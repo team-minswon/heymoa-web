@@ -49,21 +49,24 @@ const guestsState = vi.hoisted(() => ({
     createdAt: string;
   }>,
 }));
-vi.mock("@/lib/api/generated/workspaces/workspaces", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useGetWorkspaceGuests: () => ({
-    isPending: false,
-    isFetching: guestsState.fetching,
-    isError: guestsState.failed || guestsState.staleFailed,
-    refetch: guestsState.refetch,
-    data: guestsState.failed
-      ? undefined
-      : {
-          status: 200,
-          data: { success: true, data: { guests: guestsState.guests } },
-        },
-  }),
-}));
+vi.mock(
+  "@/lib/api/generated/workspaces/workspaces",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useGetWorkspaceGuests: () => ({
+      isPending: false,
+      isFetching: guestsState.fetching,
+      isError: guestsState.failed || guestsState.staleFailed,
+      refetch: guestsState.refetch,
+      data: guestsState.failed
+        ? undefined
+        : {
+            status: 200,
+            data: { success: true, data: { guests: guestsState.guests } },
+          },
+    }),
+  })
+);
 
 const membersState = vi.hoisted(() => ({
   failed: false,
@@ -118,7 +121,9 @@ const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
 /** 워크스페이스 셸 안이면 설정을 여는 함수, 밖이면 `null`. 가볍게 쓰려고 모듈째 대신한다. */
-const shell = vi.hoisted(() => ({ openSettings: null as null | ((section: string) => void) }));
+const shell = vi.hoisted(() => ({
+  openSettings: null as null | ((section: string) => void),
+}));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useOpenSettings: () => shell.openSettings,
 }));
@@ -243,7 +248,9 @@ describe("NoteParticipantsField", () => {
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
-    await waitFor(() => expect(screen.queryAllByRole("option")).toHaveLength(0));
+    await waitFor(() =>
+      expect(screen.queryAllByRole("option")).toHaveLength(0)
+    );
 
     view.rerender(autoOpenField({ autoOpen: false, onAutoOpened }));
     expect(screen.queryAllByRole("option")).toHaveLength(0);
@@ -303,7 +310,9 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    const departed = items.find((item) => item.textContent?.includes("나간사람"));
+    const departed = items.find((item) =>
+      item.textContent?.includes("나간사람")
+    );
     expect(departed).toBeDefined();
     expect(departed).toHaveAttribute("aria-selected", "true");
   });
@@ -389,7 +398,9 @@ describe("NoteParticipantsField", () => {
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
     // 그 사이 남이 넣은 박서준이 도착한다
     rerender(fieldOf([PARTICIPANT, GUEST_PARTICIPANT]));
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
 
     // 계정 참여자 요청에 한지원이 더해지고 김민수가 남는다
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalled());
@@ -415,7 +426,9 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    const departed = items.find((item) => item.textContent?.includes("나간사람"))!;
+    const departed = items.find((item) =>
+      item.textContent?.includes("나간사람")
+    )!;
     fireEvent.click(departed);
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
@@ -470,7 +483,9 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    fireEvent.click(items.find((item) => item.textContent?.includes("한지원"))!);
+    fireEvent.click(
+      items.find((item) => item.textContent?.includes("한지원"))!
+    );
 
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(1));
   });
@@ -517,9 +532,13 @@ describe("NoteParticipantsField", () => {
         })
       )
       .mockResolvedValue({ status: 200 });
-    getNote.mockResolvedValue(
-      { status: 200, data: { success: true, data: { participants: [PARTICIPANT, ADDED_BY_OTHER] } } }
-    );
+    getNote.mockResolvedValue({
+      status: 200,
+      data: {
+        success: true,
+        data: { participants: [PARTICIPANT, ADDED_BY_OTHER] },
+      },
+    });
     renderField([PARTICIPANT]);
     openMenu();
     await screen.findAllByRole("option");
@@ -531,10 +550,16 @@ describe("NoteParticipantsField", () => {
     settle({
       success: false,
       data: null,
-      error: { code: "NOTE_PARTICIPANTS_CONFLICT", message: "충돌", details: null },
+      error: {
+        code: "NOTE_PARTICIPANTS_CONFLICT",
+        message: "충돌",
+        details: null,
+      },
     });
 
-    await waitFor(() => expect(replaceParticipants.mock.calls.length).toBeGreaterThanOrEqual(2));
+    await waitFor(() =>
+      expect(replaceParticipants.mock.calls.length).toBeGreaterThanOrEqual(2)
+    );
     // 후보에 없는 이영희는 화면에 안 서지만 선택에는 들어 있어야 한다 — 그 뒤 다른 항목을 누른다
     // 거절 → 병합 재시도 → 대기 중이던 저장 순이다
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(3));
@@ -547,20 +572,25 @@ describe("NoteParticipantsField", () => {
     }
   });
 
-  it("셸 안이면 팝업 맨 위에서 멤버 설정을 열고 팝업을 닫는다", async () => {
+  it("셸 안이면 팝업 맨 아래에서 임시 참여자 설정을 열고 팝업을 닫는다", async () => {
     const openSettings = vi.fn();
     shell.openSettings = openSettings;
     try {
       renderField();
       openMenu();
 
-      const manage = await screen.findByRole("button", { name: "멤버·외부인 관리" });
-      // 검색창보다 위에 있다
+      const manage = await screen.findByRole("button", {
+        name: "임시 참여자 관리",
+      });
+      // 목록 밖 맨 아래에 있다 — 검색창보다 뒤다
       const search = screen.getByRole("combobox", { name: /참여자 검색/ });
-      expect(manage.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        manage.compareDocumentPosition(search) &
+          Node.DOCUMENT_POSITION_PRECEDING
+      ).toBeTruthy();
 
       fireEvent.click(manage);
-      expect(openSettings).toHaveBeenCalledWith("members");
+      expect(openSettings).toHaveBeenCalledWith("guests");
       await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
     } finally {
       shell.openSettings = null;
@@ -572,7 +602,9 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     await screen.findByRole("combobox", { name: /참여자 검색/ });
-    expect(screen.queryByRole("button", { name: "멤버·외부인 관리" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "임시 참여자 관리" })
+    ).toBeNull();
   });
 
   it("열 때 골라져 있던 사람이 위에 선다", async () => {
@@ -589,7 +621,9 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    fireEvent.click(items.find((item) => item.textContent?.includes("한지원"))!);
+    fireEvent.click(
+      items.find((item) => item.textContent?.includes("한지원"))!
+    );
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
@@ -636,9 +670,7 @@ describe("NoteParticipantsField", () => {
       key: "Escape",
     });
 
-    await waitFor(() =>
-      expect(screen.queryByRole("option")).toBeNull()
-    );
+    await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
     expect(replaceParticipants).not.toHaveBeenCalled();
   });
 
@@ -650,9 +682,7 @@ describe("NoteParticipantsField", () => {
       key: "Escape",
     });
 
-    await waitFor(() =>
-      expect(screen.queryByRole("option")).toBeNull()
-    );
+    await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
     expect(replaceParticipants).not.toHaveBeenCalled();
   });
 
@@ -763,9 +793,12 @@ describe("NoteParticipantsField", () => {
     renderField();
     openMenu();
 
-    fireEvent.change(await screen.findByRole("combobox", { name: /참여자 검색/ }), {
-      target: { value: "박서준" },
-    });
+    fireEvent.change(
+      await screen.findByRole("combobox", { name: /참여자 검색/ }),
+      {
+        target: { value: "박서준" },
+      }
+    );
 
     expect(screen.queryByRole("button", { name: /추가/ })).toBeNull();
   });
@@ -775,16 +808,22 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const input = await screen.findByRole("combobox", { name: /참여자 검색/ });
-    expect(input).toHaveAttribute("placeholder", "이름으로 검색 또는 외부인 추가");
+    expect(input).toHaveAttribute(
+      "placeholder",
+      "이름으로 검색 또는 외부인 추가"
+    );
   });
 
   it("이름을 치면 추가 버튼 아래에 외부인 설명을 둔다", async () => {
     renderField();
     openMenu();
 
-    fireEvent.change(await screen.findByRole("combobox", { name: /참여자 검색/ }), {
-      target: { value: "새사람" },
-    });
+    fireEvent.change(
+      await screen.findByRole("combobox", { name: /참여자 검색/ }),
+      {
+        target: { value: "새사람" },
+      }
+    );
 
     expect(
       screen.getByText("계정 없이 이 회의의 외부인으로 추가됩니다.")
@@ -815,9 +854,12 @@ describe("NoteParticipantsField", () => {
     renderField();
     openMenu();
 
-    fireEvent.change(await screen.findByRole("combobox", { name: /참여자 검색/ }), {
-      target: { value: "  이도현  " },
-    });
+    fireEvent.change(
+      await screen.findByRole("combobox", { name: /참여자 검색/ }),
+      {
+        target: { value: "  이도현  " },
+      }
+    );
     fireEvent.click(await screen.findByRole("button", { name: /이도현/ }));
 
     await waitFor(() =>
@@ -839,7 +881,8 @@ describe("NoteParticipantsField", () => {
     data: null,
     error: {
       code: "NOTE_PARTICIPANTS_CONFLICT",
-      message: "참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.",
+      message:
+        "참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.",
       details: null,
     },
   };
@@ -872,7 +915,9 @@ describe("NoteParticipantsField", () => {
     openMenu();
     await screen.findAllByRole("option");
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
   }
 
   it("저장에 병합 기준 목록을 싣는다", async () => {
@@ -894,13 +939,18 @@ describe("NoteParticipantsField", () => {
     replaceParticipants
       .mockRejectedValueOnce(CONFLICT)
       .mockResolvedValueOnce({ status: 200 });
-    getNote.mockResolvedValue(latestNote([PARTICIPANT, MEMBER_TWO, ADDED_BY_OTHER]));
+    getNote.mockResolvedValue(
+      latestNote([PARTICIPANT, MEMBER_TWO, ADDED_BY_OTHER])
+    );
     renderField([PARTICIPANT, MEMBER_TWO]);
     await turnOffMemberTwo();
 
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(2));
     const retry = replaceParticipants.mock.calls[1][0];
-    expect([...retry.data.userIds].sort()).toEqual(["01K0000000001", "01K0000000003"]);
+    expect([...retry.data.userIds].sort()).toEqual([
+      "01K0000000001",
+      "01K0000000003",
+    ]);
     expect([...retry.data.expectedUserIds].sort()).toEqual([
       "01K0000000001",
       "01K0000000002",
@@ -914,7 +964,9 @@ describe("NoteParticipantsField", () => {
 
   it("다시 보낸 것도 거절되면 더 보내지 않고 알린다", async () => {
     replaceParticipants.mockRejectedValue(CONFLICT);
-    getNote.mockResolvedValue(latestNote([PARTICIPANT, MEMBER_TWO, ADDED_BY_OTHER]));
+    getNote.mockResolvedValue(
+      latestNote([PARTICIPANT, MEMBER_TWO, ADDED_BY_OTHER])
+    );
     renderField([PARTICIPANT, MEMBER_TWO]);
     await turnOffMemberTwo();
 
@@ -929,7 +981,9 @@ describe("NoteParticipantsField", () => {
     renderField([PARTICIPANT, MEMBER_TWO]);
     await turnOffMemberTwo();
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith(CONFLICT.error.message));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(CONFLICT.error.message)
+    );
     expect(replaceParticipants).toHaveBeenCalledTimes(1);
   });
 
@@ -939,16 +993,24 @@ describe("NoteParticipantsField", () => {
     replaceParticipants.mockRejectedValue({
       success: false,
       data: null,
-      error: { code: "NOT_WORKSPACE_MEMBER", message: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.", details: null },
+      error: {
+        code: "NOT_WORKSPACE_MEMBER",
+        message: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.",
+        details: null,
+      },
     });
     renderField([PARTICIPANT, MEMBER_TWO]);
     await turnOffMemberTwo();
 
     await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith("워크스페이스 멤버만 참여자로 등록할 수 있습니다.")
+      expect(toastError).toHaveBeenCalledWith(
+        "워크스페이스 멤버만 참여자로 등록할 수 있습니다."
+      )
     );
     expect(toastError).toHaveBeenCalledTimes(1);
-    expect(replaceOptions).toContainEqual({ mutation: { meta: { suppressErrorToast: true } } });
+    expect(replaceOptions).toContainEqual({
+      mutation: { meta: { suppressErrorToast: true } },
+    });
     expect(replaceParticipants).toHaveBeenCalledTimes(1);
     expect(getNote).not.toHaveBeenCalled();
     // 실패했으니 화면은 서버가 준 기존 참여자 그대로 남는다.

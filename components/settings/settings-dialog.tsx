@@ -1,12 +1,20 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Bot, Building2, Plug, UserRound, UsersRound } from "lucide-react";
+import {
+  Bot,
+  Building2,
+  Plug,
+  UserRound,
+  UserRoundPlus,
+  UsersRound,
+} from "lucide-react";
 import {
   AccountSettingsForm,
   AccountSettingsFormSkeleton,
 } from "@/components/settings/account-settings-form";
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
+import { GuestsSettings } from "@/components/settings/guests-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
 import { WorkspaceAgentAccessSettings } from "@/components/settings/workspace-agent-access-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
@@ -27,6 +35,7 @@ export type SettingsSection =
   | "account"
   | "workspace"
   | "members"
+  | "guests"
   | "integrations"
   | "workspaceAgents"
   | "agents";
@@ -56,6 +65,7 @@ const SETTINGS_GROUPS: {
     items: [
       { key: "workspace", label: "일반", Icon: Building2 },
       { key: "members", label: "멤버", Icon: UsersRound },
+      { key: "guests", label: "임시 참여자", Icon: UserRoundPlus },
       { key: "integrations", label: "연동", Icon: Plug },
       { key: "workspaceAgents", label: "MCP 관리", Icon: Bot },
     ],
@@ -89,9 +99,7 @@ function SettingsSections({
         className="border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
       >
         {/* 제품 면에 대문자 키커를 두지 않는다 — 세리프 제목만 남긴다. (FORM SPEC) */}
-        <p className="mb-7 text-3xl font-light tracking-[-0.03em]">
-          설정
-        </p>
+        <p className="mb-7 text-3xl font-light tracking-[-0.03em]">설정</p>
         {/* 워크스페이스 것과 내 계정 것이 섞여 있으면 무엇이 팀에 영향을 주는지 안 읽힌다. */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-1">
           {SETTINGS_GROUPS.map((group) => (
@@ -137,6 +145,8 @@ function SettingsSections({
           </DataBoundary>
         ) : section === "members" ? (
           <MembersSettings workspaceId={workspaceId} />
+        ) : section === "guests" ? (
+          <GuestsSettings workspaceId={workspaceId} />
         ) : section === "integrations" ? (
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : section === "workspaceAgents" ? (

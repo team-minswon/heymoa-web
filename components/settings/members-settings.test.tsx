@@ -344,11 +344,14 @@ describe("MembersSettings", () => {
     await invite("junho@heymoa.app");
     await waitFor(() =>
       expect(
-        screen.getByText("지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.")
+        screen.getByText(
+          "지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요."
+        )
       ).toBeTruthy()
     );
     expect(
-      (screen.getByRole("button", { name: "초대" }) as HTMLButtonElement).disabled
+      (screen.getByRole("button", { name: "초대" }) as HTMLButtonElement)
+        .disabled
     ).toBe(false);
   });
 

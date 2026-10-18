@@ -169,8 +169,7 @@ export function AgentConnectionsSettings({
           </h2>
           <p className="mt-2 text-sm text-[var(--el-muted)]">
             Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와
-            프로젝트를 읽을 수 있게 연결합니다.{" "}
-            <HelpLink topic="agents" />
+            프로젝트를 읽을 수 있게 연결합니다. <HelpLink topic="agents" />
           </p>
         </div>
         {!mode && !issued ? (
@@ -512,7 +511,7 @@ function IssuedToken({
     // 지운다. 평소엔 TOML 을 제대로 읽는 `codex mcp remove`(따옴표 키·여러 줄 문자열·권한을 지킨다, 없으면 0)를
     // 쓰고, 설정이 이미 그렇게 깨져 Codex 가 못 읽을 때만 줄 단위로 걷어 낸다 — 같은 파일에 다시 써 권한을 둔다.
     // 줄 단위는 TOML 문맥(여러 줄 문자열 등)을 모르니 그 경로에서만 원본을 권한째 `.bak-heymoa` 로 남긴다
-    "{ codex mcp remove heymoa >/dev/null 2>&1 || { cp -p \"$f\" \"$f.bak-heymoa\" && t=$(awk '/^[ \\t]*\\[[ \\t]*mcp_servers\\.heymoa[ \\t]*[].]/{s=1;next} /^[ \\t]*\\[/{s=0} !s' \"$f\") && printf '%s\\n' \"$t\" > \"$f\"; }; } && \\",
+    '{ codex mcp remove heymoa >/dev/null 2>&1 || { cp -p "$f" "$f.bak-heymoa" && t=$(awk \'/^[ \\t]*\\[[ \\t]*mcp_servers\\.heymoa[ \\t]*[].]/{s=1;next} /^[ \\t]*\\[/{s=0} !s\' "$f") && printf \'%s\\n\' "$t" > "$f"; }; } && \\',
     "cat >> \"$f\" <<'EOF'",
     // 기존 파일이 줄바꿈 없이 끝나면 표 머리가 마지막 값에 붙어 TOML 이 깨진다 — 빈 줄로 띄운다
     "",

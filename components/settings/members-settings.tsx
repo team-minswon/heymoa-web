@@ -9,7 +9,6 @@ import { z } from "zod";
 import { AlertTriangle, Info } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { WorkspaceGuestsSettings } from "@/components/settings/workspace-guests-settings";
 import {
   isWorkspaceRecordingActive,
   useRecording,
@@ -211,10 +210,6 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
         </div>
       ) : null}
 
-      {/* 멤버 목록과 **섞지 않는다** — 역할 변경·내보내기가 임시 참여자에게도 있는
-          것처럼 읽힌다. 목록은 전원이 보고 관리만 ADMIN이다. */}
-      <WorkspaceGuestsSettings workspaceId={workspaceId} canManage={canManage} />
-
       <LeaveWorkspaceSection workspaceId={workspaceId} />
     </div>
   );
@@ -337,70 +332,70 @@ function MemberRow({
       {/* **내보내기 자리는 버튼이 없어도 비워 둔다.** 내 행에는 그 버튼이 없는데 자리까지
           없애면 그 행만 날짜가 오른쪽 끝까지 밀려, 두 줄의 날짜가 서로 다른 자리에 선다. */}
       <div className="flex w-[72px] shrink-0 justify-end">
-      {canManage && !isMe ? (
-        <>
-          {/*
+        {canManage && !isMe ? (
+          <>
+            {/*
             보이는 글자는 「내보내기」지만 접근성 이름에는 대상을 넣는다. 행이 여럿이면 스크린
             리더의 버튼 목록에 같은 이름이 반복되어 누구를 내보내는 버튼인지 구분할 수 없고,
             되돌릴 수 없는 조작이라 그 모호함의 대가가 크다. 보이는 글자를 그대로 품고 있어
             음성 제어로 「내보내기」라고 말해도 여전히 잡힌다.
           */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            aria-label={`${memberLabel(member)} 내보내기`}
-            loading={remove.isPending}
-            disabled={busy}
-            onClick={() => setConfirmOpen(true)}
-          >
-            내보내기
-          </Button>
-          {/* 나가기와 같은 이유로 요청 중에는 닫지 않는다. */}
-          <AlertDialog
-            open={confirmOpen}
-            onOpenChange={(open) => {
-              if (remove.isPending) return;
-              setConfirmOpen(open);
-            }}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {member.name}님을 내보낼까요?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {member.email} 계정이 이 워크스페이스의 멤버 목록과 접근
-                  권한을 잃습니다.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={remove.isPending}>
-                  취소
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  loading={remove.isPending}
-                  disabled={remove.isPending}
-                  onClick={async () => {
-                    // 다이얼로그를 연 채 기다린다 — 여기서 바로 닫으면 remove.isPending이
-                    // 다이얼로그 안에서 참으로 보일 틈이 없다(`note-delete-dialog.tsx`와 같은
-                    // 패턴). 거절은 여기서 소비한다 — 안 그러면 unhandled rejection으로 남고,
-                    // 토스트는 전역 `MutationCache.onError`가 띄운다.
-                    const response = await remove
-                      .mutateAsync({ workspaceId, userId: member.userId })
-                      .catch(() => null);
-                    if (response?.status !== 204) return;
-                    setConfirmOpen(false);
-                  }}
-                >
-                  내보내기
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </>
-      ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              aria-label={`${memberLabel(member)} 내보내기`}
+              loading={remove.isPending}
+              disabled={busy}
+              onClick={() => setConfirmOpen(true)}
+            >
+              내보내기
+            </Button>
+            {/* 나가기와 같은 이유로 요청 중에는 닫지 않는다. */}
+            <AlertDialog
+              open={confirmOpen}
+              onOpenChange={(open) => {
+                if (remove.isPending) return;
+                setConfirmOpen(open);
+              }}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {member.name}님을 내보낼까요?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {member.email} 계정이 이 워크스페이스의 멤버 목록과 접근
+                    권한을 잃습니다.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={remove.isPending}>
+                    취소
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    loading={remove.isPending}
+                    disabled={remove.isPending}
+                    onClick={async () => {
+                      // 다이얼로그를 연 채 기다린다 — 여기서 바로 닫으면 remove.isPending이
+                      // 다이얼로그 안에서 참으로 보일 틈이 없다(`note-delete-dialog.tsx`와 같은
+                      // 패턴). 거절은 여기서 소비한다 — 안 그러면 unhandled rejection으로 남고,
+                      // 토스트는 전역 `MutationCache.onError`가 띄운다.
+                      const response = await remove
+                        .mutateAsync({ workspaceId, userId: member.userId })
+                        .catch(() => null);
+                      if (response?.status !== 204) return;
+                      setConfirmOpen(false);
+                    }}
+                  >
+                    내보내기
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        ) : null}
       </div>
     </li>
   );

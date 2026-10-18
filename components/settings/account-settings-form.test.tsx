@@ -1,6 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { AccountSettingsForm } from "@/components/settings/account-settings-form";
 
 vi.mock("@/lib/api/generated/users/users", () => ({
@@ -76,7 +84,9 @@ describe("AccountSettingsForm", () => {
     expect(localStorage.getItem("heymoa:analytics-opt-out")).toBe("1");
     cleanup();
     renderForm();
-    expect(screen.getByRole("switch", { name: "이용 통계 보내기" })).not.toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "이용 통계 보내기" })
+    ).not.toBeChecked();
   });
 
   it("워크스페이스 목록을 그리지 않는다", () => {

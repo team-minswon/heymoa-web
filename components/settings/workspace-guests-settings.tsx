@@ -49,9 +49,12 @@ import type {
 export function WorkspaceGuestsSettings({
   workspaceId,
   canManage,
+  standalone = false,
 }: {
   workspaceId: string;
   canManage: boolean;
+  /** 자기 탭 머리글이 이미 있다 — 위 여백·구분선과 제목·설명을 다시 그리지 않고 인원수만 보인다. */
+  standalone?: boolean;
   /**
    * 회의로 옮겨 가기 직전에 부른다. **설정이 대화상자라 닫지 않으면** 이동한 화면 위에
    * 그대로 덮여 있어 사용자는 아무것도 안 일어난 것처럼 본다.
@@ -93,19 +96,33 @@ export function WorkspaceGuestsSettings({
   const isLoadingMore = guestsQuery.isFetching && guestsQuery.isPlaceholderData;
 
   return (
-    <section className="mt-8 border-t border-[var(--el-hairline)] pt-8">
-      <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">
-        임시 참여자
-        {page ? (
-          <span className="ml-1.5 font-normal text-[var(--el-muted)]">
-            {page.totalCount}명
-          </span>
-        ) : null}
-      </h3>
-      <p className="mt-1.5 text-sm text-[var(--el-muted)]">
-        계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 이어 붙일 수
-        있습니다.
-      </p>
+    <section
+      className={
+        standalone
+          ? undefined
+          : "mt-8 border-t border-[var(--el-hairline)] pt-8"
+      }
+    >
+      {standalone ? (
+        page ? (
+          <p className="text-sm text-[var(--el-muted)]">{page.totalCount}명</p>
+        ) : null
+      ) : (
+        <>
+          <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">
+            임시 참여자
+            {page ? (
+              <span className="ml-1.5 font-normal text-[var(--el-muted)]">
+                {page.totalCount}명
+              </span>
+            ) : null}
+          </h3>
+          <p className="mt-1.5 text-sm text-[var(--el-muted)]">
+            계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 이어 붙일
+            수 있습니다.
+          </p>
+        </>
+      )}
 
       {guestsQuery.isLoading ? (
         <div className="mt-4 space-y-2">
@@ -145,7 +162,8 @@ export function WorkspaceGuestsSettings({
           {/* **왜 관리가 사라졌는지 말한다.** 캐시를 든 채 리패치가 실패하면 목록은 그대로
               두되 연동·삭제를 잠그는데(확인창의 숫자가 낡을 수 있어서), 이유가 안 보이면
               ADMIN 은 **권한이 사라진 것으로 읽고** 되돌릴 길도 없다. */}
-          {(guestsQuery.isError && guestsQuery.data !== undefined) || partial ? (
+          {(guestsQuery.isError && guestsQuery.data !== undefined) ||
+          partial ? (
             <div
               role="alert"
               className="mt-4 flex items-center gap-2 text-sm text-[var(--el-muted)]"

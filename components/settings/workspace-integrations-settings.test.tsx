@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
@@ -7,9 +14,11 @@ import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-i
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 const refresh = vi.hoisted(() => ({ run: vi.fn() }));
 vi.mock("@/lib/ui/toast", () => ({ toast }));
-vi.mock("@/lib/mocks/enable-mocking", () => ({ shouldEnableMocking: () => false }));
+vi.mock("@/lib/mocks/enable-mocking", () => ({
+  shouldEnableMocking: () => false,
+}));
 vi.mock("@/lib/api/fetcher", async (importOriginal) => ({
-  ...await importOriginal<typeof import("@/lib/api/fetcher")>(),
+  ...(await importOriginal<typeof import("@/lib/api/fetcher")>()),
   refreshAuthOnce: refresh.run,
 }));
 
@@ -121,7 +130,10 @@ describe("WorkspaceIntegrationsSettings", () => {
   });
 
   function desktop(bridge: object) {
-    Object.defineProperty(window, "heymoaDesktop", { value: bridge, configurable: true });
+    Object.defineProperty(window, "heymoaDesktop", {
+      value: bridge,
+      configurable: true,
+    });
   }
 
   it("두 provider가 항상 렌더되고 연결 상태를 보인다", () => {
@@ -149,20 +161,22 @@ describe("WorkspaceIntegrationsSettings", () => {
     // 되돌릴 수 있는 제거라 솔리드가 아니라 destructive 틴트다.
     const disconnectButton = screen.getByRole("button", { name: "연결 해제" });
     expect(disconnectButton.className).toContain("bg-destructive/10");
-    expect(disconnectButton.className).toContain("text-[var(--el-error-strong)]");
-    // 연결은 이 카드의 주 행동이라 primary 그대로 — 색을 더 얹지 않는다.
-    expect(screen.getByRole("button", { name: "연결" }).className).not.toContain(
-      "--el-success"
+    expect(disconnectButton.className).toContain(
+      "text-[var(--el-error-strong)]"
     );
+    // 연결은 이 카드의 주 행동이라 primary 그대로 — 색을 더 얹지 않는다.
+    expect(
+      screen.getByRole("button", { name: "연결" }).className
+    ).not.toContain("--el-success");
     // 아이콘도 상태 단서라 같은 틴트 위에서 대비를 넘겨야 한다 — 틴트색을 그대로 쓰면 안 된다.
     const icons = Array.from(document.querySelectorAll("svg.lucide-link-2"));
     const iconClasses = icons.map((icon) => icon.getAttribute("class") ?? "");
     expect(iconClasses.some((c) => c.includes("--el-success-strong"))).toBe(
       true
     );
-    expect(iconClasses.some((c) => c.includes("text-[var(--el-success)]"))).toBe(
-      false
-    );
+    expect(
+      iconClasses.some((c) => c.includes("text-[var(--el-success)]"))
+    ).toBe(false);
   });
 
   it("ADMIN이면 연결·해제 버튼을 주고 해제가 mutation을 부른다", () => {
@@ -212,21 +226,36 @@ describe("WorkspaceIntegrationsSettings", () => {
   it("keeps all cards locked until successful native connection refetch completes", async () => {
     let finish!: (value: { status: "success" }) => void;
     let finishRefetch!: () => void;
-    const beginConnection = vi.fn(() => new Promise<{ status: "success" }>((resolve) => { finish = resolve; }));
+    const beginConnection = vi.fn(
+      () =>
+        new Promise<{ status: "success" }>((resolve) => {
+          finish = resolve;
+        })
+    );
     const client = new QueryClient();
-    const invalidate = vi.spyOn(client, "invalidateQueries").mockImplementation(() => new Promise<void>((resolve) => { finishRefetch = resolve; }));
+    const invalidate = vi.spyOn(client, "invalidateQueries").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRefetch = resolve;
+        })
+    );
     desktop({ beginConnection });
     renderPanel(client);
     const connect = screen.getByRole("button", { name: "연결" });
     const disconnect = screen.getByRole("button", { name: "연결 해제" });
     fireEvent.click(connect);
-    expect(beginConnection).toHaveBeenCalledWith({ workspaceId: WORKSPACE_ID, provider: "GITHUB" });
+    expect(beginConnection).toHaveBeenCalledWith({
+      workspaceId: WORKSPACE_ID,
+      provider: "GITHUB",
+    });
     expect(connect).toBeDisabled();
     expect(disconnect).toBeDisabled();
     fireEvent.click(connect);
     expect(beginConnection).toHaveBeenCalledTimes(1);
     await act(async () => finish({ status: "success" }));
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["integrations", WORKSPACE_ID] });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["integrations", WORKSPACE_ID],
+    });
     expect(connect).toBeDisabled();
     await act(async () => finishRefetch());
     expect(connect).not.toBeDisabled();
@@ -236,7 +265,8 @@ describe("WorkspaceIntegrationsSettings", () => {
   });
 
   it("native cancellation and rejection both allow retry without web refresh or stale invalidation", async () => {
-    const beginConnection = vi.fn()
+    const beginConnection = vi
+      .fn()
       .mockResolvedValueOnce({ status: "cancelled" })
       .mockRejectedValueOnce(new Error("IPC unavailable"))
       .mockResolvedValueOnce({ status: "cancelled" });
@@ -277,5 +307,4 @@ describe("WorkspaceIntegrationsSettings", () => {
     );
     open.mockRestore();
   });
-
 });

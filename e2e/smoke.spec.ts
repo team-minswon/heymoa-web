@@ -2063,18 +2063,18 @@ test("creates a guest participant from the attendee field and keeps members unto
   await expect(page.getByLabel("이도현 (외부)").first()).toBeVisible();
 });
 
-/** 참여자 추가 팝업 맨 위의 「멤버·외부인 관리」가 팝업을 닫고 설정의 멤버 섹션을 연다(APP-1110). */
-test("opens member settings from the participants popup", async ({ page }) => {
+/** 참여자 추가 팝업 맨 아래의 「임시 참여자 관리」가 팝업을 닫고 설정의 임시 참여자 섹션을 연다(APP-1110). */
+test("opens guest settings from the participants popup", async ({ page }) => {
   await page.goto(
     `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=details`
   );
 
   await page.getByRole("combobox", { name: "참여자 추가" }).click();
-  await page.getByRole("button", { name: "멤버·외부인 관리" }).click();
+  await page.getByRole("button", { name: "임시 참여자 관리" }).click();
 
   await expect(page.getByRole("option").first()).toBeHidden();
   await expect(page.getByRole("dialog", { name: /설정/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "멤버", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임시 참여자", level: 2 })).toBeVisible();
 });
 
 /**
@@ -2256,14 +2256,14 @@ test("links a guest to an account and keeps the speaker assignment", async ({
   await page.getByRole("button", { name: /"최유진" 추가/ }).click();
   await expect(page.getByLabel("최유진 화자 지정").first()).toBeVisible();
 
-  // ② 설정 › 멤버에서 그 사람을 계정과 잇는다.
+  // ② 설정 › 임시 참여자에서 그 사람을 계정과 잇는다.
   //
   // **문서를 다시 로드하지 않는다.** 목 DB 가 페이지 모듈 상태라 새로고침하면 방금 만든
   // 임시 참여자가 사라진다 — 노트를 닫고 사이드바로 가는 클라이언트 이동만 한다.
   await page.getByRole("button", { name: "목록으로" }).click();
   await page.getByRole("button", { name: "워크스페이스 전환" }).click();
   await page.getByRole("menuitem", { name: "워크스페이스 설정" }).click();
-  await page.getByRole("button", { name: "멤버" }).click();
+  await page.getByRole("button", { name: "임시 참여자" }).click();
 
   const guestRow = page.getByRole("listitem").filter({ hasText: "최유진" });
   await expect(guestRow).toBeVisible();

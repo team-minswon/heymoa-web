@@ -582,8 +582,7 @@ describe("AgentConnectionsSettings", () => {
 
   // 관리자가 외부 에이전트를 끈 워크스페이스(APP-941)
   describe("막힌 워크스페이스", () => {
-    const BLOCKED =
-      "관리자가 이 워크스페이스의 MCP 연결을 꺼 두었습니다.";
+    const BLOCKED = "관리자가 이 워크스페이스의 MCP 연결을 꺼 두었습니다.";
     const openForm = () => {
       renderSettings();
       openTokenForm();

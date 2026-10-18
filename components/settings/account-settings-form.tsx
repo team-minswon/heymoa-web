@@ -8,10 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import {
-  isAnalyticsOptedOut,
-  setAnalyticsOptOut,
-} from "@/lib/analytics/track";
+import { isAnalyticsOptedOut, setAnalyticsOptOut } from "@/lib/analytics/track";
 import { useGetCurrentUserSuspense } from "@/lib/api/generated/users/users";
 
 export function AccountSettingsForm() {
@@ -24,9 +21,7 @@ export function AccountSettingsForm() {
   return (
     <div className="mx-auto max-w-2xl space-y-8" aria-label="내 계정 설정">
       <div>
-        <h2 className="text-3xl font-light tracking-[-0.025em]">
-          내 계정
-        </h2>
+        <h2 className="text-3xl font-light tracking-[-0.025em]">내 계정</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
           프로필 정보를 확인합니다.
         </p>
@@ -67,10 +62,12 @@ function AnalyticsConsentCard() {
       className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-6"
     >
       <div className="min-w-0">
-        <p className="text-sm font-medium text-[var(--el-ink)]">이용 통계 보내기</p>
+        <p className="text-sm font-medium text-[var(--el-ink)]">
+          이용 통계 보내기
+        </p>
         <p className="mt-1 text-xs leading-5 text-[var(--el-muted)]">
-          어떤 기능을 썼는지만 보내고, 회의 내용은 보내지 않습니다. 이 브라우저에만
-          적용됩니다.{" "}
+          어떤 기능을 썼는지만 보내고, 회의 내용은 보내지 않습니다. 이
+          브라우저에만 적용됩니다.{" "}
           <SitePageLink
             href="/privacy#section-5"
             className="font-medium text-[var(--el-ink)] underline underline-offset-2"
@@ -107,9 +104,7 @@ export function AccountSettingsFormSkeleton() {
       aria-label="내 계정 설정 불러오는 중"
     >
       <div>
-        <h2 className="text-3xl font-light tracking-[-0.025em]">
-          내 계정
-        </h2>
+        <h2 className="text-3xl font-light tracking-[-0.025em]">내 계정</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
           프로필 정보를 확인합니다.
         </p>

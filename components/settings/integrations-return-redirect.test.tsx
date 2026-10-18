@@ -15,9 +15,7 @@ vi.mock("next/navigation", () => ({
 const getWorkspaces = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({ getWorkspaces }));
 
-function workspacesResponse(
-  workspaces: { workspaceId: string }[]
-) {
+function workspacesResponse(workspaces: { workspaceId: string }[]) {
   return { status: 200, data: { success: true, data: { workspaces } } };
 }
 
@@ -48,7 +46,9 @@ describe("IntegrationsReturnRedirect", () => {
 
   it("기억이 없으면 첫 번째로 보낸다", async () => {
     navState.params = new URLSearchParams("provider=GITHUB&status=connected");
-    getWorkspaces.mockResolvedValue(workspacesResponse([{ workspaceId: "W1" }]));
+    getWorkspaces.mockResolvedValue(
+      workspacesResponse([{ workspaceId: "W1" }])
+    );
 
     render(<IntegrationsReturnRedirect />);
 

@@ -132,7 +132,10 @@ export function NoteParticipantsField({
   // 이 효과는 `saving` 을 아래에서 읽는다 — 선언 순서 때문에 아래에 둔다.
   // **소속이 확인되기 전에는 안 읽는다.** 확인 전 값으로 읽으면 남의 워크스페이스 후보가 선다.
   const workspaceQueryOptions = { query: { enabled: Boolean(workspaceId) } };
-  const membersResponse = useGetWorkspaceMembers(workspaceId ?? "", workspaceQueryOptions);
+  const membersResponse = useGetWorkspaceMembers(
+    workspaceId ?? "",
+    workspaceQueryOptions
+  );
   const guestsResponse = useGetWorkspaceGuests(
     workspaceId ?? "",
     // `limit` 을 안 보낸다 — 후보를 전건에서 세우므로 쪽으로 자르면 후보가 빠진다(APP-1032).
@@ -142,8 +145,12 @@ export function NoteParticipantsField({
   // 실패 토스트는 전역(`MutationCache.onError`)이 서버 문구 그대로 띄운다. 여기서 또 띄우면
   // 두 개가 겹친다 — opt-out은 화면이 인라인으로 그리거나 코드별 문구가 갈릴 때만 쓴다.
   // 실패는 `save` 가 알린다 — 409 는 다시 보내 볼 것이라 전역 토스트가 먼저 뜨면 안 된다.
-  const replaceParticipants = useReplaceNoteParticipants({ mutation: { meta } });
-  const replaceGuestParticipants = useReplaceNoteGuestParticipants({ mutation: { meta } });
+  const replaceParticipants = useReplaceNoteParticipants({
+    mutation: { meta },
+  });
+  const replaceGuestParticipants = useReplaceNoteGuestParticipants({
+    mutation: { meta },
+  });
   const createGuestParticipant = useCreateNoteGuestParticipant();
 
   const membersData = membersResponse.data;
@@ -267,7 +274,9 @@ export function NoteParticipantsField({
         (participant) =>
           (participant.userId === null ||
             (candidatesLoaded &&
-              !members.some((member) => member.userId === participant.userId))) &&
+              !members.some(
+                (member) => member.userId === participant.userId
+              ))) &&
           (participant.guestId === null ||
             (candidatesLoaded &&
               !guests.some((guest) => guest.guestId === participant.guestId)))
@@ -381,7 +390,10 @@ export function NoteParticipantsField({
   }
 
   /** 서버에 들어간 목록을 돌려준다. 실패하면 `null`. `base` 는 이 저장이 출발하는 서버 목록이다. */
-  async function save(next: string[], from: string[]): Promise<string[] | null> {
+  async function save(
+    next: string[],
+    from: string[]
+  ): Promise<string[] | null> {
     if (sameSet(next, from)) return from;
     let base = from;
 
@@ -399,11 +411,14 @@ export function NoteParticipantsField({
         if (failures.length === 0) return target;
         // **그 사이 남이 바꿨다(APP-777).** 최신을 다시 읽어 내가 켜고 끈 것만 그 위에 얹고
         // 한 번만 더 보낸다. 또 거절되면 계속 다투는 중이라 멈추고 알린다.
-        if (attempt === 0 && failures.some((e) => errorCodeOf(e) === PARTICIPANTS_CONFLICT)) {
+        if (
+          attempt === 0 &&
+          failures.some((e) => errorCodeOf(e) === PARTICIPANTS_CONFLICT)
+        ) {
           // 다시 읽기마저 실패하면 아래로 떨어져 409 문구를 알린다 — 삼키면 저장이 조용히 끝난다.
-          const latest = okData(await getNote(noteId).catch(() => undefined))?.participants.map(
-            keyOf
-          );
+          const latest = okData(
+            await getNote(noteId).catch(() => undefined)
+          )?.participants.map(keyOf);
           if (latest) {
             target = mergeDraft(next, base, latest);
             base = latest;
@@ -433,7 +448,9 @@ export function NoteParticipantsField({
    */
   async function send(target: string[], base: string[]) {
     const idsOf = (keys: string[], prefix: string) =>
-      keys.filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length));
+      keys
+        .filter((key) => key.startsWith(prefix))
+        .map((key) => key.slice(prefix.length));
     const userIds = idsOf(target, "user:");
     const guestIds = idsOf(target, "guest:");
     const expectedUserIds = idsOf(base, "user:");
@@ -442,16 +459,24 @@ export function NoteParticipantsField({
     const requests: Array<Promise<unknown>> = [];
     if (!sameSet(userIds, expectedUserIds)) {
       requests.push(
-        replaceParticipants.mutateAsync({ noteId, data: { userIds, expectedUserIds } })
+        replaceParticipants.mutateAsync({
+          noteId,
+          data: { userIds, expectedUserIds },
+        })
       );
     }
     if (!sameSet(guestIds, expectedGuestIds)) {
       requests.push(
-        replaceGuestParticipants.mutateAsync({ noteId, data: { guestIds, expectedGuestIds } })
+        replaceGuestParticipants.mutateAsync({
+          noteId,
+          data: { guestIds, expectedGuestIds },
+        })
       );
     }
     const results = await Promise.allSettled(requests);
-    return results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+    return results.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : []
+    );
   }
 
   // 열 때 골라져 있던 사람을 위로. 고르는 중에는 순서를 안 바꾼다 — 누른 줄이 튄다.
@@ -585,7 +610,10 @@ export function NoteParticipantsField({
           onValueChange={(next: Candidate[]) => {
             // 후보에 없어 화면에 못 선 선택을 **그대로 들고 간다.** 안 그러면 조회가
             // 실패한 쪽의 저장된 참여자가 이 토글 한 번에 전체 교체로 지워진다.
-            const keys = [...next.map((candidate) => candidate.key), ...unlistedKeys];
+            const keys = [
+              ...next.map((candidate) => candidate.key),
+              ...unlistedKeys,
+            ];
             if (baseRef.current === null) baseRef.current = saved;
             desiredRef.current = keys;
             setDraft(keys);
@@ -644,22 +672,6 @@ export function NoteParticipantsField({
             }
           />
           <ComboboxContent anchor={anchorRef} align="start" className="w-72">
-            {openSettings ? (
-              // **가장 위에 둔다.** 후보에 없는 사람이나 외부인을 정리하려면 설정 → 멤버로 가야 하는데,
-              // 팝업을 닫고 설정을 직접 찾아야 했다(APP-1110). 누르면 팝업을 닫고 그 섹션을 연다.
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-left text-xs text-[var(--el-muted)] hover:text-[var(--el-ink)]"
-                onClick={() => {
-                  setOpen(false);
-                  openRef.current = false;
-                  openSettings("members");
-                }}
-              >
-                <Settings2 aria-hidden className="size-3.5 shrink-0" />
-                멤버·외부인 관리
-              </button>
-            ) : null}
             <ComboboxInput
               // 이 입력도 role="combobox"라 placeholder로는 이름이 안 붙는다.
               aria-label="이름이나 이메일로 참여자 검색"
@@ -761,6 +773,23 @@ export function NoteParticipantsField({
                   다시 시도
                 </Button>
               </div>
+            ) : null}
+            {openSettings ? (
+              // **맨 아래에 고정한다.** 목록(`ComboboxList`)만 스크롤되고 이 줄은 그 밖이라 스크롤해도 남는다. 후보에 없는
+              // 사람이나 외부인을 정리하려면 설정의 「임시 참여자」로 가야 하는데, 팝업을 닫고 설정을 직접 찾아야 했다(APP-1110).
+              // 누르면 팝업을 닫고 그 섹션을 연다.
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-left text-xs text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+                onClick={() => {
+                  setOpen(false);
+                  openRef.current = false;
+                  openSettings("guests");
+                }}
+              >
+                <Settings2 aria-hidden className="size-3.5 shrink-0" />
+                임시 참여자 관리
+              </button>
             ) : null}
           </ComboboxContent>
         </Combobox>

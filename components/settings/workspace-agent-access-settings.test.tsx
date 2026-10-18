@@ -84,8 +84,7 @@ function asRole(role: "ADMIN" | "MEMBER") {
   );
 }
 
-const toggle = () =>
-  screen.findByRole("switch", { name: "MCP 연결 허용" });
+const toggle = () => screen.findByRole("switch", { name: "MCP 연결 허용" });
 const list = () => screen.findByRole("region", { name: "열린 연결" });
 
 describe("워크스페이스 외부 에이전트 관리", () => {
