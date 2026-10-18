@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Loader2Icon } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Loader2Icon,
+  MoreHorizontal,
+} from "lucide-react";
 
 import {
   AlertDialog,
@@ -14,9 +19,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
+import {
+  RenamePersonDialog,
+  SoftName,
+} from "@/components/settings/rename-person-dialog";
 import {
   getGetWorkspaceGuestsQueryKey,
   useDeleteWorkspaceGuest,
@@ -48,6 +63,8 @@ import type {
  * 어차피 회의록에서 보인다. 관리(연동·삭제)만 ADMIN이다 — 서버가 이미 그 모양이라
  * 화면이 그대로 비추면 된다.
  */
+type GuestDialogKind = "rename" | "link" | "delete";
+
 export function WorkspaceGuestsSettings({
   workspaceId,
   canManage,
@@ -79,7 +96,7 @@ export function WorkspaceGuestsSettings({
    * 무엇을 지우려던 것인지도 잃는다.
    */
   const [dialog, setDialog] = useState<{
-    kind: "link" | "delete";
+    kind: GuestDialogKind;
     guest: WorkspaceGuestListResponseDataGuestsItem;
   } | null>(null);
 
@@ -190,7 +207,6 @@ export function WorkspaceGuestsSettings({
               <GuestRow
                 key={guest.guestId}
                 guest={guest}
-                workspaceId={workspaceId}
                 // **이름 변경은 삭제와 달리 목록이 낡아도 안전하다** — 낡은 숫자를 근거로 되돌릴 수 없는 일을
                 // 하는 게 아니라 이름 하나를 덮을 뿐이고, 결과는 응답으로 캐시에 직접 쓴다. 그래서 재조회
                 // 중·실패 중에도 잠그지 않고 역할만 본다.
@@ -209,7 +225,8 @@ export function WorkspaceGuestsSettings({
                 // 둔 채 시간이 흐르면(`staleTime` 60초) 다시 안 읽는다.
                 onOpen={(kind) => {
                   setDialog({ kind, guest });
-                  void guestsQuery.refetch();
+                  // 이름 변경은 영향 범위를 안 보므로 다시 읽을 까닭이 없다.
+                  if (kind !== "rename") void guestsQuery.refetch();
                 }}
               />
             ))}
@@ -236,6 +253,14 @@ export function WorkspaceGuestsSettings({
         </>
       )}
 
+      {dialog?.kind === "rename" ? (
+        // 연 순간의 모습을 든다 — 저장 중 낙관적 이름이 목록에 먼저 써져도 대화상자의 「지금 이름」은 흔들리지 않는다.
+        <RenameGuestDialog
+          guest={dialog.guest}
+          workspaceId={workspaceId}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       {dialog?.kind === "link" ? (
         <LinkGuestDialog
           guest={dialog.guest}
@@ -265,130 +290,104 @@ export function WorkspaceGuestsSettings({
   );
 }
 
+/**
+ * 한 사람 한 줄. **행에는 편집 상태가 없다** — 이름 변경·연동·삭제는 전부 행 끝 「⋯」 메뉴에서 대화상자로 연다(APP-1210).
+ * 행 안에 입력을 끼우면 이름 줄과 보조 줄 높이가 달라 행이 출렁였고(57→69px), 버튼 셋이 늘어서 좁은 폭에서 이름이 눌렸다.
+ * 메뉴 자리는 비어 있어도 같은 폭을 잡는다.
+ */
 function GuestRow({
   guest,
-  workspaceId,
   canManage,
   canRename,
   onOpen,
 }: {
   guest: WorkspaceGuestListResponseDataGuestsItem;
-  workspaceId: string;
   canManage: boolean;
   canRename: boolean;
-  onOpen: (kind: "link" | "delete") => void;
+  onOpen: (kind: GuestDialogKind) => void;
+}) {
+  return (
+    <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+      {/* 색은 `guestId` 가 정한다 — 이름은 겹치고(박도현·박순영) 개명하면 튄다. */}
+      <PersonAvatar name={guest.guestId} size={28} />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <SoftName
+          name={guest.displayName}
+          className="truncate text-sm text-[var(--el-ink)]"
+        />
+        <span className="text-xs text-[var(--el-muted)]">
+          회의록 {guest.noteCount}개
+        </span>
+      </span>
+
+      {/* **관리는 ADMIN만이다.** 목록 자체는 전원이 본다 */}
+      <span className="flex w-8 shrink-0 justify-end">
+        {canRename ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${guest.displayName} 관리`}
+                  className="rounded-full text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]"
+                />
+              }
+            >
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-36">
+              <DropdownMenuItem onClick={() => onOpen("rename")}>
+                이름 변경
+              </DropdownMenuItem>
+              {/* 목록이 낡았을 때는 숨기지 않고 잠근다 — 위 안내가 왜 잠겼는지 말한다. */}
+              <DropdownMenuItem
+                disabled={!canManage}
+                onClick={() => onOpen("link")}
+              >
+                계정과 연동
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={!canManage}
+                onClick={() => onOpen("delete")}
+              >
+                삭제
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </span>
+    </li>
+  );
+}
+
+/** 임시 참여자 이름 변경. 낙관적 갱신과 실패 되돌리기는 [useRenameGuest] 가 한다. */
+function RenameGuestDialog({
+  guest,
+  workspaceId,
+  onClose,
+}: {
+  guest: WorkspaceGuestListResponseDataGuestsItem;
+  workspaceId: string;
+  onClose: () => void;
 }) {
   const { rename } = useRenameGuest({
     workspaceId,
     guestId: guest.guestId,
     displayName: guest.displayName,
   });
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const trimmed = draft.trim();
-  const empty = trimmed.length === 0;
-
-  function save() {
-    // 빈 값은 저장하지 않는다 — 입력을 그대로 두어 고치게 한다.
-    if (empty) return;
-    setEditing(false);
-    // 안 바뀌었으면 요청하지 않는다.
-    if (trimmed !== guest.displayName) rename(trimmed);
-  }
-
   return (
-    <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
-      {/* 색은 `guestId` 가 정한다 — 이름은 겹치고(박도현·박순영) 개명하면 튄다. */}
-      <PersonAvatar name={guest.guestId} size={28} />
-      <span className="flex min-w-0 flex-1 flex-col">
-        {editing && canRename ? (
-          <Input
-            autoFocus
-            className="h-8 focus-visible:ring-2"
-            aria-label="임시 참여자 이름"
-            aria-invalid={empty}
-            maxLength={100}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              // 한글 조합 중의 Enter 는 글자를 확정하는 키다 — 저장으로 읽지 않는다.
-              if (event.nativeEvent.isComposing) return;
-              if (event.key === "Enter") {
-                event.preventDefault();
-                save();
-              } else if (event.key === "Escape") {
-                // 대화상자 안이라 Esc 가 설정 창까지 닫지 않게 여기서 멈춘다.
-                event.stopPropagation();
-                setEditing(false);
-              }
-            }}
-          />
-        ) : (
-          <span className="truncate text-sm text-[var(--el-ink)]">
-            {guest.displayName}
-          </span>
-        )}
-        <span className="text-xs text-[var(--el-muted)]">
-          회의록 {guest.noteCount}개
-        </span>
-      </span>
-
-      {/* 고치는 동안에는 저장·취소만 둔다 — Enter·Esc 만 있으면 어떻게 끝내는지 보이지 않는다. */}
-      {editing && canRename ? (
-        <span className="flex shrink-0 items-center gap-1.5">
-          <Button
-            size="sm"
-            className="h-[30px]"
-            disabled={empty}
-            onClick={save}
-          >
-            저장
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-[30px]"
-            onClick={() => setEditing(false)}
-          >
-            취소
-          </Button>
-        </span>
-      ) : null}
-      {/* **관리는 ADMIN만이다.** 목록 자체는 전원이 본다 */}
-      {canRename && !editing ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-[30px] shrink-0"
-          onClick={() => {
-            setDraft(guest.displayName);
-            setEditing(true);
-          }}
-        >
-          이름 변경
-        </Button>
-      ) : null}
-      {canManage && !editing ? (
-        <span className="flex shrink-0 items-center gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-[30px]"
-            onClick={() => onOpen("link")}
-          >
-            연동
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-[30px]"
-            onClick={() => onOpen("delete")}
-          >
-            삭제
-          </Button>
-        </span>
-      ) : null}
-    </li>
+    <RenamePersonDialog
+      avatarKey={guest.guestId}
+      currentName={guest.displayName}
+      secondary={`임시 참여자 · 회의록 ${guest.noteCount}개`}
+      label="이름"
+      initialValue={guest.displayName}
+      onSubmit={rename}
+      onClose={onClose}
+    />
   );
 }
 
@@ -566,19 +565,26 @@ function LinkGuestDialog({
         ) : !target && (membersPending || !membersSettled) ? (
           <Skeleton className="h-24 rounded-block" />
         ) : !target ? (
-          <ul className="max-h-64 divide-y divide-[var(--el-hairline)] overflow-y-auto rounded-block border border-[var(--el-hairline)]">
+          // 멤버 목록 행과 같은 얼굴(사진, 없으면 userId 로 그린 얼굴)이다. 회색 목록 규칙대로 hover 는 surface-strong,
+          // 키보드 포커스는 한 단계 진한 hairline 이다 — 누르면 바로 미리보기로 넘어가 「선택된 채 머무는」 상태는 없다.
+          <ul className="max-h-64 space-y-0.5 overflow-y-auto rounded-block border border-[var(--el-hairline)] p-1">
             {members.map((member) => (
               <li key={member.userId}>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[var(--el-canvas-soft)]"
+                  className="flex w-full cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-2 text-left transition-colors outline-none hover:bg-[var(--el-surface-strong)] focus-visible:bg-[var(--el-hairline)] focus-visible:font-medium motion-reduce:transition-none"
                   onClick={() => void choose(member)}
                 >
+                  <PersonAvatar
+                    name={member.userId}
+                    image={member.image}
+                    size={28}
+                  />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">
+                    <span className="block truncate text-sm text-[var(--el-ink)]">
                       {member.name}
                     </span>
-                    <span className="block truncate text-xs text-[var(--el-muted)]">
+                    <span className="block truncate text-xs font-normal text-[var(--el-muted)]">
                       {member.email}
                     </span>
                   </span>
@@ -586,11 +592,17 @@ function LinkGuestDialog({
               </li>
             ))}
           </ul>
-        ) : preview.isPending ? (
-          <Skeleton className="h-24 rounded-block" />
-        ) : shown ? (
-          <LinkPlanSummary plan={shown} executed={result !== null} />
-        ) : null}
+        ) : (
+          <div className="grid gap-3">
+            {/* 누가 누구에게 이어지는지를 얼굴로 먼저 보인다 — 되돌릴 수 없어서, 이름만으로는 동명이인을 못 가른다. */}
+            <LinkPair guest={guest} target={target} />
+            {preview.isPending ? (
+              <Skeleton className="h-24 rounded-block" />
+            ) : shown ? (
+              <LinkPlanSummary plan={shown} executed={result !== null} />
+            ) : null}
+          </div>
+        )}
 
         <AlertDialogFooter>
           {result ? (
@@ -627,6 +639,32 @@ function LinkGuestDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+function LinkPair({
+  guest,
+  target,
+}: {
+  guest: WorkspaceGuestListResponseDataGuestsItem;
+  target: WorkspaceMemberListResponseDataMembersItem;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-block border border-[var(--el-hairline)] px-3 py-2.5">
+      <PersonAvatar name={guest.guestId} size={24} />
+      <span className="min-w-0 truncate text-sm text-[var(--el-ink)]">
+        {guest.displayName}
+      </span>
+      <ArrowRight
+        className="size-4 shrink-0 text-[var(--el-muted)]"
+        aria-hidden
+      />
+      <span className="sr-only">을(를) 다음 계정과 잇습니다:</span>
+      <PersonAvatar name={target.userId} image={target.image} size={24} />
+      <span className="min-w-0 truncate text-sm font-medium text-[var(--el-ink)]">
+        {target.name}
+      </span>
+    </div>
   );
 }
 
@@ -674,7 +712,7 @@ function LinkPlanSummary({
       ) : null}
 
       {!executed ? (
-        <p className="flex items-start gap-1.5 text-[var(--el-danger)]">
+        <p className="flex items-start gap-1.5 text-[var(--el-error)]">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>되돌릴 수 없습니다.</span>
         </p>

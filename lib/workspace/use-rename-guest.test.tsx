@@ -75,7 +75,9 @@ describe("useRenameGuest", () => {
     vi.stubGlobal("fetch", fetchMock);
     const { result } = setup(client);
 
-    act(() => result.current.rename("  새 이름 "));
+    act(() => {
+      void result.current.rename("  새 이름 ");
+    });
 
     await waitFor(() => expect(nameOf(client)).toBe("새 이름"));
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -107,9 +109,14 @@ describe("useRenameGuest", () => {
     );
     const { result } = setup(client);
 
-    act(() => result.current.rename("틀린 이름"));
+    let failure: string | null = null;
+    await act(async () => {
+      failure = await result.current.rename("틀린 이름");
+    });
 
     await waitFor(() => expect(nameOf(client)).toBe("박서준"));
+    // 대화상자가 그 안에 띄울 서버 문구를 돌려준다(전역 토스트는 끈다)
+    expect(failure).toBe("권한 없음");
   });
 
   it("연달아 고치면 한 줄로 순서대로 보낸다", async () => {
@@ -126,8 +133,8 @@ describe("useRenameGuest", () => {
     const { result } = setup(client);
 
     act(() => {
-      result.current.rename("하나");
-      result.current.rename("둘");
+      void result.current.rename("하나");
+      void result.current.rename("둘");
     });
 
     // 화면은 즉시 마지막 이름이고, 요청은 앞 것이 끝나야 나간다.

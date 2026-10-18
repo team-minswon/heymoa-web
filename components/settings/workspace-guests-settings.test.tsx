@@ -118,6 +118,18 @@ function envelope(data: unknown) {
   return { status: 200, data: { success: true, data } };
 }
 
+/** 행 끝 「⋯」 메뉴에서 항목을 고른다(APP-1210). */
+async function pick(item: string) {
+  fireEvent.click(screen.getByRole("button", { name: "박서준 관리" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: item }));
+}
+
+/** 메뉴를 열어 항목이 잠겼는지 본다. */
+async function menuItem(item: string) {
+  fireEvent.click(screen.getByRole("button", { name: "박서준 관리" }));
+  return screen.findByRole("menuitem", { name: item });
+}
+
 function renderSection(canManage = true) {
   return render(
     <WorkspaceGuestsSettings
@@ -257,13 +269,19 @@ describe("WorkspaceGuestsSettings", () => {
   });
 
   /** 다만 **지우지는 못한다.** 확인창의 「회의록 N개」가 낡았을 수 있다. */
-  it("리패치가 실패하면 연동·삭제는 잠근다", () => {
+  it("리패치가 실패하면 연동·삭제는 잠그고 이름 변경은 연다", async () => {
     state.staleFailed = true;
     try {
       renderSection();
 
-      expect(screen.queryByRole("button", { name: "삭제" })).toBeNull();
-      expect(screen.queryByRole("button", { name: "연동" })).toBeNull();
+      expect(await menuItem("삭제")).toHaveAttribute("aria-disabled", "true");
+      expect(screen.getByRole("menuitem", { name: "계정과 연동" })).toHaveAttribute(
+        "aria-disabled",
+        "true"
+      );
+      expect(
+        screen.getByRole("menuitem", { name: "이름 변경" })
+      ).not.toHaveAttribute("aria-disabled", "true");
     } finally {
       state.staleFailed = false;
     }
@@ -273,84 +291,68 @@ describe("WorkspaceGuestsSettings", () => {
    * **목록은 전원이 본다.** 참석자 후보를 세우는 데 쓰이고 그 이름은 어차피 회의록에서
    * 보인다. 관리(연동·삭제)만 ADMIN이다.
    */
-  it("ADMIN이 아니면 목록은 보이고 연동·삭제만 사라진다", () => {
+  it("ADMIN이 아니면 목록은 보이고 관리 메뉴가 없다", () => {
     renderSection(false);
 
-    expect(screen.queryByRole("button", { name: "이름 변경" })).toBeNull();
     expect(screen.getByText("박서준")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "연동" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "삭제" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "박서준 관리" })).toBeNull();
   });
 
   describe("이름 변경", () => {
-    function startEditing() {
+    async function openRename() {
       renderSection();
-      fireEvent.click(screen.getByRole("button", { name: "이름 변경" }));
-      return screen.getByRole("textbox", { name: "임시 참여자 이름" });
+      await pick("이름 변경");
+      return screen.getByRole("textbox", { name: "이름" });
     }
 
-    it("행 안에서 입력으로 바뀌고 Enter 로 저장한다", () => {
-      const input = startEditing();
+    /** 행에는 편집 상태가 없다 — 대화상자가 열려도 행은 그대로 이름 줄과 보조 줄을 그린다. */
+    it("대화상자에서 고치고 Enter 로 저장하면 응답 뒤에 닫는다", async () => {
+      state.rename.mockResolvedValue(null);
+      const input = await openRename();
       expect(input).toHaveValue("박서준");
+      expect(screen.getByText("회의록 3개")).toBeInTheDocument();
 
       fireEvent.change(input, { target: { value: "  박서준2 " } });
-      fireEvent.keyDown(input, { key: "Enter" });
+      fireEvent.submit(input.closest("form")!);
 
-      expect(state.rename).toHaveBeenCalledWith("박서준2");
-      expect(screen.queryByRole("textbox")).toBeNull();
+      await waitFor(() => expect(state.rename).toHaveBeenCalledWith("박서준2"));
+      await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull());
     });
 
-    it("고치는 동안 저장·취소 버튼으로 끝낼 수 있다", () => {
-      const input = startEditing();
-      expect(screen.queryByRole("button", { name: "이름 변경" })).toBeNull();
+    it("실패하면 닫지 않고 서버 문구를 그 안에 보인다", async () => {
+      state.rename.mockResolvedValue("권한이 없습니다.");
+      const input = await openRename();
 
       fireEvent.change(input, { target: { value: "박서준3" } });
       fireEvent.click(screen.getByRole("button", { name: "저장" }));
-      expect(state.rename).toHaveBeenCalledWith("박서준3");
-      expect(screen.queryByRole("textbox")).toBeNull();
 
-      fireEvent.click(screen.getByRole("button", { name: "이름 변경" }));
-      fireEvent.click(screen.getByRole("button", { name: "취소" }));
-      expect(screen.queryByRole("textbox")).toBeNull();
-      expect(state.rename).toHaveBeenCalledTimes(1);
+      expect(await screen.findByRole("alert")).toHaveTextContent("권한이 없습니다.");
+      expect(screen.getByRole("textbox", { name: "이름" })).toHaveValue("박서준3");
     });
 
-    it("Esc 는 저장하지 않고 닫는다", () => {
-      const input = startEditing();
-
-      fireEvent.change(input, { target: { value: "다른 이름" } });
-      fireEvent.keyDown(input, { key: "Escape" });
-
-      expect(state.rename).not.toHaveBeenCalled();
-      expect(screen.queryByRole("textbox")).toBeNull();
-      expect(screen.getByText("박서준")).toBeInTheDocument();
-    });
-
-    it("빈 값은 저장하지 않고 입력을 그대로 둔다", () => {
-      const input = startEditing();
+    it("빈 값·바뀌지 않은 값이면 저장을 잠근다", async () => {
+      const input = await openRename();
+      const save = screen.getByRole("button", { name: "저장" });
+      expect(save).toBeDisabled();
 
       fireEvent.change(input, { target: { value: "   " } });
-      fireEvent.keyDown(input, { key: "Enter" });
-
+      expect(save).toBeDisabled();
+      fireEvent.submit(input.closest("form")!);
       expect(state.rename).not.toHaveBeenCalled();
-      expect(screen.getByRole("textbox")).toBeInTheDocument();
     });
 
-    it("이름이 그대로면 요청하지 않는다", () => {
-      const input = startEditing();
-
-      fireEvent.keyDown(input, { key: "Enter" });
-
-      expect(state.rename).not.toHaveBeenCalled();
-      expect(screen.queryByRole("textbox")).toBeNull();
+    it("이름은 30자까지 받고 글자 수를 보인다", async () => {
+      const input = await openRename();
+      expect(input).toHaveAttribute("maxLength", "30");
+      expect(screen.getByText("3/30")).toBeInTheDocument();
     });
 
-    it("한글 조합 중의 Enter 는 저장하지 않는다", () => {
-      const input = startEditing();
+    it("취소하면 요청하지 않고 닫는다", async () => {
+      const input = await openRename();
+      fireEvent.change(input, { target: { value: "다른 이름" } });
+      fireEvent.click(screen.getByRole("button", { name: "취소" }));
 
-      fireEvent.change(input, { target: { value: "박서" } });
-      fireEvent.keyDown(input, { key: "Enter", isComposing: true });
-
+      await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull());
       expect(state.rename).not.toHaveBeenCalled();
     });
   });
@@ -364,7 +366,7 @@ describe("WorkspaceGuestsSettings", () => {
     );
     renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: "연동" }));
+    await pick("계정과 연동");
     fireEvent.click(screen.getByRole("button", { name: /한지원/ }));
 
     await waitFor(() =>
@@ -395,7 +397,7 @@ describe("WorkspaceGuestsSettings", () => {
     );
     renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: "연동" }));
+    await pick("계정과 연동");
     fireEvent.click(screen.getByRole("button", { name: /한지원/ }));
     await screen.findByText("회의록 3개가 바뀝니다.");
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
@@ -416,7 +418,7 @@ describe("WorkspaceGuestsSettings", () => {
     );
     renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: "연동" }));
+    await pick("계정과 연동");
     fireEvent.click(screen.getByRole("button", { name: /한지원/ }));
     await screen.findByText("회의록 2개가 바뀝니다.");
     fireEvent.click(screen.getByRole("button", { name: "취소" }));
@@ -424,10 +426,10 @@ describe("WorkspaceGuestsSettings", () => {
     expect(state.link).not.toHaveBeenCalled();
   });
 
-  it("삭제 전에 쓰이고 있는 회의록 수를 보여준다", () => {
+  it("삭제 전에 쓰이고 있는 회의록 수를 보여준다", async () => {
     renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    await pick("삭제");
 
     expect(
       screen.getByText(/회의록 3개에서 이 사람이 사라지고/)
@@ -439,10 +441,10 @@ describe("WorkspaceGuestsSettings", () => {
    * **확인창이 목록 밖에 살아야 하는 이유다.** 행 안에 두면, 남이 먼저 지워 목록에서 그
    * 행이 사라지는 순간 확인창까지 함께 언마운트돼 **설명 없이 닫힌다.**
    */
-  it("남이 먼저 지웠으면 창을 닫지 않고 그렇다고 말한다", () => {
+  it("남이 먼저 지웠으면 창을 닫지 않고 그렇다고 말한다", async () => {
     const { rerender } = renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    await pick("삭제");
     expect(
       screen.getByText(/회의록 3개에서 이 사람이 사라지고/)
     ).toBeInTheDocument();
@@ -460,10 +462,10 @@ describe("WorkspaceGuestsSettings", () => {
    * 다 읽지 못한 목록에서 안 보이는 것은 지워졌다는 뜻이 아니다 — 읽은 쪽 뒤에 더 있는데 그 사람이 없으면(그사이 새 참여자가
    * 끼어 쪽 밖으로 밀렸다) 「이미 지워졌습니다」가 아니라 확인하지 못했다고 말하고 다시 시도하게 한다(APP-1032).
    */
-  it("더 읽을 쪽이 있는데 그 사람이 안 보이면 지워졌다고 하지 않고 확인하지 못했다고 말한다", () => {
+  it("더 읽을 쪽이 있는데 그 사람이 안 보이면 지워졌다고 하지 않고 확인하지 못했다고 말한다", async () => {
     state.hasMore = true;
     const { rerender } = renderSection();
-    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    await pick("삭제");
 
     state.guests = [];
     rerender(<WorkspaceGuestsSettings workspaceId="01K0000000000" canManage />);
@@ -477,20 +479,20 @@ describe("WorkspaceGuestsSettings", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("뒷쪽을 못 읽었으면 목록 위에 그렇다고 알리고 연동·삭제를 잠근다", () => {
+  it("뒷쪽을 못 읽었으면 목록 위에 그렇다고 알리고 연동·삭제를 잠근다", async () => {
     state.partial = true;
     renderSection();
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       /끝까지 불러오지 못해 연동·삭제를 잠갔습니다/
     );
-    expect(screen.queryByRole("button", { name: "삭제" })).toBeNull();
+    expect(await menuItem("삭제")).toHaveAttribute("aria-disabled", "true");
   });
 
   it("삭제를 확인하면 mutation 을 부른다", async () => {
     renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    await pick("삭제");
     fireEvent.click(screen.getAllByRole("button", { name: "삭제" }).at(-1)!);
 
     await waitFor(() =>
