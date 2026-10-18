@@ -85,7 +85,7 @@ export function HelpPalette() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="사용 가이드 검색"
+        aria-label="검색어를 입력하세요 (예: 녹음, 용어 사전) — 사용 가이드 검색"
         aria-keyshortcuts="Control+K Meta+K"
         className={cn(
           "relative flex h-14 w-full min-w-0 items-center rounded-[16px] border border-[var(--tv-rule-strong)] bg-white pr-24 pl-12 text-left text-[16px] text-[var(--tv-muted)] help-fade hover:border-[var(--tv-brand)]",
