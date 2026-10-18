@@ -90,6 +90,7 @@ const s = StyleSheet.create({
     paddingLeft: 12,
     marginBottom: mm(3.5),
   },
+  documentStatus: { textAlign: "right", fontSize: 9, lineHeight: LINE, marginBottom: mm(2) },
   meta: { borderTopWidth: 1.5, borderTopColor: color.ink, borderBottomWidth: 1, borderBottomColor: color.rule },
   metaRow: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: color.ruleSoft },
   metaRowLast: { flexDirection: "row" },
@@ -407,13 +408,14 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
       <Sheet footer={doc.footer}>
         {/* ── 1쪽 핵심: 이 쪽만 읽어도 회의를 안다 ── */}
         <Text style={s.title}>회의록</Text>
+        <Text style={[s.documentStatus, doc.confirmed ? s.sub : s.pending]}>{doc.confirmed ? "확정됨" : "검토 중(확정 전)"}</Text>
         <View style={s.meta}>
           <MetaRow label="회의명">{doc.title}</MetaRow>
           <MetaRow label="일시">
             {doc.dateLabel}
             {doc.durationLabel ? <Text style={s.sub}>{`   ${doc.durationLabel}`}</Text> : null}
           </MetaRow>
-          <MetaRow label="참석자">
+          <MetaRow label="참석자" last>
             {doc.attendees.length > 0 ? doc.attendees.join(", ") : null}
             {doc.attendeeCount > 0 ? (
               <Text style={s.sub}>{`${doc.attendees.length > 0 ? "   " : ""}${doc.attendeeCount}명`}</Text>
@@ -424,13 +426,6 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
             {doc.unnamedSpeakers > 0 ? (
               <Text style={s.sub}>{` · 이름 미확인 화자 ${doc.unnamedSpeakers}`}</Text>
             ) : null}
-          </MetaRow>
-          <MetaRow label="작성" last>
-            HeyMoa 자동 작성
-            {/* 검토 중인 회의록이 확정본처럼 읽히지 않게 상태를 적는다 — 복사본 머리말과 같은 말이다 */}
-            <Text style={doc.confirmed ? s.sub : s.pending}>{doc.confirmed ? " · 확정됨" : " · 검토 중(확정 전)"}</Text>
-            {doc.sharedBy ? <Text style={s.sub}>{`   공유 ${doc.sharedBy}`}</Text> : null}
-            {doc.transcript ? <Text style={s.sub}>{"   부록 A 녹취록"}</Text> : null}
           </MetaRow>
         </View>
 
