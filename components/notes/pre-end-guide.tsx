@@ -21,19 +21,16 @@ import type { NoteResponseData } from "@/lib/api/generated/models";
 const STEPS = [
   {
     icon: FileText,
-    orb: "var(--el-orb-mint-soft)",
     title: "요약",
     body: "개요, 결정, 액션 아이템을 자동으로 정리해요.",
   },
   {
     icon: Users,
-    orb: "var(--el-orb-lavender-soft)",
     title: "화자 분리",
     body: "목소리를 사람별로 나누고, 누구인지 이름을 붙일 수 있어요.",
   },
   {
     icon: CircleCheck,
-    orb: "var(--el-orb-sky-soft)",
     title: "검토 후 확정",
     body: "정리된 항목을 확인하고 고친 뒤 프로젝트 지식으로 확정해요.",
   },
@@ -73,7 +70,7 @@ export function PreEndGuide({
         </p>
 
         <ol className="mt-7 grid gap-3 sm:grid-cols-3">
-          {STEPS.map(({ icon: Icon, orb, title, body }, index) => (
+          {STEPS.map(({ icon: Icon, title, body }, index) => (
             <motion.li
               key={title}
               // 제목 다음에 카드가 차례로 올라온다.
@@ -87,12 +84,11 @@ export function PreEndGuide({
               className="flex flex-col rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-4"
             >
               <span className="flex items-center justify-between">
-                <span
-                  className="flex size-10 items-center justify-center rounded-full text-[var(--el-ink)]"
-                  style={{ background: orb }}
-                >
-                  <Icon className="size-[18px]" aria-hidden />
-                </span>
+                <Icon
+                  className="size-5 text-[var(--el-muted)]"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
                 <span
                   aria-hidden
                   className="text-xs tabular-nums text-[var(--el-muted-soft)]"
