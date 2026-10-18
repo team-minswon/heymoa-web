@@ -567,10 +567,20 @@ function PersonalChatPanel({
           >
             <div className="flex min-h-full flex-col justify-end p-6">
               {isThreadLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-1/2" />
+                // 대화의 모양 그대로 — 오른쪽 내 말풍선 하나와 왼쪽 답 몇 줄(`ChatThread` 의 `gap-4` · 말풍선 `rounded-panel`).
+                // 막대 세 줄만 세우면 도착할 때 말풍선이 옆에서 끼어들어 자리가 바뀐 것처럼 보였다 (APP-1212).
+                <div
+                  aria-label="대화 불러오는 중"
+                  className="flex flex-1 flex-col justify-end gap-4"
+                >
+                  <div className="flex justify-end">
+                    <Skeleton className="h-10 w-1/2 rounded-panel" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
                 </div>
               ) : turn.isUnavailable && !turn.showingLocalTurn ? (
                 // 빈 상태로 그리면 이미 있는 대화를 없는 것처럼 보인다

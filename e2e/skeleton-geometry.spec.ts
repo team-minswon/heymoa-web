@@ -107,14 +107,27 @@ test.describe("스켈레톤 기하", () => {
       .locator("li")
       .first()
       .evaluate((el) => Math.round(el.getBoundingClientRect().height));
+    // 첫 줄이 서는 **자리**도 같아야 한다 — 진행 중은 묶음 머리 아래에 줄이 선다. 스켈레톤이 머리 없이 줄만 세우면 도착할 때
+    // 목록이 머리만큼 밀린다(APP-1207 P3 · APP-1212).
+    const skeletonTop = await loading
+      .locator("li")
+      .first()
+      .evaluate((el) => Math.round(el.getBoundingClientRect().top));
 
     await expect(loading).toBeHidden({ timeout: 15_000 });
     // **`main li` 로 잡으면 안 된다.** 사이드바 메뉴도 `main` 안의 `li` 라서 그쪽(32)을
     // 집고, 스켈레톤(44)과 안 맞는다며 없는 어긋남을 만들어 낸다. 실제로 한 번 그랬다.
-    const realRow = await page
+    const [realRow, realTop] = await page
       .locator("li.group.rounded-control")
       .first()
-      .evaluate((el) => Math.round(el.getBoundingClientRect().height));
+      .evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        return [Math.round(rect.height), Math.round(rect.top)];
+      });
+    expect(
+      Math.abs(skeletonTop - realTop),
+      `스켈레톤 첫 줄 위치 ${skeletonTop} → 실제 ${realTop}`
+    ).toBeLessThanOrEqual(4);
 
     expect(
       Math.abs(skeletonRow - realRow),

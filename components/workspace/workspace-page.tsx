@@ -7,8 +7,10 @@ import { DesktopAppPromo } from "@/components/workspace/desktop-app-promo";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
+import { cn } from "@/lib/utils";
 import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
 
 export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
@@ -61,8 +63,22 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const isError = selectedProjectId
     ? notesQuery.isError
     : isWorkspaceError || notesQuery.isError;
-  // 다음 쪽을 읽는 중 = 키가 바뀌어 이전 목록을 붙들고 있는 동안
-  const isLoadingMore = notesQuery.isFetching && notesQuery.isPlaceholderData;
+  /**
+   * 지금 그린 목록이 어느 범위의 것인가. `keepPreviousData` 는 범위를 바꿔도 앞 범위의 목록을 준다 — 「더 보기」(같은 범위)와
+   * 범위 바꾸기를 여기서 가른다. 앞 범위의 목록은 옅게 그리고, 그동안 「더 보기」가 「불러오는 중」으로 서지 않게 한다 (APP-1212).
+   */
+  const [shownScope, setShownScope] = useState(scopeKey);
+  if (
+    !notesQuery.isPlaceholderData &&
+    notesQuery.data &&
+    shownScope !== scopeKey
+  ) {
+    setShownScope(scopeKey);
+  }
+  const stale = notesQuery.isPlaceholderData && shownScope !== scopeKey;
+  // 다음 쪽을 읽는 중 = 같은 범위에서 키가 바뀌어 이전 목록을 붙들고 있는 동안
+  const isLoadingMore =
+    notesQuery.isFetching && notesQuery.isPlaceholderData && !stale;
 
   const loadMore = () =>
     setPagesByScope((current) => ({
@@ -126,10 +142,23 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
               <h2 className="text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
                 {selectedProject?.name ?? "모든 노트"}
               </h2>
-              <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
-                {notes.length}개{page?.hasMore ? " 이상" : ""}의 회의 기록 ·
-                발화와 결정이 시간순으로 보관됩니다.
-              </p>
+              {/* `p` 가 아니라 `div` — 자리표시(`Skeleton`)가 `div` 라 `p` 안에 두면 잘못 포갠 HTML 이 된다. */}
+              <div className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
+                {/* 오기 전에 「0개」를 그리면 노트가 없다고 읽힌다 — 자리만 잡는다. 앞 범위의 개수는 목록과 함께 옅게 둔다. */}
+                {isPending && !page ? (
+                  <Skeleton className="inline-block h-4 w-24 align-[-3px]" />
+                ) : (
+                  <span
+                    className={cn(
+                      "transition-opacity duration-150 ease-out motion-reduce:transition-none",
+                      stale && "opacity-60"
+                    )}
+                  >
+                    {notes.length}개{page?.hasMore ? " 이상" : ""}의 회의 기록
+                  </span>
+                )}{" "}
+                · 발화와 결정이 시간순으로 보관됩니다.
+              </div>
             </header>
             <DesktopAppPromo />
             <WorkspaceNoteList
@@ -141,6 +170,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
               onNewMeeting={requestNewMeeting}
               hasMore={page?.hasMore ?? false}
               isLoadingMore={isLoadingMore}
+              stale={stale}
               onLoadMore={loadMore}
             />
           </>

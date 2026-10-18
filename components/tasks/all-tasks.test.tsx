@@ -69,15 +69,20 @@ type ListArgs = {
 /** 서버처럼 상태·내 할 일·프로젝트로 거르고 `(기한, id)` 로 정렬해 준다. 개수는 상태만 뺀 거르기 안의 전체 수다. */
 const listCalls = vi.hoisted(() => [] as unknown[]);
 const MORE = vi.hoisted(() => ({ hasMore: false, limit: 100 }));
+/** 켜면 「내 할 일」 응답이 아직 안 온 것처럼 앞 거르기(전체)의 응답을 자리표시로 준다. */
+const WAITING = vi.hoisted(() => ({ mine: false }));
 vi.mock("@/lib/tasks/use-task-list-pages", async () => {
   const { compareTasks } = await import("@/lib/tasks/task-groups");
   return {
+    taskListQuery: () => ({ queryKey: ["prefetch"], queryFn: () => new Promise(() => {}) }),
     useTaskListPages: (args: ListArgs) => {
       listCalls.push(args);
+      const waiting = WAITING.mine && Boolean(args.assigneeUserId);
       const scoped = [...TASKS.p1, ...TASKS.p2].filter(
         (task) =>
           (!args.projectId || task.projectId === args.projectId) &&
-          (!args.assigneeUserId ||
+          (waiting ||
+            !args.assigneeUserId ||
             (task.assignee?.type === "USER" && task.assignee.id === args.assigneeUserId))
       );
       const counts = {
@@ -106,8 +111,8 @@ vi.mock("@/lib/tasks/use-task-list-pages", async () => {
         },
         isPending: false,
         isError: false,
-        isPlaceholderData: false,
-        isFetching: false,
+        isPlaceholderData: waiting,
+        isFetching: waiting,
         refetch: vi.fn(),
       };
     },
@@ -138,6 +143,7 @@ describe("AllTasks", () => {
     listCalls.length = 0;
     MORE.hasMore = false;
     MORE.limit = 100;
+    WAITING.mine = false;
     cleanup();
   });
 
@@ -189,6 +195,38 @@ describe("AllTasks", () => {
     expect(screen.getByRole("radio", { name: "취소 0" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("radio", { name: "진행 중 1" })).toBeTruthy();
     expect(screen.getByText("조건에 맞는 할 일이 없습니다.")).toBeTruthy();
+  });
+
+  it("거르기를 바꿔 새 목록을 기다리는 동안 앞 목록을 비우지 않고 옅게 둔 채 손을 막는다", async () => {
+    MORE.hasMore = true;
+    const view = renderScreen();
+    await screen.findByText("지난 할 일");
+    expect(screen.getByRole("button", { name: /더 보기/ })).toBeTruthy();
+    WAITING.mine = true;
+
+    fireEvent.click(screen.getByRole("button", { name: "내 할 일" }));
+
+    // skeleton 으로 비우면 즉답에서는 번쩍이고, 지연에서는 목록 높이가 통째로 바뀐다 (APP-1212)
+    expect(screen.queryByLabelText("할 일 불러오는 중")).toBeNull();
+    const list = screen.getByText("지난 할 일").closest("[aria-busy]");
+    expect(list).toHaveAttribute("aria-busy", "true");
+    expect(list).toHaveAttribute("inert");
+    // 앞 거르기의 「더 보기」를 이 거르기의 것처럼 세우지 않는다
+    expect(screen.queryByRole("button", { name: /더 보기/ })).toBeNull();
+
+    expect(screen.getByText(/진행 중 4개/).className).toContain("opacity-60");
+
+    // 같은 거르기의 응답이 도착한다 — 옅음과 잠금이 풀리고 내 할 일만 남는다
+    WAITING.mine = false;
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <AllTasks workspaceId="w1" />
+      </QueryClientProvider>
+    );
+    expect(screen.getByRole("button", { name: "내 할 일" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("지난 할 일")).toBeNull();
+    expect(screen.getByText("이번 주 할 일").closest("[aria-busy]")).toBeNull();
+    expect(screen.getByText(/진행 중 1개/).className).not.toContain("opacity-60");
   });
 
   it("내 할 일을 누르면 내게 걸린 할 일만 남는다", async () => {

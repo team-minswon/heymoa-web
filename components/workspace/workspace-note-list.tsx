@@ -12,6 +12,7 @@ import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 import { groupNotesByRecency } from "@/lib/workspace/note-groups";
+import { cn } from "@/lib/utils";
 
 export function WorkspaceNoteList({
   workspaceId,
@@ -22,6 +23,7 @@ export function WorkspaceNoteList({
   onNewMeeting,
   hasMore = false,
   isLoadingMore = false,
+  stale = false,
   onLoadMore,
 }: {
   workspaceId: string;
@@ -34,6 +36,11 @@ export function WorkspaceNoteList({
   /** 서버에 이 뒤로 더 있다. 목록 끝에 「이전 기록 더 보기」를 둔다. */
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  /**
+   * 다른 범위(프로젝트)의 목록이 새 목록을 기다리며 자리를 지키는 중. 옅게 두고 손을 막는다 — 비웠다 채우면 번쩍이고, 그대로 두면 새
+   * 프로젝트 이름 아래 남의 노트가 진짜처럼 선다 (APP-1212).
+   */
+  stale?: boolean;
   onLoadMore?: () => void;
 }) {
   const retryRef = useRef(onRetry);
@@ -65,6 +72,10 @@ export function WorkspaceNoteList({
   if (isPending && notes.length === 0) {
     return (
       <div aria-label="노트 불러오는 중">
+        {/* 도착할 목록처럼 날짜 머리(`pt-5 pb-2` + 12px 글) 아래에 줄이 선다. 머리 자리가 없으면 도착할 때 첫 줄이 44px 밀린다. */}
+        <div className="px-3 pt-5 pb-2">
+          <Skeleton className="h-4 w-12" />
+        </div>
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
@@ -107,7 +118,15 @@ export function WorkspaceNoteList({
   }
 
   return (
-    <div data-testid="workspace-note-list">
+    <div
+      data-testid="workspace-note-list"
+      aria-busy={stale || undefined}
+      inert={stale}
+      className={cn(
+        "transition-opacity duration-150 ease-out motion-reduce:transition-none",
+        stale && "opacity-60"
+      )}
+    >
       {groupNotesByRecency(notes).map((group) => (
         <section key={group.key}>
           <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">

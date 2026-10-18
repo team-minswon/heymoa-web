@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2Icon, Plus } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 
@@ -26,7 +27,7 @@ import {
   type TaskEntry,
   type TaskStatus,
 } from "@/lib/tasks/task-groups";
-import { useTaskListPages } from "@/lib/tasks/use-task-list-pages";
+import { taskListQuery, useTaskListPages } from "@/lib/tasks/use-task-list-pages";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +61,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const today = getAppDateKey(new Date());
 
   const [view, setView] = useState<TaskStatus>("OPEN");
-  /** 사람이 보기를 바꿨는가. 첫 목록은 그대로 서고, 바꿀 때만 목록이 들어온다. */
+  /** 사람이 보기 · 거르기를 바꿨는가. 첫 목록은 그대로 서고, 바꿀 때만 목록이 들어온다. */
   const [switched, setSwitched] = useState(false);
   const [mine, setMine] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -77,13 +78,25 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const [savedRow, setSavedRow] = useState<TaskEntry | null>(null);
   const { save, pendingOf, conflictTaskId } = useTaskUpdate(workspaceId, setSavedRow);
 
-  const result = useTaskListPages({
+  const filter = {
     workspaceId,
-    status: view,
     assigneeUserId: mine ? (user?.userId ?? undefined) : undefined,
     projectId: activeProjectId ?? undefined,
-    pages,
-  });
+  };
+  const result = useTaskListPages({ ...filter, status: view, pages });
+  const queryClient = useQueryClient();
+  /**
+   * 상태 칸을 가리키거나 키보드로 들어오면 다른 두 상태의 첫 쪽을 미리 받는다 (APP-1212). 상태를 바꾸면 앞 상태의 줄은 쓸 수 없어
+   * skeleton 이 서는데, 가리키고 누르는 사이(보통 100ms 넘게)에 받아 두면 대개 바로 선다. 이미 받아 신선하면 다시 묻지 않는다.
+   * 프로젝트 메뉴는 미리 받지 않는다 — 프로젝트 수만큼 요청이 나가고, 앞 목록을 옅게 두는 것으로 기다림이 이미 가려진다.
+   */
+  const prefetchViews = () => {
+    for (const option of VIEWS) {
+      if (option.value !== view) {
+        void queryClient.prefetchQuery(taskListQuery({ ...filter, status: option.value, pages: 1 }));
+      }
+    }
+  };
   const response = result.data;
   const data = response?.status === 200 && response.data.success ? response.data.data : null;
   // 탭만 바뀌어 이전 탭의 응답이 자리를 채우는 동안(개수만 쓴다) 그 줄을 이 탭의 줄로 그리지 않는다.
@@ -95,9 +108,11 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
     result.isError || (!data && !result.isPending) ? () => void result.refetch() : null;
   const isPending = isWorkspacePending || result.isPending;
   const loadingRows = isPending || (result.isPlaceholderData && entries.length === 0);
-  const isLoadingMore = result.isFetching && result.isPlaceholderData && entries.length > 0;
-  const hasMore = !loadingRows && data?.hasMore === true;
-  const resetPages = () => setPages(1);
+  // 보기 · 거르기가 바뀌면 처음 쪽으로 돌아가고, 도착하는 목록이 짧게 들어온다.
+  const resetPages = () => {
+    setPages(1);
+    setSwitched(true);
+  };
 
   // 줄에 그리는 것이 바뀌면 목록도 새로 묶는다 — 판뿐 아니라 프로젝트 이름도 줄에 선다.
   // **그리는 값을 다 넣는다.** 담당·기한·내용은 응답 전에 캐시에 먼저 걸리는데(`use-task-update`) 그때는 판이
@@ -126,7 +141,13 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
     statuses: StatusSnapshot;
   } | null>(null);
   const [previous, setPrevious] = useState<StatusSnapshot | null>(null);
-  if (!loadingRows && snapshot?.signature !== signature) {
+  // 자리표시(앞 키의 응답)는 이 거르기의 목록이 아니라 판에 넣지 않는다 — 넣으면 도착한 진짜 목록을 「같은 거르기 안의 변화」로 읽어
+  // 줄마다 등장 · 접힘을 그린다. 그래서 판의 `scopeKey` 는 마지막으로 **도착한** 목록의 거르기다 (APP-1212).
+  if (
+    !loadingRows &&
+    !result.isPlaceholderData &&
+    (snapshot?.signature !== signature || snapshot.scopeKey !== scopeKey)
+  ) {
     setPrevious(snapshot && snapshot.scopeKey === scopeKey ? snapshot.statuses : null);
     setSnapshot({
       signature,
@@ -134,6 +155,14 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
       statuses: new Map(entries.map((e) => [e.taskId, e.taskStatus])),
     });
   }
+  /**
+   * 거르기를 바꿔 새 목록을 기다리는 동안 앞 거르기의 목록이 자리를 지킨다 (APP-1212). 비웠다가 skeleton 으로 채우면 목이 즉답일 때는
+   * 한두 프레임 번쩍이고, 실제 지연에서는 목록 높이가 통째로 바뀌었다. 옅게 두고 손은 막는다 — 곧 사라질 줄을 누르지 않게.
+   * 같은 거르기에서 쪽만 늘리는 「더 보기」는 이것이 아니다(그 줄은 이 거르기의 것이다).
+   */
+  const stale = result.isPlaceholderData && !loadingRows && snapshot?.scopeKey !== scopeKey;
+  const isLoadingMore = result.isFetching && result.isPlaceholderData && entries.length > 0 && !stale;
+  const hasMore = !loadingRows && !stale && data?.hasMore === true;
 
   const historyEntry =
     entries.find((e) => e.taskId === historyTaskId) ??
@@ -188,25 +217,39 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             <h2 className="text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
               할 일
             </h2>
-            <p className="mt-3 min-h-6 text-sm leading-6 text-[var(--el-muted)]">
+            {/* 기다리는 동안의 개수는 앞 거르기의 것이라 목록처럼 옅게 둔다 — 지우면 줄 높이 · 칸 폭이 출렁인다. */}
+            <p
+              className={cn(
+                "mt-3 min-h-6 text-sm leading-6 text-[var(--el-muted)] transition-opacity duration-150 ease-out motion-reduce:transition-none",
+                stale && "opacity-60"
+              )}
+            >
               {isPending || !counts ? null : `프로젝트 ${projects.length}개 · 진행 중 ${countOf("OPEN")}개`}
             </p>
           </header>
 
           <div className="mt-4 flex flex-wrap items-center gap-2.5">
-            <SegmentedControl
-              label="할 일 상태"
-              value={view}
-              options={VIEWS.map((option) => ({
-                value: option.value,
-                label: !counts ? option.label : `${option.label} ${countOf(option.value)}`,
-              }))}
-              onChange={(next) => {
-                setView(next);
-                resetPages();
-                setSwitched(true);
-              }}
-            />
+            <div
+              onPointerEnter={prefetchViews}
+              onFocus={prefetchViews}
+              className={cn(
+                "inline-flex transition-opacity duration-150 ease-out motion-reduce:transition-none",
+                stale && "opacity-60"
+              )}
+            >
+              <SegmentedControl
+                label="할 일 상태"
+                value={view}
+                options={VIEWS.map((option) => ({
+                  value: option.value,
+                  label: !counts ? option.label : `${option.label} ${countOf(option.value)}`,
+                }))}
+                onChange={(next) => {
+                  setView(next);
+                  resetPages();
+                }}
+              />
+            </div>
             <button
               type="button"
               aria-pressed={mine}
@@ -294,25 +337,40 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             ) : null}
 
             {loadingRows ? (
-              <ul aria-label="할 일 불러오는 중">
-                {["62%", "48%", "71%", "55%", "66%", "40%"].map((width) => (
-                  <li key={width} className={cn(grid, "min-h-11")}>
-                    <Skeleton className="size-[18px] rounded-full" />
-                    <Skeleton className="h-4 rounded-chip" style={{ width }} />
-                    <div className={TASK_ROW_TRAIL}>
-                      {showProject ? <Skeleton className="h-4 w-16 rounded-chip" /> : null}
-                      <Skeleton className="h-4 w-20 rounded-chip" />
-                      <Skeleton className={cn("h-4 w-16 rounded-chip", TASK_DUE_ALIGN)} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              // 도착할 목록과 같은 틀이다 — 진행 중은 묶음(`mt-3` + 머리 `h-8`) 안에, 완료 · 취소는 `mt-1` 안에 줄이 선다.
+              // 머리 없이 줄만 세우면 도착할 때 목록이 머리만큼 밀린다(APP-1207 P3).
+              <div aria-label="할 일 불러오는 중" className={view === "OPEN" ? "mt-3" : "mt-1"}>
+                {view === "OPEN" ? (
+                  <div className="flex h-8 items-center px-2">
+                    <Skeleton className="h-3.5 w-14 rounded-chip" />
+                  </div>
+                ) : null}
+                <ul>
+                  {["62%", "48%", "71%", "55%", "66%", "40%"].map((width) => (
+                    <li key={width} className={cn(grid, "min-h-11")}>
+                      <Skeleton className="size-[18px] rounded-full" />
+                      <Skeleton className="h-4 rounded-chip" style={{ width }} />
+                      <div className={TASK_ROW_TRAIL}>
+                        {showProject ? <Skeleton className="h-4 w-16 rounded-chip" /> : null}
+                        <Skeleton className="h-4 w-20 rounded-chip" />
+                        <Skeleton className={cn("h-4 w-16 rounded-chip", TASK_DUE_ALIGN)} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : (
               <div
-                // 보기를 바꾸면 목록을 새로 세워 들어오게 한다. 첫 목록은 움직이지 않는다.
-                key={view}
+                // **도착한 목록의 거르기로 새로 세운다** (APP-1212). 보기 · 거르기가 바뀌면 줄이 통째로 바뀌는데, 같은 목록에 두면
+                // 빠지는 줄마다 접힘(180ms)이 돌아 새 목록이 그만큼 늦게 서고 높이가 출렁였다(전체 9줄 → 고객 4줄에서 212ms).
+                // 기다리는 동안은 판이 앞 거르기라 그대로 서 있다. 첫 목록은 움직이지 않고, 바꾼 뒤에는 옅은 데서 짧게 들어온다.
+                key={snapshot?.scopeKey ?? scopeKey}
+                aria-busy={stale || undefined}
+                inert={stale}
                 className={cn(
-                  switched && "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
+                  "transition-opacity duration-150 ease-out motion-reduce:transition-none",
+                  switched && "animate-in fade-in-60 duration-150 ease-out motion-reduce:animate-none",
+                  stale && "opacity-60"
                 )}
               >
                 {groups.length === 0 && failed === null ? (

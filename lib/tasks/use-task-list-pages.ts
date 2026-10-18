@@ -25,6 +25,14 @@ export type TaskListKeyParams = {
   pages: number;
 };
 
+type TaskListArgs = {
+  workspaceId: string;
+  status: TaskStatus;
+  assigneeUserId?: string;
+  projectId?: string;
+  pages: number;
+};
+
 /**
  * 할 일 **전체 화면**의 목록. 상태 탭 하나의 거르기 안에서 쪽 수만큼 이어 붙인 한 응답을 돌려준다 (APP-1043).
  *
@@ -35,19 +43,20 @@ export type TaskListKeyParams = {
  * **전건이 필요한 호출은 이걸 쓰지 않는다.** 프로젝트 단위 목록(검토 보드)은 `limit` 없이 부르는 생성 훅 그대로다.
  * 매번 처음부터 쪽 수만큼 다시 읽고 커서를 보관하지 않는다 — 읽는 도중 기한이 바뀐 줄의 어긋남이 한 번의 읽기 연쇄 안에 갇힌다.
  */
-export function useTaskListPages({
-  workspaceId,
-  status,
-  assigneeUserId,
-  projectId,
-  pages,
-}: {
-  workspaceId: string;
-  status: TaskStatus;
-  assigneeUserId?: string;
-  projectId?: string;
-  pages: number;
-}) {
+export function useTaskListPages(args: TaskListArgs) {
+  return useQuery<getWorkspaceTasksResponse>({
+    ...taskListQuery(args),
+    // 키가 바뀌어도(쪽 수 · 거르기 · 탭) 이전 응답을 붙든다 — 그리던 목록이 skeleton 으로 비었다 차지 않게 (APP-1212).
+    // 거르기가 다른 응답인지는 화면이 가린다(옅게 그리고 손을 막는다). 탭만 바뀌면 줄은 화면이 상태로 걸러 쓴다.
+    placeholderData: (previous, previousQuery) =>
+      // 다른 워크스페이스의 응답은 줄도 개수도 남의 것이다.
+      previousQuery?.queryKey[0] === getGetWorkspaceTasksQueryKey(args.workspaceId)[0] ? previous : undefined,
+    refetchOnMount: "always",
+  });
+}
+
+/** 목록의 키와 읽기. 훅과 미리 받기(`prefetchQuery`)가 같은 키 · 같은 읽기를 쓴다 — 갈리면 미리 받은 것이 안 쓰인다. */
+export function taskListQuery({ workspaceId, status, assigneeUserId, projectId, pages }: TaskListArgs) {
   const keyParams: TaskListKeyParams = {
     status,
     ...(assigneeUserId ? { assigneeUserId } : {}),
@@ -56,9 +65,9 @@ export function useTaskListPages({
     pages,
   };
 
-  return useQuery<getWorkspaceTasksResponse>({
+  return {
     queryKey: [...getGetWorkspaceTasksQueryKey(workspaceId), keyParams],
-    queryFn: async ({ signal }): Promise<getWorkspaceTasksResponse> => {
+    queryFn: async ({ signal }: { signal: AbortSignal }): Promise<getWorkspaceTasksResponse> => {
       const merged: WorkspaceTaskListResponseDataTasksItem[] = [];
       let last: getWorkspaceTasksResponse | undefined;
       for (let page = 0; page < pages; page += 1) {
@@ -115,19 +124,5 @@ export function useTaskListPages({
         data: { success: true, error: null, data },
       };
     },
-    // 쪽 수가 바뀌면 키가 바뀐다. 같은 거르기 안에서는 이전 목록을 붙들어 「더 보기」마다 목록이 비었다 차지 않게 한다. 탭만
-    // 바뀐 경우에는 개수(상태를 뺀 거르기 값)만 쓰도록 이전 응답을 주고, 줄은 화면이 상태로 걸러 쓴다.
-    placeholderData: (previous, previousQuery) => {
-      const before = previousQuery?.queryKey[1] as TaskListKeyParams | undefined;
-      // 다른 워크스페이스의 응답은 줄도 개수도 남의 것이다.
-      return before &&
-        previousQuery?.queryKey[0] === getGetWorkspaceTasksQueryKey(workspaceId)[0] &&
-        before.assigneeUserId === assigneeUserId &&
-        before.projectId === projectId
-        ? previous
-        : undefined;
-    },
-    refetchOnMount: "always",
-  });
+  };
 }
-
