@@ -13,6 +13,7 @@ import { okData } from "@/lib/api/ok-data";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import {
   getGetMeetingReviewQueryKey,
+  getGetMeetingReviewQueryOptions,
   getGetMeetingReviewSummaryQueryKey,
   useCreateMeetingReviewItem,
   useUpdateMeetingReviewItem,
@@ -145,9 +146,14 @@ export function useReviewEditor(noteId: string) {
         });
       } else if (errorCodeOf(error) === CONFLICT) {
         // 새 항목에는 안내를 그릴 줄이 없다. 쓴 내용은 폼에 남으니 토스트로 알린다.
-        if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
-        else setConflictItemId(target);
-        await queryClient.refetchQueries({ queryKey });
+        try {
+          // 저장 중 비활성화한 쿼리도 직접 읽고, 새 판이 도착할 때까지 잠금을 유지한다.
+          await queryClient.fetchQuery({ ...getGetMeetingReviewQueryOptions(noteId), staleTime: 0 });
+          if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
+          else setConflictItemId(target);
+        } catch {
+          toast.error("최신 검토본을 불러오지 못했습니다. 다시 시도해 주세요.");
+        }
         // 그 사이 다른 사람이 주제 안에 항목을 더했으면 요약 members 도 달라졌다. 기다리지 않고 같이 읽는다.
         void queryClient.refetchQueries({
           queryKey: getGetMeetingReviewSummaryQueryKey(noteId),

@@ -51,6 +51,7 @@ import {
 } from "@/lib/api/generated/meeting-review/meeting-review";
 import {
   getGetProjectMeetingLinksQueryKey,
+  getGetProjectTasksQueryKey,
   useGetProjectMeetingLinks,
   useGetProjectTasks,
 } from "@/lib/api/generated/projects/projects";
@@ -195,7 +196,7 @@ export function ReviewBoard({
   );
   const linksData = okData(linksQuery.data);
   const tasksQuery = useGetProjectTasks(workspaceId ?? "", projectId ?? "", {
-    query: { enabled: Boolean(workspaceId && projectId) },
+    query: { enabled: Boolean(workspaceId && projectId), staleTime: 0, refetchOnMount: "always" },
   });
   // 거절 까닭은 확정 줄과 확인창에 남기므로 전역 토스트를 끈다(두 번 뜨지 않게).
   const approve = useApproveMeetingReview({
@@ -229,6 +230,11 @@ export function ReviewBoard({
             queryKey: getGetProjectMeetingLinksQueryKey(projectId, { noteId }),
           })
         : Promise.resolve(),
+      projectId && workspaceId
+        ? queryClient.invalidateQueries({
+            queryKey: getGetProjectTasksQueryKey(workspaceId, projectId),
+          })
+        : Promise.resolve(),
     ]).then(() => {
       if (active) setLoadedFlowSignature(flowSignature);
     });
@@ -241,6 +247,7 @@ export function ReviewBoard({
     editor.busyItemId,
     noteId,
     projectId,
+    workspaceId,
     queryClient,
   ]);
 
@@ -327,6 +334,10 @@ export function ReviewBoard({
 
   const confirmSummary = confirmSummaryOf(items);
   const taskConflicts = taskApplyConflictsOf(items, (id) => tasksById.get(id)?.revision);
+  const checkingTaskVersion = (change: ReviewItem["taskChanges"][number]) => {
+    const revision = tasksById.get(change.target.itemId)?.revision;
+    return tasksQuery.isFetching && revision !== undefined && revision < (change.draft?.expectedRevision ?? change.target.revision);
+  };
   const gateItems = items.map((item) =>
     isSummaryKind(item.kind)
       ? item
@@ -364,7 +375,7 @@ export function ReviewBoard({
       (item) => item.included && item.taskChanges.length > 0
     ),
     tasks:
-      !workspaceId || !projectId || tasksQuery.isPending
+      !workspaceId || !projectId || tasksQuery.isPending || gateItems.some((item) => item.included && item.taskChanges.some(checkingTaskVersion))
         ? ("pending" as const)
         : // 이미 읽은 할 일이 있으면 재조회가 실패해도 쓴다(APP-1033). 낡았어도 반영은 판 대조가 거절로 걸러내고,
           // 막으면 확정 막대가 재시도가 성공할 때까지 「불러오지 못했다」로 막힌다.
@@ -501,7 +512,7 @@ export function ReviewBoard({
               duplicate={taskConflicts.duplicates.has(change.target.itemId)}
               choice={choiceOf(change.decision)}
               taskState={
-                tasksQuery.isPending ? "pending" : tasks ? "ready" : "failed"
+                tasksQuery.isPending || checkingTaskVersion(change) ? "pending" : tasks ? "ready" : "failed"
               }
               onRetryTask={() => void tasksQuery.refetch()}
               disabled={!editable || saving || !item.included}
