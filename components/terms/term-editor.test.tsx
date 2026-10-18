@@ -121,7 +121,7 @@ describe("TermEditor 여러 개 한 번에", () => {
     const { input } = setup({ terms: [] });
     fireEvent.click(screen.getByRole("button", { name: "예시 넣어 보기" }));
     expect(input).toHaveValue(TERM_EXAMPLE);
-    expect(screen.getByText("새로 3개")).toBeInTheDocument();
+    expect(screen.getByText("새로 4개")).toBeInTheDocument();
   });
 
   it("용어 찾기로 등록한 칩을 거른다", async () => {

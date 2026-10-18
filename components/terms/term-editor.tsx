@@ -19,7 +19,7 @@ import {
 import type { AddManyOutcome } from "@/lib/terms/use-term-dictionary";
 
 /** 처음 열었을 때 칩이 없으면 눌러 넣어 보는 예시. 구분자가 쉼표인 것도 함께 보인다. */
-export const TERM_EXAMPLE = "kubernetes, k8s, 헬름 차트";
+export const TERM_EXAMPLE = "ROAS, CTR, 전환율, 리타겟팅";
 
 /** 미리보기 칩은 이만큼만 그린다 — 엑셀 열을 통째로 붙여 넣어도 입력이 버벅이지 않게. 나머지는 개수로 말한다. */
 const PREVIEW_CHIPS_MAX = 120;
