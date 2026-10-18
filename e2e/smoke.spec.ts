@@ -1882,6 +1882,8 @@ test("clears the note row spinner after the full-view note is closed", async ({
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   const row = page.locator("article", { hasText: "주간 제품 회의" }).first();
+  // 행 메뉴(⋯)는 행에 포인터를 올려야 열린다(APP-1220) — 사람은 먼저 올리고 누르므로 시험도 그렇게 한다.
+  await row.hover();
   await row.getByRole("button", { name: "주간 제품 회의 노트 메뉴" }).click();
   await page.getByRole("menuitem", { name: "전체 화면" }).click();
   await expect(page).toHaveURL(/view=full/);
