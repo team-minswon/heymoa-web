@@ -19,15 +19,23 @@ describe("OnboardingChecklist", () => {
     render(
       <OnboardingChecklist
         workspaceId="W1"
-        model={{ userId: "u1", done: new Set(["project"]), hasMoreNotes: false }}
+        model={{
+          userId: "u1",
+          done: new Set(["project"]),
+          hasMoreNotes: false,
+        }}
       />
     );
 
     expect(screen.getByText("1/3")).toBeInTheDocument();
     expect(screen.queryByText("데스크톱 앱 받기")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /팀원 초대하기\s*선택/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /팀원 초대하기\s*선택/ })
+    ).toBeEnabled();
     expect(screen.getByText("(완료)", { exact: false })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /첫 회의 기록하기/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /첫 회의 기록하기/ })
+    ).toBeEnabled();
   });
 
   // 초대를 안 해도 필수 셋을 마치면 끝난 것으로 보인다
@@ -57,7 +65,9 @@ describe("OnboardingChecklist", () => {
       />
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent("진행 상황을 불러오지 못했습니다");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "진행 상황을 불러오지 못했습니다"
+    );
     expect(screen.queryByText("첫 회의 기록하기")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(retry).toHaveBeenCalled();

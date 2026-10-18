@@ -91,6 +91,23 @@ describe("FeedbackDialog", () => {
   });
 });
 
+describe("useFeedbackAnswers", () => {
+  it("한 곳에서 읽으면 다른 곳의 새 답변 수도 바로 줄어든다", async () => {
+    const { renderHook, act } = await import("@testing-library/react");
+    const { useFeedbackAnswers } =
+      await import("@/components/workspace/use-feedback-answers");
+    window.localStorage.clear();
+    feedbacks = [answered];
+    const sidebar = renderHook(() => useFeedbackAnswers());
+    const dialog = renderHook(() => useFeedbackAnswers());
+    expect(sidebar.result.current.unseen).toBe(1);
+
+    act(() => dialog.result.current.markSeen());
+
+    expect(sidebar.result.current.unseen).toBe(0);
+  });
+});
+
 describe("composeFeedback", () => {
   it("화면은 경로만 싣고 쿼리·회의 내용은 안 싣는다", () => {
     window.history.replaceState({}, "", "/w/1/notes/2?view=full&tab=summary");

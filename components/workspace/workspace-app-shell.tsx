@@ -158,7 +158,10 @@ export function WorkspaceAppShell({
   >(null);
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
   const hasProject = projects.length > 0;
-  const openCreateProject = useCallback(() => setCreateProject("standalone"), []);
+  const openCreateProject = useCallback(
+    () => setCreateProject("standalone"),
+    []
+  );
   const requestNewMeeting = useCallback(() => {
     if (hasProject) {
       setNewMeetingOpen(true);
@@ -194,7 +197,11 @@ export function WorkspaceAppShell({
     const next = new URLSearchParams(searchParams);
     next.delete("newMeeting");
     const query = next.toString();
-    window.history.replaceState(null, "", `${pathname}${query ? `?${query}` : ""}`);
+    window.history.replaceState(
+      null,
+      "",
+      `${pathname}${query ? `?${query}` : ""}`
+    );
   }, [committed, newMeetingProjectId, projects, searchParams, pathname]);
 
   const value = useMemo(
@@ -274,7 +281,10 @@ export function WorkspaceAppShell({
                 covered={isFullNote}
                 onboarding={
                   onboarding && (
-                    <OnboardingChecklist workspaceId={workspaceId} model={onboarding} />
+                    <OnboardingChecklist
+                      workspaceId={workspaceId}
+                      model={onboarding}
+                    />
                   )
                 }
               />

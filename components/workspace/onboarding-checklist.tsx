@@ -249,7 +249,9 @@ export function OnboardingChecklist({
                   {step.label}
                 </span>
                 {step.optional && !isDone ? (
-                  <span className="text-[11px] text-[var(--el-muted)]">선택</span>
+                  <span className="text-[11px] text-[var(--el-muted)]">
+                    선택
+                  </span>
                 ) : null}
                 <span className="sr-only">{isDone ? " (완료)" : ""}</span>
               </>
