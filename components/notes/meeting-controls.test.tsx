@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -194,5 +195,80 @@ describe("MeetingControls", () => {
       })
     );
     expect(notStarted.container.firstChild).toBeNull();
+  });
+});
+
+describe("회의 중지 직후 종료 안내", () => {
+  beforeEach(() => {
+    state.userId = "user-12345";
+    state.activeNoteId = null;
+    window.localStorage.removeItem("heymoa:end-nudge-off");
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  const pause = (rerender: (ui: React.ReactElement) => void) =>
+    rerender(
+      <MeetingControls
+        note={note({ meetingStatus: "PAUSED", activeSessionStartedAt: null })}
+      />
+    );
+
+  it("기록 중에서 중지됨으로 바뀐 순간에 말풍선이 뜨고 종료 버튼이 채워진다", () => {
+    const { rerender } = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
+    expect(screen.queryByTestId("end-nudge")).toBeNull();
+
+    pause(rerender);
+
+    expect(screen.getByTestId("end-nudge")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "나중에" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "지금 종료" })).toBeTruthy();
+  });
+
+  it("열었을 때 이미 중지된 노트에서는 뜨지 않는다", () => {
+    renderControls(
+      note({ meetingStatus: "PAUSED", activeSessionStartedAt: null })
+    );
+    expect(screen.queryByTestId("end-nudge")).toBeNull();
+  });
+
+  it("15초 뒤에 접힌다", () => {
+    const { rerender } = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
+    pause(rerender);
+
+    act(() => void vi.advanceTimersByTime(14_999));
+    expect(screen.getByTestId("end-nudge")).toBeTruthy();
+    act(() => void vi.advanceTimersByTime(1));
+    expect(screen.queryByTestId("end-nudge")).toBeNull();
+  });
+
+  it("「나중에」는 닫기만 하고, 「지금 종료」는 확인창을 연다", () => {
+    const { rerender } = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
+    pause(rerender);
+    fireEvent.click(screen.getByRole("button", { name: "나중에" }));
+    expect(screen.queryByTestId("end-nudge")).toBeNull();
+    expect(screen.queryByTestId("end-dialog")).toBeNull();
+
+    const second = renderControls(
+      note({ meetingStatus: "IN_PROGRESS", noteId: "01K0000000009" })
+    );
+    pause(second.rerender);
+    fireEvent.click(screen.getAllByRole("button", { name: "지금 종료" })[0]);
+    expect(screen.getByTestId("end-dialog")).toBeTruthy();
+  });
+
+  it("「다시 보지 않기」를 누르면 기억해서 다음에는 뜨지 않는다", () => {
+    const first = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
+    pause(first.rerender);
+    fireEvent.click(screen.getByRole("button", { name: "다시 보지 않기" }));
+    expect(window.localStorage.getItem("heymoa:end-nudge-off")).toBe("1");
+    first.unmount();
+
+    const second = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
+    pause(second.rerender);
+    expect(screen.queryByTestId("end-nudge")).toBeNull();
   });
 });

@@ -477,3 +477,24 @@
     animation: none;
   }
 }
+
+/* 회의 중지 직후 「회의 종료」 버튼 둘레가 세 번 번진다. 말풍선 아래 막대는 15초에 걸쳐 줄어든다. */
+@keyframes end-nudge-ring {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes end-nudge-countdown {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}
