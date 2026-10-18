@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
 
+import { helpGroups } from "@/app/(static)/help/_content/groups";
+import { helpPathOf } from "@/app/(static)/help/_content/paths";
+import { helpTopics } from "@/app/(static)/help/_content/topics";
+import { HELP_MODIFIED } from "@/lib/help/dates";
 import { siteConfig } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -24,12 +28,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.6,
     },
-    {
-      url: `${siteConfig.url}/help/desktop`,
-      lastModified,
-      changeFrequency: "monthly",
+    ...helpGroups.map((group) => ({
+      url: `${siteConfig.url}/help/${group.slug}`,
+      lastModified: HELP_MODIFIED,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
+    ...helpTopics.map((topic) => ({
+      url: `${siteConfig.url}${helpPathOf(topic)}`,
+      lastModified: HELP_MODIFIED,
+      changeFrequency: "monthly" as const,
       priority: 0.6,
-    },
+    })),
     {
       url: `${siteConfig.url}/terms`,
       lastModified,

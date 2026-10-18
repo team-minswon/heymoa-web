@@ -13,15 +13,19 @@ const PRODUCTION_URL = "https://heymoa.app";
  * `??` 가 아니라 `||` 입니다. 빈 문자열은 「host-only」 같은 뜻이 없고 그냥 안 준 것이라,
  * 운영 기본값으로 돌려보내야 합니다.
  */
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || PRODUCTION_URL;
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || PRODUCTION_URL;
 
 export const siteConfig = {
   name: "HeyMoa",
   // 랜딩 히어로 · 기능 구간이 하는 말까지만 한다. 「참여형 AI 회의 운영 에이전트」는 지금 제품(받아 적고 정리하고
   // 묻는)과 맞지 않아 내렸다(APP-934). `app/opengraph-image.tsx` 의 한 줄도 이 설명의 앞 문장이다.
-  title: "HeyMoa | 회의를 받아 적고 결정과 할 일을 정리하는 AI 에이전트",
+  // 두 표기(HeyMoa · 헤이모아)가 모두 검색어다 — 제목·설명·본문에 실제로 쓰고, 숨긴 글자로 도배하지 않는다(APP-1236).
+  brandLabel: "HeyMoa(헤이모아)",
+  alternateNames: ["헤이모아", "HeyMoa", "Hey Moa"],
+  title: "HeyMoa(헤이모아) | AI 회의록 · 회의 요약 · 할 일 자동 정리",
   description:
-    "HeyMoa는 회의를 받아 적고 결정과 할 일을 근거와 함께 정리합니다. 사람이 검토한 것만 프로젝트에 쌓이고, 지난 회의는 내 에이전트에게 물어보면 찾아 줍니다.",
+    "헤이모아(HeyMoa)는 회의를 받아 적고 화자를 나눠 결정과 할 일을 근거와 함께 정리하는 AI 회의 에이전트입니다. 검토를 완료해 확정한 항목만 프로젝트에 쌓입니다.",
   // 랩(`env-001.realillust.com` 등)에서 열면 canonical·OG·sitemap 이 전부 운영 주소를
   // 가리켜서, 크롤러에게 랩이 운영의 거울이라고 말하게 됩니다. 기본값은 운영 그대로입니다.
   url: siteUrl,
@@ -36,6 +40,9 @@ export const siteConfig = {
     "헤이모아",
     "헤이 모아",
     "AI 회의",
+    "AI 회의록",
+    "회의록 자동 작성",
+    "회의 요약",
     "AI Agent",
     "회의 기록",
     "액션 아이템",

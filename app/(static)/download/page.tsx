@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "데스크톱 다운로드",
-  description: "HeyMoa 데스크톱 설치와 업데이트 안내",
+  description: "HeyMoa(헤이모아) 데스크톱 앱 설치와 업데이트 안내. Mac·Windows에서 내 목소리와 컴퓨터 소리를 함께 기록합니다.",
   alternates: { canonical: "/download" },
 };
 

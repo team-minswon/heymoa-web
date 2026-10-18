@@ -1,8 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import DesktopHelpPage from "@/app/(static)/help/desktop/page";
-import HelpPage from "@/app/(static)/help/page";
 import PrivacyPage from "@/app/(static)/privacy/page";
 import TermsPage from "@/app/(static)/terms/page";
 
@@ -52,49 +50,5 @@ describe("HeyMoa legal pages", () => {
     ).toHaveLength(2);
     // 도움말이 같은 틀을 쓰면서 문구를 바꿀 수 있게 됐다 — 약관은 기본값 그대로다
     expect(screen.getByText("시행일", { exact: false })).toBeVisible();
-  });
-
-  // 제품 화면이 `/help#id`로 그 항목에 바로 온다(APP-1024). id를 바꾸면 그 링크가 소리 없이 깨진다.
-  it("keeps the help anchors that product screens link to", () => {
-    const { container } = render(<HelpPage />);
-
-    expect(
-      screen.getByRole("heading", { name: "HeyMoa 사용법", level: 1 })
-    ).toBeInTheDocument();
-    for (const id of [
-      "start",
-      "recording",
-      "desktop",
-      "speakers",
-      "context",
-      "summary",
-      "tasks",
-      "integrations",
-      "agents",
-      "feedback",
-      "trouble",
-    ]) {
-      expect(container.querySelector(`section#${id}`), id).not.toBeNull();
-      expect(
-        container.querySelector(`nav a[href="#${id}"]`),
-        `목차 #${id}`
-      ).not.toBeNull();
-    }
-    expect(screen.getByText("최종 수정일", { exact: false })).toBeVisible();
-  });
-
-  // 데스크톱 가이드는 도움말 「데스크톱 앱」 항목과 다운로드 페이지에서 온다(APP-1026)
-  it("links the desktop guide from the help page", () => {
-    const { container } = render(<HelpPage />);
-
-    expect(
-      container.querySelector('section#desktop a[href="/help/desktop"]')
-    ).not.toBeNull();
-    cleanup();
-
-    render(<DesktopHelpPage />);
-    expect(
-      screen.getByRole("heading", { name: "데스크톱 앱 사용법", level: 1 })
-    ).toBeInTheDocument();
   });
 });

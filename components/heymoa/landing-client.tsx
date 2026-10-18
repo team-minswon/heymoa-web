@@ -1,3 +1,6 @@
+import { QA } from "@/components/heymoa/landing/faq";
+import { textOf } from "@/lib/help/text";
+import { JsonLd } from "@/components/help/json-ld";
 import { Landing } from "@/components/heymoa/landing/landing";
 import { siteConfig } from "@/lib/site";
 
@@ -14,11 +17,11 @@ const FEATURE_LIST = [
   "Claude Code · Codex 같은 외부 에이전트 연결",
 ];
 
-const jsonLd = {
+const softwareLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: siteConfig.name,
-  alternateName: ["heymoa", "Hey Moa", "hey moa", "헤이모아", "헤이 모아"],
+  alternateName: [...siteConfig.alternateNames, "heymoa", "헤이 모아"],
   applicationCategory: "BusinessApplication",
   // 데스크톱 앱(`app/(static)/download/page.tsx` — macOS DMG · Windows EXE)도 받을 수 있다(FAQ 01).
   operatingSystem: "Web, macOS, Windows",
@@ -28,16 +31,51 @@ const jsonLd = {
   inLanguage: "ko-KR",
 };
 
+/** 사이트와 운영 주체. 이름은 두 표기(HeyMoa · 헤이모아)를 모두 싣는다. */
+const siteLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${siteConfig.url}/#organization`,
+      name: siteConfig.name,
+      alternateName: [...siteConfig.alternateNames],
+      url: siteConfig.url,
+      logo: `${siteConfig.url}/android-chrome-192x192.png`,
+      email: siteConfig.contactEmail,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${siteConfig.url}/#website`,
+      name: siteConfig.name,
+      alternateName: [...siteConfig.alternateNames],
+      url: siteConfig.url,
+      inLanguage: "ko-KR",
+      publisher: { "@id": `${siteConfig.url}/#organization` },
+    },
+  ],
+};
+
+/** 화면의 「자주 묻는 것」과 같은 질문·답이다(`landing/faq.tsx` 의 `QA`). 본문에 없는 말은 싣지 않는다. */
+const faqLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: QA.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: textOf(a) },
+  })),
+};
+
 /**
  * 랜딩. 서버 컴포넌트로 두고, 움직이는 조각(히어로 시연 · 리빌 · 흐르는 띠 · 시작 버튼)만 클라이언트다.
  */
 export function LandingClient() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={softwareLd} />
+      <JsonLd data={siteLd} />
+      <JsonLd data={faqLd} />
       <Landing />
     </>
   );

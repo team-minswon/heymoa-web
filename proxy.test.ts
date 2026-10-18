@@ -42,6 +42,18 @@ describe("proxy matcher", () => {
     ).toBe(false);
   });
 
+  // 가이드의 정적 자산과 공유 카드는 프록시를 거치지 않는다(APP-1236)
+  it.each([
+    "/help/clips/new-meeting.mp4",
+    "/help/clips/new-meeting.webm",
+    "/help/recording/dock.webp",
+    "/help/search-index.json",
+    "/help/recording/opengraph-image-1a2b3c",
+    "/opengraph-image",
+  ])("skips static guide assets: %s", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
+  });
+
   it("keeps normal document requests matched", () => {
     expect(
       unstable_doesMiddlewareMatch({

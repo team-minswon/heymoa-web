@@ -11,7 +11,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "개인정보 처리방침",
-  description: `${siteConfig.name}의 계정, 회의 음성, 스크립트 데이터와 서비스 이용 기록 처리에 관한 안내입니다.`,
+  description: `${siteConfig.brandLabel}의 계정, 회의 음성, 스크립트 데이터와 서비스 이용 기록 처리에 관한 안내입니다.`,
   alternates: { canonical: "/privacy" },
 };
 

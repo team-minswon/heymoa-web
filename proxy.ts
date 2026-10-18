@@ -170,6 +170,9 @@ export async function proxy(request: NextRequest) {
  * 하는 prerender는 애초에 끌 수도 없다. 막아야 하는 것은 prefetch가 아니라 **투기적 요청이
  * 상태를 바꾸는 것**이다.
  *
+ * 가이드의 정적 자산(영상 `.mp4`·`.webm`, 검색 색인 `.json`)과 공유 카드(`opengraph-image`)도 뺀다 — 인증과 상관없는 정적
+ * 응답이 요청마다 프록시 실행량을 쓰지 않게(APP-1236). 데이터 응답용 `.json` 라우트를 새로 만들 때는 여기에 걸리는지 본다.
+ *
  * 목록을 상수로 빼지 않는다 — Next는 `config`를 정적으로 읽으므로 변수 참조를 쓰면
  * "Invalid segment configuration export"로 빌드가 깨진다.
  */
@@ -177,7 +180,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|webmanifest|woff2|ttf)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|.*opengraph-image|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|json|webmanifest|woff2|ttf|mp4|webm)$).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "next-router-segment-prefetch" },

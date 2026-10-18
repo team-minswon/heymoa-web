@@ -83,8 +83,8 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
                 </span>
               </Link>
               <p className="m-0 mt-3 max-w-[300px] text-[15px] leading-[1.7] text-balance break-keep text-[var(--tv-body)]">
-                회의를 받아 적고, 결정과 할 일을 근거와 함께 정리하는 AI
-                에이전트
+                헤이모아(HeyMoa)는 회의를 받아 적고, 결정과 할 일을 근거와 함께 정리하는
+                AI 에이전트입니다
               </p>
             </div>
 

@@ -7,7 +7,7 @@ import { siteConfig } from "@/lib/site";
 
 /** 상단 바 · 푸터 · 파비콘과 같은 앵무새 마크. 요청과 상관없는 값이라 모듈에서 한 번만 읽는다(Node 런타임). */
 const LOGO = `data:image/png;base64,${await readFile(join(process.cwd(), "public/apple-touch-icon.png"), "base64")}`;
-export const alt = `${siteConfig.name} — 회의에서 받아 적던 손, 이제 쉬어도 됩니다`;
+export const alt = `${siteConfig.brandLabel} — 회의에서 받아 적던 손, 이제 쉬어도 됩니다`;
 export const size = {
   width: 1200,
   height: 630,
@@ -63,7 +63,7 @@ export default function Image() {
           }}
         >
           <img src={LOGO} alt="" width={52} height={52} style={{ borderRadius: 999 }} />
-          {siteConfig.name}
+          {siteConfig.name} · 헤이모아
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>

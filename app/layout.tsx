@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   applicationName: siteConfig.name,
   title: {
     default: siteConfig.title,
-    template: `%s | ${siteConfig.name}`,
+    template: `%s | ${siteConfig.brandLabel}`,
   },
   description: siteConfig.description,
   keywords: [...siteConfig.keywords],
@@ -54,18 +54,26 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
   alternates: {
     canonical: "/",
+    languages: { ko: "/", "x-default": "/" },
+  },
+  // 검색엔진 소유 확인 메타 태그 자리. 값은 환경 변수로만 넣고, 없으면 태그를 그리지 않는다(등록은 운영자가 한다).
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION
+      ? { "naver-site-verification": process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION }
+      : undefined,
   },
   openGraph: {
     type: "website",
     locale: "ko_KR",
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: siteConfig.name,
+    title: siteConfig.brandLabel,
     description: siteConfig.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: siteConfig.name,
+    title: siteConfig.brandLabel,
     description: siteConfig.description,
   },
   robots: robotsDirective,

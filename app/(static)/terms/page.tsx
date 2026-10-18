@@ -10,7 +10,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "이용약관",
-  description: `${siteConfig.name}의 계정, 워크스페이스, 실시간 회의 스크립트와 저장된 노트 이용 조건에 관한 안내입니다.`,
+  description: `${siteConfig.brandLabel}의 계정, 워크스페이스, 실시간 회의 스크립트와 저장된 노트 이용 조건에 관한 안내입니다.`,
   alternates: { canonical: "/terms" },
 };
 

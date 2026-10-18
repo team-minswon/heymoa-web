@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   turbopack: { root: path.join(__dirname) },
   // 외부 에이전트 동의 화면(APP-888)을 다른 사이트가 프레임에 띄워 허락을 누르게 하지 못하게 한다.
   // `X-Frame-Options` 는 `frame-ancestors` 를 모르는 브라우저용이다. 사이트 전체는 따로 정한다.
+  // 사용 가이드를 주제별 주소(`/help/<그룹>/<페이지>`)로 나누기 전에 있던 `/help/desktop` 이 검색엔진과 외부 링크에 남아 있다.
+  // 영구 이동이라 순위가 새 주소로 옮겨 가고, `#first-run` 같은 해시는 브라우저가 그대로 이어 준다(APP-1231).
+  async redirects() {
+    return [{ source: "/help/desktop", destination: "/help/start/desktop", permanent: true }];
+  },
   async headers() {
     return [
       {

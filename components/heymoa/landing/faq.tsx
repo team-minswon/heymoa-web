@@ -144,7 +144,7 @@ function ExcludedSample() {
   );
 }
 
-const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
+export const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
   {
     // 웹 · 데스크톱을 나란히 말하는 곳은 여기다(회의 앱 띠 리드는 데스크톱 앱 한 줄과 링크만). 전의 「설치해야
     // 하나요?」 → 「브라우저에서 바로」는 데스크톱 앱이 있는데 설치가 없는 것처럼 읽혔다. 웹과 데스크톱을
