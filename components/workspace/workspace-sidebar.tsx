@@ -418,7 +418,10 @@ export function WorkspaceSidebar({
                                 />
                               )
                             }
-                            isActive={selectedProjectId === project.projectId}
+                            isActive={
+                              !onTasks &&
+                              selectedProjectId === project.projectId
+                            }
                             onClick={
                               onNotes
                                 ? () => onSelectProject(project.projectId)
