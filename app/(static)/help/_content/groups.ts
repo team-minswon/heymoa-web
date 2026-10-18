@@ -29,7 +29,7 @@ export const helpGroups: readonly HelpGroup[] = [
   {
     slug: "connect",
     title: "연결",
-    summary: "Linear·GitHub를 잇고, 외부 AI 앱(MCP)에서 내 회의를 읽게 해요.",
+    summary: "Linear, GitHub 같은 외부 도구를 잇고, 외부 AI 앱(MCP)에서 내 회의를 읽게 해요.",
     axis: "feature",
   },
   {

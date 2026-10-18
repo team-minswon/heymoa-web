@@ -73,7 +73,7 @@ order: 2
 > [!되돌릴 수 없어요]
 > 회의 결과 메일은 워크스페이스 멤버에게만 보낼 수 있어요. ==보낸 메일은 거둘 수 없어요.== 하루에 보낼 수 있는 횟수도 정해져 있어요.
 
-Linear 이슈 만들기와 고치기, GitHub 이슈 만들기는 연동을 해 둔 워크스페이스에서만 돼요. 연결 방법은 [Linear · GitHub 연동](help:integrations)에 있어요.
+Linear 이슈 만들기와 고치기, GitHub 이슈 만들기는 연동을 해 둔 워크스페이스에서만 돼요. 연결 방법은 [외부 도구 연동](help:integrations)에 있어요.
 
 ## 답이 안 올 때 {#errors}
 
@@ -108,6 +108,6 @@ Linear 이슈 만들기와 고치기, GitHub 이슈 만들기는 연동을 해 �
 
 ## 관련 페이지 {#related}
 
-- [Linear · GitHub 연동](help:integrations) — 이슈 만들기를 쓰려면 필요한 연결
+- [외부 도구 연동](help:integrations) — 이슈 만들기를 쓰려면 필요한 연결
 - [지난 결정이 뭐였는지 찾고 싶어요](help:find-decisions) — 에이전트로 결정 찾는 순서
 - [할 일](help:tasks) — 에이전트가 만든 할 일 확인

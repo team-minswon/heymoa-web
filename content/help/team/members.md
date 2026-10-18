@@ -75,4 +75,4 @@ order: 3
 
 - [동료를 초대해 같이 쓰고 싶어요](help:invite-team) — 초대부터 첫 회의까지 순서
 - [참석자와 화자](help:speakers) — 임시 참여자를 회의에 올리는 방법
-- [Linear · GitHub 연동](help:integrations) — 멤버를 내보낼 때 풀리는 연결
+- [외부 도구 연동](help:integrations) — 멤버를 내보낼 때 풀리는 연결

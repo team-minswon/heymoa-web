@@ -40,5 +40,5 @@ order: 11
 ## 관련 기능 페이지 {#related}
 
 - [AI 앱 연결(MCP)](help:agent-mcp) — 읽을 수 있는 것과 만료
-- [Linear · GitHub 연동](help:integrations) — 이슈 도구 연결은 달라요
+- [외부 도구 연동](help:integrations) — 이슈 도구 연결은 달라요
 - [내 데이터는 어디에 어떻게 저장되나요](help:data-privacy) — 외부 앱에 열리는 범위

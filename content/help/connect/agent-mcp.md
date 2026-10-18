@@ -74,4 +74,4 @@ MCP(AI 앱이 외부 서비스의 자료를 읽는 표준 방식)로 Claude, Cha
 ## 관련 페이지 {#related}
 
 - [외부 AI 앱에서 HeyMoa를 쓰고 싶어요](help:use-mcp) — 앱별 연결 순서
-- [Linear · GitHub 연동](help:integrations) — 이슈 서비스 연결
+- [외부 도구 연동](help:integrations) — 이슈 서비스 연결
