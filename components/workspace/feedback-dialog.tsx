@@ -177,7 +177,10 @@ export function FeedbackDialog({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="send" className="mt-4 flex flex-col gap-4">
+          <TabsContent
+            value="send"
+            className="mt-4 flex h-[380px] flex-none flex-col gap-4"
+          >
             <div
               role="radiogroup"
               aria-label="분류"
@@ -239,7 +242,7 @@ export function FeedbackDialog({
               않아요.
             </p>
 
-            <DialogFooter>
+            <DialogFooter className="mt-auto">
               <Button
                 type="button"
                 variant="ghost"
@@ -258,7 +261,7 @@ export function FeedbackDialog({
             </DialogFooter>
           </TabsContent>
 
-          <TabsContent value="mine" className="mt-4">
+          <TabsContent value="mine" className="mt-4 h-[380px] flex-none">
             <MyFeedbacks feedbacks={feedbacks} />
           </TabsContent>
         </Tabs>
@@ -270,13 +273,13 @@ export function FeedbackDialog({
 function MyFeedbacks({ feedbacks }: { feedbacks: FeedbackResponseData[] }) {
   if (feedbacks.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-[var(--el-muted)]">
+      <p className="flex h-full items-center justify-center text-sm text-[var(--el-muted)]">
         아직 보낸 문의가 없어요.
       </p>
     );
   }
   return (
-    <ul className="flex max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
+    <ul className="flex h-full flex-col gap-3 overflow-y-auto pr-1">
       {feedbacks.map((item) => (
         <li
           key={item.feedbackId}
