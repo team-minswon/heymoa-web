@@ -779,7 +779,7 @@ export function NoteTimeline({
             return (
               <section key={key} id={groupId(key)} className="mt-7 scroll-mt-4">
                 {group.agenda ? (
-                  <h3 className="-mx-2 flex h-[30px] w-[calc(100%+16px)] items-center gap-0.5">
+                  <h3 className="-mx-2 grid w-[calc(100%+16px)] grid-cols-[auto_minmax(0,1fr)] items-center gap-0.5 sm:flex sm:h-[30px]">
                     {/* **안건도 근거로 갈 수 있어야 한다.** 머리는 접는 손잡이라, 안건의 첫 발화로
                         가는 길은 시간 구간이 진다 — 항목의 시각 열과 같은 약속이다. */}
                     {group.agenda.citation ? (
@@ -789,7 +789,7 @@ export function NoteTimeline({
                         onClick={() =>
                           onEvidenceSelect(group.agenda!.citation!.segmentId)
                         }
-                        className="h-full shrink-0 rounded-[7px] px-2 text-[12px] tabular-nums text-[var(--el-muted-soft)] transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
+                        className="h-[30px] shrink-0 rounded-[7px] px-2 text-[12px] tabular-nums text-[var(--el-muted-soft)] transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
                       >
                         {groupRange(group, recording)}
                       </button>
@@ -800,7 +800,7 @@ export function NoteTimeline({
                       aria-controls={listId}
                       onClick={() => toggle("flipped", key)}
                       className={cn(
-                        "flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-[7px] pr-2 text-left transition-colors hover:bg-[var(--el-canvas-soft)]",
+                        "flex h-[30px] min-w-0 flex-1 items-center gap-2.5 rounded-[7px] pr-2 text-left transition-colors hover:bg-[var(--el-canvas-soft)]",
                         group.agenda.citation ? "pl-1" : "pl-2"
                       )}
                     >
@@ -839,7 +839,10 @@ export function NoteTimeline({
                         type="button"
                         aria-label={`앞선 ${group.agenda.title} 논의${group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}로 가기`}
                         onClick={() => jumpToGroup(group.previous!.key)}
-                        className="h-full shrink-0 rounded-[7px] px-2 text-xs text-[var(--el-muted)] underline decoration-[var(--el-hairline-strong)] underline-offset-2 hover:text-[var(--el-ink)]"
+                        className={cn(
+                          "h-[26px] shrink-0 justify-self-start rounded-[7px] px-2 text-xs text-[var(--el-muted)] underline decoration-[var(--el-hairline-strong)] underline-offset-2 hover:text-[var(--el-ink)] sm:h-full",
+                          group.agenda.citation ? "col-start-2" : "col-start-1"
+                        )}
                       >
                         앞선 논의{group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}
                       </button>
