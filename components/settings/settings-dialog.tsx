@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   Bot,
   Building2,
@@ -121,10 +122,18 @@ function SettingsSections({
                 <Button
                   key={key}
                   type="button"
-                  variant={section === key ? "secondary" : "ghost"}
+                  variant="ghost"
                   disabled={locked && section !== key}
                   onClick={() => setSection(key)}
-                  className="h-10 justify-start gap-2.5 rounded-block px-3"
+                  aria-current={section === key ? "page" : undefined}
+                  // 선택은 같은 회색의 진한 쪽, 호버는 그 절반 농도다. 예전에는 선택(secondary)이 호버(muted)보다 오히려
+                  // 밝아서 올려 둔 항목이 선택된 항목처럼 보였다.
+                  className={cn(
+                    "h-10 justify-start gap-2.5 rounded-block px-3",
+                    section === key
+                      ? "bg-[var(--el-surface-strong)] font-medium hover:bg-[var(--el-surface-strong)]"
+                      : "hover:bg-[var(--el-surface-strong)]/55"
+                  )}
                 >
                   <Icon />
                   {label}
