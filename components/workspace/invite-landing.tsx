@@ -16,19 +16,23 @@ import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
 const ERROR_COPY: Record<string, { title: string; description: string }> = {
   INVITATION_NOT_FOUND: {
     title: "유효하지 않은 초대 링크입니다",
-    description: "링크가 잘못되었거나 삭제된 초대입니다. 초대 메일의 링크를 다시 확인해 주세요.",
+    description:
+      "링크가 잘못되었거나 삭제된 초대입니다. 초대 메일의 링크를 다시 확인해 주세요.",
   },
   INVITATION_EXPIRED: {
     title: "초대가 만료되었습니다",
-    description: "초대 링크는 1일 동안만 유효합니다. 워크스페이스 관리자에게 다시 초대를 요청해 주세요.",
+    description:
+      "초대 링크는 1일 동안만 유효합니다. 워크스페이스 관리자에게 다시 초대를 요청해 주세요.",
   },
   INVITATION_NOT_PENDING: {
     title: "이미 처리된 초대입니다",
-    description: "이 초대는 이미 수락되었거나 취소되었습니다. 관리자에게 새 초대를 요청해 주세요.",
+    description:
+      "이 초대는 이미 수락되었거나 취소되었습니다. 관리자에게 새 초대를 요청해 주세요.",
   },
   INVITATION_EMAIL_MISMATCH: {
     title: "이 초대는 다른 이메일 계정용입니다",
-    description: "초대받은 이메일과 지금 로그인한 계정이 다릅니다. 초대받은 계정으로 다시 로그인해 주세요.",
+    description:
+      "초대받은 이메일과 지금 로그인한 계정이 다릅니다. 초대받은 계정으로 다시 로그인해 주세요.",
   },
 };
 
@@ -106,7 +110,9 @@ function InviteCard({
           로그인하면 초대를 수락하고 바로 워크스페이스에 합류합니다.
         </p>
         <a
-          href={buildGoogleOAuthUrl(`/invite?token=${encodeURIComponent(token)}`)}
+          href={buildGoogleOAuthUrl(
+            `/invite?token=${encodeURIComponent(token)}`
+          )}
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
         >
           <LogIn className="size-4" aria-hidden />
@@ -142,7 +148,8 @@ function InviteCard({
       <ErrorCard
         title={copy?.title ?? "초대를 수락하지 못했습니다"}
         description={
-          copy?.description ?? errorMessageOf(error, "잠시 후 다시 시도해 주세요.")
+          copy?.description ??
+          errorMessageOf(error, "잠시 후 다시 시도해 주세요.")
         }
       />
     );
@@ -161,7 +168,13 @@ function InviteCard({
   );
 }
 
-function ErrorCard({ title, description }: { title: string; description: string }) {
+function ErrorCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <CenteredCard icon={<AlertTriangle className="size-5" aria-hidden />}>
       <h1 className="text-2xl font-light tracking-[-0.01em]">{title}</h1>

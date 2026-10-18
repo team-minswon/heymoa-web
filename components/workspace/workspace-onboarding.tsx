@@ -39,7 +39,10 @@ export function WorkspaceOnboarding({
         { title: "기록하고 요약 확인", detail: "종료하면 자동으로 정리됩니다" },
       ]
     : [
-        { title: "회의 만들기", detail: "이름을 지어 두면 나중에 찾기 쉽습니다" },
+        {
+          title: "회의 만들기",
+          detail: "이름을 지어 두면 나중에 찾기 쉽습니다",
+        },
         { title: "기록 시작", detail: "마이크 권한이 필요합니다" },
         { title: "요약 확인", detail: "종료하면 자동으로 정리됩니다" },
       ];

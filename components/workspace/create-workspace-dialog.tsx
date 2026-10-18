@@ -136,7 +136,11 @@ export function CreateWorkspaceDialog({
             >
               취소
             </Button>
-            <Button type="submit" loading={createWorkspace.isPending} disabled={createWorkspace.isPending}>
+            <Button
+              type="submit"
+              loading={createWorkspace.isPending}
+              disabled={createWorkspace.isPending}
+            >
               만들기
             </Button>
           </DialogFooter>

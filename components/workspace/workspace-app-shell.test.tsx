@@ -7,7 +7,15 @@ import {
   within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 
@@ -178,7 +186,8 @@ describe("WorkspaceAppShell", () => {
       within(screen.getByRole("main")).getAllByText("할 일").length
     ).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "모든 노트" })).toHaveAttribute(
-      "href", "/w/01K0000000000"
+      "href",
+      "/w/01K0000000000"
     );
     expect(navState.push).not.toHaveBeenCalled();
   });
@@ -289,7 +298,10 @@ describe("WorkspaceAppShell", () => {
     navState.params = new URLSearchParams("view=full");
     rerender(
       <QueryClientProvider client={new QueryClient()}>
-        <WorkspaceAppShell workspaceId="01K0000000000" activeNoteId="01K0000000002">
+        <WorkspaceAppShell
+          workspaceId="01K0000000000"
+          activeNoteId="01K0000000002"
+        >
           <p>노트 목록</p>
         </WorkspaceAppShell>
       </QueryClientProvider>

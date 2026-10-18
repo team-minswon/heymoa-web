@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,9 +22,7 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", async () => {
   const { useMutation } = await import("@tanstack/react-query");
   return {
     getGetWorkspacesQueryKey: () => ["/v1/workspaces"],
-    useCreateWorkspace: (options?: {
-      mutation?: Record<string, unknown>;
-    }) =>
+    useCreateWorkspace: (options?: { mutation?: Record<string, unknown> }) =>
       useMutation({
         mutationFn: (variables: unknown) => mutation.mutateAsync(variables),
         ...options?.mutation,

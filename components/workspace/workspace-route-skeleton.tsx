@@ -51,37 +51,37 @@ export function WorkspaceRouteSkeleton() {
       </aside>
       <main className="min-w-0 flex-1 p-2.5">
         <div className="min-h-full overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-e2">
-        {/* 상단바 56과 같은 높이여야 로딩이 끝날 때 본문이 안 밀린다 (design.pen Top Bar). */}
-        <div className="flex h-14 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
-          <Skeleton className="h-5 w-28 rounded-chip" />
-        </div>
-        {/* 폭·padding은 `workspace-page.tsx`의 섹션과 같아야 한다 — 다르면 로딩이 끝나는
+          {/* 상단바 56과 같은 높이여야 로딩이 끝날 때 본문이 안 밀린다 (design.pen Top Bar). */}
+          <div className="flex h-14 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
+            <Skeleton className="h-5 w-28 rounded-chip" />
+          </div>
+          {/* 폭·padding은 `workspace-page.tsx`의 섹션과 같아야 한다 — 다르면 로딩이 끝나는
           순간 콘텐츠 폭이 튄다. 실제로 1440과 896으로 갈려 있었다. */}
-        <section className="mx-auto w-full max-w-4xl px-5 pt-8 pb-16 sm:px-8 sm:pt-11">
-          {/* 제목 34 세리프 + 서브타이틀. 키커는 없다(FORM SPEC).
+          <section className="mx-auto w-full max-w-4xl px-5 pt-8 pb-16 sm:px-8 sm:pt-11">
+            {/* 제목 34 세리프 + 서브타이틀. 키커는 없다(FORM SPEC).
               **hairline은 헤더가 갖는다** — 시작자 필터를 걷은 뒤로 이 자리에 칩이 없다.
               칩 둘을 계속 그리고 있어서 로딩이 끝나면 40px씩 사라졌다. */}
-          {/* `mb-4` + 아래 날짜 머리글의 `mt-5`가 실제 화면의 `mb-4` + `pt-5`와 같다. */}
-          <div className="mb-4 border-b border-[var(--el-hairline)] pb-6">
-            <Skeleton className="h-9 w-56 max-w-full rounded-chip" />
-            <Skeleton className="mt-3 h-4 w-80 max-w-full rounded-chip" />
-          </div>
-          {/* 날짜 헤더 + 목록 행 52 (행 사이 hairline) */}
-          {[3, 2].map((rows, group) => (
-            <div key={group}>
-              <Skeleton className="mt-5 mb-2 ml-3 h-3 w-36 rounded-chip" />
-              <div>
-                {Array.from({ length: rows }, (_, row) => (
-                  // 실제 행(note-list-row)이 두 줄 h-16이다.
-                  <div key={row} className="flex h-16 items-center gap-3.5">
-                    <Skeleton className="size-5 shrink-0 rounded-chip" />
-                    <Skeleton className="h-4 w-1/3 rounded-chip" />
-                  </div>
-                ))}
-              </div>
+            {/* `mb-4` + 아래 날짜 머리글의 `mt-5`가 실제 화면의 `mb-4` + `pt-5`와 같다. */}
+            <div className="mb-4 border-b border-[var(--el-hairline)] pb-6">
+              <Skeleton className="h-9 w-56 max-w-full rounded-chip" />
+              <Skeleton className="mt-3 h-4 w-80 max-w-full rounded-chip" />
             </div>
-          ))}
-        </section>
+            {/* 날짜 헤더 + 목록 행 52 (행 사이 hairline) */}
+            {[3, 2].map((rows, group) => (
+              <div key={group}>
+                <Skeleton className="mt-5 mb-2 ml-3 h-3 w-36 rounded-chip" />
+                <div>
+                  {Array.from({ length: rows }, (_, row) => (
+                    // 실제 행(note-list-row)이 두 줄 h-16이다.
+                    <div key={row} className="flex h-16 items-center gap-3.5">
+                      <Skeleton className="size-5 shrink-0 rounded-chip" />
+                      <Skeleton className="h-4 w-1/3 rounded-chip" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
         </div>
       </main>
     </div>

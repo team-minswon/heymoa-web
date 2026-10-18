@@ -48,7 +48,11 @@ vi.mock(
 );
 
 function envelopeError(code: string, message: string) {
-  return { success: false, data: null, error: { code, message, details: null } };
+  return {
+    success: false,
+    data: null,
+    error: { code, message, details: null },
+  };
 }
 
 function renderLanding(token: string | null) {
@@ -109,7 +113,10 @@ describe("InviteLanding", () => {
   });
 
   it("만료된 초대는 재초대 안내를 보여준다", async () => {
-    state.mutationError = envelopeError("INVITATION_EXPIRED", "만료된 초대입니다.");
+    state.mutationError = envelopeError(
+      "INVITATION_EXPIRED",
+      "만료된 초대입니다."
+    );
 
     renderLanding("abc123");
 
