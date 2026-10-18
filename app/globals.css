@@ -473,6 +473,9 @@
     0 1px 2px rgb(12 10 9 / 0.06), 0 8px 24px -12px rgb(12 10 9 / 0.18);
   --help-shadow-hover:
     0 2px 4px rgb(12 10 9 / 0.08), 0 12px 28px -12px rgb(12 10 9 / 0.28);
+  /* 본문의 핵심 문구 형광펜(`<Key>`). 주황 계열 토큰(`--el-warning-strong`)의 30% 틴트 — 색을 바꾸려면 여기 한 곳이다. */
+  --help-key: color-mix(in srgb, var(--el-warning-strong) 30%, transparent);
+  --help-sweep: 600ms;
   --help-shadow-lift: 0 10px 24px -14px rgb(12 10 9 / 0.32);
 }
 
@@ -530,6 +533,31 @@
   [data-arrived] {
     animation: help-arrive 1200ms var(--help-ease);
   }
+
+  /* 형광펜: 화면 아래에 있던 것만 JS 가 0 으로 접어 두었다가 들어오면 왼쪽에서 오른쪽으로 한 번 칠한다. */
+  .help-key[data-key="pending"] {
+    background-size: 0 58%;
+  }
+  .help-key[data-key="done"] {
+    transition: background-size var(--help-sweep) var(--help-ease);
+  }
+}
+
+/* 핵심 문구 형광펜. 글자 아래쪽 58% 만 칠하고(글자색은 그대로), 줄이 바뀌어도 줄마다 끊김 없이 칠한다.
+   서버 HTML 은 칠해진 상태 그대로다 — 움직임은 위 `pending` → `done` 뿐이라 JS 가 없거나 움직임 줄이기면 처음부터 칠해져 있다.
+   검색 일치(`::highlight(help-search*)`, 노랑 + 밑줄)와 색·모양이 다르다. */
+.help-key {
+  color: inherit;
+  background-color: transparent;
+  background-image: linear-gradient(var(--help-key), var(--help-key));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 58%;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  border-radius: 0.2em;
+  padding: 0 0.12em;
+  margin: 0 -0.12em;
 }
 
 @keyframes help-enter {

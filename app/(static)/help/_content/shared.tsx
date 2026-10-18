@@ -5,6 +5,7 @@ import type { HelpPageId } from "@/app/(static)/help/_content/ids";
 import { helpPathById } from "@/app/(static)/help/_content/path-by-id";
 import { HelpClip } from "@/components/help/help-clip";
 import { HelpFigure } from "@/components/help/help-figure";
+import { textOf } from "@/lib/help/text";
 import { HelpSteps } from "@/components/help/help-steps";
 import type { HelpTopic } from "@/app/(static)/help/_content/types";
 
@@ -24,6 +25,16 @@ export const ext = (href: string, label: string) => (
 export { HelpClip, HelpFigure };
 
 /**
+ * 핵심 문구 형광펜. 되돌릴 수 없는 일 · 꼭 지킬 순서 · 한도 숫자처럼 **정말 놓치면 안 되는 말**에만 쓴다(페이지당 2~4곳, 한 문단에 하나까지).
+ * 단계 문장 전체나 제목은 칠하지 않는다. 색과 칠해지는 움직임은 `app/globals.css` 의 `.help-key` 한 곳이다.
+ */
+export const Key = ({ children }: { children: React.ReactNode }) => (
+  <mark data-key="" className="help-key">
+    {children}
+  </mark>
+);
+
+/**
  * 상황별 레시피. 구조는 늘 같다: 이런 상황이에요(문제) → 먼저 확인할 곳 → 이렇게 해 보세요(단계) → 관련 기능 페이지.
  * 단계는 한 단계에 한 동작만 적고, 같은 글이 JSON-LD `HowTo` 에도 들어간다. 설명은 기능 페이지가 원본이고 여기는 링크로 잇는다.
  */
@@ -31,9 +42,9 @@ export function recipe(input: {
   slug: HelpPageId;
   title: string;
   summary: string;
-  problem: readonly string[];
-  where: string;
-  steps: readonly string[];
+  problem: readonly React.ReactNode[];
+  where: React.ReactNode;
+  steps: readonly React.ReactNode[];
   /** `facts` 는 따라 하는 순서가 아니라 사실 목록이다(번호 대신 점, JSON-LD HowTo 없음). */
   kind?: "steps" | "facts";
   /** 단계 앞에 두는 영상 등 */
@@ -46,7 +57,7 @@ export function recipe(input: {
     group: "situations",
     title: input.title,
     summary: input.summary,
-    howTo: input.kind === "facts" ? undefined : input.steps,
+    howTo: input.kind === "facts" ? undefined : input.steps.map(textOf),
     related: input.related.map((r) => r.id),
     sections: [
       { id: "problem", title: "이런 상황이에요", body: input.problem },
@@ -59,8 +70,8 @@ export function recipe(input: {
           ...(input.media ? [input.media] : []),
           input.kind === "facts" ? (
             <ul key="steps" className="m-0 flex list-disc flex-col gap-2 pl-5">
-              {input.steps.map((step) => (
-                <li key={step} className="break-keep">
+              {input.steps.map((step, index) => (
+                <li key={index} className="break-keep">
                   {step}
                 </li>
               ))}

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { LINK } from "@/app/(static)/legal-document";
 import { helpPathById } from "@/app/(static)/help/_content/path-by-id";
+import { Key } from "@/app/(static)/help/_content/shared";
 import type { HelpSection } from "@/app/(static)/help/_content/types";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 
@@ -70,7 +71,11 @@ export const desktopSections: HelpSection[] = [
       "앱에서 녹음하면 내 마이크와 컴퓨터에서 나는 소리를 함께 기록합니다. 녹음 버튼과 「중지」·「재개」·「회의 종료」는 웹과 같습니다.",
       "컴퓨터 소리에는 화상회의 앱에서 나오는 상대방 목소리도 들어갑니다. 다만 Zoom·Webex 등 각 앱에서 정상적으로 녹음되는지는 아직 확인 중입니다.",
       "녹음 중 「마이크가 끊겼습니다」나 「컴퓨터 소리가 끊겼습니다」가 표시되면 연결이 끊긴 동안의 소리는 기록되지 않습니다. 장치 연결과 음소거를 확인합니다.",
-      "창의 닫기 버튼을 누르면 창만 숨겨지고 앱은 종료되지 않습니다. 녹음은 이어집니다. 메뉴 막대(Mac)나 작업 표시줄 알림 영역(Windows)의 HeyMoa 아이콘으로 다시 엽니다.",
+      <>
+        <Key>창의 닫기 버튼을 누르면 창만 숨겨지고 앱은 종료되지 않습니다</Key>.
+        녹음은 이어집니다. 메뉴 막대(Mac)나 작업 표시줄 알림 영역(Windows)의
+        HeyMoa 아이콘으로 다시 엽니다.
+      </>,
     ],
   },
   {
@@ -92,7 +97,11 @@ export const desktopSections: HelpSection[] = [
       "「녹음 중지」는 녹음만 멈춥니다. 회의는 종료되지 않으므로 이어서 기록할 수 있습니다. 회의를 마치려면 회의 화면에서 「회의 종료」를 누릅니다.",
       "메뉴에서 「앱 종료」를 선택하거나 Mac에서 ⌘Q를 누르면, 녹음 중이거나 보내지 못한 소리가 있을 때 바로 종료하지 않고 확인 창이 열립니다.",
       "「녹음 종료 후 앱 종료」를 고르면 녹음을 멈추고 소리를 모두 보낸 뒤 앱이 종료됩니다. 30초가 지나도 끝나지 않으면 안내가 표시됩니다. 기다리는 동안 종료를 취소하려면 「앱 종료」를 다시 누르고 「앱 종료 취소」를 고릅니다.",
-      "「소리를 버리고 종료…」를 고르면 한 번 더 확인한 뒤 앱이 바로 종료됩니다. 아직 서버에 저장되지 않은 소리는 되살릴 수 없습니다.",
+      <>
+        「소리를 버리고 종료…」를 고르면 한 번 더 확인한 뒤 앱이 바로
+        종료됩니다.{" "}
+        <Key>아직 서버에 저장되지 않은 소리는 되살릴 수 없습니다</Key>.
+      </>,
     ],
   },
   {

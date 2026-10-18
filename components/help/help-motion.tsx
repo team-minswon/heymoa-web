@@ -5,6 +5,10 @@ import { usePathname } from "next/navigation";
 
 import { prefersReducedMotion, scrollToSection } from "@/lib/help/scroll";
 
+/** 등장(`data-reveal`)과 형광펜(`data-key`)은 같은 배선을 쓴다. */
+const attrOf = (el: Element) =>
+  el.hasAttribute("data-key") ? "data-key" : "data-reveal";
+
 /** 앞 화면의 주소. 모듈 값이라 페이지가 새로 마운트돼도 「다른 가이드 페이지에서 넘어왔다」를 안다(첫 로드는 null). */
 let lastPath: string | null = null;
 
@@ -35,7 +39,7 @@ export function HelpMotion() {
       return;
     const pending = [
       ...document.querySelectorAll<HTMLElement>(
-        "[data-help-root] [data-reveal]:not([data-reveal='done'])"
+        "[data-help-root] [data-reveal]:not([data-reveal='done']), [data-help-root] [data-key]:not([data-key='done'])"
       ),
     ].filter((el) => el.getBoundingClientRect().top >= window.innerHeight);
     if (pending.length === 0) return;
@@ -43,14 +47,14 @@ export function HelpMotion() {
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          entry.target.setAttribute("data-reveal", "done");
+          entry.target.setAttribute(attrOf(entry.target), "done");
           observer.unobserve(entry.target);
         }
       },
       { rootMargin: "0px 0px -6% 0px" }
     );
     for (const el of pending) {
-      el.setAttribute("data-reveal", "pending");
+      el.setAttribute(attrOf(el), "pending");
       observer.observe(el);
     }
     return () => observer.disconnect(); // 숨은 요소는 다음 실행이 `pending` 도 다시 잡는다(StrictMode 재실행 포함)
