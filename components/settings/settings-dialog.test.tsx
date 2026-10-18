@@ -1,7 +1,29 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { onTrack } from "@/lib/analytics/track";
-import { SettingsDialog } from "@/components/settings/settings-dialog";
+import { SettingsDialog as ControlledDialog } from "@/components/settings/settings-dialog";
+import type { SettingsSection } from "@/lib/workspace/settings-url";
+
+// 열린 탭은 주소가 들고 있는 값이라 셸이 내려준다 — 여기서는 상태 하나로 그 자리를 대신한다.
+function SettingsDialog({
+  initialSection = "account",
+  ...props
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialSection?: SettingsSection;
+  workspaceId: string;
+}) {
+  const [section, setSection] = useState(initialSection);
+  return (
+    <ControlledDialog
+      {...props}
+      section={section}
+      onSectionChange={setSection}
+    />
+  );
+}
 
 vi.mock("@/components/settings/account-settings-form", () => ({
   AccountSettingsForm: () => <p>계정 내용</p>,

@@ -4,6 +4,7 @@ import { track } from "@/lib/analytics/track";
 
 import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { SettingsSection } from "@/lib/workspace/settings-url";
 import {
   BookA,
   Bot,
@@ -36,15 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export type SettingsSection =
-  | "account"
-  | "workspace"
-  | "members"
-  | "guests"
-  | "terms"
-  | "integrations"
-  | "workspaceAgents"
-  | "agents";
+export type { SettingsSection };
 
 /**
  * 워크스페이스에 영향을 주는 설정과 내 계정 설정을 갈라 둔다. 프레임 `WKSCp`의 두 그룹이고,
@@ -87,18 +80,19 @@ const SETTINGS_GROUPS: {
 ];
 
 function SettingsSections({
-  initialSection,
+  section,
+  onSectionChange,
   workspaceId,
   locked,
   onLockChange,
 }: {
-  initialSection: SettingsSection;
+  section: SettingsSection;
+  onSectionChange: (section: SettingsSection) => void;
   workspaceId: string;
   /** 섹션이 되돌릴 수 없는 일을 하는 중이다 — 다른 섹션으로 못 옮긴다. */
   locked: boolean;
   onLockChange: (locked: boolean) => void;
 }) {
-  const [section, setSection] = useState(initialSection);
   return (
     <div className="grid h-full min-h-0 bg-[var(--el-canvas-soft)] md:grid-cols-[220px_1fr]">
       <nav
@@ -136,7 +130,7 @@ function SettingsSections({
                       workspace_id: workspaceId,
                       section: key,
                     });
-                    setSection(key);
+                    onSectionChange(key);
                   }}
                   aria-current={section === key ? "page" : undefined}
                   // 회색 바탕이라 선택(hairline)과 호버(surface-strong)를 한 단계씩 벌린다. 같은 색의 농도만 바꾸면
@@ -197,12 +191,15 @@ function SettingsSections({
 export function SettingsDialog({
   open,
   onOpenChange,
-  initialSection = "account",
+  section,
+  onSectionChange,
   workspaceId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialSection?: SettingsSection;
+  /** 열린 탭. 주소(`?settings=`)가 단일 출처라 셸이 들고 있다. */
+  section: SettingsSection;
+  onSectionChange: (section: SettingsSection) => void;
   workspaceId: string;
 }) {
   // **응답을 받아야 끝나는 일이 도는 동안은 닫지 않는다.** 외부 에이전트 토큰은 만든 응답에서만
@@ -225,8 +222,8 @@ export function SettingsDialog({
           계정과 워크스페이스 설정을 관리합니다.
         </DialogDescription>
         <SettingsSections
-          key={`${initialSection}-${open}`}
-          initialSection={initialSection}
+          section={section}
+          onSectionChange={onSectionChange}
           workspaceId={workspaceId}
           locked={locked}
           onLockChange={setLocked}

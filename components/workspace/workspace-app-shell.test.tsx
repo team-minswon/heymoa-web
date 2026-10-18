@@ -1,3 +1,5 @@
+import { act } from "react";
+import { useSyncExternalStore } from "react";
 import {
   cleanup,
   fireEvent,
@@ -17,17 +19,35 @@ import {
   vi,
 } from "vitest";
 
-import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
+import {
+  WorkspaceAppShell,
+  useOpenSettings,
+} from "@/components/workspace/workspace-app-shell";
 
 const navState = vi.hoisted(() => ({
-  params: new URLSearchParams(""),
   pathname: "/w/01K0000000000",
   push: vi.fn(),
   replace: vi.fn(),
 }));
+// Next 16 은 pushState/replaceState/popstate 를 라우터와 통합해 `useSearchParams` 를 갱신한다 — 같은 일을 흉내 낸다.
+function subscribeLocation(notify: () => void) {
+  window.addEventListener("locationchange", notify);
+  window.addEventListener("popstate", notify);
+  return () => {
+    window.removeEventListener("locationchange", notify);
+    window.removeEventListener("popstate", notify);
+  };
+}
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: navState.push, replace: navState.replace }),
-  useSearchParams: () => navState.params,
+  useSearchParams: () => {
+    const search = useSyncExternalStore(
+      subscribeLocation,
+      () => window.location.search,
+      () => ""
+    );
+    return new URLSearchParams(search);
+  },
   usePathname: () => navState.pathname,
 }));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
@@ -109,8 +129,47 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
   useGetNote: () => ({ data: undefined }),
 }));
 
+function visit(search: string) {
+  window.history.replaceState(null, "", `/w/01K0000000000${search}`);
+}
+
+// 탭 내용은 따로 시험한다(`settings-dialog.test.tsx`). 여기서는 창과 주소만 본다.
+vi.mock("@/components/settings/account-settings-form", () => ({
+  AccountSettingsForm: () => <p>계정 내용</p>,
+  AccountSettingsFormSkeleton: () => <p>계정 로딩</p>,
+}));
+vi.mock("@/components/settings/workspace-settings-form", () => ({
+  WorkspaceSettingsForm: () => <p>워크스페이스 내용</p>,
+  WorkspaceSettingsFormSkeleton: () => <p>워크스페이스 로딩</p>,
+}));
+vi.mock("@/components/settings/members-settings", () => ({
+  MembersSettings: () => <p>멤버 내용</p>,
+}));
+vi.mock("@/components/settings/guests-settings", () => ({
+  GuestsSettings: () => <p>임시 참여자 내용</p>,
+}));
+vi.mock("@/components/terms/workspace-terms-settings", () => ({
+  WorkspaceTermsSettings: () => <p>용어 사전 내용</p>,
+}));
+vi.mock("@/components/settings/workspace-integrations-settings", () => ({
+  WorkspaceIntegrationsSettings: () => <p>연동 내용</p>,
+}));
+vi.mock("@/components/settings/workspace-agent-access-settings", () => ({
+  WorkspaceAgentAccessSettings: () => <p>외부 에이전트 관리 내용</p>,
+}));
+vi.mock("@/components/settings/agent-connections-settings", () => ({
+  AgentConnectionsSettings: () => <p>내 연결 내용</p>,
+}));
+
 describe("WorkspaceAppShell", () => {
   beforeAll(() => {
+    for (const method of ["pushState", "replaceState"] as const) {
+      const native = window.history[method].bind(window.history);
+      window.history[method] = (...args) => {
+        native(...args);
+        window.dispatchEvent(new Event("locationchange"));
+      };
+    }
     window.matchMedia = vi.fn().mockImplementation(() => ({
       matches: false,
       addEventListener: vi.fn(),
@@ -119,7 +178,7 @@ describe("WorkspaceAppShell", () => {
   });
 
   beforeEach(() => {
-    navState.params = new URLSearchParams("");
+    window.history.replaceState(null, "", "/w/01K0000000000");
     navState.pathname = "/w/01K0000000000";
     navState.push.mockClear();
     navState.replace.mockClear();
@@ -195,7 +254,7 @@ describe("WorkspaceAppShell", () => {
   });
 
   it("OAuth 복귀 쿼리로 연동 결과 토스트를 띄우고 쿼리를 지운다", async () => {
-    navState.params = new URLSearchParams("provider=LINEAR&status=connected");
+    visit("?provider=LINEAR&status=connected");
     render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkspaceAppShell workspaceId="01K0000000000">
@@ -208,14 +267,18 @@ describe("WorkspaceAppShell", () => {
       expect(toastMock.success).toHaveBeenCalledWith(
         "Linear 연동을 연결했습니다."
       );
-      expect(navState.replace).toHaveBeenCalledWith("/w/01K0000000000", {
-        scroll: false,
-      });
     });
+    // 라우터 왕복 없이 주소만 바꾼다 — 복귀 항목이 곧 `?settings=integrations` 다.
+    expect(navState.replace).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?settings=integrations");
+    expect(await screen.findByRole("button", { name: "연동" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
   });
 
   it("status가 connected가 아니면 실패 토스트를 띄운다", async () => {
-    navState.params = new URLSearchParams("provider=GITHUB&status=error");
+    visit("?provider=GITHUB&status=error");
     render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkspaceAppShell workspaceId="01K0000000000">
@@ -297,7 +360,7 @@ describe("WorkspaceAppShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "새 노트" }));
     expect(screen.getByLabelText("회의 이름")).toBeInTheDocument();
 
-    navState.params = new URLSearchParams("view=full");
+    visit("?view=full");
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <WorkspaceAppShell
@@ -310,5 +373,112 @@ describe("WorkspaceAppShell", () => {
     );
 
     expect(screen.queryByLabelText("회의 이름")).toBeNull();
+  });
+
+  describe("설정 창 주소 (APP-1211)", () => {
+    // 사이드바·체크리스트·채팅 카드는 모두 이 컨텍스트 함수로 연다 — 같은 길 하나다.
+    function Opener() {
+      const openSettings = useOpenSettings();
+      return (
+        <button type="button" onClick={() => openSettings?.("account")}>
+          설정 열기
+        </button>
+      );
+    }
+    const mount = () =>
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <WorkspaceAppShell workspaceId="01K0000000000">
+            <Opener />
+          </WorkspaceAppShell>
+        </QueryClientProvider>
+      );
+    const dialogOpen = () => screen.queryByRole("dialog", { name: "설정" });
+
+    it("사이드바에서 열면 push, 탭 바꾸기는 replace 라 기록이 하나만 쌓인다", async () => {
+      mount();
+      const before = window.history.length;
+      fireEvent.click(screen.getByRole("button", { name: "설정 열기" }));
+      expect(await screen.findByRole("dialog", { name: "설정" })).toBeTruthy();
+      expect(window.location.search).toBe("?settings=account");
+      expect(window.history.length).toBe(before + 1);
+
+      fireEvent.click(screen.getByRole("button", { name: "멤버" }));
+      expect(window.location.search).toBe("?settings=members");
+      expect(window.history.length).toBe(before + 1);
+    });
+
+    it("push 로 연 창은 닫을 때 back() 으로 그 항목을 걷는다", async () => {
+      window.history.replaceState(null, "", "/w/01K0000000000?newMeeting=x");
+      mount();
+      const back = vi
+        .spyOn(window.history, "back")
+        .mockImplementation(() => {});
+      fireEvent.click(screen.getByRole("button", { name: "설정 열기" }));
+      await screen.findByRole("dialog", { name: "설정" });
+      // 다른 쿼리는 그대로 병합된다
+      expect(window.location.search).toContain("settings=account");
+      fireEvent.keyDown(document.activeElement ?? document.body, {
+        key: "Escape",
+      });
+      expect(back).toHaveBeenCalledTimes(1);
+      back.mockRestore();
+    });
+
+    it("딥링크로 열린 창은 닫을 때 쿼리만 지운다(기록 불변, back 안 씀)", async () => {
+      visit("?settings=members&q=1");
+      mount();
+      expect(await screen.findByRole("dialog", { name: "설정" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "멤버" })).toHaveAttribute(
+        "aria-current",
+        "page"
+      );
+      const back = vi
+        .spyOn(window.history, "back")
+        .mockImplementation(() => {});
+      const length = window.history.length;
+      fireEvent.keyDown(document.activeElement ?? document.body, {
+        key: "Escape",
+      });
+      await waitFor(() => expect(dialogOpen()).toBeNull());
+      expect(back).not.toHaveBeenCalled();
+      expect(window.location.search).toBe("?q=1");
+      expect(window.history.length).toBe(length);
+      back.mockRestore();
+    });
+
+    it("뒤로 가기(popstate)로 주소에서 settings 가 빠지면 창이 닫힌다", async () => {
+      visit("?settings=guests");
+      mount();
+      await screen.findByRole("dialog", { name: "설정" });
+      act(() => {
+        window.history.replaceState(null, "", "/w/01K0000000000");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      await waitFor(() => expect(dialogOpen()).toBeNull());
+    });
+
+    it("모르는 값은 기본 탭(워크스페이스 일반)으로 열고 주소를 고친다", async () => {
+      visit("?settings=nope");
+      mount();
+      expect(await screen.findByRole("dialog", { name: "설정" })).toBeTruthy();
+      await waitFor(() =>
+        expect(window.location.search).toBe("?settings=workspace")
+      );
+      expect(screen.getByRole("button", { name: "일반" })).toHaveAttribute(
+        "aria-current",
+        "page"
+      );
+    });
+
+    it("이미 열려 있으면 다른 자리에서 열어도 기록을 더 쌓지 않는다", async () => {
+      visit("?settings=members");
+      mount();
+      await screen.findByRole("dialog", { name: "설정" });
+      const length = window.history.length;
+      fireEvent.click(screen.getByRole("button", { name: "연동" }));
+      expect(window.history.length).toBe(length);
+      expect(window.location.search).toBe("?settings=integrations");
+    });
   });
 });

@@ -6,9 +6,10 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "@/lib/ui/toast";
 import { track } from "@/lib/analytics/track";
 import {
@@ -19,10 +20,17 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PersonalChatProvider } from "@/components/chat/personal-chat";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
 import {
-  SettingsDialog,
+  DEFAULT_SETTINGS_SECTION,
+  SETTINGS_PARAM,
+  clearSettings,
+  hasSettingsParam,
+  parseSettingsSection,
+  pushSettings,
+  replaceSettings,
   type SettingsSection,
-} from "@/components/settings/settings-dialog";
+} from "@/lib/workspace/settings-url";
 import { CreateProjectDialog } from "@/components/workspace/create-project-dialog";
 import { NewMeetingDialog } from "@/components/workspace/new-meeting-dialog";
 import {
@@ -92,24 +100,71 @@ export function WorkspaceAppShell({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
-  const [settingsSection, setSettingsSection] =
-    useState<SettingsSection>("account");
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
 
-  // OAuth 연동 승인 후 서버가 /w/{workspaceId}?provider=&status=로 돌려보낸다(APP-194).
-  // 연동 설정 모달을 열어 결과를 보이고, 새로고침·뒤로가기에 재실행되지 않게 쿼리를 지운다.
+  // **첫 커밋 뒤에만 URL을 읽고 쓴다.** 링크로 바로 들어오면 셸이 첫 hydration과 함께 마운트되는데,
+  // 그때 자식 effect는 App Router가 `history.replaceState`를 패치하기 전에 돈다 — 네이티브
+  // 호출이 되어 현재 엔트리의 라우터 상태를 지우고 `useSearchParams`도 안 바뀐다
+  // (`note-view` 의 `isOpen` 게이트와 같은 이유). 서버는 쿼리를 알아도 창은 클라이언트에서만 열린다.
+  const [committed, setCommitted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 첫 커밋을 표시하는 것 자체가 목적이다
+  useEffect(() => setCommitted(true), []);
+
+  // 설정 창은 주소(`?settings=<section>`)가 단일 출처다(APP-1211). 열기·탭 바꾸기·닫기는 모두
+  // `history.pushState/replaceState` 로 쓰고(rule `architecture`), 새로고침·딥링크·뒤로 가기는
+  // 주소가 그대로 되살린다. 모르는 값은 기본 탭으로 열고 아래 effect 가 주소를 고친다.
+  const settingsParam = searchParams.get(SETTINGS_PARAM);
+  const urlSection =
+    settingsParam === null
+      ? null
+      : (parseSettingsSection(settingsParam) ?? DEFAULT_SETTINGS_SECTION);
+  const settingsOpen = committed && urlSection !== null;
+  // 닫히는 동안(페이드)에도 마지막 탭을 그린다 — 주소에서 값이 사라져도 내용이 기본 탭으로 뒤집히지 않게.
+  const [shownSection, setShownSection] = useState<SettingsSection>(
+    DEFAULT_SETTINGS_SECTION
+  );
+  if (urlSection !== null && urlSection !== shownSection) {
+    setShownSection(urlSection);
+  }
+  /** 이 세션에서 우리가 창을 `push` 로 열었다 — 닫을 때 그 항목을 `back()` 으로 걷는다. */
+  const pushedRef = useRef(false);
+  const openSettings = useCallback((section: SettingsSection) => {
+    if (hasSettingsParam()) {
+      replaceSettings(section);
+      return;
+    }
+    pushSettings(section);
+    pushedRef.current = true;
+  }, []);
+  const closeSettings = useCallback(() => {
+    // 열 때 쌓은 항목이 남아 있으면 되돌아가 기록을 늘리지 않는다. 딥링크·새로고침·OAuth 복귀로
+    // 열린 창에는 걷을 항목이 없다 — 쿼리만 지운다(그때 `back()` 은 사이트 밖으로 나간다).
+    if (pushedRef.current) {
+      pushedRef.current = false;
+      window.history.back();
+    } else {
+      clearSettings();
+    }
+  }, []);
   useEffect(() => {
-    const provider = searchParams.get("provider");
+    if (!committed || settingsParam === null) return;
+    if (parseSettingsSection(settingsParam) === null) {
+      pushedRef.current = false;
+      replaceSettings(DEFAULT_SETTINGS_SECTION);
+    }
+  }, [committed, settingsParam]);
+
+  // OAuth 연동 승인 후 서버가 /w/{workspaceId}?provider=&status=로 돌려보낸다(APP-194).
+  // 연동 설정 창을 열어 결과를 보이고, 새로고침·뒤로가기에 재실행되지 않게 쿼리를 지운다.
+  // 복귀 항목 자체를 `?settings=integrations` 로 바꾼다(replace) — 걷을 push 항목이 없으니 닫기는 쿼리 제거다.
+  useEffect(() => {
+    if (!committed) return;
+    // 렌더 값이 아니라 주소를 본다 — StrictMode 의 두 번째 실행이 토스트를 또 띄우지 않게.
+    const params = new URLSearchParams(window.location.search);
+    const provider = params.get("provider");
     if (!provider) return;
-    const status = searchParams.get("status");
-    // URL 쿼리(외부 상태)에 반응해 설정 모달을 여는 정당한 동기화 — toast·replace와 한 묶음이라 effect가 맞다.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setSettingsSection("integrations");
-    setSettingsOpen(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
+    const status = params.get("status");
     if (status === "connected") {
       track("integration_connected", { provider });
       toast.success(
@@ -118,18 +173,12 @@ export function WorkspaceAppShell({
     } else {
       toast.error("연동 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     }
-    const next = new URLSearchParams(searchParams);
-    next.delete("provider");
-    next.delete("status");
-    const query = next.toString();
-    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
-  }, [searchParams, router, pathname]);
+    pushedRef.current = false;
+    replaceSettings("integrations", ["provider", "status"]);
+  }, [committed, searchParams]);
 
   // suspense — 로딩/에러는 route-layout의 DataBoundary가 잡는다. isPending/isError는 항상 false라
   // context 인터페이스(workspace-page가 소비)는 그대로 두어도 값이 자연히 false가 된다.
-  // 참조가 매 렌더 바뀌면 아래 effect가 매번 돌아 사용자가 방금 연 창을 닫는다.
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
-
   const workspaceQuery = useGetWorkspaceSuspense(workspaceId);
   const projectsQuery = useGetProjectsSuspense(workspaceId);
   const workspace =
@@ -175,13 +224,6 @@ export function WorkspaceAppShell({
   // 프로젝트는 없든 권한 밖이든 같은 안내 하나다. 다시 열리지 않게 쿼리를 걷는다 — 같은
   // 화면의 상태라 라우터가 아니라 `history.replaceState` 다(rule `architecture`).
   const newMeetingProjectId = searchParams.get("newMeeting");
-  // **첫 커밋 뒤에만 다룬다.** 링크로 바로 들어오면 셸이 첫 hydration과 함께 마운트되는데,
-  // 그때 자식 effect는 App Router가 `history.replaceState`를 패치하기 전에 돈다 — 네이티브
-  // 호출이 되어 현재 엔트리의 라우터 상태를 지우고 `useSearchParams`도 안 바뀐다
-  // (`note-view` 의 `isOpen` 게이트와 같은 이유). 마운트 effect가 켠 값을 보고 다음 커밋에서 한다.
-  const [committed, setCommitted] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- 첫 커밋을 표시하는 것 자체가 목적이다
-  useEffect(() => setCommitted(true), []);
   useEffect(() => {
     if (!committed || !newMeetingProjectId) return;
     // URL 쿼리(외부 상태)에 반응해 창을 여는 동기화 — 위 `?provider=` 와 같은 자리다.
@@ -207,10 +249,7 @@ export function WorkspaceAppShell({
     () => ({
       selectedProjectId,
       setSelectedProjectId,
-      openSettings: (section: SettingsSection) => {
-        setSettingsSection(section);
-        setSettingsOpen(true);
-      },
+      openSettings,
       openCreateProject,
       requestNewMeeting,
       workspace,
@@ -220,6 +259,7 @@ export function WorkspaceAppShell({
     }),
     [
       openCreateProject,
+      openSettings,
       projects,
       projectsQuery.isPending,
       projectsQuery.isError,
@@ -241,6 +281,7 @@ export function WorkspaceAppShell({
   // 전체 화면이 셸을 덮으면 **셸이 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라 `inert`도
   // 덮는 면(`z-30`)도 닿지 않고, 셸이 재마운트되지 않아 저절로 사라지지도 않는다 —
   // 허브에서 열어 둔 채 뒤로가기로 노트에 오면 노트 위에 갇힌 창이 남는다.
+  // (설정 창은 주소에서 파생되므로 노트 주소로 가면 `settings` 가 없어 저절로 닫힌다.)
   if (isFullNote && (createProject || newMeetingOpen)) {
     setCreateProject(null);
     setNewMeetingOpen(false);
@@ -255,8 +296,9 @@ export function WorkspaceAppShell({
         <TooltipProvider>
           <SettingsDialog
             open={settingsOpen}
-            onOpenChange={setSettingsOpen}
-            initialSection={settingsSection}
+            onOpenChange={(open) => !open && closeSettings()}
+            section={shownSection}
+            onSectionChange={replaceSettings}
             workspaceId={workspaceId}
           />
           {/* 셸이 캔버스를 꽉 채우지 않는다 — 사이드바는 캔버스 위에 그냥 앉고(배경·테두리 없음),
@@ -296,10 +338,7 @@ export function WorkspaceAppShell({
             >
               {children}
             </ShellMain>
-            <CloseShellOverlaysOnFullNote
-              isFullNote={isFullNote}
-              closeSettings={closeSettings}
-            />
+            <CloseShellOverlaysOnFullNote isFullNote={isFullNote} />
             {/* 프로젝트·회의 만들기 창은 **셸이 소유한다.** 입구가 사이드바 `+`·상단바
                 「새 노트」·빈 상태 CTA 셋이고, 그중 「새 노트」는 프로젝트가 없으면 프로젝트
                 창을 먼저 열어야 하므로 두 창이 한 자리에 있어야 이어 붙일 수 있다.
@@ -378,21 +417,15 @@ function WorkspaceCreateDialogs({
  * 상태가 저절로 사라지지도 않는다 — 가리는 대신 실제로 닫는다.
  *
  * 모바일 사이드바(전체 화면을 닫고 사이드바를 연 뒤 뒤로가기로 노트에 돌아오면 열린 채로
- * 남았다)와 설정 창이 여기 걸린다. 상단바의 「새 노트」 창은 그 컴포넌트가 직접 닫는다.
+ * 남았다)가 여기 걸린다. 설정 창은 주소에서 파생돼 따로 닫을 필요가 없고, 상단바의
+ * 「새 노트」 창은 그 컴포넌트가 직접 닫는다.
  */
-function CloseShellOverlaysOnFullNote({
-  isFullNote,
-  closeSettings,
-}: {
-  isFullNote: boolean;
-  closeSettings: () => void;
-}) {
+function CloseShellOverlaysOnFullNote({ isFullNote }: { isFullNote: boolean }) {
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
   useEffect(() => {
     if (!isFullNote) return;
     if (isMobile && openMobile) setOpenMobile(false);
-    closeSettings();
-  }, [closeSettings, isFullNote, isMobile, openMobile, setOpenMobile]);
+  }, [isFullNote, isMobile, openMobile, setOpenMobile]);
   return null;
 }
 
