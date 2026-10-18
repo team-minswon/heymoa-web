@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { viewerDateKey } from "@/lib/format/date";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,6 +34,12 @@ import {
  * 경계로 올리므로 실패를 action 안에서 삼켜야 하는데, 삼키면 action이 성공으로 끝나 또 비워진다.
  * 값을 우리가 들고 있으면 둘 다 걸리지 않는다.
  */
+/** 오늘 날짜로 채우는 기본 이름 「MM/DD 회의록」. 보는 사람의 시간대 기준이다(`viewerDateKey`). */
+function defaultMeetingTitle() {
+  const [, month, day] = viewerDateKey(new Date()).split("-");
+  return `${month}/${day} 회의록`;
+}
+
 export function NewMeetingDialog({
   open,
   onOpenChange,
@@ -52,7 +59,7 @@ export function NewMeetingDialog({
   /** 지금 보고 있는 프로젝트. 「모든 노트」에서 열었으면 null 이다. */
   defaultProjectId: string | null;
 }) {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(() => (open ? defaultMeetingTitle() : ""));
   const [picked, setPicked] = useState<string | null>(null);
   const trimmed = title.trim();
   // **부모가 창을 닫아도(뒤로가기·화면 이동) 쓰던 이름과 고른 프로젝트를 비운다.** 이 컴포넌트는 그대로 남아 있어
@@ -64,6 +71,9 @@ export function NewMeetingDialog({
     if (!open) {
       setTitle("");
       setPicked(null);
+    } else {
+      // 열 때마다 오늘 날짜로 이름을 채운다 — 매번 이름을 새로 짓지 않아도 되고, 입력은 전체 선택돼 바로 덮어쓸 수 있다.
+      setTitle(defaultMeetingTitle());
     }
   }
   /**
@@ -118,8 +128,10 @@ export function NewMeetingDialog({
             <DialogHeader>
               <DialogTitle>새 회의 만들기</DialogTitle>
               <DialogDescription>
-                이름을 지어 두면 나중에 찾기 쉽습니다. 기록은 만든 뒤에
-                시작합니다.
+                <span className="block">
+                  이름을 지어 두면 나중에 찾기 쉽습니다.
+                </span>
+                <span className="block">기록은 만든 뒤에 시작합니다.</span>
               </DialogDescription>
             </DialogHeader>
             <div className="py-5">
@@ -133,6 +145,7 @@ export function NewMeetingDialog({
                 maxLength={200}
                 required
                 autoFocus
+                onFocus={(event) => event.currentTarget.select()}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />

@@ -221,14 +221,44 @@ describe("NewMeetingDialog", () => {
     rerender(<NewMeetingDialog open={false} {...props} />);
     rerender(<NewMeetingDialog open {...props} defaultProjectId="P2" />);
 
-    expect((screen.getByLabelText("회의 이름") as HTMLInputElement).value).toBe(
-      ""
-    );
+    // 지난 이름은 사라지고 오늘 날짜의 기본 이름으로 다시 채워진다.
+    expect(
+      (screen.getByLabelText("회의 이름") as HTMLInputElement).value
+    ).toMatch(/^\d{2}\/\d{2} 회의록$/);
     fireEvent.change(screen.getByLabelText("회의 이름"), {
       target: { value: "새 이름" },
     });
     fireEvent.click(screen.getByRole("button", { name: "만들기" }));
     // 새 기본 프로젝트(P2)로 만든다 — 지난 선택이 남아 앞서지 않는다.
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("새 이름", "P2"));
+  });
+
+  it("열면 오늘 날짜로 이름을 채우고 안내문을 문장마다 나눈다", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 18, 12, 0, 0));
+    try {
+      render(
+        <NewMeetingDialog
+          open
+          onOpenChange={() => {}}
+          onSubmit={vi.fn().mockResolvedValue(true)}
+          isPending={false}
+          workspaceId="W1"
+          projects={PROJECTS}
+          defaultProjectId="P1"
+        />
+      );
+      expect(
+        (screen.getByLabelText("회의 이름") as HTMLInputElement).value
+      ).toBe("10/18 회의록");
+      expect(
+        screen.getByText("이름을 지어 두면 나중에 찾기 쉽습니다.")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("기록은 만든 뒤에 시작합니다.")
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
