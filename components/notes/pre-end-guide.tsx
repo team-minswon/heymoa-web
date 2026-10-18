@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { CircleCheck, FileText, UserPlus, Users } from "lucide-react";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
@@ -20,16 +21,19 @@ import type { NoteResponseData } from "@/lib/api/generated/models";
 const STEPS = [
   {
     icon: FileText,
+    orb: "var(--el-orb-mint-soft)",
     title: "요약",
     body: "개요, 결정, 액션 아이템을 자동으로 정리해요.",
   },
   {
     icon: Users,
+    orb: "var(--el-orb-lavender-soft)",
     title: "화자 분리",
     body: "목소리를 사람별로 나누고, 누구인지 이름을 붙일 수 있어요.",
   },
   {
     icon: CircleCheck,
+    orb: "var(--el-orb-sky-soft)",
     title: "검토 후 확정",
     body: "정리된 항목을 확인하고 고친 뒤 프로젝트 지식으로 확정해요.",
   },
@@ -47,52 +51,75 @@ export function PreEndGuide({
   onMeetingEnded?: () => void;
 }) {
   const [endOpen, setEndOpen] = useState(false);
+  const reduced = useReducedMotion();
   // 기록 중에는 서버가 종료를 거절한다. 중지한 뒤에만 버튼을 둔다.
   const canEnd = note?.meetingStatus === "PAUSED";
   const recording = note?.meetingStatus === "IN_PROGRESS";
   const lonely = note != null && note.participants.length <= 1;
 
   return (
-    <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-6 pb-16">
-      <div
+    <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-16">
+      <motion.div
         data-testid="pre-end-guide"
-        className="rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-6"
+        initial={reduced ? false : { opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
       >
-        <h3 className="text-base font-medium text-[var(--el-ink)]">
+        <h3 className="text-[26px] leading-tight font-light tracking-tight text-[var(--el-ink)]">
           회의를 종료하면 이런 것들이 만들어져요
         </h3>
-        <p className="mt-1 text-xs text-[var(--el-muted)]">
+        <p className="mt-2 text-sm text-[var(--el-muted)]">
           보통 종료 후 1분 안에 준비돼요. 종료 전에는 볼 수 없어요.
         </p>
 
-        <ol className="mt-5 divide-y divide-[var(--el-hairline)]">
-          {STEPS.map(({ icon: Icon, title, body }) => (
-            <li key={title} className="flex gap-3 py-3 first:pt-0">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[var(--el-ink)]">
-                <Icon className="size-4" aria-hidden />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-[var(--el-ink)]">
-                  {title}
+        <ol className="mt-7 grid gap-3 sm:grid-cols-3">
+          {STEPS.map(({ icon: Icon, orb, title, body }, index) => (
+            <motion.li
+              key={title}
+              // 제목 다음에 카드가 차례로 올라온다.
+              initial={reduced ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.3,
+                ease: "easeOut",
+                delay: 0.08 + index * 0.07,
+              }}
+              className="flex flex-col rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-4"
+            >
+              <span className="flex items-center justify-between">
+                <span
+                  className="flex size-10 items-center justify-center rounded-full text-[var(--el-ink)]"
+                  style={{ background: orb }}
+                >
+                  <Icon className="size-[18px]" aria-hidden />
                 </span>
-                <span className="block text-xs leading-relaxed text-[var(--el-muted)]">
-                  {body}
+                <span
+                  aria-hidden
+                  className="text-xs tabular-nums text-[var(--el-muted-soft)]"
+                >
+                  {index + 1}
                 </span>
               </span>
-            </li>
+              <span className="mt-4 text-sm font-medium text-[var(--el-ink)]">
+                {title}
+              </span>
+              <span className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
+                {body}
+              </span>
+            </motion.li>
           ))}
         </ol>
 
         {lonely && onEditParticipants ? (
-          <div
+          <p
             data-testid="pre-end-guide-participants"
-            className="mt-2 flex items-center gap-3 rounded-block bg-[var(--el-surface-strong)] px-3 py-2.5 text-xs text-[var(--el-muted)]"
+            className="mt-5 flex items-center gap-2 text-xs text-[var(--el-muted)]"
           >
             <UserPlus
               className="size-4 shrink-0 text-[var(--el-ink)]"
               aria-hidden
             />
-            <span className="flex-1">
+            <span>
               참여자가 1명이에요. 종료하기 전에 추가하면 화자를 더 정확히
               나눠요.
             </span>
@@ -103,10 +130,15 @@ export function PreEndGuide({
             >
               참여자 추가
             </button>
-          </div>
+          </p>
         ) : null}
 
-        <div className="mt-5 flex items-center justify-between gap-3">
+        <div className="mt-7 flex items-center gap-4">
+          {canEnd && note ? (
+            <Button type="button" onClick={() => setEndOpen(true)}>
+              회의 종료
+            </Button>
+          ) : null}
           <p className="text-xs text-[var(--el-muted-soft)]">
             {recording
               ? "기록을 중지하면 회의를 종료할 수 있어요."
@@ -114,13 +146,8 @@ export function PreEndGuide({
                 ? "종료한 뒤에는 이어서 녹음할 수 없어요."
                 : null}
           </p>
-          {canEnd && note ? (
-            <Button type="button" size="sm" onClick={() => setEndOpen(true)}>
-              회의 종료
-            </Button>
-          ) : null}
         </div>
-      </div>
+      </motion.div>
 
       {note ? (
         <MeetingEndDialog

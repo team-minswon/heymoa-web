@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   CalendarDays,
   CircleCheck,
@@ -102,56 +103,71 @@ function EndNudge({
   onEnd: () => void;
   onNever: () => void;
 }) {
+  const reduced = useReducedMotion();
   return (
-    <div
+    <motion.div
       role="status"
       data-testid="end-nudge"
-      className="absolute top-[calc(100%+10px)] right-0 z-50 w-[19.5rem] overflow-hidden rounded-block border border-[var(--el-hairline-strong)] bg-[var(--el-surface-card)] p-3.5 pb-4 shadow-lg"
+      // 툭 나오고 툭 사라지지 않게 — 버튼 쪽(오른쪽 위)에서 부드럽게 펴지고 접힌다.
+      initial={reduced ? false : { opacity: 0, y: -8, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.97, transition: { duration: 0.15 } }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      style={{ transformOrigin: "top right" }}
+      // 헤더 하단선에 붙어 보이지 않게 18px 내려 띄운다. **`overflow-hidden` 을 걸지 않는다** — 화살표가
+      // 말풍선 밖으로 튀어나와 있어 잘린다. 카운트다운 막대만 안쪽 래퍼가 자른다.
+      className="absolute top-[calc(100%+18px)] right-0 z-50 w-80 rounded-block border border-[var(--el-hairline-strong)] bg-[var(--el-surface-card)] shadow-xl"
     >
       <span
         aria-hidden
-        className="absolute -top-[6px] right-12 size-2.5 rotate-45 border-t border-l border-[var(--el-hairline-strong)] bg-[var(--el-surface-card)]"
+        className="absolute -top-[7px] right-10 size-3 rotate-45 border-t border-l border-[var(--el-hairline-strong)] bg-[var(--el-surface-card)]"
       />
-      <p className="text-sm font-medium text-[var(--el-ink)]">
-        녹음을 멈췄어요. 이제 마무리할까요?
-      </p>
-      <ul className="mt-2.5 grid gap-2">
-        {NUDGE_ITEMS.map(({ icon: Icon, title, body }) => (
-          <li key={title} className="flex gap-2.5 text-xs leading-snug">
-            <Icon
-              className="mt-0.5 size-4 shrink-0 text-[var(--el-ink)]"
-              aria-hidden
-            />
-            <span className="text-[var(--el-muted)]">
-              <b className="font-medium text-[var(--el-ink)]">{title}</b> —{" "}
-              {body}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onNever}
-          className="mr-auto text-[11px] text-[var(--el-muted-soft)] underline underline-offset-2"
-        >
-          다시 보지 않기
-        </button>
+      <div className="p-4">
+        <p className="text-sm font-medium text-[var(--el-ink)]">
+          녹음을 멈췄어요. 이제 마무리할까요?
+        </p>
+        <ul className="mt-3 grid gap-2.5">
+          {NUDGE_ITEMS.map(({ icon: Icon, title, body }) => (
+            <li key={title} className="flex gap-2.5 text-xs leading-snug">
+              <Icon
+                className="mt-0.5 size-4 shrink-0 text-[var(--el-ink)]"
+                aria-hidden
+              />
+              <span className="text-[var(--el-muted)]">
+                <b className="font-medium text-[var(--el-ink)]">{title}</b> —{" "}
+                {body}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex items-center gap-2 border-t border-[var(--el-hairline)] px-4 py-3">
         <Button type="button" variant="outline" size="sm" onClick={onLater}>
           나중에
         </Button>
         <Button type="button" size="sm" onClick={onEnd}>
           지금 종료
         </Button>
+        <button
+          type="button"
+          onClick={onNever}
+          className="ml-auto text-[11px] text-[var(--el-muted-soft)] underline underline-offset-2 hover:text-[var(--el-ink)]"
+        >
+          다시 보지 않기
+        </button>
       </div>
-      <span
+      <div
         aria-hidden
-        className="absolute bottom-0 left-0 h-0.5 bg-[var(--el-ink)] motion-reduce:hidden"
-        style={{
-          animation: `end-nudge-countdown ${NUDGE_MS}ms linear forwards`,
-        }}
-      />
-    </div>
+        className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden rounded-b-block motion-reduce:hidden"
+      >
+        <span
+          className="block h-full bg-[var(--el-ink)]"
+          style={{
+            animation: `end-nudge-countdown ${NUDGE_MS}ms linear forwards`,
+          }}
+        />
+      </div>
+    </motion.div>
   );
 }
 
@@ -262,23 +278,25 @@ export function MeetingControls({
       ) : (
         <div className="relative">
           {endButton}
-          {nudge ? (
-            <EndNudge
-              onLater={() => setNudge(false)}
-              onEnd={() => {
-                setNudge(false);
-                setEndOpen(true);
-              }}
-              onNever={() => {
-                try {
-                  window.localStorage.setItem(NUDGE_OFF_KEY, "1");
-                } catch {
-                  // 저장 못 해도 이번 안내만 닫는다.
-                }
-                setNudge(false);
-              }}
-            />
-          ) : null}
+          <AnimatePresence>
+            {nudge ? (
+              <EndNudge
+                onLater={() => setNudge(false)}
+                onEnd={() => {
+                  setNudge(false);
+                  setEndOpen(true);
+                }}
+                onNever={() => {
+                  try {
+                    window.localStorage.setItem(NUDGE_OFF_KEY, "1");
+                  } catch {
+                    // 저장 못 해도 이번 안내만 닫는다.
+                  }
+                  setNudge(false);
+                }}
+              />
+            ) : null}
+          </AnimatePresence>
         </div>
       )}
       <MeetingEndDialog

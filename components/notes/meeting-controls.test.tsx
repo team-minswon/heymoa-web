@@ -29,6 +29,30 @@ vi.mock("@/components/transcription/recording-provider", async () => {
     }),
   };
 });
+// 퇴장 애니메이션을 기다리지 않는다 — 시험은 상태만 본다.
+vi.mock("motion/react", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  motion: new Proxy(
+    {},
+    {
+      get: (_target, tag: string) =>
+        function MotionStub(props: Record<string, unknown>) {
+          // 애니메이션 속성은 DOM 에 내리지 않는다.
+          const rest = Object.fromEntries(
+            Object.entries(props).filter(
+              ([key]) =>
+                !["initial", "animate", "exit", "transition"].includes(key)
+            )
+          );
+          const Tag = tag as "div";
+          return <Tag {...(rest as object)} />;
+        },
+    }
+  ),
+  useReducedMotion: () => false,
+}));
 vi.mock("@/components/notes/meeting-end-dialog", () => ({
   MeetingEndDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="end-dialog" /> : null,
