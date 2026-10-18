@@ -31,7 +31,7 @@ export function HelpMotion() {
     if (!main) return;
     main.setAttribute("data-help-entering", "");
     // 정리 함수로 지우지 않는다 — StrictMode 가 효과를 다시 돌리며 타이머를 끊으면 속성이 남는다.
-    window.setTimeout(() => main.removeAttribute("data-help-entering"), 400); // 전환(--help-base 300ms)이 끝난 뒤
+    window.setTimeout(() => main.removeAttribute("data-help-entering"), 550); // 전환(--help-page 450ms)이 끝난 뒤
   }, [pathname]);
 
   useEffect(() => {

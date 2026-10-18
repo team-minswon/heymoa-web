@@ -470,6 +470,9 @@
   --help-fast: 200ms;
   --help-base: 300ms;
   --help-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* 가이드 페이지를 옮길 때 새 본문이 들어오는 전환만 따로 길다(작은 UI 의 200~300ms 와 달리 화면 전체가 바뀌어서). */
+  --help-page: 450ms;
+  --help-page-ease: cubic-bezier(0.16, 1, 0.3, 1);
   /* 그림자는 중립 잉크(`--el-ink`) 색이다. */
   --help-shadow:
     0 1px 2px rgb(12 10 9 / 0.06), 0 8px 24px -12px rgb(12 10 9 / 0.18);
@@ -538,7 +541,7 @@ html:has([data-help-root]) {
 
   /* 다른 가이드 페이지로 넘어온 직후 본문. JS 가 이동 때만 붙인다(첫 로드에는 없다). */
   [data-help-entering] {
-    animation: help-enter var(--help-base) var(--help-ease) backwards;
+    animation: help-enter var(--help-page) var(--help-page-ease) backwards;
   }
 
   /* 목차 활성 막대·접힘 화살표가 같은 시간으로 움직인다. */
@@ -582,7 +585,7 @@ html:has([data-help-root]) {
 @keyframes help-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(12px);
   }
 }
 
