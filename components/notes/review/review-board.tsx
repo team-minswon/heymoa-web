@@ -334,9 +334,15 @@ export function ReviewBoard({
 
   const confirmSummary = confirmSummaryOf(items);
   const taskConflicts = taskApplyConflictsOf(items, (id) => tasksById.get(id)?.revision);
-  const checkingTaskVersion = (change: ReviewItem["taskChanges"][number]) => {
+  const taskStateOf = (
+    change: ReviewItem["taskChanges"][number]
+  ): "pending" | "ready" | "failed" => {
     const revision = tasksById.get(change.target.itemId)?.revision;
-    return tasksQuery.isFetching && revision !== undefined && revision < (change.draft?.expectedRevision ?? change.target.revision);
+    const behind =
+      revision !== undefined &&
+      revision < (change.draft?.expectedRevision ?? change.target.revision);
+    if (tasksQuery.isPending || (behind && tasksQuery.isFetching)) return "pending";
+    return !tasks || (behind && tasksQuery.isError) ? "failed" : "ready";
   };
   const gateItems = items.map((item) =>
     isSummaryKind(item.kind)
@@ -375,11 +381,11 @@ export function ReviewBoard({
       (item) => item.included && item.taskChanges.length > 0
     ),
     tasks:
-      !workspaceId || !projectId || tasksQuery.isPending || gateItems.some((item) => item.included && item.taskChanges.some(checkingTaskVersion))
+      !workspaceId || !projectId || tasksQuery.isPending ||
+      gateItems.some((item) => item.included && item.taskChanges.some((change) => taskStateOf(change) === "pending"))
         ? ("pending" as const)
-        : // 이미 읽은 할 일이 있으면 재조회가 실패해도 쓴다(APP-1033). 낡았어도 반영은 판 대조가 거절로 걸러내고,
-          // 막으면 확정 막대가 재시도가 성공할 때까지 「불러오지 못했다」로 막힌다.
-          tasks
+        : // 이미 읽은 할 일은 재조회가 실패해도 쓴다. 제안보다 낮은 판은 확인하지 못한 것이므로 다시 읽는다.
+          tasks && !gateItems.some((item) => item.included && item.taskChanges.some((change) => taskStateOf(change) === "failed"))
           ? ("ready" as const)
           : ("failed" as const),
   };
@@ -511,9 +517,7 @@ export function ReviewBoard({
               choices={assigneeChoices}
               duplicate={taskConflicts.duplicates.has(change.target.itemId)}
               choice={choiceOf(change.decision)}
-              taskState={
-                tasksQuery.isPending || checkingTaskVersion(change) ? "pending" : tasks ? "ready" : "failed"
-              }
+              taskState={taskStateOf(change)}
               onRetryTask={() => void tasksQuery.refetch()}
               disabled={!editable || saving || !item.included}
               onChoose={(next, taskChange) => editor.updateItem(item.itemId, {
@@ -842,6 +846,7 @@ export function ReviewBoard({
                     openItemId={openItemId}
                     busyItemId={editor.busyItemId}
                     conflictItemId={editor.conflictItemId}
+                    conflictMessage={editor.conflictMessage}
                     adding={editor.adding}
                     aside={
                       section.key === "ACTION_ITEM" && unnamedAssigned > 0 ? (

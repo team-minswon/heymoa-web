@@ -240,9 +240,9 @@ export function TaskChangeSuggestion({
           : { type: reference.type, id: reference.id ?? undefined, name: "선택한 멤버" })
     : null;
   const applied = change.decision === "APPLIED" || (confirmed && included && change.decision === "APPLY");
-  const stale = taskState !== "pending" && !confirmed && !applied && task !== undefined && task.revision !== draft.expectedRevision;
+  const stale = taskState === "ready" && !confirmed && !applied && task !== undefined && task.revision !== draft.expectedRevision;
   const locked = disabled || applied || confirmed;
-  const fieldsLocked = locked || !task || stale || taskState === "pending";
+  const fieldsLocked = locked || !task || stale || taskState !== "ready";
   const saveDraft = (next: TaskDraft) => onChoose(choice ?? "change", next);
 
   return (
@@ -255,7 +255,7 @@ export function TaskChangeSuggestion({
           keepLabel="넘기기"
           value={choice}
           disabled={locked || taskState === "pending"}
-          changeDisabled={!task || stale}
+          changeDisabled={!task || stale || taskState !== "ready"}
           onChange={(next) => void onChoose(next, draft)}
         />
       }

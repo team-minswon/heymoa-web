@@ -1800,80 +1800,211 @@ it("최신 분석 상태 확인에 실패하면 기다림으로 숨기지 않고
 
 it("항목 저장 충돌의 복구 조회가 느려도 최신 판을 읽을 때까지 편집을 잠근다", async () => {
   const { client } = renderTab();
-  fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+  fireEvent.click(
+    await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+  );
   const exclude = await screen.findByRole("button", { name: "제외" });
   await waitFor(() => expect(client.isFetching()).toBe(0));
   let release!: () => void;
   let entered!: () => void;
-  const held = new Promise<void>((resolve) => { release = resolve; });
-  const arrived = new Promise<void>((resolve) => { entered = resolve; });
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const arrived = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
   server.use(
-    http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () => HttpResponse.json({ success: false, data: null, error: { code: "MEETING_REVIEW_CONFLICT", message: "다른 사람이 수정했습니다." } }, { status: 409 })),
-    http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => { entered(); await held; return getResponse(meetingFlowHandlers, request); })
+    http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
+      HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: "MEETING_REVIEW_CONFLICT",
+            message: "다른 사람이 수정했습니다.",
+          },
+        },
+        { status: 409 }
+      )
+    ),
+    http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+      entered();
+      await held;
+      return getResponse(meetingFlowHandlers, request);
+    })
   );
   try {
     fireEvent.click(exclude);
     await arrived;
     await waitFor(() => expect(exclude).toBeDisabled());
     expect(screen.queryByText(CONFLICT_MESSAGE)).toBeNull();
-    await act(async () => { release(); });
+    await act(async () => {
+      release();
+    });
     expect(await screen.findByText(CONFLICT_MESSAGE)).toBeInTheDocument();
     await waitFor(() => expect(exclude).toBeEnabled());
-  } finally { release(); }
+  } finally {
+    release();
+  }
 });
 
-it("충돌 뒤 복구 조회가 실패하면 입력을 남기고 다시 시도할 수 있다", async () => {
+it("충돌 복구 실패 뒤 자동 조회가 성공해도 충돌 안내와 작성한 내용을 남긴다", async () => {
   const { client } = renderTab();
-  fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
-  const exclude = await screen.findByRole("button", { name: "제외" });
+  const original = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
+  fireEvent.click(await row(original));
+  fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+  const input = screen.getByRole("textbox", { name: "항목 내용" });
+  const draft = "표본 수와 조사 시점도 함께 표시한다";
+  fireEvent.change(input, { target: { value: draft } });
   await waitFor(() => expect(client.isFetching()).toBe(0));
-  server.use(
-    http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () => HttpResponse.json({ success: false, data: null, error: { code: "MEETING_REVIEW_CONFLICT", message: "다른 사람이 수정했습니다." } }, { status: 409 })),
-    http.get("*/v1/notes/:noteId/meeting-review", () => HttpResponse.json({ success: false, error: { code: "FAILED" } }, { status: 500 }))
-  );
-  fireEvent.click(exclude);
-  await waitFor(() => expect(toast.error).toHaveBeenCalledWith("최신 검토본을 불러오지 못했습니다. 다시 시도해 주세요."));
-  await waitFor(() => expect(exclude).toBeEnabled());
-  expect(screen.queryByText(CONFLICT_MESSAGE)).toBeNull();
-  server.use(http.get("*/v1/notes/:noteId/meeting-review", ({ request }) => getResponse(meetingFlowHandlers, request)));
-  fireEvent.click(exclude);
-  expect(await screen.findByText(CONFLICT_MESSAGE)).toBeInTheDocument();
-});
-
-it("최근 업무 캐시보다 새 분석의 기대 판이 높으면 업무를 다시 읽어 유효한 반영을 연다", async () => {
-  const note = mockDb.getNote(MENTORING_NOTE_ID);
-  const { getGetProjectTasksQueryKey } = await import("@/lib/api/generated/projects/projects");
-  const response = await getResponse(projectTaskHandlers, new Request(`http://localhost/v1/workspaces/${workspaceOfProject(note.projectId)}/projects/${note.projectId}/tasks`));
-  const tasks = await response!.json();
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 60_000 } } });
-  client.setQueryData(getGetProjectTasksQueryKey(workspaceOfProject(note.projectId), note.projectId), { status: 200, data: tasks, headers: new Headers() });
   let reads = 0;
-  let release!: () => void;
-  const held = new Promise<void>((resolve) => { release = resolve; });
   server.use(
-    http.get("*/v1/workspaces/:workspaceId/projects/:projectId/tasks", async ({ request }) => {
-      reads++;
-      await held;
-      const response = await getResponse(projectTaskHandlers, request);
-      const body = await response!.json();
-      for (const task of body.data.tasks) task.revision++;
-      return HttpResponse.json(body);
-    }),
+    http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
+      HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: "MEETING_REVIEW_CONFLICT",
+            message: "다른 사람이 수정했습니다.",
+          },
+        },
+        { status: 409 }
+      )
+    ),
     http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+      if (++reads === 1)
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: { code: "FAILED", message: "조회 실패" },
+          },
+          { status: 500 }
+        );
       const response = await getResponse(meetingFlowHandlers, request);
       const body = await response!.json();
-      for (const item of body.data.items) for (const change of item.taskChanges) change.target.revision++;
+      body.data.reviewVersion++;
+      const item = body.data.items.find(
+        (item: { content: string }) => item.content === original
+      );
+      item.content = "다른 사람이 먼저 수정한 내용";
+      item.revision++;
       return HttpResponse.json(body);
     })
   );
-  renderTab(MENTORING_NOTE_ID, {}, client);
-  const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
-  const toggle = within(box).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
-  try {
-    await waitFor(() => expect(reads).toBeGreaterThan(0));
-    expect(within(toggle).getByRole("radio", { name: "반영" })).toBeDisabled();
-    expect(within(box).queryByText(/이 제안을 반영할 수 없습니다/)).toBeNull();
-    await act(async () => { release(); });
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
-  } finally { release(); }
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  await waitFor(() =>
+    expect(toast.error).toHaveBeenCalledWith(
+      "다른 사람이 먼저 수정했습니다. 최신 검토본을 불러오지 못했으니 다시 확인해 주세요."
+    )
+  );
+  await row("다른 사람이 먼저 수정한 내용");
+  expect(input).toHaveValue(draft);
+  expect(
+    screen.getByText(
+      "다른 사람이 먼저 수정했습니다. 최신 내용을 확인해 주세요."
+    )
+  ).toBeInTheDocument();
+  expect(screen.queryByText(CONFLICT_MESSAGE)).toBeNull();
+  expect(screen.getByRole("button", { name: "저장" })).toBeEnabled();
 });
+
+it.each([false, true])(
+  "최근 업무 캐시보다 높은 제안을 다시 확인하고 조회 실패도 복구한다 (실패: %s)",
+  async (failFirst) => {
+    const note = mockDb.getNote(MENTORING_NOTE_ID);
+    const { getGetProjectTasksQueryKey } =
+      await import("@/lib/api/generated/projects/projects");
+    const response = await getResponse(
+      projectTaskHandlers,
+      new Request(
+        `http://localhost/v1/workspaces/${workspaceOfProject(note.projectId)}/projects/${note.projectId}/tasks`
+      )
+    );
+    const tasks = await response!.json();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 60_000 } },
+    });
+    client.setQueryData(
+      getGetProjectTasksQueryKey(
+        workspaceOfProject(note.projectId),
+        note.projectId
+      ),
+      { status: 200, data: tasks, headers: new Headers() }
+    );
+    let reads = 0;
+    let fail = failFirst;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(
+        "*/v1/workspaces/:workspaceId/projects/:projectId/tasks",
+        async ({ request }) => {
+          reads++;
+          await held;
+          if (fail) {
+            fail = false;
+            return HttpResponse.json(
+              {
+                success: false,
+                data: null,
+                error: { code: "FAILED", message: "조회 실패" },
+              },
+              { status: 500 }
+            );
+          }
+          const response = await getResponse(projectTaskHandlers, request);
+          const body = await response!.json();
+          for (const task of body.data.tasks) task.revision++;
+          return HttpResponse.json(body);
+        }
+      ),
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+        const response = await getResponse(meetingFlowHandlers, request);
+        const body = await response!.json();
+        for (const item of body.data.items)
+          for (const change of item.taskChanges) change.target.revision++;
+        return HttpResponse.json(body);
+      })
+    );
+    renderTab(MENTORING_NOTE_ID, {}, client);
+    const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
+    const toggle = within(box).getByRole("radiogroup", {
+      name: "기존 할 일에 반영할지",
+    });
+    try {
+      await waitFor(() => expect(reads).toBeGreaterThan(0));
+      expect(
+        within(toggle).getByRole("radio", { name: "반영" })
+      ).toBeDisabled();
+      expect(
+        within(box).queryByText(/이 제안을 반영할 수 없습니다/)
+      ).toBeNull();
+      await act(async () => {
+        release();
+      });
+      if (failFirst) {
+        expect(
+          await within(box).findByText("기존 할 일을 불러오지 못했습니다.")
+        ).toBeInTheDocument();
+        expect(
+          within(box).queryByText(/이 제안을 반영할 수 없습니다/)
+        ).toBeNull();
+        expect(
+          within(toggle).getByRole("radio", { name: "반영" })
+        ).toBeDisabled();
+        fireEvent.click(within(box).getByRole("button", { name: "다시 시도" }));
+      }
+      await waitFor(() =>
+        expect(
+          within(toggle).getByRole("radio", { name: "반영" })
+        ).toBeEnabled()
+      );
+    } finally {
+      release();
+    }
+  }
+);
