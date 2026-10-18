@@ -200,6 +200,8 @@ export function TaskChangeSuggestion({
   onChoose,
   context,
   duplicate = false,
+  confirmed = false,
+  included = true,
 }: {
   change: TaskChange;
   task: ProjectTask | undefined;
@@ -214,6 +216,8 @@ export function TaskChangeSuggestion({
   onChoose: (next: Choice, draft: TaskDraft) => Promise<boolean>;
   context?: ReactNode;
   duplicate?: boolean;
+  confirmed?: boolean;
+  included?: boolean;
 }) {
   const saved = change.draft;
   const draft: TaskDraft = saved ? {
@@ -235,9 +239,9 @@ export function TaskChangeSuggestion({
           ? change.assignee.value
           : { type: reference.type, id: reference.id ?? undefined, name: "선택한 멤버" })
     : null;
-  const applied = change.decision === "APPLIED";
-  const stale = !applied && task !== undefined && task.revision !== draft.expectedRevision;
-  const locked = disabled || applied;
+  const applied = change.decision === "APPLIED" || (confirmed && included && change.decision === "APPLY");
+  const stale = !confirmed && !applied && task !== undefined && task.revision !== draft.expectedRevision;
+  const locked = disabled || applied || confirmed;
   const fieldsLocked = locked || !task || stale;
   const saveDraft = (next: TaskDraft) => onChoose(choice ?? "change", next);
 
@@ -247,7 +251,7 @@ export function TaskChangeSuggestion({
       toggle={
         <ChoiceToggle
           label="기존 할 일에 반영할지"
-          changeLabel={applied ? "반영됨" : choice === "change" ? "반영 예정" : "반영"}
+          changeLabel={applied ? "반영됨" : choice === "change" ? confirmed ? "제외됨" : "반영 예정" : "반영"}
           keepLabel="넘기기"
           value={choice}
           disabled={locked || taskState === "pending"}
@@ -260,10 +264,10 @@ export function TaskChangeSuggestion({
           {context}
           {stale ? (
             <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">기존 할 일이 변경되어 이 제안을 반영할 수 없습니다. 넘기기를 선택해 주세요.</p>
-          ) : duplicate ? (
+          ) : duplicate && !confirmed ? (
             <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">같은 할 일의 다른 제안도 반영 예정입니다. 하나만 반영하고 나머지는 넘겨 주세요.</p>
           ) : null}
-          {!applied && choice === "change" ? (
+          {!confirmed && !applied && choice === "change" ? (
             <p className="mt-2 text-xs text-[var(--el-muted)]">검토 완료 때 적용됩니다.</p>
           ) : null}
           {taskState === "failed" ? (

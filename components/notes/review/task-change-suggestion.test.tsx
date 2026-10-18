@@ -86,4 +86,16 @@ describe("기존 할 일 변경 초안", () => {
     expect(container.querySelector('input[type="date"]')).toBeNull();
     expect(screen.queryByText("검토 완료 때 적용됩니다.")).not.toBeInTheDocument();
   });
+
+  it("확정한 APPLY는 반영됨이며 제외 항목의 선택은 적용된 이력으로 표시하지 않는다", () => {
+    const initial = props({ confirmed: true, task: { ...task!, revision: 4 }, choice: "change", change: { ...change, decision: "APPLY" } });
+    const { rerender } = render(<TaskChangeSuggestion {...initial} />);
+    expect(screen.getByRole("radio", { name: "반영됨" })).toBeDisabled();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("검토 완료 때 적용됩니다.")).toBeNull();
+    rerender(<TaskChangeSuggestion {...initial} included={false} />);
+    expect(screen.getByRole("radio", { name: "제외됨" })).toBeDisabled();
+    expect(screen.queryByRole("radio", { name: "반영됨" })).toBeNull();
+    expect(screen.queryByText("검토 완료 때 적용됩니다.")).toBeNull();
+  });
 });

@@ -172,6 +172,9 @@ test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 �
   await expect(page.getByText("확정됨", { exact: true })).toBeVisible({ timeout: 20_000 });
   const applied = (await readTasks()).find((task: { taskId: string }) => task.taskId === target.taskId);
   expect(applied).toMatchObject({ assignee: null, due: "2026-12-05", revision: target.revision + 1 });
+  await expect(choice.getByRole("radio", { name: "반영됨" })).toBeDisabled();
+  await expect(row.getByText("검토 완료 때 적용됩니다.")).toHaveCount(0);
+  await expect(row.getByText(/이 제안을 반영할 수 없습니다/)).toHaveCount(0);
   expect(taskWrites).toEqual([]);
 });
 

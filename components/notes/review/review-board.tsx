@@ -389,8 +389,6 @@ export function ReviewBoard({
   const toggleItem = (itemId: string) =>
     setOpenItemId((current) => (current === itemId ? null : itemId));
 
-  const selectLinked = (itemId: string) => setOpenItemId(itemId);
-
   /**
    * 그 줄로 간다. 접힌 「더 불러오기」가 펼쳐지고 앞서 펼쳐 둔 줄이 접히는 높이 전환(`Collapse` 200ms)이
    * 끝난 뒤에 재야 자리가 맞다 — 전환 중에 재면 뒤쪽 줄은 펼침이 끝난 뒤 화면 밖에 남는다.
@@ -410,6 +408,8 @@ export function ReviewBoard({
     );
   };
   const showItem = (itemId: string) => {
+    const target = itemsById.get(itemId);
+    if (target && !isSummaryKind(target.kind)) setView("graph");
     setOpenItemId(itemId);
     scrollToItem(itemId);
   };
@@ -484,6 +484,8 @@ export function ReviewBoard({
             <TaskChangeSuggestion
               key={change.target.itemId}
               change={change}
+              confirmed={confirmed}
+              included={item.included}
               context={contextFor(
                 item,
                 change.target,
@@ -549,7 +551,7 @@ export function ReviewBoard({
       item={item}
       summary={summary}
       itemsById={itemsById}
-      onSelectItem={selectLinked}
+      onSelectItem={showItem}
       suggestions={suggestionsOf(item)}
       trail={
         <ItemTrail
@@ -894,6 +896,7 @@ export function ReviewBoard({
               {selected ? (
                 <div
                   key={selected.itemId}
+                  data-item-id={selected.itemId}
                   className="mt-4 overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-e2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
                 >
                   <div className="flex items-center gap-2.5 border-b border-[var(--el-hairline-soft)] px-4 py-3">
@@ -931,7 +934,7 @@ export function ReviewBoard({
         </div>
       </BoardShell>
 
-      {editable ? (
+      {canEdit && !confirmed ? (
         <ConfirmBar
           summary={confirmSummary}
           decisions={included.filter((item) => item.kind === "DECISION").length}

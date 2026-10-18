@@ -355,6 +355,25 @@ describe("검토 가능한 회의", () => {
     expect(screen.queryByText("회의 연결을 불러오지 못했습니다.")).toBeNull();
   });
 
+  it("요약의 해결 관계에서 이슈 대상을 누르면 그래프로 전환해 상세를 연다", async () => {
+    const response = await getResponse(meetingFlowHandlers, new Request(`http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`));
+    const review: MeetingReviewResponseData = (await response!.json()).data;
+    const source = review.items.find((item) => item.kind === "DECISION")!;
+    const target = review.items.find((item) => item.kind === "ISSUE")!;
+    server.use(http.get("*/v1/projects/:projectId/meeting-links", () => HttpResponse.json({ success: true, data: {
+      notes: [], agendaLinks: [], meetingLinks: [], conflicts: [{
+        kind: "RESOLVES", reason: "결정으로 이슈를 해결했습니다", evidenceSequences: [],
+        source: { noteId: MENTORING_NOTE_ID, ...source.originalProposalRef, proposalKind: source.kind, content: source.content },
+        target: { type: "PROPOSAL", noteId: MENTORING_NOTE_ID, ...target.originalProposalRef, proposalKind: target.kind, content: target.content },
+      }],
+    }, error: null })));
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: `관계 대상 항목 보기 · ${target.content}` }));
+    expect(screen.getByRole("radio", { name: "그래프" })).toHaveAttribute("aria-checked", "true");
+    expect(await screen.findByText(target.content, { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
+  });
+
   it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 여섯 개까지만 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {
     renderTab();
 
@@ -1306,6 +1325,46 @@ describe("검토 가능한 회의", () => {
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
     fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "검토 완료" }));
     expect(await screen.findByText("확정됨")).toBeInTheDocument();
+  });
+
+  it("느린 승인 요청과 실패에도 확인창을 유지하며 재시도 성공 뒤 APPLY를 반영됨으로 표시한다", async () => {
+    let release!: () => void;
+    let entered!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const arrived = new Promise<void>((resolve) => (entered = resolve));
+    server.use(http.post("*/v1/notes/:noteId/approval", async () => {
+      entered();
+      await held;
+      return HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "승인을 저장하지 못했습니다" } }, { status: 500 });
+    }, { once: true }));
+    renderTab();
+    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "이어가기" }));
+    const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
+    const toggle = within(box).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
+    fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
+    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "넘기기" })).toBeEnabled());
+    fireEvent.click(within(await rowBox("경쟁 서비스 요금제를 한 표로 정리한다")).getByRole("radio", { name: "넘기기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "검토 완료" }));
+    try {
+      await arrived;
+      await waitFor(() => expect(within(dialog).getByRole("button", { name: "취소" })).toBeDisabled());
+      expect(screen.getByRole("alertdialog")).toBe(dialog);
+      // 확인창이 열리면 배경은 aria-hidden입니다. 실제 버튼 잠금은 DOM으로 확인합니다.
+      for (const button of toggle.querySelectorAll("button")) expect(button).toBeDisabled();
+    } finally {
+      release();
+    }
+    expect(await within(dialog).findByText("승인을 저장하지 못했습니다")).toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "검토 완료" })).toBeEnabled());
+    fireEvent.click(within(dialog).getByRole("button", { name: "검토 완료" }));
+    expect(await screen.findByText("확정됨")).toBeInTheDocument();
+    expect(within(box).getByRole("radio", { name: "반영됨" })).toBeDisabled();
+    expect(within(box).queryByText("검토 완료 때 적용됩니다.")).toBeNull();
+    expect(within(box).queryByText(/이 제안을 반영할 수 없습니다/)).toBeNull();
   });
 
   it("요약이 오는 동안 그래프 보기는 없다고 하지 않고 자리만 잡는다", async () => {
