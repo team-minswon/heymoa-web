@@ -28,7 +28,17 @@ import { cn } from "@/lib/utils";
  */
 export const FEEDBACK_MAX = 1500;
 
-const KINDS = ["문의", "버그", "제안"] as const;
+const KINDS = ["장애·오류", "사용 문의", "기능 제안", "기타"] as const;
+
+/** 분류마다 무엇을 적으면 좋은지 한 줄. 받는 쪽이 되물을 일을 줄인다. */
+const PLACEHOLDER: Record<(typeof KINDS)[number], string> = {
+  "장애·오류":
+    "언제, 어떤 화면에서 무엇이 안 됐는지 적어 주세요. 오류 문구가 있으면 같이요.",
+  "사용 문의":
+    "궁금한 점을 적어 주세요. 어떤 기능인지 알려 주시면 더 정확히 답해요.",
+  "기능 제안": "어떤 상황에서 무엇이 있으면 좋을지 적어 주세요.",
+  기타: "하고 싶은 말을 편하게 적어 주세요.",
+};
 type Kind = (typeof KINDS)[number];
 
 /** 보내는 글 전체. 본문 뒤에 어디서 썼는지만 덧붙인다 — 경로에 쿼리는 안 싣는다. */
@@ -39,7 +49,9 @@ export function composeFeedback(kind: Kind, message: string): string {
 }
 
 export function mailtoFor(kind: Kind, message: string): string {
-  const subject = encodeURIComponent(`[HeyMoa ${kind}] 서비스 ${kind}`);
+  const subject = encodeURIComponent(
+    `[HeyMoa ${kind}] 서비스 ${kind === "장애·오류" ? "장애 제보" : kind}`
+  );
   const body = encodeURIComponent(composeFeedback(kind, message));
   return `mailto:${siteConfig.contactEmail}?subject=${subject}&body=${body}`;
 }
@@ -60,7 +72,7 @@ export function FeedbackDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [kind, setKind] = useState<Kind>("문의");
+  const [kind, setKind] = useState<Kind>("사용 문의");
   const [message, setMessage] = useState("");
   const empty = message.trim().length === 0;
 
@@ -101,7 +113,7 @@ export function FeedbackDialog({
             value={message}
             maxLength={FEEDBACK_MAX}
             rows={6}
-            placeholder="어떤 화면에서 무엇이 어땠는지 적어 주시면 빨리 고칠 수 있어요."
+            placeholder={PLACEHOLDER[kind]}
             onChange={(event) => setMessage(event.target.value)}
           />
           <p className="mt-1 text-right text-[11px] tabular-nums text-[var(--el-muted-soft)]">
