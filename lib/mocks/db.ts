@@ -3920,6 +3920,26 @@ export const mockDb = {
   },
 
   /**
+   * 회의 맥락을 통째로 바꾼다(PUT, APP-1188). 빈 값·생략은 지운다. 종료된 회의는 409 — 서버와 같은 차례로
+   * 길이(400)보다 먼저 본다.
+   */
+  updateNoteContext(
+    noteId: string,
+    input: { topic?: string | null; background?: string | null }
+  ): NoteResponseData {
+    const note = findNote(noteId);
+    if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
+    const topic = input.topic?.trim() || null;
+    const background = input.background?.trim() || null;
+    if ((topic?.length ?? 0) > 200 || (background?.length ?? 0) > 1000)
+      fail("BAD_REQUEST");
+    note.contextTopic = topic;
+    note.contextBackground = background;
+    note.updatedAt = nextTimestamp();
+    return this.getNote(noteId);
+  },
+
+  /**
    * 노트를 물리 삭제한다. 서버는 FK CASCADE가 자식을 지우므로(APP-335 V18) 목도 같은 것을
    * 같이 지운다 — 세션·전사 세그먼트·분석·챗과 그 메시지. 안 지우면 "지웠는데 요약이 남는"
    * 상태가 목에서만 만들어져 화면 검증이 거짓이 된다.

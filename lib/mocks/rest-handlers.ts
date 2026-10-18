@@ -91,6 +91,7 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   AGENT_ACCESS_DISABLED:
     "이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다.",
   MEETING_RECORDING: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
+  MEETING_ALREADY_ENDED: "이미 종료된 회의입니다.",
 };
 
 /**
@@ -155,6 +156,8 @@ const KNOWN_CODES = new Set([
   "CONCURRENT_GUEST_LINK",
   // 409 — 참여자 저장의 병합 기준이 그 사이 바뀌었다. 화면이 다시 읽고 한 번 더 보낸다
   "NOTE_PARTICIPANTS_CONFLICT",
+  // 409 — 종료된 회의의 맥락을 고치려 했다(APP-1188)
+  "MEETING_ALREADY_ENDED",
 ]);
 
 function statusOf(code: string) {
@@ -900,6 +903,21 @@ export const restHandlers = [
         mockDb.updateNote(
           id(params.noteId),
           (await request.json()) as NoteRequest
+        ),
+      BAD_REQUEST
+    )
+  ),
+
+  // 회의 맥락(APP-1188). 종료된 회의는 409, 길이 초과는 400
+  http.put("*/v1/notes/:noteId/context", async ({ request, params }) =>
+    resultOf(
+      async () =>
+        mockDb.updateNoteContext(
+          id(params.noteId),
+          (await request.json().catch(() => ({}))) as {
+            topic?: string | null;
+            background?: string | null;
+          }
         ),
       BAD_REQUEST
     )

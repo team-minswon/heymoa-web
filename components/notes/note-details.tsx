@@ -5,6 +5,10 @@ import { Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
+import {
+  NoteContextSection,
+  NoteContextSkeleton,
+} from "@/components/notes/note-context-section";
 import { NoteParticipantsField } from "@/components/notes/note-participants-field";
 import { ParticipantAvatar } from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
@@ -16,7 +20,10 @@ import {
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
 import { formatAppDate } from "@/lib/format/date";
-import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
+import {
+  deriveMeetingPhase,
+  getRecordedDurationMs,
+} from "@/lib/notes/meeting-state";
 import { invalidateNoteLifecycle } from "@/lib/notes/invalidate";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 
@@ -39,7 +46,10 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={htmlFor} className="text-xs font-semibold text-[var(--el-ink)]">
+      <Label
+        htmlFor={htmlFor}
+        className="text-xs font-semibold text-[var(--el-ink)]"
+      >
         {label}
       </Label>
       {children}
@@ -53,7 +63,13 @@ function Field({
  * 키 열을 고정하는 이유는 값이 세로로 훑히기 때문이다 — 키 길이에 따라 값이 들쭉날쭉하면
  * 「무엇이 무엇인지」를 한 줄씩 다시 읽어야 한다.
  */
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+function Fact({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-[30px] items-center gap-3">
       <dt className="w-[124px] shrink-0 text-xs text-[var(--el-body)]">
@@ -116,6 +132,7 @@ export function NoteDetails({
     mutation: { meta: { suppressErrorToast: true } },
   });
   const [feedback, setFeedback] = useState<"saved" | null>(null);
+  const [titleSaves, setTitleSaves] = useState(0);
   const loaded =
     noteResponse.status === 200 && noteResponse.data.success
       ? noteResponse.data.data
@@ -149,9 +166,9 @@ export function NoteDetails({
     // 지금은 편집만 컨트롤 테두리를 갖고, 읽기는 키/값 표로 눕는다.
     <Body>
       <form
-        // 저장이 끝나면 `updatedAt`이 바뀌어 이 폼이 재마운트되고 입력이 서버 값으로 돌아온다.
-        // 낙관적 표시 없이 서버가 확정한 것만 보이게 하는 장치다.
-        key={`${note.noteId}-${note.updatedAt}`}
+        // 제목을 저장하면(또는 남이 제목을 바꾸면) 이 폼이 재마운트되어 서버가 확정한 값을 보인다.
+        // `updatedAt`으로 걸면 회의 맥락 자동 저장(APP-1190)도 그 값을 바꿔, 아직 저장 안 한 제목을 날린다.
+        key={`${note.noteId}-${note.title}-${titleSaves}`}
         className="flex flex-col gap-4"
         onSubmit={async (event) => {
           event.preventDefault();
@@ -166,6 +183,7 @@ export function NoteDetails({
               },
             });
             await refresh();
+            setTitleSaves((count) => count + 1);
             setFeedback("saved");
           } catch {
             toast.error("저장하지 못했습니다. 입력한 내용은 유지됩니다.", {
@@ -218,6 +236,15 @@ export function NoteDetails({
         </div>
       </form>
 
+      {/* 노트마다 따로 — 회의가 끝나 못 쓴 글이 다른 노트로 따라가지 않게 */}
+      <NoteContextSection
+        key={noteId}
+        noteId={noteId}
+        phase={deriveMeetingPhase(note)}
+        topic={note.contextTopic}
+        background={note.contextBackground}
+      />
+
       {/**
        * **표는 헤더가 말하지 않은 것만 담는다.**
        *
@@ -257,7 +284,11 @@ export function NoteDetails({
           {/* 초 단위로 바뀌는 값은 여기 하나뿐이다 — 노트 헤더는 같은 값을 분 단위로 요약하고
               (「기록 42분」), 진행 중 라이브 타이머는 레코더 독이 갖는다. */}
           <Fact label="누적 기록 시간">
-            <span role="timer" aria-label="누적 기록 시간" className="tabular-nums">
+            <span
+              role="timer"
+              aria-label="누적 기록 시간"
+              className="tabular-nums"
+            >
               {formatRecordedClock(getRecordedDurationMs(note, now ?? 0))}
             </span>
             <span className="font-normal text-[var(--el-muted)]">
@@ -305,6 +336,7 @@ export function NoteDetailsSkeleton() {
         </Field>
         <Skeleton className="h-8 w-[105px] rounded-control" />
       </div>
+      <NoteContextSkeleton />
       <section className="flex flex-col">
         <h2 className="mb-2.5 text-[13px] font-semibold text-[var(--el-ink)]">
           회의 정보
@@ -316,10 +348,7 @@ export function NoteDetailsSkeleton() {
               {label === "생성" ? <FactDivider /> : null}
               <Fact label={label}>
                 {/* 값 폭은 실제와 비슷하게 — 전부 같으면 표가 아니라 블록으로 보인다. */}
-                <Skeleton
-                  className="h-3.5 rounded-chip"
-                  style={{ width }}
-                />
+                <Skeleton className="h-3.5 rounded-chip" style={{ width }} />
               </Fact>
             </Fragment>
           ))}
