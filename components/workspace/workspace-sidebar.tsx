@@ -16,6 +16,7 @@ import {
   ChevronsUpDown,
   ChevronDown,
   CircleHelp,
+  MessageSquareText,
   ListChecks,
   ChevronRight,
   ListTodo,
@@ -27,6 +28,7 @@ import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
+import { FeedbackDialog } from "@/components/workspace/feedback-dialog";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
   AlertDialog,
@@ -77,9 +79,7 @@ import type {
   ProjectResponseData,
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
-import {
-  useGetWorkspaces,
-} from "@/lib/api/generated/workspaces/workspaces";
+import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { sortByLastVisited } from "@/lib/workspaces/last-workspace";
 import { track } from "@/lib/analytics/track";
 import { openSitePage } from "@/lib/desktop/open-site-page";
@@ -136,6 +136,7 @@ export function WorkspaceSidebar({
     null
   );
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(true);
   // 노트 전체 화면이 사이드바를 덮으면 **여기서 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라
   // `inert`도 덮는 면(`z-30`)도 닿지 않고, 셸이 재마운트되지 않아 저절로 사라지지도 않는다.
@@ -234,10 +235,7 @@ export function WorkspaceSidebar({
               <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="w-64"
-          >
+          <DropdownMenuContent align="start" className="w-64">
             {/* **기억한 워크스페이스가 맨 위다.** 서버는 합류 순으로 주므로, 지금 보고 있는
                 곳(= 마지막으로 방문한 곳)이 목록 중간에 체크만 달고 앉아 있었다. 방금 온 자리를
                 목록에서 찾아야 하는 것은 순서가 잘못된 것이다.
@@ -286,7 +284,14 @@ export function WorkspaceSidebar({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    render={onNotes ? undefined : <Link href={notesHref} onNavigate={() => onSelectProject(null)} />}
+                    render={
+                      onNotes ? undefined : (
+                        <Link
+                          href={notesHref}
+                          onNavigate={() => onSelectProject(null)}
+                        />
+                      )
+                    }
                     isActive={selectedProjectId === null && !onTasks}
                     onClick={onNotes ? () => onSelectProject(null) : undefined}
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
@@ -317,6 +322,19 @@ export function WorkspaceSidebar({
                   >
                     <NavigationIcon icon={CircleHelp} />
                     <span>사용 가이드</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  {/* 푸터의 문의 메일은 랜딩에만 있었다. 로그인한 화면 안에서 바로 보낼 수 있게 도움말 아래에 둔다(APP-1173). */}
+                  <SidebarMenuButton
+                    onClick={() => {
+                      track("feedback_opened", { from: "sidebar" });
+                      setFeedbackOpen(true);
+                    }}
+                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+                  >
+                    <NavigationIcon icon={MessageSquareText} />
+                    <span>문의·피드백</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -374,9 +392,22 @@ export function WorkspaceSidebar({
                   {projects.map((project) => (
                     <SidebarMenuItem key={project.projectId}>
                       <SidebarMenuButton
-                        render={onNotes ? undefined : <Link href={notesHref} onNavigate={() => onSelectProject(project.projectId)} />}
+                        render={
+                          onNotes ? undefined : (
+                            <Link
+                              href={notesHref}
+                              onNavigate={() =>
+                                onSelectProject(project.projectId)
+                              }
+                            />
+                          )
+                        }
                         isActive={selectedProjectId === project.projectId}
-                        onClick={onNotes ? () => onSelectProject(project.projectId) : undefined}
+                        onClick={
+                          onNotes
+                            ? () => onSelectProject(project.projectId)
+                            : undefined
+                        }
                         className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                       >
                         <NavigationIcon icon={Folder} />
@@ -400,9 +431,7 @@ export function WorkspaceSidebar({
                           className="rounded-panel"
                         >
                           <DropdownMenuItem
-                            onClick={() =>
-                              setProjectDialog({ project })
-                            }
+                            onClick={() => setProjectDialog({ project })}
                             className="gap-2 rounded-control py-1.5 text-xs"
                           >
                             <Pencil className="size-3.5 text-[var(--el-muted)]" />
@@ -448,7 +477,11 @@ export function WorkspaceSidebar({
                   <Loader2 className="size-4 animate-spin text-[var(--el-muted)]" />
                 </span>
               ) : (
-                <PersonAvatar name={user?.userId ?? "?"} image={user?.image} size={28} />
+                <PersonAvatar
+                  name={user?.userId ?? "?"}
+                  image={user?.image}
+                  size={28}
+                />
               )}
               <div className="min-w-0 flex-1 text-left">
                 <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">
@@ -461,11 +494,7 @@ export function WorkspaceSidebar({
               <Settings className="size-4 text-[var(--el-muted-soft)] shrink-0" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            side="top"
-            className="w-60"
-          >
+          <DropdownMenuContent align="start" side="top" className="w-60">
             <DropdownMenuItem
               onClick={() => onOpenSettings("account")}
               className="gap-2 rounded-control py-2 text-sm"
@@ -505,6 +534,7 @@ export function WorkspaceSidebar({
         </DropdownMenu>
       </SidebarFooter>
 
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <CreateWorkspaceDialog
         open={workspaceDialogOpen}
         onOpenChange={setWorkspaceDialogOpen}
@@ -608,7 +638,10 @@ function NavigationIcon({ icon: Icon }: { icon: LucideIcon }) {
   const { pending } = useLinkStatus();
   return pending ? (
     <span role="status" aria-label="화면 이동 중">
-      <Loader2 className="size-4 animate-spin text-[var(--el-muted)]" aria-hidden />
+      <Loader2
+        className="size-4 animate-spin text-[var(--el-muted)]"
+        aria-hidden
+      />
     </span>
   ) : (
     <Icon className="size-4 text-[var(--el-muted)]" aria-hidden />

@@ -29,6 +29,7 @@ export type AnalyticsEvent =
   | "agent_connected"
   | "desktop_download_clicked"
   | "help_opened"
+  | "feedback_opened"
   | "onboarding_dismissed"
   | "onboarding_reopened"
   | "onboarding_completed"
