@@ -475,8 +475,9 @@
     0 1px 2px rgb(12 10 9 / 0.06), 0 8px 24px -12px rgb(12 10 9 / 0.18);
   --help-shadow-hover:
     0 2px 4px rgb(12 10 9 / 0.08), 0 12px 28px -12px rgb(12 10 9 / 0.28);
-  /* 본문의 핵심 문구 형광펜(`<Key>`). 주황 계열 토큰(`--el-warning-strong`)의 16% 틴트 — 색을 바꾸려면 여기 한 곳이다. */
-  --help-key: color-mix(in srgb, var(--el-warning-strong) 16%, transparent);
+  /* 본문의 핵심 문구 형광펜(`<Key>`). 연한 노랑(#fff3a3)의 58% — 색을 바꾸려면 여기 한 곳이다.
+     검색 일치(`::highlight(help-search*)`)는 글자 전체를 칠하고 밑줄이 있어 아래쪽 절반만 칠하는 이것과 겹쳐도 구분된다. */
+  --help-key: color-mix(in srgb, #fff3a3 58%, transparent);
   --help-sweep: 600ms;
   --help-shadow-lift: 0 10px 24px -14px rgb(12 10 9 / 0.32);
 }
