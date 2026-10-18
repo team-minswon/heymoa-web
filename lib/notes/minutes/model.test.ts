@@ -196,10 +196,9 @@ describe("buildMinutes", () => {
       { no: 1, content: "도메인 인증을 신청한다", assignee: null, due: null, agendaNo: 1, at: "31:00" },
     ]);
     expect(doc.open).toEqual([{ no: 1, content: "기한을 넣을 수 있나?", assignee: "강성재", agendaNo: 1, at: "05:00" }]);
-    // 항목이 다 앞 안건으로 간 「발송 상한」은 요지도 없어 싣지 않는다. 안건에 안 든 결정은 번호 없는 「기타」다
+    // 실제 안건만 목차에 싣고, 안건 미지정 결정은 상세에 남긴다
     expect(doc.agendas.map((agenda) => [agenda.no, agenda.title])).toEqual([
       [1, "외부 공유"],
-      [null, "기타"],
     ]);
   });
 
@@ -293,13 +292,13 @@ describe("buildMinutes", () => {
     ]);
   });
 
-  it("어느 안건에도 들지 않은 질문 · 이슈는 「기타」의 미결로 싣는다", () => {
+  it("안건 미지정 질문 · 이슈는 가짜 안건을 만들지 않고 미결 사항에 보존한다", () => {
     const doc = minutes(
       { transcript: false },
       { topics: [topic("외부 공유", { decisions: [item("d1", "PDF로 보낸다")] })], unfiledOpen: [item("q@2", "누가 메일 문구를 쓰나?", { kind: "QUESTION" })] }
     );
     expect(doc.open).toEqual([{ no: 1, content: "누가 메일 문구를 쓰나?", assignee: null, agendaNo: null, at: "02:00" }]);
-    expect(doc.agendas.at(-1)).toMatchObject({ no: null, title: "기타", open: 1 });
+    expect(doc.agendas.map((agenda) => agenda.title)).toEqual(["외부 공유"]);
   });
 
   it("구간 하나가 이미 길면 낱말 사이에서 여러 줄로 나누고, 이은 줄에는 시각 · 번호를 다시 적지 않는다", () => {

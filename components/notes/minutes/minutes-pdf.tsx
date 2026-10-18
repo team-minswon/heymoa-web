@@ -1,4 +1,4 @@
-import { Document, Font, Link, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
+import { Document, Font, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
 
 import type { MinutesDocument, MinutesLine } from "@/lib/notes/minutes/model";
 
@@ -149,12 +149,10 @@ const s = StyleSheet.create({
   // 1쪽 「핵심」
   pageLabel: { fontSize: 8, letterSpacing: 2, color: color.muted, marginBottom: mm(1.5) },
   verdict: { marginTop: mm(4), paddingVertical: mm(3), paddingHorizontal: mm(4), backgroundColor: color.label },
-  headline: { fontSize: 12, fontWeight: 700, lineHeight: "18pt", color: color.ink },
   leadRow: { flexDirection: "row", marginTop: mm(1.5) },
   leadMark: { lineHeight: LINE, width: mm(4), color: color.muted },
   leadText: { lineHeight: LINE, flex: 1, color: color.ink },
   agendaTitleCell: { flex: 1, color: color.ink },
-  gist: { fontSize: 9, fontWeight: 400, color: color.muted },
   // 1쪽 안건 표는 한 쪽에 들어야 해 칸 위아래를 줄인다
   tight: { paddingVertical: mm(1.4), paddingHorizontal: mm(2.5) },
   num: { width: mm(13), textAlign: "center" },
@@ -182,7 +180,7 @@ const s = StyleSheet.create({
     borderBottomColor: color.rule,
   },
   markerText: { flex: 1, fontWeight: 700, color: color.ink },
-  refs: { width: mm(18), fontSize: 8, color: color.decision, textAlign: "right" },
+  refs: { width: mm(18), fontSize: 8, color: color.muted, textAlign: "right" },
   annexHead: {
     fontSize: 11,
     fontWeight: 700,
@@ -314,8 +312,8 @@ function ItemRows({ text, cells, id }: { text: string; id?: string; cells: (piec
   );
 }
 
-const agendaLabel = (no: number | null) => (no === null ? "기타" : String(no));
-const agendaDestination = (no: number | null) => `minutes-agenda-${no ?? "other"}`;
+const agendaLabel = (no: number | null) => (no === null ? "—" : String(no));
+const agendaDestination = (no: number) => `minutes-agenda-${no}`;
 const countText = (count: number) => (count > 0 ? String(count) : "–");
 
 /** 1쪽 표의 수 칸. 0 은 흐리게 — 숫자 사이에서 「없음」이 먼저 읽히지 않게 한다 */
@@ -380,12 +378,7 @@ function TranscriptTable({ lines, truncated }: { lines: MinutesLine[]; truncated
             </Text>
             <Text style={[s.compact, { flex: 1 }]}>{line.text}</Text>
             {/* 「할 일 1」이 낱말 사이에서 꺾이지 않게 번호 안의 빈칸은 붙여 쓴다 */}
-            <Text style={[s.compact, s.refs]}>{line.refs.map((ref, index) => {
-              const [kind, no] = ref.split(" ");
-              const target = kind === "결정" ? "decision" : kind === "할" ? "action" : "open";
-              const number = kind === "할" ? ref.split(" ").at(-1) : no;
-              return <Link key={ref} src={`#minutes-${target}-${number}`}>{index ? ", " : ""}{ref.replaceAll(" ", "\u00a0")}</Link>;
-            })}</Text>
+            <Text style={[s.compact, s.refs]}>{line.refs.map((ref) => ref.replaceAll(" ", "\u00a0")).join(", ")}</Text>
           </View>
         );
       })}
@@ -441,10 +434,9 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
           </MetaRow>
         </View>
 
-        {doc.headline || doc.lead.length > 0 ? (
+        {doc.lead.length > 0 ? (
           <View style={s.verdict}>
-            <Text style={s.pageLabel}>회의 정리</Text>
-            {doc.headline ? <Text style={s.headline}>{`제목 후보 · ${doc.headline}`}</Text> : null}
+            <Text style={s.pageLabel}>회의 요약</Text>
             {doc.lead.map((line, index) => (
               <View key={index}>
                 {pieces(line).map((piece, part) => (
@@ -471,17 +463,17 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
               {/* 안건이 많아 다음 쪽으로 이어지면 칸 머리도 다시 선다 */}
               <View style={s.head} fixed>
                 <Text style={[s.tight, s.no]}>No</Text>
-                <Text style={[s.tight, { flex: 1 }]}>안건 · 요지</Text>
+                <Text style={[s.tight, { flex: 1 }]}>안건</Text>
                 <Text style={[s.tight, s.start]}>시작</Text>
                 <Text style={[s.tight, s.num]}>결정</Text>
                 <Text style={[s.tight, s.num]}>할 일</Text>
                 <Text style={[s.tight, s.num]}>미결</Text>
               </View>
               {doc.agendas.map((agenda, index) => (
-                <ItemRows key={index} text={`${agenda.title}${agenda.gist ? `   ${agenda.gist}` : ""}`} cells={(piece, first) => (
+                <ItemRows key={index} text={agenda.title} cells={(piece, first) => (
                   <>
                     <Text style={[s.tight, s.body, s.no]}>{first ? agendaLabel(agenda.no) : ""}</Text>
-                    <Link src={`#${agendaDestination(agenda.no)}`} style={[s.tight, s.body, s.agendaTitleCell]}>{piece}</Link>
+                    <Text style={[s.tight, s.body, s.agendaTitleCell]}>{piece}</Text>
                     <Text style={[s.tight, s.body, s.start]}>{first ? agenda.start ?? "" : ""}</Text>
                     <Count value={first ? agenda.decisions : null} />
                     <Count value={first ? agenda.actions : null} />
@@ -502,14 +494,13 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
                     {agendaLabel(agenda.no)}. {agenda.title}
                   </BookmarkText>
                   {pieces(agenda.text).filter(Boolean).map((piece, part) => <Text key={part} style={[s.body, { marginTop: mm(2) }]} wrap={false}>{piece}</Text>)}
-                  <Link src="#minutes-index" style={[s.gist, { marginTop: mm(2) }]}>안건 목차</Link>
                 </View>
               ))}
             </Section>
           </View>
         ) : null}
 
-        {/* 상세 항목은 한 번씩만 싣고 안건 전문으로 연결한다. */}
+        {/* 상세 항목은 한 번씩만 싣고 안건 번호를 병기한다. */}
         <View break>
           <Section title="1. 결정 사항" id="minutes-decisions">
             {doc.decisions.length === 0 ? (
@@ -531,7 +522,7 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
                       <>
                         <Text style={[s.cell, s.body, s.no]}>{first ? decision.no : ""}</Text>
                         <Text style={[s.cell, s.body, { flex: 1, color: color.ink }]}>{piece}</Text>
-                        <Link src={`#${agendaDestination(decision.agendaNo)}`} style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(decision.agendaNo) : ""}</Link>
+                        <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(decision.agendaNo) : ""}</Text>
                         <Text style={[s.cell, s.body, s.at]}>{first ? (decision.at ?? "") : ""}</Text>
                       </>
                     )}
@@ -571,7 +562,7 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
                       <Text style={[s.cell, s.body, s.due, action.due ? {} : s.tbd]} hyphenationCallback={narrowBreak}>
                         {first ? (action.due ?? "확인 필요") : ""}
                       </Text>
-                      <Link src={`#${agendaDestination(action.agendaNo)}`} style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(action.agendaNo) : ""}</Link>
+                      <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(action.agendaNo) : ""}</Text>
                       <View style={[s.cell, s.chk]}>{first ? <View style={s.box} /> : null}</View>
                     </>
                   )}
@@ -606,7 +597,7 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
                           {first ? (item.assignee ?? "확인 필요") : ""}
                         </Text>
                       ) : null}
-                      <Link src={`#${agendaDestination(item.agendaNo)}`} style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(item.agendaNo) : ""}</Link>
+                      <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(item.agendaNo) : ""}</Text>
                       <Text style={[s.cell, s.body, s.at]}>{first ? (item.at ?? "") : ""}</Text>
                     </>
                   )}
@@ -622,9 +613,7 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
         <Sheet footer={doc.footer}>
           <BookmarkText id="minutes-transcript" bookmark="부록 A. 녹취록" style={s.annexHead}>부록 A. 녹취록</BookmarkText>
           <Text style={s.annexNote}>
-            회의에서 한 말을 고치지 않고 옮긴 기록입니다. 같은 사람이 이어서 한 말은 한 줄로 이었습니다. 안건이 처음 나온
-            자리에 안건 줄을 두었고, 본문 항목이 근거로 든 발언에는 오른쪽에 그 번호를 적었습니다. 이름이 정해지지 않은
-            화자는 흐린 글씨입니다.
+            발언 시각은 녹음 시작 기준입니다. 본문 번호는 해당 발언을 근거로 한 결정·할 일·미결 사항을 가리킵니다.
           </Text>
           <Transcript lines={doc.transcript} truncated={doc.transcriptTruncated} />
         </Sheet>

@@ -93,7 +93,7 @@ describe("renderMinutesPdfInline", () => {
     expect(breakableWord(url).length).toBe(url.length * 2);
   });
 
-  it("안건 여덟 개의 긴 전문을 추가 쪽에 싣고 내부 이동과 북마크를 제공한다", async () => {
+  it("안건 여덟 개의 긴 전문을 보존하고 본문 링크 없이 북마크로 탐색한다", async () => {
     const gist = "요지 문장이 길게 이어집니다 ".repeat(20);
     const topics = Array.from({ length: 8 }, (_, index) => ({
       title: `안건 ${index + 1} 제목이 조금 깁니다`,
@@ -116,6 +116,7 @@ describe("renderMinutesPdfInline", () => {
     const bytes = Buffer.from(await (await renderMinutesPdfInline(big, FONTS)).arrayBuffer());
     expect(bytes.toString("latin1").match(/\/Type \/Page\b(?!s)/g)?.length).toBeGreaterThan(2);
     expect(bytes.toString("latin1")).toContain("/Outlines");
+    expect(bytes.toString("latin1")).not.toContain("/Subtype /Link");
     expect(bytes.toString("latin1")).toContain("minutes-agenda-1");
   }, 30_000);
 });
