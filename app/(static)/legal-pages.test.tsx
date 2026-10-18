@@ -31,6 +31,10 @@ describe("HeyMoa legal pages", () => {
     expect(document.getElementById("section-5")).toHaveTextContent("5. 쿠키와 접속 분석");
     // 서버 사건은 브라우저의 「이용 통계 보내기」와 별개라는 것을 적어 둔다(APP-1071)
     expect(screen.getByText(/서버에서 처리된 기록은/)).toBeVisible();
+    // 운영 알림으로 나가는 이용자 이름은 Grafana Cloud·Slack 카드와 1조에 일반 표현으로 적는다(APP-1217)
+    expect(document.body.textContent).toMatch(/이용자 이름 등 서비스 운영과 이용 지원에 필요한 이용 기록/);
+    expect(document.body.textContent).toMatch(/운영자 알림/);
+    expect(document.getElementById("section-1")).toHaveTextContent("서비스 이용 기록");
     expect(document.body.textContent).not.toMatch(/【/);
   });
 
