@@ -2302,6 +2302,8 @@ test("links a guest to an account and keeps the speaker assignment", async ({
   // **문서를 다시 로드하지 않는다.** 목 DB 가 페이지 모듈 상태라 새로고침하면 방금 만든
   // 임시 참여자가 사라진다 — 노트를 닫고 사이드바로 가는 클라이언트 이동만 한다.
   await page.getByRole("button", { name: "목록으로" }).click();
+  // 설정이 현재 주소를 기록하기 전에 노트 닫기의 경로 이동이 완료되어야 한다.
+  await expect.poll(() => new URL(page.url()).pathname).toBe(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "워크스페이스 전환" }).click();
   await page.getByRole("menuitem", { name: "워크스페이스 설정" }).click();
   await page.getByRole("button", { name: "임시 참여자" }).click();
