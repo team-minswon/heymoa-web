@@ -1,13 +1,18 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AGENT_INTRO_KEY, AgentFab } from "@/components/chat/agent-fab";
+import { AgentFab } from "@/components/chat/agent-fab";
+import { readUserFlag } from "@/lib/storage/user-flags";
 
 function renderFab(over: Partial<Parameters<typeof AgentFab>[0]> = {}) {
   const onOpen = vi.fn();
   render(<AgentFab hidden={false} onOpen={onOpen} className="" {...over} />);
   return { onOpen };
 }
+
+vi.mock("@/components/auth/auth-provider", () => ({
+  useAuthUserId: () => "u1",
+}));
 
 describe("AgentFab", () => {
   beforeEach(() => window.localStorage.clear());
@@ -27,7 +32,7 @@ describe("AgentFab", () => {
     renderFab();
     fireEvent.click(screen.getByRole("button", { name: "다시 보지 않기" }));
     expect(screen.queryByTestId("agent-intro")).toBeNull();
-    expect(window.localStorage.getItem(AGENT_INTRO_KEY)).toBe("1");
+    expect(readUserFlag("u1", "agentIntroDismissed")).toBe("1");
     cleanup();
     renderFab();
     expect(screen.queryByTestId("agent-intro")).toBeNull();
@@ -37,7 +42,7 @@ describe("AgentFab", () => {
     renderFab();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByTestId("agent-intro")).toBeNull();
-    expect(window.localStorage.getItem(AGENT_INTRO_KEY)).toBe("1");
+    expect(readUserFlag("u1", "agentIntroDismissed")).toBe("1");
   });
 
   it("열어 보기와 버튼 자체는 안내를 닫고 에이전트를 연다", () => {
@@ -51,7 +56,7 @@ describe("AgentFab", () => {
     const second = renderFab();
     fireEvent.click(screen.getByRole("button", { name: "내 에이전트 열기" }));
     expect(second.onOpen).toHaveBeenCalledTimes(1);
-    expect(window.localStorage.getItem(AGENT_INTRO_KEY)).toBe("1");
+    expect(readUserFlag("u1", "agentIntroDismissed")).toBe("1");
   });
 
   it("패널이 열려 숨는 동안은 카드도 보이지 않는다", () => {

@@ -1,4 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,7 +19,9 @@ import type { ScopeCandidate } from "@/lib/chat/use-scope-catalog";
 afterEach(cleanup);
 
 const CANDIDATES = {
-  projects: [{ kind: "project", id: "p1", title: "결제 개편" } as ScopeCandidate],
+  projects: [
+    { kind: "project", id: "p1", title: "결제 개편" } as ScopeCandidate,
+  ],
   notes: [
     {
       kind: "note",
@@ -299,7 +307,9 @@ describe("ChatComposer", () => {
     fireEvent.click(screen.getByText("회의 24"));
 
     expect(input.querySelectorAll("[data-scope-chip]")).toHaveLength(20);
-    expect(toastError).toHaveBeenCalledWith("범위는 20개까지 붙일 수 있습니다.");
+    expect(toastError).toHaveBeenCalledWith(
+      "범위는 20개까지 붙일 수 있습니다."
+    );
   });
 
   it("칩을 지우면 부모가 바로 안다", () => {
@@ -359,7 +369,10 @@ describe("ChatComposer", () => {
     // Shift+Enter 로 넣은 진짜 줄바꿈이다. 앞에 내용이 있으면 사용자가 넣은 것이다.
     const { input } = renderComposer();
     write(input, "첫 줄");
-    input.append(document.createElement("br"), document.createTextNode("둘째 줄"));
+    input.append(
+      document.createElement("br"),
+      document.createTextNode("둘째 줄")
+    );
     fireEvent.input(input);
 
     expect(input.querySelector("br")).toBeTruthy();

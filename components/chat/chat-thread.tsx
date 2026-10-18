@@ -407,8 +407,7 @@ function groupHistory(
           : toStepBlock(message, index);
       if (!step) return;
       if (step.kind === "approval") {
-        approvedCallId =
-          step.decision === "APPROVED" ? step.toolCallId : null;
+        approvedCallId = step.decision === "APPROVED" ? step.toolCallId : null;
       } else if (step.kind === "tool" && approvedCallId) {
         step = { ...step, toolCallId: approvedCallId };
         approvedCallId = null;

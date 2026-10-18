@@ -4,24 +4,24 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { MessageCircle } from "lucide-react";
 
 import { STARTERS } from "@/components/chat/chat-starter";
+import { useAuthUserId } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { readUserFlag, writeUserFlag } from "@/lib/storage/user-flags";
 import { cn } from "@/lib/utils";
 
-/** 안내를 닫은 브라우저의 표시. 값은 의미 없이 있으면 닫은 것이다. */
-export const AGENT_INTRO_KEY = "heymoa:agent-intro-dismissed";
-
-/** 읽을 수 없으면 닫힌 것으로 본다 — 저장소를 못 읽으면 매번 뜨는 안내가 되기 때문이다 */
-function readDismissed() {
-  try {
-    return window.localStorage.getItem(AGENT_INTRO_KEY) !== null;
-  } catch {
-    return true;
-  }
+/**
+ * 안내를 닫은 사용자의 표시(`lib/storage/user-flags`). 값은 의미 없이 있으면 닫은 것이다.
+ * **저장소를 못 읽으면 닫힌 것으로 본다** — 못 읽는 브라우저에서는 매번 뜨는 안내가 되기 때문이다.
+ */
+function readDismissed(userId: string | undefined) {
+  if (!userId) return true;
+  // 없을 때(null)만 처음이다. 값이 있거나 못 읽으면(undefined) 닫힌 것으로 본다.
+  return readUserFlag(userId, "agentIntroDismissed") !== null;
 }
 
 const subscribeNothing = () => () => {};
@@ -32,21 +32,19 @@ const subscribeNothing = () => () => {};
  * 상태로 닫힌다.
  */
 function useAgentIntro() {
+  const userId = useAuthUserId();
   const dismissedBefore = useSyncExternalStore(
     subscribeNothing,
-    readDismissed,
+    () => readDismissed(userId),
     () => true
   );
   const [closed, setClosed] = useState(false);
 
   const dismiss = useCallback(() => {
     setClosed(true);
-    try {
-      window.localStorage.setItem(AGENT_INTRO_KEY, "1");
-    } catch {
-      // 못 적어도 이번 방문은 닫혔다
-    }
-  }, []);
+    // 못 적어도 이번 방문은 닫혔다
+    if (userId) writeUserFlag(userId, "agentIntroDismissed", "1");
+  }, [userId]);
 
   return { visible: !dismissedBefore && !closed, dismiss };
 }
@@ -91,9 +89,7 @@ export function AgentFab({
           aria-label="내 에이전트 안내"
           className="fixed right-8 bottom-[5.25rem] z-40 w-[min(20rem,calc(100vw-4rem))] rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-4 shadow-e2 transition-[opacity,translate] duration-200 ease-out starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none"
         >
-          <h2 className="text-lg text-[var(--el-ink)]">
-            내 에이전트
-          </h2>
+          <h2 className="text-lg text-[var(--el-ink)]">내 에이전트</h2>
           <p className="mt-1 text-xs leading-relaxed text-balance text-[var(--el-muted)]">
             회의록을 보고 답해요. 바꾸는 일은 먼저 물어봐요.
           </p>

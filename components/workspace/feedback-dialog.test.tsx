@@ -10,6 +10,9 @@ const mutate = vi.fn();
 let feedbacks: unknown[] = [];
 let state: "ok" | "loading" | "error" = "ok";
 
+vi.mock("@/components/auth/auth-provider", () => ({
+  useAuthUserId: () => "u1",
+}));
 vi.mock("@/lib/ui/toast", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));

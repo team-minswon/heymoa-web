@@ -72,6 +72,7 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
 
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { name: "김민수", email: "minsu@example.com" } }),
+  useAuthUserId: () => "01K0000000003",
 }));
 
 const projectState = vi.hoisted(() => ({

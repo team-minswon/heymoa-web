@@ -8,7 +8,10 @@ import { toast } from "@/lib/ui/toast";
 
 // server 계약의 상한이다. 넘으면 400 이라 붙이기 전에 막는다.
 const MAX_SCOPE_ITEMS = 20;
-import { MentionInput, type MentionHandle } from "@/components/chat/mention-input";
+import {
+  MentionInput,
+  type MentionHandle,
+} from "@/components/chat/mention-input";
 import { ScopePicker } from "@/components/chat/scope-picker";
 import { Button } from "@/components/ui/button";
 import { matchScope, type ScopeCandidate } from "@/lib/chat/use-scope-catalog";
@@ -96,7 +99,9 @@ export function ChatComposer({
             onPick={(candidate) => {
               // 스무 개를 다 붙인 뒤 서버에서 거절당하지 않게 상한에서 막고 이유를 말한다.
               if (taken.size >= MAX_SCOPE_ITEMS) {
-                toast.error(`범위는 ${MAX_SCOPE_ITEMS}개까지 붙일 수 있습니다.`);
+                toast.error(
+                  `범위는 ${MAX_SCOPE_ITEMS}개까지 붙일 수 있습니다.`
+                );
                 setQuery(null);
                 return;
               }
