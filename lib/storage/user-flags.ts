@@ -11,19 +11,18 @@
  * - 내 계정의 표시면 이 파일의 사용자 표시 · `heymoa:onboarding:{userId}`(체크리스트, 자체 모듈)
  * - 탭 하나의 수명이면 sessionStorage `heymoa.transcription.clientInstanceId`
  * - 서버가 첫 화면을 그릴 때 알아야 하면 쿠키 `sidebar_state`
- * - 기기를 넘어 같아야 하거나 잃으면 곤란하면 DB 다(아직 그런 값이 없다)
+ * - 기기를 넘어 같아야 하거나 잃으면 곤란하면 DB 다(문의 답변 읽음이 그렇다 — `answerSeen`, APP-1214)
  */
 const PREFIX = "heymoa:u:";
 
 export const USER_FLAGS = {
   agentIntroDismissed: "agent-intro-dismissed",
   endNudgeOff: "end-nudge-off",
-  feedbackSeen: "feedback-seen",
 } as const;
 
 export type UserFlag = keyof typeof USER_FLAGS;
 
-/** 사용자별로 옮기기 전의 전역 키와 읽는 코드가 사라진 키. 한 번 지운다. */
+/** 사용자별로 옮기기 전의 전역 키와 읽는 코드가 사라진 키. 한 번 지운다. `feedback-seen` 은 읽음을 서버로 옮겼다(APP-1214). */
 const LEGACY_KEYS = [
   "heymoa:agent-intro-dismissed",
   "heymoa:end-nudge-off",
@@ -31,13 +30,25 @@ const LEGACY_KEYS = [
   "heymoa:desktop-promo-dismissed",
 ];
 
+/** 읽는 코드가 사라진 사용자 표시. 모든 사용자의 `heymoa:u:{userId}:{이름}` 을 한 번 지운다. */
+const LEGACY_USER_FLAGS = ["feedback-seen"];
+
 let purged = false;
 
 function purgeLegacyOnce() {
   if (purged) return;
   purged = true;
   try {
-    for (const key of LEGACY_KEYS) window.localStorage.removeItem(key);
+    const storage = window.localStorage;
+    for (const key of LEGACY_KEYS) storage.removeItem(key);
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+      if (
+        key?.startsWith(PREFIX) &&
+        LEGACY_USER_FLAGS.some((flag) => key.endsWith(`:${flag}`))
+      )
+        storage.removeItem(key);
+    }
   } catch {
     // 저장소를 못 쓰는 브라우저는 지울 것도 없다.
   }

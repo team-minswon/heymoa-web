@@ -32,4 +32,6 @@ export type FeedbackListResponseDataFeedbacksItem = {
    * @maxLength 1500
    */
   message: string;
+  /** 지금 답변을 읽었나. 답변이 없으면 false. 운영자가 답을 고쳐 answeredAt 이 늦어지면 다시 false. 새 답변 수 = answer 가 있고 answerSeen 이 false 인 항목 수 */
+  answerSeen: boolean;
 };

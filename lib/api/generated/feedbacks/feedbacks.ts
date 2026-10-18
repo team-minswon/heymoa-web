@@ -489,3 +489,119 @@ export const useCreateFeedback = <
 > => {
   return useMutation(getCreateFeedbackMutationOptions(options), queryClient);
 };
+export type markFeedbackAnswersSeenResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type markFeedbackAnswersSeenResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type markFeedbackAnswersSeenResponseSuccess =
+  markFeedbackAnswersSeenResponse204 & {
+    headers: Headers;
+  };
+export type markFeedbackAnswersSeenResponseError =
+  markFeedbackAnswersSeenResponse401 & {
+    headers: Headers;
+  };
+
+export type markFeedbackAnswersSeenResponse =
+  | markFeedbackAnswersSeenResponseSuccess
+  | markFeedbackAnswersSeenResponseError;
+
+export const getMarkFeedbackAnswersSeenUrl = () => {
+  return `/v1/feedbacks/answers/seen`;
+};
+
+/**
+ * 내 문의 중 답변이 있고 아직 안 읽은 것을 전부 읽음으로 한다. 본문 없음. 멱등이라 다시 불러도 204. 남의 문의는 바꾸지 않는다.
+ * @summary 내 문의 답변 읽음 처리
+ */
+export const markFeedbackAnswersSeen = async (
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<markFeedbackAnswersSeenResponse> => {
+  return apiFetch<markFeedbackAnswersSeenResponse>(
+    getMarkFeedbackAnswersSeenUrl(),
+    {
+      ...options,
+      method: "POST",
+    }
+  );
+};
+
+export const getMarkFeedbackAnswersSeenMutationKey = () =>
+  ["markFeedbackAnswersSeen"] as const;
+
+export const getMarkFeedbackAnswersSeenMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markFeedbackAnswersSeen>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markFeedbackAnswersSeen>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getMarkFeedbackAnswersSeenMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markFeedbackAnswersSeen>>,
+    void
+  > = () => {
+    return markFeedbackAnswersSeen(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkFeedbackAnswersSeenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markFeedbackAnswersSeen>>
+>;
+
+export type MarkFeedbackAnswersSeenMutationError = UnauthorizedResponse;
+
+/**
+ * @summary 내 문의 답변 읽음 처리
+ */
+export const useMarkFeedbackAnswersSeen = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markFeedbackAnswersSeen>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof markFeedbackAnswersSeen>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    getMarkFeedbackAnswersSeenMutationOptions(options),
+    queryClient
+  );
+};

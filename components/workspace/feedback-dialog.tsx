@@ -100,6 +100,36 @@ export function composeFeedback(message: string): string {
   return `${message.trim()}${footer}`;
 }
 
+/**
+ * 새 답변 수. 읽어서 0 이 되면 마지막 숫자를 남긴 채 150ms 동안 흐려지며 사라진다 — 숫자가 「0」으로 바뀌거나 자리가
+ * 툭 빠지지 않게. 한 번도 숫자가 없었으면 아무것도 그리지 않는다. 사이드바와 「내 문의」 탭이 같이 쓴다.
+ */
+export function UnseenCount({
+  count,
+  className,
+}: {
+  count: number;
+  className?: string;
+}) {
+  const [shown, setShown] = useState(count);
+  if (count > 0 && count !== shown) setShown(count);
+  if (shown === 0) return null;
+  const visible = count > 0;
+  return (
+    <span
+      aria-hidden={!visible}
+      aria-label={visible ? `새 답변 ${count}개` : undefined}
+      className={cn(
+        "tabular-nums transition-opacity duration-150 motion-reduce:transition-none",
+        visible ? "opacity-100" : "opacity-0",
+        className
+      )}
+    >
+      {shown}
+    </span>
+  );
+}
+
 const SENT_AT: Intl.DateTimeFormatOptions = {
   month: "numeric",
   day: "numeric",
@@ -116,8 +146,15 @@ export function FeedbackDialog({
 }) {
   const queryClient = useQueryClient();
   const create = useCreateFeedback();
-  const { feedbacks, unseen, markSeen, isLoading, isError, refetch } =
-    useFeedbackAnswers();
+  const {
+    feedbacks,
+    unseen,
+    markSeen,
+    resetMarkSeen,
+    isLoading,
+    isError,
+    refetch,
+  } = useFeedbackAnswers();
   const [tab, setTab] = useState<"send" | "mine">("send");
   const [kind, setKind] = useState<Kind>("QUESTION");
   const [message, setMessage] = useState("");
@@ -128,6 +165,10 @@ export function FeedbackDialog({
   useEffect(() => {
     if (open && tab === "mine") markSeen();
   }, [open, tab, markSeen]);
+  // 실패한 읽음 처리는 창을 다시 열 때 한 번 더 시도한다.
+  useEffect(() => {
+    if (!open) resetMarkSeen();
+  }, [open, resetMarkSeen]);
 
   function submit() {
     if (empty || create.isPending) return;
@@ -169,14 +210,10 @@ export function FeedbackDialog({
             <TabsTrigger value="send">보내기</TabsTrigger>
             <TabsTrigger value="mine">
               내 문의
-              {unseen > 0 ? (
-                <span
-                  aria-label={`새 답변 ${unseen}개`}
-                  className="ml-1.5 text-[11px] tabular-nums text-[var(--el-ink)]"
-                >
-                  {unseen}
-                </span>
-              ) : null}
+              <UnseenCount
+                count={unseen}
+                className="ml-1.5 text-[11px] text-[var(--el-ink)]"
+              />
             </TabsTrigger>
           </TabsList>
 

@@ -27,7 +27,10 @@ import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
-import { FeedbackDialog } from "@/components/workspace/feedback-dialog";
+import {
+  FeedbackDialog,
+  UnseenCount,
+} from "@/components/workspace/feedback-dialog";
 import { useFeedbackAnswers } from "@/components/workspace/use-feedback-answers";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
@@ -338,14 +341,10 @@ export function WorkspaceSidebar({
                   >
                     <NavigationIcon icon={MessageSquareText} />
                     <span>문의·피드백</span>
-                    {feedbackUnseen > 0 ? (
-                      <span
-                        aria-label={`새 답변 ${feedbackUnseen}개`}
-                        className="ml-auto text-[11px] tabular-nums text-[var(--el-muted)]"
-                      >
-                        {feedbackUnseen}
-                      </span>
-                    ) : null}
+                    <UnseenCount
+                      count={feedbackUnseen}
+                      className="ml-auto text-[11px] text-[var(--el-muted)]"
+                    />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

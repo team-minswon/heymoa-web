@@ -1823,6 +1823,7 @@ function createSeedState(): StoreState {
         answer:
           "불편을 드려 죄송합니다. 네트워크가 끊긴 구간이 있었고, 다시 연결되며 이어서 받아쓰도록 고쳤습니다.",
         answeredAt: "2026-10-17T09:30:00.000Z",
+        answerSeen: false,
         createdAt: "2026-10-17T08:12:00.000Z",
       },
       {
@@ -1831,6 +1832,7 @@ function createSeedState(): StoreState {
         message: "회의 요약을 메일로 자동 전송하는 옵션이 있으면 좋겠어요.",
         answer: null,
         answeredAt: null,
+        answerSeen: false,
         createdAt: "2026-10-18T01:05:00.000Z",
       },
     ],
@@ -3338,10 +3340,18 @@ export const mockDb = {
       message: request.message.trim(),
       answer: null,
       answeredAt: null,
+      answerSeen: false,
       createdAt: nextTimestamp(),
     };
     state.feedbacks.push(feedback);
     return copy(feedback);
+  },
+
+  /** 서버처럼 답변 있는 것만 읽음으로 한다. 멱등이다. */
+  markFeedbackAnswersSeen(): void {
+    for (const item of state.feedbacks) {
+      if (item.answer !== null) item.answerSeen = true;
+    }
   },
 
   /** 계약은 식별자만 돌려준다 — 전체 알림을 흘리면 UI가 없는 필드에 기대게 된다. */

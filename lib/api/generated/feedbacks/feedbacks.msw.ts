@@ -18,8 +18,27 @@ export const getGetMyFeedbacksResponseMock = (): FeedbackListResponse => ({
         feedbackId: "0HZX2K7M9Q4AJ",
         kind: "INCIDENT",
         message: "녹음이 자꾸 끊겨요",
+        answer: "확인했습니다.",
+        answeredAt: "2026-07-14T01:02:03Z",
+        createdAt: "2026-07-14T01:02:03Z",
+        answerSeen: false,
+      },
+      {
+        feedbackId: "0HZX2K7M9Q4AK",
+        kind: "QUESTION",
+        message: "녹음이 자꾸 끊겨요",
+        answer: "안내드렸습니다.",
+        answeredAt: "2026-07-14T01:02:03Z",
+        answerSeen: true,
+        createdAt: "2026-07-14T01:02:03Z",
+      },
+      {
+        feedbackId: "0HZX2K7M9Q4AJ",
+        kind: "INCIDENT",
+        message: "녹음이 자꾸 끊겨요",
         answer: null,
         answeredAt: null,
+        answerSeen: false,
         createdAt: "2026-07-14T01:02:03Z",
       },
     ],
@@ -36,6 +55,7 @@ export const getCreateFeedbackResponseMock = (): FeedbackResponse => ({
     answer: null,
     answeredAt: null,
     createdAt: "2026-07-14T01:02:03Z",
+    answerSeen: false,
   },
   error: null,
 });
@@ -87,7 +107,29 @@ export const getCreateFeedbackMockHandler = (
     options
   );
 };
+
+export const getMarkFeedbackAnswersSeenMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/feedbacks/answers/seen",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
 export const getFeedbacksMock = () => [
   getGetMyFeedbacksMockHandler(),
   getCreateFeedbackMockHandler(),
+  getMarkFeedbackAnswersSeenMockHandler(),
 ];

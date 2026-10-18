@@ -173,8 +173,23 @@ paths:
                       - feedbackId: 0HZX2K7M9Q4AJ
                         kind: INCIDENT
                         message: 녹음이 자꾸 끊겨요
+                        answer: 확인했습니다.
+                        answeredAt: '2026-07-14T01:02:03Z'
+                        createdAt: '2026-07-14T01:02:03Z'
+                        answerSeen: false
+                      - feedbackId: 0HZX2K7M9Q4AK
+                        kind: QUESTION
+                        message: 녹음이 자꾸 끊겨요
+                        answer: 안내드렸습니다.
+                        answeredAt: '2026-07-14T01:02:03Z'
+                        answerSeen: true
+                        createdAt: '2026-07-14T01:02:03Z'
+                      - feedbackId: 0HZX2K7M9Q4AJ
+                        kind: INCIDENT
+                        message: 녹음이 자꾸 끊겨요
                         answer: null
                         answeredAt: null
+                        answerSeen: false
                         createdAt: '2026-07-14T01:02:03Z'
                     error: null
         '401':
@@ -215,6 +230,7 @@ paths:
                       answer: null
                       answeredAt: null
                       createdAt: '2026-07-14T01:02:03Z'
+                      answerSeen: false
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -8458,6 +8474,20 @@ paths:
                       details: null
       security:
       - accessCookie: []
+  /v1/feedbacks/answers/seen:
+    post:
+      tags:
+      - Feedbacks
+      summary: 내 문의 답변 읽음 처리
+      description: 내 문의 중 답변이 있고 아직 안 읽은 것을 전부 읽음으로 한다. 본문 없음. 멱등이라 다시 불러도 204. 남의 문의는 바꾸지 않는다.
+      operationId: markFeedbackAnswersSeen
+      responses:
+        '204':
+          description: 처리 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
   /v1/workspaces/{workspaceId}/members/{userId}/display-name:
     patch:
       tags:
@@ -10771,6 +10801,7 @@ components:
               description: 내 문의. 최신순 최대 50건
               items:
                 required:
+                - answerSeen
                 - createdAt
                 - feedbackId
                 - kind
@@ -10818,6 +10849,11 @@ components:
                     nullable: false
                     example: 녹음이 자꾸 끊겨요
                     maxLength: 1500
+                  answerSeen:
+                    type: boolean
+                    description: 지금 답변을 읽었나. 답변이 없으면 false. 운영자가 답을 고쳐 answeredAt 이 늦어지면 다시 false. 새 답변 수 = answer 가 있고 answerSeen 이 false 인 항목 수
+                    nullable: false
+                    example: false
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -10841,6 +10877,7 @@ components:
       properties:
         data:
           required:
+          - answerSeen
           - createdAt
           - feedbackId
           - kind
@@ -10888,6 +10925,11 @@ components:
               nullable: false
               example: 녹음이 자꾸 끊겨요
               maxLength: 1500
+            answerSeen:
+              type: boolean
+              description: 지금 답변을 읽었나. 답변이 없으면 false. 운영자가 답을 고쳐 answeredAt 이 늦어지면 다시 false. 새 답변 수 = answer 가 있고 answerSeen 이 false 인 항목 수
+              nullable: false
+              example: false
           description: 성공 응답 데이터
           nullable: false
         success:

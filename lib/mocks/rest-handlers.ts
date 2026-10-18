@@ -1206,6 +1206,10 @@ export const restHandlers = [
     error: null,
   })),
   http.get("*/v1/feedbacks", () => commandResult(() => mockDb.listFeedbacks())),
+  http.post("*/v1/feedbacks/answers/seen", () => {
+    mockDb.markFeedbackAnswersSeen();
+    return new HttpResponse(null, { status: 204 });
+  }),
   http.post("*/v1/feedbacks", async ({ request }) => {
     const body = (await request.json()) as CreateFeedbackRequest;
     return commandResult(() => mockDb.createFeedback(body), 201);
