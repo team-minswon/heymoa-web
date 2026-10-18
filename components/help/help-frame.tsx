@@ -18,7 +18,6 @@ import { HelpTopicList } from "@/components/help/help-topic-list";
 import { helpGroups } from "@/app/(static)/help/_content/groups";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
 import type { HelpAxis, HelpTopic } from "@/app/(static)/help/_content/types";
-import { HELP_MODIFIED_LABEL } from "@/lib/help/dates";
 import { cn } from "@/lib/utils";
 
 /**
@@ -97,14 +96,7 @@ export function HelpPageFrame({
         action={<HelpPalette />}
         title={topic.title}
         description={topic.summary}
-      >
-        <p className="m-0 mt-6 text-[14px] leading-[1.6] text-[var(--tv-muted)]">
-          최종 수정일{" "}
-          <b className="font-bold text-[var(--tv-ink)]">
-            {HELP_MODIFIED_LABEL}
-          </b>
-        </p>
-      </HelpHeader>
+      />
 
       <div
         className={cn(
