@@ -78,11 +78,11 @@ export function HelpTopBar() {
                 aria-pressed={on}
                 onClick={() => pickHelpAxis(pathname, tab.axis)}
                 className={cn(
-                  "relative px-3 text-[14px] help-fade after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--tv-ink)] after:transition-opacity after:duration-(--help-fast) motion-reduce:after:transition-none",
+                  "relative px-3 text-[14px] font-semibold help-fade after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--tv-ink)] after:transition-opacity after:duration-(--help-fast) motion-reduce:after:transition-none",
                   FOCUS,
                   on
-                    ? "font-extrabold text-[var(--tv-ink)] after:opacity-100"
-                    : "font-semibold text-[var(--tv-muted)] after:opacity-0 hover:text-[var(--tv-ink)]"
+                    ? "text-[var(--tv-ink)] after:opacity-100"
+                    : "text-[var(--tv-muted)] after:opacity-0 hover:text-[var(--tv-ink)]"
                 )}
               >
                 {tab.label}

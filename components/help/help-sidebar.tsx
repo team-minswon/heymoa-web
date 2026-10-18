@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,7 +16,8 @@ const ITEM =
 
 /**
  * 왼쪽 주제 목록. 상단 탭이 고른 축의 모든 그룹을 **항상 펼친** 평평한 목록으로 낸다(접힘 없음). 상단바 아래 전체 높이로
- * 붙고 자체로 스크롤한다. 현재 페이지는 연한 회색 배경 + 굵게(`aria-current="page"`), hover 는 한 단계 더 옅은 회색이다.
+ * 붙고 자체로 스크롤한다. 현재 페이지는 연한 회색 배경 + 글자색(`aria-current="page"`), hover 는 한 단계 더 옅은 회색이다.
+ * **선택해도 굵기·크기를 바꾸지 않는다** — 굵기가 달라지면 글자 폭이 달라져 줄바꿈과 목록 높이가 출렁인다(실측: 항목 높이 32↔49).
  * 레이아웃에 서서 페이지를 옮겨도 다시 그려지지 않으므로 스크롤 위치가 유지되고, 현재 항목이 안 보일 때만 맞춘다.
  */
 export function HelpSidebar({
@@ -29,6 +30,22 @@ export function HelpSidebar({
   const pathname = usePathname();
   const axis = useHelpAxis(pathname);
   const box = useRef<HTMLDivElement>(null);
+  // 누른 즉시 활성 표시를 옮긴다(낙관적). 라우트 전환이 끝나 주소가 바뀌면 그 값이 이어받고, 오래 안 바뀌면(실패) 되돌린다.
+  const [pending, setPending] = useState<string | null>(null);
+  const current = pending ?? pathname;
+
+  useEffect(() => {
+    setPending(null); // eslint-disable-line react-hooks/set-state-in-effect -- 주소가 바뀌면 낙관적 표시를 거둔다
+  }, [pathname]);
+  useEffect(() => {
+    if (!pending) return;
+    const timer = window.setTimeout(() => setPending(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [pending]);
+  const onPick = (path: string) => (event: React.MouseEvent) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    setPending(path);
+  };
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -38,7 +55,7 @@ export function HelpSidebar({
     const bottom = top + current.offsetHeight;
     if (top < el.scrollTop + 48 || bottom > el.scrollTop + el.clientHeight - 48)
       el.scrollTop = top - el.clientHeight / 3;
-  }, [pathname, axis]);
+  }, [current, axis]);
 
   return (
     <div
@@ -55,12 +72,13 @@ export function HelpSidebar({
                 <p className="m-0 mb-1">
                   <Link
                     href={groupPath}
-                    aria-current={pathname === groupPath ? "page" : undefined}
+                    aria-current={current === groupPath ? "page" : undefined}
+                    onClick={onPick(groupPath)}
                     className={cn(
                       ITEM,
                       "font-extrabold text-[var(--tv-ink)] hover:bg-[var(--tv-lav-soft)]",
                       FOCUS,
-                      pathname === groupPath && "bg-[var(--tv-lav)]"
+                      current === groupPath && "bg-[var(--tv-lav)]"
                     )}
                   >
                     {group.title}
@@ -71,17 +89,18 @@ export function HelpSidebar({
                     .filter((topic) => topic.group === group.slug)
                     .map((topic) => {
                       const path = `${groupPath}/${topic.slug}`;
-                      const on = pathname === path;
+                      const on = current === path;
                       return (
                         <li key={topic.slug}>
                           <Link
                             href={path}
                             aria-current={on ? "page" : undefined}
+                            onClick={onPick(path)}
                             className={cn(
                               ITEM,
                               FOCUS,
                               on
-                                ? "bg-[var(--tv-lav)] font-extrabold text-[var(--tv-ink)]"
+                                ? "bg-[var(--tv-lav)] text-[var(--tv-ink)]"
                                 : "text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]"
                             )}
                           >

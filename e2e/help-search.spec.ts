@@ -226,3 +226,24 @@ test("검색 팔레트를 열고 배경을 눌러 닫아도 폭·스크롤이 �
   expect(await state()).toEqual(before);
   expect(await page.evaluate(() => (window as unknown as { __shifts: number }).__shifts)).toBe(0);
 });
+
+// 선택해도 굵기가 바뀌지 않아야 글자 폭 · 줄바꿈 · 목록 높이가 그대로다. 누르면 주소가 바뀌기 전에 활성 표시가 먼저 옮겨 간다.
+test("사이드바 항목을 눌러도 모든 항목의 폭·높이가 그대로고 활성 표시가 바로 옮겨 간다", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/help/situations/fix-speakers");
+  await page.waitForLoadState("networkidle");
+  const links = page.getByRole("navigation", { name: "사용 가이드 주제" }).getByRole("link");
+  const sizes = () =>
+    links.evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return [el.textContent, Math.round(r.width), Math.round(r.height)];
+      })
+    );
+  const before = await sizes();
+  const target = links.nth(3);
+  await target.click();
+  await expect(target).toHaveAttribute("aria-current", "page", { timeout: 300 });
+  await expect(page).toHaveURL(/\/help\/situations\/(?!fix-speakers)/);
+  expect(await sizes()).toEqual(before);
+});
