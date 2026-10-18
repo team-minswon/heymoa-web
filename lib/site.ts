@@ -19,13 +19,16 @@ const siteUrl =
 export const siteConfig = {
   name: "HeyMoa",
   // 랜딩 히어로 · 기능 구간이 하는 말까지만 한다. 「참여형 AI 회의 운영 에이전트」는 지금 제품(받아 적고 정리하고
-  // 묻는)과 맞지 않아 내렸다(APP-934). `app/opengraph-image.tsx` 의 한 줄도 이 설명의 앞 문장이다.
+  // 묻는)과 맞지 않아 내렸다(APP-934). `app/opengraph-image.tsx` 의 작은 줄도 이 설명을 줄인 것이다.
   // 두 표기(HeyMoa · 헤이모아)가 모두 검색어다 — 제목·설명·본문에 실제로 쓰고, 숨긴 글자로 도배하지 않는다(APP-1236).
   brandLabel: "HeyMoa(헤이모아)",
   alternateNames: ["헤이모아", "HeyMoa", "Hey Moa"],
-  title: "HeyMoa(헤이모아) | AI 회의록 · 회의 요약 · 할 일 자동 정리",
+  title: "HeyMoa(헤이모아) | AI 실시간 회의록 서비스",
+  // 공유 카드(og:title)는 제목 줄이 짧아서 구분 기호만 다르다. 「AI 실시간 회의록」이 어디서나 앞에 온다(APP-1245).
+  ogTitle: "HeyMoa(헤이모아) – AI 실시간 회의록 서비스",
+  // 메신저 카드는 약 90자에서 잘린다 — 핵심(맥락을 잇는 AI Agent · AI 실시간 회의록)이 그 안에 든다.
   description:
-    "헤이모아(HeyMoa)는 회의를 받아 적고 화자를 나눠 결정과 할 일을 근거와 함께 정리하는 AI 회의 에이전트입니다. 검토를 완료해 확정한 항목만 프로젝트에 쌓입니다.",
+    "HeyMoa(헤이모아)는 회의 전·중·후의 맥락을 연결하여 팀의 의사결정을 돕는 AI Agent 서비스입니다. AI 실시간 회의록, 화자 분리, 결정·할 일 정리를 한 곳에서 제공합니다.",
   // 랩(`env-001.realillust.com` 등)에서 열면 canonical·OG·sitemap 이 전부 운영 주소를
   // 가리켜서, 크롤러에게 랩이 운영의 거울이라고 말하게 됩니다. 기본값은 운영 그대로입니다.
   url: siteUrl,

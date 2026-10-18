@@ -7,7 +7,7 @@ import { siteConfig } from "@/lib/site";
 
 /** 상단 바 · 푸터 · 파비콘과 같은 앵무새 마크. 요청과 상관없는 값이라 모듈에서 한 번만 읽는다(Node 런타임). */
 const LOGO = `data:image/png;base64,${await readFile(join(process.cwd(), "public/apple-touch-icon.png"), "base64")}`;
-export const alt = `${siteConfig.brandLabel} — 회의에서 받아 적던 손, 이제 쉬어도 됩니다`;
+export const alt = `${siteConfig.brandLabel} — 회의에서 받아 적던 손, 이제 쉬어도 됩니다. AI 실시간 회의록 · 회의 전·중·후의 맥락을 잇는 AI Agent`;
 export const size = {
   width: 1200,
   height: 630,
@@ -16,8 +16,8 @@ export const contentType = "image/png";
 
 /**
  * 공유 카드. **랜딩 첫 화면을 줄여 옮겼다** — 흰 바탕에 뜬 라벤더 판, 히어로 제목, 「쉬어도」의 노란
- * 형광펜. 링크를 받은 사람이 카드와 첫 화면에서 같은 말을 본다. 아래 한 줄은 제목이 말하지 않은 것(근거와
- * 함께 정리)만 쓴다 — 「회의 · 받아 적」을 되풀이하지 않는다. 옛 「참여형 AI 회의 운영 에이전트」는 APP-934
+ * 형광펜. 링크를 받은 사람이 카드와 첫 화면에서 같은 말을 본다. 아래 한 줄은 서비스가 무엇인지(AI 실시간
+ * 회의록 · 맥락을 잇는 AI Agent)를 말한다(APP-1245). 옛 「참여형 AI 회의 운영 에이전트」는 APP-934
  * 에서 내렸다.
  *
  * - 색은 `components/heymoa/landing/tokens.ts` 의 `TV_VARS` 값을 직접 적는다 — `ImageResponse` 는 CSS
@@ -104,7 +104,7 @@ export default function Image() {
               color: "#433f69",
             }}
           >
-            결정과 할 일은 근거와 함께 정리해 둡니다.
+            AI 실시간 회의록 · 회의 전·중·후의 맥락을 잇는 AI Agent
           </div>
         </div>
       </div>
