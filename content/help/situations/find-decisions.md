@@ -1,5 +1,6 @@
 ---
 title: 지난 결정이 뭐였는지 찾고 싶어요
+navTitle: 지난 결정 찾기
 description: 지난 회의에서 정한 결정과 근거를 내 에이전트, 타임라인, 스크립트 검색으로 찾는 순서예요.
 group: situations
 slug: find-decisions

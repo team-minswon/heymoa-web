@@ -1,5 +1,6 @@
 ---
 title: 동료를 초대해 같이 쓰고 싶어요
+navTitle: 동료 초대하기
 description: 워크스페이스에 동료를 초대하고 동료가 수락하기까지의 순서예요. 초대는 관리자만 보낼 수 있고, 링크는 1일(24시간) 동안 유효해요.
 group: situations
 slug: invite-team

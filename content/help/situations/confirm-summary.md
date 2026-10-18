@@ -1,5 +1,6 @@
 ---
 title: 요약을 확인하고 프로젝트에 확정하고 싶어요
+navTitle: 요약 확정하기
 description: AI가 정리한 결정과 할 일을 확인해 고친 뒤, 검토 완료로 프로젝트에 올리는 순서예요.
 group: situations
 slug: confirm-summary

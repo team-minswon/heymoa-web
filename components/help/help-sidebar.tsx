@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import type { HelpGroup } from "@/app/(static)/help/_content/types";
+import type { HelpCluster, HelpGroup } from "@/app/(static)/help/_content/types";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { useHelpAxis } from "@/components/help/help-axis";
 import { cn } from "@/lib/utils";
@@ -22,14 +22,35 @@ const ITEM =
  */
 export function HelpSidebar({
   groups,
+  clusters,
   topics,
 }: {
   groups: readonly HelpGroup[];
+  clusters: readonly HelpCluster[];
   topics: readonly SidebarTopic[];
 }) {
   const pathname = usePathname();
   const axis = useHelpAxis(pathname);
   const box = useRef<HTMLDivElement>(null);
+  // 기능별은 그룹 제목(그룹 소개로 가는 링크) 아래 그 그룹의 페이지, 상황별은 묶음 제목(표시용) 아래 레시피. 둘 다 같은 모양이다.
+  const sections =
+    axis === "feature"
+      ? groups
+          .filter((group) => group.axis === "feature")
+          .map((group) => ({
+            key: group.slug,
+            title: group.title,
+            href: `/help/${group.slug}`,
+            topics: topics.filter((topic) => topic.group === group.slug),
+          }))
+      : clusters.map((cluster) => ({
+          key: cluster.title,
+          title: cluster.title,
+          href: null,
+          topics: cluster.pages.flatMap((slug) =>
+            topics.filter((topic) => topic.slug === slug)
+          ),
+        }));
   // 누른 즉시 활성 표시를 옮긴다(낙관적). 라우트 전환이 끝나 주소가 바뀌면 그 값이 이어받고, 오래 안 바뀌면(실패) 되돌린다.
   const [pending, setPending] = useState<string | null>(null);
   const current = pending ?? pathname;
@@ -63,56 +84,60 @@ export function HelpSidebar({
       className="sticky top-[var(--help-top)] hidden h-[calc(100dvh-var(--help-top))] w-[264px] shrink-0 self-start overflow-y-auto border-r border-[var(--tv-rule)] bg-white lg:block"
     >
       <nav aria-label="사용 가이드 주제" className="flex flex-col gap-5 px-3 py-5">
-        {groups
-          .filter((group) => group.axis === axis)
-          .map((group) => {
-            const groupPath = `/help/${group.slug}`;
-            return (
-              <div key={group.slug}>
-                <p className="m-0 mb-1">
-                  <Link
-                    href={groupPath}
-                    aria-current={current === groupPath ? "page" : undefined}
-                    onClick={onPick(groupPath)}
-                    className={cn(
-                      ITEM,
-                      "font-extrabold text-[var(--tv-ink)] hover:bg-[var(--tv-lav-soft)]",
-                      FOCUS,
-                      current === groupPath && "bg-[var(--tv-lav)]"
-                    )}
-                  >
-                    {group.title}
-                  </Link>
-                </p>
-                <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
-                  {topics
-                    .filter((topic) => topic.group === group.slug)
-                    .map((topic) => {
-                      const path = `${groupPath}/${topic.slug}`;
-                      const on = current === path;
-                      return (
-                        <li key={topic.slug}>
-                          <Link
-                            href={path}
-                            aria-current={on ? "page" : undefined}
-                            onClick={onPick(path)}
-                            className={cn(
-                              ITEM,
-                              FOCUS,
-                              on
-                                ? "bg-[var(--tv-lav)] text-[var(--tv-ink)]"
-                                : "text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]"
-                            )}
-                          >
-                            {topic.title}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                </ul>
-              </div>
-            );
-          })}
+        {sections.map((section) => (
+          <div key={section.key}>
+            <p className="m-0 mb-1">
+              {section.href ? (
+                <Link
+                  href={section.href}
+                  aria-current={current === section.href ? "page" : undefined}
+                  onClick={onPick(section.href)}
+                  className={cn(
+                    ITEM,
+                    "font-extrabold text-[var(--tv-ink)] hover:bg-[var(--tv-lav-soft)]",
+                    FOCUS,
+                    current === section.href && "bg-[var(--tv-lav)]"
+                  )}
+                >
+                  {section.title}
+                </Link>
+              ) : (
+                <span
+                  className={cn(
+                    ITEM,
+                    "min-h-8 font-extrabold text-[var(--tv-ink)]"
+                  )}
+                >
+                  {section.title}
+                </span>
+              )}
+            </p>
+            <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+              {section.topics.map((topic) => {
+                const path = `/help/${topic.group}/${topic.slug}`;
+                const on = current === path;
+                return (
+                  <li key={topic.slug}>
+                    <Link
+                      href={path}
+                      aria-current={on ? "page" : undefined}
+                      onClick={onPick(path)}
+                      className={cn(
+                        ITEM,
+                        FOCUS,
+                        on
+                          ? "bg-[var(--tv-lav)] text-[var(--tv-ink)]"
+                          : "text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]"
+                      )}
+                    >
+                      {topic.title}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
     </div>
   );

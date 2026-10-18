@@ -200,6 +200,7 @@ function topicOf(file: string): { topic: HelpTopic; order: number } {
       slug,
       group: meta.group,
       title: meta.title,
+      ...(meta.navTitle ? { navTitle: meta.navTitle } : {}),
       summary: meta.description,
       sections,
       ...(howTo ? { howTo } : {}),

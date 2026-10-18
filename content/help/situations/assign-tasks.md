@@ -1,5 +1,6 @@
 ---
 title: 회의 후 할 일을 팀에 나누고 싶어요
+navTitle: 할 일 나누기
 description: 회의에서 나온 할 일에 담당자와 기한을 정하고, 상태·프로젝트·내 할 일로 모아 보는 순서예요.
 group: situations
 slug: assign-tasks

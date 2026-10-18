@@ -1,5 +1,6 @@
 ---
 title: 외부 AI 앱(MCP)에서 HeyMoa를 쓰고 싶어요
+navTitle: 외부 AI 앱에서 쓰기
 description: Claude, ChatGPT 같은 외부 AI 앱이 내 회의와 프로젝트를 읽도록 연결하는 순서예요. 연결한 앱은 읽기만 할 수 있고, 연결은 언제든 끊을 수 있어요.
 group: situations
 slug: use-mcp

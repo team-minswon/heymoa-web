@@ -6,6 +6,7 @@ import { helpGroups } from "@/app/(static)/help/_content/groups";
 import {
   helpGroupBySlug,
   helpPathOf,
+  navTitleOf,
   helpTopicsOfGroup,
 } from "@/app/(static)/help/_content/paths";
 import { HELP_PAD, HelpPageHead } from "@/components/help/help-frame";
@@ -92,7 +93,7 @@ export default async function HelpGroupPage({ params }: Props) {
                 )}
               >
                 <span className="text-[18px] leading-[1.35] font-extrabold break-keep text-[var(--tv-ink)]">
-                  {topic.title}
+                  {navTitleOf(topic)}
                 </span>
                 <span className="text-[14px] leading-[1.65] break-keep text-[var(--tv-body)]">
                   {topic.summary}

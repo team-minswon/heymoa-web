@@ -1,5 +1,6 @@
 ---
 title: 내 데이터는 어디에 어떻게 저장되나요
+navTitle: 내 데이터 보관
 description: 회의 음성, 스크립트, 요약이 어디서 처리되고 언제 삭제되는지, 내가 끄고 지울 수 있는 것을 요약해요.
 group: situations
 slug: data-privacy

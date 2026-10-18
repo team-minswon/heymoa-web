@@ -1,5 +1,6 @@
 ---
 title: 전문 용어가 자꾸 다른 말로 기록돼요
+navTitle: 용어가 틀리게 적혀요
 description: 제품명, 사내 용어, 영어 약어가 틀리게 받아 적힐 때 용어 사전과 회의 맥락을 등록해 정확도를 높이는 순서예요.
 group: situations
 slug: fix-terms

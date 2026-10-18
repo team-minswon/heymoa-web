@@ -17,3 +17,7 @@ export const helpTopicsOfGroup = (group: string) =>
 
 export const helpAxisOf = (topic: Pick<HelpTopic, "group">) =>
   helpGroupBySlug(topic.group)?.axis ?? "feature";
+
+/** 사이드바 · 이전/다음 · 허브 카드에 쓰는 짧은 이름. */
+export const navTitleOf = (topic: Pick<HelpTopic, "title" | "navTitle">) =>
+  topic.navTitle ?? topic.title;

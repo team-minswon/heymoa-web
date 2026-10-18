@@ -1,4 +1,5 @@
-import { helpGroups } from "@/app/(static)/help/_content/groups";
+import { helpGroups, situationClusters } from "@/app/(static)/help/_content/groups";
+import { navTitleOf } from "@/app/(static)/help/_content/paths";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
 import { HelpMotion } from "@/components/help/help-motion";
 import { HelpSidebar } from "@/components/help/help-sidebar";
@@ -15,10 +16,10 @@ export default function HelpLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const topics = helpTopics.map(({ slug, group, title }) => ({
-    slug,
-    group,
-    title,
+  const topics = helpTopics.map((topic) => ({
+    slug: topic.slug,
+    group: topic.group,
+    title: navTitleOf(topic),
   }));
   return (
     <div
@@ -28,7 +29,11 @@ export default function HelpLayout({
     >
       <HelpMotion />
       <div className="mx-auto flex w-full max-w-[1800px]">
-        <HelpSidebar groups={helpGroups} topics={topics} />
+        <HelpSidebar
+          groups={helpGroups}
+          clusters={situationClusters}
+          topics={topics}
+        />
         <div className="min-w-0 flex-1">{children}</div>
       </div>
     </div>

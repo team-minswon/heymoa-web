@@ -5,6 +5,7 @@ import { BODY, CARD_TITLE, FOCUS } from "@/components/heymoa/landing/tokens";
 import { AnchorCopy } from "@/components/help/anchor-copy";
 import { HelpPageToc } from "@/components/help/help-page-toc";
 import { HelpSearch } from "@/components/help/help-search";
+import { navTitleOf } from "@/app/(static)/help/_content/paths";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
 import type { HelpGroup, HelpTopic } from "@/app/(static)/help/_content/types";
 import { cn } from "@/lib/utils";
@@ -189,7 +190,7 @@ function StepLink({
         {next ? <ArrowRight aria-hidden className="size-3.5" /> : null}
       </span>
       <span className="break-keep text-[16px] font-extrabold text-[var(--tv-ink)] group-hover:text-[var(--tv-brand-deep)]">
-        {topic.title}
+        {navTitleOf(topic)}
       </span>
     </Link>
   );

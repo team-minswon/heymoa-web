@@ -1,4 +1,4 @@
-import type { HelpGroup } from "@/app/(static)/help/_content/types";
+import type { HelpCluster, HelpGroup } from "@/app/(static)/help/_content/types";
 
 /** 기능별 그룹(왼쪽 목록·허브 카드 순서)과 상황별 묶음. 그룹 slug 는 주소다 — 바꾸지 않는다. 한 그룹은 6페이지를 넘기지 않는다. */
 export const helpGroups: readonly HelpGroup[] = [
@@ -44,5 +44,25 @@ export const helpGroups: readonly HelpGroup[] = [
     summary:
       "겪고 있는 상황을 고르면, 먼저 볼 곳과 해결 단계를 알려 줘요.",
     axis: "situation",
+  },
+];
+
+/**
+ * 상황별 레시피를 묶는 제목(사이드바 · 허브). 주소(`/help/situations/<slug>`)와 무관한 표시용 묶음이고, 상황별 페이지는 모두 한 묶음에
+ * 들어야 한다(시험이 맞춘다). 묶음 안 순서가 곧 목록 순서다.
+ */
+export const situationClusters: readonly HelpCluster[] = [
+  { title: "처음 시작", pages: ["first-meeting", "invite-team"] },
+  {
+    title: "녹음이 이상할 때",
+    pages: ["desktop-no-audio", "fix-terms", "record-call-audio"],
+  },
+  {
+    title: "요약과 할 일",
+    pages: ["summary-missing", "confirm-summary", "fix-speakers", "assign-tasks"],
+  },
+  {
+    title: "찾고 연결하기",
+    pages: ["find-decisions", "use-mcp", "data-privacy"],
   },
 ];

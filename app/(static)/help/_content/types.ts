@@ -20,12 +20,20 @@ export type HelpGroup = {
   axis: HelpAxis;
 };
 
+/** 상황별 사이드바·허브에서 레시피를 묶는 제목. 기능별의 그룹 제목과 같은 모양이다. */
+export type HelpCluster = {
+  title: string;
+  pages: readonly HelpPageId[];
+};
+
 export type HelpTopic = {
   /** 사이트 안에서 겹치지 않는 이름이자 주소의 끝마디. 바꾸면 그 링크가 깨진다 — 옛 주소는 `legacy-anchors.ts` 가 받는다. */
   slug: HelpPageId;
   /** `HelpGroup.slug` */
   group: string;
   title: string;
+  /** 사이드바 · 이전/다음 · 허브 카드에 쓰는 짧은 이름(8~14자). 없으면 `title`. h1 · `<title>` · 검색 · JSON-LD 는 늘 `title` 이다. */
+  navTitle?: string;
   /** 허브 카드와 meta description 에 쓴다(한국어 110자 안팎). */
   summary: string;
   sections: readonly HelpSection[];

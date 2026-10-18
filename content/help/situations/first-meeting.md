@@ -1,5 +1,6 @@
 ---
 title: 첫 회의를 처음부터 끝까지 해 보고 싶어요
+navTitle: 첫 회의 해보기
 description: 새 회의를 만들어 녹음하고 종료한 뒤, AI가 정리한 요약을 확정하기까지 한 번에 따라 하는 순서예요.
 group: situations
 slug: first-meeting

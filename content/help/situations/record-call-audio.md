@@ -1,5 +1,6 @@
 ---
 title: 화상회의 상대방 소리까지 녹음하고 싶어요
+navTitle: 상대방 소리 녹음하기
 description: 브라우저에서는 내 마이크 소리만 기록돼요. 화상회의 상대방 목소리까지 받아 적도록 데스크톱 앱을 쓰는 순서예요.
 group: situations
 slug: record-call-audio

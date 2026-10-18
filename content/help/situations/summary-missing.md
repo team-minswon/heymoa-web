@@ -1,5 +1,6 @@
 ---
 title: 회의가 끝났는데 요약이 안 보여요
+navTitle: 요약이 안 보여요
 description: 회의를 종료했는데 요약 탭이 비어 있거나 분석에 실패했을 때, 확인할 곳과 다시 요청하는 순서예요.
 group: situations
 slug: summary-missing

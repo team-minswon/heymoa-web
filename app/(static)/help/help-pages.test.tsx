@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { helpGroups } from "@/app/(static)/help/_content/groups";
+import { helpGroups, situationClusters } from "@/app/(static)/help/_content/groups";
 import { HELP_PAGES } from "@/app/(static)/help/_content/ids";
 import { LEGACY_HELP_ANCHORS } from "@/app/(static)/help/_content/legacy-anchors";
 import {
@@ -48,6 +48,20 @@ describe("도움말 페이지", () => {
     expect(groupParams().map((p) => p.group)).toEqual(
       helpGroups.map((g) => g.slug)
     );
+  });
+
+  // 상황별 사이드바는 짧은 이름(navTitle)을 묶음 제목 아래에 낸다 — 한 줄에 들어가게, 모든 상황이 정확히 한 묶음에.
+  it("상황별 페이지는 모두 한 묶음에 들고 짧고 겹치지 않는 navTitle 이 있다", () => {
+    const situations = helpTopics.filter((t) => t.group === "situations");
+    const clustered = situationClusters.flatMap((c) => c.pages);
+    expect([...clustered].sort()).toEqual(situations.map((t) => t.slug).sort());
+    const names = situations.map((t) => t.navTitle);
+    for (const topic of situations) {
+      expect(topic.navTitle, topic.slug).toBeTruthy();
+      expect(topic.navTitle!.length, topic.slug).toBeLessThanOrEqual(14);
+      expect(topic.navTitle).not.toBe(topic.title);
+    }
+    expect(new Set(names).size).toBe(names.length);
   });
 
   it("페이지 id 는 사이트 안에서 겹치지 않고 그룹 slug 와도 겹치지 않는다", () => {

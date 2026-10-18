@@ -1,5 +1,6 @@
 ---
 title: 이름이 잘못 나온 화자를 고치고 싶어요
+navTitle: 화자 이름 고치기
 description: 화자 나누기 결과에서 이름이 없거나 틀린 화자를 바로잡는 순서예요. 화자 전체도, 한 줄만도 고칠 수 있어요.
 group: situations
 slug: fix-speakers

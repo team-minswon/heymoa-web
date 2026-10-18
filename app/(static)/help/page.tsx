@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { LEGACY_HELP_ANCHORS } from "@/app/(static)/help/_content/legacy-anchors";
-import { helpGroups } from "@/app/(static)/help/_content/groups";
+import { helpGroups, situationClusters } from "@/app/(static)/help/_content/groups";
 import type { HelpPageId } from "@/app/(static)/help/_content/ids";
 import {
   helpAxisOf,
   helpPathOf,
+  navTitleOf,
   helpTopicsOfGroup,
 } from "@/app/(static)/help/_content/paths";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
@@ -175,23 +176,34 @@ export default function HelpHubPage() {
                 <h2 id="by-situation" className={H2_SMALL}>
                   상황별로 찾기
                 </h2>
-                <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                  {situations.map((topic) => (
-                    <li key={topic.slug} data-reveal="">
-                      <Link
-                        href={helpPathOf(topic)}
-                        className={cn(card, "gap-1 p-5", FOCUS)}
-                      >
-                        <span className="text-[16px] leading-[1.4] font-extrabold break-keep text-[var(--tv-ink)]">
-                          {topic.title}
-                        </span>
-                        <span className="text-[14px] leading-[1.6] break-keep text-[var(--tv-body)]">
-                          {topic.summary}
-                        </span>
-                      </Link>
-                    </li>
+                <div className="flex flex-col gap-6">
+                  {situationClusters.map((cluster) => (
+                    <div key={cluster.title}>
+                      <h3 className="m-0 mb-2 text-[15px] font-extrabold text-[var(--tv-ink)]">
+                        {cluster.title}
+                      </h3>
+                      <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                        {cluster.pages
+                          .map((slug) => situations.find((t) => t.slug === slug)!)
+                          .map((topic) => (
+                            <li key={topic.slug} data-reveal="">
+                              <Link
+                                href={helpPathOf(topic)}
+                                className={cn(card, "gap-1 p-5", FOCUS)}
+                              >
+                                <span className="text-[16px] leading-[1.4] font-extrabold break-keep text-[var(--tv-ink)]">
+                                  {navTitleOf(topic)}
+                                </span>
+                                <span className="text-[14px] leading-[1.6] break-keep text-[var(--tv-body)]">
+                                  {topic.summary}
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </section>
             </HelpHubBody>
           </div>
