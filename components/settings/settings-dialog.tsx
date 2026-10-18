@@ -135,13 +135,13 @@ function SettingsSections({
                     setSection(key);
                   }}
                   aria-current={section === key ? "page" : undefined}
-                  // 선택은 같은 회색의 진한 쪽, 호버는 그 절반 농도다. 예전에는 선택(secondary)이 호버(muted)보다 오히려
-                  // 밝아서 올려 둔 항목이 선택된 항목처럼 보였다.
+                  // 회색 바탕이라 선택(hairline)과 호버(surface-strong)를 한 단계씩 벌린다. 같은 색의 농도만 바꾸면
+                  // (APP-1195) 바탕과 4단계 차이라 눈으로 갈리지 않았다(APP-1205).
                   className={cn(
                     "h-10 justify-start gap-2.5 rounded-block px-3",
                     section === key
-                      ? "bg-[var(--el-surface-strong)] font-medium hover:bg-[var(--el-surface-strong)]"
-                      : "hover:bg-[var(--el-surface-strong)]/55"
+                      ? "bg-[var(--el-hairline)] font-medium hover:bg-[var(--el-hairline)]"
+                      : "hover:bg-[var(--el-surface-strong)]"
                   )}
                 >
                   <Icon />
