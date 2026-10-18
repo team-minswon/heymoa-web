@@ -64,5 +64,16 @@ export function useFeedbackAnswers() {
     window.dispatchEvent(new Event(SEEN_EVENT));
   }, [feedbacks, seen]);
 
-  return { feedbacks, unseen, markSeen, isLoading: query.isLoading };
+  // 응답이 와도 200 이 아니면(옛 server 의 404 등) 빈 목록이 아니라 실패다.
+  const isError =
+    query.isError || (query.data !== undefined && query.data.status !== 200);
+
+  return {
+    feedbacks,
+    unseen,
+    markSeen,
+    isLoading: query.isLoading,
+    isError,
+    refetch: query.refetch,
+  };
 }

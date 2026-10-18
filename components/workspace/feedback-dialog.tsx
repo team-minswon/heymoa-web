@@ -12,6 +12,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { InlineRetry } from "@/components/ui/inline-retry";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -114,7 +116,8 @@ export function FeedbackDialog({
 }) {
   const queryClient = useQueryClient();
   const create = useCreateFeedback();
-  const { feedbacks, unseen, markSeen } = useFeedbackAnswers();
+  const { feedbacks, unseen, markSeen, isLoading, isError, refetch } =
+    useFeedbackAnswers();
   const [tab, setTab] = useState<"send" | "mine">("send");
   const [kind, setKind] = useState<Kind>("QUESTION");
   const [message, setMessage] = useState("");
@@ -262,7 +265,22 @@ export function FeedbackDialog({
           </TabsContent>
 
           <TabsContent value="mine" className="mt-4 h-[380px] flex-none">
-            <MyFeedbacks feedbacks={feedbacks} />
+            {isLoading ? (
+              <div
+                aria-label="내 문의를 불러오는 중"
+                className="flex flex-col gap-3"
+              >
+                <Skeleton className="h-24 w-full rounded-panel" />
+                <Skeleton className="h-24 w-full rounded-panel" />
+              </div>
+            ) : isError ? (
+              <InlineRetry
+                label="내 문의를 불러오지 못했어요"
+                onRetry={() => void refetch()}
+              />
+            ) : (
+              <MyFeedbacks feedbacks={feedbacks} />
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>

@@ -8,6 +8,7 @@ import {
 
 const mutate = vi.fn();
 let feedbacks: unknown[] = [];
+let state: "ok" | "loading" | "error" = "ok";
 
 vi.mock("@/lib/ui/toast", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -19,8 +20,13 @@ vi.mock("@/lib/api/generated/feedbacks/feedbacks", () => ({
   getGetMyFeedbacksQueryKey: () => ["feedbacks"],
   useCreateFeedback: () => ({ mutate, isPending: false }),
   useGetMyFeedbacks: () => ({
-    isLoading: false,
-    data: { status: 200, data: { success: true, data: { feedbacks } } },
+    isLoading: state === "loading",
+    isError: state === "error",
+    refetch: vi.fn(),
+    data:
+      state === "ok"
+        ? { status: 200, data: { success: true, data: { feedbacks } } }
+        : undefined,
   }),
 }));
 
@@ -37,6 +43,7 @@ describe("FeedbackDialog", () => {
   beforeEach(() => {
     mutate.mockReset();
     feedbacks = [];
+    state = "ok";
     window.localStorage.clear();
   });
   afterEach(cleanup);
@@ -82,6 +89,23 @@ describe("FeedbackDialog", () => {
     expect(screen.queryByText(/환경: x/)).toBeNull();
     // 본 뒤에는 새 답변 표시가 사라진다.
     expect(screen.queryByLabelText("새 답변 1개")).toBeNull();
+  });
+
+  it("조회 중에는 빈 상태가 아니라 불러오는 중을 보여 준다", () => {
+    state = "loading";
+    render(<FeedbackDialog open onOpenChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /내 문의/ }));
+    expect(screen.getByLabelText("내 문의를 불러오는 중")).toBeTruthy();
+    expect(screen.queryByText("아직 보낸 문의가 없어요.")).toBeNull();
+  });
+
+  it("조회에 실패하면 빈 상태가 아니라 오류와 다시 시도를 보여 준다", () => {
+    state = "error";
+    render(<FeedbackDialog open onOpenChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /내 문의/ }));
+    expect(screen.getByText("내 문의를 불러오지 못했어요")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+    expect(screen.queryByText("아직 보낸 문의가 없어요.")).toBeNull();
   });
 
   it("보낸 문의가 없으면 빈 상태를 보여 준다", () => {
