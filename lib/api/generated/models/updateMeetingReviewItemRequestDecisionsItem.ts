@@ -6,10 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { UpdateMeetingReviewItemRequestDecisionsItemDecision } from "./updateMeetingReviewItemRequestDecisionsItemDecision";
+import type { UpdateMeetingReviewItemRequestDecisionsItemTaskChange } from "./updateMeetingReviewItemRequestDecisionsItemTaskChange";
 
 export type UpdateMeetingReviewItemRequestDecisionsItem = {
   /**
-   * 대체는 END·KEEP, 기존 할 일 변경은 APPLIED·KEEP. null 이면 선택을 지웁니다
+   * 대체는 END·KEEP, 업무 변경은 APPLY·KEEP. APPLIED는 옛 즉시 반영 이력으로 선택 변경이 불가합니다. null은 선택·초안을 지웁니다
    * @nullable
    */
   decision: UpdateMeetingReviewItemRequestDecisionsItemDecision;
@@ -18,4 +19,9 @@ export type UpdateMeetingReviewItemRequestDecisionsItem = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   targetId: string;
+  /**
+   * APPLY에는 필수인 업무 변경 초안. KEEP에서 생략하면 저장된 초안을 유지하며 객체를 주면 전체 교체합니다
+   * @nullable
+   */
+  taskChange?: UpdateMeetingReviewItemRequestDecisionsItemTaskChange;
 };

@@ -6,6 +6,7 @@ import { setupServer } from "msw/node";
 import { CONTEXT_SNAPSHOT } from "@/lib/mocks/proposals";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
+import { MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
 import { restHandlers, seedShareMail } from "@/lib/mocks/rest-handlers";
 import {
@@ -522,9 +523,30 @@ describe("nullable 목 표본", () => {
       // 그래서 개별 URL은 봐주고, 아래에서 스키마별로 200을 한 번은 받았는지 본다.
       if (!response.ok) continue;
       answered.add(schemaName);
-      const body = await response.json();
+      const bodies = [await response.json()];
+      // 저장한 초안은 처음 시드에 없습니다. 실제 PATCH → GET으로 담당 참조·해제·미변경을 함께 검사합니다.
+      if (schemaName === "MeetingReviewResponse" && bodies[0].data.noteId === MENTORING_NOTE_ID) {
+        for (const fields of [
+          { status: "COMPLETED", assignee: { value: { type: "USER", id: mockDb.getCurrentUser().userId } }, due: { value: "2026-12-05" } },
+          { status: null, assignee: { value: { type: "SPEAKER_LABEL", label: "B" } }, due: { value: null } },
+          { status: null, assignee: { value: null }, due: null },
+          { status: null, assignee: null, due: null },
+        ]) {
+          const current = bodies.at(-1).data;
+          const item = current.items.find((row: { taskChanges: unknown[] }) => row.taskChanges.length > 0);
+          const target = item.taskChanges[0].target;
+          const saved = await fetch(`http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`, {
+            method: "PATCH", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+              decisions: [{ targetId: target.itemId, decision: "APPLY", taskChange: { expectedRevision: target.revision, ...fields } }],
+            }),
+          });
+          expect(saved.status).toBe(200);
+          bodies.push(await (await fetch(`http://localhost${url}`)).json());
+        }
+      }
 
-      for (const leaf of nullableLeaves(schema)) {
+      for (const body of bodies) for (const leaf of nullableLeaves(schema)) {
         if (leaf === "error") continue; // 성공 응답의 봉투는 언제나 null이다
         const values = valuesAt(body, leaf.split("."));
         if (values.length === 0) continue;

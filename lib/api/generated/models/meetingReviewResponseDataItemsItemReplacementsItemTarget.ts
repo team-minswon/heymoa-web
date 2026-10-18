@@ -34,6 +34,11 @@ export type MeetingReviewResponseDataItemsItemReplacementsItemTarget = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
+  /**
+   * 이 노드가 된 검토 항목의 원래 명제. 사람이 더한 항목이면 null
+   * @nullable
+   */
+  originalProposalRef: MeetingReviewResponseDataItemsItemReplacementsItemTargetOriginalProposalRef;
   /** 그 노드를 확정한 시각 */
   approvedAt: string;
   /**
@@ -46,9 +51,4 @@ export type MeetingReviewResponseDataItemsItemReplacementsItemTarget = {
    * @minimum 1
    */
   revision: number;
-  /**
-   * 이 노드가 된 검토 항목의 원래 명제. 사람이 더한 항목이면 null
-   * @nullable
-   */
-  originalProposalRef: MeetingReviewResponseDataItemsItemReplacementsItemTargetOriginalProposalRef;
 };

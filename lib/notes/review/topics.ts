@@ -80,8 +80,9 @@ export function topicDigests(
       // 결론 · 남은 일이 섞여 있어 쓰면 겹친다. 서버가 그 칸을 지우면 빈 값이다.
       const narrative =
         topic.agendaId === null ? (topic.sentences ?? []) : topic.description;
-      const text =
-        topic.summary?.trim() || narrative.map((row) => row.text).join(" ");
+      // 옛 응답에는 한 줄 summary와 긴 description이 함께 있다. 펼친 내용과 내보내기에서 전문을 보존한다.
+      const narrativeText = narrative.map((row) => row.text).join(" ").trim();
+      const text = narrativeText || topic.summary?.trim() || "";
       const decisions = members.filter((item) => item.kind === "DECISION");
       const tasks = members.filter((item) => item.kind === "ACTION_ITEM");
       return {
@@ -92,8 +93,8 @@ export function topicDigests(
         description: topic.description,
         conclusions: topic.conclusions,
         openItems: topic.openItems,
-        // 새 안건은 summary만 읽고, 옛 응답은 서술 전문으로 대체한다.
-        gist: text || null,
+        // 새 안건은 summary 전문, 옛 응답의 접힌 개요는 기존 한 줄 summary다.
+        gist: topic.summary?.trim() || text || null,
         text,
         count: decisions.length + tasks.length,
         startMs: times.length > 0 ? Math.min(...times) : null,

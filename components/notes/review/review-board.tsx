@@ -4,7 +4,7 @@ import { reviewToMarkdown } from "@/lib/notes/review/markdown";
 import { renderMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { widerExports } from "@/lib/notes/minutes/exports";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
-import { useIsMutating, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -195,9 +195,6 @@ export function ReviewBoard({
   const tasksQuery = useGetProjectTasks(workspaceId ?? "", projectId ?? "", {
     query: { enabled: Boolean(workspaceId && projectId) },
   });
-  // 기존 할 일 반영은 제안 줄 안에서 돈다. 확정이 그 저장보다 앞서지 않게 여기서도 센다.
-  const applyingTasks =
-    useIsMutating({ mutationKey: ["updateProjectTask"] }) > 0;
   // 거절 까닭은 확정 줄과 확인창에 남기므로 전역 토스트를 끈다(두 번 뜨지 않게).
   const approve = useApproveMeetingReview({
     mutation: { meta: { suppressErrorToast: true } },
@@ -248,14 +245,6 @@ export function ReviewBoard({
   const [view, setView] = useState<View>("summary");
   const [mailOpen, setMailOpen] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
-  /**
-   * 할 일에는 반영했는데 선택 저장이 실패한 변경(`항목 id:할 일 id`). 반영은 할 일을 먼저 바꾸고 선택을 나중에 저장한다.
-   * ponytail: 이 화면이 떠 있는 동안만 기억한다. 새로고침하면 잊어, 감춘 항목의 그 제안은 다시 고르지 않은 채
-   * 확정될 수 있다(할 일 이력에는 남는다). 막으려면 반영과 선택을 server 가 한 번에 저장해야 한다.
-   */
-  const [unsavedApplies, setUnsavedApplies] = useState<ReadonlySet<string>>(
-    () => new Set()
-  );
   const lastRequest = useRef<{ body: string; id: string } | null>(null);
 
   const review = okData(reviewQuery.data);
@@ -339,9 +328,7 @@ export function ReviewBoard({
       : {
           ...item,
           replacements: [],
-          taskChanges: item.taskChanges.filter((row) =>
-            unsavedApplies.has(`${item.itemId}:${row.target.itemId}`)
-          ),
+          taskChanges: [],
         }
   );
   const unnamedAssigned = items.filter(
@@ -350,25 +337,22 @@ export function ReviewBoard({
       item.kind === "ACTION_ITEM" &&
       item.assignee?.type === "SPEAKER_LABEL"
   ).length;
-  const editable = canEdit && !confirmed;
+  const editable = canEdit && !confirmed && !approve.isPending;
 
   // 제안의 선택은 검토본에 저장한다 — 새로고침하거나 다른 참석자가 열어도 같은 선택이 보인다.
   const choose = (
     item: ReviewItem,
     targetId: string,
-    decision: "END" | "APPLIED" | "KEEP"
+    decision: "END" | "KEEP"
   ) => editor.updateItem(item.itemId, { decisions: [{ targetId, decision }] });
   const saving = editor.busyItemId !== null;
   const hasTask = (taskId: string) => tasksById.has(taskId);
   // **화면에 서는 항목의 제안만 본다.** 요약 보기에 없는 이슈 · 질문 · 참고의 제안은 고를 곳이 없어,
   // 세면 검토 완료가 영영 막힌다. 고르지 않은 제안은 확정이 건너뛴다 — 이전 결정을 끝내지 않고 할 일도
   // 바꾸지 않는다(그래프 보기에서 고르면 그 선택대로 된다).
-  // 다만 할 일에 이미 반영한 변경은 감춘 항목이라도 선택이 저장될 때까지 센다 — 안 세면 할 일은 바뀌었는데
-  // 제안은 고르지 않은 채 확정돼, 확정 뒤에는 선택을 다시 저장할 길도 없다.
   const unchosen = unchosenSuggestionCount(gateItems, hasTask);
   const blockInput = {
     saving,
-    applyingTasks,
     hasTaskChanges: gateItems.some(
       (item) => item.included && item.taskChanges.length > 0
     ),
@@ -503,8 +487,7 @@ export function ReviewBoard({
                 change.reason
               )}
               task={tasksById.get(change.target.itemId)}
-              workspaceId={workspaceId}
-              projectId={projectId}
+              noteId={noteId}
               choices={assigneeChoices}
               choice={choiceOf(change.decision)}
               taskState={
@@ -512,24 +495,9 @@ export function ReviewBoard({
               }
               onRetryTask={() => void tasksQuery.refetch()}
               disabled={!editable || saving || !item.included}
-              onChoose={async (next) => {
-                const saved = await choose(
-                  item,
-                  change.target.itemId,
-                  next === "change" ? "APPLIED" : "KEEP"
-                );
-                // 「반영」의 선택 저장은 할 일을 바꾼 뒤에만 온다. 실패한 것만 남겨 두고 저장되면 지운다.
-                if (next === "change") {
-                  const key = `${item.itemId}:${change.target.itemId}`;
-                  setUnsavedApplies((keys) => {
-                    const nextKeys = new Set(keys);
-                    if (saved) nextKeys.delete(key);
-                    else nextKeys.add(key);
-                    return nextKeys;
-                  });
-                }
-                return saved;
-              }}
+              onChoose={(next, taskChange) => editor.updateItem(item.itemId, {
+                decisions: [{ targetId: change.target.itemId, decision: next === "change" ? "APPLY" : "KEEP", taskChange }],
+              })}
             />
           ) : (
             <p
@@ -593,6 +561,7 @@ export function ReviewBoard({
   );
 
   const confirm = async () => {
+    if (confirmBlocked || approve.isPending) return false;
     const body = {
       reviewId: review.reviewId,
       reviewRevision: review.reviewVersion,

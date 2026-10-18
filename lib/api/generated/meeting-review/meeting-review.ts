@@ -953,6 +953,11 @@ export type updateMeetingReviewItemResponse200 = {
   status: 200;
 };
 
+export type updateMeetingReviewItemResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type updateMeetingReviewItemResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -968,6 +973,7 @@ export type updateMeetingReviewItemResponseSuccess =
     headers: Headers;
   };
 export type updateMeetingReviewItemResponseError = (
+  | updateMeetingReviewItemResponse400
   | updateMeetingReviewItemResponse401
   | updateMeetingReviewItemResponse409
 ) & {
@@ -1034,7 +1040,7 @@ export const getUpdateMeetingReviewItemMutationKey = () =>
   ["updateMeetingReviewItem"] as const;
 
 export const getUpdateMeetingReviewItemMutationOptions = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1078,8 +1084,8 @@ export type UpdateMeetingReviewItemMutationBody =
   | UpdateMeetingReviewItemRequest
   | undefined;
 export type UpdateMeetingReviewItemMutationError =
-  | UnauthorizedResponse
-  | AppErrorResponse;
+  | AppErrorResponse
+  | UnauthorizedResponse;
 export type UpdateMeetingReviewItemMutationVariables = {
   noteId: string;
   itemId: string;
@@ -1090,7 +1096,7 @@ export type UpdateMeetingReviewItemMutationVariables = {
  * @summary updateMeetingReviewItem
  */
 export const useUpdateMeetingReviewItem = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(
   options?: {

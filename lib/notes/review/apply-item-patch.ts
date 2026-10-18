@@ -34,11 +34,10 @@ export function applyItemPatch(
     ...("due" in patch ? { due: patch.due ?? null } : {}),
     ...(decisionOf.size > 0
       ? {
-          // 대체 제안은 END·KEEP, 할 일 변경 제안은 KEEP 만 건다. 할 일 변경의 APPLIED 는 할 일 API 로 먼저 반영한 뒤의 기록이라
-          // (두 단계 저장, 되돌릴 수 없다) 응답을 기다리는 지금 방식 그대로 둔다.
+          // 초안의 담당 표시는 서버 응답을 기다린다. 선택만 먼저 보여 주고 저장 중에는 조작을 잠근다.
           replacements: item.replacements.map((row) => {
             const decision = decisionOf.get(row.target.itemId);
-            return decision === undefined || decision === "APPLIED"
+            return decision === undefined || decision === "APPLIED" || decision === "APPLY"
               ? row
               : { ...row, decision };
           }),
@@ -73,7 +72,7 @@ export function restoreItemFields(
   // `applyItemPatch` 가 안 건 값(대체의 APPLIED, 할 일 변경의 END·APPLIED)은 되돌리지도 않는다 — 그 칸은 다른 길이 쓴 값이다.
   const touched = new Set(
     (patch.decisions ?? [])
-      .filter((choice) => choice.decision !== "APPLIED")
+      .filter((choice) => choice.decision !== "APPLIED" && choice.decision !== "APPLY")
       .map((choice) => choice.targetId)
   );
   const touchedTasks = new Set(
@@ -98,7 +97,7 @@ export function restoreItemFields(
                 ? { included: before.included }
                 : {}),
               ...("due" in patch ? { due: before.due } : {}),
-              ...(touched.size > 0
+              ...(touched.size > 0 || touchedTasks.size > 0
                 ? {
                     replacements: item.replacements.map((row) => {
                       const old = before.replacements.find(

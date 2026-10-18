@@ -84,7 +84,7 @@ describe("sectionsOf", () => {
 });
 
 describe("confirmSummaryOf", () => {
-  it("포함 항목에 저장된 끝내기만 끝낼 것으로 세고, 반영한 할 일 변경을 센다", () => {
+  it("포함 항목의 END와 APPLY만 세고 APPLIED 이력은 다시 적용하지 않는다", () => {
     const items = [
       item({
         itemId: "d",
@@ -102,19 +102,19 @@ describe("confirmSummaryOf", () => {
         itemId: "t",
         kind: "ACTION_ITEM",
         taskChanges: [
-          { target: { itemId: "task", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLIED" },
+          { target: { itemId: "task", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLY", draft: { expectedRevision: 2, status: "COMPLETED", assignee: null, due: null } },
+          { target: { itemId: "already", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLIED", draft: null },
         ],
       }),
     ];
     expect(confirmSummaryOf(items)).toEqual({ newTasks: 1, endedDecisions: 1, changedTasks: 1 });
   });
 
-  it("저장 · 반영이 끝나지 않았거나 변경 제안의 할 일을 못 읽었으면 확정을 막는다", () => {
-    const base = { saving: false, applyingTasks: false, hasTaskChanges: true, tasks: "ready" as const, unchosen: 0 };
+  it("선택 저장이 끝나지 않았거나 변경 제안의 할 일을 못 읽었으면 확정을 막는다", () => {
+    const base = { saving: false, hasTaskChanges: true, tasks: "ready" as const, unchosen: 0 };
     expect(confirmBlockReason(base)).toBeNull();
     expect(confirmBlockReason({ ...base, unchosen: 2 })).toBe("고르지 않은 제안이 2개 남았습니다");
     expect(confirmBlockReason({ ...base, saving: true })).toBe("저장이 끝나면 완료할 수 있습니다");
-    expect(confirmBlockReason({ ...base, applyingTasks: true })).toBe("기존 할 일에 반영하는 중입니다");
     expect(confirmBlockReason({ ...base, tasks: "pending" })).toBe("기존 할 일 변경 제안을 불러오는 중입니다");
     expect(confirmBlockReason({ ...base, tasks: "failed" })).toMatch(/불러오지 못해/);
     // 변경 제안이 없으면 할 일 조회를 기다릴 까닭이 없다.
@@ -130,6 +130,7 @@ describe("confirmSummaryOf", () => {
       due: null,
       reason: "",
       decision,
+      draft: null,
     });
     const items = [
       item({ itemId: "d", kind: "DECISION", replacements: [replacement("n1"), replacement("n2", "KEEP"), ended] }),
@@ -141,6 +142,7 @@ describe("confirmSummaryOf", () => {
 
   it("저장된 선택을 두 칸 토글의 값으로 읽는다", () => {
     expect(choiceOf("END")).toBe("change");
+    expect(choiceOf("APPLY")).toBe("change");
     expect(choiceOf("APPLIED")).toBe("change");
     expect(choiceOf("KEEP")).toBe("keep");
     expect(choiceOf(null)).toBeNull();
@@ -231,8 +233,8 @@ describe("topicDigests", () => {
     expect(first.tasks.map((row) => row.itemId)).toEqual(["t"]);
     expect(first.open.map((row) => row.itemId)).toEqual(["q"]);
     expect(first.count).toBe(2);
-    // 새 안건 요약을 접힌 상태와 펼친 상태에서 같은 기준으로 읽는다
-    expect(first).toMatchObject({ gist: "한 줄 요약", text: "한 줄 요약", startMs: 5_000, endMs: 9_000 });
+    // 옛 응답은 접힌 한 줄 요약과 펼친 설명 전문을 함께 보존한다.
+    expect(first).toMatchObject({ gist: "한 줄 요약", text: "첫 문장. 둘째 문장.", startMs: 5_000, endMs: 9_000 });
     expect(digests.find((row) => row.ordinal === 2)?.gist).toBeNull();
   });
 

@@ -121,7 +121,7 @@ export function FlowNotice({
       >
         <div className="rounded-block border border-[var(--el-hairline)] px-4 py-3 text-sm leading-6 text-[var(--el-body)]">
           <p className="font-medium text-[var(--el-ink)]">{copy.title}</p>
-          <p>이전에 받은 회의 정리와 검토 내용은 유지됩니다.</p>
+          <p>받은 회의 정리와 검토 내용은 유지됩니다.</p>
           {requestAction}
         </div>
       </div>

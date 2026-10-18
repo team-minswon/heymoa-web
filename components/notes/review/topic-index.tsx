@@ -2,7 +2,7 @@
 
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Collapse } from "@/components/heymoa/collapse";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
@@ -43,6 +43,7 @@ export function TopicIndex({
     () => new Set()
   );
   const [expanded, setExpanded] = useState(false);
+  const followedHash = useRef<string | null>(null);
   const selectAgenda = useCallback(
     (agendaId: string) => {
       const target = topics.find((topic) => topic.agendaId === agendaId);
@@ -64,8 +65,17 @@ export function TopicIndex({
   useEffect(() => {
     const followHash = () => {
       const prefix = "#summary-agenda-";
-      if (window.location.hash.startsWith(prefix))
-        selectAgenda(window.location.hash.slice(prefix.length));
+      const hash = window.location.hash;
+      if (!hash.startsWith(prefix)) {
+        followedHash.current = null;
+        return;
+      }
+      const key = `${noteId ?? ""}:${hash}`;
+      if (followedHash.current === key) return;
+      const agendaId = hash.slice(prefix.length);
+      if (!topics.some((topic) => topic.agendaId === agendaId)) return;
+      followedHash.current = key;
+      selectAgenda(agendaId);
     };
     const timer = window.setTimeout(followHash, 0);
     window.addEventListener("hashchange", followHash);
@@ -73,7 +83,7 @@ export function TopicIndex({
       window.clearTimeout(timer);
       window.removeEventListener("hashchange", followHash);
     };
-  }, [selectAgenda]);
+  }, [selectAgenda, noteId, topics]);
   if (topics.length === 0) return null;
   const shown = expanded ? topics : topics.slice(0, VISIBLE_TOPICS);
   const toggle = (ordinal: number) =>

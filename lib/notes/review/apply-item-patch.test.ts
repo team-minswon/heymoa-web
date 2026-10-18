@@ -71,7 +71,7 @@ describe("applyItemPatch", () => {
     expect(next.items[0].taskChanges[0].decision).toBe("KEEP");
   });
 
-  it("할 일 변경의 APPLIED 와 대체의 APPLIED 는 걸지 않는다(두 단계 저장이라 응답을 기다린다)", () => {
+  it("APPLIED 이력은 새 선택으로 먼저 걸지 않는다", () => {
     const next = applyItemPatch(review(), "A", {
       decisions: [
         { targetId: "T1", decision: "APPLIED" },
@@ -81,6 +81,14 @@ describe("applyItemPatch", () => {
 
     expect(next.items[0].taskChanges[0].decision).toBeNull();
     expect(next.items[0].replacements[0].decision).toBeNull();
+  });
+
+  it("APPLY 선택만 먼저 걸고 실패하면 이전 선택으로 돌린다", () => {
+    const before = review();
+    const patch = { decisions: [{ targetId: "T1", decision: "APPLY" as const, taskChange: { expectedRevision: 1, status: "COMPLETED" as const } }] };
+    const next = applyItemPatch(before, "A", patch);
+    expect(next.items[0].taskChanges[0].decision).toBe("APPLY");
+    expect(restoreItemFields(next, before.items[0], patch).items[0].taskChanges[0].decision).toBeNull();
   });
 
   it("선택을 null 로 지우면 지운다", () => {

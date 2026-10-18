@@ -17,13 +17,13 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItemTarget = {
    */
   itemId: string;
   /**
-   * 할 일 판
-   * @minimum 1
-   */
-  revision: number;
-  /**
    * 이 할 일을 만든 검토 항목의 원래 명제. 사람이 더한 항목이나 공개 경로로 만든 할 일이면 null
    * @nullable
    */
   originalProposalRef: MeetingReviewResponseDataItemsItemTaskChangesItemTargetOriginalProposalRef;
+  /**
+   * 할 일 판
+   * @minimum 1
+   */
+  revision: number;
 };

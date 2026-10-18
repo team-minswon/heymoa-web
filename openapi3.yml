@@ -2182,116 +2182,127 @@ paths:
   /v1/notes/{noteId}/meeting-review:
     get:
       tags:
-      - MeetingReview
-      summary: getMeetingReview
-      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
-      operationId: getMeetingReview
+      - "MeetingReview"
+      summary: "getMeetingReview"
+      description: "종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자\
+        , 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다."
+      operationId: "getMeetingReview"
       parameters:
-      - name: noteId
-        in: path
-        description: 회의 식별자
+      - name: "noteId"
+        in: "path"
+        description: "회의 식별자"
         required: true
         schema:
-          type: string
-          description: 회의 식별자
+          type: "string"
+          description: "회의 식별자"
           nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-        example: 0HZX2K7M9Q4AF
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        example: "0HZX2K7M9Q4AF"
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppErrorResponse'
+                $ref: "#/components/schemas/AppErrorResponse"
               examples:
                 MEETING_REVIEW_NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: MEETING_REVIEW_NOT_FOUND
-                      message: 검토본 또는 항목을 찾을 수 없습니다.
+                      code: "MEETING_REVIEW_NOT_FOUND"
+                      message: "검토본 또는 항목을 찾을 수 없습니다."
                       details: null
-        '200':
-          description: 요청 성공
+        "200":
+          description: "요청 성공"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MeetingReviewResponse'
+                $ref: "#/components/schemas/MeetingReviewResponse"
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
-                      noteId: 0HZX2K7M9Q4AF
-                      reviewId: 0K9GVJT2C4Q1Z
+                      noteId: "0HZX2K7M9Q4AF"
+                      reviewId: "0K9GVJT2C4Q1Z"
                       reviewVersion: 2
                       items:
-                      - itemId: 0HZX2K7M9Q4AN
+                      - itemId: "0HZX2K7M9Q4AN"
                         revision: 1
-                        kind: ACTION_ITEM
-                        content: 검토한 업무
+                        kind: "ACTION_ITEM"
+                        content: "검토한 업무"
                         included: true
                         citations:
-                        - segmentId: 0HZX2K7M9Q4AH
-                          role: SUPPORTS
+                        - segmentId: "0HZX2K7M9Q4AH"
+                          role: "SUPPORTS"
                         originalProposalRef:
-                          proposalId: 0HZX2K7M9Q4AG
+                          proposalId: "0HZX2K7M9Q4AG"
                           revision: 1
                         authoredByUserId: null
                         edited: false
                         assignee:
-                          type: USER
-                          id: 0HZX2K7M9Q4AC
-                          name: 민수
-                          image: https://cdn.example.com/avatars/hong.png
-                        due: '2026-09-18'
+                          type: "USER"
+                          id: "0HZX2K7M9Q4AC"
+                          name: "민수"
+                          image: "https://cdn.example.com/avatars/hong.png"
+                        due: "2026-09-18"
                         replacements:
                         - target:
-                            itemId: 0K9GVJT2C4Q21
+                            itemId: "0K9GVJT2C4Q21"
                             revision: 1
-                            kind: DECISION
-                            content: 배포는 금요일에 한다
-                            noteId: 0HZX2K7M9Q4AF
-                            noteTitle: 지난 주간 회의
-                            approvedAt: '2026-09-10T01:00:00Z'
+                            kind: "DECISION"
+                            content: "배포는 금요일에 한다"
+                            noteId: "0HZX2K7M9Q4AF"
+                            noteTitle: "지난 주간 회의"
+                            approvedAt: "2026-09-10T01:00:00Z"
                             endedAt: null
                             originalProposalRef:
-                              proposalId: 0HZX2K7M9Q4AG
+                              proposalId: "0HZX2K7M9Q4AG"
                               revision: 1
-                          kind: REPLACES
-                          label: 대체
-                          reason: 이번 회의에서 결정을 바꿨습니다
-                          decision: KEEP
+                          kind: "REPLACES"
+                          label: "대체"
+                          reason: "이번 회의에서 결정을 바꿨습니다"
+                          decision: "KEEP"
                         taskChanges:
                         - target:
-                            itemId: 0K9GVJT2C4Q21
+                            itemId: "0K9GVJT2C4Q21"
                             revision: 2
                             originalProposalRef:
-                              proposalId: 0HZX2K7M9Q4AG
+                              proposalId: "0HZX2K7M9Q4AG"
                               revision: 2
-                          status: COMPLETED
+                          status: "COMPLETED"
                           assignee:
                             value:
-                              type: USER
-                              id: 0HZX2K7M9Q4AC
-                              name: 민수
-                              image: https://cdn.example.com/avatars/hong.png
+                              type: "USER"
+                              id: "0HZX2K7M9Q4AC"
+                              name: "민수"
+                              image: "https://cdn.example.com/avatars/hong.png"
                           due:
-                            value: '2026-09-18'
-                          reason: 회의에서 끝났다고 말했습니다
-                          decision: KEEP
+                            value: "2026-09-18"
+                          reason: "회의에서 끝났다고 말했습니다"
+                          decision: "KEEP"
+                          draft:
+                            expectedRevision: 2
+                            status: "COMPLETED"
+                            assignee:
+                              value:
+                                type: "USER"
+                                id: "0HZX2K7M9Q4AC"
+                                label: null
+                            due:
+                              value: null
                         suggestedAssignment:
                           assignee:
-                            type: USER
-                            id: 0HZX2K7M9Q4AC
-                            name: 민수
-                            image: https://cdn.example.com/avatars/hong.png
-                          due: '2026-09-18'
+                            type: "USER"
+                            id: "0HZX2K7M9Q4AC"
+                            name: "민수"
+                            image: "https://cdn.example.com/avatars/hong.png"
+                          due: "2026-09-18"
                     error: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
   /v1/notes/{noteId}/participants:
@@ -4389,199 +4400,210 @@ paths:
   /v1/notes/{noteId}/meeting-review/items:
     post:
       tags:
-      - MeetingReview
-      summary: createMeetingReviewItem
-      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
-      operationId: createMeetingReviewItem
+      - "MeetingReview"
+      summary: "createMeetingReviewItem"
+      description: "종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자\
+        , 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다."
+      operationId: "createMeetingReviewItem"
       parameters:
-      - name: noteId
-        in: path
-        description: 회의 식별자
+      - name: "noteId"
+        in: "path"
+        description: "회의 식별자"
         required: true
         schema:
-          type: string
-          description: 회의 식별자
+          type: "string"
+          description: "회의 식별자"
           nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-        example: 0HZX2K7M9Q4AF
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AddMeetingReviewItemRequest'
+              $ref: "#/components/schemas/AddMeetingReviewItemRequest"
             examples:
-              createMeetingReviewItem_Success:
-                value:
-                  expectedReviewVersion: 1
-                  kind: ACTION_ITEM
-                  content: 검토한 업무
-                  assignee:
-                    type: USER
-                    id: 0HZX2K7M9Q4AC
-                  due: '2026-09-18'
-                  citations:
-                  - segmentId: 0HZX2K7M9Q4AH
-                    role: SUPPORTS
-                  topicOrdinal: 1
-              createMeetingReviewItem_BadRequest:
-                value:
-                  expectedReviewVersion: 0
-                  kind: ACTION_ITEM
-                  content: 검토한 업무
-                  assignee:
-                    type: USER
-                    id: 0HZX2K7M9Q4AC
-                  due: '2026-09-18'
-                  citations:
-                  - segmentId: 0HZX2K7M9Q4AH
-                    role: SUPPORTS
-                  topicOrdinal: 1
               createMeetingReviewItem_MeetingReviewConflictException:
                 value:
                   expectedReviewVersion: 1
-                  kind: ACTION_ITEM
-                  content: 검토한 업무
+                  kind: "ACTION_ITEM"
+                  content: "검토한 업무"
                   assignee:
-                    type: USER
-                    id: 0HZX2K7M9Q4AC
-                  due: '2026-09-18'
+                    type: "USER"
+                    id: "0HZX2K7M9Q4AC"
+                  due: "2026-09-18"
                   citations:
-                  - segmentId: 0HZX2K7M9Q4AH
-                    role: SUPPORTS
+                  - segmentId: "0HZX2K7M9Q4AH"
+                    role: "SUPPORTS"
+                  topicOrdinal: 1
+              createMeetingReviewItem_Success:
+                value:
+                  expectedReviewVersion: 1
+                  kind: "ACTION_ITEM"
+                  content: "검토한 업무"
+                  assignee:
+                    type: "USER"
+                    id: "0HZX2K7M9Q4AC"
+                  due: "2026-09-18"
+                  citations:
+                  - segmentId: "0HZX2K7M9Q4AH"
+                    role: "SUPPORTS"
                   topicOrdinal: 1
               createMeetingReviewItem_MeetingReviewConfirmedException:
                 value:
                   expectedReviewVersion: 1
-                  kind: ACTION_ITEM
-                  content: 검토한 업무
+                  kind: "ACTION_ITEM"
+                  content: "검토한 업무"
                   assignee:
-                    type: USER
-                    id: 0HZX2K7M9Q4AC
-                  due: '2026-09-18'
+                    type: "USER"
+                    id: "0HZX2K7M9Q4AC"
+                  due: "2026-09-18"
                   citations:
-                  - segmentId: 0HZX2K7M9Q4AH
-                    role: SUPPORTS
+                  - segmentId: "0HZX2K7M9Q4AH"
+                    role: "SUPPORTS"
+                  topicOrdinal: 1
+              createMeetingReviewItem_BadRequest:
+                value:
+                  expectedReviewVersion: 0
+                  kind: "ACTION_ITEM"
+                  content: "검토한 업무"
+                  assignee:
+                    type: "USER"
+                    id: "0HZX2K7M9Q4AC"
+                  due: "2026-09-18"
+                  citations:
+                  - segmentId: "0HZX2K7M9Q4AH"
+                    role: "SUPPORTS"
                   topicOrdinal: 1
       responses:
-        '201':
-          description: 생성 성공
+        "409":
+          description: "요청 상태 충돌"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MeetingReviewResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      noteId: 0HZX2K7M9Q4AF
-                      reviewId: 0K9GVJT2C4Q1Z
-                      reviewVersion: 2
-                      items:
-                      - itemId: 0HZX2K7M9Q4AN
-                        revision: 1
-                        kind: ACTION_ITEM
-                        content: 검토한 업무
-                        included: true
-                        citations:
-                        - segmentId: 0HZX2K7M9Q4AH
-                          role: SUPPORTS
-                        originalProposalRef:
-                          proposalId: 0HZX2K7M9Q4AG
-                          revision: 1
-                        authoredByUserId: null
-                        edited: false
-                        assignee:
-                          type: USER
-                          id: 0HZX2K7M9Q4AC
-                          name: 민수
-                          image: https://cdn.example.com/avatars/hong.png
-                        due: '2026-09-18'
-                        replacements:
-                        - target:
-                            itemId: 0K9GVJT2C4Q21
-                            revision: 1
-                            kind: DECISION
-                            content: 배포는 금요일에 한다
-                            noteId: 0HZX2K7M9Q4AF
-                            noteTitle: 지난 주간 회의
-                            approvedAt: '2026-09-10T01:00:00Z'
-                            endedAt: null
-                            originalProposalRef:
-                              proposalId: 0HZX2K7M9Q4AG
-                              revision: 1
-                          kind: REPLACES
-                          label: 대체
-                          reason: 이번 회의에서 결정을 바꿨습니다
-                          decision: KEEP
-                        taskChanges:
-                        - target:
-                            itemId: 0K9GVJT2C4Q21
-                            revision: 2
-                            originalProposalRef:
-                              proposalId: 0HZX2K7M9Q4AG
-                              revision: 2
-                          status: COMPLETED
-                          assignee:
-                            value:
-                              type: USER
-                              id: 0HZX2K7M9Q4AC
-                              name: 민수
-                              image: https://cdn.example.com/avatars/hong.png
-                          due:
-                            value: '2026-09-18'
-                          reason: 회의에서 끝났다고 말했습니다
-                          decision: KEEP
-                        suggestedAssignment:
-                          assignee:
-                            type: USER
-                            id: 0HZX2K7M9Q4AC
-                            name: 민수
-                            image: https://cdn.example.com/avatars/hong.png
-                          due: '2026-09-18'
-                    error: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details:
-                      - field: expectedReviewVersion
-                        message: 1 이상이어야 합니다.
-        '409':
-          description: 요청 상태 충돌
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
+                $ref: "#/components/schemas/AppErrorResponse"
               examples:
                 MEETING_REVIEW_CONFLICT:
                   value:
                     success: false
                     data: null
                     error:
-                      code: MEETING_REVIEW_CONFLICT
-                      message: 검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요.
+                      code: "MEETING_REVIEW_CONFLICT"
+                      message: "검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요."
                       details: null
                 MEETING_REVIEW_CONFIRMED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: MEETING_REVIEW_CONFIRMED
-                      message: 확정된 검토본은 고칠 수 없습니다.
+                      code: "MEETING_REVIEW_CONFIRMED"
+                      message: "확정된 검토본은 고칠 수 없습니다."
                       details: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "201":
+          description: "생성 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingReviewResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: "0HZX2K7M9Q4AF"
+                      reviewId: "0K9GVJT2C4Q1Z"
+                      reviewVersion: 2
+                      items:
+                      - itemId: "0HZX2K7M9Q4AN"
+                        revision: 1
+                        kind: "ACTION_ITEM"
+                        content: "검토한 업무"
+                        included: true
+                        citations:
+                        - segmentId: "0HZX2K7M9Q4AH"
+                          role: "SUPPORTS"
+                        originalProposalRef:
+                          proposalId: "0HZX2K7M9Q4AG"
+                          revision: 1
+                        authoredByUserId: null
+                        edited: false
+                        assignee:
+                          type: "USER"
+                          id: "0HZX2K7M9Q4AC"
+                          name: "민수"
+                          image: "https://cdn.example.com/avatars/hong.png"
+                        due: "2026-09-18"
+                        replacements:
+                        - target:
+                            itemId: "0K9GVJT2C4Q21"
+                            revision: 1
+                            kind: "DECISION"
+                            content: "배포는 금요일에 한다"
+                            noteId: "0HZX2K7M9Q4AF"
+                            noteTitle: "지난 주간 회의"
+                            approvedAt: "2026-09-10T01:00:00Z"
+                            endedAt: null
+                            originalProposalRef:
+                              proposalId: "0HZX2K7M9Q4AG"
+                              revision: 1
+                          kind: "REPLACES"
+                          label: "대체"
+                          reason: "이번 회의에서 결정을 바꿨습니다"
+                          decision: "KEEP"
+                        taskChanges:
+                        - target:
+                            itemId: "0K9GVJT2C4Q21"
+                            revision: 2
+                            originalProposalRef:
+                              proposalId: "0HZX2K7M9Q4AG"
+                              revision: 2
+                          status: "COMPLETED"
+                          assignee:
+                            value:
+                              type: "USER"
+                              id: "0HZX2K7M9Q4AC"
+                              name: "민수"
+                              image: "https://cdn.example.com/avatars/hong.png"
+                          due:
+                            value: "2026-09-18"
+                          reason: "회의에서 끝났다고 말했습니다"
+                          decision: "KEEP"
+                          draft:
+                            expectedRevision: 2
+                            status: "COMPLETED"
+                            assignee:
+                              value:
+                                type: "USER"
+                                id: "0HZX2K7M9Q4AC"
+                                label: null
+                            due:
+                              value: null
+                        suggestedAssignment:
+                          assignee:
+                            type: "USER"
+                            id: "0HZX2K7M9Q4AC"
+                            name: "민수"
+                            image: "https://cdn.example.com/avatars/hong.png"
+                          due: "2026-09-18"
+                    error: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details:
+                      - field: "expectedReviewVersion"
+                        message: "1 이상이어야 합니다."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
   /v1/notes/{noteId}/meeting-review/summary:
@@ -6208,173 +6230,236 @@ paths:
   /v1/notes/{noteId}/meeting-review/items/{itemId}:
     patch:
       tags:
-      - MeetingReview
-      summary: updateMeetingReviewItem
-      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
-      operationId: updateMeetingReviewItem
+      - "MeetingReview"
+      summary: "updateMeetingReviewItem"
+      description: "종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자\
+        , 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다."
+      operationId: "updateMeetingReviewItem"
       parameters:
-      - name: noteId
-        in: path
-        description: 회의 식별자
+      - name: "noteId"
+        in: "path"
+        description: "회의 식별자"
         required: true
         schema:
-          type: string
-          description: 회의 식별자
+          type: "string"
+          description: "회의 식별자"
           nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-        example: 0HZX2K7M9Q4AF
-      - name: itemId
-        in: path
-        description: 검토 항목 ID
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        example: "0HZX2K7M9Q4AF"
+      - name: "itemId"
+        in: "path"
+        description: "검토 항목 ID"
         required: true
         schema:
-          type: string
-          description: 검토 항목 ID
+          type: "string"
+          description: "검토 항목 ID"
           nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-        example: 0HZX2K7M9Q4AN
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        example: "0HZX2K7M9Q4AN"
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateMeetingReviewItemRequest'
+              $ref: "#/components/schemas/UpdateMeetingReviewItemRequest"
             examples:
               updateMeetingReviewItem_Success:
                 value:
                   expectedReviewVersion: 1
                   expectedItemRevision: 1
-                  content: 검토한 업무
+                  content: "검토한 업무"
                   included: true
                   assignee: null
-                  due: '2026-09-18'
+                  due: "2026-09-18"
                   decisions:
-                  - targetId: 0K9GVJT2C4Q21
-                    decision: KEEP
-              updateMeetingReviewItem_MeetingReviewConflictException:
-                value:
-                  expectedReviewVersion: 1
-                  expectedItemRevision: 1
-                  content: 검토한 업무
-                  included: true
-                  assignee: null
-                  due: '2026-09-18'
-                  decisions:
-                  - targetId: 0K9GVJT2C4Q21
-                    decision: KEEP
+                  - targetId: "0K9GVJT2C4Q21"
+                    decision: "APPLY"
+                    taskChange:
+                      expectedRevision: 2
+                      status: "COMPLETED"
+                      assignee:
+                        value:
+                          type: "USER"
+                          id: "0HZX2K7M9Q4AC"
+                      due:
+                        value: null
               updateMeetingReviewItem_MeetingReviewConfirmedException:
                 value:
                   expectedReviewVersion: 1
                   expectedItemRevision: 1
-                  content: 검토한 업무
+                  content: "검토한 업무"
                   included: true
                   assignee: null
-                  due: '2026-09-18'
+                  due: "2026-09-18"
                   decisions:
-                  - targetId: 0K9GVJT2C4Q21
-                    decision: KEEP
+                  - targetId: "0K9GVJT2C4Q21"
+                    decision: "APPLY"
+                    taskChange:
+                      expectedRevision: 2
+                      status: "COMPLETED"
+                      assignee:
+                        value:
+                          type: "USER"
+                          id: "0HZX2K7M9Q4AC"
+                      due:
+                        value: null
+              updateMeetingReviewItem_BadRequest:
+                value:
+                  expectedReviewVersion: 1
+                  expectedItemRevision: 1
+                  decisions:
+                  - decision: "APPLY"
+                    targetId: "0K9GVJT2C4Q21"
+                    taskChange:
+                      expectedRevision: 1
+                      due: {}
+              updateMeetingReviewItem_MeetingReviewConflictException:
+                value:
+                  expectedReviewVersion: 1
+                  expectedItemRevision: 1
+                  content: "검토한 업무"
+                  included: true
+                  assignee: null
+                  due: "2026-09-18"
+                  decisions:
+                  - targetId: "0K9GVJT2C4Q21"
+                    decision: "APPLY"
+                    taskChange:
+                      expectedRevision: 2
+                      status: "COMPLETED"
+                      assignee:
+                        value:
+                          type: "USER"
+                          id: "0HZX2K7M9Q4AC"
+                      due:
+                        value: null
       responses:
-        '200':
-          description: 요청 성공
+        "200":
+          description: "요청 성공"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MeetingReviewResponse'
+                $ref: "#/components/schemas/MeetingReviewResponse"
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
-                      noteId: 0HZX2K7M9Q4AF
-                      reviewId: 0K9GVJT2C4Q1Z
+                      noteId: "0HZX2K7M9Q4AF"
+                      reviewId: "0K9GVJT2C4Q1Z"
                       reviewVersion: 2
                       items:
-                      - itemId: 0HZX2K7M9Q4AN
+                      - itemId: "0HZX2K7M9Q4AN"
                         revision: 1
-                        kind: ACTION_ITEM
-                        content: 검토한 업무
+                        kind: "ACTION_ITEM"
+                        content: "검토한 업무"
                         included: true
                         citations:
-                        - segmentId: 0HZX2K7M9Q4AH
-                          role: SUPPORTS
+                        - segmentId: "0HZX2K7M9Q4AH"
+                          role: "SUPPORTS"
                         originalProposalRef:
-                          proposalId: 0HZX2K7M9Q4AG
+                          proposalId: "0HZX2K7M9Q4AG"
                           revision: 1
                         authoredByUserId: null
                         edited: false
                         assignee:
-                          type: USER
-                          id: 0HZX2K7M9Q4AC
-                          name: 민수
-                          image: https://cdn.example.com/avatars/hong.png
-                        due: '2026-09-18'
+                          type: "USER"
+                          id: "0HZX2K7M9Q4AC"
+                          name: "민수"
+                          image: "https://cdn.example.com/avatars/hong.png"
+                        due: "2026-09-18"
                         replacements:
                         - target:
-                            itemId: 0K9GVJT2C4Q21
+                            itemId: "0K9GVJT2C4Q21"
                             revision: 1
-                            kind: DECISION
-                            content: 배포는 금요일에 한다
-                            noteId: 0HZX2K7M9Q4AF
-                            noteTitle: 지난 주간 회의
-                            approvedAt: '2026-09-10T01:00:00Z'
+                            kind: "DECISION"
+                            content: "배포는 금요일에 한다"
+                            noteId: "0HZX2K7M9Q4AF"
+                            noteTitle: "지난 주간 회의"
+                            approvedAt: "2026-09-10T01:00:00Z"
                             endedAt: null
                             originalProposalRef:
-                              proposalId: 0HZX2K7M9Q4AG
+                              proposalId: "0HZX2K7M9Q4AG"
                               revision: 1
-                          kind: REPLACES
-                          label: 대체
-                          reason: 이번 회의에서 결정을 바꿨습니다
-                          decision: KEEP
+                          kind: "REPLACES"
+                          label: "대체"
+                          reason: "이번 회의에서 결정을 바꿨습니다"
+                          decision: "KEEP"
                         taskChanges:
                         - target:
-                            itemId: 0K9GVJT2C4Q21
+                            itemId: "0K9GVJT2C4Q21"
                             revision: 2
                             originalProposalRef:
-                              proposalId: 0HZX2K7M9Q4AG
+                              proposalId: "0HZX2K7M9Q4AG"
                               revision: 2
-                          status: COMPLETED
+                          status: "COMPLETED"
                           assignee:
                             value:
-                              type: USER
-                              id: 0HZX2K7M9Q4AC
-                              name: 민수
-                              image: https://cdn.example.com/avatars/hong.png
+                              type: "USER"
+                              id: "0HZX2K7M9Q4AC"
+                              name: "민수"
+                              image: "https://cdn.example.com/avatars/hong.png"
                           due:
-                            value: '2026-09-18'
-                          reason: 회의에서 끝났다고 말했습니다
-                          decision: KEEP
+                            value: "2026-09-18"
+                          reason: "회의에서 끝났다고 말했습니다"
+                          decision: "KEEP"
+                          draft:
+                            expectedRevision: 2
+                            status: "COMPLETED"
+                            assignee:
+                              value:
+                                type: "USER"
+                                id: "0HZX2K7M9Q4AC"
+                                label: null
+                            due:
+                              value: null
                         suggestedAssignment:
                           assignee:
-                            type: USER
-                            id: 0HZX2K7M9Q4AC
-                            name: 민수
-                            image: https://cdn.example.com/avatars/hong.png
-                          due: '2026-09-18'
+                            type: "USER"
+                            id: "0HZX2K7M9Q4AC"
+                            name: "민수"
+                            image: "https://cdn.example.com/avatars/hong.png"
+                          due: "2026-09-18"
                     error: null
-        '409':
-          description: 요청 상태 충돌
+        "409":
+          description: "요청 상태 충돌"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppErrorResponse'
+                $ref: "#/components/schemas/AppErrorResponse"
               examples:
-                MEETING_REVIEW_CONFLICT:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: MEETING_REVIEW_CONFLICT
-                      message: 검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요.
-                      details: null
                 MEETING_REVIEW_CONFIRMED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: MEETING_REVIEW_CONFIRMED
-                      message: 확정된 검토본은 고칠 수 없습니다.
+                      code: "MEETING_REVIEW_CONFIRMED"
+                      message: "확정된 검토본은 고칠 수 없습니다."
                       details: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                MEETING_REVIEW_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "MEETING_REVIEW_CONFLICT"
+                      message: "검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요."
+                      details: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
   /v1/notes/{noteId}/proposals/{proposalId}/revisions:
@@ -11077,515 +11162,601 @@ components:
           - null
           description: 성공 시 null인 오류 정보
     MeetingReviewResponse:
-      title: MeetingReviewResponse
+      title: "MeetingReviewResponse"
       required:
-      - data
-      - error
-      - success
-      type: object
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
       properties:
         data:
           required:
-          - items
-          - noteId
-          - reviewId
-          - reviewVersion
-          type: object
+          - "items"
+          - "noteId"
+          - "reviewId"
+          - "reviewVersion"
+          type: "object"
           properties:
             reviewVersion:
-              type: integer
-              description: 검토본 CAS 버전
+              type: "integer"
+              description: "검토본 CAS 버전"
               nullable: false
-              format: int64
+              format: "int64"
               minimum: 1
             noteId:
-              type: string
-              description: 회의 식별자
+              type: "string"
+              description: "회의 식별자"
               nullable: false
-              example: 0HZX2K7M9Q4AF
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              example: "0HZX2K7M9Q4AF"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
             items:
-              type: array
-              description: 저장된 검토 항목. 제외 항목도 포함합니다
+              type: "array"
+              description: "저장된 검토 항목. 제외 항목도 포함합니다"
               items:
                 required:
-                - citations
-                - content
-                - edited
-                - included
-                - itemId
-                - kind
-                - originalProposalRef
-                - replacements
-                - revision
-                - taskChanges
-                - assignee
-                - due
-                - authoredByUserId
-                - suggestedAssignment
-                type: object
+                - "citations"
+                - "content"
+                - "edited"
+                - "included"
+                - "itemId"
+                - "kind"
+                - "originalProposalRef"
+                - "replacements"
+                - "revision"
+                - "taskChanges"
+                - "assignee"
+                - "due"
+                - "authoredByUserId"
+                - "suggestedAssignment"
+                type: "object"
                 properties:
                   edited:
-                    type: boolean
-                    description: 사람이 수정한 항목 여부
+                    type: "boolean"
+                    description: "사람이 수정한 항목 여부"
                   kind:
-                    type: string
-                    description: 항목 종류
+                    type: "string"
+                    description: "항목 종류"
                     nullable: false
                     enum:
-                    - AGENDA
-                    - DECISION
-                    - ACTION_ITEM
-                    - ISSUE
-                    - QUESTION
-                    - STATUS_REPORT
-                    - INSIGHT
-                  taskChanges:
-                    type: array
-                    description: 최신 분석이 제안한 기존 할 일 변경. 받으려면 할 일 API 로 고칩니다
-                    items:
-                      required:
-                      - reason
-                      - target
-                      - status
-                      - assignee
-                      - due
-                      - decision
-                      type: object
-                      properties:
-                        reason:
-                          type: string
-                          description: 제안 이유
-                          nullable: false
-                          minLength: 1
-                        decision:
-                          type: string
-                          description: 사람이 저장한 선택. 할 일 API 로 반영했으면 APPLIED·유지 KEEP, 안 골랐으면 null. APPLIED 는 기록일 뿐 할 일을 바꾸지 않습니다
-                          nullable: true
-                          enum:
-                          - APPLIED
-                          - KEEP
-                        due:
-                          type: object
-                          properties:
-                            value:
-                              type: string
-                              description: 바꿀 기한. null 이면 해제
-                              nullable: true
-                              example: '2026-09-18'
-                              format: date
-                          description: 기한 변경. null 이면 기한은 그대로
-                          nullable: true
-                          required:
-                          - value
-                        assignee:
-                          type: object
-                          properties:
-                            value:
-                              type: object
-                              properties:
-                                image:
-                                  type: string
-                                  description: 사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자면 키가 빠진다
-                                  nullable: false
-                                  example: https://cdn.example.com/avatars/hong.png
-                                name:
-                                  type: string
-                                  description: 사람 담당의 현재 이름
-                                  nullable: false
-                                  minLength: 1
-                                noteId:
-                                  type: string
-                                  description: 회의 라벨 담당의 회의 ID
-                                  nullable: false
-                                  example: 0HZX2K7M9Q4AF
-                                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                                label:
-                                  type: string
-                                  description: 회의 라벨 담당의 화자 라벨
-                                  nullable: false
-                                  minLength: 1
-                                  maxLength: 8
-                                id:
-                                  type: string
-                                  description: 사람 담당의 계정·임시 참여자 ID
-                                  nullable: false
-                                  example: 0HZX2K7M9Q4AC
-                                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                                type:
-                                  type: string
-                                  description: 담당 종류
-                                  nullable: false
-                                  enum:
-                                  - USER
-                                  - GUEST
-                                  - SPEAKER_LABEL
-                              description: 바꿀 담당. null 이면 해제
-                              nullable: true
-                              required:
-                              - type
-                          description: 담당 변경. null 이면 담당은 그대로
-                          nullable: true
-                          required:
-                          - value
-                        status:
-                          type: string
-                          description: 바꿀 상태. null 이면 그대로
-                          nullable: true
-                          enum:
-                          - OPEN
-                          - COMPLETED
-                          - CANCELLED
-                        target:
-                          required:
-                          - itemId
-                          - revision
-                          - originalProposalRef
-                          type: object
-                          properties:
-                            itemId:
-                              type: string
-                              description: 할 일 ID
-                              nullable: false
-                              example: 0K9GVJT2C4Q21
-                              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                            revision:
-                              type: integer
-                              description: 할 일 판
-                              nullable: false
-                              format: int64
-                              minimum: 1
-                            originalProposalRef:
-                              type: object
-                              properties:
-                                proposalId:
-                                  type: string
-                                  description: 원래 명제 ID
-                                  nullable: false
-                                  example: 0HZX2K7M9Q4AG
-                                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                                revision:
-                                  type: integer
-                                  description: 원래 명제 판
-                                  nullable: false
-                                  format: int64
-                                  minimum: 1
-                              description: 이 할 일을 만든 검토 항목의 원래 명제. 사람이 더한 항목이나 공개 경로로 만든 할 일이면 null
-                              nullable: true
-                              required:
-                              - revision
-                          description: 바꾸자고 제안한 이 프로젝트의 할 일
-                  authoredByUserId:
-                    type: string
-                    description: 사람 추가 항목의 작성자. 원본 복사 항목은 null
-                    nullable: true
-                    example: 0HZX2K7M9Q4AC
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                  content:
-                    type: string
-                    description: 검토한 내용
-                    nullable: false
-                    minLength: 1
-                  revision:
-                    type: integer
-                    description: 항목 CAS 버전
-                    nullable: false
-                    format: int64
-                    minimum: 1
-                  itemId:
-                    type: string
-                    description: 서버 발급 검토 항목 ID
-                    nullable: false
-                    example: 0HZX2K7M9Q4AN
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                  citations:
-                    type: array
-                    description: 이 항목에 저장된 전사 참조
-                    items:
-                      required:
-                      - role
-                      - segmentId
-                      type: object
-                      properties:
-                        role:
-                          type: string
-                          description: 저장된 인용 역할
-                          nullable: false
-                          enum:
-                          - SUPPORTS
-                          - REFUTES
-                          - CONDITIONS
-                          - RETRACTS
-                          - REFERENCES
-                        segmentId:
-                          type: string
-                          description: 같은 회의의 전사 ID
-                          nullable: false
-                          example: 0HZX2K7M9Q4AH
-                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                  due:
-                    type: string
-                    description: 기한 날짜. 할 일·이슈·질문 항목만 가집니다. 없으면 null
-                    nullable: true
-                    example: '2026-09-18'
-                    format: date
-                  replacements:
-                    type: array
-                    description: 최신 분석이 제안한 대체(끝낼 옛 노드). 끝내려면 decisions 로 END 를 저장하고, 확정은 포함 항목의 END 대상만 끝냅니다
-                    items:
-                      required:
-                      - kind
-                      - label
-                      - reason
-                      - target
-                      - decision
-                      type: object
-                      properties:
-                        reason:
-                          type: string
-                          description: 제안 이유
-                          nullable: false
-                          minLength: 1
-                        decision:
-                          type: string
-                          description: 사람이 저장한 선택. 끝내기 END·유지 KEEP, 안 골랐으면 null
-                          nullable: true
-                          enum:
-                          - END
-                          - KEEP
-                        kind:
-                          type: string
-                          description: AI 관계 종류. 서버는 해석하지 않습니다
-                          nullable: false
-                          minLength: 1
-                        label:
-                          type: string
-                          description: 관계 이름
-                          nullable: false
-                          minLength: 1
-                        target:
-                          required:
-                          - approvedAt
-                          - content
-                          - itemId
-                          - kind
-                          - noteId
-                          - noteTitle
-                          - revision
-                          - endedAt
-                          - originalProposalRef
-                          type: object
-                          properties:
-                            noteTitle:
-                              type: string
-                              description: 그 회의의 제목
-                              nullable: false
-                              minLength: 1
-                            itemId:
-                              type: string
-                              description: 지식 노드 ID
-                              nullable: false
-                              example: 0K9GVJT2C4Q21
-                              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                            endedAt:
-                              type: string
-                              description: 이 노드가 끝났으면 그 시각. 확정 전에는 다른 확정이 끝낸 것이고, 확정 뒤 조회면 이 확정이 끝낸 것도 포함합니다. 현재 노드면 null
-                              nullable: true
-                              format: date-time
-                            kind:
-                              type: string
-                              description: 지식 노드 종류. 할 일은 노드가 아니라 없습니다
-                              nullable: false
-                              enum:
-                              - AGENDA
-                              - DECISION
-                              - ISSUE
-                              - QUESTION
-                              - STATUS_REPORT
-                              - INSIGHT
-                            noteId:
-                              type: string
-                              description: 그 노드를 확정한 회의
-                              nullable: false
-                              example: 0HZX2K7M9Q4AF
-                              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                            approvedAt:
-                              type: string
-                              description: 그 노드를 확정한 시각
-                              nullable: false
-                              format: date-time
-                            content:
-                              type: string
-                              description: 지식 노드 내용
-                              nullable: false
-                              minLength: 1
-                            revision:
-                              type: integer
-                              description: 지식 노드 판
-                              nullable: false
-                              format: int64
-                              minimum: 1
-                            originalProposalRef:
-                              type: object
-                              properties:
-                                proposalId:
-                                  type: string
-                                  description: 원래 명제 ID
-                                  nullable: false
-                                  example: 0HZX2K7M9Q4AG
-                                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                                revision:
-                                  type: integer
-                                  description: 원래 명제 판
-                                  nullable: false
-                                  format: int64
-                                  minimum: 1
-                              description: 이 노드가 된 검토 항목의 원래 명제. 사람이 더한 항목이면 null
-                              nullable: true
-                              required:
-                              - revision
-                          description: 끝내자고 제안한 이 프로젝트의 지식 노드와 그 출처
-                  assignee:
-                    type: object
-                    properties:
-                      image:
-                        type: string
-                        description: 사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자면 키가 빠진다
-                        nullable: false
-                        example: https://cdn.example.com/avatars/hong.png
-                      name:
-                        type: string
-                        description: 사람 담당의 현재 이름
-                        nullable: false
-                        minLength: 1
-                      noteId:
-                        type: string
-                        description: 회의 라벨 담당의 회의 ID
-                        nullable: false
-                        example: 0HZX2K7M9Q4AF
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                      label:
-                        type: string
-                        description: 회의 라벨 담당의 화자 라벨
-                        nullable: false
-                        minLength: 1
-                        maxLength: 8
-                      id:
-                        type: string
-                        description: 사람 담당의 계정·임시 참여자 ID
-                        nullable: false
-                        example: 0HZX2K7M9Q4AC
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                      type:
-                        type: string
-                        description: 담당 종류
-                        nullable: false
-                        enum:
-                        - USER
-                        - GUEST
-                        - SPEAKER_LABEL
-                    description: 담당. 할 일·이슈·질문 항목만 가집니다. 회의 라벨은 조회 시점 화자 지정으로 풉니다. 없으면 null
-                    nullable: true
-                    required:
-                    - type
-                  originalProposalRef:
-                    type: object
-                    properties:
-                      proposalId:
-                        type: string
-                        description: 원본 명제 ID
-                        nullable: false
-                        example: 0HZX2K7M9Q4AG
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                      revision:
-                        type: integer
-                        description: 원본 명제 판
-                        nullable: false
-                        format: int64
-                        minimum: 1
-                    description: 원본 명제 출처. 사람 추가는 null
-                    nullable: true
-                    required:
-                    - proposalId
-                    - revision
-                  included:
-                    type: boolean
-                    description: 검토 대상 포함 여부
+                    - "AGENDA"
+                    - "DECISION"
+                    - "ACTION_ITEM"
+                    - "ISSUE"
+                    - "QUESTION"
+                    - "STATUS_REPORT"
+                    - "INSIGHT"
                   suggestedAssignment:
-                    type: object
+                    type: "object"
                     properties:
                       due:
-                        type: string
-                        description: 제안한 기한. 없으면 null
+                        type: "string"
+                        description: "제안한 기한. 없으면 null"
                         nullable: true
-                        example: '2026-09-18'
-                        format: date
+                        example: "2026-09-18"
+                        format: "date"
                       assignee:
-                        type: object
+                        type: "object"
                         properties:
                           image:
-                            type: string
-                            description: 사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자면 키가 빠진다
+                            type: "string"
+                            description: "사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자면 키가 빠\
+                              진다"
                             nullable: false
-                            example: https://cdn.example.com/avatars/hong.png
+                            example: "https://cdn.example.com/avatars/hong.png"
                           name:
-                            type: string
-                            description: 사람 담당의 현재 이름
+                            type: "string"
+                            description: "사람 담당의 현재 이름"
                             nullable: false
                             minLength: 1
                           noteId:
-                            type: string
-                            description: 회의 라벨 담당의 회의 ID
+                            type: "string"
+                            description: "회의 라벨 담당의 회의 ID"
                             nullable: false
-                            example: 0HZX2K7M9Q4AF
-                            pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                            example: "0HZX2K7M9Q4AF"
+                            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                           label:
-                            type: string
-                            description: 회의 라벨 담당의 화자 라벨
+                            type: "string"
+                            description: "회의 라벨 담당의 화자 라벨"
                             nullable: false
                             minLength: 1
                             maxLength: 8
                           id:
-                            type: string
-                            description: 사람 담당의 계정·임시 참여자 ID
+                            type: "string"
+                            description: "사람 담당의 계정·임시 참여자 ID"
                             nullable: false
-                            example: 0HZX2K7M9Q4AC
-                            pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                            example: "0HZX2K7M9Q4AC"
+                            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                           type:
-                            type: string
-                            description: 담당 종류
+                            type: "string"
+                            description: "담당 종류"
                             nullable: false
                             enum:
-                            - USER
-                            - GUEST
-                            - SPEAKER_LABEL
-                        description: 제안한 담당. 없거나 풀 수 없으면 null
+                            - "USER"
+                            - "GUEST"
+                            - "SPEAKER_LABEL"
+                        description: "제안한 담당. 없거나 풀 수 없으면 null"
                         nullable: true
                         required:
-                        - type
-                    description: 화자 분리 뒤 판정한 이 할 일의 담당 · 기한 제안. 받으려면 항목 수정으로 반영합니다. 제안이 없으면 null
+                        - "type"
+                    description: "화자 분리 뒤 판정한 이 할 일의 담당 · 기한 제안. 받으려면 항목 수정으로 반영합니\
+                      다. 제안이 없으면 null"
                     nullable: true
                     required:
-                    - assignee
-                    - due
+                    - "assignee"
+                    - "due"
+                  taskChanges:
+                    type: "array"
+                    description: "최신 분석이 제안한 기존 할 일 변경. APPLY 선택과 초안을 저장하면 검토 완료 때\
+                      \ 서버가 일괄 적용합니다"
+                    items:
+                      required:
+                      - "reason"
+                      - "target"
+                      - "status"
+                      - "assignee"
+                      - "due"
+                      - "decision"
+                      - "draft"
+                      type: "object"
+                      properties:
+                        reason:
+                          type: "string"
+                          description: "제안 이유"
+                          nullable: false
+                          minLength: 1
+                        decision:
+                          type: "string"
+                          description: "APPLY는 확정 때 반영, KEEP은 미반영, APPLIED는 이미 적용한\
+                            \ 옛 이력으로 재적용하지 않습니다. 미선택은 null입니다"
+                          nullable: true
+                          enum:
+                          - "APPLY"
+                          - "APPLIED"
+                          - "KEEP"
+                        due:
+                          type: "object"
+                          properties:
+                            value:
+                              type: "string"
+                              description: "바꿀 기한. null 이면 해제"
+                              nullable: true
+                              example: "2026-09-18"
+                              format: "date"
+                          description: "기한 변경. null 이면 기한은 그대로"
+                          nullable: true
+                          required:
+                          - "value"
+                        draft:
+                          type: "object"
+                          properties:
+                            due:
+                              type: "object"
+                              properties:
+                                value:
+                                  type: "string"
+                                  description: "바꿀 날짜. null이면 해제하며 객체 안 value 키는 필\
+                                    수입니다"
+                                  nullable: true
+                                  format: "date"
+                              description: "null 또는 생략은 기한 미변경입니다"
+                              nullable: true
+                              required:
+                              - "value"
+                            assignee:
+                              type: "object"
+                              properties:
+                                value:
+                                  type: "object"
+                                  properties:
+                                    label:
+                                      type: "string"
+                                      description: "회의 라벨. 사람 담당이면 null 또는 생략입니다"
+                                      nullable: true
+                                      maxLength: 8
+                                    id:
+                                      type: "string"
+                                      description: "사람 담당 ID. 회의 라벨이면 null 또는 생략입니\
+                                        다"
+                                      nullable: true
+                                      example: "0HZX2K7M9Q4AC"
+                                      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                                    type:
+                                      type: "string"
+                                      description: "USER·GUEST는 id, SPEAKER_LABEL은\
+                                        \ label을 사용합니다"
+                                      nullable: false
+                                      enum:
+                                      - "USER"
+                                      - "GUEST"
+                                      - "SPEAKER_LABEL"
+                                  description: "담당 참조 원문. null이면 해제하며 객체 안 value 키\
+                                    는 필수입니다"
+                                  nullable: true
+                                  required:
+                                  - "type"
+                              description: "null 또는 생략은 담당 미변경입니다"
+                              nullable: true
+                              required:
+                              - "value"
+                            expectedRevision:
+                              type: "integer"
+                              description: "제안 target.revision과 같은 기대 업무 판. 승인에서 달\
+                                라졌으면 전체 409입니다"
+                              nullable: false
+                              format: "int64"
+                              minimum: 1
+                            status:
+                              type: "string"
+                              description: "바꿀 상태. null 또는 생략은 미변경입니다"
+                              nullable: true
+                              enum:
+                              - "OPEN"
+                              - "COMPLETED"
+                              - "CANCELLED"
+                          description: "사람이 저장한 업무 변경 초안. 없으면 null이며 원본 제안과 별도로 보존\
+                            합니다"
+                          nullable: true
+                          required:
+                          - "expectedRevision"
+                          - "status"
+                          - "assignee"
+                          - "due"
+                        assignee:
+                          type: "object"
+                          properties:
+                            value:
+                              type: "object"
+                              properties:
+                                image:
+                                  type: "string"
+                                  description: "사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자\
+                                    면 키가 빠진다"
+                                  nullable: false
+                                  example: "https://cdn.example.com/avatars/hong.png"
+                                name:
+                                  type: "string"
+                                  description: "사람 담당의 현재 이름"
+                                  nullable: false
+                                  minLength: 1
+                                noteId:
+                                  type: "string"
+                                  description: "회의 라벨 담당의 회의 ID"
+                                  nullable: false
+                                  example: "0HZX2K7M9Q4AF"
+                                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                                label:
+                                  type: "string"
+                                  description: "회의 라벨 담당의 화자 라벨"
+                                  nullable: false
+                                  minLength: 1
+                                  maxLength: 8
+                                id:
+                                  type: "string"
+                                  description: "사람 담당의 계정·임시 참여자 ID"
+                                  nullable: false
+                                  example: "0HZX2K7M9Q4AC"
+                                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                                type:
+                                  type: "string"
+                                  description: "담당 종류"
+                                  nullable: false
+                                  enum:
+                                  - "USER"
+                                  - "GUEST"
+                                  - "SPEAKER_LABEL"
+                              description: "바꿀 담당. null 이면 해제"
+                              nullable: true
+                              required:
+                              - "type"
+                          description: "담당 변경. null 이면 담당은 그대로"
+                          nullable: true
+                          required:
+                          - "value"
+                        status:
+                          type: "string"
+                          description: "바꿀 상태. null 이면 그대로"
+                          nullable: true
+                          enum:
+                          - "OPEN"
+                          - "COMPLETED"
+                          - "CANCELLED"
+                        target:
+                          required:
+                          - "itemId"
+                          - "revision"
+                          - "originalProposalRef"
+                          type: "object"
+                          properties:
+                            itemId:
+                              type: "string"
+                              description: "할 일 ID"
+                              nullable: false
+                              example: "0K9GVJT2C4Q21"
+                              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                            originalProposalRef:
+                              type: "object"
+                              properties:
+                                proposalId:
+                                  type: "string"
+                                  description: "원래 명제 ID"
+                                  nullable: false
+                                  example: "0HZX2K7M9Q4AG"
+                                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                                revision:
+                                  type: "integer"
+                                  description: "원래 명제 판"
+                                  nullable: false
+                                  format: "int64"
+                                  minimum: 1
+                              description: "이 할 일을 만든 검토 항목의 원래 명제. 사람이 더한 항목이나 공개\
+                                \ 경로로 만든 할 일이면 null"
+                              nullable: true
+                              required:
+                              - "revision"
+                            revision:
+                              type: "integer"
+                              description: "할 일 판"
+                              nullable: false
+                              format: "int64"
+                              minimum: 1
+                          description: "바꾸자고 제안한 이 프로젝트의 할 일"
+                  authoredByUserId:
+                    type: "string"
+                    description: "사람 추가 항목의 작성자. 원본 복사 항목은 null"
+                    nullable: true
+                    example: "0HZX2K7M9Q4AC"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  content:
+                    type: "string"
+                    description: "검토한 내용"
+                    nullable: false
+                    minLength: 1
+                  revision:
+                    type: "integer"
+                    description: "항목 CAS 버전"
+                    nullable: false
+                    format: "int64"
+                    minimum: 1
+                  itemId:
+                    type: "string"
+                    description: "서버 발급 검토 항목 ID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AN"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  citations:
+                    type: "array"
+                    description: "이 항목에 저장된 전사 참조"
+                    items:
+                      required:
+                      - "role"
+                      - "segmentId"
+                      type: "object"
+                      properties:
+                        role:
+                          type: "string"
+                          description: "저장된 인용 역할"
+                          nullable: false
+                          enum:
+                          - "SUPPORTS"
+                          - "REFUTES"
+                          - "CONDITIONS"
+                          - "RETRACTS"
+                          - "REFERENCES"
+                        segmentId:
+                          type: "string"
+                          description: "같은 회의의 전사 ID"
+                          nullable: false
+                          example: "0HZX2K7M9Q4AH"
+                          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  due:
+                    type: "string"
+                    description: "기한 날짜. 할 일·이슈·질문 항목만 가집니다. 없으면 null"
+                    nullable: true
+                    example: "2026-09-18"
+                    format: "date"
+                  replacements:
+                    type: "array"
+                    description: "최신 분석이 제안한 대체(끝낼 옛 노드). 끝내려면 decisions 로 END 를 저\
+                      장하고, 확정은 포함 항목의 END 대상만 끝냅니다"
+                    items:
+                      required:
+                      - "kind"
+                      - "label"
+                      - "reason"
+                      - "target"
+                      - "decision"
+                      type: "object"
+                      properties:
+                        reason:
+                          type: "string"
+                          description: "제안 이유"
+                          nullable: false
+                          minLength: 1
+                        decision:
+                          type: "string"
+                          description: "사람이 저장한 선택. 끝내기 END·유지 KEEP, 안 골랐으면 null"
+                          nullable: true
+                          enum:
+                          - "END"
+                          - "KEEP"
+                        kind:
+                          type: "string"
+                          description: "AI 관계 종류. 서버는 해석하지 않습니다"
+                          nullable: false
+                          minLength: 1
+                        label:
+                          type: "string"
+                          description: "관계 이름"
+                          nullable: false
+                          minLength: 1
+                        target:
+                          required:
+                          - "approvedAt"
+                          - "content"
+                          - "itemId"
+                          - "kind"
+                          - "noteId"
+                          - "noteTitle"
+                          - "revision"
+                          - "endedAt"
+                          - "originalProposalRef"
+                          type: "object"
+                          properties:
+                            noteTitle:
+                              type: "string"
+                              description: "그 회의의 제목"
+                              nullable: false
+                              minLength: 1
+                            itemId:
+                              type: "string"
+                              description: "지식 노드 ID"
+                              nullable: false
+                              example: "0K9GVJT2C4Q21"
+                              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                            endedAt:
+                              type: "string"
+                              description: "이 노드가 끝났으면 그 시각. 확정 전에는 다른 확정이 끝낸 것이고\
+                                , 확정 뒤 조회면 이 확정이 끝낸 것도 포함합니다. 현재 노드면 null"
+                              nullable: true
+                              format: "date-time"
+                            kind:
+                              type: "string"
+                              description: "지식 노드 종류. 할 일은 노드가 아니라 없습니다"
+                              nullable: false
+                              enum:
+                              - "AGENDA"
+                              - "DECISION"
+                              - "ISSUE"
+                              - "QUESTION"
+                              - "STATUS_REPORT"
+                              - "INSIGHT"
+                            noteId:
+                              type: "string"
+                              description: "그 노드를 확정한 회의"
+                              nullable: false
+                              example: "0HZX2K7M9Q4AF"
+                              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                            originalProposalRef:
+                              type: "object"
+                              properties:
+                                proposalId:
+                                  type: "string"
+                                  description: "원래 명제 ID"
+                                  nullable: false
+                                  example: "0HZX2K7M9Q4AG"
+                                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                                revision:
+                                  type: "integer"
+                                  description: "원래 명제 판"
+                                  nullable: false
+                                  format: "int64"
+                                  minimum: 1
+                              description: "이 노드가 된 검토 항목의 원래 명제. 사람이 더한 항목이면 null"
+                              nullable: true
+                              required:
+                              - "revision"
+                            approvedAt:
+                              type: "string"
+                              description: "그 노드를 확정한 시각"
+                              nullable: false
+                              format: "date-time"
+                            content:
+                              type: "string"
+                              description: "지식 노드 내용"
+                              nullable: false
+                              minLength: 1
+                            revision:
+                              type: "integer"
+                              description: "지식 노드 판"
+                              nullable: false
+                              format: "int64"
+                              minimum: 1
+                          description: "끝내자고 제안한 이 프로젝트의 지식 노드와 그 출처"
+                  assignee:
+                    type: "object"
+                    properties:
+                      image:
+                        type: "string"
+                        description: "사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자면 키가 빠진다"
+                        nullable: false
+                        example: "https://cdn.example.com/avatars/hong.png"
+                      name:
+                        type: "string"
+                        description: "사람 담당의 현재 이름"
+                        nullable: false
+                        minLength: 1
+                      noteId:
+                        type: "string"
+                        description: "회의 라벨 담당의 회의 ID"
+                        nullable: false
+                        example: "0HZX2K7M9Q4AF"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      label:
+                        type: "string"
+                        description: "회의 라벨 담당의 화자 라벨"
+                        nullable: false
+                        minLength: 1
+                        maxLength: 8
+                      id:
+                        type: "string"
+                        description: "사람 담당의 계정·임시 참여자 ID"
+                        nullable: false
+                        example: "0HZX2K7M9Q4AC"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      type:
+                        type: "string"
+                        description: "담당 종류"
+                        nullable: false
+                        enum:
+                        - "USER"
+                        - "GUEST"
+                        - "SPEAKER_LABEL"
+                    description: "담당. 할 일·이슈·질문 항목만 가집니다. 회의 라벨은 조회 시점 화자 지정으로 풉니다\
+                      . 없으면 null"
+                    nullable: true
+                    required:
+                    - "type"
+                  originalProposalRef:
+                    type: "object"
+                    properties:
+                      proposalId:
+                        type: "string"
+                        description: "원본 명제 ID"
+                        nullable: false
+                        example: "0HZX2K7M9Q4AG"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      revision:
+                        type: "integer"
+                        description: "원본 명제 판"
+                        nullable: false
+                        format: "int64"
+                        minimum: 1
+                    description: "원본 명제 출처. 사람 추가는 null"
+                    nullable: true
+                    required:
+                    - "proposalId"
+                    - "revision"
+                  included:
+                    type: "boolean"
+                    description: "검토 대상 포함 여부"
             reviewId:
-              type: string
-              description: 별도 검토본 식별자
+              type: "string"
+              description: "별도 검토본 식별자"
               nullable: false
-              example: 0K9GVJT2C4Q1Z
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-          description: 성공 응답 데이터
+              example: "0K9GVJT2C4Q1Z"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          description: "성공 응답 데이터"
           nullable: false
         success:
-          type: boolean
-          description: 요청 성공 여부
+          type: "boolean"
+          description: "요청 성공 여부"
           nullable: false
           example: true
         error:
           nullable: true
           enum:
           - null
-          description: 성공 시 null인 오류 정보
+          description: "성공 시 null인 오류 정보"
     MeetingReviewSummaryResponse:
       title: MeetingReviewSummaryResponse
       required:
@@ -14448,89 +14619,161 @@ components:
       type: string
       pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
     UpdateMeetingReviewItemRequest:
-      title: UpdateMeetingReviewItemRequest
+      title: "UpdateMeetingReviewItemRequest"
       required:
-      - expectedItemRevision
-      - expectedReviewVersion
-      type: object
+      - "expectedItemRevision"
+      - "expectedReviewVersion"
+      type: "object"
       properties:
         expectedReviewVersion:
-          type: integer
-          description: 읽은 검토본 버전
+          type: "integer"
+          description: "읽은 검토본 버전"
           nullable: false
-          format: int64
+          format: "int64"
           minimum: 1
         due:
-          type: string
-          description: 생략 시 유지, null은 해제
+          type: "string"
+          description: "생략 시 유지, null은 해제"
           nullable: true
-          example: '2026-09-18'
-          format: date
+          example: "2026-09-18"
+          format: "date"
         decisions:
-          type: array
-          description: 분석 제안에 대한 선택. 생략 시 모두 유지하고 준 대상만 바꿉니다. null은 거절합니다
+          type: "array"
+          description: "분석 제안에 대한 선택. 생략 시 모두 유지하고 준 대상만 바꿉니다. null은 거절합니다"
           items:
-            type: object
+            type: "object"
             properties:
               decision:
-                type: string
-                description: 대체는 END·KEEP, 기존 할 일 변경은 APPLIED·KEEP. null 이면 선택을 지웁니다
+                type: "string"
+                description: "대체는 END·KEEP, 업무 변경은 APPLY·KEEP. APPLIED는 옛 즉시 반영 이력\
+                  으로 선택 변경이 불가합니다. null은 선택·초안을 지웁니다"
                 nullable: true
                 enum:
-                - END
-                - KEEP
-                - APPLIED
+                - "END"
+                - "KEEP"
+                - "APPLIED"
+                - "APPLY"
               targetId:
-                type: string
-                description: 대체 제안은 대상 노드 ID, 기존 할 일 변경 제안은 대상 할 일 ID. 같은 대상을 두 번 줄 수 없습니다
+                type: "string"
+                description: "대체 제안은 대상 노드 ID, 기존 할 일 변경 제안은 대상 할 일 ID. 같은 대상을 두 번\
+                  \ 줄 수 없습니다"
                 nullable: false
-                example: 0K9GVJT2C4Q21
-                pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                example: "0K9GVJT2C4Q21"
+                pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              taskChange:
+                type: "object"
+                properties:
+                  due:
+                    type: "object"
+                    properties:
+                      value:
+                        type: "string"
+                        description: "바꿀 날짜. null이면 해제하며 객체 안 value 키는 필수입니다"
+                        nullable: true
+                        format: "date"
+                    description: "null 또는 생략은 기한 미변경입니다"
+                    nullable: true
+                    required:
+                    - "value"
+                  assignee:
+                    type: "object"
+                    properties:
+                      value:
+                        type: "object"
+                        properties:
+                          label:
+                            type: "string"
+                            description: "회의 라벨. 사람 담당이면 null 또는 생략입니다"
+                            nullable: false
+                            maxLength: 8
+                          id:
+                            type: "string"
+                            description: "사람 담당 ID. 회의 라벨이면 null 또는 생략입니다"
+                            nullable: false
+                            example: "0HZX2K7M9Q4AC"
+                            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                          type:
+                            type: "string"
+                            description: "USER·GUEST는 id, SPEAKER_LABEL은 label을 사용\
+                              합니다"
+                            nullable: false
+                            enum:
+                            - "USER"
+                            - "GUEST"
+                            - "SPEAKER_LABEL"
+                        description: "담당 참조 원문. null이면 해제하며 객체 안 value 키는 필수입니다"
+                        nullable: true
+                        required:
+                        - "type"
+                    description: "null 또는 생략은 담당 미변경입니다"
+                    nullable: true
+                    required:
+                    - "value"
+                  expectedRevision:
+                    type: "integer"
+                    description: "제안 target.revision과 같은 기대 업무 판. 승인에서 달라졌으면 전체 409입\
+                      니다"
+                    nullable: false
+                    format: "int64"
+                    minimum: 1
+                  status:
+                    type: "string"
+                    description: "바꿀 상태. null 또는 생략은 미변경입니다"
+                    nullable: true
+                    enum:
+                    - "OPEN"
+                    - "COMPLETED"
+                    - "CANCELLED"
+                description: "APPLY에는 필수인 업무 변경 초안. KEEP에서 생략하면 저장된 초안을 유지하며 객체를 주\
+                  면 전체 교체합니다"
+                nullable: true
+                required:
+                - "expectedRevision"
             required:
-            - targetId
-            - decision
+            - "targetId"
+            - "decision"
           nullable: false
         assignee:
-          type: object
+          type: "object"
           properties:
             label:
-              type: string
-              description: 회의 라벨 담당의 화자 라벨
+              type: "string"
+              description: "회의 라벨 담당의 화자 라벨"
               nullable: false
               minLength: 1
               maxLength: 8
             id:
-              type: string
-              description: 사람 담당의 계정·임시 참여자 ID
+              type: "string"
+              description: "사람 담당의 계정·임시 참여자 ID"
               nullable: false
-              example: 0HZX2K7M9Q4AC
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              example: "0HZX2K7M9Q4AC"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
             type:
-              type: string
-              description: 담당 종류
+              type: "string"
+              description: "담당 종류"
               nullable: false
               enum:
-              - USER
-              - GUEST
-              - SPEAKER_LABEL
-          description: 생략 시 유지, null은 해제. 모양과 받는 kind 는 추가와 같습니다
+              - "USER"
+              - "GUEST"
+              - "SPEAKER_LABEL"
+          description: "생략 시 유지, null은 해제. 모양과 받는 kind 는 추가와 같습니다"
           nullable: true
           required:
-          - type
+          - "type"
         included:
-          type: boolean
-          description: 포함/제외. 생략 시 유지, null은 거절합니다
+          type: "boolean"
+          description: "포함/제외. 생략 시 유지, null은 거절합니다"
           nullable: false
         content:
-          type: string
-          description: 생략 시 유지. null과 빈 내용은 거절합니다
+          type: "string"
+          description: "생략 시 유지. null과 빈 내용은 거절합니다"
           nullable: false
           minLength: 1
         expectedItemRevision:
-          type: integer
-          description: 읽은 항목 버전
+          type: "integer"
+          description: "읽은 항목 버전"
           nullable: false
-          format: int64
+          format: "int64"
           minimum: 1
     UpdateProjectTaskRequest:
       title: UpdateProjectTaskRequest

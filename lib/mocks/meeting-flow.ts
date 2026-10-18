@@ -40,9 +40,11 @@ import type {
 type FlowStatus = MeetingAnalysisFlowResponseDataStatus;
 type ReviewItem = MeetingReviewResponseDataItemsItem;
 type Kind = ReviewItem["kind"];
+type TaskDraft = NonNullable<NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"]>;
 
-type StoredTaskChange = Omit<ReviewItem["taskChanges"][number], "assignee"> & {
+type StoredTaskChange = Omit<ReviewItem["taskChanges"][number], "assignee" | "draft"> & {
   assignee: { value: StoredAssignee | null } | null;
+  draft: TaskDraft | null;
 };
 
 type StoredItem = Omit<ReviewItem, "assignee" | "taskChanges"> & {
@@ -279,6 +281,7 @@ function seedMentoringReview(target: State) {
                     : { value: change.dueIn === null ? null : dueAfterMeeting(change.dueIn) },
                 reason: change.reason,
                 decision: change.decision ?? null,
+                draft: null,
               };
             })(),
           ]
@@ -587,6 +590,18 @@ function view(review: StoredReview): MeetingReviewResponseData {
       assignee: resolveAssignee(workspaceId, item.assignee),
       taskChanges: item.taskChanges.map((change) => ({
         ...change,
+        draft: change.draft ? {
+          ...change.draft,
+          status: change.draft.status ?? null,
+          due: change.draft.due ?? null,
+          assignee: change.draft.assignee ? {
+            value: change.draft.assignee.value ? {
+              type: change.draft.assignee.value.type,
+              id: change.draft.assignee.value.id ?? null,
+              label: change.draft.assignee.value.label ?? null,
+            } : null,
+          } : null,
+        } : null,
         assignee: change.assignee && {
           value: resolveAssignee(workspaceId, change.assignee.value),
         },
@@ -754,9 +769,9 @@ export const meetingFlowHandlers = [
       const noteId = paramId(params.noteId);
       const body = (await request.json()) as UpdateMeetingReviewItemRequest;
       const review = editableReview(noteId, body.expectedReviewVersion);
-      const item =
-        review.items.find((row) => row.itemId === paramId(params.itemId)) ??
-        failWith("MEETING_REVIEW_NOT_FOUND", 404, "검토본 또는 항목을 찾을 수 없습니다.");
+      const itemIndex = review.items.findIndex((row) => row.itemId === paramId(params.itemId));
+      if (itemIndex < 0) failWith("MEETING_REVIEW_NOT_FOUND", 404, "검토본 또는 항목을 찾을 수 없습니다.");
+      const item = structuredClone(review.items[itemIndex]);
       if (body.expectedItemRevision !== item.revision) failWith(...CONFLICT);
       if (body.included === null || (body.content !== undefined && !body.content?.trim())) {
         failWith(...BAD_REQUEST);
@@ -780,14 +795,26 @@ export const meetingFlowHandlers = [
         item.due = body.due;
         changed = true;
       }
-      // 제안의 선택. 대체는 END · KEEP, 할 일 변경은 APPLIED · KEEP 이고, 그 항목의 제안에 없는 대상은 거절한다.
-      for (const { targetId, decision } of body.decisions ?? []) {
+      const decisions = body.decisions ?? [];
+      if (new Set(decisions.map((row) => row.targetId)).size !== decisions.length) failWith(...BAD_REQUEST);
+      // 선택 저장은 실제 업무를 바꾸지 않습니다. APPLY는 초안 전체가 필요하고 KEEP 생략은 보존합니다.
+      for (const { targetId, decision, taskChange: draft } of decisions) {
         const replacement = item.replacements.find((row) => row.target.itemId === targetId);
         const taskChange = item.taskChanges.find((row) => row.target.itemId === targetId);
-        if (replacement && decision !== "APPLIED") {
+        if (replacement && decision !== "APPLIED" && decision !== "APPLY" && !draft) {
           changed ||= replacement.decision !== decision;
           replacement.decision = decision;
         } else if (taskChange && decision !== "END") {
+          if (taskChange.decision === "APPLIED" && decision !== "APPLIED") failWith(...BAD_REQUEST);
+          if (decision === "APPLY" && !draft) failWith(...BAD_REQUEST);
+          if (draft) {
+            if ((decision !== "APPLY" && decision !== "KEEP") || draft.expectedRevision !== taskChange.target.revision) failWith(...BAD_REQUEST);
+            if ((draft.assignee && !("value" in draft.assignee)) || (draft.due && !("value" in draft.due))) failWith(...BAD_REQUEST);
+            if (draft.assignee?.value) assigneeFromRequest(draft.assignee.value, noteId);
+          }
+          const nextDraft = decision === null ? null : draft ?? taskChange.draft;
+          changed ||= JSON.stringify(nextDraft) !== JSON.stringify(taskChange.draft);
+          taskChange.draft = nextDraft;
           changed ||= taskChange.decision !== decision;
           taskChange.decision = decision;
         } else {
@@ -797,6 +824,7 @@ export const meetingFlowHandlers = [
       if (changed) {
         item.revision += 1;
         review.reviewVersion += 1;
+        review.items[itemIndex] = item;
       }
       return view(review);
     })
@@ -819,13 +847,25 @@ export const meetingFlowHandlers = [
         failWith("PROJECT_KNOWLEDGE_CONFLICT", 409, "프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요.");
       }
       const included = review.items.filter((item) => item.included);
+      const approvalId = nextId("01KA");
+      const changes = included.flatMap((item) => item.taskChanges)
+        .filter((row) => row.decision === "APPLY")
+        .map((row) => {
+          const draft = row.draft ?? failWith(...BAD_REQUEST);
+          return {
+            ...draft,
+            taskId: row.target.itemId,
+            assignee: draft.assignee ? { value: assigneeFromRequest(draft.assignee.value, noteId) } : null,
+          };
+        });
+      // 모든 충돌 검사가 끝난 뒤에만 새 할 일과 이전 결정도 확정합니다.
+      projectTasks.applyReviewedChanges(note.projectId, changes, approvalId);
       // 포함 항목에 저장된 끝내기만 끝낸다. 다른 확정이 먼저 끝낸 노드는 건너뛴다.
       const endedAt = new Date().toISOString();
       for (const row of included.flatMap((item) => item.replacements)) {
         if (row.decision === "END" && row.target.endedAt === null) row.target.endedAt = endedAt;
       }
 
-      const approvalId = nextId("01KA");
       const actions = included.filter((item) => item.kind === "ACTION_ITEM");
       const promoted = projectTasks.promote(
         note.projectId,
@@ -990,7 +1030,9 @@ export const meetingFlowHandlers = [
             })),
           },
         ],
-        conflicts: priceSource
+        conflicts: [
+          ...carded.slice(0, 1),
+          ...(priceSource
           ? [
               {
                 kind: "SUPERSEDES",
@@ -998,24 +1040,13 @@ export const meetingFlowHandlers = [
                   "좌석 수 대신 실제 회의 시간을 과금 기준으로 정했습니다.",
                 evidenceSequences: [108],
                 source: priceSource,
-                target: side(
-                  PREVIOUS_NOTE_ID,
-                  "01KP900000002",
-                  "요금은 좌석 수에 따라 계산한다",
-                  "DECISION"
-                ),
-              },
-              {
-                kind: "SUPERSEDES",
-                reason: "확정했던 좌석 기준 과금 정책을 회의 시간 기준으로 바꿉니다.",
-                evidenceSequences: [108],
-                source: priceSource,
                 target: { type: "APPROVED", itemId: "01KD900000001", revision: 3, proposalKind: "DECISION", content: "요금은 좌석 수에 따라 계산한다" },
               },
             ]
-          : [],
+          : []),
+        ],
         meetingLinks: [
-          ...carded,
+          ...carded.slice(1),
           ...free,
           ...(priceSource
             ? [

@@ -46,7 +46,7 @@ test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐�
       }),
     });
   await expect(
-    pricing.getByText("대체", { exact: true }).first()
+    pricing.getByText("대체", { exact: true })
   ).toBeVisible();
   await expect(pricing.getByText("이어짐", { exact: true })).toBeVisible();
   await expect(pricing).toContainText("프로젝트 확정 항목");
@@ -126,6 +126,53 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
   await page.getByRole("button", { name: "검토 완료" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "검토 완료" }).click();
   await expect(page.getByText("확정됨", { exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 완료 때 편집한 초안이 적용된다", async ({ page }) => {
+  const taskWrites: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && /\/tasks\//.test(request.url())) taskWrites.push(request.url());
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
+  const tasksUrl = await page.evaluate(async ({ noteId, workspaceId }) => {
+    const { data: note } = await (await fetch(`/v1/notes/${noteId}`)).json();
+    return `/v1/workspaces/${workspaceId}/projects/${note.projectId}/tasks`;
+  }, { noteId: MENTORING_NOTE, workspaceId: WORKSPACE_ID });
+  const readTasks = () => page.evaluate(async (url) => (await (await fetch(url)).json()).data.tasks, tasksUrl);
+  const before = await readTasks();
+  const target = before.find((task: { content: string }) => task.content === "경쟁 서비스 요금제를 표로 정리한다");
+  expect(target).toBeTruthy();
+  const row = rowOf(page, "경쟁 서비스 요금제를 한 표로 정리한다");
+  const choice = row.getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+  await choice.getByRole("radio", { name: "반영", exact: true }).click();
+  await expect(choice.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+  await expect(row).toContainText("검토 완료 때 적용됩니다.");
+  await row.locator('input[type="date"]').fill("2026-12-05");
+  await expect.poll(() => page.evaluate(async ({ noteId, taskId }) => {
+    const { data: review } = await (await fetch(`/v1/notes/${noteId}/meeting-review`)).json();
+    return review.items.flatMap((item: { taskChanges: Array<{ target: { itemId: string }; draft?: { due?: { value: string } } }> }) => item.taskChanges)
+      .find((change: { target: { itemId: string } }) => change.target.itemId === taskId)?.draft?.due?.value;
+  }, { noteId: MENTORING_NOTE, taskId: target.taskId })).toBe("2026-12-05");
+  await choice.getByRole("radio", { name: "넘기기" }).click();
+  await expect(choice.getByRole("radio", { name: "넘기기" })).toHaveAttribute("aria-checked", "true");
+  expect(await readTasks()).toEqual(before);
+  await choice.getByRole("radio", { name: "반영", exact: true }).click();
+  await expect(choice.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+  expect(await readTasks()).toEqual(before);
+
+  await rowOf(page, "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")
+    .getByRole("radio", { name: "이어가기" }).click();
+  await rowOf(page, "구현 결과를 기대 효과 순서로 다시 배치한다")
+    .getByRole("radio", { name: "넘기기" }).click();
+  await expect(page.getByText(/를 프로젝트에 올립니다/)).toContainText("기존 할 일 1개 변경");
+  await page.getByRole("button", { name: "검토 완료" }).click();
+  await expect(page.getByRole("alertdialog")).toContainText("기존 할 일 1개가 변경됩니다.");
+  await page.getByRole("alertdialog").getByRole("button", { name: "검토 완료" }).click();
+  await expect(page.getByText("확정됨", { exact: true })).toBeVisible({ timeout: 20_000 });
+  const applied = (await readTasks()).find((task: { taskId: string }) => task.taskId === target.taskId);
+  expect(applied).toMatchObject({ assignee: null, due: "2026-12-05", revision: target.revision + 1 });
+  expect(taskWrites).toEqual([]);
 });
 
 test("그래프를 확대 · 이동하고, 점이나 목록에서 항목을 고르면 아래에 수정 기록이 서며 닫을 수 있다", async ({ page }) => {

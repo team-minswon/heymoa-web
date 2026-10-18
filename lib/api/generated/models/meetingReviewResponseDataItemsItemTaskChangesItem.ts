@@ -7,6 +7,7 @@
  */
 import type { MeetingReviewResponseDataItemsItemTaskChangesItemAssignee } from "./meetingReviewResponseDataItemsItemTaskChangesItemAssignee";
 import type { MeetingReviewResponseDataItemsItemTaskChangesItemDecision } from "./meetingReviewResponseDataItemsItemTaskChangesItemDecision";
+import type { MeetingReviewResponseDataItemsItemTaskChangesItemDraft } from "./meetingReviewResponseDataItemsItemTaskChangesItemDraft";
 import type { MeetingReviewResponseDataItemsItemTaskChangesItemDue } from "./meetingReviewResponseDataItemsItemTaskChangesItemDue";
 import type { MeetingReviewResponseDataItemsItemTaskChangesItemStatus } from "./meetingReviewResponseDataItemsItemTaskChangesItemStatus";
 import type { MeetingReviewResponseDataItemsItemTaskChangesItemTarget } from "./meetingReviewResponseDataItemsItemTaskChangesItemTarget";
@@ -18,7 +19,7 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItem = {
    */
   reason: string;
   /**
-   * 사람이 저장한 선택. 할 일 API 로 반영했으면 APPLIED·유지 KEEP, 안 골랐으면 null. APPLIED 는 기록일 뿐 할 일을 바꾸지 않습니다
+   * APPLY는 확정 때 반영, KEEP은 미반영, APPLIED는 이미 적용한 옛 이력으로 재적용하지 않습니다. 미선택은 null입니다
    * @nullable
    */
   decision: MeetingReviewResponseDataItemsItemTaskChangesItemDecision;
@@ -27,6 +28,11 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItem = {
    * @nullable
    */
   due: MeetingReviewResponseDataItemsItemTaskChangesItemDue;
+  /**
+   * 사람이 저장한 업무 변경 초안. 없으면 null이며 원본 제안과 별도로 보존합니다
+   * @nullable
+   */
+  draft: MeetingReviewResponseDataItemsItemTaskChangesItemDraft;
   /**
    * 담당 변경. null 이면 담당은 그대로
    * @nullable

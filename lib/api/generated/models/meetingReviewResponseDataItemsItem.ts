@@ -18,7 +18,12 @@ export type MeetingReviewResponseDataItemsItem = {
   edited: boolean;
   /** 항목 종류 */
   kind: MeetingReviewResponseDataItemsItemKind;
-  /** 최신 분석이 제안한 기존 할 일 변경. 받으려면 할 일 API 로 고칩니다 */
+  /**
+   * 화자 분리 뒤 판정한 이 할 일의 담당 · 기한 제안. 받으려면 항목 수정으로 반영합니다. 제안이 없으면 null
+   * @nullable
+   */
+  suggestedAssignment: MeetingReviewResponseDataItemsItemSuggestedAssignment;
+  /** 최신 분석이 제안한 기존 할 일 변경. APPLY 선택과 초안을 저장하면 검토 완료 때 서버가 일괄 적용합니다 */
   taskChanges: MeetingReviewResponseDataItemsItemTaskChangesItem[];
   /**
    * 사람 추가 항목의 작성자. 원본 복사 항목은 null
@@ -62,9 +67,4 @@ export type MeetingReviewResponseDataItemsItem = {
   originalProposalRef: MeetingReviewResponseDataItemsItemOriginalProposalRef;
   /** 검토 대상 포함 여부 */
   included: boolean;
-  /**
-   * 화자 분리 뒤 판정한 이 할 일의 담당 · 기한 제안. 받으려면 항목 수정으로 반영합니다. 제안이 없으면 null
-   * @nullable
-   */
-  suggestedAssignment: MeetingReviewResponseDataItemsItemSuggestedAssignment;
 };
