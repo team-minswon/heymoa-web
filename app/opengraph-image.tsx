@@ -15,7 +15,7 @@ export const size = {
 export const contentType = "image/png";
 
 /**
- * 공유 카드. **랜딩 첫 화면을 줄여 옮겼다** — 흰 바탕에 뜬 라벤더 판, 히어로 제목, 「쉬어도」의 노란
+ * 공유 카드. **랜딩 첫 화면을 줄여 옮겼다** — 흰 바탕에 뜬 연주황 판, 히어로 제목, 「쉬어도」의 노란
  * 형광펜. 링크를 받은 사람이 카드와 첫 화면에서 같은 말을 본다. 아래 한 줄은 서비스가 무엇인지(AI 실시간
  * 회의록 · 맥락을 잇는 AI Agent)를 말한다(APP-1245). 옛 「참여형 AI 회의 운영 에이전트」는 APP-934
  * 에서 내렸다.
@@ -47,10 +47,10 @@ export default function Image() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#ece8ff",
+          background: "#ffe9df",
           borderRadius: 40,
           padding: "56px 72px 64px",
-          color: "#1c1845",
+          color: "#1c1917",
         }}
       >
         <div
@@ -101,7 +101,7 @@ export default function Image() {
               marginTop: 28,
               fontSize: 30,
               lineHeight: 1.45,
-              color: "#433f69",
+              color: "#44403c",
             }}
           >
             AI 실시간 회의록 · 회의 전·중·후의 맥락을 잇는 AI Agent

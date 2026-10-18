@@ -38,11 +38,11 @@ export const NAV: Array<[string, string]> = [
  * 「설치 없음」 말풍선은 두지 않는다 — 랜딩에서 「설치할 것 없음 · 신용카드 없음」 류 문구는 뺐고(72f4c27),
  * 어디서 쓰는지(웹 · 데스크톱)는 FAQ 01 하나에만 둔다.
  *
- * 시작하기의 포커스 링은 하나다. `Button` 기본의 `focus-visible:ring-3` · `border-ring` 을 끄고 보라
- * outline(`FOCUS`)만 쓰는데, 칠한 알약에 `outline-offset-2` 를 그대로 두면 「보라 알약 · 흰 틈 · 보라 선」이
+ * 시작하기의 포커스 링은 하나다. `Button` 기본의 `focus-visible:ring-3` · `border-ring` 을 끄고 주황
+ * outline(`FOCUS`)만 쓰는데, 칠한 알약에 `outline-offset-2` 를 그대로 두면 「주황 알약 · 흰 틈 · 주황 선」이
  * 동심 테두리 두 겹으로 읽혔다(1440 실측). 그래서 이 버튼만 틈을 0 으로 붙이고, `Button` 의
  * `bg-clip-padding` + 투명 1px 테두리가 남기던 흰 실선도 `bg-clip-border` 와 포커스 때 테두리를 링과
- * 같은 색으로 칠해 없앤다 — 포커스는 알약 가장자리의 진보라 테 3px 하나로만 보인다(바깥 흰 바탕 대비 8.8:1).
+ * 같은 색으로 칠해 없앤다 — 포커스는 알약 가장자리의 진한 주황 테 3px 하나로만 보인다(바깥 흰 바탕 대비 5.7:1).
  */
 export function TopBar() {
   return (
@@ -96,7 +96,7 @@ export function TopBar() {
         <div className="ml-auto flex items-center">
           <LandingCta
             label="무료로 시작하기"
-            className={`h-11 border-transparent bg-[var(--tv-brand)] px-5 text-[14px] font-bold text-white bg-clip-border hover:bg-[var(--tv-brand-deep)] focus-visible:border-[var(--tv-brand-deep)] focus-visible:ring-0 lg:h-10 ${FOCUS} focus-visible:outline-offset-0`}
+            className={`h-11 border-transparent bg-[var(--tv-brand)] px-5 text-[14px] font-bold text-[var(--tv-on-brand)] bg-clip-border hover:bg-[var(--tv-brand-hover)] focus-visible:border-[var(--tv-brand-deep)] focus-visible:ring-0 lg:h-10 ${FOCUS} focus-visible:outline-offset-0`}
           />
         </div>
       </div>

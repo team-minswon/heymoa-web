@@ -66,7 +66,7 @@ function SeeLink({ href, children }: { href: string; children: ReactNode }) {
  * 합쳐 받는다.
  */
 const SHADOW_NARROW =
-  "max-lg:shadow-[0_10px_20px_-10px_rgba(40,24,120,0.3),0_1px_3px_rgba(12,10,9,0.05)]";
+  "max-lg:shadow-[0_10px_20px_-10px_rgba(120,50,24,0.26),0_1px_3px_rgba(12,10,9,0.05)]";
 
 /**
  * 답 안의 앱 조각 자리. 좁은 화면에서는 답의 들여쓰기(번호 칸 60px)를 대부분 상쇄해 기둥 폭을 거의

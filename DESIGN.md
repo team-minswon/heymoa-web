@@ -195,7 +195,7 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 | 구간 | 파일 | 무엇 |
 | --- | --- | --- |
 | 상단 바 | `top-bar.tsx` | sticky 64px 흰 바. 구간 다섯으로 가는 링크 + 시작 버튼(`LandingCta`) |
-| 히어로 | `hero.tsx` · `hero-stage.tsx` · `hero-note.tsx` · `hero-rail.tsx` | 당번 농담 말풍선 · 두 줄 제목 · 라벤더 무대 위 앱 창이 예시 회의 한 바퀴를 혼자 돈다 |
+| 히어로 | `hero.tsx` · `hero-stage.tsx` · `hero-note.tsx` · `hero-rail.tsx` | 당번 농담 말풍선 · 두 줄 제목 · 연주황 무대 위 앱 창이 예시 회의 한 바퀴를 혼자 돈다 |
 | 회의 카드 | `meeting-cards.tsx` · `weekly-card.tsx` | 기울인 카드 셋(킥오프 · 멘토링 · 주간 회의). 머리는 색 면, 몸통은 요약 탭 |
 | 근거 | `evidence.tsx` | 스크립트 창과 요약 창을 「증거 1~4」 번호표와 형광펜으로 짝짓는다 |
 | 팀 | `team.tsx` | 프로젝트 목록 창과 멤버 창 |
@@ -203,12 +203,12 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 | 도구 연결 | `safety.tsx` | 내 에이전트(승인 카드 만화 두 컷) · 외부 에이전트 연결(연결 한 줄 + 출입증). 두 타일은 어디서 부르는 에이전트인가로 가른다 — 쓰기 · 읽기로 가르지 않는다(APP-934) |
 | FAQ | `faq.tsx` | `<details>` 여섯. 큰 번호 + 작은 앱 조각 |
 | 회의 앱 띠 | `works-with.tsx` | 「어디서 회의하든 켜 두기만」. 카드 두 줄이 반대로 흐르고 가운데 「HeyMoa · 기록 중」 알약 |
-| 마무리 | `closing.tsx` | 보라 면 + 당번표 종이 |
-| 푸터 | `footer.tsx` | 위만 둥근 연보라 면. 서비스 · 정책 링크, 문의, 「예시」 도장과 지어낸 예시 고지(고지는 `/` 에서만) |
+| 마무리 | `closing.tsx` | 코랄 면 + 당번표 종이 |
+| 푸터 | `footer.tsx` | 위만 둥근 연주황 면. 서비스 · 정책 링크, 문의, 「예시」 도장과 지어낸 예시 고지(고지는 `/` 에서만) |
 
 **두 목소리를 색으로 가른다.**
-- 페이지(창 밖 · 창 위 주석) = `--tv-*`(`tokens.ts` `TV_VARS`, 루트 `.tv-root` 에만 건다). 흰 바탕 하나에 라벤더 ·
-  버터 · 민트 · 복숭아 면, 보라 하나, 노랑 하나.
+- 페이지(창 밖 · 창 위 주석) = `--tv-*`(`tokens.ts` `TV_VARS`, 루트 `.tv-root` 에만 건다). 흰 바탕 하나에 연주황 ·
+  버터 · 민트 · 살구 면, 주황 하나, 노랑 하나. **색은 로고에서 파생**했다 — 로고 코랄 `#fd7765` · 연한 면 `#fec5a8` 의 색상에서 밝기만 옮긴다(채움 `--tv-brand` · 링크 글자 `--tv-brand-deep` · 코랄 위 글자 `--tv-on-brand` = ink, 흰 글자는 2.6:1 이라 안 된다). 글자색은 앱 `--el-*` 와 같은 따뜻한 중립이다.
 - 앱 창 안 = 앱의 `--el-*` 와 `APP` · `ROLE_*`. **창 안에 `--tv-*` 를 쓰면 틀린 것이다.** 탭 · 상태 · 라벨 · 아이콘
   문법(결정 파란 체크, 할 일 초록 빈 원, 열린 질문 주황 점선 원)은 앱 그대로다. 과장은 크기 · 자르기 · 줄 추리기 ·
   창 밖 주석 · 움직임으로만 한다 — 창 안을 다시 칠하면 방문자가 가입 뒤 보는 화면과 갈린다.
@@ -237,13 +237,13 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 390×664 에서 창이 스크롤 없이 들어온다)은 이 64px 바를 전제로 한다 — 값은 `hero.tsx` 주석. 상단 바 메뉴와 푸터
 「둘러보기」는 같은 `NAV` 이고 href 가 `/#meetings` 꼴이라 약관 · 다운로드에서도 랜딩 구간으로 간다.
 
-**약관 · 개인정보(`legal-document.tsx`)도 이 면이다** — `TV_VARS` 를 루트에 걸고, 흰 바탕 위 라벤더 머리 판(목차 ·
-본문과 같은 `CONTAINER` 기둥, 라벨 알약 · H2 급 제목 · 설명 · 시행일), 760 까지의 흰 본문 판, 연보라 목차(lg 미만은
+**약관 · 개인정보(`legal-document.tsx`)도 이 면이다** — `TV_VARS` 를 루트에 걸고, 흰 바탕 위 연주황 머리 판(목차 ·
+본문과 같은 `CONTAINER` 기둥, 라벨 알약 · H2 급 제목 · 설명 · 시행일), 760 까지의 흰 본문 판, 연주황 목차(lg 미만은
 닫힌 `<details>`, lg 부터 펼친 sticky 카드)로 짠다. 읽는 문서라 스크롤 리빌 · 쪽지 · 테이프 · 말풍선은 없고, 조항마다 `scroll-mt-20` 으로 sticky 바 아래에 닿는다.
 
-**데스크톱 다운로드(`app/(static)/download/page.tsx`)도 같은 결이다** — 같은 라벤더 머리 판(라벨 알약 · H2 급 제목 · 리드 ·
-보라 「설치 파일과 새 버전 보기」 + 흰 「웹에서 바로 시작」), 그 아래 Mac · Windows 흰 카드 둘(md 부터 2열, 주의는 버터 상자),
-연보라 「설정과 업데이트」 판. 장식 · 리빌은 없다.
+**데스크톱 다운로드(`app/(static)/download/page.tsx`)도 같은 결이다** — 같은 연주황 머리 판(라벨 알약 · H2 급 제목 · 리드 ·
+코랄 「설치 파일과 새 버전 보기」 + 흰 「웹에서 바로 시작」), 그 아래 Mac · Windows 흰 카드 둘(md 부터 2열, 주의는 버터 상자),
+연주황 「설정과 업데이트」 판. 장식 · 리빌은 없다.
 
 옛 크림 · 갈색 면(`--lp-*` · `.landing-surface` · `.landing-footer`)과 마케팅 `Footer` 의 파도 갈래는 APP-934 에서
 걷었다. 랜딩 크롬 밖 경로는 범용 `Footer` 를 쓴다.

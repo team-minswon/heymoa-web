@@ -23,16 +23,16 @@ export type LegalSection = {
 const anchorOf = (section: LegalSection, index: number) =>
   section.id ?? `section-${index + 1}`;
 
-/** 문서 안 링크는 보라 진한 색이다(흰 면 8.8:1 · 연보라 면 7.9:1). */
+/** 문서 안 링크는 주황 진한 색이다(흰 면 5.7:1 · 연주황 면 4.9:1). */
 export const LINK = cn(
-  "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
+  "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-ink)]",
   FOCUS
 );
 
 /**
  * 약관 · 개인정보의 공통 틀. **랜딩과 같은 면이다** — 상단 바 · 푸터도 랜딩 것이다(`isLandingChromeRoute`).
- * 그래서 랜딩의 `--tv-*`(`TV_VARS`)를 루트에 걸고 흰 바탕 위 라벤더 머리 판, 흰 본문 판, 연보라 목차로 짠다.
- * 예전 크림 · `--lp-*` 판은 랜딩이 흰 바탕 · 보라로 바뀐 뒤 같은 사이트의 다른 페이지처럼 읽혔다.
+ * 그래서 랜딩의 `--tv-*`(`TV_VARS`)를 루트에 걸고 흰 바탕 위 연주황 머리 판, 흰 본문 판, 연주황 목차로 짠다.
+ * 예전 크림 · `--lp-*` 판은 랜딩이 흰 바탕 · 주황로 바뀐 뒤 같은 사이트의 다른 페이지처럼 읽혔다.
  * 머리 판은 목차 · 본문과 같은 기둥(`CONTAINER`)에 선다 — 히어로 무대 폭(`STAGE_WRAP`)으로 두면 바로 아래 붙은
  * 목차 카드와 가장자리가 390 에서 8px, 1024~1279 에서 24px 어긋나 실수처럼 보였다.
  *
@@ -110,7 +110,7 @@ export function LegalDocument({
           "mt-8 grid items-start gap-6 lg:mt-12 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10"
         )}
       >
-        {/* 목차는 연보라 카드, 본문은 흰 판 — 「옮겨 다니는 곳」과 「읽는 곳」이 갈린다. */}
+        {/* 목차는 연주황 카드, 본문은 흰 판 — 「옮겨 다니는 곳」과 「읽는 곳」이 갈린다. */}
         <details className="details-motion group rounded-[20px] bg-[var(--tv-lav-soft)] lg:hidden">
           <summary
             className={cn(
