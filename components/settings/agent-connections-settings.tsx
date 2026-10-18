@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Collapse } from "@/components/heymoa/collapse";
 import { Button } from "@/components/ui/button";
 import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { Input } from "@/components/ui/input";
@@ -290,10 +291,10 @@ function PastConnections({
       >
         지난 연결 {delegations.length}개
         <ChevronDown
-          className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
         />
       </Button>
-      {open ? (
+      <Collapse open={open} lazy>
         <ul
           id="agent-past-connections"
           aria-label="지난 연결"
@@ -307,7 +308,7 @@ function PastConnections({
             />
           ))}
         </ul>
-      ) : null}
+      </Collapse>
     </div>
   );
 }
@@ -630,7 +631,7 @@ function DelegationRow({
           >
             사용 내역
             <ChevronDown
-              className={`size-3.5 transition-transform ${historyOpen ? "rotate-180" : ""}`}
+              className={`size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none ${historyOpen ? "rotate-180" : ""}`}
             />
           </Button>
           {active ? (
@@ -690,9 +691,9 @@ function DelegationRow({
           ) : null}
         </div>
       </div>
-      {historyOpen ? (
+      <Collapse open={historyOpen} lazy>
         <UsageHistory id={historyId} delegationId={delegation.delegationId} />
-      ) : null}
+      </Collapse>
     </li>
   );
 }

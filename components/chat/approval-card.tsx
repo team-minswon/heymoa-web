@@ -273,13 +273,13 @@ function Items({ items }: { items: ApprovalCardData["items"] }) {
       <ItemList items={items.slice(0, ITEMS_SHOWN)} start={1} />
       {rest.length > 0 ? (
         // 열림을 React state 로 들면 카드가 다시 그려질 때마다 접힌다.
-        <details className="group border-t border-[var(--el-hairline)]">
+        <details className="details-motion group border-t border-[var(--el-hairline)]">
           <summary className="flex cursor-pointer list-none items-center gap-1 bg-[var(--el-canvas-soft)] px-3 py-2 text-xs font-medium text-[var(--el-body-strong)] [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">{rest.length}건 더 보기</span>
             <span className="hidden group-open:inline">접기</span>
             <ChevronDown
               aria-hidden
-              className="size-3.5 transition-transform group-open:rotate-180"
+              className="size-3.5 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
             />
           </summary>
           <ItemList items={rest} start={ITEMS_SHOWN + 1} />
@@ -361,7 +361,7 @@ function Body({ label, text }: { label: string; text: string }) {
           <span className="hidden group-open:inline">접기</span>
           <ChevronDown
             aria-hidden
-            className="size-3.5 transition-transform group-open:rotate-180"
+            className="size-3.5 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
           />
         </span>
       </summary>

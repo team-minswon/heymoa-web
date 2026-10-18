@@ -11,6 +11,7 @@ import {
 import type { ComponentType, ReactNode } from "react";
 
 import { CopyBlock } from "@/components/agent-connections/copy-block";
+import { Collapse } from "@/components/heymoa/collapse";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildUrl } from "@/lib/api/fetcher";
@@ -264,7 +265,9 @@ function Done({ trouble }: { trouble?: ReactNode }) {
           </>
         ) : null}
       </p>
-      {open ? <p className="mt-2 leading-relaxed">{trouble}</p> : null}
+      <Collapse open={open}>
+        <p className="pt-2 leading-relaxed">{trouble}</p>
+      </Collapse>
     </div>
   );
 }

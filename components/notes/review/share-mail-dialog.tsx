@@ -599,10 +599,10 @@ function MailPreview({
       .join(", ") || "받는 사람을 추가하세요";
   const contents = include.transcript ? "회의록 · 녹취록" : "회의록";
   return (
-    <details className="group rounded-block border border-[var(--el-hairline)]">
+    <details className="details-motion group rounded-block border border-[var(--el-hairline)]">
       <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[13px] font-medium text-[var(--el-ink)] [&::-webkit-details-marker]:hidden">
         받는 사람에게 보이는 메일
-        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden />
+        <ChevronDown className="size-3.5 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
       </summary>
       <div className="flex flex-col gap-2.5 border-t border-[var(--el-hairline)] p-3.5 text-[13px] text-[var(--el-body)]">
         <dl className="grid grid-cols-[56px_1fr] gap-x-2 gap-y-0.5 text-xs">

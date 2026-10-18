@@ -111,7 +111,7 @@ export function LegalDocument({
         )}
       >
         {/* 목차는 연보라 카드, 본문은 흰 판 — 「옮겨 다니는 곳」과 「읽는 곳」이 갈린다. */}
-        <details className="group rounded-[20px] bg-[var(--tv-lav-soft)] lg:hidden">
+        <details className="details-motion group rounded-[20px] bg-[var(--tv-lav-soft)] lg:hidden">
           <summary
             className={cn(
               "flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-[20px] px-5 py-3 text-[14px] font-extrabold text-[var(--tv-ink)] [&::-webkit-details-marker]:hidden",
@@ -122,7 +122,7 @@ export function LegalDocument({
             문서 목차
             <ChevronDown
               aria-hidden
-              className="ml-auto size-4 text-[var(--tv-muted)] transition-transform group-open:rotate-180"
+              className="ml-auto size-4 text-[var(--tv-muted)] transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
             />
           </summary>
           <div className="px-5 pb-5">{toc}</div>

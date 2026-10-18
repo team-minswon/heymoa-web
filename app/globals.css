@@ -382,6 +382,24 @@
   }
 }
 
+/* `<details>` 펼침 — 지원하는 브라우저(::details-content)에서만 높이가 200ms 로 자란다. 나머지는 바로 열린다.
+   처음부터 열린 채 그려지는 것은 전환이 돌지 않는다(상태가 바뀔 때만 전환). */
+@media (prefers-reduced-motion: no-preference) {
+  .details-motion {
+    interpolate-size: allow-keywords;
+  }
+  .details-motion::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 200ms ease-out,
+      content-visibility 200ms allow-discrete;
+  }
+  .details-motion[open]::details-content {
+    block-size: auto;
+  }
+}
+
 /* 획이 오가는 것 자체가 움직임이라 끈다. 표시는 남는다 — 위 정적 값이 다 그어진 밑줄이고,
    걷어 내는 일은 소유자의 타이머가 그대로 한다. */
 @media (prefers-reduced-motion: reduce) {
