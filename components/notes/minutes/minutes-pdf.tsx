@@ -1,4 +1,4 @@
-import { Document, Font, Image, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
+import { Document, Font, Image as PdfImage, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
 
 import type { MinutesDocument, MinutesLine } from "@/lib/notes/minutes/model";
 
@@ -240,7 +240,7 @@ function Sheet({ footer, logoSrc, children }: { footer: string; logoSrc: string;
           {content}
           <View style={s.footer}>
             <View style={s.footerBrand}>
-              <Image src={logoSrc} style={s.footerLogo} />
+              <PdfImage src={logoSrc} style={s.footerLogo} />
               <Text style={s.footerWordmark}>HeyMoa</Text>
             </View>
             <Text style={s.footerTitle}>{footer}</Text>
