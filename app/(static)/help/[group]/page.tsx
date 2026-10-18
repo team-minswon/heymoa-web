@@ -11,8 +11,10 @@ import {
 import {
   HELP_CONTAINER,
   HELP_ROOT,
+  HELP_ROOT_PROPS,
   HelpHeader,
 } from "@/components/help/help-frame";
+import { HelpMotion } from "@/components/help/help-motion";
 import { HelpPalette } from "@/components/help/help-palette";
 import { JsonLd } from "@/components/help/json-ld";
 import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
@@ -53,7 +55,8 @@ export default async function HelpGroupPage({ params }: Props) {
   if (!group) notFound();
   const topics = helpTopicsOfGroup(group.slug);
   return (
-    <div style={TV_VARS} className={HELP_ROOT}>
+    <div style={TV_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
+      <HelpMotion />
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -92,18 +95,21 @@ export default async function HelpGroupPage({ params }: Props) {
             ← 사용 가이드
           </Link>
         }
-        action={<HelpPalette />}
         title={group.title}
         description={group.summary}
-      />
-      <div className={cn(HELP_CONTAINER, "mt-8 lg:mt-12")}>
+      >
+        <div className="mt-8 max-w-[640px]">
+          <HelpPalette />
+        </div>
+      </HelpHeader>
+      <div data-help-main="" className={cn(HELP_CONTAINER, "mt-8 lg:mt-12")}>
         <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3">
           {topics.map((topic) => (
-            <li key={topic.slug}>
+            <li key={topic.slug} data-reveal="">
               <Link
                 href={helpPathOf(topic)}
                 className={cn(
-                  "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 transition-colors duration-150 hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)] motion-reduce:transition-none",
+                  "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 help-lift hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",
                   FOCUS
                 )}
               >

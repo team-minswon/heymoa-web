@@ -36,14 +36,11 @@ export const HELP_ROOT_PROPS = { "data-help-root": "" } as const;
 
 export function HelpHeader({
   label,
-  action,
   title,
   description,
   children,
 }: {
   label: React.ReactNode;
-  /** 라벨 줄 오른쪽(가이드 검색 버튼). */
-  action?: React.ReactNode;
   title: string;
   description: string;
   children?: React.ReactNode;
@@ -56,12 +53,9 @@ export function HelpHeader({
           "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-14"
         )}
       >
-        <div className="flex min-h-10 items-center justify-between gap-3">
-          <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
-            {label}
-          </p>
-          {action}
-        </div>
+        <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
+          {label}
+        </p>
         <h1 className={cn(H2, "mt-4 max-w-[820px]")}>{title}</h1>
         <p className={cn(LEAD, "mt-4 max-w-[640px]")}>{description}</p>
         {children}
@@ -98,10 +92,13 @@ export function HelpPageFrame({
             ← 사용 가이드
           </Link>
         }
-        action={<HelpPalette />}
         title={topic.title}
         description={topic.summary}
-      />
+      >
+        <div className="mt-8 max-w-[640px]">
+          <HelpPalette />
+        </div>
+      </HelpHeader>
 
       <div
         className={cn(

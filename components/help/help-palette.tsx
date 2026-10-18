@@ -84,15 +84,22 @@ export function HelpPalette() {
       <button
         type="button"
         onClick={() => setOpen(true)}
+        aria-label="사용 가이드 검색"
+        aria-keyshortcuts="Control+K Meta+K"
         className={cn(
-          "inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[14px] font-bold text-[var(--tv-body)] help-fade hover:text-[var(--tv-brand-deep)] motion-reduce:transition-none",
+          "relative flex h-14 w-full min-w-0 items-center rounded-[16px] border border-[var(--tv-rule-strong)] bg-white pr-24 pl-12 text-left text-[16px] text-[var(--tv-muted)] help-fade hover:border-[var(--tv-brand)]",
           FOCUS
         )}
       >
-        <Search aria-hidden className="size-4" />
-        가이드 검색
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2"
+        />
+        <span className="truncate">
+          검색어를 입력하세요 (예: 녹음, 용어 사전)
+        </span>
         <kbd
-          className="rounded-[6px] border border-[var(--tv-rule-strong)] px-1.5 font-sans text-[12px] text-[var(--tv-muted)]"
+          className="pointer-events-none absolute top-1/2 right-4 grid h-6 min-w-6 -translate-y-1/2 place-items-center rounded-[6px] border border-[var(--tv-rule-strong)] bg-white px-1.5 font-sans text-[12px] font-bold"
           aria-hidden
         >
           {hint}
