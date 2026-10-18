@@ -372,6 +372,10 @@ describe("검토 가능한 회의", () => {
     expect(screen.getByRole("radio", { name: "그래프" })).toHaveAttribute("aria-checked", "true");
     expect(await screen.findByText(target.content, { exact: true })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
+    const detail = screen.getByText(target.content, { exact: true }).closest("[data-item-id]") as HTMLElement;
+    detail.scrollIntoView = vi.fn();
+    expect(detail).toHaveAttribute("data-item-scroll-target");
+    await waitFor(() => expect(detail.scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" }));
   });
 
   it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 여섯 개까지만 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {

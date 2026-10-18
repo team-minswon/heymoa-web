@@ -81,6 +81,7 @@ export function ReviewRow({
   return (
     <div
       data-item-id={item.itemId}
+      data-item-scroll-target
       className={cn(
         "scroll-mt-24 border-b border-[var(--el-hairline-soft)]",
         fresh && ARRIVE_CLASS

@@ -419,7 +419,7 @@ export function ReviewBoard({
     window.setTimeout(
       () =>
         document
-          .querySelector(`[data-item-id="${CSS.escape(itemId)}"]`)
+          .querySelector(`[data-item-scroll-target][data-item-id="${CSS.escape(itemId)}"]`)
           ?.scrollIntoView?.({
             block: "center",
             behavior: reduce ? "auto" : "smooth",
@@ -923,6 +923,7 @@ export function ReviewBoard({
                 <div
                   key={selected.itemId}
                   data-item-id={selected.itemId}
+                  data-item-scroll-target
                   className="mt-4 overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-e2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
                 >
                   <div className="flex items-center gap-2.5 border-b border-[var(--el-hairline-soft)] px-4 py-3">
