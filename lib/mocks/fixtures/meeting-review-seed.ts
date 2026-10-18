@@ -9,8 +9,8 @@ import type { MeetingReviewResponseDataItemsItemKind } from "@/lib/api/generated
  */
 export type SeedKind = MeetingReviewResponseDataItemsItemKind;
 
-/** 담당. 글자는 그 회의의 화자 라벨, `me` 는 목 유저다. */
-export type SeedWho = "A" | "B" | "C" | "me";
+/** 담당. 글자는 그 회의의 화자 라벨, `me` 는 목 유저, `user:<ID>` 는 워크스페이스 멤버다. */
+export type SeedWho = "A" | "B" | "C" | "D" | "me" | `user:${string}`;
 
 export type SeedStep = {
   operation: "AMEND" | "CORRECT" | "RESOLVE" | "RETRACT";

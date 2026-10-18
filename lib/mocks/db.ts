@@ -39,6 +39,7 @@ import type {
 } from "@/lib/api/generated/models";
 import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
+import { createHelpDemoState, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 import {
   MENTORING_GUEST_IDS,
@@ -207,7 +208,7 @@ type MockWorkspaceGuest = {
   createdAt: string;
 };
 
-type StoreState = {
+export type StoreState = {
   user: CurrentUserResponseData;
   workspaces: WorkspaceResponseData[];
   projects: ProjectResponseData[];
@@ -2421,7 +2422,8 @@ const MOCK_RECORDER_CLIENT_ID = "mock-recorder-tab";
 function reset() {
   idCounter = 100;
   mockClock = 0;
-  state = createSeedState();
+  // 가이드 캡처용 프리셋이 켜져 있으면 그것으로, 아니면 기본 시드로 연다(help-demo/index.ts)
+  state = isHelpDemoEnabled() ? createHelpDemoState() : createSeedState();
   sessionOpeners.clear();
   sessionOpeners.set("01K0000000402", MOCK_RECORDER_CLIENT_ID);
   for (const listener of resetListeners) listener();

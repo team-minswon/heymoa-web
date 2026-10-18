@@ -16,6 +16,11 @@ import {
 } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
 import {
+  helpDemoTaskRows,
+  isHelpDemoEnabled,
+  type TaskSeedRow,
+} from "@/lib/mocks/help-demo";
+import {
   MENTORING_GUEST_IDS,
   MENTORING_NOTE_ID,
 } from "@/lib/mocks/fixtures/mentoring-note";
@@ -62,6 +67,8 @@ const current = (task: StoredTask) => task.history[task.history.length - 1];
 
 function seed(): StoredTask[] {
   const me = mockDb.getCurrentUser().userId;
+  // 가이드 캡처 프리셋(help-demo)이 켜져 있으면 그쪽 할 일 목록을 쓴다
+  if (isHelpDemoEnabled()) return build(helpDemoTaskRows(), nextId("01KA"), me);
   const meetingProject = mockDb.getNote(MENTORING_NOTE_ID).projectId;
   const workspaceId = workspaceOfProject(meetingProject);
   const otherProject =
@@ -71,16 +78,7 @@ function seed(): StoredTask[] {
     meetingProject;
   const approvalId = nextId("01KA");
 
-  const rows: Array<{
-    key: string;
-    projectId: string;
-    content: string;
-    status: TaskStatus;
-    assignee: StoredAssignee | null;
-    due: number | null;
-    fromApproval?: boolean;
-    edit?: { by: string; due?: number; status?: TaskStatus };
-  }> = [
+  const rows: TaskSeedRow[] = [
     {
       key: "measure-items",
       projectId: meetingProject,
@@ -178,6 +176,10 @@ function seed(): StoredTask[] {
     },
   ];
 
+  return build(rows, approvalId, me);
+}
+
+function build(rows: TaskSeedRow[], approvalId: string, me: string): StoredTask[] {
   return rows.map((row, index) => {
     const first: StoredRevision = {
       revision: 1,

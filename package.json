@@ -26,7 +26,9 @@
     "desktop:test": "pnpm --filter @heymoa/desktop test",
     "desktop:dev": "pnpm --filter @heymoa/desktop dev",
     "desktop:package": "pnpm --filter @heymoa/desktop package:dir",
-    "install:vercel": "node scripts/install-vercel.mjs"
+    "install:vercel": "node scripts/install-vercel.mjs",
+    "help:shots": "node scripts/help-media/shots.mjs",
+    "help:clips": "node scripts/help-media/clips.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

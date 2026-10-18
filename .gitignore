@@ -54,3 +54,4 @@ next-env.d.ts
 apps/desktop/node_modules/
 apps/desktop/dist/
 apps/desktop/release/
+scripts/help-media/.work/

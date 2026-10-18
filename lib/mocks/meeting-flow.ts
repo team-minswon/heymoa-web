@@ -19,6 +19,12 @@ import {
   type StoredAssignee,
 } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
+import {
+  HELP_DEMO_ENDED_ITEMS,
+  helpDemoReviewSets,
+  isHelpDemoEnabled,
+  type HelpDemoReviewSet,
+} from "@/lib/mocks/help-demo";
 import { MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
 import { LIVE_AGENDA_NOTE_ID, liveAgendaList } from "@/lib/mocks/live-agendas";
 import {
@@ -27,6 +33,7 @@ import {
   REVIEW_SEED_LOOSE,
   REVIEW_SEED_TOPICS,
   type SeedItem,
+  type SeedTopic,
   type SeedWho,
 } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
@@ -120,8 +127,42 @@ function pastProposal(
   return ref;
 }
 
-const dueAfterMeeting = (days: number) =>
-  new Date(MEETING_DATE + days * 86_400_000).toISOString().slice(0, 10);
+const dueAfterMeeting = (days: number, base = MEETING_DATE) =>
+  new Date(base + days * 86_400_000).toISOString().slice(0, 10);
+
+/** 검토본 시드 한 벌. 멘토링 노트가 기본이고, 가이드 캡처 프리셋은 회의마다 한 벌씩 더한다(help-demo). */
+type ReviewSeedSet = {
+  noteId: string;
+  topics: SeedTopic[];
+  loose: SeedItem[];
+  headline: string;
+  headlineTopics: number[];
+  lead: Array<{ text: string; topics: number[] }>;
+  agendaIds?: string[];
+  /** 기한을 세는 기준 날짜 */
+  meetingDate: number;
+  /** 멘토링 시드에만 있는 손질(사람이 고친 항목 · 직접 더한 항목 · 다른 주제에도 속한 항목) */
+  decorated: boolean;
+};
+
+const MENTORING_SET: ReviewSeedSet = {
+  noteId: MENTORING_NOTE_ID,
+  topics: REVIEW_SEED_TOPICS,
+  loose: REVIEW_SEED_LOOSE,
+  headline: REVIEW_SEED_HEADLINE,
+  headlineTopics: [1, 6],
+  lead: REVIEW_SEED_LEAD,
+  agendaIds: MENTORING_AGENDA_IDS,
+  meetingDate: MEETING_DATE,
+  decorated: true,
+};
+
+const reviewSetOf = (set: HelpDemoReviewSet): ReviewSeedSet => ({ ...set, decorated: false });
+
+/** 검토본 시드가 있는 노트인가. 멘토링 노트이거나, 프리셋이 켜졌을 때 요약이 성공한 프리셋 회의다. */
+const hasSeededReview = (noteId: string) =>
+  noteId === MENTORING_NOTE_ID ||
+  (isHelpDemoEnabled() && store().summaries.get(noteId)?.status === "SUCCEEDED");
 
 let state: State | null = null;
 let counter = 0;
@@ -144,20 +185,28 @@ const ASSIGNABLE_KINDS: ReadonlySet<Kind> = new Set<Kind>(["ACTION_ITEM", "ISSUE
 
 function store(): State {
   if (state) return state;
+  const demoSets = isHelpDemoEnabled() ? helpDemoReviewSets() : null;
+  const seededFlows: Record<string, FlowStatus> = demoSets
+    ? Object.fromEntries(demoSets.map((set) => [set.noteId, set.flow]))
+    : SEEDED_FLOWS;
   state = {
-    flows: new Map(Object.entries(SEEDED_FLOWS)),
+    flows: new Map(Object.entries(seededFlows)),
     reviews: new Map(),
     summaries: new Map(),
     revisions: new Map(),
     approvals: new Map(),
     runningSince: new Map(
-      Object.entries(SEEDED_FLOWS)
+      Object.entries(seededFlows)
         .filter(([, status]) => status === "DIARIZING" || status === "ANALYZING")
         .map(([noteId]) => [noteId, Date.now()])
     ),
     agendas: new Map(),
     pastLinks: [],
   };
+  if (demoSets) {
+    for (const set of demoSets) seedMentoringReview(state, reviewSetOf(set));
+    return state;
+  }
   seedMentoringReview(state);
   seedSmallReview(state, "01K0000000021", false);
   seedSmallReview(state, "01K0000000024", true);
@@ -168,11 +217,12 @@ function store(): State {
 function who(noteId: string, value: SeedWho | null | undefined): StoredAssignee | null {
   if (!value) return null;
   if (value === "me") return { type: "USER", id: mockDb.getCurrentUser().userId };
+  if (value.startsWith("user:")) return { type: "USER", id: value.slice(5) };
   return { type: "SPEAKER_LABEL", noteId, label: value };
 }
 
-function seedMentoringReview(target: State) {
-  const noteId = MENTORING_NOTE_ID;
+function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) {
+  const { noteId } = set;
   const segments = mockDb.listSegments(noteId);
   const segment = (at: number) => segments[Math.min(at, segments.length - 1)];
   const review: StoredReview = { reviewId: nextId("01KR"), noteId, reviewVersion: 1, items: [] };
@@ -182,7 +232,7 @@ function seedMentoringReview(target: State) {
   const suggest = (seed: SeedItem): StoredItem["suggestedAssignment"] => {
     if (seed.kind !== "ACTION_ITEM" || seed.who !== undefined) return null;
     suggestions += 1;
-    if (suggestions % 2 === 1) return { due: dueAfterMeeting(5), assignee: null };
+    if (suggestions % 2 === 1) return { due: dueAfterMeeting(5, set.meetingDate), assignee: null };
     const me = mockDb.getCurrentUser();
     return { due: null, assignee: { type: "USER", id: me.userId, name: me.name } };
   };
@@ -230,7 +280,7 @@ function seedMentoringReview(target: State) {
         row.citations.map(({ segmentId, role }) => ({ segmentId, role }))
       ),
       assignee: who(noteId, seed.who),
-      due: seed.dueIn === undefined ? null : dueAfterMeeting(seed.dueIn),
+      due: seed.dueIn === undefined ? null : dueAfterMeeting(seed.dueIn, set.meetingDate),
       replacements: seed.replaces
         ? [
             {
@@ -246,9 +296,9 @@ function seedMentoringReview(target: State) {
                 originalProposalRef: seed.replaces.endedElsewhere
                   ? null
                   : pastProposal(target, proposalId, "SUPERSEDES", seed.replaces.content, "DECISION"),
-                approvedAt: new Date(MEETING_DATE - 7 * 86_400_000).toISOString(),
+                approvedAt: new Date(set.meetingDate - 7 * 86_400_000).toISOString(),
                 // 이 회의를 검토하는 사이 다른 회의의 확정이 먼저 끝낸 결정
-                endedAt: seed.replaces.endedElsewhere ? new Date(MEETING_DATE - 86_400_000).toISOString() : null,
+                endedAt: seed.replaces.endedElsewhere ? new Date(set.meetingDate - 86_400_000).toISOString() : null,
               },
               kind: "SUPERSEDES",
               label: "대체",
@@ -276,7 +326,7 @@ function seedMentoringReview(target: State) {
                 due:
                   change.dueIn === undefined
                     ? null
-                    : { value: change.dueIn === null ? null : dueAfterMeeting(change.dueIn) },
+                    : { value: change.dueIn === null ? null : dueAfterMeeting(change.dueIn, set.meetingDate) },
                 reason: change.reason,
                 decision: change.decision ?? null,
               };
@@ -287,35 +337,37 @@ function seedMentoringReview(target: State) {
     };
   };
 
-  const topicItems = REVIEW_SEED_TOPICS.map((topic) => topic.items.map(build));
-  const looseItems = REVIEW_SEED_LOOSE.map(build);
+  const topicItems = set.topics.map((topic) => topic.items.map(build));
+  const looseItems = set.loose.map(build);
   review.items = [...topicItems.flat(), ...looseItems];
 
-  // 사람이 고친 항목과 사람이 더한 항목. 원본과 다른 모양이 목에 하나씩은 있어야 한다.
-  const edited = topicItems[1][3];
-  edited.content = "무료 구간은 월 5시간으로 두고 팀 요금제에서는 뺀다";
-  edited.edited = true;
-  edited.revision = 2;
-  review.reviewVersion = 2;
-  review.items.push({
-    itemId: nextId("01KI"),
-    revision: 1,
-    kind: "QUESTION",
-    content: "발표 순서를 다시 정해야 하나",
-    included: true,
-    edited: false,
-    authoredByUserId: mockDb.getCurrentUser().userId,
-    originalProposalRef: null,
-    citations: [],
-    assignee: null,
-    due: null,
-    replacements: [],
-    taskChanges: [],
-    suggestedAssignment: null,
-  });
+  if (set.decorated) {
+    // 사람이 고친 항목과 사람이 더한 항목. 원본과 다른 모양이 목에 하나씩은 있어야 한다.
+    const edited = topicItems[1][3];
+    edited.content = "무료 구간은 월 5시간으로 두고 팀 요금제에서는 뺀다";
+    edited.edited = true;
+    edited.revision = 2;
+    review.reviewVersion = 2;
+    review.items.push({
+      itemId: nextId("01KI"),
+      revision: 1,
+      kind: "QUESTION",
+      content: "발표 순서를 다시 정해야 하나",
+      included: true,
+      edited: false,
+      authoredByUserId: mockDb.getCurrentUser().userId,
+      originalProposalRef: null,
+      citations: [],
+      assignee: null,
+      due: null,
+      replacements: [],
+      taskChanges: [],
+      suggestedAssignment: null,
+    });
+  }
 
   target.reviews.set(noteId, review);
-  target.summaries.set(noteId, buildSummary(noteId, topicItems));
+  target.summaries.set(noteId, buildSummary(set, topicItems));
 }
 
 function citationOf(
@@ -333,10 +385,11 @@ function citationOf(
 }
 
 function buildSummary(
-  noteId: string,
+  set: ReviewSeedSet,
   topicItems: StoredItem[][]
 ): MeetingReviewSummary {
-  const topics = REVIEW_SEED_TOPICS.map((seed, index): SummaryTopic => {
+  const { noteId } = set;
+  const topics = set.topics.map((seed, index): SummaryTopic => {
     const items = topicItems[index];
     const ids = items.map((item) => item.itemId);
     const ofKind = (...kinds: Kind[]) => items.filter((item) => kinds.includes(item.kind));
@@ -380,7 +433,7 @@ function buildSummary(
       ...resolved.flatMap((item) => link(decisions[0] ?? center, item, "RESOLVES", "해결")),
     ];
     // 다른 주제에도 속한 항목은 그 주제의 members 에도 든다(새 계약). 옛 칸 alsoItemIds 도 server ② 전까지 같이 낸다.
-    const also = index === 5 ? [topicItems[0][3]] : [];
+    const also = set.decorated && index === 5 ? [topicItems[0][3]] : [];
     return {
       ordinal: index + 1,
       title: seed.title,
@@ -398,7 +451,7 @@ function buildSummary(
           .map(({ sourceItemId, targetItemId, kind }) => ({ sourceItemId, targetItemId, kind })),
       })),
       openItemIds: open.map((row) => row.itemId),
-      agendaId: MENTORING_AGENDA_IDS[index] ?? nextId("01KG"),
+      agendaId: set.agendaIds?.[index] ?? nextId("01KG"),
       summary: seed.sentences[0]?.text ?? null,
       completed: true,
       description: seed.sentences.slice(0, 1).map((sentence) => ({
@@ -413,8 +466,8 @@ function buildSummary(
     noteId,
     status: "SUCCEEDED",
     resultVersion: nextId("01KV"),
-    headline: { text: REVIEW_SEED_HEADLINE, topics: [1, 6] },
-    lead: REVIEW_SEED_LEAD,
+    headline: { text: set.headline, topics: set.headlineTopics },
+    lead: set.lead,
     topics,
     agendas: topics,
   };
@@ -621,7 +674,7 @@ function completeAnalysis(noteId: string) {
     reviewId: nextId("01KR"),
     noteId,
     reviewVersion: 1,
-    items: REVIEW_SEED_TOPICS[0].items.map((seed) => ({
+    items: (isHelpDemoEnabled() ? HELP_DEMO_ENDED_ITEMS : REVIEW_SEED_TOPICS[0].items).map((seed) => ({
       itemId: nextId("01KI"),
       revision: 1,
       kind: seed.kind,
@@ -856,7 +909,7 @@ export const meetingFlowHandlers = [
   // 검토 항목의 원본 명제 이력. 이 목이 만든 명제만 답하고, 나머지는 실시간 정리 목으로 넘긴다.
   http.get("*/v1/notes/:noteId/proposals/:proposalId/revisions", ({ params }) => {
     const revisions = store().revisions.get(paramId(params.proposalId));
-    if (!revisions || paramId(params.noteId) !== MENTORING_NOTE_ID) return undefined;
+    if (!revisions || !hasSeededReview(paramId(params.noteId))) return undefined;
     return respond(() => ({ proposalId: paramId(params.proposalId), revisions }));
   }),
 
@@ -943,7 +996,7 @@ export const meetingFlowHandlers = [
       const noteId = paramId(params.noteId);
       mockDb.getNote(noteId);
       // 끝난 멘토링 회의는 검토 요약의 주제가 곧 안건 정본이다(분석이 목록을 바꾼 뒤의 모양)
-      const summary = noteId === MENTORING_NOTE_ID ? store().summaries.get(noteId) : undefined;
+      const summary = hasSeededReview(noteId) ? store().summaries.get(noteId) : undefined;
       const review = store().reviews.get(noteId);
       if (summary && review) {
         const proposalOf = new Map(review.items.map((row) => [row.itemId, row.originalProposalRef?.proposalId ?? null]));

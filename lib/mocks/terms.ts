@@ -1,6 +1,7 @@
 import { delay, http } from "msw";
 
 import { mockDb } from "@/lib/mocks/db";
+import { HELP_DEMO_TERMS, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
 import {
   TERM_MAX_LENGTH,
@@ -36,7 +37,12 @@ function reset() {
   workspaceTerms = new Map([
     [
       "01K0000000000",
-      seed(["HeyMoa", "핀볼", "MCP", "PRD", "pyannote", "온보딩 퍼널"]),
+      seed(
+        // 가이드 캡처 프리셋(help-demo)이 켜져 있으면 마케팅 용어 사전을 쓴다
+        isHelpDemoEnabled()
+          ? HELP_DEMO_TERMS
+          : ["HeyMoa", "핀볼", "MCP", "PRD", "pyannote", "온보딩 퍼널"]
+      ),
     ],
   ]);
 }

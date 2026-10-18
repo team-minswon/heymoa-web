@@ -3,6 +3,7 @@ import { cache } from "react";
 
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
+import { HD_ME_EMAIL, HD_ME_NAME } from "@/lib/mocks/help-demo/people";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 import { parseAuthSession } from "@/lib/auth/session-probe";
 
@@ -26,6 +27,11 @@ function serializeCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
 export const getCurrentUserForSsr = cache(
   async (): Promise<AuthUser | null> => {
     if (shouldEnableMocking()) {
+      // 가이드 캡처용 목 프리셋(`lib/mocks/help-demo`)은 사용자 이름도 가상이다. 캡처 스크립트가 심는 쿠키가 있을 때만
+      // 서버가 그린 첫 화면의 사용자도 같은 이름으로 맞춘다. 목 모드에서만 이 분기를 지난다.
+      if ((await cookies()).get("heymoa-help-demo")?.value === "1") {
+        return { ...MOCK_USER, name: HD_ME_NAME, email: HD_ME_EMAIL };
+      }
       return MOCK_USER;
     }
 
