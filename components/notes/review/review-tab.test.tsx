@@ -1268,6 +1268,44 @@ describe("검토 가능한 회의", () => {
     ).toBeNull();
   });
 
+  it("승인 409 뒤 기존 할 일도 다시 읽고 넘기기를 선택해 완료할 수 있다", async () => {
+    const before = await readProjectTasks();
+    renderTab();
+    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "이어가기" }));
+    const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
+    const toggle = within(box).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
+    fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
+    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "넘기기" })).toBeEnabled());
+    const other = within(await rowBox("경쟁 서비스 요금제를 한 표로 정리한다"));
+    fireEvent.click(other.getByRole("radio", { name: "넘기기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled());
+
+    const review = await (await fetch(`http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`)).json();
+    const target = (review.data as MeetingReviewResponseData).items.find((row) => row.content === "구현 결과를 기대 효과 순서로 다시 배치한다")!.taskChanges[0].target;
+    const task = before.find((row: { taskId: string }) => row.taskId === target.itemId);
+    const note = mockDb.getNote(MENTORING_NOTE_ID);
+    const updated = await fetch(`http://localhost/v1/workspaces/${workspaceOfProject(note.projectId)}/projects/${note.projectId}/tasks/${target.itemId}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ revision: task.revision, content: `${task.content} 최신`, taskStatus: task.taskStatus, assignee: null, due: task.due }),
+    });
+    expect(updated.status).toBe(200);
+
+    fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "검토 완료" }));
+    expect(await within(dialog).findByText(/넘기기를 선택/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "검토 완료" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    expect(await within(box).findByText(`${task.content} 최신`)).toBeInTheDocument();
+    expect(within(toggle).getByRole("radio", { name: "반영 예정" })).toBeDisabled();
+    fireEvent.click(within(toggle).getByRole("radio", { name: "넘기기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "검토 완료" }));
+    expect(await screen.findByText("확정됨")).toBeInTheDocument();
+  });
+
   it("요약이 오는 동안 그래프 보기는 없다고 하지 않고 자리만 잡는다", async () => {
     server.use(
       http.get("*/v1/notes/:noteId/meeting-review/summary", async () => {
@@ -1685,5 +1723,15 @@ it("종료 전 NOT_REQUESTED 캐시를 새로 확인하는 동안 수동 분석 
   expect(
     await screen.findByText("회의를 분석하는 중입니다")
   ).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "분석 요청" })).toBeNull();
+});
+
+it("최신 분석 상태 확인에 실패하면 기다림으로 숨기지 않고 다시 시도할 수 있다", async () => {
+  server.use(http.get("*/v1/notes/:noteId/analyses/flow", () => HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "오류" } }, { status: 500 })));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID), { status: 200, data: { success: true, data: { noteId: MENTORING_NOTE_ID, status: "NOT_REQUESTED", regions: [] }, error: null } });
+  renderTab(MENTORING_NOTE_ID, {}, client);
+  expect(await screen.findByText("요약 상태를 불러오지 못했습니다.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "다시 시도" })).toBeEnabled();
   expect(screen.queryByRole("button", { name: "분석 요청" })).toBeNull();
 });

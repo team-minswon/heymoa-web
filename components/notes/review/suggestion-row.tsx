@@ -23,7 +23,6 @@ import { formatOffset } from "@/lib/transcription/presentation";
 import {
   assigneeImageOf,
   assigneeKey,
-  assigneeRequestOf,
   type AssigneeChoice,
   type AssigneeValue,
 } from "@/lib/assignees/describe";
@@ -43,7 +42,7 @@ function SuggestionShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="rounded-control bg-[var(--el-canvas-soft)] px-3 py-2.5 text-[12.5px] text-[var(--el-body)]">
+    <div role="group" aria-label={label} className="rounded-control bg-[var(--el-canvas-soft)] px-3 py-2.5 text-[12.5px] text-[var(--el-body)]">
       <div className="grid grid-cols-1 items-center gap-x-3 gap-y-1.5 sm:grid-cols-[96px_minmax(0,1fr)_auto]">
         <span className="text-xs whitespace-nowrap text-[var(--el-muted)]">{label}</span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{children}</span>
@@ -179,6 +178,15 @@ export function RelationSuggestion({
 
 type TaskDraft = NonNullable<NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"]>;
 
+/** 회의 라벨은 이 회의 소유입니다. 응답의 nullable 참조를 요청 모양으로 돌립니다. */
+function taskAssigneeRequestOf(box: NonNullable<TaskChange["draft"]>["assignee"]): TaskDraft["assignee"] {
+  if (!box) return null;
+  const value = box.value;
+  return { value: !value ? null : value.type === "SPEAKER_LABEL"
+    ? { type: value.type, label: value.label ?? undefined }
+    : { type: value.type, id: value.id ?? undefined } };
+}
+
 /** 기존 할 일의 변경 초안. 실제 업무는 검토 완료에서만 바뀝니다. */
 export function TaskChangeSuggestion({
   change,
@@ -191,6 +199,7 @@ export function TaskChangeSuggestion({
   disabled,
   onChoose,
   context,
+  duplicate = false,
 }: {
   change: TaskChange;
   task: ProjectTask | undefined;
@@ -204,22 +213,16 @@ export function TaskChangeSuggestion({
   /** 선택을 검토본에 저장한다. 저장했는지를 돌려준다 */
   onChoose: (next: Choice, draft: TaskDraft) => Promise<boolean>;
   context?: ReactNode;
+  duplicate?: boolean;
 }) {
   const saved = change.draft;
   const draft: TaskDraft = saved ? {
     ...saved,
-    assignee: saved.assignee ? {
-      value: saved.assignee.value ? {
-        type: saved.assignee.value.type,
-        ...(saved.assignee.value.type === "SPEAKER_LABEL"
-          ? { label: saved.assignee.value.label ?? undefined }
-          : { id: saved.assignee.value.id ?? undefined }),
-      } : null,
-    } : null,
+    assignee: taskAssigneeRequestOf(saved.assignee),
   } : {
     expectedRevision: change.target.revision,
     status: change.status,
-    assignee: change.assignee ? { value: assigneeRequestOf(change.assignee.value) } : null,
+    assignee: taskAssigneeRequestOf(change.assignee),
     due: change.due,
   };
   // 초안은 표시 이름이 아닌 참조로 옵니다. UI에서만 선택 목록과 이어 이름을 붙입니다.
@@ -233,7 +236,9 @@ export function TaskChangeSuggestion({
           : { type: reference.type, id: reference.id ?? undefined, name: "선택한 멤버" })
     : null;
   const applied = change.decision === "APPLIED";
-  const locked = disabled || applied || !task;
+  const stale = !applied && task !== undefined && task.revision !== draft.expectedRevision;
+  const locked = disabled || applied;
+  const fieldsLocked = locked || !task || stale;
   const saveDraft = (next: TaskDraft) => onChoose(choice ?? "change", next);
 
   return (
@@ -245,13 +250,19 @@ export function TaskChangeSuggestion({
           changeLabel={applied ? "반영됨" : choice === "change" ? "반영 예정" : "반영"}
           keepLabel="넘기기"
           value={choice}
-          disabled={locked}
+          disabled={locked || taskState === "pending"}
+          changeDisabled={!task || stale}
           onChange={(next) => void onChoose(next, draft)}
         />
       }
       footer={
         <>
           {context}
+          {stale ? (
+            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">기존 할 일이 변경되어 이 제안을 반영할 수 없습니다. 넘기기를 선택해 주세요.</p>
+          ) : duplicate ? (
+            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">같은 할 일의 다른 제안도 반영 예정입니다. 하나만 반영하고 나머지는 넘겨 주세요.</p>
+          ) : null}
           {!applied && choice === "change" ? (
             <p className="mt-2 text-xs text-[var(--el-muted)]">검토 완료 때 적용됩니다.</p>
           ) : null}
@@ -294,13 +305,13 @@ export function TaskChangeSuggestion({
             )
           }
           to={
-            <Pick editable={!locked}>
+            <Pick editable={!fieldsLocked}>
               <AssigneeCell
                 value={assignee ?? null}
                 choices={choices}
-                editable={!locked}
+                editable={!fieldsLocked}
                 placeholder="없음"
-                onChange={(next) => void saveDraft({ ...draft, assignee: { value: assigneeRequestOf(next) } })}
+                onChange={(next) => void saveDraft({ ...draft, assignee: taskAssigneeRequestOf({ value: next }) })}
               />
             </Pick>
           }
@@ -311,8 +322,8 @@ export function TaskChangeSuggestion({
           label="기한"
           from={task.due ? formatDueDate(task.due) : "없음"}
           to={
-            <Pick editable={!locked}>
-              <DueCell value={draft.due.value ?? null} editable={!locked} placeholder="없음" onChange={(value) => void saveDraft({ ...draft, due: { value } })} />
+            <Pick editable={!fieldsLocked}>
+              <DueCell value={draft.due.value ?? null} editable={!fieldsLocked} placeholder="없음" onChange={(value) => void saveDraft({ ...draft, due: { value } })} />
             </Pick>
           }
         />

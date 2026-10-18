@@ -92,8 +92,7 @@ export function ReviewTab({
 
   if (flowQuery.isLoading) return <ReviewBoardSkeleton />;
 
-  if (!flow) {
-    return (
+  const retryFlow = (
       <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-6">
         <InlineRetry
           variant="line"
@@ -101,8 +100,8 @@ export function ReviewTab({
           onRetry={() => void flowQuery.refetch()}
         />
       </div>
-    );
-  }
+  );
+  if (!flow) return retryFlow;
 
   if (flow.status === "NOT_APPLICABLE") {
     return (
@@ -129,6 +128,7 @@ export function ReviewTab({
       (row) => row.region === "SUMMARY" && row.status === "SUCCEEDED"
     )
   ) {
+    if (flowQuery.isError) return retryFlow;
     return (
       <FlowNotice
         noteId={noteId}

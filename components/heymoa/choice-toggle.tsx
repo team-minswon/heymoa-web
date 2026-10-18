@@ -17,6 +17,7 @@ export function ChoiceToggle({
   label,
   disabled = false,
   keepDisabled = false,
+  changeDisabled = false,
   onChange,
 }: {
   value: Choice | null;
@@ -28,6 +29,8 @@ export function ChoiceToggle({
   disabled?: boolean;
   /** 그대로 두는 쪽만 막는다. 이미 바꾼 것을 되돌릴 수 없는데 그대로 둔다고 적히면 기록과 실제가 갈린다 */
   keepDisabled?: boolean;
+  /** 바꾸는 쪽만 막고 넘기기는 남깁니다. 대상 업무가 변경된 초안에 사용합니다. */
+  changeDisabled?: boolean;
   onChange: (next: Choice) => void;
 }) {
   const option = (choice: Choice, text: string) => {
@@ -37,7 +40,7 @@ export function ChoiceToggle({
         type="button"
         role="radio"
         aria-checked={selected}
-        disabled={disabled || (choice === "keep" && keepDisabled)}
+        disabled={disabled || (choice === "keep" && keepDisabled) || (choice === "change" && changeDisabled)}
         onClick={() => onChange(choice)}
         className={cn(
           "inline-flex h-[22px] items-center gap-1 rounded-full border border-transparent px-2.5 text-[11.5px] font-medium whitespace-nowrap text-[var(--el-muted)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)] disabled:opacity-50",

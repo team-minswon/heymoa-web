@@ -42,12 +42,22 @@ describe("기존 할 일 변경 초안", () => {
   });
 
   it("편집한 기한을 즉시 초안에 저장하며 대상의 원래 판을 유지한다", () => {
-    const initial = props({ task: { ...task!, revision: 9 } });
+    const initial = props();
     const { container } = render(<TaskChangeSuggestion {...initial} />);
     fireEvent.change(container.querySelector('input[type="date"]')!, { target: { value: "2026-10-30" } });
     expect(initial.onChoose).toHaveBeenCalledWith("change", expect.objectContaining({
       expectedRevision: 3, due: { value: "2026-10-30" },
     }));
+  });
+
+  it("대상 업무의 판이 바뀌면 반영과 편집을 막고 넘기기로 회복할 수 있다", () => {
+    const initial = props({ task: { ...task!, revision: 9 }, choice: "change", change: { ...change, decision: "APPLY" } });
+    const { container } = render(<TaskChangeSuggestion {...initial} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/넘기기/);
+    expect(screen.getByRole("radio", { name: "반영 예정" })).toBeDisabled();
+    expect(container.querySelector('input[type="date"]')).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "넘기기" }));
+    expect(initial.onChoose).toHaveBeenCalledWith("keep", expect.objectContaining({ expectedRevision: 3 }));
   });
 
   it("재조회한 초안의 사람 참조를 이름으로 표시하고 제안 원문보다 초안을 우선한다", () => {

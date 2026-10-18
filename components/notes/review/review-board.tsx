@@ -32,7 +32,7 @@ import {
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorMessageOf } from "@/lib/api/error-message";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
 import {
   indexMeetingLinks,
@@ -65,6 +65,7 @@ import {
   confirmBlockReason,
   confirmSummaryOf,
   unchosenSuggestionCount,
+  taskApplyConflictsOf,
 } from "@/lib/notes/review/confirm";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
 import {
@@ -322,6 +323,7 @@ export function ReviewBoard({
   }
 
   const confirmSummary = confirmSummaryOf(items);
+  const taskConflicts = taskApplyConflictsOf(items, (id) => tasksById.get(id)?.revision);
   const gateItems = items.map((item) =>
     isSummaryKind(item.kind)
       ? item
@@ -353,6 +355,8 @@ export function ReviewBoard({
   const unchosen = unchosenSuggestionCount(gateItems, hasTask);
   const blockInput = {
     saving,
+    duplicateApplies: taskConflicts.duplicates.size,
+    staleApplies: taskConflicts.stale.size,
     hasTaskChanges: gateItems.some(
       (item) => item.included && item.taskChanges.length > 0
     ),
@@ -489,6 +493,7 @@ export function ReviewBoard({
               task={tasksById.get(change.target.itemId)}
               noteId={noteId}
               choices={assigneeChoices}
+              duplicate={taskConflicts.duplicates.has(change.target.itemId)}
               choice={choiceOf(change.decision)}
               taskState={
                 tasksQuery.isPending ? "pending" : tasks ? "ready" : "failed"
@@ -593,9 +598,12 @@ export function ReviewBoard({
     } catch (error) {
       // 서버 문구를 확정 줄에 남긴다. 판이 낡아 거절됐을 수 있으니 검토본도 다시 읽는다.
       setApproveError(errorMessageOf(error, "검토를 완료하지 못했습니다."));
-      await queryClient.invalidateQueries({
-        queryKey: getGetMeetingReviewQueryKey(noteId),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetMeetingReviewQueryKey(noteId) }),
+        errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT"
+          ? queryClient.invalidateQueries({ predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey) })
+          : Promise.resolve(),
+      ]);
       return false;
     }
   };
@@ -669,9 +677,9 @@ export function ReviewBoard({
         className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
       >
         {relationsStatus === "PENDING"
-          ? "충돌과 이어짐을 확인하고 있습니다. 회의 정리는 먼저 읽을 수 있습니다."
+          ? "충돌과 이어짐을 확인하고 있습니다."
           : relationsStatus === "FAILED"
-            ? "충돌과 이어짐을 분석하지 못했습니다. 회의 정리와 검토 항목은 그대로 남아 있습니다."
+            ? "충돌과 이어짐을 분석하지 못했습니다."
             : "화자 정보를 확인하지 못해 충돌과 이어짐을 분석하지 않았습니다."}
       </p>
     ) : projectId && linksQuery.isError ? (
@@ -682,7 +690,7 @@ export function ReviewBoard({
         className="pb-4"
       />
     ) : projectId &&
-      (linksQuery.isPending || refreshingAnalysis || linksQuery.isFetching) ? (
+      (linksQuery.isPending || refreshingAnalysis) ? (
       <p
         role="status"
         className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
@@ -792,7 +800,7 @@ export function ReviewBoard({
                     className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
                   >
                     {enrichmentStatus === "PENDING"
-                      ? "화자 확인 뒤 담당과 기한을 정리하고 있습니다. 먼저 검토한 내용은 유지됩니다."
+                      ? "담당과 기한을 정리하고 있습니다."
                       : enrichmentStatus === "FAILED"
                         ? "담당과 기한을 분석하지 못했습니다. 직접 지정할 수 있습니다."
                         : "화자 정보를 확인하지 못해 담당과 기한을 분석하지 않았습니다."}

@@ -130,6 +130,7 @@ function useNow(intervalMs: number) {
 const NONE: ReadonlySet<string> = new Set();
 
 const itemId = (proposalId: string) => `timeline-item-${proposalId}`;
+const groupId = (key: string) => `timeline-agenda-${key}`;
 
 function metaOf(item: TimelineItem): Array<{ text: string; tone?: "error" }> {
   const { proposal } = item;
@@ -337,11 +338,30 @@ export function NoteTimeline({
     [context.state, listFilter, agendaList, placement]
   );
 
+  // 이미 접어 둔 묶음으로 새 명제가 분류되어도 감추지 않습니다. 다른 안건의 접힘 상태는 유지합니다.
+  const groupSizes = useRef<{ noteId: string; sizes: Map<string, number> }>({ noteId, sizes: new Map() });
+  useEffect(() => {
+    const before = groupSizes.current.noteId === noteId ? groupSizes.current.sizes : new Map<string, number>();
+    const grown = timeline.groups.filter((group) => group.agenda && before.has(group.key) && group.total > before.get(group.key)!);
+    groupSizes.current = { noteId, sizes: new Map(timeline.groups.map((group) => [group.key, group.total])) };
+    if (meetingEnded || grown.length === 0) return;
+    setView((current) => {
+      if (current.noteId !== noteId) return current;
+      const flipped = new Set(current.flipped);
+      for (const group of grown) {
+        if (current.foldByDefault) flipped.add(group.key);
+        else flipped.delete(group.key);
+      }
+      if (flipped.size === current.flipped.size && [...flipped].every((key) => current.flipped.has(key))) return current;
+      return { ...current, flipped };
+    });
+  }, [timeline.groups, meetingEnded, noteId]);
+
   /** 관계(질문 ↔ 답)를 누르면 그 항목을 펼치고 화면 가운데로 데려온다. */
   const pendingScroll = useRef<string | null>(null);
   const jumpTo = (proposal: ProposalHead) => {
     updateFollowing(false);
-    pendingScroll.current = proposal.proposalId;
+    pendingScroll.current = itemId(proposal.proposalId);
     setView((current) => ({
       ...current,
       filter: "ALL",
@@ -352,12 +372,22 @@ export function NoteTimeline({
       flipped: NONE,
     }));
   };
+  const jumpToGroup = (key: string) => {
+    updateFollowing(false);
+    pendingScroll.current = groupId(key);
+    setView((current) => {
+      const flipped = new Set(current.flipped);
+      if (current.foldByDefault) flipped.add(key);
+      else flipped.delete(key);
+      return { ...current, filter: "ALL", flipped, instant: true };
+    });
+  };
   useEffect(() => {
     const target = pendingScroll.current;
     if (!target) return;
     // 골라 보기를 「전체」로 되돌린 목록은 `useDeferredValue` 로 한 박자 늦게 선다 — 그 사이
     // 커밋에는 대상이 아직 없다. 찾을 때까지 비우지 않고 다음 커밋에서 다시 본다.
-    const element = document.getElementById(itemId(target));
+    const element = document.getElementById(target);
     if (!element) return;
     pendingScroll.current = null;
     element.scrollIntoView?.({ block: "center" });
@@ -747,7 +777,7 @@ export function NoteTimeline({
               !!group.agenda && view.foldByDefault !== view.flipped.has(key);
             const listId = `timeline-group-${key}`;
             return (
-              <section key={key} className="mt-7">
+              <section key={key} id={groupId(key)} className="mt-7 scroll-mt-4">
                 {group.agenda ? (
                   <h3 className="-mx-2 flex h-[30px] w-[calc(100%+16px)] items-center gap-0.5">
                     {/* **안건도 근거로 갈 수 있어야 한다.** 머리는 접는 손잡이라, 안건의 첫 발화로
@@ -783,6 +813,9 @@ export function NoteTimeline({
                       >
                         {group.agenda.title}
                       </span>
+                      {group.previous ? (
+                        <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">이어서</span>
+                      ) : null}
                       {group.agenda.retracted ? (
                         <span className="shrink-0 text-[12px] font-medium text-[var(--el-error-strong)]">
                           철회됨
@@ -801,6 +834,16 @@ export function NoteTimeline({
                       <span className="flex-1" />
                       {group.last && recording ? <LiveChip /> : null}
                     </button>
+                    {group.previous ? (
+                      <button
+                        type="button"
+                        aria-label={`앞선 ${group.agenda.title} 논의${group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}로 가기`}
+                        onClick={() => jumpToGroup(group.previous!.key)}
+                        className="h-full shrink-0 rounded-[7px] px-2 text-xs text-[var(--el-muted)] underline decoration-[var(--el-hairline-strong)] underline-offset-2 hover:text-[var(--el-ink)]"
+                      >
+                        앞선 논의{group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}
+                      </button>
+                    ) : null}
                   </h3>
                 ) : null}
                 {/* 열고 닫을 때 높이와 투명도로 접힌다. `initial={false}` 라 처음 그릴 때는 움직이지 않고,

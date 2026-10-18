@@ -148,7 +148,7 @@ test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 �
   await choice.getByRole("radio", { name: "반영", exact: true }).click();
   await expect(choice.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
   await expect(row).toContainText("검토 완료 때 적용됩니다.");
-  await row.locator('input[type="date"]').fill("2026-12-05");
+  await row.getByRole("group", { name: "기존 할 일 변경", exact: true }).locator('input[type="date"]').fill("2026-12-05");
   await expect.poll(() => page.evaluate(async ({ noteId, taskId }) => {
     const { data: review } = await (await fetch(`/v1/notes/${noteId}/meeting-review`)).json();
     return review.items.flatMap((item: { taskChanges: Array<{ target: { itemId: string }; draft?: { due?: { value: string } } }> }) => item.taskChanges)

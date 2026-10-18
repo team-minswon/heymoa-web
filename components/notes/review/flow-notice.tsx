@@ -41,7 +41,7 @@ const COPY: Record<WaitingStatus, { title: string; body: string }> = {
   },
   ANALYZING: {
     title: "회의를 분석하는 중입니다",
-    body: "회의 정리와 안건 요약을 먼저 보여 드립니다. 화자 확인 뒤 충돌·이어짐과 담당·기한을 정리합니다. 다른 화면으로 옮겨도 됩니다.",
+    body: "회의 정리와 안건 요약을 만들고 있습니다. 화자 확인 뒤 충돌·이어짐과 담당·기한을 정리합니다.",
   },
   ANALYSIS_FAILED: {
     title: "회의를 분석하지 못했습니다",

@@ -14,6 +14,7 @@ type Props = Record<string, unknown> & { ref?: Ref<unknown> };
  */
 const forceGraph = vi.hoisted(() => ({
   props: null as Props | null,
+  zoomDuringRender: null as number | null,
   api: {
     zoom: vi.fn(() => 1),
     zoomToFit: vi.fn(),
@@ -28,6 +29,11 @@ vi.mock("react-force-graph-2d", () => ({
   default: function ForceGraphDouble(props: Props) {
     forceGraph.props = props;
     useImperativeHandle(props.ref, () => forceGraph.api);
+    if (forceGraph.zoomDuringRender !== null) {
+      const k = forceGraph.zoomDuringRender;
+      forceGraph.zoomDuringRender = null;
+      (props.onZoom as (value: { k: number }) => void)({ k });
+    }
     return <canvas />;
   },
 }));
@@ -158,7 +164,9 @@ describe("ReviewGraph", () => {
     cleanup();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     forceGraph.props = null;
+    forceGraph.zoomDuringRender = null;
     panelWidth = 840;
   });
 
@@ -170,6 +178,14 @@ describe("ReviewGraph", () => {
       ["d1", false],
       ["a1", false],
     ]);
+  });
+
+  it("라이브러리가 렌더 중 확대 상태를 알려도 부모를 즉시 갱신하지 않는다", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    forceGraph.zoomDuringRender = 8;
+    await renderGraph();
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "확대" })).toBeDisabled());
+    expect(error.mock.calls.some((args) => String(args[0]).includes("Cannot update a component"))).toBe(false);
   });
 
   it("캔버스에서 항목을 누르면 그 항목을 고르고, 허브를 누르면 고르지 않고 판을 그리로 옮긴다", async () => {

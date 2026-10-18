@@ -58,6 +58,16 @@ function valuesAt(node: unknown, parts: string[]): unknown[] {
   return valuesAt((node as Record<string, unknown>)[head], rest);
 }
 
+/** 최종 필드 자체가 선택일 때만 NON_NULL 직렬화에 따른 누락을 null 표본으로 센다. */
+type NullableSchema = { properties?: Record<string, NullableSchema>; items?: NullableSchema; required?: string[] };
+function optionalLeaf(schema: NullableSchema | undefined, parts: string[]): boolean {
+  const [part, ...rest] = parts;
+  const key = part.replace(/\[\]$/, "");
+  if (rest.length === 0) return !schema?.required?.includes(key);
+  const child = schema?.properties?.[key];
+  return optionalLeaf(part.endsWith("[]") ? child?.items : child, rest);
+}
+
 type GetOperation = {
   path: string;
   schema: string;
@@ -553,8 +563,8 @@ describe("nullable 목 표본", () => {
         const key = `${schemaName}.${leaf}`;
         const entry = observed.get(key) ?? { total: 0, nulls: 0 };
         entry.total += values.length;
-        // 선택 nullable 필드는 서버의 NON_NULL 직렬화로 생략될 수도 있다.
-        entry.nulls += values.filter((value) => value == null).length;
+        const optional = optionalLeaf(schema, leaf.split("."));
+        entry.nulls += values.filter((value) => value === null || (optional && value === undefined)).length;
         observed.set(key, entry);
       }
     }

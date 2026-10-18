@@ -213,6 +213,28 @@ describe("NoteTimeline", () => {
     expect(agendas.refetch).toHaveBeenCalled();
   });
 
+  it("재언급한 안건의 앞선 논의는 필터를 풀고 해당 묶음만 펼친다", async () => {
+    const a = head({ kind: "STATUS_REPORT", content: "온보딩 이탈률 보고", atMs: 60_000 });
+    const b = head({ content: "결제 방식을 정한다", atMs: 120_000 });
+    const c = head({ content: "온보딩 단계를 줄인다", atMs: 180_000 });
+    withLedger(a, b, c);
+    agendas.data = agendaResponse(c.createdSequence, [
+      { agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, c.proposalId] },
+      { agendaId: "payment", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+    ]);
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    expect(screen.getAllByText("이어서")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /^결정 / }));
+    await waitFor(() => expect(screen.getAllByRole("button", { name: /^온보딩 개편/ })).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "앞선 온보딩 개편 논의 01:00로 가기" }));
+    await waitFor(() => expect(screen.getByText("온보딩 이탈률 보고")).toBeVisible());
+    const titles = screen.getAllByRole("button", { name: /^온보딩 개편/ });
+    expect(titles[0]).toHaveAttribute("aria-expanded", "true");
+    expect(titles[1]).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /^결제 실패 대응/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /^전체 / })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("끝난 회의는 회의 뒤 분석이 도는 동안 주제 정본을 주기적으로 다시 읽는다", () => {
     withLedger(head({}));
     flow.data = { status: 200, data: { success: true, data: { status: "ANALYZING" }, error: null } };
@@ -227,6 +249,30 @@ describe("NoteTimeline", () => {
     expect(agendas.refetch).toHaveBeenCalledTimes(1);
   });
 
+  it("새 명제는 접힌 이전 안건에 숨지 않고 분류 전후 모두 보인다", async () => {
+    const a = head({ content: "온보딩 이탈률을 확인한다" });
+    const b = head({ content: "건너뛰기 버튼을 둔다" });
+    withLedger(a);
+    agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId] }]);
+    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    fireEvent.click(screen.getByRole("button", { name: /^온보딩 개편/ }));
+    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+
+    withLedger(a, b);
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    await waitFor(() => expect(screen.getByText("건너뛰기 버튼을 둔다")).toBeVisible());
+    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+
+    agendas.data = agendaResponse(b.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, b.proposalId] }]);
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "true"));
+    await waitFor(() => expect(screen.getByText("건너뛰기 버튼을 둔다")).toBeVisible());
+    // 열어 준 뒤 사용자가 다시 접으면 새 내용이 더 오기 전까지 그대로 둡니다.
+    fireEvent.click(screen.getByRole("button", { name: /^온보딩 개편/ }));
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("다시 읽기가 실패하면 지난 주제 제목을 두고 새로 불러올 길을 둔다", () => {
     const a = head({ content: "온보딩을 2단계로 줄인다" });
     withLedger(a);
@@ -237,7 +283,7 @@ describe("NoteTimeline", () => {
     expect(screen.getByText("주제 제목을 새로 불러오지 못했습니다.")).toBeVisible();
   });
 
-  it("회의 중에는 자리를 정한 줄을 옮기지 않고, 정리가 못 본 줄은 앞 줄 묶음에 붙으며, 회의가 끝나면 서버 판정대로 맞춘다", () => {
+  it("회의 중에는 읽던 배치를 유지하고 새 미분류 명제를 숨기지 않으며 종료 뒤 정본에 맞춘다", () => {
     const a = head({ content: "이탈률 38%" });
     const b = head({ content: "3DS 응답이 늦다" });
     const c = head({ content: "건너뛰기 버튼을 둔다" });
@@ -251,8 +297,8 @@ describe("NoteTimeline", () => {
     const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
     const groupOf = (text: string) =>
       screen.getByText(text).closest("section")?.querySelector("h3")?.textContent ?? "";
-    // c 는 정리가 아직 못 봤다 — 바로 앞 줄(b)의 묶음에 붙는다
-    expect(groupOf("건너뛰기 버튼을 둔다")).toMatch("결제 실패 대응");
+    // c 는 정리가 아직 못 봤다. 접힌 이전 안건에 숨기지 않고 제 시각에 제목 없이 보인다.
+    expect(groupOf("건너뛰기 버튼을 둔다")).toBe("");
 
     // 다음 정리가 a 를 결제로 옮기고 c 를 온보딩에 넣는다. 회의 중이라 a 는 그대로, c 만 자리를 얻는다.
     agendas.data = agendaResponse(c.createdSequence, [

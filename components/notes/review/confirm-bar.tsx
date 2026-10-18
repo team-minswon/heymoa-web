@@ -138,6 +138,7 @@ export function ConfirmBar({
                 {error}
               </p>
             ) : null}
+            {blocked ? <p role="alert" className="text-sm text-[var(--el-muted)]">{blocked}</p> : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>취소</AlertDialogCancel>

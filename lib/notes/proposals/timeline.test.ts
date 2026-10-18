@@ -166,6 +166,25 @@ describe("toneOf", () => {
 
 
 describe("바뀐 안건 정본", () => {
+  it("재언급은 같은 안건 ID의 직전 묶음만 가리키며 필터로 가린 앞선 논의도 기억한다", () => {
+    const a = head({ kind: "STATUS_REPORT" }), b = head({}), c = head({}), d = head({}), e = head({});
+    const rows = [a, b, c, d, e];
+    const list = { agendas: [
+      { agendaId: "a", title: "같은 제목", completed: false, proposalIds: [a.proposalId, c.proposalId, e.proposalId] },
+      { agendaId: "b", title: "같은 제목", completed: false, proposalIds: [b.proposalId, d.proposalId] },
+    ] };
+    const plan = { list, placement: placeAgendas(new Map(), rows, list, false) };
+    const groups = selectTimeline(stateOf(...rows), "ALL", plan).groups;
+    expect(groups[0].previous).toBeNull();
+    expect(groups[1].previous).toBeNull();
+    expect(groups[2].previous).toEqual({ key: groups[0].key, startMs: groups[0].startMs });
+    expect(groups[3].previous?.key).toBe(groups[1].key);
+    expect(groups[4].previous?.key).toBe(groups[2].key);
+    const filtered = selectTimeline(stateOf(...rows), "DECISION", plan).groups;
+    expect(filtered.some((group) => group.key === groups[0].key)).toBe(false);
+    expect(filtered.find((group) => group.key === groups[2].key)?.previous?.key).toBe(groups[0].key);
+  });
+
   it("사라진 안건과 새로 소속이 생긴 미분류 항목은 최신 정본으로 옮긴다", () => {
     const a = head({}), b = head({});
     const previous = new Map([[a.proposalId, "removed"], [b.proposalId, null]]);

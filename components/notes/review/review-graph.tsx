@@ -284,10 +284,6 @@ export function ReviewGraph({
           </div>
         ) : null}
 
-        <p className="pointer-events-none absolute bottom-2.5 left-3 hidden text-xs text-[var(--el-muted)] sm:block">
-          항목을 누르면 아래에 수정 기록과 스크립트가 펼쳐집니다
-        </p>
-
         {/* 손가락으로 쓰는 화면에서는 버튼을 40px 로 키우고 가로로 눕혀 그래프를 덜 가린다 */}
         <div className="absolute right-2 bottom-2 flex flex-col divide-y divide-[var(--el-hairline)] overflow-hidden rounded-control border border-[var(--el-hairline)] bg-[var(--el-surface-card)] pointer-coarse:flex-row pointer-coarse:divide-x pointer-coarse:divide-y-0">
           <ControlButton label="확대" disabled={zoom >= ZOOM_RANGE[1]} onClick={() => zoomBy(STEP)}>
@@ -312,10 +308,6 @@ export function ReviewGraph({
         </ul>
       ) : null}
 
-      {/* 좁은 화면에서는 안내가 점을 가려 그래프 밖 아래에 둔다 */}
-      <p className="mt-2 text-xs text-[var(--el-muted)] sm:hidden">
-        항목을 누르면 아래에 수정 기록과 스크립트가 펼쳐집니다
-      </p>
     </div>
   );
 }

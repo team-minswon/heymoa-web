@@ -119,6 +119,19 @@ export default function ReviewGraphCanvas({
   onSettled: () => void;
 }) {
   const fitted = useRef(false);
+  const zoomFrame = useRef<number | null>(null);
+  // 라이브러리는 폭 등 prop을 적용하는 렌더 중에도 onZoom을 부릅니다. React 상태 알림은 다음 프레임으로 모읍니다.
+  const reportZoom = useCallback((scale: number) => {
+    if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
+    zoomFrame.current = requestAnimationFrame(() => {
+      zoomFrame.current = null;
+      onZoom(scale);
+    });
+  }, [onZoom]);
+
+  useEffect(() => () => {
+    if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
+  }, []);
 
   useEffect(() => {
     const graph = graphRef.current;
@@ -280,7 +293,7 @@ export default function ReviewGraphCanvas({
       onNodeClick={onSelect}
       // 그냥 굴리면 페이지가 내려가야 한다. 휠 확대는 Ctrl/⌘ 과 트랙패드 핀치(ctrlKey 가 실린다)만이다.
       enableZoomInteraction={(event) => event.ctrlKey || event.metaKey}
-      onZoom={({ k }) => onZoom(k)}
+      onZoom={({ k }) => reportZoom(k)}
       onEngineStop={() => {
         if (fitted.current) return;
         fitted.current = true;

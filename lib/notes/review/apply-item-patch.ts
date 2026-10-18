@@ -21,9 +21,9 @@ export function applyItemPatch(
   itemId: string,
   patch: ItemPatch
 ): MeetingReviewResponseData {
-  const decisionOf = new Map(
+  const choiceOf = new Map(
     (patch.decisions ?? []).map(
-      (choice) => [choice.targetId, choice.decision] as const
+      (choice) => [choice.targetId, choice] as const
     )
   );
   const patchItem = (
@@ -32,22 +32,33 @@ export function applyItemPatch(
     ...item,
     ...(patch.included !== undefined ? { included: patch.included } : {}),
     ...("due" in patch ? { due: patch.due ?? null } : {}),
-    ...(decisionOf.size > 0
+    ...(choiceOf.size > 0
       ? {
-          // 초안의 담당 표시는 서버 응답을 기다린다. 선택만 먼저 보여 주고 저장 중에는 조작을 잠근다.
           replacements: item.replacements.map((row) => {
-            const decision = decisionOf.get(row.target.itemId);
+            const decision = choiceOf.get(row.target.itemId)?.decision;
             return decision === undefined || decision === "APPLIED" || decision === "APPLY"
               ? row
               : { ...row, decision };
           }),
           taskChanges: item.taskChanges.map((row) => {
-            const decision = decisionOf.get(row.target.itemId);
+            const choice = choiceOf.get(row.target.itemId);
+            const decision = choice?.decision;
             return decision === undefined ||
               decision === "END" ||
               decision === "APPLIED"
               ? row
-              : { ...row, decision };
+              : {
+                  ...row, decision,
+                  // 초안은 이름을 포함하지 않는 참조라 요청 값을 바로 표시할 수 있다.
+                  draft: decision === null ? null : choice?.taskChange ? {
+                    expectedRevision: choice.taskChange.expectedRevision,
+                    status: choice.taskChange.status ?? null,
+                    assignee: choice.taskChange.assignee?.value ? {
+                      value: { type: choice.taskChange.assignee.value.type, id: choice.taskChange.assignee.value.id ?? null, label: choice.taskChange.assignee.value.label ?? null },
+                    } : choice.taskChange.assignee ?? null,
+                    due: choice.taskChange.due ?? null,
+                  } : row.draft,
+                };
           }),
         }
       : {}),
@@ -114,7 +125,7 @@ export function restoreItemFields(
                           candidate.target.itemId === row.target.itemId
                       );
                       return touchedTasks.has(row.target.itemId) && old
-                        ? { ...row, decision: old.decision }
+                        ? { ...row, decision: old.decision, draft: old.draft }
                         : row;
                     }),
                   }

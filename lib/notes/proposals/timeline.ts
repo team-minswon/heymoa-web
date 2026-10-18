@@ -72,6 +72,8 @@ export type TimelineAgenda = {
 export type TimelineGroup = {
   /** 화면 key. 같은 주제로 돌아온 묶음끼리도 다르다 */
   key: string;
+  /** 같은 안건을 앞서 다룬 묶음. 제목이 같아도 안건 ID가 다르면 잇지 않는다. */
+  previous: { key: string; startMs: number | null } | null;
   /** 머리 주제. 어느 주제에도 들지 않은 줄의 묶음이면 `null`. */
   agenda: TimelineAgenda | null;
   startMs: number | null;
@@ -139,7 +141,7 @@ export type AgendaList = {
   agendas: ReadonlyArray<{ agendaId: string; title: string; completed: boolean; proposalIds: ReadonlyArray<unknown> }>;
 };
 
-/** 명제 → 주제(agendaId, 어느 주제에도 들지 않으면 null). 없는 명제는 바로 앞 줄의 묶음을 따른다 */
+/** 명제 → 주제(agendaId, 어느 주제에도 들지 않으면 null). 아직 분류되지 않은 새 명제는 제목 없이 제 시각에 선다. */
 export type AgendaPlacement = ReadonlyMap<string, string | null>;
 
 /**
@@ -147,7 +149,7 @@ export type AgendaPlacement = ReadonlyMap<string, string | null>;
  *
  * **회의 중에는 한 번 자리를 정한 줄을 옮기지 않는다** — 읽던 줄이 다른 주제 밑으로 뛰면 어디까지
  * 읽었는지 잃는다. 정리가 아직 못 본 줄(`createdSequence > asOfSequence`)은 자리를 정하지 않아
- * 바로 앞 줄의 묶음에 붙는다. 그래서 정리가 와도 바뀌는 것은 맨 아래 몇 줄뿐이다.
+ * 제목 없는 묶음에 둔다. 이전 안건이 접혀 있어도 새 명제는 바로 읽을 수 있다.
  * 회의가 끝나면(`live` 거짓) 지난 배치를 버리고 서버 판정대로 한 번 맞춘다.
  */
 export function placeAgendas(
@@ -211,6 +213,7 @@ export function selectTimeline(
   const groups: TimelineGroup[] = [];
   let current: TimelineGroup | null = null;
   let currentAgendaId: string | null = null;
+  const lastByAgenda = new Map<string, TimelineGroup>();
   const agendaOf = new Map<string, AgendaList["agendas"][number]>(
     (byAgenda?.list.agendas ?? []).map((agenda) => [agenda.agendaId, agenda])
   );
@@ -221,15 +224,15 @@ export function selectTimeline(
       if (proposal.kind === "AGENDA") continue;
       const placed: string | null = byAgenda.placement.has(proposal.proposalId)
         ? (byAgenda.placement.get(proposal.proposalId) ?? null)
-        : current
-          ? currentAgendaId
-          : null;
+        : null;
       if (!current || placed !== currentAgendaId) {
         const startMs = firstAt(proposal);
         if (current) current.endMs = startMs;
         const agenda: AgendaList["agendas"][number] | undefined = placed ? agendaOf.get(placed) : undefined;
+        const previous: TimelineGroup | undefined = placed ? lastByAgenda.get(placed) : undefined;
         current = {
           key: `${placed ?? "none"}:${proposal.proposalId}`,
+          previous: previous ? { key: previous.key, startMs: previous.startMs } : null,
           agenda: agenda
             ? { title: agenda.title, completed: agenda.completed, retracted: false, citation: proposal.citations[0] ?? null }
             : null,
@@ -241,12 +244,14 @@ export function selectTimeline(
         };
         currentAgendaId = placed;
         groups.push(current);
+        if (placed) lastByAgenda.set(placed, current);
       }
     } else if (proposal.kind === "AGENDA") {
       const startMs = firstAt(proposal);
       if (current) current.endMs = startMs;
       current = {
         key: proposal.proposalId,
+        previous: null,
         agenda: {
           title: proposal.content,
           completed: false,
@@ -265,6 +270,7 @@ export function selectTimeline(
     if (!current) {
       current = {
         key: "lead",
+        previous: null,
         agenda: null,
         startMs: firstAt(proposal),
         endMs: null,

@@ -16,19 +16,41 @@ export function confirmBlockReason({
   hasTaskChanges,
   tasks,
   unchosen,
+  duplicateApplies = 0,
+  staleApplies = 0,
 }: {
   saving: boolean;
   hasTaskChanges: boolean;
   tasks: "pending" | "ready" | "failed";
   /** 포함 항목에 붙었는데 아직 고르지 않은, 고를 수 있는 제안 수 */
   unchosen: number;
+  duplicateApplies?: number;
+  staleApplies?: number;
 }): string | null {
   if (saving) return "저장이 끝나면 완료할 수 있습니다";
   if (hasTaskChanges && tasks === "pending") return "기존 할 일 변경 제안을 불러오는 중입니다";
   if (hasTaskChanges && tasks === "failed") return "기존 할 일을 불러오지 못해 변경 제안을 확인할 수 없습니다";
+  if (duplicateApplies > 0) return "같은 기존 할 일에 반영할 제안이 겹칩니다. 하나만 반영하고 나머지는 넘겨 주세요";
+  if (staleApplies > 0) return "변경된 기존 할 일의 제안을 확인하고 넘기기를 선택해 주세요";
   // 사람이 고르는 것은 제안뿐이다. 안 본 제안을 둔 채 되돌릴 수 없는 확정으로 넘기지 않는다.
   if (unchosen > 0) return `고르지 않은 제안이 ${unchosen}개 남았습니다`;
   return null;
+}
+
+/** 승인에서 전체 거절될 선택. 원본 제안의 기대 판을 현재 판으로 덮어쓰지 않습니다. */
+export function taskApplyConflictsOf(items: readonly ReviewItem[], revisionOf: (id: string) => number | undefined) {
+  const counts = new Map<string, number>();
+  const stale = new Set<string>();
+  for (const item of items) {
+    if (!item.included) continue;
+    for (const change of item.taskChanges) {
+      if (change.decision !== "APPLY") continue;
+      const id = change.target.itemId;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+      if (revisionOf(id) !== (change.draft?.expectedRevision ?? change.target.revision)) stale.add(id);
+    }
+  }
+  return { duplicates: new Set([...counts].filter(([, count]) => count > 1).map(([id]) => id)), stale };
 }
 
 /**

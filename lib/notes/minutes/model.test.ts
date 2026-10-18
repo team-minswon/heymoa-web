@@ -71,6 +71,7 @@ const group = (
 ) =>
   ({
     key: `${title}:${startMs}`,
+    previous: null,
     agenda: title === null ? null : { title, completed: true, retracted: false, citation: null },
     startMs,
     endMs,

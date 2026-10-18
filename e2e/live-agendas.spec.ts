@@ -25,4 +25,15 @@ test("안건 제목이 실시간으로 끼어들고, 자리를 정한 줄은 회
   // 같은 주제로 돌아오면 제목이 한 번 더 선다
   await expect(heading("온보딩 개편")).toHaveCount(2);
   await expect(groupOf("튜토리얼에 건너뛰기 버튼을 둔다")).toContainText("온보딩 개편");
+  await expect(groupOf("튜토리얼에 건너뛰기 버튼을 둔다")).toContainText("이어서");
+  const first = heading("온보딩 개편").first();
+  const returning = heading("온보딩 개편").last();
+  await first.click();
+  await expect(first).toHaveAttribute("aria-expanded", "false");
+  await returning.click();
+  await expect(returning).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "앞선 온보딩 개편 논의 01:00로 가기" }).click();
+  await expect(first).toHaveAttribute("aria-expanded", "true");
+  await expect(first).toBeInViewport();
+  await expect(returning).toHaveAttribute("aria-expanded", "false");
 });

@@ -8,6 +8,7 @@ import {
   choiceOf,
   confirmBlockReason,
   confirmSummaryOf,
+  taskApplyConflictsOf,
   unchosenSuggestionCount,
 } from "@/lib/notes/review/confirm";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
@@ -138,6 +139,24 @@ describe("confirmSummaryOf", () => {
       item({ itemId: "t", kind: "ACTION_ITEM", taskChanges: [change("known", null), change("gone", null), change("done", "APPLIED")] }),
     ];
     expect(unchosenSuggestionCount(items, (taskId) => taskId !== "gone")).toBe(2);
+  });
+
+  it("같은 업무의 복수 반영과 바뀐 업무 판은 확정 전에 막고 넘기기를 고르면 풀린다", () => {
+    const change = (decision: "APPLY" | "KEEP" | "APPLIED"): ReviewItem["taskChanges"][number] => ({
+      target: { itemId: "task", revision: 3, originalProposalRef: null },
+      status: "COMPLETED", assignee: null, due: null, reason: "", decision,
+      draft: { expectedRevision: 3, status: "COMPLETED", assignee: null, due: null },
+    });
+    const items = [item({ itemId: "a", kind: "DECISION", taskChanges: [change("APPLY")] }), item({ itemId: "b", kind: "DECISION", taskChanges: [change("APPLY")] })];
+    const conflicts = taskApplyConflictsOf(items, () => 4);
+    expect([...conflicts.duplicates]).toEqual(["task"]);
+    expect([...conflicts.stale]).toEqual(["task"]);
+    const base = { saving: false, hasTaskChanges: true, tasks: "ready" as const, unchosen: 0 };
+    expect(confirmBlockReason({ ...base, duplicateApplies: conflicts.duplicates.size })).toMatch(/하나만 반영/);
+    expect(confirmBlockReason({ ...base, staleApplies: conflicts.stale.size })).toMatch(/넘기기/);
+    const kept = items.map((row) => ({ ...row, taskChanges: [change("KEEP")] }));
+    expect(taskApplyConflictsOf(kept, () => 4)).toEqual({ duplicates: new Set(), stale: new Set() });
+    expect(taskApplyConflictsOf([{ ...items[0], included: false }, { ...items[1], taskChanges: [change("APPLIED")] }], () => 4)).toEqual({ duplicates: new Set(), stale: new Set() });
   });
 
   it("저장된 선택을 두 칸 토글의 값으로 읽는다", () => {
