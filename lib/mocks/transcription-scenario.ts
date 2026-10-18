@@ -13,6 +13,11 @@ import {
 } from "@/lib/transcription/protocol";
 
 const AUTO_COMMIT_BYTES = CAPTURE_CONTRACT.sampleRate * 2 * 15;
+/** 가이드 캡처는 10초 안팎 영상이라, 받아쓰기 줄이 몇 초 만에 굳고 다음 줄로 넘어가게 한다. */
+const HELP_DEMO_COMMIT_BYTES = CAPTURE_CONTRACT.sampleRate * 2 * 3;
+const HELP_DEMO_PARTIAL_EVERY_MS = 200;
+/** partial 한 번에 드러나는 어절 수. 기본 3이라 한 문장에 4초가 걸린다. */
+const HELP_DEMO_TOKENS_PER_STEP = 4;
 const MAX_FRAME_BYTES = CAPTURE_CONTRACT.maxFrameBytes;
 /** 서버는 S3 적재(30초)마다 ACK한다. 목은 그보다 자주 보내 재전송 버퍼를 빨리 흔든다. */
 const ACK_EVERY_CHUNKS = 30;
@@ -96,6 +101,8 @@ export class MockTranscriptionScenario {
   private partialPending = "";
   private utteranceStartedAtMs: number | null = null;
   private lastPartialAtMs = 0;
+  /** 가이드 캡처 전용: 이번 발화에서 말한 것으로 센 시간. */
+  private demoVoicedMs = 0;
   private lastChunkSeq: number | null = null;
   private lastCaptureEnd: number | null = null;
   private chunksSinceAck = 0;
@@ -107,7 +114,11 @@ export class MockTranscriptionScenario {
   private readonly script: readonly string[];
 
   constructor(private readonly options: ScenarioOptions) {
-    this.config = { ...DEFAULT_VOICE_ACTIVITY_CONFIG, ...options.config };
+    this.config = {
+      ...DEFAULT_VOICE_ACTIVITY_CONFIG,
+      ...(isHelpDemoEnabled() && { partialEveryMs: HELP_DEMO_PARTIAL_EVERY_MS }),
+      ...options.config,
+    };
     this.detector = new VoiceActivityDetector(this.config);
     this.script =
       options.script ??
@@ -202,7 +213,15 @@ export class MockTranscriptionScenario {
       (buffer.byteLength / 2 / CAPTURE_CONTRACT.sampleRate) * 1000;
     this.recordedDurationMs += frameDurationMs;
     this.bufferedBytes += buffer.byteLength;
-    const activity = this.detector.push(frameDurationMs, pcm16Rms(buffer));
+    // 가이드 캡처는 마이크 음량과 상관없이 늘 말하는 중으로 본다 — 가짜 마이크의 신호가 어느 박자에
+    // 시작하느냐에 따라 받아쓰기가 안 붙는 일이 없게 한다.
+    const activity = isHelpDemoEnabled()
+      ? {
+          voicedMs: (this.demoVoicedMs += frameDurationMs),
+          silenceMs: 0,
+          isVoiced: true,
+        }
+      : this.detector.push(frameDurationMs, pcm16Rms(buffer));
 
     if (activity.isVoiced && this.utteranceStartedAtMs === null) {
       this.utteranceStartedAtMs = Math.max(
@@ -221,7 +240,10 @@ export class MockTranscriptionScenario {
       this.commitBufferedAudio(this.recordedDurationMs - activity.silenceMs);
       return;
     }
-    if (this.bufferedBytes >= AUTO_COMMIT_BYTES) {
+    if (
+      this.bufferedBytes >=
+      (isHelpDemoEnabled() ? HELP_DEMO_COMMIT_BYTES : AUTO_COMMIT_BYTES)
+    ) {
       this.commitBufferedAudio();
     }
   }
@@ -328,7 +350,10 @@ export class MockTranscriptionScenario {
       1,
       Math.floor(voicedMs / this.config.partialEveryMs)
     );
-    const tokenCount = Math.min(tokens.length, revealSteps * 3);
+    const tokenCount = Math.min(
+      tokens.length,
+      revealSteps * (isHelpDemoEnabled() ? HELP_DEMO_TOKENS_PER_STEP : 3)
+    );
     const revealed = tokens.slice(0, tokenCount);
 
     // **꼬리 두 어절은 아직 안 굳었다.** 업체가 다음 응답에서 통째로 갈아치울 수 있는
@@ -386,6 +411,7 @@ export class MockTranscriptionScenario {
     this.partialPending = "";
     this.utteranceStartedAtMs = null;
     this.lastPartialAtMs = 0;
+    this.demoVoicedMs = 0;
     this.detector.reset();
   }
 

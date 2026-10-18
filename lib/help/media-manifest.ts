@@ -48,7 +48,7 @@ export const HELP_MEDIA = {
   "clips/new-meeting-record": {
     "width": 960,
     "height": 540,
-    "bytes": 392662
+    "bytes": 509855
   },
   "clips/review-confirm": {
     "width": 960,

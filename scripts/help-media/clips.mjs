@@ -75,7 +75,10 @@ try {
     const vp =
       name === "desktop-menubar"
         ? { width: 760, height: 640 }
-        : { width: 1280, height: 720 };
+        : (scenes.find((s) => s.name === name)?.viewport ?? {
+            width: 1280,
+            height: 720,
+          });
     const context = await browser.newContext({
       viewport: vp,
       recordVideo: { dir: work, size: vp },
@@ -142,11 +145,15 @@ try {
       await scene.ready(page);
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(1000);
-      await page.mouse.move(1100, 660, { steps: 24 });
+      await page.mouse.move(vp.width - 180, vp.height - 60, { steps: 24 });
       const start = (performance.now() - videoZero) / 1000;
       await page.waitForTimeout(650);
-      await scene.run(page);
-      await page.waitForTimeout(1000);
+      // 포스터로 쓸 가장 이해하기 쉬운 순간을 장면이 짚는다(없으면 첫 프레임).
+      let posterAt = 0;
+      await scene.run(page, () => {
+        posterAt = (performance.now() - videoZero) / 1000 - start;
+      });
+      await page.waitForTimeout(scene.endHold ?? 1000);
       const duration = (performance.now() - videoZero) / 1000 - start;
       await context.close();
       const raw = await video.path();
@@ -156,7 +163,10 @@ try {
         start,
         Math.max(5, duration),
         path.join(work, "qa", name),
-        vp.width === 1280 ? { width: 960, height: 540 } : vp
+        vp.width === 1280 || scene.viewport
+          ? { width: 960, height: 540 }
+          : vp,
+        { posterAt, fade: scene.fade }
       );
       console.log(`${name}: ${JSON.stringify(report[name])}`);
     } finally {

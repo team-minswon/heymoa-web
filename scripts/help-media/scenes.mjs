@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { click, type } from "./cursor.mjs";
+import { click, quietClick, type } from "./cursor.mjs";
 const workspace = "/w/01K0000000000";
 const note = (id, tab) => `${workspace}/notes/${id}?tab=${tab}&view=full`;
 const button = (p, name) => p.getByRole("button", { name, exact: true });
@@ -8,27 +8,41 @@ export const scenes = [
   {
     name: "new-meeting-record",
     path: workspace,
+    // 1024 폭으로 찍어 960으로 줄인다 — 거의 1:1이라 도크의 작은 글자와 버튼이 뭉개지지 않는다.
+    viewport: { width: 1024, height: 576 },
+    fade: true,
+    endHold: 1200,
     ready: (p) => button(p, "새 노트").waitFor(),
-    async run(p) {
-      await click(p, button(p, "새 노트"));
+    async run(p, mark) {
+      // 본문 단계와 1:1: [새 노트] → 이름 입력 → [만들기] → 빨간 점(회의 시작) → 받아쓰기가 쌓임
+      await click(p, button(p, "새 노트"), 300, 450);
       await p.getByRole("dialog", { name: "새 회의 만들기" }).waitFor();
+      await p.waitForTimeout(250);
       await type(
         p,
         p.getByLabel("회의 이름", { exact: true }),
-        "4월 캠페인 성과 리뷰"
+        "4월 캠페인 리뷰",
+        { hold: 450, delay: 60 }
       );
-      await click(p, button(p, "만들기"));
-      await click(p, button(p, "회의 시작"));
+      await p.waitForTimeout(350);
+      await click(p, button(p, "만들기"), 100, 450);
+      // 노트가 열리면 하단 도크의 빨간 점이 보인다. 읽을 시간을 준다.
+      await button(p, "회의 시작").waitFor();
+      // 이 절과 상관없는 「내 에이전트」 패널은 접어 둔다. 받아쓰기가 넓게 보이게.
+      await quietClick(
+        p,
+        p.getByRole("button", { name: "내 에이전트 접기", exact: true })
+      );
+      await p.waitForTimeout(700);
+      await click(p, button(p, "회의 시작"), 100, 450);
       await p.getByTestId("note-recording-waveform").waitFor();
-      await p
-        .getByText(/자, 시작하겠습니다/)
-        .first()
-        .waitFor();
-      await p.waitForTimeout(2200);
-      await click(p, button(p, "중지"));
-      await p
-        .getByTestId("note-recording-waveform")
-        .waitFor({ state: "hidden" });
+      // 커서가 중지 버튼 위에 남아 있으면 누르려는 것처럼 보인다. 받아쓰기 쪽으로 비켜 준다.
+      await p.mouse.move(700, 330, { steps: 14 });
+      // 받아쓰기 줄이 하나둘 쌓이는 걸 보여 준다.
+      await p.getByTestId("transcript-block").first().waitFor({ timeout: 30000 });
+      await p.getByTestId("partial-pending").waitFor({ timeout: 30000 });
+      await p.waitForTimeout(300);
+      mark();
     },
   },
   {

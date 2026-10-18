@@ -49,7 +49,8 @@ export async function encode(
   start,
   duration,
   qa,
-  out = { width: 960, height: 540 }
+  out = { width: 960, height: 540 },
+  { posterAt = 0, fade = false } = {}
 ) {
   assert.ok(
     start >= 0 && duration >= 5 && duration <= 18,
@@ -73,7 +74,11 @@ export async function encode(
         String(duration),
         "-an",
         "-vf",
-        `scale=${out.width}:${out.height}:flags=lanczos,fps=30`,
+        `scale=${out.width}:${out.height}:flags=lanczos,fps=30${
+          fade
+            ? `,fade=t=in:st=0:d=0.3:color=white,fade=t=out:st=${(duration - 0.4).toFixed(2)}:d=0.4:color=white`
+            : ""
+        }`,
         "-c:v",
         ext === "webm" ? "libvpx-vp9" : "libx264",
         ...(ext === "webm"
@@ -124,12 +129,18 @@ export async function encode(
       "1",
       png,
     ]);
-    if (index === 0) await sharp(png).webp({ quality: 88 }).toFile(poster);
+    if (index === 0 && !posterAt)
+      await sharp(png).webp({ quality: 88 }).toFile(poster);
     tiles.push({
       input: await sharp(png).resize(640, 360).toBuffer(),
       left: (index % 2) * 640,
       top: Math.floor(index / 2) * 360,
     });
+  }
+  if (posterAt) {
+    const png = path.join(qa, "poster.png");
+    await run(ffmpeg, ["-y", "-v", "error", "-ss", String(posterAt), "-i", `${target}.mp4`, "-frames:v", "1", png]);
+    await sharp(png).webp({ quality: 88 }).toFile(poster);
   }
   await sharp({
     create: { width: 1280, height: 720, channels: 3, background: "white" },
