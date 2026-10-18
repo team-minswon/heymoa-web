@@ -300,6 +300,21 @@ describe("WorkspaceGuestsSettings", () => {
       expect(screen.queryByRole("textbox")).toBeNull();
     });
 
+    it("고치는 동안 저장·취소 버튼으로 끝낼 수 있다", () => {
+      const input = startEditing();
+      expect(screen.queryByRole("button", { name: "이름 변경" })).toBeNull();
+
+      fireEvent.change(input, { target: { value: "박서준3" } });
+      fireEvent.click(screen.getByRole("button", { name: "저장" }));
+      expect(state.rename).toHaveBeenCalledWith("박서준3");
+      expect(screen.queryByRole("textbox")).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "이름 변경" }));
+      fireEvent.click(screen.getByRole("button", { name: "취소" }));
+      expect(screen.queryByRole("textbox")).toBeNull();
+      expect(state.rename).toHaveBeenCalledTimes(1);
+    });
+
     it("Esc 는 저장하지 않고 닫는다", () => {
       const input = startEditing();
 

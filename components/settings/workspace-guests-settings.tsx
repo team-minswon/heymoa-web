@@ -304,6 +304,7 @@ function GuestRow({
         {editing && canRename ? (
           <Input
             autoFocus
+            className="h-8 focus-visible:ring-2"
             aria-label="임시 참여자 이름"
             aria-invalid={empty}
             maxLength={100}
@@ -332,6 +333,27 @@ function GuestRow({
         </span>
       </span>
 
+      {/* 고치는 동안에는 저장·취소만 둔다 — Enter·Esc 만 있으면 어떻게 끝내는지 보이지 않는다. */}
+      {editing && canRename ? (
+        <span className="flex shrink-0 items-center gap-1.5">
+          <Button
+            size="sm"
+            className="h-[30px]"
+            disabled={empty}
+            onClick={save}
+          >
+            저장
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-[30px]"
+            onClick={() => setEditing(false)}
+          >
+            취소
+          </Button>
+        </span>
+      ) : null}
       {/* **관리는 ADMIN만이다.** 목록 자체는 전원이 본다 */}
       {canRename && !editing ? (
         <Button
