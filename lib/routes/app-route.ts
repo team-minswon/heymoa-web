@@ -20,7 +20,7 @@ export function isLandingChromeRoute(pathname: string) {
     pathname === "/privacy" ||
     pathname === "/download" ||
     pathname === "/help" ||
-    pathname === "/help/desktop"
+    pathname.startsWith("/help/")
   );
 }
 

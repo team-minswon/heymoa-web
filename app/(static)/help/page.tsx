@@ -1,161 +1,202 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { LEGACY_HELP_ANCHORS } from "@/app/(static)/help/_content/legacy-anchors";
+import { helpGroups } from "@/app/(static)/help/_content/groups";
+import type { HelpPageId } from "@/app/(static)/help/_content/ids";
 import {
-  LINK,
-  LegalDocument,
-  type LegalSection,
-} from "@/app/(static)/legal-document";
+  helpAxisOf,
+  helpPathOf,
+  helpTopicsOfGroup,
+} from "@/app/(static)/help/_content/paths";
+import { helpTopics } from "@/app/(static)/help/_content/topics";
+import {
+  HELP_CONTAINER,
+  HELP_ROOT,
+  HelpHeader,
+} from "@/components/help/help-frame";
+import {
+  HelpHubBody,
+  HelpHubInput,
+  HelpHubProvider,
+} from "@/components/help/help-hub-search";
+import { JsonLd } from "@/components/help/json-ld";
+import { LegacyHashRedirect } from "@/components/help/legacy-hash-redirect";
+import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
 import { siteConfig } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
 
+const TITLE = `${siteConfig.brandLabel} 사용법`;
+const DESCRIPTION = `헤이모아(${siteConfig.name})의 회의 기록, 화자 지정, 회의 맥락과 용어 사전, 요약 검토, 데스크톱 앱과 AI 앱 연결 방법을 주제별로 안내합니다.`;
+
 export const metadata: Metadata = {
-  title: "HeyMoa 도움말",
-  description: `${siteConfig.name}의 회의 기록, 화자 지정, 회의 맥락과 용어 사전, 요약 검토 방법을 안내합니다. 데스크톱 앱 사용과 AI 앱(MCP) 연결도 다룹니다.`,
+  title: { absolute: `사용 가이드 · ${TITLE}` },
+  description: DESCRIPTION,
   alternates: { canonical: "/help" },
+  openGraph: {
+    type: "website",
+    url: "/help",
+    title: `사용 가이드 · ${TITLE}`,
+    description: DESCRIPTION,
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `사용 가이드 · ${TITLE}`,
+    description: DESCRIPTION,
+  },
 };
 
-/**
- * 사용자가 읽는 사용법 (APP-1024). 제품 안의 링크가 `#id`로 바로 온다 — **id를 바꾸면 그 링크가
- * 깨진다**(`grep -r '/help#'`).
- *
- * 화면 이름은 지금 UI 문구 그대로 쓴다. 문구를 바꾸는 PR은 여기도 같이 고친다. 데스크톱 앱의
- * 자세한 안내는 따로 `/help/desktop` 에 둔다(APP-1026).
- */
-const sections = [
-  {
-    id: "start",
-    title: "처음 시작하기",
-    body: [
-      "로그인한 뒤 「워크스페이스 만들기」로 팀이 함께 쓸 공간을 만듭니다.",
-      "워크스페이스에는 「일반」 프로젝트가 기본으로 있습니다. 회의는 프로젝트 안에 생기고, 나누어 관리하고 싶으면 사이드바의 「+」로 프로젝트를 더 만듭니다.",
-      "상단의 「새 노트」를 누르면 새 회의 창이 열립니다. 이름은 오늘 날짜(「10/18 회의록」처럼)로 채워져 있어 그대로 만들거나 고칠 수 있습니다. 만든 뒤 아래 가운데의 녹음 버튼을 눌러 기록을 시작합니다.",
-      "회의가 끝나면 「회의 종료」를 누릅니다. 종료하면 화자 나누기와 요약이 시작됩니다. 종료한 회의는 다시 기록할 수 없습니다.",
-      "설정은 왼쪽 아래 내 이름에서 엽니다. 설정 창은 주소(?settings=)에 남아서 뒤로 가기로 닫히고, 주소를 공유하면 같은 설정이 열립니다.",
-      "사이드바 아래 「시작하기」에서 남은 단계를 확인합니다. 닫았다면 왼쪽 아래 내 이름을 누르고 「시작 안내 다시 보기」를 선택합니다.",
-    ],
-  },
-  {
-    id: "recording",
-    title: "회의 기록과 마이크",
-    body: [
-      <>
-        브라우저에서는 마이크 소리만 기록합니다. 화상회의 상대방의 소리도
-        기록하려면{" "}
-        <a href="#desktop" className={LINK}>
-          데스크톱 앱
-        </a>
-        을 사용합니다.
-      </>,
-      "처음 기록할 때 브라우저가 마이크 권한을 묻습니다. 거부했다면 주소창 옆 사이트 설정에서 마이크를 허용한 뒤 녹음 버튼을 다시 누릅니다.",
-      "「중지」로 멈추고 「재개」로 이어서 기록합니다.",
-      "한 회의는 한 곳에서만 기록합니다. 다른 탭이나 기기에서 기록 중이면 여기서는 시작할 수 없습니다. 그 기기와 연결이 끊기면 약 1분 뒤 이어서 기록할 수 있습니다.",
-    ],
-  },
-  {
-    id: "desktop",
-    title: "데스크톱 앱",
-    body: [
-      "데스크톱 앱은 내 목소리와 컴퓨터에서 나는 회의 소리를 함께 기록합니다. 앱에서도 같은 웹 서비스를 사용합니다.",
-      "Mac은 macOS 14.2 이상(Apple Silicon), Windows는 Windows 11 x64에서 씁니다. Windows 설치 파일에 서명이 없어 Windows가 처음 실행을 차단할 수 있습니다.",
-      <>
-        설치, 권한 설정, 녹음 중 앱 종료, 문제 해결은{" "}
-        <Link href="/help/desktop" className={LINK}>
-          데스크톱 앱 도움말
-        </Link>
-        에서 확인합니다. 설치 파일은{" "}
-        <Link href="/download" className={LINK}>
-          다운로드 페이지
-        </Link>
-        에 있습니다.
-      </>,
-    ],
-  },
-  {
-    id: "speakers",
-    title: "참석자와 화자",
-    body: [
-      "노트의 「정보」 탭의 「참석자」에서 참석한 사람을 정합니다. 언제든 고칠 수 있습니다.",
-      "워크스페이스 멤버가 아닌 사람은 「임시 참여자」로 추가합니다. 설정 › 워크스페이스 › 「임시 참여자」에서 목록을 보고, 「⋯」 메뉴에서 이름 변경·연동·삭제를 합니다. 연동과 삭제는 관리자만 할 수 있습니다.",
-      "멤버는 설정 › 워크스페이스 › 「멤버」의 「⋯」 메뉴 「이름 변경」으로 「이 워크스페이스에서 보일 이름」을 바꿉니다. 비우면 계정 이름으로 돌아갑니다.",
-      "회의를 종료하면 화자를 나눕니다. 화자 나누기가 끝나면 스크립트 위의 「화자」나 「미지정」 버튼에서 각 화자가 누구인지 지정합니다.",
-      "「이 화자의 모든 발화에 적용」과 「현재 발화에만 적용」 중 하나를 선택합니다.",
-    ],
-  },
-  {
-    id: "context",
-    title: "회의 맥락과 용어 사전",
-    body: [
-      "노트의 「정보」 탭 「회의 맥락」에 회의의 주제와 배경을 적어 두면 받아 적을 때 참고합니다. 입력을 멈추면 자동으로 저장됩니다. 녹음 중에 고친 내용은 다음에 이어서 기록할 때부터 반영됩니다.",
-      "받아쓰기가 자주 틀리는 제품명·사내 용어·영어 약어는 설정 › 워크스페이스 › 「용어 사전」에 적어 둡니다. 쉼표나 줄바꿈으로 구분하면 여러 개를 한 번에 등록할 수 있고, 이 워크스페이스의 모든 회의에서 쓰입니다.",
-      "흔한 단어는 넣지 않아도 됩니다.",
-    ],
-  },
-  {
-    id: "summary",
-    title: "요약 검토",
-    body: [
-      "분석이 끝나면 「요약」 탭에 결정과 할 일 제안이 정리됩니다.",
-      "제안을 확인한 뒤 「검토 완료」를 누르면 결정이 프로젝트에 확정되고 할 일이 생깁니다. 검토를 완료한 뒤에는 수정할 수 없습니다.",
-      "분석이 실패하면 「다시 분석」을 누릅니다.",
-    ],
-  },
-  {
-    id: "tasks",
-    title: "할 일과 챗봇",
-    body: [
-      "사이드바의 「할 일」에서 워크스페이스의 할 일을 모아 봅니다. 「진행 중」·「완료」·「취소」 탭으로 상태를 고르고, 프로젝트로 좁힐 수 있습니다. 담당은 「담당 정하기」로 정하고, 「할 일 추가」로 직접 만들 수도 있습니다.",
-      "오른쪽 아래 「내 에이전트」 버튼으로 개인 챗봇을 엽니다. 「@」로 프로젝트·회의록을 선택해 질문할 수 있습니다.",
-      "챗봇이 Linear·GitHub에 이슈를 만드는 등 외부 서비스에 쓰는 작업은 「승인」을 눌러야 실행됩니다.",
-    ],
-  },
-  {
-    id: "integrations",
-    title: "Linear · GitHub 연동",
-    body: [
-      "설정 › 워크스페이스 › 「연동」에서 관리자가 연결합니다. 챗봇이 회의에서 이슈를 만들거나 조회할 때 이 연동을 씁니다.",
-      "관리자가 아니면 연결 버튼이 보이지 않습니다. 새 연동이 필요하면 관리자에게 요청합니다.",
-    ],
-  },
-  {
-    id: "agents",
-    title: "AI 앱 연결(MCP)",
-    body: [
-      "Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와 프로젝트를 읽게 할 수 있습니다. 읽기만 가능합니다.",
-      "설정 › 계정 › 「내 MCP 연결」에서 연결합니다. 「회수」를 누르면 언제든 끊을 수 있습니다.",
-      "관리자는 설정 › 워크스페이스 › 「MCP 관리」에서 「MCP 연결 허용」을 켜고 끕니다. 끄면 이 워크스페이스에 맡긴 기존 연결이 모두 회수되고, 다시 켜도 되살아나지 않습니다. 꺼져 있는 동안에는 새 연결을 만들 수 없습니다.",
-    ],
-  },
-  {
-    id: "feedback",
-    title: "문의·피드백",
-    body: [
-      "사이드바의 「문의·피드백」에서 장애·오류, 사용 문의, 기능 제안, 기타 중 하나를 골라 보냅니다. 어느 화면에서 쓰는지가 함께 전달됩니다.",
-      "답변이 달리면 「내 문의」에서 확인합니다. 새 답변이 있으면 사이드바에 숫자로 표시됩니다.",
-    ],
-  },
-  {
-    id: "trouble",
-    title: "문제 해결",
-    body: [
-      "「마이크 권한이 필요합니다」 — 브라우저 사이트 설정에서 마이크를 허용한 뒤 녹음 버튼을 다시 누릅니다.",
-      "「사용할 수 있는 마이크를 찾지 못했습니다」 — 마이크가 연결돼 있는지 확인합니다.",
-      "「실시간 스크립트 서버에 연결하지 못했습니다」 — 로그인 상태와 인터넷 연결을 확인한 뒤 녹음 버튼을 다시 누릅니다.",
-      "「다른 탭이나 기기에서 이 회의를 녹음하고 있어요」 — 그 탭이나 기기에서 기록을 중지합니다.",
-    ],
-  },
-] satisfies readonly LegalSection[];
+/** 허브 위쪽에 크게 세우는 페이지. 처음 오는 사람이 가장 먼저 찾는 것들이다. */
+const FEATURED: readonly HelpPageId[] = [
+  "getting-started",
+  "terms-context",
+  "review",
+];
 
-export default function HelpPage() {
+const card =
+  "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 transition-colors duration-150 hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)] motion-reduce:transition-none";
+
+const H2_SMALL =
+  "m-0 mb-4 text-[14px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]";
+
+/**
+ * 사용 가이드 허브 (APP-1231). 머리 판 안의 큰 검색칸이 입구이고(전 페이지 검색), 그 아래 「자주 찾는 주제」, 그리고 두 축 —
+ * 기능별(그룹 카드와 그 안의 페이지)과 상황별(「이럴 때」 레시피)이 나란히 선다. 옛 한 장짜리 시절의 `#해시` 링크는
+ * `LegacyHashRedirect` 가 새 주소로 옮긴다.
+ */
+export default function HelpHubPage() {
+  const featured = FEATURED.map(
+    (id) => helpTopics.find((topic) => topic.slug === id)!
+  );
+  const featureGroups = helpGroups.filter((group) => group.axis === "feature");
+  const situations = helpTopics.filter(
+    (topic) => helpAxisOf(topic) === "situation"
+  );
   return (
-    <LegalDocument
-      label="도움말"
-      title="HeyMoa 사용법"
-      description="회의 기록, 화자 지정, 요약 검토와 프로젝트 반영 방법을 안내합니다."
-      effectiveDate="2026년 10월 18일"
-      dateLabel="최종 수정일"
-      sections={sections}
-    />
+    <div style={TV_VARS} className={HELP_ROOT}>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: siteConfig.name,
+              item: siteConfig.url,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "사용 가이드",
+              item: `${siteConfig.url}/help`,
+            },
+          ],
+        }}
+      />
+      <LegacyHashRedirect map={LEGACY_HELP_ANCHORS} />
+      <HelpHubProvider>
+        <HelpHeader
+          label="도움말"
+          title={TITLE}
+          description="궁금한 낱말을 찾거나, 기능 또는 상황으로 골라 읽어 보세요."
+        >
+          <HelpHubInput />
+        </HelpHeader>
+        <div className={cn(HELP_CONTAINER, "mt-8 lg:mt-12")}>
+          <HelpHubBody>
+            <h2 className={H2_SMALL}>자주 찾는 주제</h2>
+            <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
+              {featured.map((topic) => (
+                <li key={topic.slug}>
+                  <Link
+                    href={helpPathOf(topic)}
+                    className={cn(card, "bg-[var(--tv-lav-soft)] p-7", FOCUS)}
+                  >
+                    <span className="text-[22px] leading-[1.3] font-extrabold tracking-[-0.03em] break-keep text-[var(--tv-ink)]">
+                      {topic.title}
+                    </span>
+                    <span className="text-[15px] leading-[1.65] break-keep text-[var(--tv-body)]">
+                      {topic.summary}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-10 grid gap-10 lg:mt-12 xl:grid-cols-2 xl:gap-8">
+              <section aria-labelledby="by-feature">
+                <h2 id="by-feature" className={H2_SMALL}>
+                  기능별로 찾기
+                </h2>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                  {featureGroups.map((group) => (
+                    <div
+                      key={group.slug}
+                      className="rounded-[20px] border border-[var(--tv-rule)] bg-white p-6"
+                    >
+                      <h3 className="m-0 text-[18px] font-extrabold leading-[1.35] break-keep text-[var(--tv-ink)]">
+                        <Link
+                          href={`/help/${group.slug}`}
+                          className={cn(
+                            "rounded-[4px] hover:text-[var(--tv-brand-deep)]",
+                            FOCUS
+                          )}
+                        >
+                          {group.title}
+                        </Link>
+                      </h3>
+                      <p className="m-0 mt-1 text-[14px] leading-[1.65] break-keep text-[var(--tv-muted)]">
+                        {group.summary}
+                      </p>
+                      <ul className="m-0 mt-3 flex list-none flex-col gap-0.5 p-0">
+                        {helpTopicsOfGroup(group.slug).map((topic) => (
+                          <li key={topic.slug}>
+                            <Link
+                              href={helpPathOf(topic)}
+                              className={cn(
+                                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] transition-colors duration-150 hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
+                                FOCUS
+                              )}
+                            >
+                              {topic.title}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section aria-labelledby="by-situation">
+                <h2 id="by-situation" className={H2_SMALL}>
+                  상황별로 찾기
+                </h2>
+                <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0">
+                  {situations.map((topic) => (
+                    <li key={topic.slug}>
+                      <Link
+                        href={helpPathOf(topic)}
+                        className={cn(card, "gap-1 p-5", FOCUS)}
+                      >
+                        <span className="text-[16px] leading-[1.4] font-extrabold break-keep text-[var(--tv-ink)]">
+                          {topic.title}
+                        </span>
+                        <span className="text-[14px] leading-[1.6] break-keep text-[var(--tv-body)]">
+                          {topic.summary}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </HelpHubBody>
+        </div>
+      </HelpHubProvider>
+    </div>
   );
 }

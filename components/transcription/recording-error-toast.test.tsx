@@ -66,7 +66,7 @@ describe("RecordingErrorToast", () => {
     render(<RecordingErrorToast />);
     toast.error.mock.calls.at(-1)![1].action.onClick();
     expect(openSitePage).toHaveBeenCalledWith(
-      "/help/desktop#first-run",
+      "/help/start/desktop#first-run",
       expect.any(Function)
     );
   });

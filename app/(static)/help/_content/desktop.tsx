@@ -1,21 +1,9 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 
-import {
-  LINK,
-  LegalDocument,
-  type LegalSection,
-} from "@/app/(static)/legal-document";
-import { siteConfig } from "@/lib/site";
+import { LINK } from "@/app/(static)/legal-document";
+import { helpPathById } from "@/app/(static)/help/_content/path-by-id";
+import type { HelpSection } from "@/app/(static)/help/_content/types";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
-
-export const dynamic = "force-static";
-
-export const metadata: Metadata = {
-  title: "데스크톱 앱 도움말",
-  description: `${siteConfig.name} 데스크톱 앱의 설치, 마이크·컴퓨터 소리 권한 설정, 메뉴 막대에서 녹음 확인, 녹음 중 앱 종료와 문제 해결 방법을 안내합니다.`,
-  alternates: { canonical: "/help/desktop" },
-};
 
 /** 터미널에 그대로 옮겨 쓰는 명령. 문단 안에 둔다 — 어두운 코드 상자는 안 쓴다. */
 const CODE =
@@ -39,21 +27,24 @@ const RELEASES = (
  * Zoom·Webex 상대방 소리, Bluetooth, 절전 복귀는 실기기 확인 전이라(APP-896) 약속하지 않고 「확인 중」으로 둔다.
  * 「녹음이 끊김」은 0.1.0-beta.1(짧은 멈춤에도 끊김)과 beta.2(3초 넘게 멈추면 끊김, APP-1014) 둘 다에 맞게 쓴다.
  */
-const sections = [
+export const desktopSections: HelpSection[] = [
   {
     id: "install",
     title: "설치",
     body: [
       "Mac은 macOS 14.2 이상(Apple Silicon), Windows는 Windows 11 x64에서 씁니다. 그 밖의 환경에서는 「지원하지 않는 환경」이 표시되고 앱이 종료됩니다. 컴퓨터 소리를 받는 방식이 OS마다 달라 확인한 환경에서만 실행됩니다. 이 경우에는 브라우저에서 웹 서비스를 사용합니다. 마이크 소리만 기록합니다.",
       <>
-        설치 파일은 {RELEASES}에 있습니다. Apple Silicon Mac은 파일 이름이 mac-arm64.dmg로 끝나는
-        파일을, Windows는 win-x64.exe로 끝나는 파일을 받습니다.
+        설치 파일은 {RELEASES}에 있습니다. Apple Silicon Mac은 파일 이름이
+        mac-arm64.dmg로 끝나는 파일을, Windows는 win-x64.exe로 끝나는 파일을
+        받습니다.
       </>,
       "Mac은 DMG를 열고 HeyMoa를 응용 프로그램 폴더로 옮깁니다. Windows는 받은 설치 파일을 실행합니다.",
       <>
         Mac에서 Homebrew를 쓰면 터미널에서{" "}
-        <code className={CODE}>brew install --cask team-minswon/tap/heymoa</code>로
-        설치합니다.
+        <code className={CODE}>
+          brew install --cask team-minswon/tap/heymoa
+        </code>
+        로 설치합니다.
       </>,
       "Mac 앱은 Apple 서명·공증을 받았습니다. 처음 실행할 때 인터넷에서 받은 앱이라는 확인 창이 뜨면 열기를 누릅니다.",
       "Windows 설치 파일에 서명이 없어 SmartScreen 경고가 뜰 수 있습니다.",
@@ -86,6 +77,7 @@ const sections = [
     id: "menubar",
     title: "메뉴 막대와 트레이",
     body: [
+      "녹음 중이 아닐 때 팝오버는 「녹음 대기」로 열리고 「녹음 중인 회의가 없습니다.」가 표시됩니다. 다른 사람이 기록 중인 회의를 팝오버에서 보는 중에는 「녹음 중지」 자리가 「보기 종료」로 바뀝니다.",
       "Mac에서는 녹음 중 메뉴 막대 아이콘 옆에 녹음 시작 후 지난 시간이 표시됩니다.",
       "아이콘을 누르면 지금 회의의 타임라인이 열립니다. 「전체」·「결정」·「할 일」·「열린 질문」·「참고」로 표시할 내용을 고릅니다. 「현재 회의 열기 ↗」로 회의 화면을 열고, 「■ 녹음 중지」로 녹음을 멈춥니다. 30초 넘게 새 내용이 없으면 「갱신이 멈췄습니다」가 뜹니다. 회의를 열어 확인합니다.",
       "아이콘을 오른쪽 클릭하면 메뉴 첫 줄에 현재 상태가 표시됩니다. 「녹음 중 · 시작 후 12:34」처럼 보입니다.",
@@ -98,7 +90,7 @@ const sections = [
     title: "녹음 중지와 앱 종료",
     body: [
       "「녹음 중지」는 녹음만 멈춥니다. 회의는 종료되지 않으므로 이어서 기록할 수 있습니다. 회의를 마치려면 회의 화면에서 「회의 종료」를 누릅니다.",
-      "메뉴의 「앱 종료」나 Mac의 ⌘Q는 녹음 중이거나 보내지 못한 소리가 있으면 바로 종료하지 않고 확인을 요청합니다.",
+      "메뉴에서 「앱 종료」를 선택하거나 Mac에서 ⌘Q를 누르면, 녹음 중이거나 보내지 못한 소리가 있을 때 바로 종료하지 않고 확인 창이 열립니다.",
       "「녹음 종료 후 앱 종료」를 고르면 녹음을 멈추고 소리를 모두 보낸 뒤 앱이 종료됩니다. 30초가 지나도 끝나지 않으면 안내가 표시됩니다. 기다리는 동안 종료를 취소하려면 「앱 종료」를 다시 누르고 「앱 종료 취소」를 고릅니다.",
       "「소리를 버리고 종료…」를 고르면 한 번 더 확인한 뒤 앱이 바로 종료됩니다. 아직 서버에 저장되지 않은 소리는 되살릴 수 없습니다.",
     ],
@@ -108,13 +100,15 @@ const sections = [
     title: "업데이트",
     body: [
       <>
-        자동 업데이트는 없습니다. 새 버전은 {RELEASES}에서 확인합니다. 화면과 기능 대부분은
-        웹과 함께 바로 바뀝니다. 소리 녹음·메뉴 막대 같은 앱 자체 기능은 새 버전을 설치해야 바뀝니다.
+        자동 업데이트는 없습니다. 새 버전은 {RELEASES}에서 확인합니다. 화면과
+        기능 대부분은 웹과 함께 바로 바뀝니다. 소리 녹음·메뉴 막대 같은 앱 자체
+        기능은 새 버전을 설치해야 바뀝니다.
       </>,
       <>
-        녹음을 중지하고 앱을 종료한 뒤 새 버전을 설치합니다. Mac은 새 DMG의 HeyMoa를 응용 프로그램 폴더에
-        덮어쓰고, Homebrew는 <code className={CODE}>brew upgrade --cask heymoa</code>를
-        실행합니다. Windows는 새 설치 파일을 실행합니다.
+        녹음을 중지하고 앱을 종료한 뒤 새 버전을 설치합니다. Mac은 새 DMG의
+        HeyMoa를 응용 프로그램 폴더에 덮어쓰고, Homebrew는{" "}
+        <code className={CODE}>brew upgrade --cask heymoa</code>를 실행합니다.
+        Windows는 새 설치 파일을 실행합니다.
       </>,
       "로그인할 때 「앱을 업데이트한 뒤 다시 로그인해 주세요」가 표시되면 앱을 업데이트해야 합니다. 「새 버전 보기」를 눌러 새 버전을 받습니다.",
     ],
@@ -124,7 +118,7 @@ const sections = [
     title: "문제 해결",
     body: [
       "「녹음을 시작하지 못했습니다」 — 마이크와 컴퓨터 소리 권한을 확인합니다. Mac은 「개인정보 보호 및 보안」의 마이크·오디오 녹음 권한, Windows는 설정의 마이크 개인 정보 화면을 확인합니다.",
-      "첫 녹음에서 권한을 허용했다면 먼저 녹음을 다시 눌러 연결을 확인합니다. 계속 실패하거나 macOS가 앱 종료를 요청하면 앱을 완전히 종료한 뒤 다시 엽니다. Mac의 창 닫기는 앱을 숨기므로 메뉴의 「앱 종료」나 ⌘Q를 사용합니다. 녹음은 자동으로 다시 시작되지 않습니다.",
+      "첫 녹음에서 권한을 허용했다면 먼저 녹음 버튼을 다시 눌러 연결을 확인합니다. 계속 실패하거나 macOS가 앱 종료를 요청하면 앱을 완전히 종료한 뒤 다시 엽니다. Mac의 창 닫기는 앱을 숨기므로 메뉴의 「앱 종료」나 ⌘Q를 사용합니다. 녹음은 자동으로 다시 시작되지 않습니다.",
       "상대방 소리가 녹음되지 않음 — 그 소리가 지금 이 컴퓨터에서 들리는지 확인합니다. Windows는 소리 설정의 출력 장치를 확인합니다.",
       "「소리 캡처가 중단됐습니다」 — 녹음이 멈췄습니다. 마지막 소리 일부가 빠졌을 수 있습니다. 앱 화면이 잠시 응답하지 않으면 녹음이 멈출 수 있습니다. 회의에서 다시 녹음을 시작합니다.",
       "「앱 화면이 중단되었습니다」 — 「다시 열기」를 누릅니다. 녹음은 자동으로 다시 시작되지 않습니다. 회의에서 직접 다시 시작합니다. 보내지 못한 소리는 사라질 수 있습니다.",
@@ -133,24 +127,11 @@ const sections = [
       "Bluetooth 헤드셋을 쓴 녹음과 절전에서 깨어난 뒤의 녹음은 아직 확인 중입니다. 녹음 중 끊김 안내가 보이면 녹음을 중지했다가 다시 시작합니다.",
       <>
         마이크 찾기·실시간 스크립트 연결처럼 웹에서도 생기는 문제는{" "}
-        <Link href="/help#trouble" className={LINK}>
+        <Link href={helpPathById("troubleshooting")} className={LINK}>
           도움말의 문제 해결
         </Link>
         에서 확인합니다.
       </>,
     ],
   },
-] satisfies readonly LegalSection[];
-
-export default function DesktopHelpPage() {
-  return (
-    <LegalDocument
-      label="도움말"
-      title="데스크톱 앱 사용법"
-      description="설치, 첫 녹음, 메뉴 막대에서 상태 확인, 녹음 중 앱 종료 방법을 안내합니다."
-      effectiveDate="2026년 10월 16일"
-      dateLabel="최종 수정일"
-      sections={sections}
-    />
-  );
-}
+];

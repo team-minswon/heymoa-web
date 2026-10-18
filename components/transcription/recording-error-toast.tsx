@@ -1,5 +1,6 @@
 "use client";
 
+import { helpPathById } from "@/app/(static)/help/_content/path-by-id";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/ui/toast";
@@ -32,7 +33,9 @@ export function RecordingErrorToast() {
         label: "해결 방법",
         onClick: () =>
           openSitePage(
-            isDesktopApp ? "/help/desktop#first-run" : "/help#trouble",
+            isDesktopApp
+              ? `${helpPathById("desktop")}#first-run`
+              : helpPathById("troubleshooting"),
             router.push
           ),
       },
