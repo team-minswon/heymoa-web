@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
-import { SpeakerChip } from "@/components/notes/speaker-chip";
+import { TranscriptRow } from "@/components/notes/transcript-row";
 import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { transcriptToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { toGapRows } from "@/lib/transcription/gaps";
@@ -21,7 +21,6 @@ import {
   type SpeakerFace,
 } from "@/lib/transcription/speaker-identity";
 import {
-  formatOffset,
   interleaveTranscript,
   mergeLiveSegments,
 } from "@/lib/transcription/presentation";
@@ -40,6 +39,7 @@ import {
 } from "@/lib/notes/follow-scroll";
 
 const EMPTY_PARTICIPANTS: SpeakerFace[] = [];
+const EMPTY_SPEAKERS: never[] = [];
 
 /** 발화 길이는 고르지 않다 — 전부 같은 폭이면 표처럼 보여서 대화로 안 읽힌다. */
 const TRANSCRIPT_SKELETON_WIDTHS = ["58%", "86%", "41%"];
@@ -100,13 +100,12 @@ export function TranscriptView({
     [segments, transcript]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";
+  // 전사 전체(`transcript`)가 아니라 화자 목록에만 건다. 줄이 붙어 재조회될 때마다 resolver 가
+  // 바뀌면 화자 객체가 전부 새로 만들어져 모든 줄이 다시 그려진다. 같은 목록이면 참조가 같다.
+  const speakers = diarized ? transcript!.diarization.speakers : EMPTY_SPEAKERS;
   const speakerOf = useMemo(
-    () =>
-      createSpeakerIdentityResolver(
-        diarized ? transcript!.diarization.speakers : [],
-        participants
-      ),
-    [diarized, transcript, participants]
+    () => createSpeakerIdentityResolver(speakers, participants),
+    [speakers, participants]
   );
 
   const partial = useLivePartial(noteId);
@@ -253,35 +252,19 @@ export function TranscriptView({
         row.type === "gap" ? (
           <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
         ) : (
-          <article
+          <TranscriptRow
             key={row.segment.segmentId}
-            ref={segmentRef(row.segment.segmentId)}
-            /* 짚힌 줄로 포커스를 옮길 수 있게 늘 단다. 짚힌 줄에만 달면 형광이 꺼질 때
-           속성이 사라지며 포커스를 빼앗는다. `-1` 은 Tab 순서에 안 든다. */
-            tabIndex={-1}
-            data-testid="transcript-block"
-            data-timeline-start-ms={row.segment.startedAtMs}
-            data-state="final"
-            data-focused={isHighlighted(row.segment.segmentId) || undefined}
-            className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
-          >
-            <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
-              {formatOffset(row.segment.startedAtMs)}
-            </time>
-            <div className="min-w-0">
-              {speakerOf(row.segment.speakerLabel) ? (
-                <SpeakerChip
-                  identity={speakerOf(row.segment.speakerLabel)!}
-                  className="mb-1"
-                />
-              ) : null}
-              <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
-                <span {...markProps(row.segment.segmentId)}>
-                  {row.segment.text}
-                </span>
-              </p>
-            </div>
-          </article>
+            segment={row.segment}
+            speaker={speakerOf(row.segment.speakerLabel)}
+            focus={
+              isHighlighted(row.segment.segmentId)
+                ? {
+                    ref: segmentRef(row.segment.segmentId),
+                    markProps: markProps(row.segment.segmentId),
+                  }
+                : null
+            }
+          />
         )
       ),
     [rows, speakerOf, segmentRef, isHighlighted, markProps]

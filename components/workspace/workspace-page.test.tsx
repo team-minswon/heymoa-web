@@ -36,6 +36,7 @@ vi.mock("@/components/transcription/recording-provider", () => ({
     activeNoteId: undefined,
     session: null,
   }),
+  useRecordingNoteId: () => null,
   useRecordingMeter: () => ({ level: 0, levelHistory: [0, 0, 0, 0, 0] }),
 }));
 const shell = vi.hoisted(() => ({

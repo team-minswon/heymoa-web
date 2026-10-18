@@ -74,6 +74,14 @@ function stableIndex(value: string, length: number) {
   return Math.abs(hash) % length;
 }
 
+function mockStopDelayMs() {
+  try {
+    return Number(window.localStorage.getItem("heymoa:mockStopDelayMs")) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function createMockTranscriptionScenario(options: ScenarioOptions) {
   return new MockTranscriptionScenario(options);
 }
@@ -238,13 +246,21 @@ export class MockTranscriptionScenario {
     // 발화 경계는 침묵(`finalSilenceMs`)과 버퍼 상한이 정한다.
     this.commitBufferedAudio();
     this.phase = "stopping";
-    mockDb.updateSessionStatus(this.options.sessionId, "COMPLETED");
-    this.options.send({
-      type: "completed",
-      sessionId: this.options.sessionId,
-    });
-    this.phase = "closed";
-    this.options.requestClose?.(1000, "completed");
+    // 실서버는 남은 소리 저장과 업체의 마지막 확정을 기다려 수 초 뒤에 끝낸다(최대 10초+10초).
+    // 「마무리 중」 상태를 눈으로 볼 수 있게 `localStorage["heymoa:mockStopDelayMs"]` 만큼 미룬다.
+    const finish = () => {
+      if (this.phase !== "stopping") return;
+      mockDb.updateSessionStatus(this.options.sessionId, "COMPLETED");
+      this.options.send({
+        type: "completed",
+        sessionId: this.options.sessionId,
+      });
+      this.phase = "closed";
+      this.options.requestClose?.(1000, "completed");
+    };
+    const delayMs = mockStopDelayMs();
+    if (delayMs > 0) setTimeout(finish, delayMs);
+    else finish();
   }
 
   /**

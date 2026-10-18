@@ -121,6 +121,12 @@ export type RecordingMeterValue = {
 const RecordingContext = createContext<RecordingContextValue | null>(null);
 const RecordingTranscriptContext = createContext<TranscriptState | null>(null);
 const RecordingMeterContext = createContext<RecordingMeterValue | null>(null);
+/**
+ * 지금 녹음이 **진행 중인** 노트 id (없으면 null). 목록 행처럼 「이 노트가 녹음 중인가」만 묻는
+ * 자리가 이것을 읽는다. 통째 `useRecording()` 은 초 단위 타이머·알림·버퍼가 바뀔 때마다 구독자를
+ * 전부 다시 그려서, 노트가 많은 사이드바가 녹음하는 내내 다시 그려졌다(APP-1246).
+ */
+const RecordingNoteContext = createContext<string | null>(null);
 
 /**
  * 지금 붙들고 있는 전사 세션이 아직 살아 있는가. 무엇의 녹음인지는 아래 두 함수가 묻는다.
@@ -830,13 +836,19 @@ export function RecordingProvider({
     [level, levelHistory]
   );
 
+  const recordingNoteId = ACTIVE_PHASES.has(phase)
+    ? (activeNoteId ?? session?.noteId ?? null)
+    : null;
+
   return (
     <RecordingContext.Provider value={value}>
-      <RecordingTranscriptContext.Provider value={transcript}>
-        <RecordingMeterContext.Provider value={meterValue}>
-          {children}
-        </RecordingMeterContext.Provider>
-      </RecordingTranscriptContext.Provider>
+      <RecordingNoteContext.Provider value={recordingNoteId}>
+        <RecordingTranscriptContext.Provider value={transcript}>
+          <RecordingMeterContext.Provider value={meterValue}>
+            {children}
+          </RecordingMeterContext.Provider>
+        </RecordingTranscriptContext.Provider>
+      </RecordingNoteContext.Provider>
     </RecordingContext.Provider>
   );
 }
@@ -856,6 +868,11 @@ export function useRecording() {
 export function useIsRecordingBusy() {
   const value = useContext(RecordingContext);
   return value ? isRecordingLive(value) : false;
+}
+
+/** 녹음이 진행 중인 노트 id. 제공자 밖이면 null. 값이 바뀔 때만 다시 그려진다. */
+export function useRecordingNoteId() {
+  return useContext(RecordingNoteContext);
 }
 
 export function useRecordingMeter() {

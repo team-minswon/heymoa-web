@@ -33,6 +33,15 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("B")?.displayName).toBe("화자 B");
   });
 
+  /** 같은 사람이면 같은 객체여야 화면의 memo 가 깨지지 않는다(APP-1246). */
+  it("같은 라벨은 부를 때마다 같은 객체를 준다", () => {
+    const resolve = createSpeakerIdentityResolver([speaker("A"), speaker("B")]);
+
+    expect(resolve("A")).toBe(resolve("A"));
+    expect(resolve("A")).not.toBe(resolve("B"));
+    expect(resolve(null)).toBeNull();
+  });
+
   it("「참석자 아님」으로 확정해도 화자 A 로 남는다", () => {
     // 그 사람이 누구인지 우리가 모른다는 것이 사실이다
     const resolve = createSpeakerIdentityResolver([

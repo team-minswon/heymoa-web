@@ -29,6 +29,12 @@ const recording = vi.hoisted(() => ({
 
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording.current,
+  useRecordingNoteId: () =>
+    ["requesting-permission", "connecting", "recording", "stopping"].includes(
+      recording.current.phase
+    )
+      ? (recording.current.activeNoteId ?? recording.current.session?.noteId ?? null)
+      : null,
   useRecordingMeter: () => recording.meter,
 }));
 

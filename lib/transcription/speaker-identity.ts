@@ -150,7 +150,12 @@ export function createSpeakerIdentityResolver(
     ])
   );
 
-  return (
+  /**
+   * 라벨만으로 정해지는 답은 한 번만 만든다. 같은 사람을 부를 때마다 새 객체를 주면 화면의 memo 가
+   * 전부 깨져서, 긴 전사는 줄 하나가 붙을 때마다 모든 줄을 다시 그린다(APP-1246).
+   */
+  const byLabelCache = new Map<string, SpeakerIdentity | null>();
+  const resolve = (
     label: string | null | undefined,
     /**
      * 이 발화에만 붙은 참여 기록. 있으면 **라벨의 이름을 이긴다** — 더 좁은 범위를 사람이
@@ -215,5 +220,18 @@ export function createSpeakerIdentityResolver(
           : null),
       unassigned: !speaker?.confirmed,
     };
+  };
+
+  return (
+    label: string | null | undefined,
+    overriddenParticipantId?: string | null
+  ): SpeakerIdentity | null => {
+    if (!label) return null;
+    // 발화에 따로 붙은 사람이 이긴 줄만 그 줄 몫으로 만든다. 나머지는 라벨의 답이라 한 번이면 된다
+    if (overriddenParticipantId && nameOf.get(overriddenParticipantId)) {
+      return resolve(label, overriddenParticipantId);
+    }
+    if (!byLabelCache.has(label)) byLabelCache.set(label, resolve(label));
+    return byLabelCache.get(label)!;
   };
 }

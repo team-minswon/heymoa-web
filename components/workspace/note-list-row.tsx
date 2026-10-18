@@ -2,7 +2,7 @@
 
 import { track } from "@/lib/analytics/track";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 
 import {
-  useRecording,
   useRecordingMeter,
+  useRecordingNoteId,
 } from "@/components/transcription/recording-provider";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import {
@@ -171,7 +171,7 @@ function MeetingMeta({
   );
 }
 
-export function NoteListRow({
+export const NoteListRow = memo(function NoteListRow({
   workspaceId,
   note,
   now = null,
@@ -184,12 +184,7 @@ export function NoteListRow({
   /** 「더 보기」로 방금 이어 붙은 행. 짧게 옅은 데서 들어온다 — 자리는 처음부터 잡혀 있어 아래가 밀리지 않는다. */
   arrived?: boolean;
 }) {
-  const recording = useRecording();
-  const isRecording =
-    (recording.activeNoteId ?? recording.session?.noteId) === note.noteId &&
-    ["requesting-permission", "connecting", "recording", "stopping"].includes(
-      recording.phase
-    );
+  const isRecording = useRecordingNoteId() === note.noteId;
   // `전체 화면으로 열기`는 메뉴 안에 있고, 누르면 메뉴가 닫히며 그 안의 표시도 사라진다.
   // 그래서 진행 상태를 포털 밖(이 행)에 둔다.
   //
@@ -342,4 +337,4 @@ export function NoteListRow({
       />
     </article>
   );
-}
+});

@@ -18,6 +18,7 @@ import {
   type RecordingApi,
   type RecordingRuntime,
   useRecording,
+  useRecordingNoteId,
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
 
@@ -146,6 +147,7 @@ function setup({
       () => ({
         ...useRecording(),
         transcript: useRecordingTranscript(),
+        recordingNoteId: useRecordingNoteId(),
       }),
       { wrapper }
     ),
@@ -238,6 +240,17 @@ describe("RecordingProvider", () => {
     expect(harness.controller.connect).toHaveBeenCalledWith(session.sessionId);
     expect(harness.order).toEqual(["permission", "realtime-connect"]);
     expect(harness.result.current.phase).toBe("recording");
+  });
+
+  it("진행 중인 노트 id 는 녹음이 서 있는 동안만 값이고 끝나면 null 이다", async () => {
+    const harness = setup();
+    expect(harness.result.current.recordingNoteId).toBeNull();
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(harness.result.current.recordingNoteId).toBe(session.noteId);
+
+    await act(() => harness.result.current.stop());
+    expect(harness.result.current.recordingNoteId).toBeNull();
   });
 
   it("invalidates the exact note and cached project lists after creating a recording session", async () => {
