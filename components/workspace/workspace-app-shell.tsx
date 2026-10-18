@@ -146,7 +146,6 @@ export function WorkspaceAppShell({
   // 「시작하기」의 판단·조회·기록은 늘 떠 있는 셸이 한다 — 사이드바는 모바일에서 닫히면 사라지는 시트다.
   const onboarding = useOnboardingChecklist({
     workspaceId,
-    projectCount: projects.length,
     isWorkspacePending: workspaceQuery.isPending || projectsQuery.isPending,
   });
   /**

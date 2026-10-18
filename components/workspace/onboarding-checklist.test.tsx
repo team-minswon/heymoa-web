@@ -21,13 +21,13 @@ describe("OnboardingChecklist", () => {
         workspaceId="W1"
         model={{
           userId: "u1",
-          done: new Set(["project"]),
+          done: new Set(["confirm"]),
           hasMoreNotes: false,
         }}
       />
     );
 
-    expect(screen.getByText("1/3")).toBeInTheDocument();
+    expect(screen.getByText("1/2")).toBeInTheDocument();
     expect(screen.queryByText("데스크톱 앱 받기")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /팀원 초대하기\s*선택/ })
@@ -45,14 +45,14 @@ describe("OnboardingChecklist", () => {
         workspaceId="W1"
         model={{
           userId: "u1",
-          done: new Set(["project", "record", "confirm"]),
+          done: new Set(["record", "confirm"]),
           hasMoreNotes: false,
         }}
       />
     );
 
     expect(screen.getByText("준비가 끝났어요")).toBeInTheDocument();
-    expect(screen.getByText("3/3")).toBeInTheDocument();
+    expect(screen.getByText("2/2")).toBeInTheDocument();
   });
 
   // 목록을 못 읽었는데 그대로 그리면 기록이 없는 것처럼 「첫 회의 기록하기」가 미완료로 보인다
