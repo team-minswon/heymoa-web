@@ -2099,11 +2099,13 @@ test("renames a guest in settings and the attendee field follows", async ({
     .getByRole("listitem")
     .filter({ hasText: "박서준" })
     .first();
-  await row.getByRole("button", { name: "이름 변경" }).click();
-  // 입력이 열린 행은 이름이 텍스트가 아니라 값이라 `row` 가 더는 안 잡힌다 — 열린 입력은 하나뿐이다.
-  const input = dialog.getByRole("textbox", { name: "임시 참여자 이름" });
+  // 행 끝 메뉴 → 이름 변경 대화상자(APP-1210). 행 안에서 고치지 않는다.
+  await row.getByRole("button", { name: "박서준 관리" }).click();
+  await page.getByRole("menuitem", { name: "이름 변경" }).click();
+  const input = page.getByRole("textbox", { name: "이름" });
   await input.fill("박서준2");
   await input.press("Enter");
+  await expect(input).toHaveCount(0);
 
   await expect(dialog.getByText("박서준2")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -2300,7 +2302,8 @@ test("links a guest to an account and keeps the speaker assignment", async ({
 
   const guestRow = page.getByRole("listitem").filter({ hasText: "최유진" });
   await expect(guestRow).toBeVisible();
-  await guestRow.getByRole("button", { name: "연동" }).click();
+  await guestRow.getByRole("button", { name: "최유진 관리" }).click();
+  await page.getByRole("menuitem", { name: "계정과 연동" }).click();
   await page.getByRole("button", { name: /한지원/ }).click();
 
   // ③ 되돌릴 수 없다는 사실이 실행 전에 보인다.

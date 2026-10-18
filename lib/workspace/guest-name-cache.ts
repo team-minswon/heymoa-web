@@ -1,6 +1,9 @@
 import type { Query, QueryClient } from "@tanstack/react-query";
 
-import { isNoteListQueryKey } from "@/lib/notes/query-keys";
+import {
+  isNoteListQueryKey,
+  isWorkspaceGuestsQueryKey,
+} from "@/lib/notes/query-keys";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 
 /**
@@ -40,6 +43,105 @@ export function writeGuestName(
   }
 }
 
+/**
+ * 임시 참여자 목록 캐시에서 그 사람의 지금 이름을 읽는다. 쪽 수가 다른 목록 캐시가 여럿이면 **가장 늦게 받은** 것을 믿는다.
+ * 없으면 undefined.
+ */
+export function cachedGuestName(
+  queryClient: QueryClient,
+  guestId: string
+): string | undefined {
+  let latest: { at: number; name: string } | undefined;
+  for (const query of queryClient.getQueryCache().findAll({
+    predicate: (candidate) => isWorkspaceGuestsQueryKey(candidate.queryKey),
+  })) {
+    const data = query.state.data as
+      | { data?: { data?: { guests?: Json[] } } }
+      | undefined;
+    const found = data?.data?.data?.guests?.find(
+      (row) => row.guestId === guestId
+    );
+    if (typeof found?.displayName !== "string") continue;
+    if (!latest || query.state.dataUpdatedAt > latest.at) {
+      latest = { at: query.state.dataUpdatedAt, name: found.displayName };
+    }
+  }
+  return latest?.name;
+}
+
+function payload(query: Query): Json | undefined {
+  const data = query.state.data as
+    | { data?: { success?: boolean; data?: unknown } }
+    | undefined;
+  const inner = data?.data?.data;
+  return typeof inner === "object" && inner !== null
+    ? (inner as Json)
+    : undefined;
+}
+
+/**
+ * 캐시에 든 조회 중 **이 워크스페이스 것**을 가르는 판정. 회의·할 일 조회의 키에는 워크스페이스가 없어서, 회의 상세·
+ * 프로젝트 목록·노트 목록으로 이 워크스페이스의 회의·프로젝트를 먼저 모은다. 어디 것인지 모르는 조회는 아니라고 본다.
+ * 이름 쓰기와 진행 중 조회 끊기가 둘 다 이 판정을 지나야 다른 워크스페이스를 건드리지 않는다.
+ */
+export function workspaceScope(queries: Query[], workspaceId: string) {
+  const notes = new Set<string>();
+  const projects = new Set<string>();
+  const own = `/v1/workspaces/${workspaceId}/`;
+  for (const query of queries) {
+    const path = String(query.queryKey[0]);
+    const data = payload(query);
+    const note = /^\/v1\/notes\/([^/]+)$/.exec(path);
+    if (note && data?.workspaceId === workspaceId) {
+      notes.add(note[1]);
+      if (typeof data.projectId === "string") projects.add(data.projectId);
+    }
+    if (path.startsWith(own)) {
+      for (const item of [
+        ...(Array.isArray(data?.notes) ? data.notes : []),
+        ...(Array.isArray(data?.projects) ? data.projects : []),
+      ] as Json[]) {
+        if (typeof item.noteId === "string") notes.add(item.noteId);
+        if (typeof item.projectId === "string") projects.add(item.projectId);
+      }
+    }
+  }
+  // 프로젝트 단위 노트 목록은 그 프로젝트가 이 워크스페이스 것일 때만 믿는다.
+  for (const query of queries) {
+    const project = /^\/v1\/projects\/([^/]+)\/notes$/.exec(
+      String(query.queryKey[0])
+    );
+    if (!project || !projects.has(project[1])) continue;
+    const data = payload(query);
+    for (const item of (Array.isArray(data?.notes)
+      ? data.notes
+      : []) as Json[]) {
+      if (typeof item.noteId === "string") notes.add(item.noteId);
+    }
+  }
+  return (queryKey: readonly unknown[]) => {
+    const path = String(queryKey[0]);
+    if (path.startsWith(own)) return true;
+    const note = /^\/v1\/notes\/([^/]+)/.exec(path);
+    if (note) return notes.has(note[1]);
+    const project = /^\/v1\/projects\/([^/]+)/.exec(path);
+    return project !== null && projects.has(project[1]);
+  };
+}
+
+/** [workspaceId] 의 조회 중 [holds] 가 고른 것을 고르는 술어 — 진행 중 조회를 끊을 때 다른 워크스페이스를 건드리지 않게. */
+export function inWorkspace(
+  queryClient: QueryClient,
+  workspaceId: string,
+  holds: (queryKey: readonly unknown[]) => boolean
+) {
+  const scope = workspaceScope(
+    queryClient.getQueryCache().getAll(),
+    workspaceId
+  );
+  return (query: Query) => holds(query.queryKey) && scope(query.queryKey);
+}
+
 /** 이 이름을 사본으로 들 수 있는 조회인가. 이름 변경 전에 이 조회들의 진행 중인 요청을 끊는 데도 쓴다. */
 export function holdsGuestName(queryKey: readonly unknown[]) {
   const path = queryKey[0];
@@ -52,7 +154,7 @@ export function holdsGuestName(queryKey: readonly unknown[]) {
   );
 }
 
-function write(
+export function write(
   queryClient: QueryClient,
   query: Query,
   rewrite: (data: unknown) => unknown
@@ -64,14 +166,14 @@ function write(
   });
 }
 
-type Json = Record<string, unknown>;
+export type Json = Record<string, unknown>;
 
 function isJson(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** 바뀐 곳만 새로 만들고 나머지는 같은 참조로 둔다 — 안 바뀌면 입력 그대로를 돌려준다. */
-function mapDeep(value: unknown, visit: (node: Json) => Json): unknown {
+export function mapDeep(value: unknown, visit: (node: Json) => Json): unknown {
   if (Array.isArray(value)) {
     let changed = false;
     const next = value.map((item) => {

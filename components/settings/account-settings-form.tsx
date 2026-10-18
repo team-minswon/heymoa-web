@@ -39,8 +39,17 @@ export function AccountSettingsForm() {
         </div>
       </div>
       <div className="space-y-2 rounded-panel border border-[var(--el-hairline)] bg-white p-6">
-        <Label htmlFor="account-name">이름</Label>
-        <Input id="account-name" value={user.name} disabled />
+        <Label htmlFor="account-name">계정 이름</Label>
+        <Input
+          id="account-name"
+          value={user.name}
+          disabled
+          aria-describedby="account-name-hint"
+        />
+        {/* 계정 이름은 로그인한 계정에서 와 여기서 못 고친다. 고칠 길이 어디 있는지만 한 줄로 알린다(APP-1206). */}
+        <p id="account-name-hint" className="text-xs text-[var(--el-muted)]">
+          워크스페이스에서 보일 이름은 멤버 탭에서 바꿉니다.
+        </p>
       </div>
       <AnalyticsConsentCard />
     </div>
@@ -109,9 +118,9 @@ export function AccountSettingsFormSkeleton() {
           프로필 정보를 확인합니다.
         </p>
       </div>
-      {/* 아바타 + 이메일 카드(106) · 이름 카드(104) */}
+      {/* 아바타 + 이메일 카드(106) · 계정 이름 카드(128, 안내 한 줄 포함) */}
       <Skeleton className="h-[106px] rounded-panel" />
-      <Skeleton className="h-[104px] rounded-panel" />
+      <Skeleton className="h-[128px] rounded-panel" />
       <AnalyticsConsentCard />
     </div>
   );

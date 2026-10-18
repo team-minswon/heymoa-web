@@ -3894,6 +3894,8 @@ paths:
                         image: https://cdn.heymoa.com/profiles/member.png
                         role: ADMIN
                         joinedAt: '2026-07-14T01:02:03Z'
+                        displayName: 홍길동
+                        accountName: 상어
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -8453,6 +8455,124 @@ paths:
                     error:
                       code: SHARE_MAIL_NOT_FOUND
                       message: 공유 메일을 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/members/{userId}/display-name:
+    patch:
+      tags:
+      - Workspace Members
+      summary: 워크스페이스 멤버 표시 이름 변경
+      description: 이 워크스페이스에서 보이는 멤버 이름을 바꾼다. 본인은 자기 이름을, ADMIN 은 누구의 이름이든 바꿀 수 있다. null 이나 빈 값이면 계정 이름으로 되돌린다. 바뀐 이름은 참석자·화자·담당·에이전트 입력에 곧바로 보이고, 이미 만들어진 요약 본문은 바뀌지 않는다. 응답은 멤버 목록 항목과 같은 모양이다.
+      operationId: renameWorkspaceMember
+      parameters:
+      - name: workspaceId
+        in: path
+        description: ''
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      - name: userId
+        in: path
+        description: ''
+        required: true
+        schema:
+          type: string
+          description: 이름을 바꿀 멤버의 사용자 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameWorkspaceMemberRequest'
+            examples:
+              renameWorkspaceMember_WorkspaceMemberNotFoundException:
+                value:
+                  displayName: 홍길동
+              renameWorkspaceMember_Success:
+                value:
+                  displayName: 홍길동
+              renameWorkspaceMember_BadRequest:
+                value:
+                  displayName: 가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가
+              renameWorkspaceMember_Forbidden:
+                value:
+                  displayName: 홍길동
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMemberResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      userId: 0HZX2K7M9Q4AM
+                      name: 홍길동
+                      displayName: 홍길동
+                      accountName: 상어
+                      email: hong@example.com
+                      image: https://cdn.heymoa.com/profiles/member.png
+                      role: MEMBER
+                      joinedAt: '2026-07-14T01:02:03Z'
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: displayName
+                        message: 길이가 상한을 넘습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_MEMBER_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_MEMBER_NOT_FOUND
+                      message: 워크스페이스 멤버를 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -15066,6 +15186,8 @@ components:
               description: 멤버 목록. 가입순 정렬
               items:
                 required:
+                - accountName
+                - displayName
                 - email
                 - image
                 - joinedAt
@@ -15096,7 +15218,7 @@ components:
                     format: date-time
                   name:
                     type: string
-                    description: 멤버 이름
+                    description: 이 워크스페이스에서 보이는 이름. 표시 이름이 있으면 그것, 없으면 계정 이름
                     nullable: false
                     example: 홍길동
                   userId:
@@ -15111,6 +15233,16 @@ components:
                     nullable: false
                     example: hong@example.com
                     format: email
+                  accountName:
+                    type: string
+                    description: 계정(구글) 이름
+                    nullable: false
+                    example: 상어
+                  displayName:
+                    type: string
+                    description: 워크스페이스가 정한 표시 이름. 정하지 않았으면 null
+                    nullable: true
+                    example: 홍길동
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -16400,6 +16532,97 @@ components:
               nullable: false
               example: 0HZX2K7M9Q4AR
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    RenameWorkspaceMemberRequest:
+      title: RenameWorkspaceMemberRequest
+      required:
+      - displayName
+      type: object
+      properties:
+        displayName:
+          type: string
+          description: 이 워크스페이스에서 보일 이름. 앞뒤 공백을 지우고 1~30자. null 이나 빈 값이면 표시 이름을 지워 계정 이름으로 되돌린다
+          nullable: true
+          example: 홍길동
+          maxLength: 30
+    WorkspaceMemberResponse:
+      title: WorkspaceMemberResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - accountName
+          - displayName
+          - email
+          - image
+          - joinedAt
+          - name
+          - role
+          - userId
+          type: object
+          properties:
+            image:
+              type: string
+              description: 멤버 프로필 이미지 URL. 등록되지 않은 경우 null
+              nullable: true
+              example: https://cdn.heymoa.com/profiles/member.png
+              format: uri
+            role:
+              type: string
+              description: 워크스페이스 역할
+              nullable: false
+              example: ADMIN
+              enum:
+              - ADMIN
+              - MEMBER
+            accountName:
+              type: string
+              description: 계정(구글) 이름
+              nullable: false
+              example: 상어
+            joinedAt:
+              type: string
+              description: 워크스페이스 가입 시각
+              nullable: false
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+            displayName:
+              type: string
+              description: 워크스페이스가 정한 표시 이름. 정하지 않았으면 null
+              nullable: true
+              example: 홍길동
+            name:
+              type: string
+              description: 이 워크스페이스에서 보이는 이름. 표시 이름이 있으면 그것, 없으면 계정 이름
+              nullable: false
+              example: 홍길동
+            userId:
+              type: string
+              description: 멤버 사용자 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AC
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            email:
+              type: string
+              description: 멤버 이메일
+              nullable: false
+              example: hong@example.com
+              format: email
           description: 성공 응답 데이터
           nullable: false
         success:

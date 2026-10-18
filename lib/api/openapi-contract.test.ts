@@ -298,7 +298,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-1114(server APP-1113)에서 회의록 메일 둘이 늘었다 (74 → 76) — `notes/{noteId}/share-mails`(발송)·
     // `.../share-mails/{mailId}`(받는 사람별 상태).
     // APP-1177(server APP-1174)에서 문의·피드백 `/v1/feedbacks`(접수·조회) 한 경로가 늘었다 (76 → 77).
-    expect(paths).toHaveLength(77);
+    // APP-1206(server APP-1204)에서 멤버 표시 이름 변경 `.../members/{userId}/display-name` 한 경로가 늘었다 (77 → 78).
+    expect(paths).toHaveLength(78);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

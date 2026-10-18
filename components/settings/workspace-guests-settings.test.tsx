@@ -275,10 +275,9 @@ describe("WorkspaceGuestsSettings", () => {
       renderSection();
 
       expect(await menuItem("삭제")).toHaveAttribute("aria-disabled", "true");
-      expect(screen.getByRole("menuitem", { name: "계정과 연동" })).toHaveAttribute(
-        "aria-disabled",
-        "true"
-      );
+      expect(
+        screen.getByRole("menuitem", { name: "계정과 연동" })
+      ).toHaveAttribute("aria-disabled", "true");
       expect(
         screen.getByRole("menuitem", { name: "이름 변경" })
       ).not.toHaveAttribute("aria-disabled", "true");
@@ -326,8 +325,12 @@ describe("WorkspaceGuestsSettings", () => {
       fireEvent.change(input, { target: { value: "박서준3" } });
       fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
-      expect(await screen.findByRole("alert")).toHaveTextContent("권한이 없습니다.");
-      expect(screen.getByRole("textbox", { name: "이름" })).toHaveValue("박서준3");
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "권한이 없습니다."
+      );
+      expect(screen.getByRole("textbox", { name: "이름" })).toHaveValue(
+        "박서준3"
+      );
     });
 
     it("빈 값·바뀌지 않은 값이면 저장을 잠근다", async () => {

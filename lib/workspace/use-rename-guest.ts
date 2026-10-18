@@ -3,7 +3,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { errorMessageOf } from "@/lib/api/error-message";
 import { useRenameWorkspaceGuest } from "@/lib/api/generated/workspaces/workspaces";
 import {
+  cachedGuestName,
   holdsGuestName,
+  inWorkspace,
   writeGuestName,
 } from "@/lib/workspace/guest-name-cache";
 
@@ -53,23 +55,25 @@ export function useRenameGuest({
       meta: { suppressErrorToast: true },
       scope: { id: `rename-workspace-guest:${guestId}` },
       onMutate: async (variables) => {
+        // 되돌릴 기준은 지금 캐시의 이름이다 — 대화상자를 연 뒤 목록이 새 이름을 받았을 수 있다.
+        const current = cachedGuestName(queryClient, guestId) ?? displayName;
         const state = renames.get(guestId) ?? {
           inFlight: 0,
-          confirmed: displayName,
+          confirmed: current,
         };
-        if (state.inFlight === 0) state.confirmed = displayName;
+        if (state.inFlight === 0) state.confirmed = current;
         state.inFlight += 1;
         renames.set(guestId, state);
         // 이름 변경 전에 떠 있던 조회가 늦게 도착해 새 이름을 옛 값으로 덮지 못하게 끊는다.
         await queryClient.cancelQueries({
-          predicate: (query) => holdsGuestName(query.queryKey),
+          predicate: inWorkspace(queryClient, workspaceId, holdsGuestName),
         });
         writeGuestName(queryClient, {
           guestId,
           displayName: variables.data?.displayName.trim() ?? displayName,
         });
       },
-      onSuccess: (response) => {
+      onSuccess: async (response) => {
         // 200 이 아니거나 success:false 면 실패와 같다 — 낙관적 이름을 되돌린다.
         if (response.status !== 200 || !response.data.success) {
           rollback();
@@ -79,6 +83,10 @@ export function useRenameGuest({
         if (state) state.confirmed = response.data.data.displayName;
         // 뒤에 더 서 있으면 그 요청의 낙관적 이름이 화면의 진실이다 — 앞 응답으로 덮으면 잠깐 되돌아간다.
         if ((renames.get(guestId)?.inFlight ?? 0) > 1) return;
+        // 저장 중에 새로 시작한 조회는 저장 전 값을 읽었을 수 있다 — 끊고 응답을 쓴다.
+        await queryClient.cancelQueries({
+          predicate: inWorkspace(queryClient, workspaceId, holdsGuestName),
+        });
         writeGuestName(queryClient, {
           guestId,
           displayName: response.data.data.displayName,

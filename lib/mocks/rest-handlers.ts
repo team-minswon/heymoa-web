@@ -3,7 +3,10 @@ import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow } from "@/lib/mocks/meeting-flow";
 // 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
 import { agentChatTurnState, runningTurnOf } from "@/lib/mocks/sse-handler";
-import { LIVE_AGENDA_NOTE_ID, liveAgendaProposals } from "@/lib/mocks/live-agendas";
+import {
+  LIVE_AGENDA_NOTE_ID,
+  liveAgendaProposals,
+} from "@/lib/mocks/live-agendas";
 import {
   CONTEXT_DEMO_NOTE_ID,
   CONTEXT_FAILING_NOTE_ID,
@@ -363,7 +366,10 @@ const SHARE_MAIL_WINDOW_MS = 60 * 60 * 1000;
 /** 한 시간 칸(정시 기준) → 그 칸에 받아들인 발송 수 */
 const shareMailSent = new Map<number, number>();
 /** 받아들인 발송. 받는 사람은 서버처럼 대소문자만 다른 주소를 합치고 처음 쓴 표기를 남긴다 */
-const shareMails = new Map<string, { noteId: string; requestedAt: number; recipients: string[] }>();
+const shareMails = new Map<
+  string,
+  { noteId: string; requestedAt: number; recipients: string[] }
+>();
 mockDb.onReset(() => {
   shareMailSent.clear();
   shareMails.clear();
@@ -372,7 +378,11 @@ mockDb.onReset(() => {
 const SHARE_MAIL_SETTLE_MS = 1_500;
 
 /** 발송 하나를 접수해 둔다. 목 핸들러 POST 와 계약 표본 테스트(`nullable-coverage`)가 쓴다 */
-export function seedShareMail(noteId: string, recipients: string[], requestedAt = Date.now()) {
+export function seedShareMail(
+  noteId: string,
+  recipients: string[],
+  requestedAt = Date.now()
+) {
   const mailId = `0K9${String(shareMails.size + 1).padStart(10, "0")}`;
   shareMails.set(mailId, { noteId, requestedAt, recipients });
   return mailId;
@@ -558,34 +568,66 @@ export const restHandlers = [
     // 여럿이면 어느 문구가 뜨는지가 이 차례로 정해진다
     const recipients = [
       ...new Map(
-        form.getAll("recipients").map((value) => [String(value).trim().toLowerCase(), String(value).trim()] as const).reverse()
+        form
+          .getAll("recipients")
+          .map(
+            (value) =>
+              [
+                String(value).trim().toLowerCase(),
+                String(value).trim(),
+              ] as const
+          )
+          .reverse()
       ).values(),
     ].reverse();
     // 서버와 같은 주소 규칙(`isEmail`)이다. 서버만 거절하는 주소(도달 불가)를 재현하려고 예약 도메인 `.invalid` 도 막는다
-    if (recipients.length === 0 || recipients.some((value) => !isEmail(value) || value.endsWith(".invalid"))) {
-      return fail("SHARE_MAIL_INVALID_RECIPIENT", "받는 사람 이메일 주소를 확인해 주세요.");
+    if (
+      recipients.length === 0 ||
+      recipients.some((value) => !isEmail(value) || value.endsWith(".invalid"))
+    ) {
+      return fail(
+        "SHARE_MAIL_INVALID_RECIPIENT",
+        "받는 사람 이메일 주소를 확인해 주세요."
+      );
     }
     if (recipients.length > 10) {
-      return fail("SHARE_MAIL_TOO_MANY_RECIPIENTS", "받는 사람은 한 번에 10명까지 지정할 수 있습니다.");
+      return fail(
+        "SHARE_MAIL_TOO_MANY_RECIPIENTS",
+        "받는 사람은 한 번에 10명까지 지정할 수 있습니다."
+      );
     }
     if (String(form.get("message") ?? "").trim().length > 1000) {
-      return fail("SHARE_MAIL_MESSAGE_TOO_LONG", "메시지는 1000자까지 쓸 수 있습니다.");
+      return fail(
+        "SHARE_MAIL_MESSAGE_TOO_LONG",
+        "메시지는 1000자까지 쓸 수 있습니다."
+      );
     }
     if (file instanceof Blob && file.size > 10 * 1024 * 1024) {
-      return fail("SHARE_MAIL_FILE_TOO_LARGE", "첨부 파일은 10MB 이하여야 합니다.");
+      return fail(
+        "SHARE_MAIL_FILE_TOO_LARGE",
+        "첨부 파일은 10MB 이하여야 합니다."
+      );
     }
     const head = file instanceof Blob ? await file.slice(0, 5).text() : "";
-    if (head !== "%PDF-") return fail("SHARE_MAIL_NOT_PDF", "PDF 파일만 보낼 수 있습니다.");
+    if (head !== "%PDF-")
+      return fail("SHARE_MAIL_NOT_PDF", "PDF 파일만 보낼 수 있습니다.");
     // 서버처럼 정시로 자른 한 시간 칸마다 30건이다(고정 창). 직전 60분을 세면 10:59 에 30건을 보낸 뒤 11:00 에
     // 서버는 받는데 목은 막았다. 검사를 다 통과한 요청만 센다
     const slot = Math.floor(Date.now() / SHARE_MAIL_WINDOW_MS);
     const sent = shareMailSent.get(slot) ?? 0;
     if (sent >= SHARE_MAIL_HOURLY_LIMIT) {
-      return fail("SHARE_MAIL_RATE_LIMITED", "메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.", 429);
+      return fail(
+        "SHARE_MAIL_RATE_LIMITED",
+        "메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.",
+        429
+      );
     }
     shareMailSent.set(slot, sent + 1);
     const mailId = seedShareMail(String(params.noteId), recipients);
-    return HttpResponse.json({ success: true, data: { mailId }, error: null }, { status: 202 });
+    return HttpResponse.json(
+      { success: true, data: { mailId }, error: null },
+      { status: 202 }
+    );
   }),
   // 받는 사람별 발송 상태(`getNoteShareMail`). 보낸 사람만 본다 — 목의 보낸 사람은 늘 한 명이라 노트만 맞춘다.
   // 접수 뒤 잠깐 PENDING 이었다가 SENT 가 된다. 실패 길을 화면에서 볼 수 있게 `@reject.test` 주소는 FAILED 다
@@ -593,14 +635,26 @@ export const restHandlers = [
     const mail = shareMails.get(String(params.mailId));
     if (!mail || mail.noteId !== String(params.noteId)) {
       return HttpResponse.json(
-        { success: false, data: null, error: { code: "SHARE_MAIL_NOT_FOUND", message: "공유 메일을 찾을 수 없습니다.", details: null } },
+        {
+          success: false,
+          data: null,
+          error: {
+            code: "SHARE_MAIL_NOT_FOUND",
+            message: "공유 메일을 찾을 수 없습니다.",
+            details: null,
+          },
+        },
         { status: 404 }
       );
     }
     const settled = Date.now() - mail.requestedAt >= SHARE_MAIL_SETTLE_MS;
     const recipients = mail.recipients.map((email) => ({
       email,
-      status: !settled ? "PENDING" : email.toLowerCase().endsWith("@reject.test") ? "FAILED" : "SENT",
+      status: !settled
+        ? "PENDING"
+        : email.toLowerCase().endsWith("@reject.test")
+          ? "FAILED"
+          : "SENT",
     }));
     return HttpResponse.json({
       success: true,
@@ -1088,6 +1142,27 @@ export const restHandlers = [
     commandResult(() => ({
       members: mockDb.listMembers(id(params.workspaceId)),
     }))
+  ),
+  // 하위 경로라 역할 변경(`/members/:userId`)과 겹치지 않는다(APP-1204).
+  http.patch(
+    "*/v1/workspaces/:workspaceId/members/:userId/display-name",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.renameMember(
+            id(params.workspaceId),
+            id(params.userId),
+            (
+              (await request.json().catch(() => ({}))) as {
+                displayName?: string | null;
+              }
+            ).displayName ?? null
+          ),
+        notFound(
+          "WORKSPACE_MEMBER_NOT_FOUND",
+          "워크스페이스 멤버를 찾을 수 없습니다."
+        )
+      )
   ),
   // 본문 파싱은 반드시 memberResult 안에서 한다. 생성 훅의 `data`가 optional이라 본문 없는
   // 요청이 실제로 날아올 수 있는데, 밖에서 파싱하면 SyntaxError가 그대로 새어 MSW가 500과

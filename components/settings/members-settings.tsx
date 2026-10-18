@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Info, MoreHorizontal } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import {
@@ -24,6 +24,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  RenamePersonDialog,
+  SoftName,
+} from "@/components/settings/rename-person-dialog";
+import {
+  memberNameOf,
+  useRenameMember,
+} from "@/lib/workspace/use-rename-member";
 import {
   Select,
   SelectContent,
@@ -151,6 +166,12 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
   const invitationsQuery = useGetWorkspaceInvitations(workspaceId, {
     query: { enabled: canManage },
   });
+  /**
+   * **이름 변경 대화상자는 목록 밖에서 연다.** 행 안에 두면 저장 중 재조회가 그 멤버를 목록에서 지우는 순간(남이 내보냈다)
+   * 대화상자까지 함께 사라져 결과를 말할 자리가 없다. 연 순간의 멤버를 객체째 든다(임시 참여자와 같은 규칙).
+   */
+  const [renaming, setRenaming] =
+    useState<WorkspaceMemberListResponseDataMembersItem | null>(null);
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
@@ -192,10 +213,19 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
               isMe={member.userId === user?.userId}
               canManage={canManage}
               workspaceId={workspaceId}
+              onRename={() => setRenaming(member)}
             />
           ))}
         </ul>
       )}
+
+      {renaming ? (
+        <RenameMemberDialog
+          workspaceId={workspaceId}
+          member={renaming}
+          onClose={() => setRenaming(null)}
+        />
+      ) : null}
 
       {canManage ? (
         <div className="mt-8 space-y-8">
@@ -243,11 +273,13 @@ function MemberRow({
   isMe,
   canManage,
   workspaceId,
+  onRename,
 }: {
   member: WorkspaceMemberListResponseDataMembersItem;
   isMe: boolean;
   canManage: boolean;
   workspaceId: string;
+  onRename: () => void;
 }) {
   const queryClient = useQueryClient();
   const invalidateMembers = () =>
@@ -263,6 +295,10 @@ function MemberRow({
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = useMemberMutationBusy(workspaceId);
+  const names = memberNameOf(member);
+  // 본인은 자기 이름을, ADMIN 은 누구의 이름이든 고친다(서버가 최종 판정한다).
+  const canRename = isMe || canManage;
+  const canRemove = canManage && !isMe;
 
   return (
     <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
@@ -272,14 +308,20 @@ function MemberRow({
       <PersonAvatar name={member.userId} image={member.image} size={28} />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--el-ink)]">
-          <span className="truncate">{member.name}</span>
+          <SoftName name={member.name} className="truncate" />
           {isMe ? (
             <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">
               (나)
             </span>
           ) : null}
         </p>
+        {/* **고친 이름이면 계정 이름을 보조 줄에 함께 둔다.** 누가 누구인지(구글 계정의 그 사람)를 잃지 않게 — 한 줄이라 행
+            높이는 그대로다. 이메일이 길면 뒤가 잘리므로 계정 이름을 앞에 둔다. */}
         <p className="truncate text-xs text-[var(--el-muted)]">
+          {names.displayName !== null &&
+          names.displayName !== names.accountName ? (
+            <>계정 이름 {names.accountName} · </>
+          ) : null}
           {member.email}
         </p>
       </div>
@@ -329,75 +371,119 @@ function MemberRow({
         })}
       </p>
 
-      {/* **내보내기 자리는 버튼이 없어도 비워 둔다.** 내 행에는 그 버튼이 없는데 자리까지
-          없애면 그 행만 날짜가 오른쪽 끝까지 밀려, 두 줄의 날짜가 서로 다른 자리에 선다. */}
-      <div className="flex w-[72px] shrink-0 justify-end">
-        {canManage && !isMe ? (
-          <>
-            {/*
-            보이는 글자는 「내보내기」지만 접근성 이름에는 대상을 넣는다. 행이 여럿이면 스크린
-            리더의 버튼 목록에 같은 이름이 반복되어 누구를 내보내는 버튼인지 구분할 수 없고,
-            되돌릴 수 없는 조작이라 그 모호함의 대가가 크다. 보이는 글자를 그대로 품고 있어
-            음성 제어로 「내보내기」라고 말해도 여전히 잡힌다.
-          */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              aria-label={`${memberLabel(member)} 내보내기`}
-              loading={remove.isPending}
-              disabled={busy}
-              onClick={() => setConfirmOpen(true)}
+      {/* **관리 메뉴 자리는 버튼이 없어도 비워 둔다.** 내 행·MEMBER 의 남 행에는 고칠 것이 없거나 적은데, 자리까지 없애면
+          그 행만 날짜가 오른쪽 끝까지 밀려 두 줄의 날짜가 서로 다른 자리에 선다. 이름 변경·내보내기를 한 메뉴로 모아 행에
+          버튼이 늘어서지 않게 하고(좁은 폭에서 이름이 눌렸다), 되돌릴 수 없는 내보내기는 한 번 더 열어야 닿게 둔다. */}
+      <div className="flex w-8 shrink-0 justify-end">
+        {canRename ? (
+          <DropdownMenu>
+            {/* 보이는 것은 「⋯」 지만 접근성 이름에는 대상을 넣는다 — 행이 여럿이면 같은 이름의 버튼이 반복된다. */}
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${memberLabel(member)} 관리`}
+                  className="rounded-full text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]"
+                />
+              }
             >
-              내보내기
-            </Button>
-            {/* 나가기와 같은 이유로 요청 중에는 닫지 않는다. */}
-            <AlertDialog
-              open={confirmOpen}
-              onOpenChange={(open) => {
-                if (remove.isPending) return;
-                setConfirmOpen(open);
-              }}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {member.name}님을 내보낼까요?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {member.email} 계정이 이 워크스페이스의 멤버 목록과 접근
-                    권한을 잃습니다.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={remove.isPending}>
-                    취소
-                  </AlertDialogCancel>
-                  <AlertDialogAction
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-36">
+              <DropdownMenuItem onClick={onRename}>이름 변경</DropdownMenuItem>
+              {canRemove ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
                     variant="destructive"
-                    loading={remove.isPending}
-                    disabled={remove.isPending}
-                    onClick={async () => {
-                      // 다이얼로그를 연 채 기다린다 — 여기서 바로 닫으면 remove.isPending이
-                      // 다이얼로그 안에서 참으로 보일 틈이 없다(`note-delete-dialog.tsx`와 같은
-                      // 패턴). 거절은 여기서 소비한다 — 안 그러면 unhandled rejection으로 남고,
-                      // 토스트는 전역 `MutationCache.onError`가 띄운다.
-                      const response = await remove
-                        .mutateAsync({ workspaceId, userId: member.userId })
-                        .catch(() => null);
-                      if (response?.status !== 204) return;
-                      setConfirmOpen(false);
-                    }}
+                    disabled={busy}
+                    onClick={() => setConfirmOpen(true)}
                   >
                     내보내기
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
+
+      {/* 나가기와 같은 이유로 요청 중에는 닫지 않는다. */}
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (remove.isPending) return;
+          setConfirmOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{member.name}님을 내보낼까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {member.email} 계정이 이 워크스페이스의 멤버 목록과 접근 권한을
+              잃습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              loading={remove.isPending}
+              disabled={remove.isPending}
+              onClick={async () => {
+                // 다이얼로그를 연 채 기다린다 — 여기서 바로 닫으면 remove.isPending이
+                // 다이얼로그 안에서 참으로 보일 틈이 없다(`note-delete-dialog.tsx`와 같은
+                // 패턴). 거절은 여기서 소비한다 — 안 그러면 unhandled rejection으로 남고,
+                // 토스트는 전역 `MutationCache.onError`가 띄운다.
+                const response = await remove
+                  .mutateAsync({ workspaceId, userId: member.userId })
+                  .catch(() => null);
+                if (response?.status !== 204) return;
+                setConfirmOpen(false);
+              }}
+            >
+              내보내기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </li>
+  );
+}
+
+/**
+ * 멤버 이름 변경 (APP-1206). 비우면 계정 이름으로 돌아간다는 것을 placeholder 와 안내 한 줄이 함께 말한다.
+ * 낙관적 갱신·실패 되돌리기는 [useRenameMember] 가 한다.
+ */
+function RenameMemberDialog({
+  workspaceId,
+  member,
+  onClose,
+}: {
+  workspaceId: string;
+  member: WorkspaceMemberListResponseDataMembersItem;
+  onClose: () => void;
+}) {
+  // 연 순간의 모습을 든다 — 저장 중 낙관적 이름이 목록에 먼저 써져도 대화상자의 「지금 이름」은 흔들리지 않는다.
+  const [opened] = useState(() => memberNameOf(member));
+  const { rename } = useRenameMember({ workspaceId, member: opened });
+  return (
+    <RenamePersonDialog
+      avatarKey={member.userId}
+      image={member.image}
+      currentName={opened.name}
+      secondary={member.email}
+      label="이 워크스페이스에서 보일 이름"
+      initialValue={opened.displayName ?? ""}
+      placeholder={opened.accountName}
+      hint={`비우면 계정 이름(${opened.accountName})으로 보입니다.`}
+      allowEmpty
+      onSubmit={rename}
+      onClose={onClose}
+    />
   );
 }
 

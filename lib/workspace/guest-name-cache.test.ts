@@ -1,7 +1,11 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
-import { writeGuestName } from "@/lib/workspace/guest-name-cache";
+import {
+  cachedGuestName,
+  inWorkspace,
+  writeGuestName,
+} from "@/lib/workspace/guest-name-cache";
 
 const GUEST = "0HZX2K7M9Q4AR";
 const OTHER = "0HZX2K7M9Q4AS";
@@ -139,5 +143,33 @@ describe("writeGuestName", () => {
     writeGuestName(client, { guestId: GUEST, displayName: "박서준" });
 
     expect(client.getQueryData(["/v1/notes/N"])).toBe(before);
+  });
+
+  it("쪽 수가 다른 목록이 여럿이면 가장 늦게 받은 이름을 믿는다", () => {
+    const client = new QueryClient();
+    client.setQueryData(
+      ["/v1/workspaces/W/guests", { pages: 1 }],
+      ok({ guests: [{ guestId: GUEST, displayName: "옛 이름" }] }),
+      { updatedAt: 1000 }
+    );
+    client.setQueryData(
+      ["/v1/workspaces/W/guests", { pages: 2 }],
+      ok({ guests: [{ guestId: GUEST, displayName: "새 이름" }] }),
+      { updatedAt: 2000 }
+    );
+    expect(cachedGuestName(client, GUEST)).toBe("새 이름");
+  });
+
+  it("진행 중 조회를 끊는 술어는 다른 워크스페이스 조회를 고르지 않는다", () => {
+    const client = new QueryClient();
+    client.setQueryData(["/v1/workspaces/W/guests"], ok({ guests: [] }));
+    client.setQueryData(["/v1/workspaces/OTHER/guests"], ok({ guests: [] }));
+    const pick = inWorkspace(client, "W", () => true);
+    const picked = client
+      .getQueryCache()
+      .getAll()
+      .filter(pick)
+      .map((query) => query.queryKey[0]);
+    expect(picked).toEqual(["/v1/workspaces/W/guests"]);
   });
 });

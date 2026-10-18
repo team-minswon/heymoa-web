@@ -8,7 +8,10 @@
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { WorkspaceMemberListResponse } from "../models";
+import type {
+  WorkspaceMemberListResponse,
+  WorkspaceMemberResponse,
+} from "../models";
 
 export const getGetWorkspaceMembersResponseMock =
   (): WorkspaceMemberListResponse => ({
@@ -22,8 +25,26 @@ export const getGetWorkspaceMembersResponseMock =
           image: "https://cdn.heymoa.com/profiles/member.png",
           role: "ADMIN",
           joinedAt: "2026-07-14T01:02:03Z",
+          displayName: "홍길동",
+          accountName: "상어",
         },
       ],
+    },
+    error: null,
+  });
+
+export const getRenameWorkspaceMemberResponseMock =
+  (): WorkspaceMemberResponse => ({
+    success: true,
+    data: {
+      userId: "0HZX2K7M9Q4AM",
+      name: "홍길동",
+      displayName: "홍길동",
+      accountName: "상어",
+      email: "hong@example.com",
+      image: "https://cdn.heymoa.com/profiles/member.png",
+      role: "MEMBER",
+      joinedAt: "2026-07-14T01:02:03Z",
     },
     error: null,
   });
@@ -114,9 +135,34 @@ export const getChangeWorkspaceMemberRoleMockHandler = (
     options
   );
 };
+
+export const getRenameWorkspaceMemberMockHandler = (
+  overrideResponse?:
+    | WorkspaceMemberResponse
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0]
+      ) => Promise<WorkspaceMemberResponse> | WorkspaceMemberResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.patch(
+    "*/v1/workspaces/:workspaceId/members/:userId/display-name",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRenameWorkspaceMemberResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getWorkspaceMembersMock = () => [
   getGetWorkspaceMembersMockHandler(),
   getLeaveWorkspaceMockHandler(),
   getRemoveWorkspaceMemberMockHandler(),
   getChangeWorkspaceMemberRoleMockHandler(),
+  getRenameWorkspaceMemberMockHandler(),
 ];

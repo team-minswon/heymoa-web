@@ -17,7 +17,7 @@ export type WorkspaceMemberListResponseDataMembersItem = {
   role: WorkspaceMemberListResponseDataMembersItemRole;
   /** 워크스페이스 가입 시각 */
   joinedAt: string;
-  /** 멤버 이름 */
+  /** 이 워크스페이스에서 보이는 이름. 표시 이름이 있으면 그것, 없으면 계정 이름 */
   name: string;
   /**
    * 멤버 사용자 식별자
@@ -26,4 +26,11 @@ export type WorkspaceMemberListResponseDataMembersItem = {
   userId: string;
   /** 멤버 이메일 */
   email: string;
+  /** 계정(구글) 이름 */
+  accountName: string;
+  /**
+   * 워크스페이스가 정한 표시 이름. 정하지 않았으면 null
+   * @nullable
+   */
+  displayName: string | null;
 };

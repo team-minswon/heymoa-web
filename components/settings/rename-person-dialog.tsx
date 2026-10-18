@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/lib/ui/toast";
 
 /**
  * 설정에서 보이는 사람 이름의 상한. 멤버 표시 이름(서버 30)과 같다. 임시 참여자는 서버 상한이 100이지만(기존 데이터)
@@ -67,6 +68,14 @@ export function RenamePersonDialog({
   const [value, setValue] = useState(initialValue);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  /** 저장 중에 닫았는가. 그러면 실패 문구를 띄울 자리가 없어 토스트로 알린다. */
+  const closed = useRef(false);
+
+  function close() {
+    closed.current = true;
+    onClose();
+  }
   const trimmed = value.trim();
   const unchanged = trimmed === initialValue.trim();
   const blocked =
@@ -79,18 +88,29 @@ export function RenamePersonDialog({
     setPending(true);
     setError(null);
     const failure = await onSubmit(trimmed);
+    if (closed.current) {
+      // 이미 닫혔다 — 이름은 훅이 되돌렸고, 무엇이 실패했는지만 알린다.
+      if (failure !== null) toast.error(failure);
+      return;
+    }
     setPending(false);
-    if (failure === null) onClose();
-    else setError(failure);
+    if (failure === null) {
+      close();
+      return;
+    }
+    setError(failure);
+    // 저장 중 잠갔던 입력으로 포커스를 돌린다 — 키보드로 고쳐 다시 Enter 할 수 있게.
+    requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   return (
     <AlertDialog
       open
       onOpenChange={(open) => {
-        // 요청이 도는 동안에는 닫지 않는다 — 닫으면 실패 문구를 띄울 자리가 없다.
-        if (open || pending) return;
-        onClose();
+        // 저장 중에도 닫을 수 있다 — 응답이 멎으면 빠져나올 길이 있어야 한다. 요청은 계속 가고, 실패하면 훅이 이름을
+        // 되돌리고 여기서 토스트로 알린다(위 `closed`).
+        if (open) return;
+        close();
       }}
     >
       <AlertDialogContent>
@@ -132,6 +152,7 @@ export function RenamePersonDialog({
               </span>
             </div>
             <Input
+              ref={inputRef}
               id={inputId}
               autoFocus
               value={value}
@@ -159,9 +180,7 @@ export function RenamePersonDialog({
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={pending}>
-              취소
-            </AlertDialogCancel>
+            <AlertDialogCancel type="button">취소</AlertDialogCancel>
             {/* 대화상자를 닫는 `AlertDialogAction` 이 아니라 폼 제출 버튼이다 — 실패하면 열어 둔다. Enter 도 같은 길이다. */}
             <Button type="submit" loading={pending} disabled={blocked}>
               저장

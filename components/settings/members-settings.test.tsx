@@ -32,6 +32,9 @@ const state = vi.hoisted(() => ({
   leaveOptions: null as { mutation?: Record<string, unknown> } | null,
   leaveError: null as unknown,
   leavePending: false,
+  renameMock: vi.fn(),
+  toastError: vi.fn(),
+  renameArgs: [] as unknown[],
   /** 지금 녹음 중인 것. `useRecording()`이 돌려줄 것 중 이 화면이 보는 부분이다. */
   recording: null as { activeWorkspaceId: string; phase: string } | null,
 }));
@@ -142,9 +145,12 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
                   joinedAt: "2026-07-05T00:00:00Z",
                   image: null,
                 };
+                // 계정 이름은 「고래」인데 이 워크스페이스에서 「박서준」으로 고친 사람이다(APP-1206).
                 const third = {
                   userId: "user-24680",
                   name: "박서준",
+                  displayName: "박서준",
+                  accountName: "고래",
                   email: "seojun@heymoa.com",
                   role: "MEMBER" as const,
                   joinedAt: "2026-07-09T00:00:00Z",
@@ -159,6 +165,19 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
         },
   }),
 }));
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: state.toastError } }));
+
+/** 낙관적 갱신·되돌리기는 훅 자신의 시험 몫이다. 여기서는 대화상자가 무엇을 넘기고 결과를 어떻게 그리는지만 본다. */
+vi.mock("@/lib/workspace/use-rename-member", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/lib/workspace/use-rename-member")
+  >()),
+  useRenameMember: (args: unknown) => {
+    state.renameArgs.push(args);
+    return { isPending: false, rename: state.renameMock };
+  },
+}));
+
 vi.mock(
   "@/lib/api/generated/workspace-invitations/workspace-invitations",
   () => ({
@@ -226,6 +245,12 @@ async function invite(email: string) {
  * 역할을 고른다. 네이티브 `<select>` 가 아니라 base-ui `Select` 라 값 이벤트가 아니라
  * **열고 고르는** 두 동작이다 — 실제 사용자가 하는 것과 같다.
  */
+/** 행 끝 「⋯」 메뉴를 연다(APP-1206). */
+async function openMenu(label: string) {
+  fireEvent.click(screen.getByRole("button", { name: `${label} 관리` }));
+  return screen.findByRole("menu");
+}
+
 async function pickRole(label: string, option: string) {
   fireEvent.click(screen.getByLabelText(label));
   const item = await screen.findByRole("option", { name: option });
@@ -258,6 +283,8 @@ describe("MembersSettings", () => {
     state.leaveError = null;
     state.leavePending = false;
     state.recording = null;
+    state.renameMock.mockReset();
+    state.renameArgs = [];
   });
   afterEach(cleanup);
 
@@ -403,32 +430,43 @@ describe("MembersSettings", () => {
     expect(screen.getByRole("button", { name: "취소" })).toBeTruthy();
   });
 
-  it("관리자에게만 역할 드롭다운과 추방 버튼을 보인다", () => {
-    const { rerender } = renderSettings();
+  it("관리자에게는 모든 행에 관리 메뉴를, MEMBER 에게는 자기 행에만 보인다", async () => {
+    renderSettings();
     // 나 + 김민수 + 박서준 = 3개 select.
     expect(screen.getAllByLabelText(/ 역할$/)).toHaveLength(3);
-    // 내 행은 빠지니 추방 버튼은 2개.
-    expect(screen.getAllByRole("button", { name: / 내보내기$/ })).toHaveLength(
-      2
-    );
+    // ADMIN 은 모든 행의 이름을 고칠 수 있어 메뉴가 셋이다.
+    expect(screen.getAllByRole("button", { name: / 관리$/ })).toHaveLength(3);
+    const menu = await openMenu("김민수(minsu@heymoa.com)");
+    expect(
+      within(menu).getByRole("menuitem", { name: "이름 변경" })
+    ).toBeTruthy();
+    expect(
+      within(menu).getByRole("menuitem", { name: "내보내기" })
+    ).toBeTruthy();
+    cleanup();
 
     state.myRole = "MEMBER";
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <MembersSettings workspaceId="01K0000000000" />
-      </QueryClientProvider>
-    );
+    renderSettings();
     expect(screen.queryAllByLabelText(/ 역할$/)).toHaveLength(0);
-    expect(screen.queryByRole("button", { name: /내보내기/ })).toBeNull();
+    // MEMBER 는 자기 이름만 고친다 — 메뉴는 내 행 하나, 내보내기는 없다.
+    expect(screen.getAllByRole("button", { name: / 관리$/ })).toHaveLength(1);
+    const mine = await openMenu("테스트 유저(me@heymoa.com)");
+    expect(
+      within(mine).queryByRole("menuitem", { name: "내보내기" })
+    ).toBeNull();
   });
 
-  it("자기 행에는 추방 버튼을 그리지 않는다", () => {
+  it("자기 행 메뉴에는 이름 변경만 있고 내보내기는 없다", async () => {
     renderSettings();
     const myRow = screen.getByText("테스트 유저").closest("li");
     if (!myRow) throw new Error("내 행을 찾지 못했다");
 
+    const menu = await openMenu("테스트 유저(me@heymoa.com)");
     expect(
-      within(myRow).queryByRole("button", { name: /내보내기/ })
+      within(menu).getByRole("menuitem", { name: "이름 변경" })
+    ).toBeTruthy();
+    expect(
+      within(menu).queryByRole("menuitem", { name: "내보내기" })
     ).toBeNull();
     // 자기 역할은 select로 바꿀 수 있어야 한다 — 자기 강등 흐름이 이걸로 된다.
     expect(
@@ -441,7 +479,7 @@ describe("MembersSettings", () => {
    * 역할은 고칠 수 있으면 select·없으면 칩이라 폭이 다르다 — 자리를 안 잡아 두면 두 줄의
    * 날짜가 서로 어긋난다. jsdom 은 px 를 못 재니 자리 상자가 양쪽에 다 있는지로 본다.
    */
-  it("역할·내보내기 자리를 폭 고정으로 잡아 날짜 열이 어긋나지 않는다", () => {
+  it("역할·관리 메뉴 자리를 폭 고정으로 잡아 날짜 열이 어긋나지 않는다", () => {
     renderSettings();
     const rows = ["테스트 유저", "김민수"].map((name) => {
       const row = screen.getByText(name).closest("li");
@@ -452,8 +490,8 @@ describe("MembersSettings", () => {
     for (const row of rows) {
       const slots = [...row.querySelectorAll("div")].map((el) => el.className);
       expect(slots.some((cls) => cls.includes("w-[104px]"))).toBe(true);
-      // 버튼이 없는 행에도 그 자리는 남아 있어야 한다.
-      expect(slots.some((cls) => cls.includes("w-[72px]"))).toBe(true);
+      // 메뉴가 없는 행에도 그 자리는 남아 있어야 한다.
+      expect(slots.some((cls) => /(^| )w-8( |$)/.test(cls))).toBe(true);
     }
   });
 
@@ -495,7 +533,7 @@ describe("MembersSettings", () => {
     return client;
   }
 
-  it("한 행의 역할 변경이 진행 중이면 형제 행의 컨트롤도 잠긴다", () => {
+  it("한 행의 역할 변경이 진행 중이면 형제 행의 컨트롤도 잠긴다", async () => {
     const client = clientWithPendingRoleChange("01K0000000000");
 
     render(
@@ -509,16 +547,15 @@ describe("MembersSettings", () => {
     for (const select of screen.getAllByLabelText(/ 역할$/)) {
       expect(select).toBeDisabled();
     }
-    for (const button of screen.getAllByRole("button", {
-      name: / 내보내기$/,
-    })) {
-      expect(button).toBeDisabled();
-    }
+    const menu = await openMenu("박서준(seojun@heymoa.com)");
+    expect(
+      within(menu).getByRole("menuitem", { name: "내보내기" })
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   // QueryClient는 앱 전역이고 mutation은 언마운트로 취소되지 않는다. 키만 보고 세면 A에서
   // 시작한 변경이 B의 멤버 탭을 잠그고, A의 요청이 멈추면 B가 계속 잠긴 채로 남는다.
-  it("다른 워크스페이스의 변경은 이 목록을 잠그지 않는다", () => {
+  it("다른 워크스페이스의 변경은 이 목록을 잠그지 않는다", async () => {
     const client = clientWithPendingRoleChange("01K0000000006");
 
     render(
@@ -530,11 +567,10 @@ describe("MembersSettings", () => {
     for (const select of screen.getAllByLabelText(/ 역할$/)) {
       expect(select).not.toBeDisabled();
     }
-    for (const button of screen.getAllByRole("button", {
-      name: / 내보내기$/,
-    })) {
-      expect(button).not.toBeDisabled();
-    }
+    const menu = await openMenu("박서준(seojun@heymoa.com)");
+    expect(
+      within(menu).getByRole("menuitem", { name: "내보내기" })
+    ).not.toHaveAttribute("aria-disabled", "true");
   });
 
   // canManage는 멤버 목록에서 나온다 — 목록이 새로 내려오면 관리 UI는 저절로 사라져야 하고,
@@ -568,7 +604,8 @@ describe("MembersSettings", () => {
     );
 
     expect(screen.queryAllByLabelText(/ 역할$/)).toHaveLength(0);
-    expect(screen.queryByRole("button", { name: /내보내기/ })).toBeNull();
+    // 남은 관리 메뉴는 내 행(이름 변경) 하나다.
+    expect(screen.getAllByRole("button", { name: / 관리$/ })).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "초대" })).toBeNull();
   });
 
@@ -577,11 +614,8 @@ describe("MembersSettings", () => {
     const otherRow = screen.getByText("김민수").closest("li");
     if (!otherRow) throw new Error("김민수 행을 찾지 못했다");
 
-    fireEvent.click(
-      within(otherRow).getByRole("button", {
-        name: "김민수(minsu@heymoa.com) 내보내기",
-      })
-    );
+    await openMenu("김민수(minsu@heymoa.com)");
+    fireEvent.click(await screen.findByRole("menuitem", { name: "내보내기" }));
 
     const dialog = screen.getByRole("alertdialog");
     expect(state.removeCalls).toHaveLength(0);
@@ -828,5 +862,111 @@ describe("워크스페이스 나가기", () => {
           | undefined
       )?.meta?.suppressErrorToast
     ).toBe(true);
+  });
+});
+
+describe("MembersSettings 이름 변경", () => {
+  beforeEach(() => {
+    state.myRole = "ADMIN";
+    state.meJoinedLast = false;
+    state.membersError = false;
+    state.invitations = [];
+    state.renameMock.mockReset();
+    state.renameArgs = [];
+  });
+  afterEach(cleanup);
+
+  async function openRename(label: string) {
+    renderSettings();
+    await openMenu(label);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "이름 변경" }));
+    return screen.getByRole("textbox", {
+      name: "이 워크스페이스에서 보일 이름",
+    });
+  }
+
+  it("고친 이름이면 보조 줄에 계정 이름을 함께 보인다", () => {
+    renderSettings();
+    expect(
+      screen.getByText("계정 이름 고래 · seojun@heymoa.com")
+    ).toBeInTheDocument();
+    // 안 고친 사람은 이메일만이다
+    expect(screen.getByText("minsu@heymoa.com")).toBeInTheDocument();
+  });
+
+  it("계정 이름을 placeholder 와 안내로 보이고, 비워 저장하면 계정 이름으로 되돌린다", async () => {
+    state.renameMock.mockResolvedValue(null);
+    const input = await openRename("박서준(seojun@heymoa.com)");
+    expect(input).toHaveValue("박서준");
+    expect(input).toHaveAttribute("placeholder", "고래");
+    expect(input).toHaveAttribute("maxLength", "30");
+    expect(
+      screen.getByText("비우면 계정 이름(고래)으로 보입니다.")
+    ).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "  " } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(state.renameMock).toHaveBeenCalledWith(""));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("textbox", { name: "이 워크스페이스에서 보일 이름" })
+      ).toBeNull()
+    );
+    // 훅에는 서버가 준 모습(표시 이름·계정 이름)을 넘긴다
+    expect(state.renameArgs.at(-1)).toMatchObject({
+      workspaceId: "01K0000000000",
+      member: {
+        userId: "user-24680",
+        displayName: "박서준",
+        accountName: "고래",
+      },
+    });
+  });
+
+  it("서버가 표시 이름을 안 줘도(배포 전) 계정 이름을 이름으로 보고 빈 입력에서 시작한다", async () => {
+    const input = await openRename("김민수(minsu@heymoa.com)");
+    expect(input).toHaveValue("");
+    expect(input).toHaveAttribute("placeholder", "김민수");
+    // 바뀐 것이 없으면 저장을 잠근다
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+  });
+
+  it("실패하면 닫지 않고 서버 문구를 보인다", async () => {
+    state.renameMock.mockResolvedValue(
+      "워크스페이스를 변경할 권한이 없습니다."
+    );
+    const input = await openRename("김민수(minsu@heymoa.com)");
+    fireEvent.change(input, { target: { value: "민수" } });
+    fireEvent.submit(input.closest("form")!);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "워크스페이스를 변경할 권한이 없습니다."
+    );
+    expect(
+      screen.getByRole("textbox", { name: "이 워크스페이스에서 보일 이름" })
+    ).toHaveValue("민수");
+  });
+
+  it("저장 중에도 닫을 수 있고, 닫은 뒤 실패하면 토스트로 알린다", async () => {
+    let fail: (message: string) => void = () => {};
+    state.renameMock.mockReturnValue(
+      new Promise<string>((resolve) => (fail = resolve))
+    );
+    state.toastError.mockReset();
+    const input = await openRename("김민수(minsu@heymoa.com)");
+    fireEvent.change(input, { target: { value: "민수" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("textbox", { name: "이 워크스페이스에서 보일 이름" })
+      ).toBeNull()
+    );
+    fail("연결이 끊겼습니다.");
+    await waitFor(() =>
+      expect(state.toastError).toHaveBeenCalledWith("연결이 끊겼습니다.")
+    );
   });
 });

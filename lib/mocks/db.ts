@@ -96,10 +96,37 @@ function noteOffsetsMs(sessions: MockSession[]) {
   return offsets;
 }
 
-/** 멤버는 워크스페이스 소속이므로 응답 항목에 없는 workspaceId를 안쪽에서만 들고 있는다. */
-type MockMember = WorkspaceMemberListResponseDataMembersItem & {
+/**
+ * 멤버는 워크스페이스 소속이므로 응답 항목에 없는 workspaceId를 안쪽에서만 들고 있는다.
+ * **`name` 은 계정 이름이다.** 워크스페이스가 정한 이름은 `displayName` 에 따로 들고, 응답을 만들 때
+ * 서버처럼 `name` = 표시 이름 ?? 계정 이름으로 합친다(APP-1204).
+ */
+type MockMember = Omit<
+  WorkspaceMemberListResponseDataMembersItem,
+  "displayName" | "accountName"
+> & {
   workspaceId: string;
+  displayName?: string | null;
 };
+
+/** 지금 유저가 그 워크스페이스에서 보이는 이름. 멤버가 아니면 계정 이름이다. */
+function myNameIn(workspaceId: string | undefined) {
+  const me = state.members.find(
+    (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
+  );
+  return me ? memberView(me).name : state.user.name;
+}
+
+/** 서버의 `coalesce(display_name, users.name)` 과 같다. */
+function memberView(member: MockMember) {
+  const { displayName, ...rest } = omit(member, ["workspaceId"]);
+  return {
+    ...rest,
+    name: displayName ?? member.name,
+    displayName: displayName ?? null,
+    accountName: member.name,
+  };
+}
 
 /**
  * 초대는 목록 응답 항목보다 넓다 — 목록은 PENDING만 보여주지만 목은 수락·거절·취소된 것도
@@ -907,6 +934,8 @@ function createSeedState(): StoreState {
       workspaceId: workspaces[1].workspaceId,
       userId: user.userId,
       name: user.name,
+      // 이 워크스페이스에서만 다른 이름을 정해 둔 모습이다(APP-1204) — 같은 사람이 워크스페이스마다 다른 이름일 수 있다.
+      displayName: "리서치 담당",
       email: user.email,
       role: "ADMIN",
       image: user.image,
@@ -948,6 +977,7 @@ function createSeedState(): StoreState {
         )
       )
       .filter((member) => member !== undefined)
+      .map(memberView)
       .map(({ userId, name, email, image }) => ({
         participantId: nextId(),
         userId,
@@ -1013,7 +1043,7 @@ function createSeedState(): StoreState {
   const starterOf = (userId: string): NoteResponseData["meetingStartedBy"] => {
     const member = members.find((candidate) => candidate.userId === userId);
     if (!member) return null;
-    const { name, email, image } = member;
+    const { name, email, image } = memberView(member);
     return { userId, name, email, image };
   };
   /**
@@ -2306,7 +2336,7 @@ function resolveOrJoinParticipant(
     participantId: nextId(),
     userId: member.userId,
     guestId: null,
-    name: member.name,
+    name: memberView(member).name,
     email: member.email,
     image: member.image,
   };
@@ -2718,7 +2748,7 @@ export const mockDb = {
     const integration = findIntegration(workspaceId, provider);
     if (integration.connected) fail("INTEGRATION_ALREADY_CONNECTED");
     integration.connected = true;
-    integration.connectedBy = state.user.name;
+    integration.connectedBy = myNameIn(workspaceId);
     integration.connectedAt = nextTimestamp();
     return copy(omit(integration, ["workspaceId"]));
   },
@@ -2956,12 +2986,13 @@ export const mockDb = {
           name: delegation.name,
           credentialKind: delegation.credentialKind,
           userId: delegation.userId,
-          userName:
+          userName: ((member) => (member ? memberView(member).name : ""))(
             state.members.find(
               (member) =>
                 member.workspaceId === workspaceId &&
                 member.userId === delegation.userId
-            )?.name ?? "",
+            )
+          ),
           createdAt: delegation.createdAt,
           lastUsedAt: delegation.lastUsedAt,
         }))
@@ -3009,9 +3040,54 @@ export const mockDb = {
     return copy(
       state.members
         .filter((member) => member.workspaceId === workspaceId)
-        .map((member) => omit(member, ["workspaceId"]))
+        .map(memberView)
         .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
     );
+  },
+
+  /**
+   * 멤버의 워크스페이스 표시 이름을 고친다 (APP-1204). 본인은 자기 이름을, ADMIN 은 누구의 이름이든.
+   * 비우면 계정 이름으로 되돌린다. 회의가 들고 있는 이름 사본(참여자·화자)도 따라 바뀐다 — 서버는 id 로 조인해 읽는다.
+   */
+  renameMember(
+    workspaceId: string,
+    userId: string,
+    displayName: string | null
+  ) {
+    if (userId === state.user.userId) requireWorkspaceMember(workspaceId);
+    else requireWorkspaceAdmin(workspaceId);
+    const member = state.members.find(
+      (m) => m.workspaceId === workspaceId && m.userId === userId
+    );
+    if (!member) fail("WORKSPACE_MEMBER_NOT_FOUND");
+    const name = (displayName ?? "")
+      .replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ")
+      .trim();
+    if (name.length > 30) fail("BAD_REQUEST");
+    member.displayName = name.length > 0 ? name : null;
+    const shown = memberView(member).name;
+    const projectIds = new Set(
+      state.projects
+        .filter((project) => project.workspaceId === workspaceId)
+        .map((project) => project.projectId)
+    );
+    for (const note of state.notes) {
+      if (!projectIds.has(note.projectId)) continue;
+      const participantIds = new Set<string>();
+      note.participants = note.participants.map((row) => {
+        if (row.userId !== userId) return row;
+        participantIds.add(row.participantId);
+        return { ...row, name: shown };
+      });
+      for (const participantId of participantIds) {
+        renameSpeaker(note.noteId, participantId, { userId, name: shown });
+      }
+      // 회의 시작자도 같은 이름을 읽는다(서버는 id 로 조인한다)
+      if (note.meetingStartedBy?.userId === userId) {
+        note.meetingStartedBy = { ...note.meetingStartedBy, name: shown };
+      }
+    }
+    return copy(memberView(member));
   },
 
   /**
@@ -3136,7 +3212,7 @@ export const mockDb = {
       inviteeName: null,
       inviteeEmail: email,
       inviteeImage: null,
-      inviterName: state.user.name,
+      inviterName: myNameIn(workspaceId),
       role: input.role as MockInvitation["role"],
       status: "PENDING",
       createdAt: new Date(createdAtMs).toISOString(),
@@ -3433,7 +3509,7 @@ export const mockDb = {
           participantId: nextId(),
           userId: state.user.userId,
           guestId: null,
-          name: state.user.name,
+          name: myNameIn(project.workspaceId),
           email: state.user.email,
           image: state.user.image,
         },
@@ -3456,9 +3532,10 @@ export const mockDb = {
     const project = state.projects.find(
       (row) => row.projectId === note.projectId
     );
-    const workspaceMembers = state.members.filter(
-      (member) => member.workspaceId === project?.workspaceId
-    );
+    // 참여자 이름은 이 워크스페이스에서 보이는 이름이다(APP-1204)
+    const workspaceMembers = state.members
+      .filter((member) => member.workspaceId === project?.workspaceId)
+      .map(memberView);
     const unique = [...new Set(userIds)];
     // **이미 이 회의의 참여자면 멤버가 아니어도 남길 수 있다.** 멤버를 내보내도 참여 기록은
     // 남는데 이건 전체 교체라, 「현재 멤버」만 받으면 나간 사람이 낀 회의록은 참여자를
@@ -3750,7 +3827,7 @@ export const mockDb = {
                   ...row,
                   userId: targetUserId,
                   guestId: null,
-                  name: target.name,
+                  name: memberView(target).name,
                   email: target.email,
                   image: target.image,
                 }
@@ -3893,7 +3970,10 @@ export const mockDb = {
     // 종료도 재개도 시작자로 묶이지 않는다.
     note.meetingStartedBy ??= {
       userId: state.user.userId,
-      name: state.user.name,
+      name: myNameIn(
+        state.projects.find((project) => project.projectId === note.projectId)
+          ?.workspaceId
+      ),
       email: state.user.email,
       image: state.user.image,
     };
