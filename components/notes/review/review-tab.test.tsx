@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -1730,6 +1730,90 @@ describe("최종 요약과 늦은 관계 결과", () => {
     ).toBeInTheDocument();
     await screen.findByText(/충돌과 이어짐을 확인하고 있습니다/);
     expect(screen.queryByText("확인된 충돌과 이어짐이 없습니다.")).toBeNull();
+  });
+
+  it.each(["review", "links"] as const)("늦은 분석의 %s 재조회 실패는 이전 내용을 보존하고 같은 흐름에서도 재시도한다", async (resource) => {
+    let current = flow("PENDING");
+    installFlow(() => current);
+    const { client } = renderTab(MENTORING_NOTE_ID, { noteMeta: { title: "검토 회의", whenIso: "2026-10-18T00:00:00Z", participantCount: 4 } });
+    const content = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
+    fireEvent.click(await row(content));
+    fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+    const input = screen.getByRole("textbox", { name: "항목 내용" });
+    fireEvent.change(input, { target: { value: "작성 중인 내용" } });
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    let fail = true;
+    let reviewReads = 0;
+    let linkReads = 0;
+    server.use(
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+        reviewReads++;
+        if (fail && resource === "review") return HttpResponse.json({ success: false, data: null, error: { code: "FAILED", message: "조회 실패" } }, { status: 500 });
+        const response = await getResponse(meetingFlowHandlers, request);
+        const body = await response!.json();
+        const item = body.data.items.find((item: { content: string }) => item.content === content);
+        item.content = "늦게 도착한 검토 내용";
+        item.revision++;
+        body.data.reviewVersion++;
+        return HttpResponse.json(body);
+      }),
+      http.get("*/v1/projects/:projectId/meeting-links", () => { linkReads++; return fail && resource === "links"
+        ? HttpResponse.json({ success: false, data: null, error: { code: "FAILED", message: "조회 실패" } }, { status: 500 })
+        : HttpResponse.json({ success: true, data: { notes: [], meetingLinks: [], conflicts: [], agendaLinks: [] }, error: null }); })
+    );
+    current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((region) => ({ ...region, status: "SUCCEEDED" as const })) };
+    await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
+    const notice = await screen.findByText("최신 분석 결과를 불러오지 못했습니다.");
+    expect(input).toHaveValue("작성 중인 내용");
+    if (resource === "review") expect(await row(content)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
+    const reads = reviewReads;
+    await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
+    expect(reviewReads).toBe(reads);
+    expect(notice).toBeInTheDocument();
+    const worker = vi.fn(function PdfWorker() { throw new Error("PDF 생성이 시작되었습니다"); });
+    vi.stubGlobal("Worker", worker);
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "내보내기·공유" }));
+      fireEvent.click(await screen.findByRole("menuitem", { name: /PDF로 내보내기/ }));
+      const dialog = await screen.findByRole("dialog", { name: "회의록 PDF로 내보내기" });
+      fireEvent.click(within(dialog).getByRole("button", { name: "PDF 미리보기" }));
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("회의록 PDF를 만들지 못했습니다."));
+      expect(worker).not.toHaveBeenCalled();
+      fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    } finally { vi.unstubAllGlobals(); }
+    const previousLinkReads = linkReads;
+    fail = false;
+    fireEvent.click(within(notice.closest('[role="alert"]') as HTMLElement).getByRole("button", { name: "다시 시도" }));
+    await waitFor(() => expect(screen.queryByText("최신 분석 결과를 불러오지 못했습니다.")).toBeNull());
+    expect(await row("늦게 도착한 검토 내용")).toBeInTheDocument();
+    expect(linkReads).toBeGreaterThan(previousLinkReads);
+    expect(input).toHaveValue("작성 중인 내용");
+    expect(screen.queryByText("최신 분석 결과를 다시 확인해 주세요")).toBeNull();
+  });
+
+  it("온라인 연결이 끊겨 분석 자료 조회가 멈춰도 완료로 처리하지 않는다", async () => {
+    let current = flow("PENDING");
+    let dropOnce = false;
+    server.use(http.get("*/v1/notes/:noteId/analyses/flow", () => {
+      if (dropOnce) { dropOnce = false; onlineManager.setOnline(false); }
+      return HttpResponse.json({ success: true, data: current, error: null });
+    }));
+    const { client } = renderTab();
+    await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    try {
+      current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((region) => ({ ...region, status: "SUCCEEDED" as const })) };
+      dropOnce = true;
+      await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
+      const notice = await screen.findByText("최신 분석 결과를 불러오지 못했습니다.");
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
+      await act(async () => { onlineManager.setOnline(true); });
+      await waitFor(() => expect(client.isFetching()).toBe(0));
+      expect(notice).toBeInTheDocument();
+      fireEvent.click(within(notice.closest('[role="alert"]') as HTMLElement).getByRole("button", { name: "다시 시도" }));
+      await waitFor(() => expect(screen.queryByText("최신 분석 결과를 불러오지 못했습니다.")).toBeNull());
+    } finally { onlineManager.setOnline(true); }
   });
 
   it("관계 실패와 성공한 빈 결과를 구별하고 담당 영역도 따로 표시한다", async () => {

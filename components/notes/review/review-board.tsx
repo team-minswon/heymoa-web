@@ -208,42 +208,48 @@ export function ReviewBoard({
   const relationsStatus = regionStatus("RELATIONS");
   const enrichmentStatus = regionStatus("ITEM_ENRICHMENT");
   const flowSignature = `${flow?.status}:${(flow?.regions ?? []).map((row) => `${row.region}:${row.status}`).join(",")}`;
-  const [loadedFlowSignature, setLoadedFlowSignature] = useState(flowSignature);
-  const refreshingAnalysis = loadedFlowSignature !== flowSignature;
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const refreshKey = useMemo(() => ({ flowSignature, refreshAttempt }), [flowSignature, refreshAttempt]);
+  const [loadedRefreshKey, setLoadedRefreshKey] = useState(refreshKey);
+  const [failedRefreshKey, setFailedRefreshKey] = useState<typeof refreshKey | null>(null);
+  const refreshFailed = failedRefreshKey === refreshKey;
+  const refreshingAnalysis = loadedRefreshKey !== refreshKey && !refreshFailed;
   useEffect(() => {
     // 저장 중에는 늦은 GET을 늘리지 않는다. 상태 변화는 저장이 끝난 뒤 읽는다.
-    if (editor.busyItemId !== null || loadedFlowSignature === flowSignature)
+    if (editor.busyItemId !== null || loadedRefreshKey === refreshKey || refreshFailed)
       return;
     let active = true;
+    const reload = (queryKey: readonly unknown[]) =>
+      queryClient.invalidateQueries({ queryKey }, { throwOnError: true });
+    const requiredKeys = [
+      getGetMeetingReviewQueryKey(noteId),
+      getGetMeetingReviewSummaryQueryKey(noteId),
+      getGetNoteTranscriptQueryKey(noteId),
+      ...(projectId ? [getGetProjectMeetingLinksQueryKey(projectId, { noteId })] : []),
+    ];
     void Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: getGetMeetingReviewQueryKey(noteId),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: getGetMeetingReviewSummaryQueryKey(noteId),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: getGetNoteTranscriptQueryKey(noteId),
-      }),
-      projectId
-        ? queryClient.invalidateQueries({
-            queryKey: getGetProjectMeetingLinksQueryKey(projectId, { noteId }),
-          })
-        : Promise.resolve(),
+      ...requiredKeys.map(reload),
       projectId && workspaceId
-        ? queryClient.invalidateQueries({
-            queryKey: getGetProjectTasksQueryKey(workspaceId, projectId),
-          })
+        // 업무 조회 실패는 제안의 판과 캐시를 대조해 taskStateOf에서 처리한다.
+        ? queryClient.invalidateQueries({ queryKey: getGetProjectTasksQueryKey(workspaceId, projectId) })
         : Promise.resolve(),
     ]).then(() => {
-      if (active) setLoadedFlowSignature(flowSignature);
+      if (!active) return;
+      // 오프라인으로 멈춘 조회도 resolve되므로 실제 무효화가 해제됐는지 확인한다.
+      if (requiredKeys.some((key) => queryClient.getQueryState(key)?.isInvalidated !== false)) {
+        throw new Error("분석 자료 조회가 끝나지 않았습니다.");
+      }
+      setLoadedRefreshKey(refreshKey);
+    }).catch(() => {
+      if (active) setFailedRefreshKey(refreshKey);
     });
     return () => {
       active = false;
     };
   }, [
-    flowSignature,
-    loadedFlowSignature,
+    refreshKey,
+    loadedRefreshKey,
+    refreshFailed,
     editor.busyItemId,
     noteId,
     projectId,
@@ -285,7 +291,7 @@ export function ReviewBoard({
   const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
   const speakers = transcript?.diarization.speakers;
   const [renderPdf] = useState(createMinutesPdfRenderer);
-  const exportVersion = useMemo(() => JSON.stringify({ noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName }), [noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName]);
+  const exportVersion = useMemo(() => JSON.stringify({ noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName, flowSignature, refreshAttempt }), [noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName, flowSignature, refreshAttempt]);
   // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
   const starts = useMemo(() => segmentStarts(segments), [segments]);
   const citedAt = useCallback(
@@ -341,7 +347,7 @@ export function ReviewBoard({
     const behind =
       revision !== undefined &&
       revision < (change.draft?.expectedRevision ?? change.target.revision);
-    if (tasksQuery.isPending || (behind && tasksQuery.isFetching)) return "pending";
+    if (tasksQuery.isPending || (behind && (tasksQuery.isFetching || tasksQuery.isPaused))) return "pending";
     return !tasks || (behind && tasksQuery.isError) ? "failed" : "ready";
   };
   const gateItems = items.map((item) =>
@@ -392,7 +398,11 @@ export function ReviewBoard({
   // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
   // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
   const analysisBlock =
-    relationsStatus === "PENDING"
+    refreshFailed
+      ? "최신 분석 결과를 다시 확인해 주세요"
+      : refreshingAnalysis
+        ? "최신 분석 결과를 확인하고 있습니다"
+        : relationsStatus === "PENDING"
       ? "충돌과 이어짐 확인이 끝나면 검토를 완료할 수 있습니다"
       : enrichmentStatus === "PENDING"
         ? "담당과 기한 정리가 끝나면 검토를 완료할 수 있습니다"
@@ -684,6 +694,7 @@ export function ReviewBoard({
         })
       : undefined;
   const preparePdf: PrepareMinutesPdf = async (include, signal) => {
+    if (refreshingAnalysis || refreshFailed) throw new Error("최신 분석 결과를 확인한 뒤 PDF를 만들 수 있습니다.");
     if (!exportSources) throw new Error("회의록 자료를 불러오지 못했습니다.");
     const doc = await exportSources.minutes(include);
     signal?.throwIfAborted();
@@ -709,7 +720,7 @@ export function ReviewBoard({
             ? "충돌과 이어짐을 분석하지 못했습니다."
             : "화자 정보를 확인하지 못해 충돌과 이어짐을 분석하지 않았습니다."}
       </p>
-    ) : projectId && linksQuery.isError ? (
+    ) : projectId && linksQuery.isError && !refreshFailed ? (
       <InlineRetry
         variant="line"
         label="회의 연결을 불러오지 못했습니다."
@@ -766,6 +777,14 @@ export function ReviewBoard({
           }
         />
 
+        {refreshFailed ? (
+          <InlineRetry
+            variant="line"
+            label="최신 분석 결과를 불러오지 못했습니다."
+            onRetry={() => setRefreshAttempt((attempt) => attempt + 1)}
+            className="pt-4"
+          />
+        ) : null}
         <div className="pt-4">
           <SpeakerNudgeBanner noteId={noteId} />
         </div>
