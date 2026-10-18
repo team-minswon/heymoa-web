@@ -9,6 +9,8 @@ import {
   ReviewBoardSkeleton,
 } from "@/components/notes/review/review-board";
 import { NoteSummary } from "@/components/notes/note-summary";
+import { PreEndGuide } from "@/components/notes/pre-end-guide";
+import type { NoteResponseData } from "@/lib/api/generated/models";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { okData } from "@/lib/api/ok-data";
@@ -33,6 +35,9 @@ export function ReviewTab({
   onEvidenceSelect,
   onOpenTranscript,
   onOpenTimeline,
+  note,
+  onEditParticipants,
+  onMeetingEnded,
 }: {
   noteId: string;
   workspaceId: string | undefined;
@@ -47,6 +52,10 @@ export function ReviewTab({
   onEvidenceSelect: (segmentId: string) => void;
   onOpenTranscript: () => void;
   onOpenTimeline?: () => void;
+  /** 종료 전 안내가 종료 확인창을 직접 연다. */
+  note?: NoteResponseData | null;
+  onEditParticipants?: () => void;
+  onMeetingEnded?: () => void;
 }) {
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
@@ -59,17 +68,11 @@ export function ReviewTab({
 
   if (!isEnded) {
     return (
-      <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-6 pb-16">
-        <div className="rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-5">
-          <p className="text-sm font-medium text-[var(--el-ink)]">
-            요약은 회의가 끝나면 정리됩니다
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
-            회의를 끝내면 결정 · 할 일 · 이슈를 주제로 묶어 검토할 수 있게
-            됩니다.
-          </p>
-        </div>
-      </div>
+      <PreEndGuide
+        note={note}
+        onEditParticipants={onEditParticipants}
+        onMeetingEnded={onMeetingEnded}
+      />
     );
   }
 

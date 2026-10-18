@@ -886,6 +886,9 @@ export function NotePanel({
                     // 레일을 접으면 「이 회의에 대해 물어보기」 알약이 검토 막대와 같은 자리에 뜬다.
                     dockRaised={showAgentRail && agentRail === false}
                     onEvidenceSelect={jumpToSegment}
+                    note={note}
+                    onEditParticipants={editParticipants}
+                    onMeetingEnded={() => onTabChange("summary")}
                     onOpenTranscript={() => handleTabChange("transcript")}
                     onOpenTimeline={
                       showContextTab

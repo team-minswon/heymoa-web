@@ -91,19 +91,42 @@ const rowBox = async (content: string) =>
 
 describe("검토 가능한 회의", () => {
   it("머리 · 언제 정해졌나 · 요약 · 주제 · 결정 · 할 일 차례로 서고, 주제를 누르면 그 자리에서 펼쳐진다", async () => {
-    renderTab(MENTORING_NOTE_ID, { noteMeta: { title: "9/11 팀 멘토링", whenIso: "2026-09-11T01:45:00Z", participantCount: 4, projectName: "주간" } });
+    renderTab(MENTORING_NOTE_ID, {
+      noteMeta: {
+        title: "9/11 팀 멘토링",
+        whenIso: "2026-09-11T01:45:00Z",
+        participantCount: 4,
+        projectName: "주간",
+      },
+    });
 
     // 요약 맨 위는 회의 한 문장이다. 옛 lead 문단은 한 문장이 없을 때만 선다.
-    expect(await screen.findByText("회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다")).toBeInTheDocument();
-    expect(screen.queryByText(/문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/)).toBeNull();
-    expect(screen.getByRole("heading", { level: 1, name: "9/11 팀 멘토링" })).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다"
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        /문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/
+      )
+    ).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "9/11 팀 멘토링" })
+    ).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
-    expect(await screen.findByRole("region", { name: "언제 정해졌나" })).toBeInTheDocument();
-    const order = [...document.querySelectorAll("section[aria-label]")].map((node) => node.getAttribute("aria-label"));
+    expect(
+      await screen.findByRole("region", { name: "언제 정해졌나" })
+    ).toBeInTheDocument();
+    const order = [...document.querySelectorAll("section[aria-label]")].map(
+      (node) => node.getAttribute("aria-label")
+    );
     expect(order).toEqual(["언제 정해졌나", "요약", "주제", "결정", "할 일"]);
     // 이슈 · 질문과 참고는 요약 보기의 섹션에 서지 않는다(APP-864).
     expect(
-      screen.queryByText("설문의 54%가 우리 사용자층에도 맞는 수치인지 알 수 없다")
+      screen.queryByText(
+        "설문의 54%가 우리 사용자층에도 맞는 수치인지 알 수 없다"
+      )
     ).toBeNull();
 
     const topic = screen.getByRole("button", { name: /차별점과 요금/ });
@@ -113,10 +136,14 @@ describe("검토 가능한 회의", () => {
     // 펼친 주제 안에 그 주제의 결정이 선다. 다른 섹션은 거르지 않는다.
     const index = screen.getByRole("list", { name: "주제 목차" });
     expect(
-      await within(index).findByText("요금은 좌석이 아니라 회의 시간 기준으로 계산한다")
+      await within(index).findByText(
+        "요금은 좌석이 아니라 회의 시간 기준으로 계산한다"
+      )
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다" })
+      screen.getByRole("button", {
+        name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다",
+      })
     ).toBeInTheDocument();
   });
 
@@ -125,33 +152,54 @@ describe("검토 가능한 회의", () => {
     const past = mockDb.getNote("01K0000000024");
     const index = await screen.findByRole("list", { name: "주제 목차" });
     // 주제 01 · 06 두 곳에서 이어진다. 앞의 여섯 밖에 있는 주제도 펼쳐서 본다
-    fireEvent.click(screen.getByRole("button", { name: /^나머지 주제 \d+개$/ }));
-    const links = await within(index).findAllByRole("link", { name: past.title });
+    fireEvent.click(
+      screen.getByRole("button", { name: /^나머지 주제 \d+개$/ })
+    );
+    const links = await within(index).findAllByRole("link", {
+      name: past.title,
+    });
     expect(links).toHaveLength(2);
-    expect(links[0]).toHaveAttribute("href", expect.stringContaining(`/notes/01K0000000024?view=full&tab=summary`));
-    expect(links[0].parentElement).toHaveTextContent(`${past.title}에서 이어짐`);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining(`/notes/01K0000000024?view=full&tab=summary`)
+    );
+    expect(links[0].parentElement).toHaveTextContent(
+      `${past.title}에서 이어짐`
+    );
 
-    fireEvent.click(within(index).getByRole("button", { name: /차별점과 요금/ }));
+    fireEvent.click(
+      within(index).getByRole("button", { name: /차별점과 요금/ })
+    );
     // 펼친 주제는 예전처럼 서술 + 항목 줄이고, 이어진 항목 바로 아래에 연결 한 줄이 선다
     expect(within(index).queryByText("결론")).toBeNull();
-    expect(await within(index).findByText(/경쟁 도구 요금표를 모은다/)).toHaveTextContent("할 일 「경쟁 도구 요금표를 모은다」");
+    expect(
+      await within(index).findByText(/경쟁 도구 요금표를 모은다/)
+    ).toHaveTextContent("할 일 「경쟁 도구 요금표를 모은다」");
   });
 
   it("지난 회의 연결을 못 불러오면 없는 것처럼 접지 않고 다시 불러올 길을 둔다", async () => {
     let fail = true;
     server.use(
       http.get("*/v1/projects/:projectId/meeting-links", () =>
-        fail ? HttpResponse.json({ success: false }, { status: 500 }) : undefined
+        fail
+          ? HttpResponse.json({ success: false }, { status: 500 })
+          : undefined
       )
     );
     renderTab();
-    const retry = await screen.findByText("지난 회의와의 연결을 불러오지 못했습니다.");
+    const retry = await screen.findByText(
+      "지난 회의와의 연결을 불러오지 못했습니다."
+    );
     fail = false;
     fireEvent.click(within(retry).getByRole("button", { name: "다시 시도" }));
-    fireEvent.click(screen.getByRole("button", { name: /^나머지 주제 \d+개$/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /^나머지 주제 \d+개$/ })
+    );
     const index = screen.getByRole("list", { name: "주제 목차" });
     expect(await within(index).findAllByRole("link")).toHaveLength(2);
-    expect(screen.queryByText("지난 회의와의 연결을 불러오지 못했습니다.")).toBeNull();
+    expect(
+      screen.queryByText("지난 회의와의 연결을 불러오지 못했습니다.")
+    ).toBeNull();
   });
 
   it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 여섯 개까지만 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {
@@ -161,7 +209,9 @@ describe("검토 가능한 회의", () => {
     const first = within(index).getByRole("button", {
       name: /회의가 끝난 뒤 할 일이 흐려지는 문제/,
     });
-    expect(first).toHaveTextContent("회의 뒤 할 일이 흐려지는 문제를 한 문장으로 좁히고");
+    expect(first).toHaveTextContent(
+      "회의 뒤 할 일이 흐려지는 문제를 한 문장으로 좁히고"
+    );
     expect(first.textContent).toMatch(/^\d{2}:\d{2}/);
     expect(first.textContent).toMatch(/결정 \d+/);
     expect(within(index).getAllByRole("button")).toHaveLength(6);
@@ -174,7 +224,9 @@ describe("검토 가능한 회의", () => {
       screen.getAllByTitle("주제 01 · 회의가 끝난 뒤 할 일이 흐려지는 문제")
         .length
     ).toBeGreaterThan(0);
-    const decision = await rowBox("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
+    const decision = await rowBox(
+      "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"
+    );
     expect(decision.textContent).toMatch(/\d{2}:\d{2}/);
   });
 
@@ -200,7 +252,11 @@ describe("검토 가능한 회의", () => {
     renderTab();
     const map = await screen.findByRole("region", { name: "언제 정해졌나" });
     const mark = within(map).getAllByRole("button", { name: /^결정 · / })[0];
-    const content = mark.getAttribute("aria-label")!.split(" · ").slice(2).join(" · ");
+    const content = mark
+      .getAttribute("aria-label")!
+      .split(" · ")
+      .slice(2)
+      .join(" · ");
 
     fireEvent.click(mark);
     expect(await row(content)).toHaveAttribute("aria-expanded", "true");
@@ -233,11 +289,20 @@ describe("검토 가능한 회의", () => {
 
   it("결정을 제외하면 그 주제와 결정 섹션의 개수가 하나 줄고 제외 취소하면 늘어난다", async () => {
     renderTab();
-    const topic = await screen.findByRole("button", { name: /회의가 끝난 뒤 할 일이 흐려지는 문제/ });
-    const topicCount = () => Number(/결정 (\d+)/.exec(topic.textContent ?? "")?.[1]);
+    const topic = await screen.findByRole("button", {
+      name: /회의가 끝난 뒤 할 일이 흐려지는 문제/,
+    });
+    const topicCount = () =>
+      Number(/결정 (\d+)/.exec(topic.textContent ?? "")?.[1]);
     const sectionCount = () =>
-      Number(/(\d+)/.exec(within(section("결정")).getByRole("heading").textContent ?? "")?.[1]);
-    fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      Number(
+        /(\d+)/.exec(
+          within(section("결정")).getByRole("heading").textContent ?? ""
+        )?.[1]
+      );
+    fireEvent.click(
+      await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+    );
     await screen.findByRole("button", { name: "제외" });
     const [topicBefore, sectionBefore] = [topicCount(), sectionCount()];
 
@@ -255,26 +320,45 @@ describe("검토 가능한 회의", () => {
     server.use(
       http.get("*/v1/notes/:noteId/analyses/flow", () => {
         flowReads += 1;
-        return HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, status: "REVIEWABLE" }, error: null });
+        return HttpResponse.json({
+          success: true,
+          data: { noteId: MENTORING_NOTE_ID, status: "REVIEWABLE" },
+          error: null,
+        });
       }),
       http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
         HttpResponse.json(
-          { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정된 검토본은 고칠 수 없습니다." } },
+          {
+            success: false,
+            data: null,
+            error: {
+              code: "MEETING_REVIEW_CONFIRMED",
+              message: "확정된 검토본은 고칠 수 없습니다.",
+            },
+          },
           { status: 409 }
         )
       )
     );
     renderTab();
-    fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+    fireEvent.click(
+      await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+    );
     await screen.findByRole("button", { name: "제외" });
     await waitFor(() => expect(flowReads).toBeGreaterThan(0));
     const before = flowReads;
 
     fireEvent.click(screen.getByRole("button", { name: "제외" }));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("확정된 검토본은 고칠 수 없습니다."));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "확정된 검토본은 고칠 수 없습니다."
+      )
+    );
     await waitFor(() => expect(flowReads).toBeGreaterThan(before));
-    expect(screen.queryByText(/다른 사람이 먼저 수정해/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/다른 사람이 먼저 수정해/)
+    ).not.toBeInTheDocument();
     expect(toast.error).not.toHaveBeenCalledWith(CONFLICT_MESSAGE);
   });
 
@@ -282,30 +366,53 @@ describe("검토 가능한 회의", () => {
     const confirmedPatch = () =>
       http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
         HttpResponse.json(
-          { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정된 검토본은 고칠 수 없습니다." } },
+          {
+            success: false,
+            data: null,
+            error: {
+              code: "MEETING_REVIEW_CONFIRMED",
+              message: "확정된 검토본은 고칠 수 없습니다.",
+            },
+          },
           { status: 409 }
         )
       );
     const flowOf = (status: string) =>
-      HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, status }, error: null });
+      HttpResponse.json({
+        success: true,
+        data: { noteId: MENTORING_NOTE_ID, status },
+        error: null,
+      });
 
     it("흐름 재조회가 실패해도 확정으로 남아 편집 컨트롤이 다시 켜지지 않는다", async () => {
       let rejected = false;
       server.use(
         http.get("*/v1/notes/:noteId/analyses/flow", () =>
-          rejected ? HttpResponse.json({ success: false }, { status: 500 }) : flowOf("REVIEWABLE")
+          rejected
+            ? HttpResponse.json({ success: false }, { status: 500 })
+            : flowOf("REVIEWABLE")
         ),
         confirmedPatch()
       );
       renderTab();
-      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(
+        await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+      );
       await screen.findByRole("button", { name: "제외" });
       rejected = true;
 
       fireEvent.click(screen.getByRole("button", { name: "제외" }));
 
-      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("확정된 검토본은 고칠 수 없습니다."));
-      await waitFor(() => expect(screen.queryByRole("button", { name: "제외" })).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          "확정된 검토본은 고칠 수 없습니다."
+        )
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", { name: "제외" })
+        ).not.toBeInTheDocument()
+      );
       expect(screen.getByText("확정됨")).toBeInTheDocument();
     });
 
@@ -319,7 +426,9 @@ describe("검토 가능한 회의", () => {
         confirmedPatch()
       );
       renderTab();
-      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(
+        await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+      );
       await screen.findByRole("button", { name: "제외" });
       const before = reviewReads;
 
@@ -331,19 +440,29 @@ describe("검토 가능한 회의", () => {
     it("확정으로 바뀌어도 쓰던 수정 초안은 남는다", async () => {
       let rejected = false;
       server.use(
-        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        http.get("*/v1/notes/:noteId/analyses/flow", () =>
+          flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")
+        ),
         confirmedPatch()
       );
       renderTab();
-      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(
+        await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+      );
       fireEvent.click(await screen.findByRole("button", { name: "수정" }));
-      fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), { target: { value: "고치던 문장" } });
+      fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
+        target: { value: "고치던 문장" },
+      });
       rejected = true;
 
       fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
-      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
-      expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue("고치던 문장");
+      await waitFor(() =>
+        expect(screen.getByText("확정됨")).toBeInTheDocument()
+      );
+      expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue(
+        "고치던 문장"
+      );
     });
 
     it("요약과 프로젝트 할 일도 다시 읽는다", async () => {
@@ -356,7 +475,9 @@ describe("검토 가능한 회의", () => {
       });
       server.use(confirmedPatch());
       renderTab();
-      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(
+        await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+      );
       await screen.findByRole("button", { name: "제외" });
       await waitFor(() => expect(taskReads).toBeGreaterThan(0));
       const [summaryBefore, taskBefore] = [summaryReads, taskReads];
@@ -371,27 +492,41 @@ describe("검토 가능한 회의", () => {
     it("확정으로 바뀐 뒤 남은 초안의 저장 버튼은 꺼진다", async () => {
       let rejected = false;
       server.use(
-        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        http.get("*/v1/notes/:noteId/analyses/flow", () =>
+          flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")
+        ),
         confirmedPatch()
       );
       renderTab();
-      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(
+        await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+      );
       fireEvent.click(await screen.findByRole("button", { name: "수정" }));
-      fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), { target: { value: "고치던 문장" } });
+      fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
+        target: { value: "고치던 문장" },
+      });
       rejected = true;
       fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
-      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByText("확정됨")).toBeInTheDocument()
+      );
       expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
     });
 
     it("확정으로 바뀐 뒤 남은 새 항목 초안의 추가 버튼은 꺼진다", async () => {
       let rejected = false;
       server.use(
-        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        http.get("*/v1/notes/:noteId/analyses/flow", () =>
+          flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")
+        ),
         http.post("*/v1/notes/:noteId/meeting-review/items", () =>
           HttpResponse.json(
-            { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정" } },
+            {
+              success: false,
+              data: null,
+              error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정" },
+            },
             { status: 409 }
           )
         )
@@ -399,11 +534,15 @@ describe("검토 가능한 회의", () => {
       renderTab();
       await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
       fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
-      fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), { target: { value: "쓰던 새 항목" } });
+      fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+        target: { value: "쓰던 새 항목" },
+      });
       rejected = true;
       fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
-      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByText("확정됨")).toBeInTheDocument()
+      );
       expect(screen.getByRole("button", { name: "추가" })).toBeDisabled();
     });
 
@@ -411,24 +550,41 @@ describe("검토 가능한 회의", () => {
       server.use(
         http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
           HttpResponse.json(
-            { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "서버가 준 확정 문구" } },
+            {
+              success: false,
+              data: null,
+              error: {
+                code: "MEETING_REVIEW_CONFIRMED",
+                message: "서버가 준 확정 문구",
+              },
+            },
             { status: 409 }
           )
         )
       );
       renderTab();
-      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(
+        await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+      );
       fireEvent.click(await screen.findByRole("button", { name: "제외" }));
-      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버가 준 확정 문구"));
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith("서버가 준 확정 문구")
+      );
     });
 
     it("확정으로 바뀌어도 쓰던 새 항목 초안은 남는다", async () => {
       let rejected = false;
       server.use(
-        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        http.get("*/v1/notes/:noteId/analyses/flow", () =>
+          flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")
+        ),
         http.post("*/v1/notes/:noteId/meeting-review/items", () =>
           HttpResponse.json(
-            { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정" } },
+            {
+              success: false,
+              data: null,
+              error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정" },
+            },
             { status: 409 }
           )
         )
@@ -436,13 +592,19 @@ describe("검토 가능한 회의", () => {
       renderTab();
       await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
       fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
-      fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), { target: { value: "쓰던 새 항목" } });
+      fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+        target: { value: "쓰던 새 항목" },
+      });
       rejected = true;
 
       fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
-      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
-      expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue("쓰던 새 항목");
+      await waitFor(() =>
+        expect(screen.getByText("확정됨")).toBeInTheDocument()
+      );
+      expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue(
+        "쓰던 새 항목"
+      );
     });
   });
 
@@ -466,7 +628,10 @@ describe("검토 가능한 회의", () => {
   it("추가하면 요청 본문에 topicOrdinal 키가 없다 — 요약 보기는 주제로 거르지 않는다", async () => {
     const bodies: Record<string, unknown>[] = [];
     server.events.on("request:start", async ({ request }) => {
-      if (request.method === "POST" && request.url.endsWith("/meeting-review/items")) {
+      if (
+        request.method === "POST" &&
+        request.url.endsWith("/meeting-review/items")
+      ) {
         bodies.push(await request.clone().json());
       }
     });
@@ -489,7 +654,13 @@ describe("검토 가능한 회의", () => {
     server.use(
       http.post("*/v1/notes/:noteId/meeting-review/items", () =>
         HttpResponse.json(
-          { success: false, error: { code: "INVALID_INPUT", message: "추가할 수 없는 항목입니다." } },
+          {
+            success: false,
+            error: {
+              code: "INVALID_INPUT",
+              message: "추가할 수 없는 항목입니다.",
+            },
+          },
           { status: 400 }
         )
       )
@@ -503,13 +674,19 @@ describe("검토 가능한 회의", () => {
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue("거절될 결정");
+    expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue(
+      "거절될 결정"
+    );
   });
 
   it("추가하면 요약을 다시 읽지 않는다", async () => {
     let summaryReads = 0;
     server.events.on("request:start", ({ request }) => {
-      if (request.method === "GET" && request.url.endsWith("/meeting-review/summary")) summaryReads += 1;
+      if (
+        request.method === "GET" &&
+        request.url.endsWith("/meeting-review/summary")
+      )
+        summaryReads += 1;
     });
     renderTab();
     await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
@@ -519,7 +696,9 @@ describe("검토 가능한 회의", () => {
       target: { value: "요약 재조회가 필요 없는 결정" },
     });
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
-    await within(section("결정")).findByRole("button", { name: "요약 재조회가 필요 없는 결정" });
+    await within(section("결정")).findByRole("button", {
+      name: "요약 재조회가 필요 없는 결정",
+    });
     expect(summaryReads).toBe(before);
     server.events.removeAllListeners();
   });
@@ -527,12 +706,22 @@ describe("검토 가능한 회의", () => {
   it("추가가 판 충돌로 거절되면 검토본과 함께 요약도 다시 읽는다", async () => {
     let summaryReads = 0;
     server.events.on("request:start", ({ request }) => {
-      if (request.method === "GET" && request.url.endsWith("/meeting-review/summary")) summaryReads += 1;
+      if (
+        request.method === "GET" &&
+        request.url.endsWith("/meeting-review/summary")
+      )
+        summaryReads += 1;
     });
     server.use(
       http.post("*/v1/notes/:noteId/meeting-review/items", () =>
         HttpResponse.json(
-          { success: false, error: { code: "MEETING_REVIEW_CONFLICT", message: "다른 사람이 먼저 수정했습니다." } },
+          {
+            success: false,
+            error: {
+              code: "MEETING_REVIEW_CONFLICT",
+              message: "다른 사람이 먼저 수정했습니다.",
+            },
+          },
           { status: 409 }
         )
       )
@@ -556,23 +745,35 @@ describe("검토 가능한 회의", () => {
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();
-        type Row = { kind: string; content: string; included: boolean; replacements: Array<Record<string, unknown>>; taskChanges: unknown[] };
+        type Row = {
+          kind: string;
+          content: string;
+          included: boolean;
+          replacements: Array<Record<string, unknown>>;
+          taskChanges: unknown[];
+        };
         const items: Row[] = body.data.items;
         const replacement = items.flatMap((item) => item.replacements)[0];
         for (const item of items) {
           item.replacements = [];
           item.taskChanges = [];
         }
-        const decisions = items.filter((item) => item.kind === "DECISION" && item.included).slice(0, 6);
+        const decisions = items
+          .filter((item) => item.kind === "DECISION" && item.included)
+          .slice(0, 6);
         decisions.forEach((item, at) => {
-          item.replacements = [{ ...replacement, decision: at < 5 ? "KEEP" : null }];
+          item.replacements = [
+            { ...replacement, decision: at < 5 ? "KEEP" : null },
+          ];
         });
         lastDecision = decisions[5].content;
         return HttpResponse.json(body);
       })
     );
     renderTab();
-    expect(await screen.findByText(/확인할 제안/)).toHaveTextContent("확인할 제안 1개");
+    expect(await screen.findByText(/확인할 제안/)).toHaveTextContent(
+      "확인할 제안 1개"
+    );
     expect(screen.queryByRole("button", { name: lastDecision })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "제안으로 가기" }));
@@ -582,7 +783,9 @@ describe("검토 가능한 회의", () => {
   it("고를 제안을 다 고르기 전에는 확정을 막고, 이전 결정을 끝내기로 고르면 확정 줄이 바뀐 뒤 확정한다", async () => {
     renderTab();
     // 목의 멘토링 회의에는 아직 안 고른 제안이 셋이다(대체 하나 · 기존 할 일 변경 둘).
-    expect(await screen.findByText(/확인할 제안/)).toHaveTextContent("확인할 제안 3개");
+    expect(await screen.findByText(/확인할 제안/)).toHaveTextContent(
+      "확인할 제안 3개"
+    );
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
 
     // 제안은 줄을 펼치지 않아도 줄 아래에 서 있다.
@@ -592,7 +795,9 @@ describe("검토 가능한 회의", () => {
     fireEvent.click(within(box).getByRole("radio", { name: /끝내기/ }));
     // 선택은 검토본에 저장된 뒤에 선다. 남은 제안 수가 하나 준다.
     await waitFor(() =>
-      expect(screen.getByText(/확인할 제안/)).toHaveTextContent("확인할 제안 2개")
+      expect(screen.getByText(/확인할 제안/)).toHaveTextContent(
+        "확인할 제안 2개"
+      )
     );
     expect(within(box).getByRole("radio", { name: /끝내기/ })).toHaveAttribute(
       "aria-checked",
@@ -622,7 +827,9 @@ describe("검토 가능한 회의", () => {
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
     // 다 고르면 막대가 무엇이 올라가고 무엇이 끝나는지 말한다.
-    expect(screen.getByText(/를 프로젝트에 올립니다/)).toHaveTextContent("이전 결정 1개 끝남");
+    expect(screen.getByText(/를 프로젝트에 올립니다/)).toHaveTextContent(
+      "이전 결정 1개 끝남"
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
     const dialog = await screen.findByRole("alertdialog");
@@ -665,16 +872,21 @@ describe("검토 가능한 회의", () => {
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();
-        type Row = { kind: string; included: boolean; replacements: Array<Record<string, unknown>>; taskChanges: unknown[] };
+        type Row = {
+          kind: string;
+          included: boolean;
+          replacements: Array<Record<string, unknown>>;
+          taskChanges: unknown[];
+        };
         const items: Row[] = body.data.items;
         const replacement = items.flatMap((item) => item.replacements)[0];
         for (const item of items) {
           item.replacements = [];
           item.taskChanges = [];
         }
-        items.find((item) => item.kind === "ISSUE" && item.included)!.replacements = [
-          { ...replacement, decision: null },
-        ];
+        items.find(
+          (item) => item.kind === "ISSUE" && item.included
+        )!.replacements = [{ ...replacement, decision: null }];
         return HttpResponse.json(body);
       })
     );
@@ -695,14 +907,22 @@ describe("검토 가능한 회의", () => {
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();
-        type Row = { kind: string; content: string; included: boolean; replacements: unknown[]; taskChanges: Array<Record<string, unknown>> };
+        type Row = {
+          kind: string;
+          content: string;
+          included: boolean;
+          replacements: unknown[];
+          taskChanges: Array<Record<string, unknown>>;
+        };
         const items: Row[] = body.data.items;
         const change = items.flatMap((item) => item.taskChanges)[0];
         for (const item of items) {
           item.replacements = [];
           item.taskChanges = [];
         }
-        const issue = items.find((item) => item.kind === "ISSUE" && item.included)!;
+        const issue = items.find(
+          (item) => item.kind === "ISSUE" && item.included
+        )!;
         issue.taskChanges = [{ ...change, decision: null }];
         issueContent = issue.content;
         return HttpResponse.json(body);
@@ -715,10 +935,14 @@ describe("검토 가능한 회의", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
     const node = (
-      await screen.findAllByRole("button", { name: (name) => name.includes(issueContent) })
+      await screen.findAllByRole("button", {
+        name: (name) => name.includes(issueContent),
+      })
     )[0];
     fireEvent.click(node);
-    const toggle = await screen.findByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    const toggle = await screen.findByRole("radiogroup", {
+      name: "기존 할 일에 반영할지",
+    });
     await waitFor(() =>
       expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
     );
@@ -728,7 +952,11 @@ describe("검토 가능한 회의", () => {
         "*/v1/notes/:noteId/meeting-review/items/:itemId",
         () =>
           HttpResponse.json(
-            { success: false, data: null, error: { code: "INTERNAL", message: "오류" } },
+            {
+              success: false,
+              data: null,
+              error: { code: "INTERNAL", message: "오류" },
+            },
             { status: 500 }
           ),
         { once: true }
@@ -753,27 +981,41 @@ describe("검토 가능한 회의", () => {
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();
-        type Row = { kind: string; content: string; included: boolean; replacements: unknown[]; taskChanges: Array<Record<string, unknown>> };
+        type Row = {
+          kind: string;
+          content: string;
+          included: boolean;
+          replacements: unknown[];
+          taskChanges: Array<Record<string, unknown>>;
+        };
         const items: Row[] = body.data.items;
         const change = items.flatMap((item) => item.taskChanges)[0];
         for (const item of items) {
           item.replacements = [];
           item.taskChanges = [];
         }
-        const issue = items.find((item) => item.kind === "ISSUE" && item.included)!;
+        const issue = items.find(
+          (item) => item.kind === "ISSUE" && item.included
+        )!;
         issue.taskChanges = [{ ...change, decision: null }];
         issueContent = issue.content;
         return HttpResponse.json(body);
       }),
       // 할 일 저장 뒤의 목록 재조회를 붙잡는다. 아무것도 돌려주지 않으면 원래 목이 답한다.
-      http.put("*/v1/workspaces/:workspaceId/projects/:projectId/tasks/:taskId", () => {
-        taskSaved = true;
-      }),
-      http.get("*/v1/workspaces/:workspaceId/projects/:projectId/tasks", async () => {
-        if (!taskSaved) return;
-        arrived();
-        await held;
-      })
+      http.put(
+        "*/v1/workspaces/:workspaceId/projects/:projectId/tasks/:taskId",
+        () => {
+          taskSaved = true;
+        }
+      ),
+      http.get(
+        "*/v1/workspaces/:workspaceId/projects/:projectId/tasks",
+        async () => {
+          if (!taskSaved) return;
+          arrived();
+          await held;
+        }
+      )
     );
     renderTab();
     await waitFor(() =>
@@ -782,9 +1024,15 @@ describe("검토 가능한 회의", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
     fireEvent.click(
-      (await screen.findAllByRole("button", { name: (name) => name.includes(issueContent) }))[0]
+      (
+        await screen.findAllByRole("button", {
+          name: (name) => name.includes(issueContent),
+        })
+      )[0]
     );
-    const toggle = await screen.findByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    const toggle = await screen.findByRole("radiogroup", {
+      name: "기존 할 일에 반영할지",
+    });
     await waitFor(() =>
       expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
     );
@@ -804,7 +1052,13 @@ describe("검토 가능한 회의", () => {
     const reviewBody = async (url: string) => {
       const original = await getResponse(meetingFlowHandlers, new Request(url));
       const body = await original!.json();
-      type Row = { kind: string; content: string; included: boolean; replacements: unknown[]; taskChanges: Array<Record<string, unknown>> };
+      type Row = {
+        kind: string;
+        content: string;
+        included: boolean;
+        replacements: unknown[];
+        taskChanges: Array<Record<string, unknown>>;
+      };
       const items: Row[] = body.data.items;
       const change = items.flatMap((item) => item.taskChanges)[0];
       for (const item of items) {
@@ -812,9 +1066,12 @@ describe("검토 가능한 회의", () => {
         item.taskChanges = [];
       }
       const hidden = items.filter(
-        (item) => (item.kind === "ISSUE" || item.kind === "QUESTION") && item.included
+        (item) =>
+          (item.kind === "ISSUE" || item.kind === "QUESTION") && item.included
       );
-      hidden[0].taskChanges = [{ ...change, decision: applied ? "APPLIED" : null }];
+      hidden[0].taskChanges = [
+        { ...change, decision: applied ? "APPLIED" : null },
+      ];
       hidden[1].taskChanges = [{ ...change, decision: null }];
       firstContent = hidden[0].content;
       return body;
@@ -823,11 +1080,19 @@ describe("검토 가능한 회의", () => {
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) =>
         HttpResponse.json(await reviewBody(request.url))
       ),
-      http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", async ({ request }) => {
-        const patch = (await request.json()) as { decisions?: Array<{ decision: string }> };
-        applied ||= patch.decisions?.some((row) => row.decision === "APPLIED") ?? false;
-        return HttpResponse.json(await reviewBody(request.url.replace(/\/items\/[^/]+$/, "")));
-      })
+      http.patch(
+        "*/v1/notes/:noteId/meeting-review/items/:itemId",
+        async ({ request }) => {
+          const patch = (await request.json()) as {
+            decisions?: Array<{ decision: string }>;
+          };
+          applied ||=
+            patch.decisions?.some((row) => row.decision === "APPLIED") ?? false;
+          return HttpResponse.json(
+            await reviewBody(request.url.replace(/\/items\/[^/]+$/, ""))
+          );
+        }
+      )
     );
     renderTab();
     await waitFor(() =>
@@ -836,9 +1101,15 @@ describe("검토 가능한 회의", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
     fireEvent.click(
-      (await screen.findAllByRole("button", { name: (name) => name.includes(firstContent) }))[0]
+      (
+        await screen.findAllByRole("button", {
+          name: (name) => name.includes(firstContent),
+        })
+      )[0]
     );
-    const toggle = await screen.findByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    const toggle = await screen.findByRole("radiogroup", {
+      name: "기존 할 일에 반영할지",
+    });
     await waitFor(() =>
       expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
     );
@@ -881,11 +1152,16 @@ describe("검토 가능한 회의", () => {
 
   it("그래프 보기 위쪽 문단도 요약 보기처럼 회의 한 문장이다", async () => {
     renderTab();
-    const headline = "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다";
+    const headline =
+      "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다";
     expect(await screen.findByText(headline)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
     expect(await screen.findByText(headline)).toBeInTheDocument();
-    expect(screen.queryByText(/문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/)).toBeNull();
+    expect(
+      screen.queryByText(
+        /문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/
+      )
+    ).toBeNull();
   });
 
   it("요약이 오는 동안 그래프 보기는 없다고 하지 않고 자리만 잡는다", async () => {
@@ -1142,10 +1418,13 @@ describe("검토본이 서기 전과 뒤", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("회의가 끝나기 전에는 요약이 언제 생기는지만 말한다", () => {
+  it("회의가 끝나기 전에는 종료하면 무엇이 생기는지 말한다", () => {
     renderTab(MENTORING_NOTE_ID, { isEnded: false });
     expect(
-      screen.getByText("요약은 회의가 끝나면 정리됩니다")
+      screen.getByText("회의를 종료하면 이런 것들이 만들어져요")
     ).toBeInTheDocument();
+    for (const title of ["요약", "화자 분리", "검토 후 확정"]) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
   });
 });
