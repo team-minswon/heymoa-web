@@ -1053,8 +1053,16 @@ function createSeedState(): StoreState {
    */
   type SeedNote = Omit<
     NoteResponseData,
-    "workspaceId" | "projectName" | "meetingEndedAt"
-  > & { meetingEndedAt?: string | null };
+    | "workspaceId"
+    | "projectName"
+    | "meetingEndedAt"
+    | "contextTopic"
+    | "contextBackground"
+  > & {
+    meetingEndedAt?: string | null;
+    contextTopic?: string | null;
+    contextBackground?: string | null;
+  };
   const withProjectScope = (note: SeedNote): NoteResponseData => {
     const project = projects.find((it) => it.projectId === note.projectId);
     return {
@@ -1062,6 +1070,8 @@ function createSeedState(): StoreState {
       workspaceId: project?.workspaceId ?? workspaces[0].workspaceId,
       projectName: project?.name ?? "알 수 없는 프로젝트",
       meetingEndedAt: note.meetingEndedAt ?? null,
+      contextTopic: note.contextTopic ?? null,
+      contextBackground: note.contextBackground ?? null,
     };
   };
   const noteSeeds: SeedNote[] = [
@@ -1071,6 +1081,10 @@ function createSeedState(): StoreState {
       title: "주간 제품 회의",
       createdAt: "2026-07-10T00:00:00Z",
       updatedAt: "2026-07-11T00:00:00Z",
+      // 회의 맥락(APP-1188)을 적어 둔 표본. 나머지 시드는 비어 있다
+      contextTopic: "결제 오류 대응과 다음 주 출시 일정",
+      contextBackground:
+        "지난주 결제 승인 실패가 늘어 원인을 찾는 중입니다. 오늘은 PG사 로그 결과와 임시 조치를 정합니다.",
       meetingStatus: "IN_PROGRESS",
       meetingStartedAt: "2026-07-11T00:00:00Z",
       recordedDurationMs: 0,
@@ -3513,6 +3527,8 @@ export const mockDb = {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: null,
+      contextTopic: null,
+      contextBackground: null,
       // 서버(CreateNoteService)가 만든 사람을 참여자로 넣는다.
       participants: [
         {

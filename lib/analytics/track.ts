@@ -70,6 +70,7 @@ type WebEventProperties = {
       | "workspace"
       | "members"
       | "guests"
+      | "terms"
       | "integrations"
       | "workspaceAgents"
       | "agents";

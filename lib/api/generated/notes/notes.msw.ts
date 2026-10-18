@@ -57,6 +57,8 @@ export const getGetNoteResponseMock = (): NoteResponse => ({
         image: null,
       },
     ],
+    contextTopic: "분기 로드맵 점검",
+    contextBackground: "3분기 출시 일정과 담당자를 정한다.",
   },
   error: null,
 });
@@ -100,6 +102,8 @@ export const getUpdateNoteResponseMock = (): NoteResponse => ({
         image: null,
       },
     ],
+    contextTopic: "분기 로드맵 점검",
+    contextBackground: "3분기 출시 일정과 담당자를 정한다.",
   },
   error: null,
 });
@@ -234,6 +238,8 @@ export const getCreateNoteResponseMock = (): NoteResponse => ({
         image: null,
       },
     ],
+    contextTopic: "분기 로드맵 점검",
+    contextBackground: "3분기 출시 일정과 담당자를 정한다.",
   },
   error: null,
 });
@@ -361,6 +367,51 @@ export const getGetNoteShareMailResponseMock =
     },
     error: null,
   });
+
+export const getUpdateNoteContextResponseMock = (): NoteResponse => ({
+  success: true,
+  data: {
+    noteId: "0HZX2K7M9Q4AF",
+    projectId: "0HZX2K7M9Q4AE",
+    workspaceId: "0HZX2K7M9Q4AD",
+    projectName: "모바일 앱",
+    title: "주간 회의",
+    createdAt: "2026-07-14T01:02:03Z",
+    updatedAt: "2026-07-14T01:02:03Z",
+    meetingStatus: "IN_PROGRESS",
+    meetingStartedAt: "2026-07-14T01:02:03Z",
+    meetingEndedAt: null,
+    recordedDurationMs: 6500,
+    activeSessionStartedAt: "2026-07-14T01:02:03Z",
+    meetingStartedBy: {
+      userId: "0HZX2K7M9Q4AC",
+      name: "홍길동",
+      email: "hong@example.com",
+      image: "https://cdn.example.com/avatars/hong.png",
+    },
+    participants: [
+      {
+        participantId: "0HZX2K7M9Q4AP",
+        userId: "0HZX2K7M9Q4AC",
+        guestId: null,
+        name: "홍길동",
+        email: "hong@example.com",
+        image: "https://cdn.example.com/avatars/hong.png",
+      },
+      {
+        participantId: "0HZX2K7M9Q4AQ",
+        userId: null,
+        guestId: "0HZX2K7M9Q4AR",
+        name: "박서준",
+        email: null,
+        image: null,
+      },
+    ],
+    contextTopic: "분기 로드맵 점검",
+    contextBackground: "3분기 출시 일정과 담당자를 정한다.",
+  },
+  error: null,
+});
 
 export const getGetNoteMockHandler = (
   overrideResponse?:
@@ -648,6 +699,30 @@ export const getGetNoteShareMailMockHandler = (
     options
   );
 };
+
+export const getUpdateNoteContextMockHandler = (
+  overrideResponse?:
+    | NoteResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<NoteResponse> | NoteResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notes/:noteId/context",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateNoteContextResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getNotesMock = () => [
   getGetNoteMockHandler(),
   getDeleteNoteMockHandler(),
@@ -661,4 +736,5 @@ export const getNotesMock = () => [
   getCreateNoteGuestParticipantMockHandler(),
   getSendNoteShareMailMockHandler(),
   getGetNoteShareMailMockHandler(),
+  getUpdateNoteContextMockHandler(),
 ];

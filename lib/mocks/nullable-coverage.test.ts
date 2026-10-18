@@ -8,6 +8,7 @@ import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
 import { restHandlers, seedShareMail } from "@/lib/mocks/rest-handlers";
+import { termHandlers } from "@/lib/mocks/terms";
 import {
   resetChatStreamsForTests,
   seedAgentChatTurnForTests,
@@ -24,7 +25,8 @@ import {
 const server = setupServer(
   ...meetingFlowHandlers,
   ...projectTaskHandlers,
-  ...restHandlers
+  ...restHandlers,
+  ...termHandlers
 );
 const contract = parse(readFileSync("openapi3.yml", "utf8"));
 

@@ -9,6 +9,7 @@ export { getMeetingApprovalMock } from "./meeting-approval/meeting-approval.msw"
 export { getMeetingReviewMock } from "./meeting-review/meeting-review.msw";
 export { getNotesMock } from "./notes/notes.msw";
 export { getNotificationsMock } from "./notifications/notifications.msw";
+export { getProjectTermsMock } from "./project-terms/project-terms.msw";
 export { getProjectsMock } from "./projects/projects.msw";
 export { getProposalsMock } from "./proposals/proposals.msw";
 export { getRelationsMock } from "./relations/relations.msw";
@@ -17,4 +18,5 @@ export { getUsersMock } from "./users/users.msw";
 export { getWorkspaceIntegrationMock } from "./workspace-integration/workspace-integration.msw";
 export { getWorkspaceInvitationsMock } from "./workspace-invitations/workspace-invitations.msw";
 export { getWorkspaceMembersMock } from "./workspace-members/workspace-members.msw";
+export { getWorkspaceTermsMock } from "./workspace-terms/workspace-terms.msw";
 export { getWorkspacesMock } from "./workspaces/workspaces.msw";

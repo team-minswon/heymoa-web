@@ -72,4 +72,16 @@ export type NoteResponseData = {
    * @nullable
    */
   activeSessionStartedAt: string | null;
+  /**
+   * 회의 배경(여러 줄). 전사 인식에 참고로 쓰인다. 안 적었으면 null
+   * @maxLength 1000
+   * @nullable
+   */
+  contextBackground: string | null;
+  /**
+   * 회의 주제(한 줄). 전사 인식에 가장 크게 반영된다. 안 적었으면 null
+   * @maxLength 200
+   * @nullable
+   */
+  contextTopic: string | null;
 };

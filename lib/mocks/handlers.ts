@@ -7,6 +7,7 @@ import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers } from "@/lib/mocks/project-tasks";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 import { chatSseHandlers } from "@/lib/mocks/sse-handler";
+import { termHandlers } from "@/lib/mocks/terms";
 import { transcriptionWebSocketHandler } from "@/lib/mocks/websocket-handler";
 
 export const handlers = [
@@ -28,6 +29,7 @@ export const handlers = [
   ...meetingFlowHandlers,
   ...projectTaskHandlers,
   ...restHandlers,
+  ...termHandlers,
   ...chatSseHandlers,
   transcriptionWebSocketHandler,
 ];

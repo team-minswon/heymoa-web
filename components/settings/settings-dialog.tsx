@@ -5,6 +5,7 @@ import { track } from "@/lib/analytics/track";
 import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
+  BookA,
   Bot,
   Building2,
   Plug,
@@ -19,6 +20,7 @@ import {
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
 import { GuestsSettings } from "@/components/settings/guests-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
+import { WorkspaceTermsSettings } from "@/components/terms/workspace-terms-settings";
 import { WorkspaceAgentAccessSettings } from "@/components/settings/workspace-agent-access-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
 import {
@@ -39,6 +41,7 @@ export type SettingsSection =
   | "workspace"
   | "members"
   | "guests"
+  | "terms"
   | "integrations"
   | "workspaceAgents"
   | "agents";
@@ -69,6 +72,7 @@ const SETTINGS_GROUPS: {
       { key: "workspace", label: "일반", Icon: Building2 },
       { key: "members", label: "멤버", Icon: UsersRound },
       { key: "guests", label: "임시 참여자", Icon: UserRoundPlus },
+      { key: "terms", label: "용어 사전", Icon: BookA },
       { key: "integrations", label: "연동", Icon: Plug },
       { key: "workspaceAgents", label: "MCP 관리", Icon: Bot },
     ],
@@ -112,7 +116,7 @@ function SettingsSections({
               key={group.label}
               role="group"
               aria-label={group.label}
-              className="grid gap-1"
+              className="grid content-start gap-1"
             >
               <p
                 aria-hidden
@@ -165,6 +169,8 @@ function SettingsSections({
           <MembersSettings workspaceId={workspaceId} />
         ) : section === "guests" ? (
           <GuestsSettings workspaceId={workspaceId} />
+        ) : section === "terms" ? (
+          <WorkspaceTermsSettings workspaceId={workspaceId} />
         ) : section === "integrations" ? (
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : section === "workspaceAgents" ? (

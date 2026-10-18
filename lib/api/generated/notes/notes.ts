@@ -29,6 +29,7 @@ import type {
   GetNotesParams,
   GetWorkspaceNotesParams,
   NoteAgendasResponse,
+  NoteContextRequest,
   NoteGuestParticipantRequest,
   NoteGuestParticipantsRequest,
   NoteListResponse,
@@ -2945,3 +2946,168 @@ export function useGetNoteShareMailSuspense<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type updateNoteContextResponse200 = {
+  data: NoteResponse;
+  status: 200;
+};
+
+export type updateNoteContextResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type updateNoteContextResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type updateNoteContextResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type updateNoteContextResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type updateNoteContextResponseSuccess = updateNoteContextResponse200 & {
+  headers: Headers;
+};
+export type updateNoteContextResponseError = (
+  | updateNoteContextResponse400
+  | updateNoteContextResponse401
+  | updateNoteContextResponse404
+  | updateNoteContextResponse409
+) & {
+  headers: Headers;
+};
+
+export type updateNoteContextResponse =
+  | updateNoteContextResponseSuccess
+  | updateNoteContextResponseError;
+
+export const getUpdateNoteContextUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/context`;
+};
+
+/**
+ * 회의의 주제와 배경을 통째로 바꾼다(앞뒤 공백은 지우고 빈 값은 비운다). 종료된 회의는 409 MEETING_ALREADY_ENDED. 열린 전사 연결에는 반영되지 않고 다음 연결(재연결·재개)부터 전사 인식에 쓰인다.
+ * @summary 회의 맥락 수정
+ */
+export const updateNoteContext = async (
+  noteId: string,
+  noteContextRequest?: NoteContextRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<updateNoteContextResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<updateNoteContextResponse>(getUpdateNoteContextUrl(noteId), {
+    ...options,
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(noteContextRequest),
+  });
+};
+
+export const getUpdateNoteContextMutationKey = () =>
+  ["updateNoteContext"] as const;
+
+export const getUpdateNoteContextMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateNoteContext>>,
+    TError,
+    UpdateNoteContextMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateNoteContext>>,
+  TError,
+  UpdateNoteContextMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateNoteContextMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateNoteContext>>,
+    UpdateNoteContextMutationVariables
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return updateNoteContext(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateNoteContextMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateNoteContext>>
+>;
+export type UpdateNoteContextMutationBody = NoteContextRequest | undefined;
+export type UpdateNoteContextMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type UpdateNoteContextMutationVariables = {
+  noteId: string;
+  data?: NoteContextRequest;
+};
+
+/**
+ * @summary 회의 맥락 수정
+ */
+export const useUpdateNoteContext = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateNoteContext>>,
+      TError,
+      UpdateNoteContextMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateNoteContext>>,
+  TError,
+  UpdateNoteContextMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateNoteContextMutationOptions(options), queryClient);
+};

@@ -17,6 +17,9 @@ vi.mock("@/components/settings/members-settings", () => ({
 vi.mock("@/components/settings/guests-settings", () => ({
   GuestsSettings: () => <p>임시 참여자 내용</p>,
 }));
+vi.mock("@/components/terms/workspace-terms-settings", () => ({
+  WorkspaceTermsSettings: () => <p>용어 사전 내용</p>,
+}));
 vi.mock("@/components/settings/workspace-integrations-settings", () => ({
   WorkspaceIntegrationsSettings: () => <p>연동 내용</p>,
 }));
@@ -93,6 +96,9 @@ describe("SettingsDialog", () => {
     // 임시 참여자는 멤버 탭 아래가 아니라 자기 탭이다
     fireEvent.click(screen.getByRole("button", { name: "임시 참여자" }));
     expect(screen.getByText("임시 참여자 내용")).toBeInTheDocument();
+    // 용어 사전은 임시 참여자 다음 탭이다(APP-1189)
+    fireEvent.click(screen.getByRole("button", { name: "용어 사전" }));
+    expect(screen.getByText("용어 사전 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
     expect(screen.getByText("연동 내용")).toBeInTheDocument();
   });

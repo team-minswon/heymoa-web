@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BookA,
   Check,
   Folder,
   MoreHorizontal,
@@ -33,6 +34,8 @@ import {
 } from "@/components/workspace/feedback-dialog";
 import { useFeedbackAnswers } from "@/components/workspace/use-feedback-answers";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
+import { ProjectTermsDialog } from "@/components/terms/project-terms-dialog";
+import type { SettingsSection } from "@/components/settings/settings-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -109,7 +112,7 @@ export function WorkspaceSidebar({
   projects: ProjectResponseData[];
   selectedProjectId: string | null;
   onSelectProject: (projectId: string | null) => void;
-  onOpenSettings: (section: "account" | "workspace") => void;
+  onOpenSettings: (section: SettingsSection) => void;
   /**
    * 프로젝트 만들기 창을 연다. **셸이 소유한다** — 입구가 여기 `+`·빈 상태 CTA·상단바
    * 「새 노트」 셋이고, 「새 노트」는 프로젝트가 없으면 이 창을 먼저 열어야 한다.
@@ -137,6 +140,9 @@ export function WorkspaceSidebar({
   });
   const isProjectMutationPending = updateProject.isPending;
   const [projectDialog, setProjectDialog] = useState<ProjectDialogState>(null);
+  const [termsProject, setTermsProject] = useState<ProjectResponseData | null>(
+    null
+  );
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponseData | null>(
     null
   );
@@ -147,8 +153,12 @@ export function WorkspaceSidebar({
   // 노트 전체 화면이 사이드바를 덮으면 **여기서 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라
   // `inert`도 덮는 면(`z-30`)도 닿지 않고, 셸이 재마운트되지 않아 저절로 사라지지도 않는다.
   // 모달이라 바깥을 눌러도 안 닫히므로 노트 위에 갇힌 창이 남는다.
-  if (covered && (projectDialog || deleteTarget || workspaceDialogOpen)) {
+  if (
+    covered &&
+    (projectDialog || termsProject || deleteTarget || workspaceDialogOpen)
+  ) {
     setProjectDialog(null);
+    setTermsProject(null);
     setDeleteTarget(null);
     setWorkspaceDialogOpen(false);
   }
@@ -457,6 +467,13 @@ export function WorkspaceSidebar({
                                 <span>이름 변경</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={() => setTermsProject(project)}
+                                className="gap-2 rounded-control py-1.5 text-xs"
+                              >
+                                <BookA className="size-3.5 text-[var(--el-muted)]" />
+                                <span>용어 사전</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 variant="destructive"
                                 onClick={() => setDeleteTarget(project)}
                                 className="gap-2 rounded-control py-1.5 text-xs text-destructive"
@@ -559,6 +576,16 @@ export function WorkspaceSidebar({
       <CreateWorkspaceDialog
         open={workspaceDialogOpen}
         onOpenChange={setWorkspaceDialogOpen}
+      />
+
+      <ProjectTermsDialog
+        workspaceId={workspaceId}
+        project={termsProject}
+        onOpenChange={(open) => !open && setTermsProject(null)}
+        onOpenWorkspaceTerms={() => {
+          setTermsProject(null);
+          onOpenSettings("terms");
+        }}
       />
 
       <Dialog
