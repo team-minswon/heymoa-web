@@ -298,8 +298,8 @@ describe("회의 간 연결", () => {
     const links = (await api(`/v1/projects/p/meeting-links?noteId=${MENTORING_NOTE_ID}`)).body.data;
     expect(links.notes).toHaveLength(2);
     expect(links.meetingLinks.map((row: { kind: string }) => row.kind)).toEqual(expect.arrayContaining(["SUPERSEDES", "COMPLETES"]));
-    expect(links.agendaLinks).toHaveLength(2);
-    expect((await api("/v1/projects/p/meeting-links?noteId=01K0000000002")).body.data).toEqual({ notes: [], meetingLinks: [], agendaLinks: [] });
+    expect(links.agendaLinks).toHaveLength(3);
+    expect((await api("/v1/projects/p/meeting-links?noteId=01K0000000002")).body.data).toEqual({ notes: [], meetingLinks: [], conflicts: [], agendaLinks: [] });
   });
 });
 

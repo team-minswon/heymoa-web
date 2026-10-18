@@ -10,6 +10,42 @@ const ANALYZING_NOTE = "01K0000000022";
 
 const reviewUrl = (noteId: string) => `/w/${WORKSPACE_ID}/notes/${noteId}?view=full&tab=summary`;
 
+test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐을 읽는다", async ({
+  page,
+}) => {
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  const overview = page.getByRole("region", { name: "요약", exact: true });
+  await expect(overview).toContainText(
+    "문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고", { timeout: 20_000 }
+  );
+  await expect(overview).toContainText("온톨로지 작업은 다음 학기로 넘겼다.");
+  await expect(overview).not.toContainText(
+    "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다"
+  );
+  const index = page.getByRole("list", { name: "주제 목차" });
+  await index
+    .getByRole("link", {
+      name: "회의가 끝난 뒤 할 일이 흐려지는 문제",
+      exact: true,
+    })
+    .click();
+  await expect(
+    index.getByRole("button", { name: /회의가 끝난 뒤 할 일이 흐려지는 문제/ })
+  ).toHaveAttribute("aria-expanded", "true");
+  const relations = page.getByRole("region", {
+    name: "충돌·이어짐",
+    exact: true,
+  });
+  await expect(
+    relations.getByText("대체", { exact: true }).first()
+  ).toBeVisible();
+  await expect(relations.getByText("이어짐", { exact: true })).toBeVisible();
+  await expect(relations).toContainText("프로젝트 확정 항목");
+  await expect(relations).toContainText(
+    "좌석 수 대신 실제 회의 시간을 과금 기준으로 정했습니다."
+  );
+});
+
 /** 검토 줄 하나. 줄의 내용 버튼을 품은 상자다 */
 const rowOf = (page: Page, content: string) =>
   page.locator("[data-item-id]").filter({ has: page.getByRole("button", { name: content, exact: true }) });
@@ -28,7 +64,7 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
   // 줄 이름은 exact 로 찾는다 — 「언제 정해졌나」의 표시도 같은 문장을 이름에 품는다.
   const decision = page.getByRole("button", { name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다", exact: true });
   await decision.click();
-  await expect(page.getByRole("list", { name: "근거 발언" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "근거 발언", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "수정", exact: true }).click();
   await page.getByRole("textbox", { name: "항목 내용" }).fill("설문 근거는 출처 · 표본 수 · 조사 연도를 함께 적는다");

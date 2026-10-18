@@ -227,12 +227,16 @@ export const NoteArchive = memo(function NoteArchive({
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
       refetchInterval: (query) =>
-        okData(query.state.data)?.status === "DIARIZING"
+        okData(query.state.data)?.status === "DIARIZING" ||
+        okData(query.state.data)?.regions?.some((row) => row.status === "PENDING")
           ? DIARIZATION_POLL_MS
           : false,
     },
   });
   const diarizing = okData(flowQuery.data)?.status === "DIARIZING";
+  const awaitingSpeakerAnalysis = okData(flowQuery.data)?.regions?.some(
+    (row) => row.region === "ITEM_ENRICHMENT" && row.status === "PENDING"
+  ) ?? false;
   // 종료 직후 마운트다 — 전역 staleTime(60초)을 그대로 두면 방금 전 라이브 캐시를 재사용해
   // 마지막 전사가 빠질 수 있다. 마운트할 때 최종 상태를 다시 당긴다.
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -240,7 +244,9 @@ export const NoteArchive = memo(function NoteArchive({
       refetchOnMount: "always",
       refetchInterval: (query) => {
         const status = okData(query.state.data)?.diarization?.status;
-        return diarizing || status === "ASSEMBLING" || status === "SUBMITTED"
+        return diarizing ||
+          (awaitingSpeakerAnalysis && status === "NOT_REQUESTED") ||
+          status === "ASSEMBLING" || status === "SUBMITTED"
           ? DIARIZATION_POLL_MS
           : false;
       },

@@ -8066,81 +8066,114 @@ paths:
   /v1/projects/{projectId}/meeting-links:
     get:
       tags:
-      - Projects
-      summary: 회의 간 연결 조회
-      description: 프로젝트의 끝난 노트 최근 N 개(서버 설정)와 그 사이의 회의 간 연결이다. 연결은 각 노트의 가장 최근 회의 뒤 분석이 냈고, 양 끝이 이 노트들 안에 있는 것만 나간다. noteId 를 주면 그 노트가 출발이나 도착인 연결과 양 끝 노트만 낸다. 연결은 화면 표시용이고 지난 항목의 상태를 바꾸지 않는다.
-      operationId: getProjectMeetingLinks
+      - "Projects"
+      summary: "회의 간 연결 조회"
+      description: "프로젝트의 끝난 노트 최근 N 개(서버 설정)와 그 사이의 회의 간 연결이다. 연결은 각 노트의 가장 최근 회의 뒤 분석이 냈고, 양 끝이 이 노트들 안에 있는 것만 나간다. noteId 를 주면 그 노트가 출발이나 도착인 연결과 양 끝 노트만 낸다. 연결은 화면 표시용이고 지난 항목의 상태를 바꾸지 않는다."
+      operationId: "getProjectMeetingLinks"
       parameters:
-      - name: projectId
-        in: path
-        description: 프로젝트 id
+      - name: "projectId"
+        in: "path"
+        description: "프로젝트 id"
         required: true
         schema:
-          type: string
-          description: 프로젝트 id
+          type: "string"
+          description: "프로젝트 id"
           nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-        example: 0HZX2K7M9Q4AE
-      - name: noteId
-        in: query
-        description: 이 노트 둘레만 볼 때 주는 노트 id
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        example: "0HZX2K7M9Q4AE"
+      - name: "noteId"
+        in: "query"
+        description: "이 노트 둘레만 볼 때 주는 노트 id"
         required: false
         schema:
-          type: string
-          description: 이 노트 둘레만 볼 때 주는 노트 id
+          type: "string"
+          description: "이 노트 둘레만 볼 때 주는 노트 id"
       responses:
-        '200':
-          description: 요청 성공
+        "200":
+          description: "요청 성공"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectMeetingLinksResponse'
+                $ref: "#/components/schemas/ProjectMeetingLinksResponse"
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
                       notes:
-                      - noteId: 0HZX2K7M9Q4AF
-                        title: 주간 회의
-                        startedAt: '2026-10-08T01:00:00Z'
+                      - noteId: "0HZX2K7M9Q4AF"
+                        title: "주간 회의"
+                        startedAt: "2026-10-08T01:00:00Z"
                         agendas: []
-                      - noteId: 0K9GVJT2C4N01
-                        title: 배포 회의
-                        startedAt: '2026-10-01T01:00:00Z'
+                      - noteId: "0K9GVJT2C4N01"
+                        title: "배포 회의"
+                        startedAt: "2026-10-01T01:00:00Z"
                         agendas:
-                        - agendaId: 0K9GVJT2C4A01
-                          title: 배포 일정
+                        - agendaId: "0K9GVJT2C4A01"
+                          title: "배포 일정"
                           completed: true
                           proposalIds:
-                          - 0K9GVJT2C4P01
+                          - "0K9GVJT2C4P01"
                       meetingLinks:
-                      - kind: SUPERSEDES
-                        reason: 배포 요일이 바뀌었다
+                      - kind: "SUPERSEDES"
+                        reason: "배포 요일이 바뀌었다"
                         evidenceSequences:
                         - 12
                         source:
-                          noteId: 0HZX2K7M9Q4AF
-                          proposalId: 0K9GVJT2C4P02
+                          noteId: "0HZX2K7M9Q4AF"
+                          proposalId: "0K9GVJT2C4P02"
                           revision: 1
-                          proposalKind: DECISION
-                          content: 목요일로 바꾼다
+                          proposalKind: "DECISION"
+                          content: "목요일로 바꾼다"
                         target:
-                          noteId: 0K9GVJT2C4N01
-                          proposalId: 0K9GVJT2C4P01
+                          noteId: "0K9GVJT2C4N01"
+                          proposalId: "0K9GVJT2C4P01"
                           revision: 2
-                          proposalKind: DECISION
-                          content: 화요일에 배포한다
+                          proposalKind: "DECISION"
+                          content: "화요일에 배포한다"
+                      - kind: "SUCCEEDS"
+                        reason: "승인된 작업을 이어 확인합니다"
+                        evidenceSequences:
+                        - 14
+                        source:
+                          noteId: "0HZX2K7M9Q4AF"
+                          proposalId: "0K9GVJT2C4P03"
+                          revision: 1
+                          proposalKind: "DECISION"
+                          content: "작업을 다시 검토한다"
+                        target:
+                          revision: 1
+                          proposalKind: "ACTION_ITEM"
+                          content: "기존 작업"
+                          type: "APPROVED"
+                          itemId: "0K9GVJT2C4T01"
                       agendaLinks:
                       - source:
-                          noteId: 0HZX2K7M9Q4AF
-                          agendaId: 0K9GVJT2C4A02
+                          noteId: "0HZX2K7M9Q4AF"
+                          agendaId: "0K9GVJT2C4A02"
                         target:
-                          noteId: 0K9GVJT2C4N01
-                          agendaId: 0K9GVJT2C4A01
+                          noteId: "0K9GVJT2C4N01"
+                          agendaId: "0K9GVJT2C4A01"
+                      conflicts:
+                      - kind: "CANCELS"
+                        reason: "기존 작업을 하지 않기로 정했습니다"
+                        evidenceSequences:
+                        - 13
+                        source:
+                          noteId: "0HZX2K7M9Q4AF"
+                          proposalId: "0K9GVJT2C4P03"
+                          revision: 1
+                          proposalKind: "DECISION"
+                          content: "작업을 중단한다"
+                        target:
+                          revision: 1
+                          proposalKind: "ACTION_ITEM"
+                          content: "기존 작업"
+                          type: "APPROVED"
+                          itemId: "0K9GVJT2C4T01"
                     error: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
   /v1/notes/{noteId}/share-mails:
@@ -15851,260 +15884,429 @@ components:
           - null
           description: 성공 시 null인 오류 정보
     ProjectMeetingLinksResponse:
-      title: ProjectMeetingLinksResponse
+      title: "ProjectMeetingLinksResponse"
       required:
-      - data
-      - error
-      - success
-      type: object
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
       properties:
         data:
           required:
-          - agendaLinks
-          - meetingLinks
-          - notes
-          type: object
+          - "agendaLinks"
+          - "conflicts"
+          - "meetingLinks"
+          - "notes"
+          type: "object"
           properties:
             notes:
-              type: array
-              description: 끝난 노트. 최근 순
+              type: "array"
+              description: "끝난 노트. 최근 순"
               items:
                 required:
-                - agendas
-                - noteId
-                - startedAt
-                - title
-                type: object
+                - "agendas"
+                - "noteId"
+                - "startedAt"
+                - "title"
+                type: "object"
                 properties:
                   agendas:
-                    type: array
-                    description: 그 노트의 안건
+                    type: "array"
+                    description: "그 노트의 안건"
                     items:
                       required:
-                      - agendaId
-                      - completed
-                      - proposalIds
-                      - title
-                      type: object
+                      - "agendaId"
+                      - "completed"
+                      - "proposalIds"
+                      - "title"
+                      type: "object"
                       properties:
                         proposalIds:
-                          type: array
-                          description: 소속 명제 id. 철회된 명제는 빠진다
+                          type: "array"
+                          description: "소속 명제 id. 철회된 명제는 빠진다"
                           items:
                             oneOf:
-                            - type: object
-                            - type: boolean
-                            - type: string
-                            - type: number
+                            - type: "object"
+                            - type: "boolean"
+                            - type: "string"
+                            - type: "number"
                           nullable: false
                         completed:
-                          type: boolean
-                          description: 완료 여부
+                          type: "boolean"
+                          description: "완료 여부"
                           nullable: false
                         title:
-                          type: string
-                          description: 안건 제목
+                          type: "string"
+                          description: "안건 제목"
                           nullable: false
                         agendaId:
-                          type: string
-                          description: 안건 id
+                          type: "string"
+                          description: "안건 id"
                           nullable: false
-                          example: 0K9GVJT2C4A01
-                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                          example: "0K9GVJT2C4A01"
+                          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                     nullable: false
                   startedAt:
-                    type: string
-                    description: 회의 시작 시각. 노트 목록과 같은 기준
+                    type: "string"
+                    description: "회의 시작 시각. 노트 목록과 같은 기준"
                     nullable: false
-                    example: '2026-07-14T01:02:03Z'
-                    format: date-time
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
                   noteId:
-                    type: string
-                    description: 노트 id
+                    type: "string"
+                    description: "노트 id"
                     nullable: false
-                    example: 0HZX2K7M9Q4AF
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    example: "0HZX2K7M9Q4AF"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                   title:
-                    type: string
-                    description: 노트 제목
+                    type: "string"
+                    description: "노트 제목"
                     nullable: false
                     minLength: 1
               nullable: false
             agendaLinks:
-              type: array
-              description: 안건 이어짐
+              type: "array"
+              description: "안건 이어짐"
               items:
-                type: object
+                type: "object"
                 properties:
                   source:
                     required:
-                    - agendaId
-                    - noteId
-                    type: object
+                    - "agendaId"
+                    - "noteId"
+                    type: "object"
                     properties:
                       noteId:
-                        type: string
-                        description: 뒤 회의 노트 id
+                        type: "string"
+                        description: "출발 회의 노트 id"
                         nullable: false
-                        example: 0HZX2K7M9Q4AF
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        example: "0HZX2K7M9Q4AF"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                       agendaId:
-                        type: string
-                        description: 뒤 회의 안건 id
+                        type: "string"
+                        description: "출발 안건 id"
                         nullable: false
-                        example: 0K9GVJT2C4A02
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        example: "0K9GVJT2C4A02"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                   target:
                     required:
-                    - agendaId
-                    - noteId
-                    type: object
+                    - "agendaId"
+                    - "noteId"
+                    type: "object"
                     properties:
                       noteId:
-                        type: string
-                        description: 앞 회의 노트 id
+                        type: "string"
+                        description: "같은 회의 또는 이전 회의 노트 id"
                         nullable: false
-                        example: 0K9GVJT2C4N01
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        example: "0K9GVJT2C4N01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                       agendaId:
-                        type: string
-                        description: 앞 회의 안건 id
+                        type: "string"
+                        description: "같은 회의의 앞 안건 또는 이전 회의 안건 id"
                         nullable: false
-                        example: 0K9GVJT2C4A01
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        example: "0K9GVJT2C4A01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
               nullable: false
             meetingLinks:
-              type: array
-              description: 명제 사이 연결
+              type: "array"
+              description: "명제의 이어짐. 새 결과는 SUCCEEDS이며 옛 결과의 관계 종류도 보존합니다"
               items:
                 required:
-                - evidenceSequences
-                - kind
-                - reason
-                - source
-                - target
-                type: object
+                - "evidenceSequences"
+                - "kind"
+                - "reason"
+                - "source"
+                - "target"
+                type: "object"
                 properties:
                   reason:
-                    type: string
-                    description: 한 줄 이유
+                    type: "string"
+                    description: "한 줄 이유"
                     nullable: false
                   kind:
-                    type: string
-                    description: 관계 종류. 서버는 해석하지 않는다(ai 계약이 정함)
+                    type: "string"
+                    description: "관계 종류. 서버는 해석하지 않는다(ai 계약이 정함)"
                     nullable: false
-                    example: SUPERSEDES
+                    example: "SUPERSEDES"
                   source:
                     required:
-                    - content
-                    - noteId
-                    - proposalId
-                    - proposalKind
-                    - revision
-                    type: object
+                    - "content"
+                    - "noteId"
+                    - "proposalId"
+                    - "proposalKind"
+                    - "revision"
+                    type: "object"
                     properties:
+                      itemId:
+                        type: "string"
+                        description: "승격 ID"
+                        nullable: true
+                        example: "0K9GVJT2C4A01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                       proposalKind:
-                        type: string
-                        description: 명제 종류
+                        type: "string"
+                        description: "종류"
                         nullable: false
                         enum:
-                        - AGENDA
-                        - DECISION
-                        - ACTION_ITEM
-                        - ISSUE
-                        - QUESTION
-                        - STATUS_REPORT
-                        - INSIGHT
+                        - "AGENDA"
+                        - "DECISION"
+                        - "ACTION_ITEM"
+                        - "ISSUE"
+                        - "QUESTION"
+                        - "STATUS_REPORT"
+                        - "INSIGHT"
                       noteId:
-                        type: string
-                        description: 노트 id
+                        type: "string"
+                        description: "노트 ID 또는 null"
                         nullable: false
-                        example: 0HZX2K7M9Q4AF
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        example: "0HZX2K7M9Q4AF"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      type:
+                        type: "string"
+                        description: "승격 대상 구분"
+                        nullable: true
+                        enum:
+                        - "APPROVED"
                       content:
-                        type: string
-                        description: 명제 현재 판 내용
+                        type: "string"
+                        description: "대상 내용"
                         nullable: false
                       proposalId:
-                        type: string
-                        description: 명제 id
+                        type: "string"
+                        description: "명제 ID 또는 null"
                         nullable: false
-                        example: 0K9GVJT2C4P01
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        example: "0K9GVJT2C4P01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                       revision:
-                        type: number
-                        description: 명제 현재 판
+                        type: "number"
+                        description: "관계가 가리킨 판"
                         nullable: false
                         minimum: 1
-                    description: 출발(뒤 회의의 명제)
+                    description: "출발(뒤 회의의 명제)"
                     nullable: false
                   target:
                     required:
-                    - content
-                    - noteId
-                    - proposalId
-                    - proposalKind
-                    - revision
-                    type: object
+                    - "content"
+                    - "proposalKind"
+                    - "revision"
+                    type: "object"
                     properties:
+                      itemId:
+                        type: "string"
+                        description: "승격 ID"
+                        nullable: true
+                        example: "0K9GVJT2C4A01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                       proposalKind:
-                        type: string
-                        description: 명제 종류
+                        type: "string"
+                        description: "종류"
                         nullable: false
                         enum:
-                        - AGENDA
-                        - DECISION
-                        - ACTION_ITEM
-                        - ISSUE
-                        - QUESTION
-                        - STATUS_REPORT
-                        - INSIGHT
+                        - "AGENDA"
+                        - "DECISION"
+                        - "ACTION_ITEM"
+                        - "ISSUE"
+                        - "QUESTION"
+                        - "STATUS_REPORT"
+                        - "INSIGHT"
                       noteId:
-                        type: string
-                        description: 노트 id
-                        nullable: false
-                        example: 0HZX2K7M9Q4AF
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        type: "string"
+                        description: "노트 ID 또는 null"
+                        nullable: true
+                        example: "0HZX2K7M9Q4AF"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      type:
+                        type: "string"
+                        description: "승격 대상 구분"
+                        nullable: true
+                        enum:
+                        - "APPROVED"
                       content:
-                        type: string
-                        description: 명제 현재 판 내용
+                        type: "string"
+                        description: "대상 내용"
                         nullable: false
                       proposalId:
-                        type: string
-                        description: 명제 id
-                        nullable: false
-                        example: 0K9GVJT2C4P01
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        type: "string"
+                        description: "명제 ID 또는 null"
+                        nullable: true
+                        example: "0K9GVJT2C4P01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
                       revision:
-                        type: number
-                        description: 명제 현재 판
+                        type: "number"
+                        description: "관계가 가리킨 판"
                         nullable: false
                         minimum: 1
-                    description: 도착(앞 회의의 명제)
+                    description: "도착(같은 회의·이전 회의 명제 또는 승격 항목)"
                     nullable: false
                   evidenceSequences:
-                    type: array
-                    description: 이번 쪽 근거 발화 sequence
+                    type: "array"
+                    description: "이번 쪽 근거 발화 sequence"
                     items:
                       oneOf:
-                      - type: object
-                      - type: boolean
-                      - type: string
-                      - type: number
+                      - type: "object"
+                      - type: "boolean"
+                      - type: "string"
+                      - type: "number"
                     nullable: false
               nullable: false
-          description: 성공 응답 데이터
+            conflicts:
+              type: "array"
+              description: "충돌·대체·취소·해결. 관계 제안만으로 상태를 바꾸지 않습니다"
+              items:
+                required:
+                - "evidenceSequences"
+                - "kind"
+                - "reason"
+                - "source"
+                - "target"
+                type: "object"
+                properties:
+                  reason:
+                    type: "string"
+                    description: "관계 판정 근거"
+                    nullable: false
+                  kind:
+                    type: "string"
+                    description: "AI가 판정한 강한 관계 종류"
+                    nullable: false
+                    enum:
+                    - "CONFLICTS_WITH"
+                    - "SUPERSEDES"
+                    - "CANCELS"
+                    - "RESOLVES"
+                  source:
+                    required:
+                    - "content"
+                    - "noteId"
+                    - "proposalId"
+                    - "proposalKind"
+                    - "revision"
+                    type: "object"
+                    properties:
+                      itemId:
+                        type: "string"
+                        description: "승격 ID"
+                        nullable: true
+                        example: "0K9GVJT2C4A01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      proposalKind:
+                        type: "string"
+                        description: "종류"
+                        nullable: false
+                        enum:
+                        - "AGENDA"
+                        - "DECISION"
+                        - "ACTION_ITEM"
+                        - "ISSUE"
+                        - "QUESTION"
+                        - "STATUS_REPORT"
+                        - "INSIGHT"
+                      noteId:
+                        type: "string"
+                        description: "노트 ID 또는 null"
+                        nullable: false
+                        example: "0HZX2K7M9Q4AF"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      type:
+                        type: "string"
+                        description: "승격 대상 구분"
+                        nullable: true
+                        enum:
+                        - "APPROVED"
+                      content:
+                        type: "string"
+                        description: "대상 내용"
+                        nullable: false
+                      proposalId:
+                        type: "string"
+                        description: "명제 ID 또는 null"
+                        nullable: false
+                        example: "0K9GVJT2C4P01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      revision:
+                        type: "number"
+                        description: "관계가 가리킨 판"
+                        nullable: false
+                        minimum: 1
+                    description: "출발 명제"
+                    nullable: false
+                  target:
+                    required:
+                    - "content"
+                    - "proposalKind"
+                    - "revision"
+                    type: "object"
+                    properties:
+                      itemId:
+                        type: "string"
+                        description: "승격 ID"
+                        nullable: true
+                        example: "0K9GVJT2C4A01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      proposalKind:
+                        type: "string"
+                        description: "종류"
+                        nullable: false
+                        enum:
+                        - "AGENDA"
+                        - "DECISION"
+                        - "ACTION_ITEM"
+                        - "ISSUE"
+                        - "QUESTION"
+                        - "STATUS_REPORT"
+                        - "INSIGHT"
+                      noteId:
+                        type: "string"
+                        description: "노트 ID 또는 null"
+                        nullable: true
+                        example: "0HZX2K7M9Q4AF"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      type:
+                        type: "string"
+                        description: "승격 대상 구분"
+                        nullable: true
+                        enum:
+                        - "APPROVED"
+                      content:
+                        type: "string"
+                        description: "대상 내용"
+                        nullable: false
+                      proposalId:
+                        type: "string"
+                        description: "명제 ID 또는 null"
+                        nullable: true
+                        example: "0K9GVJT2C4P01"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                      revision:
+                        type: "number"
+                        description: "관계가 가리킨 판"
+                        nullable: false
+                        minimum: 1
+                    description: "같은 회의·이전 회의 명제 또는 승격 항목"
+                    nullable: false
+                  evidenceSequences:
+                    type: "array"
+                    description: "출발 회의의 근거 발화 순번"
+                    items:
+                      oneOf:
+                      - type: "object"
+                      - type: "boolean"
+                      - type: "string"
+                      - type: "number"
+                    nullable: false
+              nullable: false
+          description: "성공 응답 데이터"
           nullable: false
         success:
-          type: boolean
-          description: 요청 성공 여부
+          type: "boolean"
+          description: "요청 성공 여부"
           nullable: false
           example: true
         error:
           nullable: true
           enum:
           - null
-          description: 성공 시 null인 오류 정보
+          description: "성공 시 null인 오류 정보"
     NoteShareMailResponse:
       title: NoteShareMailResponse
       required:

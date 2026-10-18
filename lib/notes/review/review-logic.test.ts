@@ -231,8 +231,8 @@ describe("topicDigests", () => {
     expect(first.tasks.map((row) => row.itemId)).toEqual(["t"]);
     expect(first.open.map((row) => row.itemId)).toEqual(["q"]);
     expect(first.count).toBe(2);
-    // 한 줄은 서버의 summary, 펼친 서술은 description 이다
-    expect(first).toMatchObject({ gist: "한 줄 요약", text: "첫 문장. 둘째 문장.", startMs: 5_000, endMs: 9_000 });
+    // 새 안건 요약을 접힌 상태와 펼친 상태에서 같은 기준으로 읽는다
+    expect(first).toMatchObject({ gist: "한 줄 요약", text: "한 줄 요약", startMs: 5_000, endMs: 9_000 });
     expect(digests.find((row) => row.ordinal === 2)?.gist).toBeNull();
   });
 

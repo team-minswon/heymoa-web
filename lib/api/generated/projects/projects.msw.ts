@@ -238,11 +238,51 @@ export const getGetProjectMeetingLinksResponseMock =
             content: "화요일에 배포한다",
           },
         },
+        {
+          kind: "SUCCEEDS",
+          reason: "승인된 작업을 이어 확인합니다",
+          evidenceSequences: [14],
+          source: {
+            noteId: "0HZX2K7M9Q4AF",
+            proposalId: "0K9GVJT2C4P03",
+            revision: 1,
+            proposalKind: "DECISION",
+            content: "작업을 다시 검토한다",
+          },
+          target: {
+            revision: 1,
+            proposalKind: "ACTION_ITEM",
+            content: "기존 작업",
+            type: "APPROVED",
+            itemId: "0K9GVJT2C4T01",
+          },
+        },
       ],
       agendaLinks: [
         {
           source: { noteId: "0HZX2K7M9Q4AF", agendaId: "0K9GVJT2C4A02" },
           target: { noteId: "0K9GVJT2C4N01", agendaId: "0K9GVJT2C4A01" },
+        },
+      ],
+      conflicts: [
+        {
+          kind: "CANCELS",
+          reason: "기존 작업을 하지 않기로 정했습니다",
+          evidenceSequences: [13],
+          source: {
+            noteId: "0HZX2K7M9Q4AF",
+            proposalId: "0K9GVJT2C4P03",
+            revision: 1,
+            proposalKind: "DECISION",
+            content: "작업을 중단한다",
+          },
+          target: {
+            revision: 1,
+            proposalKind: "ACTION_ITEM",
+            content: "기존 작업",
+            type: "APPROVED",
+            itemId: "0K9GVJT2C4T01",
+          },
         },
       ],
     },

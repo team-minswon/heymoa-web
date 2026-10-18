@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -19,10 +20,13 @@ import {
   vi,
 } from "vitest";
 
+import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
+import type { MeetingAnalysisFlowResponseData } from "@/lib/api/generated/models";
 import { ReviewTab } from "@/components/notes/review/review-tab";
 import { workspaceOfProject } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
 import { MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
+import { REVIEW_SEED_LEAD } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
@@ -58,12 +62,15 @@ afterAll(() => server.close());
 
 function renderTab(
   noteId = MENTORING_NOTE_ID,
-  over: Partial<Parameters<typeof ReviewTab>[0]> = {}
+  over: Partial<Parameters<typeof ReviewTab>[0]> = {},
+  existingClient?: QueryClient
 ) {
   const note = mockDb.getNote(noteId);
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client =
+    existingClient ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
   const onEvidenceSelect = vi.fn();
   const onOpenTranscript = vi.fn();
   render(
@@ -80,7 +87,7 @@ function renderTab(
       />
     </QueryClientProvider>
   );
-  return { onEvidenceSelect, onOpenTranscript };
+  return { onEvidenceSelect, onOpenTranscript, client };
 }
 
 const row = (content: string) => screen.findByRole("button", { name: content });
@@ -100,15 +107,14 @@ describe("검토 가능한 회의", () => {
       },
     });
 
-    // 요약 맨 위는 회의 한 문장이다. 옛 lead 문단은 한 문장이 없을 때만 선다.
     expect(
       await screen.findByText(
-        "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다"
+        REVIEW_SEED_LEAD.map((line) => line.text).join(" ")
       )
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(
-        /문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/
+      within(section("요약")).queryByText(
+        "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다"
       )
     ).toBeNull();
     expect(
@@ -121,7 +127,14 @@ describe("검토 가능한 회의", () => {
     const order = [...document.querySelectorAll("section[aria-label]")].map(
       (node) => node.getAttribute("aria-label")
     );
-    expect(order).toEqual(["언제 정해졌나", "요약", "주제", "결정", "할 일"]);
+    expect(order).toEqual([
+      "언제 정해졌나",
+      "요약",
+      "주제",
+      "충돌·이어짐",
+      "결정",
+      "할 일",
+    ]);
     // 이슈 · 질문과 참고는 요약 보기의 섹션에 서지 않는다(APP-864).
     expect(
       screen.queryByText(
@@ -173,8 +186,10 @@ describe("검토 가능한 회의", () => {
     // 펼친 주제는 예전처럼 서술 + 항목 줄이고, 이어진 항목 바로 아래에 연결 한 줄이 선다
     expect(within(index).queryByText("결론")).toBeNull();
     expect(
-      await within(index).findByText(/경쟁 도구 요금표를 모은다/)
-    ).toHaveTextContent("할 일 「경쟁 도구 요금표를 모은다」");
+      await within(section("충돌·이어짐")).findByText(
+        /경쟁 도구 요금표를 모은다/
+      )
+    ).toBeInTheDocument();
   });
 
   it("지난 회의 연결을 못 불러오면 없는 것처럼 접지 않고 다시 불러올 길을 둔다", async () => {
@@ -187,19 +202,15 @@ describe("검토 가능한 회의", () => {
       )
     );
     renderTab();
-    const retry = await screen.findByText(
-      "지난 회의와의 연결을 불러오지 못했습니다."
-    );
+    const retry = await screen.findByText("회의 연결을 불러오지 못했습니다.");
     fail = false;
     fireEvent.click(within(retry).getByRole("button", { name: "다시 시도" }));
     fireEvent.click(
       screen.getByRole("button", { name: /^나머지 주제 \d+개$/ })
     );
     const index = screen.getByRole("list", { name: "주제 목차" });
-    expect(await within(index).findAllByRole("link")).toHaveLength(2);
-    expect(
-      screen.queryByText("지난 회의와의 연결을 불러오지 못했습니다.")
-    ).toBeNull();
+    expect(await within(index).findAllByRole("link")).toHaveLength(3);
+    expect(screen.queryByText("회의 연결을 불러오지 못했습니다.")).toBeNull();
   });
 
   it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 여섯 개까지만 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {
@@ -1150,16 +1161,15 @@ describe("검토 가능한 회의", () => {
     expect(task.taskStatus).toBe("COMPLETED");
   });
 
-  it("그래프 보기 위쪽 문단도 요약 보기처럼 회의 한 문장이다", async () => {
+  it("그래프 보기 위쪽 문단도 회의 정리 전문이다", async () => {
     renderTab();
-    const headline =
-      "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다";
-    expect(await screen.findByText(headline)).toBeInTheDocument();
+    const overview = REVIEW_SEED_LEAD.map((line) => line.text).join(" ");
+    expect(await screen.findByText(overview)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
-    expect(await screen.findByText(headline)).toBeInTheDocument();
+    expect(await screen.findByText(overview)).toBeInTheDocument();
     expect(
       screen.queryByText(
-        /문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/
+        "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다"
       )
     ).toBeNull();
   });
@@ -1382,17 +1392,17 @@ describe("검토본이 서기 전과 뒤", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(
-      screen.getByRole("listitem", { name: "화자 나누기: 완료" })
+      screen.getByRole("listitem", { name: "충돌·담당 확인: 대기" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("listitem", { name: "분석: 진행 중" })
+      screen.getByRole("listitem", { name: "회의 정리: 진행 중" })
     ).toBeInTheDocument();
   });
 
   it("분석이 실패하면 노트 멤버가 다시 요청해 진행으로 넘어간다", async () => {
     renderTab("01K0000000026");
     expect(
-      await screen.findByRole("listitem", { name: "분석: 실패" })
+      await screen.findByRole("listitem", { name: "회의 정리: 실패" })
     ).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "다시 분석" }));
     expect(
@@ -1427,4 +1437,160 @@ describe("검토본이 서기 전과 뒤", () => {
       expect(screen.getByText(title)).toBeInTheDocument();
     }
   });
+});
+
+describe("최종 요약과 늦은 관계 결과", () => {
+  const flow = (
+    relations: "PENDING" | "SUCCEEDED" | "FAILED",
+    status: MeetingAnalysisFlowResponseData["status"] = "REVIEWABLE"
+  ): MeetingAnalysisFlowResponseData => ({
+    noteId: MENTORING_NOTE_ID,
+    status,
+    regions: [
+      { region: "SUMMARY", status: "SUCCEEDED" },
+      { region: "RELATIONS", status: relations },
+      { region: "ITEM_ENRICHMENT", status: "PENDING" },
+    ],
+  });
+  const installFlow = (read: () => MeetingAnalysisFlowResponseData) =>
+    server.use(
+      http.get("*/v1/notes/:noteId/analyses/flow", () =>
+        HttpResponse.json({ success: true, data: read(), error: null })
+      )
+    );
+
+  it("요약이 먼저 성공하면 전체 분석 종료를 기다리지 않고 정리를 읽는다", async () => {
+    installFlow(() => flow("PENDING", "ANALYZING"));
+    renderTab();
+    expect(
+      await screen.findByText(
+        REVIEW_SEED_LEAD.map((line) => line.text).join(" ")
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "분석 단계" })).toBeNull();
+    expect(
+      screen.getByText(/충돌과 이어짐을 확인하고 있습니다/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText("확인된 충돌과 이어짐이 없습니다.")).toBeNull();
+  });
+
+  it("관계와 담당 확인이 끝나기 전에는 검토 완료를 기다린다", async () => {
+    installFlow(() => flow("PENDING"));
+    renderTab();
+    expect(
+      await screen.findByText(
+        "충돌과 이어짐 확인이 끝나면 검토를 완료할 수 있습니다"
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
+  });
+
+  it("뒤늦은 관계 완료와 재요청이 펼친 줄·편집 초안을 초기화하지 않는다", async () => {
+    let current = flow("PENDING");
+    installFlow(() => current);
+    server.use(
+      http.get("*/v1/projects/:projectId/meeting-links", () =>
+        HttpResponse.json({
+          success: true,
+          data: { notes: [], meetingLinks: [], conflicts: [], agendaLinks: [] },
+          error: null,
+        })
+      )
+    );
+    const { client } = renderTab();
+    const content = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
+    fireEvent.click(await row(content));
+    fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
+      target: { value: "입력 중인 수정 내용" },
+    });
+    current = flow("SUCCEEDED");
+    await act(() =>
+      client.invalidateQueries({
+        queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
+      })
+    );
+    expect(
+      await screen.findByText("확인된 충돌과 이어짐이 없습니다.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue(
+      "입력 중인 수정 내용"
+    );
+    current = {
+      ...flow("PENDING", "ANALYZING"),
+      regions: [
+        { region: "SUMMARY", status: "PENDING" },
+        { region: "RELATIONS", status: "PENDING" },
+      ],
+    };
+    await act(() =>
+      client.invalidateQueries({
+        queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
+      })
+    );
+    expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue(
+      "입력 중인 수정 내용"
+    );
+    expect(
+      screen.getByText(REVIEW_SEED_LEAD.map((line) => line.text).join(" "))
+    ).toBeInTheDocument();
+    await screen.findByText(/충돌과 이어짐을 확인하고 있습니다/);
+    expect(screen.queryByText("확인된 충돌과 이어짐이 없습니다.")).toBeNull();
+  });
+
+  it("관계 실패와 성공한 빈 결과를 구별하고 담당 영역도 따로 표시한다", async () => {
+    installFlow(() => ({
+      ...flow("FAILED"),
+      regions: [
+        ...flow("FAILED").regions.slice(0, 2),
+        { region: "ITEM_ENRICHMENT", status: "SUCCEEDED" },
+      ],
+    }));
+    renderTab();
+    expect(
+      await screen.findByText(/충돌과 이어짐을 분석하지 못했습니다/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText("확인된 충돌과 이어짐이 없습니다.")).toBeNull();
+    expect(screen.queryByText(/화자 확인 뒤 담당과 기한/)).toBeNull();
+    expect(
+      await screen.findByText(
+        REVIEW_SEED_LEAD.map((line) => line.text).join(" ")
+      )
+    ).toBeInTheDocument();
+  });
+});
+
+it("종료 전 NOT_REQUESTED 캐시를 새로 확인하는 동안 수동 분석 버튼을 띄우지 않는다", async () => {
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  server.use(
+    http.get("*/v1/notes/:noteId/analyses/flow", async () => {
+      await pending;
+      return HttpResponse.json({
+        success: true,
+        data: { noteId: MENTORING_NOTE_ID, status: "ANALYZING", regions: [] },
+        error: null,
+      });
+    })
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 60_000 } },
+  });
+  client.setQueryData(getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID), {
+    status: 200,
+    data: {
+      success: true,
+      data: { noteId: MENTORING_NOTE_ID, status: "NOT_REQUESTED", regions: [] },
+      error: null,
+    },
+  });
+  renderTab(MENTORING_NOTE_ID, {}, client);
+  expect(screen.queryByRole("button", { name: "분석 요청" })).toBeNull();
+  release();
+  expect(
+    await screen.findByText("회의를 분석하는 중입니다")
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "분석 요청" })).toBeNull();
 });

@@ -24,6 +24,7 @@ import {
   useRecording,
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
+import { flowPollInterval } from "@/lib/notes/review/flow-cache";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { SpeakerChip } from "@/components/notes/speaker-chip";
 import { useGetNoteAgendas } from "@/lib/api/generated/notes/notes";
@@ -242,13 +243,14 @@ export function NoteTimeline({
     query: {
       enabled: meetingEnded,
       refetchInterval: (query) => {
-        const status = okData(query.state.data)?.status;
-        return status === "DIARIZING" || status === "ANALYZING" ? 5_000 : false;
+        const flow = okData(query.state.data);
+        return flowPollInterval(flow?.status ?? null, flow?.regions);
       },
     },
   });
   const analyzing =
-    meetingEnded && ["DIARIZING", "ANALYZING"].includes(okData(flowQuery.data)?.status ?? "");
+    meetingEnded && (["DIARIZING", "NOT_REQUESTED", "ANALYZING"].includes(okData(flowQuery.data)?.status ?? "") ||
+      (okData(flowQuery.data)?.regions ?? []).some((row) => row.status === "PENDING"));
   const diarizing =
     meetingEnded && okData(flowQuery.data)?.status === "DIARIZING";
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -291,12 +293,6 @@ export function NoteTimeline({
   // 칩은 바로 바뀌고 목록은 뒤따른다 — 수백 줄을 다시 그리는 동안 누른 칩이 멈춰 보이지 않게.
   const listFilter = useDeferredValue(filter);
   const reducedMotion = useReducedMotion();
-  const toggle = (key: "open" | "flipped", id: string) =>
-    setView((current) => {
-      const next = new Set(current[key]);
-      if (!next.delete(id)) next.add(id);
-      return { ...current, [key]: next, instant: false };
-    });
 
   // 주제 제목은 안건 정본이 준다. 노트 소켓의 agendas.changed 가 오면 provider 가 다시 읽게 한다.
   const agendasQuery = useGetNoteAgendas(noteId, {
@@ -395,12 +391,23 @@ export function NoteTimeline({
     },
     [noteId]
   );
+  const toggle = useCallback((key: "open" | "flipped", id: string) => {
+    // 직접 펼치는 조작은 읽으려는 의도다. 높이 변화가 자동 추종을 타고 바닥으로 끌고 가지 않게 한다.
+    updateFollowing(false);
+    readAwayNoteRef.current = noteId;
+    setView((current) => {
+      const next = new Set(current[key]);
+      if (!next.delete(id)) next.add(id);
+      return { ...current, [key]: next, instant: false };
+    });
+  }, [noteId, updateFollowing]);
   /** 방향 없이 거리만으로 잰다. 기록이 끝난 목록의 버튼 위치용이다. */
   const syncFollowing = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     updateFollowing(distanceFromBottom(viewport) <= FOLLOW_STICK_PX);
   }, [updateFollowing]);
+
   const scrollToLatest = () => {
     const viewport = viewportRef.current;
     if (!viewport) return;

@@ -17,7 +17,7 @@ type WaitingStatus = Extract<
   "DIARIZING" | "NOT_REQUESTED" | "ANALYZING" | "ANALYSIS_FAILED"
 >;
 
-const STEPS = ["화자 나누기", "분석", "검토", "확정"] as const;
+const STEPS = ["회의 정리", "충돌·담당 확인", "검토", "확정"] as const;
 
 /** 흐름 상태 → 지금 선 단계와 그 단계의 모양. */
 const CURRENT: Record<
@@ -25,15 +25,15 @@ const CURRENT: Record<
   { index: number; state: "running" | "waiting" | "failed" }
 > = {
   DIARIZING: { index: 0, state: "running" },
-  NOT_REQUESTED: { index: 1, state: "waiting" },
-  ANALYZING: { index: 1, state: "running" },
-  ANALYSIS_FAILED: { index: 1, state: "failed" },
+  NOT_REQUESTED: { index: 0, state: "waiting" },
+  ANALYZING: { index: 0, state: "running" },
+  ANALYSIS_FAILED: { index: 0, state: "failed" },
 };
 
 const COPY: Record<WaitingStatus, { title: string; body: string }> = {
   DIARIZING: {
-    title: "화자를 나누는 중입니다",
-    body: "끝나면 바로 회의 분석을 시작합니다. 몇 분 걸릴 수 있고, 다른 화면으로 옮겨도 됩니다.",
+    title: "녹음 기록을 정리하고 있습니다",
+    body: "스크립트 저장이 마무리되면 회의 정리를 시작합니다. 화자 확인 뒤 충돌과 담당도 이어서 정리합니다.",
   },
   NOT_REQUESTED: {
     title: "분석을 기다리고 있습니다",
@@ -41,7 +41,7 @@ const COPY: Record<WaitingStatus, { title: string; body: string }> = {
   },
   ANALYZING: {
     title: "회의를 분석하는 중입니다",
-    body: "결정과 할 일을 주제로 묶고, 담당과 기한을 붙이고, 프로젝트의 기존 결정 · 할 일과 견줍니다. 몇 분 걸릴 수 있고, 다른 화면으로 옮겨도 됩니다.",
+    body: "회의 정리와 안건 요약을 먼저 보여 드립니다. 화자 확인 뒤 충돌·이어짐과 담당·기한을 정리합니다. 다른 화면으로 옮겨도 됩니다.",
   },
   ANALYSIS_FAILED: {
     title: "회의를 분석하지 못했습니다",
@@ -60,17 +60,72 @@ export function isWaitingStatus(status: FlowStatus): status is WaitingStatus {
 export function FlowNotice({
   noteId,
   status,
+  verified = true,
+  compact = false,
   onOpenTranscript,
 }: {
   noteId: string;
   status: WaitingStatus;
+  /** 이번 화면에서 서버의 최신 상태를 확인한 뒤에만 수동 요청을 제공한다. */
+  verified?: boolean;
+  compact?: boolean;
   onOpenTranscript: () => void;
 }) {
   const queryClient = useQueryClient();
   const request = useRequestAnalysis();
   const { index, state } = CURRENT[status];
   const copy = COPY[status];
-  const canRequest = status === "ANALYSIS_FAILED" || status === "NOT_REQUESTED";
+  const canRequest =
+    verified && (status === "ANALYSIS_FAILED" || status === "NOT_REQUESTED");
+
+  const requestAction = canRequest ? (
+    <div className="col-start-2 mt-3">
+      <Button
+        size="sm"
+        loading={request.isPending}
+        onClick={() =>
+          request.mutate(
+            { noteId },
+            {
+              /**
+               * **서버가 준 상태를 쓴다** (APP-685). 전에는 `"ANALYZING"` 을 추측해 캐시에
+               * 써 넣고 폴링이 따라오기를 기다렸다 — 추측이 틀리면 버튼이 잠깐 거짓을
+               * 말한다. 202 응답이 **요청을 보낸 뒤의** 흐름 상태를 싣는다.
+               */
+              onSuccess: (response) => {
+                if (response.status === 202 && response.data.success) {
+                  moveFlowStatus(
+                    queryClient,
+                    noteId,
+                    response.data.data.flowStatus
+                  );
+                }
+                void queryClient.invalidateQueries({
+                  queryKey: getGetAnalysisFlowQueryKey(noteId),
+                });
+              },
+            }
+          )
+        }
+      >
+        {status === "ANALYSIS_FAILED" ? "다시 분석" : "분석 요청"}
+      </Button>
+    </div>
+  ) : null;
+
+  if (compact)
+    return (
+      <div
+        role={state === "failed" ? "alert" : "status"}
+        className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-5"
+      >
+        <div className="rounded-block border border-[var(--el-hairline)] px-4 py-3 text-sm leading-6 text-[var(--el-body)]">
+          <p className="font-medium text-[var(--el-ink)]">{copy.title}</p>
+          <p>이전에 받은 회의 정리와 검토 내용은 유지됩니다.</p>
+          {requestAction}
+        </div>
+      </div>
+    );
 
   return (
     <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-16">
@@ -170,40 +225,7 @@ export function FlowNotice({
         <p className="col-start-2 max-w-[54ch] text-sm leading-[23px] break-keep text-[var(--el-muted)]">
           {copy.body}
         </p>
-        {canRequest ? (
-          <div className="col-start-2 mt-3">
-            <Button
-              size="sm"
-              loading={request.isPending}
-              onClick={() =>
-                request.mutate(
-                  { noteId },
-                  {
-                    /**
-                     * **서버가 준 상태를 쓴다** (APP-685). 전에는 `"ANALYZING"` 을 추측해 캐시에
-                     * 써 넣고 폴링이 따라오기를 기다렸다 — 추측이 틀리면 버튼이 잠깐 거짓을
-                     * 말한다. 202 응답이 **요청을 보낸 뒤의** 흐름 상태를 싣는다.
-                     */
-                    onSuccess: (response) => {
-                      if (response.status === 202 && response.data.success) {
-                        moveFlowStatus(
-                          queryClient,
-                          noteId,
-                          response.data.data.flowStatus
-                        );
-                      }
-                      void queryClient.invalidateQueries({
-                        queryKey: getGetAnalysisFlowQueryKey(noteId),
-                      });
-                    },
-                  }
-                )
-              }
-            >
-              {status === "ANALYSIS_FAILED" ? "다시 분석" : "분석 요청"}
-            </Button>
-          </div>
-        ) : null}
+        {requestAction}
       </div>
 
       <div className="mt-10 grid gap-2.5 border-t border-[var(--el-hairline)] pt-5">

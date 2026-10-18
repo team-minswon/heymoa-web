@@ -5,7 +5,7 @@ import {
   type ContextState,
   type ProposalHead,
 } from "@/lib/notes/proposals/reducer";
-import { selectTimeline, toneOf } from "@/lib/notes/proposals/timeline";
+import { placeAgendas, selectTimeline, toneOf } from "@/lib/notes/proposals/timeline";
 
 let seq = 0;
 function head(
@@ -161,5 +161,22 @@ describe("toneOf", () => {
     expect(toneOf(head({ kind: "STATUS_REPORT" }))).toBe("reference");
     expect(toneOf(head({ kind: "INSIGHT" }))).toBe("reference");
     expect(toneOf(head({ kind: "ACTION_ITEM" }))).toBe("task");
+  });
+});
+
+
+describe("바뀐 안건 정본", () => {
+  it("사라진 안건과 새로 소속이 생긴 미분류 항목은 최신 정본으로 옮긴다", () => {
+    const a = head({}), b = head({});
+    const previous = new Map([[a.proposalId, "removed"], [b.proposalId, null]]);
+    const list = { asOfSequence: b.createdSequence, agendas: [{ agendaId: "current", title: "다시 정리한 안건", completed: false, proposalIds: [a.proposalId, b.proposalId] }] };
+    expect([...placeAgendas(previous, [a, b], list, true).values()]).toEqual(["current", "current"]);
+  });
+
+  it("앞에 다른 안건이 추가되어도 기존 그룹의 key가 바뀌지 않는다", () => {
+    const a = head({}), b = head({}), earlier = head({ createdSequence: a.createdSequence - 1 });
+    const list = { agendas: [{ agendaId: "a", title: "첫 안건", completed: false, proposalIds: [a.proposalId] }, { agendaId: "b", title: "둘째 안건", completed: false, proposalIds: [b.proposalId] }, { agendaId: "c", title: "앞에 추가된 안건", completed: false, proposalIds: [earlier.proposalId] }] };
+    const keys = (rows: ProposalHead[]) => selectTimeline(stateOf(...rows), "ALL", { list, placement: placeAgendas(new Map(), rows, list, false) }).groups;
+    expect(keys([a, b]).find((row) => row.agenda?.title === "둘째 안건")?.key).toBe(keys([earlier, a, b]).find((row) => row.agenda?.title === "둘째 안건")?.key);
   });
 });

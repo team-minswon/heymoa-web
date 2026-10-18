@@ -955,3 +955,36 @@ it("첫 목록은 즉시 보이고 나중에 붙은 항목만 짧게 나타납�
   const appended = container.querySelector(`#timeline-item-${second.proposalId}`)!;
   expect(appended).toHaveStyle({ opacity: "0" });
 });
+
+
+it("안건이 교체되면 제목 없는 옛 그룹을 남기지 않고 새 안건에서 펼쳐 읽는다", () => {
+  const a = head({ content: "사용자 가입 단계를 줄인다" });
+  withLedger(a);
+  agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "old", title: "옛 안건", proposalIds: [a.proposalId] }]);
+  const view = () => <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />;
+  const { rerender } = render(view());
+  expect(screen.getByRole("button", { name: /^옛 안건/ })).toBeInTheDocument();
+  agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "new", title: "가입 흐름 정리", proposalIds: [a.proposalId] }]);
+  rerender(view());
+  expect(screen.queryByRole("button", { name: /^옛 안건/ })).toBeNull();
+  expect(screen.getByRole("button", { name: /^가입 흐름 정리/ })).toHaveAttribute("aria-expanded", "true");
+  fireEvent.click(screen.getByRole("button", { name: /^가입 흐름 정리/ }));
+  expect(screen.getByRole("button", { name: /^가입 흐름 정리/ })).toHaveAttribute("aria-expanded", "false");
+});
+
+it("실시간 항목의 근거를 펼칠 때 높이가 늘어도 자동 추종으로 위치를 빼앗지 않는다", () => {
+  const callbacks: ResizeObserverCallback[] = [];
+  vi.stubGlobal("ResizeObserver", class {
+    constructor(callback: ResizeObserverCallback) { callbacks.push(callback); }
+    observe() {} unobserve() {} disconnect() {}
+  });
+  withLedger(head({ content: "검토하려고 펼치는 항목" }));
+  const { container } = render(<NoteTimeline header={null} onEvidenceSelect={() => {}} recording />);
+  const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
+  Object.defineProperties(viewport, { scrollTop: { configurable: true, writable: true, value: 1500 }, scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 500 } });
+  fireEvent.click(screen.getByRole("button", { name: /검토하려고 펼치는 항목/ }));
+  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 2500 });
+  act(() => callbacks.forEach((callback) => callback([], {} as ResizeObserver)));
+  expect(viewport.scrollTop).toBe(1500);
+  expect(screen.getByRole("button", { name: "맨 아래로" })).toBeInTheDocument();
+});

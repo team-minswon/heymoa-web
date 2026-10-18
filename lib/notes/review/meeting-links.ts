@@ -1,72 +1,137 @@
 import type {
   MeetingReviewResponseDataItemsItem,
   ProjectMeetingLinksResponseData,
-  ProjectMeetingLinksResponseDataMeetingLinksItemTargetProposalKind,
+  ProjectMeetingLinksResponseDataMeetingLinksItem,
 } from "@/lib/api/generated/models";
 
-/**
- * 요약 보기에 싣는 회의 간 연결. 이 회의에서 **나가는** 연결만 보인다 — 지난 회의 화면에 「이후 회의에서
- * 바뀜」을 거꾸로 보이지 않는다. 보기만 하고 지난 항목의 상태는 바꾸지 않는다(그건 제안 카드의 일이다).
- */
+/** 서버가 판정한 종류를 그대로 표시한다. 관계를 읽는 것으로 대상 상태나 승인을 바꾸지 않는다. */
+export const LINK_LABEL: Readonly<Record<string, string>> = {
+  CONFLICTS_WITH: "충돌",
+  SUPERSEDES: "대체",
+  CANCELS: "취소",
+  RESOLVES: "해결",
+  SUCCEEDS: "이어짐",
+  COMPLETES: "마침",
+};
+export const SHOWN_LINK_KINDS: ReadonlySet<string> = new Set(
+  Object.keys(LINK_LABEL)
+);
 
-/** 믿을 만하고 행동을 바꾸는 관계 넷만 — 바꿈 · 취소 · 마침 · 해결 */
-export const SHOWN_LINK_KINDS: ReadonlySet<string> = new Set(["SUPERSEDES", "CANCELS", "COMPLETES", "RESOLVES"]);
-
-export type PastNote = { noteId: string; title: string };
-export type PastItem = PastNote & { kind: ProjectMeetingLinksResponseDataMeetingLinksItemTargetProposalKind; content: string };
-
+export type PastNote = {
+  noteId: string;
+  title: string;
+  agendaId: string;
+  agendaTitle: string;
+};
+export type MeetingRelation =
+  ProjectMeetingLinksResponseDataMeetingLinksItem & {
+    key: string;
+    sourceItemId: string | null;
+    targetItemId: string | null;
+    targetTitle: string;
+    scope: "same" | "past" | "approved";
+  };
 export type MeetingLinkIndex = {
-  /** 검토 항목 → 이어진 지난 항목. 같은 지난 항목을 제안 카드가 다루면 빠진다 */
-  byItemId: ReadonlyMap<string, PastItem[]>;
-  /** 이 회의의 주제(agendaId) → 이어진 지난 회의 */
+  relations: MeetingRelation[];
   byAgendaId: ReadonlyMap<string, PastNote[]>;
 };
 
-const EMPTY: MeetingLinkIndex = { byItemId: new Map(), byAgendaId: new Map() };
+const endpointKey = (
+  end: ProjectMeetingLinksResponseDataMeetingLinksItem["target"]
+) =>
+  JSON.stringify([
+    end.type ?? "PROPOSAL",
+    end.noteId ?? null,
+    end.type === "APPROVED" ? end.itemId : end.proposalId,
+    end.revision,
+  ]);
 
+/** 내용이 같아도 ID·판이 다르면 별개 관계다. 옛 서버에는 conflicts가 없다. */
 export function indexMeetingLinks(
   data: ProjectMeetingLinksResponseData | null | undefined,
   noteId: string,
-  items: readonly Pick<MeetingReviewResponseDataItemsItem, "itemId" | "originalProposalRef" | "replacements" | "taskChanges">[]
+  items: readonly Pick<
+    MeetingReviewResponseDataItemsItem,
+    "itemId" | "originalProposalRef"
+  >[]
 ): MeetingLinkIndex {
-  if (!data) return EMPTY;
-  const titleOf = new Map(data.notes.map((note) => [note.noteId, note.title]));
+  if (!data) return { relations: [], byAgendaId: new Map() };
+  const notes = new Map(data.notes.map((note) => [note.noteId, note]));
   const itemOfProposal = new Map(
-    items.flatMap((item) => (item.originalProposalRef ? [[item.originalProposalRef.proposalId, item.itemId] as const] : []))
+    items.flatMap((item) =>
+      item.originalProposalRef
+        ? [
+            [
+              JSON.stringify([
+                item.originalProposalRef.proposalId,
+                item.originalProposalRef.revision,
+              ]),
+              item.itemId,
+            ] as const,
+          ]
+        : []
+    )
   );
-  // 제안 카드가 이미 다루는 지난 명제 — 같은 것을 한 줄로 또 보이면 겹친다
-  const carded = new Set(
-    items.flatMap((item) => [
-      ...item.replacements.flatMap((row) => (row.target.originalProposalRef ? [row.target.originalProposalRef.proposalId] : [])),
-      ...item.taskChanges.flatMap((row) => (row.target.originalProposalRef ? [row.target.originalProposalRef.proposalId] : [])),
-    ])
-  );
-
-  const byItemId = new Map<string, PastItem[]>();
-  for (const link of data.meetingLinks) {
-    if (link.source.noteId !== noteId || !SHOWN_LINK_KINDS.has(link.kind)) continue;
-    if (carded.has(link.target.proposalId)) continue;
-    const itemId = itemOfProposal.get(link.source.proposalId);
-    if (!itemId) continue;
-    const list = byItemId.get(itemId) ?? [];
-    if (list.some((row) => row.content === link.target.content && row.noteId === link.target.noteId)) continue;
-    list.push({
-      noteId: link.target.noteId,
-      title: titleOf.get(link.target.noteId) ?? "",
-      kind: link.target.proposalKind,
-      content: link.target.content,
+  const itemIdOf = (
+    end: ProjectMeetingLinksResponseDataMeetingLinksItem["target"]
+  ) =>
+    end.type !== "APPROVED" && end.noteId === noteId && end.proposalId
+      ? (itemOfProposal.get(JSON.stringify([end.proposalId, end.revision])) ??
+        null)
+      : null;
+  const seen = new Set<string>();
+  const relations: MeetingRelation[] = [];
+  // 강한 관계를 먼저 둔다. 같은 방향·끝점·종류만 중복으로 처리한다.
+  for (const link of [...(data.conflicts ?? []), ...data.meetingLinks]) {
+    if (link.source.noteId !== noteId || !SHOWN_LINK_KINDS.has(link.kind))
+      continue;
+    const key = JSON.stringify([
+      endpointKey(link.source),
+      endpointKey(link.target),
+      link.kind,
+    ]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    relations.push({
+      ...link,
+      key,
+      sourceItemId: itemIdOf(link.source),
+      targetItemId: itemIdOf(link.target),
+      targetTitle: link.target.noteId
+        ? (notes.get(link.target.noteId)?.title ?? "이전 회의")
+        : "프로젝트 확정 항목",
+      scope:
+        link.target.type === "APPROVED"
+          ? "approved"
+          : link.target.noteId === noteId
+            ? "same"
+            : "past",
     });
-    byItemId.set(itemId, list);
   }
 
   const byAgendaId = new Map<string, PastNote[]>();
-  for (const link of data.agendaLinks) {
-    const { source, target } = link;
-    if (!source || !target || source.noteId !== noteId || target.noteId === noteId) continue;
+  for (const { source, target } of data.agendaLinks) {
+    if (!source || !target || source.noteId !== noteId) continue;
+    if (target.noteId === noteId && target.agendaId === source.agendaId)
+      continue;
     const list = byAgendaId.get(source.agendaId) ?? [];
-    if (list.some((row) => row.noteId === target.noteId)) continue;
-    list.push({ noteId: target.noteId, title: titleOf.get(target.noteId) ?? "" });
+    if (
+      list.some(
+        (row) =>
+          row.noteId === target.noteId && row.agendaId === target.agendaId
+      )
+    )
+      continue;
+    const targetNote = notes.get(target.noteId);
+    list.push({
+      noteId: target.noteId,
+      title: targetNote?.title ?? "이전 회의",
+      agendaId: target.agendaId,
+      agendaTitle:
+        targetNote?.agendas.find((row) => row.agendaId === target.agendaId)
+          ?.title ?? "안건",
+    });
     byAgendaId.set(source.agendaId, list);
   }
-  return { byItemId, byAgendaId };
+  return { relations, byAgendaId };
 }

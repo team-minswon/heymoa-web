@@ -423,8 +423,8 @@ export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
 
         {doc.headline || doc.lead.length > 0 ? (
           <View style={s.verdict} wrap={false}>
-            <Text style={s.pageLabel}>결론</Text>
-            {doc.headline ? <Text style={s.headline}>{doc.headline}</Text> : null}
+            <Text style={s.pageLabel}>회의 정리</Text>
+            {doc.headline ? <Text style={s.headline}>{`제목 후보 · ${doc.headline}`}</Text> : null}
             {doc.lead.map((line, index) => (
               <View key={index} style={s.leadRow}>
                 <Text style={s.leadMark}>·</Text>

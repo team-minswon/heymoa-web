@@ -6,13 +6,14 @@ import { widerExports } from "@/lib/notes/minutes/exports";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { SegmentedControl } from "@/components/heymoa/segmented-control";
 import { ConfirmBar } from "@/components/notes/review/confirm-bar";
 import { EvidenceQuotes } from "@/components/notes/review/evidence-quotes";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
+import { MeetingRelations } from "@/components/notes/review/meeting-relations";
 import { MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewActions } from "@/components/notes/review/review-actions";
@@ -33,15 +34,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
 import { indexMeetingLinks } from "@/lib/notes/review/meeting-links";
+import type { MeetingAnalysisFlowResponseData } from "@/lib/api/generated/models";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import { useApproveMeetingReview } from "@/lib/api/generated/meeting-approval/meeting-approval";
 import {
   getGetMeetingReviewQueryKey,
+  getGetMeetingReviewSummaryQueryKey,
   useGetMeetingReview,
   useGetMeetingReviewSummary,
 } from "@/lib/api/generated/meeting-review/meeting-review";
-import { useGetProjectMeetingLinks, useGetProjectTasks } from "@/lib/api/generated/projects/projects";
-import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
+import {
+  getGetProjectMeetingLinksQueryKey,
+  useGetProjectMeetingLinks,
+  useGetProjectTasks,
+} from "@/lib/api/generated/projects/projects";
+import {
+  getGetNoteTranscriptQueryKey,
+  useGetNoteTranscript,
+} from "@/lib/api/generated/transcription/transcription";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import { useAssigneeChoices } from "@/lib/assignees/use-assignee-choices";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
@@ -104,11 +114,20 @@ function newRequestId() {
 }
 
 /** 어느 주제에도 들지 않은 질문 · 이슈. 회의록의 「기타」 미결이다 */
-const unfiledOpen = (items: readonly ReviewItem[], topicOf: (itemId: string) => number | null) =>
-  items.filter((item) => item.included && (item.kind === "QUESTION" || item.kind === "ISSUE") && topicOf(item.itemId) === null);
+const unfiledOpen = (
+  items: readonly ReviewItem[],
+  topicOf: (itemId: string) => number | null
+) =>
+  items.filter(
+    (item) =>
+      item.included &&
+      (item.kind === "QUESTION" || item.kind === "ISSUE") &&
+      topicOf(item.itemId) === null
+  );
 
 export function ReviewBoard({
   noteId,
+  flow,
   workspaceId,
   projectId,
   confirmed,
@@ -123,6 +142,7 @@ export function ReviewBoard({
   onOpenTimeline,
 }: {
   noteId: string;
+  flow?: MeetingAnalysisFlowResponseData;
   workspaceId: string | undefined;
   projectId: string | undefined;
   confirmed: boolean;
@@ -142,16 +162,34 @@ export function ReviewBoard({
   onOpenTimeline?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const reviewQuery = useGetMeetingReview(noteId);
-  const summaryQuery = useGetMeetingReviewSummary(noteId);
+  const editor = useReviewEditor(noteId);
+  const reviewQuery = useGetMeetingReview(noteId, {
+    query: {
+      enabled: editor.busyItemId === null,
+      staleTime: 0,
+      refetchOnMount: "always",
+    },
+  });
+  const summaryQuery = useGetMeetingReviewSummary(noteId, {
+    query: { staleTime: 0, refetchOnMount: "always" },
+  });
   const transcriptQuery = useGetNoteTranscript(noteId);
   // 회의 간 연결은 이 회의가 양 끝인 것만 받는다. 프로젝트 없는 회의는 연결이 없다.
-  const linksQuery = useGetProjectMeetingLinks(projectId ?? "", { noteId }, { query: { enabled: Boolean(projectId) } });
+  const linksQuery = useGetProjectMeetingLinks(
+    projectId ?? "",
+    { noteId },
+    {
+      query: {
+        enabled: Boolean(projectId),
+        staleTime: 0,
+        refetchOnMount: "always",
+      },
+    }
+  );
   const linksData = okData(linksQuery.data);
   const tasksQuery = useGetProjectTasks(workspaceId ?? "", projectId ?? "", {
     query: { enabled: Boolean(workspaceId && projectId) },
   });
-  const editor = useReviewEditor(noteId);
   // 기존 할 일 반영은 제안 줄 안에서 돈다. 확정이 그 저장보다 앞서지 않게 여기서도 센다.
   const applyingTasks =
     useIsMutating({ mutationKey: ["updateProjectTask"] }) > 0;
@@ -160,6 +198,47 @@ export function ReviewBoard({
     mutation: { meta: { suppressErrorToast: true } },
   });
   const [approveError, setApproveError] = useState<string | null>(null);
+  const regionStatus = (region: string) =>
+    flow?.regions?.find((row) => row.region === region)?.status;
+  const relationsStatus = regionStatus("RELATIONS");
+  const enrichmentStatus = regionStatus("ITEM_ENRICHMENT");
+  const flowSignature = `${flow?.status}:${(flow?.regions ?? []).map((row) => `${row.region}:${row.status}`).join(",")}`;
+  const [loadedFlowSignature, setLoadedFlowSignature] = useState(flowSignature);
+  const refreshingAnalysis = loadedFlowSignature !== flowSignature;
+  useEffect(() => {
+    // 저장 중에는 늦은 GET을 늘리지 않는다. 상태 변화는 저장이 끝난 뒤 읽는다.
+    if (editor.busyItemId !== null || loadedFlowSignature === flowSignature)
+      return;
+    let active = true;
+    void Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: getGetMeetingReviewQueryKey(noteId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: getGetMeetingReviewSummaryQueryKey(noteId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: getGetNoteTranscriptQueryKey(noteId),
+      }),
+      projectId
+        ? queryClient.invalidateQueries({
+            queryKey: getGetProjectMeetingLinksQueryKey(projectId, { noteId }),
+          })
+        : Promise.resolve(),
+    ]).then(() => {
+      if (active) setLoadedFlowSignature(flowSignature);
+    });
+    return () => {
+      active = false;
+    };
+  }, [
+    flowSignature,
+    loadedFlowSignature,
+    editor.busyItemId,
+    noteId,
+    projectId,
+    queryClient,
+  ]);
 
   const [view, setView] = useState<View>("summary");
   const [mailOpen, setMailOpen] = useState(false);
@@ -169,7 +248,9 @@ export function ReviewBoard({
    * ponytail: 이 화면이 떠 있는 동안만 기억한다. 새로고침하면 잊어, 감춘 항목의 그 제안은 다시 고르지 않은 채
    * 확정될 수 있다(할 일 이력에는 남는다). 막으려면 반영과 선택을 server 가 한 번에 저장해야 한다.
    */
-  const [unsavedApplies, setUnsavedApplies] = useState<ReadonlySet<string>>(() => new Set());
+  const [unsavedApplies, setUnsavedApplies] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
   const lastRequest = useRef<{ body: string; id: string } | null>(null);
 
   const review = okData(reviewQuery.data);
@@ -182,7 +263,10 @@ export function ReviewBoard({
     () => new Map(items.map((item) => [item.itemId, item])),
     [items]
   );
-  const meetingLinks = useMemo(() => indexMeetingLinks(linksData, noteId, items), [linksData, noteId, items]);
+  const meetingLinks = useMemo(
+    () => indexMeetingLinks(linksData, noteId, items),
+    [linksData, noteId, items]
+  );
   const topics = useMemo(() => topicIndex(summary), [summary]);
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
   const topicTitleOf = (ordinal: number) =>
@@ -199,7 +283,10 @@ export function ReviewBoard({
   const speakers = transcript?.diarization.speakers;
   // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
   const starts = useMemo(() => segmentStarts(segments), [segments]);
-  const citedAt = useCallback((item: ReviewItem) => citedAtOf(item, starts), [starts]);
+  const citedAt = useCallback(
+    (item: ReviewItem) => citedAtOf(item, starts),
+    [starts]
+  );
   const digests = useMemo(
     () => topicDigests(summary, itemsById, citedAt),
     [summary, itemsById, citedAt]
@@ -291,8 +378,16 @@ export function ReviewBoard({
   };
   // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
   // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
-  const earlierBlock = confirmBlockReason({ ...blockInput, unchosen: 0 });
-  const confirmBlocked = confirmBlockReason({ ...blockInput, unchosen });
+  const analysisBlock =
+    relationsStatus === "PENDING"
+      ? "충돌과 이어짐 확인이 끝나면 검토를 완료할 수 있습니다"
+      : enrichmentStatus === "PENDING"
+        ? "담당과 기한 정리가 끝나면 검토를 완료할 수 있습니다"
+        : null;
+  const earlierBlock =
+    analysisBlock ?? confirmBlockReason({ ...blockInput, unchosen: 0 });
+  const confirmBlocked =
+    analysisBlock ?? confirmBlockReason({ ...blockInput, unchosen });
   // 막대의 「제안으로 가기」가 데려갈 줄. 요약 보기에 선 줄만이다.
   const firstUnchosen = sections
     .flatMap((section) => section.items)
@@ -308,12 +403,16 @@ export function ReviewBoard({
    * 끝난 뒤에 재야 자리가 맞다 — 전환 중에 재면 뒤쪽 줄은 펼침이 끝난 뒤 화면 밖에 남는다.
    */
   const scrollToItem = (itemId: string) => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const reduce =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     window.setTimeout(
       () =>
         document
           .querySelector(`[data-item-id="${CSS.escape(itemId)}"]`)
-          ?.scrollIntoView?.({ block: "center", behavior: reduce ? "auto" : "smooth" }),
+          ?.scrollIntoView?.({
+            block: "center",
+            behavior: reduce ? "auto" : "smooth",
+          }),
       reduce ? 0 : COLLAPSE_SETTLE_MS
     );
   };
@@ -471,7 +570,9 @@ export function ReviewBoard({
   const marks = included.flatMap((item) => {
     if (item.kind !== "DECISION" && item.kind !== "ACTION_ITEM") return [];
     const atMs = citedAt(item);
-    return atMs === null ? [] : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
+    return atMs === null
+      ? []
+      : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
   });
   const summaryMarkdown = () =>
     reviewToMarkdown({
@@ -491,23 +592,30 @@ export function ReviewBoard({
   // 복사 · PDF · 메일이 같은 회의록 재료를 쓴다 — 셋이 따로 조립하면 받은 PDF 와 내려받은 PDF 가 갈라진다.
   // 녹취록이 온 뒤에 연다 — 항목 시각 · 안건 시작 · 회의 길이를 녹취록에서 잰다. **받은 녹취록이 있는지로 가린다**:
   // isSuccess 로 가리면 다시 받기가 실패할 때 열린 PDF · 메일 창이 사라지고 쓰던 받는 사람 · 메시지도 날아갔다
-  const wider = noteMeta && transcript
-    ? widerExports({
-        queryClient,
-        noteId,
-        note: { ...noteMeta, durationMs: lengthMs ?? undefined },
-        participants,
-        sharedBy: currentUserName ?? null,
-        confirmed,
-        headline: summary?.status === "SUCCEEDED" ? (summary.headline?.text ?? null) : null,
-        lead: summary?.status === "SUCCEEDED" ? summary.lead.map((line) => line.text) : [],
-        topics: digests,
-        sections,
-        citedAt,
-        unfiledOpen: unfiledOpen(items, topicOf),
-        unnamedSpeakers: unnamedSpeakers.length,
-      })
-    : undefined;
+  const wider =
+    noteMeta && transcript
+      ? widerExports({
+          queryClient,
+          noteId,
+          note: { ...noteMeta, durationMs: lengthMs ?? undefined },
+          participants,
+          sharedBy: currentUserName ?? null,
+          confirmed,
+          headline:
+            summary?.status === "SUCCEEDED"
+              ? (summary.headline?.text ?? null)
+              : null,
+          lead:
+            summary?.status === "SUCCEEDED"
+              ? summary.lead.map((line) => line.text)
+              : [],
+          topics: digests,
+          sections,
+          citedAt,
+          unfiledOpen: unfiledOpen(items, topicOf),
+          unnamedSpeakers: unnamedSpeakers.length,
+        })
+      : undefined;
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
@@ -525,9 +633,19 @@ export function ReviewBoard({
             <div className="flex items-center gap-2">
               <ReviewActions
                 // **요약을 못 받았으면 복사를 막는다.** 요약·주제가 빠진 문서가 성공 토스트와 함께 복사된다.
-                disabled={!noteMeta || summaryQuery.isPending || (summaryQuery.isError && !summary)}
+                disabled={
+                  !noteMeta ||
+                  summaryQuery.isPending ||
+                  (summaryQuery.isError && !summary)
+                }
                 build={summaryMarkdown}
-                material={noteMeta && !transcript ? (transcriptQuery.isError ? "failed" : "loading") : undefined}
+                material={
+                  noteMeta && !transcript
+                    ? transcriptQuery.isError
+                      ? "failed"
+                      : "loading"
+                    : undefined
+                }
                 onRetryMaterial={() => void transcriptQuery.refetch()}
                 wider={wider}
                 // 발송 API 가 운영에 배포되기 전에는 목 환경에서만 연다 — 운영에서는 메일 항목을 세우지 않는다
@@ -567,7 +685,13 @@ export function ReviewBoard({
                   chapters={digests.flatMap((topic) =>
                     topic.startMs === null
                       ? []
-                      : [{ ordinal: topic.ordinal, title: topic.title, startMs: topic.startMs }]
+                      : [
+                          {
+                            ordinal: topic.ordinal,
+                            title: topic.title,
+                            startMs: topic.startMs,
+                          },
+                        ]
                   )}
                   marks={marks}
                   onSelect={showItem}
@@ -582,10 +706,45 @@ export function ReviewBoard({
                   failed={summaryQuery.isError && !summary}
                   onRetry={() => void summaryQuery.refetch()}
                 />
-                <TopicIndex topics={digests} onOpenTimeline={onOpenTimeline} links={meetingLinks}
+                <TopicIndex
+                  noteId={noteId}
+                  topics={digests}
+                  onOpenTimeline={onOpenTimeline}
+                  links={meetingLinks}
                   workspaceId={workspaceId}
-                  onRetryLinks={linksQuery.isError ? () => void linksQuery.refetch() : undefined}
                 />
+                <MeetingRelations
+                  relations={meetingLinks.relations}
+                  status={relationsStatus}
+                  unavailable={!projectId}
+                  loading={
+                    Boolean(projectId) &&
+                    (linksQuery.isPending ||
+                      refreshingAnalysis ||
+                      (relationsStatus === "SUCCEEDED" &&
+                        linksQuery.isFetching))
+                  }
+                  failed={linksQuery.isError}
+                  onRetry={() => void linksQuery.refetch()}
+                  workspaceId={workspaceId}
+                  segments={segments}
+                  onSelectItem={showItem}
+                  onOpenScript={onOpenScript}
+                />
+                {enrichmentStatus === "PENDING" ||
+                enrichmentStatus === "FAILED" ||
+                enrichmentStatus === "SKIPPED" ? (
+                  <p
+                    role={enrichmentStatus === "FAILED" ? "alert" : "status"}
+                    className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+                  >
+                    {enrichmentStatus === "PENDING"
+                      ? "화자 확인 뒤 담당과 기한을 정리하고 있습니다. 먼저 검토한 내용은 유지됩니다."
+                      : enrichmentStatus === "FAILED"
+                        ? "담당과 기한을 분석하지 못했습니다. 직접 지정할 수 있습니다."
+                        : "화자 정보를 확인하지 못해 담당과 기한을 분석하지 않았습니다."}
+                  </p>
+                ) : null}
                 {sections.map((section) => (
                   <ReviewSection
                     key={section.key}
@@ -603,7 +762,9 @@ export function ReviewBoard({
                     aside={
                       section.key === "ACTION_ITEM" && unnamedAssigned > 0 ? (
                         <>
-                          <span>이름 없는 화자에게 걸린 할 일 {unnamedAssigned}</span>
+                          <span>
+                            이름 없는 화자에게 걸린 할 일 {unnamedAssigned}
+                          </span>
                           <button
                             type="button"
                             onClick={onOpenTranscript}
@@ -649,22 +810,22 @@ export function ReviewBoard({
                 />
               ) : (
                 <div className={GRAPH_WIDE}>
-                <ReviewGraph
-                  summary={
-                    summary ?? {
-                      noteId,
-                      status: "NOT_AVAILABLE",
-                      resultVersion: null,
-                      headline: null,
-                      lead: [],
-                      topics: [],
-                      agendas: [],
+                  <ReviewGraph
+                    summary={
+                      summary ?? {
+                        noteId,
+                        status: "NOT_AVAILABLE",
+                        resultVersion: null,
+                        headline: null,
+                        lead: [],
+                        topics: [],
+                        agendas: [],
+                      }
                     }
-                  }
-                  items={items}
-                  selectedItemId={openItemId}
-                  onSelect={setOpenItemId}
-                />
+                    items={items}
+                    selectedItemId={openItemId}
+                    onSelect={setOpenItemId}
+                  />
                 </div>
               )}
               {selected ? (
@@ -734,13 +895,17 @@ export function ReviewBoard({
           workspaceId={workspaceId}
           meeting={noteMeta}
           attendees={participants.flatMap((person) =>
-            person.email ? [{ name: person.name ?? person.email, email: person.email }] : []
+            person.email
+              ? [{ name: person.name ?? person.email, email: person.email }]
+              : []
           )}
           unnamedSpeakers={unnamedSpeakers.flatMap((speaker) =>
             speaker.type === "SPEAKER_LABEL" ? [`화자 ${speaker.label}`] : []
           )}
           // 「PDF로 내보내기」와 같은 생성기다 — 받는 사람이 받는 파일과 내려받은 파일이 같다
-          buildPdf={async (include) => renderMinutesPdf(await wider.minutes(include))}
+          buildPdf={async (include) =>
+            renderMinutesPdf(await wider.minutes(include))
+          }
         />
       ) : null}
     </div>
@@ -775,7 +940,11 @@ export function ReviewBoardSkeleton() {
         <Skeleton className="mt-2.5 h-[38px] w-[60%] rounded-chip" />
         <div className="mt-3 flex gap-1.5 pb-1">
           {[132, 72, 112].map((width) => (
-            <Skeleton key={width} className="h-[26px] rounded-control" style={{ width }} />
+            <Skeleton
+              key={width}
+              className="h-[26px] rounded-control"
+              style={{ width }}
+            />
           ))}
         </div>
         <div className="pt-[62px]">

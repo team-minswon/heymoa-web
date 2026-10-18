@@ -367,7 +367,11 @@ function contractSamples() {
         );
       }
       for (const url of urls) {
-        for (const query of queries) samples.push([schema, `${url}${query}`]);
+        for (const query of queries) {
+          // 선택 noteId 필터로 실제 관계가 있는 회의도 검사한다. 경로만 부르면 목은 빈 목록을 준다.
+          const suffix = path === "/v1/projects/{projectId}/meeting-links" && tuple.noteId ? `?noteId=${tuple.noteId}` : query;
+          samples.push([schema, `${url}${suffix}`]);
+        }
       }
       filled += urls.length;
     }
@@ -388,6 +392,11 @@ function contractSamples() {
  * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
  */
 const KNOWN_ONE_SIDED = new Set([
+  // 관계의 출발은 항상 현재 회의 명제다. 공용 endpoint DTO의 승격 구분·ID는 출발 쪽에 나오지 않는다.
+  "ProjectMeetingLinksResponse.data.meetingLinks[].source.itemId",
+  "ProjectMeetingLinksResponse.data.meetingLinks[].source.type",
+  "ProjectMeetingLinksResponse.data.conflicts[].source.itemId",
+  "ProjectMeetingLinksResponse.data.conflicts[].source.type",
   // **목의 알림은 한 쪽뿐이다.** 커서는 `hasMore` 가 참일 때만 값이 있는데, 그러려면 시드에
   // 알림을 50건 넘게 심어야 한다 — 모든 테스트가 그만큼 느려지는 값을 이 한 필드 때문에
   // 치르지 않는다. 서버 쪽은 `GetNotificationsService` 가 한 건 더 읽어 정하고 IT 가 본다.
@@ -522,7 +531,8 @@ describe("nullable 목 표본", () => {
         const key = `${schemaName}.${leaf}`;
         const entry = observed.get(key) ?? { total: 0, nulls: 0 };
         entry.total += values.length;
-        entry.nulls += values.filter((value) => value === null).length;
+        // 선택 nullable 필드는 서버의 NON_NULL 직렬화로 생략될 수도 있다.
+        entry.nulls += values.filter((value) => value == null).length;
         observed.set(key, entry);
       }
     }

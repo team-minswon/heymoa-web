@@ -399,14 +399,11 @@ function buildSummary(
       })),
       openItemIds: open.map((row) => row.itemId),
       agendaId: MENTORING_AGENDA_IDS[index] ?? nextId("01KG"),
-      summary: seed.sentences[0]?.text ?? null,
+      summary: seed.sentences.map((sentence) => sentence.text).join(" ") || null,
       completed: true,
-      description: seed.sentences.slice(0, 1).map((sentence) => ({
-        text: sentence.text,
-        itemIds: sentence.items.map((at) => ids[at]),
-      })),
-      conclusions: decisions.slice(0, 3).map((row) => ({ text: row.content, itemIds: [row.itemId] })),
-      openItems: open.map((row) => ({ text: row.content, itemIds: [row.itemId] })),
+      description: [],
+      conclusions: [],
+      openItems: [],
     };
   });
   return {
@@ -865,7 +862,12 @@ export const meetingFlowHandlers = [
   http.get("*/v1/projects/:projectId/meeting-links", ({ request }) =>
     respond(() => {
       const noteId = new URL(request.url).searchParams.get("noteId");
-      const empty = { notes: [], meetingLinks: [], agendaLinks: [] };
+      const empty = {
+        notes: [],
+        meetingLinks: [],
+        conflicts: [],
+        agendaLinks: [],
+      };
       if (noteId !== MENTORING_NOTE_ID) return empty;
       const summary = store().summaries.get(MENTORING_NOTE_ID);
       const review = store().reviews.get(MENTORING_NOTE_ID);
@@ -874,15 +876,25 @@ export const meetingFlowHandlers = [
       const now = mockDb.getNote(MENTORING_NOTE_ID);
       const past = mockDb.getNote(PREVIOUS_NOTE_ID);
       const startedAt = new Date(MEETING_DATE).toISOString();
-      const pastStartedAt = new Date(MEETING_DATE - 7 * 86_400_000).toISOString();
-      const side = (noteId: string, proposalId: string, content: string, proposalKind: PastLink["target"]["proposalKind"]) => ({
+      const pastStartedAt = new Date(
+        MEETING_DATE - 7 * 86_400_000
+      ).toISOString();
+      const side = (
+        noteId: string,
+        proposalId: string,
+        content: string,
+        proposalKind: PastLink["target"]["proposalKind"]
+      ) => ({
         noteId,
         proposalId,
         revision: 1,
         content,
         proposalKind,
       });
-      const sourceOf = (proposalId: string) => review.items.find((row) => row.originalProposalRef?.proposalId === proposalId);
+      const sourceOf = (proposalId: string) =>
+        review.items.find(
+          (row) => row.originalProposalRef?.proposalId === proposalId
+        );
       const carded = store().pastLinks.flatMap((link) => {
         const source = sourceOf(link.sourceProposalId);
         if (!source) return [];
@@ -891,8 +903,18 @@ export const meetingFlowHandlers = [
             kind: link.kind,
             reason: "새 결정이 지난 결정을 대신한다",
             evidenceSequences: [],
-            source: side(MENTORING_NOTE_ID, link.sourceProposalId, source.content, "DECISION"),
-            target: side(PREVIOUS_NOTE_ID, link.target.proposalId, link.target.content, link.target.proposalKind),
+            source: side(
+              MENTORING_NOTE_ID,
+              link.sourceProposalId,
+              source.content,
+              "DECISION"
+            ),
+            target: side(
+              PREVIOUS_NOTE_ID,
+              link.target.proposalId,
+              link.target.content,
+              link.target.proposalKind
+            ),
           },
         ];
       });
@@ -907,11 +929,37 @@ export const meetingFlowHandlers = [
               kind: "COMPLETES",
               reason: "지난 회의에서 맡은 조사를 이번에 마쳤다",
               evidenceSequences: [],
-              source: side(MENTORING_NOTE_ID, finishing.originalProposalRef.proposalId, finishing.content, "DECISION"),
-              target: side(PREVIOUS_NOTE_ID, "01KP900000001", "경쟁 도구 요금표를 모은다", "ACTION_ITEM"),
+              source: side(
+                MENTORING_NOTE_ID,
+                finishing.originalProposalRef.proposalId,
+                finishing.content,
+                "DECISION"
+              ),
+              target: side(
+                PREVIOUS_NOTE_ID,
+                "01KP900000001",
+                "경쟁 도구 요금표를 모은다",
+                "ACTION_ITEM"
+              ),
             },
           ]
         : [];
+      const priceDecision = review.items.find(
+        (row) =>
+          row.kind === "DECISION" &&
+          row.content.includes("좌석이 아니라 회의 시간")
+      );
+      const priceSource = priceDecision?.originalProposalRef
+        ? {
+            ...side(
+              MENTORING_NOTE_ID,
+              priceDecision.originalProposalRef.proposalId,
+              priceDecision.content,
+              "DECISION"
+            ),
+            revision: priceDecision.originalProposalRef.revision,
+          }
+        : null;
       return {
         notes: [
           {
@@ -919,20 +967,106 @@ export const meetingFlowHandlers = [
             title: now.title,
             startedAt,
             agendas: summary.agendas.flatMap((row) =>
-              row.agendaId ? [{ agendaId: row.agendaId, title: row.title, completed: row.completed, proposalIds: [] }] : []
+              row.agendaId
+                ? [
+                    {
+                      agendaId: row.agendaId,
+                      title: row.title,
+                      completed: row.completed,
+                      proposalIds: [],
+                    },
+                  ]
+                : []
             ),
           },
           {
             noteId: PREVIOUS_NOTE_ID,
             title: past.title,
             startedAt: pastStartedAt,
-            agendas: PREVIOUS_AGENDAS.map((row) => ({ ...row, completed: true, proposalIds: [] })),
+            agendas: PREVIOUS_AGENDAS.map((row) => ({
+              ...row,
+              completed: true,
+              proposalIds: [],
+            })),
           },
         ],
-        meetingLinks: [...carded, ...free],
+        conflicts: priceSource
+          ? [
+              {
+                kind: "SUPERSEDES",
+                reason:
+                  "좌석 수 대신 실제 회의 시간을 과금 기준으로 정했습니다.",
+                evidenceSequences: [108],
+                source: priceSource,
+                target: side(
+                  PREVIOUS_NOTE_ID,
+                  "01KP900000002",
+                  "요금은 좌석 수에 따라 계산한다",
+                  "DECISION"
+                ),
+              },
+              {
+                kind: "SUPERSEDES",
+                reason: "확정했던 좌석 기준 과금 정책을 회의 시간 기준으로 바꿉니다.",
+                evidenceSequences: [108],
+                source: priceSource,
+                target: { type: "APPROVED", itemId: "01KD900000001", revision: 3, proposalKind: "DECISION", content: "요금은 좌석 수에 따라 계산한다" },
+              },
+            ]
+          : [],
+        meetingLinks: [
+          ...carded,
+          ...free,
+          ...(priceSource
+            ? [
+                {
+                  kind: "SUCCEEDS",
+                  reason:
+                    "회의 시간 기준 요금을 적용하기 위해 원가 계산을 이어서 확인합니다.",
+                  evidenceSequences: [109],
+                  source: priceSource,
+                  target: {
+                    type: "APPROVED",
+                    itemId: "01KT900000001",
+                    revision: 2,
+                    proposalKind: "ACTION_ITEM",
+                    content: "회의 시간별 원가 계산을 검토한다",
+                  },
+                },
+              ]
+            : []),
+        ],
         agendaLinks: [
-          { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[0] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[0].agendaId } },
-          { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[5] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[1].agendaId } },
+          {
+            source: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[1],
+            },
+            target: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[0],
+            },
+          },
+          {
+            source: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[0],
+            },
+            target: {
+              noteId: PREVIOUS_NOTE_ID,
+              agendaId: PREVIOUS_AGENDAS[0].agendaId,
+            },
+          },
+          {
+            source: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[5],
+            },
+            target: {
+              noteId: PREVIOUS_NOTE_ID,
+              agendaId: PREVIOUS_AGENDAS[1].agendaId,
+            },
+          },
         ],
       };
     })

@@ -6,27 +6,39 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ProjectMeetingLinksResponseDataMeetingLinksItemSourceProposalKind } from "./projectMeetingLinksResponseDataMeetingLinksItemSourceProposalKind";
+import type { ProjectMeetingLinksResponseDataMeetingLinksItemSourceType } from "./projectMeetingLinksResponseDataMeetingLinksItemSourceType";
 
 /**
  * 출발(뒤 회의의 명제)
  */
 export type ProjectMeetingLinksResponseDataMeetingLinksItemSource = {
-  /** 명제 종류 */
+  /**
+   * 승격 ID
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  itemId?: string | null;
+  /** 종류 */
   proposalKind: ProjectMeetingLinksResponseDataMeetingLinksItemSourceProposalKind;
   /**
-   * 노트 id
+   * 노트 ID 또는 null
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
-  /** 명제 현재 판 내용 */
+  /**
+   * 승격 대상 구분
+   * @nullable
+   */
+  type?: ProjectMeetingLinksResponseDataMeetingLinksItemSourceType;
+  /** 대상 내용 */
   content: string;
   /**
-   * 명제 id
+   * 명제 ID 또는 null
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   proposalId: string;
   /**
-   * 명제 현재 판
+   * 관계가 가리킨 판
    * @minimum 1
    */
   revision: number;

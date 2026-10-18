@@ -1,5 +1,11 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+
+import {
+  getGetMeetingReviewSummaryQueryKey,
+  type getMeetingReviewSummaryResponse,
+} from "@/lib/api/generated/meeting-review/meeting-review";
 import {
   FlowNotice,
   isWaitingStatus,
@@ -57,12 +63,18 @@ export function ReviewTab({
   onEditParticipants?: () => void;
   onMeetingEnded?: () => void;
 }) {
+  const queryClient = useQueryClient();
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
       enabled: isEnded,
+      staleTime: 0,
+      refetchOnMount: "always",
       // 끝나는 시각을 모르는 단계만 다시 묻는다. 검토 가능 · 확정은 사람이 움직일 때 다시 읽는다.
       refetchInterval: (query) =>
-        flowPollInterval(okData(query.state.data)?.status ?? null),
+        flowPollInterval(
+          okData(query.state.data)?.status ?? null,
+          okData(query.state.data)?.regions
+        ),
     },
   });
 
@@ -104,34 +116,58 @@ export function ReviewTab({
     );
   }
 
-  if (isWaitingStatus(flow.status)) {
+  const hasSummary =
+    okData(
+      queryClient.getQueryData<getMeetingReviewSummaryResponse>(
+        getGetMeetingReviewSummaryQueryKey(noteId)
+      )
+    )?.status === "SUCCEEDED";
+  if (
+    isWaitingStatus(flow.status) &&
+    !hasSummary &&
+    !flow.regions?.some(
+      (row) => row.region === "SUMMARY" && row.status === "SUCCEEDED"
+    )
+  ) {
     return (
       <FlowNotice
         noteId={noteId}
         status={flow.status}
+        verified={flowQuery.isFetchedAfterMount && !flowQuery.isError}
         onOpenTranscript={onOpenTranscript}
       />
     );
   }
 
   return (
-    <ReviewBoard
-      // 노트나 흐름 상태가 바뀌면 보기 · 주제 · 펼친 줄 · 편집 잠금을 새로 시작한다.
-      // 검토 가능 → 확정은 같은 판으로 둔다. 확정 거절로 넘어갈 때 쓰던 초안이 사라지지 않게 한다.
-      key={`${noteId}:${flow.status === "CONFIRMED" ? "REVIEWABLE" : flow.status}`}
-      noteId={noteId}
-      workspaceId={workspaceId}
-      projectId={projectId}
-      confirmed={flow.status === "CONFIRMED"}
-      canEdit={flow.status === "REVIEWABLE"}
-      noteMeta={noteMeta}
-      participants={participants}
-      currentUserId={currentUserId}
-      currentUserName={currentUserName}
-      dockRaised={dockRaised}
-      onOpenScript={onEvidenceSelect}
-      onOpenTranscript={onOpenTranscript}
-      onOpenTimeline={onOpenTimeline}
-    />
+    <>
+      {isWaitingStatus(flow.status) ? (
+        <FlowNotice
+          compact
+          noteId={noteId}
+          status={flow.status}
+          verified={flowQuery.isFetchedAfterMount && !flowQuery.isError}
+          onOpenTranscript={onOpenTranscript}
+        />
+      ) : null}
+      <ReviewBoard
+        // 뒤늦은 관계·담당 도착이나 재분석으로 열어 둔 줄과 편집 초안을 초기화하지 않는다.
+        key={noteId}
+        noteId={noteId}
+        flow={flow}
+        workspaceId={workspaceId}
+        projectId={projectId}
+        confirmed={flow.status === "CONFIRMED"}
+        canEdit={flow.status === "REVIEWABLE"}
+        noteMeta={noteMeta}
+        participants={participants}
+        currentUserId={currentUserId}
+        currentUserName={currentUserName}
+        dockRaised={dockRaised}
+        onOpenScript={onEvidenceSelect}
+        onOpenTranscript={onOpenTranscript}
+        onOpenTimeline={onOpenTimeline}
+      />
+    </>
   );
 }

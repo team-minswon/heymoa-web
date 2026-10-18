@@ -156,6 +156,7 @@ export function placeAgendas(
   list: AgendaList,
   live: boolean
 ): AgendaPlacement {
+  const validAgendas = new Set(list.agendas.map((agenda) => agenda.agendaId));
   const owner = new Map<string, string>();
   for (const agenda of list.agendas) {
     for (const proposalId of agenda.proposalIds) owner.set(String(proposalId), agenda.agendaId);
@@ -165,8 +166,10 @@ export function placeAgendas(
   for (const proposal of proposals) {
     if (proposal.kind === "AGENDA") continue;
     const id = proposal.proposalId;
-    if (live && previous.has(id)) {
-      next.set(id, previous.get(id) ?? null);
+    const previousAgenda = previous.get(id);
+    // 이미 읽던 안건은 유지하되, 사라진 안건이나 새로 소속이 생긴 미분류 줄은 정본으로 옮긴다.
+    if (live && previous.has(id) && (previousAgenda ? validAgendas.has(previousAgenda) : !owner.has(id))) {
+      next.set(id, previousAgenda ?? null);
       continue;
     }
     const seen = !live || owner.has(id) || (asOf !== null && proposal.createdSequence <= asOf);
@@ -226,7 +229,7 @@ export function selectTimeline(
         if (current) current.endMs = startMs;
         const agenda: AgendaList["agendas"][number] | undefined = placed ? agendaOf.get(placed) : undefined;
         current = {
-          key: `${placed ?? "none"}:${groups.length}`,
+          key: `${placed ?? "none"}:${proposal.proposalId}`,
           agenda: agenda
             ? { title: agenda.title, completed: agenda.completed, retracted: false, citation: proposal.citations[0] ?? null }
             : null,

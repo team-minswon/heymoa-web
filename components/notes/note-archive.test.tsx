@@ -26,6 +26,7 @@ const data = vi.hoisted(() => ({
   refetched: null as unknown[] | null,
   transcriptFails: false,
   flowStatus: "REVIEWABLE" as string,
+  flowRegions: [] as Array<{ region: string; status: string }>,
 }));
 
 type PollOptions = {
@@ -113,7 +114,7 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
 }));
 const flowEnvelope = (status: string) => ({
   status: 200,
-  data: { success: true, data: { noteId: "n1", status } },
+  data: { success: true, data: { noteId: "n1", status, regions: data.flowRegions } },
 });
 vi.mock("@/lib/api/generated/analysis/analysis", () => ({
   useGetAnalysisFlow: (_noteId: string, options?: PollOptions) => {
@@ -1258,6 +1259,7 @@ describe("NoteArchive", () => {
 
     afterEach(() => {
       data.flowStatus = "REVIEWABLE";
+      data.flowRegions = [];
     });
 
     it("화자를 나누는 동안 전사를 다시 읽는다 — 소켓 없이 열린 화면도 결과를 받는다", () => {
@@ -1274,6 +1276,14 @@ describe("NoteArchive", () => {
       renderArchive();
 
       expect(transcriptInterval("SUBMITTED")).toBe(5_000);
+    });
+
+    it("요약이 먼저 끝나도 담당 영역이 대기 중이면 화자 결과를 계속 읽는다", () => {
+      data.flowRegions = [{ region: "ITEM_ENRICHMENT", status: "PENDING" }];
+      renderArchive();
+      expect(flowInterval("REVIEWABLE")).toBe(5_000);
+      expect(transcriptInterval("NOT_REQUESTED")).toBe(5_000);
+      expect(transcriptInterval("MAPPED")).toBe(false);
     });
 
     it("분리가 끝났거나 실패했으면 멈춘다 — 지난 노트는 두드리지 않는다", () => {
