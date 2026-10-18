@@ -219,8 +219,11 @@ export function ReviewBoard({
     if (editor.busyItemId !== null || loadedRefreshKey === refreshKey || refreshFailed)
       return;
     let active = true;
-    const reload = (queryKey: readonly unknown[]) =>
-      queryClient.invalidateQueries({ queryKey }, { throwOnError: true });
+    const reload = async (queryKey: readonly unknown[]) => {
+      // 첫 응답을 기다리는 쿼리는 invalidate만으로 이전 요청이 취소되지 않는다.
+      await queryClient.cancelQueries({ queryKey });
+      if (active) return queryClient.invalidateQueries({ queryKey }, { throwOnError: true });
+    };
     const requiredKeys = [
       getGetMeetingReviewQueryKey(noteId),
       getGetMeetingReviewSummaryQueryKey(noteId),

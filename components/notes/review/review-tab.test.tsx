@@ -1792,6 +1792,39 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(screen.queryByText("최신 분석 결과를 다시 확인해 주세요")).toBeNull();
   });
 
+  it("최초 검토본 응답이 늦어도 새 분석 완료 뒤 이전 응답을 최신 결과로 쓰지 않는다", async () => {
+    let current = flow("PENDING");
+    installFlow(() => current);
+    let release!: () => void;
+    let entered!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const arrived = new Promise<void>((resolve) => { entered = resolve; });
+    let reads = 0;
+    server.use(http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+      const first = ++reads === 1;
+      const response = await getResponse(meetingFlowHandlers, request);
+      const body = await response!.json();
+      if (first) { entered(); await held; }
+      else {
+        const item = body.data.items.find((item: { kind: string; included: boolean }) => item.kind === "DECISION" && item.included);
+        item.content = "분석 완료 뒤 받은 최신 검토본";
+        item.revision++;
+        body.data.reviewVersion++;
+      }
+      return HttpResponse.json(body);
+    }));
+    const { client } = renderTab();
+    try {
+      await arrived;
+      current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((region) => ({ ...region, status: "SUCCEEDED" as const })) };
+      await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
+      await waitFor(() => expect(reads).toBeGreaterThan(1));
+      expect(await row("분석 완료 뒤 받은 최신 검토본")).toBeInTheDocument();
+      await act(async () => { release(); });
+      expect(await row("분석 완료 뒤 받은 최신 검토본")).toBeInTheDocument();
+    } finally { release(); }
+  });
+
   it("온라인 연결이 끊겨 분석 자료 조회가 멈춰도 완료로 처리하지 않는다", async () => {
     let current = flow("PENDING");
     let dropOnce = false;
