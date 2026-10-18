@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
+
 import Link from "next/link";
 import { Square } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -161,7 +163,10 @@ export function GlobalRecordingIndicator() {
               />
             ) : null
           }
-          onStop={() => void stop()}
+          onStop={() => {
+            track("recording_stop_clicked", { surface: "global" });
+            void stop();
+          }}
         />
       ) : null}
     </AnimatePresence>

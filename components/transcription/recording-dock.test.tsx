@@ -8,6 +8,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { onTrack } from "@/lib/analytics/track";
+
 import { RecordingDock } from "@/components/transcription/recording-dock";
 
 /** 독이 시작할 때 넘겨야 하는 워크스페이스. 계약이 노트에서 알려주지 않는다. */
@@ -40,6 +42,38 @@ vi.mock("@/components/transcription/recording-provider", async () => {
 
 describe("RecordingDock", () => {
   afterEach(cleanup);
+
+  it.each(["idle", "failed"])("%s에서 시작 클릭 한 번만 기록합니다", (phase) => {
+    recording.phase = phase;
+    recording.activeNoteId = "note-1";
+    const heard = vi.fn();
+    const unsubscribe = onTrack(heard);
+    try {
+      const { rerender } = render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      rerender(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      expect(heard).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: phase === "failed" ? "다시 녹음" : "회의 시작" }));
+      expect(heard.mock.calls).toEqual([["recording_start_clicked", { workspace_id: WORKSPACE_ID, retry: phase === "failed" }]]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("중지 클릭을 성공 이벤트와 구분해 한 번 기록합니다", () => {
+    recording.phase = "recording";
+    recording.activeNoteId = "note-1";
+    const heard = vi.fn();
+    const unsubscribe = onTrack(heard);
+    try {
+      const { rerender } = render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      fireEvent.click(screen.getByRole("button", { name: "중지" }));
+      rerender(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      expect(heard.mock.calls).toEqual([["recording_stop_clicked", { surface: "note" }]]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
 
   it.each([
     ["requesting-permission", "권한 확인 중"],

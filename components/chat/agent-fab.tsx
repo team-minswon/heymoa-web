@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
+
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { MessageCircle } from "lucide-react";
 
@@ -77,6 +79,7 @@ export function AgentFab({
   }, [dismiss, showIntro]);
 
   const open = () => {
+    track("agent_opened", { surface: "fab" });
     dismiss();
     onOpen();
   };

@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
+
 import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -124,7 +126,14 @@ function SettingsSections({
                   type="button"
                   variant="ghost"
                   disabled={locked && section !== key}
-                  onClick={() => setSection(key)}
+                  onClick={() => {
+                    if (section === key) return;
+                    track("settings_tab_opened", {
+                      workspace_id: workspaceId,
+                      section: key,
+                    });
+                    setSection(key);
+                  }}
                   aria-current={section === key ? "page" : undefined}
                   // 선택은 같은 회색의 진한 쪽, 호버는 그 절반 농도다. 예전에는 선택(secondary)이 호버(muted)보다 오히려
                   // 밝아서 올려 둔 항목이 선택된 항목처럼 보였다.

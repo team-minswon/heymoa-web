@@ -8,7 +8,7 @@ import { desktopAuthBridge } from "@/lib/desktop/auth";
  *
  * 깔때기: login_started → login_completed → workspace_created → project_created →
  * meeting_created → recording_started → meeting_ended → summary_viewed → summary_confirmed.
- * 「가입」은 따로 보내지 않는다 — 서버가 신규 여부를 주지 않고, 사람마다 첫 `login_completed`가 곧 가입이다.
+ * 가입은 서버의 `user_signed_up`으로 셉니다. 웹 로그인 완료와 중복으로 보내지 않습니다.
  */
 export type AnalyticsEvent =
   | "login_started"
@@ -43,7 +43,40 @@ export type AnalyticsEvent =
   | "summary_copied"
   | "summary_exported"
   | "export_requested"
-  | "minutes_emailed";
+  | "minutes_emailed"
+  | "recording_start_clicked"
+  | "recording_stop_clicked"
+  | "note_opened"
+  | "note_tab_opened"
+  | "review_confirmation_clicked"
+  | "settings_tab_opened"
+  | "agent_opened"
+  | "feedback_sent";
+
+/** 새 행동의 속성은 정해진 종류·개수·워크스페이스 식별자만 받습니다. */
+type WebEventProperties = {
+  recording_start_clicked: { workspace_id: string; retry: boolean };
+  recording_stop_clicked: { surface: "note" | "global" };
+  note_opened: { workspace_id: string; view: "side" | "full" };
+  note_tab_opened: {
+    workspace_id: string;
+    tab: "context" | "details" | "transcript" | "summary";
+  };
+  review_confirmation_clicked: { workspace_id: string | undefined };
+  settings_tab_opened: {
+    workspace_id: string;
+    section:
+      | "account"
+      | "workspace"
+      | "members"
+      | "guests"
+      | "integrations"
+      | "workspaceAgents"
+      | "agents";
+  };
+  agent_opened: { surface: "fab" };
+  feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
+};
 
 type Properties = Record<string, string | number | boolean | null | undefined>;
 
@@ -75,6 +108,14 @@ const assignsSomeone = (variables: MutationVariables) => {
  * `MutationCache.onSuccess` 한 곳에서 본다(`lib/query/query-client.ts`).
  */
 const MUTATION_EVENTS: Record<string, MutationEvent> = {
+  createFeedback: (v) => {
+    const kind = bodyOf(v).kind;
+    if (
+      kind !== "INCIDENT" && kind !== "QUESTION" &&
+      kind !== "SUGGESTION" && kind !== "OTHER"
+    ) return null;
+    return ["feedback_sent", { kind }];
+  },
   createWorkspace: "workspace_created",
   createProject: "project_created",
   createNote: "meeting_created",
@@ -161,7 +202,12 @@ export function onTrack(listener: Listener) {
 const BEFORE_INIT_LIMIT = 20;
 const beforeInit: Array<[AnalyticsEvent, Properties | undefined]> = [];
 
-export function track(event: AnalyticsEvent, properties?: Properties) {
+export function track<Event extends AnalyticsEvent>(
+  event: Event,
+  properties?: Event extends keyof WebEventProperties
+    ? WebEventProperties[Event]
+    : Properties
+) {
   // 듣는 쪽(체크리스트)은 이 기기 안의 일이라 거부해도 알린다. 바깥으로 보내는 것만 막는다.
   for (const listener of listeners) listener(event, properties);
   if (isAnalyticsOptedOut()) return;

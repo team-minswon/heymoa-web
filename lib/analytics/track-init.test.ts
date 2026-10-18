@@ -13,6 +13,7 @@ import {
   initAnalytics,
   setAnalyticsOptOut,
   track,
+  trackMutation,
 } from "@/lib/analytics/track";
 
 describe("PostHog를 켜기 전에 난 이벤트", () => {
@@ -55,5 +56,38 @@ describe("거부한 브라우저", () => {
 
     expect(posthog.init).not.toHaveBeenCalled();
     setAnalyticsOptOut(false);
+  });
+});
+
+
+describe("새 행동 이벤트의 수집 거부", () => {
+  it("초기화 전 거부한 이벤트는 큐에도 남기지 않습니다", () => {
+    posthog.__loaded = false;
+    posthog.capture.mockClear();
+    setAnalyticsOptOut(true);
+    track("note_opened", { workspace_id: "01K0000000000", view: "side" });
+    trackMutation("createFeedback", { data: { kind: "QUESTION", message: "보내지 않을 본문입니다" } });
+    setAnalyticsOptOut(false);
+    initAnalytics("phc_test");
+    expect(posthog.capture).not.toHaveBeenCalled();
+  });
+
+  it("초기화 후에도 직접 호출과 mutation 모두 PostHog로 보내지 않습니다", () => {
+    posthog.__loaded = true;
+    posthog.capture.mockClear();
+    setAnalyticsOptOut(true);
+    try {
+      track("recording_start_clicked", { workspace_id: "01K0000000000", retry: false });
+      track("recording_stop_clicked", { surface: "note" });
+      track("note_opened", { workspace_id: "01K0000000000", view: "full" });
+      track("note_tab_opened", { workspace_id: "01K0000000000", tab: "summary" });
+      track("review_confirmation_clicked", { workspace_id: "01K0000000000" });
+      track("settings_tab_opened", { workspace_id: "01K0000000000", section: "account" });
+      track("agent_opened", { surface: "fab" });
+      trackMutation("createFeedback", { data: { kind: "QUESTION", message: "보내지 않을 본문입니다" } });
+      expect(posthog.capture).not.toHaveBeenCalled();
+    } finally {
+      setAnalyticsOptOut(false);
+    }
   });
 });

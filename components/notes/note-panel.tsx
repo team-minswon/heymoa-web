@@ -292,11 +292,14 @@ export function NotePanel({
   );
   const handleTabChange = useCallback(
     (next: NoteTab) => {
+      if (next !== tab) {
+        track("note_tab_opened", { workspace_id: workspaceId, tab: next });
+      }
       setFocusSegmentId(null);
       setParticipantsRequest(null);
       onTabChange(next);
     },
-    [onTabChange]
+    [onTabChange, tab, workspaceId]
   );
   const editParticipants = useCallback(() => {
     setFocusSegmentId(null);

@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
+
 import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -209,6 +211,10 @@ export function NoteListRow({
     <article className="group flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset">
       <Link
         href={sideHref}
+        onClick={() => track("note_opened", {
+          workspace_id: workspaceId,
+          view: "side",
+        })}
         aria-label={`${note.title} 노트 열기`}
         // self-stretch로 행 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
         className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none"
@@ -267,6 +273,10 @@ export function NoteListRow({
         <DropdownMenuContent align="end">
           <DropdownMenuLinkItem
             href={fullHref}
+            onClick={() => track("note_opened", {
+              workspace_id: workspaceId,
+              view: "full",
+            })}
             // `onNavigate`는 실제 클라이언트 이동에만 불린다 — ⌘+클릭(새 탭)에서는 안 돈다.
             // `onClick`으로 하면 새 탭을 열어도 이 탭의 스피너가 영원히 남는다.
             onNavigate={() => setOpenedFullViewFrom(routeKey)}

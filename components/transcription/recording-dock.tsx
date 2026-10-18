@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
+
 import { AnimatePresence, motion } from "motion/react";
 import { Mic, RotateCcw, Square, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -161,7 +163,10 @@ export function RecordingDock({
               // 독을 44px로 줄이면서 탭 영역까지 같이 줄면 모바일에서 가장자리가 안 먹는다.
               className="size-9 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)] after:absolute after:-inset-1 after:content-['']"
               aria-label="중지"
-              onClick={() => void recording.stop()}
+              onClick={() => {
+                track("recording_stop_clicked", { surface: "note" });
+                void recording.stop();
+              }}
             >
               <Square className="size-3.5" />
             </Button>
@@ -239,9 +244,14 @@ export function RecordingDock({
               size="sm"
               className="h-9 shrink-0 rounded-full px-3 text-xs after:absolute after:-inset-1 after:content-['']"
               disabled={isOtherNote || !workspaceId}
-              onClick={() =>
-                workspaceId && void recording.start(noteId, workspaceId)
-              }
+              onClick={() => {
+                if (!workspaceId) return;
+                track("recording_start_clicked", {
+                  workspace_id: workspaceId,
+                  retry: true,
+                });
+                void recording.start(noteId, workspaceId);
+              }}
             >
               <RotateCcw className="size-3.5" />
               다시 녹음
@@ -289,6 +299,10 @@ export function RecordingDock({
                     disabled={isOtherNote || !workspaceId}
                     onClick={() => {
                       if (!workspaceId) return;
+                      track("recording_start_clicked", {
+                        workspace_id: workspaceId,
+                        retry: false,
+                      });
                       void recording.start(noteId, workspaceId);
                       onStart?.();
                     }}

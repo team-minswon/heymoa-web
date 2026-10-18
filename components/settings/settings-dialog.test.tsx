@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { onTrack } from "@/lib/analytics/track";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 
 vi.mock("@/components/settings/account-settings-form", () => ({
@@ -35,6 +36,23 @@ vi.mock("@/components/settings/agent-connections-settings", () => ({
 }));
 
 describe("SettingsDialog", () => {
+  afterEach(cleanup);
+  it("탭 선택을 한 번 기록하고 같은 탭·리렌더는 세지 않습니다", () => {
+    const heard = vi.fn();
+    const unsubscribe = onTrack(heard);
+    const props = { open: true, onOpenChange: vi.fn(), workspaceId: "01K0000000000" };
+    try {
+      const { rerender } = render(<SettingsDialog {...props} />);
+      expect(heard).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "멤버" }));
+      fireEvent.click(screen.getByRole("button", { name: "멤버" }));
+      rerender(<SettingsDialog {...props} />);
+      expect(heard.mock.calls).toEqual([["settings_tab_opened", { workspace_id: props.workspaceId, section: "members" }]]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
   // 외부 에이전트 토큰은 만든 응답에서만 한 번 나온다 — 그 사이 닫히면 아무도 못 본다
   it("섹션이 잠근 동안에는 닫히지도 다른 섹션으로 옮기지도 않는다", () => {
     const onOpenChange = vi.fn();

@@ -1,7 +1,8 @@
 import type { CaptureResult } from "posthog-js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import {
+  type AnalyticsEvent,
   beforeSend,
   isAnalyticsOptedOut,
   onTrack,
@@ -16,6 +17,17 @@ afterEach(() => {
   localStorage.clear();
 });
 
+describe("이벤트 타입", () => {
+  it("등록한 행동만 허용하고 탭 속성은 enum으로 제한합니다", () => {
+    expectTypeOf<"note_opened" | "feedback_sent">().toExtend<AnalyticsEvent>();
+    expectTypeOf<"not_registered" | "user_signed_up">().not.toExtend<AnalyticsEvent>();
+    expectTypeOf(track<"note_tab_opened">).parameter(1).exclude<undefined>().toEqualTypeOf<{
+      workspace_id: string;
+      tab: "context" | "details" | "transcript" | "summary";
+    }>();
+  });
+});
+
 describe("trackMutation", () => {
   const heardFrom = (calls: Array<[string, unknown]>) => {
     const heard: Array<[string, unknown]> = [];
@@ -24,6 +36,13 @@ describe("trackMutation", () => {
     stop();
     return heard;
   };
+
+  it("문의 종류만 보내고 본문·이메일·주소는 보내지 않습니다", () => {
+    expect(heardFrom([
+      ["createFeedback", { data: { kind: "QUESTION", message: "개인 본문 user@example.com https://example.com/?secret=1" } }],
+      ["createFeedback", { data: { kind: "자유 입력" } }],
+    ])).toEqual([["feedback_sent", { kind: "QUESTION" }]]);
+  });
 
   // 요청 내용으로 거르는 것 (APP-1072): 화자 연결을 지우거나 완료가 아닌 할 일 수정은 세지 않는다
   it("요청 내용을 보고 보낼지와 속성을 정한다", () => {

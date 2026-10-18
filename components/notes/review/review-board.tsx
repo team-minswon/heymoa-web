@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
+
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
 import { renderMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { widerExports } from "@/lib/notes/minutes/exports";
@@ -424,6 +426,7 @@ export function ReviewBoard({
   );
 
   const confirm = async () => {
+    track("review_confirmation_clicked", { workspace_id: workspaceId });
     const body = {
       reviewId: review.reviewId,
       reviewRevision: review.reviewVersion,

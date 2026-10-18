@@ -8,6 +8,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { onTrack } from "@/lib/analytics/track";
+
 import { NoteListRow } from "@/components/workspace/note-list-row";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 
@@ -61,6 +63,24 @@ function renderRow(row: NoteListResponseDataNotesItem, now?: number) {
 
 describe("NoteListRow", () => {
   afterEach(cleanup);
+
+  it("노트 열기를 클릭 시점에만 기록하고 제목은 보내지 않습니다", async () => {
+    const heard = vi.fn();
+    const unsubscribe = onTrack(heard);
+    try {
+      renderRow(note());
+      expect(heard).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("link", { name: /노트 열기/ }));
+      fireEvent.click(screen.getByRole("button", { name: /노트 메뉴/ }));
+      fireEvent.click(await screen.findByRole("menuitem", { name: /전체 화면/ }));
+      expect(heard.mock.calls).toEqual([
+        ["note_opened", { workspace_id: "01K0000000000", view: "side" }],
+        ["note_opened", { workspace_id: "01K0000000000", view: "full" }],
+      ]);
+    } finally {
+      unsubscribe();
+    }
+  });
   beforeEach(() => {
     recording.current = {
       session: {
