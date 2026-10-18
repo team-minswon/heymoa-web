@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { ProjectMeetingLinksResponseData } from "@/lib/api/generated/models";
-import { indexMeetingLinks } from "@/lib/notes/review/meeting-links";
+import {
+  indexMeetingLinks,
+  relationMatchesTarget,
+} from "@/lib/notes/review/meeting-links";
 
 const ref = (proposalId: string) => ({ proposalId, revision: 1 });
 const link = (
@@ -140,12 +143,15 @@ describe("indexMeetingLinks", () => {
     });
   });
 
-  it("제안 카드와 별도로 관계 근거를 읽을 수 있고 대상 상태는 수정하지 않는다", () => {
+  it("관계를 해당 검토 항목에 연결하고 대상 상태는 수정하지 않는다", () => {
     const before = structuredClone(items);
     expect(
       index.relations.find((row) => row.sourceItemId === "i3")?.target
         .proposalId
     ).toBe("carded");
+    expect(index.byItemId.get("i3")).toEqual([
+      index.relations.find((row) => row.sourceItemId === "i3"),
+    ]);
     expect(items).toEqual(before);
   });
 
@@ -253,5 +259,45 @@ describe("indexMeetingLinks", () => {
         .relations
     ).toHaveLength(4);
     expect(indexMeetingLinks(undefined, "now", items).relations).toEqual([]);
+  });
+});
+
+describe("relationMatchesTarget", () => {
+  const proposal = indexMeetingLinks(data, "now", items).relations[2];
+  const target = items[2].replacements[0].target;
+
+  it("명제의 판과 확정 항목의 판을 구별하고 다른 판은 기존 승인 카드로 합치지 않는다", () => {
+    expect(relationMatchesTarget(proposal, target)).toBe(true);
+    expect(
+      relationMatchesTarget(
+        { ...proposal, target: { ...proposal.target, revision: 2 } },
+        target
+      )
+    ).toBe(false);
+    const approved = {
+      ...proposal,
+      target: {
+        ...proposal.target,
+        type: "APPROVED" as const,
+        itemId: target.itemId,
+        revision: target.revision,
+      },
+    };
+    expect(relationMatchesTarget(approved, target)).toBe(true);
+    expect(
+      relationMatchesTarget(
+        {
+          ...approved,
+          target: { ...approved.target, revision: target.revision + 1 },
+        },
+        target
+      )
+    ).toBe(false);
+    expect(
+      relationMatchesTarget(
+        { ...approved, target: { ...approved.target, itemId: "other" } },
+        target
+      )
+    ).toBe(false);
   });
 });

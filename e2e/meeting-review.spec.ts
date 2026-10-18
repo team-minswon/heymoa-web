@@ -32,18 +32,43 @@ test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐�
   await expect(
     index.getByRole("button", { name: /회의가 끝난 뒤 할 일이 흐려지는 문제/ })
   ).toHaveAttribute("aria-expanded", "true");
-  const relations = page.getByRole("region", {
-    name: "충돌·이어짐",
-    exact: true,
-  });
   await expect(
-    relations.getByText("대체", { exact: true }).first()
+    page.getByRole("region", { name: "충돌·이어짐", exact: true })
+  ).toHaveCount(0);
+  const decisions = page.getByRole("region", { name: "결정", exact: true });
+  await decisions.getByRole("button", { name: "더 불러오기" }).click();
+  const pricing = decisions
+    .locator("[data-item-id]")
+    .filter({
+      has: page.getByRole("button", {
+        name: "요금은 좌석이 아니라 회의 시간 기준으로 계산한다",
+        exact: true,
+      }),
+    });
+  await expect(
+    pricing.getByText("대체", { exact: true }).first()
   ).toBeVisible();
-  await expect(relations.getByText("이어짐", { exact: true })).toBeVisible();
-  await expect(relations).toContainText("프로젝트 확정 항목");
-  await expect(relations).toContainText(
+  await expect(pricing.getByText("이어짐", { exact: true })).toBeVisible();
+  await expect(pricing).toContainText("프로젝트 확정 항목");
+  await expect(pricing).toContainText(
     "좌석 수 대신 실제 회의 시간을 과금 기준으로 정했습니다."
   );
+  const replacement = decisions
+    .locator("[data-item-id]")
+    .filter({
+      has: page.getByRole("button", {
+        name: "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다",
+        exact: true,
+      }),
+    });
+  await expect(
+    replacement.getByRole("radiogroup", { name: "이전 결정을 끝낼지" })
+  ).toHaveCount(1);
+  await expect(
+    replacement.getByText("첫 화면 메시지는 회의 기록 품질로 둔다", {
+      exact: true,
+    })
+  ).toHaveCount(1);
 });
 
 /** 검토 줄 하나. 줄의 내용 버튼을 품은 상자다 */

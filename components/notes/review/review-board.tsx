@@ -13,7 +13,6 @@ import { ConfirmBar } from "@/components/notes/review/confirm-bar";
 import { EvidenceQuotes } from "@/components/notes/review/evidence-quotes";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
-import { MeetingRelations } from "@/components/notes/review/meeting-relations";
 import { MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewActions } from "@/components/notes/review/review-actions";
@@ -25,6 +24,8 @@ import { TopicIndex } from "@/components/notes/review/topic-index";
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import {
+  RelationContext,
+  RelationSuggestion,
   ReplacementSuggestion,
   TaskChangeSuggestion,
 } from "@/components/notes/review/suggestion-row";
@@ -33,7 +34,11 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
-import { indexMeetingLinks } from "@/lib/notes/review/meeting-links";
+import {
+  indexMeetingLinks,
+  relationMatchesTarget,
+  type MeetingRelation,
+} from "@/lib/notes/review/meeting-links";
 import type { MeetingAnalysisFlowResponseData } from "@/lib/api/generated/models";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import { useApproveMeetingReview } from "@/lib/api/generated/meeting-approval/meeting-approval";
@@ -421,13 +426,60 @@ export function ReviewBoard({
     scrollToItem(itemId);
   };
 
+  const relationsOf = (item: ReviewItem) =>
+    meetingLinks.byItemId.get(item.itemId) ?? [];
+  const contextFor = (
+    item: ReviewItem,
+    target:
+      | ReviewItem["replacements"][number]["target"]
+      | ReviewItem["taskChanges"][number]["target"],
+    kind?: string,
+    fallbackReason?: string
+  ) => {
+    const relations = relationsOf(item).filter(
+      (relation) =>
+        (!kind || relation.kind === kind) &&
+        relationMatchesTarget(relation, target)
+    );
+    return relations.length > 0
+      ? relations.map((relation) => (
+          <RelationContext
+            key={relation.key}
+            relation={relation}
+            segments={segments}
+            onOpenScript={onOpenScript}
+            fallbackReason={fallbackReason}
+            showKind={!kind}
+          />
+        ))
+      : undefined;
+  };
+  const cardedRelation = (item: ReviewItem, relation: MeetingRelation) =>
+    item.replacements.some(
+      (replacement) =>
+        replacement.kind === relation.kind &&
+        relationMatchesTarget(relation, replacement.target)
+    ) ||
+    item.taskChanges.some((change) =>
+      relationMatchesTarget(relation, change.target)
+    );
+
   const suggestionsOf = (item: ReviewItem) =>
-    item.replacements.length + item.taskChanges.length > 0 ? (
+    item.replacements.length +
+      item.taskChanges.length +
+      relationsOf(item).length >
+    0 ? (
       <div className="space-y-1.5">
         {item.replacements.map((replacement) => (
           <ReplacementSuggestion
             key={replacement.target.itemId}
             replacement={replacement}
+            context={contextFor(
+              item,
+              replacement.target,
+              replacement.kind,
+              replacement.reason
+            )}
             choice={choiceOf(replacement.decision)}
             disabled={!editable || !item.included || saving}
             onChoose={(next) =>
@@ -444,6 +496,12 @@ export function ReviewBoard({
             <TaskChangeSuggestion
               key={change.target.itemId}
               change={change}
+              context={contextFor(
+                item,
+                change.target,
+                undefined,
+                change.reason
+              )}
               task={tasksById.get(change.target.itemId)}
               workspaceId={workspaceId}
               projectId={projectId}
@@ -482,6 +540,18 @@ export function ReviewBoard({
             </p>
           )
         )}
+        {relationsOf(item)
+          .filter((relation) => !cardedRelation(item, relation))
+          .map((relation) => (
+            <RelationSuggestion
+              key={relation.key}
+              relation={relation}
+              workspaceId={workspaceId}
+              segments={segments}
+              onSelectItem={showItem}
+              onOpenScript={onOpenScript}
+            />
+          ))}
       </div>
     ) : null;
 
@@ -713,24 +783,37 @@ export function ReviewBoard({
                   links={meetingLinks}
                   workspaceId={workspaceId}
                 />
-                <MeetingRelations
-                  relations={meetingLinks.relations}
-                  status={relationsStatus}
-                  unavailable={!projectId}
-                  loading={
-                    Boolean(projectId) &&
-                    (linksQuery.isPending ||
-                      refreshingAnalysis ||
-                      (relationsStatus === "SUCCEEDED" &&
-                        linksQuery.isFetching))
-                  }
-                  failed={linksQuery.isError}
-                  onRetry={() => void linksQuery.refetch()}
-                  workspaceId={workspaceId}
-                  segments={segments}
-                  onSelectItem={showItem}
-                  onOpenScript={onOpenScript}
-                />
+                {relationsStatus === "PENDING" ||
+                relationsStatus === "FAILED" ||
+                relationsStatus === "SKIPPED" ? (
+                  <p
+                    role={relationsStatus === "FAILED" ? "alert" : "status"}
+                    className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+                  >
+                    {relationsStatus === "PENDING"
+                      ? "충돌과 이어짐을 확인하고 있습니다. 회의 정리는 먼저 읽을 수 있습니다."
+                      : relationsStatus === "FAILED"
+                        ? "충돌과 이어짐을 분석하지 못했습니다. 회의 정리와 검토 항목은 그대로 남아 있습니다."
+                        : "화자 정보를 확인하지 못해 충돌과 이어짐을 분석하지 않았습니다."}
+                  </p>
+                ) : projectId && linksQuery.isError ? (
+                  <InlineRetry
+                    variant="line"
+                    label="회의 연결을 불러오지 못했습니다."
+                    onRetry={() => void linksQuery.refetch()}
+                    className="pb-4"
+                  />
+                ) : projectId &&
+                  (linksQuery.isPending ||
+                    refreshingAnalysis ||
+                    linksQuery.isFetching) ? (
+                  <p
+                    role="status"
+                    className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+                  >
+                    충돌과 이어짐을 불러오고 있습니다.
+                  </p>
+                ) : null}
                 {enrichmentStatus === "PENDING" ||
                 enrichmentStatus === "FAILED" ||
                 enrichmentStatus === "SKIPPED" ? (

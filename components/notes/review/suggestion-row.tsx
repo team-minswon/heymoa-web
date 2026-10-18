@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 
 import { AssigneeCell, AssigneeFace } from "@/components/heymoa/assignee-cell";
 import { ChoiceToggle } from "@/components/heymoa/choice-toggle";
@@ -15,7 +16,11 @@ import type {
   MeetingReviewResponseDataItemsItemReplacementsItem as Replacement,
   MeetingReviewResponseDataItemsItemTaskChangesItem as TaskChange,
   ProjectTaskListResponseDataTasksItem as ProjectTask,
+  TranscriptResponseDataSegmentsItem,
 } from "@/lib/api/generated/models";
+import { LINK_LABEL, type MeetingRelation } from "@/lib/notes/review/meeting-links";
+import { KIND_LABEL } from "@/lib/notes/review/sections";
+import { formatOffset } from "@/lib/transcription/presentation";
 import {
   getGetProjectTaskRevisionsQueryKey,
   useUpdateProjectTask,
@@ -41,7 +46,7 @@ function SuggestionShell({
 }: {
   label: string;
   children: ReactNode;
-  toggle: ReactNode;
+  toggle?: ReactNode;
   footer?: ReactNode;
 }) {
   return (
@@ -72,18 +77,20 @@ export function ReplacementSuggestion({
   choice,
   disabled,
   onChoose,
+  context,
 }: {
   replacement: Replacement;
   choice: Choice | null;
   disabled: boolean;
   onChoose: (next: Choice) => void;
+  context?: ReactNode;
 }) {
   const { target } = replacement;
   // 다른 확정이 먼저 끝낸 결정은 여기서 끝낼 것이 없다. 확정도 그 노드를 건너뛴다.
   const ended = target.endedAt !== null;
   return (
     <SuggestionShell
-      label="이전 결정 대체"
+      label={`이전 ${KIND_LABEL[target.kind]} ${replacement.label}`}
       toggle={
         <ChoiceToggle
           label="이전 결정을 끝낼지"
@@ -94,7 +101,7 @@ export function ReplacementSuggestion({
           onChange={onChoose}
         />
       }
-      footer={<p className="mt-1.5 text-xs text-[var(--el-muted)]">{replacement.reason}</p>}
+      footer={context ?? <p className="mt-1.5 text-xs text-[var(--el-muted)]">{replacement.reason}</p>}
     >
       <span className={cn("text-[var(--el-ink)]", ended && "text-[var(--el-muted-soft)] line-through")}>
         {target.content}
@@ -103,6 +110,76 @@ export function ReplacementSuggestion({
         {target.noteTitle} · {formatAppDate(target.approvedAt, { month: "long", day: "numeric" })} 확정
         {ended ? " · 이미 끝남" : ""}
       </span>
+    </SuggestionShell>
+  );
+}
+
+/** 승인 제안의 근거를 그 제안 안에 둔다. 관계 조회만으로 선택이나 대상 상태를 바꾸지 않는다. */
+export function RelationContext({
+  relation,
+  segments,
+  onOpenScript,
+  fallbackReason,
+  showKind = false,
+}: {
+  relation: MeetingRelation;
+  segments: readonly TranscriptResponseDataSegmentsItem[];
+  onOpenScript: (segmentId: string) => void;
+  fallbackReason?: string;
+  showKind?: boolean;
+}) {
+  const sequences = new Set(relation.evidenceSequences);
+  const quotes = segments.filter((segment) => sequences.has(segment.sequence));
+  return (
+    <div className="mt-1.5 space-y-1 text-xs text-[var(--el-muted)]">
+      <p>
+        {showKind ? `${LINK_LABEL[relation.kind]} · ` : ""}
+        {relation.scope === "same" ? "같은 회의" : relation.scope === "approved" ? "프로젝트 확정 항목" : relation.targetTitle}
+        {` · 판 ${relation.target.revision}`}
+      </p>
+      {relation.reason || fallbackReason ? (
+        <p className="whitespace-pre-wrap break-words">{relation.reason || fallbackReason}</p>
+      ) : null}
+      {quotes.length > 0 ? (
+        <ul aria-label="관계 근거 발언" className="space-y-1 border-l border-[var(--el-hairline)] pl-3">
+          {quotes.map((segment) => (
+            <li key={segment.segmentId}>
+              <button type="button" className="text-left leading-5 hover:text-[var(--el-ink)]" onClick={() => onOpenScript(segment.segmentId)}>
+                {formatOffset(segment.startedAtMs)} · {segment.text}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/** 승인 API에 제안이 없는 관계도 해당 결정·할 일 아래에서 읽는다. */
+export function RelationSuggestion({
+  relation,
+  workspaceId,
+  onSelectItem,
+  ...context
+}: {
+  relation: MeetingRelation;
+  workspaceId?: string;
+  onSelectItem: (itemId: string) => void;
+  segments: readonly TranscriptResponseDataSegmentsItem[];
+  onOpenScript: (segmentId: string) => void;
+}) {
+  return (
+    <SuggestionShell label={LINK_LABEL[relation.kind]} footer={<RelationContext relation={relation} {...context} />}>
+      {relation.targetItemId ? (
+        <button type="button" aria-label={`관계 대상 항목 보기 · ${relation.target.content}`} className="text-left underline underline-offset-4" onClick={() => onSelectItem(relation.targetItemId!)}>
+          {relation.target.content}
+        </button>
+      ) : <span className="break-words text-[var(--el-ink)]">{relation.target.content}</span>}
+      {relation.scope === "past" && workspaceId && relation.target.noteId ? (
+        <Link className="text-xs underline underline-offset-4" href={`/w/${workspaceId}/notes/${relation.target.noteId}?view=full&tab=summary`}>
+          {relation.targetTitle}
+        </Link>
+      ) : null}
     </SuggestionShell>
   );
 }
@@ -122,6 +199,7 @@ export function TaskChangeSuggestion({
   onRetryTask,
   disabled,
   onChoose,
+  context,
 }: {
   change: TaskChange;
   task: ProjectTask | undefined;
@@ -135,6 +213,7 @@ export function TaskChangeSuggestion({
   disabled: boolean;
   /** 선택을 검토본에 저장한다. 저장했는지를 돌려준다 */
   onChoose: (next: Choice) => Promise<boolean>;
+  context?: ReactNode;
 }) {
   const queryClient = useQueryClient();
   const update = useUpdateProjectTask({
@@ -216,6 +295,7 @@ export function TaskChangeSuggestion({
       }
       footer={
         <>
+          {context}
           {conflict ? (
             <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">
               {CONFLICT_MESSAGE}

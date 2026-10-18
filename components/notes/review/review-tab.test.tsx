@@ -21,7 +21,7 @@ import {
 } from "vitest";
 
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
-import type { MeetingAnalysisFlowResponseData } from "@/lib/api/generated/models";
+import type { MeetingAnalysisFlowResponseData, MeetingReviewResponseData } from "@/lib/api/generated/models";
 import { ReviewTab } from "@/components/notes/review/review-tab";
 import { workspaceOfProject } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
@@ -131,7 +131,6 @@ describe("검토 가능한 회의", () => {
       "언제 정해졌나",
       "요약",
       "주제",
-      "충돌·이어짐",
       "결정",
       "할 일",
     ]);
@@ -186,10 +185,146 @@ describe("검토 가능한 회의", () => {
     // 펼친 주제는 예전처럼 서술 + 항목 줄이고, 이어진 항목 바로 아래에 연결 한 줄이 선다
     expect(within(index).queryByText("결론")).toBeNull();
     expect(
-      await within(section("충돌·이어짐")).findByText(
+      await within(section("결정")).findByText(
         /경쟁 도구 요금표를 모은다/
       )
     ).toBeInTheDocument();
+  });
+
+  it("충돌 근거를 기존 승인 카드에 합치고 같은 대상의 검토 UI를 중복하지 않는다", async () => {
+    const response = await getResponse(
+      meetingFlowHandlers,
+      new Request(
+        `http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`
+      )
+    );
+    const { data: review } = (await response!.json()) as {
+      data: MeetingReviewResponseData;
+    };
+    const item = review.items.find((row) =>
+      row.replacements.some(
+        (replacement) => replacement.target.endedAt === null
+      )
+    )!;
+    const replacement = item.replacements[0];
+    server.use(
+      http.get("*/v1/projects/:projectId/meeting-links", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            notes: [],
+            agendaLinks: [],
+            meetingLinks: [],
+            conflicts: [
+              {
+                kind: replacement.kind,
+                reason: "새 판정의 근거를 기존 검토 카드에서 확인합니다.",
+                evidenceSequences: [],
+                source: {
+                  noteId: MENTORING_NOTE_ID,
+                  ...item.originalProposalRef,
+                  proposalKind: item.kind,
+                  content: item.content,
+                },
+                target: {
+                  type: "APPROVED",
+                  itemId: replacement.target.itemId,
+                  revision: replacement.target.revision,
+                  proposalKind: replacement.target.kind,
+                  content: replacement.target.content,
+                },
+              },
+            ],
+          },
+          error: null,
+        })
+      )
+    );
+    renderTab();
+    const box = await rowBox(item.content);
+    expect(
+      await within(box).findByText(
+        "새 판정의 근거를 기존 검토 카드에서 확인합니다."
+      )
+    ).toBeInTheDocument();
+    expect(within(box).getAllByText(replacement.target.content)).toHaveLength(
+      1
+    );
+    const choice = within(box).getByRole("radiogroup", {
+      name: "이전 결정을 끝낼지",
+    });
+    expect(within(box).getAllByRole("radiogroup")).toHaveLength(1);
+    fireEvent.click(within(choice).getByRole("radio", { name: "끝내기" }));
+    await waitFor(() =>
+      expect(
+        within(choice).getByRole("radio", { name: "끝내기" })
+      ).toHaveAttribute("aria-checked", "true")
+    );
+    expect(screen.queryByRole("region", { name: "충돌·이어짐" })).toBeNull();
+  });
+
+  it("할 일의 충돌도 기존 반영·넘기기 카드 안에서 검토하고 선택을 저장한다", async () => {
+    const response = await getResponse(
+      meetingFlowHandlers,
+      new Request(
+        `http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`
+      )
+    );
+    const { data: review } = (await response!.json()) as {
+      data: MeetingReviewResponseData;
+    };
+    const item = review.items.find((row) => row.taskChanges.length > 0)!;
+    const change = item.taskChanges[0];
+    server.use(
+      http.get("*/v1/projects/:projectId/meeting-links", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            notes: [],
+            agendaLinks: [],
+            meetingLinks: [],
+            conflicts: [
+              {
+                kind: "CONFLICTS_WITH",
+                reason: "기존 할 일과 담당·기한이 다릅니다.",
+                evidenceSequences: [],
+                source: {
+                  noteId: MENTORING_NOTE_ID,
+                  ...item.originalProposalRef,
+                  proposalKind: item.kind,
+                  content: item.content,
+                },
+                target: {
+                  type: "APPROVED",
+                  itemId: change.target.itemId,
+                  revision: change.target.revision,
+                  proposalKind: "ACTION_ITEM",
+                  content: "중복으로 표시하면 안 되는 대상",
+                },
+              },
+            ],
+          },
+          error: null,
+        })
+      )
+    );
+    renderTab();
+    const box = await rowBox(item.content);
+    expect(
+      await within(box).findByText("기존 할 일과 담당·기한이 다릅니다.")
+    ).toBeInTheDocument();
+    expect(
+      within(box).queryByText("중복으로 표시하면 안 되는 대상")
+    ).toBeNull();
+    const choice = within(box).getByRole("radiogroup", {
+      name: "기존 할 일에 반영할지",
+    });
+    expect(within(box).getAllByRole("radiogroup")).toHaveLength(1);
+    const keep = within(choice).getByRole("radio", { name: "넘기기" });
+    await waitFor(() => expect(keep).toBeEnabled());
+    fireEvent.click(keep);
+    await waitFor(() => expect(keep).toHaveAttribute("aria-checked", "true"));
+    expect(screen.queryByRole("region", { name: "충돌·이어짐" })).toBeNull();
   });
 
   it("지난 회의 연결을 못 불러오면 없는 것처럼 접지 않고 다시 불러올 길을 둔다", async () => {
@@ -1510,9 +1645,7 @@ describe("최종 요약과 늦은 관계 결과", () => {
         queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
       })
     );
-    expect(
-      await screen.findByText("확인된 충돌과 이어짐이 없습니다.")
-    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/충돌과 이어짐을 확인하고 있습니다/)).toBeNull());
     expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue(
       "입력 중인 수정 내용"
     );

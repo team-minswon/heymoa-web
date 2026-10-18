@@ -33,8 +33,26 @@ export type MeetingRelation =
   };
 export type MeetingLinkIndex = {
   relations: MeetingRelation[];
+  byItemId: ReadonlyMap<string, MeetingRelation[]>;
   byAgendaId: ReadonlyMap<string, PastNote[]>;
 };
+
+/** 확정 항목과 원래 명제의 판은 별개이므로 각각 같은 종류의 참조끼리 비교한다. */
+export function relationMatchesTarget(
+  relation: MeetingRelation,
+  target: {
+    itemId: string;
+    revision: number;
+    originalProposalRef: { proposalId?: string; revision: number } | null;
+  }
+) {
+  return relation.target.type === "APPROVED"
+    ? relation.target.itemId === target.itemId &&
+        relation.target.revision === target.revision
+    : target.originalProposalRef?.proposalId !== undefined &&
+        relation.target.proposalId === target.originalProposalRef.proposalId &&
+        relation.target.revision === target.originalProposalRef.revision;
+}
 
 const endpointKey = (
   end: ProjectMeetingLinksResponseDataMeetingLinksItem["target"]
@@ -55,7 +73,8 @@ export function indexMeetingLinks(
     "itemId" | "originalProposalRef"
   >[]
 ): MeetingLinkIndex {
-  if (!data) return { relations: [], byAgendaId: new Map() };
+  if (!data)
+    return { relations: [], byItemId: new Map(), byAgendaId: new Map() };
   const notes = new Map(data.notes.map((note) => [note.noteId, note]));
   const itemOfProposal = new Map(
     items.flatMap((item) =>
@@ -133,5 +152,12 @@ export function indexMeetingLinks(
     });
     byAgendaId.set(source.agendaId, list);
   }
-  return { relations, byAgendaId };
+  const byItemId = new Map<string, MeetingRelation[]>();
+  for (const relation of relations) {
+    if (!relation.sourceItemId) continue;
+    const list = byItemId.get(relation.sourceItemId) ?? [];
+    list.push(relation);
+    byItemId.set(relation.sourceItemId, list);
+  }
+  return { relations, byItemId, byAgendaId };
 }
