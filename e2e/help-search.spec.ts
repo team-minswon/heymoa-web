@@ -178,3 +178,24 @@ test("움직임 줄이기면 목차 이동이 바로 끝난다 (APP-1237)", asyn
   expect(top).toBe(113);
   await context.close();
 });
+
+test("영상을 누르면 확대 창이 열리고 Esc 로 닫히며 포커스가 크게 보기 버튼으로 돌아온다", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/help/situations/fix-speakers");
+  await page.waitForLoadState("networkidle");
+  const video = page.locator("figure video").first();
+  await video.scrollIntoViewIfNeeded();
+  const before = await video.boundingBox();
+  await video.click({ force: true }); // 마우스는 영상 위 덮개 버튼에 닿는다
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  const big = await dialog.locator("video").boundingBox();
+  expect(big!.width).toBeGreaterThan(before!.width);
+  // 열린 동안 본문의 같은 영상은 멈춘다
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /크게 보기/ }).first()).toBeFocused();
+  // 자리는 그대로
+  expect((await video.boundingBox())!.height).toBe(before!.height);
+});

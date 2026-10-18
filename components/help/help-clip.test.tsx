@@ -92,4 +92,29 @@ describe("HelpClip", () => {
     fireEvent.click(screen.getByRole("button", { name: /재생|일시정지/ }));
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
   });
+
+  it("크게 보기: 확대 창이 열리면 본문 영상이 멈추고 같은 소스로 처음부터 재생한다", async () => {
+    mockReducedMotion(false);
+    render(<HelpClip name="desktop-menubar" alt="설명" caption="캡션" />);
+    fireEvent.click(screen.getByRole("button", { name: "설명 — 크게 보기" }));
+    const dialog = await screen.findByRole("dialog");
+    const zoomed = dialog.querySelector("video")!;
+    expect(zoomed.muted).toBe(true);
+    expect(zoomed.loop).toBe(true);
+    expect(zoomed).toHaveAttribute("autoplay");
+    expect(zoomed.querySelector("source[type='video/webm']")).not.toBeNull();
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+    expect(
+      screen.getByRole("slider", { name: "재생 위치" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "재생" })).toBeInTheDocument();
+  });
+
+  it("크게 보기: 움직임 줄이기면 확대 창도 자동 재생하지 않는다", async () => {
+    mockReducedMotion(true);
+    render(<HelpClip name="desktop-menubar" alt="설명" />);
+    fireEvent.click(screen.getByRole("button", { name: "설명 — 크게 보기" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.querySelector("video")).not.toHaveAttribute("autoplay");
+  });
 });
