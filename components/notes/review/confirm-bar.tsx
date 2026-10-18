@@ -31,7 +31,7 @@ function Count({ value }: { value: number }) {
 /**
  * 검토 완료 — 아래 가운데 떠 있는 막대(APP-865). 고를 제안이 남았으면 그 수와 그 줄로 가는 링크를,
  * 다른 까닭으로 막혔으면 까닭을, 아니면 무엇이 프로젝트에 올라가는지를 말한다. 확정은 되돌릴 수 없어서
- * 한 번 더 묻는다. 기존 할 일 변경은 「반영」 때 이미 저장됐다.
+ * 한 번 더 묻는다. 기존 할 일 변경도 이때 함께 적용된다.
  */
 export function ConfirmBar({
   summary,
@@ -74,7 +74,7 @@ export function ConfirmBar({
         className="absolute inset-x-0 -top-10 bottom-0 bg-gradient-to-b from-transparent to-[var(--el-surface-card)] to-60%"
       />
       <div className="pointer-events-auto relative flex min-h-[50px] max-w-full flex-wrap items-center gap-x-3.5 gap-y-1 rounded-[14px] border border-[var(--el-hairline)] bg-[var(--el-surface-card)]/[0.98] py-[7px] pr-[7px] pl-[18px] shadow-e2 animate-in slide-in-from-bottom-2 fade-in-0 duration-200 ease-out motion-reduce:animate-none">
-        {error ? (
+        {error && !blocked ? (
           <span role="alert" className="text-[13px] text-[var(--el-error-strong)]">
             {error}
           </span>
@@ -123,13 +123,14 @@ export function ConfirmBar({
           검토 완료
         </Button>
       </div>
-      <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialog open={open} onOpenChange={(next) => { if (!pending) setOpen(next); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>검토를 완료할까요?</AlertDialogTitle>
             <AlertDialogDescription>
               포함한 항목이 프로젝트에 확정되고 할 일 {summary.newTasks}개가 생깁니다.
-              {summary.endedDecisions > 0 ? ` 이전 결정 ${summary.endedDecisions}개가 끝납니다.` : ""} 완료한 뒤에는 검토를
+              {summary.endedDecisions > 0 ? ` 이전 결정 ${summary.endedDecisions}개가 끝납니다.` : ""}
+              {summary.changedTasks > 0 ? ` 기존 할 일 ${summary.changedTasks}개가 변경됩니다.` : ""} 완료한 뒤에는 검토를
               고칠 수 없습니다.
             </AlertDialogDescription>
             {error ? (
@@ -137,10 +138,13 @@ export function ConfirmBar({
                 {error}
               </p>
             ) : null}
+            {blocked ? <p role="alert" className="text-sm text-[var(--el-muted)]">{blocked}</p> : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>취소</AlertDialogCancel>
             <AlertDialogAction
+              loading={pending}
+              disabled={Boolean(blocked)}
               onClick={async () => {
                 if (await onConfirm()) setOpen(false);
               }}

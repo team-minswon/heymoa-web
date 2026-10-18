@@ -41,6 +41,7 @@ export function ReviewRow({
   busy,
   locked = false,
   conflict,
+  conflictMessage = CONFLICT_MESSAGE,
   fresh,
   choices,
   onToggle,
@@ -63,6 +64,7 @@ export function ReviewRow({
   /** 다른 항목이 저장 중이다. 검토본 저장은 한 번에 하나라, 풀어 두면 누른 조작이 조용히 버려진다 */
   locked?: boolean;
   conflict: boolean;
+  conflictMessage?: string;
   /** 방금 더한 항목. 한 번 스며들며 선다 */
   fresh: boolean;
   choices: AssigneeChoice[];
@@ -79,6 +81,7 @@ export function ReviewRow({
   return (
     <div
       data-item-id={item.itemId}
+      data-item-scroll-target
       className={cn(
         "scroll-mt-24 border-b border-[var(--el-hairline-soft)]",
         fresh && ARRIVE_CLASS
@@ -190,7 +193,7 @@ export function ReviewRow({
           className="my-1.5 flex items-center gap-3 rounded-control bg-[var(--el-canvas-soft)] px-3 py-2 text-[12.5px] text-[var(--el-body)]"
         >
           <span className="min-w-0 flex-1">
-            {CONFLICT_MESSAGE}
+            {conflictMessage}
           </span>
           <button
             type="button"

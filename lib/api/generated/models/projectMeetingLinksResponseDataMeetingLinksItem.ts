@@ -16,7 +16,7 @@ export type ProjectMeetingLinksResponseDataMeetingLinksItem = {
   kind: string;
   /** 출발(뒤 회의의 명제) */
   source: ProjectMeetingLinksResponseDataMeetingLinksItemSource;
-  /** 도착(앞 회의의 명제) */
+  /** 도착(같은 회의·이전 회의 명제 또는 승격 항목) */
   target: ProjectMeetingLinksResponseDataMeetingLinksItemTarget;
   /** 이번 쪽 근거 발화 sequence */
   evidenceSequences: ProjectMeetingLinksResponseDataMeetingLinksItemEvidenceSequencesItem[];

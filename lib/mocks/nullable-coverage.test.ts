@@ -6,6 +6,7 @@ import { setupServer } from "msw/node";
 import { CONTEXT_SNAPSHOT } from "@/lib/mocks/proposals";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
+import { MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
 import { restHandlers, seedShareMail } from "@/lib/mocks/rest-handlers";
 import { termHandlers } from "@/lib/mocks/terms";
@@ -57,6 +58,16 @@ function valuesAt(node: unknown, parts: string[]): unknown[] {
   }
   if (node === null || node === undefined) return [];
   return valuesAt((node as Record<string, unknown>)[head], rest);
+}
+
+/** 최종 필드 자체가 선택일 때만 NON_NULL 직렬화에 따른 누락을 null 표본으로 센다. */
+type NullableSchema = { properties?: Record<string, NullableSchema>; items?: NullableSchema; required?: string[] };
+function optionalLeaf(schema: NullableSchema | undefined, parts: string[]): boolean {
+  const [part, ...rest] = parts;
+  const key = part.replace(/\[\]$/, "");
+  if (rest.length === 0) return !schema?.required?.includes(key);
+  const child = schema?.properties?.[key];
+  return optionalLeaf(part.endsWith("[]") ? child?.items : child, rest);
 }
 
 type GetOperation = {
@@ -369,7 +380,11 @@ function contractSamples() {
         );
       }
       for (const url of urls) {
-        for (const query of queries) samples.push([schema, `${url}${query}`]);
+        for (const query of queries) {
+          // 선택 noteId 필터로 실제 관계가 있는 회의도 검사한다. 경로만 부르면 목은 빈 목록을 준다.
+          const suffix = path === "/v1/projects/{projectId}/meeting-links" && tuple.noteId ? `?noteId=${tuple.noteId}` : query;
+          samples.push([schema, `${url}${suffix}`]);
+        }
       }
       filled += urls.length;
     }
@@ -390,6 +405,11 @@ function contractSamples() {
  * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
  */
 const KNOWN_ONE_SIDED = new Set([
+  // 관계의 출발은 항상 현재 회의 명제다. 공용 endpoint DTO의 승격 구분·ID는 출발 쪽에 나오지 않는다.
+  "ProjectMeetingLinksResponse.data.meetingLinks[].source.itemId",
+  "ProjectMeetingLinksResponse.data.meetingLinks[].source.type",
+  "ProjectMeetingLinksResponse.data.conflicts[].source.itemId",
+  "ProjectMeetingLinksResponse.data.conflicts[].source.type",
   // **목의 알림은 한 쪽뿐이다.** 커서는 `hasMore` 가 참일 때만 값이 있는데, 그러려면 시드에
   // 알림을 50건 넘게 심어야 한다 — 모든 테스트가 그만큼 느려지는 값을 이 한 필드 때문에
   // 치르지 않는다. 서버 쪽은 `GetNotificationsService` 가 한 건 더 읽어 정하고 IT 가 본다.
@@ -515,16 +535,38 @@ describe("nullable 목 표본", () => {
       // 그래서 개별 URL은 봐주고, 아래에서 스키마별로 200을 한 번은 받았는지 본다.
       if (!response.ok) continue;
       answered.add(schemaName);
-      const body = await response.json();
+      const bodies = [await response.json()];
+      // 저장한 초안은 처음 시드에 없습니다. 실제 PATCH → GET으로 담당 참조·해제·미변경을 함께 검사합니다.
+      if (schemaName === "MeetingReviewResponse" && bodies[0].data.noteId === MENTORING_NOTE_ID) {
+        for (const fields of [
+          { status: "COMPLETED", assignee: { value: { type: "USER", id: mockDb.getCurrentUser().userId } }, due: { value: "2026-12-05" } },
+          { status: null, assignee: { value: { type: "SPEAKER_LABEL", label: "B" } }, due: { value: null } },
+          { status: null, assignee: { value: null }, due: null },
+          { status: null, assignee: null, due: null },
+        ]) {
+          const current = bodies.at(-1).data;
+          const item = current.items.find((row: { taskChanges: unknown[] }) => row.taskChanges.length > 0);
+          const target = item.taskChanges[0].target;
+          const saved = await fetch(`http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`, {
+            method: "PATCH", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+              decisions: [{ targetId: target.itemId, decision: "APPLY", taskChange: { expectedRevision: target.revision, ...fields } }],
+            }),
+          });
+          expect(saved.status).toBe(200);
+          bodies.push(await (await fetch(`http://localhost${url}`)).json());
+        }
+      }
 
-      for (const leaf of nullableLeaves(schema)) {
+      for (const body of bodies) for (const leaf of nullableLeaves(schema)) {
         if (leaf === "error") continue; // 성공 응답의 봉투는 언제나 null이다
         const values = valuesAt(body, leaf.split("."));
         if (values.length === 0) continue;
         const key = `${schemaName}.${leaf}`;
         const entry = observed.get(key) ?? { total: 0, nulls: 0 };
         entry.total += values.length;
-        entry.nulls += values.filter((value) => value === null).length;
+        const optional = optionalLeaf(schema, leaf.split("."));
+        entry.nulls += values.filter((value) => value === null || (optional && value === undefined)).length;
         observed.set(key, entry);
       }
     }

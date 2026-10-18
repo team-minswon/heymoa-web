@@ -14,6 +14,7 @@ type Props = Record<string, unknown> & { ref?: Ref<unknown> };
  */
 const forceGraph = vi.hoisted(() => ({
   props: null as Props | null,
+  zoomDuringRender: null as number | null,
   api: {
     zoom: vi.fn(() => 1),
     zoomToFit: vi.fn(),
@@ -28,6 +29,11 @@ vi.mock("react-force-graph-2d", () => ({
   default: function ForceGraphDouble(props: Props) {
     forceGraph.props = props;
     useImperativeHandle(props.ref, () => forceGraph.api);
+    if (forceGraph.zoomDuringRender !== null) {
+      const k = forceGraph.zoomDuringRender;
+      forceGraph.zoomDuringRender = null;
+      (props.onZoom as (value: { k: number }) => void)({ k });
+    }
     return <canvas />;
   },
 }));
@@ -121,9 +127,9 @@ const items = [
   reviewItem("x", "ACTION_ITEM", { content: "뺀 항목", included: false }),
 ];
 
-async function renderGraph(onSelect = vi.fn(), selectedItemId: string | null = null) {
+async function renderGraph(onSelect = vi.fn(), selectedItemId: string | null = null, extra: Partial<Parameters<typeof ReviewGraph>[0]> = {}) {
   const view = render(
-    <ReviewGraph summary={summary} items={items} selectedItemId={selectedItemId} onSelect={onSelect} />
+    <ReviewGraph summary={summary} items={items} selectedItemId={selectedItemId} onSelect={onSelect} {...extra} />
   );
   // 캔버스는 브라우저에서만 불러온다(next/dynamic, ssr: false)
   await vi.waitFor(() => expect(forceGraph.props).not.toBeNull());
@@ -158,7 +164,9 @@ describe("ReviewGraph", () => {
     cleanup();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     forceGraph.props = null;
+    forceGraph.zoomDuringRender = null;
     panelWidth = 840;
   });
 
@@ -170,6 +178,14 @@ describe("ReviewGraph", () => {
       ["d1", false],
       ["a1", false],
     ]);
+  });
+
+  it("라이브러리가 렌더 중 확대 상태를 알려도 부모를 즉시 갱신하지 않는다", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    forceGraph.zoomDuringRender = 8;
+    await renderGraph();
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "확대" })).toBeDisabled());
+    expect(error.mock.calls.some((args) => String(args[0]).includes("Cannot update a component"))).toBe(false);
   });
 
   it("캔버스에서 항목을 누르면 그 항목을 고르고, 허브를 누르면 고르지 않고 판을 그리로 옮긴다", async () => {
@@ -253,6 +269,23 @@ describe("ReviewGraph", () => {
     await renderGraph();
 
     expect(drawnLabels(1.5)).toEqual(["01"]);
+  });
+
+  it("안건 허브 사이 이어짐을 화살표와 텍스트로 표시하고 다른 관계선과 구별한다", async () => {
+    await renderGraph(vi.fn(), null, {
+      summary: { ...summary, agendas: [{ ...summary.agendas[0], agendaId: "ag1" }, topic(2, { agendaId: "ag2", title: "수익 모델" })] },
+      agendaLinks: new Map([["ag2", [{ noteId: "n", agendaId: "ag1", title: "회의", agendaTitle: "요금" }]]]),
+    });
+    expect(screen.getByRole("list", { name: "안건 이어짐" })).toHaveTextContent("01 요금 → 02 수익 모델");
+    const props = forceGraph.props as Props & {
+      graphData: { links: Array<{ source: string; target: string; kind: string }> };
+      linkDirectionalArrowLength: (link: { kind: string }) => number;
+    };
+    expect(props.graphData.links).toContainEqual({ source: "topic:1", target: "topic:2", kind: "agenda" });
+    expect(props.linkDirectionalArrowLength({ kind: "agenda" })).toBeGreaterThan(0);
+    expect(props.linkDirectionalArrowLength({ kind: "relation" })).toBe(0);
+    act(() => graphProps().onNodeHover(graphProps().graphData.nodes.find((node) => node.id === "topic:1")));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("항목 2");
   });
 
   it("주제 묶음이 없으면 빈 그래프 대신 한 줄로 말한다", () => {

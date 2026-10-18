@@ -34,6 +34,7 @@ const item = (itemId: string, over: Record<string, unknown> = {}) => ({
       due: null,
       assignee: null,
       status: "OPEN",
+      draft: null,
       target: { itemId: "T1", revision: 1 },
     },
   ],
@@ -71,7 +72,7 @@ describe("applyItemPatch", () => {
     expect(next.items[0].taskChanges[0].decision).toBe("KEEP");
   });
 
-  it("할 일 변경의 APPLIED 와 대체의 APPLIED 는 걸지 않는다(두 단계 저장이라 응답을 기다린다)", () => {
+  it("APPLIED 이력은 새 선택으로 먼저 걸지 않는다", () => {
     const next = applyItemPatch(review(), "A", {
       decisions: [
         { targetId: "T1", decision: "APPLIED" },
@@ -81,6 +82,17 @@ describe("applyItemPatch", () => {
 
     expect(next.items[0].taskChanges[0].decision).toBeNull();
     expect(next.items[0].replacements[0].decision).toBeNull();
+  });
+
+  it("APPLY 선택과 기한·담당 초안을 즉시 표시하고 실패하면 이전 값으로 돌린다", () => {
+    const before = review();
+    const patch = { decisions: [{ targetId: "T1", decision: "APPLY" as const, taskChange: { expectedRevision: 1, status: "COMPLETED" as const, due: { value: "2026-12-05" }, assignee: { value: { type: "USER" as const, id: "u1" } } } }] };
+    const next = applyItemPatch(before, "A", patch);
+    expect(next.items[0].taskChanges[0].decision).toBe("APPLY");
+    expect(next.items[0].taskChanges[0].draft).toEqual({ expectedRevision: 1, status: "COMPLETED", due: { value: "2026-12-05" }, assignee: { value: { type: "USER", id: "u1", label: null } } });
+    const restored = restoreItemFields(next, before.items[0], patch).items[0].taskChanges[0];
+    expect(restored.decision).toBeNull();
+    expect(restored.draft).toBeNull();
   });
 
   it("선택을 null 로 지우면 지운다", () => {

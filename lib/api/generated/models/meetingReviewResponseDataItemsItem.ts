@@ -18,7 +18,7 @@ export type MeetingReviewResponseDataItemsItem = {
   edited: boolean;
   /** 항목 종류 */
   kind: MeetingReviewResponseDataItemsItemKind;
-  /** 최신 분석이 제안한 기존 할 일 변경. 받으려면 할 일 API 로 고칩니다 */
+  /** 최신 분석이 제안한 기존 할 일 변경. APPLY 선택과 초안을 저장하면 검토 완료 때 서버가 일괄 적용합니다 */
   taskChanges: MeetingReviewResponseDataItemsItemTaskChangesItem[];
   /**
    * 사람 추가 항목의 작성자. 원본 복사 항목은 null

@@ -13,6 +13,7 @@ import { okData } from "@/lib/api/ok-data";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import {
   getGetMeetingReviewQueryKey,
+  getGetMeetingReviewQueryOptions,
   getGetMeetingReviewSummaryQueryKey,
   useCreateMeetingReviewItem,
   useUpdateMeetingReviewItem,
@@ -59,6 +60,7 @@ export function useReviewEditor(noteId: string) {
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [conflictItemId, setConflictItemId] = useState<string | null>(null);
+  const [conflictMessage, setConflictMessage] = useState(CONFLICT_MESSAGE);
 
   const cached = () =>
     okData(queryClient.getQueryData<getMeetingReviewResponse>(queryKey));
@@ -145,9 +147,21 @@ export function useReviewEditor(noteId: string) {
         });
       } else if (errorCodeOf(error) === CONFLICT) {
         // 새 항목에는 안내를 그릴 줄이 없다. 쓴 내용은 폼에 남으니 토스트로 알린다.
-        if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
-        else setConflictItemId(target);
-        await queryClient.refetchQueries({ queryKey });
+        if (target !== NEW_ITEM) {
+          setConflictItemId(target);
+          setConflictMessage("다른 사람이 먼저 수정했습니다. 최신 내용을 확인해 주세요.");
+        }
+        try {
+          // 저장 중 비활성화한 쿼리도 직접 읽고, 새 판이 도착할 때까지 잠금을 유지한다.
+          await queryClient.fetchQuery({
+            ...getGetMeetingReviewQueryOptions(noteId),
+            staleTime: 0,
+          });
+          if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
+          else setConflictMessage(CONFLICT_MESSAGE);
+        } catch {
+          toast.error("다른 사람이 먼저 수정했습니다. 최신 검토본을 불러오지 못했으니 다시 확인해 주세요.");
+        }
         // 그 사이 다른 사람이 주제 안에 항목을 더했으면 요약 members 도 달라졌다. 기다리지 않고 같이 읽는다.
         void queryClient.refetchQueries({
           queryKey: getGetMeetingReviewSummaryQueryKey(noteId),
@@ -166,6 +180,7 @@ export function useReviewEditor(noteId: string) {
     busyItemId,
     adding,
     conflictItemId,
+    conflictMessage,
     dismissConflict: () => setConflictItemId(null),
 
     updateItem(itemId: string, patch: ItemPatch) {

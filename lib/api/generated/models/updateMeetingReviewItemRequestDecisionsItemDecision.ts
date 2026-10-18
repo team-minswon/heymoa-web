@@ -7,7 +7,7 @@
  */
 
 /**
- * 대체는 END·KEEP, 기존 할 일 변경은 APPLIED·KEEP. null 이면 선택을 지웁니다
+ * 대체는 END·KEEP, 업무 변경은 APPLY·KEEP. APPLIED는 옛 즉시 반영 이력으로 선택 변경이 불가합니다. null은 선택·초안을 지웁니다
  * @nullable
  */
 export type UpdateMeetingReviewItemRequestDecisionsItemDecision =
@@ -18,4 +18,5 @@ export const UpdateMeetingReviewItemRequestDecisionsItemDecision = {
   END: "END",
   KEEP: "KEEP",
   APPLIED: "APPLIED",
+  APPLY: "APPLY",
 } as const;

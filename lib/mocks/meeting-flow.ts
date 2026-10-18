@@ -47,9 +47,11 @@ import type {
 type FlowStatus = MeetingAnalysisFlowResponseDataStatus;
 type ReviewItem = MeetingReviewResponseDataItemsItem;
 type Kind = ReviewItem["kind"];
+type TaskDraft = NonNullable<NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"]>;
 
-type StoredTaskChange = Omit<ReviewItem["taskChanges"][number], "assignee"> & {
+type StoredTaskChange = Omit<ReviewItem["taskChanges"][number], "assignee" | "draft"> & {
   assignee: { value: StoredAssignee | null } | null;
+  draft: TaskDraft | null;
 };
 
 type StoredItem = Omit<ReviewItem, "assignee" | "taskChanges"> & {
@@ -329,6 +331,7 @@ function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) 
                     : { value: change.dueIn === null ? null : dueAfterMeeting(change.dueIn, set.meetingDate) },
                 reason: change.reason,
                 decision: change.decision ?? null,
+                draft: null,
               };
             })(),
           ]
@@ -452,14 +455,11 @@ function buildSummary(
       })),
       openItemIds: open.map((row) => row.itemId),
       agendaId: set.agendaIds?.[index] ?? nextId("01KG"),
-      summary: seed.sentences[0]?.text ?? null,
+      summary: seed.sentences.map((sentence) => sentence.text).join(" ") || null,
       completed: true,
-      description: seed.sentences.slice(0, 1).map((sentence) => ({
-        text: sentence.text,
-        itemIds: sentence.items.map((at) => ids[at]),
-      })),
-      conclusions: decisions.slice(0, 3).map((row) => ({ text: row.content, itemIds: [row.itemId] })),
-      openItems: open.map((row) => ({ text: row.content, itemIds: [row.itemId] })),
+      description: [],
+      conclusions: [],
+      openItems: [],
     };
   });
   return {
@@ -643,6 +643,18 @@ function view(review: StoredReview): MeetingReviewResponseData {
       assignee: resolveAssignee(workspaceId, item.assignee),
       taskChanges: item.taskChanges.map((change) => ({
         ...change,
+        draft: change.draft ? {
+          ...change.draft,
+          status: change.draft.status ?? null,
+          due: change.draft.due ?? null,
+          assignee: change.draft.assignee ? {
+            value: change.draft.assignee.value ? {
+              type: change.draft.assignee.value.type,
+              id: change.draft.assignee.value.id ?? null,
+              label: change.draft.assignee.value.label ?? null,
+            } : null,
+          } : null,
+        } : null,
         assignee: change.assignee && {
           value: resolveAssignee(workspaceId, change.assignee.value),
         },
@@ -810,9 +822,9 @@ export const meetingFlowHandlers = [
       const noteId = paramId(params.noteId);
       const body = (await request.json()) as UpdateMeetingReviewItemRequest;
       const review = editableReview(noteId, body.expectedReviewVersion);
-      const item =
-        review.items.find((row) => row.itemId === paramId(params.itemId)) ??
-        failWith("MEETING_REVIEW_NOT_FOUND", 404, "검토본 또는 항목을 찾을 수 없습니다.");
+      const itemIndex = review.items.findIndex((row) => row.itemId === paramId(params.itemId));
+      if (itemIndex < 0) failWith("MEETING_REVIEW_NOT_FOUND", 404, "검토본 또는 항목을 찾을 수 없습니다.");
+      const item = structuredClone(review.items[itemIndex]);
       if (body.expectedItemRevision !== item.revision) failWith(...CONFLICT);
       if (body.included === null || (body.content !== undefined && !body.content?.trim())) {
         failWith(...BAD_REQUEST);
@@ -836,14 +848,26 @@ export const meetingFlowHandlers = [
         item.due = body.due;
         changed = true;
       }
-      // 제안의 선택. 대체는 END · KEEP, 할 일 변경은 APPLIED · KEEP 이고, 그 항목의 제안에 없는 대상은 거절한다.
-      for (const { targetId, decision } of body.decisions ?? []) {
+      const decisions = body.decisions ?? [];
+      if (new Set(decisions.map((row) => row.targetId)).size !== decisions.length) failWith(...BAD_REQUEST);
+      // 선택 저장은 실제 업무를 바꾸지 않습니다. APPLY는 초안 전체가 필요하고 KEEP 생략은 보존합니다.
+      for (const { targetId, decision, taskChange: draft } of decisions) {
         const replacement = item.replacements.find((row) => row.target.itemId === targetId);
         const taskChange = item.taskChanges.find((row) => row.target.itemId === targetId);
-        if (replacement && decision !== "APPLIED") {
+        if (replacement && decision !== "APPLIED" && decision !== "APPLY" && !draft) {
           changed ||= replacement.decision !== decision;
           replacement.decision = decision;
         } else if (taskChange && decision !== "END") {
+          if (taskChange.decision === "APPLIED" && decision !== "APPLIED") failWith(...BAD_REQUEST);
+          if (decision === "APPLY" && !draft) failWith(...BAD_REQUEST);
+          if (draft) {
+            if ((decision !== "APPLY" && decision !== "KEEP") || draft.expectedRevision !== taskChange.target.revision) failWith(...BAD_REQUEST);
+            if ((draft.assignee && !("value" in draft.assignee)) || (draft.due && !("value" in draft.due))) failWith(...BAD_REQUEST);
+            if (draft.assignee?.value) assigneeFromRequest(draft.assignee.value, noteId);
+          }
+          const nextDraft = decision === null ? null : draft ?? taskChange.draft;
+          changed ||= JSON.stringify(nextDraft) !== JSON.stringify(taskChange.draft);
+          taskChange.draft = nextDraft;
           changed ||= taskChange.decision !== decision;
           taskChange.decision = decision;
         } else {
@@ -853,6 +877,7 @@ export const meetingFlowHandlers = [
       if (changed) {
         item.revision += 1;
         review.reviewVersion += 1;
+        review.items[itemIndex] = item;
       }
       return view(review);
     })
@@ -875,13 +900,25 @@ export const meetingFlowHandlers = [
         failWith("PROJECT_KNOWLEDGE_CONFLICT", 409, "프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요.");
       }
       const included = review.items.filter((item) => item.included);
+      const approvalId = nextId("01KA");
+      const changes = included.flatMap((item) => item.taskChanges)
+        .filter((row) => row.decision === "APPLY")
+        .map((row) => {
+          const draft = row.draft ?? failWith(...BAD_REQUEST);
+          return {
+            ...draft,
+            taskId: row.target.itemId,
+            assignee: draft.assignee ? { value: assigneeFromRequest(draft.assignee.value, noteId) } : null,
+          };
+        });
+      // 모든 충돌 검사가 끝난 뒤에만 새 할 일과 이전 결정도 확정합니다.
+      projectTasks.applyReviewedChanges(note.projectId, changes, approvalId);
       // 포함 항목에 저장된 끝내기만 끝낸다. 다른 확정이 먼저 끝낸 노드는 건너뛴다.
       const endedAt = new Date().toISOString();
       for (const row of included.flatMap((item) => item.replacements)) {
         if (row.decision === "END" && row.target.endedAt === null) row.target.endedAt = endedAt;
       }
 
-      const approvalId = nextId("01KA");
       const actions = included.filter((item) => item.kind === "ACTION_ITEM");
       const promoted = projectTasks.promote(
         note.projectId,
@@ -918,7 +955,12 @@ export const meetingFlowHandlers = [
   http.get("*/v1/projects/:projectId/meeting-links", ({ request }) =>
     respond(() => {
       const noteId = new URL(request.url).searchParams.get("noteId");
-      const empty = { notes: [], meetingLinks: [], agendaLinks: [] };
+      const empty = {
+        notes: [],
+        meetingLinks: [],
+        conflicts: [],
+        agendaLinks: [],
+      };
       if (noteId !== MENTORING_NOTE_ID) return empty;
       const summary = store().summaries.get(MENTORING_NOTE_ID);
       const review = store().reviews.get(MENTORING_NOTE_ID);
@@ -927,15 +969,25 @@ export const meetingFlowHandlers = [
       const now = mockDb.getNote(MENTORING_NOTE_ID);
       const past = mockDb.getNote(PREVIOUS_NOTE_ID);
       const startedAt = new Date(MEETING_DATE).toISOString();
-      const pastStartedAt = new Date(MEETING_DATE - 7 * 86_400_000).toISOString();
-      const side = (noteId: string, proposalId: string, content: string, proposalKind: PastLink["target"]["proposalKind"]) => ({
+      const pastStartedAt = new Date(
+        MEETING_DATE - 7 * 86_400_000
+      ).toISOString();
+      const side = (
+        noteId: string,
+        proposalId: string,
+        content: string,
+        proposalKind: PastLink["target"]["proposalKind"]
+      ) => ({
         noteId,
         proposalId,
         revision: 1,
         content,
         proposalKind,
       });
-      const sourceOf = (proposalId: string) => review.items.find((row) => row.originalProposalRef?.proposalId === proposalId);
+      const sourceOf = (proposalId: string) =>
+        review.items.find(
+          (row) => row.originalProposalRef?.proposalId === proposalId
+        );
       const carded = store().pastLinks.flatMap((link) => {
         const source = sourceOf(link.sourceProposalId);
         if (!source) return [];
@@ -944,8 +996,18 @@ export const meetingFlowHandlers = [
             kind: link.kind,
             reason: "새 결정이 지난 결정을 대신한다",
             evidenceSequences: [],
-            source: side(MENTORING_NOTE_ID, link.sourceProposalId, source.content, "DECISION"),
-            target: side(PREVIOUS_NOTE_ID, link.target.proposalId, link.target.content, link.target.proposalKind),
+            source: side(
+              MENTORING_NOTE_ID,
+              link.sourceProposalId,
+              source.content,
+              "DECISION"
+            ),
+            target: side(
+              PREVIOUS_NOTE_ID,
+              link.target.proposalId,
+              link.target.content,
+              link.target.proposalKind
+            ),
           },
         ];
       });
@@ -960,11 +1022,37 @@ export const meetingFlowHandlers = [
               kind: "COMPLETES",
               reason: "지난 회의에서 맡은 조사를 이번에 마쳤다",
               evidenceSequences: [],
-              source: side(MENTORING_NOTE_ID, finishing.originalProposalRef.proposalId, finishing.content, "DECISION"),
-              target: side(PREVIOUS_NOTE_ID, "01KP900000001", "경쟁 도구 요금표를 모은다", "ACTION_ITEM"),
+              source: side(
+                MENTORING_NOTE_ID,
+                finishing.originalProposalRef.proposalId,
+                finishing.content,
+                "DECISION"
+              ),
+              target: side(
+                PREVIOUS_NOTE_ID,
+                "01KP900000001",
+                "경쟁 도구 요금표를 모은다",
+                "ACTION_ITEM"
+              ),
             },
           ]
         : [];
+      const priceDecision = review.items.find(
+        (row) =>
+          row.kind === "DECISION" &&
+          row.content.includes("좌석이 아니라 회의 시간")
+      );
+      const priceSource = priceDecision?.originalProposalRef
+        ? {
+            ...side(
+              MENTORING_NOTE_ID,
+              priceDecision.originalProposalRef.proposalId,
+              priceDecision.content,
+              "DECISION"
+            ),
+            revision: priceDecision.originalProposalRef.revision,
+          }
+        : null;
       return {
         notes: [
           {
@@ -972,20 +1060,97 @@ export const meetingFlowHandlers = [
             title: now.title,
             startedAt,
             agendas: summary.agendas.flatMap((row) =>
-              row.agendaId ? [{ agendaId: row.agendaId, title: row.title, completed: row.completed, proposalIds: [] }] : []
+              row.agendaId
+                ? [
+                    {
+                      agendaId: row.agendaId,
+                      title: row.title,
+                      completed: row.completed,
+                      proposalIds: [],
+                    },
+                  ]
+                : []
             ),
           },
           {
             noteId: PREVIOUS_NOTE_ID,
             title: past.title,
             startedAt: pastStartedAt,
-            agendas: PREVIOUS_AGENDAS.map((row) => ({ ...row, completed: true, proposalIds: [] })),
+            agendas: PREVIOUS_AGENDAS.map((row) => ({
+              ...row,
+              completed: true,
+              proposalIds: [],
+            })),
           },
         ],
-        meetingLinks: [...carded, ...free],
+        conflicts: [
+          ...carded.slice(0, 1),
+          ...(priceSource
+          ? [
+              {
+                kind: "SUPERSEDES",
+                reason:
+                  "좌석 수 대신 실제 회의 시간을 과금 기준으로 정했습니다.",
+                evidenceSequences: [108],
+                source: priceSource,
+                target: { type: "APPROVED", itemId: "01KD900000001", revision: 3, proposalKind: "DECISION", content: "요금은 좌석 수에 따라 계산한다" },
+              },
+            ]
+          : []),
+        ],
+        meetingLinks: [
+          ...carded.slice(1),
+          ...free,
+          ...(priceSource
+            ? [
+                {
+                  kind: "SUCCEEDS",
+                  reason:
+                    "회의 시간 기준 요금을 적용하기 위해 원가 계산을 이어서 확인합니다.",
+                  evidenceSequences: [109],
+                  source: priceSource,
+                  target: {
+                    type: "APPROVED",
+                    itemId: "01KT900000001",
+                    revision: 2,
+                    proposalKind: "ACTION_ITEM",
+                    content: "회의 시간별 원가 계산을 검토한다",
+                  },
+                },
+              ]
+            : []),
+        ],
         agendaLinks: [
-          { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[0] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[0].agendaId } },
-          { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[5] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[1].agendaId } },
+          {
+            source: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[1],
+            },
+            target: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[0],
+            },
+          },
+          {
+            source: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[0],
+            },
+            target: {
+              noteId: PREVIOUS_NOTE_ID,
+              agendaId: PREVIOUS_AGENDAS[0].agendaId,
+            },
+          },
+          {
+            source: {
+              noteId: MENTORING_NOTE_ID,
+              agendaId: MENTORING_AGENDA_IDS[5],
+            },
+            target: {
+              noteId: PREVIOUS_NOTE_ID,
+              agendaId: PREVIOUS_AGENDAS[1].agendaId,
+            },
+          },
         ],
       };
     })

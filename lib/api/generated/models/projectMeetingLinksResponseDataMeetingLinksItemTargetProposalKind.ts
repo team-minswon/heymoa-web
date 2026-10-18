@@ -7,7 +7,7 @@
  */
 
 /**
- * 명제 종류
+ * 종류
  */
 export type ProjectMeetingLinksResponseDataMeetingLinksItemTargetProposalKind =
   (typeof ProjectMeetingLinksResponseDataMeetingLinksItemTargetProposalKind)[keyof typeof ProjectMeetingLinksResponseDataMeetingLinksItemTargetProposalKind];

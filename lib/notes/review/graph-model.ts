@@ -1,4 +1,5 @@
 import type { MeetingReviewResponseDataItemsItem } from "@/lib/api/generated/models";
+import type { MeetingLinkIndex } from "@/lib/notes/review/meeting-links";
 import { summaryTopics, type MeetingReviewSummary } from "@/lib/notes/review/summary";
 
 type ReviewItem = MeetingReviewResponseDataItemsItem;
@@ -38,6 +39,8 @@ export type GraphEdge = {
 export type ReviewGraph = {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  /** 안건 이어짐은 앞선 안건 → 뒤 안건 방향이다. 항목 관계와 별도로 그린다. */
+  agendaEdges: GraphEdge[];
   topics: Map<number, string>;
 };
 
@@ -47,7 +50,8 @@ export type ReviewGraph = {
  */
 export function buildReviewGraph(
   summary: MeetingReviewSummary,
-  items: readonly ReviewItem[]
+  items: readonly ReviewItem[],
+  agendaLinks?: MeetingLinkIndex["byAgendaId"]
 ): ReviewGraph {
   const shown = items.filter((item) => item.included);
   const present = new Set(shown.map((item) => item.itemId));
@@ -94,9 +98,26 @@ export function buildReviewGraph(
     for (const relation of topic.relations) connect(relation.sourceItemId, relation.targetItemId);
   }
 
+  const ordinalByAgenda = new Map(summaryTopics(summary).flatMap((topic) =>
+    topic.agendaId ? [[topic.agendaId, topic.ordinal] as const] : []
+  ));
+  const agendaEdges = new Map<string, GraphEdge>();
+  for (const [agendaId, previous] of agendaLinks ?? []) {
+    const current = ordinalByAgenda.get(agendaId);
+    if (current === undefined) continue;
+    for (const target of previous) {
+      if (target.noteId !== summary.noteId) continue;
+      const earlier = ordinalByAgenda.get(target.agendaId);
+      if (earlier === undefined || earlier === current) continue;
+      const source = hubId(earlier), destination = hubId(current);
+      agendaEdges.set(`${source}→${destination}`, { source, target: destination });
+    }
+  }
+
   return {
     nodes,
     edges: [...edges.values()],
+    agendaEdges: [...agendaEdges.values()],
     topics: new Map(summaryTopics(summary).map((topic) => [topic.ordinal, topic.title])),
   };
 }
@@ -110,13 +131,15 @@ export type ForceNode = {
   /** 허브는 「01 제목」, 항목은 내용 */
   label: string;
   degree: number;
+  /** 허브에 속한 항목 수. 안건 간 연결은 세지 않는다. */
+  memberCount?: number;
   radius: number;
   x: number;
   y: number;
 };
 
 /** 허브-항목 · 항목 사이 관계 · 다른 주제에도 속함 */
-export type ForceLinkKind = "hub" | "relation" | "also";
+export type ForceLinkKind = "hub" | "relation" | "also" | "agenda";
 
 export type ForceLink = { source: string; target: string; kind: ForceLinkKind };
 
@@ -154,8 +177,9 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: ForceLink[] } {
   // 항목이 남은 주제마다 허브를 둔다. 다른 주제에도 속한 항목만 남은 주제도 그 점선이 닿을 허브가 있어야 한다.
+  const linkedAgendas = new Set(graph.agendaEdges.flatMap((edge) => [edge.source, edge.target]));
   const ordinals = [...graph.topics.keys()].filter((ordinal) =>
-    graph.nodes.some((node) => node.group === ordinal || node.alsoGroups.includes(ordinal))
+    linkedAgendas.has(hubId(ordinal)) || graph.nodes.some((node) => node.group === ordinal || node.alsoGroups.includes(ordinal))
   );
   // 허브는 해바라기 씨 배열로 흩어 두고, 항목은 제 허브 곁에서 ID 로 정한 자리에서 출발한다.
   const hubAt = new Map(
@@ -171,6 +195,7 @@ export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: F
       node.group !== null && hubAt.has(node.group) ? [{ source: hubId(node.group), target: node.id, kind: "hub" }] : []
     ),
     ...graph.edges.map((edge): ForceLink => ({ source: edge.source, target: edge.target, kind: "relation" })),
+    ...graph.agendaEdges.map((edge): ForceLink => ({ ...edge, kind: "agenda" })),
     // 다른 주제에도 속한 항목은 그 주제의 허브와 약하게 잇는다
     ...graph.nodes.flatMap((node): ForceLink[] =>
       node.alsoGroups.flatMap((group): ForceLink[] =>
@@ -193,6 +218,7 @@ export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: F
       item: null,
       label: `${topicNumber(ordinal)} ${graph.topics.get(ordinal) ?? ""}`.trim(),
       degree: d,
+      memberCount: graph.nodes.filter((node) => node.group === ordinal || node.alsoGroups.includes(ordinal)).length,
       radius: nodeRadius(d, true),
       ...hubAt.get(ordinal)!,
     };

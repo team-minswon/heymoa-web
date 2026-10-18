@@ -39,6 +39,7 @@ export function ReviewSection({
   openItemId,
   busyItemId,
   conflictItemId,
+  conflictMessage,
   adding,
   hint,
   aside,
@@ -62,6 +63,7 @@ export function ReviewSection({
   openItemId: string | null;
   busyItemId: string | null;
   conflictItemId: string | null;
+  conflictMessage?: string;
   adding: boolean;
   hint?: ReactNode;
   aside?: ReactNode;
@@ -103,6 +105,7 @@ export function ReviewSection({
         busy={busyItemId === item.itemId}
         locked={busyItemId !== null}
         conflict={conflictItemId === item.itemId}
+        conflictMessage={conflictMessage}
         fresh={fresh}
         choices={choices}
         onToggle={() => onToggleItem(item.itemId)}

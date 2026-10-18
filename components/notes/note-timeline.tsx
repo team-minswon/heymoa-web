@@ -24,6 +24,7 @@ import {
   useRecording,
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
+import { flowPollInterval } from "@/lib/notes/review/flow-cache";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { SpeakerChip } from "@/components/notes/speaker-chip";
 import { useGetNoteAgendas } from "@/lib/api/generated/notes/notes";
@@ -54,6 +55,7 @@ import {
   CONTEXT_OPERATION_LABEL,
 } from "@/lib/notes/proposals/presentation";
 import {
+  inFilter,
   placeAgendas,
   samePlacement,
   selectTimeline,
@@ -129,6 +131,7 @@ function useNow(intervalMs: number) {
 const NONE: ReadonlySet<string> = new Set();
 
 const itemId = (proposalId: string) => `timeline-item-${proposalId}`;
+const groupId = (key: string) => `timeline-agenda-${key}`;
 
 function metaOf(item: TimelineItem): Array<{ text: string; tone?: "error" }> {
   const { proposal } = item;
@@ -242,13 +245,14 @@ export function NoteTimeline({
     query: {
       enabled: meetingEnded,
       refetchInterval: (query) => {
-        const status = okData(query.state.data)?.status;
-        return status === "DIARIZING" || status === "ANALYZING" ? 5_000 : false;
+        const flow = okData(query.state.data);
+        return flowPollInterval(flow?.status ?? null, flow?.regions);
       },
     },
   });
   const analyzing =
-    meetingEnded && ["DIARIZING", "ANALYZING"].includes(okData(flowQuery.data)?.status ?? "");
+    meetingEnded && (["DIARIZING", "NOT_REQUESTED", "ANALYZING"].includes(okData(flowQuery.data)?.status ?? "") ||
+      (okData(flowQuery.data)?.regions ?? []).some((row) => row.status === "PENDING"));
   const diarizing =
     meetingEnded && okData(flowQuery.data)?.status === "DIARIZING";
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -291,12 +295,6 @@ export function NoteTimeline({
   // 칩은 바로 바뀌고 목록은 뒤따른다 — 수백 줄을 다시 그리는 동안 누른 칩이 멈춰 보이지 않게.
   const listFilter = useDeferredValue(filter);
   const reducedMotion = useReducedMotion();
-  const toggle = (key: "open" | "flipped", id: string) =>
-    setView((current) => {
-      const next = new Set(current[key]);
-      if (!next.delete(id)) next.add(id);
-      return { ...current, [key]: next, instant: false };
-    });
 
   // 주제 제목은 안건 정본이 준다. 노트 소켓의 agendas.changed 가 오면 provider 가 다시 읽게 한다.
   const agendasQuery = useGetNoteAgendas(noteId, {
@@ -331,21 +329,45 @@ export function NoteTimeline({
     setPlaced({ noteId, placement });
   }
 
-  const timeline = useMemo(
+  const allTimeline = useMemo(
     () =>
       selectTimeline(
         context.state,
-        listFilter,
+        "ALL",
         agendaList && placement ? { list: agendaList, placement } : null
       ),
-    [context.state, listFilter, agendaList, placement]
+    [context.state, agendaList, placement]
   );
+  const timeline = useMemo(() => listFilter === "ALL" ? allTimeline : {
+    ...allTimeline,
+    groups: allTimeline.groups.map((group) => ({
+      ...group, items: group.items.filter((item) => inFilter(item.tone, listFilter)),
+    })).filter((group) => group.items.length > 0),
+  }, [allTimeline, listFilter]);
+
+  // 골라 보기로 가린 묶음도 기억합니다. 분류되는 첫 화면부터 새 명제를 펼쳐 둡니다.
+  const [seenGroups, setSeenGroups] = useState({ noteId, groups: allTimeline.groups });
+  if (seenGroups.noteId !== noteId || seenGroups.groups !== allTimeline.groups) {
+    setSeenGroups({ noteId, groups: allTimeline.groups });
+    const before = new Map(seenGroups.noteId === noteId ? seenGroups.groups.map((group) => [group.key, group.total]) : []);
+    const grown = allTimeline.groups.filter((group) => group.agenda && before.has(group.key) && group.total > before.get(group.key)!);
+    if (!meetingEnded && view.noteId === noteId && grown.length > 0) {
+      const flipped = new Set(view.flipped);
+      for (const group of grown) {
+        if (view.foldByDefault) flipped.add(group.key);
+        else flipped.delete(group.key);
+      }
+      if (flipped.size !== view.flipped.size || [...flipped].some((key) => !view.flipped.has(key))) {
+        setView({ ...view, flipped, instant: true });
+      }
+    }
+  }
 
   /** 관계(질문 ↔ 답)를 누르면 그 항목을 펼치고 화면 가운데로 데려온다. */
-  const pendingScroll = useRef<string | null>(null);
+  const pendingScroll = useRef<{ id: string; block: ScrollLogicalPosition } | null>(null);
   const jumpTo = (proposal: ProposalHead) => {
     updateFollowing(false);
-    pendingScroll.current = proposal.proposalId;
+    pendingScroll.current = { id: itemId(proposal.proposalId), block: "center" };
     setView((current) => ({
       ...current,
       filter: "ALL",
@@ -356,15 +378,25 @@ export function NoteTimeline({
       flipped: NONE,
     }));
   };
+  const jumpToGroup = (key: string) => {
+    updateFollowing(false);
+    pendingScroll.current = { id: groupId(key), block: "start" };
+    setView((current) => {
+      const flipped = new Set(current.flipped);
+      if (current.foldByDefault) flipped.add(key);
+      else flipped.delete(key);
+      return { ...current, filter: "ALL", flipped, instant: true };
+    });
+  };
   useEffect(() => {
     const target = pendingScroll.current;
     if (!target) return;
     // 골라 보기를 「전체」로 되돌린 목록은 `useDeferredValue` 로 한 박자 늦게 선다 — 그 사이
     // 커밋에는 대상이 아직 없다. 찾을 때까지 비우지 않고 다음 커밋에서 다시 본다.
-    const element = document.getElementById(itemId(target));
+    const element = document.getElementById(target.id);
     if (!element) return;
     pendingScroll.current = null;
-    element.scrollIntoView?.({ block: "center" });
+    element.scrollIntoView?.({ block: target.block });
   });
 
   /**
@@ -395,12 +427,23 @@ export function NoteTimeline({
     },
     [noteId]
   );
+  const toggle = useCallback((key: "open" | "flipped", id: string) => {
+    // 직접 펼치는 조작은 읽으려는 의도다. 높이 변화가 자동 추종을 타고 바닥으로 끌고 가지 않게 한다.
+    updateFollowing(false);
+    readAwayNoteRef.current = noteId;
+    setView((current) => {
+      const next = new Set(current[key]);
+      if (!next.delete(id)) next.add(id);
+      return { ...current, [key]: next, instant: false };
+    });
+  }, [noteId, updateFollowing]);
   /** 방향 없이 거리만으로 잰다. 기록이 끝난 목록의 버튼 위치용이다. */
   const syncFollowing = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     updateFollowing(distanceFromBottom(viewport) <= FOLLOW_STICK_PX);
   }, [updateFollowing]);
+
   const scrollToLatest = () => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -740,9 +783,9 @@ export function NoteTimeline({
               !!group.agenda && view.foldByDefault !== view.flipped.has(key);
             const listId = `timeline-group-${key}`;
             return (
-              <section key={key} className="mt-7">
+              <section key={key} id={groupId(key)} className="mt-7 scroll-mt-4">
                 {group.agenda ? (
-                  <h3 className="-mx-2 flex h-[30px] w-[calc(100%+16px)] items-center gap-0.5">
+                  <h3 className="-mx-2 grid w-[calc(100%+16px)] grid-cols-[auto_minmax(0,1fr)] items-center gap-0.5 sm:flex sm:h-[30px]">
                     {/* **안건도 근거로 갈 수 있어야 한다.** 머리는 접는 손잡이라, 안건의 첫 발화로
                         가는 길은 시간 구간이 진다 — 항목의 시각 열과 같은 약속이다. */}
                     {group.agenda.citation ? (
@@ -752,7 +795,7 @@ export function NoteTimeline({
                         onClick={() =>
                           onEvidenceSelect(group.agenda!.citation!.segmentId)
                         }
-                        className="h-full shrink-0 rounded-[7px] px-2 text-[12px] tabular-nums text-[var(--el-muted-soft)] transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
+                        className="h-[30px] shrink-0 rounded-[7px] px-2 text-[12px] tabular-nums text-[var(--el-muted-soft)] transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
                       >
                         {groupRange(group, recording)}
                       </button>
@@ -763,7 +806,7 @@ export function NoteTimeline({
                       aria-controls={listId}
                       onClick={() => toggle("flipped", key)}
                       className={cn(
-                        "flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-[7px] pr-2 text-left transition-colors hover:bg-[var(--el-canvas-soft)]",
+                        "flex h-[30px] min-w-0 flex-1 items-center gap-2.5 rounded-[7px] pr-2 text-left transition-colors hover:bg-[var(--el-canvas-soft)]",
                         group.agenda.citation ? "pl-1" : "pl-2"
                       )}
                     >
@@ -776,6 +819,9 @@ export function NoteTimeline({
                       >
                         {group.agenda.title}
                       </span>
+                      {group.previous ? (
+                        <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">이어서</span>
+                      ) : null}
                       {group.agenda.retracted ? (
                         <span className="shrink-0 text-[12px] font-medium text-[var(--el-error-strong)]">
                           철회됨
@@ -794,6 +840,19 @@ export function NoteTimeline({
                       <span className="flex-1" />
                       {group.last && recording ? <LiveChip /> : null}
                     </button>
+                    {group.previous ? (
+                      <button
+                        type="button"
+                        aria-label={`앞선 ${group.agenda.title} 논의${group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}로 가기`}
+                        onClick={() => jumpToGroup(group.previous!.key)}
+                        className={cn(
+                          "h-[26px] shrink-0 justify-self-start rounded-[7px] px-2 text-xs text-[var(--el-muted)] underline decoration-[var(--el-hairline-strong)] underline-offset-2 hover:text-[var(--el-ink)] sm:h-full",
+                          group.agenda.citation ? "col-start-2" : "col-start-1"
+                        )}
+                      >
+                        앞선 논의{group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}
+                      </button>
+                    ) : null}
                   </h3>
                 ) : null}
                 {/* 열고 닫을 때 높이와 투명도로 접힌다. `initial={false}` 라 처음 그릴 때는 움직이지 않고,

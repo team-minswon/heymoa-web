@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MinutesExportDialog } from "@/components/notes/minutes/minutes-export-dialog";
+import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { track } from "@/lib/analytics/track";
 import { renderExport, type ExportFormat } from "@/lib/notes/review/markdown";
 import type { MinutesDocument, MinutesInclude } from "@/lib/notes/minutes/model";
@@ -62,6 +63,8 @@ export function ReviewActions({
    */
   wider?: {
     minutes: (include: MinutesInclude) => Promise<MinutesDocument>;
+    preparePdf?: PrepareMinutesPdf;
+    version?: string;
   };
   /**
    * [wider] 가 아직 없는 까닭 — 녹취록을 받는 중이거나 받지 못했다. 둘 다 「준비 중」(기능이 없다)과 다르다:
@@ -174,7 +177,7 @@ export function ReviewActions({
         </DropdownMenuContent>
       </DropdownMenu>
       {wider ? (
-        <MinutesExportDialog open={minutesOpen} onOpenChange={setMinutesOpen} build={wider.minutes} />
+        <MinutesExportDialog open={minutesOpen} onOpenChange={setMinutesOpen} build={wider.minutes} preparePdf={wider.preparePdf} version={wider.version} />
       ) : null}
     </div>
   );

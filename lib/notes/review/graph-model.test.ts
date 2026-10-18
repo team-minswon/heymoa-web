@@ -301,3 +301,34 @@ describe("toForceGraph", () => {
     expect(neighbors.get("loose")).toBeUndefined();
   });
 });
+
+
+describe("회의 안 안건 이어짐", () => {
+  const summary: MeetingReviewSummary = {
+    noteId: "now", status: "SUCCEEDED", resultVersion: "v", headline: null, lead: [], topics: [],
+    agendas: [
+      topic(1, { agendaId: "ag1", title: "문제 정의", members: [{ itemId: "d1", kind: "DECISION" }] }),
+      topic(2, { agendaId: "ag2", title: "해결 방안", members: [] }),
+      topic(3, { agendaId: "ag3", title: "연결 없는 안건", members: [] }),
+    ],
+  };
+  const previous = (noteId: string, agendaId: string) => ({ noteId, agendaId, title: "회의", agendaTitle: "안건" });
+  const agendaLinks = new Map([
+    ["ag2", [previous("now", "ag1"), previous("now", "ag1"), previous("past", "ag1"), previous("now", "missing"), previous("now", "ag2")]],
+    ["missing", [previous("now", "ag1")]],
+  ]);
+
+  it("현재 회의의 앞선 안건에서 뒤 안건으로 한 번만 연결하고 다른 회의·미확인·자기 연결을 제외한다", () => {
+    const graph = buildReviewGraph(summary, [reviewItem("d1", "DECISION")], agendaLinks);
+    expect(graph.agendaEdges).toEqual([{ source: hubId(1), target: hubId(2) }]);
+    const force = toForceGraph(graph);
+    expect(force.links.filter((link) => link.kind === "agenda")).toEqual([{ source: hubId(1), target: hubId(2), kind: "agenda" }]);
+    expect(force.nodes.filter((node) => node.hub).map((node) => node.id)).toEqual([hubId(1), hubId(2)]);
+  });
+
+  it("안건 연결이 늘어도 허브에 표시하는 항목 수를 부풀리지 않는다", () => {
+    const { nodes } = toForceGraph(buildReviewGraph(summary, [reviewItem("d1", "DECISION")], agendaLinks));
+    expect(nodes.find((node) => node.id === hubId(1))).toMatchObject({ degree: 2, memberCount: 1 });
+    expect(nodes.find((node) => node.id === hubId(2))).toMatchObject({ degree: 1, memberCount: 0 });
+  });
+});

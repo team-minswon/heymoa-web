@@ -13,16 +13,25 @@ import type {
  */
 export type MeetingReviewSummary = MeetingReviewSummaryResponseData;
 export type SummaryTopic = MeetingReviewSummaryResponseDataAgendasItem;
-export type SummaryRelation = MeetingReviewSummaryResponseDataAgendasItemRelationsItem;
+export type SummaryRelation =
+  MeetingReviewSummaryResponseDataAgendasItemRelationsItem;
 /** 설명 · 결론 · 남은 일의 한 문장. `itemIds` 는 그 문장이 근거로 삼은 검토 항목이다 */
-export type SummarySentence = MeetingReviewSummaryResponseDataAgendasItemConclusionsItem;
+export type SummarySentence =
+  MeetingReviewSummaryResponseDataAgendasItemConclusionsItem;
 
-/** 회의를 말하는 첫 문장. 한 문장(headline)이 있으면 그것, 없는 옛 요약은 lead 문단이다 */
+/** 회의 정리. 서버가 abstract를 lead로 제공한다. 제목 후보는 정리가 없는 옛 응답에서만 대신 쓴다. */
 export const overviewText = (summary: MeetingReviewSummary) =>
-  summary.headline?.text ?? summary.lead.map((line) => line.text).join(" ");
+  summary.lead
+    .map((line) => line.text.trim())
+    .filter(Boolean)
+    .join(" ") ||
+  summary.headline?.text?.trim() ||
+  "";
 
-export const summaryTopics = (summary: MeetingReviewSummary | null | undefined): SummaryTopic[] =>
-  summary?.agendas ?? [];
+export const summaryTopics = (
+  summary: MeetingReviewSummary | null | undefined
+): SummaryTopic[] => summary?.agendas ?? [];
 
 /** 화면 key. 옛 노트는 안건 행이 없어 agendaId 가 null 이다 — 그때는 순서 번호로 가른다 */
-export const topicKey = (topic: Pick<SummaryTopic, "agendaId" | "ordinal">) => topic.agendaId ?? `ordinal:${topic.ordinal}`;
+export const topicKey = (topic: Pick<SummaryTopic, "agendaId" | "ordinal">) =>
+  topic.agendaId ?? `ordinal:${topic.ordinal}`;

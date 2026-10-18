@@ -39,7 +39,7 @@ export function widerExports({
   sharedBy: string | null;
   /** 검토를 마쳐 확정했는가 */
   confirmed: boolean;
-  /** 회의 한 줄 결론과 그것을 받치는 요약 문장 */
+  /** 회의를 구별하는 제목 후보와 회의 정리 전문. 서로 다른 내용이므로 따로 전달한다. */
   headline: string | null;
   lead: readonly string[];
   topics: readonly MinutesTopic[];

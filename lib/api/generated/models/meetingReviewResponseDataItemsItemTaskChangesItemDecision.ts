@@ -7,7 +7,7 @@
  */
 
 /**
- * 사람이 저장한 선택. 할 일 API 로 반영했으면 APPLIED·유지 KEEP, 안 골랐으면 null. APPLIED 는 기록일 뿐 할 일을 바꾸지 않습니다
+ * APPLY는 확정 때 반영, KEEP은 미반영, APPLIED는 이미 적용한 옛 이력으로 재적용하지 않습니다. 미선택은 null입니다
  * @nullable
  */
 export type MeetingReviewResponseDataItemsItemTaskChangesItemDecision =
@@ -15,6 +15,7 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItemDecision =
   | null;
 
 export const MeetingReviewResponseDataItemsItemTaskChangesItemDecision = {
+  APPLY: "APPLY",
   APPLIED: "APPLIED",
   KEEP: "KEEP",
 } as const;

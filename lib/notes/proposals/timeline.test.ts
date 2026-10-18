@@ -5,7 +5,7 @@ import {
   type ContextState,
   type ProposalHead,
 } from "@/lib/notes/proposals/reducer";
-import { selectTimeline, toneOf } from "@/lib/notes/proposals/timeline";
+import { placeAgendas, selectTimeline, toneOf } from "@/lib/notes/proposals/timeline";
 
 let seq = 0;
 function head(
@@ -161,5 +161,41 @@ describe("toneOf", () => {
     expect(toneOf(head({ kind: "STATUS_REPORT" }))).toBe("reference");
     expect(toneOf(head({ kind: "INSIGHT" }))).toBe("reference");
     expect(toneOf(head({ kind: "ACTION_ITEM" }))).toBe("task");
+  });
+});
+
+
+describe("바뀐 안건 정본", () => {
+  it("재언급은 같은 안건 ID의 직전 묶음만 가리키며 필터로 가린 앞선 논의도 기억한다", () => {
+    const a = head({ kind: "STATUS_REPORT" }), b = head({}), c = head({}), d = head({}), e = head({});
+    const rows = [a, b, c, d, e];
+    const list = { agendas: [
+      { agendaId: "a", title: "같은 제목", completed: false, proposalIds: [a.proposalId, c.proposalId, e.proposalId] },
+      { agendaId: "b", title: "같은 제목", completed: false, proposalIds: [b.proposalId, d.proposalId] },
+    ] };
+    const plan = { list, placement: placeAgendas(new Map(), rows, list, false) };
+    const groups = selectTimeline(stateOf(...rows), "ALL", plan).groups;
+    expect(groups[0].previous).toBeNull();
+    expect(groups[1].previous).toBeNull();
+    expect(groups[2].previous).toEqual({ key: groups[0].key, startMs: groups[0].startMs });
+    expect(groups[3].previous?.key).toBe(groups[1].key);
+    expect(groups[4].previous?.key).toBe(groups[2].key);
+    const filtered = selectTimeline(stateOf(...rows), "DECISION", plan).groups;
+    expect(filtered.some((group) => group.key === groups[0].key)).toBe(false);
+    expect(filtered.find((group) => group.key === groups[2].key)?.previous?.key).toBe(groups[0].key);
+  });
+
+  it("사라진 안건과 새로 소속이 생긴 미분류 항목은 최신 정본으로 옮긴다", () => {
+    const a = head({}), b = head({});
+    const previous = new Map([[a.proposalId, "removed"], [b.proposalId, null]]);
+    const list = { asOfSequence: b.createdSequence, agendas: [{ agendaId: "current", title: "다시 정리한 안건", completed: false, proposalIds: [a.proposalId, b.proposalId] }] };
+    expect([...placeAgendas(previous, [a, b], list, true).values()]).toEqual(["current", "current"]);
+  });
+
+  it("앞에 다른 안건이 추가되어도 기존 그룹의 key가 바뀌지 않는다", () => {
+    const a = head({}), b = head({}), earlier = head({ createdSequence: a.createdSequence - 1 });
+    const list = { agendas: [{ agendaId: "a", title: "첫 안건", completed: false, proposalIds: [a.proposalId] }, { agendaId: "b", title: "둘째 안건", completed: false, proposalIds: [b.proposalId] }, { agendaId: "c", title: "앞에 추가된 안건", completed: false, proposalIds: [earlier.proposalId] }] };
+    const keys = (rows: ProposalHead[]) => selectTimeline(stateOf(...rows), "ALL", { list, placement: placeAgendas(new Map(), rows, list, false) }).groups;
+    expect(keys([a, b]).find((row) => row.agenda?.title === "둘째 안건")?.key).toBe(keys([earlier, a, b]).find((row) => row.agenda?.title === "둘째 안건")?.key);
   });
 });
