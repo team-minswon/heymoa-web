@@ -2323,10 +2323,10 @@ test("links a guest to an account and keeps the speaker assignment", async ({
   ).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  // ⑤ 그 회의록을 다시 연다. **여기서도 새로고침하지 않는다** — 목록에서 클라이언트 이동이다.
+  // ⑤ 설정 주소가 닫힌 뒤 실제 노트 링크로 클라이언트 이동한다. 새로고침하면 목의 연동 기록이 사라진다.
+  await expect(page).not.toHaveURL(/[?&]settings=/);
   await page
-    .locator("article", { hasText: "온보딩 이탈 구간 리뷰" })
-    .first()
+    .getByRole("link", { name: "온보딩 이탈 구간 리뷰 노트 열기", exact: true })
     .click();
   await page.getByRole("tab", { name: "스크립트" }).click();
 
