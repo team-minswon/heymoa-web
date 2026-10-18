@@ -150,11 +150,16 @@ export function LegalDocument({
               >
                 <h2 className={CARD_TITLE}>{section.title}</h2>
                 <div className="mt-3 flex flex-col gap-3 lg:mt-4">
-                  {section.body.map((paragraph, paragraphIndex) => (
-                    <p key={paragraphIndex} className={cn(BODY, "[overflow-wrap:anywhere]")}>
-                      {paragraph}
-                    </p>
-                  ))}
+                  {section.body.map((paragraph, paragraphIndex) =>
+                    // 문장은 문단으로, 표처럼 짠 블록(개인정보 7조의 사업자 목록)은 그대로 둔다 — `<p>` 안에 `<dl>` 을 못 넣는다.
+                    typeof paragraph === "string" ? (
+                      <p key={paragraphIndex} className={cn(BODY, "[overflow-wrap:anywhere]")}>
+                        {paragraph}
+                      </p>
+                    ) : (
+                      <div key={paragraphIndex}>{paragraph}</div>
+                    )
+                  )}
                 </div>
               </section>
             ))}

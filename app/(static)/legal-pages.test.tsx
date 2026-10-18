@@ -19,8 +19,8 @@ describe("HeyMoa legal pages", () => {
       screen.getByRole("heading", { name: "개인정보 처리방침", level: 1 })
     ).toBeInTheDocument();
     // 실제로 쓰는 사업자를 적었는지 본다. 예전에는 안 쓰는 이름(ElevenLabs)이 적혀 있었다.
-    expect(screen.getByText(/Soniox — 실시간 음성 인식/)).toBeVisible();
-    expect(screen.getByText(/pyannote\.ai — 화자 분리/)).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Soniox\s*실시간 음성 인식/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /pyannote\.ai\s*화자 분리/ })).toBeVisible();
     expect(screen.queryByText(/ElevenLabs/)).not.toBeInTheDocument();
     expect(screen.queryByText(/이미지 검사|진짜그림/)).not.toBeInTheDocument();
     // PostHog 키와 함께 들어간 문안이다(APP-1068). 채우지 않은 자리표시가 운영에 나가면 안 된다.

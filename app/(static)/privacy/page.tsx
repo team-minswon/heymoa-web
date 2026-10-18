@@ -16,17 +16,31 @@ export const metadata: Metadata = {
 };
 
 /** 7조의 사업자 한 곳. 문단(`<p>`) 안에 들어가므로 줄바꿈만 쓴다 — 표·목록 요소는 `<p>` 안에 둘 수 없다. */
+// 국가·보유 기간을 따로 정하지 않은 사업자는 그 줄을 그리지 않는다 — 같은 「해당 사업자의 …」가 사업자마다 되풀이되면
+// 정작 다른 값(PostHog 미국·1년, AWS 서울)이 묻혔다. 대신 7조 머리에 한 번만 적는다.
+const VENDOR_DEFAULT = new Set(["해당 사업자의 처리 지역", "해당 사업자의 정책에 따름"]);
+
 function processor(name: string, rows: readonly (readonly [string, string])[]): ReactNode {
+  const [vendor, role] = name.split(" — ");
   return (
-    <>
-      <b>{name}</b>
-      {rows.map(([label, value]) => (
-        <span key={label}>
-          <br />
-          {label}: {value}
-        </span>
-      ))}
-    </>
+    <section className="rounded-[16px] border border-[var(--tv-rule)] px-4 py-3.5 sm:px-5">
+      <h3 className="m-0 text-[15px] leading-[1.5] font-extrabold break-keep text-[var(--tv-ink)]">
+        {vendor}
+        {role ? (
+          <span className="block text-[13px] font-semibold text-[var(--tv-muted)] sm:ml-2 sm:inline">{role}</span>
+        ) : null}
+      </h3>
+      <dl className="m-0 mt-2 grid grid-cols-1 gap-x-3 gap-y-0.5 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-y-1.5 text-[14px] leading-[1.6] break-keep [overflow-wrap:anywhere]">
+        {rows
+          .filter(([, value]) => !VENDOR_DEFAULT.has(value))
+          .map(([label, value]) => (
+            <div key={label} className="contents">
+              <dt className="text-[var(--tv-muted)]">{label}</dt>
+              <dd className="m-0 mb-1.5 text-[var(--tv-body)] sm:mb-0">{value}</dd>
+            </div>
+          ))}
+      </dl>
+    </section>
   );
 }
 
@@ -115,6 +129,7 @@ const sections = [
       "서비스 운영을 위해 아래 사업자에게 필요한 범위에서 처리를 위탁합니다. 대한민국 밖의 사업자에게는 개인정보가 국외로 이전됩니다.",
       "전송 시기는 해당 기능을 이용하는 시점이고, 방법은 암호화된 네트워크 전송입니다. 이전 목적은 아래 처리 수행으로 한정됩니다.",
       "국외 이전을 원하지 않으면 해당 기능을 쓰지 않거나 연결을 해제해 거부할 수 있습니다. 음성 인식, AI 정리, 웹 호스팅에 필요한 이전을 거부하면 그 기능을 이용할 수 없습니다.",
+      "아래에 이전 국가나 보유 기간을 따로 적지 않은 사업자는 해당 사업자의 처리 지역에서 처리하며, 그 사업자의 정책에 따라 보관합니다.",
       processor("Soniox — 실시간 음성 인식", [
         ["이전 국가", "해당 사업자의 처리 지역"],
         ["이전 항목", "회의 음성, 회의 맥락(프로젝트 이름, 회의 제목, 참석자 이름, 사전 안건, 용어 사전, 회의 주제와 배경)"],
