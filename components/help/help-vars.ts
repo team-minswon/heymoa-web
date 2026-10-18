@@ -27,4 +27,4 @@ export const HELP_VARS = {
  * 하게 두면 막이 페이드 아웃과 함께 자연스럽게 걷힌다.
  */
 export const HELP_OVERLAY =
-  "bg-black/15 supports-backdrop-filter:backdrop-blur-none";
+  "bg-black/15 duration-(--help-base) supports-backdrop-filter:backdrop-blur-none motion-reduce:duration-0";

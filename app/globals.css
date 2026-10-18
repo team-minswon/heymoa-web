@@ -459,7 +459,7 @@
 }
 
 /* ── 사용 가이드 모션 (APP-1237) ─────────────────────────────────────────────
-   값은 이 블록 한 곳이다 — 시간 150ms(색·호버) / 200ms(등장·이동), 이징 ease-out(위 펼침 전환과 같다).
+   값은 이 블록 한 곳이다 — 시간 200ms(색·호버·활성 표시) / 300ms(등장·이동·대화상자·페이지 전환), 이징 cubic-bezier(0.22, 1, 0.36, 1)(부드럽게 안착).
    움직이는 것은 불투명도와 transform 뿐이라 자리를 밀지 않는다(CLS 0).
    ★ 서버가 그린 HTML 은 항상 보인다. 숨김(`pending`)은 JS 가 마운트한 뒤 「화면 아래에 있는」 요소에만 건다
    (`components/help/help-motion.tsx`) — JS 가 없거나 크롤러가 읽어도 본문이 그대로 있다.
@@ -467,9 +467,9 @@
 :root {
   /* 가이드 고정 상단바(56) + 탭 줄(40) + 아래 선(1). 사이드바·목차·앵커 오프셋이 이 값 하나를 쓴다. */
   --help-top: 97px;
-  --help-fast: 150ms;
-  --help-base: 200ms;
-  --help-ease: ease-out;
+  --help-fast: 200ms;
+  --help-base: 300ms;
+  --help-ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* 그림자는 중립 잉크(`--el-ink`) 색이다. */
   --help-shadow:
     0 1px 2px rgb(12 10 9 / 0.06), 0 8px 24px -12px rgb(12 10 9 / 0.18);
@@ -480,6 +480,15 @@
   --help-key: color-mix(in srgb, #fff3a3 58%, transparent);
   --help-sweep: 600ms;
   --help-shadow-lift: 0 10px 24px -14px rgb(12 10 9 / 0.32);
+}
+
+/* 가이드 대화상자와 스크롤. Base UI 의 스크롤 잠금(`modal={true}`)은 스크롤바가 있는 데스크톱에서 body 를 `position: relative;
+   height: 100dvh; overflow: hidden` 으로 바꿔 body 가 스크롤 컨테이너가 되고, 그러면 sticky 상단바·사이드바가 위로 끌려 올라갔다 닫힐 때
+   돌아온다(스크롤 1168 에서 상단바 top -365px — 열고 닫을 때 화면이 반짝이며 버벅이던 원인). 그래서 가이드 대화상자는 `modal="trap-focus"`
+   로 그 잠금을 끈다. 잠그지 않으니 스크롤바가 사라지며 폭이 변하는 일도 없고, 스크롤 위치도 그대로다. 스크롤바 자리는 늘 예약해
+   둔다(`stable`) — 짧은 페이지에서 스크롤바가 생기고 사라질 때 폭이 달라지지 않게. */
+html:has([data-help-root]) {
+  scrollbar-gutter: stable;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -520,6 +529,13 @@
       transform var(--help-base) var(--help-ease);
   }
 
+  /* 가이드 안의 접이식(FAQ 등)은 같은 토큰으로 펼친다. */
+  [data-help-root] .details-motion::details-content {
+    transition:
+      block-size var(--help-base) var(--help-ease),
+      content-visibility var(--help-base) allow-discrete;
+  }
+
   /* 다른 가이드 페이지로 넘어온 직후 본문. JS 가 이동 때만 붙인다(첫 로드에는 없다). */
   [data-help-entering] {
     animation: help-enter var(--help-base) var(--help-ease) backwards;
@@ -528,8 +544,8 @@
   /* 목차 활성 막대·접힘 화살표가 같은 시간으로 움직인다. */
   .help-slide {
     transition:
-      transform var(--help-base) var(--help-ease),
-      height var(--help-base) var(--help-ease),
+      transform var(--help-fast) var(--help-ease),
+      height var(--help-fast) var(--help-ease),
       opacity var(--help-fast) var(--help-ease);
   }
 

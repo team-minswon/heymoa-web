@@ -126,6 +126,7 @@ export function HelpPalette() {
         </kbd>
       </button>
       <Dialog
+        modal="trap-focus"
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
@@ -141,7 +142,7 @@ export function HelpPalette() {
           showCloseButton={false}
           finalFocus={() => arrived.current ?? true}
           style={HELP_VARS}
-          className="top-[18vh] max-w-[640px] duration-200 translate-y-0 gap-0 rounded-[20px] bg-white p-0 text-[var(--tv-ink)] sm:max-w-[640px]"
+          className="top-[18vh] max-w-[640px] duration-(--help-base) motion-reduce:duration-0 translate-y-0 gap-0 rounded-[20px] bg-white p-0 text-[var(--tv-ink)] sm:max-w-[640px]"
         >
           <DialogTitle className="sr-only">사용 가이드 검색</DialogTitle>
           <DialogDescription className="sr-only">
