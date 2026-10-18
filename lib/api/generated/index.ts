@@ -3,6 +3,7 @@ export * from "./agent-delegation/agent-delegation";
 export * from "./agent-o-auth-consent/agent-o-auth-consent";
 export * from "./analysis/analysis";
 export * from "./auth/auth";
+export * from "./feedbacks/feedbacks";
 export * from "./integration/integration";
 export * from "./meeting-approval/meeting-approval";
 export * from "./meeting-review/meeting-review";

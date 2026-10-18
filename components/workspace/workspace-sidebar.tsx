@@ -29,6 +29,7 @@ import { toast } from "@/lib/ui/toast";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { FeedbackDialog } from "@/components/workspace/feedback-dialog";
+import { useFeedbackAnswers } from "@/components/workspace/use-feedback-answers";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
   AlertDialog,
@@ -137,6 +138,7 @@ export function WorkspaceSidebar({
   );
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const { unseen: feedbackUnseen } = useFeedbackAnswers();
   const [projectsOpen, setProjectsOpen] = useState(true);
   // 노트 전체 화면이 사이드바를 덮으면 **여기서 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라
   // `inert`도 덮는 면(`z-30`)도 닿지 않고, 셸이 재마운트되지 않아 저절로 사라지지도 않는다.
@@ -335,6 +337,14 @@ export function WorkspaceSidebar({
                   >
                     <NavigationIcon icon={MessageSquareText} />
                     <span>문의·피드백</span>
+                    {feedbackUnseen > 0 ? (
+                      <span
+                        aria-label={`새 답변 ${feedbackUnseen}개`}
+                        className="ml-auto text-[11px] tabular-nums text-[var(--el-muted)]"
+                      >
+                        {feedbackUnseen}
+                      </span>
+                    ) : null}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

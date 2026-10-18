@@ -150,6 +150,76 @@ paths:
                       details: null
       security:
       - accessCookie: []
+  /v1/feedbacks:
+    get:
+      tags:
+      - "Feedbacks"
+      summary: "내 문의 조회"
+      description: "내가 보낸 문의와 운영자의 답변을 최신순 최대 50건으로 돌려준다."
+      operationId: "getMyFeedbacks"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackListResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      feedbacks:
+                      - feedbackId: "0HZX2K7M9Q4AJ"
+                        kind: "INCIDENT"
+                        message: "녹음이 자꾸 끊겨요"
+                        answer: null
+                        answeredAt: null
+                        createdAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+    post:
+      tags:
+      - "Feedbacks"
+      summary: "문의·피드백 접수"
+      description: "문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지."
+      operationId: "createFeedback"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFeedbackRequest"
+            examples:
+              createFeedback_Success:
+                value:
+                  kind: "INCIDENT"
+                  message: "녹음이 자꾸 끊겨요"
+      responses:
+        "201":
+          description: "생성 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      feedbackId: "0HZX2K7M9Q4AJ"
+                      kind: "INCIDENT"
+                      message: "녹음이 자꾸 끊겨요"
+                      answer: null
+                      answeredAt: null
+                      createdAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
   /v1/notifications:
     get:
       tags:
@@ -9951,6 +10021,30 @@ components:
           nullable: false
           example: 0HZX2K7M9Q4AD
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+    CreateFeedbackRequest:
+      title: "CreateFeedbackRequest"
+      required:
+      - "kind"
+      - "message"
+      type: "object"
+      properties:
+        kind:
+          type: "string"
+          description: "문의 종류"
+          nullable: false
+          example: "INCIDENT"
+          enum:
+          - "INCIDENT"
+          - "QUESTION"
+          - "SUGGESTION"
+          - "OTHER"
+        message:
+          type: "string"
+          description: "내용. 앞뒤 공백을 뺀 길이가 1~1500자"
+          nullable: false
+          example: "녹음이 자꾸 끊겨요"
+          minLength: 1
+          maxLength: 1500
     CreateProjectTaskRequest:
       title: CreateProjectTaskRequest
       required:
@@ -10426,6 +10520,153 @@ components:
           type: object
           description: 실패 시 null인 응답 데이터
           nullable: true
+    FeedbackListResponse:
+      title: "FeedbackListResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "feedbacks"
+          type: "object"
+          properties:
+            feedbacks:
+              type: "array"
+              description: "내 문의. 최신순 최대 50건"
+              items:
+                required:
+                - "createdAt"
+                - "feedbackId"
+                - "kind"
+                - "message"
+                - "answer"
+                - "answeredAt"
+                type: "object"
+                properties:
+                  createdAt:
+                    type: "string"
+                    description: "접수 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  answer:
+                    type: "string"
+                    description: "운영자의 답변. 아직 없으면 null"
+                    nullable: true
+                    example: "확인했습니다."
+                  kind:
+                    type: "string"
+                    description: "문의 종류"
+                    nullable: false
+                    example: "INCIDENT"
+                    enum:
+                    - "INCIDENT"
+                    - "QUESTION"
+                    - "SUGGESTION"
+                    - "OTHER"
+                  answeredAt:
+                    type: "string"
+                    description: "답변한 시각. 답변이 없으면 null"
+                    nullable: true
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  feedbackId:
+                    type: "string"
+                    description: "문의 식별자"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AJ"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  message:
+                    type: "string"
+                    description: "보낸 내용"
+                    nullable: false
+                    example: "녹음이 자꾸 끊겨요"
+                    maxLength: 1500
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    FeedbackResponse:
+      title: "FeedbackResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "createdAt"
+          - "feedbackId"
+          - "kind"
+          - "message"
+          - "answer"
+          - "answeredAt"
+          type: "object"
+          properties:
+            createdAt:
+              type: "string"
+              description: "접수 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            answer:
+              type: "string"
+              description: "운영자의 답변. 아직 없으면 null"
+              nullable: true
+              example: "확인했습니다."
+            kind:
+              type: "string"
+              description: "문의 종류"
+              nullable: false
+              example: "INCIDENT"
+              enum:
+              - "INCIDENT"
+              - "QUESTION"
+              - "SUGGESTION"
+              - "OTHER"
+            answeredAt:
+              type: "string"
+              description: "답변한 시각. 답변이 없으면 null"
+              nullable: true
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            feedbackId:
+              type: "string"
+              description: "문의 식별자"
+              nullable: false
+              example: "0HZX2K7M9Q4AJ"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            message:
+              type: "string"
+              description: "보낸 내용"
+              nullable: false
+              example: "녹음이 자꾸 끊겨요"
+              maxLength: 1500
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     GuestLinkResponse:
       title: GuestLinkResponse
       required:
