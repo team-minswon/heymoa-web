@@ -305,3 +305,19 @@ for (const width of [1024, 1440]) {
     await expect(trigger).toBeFocused();
   });
 }
+
+// 수집이 꺼진 환경(로컬·e2e)에서는 가이드를 둘러봐도 PostHog 로 아무것도 나가지 않는다(분석 게이트는 SiteAnalytics 한 곳).
+test("가이드를 둘러봐도 분석 도구로 요청이 나가지 않는다", async ({ page }) => {
+  const sent: string[] = [];
+  page.on("request", (r) => {
+    if (/posthog\.com|google-analytics\.com|googletagmanager\.com/.test(r.url())) sent.push(r.url());
+  });
+  await page.goto("/help");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("link", { name: /처음 시작하기/ }).first().click();
+  await page.waitForLoadState("networkidle");
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("녹음");
+  await page.waitForTimeout(1200);
+  expect(sent).toEqual([]);
+});

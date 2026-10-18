@@ -101,6 +101,7 @@ export function HelpSidebar({
                 <Link
                   href={section.href}
                   aria-current={current === section.href ? "page" : undefined}
+                  data-help-nav="sidebar"
                   onClick={onPick(section.href)}
                   className={cn(
                     ITEM,
@@ -131,6 +132,7 @@ export function HelpSidebar({
                     <Link
                       href={path}
                       aria-current={on ? "page" : undefined}
+                      data-help-nav="sidebar"
                       onClick={onPick(path)}
                       className={cn(
                         ITEM,

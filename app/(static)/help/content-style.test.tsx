@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
 import { textOf } from "@/lib/help/text";
 
-vi.mock("next/navigation", () => ({}));
+vi.mock("next/navigation", () => ({ usePathname: () => "/help" }));
 
 /** 따옴표 안(화면에 뜨는 문구)은 화면의 말투 그대로 두므로 검사에서 뺀다. */
 const withoutQuoted = (text: string) => text.replace(/“[^”]*”/g, "");

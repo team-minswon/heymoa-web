@@ -95,6 +95,7 @@ export function FaqItem({
   return (
     <details
       open={open}
+      data-help-faq=""
       className="details-motion group/faq rounded-[12px] border border-[var(--tv-rule)] px-4 [&_summary::-webkit-details-marker]:hidden"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 font-bold text-[var(--tv-ink)]">

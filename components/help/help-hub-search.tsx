@@ -17,6 +17,7 @@ import { Search, X } from "lucide-react";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { HelpHitRow } from "@/components/help/help-hit-list";
 import { searchHelp } from "@/lib/help/search-index";
+import { track } from "@/lib/analytics/track";
 import { useHelpIndex } from "@/lib/help/use-help-index";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ type Hub = {
   query: string;
   clear: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  onFocus: () => void;
   announce: string;
   hits: ReturnType<typeof searchHelp>;
   loading: boolean;
@@ -61,6 +63,16 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
   const timer = useRef(0);
   // 우리가 방금 주소에 쓴 검색어. 이것과 같은 주소 변화는 바깥 이동이 아니라 우리 자신의 기록이라 입력을 되돌리지 않는다.
   const written = useRef<string | null>(null);
+  // 사용자가 직접 입력한 검색어만 센다(뒤로 가기로 복원된 주소의 검색어는 세지 않는다).
+  const typed = useRef(false);
+  // 검색칸을 처음 연 방법(`/` 키인지 눌러서인지). 마운트마다 한 번만 센다.
+  const openedBy = useRef<"keyboard" | "click" | null>(null);
+  const opened = useRef(false);
+  const onFocus = () => {
+    if (opened.current) return;
+    opened.current = true;
+    track("help_search_opened", { surface: "hub", via: openedBy.current ?? "click" });
+  };
   const { entries, failed } = useHelpIndex(value.length > 0);
 
   // 주소가 원본이다. 마운트 · 뒤로/앞으로 · 새로고침으로 주소가 정해지면 그 검색어를 읽어 오기만 하고 **주소를 쓰지 않는다**.
@@ -81,6 +93,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
     window.history.replaceState(null, "", url);
   };
   const type = (next: string) => {
+    typed.current = true;
     setValue(next);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
@@ -96,15 +109,22 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
       setAnnounce("");
       return;
     }
-    const timer = window.setTimeout(
-      () =>
-        setAnnounce(
-          hits.length
-            ? `${hits.length}곳에서 찾았어요`
-            : "일치하는 내용이 없어요."
-        ),
-      ANNOUNCE_MS
-    );
+    // 입력이 멎은 뒤(ANNOUNCE_MS) 한 번 — 한 글자마다 세지 않는다.
+    const timer = window.setTimeout(() => {
+      setAnnounce(
+        hits.length
+          ? `${hits.length}곳에서 찾았어요`
+          : "일치하는 내용이 없어요."
+      );
+      if (typed.current) {
+        typed.current = false;
+        track("help_search_submitted", {
+          query_length: query.length,
+          result_count: hits.length,
+          zero_results: hits.length === 0,
+        });
+      }
+    }, ANNOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [query, entries, hits.length]);
 
@@ -122,6 +142,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
       )
         return;
       event.preventDefault();
+      openedBy.current = "keyboard";
       inputRef.current?.focus();
     };
     document.addEventListener("keydown", onKey);
@@ -145,6 +166,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
         query,
         clear,
         inputRef,
+        onFocus,
         announce,
         hits,
         loading,
@@ -161,7 +183,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
 
 /** 큰 검색칸. 머리 판 안에 선다. */
 export function HelpHubInput() {
-  const { value, setValue, clear, inputRef, announce } = useHub();
+  const { value, setValue, clear, inputRef, onFocus, announce } = useHub();
   return (
     <div className="mt-5 max-w-[640px]">
       <div role="search" className="relative">
@@ -172,6 +194,7 @@ export function HelpHubInput() {
         <input
           ref={inputRef}
           data-help-hub-input=""
+          onFocus={onFocus}
           type="search"
           value={value}
           aria-label="사용 가이드 전체에서 찾기"
@@ -251,9 +274,9 @@ export function HelpHubBody({ children }: { children: React.ReactNode }) {
         {hits.length}곳에서 찾았어요
       </p>
       <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 lg:grid-cols-2">
-        {hits.map((hit) => (
+        {hits.map((hit, rank) => (
           <li key={`${hit.path}#${hit.sectionId}`}>
-            <HelpHitRow hit={hit} query={query} />
+            <HelpHitRow hit={hit} query={query} rank={rank + 1} />
           </li>
         ))}
       </ul>

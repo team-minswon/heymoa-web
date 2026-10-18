@@ -88,6 +88,7 @@ export default async function HelpGroupPage({ params }: Props) {
             <li key={topic.slug} data-reveal="">
               <Link
                 href={helpPathOf(topic)}
+                data-help-nav="hub_card"
                 className={cn(
                   "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 help-lift hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",
                   FOCUS

@@ -28,6 +28,25 @@ describe("이벤트 타입", () => {
   });
 });
 
+// 가이드 이벤트(로그인 전 방문자도 온다): 이름은 유니온에만, 속성은 닫힌 값·숫자·slug 뿐이고 검색어 원문 필드는 없다.
+describe("가이드 이벤트 타입", () => {
+  it("검색 이벤트는 길이와 개수만 받고 원문을 받지 않는다", () => {
+    expectTypeOf<
+      "help_page_viewed" | "help_search_submitted" | "help_result_clicked" | "help_nav_clicked"
+    >().toExtend<AnalyticsEvent>();
+    expectTypeOf(track<"help_search_submitted">).parameter(1).exclude<undefined>().toEqualTypeOf<{
+      query_length: number;
+      result_count: number;
+      zero_results: boolean;
+    }>();
+    expectTypeOf(track<"help_result_clicked">).parameter(1).exclude<undefined>().toEqualTypeOf<{
+      slug: string;
+      rank: number;
+      query_length: number;
+    }>();
+  });
+});
+
 describe("trackMutation", () => {
   const heardFrom = (calls: Array<[string, unknown]>) => {
     const heard: Array<[string, unknown]> = [];

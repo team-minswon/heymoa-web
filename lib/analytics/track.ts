@@ -8,6 +8,8 @@ import { desktopAuthBridge } from "@/lib/desktop/auth";
  *
  * 깔때기: login_started → login_completed → workspace_created → project_created →
  * meeting_created → recording_started → meeting_ended → summary_viewed → summary_confirmed.
+ * 사용 가이드(`/help`)는 로그인 전 방문자도 보므로 따로 센다: help_page_viewed → help_search_opened → help_search_submitted →
+ * help_result_clicked → (login_started | 대시보드 이동 help_cta_clicked). 속성은 slug·순위·길이·개수뿐이고 검색어 원문은 보내지 않는다.
  * 가입은 서버의 `user_signed_up`으로 셉니다. 웹 로그인 완료와 중복으로 보내지 않습니다.
  */
 export type AnalyticsEvent =
@@ -51,7 +53,18 @@ export type AnalyticsEvent =
   | "review_confirmation_clicked"
   | "settings_tab_opened"
   | "agent_opened"
-  | "feedback_sent";
+  | "feedback_sent"
+  | "help_page_viewed"
+  | "help_search_opened"
+  | "help_search_submitted"
+  | "help_result_clicked"
+  | "help_nav_clicked"
+  | "help_clip_played"
+  | "help_clip_zoomed"
+  | "help_image_zoomed"
+  | "help_cta_clicked"
+  | "help_code_copied"
+  | "help_faq_opened";
 
 /** 새 행동의 속성은 정해진 종류·개수·워크스페이스 식별자만 받습니다. */
 type WebEventProperties = {
@@ -77,6 +90,32 @@ type WebEventProperties = {
   };
   agent_opened: { surface: "fab" };
   feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
+  // 사용 가이드. 로그인 전에도 오므로 workspace_id 가 없다. slug·이름은 우리가 정한 값이고 검색어·글은 싣지 않는다.
+  help_page_viewed: {
+    slug: string;
+    group: string;
+    level: "hub" | "group" | "topic";
+    axis: "feature" | "situation" | "hub";
+    entry: "search" | "hub" | "internal" | "external" | "back";
+  };
+  help_search_opened: { surface: "palette" | "hub"; via: "keyboard" | "click" };
+  help_search_submitted: {
+    query_length: number;
+    result_count: number;
+    zero_results: boolean;
+  };
+  help_result_clicked: { slug: string; rank: number; query_length: number };
+  help_nav_clicked: {
+    from_slug: string;
+    to_slug: string;
+    surface: "sidebar" | "toc" | "related" | "prev_next" | "hub_card";
+  };
+  help_clip_played: { clip: string; slug: string };
+  help_clip_zoomed: { clip: string; slug: string };
+  help_image_zoomed: { name: string; slug: string };
+  help_cta_clicked: { target: "dashboard"; surface: "topbar" };
+  help_code_copied: { slug: string };
+  help_faq_opened: { slug: string; index: number };
 };
 
 type Properties = Record<string, string | number | boolean | null | undefined>;

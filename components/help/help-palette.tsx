@@ -13,12 +13,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
-import { HelpHitRow, hitHref } from "@/components/help/help-hit-list";
+import { HelpHitRow, hitHref, trackResultClick } from "@/components/help/help-hit-list";
 import { searchHelp } from "@/lib/help/search-index";
 import { goSamePage } from "@/lib/help/scroll";
+import { track } from "@/lib/analytics/track";
 import { useHelpIndex } from "@/lib/help/use-help-index";
 import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
+
+/** 입력이 멎었다고 보는 시간. */
+const SETTLE_MS = 800;
 
 const isMac = () =>
   typeof navigator !== "undefined" &&
@@ -47,7 +51,10 @@ export function HelpPalette() {
     const onKey = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        setOpen((now) => !now);
+        setOpen((now) => {
+          if (!now) track("help_search_opened", { surface: "palette", via: "keyboard" });
+          return !now;
+        });
       } else if (
         event.key === "/" &&
         !event.metaKey &&
@@ -64,6 +71,7 @@ export function HelpPalette() {
           return;
         if (document.querySelector("[data-help-hub-input]")) return;
         event.preventDefault();
+        track("help_search_opened", { surface: "palette", via: "keyboard" });
         setOpen(true);
       }
     };
@@ -75,6 +83,21 @@ export function HelpPalette() {
     () => (entries && value.trim() ? searchHelp(entries, value) : []),
     [entries, value]
   );
+  // 입력이 멎은 뒤 한 번 — 한 글자마다 세지 않는다. 검색어 원문은 보내지 않고 길이와 결과 수만 보낸다.
+  useEffect(() => {
+    const q = value.trim();
+    if (!open || !entries || !q) return;
+    const timer = window.setTimeout(
+      () =>
+        track("help_search_submitted", {
+          query_length: q.length,
+          result_count: hits.length,
+          zero_results: hits.length === 0,
+        }),
+      SETTLE_MS
+    );
+    return () => window.clearTimeout(timer);
+  }, [open, entries, value, hits.length]);
   const topics = useMemo(() => {
     const seen = new Map<string, string>();
     for (const entry of entries ?? []) seen.set(entry.path, entry.topicTitle);
@@ -103,7 +126,10 @@ export function HelpPalette() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          track("help_search_opened", { surface: "palette", via: "click" });
+          setOpen(true);
+        }}
         aria-label={`검색어를 입력하세요 (예: 녹음, 용어 사전) ${hint} — 사용 가이드 검색`}
         aria-keyshortcuts="Control+K Meta+K"
         className={cn(
@@ -182,6 +208,7 @@ export function HelpPalette() {
                   setSelected((now) => (now - 1 + hits.length) % hits.length);
                 } else if (event.key === "Enter" && hits[selected]) {
                   event.preventDefault();
+                  trackResultClick(hits[selected], selected + 1, value.trim());
                   go(hitHref(hits[selected], value.trim()));
                 }
               }}
@@ -235,6 +262,7 @@ export function HelpPalette() {
                     id={`help-hit-${index}`}
                     hit={hit}
                     query={value.trim()}
+                    rank={index + 1}
                     active={index === selected}
                     onNavigate={() => setOpen(false)}
                   />

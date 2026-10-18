@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Maximize2, Pause, Play } from "lucide-react";
 
+import { track } from "@/lib/analytics/track";
+import { useHelpSlug } from "@/lib/help/analytics";
 import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
@@ -44,6 +46,12 @@ export function HelpClip({
   const [userPaused, setUserPaused] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const zoomButton = useRef<HTMLButtonElement>(null);
+  const slug = useHelpSlug();
+  const played = useRef(false);
+  const openZoom = () => {
+    track("help_clip_zoomed", { clip: name, slug });
+    setZoomed(true);
+  };
 
   useEffect(() => {
     // (matchMedia 가 없는 환경 — 서버 렌더 검사·오래된 브라우저 — 에서는 움직임 줄이기 설정이 없는 것으로 본다)
@@ -106,7 +114,14 @@ export function HelpClip({
           height={height}
           aria-label={alt}
           aria-describedby={caption ? captionId : undefined}
-          onPlay={() => setPlaying(true)}
+          onPlay={() => {
+            setPlaying(true);
+            // 화면에 들어와 자동으로 시작해도 한 번만 센다(열람 중 재생된 영상 수).
+            if (!played.current) {
+              played.current = true;
+              track("help_clip_played", { clip: name, slug });
+            }
+          }}
           onPause={() => setPlaying(false)}
           className="block h-auto w-full"
         >
@@ -118,7 +133,7 @@ export function HelpClip({
           type="button"
           tabIndex={-1}
           aria-hidden
-          onClick={() => setZoomed(true)}
+          onClick={openZoom}
           className="absolute inset-0 cursor-zoom-in bg-transparent p-0"
         />
         <button
@@ -139,7 +154,7 @@ export function HelpClip({
         <button
           ref={zoomButton}
           type="button"
-          onClick={() => setZoomed(true)}
+          onClick={openZoom}
           aria-label={`${alt} — 크게 보기`}
           className={cn(
             "absolute right-3 bottom-3 grid size-9 place-items-center rounded-full bg-white/90 text-[var(--tv-ink)] opacity-0 help-fade hover:bg-white hover:text-[var(--tv-brand-deep)] group-hover/clip:opacity-100 focus-visible:opacity-100 motion-reduce:transition-none",

@@ -187,6 +187,7 @@ function StepLink({
   return (
     <Link
       href={`/help/${topic.group}/${topic.slug}`}
+      data-help-nav="prev_next"
       className={cn(
         "group flex flex-col gap-1 rounded-[16px] border border-[var(--tv-rule)] px-5 py-4 help-lift hover:border-[var(--tv-rule-strong)] hover:bg-[var(--tv-lav-soft)]",
         next && "sm:items-end sm:text-right",
@@ -228,6 +229,7 @@ function RelatedSituations({ topic }: { topic: HelpTopic }) {
           <li key={situation.slug}>
             <Link
               href={`/help/${situation.group}/${situation.slug}`}
+              data-help-nav="related"
               className={cn(
                 "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",
                 FOCUS

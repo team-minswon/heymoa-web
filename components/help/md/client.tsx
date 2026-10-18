@@ -10,6 +10,8 @@ import {
 import { Check, Copy } from "lucide-react";
 
 import { FOCUS } from "@/components/heymoa/landing/tokens";
+import { track } from "@/lib/analytics/track";
+import { useHelpSlug } from "@/lib/help/analytics";
 import { copyText } from "@/lib/ui/copy-text";
 import { cn } from "@/lib/utils";
 
@@ -112,6 +114,7 @@ export function HelpTabsView({
 /** 코드 블록. 오른쪽 위 복사 버튼. */
 export function HelpCodeBlock({ text }: { text: string }) {
   const [done, setDone] = useState(false);
+  const slug = useHelpSlug();
   return (
     <div className="relative">
       <pre className="m-0 overflow-x-auto rounded-[12px] bg-[var(--tv-lav-soft)] py-3 pr-14 pl-4 font-mono text-[13px] leading-[1.6] text-[var(--tv-ink)]">
@@ -123,6 +126,7 @@ export function HelpCodeBlock({ text }: { text: string }) {
         onClick={async () => {
           try {
             await copyText(text);
+            track("help_code_copied", { slug });
             setDone(true);
             setTimeout(() => setDone(false), 1500);
           } catch {

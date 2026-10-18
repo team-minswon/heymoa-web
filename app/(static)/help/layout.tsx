@@ -1,6 +1,7 @@
 import { helpGroups, situationClusters } from "@/app/(static)/help/_content/groups";
 import { navTitleOf } from "@/app/(static)/help/_content/paths";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
+import { HelpAnalytics } from "@/components/help/help-analytics";
 import { HelpMotion } from "@/components/help/help-motion";
 import { HelpSidebar } from "@/components/help/help-sidebar";
 import { HELP_VARS } from "@/components/help/help-vars";
@@ -29,6 +30,7 @@ export default function HelpLayout({
       className="w-full flex-1 bg-white text-[var(--tv-ink)]"
     >
       <HelpMotion />
+      <HelpAnalytics />
       <div className="mx-auto flex w-full max-w-[1800px]">
         <HelpSidebar
           groups={helpGroups}

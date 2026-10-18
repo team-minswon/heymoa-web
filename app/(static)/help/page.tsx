@@ -112,6 +112,7 @@ export default function HelpHubPage() {
                   <li key={topic.slug} data-reveal="">
                     <Link
                       href={helpPathOf(topic)}
+                      data-help-nav="hub_card"
                       className={cn(
                         card,
                         "bg-[var(--tv-lav-soft)] hover:bg-[var(--tv-lav)]",
@@ -143,6 +144,7 @@ export default function HelpHubPage() {
                       <h3 className="m-0 text-[18px] font-extrabold leading-[1.35] break-keep text-[var(--tv-ink)]">
                         <Link
                           href={`/help/${group.slug}`}
+                          data-help-nav="hub_card"
                           className={cn(
                             "rounded-[4px] hover:text-[var(--tv-brand-deep)]",
                             FOCUS
@@ -159,6 +161,7 @@ export default function HelpHubPage() {
                           <li key={topic.slug}>
                             <Link
                               href={helpPathOf(topic)}
+                      data-help-nav="hub_card"
                               className={cn(
                                 "flex min-h-9 items-center gap-2 rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
                                 FOCUS
@@ -191,6 +194,7 @@ export default function HelpHubPage() {
                             <li key={topic.slug} data-reveal="">
                               <Link
                                 href={helpPathOf(topic)}
+                      data-help-nav="hub_card"
                                 className={cn(card, "gap-1 p-5", FOCUS)}
                               >
                                 <span className="text-[16px] leading-[1.4] font-extrabold break-keep text-[var(--tv-ink)]">

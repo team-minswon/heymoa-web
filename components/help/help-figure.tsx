@@ -6,6 +6,8 @@ import { Maximize2 } from "lucide-react";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
+import { track } from "@/lib/analytics/track";
+import { useHelpSlug } from "@/lib/help/analytics";
 import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +34,7 @@ export function HelpFigure({
 }) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const slug = useHelpSlug();
   const url = helpAssetUrl(src);
   // 크기는 캡처 스크립트가 쓴 목록(`lib/help/media-manifest.ts`)에서 읽는다 — 자리를 미리 잡는다.
   const { width, height } = HELP_MEDIA[src];
@@ -53,7 +56,10 @@ export function HelpFigure({
       <button
         ref={trigger}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          track("help_image_zoomed", { name: src, slug });
+          setOpen(true);
+        }}
         aria-label={`${alt} — 크게 보기`}
         className={cn(
           "group/fig relative block cursor-zoom-in overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] p-0 shadow-(--help-shadow) help-fade hover:shadow-(--help-shadow-hover) motion-reduce:transition-none",
