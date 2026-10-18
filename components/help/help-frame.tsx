@@ -3,11 +3,16 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { BODY, CARD_TITLE, FOCUS } from "@/components/heymoa/landing/tokens";
 import { AnchorCopy } from "@/components/help/anchor-copy";
+import { HelpBadge } from "@/components/help/help-badge";
 import { HelpPageToc } from "@/components/help/help-page-toc";
 import { HelpSearch } from "@/components/help/help-search";
 import { navTitleOf } from "@/app/(static)/help/_content/paths";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
-import type { HelpGroup, HelpTopic } from "@/app/(static)/help/_content/types";
+import type {
+  HelpBadgeName,
+  HelpGroup,
+  HelpTopic,
+} from "@/app/(static)/help/_content/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,11 +29,13 @@ export const HELP_READING = "mx-auto w-full max-w-[920px] min-w-0";
  */
 export function HelpPageHead({
   crumbs,
+  badge,
   title,
   description,
   children,
 }: {
   crumbs?: readonly { label: string; href: string }[];
+  badge?: HelpBadgeName;
   title: string;
   description: string;
   children?: React.ReactNode;
@@ -36,7 +43,7 @@ export function HelpPageHead({
   return (
     <header>
       {crumbs && crumbs.length > 0 ? (
-        <nav aria-label="breadcrumb">
+        <nav aria-label="breadcrumb" className="flex items-center gap-2">
           <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[13px] text-[var(--tv-muted)]">
             {crumbs.map((crumb, i) => (
               <li key={crumb.href} className="flex items-center gap-1.5">
@@ -53,6 +60,7 @@ export function HelpPageHead({
               </li>
             ))}
           </ol>
+          {badge ? <HelpBadge name={badge} /> : null}
         </nav>
       ) : null}
       <h1 className="m-0 mt-2 text-[32px] leading-[1.2] font-extrabold tracking-[-0.035em] break-keep text-[var(--tv-ink)] lg:text-[36px]">
@@ -93,6 +101,7 @@ export function HelpPageFrame({
             { label: "사용 가이드", href: "/help" },
             { label: group.title, href: `/help/${group.slug}` },
           ]}
+          badge={topic.badge}
           title={topic.title}
           description={topic.summary}
         />

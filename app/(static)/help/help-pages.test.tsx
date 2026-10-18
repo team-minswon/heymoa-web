@@ -64,6 +64,16 @@ describe("도움말 페이지", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  // 데스크톱 앱 전용 페이지만 알약을 붙이고, 붙인 페이지의 라벨에는 「데스크톱」이 또 나오지 않는다.
+  it("badge 는 데스크톱 앱 전용 페이지에만 있고 라벨과 겹치지 않는다", () => {
+    const badged = helpTopics.filter((t) => t.badge);
+    expect(badged.map((t) => t.slug).sort()).toEqual(["desktop", "desktop-no-audio"]);
+    for (const topic of badged) {
+      expect(topic.badge).toBe("데스크톱");
+      expect(topic.navTitle ?? topic.title, topic.slug).not.toContain("데스크톱");
+    }
+  });
+
   it("페이지 id 는 사이트 안에서 겹치지 않고 그룹 slug 와도 겹치지 않는다", () => {
     const ids = helpTopics.map((t) => t.slug);
     expect(new Set(ids).size).toBe(ids.length);

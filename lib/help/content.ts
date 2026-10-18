@@ -9,8 +9,10 @@ import { unified } from "unified";
 
 import { helpGroups } from "@/app/(static)/help/_content/groups";
 import { HELP_PAGES, type HelpPageId } from "@/app/(static)/help/_content/ids";
-import type {
-  HelpSection,
+import {
+  HELP_BADGES,
+  type HelpBadgeName,
+  type HelpSection,
   HelpTopic,
 } from "@/app/(static)/help/_content/types";
 import { FaqItem, MdBlock } from "@/components/help/md/render";
@@ -135,6 +137,9 @@ function topicOf(file: string): { topic: HelpTopic; order: number } {
   if (HELP_PAGES[slug] !== meta.group) {
     throw new Error(`${file}: ids.ts 의 그룹(${HELP_PAGES[slug]})과 다릅니다`);
   }
+  if (meta.badge && !(HELP_BADGES as readonly string[]).includes(meta.badge)) {
+    throw new Error(`${file}: badge 는 ${HELP_BADGES.join(" · ")} 만 쓸 수 있습니다`);
+  }
   const raws = sectionsOf(body, file);
   const faq: { question: string; answer: string }[] = [];
 
@@ -201,6 +206,7 @@ function topicOf(file: string): { topic: HelpTopic; order: number } {
       group: meta.group,
       title: meta.title,
       ...(meta.navTitle ? { navTitle: meta.navTitle } : {}),
+      ...(meta.badge ? { badge: meta.badge as HelpBadgeName } : {}),
       summary: meta.description,
       sections,
       ...(howTo ? { howTo } : {}),

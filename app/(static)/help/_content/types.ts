@@ -26,6 +26,10 @@ export type HelpCluster = {
   pages: readonly HelpPageId[];
 };
 
+/** 페이지 라벨 옆 알약. 닫힌 집합이다 — 늘리려면 여기와 `help-badge.tsx` 의 읽어 주는 글을 함께 고친다. */
+export const HELP_BADGES = ["데스크톱"] as const;
+export type HelpBadgeName = (typeof HELP_BADGES)[number];
+
 export type HelpTopic = {
   /** 사이트 안에서 겹치지 않는 이름이자 주소의 끝마디. 바꾸면 그 링크가 깨진다 — 옛 주소는 `legacy-anchors.ts` 가 받는다. */
   slug: HelpPageId;
@@ -34,6 +38,8 @@ export type HelpTopic = {
   title: string;
   /** 사이드바 · 이전/다음 · 허브 카드에 쓰는 짧은 이름(8~14자). 없으면 `title`. h1 · `<title>` · 검색 · JSON-LD 는 늘 `title` 이다. */
   navTitle?: string;
+  /** 데스크톱 앱 전용 페이지처럼 라벨 옆에 알약을 붙인다. */
+  badge?: HelpBadgeName;
   /** 허브 카드와 meta description 에 쓴다(한국어 110자 안팎). */
   summary: string;
   sections: readonly HelpSection[];

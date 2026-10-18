@@ -4,15 +4,25 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import type { HelpCluster, HelpGroup } from "@/app/(static)/help/_content/types";
+import type {
+  HelpBadgeName,
+  HelpCluster,
+  HelpGroup,
+} from "@/app/(static)/help/_content/types";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
+import { HelpBadge } from "@/components/help/help-badge";
 import { useHelpAxis } from "@/components/help/help-axis";
 import { cn } from "@/lib/utils";
 
-type SidebarTopic = { slug: string; group: string; title: string };
+type SidebarTopic = {
+  slug: string;
+  group: string;
+  title: string;
+  badge?: HelpBadgeName;
+};
 
 const ITEM =
-  "flex min-h-8 items-center rounded-[8px] px-3 py-1 text-[14px] leading-[1.45] break-keep help-fade";
+  "group/item flex min-h-8 items-center gap-2 rounded-[8px] px-3 py-1 text-[14px] leading-[1.45] break-keep help-fade";
 
 /**
  * 왼쪽 주제 목록. 상단 탭이 고른 축의 모든 그룹을 **항상 펼친** 평평한 목록으로 낸다(접힘 없음). 상단바 아래 전체 높이로
@@ -130,7 +140,8 @@ export function HelpSidebar({
                           : "text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]"
                       )}
                     >
-                      {topic.title}
+                      <span className="min-w-0">{topic.title}</span>
+                      {topic.badge ? <HelpBadge name={topic.badge} /> : null}
                     </Link>
                   </li>
                 );

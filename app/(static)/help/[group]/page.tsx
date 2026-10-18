@@ -9,6 +9,7 @@ import {
   navTitleOf,
   helpTopicsOfGroup,
 } from "@/app/(static)/help/_content/paths";
+import { HelpBadge } from "@/components/help/help-badge";
 import { HELP_PAD, HelpPageHead } from "@/components/help/help-frame";
 import { JsonLd } from "@/components/help/json-ld";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
@@ -94,6 +95,9 @@ export default async function HelpGroupPage({ params }: Props) {
               >
                 <span className="text-[18px] leading-[1.35] font-extrabold break-keep text-[var(--tv-ink)]">
                   {navTitleOf(topic)}
+                  {topic.badge ? (
+                    <HelpBadge name={topic.badge} className="ml-2 align-middle" />
+                  ) : null}
                 </span>
                 <span className="text-[14px] leading-[1.65] break-keep text-[var(--tv-body)]">
                   {topic.summary}

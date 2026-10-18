@@ -1,5 +1,7 @@
 ---
 title: 데스크톱 앱
+navTitle: 앱 설치와 사용
+badge: 데스크톱
 description: Mac·Windows 앱을 설치하고, 컴퓨터에서 나는 소리까지 녹음하는 법과 문제 해결 방법이에요.
 group: start
 slug: desktop

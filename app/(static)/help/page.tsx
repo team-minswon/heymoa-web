@@ -11,6 +11,7 @@ import {
   helpTopicsOfGroup,
 } from "@/app/(static)/help/_content/paths";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
+import { HelpBadge } from "@/components/help/help-badge";
 import { HELP_PAD, HelpPageHead } from "@/components/help/help-frame";
 import {
   HelpHubBody,
@@ -159,11 +160,12 @@ export default function HelpHubPage() {
                             <Link
                               href={helpPathOf(topic)}
                               className={cn(
-                                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
+                                "flex min-h-9 items-center gap-2 rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
                                 FOCUS
                               )}
                             >
-                              {topic.title}
+                              {navTitleOf(topic)}
+                              {topic.badge ? <HelpBadge name={topic.badge} /> : null}
                             </Link>
                           </li>
                         ))}
@@ -193,6 +195,12 @@ export default function HelpHubPage() {
                               >
                                 <span className="text-[16px] leading-[1.4] font-extrabold break-keep text-[var(--tv-ink)]">
                                   {navTitleOf(topic)}
+                                  {topic.badge ? (
+                                    <HelpBadge
+                                      name={topic.badge}
+                                      className="ml-2 align-middle"
+                                    />
+                                  ) : null}
                                 </span>
                                 <span className="text-[14px] leading-[1.6] break-keep text-[var(--tv-body)]">
                                   {topic.summary}

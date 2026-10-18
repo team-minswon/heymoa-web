@@ -20,6 +20,7 @@ export default function HelpLayout({
     slug: topic.slug,
     group: topic.group,
     title: navTitleOf(topic),
+    badge: topic.badge,
   }));
   return (
     <div
