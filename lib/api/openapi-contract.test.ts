@@ -297,7 +297,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-1030에서 `notes/{noteId}/relations`(회의 안 관계 조회)가 늘었다 (73 → 74).
     // APP-1114(server APP-1113)에서 회의록 메일 둘이 늘었다 (74 → 76) — `notes/{noteId}/share-mails`(발송)·
     // `.../share-mails/{mailId}`(받는 사람별 상태).
-    expect(paths).toHaveLength(76);
+    // APP-1177(server APP-1174)에서 문의·피드백 `/v1/feedbacks`(접수·조회) 한 경로가 늘었다 (76 → 77).
+    expect(paths).toHaveLength(77);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 
@@ -462,36 +463,77 @@ describe("contract sync 2026-07-29", () => {
 
 describe("desktop auth contract", () => {
   it("keeps login anonymous but binds integration tickets to the app session", () => {
-    const paths = api().paths as unknown as Record<string, Record<string, {
-      operationId: string;
-      security: unknown[];
-      requestBody?: { content: Record<string, { schema: { $ref: string } }> };
-    }>>;
+    const paths = api().paths as unknown as Record<
+      string,
+      Record<
+        string,
+        {
+          operationId: string;
+          security: unknown[];
+          requestBody?: {
+            content: Record<string, { schema: { $ref: string } }>;
+          };
+        }
+      >
+    >;
     const commands = [
-      ["/v1/auth/desktop/start", "startDesktopLogin", "DesktopLoginStartRequest"],
-      ["/v1/auth/desktop/exchange", "exchangeDesktopLogin", "DesktopLoginExchangeRequest"],
-      ["/v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket", "createDesktopIntegrationTicket", "DesktopConnectionTicketRequest"],
+      [
+        "/v1/auth/desktop/start",
+        "startDesktopLogin",
+        "DesktopLoginStartRequest",
+      ],
+      [
+        "/v1/auth/desktop/exchange",
+        "exchangeDesktopLogin",
+        "DesktopLoginExchangeRequest",
+      ],
+      [
+        "/v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket",
+        "createDesktopIntegrationTicket",
+        "DesktopConnectionTicketRequest",
+      ],
     ] as const;
     for (const [path, operationId, schema] of commands) {
       expect(paths[path].post.operationId).toBe(operationId);
-      expect(paths[path].post.requestBody?.content["application/json"].schema.$ref).toBe(`#/components/schemas/${schema}`);
+      expect(
+        paths[path].post.requestBody?.content["application/json"].schema.$ref
+      ).toBe(`#/components/schemas/${schema}`);
     }
     expect(paths["/v1/auth/desktop/start"].post.security).toEqual([]);
     expect(paths["/v1/auth/desktop/exchange"].post.security).toEqual([]);
-    expect(paths["/v1/auth/desktop/authorize"].get.operationId).toBe("authorizeDesktopLogin");
-    expect(paths["/v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket"].post.security).toEqual([{ accessCookie: [] }]);
+    expect(paths["/v1/auth/desktop/authorize"].get.operationId).toBe(
+      "authorizeDesktopLogin"
+    );
+    expect(
+      paths[
+        "/v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket"
+      ].post.security
+    ).toEqual([{ accessCookie: [] }]);
   });
 
   it("requires the PKCE/state binding and never puts session tokens in an exchange body", () => {
-    const schemas = api().components.schemas as Record<string, {
-      required: string[];
-      properties: Record<string, { properties?: Record<string, unknown> }>;
-    }>;
-    expect(schemas.DesktopLoginStartRequest.required).toEqual(expect.arrayContaining(["state", "codeChallenge"]));
-    expect(schemas.DesktopLoginExchangeRequest.required).toEqual(expect.arrayContaining(["state", "code", "codeVerifier"]));
+    const schemas = api().components.schemas as Record<
+      string,
+      {
+        required: string[];
+        properties: Record<string, { properties?: Record<string, unknown> }>;
+      }
+    >;
+    expect(schemas.DesktopLoginStartRequest.required).toEqual(
+      expect.arrayContaining(["state", "codeChallenge"])
+    );
+    expect(schemas.DesktopLoginExchangeRequest.required).toEqual(
+      expect.arrayContaining(["state", "code", "codeVerifier"])
+    );
     expect(schemas.DesktopConnectionTicketRequest.required).toContain("state");
-    expect(Object.keys(schemas.DesktopLoginStartRequest.properties)).not.toContain("redirectUri");
-    expect(Object.keys(schemas.RefreshTokensResponse.properties.data.properties ?? {})).toEqual(["message"]);
+    expect(
+      Object.keys(schemas.DesktopLoginStartRequest.properties)
+    ).not.toContain("redirectUri");
+    expect(
+      Object.keys(
+        schemas.RefreshTokensResponse.properties.data.properties ?? {}
+      )
+    ).toEqual(["message"]);
   });
 });
 

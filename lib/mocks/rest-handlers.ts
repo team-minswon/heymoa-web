@@ -25,6 +25,7 @@ import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/work
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
 
 import type {
+  CreateFeedbackRequest,
   CreateWorkspaceRequest,
   NoteListResponseData,
   NoteListResponseDataNotesItem,
@@ -1115,6 +1116,11 @@ export const restHandlers = [
     data: mockDb.listNotifications(),
     error: null,
   })),
+  http.get("*/v1/feedbacks", () => commandResult(() => mockDb.listFeedbacks())),
+  http.post("*/v1/feedbacks", async ({ request }) => {
+    const body = (await request.json()) as CreateFeedbackRequest;
+    return commandResult(() => mockDb.createFeedback(body), 201);
+  }),
   http.put("*/v1/notifications/:notificationId/read", ({ params }) =>
     commandResult(() => mockDb.markNotificationRead(id(params.notificationId)))
   ),

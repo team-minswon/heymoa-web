@@ -25,6 +25,8 @@ import type {
   NotificationListResponseDataNotificationsItem,
   NotificationListResponseDataNotificationsItemInvitationStatus,
   MarkNotificationReadResponseData,
+  FeedbackResponseData,
+  CreateFeedbackRequest,
   AnalysisResultResponseData,
   ToolConnectionsResponseDataIntegrationsItem,
   AgentChatResponseData,
@@ -196,6 +198,7 @@ type StoreState = {
   workspaceGuests: MockWorkspaceGuest[];
   invitations: MockInvitation[];
   notifications: NotificationListResponseDataNotificationsItem[];
+  feedbacks: FeedbackResponseData[];
   analyses: AnalysisResultResponseData[];
   integrations: MockIntegration[];
   agentChats: MockAgentChat[];
@@ -1780,6 +1783,26 @@ function createSeedState(): StoreState {
     members,
     invitations,
     notifications,
+    // 답변이 달린 문의와 아직 접수 상태인 문의를 하나씩 시드한다 — 내 문의 탭의 두 모양을 목에서 본다.
+    feedbacks: [
+      {
+        feedbackId: "01K0000000031",
+        kind: "INCIDENT",
+        message: "녹음 중에 전사가 몇 분 멈췄어요. 데스크톱 앱이고 화면은 노트 상세였습니다.",
+        answer:
+          "불편을 드려 죄송합니다. 네트워크가 끊긴 구간이 있었고, 다시 연결되며 이어서 받아쓰도록 고쳤습니다.",
+        answeredAt: "2026-10-17T09:30:00.000Z",
+        createdAt: "2026-10-17T08:12:00.000Z",
+      },
+      {
+        feedbackId: "01K0000000032",
+        kind: "SUGGESTION",
+        message: "회의 요약을 메일로 자동 전송하는 옵션이 있으면 좋겠어요.",
+        answer: null,
+        answeredAt: null,
+        createdAt: "2026-10-18T01:05:00.000Z",
+      },
+    ],
     // 완료된 분석을 하나 시드한다. 실제로는 heymoa-ai의 callback이 채우는데 목에는 그걸
     // 밀어줄 주체가 없어서, 이게 없으면 **요약 화면(개요·액션 아이템·결정)을 목에서
     // 한 번도 볼 수 없다.** 종료된 노트 하나에만 붙여 빈 상태·분석 중 화면도 그대로 남긴다.
@@ -3221,6 +3244,27 @@ export const mockDb = {
       nextCreatedAt: null,
       nextNotificationId: null,
     });
+  },
+
+  listFeedbacks(): { feedbacks: FeedbackResponseData[] } {
+    return copy({
+      feedbacks: [...state.feedbacks].sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt)
+      ),
+    });
+  },
+
+  createFeedback(request: CreateFeedbackRequest): FeedbackResponseData {
+    const feedback: FeedbackResponseData = {
+      feedbackId: nextId(),
+      kind: request.kind,
+      message: request.message.trim(),
+      answer: null,
+      answeredAt: null,
+      createdAt: nextTimestamp(),
+    };
+    state.feedbacks.push(feedback);
+    return copy(feedback);
   },
 
   /** 계약은 식별자만 돌려준다 — 전체 알림을 흘리면 UI가 없는 필드에 기대게 된다. */
