@@ -164,7 +164,7 @@ export function AgentFab({
         >
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 rounded-full group-data-[nudge]/fab:motion-safe:animate-[fab-ring_1.2s_ease-out_2]"
+            className="pointer-events-none absolute inset-0 -z-10 rounded-full group-data-[nudge]/fab:motion-safe:animate-[fab-ring_1.3s_ease-out_3]"
           />
           {showIntro ? (
             <span

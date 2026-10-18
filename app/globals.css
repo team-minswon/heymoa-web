@@ -512,10 +512,10 @@
    box-shadow 라 레이아웃을 밀지 않는다. 호출부가 `motion-safe:` 로만 건다. */
 @keyframes fab-ring {
   from {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 35%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 55%, transparent);
   }
   to {
-    box-shadow: 0 0 0 12px color-mix(in oklch, var(--primary) 0%, transparent);
+    box-shadow: 0 0 0 18px color-mix(in oklch, var(--primary) 0%, transparent);
   }
 }
 
