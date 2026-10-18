@@ -7,7 +7,7 @@ import { ExampleStamp, Scribble, Speech } from "./marks";
 import { CLOSING_H, CONTAINER, FOCUS_ON_BRAND, RADIUS, SHADOW, vars } from "./tokens";
 
 /**
- * 마무리. tl;dv 처럼 코랄 색 면 하나로 닫는다. 히어로가 던진 「이번 주 회의록 당번 누구예요?」를
+ * 마무리. tl;dv 처럼 보라 색 면 하나로 닫는다. 히어로가 던진 「이번 주 회의록 당번 누구예요?」를
  * **당번표 종이**로 받는다 — 블록 오른쪽 위 모서리에 테이프로 붙은 종이에서 이름 넷이 차례로 그어지고,
  * 아래에 「받아 적기 — HeyMoa / 검토 완료 — 나」가 남는다. 왼쪽 아래 모서리에는 히어로에서 「저… 지난주에
  * 했는데요」 하던 박지훈이 「저 이번 주는 쉬어도 되죠?」 하고 묻는다(넓은 화면만) — 히어로의 농담 · 제목
@@ -43,7 +43,7 @@ const SCRAWL =
   "tv-rpop m-0 origin-left whitespace-nowrap text-[13px] leading-[1.35] font-extrabold tracking-[-0.01em] text-[var(--tv-brand-deep)] lg:text-[14px]";
 
 /**
- * 회의록 당번표 — 흰 종이 + 먹색 테 + 노란 테이프 + 오른쪽 아래 접힌 귀(연주황 삼각형과 먹색 접은 선).
+ * 회의록 당번표 — 흰 종이 + 먹색 테 + 노란 테이프 + 오른쪽 아래 접힌 귀(라벤더 삼각형과 먹색 접은 선).
  * 기울기는 `rotate` 속성이라 등장(`tv-rslide` 의 translate)과 겹치지 않는다. 모바일은 셋째 · 넷째 주를
  * 빼서 제목과 겹치지 않게 키를 줄인다.
  */
@@ -164,7 +164,7 @@ export function Closing() {
               이번 주 당번 칸에는 HeyMoa를 적어 두세요. <br className="hidden lg:inline" />
               지난주에 누가 했는지 따질 일도 없고요.
             </p>
-            {/* 모든 폭에서 글자 폭만큼의 알약이다. 전에는 모바일에서 꽉 채워(w-full) 주황 블록 양옆과
+            {/* 모든 폭에서 글자 폭만큼의 알약이다. 전에는 모바일에서 꽉 채워(w-full) 보라 블록 양옆과
                 24px 간격으로 평행한 노란 띠가 됐고, 둥근 블록 안의 둥근 띠가 테두리 두 겹으로 읽혔다.
                 모바일은 히어로 CTA 와 같은 15px · px-6 으로 줄여 320 에서도 양옆이 30px 넘게 빈다. */}
             <LandingCta

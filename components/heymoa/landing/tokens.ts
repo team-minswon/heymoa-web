@@ -1,41 +1,36 @@
 import type { CSSProperties } from "react";
 
 /*
- * **로고에서 파생한 값.** 로고(`public/android-chrome-192x192.png`)의 코랄 `#fd7765` 와 연한 면 `#fec5a8` 을
- * 기준으로, 같은 색상(약 7°)에서 밝기만 옮겨 만들었다. 글자색은 앱의 `--el-*` 와 같은 따뜻한 중립(stone)이다.
- * **두 목소리를 색으로 가른다.**
- *   - 창 안(앱 화면 하나) = 앱의 `--el-*` 와 아래 `APP` · `ROLE_*`. 주황 · 연주황 · 노랑은 한 픽셀도 없다.
+ * tl;dv 판의 값. **두 목소리를 색으로 가른다.**
+ *   - 창 안(앱 화면 하나) = 앱의 `--el-*` 와 아래 `APP` · `ROLE_*`. 보라 · 라벤더 · 노랑은 한 픽셀도 없다.
  *   - 창 밖 · 창 위 주석(쪽지 · 손글씨 · 화살표 · 형광펜 · 커서 · 섬광) = 이 페이지의 `--tv-*`.
  * 구간 파일은 여기와 `marks.tsx` · `app.tsx` 에 없는 색 · 그림자 · 반경을 새로 만들지 않는다.
  */
 
 /**
- * 페이지 팔레트. 바탕은 흰색 하나(`--tv-bg` 없음)이고, 색은 면(연주황 · 버터 · 민트 · 살구)과
- * 주황 하나 · 노랑 하나가 전부다. 앱 상태색(기록 중 · 확정됨 · 역할 색)은 여기 두지 않는다 — 그건
+ * 페이지 팔레트. 바탕은 흰색 하나(`--tv-bg` 없음)이고, 색은 면(라벤더 · 버터 · 민트 · 복숭아)과
+ * 보라 하나 · 노랑 하나가 전부다. 앱 상태색(기록 중 · 확정됨 · 역할 색)은 여기 두지 않는다 — 그건
  * 창 안의 말이라 `APP` · `ROLE_*` 로 쓴다.
  *
- * 대비: 흰 면 · 연주황 면 위 글자 muted 5.0:1 이상, body 8.7:1 이상. 노랑(`--tv-pop`) 위에는 ink 만
- * 얹는다(12.1:1). 코랄(`--tv-brand`) 면 위 글자는 ink · `--tv-on-brand` 만 쓴다(흰 글자는 2.6:1 이라 안 된다).
- * 글자로 쓰는 주황(링크 · 호버)은 진한 주황 `--tv-brand-deep` 이다(흰 5.7:1, 연주황 면 4.9:1 이상).
- * 노란 버튼은 노랑 + ink.
+ * 대비: 흰 면 · 라벤더 면 위 글자 muted 5.0:1 이상, body 8:1 이상. 노랑(`--tv-pop`) 위에는 ink 만
+ * 얹는다(11.5:1). 보라(`--tv-brand`) 위 글자는 흰색 · `--tv-on-brand` 만 쓴다. 노란 버튼은 노랑 + ink.
  */
 export const TV_VARS = {
-  "--tv-ink": "#1c1917",
-  "--tv-body": "#44403c",
-  "--tv-muted": "#665f59",
-  "--tv-rule": "#f1ddd3",
-  "--tv-rule-strong": "#e6c9ba",
-  "--tv-brand": "#fd7765",
-  "--tv-brand-hover": "#ff9a8a",
-  "--tv-brand-deep": "#b93a26",
-  "--tv-on-brand": "#1c1917",
-  "--tv-lav": "#ffe9df",
-  "--tv-lav-soft": "#fff5f0",
+  "--tv-ink": "#1c1845",
+  "--tv-body": "#433f69",
+  "--tv-muted": "#625f8a",
+  "--tv-rule": "#e4e0f5",
+  "--tv-rule-strong": "#d3ccf2",
+  "--tv-brand": "#5a3df0",
+  "--tv-brand-deep": "#4328c9",
+  "--tv-on-brand": "#e4dcff",
+  "--tv-lav": "#ece8ff",
+  "--tv-lav-soft": "#f4f1ff",
   "--tv-butter": "#fff2bf",
   "--tv-butter-soft": "#fff8dc",
   "--tv-mint": "#d5f3e6",
   "--tv-mint-deep": "#9fd9bf",
-  "--tv-peach": "#ffd3bd",
+  "--tv-peach": "#ffe3d6",
   "--tv-pop": "#ffd23f",
 } as CSSProperties;
 
@@ -66,9 +61,9 @@ export const CARD_TITLE =
 /** 섹션 제목 — 모바일 28 / 데스크톱 44. */
 export const H2 =
   "m-0 text-balance break-keep text-[28px] font-extrabold leading-[1.22] tracking-[-0.035em] text-[var(--tv-ink)] lg:text-[44px] lg:leading-[1.16] lg:tracking-[-0.04em]";
-/** 마무리 코랄 블록의 제목. 코랄 위라 ink 글자다(흰 글자는 2.6:1). */
+/** 마무리 보라 블록의 제목. 보라 위라 흰 글자다. */
 export const CLOSING_H =
-  "m-0 text-balance break-keep text-[30px] font-extrabold leading-[1.18] tracking-[-0.04em] text-[var(--tv-on-brand)] lg:text-[56px] lg:leading-[1.1] lg:tracking-[-0.045em]";
+  "m-0 text-balance break-keep text-[30px] font-extrabold leading-[1.18] tracking-[-0.04em] text-white lg:text-[56px] lg:leading-[1.1] lg:tracking-[-0.045em]";
 export const H1 =
   "m-0 text-[clamp(28px,9vw,34px)] lg:text-[64px] font-extrabold leading-[1.12] lg:leading-[1.08] tracking-[-0.04em] lg:tracking-[-0.045em] text-[var(--tv-ink)] break-keep";
 /** 손글씨 결 — 먹색 굵은 짧은 말. 설명 주석용. */
@@ -96,7 +91,7 @@ export const MARKER_REVEAL = `${MARKER} tv-rmark`;
  */
 export const SHADOW = {
   panel:
-    "shadow-[0_24px_48px_-24px_rgba(120,50,24,0.30),0_2px_6px_rgba(12,10,9,0.05)]",
+    "shadow-[0_24px_48px_-24px_rgba(40,24,120,0.35),0_2px_6px_rgba(12,10,9,0.05)]",
   sticky: "shadow-[0_6px_14px_-6px_rgba(60,40,0,0.35)]",
   app: "shadow-e2",
 } as const;
@@ -109,14 +104,14 @@ export const RADIUS = {
 } as const;
 
 /**
- * 진짜 컨트롤의 포커스 링. 밝은 면에서는 진한 주황(5.7:1), 코랄 면 위에서는 ink(6.7:1).
+ * 진짜 컨트롤의 포커스 링. 밝은 면에서는 보라 진한 색(8.8:1), 보라 면 위에서는 흰색(6.25:1).
  * `outline-solid` 를 같이 건다 — Tailwind 4 의 `outline-none` 은 `--tw-outline-style` 을 none 으로
  * 두어서, `outline-2` 만으로는 포커스 때도 선이 안 그려진다.
  */
 export const FOCUS =
   "outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-[var(--tv-brand-deep)]";
 export const FOCUS_ON_BRAND =
-  "outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-[var(--tv-on-brand)]";
+  "outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-white";
 
 /* ── 창 안 전용(앱 값) ────────────────────────────────────────────────── */
 

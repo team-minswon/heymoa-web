@@ -114,13 +114,13 @@ export function Hero() {
             도 갈라 둡니다.
           </p>
           <div className="mt-5 flex flex-col gap-2 max-lg:[@media(max-height:600px)]:mt-3 max-lg:[@media(min-height:601px)_and_(max-height:700px)]:mt-4 lg:mt-6 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-3 lg:gap-y-2">
-            {/* 포커스 링은 주황 outline(`FOCUS`) 하나다 — `Button` 기본의 `focus-visible:border-ring` ·
+            {/* 포커스 링은 보라 outline(`FOCUS`) 하나다 — `Button` 기본의 `focus-visible:border-ring` ·
                 `ring-3` 을 끈다(`top-bar.tsx` · `closing.tsx` 와 같은 처리). 안 끄면 회색 링이 한 겹 더 붙는다. */}
             <LandingCta
               label="Google 계정으로 시작"
               openOnWelcome
               className={cn(
-                "h-[52px] w-full justify-center gap-2 max-lg:[@media(max-height:600px)]:h-11 border-transparent bg-[var(--tv-brand)] px-6 text-[15px] font-bold text-[var(--tv-on-brand)] hover:bg-[var(--tv-brand-hover)] focus-visible:border-transparent focus-visible:ring-0 lg:w-auto lg:px-5",
+                "h-[52px] w-full justify-center gap-2 max-lg:[@media(max-height:600px)]:h-11 border-transparent bg-[var(--tv-brand)] px-6 text-[15px] font-bold text-white hover:bg-[var(--tv-brand-deep)] focus-visible:border-transparent focus-visible:ring-0 lg:w-auto lg:px-5",
                 FOCUS
               )}
             />

@@ -95,7 +95,7 @@ export default function DownloadPage() {
                   event="desktop_download_clicked"
                   href={installer.href}
                   className={cn(
-                    "inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--tv-brand)] px-5 py-3 text-[15px] font-bold text-[var(--tv-on-brand)] hover:bg-[var(--tv-brand-hover)]",
+                    "inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--tv-brand)] px-5 py-3 text-[15px] font-bold text-white hover:bg-[var(--tv-brand-deep)]",
                     FOCUS
                   )}
                 >
@@ -134,7 +134,7 @@ export default function DownloadPage() {
           <Link
             href="/help/desktop"
             className={cn(
-              "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-ink)]",
+              "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
               FOCUS
             )}
           >
