@@ -12,7 +12,7 @@ import {
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
-import { HELP_VARS } from "@/components/help/help-vars";
+import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 /**
@@ -79,6 +79,7 @@ export function HelpFigure({
       ) : null}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          overlayClassName={HELP_OVERLAY}
           style={HELP_VARS}
           className="max-h-[92vh] w-auto duration-200 max-w-[min(1240px,calc(100vw-2rem))] gap-3 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] sm:max-w-[min(1240px,calc(100vw-2rem))]"
         >

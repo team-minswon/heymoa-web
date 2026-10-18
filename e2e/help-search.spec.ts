@@ -199,3 +199,30 @@ test("영상을 누르면 확대 창이 열리고 Esc 로 닫히며 포커스가
   // 자리는 그대로
   expect((await video.boundingBox())!.height).toBe(before!.height);
 });
+
+// 배경을 눌러 팔레트를 닫을 때 화면이 깜빡이던 문제: 오버레이의 backdrop-blur 가 닫힘 때 서서히 풀리지 않고 뚝 끊겼다.
+test("검색 팔레트를 열고 배경을 눌러 닫아도 폭·스크롤이 그대로고 레이아웃이 밀리지 않으며 배경 흐림이 없다", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/help/situations/fix-speakers");
+  await page.waitForLoadState("networkidle");
+  await page.mouse.wheel(0, 400);
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    (window as unknown as { __shifts: number }).__shifts = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[])
+        if (!e.hadRecentInput) (window as unknown as { __shifts: number }).__shifts += e.value;
+    }).observe({ type: "layout-shift", buffered: false });
+  });
+  const state = () =>
+    page.evaluate(() => ({ width: document.documentElement.clientWidth, y: Math.round(scrollY) }));
+  const before = await state();
+  await page.keyboard.press("Control+k");
+  const overlay = page.locator("[data-slot='dialog-overlay']");
+  await expect(overlay).toBeVisible();
+  expect(await overlay.evaluate((el) => getComputedStyle(el).backdropFilter)).toBe("none");
+  await page.mouse.click(1380, 850);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await state()).toEqual(before);
+  expect(await page.evaluate(() => (window as unknown as { __shifts: number }).__shifts)).toBe(0);
+});

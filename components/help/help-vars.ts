@@ -20,3 +20,11 @@ export const HELP_VARS = {
   "--tv-lav": "var(--el-surface-strong)",
   "--tv-lav-soft": "var(--el-canvas)",
 } as CSSProperties;
+
+/**
+ * 가이드 대화상자(검색 팔레트 · 이미지/영상 확대)의 배경 막. 기본 오버레이의 `backdrop-blur` 는 닫힐 때 배경 흐림이 서서히 풀리지 않고
+ * 막이 사라지는 순간 뚝 끊겨 화면 전체가 깜빡여 보인다(실측: 닫힘 프레임에서 흐림이 끝까지 남다 한 프레임에 해제). 흐림 없이 어둡기만
+ * 하게 두면 막이 페이드 아웃과 함께 자연스럽게 걷힌다.
+ */
+export const HELP_OVERLAY =
+  "bg-black/15 supports-backdrop-filter:backdrop-blur-none";

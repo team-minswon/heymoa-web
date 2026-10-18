@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { HELP_VARS } from "@/components/help/help-vars";
+import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
@@ -157,6 +157,7 @@ export function HelpClip({
       </div>
       <Dialog open={zoomed} onOpenChange={setZoomed}>
         <DialogContent
+          overlayClassName={HELP_OVERLAY}
           style={HELP_VARS}
           finalFocus={() => zoomButton.current ?? true}
           className="max-h-[92vh] w-[min(1100px,calc(100vw-2rem))] duration-200 max-w-[min(1100px,calc(100vw-2rem))] gap-3 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] sm:max-w-[min(1100px,calc(100vw-2rem))]"

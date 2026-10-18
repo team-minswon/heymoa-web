@@ -17,7 +17,7 @@ import { HelpHitRow, hitHref } from "@/components/help/help-hit-list";
 import { searchHelp } from "@/lib/help/search-index";
 import { goSamePage } from "@/lib/help/scroll";
 import { useHelpIndex } from "@/lib/help/use-help-index";
-import { HELP_VARS } from "@/components/help/help-vars";
+import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 const isMac = () =>
@@ -137,6 +137,7 @@ export function HelpPalette() {
         }}
       >
         <DialogContent
+          overlayClassName={HELP_OVERLAY}
           showCloseButton={false}
           finalFocus={() => arrived.current ?? true}
           style={HELP_VARS}
