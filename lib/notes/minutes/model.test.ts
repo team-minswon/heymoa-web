@@ -117,7 +117,7 @@ describe("buildMinutes", () => {
     expect(doc.sharedBy).toBe("김민수");
     expect(doc.confirmed).toBe(false);
     expect(minutes({ transcript: false }, { confirmed: true }).confirmed).toBe(true);
-    expect(doc.footer).toBe("공유 기능 범위 정리 · 2026. 10. 15. 회의록");
+    expect(doc.footer).toBe("2026. 10. 15. · 공유 기능 범위 정리 회의록");
     expect(doc.fileName).toBe("회의록_공유 기능 범위 정리_20261015.pdf");
   });
 
