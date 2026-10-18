@@ -19,13 +19,16 @@ describe("HeyMoa legal pages", () => {
       screen.getByRole("heading", { name: "개인정보 처리방침", level: 1 })
     ).toBeInTheDocument();
     // 실제로 쓰는 사업자를 적었는지 본다. 예전에는 안 쓰는 이름(ElevenLabs)이 적혀 있었다.
-    expect(screen.getByText(/실시간 음성 인식은 Soniox/)).toBeVisible();
-    expect(screen.getByText(/화자 분리는 pyannote\.ai/)).toBeVisible();
-    expect(screen.getByText(/국외에서 처리합니다/)).toBeVisible();
+    expect(screen.getByText(/Soniox — 실시간 음성 인식/)).toBeVisible();
+    expect(screen.getByText(/pyannote\.ai — 화자 분리/)).toBeVisible();
     expect(screen.queryByText(/ElevenLabs/)).not.toBeInTheDocument();
     expect(screen.queryByText(/이미지 검사|진짜그림/)).not.toBeInTheDocument();
     // PostHog 키와 함께 들어간 문안이다(APP-1068). 채우지 않은 자리표시가 운영에 나가면 안 된다.
-    expect(screen.getByText(/이전받는 자는 PostHog Inc\./)).toBeVisible();
+    expect(screen.getByText(/PostHog Inc\./)).toBeVisible();
+    // 「확인 중」 자리표시는 개정에서 걷어냈다(APP-1196). 다시 들어오면 미완성 문안이 운영에 나간다.
+    expect(document.body.textContent).not.toMatch(/확인 중/);
+    // 계정 설정의 「처리방침」 링크가 `/privacy#section-5`로 온다. 조 순서가 밀리면 다른 조가 열린다.
+    expect(document.getElementById("section-5")).toHaveTextContent("5. 쿠키와 접속 분석");
     // 서버 사건은 브라우저의 「이용 통계 보내기」와 별개라는 것을 적어 둔다(APP-1071)
     expect(screen.getByText(/서버에서 처리된 기록은/)).toBeVisible();
     expect(document.body.textContent).not.toMatch(/【/);

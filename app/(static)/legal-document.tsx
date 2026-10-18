@@ -55,7 +55,6 @@ export function LegalDocument({
   effectiveDate,
   sections,
   dateLabel = "시행일",
-  notice,
 }: {
   label: string;
   title: string;
@@ -64,8 +63,6 @@ export function LegalDocument({
   sections: readonly LegalSection[];
   /** 도움말이 같은 틀을 쓴다 — 거기서는 「최종 수정일」이다. */
   dateLabel?: string;
-  /** 개정 안내. 처리방침 10절이 「변경 사항과 시행일을 서비스 화면에 알린다」고 약속한 자리다. */
-  notice?: string;
 }) {
   // 좁은 화면의 접는 목차와 넓은 화면의 sticky 카드가 같은 목록을 쓴다(한쪽은 늘 display:none).
   const toc = (
@@ -98,12 +95,6 @@ export function LegalDocument({
           {/* 랜딩 섹션 제목(H2)과 같은 급이다. 히어로 급을 쓰면 문서 하나가 첫 화면처럼 군다. */}
           <h1 className={cn(H2, "mt-4 max-w-[820px]")}>{title}</h1>
           <p className={cn(LEAD, "mt-4 max-w-[640px]")}>{description}</p>
-          {notice && (
-            <p className="m-0 mt-6 max-w-[760px] rounded-[16px] bg-white px-4 py-3 text-[15px] leading-[1.7] break-keep text-[var(--tv-body)] [overflow-wrap:anywhere]">
-              <b className="font-extrabold text-[var(--tv-ink)]">변경 안내 </b>
-              {notice}
-            </p>
-          )}
           <p className="m-0 mt-6 flex flex-wrap gap-x-5 gap-y-1 text-[14px] leading-[1.6] text-[var(--tv-muted)]">
             <span>
               {dateLabel}{" "}
