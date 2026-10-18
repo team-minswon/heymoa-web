@@ -147,7 +147,7 @@ export function FeedbackDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="bg-[var(--el-surface-card)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>문의·피드백</DialogTitle>
           <DialogDescription>
@@ -196,7 +196,7 @@ export function FeedbackDialog({
                   className={cn(
                     "flex items-start gap-2.5 rounded-panel border p-3 text-left transition-colors",
                     kind === value
-                      ? "border-[var(--el-ink)] bg-[var(--el-surface-card)]"
+                      ? "border-[var(--el-hairline-strong)] bg-[var(--el-surface-strong)]"
                       : "border-[var(--el-hairline)] hover:border-[var(--el-hairline-strong)]"
                   )}
                 >
@@ -242,7 +242,7 @@ export function FeedbackDialog({
               않아요.
             </p>
 
-            <DialogFooter className="mt-auto">
+            <DialogFooter className="mt-auto bg-transparent">
               <Button
                 type="button"
                 variant="ghost"
@@ -304,7 +304,7 @@ function MyFeedbacks({ feedbacks }: { feedbacks: FeedbackResponseData[] }) {
             {userPart(item.message)}
           </p>
           {item.answer ? (
-            <div className="mt-3 flex gap-2.5 rounded-control bg-[var(--el-surface-card)] p-3">
+            <div className="mt-3 flex gap-2.5 rounded-control bg-[var(--el-surface-strong)] p-3">
               <MessageSquareText
                 className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
                 strokeWidth={1.5}
