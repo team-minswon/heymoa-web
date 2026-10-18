@@ -691,6 +691,37 @@ export function ReviewBoard({
     item.assignee?.type === "USER" &&
     item.assignee.id === currentUserId;
 
+  const relationsNotice =
+    relationsStatus === "PENDING" ||
+    relationsStatus === "FAILED" ||
+    relationsStatus === "SKIPPED" ? (
+      <p
+        role={relationsStatus === "FAILED" ? "alert" : "status"}
+        className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+      >
+        {relationsStatus === "PENDING"
+          ? "충돌과 이어짐을 확인하고 있습니다. 회의 정리는 먼저 읽을 수 있습니다."
+          : relationsStatus === "FAILED"
+            ? "충돌과 이어짐을 분석하지 못했습니다. 회의 정리와 검토 항목은 그대로 남아 있습니다."
+            : "화자 정보를 확인하지 못해 충돌과 이어짐을 분석하지 않았습니다."}
+      </p>
+    ) : projectId && linksQuery.isError ? (
+      <InlineRetry
+        variant="line"
+        label="회의 연결을 불러오지 못했습니다."
+        onRetry={() => void linksQuery.refetch()}
+        className="pb-4"
+      />
+    ) : projectId &&
+      (linksQuery.isPending || refreshingAnalysis || linksQuery.isFetching) ? (
+      <p
+        role="status"
+        className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+      >
+        충돌과 이어짐을 불러오고 있습니다.
+      </p>
+    ) : null;
+
   return (
     <div className="flex min-h-full flex-col">
       <BoardShell>
@@ -783,37 +814,7 @@ export function ReviewBoard({
                   links={meetingLinks}
                   workspaceId={workspaceId}
                 />
-                {relationsStatus === "PENDING" ||
-                relationsStatus === "FAILED" ||
-                relationsStatus === "SKIPPED" ? (
-                  <p
-                    role={relationsStatus === "FAILED" ? "alert" : "status"}
-                    className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
-                  >
-                    {relationsStatus === "PENDING"
-                      ? "충돌과 이어짐을 확인하고 있습니다. 회의 정리는 먼저 읽을 수 있습니다."
-                      : relationsStatus === "FAILED"
-                        ? "충돌과 이어짐을 분석하지 못했습니다. 회의 정리와 검토 항목은 그대로 남아 있습니다."
-                        : "화자 정보를 확인하지 못해 충돌과 이어짐을 분석하지 않았습니다."}
-                  </p>
-                ) : projectId && linksQuery.isError ? (
-                  <InlineRetry
-                    variant="line"
-                    label="회의 연결을 불러오지 못했습니다."
-                    onRetry={() => void linksQuery.refetch()}
-                    className="pb-4"
-                  />
-                ) : projectId &&
-                  (linksQuery.isPending ||
-                    refreshingAnalysis ||
-                    linksQuery.isFetching) ? (
-                  <p
-                    role="status"
-                    className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
-                  >
-                    충돌과 이어짐을 불러오고 있습니다.
-                  </p>
-                ) : null}
+                {relationsNotice}
                 {enrichmentStatus === "PENDING" ||
                 enrichmentStatus === "FAILED" ||
                 enrichmentStatus === "SKIPPED" ? (
@@ -872,6 +873,7 @@ export function ReviewBoard({
             </>
           ) : (
             <div>
+              {relationsNotice}
               {summary?.status === "SUCCEEDED" && overviewText(summary) ? (
                 <p className="mb-5 max-w-[60ch] text-base leading-7 break-keep text-[var(--el-ink)]">
                   {overviewText(summary)}
@@ -894,6 +896,7 @@ export function ReviewBoard({
               ) : (
                 <div className={GRAPH_WIDE}>
                   <ReviewGraph
+                    agendaLinks={meetingLinks.byAgendaId}
                     summary={
                       summary ?? {
                         noteId,

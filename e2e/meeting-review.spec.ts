@@ -69,6 +69,9 @@ test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐�
       exact: true,
     })
   ).toHaveCount(1);
+  await page.getByRole("radio", { name: "그래프" }).click();
+  await expect(page.getByRole("list", { name: "안건 이어짐" })).toContainText("회의가 끝난 뒤 할 일이 흐려지는 문제 → 02 차별점과 요금");
+
 });
 
 /** 검토 줄 하나. 줄의 내용 버튼을 품은 상자다 */

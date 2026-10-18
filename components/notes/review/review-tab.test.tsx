@@ -1685,6 +1685,8 @@ describe("최종 요약과 늦은 관계 결과", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("확인된 충돌과 이어짐이 없습니다.")).toBeNull();
     expect(screen.queryByText(/화자 확인 뒤 담당과 기한/)).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
+    expect(screen.getByText(/충돌과 이어짐을 분석하지 못했습니다/)).toBeInTheDocument();
     expect(
       await screen.findByText(
         REVIEW_SEED_LEAD.map((line) => line.text).join(" ")

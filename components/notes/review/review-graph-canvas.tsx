@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, type RefObject } from "react";
 import ForceGraph2D, { type ForceGraphMethods, type LinkObject, type NodeObject } from "react-force-graph-2d";
 
 import { ROLE_COLOR } from "@/components/notes/review/role-dot";
-import { screenRadius, type ForceLink, type ForceNode } from "@/lib/notes/review/graph-model";
+import { screenRadius, type ForceLink, type ForceLinkKind, type ForceNode } from "@/lib/notes/review/graph-model";
 
 export type GraphNodeObject = NodeObject<ForceNode>;
 type GraphLinkObject = LinkObject<ForceNode, ForceLink>;
@@ -83,6 +83,8 @@ function collide(padding: number) {
 const TOPIC_NAME_ZOOM = 1.2;
 /** 멀리서도 이름을 적는 큰 주제의 항목 수 */
 const BIG_TOPIC = 10;
+const LINK_DISTANCE: Record<ForceLinkKind, number> = { hub: 40, relation: 45, also: 90, agenda: 160 };
+const LINK_STRENGTH: Record<ForceLinkKind, number> = { hub: 0.5, relation: 0.2, also: 0.02, agenda: 0.05 };
 
 export default function ReviewGraphCanvas({
   data,
@@ -126,8 +128,8 @@ export default function ReviewGraphCanvas({
     graph.d3Force("charge")?.strength((node: GraphNodeObject) => (node.hub ? -300 : -45)).distanceMax(400);
     graph
       .d3Force("link")
-      ?.distance((link: GraphLinkObject) => (link.kind === "hub" ? 40 : link.kind === "relation" ? 45 : 90))
-      .strength((link: GraphLinkObject) => (link.kind === "hub" ? 0.5 : link.kind === "relation" ? 0.2 : 0.02));
+      ?.distance((link: GraphLinkObject) => LINK_DISTANCE[link.kind])
+      .strength((link: GraphLinkObject) => LINK_STRENGTH[link.kind]);
     graph.d3Force("gravity", gravity(0.04));
     graph.d3Force("collide", collide(2));
     graph.d3ReheatSimulation();
@@ -233,6 +235,7 @@ export default function ReviewGraphCanvas({
       const fade = hoveredId !== null ? 0.25 : 1;
       if (link.kind === "hub") return withAlpha(tokens.mutedSoft, 0.28 * fade);
       if (link.kind === "also") return withAlpha(tokens.mutedSoft, 0.7 * fade);
+      if (link.kind === "agenda") return withAlpha(tokens.ink, 0.85 * fade);
       return withAlpha(tokens.muted, 0.75 * fade);
     },
     [hoveredId, tokens]
@@ -241,7 +244,7 @@ export default function ReviewGraphCanvas({
   const linkWidth = useCallback(
     (link: GraphLinkObject) => {
       const adjacent = hoveredId !== null && (endId(link.source) === hoveredId || endId(link.target) === hoveredId);
-      return adjacent ? 1.6 : link.kind === "relation" ? 1.1 : link.kind === "also" ? 0.9 : 0.6;
+      return adjacent ? 1.8 : link.kind === "agenda" ? 1.6 : link.kind === "relation" ? 1.1 : link.kind === "also" ? 0.9 : 0.6;
     },
     [hoveredId]
   );
@@ -271,6 +274,8 @@ export default function ReviewGraphCanvas({
       linkColor={linkColor}
       linkWidth={linkWidth}
       linkLineDash={(link) => (link.kind === "also" ? [2, 3] : null)}
+      linkDirectionalArrowLength={(link) => link.kind === "agenda" ? 8 : 0}
+      linkDirectionalArrowRelPos={0.5}
       onNodeHover={onHover}
       onNodeClick={onSelect}
       // 그냥 굴리면 페이지가 내려가야 한다. 휠 확대는 Ctrl/⌘ 과 트랙패드 핀치(ctrlKey 가 실린다)만이다.
