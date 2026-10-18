@@ -40,13 +40,13 @@ import { cn } from "@/lib/utils";
 /**
  * 행이 「열린」 상태일 때만 켜지는 변형. 아바타가 `…` 폭만큼 왼쪽으로 비키고 `…` 가 나타난다.
  * 포인터 hover, **키보드 포커스**(`:focus-visible` — 마우스로 누른 포커스는 제외), 메뉴가 열려 있는
- * 동안(`aria-expanded`), 그리고 hover 가 없는 터치 환경에서 늘 켠다.
+ * 동안(`aria-expanded`), 아바타 툴팁이 열려 있는 동안(`data-popup-open` — 툴팁은 포털이라 포인터가 거기 닿으면 행 hover 가 풀린다), 그리고 hover 가 없는 터치 환경에서 늘 켠다.
  * Tailwind 는 클래스를 정적 문자열로만 읽으므로 두 곳에서 같은 목록을 그대로 쓴다.
  */
 const SHIFT_WHEN_OPEN =
-  "group-hover/row:-translate-x-9 group-has-[:focus-visible]/row:-translate-x-9 group-has-[[aria-expanded=true]]/row:-translate-x-9 [@media(hover:none)]:-translate-x-9";
+  "group-hover/row:-translate-x-9 group-has-[:focus-visible]/row:-translate-x-9 group-has-[[aria-expanded=true]]/row:-translate-x-9 group-has-[[data-popup-open]]/row:-translate-x-9 [@media(hover:none)]:-translate-x-9";
 const REVEAL_WHEN_OPEN =
-  "group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-has-[:focus-visible]/row:pointer-events-auto group-has-[:focus-visible]/row:opacity-100 group-has-[[aria-expanded=true]]/row:pointer-events-auto group-has-[[aria-expanded=true]]/row:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100";
+  "group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-has-[:focus-visible]/row:pointer-events-auto group-has-[:focus-visible]/row:opacity-100 group-has-[[aria-expanded=true]]/row:pointer-events-auto group-has-[[aria-expanded=true]]/row:opacity-100 group-has-[[data-popup-open]]/row:pointer-events-auto group-has-[[data-popup-open]]/row:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100";
 
 function ActiveRecordingMeter({ title }: { title: string }) {
   const meter = useRecordingMeter();
@@ -224,17 +224,19 @@ export function NoteListRow({
     // 그 버튼의 링이 따로 있으므로 행까지 두르면 링이 두 겹이 된다.
     <article
       className={cn(
-        "group/row relative flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset",
+        "group/row relative flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[[data-popup-open]]:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset",
         arrived &&
           "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
       )}
     >
       <Link
         href={sideHref}
-        onClick={() => track("note_opened", {
-          workspace_id: workspaceId,
-          view: "side",
-        })}
+        onClick={() =>
+          track("note_opened", {
+            workspace_id: workspaceId,
+            view: "side",
+          })
+        }
         aria-label={`${note.title} 노트 열기`}
         // self-stretch로 행 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
         className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none"
@@ -308,10 +310,12 @@ export function NoteListRow({
         <DropdownMenuContent align="end">
           <DropdownMenuLinkItem
             href={fullHref}
-            onClick={() => track("note_opened", {
-              workspace_id: workspaceId,
-              view: "full",
-            })}
+            onClick={() =>
+              track("note_opened", {
+                workspace_id: workspaceId,
+                view: "full",
+              })
+            }
             // `onNavigate`는 실제 클라이언트 이동에만 불린다 — ⌘+클릭(새 탭)에서는 안 돈다.
             // `onClick`으로 하면 새 탭을 열어도 이 탭의 스피너가 영원히 남는다.
             onNavigate={() => setOpenedFullViewFrom(routeKey)}
