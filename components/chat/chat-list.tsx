@@ -65,7 +65,7 @@ export function ChatList({
           ref={backRef}
           type="button"
           onClick={onBack}
-          className="flex w-full items-center gap-2 rounded-block px-3 py-2.5 text-left text-sm text-[var(--el-ink)] outline-none hover:bg-[var(--el-canvas-soft)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex w-full items-center gap-2 rounded-block px-3 py-2.5 text-left text-sm text-[var(--el-ink)] outline-none hover:bg-[var(--el-surface-strong)]/55 focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <ArrowLeft aria-hidden className="size-4 shrink-0" />
           뒤로가기
@@ -96,8 +96,8 @@ export function ChatList({
                     "transition-colors duration-150 motion-reduce:transition-none",
                     // 평소에는 배경이 없어야 hover·선택·선택+hover 셋이 안 뭉개진다.
                     chat.chatId === currentChatId
-                      ? "bg-[var(--el-surface-strong)] hover:bg-[color-mix(in_oklch,var(--el-surface-strong),var(--el-ink)_8%)]"
-                      : "hover:bg-[var(--el-canvas-soft)]"
+                      ? "bg-[var(--el-surface-strong)] font-medium"
+                      : "hover:bg-[var(--el-surface-strong)]/55"
                   )}
                 >
                   <span className="min-w-0 flex-1 truncate text-sm text-[var(--el-ink)]">

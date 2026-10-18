@@ -199,7 +199,7 @@
   --sidebar-foreground: var(--el-ink);
   --sidebar-primary: var(--el-primary);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--el-surface-card);
+  --sidebar-accent: var(--el-surface-strong);
   --sidebar-accent-foreground: var(--el-ink);
   --sidebar-border: var(--el-hairline);
   --sidebar-ring: var(--el-ink);

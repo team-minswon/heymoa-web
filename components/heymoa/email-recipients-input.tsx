@@ -321,7 +321,7 @@ function OptionRow({
       id={id}
       role="option"
       aria-selected={selected}
-      className="flex cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-1.5 aria-selected:bg-[var(--el-canvas-soft)]"
+      className="flex cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-1.5 hover:bg-[var(--el-surface-strong)]/55 aria-selected:bg-[var(--el-surface-strong)]"
       // mousedown 은 입력칸의 포커스만 붙든다 — blur 가 목록을 닫으면 클릭이 닿지 않는다. 고르기는 click 에서 한다:
       // 스크린 리더는 click 만 보내고, mousedown 에서 고르면 오른쪽 클릭에도 받는 사람이 들어갔다
       onMouseDown={(event) => event.preventDefault()}
