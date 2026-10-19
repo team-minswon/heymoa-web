@@ -30,6 +30,11 @@ import {
   recordingClaimOf,
 } from "@/lib/transcription/recorder-lease";
 
+const desktopApp = vi.hoisted(() => ({ value: false as boolean | null }));
+vi.mock("@/lib/desktop/use-desktop-app", () => ({
+  useDesktopApp: () => desktopApp.value,
+}));
+
 // 이 파일이 보는 것은 패널이지 소켓이 아니다. 연결은 세우지 않는다.
 vi.mock("@/lib/notes/note-topic-client", () => ({
   NoteTopicClient: class {
@@ -1862,6 +1867,47 @@ describe("NotePanel", () => {
       expect(
         screen.getByRole("button", { name: "회의 시작" })
       ).toBeInTheDocument();
+    });
+
+    describe("데스크톱 앱 안내 말풍선", () => {
+      afterEach(() => {
+        desktopApp.value = false;
+      });
+
+      it("브라우저의 미시작 회의에서 링크와 화살표가 있는 말풍선을 띄운다", () => {
+        noteState.value.meetingStatus = "NOT_STARTED";
+        noteState.value.meetingStartedBy = null;
+
+        renderStartGate();
+
+        const hint = screen.getByTestId("desktop-app-hint");
+        expect(hint).toHaveTextContent(
+          "화상회의 녹음은 데스크톱 앱으로"
+        );
+        const link = screen.getByRole("link", { name: "데스크톱 앱" });
+        expect(link).toHaveAttribute("href", "/download");
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).toHaveAttribute("rel", "noopener noreferrer");
+        expect(hint.querySelector('span[aria-hidden="true"]')).not.toBeNull();
+      });
+
+      it.each([true, null])("앱 안(%s)에서는 띄우지 않는다", (v) => {
+        desktopApp.value = v;
+        noteState.value.meetingStatus = "NOT_STARTED";
+        noteState.value.meetingStartedBy = null;
+
+        renderStartGate();
+
+        expect(screen.queryByTestId("desktop-app-hint")).toBeNull();
+      });
+
+      it("시작한 회의에서는 띄우지 않는다", () => {
+        noteState.value.meetingStatus = "IN_PROGRESS";
+
+        renderStartGate();
+
+        expect(screen.queryByTestId("desktop-app-hint")).toBeNull();
+      });
     });
 
     it("좁은 화면에서는 독을 본문 아래 레인에 두고 desktop에서만 띄운다", () => {

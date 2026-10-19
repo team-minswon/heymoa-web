@@ -9,7 +9,7 @@ export const contentType = "image/png";
 export default function Image() {
   return helpOgImage(
     "데스크톱 앱 다운로드",
-    "Mac · Windows에서 화상회의 상대방 소리까지 녹음해요",
+    "Mac · Windows에서 화상회의 녹음까지 해요",
     "헤이모아 데스크톱 앱"
   );
 }

@@ -943,21 +943,30 @@ export function NotePanel({
                 ) : null}
                 {/* 자막이 멈춘 이유를 말해 준다. 안 말하면 멀쩡한 녹음을 중단한다. */}
                 {recordingDegraded ? <RecordingDegradedNotice /> : null}
-                {/* 브라우저는 마이크만 받는다. 화상회의 상대방 소리가 빠진다는 것을 **시작 전에** 한 번
+                {/* 브라우저는 마이크만 받는다. 화상회의 상대방 목소리가 빠진다는 것을 **시작 전에** 한 번
                     말한다 — 끝나고 알면 그 회의는 되돌릴 수 없다. 시작한 회의·앱 안에서는 안 띄운다. */}
                 {isDesktopApp === false &&
                 note?.meetingStatus === "NOT_STARTED" &&
                 !recordingHere ? (
-                  <p className="rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] px-3 py-1.5 text-[12px] text-[var(--el-muted)] shadow-e2 backdrop-blur-xl">
-                    상대방 소리까지 기록하려면{" "}
+                  <p
+                    data-testid="desktop-app-hint"
+                    // 독을 가리키는 말풍선. 화살표는 EndNudge 와 같이 회전한 정사각형의 두 변만 테두리를 그린다.
+                    className="relative rounded-full border border-[var(--el-hairline-strong)] bg-white px-3 whitespace-nowrap py-1.5 text-[12px] text-[var(--el-muted)] shadow-e2 animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
+                  >
+                    화상회의 녹음은{" "}
                     <a
                       href="/download"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-[var(--el-ink)] underline underline-offset-2"
+                      className="rounded-sm font-semibold text-[var(--el-ink)] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
                     >
                       데스크톱 앱
                     </a>
+                    으로
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute -bottom-[6px] left-1/2 size-2.5 -translate-x-1/2 rotate-45 border-r border-b border-[var(--el-hairline-strong)] bg-white"
+                    />
                   </p>
                 ) : null}
                 {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
