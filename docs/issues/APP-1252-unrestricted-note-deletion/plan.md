@@ -58,6 +58,8 @@ Server baseline의 `PatchMeetingReviewItemHandler.requireDecisionsAllowed`는 �
 
 최신 `origin/dev` 위에서 최종 변경과 생성물에 `pnpm test:run && pnpm verify`와 전체 `pnpm test:e2e`를 실행한다. 레포 `code-review` 기준의 Codex 리뷰와 dev 대상 PR 상태를 확인한다. 공동 docs가 먼저 반영된 뒤 사용자 승인 범위의 구현 병합·Linear 종료·WT 정리를 수행하며 운영 배포는 하지 않는다.
 
+최초 최종 검증에서 전체 브라우저 검사와 Codex 전체 리뷰를 완료했다. docs 대기 중 base에 APP-1261 회의 종료 변경이 추가되어 재배치한다. 사용자가 과한 검증을 줄이도록 정했으므로 이 재배치에서는 필수 `pnpm test:run && pnpm verify`를 실행하고, 브라우저는 기존 종료·삭제 사례만 선택한다. 전체 브라우저 묶음을 반복하거나 새 테스트 행렬을 추가하지 않는다. Codex는 이전 전체 리뷰와 `git range-diff`의 제품 코드 동일성을 대조하고, 새 base의 종료 확인창·NoteView·삭제/녹음 경계만 확인해 최종 판정한다. 이전 전체 결과는 해당 base의 근거로 구분하며 새 base의 전수 브라우저 결과로 확대하지 않는다.
+
 ## 안 하는 것
 
 전건 분석, 프로젝트 요약, 승계 결정·할 일 재판정, Web 연결 합성, SQS/AI 호출, 새 기능·이슈, 일반 분석 flag, 별도 삭제 상태관리, 운영 배포는 하지 않는다. AI 그룹 실험은 %4, Server 삭제는 %1, AI 비실험 구현은 %0 소유다.
