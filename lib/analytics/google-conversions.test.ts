@@ -51,13 +51,19 @@ describe("GA 광고 전환", () => {
       "first_recording",
       undefined,
     ]);
-    expect(posthog.capture).not.toHaveBeenCalled();
+    expect(posthog.capture.mock.calls).toEqual([
+      ["sign_up", undefined],
+      ["first_recording", { workspace_id: "W1" }],
+    ]);
   });
 
   it("수집을 거부하면 대기 전환도 삭제합니다", () => {
     analytics.trackConversion("sign_up");
     analytics.setAnalyticsOptOut(true);
+    posthog.capture.mockClear();
     analytics.trackConversion("first_recording");
+    analytics.trackConversion("sign_up");
+    expect(posthog.capture).not.toHaveBeenCalled();
     analytics.setAnalyticsOptOut(false);
     const gtag = vi.fn();
     (window as { gtag?: unknown }).gtag = gtag;

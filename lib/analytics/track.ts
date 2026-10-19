@@ -10,9 +10,11 @@ import { desktopAuthBridge } from "@/lib/desktop/auth";
  * meeting_created → recording_started → meeting_ended → summary_viewed → summary_confirmed.
  * 사용 가이드(`/help`)는 로그인 전 방문자도 보므로 따로 센다: help_page_viewed → help_search_opened → help_search_submitted →
  * help_result_clicked → (login_started | 대시보드 이동 help_cta_clicked). 속성은 slug·순위·길이·개수뿐이고 검색어 원문은 보내지 않는다.
- * 가입은 서버의 `user_signed_up`으로 셉니다. 웹 로그인 완료와 중복으로 보내지 않습니다.
+ * 제품 가입 집계는 서버의 `user_signed_up`, Meta 전송은 웹의 `sign_up`을 씁니다. 합산하지 않습니다.
  */
 export type AnalyticsEvent =
+  | "sign_up"
+  | "first_recording"
   | "login_started"
   | "login_completed"
   | "workspace_created"
@@ -291,12 +293,13 @@ function sendGoogleEvent(event: GoogleEvent, properties?: Properties) {
     beforeGoogleInit.push([event, properties]);
 }
 
-/** 신규 여부는 서버가 판정합니다. PostHog 의 기존 제품 이벤트와 중복 전송하지 않습니다. */
+/** 서버 확정 전환은 Meta 전송용으로도 수집합니다. 제품 가입 집계는 user_signed_up을 유지합니다. */
 export function trackConversion(
   event: "sign_up" | "first_recording",
   properties?: Properties
 ) {
   if (isTestWorkspace(properties)) return;
+  track(event, properties);
   // GA 광고 전환에는 회원·워크스페이스 식별자를 보내지 않습니다.
   sendGoogleEvent(
     event,
