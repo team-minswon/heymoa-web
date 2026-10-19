@@ -121,6 +121,22 @@ describe("MockTranscriptionScenario", () => {
     expect(mockDb.getSession(session.sessionId).status).toBe("INTERRUPTED");
   });
 
+  it("회의 삭제 후 연결 종료가 세션을 다시 찾거나 만들지 않는다", () => {
+    const { note, session } = createSession();
+    const scenario = createMockTranscriptionScenario({
+      sessionId: session.sessionId,
+      send: vi.fn(),
+    });
+    scenario.open();
+    mockDb.deleteNote(note.noteId);
+
+    expect(() => scenario.dispose()).not.toThrow();
+    expect(() => scenario.dispose()).not.toThrow();
+    expect(() => mockDb.getSession(session.sessionId)).toThrow(
+      "TRANSCRIPTION_SESSION_NOT_FOUND"
+    );
+  });
+
   it("reports invalid odd-byte audio and closes with 1008", async () => {
     const { session } = createSession();
     const send = vi.fn();

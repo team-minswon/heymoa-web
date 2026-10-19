@@ -24,6 +24,7 @@ const item = (over: Partial<ReviewItem>): ReviewItem => ({
   due: null,
   replacements: [],
   taskChanges: [],
+  decisions: [],
   suggestedAssignment: null,
   ...over,
 });

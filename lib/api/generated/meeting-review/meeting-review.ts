@@ -88,7 +88,7 @@ export const getGetMeetingReviewUrl = (noteId: string) => {
 };
 
 /**
- * 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+ * 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을 바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
  * @summary getMeetingReview
  */
 export const getMeetingReview = async (
@@ -454,7 +454,7 @@ export const getCreateMeetingReviewItemUrl = (noteId: string) => {
 };
 
 /**
- * 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+ * 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을 바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
  * @summary createMeetingReviewItem
  */
 export const createMeetingReviewItem = async (
@@ -953,6 +953,11 @@ export type updateMeetingReviewItemResponse200 = {
   status: 200;
 };
 
+export type updateMeetingReviewItemResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type updateMeetingReviewItemResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -968,6 +973,7 @@ export type updateMeetingReviewItemResponseSuccess =
     headers: Headers;
   };
 export type updateMeetingReviewItemResponseError = (
+  | updateMeetingReviewItemResponse400
   | updateMeetingReviewItemResponse401
   | updateMeetingReviewItemResponse409
 ) & {
@@ -986,7 +992,7 @@ export const getUpdateMeetingReviewItemUrl = (
 };
 
 /**
- * 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+ * 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을 바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
  * @summary updateMeetingReviewItem
  */
 export const updateMeetingReviewItem = async (
@@ -1034,7 +1040,7 @@ export const getUpdateMeetingReviewItemMutationKey = () =>
   ["updateMeetingReviewItem"] as const;
 
 export const getUpdateMeetingReviewItemMutationOptions = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1078,8 +1084,8 @@ export type UpdateMeetingReviewItemMutationBody =
   | UpdateMeetingReviewItemRequest
   | undefined;
 export type UpdateMeetingReviewItemMutationError =
-  | UnauthorizedResponse
-  | AppErrorResponse;
+  | AppErrorResponse
+  | UnauthorizedResponse;
 export type UpdateMeetingReviewItemMutationVariables = {
   noteId: string;
   itemId: string;
@@ -1090,7 +1096,7 @@ export type UpdateMeetingReviewItemMutationVariables = {
  * @summary updateMeetingReviewItem
  */
 export const useUpdateMeetingReviewItem = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(
   options?: {

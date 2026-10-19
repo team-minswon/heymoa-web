@@ -132,7 +132,7 @@ export const getStartTranscriptionSessionResponseMock =
           sessionId: "0HZX2K7M9Q4AG",
           noteId: "0HZX2K7M9Q4AF",
           status: "READY",
-          firstRecording: false,
+          firstRecording: true,
           readyExpiresAt: "2026-07-14T01:02:03Z",
           startedAt: null,
           endedAt: null,

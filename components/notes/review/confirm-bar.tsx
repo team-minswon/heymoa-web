@@ -129,7 +129,8 @@ export function ConfirmBar({
             <AlertDialogTitle>검토를 완료할까요?</AlertDialogTitle>
             <AlertDialogDescription>
               포함한 항목이 프로젝트에 확정되고 할 일 {summary.newTasks}개가 생깁니다.
-              {summary.endedDecisions > 0 ? ` 이전 결정 ${summary.endedDecisions}개가 끝납니다.` : ""} 완료한 뒤에는 검토를
+              {summary.endedDecisions > 0 ? ` 이전 결정 ${summary.endedDecisions}개가 끝납니다.` : ""}
+              {summary.changedTasks > 0 ? ` 기존 할 일 변경 ${summary.changedTasks}건이 포함됩니다.` : ""} 완료한 뒤에는 검토를
               고칠 수 없습니다.
             </AlertDialogDescription>
             {error ? (

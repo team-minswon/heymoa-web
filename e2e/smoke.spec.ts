@@ -218,6 +218,30 @@ async function expectForeignViewerTranscript(
   }
 }
 
+test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 제거한다", async ({
+  page,
+}) => {
+  const noteId = await createMeetingNote(page);
+  await startRecording(page, "회의 시작");
+  await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
+  await page.getByRole("menuitem", { name: "삭제" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("프로젝트로 승계된 결정사항·할 일");
+  await dialog.getByRole("button", { name: "삭제", exact: true }).click();
+
+  await expect(
+    page.getByText("회의를 삭제했습니다.", { exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "중지", exact: true })
+  ).toHaveCount(0);
+  await expect(page.locator(`a[href*="/notes/${noteId}"]`)).toHaveCount(0);
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=full`);
+  await expect(
+    page.getByRole("button", { name: "노트 메뉴", exact: true })
+  ).toHaveCount(0);
+});
+
 test("boots with the MSW service worker registered", async ({ page }) => {
   await page.goto("/");
 
@@ -1504,7 +1528,9 @@ test("ends a stopped meeting from the side panel and opens the ended summary", a
 });
 
 /** 시작 카드를 누르면 입력 없이 바로 보내진다(APP-1117). 연동 전인 외부 도구 카드는 설정의 연동 섹션을 연다. */
-test("sends a starter question straight from the empty chat", async ({ page }) => {
+test("sends a starter question straight from the empty chat", async ({
+  page,
+}) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
@@ -1517,7 +1543,9 @@ test("sends a starter question straight from the empty chat", async ({ page }) =
   await expect(page.getByText("무엇을 도와드릴까요?")).toBeHidden();
 });
 
-test("opens integration settings from the starter when Linear is not connected", async ({ page }) => {
+test("opens integration settings from the starter when Linear is not connected", async ({
+  page,
+}) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
@@ -2099,7 +2127,9 @@ test("opens guest settings from the participants popup", async ({ page }) => {
 
   await expect(page.getByRole("option").first()).toBeHidden();
   await expect(page.getByRole("dialog", { name: /설정/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "임시 참여자", level: 2 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "임시 참여자", level: 2 })
+  ).toBeVisible();
 });
 
 /**
@@ -2527,9 +2557,7 @@ test("keeps confirmation shading and cancellation in both note display modes", a
       .click();
     const dialog = page.getByRole("dialog", { name: "회의를 종료할까요?" });
     await expect(dialog).toBeVisible();
-    await expect(
-      page.locator('[data-slot="dialog-overlay"]')
-    ).toBeVisible();
+    await expect(page.locator('[data-slot="dialog-overlay"]')).toBeVisible();
     await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCSS(
       "opacity",
       "1"
@@ -2606,8 +2634,9 @@ test("searches the full transcript locally without stealing input focus", async 
   expect(requests).toBe(0);
 });
 
-
-test("녹음 컨트롤은 전체·사이드 보기와 좁은 화면에서 영역 안에 머뭅니다", async ({ page }) => {
+test("녹음 컨트롤은 전체·사이드 보기와 좁은 화면에서 영역 안에 머뭅니다", async ({
+  page,
+}) => {
   await createMeetingNote(page);
   await startRecording(page, "회의 시작");
   const dock = page.getByRole("group", { name: "녹음 제어" });
@@ -2615,14 +2644,26 @@ test("녹음 컨트롤은 전체·사이드 보기와 좁은 화면에서 영역
     await page.setViewportSize({ width, height: 900 });
     for (const label of ["사이드 뷰로 보기", "전체 화면으로 보기"]) {
       await page.getByRole("button", { name: label, exact: true }).click();
-      await expect(dock.getByRole("button", { name: "중지", exact: true })).toBeVisible();
-      await expect.poll(() => dock.evaluate((node) => {
-        const rect = node.getBoundingClientRect();
-        const button = node.querySelector('button[aria-label="중지"]')!.getBoundingClientRect();
-        return rect.left >= 0 && rect.right <= window.innerWidth &&
-          button.left >= rect.left && button.right <= rect.right &&
-          node.scrollWidth <= node.clientWidth;
-      })).toBe(true);
+      await expect(
+        dock.getByRole("button", { name: "중지", exact: true })
+      ).toBeVisible();
+      await expect
+        .poll(() =>
+          dock.evaluate((node) => {
+            const rect = node.getBoundingClientRect();
+            const button = node
+              .querySelector('button[aria-label="중지"]')!
+              .getBoundingClientRect();
+            return (
+              rect.left >= 0 &&
+              rect.right <= window.innerWidth &&
+              button.left >= rect.left &&
+              button.right <= rect.right &&
+              node.scrollWidth <= node.clientWidth
+            );
+          })
+        )
+        .toBe(true);
       await expect(dock).toHaveCSS("transform", "none");
     }
   }

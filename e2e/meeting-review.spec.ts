@@ -21,6 +21,37 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(overflow).toBeLessThanOrEqual(0);
 }
 
+test("분석 중에는 삭제 확인을 비활성화한다", async ({ page }) => {
+  await page.goto(reviewUrl(ANALYZING_NOTE));
+  await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
+  await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog.getByText("분석 중에는 삭제할 수 없습니다.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "삭제", exact: true })).toBeDisabled();
+  await dialog.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(page.getByRole("button", { name: "노트 메뉴", exact: true })).toBeVisible();
+});
+
+for (const [state, noteId] of [
+  ["미분석", "01K0000000023"],
+  ["분석 완료", "01K0000000021"],
+  ["승인 완료", "01K0000000024"],
+  ["분석 실패", "01K0000000026"],
+] as const) {
+  test(`${state} 회의는 삭제하고 다시 열면 재노출하지 않는다`, async ({ page }) => {
+    await page.goto(reviewUrl(noteId));
+    await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
+    await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
+    const button = page.getByRole("alertdialog").getByRole("button", { name: "삭제", exact: true });
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect(page.getByText("회의를 삭제했습니다.", { exact: true })).toBeVisible();
+    await expect(page.locator(`a[href*="/notes/${noteId}"]`)).toHaveCount(0);
+    await page.goto(reviewUrl(noteId));
+    await expect(page.getByRole("button", { name: "노트 메뉴", exact: true })).toHaveCount(0);
+  });
+}
+
 test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다", async ({ page }) => {
   await page.goto(reviewUrl(MENTORING_NOTE));
   await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });

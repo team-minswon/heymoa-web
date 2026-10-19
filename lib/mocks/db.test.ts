@@ -864,14 +864,13 @@ describe("only the meeting starter can operate a meeting", () => {
 describe("노트 삭제", () => {
   beforeEach(() => mockDb.reset());
 
-  it("기록 중인 회의는 못 지운다", () => {
+  it("기록 중인 회의도 지운다", () => {
     const live = mockDb
       .listNotes("01K0000000001")
       .find((row) => row.meetingStatus === "IN_PROGRESS");
     expect(live).toBeDefined();
-    expect(() => mockDb.deleteNote(live!.noteId)).toThrow(
-      "MEETING_IN_PROGRESS"
-    );
+    mockDb.deleteNote(live!.noteId);
+    expect(() => mockDb.getNote(live!.noteId)).toThrow("NOTE_NOT_FOUND");
   });
 
   it("지우면 전사 세그먼트와 요약도 함께 사라진다", () => {

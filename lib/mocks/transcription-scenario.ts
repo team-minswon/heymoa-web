@@ -1,5 +1,8 @@
 import { mockDb } from "@/lib/mocks/db";
-import { HELP_DEMO_LIVE_SCRIPT, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
+import {
+  HELP_DEMO_LIVE_SCRIPT,
+  isHelpDemoEnabled,
+} from "@/lib/mocks/help-demo";
 import {
   DEFAULT_VOICE_ACTIVITY_CONFIG,
   pcm16Rms,
@@ -116,7 +119,9 @@ export class MockTranscriptionScenario {
   constructor(private readonly options: ScenarioOptions) {
     this.config = {
       ...DEFAULT_VOICE_ACTIVITY_CONFIG,
-      ...(isHelpDemoEnabled() && { partialEveryMs: HELP_DEMO_PARTIAL_EVERY_MS }),
+      ...(isHelpDemoEnabled() && {
+        partialEveryMs: HELP_DEMO_PARTIAL_EVERY_MS,
+      }),
       ...options.config,
     };
     this.detector = new VoiceActivityDetector(this.config);
@@ -250,7 +255,15 @@ export class MockTranscriptionScenario {
 
   dispose() {
     if (this.phase === "recording" || this.phase === "stopping") {
-      mockDb.updateSessionStatus(this.options.sessionId, "INTERRUPTED");
+      try {
+        mockDb.updateSessionStatus(this.options.sessionId, "INTERRUPTED");
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          error.message !== "TRANSCRIPTION_SESSION_NOT_FOUND"
+        )
+          throw error;
+      }
     }
     this.phase = "closed";
   }

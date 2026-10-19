@@ -595,11 +595,7 @@ export function NotePanel({
               ) : null}
             </TabsList>
 
-            {/* **회의 종료와 노트 메뉴는 이 한 자리를 나눠 쓴다.** 서로 배타적이라 겹치지
-              않는다 — 삭제 메뉴는 기록 중에 숨고(서버가 409로 막으니 눌러서 실패하게 두지
-              않는다), 회의 종료는 기록 중·중지됨에만 뜬다. 중지됨에서만 둘이 함께 서는데
-              88+32라 860 사이드 시트에서도 넉넉하다.
-              전사를 보다가 회의를 끝내는 것은 흔한 일이라 **탭과 무관하게** 여기 있어야 한다. */}
+            {/* 회의 종료 제어와 삭제 메뉴는 상태와 무관하게 함께 사용할 수 있습니다. */}
             {note && canEndMeeting ? (
               // **noteId로 키잉한다.** 안 하면 A의 회의 종료 확인창을 연 채 뒤로가기로 B에
               // 왔을 때 이 패널이 재마운트되지 않아 `endOpen`이 남고, 대상만 B로 바뀌어
@@ -611,7 +607,7 @@ export function NotePanel({
                 onEditParticipants={editParticipants}
               />
             ) : null}
-            {note && note.meetingStatus !== "IN_PROGRESS" ? (
+            {note ? (
               <div className="flex shrink-0 items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -638,6 +634,7 @@ export function NotePanel({
                 </DropdownMenu>
                 <NoteDeleteDialog
                   noteId={noteId}
+                  projectId={note.projectId}
                   title={note.title}
                   open={deleteTargetId === noteId}
                   onOpenChange={(open) =>

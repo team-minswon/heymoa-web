@@ -359,6 +359,7 @@ export function ReviewBoard({
               }
               onRetryTask={() => void tasksQuery.refetch()}
               disabled={!editable || saving || !item.included}
+              confirmed={confirmed && item.included}
               onChoose={async (next) => {
                 const saved = await choose(
                   item,

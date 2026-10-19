@@ -43,8 +43,10 @@ export function indexMeetingLinks(
   );
 
   const byItemId = new Map<string, PastItem[]>();
-  for (const link of data.meetingLinks) {
+  for (const link of [...data.meetingLinks, ...data.conflicts]) {
     if (link.source.noteId !== noteId || !SHOWN_LINK_KINDS.has(link.kind)) continue;
+    // 승계 항목은 출처 회의가 삭제돼도 남습니다. 없는 출처를 회의 링크로 만들지 않습니다.
+    if (link.target.noteId == null || link.target.proposalId == null) continue;
     if (carded.has(link.target.proposalId)) continue;
     const itemId = itemOfProposal.get(link.source.proposalId);
     if (!itemId) continue;

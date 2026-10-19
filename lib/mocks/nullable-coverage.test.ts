@@ -390,6 +390,13 @@ function contractSamples() {
  * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
  */
 const KNOWN_ONE_SIDED = new Set([
+  // APP-1252에서 공개 계약 사본을 맞췄지만 기존 목에는 사람이 저장한 업무 초안이 없다.
+  // 빈 decisions/null draft를 유지하는 최소 호환이며 초안 편집 기능 검증으로 세지 않는다.
+  "MeetingReviewResponse.data.items[].taskChanges[].draft",
+  // 기존 시드의 대체 대상은 모두 생존 회의에 속한다. 삭제된 출처의 표시 fallback은
+  // review-parts의 국소 응답 검사로 확인하고, 전수 목 표본의 삭제 재현으로 세지 않는다.
+  "MeetingReviewResponse.data.items[].replacements[].target.noteTitle",
+  "MeetingReviewResponse.data.items[].replacements[].target.noteId",
   // **목의 알림은 한 쪽뿐이다.** 커서는 `hasMore` 가 참일 때만 값이 있는데, 그러려면 시드에
   // 알림을 50건 넘게 심어야 한다 — 모든 테스트가 그만큼 느려지는 값을 이 한 필드 때문에
   // 치르지 않는다. 서버 쪽은 `GetNotificationsService` 가 한 건 더 읽어 정하고 IT 가 본다.
@@ -430,6 +437,25 @@ const KNOWN_ONE_SIDED = new Set([
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */
 const KNOWN_UNOBSERVED = new Set<string>([
+  // 이 전수 표본은 선택 query인 noteId를 보내지 않아 기존 목의 meetingLinks가 비어 있다.
+  // EndpointResponse는 NON_NULL을 생략한다. APPROVED 대상의 출처 부재는 별도
+  // meeting-links.test.ts에서 검사하며, 이 표본이 양쪽 응답을 덮었다고 세지 않는다.
+  ...["source.itemId", "source.type", "target.noteId", "target.proposalId", "target.itemId", "target.type"].map(
+    (path) => `ProjectMeetingLinksResponse.data.meetingLinks[].${path}`
+  ),
+  // 최신 Server baseline의 기존 저장 초안 필드다. 현재 목은 초안을 저장하지 않으므로
+  // 부모가 null/빈 배열이다. 새 UX나 임의 저장값을 넣어 지원하는 것처럼 보이지 않게 한다.
+  ...["taskChanges[].draft", "decisions[].taskChange"].flatMap((parent) =>
+    ["due", "due.value", "assignee", "assignee.value", "assignee.value.label", "assignee.value.id", "status"].map(
+      (path) => `MeetingReviewResponse.data.items[].${parent}.${path}`
+    )
+  ),
+  "MeetingReviewResponse.data.items[].decisions[].taskChange",
+  // 충돌은 기존 공개 DTO에 있으나 이 전수 표본은 noteId 없이 조회해 conflicts가 비어 있다. 삭제 출처의 nullable
+  // 대응은 meeting-links/suggestion-row 검사에서 보고, 충돌 표시 품질로 확대하지 않는다.
+  ...["source.itemId", "source.type", "target.itemId", "target.noteId", "target.type", "target.proposalId"].map(
+    (path) => `ProjectMeetingLinksResponse.data.conflicts[].${path}`
+  ),
   // **server 가 `lastTurn.pendingApproval` 에 늘 `null` 을 보낸다.** 계약이 선언만 하고
   // 채우는 경로가 없어서, 그 아래 필드는 목이 무엇을 해도 관측될 수 없다.
   // 목을 억지로 채우면 **실서버가 안 내는 모양을 화면이 믿게 된다** — 그게 이 프로젝트가

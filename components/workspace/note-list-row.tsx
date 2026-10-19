@@ -317,20 +317,18 @@ export const NoteListRow = memo(function NoteListRow({
           >
             <Expand /> 전체 화면
           </DropdownMenuLinkItem>
-          {/* 기록 중이면 서버가 409로 막는다. 눌러서 실패하게 두지 않고 항목을 안 그린다. */}
-          {note.meetingStatus === "IN_PROGRESS" ? null : (
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2 /> 삭제
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 /> 삭제
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <NoteDeleteDialog
         noteId={note.noteId}
+        projectId={note.projectId}
         title={note.title}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}

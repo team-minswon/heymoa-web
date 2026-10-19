@@ -38,7 +38,7 @@ export function applyItemPatch(
           // (두 단계 저장, 되돌릴 수 없다) 응답을 기다리는 지금 방식 그대로 둔다.
           replacements: item.replacements.map((row) => {
             const decision = decisionOf.get(row.target.itemId);
-            return decision === undefined || decision === "APPLIED"
+            return decision !== null && decision !== "END" && decision !== "KEEP"
               ? row
               : { ...row, decision };
           }),

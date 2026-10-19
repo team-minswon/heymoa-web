@@ -110,7 +110,7 @@ export type RecordingContextValue = {
   error: string | null;
   start: (noteId: string, workspaceId: string) => Promise<void>;
   stop: () => Promise<boolean>;
-  disconnect: () => Promise<void>;
+  disconnect: (noteId?: string) => Promise<void>;
 };
 
 export type RecordingMeterValue = {
@@ -739,26 +739,31 @@ export function RecordingProvider({
     ]
   );
 
-  const disconnect = useCallback(async () => {
-    // 진행 중인 `start()` 에게 결과를 되돌려 놓지 말라고 알린다. 컨트롤러를 비우기 전에 올려야
-    // 그 사이에 끝난 요청도 이 값을 보고 판단한다.
-    teardownCountRef.current += 1;
-    const controller = controllerRef.current;
-    const current = latest.current.session;
-    controllerRef.current = null;
-    cancelledControllerRef.current = null;
-    stopPromiseRef.current = null;
+  const disconnect = useCallback(
+    async (noteId?: string) => {
+      // DELETE가 기다리는 동안 다른 회의의 녹음으로 바뀌었으면 그 녹음은 건드리지 않습니다.
+      if (noteId && latest.current.activeNoteId !== noteId) return;
+      // 진행 중인 `start()` 에게 결과를 되돌려 놓지 말라고 알린다. 컨트롤러를 비우기 전에 올려야
+      // 그 사이에 끝난 요청도 이 값을 보고 판단한다.
+      teardownCountRef.current += 1;
+      const controller = controllerRef.current;
+      const current = latest.current.session;
+      controllerRef.current = null;
+      cancelledControllerRef.current = null;
+      stopPromiseRef.current = null;
 
-    clearLevel();
-    forgetRecording();
-    cancelDegradedTimer();
-    // 남은 소리 수치까지 비운다. 남으면 phase 가 idle 이어도 탭 닫기를 붙잡는다
-    dispatch({ type: "disconnected" });
-    dispatchTranscript({ type: "reset" });
+      clearLevel();
+      forgetRecording();
+      cancelDegradedTimer();
+      // 남은 소리 수치까지 비운다. 남으면 phase 가 idle 이어도 탭 닫기를 붙잡는다
+      dispatch({ type: "disconnected" });
+      dispatchTranscript({ type: "reset" });
 
-    await controller?.close();
-    if (current) invalidateTranscriptQueries(current.noteId);
-  }, [cancelDegradedTimer, clearLevel, dispatch, invalidateTranscriptQueries]);
+      await controller?.close();
+      if (current) invalidateTranscriptQueries(current.noteId);
+    },
+    [cancelDegradedTimer, clearLevel, dispatch, invalidateTranscriptQueries]
+  );
 
   /**
    * 녹음 중에 그 워크스페이스에서 쫓겨났으면 보고 있는 화면과 무관하게 끊는다. 녹음은 route 를
@@ -773,6 +778,13 @@ export function RecordingProvider({
     const gone =
       errorCodeOf(sessionQuery.error) === "WORKSPACE_NOT_FOUND" ||
       errorCodeOf(sessionQuery.failureReason) === "WORKSPACE_NOT_FOUND";
+    const sessionGone = [sessionQuery.error, sessionQuery.failureReason].some(
+      (error) => errorCodeOf(error) === "TRANSCRIPTION_SESSION_NOT_FOUND"
+    );
+    if (sessionGone && !gone) {
+      const timer = window.setTimeout(() => void disconnect(), 0);
+      return () => window.clearTimeout(timer);
+    }
     if (!gone) return;
     // 화면이 다른 워크스페이스에 있으면 이 경로만 404 를 본다. 알리고 캐시에서도 걷어야 사이드바가
     // 죽은 워크스페이스를 계속 그리지 않는다. 화면 쪽과 같은 토스트 id 라 하나만 선다.

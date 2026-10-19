@@ -11,6 +11,9 @@ import { ReviewRow } from "@/components/notes/review/review-row";
 import { roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import { ConfirmBar } from "@/components/notes/review/confirm-bar";
+import { ReplacementSuggestion, TaskChangeSuggestion } from "@/components/notes/review/suggestion-row";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { formatDueDate } from "@/lib/format/date";
 import type { ProposalRevision } from "@/lib/api/generated/models";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
@@ -46,6 +49,7 @@ const item = (over: Partial<ReviewItem> = {}): ReviewItem => ({
   due: null,
   replacements: [],
   taskChanges: [],
+  decisions: [],
   suggestedAssignment: null,
   ...over,
 });
@@ -71,6 +75,100 @@ function renderRow(over: Partial<Parameters<typeof ReviewRow>[0]> = {}) {
   );
   return { onSave };
 }
+
+it("출처 회의가 삭제돼도 승계 결정과 사용자 선택은 남는다", () => {
+  const onChoose = vi.fn();
+  render(
+    <ReplacementSuggestion
+      replacement={{
+        target: {
+          itemId: "kept-decision",
+          revision: 1,
+          kind: "DECISION",
+          content: "사용자가 유지한 프로젝트 결정",
+          noteId: null,
+          noteTitle: null,
+          approvedAt: "2026-10-01T00:00:00Z",
+          endedAt: null,
+          originalProposalRef: null,
+        },
+        kind: "SUPERSEDES",
+        label: "대체",
+        reason: "사용자 검토가 필요합니다",
+        decision: "KEEP",
+      }}
+      choice="keep"
+      disabled={false}
+      onChoose={onChoose}
+    />
+  );
+  expect(screen.getByText("사용자가 유지한 프로젝트 결정")).toBeInTheDocument();
+  expect(screen.getByText(/프로젝트 결정 ·/)).toBeInTheDocument();
+  expect(onChoose).not.toHaveBeenCalled();
+});
+
+it.each([
+  { decision: "APPLY" as const, confirmed: false, pending: true },
+  { decision: "APPLY" as const, confirmed: true, pending: false },
+])("$decision·confirmed=$confirmed 초안의 실제 반영 상태와 저장된 값을 표시한다", async ({ decision, confirmed, pending: isPending }) => {
+  const onChoose = vi.fn().mockResolvedValue(true);
+  const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected request"));
+  try {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <TaskChangeSuggestion
+          change={{
+            target: { itemId: "task", revision: 1, originalProposalRef: null },
+            status: "CANCELLED",
+            assignee: { value: { type: "USER", id: "old", name: "원래 제안 담당" } },
+            due: { value: "2026-11-15" },
+            reason: "기존 제안",
+            decision,
+            draft: {
+              expectedRevision: 1,
+              status: "COMPLETED",
+              assignee: { value: { type: "USER", id: "saved" } },
+              due: { value: "2026-12-31" },
+            },
+          }}
+          task={{ taskId: "task", projectId: "project", projectName: "프로젝트", revision: 1, content: "프로젝트 할 일", taskStatus: "OPEN", assignee: null, due: null }}
+          workspaceId="workspace"
+          projectId="project"
+          choices={[{ type: "USER", id: "saved", name: "저장한 담당" }]}
+          choice="change"
+          taskState="ready"
+          onRetryTask={vi.fn()}
+          disabled={false}
+          confirmed={confirmed}
+          onChoose={onChoose}
+        />
+      </QueryClientProvider>
+    );
+    const pending = screen.getByRole("radio", { name: isPending ? "확정 시 반영" : "반영됨" });
+    expect(pending).toHaveAttribute("aria-checked", "true");
+    if (isPending) expect(screen.queryByRole("radio", { name: "반영됨" })).not.toBeInTheDocument();
+    expect(screen.getByText("완료")).toBeInTheDocument();
+    expect(screen.getByText("저장한 담당")).toBeInTheDocument();
+    expect(screen.getByText(formatDueDate("2026-12-31"))).toBeInTheDocument();
+    expect(screen.queryByText("원래 제안 담당")).not.toBeInTheDocument();
+    fireEvent.click(pending);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(onChoose).not.toHaveBeenCalled();
+    const keep = screen.getByRole("radio", { name: "넘기기" });
+    if (isPending) {
+      expect(keep).toBeEnabled();
+      fireEvent.click(keep);
+      await waitFor(() => expect(onChoose).toHaveBeenCalledWith("keep"));
+    } else {
+      expect(keep).toBeDisabled();
+      fireEvent.click(keep);
+      expect(onChoose).not.toHaveBeenCalled();
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  } finally {
+    fetchSpy.mockRestore();
+  }
+});
 
 describe("ReviewRow", () => {
   it("내용 편집은 Enter 로 저장하고 Esc 로 닫는다", async () => {

@@ -75,6 +75,14 @@ export const getGetMeetingReviewResponseMock = (): MeetingReviewResponse => ({
             due: { value: "2026-09-18" },
             reason: "회의에서 끝났다고 말했습니다",
             decision: "KEEP",
+            draft: {
+              expectedRevision: 2,
+              status: "COMPLETED",
+              assignee: {
+                value: { type: "USER", id: "0HZX2K7M9Q4AC", label: null },
+              },
+              due: { value: null },
+            },
           },
         ],
         suggestedAssignment: {
@@ -86,6 +94,22 @@ export const getGetMeetingReviewResponseMock = (): MeetingReviewResponse => ({
           },
           due: "2026-09-18",
         },
+        decisions: [
+          {
+            targetId: "0K9GVJT2C4Q21",
+            decision: "KEEP",
+            taskChange: {
+              expectedRevision: 2,
+              status: "COMPLETED",
+              assignee: {
+                value: { type: "USER", id: "0HZX2K7M9Q4AC", label: null },
+              },
+              due: { value: null },
+            },
+          },
+          { targetId: "0K9GVJT2C4Q22", decision: "END", taskChange: null },
+          { targetId: "0K9GVJT2C4Q23", decision: "APPLIED", taskChange: null },
+        ],
       },
     ],
   },
@@ -161,6 +185,14 @@ export const getCreateMeetingReviewItemResponseMock =
               due: { value: "2026-09-18" },
               reason: "회의에서 끝났다고 말했습니다",
               decision: "KEEP",
+              draft: {
+                expectedRevision: 2,
+                status: "COMPLETED",
+                assignee: {
+                  value: { type: "USER", id: "0HZX2K7M9Q4AC", label: null },
+                },
+                due: { value: null },
+              },
             },
           ],
           suggestedAssignment: {
@@ -172,6 +204,26 @@ export const getCreateMeetingReviewItemResponseMock =
             },
             due: "2026-09-18",
           },
+          decisions: [
+            {
+              targetId: "0K9GVJT2C4Q21",
+              decision: "KEEP",
+              taskChange: {
+                expectedRevision: 2,
+                status: "COMPLETED",
+                assignee: {
+                  value: { type: "USER", id: "0HZX2K7M9Q4AC", label: null },
+                },
+                due: { value: null },
+              },
+            },
+            { targetId: "0K9GVJT2C4Q22", decision: "END", taskChange: null },
+            {
+              targetId: "0K9GVJT2C4Q23",
+              decision: "APPLIED",
+              taskChange: null,
+            },
+          ],
         },
       ],
     },
@@ -322,6 +374,14 @@ export const getUpdateMeetingReviewItemResponseMock =
               due: { value: "2026-09-18" },
               reason: "회의에서 끝났다고 말했습니다",
               decision: "KEEP",
+              draft: {
+                expectedRevision: 2,
+                status: "COMPLETED",
+                assignee: {
+                  value: { type: "USER", id: "0HZX2K7M9Q4AC", label: null },
+                },
+                due: { value: null },
+              },
             },
           ],
           suggestedAssignment: {
@@ -333,6 +393,26 @@ export const getUpdateMeetingReviewItemResponseMock =
             },
             due: "2026-09-18",
           },
+          decisions: [
+            {
+              targetId: "0K9GVJT2C4Q21",
+              decision: "KEEP",
+              taskChange: {
+                expectedRevision: 2,
+                status: "COMPLETED",
+                assignee: {
+                  value: { type: "USER", id: "0HZX2K7M9Q4AC", label: null },
+                },
+                due: { value: null },
+              },
+            },
+            { targetId: "0K9GVJT2C4Q22", decision: "END", taskChange: null },
+            {
+              targetId: "0K9GVJT2C4Q23",
+              decision: "APPLIED",
+              taskChange: null,
+            },
+          ],
         },
       ],
     },

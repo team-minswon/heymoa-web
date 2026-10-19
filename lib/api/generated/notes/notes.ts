@@ -402,18 +402,12 @@ export type deleteNoteResponse404 = {
   status: 404;
 };
 
-export type deleteNoteResponse409 = {
-  data: AppErrorResponse;
-  status: 409;
-};
-
 export type deleteNoteResponseSuccess = deleteNoteResponse204 & {
   headers: Headers;
 };
 export type deleteNoteResponseError = (
   | deleteNoteResponse401
   | deleteNoteResponse404
-  | deleteNoteResponse409
 ) & {
   headers: Headers;
 };
@@ -427,7 +421,7 @@ export const getDeleteNoteUrl = (noteId: string) => {
 };
 
 /**
- * 노트를 삭제한다. 전사·요약·채팅이 함께 사라지며 되돌릴 수 없다.
+ * 회의 상태·분석·승인과 무관하게 노트를 삭제한다. 전사·요약·검토본과 회의 지식이 함께 사라지며 되돌릴 수 없다. 프로젝트 할 일과 개인 대화는 유지한다.
  * @summary 노트 삭제
  */
 export const deleteNote = async (

@@ -8,12 +8,12 @@
 
 export type ProjectMeetingLinksResponseDataAgendaLinksItemSource = {
   /**
-   * 뒤 회의 노트 id
+   * 출발 회의 노트 id
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
   /**
-   * 뒤 회의 안건 id
+   * 출발 안건 id
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   agendaId: string;
