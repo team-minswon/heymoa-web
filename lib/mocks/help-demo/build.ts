@@ -205,6 +205,7 @@ export function createHelpDemoState(now = Date.now()): StoreState {
       sessionId,
       noteId: def.noteId,
       status: "COMPLETED",
+      firstRecording: false,
       readyExpiresAt: iso(startMs + 600_000),
       startedAt: iso(startMs),
       endedAt: iso(startMs + (def.status === "IN_PROGRESS" ? lastEnd + 15_000 : sessionLength)),

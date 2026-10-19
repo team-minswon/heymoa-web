@@ -12,6 +12,8 @@ import type { StartTranscriptionSessionResponseDataStatus } from "./startTranscr
  * 성공 응답 데이터
  */
 export type StartTranscriptionSessionResponseData = {
+  /** 이 호출이 사용자의 첫 녹음 세션을 만들었으면 true (세션 생성 응답에서만 true 가 될 수 있다) */
+  firstRecording: boolean;
   /** 전사 연결 대기 만료 시각 */
   readyExpiresAt: string;
   /**

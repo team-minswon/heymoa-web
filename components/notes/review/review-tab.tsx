@@ -96,6 +96,7 @@ export function ReviewTab({
     return (
       <NoteSummary
         noteId={noteId}
+        workspaceId={workspaceId}
         isEnded={isEnded}
         noteMeta={noteMeta}
         onEvidenceSelect={onEvidenceSelect}

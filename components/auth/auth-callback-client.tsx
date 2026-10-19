@@ -7,7 +7,7 @@ import { AlertTriangle, Home, Loader2, LogIn } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { WELCOME_PARAM } from "@/components/heymoa/landing-cta";
-import { track } from "@/lib/analytics/track";
+import { track, trackConversion } from "@/lib/analytics/track";
 import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { getMe } from "@/lib/auth/api";
 import { normalizeReturnTo } from "@/lib/auth/paths";
@@ -63,6 +63,13 @@ export function CallbackProcessor({
         if (!ignore) {
           setUser(user);
           track("login_completed");
+          // 서버가 신규 가입에만 붙이는 표식입니다. 새로고침·effect 재실행 전에 URL 에서 걷습니다.
+          const callbackUrl = new URL(window.location.href);
+          if (callbackUrl.searchParams.get("signup") === "1") {
+            callbackUrl.searchParams.delete("signup");
+            window.history.replaceState(window.history.state, "", callbackUrl);
+            trackConversion("sign_up", { method: "google" });
+          }
 
           const destination = normalizeReturnTo(returnTo);
           if (destination !== "/") {

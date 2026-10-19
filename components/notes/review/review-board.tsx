@@ -1,6 +1,7 @@
 "use client";
 
 import { track } from "@/lib/analytics/track";
+import { useSummaryViewed } from "@/lib/analytics/use-summary-viewed";
 
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
 import { renderMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
@@ -176,6 +177,7 @@ export function ReviewBoard({
 
   const review = okData(reviewQuery.data);
   const summary = okData(summaryQuery.data);
+  useSummaryViewed(noteId, workspaceId, Boolean(review) && summary?.status === "SUCCEEDED");
   const transcript = okData(transcriptQuery.data);
   const tasks = okData(tasksQuery.data)?.tasks ?? null;
 

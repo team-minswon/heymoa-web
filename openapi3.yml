@@ -1036,6 +1036,7 @@ paths:
                       sessionId: 0HZX2K7M9Q4AG
                       noteId: 0HZX2K7M9Q4AF
                       status: COMPLETED
+                      firstRecording: false
                       readyExpiresAt: '2026-07-14T01:02:03Z'
                       startedAt: '2026-07-14T01:02:03Z'
                       endedAt: '2026-07-14T01:02:03Z'
@@ -2944,6 +2945,7 @@ paths:
                       sessionId: 0HZX2K7M9Q4AG
                       noteId: 0HZX2K7M9Q4AF
                       status: READY
+                      firstRecording: false
                       readyExpiresAt: '2026-07-14T01:02:03Z'
                       startedAt: null
                       endedAt: null
@@ -3025,6 +3027,7 @@ paths:
                       sessionId: 0HZX2K7M9Q4AG
                       noteId: 0HZX2K7M9Q4AF
                       status: READY
+                      firstRecording: false
                       readyExpiresAt: '2026-07-14T01:02:03Z'
                       startedAt: null
                       endedAt: null
@@ -14513,6 +14516,7 @@ components:
           required:
           - endReason
           - endedAt
+          - firstRecording
           - noteId
           - readyExpiresAt
           - sessionId
@@ -14520,6 +14524,11 @@ components:
           - status
           type: object
           properties:
+            firstRecording:
+              type: boolean
+              description: 이 호출이 사용자의 첫 녹음 세션을 만들었으면 true (세션 생성 응답에서만 true 가 될 수 있다)
+              nullable: false
+              example: false
             readyExpiresAt:
               type: string
               description: 전사 연결 대기 만료 시각
@@ -15060,6 +15069,7 @@ components:
           required:
           - endReason
           - endedAt
+          - firstRecording
           - noteId
           - readyExpiresAt
           - sessionId
@@ -15067,6 +15077,11 @@ components:
           - status
           type: object
           properties:
+            firstRecording:
+              type: boolean
+              description: 이 호출이 사용자의 첫 녹음 세션을 만들었으면 true (세션 생성 응답에서만 true 가 될 수 있다)
+              nullable: false
+              example: false
             endReason:
               type: string
               description: 전사 종료 사유 (READY면 null)

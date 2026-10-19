@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { track } from "@/lib/analytics/track";
+import { track, trackConversion } from "@/lib/analytics/track";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { toast } from "@/lib/ui/toast";
 import {
@@ -667,6 +667,10 @@ export function RecordingProvider({
         const connectionSession =
           reusableSession ?? (await api.startSession(noteId));
         if (!reusableSession) {
+          // 서버의 최초 표식은 세션 생성 때 소비됩니다. 마이크 연결 실패로 전환을 잃지 않게 여기서 보냅니다.
+          if (connectionSession.firstRecording) {
+            trackConversion("first_recording", { workspace_id: workspaceId });
+          }
           invalidateLifecycleQueries(noteId);
         }
         if (cancelled()) {

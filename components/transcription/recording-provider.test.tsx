@@ -44,6 +44,11 @@ vi.mock("@/lib/ui/toast", () => ({
 }));
 
 const apiFetchMock = vi.hoisted(() => vi.fn());
+const conversion = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics/track", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/analytics/track")>()),
+  trackConversion: conversion,
+}));
 vi.mock("@/lib/api/fetcher", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/fetcher")>()),
   apiFetch: apiFetchMock,
@@ -71,6 +76,7 @@ const session: StartTranscriptionSessionResponseData = {
   sessionId: "0HZX2K7M9Q4AG",
   noteId: "0HZX2K7M9Q4AF",
   status: "READY",
+  firstRecording: false,
   readyExpiresAt: "2099-07-15T00:01:00Z",
   startedAt: null,
   endedAt: null,
@@ -80,6 +86,32 @@ const session: StartTranscriptionSessionResponseData = {
 /** 녹음이 시작된 워크스페이스. 계약이 안 알려줘서 `start()`가 받아 들고 있어야 하는 값이다. */
 const WORKSPACE_ID = "0HZX2K7M9Q4AW";
 const OTHER_WORKSPACE_ID = "0HZX2K7M9Q4AX";
+
+describe("첫 녹음 광고 전환", () => {
+  afterEach(() => {
+    cleanup();
+    conversion.mockClear();
+  });
+
+  it("서버가 첫 세션으로 확정한 경우 연결 실패보다 먼저 한 번 보냅니다", async () => {
+    const harness = setup();
+    vi.mocked(harness.api.startSession).mockResolvedValueOnce({
+      ...session,
+      firstRecording: true,
+    });
+    harness.controller.connect.mockRejectedValueOnce(new Error("연결 실패"));
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(conversion).toHaveBeenCalledExactlyOnceWith("first_recording", {
+      workspace_id: WORKSPACE_ID,
+    });
+  });
+
+  it("이미 녹음해 본 사용자는 전환을 다시 보내지 않습니다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(conversion).not.toHaveBeenCalled();
+  });
+});
 
 function setup({
   enablePolling = false,

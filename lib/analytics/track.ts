@@ -120,6 +120,11 @@ type WebEventProperties = {
 
 type Properties = Record<string, string | number | boolean | null | undefined>;
 
+// server application.yml 의 app.metrics.test-workspace-ids 기본값과 맞춥니다.
+const TEST_WORKSPACES = new Set(["0R1Q3TMN6P4QY", "0RSQB39CHT4ZV"]);
+const isTestWorkspace = (properties?: Properties) =>
+  TEST_WORKSPACES.has(String(properties?.workspace_id ?? ""));
+
 /** orval mutation 변수 — 경로 값(`workspaceId` 등)과 요청 본문(`data`). */
 type MutationVariables = Record<string, unknown>;
 
@@ -130,7 +135,9 @@ type MutationVariables = Record<string, unknown>;
  */
 type MutationEvent =
   | AnalyticsEvent
-  | ((variables: MutationVariables) => readonly [AnalyticsEvent, Properties?] | null);
+  | ((
+      variables: MutationVariables
+    ) => readonly [AnalyticsEvent, Properties?] | null);
 
 const bodyOf = (variables: MutationVariables) =>
   (typeof variables.data === "object" && variables.data !== null
@@ -151,9 +158,12 @@ const MUTATION_EVENTS: Record<string, MutationEvent> = {
   createFeedback: (v) => {
     const kind = bodyOf(v).kind;
     if (
-      kind !== "INCIDENT" && kind !== "QUESTION" &&
-      kind !== "SUGGESTION" && kind !== "OTHER"
-    ) return null;
+      kind !== "INCIDENT" &&
+      kind !== "QUESTION" &&
+      kind !== "SUGGESTION" &&
+      kind !== "OTHER"
+    )
+      return null;
     return ["feedback_sent", { kind }];
   },
   createWorkspace: "workspace_created",
@@ -169,7 +179,8 @@ const MUTATION_EVENTS: Record<string, MutationEvent> = {
   approveAgentOAuthConsent: "agent_connected",
   createAgentDelegation: "agent_connected",
   assignNoteSpeaker: (v) => (assignsSomeone(v) ? ["speaker_assigned"] : null),
-  assignSegmentSpeaker: (v) => (assignsSomeone(v) ? ["speaker_assigned"] : null),
+  assignSegmentSpeaker: (v) =>
+    assignsSomeone(v) ? ["speaker_assigned"] : null,
   createMeetingReviewItem: () => ["review_item_edited", { action: "created" }],
   updateMeetingReviewItem: () => ["review_item_edited", { action: "updated" }],
   resolveToolApproval: (v) => [
@@ -188,7 +199,9 @@ const MUTATION_EVENTS: Record<string, MutationEvent> = {
     return [
       "minutes_emailed",
       {
-        recipient_count: Array.isArray(body.recipients) ? body.recipients.length : 0,
+        recipient_count: Array.isArray(body.recipients)
+          ? body.recipients.length
+          : 0,
         agenda_log: include.includes("AGENDA_LOG"),
         transcript: include.includes("TRANSCRIPT"),
       },
@@ -201,12 +214,12 @@ const MUTATION_EVENTS: Record<string, MutationEvent> = {
 };
 
 /**
- * 도구마다 맡는 것 (APP-1037). **같은 사건을 두 도구가 따로 세지 않게** GA에는 유입 이벤트만 보낸다.
+ * GA는 유입·광고 전환, PostHog는 제품 행동을 맡습니다. 두 도구의 수를 합산하지 않습니다.
  *
  * | 무엇 | 정본 |
  * |---|---|
  * | 제품 깔때기 · 유입별 가입 전환 | PostHog — 모든 이벤트. UTM·referrer를 사람의 첫 값으로 남긴다 |
- * | 유입 경로 · 검색 유입 | GA4 — 페이지뷰와 아래 `GA_EVENTS`뿐. Search Console을 여기 잇는다 |
+ * | 유입 경로 · 광고 전환 | GA4 — 페이지뷰·`GA_EVENTS`·sign_up·first_recording |
  * | 성능(Web Vitals) | Vercel Speed Insights · Analytics |
  * | 검색 노출 · 색인 | Search Console |
  */
@@ -226,7 +239,7 @@ export function onTrack(listener: Listener) {
 
 /**
  * PostHog에 보내고, 유입 이벤트(`GA_EVENTS`)는 GA에도 같은 이름으로 보낸다. **수집이 꺼진 환경(로컬·preview)에서는 아무것도
- * 보내지 않는다** — PostHog는 `init` 전이면, GA는 `gtag`가 없으면 그냥 지나간다. 게이트는
+ * 보내지 않는다** — PostHog는 `init` 전이면, GA는 초기화 전 이벤트를 제한된 대기열에 보관한다. 게이트는
  * `SiteAnalytics` 한 곳이다.
  *
  * 속성에 회의 제목·전사·이메일을 넣지 않는다. 개인정보처리방침이 「회의 음성·스크립트·노트는
@@ -236,11 +249,60 @@ export function onTrack(listener: Listener) {
  * PostHog를 켜기 전에 난 이벤트. 초기화는 `SiteAnalytics`의 effect인데, 연동 복귀 주소나 요약 링크로 처음 들어오면
  * 그 화면의 effect가 먼저 돌아 `integration_connected`·`summary_viewed`가 여기 먼저 온다. 켤 때 차례대로 보낸다.
  *
- * ponytail: 켜지지 않는 환경(로컬·preview·키 없음)에서 끝없이 쌓이지 않게 20개에서 자른다. 첫 화면에서 그보다
+ * shortcut: 켜지지 않는 환경(로컬·preview·키 없음)에서 끝없이 쌓이지 않게 20개에서 자른다. 첫 화면에서 그보다
  * 많이 나는 일은 없다 — 넘치면 늦은 것부터 버려진다.
  */
 const BEFORE_INIT_LIMIT = 20;
 const beforeInit: Array<[AnalyticsEvent, Properties | undefined]> = [];
+type GoogleEvent =
+  | "sign_up"
+  | "first_recording"
+  | "login_started"
+  | "desktop_download_clicked";
+const beforeGoogleInit: Array<[GoogleEvent, Properties | undefined]> = [];
+let googleInitialized = false;
+
+/** Script 가 늦게 와도 콜백의 가입 전환을 잃지 않습니다. 구성 뒤에 대기 이벤트를 보냅니다. */
+export function initGoogleAnalytics(measurementId: string) {
+  if (googleInitialized) return;
+  googleInitialized = true;
+  const target = window as typeof window & {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+  };
+  target.dataLayer ??= [];
+  // Google 태그는 arguments 객체를 명령으로 해석합니다.
+  target.gtag ??= function () {
+    // eslint-disable-next-line prefer-rest-params -- Google 태그 명령 형식을 유지합니다.
+    target.dataLayer!.push(arguments);
+  };
+  target.gtag("js", new Date());
+  target.gtag("config", measurementId);
+  for (const [event, properties] of beforeGoogleInit.splice(0)) {
+    sendGoogleEvent(event, properties);
+  }
+}
+
+function sendGoogleEvent(event: GoogleEvent, properties?: Properties) {
+  if (isAnalyticsOptedOut() || isTestWorkspace(properties)) return;
+  const gtag = (window as { gtag?: (...args: unknown[]) => void }).gtag;
+  if (gtag) gtag("event", event, properties);
+  else if (beforeGoogleInit.length < BEFORE_INIT_LIMIT)
+    beforeGoogleInit.push([event, properties]);
+}
+
+/** 신규 여부는 서버가 판정합니다. PostHog 의 기존 제품 이벤트와 중복 전송하지 않습니다. */
+export function trackConversion(
+  event: "sign_up" | "first_recording",
+  properties?: Properties
+) {
+  if (isTestWorkspace(properties)) return;
+  // GA 광고 전환에는 회원·워크스페이스 식별자를 보내지 않습니다.
+  sendGoogleEvent(
+    event,
+    event === "sign_up" ? { method: "google" } : undefined
+  );
+}
 
 export function track<Event extends AnalyticsEvent>(
   event: Event,
@@ -250,12 +312,12 @@ export function track<Event extends AnalyticsEvent>(
 ) {
   // 듣는 쪽(체크리스트)은 이 기기 안의 일이라 거부해도 알린다. 바깥으로 보내는 것만 막는다.
   for (const listener of listeners) listener(event, properties);
-  if (isAnalyticsOptedOut()) return;
+  if (isAnalyticsOptedOut() || isTestWorkspace(properties)) return;
   if (posthog.__loaded) posthog.capture(event, properties);
-  else if (beforeInit.length < BEFORE_INIT_LIMIT) beforeInit.push([event, properties]);
+  else if (beforeInit.length < BEFORE_INIT_LIMIT)
+    beforeInit.push([event, properties]);
   if (GA_EVENTS.has(event)) {
-    const gtag = (window as { gtag?: (...args: unknown[]) => void }).gtag;
-    gtag?.("event", event, properties);
+    sendGoogleEvent(event as GoogleEvent, properties);
   }
   if (process.env.NODE_ENV === "development") {
     console.debug("[analytics]", event, properties ?? {});
@@ -268,7 +330,8 @@ export function trackMutation(mutationKey: unknown, variables: unknown) {
   const vars = (
     typeof variables === "object" && variables !== null ? variables : {}
   ) as MutationVariables;
-  const resolved = typeof entry === "function" ? entry(vars) : ([entry] as const);
+  const resolved =
+    typeof entry === "function" ? entry(vars) : ([entry] as const);
   if (!resolved) return;
   const [event, extra] = resolved;
   const properties: Properties = {
@@ -335,6 +398,10 @@ export function isAnalyticsOptedOut() {
  * 아예 켜지 않는다. GA 페이지뷰는 Google 차단 부가기능 몫이다.
  */
 export function setAnalyticsOptOut(optOut: boolean) {
+  if (optOut) {
+    beforeInit.length = 0;
+    beforeGoogleInit.length = 0;
+  }
   try {
     if (optOut) localStorage.setItem(OPT_OUT_KEY, "1");
     else localStorage.removeItem(OPT_OUT_KEY);
@@ -362,7 +429,9 @@ export function resetAnalytics() {
  * 거치지 않으므로, 켜진 뒤에 거부한 경우를 여기서 막는다. 거부의 원본은 우리 키 하나다.
  */
 export function beforeSend(event: CaptureResult | null) {
-  return isAnalyticsOptedOut() ? null : stripUrlQueries(event);
+  return isAnalyticsOptedOut() || isTestWorkspace(event?.properties)
+    ? null
+    : stripUrlQueries(event);
 }
 
 /** 절대 주소면 쿼리·해시를 떼고, 아니면 그대로 둔다. */

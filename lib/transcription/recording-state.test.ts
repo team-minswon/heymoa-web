@@ -12,6 +12,7 @@ const session: RecordingSession = {
   sessionId: "0HZX2K7M9Q4AG",
   noteId: "0HZX2K7M9Q4AF",
   status: "ACTIVE",
+  firstRecording: false,
   readyExpiresAt: "2099-07-15T00:01:00Z",
   startedAt: "2099-07-15T00:00:00Z",
   endedAt: null,

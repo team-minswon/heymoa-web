@@ -24,6 +24,7 @@ import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { summaryToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
+import { useSummaryViewed } from "@/lib/analytics/use-summary-viewed";
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -78,12 +79,14 @@ function isRunning(status: string | null | undefined): boolean {
  */
 export function NoteSummary({
   noteId,
+  workspaceId,
   isEnded,
   noteMeta,
   onEvidenceSelect,
   readOnly = false,
 }: {
   noteId: string;
+  workspaceId?: string;
   isEnded: boolean;
   /** 지난 노트의 구형 결과. 새 회의 분석은 이 결과를 다시 만들지 않으므로 요청 버튼을 두지 않는다. */
   readOnly?: boolean;
@@ -116,6 +119,11 @@ export function NoteSummary({
     response !== undefined && response.status === 200 && response.data.success
       ? response.data.data
       : null;
+  useSummaryViewed(
+    noteId,
+    workspaceId,
+    isEnded && analysis?.status === "SUCCEEDED"
+  );
   const isMissing =
     errorCodeOf(analysisQuery.error) === "ANALYSIS_JOB_NOT_FOUND";
 

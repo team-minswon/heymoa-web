@@ -32,16 +32,25 @@ test("공개 페이지는 색인을 막지 않는다", async ({ request }) => {
 });
 
 test("다운로드·약관·개인정보는 JSON-LD 를 내고 다운로드는 전용 OG 이미지를 가진다", async ({
+  page,
   request,
 }) => {
+  // 목 환경은 MockProvider 준비 전 본문을 비운다. JSON-LD는 준비된 화면에서 확인한다.
   for (const path of ["/download", "/terms", "/privacy"]) {
-    const html = await (await request.get(path)).text();
-    const types = [
-      ...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g),
-    ].map((m) => JSON.parse(m[1])["@type"]);
-    expect(types, path).toEqual(
-      expect.arrayContaining(["WebPage", "BreadcrumbList"])
-    );
+    await page.goto(path);
+    await expect
+      .poll(
+        async () =>
+          page
+            .locator('script[type="application/ld+json"]')
+            .evaluateAll((scripts) =>
+              scripts.map(
+                (script) => JSON.parse(script.textContent ?? "{}")["@type"]
+              )
+            ),
+        { message: path }
+      )
+      .toEqual(expect.arrayContaining(["WebPage", "BreadcrumbList"]));
   }
   const html = await (await request.get("/download")).text();
   const og =

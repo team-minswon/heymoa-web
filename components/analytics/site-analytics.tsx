@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from "next/script";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 
 import { PostHogAnalytics } from "@/components/analytics/posthog-analytics";
 import { shouldCollectAnalytics } from "@/lib/analytics/should-collect";
@@ -15,7 +15,8 @@ const GA_MEASUREMENT_ID = "G-YL06KCCE4N";
  * 「Discard client IP data」 켬. 리전·요금제·IP 설정을 바꾸면 7절과 시행일을 같은 커밋에서 고친다.
  * EU로 옮기면 `lib/analytics/track.ts`의 `api_host`와 7절의 이전 국가도 바뀐다.
  */
-const POSTHOG_PROJECT_KEY: string = "phc_qDMePviF8ySaSsxZvXCPqdnEMBdtNgZZqRaCpRqiDYfj";
+const POSTHOG_PROJECT_KEY: string =
+  "phc_qDMePviF8ySaSsxZvXCPqdnEMBdtNgZZqRaCpRqiDYfj";
 
 /**
  * 분석 넷을 한자리에 모은다 — GA·PostHog·Vercel Analytics·Speed Insights.
@@ -23,7 +24,7 @@ const POSTHOG_PROJECT_KEY: string = "phc_qDMePviF8ySaSsxZvXCPqdnEMBdtNgZZqRaCpRq
  * **프로덕션이 아니면 아무것도 그리지 않는다.** Server Component라 판정이 서버에서 끝나고,
  * 꺼진 환경에서는 스크립트가 HTML에 실리지도 않는다.
  *
- * 셋을 한 컴포넌트로 합친 이유는 게이트를 한 곳에만 두기 위해서다. layout에 흩어 두면
+ * 넷을 한 컴포넌트로 합친 이유는 게이트를 한 곳에만 두기 위해서다. layout에 흩어 두면
  * 하나를 빠뜨렸을 때 아무도 못 잡는다. GA 스크립트는 `afterInteractive`라 body 안 어디에
  * 있든 동작이 같으므로 위치를 옮겨도 무방하다.
  */
@@ -32,20 +33,7 @@ export function SiteAnalytics() {
 
   return (
     <>
-      {/* Google tag (gtag.js) */}
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-      />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', '${GA_MEASUREMENT_ID}');
-          `}
-      </Script>
+      <GoogleAnalytics measurementId={GA_MEASUREMENT_ID} />
       {POSTHOG_PROJECT_KEY && <PostHogAnalytics apiKey={POSTHOG_PROJECT_KEY} />}
       <Analytics />
       <SpeedInsights />

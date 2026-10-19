@@ -275,6 +275,7 @@ function renderNotePanel(ui: ReactNode) {
             sessionId: "01K0000000010",
             noteId,
             status: "READY" as const,
+            firstRecording: false,
             readyExpiresAt: "2026-07-11T00:10:00Z",
             startedAt: null,
             endedAt: null,
@@ -1881,9 +1882,7 @@ describe("NotePanel", () => {
         renderStartGate();
 
         const hint = screen.getByTestId("desktop-app-hint");
-        expect(hint).toHaveTextContent(
-          "화상회의 녹음은 데스크톱 앱으로"
-        );
+        expect(hint).toHaveTextContent("화상회의 녹음은 데스크톱 앱으로");
         const link = screen.getByRole("link", { name: "데스크톱 앱" });
         expect(link).toHaveAttribute("href", "/download");
         expect(link).toHaveAttribute("target", "_blank");
