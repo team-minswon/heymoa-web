@@ -13,6 +13,7 @@ const link = (kind: string, from: string, to: string, content = `${to} 내용`, 
 });
 
 const data: ProjectMeetingLinksResponseData = {
+  conflicts: [],
   notes: [
     { noteId: "now", title: "이번 회의", startedAt: "2026-09-11T01:45:00Z", agendas: [] },
     { noteId: "past", title: "로드맵 브레인스토밍", startedAt: "2026-09-04T01:00:00Z", agendas: [] },
@@ -87,5 +88,29 @@ describe("indexMeetingLinks", () => {
 
   it("연결 응답이 없으면 비어 있다", () => {
     expect(indexMeetingLinks(undefined, "now", items).byItemId.size).toBe(0);
+  });
+
+  it("conflicts와 옛 meetingLinks의 같은 관계는 기존 표시를 한 번만 유지한다", () => {
+    const moved = link("SUPERSEDES", "p1", "old1");
+    const result = indexMeetingLinks({
+      ...data,
+      conflicts: [{ ...moved, kind: "SUPERSEDES" }],
+    }, "now", items);
+    expect(result.byItemId.get("i1")).toEqual(index.byItemId.get("i1"));
+    const conflictsOnly = indexMeetingLinks({
+      ...data,
+      meetingLinks: [],
+      conflicts: [{ ...moved, kind: "SUPERSEDES" }],
+    }, "now", items);
+    expect(conflictsOnly.byItemId.get("i1")).toEqual(index.byItemId.get("i1"));
+  });
+
+  it("출처가 삭제된 승계 항목에 죽은 회의 링크를 만들지 않는다", () => {
+    const approved = link("SUPERSEDES", "p1", "old1");
+    const result = indexMeetingLinks({
+      ...data,
+      meetingLinks: [{ ...approved, target: { ...approved.target, noteId: null, proposalId: null, type: "APPROVED", itemId: "kept-project-item" } }],
+    }, "now", items);
+    expect(result.byItemId.size).toBe(0);
   });
 });

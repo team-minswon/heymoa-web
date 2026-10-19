@@ -918,7 +918,6 @@ describe("NotePanel", () => {
   it("삭제 확인창을 연 채 다른 노트로 바뀌면 창이 따라가지 않는다", async () => {
     // 이 패널은 노트가 바뀌어도 재마운트되지 않는다. 창이 열린 채 대상만 바뀌면 A를 지우려다
     // B가 지워진다 — 상태가 「열렸나」가 아니라 「어느 노트의 것인가」를 담아야 한다.
-    // 기록 중이면 삭제 메뉴 자체가 없다(서버가 409).
     noteState.value.meetingStatus = "ENDED";
 
     const { rerenderNote } = renderNotePanel(

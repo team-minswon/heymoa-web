@@ -3957,9 +3957,7 @@ export const mockDb = {
    * 상태가 목에서만 만들어져 화면 검증이 거짓이 된다.
    */
   deleteNote(noteId: string) {
-    const note = findNote(noteId);
-    // 기록 중 삭제는 전사 세션과 경합한다. 계약이 409로 막는 자리다.
-    if (note.meetingStatus === "IN_PROGRESS") fail("MEETING_IN_PROGRESS");
+    findNote(noteId);
     const sessionIds = new Set(
       state.sessions
         .filter((row) => row.noteId === noteId)

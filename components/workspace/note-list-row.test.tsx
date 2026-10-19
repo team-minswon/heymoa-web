@@ -33,7 +33,9 @@ vi.mock("@/components/transcription/recording-provider", () => ({
     ["requesting-permission", "connecting", "recording", "stopping"].includes(
       recording.current.phase
     )
-      ? (recording.current.activeNoteId ?? recording.current.session?.noteId ?? null)
+      ? (recording.current.activeNoteId ??
+        recording.current.session?.noteId ??
+        null)
       : null,
   useRecordingMeter: () => recording.meter,
 }));
@@ -78,7 +80,9 @@ describe("NoteListRow", () => {
       expect(heard).not.toHaveBeenCalled();
       fireEvent.click(screen.getByRole("link", { name: /노트 열기/ }));
       fireEvent.click(screen.getByRole("button", { name: /노트 메뉴/ }));
-      fireEvent.click(await screen.findByRole("menuitem", { name: /전체 화면/ }));
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: /전체 화면/ })
+      );
       expect(heard.mock.calls).toEqual([
         ["note_opened", { workspace_id: "01K0000000000", view: "side" }],
         ["note_opened", { workspace_id: "01K0000000000", view: "full" }],
@@ -312,18 +316,17 @@ describe("NoteListRow", () => {
     });
   });
 
-  it("기록 중인 회의에는 삭제를 안 그린다", async () => {
+  it("기록 중인 회의도 메뉴에서 삭제할 수 있다", async () => {
     renderRow(note({ meetingStatus: "IN_PROGRESS" }));
 
     fireEvent.click(
       screen.getByRole("button", { name: "주간 제품 회의 노트 메뉴" })
     );
 
-    // 서버가 409로 막는 자리라 눌러서 실패하게 두지 않는다.
     await waitFor(() => {
       expect(screen.getByText("전체 화면")).toBeInTheDocument();
     });
-    expect(screen.queryByText("삭제")).toBeNull();
+    expect(screen.getByText("삭제")).toBeInTheDocument();
   });
 
   /** 참석자 그룹은 최대 4명 — 5명부터 4개 + `+N`(보이지 않는 인원). 인원 글자와 모순이 없어야 한다. */
@@ -332,23 +335,28 @@ describe("NoteListRow", () => {
     [4, 4, null],
     [5, 4, "+1"],
     [12, 4, "+8"],
-  ] as const)("참석자 %i명이면 아바타 %i개와 %s 를 보인다", (count, shown, more) => {
-    const participants = Array.from({ length: count }, (_, k) => ({
-      participantId: `p${k}`,
-      userId: `u${k}`,
-      guestId: null,
-      name: `참석자${k}`,
-      email: `p${k}@heymoa.test`,
-      image: null,
-    }));
-    const { container } = renderRow(note({ participants }));
+  ] as const)(
+    "참석자 %i명이면 아바타 %i개와 %s 를 보인다",
+    (count, shown, more) => {
+      const participants = Array.from({ length: count }, (_, k) => ({
+        participantId: `p${k}`,
+        userId: `u${k}`,
+        guestId: null,
+        name: `참석자${k}`,
+        email: `p${k}@heymoa.test`,
+        image: null,
+      }));
+      const { container } = renderRow(note({ participants }));
 
-    const people = container.querySelector('[data-slot="note-row-people"]')!;
-    expect(people.querySelectorAll('[data-slot="avatar"]')).toHaveLength(shown);
-    const chip = people.querySelector('[aria-label^="외 "]');
-    expect(chip?.textContent ?? null).toBe(more);
-    expect(screen.getByText(`참여 ${count}명`)).toBeInTheDocument();
-  });
+      const people = container.querySelector('[data-slot="note-row-people"]')!;
+      expect(people.querySelectorAll('[data-slot="avatar"]')).toHaveLength(
+        shown
+      );
+      const chip = people.querySelector('[aria-label^="외 "]');
+      expect(chip?.textContent ?? null).toBe(more);
+      expect(screen.getByText(`참여 ${count}명`)).toBeInTheDocument();
+    }
+  );
 
   /** jsdom 은 hover 를 못 흉내 내니 열린 상태의 클래스가 걸려 있는지로 고정한다. */
   it("행이 열리면(hover·키보드 포커스·메뉴 열림·터치) 아바타는 비키고 메뉴 버튼이 나타난다", () => {

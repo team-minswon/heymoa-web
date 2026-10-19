@@ -67,6 +67,7 @@ function reviewItem(
     due: null,
     replacements: [],
     taskChanges: [],
+    decisions: [],
     suggestedAssignment: null,
     ...over,
   };

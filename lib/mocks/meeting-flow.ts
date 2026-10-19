@@ -281,6 +281,7 @@ function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) 
       ),
       assignee: who(noteId, seed.who),
       due: seed.dueIn === undefined ? null : dueAfterMeeting(seed.dueIn, set.meetingDate),
+      decisions: [],
       replacements: seed.replaces
         ? [
             {
@@ -329,6 +330,7 @@ function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) 
                     : { value: change.dueIn === null ? null : dueAfterMeeting(change.dueIn, set.meetingDate) },
                 reason: change.reason,
                 decision: change.decision ?? null,
+                draft: null,
               };
             })(),
           ]
@@ -362,6 +364,7 @@ function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) 
       due: null,
       replacements: [],
       taskChanges: [],
+      decisions: [],
       suggestedAssignment: null,
     });
   }
@@ -498,6 +501,7 @@ function seedLargeReview(target: State, noteId: string) {
     due: null,
     replacements: [],
     taskChanges: [],
+    decisions: [],
     suggestedAssignment: null,
   });
   const groups = sizes.map((size, index) => {
@@ -573,6 +577,7 @@ function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
     due: null,
     replacements: [],
     taskChanges: [],
+    decisions: [],
     suggestedAssignment: null,
     ...over,
   });
@@ -688,6 +693,7 @@ function completeAnalysis(noteId: string) {
       due: seed.kind === "ACTION_ITEM" && seed.dueIn !== undefined ? dueAfterMeeting(seed.dueIn) : null,
       replacements: [],
       taskChanges: [],
+      decisions: [],
       suggestedAssignment: null,
     })),
   });
@@ -798,6 +804,7 @@ export const meetingFlowHandlers = [
         due: body.due ?? null,
         replacements: [],
         taskChanges: [],
+        decisions: [],
         suggestedAssignment: null,
       });
       review.reviewVersion += 1;
@@ -840,7 +847,7 @@ export const meetingFlowHandlers = [
       for (const { targetId, decision } of body.decisions ?? []) {
         const replacement = item.replacements.find((row) => row.target.itemId === targetId);
         const taskChange = item.taskChanges.find((row) => row.target.itemId === targetId);
-        if (replacement && decision !== "APPLIED") {
+        if (replacement && (decision === null || decision === "END" || decision === "KEEP")) {
           changed ||= replacement.decision !== decision;
           replacement.decision = decision;
         } else if (taskChange && decision !== "END") {
@@ -918,7 +925,7 @@ export const meetingFlowHandlers = [
   http.get("*/v1/projects/:projectId/meeting-links", ({ request }) =>
     respond(() => {
       const noteId = new URL(request.url).searchParams.get("noteId");
-      const empty = { notes: [], meetingLinks: [], agendaLinks: [] };
+      const empty = { notes: [], meetingLinks: [], agendaLinks: [], conflicts: [] };
       if (noteId !== MENTORING_NOTE_ID) return empty;
       const summary = store().summaries.get(MENTORING_NOTE_ID);
       const review = store().reviews.get(MENTORING_NOTE_ID);
@@ -983,6 +990,8 @@ export const meetingFlowHandlers = [
           },
         ],
         meetingLinks: [...carded, ...free],
+        // 옛 배열과 새 배열에 같은 강한 관계가 있어도 표시가 중복되지 않아야 한다.
+        conflicts: carded.slice(0, 1),
         agendaLinks: [
           { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[0] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[0].agendaId } },
           { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[5] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[1].agendaId } },

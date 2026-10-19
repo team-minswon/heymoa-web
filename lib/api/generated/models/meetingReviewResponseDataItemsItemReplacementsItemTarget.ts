@@ -13,10 +13,10 @@ import type { MeetingReviewResponseDataItemsItemReplacementsItemTargetOriginalPr
  */
 export type MeetingReviewResponseDataItemsItemReplacementsItemTarget = {
   /**
-   * 그 회의의 제목
-   * @minLength 1
+   * 그 회의의 제목. 삭제하면 null
+   * @nullable
    */
-  noteTitle: string;
+  noteTitle: string | null;
   /**
    * 지식 노드 ID
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -30,10 +30,11 @@ export type MeetingReviewResponseDataItemsItemReplacementsItemTarget = {
   /** 지식 노드 종류. 할 일은 노드가 아니라 없습니다 */
   kind: MeetingReviewResponseDataItemsItemReplacementsItemTargetKind;
   /**
-   * 그 노드를 확정한 회의
+   * 그 노드를 확정한 회의. 삭제하면 null
+   * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
-  noteId: string;
+  noteId?: string | null;
   /** 그 노드를 확정한 시각 */
   approvedAt: string;
   /**

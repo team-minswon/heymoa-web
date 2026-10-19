@@ -711,6 +711,42 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.transcript.partial).toBeNull();
   });
 
+  it("다른 회의를 삭제해도 현재 녹음은 유지한다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    await act(() => harness.result.current.disconnect("0HZX2K7M9Q4AX"));
+
+    expect(harness.controller.close).not.toHaveBeenCalled();
+    expect(harness.result.current.activeNoteId).toBe(session.noteId);
+    expect(harness.result.current.phase).toBe("recording");
+  });
+
+  it("삭제한 회의의 늦은 녹음 시작 결과는 복구하지 않는다", async () => {
+    const harness = setup();
+    let resolvePermission!: () => void;
+    harness.controller.requestPermission.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePermission = resolve;
+        })
+    );
+    let starting!: Promise<void>;
+    act(() => {
+      starting = harness.result.current.start(session.noteId, WORKSPACE_ID);
+    });
+    await act(() => harness.result.current.disconnect(session.noteId));
+    await act(async () => {
+      resolvePermission();
+      await starting;
+    });
+
+    expect(harness.api.startSession).not.toHaveBeenCalled();
+    expect(harness.controller.close).toHaveBeenCalled();
+    expect(harness.result.current.phase).toBe("idle");
+    expect(harness.result.current.activeNoteId).toBeNull();
+  });
+
   it("fails and closes after a realtime transport error", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));

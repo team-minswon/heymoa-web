@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ProjectMeetingLinksResponseDataAgendaLinksItem } from "./projectMeetingLinksResponseDataAgendaLinksItem";
+import type { ProjectMeetingLinksResponseDataConflictsItem } from "./projectMeetingLinksResponseDataConflictsItem";
 import type { ProjectMeetingLinksResponseDataMeetingLinksItem } from "./projectMeetingLinksResponseDataMeetingLinksItem";
 import type { ProjectMeetingLinksResponseDataNotesItem } from "./projectMeetingLinksResponseDataNotesItem";
 
@@ -17,6 +18,8 @@ export type ProjectMeetingLinksResponseData = {
   notes: ProjectMeetingLinksResponseDataNotesItem[];
   /** 안건 이어짐 */
   agendaLinks: ProjectMeetingLinksResponseDataAgendaLinksItem[];
-  /** 명제 사이 연결 */
+  /** 명제의 이어짐. 새 결과는 SUCCEEDS이며 옛 결과의 관계 종류도 보존합니다 */
   meetingLinks: ProjectMeetingLinksResponseDataMeetingLinksItem[];
+  /** 충돌·대체·취소·해결. 관계 제안만으로 상태를 바꾸지 않습니다 */
+  conflicts: ProjectMeetingLinksResponseDataConflictsItem[];
 };

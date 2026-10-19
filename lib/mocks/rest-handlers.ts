@@ -932,20 +932,6 @@ export const restHandlers = [
     } catch (error) {
       const code =
         error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
-      if (code === "MEETING_IN_PROGRESS") {
-        return HttpResponse.json(
-          {
-            success: false,
-            data: null,
-            error: {
-              code,
-              message: "기록 중인 회의는 삭제할 수 없습니다.",
-              details: null,
-            },
-          },
-          { status: 409 }
-        );
-      }
       const notFound = code === "NOTE_NOT_FOUND";
       return HttpResponse.json(
         {

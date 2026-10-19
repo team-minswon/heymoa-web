@@ -3,8 +3,8 @@ import type { ReviewItem } from "@/lib/notes/review/sections";
 /** 제안에 대해 고른 쪽. 바꾸는 쪽(반영 · 끝내기)이거나 그대로 두는 쪽(넘기기 · 이어가기)이다. */
 export type Choice = "change" | "keep";
 
-/** 서버에 저장된 선택(`END` · `APPLIED` · `KEEP`)을 두 칸 토글의 값으로 읽는다. 안 고른 제안은 비어 있다. */
-export const choiceOf = (decision: "END" | "APPLIED" | "KEEP" | null): Choice | null =>
+/** 서버에 저장된 선택을 두 칸 토글의 값으로 읽는다. 안 고른 제안은 비어 있다. */
+export const choiceOf = (decision: "END" | "APPLY" | "APPLIED" | "KEEP" | null): Choice | null =>
   decision === null ? null : decision === "KEEP" ? "keep" : "change";
 
 /**

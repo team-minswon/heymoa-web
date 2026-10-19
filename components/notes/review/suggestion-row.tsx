@@ -100,7 +100,7 @@ export function ReplacementSuggestion({
         {target.content}
       </span>
       <span className="text-xs text-[var(--el-muted)]">
-        {target.noteTitle} · {formatAppDate(target.approvedAt, { month: "long", day: "numeric" })} 확정
+        {target.noteTitle ?? "프로젝트 결정"} · {formatAppDate(target.approvedAt, { month: "long", day: "numeric" })} 확정
         {ended ? " · 이미 끝남" : ""}
       </span>
     </SuggestionShell>

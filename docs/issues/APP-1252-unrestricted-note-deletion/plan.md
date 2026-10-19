@@ -26,13 +26,14 @@
 | `components/transcription/recording-provider.tsx` | 대상 noteId 조건의 disconnect·404 정리 인계 변경 | 다른 회의 녹음 보존과 대상 세션 정리 검증 |
 | `lib/mocks/{db,rest-handlers,transcription-scenario}.ts` | 상태 가드 제거·삭제 후 dispose 인계 변경 | 실제 삭제 응답과 일치하는 모의 환경 유지 |
 | `openapi3.yml`, `lib/api/generated/**`, `components/notes/review/suggestion-row.tsx` | Server 공개 계약·재생성·nullable 출처 대응 인계 변경 | 손편집 없이 최종 타입·빌드 검사 |
+| `lib/notes/review/{meeting-links,confirm,apply-item-patch}.ts`, `lib/mocks/meeting-flow.ts`, 기존 검토 fixture | 최종 생성물의 nullable 출처·필수 decisions/draft·APPLY와 기존 Web 타입의 차이 | 출처 없는 승계 항목에 죽은 회의 링크를 만들지 않고, 빈 decisions/null draft와 기존 선택 의미를 호환. 새 편집 UX는 만들지 않음 |
 | 관련 `.test.tsx`, `e2e/smoke.spec.ts` | 기존 성공·실패·기록 중 삭제 검사 | 분석 진행/완료/실패·미분석, 늦은 목록/연결 조회, 대상 녹음과 다른 녹음 보존 보강 |
 
 ## 순서
 
 ### 1. 기존 분석 상태에 따른 삭제 확인 버튼 제한
 
-- 바꾸는 것: 공용 확인창에서 기존 생성 `useGetAnalysisFlow`와 Query 캐시를 사용한다. 진행 중에는 비활성화 사유를 표시하고, 확인 중이거나 조회 실패일 때는 기존 조회/재시도 UI로 상태를 확인한다. 별도 분석 상태 저장소는 만들지 않는다.
+- 바꾸는 것: 공용 확인창에서 기존 생성 `useGetAnalysisFlow`와 Query 캐시를 사용한다. 열 때 `staleTime: 0`으로 재확인하며, 열려 있는 동안 기존 `flowPollInterval`을 따른다. 진행 중에는 비활성화 사유를 표시하고, 확인 중이거나 조회 실패일 때는 기존 조회/재시도 UI로 상태를 확인한다. 별도 분석 상태 저장소는 만들지 않는다.
 - 검증: `pnpm exec vitest run components/notes/note-delete-dialog.test.tsx components/workspace/note-list-row.test.tsx components/notes/note-panel.test.tsx`
 - 되돌리기: 해당 UI와 검사 변경만 되돌릴 수 있다. Server 원문에는 쓰지 않는다.
 
@@ -45,10 +46,12 @@
 ### 3. 브라우저 삭제 경로와 독립 검토
 
 - 바꾸는 것: 기존 브라우저 삭제 사례와 분석 상태 제한을 확인하고, 독립 tester가 실패·늦은 응답·다른 녹음 보존을 검토한다. 사용자에게 실제 diff와 검사 결과를 제공한다.
-- 검증: `pnpm test:e2e e2e/smoke.spec.ts --grep '삭제|delete'` 및 아래 마지막 관문. 별도 브라우저 dev 서버를 사용하며 다른 pane의 서버는 종료하지 않는다.
+- 검증: `pnpm test:e2e e2e/smoke.spec.ts e2e/meeting-review.spec.ts --grep '삭제' --workers=1` 및 아래 마지막 관문. 별도 브라우저 dev 서버를 사용하며 다른 pane의 서버는 종료하지 않는다.
 - 되돌리기: 검사만으로 운영 자료는 바뀌지 않는다. 결함이 발견되면 이 APP 범위에서 수정한다.
 
 ## 마지막 관문
+
+Server baseline의 `PatchMeetingReviewItemHandler.requireDecisionsAllowed`는 기존 `APPLIED`와 초안 없는 선택을 허용한다. `MeetingReviewIT`의 기존 APPLIED 저장 성공 사례와 담당 확인을 근거로 Web의 PUT → APPLIED PATCH 반영을 유지한다. 새 APPLY/초안 편집 UX로 바꾸지 않는다. 관계 응답은 Server가 kind로 배열을 재분류하지 않으므로 기존 표시 종류를 `meetingLinks`와 `conflicts` 양쪽에서 읽고 중복을 제거한다. nullable 표본 검사에서 기존 목이 제공하지 않는 저장 초안·APPROVED 출처는 정확한 필드/사유로 남기며 검증 성공으로 세지 않는다.
 
 최종 변경과 생성물에 `pnpm test:run && pnpm verify`를 한 번 통째로 실행한다. 이 레포에는 PR/CI가 없어 이 검사가 로컬 관문이다. 브라우저 삭제 검사와 레포 `code-review` 기준의 리뷰를 추가한다. 병합/배포 완료로 보고하지 않는다.
 

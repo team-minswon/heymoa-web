@@ -7,6 +7,7 @@
  */
 import type { MeetingReviewResponseDataItemsItemAssignee } from "./meetingReviewResponseDataItemsItemAssignee";
 import type { MeetingReviewResponseDataItemsItemCitationsItem } from "./meetingReviewResponseDataItemsItemCitationsItem";
+import type { MeetingReviewResponseDataItemsItemDecisionsItem } from "./meetingReviewResponseDataItemsItemDecisionsItem";
 import type { MeetingReviewResponseDataItemsItemKind } from "./meetingReviewResponseDataItemsItemKind";
 import type { MeetingReviewResponseDataItemsItemOriginalProposalRef } from "./meetingReviewResponseDataItemsItemOriginalProposalRef";
 import type { MeetingReviewResponseDataItemsItemReplacementsItem } from "./meetingReviewResponseDataItemsItemReplacementsItem";
@@ -18,7 +19,7 @@ export type MeetingReviewResponseDataItemsItem = {
   edited: boolean;
   /** 항목 종류 */
   kind: MeetingReviewResponseDataItemsItemKind;
-  /** 최신 분석이 제안한 기존 할 일 변경. 받으려면 할 일 API 로 고칩니다 */
+  /** 최신 분석이 제안한 기존 할 일 변경. APPLY 선택과 초안을 저장하면 검토 완료 때 서버가 일괄 적용합니다 */
   taskChanges: MeetingReviewResponseDataItemsItemTaskChangesItem[];
   /**
    * 사람 추가 항목의 작성자. 원본 복사 항목은 null
@@ -67,4 +68,6 @@ export type MeetingReviewResponseDataItemsItem = {
    * @nullable
    */
   suggestedAssignment: MeetingReviewResponseDataItemsItemSuggestedAssignment;
+  /** 사람이 저장한 선택. 현재 제안에서 사라진 대상도 포함하므로 재조회 뒤 null PATCH로 해제할 수 있습니다 */
+  decisions: MeetingReviewResponseDataItemsItemDecisionsItem[];
 };

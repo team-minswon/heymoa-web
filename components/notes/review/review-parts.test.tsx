@@ -11,6 +11,7 @@ import { ReviewRow } from "@/components/notes/review/review-row";
 import { roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import { ConfirmBar } from "@/components/notes/review/confirm-bar";
+import { ReplacementSuggestion } from "@/components/notes/review/suggestion-row";
 import type { ProposalRevision } from "@/lib/api/generated/models";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
@@ -46,6 +47,7 @@ const item = (over: Partial<ReviewItem> = {}): ReviewItem => ({
   due: null,
   replacements: [],
   taskChanges: [],
+  decisions: [],
   suggestedAssignment: null,
   ...over,
 });
@@ -71,6 +73,37 @@ function renderRow(over: Partial<Parameters<typeof ReviewRow>[0]> = {}) {
   );
   return { onSave };
 }
+
+it("출처 회의가 삭제돼도 승계 결정과 사용자 선택은 남는다", () => {
+  const onChoose = vi.fn();
+  render(
+    <ReplacementSuggestion
+      replacement={{
+        target: {
+          itemId: "kept-decision",
+          revision: 1,
+          kind: "DECISION",
+          content: "사용자가 유지한 프로젝트 결정",
+          noteId: null,
+          noteTitle: null,
+          approvedAt: "2026-10-01T00:00:00Z",
+          endedAt: null,
+          originalProposalRef: null,
+        },
+        kind: "SUPERSEDES",
+        label: "대체",
+        reason: "사용자 검토가 필요합니다",
+        decision: "KEEP",
+      }}
+      choice="keep"
+      disabled={false}
+      onChoose={onChoose}
+    />
+  );
+  expect(screen.getByText("사용자가 유지한 프로젝트 결정")).toBeInTheDocument();
+  expect(screen.getByText(/프로젝트 결정 ·/)).toBeInTheDocument();
+  expect(onChoose).not.toHaveBeenCalled();
+});
 
 describe("ReviewRow", () => {
   it("내용 편집은 Enter 로 저장하고 Esc 로 닫는다", async () => {

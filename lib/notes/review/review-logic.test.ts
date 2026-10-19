@@ -45,6 +45,7 @@ const item = (over: Partial<ReviewItem> & Pick<ReviewItem, "itemId" | "kind">): 
   due: null,
   replacements: [],
   taskChanges: [],
+  decisions: [],
   suggestedAssignment: null,
   ...over,
 });
@@ -102,7 +103,7 @@ describe("confirmSummaryOf", () => {
         itemId: "t",
         kind: "ACTION_ITEM",
         taskChanges: [
-          { target: { itemId: "task", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLIED" },
+          { target: { itemId: "task", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, draft: null, reason: "", decision: "APPLIED" },
         ],
       }),
     ];
@@ -128,6 +129,7 @@ describe("confirmSummaryOf", () => {
       status: "COMPLETED" as const,
       assignee: null,
       due: null,
+      draft: null,
       reason: "",
       decision,
     });
@@ -142,6 +144,7 @@ describe("confirmSummaryOf", () => {
   it("저장된 선택을 두 칸 토글의 값으로 읽는다", () => {
     expect(choiceOf("END")).toBe("change");
     expect(choiceOf("APPLIED")).toBe("change");
+    expect(choiceOf("APPLY")).toBe("change");
     expect(choiceOf("KEEP")).toBe("keep");
     expect(choiceOf(null)).toBeNull();
   });
