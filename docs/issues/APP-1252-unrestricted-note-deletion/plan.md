@@ -2,9 +2,10 @@
 
 - 이슈: [APP-1252](https://linear.app/minswon/issue/APP-1252)
 - spec: docs `origin/docs/app-1255/deletion-reconnection-registration:projects/PRO-48-명제·관계-온톨로지와-AI-workflow-품질-고도화/spec/APP-1252/spec.md` @ `72ec3c5c3434b3bbf059a1edc83f6166681ecb29`
-- 프로젝트 브랜치: `pro-48/명제·관계-온톨로지와-AI-workflow-품질-고도화` ← `dev`
+- 통합 대상: `dev`
 - APP 브랜치: `feature/app-1252-unrestricted-note-deletion` (인계받은 기존 WT와 브랜치를 유지)
-- 병합: 별도 승인 뒤 APP → PRO squash, PRO → dev rebase. 이번 작업에는 병합·배포를 포함하지 않음
+- 병합: APP → `dev` PR을 squash 병합한다. 사용자의 최신 PR·마감 요청에 따라 registry의 과거 `projectBranches`/`usesPR` 기본값 대신 기존 dev 기반 구현을 유지한다. 새 PRO 경로는 만들지 않는다.
+- docs: 공동 docs main PR·병합은 AI 담당이 소유한다. Web는 APP-1252 prefix만 별도 ref로 전달하고 공동 docs 병합 SHA 확인 뒤 구현을 병합한다. 운영 배포는 제외한다.
 - 검증: `pnpm test:run && pnpm verify`
 
 ## spec 검토 결과
@@ -55,8 +56,8 @@ Server baseline의 `PatchMeetingReviewItemHandler.requireDecisionsAllowed`는 �
 
 다른 화면에서 저장한 APPLY 응답은 APPLIED 완료 이력과 구분한다. 기존 토글에 확정 대기로 표시하고 저장된 초안은 읽기만 하며, 넘기기는 허용한다. 선택된 칸을 다시 눌러도 즉시 PUT하지 않는다. 확정 안내에는 APPLY도 포함하며 같은 할 일을 중복 집계하지 않는다. 이 Web에서 새 APPLY 초안을 작성·수정하는 흐름은 추가하지 않는다.
 
-최종 변경과 생성물에 `pnpm test:run && pnpm verify`를 한 번 통째로 실행한다. 이 레포에는 PR/CI가 없어 이 검사가 로컬 관문이다. 브라우저 삭제 검사와 레포 `code-review` 기준의 리뷰를 추가한다. 병합/배포 완료로 보고하지 않는다.
+최신 `origin/dev` 위에서 최종 변경과 생성물에 `pnpm test:run && pnpm verify`와 전체 `pnpm test:e2e`를 실행한다. 레포 `code-review` 기준의 Codex 리뷰와 dev 대상 PR 상태를 확인한다. 공동 docs가 먼저 반영된 뒤 사용자 승인 범위의 구현 병합·Linear 종료·WT 정리를 수행하며 운영 배포는 하지 않는다.
 
 ## 안 하는 것
 
-전건 분석, 프로젝트 요약, 승계 결정·할 일 재판정, Web 연결 합성, SQS/AI 호출, 새 기능·이슈, 일반 분석 flag, 별도 삭제 상태관리, 병합·배포는 하지 않는다. AI 그룹 실험은 %4, Server 삭제는 %1, AI 비실험 구현은 %0 소유다.
+전건 분석, 프로젝트 요약, 승계 결정·할 일 재판정, Web 연결 합성, SQS/AI 호출, 새 기능·이슈, 일반 분석 flag, 별도 삭제 상태관리, 운영 배포는 하지 않는다. AI 그룹 실험은 %4, Server 삭제는 %1, AI 비실험 구현은 %0 소유다.
