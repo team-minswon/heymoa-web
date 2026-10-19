@@ -53,6 +53,8 @@
 
 Server baseline의 `PatchMeetingReviewItemHandler.requireDecisionsAllowed`는 기존 `APPLIED`와 초안 없는 선택을 허용한다. `MeetingReviewIT`의 기존 APPLIED 저장 성공 사례와 담당 확인을 근거로 Web의 PUT → APPLIED PATCH 반영을 유지한다. 새 APPLY/초안 편집 UX로 바꾸지 않는다. 관계 응답은 Server가 kind로 배열을 재분류하지 않으므로 기존 표시 종류를 `meetingLinks`와 `conflicts` 양쪽에서 읽고 중복을 제거한다. nullable 표본 검사에서 기존 목이 제공하지 않는 저장 초안·APPROVED 출처는 정확한 필드/사유로 남기며 검증 성공으로 세지 않는다.
 
+다른 화면에서 저장한 APPLY 응답은 APPLIED 완료 이력과 구분한다. 기존 토글에 확정 대기로 표시하고 저장된 초안은 읽기만 하며, 넘기기는 허용한다. 선택된 칸을 다시 눌러도 즉시 PUT하지 않는다. 확정 안내에는 APPLY도 포함하며 같은 할 일을 중복 집계하지 않는다. 이 Web에서 새 APPLY 초안을 작성·수정하는 흐름은 추가하지 않는다.
+
 최종 변경과 생성물에 `pnpm test:run && pnpm verify`를 한 번 통째로 실행한다. 이 레포에는 PR/CI가 없어 이 검사가 로컬 관문이다. 브라우저 삭제 검사와 레포 `code-review` 기준의 리뷰를 추가한다. 병합/배포 완료로 보고하지 않는다.
 
 ## 안 하는 것

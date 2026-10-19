@@ -59,7 +59,7 @@ export type ConfirmSummary = {
 /**
  * 확정하면 무엇이 일어나는지. 서버는 포함 항목에 저장된 끝내기(`END`)만 끝내고 다른 확정이 먼저 끝낸 노드는
  * 건너뛰므로 여기서도 그것만 센다 — 고르지 않은 대체는 끝내지 않는다. 기존 할 일 변경은 반영을 누를 때 이미
- * 할 일에 저장된다.
+ * 할 일에 저장된다. 다른 화면에서 저장된 APPLY 초안은 확정 때 반영되므로 함께 안내한다.
  */
 export function confirmSummaryOf(items: readonly ReviewItem[]): ConfirmSummary {
   const included = items.filter((item) => item.included);
@@ -68,6 +68,6 @@ export function confirmSummaryOf(items: readonly ReviewItem[]): ConfirmSummary {
   return {
     newTasks: included.filter((item) => item.kind === "ACTION_ITEM").length,
     endedDecisions: targets(included.flatMap((item) => item.replacements.filter((row) => row.decision === "END" && row.target.endedAt === null))),
-    changedTasks: targets(included.flatMap((item) => item.taskChanges.filter((row) => row.decision === "APPLIED"))),
+    changedTasks: targets(included.flatMap((item) => item.taskChanges.filter((row) => row.decision === "APPLY" || row.decision === "APPLIED"))),
   };
 }

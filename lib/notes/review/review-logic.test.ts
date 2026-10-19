@@ -85,6 +85,21 @@ describe("sectionsOf", () => {
 });
 
 describe("confirmSummaryOf", () => {
+  it("확정 전 APPLY와 APPLIED를 변경 안내에 포함하되 같은 할 일은 한 번만 센다", () => {
+    const change = (decision: "APPLY" | "APPLIED" | "KEEP") => ({
+      target: { itemId: "task", revision: 1, originalProposalRef: null },
+      status: "COMPLETED" as const,
+      assignee: null,
+      due: null,
+      draft: decision === "APPLY" ? { expectedRevision: 1, status: "COMPLETED" as const, assignee: null, due: null } : null,
+      reason: "",
+      decision,
+    });
+    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", taskChanges: [change("APPLY")] })]).changedTasks).toBe(1);
+    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", taskChanges: [change("APPLY"), change("APPLIED")] })]).changedTasks).toBe(1);
+    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", taskChanges: [change("KEEP")] })]).changedTasks).toBe(0);
+    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", included: false, taskChanges: [change("APPLY")] })]).changedTasks).toBe(0);
+  });
   it("포함 항목에 저장된 끝내기만 끝낼 것으로 세고, 반영한 할 일 변경을 센다", () => {
     const items = [
       item({

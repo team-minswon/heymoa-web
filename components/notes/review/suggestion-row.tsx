@@ -121,6 +121,7 @@ export function TaskChangeSuggestion({
   taskState,
   onRetryTask,
   disabled,
+  confirmed = false,
   onChoose,
 }: {
   change: TaskChange;
@@ -133,6 +134,7 @@ export function TaskChangeSuggestion({
   taskState: "pending" | "ready" | "failed";
   onRetryTask: () => void;
   disabled: boolean;
+  confirmed?: boolean;
   /** 선택을 검토본에 저장한다. 저장했는지를 돌려준다 */
   onChoose: (next: Choice) => Promise<boolean>;
 }) {
@@ -164,12 +166,35 @@ export function TaskChangeSuggestion({
   const [conflict, setConflict] = useState(false);
   // 할 일에는 반영했는데 선택 저장이 거절됐다. 다시 누르면 할 일은 두고 선택만 저장한다.
   const [choiceUnsaved, setChoiceUnsaved] = useState(false);
-  const applied = choice === "change";
-  const locked = disabled || applied || choiceUnsaved || update.isPending || !task;
+  const applied = change.decision === "APPLIED" || (confirmed && change.decision === "APPLY");
+  const pendingApply = change.decision === "APPLY" && !confirmed;
+  const usesDraft = change.decision === "APPLY";
+  const locked = disabled || applied || pendingApply || choiceUnsaved || update.isPending || !task;
+  // 다른 화면에서 저장한 확정 전 초안은 원래 AI 제안과 구분해 읽기만 한다.
+  const draftAssignee = change.draft?.assignee?.value;
+  const savedAssignee = draftAssignee
+    ? choices.find((candidate) => candidate.type === draftAssignee.type && (
+        candidate.type === "SPEAKER_LABEL"
+          ? candidate.label === draftAssignee.label
+          : candidate.id === draftAssignee.id
+      )) ?? {
+        type: draftAssignee.type,
+        id: draftAssignee.id ?? undefined,
+        label: draftAssignee.label ?? undefined,
+        name: "담당자 정보 없음",
+      }
+    : null;
+  const statusChange = usesDraft ? change.draft?.status : change.status;
+  const assigneeChange = usesDraft ? change.draft?.assignee : change.assignee;
+  const dueChange = usesDraft ? change.draft?.due : change.due;
+  const shownAssignee = usesDraft ? savedAssignee : assignee;
+  const shownDue = usesDraft ? change.draft?.due?.value : due;
 
   const saveChoice = async () => setChoiceUnsaved(!(await onChoose("change")));
 
   const apply = async () => {
+    // 이미 저장된 초안은 확정이 반영한다. 선택된 칸을 다시 눌러도 즉시 PUT하지 않는다.
+    if (pendingApply) return;
     if (choiceUnsaved) return saveChoice();
     if (!task) return;
     try {
@@ -205,7 +230,7 @@ export function TaskChangeSuggestion({
       toggle={
         <ChoiceToggle
           label="기존 할 일에 반영할지"
-          changeLabel={update.isPending ? "반영 중" : applied ? "반영됨" : "반영"}
+          changeLabel={update.isPending ? "반영 중" : applied ? "반영됨" : pendingApply ? "확정 시 반영" : "반영"}
           keepLabel="넘기기"
           value={choice}
           // 반영한 뒤에는 잠근다 — 「넘기기」로 바꿔도 이미 바뀐 할 일은 되돌아가지 않아 기록과 실제가 갈린다.
@@ -244,14 +269,14 @@ export function TaskChangeSuggestion({
       ) : (
         <span className="text-[var(--el-ink)]">{task?.content ?? change.reason}</span>
       )}
-      {task && change.status ? (
+      {task && statusChange ? (
         <Diff
           label="상태"
           from={TASK_STATUS_LABEL[task.taskStatus]}
-          to={<Pick>{TASK_STATUS_LABEL[change.status]}</Pick>}
+          to={<Pick>{TASK_STATUS_LABEL[statusChange]}</Pick>}
         />
       ) : null}
-      {task && change.assignee ? (
+      {task && assigneeChange ? (
         <Diff
           label="담당"
           from={
@@ -267,7 +292,7 @@ export function TaskChangeSuggestion({
           to={
             <Pick editable={!locked}>
               <AssigneeCell
-                value={assignee ?? null}
+                value={shownAssignee ?? null}
                 choices={choices}
                 editable={!locked}
                 placeholder="없음"
@@ -277,18 +302,18 @@ export function TaskChangeSuggestion({
           }
         />
       ) : null}
-      {task && change.due ? (
+      {task && dueChange ? (
         <Diff
           label="기한"
           from={task.due ? formatDueDate(task.due) : "없음"}
           to={
             <Pick editable={!locked}>
-              <DueCell value={due ?? null} editable={!locked} placeholder="없음" onChange={setDue} />
+              <DueCell value={shownDue ?? null} editable={!locked} placeholder="없음" onChange={setDue} />
             </Pick>
           }
         />
       ) : null}
-      {task && assignee !== undefined && assigneeKey(assignee) === assigneeKey(task.assignee) && !change.status && !change.due ? (
+      {task && !usesDraft && assignee !== undefined && assigneeKey(assignee) === assigneeKey(task.assignee) && !change.status && !change.due ? (
         <span className="text-[var(--el-muted-soft)]">이미 같은 값입니다</span>
       ) : null}
     </SuggestionShell>
