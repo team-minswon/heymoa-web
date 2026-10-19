@@ -83,9 +83,30 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
                 </span>
               </Link>
               <p className="m-0 mt-3 max-w-[300px] text-[15px] leading-[1.7] text-balance break-keep text-[var(--tv-body)]">
-                헤이모아(HeyMoa)는 회의를 받아 적고, 결정과 할 일을 근거와 함께 정리하는
-                AI 에이전트입니다
+                헤이모아(HeyMoa)는 회의를 받아 적고, 결정과 할 일을 근거와 함께
+                정리하는 AI 에이전트입니다
               </p>
+              <nav
+                aria-label="HeyMoa 소셜 채널"
+                className="mt-4 flex flex-wrap gap-x-5 gap-y-2"
+              >
+                <a
+                  href="https://www.instagram.com/heymoa.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={LINK}
+                >
+                  Instagram<span className="sr-only"> (새 탭에서 열림)</span>
+                </a>
+                <a
+                  href="https://www.threads.com/@heymoa.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={LINK}
+                >
+                  Threads<span className="sr-only"> (새 탭에서 열림)</span>
+                </a>
+              </nav>
             </div>
 
             {COLUMNS.map((column, i) => (
