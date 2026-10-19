@@ -67,7 +67,32 @@ export function MeetingEndDialog({
   const recording = useRecording();
   // 인라인 차단 안내가 사유를 소유하므로 전역 토스트는 끈다 — 인라인이 없는 실패만 토스트한다.
   const endMeeting = useEndMeeting({
-    mutation: { meta: { suppressErrorToast: true } },
+    mutation: {
+      meta: { suppressErrorToast: true },
+      // meeting.ended가 HTTP 응답보다 먼저 제어를 제거해도 종료 결과를 반영한다.
+      onSuccess: (response) => void convergeEnded(response),
+      onError: (error) => {
+        const code = errorCodeOf(error);
+        if (code === "MEETING_ALREADY_ENDED") {
+          void convergeEnded();
+          return;
+        }
+        // 그 사이 누군가 기록을 시작했다(APP-694). 화면이 따라잡도록 노트를 다시 묻는다.
+        if (code === "MEETING_RECORDING") {
+          setBlocked(
+            errorMessageOf(
+              error,
+              "기록 중인 회의는 중지한 뒤 종료할 수 있습니다."
+            )
+          );
+          void queryClient.invalidateQueries({
+            queryKey: getGetNoteQueryKey(noteId),
+          });
+          return;
+        }
+        toast.error(errorMessageOf(error, "회의를 종료하지 못했습니다."));
+      },
+    },
   });
   const [blocked, setBlocked] = useState<string | null>(null);
 
@@ -100,7 +125,9 @@ export function MeetingEndDialog({
       );
     } else {
       // 이미 끝난 회의였다 — 응답에 노트가 없다. 지어내지 말고 다시 묻는다.
-      void queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) });
+      void queryClient.invalidateQueries({
+        queryKey: getGetNoteQueryKey(noteId),
+      });
     }
     onOpenChange(false);
     // 목록 항목이 상태와 시간을 보여주므로 같이 비운다. 응답 하나로는 못 대신한다.
@@ -114,33 +141,7 @@ export function MeetingEndDialog({
   const requestEnd = () => {
     if (starting) return;
     setBlocked(null);
-    endMeeting.mutate(
-      { noteId },
-      {
-        onSuccess: (response) => void convergeEnded(response),
-        onError: (error) => {
-          const code = errorCodeOf(error);
-          if (code === "MEETING_ALREADY_ENDED") {
-            void convergeEnded();
-            return;
-          }
-          // 그 사이 누군가 기록을 시작했다(APP-694). 화면이 따라잡도록 노트를 다시 묻는다.
-          if (code === "MEETING_RECORDING") {
-            setBlocked(
-              errorMessageOf(
-                error,
-                "기록 중인 회의는 중지한 뒤 종료할 수 있습니다."
-              )
-            );
-            void queryClient.invalidateQueries({
-              queryKey: getGetNoteQueryKey(noteId),
-            });
-            return;
-          }
-          toast.error(errorMessageOf(error, "회의를 종료하지 못했습니다."));
-        },
-      }
-    );
+    endMeeting.mutate({ noteId });
   };
 
   // **종료 요청이 떠 있는 동안은 닫지 못하게 한다.** 이 창이 진행 표시(버튼 spinner)를 들고 있고,
@@ -250,11 +251,7 @@ export function MeetingEndDialog({
           ) : null}
           {/* 높이를 손으로 주지 않는다 — `h-11`(44)이 `닫기`의 기본 높이와 달라 같은 줄에서
               두 버튼 크기가 어긋났다. 진행 표시는 문구 교체가 아니라 `loading`으로 준다. */}
-          <Button
-            loading={busy}
-            disabled={busy}
-            onClick={requestEnd}
-          >
+          <Button loading={busy} disabled={busy} onClick={requestEnd}>
             회의 종료
           </Button>
         </DialogFooter>

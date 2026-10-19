@@ -20,7 +20,10 @@ const participant = (id: string, name: string): Participant => ({
   email: `${id}@heymoa.com`,
   image: null,
 });
-const TWO_PARTICIPANTS = [participant("p1", "김민수"), participant("p2", "한지원")];
+const TWO_PARTICIPANTS = [
+  participant("p1", "김민수"),
+  participant("p2", "한지원"),
+];
 
 /**
  * **종료 응답이 갱신된 노트다** (APP-685). 전에는 204 라 화면이 종료 뒤 상태를 스스로
@@ -49,6 +52,8 @@ const state = vi.hoisted(() => ({
   disconnectMock: vi.fn(),
   toastError: vi.fn(),
   pending: false,
+  realMutation: false,
+  request: vi.fn(),
 }));
 
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: state.toastError } }));
@@ -77,10 +82,27 @@ vi.mock("@/components/transcription/recording-provider", async () => {
     }),
   };
 });
-vi.mock("@/lib/api/generated/analysis/analysis", () => ({
-  useEndMeeting: () => ({ mutate: state.endMock, isPending: state.pending }),
-  getGetLatestAnalysisQueryKey: (noteId: string) => ["analysis", noteId],
-}));
+vi.mock("@/lib/api/generated/analysis/analysis", async () => {
+  const { useMutation } = await vi.importActual<
+    typeof import("@tanstack/react-query")
+  >("@tanstack/react-query");
+  return {
+    useEndMeeting: (options?: { mutation?: object }) => {
+      const mutation = useMutation({
+        mutationFn: () => state.request(),
+        ...options?.mutation,
+      });
+      return state.realMutation
+        ? mutation
+        : {
+            mutate: (variables: unknown) =>
+              state.endMock(variables, options?.mutation),
+            isPending: state.pending,
+          };
+    },
+    getGetLatestAnalysisQueryKey: (noteId: string) => ["analysis", noteId],
+  };
+});
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNoteQueryKey: (noteId: string) => ["note", noteId],
 }));
@@ -122,12 +144,33 @@ describe("MeetingEndDialog", () => {
     state.sessionStartedAt = null;
     state.endMock.mockReset();
     state.pending = false;
+    state.realMutation = false;
+    state.request.mockReset();
     state.stopMock.mockReset();
     state.disconnectMock.mockReset();
   });
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+  });
+
+  it("종료 이벤트로 다이얼로그가 먼저 사라져도 HTTP 종료 응답 뒤 요약으로 이동한다", async () => {
+    state.realMutation = true;
+    let finish!: (value: typeof ENDED_NOTE) => void;
+    state.request.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    const onEnded = vi.fn();
+    const view = renderDialog(onEnded);
+    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+    await waitFor(() => expect(state.request).toHaveBeenCalledOnce());
+    // meeting.ended가 캐시를 ENDED로 바꾸면 부모가 MeetingControls를 제거한다.
+    view.unmount();
+    await act(async () => finish(ENDED_NOTE));
+    await waitFor(() => expect(onEnded).toHaveBeenCalledOnce());
   });
 
   it("우측 상단 닫기(X) 버튼으로 닫힌다", () => {
@@ -140,7 +183,9 @@ describe("MeetingEndDialog", () => {
   it("Esc 로 닫힌다", () => {
     const onOpenChange = vi.fn();
     renderDialog(undefined, "PAUSED", undefined, onOpenChange);
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -153,7 +198,9 @@ describe("MeetingEndDialog", () => {
       (screen.getByRole("button", { name: "취소" }) as HTMLButtonElement)
         .disabled
     ).toBe(true);
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
@@ -474,9 +521,9 @@ describe("MeetingEndDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
 
     await waitFor(() => expect(onEnded).toHaveBeenCalledOnce());
-    expect(
-      client.getQueryState(["note", "01K0000000002"])?.isInvalidated
-    ).toBe(true);
+    expect(client.getQueryState(["note", "01K0000000002"])?.isInvalidated).toBe(
+      true
+    );
   });
 
   it("진행 중인 PAUSED 조회 취소가 끝난 뒤 ENDED를 캐시에 쓴다", async () => {

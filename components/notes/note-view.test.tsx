@@ -12,6 +12,9 @@ import { normalizeNoteViewQuery, NoteView } from "@/components/notes/note-view";
 
 const state = vi.hoisted(() => ({
   search: "",
+  onTabChange: undefined as
+    | undefined
+    | ((tab: "summary" | "transcript") => void),
   note: undefined as
     | undefined
     | {
@@ -42,26 +45,29 @@ vi.mock("@/components/notes/note-panel", () => ({
       options?: { push?: boolean }
     ) => void;
     onSharedTurnActiveChange?: (active: boolean) => void;
-  }) => (
-    <>
-      <div data-testid="note-panel">{tab}</div>
-      <button type="button" onClick={() => onTabChange("summary")}>
-        요약 전환
-      </button>
-      <button
-        type="button"
-        onClick={() => onTabChange("transcript", { push: true })}
-      >
-        근거 점프
-      </button>
-      <button type="button" onClick={() => onSharedTurnActiveChange?.(true)}>
-        공유 턴 시작
-      </button>
-      <button type="button" onClick={() => onSharedTurnActiveChange?.(false)}>
-        공유 턴 끝
-      </button>
-    </>
-  ),
+  }) => {
+    state.onTabChange = onTabChange;
+    return (
+      <>
+        <div data-testid="note-panel">{tab}</div>
+        <button type="button" onClick={() => onTabChange("summary")}>
+          요약 전환
+        </button>
+        <button
+          type="button"
+          onClick={() => onTabChange("transcript", { push: true })}
+        >
+          근거 점프
+        </button>
+        <button type="button" onClick={() => onSharedTurnActiveChange?.(true)}>
+          공유 턴 시작
+        </button>
+        <button type="button" onClick={() => onSharedTurnActiveChange?.(false)}>
+          공유 턴 끝
+        </button>
+      </>
+    );
+  },
 }));
 vi.mock("@/components/notes/note-route-surface", () => ({
   NoteRouteSurface: ({ children }: { children: ReactNode }) => children,
@@ -186,7 +192,9 @@ describe("NoteView", () => {
     fireEvent.click(screen.getByRole("button", { name: "요약 전환" }));
 
     expect(pushState).not.toHaveBeenCalled();
-    expect(replacedUrls()).toContain("/w/workspace/notes/note?view=full&tab=summary");
+    expect(replacedUrls()).toContain(
+      "/w/workspace/notes/note?view=full&tab=summary"
+    );
   });
 
   it("announces a meeting state change once through one polite live region", () => {
@@ -248,6 +256,28 @@ describe("NoteView", () => {
     expect(state.replace).not.toHaveBeenCalled();
   });
 
+  it("ignores a late summary callback after leaving the note", () => {
+    const view = render(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+    const onTabChange = state.onTabChange!;
+    view.unmount();
+    onTabChange("summary");
+    expect(replacedUrls()).toEqual([]);
+  });
+
+  it("ignores the previous note's late summary callback when the view is reused", () => {
+    const view = render(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+    const onTabChange = state.onTabChange!;
+    view.rerender(
+      <NoteView workspaceId="workspace" noteId="other-note" initialQuery={{}} />
+    );
+    onTabChange("summary");
+    expect(replacedUrls()).toEqual([]);
+  });
+
   it("does not normalize an ended-summary intent from a stale chat URL", async () => {
     state.search = "view=side&tab=chat";
     state.note = {
@@ -279,5 +309,4 @@ describe("NoteView", () => {
     );
     await waitFor(() => expect(replacedUrls()).toHaveLength(1));
   });
-
 });

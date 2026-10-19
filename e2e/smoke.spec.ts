@@ -1446,6 +1446,29 @@ test("locks ending a remotely recorded meeting in the side panel", async ({
   );
 });
 
+for (const view of ["full", "side"] as const) {
+  test(`ends from the stop tooltip and opens the summary in ${view} view`, async ({
+    page,
+  }) => {
+    await createMeetingNote(page);
+    if (view === "side")
+      await page.getByRole("button", { name: "사이드 뷰로 보기" }).click();
+    await startRecording(page, "회의 시작");
+    await stopRecording(page);
+    await page.getByRole("button", { name: "지금 종료", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "회의를 종료할까요?" });
+    await expect(dialog).toBeVisible();
+    await dialog
+      .getByRole("button", { name: "회의 종료", exact: true })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`view=${view}&tab=summary`));
+    await expect(
+      page.getByRole("tab", { name: "요약", exact: true })
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText("회의를 분석하는 중입니다")).toBeVisible();
+  });
+}
+
 test("ends a stopped meeting from the side panel and opens the ended summary", async ({
   page,
 }) => {

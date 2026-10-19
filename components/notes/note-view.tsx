@@ -106,6 +106,13 @@ export function NoteView({
 
   const [isOpen, setIsOpen] = useState(false);
   const pendingSearchRef = useRef<{ from: string; to: string } | null>(null);
+  const activeNoteIdRef = useRef<string | null>(noteId);
+  useEffect(() => {
+    activeNoteIdRef.current = noteId;
+    return () => {
+      activeNoteIdRef.current = null;
+    };
+  }, [noteId]);
 
   useEffect(() => {
     // Wait for the initial render to commit before triggering the open transition
@@ -171,6 +178,8 @@ export function NoteView({
     /** 뒤로가기로 되돌아올 자리를 남긴다. 근거 점프에만 쓴다. */
     options?: { push?: boolean }
   ) => {
+    // 종료 응답보다 먼저 노트 자체를 떠났다면 이전 노트로 되돌리지 않는다.
+    if (activeNoteIdRef.current !== noteId) return;
     const next = new URLSearchParams(search);
     // 회의 종료 성공 콜백은 쿼리 캐시 구독자가 ENDED로 다시 그리기 직전에 올 수 있다.
     // 여기서 이전 phase로 정규화하면 의도한 summary가 transcript로 유실된다. 이벤트 의도를
