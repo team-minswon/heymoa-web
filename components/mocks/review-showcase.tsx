@@ -4,6 +4,7 @@ import { ExternalLink, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { SegmentedControl } from "@/components/heymoa/segmented-control";
+import { PROJECT_APPROVAL_CASES } from "@/lib/mocks/fixtures/project-approval-cases";
 import { cn } from "@/lib/utils";
 
 const WORKSPACE_ID = "01K0000000000";
@@ -19,6 +20,13 @@ export type Scenario = {
 
 /** 목 시드의 노트마다 한 상태. 무엇을 눌러 볼지를 함께 둬서, 화면을 모르는 사람도 전부 밟아 본다. */
 export const SCENARIOS: Scenario[] = [
+  ...PROJECT_APPROVAL_CASES.map((row) => ({
+    key: row.key,
+    group: "프로젝트 추가",
+    title: row.title,
+    path: `${summaryOf("01K0000000920")}&reviewCase=${row.key}`,
+    tryThis: [...row.tryThis],
+  })),
   {
     key: "review",
     group: "검토",
@@ -29,7 +37,7 @@ export const SCENARIOS: Scenario[] = [
       "줄을 눌러 수정 기록 → 스크립트 펼치기",
       "할 일의 담당 · 기한 칸 고치기",
       "수정 · 제외 · 제외 취소 · 섹션에 추가",
-      "이전 결정 끝내기 · 기존 할 일 반영",
+      "이전 결정 대체 · 유지와 기존 할 일 반영",
       "그래프로 바꿔 확대 · 이동 · 항목 고르기",
       "검토 완료",
     ],
@@ -67,7 +75,7 @@ export const SCENARIOS: Scenario[] = [
     group: "읽기",
     title: "다른 사람이 시작한 회의 · 요약 없음",
     path: summaryOf("01K0000000021"),
-    tryThis: ["고치는 조작 없이 섹션만 읽고, 요약 자리에 요약이 없다고 말합니다"],
+    tryThis: ["노트 멤버는 검토할 수 있고, 요약이 없을 때의 안내를 확인할 수 있습니다"],
   },
   {
     key: "confirmed",

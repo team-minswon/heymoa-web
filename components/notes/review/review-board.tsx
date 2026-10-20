@@ -74,8 +74,12 @@ import {
   unchosenSuggestionCount,
   taskApplyConflictsOf,
 } from "@/lib/notes/review/confirm";
+import { isProjectIncluded } from "@/lib/notes/review/project-approval";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
-import { hasMissingApply, missingChoicesOf } from "@/lib/notes/review/saved-choices";
+import {
+  hasMissingApply,
+  missingChoicesOf,
+} from "@/lib/notes/review/saved-choices";
 import {
   citedAtOf,
   meetingLengthOf,
@@ -91,11 +95,7 @@ import {
   sectionsOf,
   type ReviewItem,
 } from "@/lib/notes/review/sections";
-import {
-  topicDigests,
-  topicIndex,
-  topicNumber,
-} from "@/lib/notes/review/topics";
+import { topicDigests, topicIndex } from "@/lib/notes/review/topics";
 import { useReviewEditor } from "@/lib/notes/review/use-review-editor";
 import {
   createSpeakerIdentityResolver,
@@ -202,56 +202,86 @@ export function ReviewBoard({
   );
   const linksData = okData(linksQuery.data);
   const tasksQuery = useGetProjectTasks(workspaceId ?? "", projectId ?? "", {
-    query: { enabled: Boolean(workspaceId && projectId), staleTime: 0, refetchOnMount: "always" },
+    query: {
+      enabled: Boolean(workspaceId && projectId),
+      staleTime: 0,
+      refetchOnMount: "always",
+    },
   });
   // 거절 까닭은 확정 줄과 확인창에 남기므로 전역 토스트를 끈다(두 번 뜨지 않게).
   const approve = useApproveMeetingReview({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  const [approveError, setApproveError] = useState<{ version: number; message: string } | null>(null);
+  const [approveError, setApproveError] = useState<{
+    version: number;
+    message: string;
+  } | null>(null);
   const regionStatus = (region: string) =>
     flow?.regions?.find((row) => row.region === region)?.status;
   const relationsStatus = regionStatus("RELATIONS");
   const enrichmentStatus = regionStatus("ITEM_ENRICHMENT");
   const flowSignature = `${flow?.status}:${(flow?.regions ?? []).map((row) => `${row.region}:${row.status}`).join(",")}`;
   const [refreshAttempt, setRefreshAttempt] = useState(0);
-  const refreshKey = useMemo(() => ({ flowSignature, refreshAttempt }), [flowSignature, refreshAttempt]);
+  const refreshKey = useMemo(
+    () => ({ flowSignature, refreshAttempt }),
+    [flowSignature, refreshAttempt]
+  );
   const [loadedRefreshKey, setLoadedRefreshKey] = useState(refreshKey);
-  const [failedRefreshKey, setFailedRefreshKey] = useState<typeof refreshKey | null>(null);
+  const [failedRefreshKey, setFailedRefreshKey] = useState<
+    typeof refreshKey | null
+  >(null);
   const refreshFailed = failedRefreshKey === refreshKey;
   const refreshingAnalysis = loadedRefreshKey !== refreshKey && !refreshFailed;
   useEffect(() => {
     // 저장 중에는 늦은 GET을 늘리지 않는다. 상태 변화는 저장이 끝난 뒤 읽는다.
-    if (editor.busyItemId !== null || loadedRefreshKey === refreshKey || refreshFailed)
+    if (
+      editor.busyItemId !== null ||
+      loadedRefreshKey === refreshKey ||
+      refreshFailed
+    )
       return;
     let active = true;
     const reload = async (queryKey: readonly unknown[]) => {
       // 첫 응답을 기다리는 쿼리는 invalidate만으로 이전 요청이 취소되지 않는다.
       await queryClient.cancelQueries({ queryKey });
-      if (active) return queryClient.invalidateQueries({ queryKey }, { throwOnError: true });
+      if (active)
+        return queryClient.invalidateQueries(
+          { queryKey },
+          { throwOnError: true }
+        );
     };
     const requiredKeys = [
       getGetMeetingReviewQueryKey(noteId),
       getGetMeetingReviewSummaryQueryKey(noteId),
       getGetNoteTranscriptQueryKey(noteId),
-      ...(projectId ? [getGetProjectMeetingLinksQueryKey(projectId, { noteId })] : []),
+      ...(projectId
+        ? [getGetProjectMeetingLinksQueryKey(projectId, { noteId })]
+        : []),
     ];
     void Promise.all([
       ...requiredKeys.map(reload),
       projectId && workspaceId
-        // 업무 조회 실패는 제안의 판과 캐시를 대조해 taskStateOf에서 처리한다.
-        ? queryClient.invalidateQueries({ queryKey: getGetProjectTasksQueryKey(workspaceId, projectId) })
+        ? // 업무 조회 실패는 제안의 판과 캐시를 대조해 taskStateOf에서 처리한다.
+          queryClient.invalidateQueries({
+            queryKey: getGetProjectTasksQueryKey(workspaceId, projectId),
+          })
         : Promise.resolve(),
-    ]).then(() => {
-      if (!active) return;
-      // 오프라인으로 멈춘 조회도 resolve되므로 실제 무효화가 해제됐는지 확인한다.
-      if (requiredKeys.some((key) => queryClient.getQueryState(key)?.isInvalidated !== false)) {
-        throw new Error("분석 자료 조회가 끝나지 않았습니다.");
-      }
-      setLoadedRefreshKey(refreshKey);
-    }).catch(() => {
-      if (active) setFailedRefreshKey(refreshKey);
-    });
+    ])
+      .then(() => {
+        if (!active) return;
+        // 오프라인으로 멈춘 조회도 resolve되므로 실제 무효화가 해제됐는지 확인한다.
+        if (
+          requiredKeys.some(
+            (key) => queryClient.getQueryState(key)?.isInvalidated !== false
+          )
+        ) {
+          throw new Error("분석 자료 조회가 끝나지 않았습니다.");
+        }
+        setLoadedRefreshKey(refreshKey);
+      })
+      .catch(() => {
+        if (active) setFailedRefreshKey(refreshKey);
+      });
     return () => {
       active = false;
     };
@@ -273,7 +303,11 @@ export function ReviewBoard({
 
   const review = okData(reviewQuery.data);
   const summary = okData(summaryQuery.data);
-  useSummaryViewed(noteId, workspaceId, Boolean(review) && summary?.status === "SUCCEEDED");
+  useSummaryViewed(
+    noteId,
+    workspaceId,
+    Boolean(review) && summary?.status === "SUCCEEDED"
+  );
   const transcript = okData(transcriptQuery.data);
   const tasks = okData(tasksQuery.data)?.tasks ?? null;
 
@@ -301,7 +335,33 @@ export function ReviewBoard({
   const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
   const speakers = transcript?.diarization.speakers;
   const [renderPdf] = useState(createMinutesPdfRenderer);
-  const exportVersion = useMemo(() => JSON.stringify({ noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName, flowSignature, refreshAttempt }), [noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName, flowSignature, refreshAttempt]);
+  const exportVersion = useMemo(
+    () =>
+      JSON.stringify({
+        noteId,
+        noteMeta,
+        confirmed,
+        summary,
+        items,
+        transcript,
+        participants,
+        currentUserName,
+        flowSignature,
+        refreshAttempt,
+      }),
+    [
+      noteId,
+      noteMeta,
+      confirmed,
+      summary,
+      items,
+      transcript,
+      participants,
+      currentUserName,
+      flowSignature,
+      refreshAttempt,
+    ]
+  );
   // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
   const starts = useMemo(() => segmentStarts(segments), [segments]);
   const citedAt = useCallback(
@@ -350,7 +410,10 @@ export function ReviewBoard({
 
   const confirmSummary = confirmSummaryOf(items);
   const firstMissingApply = items.find(hasMissingApply);
-  const taskConflicts = taskApplyConflictsOf(items, (id) => tasksById.get(id)?.revision);
+  const taskConflicts = taskApplyConflictsOf(
+    items,
+    (id) => tasksById.get(id)?.revision
+  );
   const taskStateOf = (
     change: ReviewItem["taskChanges"][number]
   ): "pending" | "ready" | "failed" => {
@@ -358,7 +421,11 @@ export function ReviewBoard({
     const behind =
       revision !== undefined &&
       revision < (change.draft?.expectedRevision ?? change.target.revision);
-    if (tasksQuery.isPending || (behind && (tasksQuery.isFetching || tasksQuery.isPaused))) return "pending";
+    if (
+      tasksQuery.isPending ||
+      (behind && (tasksQuery.isFetching || tasksQuery.isPaused))
+    )
+      return "pending";
     return !tasks || (behind && tasksQuery.isError) ? "failed" : "ready";
   };
   const gateItems = items.map((item) =>
@@ -395,39 +462,57 @@ export function ReviewBoard({
     duplicateApplies: taskConflicts.duplicates.size,
     staleApplies: taskConflicts.stale.size,
     hasTaskChanges: gateItems.some(
-      (item) => item.included && item.taskChanges.length > 0
+      (item) => isProjectIncluded(item) && item.taskChanges.length > 0
     ),
     tasks:
-      !workspaceId || !projectId || tasksQuery.isPending ||
-      gateItems.some((item) => item.included && item.taskChanges.some((change) => taskStateOf(change) === "pending"))
+      !workspaceId ||
+      !projectId ||
+      tasksQuery.isPending ||
+      gateItems.some(
+        (item) =>
+          isProjectIncluded(item) &&
+          item.taskChanges.some((change) => taskStateOf(change) === "pending")
+      )
         ? ("pending" as const)
         : // 이미 읽은 할 일은 재조회가 실패해도 쓴다. 제안보다 낮은 판은 확인하지 못한 것이므로 다시 읽는다.
-          tasks && !gateItems.some((item) => item.included && item.taskChanges.some((change) => taskStateOf(change) === "failed"))
+          tasks &&
+            !gateItems.some(
+              (item) =>
+                isProjectIncluded(item) &&
+                item.taskChanges.some(
+                  (change) => taskStateOf(change) === "failed"
+                )
+            )
           ? ("ready" as const)
           : ("failed" as const),
   };
   // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
   // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
-  const analysisBlock =
-    reviewQuery.isError
-      ? "최신 검토본을 다시 확인해 주세요"
-      : refreshFailed
+  const analysisBlock = reviewQuery.isError
+    ? "최신 검토본을 다시 확인해 주세요"
+    : refreshFailed
       ? "최신 분석 결과를 다시 확인해 주세요"
       : refreshingAnalysis
         ? "최신 분석 결과를 확인하고 있습니다"
         : relationsStatus === "PENDING"
-      ? "충돌과 이어짐 확인이 끝나면 검토를 완료할 수 있습니다"
-      : enrichmentStatus === "PENDING"
-        ? "담당과 기한 정리가 끝나면 검토를 완료할 수 있습니다"
-        : null;
+          ? "충돌과 이어짐 확인이 끝나면 검토를 완료할 수 있습니다"
+          : enrichmentStatus === "PENDING"
+            ? "담당과 기한 정리가 끝나면 검토를 완료할 수 있습니다"
+            : null;
   const missingChoiceBlock = firstMissingApply
     ? "이전 분석의 선택을 해제해 주세요"
     : null;
-  const choiceBlock = saving ? "저장이 끝나면 완료할 수 있습니다" : missingChoiceBlock;
+  const choiceBlock = saving
+    ? "저장이 끝나면 완료할 수 있습니다"
+    : missingChoiceBlock;
   const earlierBlock =
-    analysisBlock ?? choiceBlock ?? confirmBlockReason({ ...blockInput, unchosen: 0 });
+    analysisBlock ??
+    choiceBlock ??
+    confirmBlockReason({ ...blockInput, unchosen: 0 });
   const confirmBlocked =
-    analysisBlock ?? choiceBlock ?? confirmBlockReason({ ...blockInput, unchosen });
+    analysisBlock ??
+    choiceBlock ??
+    confirmBlockReason({ ...blockInput, unchosen });
   // 막대의 「제안으로 가기」가 데려갈 줄. 요약 보기에 선 줄만이다.
   const firstUnchosen = sections
     .flatMap((section) => section.items)
@@ -445,12 +530,17 @@ export function ReviewBoard({
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     window.setTimeout(
       () => {
-        const target = document.querySelector(`[data-item-scroll-target][data-item-id="${CSS.escape(itemId)}"]`);
+        const target = document.querySelector(
+          `[data-item-scroll-target][data-item-id="${CSS.escape(itemId)}"]`
+        );
         target?.scrollIntoView?.({
-            block: "center",
-            behavior: reduce ? "auto" : "smooth",
-          });
-        if (focusChoice) target?.querySelector<HTMLButtonElement>("[data-clear-saved-choice]")?.focus({ preventScroll: true });
+          block: "center",
+          behavior: reduce ? "auto" : "smooth",
+        });
+        if (focusChoice)
+          target
+            ?.querySelector<HTMLButtonElement>("[data-clear-saved-choice]")
+            ?.focus({ preventScroll: true });
       },
       reduce ? 0 : COLLAPSE_SETTLE_MS
     );
@@ -486,6 +576,7 @@ export function ReviewBoard({
             onOpenScript={onOpenScript}
             fallbackReason={fallbackReason}
             showKind={!kind}
+            showSource={false}
           />
         ))
       : undefined;
@@ -510,41 +601,48 @@ export function ReviewBoard({
         <SavedChoices
           item={item}
           disabled={!editable || saving}
-          onClear={(targetId) => editor.updateItem(item.itemId, {
-            decisions: [{ targetId, decision: null }],
-          })}
+          onClear={(targetId) =>
+            editor.updateItem(item.itemId, {
+              decisions: [{ targetId, decision: null }],
+            })
+          }
         />
         {view === "graph" && editor.conflictItemId === item.itemId ? (
-          <p role="alert" className="text-xs text-[var(--el-muted)]">{editor.conflictMessage}</p>
+          <p role="alert" className="text-xs text-[var(--el-muted)]">
+            {editor.conflictMessage}
+          </p>
         ) : null}
-        {item.replacements.map((replacement) => (
-          <ReplacementSuggestion
-            key={replacement.target.itemId}
-            replacement={replacement}
-            context={contextFor(
-              item,
-              replacement.target,
-              replacement.kind,
-              replacement.reason
-            )}
-            choice={choiceOf(replacement.decision)}
-            disabled={!editable || !item.included || saving}
-            onChoose={(next) =>
-              choose(
+        {(isProjectIncluded(item) ? item.replacements : []).map(
+          (replacement) => (
+            <ReplacementSuggestion
+              key={replacement.target.itemId}
+              replacement={replacement}
+              newContent={item.content}
+              context={contextFor(
                 item,
-                replacement.target.itemId,
-                next === "change" ? "END" : "KEEP"
-              )
-            }
-          />
-        ))}
-        {item.taskChanges.map((change) =>
+                replacement.target,
+                replacement.kind,
+                replacement.reason
+              )}
+              choice={choiceOf(replacement.decision)}
+              disabled={!editable || !isProjectIncluded(item) || saving}
+              onChoose={(next) =>
+                choose(
+                  item,
+                  replacement.target.itemId,
+                  next === "change" ? "END" : "KEEP"
+                )
+              }
+            />
+          )
+        )}
+        {(isProjectIncluded(item) ? item.taskChanges : []).map((change) =>
           workspaceId && projectId ? (
             <TaskChangeSuggestion
               key={change.target.itemId}
               change={change}
               confirmed={confirmed}
-              included={item.included}
+              included={isProjectIncluded(item)}
               context={contextFor(
                 item,
                 change.target,
@@ -558,10 +656,18 @@ export function ReviewBoard({
               choice={choiceOf(change.decision)}
               taskState={taskStateOf(change)}
               onRetryTask={() => void tasksQuery.refetch()}
-              disabled={!editable || saving || !item.included}
-              onChoose={(next, taskChange) => editor.updateItem(item.itemId, {
-                decisions: [{ targetId: change.target.itemId, decision: next === "change" ? "APPLY" : "KEEP", taskChange }],
-              })}
+              disabled={!editable || saving || !isProjectIncluded(item)}
+              onChoose={(next, taskChange) =>
+                editor.updateItem(item.itemId, {
+                  decisions: [
+                    {
+                      targetId: change.target.itemId,
+                      decision: next === "change" ? "APPLY" : "KEEP",
+                      taskChange,
+                    },
+                  ],
+                })
+              }
             />
           ) : (
             <p
@@ -609,6 +715,10 @@ export function ReviewBoard({
       summary={summary}
       itemsById={itemsById}
       onSelectItem={showItem}
+      onSelectAgenda={(agendaId) => {
+        setView("summary");
+        window.location.hash = `summary-agenda-${agendaId}`;
+      }}
       suggestions={suggestionsOf(item)}
       trail={
         <ItemTrail
@@ -630,6 +740,7 @@ export function ReviewBoard({
     const body = {
       reviewId: review.reviewId,
       reviewRevision: review.reviewVersion,
+      projectSelectionConfirmed: true,
     };
     const key = JSON.stringify(body);
     if (lastRequest.current?.body !== key)
@@ -657,11 +768,18 @@ export function ReviewBoard({
       return true;
     } catch (error) {
       // 서버 문구를 확정 줄에 남긴다. 판이 낡아 거절됐을 수 있으니 검토본도 다시 읽는다.
-      setApproveError({ version: review.reviewVersion, message: errorMessageOf(error, "검토를 완료하지 못했습니다.") });
+      setApproveError({
+        version: review.reviewVersion,
+        message: errorMessageOf(error, "검토를 완료하지 못했습니다."),
+      });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getGetMeetingReviewQueryKey(noteId) }),
+        queryClient.invalidateQueries({
+          queryKey: getGetMeetingReviewQueryKey(noteId),
+        }),
         errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT"
-          ? queryClient.invalidateQueries({ predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey) })
+          ? queryClient.invalidateQueries({
+              predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
+            })
           : Promise.resolve(),
       ]);
       return false;
@@ -724,13 +842,16 @@ export function ReviewBoard({
         })
       : undefined;
   const preparePdf: PrepareMinutesPdf = async (include, signal) => {
-    if (refreshingAnalysis || refreshFailed) throw new Error("최신 분석 결과를 확인한 뒤 PDF를 만들 수 있습니다.");
+    if (refreshingAnalysis || refreshFailed)
+      throw new Error("최신 분석 결과를 확인한 뒤 PDF를 만들 수 있습니다.");
     if (!exportSources) throw new Error("회의록 자료를 불러오지 못했습니다.");
     const doc = await exportSources.minutes(include);
     signal?.throwIfAborted();
     return { blob: await renderPdf(doc, signal), fileName: doc.fileName };
   };
-  const wider = exportSources ? { ...exportSources, preparePdf, version: exportVersion } : undefined;
+  const wider = exportSources
+    ? { ...exportSources, preparePdf, version: exportVersion }
+    : undefined;
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
@@ -757,8 +878,7 @@ export function ReviewBoard({
         onRetry={() => void linksQuery.refetch()}
         className="pb-4"
       />
-    ) : projectId &&
-      (linksQuery.isPending || refreshingAnalysis) ? (
+    ) : projectId && (linksQuery.isPending || refreshingAnalysis) ? (
       <p
         role="status"
         className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
@@ -835,15 +955,28 @@ export function ReviewBoard({
           />
         ) : null}
         {firstMissingApply && canEdit && !confirmed ? (
-          <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm text-[var(--el-muted)]">
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm text-[var(--el-muted)]"
+          >
             <span>이전 분석의 선택을 해제해 주세요.</span>
-            <button type="button" onClick={() => showItem(firstMissingApply.itemId, true)} className="underline underline-offset-4">
+            <button
+              type="button"
+              onClick={() => showItem(firstMissingApply.itemId, true)}
+              className="underline underline-offset-4"
+            >
               선택으로 가기
             </button>
           </div>
         ) : null}
-        {flow?.status === "REVIEWABLE" && (relationsStatus === "PENDING" || enrichmentStatus === "PENDING") ? (
-          <PendingAnalysisRetry noteId={noteId} disabled={!editable || saving || refreshingAnalysis || refreshFailed} />
+        {flow?.status === "REVIEWABLE" &&
+        (relationsStatus === "PENDING" || enrichmentStatus === "PENDING") ? (
+          <PendingAnalysisRetry
+            noteId={noteId}
+            disabled={
+              !editable || saving || refreshingAnalysis || refreshFailed
+            }
+          />
         ) : null}
 
         <div
@@ -901,12 +1034,15 @@ export function ReviewBoard({
                         : "화자 정보를 확인하지 못해 담당과 기한을 분석하지 않았습니다."}
                   </p>
                 ) : null}
+                {!confirmed ? (
+                  <p className="mb-5 text-[13px] leading-6 text-[var(--el-muted)]">
+                    스위치를 켠 항목만 검토 완료 후 프로젝트에 추가됩니다.
+                  </p>
+                ) : null}
                 {sections.map((section) => (
                   <ReviewSection
                     key={section.key}
                     section={section}
-                    topicOf={topicOf}
-                    topicTitleOf={topicTitleOf}
                     whenOf={citedAt}
                     isMine={isMine}
                     canEdit={editable}
@@ -994,28 +1130,18 @@ export function ReviewBoard({
                   data-item-scroll-target
                   className="mt-4 overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-e2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
                 >
-                  <div className="flex items-center gap-2.5 border-b border-[var(--el-hairline-soft)] px-4 py-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-2 border-b border-[var(--el-hairline-soft)] px-4 py-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-[var(--el-ink)]">
                       <RoleDot role={roleOfItem(selected, summary)} />
                       {KIND_LABEL[selected.kind]}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--el-ink)]">
+                    <span className="col-span-2 row-start-2 min-w-0 whitespace-normal break-words text-sm leading-6 font-medium text-[var(--el-ink)] [overflow-wrap:anywhere]">
                       {selected.content}
                     </span>
-                    {topicOf(selected.itemId) !== null ? (
-                      <span className="text-xs whitespace-nowrap text-[var(--el-muted)] max-sm:hidden">
-                        {topicNumber(topicOf(selected.itemId)!)}{" "}
-                        {
-                          summaryTopics(summary).find(
-                            (row) => row.ordinal === topicOf(selected.itemId)
-                          )?.title
-                        }
-                      </span>
-                    ) : null}
                     <button
                       type="button"
                       aria-label="닫기"
-                      className="text-[var(--el-muted-soft)] hover:text-[var(--el-ink)]"
+                      className="col-start-2 row-start-1 text-[var(--el-muted-soft)] hover:text-[var(--el-ink)]"
                       onClick={() => setOpenItemId(null)}
                     >
                       <X className="size-3.5" />
@@ -1032,7 +1158,11 @@ export function ReviewBoard({
       {canEdit && !confirmed ? (
         <ConfirmBar
           summary={confirmSummary}
-          decisions={included.filter((item) => item.kind === "DECISION").length}
+          decisions={
+            items.filter(
+              (item) => isProjectIncluded(item) && item.kind === "DECISION"
+            ).length
+          }
           pending={approve.isPending}
           blocked={confirmBlocked}
           unchosen={earlierBlock ? 0 : unchosen}
@@ -1042,7 +1172,11 @@ export function ReviewBoard({
                 () => showItem(firstUnchosen.itemId)
               : undefined
           }
-          error={approveError?.version === review.reviewVersion ? approveError.message : null}
+          error={
+            approveError?.version === review.reviewVersion
+              ? approveError.message
+              : null
+          }
           raised={dockRaised}
           onConfirm={confirm}
         />

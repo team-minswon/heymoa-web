@@ -81,7 +81,10 @@ export function topicDigests(
       const narrative =
         topic.agendaId === null ? (topic.sentences ?? []) : topic.description;
       // 옛 응답에는 한 줄 summary와 긴 description이 함께 있다. 펼친 내용과 내보내기에서 전문을 보존한다.
-      const narrativeText = narrative.map((row) => row.text).join(" ").trim();
+      const narrativeText = narrative
+        .map((row) => row.text)
+        .join(" ")
+        .trim();
       const text = narrativeText || topic.summary?.trim() || "";
       const decisions = members.filter((item) => item.kind === "DECISION");
       const tasks = members.filter((item) => item.kind === "ACTION_ITEM");
@@ -144,7 +147,16 @@ export function linkedItemsOf(
           : relation.sourceItemId;
       if (other === itemId || seen.has(other)) continue;
       seen.add(other);
-      linked.push({ itemId: other, label: relation.label });
+      const labels: Record<string, string> = {
+        LEADS_TO: "연결",
+        SUPPORTS: "보완",
+        PROGRESS: "보고",
+        RESOLVES: "해결",
+      };
+      linked.push({
+        itemId: other,
+        label: labels[relation.kind] ?? relation.label,
+      });
     }
   }
   return linked;

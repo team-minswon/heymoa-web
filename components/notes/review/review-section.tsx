@@ -30,8 +30,6 @@ const EMPTY_TEXT: Record<Section["key"], string> = {
  */
 export function ReviewSection({
   section,
-  topicOf,
-  topicTitleOf,
   whenOf,
   isMine,
   canEdit,
@@ -52,8 +50,6 @@ export function ReviewSection({
   suggestionsOf,
 }: {
   section: Section;
-  topicOf: (itemId: string) => number | null;
-  topicTitleOf: (ordinal: number) => string;
   /** 항목이 회의에서 나온 때(ms) */
   whenOf: (item: ReviewItem) => number | null;
   /** 담당이 보는 사람 자신인가 */
@@ -93,10 +89,6 @@ export function ReviewSection({
       <ReviewRow
         key={item.itemId}
         item={item}
-        topic={(() => {
-          const ordinal = topicOf(item.itemId);
-          return ordinal === null ? null : { ordinal, title: topicTitleOf(ordinal) };
-        })()}
         assignable={assignable}
         whenMs={whenOf(item)}
         mine={isMine(item)}
@@ -122,6 +114,9 @@ export function ReviewSection({
     <SectionBlock
       title={section.label}
       count={section.includedCount}
+      aside={section.key === "DECISION" || section.key === "ACTION_ITEM" ? (
+        <span className="w-[92px] shrink-0 text-center text-xs text-[var(--el-muted)]">프로젝트에 추가</span>
+      ) : null}
     >
       {hint || aside ? (
         <div className="flex min-h-[30px] flex-wrap items-center gap-x-2.5 text-xs text-[var(--el-muted)]">

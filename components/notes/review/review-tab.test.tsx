@@ -14,6 +14,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -27,7 +28,7 @@ import { workspaceOfProject } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
 import { MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
 import { REVIEW_SEED_LEAD } from "@/lib/mocks/fixtures/meeting-review-seed";
-import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
+import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers } from "@/lib/mocks/project-tasks";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
@@ -53,6 +54,8 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+// 기존 검토 시나리오는 프로젝트 추가 대상을 선택한 상태에서 제안과 충돌을 검사합니다.
+beforeEach(() => meetingFlow.seedApprovalCase("all-selected"));
 afterEach(() => {
   cleanup();
   server.resetHandlers();
@@ -90,6 +93,12 @@ function renderTab(
   );
   return { onEvidenceSelect, onOpenTranscript, client };
 }
+
+
+const editButton = () => {
+  const expanded = screen.getAllByRole("button", { expanded: true }).find((button) => button.closest("[data-item-id]"));
+  return within(expanded!.closest("[data-item-id]") as HTMLElement).getByRole("button", { name: "수정" });
+};
 
 const row = (content: string) => screen.findByRole("button", { name: content });
 const section = (title: string) => screen.getByRole("region", { name: title });
@@ -258,13 +267,13 @@ describe("검토 가능한 회의", () => {
       1
     );
     const choice = within(box).getByRole("radiogroup", {
-      name: "이전 결정을 끝낼지",
+      name: "이전 결정을 어떻게 할까요?",
     });
     expect(within(box).getAllByRole("radiogroup")).toHaveLength(1);
-    fireEvent.click(within(choice).getByRole("radio", { name: "끝내기" }));
+    fireEvent.click(within(choice).getByRole("radio", { name: "대체" }));
     await waitFor(() =>
       expect(
-        within(choice).getByRole("radio", { name: "끝내기" })
+        within(choice).getByRole("radio", { name: "대체" })
       ).toHaveAttribute("aria-checked", "true")
     );
     expect(screen.queryByRole("region", { name: "충돌·이어짐" })).toBeNull();
@@ -378,7 +387,7 @@ describe("검토 가능한 회의", () => {
     await waitFor(() => expect(detail.scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" }));
   });
 
-  it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 여섯 개까지만 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {
+  it("주제 개요는 여섯 개까지만 서며, 결정 줄에는 주제를 반복하지 않고 나온 때를 표시한다", async () => {
     renderTab();
 
     const index = await screen.findByRole("list", { name: "주제 목차" });
@@ -396,10 +405,7 @@ describe("검토 가능한 회의", () => {
     expect(
       await within(index).findByRole("button", { name: /다음 멘토링과 활동비/ })
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByTitle("주제 01 · 회의가 끝난 뒤 할 일이 흐려지는 문제")
-        .length
-    ).toBeGreaterThan(0);
+    expect(screen.queryAllByTitle("주제 01 · 회의가 끝난 뒤 할 일이 흐려지는 문제")).toHaveLength(0);
     const decision = await rowBox(
       "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"
     );
@@ -444,7 +450,7 @@ describe("검토 가능한 회의", () => {
       await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+    fireEvent.click(editButton());
     fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
       target: { value: "설문 근거는 출처 · 표본 수 · 조사 연도를 함께 적는다" },
     });
@@ -625,7 +631,7 @@ describe("검토 가능한 회의", () => {
       fireEvent.click(
         await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
       );
-      fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+      fireEvent.click(editButton());
       fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
         target: { value: "고치던 문장" },
       });
@@ -677,7 +683,7 @@ describe("검토 가능한 회의", () => {
       fireEvent.click(
         await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
       );
-      fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+      fireEvent.click(editButton());
       fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
         target: { value: "고치던 문장" },
       });
@@ -956,7 +962,7 @@ describe("검토 가능한 회의", () => {
     expect(await row(lastDecision)).toBeInTheDocument();
   });
 
-  it("고를 제안을 다 고르기 전에는 확정을 막고, 이전 결정을 끝내기로 고르면 확정 줄이 바뀐 뒤 확정한다", async () => {
+  it("고를 제안을 다 고르기 전에는 확정을 막고, 이전 결정을 대체로 고르면 확정 줄이 바뀐 뒤 확정한다", async () => {
     renderTab();
     // 목의 멘토링 회의에는 아직 안 고른 제안이 셋이다(대체 하나 · 기존 할 일 변경 둘).
     expect(await screen.findByText(/확인할 제안/)).toHaveTextContent(
@@ -968,14 +974,14 @@ describe("검토 가능한 회의", () => {
     const box = await rowBox(
       "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다"
     );
-    fireEvent.click(within(box).getByRole("radio", { name: /끝내기/ }));
+    fireEvent.click(within(box).getByRole("radio", { name: /대체/ }));
     // 선택은 검토본에 저장된 뒤에 선다. 남은 제안 수가 하나 준다.
     await waitFor(() =>
       expect(screen.getByText(/확인할 제안/)).toHaveTextContent(
         "확인할 제안 2개"
       )
     );
-    expect(within(box).getByRole("radio", { name: /끝내기/ })).toHaveAttribute(
+    expect(within(box).getByRole("radio", { name: /대체/ })).toHaveAttribute(
       "aria-checked",
       "true"
     );
@@ -1003,7 +1009,7 @@ describe("검토 가능한 회의", () => {
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
     // 다 고르면 막대가 무엇이 올라가고 무엇이 끝나는지 말한다.
-    expect(screen.getByText(/를 프로젝트에 올립니다/)).toHaveTextContent(
+    expect(screen.getByText(/개 추가/)).toHaveTextContent(
       "이전 결정 1개 끝남"
     );
 
@@ -1025,10 +1031,10 @@ describe("검토 가능한 회의", () => {
     expect(
       within(box).getByText(/로드맵 브레인스토밍 · .* 확정/)
     ).toBeInTheDocument();
-    fireEvent.click(within(box).getByRole("radio", { name: /끝내기/ }));
+    fireEvent.click(within(box).getByRole("radio", { name: /대체/ }));
     await waitFor(() =>
       expect(
-        within(box).getByRole("radio", { name: /끝내기/ })
+        within(box).getByRole("radio", { name: /대체/ })
       ).toHaveAttribute("aria-checked", "true")
     );
 
@@ -1038,7 +1044,7 @@ describe("검토 가능한 회의", () => {
       "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다"
     );
     expect(
-      within(again).getByRole("radio", { name: /끝내기/ })
+      within(again).getByRole("radio", { name: /대체/ })
     ).toHaveAttribute("aria-checked", "true");
   });
 
@@ -1294,7 +1300,7 @@ describe("검토 가능한 회의", () => {
   it("승인 409 뒤 기존 할 일도 다시 읽고 넘기기를 선택해 완료할 수 있다", async () => {
     const before = await readProjectTasks();
     renderTab();
-    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "이어가기" }));
+    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "유지" }));
     const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
     const toggle = within(box).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
     await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
@@ -1342,7 +1348,7 @@ describe("검토 가능한 회의", () => {
       return HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "승인을 저장하지 못했습니다" } }, { status: 500 });
     }, { once: true }));
     renderTab();
-    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "이어가기" }));
+    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "유지" }));
     const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
     const toggle = within(box).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
     await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
@@ -1546,7 +1552,7 @@ describe("검토 가능한 회의", () => {
     );
   });
 
-  it("그래프 보기에서 항목을 고르면 그 아래에 수정 기록이 선다", async () => {
+  it("그래프에서 항목을 고르면 연결된 안건과 수정이력을 표시한다", async () => {
     renderTab();
     await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
 
@@ -1561,7 +1567,8 @@ describe("검토 가능한 회의", () => {
     expect(
       await screen.findByRole("button", { name: "닫기" })
     ).toBeInTheDocument();
-    expect(await screen.findByText("검토에서 수정")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "연결된 안건" })).toHaveTextContent("차별점과 요금");
+    expect(await screen.findByText("검토에서 수정")).toBeVisible();
   });
 
   it("노트 멤버는 시작자와 관계없이 검토할 수 있다", async () => {
@@ -1769,7 +1776,7 @@ describe("최종 요약과 늦은 관계 결과", () => {
     const { client } = renderTab();
     const content = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
     fireEvent.click(await row(content));
-    fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+    fireEvent.click(editButton());
     fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
       target: { value: "입력 중인 수정 내용" },
     });
@@ -1811,7 +1818,7 @@ describe("최종 요약과 늦은 관계 결과", () => {
     const { client } = renderTab(MENTORING_NOTE_ID, { noteMeta: { title: "검토 회의", whenIso: "2026-10-18T00:00:00Z", participantCount: 4 } });
     const content = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
     fireEvent.click(await row(content));
-    fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+    fireEvent.click(editButton());
     const input = screen.getByRole("textbox", { name: "항목 내용" });
     fireEvent.change(input, { target: { value: "작성 중인 내용" } });
     await waitFor(() => expect(client.isFetching()).toBe(0));
@@ -2046,7 +2053,7 @@ it("충돌 복구 실패 뒤 자동 조회가 성공해도 충돌 안내와 작�
   const { client } = renderTab();
   const original = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
   fireEvent.click(await row(original));
-  fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+  fireEvent.click(editButton());
   const input = screen.getByRole("textbox", { name: "항목 내용" });
   const draft = "표본 수와 조사 시점도 함께 표시한다";
   fireEvent.change(input, { target: { value: draft } });

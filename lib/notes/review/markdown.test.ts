@@ -16,6 +16,7 @@ const item = (over: Partial<ReviewItem>): ReviewItem => ({
   kind: "DECISION",
   content: "",
   included: true,
+  projectSelected: true,
   edited: false,
   authoredByUserId: null,
   originalProposalRef: null,
