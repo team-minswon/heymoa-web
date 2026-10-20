@@ -158,7 +158,7 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
 
       const summary = await get(`/v1/notes/${campaign}/meeting-review/summary`);
       expect(summary.status).toBe("SUCCEEDED");
-      expect(summary.topics.length).toBeGreaterThanOrEqual(3);
+      expect(summary.agendas.length).toBeGreaterThanOrEqual(3);
     });
 
     it("핵심 회의 2: 전사 100발화 이상, 검토 완료, 할 일이 프로젝트에 반영", async () => {

@@ -42,6 +42,7 @@ test("옛 필드 없는 옛 회의의 전문을 화면·복사·실제 PDF에서
   await expect(index).toContainText("둘째 줄도 전문에 남습니다.");
   await page.screenshot({ path: testInfo.outputPath("legacy-summary.png"), fullPage: true });
   await page.getByRole("button", { name: "요약 복사", exact: true }).click();
+  await page.getByRole("menuitem", { name: /마크다운.*복사/ }).click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain("옛 설명 첫 줄");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("둘째 줄도 전문에 남습니다.");
   await page.getByRole("button", { name: "내보내기·공유" }).click();
