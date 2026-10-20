@@ -933,7 +933,7 @@ describe("NotePanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "노트 메뉴" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /삭제/ }));
-    expect(await screen.findByText(/을 삭제할까요/)).toBeTruthy();
+    expect(await screen.findByText(/회의록을 삭제할까요/)).toBeTruthy();
 
     noteState.value = { ...noteState.value, noteId: "01K0000000009" };
     rerenderNote(
@@ -947,7 +947,7 @@ describe("NotePanel", () => {
       />
     );
 
-    await waitFor(() => expect(screen.queryByText(/을 삭제할까요/)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull());
   });
 
   it("개인 답변이 흐르는 동안에는 좁은 화면에서도 레일을 접지 않는다", () => {
@@ -988,16 +988,16 @@ describe("NotePanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "노트 메뉴" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /삭제/ }));
-    expect(await screen.findByText(/을 삭제할까요/)).toBeTruthy();
+    expect(await screen.findByText(/회의록을 삭제할까요/)).toBeTruthy();
 
     noteState.value = { ...noteState.value, noteId: "01K0000000009" };
     rerenderNote(panel("01K0000000009"));
-    await waitFor(() => expect(screen.queryByText(/을 삭제할까요/)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull());
 
     // 되돌아온다. 저장된 대상을 안 버렸으면 여기서 창이 저절로 뜬다.
     noteState.value = { ...noteState.value, noteId: "01K0000000002" };
     rerenderNote(panel("01K0000000002"));
-    expect(screen.queryByText(/을 삭제할까요/)).toBeNull();
+    expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull();
   });
 
   describe("발화 링크(?segment=)", () => {

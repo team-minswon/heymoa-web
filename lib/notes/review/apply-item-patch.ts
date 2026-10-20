@@ -21,9 +21,9 @@ export function applyItemPatch(
   itemId: string,
   patch: ItemPatch
 ): MeetingReviewResponseData {
-  const decisionOf = new Map(
+  const choiceOf = new Map(
     (patch.decisions ?? []).map(
-      (choice) => [choice.targetId, choice.decision] as const
+      (choice) => [choice.targetId, choice] as const
     )
   );
   const patchItem = (
@@ -32,23 +32,33 @@ export function applyItemPatch(
     ...item,
     ...(patch.included !== undefined ? { included: patch.included } : {}),
     ...("due" in patch ? { due: patch.due ?? null } : {}),
-    ...(decisionOf.size > 0
+    ...(choiceOf.size > 0
       ? {
-          // 대체 제안은 END·KEEP, 할 일 변경 제안은 KEEP 만 건다. 할 일 변경의 APPLIED 는 할 일 API 로 먼저 반영한 뒤의 기록이라
-          // (두 단계 저장, 되돌릴 수 없다) 응답을 기다리는 지금 방식 그대로 둔다.
           replacements: item.replacements.map((row) => {
-            const decision = decisionOf.get(row.target.itemId);
-            return decision !== null && decision !== "END" && decision !== "KEEP"
+            const decision = choiceOf.get(row.target.itemId)?.decision;
+            return decision === undefined || decision === "APPLIED" || decision === "APPLY"
               ? row
               : { ...row, decision };
           }),
           taskChanges: item.taskChanges.map((row) => {
-            const decision = decisionOf.get(row.target.itemId);
+            const choice = choiceOf.get(row.target.itemId);
+            const decision = choice?.decision;
             return decision === undefined ||
               decision === "END" ||
               decision === "APPLIED"
               ? row
-              : { ...row, decision };
+              : {
+                  ...row, decision,
+                  // 초안은 이름을 포함하지 않는 참조라 요청 값을 바로 표시할 수 있다.
+                  draft: decision === null ? null : choice?.taskChange ? {
+                    expectedRevision: choice.taskChange.expectedRevision,
+                    status: choice.taskChange.status ?? null,
+                    assignee: choice.taskChange.assignee?.value ? {
+                      value: { type: choice.taskChange.assignee.value.type, id: choice.taskChange.assignee.value.id ?? null, label: choice.taskChange.assignee.value.label ?? null },
+                    } : choice.taskChange.assignee ?? null,
+                    due: choice.taskChange.due ?? null,
+                  } : row.draft,
+                };
           }),
         }
       : {}),
@@ -73,7 +83,7 @@ export function restoreItemFields(
   // `applyItemPatch` 가 안 건 값(대체의 APPLIED, 할 일 변경의 END·APPLIED)은 되돌리지도 않는다 — 그 칸은 다른 길이 쓴 값이다.
   const touched = new Set(
     (patch.decisions ?? [])
-      .filter((choice) => choice.decision !== "APPLIED")
+      .filter((choice) => choice.decision !== "APPLIED" && choice.decision !== "APPLY")
       .map((choice) => choice.targetId)
   );
   const touchedTasks = new Set(
@@ -98,7 +108,7 @@ export function restoreItemFields(
                 ? { included: before.included }
                 : {}),
               ...("due" in patch ? { due: before.due } : {}),
-              ...(touched.size > 0
+              ...(touched.size > 0 || touchedTasks.size > 0
                 ? {
                     replacements: item.replacements.map((row) => {
                       const old = before.replacements.find(
@@ -115,7 +125,7 @@ export function restoreItemFields(
                           candidate.target.itemId === row.target.itemId
                       );
                       return touchedTasks.has(row.target.itemId) && old
-                        ? { ...row, decision: old.decision }
+                        ? { ...row, decision: old.decision, draft: old.draft }
                         : row;
                     }),
                   }

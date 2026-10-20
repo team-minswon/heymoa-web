@@ -2,15 +2,16 @@
 
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Collapse } from "@/components/heymoa/collapse";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import type { ReviewItem } from "@/lib/notes/review/sections";
-import { InlineRetry } from "@/components/ui/inline-retry";
-import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
-import type { MeetingLinkIndex, PastNote } from "@/lib/notes/review/meeting-links";
+import type {
+  MeetingLinkIndex,
+  PastNote,
+} from "@/lib/notes/review/meeting-links";
 import type { TopicDigest } from "@/lib/notes/review/topics";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
@@ -26,23 +27,64 @@ type Tone = "decision" | "task" | "open";
  */
 export function TopicIndex({
   topics,
+  noteId,
   onOpenTimeline,
   links,
   workspaceId,
-  onRetryLinks,
 }: {
   topics: readonly TopicDigest[];
+  noteId?: string;
   onOpenTimeline?: () => void;
   /** 이 회의에서 나가는 회의 간 연결. 없으면(조회 전 · 프로젝트 없음) 연결 줄을 그리지 않는다 */
   links?: MeetingLinkIndex;
   workspaceId?: string;
-  /** 연결 조회가 실패했다. 연결이 없는 것과 달라 다시 불러올 길을 둔다 */
-  onRetryLinks?: () => void;
 }) {
-  const [openOrdinals, setOpenOrdinals] = useState<ReadonlySet<number>>(() => new Set());
+  const [openOrdinals, setOpenOrdinals] = useState<ReadonlySet<number>>(
+    () => new Set()
+  );
   const [expanded, setExpanded] = useState(false);
+  const followedHash = useRef<string | null>(null);
+  const selectAgenda = useCallback(
+    (agendaId: string) => {
+      const target = topics.find((topic) => topic.agendaId === agendaId);
+      if (!target) return;
+      setExpanded(true);
+      setOpenOrdinals((current) =>
+        current.has(target.ordinal)
+          ? current
+          : new Set([...current, target.ordinal])
+      );
+      window.setTimeout(() => {
+        const element = document.getElementById(`summary-agenda-${agendaId}`);
+        element?.querySelector("button")?.focus({ preventScroll: true });
+        element?.scrollIntoView?.({ block: "center" });
+      }, 240);
+    },
+    [topics]
+  );
+  useEffect(() => {
+    const followHash = () => {
+      const prefix = "#summary-agenda-";
+      const hash = window.location.hash;
+      if (!hash.startsWith(prefix)) {
+        followedHash.current = null;
+        return;
+      }
+      const key = `${noteId ?? ""}:${hash}`;
+      if (followedHash.current === key) return;
+      const agendaId = hash.slice(prefix.length);
+      if (!topics.some((topic) => topic.agendaId === agendaId)) return;
+      followedHash.current = key;
+      selectAgenda(agendaId);
+    };
+    const timer = window.setTimeout(followHash, 0);
+    window.addEventListener("hashchange", followHash);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("hashchange", followHash);
+    };
+  }, [selectAgenda, noteId, topics]);
   if (topics.length === 0) return null;
-
   const shown = expanded ? topics : topics.slice(0, VISIBLE_TOPICS);
   const toggle = (ordinal: number) =>
     setOpenOrdinals((current) => {
@@ -54,11 +96,16 @@ export function TopicIndex({
 
   return (
     <SectionBlock title="주제" count={topics.length}>
-      <ul aria-label="주제 목차" className="border-t border-[var(--el-hairline-soft)]">
+      <ul
+        aria-label="주제 목차"
+        className="border-t border-[var(--el-hairline-soft)]"
+      >
         {shown.map((topic) => (
           <TopicRow
             key={topic.ordinal}
             topic={topic}
+            noteId={noteId}
+            onSelectAgenda={selectAgenda}
             open={openOrdinals.has(topic.ordinal)}
             onToggle={() => toggle(topic.ordinal)}
             onOpenTimeline={onOpenTimeline}
@@ -76,50 +123,85 @@ export function TopicIndex({
         >
           <ChevronDown
             aria-hidden
-            className={cn("size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none", expanded && "rotate-180")}
+            className={cn(
+              "size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none",
+              expanded && "rotate-180"
+            )}
           />
-          {expanded ? `처음 ${VISIBLE_TOPICS}개만` : `나머지 주제 ${topics.length - VISIBLE_TOPICS}개`}
+          {expanded
+            ? `처음 ${VISIBLE_TOPICS}개만`
+            : `나머지 주제 ${topics.length - VISIBLE_TOPICS}개`}
         </button>
-      ) : null}
-      {onRetryLinks ? (
-        <InlineRetry variant="line" label="지난 회의와의 연결을 불러오지 못했습니다." onRetry={onRetryLinks} className="pt-3" />
       ) : null}
     </SectionBlock>
   );
 }
 
-const COUNT_NAME: Record<Tone, string> = { decision: "결정", task: "할 일", open: "열린 질문" };
+const COUNT_NAME: Record<Tone, string> = {
+  decision: "결정",
+  task: "할 일",
+  open: "열린 질문",
+};
 
 /**
  * 「〈회의 이름〉에서 이어짐」. 회의 이름이 그 회의 요약으로 가는 링크다. 이어짐만 말하고 무엇이 바뀌었다고
  * 단정하지 않는다 — 연결은 사람 검토 없이 만들어져 틀릴 수 있고, 바꾸는 일은 제안 카드가 맡는다.
  */
-function ContinuedFrom({ notes, workspaceId, children }: { notes: readonly PastNote[]; workspaceId?: string; children?: React.ReactNode }) {
+function ContinuedFrom({
+  notes,
+  workspaceId,
+  noteId,
+  onSelectAgenda,
+}: {
+  notes: readonly PastNote[];
+  workspaceId?: string;
+  noteId?: string;
+  onSelectAgenda: (agendaId: string) => void;
+}) {
   if (notes.length === 0) return null;
   return (
     <span className="flex flex-wrap items-baseline gap-x-2 text-[12.5px] leading-5 text-[var(--el-muted)]">
-      {notes.map((note, at) => (
-        <span key={note.noteId}>
-          {workspaceId ? (
+      {notes.map((note) => (
+        <span
+          key={`${note.noteId}:${note.agendaId}`}
+          className="inline-flex items-baseline gap-1"
+        >
+          <span
+            aria-hidden
+            className="border-l border-b border-[var(--el-hairline-strong)] w-3 h-2"
+          />
+          {note.noteId === noteId ? (
+            <a
+              href={`#summary-agenda-${note.agendaId}`}
+              onClick={(event) => {
+                event.preventDefault();
+                onSelectAgenda(note.agendaId);
+              }}
+              className="text-[var(--el-body)] underline underline-offset-[3px]"
+            >
+              {note.agendaTitle}
+            </a>
+          ) : workspaceId ? (
             <Link
-              href={`/w/${workspaceId}/notes/${note.noteId}?view=full&tab=summary`}
-              className="text-[var(--el-body)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)] hover:decoration-[var(--el-ink)]"
+              href={`/w/${workspaceId}/notes/${note.noteId}?view=full&tab=summary#summary-agenda-${note.agendaId}`}
+              className="text-[var(--el-body)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
             >
               {note.title}
             </Link>
           ) : (
             note.title
           )}
-          에서 이어짐{at < notes.length - 1 ? " ·" : ""}
+          에서 이어짐{note.noteId !== noteId ? ` · ${note.agendaTitle}` : ""}
         </span>
       ))}
-      {children}
     </span>
   );
 }
 
 function TopicRow({
   topic,
+  noteId,
+  onSelectAgenda,
   open,
   onToggle,
   onOpenTimeline,
@@ -127,13 +209,17 @@ function TopicRow({
   workspaceId,
 }: {
   topic: TopicDigest;
+  noteId?: string;
+  onSelectAgenda: (agendaId: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenTimeline?: () => void;
   links?: MeetingLinkIndex;
   workspaceId?: string;
 }) {
-  const continued = topic.agendaId ? (links?.byAgendaId.get(topic.agendaId) ?? []) : [];
+  const continued = topic.agendaId
+    ? (links?.byAgendaId.get(topic.agendaId) ?? [])
+    : [];
 
   const counts = (
     [
@@ -155,7 +241,10 @@ function TopicRow({
         : formatOffset(topic.startMs);
 
   return (
-    <li className="border-b border-[var(--el-hairline-soft)]">
+    <li
+      id={topic.agendaId ? `summary-agenda-${topic.agendaId}` : undefined}
+      className="scroll-mt-24 border-b border-[var(--el-hairline-soft)]"
+    >
       <button
         type="button"
         aria-expanded={open}
@@ -166,9 +255,13 @@ function TopicRow({
           {topic.startMs === null ? "" : formatOffset(topic.startMs)}
         </span>
         <span className="flex min-w-0 flex-col">
-          <span className="text-[15px] leading-6 font-medium break-keep text-[var(--el-ink)]">{topic.title}</span>
+          <span className="text-[15px] leading-6 font-medium break-keep text-[var(--el-ink)]">
+            {topic.title}
+          </span>
           {topic.gist && !open ? (
-            <span className="truncate text-[13.5px] leading-5 text-[var(--el-muted)]">{topic.gist}</span>
+            <span className="whitespace-pre-wrap text-[13.5px] leading-6 break-words text-[var(--el-muted)]">
+              {topic.gist}
+            </span>
           ) : null}
         </span>
         <span className="col-start-2 row-start-2 mt-1 flex h-6 items-center gap-2.5 text-xs whitespace-nowrap tabular-nums text-[var(--el-muted)] sm:col-start-3 sm:row-start-1 sm:mt-0">
@@ -191,13 +284,20 @@ function TopicRow({
       {continued.length > 0 ? (
         // 버튼 안에 링크를 둘 수 없어 줄 아래에 따로 둔다(주제 제목 칸과 같은 들여쓰기)
         <div className="-mt-2 pb-3 pl-[56px] sm:pl-[68px]">
-          <ContinuedFrom notes={continued} workspaceId={workspaceId} />
+          <ContinuedFrom
+            notes={continued}
+            workspaceId={workspaceId}
+            noteId={noteId}
+            onSelectAgenda={onSelectAgenda}
+          />
         </div>
       ) : null}
       <Collapse open={open} lazy>
         <div className="flex flex-col gap-3 pb-[18px] pl-0 sm:pr-7 sm:pl-[68px]">
           {topic.text ? (
-            <p className="text-[14.5px] leading-[26px] break-keep text-[var(--el-body)]">{topic.text}</p>
+            <p className="whitespace-pre-wrap text-[14.5px] leading-[26px] break-words text-[var(--el-body)]">
+              {topic.text}
+            </p>
           ) : null}
           {lines.length > 0 ? (
             <ul className="flex flex-col gap-1.5">
@@ -206,7 +306,9 @@ function TopicRow({
                   key={item.itemId}
                   className={cn(
                     "grid grid-cols-[16px_minmax(0,1fr)] items-start gap-x-2 text-sm leading-[22px] break-keep",
-                    tone === "open" ? "text-[var(--el-body)]" : "text-[var(--el-ink)]"
+                    tone === "open"
+                      ? "text-[var(--el-body)]"
+                      : "text-[var(--el-ink)]"
                   )}
                 >
                   <span className="mt-[3px]">
@@ -215,16 +317,6 @@ function TopicRow({
                   <span>
                     <span className="sr-only">{COUNT_NAME[tone]} · </span>
                     {item.content}
-                    {/* 이 항목이 지난 회의의 항목과 이어지면 바로 아래에 한 줄 */}
-                    {(links?.byItemId.get(item.itemId) ?? []).map((past) => (
-                      <span key={`${past.noteId}-${past.content}`} className="mt-0.5 flex">
-                        <ContinuedFrom notes={[past]} workspaceId={workspaceId}>
-                          <span className="text-[var(--el-muted-soft)]">
-                            {CONTEXT_KIND_LABEL[past.kind]} 「{past.content}」
-                          </span>
-                        </ContinuedFrom>
-                      </span>
-                    ))}
                   </span>
                 </li>
               ))}

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 // MSW 회의만 사용합니다. 실제 회의·녹음 상태는 바꾸지 않습니다.
-test("긴 내용과 펼침의 높이 변화는 하단을 유지하고 수동 스크롤은 존중합니다", async ({
+test("새 내용의 높이 변화는 하단을 유지하고 수동 스크롤은 존중합니다", async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -54,4 +54,21 @@ test("긴 내용과 펼침의 높이 변화는 하단을 유지하고 수동 스
   );
   await page.getByRole("button", { name: "맨 아래로" }).click();
   await expect.poll(distance).toBeLessThan(2);
+});
+
+
+test("실시간 항목을 펼칠 때는 자동 추종을 멈추고 읽던 위치를 유지합니다", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto("/w/01K0000000000/notes/01K0000000016?view=full&tab=context");
+  const lastGroup = page.getByRole("button", { name: /^하반기 채용/ });
+  await expect(lastGroup).toBeVisible({ timeout: 30_000 });
+  const viewport = page.locator("[data-slot=scroll-area-viewport]").filter({ has: lastGroup });
+  const row = page.getByRole("button", { name: /백엔드 채용 2명 예산이 승인됐다/ });
+  await row.scrollIntoViewIfNeeded();
+  const top = await viewport.evaluate((node) => node.scrollTop);
+  await row.click();
+  await expect(row).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: /백엔드 두 명 예산은 승인이 났습니다/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "맨 아래로" })).toBeVisible();
+  expect(await viewport.evaluate((node) => node.scrollTop)).toBeLessThanOrEqual(top + 2);
 });

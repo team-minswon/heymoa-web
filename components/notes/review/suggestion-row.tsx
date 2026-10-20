@@ -1,7 +1,7 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { AssigneeCell, AssigneeFace } from "@/components/heymoa/assignee-cell";
 import { ChoiceToggle } from "@/components/heymoa/choice-toggle";
@@ -10,26 +10,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Choice } from "@/lib/notes/review/confirm";
 import { DueCell } from "@/components/heymoa/due-cell";
 import { formatAppDate, formatDueDate } from "@/lib/format/date";
-import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import type {
   MeetingReviewResponseDataItemsItemReplacementsItem as Replacement,
   MeetingReviewResponseDataItemsItemTaskChangesItem as TaskChange,
   ProjectTaskListResponseDataTasksItem as ProjectTask,
+  TranscriptResponseDataSegmentsItem,
+  UpdateMeetingReviewItemRequest,
 } from "@/lib/api/generated/models";
-import {
-  getGetProjectTaskRevisionsQueryKey,
-  useUpdateProjectTask,
-} from "@/lib/api/generated/projects/projects";
+import { LINK_LABEL, type MeetingRelation } from "@/lib/notes/review/meeting-links";
+import { KIND_LABEL } from "@/lib/notes/review/sections";
+import { formatOffset } from "@/lib/transcription/presentation";
 import {
   assigneeImageOf,
   assigneeKey,
-  assigneeRequestOf,
   type AssigneeChoice,
   type AssigneeValue,
 } from "@/lib/assignees/describe";
-import { toast } from "@/lib/ui/toast";
-import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
-import { isProjectTaskQueryKey, TASK_STATUS_LABEL } from "@/lib/tasks/task-groups";
+import { TASK_STATUS_LABEL } from "@/lib/tasks/task-groups";
 import { cn } from "@/lib/utils";
 
 /** 제안 한 줄의 틀. 무엇에 대한 제안인지 · 무엇이 바뀌는지 · 받을지를 한 줄에 둔다. */
@@ -41,11 +38,11 @@ function SuggestionShell({
 }: {
   label: string;
   children: ReactNode;
-  toggle: ReactNode;
+  toggle?: ReactNode;
   footer?: ReactNode;
 }) {
   return (
-    <div className="rounded-control bg-[var(--el-canvas-soft)] px-3 py-2.5 text-[12.5px] text-[var(--el-body)]">
+    <div role="group" aria-label={label} className="rounded-control bg-[var(--el-canvas-soft)] px-3 py-2.5 text-[12.5px] text-[var(--el-body)]">
       <div className="grid grid-cols-1 items-center gap-x-3 gap-y-1.5 sm:grid-cols-[96px_minmax(0,1fr)_auto]">
         <span className="text-xs whitespace-nowrap text-[var(--el-muted)]">{label}</span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{children}</span>
@@ -72,18 +69,20 @@ export function ReplacementSuggestion({
   choice,
   disabled,
   onChoose,
+  context,
 }: {
   replacement: Replacement;
   choice: Choice | null;
   disabled: boolean;
   onChoose: (next: Choice) => void;
+  context?: ReactNode;
 }) {
   const { target } = replacement;
   // 다른 확정이 먼저 끝낸 결정은 여기서 끝낼 것이 없다. 확정도 그 노드를 건너뛴다.
   const ended = target.endedAt !== null;
   return (
     <SuggestionShell
-      label="이전 결정 대체"
+      label={`이전 ${KIND_LABEL[target.kind]} ${replacement.label}`}
       toggle={
         <ChoiceToggle
           label="이전 결정을 끝낼지"
@@ -94,7 +93,7 @@ export function ReplacementSuggestion({
           onChange={onChoose}
         />
       }
-      footer={<p className="mt-1.5 text-xs text-[var(--el-muted)]">{replacement.reason}</p>}
+      footer={context ?? <p className="mt-1.5 text-xs text-[var(--el-muted)]">{replacement.reason}</p>}
     >
       <span className={cn("text-[var(--el-ink)]", ended && "text-[var(--el-muted-soft)] line-through")}>
         {target.content}
@@ -107,122 +106,144 @@ export function ReplacementSuggestion({
   );
 }
 
-/**
- * 기존 할 일 변경. 제안된 값을 사람이 칸에서 바꾼 뒤 「반영」하면 **할 일에 바로 저장한다** —
- * 확정을 기다리지 않는다. 할 일은 확정과 따로 사람이 다루는 대상이고, 저장한 사실은 할 일 이력에 남는다.
- */
+/** 승인 제안의 근거를 그 제안 안에 둔다. 관계 조회만으로 선택이나 대상 상태를 바꾸지 않는다. */
+export function RelationContext({
+  relation,
+  segments,
+  onOpenScript,
+  fallbackReason,
+  showKind = false,
+}: {
+  relation: MeetingRelation;
+  segments: readonly TranscriptResponseDataSegmentsItem[];
+  onOpenScript: (segmentId: string) => void;
+  fallbackReason?: string;
+  showKind?: boolean;
+}) {
+  const sequences = new Set(relation.evidenceSequences);
+  const quotes = segments.filter((segment) => sequences.has(segment.sequence));
+  return (
+    <div className="mt-1.5 space-y-1 text-xs text-[var(--el-muted)]">
+      <p>
+        {showKind ? `${LINK_LABEL[relation.kind]} · ` : ""}
+        {relation.scope === "same" ? "같은 회의" : relation.scope === "approved" ? "프로젝트 확정 항목" : relation.targetTitle}
+        {` · 판 ${relation.target.revision}`}
+      </p>
+      {relation.reason || fallbackReason ? (
+        <p className="whitespace-pre-wrap break-words">{relation.reason || fallbackReason}</p>
+      ) : null}
+      {quotes.length > 0 ? (
+        <ul aria-label="관계 근거 발언" className="space-y-1 border-l border-[var(--el-hairline)] pl-3">
+          {quotes.map((segment) => (
+            <li key={segment.segmentId}>
+              <button type="button" className="text-left leading-5 hover:text-[var(--el-ink)]" onClick={() => onOpenScript(segment.segmentId)}>
+                {formatOffset(segment.startedAtMs)} · {segment.text}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/** 승인 API에 제안이 없는 관계도 해당 결정·할 일 아래에서 읽는다. */
+export function RelationSuggestion({
+  relation,
+  workspaceId,
+  onSelectItem,
+  ...context
+}: {
+  relation: MeetingRelation;
+  workspaceId?: string;
+  onSelectItem: (itemId: string) => void;
+  segments: readonly TranscriptResponseDataSegmentsItem[];
+  onOpenScript: (segmentId: string) => void;
+}) {
+  return (
+    <SuggestionShell label={LINK_LABEL[relation.kind]} footer={<RelationContext relation={relation} {...context} />}>
+      {relation.targetItemId ? (
+        <button type="button" aria-label={`관계 대상 항목 보기 · ${relation.target.content}`} className="text-left underline underline-offset-4" onClick={() => onSelectItem(relation.targetItemId!)}>
+          {relation.target.content}
+        </button>
+      ) : <span className="break-words text-[var(--el-ink)]">{relation.target.content}</span>}
+      {relation.scope === "past" && workspaceId && relation.target.noteId ? (
+        <Link className="text-xs underline underline-offset-4" href={`/w/${workspaceId}/notes/${relation.target.noteId}?view=full&tab=summary`}>
+          {relation.targetTitle}
+        </Link>
+      ) : null}
+    </SuggestionShell>
+  );
+}
+
+type TaskDraft = NonNullable<NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"]>;
+
+/** 회의 라벨은 이 회의 소유입니다. 응답의 nullable 참조를 요청 모양으로 돌립니다. */
+function taskAssigneeRequestOf(box: NonNullable<TaskChange["draft"]>["assignee"]): TaskDraft["assignee"] {
+  if (!box) return null;
+  const value = box.value;
+  return { value: !value ? null : value.type === "SPEAKER_LABEL"
+    ? { type: value.type, label: value.label ?? undefined }
+    : { type: value.type, id: value.id ?? undefined } };
+}
+
+/** 기존 할 일의 변경 초안. 실제 업무는 검토 완료에서만 바뀝니다. */
 export function TaskChangeSuggestion({
   change,
   task,
-  workspaceId,
-  projectId,
+  noteId,
   choices,
   choice,
   taskState,
   onRetryTask,
   disabled,
-  confirmed = false,
   onChoose,
+  context,
+  duplicate = false,
+  confirmed = false,
+  included = true,
 }: {
   change: TaskChange;
   task: ProjectTask | undefined;
-  workspaceId: string;
-  projectId: string;
+  noteId: string;
   choices: AssigneeChoice[];
   choice: Choice | null;
   /** 프로젝트 할 일 조회 상태. 실패를 「할 일을 찾지 못했다」로 적지 않는다 */
   taskState: "pending" | "ready" | "failed";
   onRetryTask: () => void;
   disabled: boolean;
-  confirmed?: boolean;
   /** 선택을 검토본에 저장한다. 저장했는지를 돌려준다 */
-  onChoose: (next: Choice) => Promise<boolean>;
+  onChoose: (next: Choice, draft: TaskDraft) => Promise<boolean>;
+  context?: ReactNode;
+  duplicate?: boolean;
+  confirmed?: boolean;
+  included?: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const update = useUpdateProjectTask({
-    mutation: {
-      meta: { suppressErrorToast: true },
-      // 목록과 함께 그 할 일의 이력도 다시 읽는다. 이력 시트를 다시 열었을 때 바뀌기 전 판이 서면 안 된다.
-      // **목록은 둘이다** (APP-685) — 프로젝트 키만 비우면 「모든 할 일」이 낡은 값을 들고 남는다.
-      // onSuccess 에서 기다려야 그동안 반영이 진행 중으로 남는다 — 검토 화면은 이것으로 확정을 막고,
-      // 끝나면 곧바로 선택 저장이 이어받는다. 밖에서 기다리면 그 틈에 확정이 열린다.
-      onSuccess: (_, { workspaceId, projectId, taskId }) =>
-        Promise.all([
-          queryClient.invalidateQueries({
-            predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: getGetProjectTaskRevisionsQueryKey(workspaceId, projectId, taskId),
-          }),
-        ]),
-    },
-  });
-  const [assignee, setAssignee] = useState<AssigneeValue | null | undefined>(
-    change.assignee ? change.assignee.value : undefined
-  );
-  const [due, setDue] = useState<string | null | undefined>(
-    change.due ? change.due.value : undefined
-  );
-  const [conflict, setConflict] = useState(false);
-  // 할 일에는 반영했는데 선택 저장이 거절됐다. 다시 누르면 할 일은 두고 선택만 저장한다.
-  const [choiceUnsaved, setChoiceUnsaved] = useState(false);
-  const applied = change.decision === "APPLIED" || (confirmed && change.decision === "APPLY");
-  const pendingApply = change.decision === "APPLY" && !confirmed;
-  const usesDraft = change.decision === "APPLY";
-  const locked = disabled || applied || pendingApply || choiceUnsaved || update.isPending || !task;
-  // 다른 화면에서 저장한 확정 전 초안은 원래 AI 제안과 구분해 읽기만 한다.
-  const draftAssignee = change.draft?.assignee?.value;
-  const savedAssignee = draftAssignee
-    ? choices.find((candidate) => candidate.type === draftAssignee.type && (
-        candidate.type === "SPEAKER_LABEL"
-          ? candidate.label === draftAssignee.label
-          : candidate.id === draftAssignee.id
-      )) ?? {
-        type: draftAssignee.type,
-        id: draftAssignee.id ?? undefined,
-        label: draftAssignee.label ?? undefined,
-        name: "담당자 정보 없음",
-      }
-    : null;
-  const statusChange = usesDraft ? change.draft?.status : change.status;
-  const assigneeChange = usesDraft ? change.draft?.assignee : change.assignee;
-  const dueChange = usesDraft ? change.draft?.due : change.due;
-  const shownAssignee = usesDraft ? savedAssignee : assignee;
-  const shownDue = usesDraft ? change.draft?.due?.value : due;
-
-  const saveChoice = async () => setChoiceUnsaved(!(await onChoose("change")));
-
-  const apply = async () => {
-    // 이미 저장된 초안은 확정이 반영한다. 선택된 칸을 다시 눌러도 즉시 PUT하지 않는다.
-    if (pendingApply) return;
-    if (choiceUnsaved) return saveChoice();
-    if (!task) return;
-    try {
-      await update.mutateAsync({
-        workspaceId,
-        projectId,
-        taskId: task.taskId,
-        data: {
-          content: task.content,
-          taskStatus: change.status ?? task.taskStatus,
-          assignee: assigneeRequestOf(assignee === undefined ? (task.assignee ?? null) : assignee),
-          due: due === undefined ? task.due : due,
-          revision: task.revision,
-        },
-      });
-      setConflict(false);
-      await saveChoice();
-    } catch (error) {
-      if (errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT") {
-        setConflict(true);
-        await queryClient.invalidateQueries({
-          predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
-        });
-      } else {
-        toast.error(errorMessageOf(error, "할 일을 바꾸지 못했습니다."));
-      }
-    }
+  const saved = change.draft;
+  const draft: TaskDraft = saved ? {
+    ...saved,
+    assignee: taskAssigneeRequestOf(saved.assignee),
+  } : {
+    expectedRevision: change.target.revision,
+    status: change.status,
+    assignee: taskAssigneeRequestOf(change.assignee),
+    due: change.due,
   };
+  // 초안은 표시 이름이 아닌 참조로 옵니다. UI에서만 선택 목록과 이어 이름을 붙입니다.
+  const reference = draft.assignee?.value;
+  const assignee: AssigneeValue | null = reference
+    ? reference.type === "SPEAKER_LABEL"
+      ? { type: "SPEAKER_LABEL", noteId, label: reference.label ?? undefined }
+      : choices.find((row) => row.type === reference.type && "id" in row && row.id === reference.id)
+        ?? (change.assignee?.value?.type === reference.type && change.assignee.value.id === reference.id
+          ? change.assignee.value
+          : { type: reference.type, id: reference.id ?? undefined, name: "선택한 멤버" })
+    : null;
+  const applied = change.decision === "APPLIED" || (confirmed && included && change.decision === "APPLY");
+  const stale = taskState === "ready" && !confirmed && !applied && task !== undefined && task.revision !== draft.expectedRevision;
+  const locked = disabled || applied || confirmed;
+  const fieldsLocked = locked || !task || stale || taskState !== "ready";
+  const saveDraft = (next: TaskDraft) => onChoose(choice ?? "change", next);
 
   return (
     <SuggestionShell
@@ -230,26 +251,24 @@ export function TaskChangeSuggestion({
       toggle={
         <ChoiceToggle
           label="기존 할 일에 반영할지"
-          changeLabel={update.isPending ? "반영 중" : applied ? "반영됨" : pendingApply ? "확정 시 반영" : "반영"}
+          changeLabel={applied ? "반영됨" : choice === "change" ? confirmed ? "제외됨" : "반영 예정" : "반영"}
           keepLabel="넘기기"
           value={choice}
-          // 반영한 뒤에는 잠근다 — 「넘기기」로 바꿔도 이미 바뀐 할 일은 되돌아가지 않아 기록과 실제가 갈린다.
-          disabled={disabled || applied || update.isPending || !task}
-          keepDisabled={choiceUnsaved}
-          onChange={(next) => (next === "change" ? void apply() : onChoose("keep"))}
+          disabled={locked || taskState === "pending"}
+          changeDisabled={!task || stale || taskState !== "ready"}
+          onChange={(next) => { if (next !== choice) void onChoose(next, draft); }}
         />
       }
       footer={
         <>
-          {conflict ? (
-            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">
-              {CONFLICT_MESSAGE}
-            </p>
+          {context}
+          {stale ? (
+            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">기존 할 일이 변경되어 이 제안을 반영할 수 없습니다. 넘기기를 선택해 주세요.</p>
+          ) : duplicate && !confirmed ? (
+            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">같은 할 일의 다른 제안도 반영 예정입니다. 하나만 반영하고 나머지는 넘겨 주세요.</p>
           ) : null}
-          {choiceUnsaved ? (
-            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">
-              할 일에는 반영했지만 선택을 저장하지 못했습니다. 반영을 한 번 더 누르면 선택만 저장합니다.
-            </p>
+          {!confirmed && !applied && choice === "change" ? (
+            <p className="mt-2 text-xs text-[var(--el-muted)]">검토 완료 때 적용됩니다.</p>
           ) : null}
           {taskState === "failed" ? (
             <InlineRetry
@@ -269,14 +288,14 @@ export function TaskChangeSuggestion({
       ) : (
         <span className="text-[var(--el-ink)]">{task?.content ?? change.reason}</span>
       )}
-      {task && statusChange ? (
+      {task && draft.status ? (
         <Diff
           label="상태"
           from={TASK_STATUS_LABEL[task.taskStatus]}
-          to={<Pick>{TASK_STATUS_LABEL[statusChange]}</Pick>}
+          to={<Pick>{TASK_STATUS_LABEL[draft.status]}</Pick>}
         />
       ) : null}
-      {task && assigneeChange ? (
+      {task && draft.assignee ? (
         <Diff
           label="담당"
           from={
@@ -290,30 +309,30 @@ export function TaskChangeSuggestion({
             )
           }
           to={
-            <Pick editable={!locked}>
+            <Pick editable={!fieldsLocked}>
               <AssigneeCell
-                value={shownAssignee ?? null}
+                value={assignee ?? null}
                 choices={choices}
-                editable={!locked}
+                editable={!fieldsLocked}
                 placeholder="없음"
-                onChange={(next) => setAssignee(next)}
+                onChange={(next) => void saveDraft({ ...draft, assignee: taskAssigneeRequestOf({ value: next }) })}
               />
             </Pick>
           }
         />
       ) : null}
-      {task && dueChange ? (
+      {task && draft.due ? (
         <Diff
           label="기한"
           from={task.due ? formatDueDate(task.due) : "없음"}
           to={
-            <Pick editable={!locked}>
-              <DueCell value={shownDue ?? null} editable={!locked} placeholder="없음" onChange={setDue} />
+            <Pick editable={!fieldsLocked}>
+              <DueCell value={draft.due.value ?? null} editable={!fieldsLocked} placeholder="없음" onChange={(value) => void saveDraft({ ...draft, due: { value } })} />
             </Pick>
           }
         />
       ) : null}
-      {task && !usesDraft && assignee !== undefined && assigneeKey(assignee) === assigneeKey(task.assignee) && !change.status && !change.due ? (
+      {task && draft.assignee && assigneeKey(assignee) === assigneeKey(task.assignee) && !draft.status && !draft.due ? (
         <span className="text-[var(--el-muted-soft)]">이미 같은 값입니다</span>
       ) : null}
     </SuggestionShell>

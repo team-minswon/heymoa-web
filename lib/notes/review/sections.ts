@@ -3,6 +3,7 @@ import type {
   MeetingReviewResponseDataItemsItemKind,
 } from "@/lib/api/generated/models";
 import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
+import { missingChoicesOf } from "@/lib/notes/review/saved-choices";
 
 export type ReviewItem = MeetingReviewResponseDataItemsItem;
 export type ReviewKind = MeetingReviewResponseDataItemsItemKind;
@@ -51,7 +52,7 @@ export type ReviewSection = {
 };
 
 const hasSuggestion = (item: ReviewItem) =>
-  item.replacements.length > 0 || item.taskChanges.length > 0;
+  item.replacements.length > 0 || item.taskChanges.length > 0 || missingChoicesOf(item).length > 0;
 
 /**
  * 항목을 섹션으로 나눈다. 제안이 붙은 항목이 먼저 선다 — 사람이 고를 것이 있는 줄이다.

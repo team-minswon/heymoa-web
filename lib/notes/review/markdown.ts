@@ -23,13 +23,14 @@ export function overviewToMarkdown(summary: MeetingReviewSummary) {
  * 주제를 회의에서 나온 차례로 적는다. **번호는 목록 안의 차례다** — 요약이 주는 번호(`ordinal`)는 분석이 붙인 이름표라
  * 시간순으로 세우면 1·2·5·4·3 처럼 뛰어, 복사본에서는 잘못 센 것으로 읽힌다. 때를 알면 `[00:07]` 을 앞에 붙인다.
  */
-export function topicsToMarkdown(topics: readonly (TopicChip & { startMs?: number | null })[]) {
+export function topicsToMarkdown(topics: readonly (TopicChip & { startMs?: number | null; text?: string })[]) {
   return joined([
     "## 주제",
     "",
     ...topics.map((topic, index) => {
       const at = topic.startMs == null ? "" : `[${formatOffset(topic.startMs)}] `;
-      return `${index + 1}. ${at}**${oneLine(topic.title)}**${topic.gist ? ` — ${oneLine(topic.gist)}` : ""}`;
+      const text = topic.text?.trim() || topic.gist;
+      return `${index + 1}. ${at}**${oneLine(topic.title)}**${text ? ` — ${oneLine(text)}` : ""}`;
     }),
   ]);
 }

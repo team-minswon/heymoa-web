@@ -4,14 +4,21 @@ import {
   getGetAnalysisFlowQueryKey,
   type getAnalysisFlowResponse,
 } from "@/lib/api/generated/analysis/analysis";
-import type { MeetingAnalysisFlowResponseDataStatus } from "@/lib/api/generated/models";
+import type {
+  MeetingAnalysisFlowResponseData,
+  MeetingAnalysisFlowResponseDataStatus,
+} from "@/lib/api/generated/models";
 
 /**
  * 흐름 상태를 얼마마다 다시 물을까. 끝나는 시각을 모르는 단계는 자주, 사람을 기다리는 단계(분석 실패 ·
  * 검토 가능)도 드물게 묻는다 — 다른 참석자가 다시 요청하거나 확정한 것이 열린 화면에 옮겨 와야 한다.
  * 확정 뒤와 분석 흐름 밖의 노트는 더 바뀌지 않는다.
  */
-export function flowPollInterval(status: MeetingAnalysisFlowResponseDataStatus | null): number | false {
+export function flowPollInterval(
+  status: MeetingAnalysisFlowResponseDataStatus | null,
+  regions: MeetingAnalysisFlowResponseData["regions"] = []
+): number | false {
+  if (regions.some((row) => row.status === "PENDING")) return 3_000;
   switch (status) {
     case "DIARIZING":
     case "NOT_REQUESTED":
@@ -35,9 +42,14 @@ export function moveFlowStatus(
   noteId: string,
   status: MeetingAnalysisFlowResponseDataStatus
 ) {
-  queryClient.setQueryData<getAnalysisFlowResponse>(getGetAnalysisFlowQueryKey(noteId), (previous) =>
-    previous?.status === 200 && previous.data.success
-      ? ({ ...previous, data: { ...previous.data, data: { ...previous.data.data, status } } } as getAnalysisFlowResponse)
-      : previous
+  queryClient.setQueryData<getAnalysisFlowResponse>(
+    getGetAnalysisFlowQueryKey(noteId),
+    (previous) =>
+      previous?.status === 200 && previous.data.success
+        ? ({
+            ...previous,
+            data: { ...previous.data, data: { ...previous.data.data, status } },
+          } as getAnalysisFlowResponse)
+        : previous
   );
 }

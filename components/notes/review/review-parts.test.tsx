@@ -47,9 +47,9 @@ const item = (over: Partial<ReviewItem> = {}): ReviewItem => ({
   citations: [],
   assignee: null,
   due: null,
+  decisions: [],
   replacements: [],
   taskChanges: [],
-  decisions: [],
   suggestedAssignment: null,
   ...over,
 });
@@ -132,8 +132,7 @@ it.each([
             },
           }}
           task={{ taskId: "task", projectId: "project", projectName: "프로젝트", revision: 1, content: "프로젝트 할 일", taskStatus: "OPEN", assignee: null, due: null }}
-          workspaceId="workspace"
-          projectId="project"
+          noteId="note"
           choices={[{ type: "USER", id: "saved", name: "저장한 담당" }]}
           choice="change"
           taskState="ready"
@@ -144,7 +143,7 @@ it.each([
         />
       </QueryClientProvider>
     );
-    const pending = screen.getByRole("radio", { name: isPending ? "확정 시 반영" : "반영됨" });
+    const pending = screen.getByRole("radio", { name: isPending ? "반영 예정" : "반영됨" });
     expect(pending).toHaveAttribute("aria-checked", "true");
     if (isPending) expect(screen.queryByRole("radio", { name: "반영됨" })).not.toBeInTheDocument();
     expect(screen.getByText("완료")).toBeInTheDocument();
@@ -158,7 +157,7 @@ it.each([
     if (isPending) {
       expect(keep).toBeEnabled();
       fireEvent.click(keep);
-      await waitFor(() => expect(onChoose).toHaveBeenCalledWith("keep"));
+      await waitFor(() => expect(onChoose).toHaveBeenCalledWith("keep", expect.objectContaining({ expectedRevision: 1 })));
     } else {
       expect(keep).toBeDisabled();
       fireEvent.click(keep);

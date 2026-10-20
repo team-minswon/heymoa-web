@@ -343,6 +343,40 @@ export const projectTasks = {
     const task = all().find((row) => row.taskId === taskId);
     return task ? current(task).revision : 1;
   },
+  /** 승인 전에 전부 검사합니다. 하나가 낡거나 중복이면 업무 이력을 하나도 바꾸지 않습니다. */
+  applyReviewedChanges(
+    projectId: string,
+    entries: Array<{
+      taskId: string;
+      expectedRevision: number;
+      status?: TaskStatus | null;
+      assignee?: { value: StoredAssignee | null } | null;
+      due?: { value: string | null } | null;
+    }>,
+    approvalId: string
+  ) {
+    const conflict = () => failWith("PROJECT_KNOWLEDGE_CONFLICT", 409, "프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요.");
+    if (new Set(entries.map((entry) => entry.taskId)).size !== entries.length) conflict();
+    const updates = entries.map((entry) => {
+      const task = all().find((row) => row.taskId === entry.taskId && row.projectId === projectId) ?? conflict();
+      const head = current(task);
+      if (head.revision !== entry.expectedRevision) conflict();
+      return {
+        task,
+        next: {
+          ...head,
+          revision: head.revision + 1,
+          taskStatus: entry.status ?? head.taskStatus,
+          assignee: entry.assignee ? entry.assignee.value : head.assignee,
+          due: entry.due ? entry.due.value : head.due,
+          changedAt: new Date().toISOString(),
+          changedBy: null,
+          approvalId,
+        },
+      };
+    });
+    for (const { task, next } of updates) task.history.push(next);
+  },
   /** 회의 확정이 포함된 할 일 항목마다 새 할 일을 만든다. */
   promote(
     projectId: string,

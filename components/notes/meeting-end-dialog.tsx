@@ -27,6 +27,7 @@ import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
   type endMeetingResponse,
   getGetLatestAnalysisQueryKey,
+  getGetAnalysisFlowQueryKey,
   useEndMeeting,
 } from "@/lib/api/generated/analysis/analysis";
 import {
@@ -129,6 +130,10 @@ export function MeetingEndDialog({
         queryKey: getGetNoteQueryKey(noteId),
       });
     }
+    // 종료 전에 읽던 흐름 조회를 끊고 다음 탭이 서버의 종료 후 상태를 새로 읽게 한다.
+    const flowKey = getGetAnalysisFlowQueryKey(noteId);
+    await queryClient.cancelQueries({ queryKey: flowKey });
+    void queryClient.invalidateQueries({ queryKey: flowKey });
     onOpenChange(false);
     // 목록 항목이 상태와 시간을 보여주므로 같이 비운다. 응답 하나로는 못 대신한다.
     void invalidateNoteLists(queryClient);

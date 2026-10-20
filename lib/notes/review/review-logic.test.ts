@@ -8,6 +8,7 @@ import {
   choiceOf,
   confirmBlockReason,
   confirmSummaryOf,
+  taskApplyConflictsOf,
   unchosenSuggestionCount,
 } from "@/lib/notes/review/confirm";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
@@ -43,9 +44,9 @@ const item = (over: Partial<ReviewItem> & Pick<ReviewItem, "itemId" | "kind">): 
   citations: [],
   assignee: null,
   due: null,
+  decisions: [],
   replacements: [],
   taskChanges: [],
-  decisions: [],
   suggestedAssignment: null,
   ...over,
 });
@@ -85,22 +86,7 @@ describe("sectionsOf", () => {
 });
 
 describe("confirmSummaryOf", () => {
-  it("확정 전 APPLY와 APPLIED를 변경 안내에 포함하되 같은 할 일은 한 번만 센다", () => {
-    const change = (decision: "APPLY" | "APPLIED" | "KEEP") => ({
-      target: { itemId: "task", revision: 1, originalProposalRef: null },
-      status: "COMPLETED" as const,
-      assignee: null,
-      due: null,
-      draft: decision === "APPLY" ? { expectedRevision: 1, status: "COMPLETED" as const, assignee: null, due: null } : null,
-      reason: "",
-      decision,
-    });
-    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", taskChanges: [change("APPLY")] })]).changedTasks).toBe(1);
-    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", taskChanges: [change("APPLY"), change("APPLIED")] })]).changedTasks).toBe(1);
-    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", taskChanges: [change("KEEP")] })]).changedTasks).toBe(0);
-    expect(confirmSummaryOf([item({ itemId: "review", kind: "DECISION", included: false, taskChanges: [change("APPLY")] })]).changedTasks).toBe(0);
-  });
-  it("포함 항목에 저장된 끝내기만 끝낼 것으로 세고, 반영한 할 일 변경을 센다", () => {
+  it("포함 항목의 END와 APPLY만 세고 APPLIED 이력은 다시 적용하지 않는다", () => {
     const items = [
       item({
         itemId: "d",
@@ -118,19 +104,19 @@ describe("confirmSummaryOf", () => {
         itemId: "t",
         kind: "ACTION_ITEM",
         taskChanges: [
-          { target: { itemId: "task", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, draft: null, reason: "", decision: "APPLIED" },
+          { target: { itemId: "task", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLY", draft: { expectedRevision: 2, status: "COMPLETED", assignee: null, due: null } },
+          { target: { itemId: "already", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLIED", draft: null },
         ],
       }),
     ];
     expect(confirmSummaryOf(items)).toEqual({ newTasks: 1, endedDecisions: 1, changedTasks: 1 });
   });
 
-  it("저장 · 반영이 끝나지 않았거나 변경 제안의 할 일을 못 읽었으면 확정을 막는다", () => {
-    const base = { saving: false, applyingTasks: false, hasTaskChanges: true, tasks: "ready" as const, unchosen: 0 };
+  it("선택 저장이 끝나지 않았거나 변경 제안의 할 일을 못 읽었으면 확정을 막는다", () => {
+    const base = { saving: false, hasTaskChanges: true, tasks: "ready" as const, unchosen: 0 };
     expect(confirmBlockReason(base)).toBeNull();
     expect(confirmBlockReason({ ...base, unchosen: 2 })).toBe("고르지 않은 제안이 2개 남았습니다");
     expect(confirmBlockReason({ ...base, saving: true })).toBe("저장이 끝나면 완료할 수 있습니다");
-    expect(confirmBlockReason({ ...base, applyingTasks: true })).toBe("기존 할 일에 반영하는 중입니다");
     expect(confirmBlockReason({ ...base, tasks: "pending" })).toBe("기존 할 일 변경 제안을 불러오는 중입니다");
     expect(confirmBlockReason({ ...base, tasks: "failed" })).toMatch(/불러오지 못해/);
     // 변경 제안이 없으면 할 일 조회를 기다릴 까닭이 없다.
@@ -156,8 +142,27 @@ describe("confirmSummaryOf", () => {
     expect(unchosenSuggestionCount(items, (taskId) => taskId !== "gone")).toBe(2);
   });
 
+  it("같은 업무의 복수 반영과 바뀐 업무 판은 확정 전에 막고 넘기기를 고르면 풀린다", () => {
+    const change = (decision: "APPLY" | "KEEP" | "APPLIED"): ReviewItem["taskChanges"][number] => ({
+      target: { itemId: "task", revision: 3, originalProposalRef: null },
+      status: "COMPLETED", assignee: null, due: null, reason: "", decision,
+      draft: { expectedRevision: 3, status: "COMPLETED", assignee: null, due: null },
+    });
+    const items = [item({ itemId: "a", kind: "DECISION", taskChanges: [change("APPLY")] }), item({ itemId: "b", kind: "DECISION", taskChanges: [change("APPLY")] })];
+    const conflicts = taskApplyConflictsOf(items, () => 4);
+    expect([...conflicts.duplicates]).toEqual(["task"]);
+    expect([...conflicts.stale]).toEqual(["task"]);
+    const base = { saving: false, hasTaskChanges: true, tasks: "ready" as const, unchosen: 0 };
+    expect(confirmBlockReason({ ...base, duplicateApplies: conflicts.duplicates.size })).toMatch(/하나만 반영/);
+    expect(confirmBlockReason({ ...base, staleApplies: conflicts.stale.size })).toMatch(/넘기기/);
+    const kept = items.map((row) => ({ ...row, taskChanges: [change("KEEP")] }));
+    expect(taskApplyConflictsOf(kept, () => 4)).toEqual({ duplicates: new Set(), stale: new Set() });
+    expect(taskApplyConflictsOf([{ ...items[0], included: false }, { ...items[1], taskChanges: [change("APPLIED")] }], () => 4)).toEqual({ duplicates: new Set(), stale: new Set() });
+  });
+
   it("저장된 선택을 두 칸 토글의 값으로 읽는다", () => {
     expect(choiceOf("END")).toBe("change");
+    expect(choiceOf("APPLY")).toBe("change");
     expect(choiceOf("APPLIED")).toBe("change");
     expect(choiceOf("APPLY")).toBe("change");
     expect(choiceOf("KEEP")).toBe("keep");
@@ -249,7 +254,7 @@ describe("topicDigests", () => {
     expect(first.tasks.map((row) => row.itemId)).toEqual(["t"]);
     expect(first.open.map((row) => row.itemId)).toEqual(["q"]);
     expect(first.count).toBe(2);
-    // 한 줄은 서버의 summary, 펼친 서술은 description 이다
+    // 옛 응답은 접힌 한 줄 요약과 펼친 설명 전문을 함께 보존한다.
     expect(first).toMatchObject({ gist: "한 줄 요약", text: "첫 문장. 둘째 문장.", startMs: 5_000, endMs: 9_000 });
     expect(digests.find((row) => row.ordinal === 2)?.gist).toBeNull();
   });

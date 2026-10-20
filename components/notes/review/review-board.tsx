@@ -4,12 +4,13 @@ import { track } from "@/lib/analytics/track";
 import { useSummaryViewed } from "@/lib/analytics/use-summary-viewed";
 
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
-import { renderMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
+import { createMinutesPdfRenderer } from "@/components/notes/minutes/render-minutes-pdf";
+import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { widerExports } from "@/lib/notes/minutes/exports";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
-import { useIsMutating, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { SegmentedControl } from "@/components/heymoa/segmented-control";
 import { ConfirmBar } from "@/components/notes/review/confirm-bar";
@@ -17,34 +18,52 @@ import { EvidenceQuotes } from "@/components/notes/review/evidence-quotes";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
 import { MeetingMap } from "@/components/notes/review/meeting-map";
+import { PendingAnalysisRetry } from "@/components/notes/review/pending-analysis-retry";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewActions } from "@/components/notes/review/review-actions";
 import { ShareMailDialog } from "@/components/notes/review/share-mail-dialog";
 import { ReviewHead } from "@/components/notes/review/review-head";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewSection } from "@/components/notes/review/review-section";
+import { SavedChoices } from "@/components/notes/review/saved-choices";
 import { TopicIndex } from "@/components/notes/review/topic-index";
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import {
+  RelationContext,
+  RelationSuggestion,
   ReplacementSuggestion,
   TaskChangeSuggestion,
 } from "@/components/notes/review/suggestion-row";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorMessageOf } from "@/lib/api/error-message";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
-import { indexMeetingLinks } from "@/lib/notes/review/meeting-links";
+import {
+  indexMeetingLinks,
+  relationMatchesTarget,
+  type MeetingRelation,
+} from "@/lib/notes/review/meeting-links";
+import type { MeetingAnalysisFlowResponseData } from "@/lib/api/generated/models";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import { useApproveMeetingReview } from "@/lib/api/generated/meeting-approval/meeting-approval";
 import {
   getGetMeetingReviewQueryKey,
+  getGetMeetingReviewSummaryQueryKey,
   useGetMeetingReview,
   useGetMeetingReviewSummary,
 } from "@/lib/api/generated/meeting-review/meeting-review";
-import { useGetProjectMeetingLinks, useGetProjectTasks } from "@/lib/api/generated/projects/projects";
-import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
+import {
+  getGetProjectMeetingLinksQueryKey,
+  getGetProjectTasksQueryKey,
+  useGetProjectMeetingLinks,
+  useGetProjectTasks,
+} from "@/lib/api/generated/projects/projects";
+import {
+  getGetNoteTranscriptQueryKey,
+  useGetNoteTranscript,
+} from "@/lib/api/generated/transcription/transcription";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import { useAssigneeChoices } from "@/lib/assignees/use-assignee-choices";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
@@ -53,8 +72,10 @@ import {
   confirmBlockReason,
   confirmSummaryOf,
   unchosenSuggestionCount,
+  taskApplyConflictsOf,
 } from "@/lib/notes/review/confirm";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
+import { hasMissingApply, missingChoicesOf } from "@/lib/notes/review/saved-choices";
 import {
   citedAtOf,
   meetingLengthOf,
@@ -107,11 +128,20 @@ function newRequestId() {
 }
 
 /** 어느 주제에도 들지 않은 질문 · 이슈. 회의록의 「기타」 미결이다 */
-const unfiledOpen = (items: readonly ReviewItem[], topicOf: (itemId: string) => number | null) =>
-  items.filter((item) => item.included && (item.kind === "QUESTION" || item.kind === "ISSUE") && topicOf(item.itemId) === null);
+const unfiledOpen = (
+  items: readonly ReviewItem[],
+  topicOf: (itemId: string) => number | null
+) =>
+  items.filter(
+    (item) =>
+      item.included &&
+      (item.kind === "QUESTION" || item.kind === "ISSUE") &&
+      topicOf(item.itemId) === null
+  );
 
 export function ReviewBoard({
   noteId,
+  flow,
   workspaceId,
   projectId,
   confirmed,
@@ -126,6 +156,7 @@ export function ReviewBoard({
   onOpenTimeline,
 }: {
   noteId: string;
+  flow?: MeetingAnalysisFlowResponseData;
   workspaceId: string | undefined;
   projectId: string | undefined;
   confirmed: boolean;
@@ -145,34 +176,99 @@ export function ReviewBoard({
   onOpenTimeline?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const reviewQuery = useGetMeetingReview(noteId);
-  const summaryQuery = useGetMeetingReviewSummary(noteId);
+  const editor = useReviewEditor(noteId);
+  const reviewQuery = useGetMeetingReview(noteId, {
+    query: {
+      enabled: editor.busyItemId === null,
+      staleTime: 0,
+      refetchOnMount: "always",
+    },
+  });
+  const summaryQuery = useGetMeetingReviewSummary(noteId, {
+    query: { staleTime: 0, refetchOnMount: "always" },
+  });
   const transcriptQuery = useGetNoteTranscript(noteId);
   // 회의 간 연결은 이 회의가 양 끝인 것만 받는다. 프로젝트 없는 회의는 연결이 없다.
-  const linksQuery = useGetProjectMeetingLinks(projectId ?? "", { noteId }, { query: { enabled: Boolean(projectId) } });
+  const linksQuery = useGetProjectMeetingLinks(
+    projectId ?? "",
+    { noteId },
+    {
+      query: {
+        enabled: Boolean(projectId),
+        staleTime: 0,
+        refetchOnMount: "always",
+      },
+    }
+  );
   const linksData = okData(linksQuery.data);
   const tasksQuery = useGetProjectTasks(workspaceId ?? "", projectId ?? "", {
-    query: { enabled: Boolean(workspaceId && projectId) },
+    query: { enabled: Boolean(workspaceId && projectId), staleTime: 0, refetchOnMount: "always" },
   });
-  const editor = useReviewEditor(noteId);
-  // 기존 할 일 반영은 제안 줄 안에서 돈다. 확정이 그 저장보다 앞서지 않게 여기서도 센다.
-  const applyingTasks =
-    useIsMutating({ mutationKey: ["updateProjectTask"] }) > 0;
   // 거절 까닭은 확정 줄과 확인창에 남기므로 전역 토스트를 끈다(두 번 뜨지 않게).
   const approve = useApproveMeetingReview({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  const [approveError, setApproveError] = useState<string | null>(null);
+  const [approveError, setApproveError] = useState<{ version: number; message: string } | null>(null);
+  const regionStatus = (region: string) =>
+    flow?.regions?.find((row) => row.region === region)?.status;
+  const relationsStatus = regionStatus("RELATIONS");
+  const enrichmentStatus = regionStatus("ITEM_ENRICHMENT");
+  const flowSignature = `${flow?.status}:${(flow?.regions ?? []).map((row) => `${row.region}:${row.status}`).join(",")}`;
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const refreshKey = useMemo(() => ({ flowSignature, refreshAttempt }), [flowSignature, refreshAttempt]);
+  const [loadedRefreshKey, setLoadedRefreshKey] = useState(refreshKey);
+  const [failedRefreshKey, setFailedRefreshKey] = useState<typeof refreshKey | null>(null);
+  const refreshFailed = failedRefreshKey === refreshKey;
+  const refreshingAnalysis = loadedRefreshKey !== refreshKey && !refreshFailed;
+  useEffect(() => {
+    // 저장 중에는 늦은 GET을 늘리지 않는다. 상태 변화는 저장이 끝난 뒤 읽는다.
+    if (editor.busyItemId !== null || loadedRefreshKey === refreshKey || refreshFailed)
+      return;
+    let active = true;
+    const reload = async (queryKey: readonly unknown[]) => {
+      // 첫 응답을 기다리는 쿼리는 invalidate만으로 이전 요청이 취소되지 않는다.
+      await queryClient.cancelQueries({ queryKey });
+      if (active) return queryClient.invalidateQueries({ queryKey }, { throwOnError: true });
+    };
+    const requiredKeys = [
+      getGetMeetingReviewQueryKey(noteId),
+      getGetMeetingReviewSummaryQueryKey(noteId),
+      getGetNoteTranscriptQueryKey(noteId),
+      ...(projectId ? [getGetProjectMeetingLinksQueryKey(projectId, { noteId })] : []),
+    ];
+    void Promise.all([
+      ...requiredKeys.map(reload),
+      projectId && workspaceId
+        // 업무 조회 실패는 제안의 판과 캐시를 대조해 taskStateOf에서 처리한다.
+        ? queryClient.invalidateQueries({ queryKey: getGetProjectTasksQueryKey(workspaceId, projectId) })
+        : Promise.resolve(),
+    ]).then(() => {
+      if (!active) return;
+      // 오프라인으로 멈춘 조회도 resolve되므로 실제 무효화가 해제됐는지 확인한다.
+      if (requiredKeys.some((key) => queryClient.getQueryState(key)?.isInvalidated !== false)) {
+        throw new Error("분석 자료 조회가 끝나지 않았습니다.");
+      }
+      setLoadedRefreshKey(refreshKey);
+    }).catch(() => {
+      if (active) setFailedRefreshKey(refreshKey);
+    });
+    return () => {
+      active = false;
+    };
+  }, [
+    refreshKey,
+    loadedRefreshKey,
+    refreshFailed,
+    editor.busyItemId,
+    noteId,
+    projectId,
+    workspaceId,
+    queryClient,
+  ]);
 
   const [view, setView] = useState<View>("summary");
   const [mailOpen, setMailOpen] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
-  /**
-   * 할 일에는 반영했는데 선택 저장이 실패한 변경(`항목 id:할 일 id`). 반영은 할 일을 먼저 바꾸고 선택을 나중에 저장한다.
-   * ponytail: 이 화면이 떠 있는 동안만 기억한다. 새로고침하면 잊어, 감춘 항목의 그 제안은 다시 고르지 않은 채
-   * 확정될 수 있다(할 일 이력에는 남는다). 막으려면 반영과 선택을 server 가 한 번에 저장해야 한다.
-   */
-  const [unsavedApplies, setUnsavedApplies] = useState<ReadonlySet<string>>(() => new Set());
   const lastRequest = useRef<{ body: string; id: string } | null>(null);
 
   const review = okData(reviewQuery.data);
@@ -186,7 +282,10 @@ export function ReviewBoard({
     () => new Map(items.map((item) => [item.itemId, item])),
     [items]
   );
-  const meetingLinks = useMemo(() => indexMeetingLinks(linksData, noteId, items), [linksData, noteId, items]);
+  const meetingLinks = useMemo(
+    () => indexMeetingLinks(linksData, noteId, items),
+    [linksData, noteId, items]
+  );
   const topics = useMemo(() => topicIndex(summary), [summary]);
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
   const topicTitleOf = (ordinal: number) =>
@@ -201,9 +300,14 @@ export function ReviewBoard({
   );
   const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
   const speakers = transcript?.diarization.speakers;
+  const [renderPdf] = useState(createMinutesPdfRenderer);
+  const exportVersion = useMemo(() => JSON.stringify({ noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName, flowSignature, refreshAttempt }), [noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName, flowSignature, refreshAttempt]);
   // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
   const starts = useMemo(() => segmentStarts(segments), [segments]);
-  const citedAt = useCallback((item: ReviewItem) => citedAtOf(item, starts), [starts]);
+  const citedAt = useCallback(
+    (item: ReviewItem) => citedAtOf(item, starts),
+    [starts]
+  );
   const digests = useMemo(
     () => topicDigests(summary, itemsById, citedAt),
     [summary, itemsById, citedAt]
@@ -245,15 +349,25 @@ export function ReviewBoard({
   }
 
   const confirmSummary = confirmSummaryOf(items);
+  const firstMissingApply = items.find(hasMissingApply);
+  const taskConflicts = taskApplyConflictsOf(items, (id) => tasksById.get(id)?.revision);
+  const taskStateOf = (
+    change: ReviewItem["taskChanges"][number]
+  ): "pending" | "ready" | "failed" => {
+    const revision = tasksById.get(change.target.itemId)?.revision;
+    const behind =
+      revision !== undefined &&
+      revision < (change.draft?.expectedRevision ?? change.target.revision);
+    if (tasksQuery.isPending || (behind && (tasksQuery.isFetching || tasksQuery.isPaused))) return "pending";
+    return !tasks || (behind && tasksQuery.isError) ? "failed" : "ready";
+  };
   const gateItems = items.map((item) =>
     isSummaryKind(item.kind)
       ? item
       : {
           ...item,
           replacements: [],
-          taskChanges: item.taskChanges.filter((row) =>
-            unsavedApplies.has(`${item.itemId}:${row.target.itemId}`)
-          ),
+          taskChanges: [],
         }
   );
   const unnamedAssigned = items.filter(
@@ -262,41 +376,58 @@ export function ReviewBoard({
       item.kind === "ACTION_ITEM" &&
       item.assignee?.type === "SPEAKER_LABEL"
   ).length;
-  const editable = canEdit && !confirmed;
+  const editable = canEdit && !confirmed && !approve.isPending;
 
   // 제안의 선택은 검토본에 저장한다 — 새로고침하거나 다른 참석자가 열어도 같은 선택이 보인다.
   const choose = (
     item: ReviewItem,
     targetId: string,
-    decision: "END" | "APPLIED" | "KEEP"
+    decision: "END" | "KEEP"
   ) => editor.updateItem(item.itemId, { decisions: [{ targetId, decision }] });
   const saving = editor.busyItemId !== null;
   const hasTask = (taskId: string) => tasksById.has(taskId);
   // **화면에 서는 항목의 제안만 본다.** 요약 보기에 없는 이슈 · 질문 · 참고의 제안은 고를 곳이 없어,
   // 세면 검토 완료가 영영 막힌다. 고르지 않은 제안은 확정이 건너뛴다 — 이전 결정을 끝내지 않고 할 일도
   // 바꾸지 않는다(그래프 보기에서 고르면 그 선택대로 된다).
-  // 다만 할 일에 이미 반영한 변경은 감춘 항목이라도 선택이 저장될 때까지 센다 — 안 세면 할 일은 바뀌었는데
-  // 제안은 고르지 않은 채 확정돼, 확정 뒤에는 선택을 다시 저장할 길도 없다.
   const unchosen = unchosenSuggestionCount(gateItems, hasTask);
   const blockInput = {
     saving,
-    applyingTasks,
+    duplicateApplies: taskConflicts.duplicates.size,
+    staleApplies: taskConflicts.stale.size,
     hasTaskChanges: gateItems.some(
       (item) => item.included && item.taskChanges.length > 0
     ),
     tasks:
-      !workspaceId || !projectId || tasksQuery.isPending
+      !workspaceId || !projectId || tasksQuery.isPending ||
+      gateItems.some((item) => item.included && item.taskChanges.some((change) => taskStateOf(change) === "pending"))
         ? ("pending" as const)
-        : // 이미 읽은 할 일이 있으면 재조회가 실패해도 쓴다(APP-1033). 낡았어도 반영은 판 대조가 거절로 걸러내고,
-          // 막으면 확정 막대가 재시도가 성공할 때까지 「불러오지 못했다」로 막힌다.
-          tasks
+        : // 이미 읽은 할 일은 재조회가 실패해도 쓴다. 제안보다 낮은 판은 확인하지 못한 것이므로 다시 읽는다.
+          tasks && !gateItems.some((item) => item.included && item.taskChanges.some((change) => taskStateOf(change) === "failed"))
           ? ("ready" as const)
           : ("failed" as const),
   };
   // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
   // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
-  const earlierBlock = confirmBlockReason({ ...blockInput, unchosen: 0 });
-  const confirmBlocked = confirmBlockReason({ ...blockInput, unchosen });
+  const analysisBlock =
+    reviewQuery.isError
+      ? "최신 검토본을 다시 확인해 주세요"
+      : refreshFailed
+      ? "최신 분석 결과를 다시 확인해 주세요"
+      : refreshingAnalysis
+        ? "최신 분석 결과를 확인하고 있습니다"
+        : relationsStatus === "PENDING"
+      ? "충돌과 이어짐 확인이 끝나면 검토를 완료할 수 있습니다"
+      : enrichmentStatus === "PENDING"
+        ? "담당과 기한 정리가 끝나면 검토를 완료할 수 있습니다"
+        : null;
+  const missingChoiceBlock = firstMissingApply
+    ? "이전 분석의 선택을 해제해 주세요"
+    : null;
+  const choiceBlock = saving ? "저장이 끝나면 완료할 수 있습니다" : missingChoiceBlock;
+  const earlierBlock =
+    analysisBlock ?? choiceBlock ?? confirmBlockReason({ ...blockInput, unchosen: 0 });
+  const confirmBlocked =
+    analysisBlock ?? choiceBlock ?? confirmBlockReason({ ...blockInput, unchosen });
   // 막대의 「제안으로 가기」가 데려갈 줄. 요약 보기에 선 줄만이다.
   const firstUnchosen = sections
     .flatMap((section) => section.items)
@@ -305,34 +436,97 @@ export function ReviewBoard({
   const toggleItem = (itemId: string) =>
     setOpenItemId((current) => (current === itemId ? null : itemId));
 
-  const selectLinked = (itemId: string) => setOpenItemId(itemId);
-
   /**
    * 그 줄로 간다. 접힌 「더 불러오기」가 펼쳐지고 앞서 펼쳐 둔 줄이 접히는 높이 전환(`Collapse` 200ms)이
    * 끝난 뒤에 재야 자리가 맞다 — 전환 중에 재면 뒤쪽 줄은 펼침이 끝난 뒤 화면 밖에 남는다.
    */
-  const scrollToItem = (itemId: string) => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const scrollToItem = (itemId: string, focusChoice = false) => {
+    const reduce =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     window.setTimeout(
-      () =>
-        document
-          .querySelector(`[data-item-id="${CSS.escape(itemId)}"]`)
-          ?.scrollIntoView?.({ block: "center", behavior: reduce ? "auto" : "smooth" }),
+      () => {
+        const target = document.querySelector(`[data-item-scroll-target][data-item-id="${CSS.escape(itemId)}"]`);
+        target?.scrollIntoView?.({
+            block: "center",
+            behavior: reduce ? "auto" : "smooth",
+          });
+        if (focusChoice) target?.querySelector<HTMLButtonElement>("[data-clear-saved-choice]")?.focus({ preventScroll: true });
+      },
       reduce ? 0 : COLLAPSE_SETTLE_MS
     );
   };
-  const showItem = (itemId: string) => {
+  const showItem = (itemId: string, focusChoice = false) => {
+    const target = itemsById.get(itemId);
+    if (target && !isSummaryKind(target.kind)) setView("graph");
     setOpenItemId(itemId);
-    scrollToItem(itemId);
+    scrollToItem(itemId, focusChoice);
   };
 
+  const relationsOf = (item: ReviewItem) =>
+    meetingLinks.byItemId.get(item.itemId) ?? [];
+  const contextFor = (
+    item: ReviewItem,
+    target:
+      | ReviewItem["replacements"][number]["target"]
+      | ReviewItem["taskChanges"][number]["target"],
+    kind?: string,
+    fallbackReason?: string
+  ) => {
+    const relations = relationsOf(item).filter(
+      (relation) =>
+        (!kind || relation.kind === kind) &&
+        relationMatchesTarget(relation, target)
+    );
+    return relations.length > 0
+      ? relations.map((relation) => (
+          <RelationContext
+            key={relation.key}
+            relation={relation}
+            segments={segments}
+            onOpenScript={onOpenScript}
+            fallbackReason={fallbackReason}
+            showKind={!kind}
+          />
+        ))
+      : undefined;
+  };
+  const cardedRelation = (item: ReviewItem, relation: MeetingRelation) =>
+    item.replacements.some(
+      (replacement) =>
+        replacement.kind === relation.kind &&
+        relationMatchesTarget(relation, replacement.target)
+    ) ||
+    item.taskChanges.some((change) =>
+      relationMatchesTarget(relation, change.target)
+    );
+
   const suggestionsOf = (item: ReviewItem) =>
-    item.replacements.length + item.taskChanges.length > 0 ? (
+    item.replacements.length +
+      item.taskChanges.length +
+      missingChoicesOf(item).length +
+      relationsOf(item).length >
+    0 ? (
       <div className="space-y-1.5">
+        <SavedChoices
+          item={item}
+          disabled={!editable || saving}
+          onClear={(targetId) => editor.updateItem(item.itemId, {
+            decisions: [{ targetId, decision: null }],
+          })}
+        />
+        {view === "graph" && editor.conflictItemId === item.itemId ? (
+          <p role="alert" className="text-xs text-[var(--el-muted)]">{editor.conflictMessage}</p>
+        ) : null}
         {item.replacements.map((replacement) => (
           <ReplacementSuggestion
             key={replacement.target.itemId}
             replacement={replacement}
+            context={contextFor(
+              item,
+              replacement.target,
+              replacement.kind,
+              replacement.reason
+            )}
             choice={choiceOf(replacement.decision)}
             disabled={!editable || !item.included || saving}
             onChoose={(next) =>
@@ -349,35 +543,25 @@ export function ReviewBoard({
             <TaskChangeSuggestion
               key={change.target.itemId}
               change={change}
+              confirmed={confirmed}
+              included={item.included}
+              context={contextFor(
+                item,
+                change.target,
+                undefined,
+                change.reason
+              )}
               task={tasksById.get(change.target.itemId)}
-              workspaceId={workspaceId}
-              projectId={projectId}
+              noteId={noteId}
               choices={assigneeChoices}
+              duplicate={taskConflicts.duplicates.has(change.target.itemId)}
               choice={choiceOf(change.decision)}
-              taskState={
-                tasksQuery.isPending ? "pending" : tasks ? "ready" : "failed"
-              }
+              taskState={taskStateOf(change)}
               onRetryTask={() => void tasksQuery.refetch()}
               disabled={!editable || saving || !item.included}
-              confirmed={confirmed && item.included}
-              onChoose={async (next) => {
-                const saved = await choose(
-                  item,
-                  change.target.itemId,
-                  next === "change" ? "APPLIED" : "KEEP"
-                );
-                // 「반영」의 선택 저장은 할 일을 바꾼 뒤에만 온다. 실패한 것만 남겨 두고 저장되면 지운다.
-                if (next === "change") {
-                  const key = `${item.itemId}:${change.target.itemId}`;
-                  setUnsavedApplies((keys) => {
-                    const nextKeys = new Set(keys);
-                    if (saved) nextKeys.delete(key);
-                    else nextKeys.add(key);
-                    return nextKeys;
-                  });
-                }
-                return saved;
-              }}
+              onChoose={(next, taskChange) => editor.updateItem(item.itemId, {
+                decisions: [{ targetId: change.target.itemId, decision: next === "change" ? "APPLY" : "KEEP", taskChange }],
+              })}
             />
           ) : (
             <p
@@ -388,6 +572,18 @@ export function ReviewBoard({
             </p>
           )
         )}
+        {relationsOf(item)
+          .filter((relation) => !cardedRelation(item, relation))
+          .map((relation) => (
+            <RelationSuggestion
+              key={relation.key}
+              relation={relation}
+              workspaceId={workspaceId}
+              segments={segments}
+              onSelectItem={showItem}
+              onOpenScript={onOpenScript}
+            />
+          ))}
       </div>
     ) : null;
 
@@ -412,7 +608,7 @@ export function ReviewBoard({
       item={item}
       summary={summary}
       itemsById={itemsById}
-      onSelectItem={selectLinked}
+      onSelectItem={showItem}
       suggestions={suggestionsOf(item)}
       trail={
         <ItemTrail
@@ -429,6 +625,7 @@ export function ReviewBoard({
   );
 
   const confirm = async () => {
+    if (confirmBlocked || approve.isPending) return false;
     track("review_confirmation_clicked", { workspace_id: workspaceId });
     const body = {
       reviewId: review.reviewId,
@@ -460,10 +657,13 @@ export function ReviewBoard({
       return true;
     } catch (error) {
       // 서버 문구를 확정 줄에 남긴다. 판이 낡아 거절됐을 수 있으니 검토본도 다시 읽는다.
-      setApproveError(errorMessageOf(error, "검토를 완료하지 못했습니다."));
-      await queryClient.invalidateQueries({
-        queryKey: getGetMeetingReviewQueryKey(noteId),
-      });
+      setApproveError({ version: review.reviewVersion, message: errorMessageOf(error, "검토를 완료하지 못했습니다.") });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetMeetingReviewQueryKey(noteId) }),
+        errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT"
+          ? queryClient.invalidateQueries({ predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey) })
+          : Promise.resolve(),
+      ]);
       return false;
     }
   };
@@ -477,7 +677,9 @@ export function ReviewBoard({
   const marks = included.flatMap((item) => {
     if (item.kind !== "DECISION" && item.kind !== "ACTION_ITEM") return [];
     const atMs = citedAt(item);
-    return atMs === null ? [] : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
+    return atMs === null
+      ? []
+      : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
   });
   const summaryMarkdown = () =>
     reviewToMarkdown({
@@ -497,27 +699,73 @@ export function ReviewBoard({
   // 복사 · PDF · 메일이 같은 회의록 재료를 쓴다 — 셋이 따로 조립하면 받은 PDF 와 내려받은 PDF 가 갈라진다.
   // 녹취록이 온 뒤에 연다 — 항목 시각 · 안건 시작 · 회의 길이를 녹취록에서 잰다. **받은 녹취록이 있는지로 가린다**:
   // isSuccess 로 가리면 다시 받기가 실패할 때 열린 PDF · 메일 창이 사라지고 쓰던 받는 사람 · 메시지도 날아갔다
-  const wider = noteMeta && transcript
-    ? widerExports({
-        queryClient,
-        noteId,
-        note: { ...noteMeta, durationMs: lengthMs ?? undefined },
-        participants,
-        sharedBy: currentUserName ?? null,
-        confirmed,
-        headline: summary?.status === "SUCCEEDED" ? (summary.headline?.text ?? null) : null,
-        lead: summary?.status === "SUCCEEDED" ? summary.lead.map((line) => line.text) : [],
-        topics: digests,
-        sections,
-        citedAt,
-        unfiledOpen: unfiledOpen(items, topicOf),
-        unnamedSpeakers: unnamedSpeakers.length,
-      })
-    : undefined;
+  const exportSources =
+    noteMeta && transcript
+      ? widerExports({
+          queryClient,
+          noteId,
+          note: { ...noteMeta, durationMs: lengthMs ?? undefined },
+          participants,
+          sharedBy: currentUserName ?? null,
+          confirmed,
+          headline:
+            summary?.status === "SUCCEEDED"
+              ? (summary.headline?.text ?? null)
+              : null,
+          lead:
+            summary?.status === "SUCCEEDED"
+              ? summary.lead.map((line) => line.text)
+              : [],
+          topics: digests,
+          sections,
+          citedAt,
+          unfiledOpen: unfiledOpen(items, topicOf),
+          unnamedSpeakers: unnamedSpeakers.length,
+        })
+      : undefined;
+  const preparePdf: PrepareMinutesPdf = async (include, signal) => {
+    if (refreshingAnalysis || refreshFailed) throw new Error("최신 분석 결과를 확인한 뒤 PDF를 만들 수 있습니다.");
+    if (!exportSources) throw new Error("회의록 자료를 불러오지 못했습니다.");
+    const doc = await exportSources.minutes(include);
+    signal?.throwIfAborted();
+    return { blob: await renderPdf(doc, signal), fileName: doc.fileName };
+  };
+  const wider = exportSources ? { ...exportSources, preparePdf, version: exportVersion } : undefined;
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
     item.assignee.id === currentUserId;
+
+  const relationsNotice =
+    relationsStatus === "PENDING" ||
+    relationsStatus === "FAILED" ||
+    relationsStatus === "SKIPPED" ? (
+      <p
+        role={relationsStatus === "FAILED" ? "alert" : "status"}
+        className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+      >
+        {relationsStatus === "PENDING"
+          ? "충돌과 이어짐을 확인하고 있습니다."
+          : relationsStatus === "FAILED"
+            ? "충돌과 이어짐을 분석하지 못했습니다."
+            : "화자 정보를 확인하지 못해 충돌과 이어짐을 분석하지 않았습니다."}
+      </p>
+    ) : projectId && linksQuery.isError && !refreshFailed ? (
+      <InlineRetry
+        variant="line"
+        label="회의 연결을 불러오지 못했습니다."
+        onRetry={() => void linksQuery.refetch()}
+        className="pb-4"
+      />
+    ) : projectId &&
+      (linksQuery.isPending || refreshingAnalysis) ? (
+      <p
+        role="status"
+        className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+      >
+        충돌과 이어짐을 불러오고 있습니다.
+      </p>
+    ) : null;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -531,9 +779,19 @@ export function ReviewBoard({
             <div className="flex items-center gap-2">
               <ReviewActions
                 // **요약을 못 받았으면 복사를 막는다.** 요약·주제가 빠진 문서가 성공 토스트와 함께 복사된다.
-                disabled={!noteMeta || summaryQuery.isPending || (summaryQuery.isError && !summary)}
+                disabled={
+                  !noteMeta ||
+                  summaryQuery.isPending ||
+                  (summaryQuery.isError && !summary)
+                }
                 build={summaryMarkdown}
-                material={noteMeta && !transcript ? (transcriptQuery.isError ? "failed" : "loading") : undefined}
+                material={
+                  noteMeta && !transcript
+                    ? transcriptQuery.isError
+                      ? "failed"
+                      : "loading"
+                    : undefined
+                }
                 onRetryMaterial={() => void transcriptQuery.refetch()}
                 wider={wider}
                 // 발송 API 가 운영에 배포되기 전에는 목 환경에서만 연다 — 운영에서는 메일 항목을 세우지 않는다
@@ -549,6 +807,22 @@ export function ReviewBoard({
           }
         />
 
+        {refreshFailed ? (
+          <InlineRetry
+            variant="line"
+            label="최신 분석 결과를 불러오지 못했습니다."
+            onRetry={() => setRefreshAttempt((attempt) => attempt + 1)}
+            className="pt-4"
+          />
+        ) : null}
+        {reviewQuery.isError && !refreshFailed ? (
+          <InlineRetry
+            variant="line"
+            label="최신 검토본을 불러오지 못했습니다."
+            onRetry={() => void reviewQuery.refetch()}
+            className="pt-4"
+          />
+        ) : null}
         <div className="pt-4">
           <SpeakerNudgeBanner noteId={noteId} />
         </div>
@@ -559,6 +833,17 @@ export function ReviewBoard({
             onRetry={retryAssignees}
             className="pb-4 text-xs text-[var(--el-muted)]"
           />
+        ) : null}
+        {firstMissingApply && canEdit && !confirmed ? (
+          <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm text-[var(--el-muted)]">
+            <span>이전 분석의 선택을 해제해 주세요.</span>
+            <button type="button" onClick={() => showItem(firstMissingApply.itemId, true)} className="underline underline-offset-4">
+              선택으로 가기
+            </button>
+          </div>
+        ) : null}
+        {flow?.status === "REVIEWABLE" && (relationsStatus === "PENDING" || enrichmentStatus === "PENDING") ? (
+          <PendingAnalysisRetry noteId={noteId} disabled={!editable || saving || refreshingAnalysis || refreshFailed} />
         ) : null}
 
         <div
@@ -573,7 +858,13 @@ export function ReviewBoard({
                   chapters={digests.flatMap((topic) =>
                     topic.startMs === null
                       ? []
-                      : [{ ordinal: topic.ordinal, title: topic.title, startMs: topic.startMs }]
+                      : [
+                          {
+                            ordinal: topic.ordinal,
+                            title: topic.title,
+                            startMs: topic.startMs,
+                          },
+                        ]
                   )}
                   marks={marks}
                   onSelect={showItem}
@@ -588,10 +879,28 @@ export function ReviewBoard({
                   failed={summaryQuery.isError && !summary}
                   onRetry={() => void summaryQuery.refetch()}
                 />
-                <TopicIndex topics={digests} onOpenTimeline={onOpenTimeline} links={meetingLinks}
+                <TopicIndex
+                  noteId={noteId}
+                  topics={digests}
+                  onOpenTimeline={onOpenTimeline}
+                  links={meetingLinks}
                   workspaceId={workspaceId}
-                  onRetryLinks={linksQuery.isError ? () => void linksQuery.refetch() : undefined}
                 />
+                {relationsNotice}
+                {enrichmentStatus === "PENDING" ||
+                enrichmentStatus === "FAILED" ||
+                enrichmentStatus === "SKIPPED" ? (
+                  <p
+                    role={enrichmentStatus === "FAILED" ? "alert" : "status"}
+                    className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
+                  >
+                    {enrichmentStatus === "PENDING"
+                      ? "담당과 기한을 정리하고 있습니다."
+                      : enrichmentStatus === "FAILED"
+                        ? "담당과 기한을 분석하지 못했습니다. 직접 지정할 수 있습니다."
+                        : "화자 정보를 확인하지 못해 담당과 기한을 분석하지 않았습니다."}
+                  </p>
+                ) : null}
                 {sections.map((section) => (
                   <ReviewSection
                     key={section.key}
@@ -605,11 +914,14 @@ export function ReviewBoard({
                     openItemId={openItemId}
                     busyItemId={editor.busyItemId}
                     conflictItemId={editor.conflictItemId}
+                    conflictMessage={editor.conflictMessage}
                     adding={editor.adding}
                     aside={
                       section.key === "ACTION_ITEM" && unnamedAssigned > 0 ? (
                         <>
-                          <span>이름 없는 화자에게 걸린 할 일 {unnamedAssigned}</span>
+                          <span>
+                            이름 없는 화자에게 걸린 할 일 {unnamedAssigned}
+                          </span>
                           <button
                             type="button"
                             onClick={onOpenTranscript}
@@ -634,6 +946,7 @@ export function ReviewBoard({
             </>
           ) : (
             <div>
+              {relationsNotice}
               {summary?.status === "SUCCEEDED" && overviewText(summary) ? (
                 <p className="mb-5 max-w-[60ch] text-base leading-7 break-keep text-[var(--el-ink)]">
                   {overviewText(summary)}
@@ -655,27 +968,30 @@ export function ReviewBoard({
                 />
               ) : (
                 <div className={GRAPH_WIDE}>
-                <ReviewGraph
-                  summary={
-                    summary ?? {
-                      noteId,
-                      status: "NOT_AVAILABLE",
-                      resultVersion: null,
-                      headline: null,
-                      lead: [],
-                      topics: [],
-                      agendas: [],
+                  <ReviewGraph
+                    agendaLinks={meetingLinks.byAgendaId}
+                    summary={
+                      summary ?? {
+                        noteId,
+                        status: "NOT_AVAILABLE",
+                        resultVersion: null,
+                        headline: null,
+                        lead: [],
+                        topics: [],
+                        agendas: [],
+                      }
                     }
-                  }
-                  items={items}
-                  selectedItemId={openItemId}
-                  onSelect={setOpenItemId}
-                />
+                    items={items}
+                    selectedItemId={openItemId}
+                    onSelect={setOpenItemId}
+                  />
                 </div>
               )}
               {selected ? (
                 <div
                   key={selected.itemId}
+                  data-item-id={selected.itemId}
+                  data-item-scroll-target
                   className="mt-4 overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-e2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
                 >
                   <div className="flex items-center gap-2.5 border-b border-[var(--el-hairline-soft)] px-4 py-3">
@@ -713,7 +1029,7 @@ export function ReviewBoard({
         </div>
       </BoardShell>
 
-      {editable ? (
+      {canEdit && !confirmed ? (
         <ConfirmBar
           summary={confirmSummary}
           decisions={included.filter((item) => item.kind === "DECISION").length}
@@ -726,7 +1042,7 @@ export function ReviewBoard({
                 () => showItem(firstUnchosen.itemId)
               : undefined
           }
-          error={approveError}
+          error={approveError?.version === review.reviewVersion ? approveError.message : null}
           raised={dockRaised}
           onConfirm={confirm}
         />
@@ -740,13 +1056,17 @@ export function ReviewBoard({
           workspaceId={workspaceId}
           meeting={noteMeta}
           attendees={participants.flatMap((person) =>
-            person.email ? [{ name: person.name ?? person.email, email: person.email }] : []
+            person.email
+              ? [{ name: person.name ?? person.email, email: person.email }]
+              : []
           )}
           unnamedSpeakers={unnamedSpeakers.flatMap((speaker) =>
             speaker.type === "SPEAKER_LABEL" ? [`화자 ${speaker.label}`] : []
           )}
           // 「PDF로 내보내기」와 같은 생성기다 — 받는 사람이 받는 파일과 내려받은 파일이 같다
-          buildPdf={async (include) => renderMinutesPdf(await wider.minutes(include))}
+          buildPdf={async (include) => (await preparePdf(include)).blob}
+          preparePdf={preparePdf}
+          version={exportVersion}
         />
       ) : null}
     </div>
@@ -781,7 +1101,11 @@ export function ReviewBoardSkeleton() {
         <Skeleton className="mt-2.5 h-[38px] w-[60%] rounded-chip" />
         <div className="mt-3 flex gap-1.5 pb-1">
           {[132, 72, 112].map((width) => (
-            <Skeleton key={width} className="h-[26px] rounded-control" style={{ width }} />
+            <Skeleton
+              key={width}
+              className="h-[26px] rounded-control"
+              style={{ width }}
+            />
           ))}
         </div>
         <div className="pt-[62px]">

@@ -10,6 +10,70 @@ const ANALYZING_NOTE = "01K0000000022";
 
 const reviewUrl = (noteId: string) => `/w/${WORKSPACE_ID}/notes/${noteId}?view=full&tab=summary`;
 
+test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐을 읽는다", async ({
+  page,
+}) => {
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  const overview = page.getByRole("region", { name: "요약", exact: true });
+  await expect(overview).toContainText(
+    "문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고", { timeout: 20_000 }
+  );
+  await expect(overview).toContainText("온톨로지 작업은 다음 학기로 넘겼다.");
+  await expect(overview).not.toContainText(
+    "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다"
+  );
+  const index = page.getByRole("list", { name: "주제 목차" });
+  await index
+    .getByRole("link", {
+      name: "회의가 끝난 뒤 할 일이 흐려지는 문제",
+      exact: true,
+    })
+    .click();
+  await expect(
+    index.getByRole("button", { name: /회의가 끝난 뒤 할 일이 흐려지는 문제/ })
+  ).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.getByRole("region", { name: "충돌·이어짐", exact: true })
+  ).toHaveCount(0);
+  const decisions = page.getByRole("region", { name: "결정", exact: true });
+  await decisions.getByRole("button", { name: "더 불러오기" }).click();
+  const pricing = decisions
+    .locator("[data-item-id]")
+    .filter({
+      has: page.getByRole("button", {
+        name: "요금은 좌석이 아니라 회의 시간 기준으로 계산한다",
+        exact: true,
+      }),
+    });
+  await expect(
+    pricing.getByText("대체", { exact: true })
+  ).toBeVisible();
+  await expect(pricing.getByText("이어짐", { exact: true })).toBeVisible();
+  await expect(pricing).toContainText("프로젝트 확정 항목");
+  await expect(pricing).toContainText(
+    "좌석 수 대신 실제 회의 시간을 과금 기준으로 정했습니다."
+  );
+  const replacement = decisions
+    .locator("[data-item-id]")
+    .filter({
+      has: page.getByRole("button", {
+        name: "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다",
+        exact: true,
+      }),
+    });
+  await expect(
+    replacement.getByRole("radiogroup", { name: "이전 결정을 끝낼지" })
+  ).toHaveCount(1);
+  await expect(
+    replacement.getByText("첫 화면 메시지는 회의 기록 품질로 둔다", {
+      exact: true,
+    })
+  ).toHaveCount(1);
+  await page.getByRole("radio", { name: "그래프" }).click();
+  await expect(page.getByRole("list", { name: "안건 이어짐" })).toContainText("회의가 끝난 뒤 할 일이 흐려지는 문제 → 02 차별점과 요금");
+
+});
+
 /** 검토 줄 하나. 줄의 내용 버튼을 품은 상자다 */
 const rowOf = (page: Page, content: string) =>
   page.locator("[data-item-id]").filter({ has: page.getByRole("button", { name: content, exact: true }) });
@@ -26,7 +90,7 @@ test("분석 중에는 삭제 확인을 비활성화한다", async ({ page }) =>
   await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
   await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
   const dialog = page.getByRole("alertdialog");
-  await expect(dialog.getByText("분석 중에는 삭제할 수 없습니다.")).toBeVisible();
+  await expect(dialog.getByText("회의 분석이 끝난 뒤 삭제할 수 있어요.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "삭제", exact: true })).toBeDisabled();
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(page.getByRole("button", { name: "노트 메뉴", exact: true })).toBeVisible();
@@ -59,7 +123,7 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
   // 줄 이름은 exact 로 찾는다 — 「언제 정해졌나」의 표시도 같은 문장을 이름에 품는다.
   const decision = page.getByRole("button", { name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다", exact: true });
   await decision.click();
-  await expect(page.getByRole("list", { name: "근거 발언" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "근거 발언", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "수정", exact: true }).click();
   await page.getByRole("textbox", { name: "항목 내용" }).fill("설문 근거는 출처 · 표본 수 · 조사 연도를 함께 적는다");
@@ -93,6 +157,107 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
   await page.getByRole("button", { name: "검토 완료" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "검토 완료" }).click();
   await expect(page.getByText("확정됨", { exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 완료 때 편집한 초안이 적용된다", async ({ page }) => {
+  const taskWrites: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && /\/tasks\//.test(request.url())) taskWrites.push(request.url());
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
+  const tasksUrl = await page.evaluate(async ({ noteId, workspaceId }) => {
+    const { data: note } = await (await fetch(`/v1/notes/${noteId}`)).json();
+    return `/v1/workspaces/${workspaceId}/projects/${note.projectId}/tasks`;
+  }, { noteId: MENTORING_NOTE, workspaceId: WORKSPACE_ID });
+  const readTasks = () => page.evaluate(async (url) => (await (await fetch(url)).json()).data.tasks, tasksUrl);
+  const before = await readTasks();
+  const target = before.find((task: { content: string }) => task.content === "경쟁 서비스 요금제를 표로 정리한다");
+  expect(target).toBeTruthy();
+  const row = rowOf(page, "경쟁 서비스 요금제를 한 표로 정리한다");
+  const choice = row.getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+  await choice.getByRole("radio", { name: "반영", exact: true }).click();
+  await expect(choice.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+  await expect(row).toContainText("검토 완료 때 적용됩니다.");
+  await row.getByRole("group", { name: "기존 할 일 변경", exact: true }).locator('input[type="date"]').fill("2026-12-05");
+  await expect.poll(() => page.evaluate(async ({ noteId, taskId }) => {
+    const { data: review } = await (await fetch(`/v1/notes/${noteId}/meeting-review`)).json();
+    return review.items.flatMap((item: { taskChanges: Array<{ target: { itemId: string }; draft?: { due?: { value: string } } }> }) => item.taskChanges)
+      .find((change: { target: { itemId: string } }) => change.target.itemId === taskId)?.draft?.due?.value;
+  }, { noteId: MENTORING_NOTE, taskId: target.taskId })).toBe("2026-12-05");
+  await choice.getByRole("radio", { name: "넘기기" }).click();
+  await expect(choice.getByRole("radio", { name: "넘기기" })).toHaveAttribute("aria-checked", "true");
+  expect(await readTasks()).toEqual(before);
+  await choice.getByRole("radio", { name: "반영", exact: true }).click();
+  await expect(choice.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+  expect(await readTasks()).toEqual(before);
+
+  await rowOf(page, "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")
+    .getByRole("radio", { name: "이어가기" }).click();
+  await rowOf(page, "구현 결과를 기대 효과 순서로 다시 배치한다")
+    .getByRole("radio", { name: "넘기기" }).click();
+  await expect(page.getByText(/를 프로젝트에 올립니다/)).toContainText("기존 할 일 1개 변경");
+  await page.getByRole("button", { name: "검토 완료" }).click();
+  await expect(page.getByRole("alertdialog")).toContainText("기존 할 일 1개가 변경됩니다.");
+  await page.getByRole("alertdialog").getByRole("button", { name: "검토 완료" }).click();
+  await expect(page.getByText("확정됨", { exact: true })).toBeVisible({ timeout: 20_000 });
+  const applied = (await readTasks()).find((task: { taskId: string }) => task.taskId === target.taskId);
+  expect(applied).toMatchObject({ assignee: null, due: "2026-12-05", revision: target.revision + 1 });
+  await expect(choice.getByRole("radio", { name: "반영됨" })).toBeDisabled();
+  await expect(row.getByText("검토 완료 때 적용됩니다.")).toHaveCount(0);
+  await expect(row.getByText(/이 제안을 반영할 수 없습니다/)).toHaveCount(0);
+  expect(taskWrites).toEqual([]);
+});
+
+test("재진입 GET에서 사라진 제안의 저장 선택을 해제하고 업무는 유지한다", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && /\/tasks\//.test(request.url())) writes.push(request.url());
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
+  const decision = rowOf(page, "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다");
+  const action = rowOf(page, "경쟁 서비스 요금제를 한 표로 정리한다");
+  await decision.getByRole("radio", { name: "끝내기" }).click();
+  await expect(decision.getByRole("radio", { name: "끝내기" })).toHaveAttribute("aria-checked", "true");
+  await action.getByRole("radio", { name: "반영", exact: true }).click();
+  await expect(action.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+
+  // 요청은 실제 MSW를 통과합니다. 조회/저장 응답의 현재 제안만 숨겨 새 주기 응답을 재현합니다.
+  // 서버의 실제 주기 전환과 409 원자성은 별도 Mock OFF QA로 검증합니다.
+  await page.evaluate((noteId) => {
+    const original = window.fetch.bind(window);
+    const reviewPath = `/v1/notes/${noteId}/meeting-review`;
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const response = await original(...args);
+      const input = args[0];
+      const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
+      if (response.ok && (url.pathname === reviewPath || url.pathname.startsWith(`${reviewPath}/items/`))) {
+        const body = await response.clone().json();
+        for (const item of body.data.items) { item.replacements = []; item.taskChanges = []; }
+        return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
+      }
+      return response;
+    };
+  }, MENTORING_NOTE);
+  await page.getByRole("tab", { name: "정보", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "정보", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "요약", exact: true }).click();
+  await expect(decision.getByText("이전 분석의 선택 · 끝내기")).toBeVisible();
+  await expect(action.getByText("이전 분석의 선택 · 반영 예정")).toBeVisible();
+  await expect(page.getByRole("button", { name: "검토 완료", exact: true })).toBeDisabled();
+  await expectNoHorizontalOverflow(page);
+  const cleared = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes("/meeting-review/items/"));
+  await decision.getByRole("button", { name: /끝내기 선택 해제/ }).click();
+  const patch = (await cleared).request().postDataJSON();
+  expect(patch.decisions).toEqual([{ targetId: expect.any(String), decision: null }]);
+  await expect(decision.getByRole("button", { name: /선택 해제/ })).toHaveCount(0);
+  await action.getByRole("button", { name: /반영 예정 선택 해제/ }).click();
+  await expect(action.getByRole("button", { name: /선택 해제/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "검토 완료", exact: true })).toBeEnabled();
+  await expectNoHorizontalOverflow(page);
+  expect(writes).toEqual([]);
 });
 
 test("그래프를 확대 · 이동하고, 점이나 목록에서 항목을 고르면 아래에 수정 기록이 서며 닫을 수 있다", async ({ page }) => {

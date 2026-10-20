@@ -6,6 +6,7 @@ import { mockDb } from "@/lib/mocks/db";
 import { MENTORING_GUEST_IDS, MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
 import { MOCK_STEP_MS, meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
+import type { MeetingReviewResponseData, UpdateMeetingReviewItemRequest } from "@/lib/api/generated/models";
 
 /**
  * 회의 뒤 흐름 · 할 일 목이 계약대로 답하는지. 화면 테스트가 성공 경로를 밟으니 여기서는
@@ -40,6 +41,126 @@ const tasksPath = () => {
   return `/v1/workspaces/${workspaceOfProject(projectId)}/projects/${projectId}/tasks`;
 };
 
+async function chooseTask(decision: "APPLY" | "KEEP" | "APPLIED" | null, draft?: NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"], at = 0) {
+  const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+  const item = current.items.filter((row) => row.taskChanges.length > 0)[at];
+  return api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`, "PATCH", {
+    expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+    decisions: [{ targetId: item.taskChanges[0].target.itemId, decision, ...(draft ? { taskChange: draft } : {}) }],
+  });
+}
+
+async function approveCurrent() {
+  const current = await review(MENTORING_NOTE_ID);
+  return api(`/v1/notes/${MENTORING_NOTE_ID}/approval`, "POST", {
+    requestId: "01K0000000099", reviewId: current.reviewId, reviewRevision: current.reviewVersion,
+  });
+}
+
+describe("기존 할 일의 검토 초안", () => {
+  it.each(["END", "APPLY"] as const)("사라진 %s 선택은 409로 막고 null 해제 후 승인한다", async (decision) => {
+    let current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const item = current.items.find((row) => decision === "END" ? row.replacements.length : row.taskChanges.length)!;
+    const target = decision === "END" ? item.replacements[0].target : item.taskChanges[0].target;
+    const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`;
+    const chosen = await api(path, "PATCH", {
+      expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+      decisions: [{ targetId: target.itemId, decision, ...(decision === "APPLY" ? { taskChange: { expectedRevision: target.revision, due: { value: "2026-12-05" } } } : {}) }],
+    });
+    expect(chosen.status).toBe(200);
+    meetingFlow.clearSuggestions(MENTORING_NOTE_ID);
+    current = await review(MENTORING_NOTE_ID);
+    const missing = current.items.find((row) => row.itemId === item.itemId)!;
+    expect(missing.replacements).toEqual([]);
+    expect(missing.taskChanges).toEqual([]);
+    expect(missing.decisions).toEqual([expect.objectContaining({ targetId: target.itemId, decision })]);
+    const before = (await api(tasksPath())).body.data;
+    expect((await approveCurrent()).status).toBe(409);
+    expect((await api(tasksPath())).body.data).toEqual(before);
+    const cleared = await api(path, "PATCH", {
+      expectedReviewVersion: current.reviewVersion, expectedItemRevision: missing.revision,
+      decisions: [{ targetId: target.itemId, decision: null }],
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.data.items.find((row: { itemId: string }) => row.itemId === item.itemId).decisions).toEqual([]);
+    expect((await api(tasksPath())).body.data).toEqual(before);
+    expect((await approveCurrent()).status).toBe(200);
+  });
+
+  it("제안이 사라져도 APPLIED 이력은 조회되고 null 해제가 거절된다", async () => {
+    expect((await chooseTask("APPLIED")).status).toBe(200);
+    meetingFlow.clearSuggestions(MENTORING_NOTE_ID);
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const item = current.items.find((row) => row.decisions.some((choice) => choice.decision === "APPLIED"))!;
+    const choice = item.decisions.find((row) => row.decision === "APPLIED")!;
+    const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`;
+    const result = await api(path, "PATCH", {
+      expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+      decisions: [{ targetId: choice.targetId, decision: null }],
+    });
+    expect(result.status).toBe(400);
+    expect(await review(MENTORING_NOTE_ID)).toEqual(current);
+  });
+
+  it("APPLY·KEEP를 바꾸고 재조회해도 편집값을 보존하며 실제 업무는 건드리지 않는다", async () => {
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const change = current.items.find((row) => row.taskChanges.length > 0)!.taskChanges[0];
+    const before = (await api(tasksPath())).body.data;
+    const draft = { expectedRevision: change.target.revision, status: null, assignee: { value: null }, due: { value: "2026-12-05" } };
+    expect((await chooseTask("APPLY", draft)).status).toBe(200);
+    expect((await chooseTask("KEEP")).status).toBe(200);
+    const kept: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    expect(kept.items.flatMap((row) => row.taskChanges).find((row) => row.target.itemId === change.target.itemId)).toMatchObject({ decision: "KEEP", draft });
+    expect(kept.items.flatMap((row) => row.decisions).find((row) => row.targetId === change.target.itemId)).toEqual({ targetId: change.target.itemId, decision: "KEEP", taskChange: draft });
+    expect((await api(tasksPath())).body.data).toEqual(before);
+    expect((await chooseTask("APPLY", draft)).status).toBe(200);
+    expect((await api(tasksPath())).body.data).toEqual(before);
+    expect((await chooseTask(null)).status).toBe(200);
+    const cleared: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    expect(cleared.items.flatMap((row) => row.taskChanges).find((row) => row.target.itemId === change.target.itemId)).toMatchObject({ decision: null, draft: null });
+    expect(cleared.items.flatMap((row) => row.decisions).some((row) => row.targetId === change.target.itemId)).toBe(false);
+  });
+
+  it("초안 없는 APPLY와 다른 기대 판을 거절하고 APPLIED 이력의 선택을 잠근다", async () => {
+    expect((await chooseTask("APPLY")).status).toBe(400);
+    expect((await chooseTask("APPLY", { expectedRevision: 999, due: { value: null } })).status).toBe(400);
+    expect((await chooseTask("APPLIED")).status).toBe(200);
+    expect((await chooseTask("KEEP")).status).toBe(400);
+  });
+
+  it("확정에서만 초안을 적용하고 같은 요청을 재전송해도 업무 이력이 더 늘지 않는다", async () => {
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const change = current.items.find((row) => row.taskChanges.length > 0)!.taskChanges[0];
+    const draft = { expectedRevision: change.target.revision, status: "COMPLETED" as const, assignee: { value: null }, due: { value: "2026-12-05" } };
+    expect((await chooseTask("APPLY", draft)).status).toBe(200);
+    const approved = await approveCurrent();
+    expect(approved.status).toBe(200);
+    const after = (await api(tasksPath())).body.data.tasks;
+    expect(after.find((row: { taskId: string }) => row.taskId === change.target.itemId)).toMatchObject({ taskStatus: "COMPLETED", due: "2026-12-05", assignee: null, revision: change.target.revision + 1 });
+    const history = (await api(`${tasksPath()}/${change.target.itemId}/revisions`)).body.data.revisions;
+    expect(history.at(-1).approvalId).not.toBeNull();
+    expect((await approveCurrent()).body.data).toEqual(approved.body.data);
+    expect((await api(`${tasksPath()}/${change.target.itemId}/revisions`)).body.data.revisions).toEqual(history);
+  });
+
+  it("업무 판이 다르면 새 업무 생성과 다른 변경도 남기지 않고 확정 전체를 거절한다", async () => {
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const changes = current.items.filter((row) => row.taskChanges.length > 0).map((row) => row.taskChanges[0]);
+    for (const [at, change] of changes.entries()) {
+      expect((await chooseTask("APPLY", { expectedRevision: change.target.revision, due: { value: "2026-12-05" } }, at)).status).toBe(200);
+    }
+    const tasks = (await api(tasksPath())).body.data.tasks;
+    const stale = tasks.find((row: { taskId: string }) => row.taskId === changes.at(-1)!.target.itemId);
+    expect((await api(`${tasksPath()}/${stale.taskId}`, "PUT", { ...stale, taskStatus: "CANCELLED" })).status).toBe(200);
+    const before = (await api(tasksPath())).body.data;
+    const reviewBefore = await review(MENTORING_NOTE_ID);
+    expect((await approveCurrent()).status).toBe(409);
+    expect((await api(tasksPath())).body.data).toEqual(before);
+    expect(await review(MENTORING_NOTE_ID)).toEqual(reviewBefore);
+    expect(await flow(MENTORING_NOTE_ID)).toBe("REVIEWABLE");
+  });
+});
+
 describe("흐름 상태", () => {
   it("화자 분리와 분석은 시간이 지나면 다음 단계로 넘어가 검토본이 선다", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -66,6 +187,7 @@ describe("흐름 상태", () => {
     );
     const accepted = await api("/v1/notes/01K0000000026/analyses", "POST");
     expect(accepted.status).toBe(202);
+    expect(accepted.body.data.flowStatus).toBe("ANALYZING");
     expect(accepted.body.data.requestId).toHaveLength(13);
     expect(await flow("01K0000000026")).toBe("ANALYZING");
   });
@@ -297,9 +419,10 @@ describe("회의 간 연결", () => {
   it("멘토링 노트만 지난 회의와 이어지고, 다른 노트는 비어 있다", async () => {
     const links = (await api(`/v1/projects/p/meeting-links?noteId=${MENTORING_NOTE_ID}`)).body.data;
     expect(links.notes).toHaveLength(2);
-    expect(links.meetingLinks.map((row: { kind: string }) => row.kind)).toEqual(expect.arrayContaining(["SUPERSEDES", "COMPLETES"]));
-    expect(links.agendaLinks).toHaveLength(2);
-    expect((await api("/v1/projects/p/meeting-links?noteId=01K0000000002")).body.data).toEqual({ notes: [], meetingLinks: [], agendaLinks: [], conflicts: [] });
+    expect(links.conflicts.map((row: { kind: string }) => row.kind)).toContain("SUPERSEDES");
+    expect(links.meetingLinks.map((row: { kind: string }) => row.kind)).toEqual(expect.arrayContaining(["COMPLETES", "SUCCEEDS"]));
+    expect(links.agendaLinks).toHaveLength(3);
+    expect((await api("/v1/projects/p/meeting-links?noteId=01K0000000002")).body.data).toEqual({ notes: [], meetingLinks: [], conflicts: [], agendaLinks: [] });
   });
 });
 

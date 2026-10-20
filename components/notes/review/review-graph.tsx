@@ -12,6 +12,7 @@ import type {
 import { RoleDot } from "@/components/notes/review/role-dot";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MeetingReviewResponseDataItemsItem } from "@/lib/api/generated/models";
+import type { MeetingLinkIndex } from "@/lib/notes/review/meeting-links";
 import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
 import {
   buildReviewGraph,
@@ -48,14 +49,16 @@ export function ReviewGraph({
   items,
   selectedItemId,
   onSelect,
+  agendaLinks,
 }: {
   summary: MeetingReviewSummary;
   items: MeetingReviewResponseDataItemsItem[];
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
+  agendaLinks?: MeetingLinkIndex["byAgendaId"];
 }) {
   const ready = summary.status === "SUCCEEDED" && summaryTopics(summary).length > 0;
-  const graph = useMemo(() => buildReviewGraph(summary, items), [summary, items]);
+  const graph = useMemo(() => buildReviewGraph(summary, items, agendaLinks), [summary, items, agendaLinks]);
   // 힘 배치는 점 객체에 좌표를 써 넣는다. 같은 그래프면 같은 객체를 넘겨야 배치가 처음부터 다시 돌지 않는다.
   const data = useMemo(() => toForceGraph(graph), [graph]);
   const neighbors = useMemo(() => neighborsOf(data.links), [data]);
@@ -172,6 +175,12 @@ export function ReviewGraph({
           ))}
         </span>
         <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+          {graph.agendaEdges.length > 0 ? (
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <span aria-hidden className="text-[var(--el-ink)]">⟶</span>
+              안건 이어짐
+            </span>
+          ) : null}
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span aria-hidden className="inline-block h-px w-4 bg-[var(--el-muted)]" />
             관계
@@ -268,16 +277,12 @@ export function ReviewGraph({
             ) : (
               // 허브 이름은 그래프 위에서 잘린다. 온전한 이름은 여기서만 읽힌다
               <>
-                <p className="text-[11px] font-medium text-[var(--el-muted)]">주제 · 항목 {tooltip.node.degree}</p>
+                <p className="text-[11px] font-medium text-[var(--el-muted)]">주제 · 항목 {tooltip.node.memberCount ?? 0}</p>
                 <p className="mt-1.5 text-[13px] leading-[19px] font-semibold text-[var(--el-ink)]">{tooltip.node.label}</p>
               </>
             )}
           </div>
         ) : null}
-
-        <p className="pointer-events-none absolute bottom-2.5 left-3 hidden text-xs text-[var(--el-muted)] sm:block">
-          항목을 누르면 아래에 수정 기록과 스크립트가 펼쳐집니다
-        </p>
 
         {/* 손가락으로 쓰는 화면에서는 버튼을 40px 로 키우고 가로로 눕혀 그래프를 덜 가린다 */}
         <div className="absolute right-2 bottom-2 flex flex-col divide-y divide-[var(--el-hairline)] overflow-hidden rounded-control border border-[var(--el-hairline)] bg-[var(--el-surface-card)] pointer-coarse:flex-row pointer-coarse:divide-x pointer-coarse:divide-y-0">
@@ -293,10 +298,16 @@ export function ReviewGraph({
         </div>
       </div>
 
-      {/* 좁은 화면에서는 안내가 점을 가려 그래프 밖 아래에 둔다 */}
-      <p className="mt-2 text-xs text-[var(--el-muted)] sm:hidden">
-        항목을 누르면 아래에 수정 기록과 스크립트가 펼쳐집니다
-      </p>
+      {graph.agendaEdges.length > 0 ? (
+        <ul aria-label="안건 이어짐" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--el-muted)]">
+          {graph.agendaEdges.map((edge) => (
+            <li key={`${edge.source}:${edge.target}`}>
+              {nodeById.get(edge.source)?.label} → {nodeById.get(edge.target)?.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
     </div>
   );
 }

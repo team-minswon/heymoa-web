@@ -101,6 +101,7 @@ vi.mock("@/lib/api/generated/analysis/analysis", async () => {
           };
     },
     getGetLatestAnalysisQueryKey: (noteId: string) => ["analysis", noteId],
+    getGetAnalysisFlowQueryKey: (noteId: string) => ["flow", noteId],
   };
 });
 vi.mock("@/lib/api/generated/notes/notes", () => ({
@@ -568,4 +569,18 @@ describe("MeetingEndDialog", () => {
       ).toBe("ENDED")
     );
   });
+});
+
+
+it("회의 종료 시 이전 흐름 조회를 취소하고 상태를 무효화한 뒤 요약으로 이동한다", async () => {
+  state.endMock.mockImplementation((_args, options) => options.onSuccess(ENDED_NOTE));
+  const ended = vi.fn();
+  const { client } = renderDialog(ended);
+  const key = ["flow", "01K0000000002"];
+  client.setQueryData(key, { status: 200, data: { success: true, data: { status: "NOT_REQUESTED" } } });
+  const cancel = vi.spyOn(client, "cancelQueries");
+  fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+  await waitFor(() => expect(ended).toHaveBeenCalled());
+  expect(cancel).toHaveBeenCalledWith({ queryKey: key });
+  expect(client.getQueryState(key)?.isInvalidated).toBe(true);
 });

@@ -9,7 +9,7 @@ import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
 
 
 /**
- * 회의록 문서 한 벌. PDF 렌더러와 메일 첨부가 같은 모델에서 출발한다 — 무엇을 싣고 무엇을 「확인 필요」로 둘지는
+ * 회의록 문서 한 벌. PDF 렌더러와 메일 첨부가 같은 모델에서 출발한다 — 무엇을 싣고 무엇을 「미지정」으로 둘지는
  * 여기서 다 정하고, 렌더러는 그리기만 한다. 문자열은 전부 이미 사람이 읽을 형태다.
  *
  * **두 층이다.** 1쪽 「핵심」은 그 쪽만 읽어도 회의를 아는 자리다 — 결론 · 안건 한눈에 · 할 일 담당. 2쪽부터
@@ -17,7 +17,7 @@ import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
  * 않는다(같은 항목이 두 자리에 서면 문서만 길어진다). 녹취록은 본문이 아니라 부록이다 — 회의록은 「한 일」의
  * 기록이고, 한 말은 본문의 시각 · 번호로 찾아가는 자리다. 회의록 도구 · 서식 조사(2026-10-16)를 따랐다.
  *
- * **모르는 값을 지어내지 않는다.** 담당 · 기한이 없으면 「확인 필요」로 남긴다 — 비우면 「안 적었다」로,
+ * **모르는 값을 지어내지 않는다.** 담당 · 기한이 없으면 「미지정」으로 남긴다 — 비우면 「안 적었다」로,
  * 그럴듯한 값을 넣으면 사실로 읽힌다. 중요도도 매기지 않는다 — 고를 근거가 없어, 1쪽은 개수와 요지만 싣는다.
  */
 export type MinutesDocument = {
@@ -34,7 +34,7 @@ export type MinutesDocument = {
   sharedBy: string | null;
   /** 검토를 마쳐 확정한 회의록인가. 검토 중인 내용이 확정본처럼 남에게 가면 안 된다 */
   confirmed: boolean;
-  /** 회의 한 줄 결론 */
+  /** 앱에서 제안하는 회의 제목. 보고서 본문에는 싣지 않는다 */
   headline: string | null;
   /** 결론을 받치는 요약 문장. 회의 전체에 걸친 문장이라 1쪽에 그대로 싣는다 */
   lead: string[];
@@ -55,13 +55,15 @@ export type MinutesDocument = {
 };
 
 /**
- * 1쪽 안건 표의 한 줄. 번호가 없는(`no` null) 줄은 어느 안건에도 들지 않은 항목을 모은 「기타」다.
- * 개수는 상세의 결정 · 할 일 · 미결 중 이 안건에서 나온 것이다.
+ * 실제 안건의 목차 한 줄. 개수는 상세의 결정 · 할 일 · 미결 중 이 안건에서 나온 것이다.
+ * 안건 미지정 항목은 상세에만 싣고 빈 안건을 만들지 않는다.
  */
 export type MinutesAgenda = {
-  no: number | null;
+  no: number;
   title: string;
   gist: string | null;
+  /** 목차의 축약본과 별개로 본문에 보존할 안건 요약 전문 */
+  text: string;
   /** 이 안건이 처음 나온 녹취록 시각 */
   start: string | null;
   decisions: number;
@@ -69,7 +71,7 @@ export type MinutesAgenda = {
   open: number;
 };
 
-/** [agendaNo] 는 나온 안건(「기타」면 null), [at] 은 녹취록에서 찾아갈 시각이다 */
+/** [agendaNo] 는 나온 안건(미지정이면 null), [at] 은 녹취록에서 찾아갈 시각이다 */
 export type MinutesDecision = { no: number; text: string; agendaNo: number | null; at: string | null };
 
 export type MinutesAction = {
@@ -274,11 +276,11 @@ export function buildMinutes({
   lead?: readonly string[];
   /** 회의에서 나온 차례로 선 안건 */
   topics: readonly MinutesTopic[];
-  /** 검토 섹션. 어느 안건에도 들지 않은 결정 · 할 일을 「기타」로 모으는 데만 본다 */
+  /** 검토 섹션. 안건 미지정 결정 · 할 일을 상세에 보존한다 */
   sections: readonly ReviewSection[];
   /** 항목이 회의에서 나온 때(ms). 인용으로 계산한다 */
   citedAt: (item: ReviewItem) => number | null;
-  /** 어느 안건에도 들지 않은 질문 · 이슈. 「기타」의 미결로 싣는다 — 버리면 안건 요약이 없는 회의의 미결이 통째로 빠진다 */
+  /** 안건 미지정 질문 · 이슈도 미결 사항에 보존한다 */
   unfiledOpen?: readonly ReviewItem[];
   unnamedSpeakers?: number;
   transcript?: MinutesTranscriptSource | null;
@@ -307,7 +309,7 @@ export function buildMinutes({
     for (const { segmentId } of item.citations ?? []) refsOf.set(segmentId, [...(refsOf.get(segmentId) ?? []), label]);
   };
 
-  const place = (no: number | null, title: string, gist: string | null, startMs: number | null, source: Pick<MinutesTopic, "decisions" | "tasks" | "open">) => {
+  const place = (no: number | null, title: string, gist: string | null, startMs: number | null, source: Pick<MinutesTopic, "decisions" | "tasks" | "open">, text = "") => {
     const picked = { decisions: fresh(source.decisions), tasks: fresh(source.tasks), open: fresh(source.open) };
     for (const item of picked.decisions) {
       decisions.push({ no: decisions.length + 1, text: item.content.trim(), agendaNo: no, at: pointAt(citedAt(item)) });
@@ -335,16 +337,16 @@ export function buildMinutes({
       cite(item, `미결 ${open.length}`);
     }
     const counts = { decisions: picked.decisions.length, actions: picked.tasks.length, open: picked.open.length };
-    if (!gist && counts.decisions + counts.actions + counts.open === 0) return;
-    agendas.push({ no, title, gist, start: pointAt(startMs), ...counts });
-    if (no !== null && startMs !== null) agendaStarts.push({ ms: startMs, no, title });
+    if (no === null || (!gist && counts.decisions + counts.actions + counts.open === 0)) return;
+    agendas.push({ no, title, gist, text, start: pointAt(startMs), ...counts });
+    if (startMs !== null) agendaStarts.push({ ms: startMs, no, title });
   };
 
   topics.forEach((topic, index) =>
-    place(index + 1, topic.title.trim(), gistOf(topic), topic.startMs ?? null, topic)
+    place(index + 1, topic.title.trim(), gistOf(topic), topic.startMs ?? null, topic, topic.text.trim() || topic.gist?.trim() || "")
   );
   const rest = (key: ReviewSection["key"]) => sections.find((section) => section.key === key)?.items ?? [];
-  place(null, OTHER_AGENDA, null, null, { decisions: rest("DECISION"), tasks: rest("ACTION_ITEM"), open: unfiledOpen });
+  place(null, "", null, null, { decisions: rest("DECISION"), tasks: rest("ACTION_ITEM"), open: unfiledOpen });
 
   const owners = new Map<string | null, number>();
   for (const action of actions) owners.set(action.assignee, (owners.get(action.assignee) ?? 0) + 1);
@@ -369,7 +371,7 @@ export function buildMinutes({
     open,
     transcript: include.transcript && transcript ? transcriptLines(transcript, refsOf, agendaStarts) : null,
     transcriptTruncated: include.transcript && transcript ? transcript.truncated : false,
-    footer: `${note.title} · ${date} 회의록`,
+    footer: `${date} · ${note.title} 회의록`,
     fileName: minutesFileName(note.title, note.whenIso),
   };
 }

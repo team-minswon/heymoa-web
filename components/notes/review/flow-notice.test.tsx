@@ -11,10 +11,10 @@ vi.mock("@/lib/api/generated/analysis/analysis", () => ({
 
 type Status = "NOT_REQUESTED" | "ANALYZING" | "ANALYSIS_FAILED" | "DIARIZING";
 
-function renderNotice(status: Status) {
+function renderNotice(status: Status, verified = true) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <FlowNotice noteId="n1" status={status} onOpenTranscript={vi.fn()} />
+      <FlowNotice noteId="n1" status={status} verified={verified} onOpenTranscript={vi.fn()} />
     </QueryClientProvider>
   );
 }
@@ -47,4 +47,13 @@ describe("FlowNotice", () => {
     renderNotice("DIARIZING");
     expect(screen.queryByRole("button", { name: /분석/ })).toBeNull();
   });
+});
+
+
+it("이번 화면에서 확인하지 않은 캐시만으로 수동 분석 버튼을 내놓지 않는다", () => {
+  const view = renderNotice("NOT_REQUESTED", false);
+  expect(screen.queryByRole("button", { name: "분석 요청" })).toBeNull();
+  view.unmount();
+  renderNotice("NOT_REQUESTED", true);
+  expect(screen.getByRole("button", { name: "분석 요청" })).toBeInTheDocument();
 });

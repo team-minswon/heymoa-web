@@ -226,7 +226,7 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
   await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
   await page.getByRole("menuitem", { name: "삭제" }).click();
   const dialog = page.getByRole("alertdialog");
-  await expect(dialog).toContainText("프로젝트로 승계된 결정사항·할 일");
+  await expect(dialog).toContainText("프로젝트의 다른 회의록·결정사항·할 일과 개인 대화는 삭제되지 않아요.");
   await dialog.getByRole("button", { name: "삭제", exact: true }).click();
 
   await expect(
@@ -2226,6 +2226,7 @@ test("assigns a workspace member who is not yet a participant and checks them in
   // 기본 목록은 이 회의 참여자만이다(APP-1163) — 이름을 쳐야 나타난다.
   await expect(memberOption()).toHaveCount(0);
   await page.getByRole("combobox", { name: /참석자 검색/ }).fill(MEMBER_NAME);
+
   await memberOption().click();
 
   await expect(
@@ -2354,6 +2355,8 @@ test("links a guest to an account and keeps the speaker assignment", async ({
   // **문서를 다시 로드하지 않는다.** 목 DB 가 페이지 모듈 상태라 새로고침하면 방금 만든
   // 임시 참여자가 사라진다 — 노트를 닫고 사이드바로 가는 클라이언트 이동만 한다.
   await page.getByRole("button", { name: "목록으로" }).click();
+  // 설정이 현재 주소를 기록하기 전에 노트 닫기의 경로 이동이 완료되어야 한다.
+  await expect.poll(() => new URL(page.url()).pathname).toBe(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "워크스페이스 전환" }).click();
   await page.getByRole("menuitem", { name: "워크스페이스 설정" }).click();
   await page.getByRole("button", { name: "임시 참여자" }).click();
@@ -2375,10 +2378,10 @@ test("links a guest to an account and keeps the speaker assignment", async ({
   ).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  // ⑤ 그 회의록을 다시 연다. **여기서도 새로고침하지 않는다** — 목록에서 클라이언트 이동이다.
+  // ⑤ 설정 주소가 닫힌 뒤 실제 노트 링크로 클라이언트 이동한다. 새로고침하면 목의 연동 기록이 사라진다.
+  await expect(page).not.toHaveURL(/[?&]settings=/);
   await page
-    .locator("article", { hasText: "온보딩 이탈 구간 리뷰" })
-    .first()
+    .getByRole("link", { name: "온보딩 이탈 구간 리뷰 노트 열기", exact: true })
     .click();
   await page.getByRole("tab", { name: "스크립트" }).click();
 
