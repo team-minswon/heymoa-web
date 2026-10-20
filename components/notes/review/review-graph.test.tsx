@@ -65,6 +65,7 @@ function reviewItem(
     kind,
     content: itemId,
     included: true,
+  projectSelected: true,
     edited: false,
     authoredByUserId: null,
     originalProposalRef: null,

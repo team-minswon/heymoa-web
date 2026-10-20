@@ -22,21 +22,25 @@ export function applyItemPatch(
   patch: ItemPatch
 ): MeetingReviewResponseData {
   const choiceOf = new Map(
-    (patch.decisions ?? []).map(
-      (choice) => [choice.targetId, choice] as const
-    )
+    (patch.decisions ?? []).map((choice) => [choice.targetId, choice] as const)
   );
   const patchItem = (
     item: MeetingReviewResponseDataItemsItem
   ): MeetingReviewResponseDataItemsItem => ({
     ...item,
     ...(patch.included !== undefined ? { included: patch.included } : {}),
+    ...(patch.projectSelected !== undefined
+      ? { projectSelected: patch.projectSelected }
+      : {}),
+    ...(patch.included === false ? { projectSelected: false } : {}),
     ...("due" in patch ? { due: patch.due ?? null } : {}),
     ...(choiceOf.size > 0
       ? {
           replacements: item.replacements.map((row) => {
             const decision = choiceOf.get(row.target.itemId)?.decision;
-            return decision === undefined || decision === "APPLIED" || decision === "APPLY"
+            return decision === undefined ||
+              decision === "APPLIED" ||
+              decision === "APPLY"
               ? row
               : { ...row, decision };
           }),
@@ -48,16 +52,33 @@ export function applyItemPatch(
               decision === "APPLIED"
               ? row
               : {
-                  ...row, decision,
+                  ...row,
+                  decision,
                   // 초안은 이름을 포함하지 않는 참조라 요청 값을 바로 표시할 수 있다.
-                  draft: decision === null ? null : choice?.taskChange ? {
-                    expectedRevision: choice.taskChange.expectedRevision,
-                    status: choice.taskChange.status ?? null,
-                    assignee: choice.taskChange.assignee?.value ? {
-                      value: { type: choice.taskChange.assignee.value.type, id: choice.taskChange.assignee.value.id ?? null, label: choice.taskChange.assignee.value.label ?? null },
-                    } : choice.taskChange.assignee ?? null,
-                    due: choice.taskChange.due ?? null,
-                  } : row.draft,
+                  draft:
+                    decision === null
+                      ? null
+                      : choice?.taskChange
+                        ? {
+                            expectedRevision:
+                              choice.taskChange.expectedRevision,
+                            status: choice.taskChange.status ?? null,
+                            assignee: choice.taskChange.assignee?.value
+                              ? {
+                                  value: {
+                                    type: choice.taskChange.assignee.value.type,
+                                    id:
+                                      choice.taskChange.assignee.value.id ??
+                                      null,
+                                    label:
+                                      choice.taskChange.assignee.value.label ??
+                                      null,
+                                  },
+                                }
+                              : (choice.taskChange.assignee ?? null),
+                            due: choice.taskChange.due ?? null,
+                          }
+                        : row.draft,
                 };
           }),
         }
@@ -83,7 +104,9 @@ export function restoreItemFields(
   // `applyItemPatch` 가 안 건 값(대체의 APPLIED, 할 일 변경의 END·APPLIED)은 되돌리지도 않는다 — 그 칸은 다른 길이 쓴 값이다.
   const touched = new Set(
     (patch.decisions ?? [])
-      .filter((choice) => choice.decision !== "APPLIED" && choice.decision !== "APPLY")
+      .filter(
+        (choice) => choice.decision !== "APPLIED" && choice.decision !== "APPLY"
+      )
       .map((choice) => choice.targetId)
   );
   const touchedTasks = new Set(
@@ -106,6 +129,9 @@ export function restoreItemFields(
               ...item,
               ...(patch.included !== undefined
                 ? { included: before.included }
+                : {}),
+              ...("projectSelected" in patch || "included" in patch
+                ? { projectSelected: before.projectSelected }
                 : {}),
               ...("due" in patch ? { due: before.due } : {}),
               ...(touched.size > 0 || touchedTasks.size > 0

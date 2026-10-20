@@ -22,4 +22,6 @@ export interface MeetingApprovalRequest {
    * @minimum 1
    */
   reviewRevision: number;
+  /** 명시적 반영 선택을 확인한 새 화면의 승인 요청. true만 허용합니다 */
+  projectSelectionConfirmed: boolean;
 }

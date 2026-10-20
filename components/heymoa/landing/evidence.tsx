@@ -526,8 +526,9 @@ export function Evidence() {
             <p className="sr-only">
               아래는 같은 회의의 스크립트 탭과 요약 탭입니다. 스크립트의 네
               마디가 요약의 결정 둘과 할 일 둘이 되었습니다. 요약 탭은 검토
-              완료를 누르기 전 모습입니다. 검토 완료를 누르면 확인창이 먼저
-              뜨고, 완료한 검토는 고칠 수 없습니다.
+              완료를 누르기 전 모습입니다. 반영할 결정·할 일의 스위치를 켠 뒤
+              검토 완료를 누르면 확인창이 먼저 뜨고, 완료한 검토는 고칠 수
+              없습니다.
             </p>
             <div className="tv-r relative">
               <ExampleStamp className="absolute -top-3 -left-2 z-20 lg:hidden" />

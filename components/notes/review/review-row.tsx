@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, Pencil, Trash2, Undo2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { AssigneeCell } from "@/components/heymoa/assignee-cell";
@@ -8,12 +8,16 @@ import { Collapse } from "@/components/heymoa/collapse";
 import { DueCell } from "@/components/heymoa/due-cell";
 import { ARRIVE_CLASS } from "@/components/heymoa/motion";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
+import { requiresProjectSelection } from "@/lib/notes/review/project-approval";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { assigneeRequestOf, type AssigneeChoice } from "@/lib/assignees/describe";
+import {
+  assigneeRequestOf,
+  type AssigneeChoice,
+} from "@/lib/assignees/describe";
 import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
 import type { UpdateMeetingReviewItemRequest } from "@/lib/api/generated/models";
 import type { ReviewItem } from "@/lib/notes/review/sections";
-import { topicNumber } from "@/lib/notes/review/topics";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +25,6 @@ export type ItemPatch = Omit<
   UpdateMeetingReviewItemRequest,
   "expectedReviewVersion" | "expectedItemRevision"
 >;
-
-export type RowTopic = { ordinal: number; title: string };
 
 /**
  * 검토 항목 한 줄(APP-865). 결정은 `체크 · 내용 · 주제 · 나온 때`, 할 일은 `상자 · 내용 · 담당 · 기한` 이다.
@@ -32,7 +34,6 @@ export type RowTopic = { ordinal: number; title: string };
  */
 export function ReviewRow({
   item,
-  topic,
   assignable,
   whenMs = null,
   mine = false,
@@ -51,7 +52,6 @@ export function ReviewRow({
   suggestions,
 }: {
   item: ReviewItem;
-  topic: RowTopic | null;
   /** 담당 · 기한을 받는 줄(할 일) */
   assignable: boolean;
   /** 회의에서 나온 때(ms). 인용으로 계산하고 모르면 null */
@@ -89,17 +89,22 @@ export function ReviewRow({
     >
       <div
         className={cn(
-          "relative -mx-2 grid items-center gap-x-3 rounded-control px-2 py-[11px] transition-colors duration-200 ease-out",
+          "relative -mx-2 grid items-start gap-x-3 rounded-control px-2 py-[11px] transition-colors duration-200 ease-out",
           assignable
-            ? "grid-cols-[16px_minmax(0,1fr)_16px] sm:grid-cols-[16px_minmax(0,1fr)_132px_150px_16px]"
-            : "grid-cols-[16px_minmax(0,1fr)_auto_16px]",
-          open ? "bg-[var(--el-surface-strong)]" : "hover:bg-[var(--el-canvas-soft)]"
+            ? "grid-cols-[16px_minmax(0,1fr)_36px_16px] sm:grid-cols-[16px_minmax(0,1fr)_132px_150px_36px_16px]"
+            : "grid-cols-[16px_minmax(0,1fr)_auto_36px_16px]",
+          open
+            ? "bg-[var(--el-surface-strong)]"
+            : "hover:bg-[var(--el-canvas-soft)]"
         )}
       >
         {assignable ? (
-          <span aria-hidden className="size-4 rounded-[4px] border-[1.5px] border-[var(--el-hairline-strong)]" />
+          <span
+            aria-hidden
+            className="size-4 self-center rounded-[4px] border-[1.5px] border-[var(--el-hairline-strong)]"
+          />
         ) : (
-          <span aria-hidden className="flex">
+          <span aria-hidden className="flex self-center">
             <TimelineToneIcon tone="decision" />
           </span>
         )}
@@ -108,12 +113,13 @@ export function ReviewRow({
           aria-expanded={open}
           onClick={onToggle}
           // 버튼이 줄 전체를 덮는다(::after) — 주제 · 때 자리를 눌러도 펼쳐진다. 이름은 내용 그대로다.
-          className="min-w-0 rounded-chip text-left after:absolute after:inset-0 after:rounded-control after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
+          className="min-w-0 self-center rounded-chip text-left after:absolute after:inset-0 after:rounded-control after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
         >
           <span
             className={cn(
               "block text-[15px] leading-6 text-[var(--el-ink)] transition-colors duration-200 ease-out",
-              open ? "font-semibold break-keep" : "truncate",
+              "whitespace-normal break-words [overflow-wrap:anywhere]",
+              open && "font-semibold",
               !item.included && "text-[var(--el-muted-soft)] line-through"
             )}
           >
@@ -130,7 +136,9 @@ export function ReviewRow({
                 choices={choices}
                 editable={cellsEditable}
                 placeholder={cellsEditable ? "담당 정하기" : ""}
-                onChange={(choice) => void onSave({ assignee: assigneeRequestOf(choice) })}
+                onChange={(choice) =>
+                  void onSave({ assignee: assigneeRequestOf(choice) })
+                }
               />
               {mine ? (
                 <span className="inline-flex h-[18px] shrink-0 items-center rounded-[5px] bg-[var(--el-surface-strong)] px-[5px] text-[11px] text-[var(--el-muted)]">
@@ -149,28 +157,37 @@ export function ReviewRow({
           </div>
         ) : (
           <span className="flex min-w-0 items-center justify-end gap-3">
-            {topic ? (
-              <span
-                title={`주제 ${topicNumber(topic.ordinal)} · ${topic.title}`}
-                className="hidden max-w-[180px] truncate text-[12.5px] text-[var(--el-muted-soft)] sm:block"
-              >
-                {topic.title}
-              </span>
-            ) : null}
             {whenMs !== null ? (
-              <span className="inline-flex h-[22px] items-center rounded-[6px] bg-[var(--el-canvas-soft)] px-[7px] text-xs tabular-nums text-[var(--el-body)]">
+              <span className="text-xs tabular-nums text-[var(--el-muted-soft)]">
                 {formatOffset(whenMs)}
               </span>
             ) : null}
           </span>
         )}
+        <span
+          className={cn(
+            "relative z-10 flex justify-end",
+            assignable && "col-start-3 row-start-1 sm:col-start-5"
+          )}
+        >
+          {requiresProjectSelection(item.kind) ? (
+            <Switch
+              aria-label={`프로젝트에 추가: ${item.content}`}
+              checked={item.projectSelected}
+              disabled={!cellsEditable}
+              onCheckedChange={(projectSelected) =>
+                void onSave({ projectSelected })
+              }
+            />
+          ) : null}
+        </span>
         {/* 클릭은 줄을 덮는 버튼이 받는다. 펼치면 화살표가 회전(transform)해 그 버튼 위에 그려지므로
             흘려보내지 않으면 화살표 자리만 눌리지 않는다. */}
         <span
           aria-hidden
           className={cn(
             "pointer-events-none flex justify-end text-[var(--el-muted-soft)]",
-            assignable && "col-start-3 row-start-1 sm:col-start-5"
+            assignable && "col-start-4 row-start-1 sm:col-start-6"
           )}
         >
           {busy ? (
@@ -192,9 +209,7 @@ export function ReviewRow({
           role="alert"
           className="my-1.5 flex items-center gap-3 rounded-control bg-[var(--el-canvas-soft)] px-3 py-2 text-[12.5px] text-[var(--el-body)]"
         >
-          <span className="min-w-0 flex-1">
-            {conflictMessage}
-          </span>
+          <span className="min-w-0 flex-1">{conflictMessage}</span>
           <button
             type="button"
             className="shrink-0 text-[var(--el-muted)] underline underline-offset-2"
@@ -205,44 +220,38 @@ export function ReviewRow({
         </div>
       </Collapse>
 
-      {suggestions ? <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div> : null}
-
       <Collapse open={open} lazy>
         <div className="space-y-2.5 pt-1 pb-3.5 sm:pl-7">
-          {children}
-          <ItemState item={item} />
-          {canEdit || editing ? (
-            editing ? (
-              <ContentEditor
-                initial={item.content}
-                busy={busy}
-                disabled={!canEdit}
-                onCancel={() => setEditing(false)}
-                onSubmit={async (content) => {
-                  const saved = content === item.content || (await onSave({ content }));
-                  if (saved) setEditing(false);
-                }}
-              />
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {item.included ? (
-                  <Button variant="outline" size="xs" disabled={busy || locked} onClick={() => setEditing(true)}>
-                    수정
-                  </Button>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={busy || locked}
-                  onClick={() => void onSave({ included: !item.included })}
-                >
-                  {item.included ? "제외" : "제외 취소"}
+          {editing ? (
+            <ContentEditor
+              initial={item.content}
+              busy={busy}
+              disabled={!canEdit}
+              onCancel={() => setEditing(false)}
+              onSubmit={async (content) => {
+                const saved = content === item.content || (await onSave({ content }));
+                if (saved) setEditing(false);
+              }}
+            />
+          ) : canEdit ? (
+            <div className="flex items-center gap-2">
+              {item.included ? (
+                <Button variant="ghost" size="xs" aria-label="수정" disabled={busy || locked} onClick={() => setEditing(true)}>
+                  <Pencil aria-hidden className="size-3.5" />
+                  수정
                 </Button>
-              </div>
-            )
+              ) : null}
+              <Button variant="ghost" size="xs" disabled={busy || locked} onClick={() => void onSave({ included: !item.included })}>
+                {item.included ? <Trash2 aria-hidden className="size-3.5" /> : <Undo2 aria-hidden className="size-3.5" />}
+                {item.included ? "제외" : "제외 취소"}
+              </Button>
+            </div>
           ) : null}
+          <ItemState item={item} />
+          {children}
         </div>
       </Collapse>
+      {suggestions ? <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div> : null}
     </div>
   );
 }
@@ -288,7 +297,11 @@ function ContentEditor({
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") onCancel();
-          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+          if (
+            event.key === "Enter" &&
+            !event.shiftKey &&
+            !event.nativeEvent.isComposing
+          ) {
             event.preventDefault();
             if (trimmed && !disabled) void onSubmit(trimmed);
           }
@@ -299,7 +312,12 @@ function ContentEditor({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           취소
         </Button>
-        <Button type="submit" size="sm" loading={busy} disabled={!trimmed || disabled}>
+        <Button
+          type="submit"
+          size="sm"
+          loading={busy}
+          disabled={!trimmed || disabled}
+        >
           저장
         </Button>
       </div>

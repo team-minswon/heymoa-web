@@ -22,6 +22,7 @@ function reviewItem(
     kind,
     content: `${itemId} 내용`,
     included: true,
+  projectSelected: true,
     edited: false,
     authoredByUserId: null,
     originalProposalRef: null,

@@ -48,8 +48,7 @@ paths:
       tags:
       - AgentDelegation
       summary: 외부 에이전트 연결 만들기
-      description: 워크스페이스 하나를 외부 에이전트에 맡기고 개인 토큰을 발급한다. 맡긴 사람이 그 워크스페이스의 멤버여야 한다. 토큰 원문은 이 응답에서만 나간다. 마지막 사용 뒤 90일 동안 쓰지 않으면
-        만료된다.
+      description: 워크스페이스 하나를 외부 에이전트에 맡기고 개인 토큰을 발급한다. 맡긴 사람이 그 워크스페이스의 멤버여야 한다. 토큰 원문은 이 응답에서만 나간다. 마지막 사용 뒤 90일 동안 쓰지 않으면 만료된다.
       operationId: createAgentDelegation
       requestBody:
         content:
@@ -242,8 +241,7 @@ paths:
       tags:
       - Notifications
       summary: 알림 목록 조회
-      description: 현재 사용자의 알림을 최신순으로 조회한다. 커서는 (createdAt, notificationId) 복합이고 둘을 함께 보낸다 - 한쪽만 보내면 같은 시각의 알림이 조용히 빠진다. 읽지
-        않은 개수는 목록과 같은 조인으로 세므로 뱃지와 목록이 안 갈린다.
+      description: 현재 사용자의 알림을 최신순으로 조회한다. 커서는 (createdAt, notificationId) 복합이고 둘을 함께 보낸다 - 한쪽만 보내면 같은 시각의 알림이 조용히 빠진다. 읽지 않은 개수는 목록과 같은 조인으로 세므로 뱃지와 목록이 안 갈린다.
       operationId: getNotifications
       parameters:
       - name: afterCreatedAt
@@ -1226,8 +1224,7 @@ paths:
       tags:
       - AgentChat
       summary: 채팅 히스토리 조회
-      description: 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다. **도는 턴이 있으면 아직 안 굳은 구간도 행으로 실어 준다** —
-        밀린 것을 한 덩어리로 받는 자리다. cursor 는 그 구간의 끝이고, 스트림은 그 뒤 새 것만 준다.
+      description: 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다. **도는 턴이 있으면 아직 안 굳은 구간도 행으로 실어 준다** — 밀린 것을 한 덩어리로 받는 자리다. cursor 는 그 구간의 끝이고, 스트림은 그 뒤 새 것만 준다.
       operationId: getAgentChatMessages
       parameters:
       - name: chatId
@@ -1368,11 +1365,7 @@ paths:
       tags:
       - AgentChat
       summary: 메시지 전송 (턴 접수)
-      description: '질문을 접수하고 **202 로 턴 id 를 돌려준다.** 프레임은 이 응답으로 오지 않는다 — GET /v1/agent-chats/{chatId}/turns/{turnId}/events
-        로 붙어 받는다 (이벤트 계약은 asyncapi-web-server.yml). heymoa-ai 호출이 실패해도 202 다: 턴은 FAILED 로 굳고 스트림의 첫 프레임이 turn_failed 다. 검증은
-        접수 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0]
-        의 activeTurnId 로 그 턴을 이어받는다. **몰리면 접수 전에 거절한다** — heymoa-ai 에 자리가 없거나 내려가는 중이면 503 AGENT_CHAT_AI_BUSY. 턴 행을 남기지 않고
-        Retry-After(초) 뒤 같은 질문을 다시 보내면 된다.'
+      description: '질문을 접수하고 **202 로 턴 id 를 돌려준다.** 프레임은 이 응답으로 오지 않는다 — GET /v1/agent-chats/{chatId}/turns/{turnId}/events 로 붙어 받는다 (이벤트 계약은 asyncapi-web-server.yml). heymoa-ai 호출이 실패해도 202 다: 턴은 FAILED 로 굳고 스트림의 첫 프레임이 turn_failed 다. 검증은 접수 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받는다. **몰리면 접수 전에 거절한다** — heymoa-ai 에 자리가 없거나 내려가는 중이면 503 AGENT_CHAT_AI_BUSY. 턴 행을 남기지 않고 Retry-After(초) 뒤 같은 질문을 다시 보내면 된다.'
       operationId: sendAgentChatMessage
       parameters:
       - name: chatId
@@ -1535,8 +1528,7 @@ paths:
       tags:
       - AgentDelegation
       summary: 외부 에이전트 연결의 사용 내역
-      description: 내 연결로 에이전트가 부른 도구를 최근 것부터 돌려준다. 도구 인자·결과 본문은 남기지 않아 나가지 않는다. 회수·만료된 연결도 볼 수 있다. 남의 연결은 같은 워크스페이스의 관리자에게도
-        없는 것과 같다. 커서는 (occurredAt, usageId) 복합이고 둘을 함께 보낸다.
+      description: 내 연결로 에이전트가 부른 도구를 최근 것부터 돌려준다. 도구 인자·결과 본문은 남기지 않아 나가지 않는다. 회수·만료된 연결도 볼 수 있다. 남의 연결은 같은 워크스페이스의 관리자에게도 없는 것과 같다. 커서는 (occurredAt, usageId) 복합이고 둘을 함께 보낸다.
       operationId: getAgentDelegationUsages
       parameters:
       - name: delegationId
@@ -1615,8 +1607,7 @@ paths:
       tags:
       - WorkspaceIntegration
       summary: 워크스페이스 연동 콜백
-      description: provider OAuth 콜백을 처리하고 웹으로 리다이렉트한다. (permitAll) redirect URI는 provider에 사전 등록된 고정 경로여야 하므로 워크스페이스 경로를
-        쓰지 않는다 — workspaceId는 서명된 state에서 복원한다.
+      description: provider OAuth 콜백을 처리하고 웹으로 리다이렉트한다. (permitAll) redirect URI는 provider에 사전 등록된 고정 경로여야 하므로 워크스페이스 경로를 쓰지 않는다 — workspaceId는 서명된 state에서 복원한다.
       operationId: completeWorkspaceIntegration
       parameters:
       - name: provider
@@ -1846,8 +1837,7 @@ paths:
       tags:
       - Notes
       summary: 노트 안건 목록 조회
-      description: 회의 중에는 ai 확정이 2~3분마다, 회의 뒤에는 분석이 목록을 통째로 바꾼다. 바뀌면 노트 토픽 agendas.changed 가 오고 화면은 이 경로를 다시 읽는다. 회의 중과 회의
-        뒤가 같은 모양이다.
+      description: 회의 중에는 ai 확정이 2~3분마다, 회의 뒤에는 분석이 목록을 통째로 바꾼다. 바뀌면 노트 토픽 agendas.changed 가 오고 화면은 이 경로를 다시 읽는다. 회의 중과 회의 뒤가 같은 모양이다.
       operationId: getNoteAgendas
       parameters:
       - name: noteId
@@ -1963,11 +1953,7 @@ paths:
       tags:
       - MeetingApproval
       summary: 회의 승인
-      description: 노트 멤버가 검토본을 확정합니다. 검토본을 동결하고, 포함된 할 일 항목을 할 일로 승격하고, 포함 항목에 APPLY로 저장한 기존 할 일 변경 초안을 적용합니다. KEEP·제외 항목과
-        이미 반영한 APPLIED 이력은 적용하지 않습니다. 포함 항목의 대체 제안 중 검토에서 끝내기(END)로 저장한 기존 노드의 현재성을 끝내고(다른 확정이 이미 끝낸 노드는 건너뜁니다), 최신 분석의 회의
-        안 관계 중 포함 항목끼리의 관계를 저장하고, 프로젝트 승인 판을 올리는 일을 한 트랜잭션으로 씁니다. 할 일이 아닌 포함 항목은 확정된 검토 항목 자체가 지식 노드입니다. 같은 requestId 와 같은
-        본문의 재전송은 저장한 결과로 수렴하며 업무를 재적용하지 않습니다. 검토본·대상 업무 판이 달라졌거나 같은 업무를 여러 항목에서 APPLY로 골랐거나 분석이 준비되지 않았으면 전체 변경을 롤백하고 409입니다.
-        접근 권한이 없으면 거절하며 형식 오류는 400입니다.
+      description: 노트 멤버가 검토본을 확정합니다. 결정·할 일은 포함되어 있고 projectSelected=true인 항목만 프로젝트에 반영합니다. 다른 종류의 기존 포함 정책은 유지합니다. 미선택 항목은 회의록에 남습니다. projectSelectionConfirmed=true를 요구하며 옛 화면의 요청은 새로고침 안내와 함께 400으로 거절합니다. 검토본을 동결하고, 선택한 할 일 항목을 할 일로 승격하고, 포함 항목에 APPLY로 저장한 기존 할 일 변경 초안을 적용합니다. KEEP·제외 항목과 이미 반영한 APPLIED 이력은 적용하지 않습니다. 포함 항목의 대체 제안 중 검토에서 끝내기(END)로 저장한 기존 노드의 현재성을 끝내고(다른 확정이 이미 끝낸 노드는 건너뜁니다), 최신 분석의 회의 안 관계 중 포함 항목끼리의 관계를 저장하고, 프로젝트 승인 판을 올리는 일을 한 트랜잭션으로 씁니다. 할 일이 아닌 포함 항목은 확정된 검토 항목 자체가 지식 노드입니다. 같은 requestId 와 같은 본문의 재전송은 저장한 결과로 수렴하며 업무를 재적용하지 않습니다. 검토본·대상 업무 판이 달라졌거나 같은 업무를 여러 항목에서 APPLY로 골랐거나 분석이 준비되지 않았으면 전체 변경을 롤백하고 409입니다. 접근 권한이 없으면 거절하며 형식 오류는 400입니다.
       operationId: approveMeetingReview
       parameters:
       - name: noteId
@@ -1991,16 +1977,19 @@ paths:
                   requestId: 0K9GVJT2C4Q1Z
                   reviewId: 0HZX2K7M9Q4AF
                   reviewRevision: 0
+                  projectSelectionConfirmed: true
               approveMeetingReview_Success:
                 value:
                   requestId: 0K9GVJT2C4Q1Z
                   reviewId: 0HZX2K7M9Q4AF
                   reviewRevision: 3
+                  projectSelectionConfirmed: true
               approveMeetingReview_ProjectKnowledgeConflictException:
                 value:
                   requestId: 0K9GVJT2C4Q1Z
                   reviewId: 0HZX2K7M9Q4AF
                   reviewRevision: 3
+                  projectSelectionConfirmed: true
       responses:
         '400':
           description: 잘못된 요청
@@ -2067,9 +2056,7 @@ paths:
       tags:
       - Analysis
       summary: 회의 종료
-      description: '**워크스페이스 멤버 누구나** 노트의 회의를 종료한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다. **응답이 갱신된 노트다** -
-        없는 동안 화면이 종료 시각을 브라우저의 Date.now() 로 지어냈다. **녹음 중(IN_PROGRESS)이면 409 MEETING_RECORDING 이다** - 녹음자가 중지하거나 연결이 끊겨 PAUSED
-        가 된 뒤 종료한다. 시작만 하고 연결하지 못해 만료된 세션만 남은 회의는 종료하고 그 세션을 닫는다.'
+      description: '**워크스페이스 멤버 누구나** 노트의 회의를 종료한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다. **응답이 갱신된 노트다** - 없는 동안 화면이 종료 시각을 브라우저의 Date.now() 로 지어냈다. **녹음 중(IN_PROGRESS)이면 409 MEETING_RECORDING 이다** - 녹음자가 중지하거나 연결이 끊겨 PAUSED 가 된 뒤 종료한다. 시작만 하고 연결하지 못해 만료된 세션만 남은 회의는 종료하고 그 세션을 닫는다.'
       operationId: endMeeting
       parameters:
       - name: noteId
@@ -2192,8 +2179,7 @@ paths:
       tags:
       - MeetingReview
       summary: getMeetingReview
-      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을
-        바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을 바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
       operationId: getMeetingReview
       parameters:
       - name: noteId
@@ -2327,6 +2313,7 @@ paths:
                         - targetId: 0K9GVJT2C4Q23
                           decision: APPLIED
                           taskChange: null
+                        projectSelected: false
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -2337,11 +2324,7 @@ paths:
       tags:
       - Notes
       summary: 노트 참여자 교체
-      description: 노트의 **계정 참여자**를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 계정 참여자를 전원 지운다. 워크스페이스 멤버 또는 이미 이 회의의 참여자만 이 목록에
-        들어갈 수 있다 - 멤버를 내보내도 참여 기록은 남으므로, 전체 교체에서 그 사람을 함께 실어 유지할 수 있다. 참여자가 아니었던 사람은 넣을 수 없다. 회의 상태와 무관하게 언제나 호출할 수 있다. 계정
-        없는 임시 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants/guests 가 맡는다. expectedUserIds 를 보내면 그
-        목록이 지금의 계정 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT 로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다. 거절을 받으면 다시 읽어
-        내 변경만 얹어 보낸다.
+      description: 노트의 **계정 참여자**를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 계정 참여자를 전원 지운다. 워크스페이스 멤버 또는 이미 이 회의의 참여자만 이 목록에 들어갈 수 있다 - 멤버를 내보내도 참여 기록은 남으므로, 전체 교체에서 그 사람을 함께 실어 유지할 수 있다. 참여자가 아니었던 사람은 넣을 수 없다. 회의 상태와 무관하게 언제나 호출할 수 있다. 계정 없는 임시 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants/guests 가 맡는다. expectedUserIds 를 보내면 그 목록이 지금의 계정 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT 로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다. 거절을 받으면 다시 읽어 내 변경만 얹어 보낸다.
       operationId: replaceNoteParticipants
       parameters:
       - name: noteId
@@ -2697,7 +2680,7 @@ paths:
       parameters:
       - name: noteId
         in: path
-        description: 노트 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -2772,8 +2755,7 @@ paths:
       tags:
       - Transcription
       summary: 화자 여럿을 한 번에 연결
-      description: 본문에 실린 라벨만 바꾸는 멱등 벌크다. 여기 없는 라벨의 지정은 그대로 남는다 - 전체 교체로 읽으면 「참석자 중에 없다」 확정을 지우게 되는데 그것을 되돌릴 API 가 없다. 라벨
-        하나의 규칙은 단건 경로와 같고, 같은 본문을 두 번 보내면 결과가 같다.
+      description: 본문에 실린 라벨만 바꾸는 멱등 벌크다. 여기 없는 라벨의 지정은 그대로 남는다 - 전체 교체로 읽으면 「참석자 중에 없다」 확정을 지우게 되는데 그것을 되돌릴 API 가 없다. 라벨 하나의 규칙은 단건 경로와 같고, 같은 본문을 두 번 보내면 결과가 같다.
       operationId: assignNoteSpeakers
       parameters:
       - name: noteId
@@ -2928,11 +2910,7 @@ paths:
       tags:
       - Transcription
       summary: 전사 세션 시작
-      description: 노트에 실시간 전사 세션을 READY로 생성한다(201). READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다. 본문은 선택이다. `clientInstanceId`
-        는 시작을 누른 탭의 표시(STOMP connect 헤더와 같은 값, 최대 64자)다. 같은 사용자의 READY 세션이 이미 열려 있으면 새로 만들지 않고 그 세션을 200으로 돌려준다. 같은 사용자의 ACTIVE
-        세션은 그 탭(`clientInstanceId`)이 연 것이거나 리스가 식었으면 봉인해 닫고 새로 만들고(201), 다른 탭이 리스를 쥐고 있으면 409 ACTIVE_TRANSCRIPTION_SESSION
-        이다. 다른 사용자의 세션이 열려 있으면 409 ACTIVE_TRANSCRIPTION_SESSION, 그 기기의 리스가 식어 워치독을 기다리는 중이면 409 RECORDER_DISCONNECTED 다. 끊긴
-        녹음을 잇는 길은 STOMP 부착이다.
+      description: 노트에 실시간 전사 세션을 READY로 생성한다(201). READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다. 본문은 선택이다. `clientInstanceId` 는 시작을 누른 탭의 표시(STOMP connect 헤더와 같은 값, 최대 64자)다. 같은 사용자의 READY 세션이 이미 열려 있으면 새로 만들지 않고 그 세션을 200으로 돌려준다. 같은 사용자의 ACTIVE 세션은 그 탭(`clientInstanceId`)이 연 것이거나 리스가 식었으면 봉인해 닫고 새로 만들고(201), 다른 탭이 리스를 쥐고 있으면 409 ACTIVE_TRANSCRIPTION_SESSION 이다. 다른 사용자의 세션이 열려 있으면 409 ACTIVE_TRANSCRIPTION_SESSION, 그 기기의 리스가 식어 워치독을 기다리는 중이면 409 RECORDER_DISCONNECTED 다. 끊긴 녹음을 잇는 길은 STOMP 부착이다.
       operationId: startTranscriptionSession
       parameters:
       - name: noteId
@@ -3071,7 +3049,7 @@ paths:
       parameters:
       - name: notificationId
         in: path
-        description: ''
+        description: 읽음 처리할 알림 식별자
         required: true
         schema:
           type: string
@@ -3117,8 +3095,7 @@ paths:
       tags:
       - Notes
       summary: 노트 목록 조회
-      description: 프로젝트의 노트 목록을 조회한다. 회의를 기록하기 시작한 시각 내림차순이고, 한 번도 기록하지 않은 노트는 만든 시각으로 선다. limit 과 (afterSortedAt, afterNoteId)
-        커서로 쪽을 끊을 수 있다. 커서는 둘을 함께 보내며, 유효한 커서 값 중 하나만 오면 처음부터 읽는다(범위 밖 시각은 먼저 400). limit 이 없으면 커서 뒤의 전건을 돌려준다.
+      description: 프로젝트의 노트 목록을 조회한다. 회의를 기록하기 시작한 시각 내림차순이고, 한 번도 기록하지 않은 노트는 만든 시각으로 선다. limit 과 (afterSortedAt, afterNoteId) 커서로 쪽을 끊을 수 있다. 커서는 둘을 함께 보내며, 유효한 커서 값 중 하나만 오면 처음부터 읽는다(범위 밖 시각은 먼저 400). limit 이 없으면 커서 뒤의 전건을 돌려준다.
       operationId: getNotes
       parameters:
       - name: projectId
@@ -3144,13 +3121,11 @@ paths:
         example: 20
       - name: afterSortedAt
         in: query
-        description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt
-          을 그대로 보낸다. afterNoteId 와 함께 보낸다
+        description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt 을 그대로 보낸다. afterNoteId 와 함께 보낸다
         required: false
         schema:
           type: string
-          description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt
-            을 그대로 보낸다. afterNoteId 와 함께 보낸다
+          description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt 을 그대로 보낸다. afterNoteId 와 함께 보낸다
           nullable: false
           format: date-time
         example: '2026-07-14T01:02:03Z'
@@ -3362,8 +3337,7 @@ paths:
       tags:
       - AgentChat
       summary: 대화 목록 조회
-      description: 그 워크스페이스의 **내** 대화 목록. updatedAt 내림차순 최근 50개이고, 첫 번째가 마지막으로 쓴 대화다. **대화는 개인 것이라** 같은 워크스페이스의 남의 대화는 안 나온다.
-        runningTurn 은 살아 있는 턴이고 없으면 null 이다 — **본문도 대기 중인 승인도 안 나른다.**
+      description: 그 워크스페이스의 **내** 대화 목록. updatedAt 내림차순 최근 50개이고, 첫 번째가 마지막으로 쓴 대화다. **대화는 개인 것이라** 같은 워크스페이스의 남의 대화는 안 나온다. runningTurn 은 살아 있는 턴이고 없으면 null 이다 — **본문도 대기 중인 승인도 안 나른다.**
       operationId: getAgentChats
       parameters:
       - name: workspaceId
@@ -3389,13 +3363,11 @@ paths:
         example: 20
       - name: afterUpdatedAt
         in: query
-        description: 이어 읽기 커서의 마지막 활동 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextUpdatedAt
-          을 그대로 보낸다. afterChatId 와 함께 보낸다
+        description: 이어 읽기 커서의 마지막 활동 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextUpdatedAt 을 그대로 보낸다. afterChatId 와 함께 보낸다
         required: false
         schema:
           type: string
-          description: 이어 읽기 커서의 마지막 활동 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextUpdatedAt
-            을 그대로 보낸다. afterChatId 와 함께 보낸다
+          description: 이어 읽기 커서의 마지막 활동 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextUpdatedAt 을 그대로 보낸다. afterChatId 와 함께 보낸다
           nullable: false
           format: date-time
         example: '2026-07-14T01:02:03Z'
@@ -3459,8 +3431,7 @@ paths:
       tags:
       - AgentChat
       summary: 채팅 세션 생성
-      description: 워크스페이스 아래에 대화를 하나 만든다. 제목을 생략하면 기본값("새 대화")으로 만든다. **범위(어느 회의록·프로젝트를 볼지)는 대화가 아니라 메시지마다 붙는다.** 호출자가 워크스페이스의
-        멤버가 아니면 존재 여부를 은닉하기 위해 404로 응답한다.
+      description: 워크스페이스 아래에 대화를 하나 만든다. 제목을 생략하면 기본값("새 대화")으로 만든다. **범위(어느 회의록·프로젝트를 볼지)는 대화가 아니라 메시지마다 붙는다.** 호출자가 워크스페이스의 멤버가 아니면 존재 여부를 은닉하기 위해 404로 응답한다.
       operationId: createAgentChat
       parameters:
       - name: workspaceId
@@ -3526,8 +3497,7 @@ paths:
       tags:
       - Workspaces
       summary: 워크스페이스 임시 참여자 목록 조회
-      description: 워크스페이스가 소유한 계정 없는 참여자 목록을 이름 오름차순으로 조회한다. 참석자 후보와 화자 지정 후보를 세우는 데 쓰이므로 멤버 누구나 부를 수 있다. noteCount는 그 임시
-        참여자가 참여자로 들어가 있는 회의 수이고, 삭제 전에 무엇을 잃는지 보여주는 값이다. 이름이 같은 임시 참여자가 여럿 있을 수 있다.
+      description: 워크스페이스가 소유한 계정 없는 참여자 목록을 이름 오름차순으로 조회한다. 참석자 후보와 화자 지정 후보를 세우는 데 쓰이므로 멤버 누구나 부를 수 있다. noteCount는 그 임시 참여자가 참여자로 들어가 있는 회의 수이고, 삭제 전에 무엇을 잃는지 보여주는 값이다. 이름이 같은 임시 참여자가 여럿 있을 수 있다.
       operationId: getWorkspaceGuests
       parameters:
       - name: workspaceId
@@ -3911,7 +3881,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: 조회할 워크스페이스 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -3965,8 +3935,7 @@ paths:
       tags:
       - Notes
       summary: 워크스페이스 노트 목록 조회
-      description: 워크스페이스의 모든 프로젝트를 가로지르는 노트 목록. 정렬 규칙은 프로젝트 단위 조회와 같다. limit 과 (afterSortedAt, afterNoteId) 커서로 쪽을 끊을 수 있다.
-        커서는 둘을 함께 보내며, 유효한 커서 값 중 하나만 오면 처음부터 읽는다(범위 밖 시각은 먼저 400). limit 이 없으면 커서 뒤의 전건을 돌려준다.
+      description: 워크스페이스의 모든 프로젝트를 가로지르는 노트 목록. 정렬 규칙은 프로젝트 단위 조회와 같다. limit 과 (afterSortedAt, afterNoteId) 커서로 쪽을 끊을 수 있다. 커서는 둘을 함께 보내며, 유효한 커서 값 중 하나만 오면 처음부터 읽는다(범위 밖 시각은 먼저 400). limit 이 없으면 커서 뒤의 전건을 돌려준다.
       operationId: getWorkspaceNotes
       parameters:
       - name: workspaceId
@@ -3992,13 +3961,11 @@ paths:
         example: 20
       - name: afterSortedAt
         in: query
-        description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt
-          을 그대로 보낸다. afterNoteId 와 함께 보낸다
+        description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt 을 그대로 보낸다. afterNoteId 와 함께 보낸다
         required: false
         schema:
           type: string
-          description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt
-            을 그대로 보낸다. afterNoteId 와 함께 보낸다
+          description: 이어 읽기 커서의 정렬 시각(1970-01-01T00:00:00Z ~ 9999-12-31T23:59:59.999999Z, 밖이면 짝 여부와 무관하게 400). 응답의 nextSortedAt 을 그대로 보낸다. afterNoteId 와 함께 보낸다
           nullable: false
           format: date-time
         example: '2026-07-14T01:02:03Z'
@@ -4455,8 +4422,7 @@ paths:
       tags:
       - MeetingReview
       summary: createMeetingReviewItem
-      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을
-        바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을 바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
       operationId: createMeetingReviewItem
       parameters:
       - name: noteId
@@ -4633,6 +4599,7 @@ paths:
                         - targetId: 0K9GVJT2C4Q23
                           decision: APPLIED
                           taskChange: null
+                        projectSelected: false
                     error: null
         '400':
           description: 잘못된 요청
@@ -4683,8 +4650,7 @@ paths:
       tags:
       - MeetingReview
       summary: 회의 요약 조회
-      description: 노트의 최신 분석 요청이 받은 SUMMARY 결과를 화면 어휘로 다시 조립합니다. 명제 참조는 전부 검토 항목 ID 로 풀립니다. 노트 멤버가 읽습니다. 분석 전이거나 SUMMARY 가
-        없어도 200 이고 status 로 가릅니다.
+      description: 노트의 최신 분석 요청이 받은 SUMMARY 결과를 화면 어휘로 다시 조립합니다. 명제 참조는 전부 검토 항목 ID 로 풀립니다. 노트 멤버가 읽습니다. 분석 전이거나 SUMMARY 가 없어도 200 이고 status 로 가릅니다.
       operationId: getMeetingReviewSummary
       parameters:
       - name: noteId
@@ -4813,9 +4779,7 @@ paths:
       tags:
       - Notes
       summary: 회의 임시 참여자 교체
-      description: 이 회의의 **임시 참여자만** 요청한 목록으로 통째로 교체한다. 빈 배열이면 임시 참여자를 전원 뺀다. 계정 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants
-        가 맡는다. 다른 워크스페이스의 임시 참여자를 넣으려 하면 거절한다. expectedGuestIds 를 보내면 그 목록이 지금의 임시 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT
-        로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다.
+      description: 이 회의의 **임시 참여자만** 요청한 목록으로 통째로 교체한다. 빈 배열이면 임시 참여자를 전원 뺀다. 계정 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants 가 맡는다. 다른 워크스페이스의 임시 참여자를 넣으려 하면 거절한다. expectedGuestIds 를 보내면 그 목록이 지금의 임시 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT 로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다.
       operationId: replaceNoteGuestParticipants
       parameters:
       - name: noteId
@@ -4916,8 +4880,7 @@ paths:
       tags:
       - Notes
       summary: 임시 참여자 생성
-      description: 계정 없는 사람을 이름만으로 만들어 이 회의의 참여자로 넣는다. 만들어진 임시 참여자는 워크스페이스가 소유하므로 같은 워크스페이스의 다음 회의에서 다시 고를 수 있다. 이름이 같은 임시
-        참여자를 여럿 만들 수 있다 - 동명이인이 정상 입력이라 막지 않는다. 응답은 그 회의의 참여자 전원이다.
+      description: 계정 없는 사람을 이름만으로 만들어 이 회의의 참여자로 넣는다. 만들어진 임시 참여자는 워크스페이스가 소유하므로 같은 워크스페이스의 다음 회의에서 다시 고를 수 있다. 이름이 같은 임시 참여자를 여럿 만들 수 있다 - 동명이인이 정상 입력이라 막지 않는다. 응답은 그 회의의 참여자 전원이다.
       operationId: createNoteGuestParticipant
       parameters:
       - name: noteId
@@ -5024,14 +4987,12 @@ paths:
       tags:
       - Transcription
       summary: 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
-      description: 화자 연결은 노트의 속성이 아니라 화자 라벨의 속성이다. **노트에 닿는 워크스페이스 멤버면 누구나 고친다** - 회의록을 정리하는 사람이 그 회의에 안 들어간 경우가 흔하다. 대상을
-        가리키는 열쇠가 셋이고 뜻이 다르다 - participantId 는 이 회의의 참여 기록(임시 참여자와 나간 사람 포함), userId 와 guestId 는 각각 계정과 임시 참여자이고 **참여자가 아니면
-        참여자로 넣는다**. 둘 이상을 함께 보내면 거절한다. 응답은 갱신된 화자 목록 전체다. 이 화자에 달린 발화 단위 지정은 함께 지워진다 - 「모든 발화에 적용」이 말 그대로가 되도록.
+      description: 화자 연결은 노트의 속성이 아니라 화자 라벨의 속성이다. **노트에 닿는 워크스페이스 멤버면 누구나 고친다** - 회의록을 정리하는 사람이 그 회의에 안 들어간 경우가 흔하다. 대상을 가리키는 열쇠가 셋이고 뜻이 다르다 - participantId 는 이 회의의 참여 기록(임시 참여자와 나간 사람 포함), userId 와 guestId 는 각각 계정과 임시 참여자이고 **참여자가 아니면 참여자로 넣는다**. 둘 이상을 함께 보내면 거절한다. 응답은 갱신된 화자 목록 전체다. 이 화자에 달린 발화 단위 지정은 함께 지워진다 - 「모든 발화에 적용」이 말 그대로가 되도록.
       operationId: assignNoteSpeaker
       parameters:
       - name: noteId
         in: path
-        description: 노트의 13자리 TSID
+        description: ''
         required: true
         schema:
           type: string
@@ -5041,7 +5002,7 @@ paths:
         example: 0HZX2K7M9Q4AF
       - name: label
         in: path
-        description: 정규화된 화자 라벨
+        description: ''
         required: true
         schema:
           type: string
@@ -5145,8 +5106,7 @@ paths:
       tags:
       - Transcription
       summary: 전사 구간 증분 조회
-      description: 커서 뒤에 새로 붙은 발화만 조회한다. 커서는 (startedAtMs, sequence) 복합이고 정렬 축과 같다. 덧붙기 전용이라 이미 내려간 발화의 화자 지정 변경은 이 경로로 보이지
-        않는다 — 그 수렴은 전체 조회가 맡는다.
+      description: 커서 뒤에 새로 붙은 발화만 조회한다. 커서는 (startedAtMs, sequence) 복합이고 정렬 축과 같다. 덧붙기 전용이라 이미 내려간 발화의 화자 지정 변경은 이 경로로 보이지 않는다 — 그 수렴은 전체 조회가 맡는다.
       operationId: getTranscriptSegmentsAfter
       parameters:
       - name: noteId
@@ -5203,8 +5163,7 @@ paths:
       tags:
       - Workspaces
       summary: 워크스페이스 임시 참여자 삭제
-      description: 임시 참여자를 지운다. **되돌릴 수 없다** - 그 사람의 회의 참여 기록과 거기 붙어 있던 화자 연결이 함께 사라진다. ADMIN만 부를 수 있고, 응답으로 실제 참여 기록이 사라진
-        회의 수를 돌려준다.
+      description: 임시 참여자를 지운다. **되돌릴 수 없다** - 그 사람의 회의 참여 기록과 거기 붙어 있던 화자 연결이 함께 사라진다. ADMIN만 부를 수 있고, 응답으로 실제 참여 기록이 사라진 회의 수를 돌려준다.
       operationId: deleteWorkspaceGuest
       parameters:
       - name: workspaceId
@@ -5279,8 +5238,7 @@ paths:
       tags:
       - Workspaces
       summary: 워크스페이스 임시 참여자 이름 변경
-      description: 임시 참여자의 이름을 고친다. 같은 행의 이름만 바뀌므로 참석자 연결과 화자 지정은 그대로 유지된다. ADMIN만 부를 수 있고, 같은 이름의 임시 참여자를 허용한다(만들 때와 같다).
-        이름은 앞뒤 공백을 지우고 1~100자여야 하며, 응답은 목록 항목과 같은 모양이다.
+      description: 임시 참여자의 이름을 고친다. 같은 행의 이름만 바뀌므로 참석자 연결과 화자 지정은 그대로 유지된다. ADMIN만 부를 수 있고, 같은 이름의 임시 참여자를 허용한다(만들 때와 같다). 이름은 앞뒤 공백을 지우고 1~100자여야 하며, 응답은 목록 항목과 같은 모양이다.
       operationId: renameWorkspaceGuest
       parameters:
       - name: workspaceId
@@ -5583,7 +5541,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: 나갈 워크스페이스 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -5725,7 +5683,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: 워크스페이스 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -5735,7 +5693,7 @@ paths:
         example: 0HZX2K7M9Q4AD
       - name: userId
         in: path
-        description: 역할을 바꿀 멤버의 사용자 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -6120,10 +6078,7 @@ paths:
       tags:
       - AgentChat
       summary: 도구 승인/거절
-      description: 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor 를 after 로 넣어 다시
-        붙는다 — 승인 대기 중이면 그 값이 카드의 entryId 다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면
-        403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다. 몰리면 전송과 같이
-        접수 전에 거절하고 승인은 다시 누를 수 있게 되돌린다 — 503 AGENT_CHAT_AI_BUSY, Retry-After(초).
+      description: 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor 를 after 로 넣어 다시 붙는다 — 승인 대기 중이면 그 값이 카드의 entryId 다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다. 몰리면 전송과 같이 접수 전에 거절하고 승인은 다시 누를 수 있게 되돌린다 — 503 AGENT_CHAT_AI_BUSY, Retry-After(초).
       operationId: resolveToolApproval
       parameters:
       - name: chatId
@@ -6257,9 +6212,7 @@ paths:
       tags:
       - AgentChat
       summary: 턴 중지
-      description: 도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 그때까지 흘린 token 을 이어 붙인 부분 답이 히스토리에 남고, 붙어 있던 스트림은 turn_cancelled
-        로 닫힌다. 소유권 판정이 턴 판정보다 먼저라 없거나 소유하지 않은 대화는 404로 끝나 남의 턴 존재가 새지 않고, 그 대화에 그 턴이 없으면 **대화 없음(AGENT_CHAT_NOT_FOUND)으로 접지
-        않은** 별도 404다.
+      description: 도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 그때까지 흘린 token 을 이어 붙인 부분 답이 히스토리에 남고, 붙어 있던 스트림은 turn_cancelled 로 닫힌다. 소유권 판정이 턴 판정보다 먼저라 없거나 소유하지 않은 대화는 404로 끝나 남의 턴 존재가 새지 않고, 그 대화에 그 턴이 없으면 **대화 없음(AGENT_CHAT_NOT_FOUND)으로 접지 않은** 별도 404다.
       operationId: cancelAgentChatTurn
       parameters:
       - name: chatId
@@ -6317,11 +6270,7 @@ paths:
       tags:
       - AgentChat
       summary: 턴 스트림 (SSE)
-      description: '턴 하나의 프레임을 나르는 SSE. POST /messages 나 POST …/resolve 의 202 가 준 turnId 로 붙는다. after 보다 뒤의 프레임부터 순서대로 오고
-        id 줄이 entry id 다 — 재접속할 때 마지막으로 본 id 를 after 로 돌려준다. Last-Event-ID 헤더도 같은 뜻이고 둘 다 있으면 after 다. 종료 프레임(message_end
-        · turn_failed · turn_cancelled · tool_approval_request) 뒤에 닫힌다. error 는 닫지 않고 뒤따르는 turn_failed 에서 닫는다. 하트비트는 주석 `:
-        keepalive` 10초, 절대 상한 30분. 턴이 아직 안 시작해 스트림이 없어도 200 으로 열고 기다린다. 턴은 끝났는데 스트림이 TTL 로 사라졌으면 410 — GET /messages 를 다시
-        읽는다. 이벤트 계약은 asyncapi-web-server.yml.'
+      description: '턴 하나의 프레임을 나르는 SSE. POST /messages 나 POST …/resolve 의 202 가 준 turnId 로 붙는다. after 보다 뒤의 프레임부터 순서대로 오고 id 줄이 entry id 다 — 재접속할 때 마지막으로 본 id 를 after 로 돌려준다. Last-Event-ID 헤더도 같은 뜻이고 둘 다 있으면 after 다. 종료 프레임(message_end · turn_failed · turn_cancelled · tool_approval_request) 뒤에 닫힌다. error 는 닫지 않고 뒤따르는 turn_failed 에서 닫는다. 하트비트는 주석 `: keepalive` 10초, 절대 상한 30분. 턴이 아직 안 시작해 스트림이 없어도 200 으로 열고 기다린다. 턴은 끝났는데 스트림이 TTL 로 사라졌으면 410 — GET /messages 를 다시 읽는다. 이벤트 계약은 asyncapi-web-server.yml.'
       operationId: subscribeAgentChatTurnEvents
       parameters:
       - name: chatId
@@ -6408,21 +6357,15 @@ paths:
                 description: SSE 이벤트 스트림. 이벤트별 payload는 AsyncAPI 계약을 따른다.
               examples:
                 subscribeAgentChatTurnEvents_Success:
-                  value: 'id:1735689600001-0
-
+                  value: |+
+                    id:1735689600001-0
                     event:token
-
                     data:{"delta":"안"}
 
-
                     id:1735689600002-0
-
                     event:message_end
-
                     data:{"messageId":"m1","content":"안녕하세요"}
 
-
-                    '
         '503':
           description: '503'
           content:
@@ -6447,8 +6390,7 @@ paths:
       tags:
       - MeetingReview
       summary: updateMeetingReviewItem
-      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을
-        바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+      description: 종료된 회의의 별도 검토본 저장·조회입니다. 검토본은 회의 분석 성공 콜백이 만듭니다. 추가·편집·조회는 노트 멤버에게 허용합니다. 선택과 업무 변경 초안의 저장은 실제 프로젝트 할 일을 바꾸지 않습니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
       operationId: updateMeetingReviewItem
       parameters:
       - name: noteId
@@ -6497,6 +6439,7 @@ paths:
                           id: 0HZX2K7M9Q4AC
                       due:
                         value: null
+                  projectSelected: true
               updateMeetingReviewItem_MeetingReviewConflictException:
                 value:
                   expectedReviewVersion: 1
@@ -6517,6 +6460,7 @@ paths:
                           id: 0HZX2K7M9Q4AC
                       due:
                         value: null
+                  projectSelected: true
               updateMeetingReviewItem_MeetingReviewConfirmedException:
                 value:
                   expectedReviewVersion: 1
@@ -6537,6 +6481,7 @@ paths:
                           id: 0HZX2K7M9Q4AC
                       due:
                         value: null
+                  projectSelected: true
               updateMeetingReviewItem_BadRequest:
                 value:
                   expectedReviewVersion: 1
@@ -6653,6 +6598,7 @@ paths:
                         - targetId: 0K9GVJT2C4Q23
                           decision: APPLIED
                           taskChange: null
+                        projectSelected: false
                     error: null
         '409':
           description: 요청 상태 충돌
@@ -6782,8 +6728,7 @@ paths:
       tags:
       - Transcription
       summary: 발화 하나에만 참석자를 연결하거나 개별 지정을 해제
-      description: 라벨은 맞는데 그 줄 하나만 남의 말로 붙은 경우를 고친다. 라벨 전체를 옮기는 PUT /v1/notes/{noteId}/speakers/{label} 과 짝이고, 권한도 대상 규칙도
-        같다. 대상이 없으면 개별 지정을 해제한다 - 그 발화는 다시 라벨의 지정을 따른다. 라벨 지정의 null(「참석자 중에 없다」)과 뜻이 다르다. 응답은 그 발화 한 줄이다 - 딸려 바뀌는 화자가 없다.
+      description: 라벨은 맞는데 그 줄 하나만 남의 말로 붙은 경우를 고친다. 라벨 전체를 옮기는 PUT /v1/notes/{noteId}/speakers/{label} 과 짝이고, 권한도 대상 규칙도 같다. 대상이 없으면 개별 지정을 해제한다 - 그 발화는 다시 라벨의 지정을 따른다. 라벨 지정의 null(「참석자 중에 없다」)과 뜻이 다르다. 응답은 그 발화 한 줄이다 - 딸려 바뀌는 화자가 없다.
       operationId: assignSegmentSpeaker
       parameters:
       - name: noteId
@@ -6914,9 +6859,7 @@ paths:
       tags:
       - Workspaces
       summary: 임시 참여자와 계정 연동
-      description: 임시 참여자를 워크스페이스 멤버 한 명과 잇는다. **되돌릴 수 없다** - 그 사람이 나온 모든 회의록의 참여 기록이 그 계정 것이 되고, 참여 기록 식별자를 유지하므로 화자 연결은
-        풀리지 않는다. **건너뛰는 회의가 없다** - 그 계정이 같은 회의에서 이미 다른 화자에 붙어 있어도 두 화자를 그대로 들고 합친다. 한 사람이 여러 화자를 맡을 수 있게 되면서 사람이 판단할 것이 없어졌다.
-        ADMIN만 부를 수 있고, 실행하면 임시 참여자 자체가 사라진다.
+      description: 임시 참여자를 워크스페이스 멤버 한 명과 잇는다. **되돌릴 수 없다** - 그 사람이 나온 모든 회의록의 참여 기록이 그 계정 것이 되고, 참여 기록 식별자를 유지하므로 화자 연결은 풀리지 않는다. **건너뛰는 회의가 없다** - 그 계정이 같은 회의에서 이미 다른 화자에 붙어 있어도 두 화자를 그대로 들고 합친다. 한 사람이 여러 화자를 맡을 수 있게 되면서 사람이 판단할 것이 없어졌다. ADMIN만 부를 수 있고, 실행하면 임시 참여자 자체가 사라진다.
       operationId: linkWorkspaceGuest
       parameters:
       - name: workspaceId
@@ -7039,8 +6982,7 @@ paths:
       tags:
       - Workspaces
       summary: 임시 참여자 연동 미리보기
-      description: 연동하면 어느 회의가 바뀌는지 미리 본다. **아무것도 바꾸지 않으며** 여러 번 불러도 된다. 응답 모양이 실행과 같아서 사람이 확인한 것과 일어난 일을 맞춰 볼 수 있다. 개수는 언제나
-        정확하고 목록은 100건에서 자르므로, 개수와 목록 길이가 다르면 잘린 것이다.
+      description: 연동하면 어느 회의가 바뀌는지 미리 본다. **아무것도 바꾸지 않으며** 여러 번 불러도 된다. 응답 모양이 실행과 같아서 사람이 확인한 것과 일어난 일을 맞춰 볼 수 있다. 개수는 언제나 정확하고 목록은 100건에서 자르므로, 개수와 목록 길이가 다르면 잘린 것이다.
       operationId: previewWorkspaceGuestLink
       parameters:
       - name: workspaceId
@@ -7886,8 +7828,7 @@ paths:
       tags:
       - AgentOAuthConsent
       summary: 외부 에이전트 연결 동의 요청 조회
-      description: 동의 화면 주소에 실려 온 state 로, 나를 기다리는 외부 에이전트 인가 요청을 조회한다. 없는 요청·이미 끝난 요청·다른 사람의 요청은 모두 같은 404 다. OAuth 가 켜진
-        환경에만 있다.
+      description: 동의 화면 주소에 실려 온 state 로, 나를 기다리는 외부 에이전트 인가 요청을 조회한다. 없는 요청·이미 끝난 요청·다른 사람의 요청은 모두 같은 404 다. OAuth 가 켜진 환경에만 있다.
       operationId: getAgentOAuthConsent
       parameters:
       - name: state
@@ -7940,8 +7881,7 @@ paths:
       tags:
       - AgentOAuthConsent
       summary: 외부 에이전트 연결 허락
-      description: 고른 워크스페이스로 위임을 새로 만들고 인가 코드를 발급한다. 허락할 때마다 연결이 하나씩 생긴다. 맡긴 사람이 그 워크스페이스의 멤버여야 한다. 응답의 주소로 브라우저를 보내면 에이전트가
-        연결을 마친다.
+      description: 고른 워크스페이스로 위임을 새로 만들고 인가 코드를 발급한다. 허락할 때마다 연결이 하나씩 생긴다. 맡긴 사람이 그 워크스페이스의 멤버여야 한다. 응답의 주소로 브라우저를 보내면 에이전트가 연결을 마친다.
       operationId: approveAgentOAuthConsent
       requestBody:
         content:
@@ -8099,8 +8039,7 @@ paths:
       tags:
       - AgentDelegation
       summary: 워크스페이스 외부 에이전트 연결 켜기·끄기
-      description: 워크스페이스 ADMIN 이 외부 에이전트 연결을 켜고 끈다. 끄면 그 워크스페이스에 맡긴 연결을 누가 맡겼든 개인 토큰·OAuth 모두 회수하고(회수 사유 AGENT_ACCESS_DISABLED),
-        꺼진 동안 연결 만들기와 OAuth 허락은 403 AGENT_ACCESS_DISABLED 다. 다시 켜도 회수된 연결은 되살아나지 않는다. 같은 값을 다시 보내도 성공한다.
+      description: 워크스페이스 ADMIN 이 외부 에이전트 연결을 켜고 끈다. 끄면 그 워크스페이스에 맡긴 연결을 누가 맡겼든 개인 토큰·OAuth 모두 회수하고(회수 사유 AGENT_ACCESS_DISABLED), 꺼진 동안 연결 만들기와 OAuth 허락은 403 AGENT_ACCESS_DISABLED 다. 다시 켜도 회수된 연결은 되살아나지 않는다. 같은 값을 다시 보내도 성공한다.
       operationId: changeWorkspaceAgentAccess
       parameters:
       - name: workspaceId
@@ -8262,8 +8201,7 @@ paths:
       tags:
       - AgentDelegation
       summary: 워크스페이스 외부 에이전트 연결 끊기
-      description: 워크스페이스 ADMIN 이 연결 하나를 끊는다(회수 사유 ADMIN). 살아 있는 연결만 끊고, 이미 회수됐거나 만료된 연결은 바꾸지 않고 성공한다. 다른 워크스페이스의 연결은 없는 연결과
-        같다.
+      description: 워크스페이스 ADMIN 이 연결 하나를 끊는다(회수 사유 ADMIN). 살아 있는 연결만 끊고, 이미 회수됐거나 만료된 연결은 바꾸지 않고 성공한다. 다른 워크스페이스의 연결은 없는 연결과 같다.
       operationId: revokeWorkspaceAgentDelegation
       parameters:
       - name: workspaceId
@@ -8395,8 +8333,7 @@ paths:
       tags:
       - Projects
       summary: 회의 간 연결 조회
-      description: 프로젝트의 끝난 노트 최근 N 개(서버 설정)와 그 사이의 회의 간 연결이다. 연결은 각 노트의 가장 최근 회의 뒤 분석이 냈고, 양 끝이 이 노트들 안에 있는 것만 나간다. noteId
-        를 주면 그 노트가 출발이나 도착인 연결과 양 끝 노트만 낸다. 연결은 화면 표시용이고 지난 항목의 상태를 바꾸지 않는다.
+      description: 프로젝트의 끝난 노트 최근 N 개(서버 설정)와 그 사이의 회의 간 연결이다. 연결은 각 노트의 가장 최근 회의 뒤 분석이 냈고, 양 끝이 이 노트들 안에 있는 것만 나간다. noteId 를 주면 그 노트가 출발이나 도착인 연결과 양 끝 노트만 낸다. 연결은 화면 표시용이고 지난 항목의 상태를 바꾸지 않는다.
       operationId: getProjectMeetingLinks
       parameters:
       - name: projectId
@@ -8509,10 +8446,7 @@ paths:
       tags:
       - Notes
       summary: 회의록 메일 공유
-      description: web 이 만든 회의록 PDF 를 받아 검증한 뒤 받는 사람마다 첨부 메일을 보낸다. `multipart/form-data` 이고 부분은 `file`(PDF), `recipients`(주소,
-        여러 번 반복), `message`(선택), `include`(선택, 여러 번 반복)다. 워크스페이스 밖 주소도 되고 같은 주소는 대소문자를 가리지 않고 합친다. 파일은 앞부분이 `%PDF-` 여야 하고,
-        첨부 파일 이름과 형식은 서버가 정한다(클라이언트 파일 이름은 쓰지 않는다). 발송은 큐를 거치므로 202 는 접수일 뿐 수신 성공을 보장하지 않는다. 받는 사람별 결과는 `GET /v1/notes/{noteId}/share-mails/{mailId}`
-        로 본다. 그 노트를 열람할 수 있는 워크스페이스 멤버만 부를 수 있다. 파일이 multipart 상한을 넘으면 서비스에 닿기 전에 413 `PAYLOAD_TOO_LARGE` 다.
+      description: web 이 만든 회의록 PDF 를 받아 검증한 뒤 받는 사람마다 첨부 메일을 보낸다. `multipart/form-data` 이고 부분은 `file`(PDF), `recipients`(주소, 여러 번 반복), `message`(선택), `include`(선택, 여러 번 반복)다. 워크스페이스 밖 주소도 되고 같은 주소는 대소문자를 가리지 않고 합친다. 파일은 앞부분이 `%PDF-` 여야 하고, 첨부 파일 이름과 형식은 서버가 정한다(클라이언트 파일 이름은 쓰지 않는다). 발송은 큐를 거치므로 202 는 접수일 뿐 수신 성공을 보장하지 않는다. 받는 사람별 결과는 `GET /v1/notes/{noteId}/share-mails/{mailId}` 로 본다. 그 노트를 열람할 수 있는 워크스페이스 멤버만 부를 수 있다. 파일이 multipart 상한을 넘으면 서비스에 닿기 전에 413 `PAYLOAD_TOO_LARGE` 다.
       operationId: sendNoteShareMail
       parameters:
       - name: noteId
@@ -8642,8 +8576,7 @@ paths:
       tags:
       - Notes
       summary: 회의록 공유 메일 발송 상태 조회
-      description: 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `SHARE_MAIL_NOT_FOUND` 다. 상태는
-        SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
+      description: 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `SHARE_MAIL_NOT_FOUND` 다. 상태는 SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
       operationId: getNoteShareMail
       parameters:
       - name: noteId
@@ -8727,8 +8660,7 @@ paths:
       tags:
       - Workspace Members
       summary: 워크스페이스 멤버 표시 이름 변경
-      description: 이 워크스페이스에서 보이는 멤버 이름을 바꾼다. 본인은 자기 이름을, ADMIN 은 누구의 이름이든 바꿀 수 있다. null 이나 빈 값이면 계정 이름으로 되돌린다. 바뀐 이름은 참석자·화자·담당·에이전트
-        입력에 곧바로 보이고, 이미 만들어진 요약 본문은 바뀌지 않는다. 응답은 멤버 목록 항목과 같은 모양이다.
+      description: 이 워크스페이스에서 보이는 멤버 이름을 바꾼다. 본인은 자기 이름을, ADMIN 은 누구의 이름이든 바꿀 수 있다. null 이나 빈 값이면 계정 이름으로 되돌린다. 바뀐 이름은 참석자·화자·담당·에이전트 입력에 곧바로 보이고, 이미 만들어진 요약 본문은 바뀌지 않는다. 응답은 멤버 목록 항목과 같은 모양이다.
       operationId: renameWorkspaceMember
       parameters:
       - name: workspaceId
@@ -8846,8 +8778,7 @@ paths:
       tags:
       - Notes
       summary: 회의 맥락 수정
-      description: 회의의 주제와 배경을 통째로 바꾼다(앞뒤 공백은 지우고 빈 값은 비운다). 종료된 회의는 409 MEETING_ALREADY_ENDED. 열린 전사 연결에는 반영되지 않고 다음 연결(재연결·재개)부터
-        전사 인식에 쓰인다.
+      description: 회의의 주제와 배경을 통째로 바꾼다(앞뒤 공백은 지우고 빈 값은 비운다). 종료된 회의는 409 MEETING_ALREADY_ENDED. 열린 전사 연결에는 반영되지 않고 다음 연결(재연결·재개)부터 전사 인식에 쓰인다.
       operationId: updateNoteContext
       parameters:
       - name: noteId
@@ -9216,8 +9147,7 @@ paths:
       tags:
       - Workspace Terms
       summary: 워크스페이스 용어 일괄 추가
-      description: 워크스페이스 전사 용어 사전에 용어 여러 개를 한 번에 더한다. 한도를 넘어도 409 로 막지 않고 들어갈 만큼 넣은 뒤 나머지는 rejected 에 사유와 함께 돌려준다. 이미 있던
-        용어는 existing 이다. 항상 200.
+      description: 워크스페이스 전사 용어 사전에 용어 여러 개를 한 번에 더한다. 한도를 넘어도 409 로 막지 않고 들어갈 만큼 넣은 뒤 나머지는 rejected 에 사유와 함께 돌려준다. 이미 있던 용어는 existing 이다. 항상 200.
       operationId: addWorkspaceTerms
       parameters:
       - name: workspaceId
@@ -9318,8 +9248,7 @@ components:
           nullable: false
         topicOrdinal:
           type: integer
-          description: 주제 안에서 추가하는 항목의 요약 주제 번호. 주면 그 주제의 요약 members 에 합쳐지고, 최신 요약에 없는 번호이거나 요약이 성공하지 않았으면 400 입니다. 생략하면 주제에
-            속하지 않습니다
+          description: 주제 안에서 추가하는 항목의 요약 주제 번호. 주면 그 주제의 요약 members 에 합쳐지고, 최신 요약에 없는 번호이거나 요약이 성공하지 않았으면 400 입니다. 생략하면 주제에 속하지 않습니다
           nullable: false
           format: int32
         expectedReviewVersion:
@@ -9369,8 +9298,7 @@ components:
               - USER
               - GUEST
               - SPEAKER_LABEL
-          description: '담당. 할 일·이슈·질문만 받고 그 밖의 kind 에 주면 400 입니다. 사람은 {type: USER|GUEST, id}, 회의 라벨은 {type: SPEAKER_LABEL,
-            label}'
+          description: '담당. 할 일·이슈·질문만 받고 그 밖의 kind 에 주면 400 입니다. 사람은 {type: USER|GUEST, id}, 회의 라벨은 {type: SPEAKER_LABEL, label}'
           nullable: true
           required:
           - type
@@ -9392,9 +9320,7 @@ components:
           properties:
             cursor:
               type: string
-              description: 도는 턴의 스트림에 붙을 때 GET …/turns/{turnId}/events?after= 에 **그대로** 넣는 재생 시작점. **messages 가 어디까지 실렸는지와
-                한 몸이다** — 도는 턴의 안 굳은 구간은 이미 messages 에 있으므로 이 값이 그 구간의 마지막 프레임이고, 스트림은 그 뒤 새 것만 준다. 승인 대기 중이면 마지막 카드의 entryId
-                다(카드 뒤에는 아무것도 없다). 도는 턴이 없으면 null 이다. 불투명한 문자열이고 크기 비교를 하지 않는다
+              description: 도는 턴의 스트림에 붙을 때 GET …/turns/{turnId}/events?after= 에 **그대로** 넣는 재생 시작점. **messages 가 어디까지 실렸는지와 한 몸이다** — 도는 턴의 안 굳은 구간은 이미 messages 에 있으므로 이 값이 그 구간의 마지막 프레임이고, 스트림은 그 뒤 새 것만 준다. 승인 대기 중이면 마지막 카드의 entryId 다(카드 뒤에는 아무것도 없다). 도는 턴이 없으면 null 이다. 불투명한 문자열이고 크기 비교를 하지 않는다
               nullable: true
               example: 1735689600000-0
             lastTurn:
@@ -9633,8 +9559,7 @@ components:
                       - fields
                       - body
                       - items
-                  description: '돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에
-                    「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다'
+                  description: '돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다'
                   nullable: true
                 status:
                   type: string
@@ -9885,8 +9810,7 @@ components:
                       - fields
                       - body
                       - items
-                  description: '돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에
-                    「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다'
+                  description: '돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다'
                   nullable: true
                 status:
                   type: string
@@ -9915,8 +9839,7 @@ components:
                 properties:
                   turnId:
                     type: string
-                    description: 이 행을 만든 턴. **화면이 두 벌을 접는 열쇠다** — 진행 중인 턴의 TOOL·THINKING 행은 히스토리와 스트림 재생 양쪽에서 오고, 이 값이 없으면
-                      같은 도구 카드가 두 개 그려진다. 턴이 지워진 옛 행은 null 이다
+                    description: 이 행을 만든 턴. **화면이 두 벌을 접는 열쇠다** — 진행 중인 턴의 TOOL·THINKING 행은 히스토리와 스트림 재생 양쪽에서 오고, 이 값이 없으면 같은 도구 카드가 두 개 그려진다. 턴이 지워진 옛 행은 null 이다
                     nullable: true
                     example: 0K9GVJT2C4Q3B
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -9928,8 +9851,7 @@ components:
                     format: date-time
                   role:
                     type: string
-                    description: 메시지 역할. **THINKING 은 모델이 답을 쓰기 전에 흘린 계획 문장**이고 content 만 든다 — scope 는 비고 toolEvent 는 null
-                      이다
+                    description: 메시지 역할. **THINKING 은 모델이 답을 쓰기 전에 흘린 계획 문장**이고 content 만 든다 — scope 는 비고 toolEvent 는 null 이다
                     nullable: false
                     example: USER
                     enum:
@@ -10332,8 +10254,7 @@ components:
                         enum:
                         - IN_PROGRESS
                         - WAITING_APPROVAL
-                    description: 살아 있는 턴. 없으면 null 이고 그때 이 줄에는 배지가 안 붙는다. **본문도 대기 중인 승인도 안 싣는다** — 목록은 폴링으로 돌고 50개분 본문이 주기마다
-                      흐를 이유가 없다
+                    description: 살아 있는 턴. 없으면 null 이고 그때 이 줄에는 배지가 안 붙는다. **본문도 대기 중인 승인도 안 싣는다** — 목록은 폴링으로 돌고 50개분 본문이 주기마다 흐를 이유가 없다
                     nullable: true
                   chatId:
                     type: string
@@ -10505,9 +10426,7 @@ components:
                 properties:
                   revokeReason:
                     type: string
-                    description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐
-                      refresh 토큰이 다시 쓰임, AGENT_ACCESS_DISABLED 는 워크스페이스 ADMIN 이 외부 에이전트 연결을 끔, ADMIN 은 워크스페이스 ADMIN 이 이 연결을
-                      끊음. 회수되지 않았으면 null
+                    description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임, AGENT_ACCESS_DISABLED 는 워크스페이스 ADMIN 이 외부 에이전트 연결을 끔, ADMIN 은 워크스페이스 ADMIN 이 이 연결을 끊음. 회수되지 않았으면 null
                     nullable: true
                     example: USER
                     enum:
@@ -10842,8 +10761,7 @@ components:
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
         guestId:
           type: string
-          description: 연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 이 회의
-            밖의 임시 참여자까지 닿는다
+          description: 연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 이 회의 밖의 임시 참여자까지 닿는다
           nullable: true
           example: 0HZX2K7M9Q4AR
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -10865,15 +10783,13 @@ components:
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
         guestId:
           type: string
-          description: 연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 이 회의
-            밖의 임시 참여자까지 닿는다
+          description: 연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 이 회의 밖의 임시 참여자까지 닿는다
           nullable: true
           example: 0HZX2K7M9Q4AR
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
         userId:
           type: string
-          description: 연결할 계정의 userId. participantId 와 함께 보낼 수 없다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 워크스페이스 멤버 전원이라
-            아직 참여 기록이 없는 사람을 고를 수 있다. 계정 없는 임시 참여자는 이 값으로 가리킬 수 없다
+          description: 연결할 계정의 userId. participantId 와 함께 보낼 수 없다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 워크스페이스 멤버 전원이라 아직 참여 기록이 없는 사람을 고를 수 있다. 계정 없는 임시 참여자는 이 값으로 가리킬 수 없다
           nullable: true
           example: 0HZX2K7M9Q4AC
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -10905,15 +10821,13 @@ components:
                 pattern: ^[A-Z0-9]{1,8}$
               guestId:
                 type: string
-                description: 연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가
-                  이 회의 밖의 임시 참여자까지 닿는다
+                description: 연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 이 회의 밖의 임시 참여자까지 닿는다
                 nullable: true
                 example: 0HZX2K7M9Q4AR
                 pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
               userId:
                 type: string
-                description: 연결할 계정의 userId. participantId 와 함께 보낼 수 없다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 워크스페이스 멤버
-                  전원이라 아직 참여 기록이 없는 사람을 고를 수 있다. 계정 없는 임시 참여자는 이 값으로 가리킬 수 없다
+                description: 연결할 계정의 userId. participantId 와 함께 보낼 수 없다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 워크스페이스 멤버 전원이라 아직 참여 기록이 없는 사람을 고를 수 있다. 계정 없는 임시 참여자는 이 값으로 가리킬 수 없다
                 nullable: true
                 example: 0HZX2K7M9Q4AC
                 pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -11211,9 +11125,7 @@ components:
                   format: date-time
                 revokeReason:
                   type: string
-                  description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh
-                    토큰이 다시 쓰임, AGENT_ACCESS_DISABLED 는 워크스페이스 ADMIN 이 외부 에이전트 연결을 끔, ADMIN 은 워크스페이스 ADMIN 이 이 연결을 끊음. 회수되지
-                    않았으면 null
+                  description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임, AGENT_ACCESS_DISABLED 는 워크스페이스 ADMIN 이 외부 에이전트 연결을 끔, ADMIN 은 워크스페이스 ADMIN 이 이 연결을 끊음. 회수되지 않았으면 null
                   nullable: true
                   example: USER
                   enum:
@@ -11265,8 +11177,7 @@ components:
           properties:
             participantId:
               type: string
-              description: 방금 만든 참여 기록의 13자리 TSID. 같은 이름을 막지 않으므로 목록에서 이름으로 되찾으면 동명이인이 섞였을 때 엉뚱한 사람이 골라진다 - 화자를 붙일 때 이 값을
-                쓴다
+              description: 방금 만든 참여 기록의 13자리 TSID. 같은 이름을 막지 않으므로 목록에서 이름으로 되찾으면 동명이인이 섞였을 때 엉뚱한 사람이 골라진다 - 화자를 붙일 때 이 값을 쓴다
               nullable: false
               example: 0HZX2K7M9Q4AQ
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -11532,8 +11443,7 @@ components:
                     maxLength: 1500
                   answerSeen:
                     type: boolean
-                    description: 지금 답변을 읽었나. 답변이 없으면 false. 운영자가 답을 고쳐 answeredAt 이 늦어지면 다시 false. 새 답변 수 = answer 가 있고 answerSeen
-                      이 false 인 항목 수
+                    description: 지금 답변을 읽었나. 답변이 없으면 false. 운영자가 답을 고쳐 answeredAt 이 늦어지면 다시 false. 새 답변 수 = answer 가 있고 answerSeen 이 false 인 항목 수
                     nullable: false
                     example: false
               nullable: false
@@ -11609,8 +11519,7 @@ components:
               maxLength: 1500
             answerSeen:
               type: boolean
-              description: 지금 답변을 읽었나. 답변이 없으면 false. 운영자가 답을 고쳐 answeredAt 이 늦어지면 다시 false. 새 답변 수 = answer 가 있고 answerSeen
-                이 false 인 항목 수
+              description: 지금 답변을 읽었나. 답변이 없으면 false. 운영자가 답을 고쳐 answeredAt 이 늦어지면 다시 false. 새 답변 수 = answer 가 있고 answerSeen 이 false 인 항목 수
               nullable: false
               example: false
           description: 성공 응답 데이터
@@ -11880,6 +11789,7 @@ components:
     MeetingApprovalRequest:
       title: MeetingApprovalRequest
       required:
+      - projectSelectionConfirmed
       - requestId
       - reviewId
       - reviewRevision
@@ -11903,6 +11813,10 @@ components:
           nullable: false
           format: int64
           minimum: 1
+        projectSelectionConfirmed:
+          type: boolean
+          description: 명시적 반영 선택을 확인한 새 화면의 승인 요청. true만 허용합니다
+          nullable: false
     MeetingApprovalResponse:
       title: MeetingApprovalResponse
       required:
@@ -12042,6 +11956,7 @@ components:
                 - itemId
                 - kind
                 - originalProposalRef
+                - projectSelected
                 - replacements
                 - revision
                 - taskChanges
@@ -12657,6 +12572,9 @@ components:
                       - targetId
                       - decision
                       - taskChange
+                  projectSelected:
+                    type: boolean
+                    description: 결정·할 일의 프로젝트 반영 선택. 기본 false이며 검토 완료 때 승인됩니다
             reviewId:
               type: string
               description: 별도 검토본 식별자
@@ -12996,8 +12914,7 @@ components:
                     minLength: 1
             status:
               type: string
-              description: SUCCEEDED 는 SUMMARY 영역 성공, FAILED 는 SUMMARY 영역 실패입니다. NOT_AVAILABLE 은 분석 요청이 없거나 콜백 전이거나 요청에 SUMMARY
-                영역이 없는 경우입니다. FAILED 의 오류 코드는 싣지 않습니다
+              description: SUCCEEDED 는 SUMMARY 영역 성공, FAILED 는 SUMMARY 영역 실패입니다. NOT_AVAILABLE 은 분석 요청이 없거나 콜백 전이거나 요청에 SUMMARY 영역이 없는 경우입니다. FAILED 의 오류 코드는 싣지 않습니다
               nullable: false
               enum:
               - SUCCEEDED
@@ -13414,8 +13331,7 @@ components:
                     - image
                   recordedDurationMs:
                     type: integer
-                    description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과
-                      진행 중 구간은 0
+                    description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
                     nullable: false
                     example: 6500
                     format: int64
@@ -13710,8 +13626,7 @@ components:
               - image
             recordedDurationMs:
               type: integer
-              description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은
-                0
+              description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
               nullable: false
               example: 0
               format: int64
@@ -14596,8 +14511,7 @@ components:
           - CORRECT
           - RETRACT
           - RESOLVE
-          description: revision을 만든 operation event다. RESOLVE result revision도 CREATE가 아니라 RESOLVE다. status와 closeReason을
-            이 값에서 유도하지 않는다.
+          description: revision을 만든 operation event다. RESOLVE result revision도 CREATE가 아니라 RESOLVE다. status와 closeReason을 이 값에서 유도하지 않는다.
         revisionSource:
           type: string
           enum:
@@ -15290,8 +15204,7 @@ components:
                 properties:
                   kind:
                     type: string
-                    description: TRIM 은 업체 재연결 때 버린 앞부분, NOT_SENT 는 다시 붙은 뒤 밀려 와 소리로만 저장된 조각, UNANSWERED 는 버린 업체 연결이 답하지 않은
-                      꼬리다. 화면에서는 모두 「받아쓰지 못했어요」다
+                    description: TRIM 은 업체 재연결 때 버린 앞부분, NOT_SENT 는 다시 붙은 뒤 밀려 와 소리로만 저장된 조각, UNANSWERED 는 버린 업체 연결이 답하지 않은 꼬리다. 화면에서는 모두 「받아쓰지 못했어요」다
                     nullable: false
                     example: UNANSWERED
                     enum:
@@ -15765,6 +15678,10 @@ components:
           nullable: false
           format: int64
           minimum: 1
+        projectSelected:
+          type: boolean
+          description: 결정·할 일의 프로젝트 반영 선택. 생략 시 유지, null은 거절합니다
+          nullable: false
     UpdateProjectTaskRequest:
       title: UpdateProjectTaskRequest
       required:
@@ -16185,8 +16102,7 @@ components:
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
                   agentAccessAllowed:
                     type: boolean
-                    description: 외부 에이전트 연결 허용 여부. false 면 ADMIN 이 꺼서 이 워크스페이스로 개인 토큰 발급·OAuth 허락이 403 AGENT_ACCESS_DISABLED
-                      로 거절된다
+                    description: 외부 에이전트 연결 허용 여부. false 면 ADMIN 이 꺼서 이 워크스페이스로 개인 토큰 발급·OAuth 허락이 403 AGENT_ACCESS_DISABLED 로 거절된다
                     nullable: false
                     example: true
               nullable: false
@@ -17622,8 +17538,7 @@ components:
                     example: partner@example.com
                   status:
                     type: string
-                    description: 발송 상태. PENDING 아직 SES 에 넘기지 못함(다시 시도 중) · SENT SES 가 받음(받는 서버의 반송 여부는 모름) · FAILED 보낼 수 없어
-                      끝냄(SES 가 주소·내용을 거절했거나 첨부 PDF 가 만료됨). 다시 보내지 않는다
+                    description: 발송 상태. PENDING 아직 SES 에 넘기지 못함(다시 시도 중) · SENT SES 가 받음(받는 서버의 반송 여부는 모름) · FAILED 보낼 수 없어 끝냄(SES 가 주소·내용을 거절했거나 첨부 PDF 가 만료됨). 다시 보내지 않는다
                     nullable: false
                     example: SENT
                     enum:

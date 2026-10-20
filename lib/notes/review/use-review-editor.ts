@@ -149,7 +149,9 @@ export function useReviewEditor(noteId: string) {
         // 새 항목에는 안내를 그릴 줄이 없다. 쓴 내용은 폼에 남으니 토스트로 알린다.
         if (target !== NEW_ITEM) {
           setConflictItemId(target);
-          setConflictMessage("다른 사람이 먼저 수정했습니다. 최신 내용을 확인해 주세요.");
+          setConflictMessage(
+            "다른 사람이 먼저 수정했습니다. 최신 내용을 확인해 주세요."
+          );
         }
         try {
           // 저장 중 비활성화한 쿼리도 직접 읽고, 새 판이 도착할 때까지 잠금을 유지한다.
@@ -160,7 +162,9 @@ export function useReviewEditor(noteId: string) {
           if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
           else setConflictMessage(CONFLICT_MESSAGE);
         } catch {
-          toast.error("다른 사람이 먼저 수정했습니다. 최신 검토본을 불러오지 못했으니 다시 확인해 주세요.");
+          toast.error(
+            "다른 사람이 먼저 수정했습니다. 최신 검토본을 불러오지 못했으니 다시 확인해 주세요."
+          );
         }
         // 그 사이 다른 사람이 주제 안에 항목을 더했으면 요약 members 도 달라졌다. 기다리지 않고 같이 읽는다.
         void queryClient.refetchQueries({
@@ -200,7 +204,10 @@ export function useReviewEditor(noteId: string) {
             },
           }),
         // 응답 전에 먼저 걸 수 있는 칸이 있으면 건다(포함 여부·기한·제안 선택). 내용·담당은 서버가 정하므로 안 건다.
-        "included" in patch || "due" in patch || patch.decisions
+        "projectSelected" in patch ||
+          "included" in patch ||
+          "due" in patch ||
+          patch.decisions
           ? {
               apply: (current) => applyItemPatch(current, itemId, patch),
               restore: (current) => restoreItemFields(current, item, patch),

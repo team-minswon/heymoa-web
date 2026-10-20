@@ -17,7 +17,10 @@ import type {
   TranscriptResponseDataSegmentsItem,
   UpdateMeetingReviewItemRequest,
 } from "@/lib/api/generated/models";
-import { LINK_LABEL, type MeetingRelation } from "@/lib/notes/review/meeting-links";
+import {
+  LINK_LABEL,
+  type MeetingRelation,
+} from "@/lib/notes/review/meeting-links";
 import { KIND_LABEL } from "@/lib/notes/review/sections";
 import { formatOffset } from "@/lib/transcription/presentation";
 import {
@@ -42,18 +45,34 @@ function SuggestionShell({
   footer?: ReactNode;
 }) {
   return (
-    <div role="group" aria-label={label} className="rounded-control bg-[var(--el-canvas-soft)] px-3 py-2.5 text-[12.5px] text-[var(--el-body)]">
+    <div
+      role="group"
+      aria-label={label}
+      className="rounded-control bg-[var(--el-canvas-soft)] px-3 py-2.5 text-[12.5px] text-[var(--el-body)]"
+    >
       <div className="grid grid-cols-1 items-center gap-x-3 gap-y-1.5 sm:grid-cols-[96px_minmax(0,1fr)_auto]">
-        <span className="text-xs whitespace-nowrap text-[var(--el-muted)]">{label}</span>
-        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{children}</span>
-        {toggle}
+        <span className="text-xs whitespace-nowrap text-[var(--el-muted)]">
+          {label}
+        </span>
+        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          {children}
+        </span>
+        {toggle ? <span className="inline-flex justify-self-start sm:justify-self-end">{toggle}</span> : null}
       </div>
       {footer}
     </div>
   );
 }
 
-function Diff({ label, from, to }: { label: string; from: ReactNode; to: ReactNode }) {
+function Diff({
+  label,
+  from,
+  to,
+}: {
+  label: string;
+  from: ReactNode;
+  to: ReactNode;
+}) {
   return (
     <span className="inline-flex items-center gap-1.5">
       {label}
@@ -66,12 +85,14 @@ function Diff({ label, from, to }: { label: string; from: ReactNode; to: ReactNo
 
 export function ReplacementSuggestion({
   replacement,
+  newContent,
   choice,
   disabled,
   onChoose,
   context,
 }: {
   replacement: Replacement;
+  newContent: string;
   choice: Choice | null;
   disabled: boolean;
   onChoose: (next: Choice) => void;
@@ -82,25 +103,56 @@ export function ReplacementSuggestion({
   const ended = target.endedAt !== null;
   return (
     <SuggestionShell
-      label={`이전 ${KIND_LABEL[target.kind]} ${replacement.label}`}
-      toggle={
+      label={`이전 ${KIND_LABEL[target.kind]}`}
+      toggle={ended ? undefined : (
         <ChoiceToggle
-          label="이전 결정을 끝낼지"
-          changeLabel="끝내기"
-          keepLabel="이어가기"
+          label="이전 결정을 어떻게 할까요?"
+          changeLabel="대체"
+          keepLabel="유지"
           value={choice}
-          disabled={disabled || ended}
+          disabled={disabled}
           onChange={onChoose}
         />
+      )}
+      footer={
+        <>
+          {!ended && choice !== null ? (
+            <div role="group" aria-label={choice === "change" ? "대체 후 모습" : "함께 유지할 결정"} className="mt-3 border-t border-[var(--el-hairline)] pt-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-[var(--el-muted)]">
+                <span>검토 완료 후</span>
+                <span>결정 {choice === "change" ? 1 : 2}개</span>
+              </div>
+              <ul className="space-y-2 border-l-2 border-[var(--el-success)]/50 pl-3">
+                {choice === "keep" ? (
+                  <li className="rounded-[6px] border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-3 py-2">
+                    <span className="mb-0.5 block text-[11px] text-[var(--el-muted)]">이전 결정</span>
+                    <span className="block text-[13px] leading-5 text-[var(--el-ink)]">{target.content}</span>
+                  </li>
+                ) : null}
+                <li className="rounded-[6px] border border-[var(--el-success)]/25 bg-[var(--el-surface-card)] px-3 py-2">
+                  <span className="mb-0.5 block text-[11px] text-[var(--el-success-strong)]">새 결정</span>
+                  <span className="block text-[13px] leading-5 text-[var(--el-ink)]">{newContent}</span>
+                </li>
+              </ul>
+            </div>
+          ) : null}
+          {!ended && (context || replacement.reason) ? (
+            <details className="mt-1.5 text-xs text-[var(--el-muted)]">
+              <summary className="w-fit cursor-pointer">제안 근거 보기</summary>
+              {context ?? <p className="mt-1.5">{replacement.reason}</p>}
+            </details>
+          ) : null}
+        </>
       }
-      footer={context ?? <p className="mt-1.5 text-xs text-[var(--el-muted)]">{replacement.reason}</p>}
     >
-      <span className={cn("text-[var(--el-ink)]", ended && "text-[var(--el-muted-soft)] line-through")}>
-        {target.content}
-      </span>
+      {ended || choice === "change" ? (
+        <del className="text-[var(--el-muted-soft)] decoration-[var(--el-muted-soft)]">{target.content}</del>
+      ) : <span className="text-[var(--el-ink)]">{target.content}</span>}
       <span className="text-xs text-[var(--el-muted)]">
-        {target.noteTitle ?? "프로젝트 결정"} · {formatAppDate(target.approvedAt, { month: "long", day: "numeric" })} 확정
-        {ended ? " · 이미 끝남" : ""}
+        {target.noteTitle ?? "프로젝트 결정"} ·{" "}
+        {formatAppDate(target.approvedAt, { month: "long", day: "numeric" })}{" "}
+        확정
+        {ended ? " · 이미 종료됨" : ""}
       </span>
     </SuggestionShell>
   );
@@ -113,30 +165,46 @@ export function RelationContext({
   onOpenScript,
   fallbackReason,
   showKind = false,
+  showSource = true,
 }: {
   relation: MeetingRelation;
   segments: readonly TranscriptResponseDataSegmentsItem[];
   onOpenScript: (segmentId: string) => void;
   fallbackReason?: string;
   showKind?: boolean;
+  showSource?: boolean;
 }) {
   const sequences = new Set(relation.evidenceSequences);
   const quotes = segments.filter((segment) => sequences.has(segment.sequence));
   return (
     <div className="mt-1.5 space-y-1 text-xs text-[var(--el-muted)]">
-      <p>
-        {showKind ? `${LINK_LABEL[relation.kind]} · ` : ""}
-        {relation.scope === "same" ? "같은 회의" : relation.scope === "approved" ? "프로젝트 확정 항목" : relation.targetTitle}
-        {` · 판 ${relation.target.revision}`}
-      </p>
+      {showSource ? (
+        <p>
+          {showKind ? `${LINK_LABEL[relation.kind]} · ` : ""}
+          {relation.scope === "same"
+            ? "같은 회의"
+            : relation.scope === "approved"
+              ? "프로젝트 확정 항목"
+              : relation.targetTitle}
+        </p>
+      ) : null}
       {relation.reason || fallbackReason ? (
-        <p className="whitespace-pre-wrap break-words">{relation.reason || fallbackReason}</p>
+        <p className="whitespace-pre-wrap break-words">
+          {relation.reason || fallbackReason}
+        </p>
       ) : null}
       {quotes.length > 0 ? (
-        <ul aria-label="관계 근거 발언" className="space-y-1 border-l border-[var(--el-hairline)] pl-3">
+        <ul
+          aria-label="관계 근거 발언"
+          className="space-y-1 border-l border-[var(--el-hairline)] pl-3"
+        >
           {quotes.map((segment) => (
             <li key={segment.segmentId}>
-              <button type="button" className="text-left leading-5 hover:text-[var(--el-ink)]" onClick={() => onOpenScript(segment.segmentId)}>
+              <button
+                type="button"
+                className="text-left leading-5 hover:text-[var(--el-ink)]"
+                onClick={() => onOpenScript(segment.segmentId)}
+              >
                 {formatOffset(segment.startedAtMs)} · {segment.text}
               </button>
             </li>
@@ -161,14 +229,29 @@ export function RelationSuggestion({
   onOpenScript: (segmentId: string) => void;
 }) {
   return (
-    <SuggestionShell label={LINK_LABEL[relation.kind]} footer={<RelationContext relation={relation} {...context} />}>
+    <SuggestionShell
+      label={LINK_LABEL[relation.kind]}
+      footer={<RelationContext relation={relation} {...context} />}
+    >
       {relation.targetItemId ? (
-        <button type="button" aria-label={`관계 대상 항목 보기 · ${relation.target.content}`} className="text-left underline underline-offset-4" onClick={() => onSelectItem(relation.targetItemId!)}>
+        <button
+          type="button"
+          aria-label={`관계 대상 항목 보기 · ${relation.target.content}`}
+          className="text-left underline underline-offset-4"
+          onClick={() => onSelectItem(relation.targetItemId!)}
+        >
           {relation.target.content}
         </button>
-      ) : <span className="break-words text-[var(--el-ink)]">{relation.target.content}</span>}
+      ) : (
+        <span className="break-words text-[var(--el-ink)]">
+          {relation.target.content}
+        </span>
+      )}
       {relation.scope === "past" && workspaceId && relation.target.noteId ? (
-        <Link className="text-xs underline underline-offset-4" href={`/w/${workspaceId}/notes/${relation.target.noteId}?view=full&tab=summary`}>
+        <Link
+          className="text-xs underline underline-offset-4"
+          href={`/w/${workspaceId}/notes/${relation.target.noteId}?view=full&tab=summary`}
+        >
           {relation.targetTitle}
         </Link>
       ) : null}
@@ -176,15 +259,23 @@ export function RelationSuggestion({
   );
 }
 
-type TaskDraft = NonNullable<NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"]>;
+type TaskDraft = NonNullable<
+  NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"]
+>;
 
 /** 회의 라벨은 이 회의 소유입니다. 응답의 nullable 참조를 요청 모양으로 돌립니다. */
-function taskAssigneeRequestOf(box: NonNullable<TaskChange["draft"]>["assignee"]): TaskDraft["assignee"] {
+function taskAssigneeRequestOf(
+  box: NonNullable<TaskChange["draft"]>["assignee"]
+): TaskDraft["assignee"] {
   if (!box) return null;
   const value = box.value;
-  return { value: !value ? null : value.type === "SPEAKER_LABEL"
-    ? { type: value.type, label: value.label ?? undefined }
-    : { type: value.type, id: value.id ?? undefined } };
+  return {
+    value: !value
+      ? null
+      : value.type === "SPEAKER_LABEL"
+        ? { type: value.type, label: value.label ?? undefined }
+        : { type: value.type, id: value.id ?? undefined },
+  };
 }
 
 /** 기존 할 일의 변경 초안. 실제 업무는 검토 완료에서만 바뀝니다. */
@@ -220,27 +311,46 @@ export function TaskChangeSuggestion({
   included?: boolean;
 }) {
   const saved = change.draft;
-  const draft: TaskDraft = saved ? {
-    ...saved,
-    assignee: taskAssigneeRequestOf(saved.assignee),
-  } : {
-    expectedRevision: change.target.revision,
-    status: change.status,
-    assignee: taskAssigneeRequestOf(change.assignee),
-    due: change.due,
-  };
+  const draft: TaskDraft = saved
+    ? {
+        ...saved,
+        assignee: taskAssigneeRequestOf(saved.assignee),
+      }
+    : {
+        expectedRevision: change.target.revision,
+        status: change.status,
+        assignee: taskAssigneeRequestOf(change.assignee),
+        due: change.due,
+      };
   // 초안은 표시 이름이 아닌 참조로 옵니다. UI에서만 선택 목록과 이어 이름을 붙입니다.
   const reference = draft.assignee?.value;
   const assignee: AssigneeValue | null = reference
     ? reference.type === "SPEAKER_LABEL"
       ? { type: "SPEAKER_LABEL", noteId, label: reference.label ?? undefined }
-      : choices.find((row) => row.type === reference.type && "id" in row && row.id === reference.id)
-        ?? (change.assignee?.value?.type === reference.type && change.assignee.value.id === reference.id
+      : (choices.find(
+          (row) =>
+            row.type === reference.type &&
+            "id" in row &&
+            row.id === reference.id
+        ) ??
+        (change.assignee?.value?.type === reference.type &&
+        change.assignee.value.id === reference.id
           ? change.assignee.value
-          : { type: reference.type, id: reference.id ?? undefined, name: "선택한 멤버" })
+          : {
+              type: reference.type,
+              id: reference.id ?? undefined,
+              name: "선택한 멤버",
+            }))
     : null;
-  const applied = change.decision === "APPLIED" || (confirmed && included && change.decision === "APPLY");
-  const stale = taskState === "ready" && !confirmed && !applied && task !== undefined && task.revision !== draft.expectedRevision;
+  const applied =
+    change.decision === "APPLIED" ||
+    (confirmed && included && change.decision === "APPLY");
+  const stale =
+    taskState === "ready" &&
+    !confirmed &&
+    !applied &&
+    task !== undefined &&
+    task.revision !== draft.expectedRevision;
   const locked = disabled || applied || confirmed;
   const fieldsLocked = locked || !task || stale || taskState !== "ready";
   const saveDraft = (next: TaskDraft) => onChoose(choice ?? "change", next);
@@ -251,24 +361,42 @@ export function TaskChangeSuggestion({
       toggle={
         <ChoiceToggle
           label="기존 할 일에 반영할지"
-          changeLabel={applied ? "반영됨" : choice === "change" ? confirmed ? "제외됨" : "반영 예정" : "반영"}
+          changeLabel={
+            applied
+              ? "반영됨"
+              : choice === "change"
+                ? confirmed
+                  ? "제외됨"
+                  : "반영 예정"
+                : "반영"
+          }
           keepLabel="넘기기"
           value={choice}
           disabled={locked || taskState === "pending"}
           changeDisabled={!task || stale || taskState !== "ready"}
-          onChange={(next) => { if (next !== choice) void onChoose(next, draft); }}
+          onChange={(next) => {
+            if (next !== choice) void onChoose(next, draft);
+          }}
         />
       }
       footer={
         <>
-          {context}
-          {stale ? (
-            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">기존 할 일이 변경되어 이 제안을 반영할 수 없습니다. 넘기기를 선택해 주세요.</p>
-          ) : duplicate && !confirmed ? (
-            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">같은 할 일의 다른 제안도 반영 예정입니다. 하나만 반영하고 나머지는 넘겨 주세요.</p>
+          {context ? (
+            <details className="mt-1.5 text-xs text-[var(--el-muted)]">
+              <summary className="w-fit cursor-pointer">제안 근거 보기</summary>
+              {context}
+            </details>
           ) : null}
-          {!confirmed && !applied && choice === "change" ? (
-            <p className="mt-2 text-xs text-[var(--el-muted)]">검토 완료 때 적용됩니다.</p>
+          {stale ? (
+            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">
+              기존 할 일이 변경되어 이 제안을 반영할 수 없습니다. 넘기기를
+              선택해 주세요.
+            </p>
+          ) : duplicate && !confirmed ? (
+            <p role="alert" className="mt-2 text-xs text-[var(--el-muted)]">
+              같은 할 일의 다른 제안도 반영 예정입니다. 하나만 반영하고 나머지는
+              넘겨 주세요.
+            </p>
           ) : null}
           {taskState === "failed" ? (
             <InlineRetry
@@ -278,15 +406,22 @@ export function TaskChangeSuggestion({
               className="mt-2 text-xs text-[var(--el-muted)]"
             />
           ) : taskState === "ready" && !task ? (
-            <p className="mt-2 text-xs text-[var(--el-muted)]">바꿀 할 일을 찾지 못했습니다.</p>
+            <p className="mt-2 text-xs text-[var(--el-muted)]">
+              바꿀 할 일을 찾지 못했습니다.
+            </p>
           ) : null}
         </>
       }
     >
       {taskState === "pending" ? (
-        <Skeleton aria-label="기존 할 일 불러오는 중" className="h-4 w-40 rounded-chip" />
+        <Skeleton
+          aria-label="기존 할 일 불러오는 중"
+          className="h-4 w-40 rounded-chip"
+        />
       ) : (
-        <span className="text-[var(--el-ink)]">{task?.content ?? change.reason}</span>
+        <span className="text-[var(--el-ink)]">
+          {task?.content ?? change.reason}
+        </span>
       )}
       {task && draft.status ? (
         <Diff
@@ -315,7 +450,12 @@ export function TaskChangeSuggestion({
                 choices={choices}
                 editable={!fieldsLocked}
                 placeholder="없음"
-                onChange={(next) => void saveDraft({ ...draft, assignee: taskAssigneeRequestOf({ value: next }) })}
+                onChange={(next) =>
+                  void saveDraft({
+                    ...draft,
+                    assignee: taskAssigneeRequestOf({ value: next }),
+                  })
+                }
               />
             </Pick>
           }
@@ -327,19 +467,36 @@ export function TaskChangeSuggestion({
           from={task.due ? formatDueDate(task.due) : "없음"}
           to={
             <Pick editable={!fieldsLocked}>
-              <DueCell value={draft.due.value ?? null} editable={!fieldsLocked} placeholder="없음" onChange={(value) => void saveDraft({ ...draft, due: { value } })} />
+              <DueCell
+                value={draft.due.value ?? null}
+                editable={!fieldsLocked}
+                placeholder="없음"
+                onChange={(value) =>
+                  void saveDraft({ ...draft, due: { value } })
+                }
+              />
             </Pick>
           }
         />
       ) : null}
-      {task && draft.assignee && assigneeKey(assignee) === assigneeKey(task.assignee) && !draft.status && !draft.due ? (
-        <span className="text-[var(--el-muted-soft)]">이미 같은 값입니다</span>
+      {task &&
+      draft.assignee &&
+      assigneeKey(assignee) === assigneeKey(task.assignee) &&
+      !draft.status &&
+      !draft.due ? (
+        <span className="text-[var(--el-muted-soft)]">변경 없음</span>
       ) : null}
     </SuggestionShell>
   );
 }
 
-function Pick({ children, editable = false }: { children: ReactNode; editable?: boolean }) {
+function Pick({
+  children,
+  editable = false,
+}: {
+  children: ReactNode;
+  editable?: boolean;
+}) {
   return (
     <span
       className={cn(

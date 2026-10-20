@@ -1,3 +1,4 @@
+import { isProjectIncluded } from "@/lib/notes/review/project-approval";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 
 /** 현재 제안에서 사라져도 사람이 저장한 선택과 이미 반영된 이력은 남습니다. */
@@ -10,7 +11,10 @@ export function missingChoicesOf(item: ReviewItem) {
 }
 
 export function hasMissingApply(item: ReviewItem) {
-  return item.included && missingChoicesOf(item).some(
-    (row) => row.decision === "END" || row.decision === "APPLY"
+  return (
+    isProjectIncluded(item) &&
+    missingChoicesOf(item).some(
+      (row) => row.decision === "END" || row.decision === "APPLY"
+    )
   );
 }

@@ -33,6 +33,7 @@ async function fixture(decision: "END" | "APPLY" | "KEEP" | "APPLIED" | null, ki
   const review: MeetingReviewResponseData = (await response!.json()).data;
   // 현재 제안은 모두 유지로 검토를 마친 상태입니다. 복구해야 할 선택만 별도로 둡니다.
   for (const item of review.items) {
+    item.projectSelected = item.included;
     for (const row of [...item.replacements, ...item.taskChanges]) row.decision = "KEEP";
     item.decisions = [
       ...item.replacements.map((row) => ({ targetId: row.target.itemId, decision: "KEEP" as const, taskChange: null })),
@@ -189,10 +190,10 @@ describe("현재 제안에서 사라진 저장 선택", () => {
     const f = await fixture("END", "ISSUE"); f.show();
     fireEvent.click(await screen.findByRole("button", { name: "선택으로 가기" }));
     expect(await screen.findByRole("radio", { name: "그래프" })).toHaveAttribute("aria-checked", "true");
-    const clear = await screen.findByRole("button", { name: /끝내기 선택 해제/ });
+    const clear = await screen.findByRole("button", { name: /대체 선택 해제/ });
     await waitFor(() => expect(clear).toHaveFocus());
     fireEvent.click(clear);
-    await waitFor(() => expect(screen.queryByRole("button", { name: /끝내기 선택 해제/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("button", { name: /대체 선택 해제/ })).toBeNull());
     expect(f.puts).not.toHaveBeenCalled();
   });
 

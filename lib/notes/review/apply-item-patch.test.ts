@@ -13,6 +13,7 @@ const item = (itemId: string, over: Record<string, unknown> = {}) => ({
   content: "배포 일정을 정한다",
   revision: 2,
   included: true,
+  projectSelected: false,
   due: "2026-09-30",
   assignee: null,
   authoredByUserId: null,
@@ -47,6 +48,17 @@ const review = (): MeetingReviewResponseData =>
   }) as unknown as MeetingReviewResponseData;
 
 describe("applyItemPatch", () => {
+  it("반영 선택을 먼저 표시하고 저장 실패 시 이전 선택만 복원합니다", () => {
+    const before = review();
+    const patch = { projectSelected: true };
+    const next = applyItemPatch(before, "A", patch);
+    expect(next.items[0]).toMatchObject({ included: true, projectSelected: true, edited: false });
+    expect(restoreItemFields(next, before.items[0], patch).items[0].projectSelected).toBe(false);
+    const excluded = applyItemPatch(next, "A", { included: false });
+    expect(excluded.items[0].projectSelected).toBe(false);
+    expect(restoreItemFields(excluded, next.items[0], { included: false }).items[0].projectSelected).toBe(true);
+  });
+
   it("그 항목의 포함 여부와 기한만 바꾸고 판은 건드리지 않는다", () => {
     const next = applyItemPatch(review(), "A", { included: false, due: null });
 

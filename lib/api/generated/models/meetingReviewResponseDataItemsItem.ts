@@ -70,4 +70,6 @@ export type MeetingReviewResponseDataItemsItem = {
   suggestedAssignment: MeetingReviewResponseDataItemsItemSuggestedAssignment;
   /** 사람이 저장한 선택. 현재 제안에서 사라진 대상도 포함하므로 재조회 뒤 null PATCH로 해제할 수 있습니다 */
   decisions: MeetingReviewResponseDataItemsItemDecisionsItem[];
+  /** 결정·할 일의 프로젝트 반영 선택. 기본 false이며 검토 완료 때 승인됩니다 */
+  projectSelected: boolean;
 };

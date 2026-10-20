@@ -7,10 +7,12 @@ import type { ReactNode } from "react";
 export function SectionBlock({
   title,
   count,
+  aside,
   children,
 }: {
   title: string;
   count?: number;
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -24,6 +26,7 @@ export function SectionBlock({
             </span>
           )}
         </h2>
+        {aside}
       </div>
       <div className="mt-2 min-w-0">{children}</div>
     </section>

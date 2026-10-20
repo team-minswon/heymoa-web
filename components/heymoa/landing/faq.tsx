@@ -16,7 +16,18 @@ import {
   TimelineRow,
 } from "./app";
 import { ExampleStamp, Scribble, Speech } from "./marks";
-import { APP, BODY, CONTAINER, FOCUS, H2, HAND, MARKER, SECTION_Y, SHADOW, vars } from "./tokens";
+import {
+  APP,
+  BODY,
+  CONTAINER,
+  FOCUS,
+  H2,
+  HAND,
+  MARKER,
+  SECTION_Y,
+  SHADOW,
+  vars,
+} from "./tokens";
 
 /**
  * 자주 묻는 것. tl;dv 의 접이식 FAQ 를 가져왔고, 이 구간의 장치는 **큰 번호 + 작은 앱 조각**이다.
@@ -112,7 +123,12 @@ function RetractedSample() {
             retracted
             title="회의실 예약은 목요일로 잡는다"
           />
-          <TimelineRow at="10:41" tone="decision" kind="결정" title="회의실 예약은 금요일로 옮긴다" />
+          <TimelineRow
+            at="10:41"
+            tone="decision"
+            kind="결정"
+            title="회의실 예약은 금요일로 옮긴다"
+          />
         </TimelineList>
       </div>
     </Sample>
@@ -131,8 +147,15 @@ function ExcludedSample() {
       <MiniBar status="종료됨" tab="요약" size="sm" />
       <div className="px-4 pt-3 pb-3">
         <SectionHead title="결정" count={1} />
-        <DecisionRow text="회의실 예약은 금요일로 옮긴다" at="10:41" className="mt-1" />
-        <DecisionRow text="점심은 김밥으로 한다" at="10:58" open
+        <DecisionRow
+          text="회의실 예약은 금요일로 옮긴다"
+          at="10:41"
+          className="mt-1"
+        />
+        <DecisionRow
+          text="점심은 김밥으로 한다"
+          at="10:58"
+          open
           excluded
           className="border-b-0 [&_.line-through]:text-[var(--el-body)]"
         >
@@ -159,10 +182,11 @@ export const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
     // 설치 앱의 두 입력 전사 수용(`apps/desktop/docs/release.md`)이 끝난 뒤에야 쓴다.
     a: (
       <>
-        <span className={MARKER}>둘 다 됩니다.</span> 브라우저에서 바로 쓸 수 있고, Mac · Windows용
-        데스크톱 앱도 있습니다. 데스크톱 앱에서는 마이크 소리와 컴퓨터에서 나는 소리를 함께 녹음하고,
-        메뉴바에서 타임라인을 볼 수 있습니다. 어느 쪽이든 같은 Google 계정으로 로그인하고 같은 회의
-        기록을 봅니다. Windows판은 베타입니다.
+        <span className={MARKER}>둘 다 됩니다.</span> 브라우저에서 바로 쓸 수
+        있고, Mac · Windows용 데스크톱 앱도 있습니다. 데스크톱 앱에서는 마이크
+        소리와 컴퓨터에서 나는 소리를 함께 녹음하고, 메뉴바에서 타임라인을 볼 수
+        있습니다. 어느 쪽이든 같은 Google 계정으로 로그인하고 같은 회의 기록을
+        봅니다. Windows판은 베타입니다.
       </>
     ),
     more: <SeeLink href="/download">데스크톱 다운로드</SeeLink>,
@@ -173,8 +197,12 @@ export const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
     a: (
       <>
         아니요. 회의를 종료하면 분석을 거쳐 요약 탭에 정리되고,{" "}
-        <span className={MARKER}>사람이 검토 완료를 눌러야 프로젝트에 확정됩니다.</span> 기록
-        중이면 먼저 「중지」를 눌러야 종료할 수 있습니다.
+        <span className={MARKER}>
+          반영할 결정·할 일의 스위치를 켜고 검토 완료를 눌러야 프로젝트에
+          확정됩니다.
+        </span>{" "}
+        선택하지 않은 항목은 회의록에만 남습니다. 기록 중이면 먼저 「중지」를
+        눌러야 종료할 수 있습니다.
       </>
     ),
     more: <SeeLink href="#evidence">그림으로 보기</SeeLink>,
@@ -192,7 +220,7 @@ export const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
   },
   {
     q: "새 결정이 이전 결정을 뒤집으면요?",
-    a: "요약 탭에 「이전 결정 대체」 제안이 붙고, 이전 결정을 끝낼지 이어갈지 골라야 합니다. 고르기 전에는 검토 완료가 눌리지 않습니다.",
+    a: "요약 탭에 「이전 결정 대체」 제안이 붙습니다. 새 결정을 프로젝트에 추가하려면 스위치를 켜고 이전 결정을 대체할지 유지할지 고릅니다.",
     more: <SeeLink href="#meetings">주간 회의 카드에서 보기</SeeLink>,
   },
   {
@@ -203,8 +231,9 @@ export const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
     a: (
       <>
         요약 탭에서 비어 있는 담당과 기한을 채우고, 잘못 잡힌 줄만 고친 다음{" "}
-        <span className={MARKER}>검토 완료를 누르면 됩니다.</span> 회의 중에는 화자가 나뉘지
-        않아서, 누가 누구인지는 끝난 뒤 스크립트 탭에서 붙여 둡니다.
+        <span className={MARKER}>검토 완료를 누르면 됩니다.</span> 회의 중에는
+        화자가 나뉘지 않아서, 누가 누구인지는 끝난 뒤 스크립트 탭에서 붙여
+        둡니다.
       </>
     ),
   },
@@ -233,7 +262,9 @@ export function Faq() {
       id="faq"
       className={`bg-[var(--tv-lav-soft)] [interpolate-size:allow-keywords] ${SECTION_Y.color}`}
     >
-      <Reveal className={`${CONTAINER} grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16`}>
+      <Reveal
+        className={`${CONTAINER} grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16`}
+      >
         <div className="self-start lg:sticky lg:top-24">
           <div className="flex items-center gap-4">
             <h2 className={H2}>자주 묻는 것</h2>
@@ -253,8 +284,17 @@ export function Faq() {
           {/* 농담 — 히어로의 「이번 주 회의록 당번 누구예요?」에 대한 늦은 대답이고(이서연은 마무리
               당번표의 3주 차), 정우재가 06 을 번호로 가리킨다. 질문은 06 이 맡고 말풍선은 상황만
               던진다 — 전에는 「그럼 당번은 이제 뭐 해요?」라 06 질문을 한 구간에서 두 번 읽게 했다. */}
-          <div aria-hidden className="mt-5 flex flex-col items-start gap-2 lg:mt-12">
-            <Speech who="이서연" tone="butter" tilt={-2} anim="reveal" delay={500}>
+          <div
+            aria-hidden
+            className="mt-5 flex flex-col items-start gap-2 lg:mt-12"
+          >
+            <Speech
+              who="이서연"
+              tone="butter"
+              tilt={-2}
+              anim="reveal"
+              delay={500}
+            >
               저 이번 주 당번인데요…
             </Speech>
             <Speech
@@ -282,7 +322,10 @@ export function Faq() {
                 className={`group/sum grid cursor-pointer list-none grid-cols-[48px_minmax(0,1fr)_32px] items-center gap-3 rounded-lg py-5 marker:hidden lg:grid-cols-[64px_minmax(0,1fr)_36px] lg:gap-4 lg:py-6 [&::-webkit-details-marker]:hidden ${FOCUS}`}
               >
                 <span aria-hidden className="justify-self-start">
-                  <span className={NUM} style={vars({ "--d": `${200 + i * 90}ms` })}>
+                  <span
+                    className={NUM}
+                    style={vars({ "--d": `${200 + i * 90}ms` })}
+                  >
                     {String(i + 1).padStart(2, "0")}
                   </span>
                 </span>
