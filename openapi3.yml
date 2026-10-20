@@ -12706,6 +12706,7 @@ components:
                 - conclusions
                 - description
                 - members
+                - memberships
                 - openItemIds
                 - openItems
                 - ordinal
@@ -13014,6 +13015,7 @@ components:
                 - conclusions
                 - description
                 - members
+                - memberships
                 - openItemIds
                 - openItems
                 - ordinal

@@ -28,7 +28,7 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
   /** 주제 서술 문장 */
   sentences: MeetingReviewSummaryResponseDataTopicsItemSentencesItem[];
   /** 주·보조 소속을 구분한 검토 항목. 같은 항목은 주 소속을 우선하며 기존 members는 유지합니다 */
-  memberships?: MeetingReviewSummaryResponseDataTopicsItemMembershipsItem[];
+  memberships: MeetingReviewSummaryResponseDataTopicsItemMembershipsItem[];
   /** 이 주제에 소속된 검토 항목. 분석이 묶은 항목 뒤에 사람이 이 주제에서 추가한 항목이 붙습니다 */
   members: MeetingReviewSummaryResponseDataTopicsItemMembersItem[];
   /**

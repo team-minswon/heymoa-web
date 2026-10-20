@@ -447,15 +447,18 @@ function buildSummary(
       ),
       ...resolved.flatMap((item) => link(decisions[0] ?? center, item, "RESOLVES", "해결")),
     ];
-    // 다른 주제에도 속한 항목은 그 주제의 members 에도 든다(새 계약). 옛 칸 alsoItemIds 도 server ② 전까지 같이 낸다.
+    // 주 소속과 보조 소속을 나누어 서버의 호환 응답과 맞춥니다.
     const also = set.decorated && index === 5 ? [topicItems[0][3]] : [];
     return {
       ordinal: index + 1,
       title: seed.title,
       agendaItemId,
       centerItemId,
-      members: [...items, ...also].map((item) => ({ itemId: item.itemId, kind: item.kind })),
-      memberships: [...items, ...also].map((item) => ({ itemId: item.itemId, secondary: false })),
+      members: items.map((item) => ({ itemId: item.itemId, kind: item.kind })),
+      memberships: [
+        ...items.map((item) => ({ itemId: item.itemId, secondary: false })),
+        ...also.map((item) => ({ itemId: item.itemId, secondary: true })),
+      ],
       alsoItemIds: also.map((item) => item.itemId),
       relations,
       sentences: seed.sentences.map((sentence) => ({
@@ -539,15 +542,18 @@ function seedLargeReview(target: State, noteId: string) {
     ];
     const open = items.filter((row) => (row.kind === "ISSUE" || row.kind === "QUESTION") && random() < 0.5);
     const title = center.kind === "AGENDA" ? center.content : `${words[index % words.length]} ${index + 1}차 논의`;
-    // 다른 주제에도 속한 항목은 이 주제의 members 에도 든다(새 계약). 같은 항목이 이미 있으면 겹쳐 넣지 않는다.
+    // 같은 항목의 주 소속이 있으면 보조 소속을 중복하지 않습니다.
     const also = (random() < 0.4 ? [pick(pick(groups))] : []).filter((row) => !items.includes(row));
     return {
       ordinal: index + 1,
       title,
       agendaItemId: center.kind === "AGENDA" ? center.itemId : null,
       centerItemId: center.itemId,
-      members: [...items, ...also].map((row) => ({ itemId: row.itemId, kind: row.kind })),
-      memberships: [...items, ...also].map((row) => ({ itemId: row.itemId, secondary: false })),
+      members: items.map((row) => ({ itemId: row.itemId, kind: row.kind })),
+      memberships: [
+        ...items.map((row) => ({ itemId: row.itemId, secondary: false })),
+        ...also.map((row) => ({ itemId: row.itemId, secondary: true })),
+      ],
       alsoItemIds: also.map((row) => row.itemId),
       relations,
       sentences: [],
@@ -831,6 +837,7 @@ export const meetingFlowHandlers = [
       // 실패할 수 있는 변환을 모두 끝낸 뒤에 상태를 바꾼다. 400 뒤에 요약만 바뀌어 남으면 안 된다.
       const assignee = assigneeFromRequest(body.assignee, noteId);
       topic?.members.push({ itemId, kind: body.kind });
+      topic?.memberships.push({ itemId, secondary: false });
       review.items.push({
         itemId,
         revision: 1,
