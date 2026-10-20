@@ -249,6 +249,7 @@ export const getGetMeetingReviewSummaryResponseMock =
           centerItemId: "0HZX2K7M9Q4AN",
           members: [{ itemId: "0HZX2K7M9Q4AN", kind: "DECISION" }],
           alsoItemIds: ["0HZX2K7M9Q4AN"],
+          memberships: [{ itemId: "0HZX2K7M9Q4AN", secondary: false }],
           relations: [
             {
               sourceItemId: "0HZX2K7M9Q4AN",
@@ -280,6 +281,7 @@ export const getGetMeetingReviewSummaryResponseMock =
           centerItemId: "0HZX2K7M9Q4AN",
           members: [{ itemId: "0HZX2K7M9Q4AN", kind: "DECISION" }],
           alsoItemIds: ["0HZX2K7M9Q4AN"],
+          memberships: [{ itemId: "0HZX2K7M9Q4AN", secondary: false }],
           relations: [
             {
               sourceItemId: "0HZX2K7M9Q4AN",

@@ -1,4 +1,7 @@
-import { PROJECT_APPROVAL_CASES, type ProjectApprovalCase } from "@/lib/mocks/fixtures/project-approval-cases";
+import {
+  PROJECT_APPROVAL_CASES,
+  type ProjectApprovalCase,
+} from "@/lib/mocks/fixtures/project-approval-cases";
 import {
   isProjectIncluded,
   requiresProjectSelection,
@@ -258,8 +261,13 @@ function store(): State {
   seedSmallReview(state, "01K0000000021", false);
   seedSmallReview(state, "01K0000000024", true);
   seedLargeReview(state, LARGE_REVIEW_NOTE_ID);
-  const requestedCase = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("reviewCase");
-  const selectedCase = PROJECT_APPROVAL_CASES.find((row) => row.key === requestedCase);
+  const requestedCase =
+    typeof window === "undefined"
+      ? null
+      : new URLSearchParams(window.location.search).get("reviewCase");
+  const selectedCase = PROJECT_APPROVAL_CASES.find(
+    (row) => row.key === requestedCase
+  );
   if (selectedCase) seedApprovalCase(state, selectedCase.key);
   return state;
 }
@@ -515,34 +523,78 @@ function seedMentoringReview(
 function seedApprovalCase(target: State, key: ProjectApprovalCase) {
   target.approvalCase = key;
   const review = target.reviews.get(MENTORING_NOTE_ID)!;
-  const decision = review.items.find((item) => item.replacements.some((row) => row.target.endedAt === null))!;
+  const decision = review.items.find((item) =>
+    item.replacements.some((row) => row.target.endedAt === null)
+  )!;
   const action = review.items.find((item) => item.taskChanges.length > 0)!;
-  const select = (item: StoredItem) => { item.projectSelected = true; };
+  const select = (item: StoredItem) => {
+    item.projectSelected = true;
+  };
   const choose = (item: StoredItem, value: "END" | "KEEP") => {
     select(item);
     item.replacements[0].decision = value;
-    item.decisions = [{ targetId: item.replacements[0].target.itemId, decision: value, taskChange: null }];
+    item.decisions = [
+      {
+        targetId: item.replacements[0].target.itemId,
+        decision: value,
+        taskChange: null,
+      },
+    ];
   };
   const chooseTask = (item: StoredItem, value: "APPLY" | "KEEP") => {
     select(item);
     const change = item.taskChanges[0];
     change.decision = value;
-    change.draft = { expectedRevision: change.target.revision, status: change.status, assignee: change.assignee, due: change.due };
-    item.decisions = [{ targetId: change.target.itemId, decision: value, taskChange: change.draft }];
+    change.draft = {
+      expectedRevision: change.target.revision,
+      status: change.status,
+      assignee: change.assignee,
+      due: change.due,
+    };
+    item.decisions = [
+      {
+        targetId: change.target.itemId,
+        decision: value,
+        taskChange: change.draft,
+      },
+    ];
   };
   if (key === "all-selected") {
-    for (const item of review.items) if (item.included && requiresProjectSelection(item.kind)) select(item);
+    for (const item of review.items)
+      if (item.included && requiresProjectSelection(item.kind)) select(item);
   } else if (key === "new-items" || key === "confirmed-mixed") {
-    select(review.items.find((item) => item.kind === "DECISION" && !item.replacements.length)!);
-    select(review.items.find((item) => item.kind === "ACTION_ITEM" && !item.taskChanges.length)!);
+    select(
+      review.items.find(
+        (item) => item.kind === "DECISION" && !item.replacements.length
+      )!
+    );
+    select(
+      review.items.find(
+        (item) => item.kind === "ACTION_ITEM" && !item.taskChanges.length
+      )!
+    );
   } else if (key === "replace-pending") select(decision);
-  else if (key === "replace" || key === "missing-choice") choose(decision, "END");
+  else if (key === "replace" || key === "missing-choice")
+    choose(decision, "END");
   else if (key === "keep") choose(decision, "KEEP");
-  else if (key === "ended") select(review.items.find((item) => item.replacements.some((row) => row.target.endedAt !== null))!);
+  else if (key === "ended")
+    select(
+      review.items.find((item) =>
+        item.replacements.some((row) => row.target.endedAt !== null)
+      )!
+    );
   else if (key === "task-pending" || key === "task-load-error") select(action);
-  else if (key === "task-apply" || key === "stale-task" || key === "duplicate-task") chooseTask(action, "APPLY");
+  else if (
+    key === "task-apply" ||
+    key === "stale-task" ||
+    key === "duplicate-task"
+  )
+    chooseTask(action, "APPLY");
   else if (key === "task-keep") chooseTask(action, "KEEP");
-  else if (key === "excluded") { decision.included = false; decision.projectSelected = false; }
+  else if (key === "excluded") {
+    decision.included = false;
+    decision.projectSelected = false;
+  }
   if (key === "missing-choice") decision.replacements = [];
   if (key === "stale-task") {
     action.taskChanges[0].target.revision -= 1;
@@ -550,12 +602,15 @@ function seedApprovalCase(target: State, key: ProjectApprovalCase) {
     action.decisions[0].taskChange = action.taskChanges[0].draft;
   }
   if (key === "duplicate-task") {
-    const other = review.items.find((item) => item !== action && item.kind === "ACTION_ITEM")!;
+    const other = review.items.find(
+      (item) => item !== action && item.kind === "ACTION_ITEM"
+    )!;
     other.taskChanges = structuredClone(action.taskChanges);
     other.decisions = structuredClone(action.decisions);
     select(other);
   }
-  if (key === "confirmed-mixed") target.flows.set(MENTORING_NOTE_ID, "CONFIRMED");
+  if (key === "confirmed-mixed")
+    target.flows.set(MENTORING_NOTE_ID, "CONFIRMED");
 }
 
 function citationOf(
@@ -653,17 +708,18 @@ function buildSummary(
         link(decisions[0] ?? center, item, "RESOLVES", "해결")
       ),
     ];
-    // 다른 주제에도 속한 항목은 그 주제의 members 에도 든다(새 계약). 옛 칸 alsoItemIds 도 server ② 전까지 같이 낸다.
+    // 주 소속과 보조 소속을 나누어 서버의 호환 응답과 맞춥니다.
     const also = set.decorated && index === 5 ? [topicItems[0][3]] : [];
     return {
       ordinal: index + 1,
       title: seed.title,
       agendaItemId,
       centerItemId,
-      members: [...items, ...also].map((item) => ({
-        itemId: item.itemId,
-        kind: item.kind,
-      })),
+      members: items.map((item) => ({ itemId: item.itemId, kind: item.kind })),
+      memberships: [
+        ...items.map((item) => ({ itemId: item.itemId, secondary: false })),
+        ...also.map((item) => ({ itemId: item.itemId, secondary: true })),
+      ],
       alsoItemIds: also.map((item) => item.itemId),
       relations,
       sentences: seed.sentences.map((sentence) => ({
@@ -807,7 +863,7 @@ function seedLargeReview(target: State, noteId: string) {
       center.kind === "AGENDA"
         ? center.content
         : `${words[index % words.length]} ${index + 1}차 논의`;
-    // 다른 주제에도 속한 항목은 이 주제의 members 에도 든다(새 계약). 같은 항목이 이미 있으면 겹쳐 넣지 않는다.
+    // 같은 항목의 주 소속이 있으면 보조 소속을 중복하지 않습니다.
     const also = (random() < 0.4 ? [pick(pick(groups))] : []).filter(
       (row) => !items.includes(row)
     );
@@ -816,10 +872,11 @@ function seedLargeReview(target: State, noteId: string) {
       title,
       agendaItemId: center.kind === "AGENDA" ? center.itemId : null,
       centerItemId: center.itemId,
-      members: [...items, ...also].map((row) => ({
-        itemId: row.itemId,
-        kind: row.kind,
-      })),
+      members: items.map((row) => ({ itemId: row.itemId, kind: row.kind })),
+      memberships: [
+        ...items.map((row) => ({ itemId: row.itemId, secondary: false })),
+        ...also.map((row) => ({ itemId: row.itemId, secondary: true })),
+      ],
       alsoItemIds: also.map((row) => row.itemId),
       relations,
       sentences: [],
@@ -1054,7 +1111,9 @@ function completeAnalysis(noteId: string) {
 }
 
 export const meetingFlow = {
-  seedApprovalCase(key: ProjectApprovalCase) { seedApprovalCase(store(), key); },
+  seedApprovalCase(key: ProjectApprovalCase) {
+    seedApprovalCase(store(), key);
+  },
   /** 새 분석 주기에 제안이 없는 표본. 저장 선택은 실제 서버처럼 별도로 유지합니다. */
   clearSuggestions(noteId: string) {
     for (const item of reviewOf(noteId).items) {
@@ -1089,7 +1148,13 @@ export const meetingFlow = {
 export const meetingFlowHandlers = [
   http.get("*/v1/workspaces/:workspaceId/projects/:projectId/tasks", () => {
     if (store().approvalCase !== "task-load-error") return undefined;
-    return respond(() => failWith("INTERNAL_SERVER_ERROR", 500, "기존 할 일을 불러오지 못했습니다."));
+    return respond(() =>
+      failWith(
+        "INTERNAL_SERVER_ERROR",
+        500,
+        "기존 할 일을 불러오지 못했습니다."
+      )
+    );
   }),
   http.get("*/v1/notes/:noteId/analyses/flow", ({ params }) =>
     respond(() => {
@@ -1161,6 +1226,7 @@ export const meetingFlowHandlers = [
         // 실패할 수 있는 변환을 모두 끝낸 뒤에 상태를 바꾼다. 400 뒤에 요약만 바뀌어 남으면 안 된다.
         const assignee = assigneeFromRequest(body.assignee, noteId);
         topic?.members.push({ itemId, kind: body.kind });
+        topic?.memberships.push({ itemId, secondary: false });
         review.items.push({
           itemId,
           revision: 1,
@@ -1203,14 +1269,24 @@ export const meetingFlowHandlers = [
           );
         const item = structuredClone(review.items[itemIndex]);
         const target = store();
-      if (noteId === MENTORING_NOTE_ID && !target.saveFaultUsed && (target.approvalCase === "save-error" || target.approvalCase === "save-conflict")) {
-        target.saveFaultUsed = true;
-        if (target.approvalCase === "save-error") failWith("INTERNAL_SERVER_ERROR", 500, "저장하지 못했습니다. 다시 시도해 주세요.");
-        review.reviewVersion += 1;
-        review.items[itemIndex].revision += 1;
-        failWith(...CONFLICT);
-      }
-      if (body.expectedItemRevision !== item.revision) failWith(...CONFLICT);
+        if (
+          noteId === MENTORING_NOTE_ID &&
+          !target.saveFaultUsed &&
+          (target.approvalCase === "save-error" ||
+            target.approvalCase === "save-conflict")
+        ) {
+          target.saveFaultUsed = true;
+          if (target.approvalCase === "save-error")
+            failWith(
+              "INTERNAL_SERVER_ERROR",
+              500,
+              "저장하지 못했습니다. 다시 시도해 주세요."
+            );
+          review.reviewVersion += 1;
+          review.items[itemIndex].revision += 1;
+          failWith(...CONFLICT);
+        }
+        if (body.expectedItemRevision !== item.revision) failWith(...CONFLICT);
         if (
           body.included === null ||
           (body.content !== undefined && !body.content?.trim())

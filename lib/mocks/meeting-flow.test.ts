@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { workspaceOfProject } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
 import { MENTORING_GUEST_IDS, MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
-import { MOCK_STEP_MS, meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
+import { LARGE_REVIEW_NOTE_ID, MOCK_STEP_MS, meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
 import type { MeetingReviewResponseData, UpdateMeetingReviewItemRequest } from "@/lib/api/generated/models";
 
@@ -202,6 +202,17 @@ describe("흐름 상태", () => {
 });
 
 describe("요약", () => {
+  it.each([MENTORING_NOTE_ID, LARGE_REVIEW_NOTE_ID])("소속 응답은 주 소속과 보조 소속을 구분한다: %s", (noteId) => {
+    const summary = meetingFlow.summaryOf(noteId);
+    expect(summary.agendas.flatMap((topic) => topic.memberships).some((member) => member.secondary)).toBe(true);
+    for (const topic of summary.agendas) {
+      expect(topic.memberships.filter((member) => !member.secondary).map((member) => member.itemId))
+        .toEqual(topic.members.map((member) => member.itemId));
+      expect(topic.memberships.filter((member) => member.secondary).map((member) => member.itemId))
+        .toEqual(topic.alsoItemIds);
+    }
+  });
+
   it("검토 화면이 쓰는 세 상태를 모두 낸다", async () => {
     const mentoring = (await api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/summary`)).body.data;
     expect(mentoring.status).toBe("SUCCEEDED");
@@ -269,6 +280,7 @@ describe("검토 항목 추가 · 수정", () => {
     const topic = (await api(summaryPath)).body.data.topics[1];
     expect(topic.members).toHaveLength(before + 1);
     expect(topic.members.at(-1)).toMatchObject({ kind: "DECISION" });
+    expect(topic.memberships.at(-1)).toEqual({ itemId: topic.members.at(-1).itemId, secondary: false });
   });
 
   it("주제 번호가 맞아도 담당 검증이 400 이면 요약 members 를 바꾸지 않는다", async () => {

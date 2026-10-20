@@ -7,6 +7,7 @@
  */
 import type { MeetingReviewSummaryResponseDataTopicsItemConclusionsItem } from "./meetingReviewSummaryResponseDataTopicsItemConclusionsItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemDescriptionItem } from "./meetingReviewSummaryResponseDataTopicsItemDescriptionItem";
+import type { MeetingReviewSummaryResponseDataTopicsItemMembershipsItem } from "./meetingReviewSummaryResponseDataTopicsItemMembershipsItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemMembersItem } from "./meetingReviewSummaryResponseDataTopicsItemMembersItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemOpenItemsItem } from "./meetingReviewSummaryResponseDataTopicsItemOpenItemsItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemRelationsItem } from "./meetingReviewSummaryResponseDataTopicsItemRelationsItem";
@@ -26,6 +27,8 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
   agendaItemId: string | null;
   /** 주제 서술 문장 */
   sentences: MeetingReviewSummaryResponseDataTopicsItemSentencesItem[];
+  /** 주·보조 소속을 구분한 검토 항목. 같은 항목은 주 소속을 우선하며 기존 members는 유지합니다 */
+  memberships: MeetingReviewSummaryResponseDataTopicsItemMembershipsItem[];
   /** 이 주제에 소속된 검토 항목. 분석이 묶은 항목 뒤에 사람이 이 주제에서 추가한 항목이 붙습니다 */
   members: MeetingReviewSummaryResponseDataTopicsItemMembersItem[];
   /**
@@ -55,7 +58,7 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
   openItems: MeetingReviewSummaryResponseDataTopicsItemOpenItemsItem[];
   /** 안건 결론 문장 */
   conclusions: MeetingReviewSummaryResponseDataTopicsItemConclusionsItem[];
-  /** 안건 설명 문장. sentences 를 나눈 것이고 옛 원문 요약은 빈 배열 */
+  /** 안건 설명 문장. 옛 원문 요약에서는 전문과 문장별 항목 참조를 보존합니다 */
   description: MeetingReviewSummaryResponseDataTopicsItemDescriptionItem[];
   /** 안건 완료 여부. 옛 노트는 false */
   completed: boolean;
