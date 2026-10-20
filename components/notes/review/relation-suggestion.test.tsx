@@ -36,7 +36,7 @@ const data: ProjectMeetingLinksResponseData = {
   ],
 };
 
-it("취소 관계의 승격 대상·정확한 판·이유와 원문 이동을 보여 준다", () => {
+it("취소 관계의 대상·이유와 원문 이동을 보여 준다", () => {
   const select = vi.fn(),
     openScript = vi.fn();
   const { relations } = indexMeetingLinks(data, "now", [
@@ -58,7 +58,7 @@ it("취소 관계의 승격 대상·정확한 판·이유와 원문 이동을 �
     />
   );
   expect(screen.getByText("취소")).toBeInTheDocument();
-  expect(screen.getByText("프로젝트 확정 항목 · 판 3")).toBeInTheDocument();
+  expect(screen.getByText("프로젝트 확정 항목")).toBeInTheDocument();
   expect(screen.getByText(data.conflicts[0].reason)).toBeInTheDocument();
   expect(screen.queryByRole("region", { name: "충돌·이어짐" })).toBeNull();
   expect(select).not.toHaveBeenCalled();

@@ -46,6 +46,7 @@ async function chooseTask(decision: "APPLY" | "KEEP" | "APPLIED" | null, draft?:
   const item = current.items.filter((row) => row.taskChanges.length > 0)[at];
   return api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`, "PATCH", {
     expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+    projectSelected: true,
     decisions: [{ targetId: item.taskChanges[0].target.itemId, decision, ...(draft ? { taskChange: draft } : {}) }],
   });
 }
@@ -53,7 +54,7 @@ async function chooseTask(decision: "APPLY" | "KEEP" | "APPLIED" | null, draft?:
 async function approveCurrent() {
   const current = await review(MENTORING_NOTE_ID);
   return api(`/v1/notes/${MENTORING_NOTE_ID}/approval`, "POST", {
-    requestId: "01K0000000099", reviewId: current.reviewId, reviewRevision: current.reviewVersion,
+    requestId: "01K0000000099", reviewId: current.reviewId, reviewRevision: current.reviewVersion, projectSelectionConfirmed: true,
   });
 }
 
@@ -65,6 +66,7 @@ describe("기존 할 일의 검토 초안", () => {
     const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`;
     const chosen = await api(path, "PATCH", {
       expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+      projectSelected: true,
       decisions: [{ targetId: target.itemId, decision, ...(decision === "APPLY" ? { taskChange: { expectedRevision: target.revision, due: { value: "2026-12-05" } } } : {}) }],
     });
     expect(chosen.status).toBe(200);
@@ -96,6 +98,7 @@ describe("기존 할 일의 검토 초안", () => {
     const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`;
     const result = await api(path, "PATCH", {
       expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+      projectSelected: true,
       decisions: [{ targetId: choice.targetId, decision: null }],
     });
     expect(result.status).toBe(400);
@@ -353,6 +356,7 @@ describe("확정", () => {
       requestId: "0K9GVJT2C4Q1Z",
       reviewId: current.reviewId,
       reviewRevision: current.reviewVersion,
+      projectSelectionConfirmed: true,
     });
     expect(approved.status).toBe(200);
     expect(await flow("01K0000000021")).toBe("CONFIRMED");
@@ -368,6 +372,7 @@ describe("확정", () => {
       api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${owner.itemId}`, "PATCH", {
         expectedReviewVersion: current.reviewVersion,
         expectedItemRevision: owner.revision,
+        projectSelected: true,
         decisions,
       });
 
@@ -378,7 +383,7 @@ describe("확정", () => {
     expect(chosen.replacements[0].decision).toBe("END");
 
     const path = `/v1/notes/${MENTORING_NOTE_ID}/approval`;
-    const body = { requestId: "0K9GVJT2C4Q1Z", reviewId: current.reviewId, reviewRevision: current.reviewVersion };
+    const body = { requestId: "0K9GVJT2C4Q1Z", reviewId: current.reviewId, reviewRevision: current.reviewVersion, projectSelectionConfirmed: true };
     expect((await api(path, "POST", { ...body, reviewId: "01KNOPE000000" })).status).toBe(400);
     expect((await api(path, "POST", { ...body, reviewRevision: 1 })).body.error.code).toBe(
       "PROJECT_KNOWLEDGE_CONFLICT"
@@ -389,7 +394,7 @@ describe("확정", () => {
     expect(approved.status).toBe(200);
     expect(await flow(MENTORING_NOTE_ID)).toBe("CONFIRMED");
     const promoted = current.items.filter(
-      (item: { kind: string; included: boolean }) => item.kind === "ACTION_ITEM" && item.included
+      (item: { kind: string; included: boolean; projectSelected: boolean }) => item.kind === "ACTION_ITEM" && item.included && item.projectSelected
     ).length;
     expect((await api(tasksPath())).body.data.tasks.length).toBe(before + promoted);
     const confirmed = (await review(MENTORING_NOTE_ID)).items.find(
@@ -467,5 +472,54 @@ describe("할 일", () => {
   it("다른 워크스페이스의 프로젝트로는 읽을 수 없다", async () => {
     const projectId = mockDb.getNote(MENTORING_NOTE_ID).projectId;
     expect((await api(`/v1/workspaces/01KNOPE000000/projects/${projectId}/tasks`)).status).toBe(404);
+  });
+});
+
+describe("명시적 프로젝트 반영", () => {
+  it("처음에는 모두 OFF이며 하나만 골라 승인하면 그 결정만 반영하고 회의록은 유지합니다", async () => {
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    expect(current.items.filter((row) => row.kind === "DECISION" || row.kind === "ACTION_ITEM").every((row) => !row.projectSelected)).toBe(true);
+    const picked = current.items.find((row) => row.kind === "DECISION" && !row.replacements.length)!;
+    const saved = await api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${picked.itemId}`, "PATCH", {
+      expectedReviewVersion: current.reviewVersion, expectedItemRevision: picked.revision, projectSelected: true,
+    });
+    expect(saved.status).toBe(200);
+    const before = (await api(tasksPath())).body.data.tasks.length;
+    const approved = await approveCurrent();
+    expect(approved.status).toBe(200);
+    const approvedIds = approved.body.data.items.map((row: { review: { itemId: string } }) => row.review.itemId);
+    expect(approvedIds).toContain(picked.itemId);
+    expect(approvedIds.filter((id: string) => current.items.some((row) => row.itemId === id && (row.kind === "DECISION" || row.kind === "ACTION_ITEM")))).toEqual([picked.itemId]);
+    expect((await api(tasksPath())).body.data.tasks.length).toBe(before);
+    expect((await review(MENTORING_NOTE_ID)).items).toHaveLength(current.items.length);
+  });
+
+  it("선택 확인이 없는 이전 화면의 승인 요청은 거절합니다", async () => {
+    const current = await review(MENTORING_NOTE_ID);
+    expect((await api(`/v1/notes/${MENTORING_NOTE_ID}/approval`, "POST", { requestId: "old", reviewId: current.reviewId, reviewRevision: current.reviewVersion })).status).toBe(400);
+    expect(await flow(MENTORING_NOTE_ID)).toBe("REVIEWABLE");
+  });
+
+  it("반영을 해제하면 저장된 대체 선택을 실행하지 않습니다", async () => {
+    meetingFlow.seedApprovalCase("replace");
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const selected = current.items.find((row) => row.projectSelected)!;
+    expect((await api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${selected.itemId}`, "PATCH", { expectedReviewVersion: current.reviewVersion, expectedItemRevision: selected.revision, projectSelected: false })).status).toBe(200);
+    expect((await approveCurrent()).status).toBe(200);
+    const after: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    expect(after.items.find((row) => row.itemId === selected.itemId)!.replacements[0].target.endedAt).toBeNull();
+  });
+
+  it.each(["save-error", "save-conflict"] as const)("%s 이후 다시 선택할 수 있습니다", async (key) => {
+    meetingFlow.seedApprovalCase(key);
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const item = current.items.find((row) => row.kind === "DECISION")!;
+    const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`;
+    const patch = (version: number, revision: number) => api(path, "PATCH", { expectedReviewVersion: version, expectedItemRevision: revision, projectSelected: true });
+    expect((await patch(current.reviewVersion, item.revision)).status).toBe(key === "save-error" ? 500 : 409);
+    const latest: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const found = latest.items.find((row) => row.itemId === item.itemId)!;
+    expect(found.projectSelected).toBe(false);
+    expect((await patch(latest.reviewVersion, found.revision)).status).toBe(200);
   });
 });

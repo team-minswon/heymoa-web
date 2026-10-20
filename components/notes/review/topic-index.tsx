@@ -191,7 +191,7 @@ function ContinuedFrom({
           ) : (
             note.title
           )}
-          에서 이어짐{note.noteId !== noteId ? ` · ${note.agendaTitle}` : ""}
+          에서 이어짐
         </span>
       ))}
     </span>

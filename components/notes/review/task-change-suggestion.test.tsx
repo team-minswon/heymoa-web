@@ -35,7 +35,7 @@ describe("기존 할 일 변경 초안", () => {
     expect(initial.onChoose).toHaveBeenCalledWith("change", draft);
 
     rerender(<TaskChangeSuggestion {...initial} choice="change" change={{ ...change, decision: "APPLY", draft }} />);
-    expect(screen.getByText("검토 완료 때 적용됩니다.")).toBeInTheDocument();
+    expect(screen.queryByText("검토 완료 때 적용됩니다.")).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
     fireEvent.click(screen.getByRole("radio", { name: "넘기기" }));
     expect(initial.onChoose).toHaveBeenLastCalledWith("keep", draft);

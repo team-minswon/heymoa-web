@@ -38,6 +38,7 @@ const item = (over: Partial<ReviewItem> & Pick<ReviewItem, "itemId" | "kind">): 
   revision: 1,
   content: over.itemId,
   included: true,
+  projectSelected: true,
   edited: false,
   authoredByUserId: null,
   originalProposalRef: null,
@@ -200,12 +201,12 @@ describe("trailOf", () => {
 
   it("최근 단계가 위고, 인용 줄에 앞뒤 한 줄과 역할이 붙는다", () => {
     const steps = trailOf({
-      revisions: [revision(1, "CREATE", 1, "처음"), revision(2, "CORRECT", 4, "고침")],
+      revisions: [revision(2, "CORRECT", 4, "고침"), revision(1, "CREATE", 1, "처음")],
       segments,
       currentContent: "고침",
       edited: false,
     });
-    expect(steps.map((step) => step.label)).toEqual(["고쳐 말함", "처음 나옴"]);
+    expect(steps.map((step) => step.revision)).toEqual([2, 1]);
     expect(steps[0].lines.map((line) => line.segmentId)).toEqual(["s3", "s4", "s5"]);
     expect(steps[0].lines.find((line) => line.segmentId === "s4")?.role).toBe("REFUTES");
   });
@@ -217,7 +218,7 @@ describe("trailOf", () => {
       currentContent: "사람이 고침",
       edited: true,
     });
-    expect(steps[0]).toMatchObject({ label: "검토에서 수정", content: "처음 → 사람이 고침", lines: [] });
+    expect(steps[0]).toMatchObject({ revision: null, content: "처음 → 사람이 고침", lines: [] });
   });
 });
 
@@ -321,6 +322,14 @@ describe("topicDigests", () => {
 });
 
 describe("linkedItemsOf", () => {
+  it("관계를 짧은 이름으로 표시합니다", () => {
+    const summary = { agendas: [{ members: [], relations: [
+      { sourceItemId: "decision", targetItemId: "task", kind: "LEADS_TO", label: "후속" },
+    ] }] } as unknown as MeetingReviewSummary;
+    expect(linkedItemsOf(summary, "decision")).toEqual([{ itemId: "task", label: "연결" }]);
+    expect(linkedItemsOf(summary, "task")).toEqual([{ itemId: "decision", label: "연결" }]);
+  });
+
   it("주제의 안건 항목에서 나가는 소속 관계는 관련 항목이 아니다", () => {
     const relation = (sourceItemId: string, targetItemId: string, label: string) => ({ sourceItemId, targetItemId, kind: "X", label });
     const summary = {
@@ -334,4 +343,14 @@ describe("linkedItemsOf", () => {
     } as unknown as MeetingReviewSummary;
     expect(linkedItemsOf(summary, "d")).toEqual([{ itemId: "t", label: "후속" }]);
   });
+});
+
+it("미선택 결정과 할 일은 반영 개수와 제안 확인 대상에서 빠지지만 회의록에는 남습니다", () => {
+  const rows = [
+    item({ itemId: "d", kind: "DECISION", projectSelected: false, replacements: [replacement("old")] }),
+    item({ itemId: "t", kind: "ACTION_ITEM", projectSelected: false }),
+  ];
+  expect(unchosenSuggestionCount(rows, () => true)).toBe(0);
+  expect(confirmSummaryOf(rows).newTasks).toBe(0);
+  expect(sectionsOf(rows, () => null).flatMap((section) => section.items)).toHaveLength(2);
 });

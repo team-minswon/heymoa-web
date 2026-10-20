@@ -3,17 +3,7 @@ import type {
   TranscriptResponseDataSegmentsItem,
 } from "@/lib/api/generated/models";
 
-type Operation = ProposalRevision["operation"];
 type Role = ProposalRevision["citations"][number]["role"];
-
-/** 회의 중 항목이 바뀐 방식. 사람이 회의에서 한 말로 부른다. */
-export const OPERATION_LABEL: Record<Operation, string> = {
-  CREATE: "처음 나옴",
-  AMEND: "덧붙임",
-  CORRECT: "고쳐 말함",
-  RETRACT: "취소함",
-  RESOLVE: "답이 나옴",
-};
 
 /** 인용된 줄이 그 항목에 한 역할. 뒷받침하는 줄은 표시하지 않는다 — 대부분이 그렇다. */
 export const CITATION_ROLE_LABEL: Partial<Record<Role, string>> = {
@@ -35,7 +25,7 @@ export type TrailLine = {
 
 export type TrailStep = {
   key: string;
-  label: string;
+  revision: number | null;
   content: string;
   /** 스크립트가 없는 단계(검토에서 수정)는 `null` */
   startedAtMs: number | null;
@@ -62,9 +52,14 @@ export function trailOf({
   edited: boolean;
   context?: number;
 }): TrailStep[] {
-  const position = new Map(segments.map((row, index) => [row.segmentId, index]));
-  const steps = revisions.map((revision): TrailStep => {
-    const roles = new Map(revision.citations.map((row) => [row.segmentId, row.role]));
+  const position = new Map(
+    segments.map((row, index) => [row.segmentId, index])
+  );
+  const ordered = [...revisions].sort((a, b) => a.revision - b.revision);
+  const steps = ordered.map((revision): TrailStep => {
+    const roles = new Map(
+      revision.citations.map((row) => [row.segmentId, row.role])
+    );
     const indexes = new Set<number>();
     for (const citation of revision.citations) {
       const at = position.get(citation.segmentId);
@@ -88,18 +83,18 @@ export function trailOf({
       });
     return {
       key: `r${revision.revision}`,
-      label: OPERATION_LABEL[revision.operation],
+      revision: revision.revision,
       content: revision.content,
       startedAtMs: revision.citations[0]?.startedAtMs ?? null,
       lines,
     };
   });
 
-  const last = revisions[revisions.length - 1];
+  const last = ordered[ordered.length - 1];
   if (edited && (!last || last.content !== currentContent)) {
     steps.push({
       key: "review-edit",
-      label: "검토에서 수정",
+      revision: null,
       content: last ? `${last.content} → ${currentContent}` : currentContent,
       startedAtMs: null,
       lines: [],

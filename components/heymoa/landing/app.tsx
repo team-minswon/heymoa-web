@@ -79,7 +79,9 @@ export function Face({
   size?: number;
   className?: string;
 }) {
-  return <PersonAvatar name={FACE[who] ?? who} size={size} className={className} />;
+  return (
+    <PersonAvatar name={FACE[who] ?? who} size={size} className={className} />
+  );
 }
 
 /** 아직 이름이 안 붙은 화자의 얼굴. `label` 은 「A」 같은 화자 라벨(`unnamedSpeakerAvatarKey`). */
@@ -280,12 +282,21 @@ export function MiniBar({
       <span className={cn("flex min-w-0 flex-auto items-center gap-2", row)}>
         <StatusChip status={status} />
         {title ? (
-          <span className={cn("w-0 grow truncate text-[13px] font-semibold", APP.ink)}>
+          <span
+            className={cn(
+              "w-0 grow truncate text-[13px] font-semibold",
+              APP.ink
+            )}
+          >
             {title}
           </span>
         ) : null}
       </span>
-      <TabStrip active={tab} size={size} className={cn("-mb-px self-stretch", row)} />
+      <TabStrip
+        active={tab}
+        size={size}
+        className={cn("-mb-px self-stretch", row)}
+      />
     </div>
   );
 }
@@ -379,12 +390,16 @@ export function ReviewHead({
           "m-0 font-medium tracking-[-0.4px] break-keep",
           APP.ink,
           state && "mt-2.5",
-          titleSize === "lg" ? "text-[28px] leading-[38px]" : "text-[24px] leading-[32px]"
+          titleSize === "lg"
+            ? "text-[28px] leading-[38px]"
+            : "text-[24px] leading-[32px]"
         )}
       >
         {title}
       </p>
-      {chips ? <div className="mt-3 flex flex-wrap items-center gap-1.5">{chips}</div> : null}
+      {chips ? (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">{chips}</div>
+      ) : null}
     </header>
   );
 }
@@ -402,11 +417,22 @@ export function SectionHead({
   className?: string;
 }) {
   return (
-    <div className={cn("flex h-7 items-center justify-between gap-3", className)}>
-      <p className={cn("m-0 flex items-baseline gap-[7px] text-[16px] font-semibold", APP.ink)}>
+    <div
+      className={cn("flex h-7 items-center justify-between gap-3", className)}
+    >
+      <p
+        className={cn(
+          "m-0 flex items-baseline gap-[7px] text-[16px] font-semibold",
+          APP.ink
+        )}
+      >
         {title}
         {count === undefined ? null : (
-          <span className={cn("text-[13px] font-normal tabular-nums", APP.muted)}>{count}</span>
+          <span
+            className={cn("text-[13px] font-normal tabular-nums", APP.muted)}
+          >
+            {count}
+          </span>
         )}
       </p>
       <span className="flex items-center gap-2">
@@ -431,10 +457,18 @@ const ROW_CONTENT = "block min-w-0 break-keep text-[15px] leading-6";
  */
 const ROW_LINE = "tv-row border-b";
 
-function RowChevron({ open, className }: { open: boolean; className?: string }) {
+function RowChevron({
+  open,
+  className,
+}: {
+  open: boolean;
+  className?: string;
+}) {
   return (
     <span aria-hidden className={cn("flex justify-end", APP.faint, className)}>
-      <ChevronDown className={cn("size-4", open && "rotate-180 text-[var(--el-ink)]")} />
+      <ChevronDown
+        className={cn("size-4", open && "rotate-180 text-[var(--el-ink)]")}
+      />
     </span>
   );
 }
@@ -510,8 +544,12 @@ export function DecisionRow({
         </span>
         <RowChevron open={open} />
       </div>
-      {suggestions ? <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div> : null}
-      {open && children ? <div className="space-y-2.5 pt-1 pb-3.5 sm:pl-7">{children}</div> : null}
+      {suggestions ? (
+        <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div>
+      ) : null}
+      {open && children ? (
+        <div className="space-y-2.5 pt-1 pb-3.5 sm:pl-7">{children}</div>
+      ) : null}
     </div>
   );
 }
@@ -521,13 +559,25 @@ function Assignee({ who }: { who: { name: string } | { label: string } }) {
   const unnamed = "label" in who;
   return (
     <span className="inline-flex h-7 min-w-0 items-center">
-      <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-[13px]", APP.ink)}>
-        {unnamed ? <SpeakerFace label={who.label} size={18} /> : <Face who={who.name} size={18} />}
+      <span
+        className={cn(
+          "inline-flex min-w-0 items-center gap-1.5 text-[13px]",
+          APP.ink
+        )}
+      >
+        {unnamed ? (
+          <SpeakerFace label={who.label} size={18} />
+        ) : (
+          <Face who={who.name} size={18} />
+        )}
         <span className={cn("truncate", unnamed && APP.muted)}>
           {unnamed ? `화자 ${who.label}` : who.name}
         </span>
         {unnamed ? (
-          <span aria-hidden className="size-[5px] shrink-0 rounded-full bg-[var(--el-muted-soft)]" />
+          <span
+            aria-hidden
+            className="size-[5px] shrink-0 rounded-full bg-[var(--el-muted-soft)]"
+          />
         ) : null}
       </span>
     </span>
@@ -581,11 +631,14 @@ export function TaskRow({
   children?: ReactNode;
   className?: string;
 }) {
-  const dueChip = due === undefined ? null : <Due due={due} editable={editable} />;
+  const dueChip =
+    due === undefined ? null : <Due due={due} editable={editable} />;
   const assignee = who ? (
     <Assignee who={who} />
   ) : editable ? (
-    <span className={cn("inline-flex h-7 items-center text-[13px]", APP.muted)}>담당 정하기</span>
+    <span className={cn("inline-flex h-7 items-center text-[13px]", APP.muted)}>
+      담당 정하기
+    </span>
   ) : null;
   return (
     <div className={cn(ROW_LINE, APP.lineSoft, className)}>
@@ -628,8 +681,12 @@ export function TaskRow({
           className={cn("col-start-3 row-start-1", wide && "sm:col-start-5")}
         />
       </div>
-      {suggestions ? <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div> : null}
-      {open && children ? <div className="space-y-2.5 pt-1 pb-3.5 sm:pl-7">{children}</div> : null}
+      {suggestions ? (
+        <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div>
+      ) : null}
+      {open && children ? (
+        <div className="space-y-2.5 pt-1 pb-3.5 sm:pl-7">{children}</div>
+      ) : null}
     </div>
   );
 }
@@ -678,7 +735,8 @@ export function EvidenceQuotes({
           <span className="flex min-w-0 flex-col">
             <span className={cn("text-[12.5px] leading-5", APP.muted)}>
               <span className={cn("font-medium", APP.body)}>
-                {quote.who ?? (quote.label ? `화자 ${quote.label}` : "화자 없음")}
+                {quote.who ??
+                  (quote.label ? `화자 ${quote.label}` : "화자 없음")}
               </span>
               {" · "}
               <span className="tabular-nums">{quote.at}</span>
@@ -759,7 +817,10 @@ const BAR = {
   ),
   plate:
     "relative flex min-h-[50px] max-w-full flex-wrap items-center gap-x-3.5 gap-y-1 rounded-[12px] bg-[var(--el-canvas)] py-[7px] pr-[7px] pl-4",
-  dock: cn("flex flex-wrap items-center gap-x-3 gap-y-2 border-t bg-white px-4 py-3", APP.lineSoft),
+  dock: cn(
+    "flex flex-wrap items-center gap-x-3 gap-y-2 border-t bg-white px-4 py-3",
+    APP.lineSoft
+  ),
 } as const;
 
 /**
@@ -816,7 +877,9 @@ export function ConfirmBar({
           )}
         >
           <span className="whitespace-nowrap">
-            결정 <Count value={state.decisions} />개와 할 일 <Count value={state.tasks} />개를
+            선택한 결정 <Count value={state.decisions} />
+            개와 할 일 <Count value={state.tasks} />
+            개를
           </span>{" "}
           <span className="whitespace-nowrap">프로젝트에 올립니다</span>
           {state.ended ? (
@@ -830,12 +893,17 @@ export function ConfirmBar({
         </span>
       )}
       {pill ? null : (
-        <span aria-hidden className="hidden h-5 w-px bg-[var(--el-hairline)] sm:block" />
+        <span
+          aria-hidden
+          className="hidden h-5 w-px bg-[var(--el-hairline)] sm:block"
+        />
       )}
       <span
         className={cn(
           "relative ml-auto inline-flex shrink-0 items-center font-medium",
-          pill ? "h-8 rounded-full px-3.5 text-[12.5px]" : "h-9 rounded-[9px] px-4 text-[13px]",
+          pill
+            ? "h-8 rounded-full px-3.5 text-[12.5px]"
+            : "h-9 rounded-[9px] px-4 text-[13px]",
           APP.primary,
           state.kind === "unchosen" && "opacity-50"
         )}
@@ -849,9 +917,10 @@ export function ConfirmBar({
 
 /* ── 제안(이전 결정 대체) ─────────────────────────────────────────────── */
 
-/** 「끝내기 / 이어가기」 두 칸의 클래스(`choice-toggle.tsx`). 진짜 `role="radio"` 버튼은 구간이 이걸로 만든다. */
+/** 「대체 / 유지」 두 칸의 클래스(`choice-toggle.tsx`). 진짜 `role="radio"` 버튼은 구간이 이걸로 만든다. */
 export const CHOICE = {
-  group: "inline-flex shrink-0 rounded-full bg-[var(--el-surface-strong)] p-0.5",
+  group:
+    "inline-flex shrink-0 rounded-full bg-[var(--el-surface-strong)] p-0.5",
   option:
     "inline-flex h-[22px] items-center gap-1 rounded-full border border-transparent px-2.5 text-[11.5px] font-medium whitespace-nowrap text-[var(--el-muted)]",
   changeOn:
@@ -883,16 +952,29 @@ export function ReplacementRow({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-[8px] px-3 py-2.5 text-[12.5px]", APP.softBg, APP.body, className)}>
+    <div
+      className={cn(
+        "rounded-[8px] px-3 py-2.5 text-[12.5px]",
+        APP.softBg,
+        APP.body,
+        className
+      )}
+    >
       <div className="grid grid-cols-1 items-center justify-items-start gap-x-3 gap-y-1.5">
-        <span className={cn("text-[12px] whitespace-nowrap", APP.muted)}>이전 결정 대체</span>
+        <span className={cn("text-[12px] whitespace-nowrap", APP.muted)}>
+          이전 결정 대체
+        </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <span className={cn("break-keep", APP.ink)}>{target}</span>
           <span className={cn("text-[12px]", APP.muted)}>{meta}</span>
         </span>
         {toggle}
       </div>
-      {reason ? <p className={cn("m-0 mt-1.5 text-[12px] break-keep", APP.muted)}>{reason}</p> : null}
+      {reason ? (
+        <p className={cn("m-0 mt-1.5 text-[12px] break-keep", APP.muted)}>
+          {reason}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -924,7 +1006,8 @@ export function AgendaHead({
   as?: "div" | "button" | "h3" | "h4";
   className?: string;
 } & Omit<HTMLAttributes<HTMLElement>, "title">) {
-  const buttonProps: Record<string, string> = Tag === "button" ? { type: "button" } : {};
+  const buttonProps: Record<string, string> =
+    Tag === "button" ? { type: "button" } : {};
   return (
     <Tag
       {...buttonProps}
@@ -935,7 +1018,11 @@ export function AgendaHead({
       {...rest}
     >
       {range ? (
-        <span className={cn("shrink-0 px-2 text-[12px] tabular-nums", APP.muted)}>{range}</span>
+        <span
+          className={cn("shrink-0 px-2 text-[12px] tabular-nums", APP.muted)}
+        >
+          {range}
+        </span>
       ) : null}
       <span
         className={cn(
@@ -943,14 +1030,28 @@ export function AgendaHead({
           range ? "pl-1" : "pl-2"
         )}
       >
-        <span className={cn("min-w-0 truncate text-[15px] font-semibold", APP.ink)}>{title}</span>
-        <span className={cn("-ml-1 shrink-0 text-[12.5px] tabular-nums", APP.muted)}>{total}</span>
+        <span
+          className={cn("min-w-0 truncate text-[15px] font-semibold", APP.ink)}
+        >
+          {title}
+        </span>
+        <span
+          className={cn("-ml-1 shrink-0 text-[12.5px] tabular-nums", APP.muted)}
+        >
+          {total}
+        </span>
         <ChevronRight
           aria-hidden
-          className={cn("-ml-1.5 size-3.5 shrink-0", APP.faint, open && "rotate-90")}
+          className={cn(
+            "-ml-1.5 size-3.5 shrink-0",
+            APP.faint,
+            open && "rotate-90"
+          )}
         />
         <span className="flex-1" />
-        {live ? <LiveChip dotClassName={blink ? "tv-blink" : undefined} /> : null}
+        {live ? (
+          <LiveChip dotClassName={blink ? "tv-blink" : undefined} />
+        ) : null}
       </span>
     </Tag>
   );
@@ -1023,7 +1124,12 @@ export function TimelineRow({
         className
       )}
     >
-      <span className={cn("self-start text-right text-[12px] leading-6 tabular-nums", APP.muted)}>
+      <span
+        className={cn(
+          "self-start text-right text-[12px] leading-6 tabular-nums",
+          APP.muted
+        )}
+      >
         {at}
       </span>
       <span className="flex justify-center pt-1">
@@ -1049,7 +1155,11 @@ export function TimelineRow({
               {parts.map((part) => (
                 <span key={part.text}>
                   <Dots />
-                  <span className={part.error ? cn("font-medium", APP.recStrong) : undefined}>
+                  <span
+                    className={
+                      part.error ? cn("font-medium", APP.recStrong) : undefined
+                    }
+                  >
                     {part.text}
                   </span>
                 </span>
@@ -1065,17 +1175,32 @@ export function TimelineRow({
           />
         </div>
         {open && cites?.length ? (
-          <div className={cn("mt-2.5 overflow-hidden rounded-[10px] border", APP.line)}>
+          <div
+            className={cn(
+              "mt-2.5 overflow-hidden rounded-[10px] border",
+              APP.line
+            )}
+          >
             <ul className="m-0 flex list-none flex-col gap-0.5 px-2 py-2">
               {cites.map((cite) => (
                 <li
                   key={cite.at}
                   className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 rounded-[7px] px-1.5 py-1"
                 >
-                  <span className={cn("text-[12px] leading-[22px] tabular-nums", APP.muted)}>
+                  <span
+                    className={cn(
+                      "text-[12px] leading-[22px] tabular-nums",
+                      APP.muted
+                    )}
+                  >
                     {cite.at}
                   </span>
-                  <span className={cn("break-keep text-[14px] leading-[22px]", APP.bodyStrong)}>
+                  <span
+                    className={cn(
+                      "break-keep text-[14px] leading-[22px]",
+                      APP.bodyStrong
+                    )}
+                  >
                     {cite.text}
                   </span>
                 </li>
@@ -1115,7 +1240,9 @@ export function ScriptRow({
       className={cn(
         "grid grid-cols-[58px_minmax(0,1fr)] gap-4 py-4 sm:grid-cols-[66px_minmax(0,1fr)] sm:gap-6",
         // 받아 적는 줄도 `tv-row` 다 — 그 위 줄은 뒤에 줄이 있으니 앱처럼 선을 지킨다.
-        live ? cn("tv-row -mx-4 rounded-[6px] px-4", APP.softBg) : cn(ROW_LINE, APP.line),
+        live
+          ? cn("tv-row -mx-4 rounded-[6px] px-4", APP.softBg)
+          : cn(ROW_LINE, APP.line),
         className
       )}
     >
@@ -1126,21 +1253,38 @@ export function ScriptRow({
             APP.muted
           )}
         >
-          <span aria-hidden className="size-1.5 shrink-0 animate-pulse rounded-full bg-red-500" />
+          <span
+            aria-hidden
+            className="size-1.5 shrink-0 animate-pulse rounded-full bg-red-500"
+          />
           받아 적는 중
         </span>
       ) : (
-        <span className={cn("pt-1 font-mono text-[11px] tabular-nums", APP.muted)}>{at}</span>
+        <span
+          className={cn("pt-1 font-mono text-[11px] tabular-nums", APP.muted)}
+        >
+          {at}
+        </span>
       )}
       <div className="min-w-0">
         {speaker ? (
           <span
-            className={cn("mb-1 inline-flex items-center gap-1.5 text-[13px] font-medium", APP.muted)}
+            className={cn(
+              "mb-1 inline-flex items-center gap-1.5 text-[13px] font-medium",
+              APP.muted
+            )}
           >
-            {unnamed ? <SpeakerFace label={speaker.label} /> : <Face who={speaker.name} />}
+            {unnamed ? (
+              <SpeakerFace label={speaker.label} />
+            ) : (
+              <Face who={speaker.name} />
+            )}
             {unnamed ? `화자 ${speaker.label}` : speaker.name}
             {unnamed ? (
-              <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-[var(--el-muted-soft)]" />
+              <span
+                aria-hidden
+                className="size-1.5 shrink-0 rounded-full bg-[var(--el-muted-soft)]"
+              />
             ) : null}
           </span>
         ) : null}
@@ -1168,14 +1312,28 @@ export function ScriptRow({
 /** 오른쪽 레일의 머리(`note-agent-rail.tsx`). 「내 에이전트 · 나만 보는 대화 · 현재 회의 범위」 + 접기. */
 export function RailHead({ className }: { className?: string }) {
   return (
-    <div className={cn("flex h-12 shrink-0 items-center gap-2 border-b pr-2 pl-4", APP.line, className)}>
+    <div
+      className={cn(
+        "flex h-12 shrink-0 items-center gap-2 border-b pr-2 pl-4",
+        APP.line,
+        className
+      )}
+    >
       <Sparkles aria-hidden className={cn("size-[15px] shrink-0", APP.ink)} />
-      <span className={cn("shrink-0 text-[13px] font-semibold", APP.ink)}>내 에이전트</span>
+      <span className={cn("shrink-0 text-[13px] font-semibold", APP.ink)}>
+        내 에이전트
+      </span>
       <span className={cn("min-w-0 truncate text-[12px]", APP.muted)}>
         나만 보는 대화 · 현재 회의 범위
       </span>
       <span className="flex-1" />
-      <span aria-hidden className={cn("flex size-8 shrink-0 items-center justify-center", APP.muted)}>
+      <span
+        aria-hidden
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center",
+          APP.muted
+        )}
+      >
         <PanelRightClose className="size-4" />
       </span>
     </div>
@@ -1183,10 +1341,29 @@ export function RailHead({ className }: { className?: string }) {
 }
 
 /** 대화 제목 줄(`personal-chat.tsx` header). 제목 + 새 대화(＋) · 기록. */
-export function ThreadTitle({ title, className }: { title: string; className?: string }) {
+export function ThreadTitle({
+  title,
+  className,
+}: {
+  title: string;
+  className?: string;
+}) {
   return (
-    <div className={cn("flex items-center gap-1 border-b py-3 pr-3 pl-5", APP.line, className)}>
-      <span className={cn("min-w-0 flex-1 truncate text-[14px] font-medium", APP.ink)}>{title}</span>
+    <div
+      className={cn(
+        "flex items-center gap-1 border-b py-3 pr-3 pl-5",
+        APP.line,
+        className
+      )}
+    >
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-[14px] font-medium",
+          APP.ink
+        )}
+      >
+        {title}
+      </span>
       <span aria-hidden className={cn("flex items-center", APP.ink)}>
         <span className="flex size-8 items-center justify-center">
           <Plus className="size-4" />
@@ -1248,9 +1425,23 @@ export function UserBubble({
 }
 
 /** 에이전트의 답(`markdown.tsx` 본문). 말풍선 없이 본문 글자로 선다. */
-export function Answer({ children, className }: { children: ReactNode; className?: string }) {
+export function Answer({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <p className={cn("m-0 text-[14px] leading-[1.65] break-keep", APP.body, className)}>{children}</p>
+    <p
+      className={cn(
+        "m-0 text-[14px] leading-[1.65] break-keep",
+        APP.body,
+        className
+      )}
+    >
+      {children}
+    </p>
   );
 }
 
@@ -1326,7 +1517,10 @@ export function Composer({
       ) : (
         <span
           aria-hidden
-          className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", APP.primary)}
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-full",
+            APP.primary
+          )}
         >
           <ArrowUp className="size-4" />
         </span>

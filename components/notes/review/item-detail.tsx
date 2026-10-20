@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import type { ReviewItem } from "@/lib/notes/review/sections";
-import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
+import {
+  summaryTopics,
+  topicKey,
+  type MeetingReviewSummary,
+} from "@/lib/notes/review/summary";
 import { linkedItemsOf } from "@/lib/notes/review/topics";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +23,7 @@ export function ItemDetail({
   trail,
   elevated = false,
   onSelectItem,
+  onSelectAgenda,
 }: {
   item: ReviewItem;
   summary: MeetingReviewSummary | null;
@@ -27,8 +32,15 @@ export function ItemDetail({
   trail: ReactNode;
   elevated?: boolean;
   onSelectItem: (itemId: string) => void;
+  onSelectAgenda?: (agendaId: string) => void;
 }) {
   // 열 수 있는 항목으로 거른 뒤 넷까지 — 먼저 자르면 앞 넷이 없는 항목일 때 뒤의 것까지 사라진다.
+  const agendas = summaryTopics(summary).filter(
+    (topic) =>
+      topic.agendaItemId === item.itemId ||
+      topic.members.some((member) => member.itemId === item.itemId) ||
+      (topic.alsoItemIds ?? []).includes(item.itemId)
+  );
   const linked = linkedItemsOf(summary, item.itemId)
     .flatMap((row) => {
       const other = itemsById.get(row.itemId);
@@ -37,7 +49,38 @@ export function ItemDetail({
     .slice(0, 4);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {summary?.status === "SUCCEEDED" ? (
+        <section aria-label="연결된 안건" className="px-1">
+          <h3 className="text-xs font-medium text-[var(--el-muted)]">
+            연결된 안건
+          </h3>
+          {agendas.length > 0 ? (
+            <ul className="mt-1.5 space-y-1 border-l-2 border-[var(--el-hairline-strong)] pl-3 text-sm leading-6 text-[var(--el-ink)]">
+              {agendas.map((agenda) => (
+                <li key={topicKey(agenda)}>
+                  {agenda.agendaId && onSelectAgenda ? (
+                    <a
+                      href={`#summary-agenda-${agenda.agendaId}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        onSelectAgenda(agenda.agendaId!);
+                      }}
+                      className="block py-1 underline decoration-[var(--el-hairline-strong)] underline-offset-4 hover:decoration-current"
+                    >
+                      {agenda.title}
+                    </a>
+                  ) : (
+                    agenda.title
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm text-[var(--el-muted)]">없음</p>
+          )}
+        </section>
+      ) : null}
       {suggestions}
       <div
         className={cn(
@@ -45,23 +88,40 @@ export function ItemDetail({
           elevated && "shadow-e2"
         )}
       >
-        <div className="px-4 pt-3.5 pb-2.5">{trail}</div>
+        <div className="px-4 py-3">{trail}</div>
         {linked.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[var(--el-hairline-soft)] px-4 py-2.5 text-xs text-[var(--el-muted)]">
-            <span>관련 항목</span>
-            {linked.map((row) => (
-              <button
-                key={row.itemId}
-                type="button"
-                onClick={() => onSelectItem(row.itemId)}
-                className="inline-flex max-w-full min-w-0 items-center gap-1.5 text-[var(--el-ink)] hover:underline hover:underline-offset-2"
-              >
-                <RoleDot role={roleOfItem(row.other, summary)} />
-                <span className="text-[var(--el-muted)]">{row.label}</span>
-                <span className="truncate">{row.other.content}</span>
-              </button>
-            ))}
-          </div>
+          <section
+            aria-label="연결된 항목"
+            className="border-t border-[var(--el-hairline-soft)] px-4 py-3"
+          >
+            <h3 className="mb-1 text-xs font-medium text-[var(--el-muted)]">
+              연결된 항목
+            </h3>
+            <ul className="divide-y divide-[var(--el-hairline-soft)]">
+              {linked.map((row) => (
+                <li key={row.itemId}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectItem(row.itemId)}
+                    className="flex w-full items-center gap-2 rounded-control py-2.5 text-left hover:bg-[var(--el-canvas-soft)]"
+                  >
+                    <RoleDot role={roleOfItem(row.other, summary)} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs text-[var(--el-muted)]">
+                        {row.label}
+                      </span>
+                      <span className="block whitespace-normal break-words text-sm text-[var(--el-ink)] underline decoration-[var(--el-hairline-strong)] underline-offset-4">
+                        {row.other.content}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-[var(--el-muted)]">
+                      ↗
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
       </div>
     </div>

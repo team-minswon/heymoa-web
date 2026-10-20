@@ -41,6 +41,7 @@ const item = (over: Partial<ReviewItem> = {}): ReviewItem => ({
   kind: "DECISION",
   content: "요금은 회의 시간 기준으로 계산한다",
   included: true,
+  projectSelected: true,
   edited: false,
   authoredByUserId: null,
   originalProposalRef: { proposalId: "p1", revision: 1 },
@@ -59,7 +60,6 @@ function renderRow(over: Partial<Parameters<typeof ReviewRow>[0]> = {}) {
   render(
     <ReviewRow
       item={item()}
-      topic={{ ordinal: 2, title: "차별점과 요금" }}
       assignable={false}
       open
       canEdit
@@ -80,6 +80,7 @@ it("출처 회의가 삭제돼도 승계 결정과 사용자 선택은 남는다
   const onChoose = vi.fn();
   render(
     <ReplacementSuggestion
+      newContent="새 결정 내용"
       replacement={{
         target: {
           itemId: "kept-decision",
@@ -102,7 +103,7 @@ it("출처 회의가 삭제돼도 승계 결정과 사용자 선택은 남는다
       onChoose={onChoose}
     />
   );
-  expect(screen.getByText("사용자가 유지한 프로젝트 결정")).toBeInTheDocument();
+  expect(screen.getAllByText("사용자가 유지한 프로젝트 결정")).toHaveLength(2);
   expect(screen.getByText(/프로젝트 결정 ·/)).toBeInTheDocument();
   expect(onChoose).not.toHaveBeenCalled();
 });
@@ -170,6 +171,16 @@ it.each([
 });
 
 describe("ReviewRow", () => {
+  it("반영 스위치는 내용을 펼치지 않고 선택만 저장합니다", () => {
+    const onToggle = vi.fn();
+    const { onSave } = renderRow({ item: item({ projectSelected: false }), open: false, onToggle });
+    const toggle = screen.getByRole("switch", { name: /프로젝트에 추가/ });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(onSave).toHaveBeenCalledWith({ projectSelected: true });
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
   it("내용 편집은 Enter 로 저장하고 Esc 로 닫는다", async () => {
     const { onSave } = renderRow();
 
@@ -199,10 +210,10 @@ describe("ReviewRow", () => {
     expect(screen.getByRole("button", { name: "제외" })).toBeDisabled();
   });
 
-  it("고칠 수 없으면 조작을 두지 않고, 결정 줄에는 주제 이름과 나온 때가 선다", () => {
+  it("고칠 수 없으면 조작을 두지 않고, 결정 줄에는 나온 때만 표시한다", () => {
     renderRow({ canEdit: false, whenMs: 75_000 });
     expect(screen.queryByRole("button", { name: "제외" })).not.toBeInTheDocument();
-    expect(screen.getByTitle("주제 02 · 차별점과 요금")).toHaveTextContent("차별점과 요금");
+    expect(screen.queryByText("차별점과 요금")).toBeNull();
     expect(screen.getByText("01:15")).toBeInTheDocument();
   });
 
@@ -243,7 +254,7 @@ describe("ItemTrail", () => {
   it("불러오는 동안 자리를 잡고, 실패하면 다시 시도를 둔다", () => {
     revisionsState.current = { data: undefined, isLoading: true, refetch: vi.fn() };
     const { rerender } = trail();
-    expect(screen.getByLabelText("수정 기록 불러오는 중")).toBeInTheDocument();
+    expect(screen.getByLabelText("수정이력 불러오는 중")).toBeInTheDocument();
 
     const refetch = vi.fn();
     revisionsState.current = { data: undefined, isLoading: false, refetch };
@@ -266,6 +277,19 @@ describe("ItemTrail", () => {
     expect(screen.queryByText("스크립트 없음")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(onRetryScript).toHaveBeenCalled();
+  });
+
+  it("수정이력이 하나면 버전 pill을 숨깁니다", () => {
+    revisionsState.current = {
+      data: { status: 200, data: { success: true, data: { proposalId: "p1", revisions: [{
+        revision: 1, operation: "CREATE", content: "처음 내용", citations: [],
+      }] } } },
+      isLoading: false,
+      refetch: vi.fn(),
+    };
+    trail({ item: item({ content: "처음 내용" }) });
+    expect(screen.getByText("처음 내용")).toBeInTheDocument();
+    expect(screen.queryByText("v1", { exact: true })).not.toBeInTheDocument();
   });
 
   it("모두 펼치기와 접기가 스크립트가 있는 단계 전체에 걸린다", () => {
@@ -292,6 +316,7 @@ describe("ItemTrail", () => {
     };
     trail({ item: item({ content: "판 2" }) });
 
+    expect(screen.getByRole("list", { name: "수정이력" }).querySelector("li")).toHaveTextContent("v2");
     const toggles = screen.getAllByRole("button", { expanded: false });
     expect(toggles.length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "모두 펼치기" }));
@@ -410,7 +435,7 @@ describe("ConfirmBar", () => {
 
     rerender(<ConfirmBar summary={summary} decisions={2} pending={false} onConfirm={vi.fn()} />);
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled();
-    expect(screen.getByText(/를 프로젝트에 올립니다/)).toHaveTextContent("결정 2개와 할 일 1개를 프로젝트에 올립니다");
+    expect(screen.getByText(/개 추가/)).toHaveTextContent("결정 2개 · 할 일 1개 추가");
   });
 
   it("고를 제안이 남았으면 그 수와 그 줄로 가는 링크를 세운다", () => {
@@ -447,6 +472,22 @@ describe("ConfirmBar", () => {
 });
 
 describe("ItemDetail", () => {
+  it("여러 안건을 링크로 표시하고 선택한 안건을 엽니다", () => {
+    const summary = { status: "SUCCEEDED", agendas: [
+      { ordinal: 1, agendaId: "a", title: "요금 정책", members: [{ itemId: "i1", kind: "DECISION" }], relations: [], alsoItemIds: [] },
+      { ordinal: 2, agendaId: "b", title: "출시 준비", members: [], relations: [], alsoItemIds: ["i1"] },
+      { ordinal: 3, agendaId: "c", title: "관계없는 안건", members: [], relations: [], alsoItemIds: [] },
+    ] } as unknown as MeetingReviewSummary;
+    const onSelectAgenda = vi.fn();
+    render(<ItemDetail item={item()} summary={summary} itemsById={new Map()} trail={<p>긴 발언 기록</p>} onSelectItem={vi.fn()} onSelectAgenda={onSelectAgenda} />);
+    const connected = screen.getByRole("region", { name: "연결된 안건" });
+    expect(connected).toHaveTextContent("요금 정책");
+    expect(connected).toHaveTextContent("출시 준비");
+    expect(connected).not.toHaveTextContent("관계없는 안건");
+    fireEvent.click(screen.getByRole("link", { name: "출시 준비" }));
+    expect(onSelectAgenda).toHaveBeenCalledWith("b");
+  });
+
   it("관련 항목은 열 수 있는 것으로 거른 뒤 넷까지 세운다", () => {
     // 앞의 넷은 화면에 없는 항목이다. 먼저 자르면 뒤의 결정까지 사라진다.
     const others = ["h1", "h2", "h3", "h4", "d2"];
@@ -460,16 +501,20 @@ describe("ItemDetail", () => {
       ],
     } as unknown as MeetingReviewSummary;
     const visible = item({ itemId: "d2", content: "발표 자료에 출처를 함께 적는다" });
+    const onSelectItem = vi.fn();
     render(
       <ItemDetail
         item={item()}
         summary={summary}
         itemsById={new Map([["d2", visible]])}
         trail={null}
-        onSelectItem={vi.fn()}
+        onSelectItem={onSelectItem}
       />
     );
-    expect(screen.getByRole("button", { name: /발표 자료에 출처를 함께 적는다/ })).toBeInTheDocument();
+    const link = screen.getByRole("button", { name: /이어짐.*발표 자료에 출처를 함께 적는다/ });
+    expect(screen.getByRole("region", { name: "연결된 항목" }).querySelectorAll("li")).toHaveLength(1);
+    fireEvent.click(link);
+    expect(onSelectItem).toHaveBeenCalledWith("d2");
   });
 });
 
@@ -504,4 +549,22 @@ describe("DueCell", () => {
     fireEvent.click(screen.getByRole("button", { name: "기한 정하기" }));
     expect(showPicker).toHaveBeenCalled();
   });
+});
+
+it("대체를 고르면 이전 결정에 취소선을 긋고 새 결정을 표시합니다", () => {
+  const replacement: ReviewItem["replacements"][number] = { target: { itemId: "old", revision: 1, kind: "DECISION", content: "기존 요금 유지", noteId: null, noteTitle: null, originalProposalRef: null, approvedAt: "2026-09-04T00:00:00Z", endedAt: null }, kind: "SUPERSEDES", label: "대체", reason: "요금을 변경했습니다", decision: null };
+  const { rerender } = render(<ReplacementSuggestion replacement={replacement} newContent="새 요금 적용" choice="change" disabled={false} onChoose={vi.fn()} />);
+  expect(screen.getByText("기존 요금 유지").tagName).toBe("DEL");
+  expect(screen.getByRole("group", { name: "대체 후 모습" })).toHaveTextContent("새 요금 적용");
+  rerender(<ReplacementSuggestion replacement={replacement} newContent="새 요금 적용" choice="keep" disabled={false} onChoose={vi.fn()} />);
+  expect(screen.getAllByText("기존 요금 유지").every((node) => node.tagName !== "DEL")).toBe(true);
+  expect(screen.getByRole("group", { name: "함께 유지할 결정" })).toHaveTextContent("새 요금 적용");
+});
+
+it("이미 종료된 결정에는 대체·유지 선택을 표시하지 않습니다", () => {
+  const replacement: ReviewItem["replacements"][number] = { target: { itemId: "old", revision: 1, kind: "DECISION", content: "종료된 결정", noteId: null, noteTitle: null, originalProposalRef: null, approvedAt: "2026-09-04T00:00:00Z", endedAt: "2026-09-05T00:00:00Z" }, kind: "SUPERSEDES", label: "대체", reason: "", decision: "KEEP" };
+  render(<ReplacementSuggestion replacement={replacement} newContent="새 결정" choice="keep" disabled={false} onChoose={vi.fn()} />);
+  expect(screen.queryByRole("radiogroup")).toBeNull();
+  expect(screen.getByText(/이미 종료됨/)).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "함께 유지할 결정" })).toBeNull();
 });

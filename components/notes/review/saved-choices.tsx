@@ -7,7 +7,7 @@ import type { ReviewItem } from "@/lib/notes/review/sections";
 import { missingChoicesOf } from "@/lib/notes/review/saved-choices";
 
 const LABEL = {
-  END: "끝내기",
+  END: "대체",
   APPLY: "반영 예정",
   KEEP: "유지",
   APPLIED: "반영됨",

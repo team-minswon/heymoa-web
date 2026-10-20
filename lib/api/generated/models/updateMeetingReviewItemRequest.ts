@@ -38,4 +38,6 @@ export interface UpdateMeetingReviewItemRequest {
    * @minimum 1
    */
   expectedItemRevision: number;
+  /** 결정·할 일의 프로젝트 반영 선택. 생략 시 유지, null은 거절합니다 */
+  projectSelected?: boolean;
 }
