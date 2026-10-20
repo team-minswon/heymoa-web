@@ -55,21 +55,23 @@ export function buildReviewGraph(
 ): ReviewGraph {
   const shown = items.filter((item) => item.included);
   const present = new Set(shown.map((item) => item.itemId));
-  // 주제 묶음은 소속 항목(members)만으로 정한다. 둘 이상에 속하면 첫 주제가 집이고 나머지는 약한 연결이다.
+  // 주 소속을 먼저 정하고 보조 소속을 더합니다. 앞 주제의 보조 소속이 뒤 주제의 집을 바꾸지 않습니다.
   const groupsOf = new Map<string, number[]>();
   const open = new Set<string>();
   const join = (itemId: string, ordinal: number) => {
     const groups = groupsOf.get(itemId) ?? [];
     if (!groups.includes(ordinal)) groupsOf.set(itemId, [...groups, ordinal]);
   };
-  // 집(첫 주제)은 members 로만 정한다. 옛 요약이 alsoItemIds 에만 실은 다른 주제 소속은 그 뒤에 보조로 더한다
-  // — 한 번에 돌면 앞 주제의 보조 소속이 뒤 주제의 집을 빼앗는다. server ② 가 그 칸을 지우면 members 만 남는다.
   for (const topic of summaryTopics(summary)) {
-    for (const member of topic.members) join(member.itemId, topic.ordinal);
+    for (const member of topic.memberships) {
+      if (!member.secondary) join(member.itemId, topic.ordinal);
+    }
     for (const itemId of topic.openItemIds) open.add(itemId);
   }
   for (const topic of summaryTopics(summary)) {
-    for (const itemId of topic.alsoItemIds ?? []) join(itemId, topic.ordinal);
+    for (const member of topic.memberships) {
+      if (member.secondary) join(member.itemId, topic.ordinal);
+    }
   }
 
   const nodes = shown.map((item): GraphNode => ({

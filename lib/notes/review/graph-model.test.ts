@@ -44,7 +44,7 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     agendaItemId: null,
     centerItemId: null,
     members: [],
-    memberships: [],
+    memberships: (over.members ?? []).map(({ itemId }) => ({ itemId, secondary: false })),
     alsoItemIds: [],
     relations: [],
     sentences: [],
@@ -88,7 +88,7 @@ describe("buildReviewGraph 다른 주제 연결", () => {
     ]);
   });
 
-  it("옛 요약이 alsoItemIds 에만 실은 다른 주제 소속도 약하게 잇는다", () => {
+  it("memberships의 보조 소속도 다른 주제와 약하게 잇는다", () => {
     const summary: MeetingReviewSummary = {
       noteId: "n",
       status: "SUCCEEDED",
@@ -98,14 +98,14 @@ describe("buildReviewGraph 다른 주제 연결", () => {
       topics: [],
       agendas: [
         topic(1, { members: [{ itemId: "a1", kind: "ACTION_ITEM" }] }),
-        topic(2, { members: [{ itemId: "d1", kind: "DECISION" }], alsoItemIds: ["a1"] }),
+        topic(2, { members: [{ itemId: "d1", kind: "DECISION" }], memberships: [{ itemId: "d1", secondary: false }, { itemId: "a1", secondary: true }] }),
       ],
     };
     const graph = buildReviewGraph(summary, [reviewItem("a1", "ACTION_ITEM"), reviewItem("d1", "DECISION")]);
     expect(graph.nodes.find((node) => node.id === "a1")?.alsoGroups).toEqual([2]);
   });
 
-  it("앞 주제의 보조 소속(alsoItemIds)이 뒤 주제의 집을 빼앗지 않는다", () => {
+  it("앞 주제의 보조 소속이 뒤 주제의 집을 빼앗지 않는다", () => {
     const summary: MeetingReviewSummary = {
       noteId: "n",
       status: "SUCCEEDED",
@@ -114,7 +114,7 @@ describe("buildReviewGraph 다른 주제 연결", () => {
       lead: [],
       topics: [],
       agendas: [
-        topic(1, { members: [{ itemId: "d1", kind: "DECISION" }], alsoItemIds: ["a1"] }),
+        topic(1, { members: [{ itemId: "d1", kind: "DECISION" }], memberships: [{ itemId: "d1", secondary: false }, { itemId: "a1", secondary: true }] }),
         topic(2, { members: [{ itemId: "a1", kind: "ACTION_ITEM" }] }),
       ],
     };

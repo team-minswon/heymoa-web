@@ -10,6 +10,48 @@ const ANALYZING_NOTE = "01K0000000022";
 
 const reviewUrl = (noteId: string, approvalCase = "all-selected") => `/w/${WORKSPACE_ID}/notes/${noteId}?view=full&tab=summary&reviewCase=${approvalCase}`;
 
+test("옛 필드 없는 옛 회의의 전문을 화면·복사·실제 PDF에서 보존한다", async ({ page, context }, testInfo) => {
+  test.setTimeout(90_000);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => {
+    const forward = window.fetch;
+    window.fetch = async (input, init) => {
+      const response = await forward(input, init);
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.includes("/meeting-review/summary") || !response.ok) return response;
+      const body = await response.json();
+      const agenda = body.data.agendas[0];
+      agenda.agendaId = null;
+      agenda.title = "옛 회의 안건";
+      agenda.summary = null;
+      agenda.description = [{ text: "옛 설명 첫 줄\n둘째 줄도 전문에 남습니다.", itemIds: [] }];
+      return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
+    };
+  });
+  const summaryResponse = page.waitForResponse((response) => response.url().includes("/meeting-review/summary"));
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  const body = await (await summaryResponse).json();
+  expect(body.data).not.toHaveProperty("topics");
+  for (const agenda of body.data.agendas) {
+    for (const field of ["sentences", "agendaItemId", "centerItemId", "alsoItemIds"]) {
+      expect(agenda).not.toHaveProperty(field);
+    }
+  }
+  const index = page.getByRole("list", { name: "주제 목차" });
+  await index.getByRole("button", { name: /옛 회의 안건/ }).click();
+  await expect(index).toContainText("둘째 줄도 전문에 남습니다.");
+  await page.screenshot({ path: testInfo.outputPath("legacy-summary.png"), fullPage: true });
+  await page.getByRole("button", { name: "요약 복사", exact: true }).click();
+  await page.getByRole("menuitem", { name: /마크다운.*복사/ }).click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain("옛 설명 첫 줄");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("둘째 줄도 전문에 남습니다.");
+  await page.getByRole("button", { name: "내보내기·공유" }).click();
+  await page.getByRole("menuitem", { name: /PDF로 내보내기/ }).click();
+  const downloading = page.waitForEvent("download", { timeout: 60_000 });
+  await page.getByRole("button", { name: "PDF 받기" }).click();
+  await (await downloading).saveAs(testInfo.outputPath("legacy-summary.pdf"));
+});
+
 test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐을 읽는다", async ({
   page,
 }) => {

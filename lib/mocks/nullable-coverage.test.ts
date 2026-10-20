@@ -405,6 +405,9 @@ function contractSamples() {
  * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
  */
 const KNOWN_ONE_SIDED = new Set([
+  // APP-1266 목에서 생략한 호환 참조입니다. 서버 계약에서 제거할 때 함께 지웁니다.
+  "MeetingReviewSummaryResponse.data.agendas[].agendaItemId",
+  "MeetingReviewSummaryResponse.data.agendas[].centerItemId",
   // 삭제된 출처의 표시 fallback은 review-parts에서 확인하며 이 표본의 대체 대상은 생존 회의뿐입니다.
   "MeetingReviewResponse.data.items[].replacements[].target.noteTitle",
   "MeetingReviewResponse.data.items[].replacements[].target.noteId",
@@ -453,6 +456,10 @@ const KNOWN_ONE_SIDED = new Set([
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */
 const KNOWN_UNOBSERVED = new Set<string>([
+  // APP-1266 브라우저 목은 폐기 예정 topics를 생략합니다. 서버 호환 계약에서 제거할 때 함께 지웁니다.
+  ...["agendaItemId", "centerItemId", "agendaId", "summary"].map(
+    (field) => `MeetingReviewSummaryResponse.data.topics[].${field}`
+  ),
   // **server 가 `lastTurn.pendingApproval` 에 늘 `null` 을 보낸다.** 계약이 선언만 하고
   // 채우는 경로가 없어서, 그 아래 필드는 목이 무엇을 해도 관측될 수 없다.
   // 목을 억지로 채우면 **실서버가 안 내는 모양을 화면이 믿게 된다** — 그게 이 프로젝트가

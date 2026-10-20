@@ -303,10 +303,10 @@ describe("topicDigests", () => {
     expect(digests.map((row) => row.ordinal)).toEqual([2, 1, 3]);
   });
 
-  it("안건 행이 없는 옛 요약만 합친 문장을 서술로 쓰고, 새 안건은 설명만 쓴다", () => {
+  it("옛 필드가 없어도 안건 행 없는 옛 요약의 설명 전문을 보존하고 결론을 중복하지 않는다", () => {
     const summary = {
       agendas: [
-        { ordinal: 1, title: "옛", agendaId: null, summary: null, conclusions: [], description: [], sentences: [{ text: "옛 서술." }], members: [], openItemIds: [] },
+        { ordinal: 1, title: "옛", agendaId: null, summary: null, conclusions: [], description: [{ text: "옛 서술.\n둘째 줄." }], members: [], openItemIds: [] },
         { ordinal: 2, title: "지운 뒤", agendaId: null, summary: null, conclusions: [], description: [], members: [], openItemIds: [] },
         // 새 안건의 합친 문장에는 결론이 섞여 있다 — 설명이 비어도 그것을 서술로 쓰지 않는다
         { ordinal: 3, title: "새", agendaId: "01KG000000003", summary: null, conclusions: [{ text: "결론." }], description: [], sentences: [{ text: "결론." }], members: [], openItemIds: [] },
@@ -314,7 +314,7 @@ describe("topicDigests", () => {
     } as unknown as MeetingReviewSummary;
     const rows = topicDigests(summary, new Map(), () => null);
     expect(rows.map((row) => [row.text, row.gist])).toEqual([
-      ["옛 서술.", "옛 서술."],
+      ["옛 서술.\n둘째 줄.", "옛 서술.\n둘째 줄."],
       ["", null],
       ["", null],
     ]);

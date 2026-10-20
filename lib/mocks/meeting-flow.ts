@@ -1198,7 +1198,17 @@ export const meetingFlowHandlers = [
   ),
 
   http.get("*/v1/notes/:noteId/meeting-review/summary", ({ params }) =>
-    respond(() => meetingFlow.summaryOf(paramId(params.noteId)))
+    respond(() => {
+      // 브라우저도 옛 필드를 생략한 응답으로 검사합니다. 저장 목은 현행·호환 표현을 함께 유지합니다.
+      const summary = structuredClone(meetingFlow.summaryOf(paramId(params.noteId)));
+      Reflect.deleteProperty(summary, "topics");
+      for (const agenda of summary.agendas) {
+        for (const field of ["sentences", "agendaItemId", "centerItemId", "alsoItemIds"]) {
+          Reflect.deleteProperty(agenda, field);
+        }
+      }
+      return summary;
+    })
   ),
 
   http.get("*/v1/notes/:noteId/meeting-review", ({ params }) =>

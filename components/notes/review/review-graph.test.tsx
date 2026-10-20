@@ -87,7 +87,7 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     agendaItemId: null,
     centerItemId: null,
     members: [],
-    memberships: [],
+    memberships: (over.members ?? []).map(({ itemId }) => ({ itemId, secondary: false })),
     alsoItemIds: [],
     relations: [],
     sentences: [],
