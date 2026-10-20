@@ -76,10 +76,7 @@ export function topicDigests(
         const at = citedAt(item);
         return at === null ? [] : [at];
       });
-      // 서술은 description. 안건 행이 없는 옛 요약(agendaId 없음)만 합친 문장을 쓴다 — 새 안건의 합친 문장에는
-      // 결론 · 남은 일이 섞여 있어 쓰면 겹친다. 서버가 그 칸을 지우면 빈 값이다.
-      const narrative =
-        topic.agendaId === null ? (topic.sentences ?? []) : topic.description;
+      const narrative = topic.description;
       // 옛 응답에는 한 줄 summary와 긴 description이 함께 있다. 펼친 내용과 내보내기에서 전문을 보존한다.
       const narrativeText = narrative
         .map((row) => row.text)

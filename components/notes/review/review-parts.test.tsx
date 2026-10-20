@@ -474,9 +474,9 @@ describe("ConfirmBar", () => {
 describe("ItemDetail", () => {
   it("여러 안건을 링크로 표시하고 선택한 안건을 엽니다", () => {
     const summary = { status: "SUCCEEDED", agendas: [
-      { ordinal: 1, agendaId: "a", title: "요금 정책", members: [{ itemId: "i1", kind: "DECISION" }], relations: [], alsoItemIds: [] },
-      { ordinal: 2, agendaId: "b", title: "출시 준비", members: [], relations: [], alsoItemIds: ["i1"] },
-      { ordinal: 3, agendaId: "c", title: "관계없는 안건", members: [], relations: [], alsoItemIds: [] },
+      { ordinal: 1, agendaId: "a", title: "요금 정책", members: [{ itemId: "i1", kind: "DECISION" }], relations: [], memberships: [{ itemId: "i1", secondary: false }] },
+      { ordinal: 2, agendaId: "b", title: "출시 준비", members: [], relations: [], memberships: [{ itemId: "i1", secondary: true }] },
+      { ordinal: 3, agendaId: "c", title: "관계없는 안건", members: [], relations: [], memberships: [] },
     ] } as unknown as MeetingReviewSummary;
     const onSelectAgenda = vi.fn();
     render(<ItemDetail item={item()} summary={summary} itemsById={new Map()} trail={<p>긴 발언 기록</p>} onSelectItem={vi.fn()} onSelectAgenda={onSelectAgenda} />);
@@ -495,6 +495,7 @@ describe("ItemDetail", () => {
       agendas: [
         {
           members: [{ itemId: "agenda", kind: "AGENDA" }],
+          memberships: [],
           openItemIds: [],
           relations: others.map((targetItemId) => ({ sourceItemId: "i1", targetItemId, label: "이어짐" })),
         },

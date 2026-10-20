@@ -37,9 +37,7 @@ export function ItemDetail({
   // 열 수 있는 항목으로 거른 뒤 넷까지 — 먼저 자르면 앞 넷이 없는 항목일 때 뒤의 것까지 사라진다.
   const agendas = summaryTopics(summary).filter(
     (topic) =>
-      topic.agendaItemId === item.itemId ||
-      topic.members.some((member) => member.itemId === item.itemId) ||
-      (topic.alsoItemIds ?? []).includes(item.itemId)
+      topic.memberships.some((member) => member.itemId === item.itemId)
   );
   const linked = linkedItemsOf(summary, item.itemId)
     .flatMap((row) => {

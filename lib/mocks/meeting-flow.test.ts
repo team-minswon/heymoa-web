@@ -59,6 +59,20 @@ async function approveCurrent() {
 }
 
 describe("기존 할 일의 검토 초안", () => {
+  it("요약 HTTP는 옛 필드를 생략하고 전문과 소속의 현행 계약을 제공한다", async () => {
+    const result = await api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/summary`);
+    expect(result.status).toBe(200);
+    expect(result.body.data).not.toHaveProperty("topics");
+    expect(result.body.data.agendas.length).toBeGreaterThan(0);
+    for (const agenda of result.body.data.agendas) {
+      for (const field of ["sentences", "agendaItemId", "centerItemId", "alsoItemIds"]) {
+        expect(agenda).not.toHaveProperty(field);
+      }
+      expect(agenda).toHaveProperty("description");
+      expect(agenda).toHaveProperty("memberships");
+    }
+  });
+
   it.each(["END", "APPLY"] as const)("사라진 %s 선택은 409로 막고 null 해제 후 승인한다", async (decision) => {
     let current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
     const item = current.items.find((row) => decision === "END" ? row.replacements.length : row.taskChanges.length)!;
@@ -216,7 +230,7 @@ describe("요약", () => {
   it("검토 화면이 쓰는 세 상태를 모두 낸다", async () => {
     const mentoring = (await api(`/v1/notes/${MENTORING_NOTE_ID}/meeting-review/summary`)).body.data;
     expect(mentoring.status).toBe("SUCCEEDED");
-    expect(mentoring.topics).toHaveLength(8);
+    expect(mentoring.agendas).toHaveLength(8);
     expect((await api("/v1/notes/01K0000000021/meeting-review/summary")).body.data.status).toBe("FAILED");
     expect((await api("/v1/notes/01K0000000026/meeting-review/summary")).body.data.status).toBe("NOT_AVAILABLE");
     expect((await api("/v1/notes/01KNOPE0000000/meeting-review/summary")).status).toBe(404);
@@ -225,7 +239,7 @@ describe("요약", () => {
   it("주제의 모든 항목 ID 가 검토본에 있다", async () => {
     const ids = new Set((await review(MENTORING_NOTE_ID)).items.map((item: { itemId: string }) => item.itemId));
     const summary = meetingFlow.summaryOf(MENTORING_NOTE_ID);
-    expect(summary.topics.flatMap((topic) => topic.members).every((member) => ids.has(member.itemId))).toBe(true);
+    expect(summary.agendas.flatMap((topic) => topic.members).every((member) => ids.has(member.itemId))).toBe(true);
   });
 });
 
@@ -258,7 +272,7 @@ describe("검토 항목 추가 · 수정", () => {
   it("topicOrdinal 이 있으면 그 주제 members 에 합치고, 요약에 없는 번호는 400 으로 저장하지 않는다", async () => {
     const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items`;
     const summaryPath = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/summary`;
-    const before = (await api(summaryPath)).body.data.topics[1].members.length;
+    const before = (await api(summaryPath)).body.data.agendas[1].members.length;
     const current = await review(MENTORING_NOTE_ID);
 
     const bad = await api(path, "POST", {
@@ -277,7 +291,7 @@ describe("검토 항목 추가 · 수정", () => {
       topicOrdinal: 2,
     });
     expect(ok.status).toBe(201);
-    const topic = (await api(summaryPath)).body.data.topics[1];
+    const topic = (await api(summaryPath)).body.data.agendas[1];
     expect(topic.members).toHaveLength(before + 1);
     expect(topic.members.at(-1)).toMatchObject({ kind: "DECISION" });
     expect(topic.memberships.at(-1)).toEqual({ itemId: topic.members.at(-1).itemId, secondary: false });
@@ -286,7 +300,7 @@ describe("검토 항목 추가 · 수정", () => {
   it("주제 번호가 맞아도 담당 검증이 400 이면 요약 members 를 바꾸지 않는다", async () => {
     const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items`;
     const summaryPath = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/summary`;
-    const before = (await api(summaryPath)).body.data.topics[1].members.length;
+    const before = (await api(summaryPath)).body.data.agendas[1].members.length;
     const current = await review(MENTORING_NOTE_ID);
 
     const bad = await api(path, "POST", {
@@ -297,7 +311,7 @@ describe("검토 항목 추가 · 수정", () => {
       assignee: { type: "USER" },
     });
     expect(bad.status).toBe(400);
-    expect((await api(summaryPath)).body.data.topics[1].members).toHaveLength(before);
+    expect((await api(summaryPath)).body.data.agendas[1].members).toHaveLength(before);
   });
 
   it("읽은 판이 낡으면 409, 없는 항목은 404, 같은 값은 판을 올리지 않는다", async () => {
