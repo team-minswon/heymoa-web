@@ -86,6 +86,7 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     agendaItemId: null,
     centerItemId: null,
     members: [],
+    memberships: [],
     alsoItemIds: [],
     relations: [],
     sentences: [],

@@ -455,6 +455,7 @@ function buildSummary(
       agendaItemId,
       centerItemId,
       members: [...items, ...also].map((item) => ({ itemId: item.itemId, kind: item.kind })),
+      memberships: [...items, ...also].map((item) => ({ itemId: item.itemId, secondary: false })),
       alsoItemIds: also.map((item) => item.itemId),
       relations,
       sentences: seed.sentences.map((sentence) => ({
@@ -546,6 +547,7 @@ function seedLargeReview(target: State, noteId: string) {
       agendaItemId: center.kind === "AGENDA" ? center.itemId : null,
       centerItemId: center.itemId,
       members: [...items, ...also].map((row) => ({ itemId: row.itemId, kind: row.kind })),
+      memberships: [...items, ...also].map((row) => ({ itemId: row.itemId, secondary: false })),
       alsoItemIds: also.map((row) => row.itemId),
       relations,
       sentences: [],
