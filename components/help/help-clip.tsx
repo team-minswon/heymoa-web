@@ -1,10 +1,10 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 import { Maximize2, Pause, Play } from "lucide-react";
 
-import { track } from "@/lib/analytics/track";
-import { useHelpSlug } from "@/lib/help/analytics";
+import { trackHelp, useHelpSlug } from "@/lib/help/analytics";
 import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
@@ -47,9 +47,10 @@ export function HelpClip({
   const [zoomed, setZoomed] = useState(false);
   const zoomButton = useRef<HTMLButtonElement>(null);
   const slug = useHelpSlug();
+  const t = useTranslations("help.media");
   const played = useRef(false);
   const openZoom = () => {
-    track("help_clip_zoomed", { clip: name, slug });
+    trackHelp("help_clip_zoomed", { clip: name, slug });
     setZoomed(true);
   };
 
@@ -119,7 +120,7 @@ export function HelpClip({
             // 화면에 들어와 자동으로 시작해도 한 번만 센다(열람 중 재생된 영상 수).
             if (!played.current) {
               played.current = true;
-              track("help_clip_played", { clip: name, slug });
+              trackHelp("help_clip_played", { clip: name, slug });
             }
           }}
           onPause={() => setPlaying(false)}
@@ -139,7 +140,7 @@ export function HelpClip({
         <button
           type="button"
           onClick={toggle}
-          aria-label={playing ? `${alt} — 일시정지` : `${alt} — 재생`}
+          aria-label={playing ? t("pauseNamed", { alt }) : t("playNamed", { alt })}
           className={cn(
             "absolute right-14 bottom-3 grid size-9 place-items-center rounded-full bg-white/90 text-[var(--tv-ink)] help-fade hover:bg-white hover:text-[var(--tv-brand-deep)] motion-reduce:transition-none",
             FOCUS
@@ -155,7 +156,7 @@ export function HelpClip({
           ref={zoomButton}
           type="button"
           onClick={openZoom}
-          aria-label={`${alt} — 크게 보기`}
+          aria-label={t("zoom", { alt })}
           className={cn(
             "absolute right-3 bottom-3 grid size-9 place-items-center rounded-full bg-white/90 text-[var(--tv-ink)] opacity-0 help-fade hover:bg-white hover:text-[var(--tv-brand-deep)] group-hover/clip:opacity-100 focus-visible:opacity-100 motion-reduce:transition-none",
             FOCUS
@@ -213,6 +214,7 @@ function ZoomPlayer({
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const t = useTranslations("help.media");
 
   const toggle = () => {
     const el = video.current;
@@ -254,7 +256,7 @@ function ZoomPlayer({
         <button
           type="button"
           onClick={toggle}
-          aria-label={playing ? "일시정지" : "재생"}
+          aria-label={playing ? t("pause") : t("play")}
           className={cn(
             "grid size-9 shrink-0 place-items-center rounded-full text-[var(--tv-ink)] help-fade hover:bg-[var(--tv-lav-soft)] motion-reduce:transition-none",
             FOCUS
@@ -268,7 +270,7 @@ function ZoomPlayer({
         </button>
         <input
           type="range"
-          aria-label="재생 위치"
+          aria-label={t("seek")}
           min={0}
           max={duration || 1}
           step={0.1}

@@ -2,6 +2,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- 주소(?q=)는 서버가 그린 HTML 과 첫 렌더를 맞추려고 마운트한 뒤에만 읽는다 */
 
+import { useLocale, useTranslations } from "next-intl";
 import {
   Suspense,
   createContext,
@@ -17,7 +18,7 @@ import { Search, X } from "lucide-react";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { HelpHitRow } from "@/components/help/help-hit-list";
 import { searchHelp } from "@/lib/help/search-index";
-import { track } from "@/lib/analytics/track";
+import { trackHelp } from "@/lib/help/analytics";
 import { useHelpIndex } from "@/lib/help/use-help-index";
 import { cn } from "@/lib/utils";
 
@@ -71,9 +72,10 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
   const onFocus = () => {
     if (opened.current) return;
     opened.current = true;
-    track("help_search_opened", { surface: "hub", via: openedBy.current ?? "click" });
+    trackHelp("help_search_opened", { surface: "hub", via: openedBy.current ?? "click" });
   };
-  const { entries, failed } = useHelpIndex(value.length > 0);
+  const t = useTranslations("help.search");
+  const { entries, failed } = useHelpIndex(value.length > 0, useLocale());
 
   // 주소가 원본이다. 마운트 · 뒤로/앞으로 · 새로고침으로 주소가 정해지면 그 검색어를 읽어 오기만 하고 **주소를 쓰지 않는다**.
   // (예전에는 마운트 효과가 주소의 `?q=` 를 지웠다가 100ms 뒤 다시 붙였다 — 뒤로 갔을 때 주소가 뒤늦게 바뀌었다.)
@@ -112,13 +114,11 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
     // 입력이 멎은 뒤(ANNOUNCE_MS) 한 번 — 한 글자마다 세지 않는다.
     const timer = window.setTimeout(() => {
       setAnnounce(
-        hits.length
-          ? `${hits.length}곳에서 찾았어요`
-          : "일치하는 내용이 없어요."
+        hits.length ? t("found", { count: hits.length }) : t("noMatch")
       );
       if (typed.current) {
         typed.current = false;
-        track("help_search_submitted", {
+        trackHelp("help_search_submitted", {
           query_length: query.length,
           result_count: hits.length,
           zero_results: hits.length === 0,
@@ -126,7 +126,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
       }
     }, ANNOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [query, entries, hits.length]);
+  }, [query, entries, hits.length, t]);
 
   // 입력 중이 아닐 때의 `/` 는 이 칸으로 온다. ⌘K · Ctrl+K 는 상단바의 검색 팔레트가 받는다.
   useEffect(() => {
@@ -184,6 +184,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
 /** 큰 검색칸. 머리 판 안에 선다. */
 export function HelpHubInput() {
   const { value, setValue, clear, inputRef, onFocus, announce } = useHub();
+  const t = useTranslations("help.search");
   return (
     <div className="mt-5 max-w-[640px]">
       <div role="search" className="relative">
@@ -197,8 +198,8 @@ export function HelpHubInput() {
           onFocus={onFocus}
           type="search"
           value={value}
-          aria-label="사용 가이드 전체에서 찾기"
-          placeholder="검색어를 입력하세요 (예: 녹음, 용어 사전)"
+          aria-label={t("label")}
+          placeholder={t("placeholderExample")}
           autoComplete="off"
           spellCheck={false}
           onChange={(event) => setValue(event.target.value)}
@@ -218,7 +219,7 @@ export function HelpHubInput() {
         {value ? (
           <button
             type="button"
-            aria-label="검색어 지우기"
+            aria-label={t("clear")}
             onClick={clear}
             className={cn(
               "absolute top-1/2 right-2.5 grid size-9 -translate-y-1/2 place-items-center rounded-[10px] text-[var(--tv-muted)] help-fade hover:bg-[var(--tv-lav)] hover:text-[var(--tv-ink)]",
@@ -248,21 +249,22 @@ export function HelpHubInput() {
 /** 검색어가 없으면 `children`(주제 카드), 있으면 결과 목록. */
 export function HelpHubBody({ children }: { children: React.ReactNode }) {
   const { query, hits, loading, failed } = useHub();
+  const t = useTranslations("help.search");
   if (!query) return <>{children}</>;
   if (failed)
     return (
       <p className="m-0 text-[16px] leading-[1.75] text-[var(--tv-body)]">
-        검색에 필요한 정보를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.
+        {t("failed")}
       </p>
     );
   if (loading)
     return (
-      <p className="m-0 text-[14px] text-[var(--tv-muted)]">찾는 중이에요…</p>
+      <p className="m-0 text-[14px] text-[var(--tv-muted)]">{t("searching")}</p>
     );
   if (hits.length === 0)
     return (
       <p className="m-0 text-[16px] leading-[1.75] text-[var(--tv-body)]">
-        ‘{query}’와 일치하는 내용이 없어요. 다른 낱말로 찾아보세요.
+        {t("noMatchFor", { query })}
       </p>
     );
   return (
@@ -271,7 +273,7 @@ export function HelpHubBody({ children }: { children: React.ReactNode }) {
         className="m-0 mb-3 text-[14px] font-bold text-[var(--tv-muted)]"
         aria-hidden
       >
-        {hits.length}곳에서 찾았어요
+        {t("found", { count: hits.length })}
       </p>
       <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 lg:grid-cols-2">
         {hits.map((hit, rank) => (

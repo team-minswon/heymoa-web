@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkDirective from "remark-directive";
 import remarkGfm from "remark-gfm";
@@ -27,6 +27,7 @@ import {
 } from "@/components/help/md/blocks";
 import { remarkHelp } from "@/components/help/md/plugin";
 import { textOf } from "@/lib/help/text";
+import type { Locale } from "@/lib/i18n/locales";
 
 const BASE = {
   a: MdLink,
@@ -49,11 +50,26 @@ const BASE = {
   "help-badge": HelpBadge,
 } as unknown as Components;
 
-const RELATED = {
-  ...BASE,
-  ul: RelatedList,
-  li: RelatedItem,
-} as unknown as Components;
+/** 링크 주소와 표 칩의 읽어 주는 글이 언어를 따른다. 언어 × 변형마다 한 번만 만든다. */
+const maps = new Map<string, Components>();
+function componentsFor(locale: Locale, variant?: "related"): Components {
+  const key = `${locale}:${variant ?? ""}`;
+  let map = maps.get(key);
+  if (!map) {
+    map = {
+      ...BASE,
+      a: (props: ComponentProps<typeof MdLink>) => (
+        <MdLink {...props} locale={locale} />
+      ),
+      td: (props: ComponentProps<typeof MdCell>) => (
+        <MdCell {...props} locale={locale} />
+      ),
+      ...(variant === "related" ? { ul: RelatedList, li: RelatedItem } : {}),
+    } as unknown as Components;
+    maps.set(key, map);
+  }
+  return map;
+}
 
 /**
  * 가이드 마크다운 한 덩어리(문단 · 목록 · 표 · 알림 …)를 그린다. 문법은 `content/help/README.md`.
@@ -62,9 +78,12 @@ const RELATED = {
 export function MdBlock({
   source,
   variant,
+  locale = "ko",
 }: {
   source: string;
   variant?: "related";
+  /** 본문 언어. 가이드 안 링크(`help:`)와 사이트 링크가 그 언어판 주소로 풀린다. */
+  locale?: Locale;
   /** 검색 색인 · 시험이 읽는 글(`textOf`). 화면에는 쓰지 않는다. */
   plainText?: string;
 }): ReactNode {
@@ -72,7 +91,7 @@ export function MdBlock({
     <Markdown
       remarkPlugins={[remarkGfm, remarkDirective, remarkHelp]}
       urlTransform={(url) => url}
-      components={variant === "related" ? RELATED : BASE}
+      components={componentsFor(locale, variant)}
     >
       {source}
     </Markdown>

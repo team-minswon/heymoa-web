@@ -6,13 +6,15 @@ import { AnchorCopy } from "@/components/help/anchor-copy";
 import { HelpBadge } from "@/components/help/help-badge";
 import { HelpPageToc } from "@/components/help/help-page-toc";
 import { HelpSearch } from "@/components/help/help-search";
-import { navTitleOf } from "@/app/[lang]/help/_content/paths";
-import { helpTopics } from "@/app/[lang]/help/_content/topics";
+import { helpPathOf, navTitleOf } from "@/app/[lang]/help/_content/paths";
+import { helpTopicsFor } from "@/app/[lang]/help/_content/topics";
 import type {
   HelpBadgeName,
   HelpGroup,
   HelpTopic,
 } from "@/app/[lang]/help/_content/types";
+import { helpT } from "@/lib/help/i18n";
+import { localePath, type Locale } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
 /**
@@ -76,17 +78,20 @@ export function HelpPageHead({
 
 /** 주제 한 페이지: 머리말 · 본문 · 이전/다음, 오른쪽에 이 페이지에서 목차(xl 이상. 그보다 좁으면 본문 위 접이식). */
 export function HelpPageFrame({
+  locale = "ko",
   topic,
   group,
   prev,
   next,
 }: {
+  locale?: Locale;
   topic: HelpTopic;
   group: HelpGroup;
   prev?: HelpTopic;
   next?: HelpTopic;
 }) {
   const outline = topic.sections.map(({ id, title }) => ({ id, title }));
+  const t = helpT(locale);
   return (
     <div
       className={cn(
@@ -98,8 +103,8 @@ export function HelpPageFrame({
       <div data-help-main="" className={HELP_READING}>
         <HelpPageHead
           crumbs={[
-            { label: "사용 가이드", href: "/help" },
-            { label: group.title, href: `/help/${group.slug}` },
+            { label: t("guide"), href: localePath(locale, "/help") },
+            { label: group.title, href: localePath(locale, `/help/${group.slug}`) },
           ]}
           badge={topic.badge}
           title={topic.title}
@@ -113,7 +118,7 @@ export function HelpPageFrame({
               FOCUS
             )}
           >
-            이 페이지에서
+            {t("page.onThisPage")}
           </summary>
           <HelpPageToc sections={outline} hideLabel className="px-3 pb-3" />
         </details>
@@ -155,19 +160,29 @@ export function HelpPageFrame({
           ))}
         </article>
 
-        {group.axis === "feature" ? <RelatedSituations topic={topic} /> : null}
+        {group.axis === "feature" ? (
+          <RelatedSituations topic={topic} locale={locale} />
+        ) : null}
 
         <nav
-          aria-label="이전·다음 주제"
+          aria-label={t("page.prevNext")}
           className="mt-8 grid gap-3 sm:grid-cols-2"
         >
-          {prev ? <StepLink topic={prev} direction="prev" /> : <span />}
-          {next ? <StepLink topic={next} direction="next" /> : <span />}
+          {prev ? (
+            <StepLink topic={prev} direction="prev" locale={locale} />
+          ) : (
+            <span />
+          )}
+          {next ? (
+            <StepLink topic={next} direction="next" locale={locale} />
+          ) : (
+            <span />
+          )}
         </nav>
       </div>
 
       <aside
-        aria-label="이 페이지 목차 영역"
+        aria-label={t("page.tocArea")}
         className="sticky top-[calc(var(--help-top)+32px)] hidden max-h-[calc(100dvh-var(--help-top)-64px)] overflow-y-auto xl:block"
       >
         <HelpPageToc sections={outline} />
@@ -179,14 +194,17 @@ export function HelpPageFrame({
 function StepLink({
   topic,
   direction,
+  locale,
 }: {
   topic: HelpTopic;
   direction: "prev" | "next";
+  locale: Locale;
 }) {
   const next = direction === "next";
+  const t = helpT(locale);
   return (
     <Link
-      href={`/help/${topic.group}/${topic.slug}`}
+      href={localePath(locale, helpPathOf(topic))}
       data-help-nav="prev_next"
       className={cn(
         "group flex flex-col gap-1 rounded-[16px] border border-[var(--tv-rule)] px-5 py-4 help-lift hover:border-[var(--tv-rule-strong)] hover:bg-[var(--tv-lav-soft)]",
@@ -196,7 +214,7 @@ function StepLink({
     >
       <span className="inline-flex items-center gap-1.5 text-[13px] font-extrabold text-[var(--tv-muted)]">
         {next ? null : <ArrowLeft aria-hidden className="size-3.5" />}
-        {next ? "다음 주제" : "이전 주제"}
+        {next ? t("page.next") : t("page.prev")}
         {next ? <ArrowRight aria-hidden className="size-3.5" /> : null}
       </span>
       <span className="text-[16px] font-extrabold text-[var(--tv-ink)] group-hover:text-[var(--tv-brand-deep)]">
@@ -210,8 +228,16 @@ function StepLink({
  * 기능 페이지 끝의 "이런 상황에서 보세요". 상황별 페이지가 이 페이지를 `related` 로 가리키면 자동으로 선다 — 글을 복제하지 않고
  * 링크만 둔다(탐색과 내부 링크망).
  */
-function RelatedSituations({ topic }: { topic: HelpTopic }) {
-  const situations = helpTopics.filter((t) => t.related?.includes(topic.slug));
+function RelatedSituations({
+  topic,
+  locale,
+}: {
+  topic: HelpTopic;
+  locale: Locale;
+}) {
+  const situations = helpTopicsFor(locale).filter((each) =>
+    each.related?.includes(topic.slug)
+  );
   if (situations.length === 0) return null;
   return (
     <section
@@ -222,13 +248,13 @@ function RelatedSituations({ topic }: { topic: HelpTopic }) {
         id="related-situations"
         className="m-0 text-[16px] font-extrabold text-[var(--tv-ink)]"
       >
-        이런 상황에서 보세요
+        {helpT(locale)("page.relatedSituations")}
       </h2>
       <ul className="m-0 mt-3 flex list-none flex-col gap-1 p-0">
         {situations.map((situation) => (
           <li key={situation.slug}>
             <Link
-              href={`/help/${situation.group}/${situation.slug}`}
+              href={localePath(locale, helpPathOf(situation))}
               data-help-nav="related"
               className={cn(
                 "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",

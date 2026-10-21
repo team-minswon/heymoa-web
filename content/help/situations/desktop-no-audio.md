@@ -1,7 +1,7 @@
 ---
 title: 데스크톱 앱에서 녹음이 안 돼요
 navTitle: 녹음이 안 돼요
-badge: 데스크톱
+badge: desktop
 description: 데스크톱 앱에서 녹음이 시작되지 않거나 상대방 목소리가 안 담길 때, 권한과 연결을 확인하는 순서예요.
 group: situations
 slug: desktop-no-audio

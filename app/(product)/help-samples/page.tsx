@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
 
 import { HelpCodeBlock } from "@/components/help/md/client";
 import { MdBlock } from "@/components/help/md/render";
 import { HELP_SAMPLES } from "@/components/help/md/samples";
 import { HELP_VARS } from "@/components/help/help-vars";
+import { messagesFor } from "@/i18n/messages";
 
 export const dynamic = "force-static";
 
@@ -13,30 +15,37 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/** 제품 루트는 가이드 문구(`help`)를 클라이언트로 보내지 않으므로 이 페이지만 따로 내려 준다. */
 export default function HelpSamplesPage() {
   return (
-    <main
-      style={HELP_VARS}
-      className="mx-auto flex max-w-[760px] flex-col gap-10 px-4 py-12 text-[16px] leading-[1.8] text-[var(--tv-body)]"
+    <NextIntlClientProvider
+      locale="ko"
+      messages={{ help: messagesFor("ko").help }}
+      timeZone="Asia/Seoul"
     >
-      <h1 className="m-0 text-[28px] font-extrabold text-[var(--tv-ink)]">
-        가이드 표현 샘플
-      </h1>
-      <p className="m-0">
-        왼쪽 코드를 마크다운에 쓰면 아래 모양으로 보여요. 문법은{" "}
-        <code>content/help/README.md</code> 에 있어요.
-      </p>
-      {HELP_SAMPLES.map(({ name, source }) => (
-        <section key={name} className="flex flex-col gap-3">
-          <h2 className="m-0 text-[20px] font-extrabold text-[var(--tv-ink)]">
-            {name}
-          </h2>
-          <HelpCodeBlock text={source} />
-          <div className="flex flex-col gap-3 rounded-[16px] border border-[var(--tv-rule)] bg-white p-5">
-            <MdBlock source={source} />
-          </div>
-        </section>
-      ))}
-    </main>
+      <main
+        style={HELP_VARS}
+        className="mx-auto flex max-w-[760px] flex-col gap-10 px-4 py-12 text-[16px] leading-[1.8] text-[var(--tv-body)]"
+      >
+        <h1 className="m-0 text-[28px] font-extrabold text-[var(--tv-ink)]">
+          가이드 표현 샘플
+        </h1>
+        <p className="m-0">
+          왼쪽 코드를 마크다운에 쓰면 아래 모양으로 보여요. 문법은{" "}
+          <code>content/help/README.md</code> 에 있어요.
+        </p>
+        {HELP_SAMPLES.map(({ name, source }) => (
+          <section key={name} className="flex flex-col gap-3">
+            <h2 className="m-0 text-[20px] font-extrabold text-[var(--tv-ink)]">
+              {name}
+            </h2>
+            <HelpCodeBlock text={source} />
+            <div className="flex flex-col gap-3 rounded-[16px] border border-[var(--tv-rule)] bg-white p-5">
+              <MdBlock source={source} />
+            </div>
+          </section>
+        ))}
+      </main>
+    </NextIntlClientProvider>
   );
 }

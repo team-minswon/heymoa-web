@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { helpGroups } from "@/app/[lang]/help/_content/groups";
+import { helpT } from "@/lib/help/i18n";
 import {
   helpGroupBySlug,
   helpPathOf,
@@ -28,10 +29,10 @@ export const generateStaticParams = () =>
 type Props = { params: Promise<{ group: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const group = helpGroupBySlug((await params).group);
-  if (!group) return {};
-  const title = `${group.title} · ${siteConfig.brandLabel} 사용법`;
   const locale = await marketingLocale();
+  const group = helpGroupBySlug((await params).group, locale);
+  if (!group) return {};
+  const title = `${group.title} · ${helpT(locale)("brandTitle")}`;
   const url = localePath(locale, `/help/${group.slug}`);
   return {
     title: { absolute: title },
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       title,
       description: group.summary,
-      locale: "ko_KR",
+      locale: locale === "en" ? "en_US" : "ko_KR",
     },
     twitter: { card: "summary_large_image", title, description: group.summary },
   };
@@ -50,9 +51,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /** 그룹 소개: 그 그룹의 페이지를 카드로 보여 준다. 기능 그룹과 "상황별로 찾기"가 같은 틀이다. */
 export default async function HelpGroupPage({ params }: Props) {
-  const group = helpGroupBySlug((await params).group);
+  const locale = await marketingLocale();
+  const t = helpT(locale);
+  const href = (path: string) => localePath(locale, path);
+  const group = helpGroupBySlug((await params).group, locale);
   if (!group) notFound();
-  const topics = helpTopicsOfGroup(group.slug);
+  const topics = helpTopicsOfGroup(group.slug, locale);
   return (
     <>
       <JsonLd
@@ -69,21 +73,21 @@ export default async function HelpGroupPage({ params }: Props) {
             {
               "@type": "ListItem",
               position: 2,
-              name: "사용 가이드",
-              item: `${siteConfig.url}/help`,
+              name: t("guide"),
+              item: `${siteConfig.url}${href("/help")}`,
             },
             {
               "@type": "ListItem",
               position: 3,
               name: group.title,
-              item: `${siteConfig.url}/help/${group.slug}`,
+              item: `${siteConfig.url}${href(`/help/${group.slug}`)}`,
             },
           ],
         }}
       />
       <div data-help-main="" className={HELP_PAD}>
         <HelpPageHead
-          crumbs={[{ label: "사용 가이드", href: "/help" }]}
+          crumbs={[{ label: t("guide"), href: href("/help") }]}
           title={group.title}
           description={group.summary}
         />
@@ -91,7 +95,7 @@ export default async function HelpGroupPage({ params }: Props) {
           {topics.map((topic) => (
             <li key={topic.slug} data-reveal="">
               <Link
-                href={helpPathOf(topic)}
+                href={href(helpPathOf(topic))}
                 data-help-nav="hub_card"
                 className={cn(
                   "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 help-lift hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",

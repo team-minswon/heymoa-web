@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { LEGACY_HELP_ANCHORS } from "@/app/[lang]/help/_content/legacy-anchors";
-import { helpGroups, situationClusters } from "@/app/[lang]/help/_content/groups";
+import { legacyHelpAnchors } from "@/app/[lang]/help/_content/legacy-anchors";
 import type { HelpPageId } from "@/app/[lang]/help/_content/ids";
 import {
   helpAxisOf,
@@ -10,7 +9,11 @@ import {
   navTitleOf,
   helpTopicsOfGroup,
 } from "@/app/[lang]/help/_content/paths";
-import { helpTopics } from "@/app/[lang]/help/_content/topics";
+import {
+  helpGroupsFor,
+  helpTopicsFor,
+  situationClustersFor,
+} from "@/app/[lang]/help/_content/topics";
 import { HelpBadge } from "@/components/help/help-badge";
 import { HELP_PAD, HelpPageHead } from "@/components/help/help-frame";
 import {
@@ -24,32 +27,29 @@ import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { marketingLocale } from "@/lib/i18n/current";
 import { localePath } from "@/lib/i18n/locales";
 import { localizedMetadata } from "@/lib/i18n/metadata";
+import { helpT } from "@/lib/help/i18n";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
 
-const TITLE = `${siteConfig.brandLabel} 사용법`;
-const DESCRIPTION = `헤이모아(${siteConfig.name})의 회의 기록, 화자 지정, 회의 맥락과 용어 사전, 요약 검토, 데스크톱 앱과 AI 앱 연결 방법을 주제별로 알려 줘요.`;
-
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await marketingLocale();
+  const t = helpT(locale);
+  const title = `${t("guide")} · ${t("brandTitle")}`;
+  const description = t("hub.description");
   return {
-    title: { absolute: `사용 가이드 · ${TITLE}` },
-    description: DESCRIPTION,
+    title: { absolute: title },
+    description,
     ...localizedMetadata(locale, "/help"),
     openGraph: {
       type: "website",
       url: localePath(locale, "/help"),
-      title: `사용 가이드 · ${TITLE}`,
-      description: DESCRIPTION,
-      locale: "ko_KR",
+      title,
+      description,
+      locale: locale === "en" ? "en_US" : "ko_KR",
     },
-    twitter: {
-      card: "summary_large_image",
-      title: `사용 가이드 · ${TITLE}`,
-      description: DESCRIPTION,
-    },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -71,12 +71,18 @@ const H2_SMALL =
  * 기능별(그룹 카드와 그 안의 페이지)과 상황별("이럴 때" 레시피)이 나란히 선다. 옛 한 장짜리 시절의 `#해시` 링크는
  * `LegacyHashRedirect` 가 새 주소로 옮긴다.
  */
-export default function HelpHubPage() {
+export default async function HelpHubPage() {
+  const locale = await marketingLocale();
+  const t = helpT(locale);
+  const topics = helpTopicsFor(locale);
+  const href = (path: string) => localePath(locale, path);
   const featured = FEATURED.map(
-    (id) => helpTopics.find((topic) => topic.slug === id)!
+    (id) => topics.find((topic) => topic.slug === id)!
   );
-  const featureGroups = helpGroups.filter((group) => group.axis === "feature");
-  const situations = helpTopics.filter(
+  const featureGroups = helpGroupsFor(locale).filter(
+    (group) => group.axis === "feature"
+  );
+  const situations = topics.filter(
     (topic) => helpAxisOf(topic) === "situation"
   );
   return (
@@ -95,29 +101,34 @@ export default function HelpHubPage() {
             {
               "@type": "ListItem",
               position: 2,
-              name: "사용 가이드",
-              item: `${siteConfig.url}/help`,
+              name: t("guide"),
+              item: `${siteConfig.url}${href("/help")}`,
             },
           ],
         }}
       />
-      <LegacyHashRedirect map={LEGACY_HELP_ANCHORS} />
+      <LegacyHashRedirect map={legacyHelpAnchors(locale)} />
       <HelpHubProvider>
         <div data-help-main="" className={HELP_PAD}>
-          <HelpPageHead
-            title={TITLE}
-            description="궁금한 낱말을 찾거나, 기능 또는 상황으로 골라 읽어 보세요."
-          >
+          <HelpPageHead title={t("brandTitle")} description={t("hub.lead")}>
+            {t("hub.uiNote") ? (
+              <p
+                data-help-ui-note=""
+                className="m-0 mt-3 max-w-[760px] rounded-[10px] bg-[var(--tv-lav-soft)] px-3 py-2 text-[14px] leading-[1.6] text-[var(--tv-body)]"
+              >
+                {t("hub.uiNote")}
+              </p>
+            ) : null}
             <HelpHubInput />
           </HelpPageHead>
           <div className="mt-8">
             <HelpHubBody>
-              <h2 className={H2_SMALL}>자주 찾는 주제</h2>
+              <h2 className={H2_SMALL}>{t("hub.featured")}</h2>
               <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
                 {featured.map((topic) => (
                   <li key={topic.slug} data-reveal="">
                     <Link
-                      href={helpPathOf(topic)}
+                      href={href(helpPathOf(topic))}
                       data-help-nav="hub_card"
                       className={cn(
                         card,
@@ -138,7 +149,7 @@ export default function HelpHubPage() {
 
               <section aria-labelledby="by-feature" className="mt-10">
                 <h2 id="by-feature" className={H2_SMALL}>
-                  기능별로 찾기
+                  {t("hub.byFeature")}
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {featureGroups.map((group) => (
@@ -149,7 +160,7 @@ export default function HelpHubPage() {
                     >
                       <h3 className="m-0 text-[18px] font-extrabold leading-[1.35] text-[var(--tv-ink)]">
                         <Link
-                          href={`/help/${group.slug}`}
+                          href={href(`/help/${group.slug}`)}
                           data-help-nav="hub_card"
                           className={cn(
                             "rounded-[4px] hover:text-[var(--tv-brand-deep)]",
@@ -163,10 +174,10 @@ export default function HelpHubPage() {
                         {group.summary}
                       </p>
                       <ul className="m-0 mt-3 flex list-none flex-col gap-0.5 p-0">
-                        {helpTopicsOfGroup(group.slug).map((topic) => (
+                        {helpTopicsOfGroup(group.slug, locale).map((topic) => (
                           <li key={topic.slug}>
                             <Link
-                              href={helpPathOf(topic)}
+                              href={href(helpPathOf(topic))}
                       data-help-nav="hub_card"
                               className={cn(
                                 "flex min-h-9 items-center gap-2 rounded-[8px] px-2 text-[15px] text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
@@ -185,10 +196,10 @@ export default function HelpHubPage() {
               </section>
               <section aria-labelledby="by-situation" className="mt-10">
                 <h2 id="by-situation" className={H2_SMALL}>
-                  상황별로 찾기
+                  {t("hub.bySituation")}
                 </h2>
                 <div className="flex flex-col gap-6">
-                  {situationClusters.map((cluster) => (
+                  {situationClustersFor(locale).map((cluster) => (
                     <div key={cluster.title}>
                       <h3 className="m-0 mb-2 text-[15px] font-extrabold text-[var(--tv-ink)]">
                         {cluster.title}
@@ -199,7 +210,7 @@ export default function HelpHubPage() {
                           .map((topic) => (
                             <li key={topic.slug} data-reveal="">
                               <Link
-                                href={helpPathOf(topic)}
+                                href={href(helpPathOf(topic))}
                       data-help-nav="hub_card"
                                 className={cn(card, "gap-1 p-5", FOCUS)}
                               >

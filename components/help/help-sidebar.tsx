@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 
 import type {
   HelpBadgeName,
@@ -12,7 +13,7 @@ import type {
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { HelpBadge } from "@/components/help/help-badge";
 import { useHelpAxis } from "@/components/help/help-axis";
-import { splitLocale } from "@/lib/i18n/locales";
+import { localePath, splitLocale } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
 type SidebarTopic = {
@@ -43,6 +44,8 @@ export function HelpSidebar({
   // 언어 접두사를 벗긴 경로. 한국어 SSR 의 `/ko/help/...`(rewrite 뒤 주소)와 영어판 `/en/help/...` 이 같은 판정을 받는다.
   const pathname = splitLocale(usePathname()).path;
   const axis = useHelpAxis(pathname);
+  const locale = useLocale();
+  const t = useTranslations("help");
   const box = useRef<HTMLDivElement>(null);
   // 기능별은 그룹 제목(그룹 소개로 가는 링크) 아래 그 그룹의 페이지, 상황별은 묶음 제목(표시용) 아래 레시피. 둘 다 같은 모양이다.
   const sections =
@@ -65,6 +68,7 @@ export function HelpSidebar({
         }));
   // 누른 즉시 활성 표시를 옮긴다(낙관적). 라우트 전환이 끝나 주소가 바뀌면 그 값이 이어받고, 오래 안 바뀌면(실패) 되돌린다.
   const [pending, setPending] = useState<string | null>(null);
+  // 활성 판정은 무접두 경로로 한다. 링크만 그 언어판 주소로 낸다.
   const current = pending ?? pathname;
 
   useEffect(() => {
@@ -95,13 +99,13 @@ export function HelpSidebar({
       ref={box}
       className="sticky top-[var(--help-top)] hidden h-[calc(100dvh-var(--help-top))] w-[264px] shrink-0 self-start overflow-y-auto border-r border-[var(--tv-rule)] bg-white lg:block"
     >
-      <nav aria-label="사용 가이드 주제" className="flex flex-col gap-5 px-3 py-5">
+      <nav aria-label={t("sidebar")} className="flex flex-col gap-5 px-3 py-5">
         {sections.map((section) => (
           <div key={section.key}>
             <p className="m-0 mb-1">
               {section.href ? (
                 <Link
-                  href={section.href}
+                  href={localePath(locale, section.href)}
                   aria-current={current === section.href ? "page" : undefined}
                   data-help-nav="sidebar"
                   onClick={onPick(section.href)}
@@ -132,7 +136,7 @@ export function HelpSidebar({
                 return (
                   <li key={topic.slug}>
                     <Link
-                      href={path}
+                      href={localePath(locale, path)}
                       aria-current={on ? "page" : undefined}
                       data-help-nav="sidebar"
                       onClick={onPick(path)}

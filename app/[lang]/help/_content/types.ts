@@ -26,8 +26,8 @@ export type HelpCluster = {
   pages: readonly HelpPageId[];
 };
 
-/** 페이지 라벨 옆 알약. 닫힌 집합이다 — 늘리려면 여기와 `help-badge.tsx` 의 읽어 주는 글을 함께 고친다. */
-export const HELP_BADGES = ["데스크톱"] as const;
+/** 페이지 라벨 옆 알약의 id(frontmatter `badge`). 닫힌 집합이다 — 늘리려면 여기와 언어 파일 `help.badge` 를 함께 고친다. */
+export const HELP_BADGES = ["desktop"] as const;
 export type HelpBadgeName = (typeof HELP_BADGES)[number];
 
 export type HelpTopic = {

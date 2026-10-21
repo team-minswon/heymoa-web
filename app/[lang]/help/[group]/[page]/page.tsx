@@ -9,7 +9,8 @@ import {
   helpPathOf,
   helpTopicByPath,
 } from "@/app/[lang]/help/_content/paths";
-import { helpTopics } from "@/app/[lang]/help/_content/topics";
+import { helpTopics, helpTopicsFor } from "@/app/[lang]/help/_content/topics";
+import { helpT } from "@/lib/help/i18n";
 import { HelpPageFrame } from "@/components/help/help-frame";
 import { JsonLd } from "@/components/help/json-ld";
 import { HELP_MODIFIED, HELP_PUBLISHED } from "@/lib/help/dates";
@@ -25,10 +26,10 @@ type Props = { params: Promise<{ group: string; page: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { group, page } = await params;
-  const topic = helpTopicByPath(group, page);
-  if (!topic) return {};
-  const title = `${topic.title} · ${siteConfig.brandLabel} 사용법`;
   const locale = await marketingLocale();
+  const topic = helpTopicByPath(group, page, locale);
+  if (!topic) return {};
+  const title = `${topic.title} · ${helpT(locale)("brandTitle")}`;
   const url = localePath(locale, helpPathOf(topic));
   return {
     title: { absolute: title },
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       title,
       description: topic.summary,
-      locale: "ko_KR",
+      locale: locale === "en" ? "en_US" : "ko_KR",
     },
     twitter: {
       card: "summary_large_image",
@@ -51,13 +52,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function HelpTopicPage({ params }: Props) {
   const { group, page } = await params;
-  const index = helpTopics.findIndex(
+  const locale = await marketingLocale();
+  const t = helpT(locale);
+  const href = (path: string) => localePath(locale, path);
+  const topics = helpTopicsFor(locale);
+  const index = topics.findIndex(
     (topic) => topic.group === group && topic.slug === page
   );
   if (index === -1) notFound();
-  const topic = helpTopics[index];
-  const groupInfo = helpGroupBySlug(group)!;
-  const url = `${siteConfig.url}${helpPathOf(topic)}`;
+  const topic = topics[index];
+  const groupInfo = helpGroupBySlug(group, locale)!;
+  const url = `${siteConfig.url}${href(helpPathOf(topic))}`;
   // FAQ 는 마크다운의 "자주 묻는 질문"과 문제 해결 블록(증상 → 해결 방법)에서 온다. 단계가 분명한 상황별 페이지는 HowTo 다 — 둘을 겹쳐 마크업하지 않는다.
   const faq = topic.faq?.length
     ? topic.faq.map(({ question, answer }) => ({
@@ -83,14 +88,14 @@ export default async function HelpTopicPage({ params }: Props) {
             {
               "@type": "ListItem",
               position: 2,
-              name: "사용 가이드",
-              item: `${siteConfig.url}/help`,
+              name: t("guide"),
+              item: `${siteConfig.url}${href("/help")}`,
             },
             {
               "@type": "ListItem",
               position: 3,
               name: groupInfo.title,
-              item: `${siteConfig.url}/help/${group}`,
+              item: `${siteConfig.url}${href(`/help/${group}`)}`,
             },
             { "@type": "ListItem", position: 4, name: topic.title, item: url },
           ],
@@ -102,7 +107,7 @@ export default async function HelpTopicPage({ params }: Props) {
           "@type": "TechArticle",
           headline: topic.title,
           description: topic.summary,
-          inLanguage: "ko",
+          inLanguage: locale,
           datePublished: HELP_PUBLISHED,
           dateModified: HELP_MODIFIED,
           mainEntityOfPage: url,
@@ -117,7 +122,7 @@ export default async function HelpTopicPage({ params }: Props) {
             "@type": "HowTo",
             name: topic.title,
             description: topic.summary,
-            inLanguage: "ko",
+            inLanguage: locale,
             step: topic.howTo.map((text, i) => ({
               "@type": "HowToStep",
               position: i + 1,
@@ -136,10 +141,11 @@ export default async function HelpTopicPage({ params }: Props) {
         />
       ) : null}
       <HelpPageFrame
+        locale={locale}
         topic={topic}
         group={groupInfo}
-        prev={helpTopics[index - 1]}
-        next={helpTopics[index + 1]}
+        prev={topics[index - 1]}
+        next={topics[index + 1]}
       />
     </>
   );

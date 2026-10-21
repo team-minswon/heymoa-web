@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { helpGroups, situationClusters } from "@/app/[lang]/help/_content/groups";
@@ -18,6 +18,10 @@ import HelpTopicPage, {
 } from "@/app/[lang]/help/[group]/[page]/page";
 import HelpHubPage from "@/app/[lang]/help/page";
 import { buildHelpIndex, searchHelp } from "@/lib/help/search-index";
+import { intlWrapper } from "@/components/help/test-intl";
+
+/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: intlWrapper() });
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -69,7 +73,7 @@ describe("도움말 페이지", () => {
     const badged = helpTopics.filter((t) => t.badge);
     expect(badged.map((t) => t.slug).sort()).toEqual(["desktop", "desktop-no-audio"]);
     for (const topic of badged) {
-      expect(topic.badge).toBe("데스크톱");
+      expect(topic.badge).toBe("desktop");
       expect(topic.navTitle ?? topic.title, topic.slug).not.toContain("데스크톱");
     }
   });
@@ -189,8 +193,8 @@ describe("도움말 페이지", () => {
     }
   });
 
-  it("허브는 모든 페이지로 가는 링크와 검색칸을 낸다", () => {
-    render(<HelpHubPage />);
+  it("허브는 모든 페이지로 가는 링크와 검색칸을 낸다", async () => {
+    render(await HelpHubPage());
     expect(
       screen.getByRole("heading", { name: "HeyMoa(헤이모아) 사용법", level: 1 })
     ).toBeInTheDocument();

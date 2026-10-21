@@ -28,13 +28,20 @@ describe("og-lines", () => {
 
 describe("가이드 공유 카드 전수", () => {
   it("모든 제목·설명이 고아 줄 없이 들어가고 설명은 말줄임되지 않는다", async () => {
-    const { helpTopics } = await import("@/app/[lang]/help/_content/topics");
-    const { helpGroups } = await import("@/app/[lang]/help/_content/groups");
-    const cards = [
-      ...helpTopics.map((t) => ({ title: t.title, summary: t.summary })),
-      ...helpGroups.map((g) => ({ title: g.title, summary: g.summary })),
-    ];
-    for (const g of helpGroups) {
+    const { helpTopicsFor, helpGroupsFor } =
+      await import("@/app/[lang]/help/_content/topics");
+    // 언어판마다 카드가 따로 그려진다(영어판도 같은 판 · 같은 줄 나누기).
+    const cards = (["ko", "en"] as const).flatMap((locale) => [
+      ...helpTopicsFor(locale).map((t) => ({
+        title: t.title,
+        summary: t.summary,
+      })),
+      ...helpGroupsFor(locale).map((g) => ({
+        title: g.title,
+        summary: g.summary,
+      })),
+    ]);
+    for (const g of helpGroupsFor("ko")) {
       expect(g.summary.length, g.slug).toBeGreaterThanOrEqual(50);
       expect(g.summary.length, g.slug).toBeLessThanOrEqual(110);
     }

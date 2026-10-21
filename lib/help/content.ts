@@ -15,16 +15,21 @@ import {
   type HelpSection,
   HelpTopic,
 } from "@/app/[lang]/help/_content/types";
+import { PROBLEM_LABELS } from "@/components/help/md/labels";
 import { FaqItem, MdBlock } from "@/components/help/md/render";
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "@/lib/i18n/locales";
 
 /**
- * 가이드 본문은 `content/help/<그룹>/<slug>.md` 에 있다(문법: `content/help/README.md`).
+ * 가이드 본문은 `content/help/<그룹>/<slug>.md` 에 있다(문법: `content/help/README.md`). 영어판은 `content/help/en/<그룹>/<slug>.md` 다.
  * 여기서 한 번 읽어 `HelpTopic` 으로 만든다 — 라우트 · 검색 색인 · sitemap · JSON-LD 는 모두 이 결과를 쓴다.
  *
  * 파일을 읽는 곳은 여기 하나다(빌드 때 한 번, 정적 프리렌더). 파일은 `## 제목 {#섹션-id}` 로 섹션을 나눈다 —
  * 섹션 id 는 바깥 링크가 `#id` 로 오는 주소라서 바꾸지 않는다.
  */
 const CONTENT_ROOT = path.join(process.cwd(), "content", "help");
+/** 한국어는 바로 아래, 다른 언어는 언어 이름의 하위 폴더다. */
+const rootOf = (locale: Locale) =>
+  locale === DEFAULT_LOCALE ? CONTENT_ROOT : path.join(CONTENT_ROOT, locale);
 
 type Mdast = {
   type: string;
@@ -108,7 +113,7 @@ function problemQa(node: Mdast) {
       for (const inline of kid.children ?? []) {
         const label =
           inline.type === "strong" ? plain(inline).replace(/[:：]\s*$/, "") : "";
-        if (["증상", "원인", "해결 방법"].includes(label)) {
+        if (Object.hasOwn(PROBLEM_LABELS, label)) {
           segs.push({ label, text: "" });
         } else {
           add(plain(inline));
@@ -118,8 +123,8 @@ function problemQa(node: Mdast) {
       add(plain(kid));
     }
   }
-  const sym = segs.find((g) => g.label === "증상");
-  const fix = segs.find((g) => g.label === "해결 방법");
+  const sym = segs.find((g) => PROBLEM_LABELS[g.label] === "symptom");
+  const fix = segs.find((g) => PROBLEM_LABELS[g.label] === "fix");
   return sym && fix ? { question: oneLine(sym.text), answer: fix.text.trim() } : null;
 }
 
@@ -130,7 +135,10 @@ function findAll(nodes: Mdast[], pick: (n: Mdast) => boolean): Mdast[] {
   ]);
 }
 
-function topicOf(file: string): { topic: HelpTopic; order: number } {
+function topicOf(
+  file: string,
+  locale: Locale
+): { topic: HelpTopic; order: number } {
   const raw = fs.readFileSync(file, "utf8");
   const { meta, body } = frontmatterOf(raw, file);
   const slug = meta.slug as HelpPageId;
@@ -158,6 +166,7 @@ function topicOf(file: string): { topic: HelpTopic; order: number } {
           question,
           open: i === 0,
           answer: createElement(MdBlock, {
+            locale,
             source: answer,
             plainText: oneLine(g.answer.map(spaced).join(" ")),
           }),
@@ -167,6 +176,7 @@ function topicOf(file: string): { topic: HelpTopic; order: number } {
       blocks = nodes.map((node, i) =>
         createElement(MdBlock, {
           key: i,
+          locale,
           source: slice(body, [node]),
           variant: id === "related" ? "related" : undefined,
           plainText: oneLine(spaced(node)),
@@ -234,27 +244,31 @@ function plainSpaced(node: Mdast): string {
     : parts.join("");
 }
 
-let cache: readonly HelpTopic[] | undefined;
+const cache = new Map<Locale, readonly HelpTopic[]>();
 
-export function loadHelpTopics(): readonly HelpTopic[] {
-  if (cache) return cache;
+export function loadHelpTopics(locale: Locale = DEFAULT_LOCALE): readonly HelpTopic[] {
+  const hit = cache.get(locale);
+  if (hit) return hit;
+  const root = rootOf(locale);
   const found: { topic: HelpTopic; order: number }[] = [];
-  for (const group of fs.readdirSync(CONTENT_ROOT, { withFileTypes: true })) {
-    if (!group.isDirectory()) continue;
-    for (const file of fs.readdirSync(path.join(CONTENT_ROOT, group.name))) {
+  for (const group of fs.readdirSync(root, { withFileTypes: true })) {
+    // 한국어 폴더 안의 언어 폴더(`en/`)는 그 언어판이다
+    if (!group.isDirectory() || (LOCALES as readonly string[]).includes(group.name)) continue;
+    for (const file of fs.readdirSync(path.join(root, group.name))) {
       if (file.endsWith(".md")) {
-        found.push(topicOf(path.join(CONTENT_ROOT, group.name, file)));
+        found.push(topicOf(path.join(root, group.name, file), locale));
       }
     }
   }
   const groupIndex = (slug: string) =>
     helpGroups.findIndex((g) => g.slug === slug);
-  cache = found
+  const topics = found
     .sort(
       (a, b) =>
         groupIndex(a.topic.group) - groupIndex(b.topic.group) ||
         a.order - b.order
     )
     .map((f) => f.topic);
-  return cache;
+  cache.set(locale, topics);
+  return topics;
 }

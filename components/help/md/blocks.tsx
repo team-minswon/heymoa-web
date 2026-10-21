@@ -22,7 +22,11 @@ import { helpPathById } from "@/app/[lang]/help/_content/path-by-id";
 import { HelpClip } from "@/components/help/help-clip";
 import { HelpFigure } from "@/components/help/help-figure";
 import { HelpCodeBlock, HelpTabsView } from "@/components/help/md/client";
+import { CALLOUT_TONES, PROBLEM_LABELS } from "@/components/help/md/labels";
+import { messagesFor } from "@/i18n/messages";
 import { textOf } from "@/lib/help/text";
+import { localePath, type Locale } from "@/lib/i18n/locales";
+import { isMarketingPath } from "@/lib/i18n/marketing-routes";
 import { cn } from "@/lib/utils";
 
 /*
@@ -32,17 +36,34 @@ import { cn } from "@/lib/utils";
 
 type El = ReactElement<{ children?: ReactNode } & Record<string, unknown>>;
 
-/** `help:slug#앵커` → 가이드 안 주소 */
-export function resolveHelpHref(href: string) {
+/** `help:slug#앵커` → 그 언어의 가이드 안 주소 */
+export function resolveHelpHref(href: string, locale: Locale = "ko") {
   const [id, hash] = href.slice("help:".length).split("#");
-  return `${helpPathById(id as HelpPageId)}${hash ? `#${hash}` : ""}`;
+  return `${localePath(locale, helpPathById(id as HelpPageId))}${hash ? `#${hash}` : ""}`;
 }
 
-export function MdLink({ href = "", children }: ComponentProps<"a">) {
+/** 사이트 안 주소(`/privacy#x`)를 그 언어판으로. 언어판이 없는 제품 면(`/w/...`)은 그대로 둔다. */
+function localSiteHref(href: string, locale: Locale) {
+  const at = href.search(/[?#]/);
+  const path = at === -1 ? href : href.slice(0, at);
+  return isMarketingPath(path)
+    ? localePath(locale, path) + (at === -1 ? "" : href.slice(at))
+    : href;
+}
+
+export function MdLink({
+  href = "",
+  children,
+  locale = "ko",
+}: ComponentProps<"a"> & { locale?: Locale }) {
   if (href.startsWith("help:") || href.startsWith("/")) {
     return (
       <Link
-        href={href.startsWith("help:") ? resolveHelpHref(href) : href}
+        href={
+          href.startsWith("help:")
+            ? resolveHelpHref(href, locale)
+            : localSiteHref(href, locale)
+        }
         className={LINK}
       >
         {children}
@@ -56,12 +77,12 @@ export function MdLink({ href = "", children }: ComponentProps<"a">) {
   );
 }
 
-const CALLOUT: Record<string, { Icon: typeof Info; line: string }> = {
-  참고: { Icon: Info, line: "var(--tv-rule-strong)" },
-  팁: { Icon: Lightbulb, line: "var(--tv-brand)" },
-  주의: { Icon: TriangleAlert, line: "var(--tv-pop)" },
-  "되돌릴 수 없어요": { Icon: OctagonAlert, line: "var(--el-warning-strong)" },
-};
+const CALLOUT = {
+  note: { Icon: Info, line: "var(--tv-rule-strong)" },
+  tip: { Icon: Lightbulb, line: "var(--tv-brand)" },
+  caution: { Icon: TriangleAlert, line: "var(--tv-pop)" },
+  irreversible: { Icon: OctagonAlert, line: "var(--el-warning-strong)" },
+} as const;
 
 export function HelpCallout({
   kind = "참고",
@@ -70,7 +91,9 @@ export function HelpCallout({
   kind?: string;
   children?: ReactNode;
 }) {
-  const { Icon, line } = CALLOUT[kind] ?? CALLOUT["참고"];
+  // 이름표는 본문 언어로 적힌 종류 낱말 그대로다(`labels.ts`)
+  const { Icon, line } =
+    CALLOUT[Object.hasOwn(CALLOUT_TONES, kind) ? CALLOUT_TONES[kind] : "note"];
   return (
     <aside
       role="note"
@@ -113,30 +136,35 @@ export function MdTable({ children }: { children?: ReactNode }) {
 
 const MARKS: Record<
   string,
-  { Icon: typeof Check; label: string; tone: string }
+  { Icon: typeof Check; label: "yes" | "no" | "none"; tone: string }
 > = {
   "✓": {
     Icon: Check,
-    label: "가능",
+    label: "yes",
     tone: "bg-[var(--tv-lav)] text-[var(--tv-brand-deep)]",
   },
   "✗": {
     Icon: X,
-    label: "불가",
+    label: "no",
     tone: "bg-[var(--tv-lav-soft)] text-[var(--tv-muted)]",
   },
   "–": {
     Icon: Minus,
-    label: "해당 없음",
+    label: "none",
     tone: "bg-[var(--tv-lav-soft)] text-[var(--tv-muted)]",
   },
 };
 
-/** ✓ ✗ – 만 든 칸은 아이콘 칩이 된다(스크린 리더에는 가능 · 불가 · 해당 없음). */
-export function MdCell({ children, node: _node, ...rest }: ComponentProps<"td"> & { node?: unknown }) {
+/** ✓ ✗ – 만 든 칸은 아이콘 칩이 된다(스크린 리더에는 가능 · 불가 · 해당 없음을 그 언어로). */
+export function MdCell({
+  children,
+  node: _node,
+  locale = "ko",
+  ...rest
+}: ComponentProps<"td"> & { node?: unknown; locale?: Locale }) {
   void _node;
   const only = Children.toArray(children).map(String).join("").trim();
-  const found = MARKS[only];
+  const found = Object.hasOwn(MARKS, only) ? MARKS[only] : undefined;
   return (
     <td {...rest}>
       {found ? (
@@ -147,7 +175,9 @@ export function MdCell({ children, node: _node, ...rest }: ComponentProps<"td"> 
           )}
         >
           <found.Icon aria-hidden className="size-3.5" />
-          <span className="sr-only">{found.label}</span>
+          <span className="sr-only">
+            {messagesFor(locale).help.md[found.label]}
+          </span>
         </span>
       ) : (
         children
@@ -249,14 +279,13 @@ export function HelpTabs({ children }: { children?: ReactNode }) {
   );
 }
 
-const LABELS = ["증상", "원인", "해결 방법"];
-
 /**
  * 증상 / 원인 / 해결 방법 3칸. 안쪽은 `**증상:** …` `**원인:** …` `**해결 방법:** …` 문단이고,
  * 해결 방법 뒤에는 목록이 이어질 수 있다.
  */
 export function HelpProblem({ children }: { children?: ReactNode }) {
   const rows: { label: string; inline: ReactNode[]; extra: ReactNode[] }[] = [];
+  const isLabel = (label: string) => Object.hasOwn(PROBLEM_LABELS, label);
   const labelOf = (node: ReactNode) =>
     isValidElement(node) && node.type === "strong"
       ? textOf(node).replace(/[:：]\s*$/, "")
@@ -266,13 +295,13 @@ export function HelpProblem({ children }: { children?: ReactNode }) {
     const el = child as El;
     const kids = Children.toArray(el.props.children);
     const isLine = el.type === "p" || el.type === MdParagraph;
-    if (isLine && !LABELS.includes(labelOf(kids[0])) && rows.length > 0) {
+    if (isLine && !isLabel(labelOf(kids[0])) && rows.length > 0) {
       rows[rows.length - 1].extra.push(el); // 라벨 없는 다음 문단은 앞 칸에 이어 붙인다
     } else if (isLine) {
       // 세 줄이 한 문단으로 이어져 있다: 굵은 라벨이 나올 때마다 새 칸
       for (const kid of kids) {
         const label = labelOf(kid);
-        if (LABELS.includes(label)) rows.push({ label, inline: [], extra: [] });
+        if (isLabel(label)) rows.push({ label, inline: [], extra: [] });
         else if (rows.length > 0) rows[rows.length - 1].inline.push(kid);
       }
     } else if (rows.length > 0) {
@@ -284,14 +313,14 @@ export function HelpProblem({ children }: { children?: ReactNode }) {
       typeof n === "string" ? (i === 0 ? n.trimStart() : n).replace(/\n$/, "") : n
     );
   return (
-    <dl className="m-0 grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-[14px] border border-[var(--tv-rule)] px-4 py-3">
+    <dl className="m-0 grid grid-cols-[minmax(72px,max-content)_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-[14px] border border-[var(--tv-rule)] px-4 py-3">
       {rows.map(({ label, inline, extra }) => (
         <div key={label} className="contents">
           <dt className="m-0 font-bold text-[var(--tv-ink)]">{label}</dt>
           <dd
             className={cn(
               "m-0 flex min-w-0 flex-col gap-1.5 [&_p]:m-0 [&_ul]:m-0 [&_ul]:pl-5",
-              label === "증상" && "font-bold text-[var(--tv-ink)]"
+              PROBLEM_LABELS[label] === "symptom" && "font-bold text-[var(--tv-ink)]"
             )}
           >
             <p>{trim(inline)}</p>

@@ -38,11 +38,13 @@ describe("가이드 이벤트 타입", () => {
       query_length: number;
       result_count: number;
       zero_results: boolean;
+      language: "ko" | "en";
     }>();
     expectTypeOf(track<"help_result_clicked">).parameter(1).exclude<undefined>().toEqualTypeOf<{
       slug: string;
       rank: number;
       query_length: number;
+      language: "ko" | "en";
     }>();
   });
 });

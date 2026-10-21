@@ -1,20 +1,22 @@
-import { helpGroups } from "@/app/[lang]/help/_content/groups";
 import { helpGroupBySlug } from "@/app/[lang]/help/_content/paths";
-import { helpOgImage, helpOgSize } from "@/lib/help/og";
-import { siteConfig } from "@/lib/site";
+import { helpOgImage, helpOgMetadata } from "@/lib/help/og";
+import { helpT } from "@/lib/help/i18n";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
 
-export const alt = `${siteConfig.brandLabel} 사용법`;
-export const size = helpOgSize;
-export const contentType = "image/png";
-
-export const generateStaticParams = () =>
-  helpGroups.map(({ slug }) => ({ group: slug }));
+export const generateImageMetadata = helpOgMetadata;
 
 export default async function Image({
   params,
 }: {
-  params: Promise<{ group: string }>;
+  params: Promise<{ lang: string; group: string }>;
 }) {
-  const group = helpGroupBySlug((await params).group);
-  return helpOgImage(group?.title ?? "사용법", group?.summary ?? "");
+  const { lang, group: slug } = await params;
+  const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
+  const t = helpT(locale);
+  const group = helpGroupBySlug(slug, locale);
+  return helpOgImage(
+    group?.title ?? t("og.fallbackTitle"),
+    group?.summary ?? "",
+    t("og.label")
+  );
 }

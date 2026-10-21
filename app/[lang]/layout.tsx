@@ -45,7 +45,7 @@ export default async function MarketingRootLayout({
   }
   // 랜딩 상단 바 · 푸터는 마케팅 면 전부에 서고(`NavbarGate` · `FooterGate`, 클라이언트) 랜딩 문구를 쓴다.
   return (
-    <AppShell locale={locale} clientNamespaces={["common", "landing"]}>
+    <AppShell locale={locale} clientNamespaces={["common", "landing", "help"]}>
       {children}
     </AppShell>
   );

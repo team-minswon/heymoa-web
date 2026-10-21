@@ -1,9 +1,11 @@
 import enCommon from "@/messages/en/common.json";
 import enDownload from "@/messages/en/download.json";
+import enHelp from "@/messages/en/help.json";
 import enLanding from "@/messages/en/landing.json";
 import enLegal from "@/messages/en/legal.json";
 import koCommon from "@/messages/ko/common.json";
 import koDownload from "@/messages/ko/download.json";
+import koHelp from "@/messages/ko/help.json";
 import koLanding from "@/messages/ko/landing.json";
 import koLegal from "@/messages/ko/legal.json";
 import type { Locale } from "@/lib/i18n/locales";
@@ -17,6 +19,7 @@ const ko = {
   landing: koLanding,
   download: koDownload,
   legal: koLegal,
+  help: koHelp,
 };
 
 export type Messages = typeof ko;
@@ -31,6 +34,7 @@ const en: DeepPartial<Messages> = {
   landing: enLanding,
   download: enDownload,
   legal: enLegal,
+  help: enHelp,
 };
 
 /**

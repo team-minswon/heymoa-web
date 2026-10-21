@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
-import { track } from "@/lib/analytics/track";
+import { trackHelp } from "@/lib/help/analytics";
 import { goSamePage } from "@/lib/help/scroll";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import type { HelpHit } from "@/lib/help/search-index";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /** 결과를 눌렀다 — 주제 slug · 순위 · 검색어 길이만 보낸다(검색어 원문은 보내지 않는다). */
 export const trackResultClick = (hit: HelpHit, rank: number, query: string) =>
-  track("help_result_clicked", {
+  trackHelp("help_result_clicked", {
     slug: hit.path.split("/").pop() ?? "",
     rank,
     query_length: query.length,
@@ -34,6 +35,7 @@ export function HelpHitRow({
   rank?: number;
   onNavigate?: () => void;
 }) {
+  const t = useTranslations("help.search");
   return (
     <Link
       id={id}
@@ -62,7 +64,7 @@ export function HelpHitRow({
     >
       <span className="flex items-center gap-2 text-[13px] font-extrabold text-[var(--tv-brand-deep)]">
         <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-[var(--tv-lav)] px-2 text-[11px] font-extrabold text-[var(--tv-ink)]">
-          {hit.axis === "situation" ? "상황" : "기능"}
+          {hit.axis === "situation" ? t("situation") : t("feature")}
         </span>
         <span className="min-w-0">
           {hit.topicTitle} · {hit.sectionTitle}
