@@ -269,74 +269,89 @@ export function FeedbackDialog({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent
-            value="send"
-            className="mt-4 flex h-[380px] flex-none flex-col gap-4"
-          >
-            <ChoiceCards
-              label="분류"
-              items={KINDS}
-              value={kind}
-              onChange={setKind}
-            />
-
-            <div>
-              <Textarea
-                aria-label="내용"
-                value={message}
-                maxLength={FEEDBACK_MAX}
-                rows={6}
-                className="min-h-32"
-                placeholder={current.placeholder}
-                onChange={(event) => setMessage(event.target.value)}
+          {/*
+            두 패널을 한 칸에 겹쳐 둔다 — 창 높이는 더 큰 「보내기」 쪽을 따라서, 탭을 바꿔도 안 변하고 문구가
+            길어져도 푸터가 패널 밖으로 넘치지 않는다(APP-1292. 예전엔 둘 다 380px 고정이라 푸터가 32px 넘쳤다).
+            「보내기」는 숨겨도(inert) 높이를 재도록 `keepMounted` 에 `hidden={false}` 로 남기고 `invisible` 로만 가린다.
+            「내 문의」는 목록을 칸 안에 절대 배치해 자기 높이를 칸에 보태지 않는다.
+          */}
+          <div className="mt-4 grid">
+            <TabsContent
+              value="send"
+              keepMounted
+              hidden={false}
+              className="col-start-1 row-start-1 flex flex-col gap-4 [&[inert]]:invisible"
+            >
+              <ChoiceCards
+                label="분류"
+                items={KINDS}
+                value={kind}
+                onChange={setKind}
               />
-              <p className="mt-1 text-right text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-                {message.length} / {FEEDBACK_MAX}
-              </p>
-            </div>
 
-            <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-              현재 화면 경로와 사용 환경이 함께 담겨요. 회의 내용은 보내지
-              않아요.
-            </p>
-
-            <DialogFooter className="mt-auto bg-transparent">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-              >
-                취소
-              </Button>
-              <Button
-                type="button"
-                disabled={empty}
-                loading={create.isPending}
-                onClick={submit}
-              >
-                보내기
-              </Button>
-            </DialogFooter>
-          </TabsContent>
-
-          <TabsContent value="mine" className="mt-4 h-[380px] flex-none">
-            {isLoading ? (
-              <div
-                aria-label="내 문의를 불러오는 중"
-                className="flex flex-col gap-3"
-              >
-                <Skeleton className="h-24 w-full rounded-panel" />
-                <Skeleton className="h-24 w-full rounded-panel" />
+              <div>
+                <Textarea
+                  aria-label="내용"
+                  value={message}
+                  maxLength={FEEDBACK_MAX}
+                  rows={6}
+                  className="max-h-60 min-h-32"
+                  placeholder={current.placeholder}
+                  onChange={(event) => setMessage(event.target.value)}
+                />
+                <p className="mt-1 text-right text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+                  {message.length} / {FEEDBACK_MAX}
+                </p>
               </div>
-            ) : isError ? (
-              <InlineRetry
-                label="내 문의를 불러오지 못했어요"
-                onRetry={() => void refetch()}
-              />
-            ) : (
-              <MyFeedbacks feedbacks={feedbacks} />
-            )}
-          </TabsContent>
+
+              <p className="text-xs leading-relaxed text-[var(--el-muted)]">
+                현재 화면 경로와 사용 환경이 함께 담겨요. 회의 내용은 보내지
+                않아요.
+              </p>
+
+              <DialogFooter className="bg-transparent">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  type="button"
+                  disabled={empty}
+                  loading={create.isPending}
+                  onClick={submit}
+                >
+                  보내기
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+
+            <TabsContent
+              value="mine"
+              className="relative col-start-1 row-start-1"
+            >
+              <div className="absolute inset-0">
+                {isLoading ? (
+                  <div
+                    aria-label="내 문의를 불러오는 중"
+                    className="flex flex-col gap-3"
+                  >
+                    <Skeleton className="h-24 w-full rounded-panel" />
+                    <Skeleton className="h-24 w-full rounded-panel" />
+                  </div>
+                ) : isError ? (
+                  <InlineRetry
+                    label="내 문의를 불러오지 못했어요"
+                    onRetry={() => void refetch()}
+                  />
+                ) : (
+                  <MyFeedbacks feedbacks={feedbacks} />
+                )}
+              </div>
+            </TabsContent>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
