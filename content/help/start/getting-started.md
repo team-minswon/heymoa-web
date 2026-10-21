@@ -4,6 +4,7 @@ description: 헤이모아(HeyMoa)에 로그인해서 첫 회의를 기록하고 
 group: start
 slug: getting-started
 order: 1
+modified: 2026-10-19
 ---
 
 ## Google 계정으로 로그인해요 {#login}

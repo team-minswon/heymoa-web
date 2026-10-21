@@ -4,6 +4,7 @@ description: Invite members to your workspace and change their roles and display
 group: team
 slug: members
 order: 3
+modified: 2026-10-21
 ---
 
 ## Invite members {#invite}

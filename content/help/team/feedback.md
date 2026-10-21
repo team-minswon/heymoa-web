@@ -4,6 +4,7 @@ description: 사이드바에서 장애, 사용 문의, 기능 제안을 보내�
 group: team
 slug: feedback
 order: 4
+modified: 2026-10-19
 ---
 
 ## 문의 보내는 법 {#send}

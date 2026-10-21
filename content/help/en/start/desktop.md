@@ -6,6 +6,7 @@ description: Install the Mac or Windows app, record the sound your computer play
 group: start
 slug: desktop
 order: 4
+modified: 2026-10-21
 ---
 
 ## How the web and the app differ {#overview}

@@ -5,6 +5,7 @@ description: When product names, internal terms, or English acronyms are transcr
 group: situations
 slug: fix-terms
 order: 6
+modified: 2026-10-21
 ---
 
 ## What's happening {#problem}

@@ -4,6 +4,7 @@ description: 회의 중에 결정, 할 일, 열린 질문, 참고를 실시간�
 group: record
 slug: live-timeline
 order: 4
+modified: 2026-10-21
 ---
 
 ## 무엇이 올라오나요 {#what}

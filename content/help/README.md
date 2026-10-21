@@ -20,12 +20,14 @@ description: 한두 문장. 40~120자. 해요체. 페이지 목록, 검색 결�
 group: start
 slug: getting-started
 order: 1
+modified: 2026-10-19
 kind: facts
 ---
 ```
 
 - `slug` 와 `group` 은 `app/[lang]/help/_content/ids.ts` 와 같아야 해요. 주소가 바뀌면 옛 링크가 깨지니 바꾸지 않아요.
 - `order` 는 그룹 안 순서예요. 그룹 순서는 `_content/groups.ts` 가 정해요.
+- `modified`(필수)는 본문을 마지막으로 고친 날(`YYYY-MM-DD`)이에요. sitemap `lastmod` 와 구조화 데이터 `dateModified` 가 이 값을 읽고, 가이드 허브·그룹은 그 아래 페이지 중 가장 최근 값을 써요. 문장·단계·화면 이름을 고칠 때 같이 올리고, 맞춤법 손질은 올리지 않아요. 배포 날짜가 아니에요 — 구글은 실제 수정과 맞지 않는 `lastmod` 를 믿지 않아요. 영어판은 영어 파일을 고친 날이에요.
 - `kind: facts` 는 상황별 페이지 중 따라 하는 순서가 아니라 사실 목록일 때만 써요(이 경우 HowTo 구조화 데이터를 안 내요).
 - `title` 은 `제목 · HeyMoa(헤이모아) 사용법` 이 60자를 넘지 않게 써요.
 - `badge`(선택)는 데스크톱 앱 전용 페이지에 라벨 옆 작은 알약을 붙여요. 값은 id `desktop` 하나예요(`_content/types.ts` 의 `HELP_BADGES`, 보이는 글은 언어 파일 `help.badge`). 붙인 페이지는 `navTitle` 에서 「데스크톱」 낱말을 빼요.

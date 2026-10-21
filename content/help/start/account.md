@@ -4,6 +4,7 @@ description: Google 로그인과 로그아웃, 내 계정 화면, 이용 통계 
 group: start
 slug: account
 order: 3
+modified: 2026-10-19
 ---
 
 ## 로그인과 로그아웃 {#sign-in}

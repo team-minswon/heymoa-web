@@ -5,6 +5,7 @@ description: 회의를 종료했는데 요약 탭이 비어 있거나 분석에 
 group: situations
 slug: summary-missing
 order: 2
+modified: 2026-10-21
 ---
 
 ## 이런 상황이에요 {#problem}

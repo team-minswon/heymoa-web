@@ -4,6 +4,7 @@ description: 에이전트에게 지난 회의를 물어보고 찾을 범위를 �
 group: team
 slug: agent
 order: 2
+modified: 2026-10-19
 ---
 
 ## 에이전트 여는 법 {#open}

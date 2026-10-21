@@ -5,6 +5,7 @@ description: AI가 정리한 결정과 할 일을 확인해 고친 뒤, 검토 �
 group: situations
 slug: confirm-summary
 order: 3
+modified: 2026-10-19
 ---
 
 ## 이런 상황이에요 {#problem}

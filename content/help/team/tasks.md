@@ -4,6 +4,7 @@ description: 회의에서 나온 할 일을 상태, 프로젝트, 담당자별�
 group: team
 slug: tasks
 order: 1
+modified: 2026-10-21
 ---
 
 ## 할 일 모아 보는 법 {#list}

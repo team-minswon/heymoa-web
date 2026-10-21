@@ -4,6 +4,7 @@ description: 워크스페이스에 멤버를 초대하고 역할과 표시 이�
 group: team
 slug: members
 order: 3
+modified: 2026-10-21
 ---
 
 ## 멤버 초대하는 법 {#invite}

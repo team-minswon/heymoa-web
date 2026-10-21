@@ -5,6 +5,7 @@ description: Check the decisions and tasks the AI pulled from your meeting, fix 
 group: situations
 slug: confirm-summary
 order: 3
+modified: 2026-10-21
 ---
 
 ## What's happening {#problem}

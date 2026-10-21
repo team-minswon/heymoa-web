@@ -10,11 +10,9 @@ import { messagesFor } from "@/i18n/messages";
 import { marketingLocale } from "@/lib/i18n/current";
 import { localePath, type Locale } from "@/lib/i18n/locales";
 import { localizedMetadata } from "@/lib/i18n/metadata";
+import { PRIVACY_EFFECTIVE } from "@/lib/page-dates";
 
 export const dynamic = "force-static";
-
-// 시행일이 곧 최종 수정일이다. 조항을 고치면 같이 고친다.
-const EFFECTIVE_ISO = "2026-10-18";
 
 /**
  * 본문은 언어 파일 `legal.privacy`(`messages/<ko|en>/legal.json`)에 있다. 한국어가 정본이고 영어는 참고용 번역이다
@@ -94,14 +92,14 @@ export default async function PrivacyPage() {
         description={doc.metaDescription}
         path={localePath(locale, "/privacy")}
         inLanguage={locale}
-        dateModified={EFFECTIVE_ISO}
+        dateModified={PRIVACY_EFFECTIVE}
       />
       <LegalDocument
         locale={locale}
         path="/privacy"
         title={doc.title}
         description={doc.description}
-        effectiveDate={EFFECTIVE_ISO}
+        effectiveDate={PRIVACY_EFFECTIVE}
         sections={doc.sections.map((section) => ({
           title: section.title,
           body: section.body.map((paragraph) =>

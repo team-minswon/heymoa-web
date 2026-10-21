@@ -4,6 +4,7 @@ description: How to sign in and out with Google, use the My account screen, turn
 group: start
 slug: account
 order: 3
+modified: 2026-10-21
 ---
 
 ## Signing in and out {#sign-in}

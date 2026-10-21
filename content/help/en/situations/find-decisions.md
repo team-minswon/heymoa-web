@@ -5,6 +5,7 @@ description: Find decisions from past meetings and the reasons behind them using
 group: situations
 slug: find-decisions
 order: 8
+modified: 2026-10-21
 ---
 
 ## What's happening {#problem}

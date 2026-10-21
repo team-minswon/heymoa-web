@@ -3,6 +3,17 @@ import type { Metadata } from "next";
 import { DEFAULT_LOCALE, LOCALES, localePath, type Locale } from "./locales";
 
 /**
+ * 무접두 경로(`/help`)의 언어판 대응(hreflang): 모든 언어판과 `x-default`(한국어 주소). 페이지 head(`localizedMetadata`)와
+ * sitemap 이 같이 읽는다 — 두 곳이 따로 만들면 `x-default` 처럼 한쪽만 빠진다.
+ */
+export function localeAlternates(path: string): Record<string, string> {
+  return {
+    ...Object.fromEntries(LOCALES.map((each) => [each, localePath(each, path)])),
+    "x-default": localePath(DEFAULT_LOCALE, path),
+  };
+}
+
+/**
  * 마케팅 페이지의 canonical·hreflang 을 한 곳에서 만든다(architecture.md 8절).
  *
  * - 언어판은 늘 자기 주소를 canonical 로 낸다. 영어판이 한국어 주소를 물려받지 않게.
@@ -18,14 +29,6 @@ export function localizedMetadata(
   const canonical = localePath(locale, path);
 
   return {
-    alternates: {
-      canonical,
-      languages: {
-        ...Object.fromEntries(
-          LOCALES.map((each) => [each, localePath(each, path)])
-        ),
-        "x-default": localePath(DEFAULT_LOCALE, path),
-      },
-    },
+    alternates: { canonical, languages: localeAlternates(path) },
   };
 }

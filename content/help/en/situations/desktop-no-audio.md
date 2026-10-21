@@ -6,6 +6,7 @@ description: What to check, permissions first and then your connection, when the
 group: situations
 slug: desktop-no-audio
 order: 10
+modified: 2026-10-21
 ---
 
 ## What's happening {#problem}

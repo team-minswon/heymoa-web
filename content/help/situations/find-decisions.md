@@ -5,6 +5,7 @@ description: 지난 회의에서 정한 결정과 근거를 내 에이전트, �
 group: situations
 slug: find-decisions
 order: 8
+modified: 2026-10-21
 ---
 
 ## 이런 상황이에요 {#problem}

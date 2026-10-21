@@ -4,6 +4,7 @@ description: Where to find the sidebar, projects, the note list, and the setting
 group: start
 slug: workspace-basics
 order: 2
+modified: 2026-10-21
 ---
 
 ## Sidebar {#sidebar}

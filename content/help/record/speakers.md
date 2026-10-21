@@ -4,6 +4,7 @@ description: 회의 참석자를 정하고, 스크립트에서 누가 말했는�
 group: record
 slug: speakers
 order: 2
+modified: 2026-10-21
 ---
 
 ## 참석자 정하는 법 {#attendees}

@@ -4,6 +4,7 @@ description: 회의 주제와 배경을 적고 제품명과 약어를 용어 사
 group: record
 slug: terms-context
 order: 3
+modified: 2026-10-21
 ---
 
 ## 회의 맥락 적는 법 {#context}

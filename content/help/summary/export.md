@@ -4,6 +4,7 @@ description: 회의록과 스크립트를 복사하거나 PDF로 받고, 참석�
 group: summary
 slug: export
 order: 3
+modified: 2026-10-19
 ---
 
 ## 복사하는 법 {#copy}

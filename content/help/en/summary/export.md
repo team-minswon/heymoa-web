@@ -4,6 +4,7 @@ description: How to copy meeting notes and transcripts, download them as a PDF, 
 group: summary
 slug: export
 order: 3
+modified: 2026-10-21
 ---
 
 ## Copy {#copy}

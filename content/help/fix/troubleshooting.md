@@ -4,6 +4,7 @@ description: 녹음이 안 되거나 연결이 끊기고, 요약이 안 보이�
 group: fix
 slug: troubleshooting
 order: 1
+modified: 2026-10-19
 ---
 
 ## 녹음이 시작되지 않을 때 {#recording}

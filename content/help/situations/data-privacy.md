@@ -5,6 +5,7 @@ description: 회의 음성, 스크립트, 요약이 어디서 처리되고 언�
 group: situations
 slug: data-privacy
 order: 12
+modified: 2026-10-21
 kind: facts
 ---
 

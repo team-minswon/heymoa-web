@@ -4,6 +4,7 @@ description: How to set a meeting's attendees and mark who said what in the tran
 group: record
 slug: speakers
 order: 2
+modified: 2026-10-21
 ---
 
 ## Set attendees {#attendees}

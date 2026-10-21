@@ -5,6 +5,7 @@ description: Connect an AI app like Claude or ChatGPT so it can read your meetin
 group: situations
 slug: use-mcp
 order: 11
+modified: 2026-10-21
 ---
 
 ## What's happening {#problem}

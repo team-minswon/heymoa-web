@@ -57,8 +57,11 @@ function frontmatterOf(raw: string, file: string) {
     const kv = /^([\w-]+):\s*(.*)$/.exec(line);
     if (kv) meta[kv[1]] = kv[2].replace(/^["']|["']$/g, "");
   }
-  for (const key of ["title", "description", "group", "slug", "order"]) {
+  for (const key of ["title", "description", "group", "slug", "order", "modified"]) {
     if (!meta[key]) throw new Error(`${file}: frontmatter ${key} 가 없습니다`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(meta.modified)) {
+    throw new Error(`${file}: modified 는 YYYY-MM-DD 여야 합니다 — ${meta.modified}`);
   }
   return { meta, body: raw.slice(hit[0].length) };
 }
@@ -218,6 +221,7 @@ function topicOf(
       ...(meta.navTitle ? { navTitle: meta.navTitle } : {}),
       ...(meta.badge ? { badge: meta.badge as HelpBadgeName } : {}),
       summary: meta.description,
+      modified: meta.modified,
       sections,
       ...(howTo ? { howTo } : {}),
       ...(!howTo && faq.length > 0 ? { faq } : {}),

@@ -4,6 +4,7 @@ description: Fixes for each on-screen message when recording won't start, the co
 group: fix
 slug: troubleshooting
 order: 1
+modified: 2026-10-21
 ---
 
 ## Recording won't start {#recording}

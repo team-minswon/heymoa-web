@@ -5,6 +5,7 @@ description: 브라우저에서는 내 마이크 소리만 기록돼요. 화상�
 group: situations
 slug: record-call-audio
 order: 9
+modified: 2026-10-21
 ---
 
 ## 이런 상황이에요 {#problem}

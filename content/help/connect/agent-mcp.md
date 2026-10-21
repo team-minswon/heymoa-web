@@ -4,6 +4,7 @@ description: Claude, ChatGPT 같은 AI 앱이 내 워크스페이스의 회의�
 group: connect
 slug: agent-mcp
 order: 2
+modified: 2026-10-19
 ---
 
 ## AI 앱 연결하는 법 {#connect}

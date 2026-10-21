@@ -4,6 +4,7 @@ description: Sign in to HeyMoa, then record and end your first meeting. It takes
 group: start
 slug: getting-started
 order: 1
+modified: 2026-10-21
 ---
 
 ## Sign in with your Google account {#login}

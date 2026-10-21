@@ -4,6 +4,7 @@ description: 회의 녹음을 시작하고 멈추는 법, 마이크 권한, 연�
 group: record
 slug: recording
 order: 1
+modified: 2026-10-19
 ---
 
 ## 기록 시작하는 법 {#start}

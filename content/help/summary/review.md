@@ -4,6 +4,7 @@ description: AI가 정리한 결정과 할 일을 확인하고 고쳐서 프로�
 group: summary
 slug: review
 order: 2
+modified: 2026-10-19
 ---
 
 ## 검토 화면 보는 법 {#screen}

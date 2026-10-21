@@ -4,6 +4,7 @@ description: 관리자가 Linear, GitHub 같은 외부 도구를 워크스페이
 group: connect
 slug: integrations
 order: 1
+modified: 2026-10-19
 ---
 
 ## 외부 도구 연결하는 법 {#connect}

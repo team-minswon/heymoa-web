@@ -4,6 +4,7 @@ description: How to check and edit the decisions and tasks AI sorted out, then a
 group: summary
 slug: review
 order: 2
+modified: 2026-10-21
 ---
 
 ## The review screen {#screen}

@@ -5,6 +5,7 @@ description: 화자 나누기 결과에서 이름이 없거나 틀린 화자를 
 group: situations
 slug: fix-speakers
 order: 4
+modified: 2026-10-19
 ---
 
 ## 이런 상황이에요 {#problem}

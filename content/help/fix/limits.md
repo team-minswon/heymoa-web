@@ -4,6 +4,7 @@ description: 입력 길이, 횟수 제한, 만료 시간처럼 헤이모아(HeyM
 group: fix
 slug: limits
 order: 2
+modified: 2026-10-19
 kind: facts
 ---
 

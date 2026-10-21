@@ -13,7 +13,7 @@ import { helpTopics, helpTopicsFor } from "@/app/[lang]/help/_content/topics";
 import { helpT } from "@/lib/help/i18n";
 import { HelpPageFrame } from "@/components/help/help-frame";
 import { JsonLd } from "@/components/help/json-ld";
-import { HELP_MODIFIED, HELP_PUBLISHED } from "@/lib/help/dates";
+import { HELP_PUBLISHED } from "@/lib/help/dates";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -108,8 +108,8 @@ export default async function HelpTopicPage({ params }: Props) {
           headline: topic.title,
           description: topic.summary,
           inLanguage: locale,
-          datePublished: HELP_PUBLISHED,
-          dateModified: HELP_MODIFIED,
+          datePublished: HELP_PUBLISHED[locale],
+          dateModified: topic.modified,
           mainEntityOfPage: url,
           author: { "@type": "Organization", name: siteConfig.name },
           publisher: { "@type": "Organization", name: siteConfig.name },

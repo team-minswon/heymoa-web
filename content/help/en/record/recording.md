@@ -4,6 +4,7 @@ description: How to start and pause a meeting recording, allow microphone access
 group: record
 slug: recording
 order: 1
+modified: 2026-10-21
 ---
 
 ## Start recording {#start}

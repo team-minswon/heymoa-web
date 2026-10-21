@@ -4,6 +4,7 @@ description: Ask your agent about past meetings and choose where it searches. It
 group: team
 slug: agent
 order: 2
+modified: 2026-10-21
 ---
 
 ## Open your agent {#open}

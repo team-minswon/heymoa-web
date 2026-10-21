@@ -5,6 +5,7 @@ description: 회의에서 나온 할 일에 담당자와 기한을 정하고, �
 group: situations
 slug: assign-tasks
 order: 7
+modified: 2026-10-21
 ---
 
 ## 이런 상황이에요 {#problem}

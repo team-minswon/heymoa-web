@@ -4,6 +4,7 @@ description: 사이드바, 프로젝트, 노트 목록, 설정 창이 어디 있
 group: start
 slug: workspace-basics
 order: 2
+modified: 2026-10-19
 ---
 
 ## 사이드바 {#sidebar}

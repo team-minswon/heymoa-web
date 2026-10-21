@@ -5,6 +5,7 @@ description: Claude, ChatGPT 같은 외부 AI 앱이 내 회의와 프로젝트�
 group: situations
 slug: use-mcp
 order: 11
+modified: 2026-10-19
 ---
 
 ## 이런 상황이에요 {#problem}

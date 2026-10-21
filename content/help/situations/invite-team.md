@@ -5,6 +5,7 @@ description: 워크스페이스에 동료를 초대하고 동료가 수락하기
 group: situations
 slug: invite-team
 order: 5
+modified: 2026-10-19
 ---
 
 ## 이런 상황이에요 {#problem}

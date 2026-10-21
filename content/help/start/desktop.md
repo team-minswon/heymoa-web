@@ -6,6 +6,7 @@ description: Mac과 Windows 앱을 설치하고, 컴퓨터에서 나는 소리�
 group: start
 slug: desktop
 order: 4
+modified: 2026-10-21
 ---
 
 ## 웹과 앱은 이렇게 달라요 {#overview}

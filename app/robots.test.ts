@@ -66,7 +66,10 @@ describe("사이트맵", () => {
       pages: (await import("@/lib/i18n/marketing-routes")).MARKETING_PAGES,
       groups: (await import("@/app/[lang]/help/_content/groups")).helpGroups,
       topics: (await import("@/app/[lang]/help/_content/topics")).helpTopics,
+      topicsFor: (await import("@/app/[lang]/help/_content/topics"))
+        .helpTopicsFor,
       pathOf: (await import("@/app/[lang]/help/_content/paths")).helpPathOf,
+      dates: await import("@/lib/page-dates"),
     };
   }
 
@@ -104,6 +107,7 @@ describe("사이트맵", () => {
         languages: {
           ko: "https://heymoa.app/help",
           en: "https://heymoa.app/en/help",
+          "x-default": "https://heymoa.app/help",
         },
       });
     }
@@ -118,8 +122,60 @@ describe("사이트맵", () => {
     expect(home).toHaveLength(2);
     for (const entry of home) {
       expect(entry.alternates).toEqual({
-        languages: { ko: "https://heymoa.app", en: "https://heymoa.app/en" },
+        languages: {
+          ko: "https://heymoa.app",
+          en: "https://heymoa.app/en",
+          "x-default": "https://heymoa.app",
+        },
       });
+    }
+  });
+
+  // 구글은 lastmod 가 실제 수정과 맞을 때만 쓴다. 배포 시각(`new Date()`)이 들어오면 배포마다 바뀐다(APP-1293).
+  it("lastmod 는 날짜뿐이고 시계에 따라 바뀌지 않는다", async () => {
+    const { sitemap } = await load();
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-21T00:00:00Z"));
+      const before = sitemap();
+      vi.setSystemTime(new Date("2026-12-31T12:34:56Z"));
+      const after = sitemap();
+      expect(after).toEqual(before);
+    } finally {
+      vi.useRealTimers();
+    }
+    for (const entry of sitemap()) {
+      expect(entry.lastModified, entry.url).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it("lastmod 가 미래 날짜가 아니다", async () => {
+    const { sitemap } = await load();
+    // 한국 날짜가 UTC 보다 하루 앞설 수 있어 하루를 더 허용한다.
+    const limit = Date.now() + 24 * 60 * 60 * 1000;
+    for (const entry of sitemap()) {
+      expect(Date.parse(String(entry.lastModified)), entry.url).toBeLessThanOrEqual(limit);
+    }
+  });
+
+  it("약관·개인정보 lastmod 는 시행일이고, 가이드는 페이지의 modified 를 따른다", async () => {
+    const { sitemap, dates, topicsFor, pathOf, locales, localePath } =
+      await load();
+    const byUrl = new Map(sitemap().map((entry) => [entry.url, entry]));
+    const at = (locale: "ko" | "en", path: string) =>
+      byUrl.get(absolute(localePath(locale, path)))?.lastModified;
+
+    for (const locale of locales) {
+      expect(at(locale, "/terms")).toBe(dates.TERMS_EFFECTIVE);
+      expect(at(locale, "/privacy")).toBe(dates.PRIVACY_EFFECTIVE);
+      const topics = topicsFor(locale);
+      for (const topic of topics) {
+        expect(at(locale, pathOf(topic)), pathOf(topic)).toBe(topic.modified);
+      }
+      // 허브는 아래 페이지 중 가장 최근에 고친 날이다.
+      expect(at(locale, "/help")).toBe(
+        topics.map((topic) => topic.modified).sort().at(-1)
+      );
     }
   });
 });

@@ -4,6 +4,7 @@ description: When you end a meeting, AI sorts out the summary, decisions, and ta
 group: summary
 slug: meeting-end
 order: 1
+modified: 2026-10-21
 ---
 
 ## End a meeting {#end}

@@ -6,6 +6,7 @@ description: 데스크톱 앱에서 녹음이 시작되지 않거나 상대방 �
 group: situations
 slug: desktop-no-audio
 order: 10
+modified: 2026-10-21
 ---
 
 ## 이런 상황이에요 {#problem}

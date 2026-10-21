@@ -4,6 +4,7 @@ description: 회의를 종료하면 AI가 요약과 결정, 할 일을 정리해
 group: summary
 slug: meeting-end
 order: 1
+modified: 2026-10-19
 ---
 
 ## 회의 종료하는 법 {#end}

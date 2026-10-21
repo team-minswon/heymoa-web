@@ -4,6 +4,7 @@ description: Let AI apps like Claude and ChatGPT read the meetings and projects 
 group: connect
 slug: agent-mcp
 order: 2
+modified: 2026-10-21
 ---
 
 ## Connect an AI app {#connect}

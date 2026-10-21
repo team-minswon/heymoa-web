@@ -4,6 +4,7 @@ description: The numbers and rules to know when using HeyMoa, such as input leng
 group: fix
 slug: limits
 order: 2
+modified: 2026-10-21
 kind: facts
 ---
 

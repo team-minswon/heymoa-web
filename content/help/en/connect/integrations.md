@@ -4,6 +4,7 @@ description: When an admin connects tools like Linear and GitHub to the workspac
 group: connect
 slug: integrations
 order: 1
+modified: 2026-10-21
 ---
 
 ## Connect a tool {#connect}

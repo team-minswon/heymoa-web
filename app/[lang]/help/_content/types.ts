@@ -42,6 +42,8 @@ export type HelpTopic = {
   badge?: HelpBadgeName;
   /** 허브 카드와 meta description 에 쓴다(한국어 110자 안팎). */
   summary: string;
+  /** 본문을 마지막으로 고친 날(`YYYY-MM-DD`, frontmatter `modified`). sitemap `lastmod` 와 JSON-LD `dateModified` 가 읽는다. */
+  modified: string;
   sections: readonly HelpSection[];
   /** 상황별 레시피에서 단계가 분명할 때만: JSON-LD `HowTo` 의 단계(본문에 있는 글과 같아야 한다). */
   howTo?: readonly string[];

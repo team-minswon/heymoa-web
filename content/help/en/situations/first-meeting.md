@@ -5,6 +5,7 @@ description: Follow along in one go: create a meeting, record it, end it, and co
 group: situations
 slug: first-meeting
 order: 1
+modified: 2026-10-21
 ---
 
 ## New here? Where do I start? {#problem}

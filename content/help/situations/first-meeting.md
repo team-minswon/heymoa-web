@@ -5,6 +5,7 @@ description: 새 회의를 만들어 녹음하고 종료한 뒤, AI가 정리한
 group: situations
 slug: first-meeting
 order: 1
+modified: 2026-10-19
 ---
 
 ## 처음 쓰는데 어디서 시작하죠? {#problem}

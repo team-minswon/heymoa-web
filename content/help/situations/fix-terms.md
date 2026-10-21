@@ -5,6 +5,7 @@ description: 제품명, 사내 용어, 영어 약어가 틀리게 받아 적힐 
 group: situations
 slug: fix-terms
 order: 6
+modified: 2026-10-19
 ---
 
 ## 이런 상황이에요 {#problem}

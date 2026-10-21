@@ -5,6 +5,7 @@ description: How to invite a teammate to your workspace and get them to accept. 
 group: situations
 slug: invite-team
 order: 5
+modified: 2026-10-21
 ---
 
 ## What's happening {#problem}

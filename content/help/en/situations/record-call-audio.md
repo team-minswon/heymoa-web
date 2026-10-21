@@ -5,6 +5,7 @@ description: In the browser, only your own microphone is recorded. Here's how to
 group: situations
 slug: record-call-audio
 order: 9
+modified: 2026-10-21
 ---
 
 ## What's happening {#problem}
