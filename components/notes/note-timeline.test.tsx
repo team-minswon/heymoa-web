@@ -235,6 +235,33 @@ describe("NoteTimeline", () => {
     expect(screen.getByRole("button", { name: /^전체 / })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("요약에서 짚은 안건의 첫 묶음을 펼쳐 머리에 형광펜을 긋고, 획이 지워지면 비우라고 알린다 (APP-1290)", () => {
+    vi.useFakeTimers();
+    const a = head({ content: "온보딩 단계를 줄인다", atMs: 60_000 });
+    const b = head({ content: "결제 방식을 정한다", atMs: 120_000 });
+    const c = head({ content: "튜토리얼을 줄인다", atMs: 180_000 });
+    withLedger(a, b, c);
+    agendas.data = agendaResponse(c.createdSequence, [
+      { agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, c.proposalId] },
+      { agendaId: "payment", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+    ]);
+    const onFocusHandled = vi.fn();
+    render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded focusAgendaId="onboarding" onFocusHandled={onFocusHandled} />
+    );
+    // 같은 안건으로 돌아온 묶음이 아니라 첫 묶음에 긋는다
+    const marks = document.querySelectorAll(".evidence-mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toHaveTextContent("온보딩 개편");
+    act(() => vi.advanceTimersByTime(16));
+    expect(screen.getAllByRole("button", { name: /^온보딩 개편/ })[0]).toHaveAttribute("aria-expanded", "true");
+    // 화면이 바뀐 이동이라 근거 점프(약 1.2초)보다 오래 머문다
+    act(() => vi.advanceTimersByTime(1_500));
+    expect(onFocusHandled).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1_500));
+    expect(onFocusHandled).toHaveBeenCalledTimes(1);
+  });
+
   it("끝난 회의는 회의 뒤 분석이 도는 동안 주제 정본을 주기적으로 다시 읽는다", () => {
     withLedger(head({}));
     flow.data = { status: 200, data: { success: true, data: { status: "ANALYZING" }, error: null } };

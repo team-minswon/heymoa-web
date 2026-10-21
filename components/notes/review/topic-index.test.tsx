@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TopicIndex } from "@/components/notes/review/topic-index";
@@ -78,5 +78,13 @@ describe("안건 주소 이동", () => {
     expect(document.querySelector(".evidence-mark")).toHaveTextContent("안건 2");
     act(() => vi.advanceTimersByTime(5_000));
     expect(document.querySelector(".evidence-mark")).toBeNull();
+  });
+
+  it("「타임라인에서 보기」는 그 안건을 짚어 넘긴다 (APP-1290)", () => {
+    const onOpenTimeline = vi.fn();
+    render(<TopicIndex noteId="note" topics={[topic("ag1", 1)]} onOpenTimeline={onOpenTimeline} />);
+    fireEvent.click(screen.getByRole("button", { name: /안건 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /타임라인에서 보기/ }));
+    expect(onOpenTimeline).toHaveBeenCalledWith("ag1");
   });
 });

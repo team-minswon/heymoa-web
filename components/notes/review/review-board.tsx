@@ -173,7 +173,7 @@ export function ReviewBoard({
   dockRaised?: boolean;
   onOpenScript: (segmentId: string) => void;
   onOpenTranscript: () => void;
-  onOpenTimeline?: () => void;
+  onOpenTimeline?: (agendaId: string | null) => void;
 }) {
   const queryClient = useQueryClient();
   const editor = useReviewEditor(noteId);

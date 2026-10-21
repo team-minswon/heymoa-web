@@ -48,10 +48,22 @@ function penOf(text: string) {
 }
 
 /**
- * 형광펜 한 획(긋기 · 머물기 · 지우기)의 모습과 수명. 전사의 근거 점프와 요약의 안건 점프(APP-1290)가
- * 같은 펜을 쓴다 — 각자 조립하면 한쪽만 고쳤을 때 같은 표시가 두 화면에서 다르게 움직인다.
+ * **화면이 바뀌는 이동**(다른 노트로 넘어온 이어짐, 요약 → 타임라인 탭 전환)에서 머무는 시간.
+ * 근거 점프의 1초는 같은 탭 안에서 눈이 이미 그 자리를 따라갈 때의 값이다. 화면이 통째로 바뀌면
+ * 새 화면을 훑어 표시를 찾는 데 먼저 시간이 들어 1초 남짓이면 찾기 전에 지워진다(APP-1290 e2e
+ * 에서 획 전체 수명이 약 1.2초였다). 긋기 · 지우기를 더해 제목 길이의 표시가 약 2.5초 남게 한다.
  */
-export function evidenceMarkOf(text: string) {
+export const SCREEN_CHANGE_HOLD_MS = 2_200;
+
+/**
+ * 형광펜 한 획(긋기 · 머물기 · 지우기)의 모습과 수명. 전사의 근거 점프와 요약 · 타임라인의 안건
+ * 점프(APP-1290)가 같은 펜을 쓴다 — 각자 조립하면 한쪽만 고쳤을 때 같은 표시가 화면마다 다르게
+ * 움직인다. 머무는 시간만 이동의 종류에 따라 다르다(`SCREEN_CHANGE_HOLD_MS`).
+ */
+export function evidenceMarkOf(
+  text: string,
+  { holdMs = HOLD_MS }: { holdMs?: number } = {}
+) {
   const { spanEm, strokeMs } = penOf(text);
   return {
     props: {
@@ -59,10 +71,10 @@ export function evidenceMarkOf(text: string) {
       style: {
         "--evidence-span": `${spanEm}em`,
         "--evidence-stroke": `${strokeMs}ms`,
-        "--evidence-hold": `${HOLD_MS}ms`,
+        "--evidence-hold": `${holdMs}ms`,
       } as CSSProperties,
     },
-    lifetimeMs: strokeMs * 2 + HOLD_MS,
+    lifetimeMs: strokeMs * 2 + holdMs,
   };
 }
 

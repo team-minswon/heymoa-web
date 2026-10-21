@@ -6,7 +6,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Collapse } from "@/components/heymoa/collapse";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
-import { evidenceMarkOf } from "@/components/notes/use-transcript-focus";
+import {
+  evidenceMarkOf,
+  SCREEN_CHANGE_HOLD_MS,
+} from "@/components/notes/use-transcript-focus";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import type {
@@ -35,7 +38,7 @@ export function TopicIndex({
 }: {
   topics: readonly TopicDigest[];
   noteId?: string;
-  onOpenTimeline?: () => void;
+  onOpenTimeline?: (agendaId: string | null) => void;
   /** 이 회의에서 나가는 회의 간 연결. 없으면(조회 전 · 프로젝트 없음) 연결 줄을 그리지 않는다 */
   links?: MeetingLinkIndex;
   workspaceId?: string;
@@ -48,13 +51,15 @@ export function TopicIndex({
   /**
    * 점프로 도착한 주제(APP-1290). 스크롤만 하면 어디를 봐야 할지 모른다 — 전사의 근거 점프와 같은
    * 형광펜으로 제목을 긋는다. `nonce` 는 같은 주제로 다시 와도 획을 처음부터 긋게 하는 key 다.
+   * 주소(해시)로 도착했으면 다른 노트나 다른 탭에서 넘어온 것이라 더 오래 머문다.
    */
   const [marked, setMarked] = useState<{
     agendaId: string;
     nonce: number;
+    holdMs?: number;
   } | null>(null);
   const selectAgenda = useCallback(
-    (agendaId: string) => {
+    (agendaId: string, holdMs?: number) => {
       const target = topics.find((topic) => topic.agendaId === agendaId);
       if (!target) return;
       setExpanded(true);
@@ -71,6 +76,7 @@ export function TopicIndex({
         setMarked((current) => ({
           agendaId,
           nonce: (current?.nonce ?? 0) + 1,
+          holdMs,
         }));
       }, 240);
     },
@@ -89,7 +95,7 @@ export function TopicIndex({
       const agendaId = hash.slice(prefix.length);
       if (!topics.some((topic) => topic.agendaId === agendaId)) return;
       followedHash.current = key;
-      selectAgenda(agendaId);
+      selectAgenda(agendaId, SCREEN_CHANGE_HOLD_MS);
     };
     const timer = window.setTimeout(followHash, 0);
     window.addEventListener("hashchange", followHash);
@@ -106,7 +112,7 @@ export function TopicIndex({
     // 획이 다 지워지는 순간에 거둔다. reduced-motion 이면 획 없이 같은 시간 동안 칠해져 있다.
     const timer = window.setTimeout(
       () => setMarked(null),
-      evidenceMarkOf(markedTitle).lifetimeMs
+      evidenceMarkOf(markedTitle, { holdMs: marked?.holdMs }).lifetimeMs
     );
     return () => window.clearTimeout(timer);
   }, [marked, markedTitle]);
@@ -132,9 +138,9 @@ export function TopicIndex({
             topic={topic}
             noteId={noteId}
             onSelectAgenda={selectAgenda}
-            markNonce={
+            mark={
               topic.agendaId && topic.agendaId === marked?.agendaId
-                ? marked.nonce
+                ? marked
                 : null
             }
             open={openOrdinals.has(topic.ordinal)}
@@ -233,7 +239,7 @@ function TopicRow({
   topic,
   noteId,
   onSelectAgenda,
-  markNonce,
+  mark,
   open,
   onToggle,
   onOpenTimeline,
@@ -243,11 +249,11 @@ function TopicRow({
   topic: TopicDigest;
   noteId?: string;
   onSelectAgenda: (agendaId: string) => void;
-  /** 점프로 도착해 형광펜을 긋는 중이면 그 회차. 아니면 null */
-  markNonce: number | null;
+  /** 점프로 도착해 형광펜을 긋는 중이면 그 회차와 머무는 시간. 아니면 null */
+  mark: { nonce: number; holdMs?: number } | null;
   open: boolean;
   onToggle: () => void;
-  onOpenTimeline?: () => void;
+  onOpenTimeline?: (agendaId: string | null) => void;
   links?: MeetingLinkIndex;
   workspaceId?: string;
 }) {
@@ -290,10 +296,13 @@ function TopicRow({
         </span>
         <span className="flex min-w-0 flex-col">
           <span className="text-[15px] leading-6 font-medium text-[var(--el-ink)]">
-            {markNonce === null ? (
+            {mark === null ? (
               topic.title
             ) : (
-              <span key={markNonce} {...evidenceMarkOf(topic.title).props}>
+              <span
+                key={mark.nonce}
+                {...evidenceMarkOf(topic.title, { holdMs: mark.holdMs }).props}
+              >
                 {topic.title}
               </span>
             )}
@@ -365,7 +374,7 @@ function TopicRow({
           {onOpenTimeline ? (
             <button
               type="button"
-              onClick={onOpenTimeline}
+              onClick={() => onOpenTimeline(topic.agendaId)}
               className="inline-flex items-center gap-1.5 self-start text-[12.5px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
             >
               타임라인에서 보기{span ? ` · ${span}` : ""}

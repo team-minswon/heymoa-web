@@ -440,3 +440,39 @@ test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근
   // 획이 다 지워지면 거둔다
   await expect(arrived.locator(".evidence-mark")).toHaveCount(0, { timeout: 5_000 });
 });
+
+test("「타임라인에서 보기」로 넘어가면 그 안건의 첫 묶음 머리에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
+  // 목의 멘토링 회의에는 타임라인 원장이 없다. 데모 노트(01K0000000005)의 원장을 빌려 와 첫 안건에 넣는다.
+  await page.addInitScript(() => {
+    const forward = window.fetch;
+    const demo = async () => {
+      const response = await forward("/v1/notes/01K0000000005/proposals");
+      return (await response.json()).data as { proposals: Array<{ proposalId: string; kind: string }> };
+    };
+    window.fetch = async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.includes("/notes/01K0000000920/")) return forward(input, init);
+      if (/\/proposals(\?|$)/.test(url)) {
+        return new Response(JSON.stringify({ success: true, data: await demo(), error: null }), { headers: { "content-type": "application/json" } });
+      }
+      const response = await forward(input, init);
+      if (!/\/agendas(\?|$)/.test(url) || !response.ok) return response;
+      const body = await response.json();
+      body.data.agendas[0].proposalIds = (await demo()).proposals.filter((row) => row.kind !== "AGENDA").map((row) => row.proposalId);
+      return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
+    };
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  const index = page.getByRole("list", { name: "주제 목차" });
+  const row = index.locator('[id^="summary-agenda-"]').first();
+  const agendaId = (await row.getAttribute("id"))!.slice("summary-agenda-".length);
+  await row.getByRole("button").first().click();
+  // 그 안건의 첫 묶음(`timeline-agenda-<agendaId>:<첫 명제>`) 머리에 긋는다. 획은 몇 초 뒤 지워지니 누르기 전부터 기다린다
+  const head = page.locator(`[id^="timeline-agenda-${agendaId}:"]`).first();
+  const marked = head.locator(".evidence-mark").waitFor();
+  await row.getByRole("button", { name: /타임라인에서 보기/ }).click();
+  await marked;
+  await expect(page).toHaveURL(/tab=context/);
+  await expect(head.getByRole("button", { expanded: true }).first()).toBeVisible();
+  await expect(head.locator(".evidence-mark")).toHaveCount(0, { timeout: 6_000 });
+});

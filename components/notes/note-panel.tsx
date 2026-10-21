@@ -319,12 +319,19 @@ export function NotePanel({
     () => setParticipantsRequest(null),
     []
   );
+  /** 요약 「타임라인에서 보기」가 짚은 안건(APP-1290). 타임라인이 형광펜을 다 그으면 비운다. */
+  const [timelineFocus, setTimelineFocus] = useState<{
+    noteId: string;
+    agendaId: string;
+  } | null>(null);
+  const clearTimelineFocus = useCallback(() => setTimelineFocus(null), []);
   const handleTabChange = useCallback(
     (next: NoteTab) => {
       if (next !== tab) {
         track("note_tab_opened", { workspace_id: workspaceId, tab: next });
       }
       setFocusSegmentId(null);
+      setTimelineFocus(null);
       setParticipantsRequest(null);
       onTabChange(next);
     },
@@ -892,6 +899,12 @@ export function NotePanel({
                     : null
                 }
                 onEvidenceSelect={jumpToSegment}
+                focusAgendaId={
+                  timelineFocus?.noteId === noteId
+                    ? timelineFocus.agendaId
+                    : null
+                }
+                onFocusHandled={clearTimelineFocus}
                 meetingEnded={phase === "ended"}
                 recording={phase === "active"}
               />
@@ -923,7 +936,11 @@ export function NotePanel({
                     onOpenTranscript={() => handleTabChange("transcript")}
                     onOpenTimeline={
                       showContextTab
-                        ? () => handleTabChange("context")
+                        ? (agendaId) => {
+                            handleTabChange("context");
+                            if (agendaId)
+                              setTimelineFocus({ noteId, agendaId });
+                          }
                         : undefined
                     }
                   />
