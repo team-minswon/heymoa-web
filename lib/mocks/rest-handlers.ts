@@ -29,6 +29,7 @@ import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/work
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
 
 import type {
+  NotificationSettingsResponse,
   CreateFeedbackRequest,
   CreateWorkspaceRequest,
   NoteListResponseData,
@@ -397,6 +398,78 @@ export function seedShareMail(
   return mailId;
 }
 
+/** 알림 설정(server APP-1303) 기본값. 화면(PRO-67 I10)이 아직 없어 읽기만 한다. 쓰기는 그 화면이 심는다. */
+const notificationSettings: NotificationSettingsResponse = {
+  success: true,
+  data: {
+    muteAll: false,
+    muteEmail: false,
+    items: [
+      {
+        type: "WORKSPACE_INVITATION",
+        required: true,
+        channels: [
+          { channel: "WEB", provided: true, enabled: true, effective: true },
+          {
+            channel: "EMAIL",
+            provided: true,
+            enabled: true,
+            effective: true,
+          },
+        ],
+      },
+      {
+        type: "MEETING_PAUSED_REMINDER",
+        required: false,
+        channels: [
+          {
+            channel: "WEB",
+            provided: false,
+            enabled: false,
+            effective: false,
+          },
+          {
+            channel: "EMAIL",
+            provided: true,
+            enabled: true,
+            effective: true,
+          },
+        ],
+      },
+    ],
+  },
+  error: null,
+};
+
+let mailUnsubscribed = false;
+
+function unsubscribeResult(request: Request, run: () => boolean) {
+  if (new URL(request.url).searchParams.get("t") === "invalid") {
+    return HttpResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          code: "UNSUBSCRIBE_LINK_INVALID",
+          message:
+            "유효하지 않은 수신거부 링크입니다. 알림 설정에서 메일을 끌 수 있습니다.",
+          details: null,
+        },
+      },
+      { status: 400 }
+    );
+  }
+  return HttpResponse.json({
+    success: true,
+    data: {
+      kind: "MEETING_PAUSED_REMINDER",
+      email: "mo***@heymoa.app",
+      unsubscribed: run(),
+    },
+    error: null,
+  });
+}
+
 export const restHandlers = [
   // Users
   // 세션 응답의 사용자는 내 정보 응답보다 좁다 — 동의 상태(`consents`)는 `/v1/users/me` 만 싣는다.
@@ -411,48 +484,18 @@ export const restHandlers = [
       error: null,
     };
   }),
-  // 알림 설정(server APP-1303)은 화면(PRO-67 I10)이 아직 없어 기본값을 읽기만 한다. 쓰기는 그 화면이 심는다.
-  getGetNotificationSettingsMockHandler(() => ({
-    success: true,
-    data: {
-      muteAll: false,
-      muteEmail: false,
-      items: [
-        {
-          type: "WORKSPACE_INVITATION",
-          required: true,
-          channels: [
-            { channel: "WEB", provided: true, enabled: true, effective: true },
-            {
-              channel: "EMAIL",
-              provided: true,
-              enabled: true,
-              effective: true,
-            },
-          ],
-        },
-        {
-          type: "MEETING_PAUSED_REMINDER",
-          required: false,
-          channels: [
-            {
-              channel: "WEB",
-              provided: false,
-              enabled: false,
-              effective: false,
-            },
-            {
-              channel: "EMAIL",
-              provided: true,
-              enabled: true,
-              effective: true,
-            },
-          ],
-        },
-      ],
-    },
-    error: null,
-  })),
+  getGetNotificationSettingsMockHandler(() => notificationSettings),
+  // 수신거부 화면의 「다시 켜기」(APP-1314). 설정 화면이 생기면 값을 실제로 바꾼다 — 지금은 기본값을 돌려준다.
+  http.put("*/v1/notification-settings/items", () =>
+    HttpResponse.json(notificationSettings)
+  ),
+  // 메일 수신거부(APP-1314). 토큰 `invalid` 는 서명이 맞지 않는 링크다. 끈 상태는 이 문서 안에서만 산다.
+  http.get("*/v1/mail/unsubscribe", ({ request }) =>
+    unsubscribeResult(request, () => mailUnsubscribed)
+  ),
+  http.post("*/v1/mail/unsubscribe", ({ request }) =>
+    unsubscribeResult(request, () => (mailUnsubscribed = true))
+  ),
   getGetCurrentUserMockHandler(() => ({
     success: true,
     data: mockDb.getCurrentUser(),

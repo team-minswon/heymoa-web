@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { NoteResponseDataAutoEnd } from "./noteResponseDataAutoEnd";
 import type { NoteResponseDataMeetingStartedBy } from "./noteResponseDataMeetingStartedBy";
 import type { NoteResponseDataMeetingStatus } from "./noteResponseDataMeetingStatus";
 import type { NoteResponseDataParticipantsItem } from "./noteResponseDataParticipantsItem";
@@ -84,4 +85,14 @@ export type NoteResponseData = {
    * @nullable
    */
   contextTopic: string | null;
+  /**
+   * 자동 종료 예정·결과. 후속 조치 행이 없거나 사람이 종료한 노트는 null
+   * @nullable
+   */
+  autoEnd: NoteResponseDataAutoEnd;
+  /**
+   * 중지 시각. 실제로 녹음이 시작된 마지막 전사 세션의 종료 시각이고, 녹음 없이 끝난 시도(READY 만료)는 세지 않는다. meetingStatus 가 PAUSED 가 아니면 null
+   * @nullable
+   */
+  pausedAt: string | null;
 };

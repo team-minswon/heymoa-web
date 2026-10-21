@@ -721,6 +721,9 @@ export function RecordingProvider({
         });
         dispatch({ type: "start-failed", message: startErrorMessage(cause) });
         clearLevel();
+        // 연 뒤에 회의가 끝났다(자동 종료 포함, APP-1319). 노트를 다시 읽어야 상단 안내가 왜 끝났는지 말한다.
+        if (errorCodeOf(cause) === "MEETING_ALREADY_ENDED")
+          invalidateLifecycleQueries(noteId);
       }
     },
     [

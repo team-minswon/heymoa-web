@@ -59,6 +59,8 @@ export const getEndMeetingResponseMock = (): NoteResponse => ({
     ],
     contextTopic: "분기 로드맵 점검",
     contextBackground: "3분기 출시 일정과 담당자를 정한다.",
+    pausedAt: null,
+    autoEnd: null,
   },
   error: null,
 });

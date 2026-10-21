@@ -5,6 +5,7 @@ export { getAnalysisMock } from "./analysis/analysis.msw";
 export { getAuthMock } from "./auth/auth.msw";
 export { getFeedbacksMock } from "./feedbacks/feedbacks.msw";
 export { getIntegrationMock } from "./integration/integration.msw";
+export { getMailUnsubscribeMock } from "./mail-unsubscribe/mail-unsubscribe.msw";
 export { getMeetingApprovalMock } from "./meeting-approval/meeting-approval.msw";
 export { getMeetingReviewMock } from "./meeting-review/meeting-review.msw";
 export { getNotesMock } from "./notes/notes.msw";

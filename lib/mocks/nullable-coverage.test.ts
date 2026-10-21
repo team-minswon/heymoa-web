@@ -335,6 +335,8 @@ function contractSamples() {
     ],
     // 동의 화면이 읽는 요청 (APP-888). 목 시드의 대기 요청 하나다.
     "/v1/agent-oauth/consent": ["?state=mock-consent"],
+    // 메일 수신거부 확인 화면이 읽는 요청 (APP-1314). 목은 `invalid` 밖의 토큰을 맞는 링크로 본다.
+    "/v1/mail/unsubscribe": ["?t=mock"],
   };
 
   const samples: Array<[string, string]> = [];

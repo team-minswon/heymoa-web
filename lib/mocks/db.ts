@@ -1062,8 +1062,11 @@ function createSeedState(): StoreState {
     | "meetingEndedAt"
     | "contextTopic"
     | "contextBackground"
+    | "autoEnd"
+    | "pausedAt"
   > & {
     meetingEndedAt?: string | null;
+    autoEnd?: NoteResponseData["autoEnd"];
     contextTopic?: string | null;
     contextBackground?: string | null;
   };
@@ -1076,6 +1079,9 @@ function createSeedState(): StoreState {
       meetingEndedAt: note.meetingEndedAt ?? null,
       contextTopic: note.contextTopic ?? null,
       contextBackground: note.contextBackground ?? null,
+      autoEnd: note.autoEnd ?? null,
+      // 중지 시각은 세션에서 읽어 낸다(`pausedAtOf`). 저장하지 않는다.
+      pausedAt: null,
     };
   };
   const noteSeeds: SeedNote[] = [
@@ -1226,6 +1232,18 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-07T00:00:00Z",
       updatedAt: "2026-07-07T00:05:00Z",
       meetingStatus: "PAUSED",
+      // 자동 종료가 예고된 회의(APP-1319). 예정 시각은 실행일 기준 이틀 뒤 오후 4시 20분(KST)이다.
+      autoEnd: {
+        scheduledAt: new Date(
+          Math.floor(Date.now() / 86_400_000) * 86_400_000 +
+            2 * 86_400_000 +
+            (7 * 60 + 20) * 60_000
+        ).toISOString(),
+        endedBy: null,
+        reason: null,
+        pausedAt: null,
+        pausedBusinessDays: null,
+      },
       meetingStartedAt: "2026-07-07T00:00:00Z",
       recordedDurationMs: 300_000,
       activeSessionStartedAt: null,
@@ -1313,6 +1331,17 @@ function createSeedState(): StoreState {
                 projects[projectIndex as number].projectId,
                 MOCK_USER.userId
               ),
+        // 시스템이 자동 종료한 회의 표본(APP-1319). 분석 실패 시드라 안내의 「분석하지 못했습니다」도 여기서 본다.
+        autoEnd:
+          noteId === "01K0000000026"
+            ? {
+                scheduledAt: null,
+                endedBy: "SYSTEM" as const,
+                reason: "PAUSE_TIMEOUT" as const,
+                pausedAt: at,
+                pausedBusinessDays: 3,
+              }
+            : null,
       };
     }),
     /**
@@ -2470,6 +2499,22 @@ function reset() {
 reset();
 
 /** 노트 목록의 조립부. 프로젝트 단위와 워크스페이스 단위가 **같은 것을 쓴다**. */
+/** 중지 시각(APP-1310): 실제로 녹음이 시작된 마지막 세션의 종료 시각. 녹음 없이 끝난 시도는 세지 않는다. */
+function pausedAtOf(note: NoteResponseData) {
+  if (note.meetingStatus !== "PAUSED") return null;
+  return (
+    state.sessions
+      .filter(
+        (session) =>
+          session.noteId === note.noteId &&
+          session.startedAt !== null &&
+          session.endedAt !== null
+      )
+      .map((session) => session.endedAt as string)
+      .sort((a, b) => b.localeCompare(a))[0] ?? null
+  );
+}
+
 function listNotesWhere(
   match: (note: NoteResponseData) => boolean
 ): NoteListResponseDataNotesItem[] {
@@ -2491,22 +2536,9 @@ function listNotesWhere(
         .map((session) => session.startedAt)
         .filter((value): value is string => value !== null)
         .sort((a, b) => b.localeCompare(a))[0];
-      // 중지 시각(APP-1310): 실제로 녹음이 시작된 마지막 세션의 종료 시각. 녹음 없이 끝난 시도는 세지 않는다.
-      const pausedAt =
-        note.meetingStatus === "PAUSED"
-          ? (state.sessions
-              .filter(
-                (session) =>
-                  session.noteId === note.noteId &&
-                  session.startedAt !== null &&
-                  session.endedAt !== null
-              )
-              .map((session) => session.endedAt as string)
-              .sort((a, b) => b.localeCompare(a))[0] ?? null)
-          : null;
       return {
         ...note,
-        pausedAt,
+        pausedAt: pausedAtOf(note),
         lastRecordedAt: startedAt ?? null,
         recordedDurationMs: getRecordedDurationMs(note.noteId),
         activeSessionStartedAt:
@@ -3583,6 +3615,8 @@ export const mockDb = {
       meetingStartedBy: null,
       contextTopic: null,
       contextBackground: null,
+      autoEnd: null,
+      pausedAt: null,
       // 서버(CreateNoteService)가 만든 사람을 참여자로 넣는다.
       participants: [
         {
@@ -3956,6 +3990,12 @@ export const mockDb = {
     const note = findNote(noteId);
     return copy({
       ...note,
+      // 노트 상세도 중지 시각을 싣는다(APP-1317). 자동 종료 예정은 중지 상태일 때만 의미가 있다.
+      pausedAt: pausedAtOf(note),
+      autoEnd:
+        note.meetingStatus === "PAUSED" || note.autoEnd?.endedBy === "SYSTEM"
+          ? note.autoEnd
+          : null,
       recordedDurationMs: getRecordedDurationMs(noteId),
       activeSessionStartedAt:
         state.sessions.find(

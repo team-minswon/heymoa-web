@@ -1,4 +1,5 @@
 // `/oauth/*` 는 외부 에이전트 인가 흐름이다(APP-888) — 로그인 뒤 인가 요청·동의 화면으로 쿼리째 돌아온다.
+// `/unsubscribe` 는 메일 수신거부 화면이다(APP-1314) — 「다시 켜기」가 로그인한 뒤 그 화면으로 돌아온다.
 const allowedReturnPaths = new Set([
   "/",
   "/terms",
@@ -7,6 +8,7 @@ const allowedReturnPaths = new Set([
   "/invite",
   "/oauth/authorize",
   "/oauth/consent",
+  "/unsubscribe",
 ]);
 // `notes/new` 는 새 회의 진입 주소다(APP-802) — 외부 에이전트가 준 링크를 로그인 전에 열어도
 // 로그인 뒤 그 자리로 돌아온다.

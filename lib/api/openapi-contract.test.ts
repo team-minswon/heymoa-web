@@ -322,7 +322,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-1276(server)에서 로그인 동의 기록 `users/me/consents` 한 경로가 늘었다 (83 → 84).
     // 언어 변경(APP-1283)은 이미 있는 `users/me` 의 PATCH 라 경로 수가 그대로다.
     // PRO-67(server APP-1303)에서 알림 설정 `notification-settings`·`.../items` 두 경로가 늘었다 (84 → 86).
-    expect(paths).toHaveLength(86);
+    // PRO-67(server APP-1311)에서 메일 수신거부 `mail/unsubscribe`(GET·POST) 한 경로가 늘었다 (86 → 87).
+    expect(paths).toHaveLength(87);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

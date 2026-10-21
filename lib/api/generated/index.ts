@@ -5,6 +5,7 @@ export * from "./analysis/analysis";
 export * from "./auth/auth";
 export * from "./feedbacks/feedbacks";
 export * from "./integration/integration";
+export * from "./mail-unsubscribe/mail-unsubscribe";
 export * from "./meeting-approval/meeting-approval";
 export * from "./meeting-review/meeting-review";
 export * from "./notes/notes";
