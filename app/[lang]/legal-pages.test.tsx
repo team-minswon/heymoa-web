@@ -69,7 +69,7 @@ describe("HeyMoa legal pages", () => {
     expect(
       screen.getAllByRole("navigation", { name: "이용약관 목차" })
     ).toHaveLength(2);
-    expect(screen.getByText("2026년 10월 18일")).toBeVisible();
+    expect(screen.getByText("2026년 10월 22일")).toBeVisible();
     // 번역본 고지는 한국어본에 서지 않는다.
     expect(screen.queryByRole("link", { name: "한국어본 보기" })).not.toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe("HeyMoa legal pages", () => {
         "href",
         path
       );
-      expect(screen.getByText("October 18, 2026")).toBeVisible();
+      expect(screen.getByText("October 22, 2026")).toBeVisible();
       // 다른 화면이 링크하는 앵커(`#section-5` 등)가 언어와 상관없이 같은 조를 가리킨다.
       const sections = container.querySelectorAll("article > section");
       expect(sections).toHaveLength(count);
