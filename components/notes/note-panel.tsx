@@ -732,7 +732,7 @@ export function NotePanel({
                     <div className="flex min-w-0 items-center gap-2.5">
                       <NoteParticipantAvatars
                         participants={note?.participants}
-                        max={3}
+                        max={4}
                         size="sm"
                         className="-space-x-1.5 *:data-[slot=avatar]:ring-white"
                       />
