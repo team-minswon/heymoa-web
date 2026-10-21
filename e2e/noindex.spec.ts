@@ -13,16 +13,37 @@ const robotsOf = async (request: APIRequestContext, path: string) => {
   return html.match(/<meta name="robots" content="([^"]*)"/)?.[1] ?? null;
 };
 
+// 제품 루트 레이아웃이 기본 noindex 라 라우트가 따로 걸지 않아도 막힌다(APP-1295). `/help-samples` 는 그 예다.
+const PRIVATE_PATHS = [
+  "/w/01K0000000000",
+  "/w/01K0000000000/tasks",
+  "/invite?token=e2e",
+  "/oauth/consent",
+  "/auth/callback",
+  "/settings/integrations",
+  "/help-samples",
+];
+
 test("로그인 뒤 화면과 초대·인가 입구는 noindex 다", async ({ request }) => {
-  for (const path of [
-    "/w/01K0000000000",
-    "/w/01K0000000000/tasks",
-    "/invite?token=e2e",
-    "/oauth/consent",
-    "/auth/callback",
-  ]) {
+  for (const path of PRIVATE_PATHS) {
     expect(await robotsOf(request, path), path).toContain("noindex");
   }
+});
+
+// 색인하지 않는 페이지가 자신을 홈의 중복(canonical)이나 한국어판(hreflang)이라고 말하지 않는다.
+test("제품 면은 canonical·hreflang 을 내지 않는다", async ({ request }) => {
+  for (const path of PRIVATE_PATHS) {
+    const html = await (await request.get(path)).text();
+    expect(html, path).not.toMatch(/<link rel="canonical"/);
+    expect(html, path).not.toMatch(/<link rel="alternate" hrefLang=/i);
+  }
+});
+
+// 크롤링을 막으면 크롤러가 위 noindex 를 못 읽는다. 어떤 경로도 robots.txt 로 막지 않는다.
+test("robots.txt 는 어떤 경로도 막지 않는다", async ({ request }) => {
+  const txt = await (await request.get("/robots.txt")).text();
+  expect(txt).toMatch(/^Allow: \/$/m);
+  expect(txt).not.toMatch(/^Disallow:/m);
 });
 
 test("공개 페이지는 색인을 막지 않는다", async ({ request }) => {

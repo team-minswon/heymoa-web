@@ -46,11 +46,7 @@ describe("색인 지시", () => {
   it("운영이 아니어도 크롤링 자체는 막지 않는다", async () => {
     const { robots } = await load("https://env-001.realillust.com");
 
-    expect(robots().rules).toEqual({
-      userAgent: "*",
-      allow: "/",
-      disallow: ["/auth/callback", "/settings"],
-    });
+    expect(robots().rules).toEqual({ userAgent: "*", allow: "/" });
   });
 });
 

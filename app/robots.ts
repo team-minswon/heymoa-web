@@ -10,9 +10,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // `/w/**` · `/oauth/**` · `/invite` 는 여기서 막지 않는다 — 막으면 그 라우트의 noindex 를
-      // 못 읽는다(위 🔴). 색인 제외는 `lib/site.ts`의 `privateRouteMetadata`가 맡는다.
-      disallow: ["/auth/callback", "/settings"],
+      // 제품 면(`/w/**` · `/oauth/**` · `/invite` · `/auth/callback` · `/settings/**`)도 여기서 막지 않는다 — 막으면 그
+      // 라우트의 noindex 를 못 읽는다(위 🔴). 색인 제외는 제품 루트 레이아웃(`app/(product)/layout.tsx`)의 기본 noindex 가
+      // 맡는다. 크롤링을 막은 URL 은 다른 곳의 링크 때문에 내용 없이 색인에 남을 수 있다(APP-1295).
     },
     sitemap: `${siteConfig.url}/sitemap.xml`,
   };

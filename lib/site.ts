@@ -62,8 +62,9 @@ export const noindexDirective: Metadata["robots"] = {
 
 /**
  * 로그인해야 보이는 면(`/w/**`)과 토큰이 쿼리에 실리는 입구(`/oauth/**` · `/invite`)는 운영에서도 색인하지
- * 않는다. 위와 같은 이유로 robots.txt 가 아니라 이 메타데이터로 막는다 — 각 라우트가 `metadata.robots`로 건다.
- * 개인 회의 내용이라 `e2e/noindex.spec.ts`가 지킨다(APP-1036).
+ * 않는다. 위와 같은 이유로 robots.txt 가 아니라 이 메타데이터로 막는다. 제품 루트 레이아웃(`app/(product)/layout.tsx`)이
+ * 이미 기본으로 noindex 라 라우트마다 거는 것은 의도를 보이는 이중 안전이다. 개인 회의 내용이라
+ * `e2e/noindex.spec.ts`가 지킨다(APP-1036, APP-1295).
  */
 export const privateRouteMetadata: Metadata = { robots: noindexDirective };
 
