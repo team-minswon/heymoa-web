@@ -18,6 +18,7 @@ const PRIVATE_PATHS = [
   "/w/01K0000000000",
   "/w/01K0000000000/tasks",
   "/invite?token=e2e",
+  "/unsubscribe?t=e2e",
   "/oauth/consent",
   "/auth/callback",
   "/settings/integrations",

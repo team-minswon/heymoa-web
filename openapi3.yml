@@ -738,6 +738,8 @@ paths:
                         image: null
                       contextTopic: 분기 로드맵 점검
                       contextBackground: 3분기 출시 일정과 담당자를 정한다.
+                      pausedAt: null
+                      autoEnd: null
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -880,6 +882,8 @@ paths:
                         image: null
                       contextTopic: 분기 로드맵 점검
                       contextBackground: 3분기 출시 일정과 담당자를 정한다.
+                      pausedAt: null
+                      autoEnd: null
                     error: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -2243,6 +2247,8 @@ paths:
                         image: https://cdn.example.com/avatars/hong.png
                       contextTopic: 분기 로드맵 점검
                       contextBackground: 3분기 출시 일정과 담당자를 정한다.
+                      pausedAt: null
+                      autoEnd: null
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -3376,6 +3382,8 @@ paths:
                         image: null
                       contextTopic: 분기 로드맵 점검
                       contextBackground: 3분기 출시 일정과 담당자를 정한다.
+                      pausedAt: null
+                      autoEnd: null
                     error: null
         '400':
           description: 잘못된 요청
@@ -8969,6 +8977,8 @@ paths:
                         image: null
                       contextTopic: 분기 로드맵 점검
                       contextBackground: 3분기 출시 일정과 담당자를 정한다.
+                      pausedAt: null
+                      autoEnd: null
                     error: null
         '400':
           description: 잘못된 요청
@@ -9611,6 +9621,103 @@ paths:
                       details: null
       security:
       - accessCookie: []
+  /v1/mail/unsubscribe:
+    get:
+      tags:
+      - MailUnsubscribe
+      summary: 수신거부 링크 확인
+      description: 메일 수신거부 링크의 토큰을 확인하고 꺼질 설정 항목과 가린 이메일, 이미 꺼져 있는지를 돌려준다. **아무것도 바꾸지 않는다.** 로그인이 필요 없다.
+      operationId: getMailUnsubscribe
+      parameters:
+      - name: t
+        in: query
+        description: 메일 링크의 서명 토큰. 응답·로그에 다시 싣지 않는다
+        required: true
+        schema:
+          type: string
+          description: 메일 링크의 서명 토큰. 응답·로그에 다시 싣지 않는다
+          nullable: false
+        example: 1.dW5zdWJzY3JpYmU6TUVFVElOR19QQVVTRURfUkVNSU5ERVI6MEhaWEVDMU1LNlAyWjoxNzkyMDAwMDAwOjA.c2lnbmF0dXJl
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailUnsubscribeResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      kind: MEETING_PAUSED_REMINDER
+                      email: al***@example.com
+                      unsubscribed: false
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                UNSUBSCRIBE_LINK_INVALID:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: UNSUBSCRIBE_LINK_INVALID
+                      message: 유효하지 않은 수신거부 링크입니다. 알림 설정에서 메일을 끌 수 있습니다.
+                      details: null
+      security: []
+    post:
+      tags:
+      - MailUnsubscribe
+      summary: 메일 수신거부
+      description: 토큰의 설정 항목 메일을 끈다(중지된 회의 리마인더와 자동 종료 안내는 한 항목). 멱등이고 리다이렉트하지 않는다. 로그인·쿠키·CSRF 없이 토큰만으로 동작한다. 메일 앱의 원클릭 요청(RFC 8058)은 본문 `List-Unsubscribe=One-Click`(application/x-www-form-urlencoded)을 싣고, 확인 화면의 버튼은 본문 없이 부른다.
+      operationId: unsubscribeMail
+      parameters:
+      - name: t
+        in: query
+        description: 메일 링크의 서명 토큰. 응답·로그에 다시 싣지 않는다
+        required: true
+        schema:
+          type: string
+          description: 메일 링크의 서명 토큰. 응답·로그에 다시 싣지 않는다
+          nullable: false
+        example: 1.dW5zdWJzY3JpYmU6TUVFVElOR19QQVVTRURfUkVNSU5ERVI6MEhaWEVDMU1LNlAyWjoxNzkyMDAwMDAwOjA.c2lnbmF0dXJl
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailUnsubscribeResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      kind: MEETING_PAUSED_REMINDER
+                      email: al***@example.com
+                      unsubscribed: true
+                    error: null
+        '429':
+          description: '429'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                UNSUBSCRIBE_RATE_LIMITED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: UNSUBSCRIBE_RATE_LIMITED
+                      message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
+                      details: null
+      security: []
 components:
   schemas:
     AcceptInvitationByTokenRequest:
@@ -14009,6 +14116,7 @@ components:
         data:
           required:
           - activeSessionStartedAt
+          - autoEnd
           - contextBackground
           - contextTopic
           - createdAt
@@ -14018,6 +14126,7 @@ components:
           - meetingStatus
           - noteId
           - participants
+          - pausedAt
           - projectId
           - projectName
           - recordedDurationMs
@@ -14194,6 +14303,53 @@ components:
               nullable: true
               example: 분기 로드맵 점검
               maxLength: 200
+            autoEnd:
+              type: object
+              properties:
+                pausedBusinessDays:
+                  type: number
+                  description: 중지부터 자동 종료까지 지난 영업일 수(KST 월~금)
+                  nullable: true
+                  example: 3
+                reason:
+                  type: string
+                  description: 시스템이 종료한 사유. PAUSE_TIMEOUT = 마지막 중지 후 정한 영업일이 지남
+                  nullable: true
+                  example: PAUSE_TIMEOUT
+                  enum:
+                  - PAUSE_TIMEOUT
+                pausedAt:
+                  type: string
+                  description: 자동 종료의 기준이 된 마지막 중지 시각
+                  nullable: true
+                  format: date-time
+                endedBy:
+                  type: string
+                  description: 회의를 종료한 주체. 자동 종료면 SYSTEM
+                  nullable: true
+                  example: SYSTEM
+                  enum:
+                  - USER
+                  - SYSTEM
+                scheduledAt:
+                  type: string
+                  description: 자동 종료 예정 시각. 중지 중이고 자동 종료가 예고된 회의만 있다(약속하는 값이라 뒤로만 움직인다)
+                  nullable: true
+                  format: date-time
+              description: 자동 종료 예정·결과. 후속 조치 행이 없거나 사람이 종료한 노트는 null
+              nullable: true
+              required:
+              - scheduledAt
+              - endedBy
+              - reason
+              - pausedAt
+              - pausedBusinessDays
+            pausedAt:
+              type: string
+              description: 중지 시각. 실제로 녹음이 시작된 마지막 전사 세션의 종료 시각이고, 녹음 없이 끝난 시도(READY 만료)는 세지 않는다. meetingStatus 가 PAUSED 가 아니면 null
+              nullable: true
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -18640,6 +18796,51 @@ components:
           type: boolean
           description: 받을지 여부
           nullable: false
+    MailUnsubscribeResponse:
+      title: MailUnsubscribeResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - email
+          - kind
+          - unsubscribed
+          type: object
+          properties:
+            unsubscribed:
+              type: boolean
+              description: 그 설정 항목의 메일이 꺼져 있는가. POST 응답은 늘 true 다
+              nullable: false
+            kind:
+              type: string
+              description: 꺼지는 설정 항목. 자동 종료 안내 메일의 링크여도 리마인더 항목이다
+              nullable: false
+              example: MEETING_PAUSED_REMINDER
+              enum:
+              - WORKSPACE_INVITATION
+              - MEETING_PAUSED_REMINDER
+              - MEETING_AUTO_ENDED
+            email:
+              type: string
+              description: 계정 이메일의 일부를 가린 값
+              nullable: false
+              example: al***@example.com
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
   securitySchemes:
     accessCookie:
       type: apiKey

@@ -3,7 +3,10 @@ import path from "node:path";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
-import { marketingRedirects, marketingRewrites } from "./lib/i18n/marketing-routes";
+import {
+  marketingRedirects,
+  marketingRewrites,
+} from "./lib/i18n/marketing-routes";
 
 const nextConfig: NextConfig = {
   // **루트를 못박는다.** 워크트리(`.worktrees/app-N`)에서 빌드하면 Next가 부모 레포의
@@ -28,6 +31,14 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+        ],
+      },
+      // 메일 수신거부(APP-1314). 주소의 토큰이 캐시와 `Referer` 로 새지 않게 한다. 분석은 루트 레이아웃이 뺀다.
+      {
+        source: "/unsubscribe",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
     ];

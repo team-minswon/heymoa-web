@@ -197,6 +197,8 @@ export function createHelpDemoState(now = Date.now()): StoreState {
       participants,
       contextTopic: def.context?.topic ?? null,
       contextBackground: def.context?.background ?? null,
+      autoEnd: null,
+      pausedAt: null,
     });
 
     if (!script) return;

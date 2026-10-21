@@ -32,11 +32,17 @@ import "@/app/globals.css";
 export async function AppShell({
   locale,
   clientNamespaces = ["common"],
+  analytics = true,
   children,
 }: {
   locale: Locale;
   /** 클라이언트로 보낼 이름공간. 그 루트가 쓰는 것만 보낸다(마케팅 페이지가 대시보드 문구를 받지 않게). */
   clientNamespaces?: readonly Namespace[];
+  /**
+   * 분석 넷(GA·PostHog·Vercel)을 싣는가. 주소에 토큰이 실리는 메일 수신거부 화면만 끈다(APP-1314) — 페이지뷰가
+   * 쿼리째 나간다. 루트 레이아웃이 따로라 다른 면과 오가면 문서가 새로 열리므로, 앞 화면에서 켠 분석이 이어지지 않는다.
+   */
+  analytics?: boolean;
   children: React.ReactNode;
 }) {
   const initialUser = await getCurrentUserForSsr();
@@ -78,7 +84,7 @@ export async function AppShell({
             </div>
             <Toaster />
             {/* Providers 안이어야 PostHog가 로그인한 사람(`useAuth`)을 안다. */}
-            <SiteAnalytics />
+            {analytics ? <SiteAnalytics /> : null}
           </Providers>
         </NextIntlClientProvider>
       </body>

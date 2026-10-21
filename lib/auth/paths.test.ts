@@ -7,6 +7,12 @@ describe("normalizeReturnTo", () => {
     expect(normalizeReturnTo("/invite?token=abc")).toBe("/invite?token=abc");
   });
 
+  it("메일 수신거부 화면은 링크 토큰째 돌아온다(다시 켜기)", () => {
+    expect(normalizeReturnTo("/unsubscribe?t=1.abc.def")).toBe(
+      "/unsubscribe?t=1.abc.def"
+    );
+  });
+
   it("외부 에이전트가 준 새 회의·발화 주소는 쿼리를 보존한 채 돌아온다", () => {
     expect(
       normalizeReturnTo("/w/01K0000000000/notes/new?projectId=01K0000000001")
