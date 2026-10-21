@@ -91,6 +91,20 @@ describe("알림 사건 타입", () => {
     track("notification_clicked", { workspace_id: "W1", type: "SOMETHING", was_unread: true });
   });
 
+  it("타임라인 안내 사건은 역할·닫힌 이유만 받는다 (PRO-67 I26)", () => {
+    expectTypeOf<Props<"timeline_hint_shown">>().toEqualTypeOf<{
+      workspace_id: string;
+      role: "recorder" | "viewer";
+    }>();
+    expectTypeOf<Props<"timeline_hint_clicked">>().toEqualTypeOf<Props<"timeline_hint_shown">>();
+    expectTypeOf<Props<"timeline_hint_dismissed">>().toEqualTypeOf<{
+      workspace_id: string;
+      reason: "auto" | "close";
+    }>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"timeline_hint_shown">>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"timeline_hint_dismissed">>();
+  });
+
   it("설정 변경은 종류 하나를 바꿀 때만 종류·채널을 싣는다", () => {
     track("notification_setting_changed", { workspace_id: "W1", scope: "all", enabled: false });
     track("notification_setting_changed", {

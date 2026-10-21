@@ -62,6 +62,9 @@ export type AnalyticsEvent =
   | "notifications_all_read_clicked"
   | "notification_setting_changed"
   | "notification_settings_reset"
+  | "timeline_hint_shown"
+  | "timeline_hint_clicked"
+  | "timeline_hint_dismissed"
   | "agent_opened"
   | "feedback_sent"
   | "feedback_dismissed"
@@ -131,6 +134,11 @@ export type WebEventProperties = {
         enabled: boolean;
       };
   notification_settings_reset: { workspace_id: string };
+  // 타임라인 첫 항목 안내(PRO-67 I26). role 은 이 창이 녹음하는가(recorder)·보기만 하는가(viewer).
+  // 효과는 기존 note_tab_opened(tab=context) 비율로 본다.
+  timeline_hint_shown: { workspace_id: string; role: "recorder" | "viewer" };
+  timeline_hint_clicked: { workspace_id: string; role: "recorder" | "viewer" };
+  timeline_hint_dismissed: { workspace_id: string; reason: "auto" | "close" };
   agent_opened: { surface: "fab" };
   feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
   // 회의 종료 뒤 묻는 카드. 띄움은 `feedback_opened {from: "meeting_end"}`, 보냄은 `feedback_sent` 가 센다.
