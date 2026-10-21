@@ -40,7 +40,7 @@ import type {
 import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
 import { createHelpDemoState, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
-import { MOCK_USER } from "@/lib/mocks/mock-user";
+import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
 import {
   MENTORING_GUEST_IDS,
   MENTORING_NOTE_ID,
@@ -845,7 +845,10 @@ function seedAgentChats(workspaceId: string) {
 function createSeedState(): StoreState {
   faker.seed(20260715);
   const seededChats = seedAgentChats("01K0000000000");
-  const user: CurrentUserResponseData = { ...MOCK_USER };
+  const user: CurrentUserResponseData = {
+    ...MOCK_USER,
+    ...structuredClone(MOCK_ACCOUNT),
+  };
   const workspaces: WorkspaceResponseData[] = [
     {
       workspaceId: "01K0000000000",
@@ -1214,6 +1217,21 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
       participants: [],
     },
+    // 오래 멈춘 회의(APP-1313). 녹음한 세션이 있어 목록이 중지 시각(`pausedAt`)을 낸다 — 「N일째 중지됨」과
+    // 노트 상단 띠가 이 노트로 선다. 다른 중지 시드는 녹음 없는 READY 만료이거나 다른 e2e 가 끝내 버린다.
+    {
+      noteId: "01K0000000040",
+      projectId: projects[2].projectId,
+      title: "멈춰 둔 주간 회의",
+      createdAt: "2026-07-07T00:00:00Z",
+      updatedAt: "2026-07-07T00:05:00Z",
+      meetingStatus: "PAUSED",
+      meetingStartedAt: "2026-07-07T00:00:00Z",
+      recordedDurationMs: 300_000,
+      activeSessionStartedAt: null,
+      meetingStartedBy: starterOf(MOCK_USER.userId),
+      participants: participantsOf(projects[2].projectId, MOCK_USER.userId),
+    },
     {
       noteId: "01K0000000014",
       projectId: projects[3].projectId,
@@ -1426,6 +1444,16 @@ function createSeedState(): StoreState {
       readyExpiresAt: "2026-07-12T00:10:00Z",
       startedAt: "2026-07-12T00:00:00Z",
       endedAt: "2026-07-12T00:05:00Z",
+      endReason: "CLIENT_DISCONNECTED",
+    },
+    {
+      sessionId: "01K0000000440",
+      noteId: "01K0000000040",
+      status: "COMPLETED",
+      firstRecording: false,
+      readyExpiresAt: "2026-07-07T00:10:00Z",
+      startedAt: "2026-07-07T00:00:00Z",
+      endedAt: "2026-07-07T00:05:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
     // 커버리지 «교체» 회귀 전용 세션. 전사가 화면을 넘겨야 추종을 잴 수 있다.
@@ -2463,8 +2491,22 @@ function listNotesWhere(
         .map((session) => session.startedAt)
         .filter((value): value is string => value !== null)
         .sort((a, b) => b.localeCompare(a))[0];
+      // 중지 시각(APP-1310): 실제로 녹음이 시작된 마지막 세션의 종료 시각. 녹음 없이 끝난 시도는 세지 않는다.
+      const pausedAt =
+        note.meetingStatus === "PAUSED"
+          ? (state.sessions
+              .filter(
+                (session) =>
+                  session.noteId === note.noteId &&
+                  session.startedAt !== null &&
+                  session.endedAt !== null
+              )
+              .map((session) => session.endedAt as string)
+              .sort((a, b) => b.localeCompare(a))[0] ?? null)
+          : null;
       return {
         ...note,
+        pausedAt,
         lastRecordedAt: startedAt ?? null,
         recordedDurationMs: getRecordedDurationMs(note.noteId),
         activeSessionStartedAt:

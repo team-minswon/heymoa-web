@@ -24,6 +24,7 @@ import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/proposals/__fixtures__/synthe
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
 import { getGetAuthSessionMockHandler } from "@/lib/api/generated/auth/auth.msw";
 import { getGetCurrentUserMockHandler } from "@/lib/api/generated/users/users.msw";
+import { getGetNotificationSettingsMockHandler } from "@/lib/api/generated/notification-settings/notification-settings.msw";
 import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/workspaces.msw";
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
 
@@ -344,14 +345,19 @@ function pageOfNotes(
   const afterNoteId = url.searchParams.get("afterNoteId");
   const sortedAt = (note: NoteListResponseDataNotesItem) =>
     note.meetingStartedAt ?? note.createdAt;
+  // 회의 상태 필터는 서버처럼 **쪽을 자르기 전에** 건다(APP-1310) — 뒤에 걸면 뒤쪽 쪽의 중지 회의가 빠진다.
+  const meetingStatus = url.searchParams.get("meetingStatus");
+  const matching = meetingStatus
+    ? notes.filter((note) => note.meetingStatus === meetingStatus)
+    : notes;
   const rest =
     afterSortedAt && afterNoteId
-      ? notes.filter(
+      ? matching.filter(
           (note) =>
             sortedAt(note) < afterSortedAt ||
             (sortedAt(note) === afterSortedAt && note.noteId < afterNoteId)
         )
-      : notes;
+      : matching;
   const page = limit ? rest.slice(0, limit) : rest;
   const last = page.at(-1);
   const hasMore = page.length < rest.length && last !== undefined;
@@ -393,9 +399,58 @@ export function seedShareMail(
 
 export const restHandlers = [
   // Users
-  getGetAuthSessionMockHandler(() => ({
+  // 세션 응답의 사용자는 내 정보 응답보다 좁다 — 동의 상태(`consents`)는 `/v1/users/me` 만 싣는다.
+  getGetAuthSessionMockHandler(() => {
+    const { userId, name, email, image, language } = mockDb.getCurrentUser();
+    return {
+      success: true,
+      data: {
+        state: "authenticated",
+        user: { userId, name, email, image, language },
+      },
+      error: null,
+    };
+  }),
+  // 알림 설정(server APP-1303)은 화면(PRO-67 I10)이 아직 없어 기본값을 읽기만 한다. 쓰기는 그 화면이 심는다.
+  getGetNotificationSettingsMockHandler(() => ({
     success: true,
-    data: { state: "authenticated", user: mockDb.getCurrentUser() },
+    data: {
+      muteAll: false,
+      muteEmail: false,
+      items: [
+        {
+          type: "WORKSPACE_INVITATION",
+          required: true,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
+              effective: true,
+            },
+          ],
+        },
+        {
+          type: "MEETING_PAUSED_REMINDER",
+          required: false,
+          channels: [
+            {
+              channel: "WEB",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
+              effective: true,
+            },
+          ],
+        },
+      ],
+    },
     error: null,
   })),
   getGetCurrentUserMockHandler(() => ({

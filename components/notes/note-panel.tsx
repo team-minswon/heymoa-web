@@ -30,6 +30,7 @@ import {
   NoteDetails,
   NoteDetailsSkeleton,
 } from "@/components/notes/note-details";
+import { NoteStatusBand } from "@/components/notes/note-status-band";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import {
   claimEndFeedback,
@@ -705,6 +706,8 @@ export function NotePanel({
               </Button>
             ) : null}
           </div>
+
+          {note ? <NoteStatusBand note={note} /> : null}
 
           {/**
            * 제목 블록은 **정보 탭의 머리글이다** — 노트 전체의 크롬이 아니다.

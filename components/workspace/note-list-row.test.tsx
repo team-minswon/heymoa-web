@@ -57,6 +57,7 @@ function note(
     meetingStartedAt: "2026-07-11T00:00:00Z",
     meetingStartedBy: null,
     participants: [],
+    pausedAt: null,
     ...overrides,
   };
 }
@@ -84,8 +85,14 @@ describe("NoteListRow", () => {
         await screen.findByRole("menuitem", { name: /전체 화면/ })
       );
       expect(heard.mock.calls).toEqual([
-        ["note_opened", { workspace_id: "01K0000000000", view: "side", source: "list" }],
-        ["note_opened", { workspace_id: "01K0000000000", view: "full", source: "list" }],
+        [
+          "note_opened",
+          { workspace_id: "01K0000000000", view: "side", source: "list" },
+        ],
+        [
+          "note_opened",
+          { workspace_id: "01K0000000000", view: "full", source: "list" },
+        ],
       ]);
     } finally {
       unsubscribe();
@@ -227,6 +234,33 @@ describe("NoteListRow", () => {
       screen.getByLabelText("진행자 김민수 (minsu@heymoa.com)")
     ).toBeInTheDocument();
     expect(screen.getByText("기록 3분")).toBeInTheDocument();
+  });
+
+  it("오래 멈춘 회의에만 중지 기간을 붙인다", () => {
+    // KST 10월 22일 09:00
+    const now = Date.parse("2026-10-22T00:00:00Z");
+    const { unmount } = renderRow(
+      note({
+        meetingStatus: "PAUSED",
+        activeSessionStartedAt: null,
+        pausedAt: "2026-10-20T05:00:00Z",
+      }),
+      now
+    );
+    expect(screen.getByText("3일째 중지됨")).toBeInTheDocument();
+    unmount();
+
+    // 오늘 멈춘 회의와 중지가 아닌 회의에는 기간이 없다
+    renderRow(
+      note({
+        meetingStatus: "PAUSED",
+        activeSessionStartedAt: null,
+        pausedAt: "2026-10-21T23:00:00Z",
+      }),
+      now
+    );
+    expect(screen.getByText("중지됨")).toBeInTheDocument();
+    expect(screen.queryByText(/일째/)).toBeNull();
   });
 
   // 진행자가 참여자 명단에 없으면 예전에는 이미지를 빌릴 데가 없어, `email: ""`인 가짜

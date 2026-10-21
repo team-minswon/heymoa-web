@@ -12,6 +12,7 @@ import { setupServer } from "msw/node";
 import { parseAuthSession } from "@/lib/auth/session-probe";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
+import { MOCK_USER } from "@/lib/mocks/mock-user";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
 const server = setupServer(...meetingFlowHandlers, ...restHandlers);
@@ -33,7 +34,7 @@ describe("REST mock handlers", () => {
     expect(body.success).toBe(true);
     expect(parseAuthSession(body.data)).toEqual({
       state: "authenticated",
-      user: mockDb.getCurrentUser(),
+      user: { ...MOCK_USER, language: null },
     });
   });
 

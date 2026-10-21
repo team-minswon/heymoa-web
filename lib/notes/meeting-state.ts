@@ -1,6 +1,7 @@
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models/noteListResponseDataNotesItem";
 import type { NoteResponseData } from "@/lib/api/generated/models/noteResponseData";
 import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models/noteResponseDataMeetingStatus";
+import { getAppDateKey } from "@/lib/format/date";
 
 export const MEETING_STATUS_LABEL = {
   NOT_STARTED: "시작 전",
@@ -41,6 +42,26 @@ export function deriveMeetingPhase(
   if (note.meetingStatus === "PAUSED") return "paused";
   if (note.meetingStatus === "ENDED") return "ended";
   return "active";
+}
+
+/**
+ * 중지 며칠째인가(APP-1313). 앱 시간대의 달력일로 세고 **중지한 날이 1일째**다 — 어제 중지했으면 2일째.
+ * 메일(I17)의 「2일째」와 같은 셈이다. 중지 시각을 모르거나 오늘 중지했으면 `null` — 「1일째」는
+ * 방금 멈춘 회의에 기간을 붙이는 것이라 말하지 않는다.
+ */
+export function pausedDayCount(
+  pausedAt: string | null | undefined,
+  now: number | null
+): number | null {
+  if (!pausedAt || now === null) return null;
+  const paused = Date.parse(pausedAt);
+  if (!Number.isFinite(paused)) return null;
+  const days = Math.round(
+    (Date.parse(getAppDateKey(new Date(now))) -
+      Date.parse(getAppDateKey(new Date(paused)))) /
+      86_400_000
+  );
+  return days >= 1 ? days + 1 : null;
 }
 
 export function isMeetingActive(note: MeetingFields | undefined): boolean {

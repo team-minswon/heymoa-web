@@ -52,6 +52,7 @@ function note(
     meetingStartedAt,
     meetingStartedBy: null,
     participants: [],
+    pausedAt: null,
   };
 }
 

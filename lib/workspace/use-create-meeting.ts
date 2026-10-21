@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
+import { isMeetingStatusFilteredKey } from "@/lib/workspace/use-note-list-pages";
 import {
   getGetNotesQueryKey,
   type getNotesResponse,
@@ -56,7 +57,11 @@ export function useCreateMeeting(workspaceId: string) {
     // 같은 프로젝트의 목록 캐시를 **전부** 고친다 — 쪽 수가 키에 들어가므로(`useNoteListPages`) 키 하나를
     // 짚으면 쪽 수가 다른 사본이 낡은 채 남는다. 캐시에 없는 키는 그냥 지나간다.
     queryClient.setQueriesData<getNotesResponse>(
-      { queryKey: getGetNotesQueryKey(targetProjectId) },
+      {
+        queryKey: getGetNotesQueryKey(targetProjectId),
+        // 「중지됨」만 거른 목록에는 새 회의(시작 전)를 끼우지 않는다(APP-1313).
+        predicate: (query) => !isMeetingStatusFilteredKey(query.queryKey),
+      },
       (current) => {
         if (current?.status !== 200 || !current.data.success) return current;
         return {
@@ -70,6 +75,7 @@ export function useCreateMeeting(workspaceId: string) {
                   ...createdNote,
                   lastRecordedAt: null,
                   recordedDurationMs: 0,
+                  pausedAt: null,
                 },
                 ...current.data.data.notes.filter(
                   (note) => note.noteId !== noteId
@@ -93,7 +99,12 @@ export function useCreateMeeting(workspaceId: string) {
           error: null,
           data: {
             notes: [
-              { ...createdNote, lastRecordedAt: null, recordedDurationMs: 0 },
+              {
+                ...createdNote,
+                lastRecordedAt: null,
+                recordedDurationMs: 0,
+                pausedAt: null,
+              },
             ],
             hasMore: false,
             nextNoteId: null,

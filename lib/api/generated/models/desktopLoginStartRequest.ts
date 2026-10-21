@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { DesktopLoginStartRequestLanguage } from "./desktopLoginStartRequestLanguage";
 
 export interface DesktopLoginStartRequest {
   /**
@@ -19,4 +20,6 @@ export interface DesktopLoginStartRequest {
    * @maxLength 128
    */
   state: string;
+  /** 앱 화면 언어. 브라우저 인증 완료 화면을 이 언어로 그린다. 없으면 한국어(구버전 앱) */
+  language?: DesktopLoginStartRequestLanguage;
 }

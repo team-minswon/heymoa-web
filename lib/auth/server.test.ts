@@ -26,6 +26,7 @@ it("전달된 쿠키로 세션을 읽고 유효 사용자만 hydration에 제공
     name: "사용자",
     email: "user@example.com",
     image: null,
+    language: null,
   };
   mockCookies.getAll.mockReturnValue([
     { name: "access_token", value: "fixture" },

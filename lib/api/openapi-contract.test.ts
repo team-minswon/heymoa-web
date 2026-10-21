@@ -70,12 +70,25 @@ describe("OpenAPI contract", () => {
   /**
    * 기본 워크스페이스는 서버에서 사라졌다(APP-401) — 「로그인 후 어디로 갈지」는 브라우저의
    * 마지막 방문 기록으로 옮겼다. 계약에 다시 들어오면 그 규칙이 두 벌이 된다.
+   *
+   * `language` 는 **계정 화면 언어**(APP-1283)만 있다 — 내 정보·세션·언어 변경·데스크톱 로그인 시작.
+   * 전사 언어처럼 다른 뜻의 `language` 가 스키마에 생기면 이 목록이 알려 준다.
    */
-  it("does not expose a language field or any default-workspace surface", () => {
+  it("exposes language only as the account display language and has no default-workspace surface", () => {
     expect(source).not.toContain("/v1/workspaces/default:");
     expect(source).not.toContain("/v1/users/me/default-workspace:");
     expect(source).not.toContain("isDefault:");
-    expect(source).not.toMatch(/^\s+language:/m);
+    const schemas = api().components.schemas as Record<string, unknown>;
+    expect(
+      Object.keys(schemas)
+        .filter((name) => JSON.stringify(schemas[name]).includes('"language"'))
+        .sort()
+    ).toEqual([
+      "AuthSessionResponse",
+      "CurrentUserResponse",
+      "DesktopLoginStartRequest",
+      "UpdateCurrentUserRequest",
+    ]);
   });
 
   // 본문은 선택이다. 같은 탭이 다시 시작하면 server 가 옛 세션을 곧바로 닫는다(D-16)
@@ -306,7 +319,10 @@ describe("contract sync 2026-07-29", () => {
     // 합치면 77 → 84 (멤버 표시 이름 1 + 답변 읽음 1 + 용어 사전 넷 + 회의 맥락 1).
     // APP-1227(server APP-1226)에서 프로젝트 용어 사전 둘이 사라지고(`.../projects/{projectId}/terms`·`.../terms/{termId}`)
     // 일괄 추가 `workspaces/{workspaceId}/terms/batch` 하나가 늘었다 (84 → 83).
-    expect(paths).toHaveLength(83);
+    // APP-1276(server)에서 로그인 동의 기록 `users/me/consents` 한 경로가 늘었다 (83 → 84).
+    // 언어 변경(APP-1283)은 이미 있는 `users/me` 의 PATCH 라 경로 수가 그대로다.
+    // PRO-67(server APP-1303)에서 알림 설정 `notification-settings`·`.../items` 두 경로가 늘었다 (84 → 86).
+    expect(paths).toHaveLength(86);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

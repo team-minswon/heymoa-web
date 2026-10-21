@@ -248,8 +248,11 @@ export const getGetMeetingReviewSummaryResponseMock =
           agendaItemId: "0HZX2K7M9Q4AN",
           centerItemId: "0HZX2K7M9Q4AN",
           members: [{ itemId: "0HZX2K7M9Q4AN", kind: "DECISION" }],
-          alsoItemIds: ["0HZX2K7M9Q4AN"],
-          memberships: [{ itemId: "0HZX2K7M9Q4AN", secondary: false }],
+          alsoItemIds: ["0K9GVJT2C4Q21"],
+          memberships: [
+            { itemId: "0HZX2K7M9Q4AN", secondary: false },
+            { itemId: "0K9GVJT2C4Q21", secondary: true },
+          ],
           relations: [
             {
               sourceItemId: "0HZX2K7M9Q4AN",
@@ -280,8 +283,11 @@ export const getGetMeetingReviewSummaryResponseMock =
           agendaItemId: "0HZX2K7M9Q4AN",
           centerItemId: "0HZX2K7M9Q4AN",
           members: [{ itemId: "0HZX2K7M9Q4AN", kind: "DECISION" }],
-          alsoItemIds: ["0HZX2K7M9Q4AN"],
-          memberships: [{ itemId: "0HZX2K7M9Q4AN", secondary: false }],
+          alsoItemIds: ["0K9GVJT2C4Q21"],
+          memberships: [
+            { itemId: "0HZX2K7M9Q4AN", secondary: false },
+            { itemId: "0K9GVJT2C4Q21", secondary: true },
+          ],
           relations: [
             {
               sourceItemId: "0HZX2K7M9Q4AN",

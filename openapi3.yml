@@ -1020,7 +1020,7 @@ paths:
       tags:
       - Users
       summary: 현재 사용자 조회
-      description: 현재 인증된 사용자의 기본 정보를 조회한다.
+      description: 현재 인증된 사용자의 기본 정보와 필수 문서(개인정보처리방침·이용약관) 동의 상태를 조회한다.
       operationId: getCurrentUser
       responses:
         '404':
@@ -1053,7 +1053,81 @@ paths:
                       name: 홍길동
                       email: hong@example.com
                       image: https://cdn.heymoa.com/profiles/member.png
+                      language: en
+                      consentRequired: true
+                      consents:
+                      - documentType: PRIVACY
+                        currentVersion: '2026-10-21'
+                        agreed: true
+                      - documentType: TERMS
+                        currentVersion: '2026-10-21'
+                        agreed: false
                     error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+    patch:
+      tags:
+      - Users
+      summary: 현재 사용자 변경
+      description: 계정의 화면 언어를 바꾸고 바뀐 내 정보를 돌려준다. 같은 값을 다시 보내도 결과가 같다.
+      operationId: updateCurrentUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurrentUserRequest'
+            examples:
+              updateCurrentUser_BadRequest:
+                value:
+                  language: ja
+              updateCurrentUser_Success:
+                value:
+                  language: en
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      userId: 0HZX2K7M9Q4AC
+                      name: 홍길동
+                      email: hong@example.com
+                      image: https://cdn.heymoa.com/profiles/member.png
+                      language: en
+                      consentRequired: true
+                      consents:
+                      - documentType: PRIVACY
+                        currentVersion: '2026-10-21'
+                        agreed: true
+                      - documentType: TERMS
+                        currentVersion: '2026-10-21'
+                        agreed: false
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: language
+                        message: 형식이 올바르지 않습니다.
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -3139,6 +3213,20 @@ paths:
           nullable: false
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
         example: 0HZX2K7M9Q4AF
+      - name: meetingStatus
+        in: query
+        description: '이 회의 상태의 노트만(예: PAUSED 로 중지된 회의만). 쪽을 자르기 전에 거르므로 커서로 끝까지 읽으면 빠짐이 없다. 보내지 않으면 모든 상태, 없는 값이면 400'
+        required: false
+        schema:
+          type: string
+          description: '이 회의 상태의 노트만(예: PAUSED 로 중지된 회의만). 쪽을 자르기 전에 거르므로 커서로 끝까지 읽으면 빠짐이 없다. 보내지 않으면 모든 상태, 없는 값이면 400'
+          nullable: false
+          enum:
+          - NOT_STARTED
+          - IN_PROGRESS
+          - PAUSED
+          - ENDED
+        example: PAUSED
       responses:
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -3204,6 +3292,7 @@ paths:
                           name: 박서준
                           email: null
                           image: null
+                        pausedAt: null
                       hasMore: false
                       nextSortedAt: null
                       nextNoteId: null
@@ -3979,6 +4068,20 @@ paths:
           nullable: false
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
         example: 0HZX2K7M9Q4AF
+      - name: meetingStatus
+        in: query
+        description: '이 회의 상태의 노트만(예: PAUSED 로 중지된 회의만). 쪽을 자르기 전에 거르므로 커서로 끝까지 읽으면 빠짐이 없다. 보내지 않으면 모든 상태, 없는 값이면 400'
+        required: false
+        schema:
+          type: string
+          description: '이 회의 상태의 노트만(예: PAUSED 로 중지된 회의만). 쪽을 자르기 전에 거르므로 커서로 끝까지 읽으면 빠짐이 없다. 보내지 않으면 모든 상태, 없는 값이면 400'
+          nullable: false
+          enum:
+          - NOT_STARTED
+          - IN_PROGRESS
+          - PAUSED
+          - ENDED
+        example: PAUSED
       responses:
         '200':
           description: 요청 성공
@@ -3998,11 +4101,11 @@ paths:
                         title: 주간 회의
                         createdAt: '2026-07-14T01:02:03Z'
                         updatedAt: '2026-07-14T01:02:03Z'
-                        meetingStatus: IN_PROGRESS
+                        meetingStatus: PAUSED
                         meetingStartedAt: '2026-07-14T01:02:03Z'
                         lastRecordedAt: '2026-07-14T01:02:03Z'
                         recordedDurationMs: 6500
-                        activeSessionStartedAt: '2026-07-14T01:02:03Z'
+                        activeSessionStartedAt: null
                         meetingStartedBy:
                           userId: 0HZX2K7M9Q4AC
                           name: 홍길동
@@ -4021,6 +4124,7 @@ paths:
                           name: 박서준
                           email: null
                           image: null
+                        pausedAt: '2026-07-14T01:02:03Z'
                       hasMore: true
                       nextSortedAt: '2026-07-14T01:02:03Z'
                       nextNoteId: 0HZX2K7M9Q4AF
@@ -4720,7 +4824,7 @@ paths:
                         alsoItemIds:
                         - 0K9GVJT2C4Q21
                         memberships:
-                        - itemId: "0HZX2K7M9Q4AN"
+                        - itemId: 0HZX2K7M9Q4AN
                           secondary: false
                         - itemId: 0K9GVJT2C4Q21
                           secondary: true
@@ -4752,7 +4856,7 @@ paths:
                         alsoItemIds:
                         - 0K9GVJT2C4Q21
                         memberships:
-                        - itemId: "0HZX2K7M9Q4AN"
+                        - itemId: 0HZX2K7M9Q4AN
                           secondary: false
                         - itemId: 0K9GVJT2C4Q21
                           secondary: true
@@ -7664,6 +7768,7 @@ paths:
                 value:
                   state: sssssssssssssssssssssssssssssssssssssssssss
                   codeChallenge: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                  language: en
               startDesktopLogin_BadRequest:
                 value:
                   state: https://evil.test
@@ -9200,6 +9305,310 @@ paths:
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/notification-settings:
+    get:
+      tags:
+      - NotificationSettings
+      summary: 알림 설정 조회
+      description: 내 알림 설정을 종류·채널별로 조회한다. 모든 워크스페이스에 같이 적용된다. 고른 적이 없는 값은 기본값이다 — 선택 알림은 웹 켜짐·메일 꺼짐이고 중지된 회의 메일만 켜짐이다.
+      operationId: getNotificationSettings
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettingsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      muteAll: false
+                      muteEmail: true
+                      items:
+                      - type: WORKSPACE_INVITATION
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
+                      - type: MEETING_PAUSED_REMINDER
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: false
+                          enabled: false
+                          effective: false
+                        - channel: EMAIL
+                          provided: true
+                          enabled: false
+                          effective: false
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+    put:
+      tags:
+      - NotificationSettings
+      summary: 알림 전체 끄기 변경
+      description: 선택 알림 모두 끄기·선택 메일 모두 끄기를 함께 바꾸고 바뀐 설정을 돌려준다. 종류별 선택은 지우지 않아 풀면 이전 선택이 돌아온다.
+      operationId: updateNotificationMutes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotificationMutesRequest'
+            examples:
+              updateNotificationMutes_Success:
+                value:
+                  muteAll: false
+                  muteEmail: true
+              updateNotificationMutes_BadRequest:
+                value:
+                  muteAll: true
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettingsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      muteAll: false
+                      muteEmail: true
+                      items:
+                      - type: WORKSPACE_INVITATION
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
+                      - type: MEETING_PAUSED_REMINDER
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: false
+                          enabled: false
+                          effective: false
+                        - channel: EMAIL
+                          provided: true
+                          enabled: false
+                          effective: false
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: muteEmail
+                        message: 값이 필요합니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+    delete:
+      tags:
+      - NotificationSettings
+      summary: 알림 설정 기본값으로 되돌리기
+      description: 종류별 선택을 지우고 두 전체 끄기를 풀어 기본값으로 되돌린 설정을 돌려준다. 멱등이고 필수 알림은 영향이 없다.
+      operationId: resetNotificationSettings
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettingsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      muteAll: false
+                      muteEmail: false
+                      items:
+                      - type: WORKSPACE_INVITATION
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
+                      - type: MEETING_PAUSED_REMINDER
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: false
+                          enabled: false
+                          effective: false
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/notification-settings/items:
+    put:
+      tags:
+      - NotificationSettings
+      summary: 알림 하나 변경
+      description: (종류, 채널) 하나를 켜고 끄고 바뀐 설정을 돌려준다. 같은 값을 다시 보내도 결과가 같다. 필수 종류, 그 종류가 제공하지 않는 채널, 다른 종류의 설정을 따르는 종류는 400 BAD_REQUEST 로 거절한다. 중지된 회의 메일(MEETING_PAUSED_REMINDER)은 자동 종료 안내 메일도 함께 켜고 끈다.
+      operationId: updateNotificationPreference
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotificationPreferenceRequest'
+            examples:
+              updateNotificationPreference_Success:
+                value:
+                  type: MEETING_PAUSED_REMINDER
+                  channel: EMAIL
+                  enabled: false
+              updateNotificationPreference_NotificationPreferenceNotChangeableException:
+                value:
+                  type: WORKSPACE_INVITATION
+                  channel: EMAIL
+                  enabled: false
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettingsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      muteAll: false
+                      muteEmail: true
+                      items:
+                      - type: WORKSPACE_INVITATION
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
+                      - type: MEETING_PAUSED_REMINDER
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: false
+                          enabled: false
+                          effective: false
+                        - channel: EMAIL
+                          provided: true
+                          enabled: false
+                          effective: false
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/users/me/consents:
+    post:
+      tags:
+      - Users
+      summary: 필수 문서 동의 기록
+      description: 로그인 직후 개인정보처리방침·이용약관 동의를 기록한다. 멱등이라 같은 버전을 다시 보내도 기록은 하나이고 처음 동의한 시각이 남는다. 하나라도 지금 버전이 아니면 아무것도 기록하지 않고 409 CONSENT_VERSION_OUTDATED 다.
+      operationId: recordConsents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordConsentRequest'
+            examples:
+              recordConsents_Success:
+                value:
+                  consents:
+                  - documentType: PRIVACY
+                    version: '2026-10-21'
+                  - documentType: TERMS
+                    version: '2026-10-21'
+              recordConsents_ConsentVersionOutdatedException:
+                value:
+                  consents:
+                  - documentType: PRIVACY
+                    version: '2026-01-01'
+                  - documentType: TERMS
+                    version: '2026-01-01'
+      responses:
+        '204':
+          description: 처리 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                CONSENT_VERSION_OUTDATED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: CONSENT_VERSION_OUTDATED
+                      message: 약관이 새로 바뀌었습니다. 다시 확인한 뒤 동의해 주세요.
+                      details: null
       security:
       - accessCookie: []
 components:
@@ -11254,8 +11663,11 @@ components:
       properties:
         data:
           required:
+          - consentRequired
+          - consents
           - email
           - image
+          - language
           - name
           - userId
           type: object
@@ -11283,6 +11695,48 @@ components:
               nullable: false
               example: hong@example.com
               format: email
+            consents:
+              type: array
+              description: 필수 문서마다 지금 버전과 동의 여부. 늘 PRIVACY·TERMS 둘
+              items:
+                required:
+                - agreed
+                - currentVersion
+                - documentType
+                type: object
+                properties:
+                  documentType:
+                    type: string
+                    description: 문서 종류
+                    nullable: false
+                    example: PRIVACY
+                    enum:
+                    - PRIVACY
+                    - TERMS
+                  agreed:
+                    type: boolean
+                    description: 지금 버전에 동의했나
+                    nullable: false
+                    example: true
+                  currentVersion:
+                    type: string
+                    description: 서버가 정한 지금 문서 버전. 동의를 기록할 때 이 값을 그대로 보낸다
+                    nullable: false
+                    example: '2026-10-21'
+              nullable: false
+            language:
+              type: string
+              description: 계정 화면 언어. 고르지 않았으면 null 이고, 그때 web 은 쿠키 → ko 순으로 정한다
+              nullable: true
+              example: en
+              enum:
+              - ko
+              - en
+            consentRequired:
+              type: boolean
+              description: 필수 문서 중 하나라도 지금 버전에 동의하지 않았으면 true. true 면 동의를 받고 POST /v1/users/me/consents 를 부른다
+              nullable: false
+              example: true
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -12676,27 +13130,25 @@ components:
                           nullable: false
                           minLength: 1
                   memberships:
-                    type: "array"
-                    description: "주·보조 소속을 구분한 검토 항목. 같은 항목은 주 소속을 우선하며 기존 members는\
-                      \ 유지합니다"
+                    type: array
+                    description: 주·보조 소속을 구분한 검토 항목. 같은 항목은 주 소속을 우선하며 기존 members는 유지합니다
                     items:
                       required:
-                      - "itemId"
-                      - "secondary"
-                      type: "object"
+                      - itemId
+                      - secondary
+                      type: object
                       properties:
                         secondary:
-                          type: "boolean"
-                          description: "보조 소속 여부. 모든 주제의 false 소속을 먼저 모은 뒤 true 소속\
-                            을 더해야 주 소속이 보존됩니다"
+                          type: boolean
+                          description: 보조 소속 여부. 모든 주제의 false 소속을 먼저 모은 뒤 true 소속을 더해야 주 소속이 보존됩니다
                           nullable: false
                           example: false
                         itemId:
-                          type: "string"
-                          description: "검토 항목 ID"
+                          type: string
+                          description: 검토 항목 ID
                           nullable: false
-                          example: "0HZX2K7M9Q4AN"
-                          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                          example: 0HZX2K7M9Q4AN
+                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
                   members:
                     type: array
                     description: 이 주제에 소속된 검토 항목. 분석이 묶은 항목 뒤에 사람이 이 주제에서 추가한 항목이 붙습니다
@@ -13066,27 +13518,25 @@ components:
                     example: 0HZX2K7M9Q4AN
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
                   memberships:
-                    type: "array"
-                    description: "주·보조 소속을 구분한 검토 항목. 같은 항목은 주 소속을 우선하며 기존 members는\
-                      \ 유지합니다"
+                    type: array
+                    description: 주·보조 소속을 구분한 검토 항목. 같은 항목은 주 소속을 우선하며 기존 members는 유지합니다
                     items:
                       required:
-                      - "itemId"
-                      - "secondary"
-                      type: "object"
+                      - itemId
+                      - secondary
+                      type: object
                       properties:
                         secondary:
-                          type: "boolean"
-                          description: "보조 소속 여부. 모든 주제의 false 소속을 먼저 모은 뒤 true 소속\
-                            을 더해야 주 소속이 보존됩니다"
+                          type: boolean
+                          description: 보조 소속 여부. 모든 주제의 false 소속을 먼저 모은 뒤 true 소속을 더해야 주 소속이 보존됩니다
                           nullable: false
                           example: false
                         itemId:
-                          type: "string"
-                          description: "검토 항목 ID"
+                          type: string
+                          description: 검토 항목 ID
                           nullable: false
-                          example: "0HZX2K7M9Q4AN"
-                          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                          example: 0HZX2K7M9Q4AN
+                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
                   members:
                     type: array
                     description: 이 주제에 소속된 검토 항목. 분석이 묶은 항목 뒤에 사람이 이 주제에서 추가한 항목이 붙습니다
@@ -13249,6 +13699,7 @@ components:
                 - meetingStatus
                 - noteId
                 - participants
+                - pausedAt
                 - projectId
                 - projectName
                 - recordedDurationMs
@@ -13404,6 +13855,12 @@ components:
                     type: string
                     description: 노트 수정 시각
                     nullable: false
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  pausedAt:
+                    type: string
+                    description: 중지 시각. 실제로 녹음이 시작된 마지막 전사 세션의 종료 시각이고, 녹음 없이 끝난 시도(READY 만료)는 세지 않는다. meetingStatus 가 PAUSED 가 아니면 null
+                    nullable: true
                     example: '2026-07-14T01:02:03Z'
                     format: date-time
               nullable: false
@@ -16545,6 +17002,14 @@ components:
           nullable: false
           minLength: 32
           maxLength: 128
+        language:
+          type: string
+          description: 앱 화면 언어. 브라우저 인증 완료 화면을 이 언어로 그린다. 없으면 한국어(구버전 앱)
+          nullable: false
+          example: en
+          enum:
+          - ko
+          - en
     AuthSessionResponse:
       title: AuthSessionResponse
       required:
@@ -16589,6 +17054,14 @@ components:
                   description: 이메일
                   nullable: false
                   example: user@example.com
+                language:
+                  type: string
+                  description: 계정 화면 언어. 고르지 않았으면 null
+                  nullable: true
+                  example: en
+                  enum:
+                  - ko
+                  - en
               description: authenticated일 때만 현재 사용자
               nullable: false
               required:
@@ -16596,6 +17069,7 @@ components:
               - name
               - email
               - image
+              - language
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -17986,6 +18460,186 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    NotificationSettingsResponse:
+      title: NotificationSettingsResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - items
+          - muteAll
+          - muteEmail
+          type: object
+          properties:
+            muteAll:
+              type: boolean
+              description: 선택 알림 모두 끄기. 켜져 있으면 선택 알림을 웹·메일 모두 받지 않는다
+              nullable: false
+            muteEmail:
+              type: boolean
+              description: 선택 메일 모두 끄기. 켜져 있으면 선택 메일만 받지 않는다
+              nullable: false
+            items:
+              type: array
+              description: 설정 화면의 종류별 줄. 설정을 공유하는 종류(자동 종료 안내)는 따로 나오지 않는다
+              items:
+                required:
+                - channels
+                - required
+                - type
+                type: object
+                properties:
+                  channels:
+                    type: array
+                    description: 채널별 값. 늘 WEB·EMAIL 순서로 둘이다
+                    items:
+                      required:
+                      - channel
+                      - effective
+                      - enabled
+                      - provided
+                      type: object
+                      properties:
+                        effective:
+                          type: boolean
+                          description: 전체 끄기까지 반영해 지금 실제로 받는가
+                          nullable: false
+                        provided:
+                          type: boolean
+                          description: 이 종류를 이 채널로 보내는가. false 면 화면에 「—」
+                          nullable: false
+                        channel:
+                          type: string
+                          description: 채널
+                          nullable: false
+                          example: EMAIL
+                          enum:
+                          - WEB
+                          - EMAIL
+                        enabled:
+                          type: boolean
+                          description: 사용자의 선택. 고른 적이 없으면 기본값이다. 전체 끄기는 이 값을 지우지 않고 가린다
+                          nullable: false
+                    nullable: false
+                  type:
+                    type: string
+                    description: 알림 종류
+                    nullable: false
+                    example: MEETING_PAUSED_REMINDER
+                    enum:
+                    - WORKSPACE_INVITATION
+                    - MEETING_PAUSED_REMINDER
+                    - MEETING_AUTO_ENDED
+                  required:
+                    type: boolean
+                    description: 필수 알림. 설정과 관계없이 항상 받고 바꿀 수 없다(잠금)
+                    nullable: false
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    RecordConsentRequest:
+      title: RecordConsentRequest
+      required:
+      - consents
+      type: object
+      properties:
+        consents:
+          type: array
+          description: 동의한 문서들. 1~10개
+          items:
+            required:
+            - documentType
+            - version
+            type: object
+            properties:
+              documentType:
+                type: string
+                description: 문서 종류
+                nullable: false
+                example: PRIVACY
+                enum:
+                - PRIVACY
+                - TERMS
+              version:
+                type: string
+                description: 동의한 문서 버전. 내 정보의 consents[].currentVersion 과 같아야 한다
+                nullable: false
+                example: '2026-10-21'
+                minLength: 1
+                maxLength: 40
+          nullable: false
+    UpdateCurrentUserRequest:
+      title: UpdateCurrentUserRequest
+      required:
+      - language
+      type: object
+      properties:
+        language:
+          type: string
+          description: 화면 언어
+          nullable: false
+          example: en
+          enum:
+          - ko
+          - en
+    UpdateNotificationMutesRequest:
+      title: UpdateNotificationMutesRequest
+      required:
+      - muteAll
+      - muteEmail
+      type: object
+      properties:
+        muteAll:
+          type: boolean
+          description: 선택 알림 모두 끄기
+          nullable: false
+        muteEmail:
+          type: boolean
+          description: 선택 메일 모두 끄기
+          nullable: false
+    UpdateNotificationPreferenceRequest:
+      title: UpdateNotificationPreferenceRequest
+      required:
+      - channel
+      - enabled
+      - type
+      type: object
+      properties:
+        channel:
+          type: string
+          description: 채널. 그 종류가 제공하지 않는 채널은 거절한다
+          nullable: false
+          example: EMAIL
+          enum:
+          - WEB
+          - EMAIL
+        type:
+          type: string
+          description: 알림 종류. 필수 종류와 설정을 공유하는 종류는 거절한다
+          nullable: false
+          example: MEETING_PAUSED_REMINDER
+          enum:
+          - WORKSPACE_INVITATION
+          - MEETING_PAUSED_REMINDER
+          - MEETING_AUTO_ENDED
+        enabled:
+          type: boolean
+          description: 받을지 여부
+          nullable: false
   securitySchemes:
     accessCookie:
       type: apiKey

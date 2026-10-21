@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { GetNotesMeetingStatus } from "./getNotesMeetingStatus";
 
 export type GetNotesParams = {
   /**
@@ -22,4 +23,8 @@ export type GetNotesParams = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   afterNoteId?: string;
+  /**
+   * 이 회의 상태의 노트만(예: PAUSED 로 중지된 회의만). 쪽을 자르기 전에 거르므로 커서로 끝까지 읽으면 빠짐이 없다. 보내지 않으면 모든 상태, 없는 값이면 400
+   */
+  meetingStatus?: GetNotesMeetingStatus;
 };

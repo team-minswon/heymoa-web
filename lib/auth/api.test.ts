@@ -25,6 +25,7 @@ describe("getMe", () => {
     name: "사용자",
     email: "user@example.com",
     image: null,
+    language: null,
   };
   function session(state: string, currentUser?: unknown) {
     return jsonResponse(200, {

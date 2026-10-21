@@ -30,6 +30,7 @@ const USER = {
   name: "사용자",
   email: "user@example.com",
   image: null,
+  language: null,
 };
 const WORKSPACE: WorkspaceListResponseDataWorkspacesItem = {
   workspaceId: "01K0000000001",

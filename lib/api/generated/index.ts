@@ -8,6 +8,7 @@ export * from "./integration/integration";
 export * from "./meeting-approval/meeting-approval";
 export * from "./meeting-review/meeting-review";
 export * from "./notes/notes";
+export * from "./notification-settings/notification-settings";
 export * from "./notifications/notifications";
 export * from "./projects/projects";
 export * from "./proposals/proposals";
