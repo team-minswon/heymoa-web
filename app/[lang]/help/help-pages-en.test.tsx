@@ -136,14 +136,20 @@ describe("사용 가이드 영어판", () => {
     }
   });
 
-  it("영어판 metadata 는 자기 주소가 canonical 이고 공개 전이면 noindex 다", async () => {
+  it("영어판 metadata 는 자기 주소가 canonical 이고 noindex 없이 ko·en hreflang 을 단다", async () => {
     const topic = en[0];
     const meta = await generateMetadata({
       params: Promise.resolve({ group: topic.group, page: topic.slug }),
     });
     expect(meta.alternates?.canonical).toBe(`/en${helpPathOf(topic)}`);
     expect(meta.title).toEqual({ absolute: `${topic.title} · HeyMoa Guide` });
-    expect(meta.robots).toMatchObject({ index: false });
+    // 페이지가 robots 를 내지 않는다 — 영어판이 색인 대상이다(비운영 배포의 noindex 는 루트 레이아웃이 건다).
+    expect(meta.robots).toBeUndefined();
+    expect(meta.alternates?.languages).toEqual({
+      ko: helpPathOf(topic),
+      en: `/en${helpPathOf(topic)}`,
+      "x-default": helpPathOf(topic),
+    });
     expect(meta.openGraph).toMatchObject({ locale: "en_US" });
   });
 

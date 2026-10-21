@@ -39,19 +39,6 @@ export function splitLocale(pathname: string): {
   return { locale: DEFAULT_LOCALE, path: pathname };
 }
 
-/**
- * 검색에 공개한 언어. 빌드 때 `PUBLISHED_LOCALES`(쉼표 목록)를 읽고, 없으면 한국어만이다.
- * 공개하지 않은 언어판은 noindex 이고 sitemap·hreflang 에 오르지 않는다(rollout.md).
- */
-export function publishedLocales(
-  raw = process.env.PUBLISHED_LOCALES
-): readonly Locale[] {
-  const listed = (raw ?? "").split(",").map((value) => value.trim());
-  return LOCALES.filter(
-    (locale) => locale === DEFAULT_LOCALE || listed.includes(locale)
-  );
-}
-
 /** 언어 선택에 보이는 이름. 어느 화면에서나 그 언어 자신의 이름으로 쓴다. */
 export const LOCALE_NAMES: Record<Locale, string> = {
   ko: "한국어",

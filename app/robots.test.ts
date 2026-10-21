@@ -57,11 +57,12 @@ describe("색인 지시", () => {
 // 공개 정적 페이지가 사이트맵에 빠지면 Search Console 이 늦게 찾는다(APP-1036).
 // 고정 목록이 아니라 **원본 목록과 대조**한다 — 마케팅 경로나 가이드 주제를 더했는데 sitemap 에 없으면 실패한다(PRO-66).
 describe("사이트맵", () => {
-  async function load(published?: string) {
-    vi.resetModules();
-    if (published !== undefined) vi.stubEnv("PUBLISHED_LOCALES", published);
+  async function load() {
+    vi.resetModules(); // 앞 테스트가 바꾼 NEXT_PUBLIC_SITE_URL 이 캐시된 siteConfig 에 남지 않게
     return {
       sitemap: (await import("@/app/sitemap")).default,
+      locales: (await import("@/lib/i18n/locales")).LOCALES,
+      localePath: (await import("@/lib/i18n/locales")).localePath,
       pages: (await import("@/lib/i18n/marketing-routes")).MARKETING_PAGES,
       groups: (await import("@/app/[lang]/help/_content/groups")).helpGroups,
       topics: (await import("@/app/[lang]/help/_content/topics")).helpTopics,
@@ -72,31 +73,25 @@ describe("사이트맵", () => {
   const absolute = (path: string) =>
     path === "/" ? "https://heymoa.app" : `https://heymoa.app${path}`;
 
-  it("마케팅 경로 목록과 가이드 주제 목록의 주소를 빠짐없이 한 번씩 싣는다", async () => {
-    const { sitemap, pages, groups, topics, pathOf } = await load();
-    const expected = [
+  it("마케팅 경로 목록과 가이드 주제 목록의 주소를 언어판마다 빠짐없이 한 번씩 싣는다", async () => {
+    const { sitemap, locales, localePath, pages, groups, topics, pathOf } =
+      await load();
+    const paths = [
       ...pages.map(({ path }) => path),
       ...groups.map(({ slug }) => `/help/${slug}`),
       ...topics.map(pathOf),
-    ].map(absolute);
+    ];
+    const expected = locales
+      .flatMap((locale) => paths.map((path) => localePath(locale, path)))
+      .map(absolute);
     const urls = sitemap().map((entry) => entry.url);
 
     expect(new Set(urls).size).toBe(urls.length);
     expect([...urls].sort()).toEqual([...expected].sort());
   });
 
-  it("기본값에서는 영어 주소가 없고 한국어끼리만 대응한다", async () => {
+  it("영어판도 설정 없이 실리고, 한국어판과 서로를 대응으로 단다", async () => {
     const { sitemap } = await load();
-    const entries = sitemap();
-
-    expect(entries.some((entry) => entry.url.includes("/en"))).toBe(false);
-    expect(entries[0].alternates).toEqual({
-      languages: { ko: "https://heymoa.app" },
-    });
-  });
-
-  it("PUBLISHED_LOCALES=ko,en 이면 영어판을 싣고 서로를 대응으로 단다", async () => {
-    const { sitemap } = await load("ko,en");
     const entries = sitemap();
     const help = entries.filter((entry) => entry.url.endsWith("/help"));
 
@@ -110,6 +105,20 @@ describe("사이트맵", () => {
           ko: "https://heymoa.app/help",
           en: "https://heymoa.app/en/help",
         },
+      });
+    }
+  });
+
+  it("랜딩은 끝 슬래시 없이 두 언어판을 서로 대응한다", async () => {
+    const { sitemap } = await load();
+    const home = sitemap().filter((entry) =>
+      ["https://heymoa.app", "https://heymoa.app/en"].includes(entry.url)
+    );
+
+    expect(home).toHaveLength(2);
+    for (const entry of home) {
+      expect(entry.alternates).toEqual({
+        languages: { ko: "https://heymoa.app", en: "https://heymoa.app/en" },
       });
     }
   });

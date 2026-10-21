@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { localePath, publishedLocales, splitLocale } from "@/lib/i18n/locales";
+import { LOCALES, localePath, splitLocale } from "@/lib/i18n/locales";
 import {
   isMarketingPathname,
   marketingRedirects,
@@ -26,14 +26,6 @@ describe("언어 경로", () => {
     expect(splitLocale("/ko")).toEqual({ locale: "ko", path: "/" });
     // `/english` 같은 첫 세그먼트는 언어가 아니다.
     expect(splitLocale("/english")).toEqual({ locale: "ko", path: "/english" });
-  });
-
-  it("공개 언어는 기본 한국어만이고 PUBLISHED_LOCALES 로 더한다", () => {
-    expect(publishedLocales(undefined)).toEqual(["ko"]);
-    expect(publishedLocales("")).toEqual(["ko"]);
-    expect(publishedLocales("ko, en")).toEqual(["ko", "en"]);
-    expect(publishedLocales("en")).toEqual(["ko", "en"]);
-    expect(publishedLocales("ja")).toEqual(["ko"]);
   });
 });
 
@@ -107,31 +99,47 @@ describe("마케팅 경로 목록 하나가 rewrite·크롬 판정을 정한다"
   });
 });
 
-describe("검색 공개 플래그(PUBLISHED_LOCALES)", () => {
-  it("기본값: 영어판은 noindex·자기 canonical·hreflang 없음, 한국어판 hreflang 에 영어가 없다", () => {
-    const published = publishedLocales(undefined);
+describe("언어판 metadata — 설정 없이 모든 언어판이 검색에 공개된다", () => {
+  it("영어판도 noindex 를 걸지 않고 자기 주소가 canonical 이다", () => {
+    const en = localizedMetadata("en", "/help");
 
-    expect(localizedMetadata("en", "/help", published)).toEqual({
-      alternates: { canonical: "/en/help" },
-      robots: expect.objectContaining({ index: false }),
-    });
-    expect(localizedMetadata("ko", "/help", published)).toEqual({
-      alternates: {
-        canonical: "/help",
-        languages: { ko: "/help", "x-default": "/help" },
-      },
-    });
+    expect(en.alternates?.canonical).toBe("/en/help");
+    // robots 를 아예 내지 않는다 — 비운영 배포의 noindex 는 루트 레이아웃이 그대로 건다.
+    expect(en).not.toHaveProperty("robots");
   });
 
-  it("ko,en: 영어판 noindex 해제·self-canonical·상호 hreflang, x-default 는 한국어", () => {
-    const published = publishedLocales("ko,en");
+  it("모든 언어판이 같은 hreflang 묶음을 달고 x-default 는 한국어다", () => {
     const languages = { ko: "/", en: "/en", "x-default": "/" };
 
-    expect(localizedMetadata("en", "/", published)).toEqual({
+    expect(localizedMetadata("en", "/")).toEqual({
       alternates: { canonical: "/en", languages },
     });
-    expect(localizedMetadata("ko", "/", published)).toEqual({
+    expect(localizedMetadata("ko", "/")).toEqual({
       alternates: { canonical: "/", languages },
     });
   });
+
+  it.each(["/help", "/help/start/desktop", "/download", "/terms"])(
+    "%s: hreflang 에 LOCALES 전부가 한 번씩 오른다",
+    (path) => {
+      for (const locale of LOCALES) {
+        const { alternates } = localizedMetadata(locale, path);
+
+        expect(alternates?.canonical).toBe(localePath(locale, path));
+        expect(Object.keys(alternates?.languages ?? {}).sort()).toEqual(
+          [...LOCALES, "x-default"].sort()
+        );
+        for (const each of LOCALES) {
+          expect(alternates?.languages).toHaveProperty(
+            each,
+            localePath(each, path)
+          );
+        }
+        expect(alternates?.languages).toHaveProperty(
+          "x-default",
+          localePath("ko", path)
+        );
+      }
+    }
+  );
 });

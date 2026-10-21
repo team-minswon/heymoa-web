@@ -4,7 +4,7 @@ import { helpGroups } from "@/app/[lang]/help/_content/groups";
 import { helpPathOf } from "@/app/[lang]/help/_content/paths";
 import { helpTopics } from "@/app/[lang]/help/_content/topics";
 import { HELP_MODIFIED } from "@/lib/help/dates";
-import { localePath, publishedLocales } from "@/lib/i18n/locales";
+import { LOCALES, localePath } from "@/lib/i18n/locales";
 import { MARKETING_PAGES } from "@/lib/i18n/marketing-routes";
 import { siteConfig } from "@/lib/site";
 
@@ -39,14 +39,13 @@ function sitemapPages(): Entry[] {
 const absolute = (path: string) =>
   path === "/" ? siteConfig.url : `${siteConfig.url}${path}`;
 
-/** 공개한 언어판만 싣는다(`PUBLISHED_LOCALES`). 항목마다 공개 언어끼리의 대응을 단다. */
+/** 모든 언어판을 싣고, 항목마다 언어판끼리의 대응을 단다. */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const locales = publishedLocales();
   return sitemapPages().flatMap(({ path, ...entry }) => {
     const languages = Object.fromEntries(
-      locales.map((locale) => [locale, absolute(localePath(locale, path))])
+      LOCALES.map((locale) => [locale, absolute(localePath(locale, path))])
     );
-    return locales.map((locale) => ({
+    return LOCALES.map((locale) => ({
       ...entry,
       url: absolute(localePath(locale, path)),
       alternates: { languages },

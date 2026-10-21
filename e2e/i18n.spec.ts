@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 /**
- * 웹 국제화 기반(PRO-66-I01). 한국어는 무접두 주소 그대로, 영어는 `/en` 아래에 있고 아직 검색에 공개하지 않는다.
+ * 웹 국제화 기반(PRO-66-I01). 한국어는 무접두 주소 그대로, 영어는 `/en` 아래에 있고 설정 없이 검색에 공개된다(noindex 없음 · sitemap · hreflang).
  * 크롤러가 읽는 상태 코드·이동·`<head>` 는 서버 응답으로 보고, 화면 전환은 브라우저로 본다.
  */
 
@@ -216,24 +216,28 @@ test("/en 랜딩은 제목·설명·OpenGraph·본문이 영어이고 한글이 
   expect(korean).toEqual([]);
 });
 
-test("공개 전(PUBLISHED_LOCALES 기본값) 영어판은 noindex 이고 sitemap·hreflang 에 영어 주소가 없다", async ({
+test("영어판은 설정 없이 색인 대상이다 — noindex 가 없고 sitemap·hreflang 에 영어 주소가 오른다", async ({
   request,
 }) => {
   const en = await (await request.get("/en/help")).text();
-  expect(en).toMatch(/<meta name="robots" content="noindex/);
+  expect(en).not.toMatch(/<meta name="robots" content="[^"]*noindex/);
   expect(en).toContain('<link rel="canonical" href="https://heymoa.app/en/help"/>');
-  expect(en).not.toContain("hrefLang=");
-  expect(en).not.toContain('hreflang="');
+  expect(en).toContain('hrefLang="ko" href="https://heymoa.app/help"');
+  expect(en).toContain('hrefLang="en" href="https://heymoa.app/en/help"');
+  expect(en).toContain('hrefLang="x-default" href="https://heymoa.app/help"');
 
   const ko = await (await request.get("/help")).text();
+  expect(ko).not.toMatch(/<meta name="robots" content="[^"]*noindex/);
   expect(ko).toContain('<link rel="canonical" href="https://heymoa.app/help"/>');
   expect(ko).toContain('hrefLang="ko" href="https://heymoa.app/help"');
+  expect(ko).toContain('hrefLang="en" href="https://heymoa.app/en/help"');
   expect(ko).toContain('hrefLang="x-default" href="https://heymoa.app/help"');
-  expect(ko).not.toContain('hrefLang="en"');
 
   const sitemap = await (await request.get("/sitemap.xml")).text();
   expect(sitemap).toContain("<loc>https://heymoa.app/help</loc>");
-  expect(sitemap).not.toContain("https://heymoa.app/en");
+  expect(sitemap).toContain("<loc>https://heymoa.app/en/help</loc>");
+  expect(sitemap).toContain("<loc>https://heymoa.app/en</loc>");
+  expect(sitemap).toContain("<loc>https://heymoa.app/en/terms</loc>");
 });
 
 test("회의록 삭제 확인창의 긴 문구에서 한국어 낱말이 줄 끝에서 갈리지 않는다", async ({
