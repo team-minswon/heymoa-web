@@ -30,8 +30,10 @@ export const isMarketingPathname = (pathname: string) =>
   isMarketingPath(splitLocale(pathname).path);
 
 /**
- * 한국어 무접두 주소를 `app/[lang]` 의 `/ko/...` 로 잇는다(`beforeFiles`). proxy 다음, 파일 시스템
- * 앞에서 돌고 클라이언트 라우터에도 적용되므로 prefetch 와 실제 이동이 같은 경로로 풀린다.
+ * 한국어 무접두 주소를 `app/[lang]` 의 `/ko/...` 로 잇는다(`afterFiles`). `public/` 파일 다음, 동적 라우트
+ * 앞에서 돈다 — `public/help/**` 의 가이드 이미지·영상(`/help/getting-started/new-meeting.webp`)은 파일로
+ * 나가고, 마케팅 페이지는 모두 `app/[lang]` 아래 동적 라우트라 `[lang]` 이 `help` 를 언어로 잡기 전에 이어진다.
+ * `beforeFiles` 였을 때는 가이드 파일 45개가 페이지로 넘어가 404 HTML 이 됐다.
  */
 export function marketingRewrites() {
   return MARKETING_PAGES.flatMap(({ path }) =>

@@ -268,7 +268,11 @@ export function WorksWith() {
             })}
           </h2>
           <p
-            className={cn("tv-r", BODY, "mt-3 lg:mt-4 lg:text-[17px]")}
+            className={cn(
+              "tv-r",
+              BODY,
+              "mt-3 text-balance lg:mt-4 lg:text-[17px]"
+            )}
             style={vars({ "--i": 1 })}
           >
             {t.rich("body", {

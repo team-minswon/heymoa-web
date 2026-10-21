@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+/**
+ * 운영 빌드의 상태 코드·content-type 확인 (APP-1279).
+ *
+ *   pnpm build && pnpm start -p 3143 &
+ *   node scripts/check-route-status.mjs http://localhost:3143
+ *
+ * **e2e(`pnpm test:e2e`)는 이것을 대신하지 못한다.** e2e 는 목 모드 dev 서버라 SSR 이 본문을 그리지 않아
+ * (`MockProvider`) 없는 주소도 200 이고, 랜딩이 미리 그린 페이지인지 요청 때 그리는 페이지인지도 운영과 다르다.
+ * 실제로 운영 빌드에서만 `/없는-주소` 가 500 이었고, 가이드 이미지가 HTML 로 나갔다.
+ * API 주소(`NEXT_PUBLIC_API_BASE_URL`)를 넣고 빌드해야 운영과 같다 — 없으면 랜딩이 미리 그린 페이지가 된다.
+ */
+const origin = process.argv[2] ?? "http://localhost:3143";
+
+const CASES = [
+  // 가이드 정적 파일은 한국어 rewrite 를 타지 않는다(`afterFiles`).
+  {
+    path: "/help/getting-started/new-meeting.webp",
+    status: 200,
+    type: "image/webp",
+  },
+  { path: "/help/search-index.json", status: 200, type: "application/json" },
+  { path: "/", status: 200, type: "text/html" },
+  { path: "/en", status: 200, type: "text/html" },
+  { path: "/help/start/desktop", status: 200, type: "text/html" },
+  { path: "/download", status: 200, type: "text/html" },
+  // 없는 주소는 404 다. 언어 접두사가 없으면 쿠키 언어(없으면 한국어), `/en` 아래는 영어.
+  ...[
+    "/nope",
+    "/nope/x",
+    "/nope/help",
+    "/nope/terms",
+    "/help/nope",
+    "/help/start/nope",
+  ].map((path) => ({
+    path,
+    status: 404,
+    type: "text/html",
+    text: "페이지를 찾을 수 없습니다",
+  })),
+  ...["/en/nope", "/en/help/nope", "/en/w/x"].map((path) => ({
+    path,
+    status: 404,
+    type: "text/html",
+    text: "Page not found",
+  })),
+];
+
+let failed = 0;
+for (const { path, status, type, text } of CASES) {
+  const response = await fetch(origin + path, { redirect: "manual" });
+  const contentType = response.headers.get("content-type") ?? "";
+  const body = text ? await response.text() : "";
+  const ok =
+    response.status === status &&
+    contentType.startsWith(type) &&
+    (!text || body.includes(text));
+  if (!ok) failed++;
+  console.log(
+    `${ok ? "ok  " : "FAIL"} ${path} → ${response.status} ${contentType}`
+  );
+}
+if (failed) {
+  console.error(`${failed} 건이 기대와 다르다.`);
+  process.exit(1);
+}

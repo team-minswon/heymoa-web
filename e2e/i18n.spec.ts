@@ -85,6 +85,18 @@ test("영어판은 /en 아래에서 lang=en 으로 열린다", async ({ request 
   expect(legacy.headers().location).toBe("/en/help/start/desktop");
 });
 
+test("가이드 정적 파일은 한국어 rewrite 를 타지 않고 파일 그대로 나간다", async ({ request }) => {
+  for (const [path, type] of [
+    ["/help/getting-started/new-meeting.webp", "image/webp"],
+    ["/help/clips/agent-ask.mp4", "video/mp4"],
+    ["/help/search-index.json", "application/json"],
+  ]) {
+    const response = await get(request, path);
+    expect(response.status(), path).toBe(200);
+    expect(response.headers()["content-type"], path).toContain(type);
+  }
+});
+
 test("/ko 접두 주소는 무접두 주소로 영구 이동한다", async ({ request }) => {
   for (const [from, to] of [
     ["/ko", "/"],
@@ -112,8 +124,8 @@ async function expectNotFound(page: Page, lang: "ko" | "en") {
 
 /**
  * `/en` 아래 없는 주소는 `app/[lang]/[...rest]` 가 `notFound()` 를 불러 `app/[lang]/not-found.tsx` 가 그린다.
- * **상태 코드는 여기서 보지 않는다.** 목 모드 dev 서버는 SSR 사용자 조회(`cookies()`)에서 응답을 먼저 흘려 200 을
- * 낸다. 운영 빌드(`pnpm build && pnpm start`)는 404 다 — 2026-10-21 curl 로 확인했다(API 주소 유무 모두).
+ * **상태 코드는 여기서 보지 않는다.** 목 모드에서는 `MockProvider` 가 SSR 에서 본문을 그리지 않아 `notFound()` 가
+ * 응답 전에 불리지 않으므로 200 이다. 운영 빌드의 404 는 `scripts/check-route-status.mjs` 가 본다.
  */
 for (const path of ["/en/없는-주소", "/en/w/x"]) {
   test(`${path} 는 직접 진입과 앱 안 이동 모두 영어 404 다`, async ({ page }) => {

@@ -7,8 +7,10 @@ import { isLocale, LOCALES } from "@/lib/i18n/locales";
 import { siteMetadataFor } from "@/lib/site";
 
 /**
- * 언어는 ko·en 뿐이다. 그 밖의 첫 세그먼트(`/foo`)는 라우팅 단계의 404 가 되어 `app/global-not-found.tsx` 가 그린다.
- * 루트 레이아웃에서 `notFound()` 를 부르면 그 위에 경계가 없어 Next 기본 404 가 뜬다(16.3.8 실측).
+ * 언어는 ko·en 뿐이다. 그 밖의 첫 세그먼트(`/foo/help`)는 미리 그린(●) 페이지라면 라우팅 단계에서 떨어져
+ * `[...rest]` 의 404 가 된다. **요청 때 그리는(ƒ) 페이지에는 이 설정이 걸리지 않는다** — 그런 페이지(랜딩)는
+ * 스스로 언어를 확인한다(`app/[lang]/page.tsx`). 루트 레이아웃에서 `notFound()` 를 부르면 그 위에 경계가 없어
+ * Next 기본 404 가 뜬다(16.3.8 실측).
  */
 export const generateStaticParams = () => LOCALES.map((lang) => ({ lang }));
 export const dynamicParams = false;

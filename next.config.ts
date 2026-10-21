@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     return marketingRedirects();
   },
   async rewrites() {
-    return { beforeFiles: marketingRewrites(), afterFiles: [], fallback: [] };
+    return { beforeFiles: [], afterFiles: marketingRewrites(), fallback: [] };
   },
   // 외부 에이전트 동의 화면(APP-888)을 다른 사이트가 프레임에 띄워 허락을 누르게 하지 못하게 한다.
   // `X-Frame-Options` 는 `frame-ancestors` 를 모르는 브라우저용이다. 사이트 전체는 따로 정한다.
