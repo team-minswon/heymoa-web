@@ -76,6 +76,18 @@ describe("LandingCta", () => {
     );
   });
 
+  it("시작 버튼에 포커스하면 연결된 녹음 안내 툴팁을 연다", async () => {
+    render(
+      <LandingCta label="무료로 시작하기" tooltip="웹은 마이크 입력" />
+    );
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    const button = screen.getByRole("button", { name: "무료로 시작하기" });
+    fireEvent.focus(button);
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("웹은 마이크 입력");
+    expect(button).toHaveAttribute("aria-describedby", tooltip.id);
+  });
+
   it("조회가 실패하면 스피너를 멈추고 다시 시도를 낸다", () => {
     // 실패를 로딩과 같은 스피너로 그리면 CTA가 영원히 돌면서 빠져나갈 길이 없다.
     auth.status = "authenticated";

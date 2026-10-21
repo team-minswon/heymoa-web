@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { ArrowRight, Plus } from "lucide-react";
 
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button, LinkButton } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
@@ -28,14 +29,17 @@ export function LandingCta({
   label,
   className,
   openOnWelcome = false,
+  tooltip,
 }: {
   label: string;
   className?: string;
   /** 첫 로그인 직후 생성 폼을 열 인스턴스. 랜딩에 CTA가 여럿이라 **하나만** 켠다(히어로). */
   openOnWelcome?: boolean;
+  tooltip?: ReactNode;
 }) {
   const { status } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
+  const tooltipId = useId();
   const isAuthenticated = status === "authenticated";
   const workspacesQuery = useGetWorkspaces({
     query: { enabled: isAuthenticated, staleTime: 5 * 60 * 1000 },
@@ -124,12 +128,24 @@ export function LandingCta({
     );
   }
 
+  const button = (
+    <Button type="button" aria-describedby={tooltip ? tooltipId : undefined} className={cn(MARKETING_PILL, className)}>
+      {label}
+      <ArrowRight className="size-4" />
+    </Button>
+  );
+  if (!tooltip) return <AuthModal>{button}</AuthModal>;
+
   return (
-    <AuthModal>
-      <Button type="button" className={cn(MARKETING_PILL, className)}>
-        {label}
-        <ArrowRight className="size-4" />
-      </Button>
-    </AuthModal>
+    <TooltipProvider>
+      <Tooltip>
+        <AuthModal>
+          <TooltipTrigger render={button} />
+        </AuthModal>
+        <TooltipContent id={tooltipId} role="tooltip" side="bottom" align="end" sideOffset={8} className="block text-center leading-5">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
