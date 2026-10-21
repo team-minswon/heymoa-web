@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AuthSessionResponseDataUserLanguage } from "./authSessionResponseDataUserLanguage";
 
 /**
  * authenticated일 때만 현재 사용자
@@ -21,4 +22,9 @@ export type AuthSessionResponseDataUser = {
   userId: string;
   /** 이메일 */
   email: string;
+  /**
+   * 계정 화면 언어. 고르지 않았으면 null
+   * @nullable
+   */
+  language: AuthSessionResponseDataUserLanguage;
 };

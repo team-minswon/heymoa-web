@@ -17,6 +17,29 @@ export const getGetCurrentUserResponseMock = (): CurrentUserResponse => ({
     name: "홍길동",
     email: "hong@example.com",
     image: "https://cdn.heymoa.com/profiles/member.png",
+    language: "en",
+    consentRequired: true,
+    consents: [
+      { documentType: "PRIVACY", currentVersion: "2026-10-21", agreed: true },
+      { documentType: "TERMS", currentVersion: "2026-10-21", agreed: false },
+    ],
+  },
+  error: null,
+});
+
+export const getUpdateCurrentUserResponseMock = (): CurrentUserResponse => ({
+  success: true,
+  data: {
+    userId: "0HZX2K7M9Q4AC",
+    name: "홍길동",
+    email: "hong@example.com",
+    image: "https://cdn.heymoa.com/profiles/member.png",
+    language: "en",
+    consentRequired: true,
+    consents: [
+      { documentType: "PRIVACY", currentVersion: "2026-10-21", agreed: true },
+      { documentType: "TERMS", currentVersion: "2026-10-21", agreed: false },
+    ],
   },
   error: null,
 });
@@ -44,4 +67,53 @@ export const getGetCurrentUserMockHandler = (
     options
   );
 };
-export const getUsersMock = () => [getGetCurrentUserMockHandler()];
+
+export const getUpdateCurrentUserMockHandler = (
+  overrideResponse?:
+    | CurrentUserResponse
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0]
+      ) => Promise<CurrentUserResponse> | CurrentUserResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.patch(
+    "*/v1/users/me",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCurrentUserResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getRecordConsentsMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/users/me/consents",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
+export const getUsersMock = () => [
+  getGetCurrentUserMockHandler(),
+  getUpdateCurrentUserMockHandler(),
+  getRecordConsentsMockHandler(),
+];

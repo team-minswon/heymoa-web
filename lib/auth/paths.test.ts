@@ -23,6 +23,12 @@ describe("normalizeReturnTo", () => {
     );
   });
 
+  it("메일의 노트 링크는 탭·UTM 쿼리째 돌아온다(APP-1312)", () => {
+    const link =
+      "/w/01K0000000000/notes/01K0000000040?view=full&tab=transcript&utm_source=heymoa&utm_medium=email&utm_campaign=meeting_paused_reminder";
+    expect(normalizeReturnTo(link)).toBe(link);
+  });
+
   it("노트 자리에 new 가 아닌 아무 글자나 오면 홈으로 떨어진다", () => {
     expect(normalizeReturnTo("/w/01K0000000000/notes/newer")).toBe("/");
   });

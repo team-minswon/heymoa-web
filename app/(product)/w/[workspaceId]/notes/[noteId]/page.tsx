@@ -5,7 +5,11 @@ export default async function NoteRoute({
   searchParams,
 }: {
   params: Promise<{ workspaceId: string; noteId: string }>;
-  searchParams: Promise<{ view?: string | string[]; tab?: string | string[] }>;
+  searchParams: Promise<{
+    view?: string | string[];
+    tab?: string | string[];
+    utm_medium?: string | string[];
+  }>;
 }) {
   const [{ workspaceId, noteId }, query] = await Promise.all([
     params,
@@ -20,6 +24,11 @@ export default async function NoteRoute({
       initialQuery={{
         view: Array.isArray(query.view) ? query.view[0] : query.view,
         tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
+        // 메일 링크로 들어왔나(APP-1312). **서버가 받은 주소로 판정한다** — 클라이언트 코드가 주소를
+        // 고치기 전이다. 메일의 앱 링크에는 서버가 `utm_medium=email` 을 붙인다(PRO-67 contract).
+        ...([query.utm_medium].flat().includes("email")
+          ? { source: "mail" as const }
+          : {}),
       }}
     />
   );

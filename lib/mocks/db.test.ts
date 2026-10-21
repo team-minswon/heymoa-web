@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "@/lib/mocks/db";
-import { MOCK_USER } from "@/lib/mocks/mock-user";
+import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
 
 /**
  * 이미 진행 중인 시드에는 열린 세션이 있다. 회의 조작 검사는 전사가 있는 0002의
@@ -18,7 +18,7 @@ describe("mockDb", () => {
   beforeEach(() => mockDb.reset());
 
   it("seeds the deterministic profile and balanced workspace content", () => {
-    expect(mockDb.getCurrentUser()).toEqual(MOCK_USER);
+    expect(mockDb.getCurrentUser()).toEqual({ ...MOCK_USER, ...MOCK_ACCOUNT });
     const workspaces = mockDb.listWorkspaces();
     expect(workspaces).toHaveLength(3);
     // **id로 짚는다** — `listWorkspaces()`가 내리는 순서는 이 테스트의 관심이 아니고,
@@ -35,8 +35,9 @@ describe("mockDb", () => {
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
       // 13 + 후보 e2e 전용 셋(커버리지 추종 0008·정리 실패 0006·합성 원장 0007)
-      // + 실제 멘토링 회의 하나(화자 패널용 실데이터) + 실시간 안건 회의 0016.
-    ).toHaveLength(18);
+      // + 실제 멘토링 회의 하나(화자 패널용 실데이터) + 실시간 안건 회의 0016
+      // + 오래 멈춘 회의 0040(APP-1313 중지 기간).
+    ).toHaveLength(19);
   });
 
   it("does not seed IN_PROGRESS without a meeting starter", () => {

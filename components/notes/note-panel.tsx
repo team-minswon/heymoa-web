@@ -30,6 +30,7 @@ import {
   NoteDetails,
   NoteDetailsSkeleton,
 } from "@/components/notes/note-details";
+import { NoteStatusBand } from "@/components/notes/note-status-band";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import {
   claimEndFeedback,
@@ -72,7 +73,11 @@ import {
 } from "@/lib/transcription/recorder-lease";
 import { track } from "@/lib/analytics/track";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
+import { errorCodeOf } from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
+
+/** 노트 조회가 「없다」로 끝난 코드. 노트·프로젝트가 지워졌거나 남의 것이다. */
+const NOTE_GONE_CODES = new Set(["NOTE_NOT_FOUND", "PROJECT_NOT_FOUND"]);
 
 /**
  * 공유 챗봇이 사라지면서 `chat`이 빠졌습니다 — 대화는 이제 탭이 아니라 레일입니다.
@@ -114,6 +119,7 @@ export function NotePanel({
   onCollapse,
   onDeleted,
   linkedSegmentId = null,
+  fromMail = false,
 }: {
   workspaceId: string;
   noteId: string;
@@ -136,6 +142,8 @@ export function NotePanel({
    * 찾지 못해 아무 일도 없다.
    */
   linkedSegmentId?: string | null;
+  /** 메일 링크로 들어왔다(APP-1312). 상단 띠가 도착한 시점의 상태를 말한다. */
+  fromMail?: boolean;
 }) {
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
@@ -207,6 +215,12 @@ export function NotePanel({
     setDeleteTargetId(null);
   }
   const noteLoadFailed = noteQuery.isError && !note;
+  /**
+   * 지운 노트이거나 볼 수 없는 노트다(APP-1312). 다시 물어도 답이 같으니 「다시 시도」 대신 나갈 길을 준다.
+   * 서버는 비멤버에게도 존재를 숨기려 404 를 쓴다 — 워크스페이스 자체가 남의 것이면 레이아웃이 홈으로 보낸다.
+   */
+  const noteGone =
+    noteLoadFailed && NOTE_GONE_CODES.has(errorCodeOf(noteQuery.error) ?? "");
   // **노트를 못 읽었으면 레일도 없다.** 왼쪽은 `InlineRetry`인데 오른쪽 레일이 서면 같은
   // 실패가 두 가지 뜻으로 보인다. 캐시가 있으면 `note`가 살아 있어 여기 걸리지 않으므로, 흐르던
   // 스트림이 일시적 조회 실패로 끊기지는 않는다.
@@ -706,6 +720,8 @@ export function NotePanel({
             ) : null}
           </div>
 
+          {note ? <NoteStatusBand note={note} fromMail={fromMail} /> : null}
+
           {/**
            * 제목 블록은 **정보 탭의 머리글이다** — 노트 전체의 크롬이 아니다.
            *
@@ -716,7 +732,7 @@ export function NotePanel({
            * **회의 제어는 여기 없다** — 상단바 오른쪽에 있다. 전사를 보다가 회의를 끝내는 것은
            * 흔한 일인데, 제목 블록에 묶어 두면 정보 탭까지 다녀와야 한다.
            */}
-          {tab === "details" ? (
+          {tab === "details" && !noteGone ? (
             <header className="relative z-10 shrink-0 border-b border-[var(--el-hairline)] bg-white px-[var(--note-gutter)] pb-5 pt-5">
               <div className="mx-auto flex w-full max-w-[820px] items-start justify-between gap-4">
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -762,7 +778,30 @@ export function NotePanel({
             </header>
           ) : null}
 
-          {noteLoadFailed ? (
+          {noteGone ? (
+            <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-4 pt-6">
+              <div
+                role="alert"
+                className="rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4"
+              >
+                <p className="text-sm font-medium text-[var(--el-ink)]">
+                  이 회의를 열 수 없습니다
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
+                  삭제되었거나 지금 계정으로는 볼 수 없는 회의입니다.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 h-[30px]"
+                  onClick={onClose}
+                >
+                  노트 목록으로
+                </Button>
+              </div>
+            </div>
+          ) : noteLoadFailed ? (
             <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-4 pt-4">
               <InlineRetry
                 label="회의 상태를 확인하지 못했습니다."
@@ -948,22 +987,27 @@ export function NotePanel({
               </ScrollArea>
             </TabsContent>
           ) : null}
-          <TabsContent value="details" className="min-h-0 flex-1">
-            <ScrollArea className="h-full">
-              <DataBoundary
-                fallback={<NoteDetailsSkeleton />}
-                errorLabel="노트를 불러오지 못했습니다"
-                resetKeys={[noteId]}
-              >
-                <NoteDetails
-                  noteId={noteId}
-                  workspaceId={confirmedWorkspaceId}
-                  autoOpenParticipants={participantsRequest?.noteId === noteId}
-                  onParticipantsAutoOpened={closeParticipantsRequest}
-                />
-              </DataBoundary>
-            </ScrollArea>
-          </TabsContent>
+          {/* 없는 노트면 정보 탭이 같은 실패를 「다시 시도」로 한 번 더 그리지 않는다. */}
+          {noteGone ? null : (
+            <TabsContent value="details" className="min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <DataBoundary
+                  fallback={<NoteDetailsSkeleton />}
+                  errorLabel="노트를 불러오지 못했습니다"
+                  resetKeys={[noteId]}
+                >
+                  <NoteDetails
+                    noteId={noteId}
+                    workspaceId={confirmedWorkspaceId}
+                    autoOpenParticipants={
+                      participantsRequest?.noteId === noteId
+                    }
+                    onParticipantsAutoOpened={closeParticipantsRequest}
+                  />
+                </DataBoundary>
+              </ScrollArea>
+            </TabsContent>
+          )}
         </Tabs>
 
         {showDock || (showAgentRail && agentRail === false) ? (

@@ -31,7 +31,7 @@ import { LANDING_SCRIPT } from "@/lib/mocks/help-demo/script-landing";
 import { WEEKLY_SCRIPT } from "@/lib/mocks/help-demo/script-weekly";
 import { SMALL_SCRIPTS } from "@/lib/mocks/help-demo/small";
 import { DAY_MS, atHour } from "@/lib/mocks/help-demo/time";
-import { MOCK_USER } from "@/lib/mocks/mock-user";
+import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
 
 type Segment = StoreState["segments"][number];
 type Session = StoreState["sessions"][number];
@@ -299,7 +299,7 @@ export function createHelpDemoState(now = Date.now()): StoreState {
   const chats = helpDemoChats(now);
 
   return {
-    user,
+    user: { ...user, ...MOCK_ACCOUNT },
     workspaces,
     projects,
     notes,

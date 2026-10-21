@@ -34,6 +34,7 @@ import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
   getRecordedDurationMs,
   MEETING_STATUS_LABEL,
+  pausedDayCount,
 } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
@@ -135,6 +136,7 @@ function MeetingMeta({
   // 읽으면 아바타 하나 때문에 **노트 목록 전체가 빈 화면**이 된다(`NoteParticipantAvatars`가
   // 같은 이유로 기본값을 두는데, 이 줄이 그보다 먼저 돈다).
   const participantCount = note.participants?.length ?? 0;
+  const pausedDays = pausedDayCount(note.pausedAt, now);
 
   return (
     <span className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-[var(--el-muted)]">
@@ -147,7 +149,10 @@ function MeetingMeta({
           status === "IN_PROGRESS" && "text-destructive"
         )}
       >
-        {MEETING_STATUS_LABEL[status]}
+        {/* 오래 멈춘 회의는 기간을 붙인다(APP-1313). 목록 시계가 서기 전(SSR)에는 「중지됨」만 쓴다. */}
+        {status === "PAUSED" && pausedDays !== null
+          ? `${pausedDays}일째 중지됨`
+          : MEETING_STATUS_LABEL[status]}
       </span>
       {status !== "NOT_STARTED" ? (
         <>

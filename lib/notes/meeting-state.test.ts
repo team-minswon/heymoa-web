@@ -9,6 +9,7 @@ import {
   MEETING_PRIMARY_ACTION_LABEL,
   MEETING_STATUS_LABEL,
   meetingRefetchInterval,
+  pausedDayCount,
 } from "@/lib/notes/meeting-state";
 
 describe("deriveMeetingPhase", () => {
@@ -180,5 +181,23 @@ describe("getRecordedDurationMs", () => {
         Date.parse("2026-07-29T11:00:00Z")
       )
     ).toBe(120_000);
+  });
+});
+
+describe("pausedDayCount", () => {
+  // KST 10월 22일 09:00
+  const now = Date.parse("2026-10-22T00:00:00Z");
+
+  it("앱 시간대 달력일로 세고 중지한 날이 1일째다", () => {
+    // KST 10월 21일 23:30 — 9시간 반 전이지만 어제라 2일째
+    expect(pausedDayCount("2026-10-21T14:30:00Z", now)).toBe(2);
+    // KST 10월 19일
+    expect(pausedDayCount("2026-10-19T05:00:00Z", now)).toBe(4);
+  });
+
+  it("오늘 중지했거나 시각을 모르면 날수를 말하지 않는다", () => {
+    expect(pausedDayCount("2026-10-21T16:00:00Z", now)).toBeNull();
+    expect(pausedDayCount(null, now)).toBeNull();
+    expect(pausedDayCount("2026-10-19T05:00:00Z", null)).toBeNull();
   });
 });

@@ -287,8 +287,7 @@ export function WorkspaceSidebar({
       <SidebarContent className="px-1.5 py-2">
         <nav aria-label="워크스페이스">
           {/* ── 작업: 모든 노트 · 할 일 ──
-              PRO-67 I09 의 「알림」(`Bell`)이 이 묶음의 첫 항목으로 들어온다. 도움(가이드·문의)은
-              작업이 아니라 아래 고정 묶음으로 뗐다(APP-1325). */}
+              도움(가이드·문의)은 작업이 아니라 아래 고정 묶음으로 뗐다(APP-1325). */}
           <SidebarGroup className="py-0.5">
             <SidebarGroupContent>
               <SidebarMenu>

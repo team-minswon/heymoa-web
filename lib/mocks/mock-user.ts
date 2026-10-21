@@ -1,3 +1,4 @@
+import type { CurrentUserResponseData } from "@/lib/api/generated/models";
 import type { AuthUser } from "@/lib/auth/types";
 
 // Single source of truth for the mock identity. The SSR mock user
@@ -20,4 +21,24 @@ export const MOCK_USER: AuthUser = {
   name: "테스트 유저",
   email: "test@heymoa.com",
   image: MOCK_AVATAR,
+};
+
+/** 목 서버가 정한 지금 문서 버전. 계약의 `consents[].currentVersion` 이다. */
+export const MOCK_CONSENT_VERSION = "2026-10-21";
+
+/**
+ * 내 정보 응답이 `AuthUser` 에 더해 싣는 칸(APP-1276 동의 · APP-1283 언어). **목 사용자는 이미 동의한 계정으로
+ * 시작한다** — 로그인 뒤 동의 화면(APP-1277)이 목 모드의 모든 화면 앞에 서지 않게. 동의 화면은 이 값을 바꾸는
+ * 시험이 따로 본다.
+ */
+export const MOCK_ACCOUNT: Pick<
+  CurrentUserResponseData,
+  "language" | "consentRequired" | "consents"
+> = {
+  language: null,
+  consentRequired: false,
+  consents: [
+    { documentType: "PRIVACY", currentVersion: MOCK_CONSENT_VERSION, agreed: true },
+    { documentType: "TERMS", currentVersion: MOCK_CONSENT_VERSION, agreed: true },
+  ],
 };

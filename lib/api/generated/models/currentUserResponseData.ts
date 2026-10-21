@@ -5,6 +5,8 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { CurrentUserResponseDataConsentsItem } from "./currentUserResponseDataConsentsItem";
+import type { CurrentUserResponseDataLanguage } from "./currentUserResponseDataLanguage";
 
 /**
  * 성공 응답 데이터
@@ -24,4 +26,13 @@ export type CurrentUserResponseData = {
   userId: string;
   /** 사용자 이메일 */
   email: string;
+  /** 필수 문서마다 지금 버전과 동의 여부. 늘 PRIVACY·TERMS 둘 */
+  consents: CurrentUserResponseDataConsentsItem[];
+  /**
+   * 계정 화면 언어. 고르지 않았으면 null 이고, 그때 web 은 쿠키 → ko 순으로 정한다
+   * @nullable
+   */
+  language: CurrentUserResponseDataLanguage;
+  /** 필수 문서 중 하나라도 지금 버전에 동의하지 않았으면 true. true 면 동의를 받고 POST /v1/users/me/consents 를 부른다 */
+  consentRequired: boolean;
 };

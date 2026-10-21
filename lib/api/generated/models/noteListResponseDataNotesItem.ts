@@ -64,4 +64,9 @@ export type NoteListResponseDataNotesItem = {
   participants: NoteListResponseDataNotesItemParticipantsItem[];
   /** 노트 수정 시각 */
   updatedAt: string;
+  /**
+   * 중지 시각. 실제로 녹음이 시작된 마지막 전사 세션의 종료 시각이고, 녹음 없이 끝난 시도(READY 만료)는 세지 않는다. meetingStatus 가 PAUSED 가 아니면 null
+   * @nullable
+   */
+  pausedAt: string | null;
 };

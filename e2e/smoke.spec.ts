@@ -98,7 +98,9 @@ async function createMeetingNote(page: Page) {
 async function startRecording(page: Page, name: "회의 시작" | "재개") {
   const dock = page.getByLabel("녹음 제어");
   await dock.getByRole("button", { name }).click();
-  await expect(dock.getByRole("button", { name: "중지" })).toBeVisible({
+  await expect(
+    dock.getByRole("button", { name: "중지", exact: true })
+  ).toBeVisible({
     timeout: 20_000,
   });
   await expect(
@@ -109,7 +111,7 @@ async function startRecording(page: Page, name: "회의 시작" | "재개") {
 async function stopRecording(page: Page) {
   await page
     .getByLabel("녹음 제어")
-    .getByRole("button", { name: "중지" })
+    .getByRole("button", { name: "중지", exact: true })
     .click();
   await expect(
     noteTopBar(page).getByText("중지됨", { exact: true })
@@ -226,7 +228,9 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
   await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
   await page.getByRole("menuitem", { name: "삭제" }).click();
   const dialog = page.getByRole("alertdialog");
-  await expect(dialog).toContainText("같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다.");
+  await expect(dialog).toContainText(
+    "같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다."
+  );
   await dialog.getByRole("button", { name: "삭제", exact: true }).click();
 
   await expect(
@@ -650,7 +654,7 @@ test("stops a running turn and lets the next message through", async ({
   await page.getByLabel("메시지").fill("요약해줘");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
 
-  const stop = page.getByRole("button", { name: "중지" });
+  const stop = page.getByRole("button", { name: "중지", exact: true });
   await expect(stop).toBeVisible({ timeout: 20_000 });
   await stop.click();
 
@@ -1214,7 +1218,7 @@ test("unlocks the composer after a stop so the next question goes out", async ({
   });
 
   // 승인을 안 누른 채 접는다 — 만료가 없어진 지금 「중지」가 유일한 탈출구다.
-  await page.getByRole("button", { name: "중지" }).click();
+  await page.getByRole("button", { name: "중지", exact: true }).click();
   await expect(page.getByRole("button", { name: "다시 보내기" })).toHaveCount(
     0
   );
@@ -1728,7 +1732,9 @@ test("keeps the personal chat scrollable when the thread grows", async ({
   // 옛 동작을 붙들고 있는 것이다. 붙들어야 하는 것은 **답이 자라는 동안** 안 끌려가는 것이다.
   await page.getByLabel("메시지").fill("위를 읽는 중에 오는 메시지");
   await page.getByRole("button", { name: "보내기" }).click();
-  await expect(page.getByRole("button", { name: "중지" })).toBeVisible({
+  await expect(
+    page.getByRole("button", { name: "중지", exact: true })
+  ).toBeVisible({
     timeout: 20_000,
   });
   await viewport.evaluate((el) => {
@@ -2117,7 +2123,9 @@ test("draws the thinking rail from history alone", async ({ page }) => {
   await expect(rail).toContainText("생각 과정");
 
   // 흐르는 중이 아니다 — 스트림을 한 번도 안 열었다.
-  await expect(page.getByRole("button", { name: "중지" })).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "중지", exact: true })
+  ).toBeHidden();
 });
 
 /**
@@ -2394,7 +2402,9 @@ test("links a guest to an account and keeps the speaker assignment", async ({
   // 임시 참여자가 사라진다 — 노트를 닫고 사이드바로 가는 클라이언트 이동만 한다.
   await page.getByRole("button", { name: "목록으로" }).click();
   // 설정이 현재 주소를 기록하기 전에 노트 닫기의 경로 이동이 완료되어야 한다.
-  await expect.poll(() => new URL(page.url()).pathname).toBe(`/w/${MOCK_WORKSPACE_ID}`);
+  await expect
+    .poll(() => new URL(page.url()).pathname)
+    .toBe(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "워크스페이스 전환" }).click();
   await page.getByRole("menuitem", { name: "워크스페이스 설정" }).click();
   await page.getByRole("button", { name: "임시 참여자" }).click();

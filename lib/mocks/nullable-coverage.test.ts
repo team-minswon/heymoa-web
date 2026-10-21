@@ -445,6 +445,10 @@ const KNOWN_ONE_SIDED = new Set([
   // `lastTurn.failureCode` 와 `turn_failed` 프레임이고 그쪽은 양쪽 다 관측된다.
   "AgentChatMessagesResponse.data.activeTurn.failureCode",
   "CurrentUserResponse.data.image",
+  // 계정 언어(APP-1283)는 고르는 화면이 아직 없다(APP-1285). 목 유저는 고르지 않은 쪽(null)만 준다.
+  // 설정 화면이 목에 `PATCH /v1/users/me` 를 심을 때 이 두 줄을 지운다.
+  "CurrentUserResponse.data.language",
+  "AuthSessionResponse.data.user.language",
   // 같은 고정 목 유저를 쓰는 세션 조회도 프로필 이미지 표본이 한 쪽이다.
   "AuthSessionResponse.data.user.image",
   // 재요약의 오류 두 필드는 **실패한 재요약** 표본이 있어야 비-null이 나오는데, 회의를

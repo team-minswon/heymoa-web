@@ -54,7 +54,9 @@ test("resumes a mid-stream answer and draws it to message_end", async ({
 
   // 돌아온 화면. 방금 만든 대화가 목록 첫 줄이라 그대로 열리고, `activeTurn`으로 잇는다.
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
-  await expect(page.getByRole("button", { name: "중지" })).toBeVisible({
+  await expect(
+    page.getByRole("button", { name: "중지", exact: true })
+  ).toBeVisible({
     timeout: 20_000,
   });
 
@@ -81,7 +83,7 @@ test("stop cancels the turn and keeps the partial answer in history", async ({
 
   const answer = page.getByTestId("assistant-message").last();
   await expect(answer).toContainText("이번 회의에서는", { timeout: 20_000 });
-  await page.getByRole("button", { name: "중지" }).click();
+  await page.getByRole("button", { name: "중지", exact: true }).click();
 
   // `turn_cancelled` 뒤 컴포저가 풀린다.
   const send = page.getByRole("button", { name: "보내기", exact: true });

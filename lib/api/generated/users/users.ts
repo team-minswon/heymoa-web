@@ -5,15 +5,18 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
@@ -23,7 +26,9 @@ import type {
 import type {
   AppErrorResponse,
   CurrentUserResponse,
+  RecordConsentRequest,
   UnauthorizedResponse,
+  UpdateCurrentUserRequest,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -82,7 +87,7 @@ export const getGetCurrentUserUrl = () => {
 };
 
 /**
- * 현재 인증된 사용자의 기본 정보를 조회한다.
+ * 현재 인증된 사용자의 기본 정보와 필수 문서(개인정보처리방침·이용약관) 동의 상태를 조회한다.
  * @summary 현재 사용자 조회
  */
 export const getCurrentUser = async (
@@ -357,3 +362,303 @@ export function useGetCurrentUserSuspense<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type updateCurrentUserResponse200 = {
+  data: CurrentUserResponse;
+  status: 200;
+};
+
+export type updateCurrentUserResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type updateCurrentUserResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type updateCurrentUserResponseSuccess = updateCurrentUserResponse200 & {
+  headers: Headers;
+};
+export type updateCurrentUserResponseError = (
+  | updateCurrentUserResponse400
+  | updateCurrentUserResponse401
+) & {
+  headers: Headers;
+};
+
+export type updateCurrentUserResponse =
+  | updateCurrentUserResponseSuccess
+  | updateCurrentUserResponseError;
+
+export const getUpdateCurrentUserUrl = () => {
+  return `/v1/users/me`;
+};
+
+/**
+ * 계정의 화면 언어를 바꾸고 바뀐 내 정보를 돌려준다. 같은 값을 다시 보내도 결과가 같다.
+ * @summary 현재 사용자 변경
+ */
+export const updateCurrentUser = async (
+  updateCurrentUserRequest?: UpdateCurrentUserRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<updateCurrentUserResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<updateCurrentUserResponse>(getUpdateCurrentUserUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(updateCurrentUserRequest),
+  });
+};
+
+export const getUpdateCurrentUserMutationKey = () =>
+  ["updateCurrentUser"] as const;
+
+export const getUpdateCurrentUserMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCurrentUser>>,
+    TError,
+    UpdateCurrentUserMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCurrentUser>>,
+  TError,
+  UpdateCurrentUserMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCurrentUserMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCurrentUser>>,
+    UpdateCurrentUserMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateCurrentUser(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCurrentUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCurrentUser>>
+>;
+export type UpdateCurrentUserMutationBody =
+  | UpdateCurrentUserRequest
+  | undefined;
+export type UpdateCurrentUserMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type UpdateCurrentUserMutationVariables = {
+  data?: UpdateCurrentUserRequest;
+};
+
+/**
+ * @summary 현재 사용자 변경
+ */
+export const useUpdateCurrentUser = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCurrentUser>>,
+      TError,
+      UpdateCurrentUserMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCurrentUser>>,
+  TError,
+  UpdateCurrentUserMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCurrentUserMutationOptions(options), queryClient);
+};
+export type recordConsentsResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type recordConsentsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type recordConsentsResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type recordConsentsResponseSuccess = recordConsentsResponse204 & {
+  headers: Headers;
+};
+export type recordConsentsResponseError = (
+  | recordConsentsResponse401
+  | recordConsentsResponse409
+) & {
+  headers: Headers;
+};
+
+export type recordConsentsResponse =
+  | recordConsentsResponseSuccess
+  | recordConsentsResponseError;
+
+export const getRecordConsentsUrl = () => {
+  return `/v1/users/me/consents`;
+};
+
+/**
+ * 로그인 직후 개인정보처리방침·이용약관 동의를 기록한다. 멱등이라 같은 버전을 다시 보내도 기록은 하나이고 처음 동의한 시각이 남는다. 하나라도 지금 버전이 아니면 아무것도 기록하지 않고 409 CONSENT_VERSION_OUTDATED 다.
+ * @summary 필수 문서 동의 기록
+ */
+export const recordConsents = async (
+  recordConsentRequest?: RecordConsentRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<recordConsentsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<recordConsentsResponse>(getRecordConsentsUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(recordConsentRequest),
+  });
+};
+
+export const getRecordConsentsMutationKey = () => ["recordConsents"] as const;
+
+export const getRecordConsentsMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordConsents>>,
+    TError,
+    RecordConsentsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordConsents>>,
+  TError,
+  RecordConsentsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecordConsentsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordConsents>>,
+    RecordConsentsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return recordConsents(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordConsentsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordConsents>>
+>;
+export type RecordConsentsMutationBody = RecordConsentRequest | undefined;
+export type RecordConsentsMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+export type RecordConsentsMutationVariables = { data?: RecordConsentRequest };
+
+/**
+ * @summary 필수 문서 동의 기록
+ */
+export const useRecordConsents = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recordConsents>>,
+      TError,
+      RecordConsentsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof recordConsents>>,
+  TError,
+  RecordConsentsMutationVariables,
+  TContext
+> => {
+  return useMutation(getRecordConsentsMutationOptions(options), queryClient);
+};

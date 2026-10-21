@@ -50,7 +50,7 @@ export type { SettingsSection };
  * (Notion 「연결 / 내 연결」 식) — 둘 다 「외부 에이전트」였을 때는 메뉴만 보고 어느 쪽인지 갈리지 않았다.
  * 아이콘도 가른다(APP-1325): 내 연결은 `Bot`, 팀이 받을지 정하는 쪽은 `ShieldCheck`. 같은 목적지는
  * 사이드바 메뉴와 같은 아이콘이다 — 「워크스페이스 설정」이 여는 「일반」은 `Settings`, 「내 계정 설정」이 여는
- * 「내 계정」은 `UserRound`. 계정 그룹의 「내 계정」 다음은 PRO-67 I10 「알림」 탭(`BellRing`) 자리다.
+ * 「내 계정」은 `UserRound`.
  * 그 말을 「MCP」로 한 것은 사용자가 연결하며 상대편에서 보는 말(claude.ai 커넥터의 원격 MCP 서버 URL,
  * ChatGPT 개발자 모드, `mcp add`)과 맞추려는 것이다. 뜻은 각 화면의 설명 문장이 쉬운 말로 푼다.
  * 「연동」은 HeyMoa 가 나가는 연결이라 들어오는 연결과 섞지 않는다.
@@ -146,7 +146,6 @@ function SettingsSections({
                       : "hover:bg-[var(--el-surface-strong)]"
                   )}
                 >
-                  {/* 사이드바·메뉴 아이콘과 같은 muted (APP-1325) */}
                   <Icon className="size-4 text-[var(--el-muted)]" aria-hidden />
                   {label}
                 </Button>
