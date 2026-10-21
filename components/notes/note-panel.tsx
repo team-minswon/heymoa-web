@@ -31,6 +31,11 @@ import {
   NoteDetailsSkeleton,
 } from "@/components/notes/note-details";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
+import {
+  claimEndFeedback,
+  END_FEEDBACK_DELAY_MS,
+  MeetingEndFeedback,
+} from "@/components/notes/meeting-end-feedback";
 import { NoteAgentRail } from "@/components/notes/note-agent-rail";
 import { NoteTimeline } from "@/components/notes/note-timeline";
 import { NoteParticipantAvatars } from "@/components/notes/note-participants";
@@ -167,6 +172,34 @@ export function NotePanel({
    * 상태에 주어를 담으면 알아서 닫힌다 — 리셋 effect도, 패널 전체 재마운트도 필요 없다.
    */
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  // 종료 직후 요약 탭으로 넘기고, 물을 차례면 1초 뒤 그 위에 의견 창을 띄운다 — 종료 확인창이 닫히고 요약 탭이
+  // 자리 잡은 것을 본 다음이다. `round` 가 창의 회차다 — 회차마다 새로 마운트해 지난 입력이 남지 않고, 닫을 때는
+  // 같은 회차로 두어 닫힘 애니메이션이 돈다.
+  const [endFeedback, setEndFeedback] = useState<{
+    noteId: string;
+    round: number;
+    phase: "pending" | "open" | "closed";
+  } | null>(null);
+  const meetingEnded = () => {
+    onTabChange("summary");
+    if (claimEndFeedback(user?.userId, note?.recordedDurationMs ?? 0))
+      setEndFeedback({ noteId, round: Date.now(), phase: "pending" });
+  };
+  // 다른 노트로 가면 예약도 창도 버린다 — 숨기기만 하면 돌아왔을 때 다시 뜬다(아래 삭제 확인창과 같은 방식).
+  if (endFeedback !== null && endFeedback.noteId !== noteId) {
+    setEndFeedback(null);
+  }
+  useEffect(() => {
+    if (endFeedback?.phase !== "pending") return;
+    const timer = setTimeout(
+      () =>
+        setEndFeedback((prev) =>
+          prev?.round === endFeedback.round ? { ...prev, phase: "open" } : prev
+        ),
+      END_FEEDBACK_DELAY_MS
+    );
+    return () => clearTimeout(timer);
+  }, [endFeedback]);
   // `open`만 어긋나게 두면 **되돌아왔을 때 창이 되살아난다** — A에서 열고 B에 갔다가 A로
   // 오면 저장된 대상이 아직 A라 확인창이 저절로 뜬다. 렌더 중에 실제로 버린다(이 파일의
   // `sideChatVisit`·`archiveState`와 같은 방식).
@@ -603,7 +636,7 @@ export function NotePanel({
               <MeetingControls
                 key={noteId}
                 note={note}
-                onMeetingEnded={() => onTabChange("summary")}
+                onMeetingEnded={meetingEnded}
                 onEditParticipants={editParticipants}
               />
             ) : null}
@@ -884,7 +917,7 @@ export function NotePanel({
                     onEvidenceSelect={jumpToSegment}
                     note={note}
                     onEditParticipants={editParticipants}
-                    onMeetingEnded={() => onTabChange("summary")}
+                    onMeetingEnded={meetingEnded}
                     onOpenTranscript={() => handleTabChange("transcript")}
                     onOpenTimeline={
                       showContextTab
@@ -1020,6 +1053,16 @@ export function NotePanel({
             collapseDisabled={personalTurnActive}
           />
         </div>
+      ) : null}
+      {endFeedback ? (
+        <MeetingEndFeedback
+          key={endFeedback.round}
+          noteId={noteId}
+          open={endFeedback.phase === "open"}
+          onClose={() =>
+            setEndFeedback((prev) => prev && { ...prev, phase: "closed" })
+          }
+        />
       ) : null}
     </div>
   );

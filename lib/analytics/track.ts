@@ -56,6 +56,7 @@ export type AnalyticsEvent =
   | "settings_tab_opened"
   | "agent_opened"
   | "feedback_sent"
+  | "feedback_dismissed"
   | "help_page_viewed"
   | "help_search_opened"
   | "help_search_submitted"
@@ -92,6 +93,8 @@ type WebEventProperties = {
   };
   agent_opened: { surface: "fab" };
   feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
+  // 회의 종료 뒤 묻는 카드. 띄움은 `feedback_opened {from: "meeting_end"}`, 보냄은 `feedback_sent` 가 센다.
+  feedback_dismissed: { from: "meeting_end"; forever: boolean };
   // 사용 가이드. 로그인 전에도 오므로 workspace_id 가 없다. slug·이름은 우리가 정한 값이고 검색어·글은 싣지 않는다.
   help_page_viewed: {
     slug: string;

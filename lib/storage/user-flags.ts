@@ -18,6 +18,8 @@ const PREFIX = "heymoa:u:";
 export const USER_FLAGS = {
   agentIntroDismissed: "agent-intro-dismissed",
   endNudgeOff: "end-nudge-off",
+  endFeedbackOff: "end-feedback-off",
+  endFeedbackNextAt: "end-feedback-next-at",
 } as const;
 
 export type UserFlag = keyof typeof USER_FLAGS;

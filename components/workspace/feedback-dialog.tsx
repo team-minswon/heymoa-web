@@ -130,6 +130,58 @@ export function UnseenCount({
   );
 }
 
+/** 아이콘 · 이름 · 한 줄 설명을 단 2열 카드 중 하나를 고른다. 회의 종료 뒤 의견 창도 같은 모양을 쓴다. */
+export function ChoiceCards<T extends string>({
+  label,
+  items,
+  value,
+  onChange,
+}: {
+  label: string;
+  items: readonly { value: T; label: string; hint: string; icon: LucideIcon }[];
+  value: T | null;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="grid grid-cols-2 gap-2"
+    >
+      {items.map(({ value: item, label: name, hint, icon: Icon }) => (
+        <button
+          key={item}
+          type="button"
+          role="radio"
+          aria-checked={value === item}
+          onClick={() => onChange(item)}
+          className={cn(
+            "flex items-start gap-2.5 rounded-panel border p-3 text-left transition-colors",
+            value === item
+              ? "border-[var(--el-hairline-strong)] bg-[var(--el-surface-strong)]"
+              : "border-[var(--el-hairline)] hover:border-[var(--el-hairline-strong)]"
+          )}
+        >
+          <Icon
+            className={cn(
+              "mt-0.5 size-4 shrink-0",
+              value === item ? "text-[var(--el-ink)]" : "text-[var(--el-muted)]"
+            )}
+            strokeWidth={1.5}
+            aria-hidden
+          />
+          <span className="flex flex-col">
+            <span className="text-sm font-medium text-[var(--el-ink)]">
+              {name}
+            </span>
+            <span className="text-xs text-[var(--el-muted)]">{hint}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const SENT_AT: Intl.DateTimeFormatOptions = {
   month: "numeric",
   day: "numeric",
@@ -221,46 +273,12 @@ export function FeedbackDialog({
             value="send"
             className="mt-4 flex h-[380px] flex-none flex-col gap-4"
           >
-            <div
-              role="radiogroup"
-              aria-label="분류"
-              className="grid grid-cols-2 gap-2"
-            >
-              {KINDS.map(({ value, label, hint, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={kind === value}
-                  onClick={() => setKind(value)}
-                  className={cn(
-                    "flex items-start gap-2.5 rounded-panel border p-3 text-left transition-colors",
-                    kind === value
-                      ? "border-[var(--el-hairline-strong)] bg-[var(--el-surface-strong)]"
-                      : "border-[var(--el-hairline)] hover:border-[var(--el-hairline-strong)]"
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "mt-0.5 size-4 shrink-0",
-                      kind === value
-                        ? "text-[var(--el-ink)]"
-                        : "text-[var(--el-muted)]"
-                    )}
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  <span className="flex flex-col">
-                    <span className="text-sm font-medium text-[var(--el-ink)]">
-                      {label}
-                    </span>
-                    <span className="text-xs text-[var(--el-muted)]">
-                      {hint}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
+            <ChoiceCards
+              label="분류"
+              items={KINDS}
+              value={kind}
+              onChange={setKind}
+            />
 
             <div>
               <Textarea

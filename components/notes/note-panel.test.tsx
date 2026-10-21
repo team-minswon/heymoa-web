@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -218,6 +219,13 @@ vi.mock("@/components/notes/meeting-end-dialog", () => ({
         </button>
       </>
     ) : null,
+}));
+// 의견 창의 빈도·저장은 자기 테스트가 본다. 여기서는 패널이 언제 띄우고 언제 버리는지만 본다.
+vi.mock("@/components/notes/meeting-end-feedback", () => ({
+  END_FEEDBACK_DELAY_MS: 1000,
+  claimEndFeedback: () => true,
+  MeetingEndFeedback: ({ open }: { open: boolean }) =>
+    open ? <div>회의 후 의견 창</div> : null,
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNoteQueryKey: (noteId: string) => [`/v1/notes/${noteId}`],
@@ -947,7 +955,9 @@ describe("NotePanel", () => {
       />
     );
 
-    await waitFor(() => expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull()
+    );
   });
 
   it("개인 답변이 흐르는 동안에는 좁은 화면에서도 레일을 접지 않는다", () => {
@@ -992,7 +1002,9 @@ describe("NotePanel", () => {
 
     noteState.value = { ...noteState.value, noteId: "01K0000000009" };
     rerenderNote(panel("01K0000000009"));
-    await waitFor(() => expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull()
+    );
 
     // 되돌아온다. 저장된 대상을 안 버렸으면 여기서 창이 저절로 뜬다.
     noteState.value = { ...noteState.value, noteId: "01K0000000002" };
@@ -1051,6 +1063,51 @@ describe("NotePanel", () => {
       rerenderNote(panel(null, "01K0000000009"));
 
       await waitFor(() => expect(focusOf()).toBe(""));
+    });
+  });
+
+  describe("회의 종료 뒤 의견 창 (APP-1275)", () => {
+    const panel = (noteId = "01K0000000002") => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId={noteId}
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      noteState.value.meetingStatus = "PAUSED";
+      noteState.value.activeSessionStartedAt = null;
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it("종료를 확인하고 1초 뒤에 뜬다", () => {
+      renderNotePanel(panel());
+      fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+      fireEvent.click(screen.getByRole("button", { name: "종료 확인" }));
+      expect(screen.queryByText("회의 후 의견 창")).toBeNull();
+
+      act(() => vi.advanceTimersByTime(1000));
+      expect(screen.getByText("회의 후 의견 창")).toBeTruthy();
+    });
+
+    it("뜨기 전에 다른 노트로 가면 버린다 — 돌아와도 다시 뜨지 않는다", () => {
+      const { rerenderNote } = renderNotePanel(panel());
+      fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+      fireEvent.click(screen.getByRole("button", { name: "종료 확인" }));
+
+      noteState.value = { ...noteState.value, noteId: "01K0000000009" };
+      rerenderNote(panel("01K0000000009"));
+      act(() => vi.advanceTimersByTime(1000));
+      noteState.value = { ...noteState.value, noteId: "01K0000000002" };
+      rerenderNote(panel());
+      act(() => vi.advanceTimersByTime(1000));
+
+      expect(screen.queryByText("회의 후 의견 창")).toBeNull();
     });
   });
 
