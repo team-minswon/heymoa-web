@@ -1,9 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NoteStatusBand } from "@/components/notes/note-status-band";
-import type { NoteResponseData } from "@/lib/api/generated/models";
+import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
+import type {
+  MeetingAnalysisFlowResponseDataStatus,
+  NoteResponseData,
+} from "@/lib/api/generated/models";
 
 // KST 10월 22일 09:00
 vi.mock("@/lib/notes/use-aligned-now", () => ({
@@ -120,6 +130,101 @@ describe("NoteStatusBand", () => {
 
     it("목록에서 연 노트에는 도착 안내가 없다", () => {
       renderBand(new QueryClient(), note("IN_PROGRESS"));
+      expect(band()).toBeNull();
+    });
+  });
+  describe("자동 종료 (APP-1319)", () => {
+    const band = () => screen.queryByTestId("note-status-band");
+    const autoEnd = (
+      over: Partial<NonNullable<NoteResponseData["autoEnd"]>>
+    ): NoteResponseData["autoEnd"] => ({
+      scheduledAt: null,
+      endedBy: null,
+      reason: null,
+      pausedAt: null,
+      pausedBusinessDays: null,
+      ...over,
+    });
+
+    it("예고된 중지 회의는 일수 대신 자동 종료 예정 시각을 말한다", () => {
+      const client = new QueryClient();
+      seedList(client, "2026-10-20T05:00:00Z");
+      renderBand(client, {
+        ...note("PAUSED"),
+        autoEnd: autoEnd({ scheduledAt: "2026-10-23T07:20:00Z" }),
+      });
+      expect(band()).toHaveTextContent(
+        /^계속 중지 상태라면 10월 23일\(금\) 오후 4시 20분 이후 자동 종료될 예정입니다\.$/
+      );
+      expect(screen.queryByRole("button")).toBeNull();
+    });
+
+    it("예정 시각이 없으면 약속하지 않고 노트의 중지 시각으로 일수만 말한다", () => {
+      renderBand(new QueryClient(), {
+        ...note("PAUSED"),
+        pausedAt: "2026-10-20T05:00:00Z",
+        autoEnd: null,
+      });
+      expect(band()).toHaveTextContent(/^3일째 중지 상태입니다\.$/);
+    });
+
+    function renderEnded(
+      status: MeetingAnalysisFlowResponseDataStatus,
+      fromMail = false
+    ) {
+      const client = new QueryClient({
+        defaultOptions: { queries: { staleTime: Infinity } },
+      });
+      client.setQueryData(getGetAnalysisFlowQueryKey(NOTE_ID), {
+        status: 200,
+        data: { success: true, data: { noteId: NOTE_ID, status, regions: [] } },
+      });
+      return renderBand(
+        client,
+        {
+          ...note("ENDED"),
+          autoEnd: autoEnd({
+            endedBy: "SYSTEM",
+            reason: "PAUSE_TIMEOUT",
+            pausedBusinessDays: 3,
+          }),
+        },
+        fromMail
+      );
+    }
+
+    it.each([
+      ["ANALYZING", "분석 중입니다."],
+      ["REVIEWABLE", "검토할 결과가 준비되었습니다."],
+      ["ANALYSIS_FAILED", "분석하지 못했습니다."],
+    ] as const)(
+      "자동 종료된 노트는 사유·재개 불가·분석 상태(%s)를 말한다",
+      (status, copy) => {
+        renderEnded(status);
+        expect(band()).toHaveTextContent(
+          `회의를 자동으로 종료했습니다. 마지막 중지 후 3영업일이 지나 종료했습니다. 이 회의에는 이어서 녹음할 수 없습니다. ${copy}`
+        );
+      }
+    );
+
+    it("접으면 첫 문장만 남는다", () => {
+      renderEnded("REVIEWABLE");
+      fireEvent.click(screen.getByRole("button", { name: "접기" }));
+      expect(band()).toHaveTextContent(
+        /^회의를 자동으로 종료했습니다\.펼치기$/
+      );
+    });
+
+    it("메일로 도착해도 일반 종료 문구 대신 자동 종료 안내를 보인다", () => {
+      renderEnded("ANALYZING", true);
+      expect(band()).toHaveTextContent("회의를 자동으로 종료했습니다.");
+      expect(band()).not.toHaveTextContent(
+        "메일을 보낸 뒤 회의가 종료되었습니다."
+      );
+    });
+
+    it("사람이 종료한 노트와 옛 노트에는 안내가 없다", () => {
+      renderBand(new QueryClient(), { ...note("ENDED"), autoEnd: null });
       expect(band()).toBeNull();
     });
   });

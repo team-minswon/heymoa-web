@@ -86,3 +86,25 @@ export function formatDueDate(value: string) {
     weekday: "short",
   });
 }
+
+/**
+ * 약속하는 시각을 메일과 같은 꼴로 — 「10월 23일(금) 오후 4시 20분」, 정각이면 「오후 4시」(PRO-67 자동 종료 예고).
+ */
+export function formatPromiseTime(value: string | Date) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const part = Object.fromEntries(
+    new Intl.DateTimeFormat("ko-KR", {
+      timeZone: APP_TIME_ZONE,
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })
+      .formatToParts(date)
+      .map((item) => [item.type, item.value])
+  );
+  const minute = Number(part.minute);
+  return `${part.month}월 ${part.day}일(${part.weekday}) ${KO_DAY_PERIOD[part.dayPeriod] ?? part.dayPeriod} ${part.hour}시${minute ? ` ${minute}분` : ""}`;
+}

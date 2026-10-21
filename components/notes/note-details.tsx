@@ -9,6 +9,7 @@ import {
   NoteContextSection,
   NoteContextSkeleton,
 } from "@/components/notes/note-context-section";
+import { isAutoEnded } from "@/components/notes/note-auto-end-notice";
 import { NoteParticipantsField } from "@/components/notes/note-participants-field";
 import { ParticipantAvatar } from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
@@ -298,6 +299,21 @@ export function NoteDetails({
           {/* 정본은 「워크스페이스 멤버 4명 공개」지만 그 수는 노트 계약에 없다 — 참석자 수와
               헷갈리기도 해서 수를 뺐다(노트 헤더 메타와 같은 판단). */}
           <Fact label="공유 범위">워크스페이스 멤버에게 공개</Fact>
+          {/* 자동 종료의 사유와 시각(APP-1319). 상단 안내를 접어도 여기 남는다 — 시각은 여기에만 있다. */}
+          {isAutoEnded(note) && note.meetingEndedAt ? (
+            <Fact label="종료">
+              <time dateTime={note.meetingEndedAt}>
+                {timestamp(note.meetingEndedAt)}
+              </time>
+              <span className="font-normal text-[var(--el-muted)]">
+                {` · 자동 종료${
+                  note.autoEnd?.pausedBusinessDays
+                    ? `(마지막 중지 후 ${note.autoEnd.pausedBusinessDays}영업일)`
+                    : ""
+                }`}
+              </span>
+            </Fact>
+          ) : null}
 
           {/* 위는 회의의 사실, 아래는 문서의 이력이다 — 선 하나로 가른다. */}
           <FactDivider />

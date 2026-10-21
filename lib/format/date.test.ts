@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatAppDate } from "@/lib/format/date";
+import { formatAppDate, formatPromiseTime } from "@/lib/format/date";
 
 describe("formatAppDate", () => {
   // Node 22·24 의 ICU 78 은 ko-KR 오전·오후를 「AM」「PM」으로 내고 브라우저는 「오전」「오후」를
@@ -18,5 +18,16 @@ describe("formatAppDate", () => {
         timeStyle: "short",
       })
     ).toBe("2026년 7월 30일 오전 9:00");
+  });
+});
+
+describe("formatPromiseTime", () => {
+  it("메일과 같은 꼴로 서울 시각을 적는다", () => {
+    expect(formatPromiseTime("2026-10-23T07:20:00Z")).toBe(
+      "10월 23일(금) 오후 4시 20분"
+    );
+    expect(formatPromiseTime("2026-10-26T01:00:00Z")).toBe(
+      "10월 26일(월) 오전 10시"
+    );
   });
 });
