@@ -157,7 +157,7 @@ function AppCard({ app }: { app: App }) {
           <p className="m-0 text-[19px] leading-tight font-extrabold tracking-[-0.03em] text-[var(--tv-ink)] lg:text-[22px]">
             {app.name}
           </p>
-          <p className="m-0 mt-1.5 text-[13px] leading-[1.6] break-keep text-[var(--tv-body)] lg:text-[14px]">
+          <p className="m-0 mt-1.5 text-[13px] leading-[1.6] text-[var(--tv-body)] lg:text-[14px]">
             {app.line}
           </p>
         </div>

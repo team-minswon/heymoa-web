@@ -46,7 +46,7 @@ import {
  * - 접고 펴는 것은 네이티브 `<details>` 라 클라이언트 코드가 없다(부드럽게 열리는 것은 지원하는
  *   브라우저에서만 — `motion.tsx` 의 `.tv-faq`). 움직임은 `Reveal` 이 켜는 `tv-r*` 뿐이다.
  *
- * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 데스크톱 앱(`app/(static)/download/page.tsx`) ·
+ * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 데스크톱 앱(`app/[lang]/download/page.tsx`) ·
  * 종료와 검토 완료 · 「철회됨」(`note-timeline.tsx`
  * `metaOf`) · 줄마다 수정 · 제외와 「제외 취소」(`review-row.tsx`, 「결정 N」은 남은 줄만 센다 —
  * `review-section.tsx` `includedCount`) · 이전 결정 대체). 가격 · 지원 언어 · 모바일 앱 같은 항목은
@@ -113,7 +113,7 @@ function RetractedSample() {
           title="회의실 예약"
           total={2}
           live
-          className="h-auto min-h-[30px] [&_.truncate]:leading-5 [&_.truncate]:break-keep [&_.truncate]:whitespace-normal max-[360px]:[&>span:first-child]:hidden max-[360px]:[&>span:last-child]:pl-2"
+          className="h-auto min-h-[30px] [&_.truncate]:leading-5 [&_.truncate]:whitespace-normal max-[360px]:[&>span:first-child]:hidden max-[360px]:[&>span:last-child]:pl-2"
         />
         <TimelineList className="mt-1.5">
           <TimelineRow
@@ -173,7 +173,7 @@ export const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
     // 하나요?」 → 「브라우저에서 바로」는 데스크톱 앱이 있는데 설치가 없는 것처럼 읽혔다. 웹과 데스크톱을
     // 사실대로 나란히 말하고 「설치할 것 없음」 류로 못 박지 않는다(`hero.tsx`). 질문을 「어디서 쓰나요?」로
     // 두면 바로 다음 구간 제목(「어디서 회의하든」 — 회의 앱 · 오프라인)과 부딪혀 회의 장소를 묻는 말로 읽혔다.
-    // 데스크톱 문구는 `app/(static)/download/page.tsx` 결이다(컴퓨터에서 나는 소리 녹음 · 메뉴바 타임라인을 「더했다」,
+    // 데스크톱 문구는 `app/[lang]/download/page.tsx` 결이다(컴퓨터에서 나는 소리 녹음 · 메뉴바 타임라인을 「더했다」,
     // Windows 는 베타라고만 적는다).
     q: "브라우저로 쓰나요, 앱도 있나요?",
     // 첫마디가 「둘 다」여야 한다 — 「브라우저에서 씁니다」로 시작했을 때는 앱이 있다는 말이 넷째 문장에야 나와
@@ -329,7 +329,7 @@ export function Faq() {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                 </span>
-                <span className="break-keep text-[17px] leading-[1.4] font-bold text-[var(--tv-ink)] lg:text-[20px]">
+                <span className="text-[17px] leading-[1.4] font-bold text-[var(--tv-ink)] lg:text-[20px]">
                   {q}
                 </span>
                 <span

@@ -186,7 +186,7 @@ function Voice({ line }: { line: NonNullable<Demo["live"]>["line"] }) {
           **여백 · 테두리 · 바탕은 바깥 상자, `line-clamp` 는 안쪽 글자 상자에만 둔다.** 한 상자에 같이 두면
           overflow 가 padding 바깥에서 잘라서 넷째 줄 윗부분이 아래 여백 안에 반쯤 비쳤다. */}
       <span className="rounded-[16px] rounded-bl-[4px] border-[1.5px] border-[var(--tv-ink)] bg-white px-2.5 py-2 shadow-[0_6px_14px_-6px_rgba(60,40,0,0.35)]">
-        <span className="line-clamp-3 text-[12px] leading-[1.45] font-bold break-keep text-[var(--tv-ink)]">
+        <span className="line-clamp-3 text-[12px] leading-[1.45] font-bold text-[var(--tv-ink)]">
           {line.text}
         </span>
       </span>
@@ -461,7 +461,7 @@ function NoteNotes({
           >
             <Hand
               className={cn(
-                "tv-pop block break-keep",
+                "tv-pop block",
                 idle ? "text-[12.5px]" : "text-[12px]"
               )}
             >
@@ -628,7 +628,7 @@ function RailNotes({ scene, askDone }: { scene: Scene; askDone: boolean }) {
             top: "calc((var(--mt, 293px) + var(--mb, 321px)) / 2 - 52px)",
           }}
         >
-          <Hand className="tv-pop block text-[13px] break-keep">
+          <Hand className="tv-pop block text-[13px]">
             답 아래엔 참고한 회의록이 붙어요
           </Hand>
           <Scribble

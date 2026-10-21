@@ -1,4 +1,4 @@
-import type { HelpTopic } from "@/app/(static)/help/_content/types";
+import type { HelpTopic } from "@/app/[lang]/help/_content/types";
 import { normalizeQuery } from "@/lib/help/match-ranges";
 import { textOf } from "@/lib/help/text";
 

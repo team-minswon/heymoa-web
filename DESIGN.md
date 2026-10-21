@@ -241,7 +241,7 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 본문과 같은 `CONTAINER` 기둥, 라벨 알약 · H2 급 제목 · 설명 · 시행일), 760 까지의 흰 본문 판, 연보라 목차(lg 미만은
 닫힌 `<details>`, lg 부터 펼친 sticky 카드)로 짠다. 읽는 문서라 스크롤 리빌 · 쪽지 · 테이프 · 말풍선은 없고, 조항마다 `scroll-mt-20` 으로 sticky 바 아래에 닿는다.
 
-**데스크톱 다운로드(`app/(static)/download/page.tsx`)도 같은 결이다** — 같은 라벤더 머리 판(라벨 알약 · H2 급 제목 · 리드 ·
+**데스크톱 다운로드(`app/[lang]/download/page.tsx`)도 같은 결이다** — 같은 라벤더 머리 판(라벨 알약 · H2 급 제목 · 리드 ·
 보라 「설치 파일과 새 버전 보기」 + 흰 「웹에서 바로 시작」), 그 아래 Mac · Windows 흰 카드 둘(md 부터 2열, 주의는 버터 상자),
 연보라 「설정과 업데이트」 판. 장식 · 리빌은 없다.
 

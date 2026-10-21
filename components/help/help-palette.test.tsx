@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { helpTopics } from "@/app/(static)/help/_content/topics";
+import { helpTopics } from "@/app/[lang]/help/_content/topics";
 import { HelpPalette } from "@/components/help/help-palette";
 import { buildHelpIndex } from "@/lib/help/search-index";
 

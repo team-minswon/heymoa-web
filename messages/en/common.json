@@ -1,0 +1,12 @@
+{
+  "skipToContent": "Skip to content",
+  "notFound": {
+    "label": "Error 404",
+    "title": "Page not found",
+    "description": "This page may have moved, or it is no longer available.",
+    "home": "Back to home"
+  },
+  "language": {
+    "heading": "Language"
+  }
+}

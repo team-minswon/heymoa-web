@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-import { helpGroups } from "@/app/(static)/help/_content/groups";
+import { helpGroups } from "@/app/[lang]/help/_content/groups";
 
 /**
  * 가이드 이벤트가 싣는 값은 주소에서 뽑은 slug 뿐이다(우리가 정한 값). `/help` → hub, `/help/<그룹>` → 그룹 slug,

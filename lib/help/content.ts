@@ -7,14 +7,14 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 
-import { helpGroups } from "@/app/(static)/help/_content/groups";
-import { HELP_PAGES, type HelpPageId } from "@/app/(static)/help/_content/ids";
+import { helpGroups } from "@/app/[lang]/help/_content/groups";
+import { HELP_PAGES, type HelpPageId } from "@/app/[lang]/help/_content/ids";
 import {
   HELP_BADGES,
   type HelpBadgeName,
   type HelpSection,
   HelpTopic,
-} from "@/app/(static)/help/_content/types";
+} from "@/app/[lang]/help/_content/types";
 import { FaqItem, MdBlock } from "@/components/help/md/render";
 
 /**

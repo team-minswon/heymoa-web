@@ -53,7 +53,7 @@ import {
  * 남으면 색 띠가 창의 두 번째 테두리로 읽혔다. sm 부터는 면 안쪽 여백을 32px 이상으로 둔다.
  *
  * 제목은 「쓰던 도구까지 이어진다」만 말하고 「~로만」 · 「길은 N개」처럼 닫지 않는다 — 요약 · 답을 만들 때
- * 스크립트 · 노트 · 질문이 언어 모델 제공자에게 가고(`app/(static)/privacy/page.tsx`), 요약 · 스크립트를
+ * 스크립트 · 노트 · 질문이 언어 모델 제공자에게 가고(`app/[lang]/privacy/page.tsx`), 요약 · 스크립트를
  * 마크다운으로 복사하는 버튼(`copy-markdown-button.tsx`)도 있어서 닫으면 틀린 말이 된다.
  * 「내가 연결한 도구」라고도 하지 않는다 — Linear·GitHub 연동은 워크스페이스 연동이라 관리자만 연결·해제한다
  * (`workspace-integrations-settings.tsx`). 일반 멤버가 여는 것은 만들 때마다의 승인과 내가 만든 외부 에이전트
@@ -248,7 +248,7 @@ function ApprovalCard({ className }: { className?: string }) {
   return (
     <div className={cn("border-t border-[var(--el-hairline)] pt-3.5", className)}>
       <div className="flex items-start justify-between gap-3">
-        <p className={cn("m-0 min-w-0 flex-1 text-sm leading-relaxed break-keep", APP.ink)}>
+        <p className={cn("m-0 min-w-0 flex-1 text-sm leading-relaxed", APP.ink)}>
           {CALL}
         </p>
         <span
@@ -288,7 +288,7 @@ function ApprovalCard({ className }: { className?: string }) {
           거절
         </span>
       </div>
-      <p className={cn("m-0 mt-2 text-[11px] leading-relaxed break-keep", APP.muted)}>
+      <p className={cn("m-0 mt-2 text-[11px] leading-relaxed", APP.muted)}>
         답할 때까지 기다립니다. 그만두려면 「중지」를 누르세요.
       </p>
     </div>
@@ -408,7 +408,7 @@ function AgentTile() {
                 {/* 앱은 카드를 바로 위 본문 쪽으로 당긴다(-mt-2). 구분선이 서므로 본문과 12px 만 띄운다. */}
                 <ApprovalCard className="mt-3" />
                 <Composer chip={CHIP} busy className={cn("mt-4", DOCKED)} />
-                <p className={cn("m-0 mt-2 text-xs break-keep", APP.muted)}>
+                <p className={cn("m-0 mt-2 text-xs", APP.muted)}>
                   승인을 기다리는 동안에는 입력할 수 없습니다.
                 </p>
               </div>
@@ -465,7 +465,7 @@ function AgentTile() {
                     </span>
                     <div className="space-y-1.5 pt-1.5 pb-0.5">
                       <StepDone>
-                        <p className={cn("m-0 text-xs leading-relaxed break-keep", APP.muted)}>
+                        <p className={cn("m-0 text-xs leading-relaxed", APP.muted)}>
                           {CALL} · ONB-12 이슈를 만들었습니다: https://linear.app/…
                         </p>
                         <span
@@ -485,7 +485,7 @@ function AgentTile() {
                         </span>
                       </StepDone>
                       <StepDone>
-                        <p className={cn("m-0 text-xs leading-relaxed break-keep", APP.muted)}>
+                        <p className={cn("m-0 text-xs leading-relaxed", APP.muted)}>
                           <span className="font-medium text-[var(--el-body-strong)]">승인함</span>
                           {` · ${CALL}`}
                         </p>
@@ -650,7 +650,7 @@ function ExternalTile() {
                   <p className="m-0 text-[24px] leading-tight font-light tracking-[-0.03em] @md:text-3xl">
                     내 MCP 연결
                   </p>
-                  <p className={cn("m-0 mt-2 hidden text-sm break-keep @md:block", APP.muted)}>
+                  <p className={cn("m-0 mt-2 hidden text-sm @md:block", APP.muted)}>
                     Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와 프로젝트를 읽을 수
                     있게 연결합니다.
                   </p>
@@ -707,7 +707,7 @@ function ExternalTile() {
             <li
               key={stamp.text}
               className={cn(
-                "tv-rpop grid size-[88px] place-items-center rounded-full border-2 border-[var(--tv-brand-deep)]/75 p-2 text-center text-[12px] leading-[1.25] font-extrabold break-keep text-[var(--tv-brand-deep)] lg:size-[104px] lg:text-[13px]",
+                "tv-rpop grid size-[88px] place-items-center rounded-full border-2 border-[var(--tv-brand-deep)]/75 p-2 text-center text-[12px] leading-[1.25] font-extrabold text-[var(--tv-brand-deep)] lg:size-[104px] lg:text-[13px]",
                 stamp.place
               )}
               style={{ rotate: `${stamp.tilt}deg`, ...vars({ "--d": `${500 + i * 160}ms` }) }}

@@ -10,7 +10,8 @@ import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { pickHelpAxis, useHelpAxis } from "@/components/help/help-axis";
 import { HelpPalette } from "@/components/help/help-palette";
 import { HELP_VARS } from "@/components/help/help-vars";
-import type { HelpAxis } from "@/app/(static)/help/_content/types";
+import type { HelpAxis } from "@/app/[lang]/help/_content/types";
+import { splitLocale } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +26,8 @@ const TABS: { axis: HelpAxis; label: string }[] = [
  * `<main>` 밖(`NavbarGate`)에 서서 건너뛰기 링크가 이 바도 건너뛴다. ⌘K 는 여기 한 곳(`HelpPalette`)에서만 듣는다.
  */
 export function HelpTopBar() {
-  const pathname = usePathname();
+  // 언어 접두사를 벗긴 경로. 한국어 SSR 의 `/ko/help/...`(rewrite 뒤 주소)와 영어판 `/en/help/...` 이 같은 판정을 받는다.
+  const pathname = splitLocale(usePathname()).path;
   const axis = useHelpAxis(pathname);
   return (
     <header

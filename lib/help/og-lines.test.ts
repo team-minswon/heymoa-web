@@ -28,8 +28,8 @@ describe("og-lines", () => {
 
 describe("가이드 공유 카드 전수", () => {
   it("모든 제목·설명이 고아 줄 없이 들어가고 설명은 말줄임되지 않는다", async () => {
-    const { helpTopics } = await import("@/app/(static)/help/_content/topics");
-    const { helpGroups } = await import("@/app/(static)/help/_content/groups");
+    const { helpTopics } = await import("@/app/[lang]/help/_content/topics");
+    const { helpGroups } = await import("@/app/[lang]/help/_content/groups");
     const cards = [
       ...helpTopics.map((t) => ({ title: t.title, summary: t.summary })),
       ...helpGroups.map((g) => ({ title: g.title, summary: g.summary })),

@@ -214,7 +214,7 @@ export function TermEditor({
         <div className="flex min-h-[3.25rem] items-start justify-between gap-3 border-t border-[var(--el-hairline)] px-4 py-2.5">
           <div
             id={`${inputId}-status`}
-            className="min-h-10 min-w-0 flex-1 text-xs leading-5 break-keep"
+            className="min-h-10 min-w-0 flex-1 text-xs leading-5"
           >
             {progress ? (
               <p

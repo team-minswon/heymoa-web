@@ -24,7 +24,7 @@ kind: facts
 ---
 ```
 
-- `slug` 와 `group` 은 `app/(static)/help/_content/ids.ts` 와 같아야 해요. 주소가 바뀌면 옛 링크가 깨지니 바꾸지 않아요.
+- `slug` 와 `group` 은 `app/[lang]/help/_content/ids.ts` 와 같아야 해요. 주소가 바뀌면 옛 링크가 깨지니 바꾸지 않아요.
 - `order` 는 그룹 안 순서예요. 그룹 순서는 `_content/groups.ts` 가 정해요.
 - `kind: facts` 는 상황별 페이지 중 따라 하는 순서가 아니라 사실 목록일 때만 써요(이 경우 HowTo 구조화 데이터를 안 내요).
 - `title` 은 `제목 · HeyMoa(헤이모아) 사용법` 이 60자를 넘지 않게 써요.
@@ -158,6 +158,6 @@ Windows에서는 …
 ## 확인하는 법
 
 ```bash
-pnpm vitest run "app/(static)/help"   # 구조, 메타, 검색 색인
+pnpm vitest run "app/[lang]/help"   # 구조, 메타, 검색 색인
 pnpm dev                              # /help-samples 에서 모든 표현을 눈으로
 ```

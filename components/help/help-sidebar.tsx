@@ -8,10 +8,11 @@ import type {
   HelpBadgeName,
   HelpCluster,
   HelpGroup,
-} from "@/app/(static)/help/_content/types";
+} from "@/app/[lang]/help/_content/types";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { HelpBadge } from "@/components/help/help-badge";
 import { useHelpAxis } from "@/components/help/help-axis";
+import { splitLocale } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
 type SidebarTopic = {
@@ -22,7 +23,7 @@ type SidebarTopic = {
 };
 
 const ITEM =
-  "group/item flex min-h-8 items-center gap-2 rounded-[8px] px-3 py-1 text-[14px] leading-[1.45] break-keep help-fade";
+  "group/item flex min-h-8 items-center gap-2 rounded-[8px] px-3 py-1 text-[14px] leading-[1.45] help-fade";
 
 /**
  * 왼쪽 주제 목록. 상단 탭이 고른 축의 모든 그룹을 **항상 펼친** 평평한 목록으로 낸다(접힘 없음). 상단바 아래 전체 높이로
@@ -39,7 +40,8 @@ export function HelpSidebar({
   clusters: readonly HelpCluster[];
   topics: readonly SidebarTopic[];
 }) {
-  const pathname = usePathname();
+  // 언어 접두사를 벗긴 경로. 한국어 SSR 의 `/ko/help/...`(rewrite 뒤 주소)와 영어판 `/en/help/...` 이 같은 판정을 받는다.
+  const pathname = splitLocale(usePathname()).path;
   const axis = useHelpAxis(pathname);
   const box = useRef<HTMLDivElement>(null);
   // 기능별은 그룹 제목(그룹 소개로 가는 링크) 아래 그 그룹의 페이지, 상황별은 묶음 제목(표시용) 아래 레시피. 둘 다 같은 모양이다.

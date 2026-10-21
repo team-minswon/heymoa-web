@@ -917,7 +917,7 @@ export function NoteTimeline({
               <span className="size-1.5 rounded-full bg-red-500" />
             </span>
             <span className="flex min-w-0 flex-col">
-              <span className="break-keep text-[15px] leading-6 text-[var(--el-muted-soft)]">
+              <span className="text-[15px] leading-6 text-[var(--el-muted-soft)]">
                 {partial.confirmedText ? (
                   <span className="text-[var(--el-muted)]">
                     {partial.confirmedText}
@@ -1030,7 +1030,7 @@ function TimelineRow({
             <span className="flex min-w-0 flex-col">
               <span
                 className={cn(
-                  "break-keep text-[15px] leading-6",
+                  "text-[15px] leading-6",
                   retracted
                     ? "text-[var(--el-muted-soft)] line-through decoration-[var(--el-muted-soft)]"
                     : TONE_TITLE[tone]
@@ -1127,7 +1127,7 @@ function TimelineRow({
                                       }
                                     />
                                   ) : null}
-                                  <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
+                                  <span className="text-[14px] leading-[22px] text-[var(--el-body-strong)]">
                                     {citation.text}
                                   </span>
                                 </span>

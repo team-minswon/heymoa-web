@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { HelpBadgeName } from "@/app/(static)/help/_content/types";
+import type { HelpBadgeName } from "@/app/[lang]/help/_content/types";
 import { cn } from "@/lib/utils";
 
 /** 보이는 글은 짧게, 스크린리더에는 뜻을 풀어 읽어 준다. */

@@ -1,6 +1,9 @@
 import path from "node:path";
 
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+import { marketingRedirects, marketingRewrites } from "./lib/i18n/marketing-routes";
 
 const nextConfig: NextConfig = {
   // **루트를 못박는다.** 워크트리(`.worktrees/app-N`)에서 빌드하면 Next가 부모 레포의
@@ -8,13 +11,16 @@ const nextConfig: NextConfig = {
   // 산출물 경로가 `.worktrees/` 아래로 한 겹 더 들어간다.
   outputFileTracingRoot: path.join(__dirname),
   turbopack: { root: path.join(__dirname) },
+  // 언어 경로는 proxy 가 아니라 여기서 푼다(PRO-65). proxy 는 토큰 갱신만 하고 matcher 로 투기적 요청을
+  // 건너뛰는데, rewrite 는 prefetch 를 포함한 모든 요청에 같게 걸려야 하기 때문이다. 목록은 `marketing-routes.ts` 하나다.
+  async redirects() {
+    return marketingRedirects();
+  },
+  async rewrites() {
+    return { beforeFiles: marketingRewrites(), afterFiles: [], fallback: [] };
+  },
   // 외부 에이전트 동의 화면(APP-888)을 다른 사이트가 프레임에 띄워 허락을 누르게 하지 못하게 한다.
   // `X-Frame-Options` 는 `frame-ancestors` 를 모르는 브라우저용이다. 사이트 전체는 따로 정한다.
-  // 사용 가이드를 주제별 주소(`/help/<그룹>/<페이지>`)로 나누기 전에 있던 `/help/desktop` 이 검색엔진과 외부 링크에 남아 있다.
-  // 영구 이동이라 순위가 새 주소로 옮겨 가고, `#first-run` 같은 해시는 브라우저가 그대로 이어 준다(APP-1231).
-  async redirects() {
-    return [{ source: "/help/desktop", destination: "/help/start/desktop", permanent: true }];
-  },
   async headers() {
     return [
       {
@@ -34,4 +40,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// 문구·형식만 쓴다. next-intl 의 라우팅 미들웨어는 쓰지 않는다(인증 proxy 와 합치지 않기 위해).
+export default createNextIntlPlugin("./i18n/request.ts")(nextConfig);

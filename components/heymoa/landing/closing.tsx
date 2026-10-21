@@ -160,7 +160,7 @@ export function Closing() {
               </span>{" "}
               접어 두세요
             </h2>
-            <p className="m-0 mt-5 max-w-[520px] text-balance break-keep text-[16px] leading-[1.75] text-[var(--tv-on-brand)] lg:text-[18px]">
+            <p className="m-0 mt-5 max-w-[520px] text-balance text-[16px] leading-[1.75] text-[var(--tv-on-brand)] lg:text-[18px]">
               이번 주 당번 칸에는 HeyMoa를 적어 두세요. <br className="hidden lg:inline" />
               지난주에 누가 했는지 따질 일도 없고요.
             </p>

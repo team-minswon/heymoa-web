@@ -76,7 +76,7 @@ export function EvidenceQuotes({
                 </span>
                 <span
                   className={cn(
-                    "text-sm leading-[22px] break-keep",
+                    "text-sm leading-[22px]",
                     cited ? "text-[var(--el-ink)]" : "text-[var(--el-muted)]"
                   )}
                 >

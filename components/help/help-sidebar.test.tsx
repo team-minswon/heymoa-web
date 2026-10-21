@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { helpGroups, situationClusters } from "@/app/(static)/help/_content/groups";
+import { helpGroups, situationClusters } from "@/app/[lang]/help/_content/groups";
 import { HelpSidebar } from "@/components/help/help-sidebar";
 
 vi.mock("next/navigation", () => ({

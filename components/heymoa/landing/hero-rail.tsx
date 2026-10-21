@@ -121,7 +121,7 @@ export function HeroRail({ demo, asking }: { demo: Demo; asking: boolean }) {
                 // 답(`markdown.tsx` 본문 — 말풍선 없음). 흐르는 동안은 반쯤 적힌 문장을 읽히지 않는다.
                 <p
                   aria-hidden={running || undefined}
-                  className={cn("m-0 text-[14px] leading-[1.65] break-keep", APP.body)}
+                  className={cn("m-0 text-[14px] leading-[1.65]", APP.body)}
                 >
                   {running ? turn.a.slice(0, typing ?? 0) : turn.a}
                   {running ? (

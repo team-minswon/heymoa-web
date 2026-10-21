@@ -251,7 +251,7 @@ export function HelpHubBody({ children }: { children: React.ReactNode }) {
   if (!query) return <>{children}</>;
   if (failed)
     return (
-      <p className="m-0 text-[16px] leading-[1.75] break-keep text-[var(--tv-body)]">
+      <p className="m-0 text-[16px] leading-[1.75] text-[var(--tv-body)]">
         검색에 필요한 정보를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.
       </p>
     );
@@ -261,7 +261,7 @@ export function HelpHubBody({ children }: { children: React.ReactNode }) {
     );
   if (hits.length === 0)
     return (
-      <p className="m-0 text-[16px] leading-[1.75] break-keep text-[var(--tv-body)]">
+      <p className="m-0 text-[16px] leading-[1.75] text-[var(--tv-body)]">
         ‘{query}’와 일치하는 내용이 없어요. 다른 낱말로 찾아보세요.
       </p>
     );

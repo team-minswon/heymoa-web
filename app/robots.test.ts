@@ -54,56 +54,63 @@ describe("색인 지시", () => {
   });
 });
 
-// 공개 정적 페이지가 사이트맵에 빠지면 Search Console 이 늦게 찾는다(APP-1036)
+// 공개 정적 페이지가 사이트맵에 빠지면 Search Console 이 늦게 찾는다(APP-1036).
+// 고정 목록이 아니라 **원본 목록과 대조**한다 — 마케팅 경로나 가이드 주제를 더했는데 sitemap 에 없으면 실패한다(PRO-65).
 describe("사이트맵", () => {
-  it("공개 페이지를 운영 주소로 싣는다", async () => {
+  async function load(published?: string) {
     vi.resetModules();
-    const sitemap = (await import("@/app/sitemap")).default;
+    if (published !== undefined) vi.stubEnv("PUBLISHED_LOCALES", published);
+    return {
+      sitemap: (await import("@/app/sitemap")).default,
+      pages: (await import("@/lib/i18n/marketing-routes")).MARKETING_PAGES,
+      groups: (await import("@/app/[lang]/help/_content/groups")).helpGroups,
+      topics: (await import("@/app/[lang]/help/_content/topics")).helpTopics,
+      pathOf: (await import("@/app/[lang]/help/_content/paths")).helpPathOf,
+    };
+  }
 
-    expect(sitemap().map((entry) => entry.url)).toEqual([
-      "https://heymoa.app",
-      "https://heymoa.app/download",
+  const absolute = (path: string) =>
+    path === "/" ? "https://heymoa.app" : `https://heymoa.app${path}`;
+
+  it("마케팅 경로 목록과 가이드 주제 목록의 주소를 빠짐없이 한 번씩 싣는다", async () => {
+    const { sitemap, pages, groups, topics, pathOf } = await load();
+    const expected = [
+      ...pages.map(({ path }) => path),
+      ...groups.map(({ slug }) => `/help/${slug}`),
+      ...topics.map(pathOf),
+    ].map(absolute);
+    const urls = sitemap().map((entry) => entry.url);
+
+    expect(new Set(urls).size).toBe(urls.length);
+    expect([...urls].sort()).toEqual([...expected].sort());
+  });
+
+  it("기본값에서는 영어 주소가 없고 한국어끼리만 대응한다", async () => {
+    const { sitemap } = await load();
+    const entries = sitemap();
+
+    expect(entries.some((entry) => entry.url.includes("/en"))).toBe(false);
+    expect(entries[0].alternates).toEqual({
+      languages: { ko: "https://heymoa.app" },
+    });
+  });
+
+  it("PUBLISHED_LOCALES=ko,en 이면 영어판을 싣고 서로를 대응으로 단다", async () => {
+    const { sitemap } = await load("ko,en");
+    const entries = sitemap();
+    const help = entries.filter((entry) => entry.url.endsWith("/help"));
+
+    expect(help.map((entry) => entry.url)).toEqual([
       "https://heymoa.app/help",
-      "https://heymoa.app/help/start",
-      "https://heymoa.app/help/record",
-      "https://heymoa.app/help/summary",
-      "https://heymoa.app/help/team",
-      "https://heymoa.app/help/connect",
-      "https://heymoa.app/help/fix",
-      "https://heymoa.app/help/situations",
-      "https://heymoa.app/help/start/getting-started",
-      "https://heymoa.app/help/start/workspace-basics",
-      "https://heymoa.app/help/start/account",
-      "https://heymoa.app/help/start/desktop",
-      "https://heymoa.app/help/record/recording",
-      "https://heymoa.app/help/record/speakers",
-      "https://heymoa.app/help/record/terms-context",
-      "https://heymoa.app/help/record/live-timeline",
-      "https://heymoa.app/help/summary/meeting-end",
-      "https://heymoa.app/help/summary/review",
-      "https://heymoa.app/help/summary/export",
-      "https://heymoa.app/help/team/tasks",
-      "https://heymoa.app/help/team/agent",
-      "https://heymoa.app/help/team/members",
-      "https://heymoa.app/help/team/feedback",
-      "https://heymoa.app/help/connect/integrations",
-      "https://heymoa.app/help/connect/agent-mcp",
-      "https://heymoa.app/help/fix/troubleshooting",
-      "https://heymoa.app/help/fix/limits",
-      "https://heymoa.app/help/situations/first-meeting",
-      "https://heymoa.app/help/situations/summary-missing",
-      "https://heymoa.app/help/situations/confirm-summary",
-      "https://heymoa.app/help/situations/fix-speakers",
-      "https://heymoa.app/help/situations/invite-team",
-      "https://heymoa.app/help/situations/fix-terms",
-      "https://heymoa.app/help/situations/assign-tasks",
-      "https://heymoa.app/help/situations/find-decisions",
-      "https://heymoa.app/help/situations/record-call-audio",
-      "https://heymoa.app/help/situations/desktop-no-audio",
-      "https://heymoa.app/help/situations/use-mcp",
-      "https://heymoa.app/help/situations/data-privacy",
-      "https://heymoa.app/terms",
-      "https://heymoa.app/privacy",
+      "https://heymoa.app/en/help",
     ]);
+    for (const entry of help) {
+      expect(entry.alternates).toEqual({
+        languages: {
+          ko: "https://heymoa.app/help",
+          en: "https://heymoa.app/en/help",
+        },
+      });
+    }
   });
 });

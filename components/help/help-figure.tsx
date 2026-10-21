@@ -75,7 +75,7 @@ export function HelpFigure({
         </span>
       </button>
       {caption ? (
-        <figcaption className="m-0 text-[14px] leading-[1.65] break-keep text-[var(--tv-muted)]">
+        <figcaption className="m-0 text-[14px] leading-[1.65] text-[var(--tv-muted)]">
           {caption}
         </figcaption>
       ) : null}

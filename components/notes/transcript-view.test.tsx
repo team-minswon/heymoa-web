@@ -611,8 +611,7 @@ describe("TranscriptView", () => {
     expect(partialLabel).toHaveClass("whitespace-nowrap", "shrink-0");
     expect(partialBody).toHaveClass(
       "min-w-0",
-      "whitespace-normal",
-      "break-keep"
+      "whitespace-normal"
     );
     expect(partialBody).not.toHaveClass("truncate", "break-all");
     // **본문 x 좌표가 확정 행과 같아야 한다.** 확정되는 순간 같은 자리에서 바뀌어야지,

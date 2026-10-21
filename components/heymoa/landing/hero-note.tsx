@@ -362,7 +362,7 @@ function TopBar({
         </span>
         <span
           className={cn(
-            "min-w-0 text-[13px] leading-[1.35] font-semibold break-keep max-[359px]:truncate lg:truncate lg:text-[13.5px]",
+            "min-w-0 text-[13px] leading-[1.35] font-semibold max-[359px]:truncate lg:truncate lg:text-[13.5px]",
             APP.ink
           )}
         >
@@ -582,7 +582,7 @@ function DetailsPanel({ ended, at, panel }: { ended: boolean; at: string; panel:
                 <dt className={cn("w-[100px] shrink-0 text-[12px] lg:w-[124px]", APP.body)}>{k}</dt>
                 <dd
                   className={cn(
-                    "m-0 flex min-w-0 flex-wrap items-center gap-1.5 text-[12px] font-medium break-keep",
+                    "m-0 flex min-w-0 flex-wrap items-center gap-1.5 text-[12px] font-medium",
                     APP.ink
                   )}
                 >
@@ -753,7 +753,7 @@ function ScriptPanel({ demo, panel, rise }: { demo: Demo; panel: PanelProps; ris
                 <p
                   aria-hidden={typed === undefined ? undefined : true}
                   className={cn(
-                    "m-0 text-[15px] leading-7 tracking-[0.005em] break-keep",
+                    "m-0 text-[15px] leading-7 tracking-[0.005em]",
                     typed === undefined ? APP.ink : APP.body
                   )}
                 >
@@ -1067,7 +1067,7 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
             <span className="tv-blink size-1.5 rounded-full bg-[#ef4444]" />
           </span>
           <span className="flex min-w-0 flex-col">
-            <span className={cn("text-[15px] leading-6 break-keep", APP.muted)}>
+            <span className={cn("text-[15px] leading-6", APP.muted)}>
               <span className={APP.body}>{firm}</span>
               {soft}
               {CARET}
@@ -1161,7 +1161,7 @@ function Analyzing({ panel }: { panel: PanelProps }) {
         <span className={cn("text-[15.5px] font-medium lg:text-[17px]", APP.ink)}>
           회의를 분석하는 중입니다
         </span>
-        <p className={cn("col-start-2 m-0 max-w-[54ch] text-[13.5px] leading-[22px] break-keep lg:text-[14px] lg:leading-[23px]", APP.muted)}>
+        <p className={cn("col-start-2 m-0 max-w-[54ch] text-[13.5px] leading-[22px] lg:text-[14px] lg:leading-[23px]", APP.muted)}>
           결정과 할 일을 주제로 묶고, 담당과 기한을 붙이고, 프로젝트의 기존 결정 · 할 일과 견줍니다. 몇 분 걸릴 수
           있고, 다른 화면으로 옮겨도 됩니다.
         </p>
@@ -1425,7 +1425,7 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
           <div className="pt-7">
             <Anchor name="summary" />
             <SectionHead title="요약" />
-            <p className={cn("m-0 mt-1.5 text-[15px] leading-[1.8] break-keep", APP.body)}>
+            <p className={cn("m-0 mt-1.5 text-[15px] leading-[1.8]", APP.body)}>
               {DOC.summary}
             </p>
           </div>
@@ -1440,11 +1440,11 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
                   <div className="-mx-2 grid grid-cols-[44px_minmax(0,1fr)_16px] items-start gap-x-3 px-2 py-3 sm:grid-cols-[56px_minmax(0,1fr)_auto_16px]">
                     <span className={cn("text-[12px] leading-6 tabular-nums", APP.muted)}>{topic.at}</span>
                     <span className="flex min-w-0 flex-col">
-                      <span className={cn("text-[15px] leading-6 font-medium break-keep", APP.ink)}>
+                      <span className={cn("text-[15px] leading-6 font-medium", APP.ink)}>
                         {topic.title}
                       </span>
                       {/* 앱은 한 줄로 말줄임한다. 여기는 줄바꿈해 다 보인다(과장 허용). */}
-                      <span className={cn("text-[13.5px] leading-5 break-keep", APP.muted)}>{topic.gist}</span>
+                      <span className={cn("text-[13.5px] leading-5", APP.muted)}>{topic.gist}</span>
                     </span>
                     <span
                       className={cn(
@@ -1594,7 +1594,7 @@ function SummaryPanel({ demo, panel }: { demo: Demo; panel: PanelProps }) {
       <div {...panel} className={cn("h-full px-4 pt-5 lg:px-8 lg:pt-6", PANEL_FOCUS)}>
         <div className={cn("rounded-[16px] p-5", APP.softBg)}>
           <p className={cn("m-0 text-[14px] font-medium", APP.ink)}>요약은 회의가 끝나면 정리됩니다</p>
-          <p className={cn("m-0 mt-1 text-[12px] leading-relaxed break-keep", APP.muted)}>
+          <p className={cn("m-0 mt-1 text-[12px] leading-relaxed", APP.muted)}>
             회의를 끝내면 결정 · 할 일 · 이슈를 주제로 묶어 검토할 수 있게 됩니다.
           </p>
         </div>

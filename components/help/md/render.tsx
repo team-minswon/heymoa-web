@@ -4,7 +4,7 @@ import Markdown, { type Components } from "react-markdown";
 import remarkDirective from "remark-directive";
 import remarkGfm from "remark-gfm";
 
-import { Key } from "@/app/(static)/help/_content/shared";
+import { Key } from "@/app/[lang]/help/_content/shared";
 import {
   HelpBadge,
   HelpCallout,

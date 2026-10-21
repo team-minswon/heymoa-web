@@ -54,7 +54,7 @@ export function ReviewOverview({
   return (
     <SectionBlock title="요약">
       {/* 주제마다의 한 줄은 아래 주제 목차가 맡는다 */}
-      <p className="text-[16px] leading-7 break-keep text-[var(--el-ink)]">{overviewText(summary)}</p>
+      <p className="text-[16px] leading-7 text-[var(--el-ink)]">{overviewText(summary)}</p>
     </SectionBlock>
   );
 }

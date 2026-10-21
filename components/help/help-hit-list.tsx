@@ -68,7 +68,7 @@ export function HelpHitRow({
           {hit.topicTitle} · {hit.sectionTitle}
         </span>
       </span>
-      <span className="mt-1 block text-[14px] leading-[1.65] break-keep text-[var(--tv-body)]">
+      <span className="mt-1 block text-[14px] leading-[1.65] text-[var(--tv-body)]">
         {hit.excerpt.slice(0, hit.from)}
         <mark className="rounded-[3px] bg-[var(--tv-butter)] px-0.5 font-bold text-[var(--tv-ink)] underline decoration-[var(--tv-brand)] underline-offset-2">
           {hit.excerpt.slice(hit.from, hit.to)}

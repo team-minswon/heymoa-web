@@ -74,7 +74,7 @@ export function Sticky({
     <span
       aria-hidden={ariaHidden || undefined}
       className={cn(
-        "relative inline-block rounded-[10px] leading-[1.3] font-extrabold break-keep text-[var(--tv-ink)]",
+        "relative inline-block rounded-[10px] leading-[1.3] font-extrabold text-[var(--tv-ink)]",
         STICKY_TONE[tone],
         STICKY_SIZE[size],
         SHADOW.sticky,
@@ -336,7 +336,7 @@ export function Speech({
       <Face who={who} size={size === "md" ? 32 : 28} className="shrink-0" />
       <span
         className={cn(
-          "rounded-[18px] px-4 py-2 leading-[1.4] font-bold break-keep text-[var(--tv-ink)]",
+          "rounded-[18px] px-4 py-2 leading-[1.4] font-bold text-[var(--tv-ink)]",
           size === "md" ? "text-[15px]" : "text-[13px]",
           side === "right" ? "rounded-br-[4px]" : "rounded-bl-[4px]",
           SPEECH_TONE[tone]

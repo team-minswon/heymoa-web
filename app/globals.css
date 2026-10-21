@@ -336,6 +336,10 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: 0.16px; /* Inter looser tracking for editorial dialet */
+    /* 한국어는 낱말 단위로 줄을 바꾼다(「삭제/돼요」로 갈리지 않게). 공백 없이 긴 문자열(URL 등)은 넘치지
+       않고 꺾인다. 영어 줄바꿈에는 영향이 없다. 컴포넌트마다 `break-keep` 을 붙이지 않는다(PRO-65). */
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
   html {
     @apply font-sans;

@@ -189,7 +189,7 @@ function MeetingRow({ m }: { m: Meeting }) {
     <div className="relative flex min-h-16 items-center gap-3 px-2 sm:gap-[14px] sm:px-3">
       <RowIcon live={m.live} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className={cn("text-[15px] font-medium break-keep", APP.ink)}>
+        <span className={cn("text-[15px] font-medium", APP.ink)}>
           {m.found ? (
             <span className={MARKER_REVEAL} style={vars({ "--d": "750ms" })}>
               {m.title}
@@ -257,7 +257,7 @@ function ProjectStack() {
           >
             온보딩 개선
           </p>
-          <p className={cn("m-0 mt-3 text-[14px] leading-6 break-keep", APP.muted)}>
+          <p className={cn("m-0 mt-3 text-[14px] leading-6", APP.muted)}>
             3개의 회의 기록 · 발화와 결정이 시간순으로 보관됩니다.
           </p>
         </div>
@@ -349,7 +349,7 @@ function MembersStack() {
           >
             멤버
           </p>
-          <p className={cn("m-0 mt-1 text-[13px] leading-5 break-keep", APP.muted)}>
+          <p className={cn("m-0 mt-1 text-[13px] leading-5", APP.muted)}>
             이 워크스페이스의 멤버와 대기 중인 초대를 관리합니다.
           </p>
           <div className="mt-4 divide-y divide-[var(--el-hairline)] border-y border-[var(--el-hairline)]">

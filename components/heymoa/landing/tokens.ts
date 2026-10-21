@@ -52,20 +52,20 @@ export const SECTION_Y = { color: "py-16 lg:py-28", white: "py-14 lg:py-24" } as
 export const LABEL =
   "text-[12px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]";
 export const CAPTION =
-  "m-0 break-keep text-[14px] leading-[1.65] text-[var(--tv-muted)]";
-export const BODY = "m-0 break-keep text-[16px] leading-[1.75] text-[var(--tv-body)]";
+  "m-0 text-[14px] leading-[1.65] text-[var(--tv-muted)]";
+export const BODY = "m-0 text-[16px] leading-[1.75] text-[var(--tv-body)]";
 export const LEAD =
-  "m-0 break-keep text-[16px] leading-[1.75] text-[var(--tv-body)] lg:text-[18px]";
+  "m-0 text-[16px] leading-[1.75] text-[var(--tv-body)] lg:text-[18px]";
 export const CARD_TITLE =
-  "m-0 break-keep text-[22px] font-extrabold leading-[1.3] tracking-[-0.03em] text-[var(--tv-ink)]";
+  "m-0 text-[22px] font-extrabold leading-[1.3] tracking-[-0.03em] text-[var(--tv-ink)]";
 /** 섹션 제목 — 모바일 28 / 데스크톱 44. */
 export const H2 =
-  "m-0 text-balance break-keep text-[28px] font-extrabold leading-[1.22] tracking-[-0.035em] text-[var(--tv-ink)] lg:text-[44px] lg:leading-[1.16] lg:tracking-[-0.04em]";
+  "m-0 text-balance text-[28px] font-extrabold leading-[1.22] tracking-[-0.035em] text-[var(--tv-ink)] lg:text-[44px] lg:leading-[1.16] lg:tracking-[-0.04em]";
 /** 마무리 보라 블록의 제목. 보라 위라 흰 글자다. */
 export const CLOSING_H =
-  "m-0 text-balance break-keep text-[30px] font-extrabold leading-[1.18] tracking-[-0.04em] text-white lg:text-[56px] lg:leading-[1.1] lg:tracking-[-0.045em]";
+  "m-0 text-balance text-[30px] font-extrabold leading-[1.18] tracking-[-0.04em] text-white lg:text-[56px] lg:leading-[1.1] lg:tracking-[-0.045em]";
 export const H1 =
-  "m-0 text-[clamp(28px,9vw,34px)] lg:text-[64px] font-extrabold leading-[1.12] lg:leading-[1.08] tracking-[-0.04em] lg:tracking-[-0.045em] text-[var(--tv-ink)] break-keep";
+  "m-0 text-[clamp(28px,9vw,34px)] lg:text-[64px] font-extrabold leading-[1.12] lg:leading-[1.08] tracking-[-0.04em] lg:tracking-[-0.045em] text-[var(--tv-ink)]";
 /** 손글씨 결 — 먹색 굵은 짧은 말. 설명 주석용. */
 export const HAND =
   "text-[14px] font-extrabold leading-[1.35] tracking-[-0.01em] text-[var(--tv-ink)]";

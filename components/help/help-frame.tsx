@@ -6,17 +6,17 @@ import { AnchorCopy } from "@/components/help/anchor-copy";
 import { HelpBadge } from "@/components/help/help-badge";
 import { HelpPageToc } from "@/components/help/help-page-toc";
 import { HelpSearch } from "@/components/help/help-search";
-import { navTitleOf } from "@/app/(static)/help/_content/paths";
-import { helpTopics } from "@/app/(static)/help/_content/topics";
+import { navTitleOf } from "@/app/[lang]/help/_content/paths";
+import { helpTopics } from "@/app/[lang]/help/_content/topics";
 import type {
   HelpBadgeName,
   HelpGroup,
   HelpTopic,
-} from "@/app/(static)/help/_content/types";
+} from "@/app/[lang]/help/_content/types";
 import { cn } from "@/lib/utils";
 
 /**
- * 사용 가이드 본문 칸의 바깥 여백. 가이드 셸(`app/(static)/help/layout.tsx`)이 상단바 · 사이드바를 세우고, 페이지는 이 여백 안에서
+ * 사용 가이드 본문 칸의 바깥 여백. 가이드 셸(`app/[lang]/help/layout.tsx`)이 상단바 · 사이드바를 세우고, 페이지는 이 여백 안에서
  * 화면 폭을 거의 다 쓴다(양옆 24~40, 초광폭 상한은 셸의 1800).
  */
 export const HELP_PAD = "w-full px-6 pt-8 pb-16 lg:px-8 xl:px-10";
@@ -63,10 +63,10 @@ export function HelpPageHead({
           {badge ? <HelpBadge name={badge} /> : null}
         </nav>
       ) : null}
-      <h1 className="m-0 mt-2 text-[32px] leading-[1.2] font-extrabold tracking-[-0.035em] break-keep text-[var(--tv-ink)] lg:text-[36px]">
+      <h1 className="m-0 mt-2 text-[32px] leading-[1.2] font-extrabold tracking-[-0.035em] text-[var(--tv-ink)] lg:text-[36px]">
         {title}
       </h1>
-      <p className="m-0 mt-3 max-w-[760px] text-[16px] leading-[1.7] break-keep text-[var(--tv-muted)]">
+      <p className="m-0 mt-3 max-w-[760px] text-[16px] leading-[1.7] text-[var(--tv-muted)]">
         {description}
       </p>
       {children}
@@ -199,7 +199,7 @@ function StepLink({
         {next ? "다음 주제" : "이전 주제"}
         {next ? <ArrowRight aria-hidden className="size-3.5" /> : null}
       </span>
-      <span className="break-keep text-[16px] font-extrabold text-[var(--tv-ink)] group-hover:text-[var(--tv-brand-deep)]">
+      <span className="text-[16px] font-extrabold text-[var(--tv-ink)] group-hover:text-[var(--tv-brand-deep)]">
         {navTitleOf(topic)}
       </span>
     </Link>
@@ -231,7 +231,7 @@ function RelatedSituations({ topic }: { topic: HelpTopic }) {
               href={`/help/${situation.group}/${situation.slug}`}
               data-help-nav="related"
               className={cn(
-                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",
+                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",
                 FOCUS
               )}
             >

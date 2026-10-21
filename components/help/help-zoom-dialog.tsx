@@ -50,7 +50,7 @@ export function HelpZoomDialog({
         <DialogTitle className="sr-only">{title}</DialogTitle>
         {children}
         {caption ? (
-          <DialogDescription className="m-0 px-1 text-[14px] leading-[1.65] break-keep text-[var(--tv-muted)]">
+          <DialogDescription className="m-0 px-1 text-[14px] leading-[1.65] text-[var(--tv-muted)]">
             {caption}
           </DialogDescription>
         ) : (

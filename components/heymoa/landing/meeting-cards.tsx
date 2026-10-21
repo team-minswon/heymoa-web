@@ -124,7 +124,7 @@ function MeetingCard({
         </Hand>
         <div className="mt-6 flex items-end gap-2">
           <FacePile names={faces} size={32} ring={FACE_TONE[tone].ring} />
-          <p className="m-0 max-w-[200px] rounded-[16px] rounded-bl-[4px] bg-white px-3 py-1.5 text-[13.5px] leading-[1.4] font-bold break-keep text-[var(--tv-ink)]">
+          <p className="m-0 max-w-[200px] rounded-[16px] rounded-bl-[4px] bg-white px-3 py-1.5 text-[13.5px] leading-[1.4] font-bold text-[var(--tv-ink)]">
             <span className="sr-only">{lineWho}: </span>
             {line}
           </p>

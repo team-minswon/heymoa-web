@@ -21,6 +21,7 @@ const authorizeQuery = new URLSearchParams({
 type FakeLog = {
   authorize: string[];
   refresh: number;
+  refreshAttempts: number;
   approve: unknown[];
   deny: unknown[];
   callbacks: string[];

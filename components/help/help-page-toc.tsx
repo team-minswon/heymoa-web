@@ -110,7 +110,7 @@ export function HelpPageToc({
                 data-help-nav="toc"
                 aria-current={on ? "location" : undefined}
                 className={cn(
-                  "relative -ml-px flex min-h-8 items-center rounded-r-[8px] py-1 pr-3 pl-3.5 text-[13px] leading-[1.45] break-keep help-fade",
+                  "relative -ml-px flex min-h-8 items-center rounded-r-[8px] py-1 pr-3 pl-3.5 text-[13px] leading-[1.45] help-fade",
                   FOCUS,
                   on
                     ? "bg-[var(--tv-lav-soft)] text-[var(--tv-ink)]"

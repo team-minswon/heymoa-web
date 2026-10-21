@@ -251,7 +251,7 @@ export function HelpPalette() {
                 ))}
               </div>
             ) : hits.length === 0 ? (
-              <p className="m-0 p-3 text-[14px] leading-[1.7] break-keep text-[var(--tv-body)]">
+              <p className="m-0 p-3 text-[14px] leading-[1.7] text-[var(--tv-body)]">
                 일치하는 내용이 없어요. 다른 낱말로 찾아보세요.
               </p>
             ) : (

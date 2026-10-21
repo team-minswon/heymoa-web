@@ -366,7 +366,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
                       {item.scene}
                       <span className="sr-only">, </span>
                     </span>
-                    <span className="mt-0.5 block text-[16px] leading-[1.45] font-extrabold break-keep text-[var(--tv-ink)]">
+                    <span className="mt-0.5 block text-[16px] leading-[1.45] font-extrabold text-[var(--tv-ink)]">
                       {item.ask.q}
                     </span>
                   </span>

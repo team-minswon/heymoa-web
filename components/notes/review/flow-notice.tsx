@@ -222,7 +222,7 @@ export function FlowNotice({
         <span className="text-[17px] font-medium text-[var(--el-ink)]">
           {copy.title}
         </span>
-        <p className="col-start-2 max-w-[54ch] text-sm leading-[23px] break-keep text-[var(--el-muted)]">
+        <p className="col-start-2 max-w-[54ch] text-sm leading-[23px] text-[var(--el-muted)]">
           {copy.body}
         </p>
         {requestAction}

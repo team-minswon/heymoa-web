@@ -259,7 +259,7 @@ function HistoryBody({
             }
           />
         ) : (
-          <SheetTitle className="text-panel-title font-medium leading-[26px] text-[var(--el-ink)] [word-break:keep-all]">
+          <SheetTitle className="text-panel-title font-medium leading-[26px] text-[var(--el-ink)]">
             {task.content}
           </SheetTitle>
         )}

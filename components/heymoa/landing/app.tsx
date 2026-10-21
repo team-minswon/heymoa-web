@@ -387,7 +387,7 @@ export function ReviewHead({
       ) : null}
       <p
         className={cn(
-          "m-0 font-medium tracking-[-0.4px] break-keep",
+          "m-0 font-medium tracking-[-0.4px]",
           APP.ink,
           state && "mt-2.5",
           titleSize === "lg"
@@ -445,7 +445,7 @@ export function SectionHead({
 
 /* ── 검토 줄(요약 탭) ─────────────────────────────────────────────────── */
 
-const ROW_CONTENT = "block min-w-0 break-keep text-[15px] leading-6";
+const ROW_CONTENT = "block min-w-0 text-[15px] leading-6";
 
 /**
  * 줄 사이 선(검토 줄 · 스크립트 줄). 앱은 마지막 줄에도 선을 긋지만, 잘라 보인 창 · 카드에서는 그 선이 프레임
@@ -743,7 +743,7 @@ export function EvidenceQuotes({
             </span>
             <span
               className={cn(
-                "text-[14px] leading-[22px] break-keep",
+                "text-[14px] leading-[22px]",
                 quote.cited ? APP.ink : APP.muted
               )}
             >
@@ -871,7 +871,7 @@ export function ConfirmBar({
       ) : (
         <span
           className={cn(
-            "min-w-0 break-keep",
+            "min-w-0",
             pill ? "text-[12.5px] leading-[1.4]" : "text-[13.5px]",
             APP.body
           )}
@@ -965,15 +965,13 @@ export function ReplacementRow({
           이전 결정 대체
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={cn("break-keep", APP.ink)}>{target}</span>
+          <span className={cn(APP.ink)}>{target}</span>
           <span className={cn("text-[12px]", APP.muted)}>{meta}</span>
         </span>
         {toggle}
       </div>
       {reason ? (
-        <p className={cn("m-0 mt-1.5 text-[12px] break-keep", APP.muted)}>
-          {reason}
-        </p>
+        <p className={cn("m-0 mt-1.5 text-[12px]", APP.muted)}>{reason}</p>
       ) : null}
     </div>
   );
@@ -1142,7 +1140,7 @@ export function TimelineRow({
           <span className="flex min-w-0 flex-col">
             <span
               className={cn(
-                "break-keep text-[15px] leading-6",
+                "text-[15px] leading-6",
                 retracted
                   ? "text-[var(--el-muted)] line-through"
                   : TONE_TITLE[tone]
@@ -1196,10 +1194,7 @@ export function TimelineRow({
                     {cite.at}
                   </span>
                   <span
-                    className={cn(
-                      "break-keep text-[14px] leading-[22px]",
-                      APP.bodyStrong
-                    )}
+                    className={cn("text-[14px] leading-[22px]", APP.bodyStrong)}
                   >
                     {cite.text}
                   </span>
@@ -1290,7 +1285,7 @@ export function ScriptRow({
         ) : null}
         <p
           className={cn(
-            "m-0 break-keep text-[15px] leading-7 tracking-[0.005em]",
+            "m-0 text-[15px] leading-7 tracking-[0.005em]",
             live ? APP.body : APP.ink
           )}
         >
@@ -1412,7 +1407,7 @@ export function UserBubble({
     <div className={cn("flex justify-end", className)}>
       <p
         className={cn(
-          "m-0 max-w-[85%] rounded-[16px] px-3.5 py-2.5 text-[14px] leading-relaxed break-keep whitespace-pre-wrap",
+          "m-0 max-w-[85%] rounded-[16px] px-3.5 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap",
           APP.chipBg,
           APP.ink
         )}
@@ -1433,13 +1428,7 @@ export function Answer({
   className?: string;
 }) {
   return (
-    <p
-      className={cn(
-        "m-0 text-[14px] leading-[1.65] break-keep",
-        APP.body,
-        className
-      )}
-    >
+    <p className={cn("m-0 text-[14px] leading-[1.65]", APP.body, className)}>
       {children}
     </p>
   );
@@ -1490,7 +1479,7 @@ export function Composer({
     >
       <span
         className={cn(
-          "min-h-9 min-w-0 flex-1 py-[5px] text-[15px] leading-[1.75] break-keep",
+          "min-h-9 min-w-0 flex-1 py-[5px] text-[15px] leading-[1.75]",
           empty ? APP.muted : APP.ink
         )}
       >

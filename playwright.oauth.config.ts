@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * 외부 에이전트 OAuth e2e(APP-888). 목을 끄고 가짜 API(`e2e/agent-oauth/fake-api.ts`)를 진짜 소켓으로 띄운다 —
+ * 외부 에이전트 OAuth e2e(APP-888)와 proxy 토큰 갱신 e2e(PRO-65). 목을 끄고 가짜 API(`e2e/agent-oauth/fake-api.ts`)를 진짜 소켓으로 띄운다 —
  * 로그인 확인(SSR)과 토큰 갱신(`proxy.ts`)이 Node 쪽에서 API 를 불러 MSW 로는 재현되지 않는다.
  *
  * 인증 e2e(`playwright.auth.config.ts`)는 API 주소가 빈 것을 전제하므로 따로 둔다. 두 dev 서버가 이 워크트리의

@@ -6,6 +6,7 @@ import { Reveal } from "@/components/heymoa/landing/reveal";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
+import { LanguageSwitcher } from "./language-switcher";
 import { ExampleStamp } from "./marks";
 import { CONTAINER, FOCUS, TV_VARS, vars } from "./tokens";
 import { NAV } from "./top-bar";
@@ -69,7 +70,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
                   {siteConfig.name}
                 </span>
               </Link>
-              <p className="m-0 mt-3 max-w-[270px] text-[15px] leading-[1.7] text-balance break-keep text-[var(--tv-body)]">
+              <p className="m-0 mt-3 max-w-[270px] text-[15px] leading-[1.7] text-balance text-[var(--tv-body)]">
                 회의 중에는 실시간으로 정리하고, 다음 회의에는 지난 논의를
                 이어갑니다.
               </p>
@@ -143,7 +144,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
               style={vars({ "--i": 3 })}
             >
               <h2 className={HEADING}>함께 만들어요</h2>
-              <p className="m-0 mt-3 text-[15px] leading-[1.7] break-keep text-[var(--tv-body)]">
+              <p className="m-0 mt-3 text-[15px] leading-[1.7] text-[var(--tv-body)]">
                 써보며 느낀 점이나 궁금한 점을 들려주세요.
               </p>
               <a
@@ -160,13 +161,14 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
             </div>
           </div>
 
-          <div className="mt-10 flex flex-col gap-2 border-t border-[var(--tv-rule-strong)] pt-5 text-[13px] leading-[1.6] break-keep text-[var(--tv-muted)] lg:mt-12 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
+          <div className="mt-10 flex flex-col gap-2 border-t border-[var(--tv-rule-strong)] pt-5 text-[13px] leading-[1.6] text-[var(--tv-muted)] lg:mt-12 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
             {example ? (
               <p className="m-0 flex items-center gap-2.5">
                 <ExampleStamp />이 페이지의 회의, 인물, 날짜는 모두 지어낸
                 예시입니다.
               </p>
             ) : null}
+            <LanguageSwitcher />
             <p className="m-0">
               © 2026 {siteConfig.name}. All rights reserved.
             </p>

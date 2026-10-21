@@ -164,7 +164,7 @@ export function DesktopCompareDialog({
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-sm leading-6 break-keep text-[var(--el-muted)]">
+              <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
                 창을 닫아도 녹음은 계속됩니다.
                 <span className="block">
                   Mac 메뉴 막대에서 녹음 상태와 타임라인을 확인하세요.

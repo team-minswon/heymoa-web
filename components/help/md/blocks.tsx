@@ -16,9 +16,9 @@ import {
   X,
 } from "lucide-react";
 
-import { LINK } from "@/app/(static)/legal-document";
-import type { HelpPageId } from "@/app/(static)/help/_content/ids";
-import { helpPathById } from "@/app/(static)/help/_content/path-by-id";
+import { LINK } from "@/app/[lang]/legal-document";
+import type { HelpPageId } from "@/app/[lang]/help/_content/ids";
+import { helpPathById } from "@/app/[lang]/help/_content/path-by-id";
 import { HelpClip } from "@/components/help/help-clip";
 import { HelpFigure } from "@/components/help/help-figure";
 import { HelpCodeBlock, HelpTabsView } from "@/components/help/md/client";
@@ -104,7 +104,7 @@ export const MdSteps = ({ children }: { children?: ReactNode }) => (
 export function MdTable({ children }: { children?: ReactNode }) {
   return (
     <div className="overflow-hidden rounded-[12px] border border-[var(--tv-rule)]">
-      <table className="m-0 w-full table-fixed border-collapse text-[14px] leading-[1.6] [&_td]:border-t [&_td]:border-[var(--tv-rule)] [&_td]:p-3 [&_td]:align-top [&_td]:break-keep [&_tbody_tr:nth-child(even)]:bg-[var(--tv-lav-soft)] [&_th]:bg-[var(--tv-lav)] [&_th]:p-3 [&_th]:text-left [&_th]:font-bold [&_th]:text-[var(--tv-ink)]">
+      <table className="m-0 w-full table-fixed border-collapse text-[14px] leading-[1.6] [&_td]:border-t [&_td]:border-[var(--tv-rule)] [&_td]:p-3 [&_td]:align-top [&_tbody_tr:nth-child(even)]:bg-[var(--tv-lav-soft)] [&_th]:bg-[var(--tv-lav)] [&_th]:p-3 [&_th]:text-left [&_th]:font-bold [&_th]:text-[var(--tv-ink)]">
         {children}
       </table>
     </div>
@@ -290,7 +290,7 @@ export function HelpProblem({ children }: { children?: ReactNode }) {
           <dt className="m-0 font-bold text-[var(--tv-ink)]">{label}</dt>
           <dd
             className={cn(
-              "m-0 flex min-w-0 flex-col gap-1.5 break-keep [&_p]:m-0 [&_ul]:m-0 [&_ul]:pl-5",
+              "m-0 flex min-w-0 flex-col gap-1.5 [&_p]:m-0 [&_ul]:m-0 [&_ul]:pl-5",
               label === "증상" && "font-bold text-[var(--tv-ink)]"
             )}
           >
@@ -305,7 +305,7 @@ export function HelpProblem({ children }: { children?: ReactNode }) {
 
 /** 점 목록. 안쪽 문단은 붙여서 그린다. */
 export const MdList = ({ children }: { children?: ReactNode }) => (
-  <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 break-keep [&_p]:m-0">
+  <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 [&_p]:m-0">
     {children}
   </ul>
 );

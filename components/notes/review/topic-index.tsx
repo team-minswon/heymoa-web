@@ -255,7 +255,7 @@ function TopicRow({
           {topic.startMs === null ? "" : formatOffset(topic.startMs)}
         </span>
         <span className="flex min-w-0 flex-col">
-          <span className="text-[15px] leading-6 font-medium break-keep text-[var(--el-ink)]">
+          <span className="text-[15px] leading-6 font-medium text-[var(--el-ink)]">
             {topic.title}
           </span>
           {topic.gist && !open ? (
@@ -305,7 +305,7 @@ function TopicRow({
                 <li
                   key={item.itemId}
                   className={cn(
-                    "grid grid-cols-[16px_minmax(0,1fr)] items-start gap-x-2 text-sm leading-[22px] break-keep",
+                    "grid grid-cols-[16px_minmax(0,1fr)] items-start gap-x-2 text-sm leading-[22px]",
                     tone === "open"
                       ? "text-[var(--el-body)]"
                       : "text-[var(--el-ink)]"

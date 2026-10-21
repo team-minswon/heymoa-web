@@ -23,7 +23,7 @@ const softwareLd = {
   name: siteConfig.name,
   alternateName: [...siteConfig.alternateNames, "heymoa", "헤이 모아"],
   applicationCategory: "BusinessApplication",
-  // 데스크톱 앱(`app/(static)/download/page.tsx` — macOS DMG · Windows EXE)도 받을 수 있다(FAQ 01).
+  // 데스크톱 앱(`app/[lang]/download/page.tsx` — macOS DMG · Windows EXE)도 받을 수 있다(FAQ 01).
   operatingSystem: "Web, macOS, Windows",
   url: siteConfig.url,
   description: siteConfig.description,

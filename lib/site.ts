@@ -91,3 +91,79 @@ export const robotsDirective: Metadata["robots"] = isProductionSite
       },
     }
   : noindexDirective;
+
+/**
+ * 두 루트 레이아웃(마케팅 `app/[lang]`, 제품 `app/(product)`)이 같이 쓰는 사이트 metadata.
+ * 마케팅 페이지는 canonical·hreflang 을 `lib/i18n/metadata.ts` 에서 따로 만든다.
+ */
+/**
+ * 사이트 공통 공유 카드(`app/opengraph-image.png`). 루트 레이아웃이 `app/` 바로 아래가 아니라 두 루트로 나뉘어
+ * 파일 규칙이 페이지에 자동으로 붙지 않으므로 직접 단다. 글은 `app/opengraph-image.alt.txt` 와 같다.
+ */
+const SITE_OG_IMAGE = {
+  url: "/opengraph-image.png",
+  width: 1200,
+  height: 630,
+  type: "image/png",
+  alt: "HeyMoa(헤이모아) — 회의에 집중하세요. 기록은 모아가 할게요. 실시간 기록부터 결정사항과 할 일까지, 회의의 흐름을 정리해 드려요.",
+};
+
+export const siteMetadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
+  applicationName: siteConfig.name,
+  title: {
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.brandLabel}`,
+  },
+  description: siteConfig.description,
+  keywords: [...siteConfig.keywords],
+  authors: [{ name: siteConfig.name, url: siteConfig.url }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  icons: {
+    icon: [
+      { url: "/favicon.ico?v=3", sizes: "any" },
+      { url: "/favicon-32x32.png?v=3", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png?v=3", sizes: "16x16", type: "image/png" },
+      {
+        url: "/android-chrome-192x192.png?v=2",
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
+  alternates: {
+    canonical: "/",
+    languages: { ko: "/", "x-default": "/" },
+  },
+  // 검색엔진 소유 확인 메타 태그 자리. 값은 환경 변수로만 넣고, 없으면 태그를 그리지 않는다(등록은 운영자가 한다).
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION
+      ? {
+          "naver-site-verification":
+            process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION,
+        }
+      : undefined,
+  },
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: siteConfig.ogTitle,
+    description: siteConfig.description,
+    images: [SITE_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.ogTitle,
+    description: siteConfig.description,
+    images: [SITE_OG_IMAGE],
+  },
+  robots: robotsDirective,
+};
