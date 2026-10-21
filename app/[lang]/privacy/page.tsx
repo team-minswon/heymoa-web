@@ -78,7 +78,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: doc.title,
     description: doc.metaDescription,
-    ...localizedMetadata(locale, "/privacy"),
+    ...localizedMetadata(locale, "/privacy", {
+      title: doc.title,
+      description: doc.metaDescription,
+    }),
   };
 }
 

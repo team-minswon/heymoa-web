@@ -43,6 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     ...localizedMetadata(locale, "/help"),
     openGraph: {
+      siteName: siteConfig.name,
       type: "website",
       url: localePath(locale, "/help"),
       title,

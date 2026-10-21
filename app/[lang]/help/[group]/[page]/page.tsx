@@ -36,6 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: topic.summary,
     ...localizedMetadata(locale, helpPathOf(topic)),
     openGraph: {
+      siteName: siteConfig.name,
       type: "article",
       url,
       title,

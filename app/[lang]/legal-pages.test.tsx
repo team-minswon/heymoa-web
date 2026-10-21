@@ -1,8 +1,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import PrivacyPage from "@/app/[lang]/privacy/page";
-import TermsPage from "@/app/[lang]/terms/page";
+import PrivacyPage, {
+  generateMetadata as privacyMetadata,
+} from "@/app/[lang]/privacy/page";
+import TermsPage, {
+  generateMetadata as termsMetadata,
+} from "@/app/[lang]/terms/page";
 import type { Locale } from "@/lib/i18n/locales";
 
 // 페이지가 주소의 언어(root param)를 읽는다. vitest 에는 Next 라우팅이 없어 언어를 직접 준다.
@@ -98,4 +102,21 @@ describe("HeyMoa legal pages", () => {
       expect(container.textContent).not.toMatch(/\{email\}/);
     }
   );
+});
+
+// 공유 카드가 홈의 og:url·제목을 물려받으면 약관·방침 링크를 공유할 때 홈으로 묶인다(APP-1294).
+describe("약관·개인정보 공유 카드", () => {
+  it.each([
+    ["ko", "terms", termsMetadata, "/terms", "이용약관 | HeyMoa(헤이모아)"],
+    ["en", "terms", termsMetadata, "/en/terms", "Terms of Service | HeyMoa"],
+    ["ko", "privacy", privacyMetadata, "/privacy", "개인정보 처리방침 | HeyMoa(헤이모아)"],
+    ["en", "privacy", privacyMetadata, "/en/privacy", "Privacy Policy | HeyMoa"],
+  ] as const)("%s %s: og:url·제목이 그 페이지 것이다", async (locale, _name, generate, url, title) => {
+    route.locale = locale;
+    const meta = await generate();
+
+    expect(meta.openGraph).toMatchObject({ url, title });
+    expect(meta.twitter).toMatchObject({ title });
+    expect(meta.alternates?.canonical).toBe(url);
+  });
 });

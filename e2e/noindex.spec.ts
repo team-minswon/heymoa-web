@@ -61,3 +61,17 @@ test("다운로드·약관·개인정보는 JSON-LD 를 내고 다운로드는 �
   expect(res.status()).toBe(200);
   expect(res.headers()["content-type"]).toBe("image/png");
 });
+
+// 공유 카드의 og:url 이 홈 값이면 약관·다운로드 링크를 공유할 때 홈으로 묶인다(APP-1294).
+test("공유 카드의 og:url 이 각 페이지의 canonical 과 같다", async ({
+  request,
+}) => {
+  for (const path of ["/", "/en", "/download", "/en/download", "/terms", "/en/privacy"]) {
+    const html = await (await request.get(path)).text();
+    const ogUrl = html.match(/<meta property="og:url" content="([^"]*)"/)?.[1];
+    const canonical = html.match(/<link rel="canonical" href="([^"]*)"/)?.[1];
+
+    expect(canonical, path).toBeTruthy();
+    expect(ogUrl, path).toBe(canonical);
+  }
+});

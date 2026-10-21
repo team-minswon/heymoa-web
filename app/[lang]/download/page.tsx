@@ -22,7 +22,7 @@ import { DESKTOP_INSTALLERS } from "@/lib/desktop/downloads";
 import { marketingLocale } from "@/lib/i18n/current";
 import { localePath } from "@/lib/i18n/locales";
 import { localizedMetadata } from "@/lib/i18n/metadata";
-import { siteConfig, siteMetadataFor } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
@@ -39,24 +39,28 @@ export async function generateMetadata(): Promise<Metadata> {
   const brand = (await getTranslations({ locale, namespace: "landing.meta" }))(
     "brandLabel"
   );
+  const description = t("meta.description", { brand });
+  const share = localizedMetadata(locale, "/download", {
+    title: t("meta.title"),
+    description,
+  });
+  // 공유 이미지 파일(`opengraph-image.tsx`)의 `alt` 는 언어마다 바꿀 수 없어 여기서 단다. 이 세그먼트에서
+  // `openGraph.images` 를 주면 Next 는 파일 규칙의 이미지를 덧붙이지 않는다. 트위터 카드도 같은 그림이다.
+  const images = [
+    {
+      url: `${localePath(locale, "/download")}/opengraph-image`,
+      width: 1200,
+      height: 630,
+      type: "image/png",
+      alt: t("og.alt", { brand }),
+    },
+  ];
   return {
     title: t("meta.title"),
-    description: t("meta.description", { brand }),
-    ...localizedMetadata(locale, "/download"),
-    // 공유 이미지 파일(`opengraph-image.tsx`)의 `alt` 는 언어마다 바꿀 수 없어 여기서 단다. 이 세그먼트에서
-    // `openGraph.images` 를 주면 Next 는 파일 규칙의 이미지를 덧붙이지 않는다. 나머지 og 값은 사이트 공통값이다.
-    openGraph: {
-      ...siteMetadataFor(locale).openGraph,
-      images: [
-        {
-          url: `${localePath(locale, "/download")}/opengraph-image`,
-          width: 1200,
-          height: 630,
-          type: "image/png",
-          alt: t("og.alt", { brand }),
-        },
-      ],
-    },
+    description,
+    ...share,
+    openGraph: { ...share.openGraph, images },
+    twitter: { ...share.twitter, images },
   };
 }
 

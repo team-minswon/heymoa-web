@@ -111,12 +111,51 @@ describe("언어판 metadata — 설정 없이 모든 언어판이 검색에 공
   it("모든 언어판이 같은 hreflang 묶음을 달고 x-default 는 한국어다", () => {
     const languages = { ko: "/", en: "/en", "x-default": "/" };
 
-    expect(localizedMetadata("en", "/")).toEqual({
-      alternates: { canonical: "/en", languages },
+    expect(localizedMetadata("en", "/").alternates).toEqual({
+      canonical: "/en",
+      languages,
     });
-    expect(localizedMetadata("ko", "/")).toEqual({
-      alternates: { canonical: "/", languages },
+    expect(localizedMetadata("ko", "/").alternates).toEqual({
+      canonical: "/",
+      languages,
     });
+  });
+
+  // 안 얹으면 모든 페이지가 사이트 공통값의 홈 주소를 `og:url` 로 낸다(APP-1294).
+  it("공유 카드의 og:url 은 그 언어판 페이지의 주소다", () => {
+    expect(localizedMetadata("ko", "/").openGraph).toMatchObject({
+      url: "/",
+      locale: "ko_KR",
+      siteName: "HeyMoa",
+    });
+    expect(localizedMetadata("en", "/").openGraph).toMatchObject({
+      url: "/en",
+      locale: "en_US",
+      siteName: "HeyMoa",
+    });
+    expect(localizedMetadata("en", "/terms").openGraph?.url).toBe("/en/terms");
+  });
+
+  it("제목·설명을 주면 공유 카드가 홈의 제목 대신 그 페이지 것을 낸다", () => {
+    const home = localizedMetadata("ko", "/");
+    const terms = localizedMetadata("ko", "/terms", {
+      title: "이용약관",
+      description: "약관 설명",
+    });
+
+    expect(terms.openGraph).toMatchObject({
+      url: "/terms",
+      title: "이용약관 | HeyMoa(헤이모아)",
+      description: "약관 설명",
+    });
+    expect(terms.twitter).toMatchObject({
+      title: "이용약관 | HeyMoa(헤이모아)",
+      description: "약관 설명",
+    });
+    expect(terms.openGraph?.title).not.toBe(home.openGraph?.title);
+    // 이미지·카드 종류 같은 사이트 공통값은 그대로 물려받는다.
+    expect(terms.openGraph).toHaveProperty("images");
+    expect(terms.twitter).toMatchObject({ card: "summary_large_image" });
   });
 
   it.each(["/help", "/help/start/desktop", "/download", "/terms"])(
