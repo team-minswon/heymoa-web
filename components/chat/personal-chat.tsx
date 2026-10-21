@@ -52,6 +52,8 @@ type PersonalChatState = {
   isTurnActive: boolean;
   /** 노트 전체 화면의 레일이 내준 자리. 등록되면 떠 있는 카드 대신 그 자리에 그린다. */
   setRailSlot: (element: HTMLElement | null) => void;
+  /** 다음에 보일 때 빈 새 대화로 시작한다. 새 노트를 만들 때 부른다(APP-1278). */
+  startFreshChat: () => void;
 };
 
 const PersonalChatContext = createContext<PersonalChatState | null>(null);
@@ -134,6 +136,14 @@ export function PersonalChatProvider({
     if (element) setHasOpened(true);
   }, []);
 
+  /**
+   * 새 대화 요청이 아직 패널에 닿지 않았다. 패널이 대화 목록을 읽는 중이면 바로 못 옮기므로, 받을
+   * 수 있을 때 패널이 소비하고 내린다.
+   */
+  const [freshChatPending, setFreshChatPending] = useState(false);
+  const startFreshChat = useCallback(() => setFreshChatPending(true), []);
+  const consumeFreshChat = useCallback(() => setFreshChatPending(false), []);
+
   const wasHiddenRef = useRef(false);
 
   const setNoteScope = useCallback((scope: NoteScope | null) => {
@@ -173,8 +183,17 @@ export function PersonalChatProvider({
       setTurnActive: setIsTurnActive,
       isTurnActive,
       setRailSlot,
+      startFreshChat,
     }),
-    [hidden, isOpen, isTurnActive, railed, setNoteScope, setRailSlot]
+    [
+      hidden,
+      isOpen,
+      isTurnActive,
+      railed,
+      setNoteScope,
+      setRailSlot,
+      startFreshChat,
+    ]
   );
 
   return (
@@ -202,6 +221,8 @@ export function PersonalChatProvider({
           workspaceId={workspaceId}
           workspaceName={workspaceName}
           suggestedNote={scopeNote}
+          freshChatPending={freshChatPending}
+          onFreshChatConsumed={consumeFreshChat}
           onTurnActiveChange={setIsTurnActive}
           onClose={value.close}
         />
@@ -216,6 +237,8 @@ function PersonalChatPanel({
   workspaceId,
   workspaceName,
   suggestedNote,
+  freshChatPending = false,
+  onFreshChatConsumed,
   onTurnActiveChange,
   onClose,
 }: {
@@ -226,10 +249,17 @@ function PersonalChatPanel({
   workspaceName?: string;
   /** 회의록 화면이 미리 붙여 주는 칩. 강제가 아니다 — 사용자가 지우면 다시 안 붙는다. */
   suggestedNote: { noteId: string; title: string | null } | null;
+  /** 새 노트가 빈 새 대화를 요청했다. 이 요청을 안고 마운트되면 처음부터 빈 대화로 선다. */
+  freshChatPending?: boolean;
+  onFreshChatConsumed?: () => void;
   onTurnActiveChange: (active: boolean) => void;
   onClose: () => void;
 }) {
-  const turn = useChatTurn({ workspaceId, onTurnActiveChange });
+  const turn = useChatTurn({
+    workspaceId,
+    onTurnActiveChange,
+    startAsDraft: freshChatPending,
+  });
   const {
     isBusy,
     send: sendTurn,
@@ -375,6 +405,20 @@ function PersonalChatPanel({
     setView("thread");
     if (startTurnChat()) resetComposer();
   }, [resetComposer, startTurnChat]);
+
+  // 새 노트의 요청은 ＋ 와 같은 길로 받는다. 목록을 읽는 중이면 막혀 있으니 풀릴 때까지 들고
+  // 있는다. 이미 빈 새 대화면 `startNewChat` 이 아무 일도 안 하므로 그대로 내린다.
+  useEffect(() => {
+    if (!freshChatPending || turn.isSwitchBlocked) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 바깥(새 노트)의 요청을 막힘이 풀린 뒤에 한 번 받는다
+    startNewChat();
+    onFreshChatConsumed?.();
+  }, [
+    freshChatPending,
+    onFreshChatConsumed,
+    startNewChat,
+    turn.isSwitchBlocked,
+  ]);
 
   const router = useRouter();
   const openNote = useCallback(

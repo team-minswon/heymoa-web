@@ -15,6 +15,7 @@ const recording = vi.hoisted(() => ({
   session: null as null | { noteId: string },
   start: vi.fn(),
 }));
+const startFreshChat = vi.hoisted(() => vi.fn());
 const shell = vi.hoisted(() => ({
   selectedProjectId: "01K0000000001" as string | null,
   projects: [{ projectId: "01K0000000001", name: "모바일 앱" }] as {
@@ -31,6 +32,9 @@ vi.mock("@/components/transcription/recording-provider", () => ({
 }));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useWorkspaceShell: () => shell,
+}));
+vi.mock("@/components/chat/personal-chat", () => ({
+  usePersonalChat: () => ({ startFreshChat }),
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryKey: (projectId: string) => [
@@ -140,6 +144,8 @@ describe("useCreateMeeting", () => {
     expect(push).toHaveBeenCalledWith(
       "/w/01K0000000000/notes/01K0000000100?view=full"
     );
+    // 오른쪽 「내 에이전트」도 앞 회의 대화가 아니라 빈 새 대화로 선다(APP-1278).
+    expect(startFreshChat).toHaveBeenCalledTimes(1);
     expect(createNote).toHaveBeenCalledWith({
       projectId: "01K0000000001",
       data: { title: "주간 제품 회의" },

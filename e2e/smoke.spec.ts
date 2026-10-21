@@ -1058,6 +1058,44 @@ test("does not create a chat row until the first message is sent", async ({
 });
 
 /**
+ * ★ **새 노트의 오른쪽 레일은 빈 새 대화로 시작한다** (APP-1278). 앞 회의에서 쓰던 대화가
+ * 그대로 보이면 새 회의에서 그 이야기를 이어 가는 것처럼 읽힌다. 목 상태가 페이지 힙에 살아서
+ * 노트는 `goto` 없이 같은 문서 안에서 만든다.
+ */
+test("opens a blank agent chat in the rail of a newly created note", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
+  await page.getByTestId("chat-list-new").click();
+  await page.getByLabel("메시지").fill("요약해줘");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await expect(page.getByTestId("assistant-message").last()).toContainText(
+    "습니다",
+    { timeout: 20_000 }
+  );
+  await page.getByRole("button", { name: "닫기" }).click();
+
+  await page.getByRole("button", { name: "새 노트" }).click();
+  await page.getByLabel("회의 이름").fill("주간 제품 회의");
+  await page.getByRole("button", { name: "만들기" }).click();
+  await page.waitForURL(
+    new RegExp(`/w/${MOCK_WORKSPACE_ID}/notes/[^?]+\\?view=full`)
+  );
+
+  const panel = page.locator("[data-testid=personal-chat-panel][data-railed]");
+  await expect(panel.getByText("무엇을 도와드릴까요?")).toBeVisible();
+  await expect(panel.getByTestId("assistant-message")).toHaveCount(0);
+  // 앞 대화는 기록에 그대로 있다.
+  await panel.getByRole("button", { name: "기록" }).click();
+  await expect(
+    panel.getByTestId("chat-history-view").getByRole("button", {
+      name: /요약해줘/,
+    })
+  ).toBeVisible();
+});
+
+/**
  * ★ **기록이 패널 안에서 스레드와 겹쳐 교대한다.** 뜨는 레이어였을 때는 패널 밖에 그려져
  * 좁은 폭에서 잘렸다. 지금은 스레드와 같은 자리를 나눠 쓰므로, 목록이 서 있는 동안
  * 스레드는 **가려질 뿐 살아 있어야** 한다 — 언마운트하면 흐르던 답이 통째로 사라진다.

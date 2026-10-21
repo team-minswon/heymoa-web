@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
+import { usePersonalChat } from "@/components/chat/personal-chat";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import {
   getGetNotesQueryKey,
@@ -26,6 +27,7 @@ export function useCreateMeeting(workspaceId: string) {
     request: { timeoutMs: CREATE_TIMEOUT_MS },
   });
   const { selectedProjectId, projects } = useWorkspaceShell();
+  const { startFreshChat } = usePersonalChat();
 
   const defaultProjectId = selectedProjectId ?? projects[0]?.projectId;
   const disabled = createNote.isPending || !defaultProjectId;
@@ -100,6 +102,10 @@ export function useCreateMeeting(workspaceId: string) {
         },
       });
     }
+
+    // 새 회의는 오른쪽 「내 에이전트」도 빈 새 대화로 시작한다 — 앞 회의 대화가 남아 있으면
+    // 새 노트에서 그 이야기를 이어 가는 것처럼 보인다(APP-1278).
+    startFreshChat();
 
     // `tab`을 안 붙인다 — 어차피 전사가 기본 탭이고, 붙여 두면 "기록하러 왔다"는 뜻으로
     // 읽힌다. 새 노트는 NOT_STARTED라 「회의 시작」을 눌러야 기록이 시작된다.

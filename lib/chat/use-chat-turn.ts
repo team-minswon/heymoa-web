@@ -71,10 +71,13 @@ const uniqueIds = (scope: ScopeChip[], kind: ScopeChip["kind"]) => [
 export function useChatTurn({
   workspaceId,
   onTurnActiveChange,
+  startAsDraft = false,
 }: {
   workspaceId: string;
   /** 턴이 도는 동안 참. 그 사이 패널을 치우면 중지·승인에 닿을 길을 잃는다. */
   onTurnActiveChange: (active: boolean) => void;
+  /** 처음부터 빈 새 대화로 선다. 목록 첫 줄을 한 번 열었다가 비우면 앞 대화가 스친다(APP-1278). */
+  startAsDraft?: boolean;
 }) {
   const queryClient = useQueryClient();
   const stream = useChatStream();
@@ -83,7 +86,7 @@ export function useChatTurn({
     stream.state.phase === "awaiting_approval";
   const [createdChatId, setCreatedChatId] = useState<string | null>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [isDraftChat, setIsDraftChat] = useState(false);
+  const [isDraftChat, setIsDraftChat] = useState(startAsDraft);
   /** 방금 보낸 질문과 범위. 히스토리가 받아 줄 때까지 낙관적 말풍선으로 선다. */
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
     null

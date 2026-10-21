@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PersonalChatProvider,
+  usePersonalChat,
   usePersonalChatScope,
 } from "@/components/chat/personal-chat";
 
@@ -434,6 +435,16 @@ function NoteScope({
 }) {
   usePersonalChatScope({ noteId, title: "주간 제품 회의", hidden });
   return null;
+}
+
+/** 새 노트를 만든 자리(`useCreateMeeting`)를 대신한다. */
+function FreshChatTrigger() {
+  const { startFreshChat } = usePersonalChat();
+  return (
+    <button type="button" onClick={startFreshChat}>
+      새 노트 만듦
+    </button>
+  );
 }
 
 function renderChat(child?: React.ReactNode) {
@@ -1009,6 +1020,53 @@ describe("PersonalChatProvider", () => {
     };
     expect(last.chatId).toBe("");
     expect(last.options.query.enabled).toBe(false);
+  });
+
+  it("★ 새 노트가 요청하면 보던 대화 대신 빈 새 대화로 바뀐다 (APP-1278)", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.messages = [
+      {
+        createdAt: "2026-07-24T00:00:00Z",
+        role: "ASSISTANT",
+        content: "이전 대화입니다.",
+        toolEvent: null,
+      },
+    ];
+    renderChat(<FreshChatTrigger />);
+    openPanel();
+    await waitFor(() =>
+      expect(screen.getByText("이전 대화입니다.")).toBeTruthy()
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "새 노트 만듦" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("이전 대화입니다.")).toBeNull()
+    );
+    expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy();
+    expect(state.createMock).not.toHaveBeenCalled();
+  });
+
+  it("★ 패널을 열기 전에 요청해도 앞 대화를 한 번도 읽지 않는다 (APP-1278)", async () => {
+    // 목록 첫 줄을 열었다가 비우면 앞 대화의 스켈레톤·말풍선이 레일에 한 번 스친다.
+    state.chats = [chatRow(CHAT_ID)];
+    renderChat(<FreshChatTrigger />);
+    fireEvent.click(screen.getByRole("button", { name: "새 노트 만듦" }));
+    openPanel();
+
+    await waitFor(() =>
+      expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy()
+    );
+    expect(
+      state.messagesArgs.some(
+        (args) => (args as { chatId: string }).chatId === CHAT_ID
+      )
+    ).toBe(false);
+    // 기록에서 앞 대화로 돌아갈 수 있다.
+    pickChat(CHAT_ID);
+    await waitFor(() =>
+      expect(state.messagesArgs.at(-1)).toMatchObject({ chatId: CHAT_ID })
+    );
   });
 
   it("★ ＋ 를 두 번 눌러도 아무 일이 없다", () => {
