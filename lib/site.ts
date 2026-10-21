@@ -19,7 +19,7 @@ const siteUrl =
 export const siteConfig = {
   name: "HeyMoa",
   // 랜딩 히어로 · 기능 구간이 하는 말까지만 한다. 「참여형 AI 회의 운영 에이전트」는 지금 제품(받아 적고 정리하고
-  // 묻는)과 맞지 않아 내렸다(APP-934). `app/opengraph-image.tsx` 의 작은 줄도 이 설명을 줄인 것이다.
+  // 묻는)과 맞지 않아 내렸다(APP-934). 공유 카드는 `app/opengraph-image.png` 그림 한 장이다.
   // 두 표기(HeyMoa · 헤이모아)가 모두 검색어다 — 제목·설명·본문에 실제로 쓰고, 숨긴 글자로 도배하지 않는다(APP-1236).
   brandLabel: "HeyMoa(헤이모아)",
   alternateNames: ["헤이모아", "HeyMoa", "Hey Moa"],

@@ -16,7 +16,7 @@ const LOGO = `data:image/png;base64,${await readFile(join(process.cwd(), "public
 export const helpOgSize = { width: 1200, height: 630 };
 
 /**
- * 가이드 공유 카드 — 사이트 카드(`app/opengraph-image.tsx`)와 같은 흰 바탕 · 라벤더 판에 제목과 요약을 얹는다. 색은 `TV_VARS`
+ * 가이드 공유 카드 — 흰 바탕 · 라벤더 판에 제목과 요약을 얹는다. 색은 `TV_VARS`
  * 값을 직접 적는다(`ImageResponse` 는 CSS 변수를 모른다). 두 표기(HeyMoa · 헤이모아)가 모두 들어간다.
  */
 export function helpOgImage(
