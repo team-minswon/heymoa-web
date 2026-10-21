@@ -66,4 +66,17 @@ describe("안건 주소 이동", () => {
     act(() => vi.runAllTimers());
     expect(scroll).toHaveBeenCalledTimes(1);
   });
+
+  it("도착한 주제 제목에 근거 형광펜을 긋고, 획이 지워지면 거둔다 (APP-1290)", () => {
+    vi.useFakeTimers();
+    window.history.replaceState(null, "", "/#summary-agenda-ag2");
+    render(<TopicIndex noteId="note" topics={[topic("ag1", 1), topic("ag2", 2)]} />);
+    act(() => vi.advanceTimersByTime(0));
+    // 펼침이 끝나기 전에는 긋지 않는다
+    expect(document.querySelector(".evidence-mark")).toBeNull();
+    act(() => vi.advanceTimersByTime(240));
+    expect(document.querySelector(".evidence-mark")).toHaveTextContent("안건 2");
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(document.querySelector(".evidence-mark")).toBeNull();
+  });
 });

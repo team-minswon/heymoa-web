@@ -47,6 +47,25 @@ function penOf(text: string) {
   };
 }
 
+/**
+ * 형광펜 한 획(긋기 · 머물기 · 지우기)의 모습과 수명. 전사의 근거 점프와 요약의 안건 점프(APP-1290)가
+ * 같은 펜을 쓴다 — 각자 조립하면 한쪽만 고쳤을 때 같은 표시가 두 화면에서 다르게 움직인다.
+ */
+export function evidenceMarkOf(text: string) {
+  const { spanEm, strokeMs } = penOf(text);
+  return {
+    props: {
+      className: "evidence-mark",
+      style: {
+        "--evidence-span": `${spanEm}em`,
+        "--evidence-stroke": `${strokeMs}ms`,
+        "--evidence-hold": `${HOLD_MS}ms`,
+      } as CSSProperties,
+    },
+    lifetimeMs: strokeMs * 2 + HOLD_MS,
+  };
+}
+
 export type TranscriptFocus = {
   /** 요약의 근거 인용이 가리키는 세그먼트. 없으면 null. */
   focusSegmentId: string | null;
@@ -76,7 +95,7 @@ export function useTranscriptFocus(
   const focusedSegment =
     segments.find((segment) => segment.segmentId === focusSegmentId) ?? null;
   const focusedSegmentId = focusedSegment?.segmentId ?? null;
-  const pen = penOf(focusedSegment?.text ?? "");
+  const { lifetimeMs } = evidenceMarkOf(focusedSegment?.text ?? "");
   const nodeRef = useRef<HTMLElement | null>(null);
   const scrollToSegmentRef = useRef(scrollToSegment);
   useEffect(() => {
@@ -109,14 +128,14 @@ export function useTranscriptFocus(
     // **획이 다 지워지는 순간에 비운다.** 안 비우면 전사 탭을 다시 열 때마다 같은 자리로
     // 끌려간다. 긋기·머물기·지우기의 합이 곧 이 표시의 수명이고, 그 값을 `.evidence-mark`
     // 에도 그대로 실어 보내므로(`markProps`) 두 시계가 갈라질 수 없다.
-    const timer = window.setTimeout(onFocusHandled, pen.strokeMs * 2 + HOLD_MS);
+    const timer = window.setTimeout(onFocusHandled, lifetimeMs);
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
   }, [
     focusedSegmentId,
-    pen.strokeMs,
+    lifetimeMs,
     onFocusHandled,
     requestKey,
     focusDestination,
@@ -130,16 +149,9 @@ export function useTranscriptFocus(
   const markProps = useCallback(
     (segmentId: string) =>
       segmentId === focusedSegmentId
-        ? {
-            className: "evidence-mark",
-            style: {
-              "--evidence-span": `${pen.spanEm}em`,
-              "--evidence-stroke": `${pen.strokeMs}ms`,
-              "--evidence-hold": `${HOLD_MS}ms`,
-            } as CSSProperties,
-          }
+        ? evidenceMarkOf(focusedSegment?.text ?? "").props
         : {},
-    [focusedSegmentId, pen.spanEm, pen.strokeMs]
+    [focusedSegmentId, focusedSegment?.text]
   );
   const isHighlighted = useCallback(
     (segmentId: string) => segmentId === focusedSegmentId,

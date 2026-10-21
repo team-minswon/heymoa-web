@@ -403,3 +403,40 @@ test("반영은 기본 OFF이고 스위치를 켜야 대체·유지가 나타난
   await expect(decision.getByRole("radiogroup")).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 });
+
+test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
+  // 목의 지난 회의(01K0000000024) 요약에는 안건이 없다. 이어짐 링크가 가리키는 안건이 도착 화면에 서도록
+  // 멘토링 요약의 안건을 빌려 그 ID로 바꿔 돌려준다.
+  await page.addInitScript(() => {
+    const forward = window.fetch;
+    let borrowed: { agendas: Array<{ agendaId: string | null }> } | null = null;
+    window.fetch = async (input, init) => {
+      const response = await forward(input, init);
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.includes("/meeting-review/summary") || !response.ok) return response;
+      const body = await response.json();
+      if (url.includes("01K0000000920")) borrowed = structuredClone(body.data);
+      else if (url.includes("01K0000000024") && borrowed) {
+        body.data.agendas = borrowed.agendas.slice(0, 2);
+        body.data.agendas[0].agendaId = "01KG100000001";
+        body.data.agendas[1].agendaId = "01KG100000002";
+      }
+      return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
+    };
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  const index = page.getByRole("list", { name: "주제 목차" });
+  await page.getByRole("button", { name: /^나머지 주제 \d+개$/ }).click();
+  const continued = index.getByRole("link").first();
+  const href = await continued.getAttribute("href");
+  const agendaId = href!.split("#summary-agenda-")[1];
+  const arrived = page.locator(`[id="summary-agenda-${agendaId}"]`);
+  // 획은 1초 남짓 머물고 지워진다 — 누르기 전부터 기다려야 놓치지 않는다
+  const marked = arrived.locator(".evidence-mark").waitFor();
+  await continued.click();
+  await marked;
+  await expect(page).toHaveURL(new RegExp(`#summary-agenda-${agendaId}$`));
+  await expect(arrived.getByRole("button").first()).toHaveAttribute("aria-expanded", "true");
+  // 획이 다 지워지면 거둔다
+  await expect(arrived.locator(".evidence-mark")).toHaveCount(0, { timeout: 5_000 });
+});
