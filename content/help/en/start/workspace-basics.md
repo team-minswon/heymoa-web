@@ -84,6 +84,6 @@ Side view is the panel that opens on the right when you click a note row. You op
 
 ## Related pages {#related}
 
-- [Getting started](help:getting-started) — From signing in to your first meeting
+- [Quick start](help:getting-started) — From signing in to your first meeting
 - [Members and guest participants](help:members) — Inviting colleagues and roles
 - [Recording and your microphone](help:recording) — Starting and stopping recording

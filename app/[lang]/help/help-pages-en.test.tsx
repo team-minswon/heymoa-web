@@ -59,6 +59,18 @@ function hangulIn(container: HTMLElement) {
 describe("사용 가이드 영어판", () => {
   afterEach(cleanup);
 
+  // 같은 제목이 두 페이지에 붙으면 검색 결과에서 구분되지 않는다(APP-1296). 그룹 소개도 제목을 가진 페이지다.
+  it("그룹과 페이지의 <title> 이 서로 다르다", () => {
+    const titles = [
+      ...helpGroupsFor("en").map((group) => group.title),
+      ...en.map((topic) => topic.title),
+    ];
+
+    expect(titles.filter((title, i) => titles.indexOf(title) !== i)).toEqual(
+      []
+    );
+  });
+
   // 주소 · 섹션 id 가 언어판끼리 같아야 언어 전환과 바깥 `#id` 링크가 같은 곳으로 간다.
   it("한국어판과 같은 주제 · 순서 · 섹션 id 를 갖는다", () => {
     expect(en.map(helpPathOf)).toEqual(helpTopics.map(helpPathOf));

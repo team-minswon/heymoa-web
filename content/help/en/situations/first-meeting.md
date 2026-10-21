@@ -53,7 +53,7 @@ Start on the **[All notes]** screen in the sidebar. The **[New note]** button at
 
 ## Related pages {#related}
 
-- [Getting started](help:getting-started) — Logging in and the first screen
+- [Quick start](help:getting-started) — Logging in and the first screen
 - [Recording and your microphone](help:recording) — Start, stop, and resume recording
 - [Ending a meeting and analysis](help:meeting-end) — The analysis stages after you end
 - [Attendees and speakers](help:speakers) — Choosing attendees and naming speakers

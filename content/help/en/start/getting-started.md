@@ -1,5 +1,5 @@
 ---
-title: Getting started
+title: Quick start
 description: Sign in to HeyMoa, then record and end your first meeting. It takes about 5 minutes to follow along.
 group: start
 slug: getting-started
