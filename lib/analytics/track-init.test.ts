@@ -65,7 +65,7 @@ describe("새 행동 이벤트의 수집 거부", () => {
     posthog.__loaded = false;
     posthog.capture.mockClear();
     setAnalyticsOptOut(true);
-    track("note_opened", { workspace_id: "01K0000000000", view: "side" });
+    track("note_opened", { workspace_id: "01K0000000000", view: "side", source: "list" });
     trackMutation("createFeedback", { data: { kind: "QUESTION", message: "보내지 않을 본문입니다" } });
     setAnalyticsOptOut(false);
     initAnalytics("phc_test");
@@ -79,7 +79,7 @@ describe("새 행동 이벤트의 수집 거부", () => {
     try {
       track("recording_start_clicked", { workspace_id: "01K0000000000", retry: false });
       track("recording_stop_clicked", { surface: "note" });
-      track("note_opened", { workspace_id: "01K0000000000", view: "full" });
+      track("note_opened", { workspace_id: "01K0000000000", view: "full", source: "list" });
       track("note_tab_opened", { workspace_id: "01K0000000000", tab: "summary" });
       track("review_confirmation_clicked", { workspace_id: "01K0000000000" });
       track("settings_tab_opened", { workspace_id: "01K0000000000", section: "account" });

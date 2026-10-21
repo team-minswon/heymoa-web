@@ -28,6 +28,9 @@
           "You can ask the agent questions during and after a meeting. Each answer shows the meeting notes it actually referred to.",
           "You can register workspace members and temporary participants without an account as meeting attendees.",
           "You can share meeting notes by email, connect external tools such as Linear and GitHub as well as external AI agents, and send inquiries and feedback from within the Service.",
+          "For a meeting whose recording was paused and never ended, HeyMoa sends one reminder email to the user who last started recording one business day after the pause, and after three business days may end the meeting automatically and start the meeting analysis. When a meeting is ended automatically, one more notice email is sent to the same recipient. Business days are Monday through Friday, Korea Standard Time.",
+          "The scheduled time of automatic ending is shown in the reminder email and on the note screen, and you can resume recording or end the meeting yourself before then. A meeting that was ended automatically cannot be resumed, and automatic ending cannot be canceled. Meetings may be ended on the same schedule even if no email was received.",
+          "HeyMoa sends notifications needed to use the Service as in-app notifications and by email. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
           "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies, and HeyMoa will give notice of significant changes by reasonable means."
         ]
       },
@@ -108,6 +111,7 @@
           "Agent: We process the questions sent to the agent, its answers, and the identifiers of the meeting notes those answers referred to.",
           "Integrations: When you connect Linear or GitHub, we process the linked account identifier and access token. When you connect an external AI agent, we process information about the connected app and records of its access permissions.",
           "Invitations and sharing: We process the email addresses and invitation status of people invited to a workspace. When meeting notes are shared by email, we process the recipients' email addresses (including people who are not members), the message sent with them, and the attached meeting notes PDF.",
+          "Service notifications: To create and send in-app notifications and notification emails, we process the recipient, the type of notification, the title of the related meeting and the workspace name, and whether the notification has been read.",
           "Inquiries and feedback: We process the content of the inquiry, the sender (account name), the address of the screen it was sent from, and a summary of the browser and device environment."
         ]
       },
@@ -116,7 +120,9 @@
         "body": [
           "We use information to identify members and keep them logged in, run workspaces, provide real-time meeting transcripts, save and show notes, and keep the Service secure and prevent misuse.",
           "We use it to organize meetings into an overview, tasks, and decisions, to answer questions during and after meetings, and to export to external tools only when you approve.",
-          "We use it to send meeting note sharing emails and invitation emails and to respond to inquiries.",
+          "We use it to send meeting note sharing emails, invitation emails, and service notification emails (for example, reminders about meetings paused for a long time and notices that a meeting was ended automatically), and to respond to inquiries. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
+          "Service notifications and notification emails include the title of the related meeting. They do not include the meeting content, transcript, summary, or attendee names.",
+          "Meetings that have been paused for a long time may be ended automatically after advance notice, and analysis may proceed in the name of the person who requested the meeting analysis.",
           "We use access logs, usage records, and usage statistics to operate the Service, analyze outages, support users, and improve performance."
         ]
       },
@@ -154,17 +160,19 @@
           "Instead of your email address or name, we send PostHog the Service's internal member and workspace identifiers, the features used and when (for example, creating a meeting, starting a recording, or completing a review), the addresses of screens visited (excluding the query after the address), and device and browser information. We do not use session recording or automatic click capture.",
           "You can refuse or delete cookies and stored values in your browser settings. You can opt out of Google Analytics collection with the opt-out browser add-on provided by Google (tools.google.com/dlpage/gaoptout).",
           "If you turn off “Send usage statistics” in your account settings, that browser no longer sends data to PostHog and no longer sends feature usage records to Google Analytics. This setting applies separately to each browser and device and does not apply to access and performance metrics in Vercel Analytics and Vercel Speed Insights. Turning it off does not limit your use of the Service.",
-          "Records processed on the server, such as completed meeting analyses, speaker separation results, and recording disconnections, are sent to PostHog to operate and improve the Service regardless of this setting. In that case too, only the member identifier, the workspace identifier, and the type of event are sent.",
+          "Records processed on the server, such as completed meeting analyses, speaker separation results, recording disconnections, created notifications, notification emails sent or skipped, meetings ended automatically, and email unsubscriptions, are sent to PostHog to operate and improve the Service regardless of this setting. In that case too, only the member identifier, the workspace identifier, and the type and count of the event are sent, never meeting titles or email addresses.",
           "Analytics tools run only in the production environment, and the content of meeting audio, transcripts, and notes is not sent to them."
         ]
       },
       {
         "title": "6. Retention and Destruction",
         "body": [
-          "Personal information and meeting data are kept for as long as needed to provide the Service. Once the deletion of an account or note has been processed, they are destroyed without delay, to the extent there is no legal obligation to retain them.",
+          "Personal information and meeting data are kept for as long as needed to provide the Service. Once the deletion of an account or note has been processed, they are destroyed without delay, to the extent there is no legal obligation to retain them. However, the service notification history and emails already sent, described below, are exceptions.",
           "Meeting audio files are kept for as long as needed to provide the Service, and when you delete a note they are deleted together with the note, transcript, and summary.",
           "Workspace invitation links are valid for only 24 hours after they are sent, and records of expired or canceled invitations are considered to have served their purpose.",
           "Meeting notes PDFs shared by email are kept for 30 days after they are sent.",
+          "Service notification history is kept until the account is deleted. Because each notification stores the meeting title and workspace name as they were when it was received, the title remains in the recipient's notification list even after the meeting note is deleted or the recipient leaves the workspace. When a notification is opened, access is checked again, and nothing is shown without permission.",
+          "Emails already sent remain in the recipient's mailbox, and HeyMoa cannot recall or delete them. This applies even after a note or account is deleted.",
           "Records needed for security, dispute resolution, or legal compliance may be stored separately for the period set by the applicable law.",
           "Electronic files are deleted so that they are difficult to recover, and backup data is removed in turn according to the operating cycle."
         ]
@@ -219,7 +227,7 @@
               ["Region", "Republic of Korea (Seoul region)"],
               [
                 "Data sent",
-                "All data stored by the Service, the recipient email addresses, messages, and meeting notes PDFs of sharing emails, and invitation emails"
+                "All data stored by the Service, the recipient email addresses, messages, and meeting notes PDFs of sharing emails, invitation emails, and the recipient email addresses and meeting titles of service notification emails"
               ],
               [
                 "Purpose",

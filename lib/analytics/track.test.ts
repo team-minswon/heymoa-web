@@ -26,6 +26,23 @@ describe("이벤트 타입", () => {
       tab: "context" | "details" | "transcript" | "summary";
     }>();
   });
+
+  // 메일·알림 유입 계측 (APP-1309): 출처는 닫힌 값이고 노트 id·이메일·이름·제목 자리는 없다
+  it("note_opened 는 출처를 enum 으로만 받고 식별·내용 값을 받지 않는다", () => {
+    type NoteOpened = Parameters<typeof track<"note_opened">>[1] & {};
+    expectTypeOf<NoteOpened>().toEqualTypeOf<{
+      workspace_id: string;
+      view: "side" | "full";
+      source: "list" | "notification" | "mail";
+    }>();
+    expectTypeOf<"note_id" | "noteId" | "email" | "name" | "title">().not.toExtend<keyof NoteOpened>();
+    // @ts-expect-error 등록하지 않은 출처는 보낼 수 없다
+    track("note_opened", { workspace_id: "W1", view: "side", source: "push" });
+    // @ts-expect-error 출처를 빠뜨릴 수 없다
+    track("note_opened", { workspace_id: "W1", view: "side" });
+    // @ts-expect-error 제목 같은 내용을 실을 수 없다
+    track("note_opened", { workspace_id: "W1", view: "side", source: "mail", title: "회의" });
+  });
 });
 
 // 가이드 이벤트(로그인 전 방문자도 온다): 이름은 유니온에만, 속성은 닫힌 값·숫자·slug 뿐이고 검색어 원문 필드는 없다.

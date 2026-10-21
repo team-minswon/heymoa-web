@@ -230,6 +230,7 @@ export const NoteListRow = memo(function NoteListRow({
           track("note_opened", {
             workspace_id: workspaceId,
             view: "side",
+            source: "list",
           })
         }
         aria-label={`${note.title} 노트 열기`}
@@ -309,6 +310,7 @@ export const NoteListRow = memo(function NoteListRow({
               track("note_opened", {
                 workspace_id: workspaceId,
                 view: "full",
+                source: "list",
               })
             }
             // `onNavigate`는 실제 클라이언트 이동에만 불린다 — ⌘+클릭(새 탭)에서는 안 돈다.

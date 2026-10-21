@@ -13,8 +13,8 @@ import type { Locale } from "@/lib/i18n/locales";
  */
 
 /** 약관·개인정보처리방침 시행일. 시행일이 곧 최종 수정일이다. 조항을 고치면 같이 고친다(페이지 머리 표시도 이 값이다). */
-export const TERMS_EFFECTIVE = "2026-10-18";
-export const PRIVACY_EFFECTIVE = "2026-10-18";
+export const TERMS_EFFECTIVE = "2026-10-22";
+export const PRIVACY_EFFECTIVE = "2026-10-22";
 
 export const PAGE_MODIFIED = {
   "/": { ko: "2026-10-21", en: "2026-10-21" },

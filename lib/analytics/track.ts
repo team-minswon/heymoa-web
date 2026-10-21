@@ -76,7 +76,13 @@ type HelpLanguage = "ko" | "en";
 export type WebEventProperties = {
   recording_start_clicked: { workspace_id: string; retry: boolean };
   recording_stop_clicked: { surface: "note" | "global" };
-  note_opened: { workspace_id: string; view: "side" | "full" };
+  // source: 어디서 노트에 들어왔나. 목록 행 클릭은 list, 메일 링크(utm_medium=email)는 mail,
+  // 알림 모달 이동은 notification(발화는 PRO-67 I21·I09). 노트 id·제목은 싣지 않는다.
+  note_opened: {
+    workspace_id: string;
+    view: "side" | "full";
+    source: "list" | "notification" | "mail";
+  };
   note_tab_opened: {
     workspace_id: string;
     tab: "context" | "details" | "transcript" | "summary";
