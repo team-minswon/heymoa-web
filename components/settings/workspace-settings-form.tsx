@@ -86,8 +86,8 @@ export function WorkspaceSettingsForm({
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <h2 className="text-3xl font-light tracking-[-0.025em]">
-          워크스페이스 일반
+        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+          일반
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
           이 공간의 이름과 설명을 관리합니다.
@@ -139,8 +139,8 @@ export function WorkspaceSettingsFormSkeleton() {
       aria-label="워크스페이스 설정 불러오는 중"
     >
       <div>
-        <h2 className="text-3xl font-light tracking-[-0.025em]">
-          워크스페이스 일반
+        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+          일반
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
           이 공간의 이름과 설명을 관리합니다.

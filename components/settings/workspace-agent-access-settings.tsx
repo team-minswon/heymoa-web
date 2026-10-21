@@ -111,7 +111,7 @@ export function WorkspaceAgentAccessSettings({
     <div className="mx-auto w-full max-w-[720px]">
       <header className="mb-8">
         <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          MCP 관리
+          MCP 연결
         </h2>
         <p className="mt-2 text-sm text-[var(--el-muted)]">
           팀원이 Claude·ChatGPT 같은 AI 앱에 이 워크스페이스를 연결해도 되는지

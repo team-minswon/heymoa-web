@@ -4,7 +4,7 @@ description: Let AI apps like Claude and ChatGPT read the meetings and projects 
 group: connect
 slug: agent-mcp
 order: 2
-modified: 2026-10-21
+modified: 2026-10-22
 ---
 
 ## Connect an AI app {#connect}
@@ -54,7 +54,7 @@ Where there's no browser, use a personal token (an access password you give to t
 
 ## Manage MCP connections as an admin {#admin}
 
-Admins turn **[Allow MCP connection]** on or off in **[Settings]** → **[Workspace]** → **[Manage MCP]**. While it's off, no one can create new connections.
+Admins turn **[Allow MCP connection]** on or off in **[Settings]** → **[Workspace]** → **[MCP connections]**. While it's off, no one can create new connections.
 
 > [!Can't be undone]
 > Turning off **[Allow MCP connection]** revokes every existing connection to this workspace. Turning it back on doesn't restore them.

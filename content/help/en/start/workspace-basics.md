@@ -4,14 +4,14 @@ description: Where to find the sidebar, projects, the note list, and the setting
 group: start
 slug: workspace-basics
 order: 2
-modified: 2026-10-21
+modified: 2026-10-22
 ---
 
 ## Sidebar {#sidebar}
 
 Click the workspace name at the top to switch to another workspace or create a **[New workspace]**. You also open **[Workspace settings]** from here.
 
-Below that are **[All notes]**, **[Tasks]**, **[User guide]**, **[Help & feedback]**, and your list of projects. Click your name at the very bottom to find **[Account settings]**, **[Show the intro again]**, and **[Log out]**.
+Below that are **[All notes]**, **[Tasks]**, and your list of projects. **[User guide]** and **[Help & feedback]** sit below the projects. Click your name at the very bottom to find **[Account settings]**, **[Show the intro again]**, and **[Log out]**.
 
 Press `kbd:⌘B` (`kbd:Ctrl+B` on Windows) to collapse or expand the sidebar.
 
@@ -64,7 +64,7 @@ The left side of the window has two groups.
 
 | Group | What's in it |
 |---|---|
-| **[Workspace]** | **[General]**, **[Members]**, **[Guest participants]**, **[Glossary]**, **[Integrations]**, **[Manage MCP]** |
+| **[Workspace]** | **[General]**, **[Members]**, **[Guest participants]**, **[Glossary]**, **[Integrations]**, **[MCP connections]** |
 | **[Account]** | **[My account]**, **[My MCP connections]** |
 
 In **[General]**, you edit the workspace name and description. Only admins can do this.

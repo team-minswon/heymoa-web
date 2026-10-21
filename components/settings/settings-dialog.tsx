@@ -8,8 +8,9 @@ import type { SettingsSection } from "@/lib/workspace/settings-url";
 import {
   BookA,
   Bot,
-  Building2,
   Plug,
+  Settings,
+  ShieldCheck,
   UserRound,
   UserRoundPlus,
   UsersRound,
@@ -45,8 +46,11 @@ export type { SettingsSection };
  *
  * 외부 에이전트 연결(APP-804)은 **계정** 쪽이다. 위임은 팀원 본인이 만들고 본인만 보며,
  * 워크스페이스 설정을 바꾸지 않는다(제품 정의 「표면과 위임」). 팀이 그 연결을 받을지와 열린 연결을
- * 끊는 관리(APP-941)는 **워크스페이스** 쪽 「MCP 관리」다. 두 항목은 같은 말에 누구 것인지를 붙여 가른다
+ * 끊는 관리(APP-941)는 **워크스페이스** 쪽 「MCP 연결」이다. 두 항목은 같은 말에 누구 것인지를 붙여 가른다
  * (Notion 「연결 / 내 연결」 식) — 둘 다 「외부 에이전트」였을 때는 메뉴만 보고 어느 쪽인지 갈리지 않았다.
+ * 아이콘도 가른다(APP-1325): 내 연결은 `Bot`, 팀이 받을지 정하는 쪽은 `ShieldCheck`. 같은 목적지는
+ * 사이드바 메뉴와 같은 아이콘이다 — 「워크스페이스 설정」이 여는 「일반」은 `Settings`, 「내 계정 설정」이 여는
+ * 「내 계정」은 `UserRound`. 계정 그룹의 「내 계정」 다음은 PRO-67 I10 「알림」 탭(`BellRing`) 자리다.
  * 그 말을 「MCP」로 한 것은 사용자가 연결하며 상대편에서 보는 말(claude.ai 커넥터의 원격 MCP 서버 URL,
  * ChatGPT 개발자 모드, `mcp add`)과 맞추려는 것이다. 뜻은 각 화면의 설명 문장이 쉬운 말로 푼다.
  * 「연동」은 HeyMoa 가 나가는 연결이라 들어오는 연결과 섞지 않는다.
@@ -56,18 +60,18 @@ const SETTINGS_GROUPS: {
   items: {
     key: SettingsSection;
     label: string;
-    Icon: typeof Building2;
+    Icon: typeof Settings;
   }[];
 }[] = [
   {
     label: "워크스페이스",
     items: [
-      { key: "workspace", label: "일반", Icon: Building2 },
+      { key: "workspace", label: "일반", Icon: Settings },
       { key: "members", label: "멤버", Icon: UsersRound },
       { key: "guests", label: "임시 참여자", Icon: UserRoundPlus },
       { key: "terms", label: "용어 사전", Icon: BookA },
       { key: "integrations", label: "연동", Icon: Plug },
-      { key: "workspaceAgents", label: "MCP 관리", Icon: Bot },
+      { key: "workspaceAgents", label: "MCP 연결", Icon: ShieldCheck },
     ],
   },
   {
@@ -142,7 +146,8 @@ function SettingsSections({
                       : "hover:bg-[var(--el-surface-strong)]"
                   )}
                 >
-                  <Icon />
+                  {/* 사이드바·메뉴 아이콘과 같은 muted (APP-1325) */}
+                  <Icon className="size-4 text-[var(--el-muted)]" aria-hidden />
                   {label}
                 </Button>
               ))}

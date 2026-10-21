@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { onTrack } from "@/lib/analytics/track";
@@ -65,14 +71,23 @@ describe("SettingsDialog", () => {
   it("탭 선택을 한 번 기록하고 같은 탭·리렌더는 세지 않습니다", () => {
     const heard = vi.fn();
     const unsubscribe = onTrack(heard);
-    const props = { open: true, onOpenChange: vi.fn(), workspaceId: "01K0000000000" };
+    const props = {
+      open: true,
+      onOpenChange: vi.fn(),
+      workspaceId: "01K0000000000",
+    };
     try {
       const { rerender } = render(<SettingsDialog {...props} />);
       expect(heard).not.toHaveBeenCalled();
       fireEvent.click(screen.getByRole("button", { name: "멤버" }));
       fireEvent.click(screen.getByRole("button", { name: "멤버" }));
       rerender(<SettingsDialog {...props} />);
-      expect(heard.mock.calls).toEqual([["settings_tab_opened", { workspace_id: props.workspaceId, section: "members" }]]);
+      expect(heard.mock.calls).toEqual([
+        [
+          "settings_tab_opened",
+          { workspace_id: props.workspaceId, section: "members" },
+        ],
+      ]);
     } finally {
       unsubscribe();
     }
@@ -126,7 +141,7 @@ describe("SettingsDialog", () => {
   });
 
   // 같은 말에 누구 것인지를 붙여 가른다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)
-  it("워크스페이스 쪽 「MCP 관리」는 관리, 계정 쪽 「내 MCP 연결」은 내 연결을 연다", () => {
+  it("워크스페이스 쪽 「MCP 연결」는 관리, 계정 쪽 「내 MCP 연결」은 내 연결을 연다", () => {
     render(
       <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
     );
@@ -134,7 +149,7 @@ describe("SettingsDialog", () => {
     fireEvent.click(
       within(screen.getByRole("group", { name: "워크스페이스" })).getByRole(
         "button",
-        { name: "MCP 관리" }
+        { name: "MCP 연결" }
       )
     );
     expect(screen.getByText("외부 에이전트 관리 내용")).toBeInTheDocument();

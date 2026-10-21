@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Trash2,
+  UserRound,
   ChevronsUpDown,
   ChevronDown,
   CircleHelp,
@@ -285,7 +286,9 @@ export function WorkspaceSidebar({
 
       <SidebarContent className="px-1.5 py-2">
         <nav aria-label="워크스페이스">
-          {/* ── 모든 노트 ── */}
+          {/* ── 작업: 모든 노트 · 할 일 ──
+              PRO-67 I09 의 「알림」(`Bell`)이 이 묶음의 첫 항목으로 들어온다. 도움(가이드·문의)은
+              작업이 아니라 아래 고정 묶음으로 뗐다(APP-1325). */}
           <SidebarGroup className="py-0.5">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -315,37 +318,6 @@ export function WorkspaceSidebar({
                   >
                     <NavigationIcon icon={ListTodo} />
                     <span>할 일</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  {/* 브라우저에서는 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱은 같은 사이트 주소의 새 창을
-                      막고 외부 브라우저로도 넘기지 않아서 앱 안에서 이동한다(`openSitePage`). */}
-                  <SidebarMenuButton
-                    onClick={() => {
-                      track("help_opened", { from: "sidebar" });
-                      openSitePage("/help", router.push);
-                    }}
-                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
-                  >
-                    <NavigationIcon icon={CircleHelp} />
-                    <span>사용 가이드</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  {/* 푸터의 문의 메일은 랜딩에만 있었다. 로그인한 화면 안에서 바로 보낼 수 있게 도움말 아래에 둔다(APP-1173). */}
-                  <SidebarMenuButton
-                    onClick={() => {
-                      track("feedback_opened", { from: "sidebar" });
-                      setFeedbackOpen(true);
-                    }}
-                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
-                  >
-                    <NavigationIcon icon={MessageSquareText} />
-                    <span>문의·피드백</span>
-                    <UnseenCount
-                      count={feedbackUnseen}
-                      className="ml-auto text-[11px] text-[var(--el-muted)]"
-                    />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -478,9 +450,51 @@ export function WorkspaceSidebar({
         </nav>
       </SidebarContent>
 
-      {/* ── User profile (footer) ── */}
       {onboarding}
 
+      {/* ── 도움: 사용 가이드 · 문의·피드백 ──
+          작업 메뉴와 섞이지 않게 프로젝트 목록 밖, 계정 바로 위에 고정한다(APP-1325).
+          프로젝트가 많아 목록이 스크롤돼도 늘 같은 자리에 있다. */}
+      {/* 왼쪽 기준선을 위 작업 묶음과 맞춘다: SidebarContent px-1.5 + SidebarGroup p-2 = 14px */}
+      <SidebarGroup className="px-3.5 py-2">
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              {/* 브라우저에서는 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱은 같은 사이트 주소의 새 창을
+                막고 외부 브라우저로도 넘기지 않아서 앱 안에서 이동한다(`openSitePage`). */}
+              <SidebarMenuButton
+                onClick={() => {
+                  track("help_opened", { from: "sidebar" });
+                  openSitePage("/help", router.push);
+                }}
+                className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+              >
+                <NavigationIcon icon={CircleHelp} />
+                <span>사용 가이드</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              {/* 푸터의 문의 메일은 랜딩에만 있었다. 로그인한 화면 안에서 바로 보낼 수 있게 도움말 아래에 둔다(APP-1173). */}
+              <SidebarMenuButton
+                onClick={() => {
+                  track("feedback_opened", { from: "sidebar" });
+                  setFeedbackOpen(true);
+                }}
+                className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+              >
+                <NavigationIcon icon={MessageSquareText} />
+                <span>문의·피드백</span>
+                <UnseenCount
+                  count={feedbackUnseen}
+                  className="ml-auto text-[11px] text-[var(--el-muted)]"
+                />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      {/* ── User profile (footer) ── */}
       <SidebarFooter className="p-0 border-t border-[var(--el-hairline)]">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -521,7 +535,8 @@ export function WorkspaceSidebar({
               onClick={() => onOpenSettings("account")}
               className="gap-2 rounded-control py-2 text-sm"
             >
-              <Settings className="size-4 text-[var(--el-muted)]" />
+              {/* 설정의 「내 계정」 탭과 같은 아이콘 — 같은 목적지(APP-1325) */}
+              <UserRound className="size-4 text-[var(--el-muted)]" />
               <span>내 계정 설정</span>
             </DropdownMenuItem>
             {user && (

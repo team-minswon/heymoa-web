@@ -147,7 +147,7 @@ const SHOTS = {
   // 설정 › 멤버 › 이름 변경
   async "members/rename"({ page }) {
     await open(page, `/w/${IDS.workspace}?settings=members`);
-    // 멤버 행의 「⋯」(aria 「이름(이메일) 관리」) — 설정 탭 「MCP 관리」와 헷갈리지 않게 이메일이 든 것만
+    // 멤버 행의 「⋯」(aria 「이름(이메일) 관리」) — 설정 탭 「MCP 연결」와 헷갈리지 않게 이메일이 든 것만
     // 내가 아닌 멤버(두 번째 줄)의 이름을 바꾸는 장면으로 찍는다
     await dialog(page)
       .getByRole("button", { name: /@.*\) 관리$/ })
