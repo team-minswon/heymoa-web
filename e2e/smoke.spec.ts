@@ -226,7 +226,7 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
   await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
   await page.getByRole("menuitem", { name: "삭제" }).click();
   const dialog = page.getByRole("alertdialog");
-  await expect(dialog).toContainText("프로젝트의 다른 회의록·결정사항·할 일과 개인 대화는 삭제되지 않아요.");
+  await expect(dialog).toContainText("같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다.");
   await dialog.getByRole("button", { name: "삭제", exact: true }).click();
 
   await expect(

@@ -138,11 +138,11 @@ describe("NoteDeleteDialog", () => {
 
     expect(screen.getByRole("heading", { name: "회의록을 삭제할까요?" })).toBeInTheDocument();
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual([
-      "이 회의의 녹음·스크립트·요약과 발언에 연결된 근거가 삭제돼요.",
-      "프로젝트의 다른 회의록·결정사항·할 일과 개인 대화는 삭제되지 않아요.",
-      "진행 중인 녹음은 종료되며, 삭제한 회의록은 복구할 수 없어요.",
-    ]);
+    expect(screen.getByText(/발언에 연결된 근거가 함께 삭제됩니다/)).toBeInTheDocument();
+    expect(screen.getByText(/삭제한 회의록은 되돌릴 수 없습니다/)).toBeInTheDocument();
+    expect(
+      screen.getByText("같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다.")
+    ).toBeInTheDocument();
   });
 
   it("204면 목록을 무효화하고 성공을 알린 뒤 호출자에게 넘긴다", async () => {
@@ -167,7 +167,7 @@ describe("NoteDeleteDialog", () => {
     fireEvent.click(button);
     expect(deleteNote).not.toHaveBeenCalled();
     expect(
-      screen.getByText("회의 분석이 끝난 뒤 삭제할 수 있어요.")
+      screen.getByText("회의 분석이 끝나면 삭제할 수 있습니다.")
     ).toBeInTheDocument();
   });
 
@@ -175,7 +175,7 @@ describe("NoteDeleteDialog", () => {
     server.use(http.get(FLOW_PATH, () => HttpResponse.json(flowBody("ANALYZING"))));
     renderDialog(undefined, "ANALYSIS_FAILED");
     expect(screen.getByRole("button", { name: "삭제" })).toBeDisabled();
-    await screen.findByText("회의 분석이 끝난 뒤 삭제할 수 있어요.");
+    await screen.findByText("회의 분석이 끝나면 삭제할 수 있습니다.");
     fireEvent.click(screen.getByRole("button", { name: "삭제" }));
     expect(deleteNote).not.toHaveBeenCalled();
   });

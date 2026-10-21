@@ -227,7 +227,7 @@ test("회의록 삭제 확인창의 긴 문구에서 한국어 낱말이 줄 끝
         if (lines.size > 1) broken.push(match[0]);
       }
     }
-    const item = root.querySelector("li");
+    const item = root.querySelector("p");
     return {
       broken,
       words,

@@ -132,7 +132,7 @@ test("분석 중에는 삭제 확인을 비활성화한다", async ({ page }) =>
   await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
   await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
   const dialog = page.getByRole("alertdialog");
-  await expect(dialog.getByText("회의 분석이 끝난 뒤 삭제할 수 있어요.")).toBeVisible();
+  await expect(dialog.getByText("회의 분석이 끝나면 삭제할 수 있습니다.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "삭제", exact: true })).toBeDisabled();
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(page.getByRole("button", { name: "노트 메뉴", exact: true })).toBeVisible();
