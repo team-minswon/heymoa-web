@@ -8,10 +8,12 @@
  *
  * 이름이 안 붙은 화자는 이것과 **다르다** — `unnamedSpeakerAvatarKey`로 그려서, 앱에서도 화자 A와
  * 김민서는 이름을 이어 주기 전까지 다른 얼굴이다.
+ *
+ * 열쇠는 로마자 식별자다. 보이는 이름은 언어 파일(`landing.people`)이 언어마다 낸다.
  */
-export const FACE_KEY: Record<string, string> = {
-  김민서: "landing:kim-minseo",
-  박지훈: "landing:park-jihoon",
-  이서연: "landing:lee-seoyeon",
-  정우재: "landing:jeong-woojae",
-};
+export const FACE_KEY = {
+  minseo: "landing:kim-minseo",
+  jihoon: "landing:park-jihoon",
+  seoyeon: "landing:lee-seoyeon",
+  woojae: "landing:jeong-woojae",
+} as const;

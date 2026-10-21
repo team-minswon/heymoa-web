@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,7 @@ const SPY_OFFSET = 120;
  */
 export function HelpPageToc({
   sections,
-  label = "이 페이지에서",
+  label,
   hideLabel = false,
   className,
 }: {
@@ -24,6 +25,7 @@ export function HelpPageToc({
   hideLabel?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("help.page");
   const [active, setActive] = useState<string | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
@@ -85,10 +87,10 @@ export function HelpPageToc({
   }, [sections]);
 
   return (
-    <nav aria-label={`${label} 목차`} className={className}>
+    <nav aria-label={t("toc")} className={className}>
       {hideLabel ? null : (
         <p className="m-0 mb-2 px-3 text-[13px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]">
-          {label}
+          {label ?? t("onThisPage")}
         </p>
       )}
       <ol
@@ -110,7 +112,7 @@ export function HelpPageToc({
                 data-help-nav="toc"
                 aria-current={on ? "location" : undefined}
                 className={cn(
-                  "relative -ml-px flex min-h-8 items-center rounded-r-[8px] py-1 pr-3 pl-3.5 text-[13px] leading-[1.45] break-keep help-fade",
+                  "relative -ml-px flex min-h-8 items-center rounded-r-[8px] py-1 pr-3 pl-3.5 text-[13px] leading-[1.45] help-fade",
                   FOCUS,
                   on
                     ? "bg-[var(--tv-lav-soft)] text-[var(--tv-ink)]"

@@ -1,0 +1,328 @@
+{
+  "ui": {
+    "label": "Legal",
+    "toc": "Contents",
+    "tocLabel": "{title} contents",
+    "effectiveDate": "Effective",
+    "translationNotice": "This English translation is provided for reference only. If it differs from the Korean version, the Korean version prevails.",
+    "koreanVersion": "Read the Korean version"
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "metaDescription": "The terms for using {brand} accounts, workspaces, real-time meeting transcripts, and saved notes.",
+    "description": "The basic principles users of the Service should know to handle meeting audio safely and use automatic transcripts responsibly.",
+    "sections": [
+      {
+        "title": "1. Purpose and Scope",
+        "body": [
+          "These Terms set out the conditions of use and operating principles for the meeting notes, real-time voice transcription, automatic summaries, agent queries, notes, and workspace features provided by HeyMoa.",
+          "By using the Service, you are deemed to have agreed to these Terms and the Privacy Policy."
+        ]
+      },
+      {
+        "title": "2. The Service",
+        "body": [
+          "You can create workspaces and projects and manage meeting notes. HeyMoa transcribes meeting audio in real time and saves it as a transcript.",
+          "On the web, HeyMoa records audio from your browser's microphone. In the desktop app, it can also record the sound coming from your computer (including the voices of other participants in a video call) along with your microphone.",
+          "During a meeting, decisions, tasks, and questions are organized as they come up, and when the meeting ends it is summarized into an overview, tasks, and decisions. Each organized item is linked to the transcript lines where it was said, as its source.",
+          "You can ask the agent questions during and after a meeting. Each answer shows the meeting notes it actually referred to.",
+          "You can register workspace members and temporary participants without an account as meeting attendees.",
+          "You can share meeting notes by email, connect external tools such as Linear and GitHub as well as external AI agents, and send inquiries and feedback from within the Service.",
+          "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies, and HeyMoa will give notice of significant changes by reasonable means."
+        ]
+      },
+      {
+        "title": "3. Accounts and Workspaces",
+        "body": [
+          "You must keep your account information accurate and make sure your authentication credentials are not exposed to third parties.",
+          "Workspace administrators must set members' access permissions and sharing scope appropriately. You must not access meeting information in a workspace you have not been invited to.",
+          "If you discover account theft or unauthorized access, you must notify HeyMoa immediately."
+        ]
+      },
+      {
+        "title": "4. Recording and Use of Transcripts",
+        "body": [
+          "Before recording meeting audio, you must confirm for yourself the procedures required by law and internal rules, such as notifying attendees and obtaining their consent. Some attendees may not have signed up for the Service, and their voices are processed as well.",
+          "When you record computer audio with the desktop app, the voices of other participants in the video call are recorded too, and the same notice and consent procedures are required for them. Microphone and computer audio recording work only when you have allowed them in your operating system.",
+          "Automatic transcripts and speaker separation may be inaccurate depending on pronunciation, network conditions, background noise, and the processing results of the speech recognition provider. Assigning names to speakers is your choice, and you are also responsible for checking that those names are accurate.",
+          "For important judgments such as those involving contracts, personnel, medical, or legal matters, do not rely on transcripts or automatic summaries as the sole basis. They must be checked against the original and by the person in charge."
+        ]
+      },
+      {
+        "title": "5. Automatic Summaries and the Agent",
+        "body": [
+          "Summaries, real-time organization, and answers to questions are produced by large language models and may be factually wrong or miss context. The sources attached to an answer only indicate the material the model referred to and do not guarantee that its conclusions are accurate.",
+          "The agent answers only from materials in the workspaces you belong to. You can narrow that scope by specifying a project or meeting notes.",
+          "You are responsible for checking the original before using generated summaries and answers in your work."
+        ]
+      },
+      {
+        "title": "6. External Tools and External AI Agents",
+        "body": [
+          "You can connect Linear or GitHub to a workspace, and you decide when to connect and disconnect them.",
+          "Before the agent writes to an external tool, an approval screen shows what it will write. Only approved calls are actually executed, and links to the results remain in the conversation history.",
+          "You can allow external AI agents such as Claude and ChatGPT to read your workspace. Once allowed, the agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view, but it cannot change the content.",
+          "An external AI agent's access expires automatically if it is not used for 90 days, and you can revoke it at any time in Settings.",
+          "Data passed to external tools and external AI agents is subject to the terms and policies of those services. You must make sure the accounts used for these connections have only the permissions they need."
+        ]
+      },
+      {
+        "title": "7. User Content",
+        "body": [
+          "Rights to meeting audio, transcripts, notes, and other content you enter belong to you or the rightful owner.",
+          "You permit HeyMoa to transmit, process, store, and display your content to the extent necessary to provide the Service. This includes sending it to speech recognition providers and large language model providers to generate transcripts and automatic summaries. The details are in the Privacy Policy.",
+          "You must not process, without authorization, content that infringes other people's personal information, copyrights, trade secrets, or other rights."
+        ]
+      },
+      {
+        "title": "8. Prohibited Conduct",
+        "body": [
+          "Circumventing the Service or its authentication, accessing other people's accounts or workspaces without authorization, and harming the stability of the Service with malicious code or excessive automated requests are prohibited.",
+          "You may not use meeting note sharing emails, workspace invitations, or the inquiry feature for advertising, spam, or bulk messages that recipients do not want.",
+          "You may not use the Service for purposes that harm others, such as illegal interception, impersonation, or infringement of rights."
+        ]
+      },
+      {
+        "title": "9. Suspension and Limitation of Liability",
+        "body": [
+          "Features may be temporarily suspended because of maintenance, outages, network problems, or issues with external speech recognition or large language model services. HeyMoa will make reasonable efforts to restore the Service and protect data.",
+          "HeyMoa does not guarantee the complete accuracy or fitness for a particular purpose of automatic transcripts, speaker separation, automatic summaries, or agent answers. To the extent permitted by law, HeyMoa limits its liability for damages arising from using those results without your own verification.",
+          "Inquiries about using the Service, accounts, or these Terms can be sent to {email}."
+        ]
+      }
+    ]
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "metaDescription": "How {brand} processes account information, meeting audio, transcript data, and service usage records.",
+    "description": "What information HeyMoa processes and why, from the moment you record a meeting to when you look back at a saved transcript.",
+    "sections": [
+      {
+        "title": "1. Information We Process",
+        "body": [
+          "Sign-up and login: We process your email address, profile name and photo, and social login identifier.",
+          "Using the Service: We process workspace and project information, access logs (IP address, browser and device information, and access time), and service usage records.",
+          "Staying logged in: We store authentication tokens in browser cookies (access_token, refresh_token). These cookies are set so that scripts on web pages cannot read them (HttpOnly).",
+          "Meeting records: We process microphone audio and computer audio recorded by the desktop app, the transcripts and speaker separation results created from that audio, and meeting information such as note titles, attendee names, and pre-meeting agendas.",
+          "Attendees: Along with workspace members, we process the names of temporary participants without an account and of attendees who have not signed up. These names are used to label speakers, for AI summaries, and to improve speech recognition accuracy (Section 3).",
+          "Agent: We process the questions sent to the agent, its answers, and the identifiers of the meeting notes those answers referred to.",
+          "Integrations: When you connect Linear or GitHub, we process the linked account identifier and access token. When you connect an external AI agent, we process information about the connected app and records of its access permissions.",
+          "Invitations and sharing: We process the email addresses and invitation status of people invited to a workspace. When meeting notes are shared by email, we process the recipients' email addresses (including people who are not members), the message sent with them, and the attached meeting notes PDF.",
+          "Inquiries and feedback: We process the content of the inquiry, the sender (account name), the address of the screen it was sent from, and a summary of the browser and device environment."
+        ]
+      },
+      {
+        "title": "2. Purposes of Processing",
+        "body": [
+          "We use information to identify members and keep them logged in, run workspaces, provide real-time meeting transcripts, save and show notes, and keep the Service secure and prevent misuse.",
+          "We use it to organize meetings into an overview, tasks, and decisions, to answer questions during and after meetings, and to export to external tools only when you approve.",
+          "We use it to send meeting note sharing emails and invitation emails and to respond to inquiries.",
+          "We use access logs, usage records, and usage statistics to operate the Service, analyze outages, support users, and improve performance."
+        ]
+      },
+      {
+        "title": "3. Audio and Transcript Data",
+        "body": [
+          "On the web, we use the microphone only when you start recording and allow microphone access in your browser.",
+          "The desktop app can record the sound coming from your computer along with your microphone. Computer audio includes the voices of other participants in a video call. Both inputs work only when you have allowed them in your operating system (macOS or Windows).",
+          "Audio is sent in real time to a speech recognition provider to be transcribed, and the transcribed sentences are shown on screen.",
+          "To improve recognition accuracy, we may send meeting context along with the audio. Meeting context means the project name, meeting title, attendee names, pre-meeting agenda, the glossary you entered, and the meeting topic and background.",
+          "Transmitted audio is kept in encrypted storage (Seoul region, Republic of Korea) for speaker separation, transcript correction, and recovery from failures, and is not disclosed externally.",
+          "When a meeting ends, the saved audio is separated by speaker, and the results are shown with labels such as “Speaker A.” Assigning a person's name to a label is your choice.",
+          "Some attendees may not have signed up for the Service, and their voices and utterances are processed in the same way. The user who starts recording must confirm the necessary procedures, such as notifying attendees and obtaining their consent.",
+          "Automatic transcripts and speaker separation may contain errors, so you should check important decisions and proper nouns yourself."
+        ]
+      },
+      {
+        "title": "4. AI Processing and External Tools",
+        "body": [
+          "To produce summaries, real-time organization, and answers, we send the meeting's transcript, notes, attendee names, and your questions to large language model providers. Each answer shows the meeting notes it actually referred to.",
+          "When the agent uses web search, only search queries made up of general terms are sent to the search provider.",
+          "So that past meeting notes can be found and referenced, we convert transcripts and notes into numerical representations (vectors) and store them.",
+          "If you connect Linear or GitHub, an approval screen shows what the agent will write before it calls that tool. Only approved calls are executed, and nothing is exported automatically without approval.",
+          "If you entrust your workspace to an external AI agent such as Claude or ChatGPT, that agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view. The agent only reads and opens screens and does not change content.",
+          "An external AI agent's access expires automatically if it is not used for 90 days. You can disconnect Linear and GitHub integrations and external AI agents at any time, and when you do, the stored access permissions are destroyed."
+        ]
+      },
+      {
+        "title": "5. Cookies and Analytics",
+        "body": [
+          "The authentication cookies that keep you logged in are essential for using the Service. If you block these cookies in your browser, you will not stay logged in.",
+          "To remember the state of the screen, we store the following values in your browser: in the cookie sidebar_state, whether the sidebar is expanded; in browser storage (localStorage) values starting with heymoa:, the workspace and project you last opened, whether you have already seen guidance, temporary markers used for recovery when recording is interrupted, and your “Send usage statistics” setting; and in tab storage (sessionStorage), the identifier of the tab that is recording.",
+          "These values are stored separately for each browser and device. When you log out, we clear the per-user guidance markers.",
+          "To improve the Service, we collect visit paths, performance metrics, and feature usage records with Google Analytics 4, PostHog, Vercel Analytics, and Vercel Speed Insights. These tools may store identifiers in your browser or collect access information.",
+          "Instead of your email address or name, we send PostHog the Service's internal member and workspace identifiers, the features used and when (for example, creating a meeting, starting a recording, or completing a review), the addresses of screens visited (excluding the query after the address), and device and browser information. We do not use session recording or automatic click capture.",
+          "You can refuse or delete cookies and stored values in your browser settings. You can opt out of Google Analytics collection with the opt-out browser add-on provided by Google (tools.google.com/dlpage/gaoptout).",
+          "If you turn off “Send usage statistics” in your account settings, that browser no longer sends data to PostHog and no longer sends feature usage records to Google Analytics. This setting applies separately to each browser and device and does not apply to access and performance metrics in Vercel Analytics and Vercel Speed Insights. Turning it off does not limit your use of the Service.",
+          "Records processed on the server, such as completed meeting analyses, speaker separation results, and recording disconnections, are sent to PostHog to operate and improve the Service regardless of this setting. In that case too, only the member identifier, the workspace identifier, and the type of event are sent.",
+          "Analytics tools run only in the production environment, and the content of meeting audio, transcripts, and notes is not sent to them."
+        ]
+      },
+      {
+        "title": "6. Retention and Destruction",
+        "body": [
+          "Personal information and meeting data are kept for as long as needed to provide the Service. Once the deletion of an account or note has been processed, they are destroyed without delay, to the extent there is no legal obligation to retain them.",
+          "Meeting audio files are kept for as long as needed to provide the Service, and when you delete a note they are deleted together with the note, transcript, and summary.",
+          "Workspace invitation links are valid for only 24 hours after they are sent, and records of expired or canceled invitations are considered to have served their purpose.",
+          "Meeting notes PDFs shared by email are kept for 30 days after they are sent.",
+          "Records needed for security, dispute resolution, or legal compliance may be stored separately for the period set by the applicable law.",
+          "Electronic files are deleted so that they are difficult to recover, and backup data is removed in turn according to the operating cycle."
+        ]
+      },
+      {
+        "title": "7. Outsourcing and International Transfers",
+        "body": [
+          "To operate the Service, we entrust processing to the providers below to the extent necessary. Personal information is transferred abroad to providers located outside the Republic of Korea.",
+          "Transfers take place when you use the relevant feature, by encrypted network transmission. The purpose of each transfer is limited to performing the processing described below.",
+          "If you do not want your information transferred abroad, you can refuse by not using the relevant feature or by disconnecting it. If you refuse the transfers needed for speech recognition, AI summaries, or web hosting, you cannot use those features.",
+          "Providers below with no separately stated transfer country or retention period process data in their own processing regions and retain it according to their own policies.",
+          {
+            "vendor": "Soniox",
+            "role": "Real-time speech recognition",
+            "rows": [
+              [
+                "Data sent",
+                "Meeting audio and meeting context (project name, meeting title, attendee names, pre-meeting agenda, glossary, and meeting topic and background)"
+              ],
+              ["Purpose", "Transcribing meeting audio"]
+            ]
+          },
+          {
+            "vendor": "pyannote.ai",
+            "role": "Speaker separation",
+            "rows": [
+              [
+                "Data sent",
+                "Meeting audio files (delivered through a temporary download link)"
+              ],
+              ["Purpose", "Telling speakers apart after the meeting ends"]
+            ]
+          },
+          {
+            "vendor": "OpenRouter (relay) with OpenAI and Microsoft Azure (models)",
+            "role": "AI summaries and the agent",
+            "rows": [
+              [
+                "Data sent",
+                "Transcripts, notes, meeting information and attendee names, your questions, and search queries (when web search is used)"
+              ],
+              [
+                "Purpose",
+                "Summarizing meetings, extracting decisions and tasks, answering as the agent, and generating vectors for search"
+              ]
+            ]
+          },
+          {
+            "vendor": "Amazon Web Services",
+            "role": "Infrastructure and email delivery",
+            "rows": [
+              ["Region", "Republic of Korea (Seoul region)"],
+              [
+                "Data sent",
+                "All data stored by the Service, the recipient email addresses, messages, and meeting notes PDFs of sharing emails, and invitation emails"
+              ],
+              [
+                "Purpose",
+                "Running servers, storing data, and sending email (Amazon SES)"
+              ],
+              ["Retention", "Same as the retention periods in Section 6"]
+            ]
+          },
+          {
+            "vendor": "Vercel",
+            "role": "Web hosting and analytics",
+            "rows": [
+              [
+                "Data sent",
+                "Notes and transcripts being viewed (passed through while pages are generated and delivered), access logs, and performance metrics"
+              ],
+              [
+                "Purpose",
+                "Serving web pages and analyzing access and performance"
+              ]
+            ]
+          },
+          {
+            "vendor": "Google",
+            "role": "Usage analytics (Google Analytics 4)",
+            "rows": [
+              [
+                "Data sent",
+                "Visit paths, feature usage records, and device and browser information"
+              ],
+              ["Purpose", "Analyzing how the Service is used"],
+              [
+                "Opt-out",
+                "“Send usage statistics” in Section 5 and Google's opt-out browser add-on"
+              ]
+            ]
+          },
+          {
+            "vendor": "PostHog Inc. (privacy@posthog.com)",
+            "role": "Usage analytics",
+            "rows": [
+              ["Country", "United States"],
+              [
+                "Data sent",
+                "Member identifier, workspace identifier, feature usage records, addresses of screens visited, device and browser information, and access IP address (used only to estimate country and city, and not stored)"
+              ],
+              ["Purpose", "Analyzing how the Service is used in order to improve it"],
+              ["Retention", "1 year"],
+              [
+                "Opt-out",
+                "“Send usage statistics” in Section 5. Opting out does not limit your use of the Service"
+              ]
+            ]
+          },
+          {
+            "vendor": "Grafana Cloud",
+            "role": "Service monitoring",
+            "rows": [
+              [
+                "Data sent",
+                "Server logs and metrics (request and error records), and usage records needed to operate the Service and support users, such as user names"
+              ],
+              [
+                "Purpose",
+                "Detecting outages and analyzing their causes, operational alerts, and user support"
+              ]
+            ]
+          },
+          {
+            "vendor": "Slack",
+            "role": "Operational alerts",
+            "rows": [
+              [
+                "Data sent",
+                "Usage records needed to operate the Service and support users, such as user names"
+              ],
+              ["Purpose", "Alerting operators"]
+            ]
+          },
+          "Please send inquiries about international transfers to {email}."
+        ]
+      },
+      {
+        "title": "8. Your Rights",
+        "body": [
+          "You may request access to, correction or deletion of, or suspension of the processing of your personal information and meeting data, and you may withdraw your consent.",
+          "Requests are handled after your identity is verified, and information that must be kept under law may be deleted after that period ends."
+        ]
+      },
+      {
+        "title": "9. Security Measures",
+        "body": [
+          "HeyMoa applies the measures needed to protect personal information and meeting data, such as restricting access permissions, encrypting data in transit, managing authentication information, and reviewing logs.",
+          "Authentication tokens are handled as HttpOnly cookies that scripts cannot read, and meeting data is available only to workspace members and to the people and services you share it with by email or connect."
+        ]
+      },
+      {
+        "title": "10. Changes to This Policy",
+        "body": [
+          "When we change this Policy because of changes in law or in the Service, we will announce the changes and their effective date in the Service in advance.",
+          "Changes that are unfavorable to users will be announced at least 30 days before they take effect, and previous versions of this Policy are kept so that you can review them on request."
+        ]
+      }
+    ]
+  }
+}

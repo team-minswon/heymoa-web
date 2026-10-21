@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import Image from "next/image";
 
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
@@ -61,16 +62,19 @@ export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
             <GoogleLoginButton className="w-full flex justify-center [&>button]:w-full" />
             <p className="mt-6 text-xs text-[var(--el-muted)]">
               계속 진행하면 HeyMoa의{" "}
-              <a href="/terms" className="underline hover:text-[var(--el-ink)]">
+              <Link
+                href="/terms"
+                className="underline hover:text-[var(--el-ink)]"
+              >
                 서비스 이용약관
-              </a>
+              </Link>
               과{" "}
-              <a
+              <Link
                 href="/privacy"
                 className="underline hover:text-[var(--el-ink)]"
               >
                 개인정보 처리방침
-              </a>
+              </Link>
               에 동의하는 것으로 간주됩니다.
             </p>
           </div>

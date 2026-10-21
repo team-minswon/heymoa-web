@@ -19,7 +19,7 @@ export function HelpSteps({ children }: { children: readonly ReactNode[] }) {
           >
             {index + 1}
           </span>
-          <span className="break-keep">{step}</span>
+          <span>{step}</span>
         </li>
       ))}
     </ol>

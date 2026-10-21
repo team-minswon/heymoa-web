@@ -56,11 +56,18 @@ describe("NoteParticipantAvatars", () => {
     expect(screen.queryByLabelText(/외 \d+명/)).toBeNull();
   });
 
-  it("max를 넘으면 앞의 max명만 보이고 나머지는 +N으로 접는다", () => {
+  it("max를 넘으면 마지막 칸을 +N으로 바꿔 +1이 나오지 않는다", () => {
     renderAvatars(7, 3);
 
-    expect(screen.getAllByLabelText(/@heymoa\.com/)).toHaveLength(3);
-    expect(screen.getByLabelText("외 4명")).toHaveTextContent("+4");
+    expect(screen.getAllByLabelText(/@heymoa\.com/)).toHaveLength(2);
+    expect(screen.getByLabelText("외 5명")).toHaveTextContent("+5");
+  });
+
+  it("max와 인원이 같으면 칩 없이 모두 보인다", () => {
+    renderAvatars(4, 4);
+
+    expect(screen.getAllByLabelText(/@heymoa\.com/)).toHaveLength(4);
+    expect(screen.queryByLabelText(/^외 /)).toBeNull();
   });
 
   it("아바타 라벨에 이름과 이메일이 함께 들어간다", () => {

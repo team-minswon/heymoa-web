@@ -1,6 +1,6 @@
 "use client";
 
-import { helpPathById } from "@/app/(static)/help/_content/path-by-id";
+import { helpPathById } from "@/app/[lang]/help/_content/path-by-id";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/ui/toast";

@@ -181,7 +181,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
           aria-label="연결 요청을 불러오는 중"
         />
       )}
-      <p className="mt-2 text-base break-keep text-[var(--el-muted)]">
+      <p className="mt-2 text-base text-[var(--el-muted)]">
         이 앱이 HeyMoa 워크스페이스를 맡겨 달라고 요청합니다.
       </p>
       <p className="mt-3 inline-flex items-center gap-1.5 rounded-chip bg-[var(--el-canvas-soft)] px-3 py-1 text-sm text-[var(--el-muted)]">
@@ -191,7 +191,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
 
       <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-left text-base">
         <dt className="text-[var(--el-muted)]">돌아갈 곳</dt>
-        <dd className="min-w-0 break-keep wrap-anywhere">
+        <dd className="min-w-0 wrap-anywhere">
           {request ? (
             <>허락하면 {request.redirectHost} 로 돌아갑니다</>
           ) : (

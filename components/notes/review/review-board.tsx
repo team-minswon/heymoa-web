@@ -173,7 +173,7 @@ export function ReviewBoard({
   dockRaised?: boolean;
   onOpenScript: (segmentId: string) => void;
   onOpenTranscript: () => void;
-  onOpenTimeline?: () => void;
+  onOpenTimeline?: (agendaId: string | null) => void;
 }) {
   const queryClient = useQueryClient();
   const editor = useReviewEditor(noteId);
@@ -1084,7 +1084,7 @@ export function ReviewBoard({
             <div>
               {relationsNotice}
               {summary?.status === "SUCCEEDED" && overviewText(summary) ? (
-                <p className="mb-5 max-w-[60ch] text-base leading-7 break-keep text-[var(--el-ink)]">
+                <p className="mb-5 max-w-[60ch] text-base leading-7 text-[var(--el-ink)]">
                   {overviewText(summary)}
                 </p>
               ) : null}

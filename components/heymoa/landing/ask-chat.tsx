@@ -3,13 +3,15 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { ArrowRight } from "lucide-react";
+import { useMessages, useTranslations } from "next-intl";
 
-import { ASKS, SEED, TITLE } from "@/components/heymoa/landing/use-demo";
+import { useDemoCopy, type Ask } from "@/components/heymoa/landing/use-demo";
 import { cn } from "@/lib/utils";
 
 import {
@@ -21,6 +23,7 @@ import {
   ScopeChip,
   ThreadTitle,
   UserBubble,
+  type Person,
 } from "./app";
 import { AnswerRefs } from "./app-client";
 import { useFollowBottom, useOnceInView, useReducedMotion } from "./hooks";
@@ -34,10 +37,10 @@ import { CONTAINER, FOCUS, LABEL, SHADOW } from "./tokens";
  *
  * 창 안은 앱(`note-agent-rail.tsx` 머리 · `personal-chat.tsx` 제목 줄 · `chat-thread.tsx` 말풍선 ·
  * `chain-of-thought.tsx` 「참고한 회의록 N개」 · `chat-composer.tsx` 입력창)을 `app.tsx` 로 그린 것이고
- * 답은 `use-demo.ts` 의 `SEED` · `ASKS` 그대로다(지어 쓰지 않는다). 혼자 도는 장면은 히어로 레일이 쓰지
+ * 답은 `use-demo.ts` 의 `seed` · `asks` 그대로다(지어 쓰지 않는다). 혼자 도는 장면은 히어로 레일이 쓰지
  * 않는 것만 맡는다: 지난 회의까지 넓혀 찾은 참고 둘을 **펼쳐** 보이기, 할 일 담당을 이름으로 짚는 답
- * (`ASKS[1]` — 이름을 붙여 둔 뒤의 회의).
- * 히어로 레일의 질문(`ASKS[2]`)은 누를 때만 들어가는 마지막 쪽지다. 승인 카드는 이 구간에 두지 않는다
+ * (`asks[1]` — 이름을 붙여 둔 뒤의 회의).
+ * 히어로 레일의 질문(`asks[2]`)은 누를 때만 들어가는 마지막 쪽지다. 승인 카드는 이 구간에 두지 않는다
  * (도구 연결 구간).
  *
  * 한 번 재생(화면에 45% 들어오면): 0.5s 커서가 「참고한 회의록 2개」로 → 1.0s 눌러 펼침 + 쪽지 →
@@ -81,65 +84,51 @@ const HEAD_NARROW =
   "@max-xs:h-auto @max-xs:flex-wrap @max-xs:gap-y-0 @max-xs:pt-1 @max-xs:pb-2.5 @max-xs:[&>.truncate]:order-last @max-xs:[&>.truncate]:basis-full @max-xs:[&>.truncate]:pl-[23px]";
 
 /**
- * 질문 쪽지 셋. 답과 참고는 `ASKS` 그대로이고, `mark` 는 답 안에서 형광펜을 칠할 구절이다.
- * 차례는 `ASKS` 와 같다(i 번째 쪽지 = `ASKS[i]`). 히어로 레일이 이미 묻는 「제가 없던 사이에 뭐가
- * 정해졌나요?」(`ASKS[2]`)는 맨 아래다 — 전에는 맨 위 쪽지라 히어로에서 본 질문이 이 구간 첫 질문으로
- * 다시 나왔다. 빼지 않는 까닭: 명대사 벽의 「저 그때 없었는데요」를 받는 장면이다. 색 · 기울기 ·
- * 들여쓰기는 자리에 붙어 있어(노랑 → 흰 → 버터) 차례를 바꿔도 리듬은 같다.
+ * 질문 쪽지 셋. 답과 참고는 `useDemoCopy().asks` 그대로이고(i 번째 쪽지 = `asks[i]`), 장면 · 형광펜 구절
+ * (`mark`, 답 안에서 칠할 구절) · 쪽지 글은 언어 파일 `landing.ask.questions` 의 같은 차례다. 히어로 레일이
+ * 이미 묻는 「제가 없던 사이에 뭐가 정해졌나요?」(`asks[2]`)는 맨 아래다 — 전에는 맨 위 쪽지라 히어로에서 본
+ * 질문이 이 구간 첫 질문으로 다시 나왔다. 빼지 않는 까닭: 명대사 벽의 「저 그때 없었는데요」를 받는 장면이다.
+ * 색 · 기울기 · 들여쓰기는 자리에 붙어 있어(노랑 → 흰 → 버터) 차례를 바꿔도 리듬은 같다.
+ *
+ * 둘째는 회의 카드 · 근거 구간처럼 화자 D 에 정우재라는 이름을 붙여 둔 뒤의 답이다. 묻는 사람은 이서연이다 —
+ * 01:33 에 그 작업의 이슈를 물은 사람이 며칠 뒤 초안을 기다리며 누구에게 물을지 찾는다. 쪽지는 조건(이름을
+ * 붙여 둔 회의)까지 말한다 — 이름 없는 회의에서는 화자 라벨로 답하므로 「이름으로 답한다」를 에이전트의 일반
+ * 성질로 넓히지 않는다(FAQ 06 「끝난 뒤 스크립트 탭에서 붙여 둡니다」). 셋째의 정우재는 01:02에 처음 말한다 —
+ * 그 앞의 결정 둘(00:00 · 00:14)을 놓친 사람으로 자연스럽다.
  */
-const QUESTIONS: {
-  scene: string;
-  who: string;
-  ask: (typeof ASKS)[number];
-  mark: string;
-  note: readonly [string, string];
-  look: string;
-  tilt: string;
-  indent: string;
-}[] = [
+const LOOKS: Array<{ who: Person; look: string; tilt: string; indent: string }> = [
+  { who: "jihoon", look: "bg-[var(--tv-pop)]", tilt: "-rotate-1 lg:-rotate-2", indent: "" },
   {
-    scene: "딴생각하다 돌아와서",
-    who: "박지훈",
-    ask: ASKS[0],
-    mark: "지난주에 남긴 가설 두 개를 먼저 정리하자는 말",
-    note: ["회의 첫마디에서", "찾아왔어요"],
-    look: "bg-[var(--tv-pop)]",
-    tilt: "-rotate-1 lg:-rotate-2",
-    indent: "",
-  },
-  // 회의 카드 · 근거 구간처럼 화자 D 에 정우재라는 이름을 붙여 둔 뒤의 답이다(`ASKS[1]` 주석).
-  // 묻는 사람은 이서연이다 — 01:33 에 그 작업의 이슈를 물은 사람이 며칠 뒤 초안을 기다리며 누구에게 물을지
-  // 찾는다. 쪽지는 조건(이름을 붙여 둔 회의)까지 말한다 — 이름 없는 회의에서는 화자 라벨로 답하므로
-  // 「이름으로 답한다」를 에이전트의 일반 성질로 넓히지 않는다(FAQ 06 「끝난 뒤 스크립트 탭에서 붙여 둡니다」).
-  {
-    scene: "로그 초안 기다리다가",
-    who: "이서연",
-    ask: ASKS[1],
-    mark: "정우재입니다.",
-    note: ["이름을 붙여 두면", "이름으로 답해요"],
+    who: "seoyeon",
     look: "border-[1.5px] border-[var(--tv-ink)] bg-white",
     tilt: "rotate-1 lg:rotate-[1.5deg]",
     indent: "lg:ml-8",
   },
-  // 정우재는 01:02에 처음 말한다 — 그 앞의 결정 둘(00:00 · 00:14)을 놓친 사람으로 자연스럽다.
-  {
-    scene: "늦게 들어와서",
-    who: "정우재",
-    ask: ASKS[2],
-    mark: "결정 둘입니다.",
-    note: ["결정 둘만", "콕 집어 줘요"],
-    look: "bg-[var(--tv-butter)]",
-    tilt: "-rotate-1",
-    indent: "lg:ml-3",
-  },
+  { who: "woojae", look: "bg-[var(--tv-butter)]", tilt: "-rotate-1", indent: "lg:ml-3" },
 ];
+
+type Question = (typeof LOOKS)[number] & {
+  scene: string;
+  ask: Ask;
+  mark: string;
+  note: readonly string[];
+};
+
+function useQuestions(): Question[] {
+  const { asks } = useDemoCopy();
+  const copy = useMessages().landing.ask.questions;
+  return useMemo(
+    () => LOOKS.map((look, i) => ({ ...look, ...copy[i], ask: asks[i] })),
+    [asks, copy]
+  );
+}
 
 /** 혼자 도는 장면이 넣는 질문 — 「로그 수집은 누가 맡았나요?」. */
 const AUTO = 1;
-/** 쪽지 글은 두 줄로 끊어 둔다 — 창 옆 쪽지는 이 두 줄로, 창 위 띠는 한 줄로 이어 쓴다. */
-const NOTE_A = ["2차 회의록까지", "넓혀서 찾아왔어요"] as const;
-/** 첫 답에서 칠할 구절 — 2차 회의록에서 가져온 대목이다. */
-const SEED_MARK = "2차 회의에서 정한 결정";
+/*
+ * 쪽지 글(`landing.ask.noteA` · 질문마다 `note`)은 두 줄로 끊어 둔다 — 창 옆 쪽지는 이 두 줄로, 창 위 띠는 한
+ * 줄로 이어 쓴다. 첫 답에서 칠할 구절(`seedMark`)은 2차 회의록에서 가져온 대목이다.
+ */
 
 /**
  * 답 본문(14px)용 형광펜 — `safety.tsx` 의 `PEN` 과 같은 띠(반투명 노랑 0.62em, 92% 자리)를 마운트 때
@@ -195,7 +184,7 @@ function SideNote({
   at: "refs" | "mark";
   tone: "pop" | "butter";
   tilt: number;
-  children: readonly [string, string];
+  children: readonly string[];
 }) {
   return (
     <span
@@ -227,6 +216,11 @@ function SideNote({
 }
 
 export function AskChat({ heading }: { heading: ReactNode }) {
+  const t = useTranslations("landing.ask");
+  const { title, threadTitle, seed } = useDemoCopy();
+  const QUESTIONS = useQuestions();
+  const messages = useMessages().landing;
+  const { noteA: NOTE_A, seedMark: SEED_MARK } = messages.ask;
   const reduced = useReducedMotion();
   const [attach, seen] = useOnceInView<HTMLDivElement>({ threshold: 0.45 });
   const windowRef = useRef<HTMLDivElement | null>(null);
@@ -282,11 +276,11 @@ export function AskChat({ heading }: { heading: ReactNode }) {
       at = Math.min(at + STEP, full.length);
       setShown(at);
       if (at < full.length) timer = window.setTimeout(tick, STEP_MS);
-      else if (run.mine) setSaid(`답이 도착했습니다: ${full}`);
+      else if (run.mine) setSaid(t("arrived", { answer: full }));
     };
     timer = window.setTimeout(tick, THINK_MS);
     return () => window.clearTimeout(timer);
-  }, [run, reduced]);
+  }, [run, reduced, QUESTIONS, t]);
 
   // 모션을 줄이면 타이머 없이 끝 상태를 그린다 — 자동 질문의 답까지 선 채로.
   const view = run ?? (reduced ? { i: AUTO, n: 0, mine: false } : null);
@@ -305,7 +299,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
   const ask = (i: number) => {
     if (busy) return;
     start(i, true);
-    if (reduced) setSaid(`답이 도착했습니다: ${QUESTIONS[i].ask.a}`);
+    if (reduced) setSaid(t("arrived", { answer: QUESTIONS[i].ask.a }));
     // 좁은 화면에서는 창이 쪽지 아래에 있다 — 누른 것이 들어가는 자리가 보이게 한다.
     windowRef.current?.scrollIntoView({
       block: "nearest",
@@ -313,7 +307,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
     });
   };
 
-  const chip = <ScopeChip kind="note" title={TITLE} />;
+  const chip = <ScopeChip kind="note" title={title} />;
 
   return (
     <div
@@ -328,7 +322,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
           id="ask-try"
           className={cn(LABEL, "m-0 mt-10 flex items-center gap-2")}
         >
-          눌러서 넣어 보세요
+          {t("tryLabel")}
           <Scribble kind="arrow" className="hidden h-5 w-8 lg:block" />
         </p>
         <ul
@@ -366,7 +360,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
                       {item.scene}
                       <span className="sr-only">, </span>
                     </span>
-                    <span className="mt-0.5 block text-[16px] leading-[1.45] font-extrabold break-keep text-[var(--tv-ink)]">
+                    <span className="mt-0.5 block text-[16px] leading-[1.45] font-extrabold text-[var(--tv-ink)]">
                       {item.ask.q}
                     </span>
                   </span>
@@ -380,7 +374,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
                     <span
                       aria-hidden
                       className="absolute -top-2.5 right-4 rounded-full bg-[var(--tv-ink)] px-2 py-0.5 text-[11px] leading-[1.4] font-extrabold text-white">
-                      보는 중
+                      {t("current")}
                     </span>
                   ) : null}
                 </button>
@@ -425,28 +419,28 @@ export function AskChat({ heading }: { heading: ReactNode }) {
           className="@container flex flex-col lg:max-h-[640px]"
         >
           <figcaption className="sr-only">
-            예시 회의 「{TITLE}」를 범위로 내 에이전트에게 물어본 대화
+            {t("figcaption", { title })}
           </figcaption>
           <RailHead className={HEAD_NARROW} />
-          <ThreadTitle title="결제 화면 개편을 미룬 이유" />
+          <ThreadTitle title={threadTitle} />
 
           <div
             ref={convoRef}
             onScroll={onScroll}
             className="flex flex-col gap-4 px-5 pt-5 pb-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
           >
-            <UserBubble chip={chip}>{` ${SEED.q}`}</UserBubble>
+            <UserBubble chip={chip}>{` ${seed.q}`}</UserBubble>
             <div className="flex flex-col gap-1.5">
               <Answer>
                 <Marked
-                  text={SEED.a}
+                  text={seed.a}
                   mark={SEED_MARK}
                   className={showA ? PEN : undefined}
                 />
               </Answer>
               <div className="relative">
                 <AnswerRefs
-                  refs={SEED.refs}
+                  refs={seed.refs}
                   open={open}
                   onOpenChange={setRefsOpen}
                   className="[anchor-name:--ask-refs]"
@@ -470,7 +464,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
                   {` ${q.ask.q}`}
                 </UserBubble>
                 {at === THINKING ? (
-                  <p className="chat-shimmer m-0 text-xs">생각하는 중</p>
+                  <p className="chat-shimmer m-0 text-xs">{messages.demo.thinking}</p>
                 ) : !done ? (
                   // 흐르는 글은 읽히지 않게 둔다 — 다 흐른 뒤의 답이 읽힌다. 앱 대화에는 커서가
                   // 없어서 끝에 깜박이는 막대를 달지 않는다.

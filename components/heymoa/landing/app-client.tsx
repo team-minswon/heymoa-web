@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ export function AnswerRefs({
   onOpenChange?: (next: boolean) => void;
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
   const [own, setOwn] = useState(defaultOpen);
   const id = useId();
   const shown = open ?? own;
@@ -59,7 +61,7 @@ export function AnswerRefs({
             shown && "rotate-90"
           )}
         />
-        <span className={cn("text-[12px]", APP.muted)}>참고한 회의록 {refs.length}개</span>
+        <span className={cn("text-[12px]", APP.muted)}>{t("refsCount", { count: refs.length })}</span>
       </button>
       <div id={id} hidden={!shown} className={shown ? "chat-rise" : undefined}>
         <RefChips refs={refs} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,7 @@ export function HelpZoomDialog({
   children: React.ReactNode;
 }) {
   const width = Math.min(naturalWidth + PADDING, MAX_WIDTH);
+  const t = useTranslations("help.media");
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal="trap-focus">
       <DialogContent
@@ -50,12 +52,12 @@ export function HelpZoomDialog({
         <DialogTitle className="sr-only">{title}</DialogTitle>
         {children}
         {caption ? (
-          <DialogDescription className="m-0 px-1 text-[14px] leading-[1.65] break-keep text-[var(--tv-muted)]">
+          <DialogDescription className="m-0 px-1 text-[14px] leading-[1.65] text-[var(--tv-muted)]">
             {caption}
           </DialogDescription>
         ) : (
           <DialogDescription className="sr-only">
-            Esc를 누르면 확대 창이 닫혀요.
+            {t("zoomClose")}
           </DialogDescription>
         )}
       </DialogContent>

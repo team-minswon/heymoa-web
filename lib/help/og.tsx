@@ -3,7 +3,9 @@ import { join } from "node:path";
 
 import { ImageResponse } from "next/og";
 
+import { helpT } from "@/lib/help/i18n";
 import { clampedLines, fitTitle } from "@/lib/help/og-lines";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 
 // 판 안쪽 폭 1008px(1200 − 바깥 24×2 − 안쪽 72×2). 글자 폭이 근사값이라 여유를 둔다.
@@ -14,6 +16,29 @@ const SUMMARY_SIZE = 30;
 const LOGO = `data:image/png;base64,${await readFile(join(process.cwd(), "public/apple-touch-icon.png"), "base64")}`;
 
 export const helpOgSize = { width: 1200, height: 630 };
+
+export type HelpOgProps = { params: Promise<{ lang: string }> };
+
+/**
+ * 가이드 공유 카드의 metadata. alt 를 언어판마다 내려고 정적 `alt` 대신 이것을 쓴다(카드 한 장, id `card`).
+ * Next 버전에 따라 `params` 가 값 또는 Promise 로 와서 둘 다 받는다.
+ */
+export async function helpOgMetadata({
+  params,
+}: {
+  params: { lang: string } | Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const t = helpT(isLocale(lang) ? lang : DEFAULT_LOCALE);
+  return [
+    {
+      id: "card",
+      alt: t("brandTitle"),
+      size: helpOgSize,
+      contentType: "image/png",
+    },
+  ];
+}
 
 /**
  * 가이드 공유 카드 — 흰 바탕 · 라벤더 판에 제목과 요약을 얹는다. 색은 `TV_VARS`

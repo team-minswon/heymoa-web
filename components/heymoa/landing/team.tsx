@@ -1,10 +1,12 @@
 import { ChevronsUpDown, FileText, Hourglass } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
 
-import { AppWindow, Face } from "./app";
+import { AppWindow, Face, usePersonName, type Person } from "./app";
 import { Cursor, ExampleStamp, Scribble, Speech, Sticky } from "./marks";
+import { RICH } from "./rich";
 import {
   APP,
   CONTAINER,
@@ -32,7 +34,7 @@ import {
  *   오른쪽 끝이 겹쳤다). 640 아래는 그만큼 엇갈릴 폭이 없어(320 에서 프로젝트 창을 24px만 좁혀도 회의
  *   제목이 세 줄로 깨진다) 겹치지 않는다 — 프로젝트 창은 바로 서고, 기운 멤버 창이 32px 아래에 따로 놓인다.
  * - 겹친 앞 창 = 설정의 멤버 화면(`members-settings.tsx` 머리 · 멤버 행 · 대기 중인 초대).
- *   대기 중인 초대 줄에 「하루만 살아요」 쪽지를 붙인다(초대 링크 하루 · 앱 코드와 대조됨). 하루는
+ *   대기 중인 초대 줄에 「하루만 유효합니다」 쪽지를 붙인다(초대 링크 하루 · 앱 코드와 대조됨). 하루는
  *   이 쪽지만 말하고 리드에서 되풀이하지 않는다(한 구간에서 같은 말 두 번 금지).
  * - 여는 농담은 이서연의 「그 회의록 어디 있어요?」이고, 답은 그림이 한다 — 히어로에서 돌던
  *   「3차 스프린트 킥오프」 줄에 형광펜을 긋고 손가락을 얹는다(누르면 노트가 열리는 것은 앱 그대로).
@@ -59,45 +61,47 @@ import {
  */
 
 type Meeting = {
-  date: string;
-  title: string;
+  /** 언어 파일 `landing.team.meetings` 의 열쇠(날짜 · 제목). */
+  id: "retro" | "kickoff" | "earlier";
   live?: boolean;
   min: number;
-  host: string;
-  people: string[];
+  host: Person;
+  people: Person[];
   /** 농담의 답 — 형광펜과 손가락이 이 줄에 붙는다. */
   found?: boolean;
 };
 
 const MEETINGS: Meeting[] = [
   {
-    date: "2026년 9월 8일 (화)",
-    title: "3차 스프린트 회고",
+    id: "retro",
     live: true,
     min: 12,
-    host: "김민서",
-    people: ["김민서", "박지훈"],
+    host: "minseo",
+    people: ["minseo", "jihoon"],
   },
   {
-    date: "2026년 9월 1일 (화)",
-    title: "3차 스프린트 킥오프",
+    id: "kickoff",
     // 목록 행은 분을 내림한다(`note-list-row.tsx` MeetingMeta 의 Math.floor) — 누적 01:52 라 「기록 1분」.
     // 검토 머리의 「2분」은 반올림(lengthLabel)이라 두 자리 값이 다른 것이 앱 그대로다.
     min: 1,
-    host: "김민서",
-    people: ["김민서", "박지훈", "이서연", "정우재"],
+    host: "minseo",
+    people: ["minseo", "jihoon", "seoyeon", "woojae"],
     found: true,
   },
   {
-    date: "2026년 8월 25일 (화)",
-    title: "2차 스프린트 킥오프",
+    id: "earlier",
     min: 3,
-    host: "김민서",
-    people: ["김민서", "박지훈", "정우재"],
+    host: "minseo",
+    people: ["minseo", "jihoon", "woojae"],
   },
 ];
 
-type Member = { who: string; email: string; role: string; me?: boolean };
+type Member = {
+  who: Person;
+  email: string;
+  role: "admin" | "member";
+  me?: boolean;
+};
 
 /**
  * 페이지가 줄곧 같은 팀으로 그려 온 넷 그대로다. 정우재는 위 킥오프 두 줄 · 히어로의 참여자이고
@@ -105,10 +109,10 @@ type Member = { who: string; email: string; role: string; me?: boolean };
  * 아니어도) 눈여겨본 사람에게 어긋난다. 이서연은 이 구간 농담의 주인이라 뺄 수 없다.
  */
 const MEMBERS: Member[] = [
-  { who: "김민서", email: "minseo@example.com", role: "관리자", me: true },
-  { who: "박지훈", email: "jihoon@example.com", role: "멤버" },
-  { who: "이서연", email: "seoyeon@example.com", role: "멤버" },
-  { who: "정우재", email: "jeongwoo@example.com", role: "멤버" },
+  { who: "minseo", email: "minseo@example.com", role: "admin", me: true },
+  { who: "jihoon", email: "jihoon@example.com", role: "member" },
+  { who: "seoyeon", email: "seoyeon@example.com", role: "member" },
+  { who: "woojae", email: "woojae@example.com", role: "member" },
 ];
 
 /**
@@ -149,21 +153,26 @@ function RowIcon({ live }: { live?: boolean }) {
   );
 }
 
-/** `진행자 | 참여자들`(note-list-row). 참여자는 셋까지(390 은 둘까지), 넘치면 「+N」. */
-function RowFaces({ host, people }: { host: string; people: string[] }) {
-  const overLg = people.length - 3;
-  const overSm = people.length - 2;
+/**
+ * `진행자 | 참여자들`(note-list-row). 참여자 칸은 셋(390 은 둘)이고, 넘치면 마지막 칸이 「+N」이
+ * 된다 — 제품의 `NoteParticipantAvatars`처럼 「+1」은 나오지 않는다(APP-1288).
+ */
+function RowFaces({ host, people }: { host: Person; people: Person[] }) {
+  const shownLg = people.length > 3 ? 2 : people.length;
+  const shownSm = people.length > 2 ? 1 : people.length;
+  const overLg = people.length - shownLg;
+  const overSm = people.length - shownSm;
   return (
     <span aria-hidden className="flex shrink-0 items-center gap-1.5 sm:gap-2">
       <Face who={host} size={24} />
       <span className="h-5 w-px bg-[var(--el-hairline-strong)]" />
       <span className="flex items-center">
-        {people.slice(0, 3).map((name, i) => (
+        {people.slice(0, shownLg).map((name, i) => (
           <Face
             key={name}
             who={name}
             size={24}
-            className={cn("ring-2 ring-white", i > 0 && "-ml-2", i === 2 && "max-sm:hidden")}
+            className={cn("ring-2 ring-white", i > 0 && "-ml-2", i >= shownSm && "max-sm:hidden")}
           />
         ))}
         {overSm > 0 ? (
@@ -185,17 +194,20 @@ function RowFaces({ host, people }: { host: string; people: string[] }) {
 }
 
 function MeetingRow({ m }: { m: Meeting }) {
+  const t = useTranslations("landing.team");
+  const status = useTranslations("landing.app.status");
+  const title = t(`meetings.${m.id}.title`);
   return (
     <div className="relative flex min-h-16 items-center gap-3 px-2 sm:gap-[14px] sm:px-3">
       <RowIcon live={m.live} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className={cn("text-[15px] font-medium break-keep", APP.ink)}>
+        <span className={cn("text-[15px] font-medium", APP.ink)}>
           {m.found ? (
             <span className={MARKER_REVEAL} style={vars({ "--d": "750ms" })}>
-              {m.title}
+              {title}
             </span>
           ) : (
-            m.title
+            title
           )}
         </span>
         <span
@@ -213,14 +225,17 @@ function MeetingRow({ m }: { m: Meeting }) {
               />
             ) : null}
             <span className={cn("font-medium", m.live && APP.rec)}>
-              {m.live ? "기록 중" : "종료됨"}
+              {status(m.live ? "recording" : "ended")}
             </span>
             <span aria-hidden>·</span>
           </span>
           <span className="inline-flex items-center gap-1.5 tabular-nums">
-            기록 {m.min}분<span aria-hidden>·</span>
+            {t("recorded", { min: m.min })}
+            <span aria-hidden>·</span>
           </span>
-          <span className="tabular-nums">참여 {m.people.length}명</span>
+          <span className="tabular-nums">
+            {t("participants", { count: m.people.length })}
+          </span>
         </span>
       </span>
       <RowFaces host={m.host} people={m.people} />
@@ -245,6 +260,7 @@ function MeetingRow({ m }: { m: Meeting }) {
  * 바닥도 위(24)와 같은 숨만 둔다. 오른쪽 36px(`sm:mr-9`)은 멤버 창이 내밀 자리다(머리 주석).
  */
 function ProjectStack() {
+  const t = useTranslations("landing.team");
   return (
     <Reveal className="relative max-w-[560px] sm:mr-9 sm:-rotate-1">
       <AppWindow className="px-3 pt-6 pb-3 sm:px-6 sm:pt-7 sm:pb-20">
@@ -255,22 +271,22 @@ function ProjectStack() {
               APP.ink
             )}
           >
-            온보딩 개선
+            {t("project.name")}
           </p>
-          <p className={cn("m-0 mt-3 text-[14px] leading-6 break-keep", APP.muted)}>
-            3개의 회의 기록 · 발화와 결정이 시간순으로 보관됩니다.
+          <p className={cn("m-0 mt-3 text-[14px] leading-6", APP.muted)}>
+            {t("project.description")}
           </p>
         </div>
         <div className="mt-2">
           {MEETINGS.map((m, i) => (
-            <div key={m.title} className="tv-r" style={vars({ "--i": i * 1.5 })}>
+            <div key={m.id} className="tv-r" style={vars({ "--i": i * 1.5 })}>
               <p
                 className={cn(
                   "m-0 px-2 pt-3 pb-1.5 text-[12px] leading-4 font-medium sm:px-3 sm:pt-5 sm:pb-2",
                   APP.muted
                 )}
               >
-                {m.date}
+                {t(`meetings.${m.id}.date`)}
               </p>
               <MeetingRow m={m} />
             </div>
@@ -291,6 +307,8 @@ const OUTLINE = cn(
 );
 
 function MemberRow({ who, email, role, me }: Member) {
+  const t = useTranslations("landing.team.members");
+  const name = usePersonName();
   return (
     <div className="flex min-h-[52px] items-start gap-3 py-2.5">
       {/* 얼굴 · 내보내기는 이름 두 줄(36px) 높이에 가운데로 선다 — 역할이 아래로 내려가도 그대로. */}
@@ -305,8 +323,8 @@ function MemberRow({ who, email, role, me }: Member) {
           <span
             className={cn("flex items-center gap-1.5 text-[14px] leading-5 font-medium", APP.ink)}
           >
-            {who}
-            {me ? <span className={cn("text-[12px] font-normal", APP.muted)}>(나)</span> : null}
+            {name(who)}
+            {me ? <span className={cn("text-[12px] font-normal", APP.muted)}>{t("me")}</span> : null}
           </span>
           <span className={cn("block text-[12px] leading-4", APP.muted)}>{email}</span>
         </span>
@@ -317,13 +335,13 @@ function MemberRow({ who, email, role, me }: Member) {
             APP.ink
           )}
         >
-          {role}
+          {t(`roles.${role}`)}
           <ChevronsUpDown aria-hidden className={cn("size-3.5", APP.muted)} />
         </span>
       </span>
       {/* 내 행은 버튼 없이 자리만 남긴다(앱과 같다 — 줄마다 오른쪽 끝이 맞는다). */}
       <span className="hidden h-9 w-[74px] shrink-0 items-center justify-end sm:flex">
-        {me ? null : <span className={cn(OUTLINE, "h-7")}>내보내기</span>}
+        {me ? null : <span className={cn(OUTLINE, "h-7")}>{t("remove")}</span>}
       </span>
     </div>
   );
@@ -337,6 +355,8 @@ function MemberRow({ who, email, role, me }: Member) {
  * 창 안쪽 폭이 행 배치를 정하므로 창은 `@container` 다(멤버 행 주석).
  */
 function MembersStack() {
+  const t = useTranslations("landing.team");
+  const name = usePersonName();
   return (
     <Reveal className="relative z-10 mt-8 sm:-mt-16 sm:ml-auto sm:w-[420px]">
       <div className="tv-rslide relative rotate-1 sm:rotate-[1.5deg]" style={vars({ "--d": "300ms" })}>
@@ -347,10 +367,10 @@ function MembersStack() {
               APP.ink
             )}
           >
-            멤버
+            {t("members.title")}
           </p>
-          <p className={cn("m-0 mt-1 text-[13px] leading-5 break-keep", APP.muted)}>
-            이 워크스페이스의 멤버와 대기 중인 초대를 관리합니다.
+          <p className={cn("m-0 mt-1 text-[13px] leading-5", APP.muted)}>
+            {t("members.description")}
           </p>
           <div className="mt-4 divide-y divide-[var(--el-hairline)] border-y border-[var(--el-hairline)]">
             {MEMBERS.map((member) => (
@@ -358,7 +378,7 @@ function MembersStack() {
             ))}
           </div>
           <p className={cn("m-0 mt-4 text-[14px] leading-5 font-medium", APP.ink)}>
-            대기 중인 초대
+            {t("members.pending")}
           </p>
           {/* 멤버 행처럼 이메일은 다 보이고, 멤버 행과 같은 폭(창 안쪽 17rem)에서 역할 · 취소가 아래로
               내려간다. 창의 마지막 행이라 위 선만 둔다 — 아래 선은 창 바닥 16~20px 위에 남아 창 테두리가
@@ -380,10 +400,12 @@ function MembersStack() {
                   APP.ink
                 )}
               >
-                멤버
+                {t("members.roles.member")}
               </span>
-              <span className={cn("hidden text-[12px] sm:block", APP.muted)}>김민서 · 9월 8일</span>
-              <span className={cn(OUTLINE, "h-8")}>취소</span>
+              <span className={cn("hidden text-[12px] sm:block", APP.muted)}>
+                {t("members.invitedBy", { name: name("minseo") })}
+              </span>
+              <span className={cn(OUTLINE, "h-8")}>{t("members.cancel")}</span>
             </span>
           </div>
         </AppWindow>
@@ -402,7 +424,7 @@ function MembersStack() {
           className="absolute right-3 -bottom-5 z-10 inline-flex items-center gap-1.5 whitespace-nowrap lg:-right-14 lg:-bottom-6"
         >
           <Hourglass aria-hidden className="size-3.5" strokeWidth={2.5} />
-          이 링크는 하루만 살아요
+          {t("inviteNote")}
         </Sticky>
         <Scribble
           kind="arrow"
@@ -419,6 +441,7 @@ function MembersStack() {
 /* ── 구간 ─────────────────────────────────────────────────────────────── */
 
 export function Team() {
+  const t = useTranslations("landing.team");
   return (
     <section
       id="team"
@@ -431,26 +454,22 @@ export function Team() {
         {/* DOM 은 글 → 그림(화면 읽기 순서 = 좁은 화면에서 보이는 순서). 넓은 화면만 그림을 왼쪽
             칸으로 옮긴다 — 나란한 두 칸이라 읽는 순서가 뜻을 바꾸지 않는다. */}
         <Reveal className="min-w-0 sm:max-w-[560px] lg:max-w-none lg:self-center">
-          <Speech who="이서연" tone="pop" size="sm" tilt={-2} anim="reveal">
-            그 회의록 어디 있어요?
+          <Speech who="seoyeon" tone="pop" size="sm" tilt={-2} anim="reveal">
+            {t("speech")}
           </Speech>
           <h2 id="team-title" className={`${H2} mt-4`}>
-            회의는 프로젝트에 <span className={MARKER_REVEAL}>차곡차곡</span> 쌓입니다
+            {t.rich("title", {
+              ...RICH,
+              m: (chunks) => <span className={MARKER_REVEAL}>{chunks}</span>,
+            })}
           </h2>
-          <p className={`${LEAD} mt-4`}>
-            회의록을 따로 공유할 필요가 없습니다. 새 회의를 만들면 그 프로젝트 목록에 바로 한 줄이
-            생기고, 기록한 시간과 정보 탭에서 고른 참여자 수가 그 줄에 같이 붙습니다.
-          </p>
-          <p className={`${LEAD} mt-4`}>
-            멤버는 관리자가 이메일로 초대합니다. 아직 가입하지 않은 사람도 초대 메일의 링크로
-            가입해 들어옵니다. 역할은 관리자와 멤버 둘입니다.
-          </p>
+          <p className={`${LEAD} mt-4`}>{t("lead1")}</p>
+          <p className={`${LEAD} mt-4`}>{t("lead2")}</p>
         </Reveal>
 
         <figure className="relative m-0 w-full max-w-[596px] min-w-0 lg:order-first">
           <figcaption className="sr-only">
-            예시 화면. 「온보딩 개선」 프로젝트에 회의 세 개가 날짜별로 쌓인 목록과, 같은
-            워크스페이스의 멤버 설정(멤버 넷, 대기 중인 초대 하나)입니다.
+            {t("caption")}
           </figcaption>
           <ProjectStack />
           <MembersStack />

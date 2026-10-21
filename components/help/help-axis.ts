@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
-import { helpGroups } from "@/app/(static)/help/_content/groups";
-import type { HelpAxis } from "@/app/(static)/help/_content/types";
+import { helpGroups } from "@/app/[lang]/help/_content/groups";
+import type { HelpAxis } from "@/app/[lang]/help/_content/types";
 
 /** 주소에서 이 페이지가 속한 축. 허브와 알 수 없는 주소는 기능별이다. */
 export function axisOfPath(pathname: string): HelpAxis {

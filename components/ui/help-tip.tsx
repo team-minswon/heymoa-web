@@ -56,7 +56,7 @@ export function HelpTip({
         side="bottom"
         align="start"
         sideOffset={6}
-        className="block w-max max-w-[min(300px,calc(100vw-2rem))] px-3 py-2 text-left text-xs leading-relaxed break-keep font-normal tracking-normal"
+        className="block w-max max-w-[min(300px,calc(100vw-2rem))] px-3 py-2 text-left text-xs leading-relaxed font-normal tracking-normal"
       >
         {children}
       </TooltipContent>

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -6,6 +6,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { HelpSearch } from "@/components/help/help-search";
+import { intlWrapper } from "@/components/help/test-intl";
+
+/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: intlWrapper() });
 
 function setup(q = "녹음") {
   window.history.replaceState(null, "", q ? `/?q=${encodeURIComponent(q)}` : "/");

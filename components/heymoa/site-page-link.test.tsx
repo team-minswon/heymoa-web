@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { SitePageLink } from "@/components/heymoa/site-page-link";
@@ -22,5 +22,20 @@ describe("SitePageLink", () => {
     render(<SitePageLink href="/help#trouble">도움말</SitePageLink>);
 
     expect(screen.getByRole("link", { name: "도움말" })).not.toHaveAttribute("target");
+  });
+
+  // 사이트 페이지는 다른 루트 레이아웃이라 전체 로드다 — 녹음이 이탈을 거부하면 앱은 말없이 취소한다
+  it("데스크톱 앱에서 녹음 중이면 누름을 막는다", () => {
+    (window as { heymoaDesktop?: unknown }).heymoaDesktop = {};
+    const hold = (event: Event) => event.preventDefault();
+    window.addEventListener("beforeunload", hold);
+    render(<SitePageLink href="/help">도움말</SitePageLink>);
+
+    try {
+      const allowed = fireEvent.click(screen.getByRole("link", { name: "도움말" }));
+      expect(allowed).toBe(false);
+    } finally {
+      window.removeEventListener("beforeunload", hold);
+    }
   });
 });

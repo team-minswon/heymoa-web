@@ -69,8 +69,11 @@ export type AnalyticsEvent =
   | "help_code_copied"
   | "help_faq_opened";
 
+/** 가이드 이벤트의 언어판(`lib/i18n/locales.ts` 의 `Locale`). */
+type HelpLanguage = "ko" | "en";
+
 /** 새 행동의 속성은 정해진 종류·개수·워크스페이스 식별자만 받습니다. */
-type WebEventProperties = {
+export type WebEventProperties = {
   recording_start_clicked: { workspace_id: string; retry: boolean };
   recording_stop_clicked: { surface: "note" | "global" };
   note_opened: { workspace_id: string; view: "side" | "full" };
@@ -96,31 +99,48 @@ type WebEventProperties = {
   // 회의 종료 뒤 묻는 카드. 띄움은 `feedback_opened {from: "meeting_end"}`, 보냄은 `feedback_sent` 가 센다.
   feedback_dismissed: { from: "meeting_end"; forever: boolean };
   // 사용 가이드. 로그인 전에도 오므로 workspace_id 가 없다. slug·이름은 우리가 정한 값이고 검색어·글은 싣지 않는다.
+  // `language` 는 주소의 언어판이다 — 언어판이 달라도 같은 주제는 같은 slug·group 으로 센다(`lib/help/analytics.ts` 의 `trackHelp`).
   help_page_viewed: {
     slug: string;
     group: string;
     level: "hub" | "group" | "topic";
     axis: "feature" | "situation" | "hub";
     entry: "search" | "hub" | "internal" | "external" | "back";
+    language: HelpLanguage;
   };
-  help_search_opened: { surface: "palette" | "hub"; via: "keyboard" | "click" };
+  help_search_opened: {
+    surface: "palette" | "hub";
+    via: "keyboard" | "click";
+    language: HelpLanguage;
+  };
   help_search_submitted: {
     query_length: number;
     result_count: number;
     zero_results: boolean;
+    language: HelpLanguage;
   };
-  help_result_clicked: { slug: string; rank: number; query_length: number };
+  help_result_clicked: {
+    slug: string;
+    rank: number;
+    query_length: number;
+    language: HelpLanguage;
+  };
   help_nav_clicked: {
     from_slug: string;
     to_slug: string;
     surface: "sidebar" | "toc" | "related" | "prev_next" | "hub_card";
+    language: HelpLanguage;
   };
-  help_clip_played: { clip: string; slug: string };
-  help_clip_zoomed: { clip: string; slug: string };
-  help_image_zoomed: { name: string; slug: string };
-  help_cta_clicked: { target: "dashboard"; surface: "topbar" };
-  help_code_copied: { slug: string };
-  help_faq_opened: { slug: string; index: number };
+  help_clip_played: { clip: string; slug: string; language: HelpLanguage };
+  help_clip_zoomed: { clip: string; slug: string; language: HelpLanguage };
+  help_image_zoomed: { name: string; slug: string; language: HelpLanguage };
+  help_cta_clicked: {
+    target: "dashboard";
+    surface: "topbar";
+    language: HelpLanguage;
+  };
+  help_code_copied: { slug: string; language: HelpLanguage };
+  help_faq_opened: { slug: string; index: number; language: HelpLanguage };
 };
 
 type Properties = Record<string, string | number | boolean | null | undefined>;

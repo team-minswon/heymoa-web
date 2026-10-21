@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 
 import { LandingCta } from "@/components/heymoa/landing-cta";
 import { AppDownloadLink } from "@/components/heymoa/landing/app-download-link";
@@ -10,14 +11,12 @@ import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { pickHelpAxis, useHelpAxis } from "@/components/help/help-axis";
 import { HelpPalette } from "@/components/help/help-palette";
 import { HELP_VARS } from "@/components/help/help-vars";
-import type { HelpAxis } from "@/app/(static)/help/_content/types";
+import type { HelpAxis } from "@/app/[lang]/help/_content/types";
+import { localePath, splitLocale } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-const TABS: { axis: HelpAxis; label: string }[] = [
-  { axis: "feature", label: "기능별" },
-  { axis: "situation", label: "상황별" },
-];
+const TABS: readonly HelpAxis[] = ["feature", "situation"];
 
 /**
  * 사용 가이드 고정 상단바. 위 줄(56): 로고 · 가운데 검색 · 앱 다운로드 / 대시보드. 아래 줄(40): 기능별 / 상황별 탭.
@@ -25,8 +24,11 @@ const TABS: { axis: HelpAxis; label: string }[] = [
  * `<main>` 밖(`NavbarGate`)에 서서 건너뛰기 링크가 이 바도 건너뛴다. ⌘K 는 여기 한 곳(`HelpPalette`)에서만 듣는다.
  */
 export function HelpTopBar() {
-  const pathname = usePathname();
+  // 언어 접두사를 벗긴 경로. 한국어 SSR 의 `/ko/help/...`(rewrite 뒤 주소)와 영어판 `/en/help/...` 이 같은 판정을 받는다.
+  const pathname = splitLocale(usePathname()).path;
   const axis = useHelpAxis(pathname);
+  const locale = useLocale();
+  const t = useTranslations("help.topBar");
   return (
     <header
       style={HELP_VARS}
@@ -35,7 +37,7 @@ export function HelpTopBar() {
       <div className="mx-auto w-full max-w-[1800px]">
         <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
           <Link
-            href="/"
+            href={localePath(locale, "/")}
             className={cn(
               "inline-flex h-10 shrink-0 items-center gap-2.5 rounded-full",
               FOCUS
@@ -59,24 +61,24 @@ export function HelpTopBar() {
           <div className="flex shrink-0 items-center gap-1">
             <AppDownloadLink variant="nav" />
             <LandingCta
-              label="무료로 시작하기"
+              label={t("start")}
               className={`h-9 border-transparent bg-[var(--tv-brand)] px-4 text-[14px] font-bold text-white bg-clip-border hover:bg-[var(--tv-brand-deep)] focus-visible:border-[var(--tv-brand-deep)] focus-visible:ring-0 ${FOCUS} focus-visible:outline-offset-0`}
             />
           </div>
         </div>
         <div
           role="group"
-          aria-label="가이드 분류"
+          aria-label={t("tabs")}
           className="flex h-10 items-stretch gap-1 px-4 lg:px-6"
         >
           {TABS.map((tab) => {
-            const on = tab.axis === axis;
+            const on = tab === axis;
             return (
               <button
-                key={tab.axis}
+                key={tab}
                 type="button"
                 aria-pressed={on}
-                onClick={() => pickHelpAxis(pathname, tab.axis)}
+                onClick={() => pickHelpAxis(pathname, tab)}
                 className={cn(
                   "relative px-3 text-[14px] font-semibold help-fade after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--tv-ink)] after:transition-opacity after:duration-(--help-fast) motion-reduce:after:transition-none",
                   FOCUS,
@@ -85,7 +87,7 @@ export function HelpTopBar() {
                     : "text-[var(--tv-muted)] after:opacity-0 hover:text-[var(--tv-ink)]"
                 )}
               >
-                {tab.label}
+                {t(tab)}
               </button>
             );
           })}

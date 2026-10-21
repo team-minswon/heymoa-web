@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ import {
 } from "./app";
 import { useOnceInView, useReducedMotion } from "./hooks";
 import { Cursor, Hand, Scribble, Sticky } from "./marks";
+import { RICH } from "./rich";
 import { APP, FOCUS, vars } from "./tokens";
 
 /*
@@ -38,7 +40,7 @@ import { APP, FOCUS, vars } from "./tokens";
  * 1개를 프로젝트에 올립니다」로, 끝내기면 「· 이전 결정 1개 끝남」까지 붙는다.
  *
  * 스크롤로 막대가 들어오면 한 번 재생한다: 2초 머문 뒤 커서가 「끝내기」로 와서 누르고 → 토글이 초록
- * 체크로 → 0.4초 뒤 막대 문구와 숫자가 바뀐다. 머무는 2초는 「고르기 전엔…」 쪽지(두 줄)가 3초 넘게 읽히게 하는
+ * 체크로 → 0.4초 뒤 막대 문구와 숫자가 바뀐다. 머무는 2초는 「고르기 전에는…」 쪽지(두 줄)가 3초 넘게 읽히게 하는
  * 몫이다(지난 판은 1.7초 만에 「골랐으니…」로 바뀌었다). 방문자가 먼저 누르면 재생을 거둔다. 모션을 줄이면
  * 커서 없이 곧바로 끝내기를 고른 모습이고, 서버 HTML · JS 없음은 아직 안 고른 모습(그것도 앱의 참 상태)이다.
  *
@@ -54,10 +56,7 @@ import { APP, FOCUS, vars } from "./tokens";
 
 type Choice = "change" | "keep";
 
-const OPTIONS: ReadonlyArray<readonly [Choice, string]> = [
-  ["change", "대체"],
-  ["keep", "유지"],
-];
+const OPTIONS: readonly Choice[] = ["change", "keep"];
 
 /**
  * 재생 박자(ms). 1 커서가 미끄러져 옴 → 2 누름(노란 고리는 `Cursor` 가 450ms 뒤에 퍼뜨린다 = 2600) →
@@ -82,6 +81,8 @@ const ARROW_STEP: Partial<Record<string, number>> = {
 };
 
 export function WeeklyWindow() {
+  const t = useTranslations("landing.weekly");
+  const tm = useTranslations("landing.meetings.sections");
   const [picked, setPicked] = useState<Choice | null>(null);
   const [beat, setBeat] = useState(0);
   const [attach, seen] = useOnceInView<HTMLDivElement>({ threshold: 0.9 });
@@ -107,39 +108,39 @@ export function WeeklyWindow() {
     if (!step) return;
     event.preventDefault();
     const next = (index + step + OPTIONS.length) % OPTIONS.length;
-    setPicked(OPTIONS[next][0]);
+    setPicked(OPTIONS[next]);
     radios.current[next]?.focus();
   };
-  const stop = toggle ?? OPTIONS[0][0];
+  const stop = toggle ?? OPTIONS[0];
 
   return (
     <>
       <div className="relative px-4 pt-4 pb-5 sm:px-5">
         <ReviewHead
-          state="검토 중"
-          title="디자인팀 주간 회의"
+          state="review"
+          title={t("title")}
           chips={
             <>
-              <HeadChip icon="date">8월 31일 (월) 오전 11:00</HeadChip>
-              <HeadChip icon="length">28분</HeadChip>
-              <FacesChip names={["윤하린", "문지호", "송다온"]} />
-              <HeadChip icon="project">배너 개편</HeadChip>
+              <HeadChip icon="date">{t("date")}</HeadChip>
+              <HeadChip icon="length">{t("length")}</HeadChip>
+              <FacesChip names={["harin", "jiho", "daon"]} />
+              <HeadChip icon="project">{t("project")}</HeadChip>
             </>
           }
         />
 
         <div className="mt-6">
-          <SectionHead title="결정" count={1} />
+          <SectionHead title={tm("decisions")} count={1} />
           <div className={cn("mt-2 border-t", APP.lineSoft)}>
             <DecisionRow
-              text="배포는 다음 주 화요일로 미룬다"
+              text={t("decision")}
               at="09:32"
               suggestions={
                 <ReplacementRow
                   className="relative"
-                  target="새 배너는 9월 4일 금요일에 배포한다"
-                  meta="배너 시안 리뷰 · 8월 27일 확정"
-                  reason="배포일을 금요일에서 다음 주 화요일로 옮기는 결정이라 이전 결정과 맞지 않습니다."
+                  target={t("target")}
+                  meta={t("meta")}
+                  reason={t("reason")}
                   toggle={
                     <>
                       {/*
@@ -147,8 +148,8 @@ export function WeeklyWindow() {
                         22px 는 그대로 두고 투명한 누름 칸을 위아래로 11px 씩 넓혀 44px 로 만들었고(엄지
                         자리), 안 고른 쪽 글자를 앱의 muted(바탕 위 4.2:1) 대신 body(7:1)로 한 단 짙게 했다.
                       */}
-                      <span role="radiogroup" aria-label="이전 결정을 어떻게 할까요?" className={CHOICE.group}>
-                        {OPTIONS.map(([value, label], index) => {
+                      <span role="radiogroup" aria-label={t("groupLabel")} className={CHOICE.group}>
+                        {OPTIONS.map((value, index) => {
                           const on = toggle === value;
                           return (
                             <button
@@ -174,7 +175,7 @@ export function WeeklyWindow() {
                               )}
                             >
                               {on && value === "change" ? <ChoiceCheck /> : null}
-                              {label}
+                              {t(`options.${value}`)}
                               {value === "change" && cursor ? (
                                 <Cursor press={beat >= 2} className="top-[40%] left-[45%]" />
                               ) : null}
@@ -190,15 +191,9 @@ export function WeeklyWindow() {
                         <Scribble kind="arrow" flipX draw="reveal" delay={900} className="h-6 w-10" />
                         {/*
                           머리 농담(「말 바뀌는 날」)을 되풀이하지 않고 날짜를 짚는다 — 8월 27일 확정(위 meta) →
-                          8월 31일 회의. 세 줄로 끊어 1280 폭의 오른쪽 여백(약 110px) 안에 든다.
+                          8월 31일 회의. 세 줄로 끊어 1280 폭의 오른쪽 여백(약 110px) 안에 든다(영어도 세 줄).
                         */}
-                        <Hand className="-mt-0.5 text-[13px]">
-                          8월 27일에
-                          <br />
-                          정한 걸
-                          <br />
-                          나흘 만에
-                        </Hand>
+                        <Hand className="-mt-0.5 text-[13px]">{t.rich("dateNote", RICH)}</Hand>
                       </span>
                     </>
                   }
@@ -209,12 +204,12 @@ export function WeeklyWindow() {
         </div>
 
         <div className="mt-7">
-          <SectionHead title="할 일" count={1} />
+          <SectionHead title={tm("tasks")} count={1} />
           <div className={cn("mt-2 border-t", APP.lineSoft)}>
             <TaskRow
-              text="QA 요청 메일을 오늘 안에 보낸다"
-              who={{ name: "윤하린" }}
-              due="8월 31일 (월)"
+              text={t("task")}
+              who={{ name: "harin" }}
+              due={t("due")}
             />
           </div>
         </div>
@@ -251,7 +246,7 @@ export function WeeklyWindow() {
               BAR_AT[variant],
               "[&>[aria-hidden]]:hidden [&>span:first-child]:text-balance",
               // 흐린 「검토 완료」(마지막 자식)를 앱의 50% 대신 65% 로 — 흰 글자 대비 3.1 → 4.8:1(흰 판 · 회색 판 모두).
-              // 쪽지 「고르기 전엔 검토 완료가 안 눌려요」가 가리키는 글자라 읽혀야 한다. 흐린 모양 자체는 앱과 같다.
+              // 쪽지 「고르기 전에는 검토 완료가 잠겨 있습니다」가 가리키는 글자라 읽혀야 한다. 흐린 모양 자체는 앱과 같다.
               bar === null && "[&>span:last-child]:opacity-65"
             )}
           />
@@ -267,19 +262,7 @@ export function WeeklyWindow() {
         delay={bar === null ? 900 : 0}
         className="absolute right-3 -bottom-12 z-10 lg:-right-6"
       >
-        {bar === null ? (
-          <>
-            고르기 전엔
-            <br />
-            검토 완료가 안 눌려요
-          </>
-        ) : (
-          <>
-            골랐으니
-            <br />
-            이제 눌러도 돼요
-          </>
-        )}
+        {t.rich(bar === null ? "before" : "after", RICH)}
       </Sticky>
     </>
   );

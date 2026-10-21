@@ -21,6 +21,10 @@ import {
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import { useLivePartial } from "@/components/notes/use-live-partial";
 import {
+  evidenceMarkOf,
+  SCREEN_CHANGE_HOLD_MS,
+} from "@/components/notes/use-transcript-focus";
+import {
   useRecording,
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
@@ -172,7 +176,15 @@ export function NoteTimeline({
   meetingEnded = false,
   recording = false,
   participants = [],
+  focusAgendaId = null,
+  onFocusHandled,
 }: {
+  /**
+   * 요약의 「타임라인에서 보기」가 짚은 안건(APP-1290). 그 안건의 첫 묶음으로 옮겨 머리에 형광펜을
+   * 긋고, 획이 지워지면 `onFocusHandled` 로 소유자(`NotePanel`)에게 비우라고 알린다.
+   */
+  focusAgendaId?: string | null;
+  onFocusHandled?: () => void;
   /** 문서 머리(제목·시각·참여 인원·프로젝트). 노트를 아직 못 읽었으면 비운다. */
   header: TimelineHeader | null;
   participants?: SpeakerFace[];
@@ -443,6 +455,30 @@ export function NoteTimeline({
     if (!viewport) return;
     updateFollowing(distanceFromBottom(viewport) <= FOLLOW_STICK_PX);
   }, [updateFollowing]);
+  const jumpToGroupRef = useRef(jumpToGroup);
+  useEffect(() => {
+    jumpToGroupRef.current = jumpToGroup;
+  });
+  // 짚힌 안건의 **첫** 묶음(같은 안건으로 돌아온 묶음은 「이어서」로 선다). 묶음이 아직 없으면
+  // (안건·명제 조회 중) 없는 채로 두고, 도착한 커밋에서 다시 돈다.
+  const focusGroup = focusAgendaId
+    ? allTimeline.groups.find((group) => group.agenda && group.key.startsWith(`${focusAgendaId}:`))
+    : undefined;
+  const focusKey = focusGroup?.key ?? null;
+  const focusMark = focusGroup?.agenda
+    ? evidenceMarkOf(focusGroup.agenda.title, { holdMs: SCREEN_CHANGE_HOLD_MS })
+    : null;
+  const focusLifetimeMs = focusMark?.lifetimeMs ?? 0;
+  useEffect(() => {
+    if (!focusKey) return;
+    // 탭을 막 바꾼 참이라 다음 프레임에 옮긴다(전사 점프와 같다).
+    const frame = requestAnimationFrame(() => jumpToGroupRef.current(focusKey));
+    const timer = window.setTimeout(() => onFocusHandled?.(), focusLifetimeMs);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [focusKey, focusLifetimeMs, onFocusHandled]);
 
   const scrollToLatest = () => {
     const viewport = viewportRef.current;
@@ -817,7 +853,11 @@ export function NoteTimeline({
                             "text-[var(--el-muted-soft)] line-through"
                         )}
                       >
-                        {group.agenda.title}
+                        {key === focusKey && focusMark ? (
+                          <span {...focusMark.props}>{group.agenda.title}</span>
+                        ) : (
+                          group.agenda.title
+                        )}
                       </span>
                       {group.previous ? (
                         <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">이어서</span>
@@ -917,7 +957,7 @@ export function NoteTimeline({
               <span className="size-1.5 rounded-full bg-red-500" />
             </span>
             <span className="flex min-w-0 flex-col">
-              <span className="break-keep text-[15px] leading-6 text-[var(--el-muted-soft)]">
+              <span className="text-[15px] leading-6 text-[var(--el-muted-soft)]">
                 {partial.confirmedText ? (
                   <span className="text-[var(--el-muted)]">
                     {partial.confirmedText}
@@ -1030,7 +1070,7 @@ function TimelineRow({
             <span className="flex min-w-0 flex-col">
               <span
                 className={cn(
-                  "break-keep text-[15px] leading-6",
+                  "text-[15px] leading-6",
                   retracted
                     ? "text-[var(--el-muted-soft)] line-through decoration-[var(--el-muted-soft)]"
                     : TONE_TITLE[tone]
@@ -1127,7 +1167,7 @@ function TimelineRow({
                                       }
                                     />
                                   ) : null}
-                                  <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
+                                  <span className="text-[14px] leading-[22px] text-[var(--el-body-strong)]">
                                     {citation.text}
                                   </span>
                                 </span>

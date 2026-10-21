@@ -1,0 +1,119 @@
+{
+  "guide": "사용 가이드",
+  "brandTitle": "HeyMoa(헤이모아) 사용법",
+  "hub": {
+    "description": "헤이모아(HeyMoa)의 회의 기록, 화자 지정, 회의 맥락과 용어 사전, 요약 검토, 데스크톱 앱과 AI 앱 연결 방법을 주제별로 알려 줘요.",
+    "lead": "궁금한 낱말을 찾거나, 기능 또는 상황으로 골라 읽어 보세요.",
+    "uiNote": "",
+    "featured": "자주 찾는 주제",
+    "byFeature": "기능별로 찾기",
+    "bySituation": "상황별로 찾기"
+  },
+  "og": {
+    "hubSummary": "회의 기록부터 요약 검토, 할 일, 내 에이전트까지 기능이나 상황으로 찾아 읽어 보세요.",
+    "label": "헤이모아 사용법",
+    "fallbackTitle": "사용법"
+  },
+  "groups": {
+    "start": {
+      "title": "시작하기",
+      "summary": "HeyMoa(헤이모아)에 로그인하고, 첫 회의를 기록하고, 화면과 계정, 데스크톱 앱을 알아봐요."
+    },
+    "record": {
+      "title": "녹음과 받아쓰기",
+      "summary": "회의를 녹음하고 받아쓰는 동안 참석자와 화자를 정하고, 용어 사전과 타임라인을 쓰는 방법이에요."
+    },
+    "summary": {
+      "title": "요약과 검토",
+      "summary": "회의를 종료하면 AI가 정리한 결정과 할 일을 검토해 확정하고, 복사하거나 PDF와 메일로 나눌 수 있어요."
+    },
+    "team": {
+      "title": "함께 쓰기",
+      "summary": "팀과 함께 할 일을 나누고, 내 에이전트에게 회의 내용을 묻고, 멤버를 초대하고, 문의를 보내요."
+    },
+    "connect": {
+      "title": "연결",
+      "summary": "Linear, GitHub 같은 외부 도구를 잇고, 외부 AI 앱(MCP)에서 내 회의를 읽게 해요."
+    },
+    "fix": {
+      "title": "문제 해결과 규칙",
+      "summary": "HeyMoa(헤이모아)를 쓰다 만나는 안내 문구별 해결 방법과, 녹음과 요약, 초대의 한도와 규칙을 한곳에 모았어요."
+    },
+    "situations": {
+      "title": "상황별로 찾기",
+      "summary": "첫 회의 기록, 녹음 문제, 요약 검토처럼 HeyMoa(헤이모아)에서 겪는 상황을 고르면 먼저 볼 곳과 해결 단계를 알려 줘요."
+    }
+  },
+  "clusters": {
+    "start": "처음 시작",
+    "recording": "녹음이 이상할 때",
+    "summary": "요약과 할 일",
+    "connect": "찾고 연결하기"
+  },
+  "page": {
+    "onThisPage": "이 페이지에서",
+    "toc": "이 페이지 목차",
+    "tocArea": "이 페이지 목차 영역",
+    "prevNext": "이전 주제와 다음 주제",
+    "prev": "이전 주제",
+    "next": "다음 주제",
+    "relatedSituations": "이런 상황에서 보세요"
+  },
+  "topBar": {
+    "start": "무료로 시작하기",
+    "tabs": "가이드 분류",
+    "feature": "기능별",
+    "situation": "상황별"
+  },
+  "sidebar": "사용 가이드 주제",
+  "badge": {
+    "desktop": "데스크톱",
+    "desktopSpoken": "데스크톱 앱 전용"
+  },
+  "anchor": {
+    "copy": "{title} 링크 복사",
+    "copied": "링크를 복사했어요"
+  },
+  "media": {
+    "play": "재생",
+    "pause": "일시정지",
+    "playNamed": "{alt} — 재생",
+    "pauseNamed": "{alt} — 일시정지",
+    "zoom": "{alt} — 크게 보기",
+    "seek": "재생 위치",
+    "zoomClose": "Esc를 누르면 확대 창이 닫혀요."
+  },
+  "md": {
+    "views": "보기 선택",
+    "copy": "복사",
+    "yes": "가능",
+    "no": "불가",
+    "none": "해당 없음"
+  },
+  "search": {
+    "label": "사용 가이드 전체에서 찾기",
+    "placeholder": "검색어를 입력하세요",
+    "placeholderExample": "검색어를 입력하세요 (예: 녹음, 용어 사전)",
+    "opener": "검색어를 입력하세요 (예: 녹음, 용어 사전) {hint} — 사용 가이드 검색",
+    "dialogTitle": "사용 가이드 검색",
+    "dialogHelp": "검색어를 입력하면 사용 가이드 전체에서 찾아요. 위아래 화살표 키로 결과를 고르고 Enter를 누르면 이동해요.",
+    "results": "검색 결과",
+    "topics": "주제",
+    "failed": "검색에 필요한 정보를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.",
+    "loading": "불러오는 중이에요…",
+    "searching": "찾는 중이에요…",
+    "noMatch": "일치하는 내용이 없어요. 다른 낱말로 찾아보세요.",
+    "noMatchFor": "‘{query}’와 일치하는 내용이 없어요. 다른 낱말로 찾아보세요.",
+    "found": "{count}곳에서 찾았어요",
+    "clear": "검색어 지우기",
+    "situation": "상황",
+    "feature": "기능",
+    "inPage": "본문에서 일치하는 곳",
+    "inPageCount": "일치하는 내용 {count}개",
+    "inPageNone": "일치하는 내용이 없어요",
+    "inPageNoneSentence": "일치하는 내용이 없어요.",
+    "prevMatch": "이전 일치",
+    "nextMatch": "다음 일치",
+    "close": "검색 닫기"
+  }
+}

@@ -233,7 +233,7 @@ export function ShareMailDialog({
       <DialogContent
         showCloseButton={!submitting}
         className={cn(
-          "flex max-h-[calc(100dvh-3rem)] flex-col gap-0 p-0 break-keep sm:max-w-[520px]",
+          "flex max-h-[calc(100dvh-3rem)] flex-col gap-0 p-0 sm:max-w-[520px]",
           // 좁은 화면은 아래 시트 — 손이 닿는 자리에 보내기가 오고, 키보드가 올라와도 위가 덜 가린다
           "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-h-[92dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:pb-[env(safe-area-inset-bottom)] max-sm:data-open:slide-in-from-bottom-10"
         )}

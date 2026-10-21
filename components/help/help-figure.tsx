@@ -1,13 +1,13 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { Maximize2 } from "lucide-react";
 
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
-import { track } from "@/lib/analytics/track";
-import { useHelpSlug } from "@/lib/help/analytics";
+import { trackHelp, useHelpSlug } from "@/lib/help/analytics";
 import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,7 @@ export function HelpFigure({
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const slug = useHelpSlug();
+  const t = useTranslations("help.media");
   const url = helpAssetUrl(src);
   // 크기는 캡처 스크립트가 쓴 목록(`lib/help/media-manifest.ts`)에서 읽는다 — 자리를 미리 잡는다.
   const { width, height } = HELP_MEDIA[src];
@@ -57,10 +58,10 @@ export function HelpFigure({
         ref={trigger}
         type="button"
         onClick={() => {
-          track("help_image_zoomed", { name: src, slug });
+          trackHelp("help_image_zoomed", { name: src, slug });
           setOpen(true);
         }}
-        aria-label={`${alt} — 크게 보기`}
+        aria-label={t("zoom", { alt })}
         className={cn(
           "group/fig relative block cursor-zoom-in overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] p-0 shadow-(--help-shadow) help-fade hover:shadow-(--help-shadow-hover) motion-reduce:transition-none",
           FOCUS
@@ -75,7 +76,7 @@ export function HelpFigure({
         </span>
       </button>
       {caption ? (
-        <figcaption className="m-0 text-[14px] leading-[1.65] break-keep text-[var(--tv-muted)]">
+        <figcaption className="m-0 text-[14px] leading-[1.65] text-[var(--tv-muted)]">
           {caption}
         </figcaption>
       ) : null}

@@ -57,7 +57,7 @@ export function ReviewTab({
   dockRaised?: boolean;
   onEvidenceSelect: (segmentId: string) => void;
   onOpenTranscript: () => void;
-  onOpenTimeline?: () => void;
+  onOpenTimeline?: (agendaId: string | null) => void;
   /** 종료 전 안내가 종료 확인창을 직접 연다. */
   note?: NoteResponseData | null;
   onEditParticipants?: () => void;

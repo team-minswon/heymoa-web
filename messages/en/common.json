@@ -1,0 +1,22 @@
+{
+  "skipToContent": "Skip to content",
+  "notFound": {
+    "label": "Error 404",
+    "title": "Page not found",
+    "description": "This page may have moved, or it is no longer available.",
+    "home": "Back to home"
+  },
+  "language": {
+    "heading": "Language"
+  },
+  "error": {
+    "title": "This page couldn't load",
+    "description": "This may be a temporary problem. Try again, or go back to the home page.",
+    "retry": "Try again",
+    "home": "Home"
+  },
+  "globalError": {
+    "title": "Something went wrong",
+    "description": "HeyMoa couldn't load. Please try again."
+  }
+}

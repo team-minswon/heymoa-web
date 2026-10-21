@@ -1,3 +1,6 @@
+import { splitLocale } from "@/lib/i18n/locales";
+import { isMarketingPathname } from "@/lib/i18n/marketing-routes";
+
 export function isWorkspaceRoute(pathname: string) {
   return pathname === "/w" || pathname.startsWith("/w/");
 }
@@ -11,22 +14,19 @@ export function isWorkspaceRoute(pathname: string) {
  */
 /**
  * 마케팅 `Navbar` · `Footer` 대신 랜딩 상단 바 · 랜딩 푸터(`components/heymoa/landing/`)를 세우는 경로.
- * 위와 같은 이유로 두 게이트가 이것 하나를 같이 본다. 약관 · 개인정보 · 데스크톱 다운로드 · 도움말은 랜딩과 같은 면이라 여기 든다.
+ * 위와 같은 이유로 두 게이트가 이것 하나를 같이 본다. 경로는 마케팅 경로 목록(`lib/i18n/marketing-routes.ts`)
+ * 하나이고, 영어판(`/en/...`)도 같은 면이다.
  */
 export function isHelpRoute(pathname: string) {
-  return pathname === "/help" || pathname.startsWith("/help/");
+  const { path } = splitLocale(pathname);
+  return path === "/help" || path.startsWith("/help/");
 }
 
-export function isLandingChromeRoute(pathname: string) {
-  return (
-    pathname === "/" ||
-    pathname === "/terms" ||
-    pathname === "/privacy" ||
-    pathname === "/download" ||
-    pathname === "/help" ||
-    pathname.startsWith("/help/")
-  );
-}
+export const isLandingChromeRoute = isMarketingPathname;
+
+/** 언어마다의 랜딩 첫 화면(`/`, `/en`). */
+export const isLandingHome = (pathname: string) =>
+  splitLocale(pathname).path === "/";
 
 /**
  * 카드 하나만 세우는 흐름(외부 에이전트 동의 · 초대). 마케팅 크롬 대신 로고 · 로그아웃만 둔 머리글과 약관 링크만 둔 발

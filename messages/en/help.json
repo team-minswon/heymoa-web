@@ -1,0 +1,119 @@
+{
+  "guide": "User guide",
+  "brandTitle": "HeyMoa Guide",
+  "hub": {
+    "description": "Learn how to record meetings in HeyMoa, name speakers, add meeting context and a glossary, review summaries, and connect the desktop app and AI apps.",
+    "lead": "Search for a word, or browse by feature or by situation.",
+    "uiNote": "The HeyMoa app is in Korean for now. This guide refers to its buttons and screens by their English names.",
+    "featured": "Popular topics",
+    "byFeature": "Browse by feature",
+    "bySituation": "Browse by situation"
+  },
+  "og": {
+    "hubSummary": "From recording meetings to reviewing summaries, tasks, and My agent, find answers by feature or by situation.",
+    "label": "HeyMoa Guide",
+    "fallbackTitle": "Guide"
+  },
+  "groups": {
+    "start": {
+      "title": "Getting started",
+      "summary": "Sign in to HeyMoa, record your first meeting, and get to know the screens, your account, and the desktop app."
+    },
+    "record": {
+      "title": "Recording and transcription",
+      "summary": "Record and transcribe meetings, set attendees and speakers as you go, and use the glossary and the timeline."
+    },
+    "summary": {
+      "title": "Summary and review",
+      "summary": "After a meeting ends, review and confirm the decisions and tasks AI pulled out, then copy them or share them as a PDF or by email."
+    },
+    "team": {
+      "title": "Working together",
+      "summary": "Share tasks with your team, ask My agent about your meetings, invite members, and send us questions."
+    },
+    "connect": {
+      "title": "Connections",
+      "summary": "Connect tools like Linear and GitHub, and let outside AI apps read your meetings over MCP."
+    },
+    "fix": {
+      "title": "Troubleshooting and rules",
+      "summary": "Fixes for the messages you may see in HeyMoa, plus the limits and rules for recording, summaries, and invites, all in one place."
+    },
+    "situations": {
+      "title": "Browse by situation",
+      "summary": "Pick a situation you've run into in HeyMoa, like your first meeting, a recording problem, or reviewing a summary, and see where to look and what to do."
+    }
+  },
+  "clusters": {
+    "start": "Getting started",
+    "recording": "When recording goes wrong",
+    "summary": "Summaries and tasks",
+    "connect": "Finding and connecting"
+  },
+  "page": {
+    "onThisPage": "On this page",
+    "toc": "Page contents",
+    "tocArea": "Page contents sidebar",
+    "prevNext": "Previous and next topics",
+    "prev": "Previous",
+    "next": "Next",
+    "relatedSituations": "Situations where this helps"
+  },
+  "topBar": {
+    "start": "Start for free",
+    "tabs": "Guide sections",
+    "feature": "By feature",
+    "situation": "By situation"
+  },
+  "sidebar": "Guide topics",
+  "badge": {
+    "desktop": "Desktop",
+    "desktopSpoken": "Desktop app only"
+  },
+  "anchor": {
+    "copy": "Copy link to {title}",
+    "copied": "Link copied"
+  },
+  "media": {
+    "play": "Play",
+    "pause": "Pause",
+    "playNamed": "{alt} — play",
+    "pauseNamed": "{alt} — pause",
+    "zoom": "{alt} — enlarge",
+    "seek": "Playback position",
+    "zoomClose": "Press Esc to close the enlarged view."
+  },
+  "md": {
+    "views": "Choose a view",
+    "copy": "Copy",
+    "yes": "Yes",
+    "no": "No",
+    "none": "Not applicable"
+  },
+  "search": {
+    "label": "Search the whole guide",
+    "placeholder": "Search the guide",
+    "placeholderExample": "Search the guide (e.g. recording, glossary)",
+    "opener": "Search the guide (e.g. recording, glossary) {hint}",
+    "dialogTitle": "Search the guide",
+    "dialogHelp": "Type to search the whole guide. Use the up and down arrow keys to pick a result, then press Enter to go there.",
+    "results": "Search results",
+    "topics": "Topics",
+    "failed": "We couldn’t load search. Please try again in a moment.",
+    "loading": "Loading…",
+    "searching": "Searching…",
+    "noMatch": "No matches. Try a different word.",
+    "noMatchFor": "No matches for “{query}”. Try a different word.",
+    "found": "{count, plural, one {# match} other {# matches}}",
+    "clear": "Clear search",
+    "situation": "Situation",
+    "feature": "Feature",
+    "inPage": "Matches on this page",
+    "inPageCount": "{count, plural, one {# match} other {# matches}}",
+    "inPageNone": "No matches",
+    "inPageNoneSentence": "No matches.",
+    "prevMatch": "Previous match",
+    "nextMatch": "Next match",
+    "close": "Close search"
+  }
+}

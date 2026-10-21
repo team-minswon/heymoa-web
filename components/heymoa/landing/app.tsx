@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   ArrowUp,
   Calendar,
@@ -34,12 +35,13 @@ import type { TimelineTone } from "@/lib/notes/proposals/timeline";
 import { unnamedSpeakerAvatarKey } from "@/lib/people/avatar-key";
 import { cn } from "@/lib/utils";
 
+import { RICH } from "./rich";
 import { APP, RADIUS, SHADOW } from "./tokens";
 
 /*
  * 앱 화면 조각. **창 안 = `--el-*` · `APP` · `ROLE_*` 만, 창 밖 · 창 위 주석 = `--tv-*`(`marks.tsx`).**
  *
- * - 서버 · 클라이언트 양쪽에서 쓴다 — 훅이 없고, 전부 `<span>`/`<div>` 그림이라 포커스가 가지 않는다.
+ * - 서버 · 클라이언트 양쪽에서 쓴다 — 훅은 `useTranslations` 뿐이고(서버 · 클라이언트 둘 다 된다), 전부 `<span>`/`<div>` 그림이라 포커스가 가지 않는다.
  *   진짜로 눌리는 것은 구간이 `<button>` 으로 따로 만든다(펼치기는 `app-client.tsx`).
  * - 값은 괄호 안 앱 컴포넌트의 클래스를 다시 읽고 맞췄다. **크기 prop 이 없는 것은 앱 값 그대로다** —
  *   키울 때는 구간이 창 본문에 `[zoom:1.05]` 처럼 균일 확대를 건다(0.95~1.1).
@@ -59,15 +61,25 @@ import { APP, RADIUS, SHADOW } from "./tokens";
 /**
  * 얼굴 열쇠. 앞의 넷은 기존 랜딩과 같은 사람(`landing/shell.tsx`)이고, 나머지는 이 페이지의 예시
  * 회의가 지어낸 사람이다. 이름이 아니라 변하지 않는 식별자를 넘기는 것은 앱의 `personAvatarKey` 규칙.
+ * 열쇠(`Person`)는 로마자 식별자이고, 보이는 이름은 `usePersonName` 이 언어 파일(`landing.people`)에서 낸다.
  */
-const FACE: Record<string, string> = {
+const FACE = {
   ...FACE_KEY,
-  한서진: "landing:tldv:han-seojin",
-  오태윤: "landing:tldv:oh-taeyun",
-  윤하린: "landing:tldv:yoon-harin",
-  문지호: "landing:tldv:moon-jiho",
-  송다온: "landing:tldv:song-daon",
-};
+  seojin: "landing:tldv:han-seojin",
+  taeyun: "landing:tldv:oh-taeyun",
+  harin: "landing:tldv:yoon-harin",
+  jiho: "landing:tldv:moon-jiho",
+  daon: "landing:tldv:song-daon",
+} as const;
+
+/** 랜딩의 지어낸 사람. */
+export type Person = keyof typeof FACE;
+
+/** 사람의 보이는 이름(「김민서」 · 「Minseo Kim」). */
+export function usePersonName() {
+  const t = useTranslations("landing.people");
+  return (who: Person) => t(who);
+}
 
 /** 이름이 붙은 사람의 얼굴(`PersonAvatar`). */
 export function Face({
@@ -75,13 +87,11 @@ export function Face({
   size = 20,
   className,
 }: {
-  who: string;
+  who: Person;
   size?: number;
   className?: string;
 }) {
-  return (
-    <PersonAvatar name={FACE[who] ?? who} size={size} className={className} />
-  );
+  return <PersonAvatar name={FACE[who]} size={size} className={className} />;
 }
 
 /** 아직 이름이 안 붙은 화자의 얼굴. `label` 은 「A」 같은 화자 라벨(`unnamedSpeakerAvatarKey`). */
@@ -113,7 +123,7 @@ export function FacePile({
   ring = "ring-white",
   className,
 }: {
-  names: string[];
+  names: Person[];
   size?: number;
   ring?: string;
   className?: string;
@@ -166,7 +176,7 @@ export function AppWindow({
 
 /* ── 노트 상단바 ──────────────────────────────────────────────────────── */
 
-const TABS: readonly NoteTab[] = ["정보", "스크립트", "타임라인", "요약"];
+const TABS: readonly NoteTab[] = ["info", "script", "timeline", "summary"];
 
 /**
  * 회의 상태 칩(`meeting-controls.tsx` `MeetingStatusChip`). 바탕 없이 점 + 글자 11px. 기록 중만
@@ -179,7 +189,8 @@ export function StatusChip({
   status: Status;
   className?: string;
 }) {
-  const live = status === "기록 중";
+  const t = useTranslations("landing.app.status");
+  const live = status === "recording";
   return (
     <span
       className={cn(
@@ -188,7 +199,7 @@ export function StatusChip({
         className
       )}
     >
-      {status === "중지됨" ? (
+      {status === "paused" ? (
         <Pause aria-hidden className="size-3.5" />
       ) : (
         <span
@@ -199,7 +210,7 @@ export function StatusChip({
           )}
         />
       )}
-      {status}
+      {t(status)}
     </span>
   );
 }
@@ -219,9 +230,12 @@ function TabStrip({
   size?: "md" | "sm";
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
   return (
     <span className={cn("flex items-stretch", className)}>
-      <span className="sr-only">{`${active} 탭`}</span>
+      <span className="sr-only">
+        {t("tabSr", { tab: t(`tabs.${active}`) })}
+      </span>
       <span
         aria-hidden
         className={cn("flex items-stretch", size === "sm" ? "gap-4" : "gap-5")}
@@ -235,7 +249,7 @@ function TabStrip({
               tab === active ? APP.ink : "text-[var(--el-ink)]/60"
             )}
           >
-            {tab}
+            {t(`tabs.${tab}`)}
             {tab === active ? (
               <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[var(--el-ink)]" />
             ) : null}
@@ -338,12 +352,16 @@ export function HeadChip({
 }
 
 /** 참석자 칩(`review-head.tsx`). 얼굴 넷까지 + 「첫 이름 외 N명」. 이름 붙은 회의에만 선다. */
-export function FacesChip({ names }: { names: string[] }) {
+export function FacesChip({ names }: { names: Person[] }) {
+  const t = useTranslations("landing.app");
+  const name = usePersonName();
   return (
     <span className={cn(HEAD_CHIP, "pr-[9px] pl-1")}>
       <FacePile names={names.slice(0, 4)} size={18} />
       <span className="truncate">
-        {names.length > 1 ? `${names[0]} 외 ${names.length - 1}명` : names[0]}
+        {names.length > 1
+          ? t("facesChip", { first: name(names[0]), others: names.length - 1 })
+          : name(names[0])}
       </span>
     </span>
   );
@@ -363,13 +381,14 @@ export function ReviewHead({
   titleSize = "md",
   className,
 }: {
-  state?: "검토 중" | "확정됨";
+  state?: "review" | "confirmed";
   title: ReactNode;
   chips?: ReactNode;
   aside?: ReactNode;
   titleSize?: "md" | "lg";
   className?: string;
 }) {
+  const t = useTranslations("landing.app.reviewState");
   return (
     <header className={cn("pb-1", className)}>
       {state ? (
@@ -377,17 +396,17 @@ export function ReviewHead({
           <span
             className={cn(
               "inline-flex h-5 items-center rounded-[6px] px-[7px] text-[11px] font-semibold transition-colors duration-200 ease-out",
-              state === "확정됨" ? APP.success : cn(APP.chipBg, APP.body)
+              state === "confirmed" ? APP.success : cn(APP.chipBg, APP.body)
             )}
           >
-            {state}
+            {t(state)}
           </span>
           {aside ? <span className="ml-auto">{aside}</span> : null}
         </div>
       ) : null}
       <p
         className={cn(
-          "m-0 font-medium tracking-[-0.4px] break-keep",
+          "m-0 font-medium tracking-[-0.4px]",
           APP.ink,
           state && "mt-2.5",
           titleSize === "lg"
@@ -445,7 +464,7 @@ export function SectionHead({
 
 /* ── 검토 줄(요약 탭) ─────────────────────────────────────────────────── */
 
-const ROW_CONTENT = "block min-w-0 break-keep text-[15px] leading-6";
+const ROW_CONTENT = "block min-w-0 text-[15px] leading-6";
 
 /**
  * 줄 사이 선(검토 줄 · 스크립트 줄). 앱은 마지막 줄에도 선을 긋지만, 잘라 보인 창 · 카드에서는 그 선이 프레임
@@ -555,7 +574,9 @@ export function DecisionRow({
 }
 
 /** 담당 칸의 그림(`assignee-cell.tsx` `AssigneeFace`). 이름 없는 화자는 회색 이름 + 작은 점이다. */
-function Assignee({ who }: { who: { name: string } | { label: string } }) {
+function Assignee({ who }: { who: { name: Person } | { label: string } }) {
+  const t = useTranslations("landing.app");
+  const name = usePersonName();
   const unnamed = "label" in who;
   return (
     <span className="inline-flex h-7 min-w-0 items-center">
@@ -571,7 +592,7 @@ function Assignee({ who }: { who: { name: string } | { label: string } }) {
           <Face who={who.name} size={18} />
         )}
         <span className={cn("truncate", unnamed && APP.muted)}>
-          {unnamed ? `화자 ${who.label}` : who.name}
+          {unnamed ? t("speaker", { label: who.label }) : name(who.name)}
         </span>
         {unnamed ? (
           <span
@@ -586,6 +607,7 @@ function Assignee({ who }: { who: { name: string } | { label: string } }) {
 
 /** 기한 칩(`due-cell.tsx` chip). 없고 고칠 수 있으면 주황 점선 「기한 정하기」, 확정 뒤에는 아무것도 없다. */
 function Due({ due, editable }: { due: string | null; editable: boolean }) {
+  const t = useTranslations("landing.app");
   if (!due && !editable) return null;
   return (
     <span
@@ -597,7 +619,7 @@ function Due({ due, editable }: { due: string | null; editable: boolean }) {
       )}
     >
       <CalendarDays aria-hidden className="size-[13px] shrink-0" />
-      {due ?? "기한 정하기"}
+      {due ?? t("setDue")}
     </span>
   );
 }
@@ -621,7 +643,7 @@ export function TaskRow({
   className,
 }: {
   text: ReactNode;
-  who?: { name: string } | { label: string };
+  who?: { name: Person } | { label: string };
   due?: string | null;
   editable?: boolean;
   excluded?: boolean;
@@ -631,13 +653,14 @@ export function TaskRow({
   children?: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
   const dueChip =
     due === undefined ? null : <Due due={due} editable={editable} />;
   const assignee = who ? (
     <Assignee who={who} />
   ) : editable ? (
     <span className={cn("inline-flex h-7 items-center text-[13px]", APP.muted)}>
-      담당 정하기
+      {t("setAssignee")}
     </span>
   ) : null;
   return (
@@ -703,7 +726,7 @@ export function EvidenceQuotes({
   className,
 }: {
   quotes: Array<{
-    who?: string;
+    who?: Person;
     label?: string;
     at: string;
     text: ReactNode;
@@ -711,6 +734,8 @@ export function EvidenceQuotes({
   }>;
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
+  const name = usePersonName();
   return (
     <ul
       className={cn(
@@ -735,15 +760,18 @@ export function EvidenceQuotes({
           <span className="flex min-w-0 flex-col">
             <span className={cn("text-[12.5px] leading-5", APP.muted)}>
               <span className={cn("font-medium", APP.body)}>
-                {quote.who ??
-                  (quote.label ? `화자 ${quote.label}` : "화자 없음")}
+                {quote.who
+                  ? name(quote.who)
+                  : quote.label
+                    ? t("speaker", { label: quote.label })
+                    : t("noSpeaker")}
               </span>
               {" · "}
               <span className="tabular-nums">{quote.at}</span>
             </span>
             <span
               className={cn(
-                "text-[14px] leading-[22px] break-keep",
+                "text-[14px] leading-[22px]",
                 quote.cited ? APP.ink : APP.muted
               )}
             >
@@ -758,6 +786,7 @@ export function EvidenceQuotes({
 
 /** 펼친 줄의 「수정」 「제외」(`review-row.tsx`, outline xs 버튼). 뺀 줄은 「제외 취소」 하나다. */
 export function RowActions({ excluded = false }: { excluded?: boolean }) {
+  const t = useTranslations("landing.app");
   const button = cn(
     "inline-flex h-6 items-center rounded-[8px] border bg-[var(--el-canvas)] px-2 text-[12px] font-medium",
     APP.line,
@@ -765,8 +794,10 @@ export function RowActions({ excluded = false }: { excluded?: boolean }) {
   );
   return (
     <span className="flex flex-wrap gap-1.5">
-      {excluded ? null : <span className={button}>수정</span>}
-      <span className={button}>{excluded ? "제외 취소" : "제외"}</span>
+      {excluded ? null : <span className={button}>{t("edit")}</span>}
+      <span className={button}>
+        {excluded ? t("undoExclude") : t("exclude")}
+      </span>
     </span>
   );
 }
@@ -842,6 +873,7 @@ export function ConfirmBar({
   buttonSlot?: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("landing.app.confirm");
   const pill = variant === "pill";
   return (
     <div className={cn(BAR[variant], className)}>
@@ -855,7 +887,10 @@ export function ConfirmBar({
           >
             <span aria-hidden className="size-1.5 rounded-full bg-[#eb6834]" />
             <span className="whitespace-nowrap">
-              확인할 제안 <Count value={state.n} />개
+              {t.rich("unchosen", {
+                count: state.n,
+                n: () => <Count value={state.n} />,
+              })}
             </span>
           </span>
           <span
@@ -865,28 +900,37 @@ export function ConfirmBar({
               APP.body
             )}
           >
-            제안으로 가기
+            {t("goToSuggestions")}
           </span>
         </span>
       ) : (
         <span
           className={cn(
-            "min-w-0 break-keep",
+            "min-w-0",
             pill ? "text-[12.5px] leading-[1.4]" : "text-[13.5px]",
             APP.body
           )}
         >
-          <span className="whitespace-nowrap">
-            선택한 결정 <Count value={state.decisions} />
-            개와 할 일 <Count value={state.tasks} />
-            개를
+          {/* 줄을 갈지 않을 덩어리는 언어 파일의 `<nw>` 가 정한다 — 한국어는 덩어리째, 영어는 낱말 사이에서 갈린다. */}
+          <span>
+            {t.rich("counts", {
+              ...RICH,
+              decisions: state.decisions,
+              tasks: state.tasks,
+              d: () => <Count value={state.decisions} />,
+              t: () => <Count value={state.tasks} />,
+            })}
           </span>{" "}
-          <span className="whitespace-nowrap">프로젝트에 올립니다</span>
+          {t.rich("target", RICH)}
           {state.ended ? (
             <>
               {" "}
-              <span className="whitespace-nowrap">
-                · 이전 결정 <Count value={state.ended} />개 끝남
+              <span>
+                {t.rich("ended", {
+                  ...RICH,
+                  count: state.ended,
+                  n: () => <Count value={state.ended ?? 0} />,
+                })}
               </span>
             </>
           ) : null}
@@ -908,7 +952,7 @@ export function ConfirmBar({
           state.kind === "unchosen" && "opacity-50"
         )}
       >
-        검토 완료
+        {t("button")}
         {buttonSlot}
       </span>
     </div>
@@ -951,6 +995,7 @@ export function ReplacementRow({
   toggle: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
   return (
     <div
       className={cn(
@@ -962,18 +1007,16 @@ export function ReplacementRow({
     >
       <div className="grid grid-cols-1 items-center justify-items-start gap-x-3 gap-y-1.5">
         <span className={cn("text-[12px] whitespace-nowrap", APP.muted)}>
-          이전 결정 대체
+          {t("replacement")}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={cn("break-keep", APP.ink)}>{target}</span>
+          <span className={cn(APP.ink)}>{target}</span>
           <span className={cn("text-[12px]", APP.muted)}>{meta}</span>
         </span>
         {toggle}
       </div>
       {reason ? (
-        <p className={cn("m-0 mt-1.5 text-[12px] break-keep", APP.muted)}>
-          {reason}
-        </p>
+        <p className={cn("m-0 mt-1.5 text-[12px]", APP.muted)}>{reason}</p>
       ) : null}
     </div>
   );
@@ -1006,6 +1049,7 @@ export function AgendaHead({
   as?: "div" | "button" | "h3" | "h4";
   className?: string;
 } & Omit<HTMLAttributes<HTMLElement>, "title">) {
+  const t = useTranslations("landing.app");
   const buttonProps: Record<string, string> =
     Tag === "button" ? { type: "button" } : {};
   return (
@@ -1050,7 +1094,10 @@ export function AgendaHead({
         />
         <span className="flex-1" />
         {live ? (
-          <LiveChip dotClassName={blink ? "tv-blink" : undefined} />
+          <LiveChip
+            dotClassName={blink ? "tv-blink" : undefined}
+            label={t("live")}
+          />
         ) : null}
       </span>
     </Tag>
@@ -1110,8 +1157,9 @@ export function TimelineRow({
   cites?: Array<{ at: string; text: ReactNode }>;
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
   const parts = [
-    ...(retracted ? [{ text: "철회됨", error: true }] : []),
+    ...(retracted ? [{ text: t("retracted"), error: true }] : []),
     ...(meta ? [{ text: meta, error: metaTone === "error" }] : []),
   ];
   return (
@@ -1142,7 +1190,7 @@ export function TimelineRow({
           <span className="flex min-w-0 flex-col">
             <span
               className={cn(
-                "break-keep text-[15px] leading-6",
+                "text-[15px] leading-6",
                 retracted
                   ? "text-[var(--el-muted)] line-through"
                   : TONE_TITLE[tone]
@@ -1196,10 +1244,7 @@ export function TimelineRow({
                     {cite.at}
                   </span>
                   <span
-                    className={cn(
-                      "break-keep text-[14px] leading-[22px]",
-                      APP.bodyStrong
-                    )}
+                    className={cn("text-[14px] leading-[22px]", APP.bodyStrong)}
                   >
                     {cite.text}
                   </span>
@@ -1229,11 +1274,13 @@ export function ScriptRow({
   className,
 }: {
   at: string;
-  speaker?: { name: string } | { label: string };
+  speaker?: { name: Person } | { label: string };
   live?: boolean;
   children: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
+  const name = usePersonName();
   const unnamed = speaker !== undefined && "label" in speaker;
   return (
     <div
@@ -1257,7 +1304,7 @@ export function ScriptRow({
             aria-hidden
             className="size-1.5 shrink-0 animate-pulse rounded-full bg-red-500"
           />
-          받아 적는 중
+          {t("transcribing")}
         </span>
       ) : (
         <span
@@ -1279,7 +1326,9 @@ export function ScriptRow({
             ) : (
               <Face who={speaker.name} />
             )}
-            {unnamed ? `화자 ${speaker.label}` : speaker.name}
+            {unnamed
+              ? t("speaker", { label: speaker.label })
+              : name(speaker.name)}
             {unnamed ? (
               <span
                 aria-hidden
@@ -1290,7 +1339,7 @@ export function ScriptRow({
         ) : null}
         <p
           className={cn(
-            "m-0 break-keep text-[15px] leading-7 tracking-[0.005em]",
+            "m-0 text-[15px] leading-7 tracking-[0.005em]",
             live ? APP.body : APP.ink
           )}
         >
@@ -1311,6 +1360,7 @@ export function ScriptRow({
 
 /** 오른쪽 레일의 머리(`note-agent-rail.tsx`). 「내 에이전트 · 나만 보는 대화 · 현재 회의 범위」 + 접기. */
 export function RailHead({ className }: { className?: string }) {
+  const t = useTranslations("landing.app.rail");
   return (
     <div
       className={cn(
@@ -1321,10 +1371,10 @@ export function RailHead({ className }: { className?: string }) {
     >
       <Sparkles aria-hidden className={cn("size-[15px] shrink-0", APP.ink)} />
       <span className={cn("shrink-0 text-[13px] font-semibold", APP.ink)}>
-        내 에이전트
+        {t("title")}
       </span>
       <span className={cn("min-w-0 truncate text-[12px]", APP.muted)}>
-        나만 보는 대화 · 현재 회의 범위
+        {t("private")} · {t("scope")}
       </span>
       <span className="flex-1" />
       <span
@@ -1412,7 +1462,7 @@ export function UserBubble({
     <div className={cn("flex justify-end", className)}>
       <p
         className={cn(
-          "m-0 max-w-[85%] rounded-[16px] px-3.5 py-2.5 text-[14px] leading-relaxed break-keep whitespace-pre-wrap",
+          "m-0 max-w-[85%] rounded-[16px] px-3.5 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap",
           APP.chipBg,
           APP.ink
         )}
@@ -1433,13 +1483,7 @@ export function Answer({
   className?: string;
 }) {
   return (
-    <p
-      className={cn(
-        "m-0 text-[14px] leading-[1.65] break-keep",
-        APP.body,
-        className
-      )}
-    >
+    <p className={cn("m-0 text-[14px] leading-[1.65]", APP.body, className)}>
       {children}
     </p>
   );
@@ -1480,6 +1524,7 @@ export function Composer({
   children?: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("landing.app");
   const empty = !chip && !children;
   return (
     <div
@@ -1490,12 +1535,12 @@ export function Composer({
     >
       <span
         className={cn(
-          "min-h-9 min-w-0 flex-1 py-[5px] text-[15px] leading-[1.75] break-keep",
+          "min-h-9 min-w-0 flex-1 py-[5px] text-[15px] leading-[1.75]",
           empty ? APP.muted : APP.ink
         )}
       >
         {empty ? (
-          "@로 프로젝트·회의록을 참조해 물어보세요"
+          t("composerPlaceholder")
         ) : (
           <>
             {chip}

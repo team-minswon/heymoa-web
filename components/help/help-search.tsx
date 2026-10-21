@@ -5,6 +5,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
@@ -44,6 +45,7 @@ function UrlQuerySync({ onChange }: { onChange: (q: string) => void }) {
  * `app/globals.css` 의 `::highlight(help-search*)`.
  */
 export function HelpSearch({ targetId }: { targetId: string }) {
+  const t = useTranslations("help.search");
   const rangesRef = useRef<Range[]>([]);
   const [query, setQuery] = useState("");
   const [total, setTotal] = useState(0);
@@ -133,12 +135,12 @@ export function HelpSearch({ targetId }: { targetId: string }) {
     const timer = window.setTimeout(
       () =>
         setAnnounce(
-          total ? `일치하는 내용 ${total}개` : "일치하는 내용이 없어요."
+          total ? t("inPageCount", { count: total }) : t("inPageNoneSentence")
         ),
       ANNOUNCE_MS
     );
     return () => window.clearTimeout(timer);
-  }, [query, total]);
+  }, [query, total, t]);
 
   const step = useCallback(
     (direction: 1 | -1) => {
@@ -180,14 +182,14 @@ export function HelpSearch({ targetId }: { targetId: string }) {
       {query ? (
         <div
           role="search"
-          aria-label="본문에서 일치하는 곳"
+          aria-label={t("inPage")}
           className="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--tv-rule-strong)] bg-white py-1 pr-1.5 pl-4 text-[14px] text-[var(--tv-body)] shadow-[0_8px_24px_-12px_rgb(12_10_9/0.35)]"
         >
           <span className="max-w-[200px] truncate font-bold text-[var(--tv-ink)]">
             {query}
           </span>
           {total === 0 ? (
-            <span className="px-2">일치하는 내용이 없어요</span>
+            <span className="px-2">{t("inPageNone")}</span>
           ) : (
             <>
               <span
@@ -198,8 +200,8 @@ export function HelpSearch({ targetId }: { targetId: string }) {
               </span>
               {(
                 [
-                  ["이전 일치", -1, ChevronUp],
-                  ["다음 일치", 1, ChevronDown],
+                  [t("prevMatch"), -1, ChevronUp],
+                  [t("nextMatch"), 1, ChevronDown],
                 ] as const
               ).map(([label, direction, Icon]) => (
                 <Button
@@ -223,7 +225,7 @@ export function HelpSearch({ targetId }: { targetId: string }) {
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="검색 닫기"
+            aria-label={t("close")}
             onClick={close}
             className={cn(
               "size-8 rounded-full text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",

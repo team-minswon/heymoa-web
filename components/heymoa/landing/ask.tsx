@@ -1,8 +1,11 @@
+import { useMessages, useTranslations } from "next-intl";
+
 import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
 
 import { AskChat } from "./ask-chat";
 import { Hand, Scribble, Sticky } from "./marks";
+import { RICH } from "./rich";
 import { CONTAINER, H2, LEAD, MARKER_REVEAL, SECTION_Y } from "./tokens";
 
 /*
@@ -24,36 +27,35 @@ import { CONTAINER, H2, LEAD, MARKER_REVEAL, SECTION_Y } from "./tokens";
  * 다시 짜야 해서 숨기는 쪽을 골랐다 — 무엇을 물을 수 있는지는 리드 문단과 질문 쪽지 셋이 같은 말을 한다.
  * 담당을 묻는 쪽지의 답은 회의 카드 · 근거 구간처럼 화자에 이름을 이어 준 뒤다 — `ask-chat.tsx` 참고.
  *
- * 리드 끝 문장은 「어디서 가져온 답인지 회의록을 눌러 확인」이다. 히어로 손글씨가 이미 「답 아래엔
- * 참고한 회의록이 붙어요」라고 해서, 전의 「답 아래 참고한 회의록이 붙어서…」는 같은 말을 두 번 했다.
+ * 리드 끝 문장은 「답의 출처는 회의록을 눌러 확인」이다. 히어로 손글씨가 이미 「답 아래에
+ * 참고한 회의록이 붙습니다」라고 해서, 전의 「답 아래 참고한 회의록이 붙어서…」는 같은 말을 두 번 했다.
  * 여기서는 붙는 자리 대신 눌러서 출처를 확인한다는 쪽만 말한다(앱 `AnswerRefs` 는 누르면 그 회의록을 연다).
  */
 
-/** 회의실 명대사. 넓은 화면에서는 한 줄로 조금씩 들쭉날쭉하게, 좁은 화면에서는 2×2 로 선다. */
+/**
+ * 회의실 명대사. 넓은 화면에서는 한 줄로 조금씩 들쭉날쭉하게, 좁은 화면에서는 2×2 로 선다. 글은
+ * `landing.ask.wall` 의 같은 차례다.
+ */
 const WALL = [
   {
-    text: "그거 누가 하기로 했죠?",
     tone: "pop",
     tilt: -4,
     big: true,
     shift: "lg:-translate-y-1",
   },
   {
-    text: "지난주에 정한 거 아니었어요?",
     tone: "white",
     tilt: 3,
     big: false,
     shift: "lg:translate-y-3",
   },
   {
-    text: "아까 뭐라고 했더라?",
     tone: "mint",
     tilt: -2,
     big: false,
     shift: "lg:-translate-y-2",
   },
   {
-    text: "저 그때 없었는데요",
     tone: "butter",
     tilt: 4,
     big: true,
@@ -62,6 +64,8 @@ const WALL = [
 ] as const;
 
 export function Ask() {
+  const t = useTranslations("landing.ask");
+  const wall = useMessages().landing.ask.wall;
   return (
     <section
       id="ask"
@@ -73,7 +77,7 @@ export function Ask() {
         <ul className="m-0 grid list-none grid-cols-2 items-center gap-x-3 gap-y-5 p-0 lg:flex lg:flex-wrap lg:justify-center lg:gap-x-6 lg:gap-y-4">
           {WALL.map((line, i) => (
             <li
-              key={line.text}
+              key={line.tone}
               className={cn("flex justify-center", line.shift)}
             >
               <Sticky
@@ -89,7 +93,7 @@ export function Ask() {
                     : "lg:text-[15px]"
                 )}
               >
-                {line.text}
+                {wall[i]}
               </Sticky>
             </li>
           ))}
@@ -100,7 +104,7 @@ export function Ask() {
             기둥 상자째 `translate-x-12` 로 밀어서 1024 에서 상자가 화면 오른쪽 끝을 8px 넘었다. */}
         <div className="mt-7 flex justify-center lg:mt-9 lg:grid lg:grid-cols-[minmax(0,1fr)_540px] lg:gap-16">
           <div className="flex flex-col items-center gap-1 lg:col-start-2 lg:pl-24">
-            <Hand className="text-[16px]">이제 이건 에이전트한테</Hand>
+            <Hand className="text-[16px]">{t("hand")}</Hand>
             <Scribble
               kind="arrow-down"
               draw="reveal"
@@ -115,16 +119,16 @@ export function Ask() {
         heading={
           <Reveal>
             <h2 id="ask-title" className={H2}>
-              물어보면 <span className="whitespace-nowrap">지난 회의에서</span>{" "}
-              <span className={cn(MARKER_REVEAL, "whitespace-nowrap")}>
-                찾아 줍니다
-              </span>
+              {t.rich("title", {
+                ...RICH,
+                mark: (chunks) => (
+                  <span className={cn(MARKER_REVEAL, "whitespace-nowrap")}>
+                    {chunks}
+                  </span>
+                ),
+              })}
             </h2>
-            <p className={`${LEAD} mt-4`}>
-              회의가 도는 중에도, 끝난 뒤에도 내 에이전트에게 물어보세요. 이
-              회의부터 찾고, 모자라면 지난 회의까지 넓혀서 답합니다. 어디서
-              가져온 답인지는 그 회의록을 눌러 바로 확인할 수 있습니다.
-            </p>
+            <p className={`${LEAD} mt-4`}>{t("lead")}</p>
           </Reveal>
         }
       />

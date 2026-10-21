@@ -1,7 +1,7 @@
 # 데스크톱 다운로드와 공개 릴리스
 
 - 제품의 설치 파일 링크는 `lib/desktop/downloads.ts`의 `DESKTOP_INSTALLERS`를 공유합니다. 버전별 GitHub URL이나 앱 package 버전을 UI에 직접 넣지 않습니다.
-- 고정 주소의 입력·파일 허용 목록은 `app/(static)/download/app/route.ts`와 공통 목록이 소유합니다. 최신 공개 정식 릴리스로 임시 리다이렉트하고 파일 전송은 GitHub에 맡깁니다. 임의 URL을 입력받거나 Spring 인증을 요구하지 않습니다.
+- 고정 주소의 입력·파일 허용 목록은 `app/[lang]/download/app/route.ts`와 공통 목록이 소유합니다. 최신 공개 정식 릴리스로 임시 리다이렉트하고 파일 전송은 GitHub에 맡깁니다. 임의 URL을 입력받거나 Spring 인증을 요구하지 않습니다.
 - 다운로드는 문서 내비게이션이 아닙니다. 일반 `<a>`를 사용하고, 공용 메뉴의 Next Link를 써야 하면 prefetch를 끕니다. 랜딩의 다운로드 시작 뒤 설치 안내 이동, 워크스페이스의 현재 화면 유지, Mac은 Apple Silicon만 제공하고 CPU 선택 메뉴를 두지 않습니다. Mac UA의 Intel 문자열로 칩을 추측하지 않습니다.
 - 릴리스 CI는 `apps/desktop/scripts/prepare-download-aliases.mjs`로 버전별 설치 파일과 같은 바이트의 고정 파일명을 준비하고 `checksums.mjs`로 최종 체크섬을 만듭니다. 공개 전에 버전별 파일·고정 파일·SHA256SUMS를 모두 draft에 붙입니다. 없는 플랫폼 파일을 대신 만들거나 구버전 파일과 섞지 않습니다.
 - `release-manifest.mjs`로 공개된 파일의 크기·해시 및 고정 파일과 버전별 파일의 일치를 확인합니다. 최신 정식 릴리스 승격 후 고정 주소로 실제 파일을 받을 수 있는지도 확인합니다. prerelease·draft를 정식 다운로드로 승격하지 않습니다.

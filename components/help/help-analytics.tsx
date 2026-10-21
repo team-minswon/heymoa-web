@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-import { helpLocation } from "@/lib/help/analytics";
 import { track } from "@/lib/analytics/track";
+import { helpLocation, trackHelp } from "@/lib/help/analytics";
 
 /** 앞 화면의 주소. 모듈 값이라 페이지를 옮겨도 이어진다(첫 로드는 null). */
 let lastPath: string | null = null;
@@ -15,11 +15,13 @@ function entryOf(previous: string | null) {
     | undefined;
   if (previous === null && nav?.type === "back_forward") return "back" as const;
   if (new URLSearchParams(window.location.search).has("q")) return "search" as const;
-  if (previous !== null) return previous === "/help" ? ("hub" as const) : ("internal" as const);
+  // 허브는 언어판마다 `/help` · `/en/help` 다
+  const isHub = (path: string) => helpLocation(path).level === "hub";
+  if (previous !== null) return isHub(previous) ? ("hub" as const) : ("internal" as const);
   try {
     const ref = new URL(document.referrer);
     if (ref.origin === window.location.origin)
-      return ref.pathname === "/help" ? ("hub" as const) : ("internal" as const);
+      return isHub(ref.pathname) ? ("hub" as const) : ("internal" as const);
   } catch {
     /* 주소를 못 읽으면 바깥에서 온 것으로 본다 */
   }
@@ -61,7 +63,7 @@ export function HelpAnalytics() {
           surface === "toc"
             ? decodeURIComponent(nav.getAttribute("href")?.slice(1) ?? "")
             : helpLocation(new URL(nav.href, window.location.href).pathname).slug;
-        track("help_nav_clicked", { from_slug: here.slug, to_slug: to, surface });
+        trackHelp("help_nav_clicked", { from_slug: here.slug, to_slug: to, surface });
         return;
       }
       const summary = target?.closest("details[data-help-faq] > summary");
@@ -71,12 +73,12 @@ export function HelpAnalytics() {
           const all = [
             ...document.querySelectorAll("details[data-help-faq]"),
           ];
-          track("help_faq_opened", { slug: here.slug, index: all.indexOf(details) });
+          trackHelp("help_faq_opened", { slug: here.slug, index: all.indexOf(details) });
         }
         return;
       }
       const cta = target?.closest<HTMLAnchorElement>("header a[href^='/w/']");
-      if (cta) track("help_cta_clicked", { target: "dashboard", surface: "topbar" });
+      if (cta) trackHelp("help_cta_clicked", { target: "dashboard", surface: "topbar" });
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);

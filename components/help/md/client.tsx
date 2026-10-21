@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useRef,
   useState,
@@ -10,8 +11,7 @@ import {
 import { Check, Copy } from "lucide-react";
 
 import { FOCUS } from "@/components/heymoa/landing/tokens";
-import { track } from "@/lib/analytics/track";
-import { useHelpSlug } from "@/lib/help/analytics";
+import { trackHelp, useHelpSlug } from "@/lib/help/analytics";
 import { copyText } from "@/lib/ui/copy-text";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,7 @@ export function HelpTabsView({
     () => false
   );
   const [active, setActive] = useState(0);
+  const t = useTranslations("help.md");
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const move = (event: KeyboardEvent, from: number) => {
@@ -62,7 +63,7 @@ export function HelpTabsView({
     <div className="rounded-[14px] border border-[var(--tv-rule)] p-4">
       <div
         role="tablist"
-        aria-label="보기 선택"
+        aria-label={t("views")}
         hidden={!ready}
         className="mb-3 flex gap-1 border-b border-[var(--tv-rule)]"
       >
@@ -115,6 +116,7 @@ export function HelpTabsView({
 export function HelpCodeBlock({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   const slug = useHelpSlug();
+  const t = useTranslations("help.md");
   return (
     <div className="relative">
       <pre className="m-0 overflow-x-auto rounded-[12px] bg-[var(--tv-lav-soft)] py-3 pr-14 pl-4 font-mono text-[13px] leading-[1.6] text-[var(--tv-ink)]">
@@ -122,11 +124,11 @@ export function HelpCodeBlock({ text }: { text: string }) {
       </pre>
       <button
         type="button"
-        aria-label="복사"
+        aria-label={t("copy")}
         onClick={async () => {
           try {
             await copyText(text);
-            track("help_code_copied", { slug });
+            trackHelp("help_code_copied", { slug });
             setDone(true);
             setTimeout(() => setDone(false), 1500);
           } catch {

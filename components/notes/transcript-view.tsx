@@ -356,7 +356,7 @@ export function TranscriptView({
                   </span>
                   {/* 업체가 확정한 앞부분은 다시 안 바뀌므로 확정 행과 같은 농도로, 다음
                       snapshot 이 갈아치울 뒷부분만 옅게 둔다. */}
-                  <p className="min-w-0 whitespace-normal break-keep text-read leading-7 text-[var(--el-body)]">
+                  <p className="min-w-0 whitespace-normal text-read leading-7 text-[var(--el-body)]">
                     {partial.confirmedText ? (
                       <span
                         data-testid="partial-confirmed"

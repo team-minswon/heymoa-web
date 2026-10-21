@@ -1,7 +1,25 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HeroStage } from "@/components/heymoa/landing/hero-stage";
+import { messagesFor } from "@/i18n/messages";
+import type { Locale } from "@/lib/i18n/locales";
+
+/** 랜딩 문구는 언어 파일에서 온다 — 마케팅 루트처럼 공급자로 감싼다. */
+const renderStage = (locale: Locale = "ko") =>
+  render(
+    <NextIntlClientProvider
+      locale={locale}
+      messages={messagesFor(locale)}
+      // 없는 키는 키 이름이 화면에 그대로 선다 — 대본 한 바퀴 동안 하나라도 나오면 실패한다.
+      onError={(error) => {
+        throw error;
+      }}
+    >
+      <HeroStage />
+    </NextIntlClientProvider>
+  );
 
 /**
  * 히어로 시연. **혼자 한 바퀴 돌고, 멈출 수 있다.** 대본(`use-demo.ts`)은 그대로이고 여기서 지키는 것은
@@ -97,7 +115,7 @@ describe("HeroStage", () => {
 
   it("기록 중에서 시작해 회의 종료 · 검토 막대까지 간다", () => {
     vi.useFakeTimers();
-    render(<HeroStage />);
+    renderStage();
 
     expect(screen.getAllByText("기록 중").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("검토 완료")).toHaveLength(0);
@@ -110,7 +128,7 @@ describe("HeroStage", () => {
   /** WCAG 2.2.2 — 화면에 있는 한 스스로 계속 도는 움직임이라 멈출 수 있어야 한다. */
   it("일시정지를 누르면 그 자리에 서고, 재생하면 이어서 끝까지 간다", () => {
     vi.useFakeTimers();
-    render(<HeroStage />);
+    renderStage();
     play(150);
 
     act(() => {
@@ -128,7 +146,7 @@ describe("HeroStage", () => {
 
   it("화면 밖으로 나가면 대본이 멈춘다", () => {
     vi.useFakeTimers();
-    render(<HeroStage />);
+    renderStage();
     play(150);
 
     leaveView();
@@ -140,10 +158,24 @@ describe("HeroStage", () => {
 
   it("모션을 줄였으면 대본을 안 돌리고 끝 화면 한 장으로 선다", () => {
     window.matchMedia = matchMedia(true);
-    render(<HeroStage />);
+    renderStage();
 
     expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
     expect(screen.getAllByText("검토 완료").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("기록 중")).toHaveLength(0);
+  });
+
+  it("영어판도 같은 한 바퀴를 영어로 돈다", () => {
+    vi.useFakeTimers();
+    renderStage("en");
+
+    expect(screen.getAllByText("Recording").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
+    expect(
+      playUntil(() => screen.queryAllByText("Finish review").length > 0)
+    ).toBe(true);
+    expect(screen.getAllByText("Ended").length).toBeGreaterThan(0);
+    // 창 안에 한국어가 남지 않는다(지어낸 회의 · 앱 라벨 · 쪽지 모두 언어 파일에서 온다).
+    expect(stage().textContent).not.toMatch(/[가-힣]/);
   });
 });

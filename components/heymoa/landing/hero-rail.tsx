@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-import { THINKING, TITLE, type Demo } from "@/components/heymoa/landing/use-demo";
+import { THINKING, useDemoCopy, type Demo } from "@/components/heymoa/landing/use-demo";
 import { cn } from "@/lib/utils";
 
 import { Composer, ScopeChip, ThreadTitle, UserBubble } from "./app";
@@ -30,13 +31,14 @@ import { APP, MARKER_DRAW } from "./tokens";
  * 흰 바탕 4.5:1 을 넘겨야 한다(`hero-note.tsx` 머리 주석과 같은 규칙).
  */
 function RailHead({ marked }: { marked: boolean }) {
+  const t = useTranslations("landing.app.rail");
   return (
     <div className={cn("flex h-11 shrink-0 items-center gap-2 border-b px-4 lg:h-12", APP.line)}>
       <Sparkles aria-hidden className={cn("size-[15px] shrink-0", APP.ink)} />
-      <span className={cn("shrink-0 text-[13px] font-semibold", APP.ink)}>내 에이전트</span>
+      <span className={cn("shrink-0 text-[13px] font-semibold", APP.ink)}>{t("title")}</span>
       <span className={cn("min-w-0 truncate text-[12px]", APP.muted)}>
-        <span className={marked ? cn(MARKER_DRAW, APP.ink) : undefined}>나만 보는 대화</span>
-        {" · 현재 회의 범위"}
+        <span className={marked ? cn(MARKER_DRAW, APP.ink) : undefined}>{t("private")}</span>
+        {` · ${t("scope")}`}
       </span>
     </div>
   );
@@ -50,7 +52,7 @@ function RailHead({ marked }: { marked: boolean }) {
  *
  * **방금 물은 답이 다 흐르면(`done`) 「참고한 회의록」 줄의 바닥이 대화창 바닥 여백 위에 오도록 한 번 더
  * 굴린다** — 질문 머리는 위로 넘어가도 된다. 낮은 창(1366×650 의 레일 321)에서는 그 줄이 입력창 밑에 숨어서,
- * 바깥 손글씨 「답 아래엔 참고한 회의록이 붙어요」가 빈자리(입력창의 범위 칩)를 가리켰다. 다 들어가는 창에서는
+ * 바깥 손글씨 「답 아래에 참고한 회의록이 붙습니다」가 빈자리(입력창의 범위 칩)를 가리켰다. 다 들어가는 창에서는
  * 붙인 자리 그대로다. 처음부터 서 있는 왕복(`SEED`)은 굴리지 않는다. `scrollTop` 만 쓴다(페이지는 끌지 않는다).
  */
 function usePinLast(count: number, done: boolean) {
@@ -80,6 +82,8 @@ function usePinLast(count: number, done: boolean) {
 
 export function HeroRail({ demo, asking }: { demo: Demo; asking: boolean }) {
   const { turns, typing, typingAt } = demo;
+  const t = useTranslations("landing.demo");
+  const { title, threadTitle } = useDemoCopy();
   /**
    * 답이 다 흘렀는가. 대본은 다 흐른 뒤에도 잠시 진행값을 쥔 채 머무르므로(`HOLD.ask`) `typing` 이 null 이
    * 되기를 기다리면 「참고한 회의록」이 다음 장면에야 붙는다. 글자가 끝나면 끝난 것으로 본다.
@@ -87,13 +91,13 @@ export function HeroRail({ demo, asking }: { demo: Demo; asking: boolean }) {
   const streaming =
     typing !== null && typingAt >= 0 && typing < (turns[typingAt]?.a.length ?? 0);
   const threadRef = usePinLast(turns.length, !streaming);
-  const chip = <ScopeChip kind="note" title={TITLE} />;
+  const chip = <ScopeChip kind="note" title={title} />;
 
   return (
     <>
       <RailHead marked={asking} />
       <ThreadTitle
-        title="결제 화면 개편을 미룬 이유"
+        title={threadTitle}
         className="hidden pl-4 lg:flex lg:[@media(max-height:890px)]:hidden"
       />
       {/* `data-view` — 바닥 흐림 폭. 무대가 「참고한 회의록」 줄이 보이는 칸 안에 들었는지 잴 때 쓴다. */}
@@ -116,12 +120,12 @@ export function HeroRail({ demo, asking }: { demo: Demo; asking: boolean }) {
             >
               <UserBubble chip={chip}>{turn.q}</UserBubble>
               {running && typing === THINKING ? (
-                <p className="chat-shimmer m-0 text-[14px]">생각하는 중</p>
+                <p className="chat-shimmer m-0 text-[14px]">{t("thinking")}</p>
               ) : (
                 // 답(`markdown.tsx` 본문 — 말풍선 없음). 흐르는 동안은 반쯤 적힌 문장을 읽히지 않는다.
                 <p
                   aria-hidden={running || undefined}
-                  className={cn("m-0 text-[14px] leading-[1.65] break-keep", APP.body)}
+                  className={cn("m-0 text-[14px] leading-[1.65]", APP.body)}
                 >
                   {running ? turn.a.slice(0, typing ?? 0) : turn.a}
                   {running ? (

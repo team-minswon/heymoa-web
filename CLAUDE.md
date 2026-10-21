@@ -45,10 +45,10 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 
 | 경로 | 무엇 |
 |---|---|
-| `app/(main)/` | Navbar + Footer가 있는 페이지 (마케팅 면) |
-| `app/(static)/` | 약관 등 정적 페이지. 랜딩과 같은 마케팅 면입니다 |
-| `app/auth/` | 인증 흐름 |
-| `app/w/` · `app/settings/` | 워크스페이스 이후 (제품 면) |
+| `app/[lang]/` | 마케팅 면(랜딩·다운로드·사용 가이드·약관)의 루트 레이아웃. 한국어 무접두 주소는 `next.config.ts` rewrite 로 `/ko/...` 에, 영어는 `/en/...` 에 옵니다 |
+| `app/(product)/` | 제품 면의 루트 레이아웃. `w/` · `settings/` · `invite` · `oauth/` · `auth/` 등, 주소에 언어 접두사가 없습니다 |
+| `lib/i18n/` | 언어 경로·마케팅 경로 목록(rewrite·크롬·sitemap 이 같이 읽음)·canonical/hreflang |
+| `messages/<ko\|en>/` | 언어 파일(next-intl, 문구·형식만). 한국어가 기준이고 영어가 빠지면 한국어로 보입니다 |
 | `components/ui/` | shadcn/ui primitive. 제품 의미를 모릅니다 |
 | `components/heymoa/` | HeyMoa 합성 컴포넌트 |
 | `components/<feature>/` | feature UI |

@@ -97,16 +97,16 @@ export function NoteDeleteDialog({
           <AlertDialogTitle>회의록을 삭제할까요?</AlertDialogTitle>
           <AlertDialogDescription render={<div />} className="space-y-3 text-left">
             <p className="break-words font-medium text-foreground">{title}</p>
-            <ul className="list-disc space-y-2 pl-5">
-              <li>이 회의의 녹음·스크립트·요약과 발언에 연결된 근거가 삭제돼요.</li>
-              <li>프로젝트의 다른 회의록·결정사항·할 일과 개인 대화는 삭제되지 않아요.</li>
-              <li>진행 중인 녹음은 종료되며, 삭제한 회의록은 복구할 수 없어요.</li>
-            </ul>
+            <p>
+              이 회의의 녹음과 스크립트, 요약, 발언에 연결된 근거가 함께 삭제됩니다.
+              녹음 중이라면 녹음도 끝납니다. 삭제한 회의록은 되돌릴 수 없습니다.
+            </p>
+            <p>같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다.</p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         {analyzing ? (
           <p role="status" className="text-sm text-muted-foreground">
-            회의 분석이 끝난 뒤 삭제할 수 있어요.
+            회의 분석이 끝나면 삭제할 수 있습니다.
           </p>
         ) : flowQuery.isError ? (
           <InlineRetry

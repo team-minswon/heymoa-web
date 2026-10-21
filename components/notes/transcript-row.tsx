@@ -62,7 +62,7 @@ export const TranscriptRow = memo(function TranscriptRow({
       </time>
       <div className="min-w-0">
         {speaker ? <SpeakerChip identity={speaker} className="mb-1" /> : null}
-        <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
+        <p className="whitespace-normal text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
           <span {...focus?.markProps}>{segment.text}</span>
         </p>
       </div>

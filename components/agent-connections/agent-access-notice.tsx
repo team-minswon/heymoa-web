@@ -11,7 +11,7 @@ export function AgentAccessNotice({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-2 rounded-block bg-[var(--el-canvas-soft)] p-3.5 text-left text-xs break-keep",
+        "flex items-start gap-2 rounded-block bg-[var(--el-canvas-soft)] p-3.5 text-left text-xs",
         className
       )}
     >

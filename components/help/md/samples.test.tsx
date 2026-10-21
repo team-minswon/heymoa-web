@@ -1,8 +1,12 @@
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render as rtlRender } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MdBlock } from "@/components/help/md/render";
 import { HELP_SAMPLES } from "@/components/help/md/samples";
+import { intlWrapper } from "@/components/help/test-intl";
+
+/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: intlWrapper() });
 
 describe("가이드 마크다운 표현", () => {
   afterEach(cleanup);

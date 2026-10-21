@@ -44,6 +44,8 @@ type Pending = { agentState: string; redirectUri: string };
 type Log = {
   authorize: string[];
   refresh: number;
+  /** 성공·실패를 가리지 않은 갱신 요청 수. proxy 가 갱신을 시도했는지 본다(PRO-66). */
+  refreshAttempts: number;
   approve: unknown[];
   deny: unknown[];
   callbacks: string[];
@@ -52,10 +54,19 @@ type Log = {
 let refreshTokens = new Set<string>();
 let consents = new Map<string, Pending>();
 let log: Log = emptyLog();
+/** 켜면 갱신이 일시 장애(503)로 실패한다. 토큰이 죽었다는 코드가 아니라 proxy 가 쿠키를 지우면 안 된다. */
+let refreshUnavailable = false;
 let seq = 0;
 
 function emptyLog(): Log {
-  return { authorize: [], refresh: 0, approve: [], deny: [], callbacks: [] };
+  return {
+    authorize: [],
+    refresh: 0,
+    refreshAttempts: 0,
+    approve: [],
+    deny: [],
+    callbacks: [],
+  };
 }
 
 function base64Url(value: unknown) {
@@ -201,6 +212,10 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       refreshTokens = new Set();
       consents = new Map();
       log = emptyLog();
+      refreshUnavailable = false;
+      return send(response, 200, {});
+    case "POST /__test/refresh-unavailable":
+      refreshUnavailable = true;
       return send(response, 200, {});
     case "POST /__test/session":
       return send(
@@ -219,6 +234,10 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       return ok(response, data);
     }
     case "POST /v1/auth/refresh": {
+      log.refreshAttempts += 1;
+      if (refreshUnavailable) {
+        return fail(response, 503, "SERVICE_UNAVAILABLE", "잠시 후 다시 시도해 주세요.");
+      }
       const refresh = cookiesOf(request).refresh_token;
       if (!refresh || !refreshTokens.has(refresh)) {
         return fail(

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale, useMessages } from "next-intl";
 
+import type { Person } from "@/components/heymoa/landing/app";
 import type { TimelineTone } from "@/lib/notes/proposals/timeline";
 import { prefersReducedMotion } from "@/lib/utils";
 
@@ -57,10 +59,11 @@ import { prefersReducedMotion } from "@/lib/utils";
 
 /* ── 이 회의 ────────────────────────────────────────────────────────────── */
 
-export const TITLE = "3차 스프린트 킥오프";
-export const PROJECT = "온보딩 개선";
-/** 결제 화면 개편을 처음 미룬 회의. 에이전트가 근거로 읽는다. */
-const EARLIER = "2차 스프린트 킥오프";
+/*
+ * 회의의 **구조**(시각 · 화자 · 유형 · 근거 줄)는 여기 두고, **글**(제목 · 말 · 항목 제목 · 질의와 답)은
+ * 언어 파일 `landing.demo` 에 둔다. 둘은 차례로 짝지어진다 — `useDemoCopy` 가 합친다.
+ * 회의 제목(`title`)은 언어 파일의 `landing.demo.title`, 결제 화면 개편을 처음 미룬 앞 회의는 `earlier` 다.
+ */
 
 /**
  * `who`는 사람 이름이지만 **스크립트에는 안 나온다.** 앱에서 회의가 끝나고 붙는 것은 화자
@@ -68,62 +71,33 @@ const EARLIER = "2차 스프린트 킥오프";
  * (`speaker-identity.ts`의 `displayName` — 연결 안 됐으면 `화자 A`).
  * 여기서는 라벨을 만드는 근거와, 정보 탭의 참석자로만 쓴다.
  */
-export type Line = { at: string; who: string; text: string };
+export type Line = { at: string; who: Person; text: string };
 
 /** 목소리 덩어리 하나에 붙는 라벨. 말한 순서가 아니라 사람 단위로 갈린다. */
-export const SPEAKER_LABEL: Record<string, string> = {
-  김민서: "A",
-  박지훈: "B",
-  이서연: "C",
-  정우재: "D",
+export const SPEAKER_LABEL: Partial<Record<Person, string>> = {
+  minseo: "A",
+  jihoon: "B",
+  seoyeon: "C",
+  woojae: "D",
 };
 
 /** 참석자 얼굴의 열쇠 — 랜딩 전체가 같은 것을 쓴다(`shell.tsx`). */
 export { FACE_KEY } from "@/components/heymoa/landing/shell";
 
-export const TRANSCRIPT: Line[] = [
-  {
-    at: "00:00",
-    who: "김민서",
-    text: "이번 스프린트는 온보딩 이탈부터 봅니다. 지난주에 남긴 가설 두 개를 먼저 정리하죠.",
-  },
-  {
-    at: "00:14",
-    who: "박지훈",
-    text: "지난 회의에서 결제 화면 개편은 다음으로 미뤘습니다. 그 결정 그대로 갑니다.",
-  },
-  {
-    at: "00:31",
-    who: "이서연",
-    text: "저는 이번에 합류해서 그 맥락을 모릅니다. 왜 미뤘는지 다시 볼 수 있을까요?",
-  },
-  {
-    at: "00:44",
-    who: "김민서",
-    // **이유는 이 회의에 없다** — 2차 회의록에 있다. 그래서 타임라인이 아니라 에이전트를
-    // 가리킨다. 레일의 `SEED`(「결제 화면 개편은 왜 미뤘나요?」)가 이 말의 답이다.
-    text: "에이전트한테 물어보면 2차 회의록에서 찾아 줘요.",
-  },
-  {
-    at: "01:02",
-    who: "정우재",
-    text: "그럼 온보딩 이탈 로그 수집은 제가 맡겠습니다. 이번 주 목요일까지 초안 올릴게요.",
-  },
-  {
-    at: "01:19",
-    who: "박지훈",
-    text: "좋습니다. 그 작업은 Linear 이슈로 바로 내보내는 게 좋겠어요.",
-  },
-  {
-    at: "01:33",
-    who: "이서연",
-    text: "그 이슈에 이 회의 결정도 근거로 붙일 수 있나요? 다음에 들어올 사람도 보게요.",
-  },
-  {
-    at: "01:48",
-    who: "김민서",
-    text: "그건 내보낼 때 같이 보죠. 오늘 남길 건 여기까지입니다.",
-  },
+/**
+ * 스크립트 줄의 구조. 글은 `landing.demo.lines` 의 같은 차례다. 00:44 의 말 —
+ * **이유는 이 회의에 없다**, 2차 회의록에 있다. 그래서 타임라인이 아니라 에이전트를 가리킨다.
+ * 레일의 `seed`(「결제 화면 개편은 왜 미뤘나요?」)가 이 말의 답이다.
+ */
+const LINES: Array<Omit<Line, "text">> = [
+  { at: "00:00", who: "minseo" },
+  { at: "00:14", who: "jihoon" },
+  { at: "00:31", who: "seoyeon" },
+  { at: "00:44", who: "minseo" },
+  { at: "01:02", who: "woojae" },
+  { at: "01:19", who: "jihoon" },
+  { at: "01:33", who: "seoyeon" },
+  { at: "01:48", who: "minseo" },
 ];
 
 /** 회의 길이. 마지막 발화가 끝난 때다. */
@@ -140,11 +114,13 @@ export const LENGTH = "01:52";
  * 앱이 유형 이름 뒤에 덧붙이는 말만 쓴다 — 「답을 기다리는 중」 · 「00:44에 답함」.
  */
 export type Entry = {
-  kind: string;
+  /** 유형. `agenda` 는 안건이고, 나머지의 보이는 이름은 `landing.demo.kinds`. */
+  kind: "agenda" | "decision" | "question" | "insight" | "task";
   title: string;
   at: string;
   tone?: TimelineTone;
-  meta?: string;
+  /** 앱이 유형 이름 뒤에 덧붙이는 말(`landing.demo.meta`). `answered` 는 `answer` 항목의 시각을 넣는다. */
+  meta?: "answered" | "waiting";
   cites?: number[];
   /**
    * 이 질문의 답이 된 항목 — `TIMELINE`의 차례다. 펼친 카드의 「↗ 답」 줄이 된다.
@@ -154,157 +130,55 @@ export type Entry = {
   answer?: number;
 };
 
-export const TIMELINE: Entry[] = [
-  { kind: "안건", title: "스프린트 우선순위", at: "00:00" },
-  {
-    kind: "결정",
-    tone: "decision",
-    title: "온보딩 이탈을 이번 스프린트의 첫 기준선으로 삼는다",
-    at: "00:00",
-    cites: [0],
-  },
-  {
-    kind: "결정",
-    tone: "decision",
-    title: "결제 화면 개편은 다음 스프린트로 미룬다",
-    at: "00:14",
-    cites: [1],
-  },
-  {
-    kind: "질문",
-    tone: "answered",
-    title: "결제 화면 개편을 미룬 이유는 무엇인가",
-    at: "00:31",
-    meta: "00:44에 답함",
-    cites: [2],
-    answer: 4,
-  },
-  {
-    kind: "인사이트",
-    tone: "reference",
-    title: "미룬 이유는 2차 회의 결정에 남아 있다",
-    at: "00:44",
-    cites: [3],
-  },
-  { kind: "안건", title: "온보딩 이탈 로그 수집", at: "01:02" },
-  {
-    kind: "할 일",
-    tone: "task",
-    title: "온보딩 이탈 로그 수집 초안을 목요일까지 올린다",
-    at: "01:02",
-    cites: [4],
-  },
+/** 타임라인 줄의 구조. 제목은 `landing.demo.timeline` 의 같은 차례다. */
+const ENTRIES: Array<Omit<Entry, "title">> = [
+  { kind: "agenda", at: "00:00" },
+  { kind: "decision", tone: "decision", at: "00:00", cites: [0] },
+  { kind: "decision", tone: "decision", at: "00:14", cites: [1] },
+  { kind: "question", tone: "answered", at: "00:31", meta: "answered", cites: [2], answer: 4 },
+  { kind: "insight", tone: "reference", at: "00:44", cites: [3] },
+  { kind: "agenda", at: "01:02" },
+  { kind: "task", tone: "task", at: "01:02", cites: [4] },
   // ↓ 대본이 올린다.
-  {
-    kind: "할 일",
-    tone: "task",
-    title: "로그 수집 작업을 Linear 이슈로 내보낸다",
-    at: "01:19",
-    cites: [5],
-  },
-  {
-    kind: "질문",
-    tone: "open",
-    title: "Linear 이슈에 이 회의 결정도 근거로 붙일 수 있나",
-    at: "01:33",
-    meta: "답을 기다리는 중",
-    cites: [6],
-  },
+  { kind: "task", tone: "task", at: "01:19", cites: [5] },
+  { kind: "question", tone: "open", at: "01:33", meta: "waiting", cites: [6] },
 ];
 
 export const BASE_ENTRIES = 7;
 
 /** 타임라인의 「유형으로 골라 보기」. 라벨과 차례는 `TIMELINE_FILTERS` 그대로다. */
-export const FILTERS = ["전체", "결정", "할 일", "열린 질문", "참고"] as const;
+export const FILTERS = ["all", "decision", "task", "open", "reference"] as const;
 export type Filter = (typeof FILTERS)[number];
 
 /** 유형 → 골라 보기 칸. 답한 질문은 「참고」로 내려간다(`timeline.ts`의 `FILTER_OF`). */
 export const FILTER_OF: Record<TimelineTone, Filter> = {
-  decision: "결정",
-  task: "할 일",
-  open: "열린 질문",
-  answered: "참고",
-  reference: "참고",
-};
-
-/**
- * 요약 탭의 검토 문서(`review-board.tsx`, APP-865). 위에서부터 머리 → 「언제 정해졌나」 →
- * 요약 → 주제 → 결정 → 할 일이고, 이슈 · 질문 · 참고는 요약 보기에 서지 않는다.
- *
- * **담당은 화자 라벨이다.** 이 회의는 화자에 이름을 안 붙인 채 끝나므로, 앱도 담당 칸에
- * 「화자 D」를 쓰고 「이름 없는 화자에게 걸린 할 일」을 센다. 여기 「정우재」를 쓰면 스크립트와
- * 어긋난다.
- */
-export const REVIEW = {
-  summary:
-    "온보딩 이탈을 이번 스프린트의 첫 기준선으로 잡고, 결제 화면 개편은 2차 회의 결정대로 다음 스프린트로 미뤘습니다. 이탈 로그 수집 초안은 목요일까지 올리고, 그 작업을 Linear 이슈로 내보냅니다.",
-  topics: [
-    {
-      at: "00:00",
-      title: "스프린트 우선순위",
-      gist: "온보딩 이탈을 기준선으로 잡고 결제 화면 개편은 다음 스프린트로 미뤘습니다.",
-      counts: [["decision", 2]] as Array<[TimelineTone, number]>,
-    },
-    {
-      at: "01:02",
-      title: "온보딩 이탈 로그 수집",
-      gist: "초안은 목요일까지 올리고, 작업은 Linear 이슈로 내보냅니다.",
-      counts: [
-        ["task", 2],
-        ["open", 1],
-      ] as Array<[TimelineTone, number]>,
-    },
-  ],
-  decisions: [
-    {
-      text: "온보딩 이탈을 이번 스프린트의 첫 기준선으로 삼습니다.",
-      topic: "스프린트 우선순위",
-      at: "00:00",
-      cites: [0],
-    },
-    {
-      text: "결제 화면 개편은 다음 스프린트로 미룹니다.",
-      topic: "스프린트 우선순위",
-      at: "00:14",
-      cites: [1],
-    },
-  ],
-  tasks: [
-    {
-      text: "온보딩 이탈 로그 수집 초안 올리기",
-      who: "D",
-      due: "9월 3일 (목)",
-      at: "01:02",
-    },
-    {
-      text: "로그 수집 작업을 Linear 이슈로 내보내기",
-      who: "B",
-      due: null,
-      at: "01:19",
-    },
-  ],
+  decision: "decision",
+  task: "task",
+  open: "open",
+  answered: "reference",
+  reference: "reference",
 };
 
 /** 검토 문서가 서는 묶음 수 — 머리와 요약, 주제, 결정, 할 일과 검토 막대. */
 export const REVIEW_PARTS = 4;
 
-export const NOTE_TABS = ["정보", "스크립트", "타임라인", "요약"] as const;
+export const NOTE_TABS = ["info", "script", "timeline", "summary"] as const;
 export type NoteTab = (typeof NOTE_TABS)[number];
 
 /** 회의 상태. 앱의 `MEETING_STATUS_LABEL` 그대로다(「시작 전」은 이 대본에 안 나온다). */
-export type Status = "기록 중" | "중지됨" | "종료됨";
+export type Status = "recording" | "paused" | "ended";
 
 /**
  * 「내 에이전트」의 왕복.
  *
- * **답은 이 회의에 실제로 있는 말만 쓴다** — 위의 `TRANSCRIPT` · `TIMELINE` · `REVIEW`와,
+ * **답은 이 회의에 실제로 있는 말만 쓴다** — 위의 스크립트와 타임라인, 요약 탭(`hero-data.ts`)과,
  * 결제 화면 개편을 처음 미룬 앞 회의에서 짚을 수 있는 것뿐이다. 화면 어디에도 없는 사실을
  * 답하면, 「사실 대조판」이라고 말하는 페이지가 제 말을 먼저 어긴다.
  *
  * **대본 어디서 물어도 참인 답만 둔다.** 방문자는 아무 때나 누르므로, 아직 안 나온 말에 기댄
  * 답은 그 순간의 화면과 어긋난다 — 그래서 셋 다 처음부터 적혀 있는 다섯 줄과 앞 회의만 쓴다.
  *
- * `refs`는 「참고한 회의록」이다 — 회의 제목이다. `SEED`는 처음부터 떠 있는 왕복이라 레일이
+ * `refs`는 「참고한 회의록」이다 — 회의 제목이다. `seed`는 처음부터 떠 있는 왕복이라 레일이
  * 빈 화면으로 시작하지 않는다.
  */
 export type Ask = { q: string; a: string; refs: string[] };
@@ -316,32 +190,38 @@ export type Ask = { q: string; a: string; refs: string[] };
  */
 export type Turn = Ask & { key: string; mine: boolean };
 
-export const SEED: Ask = {
-  q: "결제 화면 개편은 왜 미뤘나요?",
-  a: "온보딩 이탈 지표를 먼저 보기로 해서 다음 스프린트로 미뤘습니다. 2차 회의에서 정한 결정이고, 이번 회의에서 그대로 가기로 했습니다.",
-  refs: [EARLIER, TITLE],
-};
-
-export const ASKS: Ask[] = [
-  {
-    q: "온보딩 이탈을 왜 먼저 보나요?",
-    a: "이번 스프린트의 첫 기준선으로 삼기로 해서입니다. 지난주에 남긴 가설 두 개를 먼저 정리하자는 말로 회의가 시작됐습니다.",
-    refs: [TITLE],
-  },
-  // 히어로 대본은 `ASKS[2]` 만 쓴다. 이 답은 묻기 구간(`ask-chat.tsx`)에서만 서고, 회의 카드 · 근거 구간처럼
-  // 화자 D 에 정우재라는 이름을 붙여 둔 뒤의 답이다. 「이번 주 목요일」은 묻는 시점에서 흐려지니 01:02 발화
-  // 인용으로 둔다.
-  {
-    q: "로그 수집은 누가 맡았나요?",
-    a: "정우재입니다. 01:02에 「이번 주 목요일까지 초안 올릴게요」라고 맡았습니다.",
-    refs: [TITLE],
-  },
-  {
-    q: "제가 없던 사이에 뭐가 정해졌나요?",
-    a: "결정 둘입니다. 온보딩 이탈을 이번 스프린트의 첫 기준선으로 삼고, 결제 화면 개편은 지난 결정대로 다음 스프린트로 미뤘습니다.",
-    refs: [TITLE],
-  },
-];
+/**
+ * 언어 파일의 글과 위 구조를 합친 회의 한 벌. 처음부터 떠 있는 왕복 `seed` 의 참고는 앞 회의와 이
+ * 회의이고, `asks` 는 이 회의다. 히어로 대본은 `asks[2]` 만 쓴다 — 나머지는 묻기 구간(`ask-chat.tsx`)에서만
+ * 서고, `asks[1]` 은 회의 카드 · 근거 구간처럼 화자 D 에 정우재라는 이름을 붙여 둔 뒤의 답이다.
+ */
+export function useDemoCopy() {
+  const copy = useMessages().landing.demo;
+  return useMemo(() => {
+    const transcript: Line[] = LINES.map((line, i) => ({
+      ...line,
+      text: copy.lines[i],
+    }));
+    const timeline: Entry[] = ENTRIES.map((entry, i) => ({
+      ...entry,
+      title: copy.timeline[i],
+    }));
+    const seed: Ask = { ...copy.seed, refs: [copy.earlier, copy.title] };
+    const asks: Ask[] = copy.asks.map((item) => ({
+      ...item,
+      refs: [copy.title],
+    }));
+    return {
+      title: copy.title,
+      project: copy.project,
+      threadTitle: copy.threadTitle,
+      transcript,
+      timeline,
+      seed,
+      asks,
+    };
+  }, [copy]);
+}
 
 /* ── 대본 ───────────────────────────────────────────────────────────────── */
 
@@ -384,7 +264,7 @@ type Beat = { ms?: number; force?: true } & (
 const BEATS: Beat[] = [
   { t: "say", i: 5 },
   // `force` — 회의 중 정리 장면의 시작이다. 탭을 만져 둔 방문자도 여기서는 같이 간다.
-  { t: "note", v: "타임라인", force: true },
+  { t: "note", v: "timeline", force: true },
   { t: "event" },
   { t: "say", i: 6 },
   { t: "event" },
@@ -400,14 +280,18 @@ const BEATS: Beat[] = [
   { t: "end" },
   // 종료 직후의 요약 탭은 분석 대기(「회의를 분석하는 중입니다」)다. 그 화면이 지나가도록
   // 길게 쉰다. `force` — 회의가 끝나면 앱이 요약 탭으로 넘긴다.
-  { t: "note", v: "요약", ms: 1700, force: true },
+  { t: "note", v: "summary", ms: 1700, force: true },
   ...Array.from({ length: REVIEW_PARTS }, (): Beat => ({ t: "review" })),
 ];
 
 export const LAST = BEATS.length;
 
-/** 한 글자가 스크립트에 찍히는 간격과, 줄이 확정된 뒤 다음 말까지 쉬는 시간. */
-const SAY_MS = 26;
+/**
+ * 한 글자가 스크립트에 찍히는 간격과, 줄이 확정된 뒤 다음 말까지 쉬는 시간. 영어는 같은 말이 글자로
+ * 두 배쯤 길어서 간격을 줄여 한 줄이 받아 적히는 시간을 한국어와 비슷하게 맞춘다(`hero-data.ts` 의
+ * `HOLD_MS` 셈이 그 시간을 바탕으로 한다).
+ */
+const SAY_MS = { ko: 26, en: 14 } as const;
 const HOLD: Record<Beat["t"], number> = {
   say: 560,
   event: 700,
@@ -517,6 +401,8 @@ export function useDemo({
   >([]);
   const [manualTyping, setManualTyping] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
+  const { transcript, seed, asks } = useDemoCopy();
+  const sayMs = SAY_MS[useLocale()];
 
   /**
    * 모션을 줄였으면 대본을 안 돌리고 끝 상태로 둔다. **`seen`이 참일 때만 본다** — 그
@@ -551,33 +437,33 @@ export function useDemo({
 
     const said = settled.filter((b) => b.t === "say").length;
     return {
-      lines: TRANSCRIPT.slice(0, BASE_LINES + said),
+      lines: transcript.slice(0, BASE_LINES + said),
       live:
         now?.t === "say"
           ? {
-              line: TRANSCRIPT[now.i],
-              text: TRANSCRIPT[now.i].text.slice(0, progress),
+              line: transcript[now.i],
+              text: transcript[now.i].text.slice(0, progress),
             }
           : null,
       entries: BASE_ENTRIES + seen.filter((b) => b.t === "event").length,
       review: seen.filter((b) => b.t === "review").length,
       status: (seen.some((b) => b.t === "end")
-        ? "종료됨"
+        ? "ended"
         : seen.some((b) => b.t === "pause")
-          ? "중지됨"
-          : "기록 중") as Status,
+          ? "paused"
+          : "recording") as Status,
       stopping: now?.t === "stop",
       pressing: now?.t === "press",
       noteTab: seen.reduce<NoteTab>(
         (v, b) => (b.t === "note" ? b.v : v),
-        "스크립트"
+        "script"
       ),
       scriptTurns: settled
         .filter((b): b is { t: "ask"; i: number } => b.t === "ask")
-        .map((b) => ASKS[b.i]),
-      scriptAsk: now?.t === "ask" ? ASKS[now.i] : null,
+        .map((b) => asks[b.i]),
+      scriptAsk: now?.t === "ask" ? asks[now.i] : null,
     };
-  }, [cursor, progress]);
+  }, [cursor, progress, transcript, asks]);
 
   /**
    * 한 바퀴가 끝나면 처음으로. **손댄 사람에게도 돈다** — 한때 안 돌렸는데, 아무거나 한 번
@@ -610,7 +496,7 @@ export function useDemo({
    */
   const here = BEATS[cursor];
   const repeated =
-    here?.t === "ask" && extra.some((e) => e.item.q === ASKS[here.i].q);
+    here?.t === "ask" && extra.some((e) => e.item.q === asks[here.i].q);
 
   useEffect(() => {
     if (!playing) return;
@@ -640,21 +526,21 @@ export function useDemo({
       });
 
     if (beat.t === "say") {
-      const full = TRANSCRIPT[beat.i].text;
+      const full = transcript[beat.i].text;
       return progress < full.length
-        ? step(SAY_MS, () => setProgress((n) => n + 1))
+        ? step(sayMs, () => setProgress((n) => n + 1))
         : step(HOLD.say, next);
     }
     if (beat.t === "ask") {
       if (repeated) return step(0, next);
-      const full = ASKS[beat.i].a;
+      const full = asks[beat.i].a;
       if (progress === THINKING) return step(THINK_MS, () => setProgress(0));
       return progress < full.length
         ? step(16, () => setProgress((n) => Math.min(n + 2, full.length)))
         : step(HOLD.ask, next);
     }
     return step(beat.ms ?? HOLD[beat.t], next);
-  }, [playing, cursor, progress, manualBusy, repeated]);
+  }, [playing, cursor, progress, manualBusy, repeated, transcript, asks, sayMs]);
 
   /**
    * **손수 보낸 답이 흐르는 동안에는 대본의 질의를 아직 안 꺼낸다.** 위 효과가 막는 것은
@@ -711,7 +597,7 @@ export function useDemo({
     key: `visitor-${e.id}`,
     mine: true,
   });
-  const turns: Turn[] = [{ ...SEED, key: "seed", mine: false }];
+  const turns: Turn[] = [{ ...seed, key: "seed", mine: false }];
   script.forEach((item, i) => {
     for (const e of extra) if (e.at === i) turns.push(visitor(e));
     // 방문자가 먼저 같은 것을 물었으면 대본의 왕복은 세우지 않는다.

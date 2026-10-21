@@ -107,7 +107,9 @@ export function ParticipantAvatar({
 }
 
 /**
- * 참여자를 겹친 아바타로 보여준다. `max`를 넘으면 나머지는 `+N` 칩 하나로 접는다.
+ * 참여자를 겹친 아바타로 보여준다. `max`는 칩까지 합친 칸 수다. 넘치면 마지막 칸을
+ * `+N` 칩으로 바꾼다 — 그래서 `+N`은 늘 2 이상이다. `+1`은 아바타 하나와 같은 폭인데
+ * 누군지는 숨겨서 정보가 없다(APP-1288).
  *
  * **이 뭉치는 참여자만 담는다.** 진행자를 여기 배지로 섞어 봤지만, 이 크기에서는 배지의
  * 아이콘이 숨겨져 점으로만 보여 뜻이 안 읽혔다. 진행자는 `진행` 라벨과 함께 글자 옆에
@@ -133,8 +135,9 @@ export function NoteParticipantAvatars({
 }) {
   if (participants.length === 0) return null;
 
-  const shown = participants.slice(0, max);
-  const hidden = participants.slice(max);
+  const visible = participants.length > max ? max - 1 : max;
+  const shown = participants.slice(0, visible);
+  const hidden = participants.slice(visible);
 
   return (
     <AvatarGroup

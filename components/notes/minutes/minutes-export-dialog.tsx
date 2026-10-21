@@ -96,7 +96,7 @@ export function MinutesExportDialog({
             <label htmlFor={`${id}-transcript`} className="font-medium text-foreground">
               녹취록
             </label>
-            <span id={`${id}-transcript-hint`} className="text-xs break-keep text-muted-foreground">
+            <span id={`${id}-transcript-hint`} className="text-xs text-muted-foreground">
               회의에서 한 말을 그대로 붙입니다. 받는 사람이 모든 발언을 읽게 됩니다.
             </span>
           </div>

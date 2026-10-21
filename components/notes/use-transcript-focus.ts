@@ -47,6 +47,37 @@ function penOf(text: string) {
   };
 }
 
+/**
+ * **화면이 바뀌는 이동**(다른 노트로 넘어온 이어짐, 요약 → 타임라인 탭 전환)에서 머무는 시간.
+ * 근거 점프의 1초는 같은 탭 안에서 눈이 이미 그 자리를 따라갈 때의 값이다. 화면이 통째로 바뀌면
+ * 새 화면을 훑어 표시를 찾는 데 먼저 시간이 들어 1초 남짓이면 찾기 전에 지워진다(APP-1290 e2e
+ * 에서 획 전체 수명이 약 1.2초였다). 긋기 · 지우기를 더해 제목 길이의 표시가 약 2.5초 남게 한다.
+ */
+export const SCREEN_CHANGE_HOLD_MS = 2_200;
+
+/**
+ * 형광펜 한 획(긋기 · 머물기 · 지우기)의 모습과 수명. 전사의 근거 점프와 요약 · 타임라인의 안건
+ * 점프(APP-1290)가 같은 펜을 쓴다 — 각자 조립하면 한쪽만 고쳤을 때 같은 표시가 화면마다 다르게
+ * 움직인다. 머무는 시간만 이동의 종류에 따라 다르다(`SCREEN_CHANGE_HOLD_MS`).
+ */
+export function evidenceMarkOf(
+  text: string,
+  { holdMs = HOLD_MS }: { holdMs?: number } = {}
+) {
+  const { spanEm, strokeMs } = penOf(text);
+  return {
+    props: {
+      className: "evidence-mark",
+      style: {
+        "--evidence-span": `${spanEm}em`,
+        "--evidence-stroke": `${strokeMs}ms`,
+        "--evidence-hold": `${holdMs}ms`,
+      } as CSSProperties,
+    },
+    lifetimeMs: strokeMs * 2 + holdMs,
+  };
+}
+
 export type TranscriptFocus = {
   /** 요약의 근거 인용이 가리키는 세그먼트. 없으면 null. */
   focusSegmentId: string | null;
@@ -76,7 +107,7 @@ export function useTranscriptFocus(
   const focusedSegment =
     segments.find((segment) => segment.segmentId === focusSegmentId) ?? null;
   const focusedSegmentId = focusedSegment?.segmentId ?? null;
-  const pen = penOf(focusedSegment?.text ?? "");
+  const { lifetimeMs } = evidenceMarkOf(focusedSegment?.text ?? "");
   const nodeRef = useRef<HTMLElement | null>(null);
   const scrollToSegmentRef = useRef(scrollToSegment);
   useEffect(() => {
@@ -109,14 +140,14 @@ export function useTranscriptFocus(
     // **획이 다 지워지는 순간에 비운다.** 안 비우면 전사 탭을 다시 열 때마다 같은 자리로
     // 끌려간다. 긋기·머물기·지우기의 합이 곧 이 표시의 수명이고, 그 값을 `.evidence-mark`
     // 에도 그대로 실어 보내므로(`markProps`) 두 시계가 갈라질 수 없다.
-    const timer = window.setTimeout(onFocusHandled, pen.strokeMs * 2 + HOLD_MS);
+    const timer = window.setTimeout(onFocusHandled, lifetimeMs);
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
   }, [
     focusedSegmentId,
-    pen.strokeMs,
+    lifetimeMs,
     onFocusHandled,
     requestKey,
     focusDestination,
@@ -130,16 +161,9 @@ export function useTranscriptFocus(
   const markProps = useCallback(
     (segmentId: string) =>
       segmentId === focusedSegmentId
-        ? {
-            className: "evidence-mark",
-            style: {
-              "--evidence-span": `${pen.spanEm}em`,
-              "--evidence-stroke": `${pen.strokeMs}ms`,
-              "--evidence-hold": `${HOLD_MS}ms`,
-            } as CSSProperties,
-          }
+        ? evidenceMarkOf(focusedSegment?.text ?? "").props
         : {},
-    [focusedSegmentId, pen.spanEm, pen.strokeMs]
+    [focusedSegmentId, focusedSegment?.text]
   );
   const isHighlighted = useCallback(
     (segmentId: string) => segmentId === focusedSegmentId,

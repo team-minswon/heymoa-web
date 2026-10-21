@@ -1,10 +1,11 @@
-import type { HelpTopic } from "@/app/(static)/help/_content/types";
+import type { HelpTopic } from "@/app/[lang]/help/_content/types";
 import { normalizeQuery } from "@/lib/help/match-ranges";
 import { textOf } from "@/lib/help/text";
+import { localePath, type Locale } from "@/lib/i18n/locales";
 
 /** 허브 검색이 훑는 한 줄(문단 또는 섹션 제목). 서버가 만들어 클라이언트에 넘긴다. */
 export type HelpEntry = {
-  /** 페이지 주소(`/help/<그룹>/<페이지>`) */
+  /** 그 언어판의 페이지 주소(`/help/<그룹>/<페이지>`, `/en/help/<그룹>/<페이지>`) */
   path: string;
   /** 기능 / 상황 — 결과에 종류 칩을 붙인다 */
   axis: "feature" | "situation";
@@ -30,12 +31,13 @@ export type HelpHit = {
 
 export function buildHelpIndex(
   topics: readonly HelpTopic[],
-  axisOf: (topic: HelpTopic) => "feature" | "situation" = () => "feature"
+  axisOf: (topic: HelpTopic) => "feature" | "situation" = () => "feature",
+  locale: Locale = "ko"
 ): HelpEntry[] {
   return topics.flatMap((topic) =>
     topic.sections.flatMap((section) => {
       const base = {
-        path: `/help/${topic.group}/${topic.slug}`,
+        path: localePath(locale, `/help/${topic.group}/${topic.slug}`),
         axis: axisOf(topic),
         topicTitle: topic.title,
         sectionId: section.id,

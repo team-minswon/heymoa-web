@@ -33,4 +33,20 @@ describe("openSitePage", () => {
     expect(open).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith("/help");
   });
+
+  // 사이트 페이지는 다른 루트 레이아웃이라 전체 로드다. 녹음이 이탈을 거부하면 앱은 말없이 취소한다
+  it("데스크톱 앱에서 녹음이 화면을 붙잡고 있으면 이동하지 않는다", () => {
+    asDesktop();
+    const hold = (event: Event) => event.preventDefault();
+    window.addEventListener("beforeunload", hold);
+    const navigate = vi.fn();
+
+    try {
+      openSitePage("/help", navigate);
+    } finally {
+      window.removeEventListener("beforeunload", hold);
+    }
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
 });

@@ -22,11 +22,14 @@ export function WebPageJsonLd({
   path,
   dateModified,
   extra,
+  inLanguage = "ko",
 }: {
   name: string;
   description: string;
   path: string;
   dateModified?: string;
+  /** 페이지 언어(`ko` · `en`). 영어판은 `path` 도 `/en/...` 로 준다. */
+  inLanguage?: string;
   extra?: Record<string, unknown>;
 }) {
   const url = `${siteConfig.url}${path}`;
@@ -40,7 +43,7 @@ export function WebPageJsonLd({
           name,
           description,
           url,
-          inLanguage: "ko",
+          inLanguage,
           ...(dateModified ? { dateModified } : {}),
           isPartOf: {
             "@type": "WebSite",

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
@@ -9,10 +10,13 @@ import {
   FacesChip,
   HeadChip,
   MiniBar,
+  type Person,
   ReviewHead,
   SectionHead,
   TaskRow,
+  usePersonName,
 } from "./app";
+import { RICH } from "./rich";
 import { ExampleStamp, Hand, Scribble, Sticky } from "./marks";
 import {
   APP,
@@ -95,11 +99,12 @@ function MeetingCard({
   kind: string;
   joke: string;
   /** 겹친 얼굴. 한마디를 한 사람을 맨 끝(말풍선 옆)에 둔다. */
-  faces: string[];
+  faces: Person[];
   line: string;
-  lineWho: string;
+  lineWho: Person;
   children: ReactNode;
 }) {
+  const name = usePersonName();
   return (
     <article className={cn("relative flex flex-col bg-white", RADIUS.card, SHADOW.panel)}>
       <header
@@ -124,13 +129,13 @@ function MeetingCard({
         </Hand>
         <div className="mt-6 flex items-end gap-2">
           <FacePile names={faces} size={32} ring={FACE_TONE[tone].ring} />
-          <p className="m-0 max-w-[200px] rounded-[16px] rounded-bl-[4px] bg-white px-3 py-1.5 text-[13.5px] leading-[1.4] font-bold break-keep text-[var(--tv-ink)]">
-            <span className="sr-only">{lineWho}: </span>
+          <p className="m-0 max-w-[200px] rounded-[16px] rounded-bl-[4px] bg-white px-3 py-1.5 text-[13.5px] leading-[1.4] font-bold text-[var(--tv-ink)]">
+            <span className="sr-only">{name(lineWho)}: </span>
             {line}
           </p>
         </div>
       </header>
-      <MiniBar status="종료됨" tab="요약" />
+      <MiniBar status="ended" tab="summary" />
       {children}
     </article>
   );
@@ -170,25 +175,28 @@ function DocSection({
 const BODY_X = "px-4 sm:px-5";
 
 function KickoffCard() {
+  const t = useTranslations("landing.meetings");
+  const decisions = t.raw("kickoff.decisions") as string[];
+  const tasks = t.raw("kickoff.tasks") as string[];
   return (
     <MeetingCard
       tone="lav"
-      kind="스프린트 킥오프"
-      joke="방향 정하는 날"
-      faces={["김민서", "이서연", "정우재", "박지훈"]}
-      line="그 결정 그대로 갑니다."
-      lineWho="박지훈"
+      kind={t("kickoff.kind")}
+      joke={t("kickoff.joke")}
+      faces={["minseo", "seoyeon", "woojae", "jihoon"]}
+      line={t("kickoff.line")}
+      lineWho="jihoon"
     >
       <div className={cn("relative pt-4 pb-5", BODY_X)}>
         <ReviewHead
-          state="확정됨"
-          title="3차 스프린트 킥오프"
+          state="confirmed"
+          title={t("kickoff.title")}
           chips={
             <>
-              <HeadChip icon="date">9월 1일 (화) 오후 2:00</HeadChip>
-              <HeadChip icon="length">2분</HeadChip>
-              <FacesChip names={["김민서", "박지훈", "이서연", "정우재"]} />
-              <HeadChip icon="project">온보딩 개선</HeadChip>
+              <HeadChip icon="date">{t("kickoff.date")}</HeadChip>
+              <HeadChip icon="length">{t("kickoff.length")}</HeadChip>
+              <FacesChip names={["minseo", "jihoon", "seoyeon", "woojae"]} />
+              <HeadChip icon="project">{t("kickoff.project")}</HeadChip>
             </>
           }
         />
@@ -207,24 +215,24 @@ function KickoffCard() {
           delay={700}
           className="absolute top-[15px] left-[90px] sm:left-[94px]"
         >
-          검토 완료 누른 뒤
+          {t("kickoff.after")}
         </Sticky>
 
-        <DocSection title="결정" count={2} className="mt-6">
-          <DecisionRow text="온보딩 이탈을 이번 스프린트의 첫 기준선으로 삼는다" at="00:00" />
-          <DecisionRow text="결제 화면 개편은 다음 스프린트로 미룬다" at="00:14" />
+        <DocSection title={t("sections.decisions")} count={2} className="mt-6">
+          <DecisionRow text={decisions[0]} at="00:00" />
+          <DecisionRow text={decisions[1]} at="00:14" />
         </DocSection>
-        <DocSection title="할 일" count={2} className="mt-7">
+        <DocSection title={t("sections.tasks")} count={2} className="mt-7">
           <TaskRow
-            text="온보딩 이탈 로그 수집 초안을 올린다"
-            who={{ name: "정우재" }}
-            due="9월 3일 (목)"
+            text={tasks[0]}
+            who={{ name: "woojae" }}
+            due={t("kickoff.due")}
             editable={false}
           />
           {/* 확정 뒤라 기한 칸이 비면 아무것도 서지 않는다(`due-cell.tsx` 비편집). */}
           <TaskRow
-            text="로그 수집 작업을 Linear 이슈로 내보낸다"
-            who={{ name: "박지훈" }}
+            text={tasks[1]}
+            who={{ name: "jihoon" }}
             due={null}
             editable={false}
           />
@@ -235,14 +243,17 @@ function KickoffCard() {
 }
 
 function MentoringCard() {
+  const t = useTranslations("landing.meetings");
+  const tasks = t.raw("mentoring.tasks") as string[];
+  const dues = t.raw("mentoring.dues") as string[];
   return (
     <MeetingCard
       tone="butter"
-      kind="멘토링"
-      joke="숙제 받는 날"
-      faces={["오태윤", "한서진"]}
-      line="답 안 단 거 세 개 남았어요."
-      lineWho="한서진"
+      kind={t("mentoring.kind")}
+      joke={t("mentoring.joke")}
+      faces={["taeyun", "seojin"]}
+      line={t("mentoring.line")}
+      lineWho="seojin"
     >
       {/*
         아래 여백(pb-12)은 쪽지와 화살표가 「기한 정하기」를 가리킬 자리다. 점선 칩에는 고리를 두르지
@@ -250,36 +261,34 @@ function MentoringCard() {
         쪽지는 색 이름을 말하지 않는다. 지난 판 「비면 주황 점선!」은 히어로에서 막 배운 「주황 점선 = 답 못 한
         질문」(열린 질문 아이콘)과 엇갈렸다. 대신 왜 비었는지(회의에서 기한이 안 나왔다 — 킥오프의 박지훈 줄도
         같다)를 말한다. 「비어 있는 기한을 채운다」는 FAQ 가 이미 말해 되풀이하지 않는다. 둘째 줄은 「정하면 끝」
-        대신 「정하면 돼요」다 — 검토 중인 문서라 검토 완료가 남았는데 「끝」은 다 끝난 것처럼 읽혔다.
-        둘째 줄이 한 글자 길어져 쪽지 오른쪽 끝이 약 12px 늘어난 만큼 화살표도 12px 옮겨(96 → 108) 꼬리가
+        대신 「정하면 됩니다」다 — 검토 중인 문서라 검토 완료가 남았는데 「끝」은 다 끝난 것처럼 읽혔다.
+        둘째 줄이 길어질 때마다 쪽지 오른쪽 끝이 늘어난 만큼 화살표도 옮겨(96 → 108 → 120, 「돼요」 → 「됩니다」) 꼬리가
         쪽지 오른쪽 위 모서리에서 나오는 지난 판 모양을 지킨다. 머리는 여전히 「기한 정하기」 칩 아래에 멈춘다.
+        영어(「Click to set one」)는 두 줄 폭이 한국어와 비슷하게 맞춰 같은 자리를 쓴다.
       */}
       <div className={cn("relative pt-4 pb-12", BODY_X)}>
         <ReviewHead
-          state="검토 중"
-          title="신입 개발자 멘토링"
+          state="review"
+          title={t("mentoring.title")}
           chips={
             <>
-              <HeadChip icon="date">8월 28일 (금) 오후 4:00</HeadChip>
-              <HeadChip icon="length">42분</HeadChip>
-              <FacesChip names={["한서진", "오태윤"]} />
-              <HeadChip icon="project">신입 온보딩</HeadChip>
+              <HeadChip icon="date">{t("mentoring.date")}</HeadChip>
+              <HeadChip icon="length">{t("mentoring.length")}</HeadChip>
+              <FacesChip names={["seojin", "taeyun"]} />
+              <HeadChip icon="project">{t("mentoring.project")}</HeadChip>
             </>
           }
         />
-        <DocSection title="결정" count={0} empty="정한 것이 없습니다." className="mt-6" />
-        <DocSection title="할 일" count={3} className="mt-7">
-          <TaskRow
-            text="PR 설명을 세 줄 요약으로 바꾼다"
-            who={{ name: "오태윤" }}
-            due="9월 4일 (금)"
-          />
-          <TaskRow
-            text="추천한 책 두 권의 링크를 보낸다"
-            who={{ name: "한서진" }}
-            due="8월 31일 (월)"
-          />
-          <TaskRow text="남은 리뷰 코멘트 세 개에 답을 단다" who={{ name: "오태윤" }} due={null} />
+        <DocSection
+          title={t("sections.decisions")}
+          count={0}
+          empty={t("mentoring.empty")}
+          className="mt-6"
+        />
+        <DocSection title={t("sections.tasks")} count={3} className="mt-7">
+          <TaskRow text={tasks[0]} who={{ name: "taeyun" }} due={dues[0]} />
+          <TaskRow text={tasks[1]} who={{ name: "seojin" }} due={dues[1]} />
+          <TaskRow text={tasks[2]} who={{ name: "taeyun" }} due={null} />
         </DocSection>
       </div>
       <Sticky
@@ -290,29 +299,28 @@ function MentoringCard() {
         delay={800}
         className="absolute -bottom-6 left-3 z-10 lg:-left-2"
       >
-        기한 안 나온 건
-        <br />
-        눌러서 정하면 돼요
+        {t.rich("mentoring.note", RICH)}
       </Sticky>
       <Scribble
         kind="arrow"
         draw="reveal"
         delay={1000}
-        className="absolute bottom-[22px] left-[108px] z-10 h-[38px] w-[60px]"
+        className="absolute bottom-[22px] left-[120px] z-10 h-[38px] w-[60px]"
       />
     </MeetingCard>
   );
 }
 
 function WeeklyCard() {
+  const t = useTranslations("landing.meetings");
   return (
     <MeetingCard
       tone="mint"
-      kind="주간 회의"
-      joke="말 바뀌는 날"
-      faces={["윤하린", "송다온", "문지호"]}
-      line="금요일은 QA 시간이 안 나와요."
-      lineWho="문지호"
+      kind={t("weekly.kind")}
+      joke={t("weekly.joke")}
+      faces={["harin", "daon", "jiho"]}
+      line={t("weekly.line")}
+      lineWho="jiho"
     >
       <WeeklyWindow />
     </MeetingCard>
@@ -355,6 +363,7 @@ function Slot({
 }
 
 export function MeetingCards() {
+  const t = useTranslations("landing.meetings");
   return (
     <section
       id="meetings"
@@ -365,19 +374,20 @@ export function MeetingCards() {
         <Reveal className="relative">
           <div className="tv-r">
             <h2 id="meetings-title" className={H2}>
-              회의마다 남는 게 <span className={MARKER_REVEAL}>다릅니다</span>
+              {t.rich("title", {
+                m: (chunks) => <span className={MARKER_REVEAL}>{chunks}</span>,
+              })}
             </h2>
             {/*
               리드는 카드가 말하지 않는 것만 — 지어낸 예시라는 것과, 주간 회의 카드는 눌린다는 것.
               회의별 성격은 카드 머리의 농담 · 한마디가, 「요약 탭」은 넓은 화면의 손글씨가 말한다.
             */}
             <p className={`${LEAD} mt-4 max-w-[640px]`}>
-              아래 셋은 회의도 사람도 지어낸 예시입니다. 주간 회의 카드의 대체와 유지는 직접 눌러
-              봐도 됩니다.
+              {t("lead")}
             </p>
             <div className="mt-5 flex justify-end lg:hidden">
               <Sticky tone="pop" size="sm" tilt={3}>
-                옆으로 넘겨 보세요 →
+                {t("swipe")}
               </Sticky>
             </div>
           </div>
@@ -386,9 +396,7 @@ export function MeetingCards() {
             className="pointer-events-none absolute right-6 bottom-1 hidden items-end gap-1.5 lg:flex"
           >
             <Hand className="text-right text-[15px]">
-              셋 다 회의 끝나고 보는
-              <br />
-              요약 탭이에요
+              {t.rich("summaryNote", RICH)}
             </Hand>
             <Scribble
               kind="arrow-down"
@@ -406,7 +414,7 @@ export function MeetingCards() {
           region 을 거둔다.
         */}
         <CardRail
-          label="회의 종류별 예시"
+          label={t("railLabel")}
           className={cn(
             "-mx-5 mt-3 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pt-3 pb-16 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             "lg:mx-0 lg:mt-12 lg:grid lg:snap-none lg:grid-cols-3 lg:items-start lg:gap-6 lg:overflow-visible lg:px-0 lg:pt-0 lg:pb-0",

@@ -592,14 +592,12 @@ function SummaryItem({
           }}
           className="group/claim -mx-2 block w-full select-text rounded-block px-2 py-0.5 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
         >
-          <span className="block break-keep text-[15px] leading-7 text-[var(--el-ink)]">
+          <span className="block text-[15px] leading-7 text-[var(--el-ink)]">
             {claim}
           </span>
         </button>
       ) : (
-        <p className="break-keep text-[15px] leading-7 text-[var(--el-ink)]">
-          {claim}
-        </p>
+        <p className="text-[15px] leading-7 text-[var(--el-ink)]">{claim}</p>
       )}
       {/* **펼침은 높이가 자라는 일이다.** 그냥 마운트하면 근거 서너 줄이 한 프레임에
           튀어나와 아래 항목들을 통째로 밀어 내려서, 무엇이 새로 생겼고 읽던 줄이 어디로
@@ -637,7 +635,7 @@ function SummaryItem({
                    위 항목과 줄이 안 맞는다. 안쪽으로 넓히고 밖으로 같은 만큼 당긴다. */
                     className="group -mx-2 flex w-full items-baseline gap-2 rounded-block px-2 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
                   >
-                    <span className="min-w-0 break-keep text-[15px] leading-7 text-[var(--el-body)]">
+                    <span className="min-w-0 text-[15px] leading-7 text-[var(--el-body)]">
                       {evidence.text}
                     </span>
                     <span

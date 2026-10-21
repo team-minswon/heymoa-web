@@ -1,6 +1,6 @@
 ---
 title: 회의 맥락과 용어 사전
-description: 회의 주제와 배경을 적고 제품명·약어를 용어 사전에 등록해서, AI 회의록의 받아쓰기가 더 정확해지게 해요.
+description: 회의 주제와 배경을 적고 제품명과 약어를 용어 사전에 등록해서, AI 회의록의 받아쓰기가 더 정확해지게 해요.
 group: record
 slug: terms-context
 order: 3

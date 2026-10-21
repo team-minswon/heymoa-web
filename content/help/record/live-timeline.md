@@ -1,6 +1,6 @@
 ---
 title: 실시간 타임라인
-description: 회의 중에 결정·할 일·열린 질문·참고를 실시간으로 정리해 주는 타임라인 탭을 보는 법과, 알아 둘 점이에요.
+description: 회의 중에 결정, 할 일, 열린 질문, 참고를 실시간으로 정리해 주는 타임라인 탭을 보는 법과, 알아 둘 점이에요.
 group: record
 slug: live-timeline
 order: 4

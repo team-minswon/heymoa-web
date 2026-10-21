@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import {
   Dialog,
@@ -16,7 +17,7 @@ import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { HelpHitRow, hitHref, trackResultClick } from "@/components/help/help-hit-list";
 import { searchHelp } from "@/lib/help/search-index";
 import { goSamePage } from "@/lib/help/scroll";
-import { track } from "@/lib/analytics/track";
+import { trackHelp } from "@/lib/help/analytics";
 import { useHelpIndex } from "@/lib/help/use-help-index";
 import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,8 @@ export function HelpPalette() {
   const [selected, setSelected] = useState(0);
   const [hint, setHint] = useState("Ctrl K");
   const listRef = useRef<HTMLDivElement>(null);
-  const { entries, failed } = useHelpIndex(open);
+  const t = useTranslations("help.search");
+  const { entries, failed } = useHelpIndex(open, useLocale());
 
   useEffect(() => {
     setHint(isMac() ? "⌘K" : "Ctrl K");
@@ -52,7 +54,7 @@ export function HelpPalette() {
       if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         setOpen((now) => {
-          if (!now) track("help_search_opened", { surface: "palette", via: "keyboard" });
+          if (!now) trackHelp("help_search_opened", { surface: "palette", via: "keyboard" });
           return !now;
         });
       } else if (
@@ -71,7 +73,7 @@ export function HelpPalette() {
           return;
         if (document.querySelector("[data-help-hub-input]")) return;
         event.preventDefault();
-        track("help_search_opened", { surface: "palette", via: "keyboard" });
+        trackHelp("help_search_opened", { surface: "palette", via: "keyboard" });
         setOpen(true);
       }
     };
@@ -89,7 +91,7 @@ export function HelpPalette() {
     if (!open || !entries || !q) return;
     const timer = window.setTimeout(
       () =>
-        track("help_search_submitted", {
+        trackHelp("help_search_submitted", {
           query_length: q.length,
           result_count: hits.length,
           zero_results: hits.length === 0,
@@ -127,10 +129,10 @@ export function HelpPalette() {
       <button
         type="button"
         onClick={() => {
-          track("help_search_opened", { surface: "palette", via: "click" });
+          trackHelp("help_search_opened", { surface: "palette", via: "click" });
           setOpen(true);
         }}
-        aria-label={`검색어를 입력하세요 (예: 녹음, 용어 사전) ${hint} — 사용 가이드 검색`}
+        aria-label={t("opener", { hint })}
         aria-keyshortcuts="Control+K Meta+K"
         className={cn(
           "relative flex h-10 w-full min-w-0 items-center rounded-[10px] border border-[var(--tv-rule-strong)] bg-white pr-16 pl-10 text-left text-[14px] text-[var(--tv-muted)] help-fade hover:border-[var(--tv-ink)]",
@@ -141,9 +143,7 @@ export function HelpPalette() {
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
         />
-        <span className="truncate">
-          검색어를 입력하세요 (예: 녹음, 용어 사전)
-        </span>
+        <span className="truncate">{t("placeholderExample")}</span>
         <kbd
           className="pointer-events-none absolute top-1/2 right-3 grid h-6 min-w-6 -translate-y-1/2 place-items-center rounded-[6px] border border-[var(--tv-rule-strong)] bg-white px-1.5 font-sans text-[12px] font-bold"
           aria-hidden
@@ -170,10 +170,9 @@ export function HelpPalette() {
           style={HELP_VARS}
           className="top-[18vh] max-w-[640px] duration-(--help-base) motion-reduce:duration-0 translate-y-0 gap-0 rounded-[20px] bg-white p-0 text-[var(--tv-ink)] sm:max-w-[640px]"
         >
-          <DialogTitle className="sr-only">사용 가이드 검색</DialogTitle>
+          <DialogTitle className="sr-only">{t("dialogTitle")}</DialogTitle>
           <DialogDescription className="sr-only">
-            검색어를 입력하면 사용 가이드 전체에서 찾아요. 위아래 화살표 키로
-            결과를 고르고 Enter를 누르면 이동해요.
+            {t("dialogHelp")}
           </DialogDescription>
           <div className="relative border-b border-[var(--tv-rule)]">
             <Search
@@ -189,8 +188,8 @@ export function HelpPalette() {
               aria-activedescendant={
                 hits.length ? `help-hit-${selected}` : undefined
               }
-              aria-label="사용 가이드 전체에서 찾기"
-              placeholder="검색어를 입력하세요"
+              aria-label={t("label")}
+              placeholder={t("placeholder")}
               autoComplete="off"
               spellCheck={false}
               value={value}
@@ -219,22 +218,21 @@ export function HelpPalette() {
             ref={listRef}
             id={listId}
             role="listbox"
-            aria-label="검색 결과"
+            aria-label={t("results")}
             className="max-h-[52vh] min-h-[160px] overflow-y-auto p-3"
           >
             {failed ? (
               <p className="m-0 p-3 text-[14px] text-[var(--tv-body)]">
-                검색에 필요한 정보를 불러오지 못했어요. 잠시 뒤 다시 시도해
-                주세요.
+                {t("failed")}
               </p>
             ) : !entries ? (
               <p className="m-0 p-3 text-[14px] text-[var(--tv-muted)]">
-                불러오는 중이에요…
+                {t("loading")}
               </p>
             ) : !searching ? (
               <div className="flex flex-col gap-1">
                 <p className="m-0 px-3 pb-1 text-[13px] font-extrabold text-[var(--tv-muted)]">
-                  주제
+                  {t("topics")}
                 </p>
                 {topics.map(([path, title]) => (
                   <button
@@ -251,8 +249,8 @@ export function HelpPalette() {
                 ))}
               </div>
             ) : hits.length === 0 ? (
-              <p className="m-0 p-3 text-[14px] leading-[1.7] break-keep text-[var(--tv-body)]">
-                일치하는 내용이 없어요. 다른 낱말로 찾아보세요.
+              <p className="m-0 p-3 text-[14px] leading-[1.7] text-[var(--tv-body)]">
+                {t("noMatch")}
               </p>
             ) : (
               <div className="flex flex-col gap-2">

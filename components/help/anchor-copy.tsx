@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Check, Link2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { cn } from "@/lib/utils";
 
 /** 섹션 제목 옆에서 그 항목의 링크를 복사한다. 제목에 마우스를 올리거나 키보드로 오면 나타난다. */
 export function AnchorCopy({ id, title }: { id: string; title: string }) {
+  const t = useTranslations("help.anchor");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export function AnchorCopy({ id, title }: { id: string; title: string }) {
   return (
     <button
       type="button"
-      aria-label={`${title} 링크 복사`}
+      aria-label={t("copy", { title })}
       onClick={async () => {
         const url = new URL(window.location.href);
         url.search = "";
@@ -46,7 +48,7 @@ export function AnchorCopy({ id, title }: { id: string; title: string }) {
         <Link2 aria-hidden className="size-4" />
       )}
       <span role="status" className="sr-only">
-        {copied ? "링크를 복사했어요" : ""}
+        {copied ? t("copied") : ""}
       </span>
     </button>
   );

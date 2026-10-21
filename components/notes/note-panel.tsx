@@ -319,12 +319,19 @@ export function NotePanel({
     () => setParticipantsRequest(null),
     []
   );
+  /** 요약 「타임라인에서 보기」가 짚은 안건(APP-1290). 타임라인이 형광펜을 다 그으면 비운다. */
+  const [timelineFocus, setTimelineFocus] = useState<{
+    noteId: string;
+    agendaId: string;
+  } | null>(null);
+  const clearTimelineFocus = useCallback(() => setTimelineFocus(null), []);
   const handleTabChange = useCallback(
     (next: NoteTab) => {
       if (next !== tab) {
         track("note_tab_opened", { workspace_id: workspaceId, tab: next });
       }
       setFocusSegmentId(null);
+      setTimelineFocus(null);
       setParticipantsRequest(null);
       onTabChange(next);
     },
@@ -465,7 +472,9 @@ export function NotePanel({
           // **`hidden` 이 아니라 `clip` 이다.** `hidden` 은 스크롤 컨테이너라서 `scrollIntoView` 가
           // 본문 끝 항목을 가운데로 못 옮기면 남는 만큼 이 면을 굴린다 — 상단바가 위로 잘려 나가고,
           // 본문을 다시 올려도 이 면은 돌아오지 않는다(「언제 정해졌나」에서 끝쪽 표시를 누를 때).
-          "relative flex min-h-0 flex-1 flex-col overflow-clip bg-white",
+          // `min-w-0` — 안쪽 최소 폭(상단바의 상태 칩 「종료됨」처럼 낱말 단위로 안 꺾이는 글자)이 이 면을 넓혀
+          // 옆 에이전트 칸을 화면 밖으로 밀지 않게 한다. `overflow-clip` 은 스크롤 컨테이너가 아니라 이 일을 못 한다.
+          "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-clip bg-white",
           // 본문 좌우 여백은 **면이 정하고 내용이 읽는다.** design.pen은 side 시트(860)에
           // 좌우 100을, 전체 뷰 본문(970)에 좌우 64를 준다 — 같은 노트인데 두 값이 다르므로
           // 헤더·전사·요약·정보가 각자 하드코딩하면 뷰를 바꿀 때마다 네 군데가 어긋난다.
@@ -732,7 +741,7 @@ export function NotePanel({
                     <div className="flex min-w-0 items-center gap-2.5">
                       <NoteParticipantAvatars
                         participants={note?.participants}
-                        max={3}
+                        max={4}
                         size="sm"
                         className="-space-x-1.5 *:data-[slot=avatar]:ring-white"
                       />
@@ -890,6 +899,12 @@ export function NotePanel({
                     : null
                 }
                 onEvidenceSelect={jumpToSegment}
+                focusAgendaId={
+                  timelineFocus?.noteId === noteId
+                    ? timelineFocus.agendaId
+                    : null
+                }
+                onFocusHandled={clearTimelineFocus}
                 meetingEnded={phase === "ended"}
                 recording={phase === "active"}
               />
@@ -921,7 +936,11 @@ export function NotePanel({
                     onOpenTranscript={() => handleTabChange("transcript")}
                     onOpenTimeline={
                       showContextTab
-                        ? () => handleTabChange("context")
+                        ? (agendaId) => {
+                            handleTabChange("context");
+                            if (agendaId)
+                              setTimelineFocus({ noteId, agendaId });
+                          }
                         : undefined
                     }
                   />

@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
+import { localePath } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
 import {
@@ -16,6 +18,7 @@ import {
   TimelineRow,
 } from "./app";
 import { ExampleStamp, Scribble, Speech } from "./marks";
+import { RICH } from "./rich";
 import {
   APP,
   BODY,
@@ -46,7 +49,7 @@ import {
  * - 접고 펴는 것은 네이티브 `<details>` 라 클라이언트 코드가 없다(부드럽게 열리는 것은 지원하는
  *   브라우저에서만 — `motion.tsx` 의 `.tv-faq`). 움직임은 `Reveal` 이 켜는 `tv-r*` 뿐이다.
  *
- * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 데스크톱 앱(`app/(static)/download/page.tsx`) ·
+ * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 데스크톱 앱(`app/[lang]/download/page.tsx`) ·
  * 종료와 검토 완료 · 「철회됨」(`note-timeline.tsx`
  * `metaOf`) · 줄마다 수정 · 제외와 「제외 취소」(`review-row.tsx`, 「결정 N」은 남은 줄만 센다 —
  * `review-section.tsx` `includedCount`) · 이전 결정 대체). 가격 · 지원 언어 · 모바일 앱 같은 항목은
@@ -104,30 +107,31 @@ function Sample({ children }: { children: ReactNode }) {
  * 색을 덮지 않는다. 연한 `--el-muted-soft` 는 점 · 셰브런 · 구분점 같은 장식에만 남는다.
  */
 function RetractedSample() {
+  const t = useTranslations("landing.faq.retracted");
   return (
     <Sample>
-      <MiniBar status="기록 중" tab="타임라인" size="sm" />
+      <MiniBar status="recording" tab="timeline" size="sm" />
       <div className="px-3 pt-2.5 pb-2">
         <AgendaHead
-          range="10:02 – 지금"
-          title="회의실 예약"
+          range={t("range")}
+          title={t("agenda")}
           total={2}
           live
-          className="h-auto min-h-[30px] [&_.truncate]:leading-5 [&_.truncate]:break-keep [&_.truncate]:whitespace-normal max-[360px]:[&>span:first-child]:hidden max-[360px]:[&>span:last-child]:pl-2"
+          className="h-auto min-h-[30px] [&_.truncate]:leading-5 [&_.truncate]:whitespace-normal max-[360px]:[&>span:first-child]:hidden max-[360px]:[&>span:last-child]:pl-2"
         />
         <TimelineList className="mt-1.5">
           <TimelineRow
             at="10:05"
             tone="decision"
-            kind="결정"
+            kind={t("kind")}
             retracted
-            title="회의실 예약은 목요일로 잡는다"
+            title={t("before")}
           />
           <TimelineRow
             at="10:41"
             tone="decision"
-            kind="결정"
-            title="회의실 예약은 금요일로 옮긴다"
+            kind={t("kind")}
+            title={t("after")}
           />
         </TimelineList>
       </div>
@@ -142,24 +146,21 @@ function RetractedSample() {
  * 올린다(`DecisionRow` 의 주제가 펼친 줄에서 하는 것과 같은 손보기). 뺀 줄은 이 그림에만 있어 여기서 고친다.
  */
 function ExcludedSample() {
+  const t = useTranslations("landing.faq.excluded");
   return (
     <Sample>
-      <MiniBar status="종료됨" tab="요약" size="sm" />
+      <MiniBar status="ended" tab="summary" size="sm" />
       <div className="px-4 pt-3 pb-3">
-        <SectionHead title="결정" count={1} />
+        <SectionHead title={t("section")} count={1} />
+        <DecisionRow text={t("kept")} at="10:41" className="mt-1" />
         <DecisionRow
-          text="회의실 예약은 금요일로 옮긴다"
-          at="10:41"
-          className="mt-1"
-        />
-        <DecisionRow
-          text="점심은 김밥으로 한다"
+          text={t("dropped")}
           at="10:58"
           open
           excluded
           className="border-b-0 [&_.line-through]:text-[var(--el-body)]"
         >
-          <p className={cn("m-0 text-[12px]", APP.muted)}>제외됨</p>
+          <p className={cn("m-0 text-[12px]", APP.muted)}>{t("note")}</p>
           <RowActions excluded />
         </DecisionRow>
       </div>
@@ -167,77 +168,51 @@ function ExcludedSample() {
   );
 }
 
-export const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
-  {
-    // 웹 · 데스크톱을 나란히 말하는 곳은 여기다(회의 앱 띠 리드는 데스크톱 앱 한 줄과 링크만). 전의 「설치해야
-    // 하나요?」 → 「브라우저에서 바로」는 데스크톱 앱이 있는데 설치가 없는 것처럼 읽혔다. 웹과 데스크톱을
-    // 사실대로 나란히 말하고 「설치할 것 없음」 류로 못 박지 않는다(`hero.tsx`). 질문을 「어디서 쓰나요?」로
-    // 두면 바로 다음 구간 제목(「어디서 회의하든」 — 회의 앱 · 오프라인)과 부딪혀 회의 장소를 묻는 말로 읽혔다.
-    // 데스크톱 문구는 `app/(static)/download/page.tsx` 결이다(컴퓨터에서 나는 소리 녹음 · 메뉴바 타임라인을 「더했다」,
-    // Windows 는 베타라고만 적는다).
-    q: "브라우저로 쓰나요, 앱도 있나요?",
-    // 첫마디가 「둘 다」여야 한다 — 「브라우저에서 씁니다」로 시작했을 때는 앱이 있다는 말이 넷째 문장에야 나와
-    // 처음 보는 사람은 데스크톱 앱이 있는 줄 몰랐다. 앱이 더하는 것은 다운로드 페이지와 같은 강도로만 쉬운 말로
-    // 옮긴다(「컴퓨터 오디오 녹음」 → 「컴퓨터에서 나는 소리까지 녹음」). 「화상회의 상대 목소리를 받아 적는다」는
-    // 설치 앱의 두 입력 전사 수용(`apps/desktop/docs/release.md`)이 끝난 뒤에야 쓴다.
-    a: (
-      <>
-        <span className={MARKER}>둘 다 됩니다.</span> 브라우저에서 바로 쓸 수
-        있고, Mac · Windows용 데스크톱 앱도 있습니다. 데스크톱 앱에서는 마이크
-        소리와 컴퓨터에서 나는 소리를 함께 녹음하고, 메뉴바에서 타임라인을 볼 수
-        있습니다. 어느 쪽이든 같은 Google 계정으로 로그인하고 같은 회의 기록을
-        봅니다. Windows판은 베타입니다.
-      </>
-    ),
-    more: <SeeLink href="/download">데스크톱 다운로드</SeeLink>,
-  },
-  {
-    // 주어는 결정과 할 일이다. 회의 자체는 만들 때부터 프로젝트 목록에 한 줄로 있다(팀 구간 리드).
-    q: "결정과 할 일은 회의가 끝나면 바로 확정되나요?",
-    a: (
-      <>
-        아니요. 회의를 종료하면 분석을 거쳐 요약 탭에 정리되고,{" "}
-        <span className={MARKER}>
-          반영할 결정·할 일의 스위치를 켜고 검토 완료를 눌러야 프로젝트에
-          확정됩니다.
-        </span>{" "}
-        선택하지 않은 항목은 회의록에만 남습니다. 기록 중이면 먼저 「중지」를
-        눌러야 종료할 수 있습니다.
-      </>
-    ),
-    more: <SeeLink href="#evidence">그림으로 보기</SeeLink>,
-  },
-  {
-    q: "회의 중에 말을 바꾸면요?",
-    a: "타임라인은 뒤집힌 항목을 지우지 않습니다. 줄을 긋고 「철회됨」을 붙여 둡니다.",
-    more: <RetractedSample />,
-  },
-  {
-    q: "잘못 정리된 줄은 어떻게 하나요?",
-    // 「할 일은 … 고칩니다」는 할 일이 고치는 것처럼 읽혀서 「할 일의 … 고칠 수 있습니다」로.
-    a: "줄마다 고치거나 뺄 수 있고, 할 일의 담당과 기한도 고칠 수 있습니다. 뺀 줄은 지워지지 않고 그어진 채 남습니다. 「제외 취소」를 누르면 돌아옵니다.",
-    more: <ExcludedSample />,
-  },
-  {
-    q: "새 결정이 이전 결정을 뒤집으면요?",
-    a: "요약 탭에 「이전 결정 대체」 제안이 붙습니다. 새 결정을 프로젝트에 추가하려면 스위치를 켜고 이전 결정을 대체할지 유지할지 고릅니다.",
-    more: <SeeLink href="#meetings">주간 회의 카드에서 보기</SeeLink>,
-  },
-  {
-    // 「훑어보고 검토 완료」는 히어로 · 마무리가 말한다. 여기서는 당번이 실제로 손대는 것을 적는다 —
-    // 빈 담당 · 기한(`assignee-cell.tsx` · `due-cell.tsx` 「담당/기한 정하기」), 화자 이름(회의 중에는
-    // 화자가 없고, 끝난 뒤 스크립트 상단바의 화자 도구 — `speaker-panel.tsx` · `speaker-nudge-banner.tsx`).
-    q: "회의록 당번은 이제 뭐 하나요?",
-    a: (
-      <>
-        요약 탭에서 비어 있는 담당과 기한을 채우고, 잘못 잡힌 줄만 고친 다음{" "}
-        <span className={MARKER}>검토 완료를 누르면 됩니다.</span> 회의 중에는
-        화자가 나뉘지 않아서, 누가 누구인지는 끝난 뒤 스크립트 탭에서 붙여
-        둡니다.
-      </>
-    ),
-  },
-];
+/** 답 안의 강조 — 버터색 형광펜. */
+const MARK = {
+  ...RICH,
+  m: (chunks: ReactNode) => <span className={MARKER}>{chunks}</span>,
+};
+
+/**
+ * 질문 · 답(`landing.faq.items` 의 q1~q6, 순서가 번호다). 화면과 JSON-LD(`landing-client.tsx`)가 같은 글을 쓴다.
+ * 서버 컴포넌트에서도 부르므로 `useTranslations` · `useLocale` 만 쓴다.
+ *
+ * - 01: 웹 · 데스크톱을 나란히 말하는 곳은 여기다(회의 앱 띠 리드는 데스크톱 앱 한 줄과 링크만). 첫마디가 「둘
+ *   다」여야 한다 — 앱이 있다는 말이 넷째 문장에야 나오면 처음 보는 사람은 데스크톱 앱이 있는 줄 모른다. 앱이
+ *   더하는 것은 다운로드 페이지(`app/[lang]/download/page.tsx`)와 같은 강도로만 옮긴다(컴퓨터에서 나는 소리 녹음 ·
+ *   메뉴바 타임라인, Windows 는 베타). 「화상회의 상대 목소리를 받아 적는다」는 설치 앱의 두 입력 전사
+ *   수용(`apps/desktop/docs/release.md`)이 끝난 뒤에야 쓴다. 질문을 「어디서 쓰나요?」로 두면 다음 구간 제목
+ *   (「어디서 회의하든」)과 부딪혀 회의 장소를 묻는 말로 읽혔다.
+ * - 02: 주어는 결정과 할 일이다. 회의 자체는 만들 때부터 프로젝트 목록에 한 줄로 있다(팀 구간 리드).
+ * - 06: 「훑어보고 검토 완료」는 히어로 · 마무리가 말한다. 여기서는 당번이 실제로 손대는 것을 적는다 — 빈 담당 ·
+ *   기한(`assignee-cell.tsx` · `due-cell.tsx`), 화자 이름(끝난 뒤 스크립트 상단바의 화자 도구 — `speaker-panel.tsx`).
+ */
+export function useFaqQA(): Array<{
+  q: string;
+  a: ReactNode;
+  more?: ReactNode;
+}> {
+  const t = useTranslations("landing.faq.items");
+  const locale = useLocale();
+  const item = (id: "q1" | "q2" | "q3" | "q4" | "q5" | "q6") => ({
+    q: t(`${id}.q`),
+    a: t.rich(`${id}.a`, MARK),
+  });
+  return [
+    {
+      ...item("q1"),
+      more: (
+        <SeeLink href={localePath(locale, "/download")}>{t("q1.more")}</SeeLink>
+      ),
+    },
+    { ...item("q2"), more: <SeeLink href="#evidence">{t("q2.more")}</SeeLink> },
+    { ...item("q3"), more: <RetractedSample /> },
+    { ...item("q4"), more: <ExcludedSample /> },
+    { ...item("q5"), more: <SeeLink href="#meetings">{t("q5.more")}</SeeLink> },
+    item("q6"),
+  ];
+}
 
 /** 노란 「?」 쪽지(말풍선 꼴 — 왼쪽 아래 모서리만 뾰족). 구간이 보일 때 튀어나온다. */
 function QMark({ className }: { className?: string }) {
@@ -257,6 +232,8 @@ function QMark({ className }: { className?: string }) {
 }
 
 export function Faq() {
+  const t = useTranslations("landing.faq");
+  const qa = useFaqQA();
   return (
     <section
       id="faq"
@@ -267,7 +244,7 @@ export function Faq() {
       >
         <div className="self-start lg:sticky lg:top-24">
           <div className="flex items-center gap-4">
-            <h2 className={H2}>자주 묻는 것</h2>
+            <h2 className={H2}>{t("title")}</h2>
             <QMark className="size-11 rounded-[14px] rounded-bl-[4px] text-[24px] lg:hidden" />
           </div>
           {/* 넓은 화면의 왼쪽 기둥 — 노란 「?」 쪽지가 목록 쪽으로 화살표를 그린다. */}
@@ -289,16 +266,16 @@ export function Faq() {
             className="mt-5 flex flex-col items-start gap-2 lg:mt-12"
           >
             <Speech
-              who="이서연"
+              who="seoyeon"
               tone="butter"
               tilt={-2}
               anim="reveal"
               delay={500}
             >
-              저 이번 주 당번인데요…
+              {t("speech.duty")}
             </Speech>
             <Speech
-              who="정우재"
+              who="woojae"
               side="right"
               tone="white"
               size="sm"
@@ -307,13 +284,13 @@ export function Faq() {
               delay={1000}
               className="ml-12"
             >
-              06번 보세요
+              {t("speech.pointer")}
             </Speech>
           </div>
         </div>
 
         <div className="border-t border-[var(--tv-rule-strong)]">
-          {QA.map(({ q, a, more }, i) => (
+          {qa.map(({ q, a, more }, i) => (
             <details
               key={q}
               className="tv-faq group border-b border-[var(--tv-rule-strong)]"
@@ -329,7 +306,7 @@ export function Faq() {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                 </span>
-                <span className="break-keep text-[17px] leading-[1.4] font-bold text-[var(--tv-ink)] lg:text-[20px]">
+                <span className="text-[17px] leading-[1.4] font-bold text-[var(--tv-ink)] lg:text-[20px]">
                   {q}
                 </span>
                 <span

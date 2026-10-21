@@ -1,0 +1,707 @@
+{
+  "people": {
+    "minseo": "Minseo Kim",
+    "jihoon": "Jihoon Park",
+    "seoyeon": "Seoyeon Lee",
+    "woojae": "Woojae Jeong",
+    "seojin": "Seojin Han",
+    "taeyun": "Taeyun Oh",
+    "harin": "Harin Yoon",
+    "jiho": "Jiho Moon",
+    "daon": "Daon Song"
+  },
+  "marks": {
+    "example": "Sample"
+  },
+  "app": {
+    "status": {
+      "recording": "Recording",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "tabs": {
+      "info": "Details",
+      "script": "Transcript",
+      "timeline": "Timeline",
+      "summary": "Summary"
+    },
+    "tabSr": "{tab} tab",
+    "facesChip": "{first} and {others, plural, one {# other} other {# others}}",
+    "reviewState": {
+      "review": "In review",
+      "confirmed": "Confirmed"
+    },
+    "speaker": "Speaker {label}",
+    "noSpeaker": "Unknown speaker",
+    "setAssignee": "Assign",
+    "setDue": "Set due date",
+    "edit": "Edit",
+    "exclude": "Exclude",
+    "undoExclude": "Undo exclude",
+    "confirm": {
+      "unchosen": "<n></n> {count, plural, one {suggestion} other {suggestions}} to review",
+      "goToSuggestions": "Go to suggestions",
+      "counts": "Add <d></d> {decisions, plural, one {decision} other {decisions}} and <t></t> {tasks, plural, one {task} other {tasks}}",
+      "target": "to the project",
+      "ended": "· closes <n></n> earlier {count, plural, one {decision} other {decisions}}",
+      "button": "Finish review"
+    },
+    "replacement": "Replaces an earlier decision",
+    "retracted": "Retracted",
+    "transcribing": "Transcribing",
+    "rail": {
+      "title": "My agent",
+      "private": "Private",
+      "scope": "This meeting"
+    },
+    "composerPlaceholder": "Type @ to pick a project or meeting, then ask",
+    "refsCount": "{count, plural, one {# meeting note} other {# meeting notes}} referenced",
+    "live": "In discussion"
+  },
+  "team": {
+    "speech": "Where did those meeting notes go?",
+    "title": "Every meeting <m>lands</m> in its project",
+    "lead1": "No more passing notes around. When you start a meeting, it shows up in the project's list right away, along with how long it was recorded and how many participants were picked in the Details tab.",
+    "lead2": "Admins invite members by email. People who don't have an account yet sign up through the link in the invite. There are two roles: Admin and Member.",
+    "caption": "Sample screen. The Onboarding improvements project lists three meetings by date. Next to it are the member settings for the same workspace, with four members and one pending invite.",
+    "project": {
+      "name": "Onboarding improvements",
+      "description": "Every remark and decision from 3 meetings, kept in order."
+    },
+    "meetings": {
+      "retro": {
+        "date": "Tue, Sep 8, 2026",
+        "title": "Sprint 3 retro"
+      },
+      "kickoff": {
+        "date": "Tue, Sep 1, 2026",
+        "title": "Sprint 3 kickoff"
+      },
+      "earlier": {
+        "date": "Tue, Aug 25, 2026",
+        "title": "Sprint 2 kickoff"
+      }
+    },
+    "recorded": "{min} min recorded",
+    "participants": "{count, plural, one {# participant} other {# participants}}",
+    "members": {
+      "title": "Members",
+      "description": "Manage this workspace's members and pending invites.",
+      "me": "(you)",
+      "roles": {
+        "admin": "Admin",
+        "member": "Member"
+      },
+      "remove": "Remove",
+      "pending": "Pending invites",
+      "invitedBy": "{name} · Sep 8",
+      "cancel": "Cancel"
+    },
+    "inviteNote": "This link expires in a day"
+  },
+  "faq": {
+    "title": "Common questions",
+    "speech": {
+      "duty": "I'm the note-taker this week…",
+      "pointer": "See number 06"
+    },
+    "items": {
+      "q1": {
+        "q": "Is it a web app, or is there a desktop app?",
+        "a": "<m>Both.</m> You can use HeyMoa right in your browser, and there's also a desktop app for Mac and Windows. The desktop app records your microphone together with the sound coming from your computer, and shows the Timeline in the menu bar. Either way, you sign in with the same Google account and see the same meeting notes. The Windows version is in beta.",
+        "more": "Download the desktop app"
+      },
+      "q2": {
+        "q": "Are decisions and tasks final as soon as the meeting ends?",
+        "a": "No. When you end the meeting, HeyMoa analyzes it and lays everything out in the Summary tab. <m>Decisions and tasks reach the project only after you switch on the ones you want and click Finish review.</m> Anything you leave off stays in the meeting notes. If the meeting is still recording, click Pause first and then end it.",
+        "more": "See it in action"
+      },
+      "q3": {
+        "q": "What if someone changes their mind mid-meeting?",
+        "a": "The Timeline doesn't delete the reversed item. It strikes it through and marks it Retracted."
+      },
+      "q4": {
+        "q": "What if a line comes out wrong?",
+        "a": "You can edit or exclude any line, and change a task's assignee and due date. Excluded lines aren't deleted. They stay struck through, and Undo exclude brings them back."
+      },
+      "q5": {
+        "q": "What if a new decision overrides an earlier one?",
+        "a": "The Summary tab attaches a \"Replaces an earlier decision\" suggestion. To add the new decision to the project, switch it on and choose whether to replace the earlier decision or keep it.",
+        "more": "See it on the weekly meeting card"
+      },
+      "q6": {
+        "q": "So what does the note-taker do now?",
+        "a": "In the Summary tab, fill in any missing assignees and due dates, fix the lines that came out wrong, and <m>click Finish review.</m> Speakers aren't separated during the meeting, so you put names to them in the Transcript tab after it ends."
+      }
+    },
+    "retracted": {
+      "range": "10:02 – now",
+      "agenda": "Meeting room booking",
+      "kind": "Decision",
+      "before": "Book the meeting room for Thursday",
+      "after": "Move the room booking to Friday"
+    },
+    "excluded": {
+      "section": "Decisions",
+      "kept": "Move the room booking to Friday",
+      "dropped": "Order kimbap for lunch",
+      "note": "Excluded"
+    }
+  },
+  "closing": {
+    "roster": {
+      "title": "Note-taker rotation",
+      "week": "Wk {n}",
+      "notes": "Notes — HeyMoa",
+      "review": "Review — me"
+    },
+    "speech": "So I get this week off, right?",
+    "title": "For your next meeting, <br></br>retire the <loop>rotation</loop>",
+    "body": "Put HeyMoa down for this week. <br></br>Nobody has to argue about who did it last week.",
+    "cta": "Start with Google"
+  },
+  "meetings": {
+    "title": "Different meetings, <m>different</m> notes",
+    "lead": "The three meetings below, and everyone in them, are made up. On the weekly meeting card, you can click Replace or Keep yourself.",
+    "swipe": "Swipe for more →",
+    "summaryNote": "All three show the Summary<br></br>tab after the meeting ends",
+    "railLabel": "Sample meetings by type",
+    "sections": {
+      "decisions": "Decisions",
+      "tasks": "Tasks"
+    },
+    "kickoff": {
+      "kind": "Sprint kickoff",
+      "joke": "Setting the direction",
+      "line": "We're sticking with that decision.",
+      "title": "Sprint 3 kickoff",
+      "date": "Tue, Sep 1, 2:00 PM",
+      "length": "2 min",
+      "project": "Onboarding improvements",
+      "after": "Once reviewed",
+      "topic": "Sprint priorities",
+      "decisions": [
+        "Make onboarding drop-off the first baseline for this sprint",
+        "Move the checkout redesign to next sprint"
+      ],
+      "tasks": [
+        "Post a draft of the onboarding drop-off logging plan",
+        "Export the logging work as a Linear issue"
+      ],
+      "due": "Thu, Sep 3"
+    },
+    "mentoring": {
+      "kind": "Mentoring",
+      "joke": "Homework day",
+      "line": "Three review comments still need replies.",
+      "title": "New developer mentoring",
+      "date": "Fri, Aug 28, 4:00 PM",
+      "length": "42 min",
+      "project": "New hire onboarding",
+      "empty": "No decisions yet.",
+      "tasks": [
+        "Rewrite PR descriptions as three-line summaries",
+        "Send links to the two recommended books",
+        "Reply to the three remaining review comments"
+      ],
+      "dues": ["Fri, Sep 4", "Mon, Aug 31"],
+      "note": "No due date yet?<br></br>Click to set one"
+    },
+    "weekly": {
+      "kind": "Weekly meeting",
+      "joke": "Plans change",
+      "line": "QA can't fit it in on Friday."
+    }
+  },
+  "weekly": {
+    "title": "Design team weekly",
+    "date": "Mon, Aug 31, 11:00 AM",
+    "length": "28 min",
+    "project": "Banner redesign",
+    "decision": "Push the release to next Tuesday",
+    "target": "Ship the new banner on Friday, Sep 4",
+    "meta": "Banner draft review · Confirmed Aug 27",
+    "reason": "This moves the release from Friday to next Tuesday, so it conflicts with the earlier decision.",
+    "options": {
+      "change": "Replace",
+      "keep": "Keep"
+    },
+    "groupLabel": "What should happen to the earlier decision?",
+    "dateNote": "Set on Aug 27,<br></br>changed four<br></br>days later",
+    "task": "Send the QA request email today",
+    "due": "Mon, Aug 31",
+    "before": "Pick one first.<br></br>Finish review is locked",
+    "after": "Picked.<br></br>Finish review is unlocked"
+  },
+  "evidence": {
+    "title": "Did someone <m>really</m> say that?",
+    "lead": "Expand any decision or task to see the part of the transcript it came from. Check what was actually said there, and edit or remove any line that got it wrong.",
+    "lines": [
+      {
+        "before": "This sprint, ",
+        "mark": "we start with onboarding drop-off",
+        "after": ". Let's sort out the two hypotheses from last week first."
+      },
+      {
+        "before": "Last meeting, ",
+        "mark": "we pushed the checkout redesign to later",
+        "after": ". We're sticking with that decision."
+      },
+      {
+        "before": "Then I'll take onboarding drop-off logging. ",
+        "mark": "I'll post a draft by this Thursday",
+        "after": "."
+      },
+      {
+        "before": "Sounds good. ",
+        "mark": "Let's send that straight to Linear as an issue",
+        "after": "."
+      }
+    ],
+    "tag": "Clue ",
+    "tape": "Only the 4 lines behind decisions and tasks",
+    "press": "Click to confirm",
+    "dialog": "Misclick? You'll be asked first<br></br>Finished reviews can't be edited",
+    "pairDecision": "this decision",
+    "pairLine": "from this line",
+    "quoteNote": "The dark line is<br></br>the quote, the faded<br></br>one came just before",
+    "before": "Not reviewed yet",
+    "sr": "Below are the Transcript and Summary tabs of the same meeting. Four lines in the transcript became two decisions and two tasks in the summary. The Summary tab is shown before Finish review. Once you switch on the decisions and tasks to keep and click Finish review, a confirmation appears first, and a finished review can't be edited.",
+    "caption": "Names appear here because each speaker was named by hand. Before that, they show as “Speaker A” and so on.",
+    "pairs": "Matching numbers go together"
+  },
+  "safety": {
+    "title": "Your meetings reach <m>the tools you use</m>",
+    "lead": "HeyMoa's built-in agent and the Claude Code or Codex you connect both work from what was said in your meetings.",
+    "agent": {
+      "label": "My agent",
+      "title": "Nothing goes out until you approve it",
+      "body": "In the same chat where you ask about a meeting, you can ask for a Linear or GitHub issue. Even if the workspace is already connected, it checks with you before creating each one, and tasks from the meeting never move over on their own.",
+      "step1": {
+        "title": "An approval card comes first",
+        "body": "It shows where the issue will go, with its title and description, and waits until you approve or decline.",
+        "note": "Declines are logged as “Declined”"
+      },
+      "step2": {
+        "title": "The issue stays in the chat",
+        "body": "Expand Thinking to find the issue link and the “Approved” record.",
+        "note": "Opens right in Linear"
+      },
+      "figure1": "Figure 1 (sample): a My agent chat next to the “Sprint 3 kickoff” meeting notes. Asked to turn the onboarding drop-off logging into a Linear issue, the agent checks first and shows an approval card for creating it. Nothing is sent before you press Approve, and the input box stays locked until then. If you decline, the chat records it as “Declined.”",
+      "figure2": "Figure 2: the Thinking section of the same chat after approval, with a link to the new issue ONB-12, an Open link, and an “Approved” line.",
+      "scope": "Sprint 3 kickoff",
+      "ask": "Make the onboarding drop-off logging a Linear issue",
+      "answer": "Should I create a Linear issue for this task? Check the details below and approve.",
+      "issue": "Draft onboarding drop-off logging",
+      "call": "Create Linear issue · {issue}",
+      "writeTool": "Write tool",
+      "description": "A task from the Sprint 3 kickoff (Sep 1).",
+      "approve": "Approve",
+      "decline": "Decline",
+      "waiting": "Waiting for your answer. Press Stop to cancel.",
+      "locked": "You can't type while an approval is pending.",
+      "thinking": "Thinking",
+      "created": "{call} · Created issue ONB-12: https://linear.app/…",
+      "open": "Open",
+      "approved": "Approved"
+    },
+    "external": {
+      "label": "External agents",
+      "title": "Connect your AI tools and they can look up past meetings",
+      "body": "Connect HeyMoa to an AI tool like Claude Code or Codex, and right where you work it can look up decisions, tasks, and meeting notes, then link you to the HeyMoa screen you need. You create each connection yourself and can disconnect it at any time.",
+      "figure": "Figure: one connection on the My MCP connections screen in settings (sample). Laptop Claude Code is connected, and the expanded usage list shows when it fetched what and how many items. Revoking blocks it from the next request and can't be undone.",
+      "screenTitle": "My MCP connections",
+      "screenBody": "Let AI apps like Claude or ChatGPT read the meetings and projects in a workspace you choose.",
+      "newConnection": "New connection",
+      "name": "Laptop Claude Code",
+      "connected": "Connected",
+      "team": "Product team",
+      "since": "Connected Sep 1, 2026",
+      "lastUsed": "Last used Sep 3, 2026",
+      "expiry": "<nw>Expires if unused</nw> <nw>by Dec 2, 2026</nw>",
+      "usage": "Usage",
+      "revoke": "Revoke",
+      "at": {
+        "t412": "Sep 3, 4:12 PM",
+        "t411": "Sep 3, 4:11 PM"
+      },
+      "tools": {
+        "openScreen": "Open screen",
+        "transcript": "Meeting transcript",
+        "meetings": "List meetings",
+        "projectItems": "List project items",
+        "checkConnection": "Check connection"
+      },
+      "count": "{n, plural, one {# result} other {# results}}",
+      "revokeNote": "Revoking blocks the very next request, and it can't be undone.",
+      "logNote": "Logs when, what, and how many",
+      "pass": "External agent pass",
+      "stamps": {
+        "workspace": "One workspace only",
+        "visible": "Only what you can see",
+        "expiry": "Expires after 90 idle days"
+      }
+    }
+  },
+  "worksWith": {
+    "title": "Wherever you meet, just <m>keep HeyMoa on</m>",
+    "body": "Keep the meeting app you already use. HeyMoa doesn't join the call. It listens through your laptop mic from the next tab, so there's no bot to invite and no integration to set up. To record your computer's audio as well, get the <link>desktop app</link>.",
+    "apps": {
+      "zoom": {
+        "name": "Zoom",
+        "line": "Open your Zoom call and start a meeting in HeyMoa. The two apps never need to be connected."
+      },
+      "meet": {
+        "name": "Google Meet",
+        "line": "Open one more tab next to Meet. When the meeting ends, decisions and tasks are gathered in the Summary tab."
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "line": "HeyMoa never joins the meeting, so no unfamiliar bot shows up in the participant list."
+      },
+      "webex": {
+        "name": "Webex",
+        "line": "It works even if your company chose the meeting app. There's no integration to ask your admin for."
+      },
+      "slack": {
+        "name": "Slack huddles",
+        "line": "Decisions from a quick huddle don't slip away."
+      },
+      "discord": {
+        "name": "Discord",
+        "line": "What you settle in a side-project voice channel gets written down too."
+      },
+      "room": {
+        "name": "Meeting room",
+        "line": "Put a laptop in the middle of the table and it captures an in-person meeting with no screen at all."
+      },
+      "other": {
+        "name": "Any other app",
+        "line": "Listed here or not, if your laptop can hear it, HeyMoa can write it down."
+      }
+    },
+    "recording": "Recording",
+    "play": "Play",
+    "pause": "Pause"
+  },
+  "demo": {
+    "title": "Sprint 3 kickoff",
+    "project": "Onboarding improvements",
+    "earlier": "Sprint 2 kickoff",
+    "lines": [
+      "This sprint we start with onboarding drop-off. Let's sort out last week's two hypotheses first.",
+      "Last meeting we pushed the checkout redesign. We're sticking with that.",
+      "I just joined, so I'm missing the context. Can we go over why it was pushed?",
+      "Ask the agent. It'll pull it from the Sprint 2 notes.",
+      "Then I'll take the onboarding drop-off logging. I'll have a draft up by Thursday.",
+      "Great. Let's send that straight to Linear as an issue.",
+      "Can we attach today's decision to that issue? So whoever joins next can see it.",
+      "Let's look at that when we export it. That's it for today."
+    ],
+    "timeline": [
+      "Sprint priorities",
+      "Make onboarding drop-off this sprint's first baseline",
+      "Push the checkout redesign to next sprint",
+      "Why was the checkout redesign pushed?",
+      "The reason is in the Sprint 2 decision",
+      "Onboarding drop-off logging",
+      "Post a draft of the drop-off logging by Thursday",
+      "Export the logging work as a Linear issue",
+      "Can this meeting's decision be attached to the Linear issue?"
+    ],
+    "kinds": {
+      "decision": "Decision",
+      "question": "Question",
+      "insight": "Insight",
+      "task": "Task"
+    },
+    "meta": {
+      "answered": "Answered at {at}",
+      "waiting": "Waiting for an answer"
+    },
+    "filters": {
+      "all": "All",
+      "decision": "Decisions",
+      "task": "Tasks",
+      "open": "Open questions",
+      "reference": "Reference"
+    },
+    "seed": {
+      "q": "Why did we push the checkout redesign?",
+      "a": "The team chose to look at onboarding drop-off first, so the redesign moved to next sprint. That was decided in the Sprint 2 kickoff, and this meeting kept it."
+    },
+    "asks": [
+      {
+        "q": "Why are we looking at onboarding drop-off first?",
+        "a": "It's the first baseline for this sprint. The meeting opened by asking to sort out last week's two hypotheses first."
+      },
+      {
+        "q": "Who's handling the log collection?",
+        "a": "Woojae Jeong. At 01:02 he took it on: “I'll have a draft up by Thursday.”"
+      },
+      {
+        "q": "What got decided while I was out?",
+        "a": "Two decisions. Onboarding drop-off is this sprint's first baseline, and the checkout redesign stays pushed to next sprint, as decided before."
+      }
+    ],
+    "threadTitle": "Why the checkout redesign was pushed",
+    "thinking": "Thinking",
+    "doc": {
+      "summary": "Onboarding drop-off is the first baseline for this sprint, and the checkout redesign moves to next sprint as decided in Sprint 2. A draft of the drop-off logging is due Thursday, and that work goes to Linear as an issue.",
+      "topics": [
+        {
+          "title": "Sprint priorities",
+          "gist": "Onboarding drop-off became the baseline, and the checkout redesign moved to next sprint."
+        },
+        {
+          "title": "Onboarding drop-off logging",
+          "gist": "The draft is due Thursday, and the work goes to Linear as an issue."
+        }
+      ],
+      "decisions": [
+        "Make onboarding drop-off this sprint's first baseline",
+        "Push the checkout redesign to next sprint"
+      ],
+      "tasks": [
+        "Post the onboarding drop-off logging draft",
+        "Export the logging work as a Linear issue"
+      ],
+      "due": "Thu, Sep 3"
+    },
+    "chapters": ["Capture", "Organize", "Ask", "Wrap up", "Review"],
+    "captions": {
+      "listen": "A line per remark",
+      "timeline": "Only items worth keeping",
+      "task": "Only items worth keeping",
+      "open": "Open questions stay too",
+      "ask": "Ask mid-meeting",
+      "stop": "① Pause first",
+      "paused": "② Then end the meeting",
+      "press": "② Then end the meeting",
+      "ended": "Done. On to Summary",
+      "analyzing": "Analysis, sped up",
+      "doc": "Summary becomes the notes",
+      "evidence": "Down to the source",
+      "confirm": "Correct? Finish review"
+    },
+    "notes": {
+      "listen": "One line per remark, <nw>timestamped</nw>",
+      "task": "A task, added <nw>as it was said</nw>",
+      "open": "Open questions stay, <nw>dashed in orange</nw>",
+      "step1": "① Pause first",
+      "step1Sub": "You can't end <nw>while recording</nw>",
+      "step2": "② Then end the meeting",
+      "step2Sub": "You'll be asked to confirm",
+      "confirm": "Pick what to keep, then <nw>Finish review</nw>",
+      "confirmSub": "Only the decisions and tasks you pick <nw>go to the project</nw>",
+      "ended": "Meeting over. On to the Summary tab",
+      "analyzing": "Analysis is sped up here",
+      "doc": "The Summary tab becomes the meeting notes",
+      "legend": "Sorted like this",
+      "room": "In the room",
+      "idle": "Not every remark becomes an item",
+      "evidence": "<nw>Where this</nw> <nw>decision</nw> <nw>came from</nw>",
+      "railAsk": "Ask quietly, mid-meeting",
+      "railRefs": "Answers list the notes they used"
+    },
+    "figcaption": {
+      "still": "The Summary tab after the sample meeting “{title}” has ended. It lists two decisions and two tasks, with the Finish review bar at the bottom.",
+      "playing": "The sample meeting “{title}”. Remarks are transcribed, and tasks and questions appear on the Timeline. Someone asks My agent mid-meeting, then recording is paused and the meeting ends, and the Summary tab shows the Finish review bar. It then starts over. Use the Pause button above to stop it."
+    },
+    "tape": "Sample meeting",
+    "pause": "Pause",
+    "play": "Play",
+    "topBar": {
+      "endMeeting": "End meeting",
+      "tablist": "Meeting note preview"
+    },
+    "details": {
+      "titleLabel": "Title",
+      "attendees": "Attendees",
+      "pickAttendees": "Choose people",
+      "save": "Save changes",
+      "meetingInfo": "Meeting details",
+      "host": "Host",
+      "hostRole": "Controls recording",
+      "recorded": "Total recorded",
+      "recordedNote": "Ended segments only",
+      "sharing": "Shared with",
+      "sharingValue": "Workspace members",
+      "created": "Created",
+      "createdValue": "Sep 1, 2026, 2:00 PM",
+      "updated": "Last edited",
+      "updatedValue": "Sep 1, 2026, 2:02 PM"
+    },
+    "script": {
+      "speakers": "Speakers",
+      "unassigned": "Unassigned {count}",
+      "copy": "Copy"
+    },
+    "timelinePanel": {
+      "date": "Sep 1, 2026, 2:00 PM",
+      "people": "{count} people",
+      "srTotal": "{count} items in total",
+      "endedNote": "Only changes worth keeping from this meeting are recorded",
+      "liveNote": "Updated as each remark ends · Just now",
+      "now": "now"
+    },
+    "analyzing": {
+      "label": "Analysis steps",
+      "steps": ["Speakers", "Analysis", "Review", "Confirm"],
+      "step": "{label}: {state}",
+      "states": {
+        "done": "Done",
+        "now": "In progress",
+        "waiting": "Waiting"
+      },
+      "title": "Analyzing the meeting",
+      "body": "Grouping decisions and tasks by topic, adding owners and due dates, then checking them against the decisions and tasks already in the project. This can take a few minutes, so feel free to leave this screen."
+    },
+    "map": {
+      "title": "When things were decided",
+      "topics": "Topics",
+      "decisions": "Decisions {count}",
+      "tasks": "Tasks {count}",
+      "start": "0:00",
+      "end": "2 min"
+    },
+    "viewSwitch": {
+      "summary": "Summary",
+      "graph": "Graph"
+    },
+    "review": {
+      "date": "Tue, Sep 1, 2:00 PM",
+      "length": "2 min",
+      "summary": "Summary",
+      "topics": "Topics",
+      "decisions": "Decisions",
+      "tasks": "Tasks",
+      "unnamed": "{count, plural, one {# task} other {# tasks}} assigned to unnamed speakers",
+      "nameSpeakers": "Name speakers",
+      "srKind": {
+        "decision": "Decisions",
+        "task": "Tasks",
+        "open": "Open questions"
+      }
+    },
+    "summaryWaiting": {
+      "title": "The summary is ready once the meeting ends",
+      "body": "When you end the meeting, decisions, tasks, and issues are grouped by topic for you to review."
+    },
+    "transcribing": "Transcribing"
+  },
+  "ask": {
+    "wall": [
+      "Wait, who's doing that?",
+      "Didn't we settle that last week?",
+      "What did they say earlier?",
+      "I wasn't there for that"
+    ],
+    "hand": "Now you can ask the agent",
+    "title": "Ask, and it finds <mark>the answer</mark> <nw>in past meetings</nw>",
+    "lead": "Ask your agent during a meeting or after it. It searches this meeting first and widens to past meetings when it needs to. Click a meeting note to see where an answer came from.",
+    "tryLabel": "Click one to try it",
+    "current": "Viewing",
+    "figcaption": "A chat with My agent, scoped to the sample meeting “{title}”",
+    "arrived": "Answer received. {answer}",
+    "noteA": ["Searched back to", "the Sprint 2 notes"],
+    "seedMark": "decided in the Sprint 2 kickoff",
+    "questions": [
+      {
+        "scene": "Back from zoning out",
+        "mark": "asking to sort out last week's two hypotheses first",
+        "note": ["Pulled from", "the opening remark"]
+      },
+      {
+        "scene": "Waiting on the log draft",
+        "mark": "Woojae Jeong.",
+        "note": ["With speakers named,", "it answers by name"]
+      },
+      {
+        "scene": "Joined late",
+        "mark": "Two decisions.",
+        "note": ["Picks out just", "the two decisions"]
+      }
+    ]
+  },
+  "meta": {
+    "brandLabel": "HeyMoa",
+    "title": "HeyMoa | Real-time AI meeting notes",
+    "ogTitle": "HeyMoa – Real-time AI meeting notes",
+    "description": "HeyMoa is an AI agent that carries context from one meeting to the next so your team can decide faster. It takes real-time AI meeting notes, tells speakers apart, and organizes decisions and tasks.",
+    "ogImageAlt": "HeyMoa — Focus on the meeting and let Moa take the notes. From the live transcript to decisions and tasks, HeyMoa keeps track of how the meeting went.",
+    "keywords": [
+      "HeyMoa",
+      "heymoa",
+      "Hey Moa",
+      "AI meeting notes",
+      "AI note taker",
+      "meeting transcription",
+      "meeting summary",
+      "AI agent",
+      "meeting minutes",
+      "action items",
+      "meeting agent",
+      "speaker identification",
+      "AI meeting assistant",
+      "real-time transcription",
+      "meeting recorder"
+    ],
+    "features": [
+      "Meeting transcripts with decisions and tasks",
+      "The exact quotes behind each decision and task",
+      "Team meeting records organized by project",
+      "A personal agent that answers from past meetings",
+      "Export only what you approve to Linear or GitHub",
+      "Connect external agents like Claude Code and Codex"
+    ]
+  },
+  "nav": {
+    "label": "Site",
+    "features": "Features",
+    "guide": "Guide",
+    "sections": {
+      "meetings": "Meeting notes",
+      "evidence": "Sources",
+      "team": "Projects",
+      "ask": "My agent",
+      "safety": "Integrations"
+    },
+    "start": "Get started free",
+    "startTooltip": "The web app records your microphone.<br></br>To record computer audio too, get the desktop app."
+  },
+  "hero": {
+    "askDuty": "Who's on notes this week?",
+    "didLastWeek": "I did it last week…",
+    "title": "Meeting notes, <nw>no <mark>note-taking</mark></nw>",
+    "lead": "HeyMoa transcribes while you talk and picks out the decisions and tasks. When the meeting ends, it also sorts out <b>who said what</b>.",
+    "start": "Start with Google"
+  },
+  "download": {
+    "checking": "Checking which app to download",
+    "app": "Download app",
+    "mac": "Download for macOS",
+    "windows": "Download for Windows"
+  },
+  "cta": {
+    "dashboard": "Go to dashboard",
+    "retryLabel": "Retry loading the dashboard",
+    "retry": "Try again",
+    "createWorkspace": "Create workspace"
+  },
+  "footer": {
+    "tagline": "Organizes your meeting while it happens and picks up the discussion in the next one.",
+    "social": "HeyMoa on social media",
+    "newTab": "{name} (opens in a new tab)",
+    "columnLabel": "Footer: {title}",
+    "product": "Product",
+    "info": "Resources",
+    "download": "Desktop app",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "feedback": "Send feedback",
+    "feedbackBody": "Tell us what you think, or ask us anything, by email.",
+    "example": "Every meeting, person, and date on this page is made up.",
+    "disclaimer": "The AI meeting agent is a tool to support your work."
+  }
+}

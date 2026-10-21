@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { Pause, Play } from "lucide-react";
+import { useMessages, useTranslations } from "next-intl";
 
 import {
   useDemo,
@@ -18,14 +19,13 @@ import {
   type Demo,
 } from "@/components/heymoa/landing/use-demo";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
+import type { Messages } from "@/i18n/messages";
 import { cn } from "@/lib/utils";
 
 import { AppWindow, Face } from "./app";
 import {
   ANSWERED_NARROW_MS,
-  CAPTION,
   CHAPTER_OF,
-  CHAPTERS,
   HOLD_MS,
   ROW_IN_MS,
   SCENE_TAB,
@@ -37,6 +37,7 @@ import { HeroNote } from "./hero-note";
 import { HeroRail } from "./hero-rail";
 import { useOnceInView, useReducedMotion } from "./hooks";
 import { Hand, Scribble, Sticky, Tape } from "./marks";
+import { RICH } from "./rich";
 import { FOCUS, STAGE_WRAP, vars } from "./tokens";
 
 /*
@@ -186,7 +187,7 @@ function Voice({ line }: { line: NonNullable<Demo["live"]>["line"] }) {
           **여백 · 테두리 · 바탕은 바깥 상자, `line-clamp` 는 안쪽 글자 상자에만 둔다.** 한 상자에 같이 두면
           overflow 가 padding 바깥에서 잘라서 넷째 줄 윗부분이 아래 여백 안에 반쯤 비쳤다. */}
       <span className="rounded-[16px] rounded-bl-[4px] border-[1.5px] border-[var(--tv-ink)] bg-white px-2.5 py-2 shadow-[0_6px_14px_-6px_rgba(60,40,0,0.35)]">
-        <span className="line-clamp-3 text-[12px] leading-[1.45] font-bold break-keep text-[var(--tv-ink)]">
+        <span className="line-clamp-3 text-[12px] leading-[1.45] font-bold text-[var(--tv-ink)]">
           {line.text}
         </span>
       </span>
@@ -203,9 +204,12 @@ function Sub({ children }: { children: ReactNode }) {
   );
 }
 
+/** 쪽지 글의 열쇠(`landing.demo.notes`). 줄바꿈 묶음은 언어 파일의 `<nw>` 다. */
+type NoteKey = keyof Messages["landing"]["demo"]["notes"];
+
 type Note = {
-  text: ReactNode;
-  sub?: ReactNode;
+  text: NoteKey;
+  sub?: NoteKey;
   tone: ComponentProps<typeof Sticky>["tone"];
   tilt: number;
   delay?: number;
@@ -215,12 +219,8 @@ type Note = {
 
 /** 멈춤 세 장면(독에서 ■ → 중지됨 → 회의 종료 누름) 동안 왼쪽 거터 아래에 그대로 선다. */
 const STEP_1: Note = {
-  text: "① 먼저 멈추고",
-  sub: (
-    <>
-      기록 중엔 <span className="whitespace-nowrap">바로 못 끝내요</span>
-    </>
-  ),
+  text: "step1",
+  sub: "step1Sub",
   tone: "butter",
   tilt: -2,
 };
@@ -230,8 +230,8 @@ const STEP_1: Note = {
  * 완료를 누르지 않는 까닭(`hero-note.tsx` `ReviewDoc`)과 같은 규칙이다. 좁은 화면 자막은 20자라 싣지 않는다.
  */
 const STEP_2: Note = {
-  text: "② 그다음 회의 종료",
-  sub: "누르면 한 번 더 물어봐요",
+  text: "step2",
+  sub: "step2Sub",
   tone: "butter",
   tilt: 2,
   delay: 250,
@@ -242,43 +242,14 @@ const STEP_2: Note = {
  * D — 가리킬 줄(`data-mark`) 높이의 왼쪽 거터 쪽지. 짧은 화살표가 창 왼쪽 본문 여백(32px) 안에서 그 줄을
  * 가리키고 멈춘다 — 쪽지는 창 안에 서지 않는다. 받아 적기는 글자가 흐르는 동안, 할 일 · 열린 질문은 **다음
  * 말이 흐르기 전까지만** 선다 — 그다음엔 맨 아래가 받아 적는 줄로 바뀌어 가리킬 줄이 위로 밀려난다.
- * 「모든 말이 항목이 되진 않아요」는 그때 회의실 말풍선 위 손글씨가 말한다. 줄은 뜻 단위로만 갈린다
- * (136px 거터라 두세 줄이 된다 — 「주황 / 점선」처럼 낱말 가운데서 끊기지 않게). 할 일 · 열린 질문 쪽지는
- * 가리킬 새 줄이 다 든 뒤(`ROW_IN_MS`)에 선다 — 같이 서면 화살표가 아직 빈 자리를 가리켰다.
+ * 「모든 말이 항목이 되지는 않습니다」는 그때 회의실 말풍선 위 손글씨가 말한다. 줄은 뜻 단위로만 갈린다
+ * (136px 거터라 두세 줄이 된다 — 「주황 / 점선」처럼 낱말 가운데서 끊기지 않게, 언어 파일의 `<nw>`). 할 일 ·
+ * 열린 질문 쪽지는 가리킬 새 줄이 다 든 뒤(`ROW_IN_MS`)에 선다 — 같이 서면 화살표가 아직 빈 자리를 가리켰다.
  */
 const BELOW: Partial<Record<Scene, Note>> = {
-  listen: {
-    text: (
-      <>
-        말이 끝날 때마다{" "}
-        <span className="whitespace-nowrap">시각을 달고 한 줄씩</span>
-      </>
-    ),
-    tone: "butter",
-    tilt: -2,
-  },
-  task: {
-    text: (
-      <>
-        방금 나온 <span className="whitespace-nowrap">할 일,</span>{" "}
-        <span className="whitespace-nowrap">벌써 붙었어요</span>
-      </>
-    ),
-    tone: "pop",
-    tilt: 2,
-    delay: ROW_IN_MS,
-  },
-  open: {
-    text: (
-      <>
-        답 못 한 질문은 <span className="whitespace-nowrap">주황 점선으로</span>{" "}
-        남아요
-      </>
-    ),
-    tone: "peach",
-    tilt: 2,
-    delay: ROW_IN_MS,
-  },
+  listen: { text: "listen", tone: "butter", tilt: -2 },
+  task: { text: "task", tone: "pop", tilt: 2, delay: ROW_IN_MS },
+  open: { text: "open", tone: "peach", tilt: 2, delay: ROW_IN_MS },
 };
 
 /**
@@ -293,17 +264,8 @@ const MARK_TOP =
  * 앱 동작 이름 「검토 완료」와 「안 올라가요」는 두 줄로 갈리지 않게 묶는다.
  */
 const CONFIRM: Note = {
-  text: (
-    <>
-      반영할 항목을 고르고 <span className="whitespace-nowrap">검토 완료</span>
-    </>
-  ),
-  sub: (
-    <>
-      선택한 결정·할 일만{" "}
-      <span className="whitespace-nowrap">프로젝트에 올라가요</span>
-    </>
-  ),
+  text: "confirm",
+  sub: "confirmSub",
   tone: "pop",
   tilt: -3,
   delay: 200,
@@ -317,20 +279,16 @@ const CONFIRM: Note = {
 const ABOVE: Partial<Record<Scene, Note>> = {
   paused: STEP_2,
   press: STEP_2,
-  ended: {
-    text: "회의 끝! 요약 탭으로 넘어가요",
-    tone: "pop",
-    tilt: -2,
-    anyTab: true,
-  },
+  ended: { text: "ended", tone: "pop", tilt: -2, anyTab: true },
   // 분석이 얼마나 걸리는지는 단정하지 않는다(앱 문구는 「몇 분 걸릴 수 있고」). 빨리 감는다는 말은 이 쪽지
   // 하나만 한다 — 창 안 쪽지는 글자 없는 「>>>」 표시다(`hero-note.tsx` `Analyzing`). 둘 다 글로 말했을 때는
   // 「빨리 감는 중」 · 「빨리 감았어요」가 한 장면에서 시제까지 엇갈렸다. 지금 일어나는 일이라 현재형이다.
-  analyzing: { text: "분석은 여기선 빨리 감아요", tone: "pop", tilt: 2 },
-  doc: { text: "요약 탭이 회의록 한 장이 돼요", tone: "mint", tilt: -2 },
+  analyzing: { text: "analyzing", tone: "pop", tilt: 2 },
+  doc: { text: "doc", tone: "mint", tilt: -2 },
 };
 
 function NoteSticky({ note }: { note: Note }) {
+  const t = useTranslations("landing.demo");
   return (
     <Sticky
       tone={note.tone}
@@ -339,8 +297,8 @@ function NoteSticky({ note }: { note: Note }) {
       delay={note.delay}
       className="block"
     >
-      {note.text}
-      {note.sub ? <Sub>{note.sub}</Sub> : null}
+      {t.rich(`notes.${note.text}`, RICH)}
+      {note.sub ? <Sub>{t.rich(`notes.${note.sub}`, RICH)}</Sub> : null}
     </Sticky>
   );
 }
@@ -373,6 +331,7 @@ function NoteNotes({
   scene: Scene;
   tabOk: boolean;
 }) {
+  const t = useTranslations("landing.demo");
   const live = demo.live;
   const typing = (live?.text.length ?? 0) > 0;
   const legend =
@@ -384,7 +343,7 @@ function NoteNotes({
   // ① 의 화살표는 독 왼쪽의 빈 바닥 띠를 지난다 — 그 띠는 따라가는 탭(스크립트 · 타임라인)만 비워 둔다.
   const stepArrow =
     scene === "stop" &&
-    (demo.noteTab === "스크립트" || demo.noteTab === "타임라인");
+    (demo.noteTab === "script" || demo.noteTab === "timeline");
   const e =
     ABOVE[scene] && (ABOVE[scene].anyTab || tabOk) ? ABOVE[scene] : null;
   /** 열린 질문 장면에서 받아 적히는 01:48 의 말 — 항목이 되지 않는 말이다. */
@@ -397,7 +356,7 @@ function NoteNotes({
    */
   const voice =
     live !== null &&
-    demo.status === "기록 중" &&
+    demo.status === "recording" &&
     (scene !== "listen" || typing);
 
   return (
@@ -409,12 +368,12 @@ function NoteNotes({
           className="absolute top-[var(--a)] right-full -mr-3 hidden w-[132px] xl:block"
         >
           <Sticky tone="mint" tilt={-3} anim="pop" className="block">
-            이렇게 갈라 둬요
+            {t("notes.legend")}
             {/* 「할 일」 튐 · 「열린 질문」 줄은 창 안 새 줄이 다 든 뒤(`ROW_IN_MS`)에 선다. */}
             <span className="mt-1.5 flex flex-col gap-1 text-[13px] font-bold">
               <span className="flex items-center gap-1.5">
                 <TimelineToneIcon tone="decision" />
-                결정
+                {t("filters.decision")}
               </span>
               <span className="flex items-center gap-1.5">
                 <TimelineToneIcon tone="task" />
@@ -426,7 +385,7 @@ function NoteNotes({
                       : undefined
                   }
                 >
-                  할 일
+                  {t("filters.task")}
                 </span>
               </span>
               {scene === "open" ? (
@@ -435,7 +394,7 @@ function NoteNotes({
                   style={vars({ "--d": `${ROW_IN_MS}ms` })}
                 >
                   <TimelineToneIcon tone="open" />
-                  열린 질문
+                  {t("filters.open")}
                 </span>
               ) : null}
             </span>
@@ -461,11 +420,11 @@ function NoteNotes({
           >
             <Hand
               className={cn(
-                "tv-pop block break-keep",
+                "tv-pop block",
                 idle ? "text-[12.5px]" : "text-[12px]"
               )}
             >
-              {idle ? "모든 말이 항목이 되진 않아요" : "회의실에서"}
+              {idle ? t("notes.idle") : t("notes.room")}
             </Hand>
             {scene === "listen" ? null : (
               <Scribble
@@ -484,7 +443,7 @@ function NoteNotes({
           가리키고, 문서가 굴러가면 따라 움직인다. 화살 끝은 근거 상자 왼쪽 선 앞에서 멈춘다.
           「누가 몇 분에 한 말인지」는 쓰지 않는다 — 히어로 리드(「누가 한 말인지도 갈라 둡니다」)가 이미 하는 말이다. 이 쪽지는
           가리키는 줄이 **무엇인지**(이 결정이 나온 대목)를 말한다. 「그 말」도 근거 구간 제목 · 손글씨의 말이라
-          피했다. 덩어리(「이 결정이 나온」 · 「대목이에요」)마다 줄바꿈을 막아 두 줄로 선다.
+          피했다. 덩어리(「이 결정이 나온」 · 「대목입니다」)마다 줄바꿈을 막아 두 줄로 선다(언어 파일의 `<nw>`).
           **인용 줄이 보이는 칸 안에 없으면 숨는다**(`--mvis`, `markShown`) — 낮은 창의 검토 막대 장면에서 그 줄은
           위로 넘어갔거나 흰 막 밑인데, 쪽지가 남아 화살표가 빈 흰 면을 가리키고 검토 막대 쪽지와 겹쳤다. */}
       {evidence ? (
@@ -497,8 +456,7 @@ function NoteNotes({
         >
           {/* 0.4초 늦게 — 문서가 인용 줄까지 굴러가는 동안은 숨어 있다가(`--mvis`) 다 든 뒤 튀어나오게. */}
           <Sticky tone="pop" tilt={-3} anim="pop" delay={400} className="block">
-            <span className="whitespace-nowrap">이 결정이 나온</span>{" "}
-            <span className="whitespace-nowrap">대목이에요</span>
+            {t.rich("notes.evidence", RICH)}
           </Sticky>
           <Scribble
             kind="arrow"
@@ -609,6 +567,7 @@ function NoteNotes({
  * 걸쳤더니 기울어진 쪽지 모서리가 흐르는 답의 줄 끝 글자를 덮었다. 오른쪽 끝은 무대 끝(거터 136) 안이다.
  */
 function RailNotes({ scene, askDone }: { scene: Scene; askDone: boolean }) {
+  const t = useTranslations("landing.demo");
   if (scene !== "ask") return null;
   return (
     <>
@@ -617,7 +576,7 @@ function RailNotes({ scene, askDone }: { scene: Scene; askDone: boolean }) {
         className="absolute top-[176px] left-full ml-2 hidden w-[124px] xl:block [@media(max-height:720px)]:top-12 [@media(min-height:721px)_and_(max-height:890px)]:top-[119px]"
       >
         <Sticky tone="white" tilt={3} anim="pop" className="block">
-          회의 중에 몰래 물어봐도 돼요
+          {t("notes.railAsk")}
         </Sticky>
       </div>
       {askDone ? (
@@ -628,8 +587,8 @@ function RailNotes({ scene, askDone }: { scene: Scene; askDone: boolean }) {
             top: "calc((var(--mt, 293px) + var(--mb, 321px)) / 2 - 52px)",
           }}
         >
-          <Hand className="tv-pop block text-[13px] break-keep">
-            답 아래엔 참고한 회의록이 붙어요
+          <Hand className="tv-pop block text-[13px]">
+            {t("notes.railRefs")}
           </Hand>
           <Scribble
             kind="arrow"
@@ -660,6 +619,7 @@ const WINDOW_H =
  * 둔다. 지난 장은 보라 점, 지금 장은 노란 점 + 먹색 굵은 글자, 남은 장은 옅은 점.
  */
 function Chapters({ chapter }: { chapter: number }) {
+  const chapters = useMessages().landing.demo.chapters;
   const dot = (i: number) =>
     cn(
       "size-3 shrink-0 rounded-full transition-colors duration-300",
@@ -675,7 +635,7 @@ function Chapters({ chapter }: { chapter: number }) {
       className="relative mt-5 flex items-center justify-center lg:mt-8 xl:mt-12"
     >
       <span className="hidden items-center gap-3.5 lg:flex">
-        {CHAPTERS.map((name, i) => (
+        {chapters.map((name, i) => (
           <Fragment key={name}>
             {i > 0 ? (
               <span className="h-px w-7 bg-[var(--tv-rule-strong)]" />
@@ -695,11 +655,11 @@ function Chapters({ chapter }: { chapter: number }) {
         ))}
       </span>
       <span className="flex items-center gap-1.5 lg:hidden">
-        {CHAPTERS.map((name, i) => (
+        {chapters.map((name, i) => (
           <span key={name} className={dot(i)} />
         ))}
         <span className="ml-2 text-[16px] font-extrabold text-[var(--tv-ink)]">
-          {CHAPTERS[chapter]}
+          {chapters[chapter]}
         </span>
       </span>
     </div>
@@ -707,6 +667,7 @@ function Chapters({ chapter }: { chapter: number }) {
 }
 
 export function HeroStage() {
+  const t = useTranslations("landing.demo");
   const [visible, seen, attach] = useInView();
   /**
    * 노트 창이 충분히 화면에 들어왔나(한 번). 감시 점은 넓은 화면은 창 위끝에서 창 높이의 25%, 좁은 화면은
@@ -785,7 +746,7 @@ export function HeroStage() {
   const uid = useId();
   const capId = `${uid}-cap`;
   const PlayIcon = demo.paused ? Play : Pause;
-  const caption = CAPTION[scene];
+  const caption = t(`captions.${scene}`);
   /**
    * 모션을 줄였으면 대본이 안 돌고 마지막 화면 한 장이다 — 일시정지 버튼도 숨는다(`motion-reduce:hidden`).
    * 그때 캡션은 「다시 돌아갑니다 · 일시정지 버튼」을 말하지 않고 그 정지 화면만 설명한다.
@@ -801,9 +762,9 @@ export function HeroStage() {
       )}
     >
       <figcaption id={capId} className="sr-only">
-        {still
-          ? "예시 회의 3차 스프린트 킥오프를 끝낸 뒤의 요약 탭 화면입니다. 결정 둘과 할 일 둘이 정리되어 있고, 아래에 검토 완료 막대가 서 있습니다."
-          : "예시 회의 3차 스프린트 킥오프 화면입니다. 말이 스크립트에 받아 적히고, 타임라인에 할 일과 질문이 붙고, 내 에이전트에게 묻고, 중지한 뒤 회의를 끝내면 요약 탭에 검토 완료 막대가 서기까지를 한 번 보여 주고 처음부터 다시 돌아갑니다. 위의 일시정지 버튼으로 멈출 수 있습니다."}
+        {t(still ? "figcaption.still" : "figcaption.playing", {
+          title: t("title"),
+        })}
       </figcaption>
 
       {/* 무대 뒤 장식 원 둘 — 무대 모서리 밖으로 반쯤 삐져나온 조각만 보인다. 버터 원의 위끝은 무대 위
@@ -850,7 +811,7 @@ export function HeroStage() {
               className="tv-pop -ml-1 inline-flex"
               style={vars({ "--d": "700ms" })}
             >
-              <Tape>예시 회의</Tape>
+              <Tape>{t("tape")}</Tape>
             </span>
             {/* 보이는 크기는 36px, 누름 칸은 44px(`before:-inset-1`, 엄지 기준). */}
             <button
@@ -863,11 +824,11 @@ export function HeroStage() {
             >
               <PlayIcon aria-hidden className="size-4" />
               <span className="sr-only lg:not-sr-only">
-                {demo.paused ? "재생" : "일시정지"}
+                {demo.paused ? t("play") : t("pause")}
               </span>
             </button>
             {tabOk && armed ? (
-              // 「답 못 한 질문도 남겨요」는 그 질문 줄이 창에 다 든 뒤에 선다(`ROW_IN_MS`). 자막은 대본이 돌기
+              // 열린 질문 자막은 그 질문 줄이 창에 다 든 뒤에 선다(`ROW_IN_MS`). 자막은 대본이 돌기
               // 시작한 뒤(`armed`)에만 선다 — 창이 아직 서 있는데 「받아 적는 중」이라 말하지 않게.
               <Sticky
                 key={caption}

@@ -132,7 +132,7 @@ test("분석 중에는 삭제 확인을 비활성화한다", async ({ page }) =>
   await page.getByRole("button", { name: "노트 메뉴", exact: true }).click();
   await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
   const dialog = page.getByRole("alertdialog");
-  await expect(dialog.getByText("회의 분석이 끝난 뒤 삭제할 수 있어요.")).toBeVisible();
+  await expect(dialog.getByText("회의 분석이 끝나면 삭제할 수 있습니다.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "삭제", exact: true })).toBeDisabled();
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(page.getByRole("button", { name: "노트 메뉴", exact: true })).toBeVisible();
@@ -402,4 +402,77 @@ test("반영은 기본 OFF이고 스위치를 켜야 대체·유지가 나타난
   await toggle.click();
   await expect(decision.getByRole("radiogroup")).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
+});
+
+test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
+  // 목의 지난 회의(01K0000000024) 요약에는 안건이 없다. 이어짐 링크가 가리키는 안건이 도착 화면에 서도록
+  // 멘토링 요약의 안건을 빌려 그 ID로 바꿔 돌려준다.
+  await page.addInitScript(() => {
+    const forward = window.fetch;
+    let borrowed: { agendas: Array<{ agendaId: string | null }> } | null = null;
+    window.fetch = async (input, init) => {
+      const response = await forward(input, init);
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.includes("/meeting-review/summary") || !response.ok) return response;
+      const body = await response.json();
+      if (url.includes("01K0000000920")) borrowed = structuredClone(body.data);
+      else if (url.includes("01K0000000024") && borrowed) {
+        body.data.agendas = borrowed.agendas.slice(0, 2);
+        body.data.agendas[0].agendaId = "01KG100000001";
+        body.data.agendas[1].agendaId = "01KG100000002";
+      }
+      return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
+    };
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  const index = page.getByRole("list", { name: "주제 목차" });
+  await page.getByRole("button", { name: /^나머지 주제 \d+개$/ }).click();
+  const continued = index.getByRole("link").first();
+  const href = await continued.getAttribute("href");
+  const agendaId = href!.split("#summary-agenda-")[1];
+  const arrived = page.locator(`[id="summary-agenda-${agendaId}"]`);
+  // 획은 1초 남짓 머물고 지워진다 — 누르기 전부터 기다려야 놓치지 않는다
+  const marked = arrived.locator(".evidence-mark").waitFor();
+  await continued.click();
+  await marked;
+  await expect(page).toHaveURL(new RegExp(`#summary-agenda-${agendaId}$`));
+  await expect(arrived.getByRole("button").first()).toHaveAttribute("aria-expanded", "true");
+  // 획이 다 지워지면 거둔다
+  await expect(arrived.locator(".evidence-mark")).toHaveCount(0, { timeout: 5_000 });
+});
+
+test("「타임라인에서 보기」로 넘어가면 그 안건의 첫 묶음 머리에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
+  // 목의 멘토링 회의에는 타임라인 원장이 없다. 데모 노트(01K0000000005)의 원장을 빌려 와 첫 안건에 넣는다.
+  await page.addInitScript(() => {
+    const forward = window.fetch;
+    const demo = async () => {
+      const response = await forward("/v1/notes/01K0000000005/proposals");
+      return (await response.json()).data as { proposals: Array<{ proposalId: string; kind: string }> };
+    };
+    window.fetch = async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.includes("/notes/01K0000000920/")) return forward(input, init);
+      if (/\/proposals(\?|$)/.test(url)) {
+        return new Response(JSON.stringify({ success: true, data: await demo(), error: null }), { headers: { "content-type": "application/json" } });
+      }
+      const response = await forward(input, init);
+      if (!/\/agendas(\?|$)/.test(url) || !response.ok) return response;
+      const body = await response.json();
+      body.data.agendas[0].proposalIds = (await demo()).proposals.filter((row) => row.kind !== "AGENDA").map((row) => row.proposalId);
+      return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
+    };
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  const index = page.getByRole("list", { name: "주제 목차" });
+  const row = index.locator('[id^="summary-agenda-"]').first();
+  const agendaId = (await row.getAttribute("id"))!.slice("summary-agenda-".length);
+  await row.getByRole("button").first().click();
+  // 그 안건의 첫 묶음(`timeline-agenda-<agendaId>:<첫 명제>`) 머리에 긋는다. 획은 몇 초 뒤 지워지니 누르기 전부터 기다린다
+  const head = page.locator(`[id^="timeline-agenda-${agendaId}:"]`).first();
+  const marked = head.locator(".evidence-mark").waitFor();
+  await row.getByRole("button", { name: /타임라인에서 보기/ }).click();
+  await marked;
+  await expect(page).toHaveURL(/tab=context/);
+  await expect(head.getByRole("button", { expanded: true }).first()).toBeVisible();
+  await expect(head.locator(".evidence-mark")).toHaveCount(0, { timeout: 6_000 });
 });

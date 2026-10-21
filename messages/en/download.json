@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "title": "Download the desktop app",
+    "description": "How to install and update the {brand} desktop app. On Mac and Windows, it records your voice and your computer's audio together."
+  },
+  "og": {
+    "alt": "Download the {brand} desktop app",
+    "title": "Download the desktop app",
+    "summary": "Record video call audio on Mac and Windows",
+    "label": "Desktop app"
+  },
+  "heading": "Install the HeyMoa app",
+  "lead": "Capture what's said in the meeting room, plus what you hear in video calls, lectures, and YouTube videos.",
+  "stepsLabel": "How to install on {platform}",
+  "platforms": {
+    "mac": {
+      "need": "Apple silicon Mac with macOS 14.2 or later",
+      "installer": "Download for Apple silicon",
+      "steps": [
+        "Open the DMG file you downloaded.",
+        "Drag HeyMoa into your Applications folder, then open it."
+      ]
+    },
+    "windows": {
+      "need": "Windows 11 (x64)",
+      "installer": "Download for Windows",
+      "steps": [
+        "Run the installer you downloaded.",
+        "If a “Windows protected your PC” window appears, click “More info.”",
+        "Click “Run anyway” and finish the installation."
+      ]
+    }
+  },
+  "homebrew": {
+    "intro": "If you use Homebrew, you can install it with this command.",
+    "label": "Homebrew install command",
+    "copy": "Copy the Homebrew install command",
+    "copied": "Copied the Homebrew install command.",
+    "failed": "Couldn't copy. Select the text and copy it yourself."
+  },
+  "permissions": "After installing, allow microphone access. On a Mac, the app asks for permission to record your computer's audio the first time you record.",
+  "guide": "Permission settings and updates are covered in <link>Using the desktop app</link>.",
+  "autoDownloadTitle": "Downloading the HeyMoa installer"
+}

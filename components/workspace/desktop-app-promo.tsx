@@ -25,7 +25,7 @@ export function DesktopAppPromo() {
       className="mb-5 hidden min-h-[68px] items-center gap-3 rounded-control border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-3 md:flex"
     >
       <Monitor aria-hidden className="size-5 shrink-0 text-[var(--el-muted)]" />
-      <p className="min-w-0 flex-1 text-sm leading-6 font-medium break-keep text-[var(--el-ink)]">
+      <p className="min-w-0 flex-1 text-sm leading-6 font-medium text-[var(--el-ink)]">
         회의실 대화도, 화상회의·강의·유튜브에서 듣는 말도 기록하세요.
         <Tooltip>
           <TooltipTrigger

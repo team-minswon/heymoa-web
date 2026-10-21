@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { MousePointer2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
-import { Face } from "./app";
+import { Face, type Person } from "./app";
 import { HAND, SHADOW, vars } from "./tokens";
 
 /*
@@ -74,7 +75,7 @@ export function Sticky({
     <span
       aria-hidden={ariaHidden || undefined}
       className={cn(
-        "relative inline-block rounded-[10px] leading-[1.3] font-extrabold break-keep text-[var(--tv-ink)]",
+        "relative inline-block rounded-[10px] leading-[1.3] font-extrabold text-[var(--tv-ink)]",
         STICKY_TONE[tone],
         STICKY_SIZE[size],
         SHADOW.sticky,
@@ -253,6 +254,7 @@ export function Cursor({
 
 /** 「예시」 도장 — 지어낸 회의 · 사람 · 날짜에 붙는다. **실제 글자다**(읽힌다). */
 export function ExampleStamp({ className }: { className?: string }) {
+  const t = useTranslations("landing.marks");
   return (
     <span
       className={cn(
@@ -261,7 +263,7 @@ export function ExampleStamp({ className }: { className?: string }) {
       )}
       style={{ rotate: "-3deg" }}
     >
-      예시
+      {t("example")}
     </span>
   );
 }
@@ -313,7 +315,7 @@ export function Speech({
   className,
   children,
 }: {
-  who: string;
+  who: Person;
   side?: "left" | "right";
   tone?: keyof typeof SPEECH_TONE;
   size?: "md" | "sm";
@@ -336,7 +338,7 @@ export function Speech({
       <Face who={who} size={size === "md" ? 32 : 28} className="shrink-0" />
       <span
         className={cn(
-          "rounded-[18px] px-4 py-2 leading-[1.4] font-bold break-keep text-[var(--tv-ink)]",
+          "rounded-[18px] px-4 py-2 leading-[1.4] font-bold text-[var(--tv-ink)]",
           size === "md" ? "text-[15px]" : "text-[13px]",
           side === "right" ? "rounded-br-[4px]" : "rounded-bl-[4px]",
           SPEECH_TONE[tone]
