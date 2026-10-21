@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { ArrowRight, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -37,6 +38,7 @@ export function LandingCta({
   openOnWelcome?: boolean;
   tooltip?: ReactNode;
 }) {
+  const t = useTranslations("landing.cta");
   const { status } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const tooltipId = useId();
@@ -77,7 +79,7 @@ export function LandingCta({
           disabled
           className={cn(MARKETING_PILL, className)}
         >
-          대시보드로 이동
+          {t("dashboard")}
           <ArrowRight className="size-4" />
         </Button>
       );
@@ -92,11 +94,11 @@ export function LandingCta({
           type="button"
           loading={workspacesQuery.isFetching}
           disabled={workspacesQuery.isFetching}
-          aria-label="대시보드 다시 시도"
+          aria-label={t("retryLabel")}
           onClick={() => void workspacesQuery.refetch()}
           className={cn(MARKETING_PILL, className)}
         >
-          다시 시도
+          {t("retry")}
         </Button>
       );
     }
@@ -110,7 +112,7 @@ export function LandingCta({
             onClick={() => setCreateOpen(true)}
             className={cn(MARKETING_PILL, className)}
           >
-            워크스페이스 만들기
+            {t("createWorkspace")}
             <Plus className="size-4" />
           </Button>
           <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
@@ -122,7 +124,7 @@ export function LandingCta({
         href={`/w/${workspaceId}`}
         className={cn(MARKETING_PILL, className)}
       >
-        대시보드로 이동
+        {t("dashboard")}
         <ArrowRight className="size-4" />
       </LinkButton>
     );

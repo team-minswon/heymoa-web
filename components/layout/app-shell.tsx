@@ -20,7 +20,7 @@ import { NavbarGate } from "@/components/NavbarGate";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
 import { DesktopRecordingControls } from "@/components/transcription/desktop-recording-controls";
 import { Toaster } from "@/components/ui/toast";
-import { messagesFor } from "@/i18n/messages";
+import { messagesFor, type Namespace } from "@/i18n/messages";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import type { Locale } from "@/lib/i18n/locales";
 import "@/app/globals.css";
@@ -31,22 +31,24 @@ import "@/app/globals.css";
  */
 export async function AppShell({
   locale,
+  clientNamespaces = ["common"],
   children,
 }: {
   locale: Locale;
+  /** 클라이언트로 보낼 이름공간. 그 루트가 쓰는 것만 보낸다(마케팅 페이지가 대시보드 문구를 받지 않게). */
+  clientNamespaces?: readonly Namespace[];
   children: React.ReactNode;
 }) {
   const initialUser = await getCurrentUserForSsr();
   const messages = messagesFor(locale);
+  const clientMessages = Object.fromEntries(
+    clientNamespaces.map((namespace) => [namespace, messages[namespace]])
+  );
 
   return (
     <html lang={locale} className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        {/* 클라이언트에는 공통 이름공간만 보낸다. 화면별 이름공간은 그 화면이 늘 때 여기서 더한다. */}
-        <NextIntlClientProvider
-          locale={locale}
-          messages={{ common: messages.common }}
-        >
+        <NextIntlClientProvider locale={locale} messages={clientMessages}>
           <Providers initialUser={initialUser}>
             <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
               {/* 키보드 첫 탭이 nav 링크 전부를 지나지 않게. 키보드로 포커스를 받기 전에는 화면 밖에 있다.

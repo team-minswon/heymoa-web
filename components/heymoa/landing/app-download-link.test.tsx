@@ -1,6 +1,23 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as baseRender,
+  screen,
+} from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AppDownloadLink } from "./app-download-link";
+import { messagesFor } from "@/i18n/messages";
+
+const render = (ui: ReactElement) =>
+  baseRender(ui, {
+    wrapper: ({ children }) => (
+      <NextIntlClientProvider locale="ko" messages={messagesFor("ko")}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
 import { DESKTOP_INSTALLERS, desktopDownload } from "@/lib/desktop/downloads";
 
 const push = vi.hoisted(() => vi.fn());

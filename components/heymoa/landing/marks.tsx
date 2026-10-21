@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { MousePointer2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
-import { Face } from "./app";
+import { Face, type Person } from "./app";
 import { HAND, SHADOW, vars } from "./tokens";
 
 /*
@@ -253,6 +254,7 @@ export function Cursor({
 
 /** 「예시」 도장 — 지어낸 회의 · 사람 · 날짜에 붙는다. **실제 글자다**(읽힌다). */
 export function ExampleStamp({ className }: { className?: string }) {
+  const t = useTranslations("landing.marks");
   return (
     <span
       className={cn(
@@ -261,7 +263,7 @@ export function ExampleStamp({ className }: { className?: string }) {
       )}
       style={{ rotate: "-3deg" }}
     >
-      예시
+      {t("example")}
     </span>
   );
 }
@@ -313,7 +315,7 @@ export function Speech({
   className,
   children,
 }: {
-  who: string;
+  who: Person;
   side?: "left" | "right";
   tone?: keyof typeof SPEECH_TONE;
   size?: "md" | "sm";

@@ -1,12 +1,14 @@
 "use client";
 
 import { DoorOpen, Pause, Play, Plus } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import type { ComponentType } from "react";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
+import { localePath } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
 import { BODY, FOCUS, H2, MARKER_REVEAL, vars } from "./tokens";
@@ -18,7 +20,7 @@ import { BODY, FOCUS, H2, MARKER_REVEAL, vars } from "./tokens";
  * 서로 반대로 흐르고, 가운데에 「HeyMoa · 기록 중」 알약이 떠 있다(어느 회의가 지나가도 듣고 있다는 그림).
  *
  * **연동이 아니다.** HeyMoa 는 회의 앱에 들어가지 않고 브라우저 탭에서 마이크(`getUserMedia`)로 듣는다
- * (`lib/transcription/audio.ts`). 카드 문구는 「봇이 안 낀다 · 연동을 안 건다 · 들리면 받아 적는다」처럼
+ * (`lib/transcription/audio.ts`). 카드 문구(`landing.worksWith`)는 「봇이 안 낀다 · 연동을 안 건다 · 들리면 받아 적는다」처럼
  * 그 사실 안에서만 말한다. 리드 끝에는 데스크톱 앱 한 줄과 `/download` 링크를 둔다 — 「옆 탭 ·
  * 노트북 마이크」만 말하면 처음 보는 사람은 앱이 있는 줄 모른다. 강도는 다운로드 페이지 · FAQ 01 과 같다
  * (「컴퓨터에서 나는 소리까지 녹음」. 화상회의 상대 목소리 전사 주장은 설치 앱 수용 뒤에). 로고는 원색 그대로다(`public/landing/logos/`) — 처음엔 simple-icons 의 한 색 마크를 브랜드
@@ -57,8 +59,16 @@ const TILE: Record<Tone, string> = {
 };
 
 type App = {
-  name: string;
-  line: string;
+  /** 이름 · 한 줄 설명의 열쇠(`landing.worksWith.apps.<id>`). */
+  id:
+    | "zoom"
+    | "meet"
+    | "teams"
+    | "webex"
+    | "slack"
+    | "discord"
+    | "room"
+    | "other";
   /** 브랜드 마크. 없으면 `icon`(회의실 · 그 밖의 앱). */
   logo?: keyof typeof LOGO;
   icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
@@ -68,26 +78,22 @@ type App = {
 
 const ROW_A: App[] = [
   {
-    name: "Zoom",
-    line: "Zoom 회의를 열고 HeyMoa에서 회의를 시작하면 끝. 둘이 서로를 몰라도 돼요.",
+    id: "zoom",
     logo: "zoom",
     tone: "white",
   },
   {
-    name: "Google Meet",
-    line: "Meet 탭 옆에 탭 하나 더. 끝나면 결정과 할 일이 요약 탭에 모여요.",
+    id: "meet",
     logo: "googlemeet",
     tone: "white",
   },
   {
-    name: "Microsoft Teams",
-    line: "참석자 목록에 낯선 봇이 끼지 않아요. HeyMoa는 회의에 들어가지 않으니까요.",
+    id: "teams",
     logo: "microsoftteams",
     tone: "white",
   },
   {
-    name: "Webex",
-    line: "회사가 정해 둔 회의 앱이어도 괜찮아요. 관리자에게 연동을 부탁할 일이 없어요.",
+    id: "webex",
     logo: "webex",
     tone: "white",
   },
@@ -95,26 +101,22 @@ const ROW_A: App[] = [
 
 const ROW_B: App[] = [
   {
-    name: "Slack 허들",
-    line: "잠깐 붙은 허들에서 나온 결정도 흘려보내지 않아요.",
+    id: "slack",
     logo: "slack",
     tone: "white",
   },
   {
-    name: "Discord",
-    line: "사이드 프로젝트 음성 채널에서 정한 것도 그대로 남아요.",
+    id: "discord",
     logo: "discord",
     tone: "white",
   },
   {
-    name: "회의실",
-    line: "화면 없이 한 방에 모여도 돼요. 노트북을 테이블 가운데 두세요.",
+    id: "room",
     icon: DoorOpen,
     tone: "butter",
   },
   {
-    name: "그 밖의 회의 앱",
-    line: "여기 없는 앱이어도 돼요. 노트북에 들리기만 하면 받아 적어요.",
+    id: "other",
     icon: Plus,
     tone: "white",
     other: true,
@@ -122,6 +124,7 @@ const ROW_B: App[] = [
 ];
 
 function AppCard({ app }: { app: App }) {
+  const t = useTranslations("landing.worksWith.apps");
   const Icon = app.icon;
   return (
     <li className="flex w-[272px] shrink-0 sm:w-[340px] lg:w-[380px]">
@@ -155,10 +158,10 @@ function AppCard({ app }: { app: App }) {
         </span>
         <div className="min-w-0">
           <p className="m-0 text-[19px] leading-tight font-extrabold tracking-[-0.03em] text-[var(--tv-ink)] lg:text-[22px]">
-            {app.name}
+            {t(`${app.id}.name`)}
           </p>
           <p className="m-0 mt-1.5 text-[13px] leading-[1.6] text-[var(--tv-body)] lg:text-[14px]">
-            {app.line}
+            {t(`${app.id}.line`)}
           </p>
         </div>
       </div>
@@ -195,7 +198,7 @@ function Row({
             )}
           >
             {apps.map((app) => (
-              <AppCard key={app.name} app={app} />
+              <AppCard key={app.id} app={app} />
             ))}
           </ul>
         ))}
@@ -210,6 +213,7 @@ function Row({
  * 알약(44px) — 카드 줄 사이 틈(20px)에 걸쳐 각 줄 카드의 위아래 안쪽 여백(16~20px) 안 12px 만 덮는다.
  */
 function Listening() {
+  const t = useTranslations("landing.worksWith");
   return (
     <span
       aria-hidden
@@ -226,7 +230,7 @@ function Listening() {
       HeyMoa
       <span className="ml-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white/85">
         <span className="tv-blink size-2 rounded-full bg-[var(--el-error)]" />
-        기록 중
+        {t("recording")}
       </span>
       <span className="ml-0.5 flex h-4 items-center gap-[3px]">
         {[0, 1, 2, 3].map((n) => (
@@ -242,6 +246,8 @@ function Listening() {
 }
 
 export function WorksWith() {
+  const t = useTranslations("landing.worksWith");
+  const locale = useLocale();
   const [paused, setPaused] = useState(false);
   const PlayIcon = paused ? Play : Pause;
 
@@ -253,29 +259,31 @@ export function WorksWith() {
       <Reveal className="tv-band" data-paused={paused || undefined}>
         <div className="mx-auto w-full max-w-[760px] px-5 text-center">
           <h2 id="works-title" className={cn("tv-r", H2, "lg:text-[36px]")}>
-            어디서 회의하든, HeyMoa는{" "}
-            <span className={cn(MARKER_REVEAL, "whitespace-nowrap")}>
-              켜 두기만
-            </span>{" "}
-            하면 됩니다
+            {t.rich("title", {
+              m: (chunks) => (
+                <span className={cn(MARKER_REVEAL, "whitespace-nowrap")}>
+                  {chunks}
+                </span>
+              ),
+            })}
           </h2>
           <p
             className={cn("tv-r", BODY, "mt-3 lg:mt-4 lg:text-[17px]")}
             style={vars({ "--i": 1 })}
           >
-            쓰던 회의 앱은 그대로 두세요. HeyMoa는 회의에 들어가지 않고, 옆
-            탭에서 노트북 마이크로 듣습니다. 봇을 초대할 일도, 연동을 걸 일도
-            없어요. 컴퓨터에서 나는 소리까지 녹음하려면{" "}
-            <Link
-              href="/download"
-              className={cn(
-                "rounded-[4px] font-bold text-[var(--tv-ink)] underline decoration-[var(--tv-pop)] decoration-[3px] underline-offset-[5px] transition-colors hover:decoration-[var(--tv-brand)]",
-                FOCUS
-              )}
-            >
-              데스크톱 앱
-            </Link>
-            을 받으세요.
+            {t.rich("body", {
+              link: (chunks) => (
+                <Link
+                  href={localePath(locale, "/download")}
+                  className={cn(
+                    "rounded-[4px] font-bold text-[var(--tv-ink)] underline decoration-[var(--tv-pop)] decoration-[3px] underline-offset-[5px] transition-colors hover:decoration-[var(--tv-brand)]",
+                    FOCUS
+                  )}
+                >
+                  {chunks}
+                </Link>
+              ),
+            })}
           </p>
         </div>
 
@@ -296,7 +304,7 @@ export function WorksWith() {
             )}
           >
             <PlayIcon aria-hidden className="size-4" />
-            {paused ? "재생" : "일시정지"}
+            {paused ? t("play") : t("pause")}
           </button>
         </div>
       </Reveal>

@@ -1,7 +1,19 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render as baseRender, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LandingCta } from "@/components/heymoa/landing-cta";
+import { messagesFor } from "@/i18n/messages";
+
+const render = (ui: ReactElement) =>
+  baseRender(ui, {
+    wrapper: ({ children }) => (
+      <NextIntlClientProvider locale="ko" messages={messagesFor("ko")}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
 
 const auth = vi.hoisted(() => ({ status: "anonymous" as string }));
 const workspaces = vi.hoisted(() => ({

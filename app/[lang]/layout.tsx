@@ -4,7 +4,7 @@ import { lang } from "next/root-params";
 import { AppShell } from "@/components/layout/app-shell";
 import { cookieLocale } from "@/lib/i18n/current";
 import { isLocale, LOCALES } from "@/lib/i18n/locales";
-import { siteMetadata } from "@/lib/site";
+import { siteMetadataFor } from "@/lib/site";
 
 /**
  * 언어는 ko·en 뿐이다. 그 밖의 첫 세그먼트(`/foo`)는 라우팅 단계의 404 가 되어 `app/global-not-found.tsx` 가 그린다.
@@ -17,12 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = await lang();
   // canonical·hreflang 은 페이지마다 `localizedMetadata` 가 단다. 사이트 공통값의 `/` 를 물려받지 않게 뺀다.
   return {
-    ...siteMetadata,
+    ...siteMetadataFor(isLocale(locale) ? locale : "ko"),
     alternates: null,
-    openGraph: {
-      ...siteMetadata.openGraph,
-      locale: locale === "en" ? "en_US" : "ko_KR",
-    },
   };
 }
 
@@ -45,5 +41,10 @@ export default async function MarketingRootLayout({
       </html>
     );
   }
-  return <AppShell locale={locale}>{children}</AppShell>;
+  // 랜딩 상단 바 · 푸터는 마케팅 면 전부에 서고(`NavbarGate` · `FooterGate`, 클라이언트) 랜딩 문구를 쓴다.
+  return (
+    <AppShell locale={locale} clientNamespaces={["common", "landing"]}>
+      {children}
+    </AppShell>
+  );
 }

@@ -24,6 +24,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { useMessages, useTranslations } from "next-intl";
 
 import {
   BASE_ENTRIES,
@@ -32,13 +33,12 @@ import {
   FILTERS,
   LENGTH,
   NOTE_TABS,
-  PROJECT,
   SPEAKER_LABEL,
-  TIMELINE,
-  TITLE,
-  TRANSCRIPT,
+  useDemoCopy,
   type Demo,
   type Entry,
+  type Filter,
+  type Line,
   type NoteTab,
 } from "@/components/heymoa/landing/use-demo";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
@@ -60,8 +60,10 @@ import {
   StatusChip,
   TaskRow,
   TimelineRow,
+  type Person,
+  usePersonName,
 } from "./app";
-import { DOC, type Scene } from "./hero-data";
+import { useDoc, type Scene } from "./hero-data";
 import { Cursor, Scribble, Sticky } from "./marks";
 import { APP, FOCUS, ROLE_COLOR, vars } from "./tokens";
 
@@ -263,10 +265,11 @@ function NoteTabs({
   uid: string;
   pointer: { tab: NoteTab; press: boolean } | null;
 }) {
+  const t = useTranslations("landing");
   return (
     <div
       role="tablist"
-      aria-label="노트 화면 미리 보기"
+      aria-label={t("demo.topBar.tablist")}
       onKeyDown={useTabKeys(value, onChange)}
       className="order-last -mb-px flex h-10 w-full items-stretch gap-4 lg:order-none lg:h-14 lg:w-auto lg:gap-5"
     >
@@ -291,7 +294,7 @@ function NoteTabs({
               "focus-visible:outline-offset-[-3px]"
             )}
           >
-            {tab}
+            {t(`app.tabs.${tab}`)}
             {on ? (
               <span aria-hidden className="absolute inset-x-0 bottom-0 h-[2px] bg-[var(--el-ink)]" />
             ) : null}
@@ -341,8 +344,9 @@ function TopBar({
   pointer: { tab: NoteTab; press: boolean } | null;
 }) {
   const { status } = demo;
-  const recording = status === "기록 중";
-  const gone = status === "종료됨";
+  const t = useTranslations("landing.demo");
+  const recording = status === "recording";
+  const gone = status === "ended";
   const pointing = scene === "paused" || scene === "press";
 
   return (
@@ -366,7 +370,7 @@ function TopBar({
             APP.ink
           )}
         >
-          {TITLE}
+          {t("title")}
         </span>
       </div>
 
@@ -396,7 +400,7 @@ function TopBar({
             aria-hidden
             className={cn("size-3.5 shrink-0 lg:size-4", recording && "opacity-45")}
           />
-          회의 종료
+          {t("topBar.endMeeting")}
         </span>
         {/* 커서 끝은 글자 밑 아래 가장자리 — 「종료」를 덮지 않는다. */}
         {pointing ? <Cursor press={scene === "press"} className="top-[84%] left-[58%]" /> : null}
@@ -433,7 +437,7 @@ function TopBar({
  * 보인다.
  */
 function Dock({ demo, scene, holding }: { demo: Demo; scene: Scene; holding: boolean }) {
-  const gone = demo.status === "종료됨";
+  const gone = demo.status === "ended";
   const at = demo.live?.line.at ?? demo.lines[demo.lines.length - 1].at;
   const pointing = scene === "stop";
   const pressing = demo.stopping && !holding;
@@ -454,7 +458,7 @@ function Dock({ demo, scene, holding }: { demo: Demo; scene: Scene; holding: boo
           <Mic className="size-4" />
         </span>
         <span className="mx-1 h-5 w-px bg-[var(--el-hairline)]" />
-        {demo.status === "기록 중" ? (
+        {demo.status === "recording" ? (
           <span className="flex items-center gap-2 pr-1 pl-2">
             <span className="min-w-12 font-mono text-[13px] font-semibold text-[var(--el-error)] tabular-nums">
               {at}
@@ -493,7 +497,7 @@ function Dock({ demo, scene, holding }: { demo: Demo; scene: Scene; holding: boo
 
 /* ── 정보 탭 ───────────────────────────────────────────────────────── */
 
-const PEOPLE = ["김민서", "박지훈", "이서연", "정우재"];
+const PEOPLE: Person[] = ["minseo", "jihoon", "seoyeon", "woojae"];
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -509,42 +513,45 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
  * 표)이고 둘 사이는 컨트롤 테두리가 가른다. 표의 생성 · 최종 수정은 앱의 날짜 형식(`dateStyle: medium`)이다.
  */
 function DetailsPanel({ ended, at, panel }: { ended: boolean; at: string; panel: PanelProps }) {
+  const t = useTranslations("landing.demo");
+  const name = usePersonName();
+  /** 넷째 줄(생성)부터는 구분선 아래다. */
   const facts: Array<[string, ReactNode]> = [
     [
-      "진행자",
+      t("details.host"),
       <>
-        <Face who="김민서" size={22} />
+        <Face who="minseo" size={22} />
         <span className="ml-1">
-          김민서
-          <span className={cn("font-normal", APP.muted)}>{" · 기록 제어 권한"}</span>
+          {name("minseo")}
+          <span className={cn("font-normal", APP.muted)}>{` · ${t("details.hostRole")}`}</span>
         </span>
       </>,
     ],
     [
-      "누적 기록 시간",
+      t("details.recorded"),
       <>
         <span className="tabular-nums">{ended ? LENGTH : at}</span>
-        <span className={cn("font-normal", APP.muted)}>· 종료된 구간만 합산</span>
+        <span className={cn("font-normal", APP.muted)}>· {t("details.recordedNote")}</span>
       </>,
     ],
-    ["공유 범위", "워크스페이스 멤버에게 공개"],
-    ["생성", "2026. 9. 1. 오후 2:00"],
-    ["최종 수정", "2026. 9. 1. 오후 2:02"],
+    [t("details.sharing"), t("details.sharingValue")],
+    [t("details.created"), t("details.createdValue")],
+    [t("details.updated"), t("details.updatedValue")],
   ];
   return (
     <div {...panel} className={cn("h-full overflow-y-auto px-4 pt-5 pb-20 lg:px-8 lg:pt-6", PANEL_FOCUS)}>
       <div className="flex flex-col gap-4">
-        <Field label="제목">
+        <Field label={t("details.titleLabel")}>
           <span
             className={cn(
               "flex h-9 items-center rounded-[8px] border border-[var(--el-hairline-strong)] px-2.5 text-[14px]",
               APP.ink
             )}
           >
-            {TITLE}
+            {t("title")}
           </span>
         </Field>
-        <Field label="참석자">
+        <Field label={t("details.attendees")}>
           <span className="flex flex-wrap items-center gap-2.5">
             <FacePile names={PEOPLE} size={28} />
             <span
@@ -556,7 +563,7 @@ function DetailsPanel({ ended, at, panel }: { ended: boolean; at: string; panel:
               )}
             >
               <UserPlus aria-hidden className="size-4" />
-              참여자 선택
+              {t("details.pickAttendees")}
             </span>
           </span>
         </Field>
@@ -567,15 +574,15 @@ function DetailsPanel({ ended, at, panel }: { ended: boolean; at: string; panel:
           )}
         >
           <Check aria-hidden className="size-4" />
-          변경 저장
+          {t("details.save")}
         </span>
       </div>
       <section className="mt-6 flex flex-col">
-        <p className={cn("m-0 mb-2.5 text-[13px] font-semibold", APP.ink)}>회의 정보</p>
+        <p className={cn("m-0 mb-2.5 text-[13px] font-semibold", APP.ink)}>{t("details.meetingInfo")}</p>
         <dl className="m-0 flex flex-col">
-          {facts.map(([k, v]) => (
+          {facts.map(([k, v], i) => (
             <Fragment key={k}>
-              {k === "생성" ? (
+              {i === 3 ? (
                 <span aria-hidden className="my-2.5 block h-px w-full bg-[var(--el-hairline)]" />
               ) : null}
               <div className="flex min-h-[30px] items-center gap-3">
@@ -642,8 +649,9 @@ const CARET = (
  * 복사 줄 밑에 들어가 있다. 기본 줄의 차례 등장(`rise`)은 페이지에 처음 뜰 때만이다.
  */
 function ScriptPanel({ demo, panel, rise }: { demo: Demo; panel: PanelProps; rise: boolean }) {
+  const t = useTranslations("landing");
   const { lines, live } = demo;
-  const ended = demo.status === "종료됨";
+  const ended = demo.status === "ended";
   const rows = [
     ...lines.map((line) => ({ line, typed: undefined as string | undefined })),
     ...(live ? [{ line: live.line, typed: live.text }] : []),
@@ -673,28 +681,28 @@ function ScriptPanel({ demo, panel, rise }: { demo: Demo; panel: PanelProps; ris
           <>
             <span className={tool}>
               <Users className={cn("size-3.5", APP.muted)} />
-              화자
+              {t("demo.script.speakers")}
             </span>
             <span className={tool}>
               <SkipForward className={cn("size-3.5", APP.muted)} />
-              미지정 {unassigned}
+              {t("demo.script.unassigned", { count: unassigned })}
             </span>
           </>
         ) : null}
         <span className={cn(tool, "border", APP.line)}>
           <Copy className={cn("size-3.5", APP.muted)} />
-          복사
+          {t("demo.script.copy")}
         </span>
       </div>
       <ul className="m-0 mt-1 list-none p-0">
         {rows.map(({ line, typed }, i) => {
-          const label = SPEAKER_LABEL[line.who];
+          const label = SPEAKER_LABEL[line.who] ?? "";
           const [firm, soft] = splitLive(typed ?? "");
           const base = rise && i < BASE_LINES;
           const liveLabel = (
             <>
               <span aria-hidden className="tv-blink size-1.5 shrink-0 rounded-full bg-[#ef4444]" />
-              받아 적는 중
+              {t("app.transcribing")}
             </>
           );
           return (
@@ -746,7 +754,7 @@ function ScriptPanel({ demo, panel, rise }: { demo: Demo; panel: PanelProps; ris
                     )}
                   >
                     <SpeakerFace label={label} size={18} />
-                    화자 {label}
+                    {t("app.speaker", { label })}
                     <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-[var(--el-muted-soft)]" />
                   </span>
                 ) : null}
@@ -778,8 +786,8 @@ function ScriptPanel({ demo, panel, rise }: { demo: Demo; panel: PanelProps; ris
 
 /* ── 타임라인 탭 ───────────────────────────────────────────────────── */
 
-const inFilter = (tone: TimelineTone, filter: (typeof FILTERS)[number]) =>
-  filter === "전체" || FILTER_OF[tone] === filter;
+const inFilter = (tone: TimelineTone, filter: Filter) =>
+  filter === "all" || FILTER_OF[tone] === filter;
 
 /**
  * 방금 붙은 줄의 노란 섬광(창 위 주석, `tv-flash` 키프레임). 줄 위에 곱하기로 얹어서 흰 바탕 · 아이콘 뒤
@@ -789,12 +797,13 @@ const FLASH =
   "before:pointer-events-none before:absolute before:inset-0 before:rounded-[8px] before:mix-blend-multiply motion-safe:before:[animation:tv-flash_1.6s_ease-out_both]";
 
 /** 처음부터 서 있는 일곱 줄의 개수. 이보다 늘어난 칸만 숫자가 한 번 튄다(창 위 강조). */
-const BASE_COUNT = Object.fromEntries(
-  FILTERS.map((f) => [
-    f,
-    TIMELINE.slice(0, BASE_ENTRIES).filter((e) => e.tone && inFilter(e.tone, f)).length,
-  ])
-) as Record<(typeof FILTERS)[number], number>;
+const baseCount = (timeline: Entry[]) =>
+  Object.fromEntries(
+    FILTERS.map((f) => [
+      f,
+      timeline.slice(0, BASE_ENTRIES).filter((e) => e.tone && inFilter(e.tone, f)).length,
+    ])
+  ) as Record<Filter, number>;
 
 /**
  * 안건 머리(`note-timeline.tsx` 안건 h3). `시간 구간 · 제목 · 개수 · ›` + 기록 중인 마지막 안건에만 「논의
@@ -823,6 +832,7 @@ function AgendaButton({
   listId: string;
   onToggle: () => void;
 }) {
+  const t = useTranslations("landing.app");
   return (
     // 그림 안의 머리라 제목 요소(h3)로 두지 않는다 — 페이지 목차에 끼면 h1 아래 h2 를 건너뛴다.
     <div data-snap>
@@ -860,7 +870,7 @@ function AgendaButton({
             className={cn("-ml-1.5 size-3.5 shrink-0", APP.faint, open && "rotate-90")}
           />
           <span className="flex-1" />
-          {live ? <LiveChip dotClassName="tv-blink" /> : null}
+          {live ? <LiveChip dotClassName="tv-blink" label={t("live")} /> : null}
         </span>
       </button>
     </div>
@@ -882,7 +892,10 @@ function AgendaButton({
  */
 function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: PanelProps }) {
   const { entries, live, status } = demo;
-  const recording = status === "기록 중";
+  const t = useTranslations("landing.demo");
+  const { title, project, timeline } = useDemoCopy();
+  const base = baseCount(timeline);
+  const recording = status === "recording";
   const [folded, setFolded] = useState<ReadonlySet<number>>(() => new Set());
   const toggle = (index: number) =>
     setFolded((current) => {
@@ -891,8 +904,8 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
       return next;
     });
 
-  const shown = TIMELINE.slice(0, entries);
-  const count = (f: (typeof FILTERS)[number]) =>
+  const shown = timeline.slice(0, entries);
+  const count = (f: Filter) =>
     shown.filter((e) => e.tone && inFilter(e.tone, f)).length;
 
   /** 안건 소속은 순서로 정한다(`timeline.ts` 의 `selectTimeline`). */
@@ -938,12 +951,12 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
             APP.ink
           )}
         >
-          {TITLE}
+          {title}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <HeadChip icon="calendar">2026년 9월 1일 오후 2:00</HeadChip>
-          <HeadChip icon="people">4명</HeadChip>
-          <HeadChip icon="project">{PROJECT}</HeadChip>
+          <HeadChip icon="calendar">{t("timelinePanel.date")}</HeadChip>
+          <HeadChip icon="people">{t("timelinePanel.people", { count: PEOPLE.length })}</HeadChip>
+          <HeadChip icon="project">{project}</HeadChip>
         </div>
       </header>
 
@@ -963,17 +976,17 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
                 key={f}
                 className={cn(
                   "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[7px] px-2 text-[13px] sm:px-[9px]",
-                  f === "전체" ? cn(APP.chipBg, "font-medium", APP.ink) : APP.muted
+                  f === "all" ? cn(APP.chipBg, "font-medium", APP.ink) : APP.muted
                 )}
               >
-                {f}
+                {t(`filters.${f}`)}
                 <span
                   key={n}
                   className={cn(
                     "text-[12px] font-normal tabular-nums",
                     // 「전체」는 회색 칩 면(#f0efed) 위라 muted 가 4.2:1 — 한 단 짙게.
-                    f === "전체" ? APP.body : APP.muted,
-                    n !== BASE_COUNT[f] && "tv-bump [animation-delay:300ms]!"
+                    f === "all" ? APP.body : APP.muted,
+                    n !== base[f] && "tv-bump [animation-delay:300ms]!"
                   )}
                 >
                   {n}
@@ -982,11 +995,9 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
             );
           })}
         </span>
-        <span className="sr-only">{`전체 ${count("전체")}개 항목`}</span>
+        <span className="sr-only">{t("timelinePanel.srTotal", { count: count("all") })}</span>
         <span className={cn("text-[12px]", APP.muted)}>
-          {status === "종료됨"
-            ? "이 회의에서 남길 만한 변화만 기록했습니다"
-            : "말이 끝날 때마다 정리됩니다 · 방금 갱신"}
+          {status === "ended" ? t("timelinePanel.endedNote") : t("timelinePanel.liveNote")}
         </span>
       </div>
 
@@ -999,7 +1010,7 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
         ) : live ? (
           <>
             {group.agenda.at}
-            <span className="max-sm:hidden"> – 지금</span>
+            <span className="max-sm:hidden"> – {t("timelinePanel.now")}</span>
           </>
         ) : (
           group.agenda.at
@@ -1033,9 +1044,9 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
                   key={index}
                   at={entry.at}
                   tone={entry.tone}
-                  kind={entry.kind}
+                  kind={entry.kind === "agenda" ? "" : t(`kinds.${entry.kind}`)}
                   title={entry.title}
-                  meta={entry.meta}
+                  meta={metaOf(entry, timeline, t)}
                   className={
                     index < BASE_ENTRIES
                       ? undefined
@@ -1072,7 +1083,7 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
               {soft}
               {CARET}
             </span>
-            <span className={cn("text-[12.5px] leading-[19px]", APP.muted)}>받아 적는 중</span>
+            <span className={cn("text-[12.5px] leading-[19px]", APP.muted)}>{t("transcribing")}</span>
           </span>
         </div>
       ) : null}
@@ -1082,7 +1093,18 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
 
 /* ── 요약 탭 ───────────────────────────────────────────────────────── */
 
-const STEPS = ["화자 나누기", "분석", "검토", "확정"];
+/** 앱이 유형 이름 뒤에 덧붙이는 말 — 답한 질문은 그 답 항목의 시각을 넣는다. */
+function metaOf(
+  entry: Entry,
+  timeline: Entry[],
+  t: ReturnType<typeof useTranslations<"landing.demo">>
+) {
+  if (entry.meta === "waiting") return t("meta.waiting");
+  if (entry.meta === "answered") {
+    return t("meta.answered", { at: timeline[entry.answer ?? 0]?.at ?? entry.at });
+  }
+  return undefined;
+}
 
 /**
  * 분석 대기(`flow-notice.tsx` ANALYZING). 화자 나누기는 끝났고 분석이 도는 중이다 — 끝나는 시각을 모르는
@@ -1096,19 +1118,30 @@ const STEPS = ["화자 나누기", "분석", "검토", "확정"];
  * 「분석은 여기선 빨리 감아요」 한 장이 하고, 여기는 그 말이 가리키는 표시만 남는다.
  */
 function Analyzing({ panel }: { panel: PanelProps }) {
+  const t = useTranslations("landing.demo");
+  const steps = useMessages().landing.demo.analyzing.steps;
   return (
     <div {...panel} className={cn("relative h-full px-4 pt-6 lg:px-10 lg:pt-9", PANEL_FOCUS)}>
       <ol
-        aria-label="분석 단계"
+        aria-label={t("analyzing.label")}
         className="m-0 flex list-none flex-wrap items-center gap-2.5 p-0 text-[12px] lg:text-[13px]"
       >
-        {STEPS.map((label, at) => {
+        {steps.map((label, at) => {
           const done = at === 0;
           const now = at === 1;
           return (
             <li
               key={label}
-              aria-label={`${label}: ${done ? "완료" : now ? "진행 중" : "대기"}`}
+              aria-label={t("analyzing.step", {
+                label,
+                state: t(
+                  done
+                    ? "analyzing.states.done"
+                    : now
+                      ? "analyzing.states.now"
+                      : "analyzing.states.waiting"
+                ),
+              })}
               className="flex items-center gap-2.5"
             >
               {at > 0 ? (
@@ -1159,11 +1192,10 @@ function Analyzing({ panel }: { panel: PanelProps }) {
           className="mt-[3px] block size-[18px] shrink-0 animate-spin rounded-full border-2 border-[var(--el-hairline-strong)] border-t-[var(--el-ink)]"
         />
         <span className={cn("text-[15.5px] font-medium lg:text-[17px]", APP.ink)}>
-          회의를 분석하는 중입니다
+          {t("analyzing.title")}
         </span>
         <p className={cn("col-start-2 m-0 max-w-[54ch] text-[13.5px] leading-[22px] lg:text-[14px] lg:leading-[23px]", APP.muted)}>
-          결정과 할 일을 주제로 묶고, 담당과 기한을 붙이고, 프로젝트의 기존 결정 · 할 일과 견줍니다. 몇 분 걸릴 수
-          있고, 다른 화면으로 옮겨도 됩니다.
+          {t("analyzing.body")}
         </p>
       </div>
       {/* 가운데 맞춤은 바깥 줄이 한다 — 튀어나오는 애니메이션(`tv-pop`)이 `translate` 를 쓴다. */}
@@ -1198,9 +1230,11 @@ const onTrack = (at: string) => `${((seconds(at) / seconds(LENGTH)) * 100).toFix
  * 넓은 창은 본문 여백이 40px 라 앱 상자 그대로다.
  */
 function MeetingMap() {
+  const t = useTranslations("landing.demo");
+  const DOC = useDoc();
   const marks = [
     ...DOC.decisions.map((d) => ({ at: d.at, color: ROLE_COLOR.decision })),
-    ...DOC.tasks.map((t) => ({ at: t.at, color: ROLE_COLOR.task })),
+    ...DOC.tasks.map((task) => ({ at: task.at, color: ROLE_COLOR.task })),
   ];
   return (
     <div
@@ -1208,19 +1242,19 @@ function MeetingMap() {
       className="mt-6 border-y border-[var(--el-hairline-soft)] pt-3.5 pb-2.5 lg:rounded-[12px] lg:border-x lg:px-4"
     >
       <div className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px]", APP.muted)}>
-        <span className={cn("font-medium", APP.body)}>언제 정해졌나</span>
+        <span className={cn("font-medium", APP.body)}>{t("map.title")}</span>
         <span className="flex items-center gap-3">
           <span className="inline-flex items-center gap-[5px]">
             <span className="h-1.5 w-3 rounded-[2px] bg-[var(--el-hairline)]" />
-            주제 구간
+            {t("map.topics")}
           </span>
           <span className="inline-flex items-center gap-[5px] tabular-nums">
             <span className="h-2.5 w-[3px] rounded-[2px]" style={{ background: ROLE_COLOR.decision }} />
-            결정 {DOC.decisions.length}
+            {t("map.decisions", { count: DOC.decisions.length })}
           </span>
           <span className="inline-flex items-center gap-[5px] tabular-nums">
             <span className="h-2.5 w-[3px] rounded-[2px]" style={{ background: ROLE_COLOR.task }} />
-            할 일 {DOC.tasks.length}
+            {t("map.tasks", { count: DOC.tasks.length })}
           </span>
         </span>
       </div>
@@ -1247,24 +1281,29 @@ function MeetingMap() {
         ))}
       </div>
       <div className={cn("flex h-4 justify-between text-[11px] tabular-nums", APP.muted)}>
-        <span>0:00</span>
-        <span>2분</span>
+        <span>{t("map.start")}</span>
+        <span>{t("map.end")}</span>
       </div>
     </div>
   );
 }
 
 /** 요약 / 그래프 전환(`SegmentedControl`). 그림이다. */
-const VIEW_SWITCH = (
-  <span
-    aria-hidden
-    className={cn("inline-flex h-8 items-center rounded-full p-[3px] text-[12px] font-medium", APP.chipBg)}
-  >
-    <span className={cn("rounded-full bg-white px-3 py-1 shadow-[0_1px_2px_#0c0a0914]", APP.ink)}>요약</span>
-    {/* 회색 칩 면 위라 muted 는 4.2:1 — 한 단 짙게. */}
-    <span className={cn("px-3", APP.body)}>그래프</span>
-  </span>
-);
+function ViewSwitch() {
+  const t = useTranslations("landing.demo");
+  return (
+    <span
+      aria-hidden
+      className={cn("inline-flex h-8 items-center rounded-full p-[3px] text-[12px] font-medium", APP.chipBg)}
+    >
+      <span className={cn("rounded-full bg-white px-3 py-1 shadow-[0_1px_2px_#0c0a0914]", APP.ink)}>
+        {t("viewSwitch.summary")}
+      </span>
+      {/* 회색 칩 면 위라 muted 는 4.2:1 — 한 단 짙게. */}
+      <span className={cn("px-3", APP.body)}>{t("viewSwitch.graph")}</span>
+    </span>
+  );
+}
 
 /**
  * 검토 문서가 장면마다 창 맨 위에 세울 묶음. 바닥을 따라가지 않는다 — 그러면 창 첫 줄이 위가 잘린 근거
@@ -1300,13 +1339,13 @@ const Anchor = ({ name }: { name: string }) => <span aria-hidden data-anchor={na
  * 근거 발언(`lib/notes/review/moments.ts` 의 `quotesOf`) — 인용한 줄과 그 바로 앞 줄(맥락, 회색). 아래
  * 근거 구간의 요약 창과 같은 모양이다.
  */
-const quotesOf = (cites: readonly number[]) =>
+const quotesOf = (transcript: Line[], cites: readonly number[]) =>
   [...new Set(cites.flatMap((c) => (c > 0 ? [c - 1, c] : [c])))]
     .sort((a, b) => a - b)
     .map((at) => ({
-      label: SPEAKER_LABEL[TRANSCRIPT[at].who],
-      at: TRANSCRIPT[at].at,
-      text: TRANSCRIPT[at].text,
+      label: SPEAKER_LABEL[transcript[at].who],
+      at: transcript[at].at,
+      text: transcript[at].text,
       cited: cites.includes(at),
     }));
 
@@ -1336,6 +1375,9 @@ const quotesOf = (cites: readonly number[]) =>
  * 노란 고리가 두 번 퍼질 뿐이다.
  */
 function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
+  const t = useTranslations("landing.demo");
+  const { title, project, transcript } = useDemoCopy();
+  const DOC = useDoc();
   const ref = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const coverRef = useRef<HTMLSpanElement>(null);
@@ -1408,23 +1450,23 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
       <div className={cn("flex-1 px-4 pt-5 lg:px-10 lg:pt-6", confirming ? "pb-6" : "pb-[360px]")}>
         <div className="chat-rise">
           <ReviewHead
-            state="검토 중"
+            state="review"
             titleSize="lg"
-            title={TITLE}
-            aside={VIEW_SWITCH}
+            title={title}
+            aside={<ViewSwitch />}
             chips={
               <>
-                <HeadChip icon="date">9월 1일 (화) 오후 2:00</HeadChip>
-                <HeadChip icon="length">2분</HeadChip>
+                <HeadChip icon="date">{t("review.date")}</HeadChip>
+                <HeadChip icon="length">{t("review.length")}</HeadChip>
                 <FacesChip names={PEOPLE} />
-                <HeadChip icon="project">{PROJECT}</HeadChip>
+                <HeadChip icon="project">{project}</HeadChip>
               </>
             }
           />
           <MeetingMap />
           <div className="pt-7">
             <Anchor name="summary" />
-            <SectionHead title="요약" />
+            <SectionHead title={t("review.summary")} />
             <p className={cn("m-0 mt-1.5 text-[15px] leading-[1.8]", APP.body)}>
               {DOC.summary}
             </p>
@@ -1433,7 +1475,7 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
 
         {review > 1 ? (
           <div className="chat-rise pt-7">
-            <SectionHead title="주제" count={DOC.topics.length} />
+            <SectionHead title={t("review.topics")} count={DOC.topics.length} />
             <ul className="m-0 mt-1.5 list-none border-t border-[var(--el-hairline-soft)] p-0">
               {DOC.topics.map((topic) => (
                 <li key={topic.at} className="border-b border-[var(--el-hairline-soft)]">
@@ -1456,7 +1498,13 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
                         <span key={tone} className="inline-flex items-center gap-1">
                           <TimelineToneIcon tone={tone} />
                           <span className="sr-only">
-                            {tone === "decision" ? "결정" : tone === "task" ? "할 일" : "열린 질문"}{" "}
+                            {t(
+                              tone === "decision"
+                                ? "review.srKind.decision"
+                                : tone === "task"
+                                  ? "review.srKind.task"
+                                  : "review.srKind.open"
+                            )}{" "}
                           </span>
                           {n}
                         </span>
@@ -1476,7 +1524,7 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
         {review > 2 ? (
           <div className="chat-rise pt-7">
             <Anchor name="decisions" />
-            <SectionHead title="결정" count={DOC.decisions.length} />
+            <SectionHead title={t("review.decisions")} count={DOC.decisions.length} />
             <div className="mt-1.5">
               {DOC.decisions.map((decision, i) => (
                 // 둘째 줄을 펼친다 — 근거 상자가 할 일 바로 위에 붙어 마지막 장면까지 남는다.
@@ -1489,7 +1537,7 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
                     open={i === 1}
                   >
                     <div data-mark>
-                      <EvidenceQuotes quotes={quotesOf(decision.cites)} />
+                      <EvidenceQuotes quotes={quotesOf(transcript, decision.cites)} />
                     </div>
                   </DecisionRow>
                 </div>
@@ -1503,14 +1551,14 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
             <Anchor name="tasks" />
             <div data-row="head">
               <SectionHead
-                title="할 일"
+                title={t("review.tasks")}
                 count={DOC.tasks.length}
                 aside={
                   // 앱은 담당이 이름 없는 화자인 할 일이 있을 때만 이 줄을 세운다. 「화자 D」가 무엇인지는
                   // 이 줄이 말한다.
                   <span className="hidden items-center gap-2 lg:flex">
                     <span className={cn("text-[12px]", APP.muted)}>
-                      이름 없는 화자에게 걸린 할 일 {DOC.tasks.length}
+                      {t("review.unnamed", { count: DOC.tasks.length })}
                     </span>
                     <span
                       className={cn(
@@ -1518,7 +1566,7 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
                         APP.ink
                       )}
                     >
-                      화자 이름 붙이기
+                      {t("review.nameSpeakers")}
                     </span>
                   </span>
                 }
@@ -1589,13 +1637,14 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
  * 창 양옆 16px 안쪽에 둥근 선이 나란히 서서 창과 동심 두 겹으로 읽혔다.
  */
 function SummaryPanel({ demo, panel }: { demo: Demo; panel: PanelProps }) {
-  if (demo.status !== "종료됨") {
+  const t = useTranslations("landing.demo");
+  if (demo.status !== "ended") {
     return (
       <div {...panel} className={cn("h-full px-4 pt-5 lg:px-8 lg:pt-6", PANEL_FOCUS)}>
         <div className={cn("rounded-[16px] p-5", APP.softBg)}>
-          <p className={cn("m-0 text-[14px] font-medium", APP.ink)}>요약은 회의가 끝나면 정리됩니다</p>
+          <p className={cn("m-0 text-[14px] font-medium", APP.ink)}>{t("summaryWaiting.title")}</p>
           <p className={cn("m-0 mt-1 text-[12px] leading-relaxed", APP.muted)}>
-            회의를 끝내면 결정 · 할 일 · 이슈를 주제로 묶어 검토할 수 있게 됩니다.
+            {t("summaryWaiting.body")}
           </p>
         </div>
       </div>
@@ -1649,9 +1698,9 @@ export function HeroNote({
   /** 탭 위의 커서 — 첫 말이 다 받아 적혀 머무는 동안 「타임라인」에 와 서고, 탭이 바뀌는 장면에서 누른다. */
   const pointer: { tab: NoteTab; press: boolean } | null =
     scene === "timeline"
-      ? { tab: "타임라인", press: true }
+      ? { tab: "timeline", press: true }
       : scene === "listen" && live && live.text.length === live.line.text.length
-        ? { tab: "타임라인", press: false }
+        ? { tab: "timeline", press: false }
         : null;
 
   const panel: PanelProps = {
@@ -1674,14 +1723,14 @@ export function HeroNote({
         className="relative min-h-0 flex-1 overflow-hidden"
       >
         <div key={tab} className="chat-rise h-full">
-          {tab === "정보" ? (
-            <DetailsPanel ended={demo.status === "종료됨"} at={at} panel={panel} />
+          {tab === "info" ? (
+            <DetailsPanel ended={demo.status === "ended"} at={at} panel={panel} />
           ) : null}
-          {tab === "스크립트" ? (
+          {tab === "script" ? (
             <ScriptPanel demo={demo} panel={panel} rise={firstTab !== null} />
           ) : null}
-          {tab === "타임라인" ? <TimelinePanel demo={demo} uid={uid} panel={panel} /> : null}
-          {tab === "요약" ? <SummaryPanel demo={demo} panel={panel} /> : null}
+          {tab === "timeline" ? <TimelinePanel demo={demo} uid={uid} panel={panel} /> : null}
+          {tab === "summary" ? <SummaryPanel demo={demo} panel={panel} /> : null}
         </div>
         <Dock demo={demo} scene={scene} holding={holding} />
       </div>

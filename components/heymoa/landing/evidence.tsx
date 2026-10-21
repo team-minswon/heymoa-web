@@ -1,5 +1,6 @@
 import { Scissors } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ import {
   FacesChip,
   HeadChip,
   MiniBar,
+  type Person,
   ReviewHead,
   RowActions,
   ScriptRow,
@@ -19,6 +21,7 @@ import {
   TaskRow,
 } from "./app";
 import { Cursor, ExampleStamp, Hand, Scribble, Sticky, Tape } from "./marks";
+import { RICH } from "./rich";
 import {
   CAPTION,
   CONTAINER,
@@ -31,7 +34,7 @@ import {
 } from "./tokens";
 
 /**
- * 근거 구간 「그 말, 진짜 나왔어요?」. tl;dv 는 신뢰를 후기 모자이크와 보안 배지로 말하지만 HeyMoa 에는
+ * 근거 구간 「그 말, 정말 나왔을까요?」. tl;dv 는 신뢰를 후기 모자이크와 보안 배지로 말하지만 HeyMoa 에는
  * 둘 다 없다. 그 자리를 **같은 회의의 창 두 장**으로 채운다 — 왼쪽은 스크립트 탭, 오른쪽은 요약 탭.
  * 수사극 농담으로 말 넷과 결정 · 할 일 넷에 노란 증거 번호표를 세우고, 스크립트의 그 마디에 앱의 근거
  * 형광펜(`--el-highlight`)을 칠해 짝을 짓는다. 창을 감싸는 바깥 카드는 두지 않는다.
@@ -46,7 +49,7 @@ import {
  * - 시점: 회의 카드 첫 장(`meeting-cards.tsx`)이 같은 회의를 「확정됨」 + 쪽지 「검토 완료 누른 뒤」로
  *   먼저 보여 준다. 여기는 그 전 장면이라 요약 창의 「검토 중」 배지에 같은 자리 · 같은 모양의 동그라미와
  *   쪽지 「검토 완료 누르기 전」을 단다(전과 후가 짝으로 읽히게). 이 그림의 쪽지는 이것과 「눌러야
- *   확정」 둘이고, 확인창 설명은 손글씨다.
+ *   확정됩니다」 둘이고, 확인창 설명은 손글씨다.
  * - 말 나눔: 리드는 「펼치면 그 말이 나온 스크립트가 붙어 있다 → 고치거나 뺀다」까지만 말한다(한 문단).
  *   「검토 완료를 눌러야 프로젝트에 올라간다」는 리드에서 뺐다 — r4 는 리드 둘째 문단 · 배지 쪽지 「검토 완료
  *   누르기 전」 · 버튼 쪽지 「눌러야 확정」이 한 구간에서 세 번 말했고, 히어로 쪽지 · FAQ 02 까지 페이지에서
@@ -55,7 +58,7 @@ import {
  *   이미 해서 뺐다. 펼친 근거 옆 손글씨는 리드가 말하지 않는 것만 짚는다 — 근거 상자가 두 줄인 까닭(진한 줄이
  *   그 말, 흐린 줄은 바로 앞 말 = 앱 `moments.ts` `quotesOf` 의 맥락 줄). 확인창과 「완료하면 못 고친다」는
  *   버튼 밑 손글씨 한 곳에서만 말한다. 그 손글씨는 히어로 ② 쪽지(「누르면 한 번 더 물어봐요」, 회의 종료)와
- *   같은 틀로 들리지 않게 「확인창부터 떠요」로 쓴다. 손글씨 · 쪽지는 화면 읽기에서 빠지므로 그 말은 그림
+ *   같은 틀로 들리지 않게 「확인창이 먼저 뜹니다」로 쓴다. 손글씨 · 쪽지는 화면 읽기에서 빠지므로 그 말은 그림
  *   설명(`sr-only`)에 한 번 둔다.
  * - 확정 막대: 직전 판은 막대가 창 안 바닥 20px 위에 서서 둥근 선이 창 테두리와 나란히 한 겹 더 생겼다(390 은
  *   네 변, 1440 은 바닥). 그래서 막대를 창 밖 형제로 빼고 창 바닥선에 반쯤 걸친다(`-mt-6`, 막대 높이의 절반). 창과
@@ -102,43 +105,28 @@ import {
 
 type Line = {
   at: string;
-  who: string;
+  who: Person;
   before: string;
   mark: string;
   after: string;
 };
 
-/** 스크립트에 남긴 네 마디. `mark` 가 결정 · 할 일이 된 부분이다. */
-const LINES: Line[] = [
-  {
-    at: "00:00",
-    who: "김민서",
-    before: "이번 스프린트는 ",
-    mark: "온보딩 이탈부터 봅니다",
-    after: ". 지난주에 남긴 가설 두 개를 먼저 정리하죠.",
-  },
-  {
-    at: "00:14",
-    who: "박지훈",
-    before: "지난 회의에서 ",
-    mark: "결제 화면 개편은 다음으로 미뤘습니다",
-    after: ". 그 결정 그대로 갑니다.",
-  },
-  {
-    at: "01:02",
-    who: "정우재",
-    before: "그럼 온보딩 이탈 로그 수집은 제가 맡겠습니다. ",
-    mark: "이번 주 목요일까지 초안 올릴게요",
-    after: ".",
-  },
-  {
-    at: "01:19",
-    who: "박지훈",
-    before: "좋습니다. 그 작업은 ",
-    mark: "Linear 이슈로 바로 내보내는",
-    after: " 게 좋겠어요.",
-  },
+/**
+ * 스크립트에 남긴 네 마디(시각 · 화자). 글은 언어 파일(`landing.evidence.lines`)의 같은 순서 줄이고,
+ * `mark` 가 결정 · 할 일이 된 부분이다.
+ */
+const SPOTS: ReadonlyArray<Pick<Line, "at" | "who">> = [
+  { at: "00:00", who: "minseo" },
+  { at: "00:14", who: "jihoon" },
+  { at: "01:02", who: "woojae" },
+  { at: "01:19", who: "jihoon" },
 ];
+
+function useLines(): Line[] {
+  const t = useTranslations("landing.evidence");
+  const text = t.raw("lines") as Array<Pick<Line, "before" | "mark" | "after">>;
+  return SPOTS.map((spot, k) => ({ ...spot, ...text[k] }));
+}
 
 /** 짝 k(0부터)가 칠해지는 때. 형광펜 → 스크립트 번호표 → 요약 번호표 순으로 80ms 씩 뒤따른다. */
 const pairAt = (k: number) => 700 + k * 260;
@@ -175,6 +163,7 @@ function Tag({
   row: "script" | "review";
   d: number;
 }) {
+  const t = useTranslations("landing.evidence");
   return (
     <span
       aria-hidden
@@ -193,7 +182,7 @@ function Tag({
           SHADOW.sticky
         )}
       >
-        <span className="hidden whitespace-pre lg:inline">증거 </span>
+        <span className="hidden whitespace-pre lg:inline">{t("tag")}</span>
         {n}
       </span>
       <span className="hidden size-0 border-x-[6px] border-t-[6px] border-x-transparent border-t-[var(--tv-pop)] lg:block" />
@@ -202,19 +191,25 @@ function Tag({
 }
 
 function ScriptWindow() {
+  const t = useTranslations("landing");
+  const lines = useLines();
   return (
     <AppWindow
       className="tv-swing overflow-visible"
       style={vars({ "--tilt": "-1.5deg" })}
     >
       <MiniBar
-        status="종료됨"
-        tab="스크립트"
+        status="ended"
+        tab="script"
         size="md"
-        title={<span className="hidden sm:inline">3차 스프린트 킥오프</span>}
+        title={
+          <span className="hidden sm:inline">
+            {t("meetings.kickoff.title")}
+          </span>
+        }
       />
       <ol className="m-0 list-none px-5 pb-3 lg:[zoom:1.04]">
-        {LINES.map((line, k) => (
+        {lines.map((line, k) => (
           <ScriptLi key={line.at} line={line} k={k} />
         ))}
       </ol>
@@ -223,7 +218,7 @@ function ScriptWindow() {
           뺀 시각 대신 남긴 것을 말한다(머리 주석). */}
       <Tape className="absolute right-3 -bottom-6 h-7 gap-1.5 text-[12px] sm:right-5 sm:text-[13px]">
         <Scissors aria-hidden className="size-3.5 shrink-0" />
-        결정·할 일이 된 네 마디만 남겼어요
+        {t("evidence.tape")}
       </Tape>
     </AppWindow>
   );
@@ -248,6 +243,7 @@ function ScriptLi({ line, k }: { line: Line; k: number }) {
 
 /** 「검토 완료」 버튼 안에 매다는 주석 — 커서(올려만 둔다) · 위로 화살표 · 쪽지 둘. 버튼을 따라 움직인다. */
 function ButtonNotes() {
+  const t = useTranslations("landing.evidence");
   return (
     <>
       <span
@@ -273,7 +269,7 @@ function ButtonNotes() {
         delay={1850}
         className="absolute top-[calc(100%_+_62px)] left-1/2 -translate-x-1/2 whitespace-nowrap"
       >
-        눌러야 확정
+        {t("press")}
       </Sticky>
       {/* 확인창 설명은 손글씨(쪽지는 위 「검토 완료 누르기 전」과 「눌러야 확정」 둘까지). */}
       {/* 좁은 화면 = 쪽지 아래, 넓은 화면 = 쪽지 왼쪽 같은 줄(쪽지 반폭 ≈ 61px + 틈). */}
@@ -281,11 +277,7 @@ function ButtonNotes() {
         className="tv-rpop absolute top-[calc(100%_+_118px)] right-[calc(100%_-_24px)] lg:top-[calc(100%_+_68px)] lg:right-[calc(50%_+_72px)]"
         style={vars({ "--d": "2050ms" })}
       >
-        <Hand className="whitespace-nowrap">
-          실수로 눌러도 확인창부터 떠요
-          <br />
-          완료하면 못 고쳐요
-        </Hand>
+        <Hand className="whitespace-nowrap">{t.rich("dialog", RICH)}</Hand>
       </span>
     </>
   );
@@ -299,13 +291,16 @@ function ButtonNotes() {
  * 가장자리에 있어 틈에는 이것만 선다.
  */
 function PairNote() {
+  const t = useTranslations("landing.evidence");
   return (
     <span
       aria-hidden
       className="tv-rpop pointer-events-none absolute top-[calc(50%_-_10px)] right-[calc(100%_+_26px)] hidden h-20 w-[84px] lg:block"
       style={vars({ "--d": "450ms" })}
     >
-      <Hand className="absolute top-0 right-0 whitespace-nowrap">이 결정</Hand>
+      <Hand className="absolute top-0 right-0 whitespace-nowrap">
+        {t("pairDecision")}
+      </Hand>
       <Scribble
         kind="arrow"
         draw="reveal"
@@ -313,23 +308,31 @@ function PairNote() {
         className="absolute top-[14px] left-[14px] h-10 w-[60px]"
       />
       <Hand className="absolute bottom-0 left-0 whitespace-nowrap">
-        이 말이
+        {t("pairLine")}
       </Hand>
     </span>
   );
 }
 
 function SummaryWindow() {
-  const quoted = LINES[1];
+  const t = useTranslations("landing");
+  const lines = useLines();
+  const quoted = lines[1];
+  const decisions = t.raw("meetings.kickoff.decisions") as string[];
+  const tasks = t.raw("meetings.kickoff.tasks") as string[];
   return (
     // 창과 확정 막대를 한 칸에 묶어 같이 기운다 — 막대가 창 바닥선에 걸친 채로(머리 주석 「확정 막대」).
     <div className="tv-swing" style={vars({ "--tilt": "1deg" })}>
       <AppWindow className="overflow-visible">
         <MiniBar
-          status="종료됨"
-          tab="요약"
+          status="ended"
+          tab="summary"
           size="md"
-          title={<span className="hidden sm:inline">3차 스프린트 킥오프</span>}
+          title={
+            <span className="hidden sm:inline">
+              {t("meetings.kickoff.title")}
+            </span>
+          }
         />
         {/* pb-10 = 아래에서 걸쳐 들어오는 막대 절반(24px) + 숨 한 칸. 360 미만은 막대가 창 안 판이라 pb-5. */}
         <div className="relative px-5 pt-5 pb-10 max-[360px]:pb-5 lg:[zoom:1.04]">
@@ -352,25 +355,31 @@ function SummaryWindow() {
             delay={600}
             className="absolute top-[19px] left-[98px] whitespace-nowrap"
           >
-            검토 완료 누르기 전
+            {t("evidence.before")}
           </Sticky>
           <ReviewHead
-            state="검토 중"
-            title="3차 스프린트 킥오프"
+            state="review"
+            title={t("meetings.kickoff.title")}
             chips={
               <>
-                <HeadChip icon="date">9월 1일 (화) 오후 2:00</HeadChip>
-                <HeadChip icon="length">2분</HeadChip>
-                <FacesChip names={["김민서", "박지훈", "이서연", "정우재"]} />
+                <HeadChip icon="date">{t("meetings.kickoff.date")}</HeadChip>
+                <HeadChip icon="length">
+                  {t("meetings.kickoff.length")}
+                </HeadChip>
+                <FacesChip names={["minseo", "jihoon", "seoyeon", "woojae"]} />
               </>
             }
           />
-          <SectionHead title="결정" count={2} className="mt-7" />
+          <SectionHead
+            title={t("meetings.sections.decisions")}
+            count={2}
+            className="mt-7"
+          />
           <div className="mt-2">
             <div className="relative">
               <DecisionRow
-                text="온보딩 이탈을 이번 스프린트의 첫 기준선으로 삼는다"
-                topic="스프린트 우선순위"
+                text={decisions[0]}
+                topic={t("meetings.kickoff.topic")}
                 at="00:00"
               />
               <Tag n={1} side="right" row="review" d={pairAt(0) + 160} />
@@ -378,8 +387,8 @@ function SummaryWindow() {
             </div>
             <div className="relative">
               <DecisionRow
-                text="결제 화면 개편은 다음 스프린트로 미룬다"
-                topic="스프린트 우선순위"
+                text={decisions[1]}
+                topic={t("meetings.kickoff.topic")}
                 at="00:14"
                 open
               >
@@ -388,9 +397,9 @@ function SummaryWindow() {
                   className="sm:mr-4"
                   quotes={[
                     {
-                      who: LINES[0].who,
-                      at: LINES[0].at,
-                      text: `${LINES[0].before}${LINES[0].mark}${LINES[0].after}`,
+                      who: lines[0].who,
+                      at: lines[0].at,
+                      text: `${lines[0].before}${lines[0].mark}${lines[0].after}`,
                       cited: false,
                     },
                     {
@@ -429,32 +438,28 @@ function SummaryWindow() {
                 {/* 리드가 말하지 않는 것 — 근거 상자가 두 줄인 까닭(머리 주석 「말 나눔」). 줄마다 100px
                   안쪽이라 1340 에서 창 오른쪽 바깥 자리(약 140px) 안에 든다. */}
                 <Hand className="mt-1 ml-5 whitespace-nowrap">
-                  진한 줄이 그 말,
-                  <br />
-                  흐린 줄은 바로
-                  <br />
-                  앞에 나온 말
+                  {t.rich("evidence.quoteNote", RICH)}
                 </Hand>
               </span>
             </div>
           </div>
 
-          <SectionHead title="할 일" count={2} className="mt-8" />
+          <SectionHead
+            title={t("meetings.sections.tasks")}
+            count={2}
+            className="mt-8"
+          />
           <div className="mt-2">
             <div className="relative">
               <TaskRow
-                text="온보딩 이탈 로그 수집 초안을 올린다"
-                who={{ name: "정우재" }}
-                due="9월 3일 (목)"
+                text={tasks[0]}
+                who={{ name: "woojae" }}
+                due={t("meetings.kickoff.due")}
               />
               <Tag n={3} side="right" row="review" d={pairAt(2) + 160} />
             </div>
             <div className="relative">
-              <TaskRow
-                text="로그 수집 작업을 Linear 이슈로 내보낸다"
-                who={{ name: "박지훈" }}
-                due={null}
-              />
+              <TaskRow text={tasks[1]} who={{ name: "jihoon" }} due={null} />
               <Tag n={4} side="right" row="review" d={pairAt(3) + 160} />
             </div>
           </div>
@@ -489,6 +494,7 @@ function SummaryWindow() {
 }
 
 export function Evidence() {
+  const t = useTranslations("landing.evidence");
   return (
     <section
       id="evidence"
@@ -505,31 +511,26 @@ export function Evidence() {
         <div>
           <Reveal className="grid gap-5 lg:gap-6">
             <h2 id="evidence-title" className={`tv-r ${H2}`}>
-              그 말,{" "}
-              <span className={MARKER_REVEAL} style={vars({ "--d": "350ms" })}>
-                진짜
-              </span>{" "}
-              나왔어요?
+              {t.rich("title", {
+                m: (chunks) => (
+                  <span
+                    className={MARKER_REVEAL}
+                    style={vars({ "--d": "350ms" })}
+                  >
+                    {chunks}
+                  </span>
+                ),
+              })}
             </h2>
             <div className="tv-r" style={vars({ "--i": 1 })}>
               {/* 「몇 분에 누가」는 히어로 리드가 했다 — 여기는 「정말 그렇게 말했나」를 대 보는 자리. */}
-              <p className={LEAD}>
-                결정이든 할 일이든 펼치면 그 말이 나온 스크립트가 그대로 붙어
-                있습니다. 정말 그렇게 말했는지는 거기서 보면 됩니다. 잘못
-                잡혔으면 줄마다 고치거나 빼고요.
-              </p>
+              <p className={LEAD}>{t("lead")}</p>
               {/* 「검토 완료를 눌러야 올라간다」는 리드에서 말하지 않는다 — 창 안 막대 · 쪽지가 한다(머리 주석 「말 나눔」). */}
             </div>
           </Reveal>
 
           <Reveal className="mt-12 lg:mt-16">
-            <p className="sr-only">
-              아래는 같은 회의의 스크립트 탭과 요약 탭입니다. 스크립트의 네
-              마디가 요약의 결정 둘과 할 일 둘이 되었습니다. 요약 탭은 검토
-              완료를 누르기 전 모습입니다. 반영할 결정·할 일의 스위치를 켠 뒤
-              검토 완료를 누르면 확인창이 먼저 뜨고, 완료한 검토는 고칠 수
-              없습니다.
-            </p>
+            <p className="sr-only">{t("sr")}</p>
             <div className="tv-r relative">
               <ExampleStamp className="absolute -top-3 -left-2 z-20 lg:hidden" />
               <ScriptWindow />
@@ -540,8 +541,7 @@ export function Evidence() {
                   rotate={-50}
                   className="mt-0.5 h-7 w-10"
                 />
-                그림 속 이름은 화자에 직접 이름을 붙인 뒤의 모습입니다. 붙이기
-                전에는 「화자 A」처럼 나옵니다.
+                {t("caption")}
               </p>
             </div>
           </Reveal>
@@ -555,7 +555,7 @@ export function Evidence() {
             className="flex items-center justify-center gap-2 pb-4 lg:hidden"
           >
             <Scribble kind="arrow-down" draw="reveal" delay={500} />
-            <Hand>같은 번호끼리 짝이에요</Hand>
+            <Hand>{t("pairs")}</Hand>
           </div>
           <div className="tv-r relative" style={vars({ "--i": 2 })}>
             <ExampleStamp className="absolute -top-4 -left-4 z-20 hidden lg:inline-flex" />

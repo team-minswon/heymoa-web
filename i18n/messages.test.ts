@@ -11,7 +11,7 @@ import {
  * **영어 키가 모두 있어야 하는 이름공간.** 이슈가 진행될 때마다 여기에 더한다(PRO-66 단계별 목록).
  * 목록 밖의 이름공간은 영어가 빠져도 실행 중에 한국어 원문으로 보인다.
  */
-const REQUIRED_EN: readonly Namespace[] = ["common"];
+const REQUIRED_EN: readonly Namespace[] = ["common", "landing"];
 
 function keyPaths(value: unknown, prefix = ""): string[] {
   if (typeof value !== "object" || value === null) return [prefix];
@@ -38,6 +38,15 @@ describe("언어 파일", () => {
       ko.common.notFound.description
     );
     expect(merged.common.skipToContent).toBe(ko.common.skipToContent);
+  });
+
+  it("목록은 배열 그대로 통째로 바뀐다", () => {
+    expect(
+      overlay({ list: ["가", "나"], name: "가" }, { list: ["a"] })
+    ).toEqual({
+      list: ["a"],
+      name: "가",
+    });
   });
 
   it("언어마다 합친 결과를 낸다", () => {

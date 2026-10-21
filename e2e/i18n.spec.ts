@@ -176,6 +176,34 @@ test("랜딩 푸터에서 언어를 고르면 같은 페이지의 다른 언어�
   expect(await langCookie()).toBe("ko");
 });
 
+test("/en 랜딩은 제목·설명·OpenGraph·본문이 영어이고 한글이 남지 않는다", async ({
+  page,
+  request,
+}) => {
+  const html = await (await request.get("/en")).text();
+  const head = html.slice(0, html.indexOf("</head>"));
+  expect(head).toContain("<title>HeyMoa | Real-time AI meeting notes</title>");
+  expect(head).toContain('property="og:locale" content="en_US"');
+  // 머리의 글(title · description · og · twitter · JSON-LD)에 한글이 없다. alternateName 의 「헤이모아」는 브랜드 표기라 뺀다.
+  expect(head.replaceAll("헤이모아", "").replaceAll("헤이 모아", "")).not.toMatch(/[가-힣]/);
+
+  await page.goto("/en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  // 대본이 한 바퀴 도는 사이 모든 장면의 글이 영어인지는 vitest(hero-stage)가 본다. 여기서는 첫 화면과 아래 구간 전부다.
+  const korean = await page.evaluate(() => {
+    const found: string[] = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      // 언어 선택의 「한국어」는 그 언어 자신의 이름으로 쓴다(`lang="ko"`).
+      if (node.parentElement?.closest('[lang="ko"], script, style')) continue;
+      if (/[가-힣]/.test(node.data)) found.push(node.data.trim());
+    }
+    return found;
+  });
+  expect(korean).toEqual([]);
+});
+
 test("공개 전(PUBLISHED_LOCALES 기본값) 영어판은 noindex 이고 sitemap·hreflang 에 영어 주소가 없다", async ({
   request,
 }) => {

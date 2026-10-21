@@ -1,9 +1,12 @@
+import { useTranslations } from "next-intl";
+
 import { LandingCta } from "@/components/heymoa/landing-cta";
 import { cn } from "@/lib/utils";
 
 import { HeroStage } from "./hero-stage";
 import { AppDownloadLink } from "./app-download-link";
 import { Speech } from "./marks";
+import { RICH } from "./rich";
 import { CONTAINER, FOCUS, H1, LEAD, MARKER_DRAW, vars } from "./tokens";
 
 /**
@@ -47,6 +50,7 @@ import { CONTAINER, FOCUS, H1, LEAD, MARKER_DRAW, vars } from "./tokens";
  * 600 단을 먼저 내보내 700 단이 이긴다 — `hero-stage.tsx` `WINDOW_H` 주석).
  */
 export function Hero() {
+  const t = useTranslations("landing.hero");
   return (
     <section className="overflow-visible pb-14 lg:pb-24">
       <div
@@ -57,11 +61,11 @@ export function Hero() {
       >
         <div>
           <div className="flex flex-col items-start gap-1 lg:flex-row lg:items-end lg:gap-3">
-            <Speech who="김민서" tone="butter" tilt={-2} anim="pop">
-              이번 주 회의록 당번 누구예요?
+            <Speech who="minseo" tone="butter" tilt={-2} anim="pop">
+              {t("askDuty")}
             </Speech>
             <Speech
-              who="박지훈"
+              who="jihoon"
               side="right"
               tone="white"
               size="sm"
@@ -70,7 +74,7 @@ export function Hero() {
               delay={600}
               className="-mt-1 ml-16 lg:mt-0 lg:-mb-3 lg:ml-0 lg:[@media(max-height:890px)]:mb-0"
             >
-              저… 지난주에 했는데요
+              {t("didLastWeek")}
             </Speech>
           </div>
           {/* 줄은 「회의에서 받아 적던 손, / 이제 쉬어도 됩니다」로만 갈린다(320 은 「회의에서」가 먼저 떨어진다). */}
@@ -80,14 +84,14 @@ export function Hero() {
               "mt-3 max-lg:[@media(max-height:600px)]:text-[30px] max-lg:[@media(max-height:700px)]:mt-2 lg:mt-5 lg:text-[52px] lg:[@media(max-height:890px)]:mt-2 xl:text-[64px] xl:[@media(max-height:720px)]:text-[52px]"
             )}
           >
-            회의에서 <span className="whitespace-nowrap">받아 적던 손,</span>{" "}
-            <span className="whitespace-nowrap">
-              이제{" "}
-              <span className={MARKER_DRAW} style={vars({ "--d": "300ms" })}>
-                쉬어도
-              </span>{" "}
-              됩니다
-            </span>
+            {t.rich("title", {
+              ...RICH,
+              mark: (chunks) => (
+                <span className={MARKER_DRAW} style={vars({ "--d": "300ms" })}>
+                  {chunks}
+                </span>
+              ),
+            })}
           </h1>
         </div>
 
@@ -105,19 +109,23 @@ export function Hero() {
               **시각은 회의 중에도 붙는다**(스크립트 · 타임라인 모두) — 회의 뒤에 더해지는 것은 화자 나누기뿐이라
               「화자와 시각까지 붙는다」고 쓰면 아래 창(기록 중에도 00:14 · 01:02 가 보인다)과 어긋난다. */}
           <p className={cn(LEAD, "lg:text-[17px] lg:leading-[1.7]")}>
-            말하는 동안 HeyMoa가 받아 적고 결정과 할 일을{" "}
-            <span className="whitespace-nowrap">골라 둡니다.</span>{" "}
-            <span className="hidden sm:inline">회의가 </span>끝나면{" "}
-            <b className="font-bold whitespace-nowrap text-[var(--tv-ink)]">
-              누가 한 말인지
-            </b>
-            도 갈라 둡니다.
+            {t.rich("lead", {
+              ...RICH,
+              wide: (chunks) => (
+                <span className="hidden sm:inline">{chunks}</span>
+              ),
+              b: (chunks) => (
+                <b className="font-bold whitespace-nowrap text-[var(--tv-ink)]">
+                  {chunks}
+                </b>
+              ),
+            })}
           </p>
           <div className="mt-5 flex flex-col gap-2 max-lg:[@media(max-height:600px)]:mt-3 max-lg:[@media(min-height:601px)_and_(max-height:700px)]:mt-4 lg:mt-6 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-3 lg:gap-y-2">
             {/* 포커스 링은 보라 outline(`FOCUS`) 하나다 — `Button` 기본의 `focus-visible:border-ring` ·
                 `ring-3` 을 끈다(`top-bar.tsx` · `closing.tsx` 와 같은 처리). 안 끄면 회색 링이 한 겹 더 붙는다. */}
             <LandingCta
-              label="Google 계정으로 시작"
+              label={t("start")}
               openOnWelcome
               className={cn(
                 "h-[52px] w-full justify-center gap-2 max-lg:[@media(max-height:600px)]:h-11 border-transparent bg-[var(--tv-brand)] px-6 text-[15px] font-bold text-white hover:bg-[var(--tv-brand-deep)] focus-visible:border-transparent focus-visible:ring-0 lg:w-auto lg:px-5",

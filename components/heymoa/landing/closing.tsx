@@ -1,9 +1,13 @@
+import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
+
 import { LandingCta } from "@/components/heymoa/landing-cta";
 import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
 
-import { Face } from "./app";
+import { Face, usePersonName } from "./app";
 import { ExampleStamp, Scribble, Speech } from "./marks";
+import { RICH } from "./rich";
 import { CLOSING_H, CONTAINER, FOCUS_ON_BRAND, RADIUS, SHADOW, vars } from "./tokens";
 
 /**
@@ -26,17 +30,17 @@ import { CLOSING_H, CONTAINER, FOCUS_ON_BRAND, RADIUS, SHADOW, vars } from "./to
  * - 본문은 「훑어보고 검토 완료」를 되풀이하지 않는다 — 히어로 · 근거 · FAQ 가 이미 여러 번 했고, 종이의
  *   「검토 완료 — 나」가 그 몫을 그림으로 말한다. 대신 당번 농담을 닫는다: 이번 주 당번 칸에 HeyMoa를
  *   적으라고 하고(종이의 「받아 적기 — HeyMoa」를 본문이 되풀이하지 않게 「받아 적기」 낱말은 피한다), 히어로의
- *   「지난주에 했는데요」를 받아 「누가 했는지 따질 일도 없다」. 사람이 검토해야 확정된다는 말과 어긋나는 「아무것도 안 해도 된다」류는 쓰지 않는다.
+ *   「지난주에 했는데요」를 받아 「누가 했는지 따질 일도 없습니다」. 사람이 검토해야 확정된다는 말과 어긋나는 「아무것도 안 해도 된다」류는 쓰지 않는다.
  * - 움직임은 조상 `Reveal` 이 화면에 들어올 때 한 번: 종이가 비스듬히 들어오고(0ms) → 「당번표를」
  *   고리(400ms) → 이름 긋기(600 · 750 · 900 · 1050ms) → 손글씨 두 줄(1450 · 1650ms) → 박지훈 말풍선
  *   (1900ms). 모션을 줄이면 처음부터 다 그어진 끝 상태다.
  */
 
 const ROSTER = [
-  ["1주", "김민서"],
-  ["2주", "박지훈"],
-  ["3주", "이서연"],
-  ["4주", "정우재"],
+  [1, "minseo"],
+  [2, "jihoon"],
+  [3, "seoyeon"],
+  [4, "woojae"],
 ] as const;
 
 const SCRAWL =
@@ -48,6 +52,8 @@ const SCRAWL =
  * 빼서 제목과 겹치지 않게 키를 줄인다.
  */
 function DutyRoster() {
+  const t = useTranslations("landing.closing.roster");
+  const name = usePersonName();
   return (
     <div
       aria-hidden
@@ -61,7 +67,7 @@ function DutyRoster() {
 
         <div className="flex items-center justify-between gap-2 border-b border-[var(--tv-rule)] pb-1.5 lg:pb-2">
           <span className="text-[13.5px] leading-[1.3] font-extrabold whitespace-nowrap text-[var(--tv-ink)] lg:text-[15px]">
-            회의록 당번표
+            {t("title")}
           </span>
           <ExampleStamp className="h-5 px-1.5 text-[11px]" />
         </div>
@@ -75,10 +81,12 @@ function DutyRoster() {
                 i > 1 && "hidden lg:flex"
               )}
             >
-              <span className="w-6 shrink-0 text-[var(--tv-muted)] tabular-nums">{week}</span>
+              <span className="min-w-6 shrink-0 whitespace-nowrap text-[var(--tv-muted)] tabular-nums">
+                {t("week", { n: week })}
+              </span>
               <Face who={who} size={18} className="shrink-0" />
               <span className="relative whitespace-nowrap">
-                {who}
+                {name(who)}
                 <Scribble
                   kind="strike"
                   color="ink"
@@ -93,10 +101,10 @@ function DutyRoster() {
 
         <div className="mt-1.5 border-t border-dashed border-[var(--tv-rule-strong)] pt-1.5 lg:mt-2 lg:pt-2">
           <p className={SCRAWL} style={vars({ "--d": "1450ms" })}>
-            받아 적기 — HeyMoa
+            {t("notes")}
           </p>
           <p className={SCRAWL} style={vars({ "--d": "1650ms" })}>
-            검토 완료 — 나
+            {t("review")}
           </p>
         </div>
       </div>
@@ -135,6 +143,7 @@ function Loop() {
 }
 
 export function Closing() {
+  const t = useTranslations("landing.closing");
   return (
     <section className="bg-white pt-16 pb-16 lg:pt-28 lg:pb-24">
       <div className={CONTAINER}>
@@ -146,29 +155,34 @@ export function Closing() {
           {/* 블록 아래 모서리에 걸친다 — 흰 말풍선(먹색 테)이라 흰 바탕으로 넘어가도 모양이 남는다.
               CTA 아래 여백(lg:pb-20)보다 얕게 걸쳐 버튼과 겹치지 않는다. */}
           <div aria-hidden className="absolute -bottom-5 -left-5 hidden whitespace-nowrap lg:block">
-            <Speech who="박지훈" tone="white" tilt={-4} anim="reveal" delay={1900}>
-              저 이번 주는 쉬어도 되죠?
+            <Speech who="jihoon" tone="white" tilt={-4} anim="reveal" delay={1900}>
+              {t("speech")}
             </Speech>
           </div>
 
           <div className="flex flex-col items-center">
             <h2 className={cn(CLOSING_H, "mx-auto max-w-[780px] leading-[1.3] lg:leading-[1.2]")}>
-              다음 회의에는 <br />
-              <span className="relative mr-1.5 whitespace-nowrap lg:mr-2">
-                당번표를
-                <Loop />
-              </span>{" "}
-              접어 두세요
+              {t.rich("title", {
+                ...RICH,
+                loop: (chunks: ReactNode) => (
+                  <span className="relative mr-1.5 whitespace-nowrap lg:mr-2">
+                    {chunks}
+                    <Loop />
+                  </span>
+                ),
+              })}
             </h2>
             <p className="m-0 mt-5 max-w-[520px] text-balance text-[16px] leading-[1.75] text-[var(--tv-on-brand)] lg:text-[18px]">
-              이번 주 당번 칸에는 HeyMoa를 적어 두세요. <br className="hidden lg:inline" />
-              지난주에 누가 했는지 따질 일도 없고요.
+              {t.rich("body", {
+                ...RICH,
+                br: () => <br className="hidden lg:inline" />,
+              })}
             </p>
             {/* 모든 폭에서 글자 폭만큼의 알약이다. 전에는 모바일에서 꽉 채워(w-full) 보라 블록 양옆과
                 24px 간격으로 평행한 노란 띠가 됐고, 둥근 블록 안의 둥근 띠가 테두리 두 겹으로 읽혔다.
                 모바일은 히어로 CTA 와 같은 15px · px-6 으로 줄여 320 에서도 양옆이 30px 넘게 빈다. */}
             <LandingCta
-              label="Google 계정으로 시작"
+              label={t("cta")}
               className={`mt-8 h-[56px] justify-center gap-2 border-transparent bg-[var(--tv-pop)] px-6 text-[15px] font-extrabold text-[var(--tv-ink)] hover:bg-white focus-visible:border-transparent focus-visible:ring-0 lg:mt-10 lg:px-8 lg:text-[16px] ${FOCUS_ON_BRAND}`}
             />
           </div>

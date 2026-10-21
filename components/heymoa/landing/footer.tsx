@@ -1,15 +1,17 @@
 import { ArrowUpRight, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
+import { localePath } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 import { LanguageSwitcher } from "./language-switcher";
 import { ExampleStamp } from "./marks";
 import { CONTAINER, FOCUS, TV_VARS, vars } from "./tokens";
-import { NAV } from "./top-bar";
+import { useSectionNav } from "./top-bar";
 
 /** 브랜드·제품 탐색·문의의 순서로 읽고, 소셜 채널은 브랜드 아래에서 찾도록 합니다. */
 const LINK = cn(
@@ -19,19 +21,20 @@ const LINK = cn(
 
 const HEADING = "m-0 text-[13px] font-bold text-[var(--tv-ink)]";
 
-const COLUMNS: Array<{ title: string; links: Array<[string, string]> }> = [
-  { title: "제품", links: NAV },
-  {
-    title: "안내",
-    links: [
-      ["데스크톱 다운로드", "/download"],
-      ["이용약관", "/terms"],
-      ["개인정보 처리방침", "/privacy"],
-    ],
-  },
-];
-
 export function LandingFooter({ example = false }: { example?: boolean }) {
+  const t = useTranslations("landing.footer");
+  const locale = useLocale();
+  const columns: Array<{ title: string; links: Array<[string, string]> }> = [
+    { title: t("product"), links: useSectionNav() },
+    {
+      title: t("info"),
+      links: [
+        [t("download"), localePath(locale, "/download")],
+        [t("terms"), localePath(locale, "/terms")],
+        [t("privacy"), localePath(locale, "/privacy")],
+      ],
+    },
+  ];
   return (
     <footer
       style={TV_VARS}
@@ -53,7 +56,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
           <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.3fr)] lg:gap-x-12">
             <div className="tv-r col-span-2 lg:col-span-1">
               <Link
-                href="/"
+                href={localePath(locale, "/")}
                 className={cn(
                   "inline-flex h-11 items-center gap-2.5 rounded-full",
                   FOCUS
@@ -71,15 +74,14 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
                 </span>
               </Link>
               <p className="m-0 mt-3 max-w-[270px] text-[15px] leading-[1.7] text-balance text-[var(--tv-body)]">
-                회의 중에는 실시간으로 정리하고, 다음 회의에는 지난 논의를
-                이어갑니다.
+                {t("tagline")}
               </p>
-              <nav aria-label="HeyMoa 소셜 채널" className="mt-5 flex gap-2.5">
+              <nav aria-label={t("social")} className="mt-5 flex gap-2.5">
                 <a
                   href="https://www.instagram.com/heymoa.app/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Instagram (새 탭에서 열림)"
+                  aria-label={t("newTab", { name: "Instagram" })}
                   title="Instagram"
                   className={cn(
                     "inline-flex size-11 items-center justify-center rounded-full border border-[var(--tv-rule-strong)] text-[var(--tv-body)] transition-colors hover:border-[var(--tv-ink)] hover:bg-white hover:text-[var(--tv-ink)]",
@@ -99,7 +101,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
                   href="https://www.threads.com/@heymoa.app"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Threads (새 탭에서 열림)"
+                  aria-label={t("newTab", { name: "Threads" })}
                   title="Threads"
                   className={cn(
                     "inline-flex size-11 items-center justify-center rounded-full border border-[var(--tv-rule-strong)] text-[var(--tv-body)] transition-colors hover:border-[var(--tv-ink)] hover:bg-white hover:text-[var(--tv-ink)]",
@@ -119,10 +121,10 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
               </nav>
             </div>
 
-            {COLUMNS.map((column, i) => (
+            {columns.map((column, i) => (
               <nav
                 key={column.title}
-                aria-label={`푸터 ${column.title}`}
+                aria-label={t("columnLabel", { title: column.title })}
                 className="tv-r"
                 style={vars({ "--i": i + 1 })}
               >
@@ -143,9 +145,9 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
               className="tv-r col-span-2 lg:col-span-1"
               style={vars({ "--i": 3 })}
             >
-              <h2 className={HEADING}>함께 만들어요</h2>
+              <h2 className={HEADING}>{t("feedback")}</h2>
               <p className="m-0 mt-3 text-[15px] leading-[1.7] text-[var(--tv-body)]">
-                써보며 느낀 점이나 궁금한 점을 들려주세요.
+                {t("feedbackBody")}
               </p>
               <a
                 href={`mailto:${siteConfig.contactEmail}`}
@@ -164,17 +166,15 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
           <div className="mt-10 flex flex-col gap-2 border-t border-[var(--tv-rule-strong)] pt-5 text-[13px] leading-[1.6] text-[var(--tv-muted)] lg:mt-12 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
             {example ? (
               <p className="m-0 flex items-center gap-2.5">
-                <ExampleStamp />이 페이지의 회의, 인물, 날짜는 모두 지어낸
-                예시입니다.
+                <ExampleStamp />
+                {t("example")}
               </p>
             ) : null}
             <LanguageSwitcher />
             <p className="m-0">
               © 2026 {siteConfig.name}. All rights reserved.
             </p>
-            <p className="m-0">
-              AI 회의 에이전트는 사용자의 업무 효율을 높이는 보조 수단입니다.
-            </p>
+            <p className="m-0">{t("disclaimer")}</p>
           </div>
         </Reveal>
       </div>

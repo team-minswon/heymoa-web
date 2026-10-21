@@ -8,6 +8,7 @@ import {
   Plug,
   Sparkles,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ComponentType, ReactNode } from "react";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 import { Answer, AppWindow, Composer, RailHead, ScopeChip, UserBubble } from "./app";
 import { Cursor, ExampleStamp, Hand, Scribble, Sticky } from "./marks";
+import { RICH } from "./rich";
 import {
   APP,
   BODY,
@@ -224,9 +226,12 @@ function Pointer({
 
 /* ── 내 에이전트 ──────────────────────────────────────────────────────── */
 
-const ISSUE = "온보딩 이탈 로그 수집 초안";
-/** 승인 카드 요약 = 도구가 만든 한 줄(heymoa-ai `summarize_create_issue`). */
-const CALL = `Linear 이슈 만들기 · ${ISSUE}`;
+/** 승인 카드 요약 = 도구가 만든 한 줄(heymoa-ai `summarize_create_issue`, 「Linear 이슈 만들기 · {이슈}」). */
+function useCall() {
+  const t = useTranslations("landing.safety.agent");
+  const issue = t("issue");
+  return { issue, call: t("call", { issue }) };
+}
 
 /** 승인 인자 한 줄(`ApprovalArgs`). 키는 도구가 쓰는 이름 그대로다. */
 function Arg({ k, className, children }: { k: string; className?: string; children: ReactNode }) {
@@ -245,11 +250,13 @@ function Arg({ k, className, children }: { k: string; className?: string; childr
  * hairline)는 위 hairline 하나로 줄였다(화면 규칙 5) — 아래쪽은 입력창의 위 hairline 이 가른다.
  */
 function ApprovalCard({ className }: { className?: string }) {
+  const t = useTranslations("landing.safety.agent");
+  const { issue, call } = useCall();
   return (
     <div className={cn("border-t border-[var(--el-hairline)] pt-3.5", className)}>
       <div className="flex items-start justify-between gap-3">
         <p className={cn("m-0 min-w-0 flex-1 text-sm leading-relaxed", APP.ink)}>
-          {CALL}
+          {call}
         </p>
         <span
           className={cn(
@@ -259,14 +266,14 @@ function ApprovalCard({ className }: { className?: string }) {
           )}
         >
           <PencilLine aria-hidden className="size-3" />
-          쓰기 도구
+          {t("writeTool")}
         </span>
       </div>
       {/* 앱은 hairline 테두리도 두르지만 창 안 겹친 액자가 돼서 채움만 남긴다(화면 규칙 5). */}
       <dl className="m-0 mt-3 flex flex-col gap-1.5 rounded-[10px] bg-[var(--el-canvas-soft)] px-3 py-2.5">
-        <Arg k="title">{ISSUE}</Arg>
+        <Arg k="title">{issue}</Arg>
         {/* 단계 1 본문이 「제목과 설명까지」라고 말하므로 모바일에서도 둘 다 보인다. */}
-        <Arg k="description">3차 스프린트 킥오프(9월 1일)에서 나온 할 일입니다.</Arg>
+        <Arg k="description">{t("description")}</Arg>
       </dl>
       <div className="mt-3 flex gap-2">
         <span
@@ -275,7 +282,7 @@ function ApprovalCard({ className }: { className?: string }) {
             APP.primary
           )}
         >
-          승인
+          {t("approve")}
           <Cursor className={CURSOR_AT} />
         </span>
         <span
@@ -285,11 +292,11 @@ function ApprovalCard({ className }: { className?: string }) {
             APP.ink
           )}
         >
-          거절
+          {t("decline")}
         </span>
       </div>
       <p className={cn("m-0 mt-2 text-[11px] leading-relaxed", APP.muted)}>
-        답할 때까지 기다립니다. 그만두려면 「중지」를 누르세요.
+        {t("waiting")}
       </p>
     </div>
   );
@@ -306,11 +313,10 @@ function StepDone({ children }: { children: ReactNode }) {
 }
 
 /**
- * 범위 칩 — 앱 그대로 한 줄 말줄임. 줄바꿈되게 풀었더니 320 에서 칩 상자 안 글자가 두 줄로 꺾여 앱에
+ * 범위 칩(`ScopeChip`, 예시 회의 제목) — 앱 그대로 한 줄 말줄임. 줄바꿈되게 풀었더니 320 에서 칩 상자 안 글자가 두 줄로 꺾여 앱에
  * 없는 칩 모양이 됐다. 입력창 상자를 걷어(화면 규칙 5) 상자 안 여백 28px 이 돌아왔고, 좁은 화면에서는 면을
  * 화면 끝까지 깔아 창이 40px 넓어져서 320 에서도 칩이 다 든다.
  */
-const CHIP = <ScopeChip title="3차 스프린트 킥오프" />;
 
 /**
  * 좁은 창(창 폭 320 미만 = 화면 약 360 미만)의 레일 머리 부제 「나만 보는 대화 · 현재 회의 범위」는 말줄임
@@ -338,6 +344,9 @@ const FACE = cn(RADIUS.face, "max-sm:-mx-5 max-sm:rounded-none");
 const COL = "mx-auto w-full max-w-[560px] lg:mx-0 lg:max-w-none";
 
 function AgentTile() {
+  const t = useTranslations("landing.safety.agent");
+  const { call } = useCall();
+  const chip = <ScopeChip title={t("scope")} />;
   return (
     <Reveal className={cn("relative bg-[var(--tv-butter)] p-5 pb-12 sm:p-8 lg:p-10", FACE)}>
       {/*
@@ -353,10 +362,8 @@ function AgentTile() {
             대비로 읽힌다). 이슈 이야기는 이 본문에만 둔다 — 회의를 묻던 대화에서 그대로 부탁한다는 것,
             연동은 워크스페이스 것이라도 만들 때마다 묻는다는 것, 할 일이 저절로 넘어가지 않는다는 것.
           */}
-          <TileHead icon={Sparkles} label="내 에이전트" title="승인한 것만 나갑니다">
-            회의 내용을 묻던 대화에서 그대로 Linear나 GitHub 이슈도 부탁할 수 있습니다. 워크스페이스에
-            연동돼 있어도 만들 때마다 나에게 먼저 묻고, 회의에서 정리된 할&nbsp;일도 저절로 넘어가지
-            않습니다.
+          <TileHead icon={Sparkles} label={t("label")} title={t("title")}>
+            {t("body")}
           </TileHead>
           {/*
             넓을 때 왼쪽 열은 컷 1 바닥에 맞춰 아래에서부터 선다(컷 1 은 `self-end`). 승인 카드 아래(입력창 ·
@@ -372,15 +379,15 @@ function AgentTile() {
           */}
           <Step
             n={1}
-            title="승인 카드가 먼저 뜹니다"
+            title={t("step1.title")}
             className={cn(COL, "mt-8 lg:mt-auto lg:mb-[127px]")}
             note={
               <Pointer tone="pop" tilt={-4} delay={750} arrow={22}>
-                거절해도 「거절함」으로 남아요
+                {t("step1.note")}
               </Pointer>
             }
           >
-            어디에 무엇을 만들지 제목과 설명까지 보여 주고, 내가 고를 때까지 기다립니다.
+            {t("step1.body")}
           </Step>
         </div>
 
@@ -389,28 +396,19 @@ function AgentTile() {
           className={cn("tv-rslide relative m-0", COL, "mt-6 lg:mt-0 lg:self-end")}
           style={vars({ "--d": "100ms" })}
         >
-          <figcaption className="sr-only">
-            그림 1(예시): 회의록 「3차 스프린트 킥오프」 옆 내 에이전트 대화. 「온보딩 이탈 로그 수집,
-            Linear 이슈로 만들어 줘」라고 하자 에이전트가 만들지 물으며 Linear 이슈 만들기 승인 카드가
-            뜹니다. 승인을 누르기 전에는 아무것도 나가지 않고, 그동안 입력창은 잠깁니다. 거절해도 대화에
-            「거절함」으로 기록이 남습니다.
-          </figcaption>
+          <figcaption className="sr-only">{t("figure1")}</figcaption>
           <div className="relative -rotate-1 lg:-rotate-[1.5deg]">
             <PanelNo n={1} />
             <ExampleStamp className="absolute -top-4 -right-2 z-10" />
             <AppWindow className="@container">
               <RailHead className={NARROW_HEAD} />
               <div className="px-4 pt-4 pb-5 sm:px-5 sm:pt-5">
-                <UserBubble chip={CHIP}>온보딩 이탈 로그 수집, Linear 이슈로 만들어&nbsp;줘</UserBubble>
-                <Answer className="mt-4">
-                  이 할 일로 Linear 이슈를 만들까요? 아래 내용을 보고 승인해 주세요.
-                </Answer>
+                <UserBubble chip={chip}>{t("ask")}</UserBubble>
+                <Answer className="mt-4">{t("answer")}</Answer>
                 {/* 앱은 카드를 바로 위 본문 쪽으로 당긴다(-mt-2). 구분선이 서므로 본문과 12px 만 띄운다. */}
                 <ApprovalCard className="mt-3" />
-                <Composer chip={CHIP} busy className={cn("mt-4", DOCKED)} />
-                <p className={cn("m-0 mt-2 text-xs", APP.muted)}>
-                  승인을 기다리는 동안에는 입력할 수 없습니다.
-                </p>
+                <Composer chip={chip} busy className={cn("mt-4", DOCKED)} />
+                <p className={cn("m-0 mt-2 text-xs", APP.muted)}>{t("locked")}</p>
               </div>
             </AppWindow>
           </div>
@@ -425,15 +423,15 @@ function AgentTile() {
         */}
         <Step
           n={2}
-          title="만든 이슈는 대화에 남습니다"
+          title={t("step2.title")}
           className={cn(COL, "mt-12 lg:mt-0 lg:pt-3")}
           note={
             <Pointer tone="white" tilt={3} delay={1100} arrow={22} className="lg:-mr-[88px]">
-              Linear로 바로 가요
+              {t("step2.note")}
             </Pointer>
           }
         >
-          「생각 과정」을 펼치면 이슈 링크와 「승인함」 기록이 있습니다.
+          {t("step2.body")}
         </Step>
 
         {/*
@@ -446,10 +444,7 @@ function AgentTile() {
             className="tv-rslide relative m-0 ml-auto w-full lg:w-[84%]"
             style={vars({ "--d": "450ms" })}
           >
-            <figcaption className="sr-only">
-              그림 2: 승인한 뒤 같은 대화의 생각 과정. 만든 이슈 ONB-12의 링크와 「열어 보기」,
-              「승인함」 줄이 남아 있습니다.
-            </figcaption>
+            <figcaption className="sr-only">{t("figure2")}</figcaption>
             <div className="relative rotate-1 lg:rotate-[1.5deg]">
               <PanelNo n={2} />
               <AppWindow className="@container">
@@ -461,12 +456,12 @@ function AgentTile() {
                         aria-hidden
                         className={cn("size-3.5 shrink-0 rotate-90", APP.muted)}
                       />
-                      <span className={cn("text-xs", APP.muted)}>생각 과정</span>
+                      <span className={cn("text-xs", APP.muted)}>{t("thinking")}</span>
                     </span>
                     <div className="space-y-1.5 pt-1.5 pb-0.5">
                       <StepDone>
                         <p className={cn("m-0 text-xs leading-relaxed", APP.muted)}>
-                          {CALL} · ONB-12 이슈를 만들었습니다: https://linear.app/…
+                          {t("created", { call })}
                         </p>
                         <span
                           className={cn(
@@ -474,7 +469,7 @@ function AgentTile() {
                             APP.ink
                           )}
                         >
-                          열어 보기
+                          {t("open")}
                           <ExternalLink aria-hidden className="size-3" />
                           <Scribble
                             kind="circle"
@@ -486,8 +481,10 @@ function AgentTile() {
                       </StepDone>
                       <StepDone>
                         <p className={cn("m-0 text-xs leading-relaxed", APP.muted)}>
-                          <span className="font-medium text-[var(--el-body-strong)]">승인함</span>
-                          {` · ${CALL}`}
+                          <span className="font-medium text-[var(--el-body-strong)]">
+                            {t("approved")}
+                          </span>
+                          {` · ${call}`}
                         </p>
                       </StepDone>
                     </div>
@@ -506,11 +503,11 @@ function AgentTile() {
 
 /** 사용 내역(최근 것부터). `wide` 는 모바일에서 추리는 줄. */
 const USAGE = [
-  { at: "9월 3일 오후 4:12", tool: "화면 열기", n: 1 },
-  { at: "9월 3일 오후 4:12", tool: "회의 전사", n: 8 },
-  { at: "9월 3일 오후 4:11", tool: "회의 목록", n: 3, wide: true },
-  { at: "9월 3일 오후 4:11", tool: "프로젝트 항목 목록", n: 6, wide: true },
-  { at: "9월 3일 오후 4:11", tool: "연결 확인", n: 1 },
+  { at: "t412", tool: "openScreen", n: 1 },
+  { at: "t412", tool: "transcript", n: 8 },
+  { at: "t411", tool: "meetings", n: 3, wide: true },
+  { at: "t411", tool: "projectItems", n: 6, wide: true },
+  { at: "t411", tool: "checkConnection", n: 1 },
 ] as const;
 
 /**
@@ -519,11 +516,11 @@ const USAGE = [
  * 88px 원 안에서 「워크스페이스」(12px 약 62px)가 한 줄에 든다.
  */
 const STAMPS = [
-  { text: "워크스페이스 하나만", tilt: -8, place: "lg:self-start" },
+  { id: "workspace", tilt: -8, place: "lg:self-start" },
   // 「내가 보는 만큼만」은 줄인 말이라 뜻이 안 읽혔다 — 연결한 사람이 볼 수 없는 프로젝트 · 회의는 도구도 못 본다.
   // 줄은 「내가 볼 수 / 있는 것만」에서만 갈리게 묶는다(1440 에서 「…있는 / 것만」으로 한 낱말이 떨어졌다).
-  { text: "내가\u00a0볼\u00a0수 있는\u00a0것만", tilt: 6, place: "lg:-mt-2 lg:self-end" },
-  { text: "90일 안 쓰면 만료", tilt: -4, place: "lg:-mt-2 lg:self-start" },
+  { id: "visible", tilt: 6, place: "lg:-mt-2 lg:self-end" },
+  { id: "expiry", tilt: -4, place: "lg:-mt-2 lg:self-start" },
 ] as const;
 
 /**
@@ -532,6 +529,7 @@ const STAMPS = [
  * 머리와 가른다(화면 규칙 5). 사용 내역은 앱처럼 `border-t` 로 가른다.
  */
 function DelegationRow() {
+  const t = useTranslations("landing.safety.external");
   return (
     <div className="@container mt-5 border-t border-[var(--el-hairline)] pt-4">
       <div className="flex flex-col gap-3 @lg:flex-row @lg:items-center @lg:justify-between @lg:gap-4">
@@ -541,29 +539,28 @@ function DelegationRow() {
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className={cn("m-0 truncate text-sm font-medium", APP.ink)}>노트북 Claude Code</p>
+              <p className={cn("m-0 truncate text-sm font-medium", APP.ink)}>{t("name")}</p>
               <span
                 className={cn(
                   "inline-flex h-5 items-center rounded-[6px] px-2 text-xs font-medium",
                   APP.success
                 )}
               >
-                연결됨
+                {t("connected")}
               </span>
             </div>
             <p className={cn("m-0 mt-1 text-xs", APP.muted)}>
-              제품팀 · <span className="font-mono">hm_k4Tz9Wq…</span>
+              {t("team")} · <span className="font-mono">hm_k4Tz9Wq…</span>
             </p>
             {/*
               앱 문구 그대로를 덩어리마다 줄바꿈 없이 묶는다 — 좁은 화면에서 「만료」 한 낱말만 다음 줄로
               떨어지지 않고, 「·」 가 줄 머리에 오지 않는다(앞 공백은 줄바꿈 없는 공백).
             */}
             <p className={cn("m-0 mt-0.5 text-xs", APP.muted)}>
-              <span className="whitespace-nowrap">2026년 9월 1일 연결</span>&nbsp;·{" "}
-              <span className="whitespace-nowrap">최근 사용 2026년 9월 3일</span>&nbsp;·{" "}
+              <span className="whitespace-nowrap">{t("since")}</span>&nbsp;·{" "}
+              <span className="whitespace-nowrap">{t("lastUsed")}</span>&nbsp;·{" "}
               <span className={cn(PEN, APP.ink)} style={vars({ "--d": "900ms" })}>
-                <span className="whitespace-nowrap">2026년 12월 2일까지</span>{" "}
-                <span className="whitespace-nowrap">쓰지 않으면 만료</span>
+                {t.rich("expiry", RICH)}
               </span>
             </p>
           </div>
@@ -575,11 +572,11 @@ function DelegationRow() {
               APP.ink
             )}
           >
-            사용 내역
+            {t("usage")}
             <ChevronDown aria-hidden className="size-3.5 rotate-180" />
           </span>
           <span className="relative inline-flex h-8 items-center rounded-[8px] bg-[var(--el-error)]/10 px-2.5 text-[0.8rem] font-medium text-[var(--el-error-strong)]">
-            회수
+            {t("revoke")}
             <Cursor className={CURSOR_AT} />
           </span>
         </div>
@@ -595,10 +592,14 @@ function DelegationRow() {
               )}
             >
               {/* 좁을 때는 시각 칸을 글자 폭만큼만 둔다(시각이 모두 같은 폭이라 도구 칸이 줄을 맞춘다). */}
-              <span className={cn("shrink-0 tabular-nums @sm:w-28", APP.muted)}>{use.at}</span>
+              <span className={cn("shrink-0 tabular-nums @sm:w-28", APP.muted)}>
+                {t(`at.${use.at}`)}
+              </span>
               {/* 도구 이름은 짧은 고정 낱말이라 말줄임 대신 통째로 둔다. */}
-              <span className={cn("whitespace-nowrap", APP.ink)}>{use.tool}</span>
-              <span className={cn("shrink-0 tabular-nums", APP.muted)}>{use.n}건</span>
+              <span className={cn("whitespace-nowrap", APP.ink)}>{t(`tools.${use.tool}`)}</span>
+              <span className={cn("shrink-0 tabular-nums", APP.muted)}>
+                {t("count", { n: use.n })}
+              </span>
             </li>
           ))}
         </ul>
@@ -613,14 +614,15 @@ function Notch({ className }: { className: string }) {
 }
 
 function ExternalTile() {
+  const t = useTranslations("landing.safety.external");
   return (
     <Reveal className={cn("relative flex flex-col bg-[var(--tv-mint)] lg:flex-row", FACE)}>
       {/* 앞면 */}
       <div className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10">
         <TileHead
           icon={Plug}
-          label="외부 에이전트 연결"
-          title="AI 도구에 연결하면 지난 회의를 찾아봐 줍니다"
+          label={t("label")}
+          title={t("title")}
           bodyClassName="lg:max-w-[560px]"
         >
           {/*
@@ -631,28 +633,21 @@ function ExternalTile() {
             (`ScreenTools.open_screen`)는 주소만 돌려준다 — 그래서 「화면을 열어 준다」가 아니라 「링크를 알려 준다」.
             「끊는다」는 설정 화면의 「회수」다(창 안 버튼 · 아래 쪽지가 그 낱말을 그대로 쓴다).
           */}
-          Claude&nbsp;Code나 Codex 같은 AI 도구에 HeyMoa를 연결해 두면, 일하다가 회의에서 정한 것 ·
-          할&nbsp;일 · 회의 기록을 그 자리에서 찾아보고 필요한 HeyMoa 화면 링크도 알려 줍니다. 연결은 직접 만들고,
-          언제든 끊을 수 있습니다.
+          {t("body")}
         </TileHead>
 
         <figure className="relative m-0 mt-8 lg:mt-9">
-          <figcaption className="sr-only">
-            그림: 설정의 내 MCP 연결 화면에 있는 연결 한 줄(예시). 노트북 Claude Code가 연결됨
-            상태이고, 펼친 사용 내역에는 언제 무엇을 몇 건 가져갔는지가 남습니다. 회수를 누르면
-            다음 요청부터 막히고 되돌릴 수 없습니다.
-          </figcaption>
+          <figcaption className="sr-only">{t("figure")}</figcaption>
           <div className="tv-rslide relative" style={vars({ "--d": "100ms" })}>
             <ExampleStamp className="absolute -top-3 -left-2 z-10" />
             <AppWindow className="@container rotate-[0.6deg] p-4 sm:p-5 lg:rotate-1">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="m-0 text-[24px] leading-tight font-light tracking-[-0.03em] @md:text-3xl">
-                    내 MCP 연결
+                    {t("screenTitle")}
                   </p>
                   <p className={cn("m-0 mt-2 hidden text-sm @md:block", APP.muted)}>
-                    Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와 프로젝트를 읽을 수
-                    있게 연결합니다.
+                    {t("screenBody")}
                   </p>
                 </div>
                 <span
@@ -661,7 +656,7 @@ function ExternalTile() {
                     APP.primary
                   )}
                 >
-                  새 연결
+                  {t("newConnection")}
                 </span>
               </div>
               <DelegationRow />
@@ -678,12 +673,12 @@ function ExternalTile() {
               delay={1000}
               className="absolute top-[calc(100%-10px)] right-3 w-[min(248px,80%)] sm:right-6 sm:w-[224px]"
             >
-              회수를 누르면 다음 요청부터 막혀요. 되돌릴 수 없어요.
+              {t("revokeNote")}
             </Sticky>
           </div>
           <div aria-hidden className="mt-7 hidden items-end gap-1 pl-14 lg:flex">
             <Scribble kind="arrow" draw="reveal" delay={1200} rotate={-68} className="h-[32px] w-[50px]" />
-            <Hand>언제 무엇을 몇 건 가져갔는지 남아요</Hand>
+            <Hand>{t("logNote")}</Hand>
           </div>
           {/* 쪽지가 창 아래로 삐져나온 만큼 자리를 둔다(모바일 · 태블릿). */}
           <div aria-hidden className="h-14 lg:hidden" />
@@ -696,7 +691,7 @@ function ExternalTile() {
         <Notch className="-top-[15px] -right-3.5 lg:top-auto lg:right-auto lg:-bottom-3.5 lg:-left-[15px]" />
         <p aria-hidden className="m-0 text-center">
           <span className="block text-[12px] font-extrabold tracking-[0.14em] text-[var(--tv-ink)]">
-            외부 에이전트 출입증
+            {t("pass")}
           </span>
           <span className="mt-0.5 block font-mono text-[11px] text-[var(--tv-muted)]">
             No. hm_k4Tz9Wq…
@@ -705,14 +700,14 @@ function ExternalTile() {
         <ul className="m-0 flex list-none flex-wrap justify-center gap-2.5 p-0 lg:w-full lg:flex-col lg:flex-nowrap lg:gap-0">
           {STAMPS.map((stamp, i) => (
             <li
-              key={stamp.text}
+              key={stamp.id}
               className={cn(
                 "tv-rpop grid size-[88px] place-items-center rounded-full border-2 border-[var(--tv-brand-deep)]/75 p-2 text-center text-[12px] leading-[1.25] font-extrabold text-[var(--tv-brand-deep)] lg:size-[104px] lg:text-[13px]",
                 stamp.place
               )}
               style={{ rotate: `${stamp.tilt}deg`, ...vars({ "--d": `${500 + i * 160}ms` }) }}
             >
-              {stamp.text}
+              {t(`stamps.${stamp.id}`)}
             </li>
           ))}
         </ul>
@@ -724,6 +719,7 @@ function ExternalTile() {
 /* ── 구간 ─────────────────────────────────────────────────────────────── */
 
 export function Safety() {
+  const t = useTranslations("landing.safety");
   return (
     <section
       id="safety"
@@ -733,12 +729,15 @@ export function Safety() {
       <div className={CONTAINER}>
         <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-16">
           <h2 id="safety-title" className={H2}>
-            회의 내용이{" "}
-            <span className={cn(MARKER_REVEAL, "whitespace-nowrap")}>쓰던 도구까지</span> 이어집니다
+            {t.rich("title", {
+              m: (chunks) => (
+                <span className={cn(MARKER_REVEAL, "whitespace-nowrap")}>{chunks}</span>
+              ),
+            })}
           </h2>
           <p className={`${LEAD} lg:pt-3`}>
             {/* 두 타일이 무엇을 하는지 가르지 않는다 — 어디서 부르는지만. 승인 · 회수 같은 규칙은 각 타일이 말한다. */}
-            HeyMoa 안의 내 에이전트도, 연결해 둔 Claude&nbsp;Code · Codex도 회의를 보고 일합니다.
+            {t("lead")}
           </p>
         </Reveal>
 
