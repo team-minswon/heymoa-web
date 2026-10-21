@@ -82,7 +82,7 @@ describe("새 행동 이벤트의 수집 거부", () => {
       track("note_opened", { workspace_id: "01K0000000000", view: "full", source: "list" });
       track("note_tab_opened", { workspace_id: "01K0000000000", tab: "summary" });
       track("review_confirmation_clicked", { workspace_id: "01K0000000000" });
-      track("settings_tab_opened", { workspace_id: "01K0000000000", section: "account" });
+      track("settings_tab_opened", { workspace_id: "01K0000000000", section: "account", from: "settings" });
       track("agent_opened", { surface: "fab" });
       trackMutation("createFeedback", { data: { kind: "QUESTION", message: "보내지 않을 본문입니다" } });
       expect(posthog.capture).not.toHaveBeenCalled();

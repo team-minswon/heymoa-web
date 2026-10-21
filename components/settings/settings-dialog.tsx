@@ -133,6 +133,7 @@ function SettingsSections({
                     track("settings_tab_opened", {
                       workspace_id: workspaceId,
                       section: key,
+                      from: "settings",
                     });
                     onSectionChange(key);
                   }}

@@ -85,7 +85,11 @@ describe("SettingsDialog", () => {
       expect(heard.mock.calls).toEqual([
         [
           "settings_tab_opened",
-          { workspace_id: props.workspaceId, section: "members" },
+          {
+            workspace_id: props.workspaceId,
+            section: "members",
+            from: "settings",
+          },
         ],
       ]);
     } finally {
