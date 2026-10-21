@@ -15,12 +15,13 @@ rule [`docs-layout`](rules/docs-layout.md)이 하네스 안에 설계 문서를 
 | [`api-data`](rules/api-data.md) | 생성 훅으로 호출하기, 생성됐어도 못 쓰는 훅 셋, 계약 미러, MSW 목 |
 | [`docs-layout`](rules/docs-layout.md) | plan을 어디에 어떤 이름으로 쓰나, spec은 왜 여기 없나 |
 | [`issue-tracking`](rules/issue-tracking.md) | Linear 상태 전이, 워크트리 착수, 댓글을 다는 다섯 순간 |
+| [`ui-text-layout`](rules/ui-text-layout.md) | 데스크톱 기준 폭, 확인·경고는 `AlertDialog`, 한국어 줄바꿈, 정렬을 숫자로 확인 |
 
 ## 부를 때 읽히는 skill
 
 | skill | 언제 |
 |---|---|
-| [`merging`](skills/merging/SKILL.md) | 브랜치를 `dev`에 넣을 때. PR이 없어서 이 절차가 곧 게이트입니다 |
+| [`merging`](skills/merging/SKILL.md) | 브랜치를 `dev`에 넣고 모아서 `origin/main`에 올릴 때. PR이 없어서 이 절차가 곧 게이트입니다 |
 | [`code-review`](skills/code-review/SKILL.md) | 리뷰할 때. codex와 리뷰 subagent가 같이 씁니다. 리뷰 방법의 원본이고 루트 `AGENTS.md`는 여기로 보내기만 합니다 |
 
 ## 말 대신 막는 hook

@@ -38,7 +38,7 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 | `pnpm build` | 실제 빌드가 깨지는지 |
 | `pnpm test:e2e` | Playwright. **MSW의 브라우저 서비스 워커 경로를 덮습니다** — vitest는 jsdom이라 그 경로를 지나지 않습니다 |
 
-머지 절차와 codex 리뷰 게이트는 skill [`merging`](.claude/skills/merging/SKILL.md)에 있습니다.
+머지·push 절차는 skill [`merging`](.claude/skills/merging/SKILL.md)에 있습니다.
 커밋·브랜치 제목은 `[APP-N] 제목` 형식입니다.
 
 ## 어디에 무엇이 있나

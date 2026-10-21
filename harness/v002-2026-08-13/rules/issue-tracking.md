@@ -6,8 +6,9 @@
 ## 작업은 이슈에서 시작합니다
 
 **번호 없이 코드를 건드리지 않습니다.** 사용자가 "이거 고쳐줘"로 시작해도 먼저 이슈를 만들고
-번호를 받습니다. 오타 수정이나 문구 손질처럼 되돌리기 쉬운 잡일만 예외이고, 그때는
-`chore:`·`docs:` bare 커밋을 씁니다.
+번호를 받습니다. 오타 수정 같은 잡일도 예외가 아닙니다 — web은 PR이 없어서 커밋 제목이
+이슈로 돌아가는 유일한 연결입니다. 번호 없는 `chore:`·`docs:` 커밋을 다시 써서 번호를 붙인 적이
+있습니다.
 
 이슈를 먼저 만드는 이유는 절차가 아니라 **번호가 있어야 나머지가 이어지기 때문**입니다.
 
@@ -31,9 +32,13 @@ git switch dev && git pull --ff-only
 git worktree add .worktrees/app-N -b feature/app-N-slug dev
 ```
 
+**이슈 여럿이 한 PRO 프로젝트에 묶이면** `dev`에서 `pro-N/슬러그` 브랜치를 먼저 따고, 이슈
+브랜치를 그 위에서 따서 그 브랜치로 squash합니다. 절차는 [`merging`](../skills/merging/SKILL.md)
+3단계. 한 이슈짜리는 위처럼 `dev`에서 바로 땁니다.
+
 **`git fetch`만 하고 넘어가지 않습니다.** fetch는 `origin/dev`만 옮기고 메인 트리에 체크아웃된
-로컬 `dev`는 그대로입니다. 그 상태로 작업하면 나중에 [`merging`](../skills/merging/SKILL.md)이
-낡은 `dev` 위에 squash 커밋을 얹어 마지막 `git push`가 non-fast-forward로 거절됩니다.
+로컬 `dev`는 그대로입니다. 그 상태로 작업하면 [`merging`](../skills/merging/SKILL.md)이
+낡은 `dev` 위에 squash 커밋을 얹어 나중에 `origin/main`으로 올릴 때 non-fast-forward로 거절됩니다.
 
 **메인 워킹 트리를 브랜치로 끌고 다니지 않습니다.** 게이트가 5종이라 한 번 돌리는 데
 몇 분이 걸리고, 그동안 급한 확인이 들어오면 stash와 checkout이 섞입니다. 워크트리는
@@ -44,10 +49,10 @@ git worktree add .worktrees/app-N -b feature/app-N-slug dev
 
 **머지는 메인 워크트리에서 합니다.** [`merging`](../skills/merging/SKILL.md)의
 `git checkout dev`는 워크트리 안에서 실패합니다 — `dev`는 이미 메인 트리가 잡고 있고 git이
-같은 브랜치의 이중 체크아웃을 거부합니다. 검증과 codex 리뷰까지 워크트리에서 끝낸 뒤 레포
-루트로 돌아가 머지합니다.
+같은 브랜치의 이중 체크아웃을 거부합니다. 검증까지 워크트리에서 끝낸 뒤 레포 루트로 돌아가
+머지합니다.
 
-정리는 `main` 승격까지 끝난 뒤입니다. 시점과 명령은 [`merging`](../skills/merging/SKILL.md)
+정리는 `dev` 머지가 끝난 뒤입니다. 시점과 명령은 [`merging`](../skills/merging/SKILL.md)
 5단계가 정합니다 — 여기 두 벌로 적지 않습니다.
 
 ## 번호는 네 곳에 같이 붙습니다
@@ -77,11 +82,12 @@ stateDiagram-v2
 ```
 
 **브랜치를 파는 순간** In Progress로 옮깁니다. 설계를 시작할 때가 아닙니다.
-Done은 `dev`에 squash 머지된 직후입니다 — 이 레포에는 PR이 없어서 머지가 곧 완료입니다.
+Done은 `dev`(PRO 묶음이면 `pro-N/…`)에 squash 머지된 직후입니다 — 이 레포에는 PR이 없어서
+머지가 곧 완료입니다. push 여부와 무관합니다.
 중간에 멈추면 Todo로 되돌리고 왜 멈췄는지 댓글을 답니다. assignee는 항상 채웁니다.
 
-머지 전에는 `codex exec review`를 받습니다. 절차는 skill
-[`merging`](../skills/merging/SKILL.md)에 있습니다.
+머지 절차는 skill [`merging`](../skills/merging/SKILL.md)에 있습니다. codex 리뷰는 사용자가
+요청할 때만 받습니다.
 
 ## 댓글을 다는 다섯 순간
 
