@@ -19,17 +19,24 @@ test("/en/help 와 주제 페이지에 한글이 남지 않는다", async ({ pag
     await page.goto(path);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     // 상단바 · 사이드바 · 본문 · 푸터까지, 화면에 보이는 글 전부. 푸터 언어 선택의 「한국어」(`lang="ko"`)는 일부러 그 언어로 쓴다.
-    const text = await page.evaluate(() => {
-      const body = document.body.cloneNode(true) as HTMLElement;
-      body
-        .querySelectorAll('[lang="ko"], script, style')
-        .forEach((el) => el.remove());
-      return body.textContent ?? "";
-    });
-    expect(
-      text.match(new RegExp(`.{0,20}${HANGUL.source}.{0,20}`, "g")),
-      path
-    ).toBeNull();
+    // dev 서버는 다른 워커가 새 라우트를 컴파일할 때 HMR 로 문서를 다시 불러, 읽는 도중 실행 문맥이
+    // 사라질 수 있다(전체 e2e 에서만 가끔). 읽기를 poll 로 감싸 그때는 다시 읽는다.
+    await expect
+      .poll(
+        () =>
+          page
+            .evaluate(() => {
+              const body = document.body.cloneNode(true) as HTMLElement;
+              body
+                .querySelectorAll('[lang="ko"], script, style')
+                .forEach((el) => el.remove());
+              return body.textContent ?? "";
+            })
+            .then((text) => text.match(new RegExp(`.{0,20}${HANGUL.source}.{0,20}`, "g")))
+            .catch((error: Error) => [`(읽기 실패) ${error.message}`]),
+        { message: path }
+      )
+      .toBeNull();
   }
 });
 
