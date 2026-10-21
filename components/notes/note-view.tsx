@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
+import { track } from "@/lib/analytics/track";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { usePersonalChatScope } from "@/components/chat/personal-chat";
@@ -15,6 +17,9 @@ import {
 } from "@/lib/notes/meeting-state";
 
 type NoteViewMode = "side" | "full";
+
+/** 노트 주소가 서버에 처음 온 모양. `source` 는 메일 링크로 들어왔을 때만 있다(APP-1312). */
+export type NoteRouteQuery = { view?: string; tab?: string; source?: "mail" };
 
 /**
  * `view`·`tab`은 라우터를 안 거친다.
@@ -76,7 +81,7 @@ export function NoteView({
 }: {
   workspaceId: string;
   noteId: string;
-  initialQuery: { view?: string; tab?: string };
+  initialQuery: NoteRouteQuery;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -119,6 +124,22 @@ export function NoteView({
     const timer = setTimeout(() => setIsOpen(true), 10);
     return () => clearTimeout(timer);
   }, []);
+
+  /**
+   * 메일 링크로 들어온 진입을 한 번 센다(APP-1312). 목록 행은 누를 때 이미 `source: "list"` 로 보내므로 여기서는
+   * 메일만 센다 — 둘이 겹치지 않는다. 같은 화면에서 다시 그려져도 다시 보내지 않게 노트마다 한 번이다.
+   */
+  const fromMail = initialQuery.source === "mail";
+  const mailCountedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!fromMail || mailCountedRef.current === noteId) return;
+    mailCountedRef.current = noteId;
+    track("note_opened", {
+      workspace_id: workspaceId,
+      view: current.view,
+      source: "mail",
+    });
+  }, [current.view, fromMail, noteId, workspaceId]);
 
   useEffect(() => {
     // **첫 커밋 전에는 URL을 안 고친다.** App Router는 자기 effect에서 `history.replaceState`를
@@ -198,6 +219,20 @@ export function NoteView({
     replaceNoteSearch(pathname, nextSearch);
   };
 
+  /**
+   * 메일을 보낸 뒤 회의가 이미 끝났으면 요약 탭으로 보낸다(APP-1312, userflow 「메일 링크로 도착한 사람」).
+   * 도착했을 때 한 번만 본다 — 그 뒤 사용자가 고른 탭을 다시 뺏지 않는다.
+   */
+  const mailLandedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!fromMail || !isOpen || phase === "unknown") return;
+    if (mailLandedRef.current === noteId) return;
+    mailLandedRef.current = noteId;
+    if (phase === "ended" && current.tab !== "summary") {
+      setQuery({ tab: "summary" });
+    }
+  });
+
   return (
     <NoteRouteSurface
       view={current.view}
@@ -231,6 +266,7 @@ export function NoteView({
         }
         // **replace다.** push하면 목록에서 뒤로가기가 방금 지운 노트 URL로 돌아가 404가 된다.
         onDeleted={() => router.replace(`/w/${workspaceId}`)}
+        fromMail={fromMail}
         // **지금 주소의 값이다.** 서버가 처음 넘긴 값을 쓰면 같은 링크로 다시 들어왔을 때
         // 「읽고 걷힘 → 다시 들어옴」이 값 변화로 안 보여 점프하지 않는다.
         linkedSegmentId={searchParams.get("segment")}

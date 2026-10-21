@@ -45,6 +45,7 @@ const route = vi.hoisted(() => ({
   } | null,
   disconnectMock: vi.fn(async () => {}),
   toastMock: vi.fn(),
+  logoutMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -73,6 +74,9 @@ vi.mock("@/components/transcription/recording-provider", async () => {
 
 // 공용 표면에는 `success`·`error`·`dismiss`뿐이다. 원치 않은 일이 벌어졌고 사용자가
 // 알아채야 하므로 `error`를 쓴다 — 한 자리를 위해 `info`를 새로 만들지 않는다.
+vi.mock("@/components/auth/auth-provider", () => ({
+  useAuth: () => ({ logout: route.logoutMock }),
+}));
 vi.mock("@/lib/ui/toast", () => ({
   toast: { error: route.toastMock, success: vi.fn(), dismiss: vi.fn() },
 }));
@@ -162,6 +166,7 @@ function resetRoute() {
   route.recording = null;
   route.disconnectMock.mockReset();
   route.toastMock.mockReset();
+  route.logoutMock.mockReset();
 }
 
 describe("WorkspaceRouteLayout", () => {
@@ -430,17 +435,20 @@ describe("강제로 나가질 때 안내", () => {
     vi.useRealTimers();
   });
 
-  // **들어온 적이 없으면 나가진 것도 아니다.** 남의 워크스페이스 URL을 붙여넣으면 첫 조회부터
-  // 404다. 홈으로 보내는 것은 맞지만 「나가게 되었습니다」는 거짓말이다.
-  //
-  // 자발적 나가기도 같은 조건에 걸린다 — 나가기가 `forgetWorkspace`로 상세 조회를 지우고
-  // 이동하므로, 지워진 자리에 새로 뜬 조회에는 데이터가 없다.
-  it("한 번도 들어가 본 적 없는 곳이면 안 띄운다", async () => {
+  // **들어온 적이 없으면 나가진 것도 아니다.** 남의 워크스페이스 URL·다른 계정으로 받은 메일 링크를 열면 첫
+  // 조회부터 404다. 홈으로 보내는 것은 맞지만 「나가게 되었습니다」는 거짓말이다 — 대신 왜 열 수 없는지와
+  // 다른 계정으로 로그인할 길을 둔다(APP-1312).
+  it("한 번도 들어가 본 적 없는 곳이면 열 수 없다고 말하고 계정을 바꿀 길을 둔다", async () => {
     route.workspaceFetch = alwaysGone();
 
     renderLayout(makeQueryClient());
 
     await waitFor(() => expect(route.replaceMock).toHaveBeenCalledWith("/"));
-    expect(route.toastMock).not.toHaveBeenCalled();
+    expect(route.toastMock).toHaveBeenCalledTimes(1);
+    const [message, options] = route.toastMock.mock.calls[0];
+    expect(message).toBe("이 워크스페이스의 회의를 열 수 없습니다.");
+    expect(message).not.toContain("나가게");
+    options.action.onClick();
+    expect(route.logoutMock).toHaveBeenCalled();
   });
 });

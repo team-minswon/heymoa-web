@@ -35,3 +35,17 @@ export function notifyWorkspaceGone() {
     duration: Infinity,
   });
 }
+
+/**
+ * 들어와 본 적 없는 워크스페이스의 주소를 열었다(APP-1312) — 남의 회의 링크이거나 다른 계정으로 받은 메일 링크다.
+ * 홈으로 보낸 뒤에도 왜 거기 있는지 알 수 있게 한 번 말하고, 다른 계정으로 다시 로그인할 길을 둔다. 메일 링크가
+ * 권한을 대신하지 않는다(PRO-67 userflow).
+ */
+export function notifyWorkspaceUnavailable(onSwitchAccount: () => void) {
+  toast.error("이 워크스페이스의 회의를 열 수 없습니다.", {
+    id: TOAST_ID,
+    duration: Infinity,
+    description: "지금 계정이 이 워크스페이스의 멤버가 아닙니다.",
+    action: { label: "다른 계정으로 로그인", onClick: onSwitchAccount },
+  });
+}

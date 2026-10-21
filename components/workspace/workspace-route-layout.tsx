@@ -7,12 +7,15 @@ import {
   useRouter,
   useSearchParams,
 } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { forgetWorkspace } from "@/lib/workspace/cache";
-import { notifyWorkspaceGone } from "@/lib/workspace/gone-notice";
+import {
+  notifyWorkspaceGone,
+  notifyWorkspaceUnavailable,
+} from "@/lib/workspace/gone-notice";
 import { rememberWorkspaceId } from "@/lib/workspaces/last-workspace";
 
 import {
@@ -20,6 +23,7 @@ import {
   useRecording,
 } from "@/components/transcription/recording-provider";
 
+import { useAuth } from "@/components/auth/auth-provider";
 import { NoteFullSkeleton } from "@/components/notes/note-full-skeleton";
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
@@ -148,6 +152,7 @@ function useRedirectWhenWorkspaceGone(workspaceId: string) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const recording = useRecording();
+  const { logout } = useAuth();
   const { data, error, failureReason } = useGetWorkspace(workspaceId, {
     query: { refetchInterval: MEMBERSHIP_POLL_MS },
   });
@@ -176,6 +181,14 @@ function useRedirectWhenWorkspaceGone(workspaceId: string) {
    */
   const wasMember = data !== undefined;
   /**
+   * 이 화면이 한 번이라도 이 워크스페이스를 읽었나. 자발적 나가기는 캐시를 지운 뒤 이동하므로 `wasMember` 가
+   * 거짓이 되지만, 그 화면은 전에 읽은 적이 있다 — 「열 수 없습니다」를 띄우면 안 된다.
+   */
+  const everReadRef = useRef(false);
+  useEffect(() => {
+    if (data !== undefined) everReadRef.current = true;
+  }, [data]);
+  /**
    * **지금 내가 나가는 중인가.** 30초 폴링이 나가기 DELETE와 겹칠 수 있다 — 서버에서 탈퇴가
    * 먼저 커밋되고 그 GET의 404가 DELETE의 204보다 먼저 도착하면, 캐시에는 아직 성공 데이터가
    * 남아 있어 `wasMember`가 참이고 **내가 누른 나가기에 「나가게 되었습니다」가 뜬다.**
@@ -200,12 +213,16 @@ function useRedirectWhenWorkspaceGone(workspaceId: string) {
     // `stop()`이 아니라 `disconnect()`다 — 이미 비멤버라 세션 종료 API도 404로 떨어진다.
     if (recordingHere) void disconnect();
     if (wasMember && !leavingHere) notifyWorkspaceGone();
+    // 들어와 본 적 없는 곳(남의 회의 링크·다른 계정으로 받은 메일 링크)이면 왜 홈인지 말하고 계정을 바꿀 길을 둔다.
+    else if (!wasMember && !everReadRef.current)
+      notifyWorkspaceUnavailable(() => void logout());
     forgetWorkspace(queryClient, workspaceId);
     router.replace("/");
   }, [
     disconnect,
     gone,
     leavingHere,
+    logout,
     queryClient,
     recordingHere,
     router,

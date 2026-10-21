@@ -25,6 +25,8 @@ const state = vi.hoisted(() => ({
   push: vi.fn(),
 }));
 
+const track = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics/track", () => ({ track }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/w/workspace/notes/note",
   useRouter: () => ({ replace: state.replace, push: state.push }),
@@ -308,5 +310,61 @@ describe("NoteView", () => {
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
     await waitFor(() => expect(replacedUrls()).toHaveLength(1));
+  });
+
+  /**
+   * 메일 링크 진입(APP-1312). 노트 진입이 `note_opened{source=mail}` 을 한 번 보내고, 목록 클릭으로 연 노트는
+   * 행이 이미 보냈으므로 여기서 보내지 않는다. 회의가 그새 끝났으면 도착할 때 한 번 요약 탭으로 보낸다.
+   */
+  describe("메일 링크로 도착", () => {
+    afterEach(() => track.mockReset());
+
+    it("메일 진입을 한 번만 세고 노트 id·제목은 싣지 않는다", () => {
+      state.note = { meetingStatus: "PAUSED", meetingStartedBy: null };
+      const view = render(
+        <NoteView
+          workspaceId="workspace"
+          noteId="note"
+          initialQuery={{ source: "mail" }}
+        />
+      );
+      view.rerender(
+        <NoteView
+          workspaceId="workspace"
+          noteId="note"
+          initialQuery={{ source: "mail" }}
+        />
+      );
+      expect(track.mock.calls).toEqual([
+        [
+          "note_opened",
+          { workspace_id: "workspace", view: "full", source: "mail" },
+        ],
+      ]);
+    });
+
+    it("목록에서 연 노트는 진입에서 다시 세지 않는다", () => {
+      render(
+        <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+      );
+      expect(track).not.toHaveBeenCalled();
+    });
+
+    it("그새 끝난 회의면 도착할 때 요약 탭으로 보낸다", async () => {
+      state.search = "view=full&tab=details";
+      state.note = { meetingStatus: "ENDED", meetingStartedBy: null };
+      render(
+        <NoteView
+          workspaceId="workspace"
+          noteId="note"
+          initialQuery={{ source: "mail" }}
+        />
+      );
+      await waitFor(() =>
+        expect(replacedUrls()).toContain(
+          "/w/workspace/notes/note?view=full&tab=summary"
+        )
+      );
+    });
   });
 });

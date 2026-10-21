@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-import { NoteView } from "@/components/notes/note-view";
+import { NoteView, type NoteRouteQuery } from "@/components/notes/note-view";
 import { NoteRealtimeProvider } from "@/components/notes/note-realtime-provider";
 import { DesktopMeetingTimelineReporter } from "@/components/transcription/desktop-meeting-timeline";
 
@@ -14,7 +14,7 @@ export function NoteRouteClient({
 }: {
   workspaceId: string;
   noteId: string;
-  initialQuery: { view?: string; tab?: string };
+  initialQuery: NoteRouteQuery;
 }) {
   const router = useRouter();
   const onNotMember = useCallback(
