@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * 한국어 줄바꿈은 `app/globals.css` 의 body 한 곳(`word-break: keep-all`)이 맡는다. 컴포넌트마다 `break-keep` 을
- * 붙이던 때는 빠진 곳에서 「삭제/돼요」처럼 낱말이 갈렸다(PRO-65). 다시 붙이면 규칙이 두 벌이 된다.
+ * 붙이던 때는 빠진 곳에서 「삭제/돼요」처럼 낱말이 갈렸다(PRO-66). 다시 붙이면 규칙이 두 벌이 된다.
  * 실제 화면에서 낱말이 안 갈리는지는 `e2e/i18n.spec.ts` 가 회의록 삭제 확인창으로 본다.
  */
 describe("전역 줄바꿈", () => {

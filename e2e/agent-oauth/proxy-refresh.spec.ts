@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 /**
- * `proxy.ts` 의 SSR 전 토큰 갱신이 언어 경로(PRO-65)를 들인 뒤에도 그대로인지 본다. 언어 rewrite 는
+ * `proxy.ts` 의 SSR 전 토큰 갱신이 언어 경로(PRO-66)를 들인 뒤에도 그대로인지 본다. 언어 rewrite 는
  * `next.config.ts` 에 있고 proxy 는 바뀌지 않았다 — 그 경계가 지켜지는지가 이 시험의 목적이다.
  *
  * - 일반 요청: 만료면 갱신하고, 새 쿠키가 **SSR**(서버가 그린 사용자)과 **브라우저**(`Set-Cookie`)에 전달된다.

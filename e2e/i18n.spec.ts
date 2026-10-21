@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 /**
- * 웹 국제화 기반(PRO-65-I01). 한국어는 무접두 주소 그대로, 영어는 `/en` 아래에 있고 아직 검색에 공개하지 않는다.
+ * 웹 국제화 기반(PRO-66-I01). 한국어는 무접두 주소 그대로, 영어는 `/en` 아래에 있고 아직 검색에 공개하지 않는다.
  * 크롤러가 읽는 상태 코드·이동·`<head>` 는 서버 응답으로 보고, 화면 전환은 브라우저로 본다.
  */
 

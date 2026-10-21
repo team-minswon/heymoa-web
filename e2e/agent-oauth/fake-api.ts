@@ -44,7 +44,7 @@ type Pending = { agentState: string; redirectUri: string };
 type Log = {
   authorize: string[];
   refresh: number;
-  /** 성공·실패를 가리지 않은 갱신 요청 수. proxy 가 갱신을 시도했는지 본다(PRO-65). */
+  /** 성공·실패를 가리지 않은 갱신 요청 수. proxy 가 갱신을 시도했는지 본다(PRO-66). */
   refreshAttempts: number;
   approve: unknown[];
   deny: unknown[];

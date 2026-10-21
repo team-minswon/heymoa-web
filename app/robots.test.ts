@@ -55,7 +55,7 @@ describe("색인 지시", () => {
 });
 
 // 공개 정적 페이지가 사이트맵에 빠지면 Search Console 이 늦게 찾는다(APP-1036).
-// 고정 목록이 아니라 **원본 목록과 대조**한다 — 마케팅 경로나 가이드 주제를 더했는데 sitemap 에 없으면 실패한다(PRO-65).
+// 고정 목록이 아니라 **원본 목록과 대조**한다 — 마케팅 경로나 가이드 주제를 더했는데 sitemap 에 없으면 실패한다(PRO-66).
 describe("사이트맵", () => {
   async function load(published?: string) {
     vi.resetModules();

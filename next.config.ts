@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   // 산출물 경로가 `.worktrees/` 아래로 한 겹 더 들어간다.
   outputFileTracingRoot: path.join(__dirname),
   turbopack: { root: path.join(__dirname) },
-  // 언어 경로는 proxy 가 아니라 여기서 푼다(PRO-65). proxy 는 토큰 갱신만 하고 matcher 로 투기적 요청을
+  // 언어 경로는 proxy 가 아니라 여기서 푼다(PRO-66). proxy 는 토큰 갱신만 하고 matcher 로 투기적 요청을
   // 건너뛰는데, rewrite 는 prefetch 를 포함한 모든 요청에 같게 걸려야 하기 때문이다. 목록은 `marketing-routes.ts` 하나다.
   async redirects() {
     return marketingRedirects();
