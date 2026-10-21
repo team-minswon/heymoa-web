@@ -3,6 +3,7 @@
 import type { ComponentProps } from "react";
 import Link from "next/link";
 
+import { blockedByRecording } from "@/lib/desktop/open-site-page";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 
 /**
@@ -12,10 +13,12 @@ import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
  * **데스크톱 앱에서는 앱 안에서 이동한다.** 앱은 새 창 요청을 막고 외부 브라우저로 넘기는데
  * (`apps/desktop/src/security.ts`), 같은 사이트 주소는 넘기지 않는다(`policy.ts`의 `externalUrl`) — 새 탭으로
  * 열면 앱에서는 아무 일도 안 일어났다(codex 리뷰). 앱인지는 하이드레이션 뒤에 알므로 그때 target을 뗀다.
- * 녹음 상태는 최상위 Provider에 있어 앱 안 이동에도 이어진다.
+ * 사이트 페이지는 제품 면과 다른 루트 레이아웃이라 이 이동은 전체 로드다. 녹음 중이면 이동하지 않고
+ * 알린다(`blockedByRecording`) — 앱은 녹음의 이탈 거부를 받으면 아무 말 없이 이동을 취소한다.
  */
 export function SitePageLink({
   href,
+  onClick,
   ...props
 }: Omit<ComponentProps<typeof Link>, "href" | "target" | "rel"> & { href: string }) {
   const inApp = useDesktopApp() === true;
@@ -23,6 +26,10 @@ export function SitePageLink({
     <Link
       href={href}
       {...(inApp ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+      onClick={(event) => {
+        onClick?.(event);
+        if (inApp && blockedByRecording(href)) event.preventDefault();
+      }}
       {...props}
     />
   );

@@ -1,4 +1,17 @@
 "use client";
 
-// 두 루트가 같은 오류 화면을 쓴다. 문구 현지화는 범위 밖이다(PRO-66-I02 이후).
-export { default } from "@/app/(product)/error";
+import { useParams } from "next/navigation";
+
+import { ErrorView } from "@/components/layout/error-view";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
+
+/** 마케팅 라우트의 오류. 언어는 주소의 `[lang]` 이다. */
+export default function MarketingError({
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  const { lang } = useParams<{ lang: string }>();
+  return <ErrorView locale={isLocale(lang) ? lang : DEFAULT_LOCALE} reset={reset} />;
+}
