@@ -84,8 +84,8 @@ describe("NoteListRow", () => {
         await screen.findByRole("menuitem", { name: /전체 화면/ })
       );
       expect(heard.mock.calls).toEqual([
-        ["note_opened", { workspace_id: "01K0000000000", view: "side" }],
-        ["note_opened", { workspace_id: "01K0000000000", view: "full" }],
+        ["note_opened", { workspace_id: "01K0000000000", view: "side", source: "list" }],
+        ["note_opened", { workspace_id: "01K0000000000", view: "full", source: "list" }],
       ]);
     } finally {
       unsubscribe();
