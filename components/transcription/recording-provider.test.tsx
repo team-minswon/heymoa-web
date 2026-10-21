@@ -1159,6 +1159,25 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.result.current.error).toBe("이미 종료된 회의입니다.");
   });
 
+  // 자동 종료된 회의는 사용자가 끝낸 적이 없어 「이미 종료」로는 왜 막혔는지 모른다(APP-1328). 서버 문구를 그대로 쓴다
+  it("자동 종료된 회의면 서버가 준 자동 종료 문구를 그대로 보여 준다", async () => {
+    const harness = setup();
+    vi.mocked(harness.api.startSession).mockRejectedValueOnce({
+      success: false,
+      data: null,
+      error: {
+        code: "MEETING_AUTO_ENDED",
+        message: "회의가 자동으로 종료되어 이어서 녹음할 수 없습니다.",
+      },
+    });
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(harness.result.current.error).toBe(
+      "회의가 자동으로 종료되어 이어서 녹음할 수 없습니다."
+    );
+  });
+
   // 같은 브라우저의 다른 탭도 409 를 받는다(서버: 같은 사용자라도 다른 탭이 리스를 쥐고 있으면). 「다른 기기」라고만 하면 사실과 다르다(D-26 G4)
   it("다른 탭이나 기기가 녹음 중이라 막히면 그렇게 말한다", async () => {
     const harness = setup();

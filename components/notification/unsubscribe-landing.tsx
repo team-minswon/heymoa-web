@@ -13,14 +13,6 @@ import {
 import { useUpdateNotificationPreference } from "@/lib/api/generated/notification-settings/notification-settings";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
 
-/**
- * 「메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다」 줄을 싣는가. PRO-67 userflow 는 **자동 종료 실행이 켜진 뒤에만**
- * 보이라고 하는데 수신거부 GET 응답에는 그 판정이 없다.
- * ponytail: 자동 종료 실행 플래그(`auto_end_execute`)를 켜는 배포에서 true 로 바꾼다. 켜고 끄기를 자주 하게 되면
- * 서버가 GET 응답에 판정을 싣게 한다.
- */
-const AUTO_END_ANNOUNCED = false;
-
 const TITLE = "중지된 회의 메일을 받지 않을까요?";
 
 /**
@@ -110,7 +102,8 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
         <li>자동 종료했을 때 보내는 안내</li>
       </ul>
       <p className="mt-3">
-        {AUTO_END_ANNOUNCED
+        {/* 자동 종료가 실제로 돌 때만 고지한다(PRO-67 userflow). 판정은 서버가 싣는다(APP-1328) */}
+        {info?.autoEndActive
           ? "메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다. "
           : null}
         초대 등 다른 메일은 그대로 받습니다.

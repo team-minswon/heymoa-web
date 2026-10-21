@@ -17,6 +17,7 @@ export const getGetMailUnsubscribeResponseMock =
       kind: "MEETING_PAUSED_REMINDER",
       email: "al***@example.com",
       unsubscribed: false,
+      autoEndActive: true,
     },
     error: null,
   });
@@ -27,6 +28,7 @@ export const getUnsubscribeMailResponseMock = (): MailUnsubscribeResponse => ({
     kind: "MEETING_PAUSED_REMINDER",
     email: "al***@example.com",
     unsubscribed: true,
+    autoEndActive: true,
   },
   error: null,
 });

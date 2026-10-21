@@ -465,6 +465,7 @@ function unsubscribeResult(request: Request, run: () => boolean) {
       kind: "MEETING_PAUSED_REMINDER",
       email: "mo***@heymoa.app",
       unsubscribed: run(),
+      autoEndActive: true,
     },
     error: null,
   });

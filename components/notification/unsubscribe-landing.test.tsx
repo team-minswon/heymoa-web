@@ -26,13 +26,14 @@ vi.mock("@/components/auth/auth-provider", () => ({
 }));
 
 const PATH = "*/v1/mail/unsubscribe";
-const ok = (unsubscribed: boolean) =>
+const ok = (unsubscribed: boolean, autoEndActive = false) =>
   HttpResponse.json({
     success: true,
     data: {
       kind: "MEETING_PAUSED_REMINDER",
       email: "al***@example.com",
       unsubscribed,
+      autoEndActive,
     },
     error: null,
   });
@@ -87,12 +88,23 @@ describe("UnsubscribeLanding", () => {
     expect(
       screen.getByText("자동 종료했을 때 보내는 안내")
     ).toBeInTheDocument();
-    // 자동 종료 실행이 켜지기 전이라 일정 고지는 없다.
+    // 서버가 자동 종료가 돌지 않는다고(`autoEndActive=false`) 하면 일정 고지는 없다.
     expect(
       screen.getByText("초대 등 다른 메일은 그대로 받습니다.")
     ).toBeInTheDocument();
     expect(screen.queryByText(/일정대로 자동 종료됩니다/)).toBeNull();
     expect(requests).toEqual(["GET"]);
+  });
+
+  it("자동 종료가 실제로 돌면 메일을 꺼도 일정대로 자동 종료된다고 알린다", async () => {
+    server.use(http.get(PATH, () => ok(false, true)));
+    renderLanding();
+
+    expect(
+      await screen.findByText(
+        "메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다. 초대 등 다른 메일은 그대로 받습니다."
+      )
+    ).toBeInTheDocument();
   });
 
   it("메일 끄기는 POST 한 번 뒤 저장 응답을 받아야 완료를 보인다", async () => {

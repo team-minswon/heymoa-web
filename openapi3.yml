@@ -3095,6 +3095,14 @@ paths:
                       code: RECORDER_DISCONNECTED
                       message: 녹음하던 기기와 연결이 끊겨 있습니다. 잠시 뒤 다시 시작해 주세요.
                       details: null
+                MEETING_AUTO_ENDED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_AUTO_ENDED
+                      message: 회의가 자동으로 종료되어 이어서 녹음할 수 없습니다.
+                      details: null
         '201':
           description: 생성 성공
           content:
@@ -9653,6 +9661,7 @@ paths:
                       kind: MEETING_PAUSED_REMINDER
                       email: al***@example.com
                       unsubscribed: false
+                      autoEndActive: true
                     error: null
         '400':
           description: 잘못된 요청
@@ -9701,6 +9710,7 @@ paths:
                       kind: MEETING_PAUSED_REMINDER
                       email: al***@example.com
                       unsubscribed: true
+                      autoEndActive: true
                     error: null
         '429':
           description: '429'
@@ -18806,6 +18816,7 @@ components:
       properties:
         data:
           required:
+          - autoEndActive
           - email
           - kind
           - unsubscribed
@@ -18829,6 +18840,10 @@ components:
               description: 계정 이메일의 일부를 가린 값
               nullable: false
               example: al***@example.com
+            autoEndActive:
+              type: boolean
+              description: 중지된 회의 자동 종료가 실제로 실행 중인가(실행 플래그 켜짐이고 시험 모드 아님). true 면 화면이 「메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다」를 함께 알린다
+              nullable: false
           description: 성공 응답 데이터
           nullable: false
         success:

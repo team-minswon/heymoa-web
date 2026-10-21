@@ -17,4 +17,6 @@ export type MailUnsubscribeResponseData = {
   kind: MailUnsubscribeResponseDataKind;
   /** 계정 이메일의 일부를 가린 값 */
   email: string;
+  /** 중지된 회의 자동 종료가 실제로 실행 중인가(실행 플래그 켜짐이고 시험 모드 아님). true 면 화면이 「메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다」를 함께 알린다 */
+  autoEndActive: boolean;
 };
