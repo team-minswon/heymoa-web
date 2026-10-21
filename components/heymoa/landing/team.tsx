@@ -149,21 +149,26 @@ function RowIcon({ live }: { live?: boolean }) {
   );
 }
 
-/** `진행자 | 참여자들`(note-list-row). 참여자는 셋까지(390 은 둘까지), 넘치면 「+N」. */
+/**
+ * `진행자 | 참여자들`(note-list-row). 참여자 칸은 셋(390 은 둘)이고, 넘치면 마지막 칸이 「+N」이
+ * 된다 — 제품의 `NoteParticipantAvatars`처럼 「+1」은 나오지 않는다(APP-1288).
+ */
 function RowFaces({ host, people }: { host: string; people: string[] }) {
-  const overLg = people.length - 3;
-  const overSm = people.length - 2;
+  const shownLg = people.length > 3 ? 2 : people.length;
+  const shownSm = people.length > 2 ? 1 : people.length;
+  const overLg = people.length - shownLg;
+  const overSm = people.length - shownSm;
   return (
     <span aria-hidden className="flex shrink-0 items-center gap-1.5 sm:gap-2">
       <Face who={host} size={24} />
       <span className="h-5 w-px bg-[var(--el-hairline-strong)]" />
       <span className="flex items-center">
-        {people.slice(0, 3).map((name, i) => (
+        {people.slice(0, shownLg).map((name, i) => (
           <Face
             key={name}
             who={name}
             size={24}
-            className={cn("ring-2 ring-white", i > 0 && "-ml-2", i === 2 && "max-sm:hidden")}
+            className={cn("ring-2 ring-white", i > 0 && "-ml-2", i >= shownSm && "max-sm:hidden")}
           />
         ))}
         {overSm > 0 ? (
