@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
 import { LandingCta } from "@/components/heymoa/landing-cta";
+import { HelpTip } from "@/components/ui/help-tip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,8 +37,7 @@ export const NAV: Array<[string, string]> = [
  * 메뉴는 셋이다 — 구간 다섯은 「기능」 하나로 접고(펼치면 `NAV`), 다른 페이지로 가는 다운로드 · 도움말을 옆에
  * 둔다. 다섯을 펼쳐 두면 페이지 링크가 붙을 때마다 한 줄이 넘쳤다(768 에서 도움말 하나로 CTA 가 12px 밀렸다).
  * 셋이면 768 에도 넉넉해 md 부터 다 보인다.
- * 「설치 없음」 말풍선은 두지 않는다 — 랜딩에서 「설치할 것 없음 · 신용카드 없음」 류 문구는 뺐고(72f4c27),
- * 어디서 쓰는지(웹 · 데스크톱)는 FAQ 01 하나에만 둔다.
+ * 데스크톱에서는 시작 버튼 아래에 웹·앱의 녹음 범위를 안내한다. 자세한 사용 상황은 도움말로 보충한다.
  *
  * 시작하기의 포커스 링은 하나다. `Button` 기본의 `focus-visible:ring-3` · `border-ring` 을 끄고 보라
  * outline(`FOCUS`)만 쓰는데, 칠한 알약에 `outline-offset-2` 를 그대로 두면 「보라 알약 · 흰 틈 · 보라 선」이
@@ -47,7 +48,7 @@ export const NAV: Array<[string, string]> = [
 export function TopBar() {
   return (
     <header style={TV_VARS} className="sticky top-0 z-30 border-b border-[var(--tv-rule)] bg-white/90 backdrop-blur-md">
-      <div className={`${CONTAINER} flex h-16 items-center gap-4`}>
+      <div className={`${CONTAINER} flex h-16 items-center gap-4 lg:h-24`}>
         <Link
           href="/"
           className={`inline-flex h-11 shrink-0 items-center gap-2.5 rounded-full ${FOCUS}`}
@@ -93,11 +94,24 @@ export function TopBar() {
           </Link>
         </nav>
 
-        <div className="ml-auto flex items-center">
+        <div className="ml-auto flex shrink-0 flex-col items-center gap-1.5">
           <LandingCta
             label="무료로 시작하기"
             className={`h-11 border-transparent bg-[var(--tv-brand)] px-5 text-[14px] font-bold text-white bg-clip-border hover:bg-[var(--tv-brand-deep)] focus-visible:border-[var(--tv-brand-deep)] focus-visible:ring-0 lg:h-10 ${FOCUS} focus-visible:outline-offset-0`}
           />
+          <div className="hidden text-center text-xs leading-4 text-[var(--tv-body)] lg:block">
+            <p>웹은 마이크 입력</p>
+            <div className="flex items-center justify-center gap-0.5">
+              <p>컴퓨터 소리까지 녹음하려면 앱</p>
+              <TooltipProvider>
+                <HelpTip label="웹과 앱의 녹음 방식" className="text-[var(--tv-body)]">
+                  웹에서는 마이크로 들어오는 소리를 녹음합니다. 온라인 회의에서
+                  상대방 목소리 등 컴퓨터 소리도 함께 녹음하려면 데스크톱 앱을
+                  이용해 주세요.
+                </HelpTip>
+              </TooltipProvider>
+            </div>
+          </div>
         </div>
       </div>
     </header>
