@@ -56,11 +56,12 @@ export function Hero() {
       <div
         className={cn(
           CONTAINER,
-          "relative z-10 pt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-end lg:gap-10"
+          "relative z-10 pt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:items-end lg:gap-10"
         )}
       >
         <div>
-          <div className="flex flex-col items-start gap-1 lg:flex-row lg:items-end lg:gap-3">
+          {/* 말풍선은 줄을 꺾지 않는다. 영어처럼 길어 한 줄에 둘이 안 들어가면 둘째가 아래로 내려간다. */}
+          <div className="flex flex-col items-start gap-1 whitespace-nowrap lg:flex-row lg:flex-wrap lg:items-end lg:gap-3">
             <Speech who="minseo" tone="butter" tilt={-2} anim="pop">
               {t("askDuty")}
             </Speech>
