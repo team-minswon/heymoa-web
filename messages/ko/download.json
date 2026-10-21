@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "title": "데스크톱 앱 다운로드",
+    "description": "{brand} 데스크톱 앱을 설치하고 업데이트하는 방법입니다. Mac과 Windows에서 내 목소리와 컴퓨터 소리를 함께 기록합니다."
+  },
+  "og": {
+    "alt": "{brand} 데스크톱 앱 다운로드",
+    "title": "데스크톱 앱 다운로드",
+    "summary": "Mac과 Windows에서 화상회의 소리까지 기록합니다",
+    "label": "헤이모아 데스크톱 앱"
+  },
+  "heading": "HeyMoa 앱 설치",
+  "lead": "회의실에서 나눈 대화는 물론, 화상회의나 강의, 유튜브에서 들리는 말까지 기록합니다.",
+  "stepsLabel": "{platform} 설치 방법",
+  "platforms": {
+    "mac": {
+      "need": "macOS 14.2 이상을 쓰는 Apple Silicon Mac",
+      "installer": "Apple Silicon용 다운로드",
+      "steps": [
+        "다운로드한 DMG 파일을 여세요.",
+        "HeyMoa를 응용 프로그램 폴더로 옮긴 뒤 실행하세요."
+      ]
+    },
+    "windows": {
+      "need": "Windows 11(x64)",
+      "installer": "Windows용 다운로드",
+      "steps": [
+        "다운로드한 설치 파일을 실행하세요.",
+        "「Windows의 PC 보호」 창이 뜨면 「추가 정보」를 누르세요.",
+        "「실행」을 누르고 설치를 진행하세요."
+      ]
+    }
+  },
+  "homebrew": {
+    "intro": "Homebrew를 쓴다면 아래 명령으로 설치할 수 있습니다.",
+    "label": "Homebrew 설치 명령어",
+    "copy": "Homebrew 설치 명령어 복사",
+    "copied": "Homebrew 설치 명령어를 복사했습니다.",
+    "failed": "복사하지 못했습니다. 직접 선택해 복사해 주세요."
+  },
+  "permissions": "설치한 뒤에는 마이크 권한을 허용해 주세요. Mac의 컴퓨터 소리 권한은 첫 녹음 때 따로 묻습니다.",
+  "guide": "권한 설정과 업데이트 방법은 <link>데스크톱 앱 사용법</link>에 있습니다.",
+  "autoDownloadTitle": "HeyMoa 설치 파일 다운로드"
+}

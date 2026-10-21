@@ -11,6 +11,9 @@ import {
   RADIUS,
   TV_VARS,
 } from "@/components/heymoa/landing/tokens";
+import { messagesFor } from "@/i18n/messages";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
+import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export type LegalSection = {
@@ -22,6 +25,17 @@ export type LegalSection = {
 
 const anchorOf = (section: LegalSection, index: number) =>
   section.id ?? `section-${index + 1}`;
+
+/** 언어 파일의 문서 문장 속 `{email}` 을 문의 주소로 채운다. 법률 문장이라 ICU 해석(`t()`)을 거치지 않고 글자 그대로 둔다. */
+export const withContact = (text: string) =>
+  text.replaceAll("{email}", siteConfig.contactEmail);
+
+/** 시행일(`2026-10-18`)을 그 언어의 긴 날짜로. ko 「2026년 10월 18일」, en 「October 18, 2026」. */
+const longDate = (locale: Locale, iso: string) =>
+  new Intl.DateTimeFormat(locale === "ko" ? "ko-KR" : "en-US", {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).format(new Date(iso));
 
 /** 문서 안 링크는 보라 진한 색이다(흰 면 8.8:1 · 연보라 면 7.9:1). */
 export const LINK = cn(
@@ -48,24 +62,26 @@ export const LINK = cn(
  * 목차 → 조항 이동의 도착점을 가리지 않게 조항마다 `scroll-mt-20`(80px, 랜딩 구간과 같은 값)을 준다.
  */
 export function LegalDocument({
-  label,
+  locale,
+  path,
   title,
   description,
   effectiveDate,
   sections,
-  dateLabel = "시행일",
 }: {
-  label: string;
+  locale: Locale;
+  /** 무접두 경로(`/terms`). 영어판 고지의 한국어본 링크가 쓴다. */
+  path: string;
   title: string;
   description: string;
+  /** 시행일(ISO 날짜). 화면에는 그 언어의 긴 날짜로 보인다. */
   effectiveDate: string;
   sections: readonly LegalSection[];
-  /** 도움말이 같은 틀을 쓴다 — 거기서는 「최종 수정일」이다. */
-  dateLabel?: string;
 }) {
+  const ui = messagesFor(locale).legal.ui;
   // 좁은 화면의 접는 목차와 넓은 화면의 sticky 카드가 같은 목록을 쓴다(한쪽은 늘 display:none).
   const toc = (
-    <nav aria-label={`${title} 목차`}>
+    <nav aria-label={ui.tocLabel.replace("{title}", title)}>
       <ol className="m-0 flex list-none flex-col gap-0.5 p-0">
         {sections.map((section, index) => (
           <li key={section.title}>
@@ -89,17 +105,28 @@ export function LegalDocument({
       <div className={cn(CONTAINER, "pt-3 lg:pt-6")}>
         <header className={cn(RADIUS.face, "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-16")}>
           <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
-            {label}
+            {ui.label}
           </p>
           {/* 랜딩 섹션 제목(H2)과 같은 급이다. 히어로 급을 쓰면 문서 하나가 첫 화면처럼 군다. */}
           <h1 className={cn(H2, "mt-4 max-w-[820px]")}>{title}</h1>
           <p className={cn(LEAD, "mt-4 max-w-[640px]")}>{description}</p>
           <p className="m-0 mt-6 flex flex-wrap gap-x-5 gap-y-1 text-[14px] leading-[1.6] text-[var(--tv-muted)]">
             <span>
-              {dateLabel}{" "}
-              <b className="font-bold text-[var(--tv-ink)]">{effectiveDate}</b>
+              {ui.effectiveDate}{" "}
+              <b className="font-bold text-[var(--tv-ink)]">
+                {longDate(locale, effectiveDate)}
+              </b>
             </span>
           </p>
+          {/* 번역본의 법적 지위(PRO-66 결정): 참고용이고 한국어본이 우선한다. 한국어본 자신에는 두지 않는다. */}
+          {locale !== DEFAULT_LOCALE ? (
+            <p className="m-0 mt-4 max-w-[640px] rounded-[16px] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[var(--tv-body)]">
+              {ui.translationNotice}{" "}
+              <a href={path} hrefLang="ko" className={LINK}>
+                {ui.koreanVersion}
+              </a>
+            </p>
+          ) : null}
         </header>
       </div>
 
@@ -118,7 +145,7 @@ export function LegalDocument({
             )}
           >
             <FileText aria-hidden className="size-4 text-[var(--tv-muted)]" />
-            문서 목차
+            {ui.toc}
             <ChevronDown
               aria-hidden
               className="ml-auto size-4 text-[var(--tv-muted)] transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
@@ -129,7 +156,7 @@ export function LegalDocument({
         <aside className="box-border hidden rounded-[20px] bg-[var(--tv-lav-soft)] p-5 lg:sticky lg:top-24 lg:block">
           <p className="m-0 flex items-center gap-2 text-[13px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]">
             <FileText aria-hidden className="size-4" />
-            문서 목차
+            {ui.toc}
           </p>
           <div className="mt-3">{toc}</div>
         </aside>

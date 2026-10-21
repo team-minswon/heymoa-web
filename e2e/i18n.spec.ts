@@ -278,3 +278,67 @@ test("회의록 삭제 확인창의 긴 문구에서 한국어 낱말이 줄 끝
   expect(result.wordBreak).toBe("keep-all");
   expect(result.broken).toEqual([]);
 });
+
+/** 화면의 글자(언어 선택의 「한국어」처럼 `lang="ko"` 로 표시한 것 제외)에서 한글을 모은다. */
+const visibleHangul = (page: Page) =>
+  page.evaluate(() => {
+    const found: string[] = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      if (node.parentElement?.closest('[lang="ko"], script, style')) continue;
+      if (/[가-힣]/.test(node.data)) found.push(node.data.trim());
+    }
+    for (const element of document.querySelectorAll("[aria-label], [title], [alt]")) {
+      for (const name of ["aria-label", "title", "alt"]) {
+        const value = element.getAttribute(name);
+        if (value && /[가-힣]/.test(value) && !element.closest('[lang="ko"]')) found.push(value);
+      }
+    }
+    return found;
+  });
+
+for (const { path, title } of [
+  { path: "/en/download", title: "Download the desktop app | HeyMoa" },
+  { path: "/en/terms", title: "Terms of Service | HeyMoa" },
+  { path: "/en/privacy", title: "Privacy Policy | HeyMoa" },
+]) {
+  test(`${path} 는 제목·머리·본문이 영어이고 한글이 남지 않는다`, async ({ page, request }) => {
+    const html = await (await request.get(path)).text();
+    const head = html.slice(0, html.indexOf("</head>"));
+    expect(head).toContain(`<title>${title}</title>`);
+    expect(head).toContain('property="og:locale" content="en_US"');
+    expect(head.replaceAll("헤이모아", "").replaceAll("헤이 모아", "")).not.toMatch(/[가-힣]/);
+
+    await page.goto(path);
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    expect(await visibleHangul(page)).toEqual([]);
+  });
+}
+
+test("다운로드 공유 이미지는 언어마다 따로 나오고 alt 도 그 언어다", async ({ request }) => {
+  const en = await (await request.get("/en/download")).text();
+  expect(en).toContain('property="og:image" content="https://heymoa.app/en/download/opengraph-image"');
+  expect(en).toContain('property="og:image:alt" content="Download the HeyMoa desktop app"');
+  const ko = await (await request.get("/download")).text();
+  expect(ko).toContain('property="og:image" content="https://heymoa.app/download/opengraph-image"');
+  expect(ko).toContain('property="og:image:alt" content="HeyMoa(헤이모아) 데스크톱 앱 다운로드"');
+
+  const [enImage, koImage] = await Promise.all(
+    ["/en/download/opengraph-image", "/download/opengraph-image"].map((url) => request.get(url))
+  );
+  for (const image of [enImage, koImage]) {
+    expect(image.status()).toBe(200);
+    expect(image.headers()["content-type"]).toBe("image/png");
+  }
+  // 글이 다르면 그림도 다르다.
+  expect(Buffer.compare(await enImage.body(), await koImage.body())).not.toBe(0);
+});
+
+test("약관 영어판의 한국어본 링크는 같은 문서의 한국어 주소로 간다", async ({ page }) => {
+  await page.goto("/en/privacy#section-5");
+  await expect(page.locator("#section-5 h2")).toHaveText("5. Cookies and Analytics");
+  await page.getByRole("link", { name: "Read the Korean version" }).click();
+  await expect(page).toHaveURL("/privacy");
+  await expect(page.locator("#section-5 h2")).toHaveText("5. 쿠키와 접속 분석");
+});

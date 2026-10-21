@@ -1,8 +1,22 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import PrivacyPage from "@/app/[lang]/privacy/page";
 import TermsPage from "@/app/[lang]/terms/page";
+import type { Locale } from "@/lib/i18n/locales";
+
+// 페이지가 주소의 언어(root param)를 읽는다. vitest 에는 Next 라우팅이 없어 언어를 직접 준다.
+const route = vi.hoisted(() => ({ locale: "ko" as Locale }));
+vi.mock("@/lib/i18n/current", () => ({
+  marketingLocale: async () => route.locale,
+}));
+
+const renderPage = async (Page: () => Promise<React.ReactElement>, locale: Locale) => {
+  route.locale = locale;
+  return render(await Page());
+};
+
+const HANGUL = /[가-힣]/;
 
 describe("HeyMoa legal pages", () => {
   // 언마운트하지 않으면 React scheduler가 setImmediate로 잡아 둔 작업이 jsdom 환경이
@@ -10,8 +24,8 @@ describe("HeyMoa legal pages", () => {
   // 1이 되어, 머지 게이트에서 내 변경이 깬 줄 알고 시간을 쓴다 (APP-238).
   afterEach(cleanup);
 
-  it("describes meeting transcription data on the privacy page", () => {
-    render(<PrivacyPage />);
+  it("describes meeting transcription data on the privacy page", async () => {
+    await renderPage(PrivacyPage, "ko");
 
     expect(
       screen.getByRole("heading", { name: "개인정보 처리방침", level: 1 })
@@ -34,10 +48,13 @@ describe("HeyMoa legal pages", () => {
     expect(document.body.textContent).toMatch(/운영자 알림/);
     expect(document.getElementById("section-1")).toHaveTextContent("서비스 이용 기록");
     expect(document.body.textContent).not.toMatch(/【/);
+    // 문의 주소 자리표시(`{email}`)가 채워진다.
+    expect(document.body.textContent).toContain("team.minswon@gmail.com로 보내 주시기 바랍니다.");
+    expect(document.body.textContent).not.toMatch(/\{email\}/);
   });
 
-  it("sets responsible recording expectations in the terms", () => {
-    render(<TermsPage />);
+  it("sets responsible recording expectations in the terms", async () => {
+    await renderPage(TermsPage, "ko");
 
     expect(
       screen.getByRole("heading", { name: "이용약관", level: 1 })
@@ -48,7 +65,37 @@ describe("HeyMoa legal pages", () => {
     expect(
       screen.getAllByRole("navigation", { name: "이용약관 목차" })
     ).toHaveLength(2);
-    // 도움말이 같은 틀을 쓰면서 문구를 바꿀 수 있게 됐다 — 약관은 기본값 그대로다
-    expect(screen.getByText("시행일", { exact: false })).toBeVisible();
+    expect(screen.getByText("2026년 10월 18일")).toBeVisible();
+    // 번역본 고지는 한국어본에 서지 않는다.
+    expect(screen.queryByRole("link", { name: "한국어본 보기" })).not.toBeInTheDocument();
   });
+
+  it.each([
+    [TermsPage, "Terms of Service", 9, "/terms"],
+    [PrivacyPage, "Privacy Policy", 10, "/privacy"],
+  ] as const)(
+    "영어판(%#)은 한글 없이 같은 조 번호·앵커로 서고 맨 위에 한국어본 우선 고지가 있다",
+    async (Page, title, count, path) => {
+      const { container } = await renderPage(Page, "en");
+
+      expect(screen.getByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
+      expect(screen.getByText(/the Korean version prevails/)).toBeVisible();
+      expect(screen.getByRole("link", { name: "Read the Korean version" })).toHaveAttribute(
+        "href",
+        path
+      );
+      expect(screen.getByText("October 18, 2026")).toBeVisible();
+      // 다른 화면이 링크하는 앵커(`#section-5` 등)가 언어와 상관없이 같은 조를 가리킨다.
+      const sections = container.querySelectorAll("article > section");
+      expect(sections).toHaveLength(count);
+      sections.forEach((section, index) => {
+        expect(section.id).toBe(`section-${index + 1}`);
+        expect(section.querySelector("h2")?.textContent).toMatch(new RegExp(`^${index + 1}\\. `));
+      });
+      // JSON-LD(script)까지 포함해 한글이 남지 않는다.
+      expect(container.textContent).not.toMatch(HANGUL);
+      expect(document.body.innerHTML).not.toMatch(HANGUL);
+      expect(container.textContent).not.toMatch(/\{email\}/);
+    }
+  );
 });

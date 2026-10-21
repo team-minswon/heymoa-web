@@ -1,15 +1,22 @@
+import { getTranslations } from "next-intl/server";
+
 import { helpOgImage, helpOgSize } from "@/lib/help/og";
-import { siteConfig } from "@/lib/site";
+import { isLocale } from "@/lib/i18n/locales";
 
 export const dynamic = "force-static";
-export const alt = `${siteConfig.brandLabel} 데스크톱 앱 다운로드`;
+// alt 는 언어마다 달라 페이지 metadata(`download/page.tsx` 의 `openGraph.images`)가 단다.
 export const size = helpOgSize;
 export const contentType = "image/png";
 
-export default function Image() {
-  return helpOgImage(
-    "데스크톱 앱 다운로드",
-    "Mac · Windows에서 화상회의 녹음까지 해요",
-    "헤이모아 데스크톱 앱"
-  );
+export default async function Image({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const t = await getTranslations({
+    locale: isLocale(lang) ? lang : "ko",
+    namespace: "download.og",
+  });
+  return helpOgImage(t("title"), t("summary"), t("label"));
 }

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { marketingLocale } from "@/lib/i18n/current";
-import { localizedMetadata } from "@/lib/i18n/metadata";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
 import { TrackedLink } from "@/components/analytics/tracked-link";
 import { DesktopAutoDownload } from "@/components/heymoa/desktop-auto-download";
 import { HomebrewInstallCommand } from "@/components/heymoa/homebrew-install-command";
+import { RICH } from "@/components/heymoa/landing/rich";
 import {
   BODY,
   CARD_TITLE,
@@ -19,66 +19,78 @@ import {
 } from "@/components/heymoa/landing/tokens";
 import { WebPageJsonLd } from "@/components/help/json-ld";
 import { DESKTOP_INSTALLERS } from "@/lib/desktop/downloads";
-import { siteConfig } from "@/lib/site";
+import { marketingLocale } from "@/lib/i18n/current";
+import { localePath } from "@/lib/i18n/locales";
+import { localizedMetadata } from "@/lib/i18n/metadata";
+import { siteConfig, siteMetadataFor } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
-const DESCRIPTION =
-  "HeyMoa(헤이모아) 데스크톱 앱 설치와 업데이트 안내. Mac·Windows에서 내 목소리와 컴퓨터 소리를 함께 기록합니다.";
+
+/** 플랫폼 이름(Mac · Windows)은 어느 언어에서나 그대로이고, 나머지 글은 언어 파일 `download` 에 있다. */
+const PLATFORMS = [
+  { key: "mac", name: "Mac", installers: DESKTOP_INSTALLERS.mac },
+  { key: "windows", name: "Windows", installers: DESKTOP_INSTALLERS.windows },
+] as const;
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await marketingLocale();
+  const t = await getTranslations({ locale, namespace: "download" });
+  const brand = (await getTranslations({ locale, namespace: "landing.meta" }))(
+    "brandLabel"
+  );
   return {
-    title: "데스크톱 다운로드",
-    description: DESCRIPTION,
-    ...localizedMetadata(await marketingLocale(), "/download"),
+    title: t("meta.title"),
+    description: t("meta.description", { brand }),
+    ...localizedMetadata(locale, "/download"),
+    // 공유 이미지 파일(`opengraph-image.tsx`)의 `alt` 는 언어마다 바꿀 수 없어 여기서 단다. 이 세그먼트에서
+    // `openGraph.images` 를 주면 Next 는 파일 규칙의 이미지를 덧붙이지 않는다. 나머지 og 값은 사이트 공통값이다.
+    openGraph: {
+      ...siteMetadataFor(locale).openGraph,
+      images: [
+        {
+          url: `${localePath(locale, "/download")}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          type: "image/png",
+          alt: t("og.alt", { brand }),
+        },
+      ],
+    },
   };
 }
 
-const PLATFORMS = [
-  {
-    name: "Mac",
-    installers: DESKTOP_INSTALLERS.mac,
-    need: "macOS 14.2 이상 · Apple Silicon",
-    steps: [
-      "다운로드한 DMG 파일을 여세요.",
-      "HeyMoa를 응용 프로그램 폴더로 옮긴 뒤 실행하세요.",
-    ],
-  },
-  {
-    name: "Windows",
-    installers: DESKTOP_INSTALLERS.windows,
-    need: "Windows 11 x64",
-    steps: [
-      "다운로드한 설치 파일을 실행하세요.",
-      "「Windows의 PC 보호」 창이 뜨면 「추가 정보」를 누르세요.",
-      "「실행」을 누르고 설치를 진행하세요.",
-    ],
-  },
-] as const;
-
 /** 랜딩과 같은 색·기둥을 쓰고, 루트 레이아웃의 main 안에 설치 방법을 둡니다. */
-export default function DownloadPage() {
+export default async function DownloadPage() {
+  const locale = await marketingLocale();
+  const t = await getTranslations({ locale, namespace: "download" });
+  const brand = (await getTranslations({ locale, namespace: "landing.meta" }))(
+    "brandLabel"
+  );
   return (
     <div
       style={TV_VARS}
       className="w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8"
     >
       <WebPageJsonLd
-        name="데스크톱 앱 다운로드"
-        description={DESCRIPTION}
-        path="/download"
+        name={t("meta.title")}
+        description={t("meta.description", { brand })}
+        path={localePath(locale, "/download")}
+        inLanguage={locale}
         extra={{
           "@type": "SoftwareApplication",
-          name: siteConfig.brandLabel,
+          name: brand,
           applicationCategory: "BusinessApplication",
-          operatingSystem: PLATFORMS.map(({ need }) => need).join(", "),
+          operatingSystem: PLATFORMS.map(({ key }) =>
+            t(`platforms.${key}.need`)
+          ).join(", "),
           downloadUrl: PLATFORMS.flatMap(({ installers }) =>
             installers.map(({ href }) => `${siteConfig.url}${href}`)
           ),
         }}
       />
       <Suspense fallback={null}>
-        <DesktopAutoDownload />
+        <DesktopAutoDownload title={t("autoDownloadTitle")} />
       </Suspense>
       <div className={cn(CONTAINER, "pt-3 lg:pt-6")}>
         <header
@@ -87,10 +99,8 @@ export default function DownloadPage() {
             "bg-[var(--tv-lav)] px-6 py-8 lg:px-12 lg:py-10"
           )}
         >
-          <h1 className={H2}>HeyMoa 앱 설치</h1>
-          <p className={cn(LEAD, "mt-3")}>
-            회의실 대화도, 화상회의·강의·유튜브에서 듣는 말도 기록하세요.
-          </p>
+          <h1 className={H2}>{t("heading")}</h1>
+          <p className={cn(LEAD, "mt-3")}>{t("lead")}</p>
         </header>
       </div>
 
@@ -103,14 +113,16 @@ export default function DownloadPage() {
       >
         {PLATFORMS.map((platform) => (
           <section
-            key={platform.name}
+            key={platform.key}
             className={cn(
               RADIUS.card,
               "border border-[var(--tv-rule)] bg-white p-6 lg:p-8"
             )}
           >
             <h2 className={CARD_TITLE}>{platform.name}</h2>
-            <p className={cn(BODY, "mt-3")}>{platform.need}</p>
+            <p className={cn(BODY, "mt-3")}>
+              {t(`platforms.${platform.key}.need`)}
+            </p>
             <div className="mt-5 flex flex-wrap gap-3">
               {platform.installers.map((installer) => (
                 <TrackedLink
@@ -122,25 +134,30 @@ export default function DownloadPage() {
                     FOCUS
                   )}
                 >
-                  {installer.label}
+                  {t(`platforms.${platform.key}.installer`)}
                 </TrackedLink>
               ))}
             </div>
             <ol
-              aria-label={`${platform.name} 설치 방법`}
+              aria-label={t("stepsLabel", { platform: platform.name })}
               className={cn(
                 BODY,
                 "mt-5 list-decimal space-y-2 pl-5 marker:font-semibold"
               )}
             >
-              {platform.steps.map((step) => (
+              {t.raw(`platforms.${platform.key}.steps`).map((step: string) => (
                 <li key={step}>{step}</li>
               ))}
             </ol>
-            {platform.name === "Mac" && (
+            {platform.key === "mac" && (
               <div className="mt-5">
-                <p className={BODY}>Homebrew로 설치</p>
-                <HomebrewInstallCommand />
+                <p className={BODY}>{t("homebrew.intro")}</p>
+                <HomebrewInstallCommand
+                  label={t("homebrew.label")}
+                  copyLabel={t("homebrew.copy")}
+                  copied={t("homebrew.copied")}
+                  failed={t("homebrew.failed")}
+                />
               </div>
             )}
           </section>
@@ -148,22 +165,22 @@ export default function DownloadPage() {
       </div>
 
       <div className={cn(CONTAINER, "mt-6 lg:mt-8")}>
-        <p className={cn(BODY, "mb-2")}>
-          마이크 권한을 허용해 주세요. Mac의 컴퓨터 소리 권한은 첫 녹음 때
-          요청합니다.
-        </p>
+        <p className={cn(BODY, "mb-2")}>{t("permissions")}</p>
         <p className={BODY}>
-          권한 설정과 업데이트 방법은{" "}
-          <Link
-            href="/help/desktop"
-            className={cn(
-              "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
-              FOCUS
-            )}
-          >
-            데스크톱 앱 사용법
-          </Link>
-          에서 확인하세요.
+          {t.rich("guide", {
+            ...RICH,
+            link: (chunks) => (
+              <Link
+                href={localePath(locale, "/help/start/desktop")}
+                className={cn(
+                  "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
+                  FOCUS
+                )}
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
       </div>
     </div>
