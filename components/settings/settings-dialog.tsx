@@ -162,9 +162,11 @@ function SettingsSections({
           ))}
         </div>
       </nav>
+      {/* **탭을 오가도 본문 폭이 같아야 한다(APP-1356).** 긴 탭에만 스크롤바(클래식 15px)가 생기면 그만큼 본문이
+          좁아져 머리글이 옆으로 움직였다 — 자리를 늘 잡아 둔다. 탭마다 폭 상한도 720 하나로 맞췄다(672 와 섞여 9px 흔들렸다). */}
       <div
         data-testid="settings-panel"
-        className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 sm:p-10 md:p-14"
+        className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 [scrollbar-gutter:stable] sm:p-10 md:p-14"
       >
         {section === "account" ? (
           <DataBoundary

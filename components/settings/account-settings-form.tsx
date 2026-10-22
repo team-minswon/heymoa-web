@@ -20,7 +20,10 @@ export function AccountSettingsForm() {
   const user = response.data.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8" aria-label="내 계정 설정">
+    <div
+      className="mx-auto w-full max-w-[720px] space-y-8"
+      aria-label="내 계정 설정"
+    >
       <Header />
       <div className={PROFILE_CARD}>
         <PersonAvatar
@@ -100,7 +103,7 @@ function AnalyticsConsentCard() {
 export function AccountSettingsFormSkeleton() {
   return (
     <div
-      className="mx-auto max-w-2xl space-y-8"
+      className="mx-auto w-full max-w-[720px] space-y-8"
       aria-label="내 계정 설정 불러오는 중"
     >
       <Header />

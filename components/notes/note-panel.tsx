@@ -734,7 +734,14 @@ export function NotePanel({
                   onDeleted={onDeleted ?? onClose}
                 />
               </div>
-            ) : null}
+            ) : (
+              // 메뉴 자리를 미리 잡는다(APP-1356). 탭 목록이 이 버튼 바로 왼쪽에 붙어 있어, 노트가 도착하며 메뉴가
+              // 끼어들면 탭 줄이 44px 왼쪽으로 밀렸다
+              <Skeleton
+                aria-hidden
+                className="size-8 shrink-0 rounded-control"
+              />
+            )}
             {/* **접힌 레일을 다시 여는 손잡이.** 레일이 통째로 빠지므로 남는 줄이 없다 — 여기가
                 그 자리다. 기본값(`null`)에서는 좁은 화면에서만 레일이 접혀 있으므로 그때만 선다. */}
             {showAgentRail && (agentRail === false || railFoldedOnNarrow) ? (

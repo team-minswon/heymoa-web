@@ -37,9 +37,10 @@ test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 �
   await expect(
     guide.getByText("--scope user heymoa", { exact: false })
   ).toBeVisible();
+  // 안 고른 앱의 안내도 자리를 지키려고 그려 둔다(APP-1356) — 보이지만 않으면 된다
   await expect(
     guide.getByText("설정 › 커넥터를 엽니다", { exact: false })
-  ).toHaveCount(0);
+  ).toBeHidden();
   await page.getByRole("button", { name: "개인 토큰 만들기" }).click();
   await page.getByLabel("연결 이름").fill("방금 만든 연결");
   await expect(

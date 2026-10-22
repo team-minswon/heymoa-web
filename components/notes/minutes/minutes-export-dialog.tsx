@@ -26,6 +26,7 @@ import type {
   MinutesInclude,
 } from "@/lib/notes/minutes/model";
 import { toast } from "@/lib/ui/toast";
+import { cn } from "@/lib/utils";
 
 /**
  * 회의록 PDF 내려받기. 회의록 본문은 늘 들어가고 붙임 녹취록만 고른다. **녹취록은 꺼 둔 채 연다** — 한 말이
@@ -116,7 +117,9 @@ export function MinutesExportDialog({
       onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}
     >
       <DialogContent
-        className={`max-h-[calc(100dvh-2rem)] overflow-y-auto ${pdf.artifact ? "sm:max-w-4xl" : ""}`}
+        // 넓히는 기준은 「미리보기를 열었나」다(APP-1356). PDF 가 있는지로 가르면 녹취록을 켜고 끌 때마다 PDF 가 무효가 되어
+        // 창이 896 → 384px 로 접혔다가 다시 미리보면 또 펴졌다. 미리보기가 A4 를 보여 줘야 해서 여는 순간 넓어지는 것은 그대로다
+        className={`max-h-[calc(100dvh-2rem)] overflow-y-auto ${previewed ? "sm:max-w-4xl" : ""}`}
       >
         <DialogHeader>
           <DialogTitle>회의록 PDF로 내보내기</DialogTitle>
@@ -158,13 +161,12 @@ export function MinutesExportDialog({
           >
             PDF 미리보기
           </Button>
-          {previewed && pdf.artifact ? (
-            <PdfPreview blob={pdf.artifact.blob} />
-          ) : null}
-          {pdf.invalidated ? (
-            <p role="status" className="mt-2 text-sm text-muted-foreground">
-              내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.
-            </p>
+          {previewed ? (
+            <PdfPreview blob={pdf.artifact?.blob ?? null}>
+              {pdf.invalidated ? <Invalidated /> : null}
+            </PdfPreview>
+          ) : pdf.invalidated ? (
+            <Invalidated className="mt-2" />
           ) : null}
         </div>
         <DialogFooter>
@@ -181,5 +183,13 @@ export function MinutesExportDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Invalidated({ className }: { className?: string }) {
+  return (
+    <p role="status" className={cn("text-sm text-muted-foreground", className)}>
+      내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.
+    </p>
   );
 }

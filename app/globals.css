@@ -333,6 +333,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* 안 고른 탭 패널이 자리는 남긴다(APP-1356) — 패널을 한 칸에 겹쳐 세운 상자가 가장 긴 탭 높이로 선다.
+     preflight 의 `[hidden]{display:none !important}` 가 base 층에 있어 같은 층에서 더 구체적으로 이긴다
+     (utilities 층의 `!` 는 important 끼리는 앞 층이 이겨서 못 덮는다). */
+  [data-keep-size][hidden] {
+    display: block !important;
+    visibility: hidden;
+  }
   body {
     @apply bg-background text-foreground;
     letter-spacing: 0.16px; /* Inter looser tracking for editorial dialet */

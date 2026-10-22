@@ -85,7 +85,7 @@ export function WorkspaceSettingsForm({
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="mx-auto w-full max-w-[720px] space-y-8">
       <Header />
       <form onSubmit={submit} className={FORM}>
         <div className={FIELD}>
@@ -127,7 +127,7 @@ export function WorkspaceSettingsForm({
 export function WorkspaceSettingsFormSkeleton() {
   return (
     <div
-      className="mx-auto max-w-2xl space-y-8"
+      className="mx-auto w-full max-w-[720px] space-y-8"
       aria-label="워크스페이스 설정 불러오는 중"
     >
       <Header />

@@ -219,7 +219,8 @@ export function HelpPalette() {
             id={listId}
             role="listbox"
             aria-label={t("results")}
-            className="max-h-[52vh] min-h-[160px] overflow-y-auto p-3"
+            // 높이를 고정한다(APP-1356) — 주제 목록 · 결과 · 「찾지 못했어요」가 오갈 때마다 창이 217 ↔ 525px 로 늘었다 줄었다
+            className="h-[52vh] overflow-y-auto p-3"
           >
             {failed ? (
               <p className="m-0 p-3 text-[14px] text-[var(--tv-body)]">

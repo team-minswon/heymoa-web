@@ -328,8 +328,11 @@ describe("AgentConnectionsSettings", () => {
       // 개인 토큰 폼은 안내 아래 링크로만 연다 — 「새 연결」이 바로 열지 않는다
       expect(screen.queryByLabelText("연결 이름")).toBeNull();
       const mcpUrl = buildUrl("/mcp");
+      // 안 고른 패널도 자리를 지키려고 그려 둔다(APP-1356, `hidden`) — 보이는 패널 안에서만 센다
+      const shown = () =>
+        guide.querySelector<HTMLElement>("[role=tabpanel]:not([hidden])")!;
       const blocks = () =>
-        Array.from(guide.querySelectorAll("pre")).map(
+        Array.from(shown().querySelectorAll("pre")).map(
           (pre) => pre.textContent ?? ""
         );
       const pick = (name: string) => {
@@ -352,7 +355,7 @@ describe("AgentConnectionsSettings", () => {
       expect(blocks()).toEqual([
         `claude mcp add --transport http --scope user heymoa ${mcpUrl}`,
       ]);
-      expect(within(guide).queryByText(/설정 › 커넥터를 엽니다/)).toBeNull();
+      expect(within(shown()).queryByText(/설정 › 커넥터를 엽니다/)).toBeNull();
 
       // 등록하면 Codex 가 로그인을 시작한다 — login 을 같이 붙이면 허락을 두 번 한다
       pick("Codex");

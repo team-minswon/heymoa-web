@@ -102,97 +102,121 @@ export function AgentOAuthGuide({
           ))}
         </TabsList>
 
-        <TabsContent value="claude-app">
-          <Steps>
-            <Step n={1}>
-              Claude 앱이나 claude.ai 에서 설정 › 커넥터를 엽니다
-            </Step>
-            <Step n={2}>
-              「추가」 › 「사용자 지정 커넥터」에 주소를 붙여 넣습니다
-              {address}
-            </Step>
-            <Step n={3}>「연결」을 누르고 {ALLOW}</Step>
-          </Steps>
-          <Done trouble="Team·Enterprise 플랜은 조직 소유자가 먼저 커넥터를 추가해야 할 수 있습니다. 같은 계정으로 Claude Code 를 쓰면 여기서 연결한 것이 Claude Code 에도 들어옵니다." />
-        </TabsContent>
+        {/* 네 앱의 안내를 한 칸에 겹쳐 세운다(APP-1356) — 고른 것만 그리면 앱을 바꿀 때마다 안내 높이가 달라
+            아래 「닫기」 줄이 40px 씩 오르내렸다. 상자는 가장 긴 안내 높이로 선다. */}
+        <div className="grid">
+          <TabsContent
+            value="claude-app"
+            keepMounted
+            data-keep-size
+            className={PANEL}
+          >
+            <Steps>
+              <Step n={1}>
+                Claude 앱이나 claude.ai 에서 설정 › 커넥터를 엽니다
+              </Step>
+              <Step n={2}>
+                「추가」 › 「사용자 지정 커넥터」에 주소를 붙여 넣습니다
+                {address}
+              </Step>
+              <Step n={3}>「연결」을 누르고 {ALLOW}</Step>
+            </Steps>
+            <Done trouble="Team·Enterprise 플랜은 조직 소유자가 먼저 커넥터를 추가해야 할 수 있습니다. 같은 계정으로 Claude Code 를 쓰면 여기서 연결한 것이 Claude Code 에도 들어옵니다." />
+          </TabsContent>
 
-        <TabsContent value="claude-code">
-          <Steps>
-            <Step n={1}>
-              터미널에 붙여 넣습니다
-              {/* 어느 폴더에서나 쓰이게 한다 — 폴더 범위(기본)로 등록하면 다른 폴더에서 heymoa 가 보이지 않았다(APP-1031) */}
-              <CopyBlock
-                inline
-                label="Claude Code 명령"
-                value={`claude mcp add --transport http --scope user heymoa ${mcpUrl}`}
-              />
-            </Step>
-            <Step n={2}>
-              {/* 「Claude Code 에서」만 쓰면 데스크톱 앱의 Code 탭으로 읽힌다 — 터미널 CLI 임을 적는다(APP-1031) */}
-              터미널에서 <code>claude</code> 를 실행하고 <code>/mcp</code> →
-              heymoa → 인증
-            </Step>
-            <Step n={3}>{ALLOW}</Step>
-          </Steps>
-          <Done
-            trouble={
-              <>
-                「이미 있다」고 나오면 <code>claude mcp remove heymoa</code> 로
-                지운 뒤 다시 붙여 넣으세요. Claude 앱에서 커넥터로 연결했다면
-                따로 등록하지 않아도 됩니다.
-              </>
-            }
-          />
-        </TabsContent>
+          <TabsContent
+            value="claude-code"
+            keepMounted
+            data-keep-size
+            className={PANEL}
+          >
+            <Steps>
+              <Step n={1}>
+                터미널에 붙여 넣습니다
+                {/* 어느 폴더에서나 쓰이게 한다 — 폴더 범위(기본)로 등록하면 다른 폴더에서 heymoa 가 보이지 않았다(APP-1031) */}
+                <CopyBlock
+                  inline
+                  label="Claude Code 명령"
+                  value={`claude mcp add --transport http --scope user heymoa ${mcpUrl}`}
+                />
+              </Step>
+              <Step n={2}>
+                {/* 「Claude Code 에서」만 쓰면 데스크톱 앱의 Code 탭으로 읽힌다 — 터미널 CLI 임을 적는다(APP-1031) */}
+                터미널에서 <code>claude</code> 를 실행하고 <code>/mcp</code> →
+                heymoa → 인증
+              </Step>
+              <Step n={3}>{ALLOW}</Step>
+            </Steps>
+            <Done
+              trouble={
+                <>
+                  「이미 있다」고 나오면 <code>claude mcp remove heymoa</code>{" "}
+                  로 지운 뒤 다시 붙여 넣으세요. Claude 앱에서 커넥터로
+                  연결했다면 따로 등록하지 않아도 됩니다.
+                </>
+              }
+            />
+          </TabsContent>
 
-        <TabsContent value="codex">
-          <Steps>
-            <Step n={1}>
-              터미널에 붙여 넣습니다
-              {/* Codex 는 OAuth 서버를 등록하면 바로 로그인을 시작한다 — `codex mcp login` 을 같이 붙여 넣으면 허락을
+          <TabsContent
+            value="codex"
+            keepMounted
+            data-keep-size
+            className={PANEL}
+          >
+            <Steps>
+              <Step n={1}>
+                터미널에 붙여 넣습니다
+                {/* Codex 는 OAuth 서버를 등록하면 바로 로그인을 시작한다 — `codex mcp login` 을 같이 붙여 넣으면 허락을
                   두 번 하게 되고 연결도 둘 생긴다(APP-889 로컬 확인) */}
-              <CopyBlock
-                inline
-                label="Codex 명령"
-                value={`codex mcp add heymoa --url ${mcpUrl}`}
-              />
-            </Step>
-            <Step n={2}>{ALLOW}</Step>
-          </Steps>
-          <Done
-            trouble={
-              <>
-                브라우저가 열리지 않으면 <code>codex mcp login heymoa</code> 를
-                실행하세요. 「이미 있다」고 나오면{" "}
-                <code>codex mcp remove heymoa</code> 로 지운 뒤 다시 붙여
-                넣으세요.
-              </>
-            }
-          />
-        </TabsContent>
+                <CopyBlock
+                  inline
+                  label="Codex 명령"
+                  value={`codex mcp add heymoa --url ${mcpUrl}`}
+                />
+              </Step>
+              <Step n={2}>{ALLOW}</Step>
+            </Steps>
+            <Done
+              trouble={
+                <>
+                  브라우저가 열리지 않으면 <code>codex mcp login heymoa</code>{" "}
+                  를 실행하세요. 「이미 있다」고 나오면{" "}
+                  <code>codex mcp remove heymoa</code> 로 지운 뒤 다시 붙여
+                  넣으세요.
+                </>
+              }
+            />
+          </TabsContent>
 
-        <TabsContent value="chatgpt">
-          {/* 메뉴 이름이 자주 바뀌어 화면 경로를 자세히 적지 않는다(APP-1031 spec) */}
-          <Steps>
-            <Step n={1}>
-              설정에서 개발자 모드를 켭니다 ·{" "}
-              <a
-                href={CHATGPT_HELP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2"
-              >
-                쓸 수 있는 요금제 보기
-              </a>
-            </Step>
-            <Step n={2}>
-              새 커넥터에 주소를 붙여 넣습니다
-              {address}
-            </Step>
-            <Step n={3}>{ALLOW}</Step>
-          </Steps>
-          <Done />
-        </TabsContent>
+          <TabsContent
+            value="chatgpt"
+            keepMounted
+            data-keep-size
+            className={PANEL}
+          >
+            {/* 메뉴 이름이 자주 바뀌어 화면 경로를 자세히 적지 않는다(APP-1031 spec) */}
+            <Steps>
+              <Step n={1}>
+                설정에서 개발자 모드를 켭니다 ·{" "}
+                <a
+                  href={CHATGPT_HELP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  쓸 수 있는 요금제 보기
+                </a>
+              </Step>
+              <Step n={2}>
+                새 커넥터에 주소를 붙여 넣습니다
+                {address}
+              </Step>
+              <Step n={3}>{ALLOW}</Step>
+            </Steps>
+            <Done />
+          </TabsContent>
+        </div>
       </Tabs>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--el-hairline)] pt-4">
@@ -216,6 +240,9 @@ export function AgentOAuthGuide({
     </section>
   );
 }
+
+/** 안 고른 패널도 자리를 남긴다 — `data-keep-size` 가 `hidden` 을 보이지 않는 블록으로 바꾼다(`globals.css`). */
+const PANEL = "col-start-1 row-start-1";
 
 function Steps({ children }: { children: ReactNode }) {
   return <ol>{children}</ol>;

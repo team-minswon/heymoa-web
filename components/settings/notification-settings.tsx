@@ -285,7 +285,10 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
     .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type));
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8" aria-label="알림 설정">
+    <div
+      className="mx-auto w-full max-w-[720px] space-y-8"
+      aria-label="알림 설정"
+    >
       <Header />
 
       <section aria-label="전체 끄기" className={CARD}>
@@ -506,7 +509,7 @@ function ChannelCell({
 export function NotificationSettingsSkeleton() {
   return (
     <div
-      className="mx-auto max-w-2xl space-y-8"
+      className="mx-auto w-full max-w-[720px] space-y-8"
       aria-label="알림 설정 불러오는 중"
     >
       <Header />

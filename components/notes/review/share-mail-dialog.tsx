@@ -279,7 +279,9 @@ export function ShareMailDialog({
       <DialogContent
         showCloseButton={!submitting}
         className={cn(
-          "flex max-h-[calc(100dvh-3rem)] flex-col gap-0 p-0 sm:max-w-[520px]",
+          // **높이를 고정한다(APP-1356).** 글을 쓰는 화면(664)에서 보낸 결과(241)로 넘어가며 창이 절반 넘게 줄어 화면 가운데로
+          // 튀었다. 두 화면 모두 본문만 스크롤하고 푸터는 아래에 붙는다
+          "flex max-h-[calc(100dvh-3rem)] flex-col gap-0 p-0 sm:h-[min(720px,calc(100dvh-3rem))] sm:max-w-[520px]",
           // 좁은 화면은 아래 시트 — 손이 닿는 자리에 보내기가 오고, 키보드가 올라와도 위가 덜 가린다
           "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-h-[92dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:pb-[env(safe-area-inset-bottom)] max-sm:data-open:slide-in-from-bottom-10"
         )}
@@ -306,7 +308,7 @@ export function ShareMailDialog({
           />
         ) : (
           <>
-            <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-5 pt-3.5 pb-1">
+            <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pt-3.5 pb-1">
               <section aria-labelledby={`${recipientsId}-contents`}>
                 <FieldLabel id={`${recipientsId}-contents`}>
                   보낼 내용
@@ -552,7 +554,7 @@ function ShareMailResult({
 }) {
   return (
     <>
-      <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 pt-3.5 pb-1">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pt-3.5 pb-1">
         {query.isError ? (
           <InlineRetry
             variant="line"
