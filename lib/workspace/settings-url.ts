@@ -32,15 +32,26 @@ export function parseSettingsSection(
   return SETTINGS_SECTIONS.find((section) => section === value) ?? null;
 }
 
-function hrefWith(section: SettingsSection | null, drop: string[] = []) {
+/**
+ * 지금 주소에서 `key` 만 바꾼(값이 `null` 이면 지운) 주소. `drop` 은 같이 걷을 쿼리다.
+ * 같은 화면 안의 상태를 주소에 남기는 다른 창(알림 모달)도 이것을 쓴다.
+ */
+export function hrefWithParam(
+  key: string,
+  value: string | null,
+  drop: string[] = []
+) {
   const { pathname, search, hash } = window.location;
   const params = new URLSearchParams(search);
-  for (const key of drop) params.delete(key);
-  if (section) params.set(SETTINGS_PARAM, section);
-  else params.delete(SETTINGS_PARAM);
+  for (const name of drop) params.delete(name);
+  if (value) params.set(key, value);
+  else params.delete(key);
   const query = params.toString();
   return `${pathname}${query ? `?${query}` : ""}${hash}`;
 }
+
+const hrefWith = (section: SettingsSection | null, drop?: string[]) =>
+  hrefWithParam(SETTINGS_PARAM, section, drop);
 
 /** 창을 연다 — 방문 기록을 하나 쌓아 뒤로 가기 한 번에 닫힌다. */
 export function pushSettings(section: SettingsSection) {

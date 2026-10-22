@@ -24,7 +24,6 @@ function row(readAt: string | null) {
         view={{ title: "알림", workspaceName: "제품 팀" }}
         timeLabel="오전 11:00"
         highlighted={false}
-        divided={false}
         onRead={() => {}}
       />
     </ul>

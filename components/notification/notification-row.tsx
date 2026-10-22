@@ -33,15 +33,15 @@ export type NotificationRowView = {
 };
 
 /**
- * 알림 한 줄. 안 읽음 점은 글 왼쪽 여백에 매달려(hanging) 있어서, 읽음·안 읽음과 상관없이 모든 행의 글이 같은 왼쪽
- * 기준선(날짜 머리글·모달 제목과 같은 선)에서 시작한다. 읽으면 점만 흐려지며 사라진다 — 글은 움직이지 않는다.
+ * 알림 한 줄. 날짜 묶음의 흰 카드 안에 서고, 줄 사이 hairline 은 카드(`divide-y`)가 긋는다.
+ * 안 읽음은 옅은 회색 바탕 + 점이다. 점은 글 왼쪽 여백(15px)에 매달려(hanging) 있어서, 읽음·안 읽음과 상관없이 모든
+ * 행의 글이 같은 왼쪽 기준선(날짜 머리글·모달 제목과 같은 선)에서 시작한다. 읽으면 점과 바탕만 흐려진다 — 글은 안 움직인다.
  */
 export function NotificationRow({
   notification,
   view,
   timeLabel,
   highlighted,
-  divided,
   onRead,
 }: {
   notification: NotificationItem;
@@ -50,8 +50,6 @@ export function NotificationRow({
   timeLabel: string;
   /** 마지막으로 누른 행 — 모달을 다시 열었을 때 어디까지 봤는지 보인다 */
   highlighted: boolean;
-  /** 바로 위가 같은 묶음의 행이면 사이에 hairline 을 긋는다 */
-  divided: boolean;
   onRead: () => void;
 }) {
   const unread = notification.readAt === null;
@@ -71,10 +69,12 @@ export function NotificationRow({
       data-notification-id={notification.notificationId}
       data-unread={unread || undefined}
       className={cn(
-        "group/row relative flex cursor-pointer gap-3 rounded-block py-2.5 pr-4 pl-4 transition-colors hover:bg-[var(--el-canvas-soft)]",
-        highlighted && "bg-[var(--el-canvas-soft)]",
-        divided &&
-          "before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-[var(--el-hairline)] hover:before:opacity-0"
+        "group/row relative flex cursor-pointer gap-3 py-3 pr-[15px] pl-[15px] transition-colors duration-150",
+        unread
+          ? "bg-[var(--el-surface-strong)]/80 hover:bg-[var(--el-surface-strong)]"
+          : "hover:bg-[var(--el-surface-strong)]/50",
+        // 마지막으로 누른 행 — 왼쪽 가장자리의 짧은 회색 띠. 바탕색은 안 읽음·hover 가 이미 쓴다.
+        highlighted && "shadow-[inset_2px_0_0_var(--el-hairline-strong)]"
       )}
       onClick={(event) => {
         // 수락·거절·점 버튼은 제 일을 한다.
@@ -82,14 +82,14 @@ export function NotificationRow({
         activate();
       }}
     >
-      {/* 점은 글 왼쪽 여백(16px)의 가운데에 매달린다. 읽으면 흐려지고, 다 흐려진 뒤 보이지 않게 된다(탭 순서에서도 빠진다). */}
+      {/* 점은 글 왼쪽 여백(15px)의 가운데에 매달린다. 읽으면 흐려지고, 다 흐려진 뒤 보이지 않게 된다(탭 순서에서도 빠진다). */}
       <button
         type="button"
         aria-label="읽음으로 표시"
         disabled={!unread}
         onClick={onRead}
         className={cn(
-          "absolute top-2.5 left-0 flex h-[21px] w-4 items-center justify-center rounded-full transition-[opacity,visibility] duration-[180ms] ease-out motion-reduce:transition-none",
+          "absolute top-3 left-0 flex h-[21px] w-[15px] items-center justify-center rounded-full transition-[opacity,visibility] duration-[180ms] ease-out motion-reduce:transition-none",
           unread ? "visible opacity-100" : "invisible opacity-0"
         )}
       >
@@ -222,7 +222,8 @@ function describeInvitation(
           </Button>
         </>
       ) : (
-        <span className="text-xs whitespace-nowrap text-[var(--el-muted)]">
+        // 처리 결과는 동작이 아니라 상태라 버튼과 다른 모양 — 작은 회색 칩이다.
+        <span className="rounded-chip bg-[var(--el-surface-strong)] px-1.5 text-[11.5px] leading-5 whitespace-nowrap text-[var(--el-body)]">
           {expired
             ? "만료됨"
             : (INVITATION_RESULT[invitation.status] ?? invitation.status)}

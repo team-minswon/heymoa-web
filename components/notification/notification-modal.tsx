@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useQuery,
@@ -108,14 +108,21 @@ const LIST_GC_MS = 30 * 60_000;
  */
 export function NotificationModal({
   open,
-  onOpenChange,
+  filter,
+  onFilterChange,
+  onClose,
   workspaceId,
   unreadCount,
   onOpenSettings,
   onNavigate,
 }: {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  /** 보이는 탭. 주소가 정한다(`notification-url`) */
+  filter: NotificationFilter;
+  /** 탭을 바꾼다 — 방문 기록을 한 칸 쌓는다 */
+  onFilterChange: (filter: NotificationFilter) => void;
+  /** 닫는다. 쌓은 기록을 걷은 뒤 `then` 을 한다(이동·설정 열기) */
+  onClose: (then?: () => void) => void;
   workspaceId: string;
   unreadCount: number | undefined;
   onOpenSettings: (section: SettingsSection) => void;
@@ -123,16 +130,18 @@ export function NotificationModal({
   onNavigate: (href: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const [filter, setFilterState] = useState<NotificationFilter>(
-    notificationModalMemory.filter
-  );
-  const setFilter = (next: NotificationFilter) => {
-    rememberNotificationModal({ filter: next });
-    rememberNotificationModal({ scrollTop: 0 });
-    setFilterState(next);
-    scrollListTo(viewportRef.current, 0);
-  };
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const setFilter = (next: NotificationFilter) => {
+    if (next !== filter) onFilterChange(next);
+  };
+  // 탭이 바뀌면(누르기·뒤로 가기 모두) 목록 맨 위에서 시작한다.
+  const shownFilterRef = useRef(filter);
+  useEffect(() => {
+    if (shownFilterRef.current === filter) return;
+    shownFilterRef.current = filter;
+    rememberNotificationModal({ scrollTop: 0 });
+    scrollListTo(viewportRef.current, 0);
+  }, [filter]);
   const popupRef = useRef<HTMLDivElement | null>(null);
   /** 모달이 열려 목록 칸이 붙는 순간 마지막 스크롤 자리로 — 불러온 쪽은 캐시에 있어 이미 그려져 있다. */
   const attachViewport = useCallback((node: HTMLDivElement | null) => {
@@ -174,10 +183,10 @@ export function NotificationModal({
       ? settings.data.data.data.muteAll
       : false;
 
-  const close = () => {
+  const close = (then?: () => void) => {
     if (viewportRef.current)
       rememberNotificationModal({ scrollTop: viewportRef.current.scrollTop });
-    onOpenChange(false);
+    onClose(then);
   };
 
   const readNotification = useReadNotification();
@@ -251,9 +260,11 @@ export function NotificationModal({
   const invitationActions: RowActions = {
     pending: accept.isPending || decline.isPending,
     openNote: (targetWorkspaceId, noteId) => {
-      close();
-      onNavigate(
-        `/w/${targetWorkspaceId}/notes/${noteId}?view=full&tab=summary&source=notification`
+      // 모달 쿼리를 걷은 뒤에 간다 — 노트에서 뒤로 가기가 모달이 열린 칸으로 돌아오지 않게.
+      close(() =>
+        onNavigate(
+          `/w/${targetWorkspaceId}/notes/${noteId}?view=full&tab=summary&source=notification`
+        )
       );
     },
     canOpen: (targetWorkspaceId) =>
@@ -287,13 +298,12 @@ export function NotificationModal({
   };
 
   const openSettings = () => {
-    close();
     track("settings_tab_opened", {
       workspace_id: workspaceId,
       section: "notifications",
       from: "modal",
     });
-    onOpenSettings("notifications");
+    close(() => onOpenSettings("notifications"));
   };
 
   const rowsFor = (item: NotificationItem) => {
@@ -323,10 +333,7 @@ export function NotificationModal({
 
   return (
     <>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => (next ? onOpenChange(true) : close())}
-      >
+      <Dialog open={open} onOpenChange={(next) => !next && close()}>
         {/*
           크기는 내용과 상관없이 고정이다 — 탭을 바꾸거나 로딩·빈 상태가 되어도 창이 줄었다 늘었다 하지 않고, 목록 칸만
           스크롤한다. 왼쪽 기준선은 24px 하나다(제목·탭·날짜 머리글·행의 글). 안 읽음 점은 그 바깥 여백에 매달린다.
@@ -337,55 +344,60 @@ export function NotificationModal({
           initialFocus={popupRef}
           // 키보드로 닫았을 때만 「알림」으로 포커스를 돌려준다. 마우스로 닫고 남은 포커스가 링으로 보이지 않게.
           finalFocus={(closeType) => closeType === "keyboard"}
-          className="flex h-[min(600px,calc(100dvh-4rem))] flex-col gap-0 overflow-hidden bg-[var(--el-surface-card)] p-0 outline-none sm:max-w-[540px] [&>[data-slot=dialog-close]]:top-5 [&>[data-slot=dialog-close]]:right-[18px]"
+          className="flex h-[min(600px,calc(100dvh-4rem))] flex-col gap-0 overflow-hidden bg-[var(--el-canvas)] p-0 outline-none sm:max-w-[540px] [&>[data-slot=dialog-close]]:top-5 [&>[data-slot=dialog-close]]:right-[18px]"
         >
-          <DialogHeader className="gap-1 px-6 pt-5 pb-1">
-            <DialogTitle className="leading-7">알림</DialogTitle>
-            <DialogDescription className="text-xs leading-[18px]">
-              모든 워크스페이스
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-end gap-1 border-b border-[var(--el-hairline)] px-6">
-            <Tabs
-              value={filter}
-              onValueChange={(value) => setFilter(value as NotificationFilter)}
-            >
-              <TabsList
-                variant="line"
-                className="gap-5 p-0 group-data-horizontal/tabs:h-10"
+          {/* 머리(제목·탭·동작)는 흰 면, 목록은 회색 캔버스 위의 흰 카드 — 두 층이 한눈에 갈린다(APP-1361). */}
+          <div className="bg-[var(--el-surface-card)]">
+            <DialogHeader className="gap-1 px-6 pt-5 pb-1">
+              <DialogTitle className="leading-7">알림</DialogTitle>
+              <DialogDescription className="text-xs leading-[18px]">
+                모든 워크스페이스
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-end gap-1 border-b border-[var(--el-hairline)] px-6">
+              <Tabs
+                value={filter}
+                onValueChange={(value) =>
+                  setFilter(value as NotificationFilter)
+                }
               >
-                {TABS.map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className={TAB_ITEM}
-                  >
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-            <span className="flex-1" />
-            {/* 같은 위계의 보조 동작 둘 — 같은 ghost 모양, 글 끝이 목록 오른쪽 열 끝(24px)과 맞게 마지막을 당긴다. */}
-            <div className="-mr-2 flex h-10 items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={ACTION}
-                disabled={!firstPage?.serverTime || !unreadCount}
-                loading={markAll.isPending}
-                onClick={readAll}
-              >
-                모두 읽음으로 표시
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={ACTION}
-                onClick={openSettings}
-              >
-                알림 설정
-              </Button>
+                <TabsList
+                  variant="line"
+                  className="gap-5 p-0 group-data-horizontal/tabs:h-10"
+                >
+                  {TABS.map((tab) => (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={TAB_ITEM}
+                    >
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+              <span className="flex-1" />
+              {/* 같은 위계의 보조 동작 둘 — 같은 ghost 모양, 글 끝이 목록 오른쪽 열 끝(24px)과 맞게 마지막을 당긴다. */}
+              <div className="-mr-2 flex h-10 items-center gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={ACTION}
+                  disabled={!firstPage?.serverTime || !unreadCount}
+                  loading={markAll.isPending}
+                  onClick={readAll}
+                >
+                  모두 읽음으로 표시
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={ACTION}
+                  onClick={openSettings}
+                >
+                  알림 설정
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -400,7 +412,7 @@ export function NotificationModal({
             */}
             <ScrollAreaPrimitive.Content className="flex min-h-full flex-col">
               {newCount > 0 ? (
-                <div className="sticky top-0 z-10 flex justify-center pt-2 pb-0.5">
+                <div className="sticky top-0 z-20 flex justify-center pt-2 pb-0.5">
                   <button
                     type="button"
                     onClick={showNew}
@@ -411,7 +423,7 @@ export function NotificationModal({
                 </div>
               ) : null}
               {webMuted ? (
-                <div className="mx-2 mt-2 flex items-center gap-2 rounded-block bg-[var(--el-canvas-soft)] px-3 py-2 text-[13px] text-[var(--el-body)]">
+                <div className="mx-2 mt-3 flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] py-2 pr-2 pl-[15px] text-[13px] text-[var(--el-body)]">
                   <BellOff
                     aria-hidden
                     className="size-4 text-[var(--el-muted)]"
@@ -434,13 +446,12 @@ export function NotificationModal({
                 isError={list.isError && !list.data}
                 onRetry={() => void list.refetch()}
                 onShowAll={() => setFilter("ALL")}
-                renderRow={(item, timeLabel, divided) => (
+                renderRow={(item, timeLabel) => (
                   <NotificationRow
                     key={item.notificationId}
                     notification={item}
                     view={rowsFor(item)}
                     timeLabel={timeLabel}
-                    divided={divided}
                     highlighted={
                       item.notificationId ===
                       notificationModalMemory.lastNotificationId
@@ -512,6 +523,16 @@ export function NotificationModal({
   );
 }
 
+/**
+ * 목록 칸의 틀. 카드는 좌우 8px 안쪽, 카드 안 행의 글은 15px 안쪽 + 테두리 1px — 글이 모달 제목과 같은 24px 선에 선다.
+ * 날짜 머리글은 스크롤해도 칸 위에 붙는 캔버스색 띠다(뒤로 지나가는 카드를 가린다).
+ */
+const LIST = "flex flex-col px-2 pb-4";
+const CARD =
+  "divide-y divide-[var(--el-hairline)] overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)]";
+const DAY =
+  "sticky top-0 z-10 -mx-2 bg-[var(--el-canvas)] px-6 pt-3 pb-1.5 text-xs leading-[18px] font-medium text-[var(--el-body)]";
+
 const EMPTY: Record<NotificationFilter, { line: string; sub?: string }> = {
   ALL: {
     line: "초대와 검토할 결과 알림이 여기에 도착합니다.",
@@ -536,25 +557,24 @@ function NotificationListBody({
   isError: boolean;
   onRetry: () => void;
   onShowAll: () => void;
-  renderRow: (
-    item: NotificationItem,
-    timeLabel: string,
-    divided: boolean
-  ) => React.ReactNode;
+  renderRow: (item: NotificationItem, timeLabel: string) => React.ReactNode;
 }) {
   if (isLoading) {
     return (
-      <ul aria-label="알림 불러오는 중" className="px-2 pt-1 pb-3">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <li key={index} className="flex gap-3 px-4 py-2.5">
-            <div className="flex flex-1 flex-col gap-0.5">
-              <Skeleton className="my-[5px] h-[11px] w-4/5 rounded-chip" />
-              <Skeleton className="mt-1.5 mb-1 h-[10px] w-2/5 rounded-chip" />
-            </div>
-            <span className="w-[104px] shrink-0" />
-          </li>
-        ))}
-      </ul>
+      <div aria-label="알림 불러오는 중" className={LIST}>
+        {filter === "ALL" ? <div className={DAY}>&nbsp;</div> : null}
+        <ul className={CARD}>
+          {[0, 1, 2, 3, 4].map((index) => (
+            <li key={index} className="flex gap-3 px-[15px] py-3">
+              <div className="flex flex-1 flex-col gap-0.5">
+                <Skeleton className="my-[5px] h-[11px] w-4/5 rounded-chip" />
+                <Skeleton className="mt-1.5 mb-1 h-[10px] w-2/5 rounded-chip" />
+              </div>
+              <span className="w-[104px] shrink-0" />
+            </li>
+          ))}
+        </ul>
+      </div>
     );
   }
   if (isError) {
@@ -580,37 +600,39 @@ function NotificationListBody({
       </div>
     );
   }
-  // 전체 탭은 날짜로 묶는다. 다른 탭은 행마다 날짜를 붙인다.
+  // 전체 탭은 날짜로 묶는다 — 묶음마다 흰 카드 하나, 머리글은 스크롤해도 위에 붙는다. 다른 탭은 카드 하나에 행마다 날짜를 붙인다.
   const grouped = filter === "ALL";
+  const groups: { day: string | null; items: NotificationItem[] }[] = [];
+  for (const item of items) {
+    const day = grouped ? dayLabel(item.createdAt) : null;
+    const last = groups.at(-1);
+    if (last && last.day === day) last.items.push(item);
+    else groups.push({ day, items: [item] });
+  }
   return (
-    <ul className={cn("px-2 pb-3", !grouped && "pt-1")}>
-      {items.map((item, index) => {
-        const day = dayLabel(item.createdAt);
-        const header =
-          grouped &&
-          (index === 0 || dayLabel(items[index - 1].createdAt) !== day)
-            ? day
-            : null;
-        // 묶음의 첫 행이 아니면 위 행과 hairline 으로 나눈다.
-        const divided = index > 0 && header === null;
-        const time = notificationTime(item.createdAt);
-        return (
-          <Fragment key={item.notificationId}>
-            {header ? (
-              <li
-                aria-hidden
-                className={cn(
-                  "px-4 pb-1 text-xs leading-[18px] font-medium text-[var(--el-muted)]",
-                  index === 0 ? "pt-3" : "pt-4"
-                )}
-              >
-                {header}
-              </li>
-            ) : null}
-            {renderRow(item, grouped ? time : `${day} ${time}`, divided)}
-          </Fragment>
-        );
-      })}
-    </ul>
+    <div className={cn(LIST, !grouped && "pt-3")}>
+      {groups.map((group, index) => (
+        <section key={group.day ?? index} aria-label={group.day ?? undefined}>
+          {group.day ? (
+            <h3 aria-hidden className={DAY}>
+              {group.day}
+            </h3>
+          ) : null}
+          <ul className={CARD}>
+            {group.items.map((item) => {
+              const time = notificationTime(item.createdAt);
+              return (
+                <Fragment key={item.notificationId}>
+                  {renderRow(
+                    item,
+                    grouped ? time : `${dayLabel(item.createdAt)} ${time}`
+                  )}
+                </Fragment>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }

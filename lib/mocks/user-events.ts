@@ -21,3 +21,15 @@ export function emitChatsChanged() {
   for (const { workspaceId } of mockDb.listWorkspaces())
     emitMockUserEvent("chats.changed", { workspaceId });
 }
+
+/** 알림이 바뀌었다(읽음·모두 읽음·초대 처리·도착). 실서버처럼 내용 없이 힌트만 — web 이 개수와 첫 쪽을 다시 읽는다. */
+export function emitNotificationsChanged() {
+  emitMockUserEvent("notifications.changed", {});
+}
+
+/** 목 모드에서 「방금 도착한 알림」을 만들고 힌트를 낸다. 브라우저 콘솔의 `heymoaMock.notify()` 가 이것이다. */
+export function mockNotificationArrives() {
+  const item = mockDb.arriveNotification();
+  emitNotificationsChanged();
+  return item;
+}

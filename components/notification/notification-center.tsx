@@ -4,19 +4,34 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { NotificationModal } from "@/components/notification/notification-modal";
 import { track } from "@/lib/analytics/track";
 import { useGetUnreadNotificationCount } from "@/lib/api/generated/notifications/notifications";
 import {
   NOTIFICATION_SCHEMA,
+  notificationModalMemory,
+  rememberNotificationModal,
   UNREAD_COUNT_POLL_MS,
+  type NotificationFilter,
 } from "@/lib/notification/notification-list";
-import type { SettingsSection } from "@/lib/workspace/settings-url";
+import {
+  clearNotifications,
+  NOTIFICATIONS_PARAM,
+  parseNotificationsParam,
+  pushNotifications,
+  replaceNotifications,
+} from "@/lib/notification/notification-url";
+import {
+  SETTINGS_PARAM,
+  type SettingsSection,
+} from "@/lib/workspace/settings-url";
 import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 
@@ -68,15 +83,81 @@ export function NotificationCenterProvider({
     count.data?.status === 200 && count.data.data.success
       ? count.data.data.data.unreadCount
       : undefined;
-  const [open, setOpen] = useState(false);
+
+  // 모달과 탭은 주소(`?notifications=all|unread|action`)가 단일 출처다(APP-1361) — 새로고침·딥링크·뒤로 가기가 그대로
+  // 되살린다. 설정 창(`?settings=`)이 같이 있으면 설정이 이긴다(둘은 동시에 열리지 않는다). 첫 커밋 뒤에만 읽는다 —
+  // 셸(`workspace-app-shell`)의 `committed` 와 같은 이유다(hydration 전 `history` 호출은 라우터 상태를 지운다).
+  const searchParams = useSearchParams();
+  const [committed, setCommitted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 첫 커밋을 표시하는 것 자체가 목적이다
+  useEffect(() => setCommitted(true), []);
+  const param = searchParams.get(NOTIFICATIONS_PARAM);
+  const urlFilter =
+    param === null || searchParams.has(SETTINGS_PARAM)
+      ? null
+      : (parseNotificationsParam(param) ?? "ALL");
+  const open = committed && urlFilter !== null;
+  // 닫히는 동안(페이드)에도 마지막 탭을 그린다 — 주소에서 값이 사라져도 내용이 다른 탭으로 뒤집히지 않게.
+  const [shownFilter, setShownFilter] = useState<NotificationFilter>(
+    notificationModalMemory.filter
+  );
+  if (urlFilter !== null && urlFilter !== shownFilter) {
+    setShownFilter(urlFilter);
+  }
+  useEffect(() => {
+    if (open) rememberNotificationModal({ filter: shownFilter });
+  }, [open, shownFilter]);
+  useEffect(() => {
+    if (committed && param !== null && parseNotificationsParam(param) === null)
+      replaceNotifications("ALL");
+  }, [committed, param]);
+
+  /**
+   * 열고 나서 우리가 쌓은 방문 기록 칸 수(열기 1 + 탭마다 1)와, 열기 자체를 우리가 쌓았는지. 닫기·이동은 이만큼
+   * 한 번에 되돌린다 — 닫은 뒤 뒤로 가기가 지난 탭을 다시 열지 않게. 뒤로 가기마다 한 칸씩 준다.
+   * ponytail: 앞으로 가기는 세지 않는다(드묾). 그 뒤 닫으면 한두 칸 덜 걷힐 뿐 주소는 맞다.
+   */
+  const depthRef = useRef(0);
+  const pushedRef = useRef(false);
+  useEffect(() => {
+    const onPop = () => {
+      if (depthRef.current > 0) depthRef.current -= 1;
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const openNotifications = useCallback(() => {
     track("notifications_opened", {
       workspace_id: workspaceId,
       unread_count: unreadCount ?? 0,
     });
-    setOpen(true);
+    if (new URLSearchParams(window.location.search).has(NOTIFICATIONS_PARAM))
+      return;
+    pushNotifications(notificationModalMemory.filter);
+    depthRef.current = 1;
+    pushedRef.current = true;
   }, [unreadCount, workspaceId]);
+
+  const changeFilter = useCallback((next: NotificationFilter) => {
+    pushNotifications(next);
+    depthRef.current += 1;
+  }, []);
+
+  /** 쌓은 칸을 걷고(딥링크로 열렸으면 쿼리를 지우고) 나서 `then` 을 한다 — 이동·설정 열기가 걷히는 중에 끼지 않게. */
+  const close = useCallback((then?: () => void) => {
+    const depth = depthRef.current;
+    const pushed = pushedRef.current;
+    depthRef.current = 0;
+    pushedRef.current = false;
+    const finish = () => {
+      if (!pushed) clearNotifications();
+      then?.();
+    };
+    if (depth === 0) return finish();
+    window.addEventListener("popstate", finish, { once: true });
+    window.history.go(-depth);
+  }, []);
 
   const value = useMemo(
     () => ({ unreadCount, openNotifications }),
@@ -88,7 +169,9 @@ export function NotificationCenterProvider({
       {children}
       <NotificationModal
         open={open}
-        onOpenChange={setOpen}
+        filter={shownFilter}
+        onFilterChange={changeFilter}
+        onClose={close}
         workspaceId={workspaceId}
         unreadCount={unreadCount}
         onOpenSettings={onOpenSettings}

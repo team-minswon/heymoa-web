@@ -39,7 +39,10 @@ import type {
   UpdateWorkspaceRequest,
 } from "@/lib/api/generated/models";
 import { isEmail } from "@/lib/notes/share-mail/recipients";
-import { emitChatsChanged } from "@/lib/mocks/user-events";
+import {
+  emitChatsChanged,
+  emitNotificationsChanged,
+} from "@/lib/mocks/user-events";
 
 function id(value: string | readonly string[] | undefined) {
   return Array.isArray(value) ? value[0] : String(value ?? "");
@@ -302,6 +305,15 @@ async function memberResult(run: () => void | Promise<void>) {
       }
     );
   }
+}
+
+/**
+ * 알림 상태를 바꾼 응답에 힌트를 붙인다 — 실서버가 커밋 뒤 `notifications.changed` 를 내는 자리다(다른 탭의 개수가 따라온다).
+ * 실패 응답에는 안 낸다.
+ */
+function notified(response: Response) {
+  if (response.ok) emitNotificationsChanged();
+  return response;
 }
 
 function invitationResult<T>(run: () => T, okStatus = 200) {
@@ -1389,7 +1401,9 @@ export const restHandlers = [
   ),
   http.put("*/v1/notifications/read", async ({ request }) => {
     const body = (await request.json()) as { upTo: string };
-    return commandResult(() => mockDb.markAllNotificationsRead(body.upTo));
+    return notified(
+      commandResult(() => mockDb.markAllNotificationsRead(body.upTo))
+    );
   }),
   http.get("*/v1/feedbacks", () => commandResult(() => mockDb.listFeedbacks())),
   http.post("*/v1/feedbacks/answers/seen", () => {
@@ -1401,7 +1415,11 @@ export const restHandlers = [
     return commandResult(() => mockDb.createFeedback(body), 201);
   }),
   http.put("*/v1/notifications/:notificationId/read", ({ params }) =>
-    commandResult(() => mockDb.markNotificationRead(id(params.notificationId)))
+    notified(
+      commandResult(() =>
+        mockDb.markNotificationRead(id(params.notificationId))
+      )
+    )
   ),
 
   http.post(
@@ -1420,7 +1438,9 @@ export const restHandlers = [
       invitationResult(() => mockDb.cancelInvitation(id(params.invitationId)))
   ),
   http.post("*/v1/invitations/:invitationId/accept", ({ params }) =>
-    invitationResult(() => mockDb.acceptInvitation(id(params.invitationId)))
+    notified(
+      invitationResult(() => mockDb.acceptInvitation(id(params.invitationId)))
+    )
   ),
   // 목 세계의 토큰은 invitationId 그 자체다 — 실서버의 digest 매칭까지 흉내내지 않는다
   http.post("*/v1/invitations/accept-by-token", async ({ request }) => {
@@ -1430,7 +1450,9 @@ export const restHandlers = [
     );
   }),
   http.post("*/v1/invitations/:invitationId/decline", ({ params }) =>
-    invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))
+    notified(
+      invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))
+    )
   ),
 
   // 외부 에이전트 연결 (APP-804·826). 계약: 목록 200 · 만들기 201 · 회수 bodyless 204 · 사용 내역 200.

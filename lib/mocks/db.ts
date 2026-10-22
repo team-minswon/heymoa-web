@@ -145,6 +145,12 @@ const INVITED_WORKSPACE = {
   name: "디자인 팀",
 } as const;
 
+/** 두 번째 대기 초대의 워크스페이스(APP-1361). */
+const RESEARCH_WORKSPACE = {
+  workspaceId: "01K0000000043",
+  name: "리서치 랩",
+} as const;
+
 /**
  * 워크스페이스를 떠난 시작자의 아바타. 멤버 목록에 없어 참여자에서 이미지를 빌릴 수 없는
  * 유일한 표본이라, 계약이 `meetingStartedBy.image`를 싣는지가 여기서만 눈에 보인다.
@@ -1773,6 +1779,19 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-09T00:00:00Z",
       expiresAt: "2026-07-10T00:00:00Z",
     },
+    // 두 번째 대기 초대(APP-1361) — 알림 모달의 「처리 필요」 탭에 두 줄이 서고, 수락하면 이 이름으로 합류한다.
+    {
+      workspaceId: RESEARCH_WORKSPACE.workspaceId,
+      invitationId: "01K0000000044",
+      inviteeName: user.name,
+      inviteeEmail: user.email,
+      inviteeImage: user.image,
+      inviterName: "박서준",
+      role: "MEMBER",
+      status: "PENDING",
+      createdAt: daysAgoIso(2, 40),
+      expiresAt: daysAgoIso(-5),
+    },
   ];
   const notifications: NotificationListResponseDataNotificationsItem[] = [
     {
@@ -1893,6 +1912,135 @@ function createSeedState(): StoreState {
         autoEnded: false,
         pausedBusinessDays: null,
       },
+    },
+    // ── 알림 모달을 목에서 실제처럼 밟는 묶음(APP-1361). 지금 시각에서 거꾸로 잡아 「오늘」·「어제」·며칠 전 묶음이 늘
+    // 서고, 스크롤이 생길 만큼 쌓는다. 읽음·안 읽음, 초대의 모든 결과, 일반·자동 종료·권한 없는 결과를 섞었다.
+    {
+      notificationId: "01K0000000041",
+      type: "ANALYSIS_READY",
+      readAt: daysAgoIso(0, 5),
+      createdAt: daysAgoIso(0, 30),
+      invitation: null,
+      payload: analysisReadyPayload(
+        workspaces[0],
+        "01K0000000002",
+        "주간 제품 회의",
+        false,
+        null
+      ),
+    },
+    {
+      notificationId: "01K0000000042",
+      type: "WORKSPACE_INVITATION",
+      readAt: null,
+      createdAt: daysAgoIso(2, 40),
+      invitation: {
+        invitationId: "01K0000000044",
+        status: "PENDING",
+        role: "MEMBER",
+        workspaceId: RESEARCH_WORKSPACE.workspaceId,
+        workspaceName: RESEARCH_WORKSPACE.name,
+        inviterName: "박서준",
+        expiresAt: daysAgoIso(-5),
+      },
+      payload: invitationPayload(
+        RESEARCH_WORKSPACE.workspaceId,
+        RESEARCH_WORKSPACE.name,
+        "01K0000000044"
+      ),
+    },
+    {
+      notificationId: "01K0000000045",
+      type: "ANALYSIS_READY",
+      readAt: null,
+      createdAt: daysAgoIso(2, 90),
+      invitation: null,
+      payload: analysisReadyPayload(
+        workspaces[0],
+        "01K0000000005",
+        "고객 인터뷰",
+        false,
+        null
+      ),
+    },
+    {
+      notificationId: "01K0000000046",
+      type: "ANALYSIS_READY",
+      readAt: daysAgoIso(3, 0),
+      createdAt: daysAgoIso(3, 60),
+      invitation: null,
+      payload: analysisReadyPayload(
+        workspaces[0],
+        "01K0000000040",
+        "멈춰 둔 주간 회의",
+        true,
+        5
+      ),
+    },
+    {
+      notificationId: "01K0000000047",
+      type: "WORKSPACE_INVITATION",
+      readAt: daysAgoIso(4, 0),
+      createdAt: daysAgoIso(4, 30),
+      invitation: {
+        invitationId: "01K0000000049",
+        status: "CANCELED",
+        role: "MEMBER",
+        workspaceId: "01K0000000048",
+        workspaceName: "영업 팀",
+        inviterName: "한지원",
+        expiresAt: daysAgoIso(-2),
+      },
+      payload: invitationPayload("01K0000000048", "영업 팀", "01K0000000049"),
+    },
+    {
+      notificationId: "01K0000000034",
+      type: "ANALYSIS_READY",
+      readAt: daysAgoIso(6, 0),
+      createdAt: daysAgoIso(6, 120),
+      invitation: null,
+      payload: analysisReadyPayload(
+        workspaces[0],
+        "01K0000000028",
+        "파트너 검토 회의",
+        false,
+        null
+      ),
+    },
+    {
+      notificationId: "01K0000000035",
+      type: "WORKSPACE_INVITATION",
+      readAt: daysAgoIso(9, 0),
+      createdAt: daysAgoIso(9, 30),
+      invitation: {
+        invitationId: "01K0000000037",
+        status: "EXPIRED",
+        role: "MEMBER",
+        workspaceId: "01K0000000036",
+        workspaceName: "외부 자문단",
+        inviterName: "이서연",
+        expiresAt: daysAgoIso(2),
+      },
+      payload: invitationPayload(
+        "01K0000000036",
+        "외부 자문단",
+        "01K0000000037"
+      ),
+    },
+    // 내가 없는 워크스페이스의 결과 — 행은 남고 이동만 막힌다(「볼 권한이 없는 회의」).
+    {
+      notificationId: "01K0000000038",
+      type: "ANALYSIS_READY",
+      readAt: null,
+      createdAt: daysAgoIso(12, 30),
+      invitation: null,
+      payload: analysisReadyPayload(
+        { workspaceId: "01K0000000014", name: "마케팅 팀" },
+        "01K0000000039",
+        "캠페인 회고",
+        false,
+        null
+      ),
     },
   ];
   // 연동은 두 provider가 모두 미연동으로 시작한다 — 연결 흐름을 데모에서 직접 밟게 한다.
@@ -3510,7 +3658,11 @@ export const mockDb = {
     ) {
       state.workspaces.push({
         workspaceId: invitation.workspaceId,
-        name: INVITED_WORKSPACE.name,
+        // 초대가 실어 온 이름으로 합류한다 — 대기 초대가 둘이라 한 이름으로 굳히면 다른 쪽이 엉뚱한 이름이 된다.
+        name:
+          state.notifications.find(
+            (item) => item.invitation?.invitationId === invitation.invitationId
+          )?.invitation?.workspaceName ?? INVITED_WORKSPACE.name,
         description: null,
         role: invitation.role,
         agentAccessAllowed: true,
@@ -3614,6 +3766,32 @@ export const mockDb = {
   /** 시험·데모가 「방금 도착한 알림」을 만든다. */
   pushNotification(item: NotificationListResponseDataNotificationsItem) {
     state.notifications.push(copy(item));
+  },
+
+  /**
+   * 「방금 도착한 검토할 결과」 하나를 만든다(APP-1361). 목 모드 콘솔의 `heymoaMock.notify()` 와 e2e 가 부른다 —
+   * 이벤트 스트림 힌트로 개수·「새 알림 N개」가 따라오는지 본다. 제목은 고정 목록을 돈다(무작위 없음).
+   */
+  arriveNotification(): NotificationListResponseDataNotificationsItem {
+    const titles = ["분기 계획 세션", "주간 제품 회의", "고객 인터뷰"];
+    const notes = ["01K0000000026", "01K0000000002", "01K0000000005"];
+    const turn = state.notifications.length % titles.length;
+    const item: NotificationListResponseDataNotificationsItem = {
+      notificationId: nextId(),
+      type: "ANALYSIS_READY",
+      readAt: null,
+      createdAt: nextTimestamp(),
+      invitation: null,
+      payload: analysisReadyPayload(
+        state.workspaces[0],
+        notes[turn],
+        titles[turn],
+        false,
+        null
+      ),
+    };
+    state.notifications.push(item);
+    return copy(item);
   },
 
   listFeedbacks(): { feedbacks: FeedbackResponseData[] } {

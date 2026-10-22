@@ -273,7 +273,8 @@ describe("invitation and notification handlers", () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data.unreadCount).toBe(1);
+    // 스키마 표식이 없으면 원본이 살아 있는 초대만 센다 — 시드의 안 읽은 대기 초대 둘.
+    expect(body.data.unreadCount).toBe(2);
   });
 });
 

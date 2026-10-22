@@ -39,7 +39,32 @@ import { notificationModalMemory } from "@/lib/notification/notification-list";
  * 요청 기록으로 「목록을 다시 읽지 않았다」·「쪽 수만큼 다시 읽지 않았다」를 본다.
  */
 const push = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+/** 라우터가 `history.pushState/replaceState` 를 `useSearchParams` 에 잇는 것을 흉내 낸다(Next 16 통합). */
+vi.mock("next/navigation", async () => {
+  const { useSyncExternalStore } = await import("react");
+  const subscribe = (notify: () => void) => {
+    window.addEventListener("popstate", notify);
+    window.addEventListener("test:history", notify);
+    return () => {
+      window.removeEventListener("popstate", notify);
+      window.removeEventListener("test:history", notify);
+    };
+  };
+  return {
+    useRouter: () => ({ push }),
+    useSearchParams: () =>
+      new URLSearchParams(
+        useSyncExternalStore(subscribe, () => window.location.search)
+      ),
+  };
+});
+for (const method of ["pushState", "replaceState"] as const) {
+  const original = window.history[method].bind(window.history);
+  window.history[method] = (...args: Parameters<History["pushState"]>) => {
+    original(...args);
+    window.dispatchEvent(new Event("test:history"));
+  };
+}
 
 const store = {
   items: [] as NotificationItem[],
@@ -226,6 +251,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   push.mockReset();
   store.items = [];
   store.failCount = false;
@@ -370,6 +396,56 @@ describe("알림 모달", () => {
     ).toBeNull();
   });
 
+  it("모달과 탭은 주소에 남는다 — 열기·탭은 기록을 쌓고, 뒤로 가기는 앞 탭으로, 닫기는 쌓은 칸을 한 번에 걷는다", async () => {
+    const before = window.history.length;
+    renderCenter();
+    let dialog = await openModal();
+    expect(window.location.search).toBe("?notifications=all");
+    fireEvent.click(within(dialog).getByRole("tab", { name: "안 읽음" }));
+    fireEvent.click(within(dialog).getByRole("tab", { name: "처리 필요" }));
+    expect(window.location.search).toBe("?notifications=action");
+    expect(window.history.length).toBe(before + 3);
+
+    window.history.back();
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("tab", { name: "안 읽음" })
+      ).toHaveAttribute("aria-selected", "true")
+    );
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => expect(window.location.search).toBe(""));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull()
+    );
+    // 다시 열면 마지막 탭이다.
+    dialog = await openModal();
+    expect(window.location.search).toBe("?notifications=unread");
+  });
+
+  it("딥링크(새로고침)로 들어오면 그 탭으로 열리고, 닫으면 기록을 안 늘리고 쿼리만 지운다", async () => {
+    window.history.replaceState(null, "", "/?notifications=action");
+    const before = window.history.length;
+    renderCenter();
+    const dialog = await screen.findByRole("dialog", { name: "알림" });
+    expect(
+      within(dialog).getByRole("tab", { name: "처리 필요" })
+    ).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => expect(window.location.search).toBe(""));
+    expect(window.history.length).toBe(before);
+  });
+
+  it("설정 창 쿼리가 같이 있으면 알림 모달은 열리지 않는다", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?settings=notifications&notifications=all"
+    );
+    renderCenter();
+    await screen.findByRole("button", { name: /^알림/ });
+    expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull();
+  });
+
   it("닫았다 열면 탭·불러온 쪽·스크롤이 그대로이고 목록을 다시 읽지 않는다", async () => {
     store.items = Array.from({ length: 30 }, (_, index) =>
       invitation(`N${index}`, at(index), "ACCEPTED", at(50))
@@ -506,7 +582,11 @@ describe("알림 모달", () => {
     await screen.findByRole("button", { name: "알림 1" });
     const dialog = await openModal();
     fireEvent.click(within(dialog).getByRole("button", { name: "알림 설정" }));
-    expect(openSettings).toHaveBeenCalledWith("notifications");
+    // 쌓은 기록을 걷은 뒤에 연다(비동기 popstate) — 그래야 설정 창의 push 가 걷히는 중에 끼지 않는다.
+    await waitFor(() =>
+      expect(openSettings).toHaveBeenCalledWith("notifications")
+    );
+    expect(window.location.search).toBe("");
     off();
     expect(heard.map(([name]) => name)).toEqual([
       "notifications_opened",
@@ -559,9 +639,13 @@ describe("검토할 결과 준비 행", () => {
         name: /검토할 결과가 준비되었습니다/,
       })
     );
-    expect(push).toHaveBeenCalledWith(
-      "/w/WS1/notes/NOTE1?view=full&tab=summary&source=notification"
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        "/w/WS1/notes/NOTE1?view=full&tab=summary&source=notification"
+      )
     );
+    // 모달 쿼리를 걷은 뒤에 간다 — 노트에서 뒤로 가기가 모달 칸으로 돌아오지 않는다.
+    expect(window.location.search).toBe("");
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull()
     );
