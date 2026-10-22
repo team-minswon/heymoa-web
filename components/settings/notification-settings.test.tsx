@@ -265,7 +265,8 @@ describe("NotificationSettings", () => {
     );
     await waitFor(() => expect(switchOf("알림 모두 끄기")).toBeChecked());
     expect(switchOf("중지된 회의 메일")).toHaveAttribute("data-disabled");
-    expect(screen.getByText("꺼짐")).toBeInTheDocument();
+    // 웹이 있는 종류(검토할 결과 준비)와 메일이 있는 종류(중지된 회의) 둘 다 「꺼짐」으로 가려진다.
+    expect(screen.getAllByText("꺼짐")).toHaveLength(2);
 
     fireEvent.click(switchOf("알림 모두 끄기"));
     await waitFor(() => expect(switchOf("알림 모두 끄기")).not.toBeChecked());

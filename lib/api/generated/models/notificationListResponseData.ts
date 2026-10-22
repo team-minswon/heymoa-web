@@ -18,13 +18,15 @@ export type NotificationListResponseData = {
   nextCreatedAt: string | null;
   /** 커서 뒤에 더 있나. 총 개수를 세지 않고 한 건 더 읽어 정한다 */
   hasMore: boolean;
-  /** 읽지 않은 알림 개수. **목록과 같은 조인**으로 센다 - 전에는 조인 없이 세서, 초대가 지워진 알림이 세어지는데 목록에 안 나와 뱃지가 안 꺼졌다 */
+  /** 읽지 않은 알림 개수. **목록과 같은 기준**으로 센다(schema 표식 포함) - 셀 수 있는 것과 보여줄 수 있는 것이 다르면 뱃지가 안 꺼진다 */
   unreadCount: number;
   /**
    * 커서의 짝. `createdAt` 만으로는 같은 시각의 알림이 조용히 빠진다
    * @nullable
    */
   nextNotificationId: string | null;
-  /** 알림 목록. 최신순 한 쪽 최대 50개 */
+  /** 알림 목록. 최신순 한 쪽 최대 limit 개 */
   notifications: NotificationListResponseDataNotificationsItem[];
+  /** 이 목록을 읽은 서버 시각. 모두 읽음(PUT /v1/notifications/read)의 upTo 로 그대로 보낸다 */
+  serverTime: string;
 };

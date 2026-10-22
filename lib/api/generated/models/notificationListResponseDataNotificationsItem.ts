@@ -6,12 +6,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { NotificationListResponseDataNotificationsItemInvitation } from "./notificationListResponseDataNotificationsItemInvitation";
+import type { NotificationListResponseDataNotificationsItemPayload } from "./notificationListResponseDataNotificationsItemPayload";
 import type { NotificationListResponseDataNotificationsItemType } from "./notificationListResponseDataNotificationsItemType";
 
 export type NotificationListResponseDataNotificationsItem = {
   /** 알림 생성 시각 */
   createdAt: string;
-  /** 워크스페이스 초대 정보. 모든 알림에 포함된다 */
+  /**
+   * 워크스페이스 초대 정보(살아 있는 값). 초대 알림이고 원본이 남아 있을 때만 있다. schema 표식이 없는 요청에는 늘 있다
+   * @nullable
+   */
   invitation: NotificationListResponseDataNotificationsItemInvitation;
   /**
    * 알림 식별자
@@ -25,4 +29,9 @@ export type NotificationListResponseDataNotificationsItem = {
   readAt: string | null;
   /** 알림 종류 */
   type: NotificationListResponseDataNotificationsItemType;
+  /**
+   * 알림을 만든 순간의 표시용 값. 종류마다 채워지는 칸이 다르고 나머지는 null 이다. 문장·사람 이름은 없다. 오래된 알림은 payload 가 null 일 수 있다
+   * @nullable
+   */
+  payload: NotificationListResponseDataNotificationsItemPayload;
 };

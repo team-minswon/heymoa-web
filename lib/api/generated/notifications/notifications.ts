@@ -26,9 +26,13 @@ import type {
 import type {
   AppErrorResponse,
   GetNotificationsParams,
+  GetUnreadNotificationCountParams,
+  MarkAllNotificationsReadRequest,
+  MarkAllNotificationsReadResponse,
   MarkNotificationReadResponse,
   NotificationListResponse,
   UnauthorizedResponse,
+  UnreadNotificationCountResponse,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -91,7 +95,7 @@ export const getGetNotificationsUrl = (params?: GetNotificationsParams) => {
 };
 
 /**
- * 현재 사용자의 알림을 최신순으로 조회한다. 커서는 (createdAt, notificationId) 복합이고 둘을 함께 보낸다 - 한쪽만 보내면 같은 시각의 알림이 조용히 빠진다. 읽지 않은 개수는 목록과 같은 조인으로 세므로 뱃지와 목록이 안 갈린다.
+ * 현재 사용자의 알림을 최신순으로 조회한다. 커서는 (createdAt, notificationId) 복합이고 둘을 함께 보낸다 - 한쪽만 보내면 같은 시각의 알림이 조용히 빠진다. 필터는 쪽을 자르기 전에 서버가 적용한다. 알림은 원본(초대 등)이 지워져도 남는다. `schema` 표식이 없는 요청(옛 web)은 원본이 살아 있는 초대 알림만 받는다.
  * @summary 알림 목록 조회
  */
 export const getNotifications = async (
@@ -538,3 +542,529 @@ export const useMarkNotificationRead = <
     queryClient
   );
 };
+export type markAllNotificationsReadResponse200 = {
+  data: MarkAllNotificationsReadResponse;
+  status: 200;
+};
+
+export type markAllNotificationsReadResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type markAllNotificationsReadResponseSuccess =
+  markAllNotificationsReadResponse200 & {
+    headers: Headers;
+  };
+export type markAllNotificationsReadResponseError =
+  markAllNotificationsReadResponse401 & {
+    headers: Headers;
+  };
+
+export type markAllNotificationsReadResponse =
+  | markAllNotificationsReadResponseSuccess
+  | markAllNotificationsReadResponseError;
+
+export const getMarkAllNotificationsReadUrl = () => {
+  return `/v1/notifications/read`;
+};
+
+/**
+ * upTo(목록 응답의 serverTime)까지 만든 내 알림을 읽음으로 바꾼다. 그 뒤에 도착한 알림은 읽음이 되지 않는다. 이미 읽은 알림은 건드리지 않으므로 두 번 불러도 상태가 같다.
+ * @summary 알림 모두 읽음 처리
+ */
+export const markAllNotificationsRead = async (
+  markAllNotificationsReadRequest?: MarkAllNotificationsReadRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<markAllNotificationsReadResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<markAllNotificationsReadResponse>(
+    getMarkAllNotificationsReadUrl(),
+    {
+      ...options,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(markAllNotificationsReadRequest),
+    }
+  );
+};
+
+export const getMarkAllNotificationsReadMutationKey = () =>
+  ["markAllNotificationsRead"] as const;
+
+export const getMarkAllNotificationsReadMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markAllNotificationsRead>>,
+    TError,
+    MarkAllNotificationsReadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markAllNotificationsRead>>,
+  TError,
+  MarkAllNotificationsReadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkAllNotificationsReadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markAllNotificationsRead>>,
+    MarkAllNotificationsReadMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return markAllNotificationsRead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkAllNotificationsReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markAllNotificationsRead>>
+>;
+export type MarkAllNotificationsReadMutationBody =
+  | MarkAllNotificationsReadRequest
+  | undefined;
+export type MarkAllNotificationsReadMutationError = UnauthorizedResponse;
+export type MarkAllNotificationsReadMutationVariables = {
+  data?: MarkAllNotificationsReadRequest;
+};
+
+/**
+ * @summary 알림 모두 읽음 처리
+ */
+export const useMarkAllNotificationsRead = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markAllNotificationsRead>>,
+      TError,
+      MarkAllNotificationsReadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof markAllNotificationsRead>>,
+  TError,
+  MarkAllNotificationsReadMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getMarkAllNotificationsReadMutationOptions(options),
+    queryClient
+  );
+};
+export type getUnreadNotificationCountResponse200 = {
+  data: UnreadNotificationCountResponse;
+  status: 200;
+};
+
+export type getUnreadNotificationCountResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getUnreadNotificationCountResponseSuccess =
+  getUnreadNotificationCountResponse200 & {
+    headers: Headers;
+  };
+export type getUnreadNotificationCountResponseError =
+  getUnreadNotificationCountResponse401 & {
+    headers: Headers;
+  };
+
+export type getUnreadNotificationCountResponse =
+  | getUnreadNotificationCountResponseSuccess
+  | getUnreadNotificationCountResponseError;
+
+export const getGetUnreadNotificationCountUrl = (
+  params?: GetUnreadNotificationCountParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/notifications/unread-count?${stringifiedParams}`
+    : `/v1/notifications/unread-count`;
+};
+
+/**
+ * 안 읽은 알림 개수만 돌려준다. 목록(GET /v1/notifications)과 같은 기준으로 센다.
+ * @summary 안 읽은 알림 개수 조회
+ */
+export const getUnreadNotificationCount = async (
+  params?: GetUnreadNotificationCountParams,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getUnreadNotificationCountResponse> => {
+  return apiFetch<getUnreadNotificationCountResponse>(
+    getGetUnreadNotificationCountUrl(params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetUnreadNotificationCountQueryKey = (
+  params?: GetUnreadNotificationCountParams
+) => {
+  return [
+    `/v1/notifications/unread-count`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetUnreadNotificationCountQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetUnreadNotificationCountQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getUnreadNotificationCount>>
+  > = ({ signal }) =>
+    getUnreadNotificationCount(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetUnreadNotificationCountQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUnreadNotificationCount>>
+>;
+export type GetUnreadNotificationCountQueryError = UnauthorizedResponse;
+
+export function useGetUnreadNotificationCount<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params: undefined | GetUnreadNotificationCountParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+          TError,
+          Awaited<ReturnType<typeof getUnreadNotificationCount>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetUnreadNotificationCount<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+          TError,
+          Awaited<ReturnType<typeof getUnreadNotificationCount>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetUnreadNotificationCount<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 안 읽은 알림 개수 조회
+ */
+
+export function useGetUnreadNotificationCount<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetUnreadNotificationCountQueryOptions(
+    params,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 안 읽은 알림 개수 조회
+ */
+export const prefetchGetUnreadNotificationCountQuery = async <
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetUnreadNotificationCountQueryOptions(
+    params,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetUnreadNotificationCountSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetUnreadNotificationCountQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getUnreadNotificationCount>>
+  > = ({ signal }) =>
+    getUnreadNotificationCount(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetUnreadNotificationCountSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUnreadNotificationCount>>
+>;
+export type GetUnreadNotificationCountSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetUnreadNotificationCountSuspense<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params: undefined | GetUnreadNotificationCountParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetUnreadNotificationCountSuspense<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetUnreadNotificationCountSuspense<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 안 읽은 알림 개수 조회
+ */
+
+export function useGetUnreadNotificationCountSuspense<
+  TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: GetUnreadNotificationCountParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getUnreadNotificationCount>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetUnreadNotificationCountSuspenseQueryOptions(
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

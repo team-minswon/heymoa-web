@@ -1789,8 +1789,13 @@ function createSeedState(): StoreState {
         inviterName: invitations[0].inviterName,
         expiresAt: invitations[0].expiresAt,
       },
+      payload: invitationPayload(
+        INVITED_WORKSPACE.workspaceId,
+        INVITED_WORKSPACE.name,
+        invitations[0].invitationId
+      ),
     },
-    // 이미 읽은 알림. `readAt`이 전부 null이면 벨의 읽음 표시와 안읽음 카운트 분기가
+    // 이미 읽은 알림. `readAt`이 전부 null이면 읽음 표시와 안읽음 카운트 분기가
     // 한쪽만 검증된다.
     {
       notificationId: "01K0000000023",
@@ -1805,6 +1810,88 @@ function createSeedState(): StoreState {
         workspaceName: workspaces[1].name,
         inviterName: "한지원",
         expiresAt: "2026-07-11T00:00:00Z",
+      },
+      payload: invitationPayload(
+        workspaces[1].workspaceId,
+        workspaces[1].name,
+        "01K0000000024"
+      ),
+    },
+    // 원본 초대가 지워진 알림(PRO-67 I06). `invitation` 이 없고 표시용 값만 남는다 — 스키마 표식이 없는 옛 web 에는 안 나간다.
+    {
+      notificationId: "01K0000000019",
+      type: "WORKSPACE_INVITATION",
+      readAt: "2026-07-09T01:00:00Z",
+      createdAt: "2026-07-09T00:00:00Z",
+      invitation: null,
+      payload: invitationPayload(
+        "01K0000000018",
+        "디자인 스튜디오",
+        "01K0000000017"
+      ),
+    },
+    // 오래된 알림 — 백필 전이라 표시용 값(payload)이 없다. 화면은 살아 있는 초대 값만으로 그린다.
+    {
+      notificationId: "01K0000000016",
+      type: "WORKSPACE_INVITATION",
+      readAt: "2026-07-08T01:00:00Z",
+      createdAt: "2026-07-08T00:00:00Z",
+      invitation: {
+        invitationId: "01K0000000015",
+        status: "DECLINED",
+        role: "MEMBER",
+        workspaceId: "01K0000000014",
+        workspaceName: "마케팅 팀",
+        inviterName: "한지원",
+        expiresAt: "2026-07-09T00:00:00Z",
+      },
+      payload: null,
+    },
+    // 검토할 결과 준비(PRO-67 I22). 자동 종료분(사유 줄)·일반 종료분·원본이 지워진 노트 셋.
+    {
+      notificationId: "01K0000000031",
+      type: "ANALYSIS_READY",
+      readAt: null,
+      createdAt: daysAgoIso(0, 0),
+      invitation: null,
+      payload: analysisReadyPayload(
+        workspaces[0],
+        "01K0000000026",
+        "분기 계획 세션",
+        true,
+        3
+      ),
+    },
+    {
+      notificationId: "01K0000000032",
+      type: "ANALYSIS_READY",
+      readAt: null,
+      createdAt: daysAgoIso(1, 0),
+      invitation: null,
+      payload: analysisReadyPayload(
+        workspaces[0],
+        MENTORING_NOTE_ID,
+        "9/11 팀 이동준 멘토님 - 정규멘토링",
+        false,
+        null
+      ),
+    },
+    {
+      notificationId: "01K0000000033",
+      type: "ANALYSIS_READY",
+      readAt: "2026-07-12T01:00:00Z",
+      createdAt: "2026-07-12T00:00:00Z",
+      invitation: null,
+      payload: {
+        // 워크스페이스째 지워져 표시용 값도 노트 제목만 남은 쪽.
+        workspaceId: null,
+        workspaceName: null,
+        invitationId: null,
+        inviterUserId: null,
+        noteId: "01K0000009999",
+        noteTitle: "6월 킥오프",
+        autoEnded: false,
+        pausedBusinessDays: null,
       },
     },
   ];
@@ -2161,6 +2248,58 @@ function findInvitation(invitationId: string): MockInvitation {
     (candidate) => candidate.invitationId === invitationId
   );
   return invitation ?? fail("INVITATION_NOT_FOUND");
+}
+
+function analysisReadyPayload(
+  workspace: { workspaceId: string; name: string },
+  noteId: string,
+  noteTitle: string,
+  autoEnded: boolean,
+  pausedBusinessDays: number | null
+): NotificationListResponseDataNotificationsItem["payload"] {
+  return {
+    workspaceId: workspace.workspaceId,
+    workspaceName: workspace.name,
+    invitationId: null,
+    inviterUserId: null,
+    noteId,
+    noteTitle,
+    autoEnded,
+    pausedBusinessDays,
+  };
+}
+
+function invitationPayload(
+  workspaceId: string,
+  workspaceName: string,
+  invitationId: string
+): NotificationListResponseDataNotificationsItem["payload"] {
+  return {
+    workspaceId,
+    workspaceName,
+    invitationId,
+    inviterUserId: "01K0000000020",
+    noteId: null,
+    noteTitle: null,
+    autoEnded: null,
+    pausedBusinessDays: null,
+  };
+}
+
+/** 스키마 표식(2 이상)이 있어야 초대 밖의 종류와 원본이 지워진 초대를 낸다 — 서버와 같은 규칙. */
+function visibleNotifications(schema?: string | null) {
+  const modern = Number(schema) >= 2;
+  return [...state.notifications]
+    .filter(
+      (item) =>
+        modern ||
+        (item.type === "WORKSPACE_INVITATION" && item.invitation !== null)
+    )
+    .sort(
+      (a, b) =>
+        b.createdAt.localeCompare(a.createdAt) ||
+        b.notificationId.localeCompare(a.notificationId)
+    );
 }
 
 /**
@@ -3410,19 +3549,71 @@ export const mockDb = {
     return resolveInvitation(invitationId, "CANCELED");
   },
 
-  listNotifications(): NotificationListResponseData {
-    const notifications = [...state.notifications].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt)
+  /**
+   * 알림 목록(PRO-67 I06 계약). 서버처럼 **필터를 쪽을 자르기 전에** 적용하고 `(createdAt, id)` 커서로 자른다.
+   * 스키마 표식이 없으면(옛 web) 원본이 살아 있는 초대만 낸다. `serverTime` 은 모두 읽음의 기준 시각이다.
+   */
+  listNotifications(
+    params: {
+      filter?: string | null;
+      limit?: string | null;
+      schema?: string | null;
+      afterCreatedAt?: string | null;
+      afterNotificationId?: string | null;
+    } = {}
+  ): NotificationListResponseData {
+    const visible = visibleNotifications(params.schema);
+    const filtered = visible.filter((item) =>
+      params.filter === "UNREAD"
+        ? item.readAt === null
+        : params.filter === "ACTION_REQUIRED"
+          ? item.invitation?.status === "PENDING" &&
+            Date.parse(item.invitation.expiresAt) > Date.now()
+          : true
     );
+    const after = params.afterNotificationId
+      ? filtered.filter(
+          (item) =>
+            item.createdAt < (params.afterCreatedAt ?? "") ||
+            (item.createdAt === params.afterCreatedAt &&
+              item.notificationId < params.afterNotificationId!)
+        )
+      : filtered;
+    const limit = Number(params.limit) || 50;
+    const page = after.slice(0, limit);
+    const hasMore = after.length > limit;
+    const last = page.at(-1);
     return copy({
-      notifications,
-      unreadCount: state.notifications.filter((item) => item.readAt === null)
-        .length,
-      // 목은 한 쪽만 돌려준다 — 커서 왕복까지 흉내 낼 이유가 없다.
-      hasMore: false,
-      nextCreatedAt: null,
-      nextNotificationId: null,
+      notifications: page,
+      unreadCount: visible.filter((item) => item.readAt === null).length,
+      hasMore,
+      nextCreatedAt: hasMore && last ? last.createdAt : null,
+      nextNotificationId: hasMore && last ? last.notificationId : null,
+      serverTime: nextTimestamp(),
     });
+  },
+
+  unreadNotificationCount(schema?: string | null): number {
+    return visibleNotifications(schema).filter((item) => item.readAt === null)
+      .length;
+  },
+
+  /** `upTo` 까지 만든 알림만 읽는다 — 그 뒤 도착한 것은 안 읽음으로 남는다. 멱등이다. */
+  markAllNotificationsRead(upTo: string): { readCount: number } {
+    let readCount = 0;
+    const readAt = nextTimestamp();
+    for (const item of state.notifications) {
+      if (item.readAt === null && item.createdAt <= upTo) {
+        item.readAt = readAt;
+        readCount += 1;
+      }
+    }
+    return { readCount };
+  },
+
+  /** 시험·데모가 「방금 도착한 알림」을 만든다. */
+  pushNotification(item: NotificationListResponseDataNotificationsItem) {
+    state.notifications.push(copy(item));
   },
 
   listFeedbacks(): { feedbacks: FeedbackResponseData[] } {

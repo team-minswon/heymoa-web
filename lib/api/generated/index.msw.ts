@@ -3,6 +3,7 @@ export { getAgentDelegationMock } from "./agent-delegation/agent-delegation.msw"
 export { getAgentOAuthConsentMock } from "./agent-o-auth-consent/agent-o-auth-consent.msw";
 export { getAnalysisMock } from "./analysis/analysis.msw";
 export { getAuthMock } from "./auth/auth.msw";
+export { getEventsMock } from "./events/events.msw";
 export { getFeedbacksMock } from "./feedbacks/feedbacks.msw";
 export { getIntegrationMock } from "./integration/integration.msw";
 export { getMailUnsubscribeMock } from "./mail-unsubscribe/mail-unsubscribe.msw";

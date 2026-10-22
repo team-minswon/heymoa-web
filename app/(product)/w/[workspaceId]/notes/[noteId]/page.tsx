@@ -9,6 +9,7 @@ export default async function NoteRoute({
     view?: string | string[];
     tab?: string | string[];
     utm_medium?: string | string[];
+    source?: string | string[];
   }>;
 }) {
   const [{ workspaceId, noteId }, query] = await Promise.all([
@@ -28,7 +29,10 @@ export default async function NoteRoute({
         // 고치기 전이다. 메일의 앱 링크에는 서버가 `utm_medium=email` 을 붙인다(PRO-67 contract).
         ...([query.utm_medium].flat().includes("email")
           ? { source: "mail" as const }
-          : {}),
+          : // 알림 모달의 행에서 왔다(PRO-67 I09). 노트가 「알림 목록으로」를 세우고 진입을 센다.
+            [query.source].flat().includes("notification")
+            ? { source: "notification" as const }
+            : {}),
       }}
     />
   );

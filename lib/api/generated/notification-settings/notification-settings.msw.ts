@@ -31,6 +31,19 @@ export const getGetNotificationSettingsResponseMock =
           ],
         },
         {
+          type: "ANALYSIS_READY",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
           type: "MEETING_PAUSED_REMINDER",
           required: false,
           channels: [
@@ -70,6 +83,19 @@ export const getUpdateNotificationMutesResponseMock =
               provided: true,
               enabled: true,
               effective: true,
+            },
+          ],
+        },
+        {
+          type: "ANALYSIS_READY",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
             },
           ],
         },
@@ -117,6 +143,19 @@ export const getResetNotificationSettingsResponseMock =
           ],
         },
         {
+          type: "ANALYSIS_READY",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
           type: "MEETING_PAUSED_REMINDER",
           required: false,
           channels: [
@@ -156,6 +195,19 @@ export const getUpdateNotificationPreferenceResponseMock =
               provided: true,
               enabled: true,
               effective: true,
+            },
+          ],
+        },
+        {
+          type: "ANALYSIS_READY",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
             },
           ],
         },
