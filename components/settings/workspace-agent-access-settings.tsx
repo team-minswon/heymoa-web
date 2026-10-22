@@ -19,6 +19,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SETTINGS_CARD,
+  SETTINGS_CARD_ICON,
+  SettingsHeader,
+  SkeletonCardIcon,
+  SkeletonLine,
+} from "@/components/settings/settings-layout";
 import { Switch } from "@/components/ui/switch";
 import {
   getGetAgentDelegationsQueryKey,
@@ -35,6 +42,7 @@ import {
   useGetWorkspace,
 } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
+import { cn } from "@/lib/utils";
 
 type Delegation = WorkspaceAgentDelegationsResponseDataDelegationsItem;
 
@@ -109,21 +117,24 @@ export function WorkspaceAgentAccessSettings({
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8">
-        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          MCP 연결
-        </h2>
-        <p className="mt-2 text-sm text-[var(--el-muted)]">
-          팀원이 Claude·ChatGPT 같은 AI 앱에 이 워크스페이스를 연결해도 되는지
-          정합니다. 관리자는 연결된 앱을 보고 끊을 수 있습니다.
-        </p>
-      </header>
+      <SettingsHeader
+        title="MCP 연결"
+        description="팀원이 Claude·ChatGPT 같은 AI 앱에 이 워크스페이스를 연결해도 되는지 정합니다. 관리자는 연결된 앱을 보고 끊을 수 있습니다."
+      />
 
       {workspaceQuery.isLoading ? (
-        <Skeleton
-          className="h-[76px] rounded-panel"
+        <section
           aria-label="MCP 설정 불러오는 중"
-        />
+          className={cn(CARD_ROW, SETTINGS_CARD)}
+        >
+          <div className="min-w-0">
+            <AllowTitle />
+            <span className="mt-1 block">
+              <SkeletonLine size="xs" className="w-72" />
+            </span>
+          </div>
+          <Skeleton className="h-5 w-9 shrink-0 rounded-full" />
+        </section>
       ) : // 다시 읽다 실패하면 캐시가 남아도 옛 값 대신 실패를 보인다 — 옛 「켜짐」을 보고 끄기를 누르게 된다
       workspaceQuery.isError || !workspace ? (
         <div role="alert" className="space-y-2">
@@ -142,12 +153,10 @@ export function WorkspaceAgentAccessSettings({
       ) : (
         <section
           aria-label="MCP 연결 허용"
-          className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4"
+          className={cn(CARD_ROW, SETTINGS_CARD)}
         >
           <div className="min-w-0">
-            <p className="text-sm font-medium text-[var(--el-ink)]">
-              MCP 연결 허용
-            </p>
+            <AllowTitle />
             <p className="mt-1 text-xs text-[var(--el-muted)]">
               {workspace.agentAccessAllowed
                 ? "팀원이 이 워크스페이스를 Claude·ChatGPT 같은 AI 앱에 맡길 수 있습니다."
@@ -206,53 +215,51 @@ export function WorkspaceAgentAccessSettings({
       ) : null}
 
       {isAdmin ? (
-        <section aria-label="열린 연결" className="mt-8">
-          <h3 className="text-sm font-medium text-[var(--el-ink)]">
-            열린 연결
-          </h3>
-          <div className="mt-3">
-            {delegationsQuery.isLoading ? (
-              <div className="space-y-3" aria-label="열린 연결 불러오는 중">
-                <Skeleton className="h-[72px] rounded-panel" />
-                <Skeleton className="h-[72px] rounded-panel" />
-              </div>
-            ) : // 캐시가 남아도 실패를 「열린 연결이 없습니다」나 옛 목록으로 접지 않는다
-            delegationsQuery.isError || !delegations ? (
-              <div role="alert" className="space-y-2">
-                <p className="text-sm text-[var(--el-ink)]">
-                  연결 목록을 불러오지 못했습니다.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-[30px]"
-                  onClick={() => void delegationsQuery.refetch()}
-                >
-                  다시 시도
-                </Button>
-              </div>
-            ) : delegations.length === 0 ? (
-              // 실패가 아니다 — 경고 색·아이콘을 쓰지 않는다
-              <div className="rounded-panel border border-dashed border-[var(--el-hairline)] p-6 text-center">
-                <p className="text-sm text-[var(--el-ink)]">
-                  열린 연결이 없습니다.
-                </p>
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {delegations.map((delegation) => (
-                  <WorkspaceDelegationRow
-                    key={delegation.delegationId}
-                    workspaceId={workspaceId}
-                    delegation={delegation}
-                    busy={change.isPending}
-                    onRevoked={refresh}
-                  />
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+        <OpenConnectionsFrame>
+          {delegationsQuery.isLoading ? (
+            <DelegationRowsSkeleton />
+          ) : // 캐시가 남아도 실패를 「열린 연결이 없습니다」나 옛 목록으로 접지 않는다
+          delegationsQuery.isError || !delegations ? (
+            <div role="alert" className="space-y-2">
+              <p className="text-sm text-[var(--el-ink)]">
+                연결 목록을 불러오지 못했습니다.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-[30px]"
+                onClick={() => void delegationsQuery.refetch()}
+              >
+                다시 시도
+              </Button>
+            </div>
+          ) : delegations.length === 0 ? (
+            // 실패가 아니다 — 경고 색·아이콘을 쓰지 않는다
+            <div className="rounded-panel border border-dashed border-[var(--el-hairline)] p-6 text-center">
+              <p className="text-sm text-[var(--el-ink)]">
+                열린 연결이 없습니다.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {delegations.map((delegation) => (
+                <WorkspaceDelegationRow
+                  key={delegation.delegationId}
+                  workspaceId={workspaceId}
+                  delegation={delegation}
+                  busy={change.isPending}
+                  onRevoked={refresh}
+                />
+              ))}
+            </ul>
+          )}
+        </OpenConnectionsFrame>
+      ) : membersQuery.isLoading ? (
+        // 역할을 모르는 동안은 관리자 자리를 잡아 둔다 — 멤버 탭과 같은 이유다(`members-settings`). 관리 UI 가 아니라
+        // 자리일 뿐이라 보조기술에는 숨긴다.
+        <OpenConnectionsFrame placeholder>
+          <DelegationRowsSkeleton />
+        </OpenConnectionsFrame>
       ) : null}
 
       <AlertDialog
@@ -308,9 +315,9 @@ function WorkspaceDelegationRow({
   const revoke = useRevokeWorkspaceAgentDelegation();
 
   return (
-    <li className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4">
+    <li className={cn(CARD_ROW, SETTINGS_CARD)}>
       <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
+        <span className={cn(SETTINGS_CARD_ICON, "bg-[var(--el-canvas-soft)]")}>
           <Bot className="size-4 text-[var(--el-muted)]" />
         </span>
         <div className="min-w-0">
@@ -388,5 +395,61 @@ function WorkspaceDelegationRow({
         </AlertDialogContent>
       </AlertDialog>
     </li>
+  );
+}
+
+const CARD_ROW = "flex items-center justify-between gap-4";
+/** skeleton 이 세우는 열린 연결 수 — 목 시드의 흔한 워크스페이스(2개)다. */
+const SKELETON_DELEGATIONS = 2;
+
+function AllowTitle() {
+  return (
+    <p className="text-sm font-medium text-[var(--el-ink)]">MCP 연결 허용</p>
+  );
+}
+
+/** 「열린 연결」 머리글과 본문 자리. 실제와 skeleton 이 같이 쓴다. */
+function OpenConnectionsFrame({
+  placeholder = false,
+  children,
+}: {
+  placeholder?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      aria-label="열린 연결"
+      aria-hidden={placeholder || undefined}
+      className="mt-8"
+    >
+      <h3 className="text-sm font-medium text-[var(--el-ink)]">열린 연결</h3>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+/** `WorkspaceDelegationRow` 와 같은 틀(이름 줄·팀원 줄·날짜 줄·끊기)에 값만 막대로 둔다. */
+function DelegationRowsSkeleton() {
+  return (
+    // 목록(`ul`)으로 세우지 않는다 — 도착 전의 자리가 연결 목록으로 읽히면 안 된다.
+    <div className="space-y-3" aria-label="열린 연결 불러오는 중">
+      {Array.from({ length: SKELETON_DELEGATIONS }, (_, index) => (
+        <div key={index} className={cn(CARD_ROW, SETTINGS_CARD)}>
+          <div className="flex min-w-0 items-start gap-3">
+            <SkeletonCardIcon />
+            <div className="min-w-0">
+              <SkeletonLine className="w-32" />
+              <span className="mt-1 block">
+                <SkeletonLine size="xs" className="w-14" />
+              </span>
+              <span className="mt-0.5 block">
+                <SkeletonLine size="xs" className="w-56" />
+              </span>
+            </div>
+          </div>
+          <Skeleton className="h-8 w-11 shrink-0 rounded-control" />
+        </div>
+      ))}
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /**
  * **스켈레톤이 최종 기하와 같은 자리를 잡는가.**
@@ -14,9 +14,7 @@ import { expect, test, type Page } from "@playwright/test";
  * baseline 을 갱신하라고 시끄럽게 구는 검사는 결국 꺼진다. 재는 것은 **스켈레톤과 도착한
  * 것의 차이** 하나다.
  *
- * **아직 둘만 덮는다.** 규칙의 표는 계정 설정·워크스페이스 일반·아카이브 전사도 적었는데,
- * 그 셋은 설정 다이얼로그와 탭 안이라 여는 절차가 화면마다 다르다. 여기 있는 `shiftOf` 가
- * 그 절차만 있으면 그대로 쓰인다.
+ * 설정 다이얼로그의 탭들(APP-1350)도 여기서 본다. 아카이브 전사는 아직 안 덮는다.
  */
 
 const WORKSPACE_ID = "01K0000000000";
@@ -82,9 +80,14 @@ async function shiftOf(page: Page, label: string) {
 test.describe("스켈레톤 기하", () => {
   test("노트 정보 탭이 도착할 때 자리가 크게 안 밀린다", async ({ page }) => {
     await holdResponses(page);
-    await page.goto(`/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full&tab=details`);
+    await page.goto(
+      `/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full&tab=details`
+    );
 
-    const { before, after, shift } = await shiftOf(page, "노트 정보 불러오는 중");
+    const { before, after, shift } = await shiftOf(
+      page,
+      "노트 정보 불러오는 중"
+    );
 
     expect(before, "스켈레톤이 자리를 잡아야 한다").toBeGreaterThan(0);
     expect(after, "도착한 내용도 자리를 차지해야 한다").toBeGreaterThan(0);
@@ -133,5 +136,89 @@ test.describe("스켈레톤 기하", () => {
       Math.abs(skeletonRow - realRow),
       `스켈레톤 줄 ${skeletonRow} → 실제 줄 ${realRow}`
     ).toBeLessThanOrEqual(4);
+  });
+
+  /**
+   * **설정 탭은 탭 전체의 높이를 비교한다(APP-1350).** 탭마다 skeleton 이 여럿으로 나뉘고(멤버는 목록 + 관리자 자리,
+   * 임시 참여자는 인원 줄 + 목록) 조회가 차례로 붙어(멤버 → 대기 중인 초대) 한 자리만 재면 나머지가 밀린 것을 놓친다.
+   * 행 수는 목 시드에 맞춰 뒀으므로 목에서는 차이가 0 이어야 한다.
+   *
+   * 「일반」은 없다 — 워크스페이스 조회를 셸이 서버에서 채워 두어 그 skeleton 은 목에서 한 프레임도 안 선다.
+   * 「알림」은 행 수가 목(1)과 운영(2)이 달라 아래 따로 본다.
+   */
+  for (const width of [1440, 1024]) {
+    for (const section of [
+      "members",
+      "guests",
+      "terms",
+      "integrations",
+      "workspaceAgents",
+      "account",
+      "agents",
+    ]) {
+      test(`설정 「${section}」 탭이 도착할 때 높이가 안 바뀐다 (${width}px)`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await holdResponses(page);
+        await page.goto(`/w/${WORKSPACE_ID}?settings=${section}`);
+
+        const panel = page.getByTestId("settings-panel");
+        const skeleton = panel.locator('[data-slot="skeleton"]');
+        await expect(skeleton.first()).toBeVisible();
+        const tabHeight = () =>
+          panel.evaluate((el) =>
+            Math.round(el.firstElementChild!.getBoundingClientRect().height)
+          );
+        const before = await tabHeight();
+
+        // 뒤따르는 조회(역할 → 대기 중인 초대·열린 연결)가 또 skeleton 을 세웠다 걷을 때까지 기다린다.
+        await expect(skeleton).toHaveCount(0, { timeout: 15_000 });
+        await page.waitForTimeout(2_000);
+        await expect(skeleton).toHaveCount(0, { timeout: 15_000 });
+        const after = await tabHeight();
+
+        expect(
+          Math.abs(after - before),
+          `스켈레톤 ${before} → 실제 ${after}`
+        ).toBeLessThanOrEqual(MAX_SHIFT_PX);
+      });
+    }
+  }
+
+  /**
+   * **알림은 행 하나의 높이와 첫 행 위치를 본다.** skeleton 은 운영이 내는 선택 종류 둘(중지된 회의 · 검토할 결과 준비)을
+   * 세우는데 목은 아직 하나라, 탭 전체 높이는 한 행만큼 다른 것이 맞다.
+   */
+  test("설정 「알림」 탭의 종류 행이 skeleton 과 같은 자리·높이로 선다", async ({
+    page,
+  }) => {
+    await holdResponses(page);
+    await page.goto(`/w/${WORKSPACE_ID}?settings=notifications`);
+
+    const loading = page.locator('[aria-label="알림 설정 불러오는 중"]');
+    await expect(loading).toBeVisible();
+    const rowOf = (row: Locator) =>
+      row.evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        return [Math.round(rect.height), Math.round(rect.top)];
+      });
+    const [skeletonRow, skeletonTop] = await rowOf(
+      loading.locator("tbody tr").first()
+    );
+
+    await expect(loading).toBeHidden({ timeout: 15_000 });
+    const [realRow, realTop] = await rowOf(
+      page.locator('[aria-label="알림 설정"] tbody tr').first()
+    );
+
+    expect(
+      Math.abs(skeletonTop - realTop),
+      `스켈레톤 첫 행 위치 ${skeletonTop} → 실제 ${realTop}`
+    ).toBeLessThanOrEqual(MAX_SHIFT_PX);
+    expect(
+      Math.abs(skeletonRow - realRow),
+      `스켈레톤 행 ${skeletonRow} → 실제 행 ${realRow}`
+    ).toBeLessThanOrEqual(MAX_SHIFT_PX);
   });
 });

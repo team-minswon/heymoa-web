@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { SettingsHeader } from "@/components/settings/settings-layout";
 import { WorkspaceGuestsSettings } from "@/components/settings/workspace-guests-settings";
 import { useGetWorkspaceMembers } from "@/lib/api/generated/workspace-members/workspace-members";
 
@@ -23,15 +24,10 @@ export function GuestsSettings({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8">
-        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          임시 참여자
-        </h2>
-        <p className="mt-2 text-sm text-[var(--el-muted)]">
-          계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 이어 붙일 수
-          있습니다.
-        </p>
-      </header>
+      <SettingsHeader
+        title="임시 참여자"
+        description="계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 이어 붙일 수 있습니다."
+      />
       <WorkspaceGuestsSettings
         workspaceId={workspaceId}
         canManage={canManage}

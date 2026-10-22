@@ -27,6 +27,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import {
+  SETTINGS_LIST,
+  SETTINGS_LIST_ROW,
+  SkeletonLine,
+} from "@/components/settings/settings-layout";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
   RenamePersonDialog,
@@ -125,6 +131,9 @@ export function WorkspaceGuestsSettings({
       {standalone ? (
         page ? (
           <p className="text-sm text-[var(--el-muted)]">{page.totalCount}명</p>
+        ) : guestsQuery.isLoading ? (
+          // 인원 줄도 응답이 채운다 — 자리를 안 잡으면 도착하며 목록을 한 줄 민다.
+          <SkeletonLine className="w-10" />
         ) : null
       ) : (
         <>
@@ -144,10 +153,14 @@ export function WorkspaceGuestsSettings({
       )}
 
       {guestsQuery.isLoading ? (
-        <div className="mt-4 space-y-2">
-          <Skeleton className="h-[52px] rounded-block" />
-          <Skeleton className="h-[52px] rounded-block" />
-        </div>
+        <ul
+          className={cn("mt-4", SETTINGS_LIST)}
+          aria-label="임시 참여자 불러오는 중"
+        >
+          {Array.from({ length: SKELETON_GUEST_ROWS }, (_, index) => (
+            <GuestRowSkeleton key={index} />
+          ))}
+        </ul>
       ) : /* **들고 있는 목록이 있으면 실패로 덮지 않는다.** 캐시를 든 채 리패치만 실패해도
              TanStack 은 `isError` 가 된다 — 그때 목록을 오류 화면으로 바꾸면 이미 보이던
              임시 참여자와 연동·삭제가 **재시도가 성공할 때까지 통째로 사라진다.**
@@ -202,7 +215,7 @@ export function WorkspaceGuestsSettings({
               </Button>
             </div>
           ) : null}
-          <ul className="mt-4 divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
+          <ul className={cn("mt-4", SETTINGS_LIST)}>
             {guests.map((guest) => (
               <GuestRow
                 key={guest.guestId}
@@ -307,7 +320,7 @@ function GuestRow({
   onOpen: (kind: GuestDialogKind) => void;
 }) {
   return (
-    <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+    <li className={SETTINGS_LIST_ROW}>
       {/* 색은 `guestId` 가 정한다 — 이름은 겹치고(박도현·박순영) 개명하면 튄다. */}
       <PersonAvatar name={guest.guestId} size={28} />
       <span className="flex min-w-0 flex-1 flex-col">
@@ -359,6 +372,23 @@ function GuestRow({
           </DropdownMenu>
         ) : null}
       </span>
+    </li>
+  );
+}
+
+/** skeleton 이 세우는 줄 수 — 목 시드의 흔한 워크스페이스(5명)다. */
+const SKELETON_GUEST_ROWS = 5;
+
+/** `GuestRow` 와 같은 칸(아바타·이름·회의록 수·메뉴 32)에 값만 막대로 둔다. */
+function GuestRowSkeleton() {
+  return (
+    <li className={SETTINGS_LIST_ROW}>
+      <Skeleton className="size-7 shrink-0 rounded-full" />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <SkeletonLine className="w-20" />
+        <SkeletonLine size="xs" className="w-16" />
+      </span>
+      <span className="w-8 shrink-0" />
     </li>
   );
 }

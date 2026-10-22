@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { SettingsHeader } from "@/components/settings/settings-layout";
 import {
   getGetWorkspaceQueryKey,
   getGetWorkspacesQueryKey,
@@ -85,19 +86,9 @@ export function WorkspaceSettingsForm({
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          일반
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
-          이 공간의 이름과 설명을 관리합니다.
-        </p>
-      </div>
-      <form
-        onSubmit={submit}
-        className="space-y-5 rounded-panel border border-[var(--el-hairline)] bg-white p-6"
-      >
-        <div className="space-y-2">
+      <Header />
+      <form onSubmit={submit} className={FORM}>
+        <div className={FIELD}>
           <Label htmlFor="workspace-name">워크스페이스 이름</Label>
           <Input id="workspace-name" {...form.register("name")} />
           {form.formState.errors.name && (
@@ -106,7 +97,7 @@ export function WorkspaceSettingsForm({
             </p>
           )}
         </div>
-        <div className="space-y-2">
+        <div className={FIELD}>
           <Label htmlFor="workspace-description">설명</Label>
           <Textarea
             id="workspace-description"
@@ -129,8 +120,9 @@ export function WorkspaceSettingsForm({
 /**
  * 워크스페이스 일반 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다.
  *
- * **머리글은 가리지 않는다** — 화면 제목과 설명은 응답이 아니라 고정 문구다. `h-9` 막대로
- * 덮었을 때 36이었고 실제 머리글 블록은 68이라, 도착하는 순간 폼이 32px 내려앉았다.
+ * **머리글·라벨·버튼은 가리지 않는다** — 고정 문구다. 값이 들어갈 입력 칸만 막대로 둔다. 폼 틀(`FORM`·`FIELD`)은
+ * 실제와 같은 상수를 읽어, 한쪽 여백만 고쳐 어긋나는 일이 없게 한다. 설명 칸은 `field-sizing-content` 라
+ * 내용이 짧으면 최소 높이(`min-h-16`)에 선다.
  */
 export function WorkspaceSettingsFormSkeleton() {
   return (
@@ -138,15 +130,33 @@ export function WorkspaceSettingsFormSkeleton() {
       className="mx-auto max-w-2xl space-y-8"
       aria-label="워크스페이스 설정 불러오는 중"
     >
-      <div>
-        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          일반
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
-          이 공간의 이름과 설명을 관리합니다.
-        </p>
+      <Header />
+      <div className={FORM}>
+        <div className={FIELD}>
+          <Label>워크스페이스 이름</Label>
+          <Skeleton className="h-8 rounded-control" />
+        </div>
+        <div className={FIELD}>
+          <Label>설명</Label>
+          <Skeleton className="h-16 rounded-control" />
+        </div>
+        <Button type="button" disabled className="rounded-full">
+          변경사항 저장
+        </Button>
       </div>
-      <Skeleton className="h-[262px] rounded-panel" />
     </div>
   );
 }
+
+function Header() {
+  return (
+    <SettingsHeader
+      title="일반"
+      description="이 공간의 이름과 설명을 관리합니다."
+    />
+  );
+}
+
+const FORM =
+  "space-y-5 rounded-panel border border-[var(--el-hairline)] bg-white p-6";
+const FIELD = "space-y-2";

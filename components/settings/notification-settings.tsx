@@ -35,6 +35,10 @@ import {
   useUpdateNotificationPreference,
 } from "@/lib/api/generated/notification-settings/notification-settings";
 import { cn } from "@/lib/utils";
+import {
+  SettingsHeader,
+  SkeletonLine,
+} from "@/components/settings/settings-layout";
 
 /**
  * 설정 > 계정 > 알림 (PRO-67 I10 · APP-1341). 사용자 단위이고 모든 워크스페이스에 같이 적용된다.
@@ -99,13 +103,39 @@ const MUTE_CONFIRM: Record<Mute, { title: string; body: string }> = {
 
 function Header() {
   return (
-    <div>
-      <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-        알림
-      </h2>
-      <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
-        받을 알림을 고릅니다. 모든 워크스페이스에 같이 적용됩니다.
-      </p>
+    <SettingsHeader
+      title="알림"
+      description="받을 알림을 고릅니다. 모든 워크스페이스에 같이 적용됩니다."
+    />
+  );
+}
+
+/**
+ * 종류별 표의 틀(카드·머리줄). 실제와 skeleton 이 같이 쓴다 — 머리줄은 고정 문구라 skeleton 에서도 그대로 선다.
+ */
+function TypeTable({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={CARD}>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-[var(--el-muted)]">
+            <th scope="col" className="py-3 text-left font-normal">
+              종류
+            </th>
+            {CHANNELS.map(({ channel, label }) => (
+              <th
+                key={channel}
+                scope="col"
+                // 스위치는 칸 오른쪽에 붙인다 — 위 「모두 끄기」 스위치와 오른쪽 끝이 같은 세로줄에 선다.
+                className="w-20 py-3 text-right font-normal"
+              >
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
     </div>
   );
 }
@@ -120,6 +150,14 @@ const isSettingsWrite = (mutation: { options: { mutationKey?: unknown } }) =>
 const CARD =
   "rounded-panel border border-[var(--el-hairline)] bg-white px-6 py-2";
 const ROW = "flex min-h-14 items-center justify-between gap-4 py-3";
+const TYPE_ROW = "border-t border-[var(--el-hairline)]";
+const TYPE_NAME_CELL = "py-3 text-left font-normal";
+const TYPE_CHANNEL_CELL = "py-3 text-right";
+/**
+ * skeleton 이 세우는 종류 행 수. 운영이 내는 선택 종류는 둘이다(중지된 회의 · 검토할 결과 준비). 목(`NOTIFICATION_DEFAULTS`)은
+ * 아직 하나라 e2e 는 행 수가 아니라 행 하나의 높이와 첫 행 위치를 비교한다.
+ */
+const SKELETON_TYPE_ROWS = 2;
 
 export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   const queryClient = useQueryClient();
@@ -273,85 +311,61 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
       </section>
 
       <section aria-label="종류별 알림">
-        <div className={CARD}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-[var(--el-muted)]">
-                <th scope="col" className="py-3 text-left font-normal">
-                  종류
-                </th>
-                {CHANNELS.map(({ channel, label }) => (
-                  <th
-                    key={channel}
-                    scope="col"
-                    // 스위치는 칸 오른쪽에 붙인다 — 위 「모두 끄기」 스위치와 오른쪽 끝이 같은 세로줄에 선다.
-                    className="w-20 py-3 text-right font-normal"
-                  >
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {optional.map((item) => (
-                <tr
-                  key={item.type}
-                  className="border-t border-[var(--el-hairline)]"
-                >
-                  <th scope="row" className="py-3 text-left font-normal">
-                    <span className="flex items-center gap-1 font-medium text-[var(--el-ink)]">
-                      {TYPE_LABELS[item.type]}
-                      {TYPE_HELP[item.type] ? (
-                        <HelpTip label={`${TYPE_LABELS[item.type]} 알림 안내`}>
-                          {TYPE_HELP[item.type]}
-                        </HelpTip>
-                      ) : null}
-                    </span>
-                    {TYPE_DESCRIPTIONS[item.type] ? (
-                      <span className="mt-0.5 block text-xs text-[var(--el-muted)]">
-                        {TYPE_DESCRIPTIONS[item.type]}
-                      </span>
-                    ) : null}
-                  </th>
-                  {CHANNELS.map(({ channel, label, missing }) => {
-                    const value = item.channels.find(
-                      (entry) => entry.channel === channel
-                    );
-                    return (
-                      <td key={channel} className="py-3 text-right">
-                        <ChannelCell
-                          value={value}
-                          label={`${TYPE_LABELS[item.type]} ${label}`}
-                          missing={missing}
-                          muted={
-                            settings.muteAll ||
-                            (channel === "EMAIL" && settings.muteEmail)
+        <TypeTable>
+          {optional.map((item) => (
+            <tr key={item.type} className={TYPE_ROW}>
+              <th scope="row" className={TYPE_NAME_CELL}>
+                <span className="flex items-center gap-1 font-medium text-[var(--el-ink)]">
+                  {TYPE_LABELS[item.type]}
+                  {TYPE_HELP[item.type] ? (
+                    <HelpTip label={`${TYPE_LABELS[item.type]} 알림 안내`}>
+                      {TYPE_HELP[item.type]}
+                    </HelpTip>
+                  ) : null}
+                </span>
+                {TYPE_DESCRIPTIONS[item.type] ? (
+                  <span className="mt-0.5 block text-xs text-[var(--el-muted)]">
+                    {TYPE_DESCRIPTIONS[item.type]}
+                  </span>
+                ) : null}
+              </th>
+              {CHANNELS.map(({ channel, label, missing }) => {
+                const value = item.channels.find(
+                  (entry) => entry.channel === channel
+                );
+                return (
+                  <td key={channel} className={TYPE_CHANNEL_CELL}>
+                    <ChannelCell
+                      value={value}
+                      label={`${TYPE_LABELS[item.type]} ${label}`}
+                      missing={missing}
+                      muted={
+                        settings.muteAll ||
+                        (channel === "EMAIL" && settings.muteEmail)
+                      }
+                      disabled={busy}
+                      onChange={(enabled) =>
+                        preference.mutate(
+                          { data: { type: item.type, channel, enabled } },
+                          {
+                            onSuccess: () =>
+                              track("notification_setting_changed", {
+                                workspace_id: workspaceId,
+                                scope: "type",
+                                type: item.type,
+                                channel,
+                                enabled,
+                              }),
                           }
-                          disabled={busy}
-                          onChange={(enabled) =>
-                            preference.mutate(
-                              { data: { type: item.type, channel, enabled } },
-                              {
-                                onSuccess: () =>
-                                  track("notification_setting_changed", {
-                                    workspace_id: workspaceId,
-                                    scope: "type",
-                                    type: item.type,
-                                    channel,
-                                    enabled,
-                                  }),
-                              }
-                            )
-                          }
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        )
+                      }
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </TypeTable>
       </section>
 
       <div className="flex justify-end">
@@ -497,8 +511,26 @@ export function NotificationSettingsSkeleton() {
           </div>
         ))}
       </section>
-      <section>
-        <Skeleton className="h-[110px] rounded-panel" />
+      {/* 종류 이름은 응답의 종류로 정해져 막대로 둔다. 행은 이름 줄(20) + 설명 줄(2 + 16)이다. 빈 머리 칸이 표로 읽히지
+          않게 보조기술에는 숨긴다. */}
+      <section aria-hidden>
+        <TypeTable>
+          {Array.from({ length: SKELETON_TYPE_ROWS }, (_, index) => (
+            <tr key={index} className={TYPE_ROW}>
+              <th scope="row" className={TYPE_NAME_CELL}>
+                <SkeletonLine className="w-28" />
+                <span className="mt-0.5 block">
+                  <SkeletonLine size="xs" className="w-44" />
+                </span>
+              </th>
+              {CHANNELS.map(({ channel }) => (
+                <td key={channel} className={TYPE_CHANNEL_CELL}>
+                  <Skeleton className="ml-auto h-5 w-9 rounded-full" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </TypeTable>
       </section>
       <div className="flex justify-end">
         <Button type="button" variant="outline" disabled>

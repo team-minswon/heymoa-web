@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsHeader } from "@/components/settings/settings-layout";
 import { TermEditor, TermEditorSkeleton } from "@/components/terms/term-editor";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { HelpTip } from "@/components/ui/help-tip";
@@ -100,12 +101,14 @@ export function WorkspaceTermsSettings({
 }) {
   return (
     <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8">
-        <h2 className="flex items-center gap-1.5 text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          용어 사전
-          <HelpTip label="용어 사전">{WORKSPACE_TERMS_HELP}</HelpTip>
-        </h2>
-      </header>
+      <SettingsHeader
+        title={
+          <>
+            용어 사전
+            <HelpTip label="용어 사전">{WORKSPACE_TERMS_HELP}</HelpTip>
+          </>
+        }
+      />
       <DataBoundary
         fallback={<TermEditorSkeleton />}
         errorLabel="용어 사전을 불러오지 못했습니다"

@@ -8,6 +8,13 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SETTINGS_CARD,
+  SETTINGS_CARD_ICON,
+  SettingsHeader,
+  SkeletonCardIcon,
+  SkeletonLine,
+} from "@/components/settings/settings-layout";
 import { toast } from "@/lib/ui/toast";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 
@@ -153,20 +160,21 @@ export function WorkspaceIntegrationsSettings({
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8">
-        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          연동
-        </h2>
-        <p className="mt-2 text-sm text-[var(--el-muted)]">
-          챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을
-          씁니다. <HelpLink topic="integrations" />
-        </p>
-      </header>
+      <SettingsHeader
+        title="연동"
+        description={
+          <>
+            챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을
+            씁니다. <HelpLink topic="integrations" />
+          </>
+        }
+      />
 
       {integrationsQuery.isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-24 rounded-panel" />
-          <Skeleton className="h-24 rounded-panel" />
+        <div className="space-y-3" aria-label="연동 불러오는 중">
+          {Array.from({ length: SKELETON_INTEGRATIONS }, (_, index) => (
+            <IntegrationCardSkeleton key={index} />
+          ))}
         </div>
       ) : integrationsQuery.isError ? (
         <div role="alert" className="space-y-2">
@@ -260,11 +268,11 @@ function IntegrationCard({
   // "아직 아무것도 아니다"를 그대로 말한다. 예전에는 둘 다 회색이라 칩을 읽어야만 구분됐다.
   // 아이콘도 같은 색을 따라가서, 칩까지 안 가도 카드 왼쪽에서 상태가 보인다.
   return (
-    <div className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4">
+    <div className={cn(CARD_ROW, SETTINGS_CARD)}>
       <div className="flex min-w-0 items-start gap-3">
         <span
           className={cn(
-            "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control",
+            SETTINGS_CARD_ICON,
             integration.connected
               ? "bg-[var(--el-success)]/10"
               : "bg-[var(--el-canvas-soft)]"
@@ -330,6 +338,28 @@ function IntegrationCard({
           </Button>
         )
       ) : null}
+    </div>
+  );
+}
+
+const CARD_ROW = "flex items-center justify-between gap-4";
+/** 공급자는 web 이 이름을 아는 고정 목록이라 skeleton 도 그만큼 세운다. */
+const SKELETON_INTEGRATIONS = Object.keys(PROVIDER_LABEL).length;
+
+/** `IntegrationCard` 와 같은 틀에 이름·상태·보조 줄·버튼을 막대로 둔다. */
+function IntegrationCardSkeleton() {
+  return (
+    <div className={cn(CARD_ROW, SETTINGS_CARD)}>
+      <div className="flex min-w-0 items-start gap-3">
+        <SkeletonCardIcon />
+        <div className="min-w-0">
+          <SkeletonLine className="w-28" />
+          <span className="mt-1 block">
+            <SkeletonLine size="xs" className="w-52" />
+          </span>
+        </div>
+      </div>
+      <Skeleton className="h-8 w-11 shrink-0 rounded-control" />
     </div>
   );
 }

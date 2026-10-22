@@ -51,6 +51,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SETTINGS_LIST,
+  SETTINGS_LIST_ROW,
+  SettingsHeader,
+  SkeletonLine,
+} from "@/components/settings/settings-layout";
 import { errorMessageOf } from "@/lib/api/error-message";
 import {
   getGetWorkspaceInvitationsQueryKey,
@@ -175,21 +181,17 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8">
-        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          멤버
-        </h2>
-        <p className="mt-2 text-sm text-[var(--el-muted)]">
-          이 워크스페이스의 멤버와 대기 중인 초대를 관리합니다.
-        </p>
-      </header>
+      <SettingsHeader
+        title="멤버"
+        description="이 워크스페이스의 멤버와 대기 중인 초대를 관리합니다."
+      />
 
       {membersQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-[52px] rounded-block" />
-          <Skeleton className="h-[52px] rounded-block" />
-          <Skeleton className="h-[52px] rounded-block" />
-        </div>
+        <ul className={SETTINGS_LIST} aria-label="멤버 불러오는 중">
+          {Array.from({ length: SKELETON_MEMBER_ROWS }, (_, index) => (
+            <MemberRowSkeleton key={index} />
+          ))}
+        </ul>
       ) : membersQuery.isError ? (
         <div role="alert" className="space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
@@ -205,7 +207,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
           </Button>
         </div>
       ) : (
-        <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
+        <ul className={SETTINGS_LIST}>
           {orderedMembers.map((member) => (
             <MemberRow
               key={member.userId}
@@ -237,6 +239,15 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
             invitations={pendingInvitationsOf(invitationsQuery.data)}
             onRetry={() => void invitationsQuery.refetch()}
           />
+        </div>
+      ) : membersQuery.isLoading ? (
+        // **역할을 모르는 동안은 관리자 자리를 잡아 둔다.** 설정을 여는 사람은 대개 워크스페이스를 만든 관리자라,
+        // 비워 두면 초대 폼이 도착하며 아래 「나가기」를 250px 가까이 민다. MEMBER 에게는 이 자리가 걷힌다.
+        <div className="mt-8 space-y-8" aria-hidden>
+          <InviteFormSkeleton />
+          <PendingInvitationsFrame>
+            <PendingInvitationsSkeleton />
+          </PendingInvitationsFrame>
         </div>
       ) : null}
 
@@ -301,7 +312,7 @@ function MemberRow({
   const canRemove = canManage && !isMe;
 
   return (
-    <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+    <li className={SETTINGS_LIST_ROW}>
       {/* **임시 참여자 목록과 같은 얼굴이다.** 한쪽에만 구슬이 있으면 같은 설정 화면에서
           사람이 두 가지로 그려진다. 색은 `userId` 가 정한다 — 이름은 겹치고(김민수가 둘)
           개명하면 튄다. */}
@@ -680,13 +691,9 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
 
   return (
     <section>
-      <h3 className="text-sm font-medium text-[var(--el-ink)]">멤버 초대</h3>
-      <p className="mt-1 text-xs text-[var(--el-muted)]">
-        이메일로 초대합니다. 미가입자도 초대 메일의 링크로 가입해 합류할 수
-        있습니다.
-      </p>
-      <form onSubmit={submit} className="mt-3 space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+      <InviteHeading />
+      <form onSubmit={submit} className={INVITE_FORM}>
+        <div className={INVITE_ROW}>
           <div className="min-w-0 flex-1 space-y-1">
             <Label htmlFor="invite-email" className="sr-only">
               초대할 이메일
@@ -787,85 +794,150 @@ function PendingInvitations({
   });
 
   return (
+    <PendingInvitationsFrame>
+      {isLoading ? (
+        <PendingInvitationsSkeleton />
+      ) : isError ? (
+        <div role="alert" className="space-y-2">
+          <p className="text-sm text-[var(--el-ink)]">
+            대기 중인 초대를 불러오지 못했습니다.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-[30px]"
+            onClick={onRetry}
+          >
+            다시 시도
+          </Button>
+        </div>
+      ) : invitations.length === 0 ? (
+        <div className={PENDING_EMPTY}>
+          <Info className="size-4 shrink-0 text-[var(--el-muted)]" />
+          <p className="text-sm text-[var(--el-muted)]">
+            대기 중인 초대가 없습니다.
+          </p>
+        </div>
+      ) : (
+        <ul className={SETTINGS_LIST}>
+          {invitations.map((invitation) => (
+            <li key={invitation.invitationId} className={SETTINGS_LIST_ROW}>
+              <div className="min-w-0 flex-1">
+                {/* 미가입자는 이름이 없다(null) — 이메일이 곧 신원이라 주 텍스트로 올린다 */}
+                <p className="truncate text-sm font-medium text-[var(--el-ink)]">
+                  {invitation.inviteeName ?? invitation.inviteeEmail}
+                </p>
+                {invitation.inviteeName !== null && (
+                  <p className="truncate text-xs text-[var(--el-muted)]">
+                    {invitation.inviteeEmail}
+                  </p>
+                )}
+              </div>
+              {Date.parse(invitation.expiresAt) < now && (
+                <Badge variant="outline">만료됨</Badge>
+              )}
+              <RoleChip role={invitation.role} />
+              <p className="hidden w-[160px] shrink-0 text-right text-xs text-[var(--el-muted)] sm:block">
+                {invitation.inviterName} ·{" "}
+                {formatAppDate(invitation.createdAt, {
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0"
+                disabled={cancel.isPending}
+                onClick={() =>
+                  cancel.mutate({
+                    workspaceId,
+                    invitationId: invitation.invitationId,
+                  })
+                }
+              >
+                취소
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </PendingInvitationsFrame>
+  );
+}
+
+/** 「대기 중인 초대」 머리글과 본문 자리. 실제와 skeleton 이 같이 쓴다. */
+function PendingInvitationsFrame({ children }: { children: React.ReactNode }) {
+  return (
     <section>
       <h3 className="text-sm font-medium text-[var(--el-ink)]">
         대기 중인 초대
       </h3>
-      <div className="mt-3">
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-[52px] rounded-block" />
-            <Skeleton className="h-[52px] rounded-block" />
-          </div>
-        ) : isError ? (
-          <div role="alert" className="space-y-2">
-            <p className="text-sm text-[var(--el-ink)]">
-              대기 중인 초대를 불러오지 못했습니다.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-[30px]"
-              onClick={onRetry}
-            >
-              다시 시도
-            </Button>
-          </div>
-        ) : invitations.length === 0 ? (
-          <div className="flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-6">
-            <Info className="size-4 shrink-0 text-[var(--el-muted)]" />
-            <p className="text-sm text-[var(--el-muted)]">
-              대기 중인 초대가 없습니다.
-            </p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
-            {invitations.map((invitation) => (
-              <li
-                key={invitation.invitationId}
-                className="flex min-h-[52px] items-center gap-3 px-4 py-2.5"
-              >
-                <div className="min-w-0 flex-1">
-                  {/* 미가입자는 이름이 없다(null) — 이메일이 곧 신원이라 주 텍스트로 올린다 */}
-                  <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-                    {invitation.inviteeName ?? invitation.inviteeEmail}
-                  </p>
-                  {invitation.inviteeName !== null && (
-                    <p className="truncate text-xs text-[var(--el-muted)]">
-                      {invitation.inviteeEmail}
-                    </p>
-                  )}
-                </div>
-                {Date.parse(invitation.expiresAt) < now && (
-                  <Badge variant="outline">만료됨</Badge>
-                )}
-                <RoleChip role={invitation.role} />
-                <p className="hidden w-[160px] shrink-0 text-right text-xs text-[var(--el-muted)] sm:block">
-                  {invitation.inviterName} ·{" "}
-                  {formatAppDate(invitation.createdAt, {
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 shrink-0"
-                  disabled={cancel.isPending}
-                  onClick={() =>
-                    cancel.mutate({
-                      workspaceId,
-                      invitationId: invitation.invitationId,
-                    })
-                  }
-                >
-                  취소
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function InviteHeading() {
+  return (
+    <>
+      <h3 className="text-sm font-medium text-[var(--el-ink)]">멤버 초대</h3>
+      <p className="mt-1 text-xs text-[var(--el-muted)]">
+        이메일로 초대합니다. 미가입자도 초대 메일의 링크로 가입해 합류할 수
+        있습니다.
+      </p>
+    </>
+  );
+}
+
+const INVITE_FORM = "mt-3 space-y-3";
+const INVITE_ROW = "flex flex-col gap-2 sm:flex-row sm:items-start";
+/** 대기 중인 초대가 없을 때의 상자. 흔한 경우가 「없음」이라 skeleton 도 이 상자 모양으로 선다. */
+const PENDING_EMPTY =
+  "flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-6";
+/** skeleton 이 세우는 멤버 줄 수 — 목 시드의 흔한 워크스페이스(2명)다. */
+const SKELETON_MEMBER_ROWS = 2;
+
+/** `MemberRow` 와 같은 칸(아바타·이름 두 줄·역할 104·가입일 120·메뉴 32)에 값만 막대로 둔다. */
+function MemberRowSkeleton() {
+  return (
+    <li className={SETTINGS_LIST_ROW}>
+      <Skeleton className="size-7 shrink-0 rounded-full" />
+      <div className="min-w-0 flex-1">
+        <SkeletonLine className="w-24" />
+        <SkeletonLine size="xs" className="w-44" />
+      </div>
+      <div className="flex w-[104px] shrink-0 justify-end">
+        <Skeleton className="h-8 w-[72px] rounded-control" />
+      </div>
+      <span className="hidden w-[120px] shrink-0 justify-end sm:flex">
+        <SkeletonLine size="xs" className="w-20" />
+      </span>
+      <div className="w-8 shrink-0" />
+    </li>
+  );
+}
+
+/** 초대 폼 자리. 머리글·안내는 그대로, 입력 칸만 막대다. 역할 칸은 숨은 입력이 뒤에 붙어 4px 더 크다(`mb-1`). */
+function InviteFormSkeleton() {
+  return (
+    <section>
+      <InviteHeading />
+      <div className={INVITE_FORM}>
+        <div className={INVITE_ROW}>
+          <Skeleton className="h-8 min-w-0 flex-1 rounded-control" />
+          <Skeleton className="mb-1 h-8 w-[88px] rounded-control" />
+          <Skeleton className="h-8 w-[60px] rounded-full" />
+        </div>
       </div>
     </section>
+  );
+}
+
+function PendingInvitationsSkeleton() {
+  return (
+    <div className={PENDING_EMPTY} aria-label="대기 중인 초대 불러오는 중">
+      <SkeletonLine className="w-40" />
+    </div>
   );
 }

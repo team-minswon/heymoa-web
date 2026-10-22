@@ -37,6 +37,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SETTINGS_CARD,
+  SETTINGS_CARD_ICON,
+  SettingsHeader,
+  SkeletonCardIcon,
+  SkeletonLine,
+} from "@/components/settings/settings-layout";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { buildUrl } from "@/lib/api/fetcher";
 import {
@@ -53,6 +60,7 @@ import type {
 } from "@/lib/api/generated/models";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
+import { cn } from "@/lib/utils";
 import { HelpLink } from "@/components/heymoa/help-link";
 
 type Delegation = AgentDelegationsResponseDataDelegationsItem;
@@ -164,27 +172,27 @@ export function AgentConnectionsSettings({
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-            내 MCP 연결
-          </h2>
-          <p className="mt-2 text-sm text-[var(--el-muted)]">
+      <SettingsHeader
+        title="내 MCP 연결"
+        description={
+          <>
             Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와
             프로젝트를 읽을 수 있게 연결합니다. <HelpLink topic="agent-mcp" />
-          </p>
-        </div>
-        {!mode && !issued ? (
-          <Button
-            size="sm"
-            className="h-8 shrink-0"
-            // 기본은 OAuth 안내다. 개인 토큰은 안내의 「브라우저 없는 환경이면」으로만 연다(PRD 「정한 것」 6, APP-933)
-            onClick={() => setMode("guide")}
-          >
-            새 연결
-          </Button>
-        ) : null}
-      </header>
+          </>
+        }
+        action={
+          !mode && !issued ? (
+            <Button
+              size="sm"
+              className="h-8 shrink-0"
+              // 기본은 OAuth 안내다. 개인 토큰은 안내의 「브라우저 없는 환경이면」으로만 연다(PRD 「정한 것」 6, APP-933)
+              onClick={() => setMode("guide")}
+            >
+              새 연결
+            </Button>
+          ) : null
+        }
+      />
 
       {issued ? (
         <IssuedToken
@@ -215,9 +223,14 @@ export function AgentConnectionsSettings({
 
       <section aria-label="내 연결" className="mt-6">
         {delegationsQuery.isLoading ? (
-          <div className="space-y-3" aria-label="연결 목록 불러오는 중">
-            <Skeleton className="h-[88px] rounded-panel" />
-            <Skeleton className="h-[88px] rounded-panel" />
+          <div aria-label="연결 목록 불러오는 중">
+            <ul className="space-y-3">
+              {Array.from({ length: SKELETON_DELEGATIONS }, (_, index) => (
+                <DelegationRowSkeleton key={index} />
+              ))}
+            </ul>
+            {/* 「지난 연결 N개」 접힌 단추 자리 */}
+            <Skeleton className="mt-6 h-8 w-24 rounded-control" />
           </div>
         ) : delegationsQuery.isError ? (
           <div role="alert" className="space-y-2">
@@ -570,10 +583,12 @@ function DelegationRow({
   const historyId = `agent-usage-${delegation.delegationId}`;
 
   return (
-    <li className="rounded-panel border border-[var(--el-hairline)] bg-white p-4">
-      <div className="flex items-center justify-between gap-4">
+    <li className={SETTINGS_CARD}>
+      <div className={CARD_ROW}>
         <div className="flex min-w-0 items-start gap-3">
-          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
+          <span
+            className={cn(SETTINGS_CARD_ICON, "bg-[var(--el-canvas-soft)]")}
+          >
             <Bot className="size-4 text-[var(--el-muted)]" />
           </span>
           <div className="min-w-0">
@@ -698,6 +713,37 @@ function DelegationRow({
   );
 }
 
+const CARD_ROW = "flex items-center justify-between gap-4";
+/** skeleton 이 세우는 살아 있는 연결 수 — 목 시드의 흔한 계정(1개)이다. */
+const SKELETON_DELEGATIONS = 1;
+
+/**
+ * `DelegationRow` 와 같은 틀(이름·배지 줄, 워크스페이스 줄, 날짜 줄, 사용 내역·회수)에 값만 막대로 둔다. 날짜 줄은
+ * 「…까지 쓰지 않으면 만료」까지 붙어 이 폭에서 두 줄로 꺾인다.
+ */
+function DelegationRowSkeleton() {
+  return (
+    <li className={SETTINGS_CARD}>
+      <div className={CARD_ROW}>
+        <div className="flex min-w-0 items-start gap-3">
+          <SkeletonCardIcon />
+          <div className="min-w-0">
+            <SkeletonLine className="w-48" />
+            <span className="mt-1 block">
+              <SkeletonLine size="xs" className="w-40" />
+            </span>
+            <span className="mt-0.5 block">
+              <SkeletonLine size="xs" className="w-80" />
+              <SkeletonLine size="xs" className="w-28" />
+            </span>
+          </div>
+        </div>
+        <Skeleton className="h-8 w-[134px] shrink-0 rounded-control" />
+      </div>
+    </li>
+  );
+}
+
 /**
  * 이 연결로 에이전트가 부른 도구(APP-826). 질문·답 본문은 server 가 남기지 않아 여기에도 없다 —
  * 언제 어느 도구로 몇 건을 받았는지만 보인다. 펼칠 때 읽고, 「더 보기」로 다음 쪽을 잇는다.
@@ -745,11 +791,12 @@ function UsageHistory({
       className="mt-4 border-t border-[var(--el-hairline)] pt-3"
     >
       {query.isLoading ? (
-        <ul className="space-y-2" aria-label="사용 내역 불러오는 중">
+        // 실제 줄과 같은 간격(`space-y-1`)·높이(`py-1` + 16)로 선다.
+        <ul className="space-y-1" aria-label="사용 내역 불러오는 중">
           {Array.from({ length: 3 }, (_, index) => (
             <li key={index} className="flex items-center gap-3 py-1">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-4 w-24" />
+              <SkeletonLine size="xs" className="w-28" />
+              <SkeletonLine size="xs" className="w-24" />
             </li>
           ))}
         </ul>

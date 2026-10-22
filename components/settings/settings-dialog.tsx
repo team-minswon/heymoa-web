@@ -162,7 +162,10 @@ function SettingsSections({
           ))}
         </div>
       </nav>
-      <div className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 sm:p-10 md:p-14">
+      <div
+        data-testid="settings-panel"
+        className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 sm:p-10 md:p-14"
+      >
         {section === "account" ? (
           <DataBoundary
             fallback={<AccountSettingsFormSkeleton />}
