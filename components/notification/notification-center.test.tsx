@@ -29,6 +29,7 @@ import {
   NotificationCenterProvider,
   useNotificationCenter,
 } from "@/components/notification/notification-center";
+import { useReadAnalysisReadyOnView } from "@/components/notification/use-read-analysis-ready";
 import { onTrack } from "@/lib/analytics/track";
 import type { NotificationItem } from "@/lib/notification/notification-list";
 import { notificationModalMemory } from "@/lib/notification/notification-list";
@@ -37,6 +38,9 @@ import { notificationModalMemory } from "@/lib/notification/notification-list";
  * 서버를 흉내 낸다 — 필터를 쪽을 자르기 전에 적용하고 `(createdAt, id)` 커서로 자르며, 모두 읽음은 `upTo` 까지만 읽는다.
  * 요청 기록으로 「목록을 다시 읽지 않았다」·「쪽 수만큼 다시 읽지 않았다」를 본다.
  */
+const push = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
 const store = {
   items: [] as NotificationItem[],
   serverTime: "2026-10-22T03:00:00.000Z",
@@ -45,6 +49,35 @@ const store = {
   muteAll: false,
 };
 const requests: string[] = [];
+
+function analysisReady(
+  id: string,
+  createdAt: string,
+  options: {
+    noteId?: string;
+    workspaceId?: string;
+    autoEnded?: boolean;
+    days?: number | null;
+  } = {}
+): NotificationItem {
+  return {
+    notificationId: id,
+    type: "ANALYSIS_READY",
+    readAt: null,
+    createdAt,
+    invitation: null,
+    payload: {
+      workspaceId: options.workspaceId ?? "WS1",
+      workspaceName: "제품 팀",
+      invitationId: null,
+      inviterUserId: null,
+      noteId: options.noteId ?? "NOTE1",
+      noteTitle: "스프린트 회고",
+      autoEnded: options.autoEnded ?? false,
+      pausedBusinessDays: options.days ?? null,
+    },
+  };
+}
 
 function invitation(
   id: string,
@@ -173,12 +206,27 @@ const server = setupServer(
     })
   ),
   http.get("*/v1/workspaces", () =>
-    HttpResponse.json({ success: true, data: { workspaces: [] }, error: null })
+    HttpResponse.json({
+      success: true,
+      data: {
+        workspaces: [
+          {
+            workspaceId: "WS1",
+            name: "제품 팀",
+            description: null,
+            role: "ADMIN",
+            agentAccessAllowed: true,
+          },
+        ],
+      },
+      error: null,
+    })
   )
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 beforeEach(() => {
+  push.mockReset();
   store.items = [];
   store.failCount = false;
   store.legacy = false;
@@ -471,5 +519,120 @@ describe("알림 모달", () => {
         );
     }
     expect(heard[0][1]).toEqual({ workspace_id: "WS1", unread_count: 1 });
+  });
+});
+
+describe("검토할 결과 준비 행", () => {
+  it("일반 종료분과 자동 종료분이 각각 맞는 문구로 그려진다", async () => {
+    store.items = [
+      analysisReady("A1", at(2), { autoEnded: true, days: 3 }),
+      analysisReady("A2", at(1), { noteId: "NOTE2" }),
+    ];
+    renderCenter();
+    const dialog = await openModal();
+    const auto = await waitFor(() => {
+      const row = dialog.querySelector<HTMLElement>(
+        '[data-notification-id="A1"]'
+      );
+      expect(row).not.toBeNull();
+      return row!;
+    });
+    expect(auto).toHaveTextContent(
+      "스프린트 회고의 검토할 결과가 준비되었습니다"
+    );
+    expect(auto).toHaveTextContent(
+      "마지막 중지 후 3영업일이 지나 자동으로 종료했습니다."
+    );
+    const normal = dialog.querySelector<HTMLElement>(
+      '[data-notification-id="A2"]'
+    )!;
+    expect(normal).not.toHaveTextContent("자동으로 종료했습니다");
+    expect(normal).toHaveTextContent("검토하기 →");
+  });
+
+  it("행을 누르면 모달을 닫고 그 노트의 요약·검토 화면으로 간다. 읽음은 도착 화면이 한다", async () => {
+    store.items = [analysisReady("A1", at(1))];
+    renderCenter();
+    const dialog = await openModal();
+    fireEvent.click(
+      await within(dialog).findByRole("button", {
+        name: /검토할 결과가 준비되었습니다/,
+      })
+    );
+    expect(push).toHaveBeenCalledWith(
+      "/w/WS1/notes/NOTE1?view=full&tab=summary&source=notification"
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull()
+    );
+    expect(requests.some((r) => r.startsWith("PUT read"))).toBe(false);
+  });
+
+  it("원본이 없거나 권한이 없는 워크스페이스면 행은 남고 이동만 막힌다", async () => {
+    store.items = [analysisReady("A1", at(1), { workspaceId: "GONE" })];
+    renderCenter();
+    const dialog = await openModal();
+    expect(
+      await within(dialog).findByText("삭제되었거나 볼 권한이 없는 회의입니다")
+    ).toBeVisible();
+    fireEvent.click(dialog.querySelector('[data-notification-id="A1"]')!);
+    expect(push).not.toHaveBeenCalled();
+  });
+});
+
+function Viewer({ noteId, displayed }: { noteId: string; displayed: boolean }) {
+  useReadAnalysisReadyOnView(noteId, displayed);
+  return null;
+}
+
+function renderViewer(displayed: boolean) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <NotificationCenterProvider workspaceId="WS1" onOpenSettings={() => {}}>
+        <Entry />
+        <Viewer noteId="NOTE1" displayed={displayed} />
+      </NotificationCenterProvider>
+    </QueryClientProvider>
+  );
+}
+
+describe("검토할 결과 준비 자동 읽음", () => {
+  function setVisibility(state: DocumentVisibilityState) {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => state,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }
+  afterEach(() => setVisibility("visible"));
+
+  it("결과가 표시되고 창이 보이면 그 노트의 알림만 읽는다", async () => {
+    setVisibility("visible");
+    store.items = [
+      analysisReady("A1", at(2)),
+      analysisReady("A2", at(1), { noteId: "OTHER" }),
+    ];
+    renderViewer(true);
+    await waitFor(() => expect(requests).toContain("PUT read A1"));
+    expect(requests).not.toContain("PUT read A2");
+  });
+
+  it("창이 숨겨져 있거나 결과가 표시되지 않았으면 읽지 않는다", async () => {
+    setVisibility("hidden");
+    store.items = [analysisReady("A1", at(2))];
+    renderViewer(true);
+    await screen.findByRole("button", { name: "알림 1" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(requests.some((r) => r.startsWith("PUT read"))).toBe(false);
+    cleanup();
+
+    setVisibility("visible");
+    renderViewer(false);
+    await screen.findByRole("button", { name: "알림 1" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(requests.some((r) => r.startsWith("PUT read"))).toBe(false);
   });
 });

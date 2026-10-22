@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import { NotificationModal } from "@/components/notification/notification-modal";
 import { track } from "@/lib/analytics/track";
@@ -47,6 +48,7 @@ export function NotificationCenterProvider({
   onOpenSettings: (section: SettingsSection) => void;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const count = useGetUnreadNotificationCount(
     { schema: NOTIFICATION_SCHEMA },
     {
@@ -85,6 +87,7 @@ export function NotificationCenterProvider({
         workspaceId={workspaceId}
         unreadCount={unreadCount}
         onOpenSettings={onOpenSettings}
+        onNavigate={(href) => router.push(href)}
       />
     </NotificationCenterContext.Provider>
   );

@@ -141,3 +141,10 @@ export const notificationModalMemory = {
   scrollTop: 0,
   lastNotificationId: null as string | null,
 };
+
+/** 기억할 자리를 고친다. 렌더 밖(이벤트)에서만 부른다. */
+export function rememberNotificationModal(
+  patch: Partial<typeof notificationModalMemory>
+) {
+  Object.assign(notificationModalMemory, patch);
+}

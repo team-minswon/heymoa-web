@@ -12,7 +12,7 @@ import {
   describeNotification,
   NotificationRow,
   notificationTime,
-  type InvitationActions,
+  type RowActions,
 } from "@/components/notification/notification-row";
 import {
   AlertDialog,
@@ -49,7 +49,10 @@ import {
   useAcceptWorkspaceInvitation,
   useDeclineWorkspaceInvitation,
 } from "@/lib/api/generated/workspace-invitations/workspace-invitations";
-import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
+import {
+  getGetWorkspacesQueryKey,
+  useGetWorkspaces,
+} from "@/lib/api/generated/workspaces/workspaces";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
 import {
   countNewer,
@@ -60,6 +63,7 @@ import {
   notificationHeadKey,
   notificationListKey,
   notificationModalMemory,
+  rememberNotificationModal,
   UNREAD_COUNT_POLL_MS,
   updateNotificationsInCache,
   type NotificationCursor,
@@ -95,20 +99,23 @@ export function NotificationModal({
   workspaceId,
   unreadCount,
   onOpenSettings,
+  onNavigate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
   unreadCount: number | undefined;
   onOpenSettings: (section: SettingsSection) => void;
+  /** 다른 화면으로 간다(검토할 결과 준비 행) */
+  onNavigate: (href: string) => void;
 }) {
   const queryClient = useQueryClient();
   const [filter, setFilterState] = useState<NotificationFilter>(
     notificationModalMemory.filter
   );
   const setFilter = (next: NotificationFilter) => {
-    notificationModalMemory.filter = next;
-    notificationModalMemory.scrollTop = 0;
+    rememberNotificationModal({ filter: next });
+    rememberNotificationModal({ scrollTop: 0 });
     setFilterState(next);
     scrollListTo(viewportRef.current, 0);
   };
@@ -155,7 +162,7 @@ export function NotificationModal({
 
   const close = () => {
     if (viewportRef.current)
-      notificationModalMemory.scrollTop = viewportRef.current.scrollTop;
+      rememberNotificationModal({ scrollTop: viewportRef.current.scrollTop });
     onOpenChange(false);
   };
 
@@ -195,6 +202,16 @@ export function NotificationModal({
     null
   );
   const [now] = useState(() => Date.now());
+  // 내 워크스페이스 목록 — 사이드바가 이미 읽어 캐시에 있다. 없는 워크스페이스의 알림은 이동을 막는다(권한 없음).
+  const workspacesQuery = useGetWorkspaces({ query: { enabled: open } });
+  const myWorkspaceIds =
+    workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
+      ? new Set(
+          workspacesQuery.data.data.data.workspaces.map(
+            (workspace) => workspace.workspaceId
+          )
+        )
+      : null;
 
   /** 초대를 처리한 결과를 행에 바로 적는다. 목록을 다시 읽지 않는다. */
   const settleInvitation = (
@@ -217,8 +234,16 @@ export function NotificationModal({
       });
     }
   };
-  const invitationActions: InvitationActions = {
+  const invitationActions: RowActions = {
     pending: accept.isPending || decline.isPending,
+    openNote: (targetWorkspaceId, noteId) => {
+      close();
+      onNavigate(
+        `/w/${targetWorkspaceId}/notes/${noteId}?view=full&tab=summary&source=notification`
+      );
+    },
+    canOpen: (targetWorkspaceId) =>
+      myWorkspaceIds === null || myWorkspaceIds.has(targetWorkspaceId),
     now,
     accept: (target) =>
       accept.mutate(
@@ -264,14 +289,18 @@ export function NotificationModal({
       ...view,
       onActivate: activate
         ? () => {
-            notificationModalMemory.lastNotificationId = item.notificationId;
+            rememberNotificationModal({
+              lastNotificationId: item.notificationId,
+            });
             track("notification_clicked", {
               workspace_id: workspaceId,
               type: item.type,
               was_unread: item.readAt === null,
             });
             if (viewportRef.current)
-              notificationModalMemory.scrollTop = viewportRef.current.scrollTop;
+              rememberNotificationModal({
+                scrollTop: viewportRef.current.scrollTop,
+              });
             activate();
           }
         : undefined,

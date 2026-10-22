@@ -41,3 +41,31 @@ test("전체 화면 노트에서도 헤더 진입점으로 같은 모달이 열�
   await open.click();
   await expect(page.getByRole("dialog", { name: "알림" })).toBeVisible();
 });
+
+test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결과가 보이면 그 알림이 읽음이 된다", async ({
+  page,
+}) => {
+  await page.goto(WS);
+  const entry = page
+    .getByRole("navigation", { name: "워크스페이스" })
+    .getByRole("button", { name: /^알림/ });
+  await expect(entry.getByLabel("안 읽은 알림 3개")).toBeVisible();
+  await entry.click();
+  const dialog = page.getByRole("dialog", { name: "알림" });
+  await expect(
+    dialog.getByText("마지막 중지 후 3영업일이 지나 자동으로 종료했습니다.")
+  ).toBeVisible();
+  // 검토 화면이 결과를 그리면 그 알림만 읽는다.
+  const read = page.waitForRequest(
+    (request) =>
+      request.method() === "PUT" &&
+      request.url().includes("/v1/notifications/01K0000000032/read")
+  );
+  await dialog
+    .getByRole("button", { name: /정규멘토링\s?의 검토할 결과가 준비되었습니다/ })
+    .click();
+  await expect(page).toHaveURL(/tab=summary&source=notification/);
+  await read;
+  await page.getByRole("button", { name: "알림 목록으로 돌아가기" }).click();
+  await expect(page.getByRole("dialog", { name: "알림" })).toBeVisible();
+});
