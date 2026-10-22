@@ -13,6 +13,13 @@ describe("normalizeReturnTo", () => {
     );
   });
 
+  it("문의 답변 메일의 「답변 보기」 주소는 로그인 뒤 그대로 돌아온다", () => {
+    expect(normalizeReturnTo("/inquiries/0HZX2K7M9Q4AJ?utm_source=email")).toBe(
+      "/inquiries/0HZX2K7M9Q4AJ?utm_source=email"
+    );
+    expect(normalizeReturnTo("/inquiries/x")).toBe("/");
+  });
+
   it("메일 푸터의 알림 설정 주소는 로그인 뒤 그대로 돌아온다", () => {
     expect(normalizeReturnTo("/settings/notifications")).toBe(
       "/settings/notifications"

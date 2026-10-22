@@ -26,11 +26,15 @@ vi.mock("@/components/auth/auth-provider", () => ({
 }));
 
 const PATH = "*/v1/mail/unsubscribe";
-const ok = (unsubscribed: boolean, autoEndActive = false) =>
+const ok = (
+  unsubscribed: boolean,
+  autoEndActive = false,
+  kind = "MEETING_PAUSED_REMINDER"
+) =>
   HttpResponse.json({
     success: true,
     data: {
-      kind: "MEETING_PAUSED_REMINDER",
+      kind,
       email: "al***@example.com",
       unsubscribed,
       autoEndActive,
@@ -104,6 +108,30 @@ describe("UnsubscribeLanding", () => {
       await screen.findByText(
         "메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다. 초대 등 다른 메일은 그대로 받습니다."
       )
+    ).toBeInTheDocument();
+  });
+
+  it("문의 답변 메일 링크는 문의 답변 문구로 묻고 자동 종료 고지를 하지 않는다", async () => {
+    server.use(
+      http.get(PATH, () => ok(false, true, "INQUIRY_ANSWERED")),
+      http.post(PATH, () => ok(true, true, "INQUIRY_ANSWERED"))
+    );
+    renderLanding();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "문의 답변 메일을 받지 않을까요?",
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("보낸 문의에 HeyMoa 팀이 답했을 때 보내는 안내")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/중지된 회의/)).toBeNull();
+    const button = screen.getByRole("button", { name: "메일 끄기" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    expect(
+      await screen.findByRole("heading", { name: "문의 답변 메일을 껐습니다" })
     ).toBeInTheDocument();
   });
 

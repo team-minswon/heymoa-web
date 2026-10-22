@@ -14,8 +14,8 @@ test("사이드바 「알림」이 모달을 열고 초대를 거절하려면 �
     .getByRole("navigation", { name: "워크스페이스" })
     .getByRole("button", { name: /^알림/ });
   await expect(entry).toBeVisible();
-  // 목 시드의 안 읽은 알림은 대기 초대 둘, 검토 결과 셋, 권한 없는 결과 하나다.
-  await expect(entry.getByLabel("안 읽은 알림 6개")).toBeVisible();
+  // 목 시드의 안 읽은 알림은 대기 초대 둘, 검토 결과 셋, 권한 없는 결과 하나, 문의 답변 하나다.
+  await expect(entry.getByLabel("안 읽은 알림 7개")).toBeVisible();
   await entry.click();
 
   const dialog = page.getByRole("dialog", { name: "알림" });
@@ -51,7 +51,7 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
   const entry = page
     .getByRole("navigation", { name: "워크스페이스" })
     .getByRole("button", { name: /^알림/ });
-  await expect(entry.getByLabel("안 읽은 알림 6개")).toBeVisible();
+  await expect(entry.getByLabel("안 읽은 알림 7개")).toBeVisible();
   await entry.click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(
@@ -72,6 +72,32 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
   await read;
   await page.getByRole("button", { name: "알림 목록으로 돌아가기" }).click();
   await expect(page.getByRole("dialog", { name: "알림" })).toBeVisible();
+});
+
+test("문의 답변 행을 누르면 「내 문의」가 그 문의를 연다. 메일의 /inquiries/{id} 도 같은 창으로 온다", async ({
+  page,
+}) => {
+  await page.goto(`${WS}?notifications=all`);
+  await page
+    .getByRole("dialog", { name: "알림" })
+    .getByRole("button", { name: "문의에 답변이 등록되었습니다" })
+    .click();
+  await expect(page).toHaveURL(/inquiry=01K0000000031/);
+  const feedback = page.getByRole("dialog", { name: "문의·피드백" });
+  await expect(feedback.getByRole("tab", { name: /내 문의/ })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(feedback.locator('[data-focused]')).toContainText(
+    "녹음 중에 전사가 몇 분 멈췄어요"
+  );
+  await page.keyboard.press("Escape");
+  await expect(feedback).toBeHidden();
+  await expect(page).not.toHaveURL(/inquiry=/);
+
+  await page.goto("/inquiries/01K0000000031?utm_source=email");
+  await expect(page).toHaveURL(/\/w\/[0-9A-Z]{13}\?.*inquiry=01K0000000031/);
+  await expect(page.getByRole("dialog", { name: "문의·피드백" })).toBeVisible();
 });
 
 test("로그인한 탭에는 이벤트 스트림 연결이 하나이고, 워크스페이스를 바꿔도 다시 연결하지 않는다", async ({
@@ -290,7 +316,7 @@ test("목에서 초대를 수락하면 다시 열어도 결과가 남고, 새 �
   const entry = page
     .getByRole("navigation", { name: "워크스페이스" })
     .getByRole("button", { name: /^알림/ });
-  await expect(entry.getByLabel("안 읽은 알림 6개")).toBeVisible();
+  await expect(entry.getByLabel("안 읽은 알림 7개")).toBeVisible();
   await entry.click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await dialog.getByRole("button", { name: "수락" }).first().click();
@@ -298,11 +324,11 @@ test("목에서 초대를 수락하면 다시 열어도 결과가 남고, 새 �
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   // 수락한 초대는 읽음이 된다(모달이 덮는 동안 사이드바는 접근성 트리에서 빠져 닫은 뒤에 본다).
-  await expect(entry.getByLabel("안 읽은 알림 5개")).toBeVisible();
+  await expect(entry.getByLabel("안 읽은 알림 6개")).toBeVisible();
 
   // 이벤트 스트림 목이 `notifications.changed` 를 내면 폴링(60초)을 기다리지 않고 개수가 따라온다.
   await page.evaluate(() => window.heymoaMock!.notify());
-  await expect(entry.getByLabel("안 읽은 알림 6개")).toBeVisible();
+  await expect(entry.getByLabel("안 읽은 알림 7개")).toBeVisible();
 
   await entry.click();
   await dialog.getByRole("tab", { name: "처리 필요" }).click();

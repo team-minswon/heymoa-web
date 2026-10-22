@@ -36,7 +36,8 @@ test("알림 탭에서 바꾼 값이 다시 열어도 남고, 모두 끄기는 �
   await expect(
     page.getByRole("switch", { name: "메일 모두 끄기" })
   ).toBeChecked();
-  await expect(dialog(page).getByText("꺼짐")).toBeVisible();
+  // 메일을 보내는 선택 종류(중지된 회의·문의 답변)의 메일 열이 가려진다.
+  await expect(dialog(page).getByText("꺼짐")).toHaveCount(2);
 
   await page.getByRole("button", { name: "기본값으로 되돌리기" }).click();
   await page

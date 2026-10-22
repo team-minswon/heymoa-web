@@ -423,7 +423,11 @@ type MockChannel = {
   enabled: boolean;
 };
 const NOTIFICATION_DEFAULTS: {
-  type: "WORKSPACE_INVITATION" | "ANALYSIS_READY" | "MEETING_PAUSED_REMINDER";
+  type:
+    | "WORKSPACE_INVITATION"
+    | "ANALYSIS_READY"
+    | "MEETING_PAUSED_REMINDER"
+    | "INQUIRY_ANSWERED";
   required: boolean;
   channels: MockChannel[];
 }[] = [
@@ -449,6 +453,15 @@ const NOTIFICATION_DEFAULTS: {
     required: false,
     channels: [
       { channel: "WEB", provided: false, enabled: false },
+      { channel: "EMAIL", provided: true, enabled: true },
+    ],
+  },
+  // 문의 답변(server APP-1398). 인앱·메일 둘 다 보내고 기본 켜짐.
+  {
+    type: "INQUIRY_ANSWERED",
+    required: false,
+    channels: [
+      { channel: "WEB", provided: true, enabled: true },
       { channel: "EMAIL", provided: true, enabled: true },
     ],
   },

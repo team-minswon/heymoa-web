@@ -8,7 +8,11 @@
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { FeedbackListResponse, FeedbackResponse } from "../models";
+import type {
+  FeedbackAnswerResponse,
+  FeedbackListResponse,
+  FeedbackResponse,
+} from "../models";
 
 export const getGetMyFeedbacksResponseMock = (): FeedbackListResponse => ({
   success: true,
@@ -59,6 +63,17 @@ export const getCreateFeedbackResponseMock = (): FeedbackResponse => ({
   },
   error: null,
 });
+
+export const getRegisterFeedbackAnswerResponseMock =
+  (): FeedbackAnswerResponse => ({
+    success: true,
+    data: {
+      feedbackId: "0HZX2K7M9Q4AJ",
+      answeredAt: "2026-07-14T01:02:03Z",
+      notified: true,
+    },
+    error: null,
+  });
 
 export const getGetMyFeedbacksMockHandler = (
   overrideResponse?:
@@ -128,8 +143,33 @@ export const getMarkFeedbackAnswersSeenMockHandler = (
     options
   );
 };
+
+export const getRegisterFeedbackAnswerMockHandler = (
+  overrideResponse?:
+    | FeedbackAnswerResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<FeedbackAnswerResponse> | FeedbackAnswerResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/admin/feedbacks/:feedbackId/answer",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRegisterFeedbackAnswerResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getFeedbacksMock = () => [
   getGetMyFeedbacksMockHandler(),
   getCreateFeedbackMockHandler(),
   getMarkFeedbackAnswersSeenMockHandler(),
+  getRegisterFeedbackAnswerMockHandler(),
 ];

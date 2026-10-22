@@ -325,6 +325,7 @@ paths:
                           noteTitle: null
                           autoEnded: null
                           pausedBusinessDays: null
+                          feedbackId: null
                       unreadCount: 0
                       hasMore: false
                       nextCreatedAt: null
@@ -9423,6 +9424,17 @@ paths:
                           provided: true
                           enabled: false
                           effective: false
+                      - type: INQUIRY_ANSWERED
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: false
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -9494,6 +9506,17 @@ paths:
                         - channel: EMAIL
                           provided: true
                           enabled: false
+                          effective: false
+                      - type: INQUIRY_ANSWERED
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
                           effective: false
                     error: null
         '400':
@@ -9567,6 +9590,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
+                      - type: INQUIRY_ANSWERED
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
                         - channel: EMAIL
                           provided: true
                           enabled: true
@@ -9646,6 +9680,17 @@ paths:
                         - channel: EMAIL
                           provided: true
                           enabled: false
+                          effective: false
+                      - type: INQUIRY_ANSWERED
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
                           effective: false
                     error: null
         '400':
@@ -9942,6 +9987,54 @@ paths:
                     success: true
                     data:
                       unreadCount: 3
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/admin/feedbacks/{feedbackId}/answer:
+    put:
+      tags:
+      - Feedbacks
+      summary: 문의 답변 등록(운영자)
+      description: 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록에 없으면 문의가 없을 때와 같은 404 다.
+      operationId: registerFeedbackAnswer
+      parameters:
+      - name: feedbackId
+        in: path
+        description: 답변할 문의 식별자
+        required: true
+        schema:
+          type: string
+          description: 답변할 문의 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AJ
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterFeedbackAnswerRequest'
+            examples:
+              registerFeedbackAnswer_Success:
+                value:
+                  answer: 왼쪽 위 녹음 버튼을 누르면 됩니다.
+                  renotify: false
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackAnswerResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      feedbackId: 0HZX2K7M9Q4AJ
+                      answeredAt: '2026-07-14T01:02:03Z'
+                      notified: true
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -14730,6 +14823,7 @@ components:
                     enum:
                     - WORKSPACE_INVITATION
                     - ANALYSIS_READY
+                    - INQUIRY_ANSWERED
                   payload:
                     type: object
                     properties:
@@ -14764,6 +14858,10 @@ components:
                         type: boolean
                         description: 시스템이 자동 종료한 회의인가(검토 결과 준비 알림)
                         nullable: true
+                      feedbackId:
+                        type: string
+                        description: 답변이 등록된 문의 식별자(문의 답변 알림)
+                        nullable: true
                       workspaceId:
                         type: string
                         description: 워크스페이스 식별자
@@ -14780,6 +14878,7 @@ components:
                     - noteTitle
                     - autoEnded
                     - pausedBusinessDays
+                    - feedbackId
               nullable: false
             serverTime:
               type: string
@@ -18979,6 +19078,7 @@ components:
                     - ANALYSIS_READY
                     - MEETING_PAUSED_REMINDER
                     - MEETING_AUTO_ENDED
+                    - INQUIRY_ANSWERED
                   required:
                     type: boolean
                     description: 필수 알림. 설정과 관계없이 항상 받고 바꿀 수 없다(잠금)
@@ -19082,6 +19182,7 @@ components:
           - ANALYSIS_READY
           - MEETING_PAUSED_REMINDER
           - MEETING_AUTO_ENDED
+          - INQUIRY_ANSWERED
         enabled:
           type: boolean
           description: 받을지 여부
@@ -19116,6 +19217,7 @@ components:
               - ANALYSIS_READY
               - MEETING_PAUSED_REMINDER
               - MEETING_AUTO_ENDED
+              - INQUIRY_ANSWERED
             email:
               type: string
               description: 계정 이메일의 일부를 가린 값
@@ -19211,6 +19313,68 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    FeedbackAnswerResponse:
+      title: FeedbackAnswerResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - answeredAt
+          - feedbackId
+          - notified
+          type: object
+          properties:
+            notified:
+              type: boolean
+              description: 이번 등록이 알림을 냈는가. 실제 수신 여부는 사용자 알림 설정이 정한다
+              nullable: false
+              example: true
+            answeredAt:
+              type: string
+              description: 답변 시각(DB 시계)
+              nullable: false
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+            feedbackId:
+              type: string
+              description: 문의 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AJ
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    RegisterFeedbackAnswerRequest:
+      title: RegisterFeedbackAnswerRequest
+      required:
+      - answer
+      type: object
+      properties:
+        answer:
+          type: string
+          description: 답변. 앞뒤 공백을 뺀 길이가 1~3000자
+          nullable: false
+          example: 왼쪽 위 녹음 버튼을 누르면 됩니다.
+          minLength: 1
+          maxLength: 3000
+        renotify:
+          type: boolean
+          description: 이미 답한 문의를 고칠 때 다시 알릴지. 기본 false. 처음 등록은 이 값과 관계없이 알린다
+          nullable: false
+          example: false
   securitySchemes:
     accessCookie:
       type: apiKey

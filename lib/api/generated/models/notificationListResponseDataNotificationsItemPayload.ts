@@ -47,6 +47,11 @@ export type NotificationListResponseDataNotificationsItemPayload = {
    */
   autoEnded: boolean | null;
   /**
+   * 답변이 등록된 문의 식별자(문의 답변 알림)
+   * @nullable
+   */
+  feedbackId: string | null;
+  /**
    * 워크스페이스 식별자
    * @nullable
    */

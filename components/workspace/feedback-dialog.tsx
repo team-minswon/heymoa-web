@@ -45,6 +45,8 @@ import { cn } from "@/lib/utils";
  */
 // 본문 뒤에 붙는 화면·환경 꼬리(최대 FOOTER_MAX)까지 합쳐 서버 한도(1500)를 넘지 않게 사용자 몫을 줄여 둔다.
 export const FEEDBACK_MAX = 1200;
+/** `/w/{id}?inquiry=<feedbackId>` — 「내 문의」를 그 항목이 보이게 연다(문의 답변 알림·메일, APP-1399). */
+export const INQUIRY_PARAM = "inquiry";
 const FOOTER_MAX = 250;
 
 type Kind = CreateFeedbackRequestKind;
@@ -196,9 +198,12 @@ const SENT_AT: Intl.DateTimeFormatOptions = {
 export function FeedbackDialog({
   open,
   onOpenChange,
+  focusId = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** 「내 문의」 탭에서 보여 줄 문의. 목록에 없으면 탭만 연다 */
+  focusId?: string | null;
 }) {
   const queryClient = useQueryClient();
   const create = useCreateFeedback();
@@ -216,6 +221,17 @@ export function FeedbackDialog({
   const [message, setMessage] = useState("");
   const empty = message.trim().length === 0;
   const current = KINDS.find((item) => item.value === kind)!;
+  // 문의를 가리키며 열리면 「내 문의」 탭부터 보인다.
+  const [focused, setFocused] = useState<string | null>(null);
+  if (open && focusId && focusId !== focused) {
+    setFocused(focusId);
+    setTab("mine");
+  }
+  if (!open && focused) setFocused(null);
+  // 방금 달린 답변이 캐시(60초)에 아직 없을 수 있다.
+  useEffect(() => {
+    if (open && focusId) void refetch();
+  }, [open, focusId, refetch]);
 
   // 내 문의를 펼쳐 본 순간 새 답변을 읽은 것으로 친다.
   useEffect(() => {
@@ -351,7 +367,7 @@ export function FeedbackDialog({
                     onRetry={() => void refetch()}
                   />
                 ) : (
-                  <MyFeedbacks feedbacks={feedbacks} />
+                  <MyFeedbacks feedbacks={feedbacks} focusId={focusId} />
                 )}
               </div>
             </TabsContent>
@@ -362,7 +378,13 @@ export function FeedbackDialog({
   );
 }
 
-function MyFeedbacks({ feedbacks }: { feedbacks: FeedbackResponseData[] }) {
+function MyFeedbacks({
+  feedbacks,
+  focusId,
+}: {
+  feedbacks: FeedbackResponseData[];
+  focusId: string | null;
+}) {
   if (feedbacks.length === 0) {
     return (
       <p className="flex h-full items-center justify-center text-sm text-[var(--el-muted)]">
@@ -375,7 +397,18 @@ function MyFeedbacks({ feedbacks }: { feedbacks: FeedbackResponseData[] }) {
       {feedbacks.map((item) => (
         <li
           key={item.feedbackId}
-          className="rounded-panel border border-[var(--el-hairline)] p-4"
+          data-focused={item.feedbackId === focusId || undefined}
+          ref={
+            item.feedbackId === focusId
+              ? (node) => node?.scrollIntoView?.({ block: "nearest" })
+              : undefined
+          }
+          className={cn(
+            "rounded-panel border p-4",
+            item.feedbackId === focusId
+              ? "border-[var(--el-hairline-strong)]"
+              : "border-[var(--el-hairline)]"
+          )}
         >
           <div className="flex items-center justify-between gap-2 text-xs text-[var(--el-muted)]">
             <span>

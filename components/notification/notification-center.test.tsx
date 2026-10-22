@@ -100,6 +100,7 @@ function analysisReady(
       noteTitle: "스프린트 회고",
       autoEnded: options.autoEnded ?? false,
       pausedBusinessDays: options.days ?? null,
+      feedbackId: null,
     },
   };
 }
@@ -133,6 +134,7 @@ function invitation(
       noteTitle: null,
       autoEnded: null,
       pausedBusinessDays: null,
+      feedbackId: null,
     },
   };
 }
@@ -659,6 +661,42 @@ describe("검토할 결과 준비 행", () => {
     ).toBeVisible();
     fireEvent.click(dialog.querySelector('[data-notification-id="A1"]')!);
     expect(push).not.toHaveBeenCalled();
+  });
+});
+
+describe("문의 답변 행", () => {
+  it("행을 누르면 읽고 모달을 닫은 뒤 「내 문의」가 그 문의를 연다", async () => {
+    store.items = [
+      {
+        notificationId: "Q1",
+        type: "INQUIRY_ANSWERED",
+        readAt: null,
+        createdAt: at(1),
+        invitation: null,
+        payload: {
+          workspaceId: null,
+          workspaceName: null,
+          invitationId: null,
+          inviterUserId: null,
+          noteId: null,
+          noteTitle: null,
+          autoEnded: null,
+          pausedBusinessDays: null,
+          feedbackId: "FB1",
+        },
+      },
+    ];
+    renderCenter();
+    const dialog = await openModal();
+    fireEvent.click(
+      await within(dialog).findByRole("button", {
+        name: "문의에 답변이 등록되었습니다",
+      })
+    );
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/w/WS1?inquiry=FB1")
+    );
+    await waitFor(() => expect(requests).toContain("PUT read Q1"));
   });
 });
 

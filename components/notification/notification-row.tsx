@@ -147,6 +147,9 @@ export function describeNotification(
   if (notification.type === "ANALYSIS_READY") {
     return describeAnalysisReady(notification, actions);
   }
+  if (notification.type === "INQUIRY_ANSWERED") {
+    return describeInquiryAnswered(notification, actions);
+  }
   return {
     title: "새 알림이 도착했습니다",
     workspaceName: notification.payload?.workspaceName ?? null,
@@ -157,6 +160,8 @@ export type RowActions = {
   pending: boolean;
   /** 노트의 요약·검토 화면으로 간다(모달을 닫는다) */
   openNote: (workspaceId: string, noteId: string) => void;
+  /** 「내 문의」 창을 그 문의가 보이게 연다(모달을 닫는다). 안 읽었으면 읽는다 */
+  openInquiry: (notification: NotificationItem, feedbackId: string) => void;
   /** 내가 그 워크스페이스에 아직 있는가. 없으면 이동을 막는다 */
   canOpen: (workspaceId: string) => boolean;
   /** 만료 판정의 기준 시각. 렌더마다 `Date.now()` 를 읽지 않는다 */
@@ -283,6 +288,29 @@ function describeAnalysisReady(
         검토하기 →
       </span>
     ),
+  };
+}
+
+/** 문의 답변(APP-1399). 워크스페이스와 상관없는 계정 알림이라 메타 줄에 워크스페이스가 없다. */
+function describeInquiryAnswered(
+  notification: NotificationItem,
+  actions: RowActions
+): NotificationRowView {
+  const feedbackId = notification.payload?.feedbackId;
+  return {
+    title: "문의에 답변이 등록되었습니다",
+    workspaceName: null,
+    onActivate: feedbackId
+      ? () => actions.openInquiry(notification, feedbackId)
+      : undefined,
+    aside: feedbackId ? (
+      <span
+        aria-hidden
+        className="text-xs font-medium whitespace-nowrap text-[var(--el-ink)] group-hover/row:underline"
+      >
+        답변 보기 →
+      </span>
+    ) : undefined,
   };
 }
 

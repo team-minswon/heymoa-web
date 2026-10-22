@@ -15,4 +15,5 @@ export type NotificationListResponseDataNotificationsItemType =
 export const NotificationListResponseDataNotificationsItemType = {
   WORKSPACE_INVITATION: "WORKSPACE_INVITATION",
   ANALYSIS_READY: "ANALYSIS_READY",
+  INQUIRY_ANSWERED: "INQUIRY_ANSWERED",
 } as const;

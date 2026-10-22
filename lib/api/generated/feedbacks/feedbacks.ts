@@ -25,8 +25,10 @@ import type {
 
 import type {
   CreateFeedbackRequest,
+  FeedbackAnswerResponse,
   FeedbackListResponse,
   FeedbackResponse,
+  RegisterFeedbackAnswerRequest,
   UnauthorizedResponse,
 } from "../models";
 
@@ -602,6 +604,158 @@ export const useMarkFeedbackAnswersSeen = <
 > => {
   return useMutation(
     getMarkFeedbackAnswersSeenMutationOptions(options),
+    queryClient
+  );
+};
+export type registerFeedbackAnswerResponse200 = {
+  data: FeedbackAnswerResponse;
+  status: 200;
+};
+
+export type registerFeedbackAnswerResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type registerFeedbackAnswerResponseSuccess =
+  registerFeedbackAnswerResponse200 & {
+    headers: Headers;
+  };
+export type registerFeedbackAnswerResponseError =
+  registerFeedbackAnswerResponse401 & {
+    headers: Headers;
+  };
+
+export type registerFeedbackAnswerResponse =
+  | registerFeedbackAnswerResponseSuccess
+  | registerFeedbackAnswerResponseError;
+
+export const getRegisterFeedbackAnswerUrl = (feedbackId: string) => {
+  return `/v1/admin/feedbacks/${feedbackId}/answer`;
+};
+
+/**
+ * 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록에 없으면 문의가 없을 때와 같은 404 다.
+ * @summary 문의 답변 등록(운영자)
+ */
+export const registerFeedbackAnswer = async (
+  feedbackId: string,
+  registerFeedbackAnswerRequest?: RegisterFeedbackAnswerRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<registerFeedbackAnswerResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<registerFeedbackAnswerResponse>(
+    getRegisterFeedbackAnswerUrl(feedbackId),
+    {
+      ...options,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(registerFeedbackAnswerRequest),
+    }
+  );
+};
+
+export const getRegisterFeedbackAnswerMutationKey = () =>
+  ["registerFeedbackAnswer"] as const;
+
+export const getRegisterFeedbackAnswerMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerFeedbackAnswer>>,
+    TError,
+    RegisterFeedbackAnswerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerFeedbackAnswer>>,
+  TError,
+  RegisterFeedbackAnswerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRegisterFeedbackAnswerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerFeedbackAnswer>>,
+    RegisterFeedbackAnswerMutationVariables
+  > = (props) => {
+    const { feedbackId, data } = props ?? {};
+
+    return registerFeedbackAnswer(feedbackId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterFeedbackAnswerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerFeedbackAnswer>>
+>;
+export type RegisterFeedbackAnswerMutationBody =
+  | RegisterFeedbackAnswerRequest
+  | undefined;
+export type RegisterFeedbackAnswerMutationError = UnauthorizedResponse;
+export type RegisterFeedbackAnswerMutationVariables = {
+  feedbackId: string;
+  data?: RegisterFeedbackAnswerRequest;
+};
+
+/**
+ * @summary 문의 답변 등록(운영자)
+ */
+export const useRegisterFeedbackAnswer = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof registerFeedbackAnswer>>,
+      TError,
+      RegisterFeedbackAnswerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof registerFeedbackAnswer>>,
+  TError,
+  RegisterFeedbackAnswerMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRegisterFeedbackAnswerMutationOptions(options),
     queryClient
   );
 };

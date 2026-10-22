@@ -362,7 +362,8 @@ describe("contract sync 2026-07-29", () => {
     // PRO-67(server APP-1303)에서 알림 설정 `notification-settings`·`.../items` 두 경로가 늘었다 (84 → 86).
     // PRO-67(server APP-1311)에서 메일 수신거부 `mail/unsubscribe`(GET·POST) 한 경로가 늘었다 (86 → 87).
     // PRO-67(server APP-1331·1337)에서 이벤트 스트림 `events`, 알림 `unread-count`·모두 읽음 `read` 셋이 늘었다 (87 → 90).
-    expect(paths).toHaveLength(90);
+    // APP-1399(server APP-1398)에서 운영자 답변 등록 `admin/feedbacks/{feedbackId}/answer` 한 경로가 늘었다 (90 → 91).
+    expect(paths).toHaveLength(91);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

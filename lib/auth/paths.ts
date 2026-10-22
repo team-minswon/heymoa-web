@@ -14,6 +14,8 @@ const allowedReturnPaths = new Set([
 ]);
 // `notes/new` 는 새 회의 진입 주소다(APP-802) — 외부 에이전트가 준 링크를 로그인 전에 열어도
 // 로그인 뒤 그 자리로 돌아온다.
+// `/inquiries/{id}` 는 문의 답변 메일의 「답변 보기」다(APP-1399).
+const inquiryReturnPath = /^\/inquiries\/[0-9A-HJKMNP-TV-Z]{13}$/;
 const workspaceReturnPath =
   /^\/w\/[0-9A-HJKMNP-TV-Z]{13}(?:\/notes\/(?:[0-9A-HJKMNP-TV-Z]{13}|new))?$/;
 
@@ -46,7 +48,9 @@ export function normalizeReturnTo(value: string | null | undefined): string {
 
   const pathname = path.split("?")[0] || "/";
 
-  return allowedReturnPaths.has(pathname) || workspaceReturnPath.test(pathname)
+  return allowedReturnPaths.has(pathname) ||
+    workspaceReturnPath.test(pathname) ||
+    inquiryReturnPath.test(pathname)
     ? path
     : "/";
 }

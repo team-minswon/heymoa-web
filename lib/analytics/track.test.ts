@@ -64,7 +64,7 @@ describe("알림 사건 타입", () => {
     }>();
     expectTypeOf<Props<"notification_clicked">>().toEqualTypeOf<{
       workspace_id: string;
-      type: "WORKSPACE_INVITATION" | "ANALYSIS_READY";
+      type: "WORKSPACE_INVITATION" | "ANALYSIS_READY" | "INQUIRY_ANSWERED";
       was_unread: boolean;
     }>();
     expectTypeOf<Props<"notifications_all_read_clicked">>().toEqualTypeOf<{

@@ -17,6 +17,7 @@ const auth = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => "/w/01K0000000000",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";

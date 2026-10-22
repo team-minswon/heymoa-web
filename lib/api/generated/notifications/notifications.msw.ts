@@ -43,6 +43,7 @@ export const getGetNotificationsResponseMock =
             noteTitle: null,
             autoEnded: null,
             pausedBusinessDays: null,
+            feedbackId: null,
           },
         },
       ],

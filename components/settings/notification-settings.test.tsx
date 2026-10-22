@@ -60,7 +60,7 @@ function renderSettings() {
 const switchOf = (name: string) => screen.getByRole("switch", { name });
 
 describe("NotificationSettings", () => {
-  it("검토할 결과 준비는 중지된 회의 다음에 이름과 함께 서고, 이름을 모르는 종류는 숨긴다", async () => {
+  it("검토할 결과 준비는 중지된 회의 다음, 문의 답변은 마지막에 이름과 함께 서고, 이름을 모르는 종류는 숨긴다", async () => {
     const channels = [
       { channel: "WEB", provided: true, enabled: true, effective: true },
       { channel: "EMAIL", provided: false, enabled: false, effective: false },
@@ -74,6 +74,7 @@ describe("NotificationSettings", () => {
             muteEmail: false,
             // 서버 순서는 시안과 다르다 — 화면이 순서를 맞춘다.
             items: [
+              { type: "INQUIRY_ANSWERED", required: false, channels },
               { type: "ANALYSIS_READY", required: false, channels },
               { type: "SOMETHING_NEW", required: false, channels },
               { type: "MEETING_PAUSED_REMINDER", required: false, channels },
@@ -85,10 +86,13 @@ describe("NotificationSettings", () => {
     );
     renderSettings();
     const rows = await screen.findAllByRole("rowheader");
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent(/^중지된 회의/);
     expect(rows[1]).toHaveTextContent(
       "검토할 결과 준비회의 분석이 끝나 결과를 검토할 수 있을 때"
+    );
+    expect(rows[2]).toHaveTextContent(
+      "문의 답변보낸 문의에 HeyMoa 팀이 답했을 때"
     );
   });
 
@@ -271,7 +275,9 @@ describe("NotificationSettings", () => {
     expect(
       screen.queryByRole("switch", { name: "검토할 결과 준비 인앱" })
     ).toBeNull();
-    expect(screen.getAllByText("꺼짐")).toHaveLength(1);
+    // 문의 답변(APP-1399)의 인앱 열도 같이 가려진다.
+    expect(screen.getByLabelText("문의 답변 인앱 꺼짐")).toBeInTheDocument();
+    expect(screen.getAllByText("꺼짐")).toHaveLength(2);
     expect(switchOf("중지된 회의 메일")).toBeChecked();
     expect(switchOf("중지된 회의 메일")).not.toHaveAttribute("data-disabled");
 

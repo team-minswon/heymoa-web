@@ -61,6 +61,19 @@ export const getGetNotificationSettingsResponseMock =
             },
           ],
         },
+        {
+          type: "INQUIRY_ANSWERED",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
+              effective: false,
+            },
+          ],
+        },
       ],
     },
     error: null,
@@ -113,6 +126,19 @@ export const getUpdateNotificationMutesResponseMock =
               channel: "EMAIL",
               provided: true,
               enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
+          type: "INQUIRY_ANSWERED",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
               effective: false,
             },
           ],
@@ -173,6 +199,19 @@ export const getResetNotificationSettingsResponseMock =
             },
           ],
         },
+        {
+          type: "INQUIRY_ANSWERED",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
+              effective: true,
+            },
+          ],
+        },
       ],
     },
     error: null,
@@ -225,6 +264,19 @@ export const getUpdateNotificationPreferenceResponseMock =
               channel: "EMAIL",
               provided: true,
               enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
+          type: "INQUIRY_ANSWERED",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
               effective: false,
             },
           ],

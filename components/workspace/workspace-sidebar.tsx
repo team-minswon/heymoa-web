@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Bell,
   Check,
@@ -31,8 +31,10 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import {
   FeedbackDialog,
+  INQUIRY_PARAM,
   UnseenCount,
 } from "@/components/workspace/feedback-dialog";
+import { hrefWithParam } from "@/lib/workspace/settings-url";
 import { useFeedbackAnswers } from "@/components/workspace/use-feedback-answers";
 import { useNotificationCenter } from "@/components/notification/notification-center";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
@@ -146,6 +148,8 @@ export function WorkspaceSidebar({
   );
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // 문의 답변 알림·메일이 `?inquiry=<id>` 로 「내 문의」를 연다. 닫으면 쿼리를 걷는다.
+  const inquiryId = useSearchParams().get(INQUIRY_PARAM);
   const { unseen: feedbackUnseen } = useFeedbackAnswers();
   const notifications = useNotificationCenter();
   const [projectsOpen, setProjectsOpen] = useState(true);
@@ -590,7 +594,19 @@ export function WorkspaceSidebar({
         </DropdownMenu>
       </SidebarFooter>
 
-      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      <FeedbackDialog
+        open={feedbackOpen || inquiryId !== null}
+        focusId={inquiryId}
+        onOpenChange={(next) => {
+          setFeedbackOpen(next);
+          if (!next && inquiryId !== null)
+            window.history.replaceState(
+              null,
+              "",
+              hrefWithParam(INQUIRY_PARAM, null)
+            );
+        }}
+      />
       <CreateWorkspaceDialog
         open={workspaceDialogOpen}
         onOpenChange={setWorkspaceDialogOpen}

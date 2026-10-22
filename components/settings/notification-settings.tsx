@@ -59,10 +59,12 @@ const TYPE_LABELS: Record<string, string> = {
   ANALYSIS_READY: "검토할 결과 준비",
   // 서버는 이 종류를 따로 내지 않는다 — 중지된 회의 메일을 따른다.
   MEETING_AUTO_ENDED: "회의 자동 종료",
+  INQUIRY_ANSWERED: "문의 답변",
 };
 const TYPE_DESCRIPTIONS: Record<string, string> = {
   MEETING_PAUSED_REMINDER: "리마인더와 자동 종료 안내",
   ANALYSIS_READY: "회의 분석이 끝나 결과를 검토할 수 있을 때",
+  INQUIRY_ANSWERED: "보낸 문의에 HeyMoa 팀이 답했을 때",
 };
 /** 이름 옆 ? 도움말. 언제 무엇이 오는지 — 읽지 않아도 스위치는 쓸 수 있다. 문장마다 한 줄씩 끊는다. */
 const TYPE_HELP: Record<string, React.ReactNode> = {

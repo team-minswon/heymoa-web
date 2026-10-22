@@ -53,6 +53,7 @@ import {
   useGetWorkspaces,
 } from "@/lib/api/generated/workspaces/workspaces";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
+import { INQUIRY_PARAM } from "@/components/workspace/feedback-dialog";
 import {
   countNewer,
   dayLabel,
@@ -263,6 +264,15 @@ export function NotificationModal({
       close(() =>
         onNavigate(
           `/w/${targetWorkspaceId}/notes/${noteId}?view=full&tab=summary&source=notification`
+        )
+      );
+    },
+    openInquiry: (target, feedbackId) => {
+      if (target.readAt === null) readNotification(target.notificationId);
+      // 지금 워크스페이스에서 사이드바가 「내 문의」를 연다(`?inquiry=`).
+      close(() =>
+        onNavigate(
+          `/w/${workspaceId}?${INQUIRY_PARAM}=${encodeURIComponent(feedbackId)}`
         )
       );
     },

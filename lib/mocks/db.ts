@@ -1868,6 +1868,25 @@ function createSeedState(): StoreState {
       },
       payload: null,
     },
+    // 문의 답변(APP-1399). 답이 달린 시드 문의(01K0000000031)를 가리킨다.
+    {
+      notificationId: "01K0000000080",
+      type: "INQUIRY_ANSWERED",
+      readAt: null,
+      createdAt: daysAgoIso(0, 10),
+      invitation: null,
+      payload: {
+        workspaceId: null,
+        workspaceName: null,
+        invitationId: null,
+        inviterUserId: null,
+        noteId: null,
+        noteTitle: null,
+        autoEnded: null,
+        pausedBusinessDays: null,
+        feedbackId: "01K0000000031",
+      },
+    },
     // 검토할 결과 준비(PRO-67 I22). 자동 종료분(사유 줄)·일반 종료분·원본이 지워진 노트 셋.
     {
       notificationId: "01K0000000031",
@@ -1913,6 +1932,7 @@ function createSeedState(): StoreState {
         noteTitle: "6월 킥오프",
         autoEnded: false,
         pausedBusinessDays: null,
+        feedbackId: null,
       },
     },
     // ── 알림 모달을 목에서 실제처럼 밟는 묶음(APP-1361). 지금 시각에서 거꾸로 잡아 「오늘」·「어제」·며칠 전 묶음이 늘
@@ -2416,6 +2436,7 @@ function analysisReadyPayload(
     noteTitle,
     autoEnded,
     pausedBusinessDays,
+    feedbackId: null,
   };
 }
 
@@ -2433,6 +2454,7 @@ function invitationPayload(
     noteTitle: null,
     autoEnded: null,
     pausedBusinessDays: null,
+    feedbackId: null,
   };
 }
 
@@ -3867,7 +3889,9 @@ export const mockDb = {
         "약관이 새로 바뀌었습니다. 다시 확인한 뒤 동의해 주세요."
       );
     }
-    const agreed = new Set(request.consents.map((consent) => consent.documentType));
+    const agreed = new Set(
+      request.consents.map((consent) => consent.documentType)
+    );
     const consents = current.map((consent) =>
       agreed.has(consent.documentType) ? { ...consent, agreed: true } : consent
     );
