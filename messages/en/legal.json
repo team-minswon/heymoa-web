@@ -331,7 +331,7 @@
               ],
               [
                 "Consent records (document version, time of consent)",
-                "{consent record retention period}",
+                "1 year after account deletion",
                 "Kept after account deletion to confirm that consent was given"
               ],
               [
@@ -502,7 +502,7 @@
               ],
               [
                 "Contact",
-                "{to be confirmed}"
+                "privacy@openrouter.ai"
               ],
               [
                 "Data",
@@ -518,7 +518,7 @@
               ],
               [
                 "Retention",
-                "Requested with zero data retention, so inputs and outputs are not stored. Retention of processing records such as request time and usage is {to be confirmed}"
+                "Requested with zero data retention, so inputs and outputs are not stored. Processing records such as request time and usage follow the OpenRouter privacy policy (no period is published)"
               ]
             ]
           },
@@ -532,7 +532,7 @@
               ],
               [
                 "Contact",
-                "{to be confirmed}"
+                "dsar@openai.com"
               ],
               [
                 "Data",
@@ -660,7 +660,7 @@
               ],
               [
                 "Retention",
-                "Request logs 1 hour. Access and performance metrics {to be confirmed}"
+                "Request logs 1 hour. Access metrics are kept for at least 1 month, and after that follow the Vercel privacy policy"
               ]
             ]
           },
@@ -738,7 +738,7 @@
               ],
               [
                 "Contact",
-                "{to be confirmed}"
+                "Inquiry form (support.google.com/policies)"
               ],
               [
                 "Data",
@@ -788,7 +788,7 @@
               ],
               [
                 "Retention",
-                "{to be confirmed}"
+                "Follows the Slack free plan retention setting (90 days or 1 year)"
               ]
             ]
           },
@@ -829,15 +829,15 @@
             "rows": [
               [
                 "Name",
-                "{privacy officer name}"
+                "Minsu Kim"
               ],
               [
                 "Title",
-                "{privacy officer title}"
+                "CEO"
               ],
               [
                 "Contact",
-                "{privacy officer contact}"
+                "team.minswon@gmail.com"
               ]
             ]
           },

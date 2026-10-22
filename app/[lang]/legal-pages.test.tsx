@@ -63,6 +63,9 @@ describe("HeyMoa legal pages", () => {
     // 문의 주소 자리표시(`{email}`)가 채워진다.
     expect(document.body.textContent).toContain("team.minswon@gmail.com로 보내 주시기 바랍니다.");
     expect(document.body.textContent).not.toMatch(/\{email\}/);
+    // 보호책임자·확인 못 한 사업자 칸 같은 자리표시(`{…}`)가 남아 운영에 나가면 안 된다(APP-1385).
+    expect(document.querySelector("article")?.textContent).not.toMatch(/[{}]/);
+    expect(document.getElementById("section-10")).toHaveTextContent("김민수");
   });
 
   it("sets responsible recording expectations in the terms", async () => {
