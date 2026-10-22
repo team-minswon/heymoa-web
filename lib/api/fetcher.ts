@@ -190,7 +190,7 @@ function fallbackMessage(status: number) {
 }
 
 // ponytail: 초 단위만 읽는다. 서버(`RetryLater`)가 초로 싣는다 — HTTP-date 를 보내는 상대가 생기면 그때 더한다
-function retryAfterMsOf(headers: Headers) {
+export function retryAfterMsOf(headers: Headers) {
   const seconds = Number(headers.get("Retry-After"));
   return headers.has("Retry-After") && Number.isFinite(seconds) && seconds >= 0
     ? seconds * 1000

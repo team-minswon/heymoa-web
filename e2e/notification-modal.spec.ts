@@ -62,10 +62,39 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
       request.url().includes("/v1/notifications/01K0000000032/read")
   );
   await dialog
-    .getByRole("button", { name: /정규멘토링\s?의 검토할 결과가 준비되었습니다/ })
+    .getByRole("button", {
+      name: /정규멘토링\s?의 검토할 결과가 준비되었습니다/,
+    })
     .click();
   await expect(page).toHaveURL(/tab=summary&source=notification/);
   await read;
   await page.getByRole("button", { name: "알림 목록으로 돌아가기" }).click();
   await expect(page.getByRole("dialog", { name: "알림" })).toBeVisible();
+});
+
+test("로그인한 탭에는 이벤트 스트림 연결이 하나이고, 워크스페이스를 바꿔도 다시 연결하지 않는다", async ({
+  page,
+}) => {
+  // 개발 모드의 StrictMode 는 effect 를 두 번 돌려 첫 연결을 곧바로 끊는다 — 열려 있는 연결 수로 센다.
+  let opened = 0;
+  let closed = 0;
+  const isEvents = (url: string) => new URL(url).pathname === "/v1/events";
+  page.on("request", (request) => {
+    if (isEvents(request.url())) opened += 1;
+  });
+  page.on("requestfailed", (request) => {
+    if (isEvents(request.url())) closed += 1;
+  });
+  await page.goto(WS);
+  await expect.poll(() => opened - closed).toBe(1);
+  const before = opened;
+  await page.getByRole("button", { name: "워크스페이스 전환" }).click();
+  await page.getByRole("menuitem", { name: "제품 팀" }).click();
+  await expect(page).toHaveURL(/\/w\/01K0000000006/);
+  await expect(
+    page.getByRole("navigation", { name: "워크스페이스" })
+  ).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(opened).toBe(before);
+  expect(opened - closed).toBe(1);
 });
