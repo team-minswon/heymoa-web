@@ -69,7 +69,7 @@ export function NotificationRow({
       data-notification-id={notification.notificationId}
       data-unread={unread || undefined}
       className={cn(
-        "group/row relative flex cursor-pointer gap-3 py-3 pr-[11px] pl-[15px] transition-colors duration-150",
+        "group/row relative flex cursor-pointer gap-3 px-[15px] py-3.5 transition-colors duration-150",
         unread
           ? "bg-[var(--el-surface-strong)]/80 hover:bg-[var(--el-surface-strong)]"
           : "hover:bg-[var(--el-surface-strong)]/50",
@@ -89,7 +89,7 @@ export function NotificationRow({
         disabled={!unread}
         onClick={onRead}
         className={cn(
-          "absolute top-3 left-0 flex h-[21px] w-[15px] items-center justify-center rounded-full transition-[opacity,visibility] duration-[180ms] ease-out motion-reduce:transition-none",
+          "absolute top-3.5 left-0 flex h-[21px] w-[15px] items-center justify-center rounded-full transition-[opacity,visibility] duration-[180ms] ease-out motion-reduce:transition-none",
           unread ? "visible opacity-100" : "invisible opacity-0"
         )}
       >
@@ -105,14 +105,14 @@ export function NotificationRow({
             type="button"
             onClick={view.onActivate}
             className={cn(
-              "rounded-[2px] text-left text-[13.5px] leading-[21px] outline-none focus-visible:underline focus-visible:underline-offset-2",
+              "rounded-[2px] text-left text-[13.5px] leading-[21px] text-pretty outline-none focus-visible:underline focus-visible:underline-offset-2",
               tone
             )}
           >
             {view.title}
           </button>
         ) : (
-          <p className={cn("text-[13.5px] leading-[21px]", tone)}>
+          <p className={cn("text-[13.5px] leading-[21px] text-pretty", tone)}>
             {view.title}
           </p>
         )}

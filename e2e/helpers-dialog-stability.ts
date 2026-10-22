@@ -64,7 +64,7 @@ export function dialogStabilityTests(classic: boolean) {
 /**
  * 알림 모달 목록 칸의 스크롤 막대(APP-1363). 예전 base-ui 막대는 sticky 날짜 머리글이 덮어 날짜마다 토막났고 카드 테두리를 덮었다.
  * 지금은 네이티브 막대 하나다 — 클래식(15px)이면 자리를 예약해 카드 밖에 서고 막대 열 어디를 찍어도 머리글이 아니라 칸 자신이
- * 잡힌다(끊김 없음). 오버레이(폭 0)면 카드 오른쪽 12px 여백이 비어 있다.
+ * 잡힌다(끊김 없음). 오버레이(폭 0)면 카드 오른쪽 24px 여백이 비어 있다.
  */
 export function notificationScrollbarTests(classic: boolean) {
   for (const width of [1440, 1024]) {
@@ -117,7 +117,7 @@ export function notificationScrollbarTests(classic: boolean) {
       expect(g.scrollable).toBe(true);
       expect(g.primitive).toBe(0);
       expect(g.bar).toBe(classic ? 15 : 0);
-      expect(new Set(g.cardGap)).toEqual(new Set([12]));
+      expect(new Set(g.cardGap)).toEqual(new Set([24]));
       if (classic)
         expect(g.hits).toEqual(["list"]); // 머리글(H3)·카드에 끊기지 않는다
       else expect(g.hits).not.toContain("card");

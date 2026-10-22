@@ -337,7 +337,7 @@ export function NotificationModal({
       <Dialog open={open} onOpenChange={(next) => !next && close()}>
         {/*
           크기는 내용과 상관없이 고정이다 — 탭을 바꾸거나 로딩·빈 상태가 되어도 창이 줄었다 늘었다 하지 않고, 목록 칸만
-          스크롤한다. 왼쪽 기준선은 24px 하나다(제목·탭·날짜 머리글·행의 글). 안 읽음 점은 그 바깥 여백에 매달린다.
+          스크롤한다. 왼쪽 기준선은 24px(제목·탭·날짜 머리글·카드 테두리)이고 행의 글은 카드 안 40px 이다. 안 읽음 점은 행의 왼쪽 안쪽 여백에 매달린다.
           열 때 포커스는 창 자체에 둔다 — 첫 탭에 두면 열자마자 포커스 링이 뜬다. Tab 으로 탭부터 차례로 간다.
         */}
         <DialogContent
@@ -378,7 +378,7 @@ export function NotificationModal({
                 </TabsList>
               </Tabs>
               <span className="flex-1" />
-              {/* 같은 위계의 보조 동작 둘 — 같은 ghost 모양, 글 끝이 목록 오른쪽 열 끝(24px)과 맞게 마지막을 당긴다. */}
+              {/* 같은 위계의 보조 동작 둘 — 같은 ghost 모양, 글 끝이 카드 오른쪽 끝(24px)과 맞게 마지막을 당긴다. */}
               <div className="-mr-2 flex h-10 items-center gap-0.5">
                 <Button
                   variant="ghost"
@@ -406,7 +406,7 @@ export function NotificationModal({
             목록 칸은 네이티브 스크롤이다(APP-1363) — 설정·가이드 창과 같은 막대. base-ui ScrollArea 의 막대는 칸 위에 그려진
             절대 위치 요소라 sticky 날짜 머리글(z-10)이 그 위를 덮어 막대가 날짜마다 토막났고, 폭(10px)이 카드 여백(8px)보다 커
             카드 테두리를 덮었다. 네이티브 막대는 늘 내용 위에 그려진다. 클래식 막대(15px)는 자리를 예약하고(`stable`), 오버레이
-            막대는 카드 오른쪽 여백(12px) 안에서 뜬다. 안쪽 칸이 높이를 채워 빈 상태·오류를 가운데에 둔다.
+            막대는 카드 오른쪽 여백(24px) 안에서 뜬다. 안쪽 칸이 높이를 채워 빈 상태·오류를 가운데에 둔다.
           */}
           <div
             ref={attachViewport}
@@ -426,7 +426,7 @@ export function NotificationModal({
                 </div>
               ) : null}
               {webMuted ? (
-                <div className="mt-3 mr-3 ml-2 flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] py-2 pr-2 pl-[15px] text-[13px] text-[var(--el-body)]">
+                <div className="mx-6 mt-4 flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] py-2 pr-2 pl-[15px] text-[13px] text-[var(--el-body)]">
                   <BellOff
                     aria-hidden
                     className="size-4 text-[var(--el-muted)]"
@@ -527,15 +527,15 @@ export function NotificationModal({
 }
 
 /**
- * 목록 칸의 틀. 카드는 왼쪽 8px·오른쪽 12px 안쪽(오른쪽은 오버레이 스크롤 막대 자리), 카드 안 행의 글은 왼쪽 15px·오른쪽 11px
- * 안쪽 + 테두리 1px — 글이 양쪽 모두 모달 제목과 같은 24px 선에 선다.
+ * 목록 칸의 틀. 카드 테두리가 모달 제목·날짜 머리글과 같은 24px 선에 서고(오른쪽 24px 은 오버레이 스크롤 막대 자리도 겸한다),
+ * 카드 안 행의 글은 그 안쪽 15px + 테두리 1px = 40px 선이다. 날짜 묶음 사이는 머리글 위 20px(APP-1363 — 16px·8px 여백이 답답했다).
  * 날짜 머리글은 스크롤해도 칸 위에 붙는 캔버스색 띠다(뒤로 지나가는 카드를 가린다).
  */
-const LIST = "flex flex-col pr-3 pb-4 pl-2";
+const LIST = "flex flex-col px-6 pb-6";
 const CARD =
   "divide-y divide-[var(--el-hairline)] overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)]";
 const DAY =
-  "sticky top-0 z-10 -mr-3 -ml-2 bg-[var(--el-canvas)] px-6 pt-3 pb-1.5 text-xs leading-[18px] font-medium text-[var(--el-body)]";
+  "sticky top-0 z-10 -mx-6 bg-[var(--el-canvas)] px-6 pt-5 pb-2 text-xs leading-[18px] font-medium text-[var(--el-body)]";
 
 const EMPTY: Record<NotificationFilter, { line: string; sub?: string }> = {
   ALL: {
@@ -569,7 +569,7 @@ function NotificationListBody({
         {filter === "ALL" ? <div className={DAY}>&nbsp;</div> : null}
         <ul className={CARD}>
           {[0, 1, 2, 3, 4].map((index) => (
-            <li key={index} className="flex gap-3 py-3 pr-[11px] pl-[15px]">
+            <li key={index} className="flex gap-3 px-[15px] py-3.5">
               <div className="flex flex-1 flex-col gap-0.5">
                 <Skeleton className="my-[5px] h-[11px] w-4/5 rounded-chip" />
                 <Skeleton className="mt-1.5 mb-1 h-[10px] w-2/5 rounded-chip" />
@@ -614,7 +614,7 @@ function NotificationListBody({
     else groups.push({ day, items: [item] });
   }
   return (
-    <div className={cn(LIST, !grouped && "pt-3")}>
+    <div className={cn(LIST, !grouped && "pt-4")}>
       {groups.map((group, index) => (
         <section key={group.day ?? index} aria-label={group.day ?? undefined}>
           {group.day ? (

@@ -310,7 +310,7 @@ test("목에서 초대를 수락하면 다시 열어도 결과가 남고, 새 �
 });
 
 for (const width of [1440, 1024]) {
-  test(`${width}px 에서 글 기준선이 모달 제목과 같은 24px 선이고, 날짜 머리글은 흰 카드 밖 회색 띠다`, async ({
+  test(`${width}px 에서 카드 테두리·날짜 머리글이 모달 제목과 같은 24px 선이고, 행 글은 40px 선, 날짜 머리글은 흰 카드 밖 회색 띠다`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -338,6 +338,12 @@ for (const width of [1440, 1024]) {
         ),
         text: Math.round(text.getBoundingClientRect().left),
         asideRight: Math.round(aside.right),
+        card: [
+          Math.round(row.parentElement!.getBoundingClientRect().left),
+          Math.round(row.parentElement!.getBoundingClientRect().right),
+        ],
+        rowPad: getComputedStyle(row).paddingTop,
+        dayTop: getComputedStyle(day).paddingTop,
         dayBg: getComputedStyle(day).backgroundColor,
         cardBg: getComputedStyle(row.parentElement!).backgroundColor,
         dayPosition: getComputedStyle(day).position,
@@ -346,12 +352,13 @@ for (const width of [1440, 1024]) {
     const base = geometry.dialogLeft + 24;
     expect(geometry.title).toBe(base);
     expect(geometry.day).toBe(base);
-    expect(geometry.text).toBe(base);
-    expect(geometry.asideRight).toBe(geometry.dialogRight - 24);
-    if (width === 1440) {
-      // APP-1355 기준선 — 왼쪽 글 474, 오른쪽 열 끝 966
-      expect([geometry.text, geometry.asideRight]).toEqual([474, 966]);
-    }
+    // APP-1363 — 카드 바깥 8·12px 이 답답해 24px 로 넓혔다. 행 위아래 14px, 날짜 묶음 사이 20px.
+    expect(geometry.card).toEqual([base, geometry.dialogRight - 24]);
+    expect(geometry.text).toBe(base + 16);
+    expect(geometry.asideRight).toBe(geometry.dialogRight - 40);
+    expect([geometry.rowPad, geometry.dayTop]).toEqual(["14px", "20px"]);
+    if (width === 1440)
+      expect([geometry.text, geometry.asideRight]).toEqual([490, 950]);
     expect(geometry.dayPosition).toBe("sticky");
     expect(geometry.dayBg).not.toBe(geometry.cardBg);
   });
