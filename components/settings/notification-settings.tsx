@@ -131,8 +131,9 @@ function TypeTable({ children }: { children: React.ReactNode }) {
               <th
                 key={channel}
                 scope="col"
-                // 스위치는 칸 오른쪽에 붙인다 — 위 「모두 끄기」 스위치와 오른쪽 끝이 같은 세로줄에 선다.
-                className="w-20 py-3 text-right font-normal"
+                // 채널 칸은 고정 폭이고 머리글·스위치·「—」가 모두 칸 가운데에 선다(APP-1352). 위 「모두 끄기」 스위치도
+                // 같은 폭의 칸 가운데라 메일 열과 같은 세로줄이다.
+                className={cn(CHANNEL_COLUMN, "py-3 font-normal")}
               >
                 {label}
               </th>
@@ -157,7 +158,9 @@ const CARD =
 const ROW = "flex min-h-14 items-center justify-between gap-4 py-3";
 const TYPE_ROW = "border-t border-[var(--el-hairline)]";
 const TYPE_NAME_CELL = "py-3 text-left font-normal";
-const TYPE_CHANNEL_CELL = "py-3 text-right";
+/** 채널 열 하나의 폭. 머리글과 행이 같은 열을 쓰고 내용은 가운데다. */
+const CHANNEL_COLUMN = "w-[72px] text-center";
+const TYPE_CHANNEL_CELL = cn(CHANNEL_COLUMN, "py-3 align-middle");
 /**
  * skeleton 이 세우는 종류 행 수. 운영이 내는 선택 종류는 둘이다(중지된 회의 · 검토할 결과 준비). 목(`NOTIFICATION_DEFAULTS`)은
  * 아직 하나라 e2e 는 행 수가 아니라 행 하나의 높이와 첫 행 위치를 비교한다.
@@ -302,15 +305,20 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
             <span className="text-sm font-medium text-[var(--el-ink)]">
               {label}
             </span>
-            <Switch
-              aria-label={label}
-              checked={settings[key]}
-              disabled={busy}
-              // 켤 때만 확인 창을 거친다. 풀 때는 바로 푼다.
-              onCheckedChange={(on) =>
-                on ? setConfirm(key) : setMute(key, false)
-              }
-            />
+            {/* 표의 채널 칸과 같은 폭의 칸 가운데 — 아래 메일 열 스위치와 같은 세로줄에 선다. */}
+            <span
+              className={cn(CHANNEL_COLUMN, "flex shrink-0 justify-center")}
+            >
+              <Switch
+                aria-label={label}
+                checked={settings[key]}
+                disabled={busy}
+                // 켤 때만 확인 창을 거친다. 풀 때는 바로 푼다.
+                onCheckedChange={(on) =>
+                  on ? setConfirm(key) : setMute(key, false)
+                }
+              />
+            </span>
           </div>
         ))}
       </section>
@@ -475,12 +483,13 @@ function ChannelCell({
     );
   }
   if (muted) {
+    // 「모두 끄기」가 가린 칸. 스위치와 같은 자리·크기에 「꺼짐」만 둔다 — 옆에 글을 덧붙이면 칸 가운데가 어긋난다.
     return (
-      <span className="inline-flex items-center gap-1.5 opacity-50">
-        <Switch aria-label={label} checked={false} disabled />
-        <span className="whitespace-nowrap text-xs text-[var(--el-muted)]">
-          꺼짐
-        </span>
+      <span
+        aria-label={`${label} 꺼짐`}
+        className="inline-flex h-5 w-9 items-center justify-center text-xs whitespace-nowrap text-[var(--el-muted)]"
+      >
+        꺼짐
       </span>
     );
   }
@@ -513,7 +522,11 @@ export function NotificationSettingsSkeleton() {
             <span className="text-sm font-medium text-[var(--el-ink)]">
               {label}
             </span>
-            <Skeleton className="h-5 w-9 rounded-full" />
+            <span
+              className={cn(CHANNEL_COLUMN, "flex shrink-0 justify-center")}
+            >
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </span>
           </div>
         ))}
       </section>
@@ -531,7 +544,7 @@ export function NotificationSettingsSkeleton() {
               </th>
               {CHANNELS.map(({ channel }) => (
                 <td key={channel} className={TYPE_CHANNEL_CELL}>
-                  <Skeleton className="ml-auto h-5 w-9 rounded-full" />
+                  <Skeleton className="mx-auto h-5 w-9 rounded-full" />
                 </td>
               ))}
             </tr>

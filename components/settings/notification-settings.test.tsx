@@ -265,7 +265,12 @@ describe("NotificationSettings", () => {
     );
     await waitFor(() => expect(switchOf("인앱 알림 모두 끄기")).toBeChecked());
     // 인앱 열(검토할 결과 준비)만 가려지고, 메일 열(중지된 회의)은 그대로 켜져 있고 누를 수 있다.
-    expect(switchOf("검토할 결과 준비 인앱")).toHaveAttribute("data-disabled");
+    expect(
+      screen.getByLabelText("검토할 결과 준비 인앱 꺼짐")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", { name: "검토할 결과 준비 인앱" })
+    ).toBeNull();
     expect(screen.getAllByText("꺼짐")).toHaveLength(1);
     expect(switchOf("중지된 회의 메일")).toBeChecked();
     expect(switchOf("중지된 회의 메일")).not.toHaveAttribute("data-disabled");
@@ -293,7 +298,7 @@ describe("NotificationSettings", () => {
       })
     );
     await waitFor(() => expect(switchOf("메일 모두 끄기")).toBeChecked());
-    expect(switchOf("중지된 회의 메일")).toHaveAttribute("data-disabled");
+    expect(screen.getByLabelText("중지된 회의 메일 꺼짐")).toBeInTheDocument();
     expect(switchOf("검토할 결과 준비 인앱")).toBeChecked();
     expect(switchOf("검토할 결과 준비 인앱")).not.toHaveAttribute(
       "data-disabled"
