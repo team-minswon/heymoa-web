@@ -27,6 +27,11 @@ const recording = vi.hoisted(() => ({
   meter: { levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2] },
 }));
 
+const admin = vi.hoisted(() => ({ value: true }));
+vi.mock("@/lib/workspace/use-is-workspace-admin", () => ({
+  useIsWorkspaceAdmin: () => admin.value,
+}));
+
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording.current,
   useRecordingNoteId: () =>
@@ -361,6 +366,22 @@ describe("NoteListRow", () => {
       expect(screen.getByText("전체 화면")).toBeInTheDocument();
     });
     expect(screen.getByText("삭제")).toBeInTheDocument();
+  });
+
+  it("관리자가 아니면 메뉴에 삭제가 없다(APP-1384)", async () => {
+    admin.value = false;
+    try {
+      renderRow(note({ meetingStatus: "ENDED", activeSessionStartedAt: null }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "주간 제품 회의 노트 메뉴" })
+      );
+      await waitFor(() => {
+        expect(screen.getByText("전체 화면")).toBeInTheDocument();
+      });
+      expect(screen.queryByText("삭제")).toBeNull();
+    } finally {
+      admin.value = true;
+    }
   });
 
   /** 참석자 그룹은 최대 4칸 — 5명부터 3개 + `+N`(N≥2, 보이지 않는 인원). 인원 글자와 모순이 없어야 한다. */

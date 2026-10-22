@@ -37,6 +37,7 @@ import {
   pausedDayCount,
 } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
+import { useIsWorkspaceAdmin } from "@/lib/workspace/use-is-workspace-admin";
 
 /**
  * 행이 「열린」 상태일 때만 켜지는 변형. 아바타가 `…` 폭만큼 왼쪽으로 비키고 `…` 가 나타난다.
@@ -201,6 +202,8 @@ export const NoteListRow = memo(function NoteListRow({
     null
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // 노트 삭제는 관리자 전용이다(APP-1384). 서버도 403 으로 거절한다.
+  const canDelete = useIsWorkspaceAdmin(workspaceId);
   // **떠날 때 기억을 버려야 한다.** 예전에는 "위치가 달라지면 저절로 꺼진다"고만 두었는데,
   // 그건 떠날 때만 맞았다. 값이 남아 있으면 **그 위치로 돌아왔을 때 다시 같아져** 스피너가
   // 켜지고, 노트를 닫는 것이 바로 그 위치로 돌아오는 동작이라 목록 행이 영원히 돌았다(APP-243).
@@ -324,22 +327,26 @@ export const NoteListRow = memo(function NoteListRow({
           >
             <Expand /> 전체 화면
           </DropdownMenuLinkItem>
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 /> 삭제
-          </DropdownMenuItem>
+          {canDelete ? (
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 /> 삭제
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <NoteDeleteDialog
-        noteId={note.noteId}
-        projectId={note.projectId}
-        title={note.title}
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-      />
+      {canDelete ? (
+        <NoteDeleteDialog
+          noteId={note.noteId}
+          projectId={note.projectId}
+          title={note.title}
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+        />
+      ) : null}
     </article>
   );
 });

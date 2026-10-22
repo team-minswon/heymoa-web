@@ -123,6 +123,11 @@ const noteState = vi.hoisted(() => ({
   },
 }));
 
+const admin = vi.hoisted(() => ({ value: true }));
+vi.mock("@/lib/workspace/use-is-workspace-admin", () => ({
+  useIsWorkspaceAdmin: () => admin.value,
+}));
+
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({
     user: { userId: authState.userId, name: "테스트 유저" },
@@ -980,6 +985,26 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-agent-rail")).not.toHaveClass(
       "max-lg:h-auto"
     );
+  });
+
+  it("관리자가 아니면 노트 메뉴가 없다(APP-1384)", () => {
+    noteState.value.meetingStatus = "ENDED";
+    admin.value = false;
+    try {
+      renderNotePanel(
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000002"
+          view="full"
+          tab="transcript"
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.queryByRole("button", { name: "노트 메뉴" })).toBeNull();
+    } finally {
+      admin.value = true;
+    }
   });
 
   it("노트를 옮겼다 돌아와도 삭제 확인창이 되살아나지 않는다", async () => {

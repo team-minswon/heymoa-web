@@ -4,7 +4,7 @@ description: Where to find the sidebar, projects, the note list, and the setting
 group: start
 slug: workspace-basics
 order: 2
-modified: 2026-10-22
+modified: 2026-10-23
 ---
 
 ## Sidebar {#sidebar}
@@ -25,7 +25,7 @@ Meetings are created inside a project. Every new workspace comes with a **[Gener
 - **Delete**: Choose **[Delete]** from **[⋯]**. Only admins can do this.
 
 > [!Caution]
-> ==You can't delete a project that has even one note in it.== Notes that have been analyzed can't be deleted, so a project that contains one can't be deleted either.
+> ==You can't delete a project that has even one note in it.== Delete its notes first, then delete the project.
 
 ## Reading the note list {#note-list}
 
@@ -37,12 +37,12 @@ Meetings are grouped by the date they started, newest first. Each row shows:
 
 ![The project list in the left sidebar, with meetings grouped by date in the note list on the right](img:workspace-basics/note-list.webp "The sidebar and the note list. Hover over a row to see [⋯] at the right end.")
 
-Click a note row to open it in side view (a panel that shows the note beside the list). From **[⋯]** at the end of the row, you can open it in **[Full screen]** or choose **[Delete]**. Notes that are still recording have no **[Delete]** option.
+Click a note row to open it in side view (a panel that shows the note beside the list). From **[⋯]** at the end of the row, you can open it in **[Full screen]**. Admins also see **[Delete]**.
 
 To load older meetings, click **[Show older notes]** at the bottom of the list.
 
 > [!Can't be undone]
-> ==Deleting a note permanently removes its transcript, summary, and chatbot conversations.== If you try to delete a meeting that is recording, has been analyzed, or has finished review, you'll see a message that it can't be deleted.
+> ==Deleting a note permanently removes its transcript, summary, and chatbot conversations.== Only admins can delete notes. Deleting a meeting that is recording also ends the recording. While a meeting is being analyzed, you can delete it once the analysis finishes.
 
 ## Reading a note {#note-view}
 
@@ -77,7 +77,7 @@ The settings tab you have open is saved in the address (`?settings=`). Press Bac
 Yes, any member can create and rename projects. Only deleting is left to admins.
 
 ### I want to delete a project that has notes.
-You can't delete a project that has even one note. Notes that have been analyzed can't be deleted, so a project that contains one can't be deleted either.
+You can't delete a project that has even one note. Delete its notes first, then delete the project. Deleting notes is also for admins.
 
 ### What's the difference between side view and full screen?
 Side view is the panel that opens on the right when you click a note row. You open full screen from **[Full screen]** in **[⋯]** or with the icon at the top. In side view, the **[Summary]** tab appears only after the meeting ends.

@@ -81,6 +81,7 @@ import { track } from "@/lib/analytics/track";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
+import { useIsWorkspaceAdmin } from "@/lib/workspace/use-is-workspace-admin";
 
 /** 노트 조회가 「없다」로 끝난 코드. 노트·프로젝트가 지워졌거나 남의 것이다. */
 const NOTE_GONE_CODES = new Set(["NOTE_NOT_FOUND", "PROJECT_NOT_FOUND"]);
@@ -196,6 +197,8 @@ export function NotePanel({
    * 상태에 주어를 담으면 알아서 닫힌다 — 리셋 effect도, 패널 전체 재마운트도 필요 없다.
    */
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  // 메뉴에는 삭제 하나뿐이라 관리자가 아니면 메뉴째 없다(APP-1384). 서버도 403 으로 거절한다.
+  const canDelete = useIsWorkspaceAdmin(workspaceId);
   // 종료 직후 요약 탭으로 넘기고, 물을 차례면 1초 뒤 그 위에 의견 창을 띄운다 — 종료 확인창이 닫히고 요약 탭이
   // 자리 잡은 것을 본 다음이다. `round` 가 창의 회차다 — 회차마다 새로 마운트해 지난 입력이 남지 않고, 닫을 때는
   // 같은 회차로 두어 닫힘 애니메이션이 돈다.
@@ -698,7 +701,7 @@ export function NotePanel({
               view={view}
               fromNotification={fromNotification}
             />
-            {note ? (
+            {note && !canDelete ? null : note ? (
               <div className="flex shrink-0 items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger

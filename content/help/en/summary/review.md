@@ -4,7 +4,7 @@ description: How to check and edit the decisions and tasks AI sorted out, then a
 group: summary
 slug: review
 order: 2
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## The review screen {#screen}
@@ -57,7 +57,7 @@ AI makes two kinds of suggestions. To confirm, you need to choose what to do wit
 After you confirm, the included tasks become project tasks and appear on the **[Tasks]** screen. Decisions, issues, and questions are kept as records in the project.
 
 > [!Can't be undone]
-> ==After you confirm, you can't edit, exclude, or add review items. You also can't undo the confirmation.== You can't delete a confirmed meeting. But you can still edit the tasks it created on the **[Tasks]** screen.
+> ==After you confirm, you can't edit, exclude, or add review items. You also can't undo the confirmation.== But you can still edit the tasks it created on the **[Tasks]** screen.
 
 You confirm only once. If you see “The project's approval rules changed. Please reload.”, reload the screen and confirm again.
 

@@ -4,7 +4,7 @@ description: The numbers and rules to know when using HeyMoa, such as input leng
 group: fix
 slug: limits
 order: 2
-modified: 2026-10-21
+modified: 2026-10-23
 kind: facts
 ---
 
@@ -53,11 +53,11 @@ kind: facts
 
 There are only two roles: admin and member.
 
-- Only admins can: Change workspace settings, manage integrations and MCP, invite and remove members, rename, link, and delete guest participants, and delete projects.
+- Only admins can: Change workspace settings, manage integrations and MCP, invite and remove members, rename, link, and delete guest participants, and delete notes and projects.
 - Any member can: View notes, record, end meetings, confirm reviews, and edit tasks.
 
 > [!Can't be undone]
-> You can't record more in a meeting that has ended, and ==you can't undo a confirmed review.== You can't delete a meeting that is recording, has finished analysis, or has been confirmed.
+> You can't record more in a meeting that has ended, and ==you can't undo a confirmed review.== You can't delete a note while its meeting is being analyzed.
 
 ## Related pages {#related}
 

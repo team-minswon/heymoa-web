@@ -4,7 +4,7 @@ description: Fixes for each on-screen message when recording won't start, the co
 group: fix
 slug: troubleshooting
 order: 1
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Recording won't start {#recording}
@@ -103,12 +103,6 @@ modified: 2026-10-21
 **Symptom:** “Invites can't be sent right now. Please try again later.” appears
 **Cause:** You went over the number of invites you can send in a day.
 **Fix:** Send it again after some time has passed.
-:::
-
-:::problem
-**Symptom:** “A meeting that is recording can't be deleted.” appears
-**Cause:** You can't delete a meeting while it's recording.
-**Fix:** Stop recording first. Meetings that have finished analysis or whose review is complete can't be deleted.
 :::
 
 :::problem
