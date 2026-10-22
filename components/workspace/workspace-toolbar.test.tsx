@@ -60,9 +60,6 @@ vi.mock("@/components/notes/note-delete-dialog", () => ({
 vi.mock("@/components/notes/meeting-controls", () => ({
   MeetingControls: () => <div data-testid="meeting-controls" />,
 }));
-vi.mock("@/components/notification/notification-bell", () => ({
-  NotificationBell: () => <div data-testid="notification-bell" />,
-}));
 
 describe("WorkspaceToolbar", () => {
   afterEach(() => {
@@ -84,7 +81,7 @@ describe("WorkspaceToolbar", () => {
     }));
   });
 
-  it("carries the single-row app bar: new note + bell, no note actions on the hub", () => {
+  it("carries the single-row app bar: new note, no bell, no note actions on the hub", () => {
     recording.session = null;
     recording.phase = "idle";
     recording.elapsedMs = 0;
@@ -103,7 +100,8 @@ describe("WorkspaceToolbar", () => {
     expect(newNote).not.toBeDisabled();
     fireEvent.click(newNote);
     expect(requestNewMeeting).toHaveBeenCalledOnce();
-    expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
+    // 알림은 상단바가 아니라 사이드바 첫 항목에서 연다(PRO-67 I09).
+    expect(screen.queryByRole("button", { name: /알림/ })).toBeNull();
     // 노트가 열려 있지 않으면 회의 조작 슬롯은 없다.
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
   });
@@ -133,7 +131,8 @@ describe("WorkspaceToolbar", () => {
     ).toBeNull();
     // 허브 크롬은 그대로다.
     expect(screen.getByRole("button", { name: "새 노트" })).toBeInTheDocument();
-    expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
+    // 알림은 상단바가 아니라 사이드바 첫 항목에서 연다(PRO-67 I09).
+    expect(screen.queryByRole("button", { name: /알림/ })).toBeNull();
   });
 
   it("shows automatic recording status with only a stop control", () => {

@@ -399,7 +399,7 @@ export function seedShareMail(
 }
 
 /**
- * 알림 설정(server APP-1303 · 화면 APP-1341). server 정책 표를 흉내 낸다 — 필수는 초대, 선택은 중지된 회의 메일(기본 켜짐).
+ * 알림 설정(server APP-1303 · 화면 APP-1341). server 정책 표를 흉내 낸다 — 필수는 초대, 선택은 중지된 회의 메일(기본 켜짐)과 검토할 결과 준비 웹(기본 켜짐).
  * 사용자의 선택(`enabled`)과 두 「모두 끄기」를 따로 들고 `effective` 는 둘을 합쳐 낸다. 이 문서 안에서만 산다.
  */
 type MockChannel = {
@@ -408,7 +408,7 @@ type MockChannel = {
   enabled: boolean;
 };
 const NOTIFICATION_DEFAULTS: {
-  type: "WORKSPACE_INVITATION" | "MEETING_PAUSED_REMINDER";
+  type: "WORKSPACE_INVITATION" | "ANALYSIS_READY" | "MEETING_PAUSED_REMINDER";
   required: boolean;
   channels: MockChannel[];
 }[] = [
@@ -418,6 +418,15 @@ const NOTIFICATION_DEFAULTS: {
     channels: [
       { channel: "WEB", provided: true, enabled: true },
       { channel: "EMAIL", provided: true, enabled: true },
+    ],
+  },
+  // 검토할 결과 준비(server APP-1342). 웹만 보내고 기본 켜짐 — 서버가 내는 순서 그대로 둔다(화면이 순서를 맞춘다).
+  {
+    type: "ANALYSIS_READY",
+    required: false,
+    channels: [
+      { channel: "WEB", provided: true, enabled: true },
+      { channel: "EMAIL", provided: false, enabled: false },
     ],
   },
   {
@@ -1355,11 +1364,31 @@ export const restHandlers = [
       invitations: mockDb.listInvitations(id(params.workspaceId)),
     }))
   ),
-  getGetNotificationsMockHandler(() => ({
-    success: true,
-    data: mockDb.listNotifications(),
-    error: null,
-  })),
+  getGetNotificationsMockHandler(({ request }) => {
+    const query = new URL(request.url).searchParams;
+    return {
+      success: true,
+      data: mockDb.listNotifications({
+        filter: query.get("filter"),
+        limit: query.get("limit"),
+        schema: query.get("schema"),
+        afterCreatedAt: query.get("afterCreatedAt"),
+        afterNotificationId: query.get("afterNotificationId"),
+      }),
+      error: null,
+    };
+  }),
+  http.get("*/v1/notifications/unread-count", ({ request }) =>
+    commandResult(() => ({
+      unreadCount: mockDb.unreadNotificationCount(
+        new URL(request.url).searchParams.get("schema")
+      ),
+    }))
+  ),
+  http.put("*/v1/notifications/read", async ({ request }) => {
+    const body = (await request.json()) as { upTo: string };
+    return commandResult(() => mockDb.markAllNotificationsRead(body.upTo));
+  }),
   http.get("*/v1/feedbacks", () => commandResult(() => mockDb.listFeedbacks())),
   http.post("*/v1/feedbacks/answers/seen", () => {
     mockDb.markFeedbackAnswersSeen();

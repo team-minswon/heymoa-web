@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Bell,
   Check,
   Folder,
   MoreHorizontal,
@@ -33,6 +34,7 @@ import {
   UnseenCount,
 } from "@/components/workspace/feedback-dialog";
 import { useFeedbackAnswers } from "@/components/workspace/use-feedback-answers";
+import { useNotificationCenter } from "@/components/notification/notification-center";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import type { SettingsSection } from "@/components/settings/settings-dialog";
 import {
@@ -145,6 +147,7 @@ export function WorkspaceSidebar({
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { unseen: feedbackUnseen } = useFeedbackAnswers();
+  const notifications = useNotificationCenter();
   const [projectsOpen, setProjectsOpen] = useState(true);
   // 노트 전체 화면이 사이드바를 덮으면 **여기서 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라
   // `inert`도 덮는 면(`z-30`)도 닿지 않고, 셸이 재마운트되지 않아 저절로 사라지지도 않는다.
@@ -286,11 +289,28 @@ export function WorkspaceSidebar({
 
       <SidebarContent className="px-1.5 py-2">
         <nav aria-label="워크스페이스">
-          {/* ── 작업: 모든 노트 · 할 일 ──
+          {/* ── 작업: 알림 · 모든 노트 · 할 일 ──
               도움(가이드·문의)은 작업이 아니라 아래 고정 묶음으로 뗐다(APP-1325). */}
           <SidebarGroup className="py-0.5">
             <SidebarGroupContent>
               <SidebarMenu>
+                {notifications ? (
+                  <SidebarMenuItem>
+                    {/* 숫자는 모든 워크스페이스의 안 읽은 개수다. 처리 필요 개수와 섞지 않는다(PRO-67 I09). */}
+                    <SidebarMenuButton
+                      onClick={notifications.openNotifications}
+                      className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+                    >
+                      <NavigationIcon icon={Bell} />
+                      <span>알림</span>
+                      <UnseenCount
+                        count={notifications.unreadCount ?? 0}
+                        label={(n) => `안 읽은 알림 ${n}개`}
+                        className="ml-auto text-[11px] text-[var(--el-muted)]"
+                      />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     render={

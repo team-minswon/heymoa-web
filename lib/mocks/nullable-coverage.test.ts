@@ -61,8 +61,15 @@ function valuesAt(node: unknown, parts: string[]): unknown[] {
 }
 
 /** 최종 필드 자체가 선택일 때만 NON_NULL 직렬화에 따른 누락을 null 표본으로 센다. */
-type NullableSchema = { properties?: Record<string, NullableSchema>; items?: NullableSchema; required?: string[] };
-function optionalLeaf(schema: NullableSchema | undefined, parts: string[]): boolean {
+type NullableSchema = {
+  properties?: Record<string, NullableSchema>;
+  items?: NullableSchema;
+  required?: string[];
+};
+function optionalLeaf(
+  schema: NullableSchema | undefined,
+  parts: string[]
+): boolean {
   const [part, ...rest] = parts;
   const key = part.replace(/\[\]$/, "");
   if (rest.length === 0) return !schema?.required?.includes(key);
@@ -240,7 +247,12 @@ function contractSamples() {
     },
   });
   seedAgentChatTurnForTests(chatIds[5], {
-    pendingApproval: { ...approval, summary: "이슈를 만들까요?", args: null, card: SPARSE_CARD },
+    pendingApproval: {
+      ...approval,
+      summary: "이슈를 만들까요?",
+      args: null,
+      card: SPARSE_CARD,
+    },
   });
   seedAgentChatTurnForTests(chatIds[2], {});
   seedAgentChatTurnForTests(chatIds[3], {
@@ -371,7 +383,10 @@ function contractSamples() {
           .listAgentDelegations()
           .map((delegation) => delegation.delegationId),
         // 회의록 메일(APP-1114) — 그 노트로 보낸 발송 하나를 심어 둔다
-        mailId: "noteId" in tuple ? [seedShareMail(String(tuple.noteId), ["kim@example.com"])] : [],
+        mailId:
+          "noteId" in tuple
+            ? [seedShareMail(String(tuple.noteId), ["kim@example.com"])]
+            : [],
       };
       if (params.some((param) => !values[param]?.length)) continue;
       // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).
@@ -384,8 +399,14 @@ function contractSamples() {
       for (const url of urls) {
         for (const query of queries) {
           // 선택 noteId 필터로 실제 관계가 있는 회의도 검사한다. 경로만 부르면 목은 빈 목록을 준다.
-          const suffix = path === "/v1/projects/{projectId}/meeting-links" && tuple.noteId ? `?noteId=${tuple.noteId}` : query;
+          const suffix =
+            path === "/v1/projects/{projectId}/meeting-links" && tuple.noteId
+              ? `?noteId=${tuple.noteId}`
+              : query;
           samples.push([schema, `${url}${suffix}`]);
+          // 알림은 스키마 표식이 있어야 원본이 지워진 초대·새 종류를 낸다(PRO-67 I06). 새 web 이 실제로 보내는 요청이다.
+          if (path === "/v1/notifications")
+            samples.push([schema, `${url}?schema=2`]);
         }
       }
       filled += urls.length;
@@ -485,7 +506,10 @@ const KNOWN_UNOBSERVED = new Set<string>([
         (key) => `${at}.fields[].${key}`
       )
     ),
-  ].map((rest) => `AgentChatMessagesResponse.data.lastTurn.pendingApproval.card${rest}`),
+  ].map(
+    (rest) =>
+      `AgentChatMessagesResponse.data.lastTurn.pendingApproval.card${rest}`
+  ),
 ]);
 
 /**
@@ -503,7 +527,13 @@ const emptyField = {
 const fullFields = [
   { ...emptyField, label: "제목", value: "APP 버그 수정" },
   { ...emptyField, label: "상태", before: "할 일", after: "진행 중" },
-  { ...emptyField, label: "라벨", added: ["버그"], removed: ["기능"], kept: ["web"] },
+  {
+    ...emptyField,
+    label: "라벨",
+    added: ["버그"],
+    removed: ["기능"],
+    kept: ["web"],
+  },
 ];
 const FULL_CARD = {
   title: "Linear 이슈 만들기",
@@ -553,38 +583,71 @@ describe("nullable 목 표본", () => {
       answered.add(schemaName);
       const bodies = [await response.json()];
       // 저장한 초안은 처음 시드에 없습니다. 실제 PATCH → GET으로 담당 참조·해제·미변경을 함께 검사합니다.
-      if (schemaName === "MeetingReviewResponse" && bodies[0].data.noteId === MENTORING_NOTE_ID) {
+      if (
+        schemaName === "MeetingReviewResponse" &&
+        bodies[0].data.noteId === MENTORING_NOTE_ID
+      ) {
         for (const fields of [
-          { status: "COMPLETED", assignee: { value: { type: "USER", id: mockDb.getCurrentUser().userId } }, due: { value: "2026-12-05" } },
-          { status: null, assignee: { value: { type: "SPEAKER_LABEL", label: "B" } }, due: { value: null } },
+          {
+            status: "COMPLETED",
+            assignee: {
+              value: { type: "USER", id: mockDb.getCurrentUser().userId },
+            },
+            due: { value: "2026-12-05" },
+          },
+          {
+            status: null,
+            assignee: { value: { type: "SPEAKER_LABEL", label: "B" } },
+            due: { value: null },
+          },
           { status: null, assignee: { value: null }, due: null },
           { status: null, assignee: null, due: null },
         ]) {
           const current = bodies.at(-1).data;
-          const item = current.items.find((row: { taskChanges: unknown[] }) => row.taskChanges.length > 0);
+          const item = current.items.find(
+            (row: { taskChanges: unknown[] }) => row.taskChanges.length > 0
+          );
           const target = item.taskChanges[0].target;
-          const saved = await fetch(`http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`, {
-            method: "PATCH", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
-              decisions: [{ targetId: target.itemId, decision: "APPLY", taskChange: { expectedRevision: target.revision, ...fields } }],
-            }),
-          });
+          const saved = await fetch(
+            `http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                expectedReviewVersion: current.reviewVersion,
+                expectedItemRevision: item.revision,
+                decisions: [
+                  {
+                    targetId: target.itemId,
+                    decision: "APPLY",
+                    taskChange: {
+                      expectedRevision: target.revision,
+                      ...fields,
+                    },
+                  },
+                ],
+              }),
+            }
+          );
           expect(saved.status).toBe(200);
           bodies.push(await (await fetch(`http://localhost${url}`)).json());
         }
       }
 
-      for (const body of bodies) for (const leaf of nullableLeaves(schema)) {
-        if (leaf === "error") continue; // 성공 응답의 봉투는 언제나 null이다
-        const values = valuesAt(body, leaf.split("."));
-        if (values.length === 0) continue;
-        const key = `${schemaName}.${leaf}`;
-        const entry = observed.get(key) ?? { total: 0, nulls: 0 };
-        entry.total += values.length;
-        const optional = optionalLeaf(schema, leaf.split("."));
-        entry.nulls += values.filter((value) => value === null || (optional && value === undefined)).length;
-        observed.set(key, entry);
-      }
+      for (const body of bodies)
+        for (const leaf of nullableLeaves(schema)) {
+          if (leaf === "error") continue; // 성공 응답의 봉투는 언제나 null이다
+          const values = valuesAt(body, leaf.split("."));
+          if (values.length === 0) continue;
+          const key = `${schemaName}.${leaf}`;
+          const entry = observed.get(key) ?? { total: 0, nulls: 0 };
+          entry.total += values.length;
+          const optional = optionalLeaf(schema, leaf.split("."));
+          entry.nulls += values.filter(
+            (value) => value === null || (optional && value === undefined)
+          ).length;
+          observed.set(key, entry);
+        }
     }
 
     // 200을 한 번도 못 받은 스키마가 있으면 그 응답은 통째로 미검사다.

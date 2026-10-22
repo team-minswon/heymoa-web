@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { GetNotificationsFilter } from "./getNotificationsFilter";
 
 export type GetNotificationsParams = {
   /**
@@ -15,4 +16,18 @@ export type GetNotificationsParams = {
    * 커서의 짝. 같은 시각 안에서 이 id 보다 작은 것부터
    */
   afterNotificationId?: string;
+  /**
+   * 쪽당 항목 수. 없으면 50
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: string;
+  /**
+   * ALL(기본)·UNREAD(안 읽음)·ACTION_REQUIRED(대기 중이고 만료되지 않은 초대). 쪽을 자르기 전에 서버가 거른다
+   */
+  filter?: GetNotificationsFilter;
+  /**
+   * 응답 스키마 표식. 2 이상이면 초대 밖의 종류와 원본이 지워진 초대 알림(invitation 이 null)도 목록과 개수에 넣는다. 없으면 원본이 살아 있는 초대 알림만 받는다(옛 web)
+   */
+  schema?: string;
 };

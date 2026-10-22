@@ -21,6 +21,7 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PersonalChatProvider } from "@/components/chat/personal-chat";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
+import { NotificationCenterProvider } from "@/components/notification/notification-center";
 import {
   DEFAULT_SETTINGS_SECTION,
   SETTINGS_PARAM,
@@ -294,63 +295,69 @@ export function WorkspaceAppShell({
         workspaceName={workspace?.name}
       >
         <TooltipProvider>
-          <SettingsDialog
-            open={settingsOpen}
-            onOpenChange={(open) => !open && closeSettings()}
-            section={shownSection}
-            onSectionChange={replaceSettings}
+          {/* 알림 개수와 모달은 셸이 한 번 소유한다 — 사이드바와 전체 화면 노트 헤더가 같은 것을 연다(PRO-67 I09). */}
+          <NotificationCenterProvider
             workspaceId={workspaceId}
-          />
-          {/* 셸이 캔버스를 꽉 채우지 않는다 — 사이드바는 캔버스 위에 그냥 앉고(배경·테두리 없음),
+            onOpenSettings={openSettings}
+          >
+            <SettingsDialog
+              open={settingsOpen}
+              onOpenChange={(open) => !open && closeSettings()}
+              section={shownSection}
+              onSectionChange={replaceSettings}
+              workspaceId={workspaceId}
+            />
+            {/* 셸이 캔버스를 꽉 채우지 않는다 — 사이드바는 캔버스 위에 그냥 앉고(배경·테두리 없음),
               본문만 둥근 흰 패널로 떠 있다. design.pen `IUax1`·`BviA2`. */}
-          <SidebarProvider className="bg-[var(--el-canvas)]">
-            {/* 노트 전체 화면이 이 사이드바를 **덮는다**. 시각적으로만 가리면 Tab이 보이지도
+            <SidebarProvider className="bg-[var(--el-canvas)]">
+              {/* 노트 전체 화면이 이 사이드바를 **덮는다**. 시각적으로만 가리면 Tab이 보이지도
                 않는 프로젝트 버튼에 들어가 Enter로 이동이 실행된다 — `inert`로 포커스·접근성
                 트리에서 함께 뺀다. */}
-            <Sidebar
-              inert={isFullNote}
-              className="overflow-hidden border-r-0 bg-transparent [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-transparent"
-            >
-              <WorkspaceSidebar
+              <Sidebar
+                inert={isFullNote}
+                className="overflow-hidden border-r-0 bg-transparent [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-transparent"
+              >
+                <WorkspaceSidebar
+                  workspaceId={workspaceId}
+                  workspace={workspace}
+                  projects={projects}
+                  selectedProjectId={selectedProjectId}
+                  onSelectProject={setSelectedProjectId}
+                  onOpenSettings={value.openSettings}
+                  onCreateProject={openCreateProject}
+                  covered={isFullNote}
+                  onboarding={
+                    onboarding && (
+                      <OnboardingChecklist
+                        workspaceId={workspaceId}
+                        model={onboarding}
+                      />
+                    )
+                  }
+                />
+              </Sidebar>
+              <ShellMain
                 workspaceId={workspaceId}
-                workspace={workspace}
-                projects={projects}
-                selectedProjectId={selectedProjectId}
-                onSelectProject={setSelectedProjectId}
-                onOpenSettings={value.openSettings}
-                onCreateProject={openCreateProject}
-                covered={isFullNote}
-                onboarding={
-                  onboarding && (
-                    <OnboardingChecklist
-                      workspaceId={workspaceId}
-                      model={onboarding}
-                    />
-                  )
-                }
-              />
-            </Sidebar>
-            <ShellMain
-              workspaceId={workspaceId}
-              currentLabel={currentLabel}
-              activeNoteId={activeNoteId}
-              isFullNote={isFullNote}
-            >
-              {children}
-            </ShellMain>
-            <CloseShellOverlaysOnFullNote isFullNote={isFullNote} />
-            {/* 프로젝트·회의 만들기 창은 **셸이 소유한다.** 입구가 사이드바 `+`·상단바
+                currentLabel={currentLabel}
+                activeNoteId={activeNoteId}
+                isFullNote={isFullNote}
+              >
+                {children}
+              </ShellMain>
+              <CloseShellOverlaysOnFullNote isFullNote={isFullNote} />
+              {/* 프로젝트·회의 만들기 창은 **셸이 소유한다.** 입구가 사이드바 `+`·상단바
                 「새 노트」·빈 상태 CTA 셋이고, 그중 「새 노트」는 프로젝트가 없으면 프로젝트
                 창을 먼저 열어야 하므로 두 창이 한 자리에 있어야 이어 붙일 수 있다.
                 컨텍스트 안쪽 자식이다 — `useCreateMeeting`이 `useWorkspaceShell()`을 읽는다. */}
-            <WorkspaceCreateDialogs
-              workspaceId={workspaceId}
-              createProject={createProject}
-              onCreateProjectChange={setCreateProject}
-              newMeetingOpen={newMeetingOpen}
-              onNewMeetingChange={setNewMeetingOpen}
-            />
-          </SidebarProvider>
+              <WorkspaceCreateDialogs
+                workspaceId={workspaceId}
+                createProject={createProject}
+                onCreateProjectChange={setCreateProject}
+                newMeetingOpen={newMeetingOpen}
+                onNewMeetingChange={setNewMeetingOpen}
+              />
+            </SidebarProvider>
+          </NotificationCenterProvider>
         </TooltipProvider>
       </PersonalChatProvider>
     </WorkspaceShellContext.Provider>

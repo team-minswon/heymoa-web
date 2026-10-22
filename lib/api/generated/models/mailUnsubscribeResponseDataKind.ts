@@ -14,6 +14,7 @@ export type MailUnsubscribeResponseDataKind =
 
 export const MailUnsubscribeResponseDataKind = {
   WORKSPACE_INVITATION: "WORKSPACE_INVITATION",
+  ANALYSIS_READY: "ANALYSIS_READY",
   MEETING_PAUSED_REMINDER: "MEETING_PAUSED_REMINDER",
   MEETING_AUTO_ENDED: "MEETING_AUTO_ENDED",
 } as const;

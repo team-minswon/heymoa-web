@@ -18,8 +18,14 @@ import {
 
 type NoteViewMode = "side" | "full";
 
-/** 노트 주소가 서버에 처음 온 모양. `source` 는 메일 링크로 들어왔을 때만 있다(APP-1312). */
-export type NoteRouteQuery = { view?: string; tab?: string; source?: "mail" };
+/**
+ * 노트 주소가 서버에 처음 온 모양. `source` 는 메일 링크(APP-1312)나 알림 모달(PRO-67 I09)로 들어왔을 때만 있다.
+ */
+export type NoteRouteQuery = {
+  view?: string;
+  tab?: string;
+  source?: "mail" | "notification";
+};
 
 /**
  * `view`·`tab`은 라우터를 안 거친다.
@@ -126,20 +132,21 @@ export function NoteView({
   }, []);
 
   /**
-   * 메일 링크로 들어온 진입을 한 번 센다(APP-1312). 목록 행은 누를 때 이미 `source: "list"` 로 보내므로 여기서는
-   * 메일만 센다 — 둘이 겹치지 않는다. 같은 화면에서 다시 그려져도 다시 보내지 않게 노트마다 한 번이다.
+   * 메일 링크·알림 모달로 들어온 진입을 한 번 센다(APP-1312 · PRO-67 I09). 목록 행은 누를 때 이미 `source: "list"` 로
+   * 보내므로 여기서는 그 둘만 센다 — 겹치지 않는다. 같은 화면에서 다시 그려져도 다시 보내지 않게 노트마다 한 번이다.
    */
-  const fromMail = initialQuery.source === "mail";
-  const mailCountedRef = useRef<string | null>(null);
+  const source = initialQuery.source;
+  const fromMail = source === "mail";
+  const sourceCountedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!fromMail || mailCountedRef.current === noteId) return;
-    mailCountedRef.current = noteId;
+    if (!source || sourceCountedRef.current === noteId) return;
+    sourceCountedRef.current = noteId;
     track("note_opened", {
       workspace_id: workspaceId,
       view: current.view,
-      source: "mail",
+      source,
     });
-  }, [current.view, fromMail, noteId, workspaceId]);
+  }, [current.view, source, noteId, workspaceId]);
 
   useEffect(() => {
     // **첫 커밋 전에는 URL을 안 고친다.** App Router는 자기 effect에서 `history.replaceState`를
@@ -267,6 +274,7 @@ export function NoteView({
         // **replace다.** push하면 목록에서 뒤로가기가 방금 지운 노트 URL로 돌아가 404가 된다.
         onDeleted={() => router.replace(`/w/${workspaceId}`)}
         fromMail={fromMail}
+        fromNotification={source === "notification"}
         // **지금 주소의 값이다.** 서버가 처음 넘긴 값을 쓰면 같은 링크로 다시 들어왔을 때
         // 「읽고 걷힘 → 다시 들어옴」이 값 변화로 안 보여 점프하지 않는다.
         linkedSegmentId={searchParams.get("segment")}

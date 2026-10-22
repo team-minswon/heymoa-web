@@ -295,6 +295,7 @@ export function createHelpDemoState(now = Date.now()): StoreState {
         inviterName: invitations[0].inviterName,
         expiresAt: invitations[0].expiresAt,
       },
+      payload: null,
     },
   ];
 

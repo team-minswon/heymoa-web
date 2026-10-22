@@ -10,7 +10,6 @@ import {
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
-import { NotificationBell } from "@/components/notification/notification-bell";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
@@ -191,10 +190,9 @@ export function WorkspaceToolbar({
               onClick={requestNewMeeting}
             >
               <Plus className="size-3.5" />
-              {/* 좁은 화면에서는 아이콘만 — 노트 액션·벨이 잘리지 않게. */}
+              {/* 좁은 화면에서는 아이콘만 — 노트 액션이 잘리지 않게. */}
               <span>새 노트</span>
             </Button>
-            <NotificationBell />
           </div>
         </div>
       </div>

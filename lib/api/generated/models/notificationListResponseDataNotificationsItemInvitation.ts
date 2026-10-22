@@ -9,7 +9,8 @@ import type { NotificationListResponseDataNotificationsItemInvitationRole } from
 import type { NotificationListResponseDataNotificationsItemInvitationStatus } from "./notificationListResponseDataNotificationsItemInvitationStatus";
 
 /**
- * 워크스페이스 초대 정보. 모든 알림에 포함된다
+ * 워크스페이스 초대 정보(살아 있는 값). 초대 알림이고 원본이 남아 있을 때만 있다. schema 표식이 없는 요청에는 늘 있다
+ * @nullable
  */
 export type NotificationListResponseDataNotificationsItemInvitation = {
   /** 수락 시 부여될 워크스페이스 역할 */
@@ -32,4 +33,4 @@ export type NotificationListResponseDataNotificationsItemInvitation = {
   workspaceId: string;
   /** 초대의 현재 상태 */
   status: NotificationListResponseDataNotificationsItemInvitationStatus;
-};
+} | null;

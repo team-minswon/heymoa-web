@@ -107,9 +107,12 @@ export function composeFeedback(message: string): string {
 export function UnseenCount({
   count,
   className,
+  label = (n) => `새 답변 ${n}개`,
 }: {
   count: number;
   className?: string;
+  /** 화면 읽기 프로그램에 읽히는 말 */
+  label?: (count: number) => string;
 }) {
   const [shown, setShown] = useState(count);
   if (count > 0 && count !== shown) setShown(count);
@@ -118,14 +121,15 @@ export function UnseenCount({
   return (
     <span
       aria-hidden={!visible}
-      aria-label={visible ? `새 답변 ${count}개` : undefined}
+      aria-label={visible ? label(count) : undefined}
       className={cn(
         "tabular-nums transition-opacity duration-150 motion-reduce:transition-none",
         visible ? "opacity-100" : "opacity-0",
         className
       )}
     >
-      {shown}
+      {/* 99를 넘으면 99+ — 사이드바 한 칸에 숫자가 길어지지 않게(알림). */}
+      {shown > 99 ? "99+" : shown}
     </span>
   );
 }

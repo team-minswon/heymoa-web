@@ -9,8 +9,10 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  MarkAllNotificationsReadResponse,
   MarkNotificationReadResponse,
   NotificationListResponse,
+  UnreadNotificationCountResponse,
 } from "../models";
 
 export const getGetNotificationsResponseMock =
@@ -32,12 +34,23 @@ export const getGetNotificationsResponseMock =
             inviterName: "홍길동",
             expiresAt: "2026-07-15T01:02:03Z",
           },
+          payload: {
+            workspaceId: "0HZX2K7M9Q4AD",
+            workspaceName: "제품 팀",
+            invitationId: "0HZX2K7M9Q4AK",
+            inviterUserId: "0HZX2K7M9Q4AC",
+            noteId: null,
+            noteTitle: null,
+            autoEnded: null,
+            pausedBusinessDays: null,
+          },
         },
       ],
       unreadCount: 0,
       hasMore: false,
       nextCreatedAt: null,
       nextNotificationId: null,
+      serverTime: "2026-07-14T01:02:03Z",
     },
     error: null,
   });
@@ -46,6 +59,20 @@ export const getMarkNotificationReadResponseMock =
   (): MarkNotificationReadResponse => ({
     success: true,
     data: { notificationId: "0HZX2K7M9Q4AJ" },
+    error: null,
+  });
+
+export const getMarkAllNotificationsReadResponseMock =
+  (): MarkAllNotificationsReadResponse => ({
+    success: true,
+    data: { readCount: 2 },
+    error: null,
+  });
+
+export const getGetUnreadNotificationCountResponseMock =
+  (): UnreadNotificationCountResponse => ({
+    success: true,
+    data: { unreadCount: 3 },
     error: null,
   });
 
@@ -98,7 +125,61 @@ export const getMarkNotificationReadMockHandler = (
     options
   );
 };
+
+export const getMarkAllNotificationsReadMockHandler = (
+  overrideResponse?:
+    | MarkAllNotificationsReadResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) =>
+        | Promise<MarkAllNotificationsReadResponse>
+        | MarkAllNotificationsReadResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notifications/read",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getMarkAllNotificationsReadResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getGetUnreadNotificationCountMockHandler = (
+  overrideResponse?:
+    | UnreadNotificationCountResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) =>
+        | Promise<UnreadNotificationCountResponse>
+        | UnreadNotificationCountResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/notifications/unread-count",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetUnreadNotificationCountResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getNotificationsMock = () => [
   getGetNotificationsMockHandler(),
   getMarkNotificationReadMockHandler(),
+  getMarkAllNotificationsReadMockHandler(),
+  getGetUnreadNotificationCountMockHandler(),
 ];
