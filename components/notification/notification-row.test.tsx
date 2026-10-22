@@ -1,7 +1,10 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { NotificationRow } from "@/components/notification/notification-row";
+import {
+  NotificationRow,
+  workspaceLabel,
+} from "@/components/notification/notification-row";
 import type { NotificationItem } from "@/lib/notification/notification-list";
 
 const base: NotificationItem = {
@@ -21,58 +24,37 @@ function row(readAt: string | null) {
         view={{ title: "알림", workspaceName: "제품 팀" }}
         timeLabel="오전 11:00"
         highlighted={false}
+        divided={false}
         onRead={() => {}}
       />
     </ul>
   );
 }
 
-function setReducedMotion(reduce: boolean) {
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn().mockReturnValue({ matches: reduce } as MediaQueryList)
-  );
-}
+afterEach(cleanup);
 
-const phase = () =>
-  screen.getByRole("listitem").getAttribute("data-read-phase");
-
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-  vi.useRealTimers();
+describe("읽음 표시", () => {
+  it("안 읽음 점은 누를 수 있고, 읽으면 같은 자리에서 보이지 않게 된다(글은 움직이지 않는다)", () => {
+    const { rerender } = render(row(null));
+    const dot = screen.getByRole("button", { name: "읽음으로 표시" });
+    expect(dot).toBeEnabled();
+    expect(dot.className).toContain("visible");
+    rerender(row("2026-10-22T03:00:00Z"));
+    // invisible 이라 접근성 트리·탭 순서에서 빠진다. 점 칸이 글 흐름 밖(absolute)이라 글의 왼쪽 기준선은 그대로다.
+    const hidden = screen.getByRole("button", {
+      name: "읽음으로 표시",
+      hidden: true,
+    });
+    expect(hidden).toBeDisabled();
+    expect(hidden.className).toContain("invisible");
+    expect(hidden.className).toContain("absolute");
+  });
 });
 
-describe("읽음 전환", () => {
-  it("읽으면 점과 내용이 점 칸만큼 왼쪽으로 밀린 뒤 끝나는 프레임에 점 칸을 뺀다", () => {
-    vi.useFakeTimers();
-    setReducedMotion(false);
-    const { rerender } = render(row(null));
-    expect(phase()).toBe("unread");
-    rerender(row("2026-10-22T03:00:00Z"));
-    expect(phase()).toBe("leaving");
-    const dot = screen.getByRole("button", { name: "읽음으로 표시" });
-    expect(dot.style.transform).toBe("translateX(-17px)");
-    expect(dot.style.opacity).toBe("0");
-    act(() => vi.advanceTimersByTime(180));
-    expect(phase()).toBe("read");
-    expect(screen.queryByRole("button", { name: "읽음으로 표시" })).toBeNull();
-  });
-
-  it("움직임 줄이기면 애니메이션 없이 바로 사라진다", () => {
-    setReducedMotion(true);
-    const { rerender } = render(row(null));
-    rerender(row("2026-10-22T03:00:00Z"));
-    expect(phase()).toBe("read");
-    expect(screen.queryByRole("button", { name: "읽음으로 표시" })).toBeNull();
-  });
-
-  it("다시 안 읽음이 되면 점이 왼쪽에서 들어온다", async () => {
-    setReducedMotion(false);
-    const { rerender } = render(row("2026-10-22T03:00:00Z"));
-    rerender(row(null));
-    expect(phase()).toBe("entering");
-    await act(() => new Promise((resolve) => requestAnimationFrame(resolve)));
-    expect(phase()).toBe("unread");
+describe("workspaceLabel", () => {
+  it("이름이 「워크스페이스」로 끝나면 접미어를 붙이지 않는다", () => {
+    expect(workspaceLabel("새로운 워크스페이스")).toBe("");
+    expect(workspaceLabel("테스트 유저의 워크스페이스 ")).toBe("");
+    expect(workspaceLabel("디자인 팀")).toBe(" 워크스페이스");
   });
 });

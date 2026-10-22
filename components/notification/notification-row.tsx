@@ -1,15 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { formatAppDate } from "@/lib/format/date";
 import type { NotificationItem } from "@/lib/notification/notification-list";
 import { cn } from "@/lib/utils";
-
-/** 점 칸의 폭 — 점 7px + 내용과의 간격 10px. 읽음 전환에서 점과 내용이 이만큼 왼쪽으로 움직인다. */
-const DOT_SLOT_PX = 17;
-const READ_TRANSITION_MS = 180;
 
 const INVITATION_RESULT: Record<string, string> = {
   ACCEPTED: "수락함",
@@ -18,40 +12,9 @@ const INVITATION_RESULT: Record<string, string> = {
   EXPIRED: "만료됨",
 };
 
-type Phase = "unread" | "leaving" | "read" | "entering";
-
-function prefersReducedMotion() {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
-  );
-}
-
-/**
- * 읽음 전환(FLIP). 읽으면 점 칸은 그대로 둔 채 점과 내용을 점 칸만큼 왼쪽으로 밀고(점은 흐려진다), 끝나는 프레임에
- * 점 칸을 빼고 이동을 0으로 되돌린다 — 행 높이와 오른쪽 열은 움직이지 않는다. 다시 안 읽음이 되면 거꾸로 점이 왼쪽에서
- * 들어온다. 움직임 줄이기 설정이면 바로 바뀐다. `transform`·`opacity` 만 움직인다.
- */
-function useReadPhase(unread: boolean): Phase {
-  const [phase, setPhase] = useState<Phase>(unread ? "unread" : "read");
-  const [previous, setPrevious] = useState(unread);
-  if (unread !== previous) {
-    setPrevious(unread);
-    if (prefersReducedMotion()) setPhase(unread ? "unread" : "read");
-    else setPhase(unread ? "entering" : "leaving");
-  }
-  useEffect(() => {
-    if (phase === "leaving") {
-      const timer = setTimeout(() => setPhase("read"), READ_TRANSITION_MS);
-      return () => clearTimeout(timer);
-    }
-    if (phase === "entering") {
-      // 밀려난 자리에서 한 프레임 그린 뒤 제자리로 — 그래야 전환이 돈다.
-      const frame = requestAnimationFrame(() => setPhase("unread"));
-      return () => cancelAnimationFrame(frame);
-    }
-  }, [phase]);
-  return phase;
+/** 이름이 이미 「워크스페이스」로 끝나면 접미어를 붙이지 않는다(server APP-1330 과 같은 규칙). */
+export function workspaceLabel(name: string) {
+  return /워크스페이스$/.test(name.trim()) ? "" : " 워크스페이스";
 }
 
 export type NotificationRowView = {
@@ -59,6 +22,7 @@ export type NotificationRowView = {
   title: React.ReactNode;
   /** 보조 줄(자동 종료 사유, 원본 없음 등) */
   detail?: React.ReactNode;
+  /** 메타 줄의 워크스페이스 이름. 첫 줄에 이미 나오면 비운다 */
   workspaceName: string | null;
   /** 오른쪽 칸. 폭이 고정이라 행마다 글 폭이 같다 */
   aside?: React.ReactNode;
@@ -68,11 +32,16 @@ export type NotificationRowView = {
   onActivate?: () => void;
 };
 
+/**
+ * 알림 한 줄. 안 읽음 점은 글 왼쪽 여백에 매달려(hanging) 있어서, 읽음·안 읽음과 상관없이 모든 행의 글이 같은 왼쪽
+ * 기준선(날짜 머리글·모달 제목과 같은 선)에서 시작한다. 읽으면 점만 흐려지며 사라진다 — 글은 움직이지 않는다.
+ */
 export function NotificationRow({
   notification,
   view,
   timeLabel,
   highlighted,
+  divided,
   onRead,
 }: {
   notification: NotificationItem;
@@ -81,16 +50,16 @@ export function NotificationRow({
   timeLabel: string;
   /** 마지막으로 누른 행 — 모달을 다시 열었을 때 어디까지 봤는지 보인다 */
   highlighted: boolean;
+  /** 바로 위가 같은 묶음의 행이면 사이에 hairline 을 긋는다 */
+  divided: boolean;
   onRead: () => void;
 }) {
   const unread = notification.readAt === null;
-  const phase = useReadPhase(unread);
-  const moved = phase === "leaving" || phase === "entering";
-  const animated = phase === "leaving" || phase === "unread";
-  const shift = moved ? `translateX(-${DOT_SLOT_PX}px)` : undefined;
-  const transition = animated
-    ? "transition-[transform,opacity] duration-[180ms] ease-out motion-reduce:transition-none"
-    : "";
+  const tone = view.gone
+    ? "text-[var(--el-muted)]"
+    : unread
+      ? "text-[var(--el-ink)]"
+      : "text-[var(--el-body)]";
 
   const activate = () => {
     if (view.onActivate) view.onActivate();
@@ -100,10 +69,12 @@ export function NotificationRow({
   return (
     <li
       data-notification-id={notification.notificationId}
-      data-read-phase={phase}
+      data-unread={unread || undefined}
       className={cn(
-        "group/row flex cursor-pointer gap-[10px] rounded-[10px] px-2.5 py-2.5 hover:bg-[var(--el-canvas-soft)]",
-        highlighted && "bg-[var(--el-canvas-soft)]"
+        "group/row relative flex cursor-pointer gap-3 rounded-block py-2.5 pr-4 pl-4 transition-colors hover:bg-[var(--el-canvas-soft)]",
+        highlighted && "bg-[var(--el-canvas-soft)]",
+        divided &&
+          "before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-[var(--el-hairline)] hover:before:opacity-0"
       )}
       onClick={(event) => {
         // 수락·거절·점 버튼은 제 일을 한다.
@@ -111,62 +82,48 @@ export function NotificationRow({
         activate();
       }}
     >
-      {phase !== "read" ? (
-        <button
-          type="button"
-          aria-label="읽음으로 표시"
-          disabled={!unread}
-          onClick={onRead}
-          className={cn(
-            "-m-1 mt-[3px] h-fit shrink-0 rounded-full p-1",
-            transition
-          )}
-          style={{ transform: shift, opacity: moved ? 0 : 1 }}
-        >
-          <span
-            aria-hidden
-            className="block size-[7px] rounded-full bg-[var(--el-primary)]"
-          />
-        </button>
-      ) : null}
-      <div
-        className={cn("flex min-w-0 flex-1 flex-col gap-[3px]", transition)}
-        style={{ transform: shift }}
+      {/* 점은 글 왼쪽 여백(16px)의 가운데에 매달린다. 읽으면 흐려지고, 다 흐려진 뒤 보이지 않게 된다(탭 순서에서도 빠진다). */}
+      <button
+        type="button"
+        aria-label="읽음으로 표시"
+        disabled={!unread}
+        onClick={onRead}
+        className={cn(
+          "absolute top-2.5 left-0 flex h-[21px] w-4 items-center justify-center rounded-full transition-[opacity,visibility] duration-[180ms] ease-out motion-reduce:transition-none",
+          unread ? "visible opacity-100" : "invisible opacity-0"
+        )}
       >
+        <span
+          aria-hidden
+          className="block size-[7px] rounded-full bg-[var(--el-primary)]"
+        />
+      </button>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {view.onActivate ? (
           // 키보드로도 닿게 첫 줄이 버튼이다. 행 어디를 눌러도 같은 일을 한다.
           <button
             type="button"
             onClick={view.onActivate}
             className={cn(
-              "text-left text-[13.5px] leading-[21px] focus-visible:underline focus-visible:outline-none",
-              unread ? "text-[var(--el-ink)]" : "text-[var(--el-body)]"
+              "rounded-[2px] text-left text-[13.5px] leading-[21px] outline-none focus-visible:underline focus-visible:underline-offset-2",
+              tone
             )}
           >
             {view.title}
           </button>
         ) : (
-          <p
-            className={cn(
-              "text-[13.5px] leading-[21px]",
-              view.gone
-                ? "text-[var(--el-muted)]"
-                : unread
-                  ? "text-[var(--el-ink)]"
-                  : "text-[var(--el-body)]"
-            )}
-          >
+          <p className={cn("text-[13.5px] leading-[21px]", tone)}>
             {view.title}
           </p>
         )}
         {view.detail ? (
-          <p className="text-[12.5px] text-pretty text-[var(--el-body)]">
+          <p className="text-[12.5px] leading-[19px] text-pretty text-[var(--el-body)]">
             {view.detail}
           </p>
         ) : null}
-        <p className="text-[11.5px] text-[var(--el-muted)]">
+        <p className="mt-0.5 truncate text-xs leading-[18px] text-[var(--el-muted)]">
           {view.workspaceName ? `${view.workspaceName} · ` : null}
-          <span className="whitespace-nowrap">{timeLabel}</span>
+          <span className="whitespace-nowrap tabular-nums">{timeLabel}</span>
         </p>
       </div>
       <div className="flex h-[21px] w-[104px] shrink-0 items-center justify-end gap-1.5">
@@ -218,14 +175,15 @@ function describeInvitation(
     return {
       title: notification.payload?.workspaceName ? (
         <>
-          <b className="font-medium">{notification.payload.workspaceName}</b>{" "}
-          워크스페이스 초대
+          <b className="font-medium">{notification.payload.workspaceName}</b>
+          {workspaceLabel(notification.payload.workspaceName)} 초대
         </>
       ) : (
         "워크스페이스 초대"
       ),
       detail: "취소되었거나 더 이상 볼 수 없는 초대입니다",
-      workspaceName: notification.payload?.workspaceName ?? null,
+      // 첫 줄이 이미 워크스페이스 이름이다
+      workspaceName: null,
       gone: true,
     };
   }
@@ -236,11 +194,12 @@ function describeInvitation(
     title: (
       <>
         <b className="font-medium">{invitation.inviterName}</b>님이{" "}
-        <b className="font-medium">{invitation.workspaceName}</b> 워크스페이스에
-        초대했습니다
+        <b className="font-medium">{invitation.workspaceName}</b>
+        {workspaceLabel(invitation.workspaceName)}에 초대했습니다
       </>
     ),
-    workspaceName: invitation.workspaceName,
+    // 첫 줄이 이미 워크스페이스 이름이다
+    workspaceName: null,
     aside:
       invitation.status === "PENDING" && !expired ? (
         <>

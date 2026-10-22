@@ -98,3 +98,32 @@ test("로그인한 탭에는 이벤트 스트림 연결이 하나이고, 워크�
   expect(opened).toBe(before);
   expect(opened - closed).toBe(1);
 });
+
+for (const width of [1440, 1024]) {
+  test(`${width}px 에서 탭을 바꿔도 알림 모달의 폭·높이가 그대로이고, 열자마자 포커스 링이 뜨지 않는다`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(WS);
+    await page
+      .getByRole("navigation", { name: "워크스페이스" })
+      .getByRole("button", { name: /^알림/ })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "알림" });
+    await expect(dialog.getByRole("button", { name: "수락" })).toBeVisible();
+    // 포커스는 창 자체에 있다 — 첫 탭에 두면 링이 보인다(APP-1355).
+    expect(
+      await page.evaluate(() => document.activeElement?.getAttribute("role"))
+    ).toBe("dialog");
+    const size = async () => {
+      await page.waitForTimeout(300); // 열림 애니메이션(zoom)과 목록 도착이 끝난 뒤에 잰다
+      const box = (await dialog.boundingBox())!;
+      return [Math.round(box.width), Math.round(box.height)];
+    };
+    const first = await size();
+    for (const name of ["안 읽음", "처리 필요", "전체"]) {
+      await dialog.getByRole("tab", { name }).click();
+      expect(await size()).toEqual(first);
+    }
+  });
+}
