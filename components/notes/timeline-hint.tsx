@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { X } from "lucide-react";
 
+import { CountdownBar, useNudgeMotion } from "@/components/notes/nudge-bubble";
 import { track } from "@/lib/analytics/track";
 import type { MeetingPhase } from "@/lib/notes/meeting-state";
 
@@ -15,7 +17,7 @@ import type { MeetingPhase } from "@/lib/notes/meeting-state";
  *   다음 회의에서도 저절로 사라지면 `done` — 「한 번 더」다
  */
 const STORAGE_KEY = "heymoa:timeline-hint";
-export const TIMELINE_HINT_MS = 12_000;
+export const TIMELINE_HINT_MS = 60_000;
 const TICK_MS = 250;
 
 function read() {
@@ -91,35 +93,42 @@ export function TimelineHint({
     closedFor !== noteId &&
     stored !== "done" &&
     stored !== `auto:${noteId}`;
-  if (!visible) return null;
+  // 닫히거나 자격을 잃어도 퇴장이 끝난 뒤에 빠진다. 퇴장 중 다시 자격이 생기면 같은 말풍선이 되돌아온다.
   return (
-    <HintBubble
-      key={noteId}
-      onShown={() => {
-        if (announced.current === noteId) return;
-        announced.current = noteId;
-        track("timeline_hint_shown", { workspace_id: workspaceId, role });
-      }}
-      onOpen={() => {
-        graduateTimelineHint();
-        setClosedFor(noteId);
-        track("timeline_hint_clicked", { workspace_id: workspaceId, role });
-        onOpen();
-      }}
-      onDismiss={(reason) => {
-        if (reason === "close") write("done");
-        else {
-          const prev = read();
-          write(
-            prev?.startsWith("auto:") && prev !== `auto:${noteId}`
-              ? "done"
-              : `auto:${noteId}`
-          );
-        }
-        setClosedFor(noteId);
-        track("timeline_hint_dismissed", { workspace_id: workspaceId, reason });
-      }}
-    />
+    <AnimatePresence>
+      {visible ? (
+        <HintBubble
+          key={noteId}
+          onShown={() => {
+            if (announced.current === noteId) return;
+            announced.current = noteId;
+            track("timeline_hint_shown", { workspace_id: workspaceId, role });
+          }}
+          onOpen={() => {
+            graduateTimelineHint();
+            setClosedFor(noteId);
+            track("timeline_hint_clicked", { workspace_id: workspaceId, role });
+            onOpen();
+          }}
+          onDismiss={(reason) => {
+            if (reason === "close") write("done");
+            else {
+              const prev = read();
+              write(
+                prev?.startsWith("auto:") && prev !== `auto:${noteId}`
+                  ? "done"
+                  : `auto:${noteId}`
+              );
+            }
+            setClosedFor(noteId);
+            track("timeline_hint_dismissed", {
+              workspace_id: workspaceId,
+              reason,
+            });
+          }}
+        />
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -133,17 +142,32 @@ function HintBubble({
   onDismiss: (reason: "auto" | "close") => void;
 }) {
   const hovered = useRef(false);
+  const focused = useRef(false);
+  // 퇴장 중에는 세지 않는다 — 자격을 잃어 접히는 사이에 시간이 다 되면 「저절로 사라짐」으로 잘못 기록된다.
+  const present = useIsPresent();
+  const presentRef = useRef(present);
+  const [paused, setPaused] = useState(false);
   const dismiss = useRef(onDismiss);
   useEffect(() => {
     dismiss.current = onDismiss;
+    presentRef.current = present;
   });
+  const motionProps = useNudgeMotion("top center");
 
   useEffect(() => {
     onShown();
-    // 창이 보이고 포커스가 있고 마우스가 없을 때만 센다 — 딴 창을 보던 사이에 사라지면 못 본 것이다.
+    // 창이 보이고 포커스가 있고 마우스·키보드 포커스가 말풍선에 없을 때만 센다 — 딴 창을 보던 사이에
+    // 사라지면 못 본 것이고, 읽거나 누르려는 사이에 사라지면 안 된다(WCAG 2.2.1). 막대도 같이 선다.
     let elapsed = 0;
     const timer = window.setInterval(() => {
-      if (document.hidden || !document.hasFocus() || hovered.current) return;
+      const hold =
+        document.hidden ||
+        !document.hasFocus() ||
+        hovered.current ||
+        focused.current ||
+        !presentRef.current;
+      setPaused(hold);
+      if (hold) return;
       elapsed += TICK_MS;
       if (elapsed >= TIMELINE_HINT_MS) {
         window.clearInterval(timer);
@@ -156,11 +180,25 @@ function HintBubble({
   }, []);
 
   return (
-    <div
+    <motion.div
       role="status"
-      onMouseEnter={() => (hovered.current = true)}
+      {...motionProps}
+      // 접히는 동안은 누를 수 없다.
+      inert={!present}
+      onMouseEnter={() => {
+        hovered.current = true;
+        setPaused(true);
+      }}
       onMouseLeave={() => (hovered.current = false)}
+      onFocus={() => {
+        focused.current = true;
+        setPaused(true);
+      }}
+      onBlur={(e) => {
+        focused.current = e.currentTarget.contains(e.relatedTarget);
+      }}
       // 탭 아래 가운데. 위 화살표가 탭을 가리킨다. 오래 남지 않으니 아래 「복사」를 잠깐 덮어도 된다.
+      // 가운데 맞춤은 `translate` 속성(-translate-x-1/2)이라 motion 의 `transform` 과 겹치지 않는다.
       className="absolute left-1/2 top-full z-30 mt-1 flex -translate-x-1/2 items-center gap-1 rounded-control bg-foreground py-1 pl-3 pr-1 text-xs text-background shadow-e2 before:absolute before:-top-1 before:left-1/2 before:size-2.5 before:-translate-x-1/2 before:rotate-45 before:rounded-[2px] before:bg-foreground"
     >
       <button
@@ -178,6 +216,12 @@ function HintBubble({
       >
         <X className="size-3.5" aria-hidden />
       </button>
-    </div>
+      <CountdownBar
+        ms={TIMELINE_HINT_MS}
+        paused={paused}
+        className="rounded-b-control"
+        barClassName="bg-background/50"
+      />
+    </motion.div>
   );
 }

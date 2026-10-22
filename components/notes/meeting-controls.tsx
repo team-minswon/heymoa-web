@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarDays,
   CircleCheck,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
+import { CountdownBar, useNudgeMotion } from "@/components/notes/nudge-bubble";
 import {
   isNoteRecordingActive,
   useRecording,
@@ -101,17 +102,13 @@ function EndNudge({
   onEnd: () => void;
   onNever: () => void;
 }) {
-  const reduced = useReducedMotion();
+  // 툭 나오고 툭 사라지지 않게 — 버튼 쪽(오른쪽 위)에서 부드럽게 펴지고 접힌다.
+  const motionProps = useNudgeMotion("top right");
   return (
     <motion.div
       role="status"
       data-testid="end-nudge"
-      // 툭 나오고 툭 사라지지 않게 — 버튼 쪽(오른쪽 위)에서 부드럽게 펴지고 접힌다.
-      initial={reduced ? false : { opacity: 0, y: -8, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -6, scale: 0.97, transition: { duration: 0.15 } }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
-      style={{ transformOrigin: "top right" }}
+      {...motionProps}
       // 헤더 하단선에 붙어 보이지 않게 18px 내려 띄운다. **`overflow-hidden` 을 걸지 않는다** — 화살표가
       // 말풍선 밖으로 튀어나와 있어 잘린다. 카운트다운 막대만 안쪽 래퍼가 자른다.
       className="absolute top-[calc(100%+18px)] right-0 z-50 w-80 rounded-block border border-[var(--el-hairline-strong)] bg-[var(--el-surface-card)] shadow-xl"
@@ -154,17 +151,11 @@ function EndNudge({
           다시 보지 않기
         </button>
       </div>
-      <div
-        aria-hidden
-        className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden rounded-b-block motion-reduce:hidden"
-      >
-        <span
-          className="block h-full bg-[var(--el-ink)]"
-          style={{
-            animation: `end-nudge-countdown ${NUDGE_MS}ms linear forwards`,
-          }}
-        />
-      </div>
+      <CountdownBar
+        ms={NUDGE_MS}
+        className="rounded-b-block"
+        barClassName="bg-[var(--el-ink)]"
+      />
     </motion.div>
   );
 }
