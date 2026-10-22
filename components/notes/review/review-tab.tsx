@@ -18,6 +18,7 @@ import { NoteSummary } from "@/components/notes/note-summary";
 import { PreEndGuide } from "@/components/notes/pre-end-guide";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import { InlineRetry } from "@/components/ui/inline-retry";
+import { useReadAnalysisReadyOnView } from "@/components/notification/use-read-analysis-ready";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { okData } from "@/lib/api/ok-data";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
@@ -78,6 +79,15 @@ export function ReviewTab({
     },
   });
 
+  // 검토 가능·확정 결과가 이 화면에 그려지는 동안 그 노트의 「검토할 결과 준비」 알림을 읽는다(PRO-67 I23).
+  const shownStatus = okData(flowQuery.data)?.status;
+  useReadAnalysisReadyOnView(
+    noteId,
+    isEnded &&
+      !flowQuery.isError &&
+      (shownStatus === "REVIEWABLE" || shownStatus === "CONFIRMED")
+  );
+
   if (!isEnded) {
     return (
       <PreEndGuide
@@ -93,13 +103,13 @@ export function ReviewTab({
   if (flowQuery.isLoading) return <ReviewBoardSkeleton />;
 
   const retryFlow = (
-      <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-6">
-        <InlineRetry
-          variant="line"
-          label="요약 상태를 불러오지 못했습니다."
-          onRetry={() => void flowQuery.refetch()}
-        />
-      </div>
+    <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-6">
+      <InlineRetry
+        variant="line"
+        label="요약 상태를 불러오지 못했습니다."
+        onRetry={() => void flowQuery.refetch()}
+      />
+    </div>
   );
   if (!flow) return retryFlow;
 

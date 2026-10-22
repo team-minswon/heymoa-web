@@ -182,10 +182,13 @@ export function NotificationRow({
  */
 export function describeNotification(
   notification: NotificationItem,
-  actions: InvitationActions
+  actions: RowActions
 ): NotificationRowView {
   if (notification.type === "WORKSPACE_INVITATION") {
     return describeInvitation(notification, actions);
+  }
+  if (notification.type === "ANALYSIS_READY") {
+    return describeAnalysisReady(notification, actions);
   }
   return {
     title: "새 알림이 도착했습니다",
@@ -193,8 +196,12 @@ export function describeNotification(
   };
 }
 
-export type InvitationActions = {
+export type RowActions = {
   pending: boolean;
+  /** 노트의 요약·검토 화면으로 간다(모달을 닫는다) */
+  openNote: (workspaceId: string, noteId: string) => void;
+  /** 내가 그 워크스페이스에 아직 있는가. 없으면 이동을 막는다 */
+  canOpen: (workspaceId: string) => boolean;
   /** 만료 판정의 기준 시각. 렌더마다 `Date.now()` 를 읽지 않는다 */
   now: number;
   accept: (notification: NotificationItem) => void;
@@ -203,7 +210,7 @@ export type InvitationActions = {
 
 function describeInvitation(
   notification: NotificationItem,
-  actions: InvitationActions
+  actions: RowActions
 ): NotificationRowView {
   const invitation = notification.invitation;
   if (!invitation) {
@@ -262,6 +269,60 @@ function describeInvitation(
             : (INVITATION_RESULT[invitation.status] ?? invitation.status)}
         </span>
       ),
+  };
+}
+
+/**
+ * 검토할 결과 준비(PRO-67 I22·I23). 행 전체가 그 노트의 요약·검토 화면으로 가는 링크다. 읽음은 이동할 때가 아니라
+ * 도착한 화면이 결과를 실제로 그렸을 때 한다(`useReadAnalysisReadyOnView`). 문구는 서버가 아니라 여기서 값으로 만든다.
+ */
+function describeAnalysisReady(
+  notification: NotificationItem,
+  actions: RowActions
+): NotificationRowView {
+  const payload = notification.payload;
+  const title = payload?.noteTitle ?? "회의";
+  const target =
+    payload?.workspaceId &&
+    payload.noteId &&
+    actions.canOpen(payload.workspaceId)
+      ? { workspaceId: payload.workspaceId, noteId: payload.noteId }
+      : null;
+  const reason =
+    payload?.autoEnded && payload.pausedBusinessDays
+      ? `마지막 중지 후 ${payload.pausedBusinessDays}영업일이 지나 자동으로 종료했습니다.`
+      : null;
+  return {
+    title: (
+      <>
+        {/* 제목은 따옴표 없이 굵게, 길면 한 줄로 자르고 전체는 툴팁으로 */}
+        <b
+          title={title}
+          className="inline-block max-w-[16rem] truncate align-bottom font-medium"
+        >
+          {title}
+        </b>
+        의 검토할 결과가 준비되었습니다
+      </>
+    ),
+    detail: target ? reason : "삭제되었거나 볼 권한이 없는 회의입니다",
+    workspaceName: payload?.workspaceName ?? null,
+    gone: !target,
+    onActivate: target
+      ? () => actions.openNote(target.workspaceId, target.noteId)
+      : undefined,
+    aside: (
+      <span
+        aria-hidden
+        className={
+          target
+            ? "text-xs font-medium whitespace-nowrap text-[var(--el-ink)] group-hover/row:underline"
+            : "text-xs whitespace-nowrap text-[var(--el-muted)]"
+        }
+      >
+        검토하기 →
+      </span>
+    ),
   };
 }
 
