@@ -5,8 +5,8 @@
  * 공용 브라우저에서 앞 사람의 흔적이 남지 않게. 같은 사람이 다시 로그인하면 안내가 한 번 더 뜬다.
  *
  * **저장소의 나머지 키(지금 있는 것 전부).** 새 키를 만들기 전에 이 목록과 아래 질문으로 자리를 고른다.
- * - 이 기기·브라우저의 사정이면 기기 범위 `heymoa:...` : `analytics-opt-out`(처리방침 5조의 거부 방법이라
- *   초기화하지 않는다), `last-workspace`·`last-meeting-project:{워크스페이스}`(읽을 때 내 목록으로 검증한다),
+ * - 이 기기·브라우저의 사정이면 기기 범위 `heymoa:...` : `analytics-opt-out`(없앤 「이용 통계 보내기」
+ *   스위치가 남긴 거부 — 계속 지키고 초기화하지 않는다, APP-1385), `last-workspace`·`last-meeting-project:{워크스페이스}`(읽을 때 내 목록으로 검증한다),
  *   `heymoa.transcription.recording:*`(5분 지나면 읽을 때 지운다)
  * - 내 계정의 표시면 이 파일의 사용자 표시 · `heymoa:onboarding:{userId}`(체크리스트, 자체 모듈)
  * - 탭 하나의 수명이면 sessionStorage `heymoa.transcription.clientInstanceId`, `heymoa:login-consent`(로그인 창에서

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import {
   afterAll,
   afterEach,
@@ -73,20 +73,10 @@ describe("AccountSettingsForm", () => {
    * 원래 없던 섹션이라 지우면서 정본에 맞춰졌다. 워크스페이스 조회도 함께 빠져서, 이 탭은
    * 이제 유저 자원만 그린다.
    */
-  // 개인정보 처리방침 5조가 적은 거부 방법. 끄면 이 브라우저에 남고 다시 열어도 꺼져 있다.
-  it("이용 통계 보내기를 끄면 이 브라우저에 거부가 남는다", () => {
+  // PRO-69 가 「이용 통계 보내기」 스위치를 없앴다(APP-1385). 거부 방법은 처리방침 5조의 브라우저 설정이다.
+  it("이용 통계 스위치를 그리지 않는다", () => {
     renderForm();
-    const toggle = screen.getByRole("switch", { name: "이용 통계 보내기" });
-    expect(toggle).toBeChecked();
-
-    fireEvent.click(toggle);
-
-    expect(localStorage.getItem("heymoa:analytics-opt-out")).toBe("1");
-    cleanup();
-    renderForm();
-    expect(
-      screen.getByRole("switch", { name: "이용 통계 보내기" })
-    ).not.toBeChecked();
+    expect(screen.queryByRole("switch")).toBeNull();
   });
 
   it("워크스페이스 목록을 그리지 않는다", () => {

@@ -1,10 +1,10 @@
 ---
 title: Account and privacy
-description: How to sign in and out with Google, use the My account screen, turn off usage statistics, and ask for your data to be deleted.
+description: How to sign in and out with Google, use the My account screen, opt out of usage statistics, and delete your data.
 group: start
 slug: account
 order: 3
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Signing in and out {#sign-in}
@@ -26,10 +26,7 @@ Open **[Account settings]** from the name menu at the bottom of the sidebar to s
 
 The name other people see in the workspace is set separately, in the **[Members]** tab. See [Members and guest participants](help:members#manage) for how.
 
-Turn off the **[Send usage statistics]** switch to stop sending which features you use. Even when it's on, HeyMoa never sends what was said in your meetings.
-
-> [!Note]
-> The usage statistics setting applies only to the browser you're using now.
+Usage statistics only say which features you used. HeyMoa never sends what was said in your meetings. To opt out, block them with your browser settings or a content blocker. Section 5 of the [Privacy Policy](/privacy#section-5) explains how.
 
 ## Deleting your data {#data}
 

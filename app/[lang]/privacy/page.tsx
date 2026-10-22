@@ -10,8 +10,7 @@ export const dynamic = "force-static";
  *   빼지 않는다. 새 조항은 맨 뒤에 붙인다(APP-1196).
  * - 5조 저장 값 표(브라우저에 저장하는 값): 키 목록의 원본은 `lib/storage/user-flags.ts` 머리 주석이다. 새 키를
  *   만들면 이 표도 고친다.
- * - 5조 거부 방법은 「이용 통계 보내기」 스위치 없이 쓴다(PRO-69 가 스위치를 없앤다, APP-1385). 스위치가 남아 있는 동안
- *   설정의 「처리방침」 링크는 그대로 `#section-5` 를 가리킨다.
+ * - 5조 거부 방법은 브라우저 설정이다. 설정의 「이용 통계 보내기」 스위치는 없앴다(APP-1385). 도움말이 `#section-5` 를 가리킨다.
  * - 5조 서버 사건 문단: 서버가 보내는 제품 사건(heymoa-server APP-1071)은 브라우저의 거부를 모른다. 사건을 더하거나
  *   빼면 이 문장을 같이 고친다.
  * - 7조 OpenRouter 카드: 게이트웨이는 OpenRouter 다(heymoa-ai `llm/web_search.py` 의 `openrouter:web_search`).
