@@ -1,10 +1,12 @@
 // `/oauth/*` 는 외부 에이전트 인가 흐름이다(APP-888) — 로그인 뒤 인가 요청·동의 화면으로 쿼리째 돌아온다.
 // `/unsubscribe` 는 메일 수신거부 화면이다(APP-1314) — 「다시 켜기」가 로그인한 뒤 그 화면으로 돌아온다.
+// `/settings/notifications` 는 메일 푸터의 「알림 설정」이다(APP-1341) — 로그인한 뒤 알림 탭으로 넘어간다.
 const allowedReturnPaths = new Set([
   "/",
   "/terms",
   "/privacy",
   "/settings",
+  "/settings/notifications",
   "/invite",
   "/oauth/authorize",
   "/oauth/consent",

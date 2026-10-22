@@ -398,48 +398,67 @@ export function seedShareMail(
   return mailId;
 }
 
-/** 알림 설정(server APP-1303) 기본값. 화면(PRO-67 I10)이 아직 없어 읽기만 한다. 쓰기는 그 화면이 심는다. */
-const notificationSettings: NotificationSettingsResponse = {
-  success: true,
-  data: {
-    muteAll: false,
-    muteEmail: false,
-    items: [
-      {
-        type: "WORKSPACE_INVITATION",
-        required: true,
-        channels: [
-          { channel: "WEB", provided: true, enabled: true, effective: true },
-          {
-            channel: "EMAIL",
-            provided: true,
-            enabled: true,
-            effective: true,
-          },
-        ],
-      },
-      {
-        type: "MEETING_PAUSED_REMINDER",
-        required: false,
-        channels: [
-          {
-            channel: "WEB",
-            provided: false,
-            enabled: false,
-            effective: false,
-          },
-          {
-            channel: "EMAIL",
-            provided: true,
-            enabled: true,
-            effective: true,
-          },
-        ],
-      },
+/**
+ * 알림 설정(server APP-1303 · 화면 APP-1341). server 정책 표를 흉내 낸다 — 필수는 초대, 선택은 중지된 회의 메일(기본 켜짐).
+ * 사용자의 선택(`enabled`)과 두 「모두 끄기」를 따로 들고 `effective` 는 둘을 합쳐 낸다. 이 문서 안에서만 산다.
+ */
+type MockChannel = {
+  channel: "WEB" | "EMAIL";
+  provided: boolean;
+  enabled: boolean;
+};
+const NOTIFICATION_DEFAULTS: {
+  type: "WORKSPACE_INVITATION" | "MEETING_PAUSED_REMINDER";
+  required: boolean;
+  channels: MockChannel[];
+}[] = [
+  {
+    type: "WORKSPACE_INVITATION",
+    required: true,
+    channels: [
+      { channel: "WEB", provided: true, enabled: true },
+      { channel: "EMAIL", provided: true, enabled: true },
     ],
   },
-  error: null,
-};
+  {
+    type: "MEETING_PAUSED_REMINDER",
+    required: false,
+    channels: [
+      { channel: "WEB", provided: false, enabled: false },
+      { channel: "EMAIL", provided: true, enabled: true },
+    ],
+  },
+];
+let notificationPrefs = structuredClone(NOTIFICATION_DEFAULTS);
+let notificationMutes = { muteAll: false, muteEmail: false };
+
+/** 시험이 사이마다 되돌린다. 화면에서는 「기본값으로 되돌리기」(DELETE)와 같다. */
+export function resetNotificationSettingsMock() {
+  notificationPrefs = structuredClone(NOTIFICATION_DEFAULTS);
+  notificationMutes = { muteAll: false, muteEmail: false };
+}
+
+function notificationSettings(): NotificationSettingsResponse {
+  return {
+    success: true,
+    data: {
+      ...notificationMutes,
+      items: notificationPrefs.map((item) => ({
+        ...item,
+        channels: item.channels.map((entry) => ({
+          ...entry,
+          effective:
+            entry.provided &&
+            (item.required ||
+              (entry.enabled &&
+                !notificationMutes.muteAll &&
+                !(entry.channel === "EMAIL" && notificationMutes.muteEmail))),
+        })),
+      })),
+    },
+    error: null,
+  };
+}
 
 let mailUnsubscribed = false;
 
@@ -485,11 +504,44 @@ export const restHandlers = [
       error: null,
     };
   }),
-  getGetNotificationSettingsMockHandler(() => notificationSettings),
-  // 수신거부 화면의 「다시 켜기」(APP-1314). 설정 화면이 생기면 값을 실제로 바꾼다 — 지금은 기본값을 돌려준다.
-  http.put("*/v1/notification-settings/items", () =>
-    HttpResponse.json(notificationSettings)
-  ),
+  getGetNotificationSettingsMockHandler(() => notificationSettings()),
+  http.put("*/v1/notification-settings", async ({ request }) => {
+    const body = (await request.json()) as typeof notificationMutes;
+    notificationMutes = { muteAll: body.muteAll, muteEmail: body.muteEmail };
+    return HttpResponse.json(notificationSettings());
+  }),
+  http.delete("*/v1/notification-settings", () => {
+    resetNotificationSettingsMock();
+    return HttpResponse.json(notificationSettings());
+  }),
+  // 설정 화면과 수신거부 화면의 「다시 켜기」(APP-1314)가 쓴다. 필수 종류·안 보내는 채널은 server 처럼 400.
+  http.put("*/v1/notification-settings/items", async ({ request }) => {
+    const body = (await request.json()) as {
+      type: string;
+      channel: string;
+      enabled: boolean;
+    };
+    const item = notificationPrefs.find((entry) => entry.type === body.type);
+    const target = item?.channels.find(
+      (entry) => entry.channel === body.channel
+    );
+    if (!item || item.required || !target?.provided) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: "BAD_REQUEST",
+            message: "잘못된 요청입니다.",
+            details: null,
+          },
+        },
+        { status: 400 }
+      );
+    }
+    target.enabled = body.enabled;
+    return HttpResponse.json(notificationSettings());
+  }),
   // 메일 수신거부(APP-1314). 토큰 `invalid` 는 서명이 맞지 않는 링크다. 끈 상태는 이 문서 안에서만 산다.
   http.get("*/v1/mail/unsubscribe", ({ request }) =>
     unsubscribeResult(request, () => mailUnsubscribed)

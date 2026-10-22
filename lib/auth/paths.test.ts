@@ -13,6 +13,12 @@ describe("normalizeReturnTo", () => {
     );
   });
 
+  it("메일 푸터의 알림 설정 주소는 로그인 뒤 그대로 돌아온다", () => {
+    expect(normalizeReturnTo("/settings/notifications")).toBe(
+      "/settings/notifications"
+    );
+  });
+
   it("외부 에이전트가 준 새 회의·발화 주소는 쿼리를 보존한 채 돌아온다", () => {
     expect(
       normalizeReturnTo("/w/01K0000000000/notes/new?projectId=01K0000000001")

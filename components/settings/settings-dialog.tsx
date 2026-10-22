@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
 import {
+  BellRing,
   BookA,
   Bot,
   Plug,
@@ -22,6 +23,10 @@ import {
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
 import { GuestsSettings } from "@/components/settings/guests-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
+import {
+  NotificationSettings,
+  NotificationSettingsSkeleton,
+} from "@/components/settings/notification-settings";
 import { WorkspaceTermsSettings } from "@/components/terms/workspace-terms-settings";
 import { WorkspaceAgentAccessSettings } from "@/components/settings/workspace-agent-access-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
@@ -42,7 +47,8 @@ export type { SettingsSection };
 
 /**
  * 워크스페이스에 영향을 주는 설정과 내 계정 설정을 갈라 둔다. 프레임 `WKSCp`의 두 그룹이고,
- * 계약에 없는 항목(알림 설정 등)은 만들지 않는다 — 있는 것을 나누는 데서 멈춘다.
+ * 계약에 있는 것만 둔다. 알림(PRO-67 I10)은 사용자 단위라 계정 쪽이고 모든 워크스페이스에 같이 적용된다.
+ * 아이콘은 `BellRing` — 사이드바 「알림」(`Bell`)은 목록을 여는 다른 목적지다.
  *
  * 외부 에이전트 연결(APP-804)은 **계정** 쪽이다. 위임은 팀원 본인이 만들고 본인만 보며,
  * 워크스페이스 설정을 바꾸지 않는다(제품 정의 「표면과 위임」). 팀이 그 연결을 받을지와 열린 연결을
@@ -78,6 +84,7 @@ const SETTINGS_GROUPS: {
     label: "계정",
     items: [
       { key: "account", label: "내 계정", Icon: UserRound },
+      { key: "notifications", label: "알림", Icon: BellRing },
       { key: "agents", label: "내 MCP 연결", Icon: Bot },
     ],
   },
@@ -163,6 +170,14 @@ function SettingsSections({
             resetKeys={["account"]}
           >
             <AccountSettingsForm />
+          </DataBoundary>
+        ) : section === "notifications" ? (
+          <DataBoundary
+            fallback={<NotificationSettingsSkeleton />}
+            errorLabel="알림 설정을 불러오지 못했습니다"
+            resetKeys={["notifications"]}
+          >
+            <NotificationSettings workspaceId={workspaceId} />
           </DataBoundary>
         ) : section === "members" ? (
           <MembersSettings workspaceId={workspaceId} />

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { IntegrationsReturnRedirect } from "@/components/settings/integrations-return-redirect";
+import { SettingsReturnRedirect } from "@/components/settings/settings-return-redirect";
 import { WorkspaceRouteSkeleton } from "@/components/workspace/workspace-route-skeleton";
 
 import { privateRouteMetadata } from "@/lib/site";
@@ -13,7 +13,7 @@ export const metadata: Metadata = privateRouteMetadata;
 export default function SettingsIntegrationsPage() {
   return (
     <Suspense fallback={<WorkspaceRouteSkeleton />}>
-      <IntegrationsReturnRedirect />
+      <SettingsReturnRedirect />
     </Suspense>
   );
 }
