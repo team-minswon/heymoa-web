@@ -36,8 +36,10 @@ import type {
   NoteListResponseDataNotesItem,
   ProjectRequest,
   NoteRequest,
+  RecordConsentRequest,
   UpdateWorkspaceRequest,
 } from "@/lib/api/generated/models";
+import { respond } from "@/lib/mocks/mock-envelope";
 import { isEmail } from "@/lib/notes/share-mail/recipients";
 import {
   emitChatsChanged,
@@ -577,6 +579,14 @@ export const restHandlers = [
     data: mockDb.getCurrentUser(),
     error: null,
   })),
+  // 계약상 204 무본문, 지금 버전이 아니면 409 `CONSENT_VERSION_OUTDATED` (APP-1276)
+  http.post("*/v1/users/me/consents", async ({ request }) =>
+    respond(
+      async () =>
+        mockDb.recordConsents((await request.json()) as RecordConsentRequest),
+      204
+    )
+  ),
 
   // Workspaces
   getGetWorkspacesMockHandler(() => ({

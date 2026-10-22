@@ -1,8 +1,10 @@
+import enAuth from "@/messages/en/auth.json";
 import enCommon from "@/messages/en/common.json";
 import enDownload from "@/messages/en/download.json";
 import enHelp from "@/messages/en/help.json";
 import enLanding from "@/messages/en/landing.json";
 import enLegal from "@/messages/en/legal.json";
+import koAuth from "@/messages/ko/auth.json";
 import koCommon from "@/messages/ko/common.json";
 import koDownload from "@/messages/ko/download.json";
 import koHelp from "@/messages/ko/help.json";
@@ -16,6 +18,7 @@ import type { Locale } from "@/lib/i18n/locales";
  */
 const ko = {
   common: koCommon,
+  auth: koAuth,
   landing: koLanding,
   download: koDownload,
   legal: koLegal,
@@ -31,6 +34,7 @@ type DeepPartial<T> = {
 
 const en: DeepPartial<Messages> = {
   common: enCommon,
+  auth: enAuth,
   landing: enLanding,
   download: enDownload,
   legal: enLegal,

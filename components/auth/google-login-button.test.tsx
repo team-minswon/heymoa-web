@@ -1,13 +1,18 @@
 import {
   cleanup,
   fireEvent,
-  render,
+  render as baseRender,
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { intlWrapper } from "@/components/help/test-intl";
+
+const render = (ui: ReactElement, locale: "ko" | "en" = "ko") =>
+  baseRender(ui, { wrapper: intlWrapper(locale) });
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 const paths = vi.hoisted(() => ({
@@ -162,5 +167,57 @@ describe("GoogleLoginButton", () => {
     expect(beginLogin).toHaveBeenCalledTimes(2);
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledTimes(1);
+  });
+  it("is not pressable while disabled and never starts login", () => {
+    paths.configured = true;
+    const onLoginStart = vi.fn();
+    render(<GoogleLoginButton disabled onLoginStart={onLoginStart} />);
+    const button = screen.getByRole("button", { name: "Google로 로그인" });
+
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+
+    expect(onLoginStart).not.toHaveBeenCalled();
+    expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("tells the caller once when login actually starts, before leaving for Google", () => {
+    paths.configured = true;
+    const onLoginStart = vi.fn();
+    paths.buildGoogleOAuthUrl.mockImplementation(() => {
+      throw new Error("navigation boundary");
+    });
+    render(<GoogleLoginButton onLoginStart={onLoginStart} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
+
+    expect(onLoginStart).toHaveBeenCalledTimes(1);
+    expect(onLoginStart.mock.invocationCallOrder[0]).toBeLessThan(
+      paths.buildGoogleOAuthUrl.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("does not report login start when login is unavailable", () => {
+    const onLoginStart = vi.fn();
+    render(<GoogleLoginButton onLoginStart={onLoginStart} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
+
+    expect(onLoginStart).not.toHaveBeenCalled();
+  });
+
+  it("speaks English in the English edition", () => {
+    paths.configured = false;
+    render(<GoogleLoginButton />, "en");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Sign in with Google" })
+    );
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Sign-in is not available right now.",
+      { id: "google-login-unavailable" }
+    );
   });
 });

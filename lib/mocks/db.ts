@@ -4,6 +4,7 @@ import type {
   AgentDelegationUsagesResponseData,
   AgentDelegationUsagesResponseDataUsagesItem,
   CreateWorkspaceRequest,
+  RecordConsentRequest,
   WorkspaceAgentDelegationsResponseDataDelegationsItem,
   CurrentUserResponseData,
   NoteListResponseDataNotesItem,
@@ -40,6 +41,7 @@ import type {
 import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
 import { createHelpDemoState, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
+import { failWith } from "@/lib/mocks/mock-envelope";
 import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
 import {
   MENTORING_GUEST_IDS,
@@ -2773,8 +2775,12 @@ const sessionOpeners = new Map<string, string>();
 /** 0002 의 진행 중 시드를 연 탭. 닫힌 탭 이어받기를 목에서 굴릴 때 이 ID 로 식은 기록을 심는다 */
 const MOCK_RECORDER_CLIENT_ID = "mock-recorder-tab";
 
+/** 남은 동의 기록 실패 횟수(`failNextConsents`). */
+let consentFailures = 0;
+
 function reset() {
   idCounter = 100;
+  consentFailures = 0;
   mockClock = 0;
   // 가이드 캡처용 프리셋이 켜져 있으면 그것으로, 아니면 기본 시드로 연다(help-demo/index.ts)
   state = isHelpDemoEnabled() ? createHelpDemoState() : createSeedState();
@@ -3837,6 +3843,56 @@ export const mockDb = {
 
   getCurrentUser(): CurrentUserResponseData {
     return copy(state.user);
+  },
+
+  /**
+   * 필수 문서 동의(APP-1276). 서버처럼 하나라도 지금 버전이 아니면 아무것도 기록하지 않고 409 로 거절한다.
+   * 멱등이다 — 이미 동의한 버전을 다시 보내도 같은 결과다.
+   */
+  recordConsents(request: RecordConsentRequest): void {
+    if (consentFailures > 0) {
+      consentFailures -= 1;
+      failWith("INTERNAL_ERROR", 500, "잠시 후 다시 시도해 주세요.");
+    }
+    const current = state.user.consents;
+    const outdated = request.consents.some(
+      ({ documentType, version }) =>
+        current.find((consent) => consent.documentType === documentType)
+          ?.currentVersion !== version
+    );
+    if (outdated) {
+      failWith(
+        "CONSENT_VERSION_OUTDATED",
+        409,
+        "약관이 새로 바뀌었습니다. 다시 확인한 뒤 동의해 주세요."
+      );
+    }
+    const agreed = new Set(request.consents.map((consent) => consent.documentType));
+    const consents = current.map((consent) =>
+      agreed.has(consent.documentType) ? { ...consent, agreed: true } : consent
+    );
+    state.user = {
+      ...state.user,
+      consents,
+      consentRequired: consents.some((consent) => !consent.agreed),
+    };
+  },
+
+  /** 다음 동의 기록 `count` 번을 500 으로 실패시킨다 — 대시보드 앞 「다시 시도」 화면을 목에서 본다. */
+  failNextConsents(count: number): void {
+    consentFailures = count;
+  },
+
+  /** 시험이 「아직 동의하지 않은 계정」을 만든다. 목 화면은 늘 동의한 계정으로 시작한다. */
+  requireConsent(): void {
+    state.user = {
+      ...state.user,
+      consentRequired: true,
+      consents: state.user.consents.map((consent) => ({
+        ...consent,
+        agreed: false,
+      })),
+    };
   },
 
   // 서버는 **합류한 순서**로 준다(workspaceMember.createdAt). 목은 삽입 순서가 곧 합류 순서라

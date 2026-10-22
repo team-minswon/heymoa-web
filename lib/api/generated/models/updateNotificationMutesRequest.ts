@@ -7,8 +7,8 @@
  */
 
 export interface UpdateNotificationMutesRequest {
-  /** 선택 알림 모두 끄기 */
+  /** 인앱 알림 모두 끄기(인앱만, 메일과 독립) */
   muteAll: boolean;
-  /** 선택 메일 모두 끄기 */
+  /** 메일 모두 끄기(메일만, 인앱과 독립) */
   muteEmail: boolean;
 }

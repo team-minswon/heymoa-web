@@ -9,7 +9,8 @@
  *   초기화하지 않는다), `last-workspace`·`last-meeting-project:{워크스페이스}`(읽을 때 내 목록으로 검증한다),
  *   `heymoa.transcription.recording:*`(5분 지나면 읽을 때 지운다)
  * - 내 계정의 표시면 이 파일의 사용자 표시 · `heymoa:onboarding:{userId}`(체크리스트, 자체 모듈)
- * - 탭 하나의 수명이면 sessionStorage `heymoa.transcription.clientInstanceId`
+ * - 탭 하나의 수명이면 sessionStorage `heymoa.transcription.clientInstanceId`, `heymoa:login-consent`(로그인 창에서
+ *   약관에 동의하고 로그인을 시작했다는 표시 — Google 을 다녀오는 동안만 산다. `lib/auth/login-consent.ts`)
  * - 서버가 첫 화면을 그릴 때 알아야 하면 쿠키 `sidebar_state`
  * - 기기를 넘어 같아야 하거나 잃으면 곤란하면 DB 다(문의 답변 읽음이 그렇다 — `answerSeen`, APP-1214)
  */

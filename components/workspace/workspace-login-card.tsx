@@ -1,5 +1,5 @@
 import { HEYMOA_MARK } from "@/components/agent-connections/agent-oauth-cards";
-import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { LoginForm } from "@/components/auth/auth-modal";
 import { CenteredCard } from "@/components/layout/centered-card";
 
 /**
@@ -21,7 +21,10 @@ export function WorkspaceLoginCard({
           로그인하면 이 화면으로 돌아옵니다
         </h1>
         <p className="mt-2 text-base text-[var(--el-muted)]">{description}</p>
-        <GoogleLoginButton className="mt-6 flex justify-center" />
+        {/* 로그인 창과 같은 약관 동의를 거친다(APP-1277) */}
+        <div className="mx-auto mt-6 w-full max-w-sm">
+          <LoginForm />
+        </div>
       </CenteredCard>
     </div>
   );

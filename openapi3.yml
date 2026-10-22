@@ -9432,7 +9432,7 @@ paths:
       tags:
       - NotificationSettings
       summary: 알림 전체 끄기 변경
-      description: 선택 알림 모두 끄기·선택 메일 모두 끄기를 함께 바꾸고 바뀐 설정을 돌려준다. 종류별 선택은 지우지 않아 풀면 이전 선택이 돌아온다.
+      description: 인앱 알림 모두 끄기(muteAll, 인앱만)·메일 모두 끄기(muteEmail, 메일만)를 함께 바꾸고 바뀐 설정을 돌려준다. 두 값은 채널별로 서로 독립이다. 종류별 선택은 지우지 않아 풀면 이전 선택이 돌아온다.
       operationId: updateNotificationMutes
       requestBody:
         content:
@@ -18921,11 +18921,11 @@ components:
           properties:
             muteAll:
               type: boolean
-              description: 선택 알림 모두 끄기. 켜져 있으면 선택 알림을 웹·메일 모두 받지 않는다
+              description: 인앱 알림 모두 끄기. 켜져 있으면 선택 알림을 인앱(웹)으로만 받지 않는다. 메일에는 영향이 없다
               nullable: false
             muteEmail:
               type: boolean
-              description: 선택 메일 모두 끄기. 켜져 있으면 선택 메일만 받지 않는다
+              description: 메일 모두 끄기. 켜져 있으면 선택 메일을 받지 않는다. 인앱(웹) 알림에는 영향이 없다
               nullable: false
             items:
               type: array
@@ -19050,11 +19050,11 @@ components:
       properties:
         muteAll:
           type: boolean
-          description: 선택 알림 모두 끄기
+          description: 인앱 알림 모두 끄기(인앱만, 메일과 독립)
           nullable: false
         muteEmail:
           type: boolean
-          description: 선택 메일 모두 끄기
+          description: 메일 모두 끄기(메일만, 인앱과 독립)
           nullable: false
     UpdateNotificationPreferenceRequest:
       title: UpdateNotificationPreferenceRequest

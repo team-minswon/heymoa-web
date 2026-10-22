@@ -12,7 +12,7 @@ import { setupServer } from "msw/node";
 import { parseAuthSession } from "@/lib/auth/session-probe";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
-import { MOCK_USER } from "@/lib/mocks/mock-user";
+import { MOCK_CONSENT_VERSION, MOCK_USER } from "@/lib/mocks/mock-user";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
 const server = setupServer(...meetingFlowHandlers, ...restHandlers);
@@ -35,6 +35,46 @@ describe("REST mock handlers", () => {
     expect(parseAuthSession(body.data)).toEqual({
       state: "authenticated",
       user: { ...MOCK_USER, language: null },
+    });
+  });
+
+  describe("필수 문서 동의 기록 (APP-1276)", () => {
+    const record = (version: string) =>
+      fetch("http://localhost/v1/users/me/consents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consents: [
+            { documentType: "PRIVACY", version },
+            { documentType: "TERMS", version },
+          ],
+        }),
+      });
+    const me = async () =>
+      (await (await fetch("http://localhost/v1/users/me")).json()).data;
+
+    it("지금 버전이면 204 로 기록하고 다시 보내도 같다", async () => {
+      mockDb.requireConsent();
+      expect((await me()).consentRequired).toBe(true);
+
+      expect((await record(MOCK_CONSENT_VERSION)).status).toBe(204);
+      expect((await record(MOCK_CONSENT_VERSION)).status).toBe(204);
+      expect(await me()).toMatchObject({
+        consentRequired: false,
+        consents: [{ agreed: true }, { agreed: true }],
+      });
+    });
+
+    it("옛 버전이면 아무것도 기록하지 않고 409 CONSENT_VERSION_OUTDATED 다", async () => {
+      mockDb.requireConsent();
+
+      const response = await record("2026-01-01");
+
+      expect(response.status).toBe(409);
+      expect((await response.json()).error.code).toBe(
+        "CONSENT_VERSION_OUTDATED"
+      );
+      expect((await me()).consentRequired).toBe(true);
     });
   });
 

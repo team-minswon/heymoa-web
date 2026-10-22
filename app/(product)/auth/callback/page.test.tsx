@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ setUser: vi.fn() }),
 }));
+vi.mock("@/lib/auth/login-consent", () => ({
+  settleLoginConsent: vi.fn().mockResolvedValue("done"),
+}));
 vi.mock("@/lib/auth/api", () => ({
   getMe: vi.fn().mockResolvedValue({ name: "김민수" }),
 }));

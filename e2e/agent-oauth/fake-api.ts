@@ -7,7 +7,8 @@
  * 가져오기만 쓴다.
  *
  * 흉내 내는 것: 세션 확인·갱신(refresh 회전), Google 로그인 왕복, server 인가 엔드포인트, 동의 API 셋, 워크스페이스
- * 목록, 에이전트 콜백. 시험은 `/__test/*` 로 기록을 읽고 세션을 만든다.
+ * 목록, 에이전트 콜백, 로그인 약관 동의(APP-1277: 내 정보의 `consentRequired` · `POST /v1/users/me/consents`).
+ * 시험은 `/__test/*` 로 기록을 읽고 세션을 만든다.
  */
 import {
   createServer,
@@ -19,6 +20,7 @@ import type {
   AgentOAuthConsentRedirectResponseData,
   AgentOAuthConsentResponseData,
   AuthSessionResponseData,
+  CurrentUserResponseData,
   WorkspaceListResponseDataWorkspacesItem,
 } from "../../lib/api/generated/models";
 
@@ -50,11 +52,25 @@ type Log = {
   approve: unknown[];
   deny: unknown[];
   callbacks: string[];
+  /** Google 로그인 시작 요청 수. 약관에 동의하지 않으면 로그인이 시작되지 않는다(APP-1277). */
+  google: number;
+  /** 동의 기록 요청 수(실패 포함)와 서버에 남은 기록. */
+  consentAttempts: number;
+  consents: unknown[];
+};
+
+/** 로그인 약관 동의(APP-1277). 새 계정은 동의 전이지만 기본값은 동의한 계정이다 — 이전 시험이 로그인 뒤 동의 화면을 안 만나게. */
+type Account = {
+  consentRequired: boolean;
+  version: string;
+  /** 앞으로 이만큼의 기록 요청을 503 으로 거절한다. */
+  failRecords: number;
 };
 
 let refreshTokens = new Set<string>();
 let consents = new Map<string, Pending>();
 let log: Log = emptyLog();
+let account: Account = emptyAccount();
 /** 켜면 갱신이 일시 장애(503)로 실패한다. 토큰이 죽었다는 코드가 아니라 proxy 가 쿠키를 지우면 안 된다. */
 let refreshUnavailable = false;
 let seq = 0;
@@ -67,6 +83,26 @@ function emptyLog(): Log {
     approve: [],
     deny: [],
     callbacks: [],
+    google: 0,
+    consentAttempts: 0,
+    consents: [],
+  };
+}
+
+function emptyAccount(): Account {
+  return { consentRequired: false, version: "2026-10-22", failRecords: 0 };
+}
+
+/** 내 정보 응답. 동의한 계정이면 두 문서 모두 `agreed` 다. */
+function currentUser(): CurrentUserResponseData {
+  return {
+    ...USER,
+    consentRequired: account.consentRequired,
+    consents: (["PRIVACY", "TERMS"] as const).map((documentType) => ({
+      documentType,
+      currentVersion: account.version,
+      agreed: !account.consentRequired,
+    })),
   };
 }
 
@@ -213,8 +249,13 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       refreshTokens = new Set();
       consents = new Map();
       log = emptyLog();
+      account = emptyAccount();
       refreshUnavailable = false;
       return send(response, 200, {});
+    // 계정의 약관 동의 상태를 정한다. `{ consentRequired?, version?, failRecords? }`
+    case "POST /__test/account":
+      account = { ...account, ...(await bodyOf(request)) };
+      return send(response, 200, account);
     case "POST /__test/refresh-unavailable":
       refreshUnavailable = true;
       return send(response, 200, {});
@@ -254,6 +295,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     }
     // Google 로그인 왕복을 한 번에 끝낸다 — 쿠키를 심고 server 처럼 web 콜백으로 보낸다.
     case "GET /v1/auth/oauth2/authorize/google": {
+      log.google += 1;
       const returnTo = url.searchParams.get("returnTo") ?? "/";
       return redirect(
         response,
@@ -310,6 +352,36 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
         ),
       };
       return ok(response, data);
+    }
+
+    case "GET /v1/users/me":
+      if (!isAuthenticated(request)) return unauthorized(response);
+      return ok(response, currentUser());
+    // 계약대로 204 무본문. 옛 버전이면 아무것도 기록하지 않고 409 다.
+    case "POST /v1/users/me/consents": {
+      if (!isAuthenticated(request)) return unauthorized(response);
+      const body = (await bodyOf(request)) as unknown as {
+        consents: { documentType: string; version: string }[];
+      };
+      log.consentAttempts += 1;
+      if (account.failRecords > 0) {
+        account.failRecords -= 1;
+        return fail(response, 503, "SERVICE_UNAVAILABLE", "잠시 후 다시 시도해 주세요.");
+      }
+      if (body.consents.some(({ version }) => version !== account.version)) {
+        return fail(
+          response,
+          409,
+          "CONSENT_VERSION_OUTDATED",
+          "약관이 새로 바뀌었습니다. 다시 확인한 뒤 동의해 주세요."
+        );
+      }
+      log.consents.push(body);
+      account.consentRequired = false;
+      cors(response);
+      response.writeHead(204);
+      response.end();
+      return;
     }
 
     case "GET /v1/workspaces":

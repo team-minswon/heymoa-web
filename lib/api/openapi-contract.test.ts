@@ -218,6 +218,44 @@ describe("OpenAPI contract", () => {
     );
   });
 
+  /**
+   * 로그인 동의(APP-1277·server APP-1276). 로그인 뒤 web 은 내 정보의 `consentRequired` 를 보고, 서버가 정한
+   * `currentVersion` 을 그대로 돌려보내 기록한다. 이 모양이 갈리면 callback 의 동의 단계가 조용히 깨진다.
+   */
+  it("records login consent from the current-user consent state", () => {
+    const record = (
+      api().paths["/v1/users/me/consents"] as {
+        post?: { operationId: string; responses: Record<string, unknown> };
+      }
+    ).post;
+    const schemas = api().components.schemas as {
+      CurrentUserResponse: {
+        properties: { data: { required: string[] } };
+      };
+      RecordConsentRequest: {
+        properties: {
+          consents: {
+            items: { properties: { documentType: { enum: string[] } } };
+          };
+        };
+      };
+    };
+
+    expect(record?.operationId).toBe("recordConsents");
+    expect(Object.keys(record?.responses ?? {}).sort()).toEqual([
+      "204",
+      "401",
+      "409",
+    ]);
+    expect(schemas.CurrentUserResponse.properties.data.required).toEqual(
+      expect.arrayContaining(["consentRequired", "consents"])
+    );
+    expect(
+      schemas.RecordConsentRequest.properties.consents.items.properties
+        .documentType.enum
+    ).toEqual(["PRIVACY", "TERMS"]);
+  });
+
   it("requires the current-user image and current session end reasons", () => {
     const schemas = api().components.schemas as {
       CurrentUserResponse: {

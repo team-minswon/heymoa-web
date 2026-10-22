@@ -31,7 +31,7 @@ import "@/app/globals.css";
  */
 export async function AppShell({
   locale,
-  clientNamespaces = ["common"],
+  clientNamespaces = ["common", "auth"],
   analytics = true,
   children,
 }: {

@@ -419,7 +419,7 @@ export const getUpdateNotificationMutesUrl = () => {
 };
 
 /**
- * 선택 알림 모두 끄기·선택 메일 모두 끄기를 함께 바꾸고 바뀐 설정을 돌려준다. 종류별 선택은 지우지 않아 풀면 이전 선택이 돌아온다.
+ * 인앱 알림 모두 끄기(muteAll, 인앱만)·메일 모두 끄기(muteEmail, 메일만)를 함께 바꾸고 바뀐 설정을 돌려준다. 두 값은 채널별로 서로 독립이다. 종류별 선택은 지우지 않아 풀면 이전 선택이 돌아온다.
  * @summary 알림 전체 끄기 변경
  */
 export const updateNotificationMutes = async (

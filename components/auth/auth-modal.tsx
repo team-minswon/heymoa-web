@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
+import { ConsentCheckbox } from "@/components/auth/consent-checkbox";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import {
   Dialog,
@@ -13,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { rememberLoginConsent } from "@/lib/auth/login-consent";
 import { siteConfig } from "@/lib/site";
 
 interface AuthModalProps {
@@ -21,7 +23,35 @@ interface AuthModalProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+/**
+ * 로그인 버튼과 약관 동의(APP-1277). **체크하기 전에는 버튼이 눌리지 않는다.** 창이 열릴 때마다 새로 마운트되어
+ * 닫았다 열면 체크가 풀린다 — 동의는 로그인할 때마다 직접 한다.
+ */
+export function LoginForm() {
+  const t = useTranslations("auth.consent");
+  const [agreed, setAgreed] = React.useState(false);
+
+  return (
+    <div className="w-full max-w-sm">
+      <GoogleLoginButton
+        className="w-full flex justify-center [&>button]:w-full"
+        disabled={!agreed}
+        onLoginStart={rememberLoginConsent}
+      />
+      <div className="mt-5">
+        <ConsentCheckbox
+          checked={agreed}
+          onCheckedChange={setAgreed}
+          hint={t("requiredToLogin")}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
+  const t = useTranslations("auth.login");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {children && (
@@ -50,34 +80,14 @@ export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
 
           <DialogHeader className="mb-8 w-full text-center">
             <DialogTitle className="text-2xl font-light tracking-[-0.02em] text-[var(--el-ink)] sm:text-3xl mx-auto">
-              Welcome to HeyMoa
+              {t("title")}
             </DialogTitle>
             <DialogDescription className="mt-2 text-[15px] font-normal text-[var(--el-body)] mx-auto">
-              회의를 기록하고 참여하며, 대화를 실제 업무로 연결하는 AI
-              에이전트를 시작해보세요.
+              {t("description")}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="w-full max-w-sm">
-            <GoogleLoginButton className="w-full flex justify-center [&>button]:w-full" />
-            <p className="mt-6 text-xs text-[var(--el-muted)]">
-              계속 진행하면 HeyMoa의{" "}
-              <Link
-                href="/terms"
-                className="underline hover:text-[var(--el-ink)]"
-              >
-                서비스 이용약관
-              </Link>
-              과{" "}
-              <Link
-                href="/privacy"
-                className="underline hover:text-[var(--el-ink)]"
-              >
-                개인정보 처리방침
-              </Link>
-              에 동의하는 것으로 간주됩니다.
-            </p>
-          </div>
+          <LoginForm />
         </div>
       </DialogContent>
     </Dialog>

@@ -11,9 +11,9 @@ import type { NotificationSettingsResponseDataItemsItem } from "./notificationSe
  * 성공 응답 데이터
  */
 export type NotificationSettingsResponseData = {
-  /** 선택 알림 모두 끄기. 켜져 있으면 선택 알림을 웹·메일 모두 받지 않는다 */
+  /** 인앱 알림 모두 끄기. 켜져 있으면 선택 알림을 인앱(웹)으로만 받지 않는다. 메일에는 영향이 없다 */
   muteAll: boolean;
-  /** 선택 메일 모두 끄기. 켜져 있으면 선택 메일만 받지 않는다 */
+  /** 메일 모두 끄기. 켜져 있으면 선택 메일을 받지 않는다. 인앱(웹) 알림에는 영향이 없다 */
   muteEmail: boolean;
   /** 설정 화면의 종류별 줄. 설정을 공유하는 종류(자동 종료 안내)는 따로 나오지 않는다 */
   items: NotificationSettingsResponseDataItemsItem[];

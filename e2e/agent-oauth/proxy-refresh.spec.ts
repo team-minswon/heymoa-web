@@ -9,7 +9,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
  *
  * 목 모드(다섯째 경우)는 목을 켠 기본 묶음 `e2e/proxy-mock.spec.ts` 가 본다.
  */
-const API = "http://localhost:3199";
+const API = `http://localhost:${process.env.E2E_API_PORT ?? "3199"}`;
 const PREFETCH = { "next-router-prefetch": "1" };
 // 한국어 마케팅 주소(rewrite 전 주소를 proxy 가 본다), 영어 마케팅 주소, 제품 주소(요청마다 SSR 이 사용자를 읽는다).
 const PATHS = ["/help", "/en/help", "/invite"];

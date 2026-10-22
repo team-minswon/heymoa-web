@@ -4,7 +4,8 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
  * 외부 에이전트가 연 브라우저의 흐름(APP-888). 가짜 API 가 server 인가 엔드포인트와 에이전트 콜백을 겸한다 —
  * 시험은 에이전트처럼 server 인가 주소를 열고, 에이전트 콜백에 무엇이 돌아오는지 본다.
  */
-const API = "http://localhost:3199";
+const API_PORT = process.env.E2E_API_PORT ?? "3199";
+const API = `http://localhost:${API_PORT}`;
 const CALLBACK = `${API}/agent/callback`;
 
 const authorizeQuery = new URLSearchParams({
@@ -75,7 +76,7 @@ test("로그인 안 된 인가 요청이 로그인을 거쳐 동의 화면에 �
   ).toBeVisible();
   await expect(page.getByText("HeyMoa 가 확인한 앱이 아닙니다")).toBeVisible();
   await expect(
-    page.getByText("허락하면 localhost:3199 로 돌아갑니다")
+    page.getByText(`허락하면 localhost:${API_PORT} 로 돌아갑니다`)
   ).toBeVisible();
   await expect(
     page.getByText("회의 전사(참석자의 발화와 이름)도 이 앱이 읽습니다.")

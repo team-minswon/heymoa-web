@@ -54,7 +54,7 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 | `components/<feature>/` | feature UI |
 | `lib/<feature>/` | 순수 selector·protocol·service |
 | `lib/api/generated/` | orval 산출물. **편집 금지** (hook이 막습니다) |
-| `lib/mocks/` | MSW. `handlers.ts`는 레지스트리만 모읍니다. `NEXT_PUBLIC_API_MOCKING=enabled pnpm dev`로 띄우면 목 모드이고, 브라우저 콘솔의 `heymoaMock.notify()`가 새 알림을 도착시킵니다(이벤트 스트림 힌트로 개수가 따라옴) |
+| `lib/mocks/` | MSW. `handlers.ts`는 레지스트리만 모읍니다. `NEXT_PUBLIC_API_MOCKING=enabled pnpm dev`로 띄우면 목 모드이고, 브라우저 콘솔의 `heymoaMock.notify()`가 새 알림을 도착시킵니다(이벤트 스트림 힌트로 개수가 따라옴). 로그인 동의는 `localStorage.mockConsent = "required"`·`mockConsentFail = "N"` 뒤 `/auth/callback`(`lib/mocks/browser.ts`) |
 | `proxy.ts` | 미들웨어. **`middleware.ts`를 만들지 않습니다** (hook이 막습니다). SSR 쪽 토큰 갱신을 페이지 렌더 전에 처리합니다 |
 | `lib/auth/` | 쿠키 인증. `access_token`·`refresh_token`을 백엔드가 HttpOnly로 심습니다 |
 | `lib/api/fetcher.ts` | 클라이언트 401 → `/v1/auth/refresh` → 재시도 |

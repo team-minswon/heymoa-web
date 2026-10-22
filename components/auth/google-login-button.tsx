@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 import { track } from "@/lib/analytics/track";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
@@ -17,12 +18,19 @@ import { desktopAuthBridge } from "@/lib/desktop/auth";
 type GoogleLoginButtonProps = {
   compact?: boolean;
   className?: string;
+  /** 약관 동의 전에는 누를 수 없다(APP-1277). 누르지 못하는 이유는 호출한 쪽이 옆에 보인다. */
+  disabled?: boolean;
+  /** 로그인을 실제로 시작하는 순간 한 번. Google 을 다녀오면 창이 사라지므로 그 전에 남길 것을 여기서 남긴다. */
+  onLoginStart?: () => void;
 };
 
 export function GoogleLoginButton({
   compact = false,
   className,
+  disabled = false,
+  onLoginStart,
 }: GoogleLoginButtonProps) {
+  const t = useTranslations("auth.login");
   const [pending, setPending] = useState(false);
 
   // The app holds one native login at a time and the browser never calls back
@@ -35,7 +43,7 @@ export function GoogleLoginButton({
   const handleLogin = async () => {
     if (pending) return;
     if (!isAuthApiConfigured) {
-      toast.error("현재 로그인을 사용할 수 없습니다.", {
+      toast.error(t("unavailable"), {
         id: "google-login-unavailable",
       });
       return;
@@ -43,15 +51,16 @@ export function GoogleLoginButton({
 
     setPending(true);
     track("login_started");
+    onLoginStart?.();
 
     try {
       const desktop = desktopAuthBridge();
       if (desktop) {
         if (!desktop.beginLogin) {
-          toast.error("앱을 업데이트한 뒤 다시 로그인해 주세요.", {
+          toast.error(t("updateApp"), {
             id: "google-login-update",
             action: {
-              label: "새 버전 보기",
+              label: t("newVersion"),
               onClick: () =>
                 window.open(
                   DESKTOP_RELEASES_URL,
@@ -72,9 +81,7 @@ export function GoogleLoginButton({
         }
         if (outcome.status !== "cancelled") {
           toast.error(
-            outcome.reason === "timeout"
-              ? "로그인 시간이 지났습니다. 다시 시도해 주세요."
-              : "로그인하지 못했습니다. 다시 시도해 주세요.",
+            outcome.reason === "timeout" ? t("timeout") : t("failed"),
             {
               id: "google-login-desktop",
             }
@@ -85,7 +92,7 @@ export function GoogleLoginButton({
       }
       window.location.href = buildGoogleOAuthUrl(getCurrentReturnTo());
     } catch {
-      toast.error("로그인 페이지로 이동하지 못했습니다. 다시 시도해 주세요.", {
+      toast.error(t("redirectFailed"), {
         id: "google-login-redirect",
       });
       setPending(false);
@@ -100,12 +107,13 @@ export function GoogleLoginButton({
         size={compact ? "icon-xl" : "xl"}
         onClick={handleLogin}
         loading={pending}
+        disabled={disabled}
         className={cn(
           // Google branding: light theme = #FFF fill, 1px #747775 stroke, #1F1F1F text
           "rounded-full border-[#747775] bg-white font-medium text-[#1F1F1F] hover:bg-[#F8F9FA] hover:text-[#1F1F1F]",
           compact ? "p-0" : "pl-3.5 pr-4"
         )}
-        aria-label="Google로 로그인"
+        aria-label={t("googleLabel")}
       >
         <svg className="size-[18px]" viewBox="0 0 24 24" aria-hidden="true">
           <path
@@ -125,7 +133,7 @@ export function GoogleLoginButton({
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        {!compact && <span>Google 로그인</span>}
+        {!compact && <span>{t("google")}</span>}
       </Button>
     </div>
   );

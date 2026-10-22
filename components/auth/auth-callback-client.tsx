@@ -6,12 +6,44 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Home, Loader2, LogIn } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import {
+  ConsentStep,
+  type ConsentStepMode,
+} from "@/components/auth/consent-step";
 import { WELCOME_PARAM } from "@/components/heymoa/landing-cta";
 import { track, trackConversion } from "@/lib/analytics/track";
 import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { getMe } from "@/lib/auth/api";
+import { recordConsentNow, settleLoginConsent } from "@/lib/auth/login-consent";
 import { normalizeReturnTo } from "@/lib/auth/paths";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
+
+/** 로그인과 동의가 끝난 사람을 가려던 곳 — 없으면 마지막으로 연 워크스페이스 — 으로 보낸다. 실패하면 던진다. */
+async function enterApp(
+  router: ReturnType<typeof useRouter>,
+  returnTo?: string
+) {
+  const destination = normalizeReturnTo(returnTo);
+  if (destination !== "/") {
+    router.replace(destination);
+    return;
+  }
+  const response = await getWorkspaces();
+  if (response.status !== 200 || !response.data.success) {
+    throw new Error("WORKSPACE_LIST_FAILED");
+  }
+  const items = response.data.data.workspaces ?? [];
+  const selected = pickWorkspaceId(items);
+  // **워크스페이스가 없으면 홈으로 보낸다.** 예전에는 여기서 「새 워크스페이스를 만든 뒤
+  // 시작해 주세요」를 그렸는데 이 화면에 만드는 버튼이 없어서, 존재하지 않는 행동을
+  // 지시하는 안내였다(APP-402). 홈의 CTA가 그 상태를 받아 생성 폼을 연다 — 막 가입한
+  // 사람은 그 버튼을 찾지 않아도 되게 `?welcome`으로 보내 폼을 바로 연다(APP-1023).
+  if (!selected) {
+    router.replace(`/?${WELCOME_PARAM}`);
+    return;
+  }
+  router.replace(`/w/${selected}`);
+}
 
 export function AuthCallbackClient({
   urlError,
@@ -40,6 +72,7 @@ export function CallbackProcessor({
     title: string;
     description: string;
   } | null>(null);
+  const [consentMode, setConsentMode] = useState<ConsentStepMode | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -71,26 +104,21 @@ export function CallbackProcessor({
             trackConversion("sign_up", { method: "google" });
           }
 
-          const destination = normalizeReturnTo(returnTo);
-          if (destination !== "/") {
-            router.replace(destination);
+          // 약관 동의가 기록돼야 앱으로 들어간다(APP-1277). 기록이 실패하면 대시보드 앞에서 다시 시도하게 한다.
+          let consent: "done" | "ask" | "retry";
+          try {
+            consent = await settleLoginConsent();
+          } catch (error) {
+            console.error("Login consent failed:", error);
+            consent = "retry";
+          }
+          if (ignore) return;
+          if (consent !== "done") {
+            setConsentMode(consent);
             return;
           }
-          const response = await getWorkspaces();
-          if (response.status !== 200 || !response.data.success) {
-            throw new Error("WORKSPACE_LIST_FAILED");
-          }
-          const items = response.data.data.workspaces ?? [];
-          const selected = pickWorkspaceId(items);
-          // **워크스페이스가 없으면 홈으로 보낸다.** 예전에는 여기서 「새 워크스페이스를 만든 뒤
-          // 시작해 주세요」를 그렸는데 이 화면에 만드는 버튼이 없어서, 존재하지 않는 행동을
-          // 지시하는 안내였다(APP-402). 홈의 CTA가 그 상태를 받아 생성 폼을 연다 — 막 가입한
-          // 사람은 그 버튼을 찾지 않아도 되게 `?welcome`으로 보내 폼을 바로 연다(APP-1023).
-          if (!selected) {
-            router.replace(`/?${WELCOME_PARAM}`);
-            return;
-          }
-          router.replace(`/w/${selected}`);
+
+          await enterApp(router, returnTo);
         }
       } catch (error) {
         if (!ignore) {
@@ -109,6 +137,37 @@ export function CallbackProcessor({
       ignore = true;
     };
   }, [returnTo, router, setUser, urlError]);
+
+  /** 동의 화면의 버튼. 기록이 끝나면 앱으로 들어간다. 기록·확인 실패는 던져 화면이 사유를 보이게 한다. */
+  const submitConsent = async () => {
+    if (consentMode === "ask") {
+      await recordConsentNow();
+    } else if ((await settleLoginConsent()) === "ask") {
+      // 다시 확인해 보니 로그인 창에서 체크한 표시가 없다 — 체크하지 않은 동의는 기록하지 않고 체크박스를 보인다.
+      setConsentMode("ask");
+      return;
+    }
+    try {
+      await enterApp(router, returnTo);
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      setConsentMode(null);
+      setErrorDetails({
+        title: "로그인에 실패했습니다",
+        description: "인증 정보를 가져오지 못했습니다. 다시 시도해 주세요.",
+      });
+    }
+  };
+
+  if (consentMode && !errorDetails) {
+    return (
+      <ConsentStep
+        key={consentMode}
+        mode={consentMode}
+        onSubmit={submitConsent}
+      />
+    );
+  }
 
   if (errorDetails) {
     return (
