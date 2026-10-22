@@ -12,10 +12,9 @@ test("알림 탭에서 바꾼 값이 다시 열어도 남고, 모두 끄기는 �
 }) => {
   await page.goto(`${WS}?settings=notifications`);
   await expect(dialog(page)).toBeVisible();
-  await expect(page.getByRole("button", { name: "알림" })).toHaveAttribute(
-    "aria-current",
-    "page"
-  );
+  await expect(
+    page.getByRole("button", { name: "알림", exact: true })
+  ).toHaveAttribute("aria-current", "page");
 
   const mail = page.getByRole("switch", { name: "중지된 회의 메일" });
   await expect(mail).toBeChecked();
@@ -24,7 +23,7 @@ test("알림 탭에서 바꾼 값이 다시 열어도 남고, 모두 끄기는 �
 
   // 다른 탭에 갔다 오면 서버 값을 다시 읽는다
   await page.getByRole("button", { name: "내 계정" }).click();
-  await page.getByRole("button", { name: "알림" }).click();
+  await page.getByRole("button", { name: "알림", exact: true }).click();
   await expect(mail).not.toBeChecked();
 
   await page.getByRole("switch", { name: "메일 모두 끄기" }).click();

@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { HelpTip } from "@/components/ui/help-tip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -58,6 +59,20 @@ const TYPE_LABELS: Record<string, string> = {
 const TYPE_DESCRIPTIONS: Record<string, string> = {
   MEETING_PAUSED_REMINDER: "리마인더와 자동 종료 안내",
   ANALYSIS_READY: "회의 분석이 끝나 결과를 검토할 수 있을 때",
+};
+/** 이름 옆 ? 도움말. 언제 무엇이 오는지 — 읽지 않아도 스위치는 쓸 수 있다. 문장마다 한 줄씩 끊는다. */
+const TYPE_HELP: Record<string, React.ReactNode> = {
+  MEETING_PAUSED_REMINDER: (
+    <>
+      <span className="block">
+        회의를 중지한 채 두면 1영업일 뒤 메일로 알려 드립니다.
+      </span>
+      <span className="mt-1 block">
+        3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을
+        한 번 더 보냅니다.
+      </span>
+    </>
+  ),
 };
 /** 행 순서는 시안을 따른다(중지된 회의 → 검토할 결과 준비). 서버가 주는 순서와 다를 수 있다. */
 const TYPE_ORDER = Object.keys(TYPE_LABELS);
@@ -284,8 +299,13 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
                   className="border-t border-[var(--el-hairline)]"
                 >
                   <th scope="row" className="py-3 text-left font-normal">
-                    <span className="block font-medium text-[var(--el-ink)]">
+                    <span className="flex items-center gap-1 font-medium text-[var(--el-ink)]">
                       {TYPE_LABELS[item.type]}
+                      {TYPE_HELP[item.type] ? (
+                        <HelpTip label={`${TYPE_LABELS[item.type]} 알림 안내`}>
+                          {TYPE_HELP[item.type]}
+                        </HelpTip>
+                      ) : null}
                     </span>
                     {TYPE_DESCRIPTIONS[item.type] ? (
                       <span className="mt-0.5 block text-xs text-[var(--el-muted)]">

@@ -85,10 +85,11 @@ describe("NotificationSettings", () => {
     );
     renderSettings();
     const rows = await screen.findAllByRole("rowheader");
-    expect(rows.map((row) => row.textContent)).toEqual([
-      "중지된 회의리마인더와 자동 종료 안내",
-      "검토할 결과 준비회의 분석이 끝나 결과를 검토할 수 있을 때",
-    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent(/^중지된 회의/);
+    expect(rows[1]).toHaveTextContent(
+      "검토할 결과 준비회의 분석이 끝나 결과를 검토할 수 있을 때"
+    );
   });
 
   it("선택 알림만 줄로 그리고 필수 알림은 안내 없이 뺀다", async () => {
@@ -103,6 +104,12 @@ describe("NotificationSettings", () => {
     ).toHaveTextContent("—");
     // 기본값은 서버가 정한다 — 중지된 회의 메일은 켜짐
     expect(switchOf("중지된 회의 메일")).toBeChecked();
+    // 중지된 회의 이름 옆 ? 도움말이 언제 무엇이 오는지 읽힌다(APP-1348).
+    expect(
+      screen.getByRole("button", { name: "도움말: 중지된 회의 알림 안내" })
+    ).toHaveAccessibleDescription(
+      "회의를 중지한 채 두면 1영업일 뒤 메일로 알려 드립니다.3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을 한 번 더 보냅니다."
+    );
     // 메일 받는 주소 카드는 걷었다(APP-1348).
     expect(screen.queryByRole("textbox")).toBeNull();
   });
