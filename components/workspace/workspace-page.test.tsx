@@ -202,117 +202,26 @@ describe("WorkspacePage", () => {
   });
 
   /**
-   * **시작자 필터는 없다.** 「전체 / 내가 시작」이었는데 시작자로 걸러 보는 요구가 실제로 없었다 —
-   * 시작자는 각 행의 아바타가 이미 말한다. 지금 칩은 「전체 / 중지됨」(APP-1313)이다.
+   * **목록에 필터가 없다.** 「전체 / 내가 시작」이었는데 시작자로 걸러 보는 요구가 실제로
+   * 없었고, 「내가 시작」을 걷으면 남는 칩이 「전체」 하나라 고르는 것이 아니게 된다 —
+   * 줄을 통째로 없앴다. 시작자는 각 행의 아바타가 이미 말한다.
+   * 「전체 / 중지됨」(APP-1313)도 2026-10-22 사용자 결정으로 걷었다(APP-1347) — 중지는 행의
+   * 「N일째 중지됨」과 노트 띠가 말한다. 목록 요청에 `meetingStatus` 를 싣지 않는다.
    */
   it("시작자 필터 없이 모든 노트를 그린다", async () => {
     renderPage();
     await screen.findByText("주간 제품 회의");
 
+    expect(screen.queryByRole("group", { name: "노트 필터" })).toBeNull();
     expect(screen.queryByRole("button", { name: "내가 시작" })).toBeNull();
-    expect(screen.getByRole("button", { name: "전체" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
     // 내가 시작한 것(주간 제품 회의)과 남이 시작한 것(리서치 공유)이 함께 선다.
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("리서치 공유")).toBeInTheDocument();
-  });
-
-  /**
-   * 「중지됨」은 서버 필터다(APP-1310) — 쪽을 자르기 전에 거르므로 「더 보기」가 같은 필터로 이어 읽는다.
-   * 필터를 끄면 지금 목록과 같은 요청(limit 만)으로 돌아간다.
-   */
-  it("중지됨을 고르면 서버에 거른 목록을 묻고 더 보기도 같은 필터로 잇는다", async () => {
-    const paused = (noteId: string, title: string, hasMore: boolean) => ({
-      status: 200,
-      headers: new Headers(),
-      data: {
-        success: true,
-        error: null,
-        data: {
-          notes: [
-            {
-              ...NOTE_LIST.data.data.notes[1],
-              noteId,
-              title,
-              meetingStatus: "PAUSED",
-              pausedAt: "2026-07-01T00:00:00Z",
-            },
-          ],
-          hasMore,
-          nextSortedAt: hasMore ? "2026-07-09T00:00:00Z" : null,
-          nextNoteId: hasMore ? noteId : null,
-        },
-      },
-    });
-    getNotes.mockImplementation(
-      async (
-        _projectId: string,
-        params: { meetingStatus?: string; afterNoteId?: string }
-      ) =>
-        params.meetingStatus !== "PAUSED"
-          ? NOTE_LIST
-          : params.afterNoteId
-            ? paused("01K0000000005", "멈춘 옛 회의", false)
-            : paused("01K0000000004", "멈춘 회의", true)
-    );
-    renderPage();
-    await screen.findByText("주간 제품 회의");
-
-    fireEvent.click(screen.getByRole("button", { name: "중지됨" }));
-    await screen.findByText("멈춘 회의");
-    expect(screen.queryByText("주간 제품 회의")).toBeNull();
-    expect(screen.getByText(/1개 이상의 중지된 회의/)).toBeInTheDocument();
-    expect(getNotes).toHaveBeenCalledWith(
-      "01K0000000001",
-      { limit: "30", meetingStatus: "PAUSED" },
-      expect.anything()
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "이전 기록 더 보기" }));
-    await screen.findByText("멈춘 옛 회의");
-    expect(getNotes).toHaveBeenCalledWith(
-      "01K0000000001",
-      {
-        limit: "30",
-        meetingStatus: "PAUSED",
-        afterSortedAt: "2026-07-09T00:00:00Z",
-        afterNoteId: "01K0000000004",
-      },
-      expect.anything()
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "전체" }));
-    await screen.findByText("주간 제품 회의");
-    expect(screen.queryByText("멈춘 회의")).toBeNull();
-    expect(getNotes).toHaveBeenCalledWith(
-      "01K0000000001",
-      { limit: "30" },
-      expect.anything()
-    );
-  });
-
-  it("중지된 회의가 없으면 첫 회의 안내 대신 비었다고 말한다", async () => {
-    getNotes.mockImplementation(
-      async (_projectId: string, params: { meetingStatus?: string }) =>
-        params.meetingStatus === "PAUSED"
-          ? {
-              ...NOTE_LIST,
-              data: {
-                ...NOTE_LIST.data,
-                data: { ...NOTE_LIST.data.data, notes: [] },
-              },
-            }
-          : NOTE_LIST
-    );
-    renderPage();
-    await screen.findByText("주간 제품 회의");
-
-    fireEvent.click(screen.getByRole("button", { name: "중지됨" }));
-    expect(
-      await screen.findByText("중지된 회의가 없습니다.")
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "중지됨" })).toBeNull();
+    expect(getNotes).toHaveBeenCalled();
+    for (const [, params] of getNotes.mock.calls) {
+      expect(params).not.toHaveProperty("meetingStatus");
+    }
   });
 
   it("polls active lists every 10 seconds and inactive lists every 30 seconds", () => {

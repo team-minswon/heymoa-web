@@ -45,6 +45,82 @@ describe("이벤트 타입", () => {
   });
 });
 
+// 알림 모달·알림 설정 (PRO-67 I32): 종류·개수·워크스페이스만 받고 알림 내용·식별 값 자리는 없다
+describe("알림 사건 타입", () => {
+  type Props<E extends AnalyticsEvent> = Parameters<typeof track<E>>[1] & {};
+  type Forbidden = "note_id" | "noteId" | "notification_id" | "email" | "name" | "title";
+
+  it("다섯 이름을 등록하고 속성 모양을 정의와 맞춘다", () => {
+    expectTypeOf<
+      | "notifications_opened"
+      | "notification_clicked"
+      | "notifications_all_read_clicked"
+      | "notification_setting_changed"
+      | "notification_settings_reset"
+    >().toExtend<AnalyticsEvent>();
+    expectTypeOf<Props<"notifications_opened">>().toEqualTypeOf<{
+      workspace_id: string;
+      unread_count: number;
+    }>();
+    expectTypeOf<Props<"notification_clicked">>().toEqualTypeOf<{
+      workspace_id: string;
+      type: "WORKSPACE_INVITATION";
+      was_unread: boolean;
+    }>();
+    expectTypeOf<Props<"notifications_all_read_clicked">>().toEqualTypeOf<{
+      workspace_id: string;
+      count: number;
+    }>();
+    expectTypeOf<Props<"notification_settings_reset">>().toEqualTypeOf<{
+      workspace_id: string;
+    }>();
+    expectTypeOf<Props<"settings_tab_opened">["section"]>().toExtend<string>();
+    expectTypeOf<"notifications">().toExtend<Props<"settings_tab_opened">["section"]>();
+    expectTypeOf<Props<"settings_tab_opened">["from"]>().toEqualTypeOf<"modal" | "settings">();
+  });
+
+  it("식별·내용 값을 받지 않는다", () => {
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"notifications_opened">>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"notification_clicked">>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"notifications_all_read_clicked">>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"notification_setting_changed">>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"notification_settings_reset">>();
+    // @ts-expect-error 알림 제목을 실을 수 없다
+    track("notification_clicked", { workspace_id: "W1", type: "WORKSPACE_INVITATION", was_unread: true, title: "초대" });
+    // @ts-expect-error 계약에 없는 종류는 보낼 수 없다
+    track("notification_clicked", { workspace_id: "W1", type: "SOMETHING", was_unread: true });
+  });
+
+  it("타임라인 안내 사건은 역할·닫힌 이유만 받는다 (PRO-67 I26)", () => {
+    expectTypeOf<Props<"timeline_hint_shown">>().toEqualTypeOf<{
+      workspace_id: string;
+      role: "recorder" | "viewer";
+    }>();
+    expectTypeOf<Props<"timeline_hint_clicked">>().toEqualTypeOf<Props<"timeline_hint_shown">>();
+    expectTypeOf<Props<"timeline_hint_dismissed">>().toEqualTypeOf<{
+      workspace_id: string;
+      reason: "auto" | "close";
+    }>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"timeline_hint_shown">>();
+    expectTypeOf<Forbidden>().not.toExtend<keyof Props<"timeline_hint_dismissed">>();
+  });
+
+  it("설정 변경은 종류 하나를 바꿀 때만 종류·채널을 싣는다", () => {
+    track("notification_setting_changed", { workspace_id: "W1", scope: "all", enabled: false });
+    track("notification_setting_changed", {
+      workspace_id: "W1",
+      scope: "type",
+      type: "MEETING_PAUSED_REMINDER",
+      channel: "EMAIL",
+      enabled: false,
+    });
+    // @ts-expect-error 종류 하나를 바꾸면 채널이 있어야 한다
+    track("notification_setting_changed", { workspace_id: "W1", scope: "type", type: "MEETING_AUTO_ENDED", enabled: true });
+    // @ts-expect-error 등록하지 않은 범위
+    track("notification_setting_changed", { workspace_id: "W1", scope: "web", enabled: true });
+  });
+});
+
 // 가이드 이벤트(로그인 전 방문자도 온다): 이름은 유니온에만, 속성은 닫힌 값·숫자·slug 뿐이고 검색어 원문 필드는 없다.
 describe("가이드 이벤트 타입", () => {
   it("검색 이벤트는 길이와 개수만 받고 원문을 받지 않는다", () => {

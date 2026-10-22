@@ -39,6 +39,11 @@ import {
 } from "@/components/notes/meeting-end-feedback";
 import { NoteAgentRail } from "@/components/notes/note-agent-rail";
 import { NoteTimeline } from "@/components/notes/note-timeline";
+import {
+  graduateTimelineHint,
+  TimelineHint,
+  timelineHintEligible,
+} from "@/components/notes/timeline-hint";
 import { NoteParticipantAvatars } from "@/components/notes/note-participants";
 import { ReviewBoardSkeleton } from "@/components/notes/review/review-board";
 import { ReviewTab } from "@/components/notes/review/review-tab";
@@ -162,6 +167,13 @@ export function NotePanel({
    * 프로젝트에서 낸 것이라, 프로젝트 조회가 확인해 주던 것과 같은 사실이다.
    */
   const phase = deriveMeetingPhase(note);
+  // 타임라인 첫 항목 안내(APP-1333). 항목 수는 제안 스냅샷(+ 실시간 후보)에서 센다.
+  const timelineItemCount = noteRealtime.context.cards.length;
+  const timelineHintOpen = timelineHintEligible({
+    phase,
+    tab,
+    itemCount: timelineItemCount,
+  });
   // 전사·요약 복사본의 머리말. **여기서 한 번 만든다** — 탭마다 노트를 다시 구독하지
   // 않는다(rule `architecture`).
   const noteMeta = useMemo(() => (note ? toNoteMeta(note) : null), [note]);
@@ -502,7 +514,12 @@ export function NotePanel({
             감싸야 한다 — primitive가 `flex flex-col`을 이미 주니 여기서는 채우기만 시킨다. */}
         <Tabs
           value={tab}
-          onValueChange={(value) => value && handleTabChange(value as NoteTab)}
+          onValueChange={(value) => {
+            if (!value) return;
+            // 타임라인을 직접 찾았으면 안내는 할 일을 다 했다(APP-1333).
+            if (value === "context") graduateTimelineHint();
+            handleTabChange(value as NoteTab);
+          }}
           className="min-h-0 flex-1 gap-0"
         >
           {/* **상단바(56)가 노트의 크롬 전부다.** design.pen `KktRX`(side)/`Sghjz`(full).
@@ -639,9 +656,19 @@ export function NotePanel({
                 스크립트
               </TabsTrigger>
               {showContextTab ? (
-                <TabsTrigger value="context" className={TAB_ITEM}>
-                  타임라인
-                </TabsTrigger>
+                // 안내 말풍선이 이 탭 아래에 붙는다 — 감싼 칸이 기준점이다.
+                <span className="relative flex">
+                  <TabsTrigger value="context" className={TAB_ITEM}>
+                    타임라인
+                  </TabsTrigger>
+                  <TimelineHint
+                    noteId={noteId}
+                    workspaceId={workspaceId}
+                    eligible={timelineHintOpen}
+                    role={recordingNoteLive ? "recorder" : "viewer"}
+                    onOpen={() => handleTabChange("context")}
+                  />
+                </span>
               ) : null}
               {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
               {showSummaryTab ? (

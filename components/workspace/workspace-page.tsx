@@ -24,16 +24,6 @@ export function noteListRefetchInterval(
     : INACTIVE_NOTE_LIST_POLL_MS;
 }
 
-/**
- * 목록 필터(APP-1313). 「중지됨」은 오래 멈춘 회의를 찾아 종료하라고 있다 — 메일도 자동 종료도 받지 않는
- * 옛 중지분을 사용자가 스스로 모아 볼 길이다. 프로젝트 선택처럼 화면 상태라 주소에 남기지 않는다.
- */
-type NoteFilter = "all" | "paused";
-const NOTE_FILTERS: { key: NoteFilter; label: string }[] = [
-  { key: "all", label: "전체" },
-  { key: "paused", label: "중지됨" },
-];
-
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const {
     selectedProjectId,
@@ -51,9 +41,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
    * 처음 보는 목록이 몇 쪽씩 한꺼번에 읽힌다. 키에 두면 범위를 바꿨다 돌아와도 펼친 만큼이 남는다.
    * 서버가 워크스페이스 단위로 한 번에 세워 주므로(APP-685) 클라이언트 정렬은 없다.
    */
-  const [filter, setFilter] = useState<NoteFilter>("all");
-  // 필터도 범위다 — 「중지됨」에서 더 본 만큼이 「전체」로 따라가지 않는다.
-  const scopeKey = `${selectedProjectId ?? `all:${workspaceId}`}:${filter}`;
+  const scopeKey = selectedProjectId ?? `all:${workspaceId}`;
   const [pagesByScope, setPagesByScope] = useState<Record<string, number>>({});
   const pages = pagesByScope[scopeKey] ?? 1;
   const notesQuery = useNoteListPages({
@@ -61,7 +49,6 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
       ? { kind: "project", projectId: selectedProjectId }
       : { kind: "workspace", workspaceId },
     pages,
-    meetingStatus: filter === "paused" ? "PAUSED" : undefined,
     enabled: true,
     refetchInterval: noteListRefetchInterval,
   });
@@ -167,60 +154,25 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
                       stale && "opacity-60"
                     )}
                   >
-                    {notes.length}개{page?.hasMore ? " 이상" : ""}의{" "}
-                    {filter === "paused" ? "중지된 회의" : "회의 기록"}
+                    {notes.length}개{page?.hasMore ? " 이상" : ""}의 회의 기록
                   </span>
                 )}{" "}
                 · 발화와 결정이 시간순으로 보관됩니다.
               </div>
-              <div
-                role="group"
-                aria-label="노트 필터"
-                className="mt-4 flex items-center gap-1.5"
-              >
-                {NOTE_FILTERS.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    aria-pressed={filter === key}
-                    onClick={() => setFilter(key)}
-                    className={cn(
-                      // 칩은 chip 6이다. pill(9999)은 주 CTA와 레코더 독 두 곳뿐. (FORM SPEC)
-                      "h-8 whitespace-nowrap rounded-chip px-3.5 text-[13px] font-medium transition-colors",
-                      filter === key
-                        ? "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
-                        : "text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)]"
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
             </header>
             <DesktopAppPromo />
-            {/* 걸러서 비었을 뿐 노트는 있다 — 「첫 회의를 시작하세요」 빈 상태는 오해를 준다. */}
-            {filter === "paused" &&
-            !isPending &&
-            !isError &&
-            !stale &&
-            notes.length === 0 ? (
-              <p className="py-16 text-center text-sm text-[var(--el-muted)]">
-                중지된 회의가 없습니다.
-              </p>
-            ) : (
-              <WorkspaceNoteList
-                workspaceId={workspaceId}
-                notes={notes}
-                isPending={isPending}
-                isError={isError}
-                onRetry={retry}
-                onNewMeeting={requestNewMeeting}
-                hasMore={page?.hasMore ?? false}
-                isLoadingMore={isLoadingMore}
-                stale={stale}
-                onLoadMore={loadMore}
-              />
-            )}
+            <WorkspaceNoteList
+              workspaceId={workspaceId}
+              notes={notes}
+              isPending={isPending}
+              isError={isError}
+              onRetry={retry}
+              onNewMeeting={requestNewMeeting}
+              hasMore={page?.hasMore ?? false}
+              isLoadingMore={isLoadingMore}
+              stale={stale}
+              onLoadMore={loadMore}
+            />
           </>
         )}
       </div>

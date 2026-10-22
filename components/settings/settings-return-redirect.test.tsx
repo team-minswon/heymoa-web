@@ -1,7 +1,7 @@
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { IntegrationsReturnRedirect } from "@/components/settings/integrations-return-redirect";
+import { SettingsReturnRedirect } from "@/components/settings/settings-return-redirect";
 
 const navState = vi.hoisted(() => ({
   params: new URLSearchParams(""),
@@ -19,7 +19,7 @@ function workspacesResponse(workspaces: { workspaceId: string }[]) {
   return { status: 200, data: { success: true, data: { workspaces } } };
 }
 
-describe("IntegrationsReturnRedirect", () => {
+describe("SettingsReturnRedirect", () => {
   beforeEach(() => {
     navState.params = new URLSearchParams("");
     navState.replace.mockClear();
@@ -35,7 +35,7 @@ describe("IntegrationsReturnRedirect", () => {
       workspacesResponse([{ workspaceId: "W1" }, { workspaceId: "W2" }])
     );
 
-    render(<IntegrationsReturnRedirect />);
+    render(<SettingsReturnRedirect />);
 
     await waitFor(() =>
       expect(navState.replace).toHaveBeenCalledWith(
@@ -50,7 +50,7 @@ describe("IntegrationsReturnRedirect", () => {
       workspacesResponse([{ workspaceId: "W1" }])
     );
 
-    render(<IntegrationsReturnRedirect />);
+    render(<SettingsReturnRedirect />);
 
     await waitFor(() =>
       expect(navState.replace).toHaveBeenCalledWith(
@@ -59,10 +59,25 @@ describe("IntegrationsReturnRedirect", () => {
     );
   });
 
+  it("탭을 주면 그 설정 탭을 연다 (메일 푸터의 알림 설정)", async () => {
+    window.localStorage.setItem("heymoa:last-workspace", "W2");
+    getWorkspaces.mockResolvedValue(
+      workspacesResponse([{ workspaceId: "W1" }, { workspaceId: "W2" }])
+    );
+
+    render(<SettingsReturnRedirect section="notifications" />);
+
+    await waitFor(() =>
+      expect(navState.replace).toHaveBeenCalledWith(
+        "/w/W2?settings=notifications"
+      )
+    );
+  });
+
   it("워크스페이스가 없으면 홈으로 보낸다", async () => {
     getWorkspaces.mockResolvedValue(workspacesResponse([]));
 
-    render(<IntegrationsReturnRedirect />);
+    render(<SettingsReturnRedirect />);
 
     await waitFor(() => expect(navState.replace).toHaveBeenCalledWith("/"));
   });

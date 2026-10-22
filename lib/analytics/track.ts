@@ -1,5 +1,8 @@
 import posthog, { type CaptureResult } from "posthog-js";
 
+import type { NotificationListResponseDataNotificationsItemType } from "@/lib/api/generated/models/notificationListResponseDataNotificationsItemType";
+import type { NotificationSettingsResponseDataItemsItemChannelsItemChannel } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemChannelsItemChannel";
+import type { NotificationSettingsResponseDataItemsItemType } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemType";
 import { desktopAuthBridge } from "@/lib/desktop/auth";
 
 /**
@@ -54,6 +57,14 @@ export type AnalyticsEvent =
   | "note_tab_opened"
   | "review_confirmation_clicked"
   | "settings_tab_opened"
+  | "notifications_opened"
+  | "notification_clicked"
+  | "notifications_all_read_clicked"
+  | "notification_setting_changed"
+  | "notification_settings_reset"
+  | "timeline_hint_shown"
+  | "timeline_hint_clicked"
+  | "timeline_hint_dismissed"
   | "agent_opened"
   | "feedback_sent"
   | "feedback_dismissed"
@@ -98,8 +109,36 @@ export type WebEventProperties = {
       | "terms"
       | "integrations"
       | "workspaceAgents"
-      | "agents";
+      | "agents"
+      | "notifications";
+    // 어디서 열었나. 알림 모달의 「알림 설정」 이동은 modal, 설정 창 안의 탭 이동은 settings(PRO-67 I32).
+    from: "modal" | "settings";
   };
+  // 알림 모달·알림 설정(PRO-67 I32, 발화는 I09·I10). 종류·개수·워크스페이스만 싣고 알림 내용·노트 id 는 싣지 않는다.
+  // `type`·`channel` 은 계약의 enum 그대로다 — 종류가 늘면 orval 이 같이 넓힌다.
+  notifications_opened: { workspace_id: string; unread_count: number };
+  notification_clicked: {
+    workspace_id: string;
+    type: NotificationListResponseDataNotificationsItemType;
+    was_unread: boolean;
+  };
+  notifications_all_read_clicked: { workspace_id: string; count: number };
+  // scope: all(알림 모두 끄기) · email(메일 모두 끄기) · type(종류 하나의 채널 하나). 종류·채널은 type 일 때만 있다.
+  notification_setting_changed:
+    | { workspace_id: string; scope: "all" | "email"; enabled: boolean }
+    | {
+        workspace_id: string;
+        scope: "type";
+        type: NotificationSettingsResponseDataItemsItemType;
+        channel: NotificationSettingsResponseDataItemsItemChannelsItemChannel;
+        enabled: boolean;
+      };
+  notification_settings_reset: { workspace_id: string };
+  // 타임라인 첫 항목 안내(PRO-67 I26). role 은 이 창이 녹음하는가(recorder)·보기만 하는가(viewer).
+  // 효과는 기존 note_tab_opened(tab=context) 비율로 본다.
+  timeline_hint_shown: { workspace_id: string; role: "recorder" | "viewer" };
+  timeline_hint_clicked: { workspace_id: string; role: "recorder" | "viewer" };
+  timeline_hint_dismissed: { workspace_id: string; reason: "auto" | "close" };
   agent_opened: { surface: "fab" };
   feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
   // 회의 종료 뒤 묻는 카드. 띄움은 `feedback_opened {from: "meeting_end"}`, 보냄은 `feedback_sent` 가 센다.
