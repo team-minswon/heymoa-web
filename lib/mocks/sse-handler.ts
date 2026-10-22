@@ -117,7 +117,11 @@ function wait(ms: number) {
  * 답한 뒤 같은 턴 스트림에 `after(decision)`를 이어 흘린다. 그래서 여기 남는 것은 「무엇을
  * 이어야 하는가」뿐이다 — 답 없는 대기를 푸는 것은 취소 API다.
  */
-type PendingApproval = { stream: MockTurnStream; message: string; plan: ApprovalPlan };
+type PendingApproval = {
+  stream: MockTurnStream;
+  message: string;
+  plan: ApprovalPlan;
+};
 
 const pendingApprovals = new Map<string, PendingApproval>();
 
@@ -431,7 +435,10 @@ function accumulate(stream: MockTurnStream, frame: Frame) {
   }
 
   if (frame.event === "tool_call_start") {
-    turn.startedSummaries.set(String(payload.toolCallId), payload.summary ?? null);
+    turn.startedSummaries.set(
+      String(payload.toolCallId),
+      payload.summary ?? null
+    );
     const args = (frame.payload as { args?: unknown }).args;
     if (args && typeof args === "object") {
       turn.startedArgs.set(
@@ -575,7 +582,8 @@ function settleTurn(
     turn.status = status;
     turn.pendingApproval = null;
     if (status === "FAILED") {
-      const code = typeof failureCode === "string" ? failureCode : "INTERNAL_ERROR";
+      const code =
+        typeof failureCode === "string" ? failureCode : "INTERNAL_ERROR";
       turn.failureCode = code;
       turn.retryable = code !== "UPSTREAM_REJECTED";
     }
@@ -710,7 +718,8 @@ async function runTurn(
   );
   const plan = buildApprovalPlan(input);
   if (!plan) {
-    if (await drain(stream, message, buildChatEvents(input))) settleZombie(stream);
+    if (await drain(stream, message, buildChatEvents(input)))
+      settleZombie(stream);
     return;
   }
 
@@ -795,7 +804,9 @@ function subscribe(stream: MockTurnStream, after: string | null) {
 
       // 모르는 `after` 는 처음부터다 — 실서버의 XRANGE 도 없는 id 뒤를 준다.
       const start =
-        after === null ? 0 : stream.frames.findIndex((frame) => frame.id === after) + 1;
+        after === null
+          ? 0
+          : stream.frames.findIndex((frame) => frame.id === after) + 1;
       for (const frame of stream.frames.slice(start)) {
         write(frame);
         if (cutAfter !== null && served >= cutAfter) return;
@@ -836,7 +847,43 @@ function sseResponse(body: ReadableStream) {
   });
 }
 
+/**
+ * 사용자 단위 이벤트 스트림(PRO-67 I01·I02). 실서버처럼 구독 뒤 `ready` 를 먼저 보내고, 15초마다 하트비트 주석, 60초마다
+ * `notifications.changed` 힌트 하나를 보낸다(값은 없다 — web 이 개수를 다시 읽는다). 끊기 전까지 열려 있다.
+ */
+function userEventStream() {
+  let beat: ReturnType<typeof setInterval> | null = null;
+  let hint: ReturnType<typeof setInterval> | null = null;
+  const frame = (event: string, data: unknown) =>
+    encoder.encode(`event:${event}\ndata:${JSON.stringify(data)}\n\n`);
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        frame("ready", {
+          v: 1,
+          connectionId: "MOCKCONN00001",
+          serverTime: new Date().toISOString(),
+          maxAgeSec: 1500,
+        })
+      );
+      beat = setInterval(
+        () => controller.enqueue(encoder.encode(": keepalive\n\n")),
+        15_000
+      );
+      hint = setInterval(
+        () => controller.enqueue(frame("notifications.changed", {})),
+        60_000
+      );
+    },
+    cancel() {
+      if (beat) clearInterval(beat);
+      if (hint) clearInterval(hint);
+    },
+  });
+}
+
 export const chatSseHandlers = [
+  http.get("*/v1/events", () => sseResponse(userEventStream())),
   http.post(
     "*/v1/agent-chats/:chatId/messages",
     async ({ request, params }) => {
@@ -906,7 +953,9 @@ export const chatSseHandlers = [
         { turnId: `turn-${chatId}-${chat.count}` },
         // 「밀리게 해줘」 — 첫 구독을 두 프레임 뒤에 끊고 끝난 스트림을 바로 지운다.
         // 재접속이 `410` 을 받고 화면이 히스토리를 다시 읽는 자리를 밟는다.
-        hasScenario(body.message, "resync") ? { ttlMs: 0, cutFirstAfter: 2 } : {}
+        hasScenario(body.message, "resync")
+          ? { ttlMs: 0, cutFirstAfter: 2 }
+          : {}
       );
       mockDb.appendAgentChatMessage(chatId, {
         role: "USER",
@@ -958,26 +1007,23 @@ export const chatSseHandlers = [
    * 턴 취소. **멱등이다** — 이미 끝난 턴에 눌러도 204다(답이 막 끝나는 순간의 중지는
    * 경합이지 오류가 아니다). 화면이 멈추는 신호는 204가 아니라 `turn_cancelled` 프레임이다.
    */
-  http.post(
-    "*/v1/agent-chats/:chatId/turns/:turnId/cancel",
-    ({ params }) => {
-      const chatId = id(params.chatId);
-      try {
-        mockDb.getAgentChatMessages(chatId);
-      } catch {
-        return failure("AGENT_CHAT_NOT_FOUND", 404);
-      }
-      const stream = turns.get(id(params.turnId));
-      if (!stream || stream.chatId !== chatId) {
-        return failure("AGENT_CHAT_TURN_NOT_FOUND", 404);
-      }
-      // 이미 굳었으면 아무것도 안 쏜다 — 두 번 쏘면 스트림에 terminal이 둘 남는다.
-      if (isLive(stream.turn)) {
-        publish(stream, "turn_cancelled", { turnId: stream.turn.turnId });
-      }
-      return new HttpResponse(null, { status: 204 });
+  http.post("*/v1/agent-chats/:chatId/turns/:turnId/cancel", ({ params }) => {
+    const chatId = id(params.chatId);
+    try {
+      mockDb.getAgentChatMessages(chatId);
+    } catch {
+      return failure("AGENT_CHAT_NOT_FOUND", 404);
     }
-  ),
+    const stream = turns.get(id(params.turnId));
+    if (!stream || stream.chatId !== chatId) {
+      return failure("AGENT_CHAT_TURN_NOT_FOUND", 404);
+    }
+    // 이미 굳었으면 아무것도 안 쏜다 — 두 번 쏘면 스트림에 terminal이 둘 남는다.
+    if (isLive(stream.turn)) {
+      publish(stream, "turn_cancelled", { turnId: stream.turn.turnId });
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
 
   /**
    * 승인. `202 {turnId}` 로 답하고 **같은 턴 스트림에 나머지 절반을 이어 흘린다** —

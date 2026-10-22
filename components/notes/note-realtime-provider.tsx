@@ -10,9 +10,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { noteSocketOpened } from "@/lib/events/note-sockets";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { getGetNoteAgendasQueryKey, useGetNote } from "@/lib/api/generated/notes/notes";
+import {
+  getGetNoteAgendasQueryKey,
+  useGetNote,
+} from "@/lib/api/generated/notes/notes";
 import {
   getGetNoteTranscriptQueryKey,
   type getNoteTranscript,
@@ -141,6 +145,12 @@ export function NoteRealtimeProvider({
     // 마운트 직후에는 이미 초기 상태라 no-op 이다.
     dispatch({ type: "reset", noteId });
   }, [noteId]);
+
+  // 소켓이 열린 노트의 회의 상태는 여기서 무효화하므로 이벤트 스트림의 `meeting` 힌트가 건너뛴다(PRO-67 I02).
+  useEffect(
+    () => (socketOpen ? noteSocketOpened(noteId) : undefined),
+    [noteId, socketOpen]
+  );
 
   useEffect(() => {
     if (!socketOpen) return;

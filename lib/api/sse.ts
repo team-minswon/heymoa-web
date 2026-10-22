@@ -1,9 +1,28 @@
-import { AuthRefreshError, buildUrl, refreshAuthOnce } from "@/lib/api/fetcher";
+import {
+  AuthRefreshError,
+  buildUrl,
+  refreshAuthOnce,
+  retryAfterMsOf,
+} from "@/lib/api/fetcher";
 import {
   isSessionExpired,
   openSessionGate,
   SessionExpiredError,
 } from "@/lib/auth/session-gate";
+
+/** 스트림을 열지 못한 실패에 붙는 HTTP 정보. 네트워크 오류에는 없다. */
+export type SseHttpFailure = {
+  httpStatus: number;
+  retryAfterMs: number | null;
+};
+
+export function sseHttpFailureOf(error: unknown): SseHttpFailure | null {
+  return typeof error === "object" &&
+    error !== null &&
+    typeof (error as { httpStatus?: unknown }).httpStatus === "number"
+    ? (error as SseHttpFailure)
+    : null;
+}
 
 export type SseEvent = {
   event: string;
@@ -65,9 +84,15 @@ async function connect(
     };
   }
   if (!response.ok) {
-    throw await response
+    // 실패에 HTTP 상태와 `Retry-After` 를 함께 싣는다(PRO-67 I02) — 이벤트 스트림은 404·501(꺼진 서버)에서 멈추고,
+    // 503 이면 서버가 말한 만큼 기다린다. 봉투는 그대로라 채팅 쪽 `errorCodeOf` 판정은 바뀌지 않는다.
+    const failure: object = await response
       .json()
       .catch(() => new Error(`SSE_STREAM_FAILED_${response.status}`));
+    throw Object.assign(failure, {
+      httpStatus: response.status,
+      retryAfterMs: retryAfterMsOf(response.headers),
+    });
   }
   if (!response.body) {
     throw new Error("SSE_STREAM_NO_BODY");

@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-
 import {
   openSessionGate,
   resetSessionGate,
@@ -104,7 +103,22 @@ describe("getEventStream", () => {
 
     await expect(
       collect(getEventStream("/v1/agent-chats/c1/turns/t1/events"))
-    ).rejects.toEqual(errorBody);
+    ).rejects.toEqual({ ...errorBody, httpStatus: 409, retryAfterMs: null });
+  });
+
+  it("503 은 Retry-After 를 밀리초로 함께 싣는다 — 이벤트 스트림이 그만큼 기다린다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response("{}", { status: 503, headers: { "Retry-After": "7" } })
+        )
+    );
+    await expect(collect(getEventStream("/v1/events"))).rejects.toMatchObject({
+      httpStatus: 503,
+      retryAfterMs: 7000,
+    });
   });
 
   /**
@@ -119,7 +133,10 @@ describe("getEventStream", () => {
           JSON.stringify({
             success: false,
             data: null,
-            error: { code: "AGENT_CHAT_STREAM_GONE", message: "스트림이 사라졌습니다." },
+            error: {
+              code: "AGENT_CHAT_STREAM_GONE",
+              message: "스트림이 사라졌습니다.",
+            },
           }),
           { status: 410 }
         )
