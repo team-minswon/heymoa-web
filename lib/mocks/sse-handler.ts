@@ -11,6 +11,7 @@ import { joinSummary } from "@/lib/chat/blocks";
 import type { ScopeRef } from "@/lib/mocks/db";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow } from "@/lib/mocks/meeting-flow";
+import { emitChatsChanged, onMockUserEvent } from "@/lib/mocks/user-events";
 import type { AgentChatMessagesResponseDataActiveTurnPendingApprovalCard as ApprovalCard } from "@/lib/api/generated/models";
 
 /**
@@ -60,6 +61,13 @@ const HEARTBEAT_MS = 10_000;
 
 /** 끝난 턴의 스트림이 남아 있는 시간. 지나면 `410` — 히스토리를 다시 읽어야 한다. */
 export const STREAM_TTL_MS = 10 * 60_000;
+
+/** 채팅 목록 행을 바꾸는 프레임 — 이때 목 이벤트 스트림이 `chats.changed` 를 낸다. */
+const CHAT_LIST_EVENTS = new Set([
+  "message_start",
+  "tool_approval_request",
+  "tool_approval_resolved",
+]);
 
 /** 이걸 흘려보낸 구독은 닫는다. 안 닫으면 web의 재연결 타이머가 영원히 돈다. */
 const TERMINAL_EVENTS = new Set([
@@ -351,6 +359,7 @@ function publish(stream: MockTurnStream, event: string, payload: unknown) {
   stream.frames.push(frame);
   accumulate(stream, frame);
   for (const notify of [...stream.subscribers]) notify(frame);
+  if (CHAT_LIST_EVENTS.has(event)) emitChatsChanged();
   if (TERMINAL_EVENTS.has(event)) {
     settleTurn(stream, TERMINAL_STATUS[event], payloadOf(frame).code);
     return;
@@ -591,6 +600,8 @@ function settleTurn(
   }
   stream.finishedAt = Date.now();
   for (const close of [...stream.closers]) close();
+  // 목록 행의 「진행 중」·마지막 턴이 바뀐다(실서버 SettleAgentChatTurnHandler 의 chats.changed).
+  emitChatsChanged();
 }
 
 function id(value: string | readonly string[] | undefined) {
@@ -857,6 +868,7 @@ function userEventStream() {
   let beat: ReturnType<typeof setInterval> | null = null;
   let hint: ReturnType<typeof setInterval> | null = null;
   let analysis: ReturnType<typeof setInterval> | null = null;
+  let unsubscribe: (() => void) | null = null;
   const frame = (event: string, data: unknown) =>
     encoder.encode(`event:${event}\ndata:${JSON.stringify(data)}\n\n`);
   return new ReadableStream({
@@ -877,6 +889,14 @@ function userEventStream() {
         () => controller.enqueue(frame("notifications.changed", {})),
         60_000
       );
+      // 목의 변경 자리(채팅 등)가 내는 힌트를 그대로 흘린다.
+      unsubscribe = onMockUserEvent((event, data) => {
+        try {
+          controller.enqueue(frame(event, data));
+        } catch {
+          // 이미 닫힌 스트림이다.
+        }
+      });
       // 목의 분석은 다시 읽을 때 다음 단계로 넘어간다. 넘어갈 때가 된 노트에 힌트를 보내 web 이 다시 읽게 한다.
       analysis = setInterval(() => {
         for (const noteId of meetingFlow.dueAnalysisNoteIds())
@@ -893,6 +913,7 @@ function userEventStream() {
       if (beat) clearInterval(beat);
       if (hint) clearInterval(hint);
       if (analysis) clearInterval(analysis);
+      unsubscribe?.();
     },
   });
 }

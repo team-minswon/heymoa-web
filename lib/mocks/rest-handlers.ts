@@ -39,6 +39,7 @@ import type {
   UpdateWorkspaceRequest,
 } from "@/lib/api/generated/models";
 import { isEmail } from "@/lib/notes/share-mail/recipients";
+import { emitChatsChanged } from "@/lib/mocks/user-events";
 
 function id(value: string | readonly string[] | undefined) {
   return Array.isArray(value) ? value[0] : String(value ?? "");
@@ -1620,7 +1621,7 @@ export const restHandlers = [
     "*/v1/workspaces/:workspaceId/agent-chats",
     async ({ request, params }) => {
       const body = (await request.json()) as { title?: string | null };
-      return commandResult(
+      const response = commandResult(
         () =>
           mockDb.createAgentChat({
             workspaceId: id(params.workspaceId),
@@ -1628,6 +1629,8 @@ export const restHandlers = [
           }),
         201
       );
+      emitChatsChanged();
+      return response;
     }
   ),
   /**

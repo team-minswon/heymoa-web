@@ -25,7 +25,7 @@ import { summaryToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
 import { useSummaryViewed } from "@/lib/analytics/use-summary-viewed";
-import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 
 const POLL_INTERVAL_MS = 3_000;

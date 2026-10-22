@@ -25,10 +25,7 @@ import type { AgentChatsResponseDataChatsItem } from "@/lib/api/generated/models
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { isAuthError } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
-import {
-  type ApprovalDecision,
-  decideApproval,
-} from "@/lib/chat/blocks";
+import { type ApprovalDecision, decideApproval } from "@/lib/chat/blocks";
 import { runningLabel } from "@/lib/chat/chat-list";
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import {
@@ -46,6 +43,8 @@ import {
 } from "@/lib/chat/turn-messages";
 import { useChatStream } from "@/lib/chat/use-chat-stream";
 import { useToolApproval } from "@/lib/chat/use-tool-approval";
+import { useEventStreamHealthy } from "@/lib/events/health";
+import { hintedInterval } from "@/lib/events/interval";
 
 /**
  * 목록 폴링 간격. 근거 있는 값이 아니다. 정하는 것은 남의 턴을 늦어도 언제 알아채나뿐이다 —
@@ -103,8 +102,12 @@ export function useChatTurn({
   /** 이 턴을 시작할 때의 히스토리 길이. 뒤에 붙은 것만 이 턴으로 본다. */
   const [turnBaseline, setTurnBaseline] = useState(0);
 
+  // 건강한 이벤트 스트림이면 `chats.changed` 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I04).
+  const streamHealthy = useEventStreamHealthy();
   const chatsQuery = useGetAgentChats(workspaceId, undefined, {
-    query: { refetchInterval: CHAT_LIST_POLL_MS },
+    query: {
+      refetchInterval: hintedInterval(streamHealthy, CHAT_LIST_POLL_MS),
+    },
   });
   const chatsResponse = chatsQuery.data;
   const chatsOk = chatsResponse?.status === 200 && chatsResponse.data.success;

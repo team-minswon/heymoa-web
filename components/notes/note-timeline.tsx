@@ -29,7 +29,7 @@ import {
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
-import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { SpeakerChip } from "@/components/notes/speaker-chip";

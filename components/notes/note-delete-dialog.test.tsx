@@ -46,7 +46,7 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
  */
 
 const stream = vi.hoisted(() => ({ healthy: false }));
-vi.mock("@/components/events/user-event-provider", () => ({
+vi.mock("@/lib/events/health", () => ({
   useEventStreamHealthy: () => stream.healthy,
 }));
 

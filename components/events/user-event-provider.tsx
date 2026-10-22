@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/events/invalidation";
 import { isNoteSocketOpen } from "@/lib/events/note-sockets";
 import { parseUserEvent } from "@/lib/events/protocol";
+import { EventStreamHealthContext } from "@/lib/events/health";
 
 /** 재연결·재조회를 흩는 창(배포 드레인 때 한꺼번에 붙지 않게). */
 const RESYNC_JITTER_MS = 3_000;
@@ -32,12 +33,7 @@ const COALESCE_MS = 300;
  */
 const TERMINAL_STATUS = new Set([401, 403, 404, 429, 501]);
 
-const HealthContext = createContext(false);
-
-/** 이벤트 스트림이 건강한가 — `ready` 를 받았고 끊기거나 `degraded` 가 오지 않았다. provider 밖이면 늘 `false`. */
-export function useEventStreamHealthy() {
-  return useContext(HealthContext);
-}
+export { useEventStreamHealthy } from "@/lib/events/health";
 
 type Timers = {
   setTimeout: (run: () => void, ms: number) => ReturnType<typeof setTimeout>;
@@ -202,6 +198,8 @@ export function UserEventProvider({
   }, [queryClient, status, timers]);
 
   return (
-    <HealthContext.Provider value={healthy}>{children}</HealthContext.Provider>
+    <EventStreamHealthContext.Provider value={healthy}>
+      {children}
+    </EventStreamHealthContext.Provider>
   );
 }
