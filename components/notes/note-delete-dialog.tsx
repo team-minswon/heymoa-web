@@ -23,7 +23,7 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
-import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 
 /** 목록 캐시에서 그 노트 행만 뺀다. 모양이 예상과 다르면 손대지 않는다. */

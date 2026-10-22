@@ -12,6 +12,8 @@ import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
+import { useEventStreamHealthy } from "@/lib/events/health";
+import { hintedInterval } from "@/lib/events/interval";
 
 export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
 export const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
@@ -44,13 +46,16 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const scopeKey = selectedProjectId ?? `all:${workspaceId}`;
   const [pagesByScope, setPagesByScope] = useState<Record<string, number>>({});
   const pages = pagesByScope[scopeKey] ?? 1;
+  const streamHealthy = useEventStreamHealthy();
   const notesQuery = useNoteListPages({
     scope: selectedProjectId
       ? { kind: "project", projectId: selectedProjectId }
       : { kind: "workspace", workspaceId },
     pages,
     enabled: true,
-    refetchInterval: noteListRefetchInterval,
+    // 건강한 이벤트 스트림이면 `notes.changed` 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I04).
+    refetchInterval: (notes) =>
+      hintedInterval(streamHealthy, noteListRefetchInterval(notes)),
   });
   const page =
     notesQuery.data?.status === 200 && notesQuery.data.data.success

@@ -22,7 +22,7 @@ import { useReadAnalysisReadyOnView } from "@/components/notification/use-read-a
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { okData } from "@/lib/api/ok-data";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
-import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import type { SpeakerFace } from "@/lib/transcription/speaker-identity";

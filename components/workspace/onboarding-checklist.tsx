@@ -26,6 +26,8 @@ import { useOnboardingProgress } from "@/lib/onboarding/use-onboarding-progress"
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { cn } from "@/lib/utils";
 import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
+import { useEventStreamHealthy } from "@/lib/events/health";
+import { hintedInterval } from "@/lib/events/interval";
 
 const NO_POLLING = () => 0;
 
@@ -69,11 +71,15 @@ export function useOnboardingChecklist({
   const open = state?.status === "open";
   // 처음 판단할 때 한 번, 그리고 열려 있는 동안만 읽는다. 닫힌 사람(기존 사용자 포함)에게는 안 읽는다.
   // 열려 있으면 목록 화면과 같은 주기로 다시 읽는다 — 그 화면이 다른 범위를 보고 있어도 낡지 않게(codex 리뷰).
+  const streamHealthy = useEventStreamHealthy();
   const notesQuery = useNoteListPages({
     scope: { kind: "workspace", workspaceId },
     pages: 1,
     enabled: Boolean(userId) && (undecided || open),
-    refetchInterval: open ? noteListRefetchInterval : NO_POLLING,
+    // 닫혀 있으면 폴링하지 않는다. 열려 있으면 목록 화면과 같은 규칙(PRO-67 I04: 건강한 스트림이면 안전망).
+    refetchInterval: open
+      ? (notes) => hintedInterval(streamHealthy, noteListRefetchInterval(notes))
+      : NO_POLLING,
   });
   // 워크스페이스를 옮기면 `keepPreviousData`가 직전 워크스페이스 목록을 자리표시로 준다 —
   // 그걸로 판단하면 빈 워크스페이스에서 넘어온 사람에게 엉뚱하게 열린다.

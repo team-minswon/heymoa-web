@@ -1186,9 +1186,11 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
   await expect(page.getByTestId("assistant-message")).toHaveCount(2, {
     timeout: 20_000,
   });
-  await expect(page.getByText("요약해줘", { exact: true })).toBeVisible();
+  // 대화 제목·목록 행에도 같은 글이 선다(chats.changed 힌트로 목록이 곧바로 갱신된다) — 대화 본문에서만 찾는다.
+  const thread = page.getByTestId("chat-thread-view");
+  await expect(thread.getByText("요약해줘", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("한 번 더 정리해줘", { exact: true })
+    thread.getByText("한 번 더 정리해줘", { exact: true })
   ).toBeVisible();
 });
 

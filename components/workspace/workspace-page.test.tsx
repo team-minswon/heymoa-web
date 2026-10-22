@@ -98,6 +98,29 @@ const NOTE_LIST = vi.hoisted(() => ({
   },
 }));
 
+const stream = vi.hoisted(() => ({ healthy: false }));
+vi.mock("@/lib/events/health", () => ({
+  useEventStreamHealthy: () => stream.healthy,
+}));
+const listOptions = vi.hoisted(() => ({
+  refetchInterval: null as null | ((notes: unknown) => number),
+}));
+vi.mock("@/lib/workspace/use-note-list-pages", async (original) => {
+  const actual =
+    await original<typeof import("@/lib/workspace/use-note-list-pages")>();
+  return {
+    ...actual,
+    useNoteListPages: (
+      options: Parameters<typeof actual.useNoteListPages>[0]
+    ) => {
+      listOptions.refetchInterval = options.refetchInterval as (
+        notes: unknown
+      ) => number;
+      return actual.useNoteListPages(options);
+    },
+  };
+});
+
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   // 행이 삭제 다이얼로그를 그리므로 그 훅도 목에 있어야 한다.
   getGetNotesQueryKey: (projectId: string) => [
@@ -240,6 +263,27 @@ describe("WorkspacePage", () => {
 
     expect(noteListRefetchInterval(notes("IN_PROGRESS"))).toBe(10_000);
     expect(noteListRefetchInterval(notes("ENDED"))).toBe(30_000);
+  });
+
+  it("이벤트 스트림이 건강하면 노트 목록 폴링은 60초 안전망, 끊기면 원래 10/30초로 돈다", async () => {
+    const active = [
+      {
+        meetingStatus: "IN_PROGRESS",
+        meetingStartedAt: "2026-07-11T00:00:00Z",
+        meetingStartedBy: { userId: "user-other", name: "남" },
+      },
+    ];
+    stream.healthy = true;
+    renderPage();
+    await screen.findByText("주간 제품 회의");
+    expect(listOptions.refetchInterval?.(active)).toBe(60_000);
+    cleanup();
+
+    stream.healthy = false;
+    renderPage();
+    await screen.findByText("주간 제품 회의");
+    expect(listOptions.refetchInterval?.(active)).toBe(10_000);
+    expect(listOptions.refetchInterval?.([])).toBe(30_000);
   });
 
   /**

@@ -17,6 +17,8 @@ import {
   UNREAD_COUNT_POLL_MS,
 } from "@/lib/notification/notification-list";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
+import { useEventStreamHealthy } from "@/lib/events/health";
+import { hintedInterval } from "@/lib/events/interval";
 
 type NotificationCenter = {
   /** 모든 워크스페이스의 안 읽은 개수. 아직 모르면 `undefined` — 0과 다르다 */
@@ -49,11 +51,14 @@ export function NotificationCenterProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const streamHealthy = useEventStreamHealthy();
   const count = useGetUnreadNotificationCount(
     { schema: NOTIFICATION_SCHEMA },
     {
       query: {
-        refetchInterval: UNREAD_COUNT_POLL_MS,
+        // 건강한 이벤트 스트림이면 `notifications.changed` 힌트가 다시 읽게 한다(PRO-67 I04). 시작값이 이미 60초라
+        // 안전망과 같다 — 힌트가 앞당기는 것이 차이다.
+        refetchInterval: hintedInterval(streamHealthy, UNREAD_COUNT_POLL_MS),
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
       },
