@@ -69,7 +69,7 @@ export function NotificationRow({
       data-notification-id={notification.notificationId}
       data-unread={unread || undefined}
       className={cn(
-        "group/row relative flex cursor-pointer gap-3 py-3 pr-[15px] pl-[15px] transition-colors duration-150",
+        "group/row relative flex cursor-pointer gap-3 py-3 pr-[11px] pl-[15px] transition-colors duration-150",
         unread
           ? "bg-[var(--el-surface-strong)]/80 hover:bg-[var(--el-surface-strong)]"
           : "hover:bg-[var(--el-surface-strong)]/50",

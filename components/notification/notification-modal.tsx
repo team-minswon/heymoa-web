@@ -6,7 +6,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { BellOff } from "lucide-react";
 
 import {
@@ -35,7 +34,6 @@ import {
 } from "@/components/ui/dialog";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { LoadMoreButton } from "@/components/ui/load-more-button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { track } from "@/lib/analytics/track";
@@ -121,10 +119,11 @@ export function NotificationModal({
   filter: NotificationFilter;
   /** 탭을 바꾼다 — 방문 기록을 한 칸 쌓는다 */
   onFilterChange: (filter: NotificationFilter) => void;
-  /** 닫는다. 쌓은 기록을 걷은 뒤 `then` 을 한다(이동·설정 열기) */
+  /** 닫는다. 쌓은 기록을 걷은 뒤 `then` 을 한다(이동) */
   onClose: (then?: () => void) => void;
   workspaceId: string;
   unreadCount: number | undefined;
+  /** 설정을 알림 위에 얹어 연다 — 알림은 주소에 남아 뒤로 가기로 돌아온다(`notification-url`) */
   onOpenSettings: (section: SettingsSection) => void;
   /** 다른 화면으로 간다(검토할 결과 준비 행) */
   onNavigate: (href: string) => void;
@@ -303,7 +302,9 @@ export function NotificationModal({
       section: "notifications",
       from: "modal",
     });
-    close(() => onOpenSettings("notifications"));
+    if (viewportRef.current)
+      rememberNotificationModal({ scrollTop: viewportRef.current.scrollTop });
+    onOpenSettings("notifications");
   };
 
   const rowsFor = (item: NotificationItem) => {
@@ -401,16 +402,18 @@ export function NotificationModal({
             </div>
           </div>
 
-          <ScrollArea
-            className="min-h-0 flex-1"
-            viewportRef={attachViewport}
-            viewportClassName="overflow-x-hidden"
+          {/*
+            목록 칸은 네이티브 스크롤이다(APP-1363) — 설정·가이드 창과 같은 막대. base-ui ScrollArea 의 막대는 칸 위에 그려진
+            절대 위치 요소라 sticky 날짜 머리글(z-10)이 그 위를 덮어 막대가 날짜마다 토막났고, 폭(10px)이 카드 여백(8px)보다 커
+            카드 테두리를 덮었다. 네이티브 막대는 늘 내용 위에 그려진다. 클래식 막대(15px)는 자리를 예약하고(`stable`), 오버레이
+            막대는 카드 오른쪽 여백(12px) 안에서 뜬다. 안쪽 칸이 높이를 채워 빈 상태·오류를 가운데에 둔다.
+          */}
+          <div
+            ref={attachViewport}
+            data-slot="notification-list"
+            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]"
           >
-            {/*
-              칸 높이를 채워 빈 상태·오류를 가운데에 둔다. 창 높이가 고정이라 뷰포트 크기는 안 변한다 — 내용 크기를
-              따로 지켜보는 Content 로 감싸야 탭을 바꿨을 때 스크롤 막대가 새 길이를 따라간다.
-            */}
-            <ScrollAreaPrimitive.Content className="flex min-h-full flex-col">
+            <div className="flex min-h-full flex-col">
               {newCount > 0 ? (
                 <div className="sticky top-0 z-20 flex justify-center pt-2 pb-0.5">
                   <button
@@ -423,7 +426,7 @@ export function NotificationModal({
                 </div>
               ) : null}
               {webMuted ? (
-                <div className="mx-2 mt-3 flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] py-2 pr-2 pl-[15px] text-[13px] text-[var(--el-body)]">
+                <div className="mt-3 mr-3 ml-2 flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] py-2 pr-2 pl-[15px] text-[13px] text-[var(--el-body)]">
                   <BellOff
                     aria-hidden
                     className="size-4 text-[var(--el-muted)]"
@@ -478,8 +481,8 @@ export function NotificationModal({
                   </LoadMoreButton>
                 </div>
               ) : null}
-            </ScrollAreaPrimitive.Content>
-          </ScrollArea>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -524,14 +527,15 @@ export function NotificationModal({
 }
 
 /**
- * 목록 칸의 틀. 카드는 좌우 8px 안쪽, 카드 안 행의 글은 15px 안쪽 + 테두리 1px — 글이 모달 제목과 같은 24px 선에 선다.
+ * 목록 칸의 틀. 카드는 왼쪽 8px·오른쪽 12px 안쪽(오른쪽은 오버레이 스크롤 막대 자리), 카드 안 행의 글은 왼쪽 15px·오른쪽 11px
+ * 안쪽 + 테두리 1px — 글이 양쪽 모두 모달 제목과 같은 24px 선에 선다.
  * 날짜 머리글은 스크롤해도 칸 위에 붙는 캔버스색 띠다(뒤로 지나가는 카드를 가린다).
  */
-const LIST = "flex flex-col px-2 pb-4";
+const LIST = "flex flex-col pr-3 pb-4 pl-2";
 const CARD =
   "divide-y divide-[var(--el-hairline)] overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)]";
 const DAY =
-  "sticky top-0 z-10 -mx-2 bg-[var(--el-canvas)] px-6 pt-3 pb-1.5 text-xs leading-[18px] font-medium text-[var(--el-body)]";
+  "sticky top-0 z-10 -mr-3 -ml-2 bg-[var(--el-canvas)] px-6 pt-3 pb-1.5 text-xs leading-[18px] font-medium text-[var(--el-body)]";
 
 const EMPTY: Record<NotificationFilter, { line: string; sub?: string }> = {
   ALL: {
@@ -565,7 +569,7 @@ function NotificationListBody({
         {filter === "ALL" ? <div className={DAY}>&nbsp;</div> : null}
         <ul className={CARD}>
           {[0, 1, 2, 3, 4].map((index) => (
-            <li key={index} className="flex gap-3 px-[15px] py-3">
+            <li key={index} className="flex gap-3 py-3 pr-[11px] pl-[15px]">
               <div className="flex flex-1 flex-col gap-0.5">
                 <Skeleton className="my-[5px] h-[11px] w-4/5 rounded-chip" />
                 <Skeleton className="mt-1.5 mb-1 h-[10px] w-2/5 rounded-chip" />

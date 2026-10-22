@@ -460,7 +460,7 @@ describe("알림 모달", () => {
       expect(dialog.querySelectorAll("[data-notification-id]")).toHaveLength(30)
     );
     const viewport = dialog.querySelector<HTMLElement>(
-      "[data-slot=scroll-area-viewport]"
+      "[data-slot=notification-list]"
     )!;
     viewport.scrollTop = 240;
     const listReads = requests.filter((r) => r.startsWith("GET list")).length;
@@ -476,7 +476,7 @@ describe("알림 모달", () => {
     );
     expect(dialog.querySelectorAll("[data-notification-id]")).toHaveLength(30);
     expect(
-      dialog.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!
+      dialog.querySelector<HTMLElement>("[data-slot=notification-list]")!
         .scrollTop
     ).toBe(240);
     expect(requests.filter((r) => r.startsWith("GET list")).length).toBe(
@@ -572,7 +572,7 @@ describe("알림 모달", () => {
     );
   });
 
-  it("「알림 설정」은 모달을 닫고 설정의 알림 탭을 연다. 사건에는 노트·이름·제목이 없다", async () => {
+  it("「알림 설정」은 알림을 주소에 남긴 채 설정의 알림 탭을 연다. 사건에는 노트·이름·제목이 없다", async () => {
     const heard: Array<[string, Record<string, unknown>]> = [];
     const off = onTrack((name, props) =>
       heard.push([name, (props ?? {}) as Record<string, unknown>])
@@ -582,11 +582,9 @@ describe("알림 모달", () => {
     await screen.findByRole("button", { name: "알림 1" });
     const dialog = await openModal();
     fireEvent.click(within(dialog).getByRole("button", { name: "알림 설정" }));
-    // 쌓은 기록을 걷은 뒤에 연다(비동기 popstate) — 그래야 설정 창의 push 가 걷히는 중에 끼지 않는다.
-    await waitFor(() =>
-      expect(openSettings).toHaveBeenCalledWith("notifications")
-    );
-    expect(window.location.search).toBe("");
+    // 알림을 걷지 않고 그 위에 설정을 얹는다(APP-1363) — 뒤로 가기가 알림으로 돌아오게.
+    expect(openSettings).toHaveBeenCalledWith("notifications");
+    expect(window.location.search).toBe("?notifications=all");
     off();
     expect(heard.map(([name]) => name)).toEqual([
       "notifications_opened",

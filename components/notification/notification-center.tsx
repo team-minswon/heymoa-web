@@ -24,14 +24,12 @@ import {
 import {
   clearNotifications,
   NOTIFICATIONS_PARAM,
+  notificationsFilterFrom,
   parseNotificationsParam,
   pushNotifications,
   replaceNotifications,
 } from "@/lib/notification/notification-url";
-import {
-  SETTINGS_PARAM,
-  type SettingsSection,
-} from "@/lib/workspace/settings-url";
+import type { SettingsSection } from "@/lib/workspace/settings-url";
 import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 
@@ -85,17 +83,14 @@ export function NotificationCenterProvider({
       : undefined;
 
   // 모달과 탭은 주소(`?notifications=all|unread|action`)가 단일 출처다(APP-1361) — 새로고침·딥링크·뒤로 가기가 그대로
-  // 되살린다. 설정 창(`?settings=`)이 같이 있으면 설정이 이긴다(둘은 동시에 열리지 않는다). 첫 커밋 뒤에만 읽는다 —
+  // 되살린다. 설정 창(`?settings=`)이 위에 얹혀 있으면 숨는다(규칙은 `notification-url`). 첫 커밋 뒤에만 읽는다 —
   // 셸(`workspace-app-shell`)의 `committed` 와 같은 이유다(hydration 전 `history` 호출은 라우터 상태를 지운다).
   const searchParams = useSearchParams();
   const [committed, setCommitted] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- 첫 커밋을 표시하는 것 자체가 목적이다
   useEffect(() => setCommitted(true), []);
   const param = searchParams.get(NOTIFICATIONS_PARAM);
-  const urlFilter =
-    param === null || searchParams.has(SETTINGS_PARAM)
-      ? null
-      : (parseNotificationsParam(param) ?? "ALL");
+  const urlFilter = notificationsFilterFrom(searchParams);
   const open = committed && urlFilter !== null;
   // 닫히는 동안(페이드)에도 마지막 탭을 그린다 — 주소에서 값이 사라져도 내용이 다른 탭으로 뒤집히지 않게.
   const [shownFilter, setShownFilter] = useState<NotificationFilter>(
@@ -144,7 +139,19 @@ export function NotificationCenterProvider({
     depthRef.current += 1;
   }, []);
 
-  /** 쌓은 칸을 걷고(딥링크로 열렸으면 쿼리를 지우고) 나서 `then` 을 한다 — 이동·설정 열기가 걷히는 중에 끼지 않게. */
+  /**
+   * 「알림 설정」 — 알림을 닫지 않고 그 위에 설정을 push 로 얹는다(APP-1363). 뒤로 가기·설정 X 가 그 한 칸을 걷으면
+   * 알림이 같은 탭으로 돌아온다. 그 한 칸도 우리 위에 쌓인 것이라 센다 — 걷힐 때 popstate 가 한 칸 빼 준다.
+   */
+  const openSettingsOver = useCallback(
+    (section: SettingsSection) => {
+      depthRef.current += 1;
+      onOpenSettings(section);
+    },
+    [onOpenSettings]
+  );
+
+  /** 쌓은 칸을 걷고(딥링크로 열렸으면 쿼리를 지우고) 나서 `then` 을 한다 — 이동이 걷히는 중에 끼지 않게. */
   const close = useCallback((then?: () => void) => {
     const depth = depthRef.current;
     const pushed = pushedRef.current;
@@ -174,7 +181,7 @@ export function NotificationCenterProvider({
         onClose={close}
         workspaceId={workspaceId}
         unreadCount={unreadCount}
-        onOpenSettings={onOpenSettings}
+        onOpenSettings={openSettingsOver}
         onNavigate={(href) => router.push(href)}
       />
     </NotificationCenterContext.Provider>

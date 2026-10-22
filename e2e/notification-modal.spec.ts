@@ -213,15 +213,73 @@ test.describe("주소 상태(APP-1361)", () => {
     await expect(page.getByRole("dialog", { name: "알림" })).toBeHidden();
   });
 
-  test("「알림 설정」은 알림 모달을 닫고 설정 창만 연다 — 둘이 같이 열리지 않는다", async ({
+  // APP-1363 — 설정은 알림 위에 얹힌다. 뒤로 가기·설정 X 는 설정만 걷고 알림(같은 탭)으로 돌아온다.
+  test("「알림 설정」 뒤 뒤로 가기는 알림(같은 탭)으로 돌아오고, 한 번 더 뒤로 가면 닫힌다", async ({
     page,
   }) => {
     await page.goto(WS);
     const dialog = await openFromSidebar(page);
+    const settings = page.getByRole("dialog", { name: "설정" });
     await dialog.getByRole("button", { name: "알림 설정" }).click();
-    await expect(page).toHaveURL(/settings=notifications/);
-    expect(page.url()).not.toContain("notifications=all");
+    await expect(settings).toBeVisible();
     await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/notifications=all&settings=notifications$/);
+    await page.goBack();
+    await expect(settings).toBeHidden();
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\?notifications=all$/);
+    await page.goBack();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`${WS}$`));
+  });
+
+  test("탭을 옮긴 뒤 「알림 설정」 → 뒤로 가기는 그 탭으로 돌아오고, 닫으면 쌓은 칸이 다 걷힌다", async ({
+    page,
+  }) => {
+    await page.goto(WS);
+    const dialog = await openFromSidebar(page);
+    await dialog.getByRole("tab", { name: "처리 필요" }).click();
+    await dialog.getByRole("button", { name: "알림 설정" }).click();
+    await expect(page.getByRole("dialog", { name: "설정" })).toBeVisible();
+    await page.goBack();
+    await expect(
+      dialog.getByRole("tab", { name: "처리 필요" })
+    ).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`${WS}$`));
+    await page.goBack();
+    await expect(page.getByRole("dialog", { name: "알림" })).toBeHidden();
+  });
+
+  test("설정의 X 도 뒤로 가기와 같다 — 설정만 닫고 알림으로 돌아온다", async ({
+    page,
+  }) => {
+    await page.goto(WS);
+    const dialog = await openFromSidebar(page);
+    const settings = page.getByRole("dialog", { name: "설정" });
+    await dialog.getByRole("button", { name: "알림 설정" }).click();
+    await settings.getByRole("button", { name: "닫기" }).click();
+    await expect(settings).toBeHidden();
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\?notifications=all$/);
+  });
+
+  test("딥링크로 연 알림에서도 「알림 설정」 → 뒤로 가기는 알림이다", async ({
+    page,
+  }) => {
+    await page.goto(`${WS}?notifications=unread`);
+    const dialog = page.getByRole("dialog", { name: "알림" });
+    await dialog.getByRole("button", { name: "알림 설정" }).click();
+    await expect(page.getByRole("dialog", { name: "설정" })).toBeVisible();
+    await page.goBack();
+    await expect(dialog.getByRole("tab", { name: "안 읽음" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`${WS}$`));
   });
 });
 
