@@ -20,7 +20,17 @@ import {
 
 const realtime = vi.hoisted(() => ({
   noteId: "01K0000000005",
-  transcript: { finalSegments: [] as Array<{ segmentId: string; sequence: number; startedAtMs: number; endedAtMs: number; text: string; speakerLabel: string | null; assignedParticipantId?: string | null }> },
+  transcript: {
+    finalSegments: [] as Array<{
+      segmentId: string;
+      sequence: number;
+      startedAtMs: number;
+      endedAtMs: number;
+      text: string;
+      speakerLabel: string | null;
+      assignedParticipantId?: string | null;
+    }>,
+  },
   context: {
     cards: [],
     state: null as unknown,
@@ -32,7 +42,11 @@ const realtime = vi.hoisted(() => ({
 vi.mock("@/components/notes/note-realtime-provider", () => ({
   useNoteRealtime: () => realtime,
 }));
-const own = vi.hoisted(() => ({ activeNoteId: null as string | null, session: null, finalSegments: [] }));
+const own = vi.hoisted(() => ({
+  activeNoteId: null as string | null,
+  session: null,
+  finalSegments: [],
+}));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => own,
   useRecordingTranscript: () => own,
@@ -54,14 +68,25 @@ const transcript = vi.hoisted(() => ({
   isError: false,
   refetch: vi.fn(),
 }));
-vi.mock("@/lib/api/generated/transcription/transcription", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/api/generated/transcription/transcription")>();
-  return {
-    ...actual,
-    useGetNoteTranscript: (noteId: string, options?: Parameters<typeof actual.useGetNoteTranscript>[1]) =>
-      transcript.real ? actual.useGetNoteTranscript(noteId, options) : transcript,
-  };
-});
+vi.mock(
+  "@/lib/api/generated/transcription/transcription",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("@/lib/api/generated/transcription/transcription")
+      >();
+    return {
+      ...actual,
+      useGetNoteTranscript: (
+        noteId: string,
+        options?: Parameters<typeof actual.useGetNoteTranscript>[1]
+      ) =>
+        transcript.real
+          ? actual.useGetNoteTranscript(noteId, options)
+          : transcript,
+    };
+  }
+);
 
 const agendas = vi.hoisted(() => ({
   data: undefined as unknown,
@@ -72,7 +97,10 @@ const agendas = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/generated/notes/notes")>()),
-  useGetNoteAgendas: (_noteId: string, options?: { query?: { refetchInterval?: unknown } }) => {
+  useGetNoteAgendas: (
+    _noteId: string,
+    options?: { query?: { refetchInterval?: unknown } }
+  ) => {
     agendas.refetchInterval = options?.query?.refetchInterval;
     return agendas;
   },
@@ -80,14 +108,25 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
 /** GET /agendas 응답 봉투 */
 const agendaResponse = (
   asOfSequence: number | null,
-  rows: Array<{ agendaId: string; title: string; completed?: boolean; proposalIds: string[] }>
+  rows: Array<{
+    agendaId: string;
+    title: string;
+    completed?: boolean;
+    proposalIds: string[];
+  }>
 ) => ({
   status: 200,
   data: {
     success: true,
     data: {
       asOfSequence,
-      agendas: rows.map((row) => ({ completed: false, description: [], conclusions: [], openItems: [], ...row })),
+      agendas: rows.map((row) => ({
+        completed: false,
+        description: [],
+        conclusions: [],
+        openItems: [],
+        ...row,
+      })),
     },
     error: null,
   },
@@ -129,7 +168,12 @@ function withLedger(...proposals: ProposalHead[]) {
     ...initialContextState,
     proposals: Object.fromEntries(proposals.map((p) => [p.proposalId, p])),
   };
-  realtime.context = { ...realtime.context, state, loading: false, failed: false };
+  realtime.context = {
+    ...realtime.context,
+    state,
+    loading: false,
+    failed: false,
+  };
 }
 
 afterEach(() => {
@@ -151,7 +195,11 @@ afterEach(() => {
 
 describe("NoteTimeline", () => {
   it("안건 머리 아래 항목이 시각·유형과 함께 서고, 시각을 누르면 그 발화로 간다", () => {
-    const agenda = head({ kind: "AGENDA", content: "MongoDB 도입 검토", atMs: 242_000 });
+    const agenda = head({
+      kind: "AGENDA",
+      content: "MongoDB 도입 검토",
+      atMs: 242_000,
+    });
     const decision = head({
       kind: "DECISION",
       content: "경로 데이터 저장소는 MongoDB를 사용한다",
@@ -160,19 +208,31 @@ describe("NoteTimeline", () => {
     withLedger(agenda, decision);
     const onEvidenceSelect = vi.fn();
     render(
-      <NoteTimeline header={null} onEvidenceSelect={onEvidenceSelect} recording />
+      <NoteTimeline
+        header={null}
+        onEvidenceSelect={onEvidenceSelect}
+        recording
+      />
     );
 
     // 안건 머리의 시간 구간이 안건의 첫 발화로 가는 길이다.
     const range = screen.getByRole("button", { name: "스크립트 04:02로 가기" });
     expect(range).toHaveTextContent("04:02 – 지금");
     fireEvent.click(range);
-    expect(onEvidenceSelect).toHaveBeenCalledWith(agenda.citations[0].segmentId);
+    expect(onEvidenceSelect).toHaveBeenCalledWith(
+      agenda.citations[0].segmentId
+    );
     expect(screen.getByText("논의 중")).toBeVisible();
-    expect(screen.getByText("경로 데이터 저장소는 MongoDB를 사용한다")).toBeVisible();
+    expect(
+      screen.getByText("경로 데이터 저장소는 MongoDB를 사용한다")
+    ).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "스크립트 31:12로 가기" }));
-    expect(onEvidenceSelect).toHaveBeenCalledWith(decision.citations[0].segmentId);
+    fireEvent.click(
+      screen.getByRole("button", { name: "스크립트 31:12로 가기" })
+    );
+    expect(onEvidenceSelect).toHaveBeenCalledWith(
+      decision.citations[0].segmentId
+    );
   });
 
   it("안건 정본이 있으면 주제 제목은 정본이 주고, 같은 주제로 돌아오면 제목이 한 번 더 선다", () => {
@@ -182,17 +242,25 @@ describe("NoteTimeline", () => {
     const c = head({ content: "튜토리얼에 건너뛰기 버튼을 둔다" });
     withLedger(old, a, b, c);
     agendas.data = agendaResponse(c.createdSequence, [
-      { agendaId: "01KA000000001", title: "온보딩 개편", proposalIds: [a.proposalId, c.proposalId] },
-      { agendaId: "01KA000000002", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+      {
+        agendaId: "01KA000000001",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId, c.proposalId],
+      },
+      {
+        agendaId: "01KA000000002",
+        title: "결제 실패 대응",
+        proposalIds: [b.proposalId],
+      },
     ]);
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
 
-    const titles = screen.getAllByRole("heading", { level: 3 }).map((node) => node.textContent);
-    expect(titles.map((text) => text?.match(/온보딩 개편|결제 실패 대응/)?.[0])).toEqual([
-      "온보딩 개편",
-      "결제 실패 대응",
-      "온보딩 개편",
-    ]);
+    const titles = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((node) => node.textContent);
+    expect(
+      titles.map((text) => text?.match(/온보딩 개편|결제 실패 대응/)?.[0])
+    ).toEqual(["온보딩 개편", "결제 실패 대응", "온보딩 개편"]);
     // 옛 안건 명제는 정본이 있으면 머리가 되지 않는다
     expect(screen.queryByText("옛 안건 명제")).toBeNull();
     expect(screen.getByText("논의 중")).toBeVisible();
@@ -201,8 +269,12 @@ describe("NoteTimeline", () => {
   it("주제 정본을 기다리는 동안은 목록을 함께 기다리고, 못 받으면 주제 없이 그리며 다시 불러올 길을 둔다", () => {
     withLedger(head({ content: "온보딩을 2단계로 줄인다" }));
     agendas.isPending = true;
-    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
-    expect(screen.getByRole("list", { name: "타임라인을 불러오는 중" })).toBeInTheDocument();
+    const { rerender } = render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} />
+    );
+    expect(
+      screen.getByRole("list", { name: "타임라인을 불러오는 중" })
+    ).toBeInTheDocument();
     expect(screen.queryByText("온보딩을 2단계로 줄인다")).toBeNull();
 
     agendas.isPending = false;
@@ -214,25 +286,52 @@ describe("NoteTimeline", () => {
   });
 
   it("재언급한 안건의 앞선 논의는 필터를 풀고 해당 묶음만 펼친다", async () => {
-    const a = head({ kind: "STATUS_REPORT", content: "온보딩 이탈률 보고", atMs: 60_000 });
+    const a = head({
+      kind: "STATUS_REPORT",
+      content: "온보딩 이탈률 보고",
+      atMs: 60_000,
+    });
     const b = head({ content: "결제 방식을 정한다", atMs: 120_000 });
     const c = head({ content: "온보딩 단계를 줄인다", atMs: 180_000 });
     withLedger(a, b, c);
     agendas.data = agendaResponse(c.createdSequence, [
-      { agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, c.proposalId] },
-      { agendaId: "payment", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+      {
+        agendaId: "onboarding",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId, c.proposalId],
+      },
+      {
+        agendaId: "payment",
+        title: "결제 실패 대응",
+        proposalIds: [b.proposalId],
+      },
     ]);
-    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
+    );
     expect(screen.getAllByText("이어서")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: /^결정 / }));
-    await waitFor(() => expect(screen.getAllByRole("button", { name: /^온보딩 개편/ })).toHaveLength(1));
-    fireEvent.click(screen.getByRole("button", { name: "앞선 온보딩 개편 논의 01:00로 가기" }));
-    await waitFor(() => expect(screen.getByText("온보딩 이탈률 보고")).toBeVisible());
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: /^온보딩 개편/ })
+      ).toHaveLength(1)
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "앞선 온보딩 개편 논의 01:00로 가기" })
+    );
+    await waitFor(() =>
+      expect(screen.getByText("온보딩 이탈률 보고")).toBeVisible()
+    );
     const titles = screen.getAllByRole("button", { name: /^온보딩 개편/ });
     expect(titles[0]).toHaveAttribute("aria-expanded", "true");
     expect(titles[1]).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("button", { name: /^결제 실패 대응/ })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("button", { name: /^전체 / })).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: /^결제 실패 대응/ })
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /^전체 / })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
   });
 
   it("요약에서 짚은 안건의 첫 묶음을 펼쳐 머리에 형광펜을 긋고, 획이 지워지면 비우라고 알린다 (APP-1290)", () => {
@@ -242,19 +341,35 @@ describe("NoteTimeline", () => {
     const c = head({ content: "튜토리얼을 줄인다", atMs: 180_000 });
     withLedger(a, b, c);
     agendas.data = agendaResponse(c.createdSequence, [
-      { agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, c.proposalId] },
-      { agendaId: "payment", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+      {
+        agendaId: "onboarding",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId, c.proposalId],
+      },
+      {
+        agendaId: "payment",
+        title: "결제 실패 대응",
+        proposalIds: [b.proposalId],
+      },
     ]);
     const onFocusHandled = vi.fn();
     render(
-      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded focusAgendaId="onboarding" onFocusHandled={onFocusHandled} />
+      <NoteTimeline
+        header={null}
+        onEvidenceSelect={vi.fn()}
+        meetingEnded
+        focusAgendaId="onboarding"
+        onFocusHandled={onFocusHandled}
+      />
     );
     // 같은 안건으로 돌아온 묶음이 아니라 첫 묶음에 긋는다
     const marks = document.querySelectorAll(".evidence-mark");
     expect(marks).toHaveLength(1);
     expect(marks[0]).toHaveTextContent("온보딩 개편");
     act(() => vi.advanceTimersByTime(16));
-    expect(screen.getAllByRole("button", { name: /^온보딩 개편/ })[0]).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getAllByRole("button", { name: /^온보딩 개편/ })[0]
+    ).toHaveAttribute("aria-expanded", "true");
     // 화면이 바뀐 이동이라 근거 점프(약 1.2초)보다 오래 머문다
     act(() => vi.advanceTimersByTime(1_500));
     expect(onFocusHandled).not.toHaveBeenCalled();
@@ -264,13 +379,23 @@ describe("NoteTimeline", () => {
 
   it("끝난 회의는 회의 뒤 분석이 도는 동안 주제 정본을 주기적으로 다시 읽는다", () => {
     withLedger(head({}));
-    flow.data = { status: 200, data: { success: true, data: { status: "ANALYZING" }, error: null } };
-    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    flow.data = {
+      status: 200,
+      data: { success: true, data: { status: "ANALYZING" }, error: null },
+    };
+    const { rerender } = render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
+    );
     expect(agendas.refetchInterval).toBe(10_000);
 
     agendas.refetch.mockClear();
-    flow.data = { status: 200, data: { success: true, data: { status: "REVIEWABLE" }, error: null } };
-    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    flow.data = {
+      status: 200,
+      data: { success: true, data: { status: "REVIEWABLE" }, error: null },
+    };
+    rerender(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
+    );
     expect(agendas.refetchInterval).toBe(false);
     // 분석이 끝나는 순간 한 번 더 읽어 최종 정본에 맞춘다
     expect(agendas.refetch).toHaveBeenCalledTimes(1);
@@ -280,16 +405,34 @@ describe("NoteTimeline", () => {
     const a = head({ kind: "STATUS_REPORT", content: "온보딩 이탈률 보고" });
     const b = head({ kind: "QUESTION", content: "온보딩 단계를 더 줄일까요?" });
     withLedger(a);
-    agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId] }]);
-    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    agendas.data = agendaResponse(a.createdSequence, [
+      {
+        agendaId: "onboarding",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId],
+      },
+    ]);
+    const { rerender } = render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
     fireEvent.click(screen.getByRole("button", { name: /^온보딩 개편/ }));
     fireEvent.click(screen.getByRole("button", { name: /^결정 / }));
     expect(screen.queryByRole("button", { name: /^온보딩 개편/ })).toBeNull();
     withLedger(a, b);
-    agendas.data = agendaResponse(b.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, b.proposalId] }]);
-    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    agendas.data = agendaResponse(b.createdSequence, [
+      {
+        agendaId: "onboarding",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId, b.proposalId],
+      },
+    ]);
+    rerender(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
     fireEvent.click(screen.getByRole("button", { name: /^전체 / }));
-    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("button", { name: /^온보딩 개편/ })
+    ).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("온보딩 단계를 더 줄일까요?")).toBeVisible();
   });
 
@@ -297,34 +440,76 @@ describe("NoteTimeline", () => {
     const a = head({ content: "온보딩 이탈률을 확인한다" });
     const b = head({ content: "건너뛰기 버튼을 둔다" });
     withLedger(a);
-    agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId] }]);
-    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    agendas.data = agendaResponse(a.createdSequence, [
+      {
+        agendaId: "onboarding",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId],
+      },
+    ]);
+    const { rerender } = render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
     fireEvent.click(screen.getByRole("button", { name: /^온보딩 개편/ }));
-    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.getByRole("button", { name: /^온보딩 개편/ })
+    ).toHaveAttribute("aria-expanded", "false");
 
     withLedger(a, b);
-    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
-    await waitFor(() => expect(screen.getByText("건너뛰기 버튼을 둔다")).toBeVisible());
-    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+    rerender(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
+    await waitFor(() =>
+      expect(screen.getByText("건너뛰기 버튼을 둔다")).toBeVisible()
+    );
+    expect(
+      screen.getByRole("button", { name: /^온보딩 개편/ })
+    ).toHaveAttribute("aria-expanded", "false");
 
-    agendas.data = agendaResponse(b.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, b.proposalId] }]);
-    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "true"));
-    await waitFor(() => expect(screen.getByText("건너뛰기 버튼을 둔다")).toBeVisible());
+    agendas.data = agendaResponse(b.createdSequence, [
+      {
+        agendaId: "onboarding",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId, b.proposalId],
+      },
+    ]);
+    rerender(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /^온보딩 개편/ })
+      ).toHaveAttribute("aria-expanded", "true")
+    );
+    await waitFor(() =>
+      expect(screen.getByText("건너뛰기 버튼을 둔다")).toBeVisible()
+    );
     // 열어 준 뒤 사용자가 다시 접으면 새 내용이 더 오기 전까지 그대로 둡니다.
     fireEvent.click(screen.getByRole("button", { name: /^온보딩 개편/ }));
-    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
-    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+    rerender(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
+    expect(
+      screen.getByRole("button", { name: /^온보딩 개편/ })
+    ).toHaveAttribute("aria-expanded", "false");
   });
 
   it("다시 읽기가 실패하면 지난 주제 제목을 두고 새로 불러올 길을 둔다", () => {
     const a = head({ content: "온보딩을 2단계로 줄인다" });
     withLedger(a);
-    agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "01KA000000001", title: "온보딩 개편", proposalIds: [a.proposalId] }]);
+    agendas.data = agendaResponse(a.createdSequence, [
+      {
+        agendaId: "01KA000000001",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId],
+      },
+    ]);
     agendas.isError = true;
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
     expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toBeVisible();
-    expect(screen.getByText("주제 제목을 새로 불러오지 못했습니다.")).toBeVisible();
+    expect(
+      screen.getByText("주제 제목을 새로 불러오지 못했습니다.")
+    ).toBeVisible();
   });
 
   it("회의 중에는 읽던 배치를 유지하고 새 미분류 명제를 숨기지 않으며 종료 뒤 정본에 맞춘다", () => {
@@ -335,33 +520,59 @@ describe("NoteTimeline", () => {
     const onboarding = "01KA000000001";
     const payment = "01KA000000002";
     agendas.data = agendaResponse(b.createdSequence, [
-      { agendaId: onboarding, title: "온보딩 개편", proposalIds: [a.proposalId] },
-      { agendaId: payment, title: "결제 실패 대응", proposalIds: [b.proposalId] },
+      {
+        agendaId: onboarding,
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId],
+      },
+      {
+        agendaId: payment,
+        title: "결제 실패 대응",
+        proposalIds: [b.proposalId],
+      },
     ]);
-    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    const { rerender } = render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
     const groupOf = (text: string) =>
-      screen.getByText(text).closest("section")?.querySelector("h3")?.textContent ?? "";
+      screen.getByText(text).closest("section")?.querySelector("h3")
+        ?.textContent ?? "";
     // c 는 정리가 아직 못 봤다. 접힌 이전 안건에 숨기지 않고 제 시각에 제목 없이 보인다.
     expect(groupOf("건너뛰기 버튼을 둔다")).toBe("");
 
     // 다음 정리가 a 를 결제로 옮기고 c 를 온보딩에 넣는다. 회의 중이라 a 는 그대로, c 만 자리를 얻는다.
     agendas.data = agendaResponse(c.createdSequence, [
-      { agendaId: onboarding, title: "온보딩 개편", proposalIds: [c.proposalId] },
-      { agendaId: payment, title: "결제 실패 대응", proposalIds: [a.proposalId, b.proposalId] },
+      {
+        agendaId: onboarding,
+        title: "온보딩 개편",
+        proposalIds: [c.proposalId],
+      },
+      {
+        agendaId: payment,
+        title: "결제 실패 대응",
+        proposalIds: [a.proposalId, b.proposalId],
+      },
     ]);
-    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    rerender(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
+    );
     expect(groupOf("이탈률 38%")).toMatch("온보딩 개편");
     expect(groupOf("건너뛰기 버튼을 둔다")).toMatch("온보딩 개편");
 
     // 회의가 끝나면 서버 판정대로 한 번 맞춘다
-    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    rerender(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
+    );
     // 끝난 회의는 그룹이 접힌 채 시작한다 — 결제 그룹을 펼쳐 본다
     fireEvent.click(screen.getByRole("button", { name: /^결제 실패 대응/ }));
     expect(groupOf("이탈률 38%")).toMatch("결제 실패 대응");
   });
 
   it("기록 중이 아니면 마지막 안건을 「논의 중」이라 하지 않는다", () => {
-    withLedger(head({ kind: "AGENDA", content: "다음 스프린트 범위" }), head({}));
+    withLedger(
+      head({ kind: "AGENDA", content: "다음 스프린트 범위" }),
+      head({})
+    );
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
     expect(screen.queryByText("논의 중")).toBeNull();
   });
@@ -425,7 +636,9 @@ describe("NoteTimeline", () => {
       `timeline-item-${question.proposalId}-details`
     )!;
     await waitFor(() =>
-      expect(within(details).getByText(question.citations[0].text)).toBeVisible()
+      expect(
+        within(details).getByText(question.citations[0].text)
+      ).toBeVisible()
     );
 
     fireEvent.click(within(details).getByRole("button", { name: /^답/ }));
@@ -456,11 +669,15 @@ describe("NoteTimeline", () => {
     try {
       render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
       fireEvent.click(screen.getByRole("button", { name: "결정 1" }));
-      fireEvent.click(screen.getByRole("button", { name: /읽기 전용 복제본은/ }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /읽기 전용 복제본은/ })
+      );
       const details = document.getElementById(
         `timeline-item-${answer.proposalId}-details`
       )!;
-      fireEvent.click(await within(details).findByRole("button", { name: /답한 질문/ }));
+      fireEvent.click(
+        await within(details).findByRole("button", { name: /답한 질문/ })
+      );
 
       await waitFor(() =>
         expect(scrolled).toContain(`timeline-item-${question.proposalId}`)
@@ -471,7 +688,10 @@ describe("NoteTimeline", () => {
   });
 
   it("골라 보기는 그 유형만 남기고 칩에 전체에서 센 개수를 단다", () => {
-    withLedger(head({ kind: "DECISION", content: "결정 하나" }), head({ kind: "ISSUE", content: "이슈 하나" }));
+    withLedger(
+      head({ kind: "DECISION", content: "결정 하나" }),
+      head({ kind: "ISSUE", content: "이슈 하나" })
+    );
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "열린 질문 1" }));
@@ -481,24 +701,44 @@ describe("NoteTimeline", () => {
   });
 
   it("조회 중 · 실패 · 없음을 서로 다르게 그린다", () => {
-    realtime.context = { ...realtime.context, state: initialContextState, loading: true };
-    const { unmount } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
-    expect(screen.getByRole("list", { name: "타임라인을 불러오는 중" })).toBeVisible();
+    realtime.context = {
+      ...realtime.context,
+      state: initialContextState,
+      loading: true,
+    };
+    const { unmount } = render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} />
+    );
+    expect(
+      screen.getByRole("list", { name: "타임라인을 불러오는 중" })
+    ).toBeVisible();
     expect(screen.getByLabelText("타임라인 제목 불러오는 중")).toBeVisible();
-    expect(screen.getByRole("list", { name: "타임라인을 불러오는 중" }).closest('[aria-busy]')).toHaveAttribute("aria-busy", "true");
+    expect(
+      screen
+        .getByRole("list", { name: "타임라인을 불러오는 중" })
+        .closest("[aria-busy]")
+    ).toHaveAttribute("aria-busy", "true");
     // 첫 snapshot 전에는 개수를 말하지 않는다.
     expect(screen.getByRole("button", { name: "전체" })).toBeVisible();
     unmount();
 
     realtime.context = { ...realtime.context, loading: false, failed: true };
-    const failed = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    const failed = render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} />
+    );
     expect(screen.getByText("타임라인을 불러오지 못했습니다.")).toBeVisible();
-    expect(screen.queryByLabelText("타임라인 제목 불러오는 중")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("타임라인 제목 불러오는 중")
+    ).not.toBeInTheDocument();
     failed.unmount();
 
     withLedger();
-    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
-    expect(screen.getByText("이 회의에서 정리된 항목이 없습니다.")).toBeVisible();
+    render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
+    );
+    expect(
+      screen.getByText("이 회의에서 정리된 항목이 없습니다.")
+    ).toBeVisible();
   });
 
   it("놓친 변경이 있으면 목록을 두고 다시 맞출 길을 보인다", () => {
@@ -506,7 +746,10 @@ describe("NoteTimeline", () => {
     const retry = vi.fn();
     realtime.context = {
       ...realtime.context,
-      state: { ...(realtime.context.state as ContextState), needsRefetch: true },
+      state: {
+        ...(realtime.context.state as ContextState),
+        needsRefetch: true,
+      },
       retry,
     };
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
@@ -519,7 +762,12 @@ describe("NoteTimeline", () => {
 
   it("철회된 질문은 열린 질문에 세지 않고 답을 기다린다고 하지 않는다", () => {
     withLedger(
-      head({ kind: "QUESTION", status: "CLOSED", closeReason: "RETRACTED", content: "취소된 질문" })
+      head({
+        kind: "QUESTION",
+        status: "CLOSED",
+        closeReason: "RETRACTED",
+        content: "취소된 질문",
+      })
     );
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
     expect(screen.getByRole("button", { name: "열린 질문 0" })).toBeVisible();
@@ -529,7 +777,10 @@ describe("NoteTimeline", () => {
 
   it("받아 적는 중인 발화를 끝에 보이고 화자 칸을 두지 않는다", () => {
     withLedger(head({}));
-    live.partial = { confirmedText: "그러면 다음 주에", pendingText: " runbook 초안 보고" };
+    live.partial = {
+      confirmedText: "그러면 다음 주에",
+      pendingText: " runbook 초안 보고",
+    };
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
     expect(screen.getByText("받아 적는 중")).toBeVisible();
     expect(screen.getByText("그러면 다음 주에")).toBeVisible();
@@ -549,7 +800,9 @@ describe("NoteTimeline", () => {
         onEvidenceSelect={vi.fn()}
       />
     );
-    expect(screen.getByRole("heading", { name: "주간 개발 회의" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "주간 개발 회의" })
+    ).toBeVisible();
     expect(screen.getByText("4명")).toBeVisible();
     expect(screen.getByText("경로 서비스 리뉴얼")).toBeVisible();
   });
@@ -712,8 +965,16 @@ describe("끝난 회의의 타임라인", () => {
     const b = head({ content: "3DS 응답이 늦다" });
     withLedger(a, b);
     agendas.data = agendaResponse(b.createdSequence, [
-      { agendaId: "01KA000000001", title: "온보딩 개편", proposalIds: [a.proposalId] },
-      { agendaId: "01KA000000002", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+      {
+        agendaId: "01KA000000001",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId],
+      },
+      {
+        agendaId: "01KA000000002",
+        title: "결제 실패 대응",
+        proposalIds: [b.proposalId],
+      },
     ]);
   }
   function metrics(viewport: HTMLElement, top: number) {
@@ -726,9 +987,13 @@ describe("끝난 회의의 타임라인", () => {
 
   it("안건 그룹을 접은 채 맨 위에서 시작하고, 누르면 그 그룹만 펼쳐진다", async () => {
     withAgendas();
-    const view = () => <NoteTimeline header={null} onEvidenceSelect={() => {}} meetingEnded />;
+    const view = () => (
+      <NoteTimeline header={null} onEvidenceSelect={() => {}} meetingEnded />
+    );
     const { container, rerender } = render(view());
-    const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
+    const viewport = container.querySelector<HTMLElement>(
+      "[data-slot=scroll-area-viewport]"
+    )!;
     metrics(viewport, 900);
     rerender(view());
     flush();
@@ -745,10 +1010,17 @@ describe("끝난 회의의 타임라인", () => {
   it("기록 중에는 펼쳐 두고 최신을 따라가다, 회의가 끝나면 접고 맨 위로 간다", async () => {
     withAgendas();
     const view = (ended: boolean) => (
-      <NoteTimeline header={null} onEvidenceSelect={() => {}} recording={!ended} meetingEnded={ended} />
+      <NoteTimeline
+        header={null}
+        onEvidenceSelect={() => {}}
+        recording={!ended}
+        meetingEnded={ended}
+      />
     );
     const { container, rerender } = render(view(false));
-    const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
+    const viewport = container.querySelector<HTMLElement>(
+      "[data-slot=scroll-area-viewport]"
+    )!;
     metrics(viewport, 0);
     rerender(view(false));
     flush();
@@ -760,7 +1032,9 @@ describe("끝난 회의의 타임라인", () => {
     expect(viewport.scrollTop).toBe(0);
     // 접히는 동안은 남았다가 끝나면 내려간다
     await waitFor(() => expect(screen.queryByText("이탈률 38%")).toBeNull());
-    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.getByRole("button", { name: /^온보딩 개편/ })
+    ).toHaveAttribute("aria-expanded", "false");
   });
 });
 
@@ -816,73 +1090,76 @@ it("기록 중 바닥에서 조금만 올려도 새 내용이 위치를 빼앗�
   }
 });
 
-it.each([true, false])("빈 snapshot 또는 조회 중(%s) 잠정 전사를 위에서 읽으면 첫 항목도 위치를 지킵니다", (loading) => {
-  const frames = new Map<number, FrameRequestCallback>();
-  let frameId = 0;
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-    frames.set(++frameId, callback);
-    return frameId;
-  });
-  vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
-  const flush = () => {
-    const callbacks = [...frames.values()];
-    frames.clear();
-    callbacks.forEach((callback) => callback(0));
-  };
-  try {
-    withLedger();
-    realtime.context.loading = loading;
-    live.partial = {
-      confirmedText: "",
-      pendingText: "조회 중에도 기록하는 글자",
-    };
-    const view = () => (
-      <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
-    );
-    const { container, rerender } = render(view());
-    const viewport = container.querySelector<HTMLElement>(
-      "[data-slot=scroll-area-viewport]"
-    )!;
-    Object.defineProperties(viewport, {
-      scrollTop: { configurable: true, writable: true, value: 0 },
-      scrollHeight: { configurable: true, value: 2000 },
-      clientHeight: { configurable: true, value: 500 },
+it.each([true, false])(
+  "빈 snapshot 또는 조회 중(%s) 잠정 전사를 위에서 읽으면 첫 항목도 위치를 지킵니다",
+  (loading) => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let frameId = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frames.set(++frameId, callback);
+      return frameId;
     });
-    flush();
-    expect(viewport.scrollTop).toBe(1500);
-    viewport.scrollTop = 200;
-    fireEvent.scroll(viewport);
-    live.partial = {
-      confirmedText: "",
-      pendingText: "위를 읽는 동안 바뀐 글자",
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+    const flush = () => {
+      const callbacks = [...frames.values()];
+      frames.clear();
+      callbacks.forEach((callback) => callback(0));
     };
-    rerender(view());
-    flush();
-    expect(viewport.scrollTop).toBe(200);
-    // query 성공과 reducer 적용이 따로 커밋되어도 읽는 의도가 먼저다.
-    realtime.context.loading = false;
-    rerender(view());
-    flush();
-    withLedger(head({ content: "처음 도착한 타임라인 항목" }));
-    rerender(view());
-    flush();
-    expect(viewport.scrollTop).toBe(200);
-    expect(screen.getByRole("button", { name: "맨 아래로" })).toBeVisible();
-    // 같은 컴포넌트로 A→B→A를 방문해도 이전 방문의 읽기 의도는 남지 않는다.
-    realtime.noteId = "01K0000000006";
-    rerender(view());
-    flush();
-    expect(viewport.scrollTop).toBe(1500);
-    viewport.scrollTop = 200;
-    fireEvent.scroll(viewport);
-    realtime.noteId = "01K0000000005";
-    rerender(view());
-    flush();
-    expect(viewport.scrollTop).toBe(1500);
-  } finally {
-    vi.unstubAllGlobals();
+    try {
+      withLedger();
+      realtime.context.loading = loading;
+      live.partial = {
+        confirmedText: "",
+        pendingText: "조회 중에도 기록하는 글자",
+      };
+      const view = () => (
+        <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+      );
+      const { container, rerender } = render(view());
+      const viewport = container.querySelector<HTMLElement>(
+        "[data-slot=scroll-area-viewport]"
+      )!;
+      Object.defineProperties(viewport, {
+        scrollTop: { configurable: true, writable: true, value: 0 },
+        scrollHeight: { configurable: true, value: 2000 },
+        clientHeight: { configurable: true, value: 500 },
+      });
+      flush();
+      expect(viewport.scrollTop).toBe(1500);
+      viewport.scrollTop = 200;
+      fireEvent.scroll(viewport);
+      live.partial = {
+        confirmedText: "",
+        pendingText: "위를 읽는 동안 바뀐 글자",
+      };
+      rerender(view());
+      flush();
+      expect(viewport.scrollTop).toBe(200);
+      // query 성공과 reducer 적용이 따로 커밋되어도 읽는 의도가 먼저다.
+      realtime.context.loading = false;
+      rerender(view());
+      flush();
+      withLedger(head({ content: "처음 도착한 타임라인 항목" }));
+      rerender(view());
+      flush();
+      expect(viewport.scrollTop).toBe(200);
+      expect(screen.getByRole("button", { name: "맨 아래로" })).toBeVisible();
+      // 같은 컴포넌트로 A→B→A를 방문해도 이전 방문의 읽기 의도는 남지 않는다.
+      realtime.noteId = "01K0000000006";
+      rerender(view());
+      flush();
+      expect(viewport.scrollTop).toBe(1500);
+      viewport.scrollTop = 200;
+      fireEvent.scroll(viewport);
+      realtime.noteId = "01K0000000005";
+      rerender(view());
+      flush();
+      expect(viewport.scrollTop).toBe(1500);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   }
-});
+);
 
 it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는 구간도 이동합니다", async () => {
   const proposal = head({ content: "근거의 화자 확인" });
@@ -909,15 +1186,24 @@ it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는
     ],
   };
   transcript.real = true;
-  const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
   const key = getGetNoteTranscriptQueryKey(realtime.noteId);
   const payload = () => ({ success: true, data });
   client.setQueryData(key, { status: 200, data: structuredClone(payload()) });
-  const fetch = vi.fn(async () => new Response(JSON.stringify(payload()), {
-    status: 200, headers: { "Content-Type": "application/json" },
-  }));
+  const fetch = vi.fn(
+    async () =>
+      new Response(JSON.stringify(payload()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+  );
   vi.stubGlobal("fetch", fetch);
-  const refresh = () => act(async () => { await client.invalidateQueries({ queryKey: key }); });
+  const refresh = () =>
+    act(async () => {
+      await client.invalidateQueries({ queryKey: key });
+    });
   const onEvidenceSelect = vi.fn();
   const view = () => (
     <NoteTimeline
@@ -929,7 +1215,9 @@ it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는
       onEvidenceSelect={onEvidenceSelect}
     />
   );
-  const { rerender } = render(<QueryClientProvider client={client}>{view()}</QueryClientProvider>);
+  const { rerender } = render(
+    <QueryClientProvider client={client}>{view()}</QueryClientProvider>
+  );
   fireEvent.click(screen.getByRole("button", { name: /근거의 화자 확인/ }));
   const details = document.getElementById(
     `timeline-item-${proposal.proposalId}-details`
@@ -943,65 +1231,115 @@ it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는
   expect(fetch).not.toHaveBeenCalled();
   data.segments[0].assignedParticipantId = "person2";
   await refresh();
-  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("지원"));
+  await waitFor(() =>
+    expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent(
+      "지원"
+    )
+  );
   data.segments[0].assignedParticipantId = null;
   data.diarization.speakers[0].assignedParticipantId = "person2";
   await refresh();
-  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("지원"));
+  await waitFor(() =>
+    expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent(
+      "지원"
+    )
+  );
   data.diarization.speakers = [];
   await refresh();
-  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("화자 A"));
+  await waitFor(() =>
+    expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent(
+      "화자 A"
+    )
+  );
   fireEvent.click(
     within(details).getByRole("button", { name: /없는 전사 근거/ })
   );
   expect(onEvidenceSelect).toHaveBeenCalledWith(missing.segmentId);
   expect(within(details).getAllByTestId("speaker-chip")).toHaveLength(1);
   expect(fetch).toHaveBeenCalledTimes(3);
-  realtime.transcript.finalSegments = [{
-    segmentId: missing.segmentId, sequence: 99, startedAtMs: 10, endedAtMs: 20,
-    text: missing.text, speakerLabel: "B",
-  }];
+  realtime.transcript.finalSegments = [
+    {
+      segmentId: missing.segmentId,
+      sequence: 99,
+      startedAtMs: 10,
+      endedAtMs: 20,
+      text: missing.text,
+      speakerLabel: "B",
+    },
+  ];
   rerender(<QueryClientProvider client={client}>{view()}</QueryClientProvider>);
   expect(within(details).getByText("화자 B")).toBeVisible();
   // 저장본 지정이 실시간 사본의 라벨보다 우선한다.
   realtime.transcript.finalSegments.push({
-    ...realtime.transcript.finalSegments[0], segmentId: proposal.citations[0].segmentId, speakerLabel: "C",
+    ...realtime.transcript.finalSegments[0],
+    segmentId: proposal.citations[0].segmentId,
+    speakerLabel: "C",
   });
   rerender(<QueryClientProvider client={client}>{view()}</QueryClientProvider>);
-  expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("화자 A");
+  expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent(
+    "화자 A"
+  );
   // 분리 중에는 다시 읽고, 완료 뒤에는 폴링을 멈춘다. 실제 대기 대신 Query 타이머만 진행한다.
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
   data.diarization.status = "SUBMITTED";
   await refresh();
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
   data.diarization.status = "MAPPED";
-  data.diarization.speakers = [{ label: "A", assignedParticipantId: "person1", confirmed: true }];
-  await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
-  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("민수"));
+  data.diarization.speakers = [
+    { label: "A", assignedParticipantId: "person1", confirmed: true },
+  ];
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(5_000);
+  });
+  await waitFor(() =>
+    expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent(
+      "민수"
+    )
+  );
   expect(fetch).toHaveBeenCalledTimes(5);
-  await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(5_000);
+  });
   expect(fetch).toHaveBeenCalledTimes(5);
   client.clear();
 });
 
-
 it("긴 항목과 근거 펼침으로 늦게 높이가 늘어도 하단 추종을 유지하고 위로 올린 뒤에는 멈춥니다", () => {
   const callbacks: ResizeObserverCallback[] = [];
-  vi.stubGlobal("ResizeObserver", class {
-    constructor(callback: ResizeObserverCallback) { callbacks.push(callback); }
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
   const frames = new Map<number, FrameRequestCallback>();
   let id = 0;
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { frames.set(++id, callback); return id; });
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++id, callback);
+    return id;
+  });
   vi.stubGlobal("cancelAnimationFrame", (key: number) => frames.delete(key));
-  const flush = () => { const pending = [...frames.values()]; frames.clear(); pending.forEach((callback) => callback(0)); };
-  const resize = () => act(() => callbacks.forEach((callback) => callback([], {} as ResizeObserver)));
+  const flush = () => {
+    const pending = [...frames.values()];
+    frames.clear();
+    pending.forEach((callback) => callback(0));
+  };
+  const resize = () =>
+    act(() =>
+      callbacks.forEach((callback) => callback([], {} as ResizeObserver))
+    );
   withLedger(head({ content: "긴 내용을 계속 받는 회의" }));
-  const { container } = render(<NoteTimeline header={null} onEvidenceSelect={() => {}} recording />);
-  const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
+  const { container } = render(
+    <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+  );
+  const viewport = container.querySelector<HTMLElement>(
+    "[data-slot=scroll-area-viewport]"
+  )!;
   Object.defineProperties(viewport, {
     scrollTop: { configurable: true, writable: true, value: 0 },
     scrollHeight: { configurable: true, value: 2000 },
@@ -1010,11 +1348,17 @@ it("긴 항목과 근거 펼침으로 늦게 높이가 늘어도 하단 추종�
   act(flush);
   expect(viewport.scrollTop).toBe(1500);
   fireEvent.scroll(viewport);
-  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 3200 });
+  Object.defineProperty(viewport, "scrollHeight", {
+    configurable: true,
+    value: 3200,
+  });
   fireEvent.scroll(viewport);
   resize();
   expect(viewport.scrollTop).toBe(2700);
-  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 3600 });
+  Object.defineProperty(viewport, "scrollHeight", {
+    configurable: true,
+    value: 3600,
+  });
   resize();
   expect(viewport.scrollTop).toBe(3100);
   fireEvent.wheel(viewport, { deltaY: -30 });
@@ -1022,59 +1366,101 @@ it("긴 항목과 근거 펼침으로 늦게 높이가 늘어도 하단 추종�
   expect(screen.getByRole("button", { name: "맨 아래로" })).toBeInTheDocument();
   viewport.scrollTop = 3070;
   fireEvent.scroll(viewport);
-  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 4000 });
+  Object.defineProperty(viewport, "scrollHeight", {
+    configurable: true,
+    value: 4000,
+  });
   resize();
   expect(viewport.scrollTop).toBe(3070);
   fireEvent.click(screen.getByRole("button", { name: "맨 아래로" }));
   expect(viewport.scrollTop).toBe(3500);
-  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 4200 });
+  Object.defineProperty(viewport, "scrollHeight", {
+    configurable: true,
+    value: 4200,
+  });
   resize();
   expect(viewport.scrollTop).toBe(3700);
 });
 
-
 it("첫 목록은 즉시 보이고 나중에 붙은 항목만 짧게 나타납니다", () => {
   const first = head({ content: "먼저 받은 항목" });
   withLedger(first);
-  const view = () => <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />;
+  const view = () => (
+    <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+  );
   const { container, rerender } = render(view());
-  expect(container.querySelector(`#timeline-item-${first.proposalId}`)).toHaveStyle({ opacity: "1" });
+  expect(
+    container.querySelector(`#timeline-item-${first.proposalId}`)
+  ).toHaveStyle({ opacity: "1" });
   const second = head({ content: "새로 받은 항목" });
   withLedger(first, second);
   rerender(view());
-  const appended = container.querySelector(`#timeline-item-${second.proposalId}`)!;
+  const appended = container.querySelector(
+    `#timeline-item-${second.proposalId}`
+  )!;
   expect(appended).toHaveStyle({ opacity: "0" });
 });
-
 
 it("안건이 교체되면 제목 없는 옛 그룹을 남기지 않고 새 안건에서 펼쳐 읽는다", () => {
   const a = head({ content: "사용자 가입 단계를 줄인다" });
   withLedger(a);
-  agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "old", title: "옛 안건", proposalIds: [a.proposalId] }]);
-  const view = () => <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />;
+  agendas.data = agendaResponse(a.createdSequence, [
+    { agendaId: "old", title: "옛 안건", proposalIds: [a.proposalId] },
+  ]);
+  const view = () => (
+    <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+  );
   const { rerender } = render(view());
   expect(screen.getByRole("button", { name: /^옛 안건/ })).toBeInTheDocument();
-  agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "new", title: "가입 흐름 정리", proposalIds: [a.proposalId] }]);
+  agendas.data = agendaResponse(a.createdSequence, [
+    { agendaId: "new", title: "가입 흐름 정리", proposalIds: [a.proposalId] },
+  ]);
   rerender(view());
   expect(screen.queryByRole("button", { name: /^옛 안건/ })).toBeNull();
-  expect(screen.getByRole("button", { name: /^가입 흐름 정리/ })).toHaveAttribute("aria-expanded", "true");
+  expect(
+    screen.getByRole("button", { name: /^가입 흐름 정리/ })
+  ).toHaveAttribute("aria-expanded", "true");
   fireEvent.click(screen.getByRole("button", { name: /^가입 흐름 정리/ }));
-  expect(screen.getByRole("button", { name: /^가입 흐름 정리/ })).toHaveAttribute("aria-expanded", "false");
+  expect(
+    screen.getByRole("button", { name: /^가입 흐름 정리/ })
+  ).toHaveAttribute("aria-expanded", "false");
 });
 
 it("실시간 항목의 근거를 펼칠 때 높이가 늘어도 자동 추종으로 위치를 빼앗지 않는다", () => {
   const callbacks: ResizeObserverCallback[] = [];
-  vi.stubGlobal("ResizeObserver", class {
-    constructor(callback: ResizeObserverCallback) { callbacks.push(callback); }
-    observe() {} unobserve() {} disconnect() {}
-  });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
   withLedger(head({ content: "검토하려고 펼치는 항목" }));
-  const { container } = render(<NoteTimeline header={null} onEvidenceSelect={() => {}} recording />);
-  const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
-  Object.defineProperties(viewport, { scrollTop: { configurable: true, writable: true, value: 1500 }, scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 500 } });
-  fireEvent.click(screen.getByRole("button", { name: /검토하려고 펼치는 항목/ }));
-  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 2500 });
-  act(() => callbacks.forEach((callback) => callback([], {} as ResizeObserver)));
+  const { container } = render(
+    <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+  );
+  const viewport = container.querySelector<HTMLElement>(
+    "[data-slot=scroll-area-viewport]"
+  )!;
+  Object.defineProperties(viewport, {
+    scrollTop: { configurable: true, writable: true, value: 1500 },
+    scrollHeight: { configurable: true, value: 2000 },
+    clientHeight: { configurable: true, value: 500 },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: /검토하려고 펼치는 항목/ })
+  );
+  Object.defineProperty(viewport, "scrollHeight", {
+    configurable: true,
+    value: 2500,
+  });
+  act(() =>
+    callbacks.forEach((callback) => callback([], {} as ResizeObserver))
+  );
   expect(viewport.scrollTop).toBe(1500);
   expect(screen.getByRole("button", { name: "맨 아래로" })).toBeInTheDocument();
 });

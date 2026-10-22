@@ -10,7 +10,7 @@ import type { UserEventHint } from "@/lib/events/protocol";
  *
  * | 힌트 | 다시 읽는 것 |
  * |---|---|
- * | `note.changed` `analysis` | 그 노트의 분석 흐름·최신 분석 |
+ * | `note.changed` `analysis` | 그 노트의 분석 흐름·최신 분석·검토본 |
  * | `note.changed` `meeting` | 그 노트 상세와 그 워크스페이스 노트 목록. **노트 소켓이 열린 노트는 건너뛴다**(STOMP 가 이미 무효화한다) |
  * | `notes.changed` | 워크스페이스 노트 목록, `projectId` 가 있으면 그 프로젝트 목록도 |
  * | `chats.changed` | 그 워크스페이스의 채팅 목록. 열린 대화의 메시지 스트림은 건드리지 않는다 |
@@ -87,9 +87,11 @@ export function filterOf(target: InvalidationTarget): QueryFilters {
   switch (kind) {
     case "analysis":
       return {
+        // 검토 가능·확정으로 넘어가면 검토본(meeting-review)도 바뀐다(PRO-67 I03).
         predicate: ({ queryKey }) =>
           head(queryKey) === `/v1/notes/${id}/analyses/flow` ||
-          head(queryKey) === `/v1/notes/${id}/analyses/latest`,
+          head(queryKey) === `/v1/notes/${id}/analyses/latest` ||
+          head(queryKey).startsWith(`/v1/notes/${id}/meeting-review`),
       };
     case "note":
       return { queryKey: [`/v1/notes/${id}`] };

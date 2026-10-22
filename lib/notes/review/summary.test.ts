@@ -54,7 +54,19 @@ describe("최종 요약의 공통 내용 선택", () => {
   });
 
   it("옛 응답의 한 줄 summary가 설명 전문을 화면·복사·PDF 입력에서 가리지 않는다", () => {
-    const legacy = { ...summary, agendas: [{ ...summary.agendas[0], summary: "짧은 개요", description: [{ text: "이전 형식의 첫 설명.", itemIds: [] }, { text: "마지막 설명도 남깁니다.", itemIds: [] }] }] };
+    const legacy = {
+      ...summary,
+      agendas: [
+        {
+          ...summary.agendas[0],
+          summary: "짧은 개요",
+          description: [
+            { text: "이전 형식의 첫 설명.", itemIds: [] },
+            { text: "마지막 설명도 남깁니다.", itemIds: [] },
+          ],
+        },
+      ],
+    };
     const [topic] = topicDigests(legacy, new Map(), () => null);
     expect(topic.gist).toBe("짧은 개요");
     expect(topic.text).toBe("이전 형식의 첫 설명. 마지막 설명도 남깁니다.");

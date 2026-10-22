@@ -65,9 +65,9 @@ describe("TranscriptRow", () => {
         segment: { ...segment, speakerLabel: "B" },
       })
     ).toBe(false);
-    expect(
-      sameTranscriptRow(base, { ...base, speaker: { ...speaker } })
-    ).toBe(false);
+    expect(sameTranscriptRow(base, { ...base, speaker: { ...speaker } })).toBe(
+      false
+    );
     expect(
       sameTranscriptRow(base, {
         ...base,

@@ -114,7 +114,10 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
 }));
 const flowEnvelope = (status: string) => ({
   status: 200,
-  data: { success: true, data: { noteId: "n1", status, regions: data.flowRegions } },
+  data: {
+    success: true,
+    data: { noteId: "n1", status, regions: data.flowRegions },
+  },
 });
 vi.mock("@/lib/api/generated/analysis/analysis", () => ({
   useGetAnalysisFlow: (_noteId: string, options?: PollOptions) => {
@@ -124,18 +127,17 @@ vi.mock("@/lib/api/generated/analysis/analysis", () => ({
 }));
 // **`enabled` 를 지킨다.** 소속이 확인되기 전에는 조회를 안 걸어야 하는데, 목이 늘 데이터를
 // 주면 화면이 「후보를 다 읽었다」로 믿어 그 규칙을 아무도 안 지킨다.
-const candidateQuery = (rows: unknown[], key: string) => (
-  _id: string,
-  options?: { query?: { enabled?: boolean } }
-) =>
-  options?.query?.enabled === false
-    ? { data: undefined, isPending: true, isError: false, refetch: vi.fn() }
-    : {
-        data: { status: 200, data: { success: true, data: { [key]: rows } } },
-        isPending: false,
-        isError: false,
-        refetch: vi.fn(),
-      };
+const candidateQuery =
+  (rows: unknown[], key: string) =>
+  (_id: string, options?: { query?: { enabled?: boolean } }) =>
+    options?.query?.enabled === false
+      ? { data: undefined, isPending: true, isError: false, refetch: vi.fn() }
+      : {
+          data: { status: 200, data: { success: true, data: { [key]: rows } } },
+          isPending: false,
+          isError: false,
+          refetch: vi.fn(),
+        };
 
 vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
   getGetWorkspaceMembersQueryKey: (id: string) => ["members", id],
@@ -215,7 +217,6 @@ describe("NoteArchive", () => {
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
-
   // 탭이 나타났다 사라지면 같은 자리인지 알기 어렵다 — 비어 있어도 탭은 남기고 안내를 준다.
 
   it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {
@@ -249,7 +250,7 @@ describe("NoteArchive", () => {
       ];
       const view = render(
         <NoteArchive
-        workspaceId={WORKSPACE_ID}
+          workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId={null}
           onFocusHandled={() => {}}
@@ -361,7 +362,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
-        workspaceId={WORKSPACE_ID}
+          workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s2"
           onFocusHandled={() => {}}
@@ -387,7 +388,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
-        workspaceId={WORKSPACE_ID}
+          workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s2"
           onFocusHandled={() => {}}
@@ -422,7 +423,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       const { unmount } = render(
         <NoteArchive
-        workspaceId={WORKSPACE_ID}
+          workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s3"
           onFocusHandled={() => {}}
@@ -433,7 +434,7 @@ describe("NoteArchive", () => {
 
       render(
         <NoteArchive
-        workspaceId={WORKSPACE_ID}
+          workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s4"
           onFocusHandled={() => {}}
@@ -453,7 +454,7 @@ describe("NoteArchive", () => {
         const onFocusHandled = vi.fn();
         render(
           <NoteArchive
-        workspaceId={WORKSPACE_ID}
+            workspaceId={WORKSPACE_ID}
             noteId="01K0000000002"
             focusSegmentId="s3"
             onFocusHandled={onFocusHandled}
@@ -485,7 +486,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
-        workspaceId={WORKSPACE_ID}
+          workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s3"
           onFocusHandled={() => {}}
@@ -504,7 +505,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
-        workspaceId={WORKSPACE_ID}
+          workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId={null}
           onFocusHandled={() => {}}
@@ -621,7 +622,9 @@ describe("NoteArchive", () => {
 
     fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "모든 발화에 적용" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "모든 발화에 적용" })
+    );
 
     await waitFor(() =>
       expect(spies.assignLabel).toHaveBeenCalledWith({
@@ -695,13 +698,15 @@ describe("NoteArchive", () => {
   it("캐시엔 없어도 다시 읽어 개별 지정을 찾아내면 확인한다", async () => {
     seedDiarizedNote();
     // 캐시에는 개별 지정이 없다
-    data.segments = (data.segments as { assignedParticipantId?: string | null }[]).map(
-      (segment) => ({ ...segment, assignedParticipantId: null })
-    );
+    data.segments = (
+      data.segments as { assignedParticipantId?: string | null }[]
+    ).map((segment) => ({ ...segment, assignedParticipantId: null }));
     // 그런데 서버는 하나 갖고 있다
     data.refetched = (data.segments as { speakerLabel?: string | null }[]).map(
       (segment, index) =>
-        index === 0 ? { ...segment, assignedParticipantId: GUEST.participantId } : segment
+        index === 0
+          ? { ...segment, assignedParticipantId: GUEST.participantId }
+          : segment
     );
     render(
       <NoteArchive
@@ -717,7 +722,9 @@ describe("NoteArchive", () => {
     fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
 
-    expect(await screen.findByText(/개별로 지정한 발화가 1개/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/개별로 지정한 발화가 1개/)
+    ).toBeInTheDocument();
     expect(spies.assignLabel).not.toHaveBeenCalled();
   });
 
@@ -1063,7 +1070,9 @@ describe("NoteArchive", () => {
 
     release();
     await waitFor(() =>
-      expect(screen.queryAllByTestId("speaker-assign-trigger").length).toBeGreaterThan(0)
+      expect(
+        screen.queryAllByTestId("speaker-assign-trigger").length
+      ).toBeGreaterThan(0)
     );
   });
 

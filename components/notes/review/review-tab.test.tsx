@@ -1,4 +1,8 @@
-import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -22,7 +26,10 @@ import {
 } from "vitest";
 
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
-import type { MeetingAnalysisFlowResponseData, MeetingReviewResponseData } from "@/lib/api/generated/models";
+import type {
+  MeetingAnalysisFlowResponseData,
+  MeetingReviewResponseData,
+} from "@/lib/api/generated/models";
 import { ReviewTab } from "@/components/notes/review/review-tab";
 import { workspaceOfProject } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
@@ -94,10 +101,14 @@ function renderTab(
   return { onEvidenceSelect, onOpenTranscript, client };
 }
 
-
 const editButton = () => {
-  const expanded = screen.getAllByRole("button", { expanded: true }).find((button) => button.closest("[data-item-id]"));
-  return within(expanded!.closest("[data-item-id]") as HTMLElement).getByRole("button", { name: "수정" });
+  const expanded = screen
+    .getAllByRole("button", { expanded: true })
+    .find((button) => button.closest("[data-item-id]"));
+  return within(expanded!.closest("[data-item-id]") as HTMLElement).getByRole(
+    "button",
+    { name: "수정" }
+  );
 };
 
 const row = (content: string) => screen.findByRole("button", { name: content });
@@ -108,7 +119,9 @@ const rowBox = async (content: string) =>
 
 async function readProjectTasks() {
   const note = mockDb.getNote(MENTORING_NOTE_ID);
-  const response = await fetch(`http://localhost/v1/workspaces/${workspaceOfProject(note.projectId)}/projects/${note.projectId}/tasks`);
+  const response = await fetch(
+    `http://localhost/v1/workspaces/${workspaceOfProject(note.projectId)}/projects/${note.projectId}/tasks`
+  );
   return (await response.json()).data.tasks;
 }
 
@@ -143,13 +156,7 @@ describe("검토 가능한 회의", () => {
     const order = [...document.querySelectorAll("section[aria-label]")].map(
       (node) => node.getAttribute("aria-label")
     );
-    expect(order).toEqual([
-      "언제 정해졌나",
-      "요약",
-      "주제",
-      "결정",
-      "할 일",
-    ]);
+    expect(order).toEqual(["언제 정해졌나", "요약", "주제", "결정", "할 일"]);
     // 이슈 · 질문과 참고는 요약 보기의 섹션에 서지 않는다(APP-864).
     expect(
       screen.queryByText(
@@ -201,9 +208,7 @@ describe("검토 가능한 회의", () => {
     // 펼친 주제는 예전처럼 서술 + 항목 줄이고, 이어진 항목 바로 아래에 연결 한 줄이 선다
     expect(within(index).queryByText("결론")).toBeNull();
     expect(
-      await within(section("결정")).findByText(
-        /경쟁 도구 요금표를 모은다/
-      )
+      await within(section("결정")).findByText(/경쟁 도구 요금표를 모은다/)
     ).toBeInTheDocument();
   });
 
@@ -365,26 +370,73 @@ describe("검토 가능한 회의", () => {
   });
 
   it("요약의 해결 관계에서 이슈 대상을 누르면 그래프로 전환해 상세를 연다", async () => {
-    const response = await getResponse(meetingFlowHandlers, new Request(`http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`));
+    const response = await getResponse(
+      meetingFlowHandlers,
+      new Request(
+        `http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`
+      )
+    );
     const review: MeetingReviewResponseData = (await response!.json()).data;
     const source = review.items.find((item) => item.kind === "DECISION")!;
     const target = review.items.find((item) => item.kind === "ISSUE")!;
-    server.use(http.get("*/v1/projects/:projectId/meeting-links", () => HttpResponse.json({ success: true, data: {
-      notes: [], agendaLinks: [], meetingLinks: [], conflicts: [{
-        kind: "RESOLVES", reason: "결정으로 이슈를 해결했습니다", evidenceSequences: [],
-        source: { noteId: MENTORING_NOTE_ID, ...source.originalProposalRef, proposalKind: source.kind, content: source.content },
-        target: { type: "PROPOSAL", noteId: MENTORING_NOTE_ID, ...target.originalProposalRef, proposalKind: target.kind, content: target.content },
-      }],
-    }, error: null })));
+    server.use(
+      http.get("*/v1/projects/:projectId/meeting-links", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            notes: [],
+            agendaLinks: [],
+            meetingLinks: [],
+            conflicts: [
+              {
+                kind: "RESOLVES",
+                reason: "결정으로 이슈를 해결했습니다",
+                evidenceSequences: [],
+                source: {
+                  noteId: MENTORING_NOTE_ID,
+                  ...source.originalProposalRef,
+                  proposalKind: source.kind,
+                  content: source.content,
+                },
+                target: {
+                  type: "PROPOSAL",
+                  noteId: MENTORING_NOTE_ID,
+                  ...target.originalProposalRef,
+                  proposalKind: target.kind,
+                  content: target.content,
+                },
+              },
+            ],
+          },
+          error: null,
+        })
+      )
+    );
     renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: `관계 대상 항목 보기 · ${target.content}` }));
-    expect(screen.getByRole("radio", { name: "그래프" })).toHaveAttribute("aria-checked", "true");
-    expect(await screen.findByText(target.content, { exact: true })).toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: `관계 대상 항목 보기 · ${target.content}`,
+      })
+    );
+    expect(screen.getByRole("radio", { name: "그래프" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    expect(
+      await screen.findByText(target.content, { exact: true })
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
-    const detail = screen.getByText(target.content, { exact: true }).closest("[data-item-id]") as HTMLElement;
+    const detail = screen
+      .getByText(target.content, { exact: true })
+      .closest("[data-item-id]") as HTMLElement;
     detail.scrollIntoView = vi.fn();
     expect(detail).toHaveAttribute("data-item-scroll-target");
-    await waitFor(() => expect(detail.scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" }));
+    await waitFor(() =>
+      expect(detail.scrollIntoView).toHaveBeenCalledWith({
+        block: "center",
+        behavior: "smooth",
+      })
+    );
   });
 
   it("주제 개요는 여섯 개까지만 서며, 결정 줄에는 주제를 반복하지 않고 나온 때를 표시한다", async () => {
@@ -405,7 +457,9 @@ describe("검토 가능한 회의", () => {
     expect(
       await within(index).findByRole("button", { name: /다음 멘토링과 활동비/ })
     ).toBeInTheDocument();
-    expect(screen.queryAllByTitle("주제 01 · 회의가 끝난 뒤 할 일이 흐려지는 문제")).toHaveLength(0);
+    expect(
+      screen.queryAllByTitle("주제 01 · 회의가 끝난 뒤 할 일이 흐려지는 문제")
+    ).toHaveLength(0);
     const decision = await rowBox(
       "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"
     );
@@ -1009,9 +1063,7 @@ describe("검토 가능한 회의", () => {
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
     // 다 고르면 막대가 무엇이 올라가고 무엇이 끝나는지 말한다.
-    expect(screen.getByText(/개 추가/)).toHaveTextContent(
-      "이전 결정 1개 끝남"
-    );
+    expect(screen.getByText(/개 추가/)).toHaveTextContent("이전 결정 1개 끝남");
 
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
     const dialog = await screen.findByRole("alertdialog");
@@ -1033,9 +1085,10 @@ describe("검토 가능한 회의", () => {
     ).toBeInTheDocument();
     fireEvent.click(within(box).getByRole("radio", { name: /대체/ }));
     await waitFor(() =>
-      expect(
-        within(box).getByRole("radio", { name: /대체/ })
-      ).toHaveAttribute("aria-checked", "true")
+      expect(within(box).getByRole("radio", { name: /대체/ })).toHaveAttribute(
+        "aria-checked",
+        "true"
+      )
     );
 
     cleanup();
@@ -1043,9 +1096,10 @@ describe("검토 가능한 회의", () => {
     const again = await rowBox(
       "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다"
     );
-    expect(
-      within(again).getByRole("radio", { name: /대체/ })
-    ).toHaveAttribute("aria-checked", "true");
+    expect(within(again).getByRole("radio", { name: /대체/ })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
   });
 
   it("요약 보기에 없는 이슈 · 질문 · 참고에 붙은 제안은 검토 완료를 막지 않는다", async () => {
@@ -1160,23 +1214,39 @@ describe("검토 가능한 회의", () => {
     const held = new Promise<void>((resolve) => (release = resolve));
     let arrived!: () => void;
     const saving = new Promise<void>((resolve) => (arrived = resolve));
-    server.use(http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", async ({ request }) => {
-      arrived();
-      await held;
-      return getResponse(meetingFlowHandlers, request);
-    }));
+    server.use(
+      http.patch(
+        "*/v1/notes/:noteId/meeting-review/items/:itemId",
+        async ({ request }) => {
+          arrived();
+          await held;
+          return getResponse(meetingFlowHandlers, request);
+        }
+      )
+    );
     renderTab();
-    const toggle = within(await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다"))
-      .getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
+    const toggle = within(
+      await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다")
+    ).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    await waitFor(() =>
+      expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
+    );
     fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
     await saving;
-    expect(within(toggle).getByRole("radio", { name: "넘기기" })).toBeDisabled();
+    expect(
+      within(toggle).getByRole("radio", { name: "넘기기" })
+    ).toBeDisabled();
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
     expect(await readProjectTasks()).toEqual(before);
     release();
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "넘기기" })).toBeEnabled());
-    expect(within(toggle).getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+    await waitFor(() =>
+      expect(
+        within(toggle).getByRole("radio", { name: "넘기기" })
+      ).toBeEnabled()
+    );
+    expect(
+      within(toggle).getByRole("radio", { name: "반영 예정" })
+    ).toHaveAttribute("aria-checked", "true");
     expect(await readProjectTasks()).toEqual(before);
   });
 
@@ -1277,10 +1347,19 @@ describe("검토 가능한 회의", () => {
     expect(await readProjectTasks()).toEqual(before);
     cleanup();
     renderTab();
-    const again = within(await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다"));
-    expect(await again.findByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+    const again = within(
+      await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다")
+    );
+    expect(
+      await again.findByRole("radio", { name: "반영 예정" })
+    ).toHaveAttribute("aria-checked", "true");
     fireEvent.click(again.getByRole("radio", { name: "넘기기" }));
-    await waitFor(() => expect(again.getByRole("radio", { name: "넘기기" })).toHaveAttribute("aria-checked", "true"));
+    await waitFor(() =>
+      expect(again.getByRole("radio", { name: "넘기기" })).toHaveAttribute(
+        "aria-checked",
+        "true"
+      )
+    );
     expect(await readProjectTasks()).toEqual(before);
   });
 
@@ -1300,40 +1379,94 @@ describe("검토 가능한 회의", () => {
   it("승인 409 뒤 기존 할 일도 다시 읽고 넘기기를 선택해 완료할 수 있다", async () => {
     const before = await readProjectTasks();
     renderTab();
-    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "유지" }));
+    fireEvent.click(
+      within(
+        await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")
+      ).getByRole("radio", { name: "유지" })
+    );
     const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
-    const toggle = within(box).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
+    const toggle = within(box).getByRole("radiogroup", {
+      name: "기존 할 일에 반영할지",
+    });
+    await waitFor(() =>
+      expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
+    );
     fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "넘기기" })).toBeEnabled());
+    await waitFor(() =>
+      expect(
+        within(toggle).getByRole("radio", { name: "넘기기" })
+      ).toBeEnabled()
+    );
     const other = within(await rowBox("경쟁 서비스 요금제를 한 표로 정리한다"));
     fireEvent.click(other.getByRole("radio", { name: "넘기기" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
 
-    const review = await (await fetch(`http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`)).json();
-    const target = (review.data as MeetingReviewResponseData).items.find((row) => row.content === "구현 결과를 기대 효과 순서로 다시 배치한다")!.taskChanges[0].target;
-    const task = before.find((row: { taskId: string }) => row.taskId === target.itemId);
+    const review = await (
+      await fetch(
+        `http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`
+      )
+    ).json();
+    const target = (review.data as MeetingReviewResponseData).items.find(
+      (row) => row.content === "구현 결과를 기대 효과 순서로 다시 배치한다"
+    )!.taskChanges[0].target;
+    const task = before.find(
+      (row: { taskId: string }) => row.taskId === target.itemId
+    );
     const note = mockDb.getNote(MENTORING_NOTE_ID);
-    const updated = await fetch(`http://localhost/v1/workspaces/${workspaceOfProject(note.projectId)}/projects/${note.projectId}/tasks/${target.itemId}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ revision: task.revision, content: `${task.content} 최신`, taskStatus: task.taskStatus, assignee: null, due: task.due }),
-    });
+    const updated = await fetch(
+      `http://localhost/v1/workspaces/${workspaceOfProject(note.projectId)}/projects/${note.projectId}/tasks/${target.itemId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          revision: task.revision,
+          content: `${task.content} 최신`,
+          taskStatus: task.taskStatus,
+          assignee: null,
+          due: task.due,
+        }),
+      }
+    );
     expect(updated.status).toBe(200);
 
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
     const dialog = await screen.findByRole("alertdialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "검토 완료" }));
-    expect(await within(dialog).findByText(/넘기기를 선택/)).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "검토 완료" })).toBeDisabled();
+    expect(
+      await within(dialog).findByText(/넘기기를 선택/)
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "검토 완료" })
+    ).toBeDisabled();
     fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
-    expect(screen.getByText("변경된 기존 할 일의 제안을 확인하고 넘기기를 선택해 주세요")).toBeInTheDocument();
-    expect(await within(box).findByText(`${task.content} 최신`)).toBeInTheDocument();
-    expect(within(toggle).getByRole("radio", { name: "반영 예정" })).toBeDisabled();
+    expect(
+      screen.getByText(
+        "변경된 기존 할 일의 제안을 확인하고 넘기기를 선택해 주세요"
+      )
+    ).toBeInTheDocument();
+    expect(
+      await within(box).findByText(`${task.content} 최신`)
+    ).toBeInTheDocument();
+    expect(
+      within(toggle).getByRole("radio", { name: "반영 예정" })
+    ).toBeDisabled();
     fireEvent.click(within(toggle).getByRole("radio", { name: "넘기기" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled());
-    expect(screen.queryByText("프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요.")).toBeNull();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
+    expect(
+      screen.queryByText(
+        "프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요."
+      )
+    ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
-    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "검토 완료" }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "검토 완료",
+      })
+    );
     expect(await screen.findByText("확정됨")).toBeInTheDocument();
   });
 
@@ -1342,34 +1475,80 @@ describe("검토 가능한 회의", () => {
     let entered!: () => void;
     const held = new Promise<void>((resolve) => (release = resolve));
     const arrived = new Promise<void>((resolve) => (entered = resolve));
-    server.use(http.post("*/v1/notes/:noteId/approval", async () => {
-      entered();
-      await held;
-      return HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "승인을 저장하지 못했습니다" } }, { status: 500 });
-    }, { once: true }));
+    server.use(
+      http.post(
+        "*/v1/notes/:noteId/approval",
+        async () => {
+          entered();
+          await held;
+          return HttpResponse.json(
+            {
+              success: false,
+              data: null,
+              error: {
+                code: "INTERNAL",
+                message: "승인을 저장하지 못했습니다",
+              },
+            },
+            { status: 500 }
+          );
+        },
+        { once: true }
+      )
+    );
     renderTab();
-    fireEvent.click(within(await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).getByRole("radio", { name: "유지" }));
+    fireEvent.click(
+      within(
+        await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")
+      ).getByRole("radio", { name: "유지" })
+    );
     const box = await rowBox("구현 결과를 기대 효과 순서로 다시 배치한다");
-    const toggle = within(box).getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
+    const toggle = within(box).getByRole("radiogroup", {
+      name: "기존 할 일에 반영할지",
+    });
+    await waitFor(() =>
+      expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
+    );
     fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "넘기기" })).toBeEnabled());
-    fireEvent.click(within(await rowBox("경쟁 서비스 요금제를 한 표로 정리한다")).getByRole("radio", { name: "넘기기" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled());
+    await waitFor(() =>
+      expect(
+        within(toggle).getByRole("radio", { name: "넘기기" })
+      ).toBeEnabled()
+    );
+    fireEvent.click(
+      within(await rowBox("경쟁 서비스 요금제를 한 표로 정리한다")).getByRole(
+        "radio",
+        { name: "넘기기" }
+      )
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
     const dialog = await screen.findByRole("alertdialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "검토 완료" }));
     try {
       await arrived;
-      await waitFor(() => expect(within(dialog).getByRole("button", { name: "취소" })).toBeDisabled());
+      await waitFor(() =>
+        expect(
+          within(dialog).getByRole("button", { name: "취소" })
+        ).toBeDisabled()
+      );
       expect(screen.getByRole("alertdialog")).toBe(dialog);
       // 확인창이 열리면 배경은 aria-hidden입니다. 실제 버튼 잠금은 DOM으로 확인합니다.
-      for (const button of toggle.querySelectorAll("button")) expect(button).toBeDisabled();
+      for (const button of toggle.querySelectorAll("button"))
+        expect(button).toBeDisabled();
     } finally {
       release();
     }
-    expect(await within(dialog).findByText("승인을 저장하지 못했습니다")).toBeInTheDocument();
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "검토 완료" })).toBeEnabled());
+    expect(
+      await within(dialog).findByText("승인을 저장하지 못했습니다")
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", { name: "검토 완료" })
+      ).toBeEnabled()
+    );
     fireEvent.click(within(dialog).getByRole("button", { name: "검토 완료" }));
     expect(await screen.findByText("확정됨")).toBeInTheDocument();
     expect(within(box).getByRole("radio", { name: "반영됨" })).toBeDisabled();
@@ -1469,8 +1648,13 @@ describe("검토 가능한 회의", () => {
     );
     fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("오류"));
-    await waitFor(() => expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled());
-    expect(within(toggle).getByRole("radio", { name: "반영" })).toHaveAttribute("aria-checked", "false");
+    await waitFor(() =>
+      expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
+    );
+    expect(within(toggle).getByRole("radio", { name: "반영" })).toHaveAttribute(
+      "aria-checked",
+      "false"
+    );
     expect(await readProjectTasks()).toEqual(before);
     fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
     expect(
@@ -1567,7 +1751,9 @@ describe("검토 가능한 회의", () => {
     expect(
       await screen.findByRole("button", { name: "닫기" })
     ).toBeInTheDocument();
-    expect(await screen.findByRole("region", { name: "연결된 안건" })).toHaveTextContent("차별점과 요금");
+    expect(
+      await screen.findByRole("region", { name: "연결된 안건" })
+    ).toHaveTextContent("차별점과 요금");
     expect(await screen.findByText("검토에서 수정")).toBeVisible();
   });
 
@@ -1692,35 +1878,78 @@ describe("최종 요약과 늦은 관계 결과", () => {
     let current = flow("PENDING");
     installFlow(() => current);
     const requests = vi.fn();
-    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
-      requests();
-      current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((row) => ({ ...row, status: "SUCCEEDED" as const })) };
-      return HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, requestId: "0HZX2K7M9Q4AD", flowStatus: "REVIEWABLE" }, error: null }, { status: 202 });
-    }));
+    server.use(
+      http.post("*/v1/notes/:noteId/analyses", () => {
+        requests();
+        current = {
+          ...flow("SUCCEEDED"),
+          regions: flow("SUCCEEDED").regions.map((row) => ({
+            ...row,
+            status: "SUCCEEDED" as const,
+          })),
+        };
+        return HttpResponse.json(
+          {
+            success: true,
+            data: {
+              noteId: MENTORING_NOTE_ID,
+              requestId: "0HZX2K7M9Q4AD",
+              flowStatus: "REVIEWABLE",
+            },
+            error: null,
+          },
+          { status: 202 }
+        );
+      })
+    );
     renderTab();
-    const box = await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다");
-    fireEvent.click(within(box).getByRole("button", { name: "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다" }));
+    const box = await rowBox(
+      "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다"
+    );
+    fireEvent.click(
+      within(box).getByRole("button", {
+        name: "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다",
+      })
+    );
     fireEvent.click(within(box).getByRole("button", { name: "수정" }));
     const input = within(box).getByRole("textbox", { name: "항목 내용" });
     fireEvent.change(input, { target: { value: "편집 중인 내용" } });
     expect(requests).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "분석 재요청" }));
     await waitFor(() => expect(requests).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByRole("button", { name: "분석 재요청" })).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "분석 재요청" })).toBeNull()
+    );
     expect(input).toHaveValue("편집 중인 내용");
   });
 
   it("후속 분석이 이미 진행 중인 409는 안내하고 자동으로 다시 요청하지 않는다", async () => {
     installFlow(() => flow("PENDING"));
     const requests = vi.fn();
-    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
-      requests();
-      return HttpResponse.json({ success: false, data: null, error: { code: "MEETING_ANALYSIS_CONFLICT", message: "저장된 분석 요청 또는 결과와 일치하지 않습니다." } }, { status: 409 });
-    }));
+    server.use(
+      http.post("*/v1/notes/:noteId/analyses", () => {
+        requests();
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: {
+              code: "MEETING_ANALYSIS_CONFLICT",
+              message: "저장된 분석 요청 또는 결과와 일치하지 않습니다.",
+            },
+          },
+          { status: 409 }
+        );
+      })
+    );
     renderTab();
     fireEvent.click(await screen.findByRole("button", { name: "분석 재요청" }));
-    expect(await screen.findByText("분석이 진행 중이거나 요청 상태가 바뀌었습니다.")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 재요청" })).toBeEnabled());
+    expect(
+      await screen.findByText("분석이 진행 중이거나 요청 상태가 바뀌었습니다.")
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "분석 재요청" })).toBeEnabled()
+    );
     expect(requests).toHaveBeenCalledTimes(1);
     expect(toast.error).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
@@ -1728,34 +1957,78 @@ describe("최종 요약과 늦은 관계 결과", () => {
 
   it("분석 재요청 후 상태 조회 실패는 POST 없이 상태만 다시 확인한다", async () => {
     let readFailed = false;
-    server.use(http.get("*/v1/notes/:noteId/analyses/flow", () => readFailed
-      ? HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "조회 실패" } }, { status: 500 })
-      : HttpResponse.json({ success: true, data: flow("PENDING"), error: null })));
+    server.use(
+      http.get("*/v1/notes/:noteId/analyses/flow", () =>
+        readFailed
+          ? HttpResponse.json(
+              {
+                success: false,
+                data: null,
+                error: { code: "INTERNAL", message: "조회 실패" },
+              },
+              { status: 500 }
+            )
+          : HttpResponse.json({
+              success: true,
+              data: flow("PENDING"),
+              error: null,
+            })
+      )
+    );
     const requests = vi.fn();
-    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
-      requests(); readFailed = true;
-      return HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, requestId: "0HZX2K7M9Q4AD", flowStatus: "REVIEWABLE" }, error: null }, { status: 202 });
-    }));
+    server.use(
+      http.post("*/v1/notes/:noteId/analyses", () => {
+        requests();
+        readFailed = true;
+        return HttpResponse.json(
+          {
+            success: true,
+            data: {
+              noteId: MENTORING_NOTE_ID,
+              requestId: "0HZX2K7M9Q4AD",
+              flowStatus: "REVIEWABLE",
+            },
+            error: null,
+          },
+          { status: 202 }
+        );
+      })
+    );
     renderTab();
     fireEvent.click(await screen.findByRole("button", { name: "분석 재요청" }));
-    expect(await screen.findByText("분석 상태를 불러오지 못했습니다.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("분석 상태를 불러오지 못했습니다.")
+    ).toBeInTheDocument();
     readFailed = false;
     fireEvent.click(screen.getByRole("button", { name: "상태 다시 확인" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 재요청" })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "분석 재요청" })).toBeEnabled()
+    );
     expect(requests).toHaveBeenCalledTimes(1);
   });
 
   it("분석 재요청 실패를 알리고 기존 내용을 유지한 채 재시도한다", async () => {
     installFlow(() => flow("PENDING"));
     const requests = vi.fn();
-    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
-      requests();
-      return HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "분석 요청 실패" } }, { status: 500 });
-    }));
+    server.use(
+      http.post("*/v1/notes/:noteId/analyses", () => {
+        requests();
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: { code: "INTERNAL", message: "분석 요청 실패" },
+          },
+          { status: 500 }
+        );
+      })
+    );
     renderTab();
     fireEvent.click(await screen.findByRole("button", { name: "분석 재요청" }));
     expect(await screen.findByText("분석 요청 실패")).toBeInTheDocument();
-    expect(await row("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).toBeInTheDocument();
+    expect(
+      await row("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "분석 재요청" }));
     await waitFor(() => expect(requests).toHaveBeenCalledTimes(2));
     expect(toast.error).not.toHaveBeenCalled();
@@ -1786,7 +2059,9 @@ describe("최종 요약과 늦은 관계 결과", () => {
         queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
       })
     );
-    await waitFor(() => expect(screen.queryByText(/충돌과 이어짐을 확인하고 있습니다/)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText(/충돌과 이어짐을 확인하고 있습니다/)).toBeNull()
+    );
     expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue(
       "입력 중인 수정 내용"
     );
@@ -1812,121 +2087,255 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(screen.queryByText("확인된 충돌과 이어짐이 없습니다.")).toBeNull();
   });
 
-  it.each(["review", "links"] as const)("늦은 분석의 %s 재조회 실패는 이전 내용을 보존하고 같은 흐름에서도 재시도한다", async (resource) => {
-    let current = flow("PENDING");
-    installFlow(() => current);
-    const { client } = renderTab(MENTORING_NOTE_ID, { noteMeta: { title: "검토 회의", whenIso: "2026-10-18T00:00:00Z", participantCount: 4 } });
-    const content = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
-    fireEvent.click(await row(content));
-    fireEvent.click(editButton());
-    const input = screen.getByRole("textbox", { name: "항목 내용" });
-    fireEvent.change(input, { target: { value: "작성 중인 내용" } });
-    await waitFor(() => expect(client.isFetching()).toBe(0));
-    let fail = true;
-    let reviewReads = 0;
-    let linkReads = 0;
-    server.use(
-      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
-        reviewReads++;
-        if (fail && resource === "review") return HttpResponse.json({ success: false, data: null, error: { code: "FAILED", message: "조회 실패" } }, { status: 500 });
-        const response = await getResponse(meetingFlowHandlers, request);
-        const body = await response!.json();
-        const item = body.data.items.find((item: { content: string }) => item.content === content);
-        item.content = "늦게 도착한 검토 내용";
-        item.revision++;
-        body.data.reviewVersion++;
-        return HttpResponse.json(body);
-      }),
-      http.get("*/v1/projects/:projectId/meeting-links", () => { linkReads++; return fail && resource === "links"
-        ? HttpResponse.json({ success: false, data: null, error: { code: "FAILED", message: "조회 실패" } }, { status: 500 })
-        : HttpResponse.json({ success: true, data: { notes: [], meetingLinks: [], conflicts: [], agendaLinks: [] }, error: null }); })
-    );
-    current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((region) => ({ ...region, status: "SUCCEEDED" as const })) };
-    await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
-    const notice = await screen.findByText("최신 분석 결과를 불러오지 못했습니다.");
-    expect(input).toHaveValue("작성 중인 내용");
-    if (resource === "review") expect(await row(content)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
-    const reads = reviewReads;
-    await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
-    expect(reviewReads).toBe(reads);
-    expect(notice).toBeInTheDocument();
-    const worker = vi.fn(function PdfWorker() { throw new Error("PDF 생성이 시작되었습니다"); });
-    vi.stubGlobal("Worker", worker);
-    try {
-      fireEvent.click(screen.getByRole("button", { name: "내보내기·공유" }));
-      fireEvent.click(await screen.findByRole("menuitem", { name: /PDF로 내보내기/ }));
-      const dialog = await screen.findByRole("dialog", { name: "회의록 PDF로 내보내기" });
-      fireEvent.click(within(dialog).getByRole("button", { name: "PDF 미리보기" }));
-      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("회의록 PDF를 만들지 못했습니다."));
-      expect(worker).not.toHaveBeenCalled();
-      fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
-    } finally { vi.unstubAllGlobals(); }
-    const previousLinkReads = linkReads;
-    fail = false;
-    fireEvent.click(within(notice.closest('[role="alert"]') as HTMLElement).getByRole("button", { name: "다시 시도" }));
-    await waitFor(() => expect(screen.queryByText("최신 분석 결과를 불러오지 못했습니다.")).toBeNull());
-    expect(await row("늦게 도착한 검토 내용")).toBeInTheDocument();
-    expect(linkReads).toBeGreaterThan(previousLinkReads);
-    expect(input).toHaveValue("작성 중인 내용");
-    expect(screen.queryByText("최신 분석 결과를 다시 확인해 주세요")).toBeNull();
-  });
+  it.each(["review", "links"] as const)(
+    "늦은 분석의 %s 재조회 실패는 이전 내용을 보존하고 같은 흐름에서도 재시도한다",
+    async (resource) => {
+      let current = flow("PENDING");
+      installFlow(() => current);
+      const { client } = renderTab(MENTORING_NOTE_ID, {
+        noteMeta: {
+          title: "검토 회의",
+          whenIso: "2026-10-18T00:00:00Z",
+          participantCount: 4,
+        },
+      });
+      const content = "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다";
+      fireEvent.click(await row(content));
+      fireEvent.click(editButton());
+      const input = screen.getByRole("textbox", { name: "항목 내용" });
+      fireEvent.change(input, { target: { value: "작성 중인 내용" } });
+      await waitFor(() => expect(client.isFetching()).toBe(0));
+      let fail = true;
+      let reviewReads = 0;
+      let linkReads = 0;
+      server.use(
+        http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+          reviewReads++;
+          if (fail && resource === "review")
+            return HttpResponse.json(
+              {
+                success: false,
+                data: null,
+                error: { code: "FAILED", message: "조회 실패" },
+              },
+              { status: 500 }
+            );
+          const response = await getResponse(meetingFlowHandlers, request);
+          const body = await response!.json();
+          const item = body.data.items.find(
+            (item: { content: string }) => item.content === content
+          );
+          item.content = "늦게 도착한 검토 내용";
+          item.revision++;
+          body.data.reviewVersion++;
+          return HttpResponse.json(body);
+        }),
+        http.get("*/v1/projects/:projectId/meeting-links", () => {
+          linkReads++;
+          return fail && resource === "links"
+            ? HttpResponse.json(
+                {
+                  success: false,
+                  data: null,
+                  error: { code: "FAILED", message: "조회 실패" },
+                },
+                { status: 500 }
+              )
+            : HttpResponse.json({
+                success: true,
+                data: {
+                  notes: [],
+                  meetingLinks: [],
+                  conflicts: [],
+                  agendaLinks: [],
+                },
+                error: null,
+              });
+        })
+      );
+      current = {
+        ...flow("SUCCEEDED"),
+        regions: flow("SUCCEEDED").regions.map((region) => ({
+          ...region,
+          status: "SUCCEEDED" as const,
+        })),
+      };
+      await act(async () => {
+        await client.invalidateQueries({
+          queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
+        });
+      });
+      const notice = await screen.findByText(
+        "최신 분석 결과를 불러오지 못했습니다."
+      );
+      expect(input).toHaveValue("작성 중인 내용");
+      if (resource === "review") expect(await row(content)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
+      const reads = reviewReads;
+      await act(async () => {
+        await client.invalidateQueries({
+          queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
+        });
+      });
+      expect(reviewReads).toBe(reads);
+      expect(notice).toBeInTheDocument();
+      const worker = vi.fn(function PdfWorker() {
+        throw new Error("PDF 생성이 시작되었습니다");
+      });
+      vi.stubGlobal("Worker", worker);
+      try {
+        fireEvent.click(screen.getByRole("button", { name: "내보내기·공유" }));
+        fireEvent.click(
+          await screen.findByRole("menuitem", { name: /PDF로 내보내기/ })
+        );
+        const dialog = await screen.findByRole("dialog", {
+          name: "회의록 PDF로 내보내기",
+        });
+        fireEvent.click(
+          within(dialog).getByRole("button", { name: "PDF 미리보기" })
+        );
+        await waitFor(() =>
+          expect(toast.error).toHaveBeenCalledWith(
+            "회의록 PDF를 만들지 못했습니다."
+          )
+        );
+        expect(worker).not.toHaveBeenCalled();
+        fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+      } finally {
+        vi.unstubAllGlobals();
+      }
+      const previousLinkReads = linkReads;
+      fail = false;
+      fireEvent.click(
+        within(notice.closest('[role="alert"]') as HTMLElement).getByRole(
+          "button",
+          { name: "다시 시도" }
+        )
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByText("최신 분석 결과를 불러오지 못했습니다.")
+        ).toBeNull()
+      );
+      expect(await row("늦게 도착한 검토 내용")).toBeInTheDocument();
+      expect(linkReads).toBeGreaterThan(previousLinkReads);
+      expect(input).toHaveValue("작성 중인 내용");
+      expect(
+        screen.queryByText("최신 분석 결과를 다시 확인해 주세요")
+      ).toBeNull();
+    }
+  );
 
   it("최초 검토본 응답이 늦어도 새 분석 완료 뒤 이전 응답을 최신 결과로 쓰지 않는다", async () => {
     let current = flow("PENDING");
     installFlow(() => current);
     let release!: () => void;
     let entered!: () => void;
-    const held = new Promise<void>((resolve) => { release = resolve; });
-    const arrived = new Promise<void>((resolve) => { entered = resolve; });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const arrived = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
     let reads = 0;
-    server.use(http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
-      const first = ++reads === 1;
-      const response = await getResponse(meetingFlowHandlers, request);
-      const body = await response!.json();
-      if (first) { entered(); await held; }
-      else {
-        const item = body.data.items.find((item: { kind: string; included: boolean }) => item.kind === "DECISION" && item.included);
-        item.content = "분석 완료 뒤 받은 최신 검토본";
-        item.revision++;
-        body.data.reviewVersion++;
-      }
-      return HttpResponse.json(body);
-    }));
+    server.use(
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+        const first = ++reads === 1;
+        const response = await getResponse(meetingFlowHandlers, request);
+        const body = await response!.json();
+        if (first) {
+          entered();
+          await held;
+        } else {
+          const item = body.data.items.find(
+            (item: { kind: string; included: boolean }) =>
+              item.kind === "DECISION" && item.included
+          );
+          item.content = "분석 완료 뒤 받은 최신 검토본";
+          item.revision++;
+          body.data.reviewVersion++;
+        }
+        return HttpResponse.json(body);
+      })
+    );
     const { client } = renderTab();
     try {
       await arrived;
-      current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((region) => ({ ...region, status: "SUCCEEDED" as const })) };
-      await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
+      current = {
+        ...flow("SUCCEEDED"),
+        regions: flow("SUCCEEDED").regions.map((region) => ({
+          ...region,
+          status: "SUCCEEDED" as const,
+        })),
+      };
+      await act(async () => {
+        await client.invalidateQueries({
+          queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
+        });
+      });
       await waitFor(() => expect(reads).toBeGreaterThan(1));
       expect(await row("분석 완료 뒤 받은 최신 검토본")).toBeInTheDocument();
-      await act(async () => { release(); });
+      await act(async () => {
+        release();
+      });
       expect(await row("분석 완료 뒤 받은 최신 검토본")).toBeInTheDocument();
-    } finally { release(); }
+    } finally {
+      release();
+    }
   });
 
   it("온라인 연결이 끊겨 분석 자료 조회가 멈춰도 완료로 처리하지 않는다", async () => {
     let current = flow("PENDING");
     let dropOnce = false;
-    server.use(http.get("*/v1/notes/:noteId/analyses/flow", () => {
-      if (dropOnce) { dropOnce = false; onlineManager.setOnline(false); }
-      return HttpResponse.json({ success: true, data: current, error: null });
-    }));
+    server.use(
+      http.get("*/v1/notes/:noteId/analyses/flow", () => {
+        if (dropOnce) {
+          dropOnce = false;
+          onlineManager.setOnline(false);
+        }
+        return HttpResponse.json({ success: true, data: current, error: null });
+      })
+    );
     const { client } = renderTab();
     await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
     await waitFor(() => expect(client.isFetching()).toBe(0));
     try {
-      current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((region) => ({ ...region, status: "SUCCEEDED" as const })) };
+      current = {
+        ...flow("SUCCEEDED"),
+        regions: flow("SUCCEEDED").regions.map((region) => ({
+          ...region,
+          status: "SUCCEEDED" as const,
+        })),
+      };
       dropOnce = true;
-      await act(async () => { await client.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID) }); });
-      const notice = await screen.findByText("최신 분석 결과를 불러오지 못했습니다.");
+      await act(async () => {
+        await client.invalidateQueries({
+          queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
+        });
+      });
+      const notice = await screen.findByText(
+        "최신 분석 결과를 불러오지 못했습니다."
+      );
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
-      await act(async () => { onlineManager.setOnline(true); });
+      await act(async () => {
+        onlineManager.setOnline(true);
+      });
       await waitFor(() => expect(client.isFetching()).toBe(0));
       expect(notice).toBeInTheDocument();
-      fireEvent.click(within(notice.closest('[role="alert"]') as HTMLElement).getByRole("button", { name: "다시 시도" }));
-      await waitFor(() => expect(screen.queryByText("최신 분석 결과를 불러오지 못했습니다.")).toBeNull());
-    } finally { onlineManager.setOnline(true); }
+      fireEvent.click(
+        within(notice.closest('[role="alert"]') as HTMLElement).getByRole(
+          "button",
+          { name: "다시 시도" }
+        )
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByText("최신 분석 결과를 불러오지 못했습니다.")
+        ).toBeNull()
+      );
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 
   it("관계 실패와 성공한 빈 결과를 구별하고 담당 영역도 따로 표시한다", async () => {
@@ -1944,7 +2353,9 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(screen.queryByText("확인된 충돌과 이어짐이 없습니다.")).toBeNull();
     expect(screen.queryByText(/화자 확인 뒤 담당과 기한/)).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
-    expect(screen.getByText(/충돌과 이어짐을 분석하지 못했습니다/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/충돌과 이어짐을 분석하지 못했습니다/)
+    ).toBeInTheDocument();
     expect(
       await screen.findByText(
         REVIEW_SEED_LEAD.map((line) => line.text).join(" ")
@@ -1989,15 +2400,36 @@ it("종료 전 NOT_REQUESTED 캐시를 새로 확인하는 동안 수동 분석 
 });
 
 it("최신 분석 상태 확인에 실패하면 기다림으로 숨기지 않고 다시 시도할 수 있다", async () => {
-  server.use(http.get("*/v1/notes/:noteId/analyses/flow", () => HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "오류" } }, { status: 500 })));
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  client.setQueryData(getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID), { status: 200, data: { success: true, data: { noteId: MENTORING_NOTE_ID, status: "NOT_REQUESTED", regions: [] }, error: null } });
+  server.use(
+    http.get("*/v1/notes/:noteId/analyses/flow", () =>
+      HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: { code: "INTERNAL", message: "오류" },
+        },
+        { status: 500 }
+      )
+    )
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID), {
+    status: 200,
+    data: {
+      success: true,
+      data: { noteId: MENTORING_NOTE_ID, status: "NOT_REQUESTED", regions: [] },
+      error: null,
+    },
+  });
   renderTab(MENTORING_NOTE_ID, {}, client);
-  expect(await screen.findByText("요약 상태를 불러오지 못했습니다.")).toBeInTheDocument();
+  expect(
+    await screen.findByText("요약 상태를 불러오지 못했습니다.")
+  ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "다시 시도" })).toBeEnabled();
   expect(screen.queryByRole("button", { name: "분석 요청" })).toBeNull();
 });
-
 
 it("항목 저장 충돌의 복구 조회가 느려도 최신 판을 읽을 때까지 편집을 잠근다", async () => {
   const { client } = renderTab();

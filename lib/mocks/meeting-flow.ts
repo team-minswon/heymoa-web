@@ -1111,6 +1111,16 @@ function completeAnalysis(noteId: string) {
 }
 
 export const meetingFlow = {
+  /**
+   * 다음 단계로 넘어갈 때가 된 분석 노트(PRO-67 I03). 목 이벤트 스트림이 이 노트들에 `note.changed`(analysis) 힌트를
+   * 보낸다 — 스트림이 건강하면 web 이 흐름을 폴링하지 않으므로, 힌트가 없으면 목의 분석이 다음 단계로 안 넘어간다.
+   */
+  dueAnalysisNoteIds(): string[] {
+    const target = store();
+    return [...target.runningSince.entries()]
+      .filter(([, since]) => Date.now() - since >= MOCK_STEP_MS)
+      .map(([noteId]) => noteId);
+  },
   seedApprovalCase(key: ProjectApprovalCase) {
     seedApprovalCase(store(), key);
   },
@@ -1200,10 +1210,17 @@ export const meetingFlowHandlers = [
   http.get("*/v1/notes/:noteId/meeting-review/summary", ({ params }) =>
     respond(() => {
       // 브라우저도 옛 필드를 생략한 응답으로 검사합니다. 저장 목은 현행·호환 표현을 함께 유지합니다.
-      const summary = structuredClone(meetingFlow.summaryOf(paramId(params.noteId)));
+      const summary = structuredClone(
+        meetingFlow.summaryOf(paramId(params.noteId))
+      );
       Reflect.deleteProperty(summary, "topics");
       for (const agenda of summary.agendas) {
-        for (const field of ["sentences", "agendaItemId", "centerItemId", "alsoItemIds"]) {
+        for (const field of [
+          "sentences",
+          "agendaItemId",
+          "centerItemId",
+          "alsoItemIds",
+        ]) {
           Reflect.deleteProperty(agenda, field);
         }
       }

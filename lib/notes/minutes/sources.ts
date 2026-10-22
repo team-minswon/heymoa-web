@@ -4,12 +4,25 @@ import { getGetNoteAgendasQueryOptions } from "@/lib/api/generated/notes/notes";
 import { getGetProposalsQueryOptions } from "@/lib/api/generated/proposals/proposals";
 import { getGetNoteTranscriptQueryOptions } from "@/lib/api/generated/transcription/transcription";
 import { okData } from "@/lib/api/ok-data";
-import { initialContextState, reduceContextEvent } from "@/lib/notes/proposals/reducer";
+import {
+  initialContextState,
+  reduceContextEvent,
+} from "@/lib/notes/proposals/reducer";
 import { selectContextSnapshot } from "@/lib/notes/proposals/select";
-import { placeAgendas, selectTimeline, type TimelineGroup } from "@/lib/notes/proposals/timeline";
+import {
+  placeAgendas,
+  selectTimeline,
+  type TimelineGroup,
+} from "@/lib/notes/proposals/timeline";
 import { toGapRows } from "@/lib/transcription/gaps";
-import { interleaveTranscript, type TranscriptRow } from "@/lib/transcription/presentation";
-import { createSpeakerIdentityResolver, type SpeakerFace } from "@/lib/transcription/speaker-identity";
+import {
+  interleaveTranscript,
+  type TranscriptRow,
+} from "@/lib/transcription/presentation";
+import {
+  createSpeakerIdentityResolver,
+  type SpeakerFace,
+} from "@/lib/transcription/speaker-identity";
 import type { SpeakerOf } from "@/lib/notes/minutes/model";
 
 /**
@@ -20,15 +33,32 @@ import type { SpeakerOf } from "@/lib/notes/minutes/model";
 const FRESH_MS = 60_000;
 
 /** 타임라인 탭과 같은 묶음 — 끝난 회의의 원장을 안건 정본대로 한 번 맞춘 것이다 */
-export async function loadTimelineGroups(queryClient: QueryClient, noteId: string): Promise<TimelineGroup[]> {
+export async function loadTimelineGroups(
+  queryClient: QueryClient,
+  noteId: string
+): Promise<TimelineGroup[]> {
   const [proposals, agendas] = await Promise.all([
-    queryClient.fetchQuery({ ...getGetProposalsQueryOptions(noteId), staleTime: FRESH_MS }),
-    queryClient.fetchQuery({ ...getGetNoteAgendasQueryOptions(noteId), staleTime: FRESH_MS }),
+    queryClient.fetchQuery({
+      ...getGetProposalsQueryOptions(noteId),
+      staleTime: FRESH_MS,
+    }),
+    queryClient.fetchQuery({
+      ...getGetNoteAgendasQueryOptions(noteId),
+      staleTime: FRESH_MS,
+    }),
   ]);
   const snapshot = selectContextSnapshot(proposals);
-  const state = reduceContextEvent(initialContextState, { type: "snapshot", ...snapshot });
+  const state = reduceContextEvent(initialContextState, {
+    type: "snapshot",
+    ...snapshot,
+  });
   const list = okData(agendas);
-  const plan = list ? { list, placement: placeAgendas(new Map(), snapshot.proposals, list, false) } : null;
+  const plan = list
+    ? {
+        list,
+        placement: placeAgendas(new Map(), snapshot.proposals, list, false),
+      }
+    : null;
   return selectTimeline(state, "ALL", plan).groups;
 }
 
@@ -45,13 +75,24 @@ export async function loadTranscript(
   participants: SpeakerFace[]
 ): Promise<TranscriptSource> {
   const transcript = okData(
-    await queryClient.fetchQuery({ ...getGetNoteTranscriptQueryOptions(noteId), staleTime: FRESH_MS })
+    await queryClient.fetchQuery({
+      ...getGetNoteTranscriptQueryOptions(noteId),
+      staleTime: FRESH_MS,
+    })
   );
   if (!transcript) throw new Error("전사를 불러오지 못했습니다");
   const diarized = transcript.diarization.status === "MAPPED";
   return {
-    rows: interleaveTranscript(transcript.segments, toGapRows(transcript.gaps, transcript.transcriptGaps)),
-    speakerOf: diarized ? createSpeakerIdentityResolver(transcript.diarization.speakers, participants) : null,
+    rows: interleaveTranscript(
+      transcript.segments,
+      toGapRows(transcript.gaps, transcript.transcriptGaps)
+    ),
+    speakerOf: diarized
+      ? createSpeakerIdentityResolver(
+          transcript.diarization.speakers,
+          participants
+        )
+      : null,
     truncated: transcript.recording.seal === "TRUNCATED",
   };
 }

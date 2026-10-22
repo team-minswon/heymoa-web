@@ -119,6 +119,7 @@ describe("힌트 → 다시 읽을 쿼리", () => {
       ["/v1/notes/N/analyses/latest"],
       ["/v1/notes/N"],
       ["/v1/notes/N/transcript"],
+      ["/v1/notes/N/meeting-review"],
       ["/v1/notes/M/analyses/flow"],
       ["/v1/workspaces/W/notes", { pages: 1 }],
       ["/v1/projects/P/notes"],
@@ -138,16 +139,17 @@ describe("힌트 → 다시 읽을 쿼리", () => {
     expect(hit("analysis:N")).toEqual([
       JSON.stringify(keys[0]),
       JSON.stringify(keys[1]),
+      JSON.stringify(keys[4]),
     ]);
     expect(hit("note:N")).toEqual([JSON.stringify(keys[2])]);
-    expect(hit("notes:ws:W")).toEqual([JSON.stringify(keys[5])]);
-    expect(hit("chats:W")).toEqual([JSON.stringify(keys[7])]);
+    expect(hit("notes:ws:W")).toEqual([JSON.stringify(keys[6])]);
+    expect(hit("chats:W")).toEqual([JSON.stringify(keys[8])]);
     // 불러온 알림 목록(무한 쿼리)은 다시 읽지 않는다 — 개수와 열린 모달의 첫 쪽만.
     expect(hit("notifications")).toEqual([
-      JSON.stringify(keys[8]),
-      JSON.stringify(keys[10]),
+      JSON.stringify(keys[9]),
+      JSON.stringify(keys[11]),
     ]);
-    expect(hit("workspaces")).toEqual([JSON.stringify(keys[11])]);
+    expect(hit("workspaces")).toEqual([JSON.stringify(keys[12])]);
     expect(hit(OWNED_TARGET)).toHaveLength(10);
   });
 });

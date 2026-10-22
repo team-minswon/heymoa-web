@@ -59,7 +59,11 @@ export function AddItemForm({
         onChange={(event) => setContent(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") onCancel();
-          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+          if (
+            event.key === "Enter" &&
+            !event.shiftKey &&
+            !event.nativeEvent.isComposing
+          ) {
             event.preventDefault();
             void submit();
           }
@@ -70,7 +74,12 @@ export function AddItemForm({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           취소
         </Button>
-        <Button type="submit" size="sm" loading={busy} disabled={!trimmed || disabled}>
+        <Button
+          type="submit"
+          size="sm"
+          loading={busy}
+          disabled={!trimmed || disabled}
+        >
           추가
         </Button>
       </div>

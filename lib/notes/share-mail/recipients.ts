@@ -31,8 +31,10 @@ export const isEmail = (value: string) => {
 
 const keyOf = (email: string) => email.trim().toLowerCase();
 
-export const hasRecipient = (list: readonly { email: string }[], email: string) =>
-  list.some((recipient) => keyOf(recipient.email) === keyOf(email));
+export const hasRecipient = (
+  list: readonly { email: string }[],
+  email: string
+) => list.some((recipient) => keyOf(recipient.email) === keyOf(email));
 
 /**
  * 붙여 넣은 글이나 쳐 둔 글을 주소 조각으로 나눈다. 메일 앱에서 복사한 `이름 <a@b.com>` 모양은 꺾쇠 안의
@@ -43,14 +45,21 @@ export const hasRecipient = (list: readonly { email: string }[], email: string) 
  * 잘못 친 주소가 오류 칩으로 보이게 한다.
  */
 export function splitAddresses(text: string): string[] {
-  return text
-    // 따옴표 안은 늘 이름이다(`"Kim, Minsu" <kim@a.com>`) — 그 안의 쉼표로 나누지 않게 먼저 걷는다
-    .replace(/"[^"]*"/g, " ")
-    .split(/[,;\n]+/)
-    .flatMap((cell) => {
-      const words = cell.replace(/<([^<>\s]+@[^<>\s]+)>/g, " $1 ").split(/\s+/).filter(Boolean);
-      return /<[^<>\s]+@[^<>\s]+>/.test(cell) ? words.filter((word) => word.includes("@")) : words;
-    });
+  return (
+    text
+      // 따옴표 안은 늘 이름이다(`"Kim, Minsu" <kim@a.com>`) — 그 안의 쉼표로 나누지 않게 먼저 걷는다
+      .replace(/"[^"]*"/g, " ")
+      .split(/[,;\n]+/)
+      .flatMap((cell) => {
+        const words = cell
+          .replace(/<([^<>\s]+@[^<>\s]+)>/g, " $1 ")
+          .split(/\s+/)
+          .filter(Boolean);
+        return /<[^<>\s]+@[^<>\s]+>/.test(cell)
+          ? words.filter((word) => word.includes("@"))
+          : words;
+      })
+  );
 }
 
 /**
@@ -104,6 +113,8 @@ export function matchCandidates(
   return candidates.filter(
     (c) =>
       !hasRecipient(list, c.email) &&
-      (!q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+      (!q ||
+        c.name.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q))
   );
 }

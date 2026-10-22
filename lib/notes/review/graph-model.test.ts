@@ -9,7 +9,10 @@ import {
   screenRadius,
   toForceGraph,
 } from "@/lib/notes/review/graph-model";
-import type { MeetingReviewSummary, SummaryTopic } from "@/lib/notes/review/summary";
+import type {
+  MeetingReviewSummary,
+  SummaryTopic,
+} from "@/lib/notes/review/summary";
 
 function reviewItem(
   itemId: string,
@@ -22,7 +25,7 @@ function reviewItem(
     kind,
     content: `${itemId} 내용`,
     included: true,
-  projectSelected: true,
+    projectSelected: true,
     edited: false,
     authoredByUserId: null,
     originalProposalRef: null,
@@ -44,7 +47,10 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     agendaItemId: null,
     centerItemId: null,
     members: [],
-    memberships: (over.members ?? []).map(({ itemId }) => ({ itemId, secondary: false })),
+    memberships: (over.members ?? []).map(({ itemId }) => ({
+      itemId,
+      secondary: false,
+    })),
     alsoItemIds: [],
     relations: [],
     sentences: [],
@@ -77,12 +83,22 @@ describe("buildReviewGraph 다른 주제 연결", () => {
       topics: [],
       agendas: [
         topic(1, { members: [{ itemId: "a1", kind: "ACTION_ITEM" }] }),
-        topic(2, { members: [{ itemId: "d1", kind: "DECISION" }, { itemId: "a1", kind: "ACTION_ITEM" }] }),
+        topic(2, {
+          members: [
+            { itemId: "d1", kind: "DECISION" },
+            { itemId: "a1", kind: "ACTION_ITEM" },
+          ],
+        }),
       ],
     };
-    const graph = buildReviewGraph(summary, [reviewItem("a1", "ACTION_ITEM"), reviewItem("d1", "DECISION")]);
+    const graph = buildReviewGraph(summary, [
+      reviewItem("a1", "ACTION_ITEM"),
+      reviewItem("d1", "DECISION"),
+    ]);
 
-    expect(graph.nodes.map((node) => [node.id, node.group, node.alsoGroups])).toEqual([
+    expect(
+      graph.nodes.map((node) => [node.id, node.group, node.alsoGroups])
+    ).toEqual([
       ["a1", 1, [2]],
       ["d1", 2, []],
     ]);
@@ -98,11 +114,22 @@ describe("buildReviewGraph 다른 주제 연결", () => {
       topics: [],
       agendas: [
         topic(1, { members: [{ itemId: "a1", kind: "ACTION_ITEM" }] }),
-        topic(2, { members: [{ itemId: "d1", kind: "DECISION" }], memberships: [{ itemId: "d1", secondary: false }, { itemId: "a1", secondary: true }] }),
+        topic(2, {
+          members: [{ itemId: "d1", kind: "DECISION" }],
+          memberships: [
+            { itemId: "d1", secondary: false },
+            { itemId: "a1", secondary: true },
+          ],
+        }),
       ],
     };
-    const graph = buildReviewGraph(summary, [reviewItem("a1", "ACTION_ITEM"), reviewItem("d1", "DECISION")]);
-    expect(graph.nodes.find((node) => node.id === "a1")?.alsoGroups).toEqual([2]);
+    const graph = buildReviewGraph(summary, [
+      reviewItem("a1", "ACTION_ITEM"),
+      reviewItem("d1", "DECISION"),
+    ]);
+    expect(graph.nodes.find((node) => node.id === "a1")?.alsoGroups).toEqual([
+      2,
+    ]);
   });
 
   it("앞 주제의 보조 소속이 뒤 주제의 집을 빼앗지 않는다", () => {
@@ -114,11 +141,20 @@ describe("buildReviewGraph 다른 주제 연결", () => {
       lead: [],
       topics: [],
       agendas: [
-        topic(1, { members: [{ itemId: "d1", kind: "DECISION" }], memberships: [{ itemId: "d1", secondary: false }, { itemId: "a1", secondary: true }] }),
+        topic(1, {
+          members: [{ itemId: "d1", kind: "DECISION" }],
+          memberships: [
+            { itemId: "d1", secondary: false },
+            { itemId: "a1", secondary: true },
+          ],
+        }),
         topic(2, { members: [{ itemId: "a1", kind: "ACTION_ITEM" }] }),
       ],
     };
-    const graph = buildReviewGraph(summary, [reviewItem("a1", "ACTION_ITEM"), reviewItem("d1", "DECISION")]);
+    const graph = buildReviewGraph(summary, [
+      reviewItem("a1", "ACTION_ITEM"),
+      reviewItem("d1", "DECISION"),
+    ]);
     const a1 = graph.nodes.find((node) => node.id === "a1");
     expect([a1?.group, a1?.alsoGroups]).toEqual([2, [1]]);
   });
@@ -136,9 +172,18 @@ describe("buildReviewGraph 다른 주제 연결", () => {
         topic(2, { members: [{ itemId: "a1", kind: "ACTION_ITEM" }] }),
       ],
     };
-    const { nodes, links } = toForceGraph(buildReviewGraph(summary, [reviewItem("a1", "ACTION_ITEM")]));
-    expect(nodes.filter((node) => node.hub).map((node) => node.id)).toEqual([hubId(1), hubId(2)]);
-    expect(links).toContainEqual({ source: hubId(2), target: "a1", kind: "also" });
+    const { nodes, links } = toForceGraph(
+      buildReviewGraph(summary, [reviewItem("a1", "ACTION_ITEM")])
+    );
+    expect(nodes.filter((node) => node.hub).map((node) => node.id)).toEqual([
+      hubId(1),
+      hubId(2),
+    ]);
+    expect(links).toContainEqual({
+      source: hubId(2),
+      target: "a1",
+      kind: "also",
+    });
   });
 });
 
@@ -160,10 +205,19 @@ describe("buildReviewGraph", () => {
             { itemId: "x", kind: "ACTION_ITEM" },
           ],
           openItemIds: ["q1"],
-          relations: [relation("d1", "q1"), relation("q1", "d1"), relation("d1", "x")],
+          relations: [
+            relation("d1", "q1"),
+            relation("q1", "d1"),
+            relation("d1", "x"),
+          ],
         }),
         // d1 은 주제 2 에도 속한다 — 첫 주제가 집이고 주제 2 와는 약하게 잇는다
-        topic(2, { members: [{ itemId: "a1", kind: "ACTION_ITEM" }, { itemId: "d1", kind: "DECISION" }] }),
+        topic(2, {
+          members: [
+            { itemId: "a1", kind: "ACTION_ITEM" },
+            { itemId: "d1", kind: "DECISION" },
+          ],
+        }),
       ],
     };
     const graph = buildReviewGraph(summary, [
@@ -175,18 +229,26 @@ describe("buildReviewGraph", () => {
       reviewItem("loose", "INSIGHT"),
     ]);
 
-    expect(graph.nodes.map((node) => [node.id, node.group, node.role])).toEqual([
-      ["d1", 1, "DECISION"],
-      ["q1", 1, "OPEN"],
-      ["q2", 1, "REFERENCE"],
-      ["a1", 2, "ACTION"],
-      ["loose", null, "REFERENCE"],
+    expect(graph.nodes.map((node) => [node.id, node.group, node.role])).toEqual(
+      [
+        ["d1", 1, "DECISION"],
+        ["q1", 1, "OPEN"],
+        ["q2", 1, "REFERENCE"],
+        ["a1", 2, "ACTION"],
+        ["loose", null, "REFERENCE"],
+      ]
+    );
+    expect(graph.nodes.find((node) => node.id === "d1")?.alsoGroups).toEqual([
+      2,
     ]);
-    expect(graph.nodes.find((node) => node.id === "d1")?.alsoGroups).toEqual([2]);
     // 양방향 관계는 선 하나, 제외 항목으로 가는 관계는 없다
     expect(graph.edges).toEqual([{ source: "d1", target: "q1" }]);
     // 다른 주제에도 속한 항목은 그 주제의 허브와 약하게 잇는다
-    expect(toForceGraph(graph).links).toContainEqual({ source: "topic:2", target: "d1", kind: "also" });
+    expect(toForceGraph(graph).links).toContainEqual({
+      source: "topic:2",
+      target: "d1",
+      kind: "also",
+    });
   });
 });
 
@@ -232,7 +294,9 @@ describe("toForceGraph", () => {
   it("항목이 남은 주제마다 번호 붙은 허브를 두고, 주제 안 항목은 허브에 잇는다", () => {
     const { nodes, links } = force();
 
-    expect(nodes.filter((node) => node.hub).map((node) => [node.id, node.label])).toEqual([
+    expect(
+      nodes.filter((node) => node.hub).map((node) => [node.id, node.label])
+    ).toEqual([
       [hubId(1), "01 요금"],
       [hubId(2), "02 온보딩"],
     ]);
@@ -243,7 +307,9 @@ describe("toForceGraph", () => {
       { source: hubId(2), target: "g2", kind: "hub" },
     ]);
     // 주제 밖 항목은 허브 없이 관계선만 갖는다
-    expect(links.some((link) => link.target === "loose" || link.source === "loose")).toBe(false);
+    expect(
+      links.some((link) => link.target === "loose" || link.source === "loose")
+    ).toBe(false);
   });
 
   it("항목 사이 관계와 「다른 주제에도 속함」은 종류를 갈라 그대로 옮긴다", () => {
@@ -289,49 +355,92 @@ describe("toForceGraph", () => {
     const second = force().nodes.map(({ id, x, y }) => ({ id, x, y }));
 
     expect(second).toEqual(first);
-    expect(new Set(first.map(({ x, y }) => `${x},${y}`)).size).toBe(first.length);
+    expect(new Set(first.map(({ x, y }) => `${x},${y}`)).size).toBe(
+      first.length
+    );
     // 항목은 남의 허브보다 제 허브 가까이에서 시작한다
     const at = new Map(first.map((row) => [row.id, row]));
-    const distance = (a: string, b: string) => Math.hypot(at.get(a)!.x - at.get(b)!.x, at.get(a)!.y - at.get(b)!.y);
+    const distance = (a: string, b: string) =>
+      Math.hypot(at.get(a)!.x - at.get(b)!.x, at.get(a)!.y - at.get(b)!.y);
     expect(distance("a2", hubId(1))).toBeLessThan(distance("a2", hubId(2)));
   });
 
   it("이웃은 양쪽으로 센다", () => {
     const neighbors = neighborsOf(force().links);
 
-    expect([...neighbors.get("a1")!].sort()).toEqual(["d1", hubId(1), hubId(2)].sort());
+    expect([...neighbors.get("a1")!].sort()).toEqual(
+      ["d1", hubId(1), hubId(2)].sort()
+    );
     expect(neighbors.get(hubId(2))).toEqual(new Set(["g2", "a1"]));
     expect(neighbors.get("loose")).toBeUndefined();
   });
 });
 
-
 describe("회의 안 안건 이어짐", () => {
   const summary: MeetingReviewSummary = {
-    noteId: "now", status: "SUCCEEDED", resultVersion: "v", headline: null, lead: [], topics: [],
+    noteId: "now",
+    status: "SUCCEEDED",
+    resultVersion: "v",
+    headline: null,
+    lead: [],
+    topics: [],
     agendas: [
-      topic(1, { agendaId: "ag1", title: "문제 정의", members: [{ itemId: "d1", kind: "DECISION" }] }),
+      topic(1, {
+        agendaId: "ag1",
+        title: "문제 정의",
+        members: [{ itemId: "d1", kind: "DECISION" }],
+      }),
       topic(2, { agendaId: "ag2", title: "해결 방안", members: [] }),
       topic(3, { agendaId: "ag3", title: "연결 없는 안건", members: [] }),
     ],
   };
-  const previous = (noteId: string, agendaId: string) => ({ noteId, agendaId, title: "회의", agendaTitle: "안건" });
+  const previous = (noteId: string, agendaId: string) => ({
+    noteId,
+    agendaId,
+    title: "회의",
+    agendaTitle: "안건",
+  });
   const agendaLinks = new Map([
-    ["ag2", [previous("now", "ag1"), previous("now", "ag1"), previous("past", "ag1"), previous("now", "missing"), previous("now", "ag2")]],
+    [
+      "ag2",
+      [
+        previous("now", "ag1"),
+        previous("now", "ag1"),
+        previous("past", "ag1"),
+        previous("now", "missing"),
+        previous("now", "ag2"),
+      ],
+    ],
     ["missing", [previous("now", "ag1")]],
   ]);
 
   it("현재 회의의 앞선 안건에서 뒤 안건으로 한 번만 연결하고 다른 회의·미확인·자기 연결을 제외한다", () => {
-    const graph = buildReviewGraph(summary, [reviewItem("d1", "DECISION")], agendaLinks);
+    const graph = buildReviewGraph(
+      summary,
+      [reviewItem("d1", "DECISION")],
+      agendaLinks
+    );
     expect(graph.agendaEdges).toEqual([{ source: hubId(1), target: hubId(2) }]);
     const force = toForceGraph(graph);
-    expect(force.links.filter((link) => link.kind === "agenda")).toEqual([{ source: hubId(1), target: hubId(2), kind: "agenda" }]);
-    expect(force.nodes.filter((node) => node.hub).map((node) => node.id)).toEqual([hubId(1), hubId(2)]);
+    expect(force.links.filter((link) => link.kind === "agenda")).toEqual([
+      { source: hubId(1), target: hubId(2), kind: "agenda" },
+    ]);
+    expect(
+      force.nodes.filter((node) => node.hub).map((node) => node.id)
+    ).toEqual([hubId(1), hubId(2)]);
   });
 
   it("안건 연결이 늘어도 허브에 표시하는 항목 수를 부풀리지 않는다", () => {
-    const { nodes } = toForceGraph(buildReviewGraph(summary, [reviewItem("d1", "DECISION")], agendaLinks));
-    expect(nodes.find((node) => node.id === hubId(1))).toMatchObject({ degree: 2, memberCount: 1 });
-    expect(nodes.find((node) => node.id === hubId(2))).toMatchObject({ degree: 1, memberCount: 0 });
+    const { nodes } = toForceGraph(
+      buildReviewGraph(summary, [reviewItem("d1", "DECISION")], agendaLinks)
+    );
+    expect(nodes.find((node) => node.id === hubId(1))).toMatchObject({
+      degree: 2,
+      memberCount: 1,
+    });
+    expect(nodes.find((node) => node.id === hubId(2))).toMatchObject({
+      degree: 1,
+      memberCount: 0,
+    });
   });
 });

@@ -9,23 +9,41 @@ const fontBase = () => new URL("/fonts/minutes", window.location.origin).href;
  * **워커에서 만든다.** react-pdf · 글꼴은 이 함수를 부를 때 처음 읽힌다 — 노트 화면 번들에는 이 파일만 든다.
  * 워커가 없는 환경(jsdom)에서는 이 스레드에서 만든다.
  */
-export async function renderMinutesPdf(doc: MinutesDocument, signal?: AbortSignal): Promise<Blob> {
+export async function renderMinutesPdf(
+  doc: MinutesDocument,
+  signal?: AbortSignal
+): Promise<Blob> {
   signal?.throwIfAborted();
   if (typeof Worker === "undefined") {
-    const { renderMinutesPdfInline } = await import("@/components/notes/minutes/minutes-pdf");
+    const { renderMinutesPdfInline } =
+      await import("@/components/notes/minutes/minutes-pdf");
     const blob = await renderMinutesPdfInline(doc, fontBase());
     signal?.throwIfAborted();
     return blob;
   }
-  const worker = new Worker(new URL("./minutes-pdf.worker.ts", import.meta.url), { type: "module" });
+  const worker = new Worker(
+    new URL("./minutes-pdf.worker.ts", import.meta.url),
+    { type: "module" }
+  );
   let abort: (() => void) | undefined;
   try {
     return await new Promise<Blob>((resolve, reject) => {
-      abort = () => reject(new DOMException("PDF 생성이 취소되었습니다", "AbortError"));
+      abort = () =>
+        reject(new DOMException("PDF 생성이 취소되었습니다", "AbortError"));
       signal?.addEventListener("abort", abort, { once: true });
-      worker.onmessage = (event: MessageEvent<{ ok: true; blob: Blob } | { ok: false; message: string }>) =>
-        event.data.ok ? resolve(event.data.blob) : reject(new Error(event.data.message));
-      worker.onerror = (event) => reject(event.error ?? new Error(event.message || "회의록 PDF 워커가 멈췄습니다"));
+      worker.onmessage = (
+        event: MessageEvent<
+          { ok: true; blob: Blob } | { ok: false; message: string }
+        >
+      ) =>
+        event.data.ok
+          ? resolve(event.data.blob)
+          : reject(new Error(event.data.message));
+      worker.onerror = (event) =>
+        reject(
+          event.error ??
+            new Error(event.message || "회의록 PDF 워커가 멈췄습니다")
+        );
       worker.postMessage({ doc, fontBase: fontBase() });
     });
   } finally {
@@ -35,7 +53,10 @@ export async function renderMinutesPdf(doc: MinutesDocument, signal?: AbortSigna
 }
 
 export type MinutesPdfArtifact = { blob: Blob; fileName: string };
-export type PrepareMinutesPdf = (include: import("@/lib/notes/minutes/model").MinutesInclude, signal?: AbortSignal) => Promise<MinutesPdfArtifact>;
+export type PrepareMinutesPdf = (
+  include: import("@/lib/notes/minutes/model").MinutesInclude,
+  signal?: AbortSignal
+) => Promise<MinutesPdfArtifact>;
 
 /** 한 회의 화면에서 최근 두 옵션의 결과만 재사용한다. 실패·취소된 파일은 보관하지 않는다. */
 export function createMinutesPdfRenderer() {

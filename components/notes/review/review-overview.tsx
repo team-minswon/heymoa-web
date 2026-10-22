@@ -1,7 +1,10 @@
 import { SectionBlock } from "@/components/notes/review/section-block";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
-import { overviewText, type MeetingReviewSummary } from "@/lib/notes/review/summary";
+import {
+  overviewText,
+  type MeetingReviewSummary,
+} from "@/lib/notes/review/summary";
 
 /**
  * 요약. 회의 전체를 말하는 한 문장이다. 주제는 바로 아래 주제 목차가 맡는다.
@@ -23,7 +26,12 @@ export function ReviewOverview({
   if (failed && onRetry) {
     return (
       <SectionBlock title="요약">
-        <InlineRetry variant="line" label="요약을 불러오지 못했습니다." onRetry={onRetry} className="pt-1" />
+        <InlineRetry
+          variant="line"
+          label="요약을 불러오지 못했습니다."
+          onRetry={onRetry}
+          className="pt-1"
+        />
       </SectionBlock>
     );
   }
@@ -54,7 +62,9 @@ export function ReviewOverview({
   return (
     <SectionBlock title="요약">
       {/* 주제마다의 한 줄은 아래 주제 목차가 맡는다 */}
-      <p className="text-[16px] leading-7 text-[var(--el-ink)]">{overviewText(summary)}</p>
+      <p className="text-[16px] leading-7 text-[var(--el-ink)]">
+        {overviewText(summary)}
+      </p>
     </SectionBlock>
   );
 }

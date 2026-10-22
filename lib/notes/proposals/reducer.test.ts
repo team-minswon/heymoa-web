@@ -132,11 +132,7 @@ describe("context proposal reducer", () => {
     expect(seen.needsRefetch).toBe(false);
 
     const gap = apply(
-      [
-        changed(
-          head({ proposalId: "0HZX2K7M9Q4A9", revision: 3 })
-        ),
-      ],
+      [changed(head({ proposalId: "0HZX2K7M9Q4A9", revision: 3 }))],
       seen
     );
     expect(gap.needsRefetch).toBe(true);
@@ -179,9 +175,7 @@ describe("context proposal reducer", () => {
   it("도착 순서가 아니라 createdSequence로 세운다", () => {
     const state = apply([
       changed(head({ proposalId: "0HZX2K7M9Q4A2", createdSequence: 50 })),
-      changed(
-        head({ proposalId: "0HZX2K7M9Q4A1", createdSequence: 10 })
-      ),
+      changed(head({ proposalId: "0HZX2K7M9Q4A1", createdSequence: 10 })),
     ]);
 
     expect(selectCards(state).map((card) => card.createdSequence)).toEqual([
@@ -308,9 +302,7 @@ describe("context proposal reducer", () => {
 
   it("마지막 갱신 시각은 batch의 occurredAt에서 온다", () => {
     const state = apply([
-      batch(
-        { ...range(), appliedAt: "2026-08-24T02:00:00.000Z" }
-      ),
+      batch({ ...range(), appliedAt: "2026-08-24T02:00:00.000Z" }),
     ]);
 
     expect(state.lastBatchAt).toBe("2026-08-24T02:00:00.000Z");
@@ -318,12 +310,8 @@ describe("context proposal reducer", () => {
 
   it("범위가 도착 순서와 무관하게 fromSequence로 정렬된다", () => {
     const state = apply([
-      batch(
-        range({ runId: "run-2", fromSequence: 11, toSequence: 20 })
-      ),
-      batch(
-        range({ runId: "run-1", fromSequence: 1, toSequence: 10 })
-      ),
+      batch(range({ runId: "run-2", fromSequence: 11, toSequence: 20 })),
+      batch(range({ runId: "run-1", fromSequence: 1, toSequence: 10 })),
     ]);
 
     expect(state.runs.map((r) => r.fromSequence)).toEqual([1, 11]);
@@ -366,12 +354,12 @@ describe("context proposal reducer", () => {
       runs: [range()],
     });
 
-    expect(
-      selectCards(settled).map((c) => [c.proposalId, c.revision])
-    ).toEqual([
-      ["0HZX2K7M9Q4A2", 1],
-      ["0HZX2K7M9Q4A1", 2],
-    ]);
+    expect(selectCards(settled).map((c) => [c.proposalId, c.revision])).toEqual(
+      [
+        ["0HZX2K7M9Q4A2", 1],
+        ["0HZX2K7M9Q4A1", 2],
+      ]
+    );
     expect(settled.needsRefetch).toBe(false);
   });
 
@@ -386,9 +374,7 @@ describe("context proposal reducer", () => {
     );
 
     // 역순으로 밀어 넣어도…
-    const byEvents = apply(
-      [...sameSequence].reverse().map((c) => changed(c))
-    );
+    const byEvents = apply([...sameSequence].reverse().map((c) => changed(c)));
     expect(selectCards(byEvents).map((c) => c.proposalId)).toEqual(ids);
 
     // …snapshot 으로 역순을 실어도 같은 순서다. 두 경로가 갈리면 새로고침에 화면이 바뀐다.
@@ -418,9 +404,7 @@ describe("context proposal reducer", () => {
     );
 
     const state = apply(
-      [question, ...[...results].reverse()].map((c) =>
-        changed(c)
-      )
+      [question, ...[...results].reverse()].map((c) => changed(c))
     );
     const [card] = selectCards(state);
     expect(card.results.map((r) => r.proposalId)).toEqual([
@@ -453,9 +437,7 @@ describe("context proposal reducer", () => {
    * 깨진 값이 그대로 화면까지 가서 `Invalid Date` 가 된다.
    */
   it("malformed 시각은 첫 event 여도 lastBatchAt 에 안 앉는다", () => {
-    const broken = apply([
-      batch(range({ appliedAt: "언젠가" })),
-    ]);
+    const broken = apply([batch(range({ appliedAt: "언젠가" }))]);
     expect(broken.lastBatchAt).toBeNull();
 
     // 그 뒤 정상 값이 오면 정상적으로 선다.

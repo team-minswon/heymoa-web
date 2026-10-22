@@ -42,8 +42,11 @@ export function SavedChoices({
           loading={clearing === choice.targetId}
           onClick={async () => {
             setClearing(choice.targetId);
-            try { await onClear(choice.targetId); }
-            finally { setClearing(null); }
+            try {
+              await onClear(choice.targetId);
+            } finally {
+              setClearing(null);
+            }
           }}
           className="ml-auto underline underline-offset-4"
         >

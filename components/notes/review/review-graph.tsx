@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import dynamic from "next/dynamic";
 import { Minus, Plus, Scan } from "lucide-react";
 
@@ -23,14 +30,20 @@ import {
   topicNumber,
   type ForceNode,
 } from "@/lib/notes/review/graph-model";
-import { summaryTopics, type MeetingReviewSummary } from "@/lib/notes/review/summary";
+import {
+  summaryTopics,
+  type MeetingReviewSummary,
+} from "@/lib/notes/review/summary";
 import { cn } from "@/lib/utils";
 
 // 캔버스와 d3 힘 배치는 브라우저에서만 돈다. 서버에서 그릴 판이 없어 이 경계만 SSR 을 끈다.
-const ReviewGraphCanvas = dynamic(() => import("@/components/notes/review/review-graph-canvas"), {
-  ssr: false,
-  loading: () => <Skeleton aria-hidden className="size-full" />,
-});
+const ReviewGraphCanvas = dynamic(
+  () => import("@/components/notes/review/review-graph-canvas"),
+  {
+    ssr: false,
+    loading: () => <Skeleton aria-hidden className="size-full" />,
+  }
+);
 
 /** 판의 가로세로 비. 요약이 오기 전 자리표시(`review-board`)와 같다 */
 const ASPECT = 520 / 840;
@@ -57,12 +70,19 @@ export function ReviewGraph({
   onSelect: (itemId: string) => void;
   agendaLinks?: MeetingLinkIndex["byAgendaId"];
 }) {
-  const ready = summary.status === "SUCCEEDED" && summaryTopics(summary).length > 0;
-  const graph = useMemo(() => buildReviewGraph(summary, items, agendaLinks), [summary, items, agendaLinks]);
+  const ready =
+    summary.status === "SUCCEEDED" && summaryTopics(summary).length > 0;
+  const graph = useMemo(
+    () => buildReviewGraph(summary, items, agendaLinks),
+    [summary, items, agendaLinks]
+  );
   // 힘 배치는 점 객체에 좌표를 써 넣는다. 같은 그래프면 같은 객체를 넘겨야 배치가 처음부터 다시 돌지 않는다.
   const data = useMemo(() => toForceGraph(graph), [graph]);
   const neighbors = useMemo(() => neighborsOf(data.links), [data]);
-  const nodeById = useMemo(() => new Map(data.nodes.map((node) => [node.id, node as GraphNodeObject])), [data]);
+  const nodeById = useMemo(
+    () => new Map(data.nodes.map((node) => [node.id, node as GraphNodeObject])),
+    [data]
+  );
 
   const panelRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<GraphApi | undefined>(undefined);
@@ -79,7 +99,8 @@ export function ReviewGraph({
     const panel = panelRef.current;
     if (!panel) return;
     const style = getComputedStyle(panel);
-    const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+    const read = (name: string, fallback: string) =>
+      style.getPropertyValue(name).trim() || fallback;
     setTokens({
       ink: read("--el-ink", "#0c0a09"),
       muted: read("--el-muted", "#777169"),
@@ -90,7 +111,8 @@ export function ReviewGraph({
     setWidth(panel.clientWidth);
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(([entry]) => {
-      if (entry?.contentRect.width) setWidth(Math.round(entry.contentRect.width));
+      if (entry?.contentRect.width)
+        setWidth(Math.round(entry.contentRect.width));
     });
     observer.observe(panel);
     return () => observer.disconnect();
@@ -101,10 +123,17 @@ export function ReviewGraph({
     (id: string) => {
       const node = nodeById.get(id);
       const api = graphRef.current;
-      if (!node || !api || node.x === undefined || node.y === undefined) return false;
+      if (!node || !api || node.x === undefined || node.y === undefined)
+        return false;
       const at = api.graph2ScreenCoords(node.x, node.y);
       const margin = 24;
-      if (at.x >= margin && at.x <= width - margin && at.y >= margin && at.y <= height - margin) return false;
+      if (
+        at.x >= margin &&
+        at.x <= width - margin &&
+        at.y >= margin &&
+        at.y <= height - margin
+      )
+        return false;
       api.centerAt(node.x, node.y, REVEAL_MS);
       return true;
     },
@@ -142,8 +171,11 @@ export function ReviewGraph({
     );
   }
 
-  const lit = hoveredId ? new Set([hoveredId, ...(neighbors.get(hoveredId) ?? [])]) : null;
-  const labelLimit = width < NARROW_LABEL_WIDTH ? 0 : width < SHORT_LABEL_WIDTH ? 10 : 16;
+  const lit = hoveredId
+    ? new Set([hoveredId, ...(neighbors.get(hoveredId) ?? [])])
+    : null;
+  const labelLimit =
+    width < NARROW_LABEL_WIDTH ? 0 : width < SHORT_LABEL_WIDTH ? 10 : 16;
 
   return (
     <div
@@ -160,15 +192,24 @@ export function ReviewGraph({
       <div className="mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-[var(--el-muted)]">
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            <span aria-hidden className="inline-block size-2.5 rounded-full bg-[var(--el-ink)]" />
+            <span
+              aria-hidden
+              className="inline-block size-2.5 rounded-full bg-[var(--el-ink)]"
+            />
             주제
           </span>
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            <span aria-hidden className="inline-block size-2 rounded-full border-[1.5px] border-[var(--el-ink)]" />
+            <span
+              aria-hidden
+              className="inline-block size-2 rounded-full border-[1.5px] border-[var(--el-ink)]"
+            />
             안건
           </span>
           {GRAPH_ROLE_ORDER.map((role) => (
-            <span key={role} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span
+              key={role}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
               <RoleDot role={role} />
               {GRAPH_ROLE_LABEL[role]}
             </span>
@@ -177,16 +218,24 @@ export function ReviewGraph({
         <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
           {graph.agendaEdges.length > 0 ? (
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-              <span aria-hidden className="text-[var(--el-ink)]">⟶</span>
+              <span aria-hidden className="text-[var(--el-ink)]">
+                ⟶
+              </span>
               안건 이어짐
             </span>
           ) : null}
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            <span aria-hidden className="inline-block h-px w-4 bg-[var(--el-muted)]" />
+            <span
+              aria-hidden
+              className="inline-block h-px w-4 bg-[var(--el-muted)]"
+            />
             관계
           </span>
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            <span aria-hidden className="inline-block w-4 border-t border-dashed border-[var(--el-muted-soft)]" />
+            <span
+              aria-hidden
+              className="inline-block w-4 border-t border-dashed border-[var(--el-muted-soft)]"
+            />
             다른 주제에도 속함
           </span>
         </span>
@@ -245,7 +294,11 @@ export function ReviewGraph({
                     window.setTimeout(() => point(node.id), REVEAL_MS + 20);
                   } else point(node.id);
                 }}
-                onBlur={() => setHoveredId((current) => (current === node.id ? null : current))}
+                onBlur={() =>
+                  setHoveredId((current) =>
+                    current === node.id ? null : current
+                  )
+                }
               />
             </li>
           ))}
@@ -258,10 +311,15 @@ export function ReviewGraph({
             className={cn(
               "pointer-events-none absolute z-10 w-60 max-w-[calc(100%-24px)] rounded-control border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-3 py-2.5 shadow-e3",
               "animate-in fade-in-0 duration-150 ease-out motion-reduce:animate-none",
-              tooltip.x > width * 0.6 ? "-translate-x-[calc(100%+14px)]" : "translate-x-[14px]",
+              tooltip.x > width * 0.6
+                ? "-translate-x-[calc(100%+14px)]"
+                : "translate-x-[14px]",
               "-translate-y-1/2"
             )}
-            style={{ left: tooltip.x, top: Math.min(Math.max(tooltip.y, 40), height - 40) }}
+            style={{
+              left: tooltip.x,
+              top: Math.min(Math.max(tooltip.y, 40), height - 40),
+            }}
           >
             {tooltip.node.item ? (
               <>
@@ -272,13 +330,19 @@ export function ReviewGraph({
                     ? ` · ${topicNumber(tooltip.node.item.group)} ${graph.topics.get(tooltip.node.item.group) ?? ""}`
                     : " · 주제 밖"}
                 </p>
-                <p className="mt-1.5 text-[13px] leading-[19px] text-[var(--el-ink)]">{tooltip.node.item.content}</p>
+                <p className="mt-1.5 text-[13px] leading-[19px] text-[var(--el-ink)]">
+                  {tooltip.node.item.content}
+                </p>
               </>
             ) : (
               // 허브 이름은 그래프 위에서 잘린다. 온전한 이름은 여기서만 읽힌다
               <>
-                <p className="text-[11px] font-medium text-[var(--el-muted)]">주제 · 항목 {tooltip.node.memberCount ?? 0}</p>
-                <p className="mt-1.5 text-[13px] leading-[19px] font-semibold text-[var(--el-ink)]">{tooltip.node.label}</p>
+                <p className="text-[11px] font-medium text-[var(--el-muted)]">
+                  주제 · 항목 {tooltip.node.memberCount ?? 0}
+                </p>
+                <p className="mt-1.5 text-[13px] leading-[19px] font-semibold text-[var(--el-ink)]">
+                  {tooltip.node.label}
+                </p>
               </>
             )}
           </div>
@@ -286,10 +350,18 @@ export function ReviewGraph({
 
         {/* 손가락으로 쓰는 화면에서는 버튼을 40px 로 키우고 가로로 눕혀 그래프를 덜 가린다 */}
         <div className="absolute right-2 bottom-2 flex flex-col divide-y divide-[var(--el-hairline)] overflow-hidden rounded-control border border-[var(--el-hairline)] bg-[var(--el-surface-card)] pointer-coarse:flex-row pointer-coarse:divide-x pointer-coarse:divide-y-0">
-          <ControlButton label="확대" disabled={zoom >= ZOOM_RANGE[1]} onClick={() => zoomBy(STEP)}>
+          <ControlButton
+            label="확대"
+            disabled={zoom >= ZOOM_RANGE[1]}
+            onClick={() => zoomBy(STEP)}
+          >
             <Plus aria-hidden className="size-3.5" />
           </ControlButton>
-          <ControlButton label="축소" disabled={zoom <= ZOOM_RANGE[0]} onClick={() => zoomBy(1 / STEP)}>
+          <ControlButton
+            label="축소"
+            disabled={zoom <= ZOOM_RANGE[0]}
+            onClick={() => zoomBy(1 / STEP)}
+          >
             <Minus aria-hidden className="size-3.5" />
           </ControlButton>
           <ControlButton label="맞춤" disabled={false} onClick={fit}>
@@ -299,15 +371,18 @@ export function ReviewGraph({
       </div>
 
       {graph.agendaEdges.length > 0 ? (
-        <ul aria-label="안건 이어짐" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--el-muted)]">
+        <ul
+          aria-label="안건 이어짐"
+          className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--el-muted)]"
+        >
           {graph.agendaEdges.map((edge) => (
             <li key={`${edge.source}:${edge.target}`}>
-              {nodeById.get(edge.source)?.label} → {nodeById.get(edge.target)?.label}
+              {nodeById.get(edge.source)?.label} →{" "}
+              {nodeById.get(edge.target)?.label}
             </li>
           ))}
         </ul>
       ) : null}
-
     </div>
   );
 }

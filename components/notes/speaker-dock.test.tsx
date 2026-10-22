@@ -1,7 +1,16 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SpeakerDock, createCurrentMsStore } from "@/components/notes/speaker-dock";
+import {
+  SpeakerDock,
+  createCurrentMsStore,
+} from "@/components/notes/speaker-dock";
 import { TIMELINE_BINS, type SpeakerStat } from "@/lib/notes/speaker-stats";
 
 const stat = (overrides: Partial<SpeakerStat> = {}): SpeakerStat => ({
@@ -51,7 +60,9 @@ describe("SpeakerDock", () => {
 
   it("처음·끝에서는 그쪽 버튼이 잠긴다", () => {
     renderDock(0);
-    expect(screen.getByRole("button", { name: "화자 A 이전 발화" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "화자 A 이전 발화" })
+    ).toBeDisabled();
   });
 
   it("띠를 누르면 그 시각 이후 첫 발화로 간다", () => {
@@ -71,7 +82,12 @@ describe("SpeakerDock", () => {
   it("말한 기록이 없는 사람은 줄이 없다", () => {
     renderDock(0, vi.fn(), [
       stat(),
-      stat({ key: "p", name: "조용한 사람", jumpTargets: [], jumpStartsMs: [] }),
+      stat({
+        key: "p",
+        name: "조용한 사람",
+        jumpTargets: [],
+        jumpStartsMs: [],
+      }),
     ]);
     expect(screen.getAllByTestId("speaker-dock-row")).toHaveLength(1);
   });
@@ -80,8 +96,12 @@ describe("SpeakerDock", () => {
     renderDock(0);
     fireEvent.click(screen.getByRole("button", { name: "화자 도크 접기" }));
     // 퇴장 애니메이션이 끝나야 줄이 빠진다.
-    await waitFor(() => expect(screen.queryByTestId("speaker-dock-row")).toBeNull());
-    fireEvent.click(await screen.findByRole("button", { name: "화자 도크 펼치기" }));
+    await waitFor(() =>
+      expect(screen.queryByTestId("speaker-dock-row")).toBeNull()
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "화자 도크 펼치기" })
+    );
     expect(await screen.findAllByTestId("speaker-dock-row")).toHaveLength(1);
   });
 });

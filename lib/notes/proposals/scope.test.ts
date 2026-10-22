@@ -64,9 +64,7 @@ describe("v1 범위 — 기각 표면은 없다", () => {
     const parsed = proposalSnapshotSchema.parse({
       proposals: [],
       runs: [],
-      rejectedProposals: [
-        { proposalId: "0HZX2K7M9Q4A1", reason: "없는 내용" },
-      ],
+      rejectedProposals: [{ proposalId: "0HZX2K7M9Q4A1", reason: "없는 내용" }],
     });
 
     expect(parsed).not.toHaveProperty("rejectedProposals");
@@ -97,9 +95,7 @@ describe("v1 범위 — 기각 표면은 없다", () => {
    * revision history. 기각 조회가 생기면 생성물에 세 번째가 나타나므로 여기서 걸린다.
    */
   it("기각 조회를 위한 생성 훅이 없다", () => {
-    const generated = read(
-      "lib/api/generated/proposals/proposals.ts"
-    );
+    const generated = read("lib/api/generated/proposals/proposals.ts");
     expect(generated).not.toMatch(/reject/i);
 
     // **선언 수가 아니라 이름 집합으로 센다.** orval 은 훅마다 오버로드를 여럿 내므로

@@ -22,6 +22,8 @@ import { useReadAnalysisReadyOnView } from "@/components/notification/use-read-a
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { okData } from "@/lib/api/ok-data";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
+import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { hintedInterval } from "@/lib/events/interval";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import type { SpeakerFace } from "@/lib/transcription/speaker-identity";
 
@@ -65,16 +67,21 @@ export function ReviewTab({
   onMeetingEnded?: () => void;
 }) {
   const queryClient = useQueryClient();
+  const streamHealthy = useEventStreamHealthy();
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
       enabled: isEnded,
       staleTime: 0,
       refetchOnMount: "always",
       // 끝나는 시각을 모르는 단계만 다시 묻는다. 검토 가능 · 확정은 사람이 움직일 때 다시 읽는다.
+      // 건강한 이벤트 스트림이면 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I03).
       refetchInterval: (query) =>
-        flowPollInterval(
-          okData(query.state.data)?.status ?? null,
-          okData(query.state.data)?.regions
+        hintedInterval(
+          streamHealthy,
+          flowPollInterval(
+            okData(query.state.data)?.status ?? null,
+            okData(query.state.data)?.regions
+          )
         ),
     },
   });

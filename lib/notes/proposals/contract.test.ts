@@ -80,9 +80,7 @@ describe("draft 계약의 관대함", () => {
   it("필수 필드가 빠지면 실패한다", () => {
     const withoutSource: Record<string, unknown> = { ...head };
     delete withoutSource.revisionSource;
-    expect(proposalHeadSchema.safeParse(withoutSource).success).toBe(
-      false
-    );
+    expect(proposalHeadSchema.safeParse(withoutSource).success).toBe(false);
   });
 
   it("enum 밖의 값은 실패한다", () => {
@@ -91,8 +89,7 @@ describe("draft 계약의 관대함", () => {
     ).toBe(false);
     // `REAFFIRM` 은 proposal event 를 만들지 않으므로 wire enum 에 없다.
     expect(
-      proposalHeadSchema.safeParse({ ...head, operation: "REAFFIRM" })
-        .success
+      proposalHeadSchema.safeParse({ ...head, operation: "REAFFIRM" }).success
     ).toBe(false);
   });
 
@@ -105,9 +102,9 @@ describe("draft 계약의 관대함", () => {
       { status: "CLOSED", closeReason: "RESOLVED", kind: "DECISION" },
     ];
     for (const over of bad) {
-      expect(
-        proposalHeadSchema.safeParse({ ...head, ...over }).success
-      ).toBe(false);
+      expect(proposalHeadSchema.safeParse({ ...head, ...over }).success).toBe(
+        false
+      );
     }
     expect(
       proposalHeadSchema.safeParse({
@@ -139,7 +136,11 @@ describe("draft 계약의 관대함", () => {
   it("TSID 첫 글자를 좁히지 않는다 — 취소된 rollout 을 선반영하지 않는다", () => {
     // APP-467~471 은 전부 Canceled+archived 다. 그 strict 패턴(`^[0-9A-F]...`)을 넣으면
     // released 식별자 중 첫 글자가 G 이상인 것이 통째로 거절된다.
-    for (const proposalId of ["0HZX2K7M9Q4A1", "ZZZZZZZZZZZZZ", "G123456789ABC"]) {
+    for (const proposalId of [
+      "0HZX2K7M9Q4A1",
+      "ZZZZZZZZZZZZZ",
+      "G123456789ABC",
+    ]) {
       expect(
         proposalHeadSchema.safeParse({ ...head, proposalId }).success
       ).toBe(true);

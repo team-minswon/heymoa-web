@@ -14,7 +14,12 @@ type Status = "NOT_REQUESTED" | "ANALYZING" | "ANALYSIS_FAILED" | "DIARIZING";
 function renderNotice(status: Status, verified = true) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <FlowNotice noteId="n1" status={status} verified={verified} onOpenTranscript={vi.fn()} />
+      <FlowNotice
+        noteId="n1"
+        status={status}
+        verified={verified}
+        onOpenTranscript={vi.fn()}
+      />
     </QueryClientProvider>
   );
 }
@@ -48,7 +53,6 @@ describe("FlowNotice", () => {
     expect(screen.queryByRole("button", { name: /분석/ })).toBeNull();
   });
 });
-
 
 it("이번 화면에서 확인하지 않은 캐시만으로 수동 분석 버튼을 내놓지 않는다", () => {
   const view = renderNotice("NOT_REQUESTED", false);

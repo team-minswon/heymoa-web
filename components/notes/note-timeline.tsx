@@ -29,6 +29,8 @@ import {
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
+import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { hintedInterval } from "@/lib/events/interval";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { SpeakerChip } from "@/components/notes/speaker-chip";
 import { useGetNoteAgendas } from "@/lib/api/generated/notes/notes";
@@ -253,18 +255,28 @@ export function NoteTimeline({
   // 종료 후에는 노트 소켓이 없는 경우도 있다. 봉인·화자 분리 완료까지 Query가 재조회한다.
   // 끝난 회의는 분석이 끝날 때까지 흐름을 본다 — 화자 분리와 회의 뒤 안건 정리가 그동안 바뀐다.
   // 소켓 없이 연 끝난 노트에서는 agendas.changed 가 안 오므로 이 흐름이 주제 제목을 다시 읽게 한다.
+  // 이벤트 스트림이 건강하면 `note.changed`(analysis) 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I03).
+  const streamHealthy = useEventStreamHealthy();
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
       enabled: meetingEnded,
       refetchInterval: (query) => {
         const flow = okData(query.state.data);
-        return flowPollInterval(flow?.status ?? null, flow?.regions);
+        return hintedInterval(
+          streamHealthy,
+          flowPollInterval(flow?.status ?? null, flow?.regions)
+        );
       },
     },
   });
   const analyzing =
-    meetingEnded && (["DIARIZING", "NOT_REQUESTED", "ANALYZING"].includes(okData(flowQuery.data)?.status ?? "") ||
-      (okData(flowQuery.data)?.regions ?? []).some((row) => row.status === "PENDING"));
+    meetingEnded &&
+    (["DIARIZING", "NOT_REQUESTED", "ANALYZING"].includes(
+      okData(flowQuery.data)?.status ?? ""
+    ) ||
+      (okData(flowQuery.data)?.regions ?? []).some(
+        (row) => row.status === "PENDING"
+      ));
   const diarizing =
     meetingEnded && okData(flowQuery.data)?.status === "DIARIZING";
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -325,19 +337,31 @@ export function NoteTimeline({
   // 정본을 못 받았으면 주제 없이 그리고, 다시 읽기가 실패했으면 지난 제목을 둔 채 — 둘 다 다시 불러올 길을 둔다
   const agendasFailed = agendasQuery.isError;
   // 회의 중에 한 번 자리를 정한 줄은 옮기지 않는다 — 지난 배치를 기억해 다음 배치의 바탕으로 쓴다.
-  const [placed, setPlaced] = useState<{ noteId: string; placement: AgendaPlacement }>({
+  const [placed, setPlaced] = useState<{
+    noteId: string;
+    placement: AgendaPlacement;
+  }>({
     noteId,
     placement: NO_PLACEMENT,
   });
-  const previousPlacement = placed.noteId === noteId ? placed.placement : NO_PLACEMENT;
+  const previousPlacement =
+    placed.noteId === noteId ? placed.placement : NO_PLACEMENT;
   const placement = useMemo(
     () =>
       agendaList
-        ? placeAgendas(previousPlacement, Object.values(context.state.proposals), agendaList, !meetingEnded)
+        ? placeAgendas(
+            previousPlacement,
+            Object.values(context.state.proposals),
+            agendaList,
+            !meetingEnded
+          )
         : null,
     [agendaList, previousPlacement, context.state.proposals, meetingEnded]
   );
-  if (placement && (placed.noteId !== noteId || !samePlacement(placement, previousPlacement))) {
+  if (
+    placement &&
+    (placed.noteId !== noteId || !samePlacement(placement, previousPlacement))
+  ) {
     setPlaced({ noteId, placement });
   }
 
@@ -350,36 +374,71 @@ export function NoteTimeline({
       ),
     [context.state, agendaList, placement]
   );
-  const timeline = useMemo(() => listFilter === "ALL" ? allTimeline : {
-    ...allTimeline,
-    groups: allTimeline.groups.map((group) => ({
-      ...group, items: group.items.filter((item) => inFilter(item.tone, listFilter)),
-    })).filter((group) => group.items.length > 0),
-  }, [allTimeline, listFilter]);
+  const timeline = useMemo(
+    () =>
+      listFilter === "ALL"
+        ? allTimeline
+        : {
+            ...allTimeline,
+            groups: allTimeline.groups
+              .map((group) => ({
+                ...group,
+                items: group.items.filter((item) =>
+                  inFilter(item.tone, listFilter)
+                ),
+              }))
+              .filter((group) => group.items.length > 0),
+          },
+    [allTimeline, listFilter]
+  );
 
   // 골라 보기로 가린 묶음도 기억합니다. 분류되는 첫 화면부터 새 명제를 펼쳐 둡니다.
-  const [seenGroups, setSeenGroups] = useState({ noteId, groups: allTimeline.groups });
-  if (seenGroups.noteId !== noteId || seenGroups.groups !== allTimeline.groups) {
+  const [seenGroups, setSeenGroups] = useState({
+    noteId,
+    groups: allTimeline.groups,
+  });
+  if (
+    seenGroups.noteId !== noteId ||
+    seenGroups.groups !== allTimeline.groups
+  ) {
     setSeenGroups({ noteId, groups: allTimeline.groups });
-    const before = new Map(seenGroups.noteId === noteId ? seenGroups.groups.map((group) => [group.key, group.total]) : []);
-    const grown = allTimeline.groups.filter((group) => group.agenda && before.has(group.key) && group.total > before.get(group.key)!);
+    const before = new Map(
+      seenGroups.noteId === noteId
+        ? seenGroups.groups.map((group) => [group.key, group.total])
+        : []
+    );
+    const grown = allTimeline.groups.filter(
+      (group) =>
+        group.agenda &&
+        before.has(group.key) &&
+        group.total > before.get(group.key)!
+    );
     if (!meetingEnded && view.noteId === noteId && grown.length > 0) {
       const flipped = new Set(view.flipped);
       for (const group of grown) {
         if (view.foldByDefault) flipped.add(group.key);
         else flipped.delete(group.key);
       }
-      if (flipped.size !== view.flipped.size || [...flipped].some((key) => !view.flipped.has(key))) {
+      if (
+        flipped.size !== view.flipped.size ||
+        [...flipped].some((key) => !view.flipped.has(key))
+      ) {
         setView({ ...view, flipped, instant: true });
       }
     }
   }
 
   /** 관계(질문 ↔ 답)를 누르면 그 항목을 펼치고 화면 가운데로 데려온다. */
-  const pendingScroll = useRef<{ id: string; block: ScrollLogicalPosition } | null>(null);
+  const pendingScroll = useRef<{
+    id: string;
+    block: ScrollLogicalPosition;
+  } | null>(null);
   const jumpTo = (proposal: ProposalHead) => {
     updateFollowing(false);
-    pendingScroll.current = { id: itemId(proposal.proposalId), block: "center" };
+    pendingScroll.current = {
+      id: itemId(proposal.proposalId),
+      block: "center",
+    };
     setView((current) => ({
       ...current,
       filter: "ALL",
@@ -439,16 +498,19 @@ export function NoteTimeline({
     },
     [noteId]
   );
-  const toggle = useCallback((key: "open" | "flipped", id: string) => {
-    // 직접 펼치는 조작은 읽으려는 의도다. 높이 변화가 자동 추종을 타고 바닥으로 끌고 가지 않게 한다.
-    updateFollowing(false);
-    readAwayNoteRef.current = noteId;
-    setView((current) => {
-      const next = new Set(current[key]);
-      if (!next.delete(id)) next.add(id);
-      return { ...current, [key]: next, instant: false };
-    });
-  }, [noteId, updateFollowing]);
+  const toggle = useCallback(
+    (key: "open" | "flipped", id: string) => {
+      // 직접 펼치는 조작은 읽으려는 의도다. 높이 변화가 자동 추종을 타고 바닥으로 끌고 가지 않게 한다.
+      updateFollowing(false);
+      readAwayNoteRef.current = noteId;
+      setView((current) => {
+        const next = new Set(current[key]);
+        if (!next.delete(id)) next.add(id);
+        return { ...current, [key]: next, instant: false };
+      });
+    },
+    [noteId, updateFollowing]
+  );
   /** 방향 없이 거리만으로 잰다. 기록이 끝난 목록의 버튼 위치용이다. */
   const syncFollowing = useCallback(() => {
     const viewport = viewportRef.current;
@@ -462,7 +524,9 @@ export function NoteTimeline({
   // 짚힌 안건의 **첫** 묶음(같은 안건으로 돌아온 묶음은 「이어서」로 선다). 묶음이 아직 없으면
   // (안건·명제 조회 중) 없는 채로 두고, 도착한 커밋에서 다시 돈다.
   const focusGroup = focusAgendaId
-    ? allTimeline.groups.find((group) => group.agenda && group.key.startsWith(`${focusAgendaId}:`))
+    ? allTimeline.groups.find(
+        (group) => group.agenda && group.key.startsWith(`${focusAgendaId}:`)
+      )
     : undefined;
   const focusKey = focusGroup?.key ?? null;
   const focusMark = focusGroup?.agenda
@@ -717,10 +781,18 @@ export function NoteTimeline({
                       title: header.title,
                       whenIso: header.whenIso,
                       participantCount: header.participantCount,
-                      participantNames: participants.map((person) => person.name).filter((name): name is string => Boolean(name)),
+                      participantNames: participants
+                        .map((person) => person.name)
+                        .filter((name): name is string => Boolean(name)),
                     },
                     minutesTimeline(
-                      selectTimeline(context.state, "ALL", agendaList && placement ? { list: agendaList, placement } : null).groups
+                      selectTimeline(
+                        context.state,
+                        "ALL",
+                        agendaList && placement
+                          ? { list: agendaList, placement }
+                          : null
+                      ).groups
                     )
                   )
                 }
@@ -798,7 +870,11 @@ export function NoteTimeline({
           <InlineRetry
             variant="line"
             className="mt-7"
-            label={agendaList ? "주제 제목을 새로 불러오지 못했습니다." : "주제 제목을 불러오지 못했습니다."}
+            label={
+              agendaList
+                ? "주제 제목을 새로 불러오지 못했습니다."
+                : "주제 제목을 불러오지 못했습니다."
+            }
             onRetry={() => void agendasQuery.refetch()}
           />
         ) : null}
@@ -860,7 +936,9 @@ export function NoteTimeline({
                         )}
                       </span>
                       {group.previous ? (
-                        <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">이어서</span>
+                        <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">
+                          이어서
+                        </span>
                       ) : null}
                       {group.agenda.retracted ? (
                         <span className="shrink-0 text-[12px] font-medium text-[var(--el-error-strong)]">
@@ -890,7 +968,10 @@ export function NoteTimeline({
                           group.agenda.citation ? "col-start-2" : "col-start-1"
                         )}
                       >
-                        앞선 논의{group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}
+                        앞선 논의
+                        {group.previous.startMs === null
+                          ? ""
+                          : ` ${formatOffset(group.previous.startMs)}`}
                       </button>
                     ) : null}
                   </h3>

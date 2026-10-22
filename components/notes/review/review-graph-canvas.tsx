@@ -1,10 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, type RefObject } from "react";
-import ForceGraph2D, { type ForceGraphMethods, type LinkObject, type NodeObject } from "react-force-graph-2d";
+import ForceGraph2D, {
+  type ForceGraphMethods,
+  type LinkObject,
+  type NodeObject,
+} from "react-force-graph-2d";
 
 import { ROLE_COLOR } from "@/components/notes/review/role-dot";
-import { screenRadius, type ForceLink, type ForceLinkKind, type ForceNode } from "@/lib/notes/review/graph-model";
+import {
+  screenRadius,
+  type ForceLink,
+  type ForceLinkKind,
+  type ForceNode,
+} from "@/lib/notes/review/graph-model";
 
 export type GraphNodeObject = NodeObject<ForceNode>;
 type GraphLinkObject = LinkObject<ForceNode, ForceLink>;
@@ -22,7 +31,10 @@ export type GraphTokens = {
 const LABEL_ZOOM = 2.4;
 
 /** 배치가 돌면 링크 끝이 ID 문자열에서 점 객체로 바뀐다 */
-const endId = (end: unknown) => String(typeof end === "object" && end !== null ? (end as { id: string }).id : end);
+const endId = (end: unknown) =>
+  String(
+    typeof end === "object" && end !== null ? (end as { id: string }).id : end
+  );
 
 /** 토큰은 hex 다. 흐림은 투명도로만 준다 */
 function withAlpha(color: string, alpha: number) {
@@ -33,7 +45,8 @@ function withAlpha(color: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-const clip = (text: string, limit: number) => (text.length > limit ? `${text.slice(0, limit - 1)}…` : text);
+const clip = (text: string, limit: number) =>
+  text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 
 /**
  * 판을 가운데로 끄는 약한 힘. 서로 이어지지 않은 주제 뭉치와 주제 밖 항목이 밀어냄에 밀려
@@ -83,8 +96,18 @@ function collide(padding: number) {
 const TOPIC_NAME_ZOOM = 1.2;
 /** 멀리서도 이름을 적는 큰 주제의 항목 수 */
 const BIG_TOPIC = 10;
-const LINK_DISTANCE: Record<ForceLinkKind, number> = { hub: 40, relation: 45, also: 90, agenda: 160 };
-const LINK_STRENGTH: Record<ForceLinkKind, number> = { hub: 0.5, relation: 0.2, also: 0.02, agenda: 0.05 };
+const LINK_DISTANCE: Record<ForceLinkKind, number> = {
+  hub: 40,
+  relation: 45,
+  also: 90,
+  agenda: 160,
+};
+const LINK_STRENGTH: Record<ForceLinkKind, number> = {
+  hub: 0.5,
+  relation: 0.2,
+  also: 0.02,
+  agenda: 0.05,
+};
 
 export default function ReviewGraphCanvas({
   data,
@@ -121,24 +144,33 @@ export default function ReviewGraphCanvas({
   const fitted = useRef(false);
   const zoomFrame = useRef<number | null>(null);
   // 라이브러리는 폭 등 prop을 적용하는 렌더 중에도 onZoom을 부릅니다. React 상태 알림은 다음 프레임으로 모읍니다.
-  const reportZoom = useCallback((scale: number) => {
-    if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
-    zoomFrame.current = requestAnimationFrame(() => {
-      zoomFrame.current = null;
-      onZoom(scale);
-    });
-  }, [onZoom]);
+  const reportZoom = useCallback(
+    (scale: number) => {
+      if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
+      zoomFrame.current = requestAnimationFrame(() => {
+        zoomFrame.current = null;
+        onZoom(scale);
+      });
+    },
+    [onZoom]
+  );
 
-  useEffect(() => () => {
-    if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
+    },
+    []
+  );
 
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
     fitted.current = false;
     // 허브는 크게 밀어내 주제끼리 떨어뜨리고, 항목은 덜 밀어 제 허브 곁에 모이게 한다.
-    graph.d3Force("charge")?.strength((node: GraphNodeObject) => (node.hub ? -300 : -45)).distanceMax(400);
+    graph
+      .d3Force("charge")
+      ?.strength((node: GraphNodeObject) => (node.hub ? -300 : -45))
+      .distanceMax(400);
     graph
       .d3Force("link")
       ?.distance((link: GraphLinkObject) => LINK_DISTANCE[link.kind])
@@ -164,7 +196,8 @@ export default function ReviewGraphCanvas({
       } else {
         const item = node.item!;
         // 안건은 속이 빈 원이다 — 결론이 아니라 이야기의 뿌리라 역할 색으로 칠하지 않는다.
-        ctx.fillStyle = item.kind === "AGENDA" ? tokens.card : ROLE_COLOR[item.role];
+        ctx.fillStyle =
+          item.kind === "AGENDA" ? tokens.card : ROLE_COLOR[item.role];
         ctx.fill();
         if (item.kind === "AGENDA") {
           ctx.strokeStyle = tokens.ink;
@@ -203,11 +236,21 @@ export default function ReviewGraphCanvas({
       ) => {
         ctx.font = `${weight} ${size / scale}px Inter, system-ui, sans-serif`;
         const x = node.x ?? 0;
-        const y = (node.y ?? 0) + screenRadius(node.radius, node.hub, scale) + 2 / scale;
+        const y =
+          (node.y ?? 0) +
+          screenRadius(node.radius, node.hub, scale) +
+          2 / scale;
         const half = ctx.measureText(text).width / 2;
-        const box: [number, number, number, number] = [x - half, y, x + half, y + (size + 2) / scale];
+        const box: [number, number, number, number] = [
+          x - half,
+          y,
+          x + half,
+          y + (size + 2) / scale,
+        ];
         // ponytail: 이름끼리 전부 견준다(O(n²)). 이름 수백 개면 한 틀에 1ms 안쪽이다.
-        const overlaps = taken.some(([l, t, r, b]) => box[0] < r && box[2] > l && box[1] < b && box[3] > t);
+        const overlaps = taken.some(
+          ([l, t, r, b]) => box[0] < r && box[2] > l && box[1] < b && box[3] > t
+        );
         if (overlaps && !force) return false;
         taken.push(box);
         ctx.lineWidth = 3 / scale;
@@ -221,9 +264,16 @@ export default function ReviewGraphCanvas({
         if (!node.hub) continue;
         ctx.globalAlpha = dimmed(node.id) ? 0.25 : 1;
         const [ordinal, ...rest] = node.label.split(" ");
-        const title = scale >= TOPIC_NAME_ZOOM || node.degree >= BIG_TOPIC ? rest.join(" ") : "";
-        const named = labelLimit > 0 && title ? `${ordinal} ${clip(title, labelLimit)}` : ordinal;
-        if (!write(node, named, 11.5, 600, tokens.ink)) write(node, ordinal, 11.5, 600, tokens.ink, true);
+        const title =
+          scale >= TOPIC_NAME_ZOOM || node.degree >= BIG_TOPIC
+            ? rest.join(" ")
+            : "";
+        const named =
+          labelLimit > 0 && title
+            ? `${ordinal} ${clip(title, labelLimit)}`
+            : ordinal;
+        if (!write(node, named, 11.5, 600, tokens.ink))
+          write(node, ordinal, 11.5, 600, tokens.ink, true);
       }
       ctx.globalAlpha = 1;
       if (scale < LABEL_ZOOM) return;
@@ -234,8 +284,10 @@ export default function ReviewGraphCanvas({
         const [x, y] = [node.x ?? 0, node.y ?? 0];
         taken.push([x - radius, y - radius, x + radius, y + radius]);
       }
-      if (lit) items.sort((a, b) => Number(lit.has(b.id)) - Number(lit.has(a.id)));
-      for (const node of items) write(node, clip(node.label, 18), 10, 400, tokens.muted);
+      if (lit)
+        items.sort((a, b) => Number(lit.has(b.id)) - Number(lit.has(a.id)));
+      for (const node of items)
+        write(node, clip(node.label, 18), 10, 400, tokens.muted);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dimmed 는 lit 만 읽는다
     [data, tokens, labelLimit, lit]
@@ -243,7 +295,9 @@ export default function ReviewGraphCanvas({
 
   const linkColor = useCallback(
     (link: GraphLinkObject) => {
-      const adjacent = hoveredId !== null && (endId(link.source) === hoveredId || endId(link.target) === hoveredId);
+      const adjacent =
+        hoveredId !== null &&
+        (endId(link.source) === hoveredId || endId(link.target) === hoveredId);
       if (adjacent) return tokens.ink;
       const fade = hoveredId !== null ? 0.25 : 1;
       if (link.kind === "hub") return withAlpha(tokens.mutedSoft, 0.28 * fade);
@@ -256,8 +310,18 @@ export default function ReviewGraphCanvas({
 
   const linkWidth = useCallback(
     (link: GraphLinkObject) => {
-      const adjacent = hoveredId !== null && (endId(link.source) === hoveredId || endId(link.target) === hoveredId);
-      return adjacent ? 1.8 : link.kind === "agenda" ? 1.6 : link.kind === "relation" ? 1.1 : link.kind === "also" ? 0.9 : 0.6;
+      const adjacent =
+        hoveredId !== null &&
+        (endId(link.source) === hoveredId || endId(link.target) === hoveredId);
+      return adjacent
+        ? 1.8
+        : link.kind === "agenda"
+          ? 1.6
+          : link.kind === "relation"
+            ? 1.1
+            : link.kind === "also"
+              ? 0.9
+              : 0.6;
     },
     [hoveredId]
   );
@@ -280,14 +344,20 @@ export default function ReviewGraphCanvas({
         ctx.fillStyle = color;
         ctx.beginPath();
         const radius = screenRadius(node.radius, node.hub, scale);
-        ctx.arc(node.x ?? 0, node.y ?? 0, Math.max(radius + 2 / scale, 8 / scale), 0, 2 * Math.PI);
+        ctx.arc(
+          node.x ?? 0,
+          node.y ?? 0,
+          Math.max(radius + 2 / scale, 8 / scale),
+          0,
+          2 * Math.PI
+        );
         ctx.fill();
       }}
       onRenderFramePost={drawLabels}
       linkColor={linkColor}
       linkWidth={linkWidth}
       linkLineDash={(link) => (link.kind === "also" ? [2, 3] : null)}
-      linkDirectionalArrowLength={(link) => link.kind === "agenda" ? 8 : 0}
+      linkDirectionalArrowLength={(link) => (link.kind === "agenda" ? 8 : 0)}
       linkDirectionalArrowRelPos={0.5}
       onNodeHover={onHover}
       onNodeClick={onSelect}

@@ -5,10 +5,8 @@ import {
   getRecordedDurationMs,
   isMeetingActive,
   isPersonalChatHiddenInNote,
-  MEETING_POLL_MS,
   MEETING_PRIMARY_ACTION_LABEL,
   MEETING_STATUS_LABEL,
-  meetingRefetchInterval,
   pausedDayCount,
 } from "@/lib/notes/meeting-state";
 
@@ -39,21 +37,6 @@ describe("deriveMeetingPhase", () => {
 
   it("노트를 아직 못 읽었으면 unknown", () => {
     expect(deriveMeetingPhase(undefined)).toBe("unknown");
-  });
-});
-
-describe("meetingRefetchInterval", () => {
-  it("종료 전에는 폴링하고 종료되면 멈춘다", () => {
-    expect(
-      meetingRefetchInterval({
-        meetingStatus: "IN_PROGRESS",
-      })
-    ).toBe(MEETING_POLL_MS);
-    expect(
-      meetingRefetchInterval({
-        meetingStatus: "ENDED",
-      })
-    ).toBe(false);
   });
 });
 

@@ -90,9 +90,7 @@ describe("server 가 적재한 원장 — 합성 108발화 입력", () => {
     );
     expect(partial.length).toBeGreaterThan(0);
     expect(
-      state.runs.some(
-        (r) => r.rawDeltaSaturated || r.semanticUnitSaturated
-      )
+      state.runs.some((r) => r.rawDeltaSaturated || r.semanticUnitSaturated)
     ).toBe(true);
     expect(
       partial.some((r) => !r.rawDeltaSaturated && !r.semanticUnitSaturated)

@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, ChevronDown, CircleAlert, FileText, Info, LoaderCircle, Paperclip } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  CircleAlert,
+  FileText,
+  Info,
+  LoaderCircle,
+  Paperclip,
+} from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { PdfPreview } from "@/components/notes/minutes/pdf-preview";
 import { usePdfArtifact } from "@/components/notes/minutes/use-pdf-artifact";
@@ -28,7 +36,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { useGetWorkspaceMembers } from "@/lib/api/generated/workspace-members/workspace-members";
 import { okData } from "@/lib/api/ok-data";
-import { useGetNoteShareMail, useSendNoteShareMail } from "@/lib/api/generated/notes/notes";
+import {
+  useGetNoteShareMail,
+  useSendNoteShareMail,
+} from "@/lib/api/generated/notes/notes";
 import type { SendNoteShareMailRequestIncludeItem } from "@/lib/api/generated/models";
 import { formatAppDate, getAppDateKey } from "@/lib/format/date";
 import {
@@ -50,7 +61,10 @@ import { cn } from "@/lib/utils";
 const MAX_MESSAGE_LENGTH = 1000;
 
 /** 서버가 받는 사람 때문에 거절한 코드. 토스트와 함께 입력칸 테두리도 붉힌다 */
-const RECIPIENT_CODES = new Set(["SHARE_MAIL_INVALID_RECIPIENT", "SHARE_MAIL_TOO_MANY_RECIPIENTS"]);
+const RECIPIENT_CODES = new Set([
+  "SHARE_MAIL_INVALID_RECIPIENT",
+  "SHARE_MAIL_TOO_MANY_RECIPIENTS",
+]);
 
 /**
  * 「회의록 보내기」. 넓은 화면은 가운데 대화상자, 좁은 화면(`< sm`)은 아래에서 올라오는 시트다 — 같은
@@ -104,7 +118,9 @@ export function ShareMailDialog({
   // **열 때마다 녹취록을 끈다** — 창은 닫혀도 마운트된 채라 지난번에 켠 녹취록이 다음 메일에 말없이 실렸다.
   // 받는 사람 · 메시지는 쓰다 만 것이라 남긴다(보내면 비운다)
   // 보낸 뒤에는 창을 닫지 않고 받는 사람별 결과를 그린다. [since] 는 결과를 다시 묻기 시작한 때다
-  const [sent, setSent] = useState<{ mailId: string; since: number } | null>(null);
+  const [sent, setSent] = useState<{ mailId: string; since: number } | null>(
+    null
+  );
   const status = useShareMailStatus(noteId, sent);
   // 더 기다릴 것이 없는 발송이다. **서버가 끝났다고 할 때뿐이다** — 조회가 실패했거나 30초가 지나 묻기를 멈춘
   // 것은 끝난 것이 아니다. 그런 발송은 다시 열어도 결과 화면과 다시 확인을 남긴다
@@ -131,19 +147,33 @@ export function ShareMailDialog({
   const [building, setBuilding] = useState(false);
   const sending = useRef(false);
   const sendMail = useSendNoteShareMail();
-  const pdf = usePdfArtifact(open, version, include, preparePdf ?? (async (option) => ({
-    blob: await buildPdf(option), fileName: minutesFileName(meeting.title, meeting.whenIso),
-  })));
+  const pdf = usePdfArtifact(
+    open,
+    version,
+    include,
+    preparePdf ??
+      (async (option) => ({
+        blob: await buildPdf(option),
+        fileName: minutesFileName(meeting.title, meeting.whenIso),
+      }))
+  );
   const preview = async () => {
-    try { await pdf.prepare(); setPreviewed(true); }
-    catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) toast.error(errorMessageOf(error, "회의록 PDF를 만들지 못했습니다.")); }
+    try {
+      await pdf.prepare();
+      setPreviewed(true);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError"))
+        toast.error(errorMessageOf(error, "회의록 PDF를 만들지 못했습니다."));
+    }
   };
 
   const busy = building || pdf.pending || sendMail.isPending;
   const submitting = building || sendMail.isPending;
   const problem = recipientProblem(recipients);
   const rejected = RECIPIENT_CODES.has(errorCodeOf(sendMail.error) ?? "");
-  const remainingAttendees = attendees.filter((person) => !hasRecipient(recipients, person.email));
+  const remainingAttendees = attendees.filter(
+    (person) => !hasRecipient(recipients, person.email)
+  );
   const day = formatAppDate(meeting.whenIso, { month: "long", day: "numeric" });
 
   const changeRecipients = (next: Recipient[]) => {
@@ -168,7 +198,9 @@ export function ShareMailDialog({
       setBuilding(false);
     }
     // 회의록에는 붙임 「안건별 경과」가 없다(1쪽 안건 표와 상세가 그 자리다) — 계약의 AGENDA_LOG 는 보내지 않는다
-    const kinds: SendNoteShareMailRequestIncludeItem[] = include.transcript ? ["TRANSCRIPT"] : [];
+    const kinds: SendNoteShareMailRequestIncludeItem[] = include.transcript
+      ? ["TRANSCRIPT"]
+      : [];
     sendMail.mutate(
       {
         noteId,
@@ -183,7 +215,8 @@ export function ShareMailDialog({
         onSuccess: (response) => {
           sending.current = false;
           // 202 는 접수일 뿐이다(계약). 받는 사람별 결과는 이 창에서 이어 묻는다
-          const mailId = response.status === 202 ? response.data.data?.mailId : undefined;
+          const mailId =
+            response.status === 202 ? response.data.data?.mailId : undefined;
           if (!mailId) return;
           // 예전 발송의 실패 토스트는 거둔다 — 남겨 두면 그 「다시 보내기」가 새 발송 화면을 덮는다
           if (notified.current) toast.dismiss(`share-mail-${notified.current}`);
@@ -191,7 +224,9 @@ export function ShareMailDialog({
           setRecipients([]);
           setMessage("");
         },
-        onError: () => { sending.current = false; },
+        onError: () => {
+          sending.current = false;
+        },
       }
     );
   };
@@ -206,11 +241,19 @@ export function ShareMailDialog({
   // **창을 닫은 뒤 나온 실패는 토스트로 알린다.** 창 안에서 최종 결과를 이미 봤으면 다시 알리지 않는다 — 모두
   // 「보냄」이면 아무것도 띄우지 않는다. 다시 보내기를 누르면 그 주소만 채운 창을 다시 연다
   const [seen, setSeen] = useState<string | null>(null);
-  if (open && sent && status.mail?.completed && seen !== sent.mailId) setSeen(sent.mailId);
+  if (open && sent && status.mail?.completed && seen !== sent.mailId)
+    setSeen(sent.mailId);
   const notified = useRef<string | null>(null);
   const { mail: finished, failed: unsent } = status;
   useEffect(() => {
-    if (open || !sent || !finished?.completed || seen === sent.mailId || notified.current === sent.mailId) return;
+    if (
+      open ||
+      !sent ||
+      !finished?.completed ||
+      seen === sent.mailId ||
+      notified.current === sent.mailId
+    )
+      return;
     const { mailId } = sent;
     notified.current = mailId;
     if (unsent.length === 0) return;
@@ -229,7 +272,10 @@ export function ShareMailDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next || !submitting) && onOpenChange(next)}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (next || !submitting) && onOpenChange(next)}
+    >
       <DialogContent
         showCloseButton={!submitting}
         className={cn(
@@ -239,7 +285,9 @@ export function ShareMailDialog({
         )}
       >
         <DialogHeader className="gap-1 px-5 pt-5 pb-1">
-          <DialogTitle className="text-[17px] font-semibold">회의록 보내기</DialogTitle>
+          <DialogTitle className="text-[17px] font-semibold">
+            회의록 보내기
+          </DialogTitle>
           <DialogDescription className="text-[13px]">
             {meeting.title} · {day}
           </DialogDescription>
@@ -257,133 +305,173 @@ export function ShareMailDialog({
             onClose={() => onOpenChange(false)}
           />
         ) : (
-        <>
-        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-5 pt-3.5 pb-1">
-          <section aria-labelledby={`${recipientsId}-contents`}>
-            <FieldLabel id={`${recipientsId}-contents`}>보낼 내용</FieldLabel>
-            <div className="overflow-hidden rounded-block border border-[var(--el-hairline)]">
-              <div className="flex items-center gap-2.5 bg-[var(--el-canvas-soft)] p-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-control bg-[var(--el-canvas)] text-[var(--el-ink)]">
-                  <FileText className="size-[15px]" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <b className="block font-medium text-[var(--el-ink)]">회의록</b>
-                  <span className="block text-[12.5px] text-[var(--el-muted)]">
-                    핵심 요약 · 결정 · 할 일 · 미결 사항
-                  </span>
-                </span>
-                <span className="shrink-0 text-xs text-[var(--el-muted)]">기본 포함</span>
-              </div>
-              <ToggleRow
-                title="녹취록"
-                description="시각 · 화자 · 발언을 고치지 않고 그대로 옮긴 기록입니다"
-                checked={include.transcript}
-                disabled={busy}
-                onChange={(transcript) => setInclude({ transcript })}
-              />
-            </div>
-          </section>
+          <>
+            <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-5 pt-3.5 pb-1">
+              <section aria-labelledby={`${recipientsId}-contents`}>
+                <FieldLabel id={`${recipientsId}-contents`}>
+                  보낼 내용
+                </FieldLabel>
+                <div className="overflow-hidden rounded-block border border-[var(--el-hairline)]">
+                  <div className="flex items-center gap-2.5 bg-[var(--el-canvas-soft)] p-3">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-control bg-[var(--el-canvas)] text-[var(--el-ink)]">
+                      <FileText className="size-[15px]" aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b className="block font-medium text-[var(--el-ink)]">
+                        회의록
+                      </b>
+                      <span className="block text-[12.5px] text-[var(--el-muted)]">
+                        핵심 요약 · 결정 · 할 일 · 미결 사항
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs text-[var(--el-muted)]">
+                      기본 포함
+                    </span>
+                  </div>
+                  <ToggleRow
+                    title="녹취록"
+                    description="시각 · 화자 · 발언을 고치지 않고 그대로 옮긴 기록입니다"
+                    checked={include.transcript}
+                    disabled={busy}
+                    onChange={(transcript) => setInclude({ transcript })}
+                  />
+                </div>
+              </section>
 
-          {include.transcript && unnamedSpeakers.length > 0 ? (
-            <InlineNote role="status">
-              녹취록에 이름 없는 화자 {unnamedSpeakers.length}명이{" "}
-              {unnamedSpeakers.map((name) => `「${name}」`).join(" · ")} 그대로 나갑니다. 보내기 전에
-              스크립트에서 이름을 지정할 수 있습니다.
-            </InlineNote>
-          ) : null}
-
-          <div>
-            <FieldLabel htmlFor={recipientsId} aside={`${recipients.length} / ${MAX_RECIPIENTS}`}>
-              받는 사람
-            </FieldLabel>
-            <EmailRecipientsInput
-              id={recipientsId}
-              value={recipients}
-              onChange={changeRecipients}
-              groups={groups}
-              disabled={submitting}
-              invalid={Boolean(problem) || rejected}
-              describedBy={problem ? problemId : undefined}
-            />
-            {/* 멤버를 못 불러온 것과 맞는 멤버가 없는 것은 다르다 — 빈 후보로 접으면 이름을 쳐도 아무도 없는 줄 안다 */}
-            {membersQuery.isError && !membersQuery.data ? (
-              <InlineRetry
-                variant="line"
-                className="mt-2"
-                label="워크스페이스 멤버를 불러오지 못했습니다. 주소는 직접 입력할 수 있습니다."
-                onRetry={() => void membersQuery.refetch()}
-              />
-            ) : null}
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              {attendees.length > 0 ? (
-                <button
-                  type="button"
-                  disabled={submitting || remainingAttendees.length === 0}
-                  className="text-[13px] font-medium text-[var(--el-ink)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] disabled:text-[var(--el-muted)] disabled:no-underline"
-                  onClick={() => changeRecipients(addRecipients(recipients, remainingAttendees))}
-                >
-                  {remainingAttendees.length
-                    ? `참석자 모두 추가 (${remainingAttendees.length}명)`
-                    : "참석자를 모두 추가했습니다"}
-                </button>
+              {include.transcript && unnamedSpeakers.length > 0 ? (
+                <InlineNote role="status">
+                  녹취록에 이름 없는 화자 {unnamedSpeakers.length}명이{" "}
+                  {unnamedSpeakers.map((name) => `「${name}」`).join(" · ")}{" "}
+                  그대로 나갑니다. 보내기 전에 스크립트에서 이름을 지정할 수
+                  있습니다.
+                </InlineNote>
               ) : null}
-              <span className="text-[12.5px] text-[var(--el-muted)]">
-                쉼표나 Enter로 여러 주소를 한 번에 넣을 수 있습니다
-              </span>
+
+              <div>
+                <FieldLabel
+                  htmlFor={recipientsId}
+                  aside={`${recipients.length} / ${MAX_RECIPIENTS}`}
+                >
+                  받는 사람
+                </FieldLabel>
+                <EmailRecipientsInput
+                  id={recipientsId}
+                  value={recipients}
+                  onChange={changeRecipients}
+                  groups={groups}
+                  disabled={submitting}
+                  invalid={Boolean(problem) || rejected}
+                  describedBy={problem ? problemId : undefined}
+                />
+                {/* 멤버를 못 불러온 것과 맞는 멤버가 없는 것은 다르다 — 빈 후보로 접으면 이름을 쳐도 아무도 없는 줄 안다 */}
+                {membersQuery.isError && !membersQuery.data ? (
+                  <InlineRetry
+                    variant="line"
+                    className="mt-2"
+                    label="워크스페이스 멤버를 불러오지 못했습니다. 주소는 직접 입력할 수 있습니다."
+                    onRetry={() => void membersQuery.refetch()}
+                  />
+                ) : null}
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {attendees.length > 0 ? (
+                    <button
+                      type="button"
+                      disabled={submitting || remainingAttendees.length === 0}
+                      className="text-[13px] font-medium text-[var(--el-ink)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] disabled:text-[var(--el-muted)] disabled:no-underline"
+                      onClick={() =>
+                        changeRecipients(
+                          addRecipients(recipients, remainingAttendees)
+                        )
+                      }
+                    >
+                      {remainingAttendees.length
+                        ? `참석자 모두 추가 (${remainingAttendees.length}명)`
+                        : "참석자를 모두 추가했습니다"}
+                    </button>
+                  ) : null}
+                  <span className="text-[12.5px] text-[var(--el-muted)]">
+                    쉼표나 Enter로 여러 주소를 한 번에 넣을 수 있습니다
+                  </span>
+                </div>
+              </div>
+
+              {problem ? (
+                <InlineNote id={problemId} role="alert" tone="error">
+                  {problem}
+                </InlineNote>
+              ) : null}
+
+              <div>
+                <FieldLabel
+                  htmlFor={`${recipientsId}-message`}
+                  aside={
+                    message.length
+                      ? `${message.length} / ${MAX_MESSAGE_LENGTH.toLocaleString("ko-KR")}`
+                      : undefined
+                  }
+                >
+                  메시지 <span className="font-normal">(선택)</span>
+                </FieldLabel>
+                <Textarea
+                  id={`${recipientsId}-message`}
+                  value={message}
+                  maxLength={MAX_MESSAGE_LENGTH}
+                  disabled={submitting}
+                  placeholder="받는 분께 남길 말을 적으세요"
+                  className="min-h-[72px] rounded-block"
+                  onChange={(event) => setMessage(event.target.value)}
+                />
+              </div>
+
+              <div>
+                <Button
+                  variant="outline"
+                  loading={pdf.pending && !building}
+                  disabled={building || sendMail.isPending}
+                  onClick={() => void preview()}
+                >
+                  첨부 PDF 미리보기
+                </Button>
+                {previewed && pdf.artifact ? (
+                  <PdfPreview blob={pdf.artifact.blob} />
+                ) : null}
+                {pdf.invalidated ? (
+                  <p
+                    role="status"
+                    className="mt-2 text-sm text-[var(--el-muted)]"
+                  >
+                    내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.
+                  </p>
+                ) : null}
+              </div>
+
+              <MailPreview
+                sender={user?.name ?? ""}
+                recipients={recipients}
+                meeting={meeting}
+                day={day}
+                message={message.trim()}
+                include={include}
+              />
             </div>
-          </div>
 
-          {problem ? (
-            <InlineNote id={problemId} role="alert" tone="error">
-              {problem}
-            </InlineNote>
-          ) : null}
-
-          <div>
-            <FieldLabel
-              htmlFor={`${recipientsId}-message`}
-              aside={message.length ? `${message.length} / ${MAX_MESSAGE_LENGTH.toLocaleString("ko-KR")}` : undefined}
-            >
-              메시지 <span className="font-normal">(선택)</span>
-            </FieldLabel>
-            <Textarea
-              id={`${recipientsId}-message`}
-              value={message}
-              maxLength={MAX_MESSAGE_LENGTH}
-              disabled={submitting}
-              placeholder="받는 분께 남길 말을 적으세요"
-              className="min-h-[72px] rounded-block"
-              onChange={(event) => setMessage(event.target.value)}
-            />
-          </div>
-
-          <div>
-            <Button variant="outline" loading={pdf.pending && !building} disabled={building || sendMail.isPending} onClick={() => void preview()}>첨부 PDF 미리보기</Button>
-            {previewed && pdf.artifact ? <PdfPreview blob={pdf.artifact.blob} /> : null}
-            {pdf.invalidated ? <p role="status" className="mt-2 text-sm text-[var(--el-muted)]">내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.</p> : null}
-          </div>
-
-          <MailPreview
-            sender={user?.name ?? ""}
-            recipients={recipients}
-            meeting={meeting}
-            day={day}
-            message={message.trim()}
-            include={include}
-          />
-        </div>
-
-        <DialogFooter className="mx-0 mt-3.5 mb-0 rounded-b-panel bg-transparent px-5 pt-3.5 pb-4 max-sm:rounded-b-none">
-          <DialogClose render={<Button variant="outline" disabled={submitting} />}>취소</DialogClose>
-          <Button
-            loading={submitting}
-            disabled={busy || recipients.length === 0 || Boolean(problem)}
-            onClick={() => void send()}
-          >
-            {recipients.length ? `${recipients.length}명에게 보내기` : "보내기"}
-          </Button>
-        </DialogFooter>
-        </>
+            <DialogFooter className="mx-0 mt-3.5 mb-0 rounded-b-panel bg-transparent px-5 pt-3.5 pb-4 max-sm:rounded-b-none">
+              <DialogClose
+                render={<Button variant="outline" disabled={submitting} />}
+              >
+                취소
+              </DialogClose>
+              <Button
+                loading={submitting}
+                disabled={busy || recipients.length === 0 || Boolean(problem)}
+                onClick={() => void send()}
+              >
+                {recipients.length
+                  ? `${recipients.length}명에게 보내기`
+                  : "보내기"}
+              </Button>
+            </DialogFooter>
+          </>
         )}
       </DialogContent>
     </Dialog>
@@ -394,7 +482,11 @@ export function ShareMailDialog({
 const POLL_MS = 2_000;
 const POLL_FOR_MS = 30_000;
 
-const STATUS_LABEL = { PENDING: "보내는 중", SENT: "보냄", FAILED: "보내지 못함" } as const;
+const STATUS_LABEL = {
+  PENDING: "보내는 중",
+  SENT: "보냄",
+  FAILED: "보내지 못함",
+} as const;
 
 type ShareMailStatus = ReturnType<typeof useShareMailStatus>;
 
@@ -403,27 +495,37 @@ type ShareMailStatus = ReturnType<typeof useShareMailStatus>;
  * 나오면 토스트로 알린다(창 안 결과만 보면 바로 닫은 사람은 실패를 모른다). 202 직후 한 번 묻고 2초마다 다시 묻다가,
  * 모두 끝났거나(`completed`) 30초가 지나거나 조회가 실패하면 멈춘다.
  */
-function useShareMailStatus(noteId: string, sent: { mailId: string; since: number } | null) {
+function useShareMailStatus(
+  noteId: string,
+  sent: { mailId: string; since: number } | null
+) {
   const query = useGetNoteShareMail(noteId, sent?.mailId ?? "", {
     query: {
       enabled: sent !== null,
       retry: false,
       refetchInterval: (current) => {
         const data = okData(current.state.data);
-        if (!sent || data?.completed || current.state.status === "error") return false;
+        if (!sent || data?.completed || current.state.status === "error")
+          return false;
         return Date.now() - sent.since < POLL_FOR_MS ? POLL_MS : false;
       },
     },
   });
   const mail = sent ? okData(query.data) : null;
-  const failed = mail?.recipients.filter((row) => row.status === "FAILED").map((row) => row.email) ?? [];
+  const failed =
+    mail?.recipients
+      .filter((row) => row.status === "FAILED")
+      .map((row) => row.email) ?? [];
   const pending = mail ? !mail.completed : true;
   // 그만 묻는 때를 렌더 밖(타이머)에서 알린다 — 다시 확인을 누르면 [since] 가 바뀌어 30초를 새로 센다
   const [expiredAt, setExpiredAt] = useState<number | null>(null);
   const since = sent?.since ?? null;
   useEffect(() => {
     if (since === null) return;
-    const timer = window.setTimeout(() => setExpiredAt(since), Math.max(0, since + POLL_FOR_MS - Date.now()));
+    const timer = window.setTimeout(
+      () => setExpiredAt(since),
+      Math.max(0, since + POLL_FOR_MS - Date.now())
+    );
     return () => window.clearTimeout(timer);
   }, [since]);
   const polling = pending && !query.isError && expiredAt !== since;
@@ -454,35 +556,57 @@ function ShareMailResult({
         {query.isError ? (
           <InlineRetry
             variant="line"
-            label={errorMessageOf(query.error, "보낸 결과를 불러오지 못했습니다.")}
+            label={errorMessageOf(
+              query.error,
+              "보낸 결과를 불러오지 못했습니다."
+            )}
             onRetry={onRefresh}
           />
         ) : mail ? (
-          <ul aria-label="받는 사람별 결과" className="divide-y divide-[var(--el-hairline)] rounded-block border border-[var(--el-hairline)]">
+          <ul
+            aria-label="받는 사람별 결과"
+            className="divide-y divide-[var(--el-hairline)] rounded-block border border-[var(--el-hairline)]"
+          >
             {mail.recipients.map((row) => (
-              <li key={row.email} className="flex items-center justify-between gap-3 px-3 py-2.5 text-[13.5px]">
-                <span className="min-w-0 [overflow-wrap:anywhere] text-[var(--el-ink)]">{row.email}</span>
+              <li
+                key={row.email}
+                className="flex items-center justify-between gap-3 px-3 py-2.5 text-[13.5px]"
+              >
+                <span className="min-w-0 [overflow-wrap:anywhere] text-[var(--el-ink)]">
+                  {row.email}
+                </span>
                 <StatusChip status={row.status} />
               </li>
             ))}
           </ul>
         ) : (
-          <p role="status" className="flex items-center gap-2 text-[13px] text-[var(--el-muted)]">
-            <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden />
+          <p
+            role="status"
+            className="flex items-center gap-2 text-[13px] text-[var(--el-muted)]"
+          >
+            <LoaderCircle
+              className="size-3.5 animate-spin motion-reduce:animate-none"
+              aria-hidden
+            />
             보낸 결과를 확인하고 있습니다
           </p>
         )}
         {mail && pending && !polling ? (
           <InlineNote role="status">
             아직 보내는 중인 주소가 있습니다. 잠시 뒤 다시 확인해 주세요.{" "}
-            <button type="button" className="font-medium underline underline-offset-[3px]" onClick={onRefresh}>
+            <button
+              type="button"
+              className="font-medium underline underline-offset-[3px]"
+              onClick={onRefresh}
+            >
               다시 확인
             </button>
           </InlineNote>
         ) : null}
         {mail ? (
           <p className="text-[12.5px] text-[var(--el-muted)]">
-            「보냄」은 메일 서버가 받았다는 뜻입니다. 받는 분의 메일함에 들어갔는지까지는 알 수 없습니다.
+            「보냄」은 메일 서버가 받았다는 뜻입니다. 받는 분의 메일함에
+            들어갔는지까지는 알 수 없습니다.
           </p>
         ) : null}
       </div>
@@ -500,17 +624,29 @@ function ShareMailResult({
 }
 
 function StatusChip({ status }: { status: keyof typeof STATUS_LABEL }) {
-  const Icon = status === "PENDING" ? LoaderCircle : status === "SENT" ? Check : CircleAlert;
+  const Icon =
+    status === "PENDING"
+      ? LoaderCircle
+      : status === "SENT"
+        ? Check
+        : CircleAlert;
   return (
     <span
       className={cn(
         "inline-flex shrink-0 items-center gap-1 text-[12.5px]",
-        status === "FAILED" ? "font-medium text-destructive" : "text-[var(--el-muted)]",
+        status === "FAILED"
+          ? "font-medium text-destructive"
+          : "text-[var(--el-muted)]",
         status === "SENT" ? "text-[var(--el-ink)]" : null
       )}
     >
       <Icon
-        className={cn("size-3.5", status === "PENDING" ? "animate-spin motion-reduce:animate-none" : null)}
+        className={cn(
+          "size-3.5",
+          status === "PENDING"
+            ? "animate-spin motion-reduce:animate-none"
+            : null
+        )}
         aria-hidden
       />
       {STATUS_LABEL[status]}
@@ -557,10 +693,16 @@ function ToggleRow({
   return (
     <label className="flex cursor-pointer items-center gap-3 border-t border-[var(--el-hairline)] p-3">
       <span className="min-w-0 flex-1">
-        <b id={`${id}-title`} className="block font-medium text-[var(--el-ink)]">
+        <b
+          id={`${id}-title`}
+          className="block font-medium text-[var(--el-ink)]"
+        >
           {title}
         </b>
-        <span id={`${id}-desc`} className="block text-[12.5px] text-[var(--el-muted)]">
+        <span
+          id={`${id}-desc`}
+          className="block text-[12.5px] text-[var(--el-muted)]"
+        >
           {description}
         </span>
       </span>
@@ -626,21 +768,30 @@ function MailPreview({
   const to =
     recipients
       .filter((recipient) => recipient.valid)
-      .map((recipient) => (recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email))
+      .map((recipient) =>
+        recipient.name
+          ? `${recipient.name} <${recipient.email}>`
+          : recipient.email
+      )
       .join(", ") || "받는 사람을 추가하세요";
   const contents = include.transcript ? "회의록 · 녹취록" : "회의록";
   return (
     <details className="details-motion group rounded-block border border-[var(--el-hairline)]">
       <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[13px] font-medium text-[var(--el-ink)] [&::-webkit-details-marker]:hidden">
         받는 사람에게 보이는 메일
-        <ChevronDown className="size-3.5 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+        <ChevronDown
+          className="size-3.5 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
+          aria-hidden
+        />
       </summary>
       <div className="flex flex-col gap-2.5 border-t border-[var(--el-hairline)] p-3.5 text-[13px] text-[var(--el-body)]">
         <dl className="grid grid-cols-[56px_1fr] gap-x-2 gap-y-0.5 text-xs">
           <dt className="text-[var(--el-muted)]">보낸 사람</dt>
           <dd className="text-[var(--el-ink)]">{sender} (HeyMoa)</dd>
           <dt className="text-[var(--el-muted)]">받는 사람</dt>
-          <dd className="[overflow-wrap:anywhere] text-[var(--el-ink)]">{to}</dd>
+          <dd className="[overflow-wrap:anywhere] text-[var(--el-ink)]">
+            {to}
+          </dd>
           <dt className="text-[var(--el-muted)]">제목</dt>
           <dd className="text-[var(--el-ink)]">[회의록] {meeting.title}</dd>
         </dl>
@@ -651,17 +802,22 @@ function MailPreview({
           </p>
         ) : null}
         <div>
-          <p className="text-[15px] font-semibold text-[var(--el-ink)]">{meeting.title}</p>
+          <p className="text-[15px] font-semibold text-[var(--el-ink)]">
+            {meeting.title}
+          </p>
           <p className="text-xs text-[var(--el-muted)]">{day}</p>
         </div>
         <p>첨부한 회의록을 확인하세요.</p>
         <div className="flex items-center gap-2 rounded-control border border-[var(--el-hairline)] px-2.5 py-2 text-[12.5px] text-[var(--el-ink)]">
           <Paperclip className="size-3.5 shrink-0" aria-hidden />
           <span className="min-w-0 [overflow-wrap:anywhere]">
-            회의록_{meeting.title}_{getAppDateKey(meeting.whenIso).replaceAll("-", "")}.pdf
+            회의록_{meeting.title}_
+            {getAppDateKey(meeting.whenIso).replaceAll("-", "")}.pdf
           </span>
         </div>
-        <p className="-mt-1 text-xs text-[var(--el-muted)]">첨부에 든 것: {contents}</p>
+        <p className="-mt-1 text-xs text-[var(--el-muted)]">
+          첨부에 든 것: {contents}
+        </p>
       </div>
     </details>
   );

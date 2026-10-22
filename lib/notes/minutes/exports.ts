@@ -8,7 +8,10 @@ import {
   type MinutesInclude,
   type MinutesTopic,
 } from "@/lib/notes/minutes/model";
-import { loadTimelineGroups, loadTranscript } from "@/lib/notes/minutes/sources";
+import {
+  loadTimelineGroups,
+  loadTranscript,
+} from "@/lib/notes/minutes/sources";
 import type { ReviewItem, ReviewSection } from "@/lib/notes/review/sections";
 import type { SpeakerFace } from "@/lib/transcription/speaker-identity";
 

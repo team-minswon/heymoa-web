@@ -10,6 +10,7 @@ import { hasScenario, leadSilenceMs } from "@/lib/mocks/chat-scenarios";
 import { joinSummary } from "@/lib/chat/blocks";
 import type { ScopeRef } from "@/lib/mocks/db";
 import { mockDb } from "@/lib/mocks/db";
+import { meetingFlow } from "@/lib/mocks/meeting-flow";
 import type { AgentChatMessagesResponseDataActiveTurnPendingApprovalCard as ApprovalCard } from "@/lib/api/generated/models";
 
 /**
@@ -849,11 +850,13 @@ function sseResponse(body: ReadableStream) {
 
 /**
  * 사용자 단위 이벤트 스트림(PRO-67 I01·I02). 실서버처럼 구독 뒤 `ready` 를 먼저 보내고, 15초마다 하트비트 주석, 60초마다
- * `notifications.changed` 힌트 하나를 보낸다(값은 없다 — web 이 개수를 다시 읽는다). 끊기 전까지 열려 있다.
+ * `notifications.changed` 힌트 하나, 다음 단계로 넘어갈 분석 노트에는 2초마다 `note.changed` 를 보낸다(값은 없다 — web 이
+ * 다시 읽는다). 끊기 전까지 열려 있다.
  */
 function userEventStream() {
   let beat: ReturnType<typeof setInterval> | null = null;
   let hint: ReturnType<typeof setInterval> | null = null;
+  let analysis: ReturnType<typeof setInterval> | null = null;
   const frame = (event: string, data: unknown) =>
     encoder.encode(`event:${event}\ndata:${JSON.stringify(data)}\n\n`);
   return new ReadableStream({
@@ -874,10 +877,22 @@ function userEventStream() {
         () => controller.enqueue(frame("notifications.changed", {})),
         60_000
       );
+      // 목의 분석은 다시 읽을 때 다음 단계로 넘어간다. 넘어갈 때가 된 노트에 힌트를 보내 web 이 다시 읽게 한다.
+      analysis = setInterval(() => {
+        for (const noteId of meetingFlow.dueAnalysisNoteIds())
+          controller.enqueue(
+            frame("note.changed", {
+              workspaceId: "",
+              noteId,
+              aspects: ["analysis"],
+            })
+          );
+      }, 2_000);
     },
     cancel() {
       if (beat) clearInterval(beat);
       if (hint) clearInterval(hint);
+      if (analysis) clearInterval(analysis);
     },
   });
 }

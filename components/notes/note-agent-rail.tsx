@@ -39,7 +39,10 @@ export function NoteAgentRail({
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-[var(--el-hairline)] pr-2 pl-4 lg:h-12">
-        <Sparkles aria-hidden className="size-[15px] shrink-0 text-[var(--el-ink)]" />
+        <Sparkles
+          aria-hidden
+          className="size-[15px] shrink-0 text-[var(--el-ink)]"
+        />
         <h2 className="shrink-0 text-[13px] font-semibold text-[var(--el-ink)]">
           내 에이전트
         </h2>

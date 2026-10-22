@@ -23,6 +23,8 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
+import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { hintedInterval } from "@/lib/events/interval";
 
 /** 목록 캐시에서 그 노트 행만 뺀다. 모양이 예상과 다르면 손대지 않는다. */
 function dropNoteFromList(current: unknown, noteId: string) {
@@ -74,12 +76,16 @@ export function NoteDeleteDialog({
   const queryClient = useQueryClient();
   const recording = useRecording();
   const deleteNote = useDeleteNote();
+  const streamHealthy = useEventStreamHealthy();
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
       enabled: open,
       staleTime: 0,
       refetchInterval: (query) =>
-        flowPollInterval(okData(query.state.data)?.status ?? null),
+        hintedInterval(
+          streamHealthy,
+          flowPollInterval(okData(query.state.data)?.status ?? null)
+        ),
     },
   });
   const flow = okData(flowQuery.data);
@@ -95,13 +101,20 @@ export function NoteDeleteDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>회의록을 삭제할까요?</AlertDialogTitle>
-          <AlertDialogDescription render={<div />} className="space-y-3 text-left">
+          <AlertDialogDescription
+            render={<div />}
+            className="space-y-3 text-left"
+          >
             <p className="break-words font-medium text-foreground">{title}</p>
             <p>
-              이 회의의 녹음과 스크립트, 요약, 발언에 연결된 근거가 함께 삭제됩니다.
-              녹음 중이라면 녹음도 끝납니다. 삭제한 회의록은 되돌릴 수 없습니다.
+              이 회의의 녹음과 스크립트, 요약, 발언에 연결된 근거가 함께
+              삭제됩니다. 녹음 중이라면 녹음도 끝납니다. 삭제한 회의록은 되돌릴
+              수 없습니다.
             </p>
-            <p>같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다.</p>
+            <p>
+              같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로
+              남습니다.
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         {analyzing ? (

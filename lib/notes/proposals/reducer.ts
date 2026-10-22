@@ -1,7 +1,4 @@
-import type {
-  RunRange,
-  ProposalHead,
-} from "@/lib/notes/proposals/contract";
+import type { RunRange, ProposalHead } from "@/lib/notes/proposals/contract";
 
 export type { RunRange, ProposalHead };
 
@@ -174,14 +171,10 @@ export function reduceContextEvent(
           proposals[current.proposalId] = current;
         }
       }
-      const snapshotRunIds = new Set(
-        event.runs.map((range) => range.runId)
-      );
+      const snapshotRunIds = new Set(event.runs.map((range) => range.runId));
       const ranges = sortRanges([
         ...event.runs,
-        ...state.runs.filter(
-          (range) => !snapshotRunIds.has(range.runId)
-        ),
+        ...state.runs.filter((range) => !snapshotRunIds.has(range.runId)),
       ]);
       // **갱신 시각도 snapshot 에서 복원한다.** event 로만 채우면, 종료된 회의를 새 탭에서
       // 열었을 때 범위가 있는데도 갱신 띠가 영원히 빈다 — 그 회의는 더 이상 event 가 안 온다.
@@ -316,11 +309,7 @@ export function selectCards(state: ContextState): ContextCard[] {
     a.createdSequence - b.createdSequence ||
     // TSID는 Crockford base32라 코드 단위 비교가 곧 서버의 `ORDER BY candidate_id ASC`다.
     // `localeCompare`는 로케일에 따라 숫자와 문자의 순서가 달라질 수 있어 쓰지 않는다.
-    (a.proposalId < b.proposalId
-      ? -1
-      : a.proposalId > b.proposalId
-        ? 1
-        : 0);
+    (a.proposalId < b.proposalId ? -1 : a.proposalId > b.proposalId ? 1 : 0);
 
   return all
     .filter((proposal) => {
@@ -334,4 +323,3 @@ export function selectCards(state: ContextState): ContextCard[] {
       results: (results.get(proposal.proposalId) ?? []).sort(byOrder),
     }));
 }
-

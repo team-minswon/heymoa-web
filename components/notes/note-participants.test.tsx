@@ -141,6 +141,4 @@ describe("NoteParticipantAvatars", () => {
     expect(screen.getByLabelText("외부인0 (외부)")).toBeInTheDocument();
     expect(screen.getByLabelText("외부인2 (외부)")).toBeInTheDocument();
   });
-
-
 });

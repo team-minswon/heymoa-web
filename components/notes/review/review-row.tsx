@@ -229,20 +229,36 @@ export function ReviewRow({
               disabled={!canEdit}
               onCancel={() => setEditing(false)}
               onSubmit={async (content) => {
-                const saved = content === item.content || (await onSave({ content }));
+                const saved =
+                  content === item.content || (await onSave({ content }));
                 if (saved) setEditing(false);
               }}
             />
           ) : canEdit ? (
             <div className="flex items-center gap-2">
               {item.included ? (
-                <Button variant="ghost" size="xs" aria-label="수정" disabled={busy || locked} onClick={() => setEditing(true)}>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  aria-label="수정"
+                  disabled={busy || locked}
+                  onClick={() => setEditing(true)}
+                >
                   <Pencil aria-hidden className="size-3.5" />
                   수정
                 </Button>
               ) : null}
-              <Button variant="ghost" size="xs" disabled={busy || locked} onClick={() => void onSave({ included: !item.included })}>
-                {item.included ? <Trash2 aria-hidden className="size-3.5" /> : <Undo2 aria-hidden className="size-3.5" />}
+              <Button
+                variant="ghost"
+                size="xs"
+                disabled={busy || locked}
+                onClick={() => void onSave({ included: !item.included })}
+              >
+                {item.included ? (
+                  <Trash2 aria-hidden className="size-3.5" />
+                ) : (
+                  <Undo2 aria-hidden className="size-3.5" />
+                )}
                 {item.included ? "제외" : "제외 취소"}
               </Button>
             </div>
@@ -251,7 +267,9 @@ export function ReviewRow({
           {children}
         </div>
       </Collapse>
-      {suggestions ? <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div> : null}
+      {suggestions ? (
+        <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div>
+      ) : null}
     </div>
   );
 }

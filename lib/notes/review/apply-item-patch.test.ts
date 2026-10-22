@@ -52,11 +52,20 @@ describe("applyItemPatch", () => {
     const before = review();
     const patch = { projectSelected: true };
     const next = applyItemPatch(before, "A", patch);
-    expect(next.items[0]).toMatchObject({ included: true, projectSelected: true, edited: false });
-    expect(restoreItemFields(next, before.items[0], patch).items[0].projectSelected).toBe(false);
+    expect(next.items[0]).toMatchObject({
+      included: true,
+      projectSelected: true,
+      edited: false,
+    });
+    expect(
+      restoreItemFields(next, before.items[0], patch).items[0].projectSelected
+    ).toBe(false);
     const excluded = applyItemPatch(next, "A", { included: false });
     expect(excluded.items[0].projectSelected).toBe(false);
-    expect(restoreItemFields(excluded, next.items[0], { included: false }).items[0].projectSelected).toBe(true);
+    expect(
+      restoreItemFields(excluded, next.items[0], { included: false }).items[0]
+        .projectSelected
+    ).toBe(true);
   });
 
   it("그 항목의 포함 여부와 기한만 바꾸고 판은 건드리지 않는다", () => {
@@ -98,11 +107,30 @@ describe("applyItemPatch", () => {
 
   it("APPLY 선택과 기한·담당 초안을 즉시 표시하고 실패하면 이전 값으로 돌린다", () => {
     const before = review();
-    const patch = { decisions: [{ targetId: "T1", decision: "APPLY" as const, taskChange: { expectedRevision: 1, status: "COMPLETED" as const, due: { value: "2026-12-05" }, assignee: { value: { type: "USER" as const, id: "u1" } } } }] };
+    const patch = {
+      decisions: [
+        {
+          targetId: "T1",
+          decision: "APPLY" as const,
+          taskChange: {
+            expectedRevision: 1,
+            status: "COMPLETED" as const,
+            due: { value: "2026-12-05" },
+            assignee: { value: { type: "USER" as const, id: "u1" } },
+          },
+        },
+      ],
+    };
     const next = applyItemPatch(before, "A", patch);
     expect(next.items[0].taskChanges[0].decision).toBe("APPLY");
-    expect(next.items[0].taskChanges[0].draft).toEqual({ expectedRevision: 1, status: "COMPLETED", due: { value: "2026-12-05" }, assignee: { value: { type: "USER", id: "u1", label: null } } });
-    const restored = restoreItemFields(next, before.items[0], patch).items[0].taskChanges[0];
+    expect(next.items[0].taskChanges[0].draft).toEqual({
+      expectedRevision: 1,
+      status: "COMPLETED",
+      due: { value: "2026-12-05" },
+      assignee: { value: { type: "USER", id: "u1", label: null } },
+    });
+    const restored = restoreItemFields(next, before.items[0], patch).items[0]
+      .taskChanges[0];
     expect(restored.decision).toBeNull();
     expect(restored.draft).toBeNull();
   });

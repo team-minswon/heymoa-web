@@ -39,9 +39,24 @@ describe("패널의 얼굴과 전사의 칩", () => {
   // pyannote 가 한 사람을 둘로 쪼갠 실제 회의(이동준 멘토님이 라벨 D·E)에서 드러났다.
   it("한 사람이 라벨 둘을 맡아도 두 화면이 같은 얼굴이다", () => {
     const speakers = [
-      { label: "A", assignedParticipantId: "p1", assignedName: "한지원", confirmed: true },
-      { label: "D", assignedParticipantId: "mentor", assignedName: "이동준", confirmed: true },
-      { label: "E", assignedParticipantId: "mentor", assignedName: "이동준", confirmed: true },
+      {
+        label: "A",
+        assignedParticipantId: "p1",
+        assignedName: "한지원",
+        confirmed: true,
+      },
+      {
+        label: "D",
+        assignedParticipantId: "mentor",
+        assignedName: "이동준",
+        confirmed: true,
+      },
+      {
+        label: "E",
+        assignedParticipantId: "mentor",
+        assignedName: "이동준",
+        confirmed: true,
+      },
     ];
     const segments = [segment(1, "A"), segment(2, "D"), segment(3, "E")];
     const resolve = createSpeakerIdentityResolver(speakers as never);
@@ -53,7 +68,14 @@ describe("패널의 얼굴과 전사의 칩", () => {
   });
 
   it("아직 아무도 안 붙은 화자도 같은 얼굴이다", () => {
-    const speakers = [{ label: "C", assignedParticipantId: null, assignedName: null, confirmed: false }];
+    const speakers = [
+      {
+        label: "C",
+        assignedParticipantId: null,
+        assignedName: null,
+        confirmed: false,
+      },
+    ];
     const resolve = createSpeakerIdentityResolver(speakers as never);
     const stats = summarizeSpeakers({ segments: [segment(1, "C")], speakers });
 
@@ -66,14 +88,22 @@ describe("패널의 얼굴과 전사의 칩", () => {
    */
   it("발화 하나만 돌려받은 사람도 두 화면이 같은 얼굴이다", () => {
     const speakers = [
-      { label: "A", assignedParticipantId: "p1", assignedName: "한지원", confirmed: true },
+      {
+        label: "A",
+        assignedParticipantId: "p1",
+        assignedName: "한지원",
+        confirmed: true,
+      },
     ];
     const participants = [
       { participantId: "p1", name: "한지원", image: null },
       { participantId: "p2", name: "상어", image: null },
     ];
     const segments = [segment(1, "A"), segment(2, "A", "p2")];
-    const resolve = createSpeakerIdentityResolver(speakers as never, participants);
+    const resolve = createSpeakerIdentityResolver(
+      speakers as never,
+      participants
+    );
     const stats = summarizeSpeakers({ segments, speakers, participants });
 
     const shark = stats.find((stat) => stat.key === "p2")!;
@@ -85,8 +115,18 @@ describe("패널의 얼굴과 전사의 칩", () => {
   // 기본 `sort()` 는 글자 순이라 `["AA","B"]` 를 그대로 둔다. 라벨 순번으로는 B 가 먼저다.
   it("라벨이 Z 를 넘어도 두 화면이 같은 얼굴이다", () => {
     const speakers = [
-      { label: "AA", assignedParticipantId: "mentor", assignedName: "이동준", confirmed: true },
-      { label: "B", assignedParticipantId: "mentor", assignedName: "이동준", confirmed: true },
+      {
+        label: "AA",
+        assignedParticipantId: "mentor",
+        assignedName: "이동준",
+        confirmed: true,
+      },
+      {
+        label: "B",
+        assignedParticipantId: "mentor",
+        assignedName: "이동준",
+        confirmed: true,
+      },
     ];
     const segments = [segment(1, "AA"), segment(2, "B")];
     const resolve = createSpeakerIdentityResolver(speakers as never);
@@ -108,23 +148,51 @@ describe("패널의 얼굴과 전사의 칩", () => {
 describe("계정 없는 임시 참여자", () => {
   it("전사·참석자 목록과 같은 얼굴이다", () => {
     const speakers = [
-      { label: "A", assignedParticipantId: "p-guest", assignedName: "강성욱 멘토님", confirmed: true },
+      {
+        label: "A",
+        assignedParticipantId: "p-guest",
+        assignedName: "강성욱 멘토님",
+        confirmed: true,
+      },
     ];
     const participants = [
-      { participantId: "p-guest", userId: null, guestId: "g-1", name: "강성욱 멘토님", image: null },
+      {
+        participantId: "p-guest",
+        userId: null,
+        guestId: "g-1",
+        name: "강성욱 멘토님",
+        image: null,
+      },
     ];
-    const resolve = createSpeakerIdentityResolver(speakers as never, participants);
-    const stats = summarizeSpeakers({ segments: [segment(1, "A")], speakers, participants });
+    const resolve = createSpeakerIdentityResolver(
+      speakers as never,
+      participants
+    );
+    const stats = summarizeSpeakers({
+      segments: [segment(1, "A")],
+      speakers,
+      participants,
+    });
 
     expect(panelOrb(stats[0])).toEqual(resolve("A")?.avatarName);
   });
 
   it("한 마디도 안 한 임시 참여자도 같은 얼굴이다", () => {
     const participants = [
-      { participantId: "p-silent", userId: null, guestId: "g-2", name: "황성윤", image: null },
+      {
+        participantId: "p-silent",
+        userId: null,
+        guestId: "g-2",
+        name: "황성윤",
+        image: null,
+      },
     ];
     const resolve = createSpeakerIdentityResolver([] as never, participants);
-    const stats = summarizeSpeakers({ segments: [], speakers: [], participants });
+    const stats = summarizeSpeakers({
+      segments: [],
+      speakers: [],
+      participants,
+    });
 
     const silent = stats.find((stat) => stat.name === "황성윤")!;
     // 발화가 없으면 화자로 못 부르니, 참석자 목록이 쓰는 열쇠와 직접 견준다.
@@ -144,7 +212,8 @@ describe("요약의 담당 칸과 전사의 칩", () => {
     ] as never);
 
     expect(
-      describeAssignee({ type: "SPEAKER_LABEL", noteId: "n1", label: "B" })?.avatarKey
+      describeAssignee({ type: "SPEAKER_LABEL", noteId: "n1", label: "B" })
+        ?.avatarKey
     ).toEqual(resolve("B")?.avatarName);
   });
 
@@ -154,8 +223,8 @@ describe("요약의 담당 칸과 전사의 칩", () => {
       [{ participantId: "p1", userId: "u1", name: "QA 비" }]
     );
 
-    expect(describeAssignee({ type: "USER", id: "u1", name: "QA 비" })?.avatarKey).toEqual(
-      resolve("B")?.avatarName
-    );
+    expect(
+      describeAssignee({ type: "USER", id: "u1", name: "QA 비" })?.avatarKey
+    ).toEqual(resolve("B")?.avatarName);
   });
 });

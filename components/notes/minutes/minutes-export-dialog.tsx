@@ -2,7 +2,10 @@
 
 import { useId, useRef, useState } from "react";
 
-import { downloadBlob, renderMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
+import {
+  downloadBlob,
+  renderMinutesPdf,
+} from "@/components/notes/minutes/render-minutes-pdf";
 import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { PdfPreview } from "@/components/notes/minutes/pdf-preview";
 import { usePdfArtifact } from "@/components/notes/minutes/use-pdf-artifact";
@@ -18,7 +21,10 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { track } from "@/lib/analytics/track";
-import type { MinutesDocument, MinutesInclude } from "@/lib/notes/minutes/model";
+import type {
+  MinutesDocument,
+  MinutesInclude,
+} from "@/lib/notes/minutes/model";
 import { toast } from "@/lib/ui/toast";
 
 /**
@@ -48,16 +54,33 @@ export function MinutesExportDialog({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) { setInclude({ transcript: false }); setPreviewed(false); }
+    if (open) {
+      setInclude({ transcript: false });
+      setPreviewed(false);
+    }
   }
-  const pdf = usePdfArtifact(open, version, include, preparePdf ?? (async (option, signal) => {
-    const doc = await build(option);
-    signal?.throwIfAborted();
-    return { blob: await renderMinutesPdf(doc, signal), fileName: doc.fileName };
-  }));
+  const pdf = usePdfArtifact(
+    open,
+    version,
+    include,
+    preparePdf ??
+      (async (option, signal) => {
+        const doc = await build(option);
+        signal?.throwIfAborted();
+        return {
+          blob: await renderMinutesPdf(doc, signal),
+          fileName: doc.fileName,
+        };
+      })
+  );
   const preview = async () => {
-    try { await pdf.prepare(); setPreviewed(true); }
-    catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) toast.error("회의록 PDF를 만들지 못했습니다."); }
+    try {
+      await pdf.prepare();
+      setPreviewed(true);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError"))
+        toast.error("회의록 PDF를 만들지 못했습니다.");
+    }
   };
 
   const download = async () => {
@@ -67,7 +90,10 @@ export function MinutesExportDialog({
     try {
       const result = await pdf.prepare();
       downloadBlob(result.blob, result.fileName);
-      track("summary_exported", { target: "pdf", transcript: include.transcript });
+      track("summary_exported", {
+        target: "pdf",
+        transcript: include.transcript,
+      });
       onOpenChange(false);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -85,19 +111,34 @@ export function MinutesExportDialog({
 
   return (
     // 만드는 동안에는 닫지 않는다 — 닫아도 내려받기는 계속돼, 닫은 창에서 파일이 튀어나온다
-    <Dialog open={open} onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}>
-      <DialogContent className={`max-h-[calc(100dvh-2rem)] overflow-y-auto ${pdf.artifact ? "sm:max-w-4xl" : ""}`}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}
+    >
+      <DialogContent
+        className={`max-h-[calc(100dvh-2rem)] overflow-y-auto ${pdf.artifact ? "sm:max-w-4xl" : ""}`}
+      >
         <DialogHeader>
           <DialogTitle>회의록 PDF로 내보내기</DialogTitle>
-          <DialogDescription>회의록(핵심 요약 · 결정 · 할 일 · 미결 사항)은 늘 들어갑니다. 녹취록을 붙일지 고르세요.</DialogDescription>
+          <DialogDescription>
+            회의록(핵심 요약 · 결정 · 할 일 · 미결 사항)은 늘 들어갑니다.
+            녹취록을 붙일지 고르세요.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <label htmlFor={`${id}-transcript`} className="font-medium text-foreground">
+            <label
+              htmlFor={`${id}-transcript`}
+              className="font-medium text-foreground"
+            >
               녹취록
             </label>
-            <span id={`${id}-transcript-hint`} className="text-xs text-muted-foreground">
-              회의에서 한 말을 그대로 붙입니다. 받는 사람이 모든 발언을 읽게 됩니다.
+            <span
+              id={`${id}-transcript-hint`}
+              className="text-xs text-muted-foreground"
+            >
+              회의에서 한 말을 그대로 붙입니다. 받는 사람이 모든 발언을 읽게
+              됩니다.
             </span>
           </div>
           <Switch
@@ -109,13 +150,32 @@ export function MinutesExportDialog({
           />
         </div>
         <div>
-          <Button variant="outline" loading={pdf.pending && !pending} disabled={pending} onClick={() => void preview()}>PDF 미리보기</Button>
-          {previewed && pdf.artifact ? <PdfPreview blob={pdf.artifact.blob} /> : null}
-          {pdf.invalidated ? <p role="status" className="mt-2 text-sm text-muted-foreground">내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.</p> : null}
+          <Button
+            variant="outline"
+            loading={pdf.pending && !pending}
+            disabled={pending}
+            onClick={() => void preview()}
+          >
+            PDF 미리보기
+          </Button>
+          {previewed && pdf.artifact ? (
+            <PdfPreview blob={pdf.artifact.blob} />
+          ) : null}
+          {pdf.invalidated ? (
+            <p role="status" className="mt-2 text-sm text-muted-foreground">
+              내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" disabled={pending} />}>취소</DialogClose>
-          <Button loading={pending} disabled={pdf.pending} onClick={() => void download()}>
+          <DialogClose render={<Button variant="outline" disabled={pending} />}>
+            취소
+          </DialogClose>
+          <Button
+            loading={pending}
+            disabled={pdf.pending}
+            onClick={() => void download()}
+          >
             PDF 받기
           </Button>
         </DialogFooter>
