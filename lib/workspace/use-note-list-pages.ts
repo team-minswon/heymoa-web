@@ -8,23 +8,11 @@ import {
   type getNotesResponse,
 } from "@/lib/api/generated/notes/notes";
 import type {
-  GetNotesMeetingStatus,
   NoteListResponseData,
   NoteListResponseDataNotesItem,
 } from "@/lib/api/generated/models";
 
 export const NOTE_LIST_PAGE_SIZE = 30;
-
-/** 목록 키의 마지막 칸이 회의 상태로 거른 목록인가. 행을 끼우는 낙관 갱신이 이 목록을 건너뛴다. */
-export function isMeetingStatusFilteredKey(queryKey: readonly unknown[]) {
-  const last = queryKey.at(-1);
-  return (
-    typeof last === "object" &&
-    last !== null &&
-    "meetingStatus" in last &&
-    last.meetingStatus !== undefined
-  );
-}
 
 export type NoteListScope =
   | { kind: "project"; projectId: string }
@@ -45,7 +33,6 @@ export type NoteListScope =
 export function useNoteListPages({
   scope,
   pages,
-  meetingStatus,
   enabled,
   refetchInterval,
   refetchIntervalInBackground,
@@ -53,8 +40,6 @@ export function useNoteListPages({
   scope: NoteListScope;
   /** 이어 붙일 쪽 수. 1 이면 첫 쪽만. */
   pages: number;
-  /** 이 회의 상태의 노트만(APP-1313 「중지됨」). 서버가 쪽을 자르기 전에 거른다. */
-  meetingStatus?: GetNotesMeetingStatus;
   enabled: boolean;
   /** 창이 숨어도 폴링을 이어 간다. 메뉴 막대 목록처럼 화면 밖 소비자만 켠다. */
   refetchIntervalInBackground?: boolean;
@@ -68,17 +53,13 @@ export function useNoteListPages({
       : getGetWorkspaceNotesQueryKey(scope.workspaceId);
 
   return useQuery({
-    queryKey: [
-      ...baseKey,
-      { limit: NOTE_LIST_PAGE_SIZE, pages, meetingStatus },
-    ],
+    queryKey: [...baseKey, { limit: NOTE_LIST_PAGE_SIZE, pages }],
     queryFn: async ({ signal }): Promise<getNotesResponse> => {
       const merged: NoteListResponseDataNotesItem[] = [];
       let last: getNotesResponse | undefined;
       for (let page = 0; page < pages; page += 1) {
         const params = {
           limit: String(NOTE_LIST_PAGE_SIZE),
-          ...(meetingStatus ? { meetingStatus } : {}),
           ...(last?.status === 200 && last.data.data.nextSortedAt
             ? {
                 afterSortedAt: last.data.data.nextSortedAt,
