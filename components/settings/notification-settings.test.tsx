@@ -7,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -35,6 +36,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 afterEach(() => {
   cleanup();
   resetNotificationSettingsMock();
+  server.resetHandlers();
   writes.length = 0;
 });
 afterAll(() => server.close());
@@ -58,22 +60,51 @@ function renderSettings() {
 const switchOf = (name: string) => screen.getByRole("switch", { name });
 
 describe("NotificationSettings", () => {
-  it("선택 알림만 줄로 그리고 필수 알림은 한 줄 안내로 둔다", async () => {
+  it("검토할 결과 준비는 중지된 회의 다음에 이름과 함께 서고, 이름을 모르는 종류는 숨긴다", async () => {
+    const channels = [
+      { channel: "WEB", provided: true, enabled: true, effective: true },
+      { channel: "EMAIL", provided: false, enabled: false, effective: false },
+    ];
+    server.use(
+      http.get("*/v1/notification-settings", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            muteAll: false,
+            muteEmail: false,
+            // 서버 순서는 시안과 다르다 — 화면이 순서를 맞춘다.
+            items: [
+              { type: "ANALYSIS_READY", required: false, channels },
+              { type: "SOMETHING_NEW", required: false, channels },
+              { type: "MEETING_PAUSED_REMINDER", required: false, channels },
+            ],
+          },
+          error: null,
+        })
+      )
+    );
+    renderSettings();
+    const rows = await screen.findAllByRole("rowheader");
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "중지된 회의리마인더와 자동 종료 안내",
+      "검토할 결과 준비회의 분석이 끝나 결과를 검토할 수 있을 때",
+    ]);
+  });
+
+  it("선택 알림만 줄로 그리고 필수 알림은 안내 없이 뺀다", async () => {
     renderSettings();
     expect(await screen.findByText("중지된 회의")).toBeInTheDocument();
     expect(screen.queryByText("워크스페이스 초대")).toBeNull();
-    expect(
-      screen.getByText(
-        "워크스페이스 초대 같은 필수 알림은 여기서 끌 수 없습니다."
-      )
-    ).toBeInTheDocument();
+    // 필수 알림 안내 문장은 두지 않는다(APP-1348).
+    expect(screen.queryByText(/필수 알림/)).toBeNull();
     // 보내지 않는 채널은 「—」이고 이유를 읽힌다
     expect(
       screen.getByLabelText("이 알림은 웹으로 보내지 않습니다")
     ).toHaveTextContent("—");
     // 기본값은 서버가 정한다 — 중지된 회의 메일은 켜짐
     expect(switchOf("중지된 회의 메일")).toBeChecked();
-    expect(screen.getByRole("textbox", { name: "메일 받는 주소" })).toBeDisabled();
+    // 메일 받는 주소 카드는 걷었다(APP-1348).
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 
   it("스위치를 바꾸면 서버에 보내고 돌아온 설정으로 그린 뒤 사건을 보낸다", async () => {

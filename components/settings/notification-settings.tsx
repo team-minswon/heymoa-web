@@ -14,8 +14,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -24,10 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { track } from "@/lib/analytics/track";
-import type {
-  NotificationSettingsResponseDataItemsItemChannelsItem as ChannelSetting,
-  NotificationSettingsResponseDataItemsItemType as NotificationType,
-} from "@/lib/api/generated/models";
+import type { NotificationSettingsResponseDataItemsItemChannelsItem as ChannelSetting } from "@/lib/api/generated/models";
 import {
   getGetNotificationSettingsQueryKey,
   useGetNotificationSettingsSuspense,
@@ -35,7 +30,6 @@ import {
   useUpdateNotificationMutes,
   useUpdateNotificationPreference,
 } from "@/lib/api/generated/notification-settings/notification-settings";
-import { useGetCurrentUserSuspense } from "@/lib/api/generated/users/users";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,15 +41,23 @@ import { cn } from "@/lib/utils";
  *
  * 확인·경고 문구는 화면에 상시 두지 않고 켤 때 뜨는 확인 창에만 둔다(rule `ui-text-layout`).
  */
-const TYPE_LABELS: Record<NotificationType, string> = {
+/**
+ * 종류별 이름. **여기 없는 종류는 그리지 않는다** — 서버가 web 보다 먼저 새 종류를 내면 이름 없는 빈 행이 섰다(APP-1348).
+ * 문자열 키인 이유도 같다: 계약 미러가 따라오기 전에 서버가 낸 종류(`ANALYSIS_READY`)를 이름으로 받는다.
+ */
+const TYPE_LABELS: Record<string, string> = {
   WORKSPACE_INVITATION: "워크스페이스 초대",
   MEETING_PAUSED_REMINDER: "중지된 회의",
+  ANALYSIS_READY: "검토할 결과 준비",
   // 서버는 이 종류를 따로 내지 않는다 — 중지된 회의 메일을 따른다.
   MEETING_AUTO_ENDED: "회의 자동 종료",
 };
-const TYPE_DESCRIPTIONS: Partial<Record<NotificationType, string>> = {
+const TYPE_DESCRIPTIONS: Record<string, string> = {
   MEETING_PAUSED_REMINDER: "리마인더와 자동 종료 안내",
+  ANALYSIS_READY: "회의 분석이 끝나 결과를 검토할 수 있을 때",
 };
+/** 행 순서는 시안을 따른다(중지된 회의 → 검토할 결과 준비). 서버가 주는 순서와 다를 수 있다. */
+const TYPE_ORDER = Object.keys(TYPE_LABELS);
 const CHANNELS = [
   { channel: "WEB", label: "웹", missing: "이 알림은 웹으로 보내지 않습니다" },
   {
@@ -97,15 +99,10 @@ const ROW = "flex min-h-14 items-center justify-between gap-4 py-3";
 export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   const queryClient = useQueryClient();
   const response = useGetNotificationSettingsSuspense().data;
-  const userResponse = useGetCurrentUserSuspense().data;
   if (response.status !== 200 || !response.data.success) {
     throw new Error("알림 설정을 불러오지 못했습니다.");
   }
   const settings = response.data.data;
-  const email =
-    userResponse.status === 200 && userResponse.data.success
-      ? userResponse.data.data.email
-      : "";
   const [confirm, setConfirm] = useState<Mute | "reset" | null>(null);
 
   /** 서버가 돌려준 설정이 곧 화면이다. */
@@ -145,7 +142,9 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
       }
     );
 
-  const optional = settings.items.filter((item) => !item.required);
+  const optional = settings.items
+    .filter((item) => !item.required && TYPE_LABELS[item.type])
+    .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type));
 
   return (
     <div className="mx-auto max-w-2xl space-y-8" aria-label="알림 설정">
@@ -256,17 +255,6 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 px-1 text-xs text-[var(--el-muted)]">
-          워크스페이스 초대 같은 필수 알림은 여기서 끌 수 없습니다.
-        </p>
-      </section>
-
-      <section
-        aria-label="메일 받는 주소"
-        className="space-y-2 rounded-panel border border-[var(--el-hairline)] bg-white p-6"
-      >
-        <Label htmlFor="notification-email">메일 받는 주소</Label>
-        <Input id="notification-email" value={email} disabled />
       </section>
 
       <div className="flex justify-end">
@@ -410,11 +398,7 @@ export function NotificationSettingsSkeleton() {
       </section>
       <section>
         <Skeleton className="h-[110px] rounded-panel" />
-        <p className="mt-3 px-1 text-xs text-[var(--el-muted)]">
-          워크스페이스 초대 같은 필수 알림은 여기서 끌 수 없습니다.
-        </p>
       </section>
-      <Skeleton className="h-[106px] rounded-panel" />
       <div className="flex justify-end">
         <Button type="button" variant="outline" disabled>
           기본값으로 되돌리기
