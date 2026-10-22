@@ -341,8 +341,8 @@ test("다운로드 공유 이미지는 언어마다 따로 나오고 alt 도 그
 
 test("약관 영어판의 한국어본 링크는 같은 문서의 한국어 주소로 간다", async ({ page }) => {
   await page.goto("/en/privacy#section-5");
-  await expect(page.locator("#section-5 h2")).toHaveText("5. Cookies and Analytics");
+  await expect(page.locator("#section-5 h2")).toHaveText("5. Automatic Collection and How to Refuse It");
   await page.getByRole("link", { name: "Read the Korean version" }).click();
   await expect(page).toHaveURL("/privacy");
-  await expect(page.locator("#section-5 h2")).toHaveText("5. 쿠키와 접속 분석");
+  await expect(page.locator("#section-5 h2")).toHaveText("제5조 (자동 수집 장치와 거부 방법)");
 });

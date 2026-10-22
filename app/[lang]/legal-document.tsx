@@ -1,17 +1,9 @@
 import type { Metadata } from "next";
-import { ChevronDown, FileText } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import {
-  BODY,
-  CARD_TITLE,
-  CONTAINER,
-  FOCUS,
-  H2,
-  LEAD,
-  RADIUS,
-  TV_VARS,
-} from "@/components/heymoa/landing/tokens";
+import { LEGAL_FOCUS, LegalToc } from "@/app/[lang]/legal-toc";
+import { CONTAINER } from "@/components/heymoa/landing/tokens";
 import { WebPageJsonLd } from "@/components/help/json-ld";
 import { messagesFor } from "@/i18n/messages";
 import { marketingLocale } from "@/lib/i18n/current";
@@ -51,25 +43,28 @@ export const longDate = (locale: Locale, iso: string) =>
     timeZone: "UTC",
   }).format(new Date(iso));
 
-/** 문서 안 링크는 보라 진한 색이다(흰 면 8.8:1 · 연보라 면 7.9:1). */
+/** 문서 안 링크. 색을 따로 두지 않고 밑줄로만 가른다 — 법률 문서에 브랜드 색이 끼면 광고처럼 읽혔다. */
 export const LINK = cn(
-  "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
-  FOCUS
+  "rounded-[2px] font-medium text-foreground underline decoration-[var(--el-hairline-strong)] underline-offset-4 transition-colors hover:decoration-foreground",
+  LEGAL_FOCUS
 );
 
-/** 처리방침 7조의 사업자 한 곳. */
+/** 본문 문단. 글줄 약 680px 에 16px · 1.8 — 정책 페이지들(Stripe·Notion)과 같은 읽기 폭이다. */
+const PROSE = "m-0 text-[15.5px] leading-[1.8] text-[var(--el-body-strong)] [overflow-wrap:anywhere] lg:text-[16px]";
+
+/** 처리방침 7조의 사업자 한 곳. 카드 대신 얇은 선 상자 — 표와 같은 무게로 읽힌다. */
 function ProcessorCard({ vendor, role, rows }: LegalProcessor) {
   return (
-    <section className="rounded-[16px] border border-[var(--tv-rule)] px-4 py-3.5 sm:px-5">
-      <h3 className="m-0 text-[15px] leading-[1.5] font-extrabold text-[var(--tv-ink)]">
+    <section className="rounded-[6px] border border-border px-4 py-3 sm:px-5 print:break-inside-avoid">
+      <h3 className="m-0 text-[14.5px] leading-[1.5] font-semibold text-foreground">
         {vendor}
-        <span className="block text-[13px] font-semibold text-[var(--tv-muted)] sm:ml-2 sm:inline">{role}</span>
+        <span className="block text-[13px] font-normal text-muted-foreground sm:ml-2 sm:inline">{role}</span>
       </h3>
-      <dl className="m-0 mt-2 grid grid-cols-1 gap-x-3 gap-y-0.5 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-y-1.5 text-[14px] leading-[1.6] [overflow-wrap:anywhere]">
+      <dl className="m-0 mt-2 grid grid-cols-1 gap-x-4 gap-y-0.5 text-[13.5px] leading-[1.65] [overflow-wrap:anywhere] sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-y-1">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
-            <dt className="text-[var(--tv-muted)]">{label}</dt>
-            <dd className="m-0 mb-1.5 text-[var(--tv-body)] sm:mb-0">{withContact(value)}</dd>
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="m-0 mb-1.5 text-[var(--el-body-strong)] sm:mb-0">{withContact(value)}</dd>
           </div>
         ))}
       </dl>
@@ -80,12 +75,16 @@ function ProcessorCard({ vendor, role, rows }: LegalProcessor) {
 /** 보관 기간·항목 같은 표. 좁은 화면에서는 표만 가로로 밀린다(페이지는 밀리지 않는다). */
 function TableBlock({ columns, rows }: LegalTable) {
   return (
-    <div className="overflow-x-auto rounded-[16px] border border-[var(--tv-rule)]">
-      <table className="w-full min-w-[520px] border-collapse text-left text-[14px] leading-[1.6] [overflow-wrap:anywhere]">
-        <thead className="bg-[var(--tv-lav-soft)]">
-          <tr>
+    <div className="overflow-x-auto border-y border-[var(--el-hairline-strong)] print:overflow-visible">
+      <table className="w-full min-w-[520px] border-collapse text-left text-[13.5px] leading-[1.65] [overflow-wrap:anywhere]">
+        <thead>
+          <tr className="border-b border-border">
             {columns.map((column) => (
-              <th key={column} scope="col" className="px-4 py-2.5 font-extrabold text-[var(--tv-ink)]">
+              <th
+                key={column}
+                scope="col"
+                className="px-3 py-2 text-[12.5px] font-medium text-muted-foreground first:pl-0 last:pr-0"
+              >
                 {column}
               </th>
             ))}
@@ -93,14 +92,18 @@ function TableBlock({ columns, rows }: LegalTable) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row[0]} className="border-t border-[var(--tv-rule)] align-top">
+            <tr key={row[0]} className="border-t border-border align-top first:border-t-0">
               {row.map((cell, index) =>
                 index === 0 ? (
-                  <th key={index} scope="row" className="min-w-[8em] px-4 py-2.5 font-bold text-[var(--tv-ink)]">
+                  <th
+                    key={index}
+                    scope="row"
+                    className="min-w-[8em] py-2.5 pr-3 pl-0 font-medium text-foreground"
+                  >
                     {cell}
                   </th>
                 ) : (
-                  <td key={index} className="px-4 py-2.5 text-[var(--tv-body)]">
+                  <td key={index} className="px-3 py-2.5 text-[var(--el-body-strong)] last:pr-0">
                     {withContact(cell)}
                   </td>
                 )
@@ -115,31 +118,36 @@ function TableBlock({ columns, rows }: LegalTable) {
 
 function Block({ block }: { block: LegalBlock }) {
   if (typeof block === "string") {
-    return <p className={cn(BODY, "[overflow-wrap:anywhere]")}>{withContact(block)}</p>;
+    return <p className={PROSE}>{withContact(block)}</p>;
   }
   // `<p>` 안에 표·`<dl>` 을 못 넣어 문단과 따로 그린다.
   return "vendor" in block ? <ProcessorCard {...block} /> : <TableBlock {...block} />;
 }
 
+/** 머리의 안내 한 줄(이전 판 · 번역본). 색 면 대신 왼쪽 선 — 경고가 아니라 참고다. */
+function Notice({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="m-0 mt-5 border-l-2 border-[var(--el-hairline-strong)] py-0.5 pl-3.5 text-[14px] leading-[1.65] text-[var(--el-body-strong)]">
+      {children}
+    </p>
+  );
+}
+
 type VersionPeriod = { version: string; from: string; to: string | null };
 
 /**
- * 약관 · 개인정보의 공통 틀. **랜딩과 같은 면이다** — 상단 바 · 푸터도 랜딩 것이다(`isLandingChromeRoute`).
- * 그래서 랜딩의 `--tv-*`(`TV_VARS`)를 루트에 걸고 흰 바탕 위 라벤더 머리 판, 흰 본문 판, 연보라 목차로 짠다.
- * 예전 크림 · `--lp-*` 판은 랜딩이 흰 바탕 · 보라로 바뀐 뒤 같은 사이트의 다른 페이지처럼 읽혔다.
- * 머리 판은 목차 · 본문과 같은 기둥(`CONTAINER`)에 선다 — 히어로 무대 폭(`STAGE_WRAP`)으로 두면 바로 아래 붙은
- * 목차 카드와 가장자리가 390 에서 8px, 1024~1279 에서 24px 어긋나 실수처럼 보였다.
+ * 약관 · 개인정보의 공통 틀. 상단 바 · 푸터는 랜딩 것이다(`isLandingChromeRoute`).
  *
- * lg 미만에서는 목차를 닫힌 `<details>` 로 둔다 — 펼친 목차(9~10줄)가 본문보다 앞서 390 첫 화면에 본문이 한
- * 줄도 안 보였다. lg 부터는 본문 옆에 펼친 sticky 카드다. 본문 문단은 `[overflow-wrap:anywhere]` 를 같이 건다 — 끊을 자리
- * 없는 URL(개인정보 5조 `tools.google.com/…`)이 320 에서 판 밖으로 넘쳤다. 전역 `keep-all`(`globals.css` body)과 같이 써도
- * 한글 낱말은 그대로 두고 넘치는 토큰만 끊는다.
+ * **차분한 문서로 짠다(APP-1385 디자인 개편).** 예전 라벤더 머리 판 · 연보라 목차 · 보라 링크는 「장난스럽다」는
+ * 말을 들었다 — 이제 서비스 전체의 무채색 토큰(`--foreground` · `--border` · `--el-*`)만 쓰고 색 면 · 둥근 카드 ·
+ * 아이콘 장식을 뺐다. 머리는 제목 · 설명 · 메타 줄(공고일 · 시행일 · 이전 버전)과 아래 선 하나다.
  *
- * **문서에는 스크롤 리빌 · 장식(쪽지 · 테이프 · 말풍선)을 안 둔다.** 랜딩은 훑어보는 자리지만 여기는 처음부터
- * 끝까지 읽는 글이다 — 읽는 동안 문단이 나타나거나 장식이 끼면 방해만 된다.
+ * lg 부터 왼쪽 220px 목차(sticky, 읽는 중인 조를 짚는다 — `LegalToc`)와 최대 720px 본문 두 칸이다. lg 미만은
+ * 목차를 닫힌 `<details>` 로 둔다 — 펼친 목차가 390 첫 화면에서 본문을 다 밀어냈었다. 본문 문단의
+ * `[overflow-wrap:anywhere]` 는 끊을 자리 없는 URL(개인정보 5조)이 320 에서 넘치지 않게 한다.
  *
- * 상단 바가 흐름 안의 sticky 64px 라 위 여백은 작다(옛 떠 있는 알약 때는 그 아래로 밀어야 해서 컸다). 대신 바가
- * 목차 → 조항 이동의 도착점을 가리지 않게 조항마다 `scroll-mt-20`(80px, 랜딩 구간과 같은 값)을 준다.
+ * 스크롤 리빌 · 장식은 두지 않는다 — 처음부터 끝까지 읽는 글이다. 조항마다 `scroll-mt-20` 은 sticky 상단 바(64px)가
+ * 목차 → 조항 이동의 도착점을 가리지 않게 한다. 인쇄할 때는 목차를 빼고 본문만 한 단으로 낸다.
  */
 export function LegalDocument({
   locale,
@@ -168,120 +176,110 @@ export function LegalDocument({
 }) {
   const ui = messagesFor(locale).legal.ui;
   const dateOrPending = (iso: string | null) => (iso ? longDate(locale, iso) : ui.pendingDate);
-  // 좁은 화면의 접는 목차와 넓은 화면의 sticky 카드가 같은 목록을 쓴다(한쪽은 늘 display:none).
-  const toc = (
-    <nav aria-label={ui.tocLabel.replace("{title}", title)}>
-      <ol className="m-0 flex list-none flex-col gap-0.5 p-0">
-        {sections.map((section, index) => (
-          <li key={section.title}>
-            <a
-              href={`#${anchorOf(section, index)}`}
-              className={cn(
-                "flex min-h-6 items-center rounded-[8px] px-2 py-1.5 text-[14px] leading-[1.5] text-[var(--tv-body)] underline-offset-4 transition-colors hover:bg-white hover:text-[var(--tv-brand-deep)] hover:underline",
-                FOCUS
-              )}
-            >
-              {section.title}
-            </a>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  );
+  const tocLabel = ui.tocLabel.replace("{title}", title);
+  const tocItems = sections.map((section, index) => ({
+    id: anchorOf(section, index),
+    title: section.title,
+  }));
 
   return (
-    <div style={TV_VARS} className="w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8">
-      <div className={cn(CONTAINER, "pt-3 lg:pt-6")}>
-        <header className={cn(RADIUS.face, "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-16")}>
-          <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
-            {ui.label}
+    <div className="w-full flex-1 bg-white pb-16 text-foreground lg:pb-24 dark:bg-background">
+      <div
+        className={cn(
+          CONTAINER,
+          "grid items-start gap-x-16 pt-8 lg:justify-center lg:grid-cols-[220px_minmax(0,720px)] lg:pt-16 print:block print:max-w-none print:px-0 print:pt-0"
+        )}
+      >
+        {/* 머리는 본문 칸에 선다 — 목차 칸 위는 비우고 목차는 첫 조 높이에서 시작한다. */}
+        <header className="border-b border-border pb-7 lg:col-start-2 lg:row-start-1 lg:pb-9">
+          <p className="m-0 text-[13px] font-medium text-muted-foreground">{ui.label}</p>
+          <h1 className="m-0 mt-2 text-[28px] leading-[1.25] font-semibold tracking-[-0.02em] text-foreground lg:text-[34px]">
+            {title}
+          </h1>
+          <p className="m-0 mt-3 max-w-[640px] text-[15.5px] leading-[1.7] text-muted-foreground lg:text-[16px]">
+            {description}
           </p>
-          {/* 랜딩 섹션 제목(H2)과 같은 급이다. 히어로 급을 쓰면 문서 하나가 첫 화면처럼 군다. */}
-          <h1 className={cn(H2, "mt-4 max-w-[820px]")}>{title}</h1>
-          <p className={cn(LEAD, "mt-4 max-w-[640px]")}>{description}</p>
-          <p className="m-0 mt-6 flex flex-wrap gap-x-5 gap-y-1 text-[14px] leading-[1.6] text-[var(--tv-muted)]">
+          <p className="m-0 mt-5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[13.5px] leading-[1.6] text-muted-foreground">
             {announced !== undefined ? (
-              <span>
-                {ui.announcedDate}{" "}
-                <b className="font-bold text-[var(--tv-ink)]">{dateOrPending(announced)}</b>
-              </span>
+              <>
+                <span>
+                  {ui.announcedDate}{" "}
+                  <span className="text-foreground tabular-nums">{dateOrPending(announced)}</span>
+                </span>
+                <span aria-hidden className="text-[var(--el-hairline-strong)]">
+                  ·
+                </span>
+              </>
             ) : null}
             <span>
               {ui.effectiveDate}{" "}
-              <b className="font-bold text-[var(--tv-ink)]">{dateOrPending(effective)}</b>
+              <span className="text-foreground tabular-nums">{dateOrPending(effective)}</span>
             </span>
             {versions.length ? (
-              <a href="#versions" className={LINK}>
-                {ui.versions}
-              </a>
+              <>
+                <span aria-hidden className="text-[var(--el-hairline-strong)] print:hidden">
+                  ·
+                </span>
+                <a href="#versions" className={cn(LINK, "font-normal print:hidden")}>
+                  {ui.versions}
+                </a>
+              </>
             ) : null}
           </p>
           {archivePeriod ? (
-            <p className="m-0 mt-4 max-w-[640px] rounded-[16px] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[var(--tv-body)]">
+            <Notice>
               {ui.archiveNotice.replace("{period}", archivePeriod)}{" "}
               <a href={path} className={LINK}>
                 {ui.currentVersion}
               </a>
-            </p>
+            </Notice>
           ) : null}
           {/* 번역본의 법적 지위(PRO-66 결정): 참고용이고 한국어본이 우선한다. 한국어본 자신에는 두지 않는다. */}
           {locale !== DEFAULT_LOCALE ? (
-            <p className="m-0 mt-4 max-w-[640px] rounded-[16px] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[var(--tv-body)]">
+            <Notice>
               {ui.translationNotice}{" "}
               <a href={path} hrefLang="ko" className={LINK}>
                 {ui.koreanVersion}
               </a>
-            </p>
+            </Notice>
           ) : null}
         </header>
-      </div>
 
-      <div
-        className={cn(
-          CONTAINER,
-          "mt-8 grid items-start gap-6 lg:mt-12 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10"
-        )}
-      >
-        {/* 목차는 연보라 카드, 본문은 흰 판 — 「옮겨 다니는 곳」과 「읽는 곳」이 갈린다. */}
-        <details className="details-motion group rounded-[20px] bg-[var(--tv-lav-soft)] lg:hidden">
+        {/* 좁은 화면의 접는 목차와 넓은 화면의 sticky 목차가 같은 목록을 쓴다(한쪽은 늘 display:none). */}
+        <details className="details-motion group border-b border-border lg:hidden print:hidden">
           <summary
             className={cn(
-              "flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-[20px] px-5 py-3 text-[14px] font-extrabold text-[var(--tv-ink)] [&::-webkit-details-marker]:hidden",
-              FOCUS
+              "flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 text-[14px] font-medium text-foreground [&::-webkit-details-marker]:hidden",
+              LEGAL_FOCUS
             )}
           >
-            <FileText aria-hidden className="size-4 text-[var(--tv-muted)]" />
             {ui.toc}
             <ChevronDown
               aria-hidden
-              className="ml-auto size-4 text-[var(--tv-muted)] transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
+              className="ml-auto size-4 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
             />
           </summary>
-          <div className="px-5 pb-5">{toc}</div>
+          <div className="pb-4">
+            <LegalToc label={tocLabel} items={tocItems} />
+          </div>
         </details>
-        <aside className="box-border hidden rounded-[20px] bg-[var(--tv-lav-soft)] p-5 lg:sticky lg:top-24 lg:block">
-          <p className="m-0 flex items-center gap-2 text-[13px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]">
-            <FileText aria-hidden className="size-4" />
-            {ui.toc}
-          </p>
-          <div className="mt-3">{toc}</div>
+        <aside className="hidden lg:sticky lg:top-24 lg:col-start-1 lg:row-start-2 lg:mt-10 lg:block lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto print:hidden">
+          <p className="m-0 mb-3 text-[12.5px] font-medium text-muted-foreground">{ui.toc}</p>
+          <LegalToc label={tocLabel} items={tocItems} />
         </aside>
 
-        {/* 줄 길이를 지키려고 본문 판은 760 까지만 넓힌다(lg 안쪽 글줄 약 660px). */}
-        <div className="min-w-0 max-w-[760px]">
-          <article className="box-border rounded-[24px] border border-[var(--tv-rule)] bg-white p-6 sm:p-9 lg:p-12">
+        <div className="min-w-0 lg:col-start-2 lg:row-start-2">
+          <article>
             {sections.map((section, index) => (
               <section
                 id={anchorOf(section, index)}
                 key={section.title}
-                className={cn(
-                  "scroll-mt-20",
-                  index > 0 &&
-                    "mt-9 border-t border-[var(--tv-rule)] pt-9 lg:mt-10 lg:pt-10"
-                )}
+                className="mt-10 scroll-mt-20 first:mt-8 lg:mt-12 lg:first:mt-10"
               >
-                <h2 className={CARD_TITLE}>{section.title}</h2>
-                <div className="mt-3 flex flex-col gap-3 lg:mt-4">
+                <h2 className="m-0 text-[18px] leading-[1.4] font-semibold tracking-[-0.01em] text-foreground lg:text-[19px] print:break-after-avoid">
+                  {section.title}
+                </h2>
+                <div className="mt-3 flex flex-col gap-3.5">
                   {section.body.map((block, blockIndex) => (
                     <Block key={blockIndex} block={block} />
                   ))}
@@ -294,17 +292,20 @@ export function LegalDocument({
             <nav
               id="versions"
               aria-label={ui.versions}
-              className="mt-6 scroll-mt-20 rounded-[20px] bg-[var(--tv-lav-soft)] p-6 sm:p-8"
+              className="mt-14 scroll-mt-20 border-t border-border pt-8 print:hidden"
             >
-              <h2 className={CARD_TITLE}>{ui.versions}</h2>
-              <p className={cn(BODY, "mt-2")}>{ui.versionsLead}</p>
-              <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
+              <h2 className="m-0 text-[15px] leading-[1.4] font-semibold text-foreground">{ui.versions}</h2>
+              <p className="m-0 mt-1.5 text-[14px] leading-[1.65] text-muted-foreground">{ui.versionsLead}</p>
+              <ul className="m-0 mt-4 flex list-none flex-col p-0">
                 {versions.map(({ version, from, to }) => (
-                  <li key={version} className="flex flex-wrap items-baseline gap-x-3 text-[14px] leading-[1.6]">
-                    <a href={`${path}/${version}`} hrefLang="ko" className={LINK}>
+                  <li
+                    key={version}
+                    className="flex flex-wrap items-baseline justify-between gap-x-4 border-t border-border py-2.5 text-[14px] leading-[1.6] first:border-t-0 first:pt-0"
+                  >
+                    <a href={`${path}/${version}`} hrefLang="ko" className={cn(LINK, "tabular-nums")}>
                       {longDate(locale, version)}
                     </a>
-                    <span className="text-[var(--tv-muted)]">{periodText(locale, from, to)}</span>
+                    <span className="text-[13px] text-muted-foreground tabular-nums">{periodText(locale, from, to)}</span>
                   </li>
                 ))}
               </ul>
