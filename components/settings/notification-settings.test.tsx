@@ -100,7 +100,7 @@ describe("NotificationSettings", () => {
     expect(screen.queryByText(/필수 알림/)).toBeNull();
     // 보내지 않는 채널은 「—」이고 이유를 읽힌다
     expect(
-      screen.getByLabelText("이 알림은 웹으로 보내지 않습니다")
+      screen.getByLabelText("이 알림은 인앱으로 보내지 않습니다")
     ).toHaveTextContent("—");
     // 기본값은 서버가 정한다 — 중지된 회의 메일은 켜짐
     expect(switchOf("중지된 회의 메일")).toBeChecked();
@@ -235,7 +235,7 @@ describe("NotificationSettings", () => {
   });
 
   it.each([
-    ["알림 모두 끄기", "알림을 모두 끌까요?"],
+    ["인앱 알림 모두 끄기", "인앱 알림을 모두 끌까요?"],
     ["메일 모두 끄기", "메일을 모두 끌까요?"],
   ])(
     "%s 는 확인 창에서 취소하면 아무것도 바꾸지 않는다",
@@ -253,29 +253,51 @@ describe("NotificationSettings", () => {
     }
   );
 
-  it("알림 모두 끄기를 켜면 종류별 스위치가 꺼짐으로 가려지고, 풀면 확인 없이 이전 선택이 돌아온다", async () => {
+  it("인앱 알림 모두 끄기는 인앱 열만 꺼짐으로 가리고 메일 열은 그대로 두며, 풀면 확인 없이 이전 선택이 돌아온다", async () => {
     renderSettings();
     fireEvent.click(
-      await screen.findByRole("switch", { name: "알림 모두 끄기" })
+      await screen.findByRole("switch", { name: "인앱 알림 모두 끄기" })
     );
     fireEvent.click(
       within(await screen.findByRole("alertdialog")).getByRole("button", {
         name: "끄기",
       })
     );
-    await waitFor(() => expect(switchOf("알림 모두 끄기")).toBeChecked());
-    expect(switchOf("중지된 회의 메일")).toHaveAttribute("data-disabled");
-    // 웹이 있는 종류(검토할 결과 준비)와 메일이 있는 종류(중지된 회의) 둘 다 「꺼짐」으로 가려진다.
-    expect(screen.getAllByText("꺼짐")).toHaveLength(2);
-
-    fireEvent.click(switchOf("알림 모두 끄기"));
-    await waitFor(() => expect(switchOf("알림 모두 끄기")).not.toBeChecked());
-    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() => expect(switchOf("인앱 알림 모두 끄기")).toBeChecked());
+    // 인앱 열(검토할 결과 준비)만 가려지고, 메일 열(중지된 회의)은 그대로 켜져 있고 누를 수 있다.
+    expect(switchOf("검토할 결과 준비 인앱")).toHaveAttribute("data-disabled");
+    expect(screen.getAllByText("꺼짐")).toHaveLength(1);
     expect(switchOf("중지된 회의 메일")).toBeChecked();
+    expect(switchOf("중지된 회의 메일")).not.toHaveAttribute("data-disabled");
+
+    fireEvent.click(switchOf("인앱 알림 모두 끄기"));
+    await waitFor(() =>
+      expect(switchOf("인앱 알림 모두 끄기")).not.toBeChecked()
+    );
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(switchOf("검토할 결과 준비 인앱")).toBeChecked();
     expect(writes).toEqual([
       'PUT /v1/notification-settings {"muteAll":true,"muteEmail":false}',
       'PUT /v1/notification-settings {"muteAll":false,"muteEmail":false}',
     ]);
+  });
+
+  it("메일 모두 끄기는 메일 열만 가린다", async () => {
+    renderSettings();
+    fireEvent.click(
+      await screen.findByRole("switch", { name: "메일 모두 끄기" })
+    );
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "끄기",
+      })
+    );
+    await waitFor(() => expect(switchOf("메일 모두 끄기")).toBeChecked());
+    expect(switchOf("중지된 회의 메일")).toHaveAttribute("data-disabled");
+    expect(switchOf("검토할 결과 준비 인앱")).toBeChecked();
+    expect(switchOf("검토할 결과 준비 인앱")).not.toHaveAttribute(
+      "data-disabled"
+    );
   });
 
   it("기본값으로 되돌리기는 확인 창을 거치고, 취소하면 아무것도 바뀌지 않는다", async () => {

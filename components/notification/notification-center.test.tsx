@@ -455,7 +455,7 @@ describe("알림 모달", () => {
     ).toBeVisible();
   });
 
-  it("빈 목록·웹 알림 꺼짐·처리 필요 없음 문구를 보인다", async () => {
+  it("빈 목록·인앱 알림 꺼짐·처리 필요 없음 문구를 보인다", async () => {
     store.muteAll = true;
     renderCenter();
     const dialog = await openModal();
@@ -465,7 +465,7 @@ describe("알림 모달", () => {
       )
     ).toBeVisible();
     expect(
-      await within(dialog).findByText("웹 알림이 꺼져 있습니다")
+      await within(dialog).findByText("인앱 알림이 꺼져 있습니다")
     ).toBeVisible();
     fireEvent.click(within(dialog).getByRole("tab", { name: "처리 필요" }));
     expect(

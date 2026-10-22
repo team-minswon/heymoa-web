@@ -459,8 +459,9 @@ function notificationSettings(): NotificationSettingsResponse {
           effective:
             entry.provided &&
             (item.required ||
+              // 채널별로 따로 끈다(APP-1352): muteAll 은 인앱, muteEmail 은 메일만.
               (entry.enabled &&
-                !notificationMutes.muteAll &&
+                !(entry.channel === "WEB" && notificationMutes.muteAll) &&
                 !(entry.channel === "EMAIL" && notificationMutes.muteEmail))),
         })),
       })),

@@ -376,7 +376,7 @@ export function NotificationModal({
                   aria-hidden
                   className="size-4 text-[var(--el-muted)]"
                 />
-                웹 알림이 꺼져 있습니다
+                인앱 알림이 꺼져 있습니다
                 <Button
                   variant="outline"
                   size="sm"

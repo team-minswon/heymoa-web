@@ -81,7 +81,11 @@ const TYPE_HELP: Record<string, React.ReactNode> = {
 /** 행 순서는 시안을 따른다(중지된 회의 → 검토할 결과 준비). 서버가 주는 순서와 다를 수 있다. */
 const TYPE_ORDER = Object.keys(TYPE_LABELS);
 const CHANNELS = [
-  { channel: "WEB", label: "웹", missing: "이 알림은 웹으로 보내지 않습니다" },
+  {
+    channel: "WEB",
+    label: "인앱",
+    missing: "이 알림은 인앱으로 보내지 않습니다",
+  },
   {
     channel: "EMAIL",
     label: "메일",
@@ -91,13 +95,14 @@ const CHANNELS = [
 
 type Mute = "muteAll" | "muteEmail";
 const MUTE_CONFIRM: Record<Mute, { title: string; body: string }> = {
+  // 채널별로 따로 끈다(APP-1352). 서버 필드 이름은 그대로 — muteAll 이 인앱, muteEmail 이 메일이다.
   muteAll: {
-    title: "알림을 모두 끌까요?",
-    body: "중지된 회의 메일과 검토할 결과 알림을 모두 받지 않습니다. 다시 켜면 이전 설정이 그대로 돌아옵니다.",
+    title: "인앱 알림을 모두 끌까요?",
+    body: "선택 인앱 알림을 받지 않습니다. 다시 켜면 이전 설정이 그대로 돌아옵니다.",
   },
   muteEmail: {
     title: "메일을 모두 끌까요?",
-    body: "선택 메일을 받지 않습니다. 웹 알림은 그대로입니다. 다시 켜면 이전 설정이 그대로 돌아옵니다.",
+    body: "선택 메일을 받지 않습니다. 다시 켜면 이전 설정이 그대로 돌아옵니다.",
   },
 };
 
@@ -283,7 +288,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
       <section aria-label="전체 끄기" className={CARD}>
         {(
           [
-            ["muteAll", "알림 모두 끄기"],
+            ["muteAll", "인앱 알림 모두 끄기"],
             ["muteEmail", "메일 모두 끄기"],
           ] as const
         ).map(([key, label], index) => (
@@ -340,8 +345,9 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
                       label={`${TYPE_LABELS[item.type]} ${label}`}
                       missing={missing}
                       muted={
-                        settings.muteAll ||
-                        (channel === "EMAIL" && settings.muteEmail)
+                        channel === "WEB"
+                          ? settings.muteAll
+                          : settings.muteEmail
                       }
                       disabled={busy}
                       onChange={(enabled) =>
@@ -496,7 +502,7 @@ export function NotificationSettingsSkeleton() {
     >
       <Header />
       <section className={CARD}>
-        {["알림 모두 끄기", "메일 모두 끄기"].map((label, index) => (
+        {["인앱 알림 모두 끄기", "메일 모두 끄기"].map((label, index) => (
           <div
             key={label}
             className={cn(

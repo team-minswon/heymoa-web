@@ -123,7 +123,7 @@ export type WebEventProperties = {
     was_unread: boolean;
   };
   notifications_all_read_clicked: { workspace_id: string; count: number };
-  // scope: all(알림 모두 끄기) · email(메일 모두 끄기) · type(종류 하나의 채널 하나). 종류·채널은 type 일 때만 있다.
+  // scope: all(인앱 알림 모두 끄기 — 이름은 서버 필드 muteAll 을 따른다) · email(메일 모두 끄기) · type(종류 하나의 채널 하나). 종류·채널은 type 일 때만 있다.
   notification_setting_changed:
     | { workspace_id: string; scope: "all" | "email"; enabled: boolean }
     | {
