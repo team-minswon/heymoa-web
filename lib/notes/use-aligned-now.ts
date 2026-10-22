@@ -21,9 +21,7 @@ export function useAlignedNow(
   useEffect(() => {
     if (!active) return;
 
-    const offsets = offsetsKey
-      ? offsetsKey.split(",").map(Number)
-      : [0];
+    const offsets = offsetsKey ? offsetsKey.split(",").map(Number) : [0];
     let timeout: number | undefined;
     const tick = () => {
       const current = Date.now();
@@ -35,7 +33,9 @@ export function useAlignedNow(
           Math.min(
             ...offsets.map((offset) => {
               const elapsed = (current - offset) % intervalMs;
-              return intervalMs - (elapsed < 0 ? elapsed + intervalMs : elapsed);
+              return (
+                intervalMs - (elapsed < 0 ? elapsed + intervalMs : elapsed)
+              );
             })
           )
         )

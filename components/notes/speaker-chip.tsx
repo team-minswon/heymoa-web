@@ -1,4 +1,3 @@
- 
 import { cn } from "@/lib/utils";
 import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";

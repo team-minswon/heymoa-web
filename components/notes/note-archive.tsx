@@ -64,6 +64,8 @@ import {
   useTranscriptFocus,
   type TranscriptFocus,
 } from "@/components/notes/use-transcript-focus";
+import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { hintedInterval } from "@/lib/events/interval";
 
 /** 바닥에서 이만큼 안쪽이면 "바닥"으로 본다. 스크롤 위치는 소수점으로 떨어진다. */
 const BOTTOM_THRESHOLD_PX = 48;
@@ -224,19 +226,27 @@ export const NoteArchive = memo(function NoteArchive({
 } & TranscriptFocus) {
   // 종료 뒤에 연 화면에는 노트 소켓이 없어 화자 분리 결과가 오지 않는다. 분리가 끝날
   // 때까지만 전사를 다시 읽는다. 봉인 전에는 전사가 NOT_REQUESTED 라 흐름 상태로 가른다.
+  // 흐름은 건강한 이벤트 스트림이면 힌트가 다시 읽는다(PRO-67 I03). 아래 전사 5초는 그대로다 — 화자 분리 상태 변화에는 힌트가 없다.
+  const streamHealthy = useEventStreamHealthy();
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
       refetchInterval: (query) =>
-        okData(query.state.data)?.status === "DIARIZING" ||
-        okData(query.state.data)?.regions?.some((row) => row.status === "PENDING")
-          ? DIARIZATION_POLL_MS
-          : false,
+        hintedInterval(
+          streamHealthy,
+          okData(query.state.data)?.status === "DIARIZING" ||
+            okData(query.state.data)?.regions?.some(
+              (row) => row.status === "PENDING"
+            )
+            ? DIARIZATION_POLL_MS
+            : false
+        ),
     },
   });
   const diarizing = okData(flowQuery.data)?.status === "DIARIZING";
-  const awaitingSpeakerAnalysis = okData(flowQuery.data)?.regions?.some(
-    (row) => row.region === "ITEM_ENRICHMENT" && row.status === "PENDING"
-  ) ?? false;
+  const awaitingSpeakerAnalysis =
+    okData(flowQuery.data)?.regions?.some(
+      (row) => row.region === "ITEM_ENRICHMENT" && row.status === "PENDING"
+    ) ?? false;
   // 종료 직후 마운트다 — 전역 staleTime(60초)을 그대로 두면 방금 전 라이브 캐시를 재사용해
   // 마지막 전사가 빠질 수 있다. 마운트할 때 최종 상태를 다시 당긴다.
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -246,7 +256,8 @@ export const NoteArchive = memo(function NoteArchive({
         const status = okData(query.state.data)?.diarization?.status;
         return diarizing ||
           (awaitingSpeakerAnalysis && status === "NOT_REQUESTED") ||
-          status === "ASSEMBLING" || status === "SUBMITTED"
+          status === "ASSEMBLING" ||
+          status === "SUBMITTED"
           ? DIARIZATION_POLL_MS
           : false;
       },

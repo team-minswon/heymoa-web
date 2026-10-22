@@ -66,7 +66,10 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
   proposalChangedSchema,
   contextBatchAppliedSchema,
   // 안건 정본이 바뀌었다. 무엇이 바뀌었는지는 싣지 않는다 — 받으면 GET /agendas 를 다시 읽는다.
-  z.object({ type: z.literal("agendas.changed"), occurredAt: wireInstantSchema }),
+  z.object({
+    type: z.literal("agendas.changed"),
+    occurredAt: wireInstantSchema,
+  }),
 ]);
 
 export type NoteTopicEvent = z.infer<typeof noteTopicEventSchema>;

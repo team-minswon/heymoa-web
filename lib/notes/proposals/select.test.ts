@@ -19,19 +19,18 @@ describe("selectContextSnapshot", () => {
 
   it("두 겹 봉투를 벗겨 snapshot 을 낸다", () => {
     const snapshot = selectContextSnapshot(ok as never);
-    expect(snapshot.proposals).toHaveLength(
-      CONTEXT_SNAPSHOT.proposals.length
-    );
-    expect(snapshot.runs).toHaveLength(
-      CONTEXT_SNAPSHOT.runs.length
-    );
+    expect(snapshot.proposals).toHaveLength(CONTEXT_SNAPSHOT.proposals.length);
+    expect(snapshot.runs).toHaveLength(CONTEXT_SNAPSHOT.runs.length);
   });
 
   it("한 겹만 벗기면 안 된다 — 바깥 봉투는 snapshot 이 아니다", () => {
     // `response.data` 를 그대로 파싱하면 `proposals` 가 없어 실패해야 한다.
     // 이 단언이 깨진다는 것은 스키마가 너무 관대해졌다는 뜻이다.
     expect(() =>
-      selectContextSnapshot({ ...ok, data: { ...ok.data, data: ok.data } } as never)
+      selectContextSnapshot({
+        ...ok,
+        data: { ...ok.data, data: ok.data },
+      } as never)
     ).toThrow();
   });
 
@@ -51,7 +50,11 @@ describe("selectContextSnapshot", () => {
     expect(() =>
       selectContextSnapshot({
         ...ok,
-        data: { success: true, data: { proposals: [{}], runs: [] }, error: null },
+        data: {
+          success: true,
+          data: { proposals: [{}], runs: [] },
+          error: null,
+        },
       } as never)
     ).toThrow();
   });

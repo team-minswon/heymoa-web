@@ -6,7 +6,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PersonAvatar, personAvatarKey } from "@/components/heymoa/person-avatar";
+import {
+  PersonAvatar,
+  personAvatarKey,
+} from "@/components/heymoa/person-avatar";
 import { cn } from "@/lib/utils";
 
 /**

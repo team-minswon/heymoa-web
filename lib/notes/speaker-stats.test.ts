@@ -18,7 +18,11 @@ const segment = (
   assignedParticipantId,
 });
 
-const speaker = (label: string, participantId: string | null, name: string | null) => ({
+const speaker = (
+  label: string,
+  participantId: string | null,
+  name: string | null
+) => ({
   label,
   assignedParticipantId: participantId,
   assignedName: name,
@@ -301,7 +305,9 @@ describe("summarizeSpeakers", () => {
       });
 
       expect(rows[0].timeline[0]).toBe(1);
-      expect(rows[0].timeline.slice(1).every((value) => value === 0)).toBe(true);
+      expect(rows[0].timeline.slice(1).every((value) => value === 0)).toBe(
+        true
+      );
     });
 
     it("말 안 한 참여자의 칸은 전부 비어 있다", () => {

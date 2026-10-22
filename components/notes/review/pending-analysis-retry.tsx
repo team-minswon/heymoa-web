@@ -5,13 +5,24 @@ import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
-import { getGetAnalysisFlowQueryOptions, useRequestAnalysis } from "@/lib/api/generated/analysis/analysis";
+import {
+  getGetAnalysisFlowQueryOptions,
+  useRequestAnalysis,
+} from "@/lib/api/generated/analysis/analysis";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
 
 /** 후속 분석 요청이 저장되지 않은 경우도 기존 수동 요청 API에서 판정합니다. */
-export function PendingAnalysisRetry({ noteId, disabled }: { noteId: string; disabled: boolean }) {
+export function PendingAnalysisRetry({
+  noteId,
+  disabled,
+}: {
+  noteId: string;
+  disabled: boolean;
+}) {
   const queryClient = useQueryClient();
-  const request = useRequestAnalysis({ mutation: { meta: { suppressErrorToast: true } } });
+  const request = useRequestAnalysis({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
   const lock = useRef(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -57,10 +68,23 @@ export function PendingAnalysisRetry({ noteId, disabled }: { noteId: string; dis
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-      <Button variant="outline" size="sm" loading={busy} disabled={disabled} onClick={() => void run(!readFailed)}>
+      <Button
+        variant="outline"
+        size="sm"
+        loading={busy}
+        disabled={disabled}
+        onClick={() => void run(!readFailed)}
+      >
         {readFailed ? "상태 다시 확인" : "분석 재요청"}
       </Button>
-      {message ? <p role={readFailed || request.isError ? "alert" : "status"} className="text-xs text-[var(--el-muted)]">{message}</p> : null}
+      {message ? (
+        <p
+          role={readFailed || request.isError ? "alert" : "status"}
+          className="text-xs text-[var(--el-muted)]"
+        >
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -57,7 +57,11 @@ function SuggestionShell({
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           {children}
         </span>
-        {toggle ? <span className="inline-flex justify-self-start sm:justify-self-end">{toggle}</span> : null}
+        {toggle ? (
+          <span className="inline-flex justify-self-start sm:justify-self-end">
+            {toggle}
+          </span>
+        ) : null}
       </div>
       {footer}
     </div>
@@ -104,20 +108,28 @@ export function ReplacementSuggestion({
   return (
     <SuggestionShell
       label={`이전 ${KIND_LABEL[target.kind]}`}
-      toggle={ended ? undefined : (
-        <ChoiceToggle
-          label="이전 결정을 어떻게 할까요?"
-          changeLabel="대체"
-          keepLabel="유지"
-          value={choice}
-          disabled={disabled}
-          onChange={onChoose}
-        />
-      )}
+      toggle={
+        ended ? undefined : (
+          <ChoiceToggle
+            label="이전 결정을 어떻게 할까요?"
+            changeLabel="대체"
+            keepLabel="유지"
+            value={choice}
+            disabled={disabled}
+            onChange={onChoose}
+          />
+        )
+      }
       footer={
         <>
           {!ended && choice !== null ? (
-            <div role="group" aria-label={choice === "change" ? "대체 후 모습" : "함께 유지할 결정"} className="mt-3 border-t border-[var(--el-hairline)] pt-3">
+            <div
+              role="group"
+              aria-label={
+                choice === "change" ? "대체 후 모습" : "함께 유지할 결정"
+              }
+              className="mt-3 border-t border-[var(--el-hairline)] pt-3"
+            >
               <div className="mb-2 flex items-center justify-between text-xs text-[var(--el-muted)]">
                 <span>검토 완료 후</span>
                 <span>결정 {choice === "change" ? 1 : 2}개</span>
@@ -125,13 +137,21 @@ export function ReplacementSuggestion({
               <ul className="space-y-2 border-l-2 border-[var(--el-success)]/50 pl-3">
                 {choice === "keep" ? (
                   <li className="rounded-[6px] border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-3 py-2">
-                    <span className="mb-0.5 block text-[11px] text-[var(--el-muted)]">이전 결정</span>
-                    <span className="block text-[13px] leading-5 text-[var(--el-ink)]">{target.content}</span>
+                    <span className="mb-0.5 block text-[11px] text-[var(--el-muted)]">
+                      이전 결정
+                    </span>
+                    <span className="block text-[13px] leading-5 text-[var(--el-ink)]">
+                      {target.content}
+                    </span>
                   </li>
                 ) : null}
                 <li className="rounded-[6px] border border-[var(--el-success)]/25 bg-[var(--el-surface-card)] px-3 py-2">
-                  <span className="mb-0.5 block text-[11px] text-[var(--el-success-strong)]">새 결정</span>
-                  <span className="block text-[13px] leading-5 text-[var(--el-ink)]">{newContent}</span>
+                  <span className="mb-0.5 block text-[11px] text-[var(--el-success-strong)]">
+                    새 결정
+                  </span>
+                  <span className="block text-[13px] leading-5 text-[var(--el-ink)]">
+                    {newContent}
+                  </span>
                 </li>
               </ul>
             </div>
@@ -146,8 +166,12 @@ export function ReplacementSuggestion({
       }
     >
       {ended || choice === "change" ? (
-        <del className="text-[var(--el-muted-soft)] decoration-[var(--el-muted-soft)]">{target.content}</del>
-      ) : <span className="text-[var(--el-ink)]">{target.content}</span>}
+        <del className="text-[var(--el-muted-soft)] decoration-[var(--el-muted-soft)]">
+          {target.content}
+        </del>
+      ) : (
+        <span className="text-[var(--el-ink)]">{target.content}</span>
+      )}
       <span className="text-xs text-[var(--el-muted)]">
         {target.noteTitle ?? "프로젝트 결정"} ·{" "}
         {formatAppDate(target.approvedAt, { month: "long", day: "numeric" })}{" "}

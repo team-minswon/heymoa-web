@@ -95,10 +95,9 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   ],
   useGetWorkspaceGuests: () => ({ isPending: false, data: undefined }),
 }));
-vi.mock(
-  "@/lib/api/generated/workspace-members/workspace-members",
-  () => ({ useGetWorkspaceMembers: () => ({ data: undefined }) })
-);
+vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
+  useGetWorkspaceMembers: () => ({ data: undefined }),
+}));
 // 프로젝트는 읽기 전용 한 줄로만 쓰인다 — 계약에 노트의 프로젝트를 바꾸는 길이 없다.
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   useGetProject: () => ({

@@ -6,7 +6,10 @@ import { useState, type ReactNode } from "react";
 import { Collapse } from "@/components/heymoa/collapse";
 import { ShowMoreButton } from "@/components/heymoa/show-more-button";
 import { AddItemForm } from "@/components/notes/review/add-item-form";
-import { ReviewRow, type ItemPatch } from "@/components/notes/review/review-row";
+import {
+  ReviewRow,
+  type ItemPatch,
+} from "@/components/notes/review/review-row";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import {
@@ -72,12 +75,15 @@ export function ReviewSection({
   /** 줄 아래에 늘 서는 제안 */
   suggestionsOf?: (item: ReviewItem) => ReactNode;
 }) {
-  const kinds = REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds ?? [];
+  const kinds =
+    REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds ?? [];
   const assignable = kinds.every((kind) => ASSIGNABLE_KINDS.has(kind));
   const [expanded, setExpanded] = useState(false);
   const [composing, setComposing] = useState(false);
   // 처음 그릴 때 있던 항목. 그 뒤에 생긴 줄만 스며들며 선다.
-  const [initialIds] = useState(() => new Set(section.items.map((item) => item.itemId)));
+  const [initialIds] = useState(
+    () => new Set(section.items.map((item) => item.itemId))
+  );
 
   const head = section.items.slice(0, initialVisible);
   const rest = section.items.slice(initialVisible);
@@ -114,22 +120,34 @@ export function ReviewSection({
     <SectionBlock
       title={section.label}
       count={section.includedCount}
-      aside={section.key === "DECISION" || section.key === "ACTION_ITEM" ? (
-        <span className="w-[92px] shrink-0 text-center text-xs text-[var(--el-muted)]">프로젝트에 추가</span>
-      ) : null}
+      aside={
+        section.key === "DECISION" || section.key === "ACTION_ITEM" ? (
+          <span className="w-[92px] shrink-0 text-center text-xs text-[var(--el-muted)]">
+            프로젝트에 추가
+          </span>
+        ) : null
+      }
     >
       {hint || aside ? (
         <div className="flex min-h-[30px] flex-wrap items-center gap-x-2.5 text-xs text-[var(--el-muted)]">
           {hint ? <span>{hint}</span> : null}
-          {aside ? <span className="ml-auto flex items-center gap-2.5">{aside}</span> : null}
+          {aside ? (
+            <span className="ml-auto flex items-center gap-2.5">{aside}</span>
+          ) : null}
         </div>
       ) : null}
 
       {section.items.length === 0 ? (
-        <p className="border-t border-[var(--el-hairline-soft)] py-2.5 text-[13px] text-[var(--el-muted-soft)]">{EMPTY_TEXT[section.key]}</p>
+        <p className="border-t border-[var(--el-hairline-soft)] py-2.5 text-[13px] text-[var(--el-muted-soft)]">
+          {EMPTY_TEXT[section.key]}
+        </p>
       ) : null}
 
-      {section.items.length > 0 ? <div className="border-t border-[var(--el-hairline-soft)]">{head.map(row)}</div> : null}
+      {section.items.length > 0 ? (
+        <div className="border-t border-[var(--el-hairline-soft)]">
+          {head.map(row)}
+        </div>
+      ) : null}
 
       <Collapse open={showRest} lazy>
         {rest.map(row)}

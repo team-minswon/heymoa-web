@@ -138,7 +138,12 @@ const firstAt = (proposal: ProposalHead) =>
 /** 안건 정본에서 배치에 쓰는 것만 */
 export type AgendaList = {
   asOfSequence?: number | null;
-  agendas: ReadonlyArray<{ agendaId: string; title: string; completed: boolean; proposalIds: ReadonlyArray<unknown> }>;
+  agendas: ReadonlyArray<{
+    agendaId: string;
+    title: string;
+    completed: boolean;
+    proposalIds: ReadonlyArray<unknown>;
+  }>;
 };
 
 /** 명제 → 주제(agendaId, 어느 주제에도 들지 않으면 null). 아직 분류되지 않은 새 명제는 제목 없이 제 시각에 선다. */
@@ -161,7 +166,8 @@ export function placeAgendas(
   const validAgendas = new Set(list.agendas.map((agenda) => agenda.agendaId));
   const owner = new Map<string, string>();
   for (const agenda of list.agendas) {
-    for (const proposalId of agenda.proposalIds) owner.set(String(proposalId), agenda.agendaId);
+    for (const proposalId of agenda.proposalIds)
+      owner.set(String(proposalId), agenda.agendaId);
   }
   const asOf = list.asOfSequence ?? null;
   const next = new Map<string, string | null>();
@@ -170,11 +176,18 @@ export function placeAgendas(
     const id = proposal.proposalId;
     const previousAgenda = previous.get(id);
     // 이미 읽던 안건은 유지하되, 사라진 안건이나 새로 소속이 생긴 미분류 줄은 정본으로 옮긴다.
-    if (live && previous.has(id) && (previousAgenda ? validAgendas.has(previousAgenda) : !owner.has(id))) {
+    if (
+      live &&
+      previous.has(id) &&
+      (previousAgenda ? validAgendas.has(previousAgenda) : !owner.has(id))
+    ) {
       next.set(id, previousAgenda ?? null);
       continue;
     }
-    const seen = !live || owner.has(id) || (asOf !== null && proposal.createdSequence <= asOf);
+    const seen =
+      !live ||
+      owner.has(id) ||
+      (asOf !== null && proposal.createdSequence <= asOf);
     if (seen) next.set(id, owner.get(id) ?? null);
   }
   return next;
@@ -183,7 +196,8 @@ export function placeAgendas(
 /** 두 배치가 같다. 같은 배치로 상태를 다시 쓰지 않게 */
 export function samePlacement(a: AgendaPlacement, b: AgendaPlacement) {
   if (a.size !== b.size) return false;
-  for (const [id, agendaId] of a) if (!b.has(id) || b.get(id) !== agendaId) return false;
+  for (const [id, agendaId] of a)
+    if (!b.has(id) || b.get(id) !== agendaId) return false;
   return true;
 }
 
@@ -228,13 +242,24 @@ export function selectTimeline(
       if (!current || placed !== currentAgendaId) {
         const startMs = firstAt(proposal);
         if (current) current.endMs = startMs;
-        const agenda: AgendaList["agendas"][number] | undefined = placed ? agendaOf.get(placed) : undefined;
-        const previous: TimelineGroup | undefined = placed ? lastByAgenda.get(placed) : undefined;
+        const agenda: AgendaList["agendas"][number] | undefined = placed
+          ? agendaOf.get(placed)
+          : undefined;
+        const previous: TimelineGroup | undefined = placed
+          ? lastByAgenda.get(placed)
+          : undefined;
         current = {
           key: `${placed ?? "none"}:${proposal.proposalId}`,
-          previous: previous ? { key: previous.key, startMs: previous.startMs } : null,
+          previous: previous
+            ? { key: previous.key, startMs: previous.startMs }
+            : null,
           agenda: agenda
-            ? { title: agenda.title, completed: agenda.completed, retracted: false, citation: proposal.citations[0] ?? null }
+            ? {
+                title: agenda.title,
+                completed: agenda.completed,
+                retracted: false,
+                citation: proposal.citations[0] ?? null,
+              }
             : null,
           startMs,
           endMs: null,
@@ -300,8 +325,11 @@ export function selectTimeline(
   }
 
   // 옛 방식은 마지막 안건이, 안건 정본은 맨 아래 묶음이 끝나지 않은 주제일 때 지금 주제다
-  const lastAgenda = byAgenda ? groups.at(-1) : groups.findLast((group) => group.agenda !== null);
-  if (lastAgenda?.agenda && !lastAgenda.agenda.completed) lastAgenda.last = true;
+  const lastAgenda = byAgenda
+    ? groups.at(-1)
+    : groups.findLast((group) => group.agenda !== null);
+  if (lastAgenda?.agenda && !lastAgenda.agenda.completed)
+    lastAgenda.last = true;
 
   return {
     // 골라 보기 중에는 그 유형이 없는 안건을 감춘다. 「전체」에서는 아직 항목이 없는 안건도

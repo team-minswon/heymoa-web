@@ -35,9 +35,8 @@ export function ItemDetail({
   onSelectAgenda?: (agendaId: string) => void;
 }) {
   // 열 수 있는 항목으로 거른 뒤 넷까지 — 먼저 자르면 앞 넷이 없는 항목일 때 뒤의 것까지 사라진다.
-  const agendas = summaryTopics(summary).filter(
-    (topic) =>
-      topic.memberships.some((member) => member.itemId === item.itemId)
+  const agendas = summaryTopics(summary).filter((topic) =>
+    topic.memberships.some((member) => member.itemId === item.itemId)
   );
   const linked = linkedItemsOf(summary, item.itemId)
     .flatMap((row) => {

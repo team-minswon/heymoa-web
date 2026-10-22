@@ -138,16 +138,3 @@ export function isPersonalChatHiddenInNote(view: "side" | "full"): boolean {
   // 정본의 「나만 보는 대화 · 워크스페이스 범위」와 맞는다.
   return view === "side" || view === "full";
 }
-
-/** 회의 상태 폴링 주기. 다른 멤버가 녹음을 시작하거나 회의를 종료해도 화면이 따라가야 한다. */
-export const MEETING_POLL_MS = 5_000;
-
-/**
- * 노트 상태를 계속 폴링해야 하는가. 종료된 회의는 더 바뀌지 않으므로 멈춘다 —
- * 안 그러면 끝난 노트를 열어 둔 사람마다 5초짜리 조회가 영원히 돈다.
- */
-export function meetingRefetchInterval(
-  note: MeetingFields | undefined
-): number | false {
-  return deriveMeetingPhase(note) === "ended" ? false : MEETING_POLL_MS;
-}

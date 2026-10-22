@@ -117,14 +117,18 @@ describe("NoteSummary 항목 리스트", () => {
 
   it("빈 섹션도 헤딩은 남기고 안내를 보여준다", () => {
     renderSummary(true);
-    expect(screen.getByText("이 회의에서는 나오지 않았습니다.")).toBeInTheDocument();
+    expect(
+      screen.getByText("이 회의에서는 나오지 않았습니다.")
+    ).toBeInTheDocument();
   });
 
   // 누를 자리는 마커가 아니라 줄 전체다. 마커만 컨트롤이면 문장 전체가 죽은 영역이 된다.
   it("근거는 접힌 채로 시작하고 항목을 누르면 펼쳐진다", () => {
     renderSummary(true);
 
-    const claim = screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ });
+    const claim = screen.getByRole("button", {
+      name: /결제 실패율이 3%로 올랐다/,
+    });
     expect(claim).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/그럼 결제 쪽부터 보죠/)).toBeNull();
 
@@ -158,7 +162,9 @@ describe("NoteSummary 항목 리스트", () => {
   // 선택 방어에 걸리면 안 된다 — 포인터에만 건다.
   it("선택이 남아 있어도 키보드로는 펼쳐진다", () => {
     renderSummary(true);
-    const claim = screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ });
+    const claim = screen.getByRole("button", {
+      name: /결제 실패율이 3%로 올랐다/,
+    });
 
     fireEvent.click(claim, { detail: 0 });
 
@@ -171,7 +177,9 @@ describe("NoteSummary 항목 리스트", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ })
     );
-    fireEvent.click(screen.getByRole("button", { name: /그럼 결제 쪽부터 보죠/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /그럼 결제 쪽부터 보죠/ })
+    );
 
     expect(onEvidenceSelect).toHaveBeenCalledWith("01K0000000061");
   });
@@ -305,7 +313,9 @@ describe("NoteSummary", () => {
   it("읽기 전용이면 분석이 없어도(404) 요약 만들기를 두지 않는다", () => {
     state.missing = true;
     renderSummary(true, true);
-    expect(screen.getByText("이 회의에는 만들어 둔 요약이 없습니다.")).toBeTruthy();
+    expect(
+      screen.getByText("이 회의에는 만들어 둔 요약이 없습니다.")
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "요약 만들기" })).toBeNull();
   });
 

@@ -29,9 +29,16 @@ export function EvidenceQuotes({
 }) {
   if (scriptState === "pending") {
     return (
-      <div aria-label="근거 발언 불러오는 중" className="flex flex-col gap-2.5 rounded-[10px] border border-[var(--el-hairline)] px-3.5 py-3">
+      <div
+        aria-label="근거 발언 불러오는 중"
+        className="flex flex-col gap-2.5 rounded-[10px] border border-[var(--el-hairline)] px-3.5 py-3"
+      >
         {["72%", "56%"].map((width) => (
-          <Skeleton key={width} className="h-4 rounded-chip" style={{ width }} />
+          <Skeleton
+            key={width}
+            className="h-4 rounded-chip"
+            style={{ width }}
+          />
         ))}
       </div>
     );
@@ -49,15 +56,23 @@ export function EvidenceQuotes({
   if (quotes.length === 0) {
     return (
       <p className="text-[12.5px] text-[var(--el-muted)]">
-        {authored ? "직접 추가한 항목이라 회의 중 발언이 없습니다." : "인용한 발언을 스크립트에서 찾지 못했습니다."}
+        {authored
+          ? "직접 추가한 항목이라 회의 중 발언이 없습니다."
+          : "인용한 발언을 스크립트에서 찾지 못했습니다."}
       </p>
     );
   }
 
   return (
-    <ul aria-label="근거 발언" className="flex flex-col gap-1 rounded-[10px] border border-[var(--el-hairline)] px-2 py-1.5">
+    <ul
+      aria-label="근거 발언"
+      className="flex flex-col gap-1 rounded-[10px] border border-[var(--el-hairline)] px-2 py-1.5"
+    >
       {quotes.map(({ segment, cited }) => {
-        const speaker = resolveSpeaker(segment.speakerLabel, segment.assignedParticipantId);
+        const speaker = resolveSpeaker(
+          segment.speakerLabel,
+          segment.assignedParticipantId
+        );
         return (
           <li key={segment.segmentId}>
             <button
@@ -66,13 +81,23 @@ export function EvidenceQuotes({
               className="grid w-full grid-cols-[20px_minmax(0,1fr)] gap-x-2.5 rounded-control px-1.5 py-1.5 text-left hover:bg-[var(--el-canvas-soft)] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)]"
             >
               <span className="pt-0.5">
-                {speaker ? <PersonAvatar name={speaker.avatarName} image={speaker.imageUrl} size={20} /> : null}
+                {speaker ? (
+                  <PersonAvatar
+                    name={speaker.avatarName}
+                    image={speaker.imageUrl}
+                    size={20}
+                  />
+                ) : null}
               </span>
               <span className="flex min-w-0 flex-col">
                 <span className="text-[12.5px] leading-5 text-[var(--el-muted-soft)]">
-                  <span className="font-medium text-[var(--el-body)]">{speaker?.displayName ?? "화자 없음"}</span>
+                  <span className="font-medium text-[var(--el-body)]">
+                    {speaker?.displayName ?? "화자 없음"}
+                  </span>
                   {" · "}
-                  <span className="tabular-nums">{formatOffset(segment.startedAtMs)}</span>
+                  <span className="tabular-nums">
+                    {formatOffset(segment.startedAtMs)}
+                  </span>
                 </span>
                 <span
                   className={cn(

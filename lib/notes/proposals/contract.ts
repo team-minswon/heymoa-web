@@ -147,36 +147,37 @@ export const proposalCitationSchema = z.object({
   role: proposalCitationRoleSchema,
 });
 
-export const proposalHeadSchema = z.object({
-  proposalId: tsidSchema,
-  revision: z.number().int().min(1),
-  operation: contextOperationSchema,
-  kind: proposalKindSchema,
-  status: z.enum(["OPEN", "CLOSED"]),
-  /** `OPEN`이면 `null`. `RESOLVED`는 `QUESTION`에만 온다. */
-  closeReason: z.enum(["RETRACTED", "RESOLVED"]).nullable(),
-  revisionSource: revisionSourceSchema,
-  /**
-   * NFC 문자열. 계약 상한이 **500 code point** 다.
-   *
-   * `.max(500)` 을 쓰면 안 된다 — zod 는 `String.length`, 즉 **UTF-16 code unit** 을 센다.
-   * 이모지처럼 surrogate pair 인 글자는 하나가 2로 계산돼, 계약상 유효한 500 code point
-   * 문자열을 web 이 1000 으로 보고 거절한다.
-   */
-  content: z
-    .string()
-    .min(1)
-    .refine((value) => [...value].length <= 500, {
-      message: "content는 500 code point 이하여야 합니다",
-    }),
-  /** 시간순 정렬 키. `updatedAt`으로 정렬하면 수정마다 카드가 아래로 튄다. */
-  createdSequence: z.number().int().min(1),
-  lastEvidenceSequence: z.number().int().min(1),
-  aiSemanticRevisionCount: z.number().int().min(0),
-  /** 결과 후보가 매달린 질문. 질문 자신과 일반 후보는 `null`이다. */
-  resolvesProposalId: tsidSchema.nullable(),
-  citations: z.array(proposalCitationSchema),
-})
+export const proposalHeadSchema = z
+  .object({
+    proposalId: tsidSchema,
+    revision: z.number().int().min(1),
+    operation: contextOperationSchema,
+    kind: proposalKindSchema,
+    status: z.enum(["OPEN", "CLOSED"]),
+    /** `OPEN`이면 `null`. `RESOLVED`는 `QUESTION`에만 온다. */
+    closeReason: z.enum(["RETRACTED", "RESOLVED"]).nullable(),
+    revisionSource: revisionSourceSchema,
+    /**
+     * NFC 문자열. 계약 상한이 **500 code point** 다.
+     *
+     * `.max(500)` 을 쓰면 안 된다 — zod 는 `String.length`, 즉 **UTF-16 code unit** 을 센다.
+     * 이모지처럼 surrogate pair 인 글자는 하나가 2로 계산돼, 계약상 유효한 500 code point
+     * 문자열을 web 이 1000 으로 보고 거절한다.
+     */
+    content: z
+      .string()
+      .min(1)
+      .refine((value) => [...value].length <= 500, {
+        message: "content는 500 code point 이하여야 합니다",
+      }),
+    /** 시간순 정렬 키. `updatedAt`으로 정렬하면 수정마다 카드가 아래로 튄다. */
+    createdSequence: z.number().int().min(1),
+    lastEvidenceSequence: z.number().int().min(1),
+    aiSemanticRevisionCount: z.number().int().min(0),
+    /** 결과 후보가 매달린 질문. 질문 자신과 일반 후보는 `null`이다. */
+    resolvesProposalId: tsidSchema.nullable(),
+    citations: z.array(proposalCitationSchema),
+  })
   /**
    * **상태 행렬을 강제한다.** 계약(APP-452 spec.md:188-189)이 세 조합만 허용한다 —
    * `OPEN/null`, `CLOSED/RETRACTED`, 그리고 `QUESTION` 에 한해 `CLOSED/RESOLVED`.
@@ -313,10 +314,6 @@ export type ContextContractGuards = [
 export type ProposalHead = z.infer<typeof proposalHeadSchema>;
 export type ProposalCitation = z.infer<typeof proposalCitationSchema>;
 export type RunRange = z.infer<typeof runRangeSchema>;
-export type ProposalSnapshot = z.infer<
-  typeof proposalSnapshotSchema
->;
-export type ProposalChanged = z.infer<
-  typeof proposalChangedSchema
->;
+export type ProposalSnapshot = z.infer<typeof proposalSnapshotSchema>;
+export type ProposalChanged = z.infer<typeof proposalChangedSchema>;
 export type ContextBatchApplied = z.infer<typeof contextBatchAppliedSchema>;

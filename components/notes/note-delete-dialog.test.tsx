@@ -10,7 +10,15 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
@@ -36,6 +44,11 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
  *
  * 진짜 캐시를 세우고 **그 안에 무엇이 남았는지**를 본다.
  */
+
+const stream = vi.hoisted(() => ({ healthy: false }));
+vi.mock("@/components/events/user-event-provider", () => ({
+  useEventStreamHealthy: () => stream.healthy,
+}));
 
 const toastSuccess = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { success: toastSuccess } }));
@@ -136,12 +149,20 @@ describe("NoteDeleteDialog", () => {
   it("무엇이 함께 사라지는지와 되돌릴 수 없음을 문구로 말한다", () => {
     renderDialog();
 
-    expect(screen.getByRole("heading", { name: "회의록을 삭제할까요?" })).toBeInTheDocument();
-    expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
-    expect(screen.getByText(/발언에 연결된 근거가 함께 삭제됩니다/)).toBeInTheDocument();
-    expect(screen.getByText(/삭제한 회의록은 되돌릴 수 없습니다/)).toBeInTheDocument();
     expect(
-      screen.getByText("같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다.")
+      screen.getByRole("heading", { name: "회의록을 삭제할까요?" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
+    expect(
+      screen.getByText(/발언에 연결된 근거가 함께 삭제됩니다/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/삭제한 회의록은 되돌릴 수 없습니다/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다."
+      )
     ).toBeInTheDocument();
   });
 
@@ -172,7 +193,9 @@ describe("NoteDeleteDialog", () => {
   });
 
   it("방금 조회한 실패 캐시가 있어도 열 때 서버의 분석 중 상태를 확인한다", async () => {
-    server.use(http.get(FLOW_PATH, () => HttpResponse.json(flowBody("ANALYZING"))));
+    server.use(
+      http.get(FLOW_PATH, () => HttpResponse.json(flowBody("ANALYZING")))
+    );
     renderDialog(undefined, "ANALYSIS_FAILED");
     expect(screen.getByRole("button", { name: "삭제" })).toBeDisabled();
     await screen.findByText("회의 분석이 끝나면 삭제할 수 있습니다.");
@@ -328,4 +351,30 @@ describe("NoteDeleteDialog", () => {
     expect(toastSuccess).not.toHaveBeenCalled();
     expect(onDeleted).not.toHaveBeenCalled();
   });
+});
+
+/**
+ * 분석 흐름의 힌트 전환(PRO-67 I03). 분석 중(3초)인 흐름도 이벤트 스트림이 건강하면 폴링하지 않고(안전망 60초), 스트림이
+ * 끊기면 지금 간격으로 돌아온다. 힌트가 오면 provider 가 같은 키를 무효화해 다시 읽는다(lib/events 표가 검증한다).
+ */
+describe("분석 흐름 폴링과 이벤트 스트림", () => {
+  async function flowReadsWithin(ms: number) {
+    let reads = 0;
+    const count = () => {
+      reads += 1;
+    };
+    server.events.on("request:start", count);
+    renderDialog(undefined, "ANALYZING");
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    server.events.removeListener("request:start", count);
+    cleanup();
+    return reads;
+  }
+
+  it("건강하면 3초 폴링을 하지 않고, 끊기면 원래 3초로 돈다", async () => {
+    stream.healthy = true;
+    expect(await flowReadsWithin(3_500)).toBe(1);
+    stream.healthy = false;
+    expect(await flowReadsWithin(3_500)).toBeGreaterThanOrEqual(2);
+  }, 15_000);
 });

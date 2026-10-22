@@ -1,4 +1,13 @@
-import { Document, Font, Image as PdfImage, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
+import {
+  Document,
+  Font,
+  Image as PdfImage,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+  pdf,
+} from "@react-pdf/renderer";
 
 import type { MinutesDocument, MinutesLine } from "@/lib/notes/minutes/model";
 
@@ -25,7 +34,10 @@ function registerFonts(base: string) {
       { src: `${base}/NotoSansKR-Bold.woff2`, fontWeight: 700 },
     ],
   });
-  Font.register({ family: TITLE, src: `${base}/NotoSerifKR-SemiBold-title.ttf` });
+  Font.register({
+    family: TITLE,
+    src: `${base}/NotoSerifKR-SemiBold-title.ttf`,
+  });
   Font.registerHyphenationCallback(breakableWord);
   registeredBase = base;
 }
@@ -39,7 +51,8 @@ function registerFonts(base: string) {
  * 좁은 칸(담당 · 기한 · 녹취록 화자)의 줄바꿈. 이 칸은 22mm 남짓이라 `ChristopherSmith` 같은 영문 이름 한 낱말도 넘쳐 옆 칸을
  * 덮었다. 이 칸의 글만 네 자 넘는 낱말을 글자마다 끊는다 — 본문까지 이렇게 끊으면 영문 낱말이 아무 데서나 갈린다
  */
-const narrowBreak = (word: string) => (word.length <= 4 ? [word] : Array.from(word).flatMap((char) => [char, ""]));
+const narrowBreak = (word: string) =>
+  word.length <= 4 ? [word] : Array.from(word).flatMap((char) => [char, ""]);
 
 export function breakableWord(word: string): string[] {
   // 한글이 든 낱말은 다섯 자부터 끊는다 — 담당 칸(22mm)에는 「크리스토퍼스미스」 같은 이름도 넘쳐 기한 칸을 덮었다.
@@ -90,9 +103,23 @@ const s = StyleSheet.create({
     paddingLeft: 12,
     marginBottom: mm(3.5),
   },
-  documentStatus: { textAlign: "right", fontSize: 9, lineHeight: LINE, marginBottom: mm(2) },
-  meta: { borderTopWidth: 1.5, borderTopColor: color.ink, borderBottomWidth: 1, borderBottomColor: color.rule },
-  metaRow: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: color.ruleSoft },
+  documentStatus: {
+    textAlign: "right",
+    fontSize: 9,
+    lineHeight: LINE,
+    marginBottom: mm(2),
+  },
+  meta: {
+    borderTopWidth: 1.5,
+    borderTopColor: color.ink,
+    borderBottomWidth: 1,
+    borderBottomColor: color.rule,
+  },
+  metaRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.75,
+    borderBottomColor: color.ruleSoft,
+  },
   metaRowLast: { flexDirection: "row" },
   metaLabel: {
     width: mm(24),
@@ -101,8 +128,19 @@ const s = StyleSheet.create({
     paddingHorizontal: mm(3.5),
   },
   // 공문서 양식처럼 칸 제목 글자를 같은 폭에 고르게 편다
-  metaLabelText: { width: mm(13), flexDirection: "row", justifyContent: "space-between", color: color.ink },
-  metaValue: { flex: 1, lineHeight: LINE, paddingVertical: mm(2), paddingHorizontal: mm(3.5), color: color.ink },
+  metaLabelText: {
+    width: mm(13),
+    flexDirection: "row",
+    justifyContent: "space-between",
+    color: color.ink,
+  },
+  metaValue: {
+    flex: 1,
+    lineHeight: LINE,
+    paddingVertical: mm(2),
+    paddingHorizontal: mm(3.5),
+    color: color.ink,
+  },
   sub: { color: color.muted },
   section: { marginTop: mm(6.5) },
   heading: {
@@ -125,11 +163,20 @@ const s = StyleSheet.create({
     color: color.muted,
     fontSize: 9,
   },
-  row: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: color.ruleSoft },
+  row: {
+    flexDirection: "row",
+    borderBottomWidth: 0.75,
+    borderBottomColor: color.ruleSoft,
+  },
   cell: { paddingVertical: mm(2), paddingHorizontal: mm(3) },
   // 본문 칸의 줄 간격. 되풀이되는 칸 머리(`fixed`)에는 걸지 않는다 — 걸면 4.9 의 새 쪽 나누기가 그 표의 줄을 통째로 잃었다
   body: { lineHeight: LINE },
-  compact: { paddingVertical: mm(1), paddingHorizontal: mm(3), fontSize: 9, lineHeight: 1.5 },
+  compact: {
+    paddingVertical: mm(1),
+    paddingHorizontal: mm(3),
+    fontSize: 9,
+    lineHeight: 1.5,
+  },
   no: { width: mm(13), textAlign: "center", color: color.muted },
   who: { width: mm(22), color: color.ink },
   due: { width: mm(30) },
@@ -146,8 +193,18 @@ const s = StyleSheet.create({
     backgroundColor: color.label,
   },
   // 1쪽 「핵심」
-  pageLabel: { fontSize: 8, letterSpacing: 2, color: color.muted, marginBottom: mm(1.5) },
-  verdict: { marginTop: mm(4), paddingVertical: mm(3), paddingHorizontal: mm(4), backgroundColor: color.label },
+  pageLabel: {
+    fontSize: 8,
+    letterSpacing: 2,
+    color: color.muted,
+    marginBottom: mm(1.5),
+  },
+  verdict: {
+    marginTop: mm(4),
+    paddingVertical: mm(3),
+    paddingHorizontal: mm(4),
+    backgroundColor: color.label,
+  },
   leadRow: { flexDirection: "row", marginTop: mm(1.5) },
   leadMark: { lineHeight: LINE, width: mm(4), color: color.muted },
   leadText: { lineHeight: LINE, flex: 1, color: color.ink },
@@ -165,7 +222,12 @@ const s = StyleSheet.create({
     borderTopWidth: 0.75,
     borderTopColor: color.rule,
   },
-  ownersLabel: { lineHeight: LINE, width: mm(17), fontSize: 9, color: color.muted },
+  ownersLabel: {
+    lineHeight: LINE,
+    width: mm(17),
+    fontSize: 9,
+    color: color.muted,
+  },
   owner: { lineHeight: LINE, marginRight: mm(4) },
   ownerCount: { fontWeight: 700, color: color.ink },
   // 상세
@@ -188,7 +250,13 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: color.ink,
   },
-  annexNote: { lineHeight: "14.85pt", marginTop: mm(2), marginBottom: mm(4), color: color.muted, fontSize: 9 },
+  annexNote: {
+    lineHeight: "14.85pt",
+    marginTop: mm(2),
+    marginBottom: mm(4),
+    color: color.muted,
+    fontSize: 9,
+  },
   footer: {
     // 내용이 짧은 쪽에서도 꼬리말은 쪽 아래에 선다
     marginTop: "auto",
@@ -201,14 +269,27 @@ const s = StyleSheet.create({
     fontSize: 8,
     color: color.muted,
   },
-  footerBrand: { flexDirection: "row", alignItems: "center", gap: mm(1.2), flexShrink: 0 },
+  footerBrand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: mm(1.2),
+    flexShrink: 0,
+  },
   footerLogo: { width: mm(4.5), height: mm(4.5) },
   footerWordmark: { fontWeight: 700, fontSize: 8, color: color.body },
   footerTitle: { flex: 1, fontSize: 7, maxLines: 1, textOverflow: "ellipsis" },
   footerPage: { width: mm(15), textAlign: "right" },
 });
 
-function MetaRow({ label, last, children }: { label: string; last?: boolean; children: React.ReactNode }) {
+function MetaRow({
+  label,
+  last,
+  children,
+}: {
+  label: string;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <View style={last ? s.metaRowLast : s.metaRow} wrap={false}>
       <View style={s.metaLabel}>
@@ -230,7 +311,15 @@ function MetaRow({ label, last, children }: { label: string; last?: boolean; chi
  * 다시 그린다. `layout` 은 새 쪽 나누기 엔진을 쓰는데, 내용을 한 번만 재고 쪽에 채워 넣어 3시간 녹취록(약 80쪽)도
  * 수 초에 끝난다. 옛 엔진은 쪽마다 남은 내용 전체를 다시 재서 같은 문서에 40초 가까이 걸렸다.
  */
-function Sheet({ footer, logoSrc, children }: { footer: string; logoSrc: string; children: React.ReactNode }) {
+function Sheet({
+  footer,
+  logoSrc,
+  children,
+}: {
+  footer: string;
+  logoSrc: string;
+  children: React.ReactNode;
+}) {
   return (
     <Page
       size="A4"
@@ -257,15 +346,30 @@ function Sheet({ footer, logoSrc, children }: { footer: string; logoSrc: string;
 }
 
 // 4.9의 런타임은 Text bookmark를 지원하지만 공개 TextProps에서만 빠져 있습니다.
-function BookmarkText(props: React.ComponentProps<typeof Text> & { bookmark: string }) {
+function BookmarkText(
+  props: React.ComponentProps<typeof Text> & { bookmark: string }
+) {
   return <Text {...props} />;
 }
 
-function Section({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  id,
+  children,
+}: {
+  title: string;
+  id?: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={s.section}>
       {/* 머리가 쪽 끝에 홀로 남지 않게 아래 내용이 조금이라도 따라올 자리를 본다 */}
-      <BookmarkText id={id} bookmark={title} style={s.heading} minPresenceAhead={mm(12)}>
+      <BookmarkText
+        id={id}
+        bookmark={title}
+        style={s.heading}
+        minPresenceAhead={mm(12)}
+      >
         {title}
       </BookmarkText>
       {children}
@@ -295,7 +399,10 @@ export function pieces(text: string, maxLines = 8, maxChars = 320): string[] {
   let current: string[] = [];
   let length = 0;
   for (const line of lines) {
-    if (current.length > 0 && (current.length >= maxLines || length + line.length > maxChars)) {
+    if (
+      current.length > 0 &&
+      (current.length >= maxLines || length + line.length > maxChars)
+    ) {
       out.push(current.join("\n"));
       current = [];
       length = 0;
@@ -308,12 +415,25 @@ export function pieces(text: string, maxLines = 8, maxChars = 320): string[] {
 }
 
 /** 항목 하나를 [pieces] 대로 여러 행에 그린다. 이어지는 행 사이에는 줄을 긋지 않아 한 항목으로 읽힌다 */
-function ItemRows({ text, cells, id }: { text: string; id?: string; cells: (piece: string, first: boolean) => React.ReactNode }) {
+function ItemRows({
+  text,
+  cells,
+  id,
+}: {
+  text: string;
+  id?: string;
+  cells: (piece: string, first: boolean) => React.ReactNode;
+}) {
   const parts = pieces(text);
   return (
     <>
       {parts.map((piece, index) => (
-        <View key={index} id={index === 0 ? id : undefined} style={[s.row, index < parts.length - 1 ? s.joined : {}]} wrap={false}>
+        <View
+          key={index}
+          id={index === 0 ? id : undefined}
+          style={[s.row, index < parts.length - 1 ? s.joined : {}]}
+          wrap={false}
+        >
           {cells(piece, index === 0)}
         </View>
       ))}
@@ -327,7 +447,18 @@ const countText = (count: number) => (count > 0 ? String(count) : "–");
 
 /** 1쪽 표의 수 칸. 0 은 흐리게 — 숫자 사이에서 「없음」이 먼저 읽히지 않게 한다 */
 function Count({ value }: { value: number | null }) {
-  return <Text style={[s.tight, s.body, s.num, value === 0 ? s.zero : { color: color.ink }]}>{value === null ? "" : countText(value)}</Text>;
+  return (
+    <Text
+      style={[
+        s.tight,
+        s.body,
+        s.num,
+        value === 0 ? s.zero : { color: color.ink },
+      ]}
+    >
+      {value === null ? "" : countText(value)}
+    </Text>
+  );
 }
 
 /** 할 일 담당별 수. 누가 몇 개를 들고 나갔는지가 1쪽에서 읽혀야 한다 — 항목은 상세의 할 일 표에 있다 */
@@ -337,28 +468,46 @@ function Owners({ owners }: { owners: MinutesDocument["owners"] }) {
       <Text style={s.ownersLabel}>담당</Text>
       {owners.map((owner) => (
         <Text key={owner.name ?? ""} style={[s.owner, owner.name ? {} : s.tbd]}>
-          {owner.name ?? "미지정"} <Text style={s.ownerCount}>{owner.count}건</Text>
+          {owner.name ?? "미지정"}{" "}
+          <Text style={s.ownerCount}>{owner.count}건</Text>
         </Text>
       ))}
     </View>
   );
 }
 
-function TranscriptTable({ lines, truncated }: { lines: MinutesLine[]; truncated: boolean }) {
+function TranscriptTable({
+  lines,
+  truncated,
+}: {
+  lines: MinutesLine[];
+  truncated: boolean;
+}) {
   return (
     <View style={s.grid}>
       {/* `fixed` 라 쪽이 넘어가도 칸 머리가 다시 선다 */}
       <View style={s.head} fixed>
         <Text style={[s.cell, s.time]}>시각</Text>
-        <Text style={[s.cell, s.speaker, { color: color.muted, fontWeight: 400 }]}>화자</Text>
+        <Text
+          style={[s.cell, s.speaker, { color: color.muted, fontWeight: 400 }]}
+        >
+          화자
+        </Text>
         <Text style={[s.cell, { flex: 1 }]}>발언</Text>
         <Text style={[s.cell, s.refs, { color: color.muted }]}>본문</Text>
       </View>
-      {lines.length === 0 ? <Text style={[s.cell, s.none]}>기록된 발언이 없습니다.</Text> : null}
+      {lines.length === 0 ? (
+        <Text style={[s.cell, s.none]}>기록된 발언이 없습니다.</Text>
+      ) : null}
       {lines.map((line, index) => {
         if (line.type === "agenda") {
           return (
-            <View key={index} style={s.agendaMark} wrap={false} minPresenceAhead={mm(8)}>
+            <View
+              key={index}
+              style={s.agendaMark}
+              wrap={false}
+              minPresenceAhead={mm(8)}
+            >
               <Text style={[s.compact, s.time]}>{line.at}</Text>
               <Text style={[s.compact, s.markerText]}>
                 안건 {line.no} · {line.title}
@@ -380,59 +529,103 @@ function TranscriptTable({ lines, truncated }: { lines: MinutesLine[]; truncated
             <Text style={[s.compact, s.time]}>{line.at}</Text>
             {/* 누가 말했는지 모르는 발언. 빈칸이면 빠뜨린 것처럼 읽힌다 */}
             <Text
-              style={[s.compact, s.speaker, line.unnamed || line.speaker === null ? s.unnamed : {}]}
+              style={[
+                s.compact,
+                s.speaker,
+                line.unnamed || line.speaker === null ? s.unnamed : {},
+              ]}
               hyphenationCallback={narrowBreak}
             >
               {line.speaker ?? "—"}
             </Text>
             <Text style={[s.compact, { flex: 1 }]}>{line.text}</Text>
             {/* 본문 참조가 낱말 사이에서 꺾이지 않게 번호 안의 빈칸은 붙여 쓴다 */}
-            <Text style={[s.compact, s.refs]}>{line.refs.map((ref) => ref.replaceAll(" ", "\u00a0")).join(", ")}</Text>
+            <Text style={[s.compact, s.refs]}>
+              {line.refs.map((ref) => ref.replaceAll(" ", "\u00a0")).join(", ")}
+            </Text>
           </View>
         );
       })}
       {truncated ? (
         <View style={s.row} wrap={false}>
-          <Text style={[s.compact, s.gap]}>기록이 끝까지 저장되지 못했습니다</Text>
+          <Text style={[s.compact, s.gap]}>
+            기록이 끝까지 저장되지 못했습니다
+          </Text>
         </View>
       ) : null}
     </View>
   );
 }
 
-function Transcript({ lines, truncated }: { lines: MinutesLine[]; truncated: boolean }) {
+function Transcript({
+  lines,
+  truncated,
+}: {
+  lines: MinutesLine[];
+  truncated: boolean;
+}) {
   // 수천 행을 한 Yoga 표에 넣으면 고정 칸 머리의 높이가 부풀어 발언이 쪽 밖으로 밀립니다.
   // 각 표의 측정 크기를 제한하되 쪽 넘김은 기존 렌더러가 맡습니다.
   const batches: MinutesLine[][] = [];
-  for (let start = 0; start < lines.length; start += 100) batches.push(lines.slice(start, start + 100));
+  for (let start = 0; start < lines.length; start += 100)
+    batches.push(lines.slice(start, start + 100));
   if (batches.length === 0) batches.push([]);
-  return <>{batches.map((batch, index) => <TranscriptTable key={index} lines={batch} truncated={truncated && index === batches.length - 1} />)}</>;
+  return (
+    <>
+      {batches.map((batch, index) => (
+        <TranscriptTable
+          key={index}
+          lines={batch}
+          truncated={truncated && index === batches.length - 1}
+        />
+      ))}
+    </>
+  );
 }
 
-export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: string }) {
+export function MinutesPdf({
+  doc,
+  logoSrc,
+}: {
+  doc: MinutesDocument;
+  logoSrc: string;
+}) {
   const openHasOwner = doc.open.some((item) => item.assignee !== null);
   return (
-    <Document title={`${doc.title} 회의록`} author="HeyMoa" creator="HeyMoa" language="ko">
+    <Document
+      title={`${doc.title} 회의록`}
+      author="HeyMoa"
+      creator="HeyMoa"
+      language="ko"
+    >
       <Sheet footer={doc.footer} logoSrc={logoSrc}>
         {/* ── 1쪽 핵심: 이 쪽만 읽어도 회의를 안다 ── */}
         <Text style={s.title}>회의록</Text>
-        <Text style={[s.documentStatus, doc.confirmed ? s.sub : s.pending]}>{doc.confirmed ? "확정됨" : "검토 중(확정 전)"}</Text>
+        <Text style={[s.documentStatus, doc.confirmed ? s.sub : s.pending]}>
+          {doc.confirmed ? "확정됨" : "검토 중(확정 전)"}
+        </Text>
         <View style={s.meta}>
           <MetaRow label="회의명">{doc.title}</MetaRow>
           <MetaRow label="일시">
             {doc.dateLabel}
-            {doc.durationLabel ? <Text style={s.sub}>{`   ${doc.durationLabel}`}</Text> : null}
+            {doc.durationLabel ? (
+              <Text style={s.sub}>{`   ${doc.durationLabel}`}</Text>
+            ) : null}
           </MetaRow>
           <MetaRow label="참석자" last>
             {doc.attendees.length > 0 ? doc.attendees.join(", ") : null}
             {doc.attendeeCount > 0 ? (
-              <Text style={s.sub}>{`${doc.attendees.length > 0 ? "   " : ""}${doc.attendeeCount}명`}</Text>
+              <Text
+                style={s.sub}
+              >{`${doc.attendees.length > 0 ? "   " : ""}${doc.attendeeCount}명`}</Text>
             ) : (
               <Text style={s.tbd}>확인 필요</Text>
             )}
             {/* 녹취록의 「화자 N」이 참석자 밖의 사람처럼 읽히지 않게 함께 센다 */}
             {doc.unnamedSpeakers > 0 ? (
-              <Text style={s.sub}>{` · 이름 미확인 화자 ${doc.unnamedSpeakers}`}</Text>
+              <Text
+                style={s.sub}
+              >{` · 이름 미확인 화자 ${doc.unnamedSpeakers}`}</Text>
             ) : null}
           </MetaRow>
         </View>
@@ -473,16 +666,26 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
                 <Text style={[s.tight, s.num]}>미결</Text>
               </View>
               {doc.agendas.map((agenda, index) => (
-                <ItemRows key={index} text={agenda.title} cells={(piece, first) => (
-                  <>
-                    <Text style={[s.tight, s.body, s.no]}>{first ? agendaLabel(agenda.no) : ""}</Text>
-                    <Text style={[s.tight, s.body, s.agendaTitleCell]}>{piece}</Text>
-                    <Text style={[s.tight, s.body, s.start]}>{first ? agenda.start ?? "" : ""}</Text>
-                    <Count value={first ? agenda.decisions : null} />
-                    <Count value={first ? agenda.actions : null} />
-                    <Count value={first ? agenda.open : null} />
-                  </>
-                )} />
+                <ItemRows
+                  key={index}
+                  text={agenda.title}
+                  cells={(piece, first) => (
+                    <>
+                      <Text style={[s.tight, s.body, s.no]}>
+                        {first ? agendaLabel(agenda.no) : ""}
+                      </Text>
+                      <Text style={[s.tight, s.body, s.agendaTitleCell]}>
+                        {piece}
+                      </Text>
+                      <Text style={[s.tight, s.body, s.start]}>
+                        {first ? (agenda.start ?? "") : ""}
+                      </Text>
+                      <Count value={first ? agenda.decisions : null} />
+                      <Count value={first ? agenda.actions : null} />
+                      <Count value={first ? agenda.open : null} />
+                    </>
+                  )}
+                />
               ))}
             </View>
           )}
@@ -493,10 +696,25 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
             <Section title="안건별 요약" id="minutes-agendas">
               {doc.agendas.map((agenda, index) => (
                 <View key={index} style={{ marginBottom: mm(5) }}>
-                  <BookmarkText id={agendaDestination(agenda.no)} bookmark={`안건 ${agendaLabel(agenda.no)} · ${agenda.title}`} style={[s.bold, s.body]} minPresenceAhead={mm(12)}>
+                  <BookmarkText
+                    id={agendaDestination(agenda.no)}
+                    bookmark={`안건 ${agendaLabel(agenda.no)} · ${agenda.title}`}
+                    style={[s.bold, s.body]}
+                    minPresenceAhead={mm(12)}
+                  >
                     {agendaLabel(agenda.no)}. {agenda.title}
                   </BookmarkText>
-                  {pieces(agenda.text).filter(Boolean).map((piece, part) => <Text key={part} style={[s.body, { marginTop: mm(2) }]} wrap={false}>{piece}</Text>)}
+                  {pieces(agenda.text)
+                    .filter(Boolean)
+                    .map((piece, part) => (
+                      <Text
+                        key={part}
+                        style={[s.body, { marginTop: mm(2) }]}
+                        wrap={false}
+                      >
+                        {piece}
+                      </Text>
+                    ))}
                 </View>
               ))}
             </Section>
@@ -523,10 +741,24 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
                     text={decision.text}
                     cells={(piece, first) => (
                       <>
-                        <Text style={[s.cell, s.body, s.no]}>{first ? decision.no : ""}</Text>
-                        <Text style={[s.cell, s.body, { flex: 1, color: color.ink }]}>{piece}</Text>
-                        <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(decision.agendaNo) : ""}</Text>
-                        <Text style={[s.cell, s.body, s.at]}>{first ? (decision.at ?? "") : ""}</Text>
+                        <Text style={[s.cell, s.body, s.no]}>
+                          {first ? decision.no : ""}
+                        </Text>
+                        <Text
+                          style={[
+                            s.cell,
+                            s.body,
+                            { flex: 1, color: color.ink },
+                          ]}
+                        >
+                          {piece}
+                        </Text>
+                        <Text style={[s.cell, s.body, s.agendaRef]}>
+                          {first ? agendaLabel(decision.agendaNo) : ""}
+                        </Text>
+                        <Text style={[s.cell, s.body, s.at]}>
+                          {first ? (decision.at ?? "") : ""}
+                        </Text>
                       </>
                     )}
                   />
@@ -544,7 +776,9 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
               <View style={s.head} fixed>
                 <Text style={[s.cell, s.no]}>번호</Text>
                 <Text style={[s.cell, { flex: 1 }]}>내용</Text>
-                <Text style={[s.cell, s.who, { color: color.muted }]}>담당</Text>
+                <Text style={[s.cell, s.who, { color: color.muted }]}>
+                  담당
+                </Text>
                 <Text style={[s.cell, s.due]}>기한</Text>
                 <Text style={[s.cell, s.agendaRef]}>안건</Text>
               </View>
@@ -555,16 +789,35 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
                   text={action.content}
                   cells={(piece, first) => (
                     <>
-                      <Text style={[s.cell, s.body, s.no]}>{first ? action.no : ""}</Text>
-                      <Text style={[s.cell, s.body, { flex: 1, color: color.ink }]}>{piece}</Text>
+                      <Text style={[s.cell, s.body, s.no]}>
+                        {first ? action.no : ""}
+                      </Text>
+                      <Text
+                        style={[s.cell, s.body, { flex: 1, color: color.ink }]}
+                      >
+                        {piece}
+                      </Text>
                       {/* 담당·기한이 없는 항목은 미지정으로 표시한다. */}
-                      <Text style={[s.cell, s.body, s.who, action.assignee ? {} : s.tbd]} hyphenationCallback={narrowBreak}>
+                      <Text
+                        style={[
+                          s.cell,
+                          s.body,
+                          s.who,
+                          action.assignee ? {} : s.tbd,
+                        ]}
+                        hyphenationCallback={narrowBreak}
+                      >
                         {first ? (action.assignee ?? "미지정") : ""}
                       </Text>
-                      <Text style={[s.cell, s.body, s.due, action.due ? {} : s.tbd]} hyphenationCallback={narrowBreak}>
+                      <Text
+                        style={[s.cell, s.body, s.due, action.due ? {} : s.tbd]}
+                        hyphenationCallback={narrowBreak}
+                      >
                         {first ? (action.due ?? "미지정") : ""}
                       </Text>
-                      <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(action.agendaNo) : ""}</Text>
+                      <Text style={[s.cell, s.body, s.agendaRef]}>
+                        {first ? agendaLabel(action.agendaNo) : ""}
+                      </Text>
                     </>
                   )}
                 />
@@ -580,7 +833,11 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
                 <Text style={[s.cell, s.no]}>번호</Text>
                 <Text style={[s.cell, { flex: 1 }]}>내용</Text>
                 {/* 담당이 지정된 미결 사항이 있을 때만 담당 칸을 표시한다. */}
-                {openHasOwner ? <Text style={[s.cell, s.who, { color: color.muted }]}>담당</Text> : null}
+                {openHasOwner ? (
+                  <Text style={[s.cell, s.who, { color: color.muted }]}>
+                    담당
+                  </Text>
+                ) : null}
                 <Text style={[s.cell, s.agendaRef]}>안건</Text>
                 <Text style={[s.cell, s.at]}>시각</Text>
               </View>
@@ -591,15 +848,33 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
                   text={item.content}
                   cells={(piece, first) => (
                     <>
-                      <Text style={[s.cell, s.body, s.no]}>{first ? item.no : ""}</Text>
-                      <Text style={[s.cell, s.body, { flex: 1, color: color.ink }]}>{piece}</Text>
+                      <Text style={[s.cell, s.body, s.no]}>
+                        {first ? item.no : ""}
+                      </Text>
+                      <Text
+                        style={[s.cell, s.body, { flex: 1, color: color.ink }]}
+                      >
+                        {piece}
+                      </Text>
                       {openHasOwner ? (
-                        <Text style={[s.cell, s.body, s.who, item.assignee ? {} : s.tbd]} hyphenationCallback={narrowBreak}>
+                        <Text
+                          style={[
+                            s.cell,
+                            s.body,
+                            s.who,
+                            item.assignee ? {} : s.tbd,
+                          ]}
+                          hyphenationCallback={narrowBreak}
+                        >
                           {first ? (item.assignee ?? "미지정") : ""}
                         </Text>
                       ) : null}
-                      <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(item.agendaNo) : ""}</Text>
-                      <Text style={[s.cell, s.body, s.at]}>{first ? (item.at ?? "") : ""}</Text>
+                      <Text style={[s.cell, s.body, s.agendaRef]}>
+                        {first ? agendaLabel(item.agendaNo) : ""}
+                      </Text>
+                      <Text style={[s.cell, s.body, s.at]}>
+                        {first ? (item.at ?? "") : ""}
+                      </Text>
                     </>
                   )}
                 />
@@ -612,11 +887,21 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
       {/* 부록은 새 쪽에서 시작한다 */}
       {doc.transcript ? (
         <Sheet footer={doc.footer} logoSrc={logoSrc}>
-          <BookmarkText id="minutes-transcript" bookmark="부록 A. 녹취록" style={s.annexHead}>부록 A. 녹취록</BookmarkText>
+          <BookmarkText
+            id="minutes-transcript"
+            bookmark="부록 A. 녹취록"
+            style={s.annexHead}
+          >
+            부록 A. 녹취록
+          </BookmarkText>
           <Text style={s.annexNote}>
-            발언 시각은 녹음 시작 기준입니다. 본문 번호는 해당 발언을 근거로 한 결정·할 일·미결 사항을 가리킵니다.
+            발언 시각은 녹음 시작 기준입니다. 본문 번호는 해당 발언을 근거로 한
+            결정·할 일·미결 사항을 가리킵니다.
           </Text>
-          <Transcript lines={doc.transcript} truncated={doc.transcriptTruncated} />
+          <Transcript
+            lines={doc.transcript}
+            truncated={doc.transcriptTruncated}
+          />
         </Sheet>
       ) : null}
     </Document>
@@ -627,7 +912,10 @@ export function MinutesPdf({ doc, logoSrc }: { doc: MinutesDocument; logoSrc: st
  * 이 스레드에서 바로 만든다. 화면에서는 `render-minutes-pdf` 의 `renderMinutesPdf` 를 쓴다 — 3시간 회의는 수 초가
  * 걸려 화면이 멈춘다. [fontBase] 는 글꼴을 읽을 자리다: 브라우저는 절대 URL, node(검사)는 파일 경로를 준다.
  */
-export async function renderMinutesPdfInline(doc: MinutesDocument, fontBase: string): Promise<Blob> {
+export async function renderMinutesPdfInline(
+  doc: MinutesDocument,
+  fontBase: string
+): Promise<Blob> {
   registerFonts(fontBase);
   // 브라우저·워커·Node 모두 글꼴과 같은 public 디렉터리의 기존 브랜드 자산을 읽습니다.
   const logoSrc = `${fontBase}/../../apple-touch-icon.png`;

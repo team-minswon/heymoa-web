@@ -255,7 +255,10 @@ export function summarizeSpeakers({
     });
   }
 
-  const total = [...rows.values()].reduce((sum, row) => sum + row.speakingMs, 0);
+  const total = [...rows.values()].reduce(
+    (sum, row) => sum + row.speakingMs,
+    0
+  );
   for (const row of rows.values()) {
     row.labels.sort(compareLabels);
     row.ownedLabels.sort(compareLabels);

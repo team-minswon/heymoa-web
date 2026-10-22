@@ -54,9 +54,13 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
 const MAX_NAMED_PARTICIPANTS = 8;
 
 function participantsFact(meta: NoteMeta) {
-  const names = (meta.participantNames ?? []).map((name) => name.trim()).filter(Boolean);
+  const names = (meta.participantNames ?? [])
+    .map((name) => name.trim())
+    .filter(Boolean);
   if (names.length === 0) {
-    return meta.participantCount > 0 ? `참석자 ${meta.participantCount}명` : null;
+    return meta.participantCount > 0
+      ? `참석자 ${meta.participantCount}명`
+      : null;
   }
   const shown = names.slice(0, MAX_NAMED_PARTICIPANTS).join(", ");
   const rest = names.length - MAX_NAMED_PARTICIPANTS;
@@ -83,8 +87,11 @@ export function headingLines(meta: NoteMeta, suffix = "") {
 }
 
 /** 발화 한 줄. 회의록 전체 복사도 같은 모양으로 적는다 */
-export const utteranceMarkdown = (speaker: string | null, at: string, text: string) =>
-  speaker ? `**${speaker}** [${at}] ${text}` : `[${at}] ${text}`;
+export const utteranceMarkdown = (
+  speaker: string | null,
+  at: string,
+  text: string
+) => (speaker ? `**${speaker}** [${at}] ${text}` : `[${at}] ${text}`);
 
 /**
  * 전사를 회의록으로 옮긴다. `rows`는 화면이 그리는 것과 **같은 배열**이다 — 실시간으로
@@ -131,7 +138,10 @@ export function transcriptToMarkdown({
     );
     // **줄 사이를 비운다.** 마크다운에서 줄바꿈만으로는 문단이 안 갈려서, 붙여 두면
     // 렌더러가 발화 전부를 한 문단으로 이어 붙인다.
-    lines.push("", utteranceMarkdown(speaker, formatOffset(row.segment.startedAtMs), text));
+    lines.push(
+      "",
+      utteranceMarkdown(speaker, formatOffset(row.segment.startedAtMs), text)
+    );
   }
 
   // **완전한 회의록처럼 붙여넣어지면 안 된다.** 화면은 이 줄을 이미 말하고 있다.

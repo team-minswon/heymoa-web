@@ -1,4 +1,7 @@
-import { summaryTopics, type MeetingReviewSummary } from "@/lib/notes/review/summary";
+import {
+  summaryTopics,
+  type MeetingReviewSummary,
+} from "@/lib/notes/review/summary";
 import type { ReviewKind } from "@/lib/notes/review/sections";
 import type { GraphRole } from "@/lib/notes/review/graph-model";
 import { cn } from "@/lib/utils";
@@ -22,14 +25,22 @@ export function roleOfItem(
   if (item.kind === "ACTION_ITEM") return "ACTION";
   if (
     (item.kind === "ISSUE" || item.kind === "QUESTION") &&
-    summaryTopics(summary).some((topic) => topic.openItemIds.includes(item.itemId))
+    summaryTopics(summary).some((topic) =>
+      topic.openItemIds.includes(item.itemId)
+    )
   ) {
     return "OPEN";
   }
   return "REFERENCE";
 }
 
-export function RoleDot({ role, className }: { role: GraphRole; className?: string }) {
+export function RoleDot({
+  role,
+  className,
+}: {
+  role: GraphRole;
+  className?: string;
+}) {
   return (
     <span
       aria-hidden

@@ -2,8 +2,16 @@ import { headingLines, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { describeAssignee } from "@/lib/assignees/describe";
 import { formatDueDate } from "@/lib/format/date";
 import { formatOffset } from "@/lib/transcription/presentation";
-import { KIND_LABEL, REVIEW_SECTIONS, type ReviewItem, type ReviewSection } from "@/lib/notes/review/sections";
-import { overviewText, type MeetingReviewSummary } from "@/lib/notes/review/summary";
+import {
+  KIND_LABEL,
+  REVIEW_SECTIONS,
+  type ReviewItem,
+  type ReviewSection,
+} from "@/lib/notes/review/sections";
+import {
+  overviewText,
+  type MeetingReviewSummary,
+} from "@/lib/notes/review/summary";
 import type { TopicChip } from "@/lib/notes/review/topics";
 
 /**
@@ -23,12 +31,15 @@ export function overviewToMarkdown(summary: MeetingReviewSummary) {
  * 주제를 회의에서 나온 차례로 적는다. **번호는 목록 안의 차례다** — 요약이 주는 번호(`ordinal`)는 분석이 붙인 이름표라
  * 시간순으로 세우면 1·2·5·4·3 처럼 뛰어, 복사본에서는 잘못 센 것으로 읽힌다. 때를 알면 `[00:07]` 을 앞에 붙인다.
  */
-export function topicsToMarkdown(topics: readonly (TopicChip & { startMs?: number | null; text?: string })[]) {
+export function topicsToMarkdown(
+  topics: readonly (TopicChip & { startMs?: number | null; text?: string })[]
+) {
   return joined([
     "## 주제",
     "",
     ...topics.map((topic, index) => {
-      const at = topic.startMs == null ? "" : `[${formatOffset(topic.startMs)}] `;
+      const at =
+        topic.startMs == null ? "" : `[${formatOffset(topic.startMs)}] `;
       const text = topic.text?.trim() || topic.gist;
       return `${index + 1}. ${at}**${oneLine(topic.title)}**${text ? ` — ${oneLine(text)}` : ""}`;
     }),
@@ -48,18 +59,31 @@ export function reviewSectionToMarkdown(
   topicTitle: string | null = null,
   context: ItemContext = {}
 ) {
-  const mixed = (REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds.length ?? 0) > 1;
-  const lines = [topicTitle ? `## ${section.label} — ${oneLine(topicTitle)}` : `## ${section.label}`, ""];
+  const mixed =
+    (REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds.length ??
+      0) > 1;
+  const lines = [
+    topicTitle
+      ? `## ${section.label} — ${oneLine(topicTitle)}`
+      : `## ${section.label}`,
+    "",
+  ];
   const items = section.items.filter((item) => item.included);
   if (items.length === 0) return joined([...lines, "_없음_"]);
 
   for (const item of items) {
     const assignee = describeAssignee(item.assignee)?.name;
-    const facts = [assignee && `담당 ${assignee}`, item.due && `기한 ${formatDueDate(item.due)}`].filter(Boolean);
+    const facts = [
+      assignee && `담당 ${assignee}`,
+      item.due && `기한 ${formatDueDate(item.due)}`,
+    ].filter(Boolean);
     const kind = mixed ? `**${KIND_LABEL[item.kind]}** ` : "";
     const when = context.whenOf?.(item) ?? null;
     const topic = topicTitle ? null : context.topicTitleOf?.(item);
-    const where = [when === null ? null : `[${formatOffset(when)}]`, topic ? `주제: ${oneLine(topic)}` : null].filter(Boolean);
+    const where = [
+      when === null ? null : `[${formatOffset(when)}]`,
+      topic ? `주제: ${oneLine(topic)}` : null,
+    ].filter(Boolean);
     lines.push(
       `- ${kind}${oneLine(item.content)}${facts.length ? ` — ${facts.join(" · ")}` : ""}${where.length ? ` (${where.join(" · ")})` : ""}`
     );
@@ -100,10 +124,12 @@ export function reviewToMarkdown({
     .filter(Boolean)
     .join(" · ");
   const blocks = [joined(head)];
-  if (summary?.status === "SUCCEEDED" && overviewText(summary)) blocks.push(overviewToMarkdown(summary));
+  if (summary?.status === "SUCCEEDED" && overviewText(summary))
+    blocks.push(overviewToMarkdown(summary));
   if (topics.length > 0) blocks.push(topicsToMarkdown(topics));
   for (const section of sections) {
-    if (section.items.some((item) => item.included)) blocks.push(reviewSectionToMarkdown(section, null, context));
+    if (section.items.some((item) => item.included))
+      blocks.push(reviewSectionToMarkdown(section, null, context));
   }
   return blocks.join("\n");
 }

@@ -116,8 +116,7 @@ export function ConfirmBar({
             )}
             {summary.endedDecisions > 0 ? (
               <>
-                {" · "}이전 결정 <Count value={summary.endedDecisions} />
-                개 끝남
+                {" · "}이전 결정 <Count value={summary.endedDecisions} />개 끝남
               </>
             ) : null}
             {summary.changedTasks > 0 ? (

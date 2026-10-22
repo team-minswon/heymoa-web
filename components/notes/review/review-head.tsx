@@ -1,7 +1,10 @@
 import { CalendarDays, Clock, Folder } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { PersonAvatar, personAvatarKey } from "@/components/heymoa/person-avatar";
+import {
+  PersonAvatar,
+  personAvatarKey,
+} from "@/components/heymoa/person-avatar";
 import { formatAppDate } from "@/lib/format/date";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import { lengthLabel } from "@/lib/notes/review/moments";
@@ -38,7 +41,9 @@ export function ReviewHead({
   confirmed: boolean;
   aside?: ReactNode;
 }) {
-  const names = participants.map((face) => face.name).filter((name): name is string => Boolean(name));
+  const names = participants
+    .map((face) => face.name)
+    .filter((name): name is string => Boolean(name));
 
   return (
     <header className="pb-1">
@@ -84,12 +89,17 @@ export function ReviewHead({
                   name={personAvatarKey(face)}
                   image={face.image}
                   size={18}
-                  className={cn("ring-[1.5px] ring-white", index > 0 && "-ml-[5px]")}
+                  className={cn(
+                    "ring-[1.5px] ring-white",
+                    index > 0 && "-ml-[5px]"
+                  )}
                 />
               ))}
             </span>
             <span className="truncate">
-              {names.length > 1 ? `${names[0]} 외 ${names.length - 1}명` : names[0]}
+              {names.length > 1
+                ? `${names[0]} 외 ${names.length - 1}명`
+                : names[0]}
             </span>
           </span>
         ) : null}

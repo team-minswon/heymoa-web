@@ -60,15 +60,19 @@ describe("머리말의 참석자", () => {
     summaryToMarkdown({ note, sections: [] }).split("\n")[2];
 
   it("이름을 알면 인원수 대신 이름을 적는다", () => {
-    expect(head({ ...NOTE, participantNames: ["이상호 멘토님", "김민수"] })).toContain(
-      "참석자 이상호 멘토님, 김민수"
-    );
-    expect(head({ ...NOTE, participantNames: ["이상호 멘토님", "김민수"] })).not.toContain("3명");
+    expect(
+      head({ ...NOTE, participantNames: ["이상호 멘토님", "김민수"] })
+    ).toContain("참석자 이상호 멘토님, 김민수");
+    expect(
+      head({ ...NOTE, participantNames: ["이상호 멘토님", "김민수"] })
+    ).not.toContain("3명");
   });
 
   it("여덟 명을 넘으면 나머지는 외 N명으로 접는다", () => {
     const names = Array.from({ length: 10 }, (_, index) => `사람${index + 1}`);
-    expect(head({ ...NOTE, participantNames: names })).toContain("사람8 외 2명");
+    expect(head({ ...NOTE, participantNames: names })).toContain(
+      "사람8 외 2명"
+    );
     expect(head({ ...NOTE, participantNames: names })).not.toContain("사람9");
   });
 

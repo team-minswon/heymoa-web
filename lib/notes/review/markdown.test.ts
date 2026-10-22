@@ -37,15 +37,28 @@ describe("reviewSectionToMarkdown", () => {
         itemId: "a",
         kind: "ACTION_ITEM",
         content: "요금표를\n정리한다",
-        assignee: { type: "USER", id: "u1", name: "김민" } as ReviewItem["assignee"],
+        assignee: {
+          type: "USER",
+          id: "u1",
+          name: "김민",
+        } as ReviewItem["assignee"],
         due: "2026-09-19",
       }),
-      item({ itemId: "b", kind: "ACTION_ITEM", content: "뺀 일", included: false }),
+      item({
+        itemId: "b",
+        kind: "ACTION_ITEM",
+        content: "뺀 일",
+        included: false,
+      }),
       item({
         itemId: "c",
         kind: "ACTION_ITEM",
         content: "화자에게 걸린 일",
-        assignee: { type: "SPEAKER_LABEL", noteId: "n", label: "B" } as ReviewItem["assignee"],
+        assignee: {
+          type: "SPEAKER_LABEL",
+          noteId: "n",
+          label: "B",
+        } as ReviewItem["assignee"],
       }),
       item({ itemId: "d", kind: "QUESTION", content: "요금 기준은?" }),
     ],
@@ -77,14 +90,24 @@ describe("overview · topics", () => {
         { text: "요금은\n다시 본다.", topics: [] },
       ],
     } as unknown as MeetingReviewSummary;
-    expect(overviewToMarkdown(summary)).toBe("## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n");
-    // 제목 후보가 있어도 회의 정리를 가리지 않는다
-    expect(overviewToMarkdown({ ...summary, headline: { text: "할 일을 주제별로 확정한다", topics: [] } })).toBe(
+    expect(overviewToMarkdown(summary)).toBe(
       "## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n"
     );
+    // 제목 후보가 있어도 회의 정리를 가리지 않는다
+    expect(
+      overviewToMarkdown({
+        ...summary,
+        headline: { text: "할 일을 주제별로 확정한다", topics: [] },
+      })
+    ).toBe("## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n");
     expect(
       topicsToMarkdown([
-        { ordinal: 1, title: "문제 정의", count: 2, gist: "한 문장으로 좁혔다." },
+        {
+          ordinal: 1,
+          title: "문제 정의",
+          count: 2,
+          gist: "한 문장으로 좁혔다.",
+        },
         { ordinal: 2, title: "요금", count: 1, gist: null },
       ])
     ).toBe("## 주제\n\n1. **문제 정의** — 한 문장으로 좁혔다.\n2. **요금**\n");
@@ -97,17 +120,32 @@ describe("reviewToMarkdown", () => {
     whenIso: "2026-10-12T04:51:00.000Z",
     participantCount: 2,
   };
-  const topics = [{ ordinal: 1, title: "표시 기능", gist: "15초마다 갱신" }] as never;
+  const topics = [
+    { ordinal: 1, title: "표시 기능", gist: "15초마다 갱신" },
+  ] as never;
   const section = (included: boolean) =>
     ({
       key: "DECISION",
       label: "결정",
       includedCount: included ? 1 : 0,
-      items: [{ included, kind: "DECISION", content: "다운로드를 아래에 둔다", assignee: null, due: null }],
+      items: [
+        {
+          included,
+          kind: "DECISION",
+          content: "다운로드를 아래에 둔다",
+          assignee: null,
+          due: null,
+        },
+      ],
     }) as never;
 
   it("머리말·주제·결정을 한 문서로 잇고 뺀 항목만 있는 섹션은 싣지 않는다", () => {
-    const out = reviewToMarkdown({ note, summary: null, topics, sections: [section(true), section(false)] });
+    const out = reviewToMarkdown({
+      note,
+      summary: null,
+      topics,
+      sections: [section(true), section(false)],
+    });
     expect(out).toContain("# 주간 회의");
     expect(out).toContain("## 주제");
     expect(out).toContain("- 다운로드를 아래에 둔다");
@@ -138,11 +176,19 @@ describe("reviewToMarkdown", () => {
   });
 
   it("검토 중이면 그렇게 적는다", () => {
-    const out = reviewToMarkdown({ note, summary: null, topics, sections: [], confirmed: false });
+    const out = reviewToMarkdown({
+      note,
+      summary: null,
+      topics,
+      sections: [],
+      confirmed: false,
+    });
     expect(out).toContain("검토 중");
   });
 
   it("텍스트 형식은 헤딩·굵게·불릿 기호를 걷어 낸다", () => {
-    expect(markdownToText("## 주제\n\n1. **표시** — 설명\n- 항목\n_없음_\n")).toBe("주제\n\n1. 표시 — 설명\n• 항목\n없음\n");
+    expect(
+      markdownToText("## 주제\n\n1. **표시** — 설명\n- 항목\n_없음_\n")
+    ).toBe("주제\n\n1. 표시 — 설명\n• 항목\n없음\n");
   });
 });

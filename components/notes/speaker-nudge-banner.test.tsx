@@ -26,11 +26,14 @@ describe("SpeakerNudgeBanner", () => {
 
   // 분리가 도는 몇 분이 화자를 아는 사람이 아직 앉아 있는 유일한 시간이다.
   // 그때 화면이 아무 말도 안 하면 화자 기능이 없는 줄 알고 닫는다.
-  it.each(["ASSEMBLING", "SUBMITTED"])("%s 이면 나누는 중이라고 말한다", (status) => {
-    renderBanner({ status, speakers: [] });
+  it.each(["ASSEMBLING", "SUBMITTED"])(
+    "%s 이면 나누는 중이라고 말한다",
+    (status) => {
+      renderBanner({ status, speakers: [] });
 
-    expect(screen.getByTestId("speaker-nudge-pending")).toBeTruthy();
-  });
+      expect(screen.getByTestId("speaker-nudge-pending")).toBeTruthy();
+    }
+  );
 
   it("실패하면 사실만 말한다 — 요약은 이미 있으니 할 일이 없다", () => {
     renderBanner({ status: "FAILED", speakers: [] });

@@ -120,7 +120,10 @@ describe("SpeakerAssignMenu", () => {
     open();
     fireEvent.click(screen.getByRole("option", { name: /박서준/ }));
 
-    expect(onAssign).toHaveBeenCalledWith({ participantId: "01K0000000102" }, "label");
+    expect(onAssign).toHaveBeenCalledWith(
+      { participantId: "01K0000000102" },
+      "label"
+    );
   });
 
   it("계정 없는 참여자도 붙일 수 있다", () => {
@@ -136,7 +139,10 @@ describe("SpeakerAssignMenu", () => {
     open();
     fireEvent.click(screen.getByRole("option", { name: /이도현/ }));
 
-    expect(onAssign).toHaveBeenCalledWith({ participantId: "01K0000000201" }, "label");
+    expect(onAssign).toHaveBeenCalledWith(
+      { participantId: "01K0000000201" },
+      "label"
+    );
   });
 
   /**
@@ -230,7 +236,10 @@ describe("SpeakerAssignMenu", () => {
     expect(screen.queryByRole("button", { name: /추가/ })).toBeNull();
 
     fireEvent.click(screen.getByRole("option", { name: /최유진/ }));
-    expect(onAssign).toHaveBeenCalledWith({ guestId: "01K0000000301" }, "label");
+    expect(onAssign).toHaveBeenCalledWith(
+      { guestId: "01K0000000301" },
+      "label"
+    );
   });
 
   /**
@@ -420,7 +429,10 @@ describe("SpeakerAssignMenu", () => {
     render(
       <SpeakerAssignMenu
         identity={identity}
-        candidates={[{ ...candidates[0], assignedLabels: ["B"] }, candidates[1]]}
+        candidates={[
+          { ...candidates[0], assignedLabels: ["B"] },
+          candidates[1],
+        ]}
         onAssign={vi.fn()}
       />
     );
@@ -638,9 +650,7 @@ describe("SpeakerAssignMenu", () => {
       svg?.innerHTML.replace(/_r_[a-z0-9]+_/g, "");
     expect(
       face(
-        container.ownerDocument.querySelector<SVGElement>(
-          '[role="option"] svg'
-        )
+        container.ownerDocument.querySelector<SVGElement>('[role="option"] svg')
       )
     ).toBe(face(expected.container.querySelector("svg")));
   });
@@ -678,7 +688,10 @@ describe("SpeakerAssignMenu", () => {
     chooseScope("현재 발화에만 적용");
     fireEvent.click(screen.getByRole("option", { name: /박서준/ }));
 
-    expect(onAssign).toHaveBeenCalledWith({ participantId: "01K0000000102" }, "segment");
+    expect(onAssign).toHaveBeenCalledWith(
+      { participantId: "01K0000000102" },
+      "segment"
+    );
   });
 
   it("그 자리에서 만든 사람도 고른 범위로 붙는다", () => {
@@ -785,7 +798,9 @@ describe("SpeakerAssignMenu", () => {
     open();
     chooseScope("현재 발화에만 적용");
 
-    expect(screen.getByRole("button", { name: "개별 지정 해제" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "개별 지정 해제" })
+    ).toBeDisabled();
   });
 
   /** 한 사람이 여러 화자를 맡을 수 있게 된 뒤로는 라벨이 여러 개 붙는다. */

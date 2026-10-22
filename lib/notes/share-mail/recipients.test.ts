@@ -17,40 +17,55 @@ const PEOPLE = [
 
 describe("splitAddresses", () => {
   it("쉼표 · 세미콜론 · 공백 · 줄바꿈으로 나눈다", () => {
-    expect(splitAddresses("a@x.com, b@y.co.kr;c@z.io\nd@w.net  e@v.org")).toEqual([
-      "a@x.com",
-      "b@y.co.kr",
-      "c@z.io",
-      "d@w.net",
-      "e@v.org",
-    ]);
+    expect(
+      splitAddresses("a@x.com, b@y.co.kr;c@z.io\nd@w.net  e@v.org")
+    ).toEqual(["a@x.com", "b@y.co.kr", "c@z.io", "d@w.net", "e@v.org"]);
   });
 
   it("메일 앱에서 복사한 「이름 <주소>」는 주소만 쓴다", () => {
-    expect(splitAddresses("김민수 <minsu@a.com>, Lee Seo <seo@b.com>")).toEqual([
-      "minsu@a.com",
-      "seo@b.com",
-    ]);
+    expect(splitAddresses("김민수 <minsu@a.com>, Lee Seo <seo@b.com>")).toEqual(
+      ["minsu@a.com", "seo@b.com"]
+    );
   });
 
   it("이름 붙은 주소와 맨 주소를 섞어 붙여 넣어도 하나도 빠뜨리지 않는다", () => {
-    expect(splitAddresses('John <john@example.com>, jane@example.com; "Kim, Minsu" <kim@a.com>')).toEqual([
-      "john@example.com",
-      "jane@example.com",
-      "kim@a.com",
-    ]);
+    expect(
+      splitAddresses(
+        'John <john@example.com>, jane@example.com; "Kim, Minsu" <kim@a.com>'
+      )
+    ).toEqual(["john@example.com", "jane@example.com", "kim@a.com"]);
   });
 
   it("줄이나 빈칸으로 나눈 맨 주소가 이름 붙은 주소 앞에 있어도 남긴다", () => {
-    expect(splitAddresses("alice@example.com\nBob <bob@example.com>")).toEqual(["alice@example.com", "bob@example.com"]);
-    expect(splitAddresses("alice@example.com Bob <bob@example.com>")).toEqual(["alice@example.com", "bob@example.com"]);
+    expect(splitAddresses("alice@example.com\nBob <bob@example.com>")).toEqual([
+      "alice@example.com",
+      "bob@example.com",
+    ]);
+    expect(splitAddresses("alice@example.com Bob <bob@example.com>")).toEqual([
+      "alice@example.com",
+      "bob@example.com",
+    ]);
   });
 });
 
 describe("isEmail", () => {
   it("서버와 같은 규칙이다 — 연속 · 앞뒤 점, 하이픈으로 시작하는 라벨, 영문이 아닌 최상위 도메인을 막는다", () => {
-    for (const ok of ["a@example.com", "a.b+c@sub.example.co.kr", "o'neil@x.io"]) expect(isEmail(ok)).toBe(true);
-    for (const bad of ["a..b@example.com", ".a@example.com", "a.@example.com", "a@-example.com", "a@example..com", "a@exa:mple.com", "a@localhost", "a@example.c0m"]) {
+    for (const ok of [
+      "a@example.com",
+      "a.b+c@sub.example.co.kr",
+      "o'neil@x.io",
+    ])
+      expect(isEmail(ok)).toBe(true);
+    for (const bad of [
+      "a..b@example.com",
+      ".a@example.com",
+      "a.@example.com",
+      "a@-example.com",
+      "a@example..com",
+      "a@exa:mple.com",
+      "a@localhost",
+      "a@example.c0m",
+    ]) {
       expect(isEmail(bad)).toBe(false);
     }
     expect(isEmail(`a@${"b".repeat(254)}.com`)).toBe(false);
@@ -60,8 +75,13 @@ describe("isEmail", () => {
 describe("addRecipients", () => {
   it("주소를 쳤으면 주소로만 후보를 찾는다 — 이름이 그 주소인 다른 후보로 바뀌지 않는다", () => {
     const tricky = [{ name: "client@example.com", email: "other@example.com" }];
-    expect(addRecipients([], ["client@example.com"], tricky).map((row) => row.email)).toEqual(["client@example.com"]);
-    expect(addRecipients([], ["강성재"], PEOPLE)[0]).toMatchObject({ email: "sungjae@mentor.kr", name: "강성재" });
+    expect(
+      addRecipients([], ["client@example.com"], tricky).map((row) => row.email)
+    ).toEqual(["client@example.com"]);
+    expect(addRecipients([], ["강성재"], PEOPLE)[0]).toMatchObject({
+      email: "sungjae@mentor.kr",
+      name: "강성재",
+    });
   });
 
   it("대소문자만 다른 주소는 한 번만 넣는다", () => {
@@ -96,7 +116,9 @@ describe("recipientProblem", () => {
   });
 
   it("틀린 주소를 짚는다", () => {
-    expect(recipientProblem(addRecipients([], ["a@x.com", "bad"]))).toContain("bad");
+    expect(recipientProblem(addRecipients([], ["a@x.com", "bad"]))).toContain(
+      "bad"
+    );
   });
 
   it(`${MAX_RECIPIENTS}명을 넘으면 몇 명을 빼야 하는지 알린다`, () => {
@@ -119,6 +141,8 @@ describe("matchCandidates · removeRecipient", () => {
 
   it("빼기는 대소문자를 가리지 않는다", () => {
     const list = addRecipients([], ["a@x.com", "b@x.com"]);
-    expect(removeRecipient(list, "A@X.COM").map((r) => r.email)).toEqual(["b@x.com"]);
+    expect(removeRecipient(list, "A@X.COM").map((r) => r.email)).toEqual([
+      "b@x.com",
+    ]);
   });
 });

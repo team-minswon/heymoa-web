@@ -54,14 +54,22 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
 
     // 지금 있는 위치가 보인다.
     fireEvent.click(button);
-    expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("1 / 3");
+    expect(
+      screen.getByRole("button", { name: /다음 발화로/ })
+    ).toHaveTextContent("1 / 3");
     fireEvent.click(screen.getByRole("button", { name: /다음 발화로/ }));
-    expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("2 / 3");
+    expect(
+      screen.getByRole("button", { name: /다음 발화로/ })
+    ).toHaveTextContent("2 / 3");
     fireEvent.click(screen.getByRole("button", { name: /다음 발화로/ }));
-    expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("3 / 3");
+    expect(
+      screen.getByRole("button", { name: /다음 발화로/ })
+    ).toHaveTextContent("3 / 3");
     // 끝에서는 처음으로 돌아온다.
     fireEvent.click(screen.getByRole("button", { name: /다음 발화로/ }));
-    expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("1 / 3");
+    expect(
+      screen.getByRole("button", { name: /다음 발화로/ })
+    ).toHaveTextContent("1 / 3");
     // 누를 때마다 패널은 닫혀 도착한 자리를 가리지 않는다.
     expect(onOpenChange).toHaveBeenCalledTimes(4);
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -69,12 +77,16 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
 
   it("지정된 사람의 첫 문구는 「첫 발화로」다", () => {
     renderPanel([stat({ unassigned: false, name: "한지원" })]);
-    expect(screen.getByRole("button", { name: /첫 발화로/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /첫 발화로/ })
+    ).toBeInTheDocument();
   });
 
   it("발화가 하나뿐이면 개수 표시 없이 그 발화로만 간다", () => {
     renderPanel([stat({ jumpTargets: ["s1"], jumpStartsMs: [0] })]);
-    expect(screen.getByRole("button", { name: "지정하러 가기" })).not.toHaveTextContent("/");
+    expect(
+      screen.getByRole("button", { name: "지정하러 가기" })
+    ).not.toHaveTextContent("/");
   });
 
   it("띠를 누르면 그 시각 이후 첫 발화로 가고 n / m 이 그 위치로 맞춰진다", () => {
@@ -87,9 +99,9 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
     // 200_000ms 이후 첫 발화는 3번째(400_000ms).
     fireEvent.click(strip, { clientX: 200 });
 
-    expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent(
-      "3 / 3"
-    );
+    expect(
+      screen.getByRole("button", { name: /다음 발화로/ })
+    ).toHaveTextContent("3 / 3");
   });
 
   it("띠에 올리면 커서 위치의 시각이 바로 보이고 벗어나면 사라진다", () => {
@@ -100,7 +112,9 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
 
     fireEvent.pointerMove(strip, { clientX: 300 });
     // 600_000ms 의 절반 = 5분.
-    expect(screen.getByTestId("speaker-panel-strip-time")).toHaveTextContent("5:00");
+    expect(screen.getByTestId("speaker-panel-strip-time")).toHaveTextContent(
+      "5:00"
+    );
 
     fireEvent.pointerLeave(strip);
     expect(screen.queryByTestId("speaker-panel-strip-time")).toBeNull();

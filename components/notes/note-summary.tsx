@@ -25,6 +25,8 @@ import { summaryToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
 import { useSummaryViewed } from "@/lib/analytics/use-summary-viewed";
+import { useEventStreamHealthy } from "@/components/events/user-event-provider";
+import { hintedInterval } from "@/lib/events/interval";
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -95,13 +97,20 @@ export function NoteSummary({
   /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
   onEvidenceSelect: (segmentId: string) => void;
 }) {
+  const streamHealthy = useEventStreamHealthy();
   const analysisQuery = useGetLatestAnalysis(noteId, {
     query: {
       retry: false,
       // 진행 중인 분석만 폴링한다. 404·실패는 종료 순간의 refetch(아래 effect)와 수동
       // 액션(요약 만들기·다시 시도)이 맡는다 — 없는 분석을 3초마다 무한히 두드리지 않는다.
+      // 건강한 이벤트 스트림이면 `note.changed`(analysis) 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I03).
       refetchInterval: (query) =>
-        isRunning(runningStatusOf(query.state.data)) ? POLL_INTERVAL_MS : false,
+        hintedInterval(
+          streamHealthy,
+          isRunning(runningStatusOf(query.state.data))
+            ? POLL_INTERVAL_MS
+            : false
+        ),
     },
   });
   const requestAnalysis = useRequestAnalysis();

@@ -32,7 +32,11 @@ describe("노트 토픽 이벤트", () => {
   });
 
   it("안건 정본이 바뀌었다는 신호는 시각만 싣는다", () => {
-    expect(parseNoteTopicEvent('{"type":"agendas.changed","occurredAt":"2026-10-12T05:00:00.000Z"}')).toEqual({
+    expect(
+      parseNoteTopicEvent(
+        '{"type":"agendas.changed","occurredAt":"2026-10-12T05:00:00.000Z"}'
+      )
+    ).toEqual({
       type: "agendas.changed",
       occurredAt: "2026-10-12T05:00:00.000Z",
     });

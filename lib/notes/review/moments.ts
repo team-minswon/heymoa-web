@@ -23,8 +23,14 @@ export const segmentStarts = (segments: readonly Segment[]) =>
   new Map(segments.map((segment) => [segment.segmentId, segment.startedAtMs]));
 
 /** 회의 길이. 녹음 길이가 마지막 구간보다 짧게 오면 막대 밖으로 표시가 나가므로 둘 중 큰 값이다. */
-export function meetingLengthOf(recordedMs: number | null | undefined, segments: readonly Segment[]) {
-  return Math.max(recordedMs ?? 0, ...segments.map((segment) => segment.endedAtMs));
+export function meetingLengthOf(
+  recordedMs: number | null | undefined,
+  segments: readonly Segment[]
+) {
+  return Math.max(
+    recordedMs ?? 0,
+    ...segments.map((segment) => segment.endedAtMs)
+  );
 }
 
 export type Quote = { segment: Segment; cited: boolean };
@@ -33,7 +39,10 @@ export type Quote = { segment: Segment; cited: boolean };
  * 근거 발언 — 인용한 줄과 그 바로 앞 줄이다. 앞 줄은 무슨 말에 대한 답인지 보이는 맥락이라 흐리게 선다.
  * 스크립트 차례로 서고 겹치면 한 번만 선다.
  */
-export function quotesOf(item: Pick<ReviewItem, "citations">, segments: readonly Segment[]): Quote[] {
+export function quotesOf(
+  item: Pick<ReviewItem, "citations">,
+  segments: readonly Segment[]
+): Quote[] {
   const cited = new Set(item.citations.map((row) => row.segmentId));
   const picked = new Set<number>();
   segments.forEach((segment, at) => {
@@ -43,7 +52,10 @@ export function quotesOf(item: Pick<ReviewItem, "citations">, segments: readonly
   });
   return [...picked]
     .sort((a, b) => a - b)
-    .map((at) => ({ segment: segments[at], cited: cited.has(segments[at].segmentId) }));
+    .map((at) => ({
+      segment: segments[at],
+      cited: cited.has(segments[at].segmentId),
+    }));
 }
 
 /** 지도 눈금 이름. 시작은 `0:00`, 정시는 「1시간」, 그 밖은 「15분」 · 「1:15」 다. */
@@ -51,7 +63,9 @@ export function tickLabel(minutes: number) {
   if (minutes === 0) return "0:00";
   if (minutes < 60) return `${minutes}분`;
   const rest = minutes % 60;
-  return rest === 0 ? `${minutes / 60}시간` : `${Math.floor(minutes / 60)}:${String(rest).padStart(2, "0")}`;
+  return rest === 0
+    ? `${minutes / 60}시간`
+    : `${Math.floor(minutes / 60)}:${String(rest).padStart(2, "0")}`;
 }
 
 /**
@@ -60,7 +74,8 @@ export function tickLabel(minutes: number) {
  */
 export function ticksOf(lengthMs: number): number[] {
   const total = Math.max(1, Math.round(lengthMs / 60_000));
-  const step = [5, 10, 15, 30, 60, 120].find((size) => total / size <= 5) ?? 180;
+  const step =
+    [5, 10, 15, 30, 60, 120].find((size) => total / size <= 5) ?? 180;
   const ticks = [0];
   for (let minute = step; minute < total; minute += step) {
     if (total - minute >= total * 0.08) ticks.push(minute);
@@ -75,5 +90,7 @@ export function lengthLabel(lengthMs: number) {
   if (minutes < 1) return "1분 미만";
   if (minutes < 60) return `${minutes}분`;
   const rest = minutes % 60;
-  return rest === 0 ? `${minutes / 60}시간` : `${Math.floor(minutes / 60)}시간 ${rest}분`;
+  return rest === 0
+    ? `${minutes / 60}시간`
+    : `${Math.floor(minutes / 60)}시간 ${rest}분`;
 }

@@ -14,7 +14,10 @@ import { MinutesExportDialog } from "@/components/notes/minutes/minutes-export-d
 import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { track } from "@/lib/analytics/track";
 import { renderExport, type ExportFormat } from "@/lib/notes/review/markdown";
-import type { MinutesDocument, MinutesInclude } from "@/lib/notes/minutes/model";
+import type {
+  MinutesDocument,
+  MinutesInclude,
+} from "@/lib/notes/minutes/model";
 import { copyText } from "@/lib/ui/copy-text";
 import { toast } from "@/lib/ui/toast";
 
@@ -82,7 +85,9 @@ export function ReviewActions({
     try {
       await copyText(renderExport(format, build()));
       track("summary_copied", { format, scope: "summary" });
-      toast.success("요약이 클립보드에 복사되었습니다.", { id: "copy-summary" });
+      toast.success("요약이 클립보드에 복사되었습니다.", {
+        id: "copy-summary",
+      });
     } catch {
       toast.error("복사하지 못했습니다.", {
         id: "copy-summary",
@@ -142,42 +147,51 @@ export function ReviewActions({
           <span className="hidden sm:inline">공유하기</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-fit min-w-44">
-          {EXPORT_TARGETS.filter(({ target }) => target !== "email" || onSendEmail !== undefined).map(
-            ({ target, label, icon: Icon }) => {
-              // PDF 와 메일은 같은 회의록 재료를 쓰므로 녹취록이 와야 연다. 노트 머리조차 안 왔으면 받는 중과 같다
-              const ready = wider !== undefined;
-              const waiting = ready ? undefined : (material ?? "loading");
-              return (
-                <DropdownMenuItem
-                  key={target}
-                  // 요약이 아직 없으면 회의록 본문이 빈다 — 복사와 같이 막는다. 녹취록을 받는 중이어도 막는다
-                  disabled={(ready && disabled) || waiting === "loading"}
-                  onClick={() => {
-                    track("export_requested", { target });
-                    if (ready) {
-                      if (target === "pdf") setMinutesOpen(true);
-                      else onSendEmail?.();
-                    } else if (waiting === "failed") {
-                      onRetryMaterial?.();
-                      toast.info("녹취록을 다시 불러옵니다. 잠시 후 다시 눌러 주세요.", { id: "export-material" });
-                    }
-                  }}
-                >
-                  <Icon aria-hidden />
-                  <span className="flex-1 whitespace-nowrap">{label}</span>
-                  {waiting ? (
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {waiting === "loading" ? "불러오는 중" : "다시 불러오기"}
-                    </span>
-                  ) : null}
-                </DropdownMenuItem>
-              );
-            }
-          )}
+          {EXPORT_TARGETS.filter(
+            ({ target }) => target !== "email" || onSendEmail !== undefined
+          ).map(({ target, label, icon: Icon }) => {
+            // PDF 와 메일은 같은 회의록 재료를 쓰므로 녹취록이 와야 연다. 노트 머리조차 안 왔으면 받는 중과 같다
+            const ready = wider !== undefined;
+            const waiting = ready ? undefined : (material ?? "loading");
+            return (
+              <DropdownMenuItem
+                key={target}
+                // 요약이 아직 없으면 회의록 본문이 빈다 — 복사와 같이 막는다. 녹취록을 받는 중이어도 막는다
+                disabled={(ready && disabled) || waiting === "loading"}
+                onClick={() => {
+                  track("export_requested", { target });
+                  if (ready) {
+                    if (target === "pdf") setMinutesOpen(true);
+                    else onSendEmail?.();
+                  } else if (waiting === "failed") {
+                    onRetryMaterial?.();
+                    toast.info(
+                      "녹취록을 다시 불러옵니다. 잠시 후 다시 눌러 주세요.",
+                      { id: "export-material" }
+                    );
+                  }
+                }}
+              >
+                <Icon aria-hidden />
+                <span className="flex-1 whitespace-nowrap">{label}</span>
+                {waiting ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {waiting === "loading" ? "불러오는 중" : "다시 불러오기"}
+                  </span>
+                ) : null}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
       {wider ? (
-        <MinutesExportDialog open={minutesOpen} onOpenChange={setMinutesOpen} build={wider.minutes} preparePdf={wider.preparePdf} version={wider.version} />
+        <MinutesExportDialog
+          open={minutesOpen}
+          onOpenChange={setMinutesOpen}
+          build={wider.minutes}
+          preparePdf={wider.preparePdf}
+          version={wider.version}
+        />
       ) : null}
     </div>
   );

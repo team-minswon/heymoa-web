@@ -303,27 +303,58 @@ describe("relationMatchesTarget", () => {
 
   it("conflicts와 옛 meetingLinks의 같은 관계는 기존 표시를 한 번만 유지한다", () => {
     const moved = link("SUPERSEDES", "p1", "old1");
-    const result = indexMeetingLinks({
-      ...data,
-      conflicts: [{ ...moved, kind: "SUPERSEDES" }],
-    }, "now", items);
-    expect(result.byItemId.get("i1")).toEqual(indexMeetingLinks(data, "now", items).byItemId.get("i1"));
-    const conflictsOnly = indexMeetingLinks({
-      ...data,
-      meetingLinks: [],
-      conflicts: [{ ...moved, kind: "SUPERSEDES" }],
-    }, "now", items);
-    expect(conflictsOnly.byItemId.get("i1")).toEqual(indexMeetingLinks(data, "now", items).byItemId.get("i1"));
+    const result = indexMeetingLinks(
+      {
+        ...data,
+        conflicts: [{ ...moved, kind: "SUPERSEDES" }],
+      },
+      "now",
+      items
+    );
+    expect(result.byItemId.get("i1")).toEqual(
+      indexMeetingLinks(data, "now", items).byItemId.get("i1")
+    );
+    const conflictsOnly = indexMeetingLinks(
+      {
+        ...data,
+        meetingLinks: [],
+        conflicts: [{ ...moved, kind: "SUPERSEDES" }],
+      },
+      "now",
+      items
+    );
+    expect(conflictsOnly.byItemId.get("i1")).toEqual(
+      indexMeetingLinks(data, "now", items).byItemId.get("i1")
+    );
   });
 
   it("출처가 삭제된 승계 항목에 죽은 회의 링크를 만들지 않는다", () => {
     const approved = link("SUPERSEDES", "p1", "old1");
-    const result = indexMeetingLinks({
-      ...data,
-      meetingLinks: [{ ...approved, target: { ...approved.target, noteId: null, proposalId: null, type: "APPROVED", itemId: "kept-project-item" } }],
-    }, "now", items);
+    const result = indexMeetingLinks(
+      {
+        ...data,
+        meetingLinks: [
+          {
+            ...approved,
+            target: {
+              ...approved.target,
+              noteId: null,
+              proposalId: null,
+              type: "APPROVED",
+              itemId: "kept-project-item",
+            },
+          },
+        ],
+      },
+      "now",
+      items
+    );
     const relation = result.byItemId.get("i1")?.[0];
-    expect(relation).toMatchObject({ scope: "approved", targetTitle: "프로젝트 확정 항목", targetItemId: null });
+    expect(relation).toMatchObject({
+      scope: "approved",
+      targetTitle: "프로젝트 확정 항목",
+      targetItemId: null,
+    });
     expect(relation?.target.noteId).toBeNull();
   });
 });

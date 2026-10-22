@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState } from "react";
 import {
   QueryClient,
@@ -120,7 +126,9 @@ describe("NoteRouteSurface", () => {
     render(
       <NoteRouteSurface view="full" isOpen onClose={vi.fn()}>
         <Sheet open>
-          <SheetContent><SheetTitle>화자</SheetTitle></SheetContent>
+          <SheetContent>
+            <SheetTitle>화자</SheetTitle>
+          </SheetContent>
         </Sheet>
       </NoteRouteSurface>
     );

@@ -30,11 +30,11 @@ provider·contract·adapter 문서와 새 `select.ts`, 그리고 삭제된 둘�
 > MSW만 만들고 **zod runtime parser를 만들지 않습니다.** 그런데 `note-topic-protocol.ts`는
 > WS JSON을 **실제로 파싱**하는 데 이 스키마를 씁니다 — 지우면 파싱할 것이 없어집니다.
 
-| 파일 | 무엇 | 계약이 오면 |
-|---|---|---|
-| **`contract.ts`** | zod 스키마 · 파생 타입 | **zod는 남깁니다.** WS 파싱에 필요합니다. 대신 **생성 타입과 묶어** 드리프트를 막습니다(아래) |
-| **`api.ts`** | `fetchProposals()` — 공용 mutator를 지나는 직접 호출 | **삭제.** orval 생성 훅으로 대체 |
-| **`query-keys.ts`** | 수동 쿼리 키 | **삭제.** orval 생성 키로 대체 |
+| 파일                | 무엇                                                 | 계약이 오면                                                                                   |
+| ------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **`contract.ts`**   | zod 스키마 · 파생 타입                               | **zod는 남깁니다.** WS 파싱에 필요합니다. 대신 **생성 타입과 묶어** 드리프트를 막습니다(아래) |
+| **`api.ts`**        | `fetchProposals()` — 공용 mutator를 지나는 직접 호출 | **삭제.** orval 생성 훅으로 대체                                                              |
+| **`query-keys.ts`** | 수동 쿼리 키                                         | **삭제.** orval 생성 키로 대체                                                                |
 
 REST(타입·훅·키)는 생성물로 가고, **WS runtime 파서만 손으로 남습니다.**
 
@@ -45,11 +45,11 @@ REST(타입·훅·키)는 생성물로 가고, **WS runtime 파서만 손으로 
 **드라이런으로 실측했습니다** — app-459의 생성 `openapi3.yml`로 orval을 돌려(exit 0) 나온
 타입에 실제로 대입해 봤습니다. 결과가 셋 다 같지 않았습니다.
 
-| 스키마 | 생성 타입 | 양방향? |
-|---|---|---|
-| `proposalCitationSchema` | `ProposalCitation` | **성립** |
-| `runRangeSchema` | `TranscriptAnalysisRunRange` | **성립** |
-| `proposalHeadSchema` | `ProposalRevision` | **한 방향만** |
+| 스키마                   | 생성 타입                    | 양방향?       |
+| ------------------------ | ---------------------------- | ------------- |
+| `proposalCitationSchema` | `ProposalCitation`           | **성립**      |
+| `runRangeSchema`         | `TranscriptAnalysisRunRange` | **성립**      |
+| `proposalHeadSchema`     | `ProposalRevision`           | **한 방향만** |
 
 **head가 다른 이유는 `oneOf`입니다.** 생성 타입이 「교차타입 3개의 union」으로 나옵니다
 (`{status:'OPEN', closeReason:null} & {…}` | `{status:'CLOSED', closeReason:'RETRACTED'} & {…}` | …).
@@ -70,13 +70,23 @@ type Assert<_T extends true> = never;
 type Extends<A, B> = [A] extends [B] ? true : false;
 
 // 평평한 둘은 양방향
-type _e1 = Assert<Extends<z.infer<typeof proposalCitationSchema>, ProposalCitation>>;
-type _e2 = Assert<Extends<ProposalCitation, z.infer<typeof proposalCitationSchema>>>;
-type _r1 = Assert<Extends<z.infer<typeof runRangeSchema>, TranscriptAnalysisRunRange>>;
-type _r2 = Assert<Extends<TranscriptAnalysisRunRange, z.infer<typeof runRangeSchema>>>;
+type _e1 = Assert<
+  Extends<z.infer<typeof proposalCitationSchema>, ProposalCitation>
+>;
+type _e2 = Assert<
+  Extends<ProposalCitation, z.infer<typeof proposalCitationSchema>>
+>;
+type _r1 = Assert<
+  Extends<z.infer<typeof runRangeSchema>, TranscriptAnalysisRunRange>
+>;
+type _r2 = Assert<
+  Extends<TranscriptAnalysisRunRange, z.infer<typeof runRangeSchema>>
+>;
 
 // head 는 「생성 → 내 타입」 한 방향만
-type _h1 = Assert<Extends<ProposalRevision, z.infer<typeof proposalHeadSchema>>>;
+type _h1 = Assert<
+  Extends<ProposalRevision, z.infer<typeof proposalHeadSchema>>
+>;
 ```
 
 **이 다섯 줄이 실제로 컴파일되는 것과, 드리프트를 잡는 것을 둘 다 확인했습니다.**
@@ -135,15 +145,15 @@ INTEGRATION_WEB_URL=... INTEGRATION_TOKEN_FILE=... \
 
 ## 임시였던 것 — 처리 결과
 
-| # | 무엇 | 결과 |
-|---|---|---|
-| 1 | zod 스키마 전체 (`contract.ts`) | **남았습니다.** orval이 zod parser를 안 만들고 WS가 그걸 씁니다. 생성 타입과 방향성 가드로 묶었습니다 |
-| 2 | `fetchProposals()` (`api.ts`) | **삭제.** `useGetProposals`로 |
-| 3 | 쿼리 키 두 개 (`query-keys.ts`) | **삭제.** `getGetProposalsQueryKey`로 |
-| 4 | `useQuery` 직접 호출 (provider) | **교체.** 두 겹 봉투는 `select.ts`가 벗깁니다 |
-| 5 | MSW 목 응답 | 유지. 계약 확정 모양과 대조했습니다 |
-| 6 | **프롬프트 파일 마운트** | 걷었습니다 — `integration/pro-33-ai`가 수정을 품었습니다 |
-| 7 | **오버레이 compose** | 남았습니다. 세 브랜치가 머지되면 기본 `compose.yml`만으로 lane이 섭니다 |
+| #   | 무엇                            | 결과                                                                                                  |
+| --- | ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1   | zod 스키마 전체 (`contract.ts`) | **남았습니다.** orval이 zod parser를 안 만들고 WS가 그걸 씁니다. 생성 타입과 방향성 가드로 묶었습니다 |
+| 2   | `fetchProposals()` (`api.ts`)   | **삭제.** `useGetProposals`로                                                                         |
+| 3   | 쿼리 키 두 개 (`query-keys.ts`) | **삭제.** `getGetProposalsQueryKey`로                                                                 |
+| 4   | `useQuery` 직접 호출 (provider) | **교체.** 두 겹 봉투는 `select.ts`가 벗깁니다                                                         |
+| 5   | MSW 목 응답                     | 유지. 계약 확정 모양과 대조했습니다                                                                   |
+| 6   | **프롬프트 파일 마운트**        | 걷었습니다 — `integration/pro-33-ai`가 수정을 품었습니다                                              |
+| 7   | **오버레이 compose**            | 남았습니다. 세 브랜치가 머지되면 기본 `compose.yml`만으로 lane이 섭니다                               |
 
 **관대함은 유지했습니다.** `contract.ts`가 `z.object`(모르는 필드 무시)인 것은 **배포가
 web을 마지막에 두기 때문**입니다. 계약이 `additionalProperties: false`로 굳어 명분은
@@ -155,8 +165,8 @@ web을 마지막에 두기 때문**입니다. 계약이 `additionalProperties: f
 
 ## 계약이 와도 안 만드는 것
 
-| 무엇 | 왜 |
-|---|---|
-| revision 이력 화면 | 계약만 받습니다. 「변경 내역」 펼침은 v1 밖 |
-| 채택 출처 링크 (`sourceProposals`) | server 조회 계약 전 임의 구현 안 함. 후속 이슈 |
-| 기각 목록·사유 UI | **v1 제외 확정.** `scope.test.ts`가 부재를 고정합니다 |
+| 무엇                               | 왜                                                    |
+| ---------------------------------- | ----------------------------------------------------- |
+| revision 이력 화면                 | 계약만 받습니다. 「변경 내역」 펼침은 v1 밖           |
+| 채택 출처 링크 (`sourceProposals`) | server 조회 계약 전 임의 구현 안 함. 후속 이슈        |
+| 기각 목록·사유 UI                  | **v1 제외 확정.** `scope.test.ts`가 부재를 고정합니다 |

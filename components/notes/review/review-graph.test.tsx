@@ -1,10 +1,19 @@
 import { useImperativeHandle, type Ref } from "react";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import type { MeetingReviewResponseDataItemsItem } from "@/lib/api/generated/models";
-import type { MeetingReviewSummary, SummaryTopic } from "@/lib/notes/review/summary";
+import type {
+  MeetingReviewSummary,
+  SummaryTopic,
+} from "@/lib/notes/review/summary";
 
 type Props = Record<string, unknown> & { ref?: Ref<unknown> };
 
@@ -19,7 +28,10 @@ const forceGraph = vi.hoisted(() => ({
     zoom: vi.fn(() => 1),
     zoomToFit: vi.fn(),
     centerAt: vi.fn(),
-    graph2ScreenCoords: vi.fn((x: number, y: number) => ({ x: 100 + x * 0, y: 100 + y * 0 })),
+    graph2ScreenCoords: vi.fn((x: number, y: number) => ({
+      x: 100 + x * 0,
+      y: 100 + y * 0,
+    })),
     d3Force: vi.fn(),
     d3ReheatSimulation: vi.fn(),
   },
@@ -46,7 +58,10 @@ beforeEach(() => {
     class {
       constructor(private readonly callback: ResizeObserverCallback) {}
       observe() {
-        this.callback([{ contentRect: { width: panelWidth } } as ResizeObserverEntry], this as unknown as ResizeObserver);
+        this.callback(
+          [{ contentRect: { width: panelWidth } } as ResizeObserverEntry],
+          this as unknown as ResizeObserver
+        );
       }
       disconnect() {}
       unobserve() {}
@@ -65,7 +80,7 @@ function reviewItem(
     kind,
     content: itemId,
     included: true,
-  projectSelected: true,
+    projectSelected: true,
     edited: false,
     authoredByUserId: null,
     originalProposalRef: null,
@@ -87,7 +102,10 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     agendaItemId: null,
     centerItemId: null,
     members: [],
-    memberships: (over.members ?? []).map(({ itemId }) => ({ itemId, secondary: false })),
+    memberships: (over.members ?? []).map(({ itemId }) => ({
+      itemId,
+      secondary: false,
+    })),
     alsoItemIds: [],
     relations: [],
     sentences: [],
@@ -118,33 +136,59 @@ const summary: MeetingReviewSummary = {
         { itemId: "a1", kind: "ACTION_ITEM" },
       ],
       relations: [
-        { sourceItemId: "d1", targetItemId: "a1", kind: "LEADS_TO", label: "후속 할 일" },
+        {
+          sourceItemId: "d1",
+          targetItemId: "a1",
+          kind: "LEADS_TO",
+          label: "후속 할 일",
+        },
       ],
     }),
   ],
 };
 
 const items = [
-  reviewItem("d1", "DECISION", { content: "요금은 회의 시간 기준으로 계산한다" }),
+  reviewItem("d1", "DECISION", {
+    content: "요금은 회의 시간 기준으로 계산한다",
+  }),
   reviewItem("a1", "ACTION_ITEM", { content: "요금 계산표를 고친다" }),
   reviewItem("x", "ACTION_ITEM", { content: "뺀 항목", included: false }),
 ];
 
-async function renderGraph(onSelect = vi.fn(), selectedItemId: string | null = null, extra: Partial<Parameters<typeof ReviewGraph>[0]> = {}) {
+async function renderGraph(
+  onSelect = vi.fn(),
+  selectedItemId: string | null = null,
+  extra: Partial<Parameters<typeof ReviewGraph>[0]> = {}
+) {
   const view = render(
-    <ReviewGraph summary={summary} items={items} selectedItemId={selectedItemId} onSelect={onSelect} {...extra} />
+    <ReviewGraph
+      summary={summary}
+      items={items}
+      selectedItemId={selectedItemId}
+      onSelect={onSelect}
+      {...extra}
+    />
   );
   // 캔버스는 브라우저에서만 불러온다(next/dynamic, ssr: false)
   await vi.waitFor(() => expect(forceGraph.props).not.toBeNull());
   return { ...view, onSelect };
 }
 
-const graphProps = () => forceGraph.props as Props & {
-  graphData: { nodes: Array<{ id: string; hub: boolean; item: unknown; x: number; y: number }> };
-  onNodeClick: (node: unknown) => void;
-  onNodeHover: (node: unknown) => void;
-  onRenderFramePost: (ctx: CanvasRenderingContext2D, scale: number) => void;
-};
+const graphProps = () =>
+  forceGraph.props as Props & {
+    graphData: {
+      nodes: Array<{
+        id: string;
+        hub: boolean;
+        item: unknown;
+        x: number;
+        y: number;
+      }>;
+    };
+    onNodeClick: (node: unknown) => void;
+    onNodeHover: (node: unknown) => void;
+    onRenderFramePost: (ctx: CanvasRenderingContext2D, scale: number) => void;
+  };
 
 /** 이름 그리기를 가짜 붓으로 돌려 적힌 글자를 모은다 */
 function drawnLabels(scale = 1) {
@@ -158,7 +202,10 @@ function drawnLabels(scale = 1) {
           : (target[key as string] ?? (() => {})),
     set: (target, key, value) => ((target[key as string] = value), true),
   });
-  graphProps().onRenderFramePost(ctx as unknown as CanvasRenderingContext2D, scale);
+  graphProps().onRenderFramePost(
+    ctx as unknown as CanvasRenderingContext2D,
+    scale
+  );
   return texts;
 }
 
@@ -176,7 +223,9 @@ describe("ReviewGraph", () => {
   it("주제는 허브 점, 포함한 항목만 항목 점으로 넘긴다", async () => {
     await renderGraph();
 
-    expect(graphProps().graphData.nodes.map((node) => [node.id, node.hub])).toEqual([
+    expect(
+      graphProps().graphData.nodes.map((node) => [node.id, node.hub])
+    ).toEqual([
       ["topic:1", true],
       ["d1", false],
       ["a1", false],
@@ -187,8 +236,14 @@ describe("ReviewGraph", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     forceGraph.zoomDuringRender = 8;
     await renderGraph();
-    await vi.waitFor(() => expect(screen.getByRole("button", { name: "확대" })).toBeDisabled());
-    expect(error.mock.calls.some((args) => String(args[0]).includes("Cannot update a component"))).toBe(false);
+    await vi.waitFor(() =>
+      expect(screen.getByRole("button", { name: "확대" })).toBeDisabled()
+    );
+    expect(
+      error.mock.calls.some((args) =>
+        String(args[0]).includes("Cannot update a component")
+      )
+    ).toBe(false);
   });
 
   it("캔버스에서 항목을 누르면 그 항목을 고르고, 허브를 누르면 고르지 않고 판을 그리로 옮긴다", async () => {
@@ -206,9 +261,13 @@ describe("ReviewGraph", () => {
   it("캔버스를 못 쓰는 사람을 위해 같은 항목을 버튼 목록으로 두고, 누르면 고른다", async () => {
     const { onSelect } = await renderGraph(vi.fn(), "d1");
 
-    const decision = screen.getByRole("button", { name: "결정 요금은 회의 시간 기준으로 계산한다" });
+    const decision = screen.getByRole("button", {
+      name: "결정 요금은 회의 시간 기준으로 계산한다",
+    });
     expect(decision.getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" })
+    );
     expect(onSelect).toHaveBeenCalledWith("a1");
     expect(screen.queryByRole("button", { name: /뺀 항목/ })).toBeNull();
   });
@@ -216,10 +275,14 @@ describe("ReviewGraph", () => {
   it("목록의 항목에 초점이 오면 그 항목의 설명 상자를 연다", async () => {
     await renderGraph();
 
-    fireEvent.focus(screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" }));
+    fireEvent.focus(
+      screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" })
+    );
 
     expect(screen.getByRole("tooltip").textContent).toContain("01 요금");
-    expect(screen.getByRole("tooltip").textContent).toContain("요금 계산표를 고친다");
+    expect(screen.getByRole("tooltip").textContent).toContain(
+      "요금 계산표를 고친다"
+    );
   });
 
   it("확대 · 축소 · 맞춤 버튼과 + · − · 0 키가 판 배율을 바꾼다", async () => {
@@ -232,7 +295,9 @@ describe("ReviewGraph", () => {
     fireEvent.click(screen.getByRole("button", { name: "맞춤" }));
     expect(forceGraph.api.zoomToFit).toHaveBeenCalledTimes(1);
 
-    const node = screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" });
+    const node = screen.getByRole("button", {
+      name: "할 일 요금 계산표를 고친다",
+    });
     fireEvent.keyDown(node, { key: "+" });
     expect(forceGraph.api.zoom).toHaveBeenLastCalledWith(1.25, 200);
     fireEvent.keyDown(node, { key: "0" });
@@ -244,7 +309,9 @@ describe("ReviewGraph", () => {
 
     expect(drawnLabels(1)).toEqual(["01"]);
     expect(drawnLabels(1.5)).toEqual(["01 요금"]);
-    expect(drawnLabels(3)).toEqual(expect.arrayContaining(["01 요금", "요금 계산표를 고친다"]));
+    expect(drawnLabels(3)).toEqual(
+      expect.arrayContaining(["01 요금", "요금 계산표를 고친다"])
+    );
   });
 
   it("가운데 허브에 올리면 잘린 주제 이름을 온전히 보여 준다", async () => {
@@ -259,7 +326,8 @@ describe("ReviewGraph", () => {
 
   it("겹치는 항목 이름은 먼저 자리 잡은 쪽만 적는다", async () => {
     await renderGraph();
-    for (const node of graphProps().graphData.nodes) Object.assign(node, { x: 0, y: 0 });
+    for (const node of graphProps().graphData.nodes)
+      Object.assign(node, { x: 0, y: 0 });
 
     const texts = drawnLabels(3);
 
@@ -276,18 +344,50 @@ describe("ReviewGraph", () => {
 
   it("안건 허브 사이 이어짐을 화살표와 텍스트로 표시하고 다른 관계선과 구별한다", async () => {
     await renderGraph(vi.fn(), null, {
-      summary: { ...summary, agendas: [{ ...summary.agendas[0], agendaId: "ag1" }, topic(2, { agendaId: "ag2", title: "수익 모델" })] },
-      agendaLinks: new Map([["ag2", [{ noteId: "n", agendaId: "ag1", title: "회의", agendaTitle: "요금" }]]]),
+      summary: {
+        ...summary,
+        agendas: [
+          { ...summary.agendas[0], agendaId: "ag1" },
+          topic(2, { agendaId: "ag2", title: "수익 모델" }),
+        ],
+      },
+      agendaLinks: new Map([
+        [
+          "ag2",
+          [
+            {
+              noteId: "n",
+              agendaId: "ag1",
+              title: "회의",
+              agendaTitle: "요금",
+            },
+          ],
+        ],
+      ]),
     });
-    expect(screen.getByRole("list", { name: "안건 이어짐" })).toHaveTextContent("01 요금 → 02 수익 모델");
+    expect(screen.getByRole("list", { name: "안건 이어짐" })).toHaveTextContent(
+      "01 요금 → 02 수익 모델"
+    );
     const props = forceGraph.props as Props & {
-      graphData: { links: Array<{ source: string; target: string; kind: string }> };
+      graphData: {
+        links: Array<{ source: string; target: string; kind: string }>;
+      };
       linkDirectionalArrowLength: (link: { kind: string }) => number;
     };
-    expect(props.graphData.links).toContainEqual({ source: "topic:1", target: "topic:2", kind: "agenda" });
-    expect(props.linkDirectionalArrowLength({ kind: "agenda" })).toBeGreaterThan(0);
+    expect(props.graphData.links).toContainEqual({
+      source: "topic:1",
+      target: "topic:2",
+      kind: "agenda",
+    });
+    expect(
+      props.linkDirectionalArrowLength({ kind: "agenda" })
+    ).toBeGreaterThan(0);
     expect(props.linkDirectionalArrowLength({ kind: "relation" })).toBe(0);
-    act(() => graphProps().onNodeHover(graphProps().graphData.nodes.find((node) => node.id === "topic:1")));
+    act(() =>
+      graphProps().onNodeHover(
+        graphProps().graphData.nodes.find((node) => node.id === "topic:1")
+      )
+    );
     expect(screen.getByRole("tooltip")).toHaveTextContent("항목 2");
   });
 
@@ -300,7 +400,9 @@ describe("ReviewGraph", () => {
         onSelect={() => {}}
       />
     );
-    expect(screen.getByText("주제 묶음이 없어 그래프를 그릴 수 없습니다")).toBeTruthy();
+    expect(
+      screen.getByText("주제 묶음이 없어 그래프를 그릴 수 없습니다")
+    ).toBeTruthy();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 });

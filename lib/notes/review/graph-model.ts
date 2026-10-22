@@ -1,6 +1,9 @@
 import type { MeetingReviewResponseDataItemsItem } from "@/lib/api/generated/models";
 import type { MeetingLinkIndex } from "@/lib/notes/review/meeting-links";
-import { summaryTopics, type MeetingReviewSummary } from "@/lib/notes/review/summary";
+import {
+  summaryTopics,
+  type MeetingReviewSummary,
+} from "@/lib/notes/review/summary";
 
 type ReviewItem = MeetingReviewResponseDataItemsItem;
 
@@ -74,35 +77,42 @@ export function buildReviewGraph(
     }
   }
 
-  const nodes = shown.map((item): GraphNode => ({
-    id: item.itemId,
-    group: groupsOf.get(item.itemId)?.[0] ?? null,
-    role:
-      item.kind === "DECISION"
-        ? "DECISION"
-        : item.kind === "ACTION_ITEM"
-          ? "ACTION"
-          : (item.kind === "ISSUE" || item.kind === "QUESTION") && open.has(item.itemId)
-            ? "OPEN"
-            : "REFERENCE",
-    kind: item.kind,
-    content: item.content,
-    alsoGroups: groupsOf.get(item.itemId)?.slice(1) ?? [],
-  }));
+  const nodes = shown.map(
+    (item): GraphNode => ({
+      id: item.itemId,
+      group: groupsOf.get(item.itemId)?.[0] ?? null,
+      role:
+        item.kind === "DECISION"
+          ? "DECISION"
+          : item.kind === "ACTION_ITEM"
+            ? "ACTION"
+            : (item.kind === "ISSUE" || item.kind === "QUESTION") &&
+                open.has(item.itemId)
+              ? "OPEN"
+              : "REFERENCE",
+      kind: item.kind,
+      content: item.content,
+      alsoGroups: groupsOf.get(item.itemId)?.slice(1) ?? [],
+    })
+  );
 
   const edges = new Map<string, GraphEdge>();
   const connect = (source: string, target: string) => {
-    if (source === target || !present.has(source) || !present.has(target)) return;
+    if (source === target || !present.has(source) || !present.has(target))
+      return;
     const key = [source, target].sort().join("→");
     if (!edges.has(key)) edges.set(key, { source, target });
   };
   for (const topic of summaryTopics(summary)) {
-    for (const relation of topic.relations) connect(relation.sourceItemId, relation.targetItemId);
+    for (const relation of topic.relations)
+      connect(relation.sourceItemId, relation.targetItemId);
   }
 
-  const ordinalByAgenda = new Map(summaryTopics(summary).flatMap((topic) =>
-    topic.agendaId ? [[topic.agendaId, topic.ordinal] as const] : []
-  ));
+  const ordinalByAgenda = new Map(
+    summaryTopics(summary).flatMap((topic) =>
+      topic.agendaId ? [[topic.agendaId, topic.ordinal] as const] : []
+    )
+  );
   const agendaEdges = new Map<string, GraphEdge>();
   for (const [agendaId, previous] of agendaLinks ?? []) {
     const current = ordinalByAgenda.get(agendaId);
@@ -111,8 +121,12 @@ export function buildReviewGraph(
       if (target.noteId !== summary.noteId) continue;
       const earlier = ordinalByAgenda.get(target.agendaId);
       if (earlier === undefined || earlier === current) continue;
-      const source = hubId(earlier), destination = hubId(current);
-      agendaEdges.set(`${source}→${destination}`, { source, target: destination });
+      const source = hubId(earlier),
+        destination = hubId(current);
+      agendaEdges.set(`${source}→${destination}`, {
+        source,
+        target: destination,
+      });
     }
   }
 
@@ -120,7 +134,9 @@ export function buildReviewGraph(
     nodes,
     edges: [...edges.values()],
     agendaEdges: [...agendaEdges.values()],
-    topics: new Map(summaryTopics(summary).map((topic) => [topic.ordinal, topic.title])),
+    topics: new Map(
+      summaryTopics(summary).map((topic) => [topic.ordinal, topic.title])
+    ),
   };
 }
 
@@ -147,7 +163,8 @@ export type ForceLink = { source: string; target: string; kind: ForceLinkKind };
 
 export const hubId = (ordinal: number) => `topic:${ordinal}`;
 
-export const topicNumber = (ordinal: number) => String(ordinal).padStart(2, "0");
+export const topicNumber = (ordinal: number) =>
+  String(ordinal).padStart(2, "0");
 
 /** 연결이 많을수록 크게. 제곱근이라 허브 몇 개가 판을 덮지 않는다 */
 export function nodeRadius(degree: number, hub: boolean): number {
@@ -158,7 +175,11 @@ export function nodeRadius(degree: number, hub: boolean): number {
 const SCREEN_RADIUS = { item: [4, 14], hub: [6, 22] } as const;
 
 /** 그릴 반지름(배치 좌표). 배율 `scale` 에서 화면 크기가 위 범위를 벗어나지 않게 묶는다 */
-export function screenRadius(radius: number, hub: boolean, scale: number): number {
+export function screenRadius(
+  radius: number,
+  hub: boolean,
+  scale: number
+): number {
   const [min, max] = SCREEN_RADIUS[hub ? "hub" : "item"];
   return Math.min(Math.max(radius, min / scale), max / scale);
 }
@@ -177,31 +198,58 @@ function hashPair(id: string): [number, number] {
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: ForceLink[] } {
+export function toForceGraph(graph: ReviewGraph): {
+  nodes: ForceNode[];
+  links: ForceLink[];
+} {
   // 항목이 남은 주제마다 허브를 둔다. 다른 주제에도 속한 항목만 남은 주제도 그 점선이 닿을 허브가 있어야 한다.
-  const linkedAgendas = new Set(graph.agendaEdges.flatMap((edge) => [edge.source, edge.target]));
-  const ordinals = [...graph.topics.keys()].filter((ordinal) =>
-    linkedAgendas.has(hubId(ordinal)) || graph.nodes.some((node) => node.group === ordinal || node.alsoGroups.includes(ordinal))
+  const linkedAgendas = new Set(
+    graph.agendaEdges.flatMap((edge) => [edge.source, edge.target])
+  );
+  const ordinals = [...graph.topics.keys()].filter(
+    (ordinal) =>
+      linkedAgendas.has(hubId(ordinal)) ||
+      graph.nodes.some(
+        (node) => node.group === ordinal || node.alsoGroups.includes(ordinal)
+      )
   );
   // 허브는 해바라기 씨 배열로 흩어 두고, 항목은 제 허브 곁에서 ID 로 정한 자리에서 출발한다.
   const hubAt = new Map(
     ordinals.map((ordinal, index) => {
       const r = 60 * Math.sqrt(index + 0.5);
-      return [ordinal, { x: r * Math.cos(index * GOLDEN_ANGLE), y: r * Math.sin(index * GOLDEN_ANGLE) }];
+      return [
+        ordinal,
+        {
+          x: r * Math.cos(index * GOLDEN_ANGLE),
+          y: r * Math.sin(index * GOLDEN_ANGLE),
+        },
+      ];
     })
   );
   const spread = 60 * Math.sqrt(ordinals.length + 1);
 
   const links: ForceLink[] = [
     ...graph.nodes.flatMap((node): ForceLink[] =>
-      node.group !== null && hubAt.has(node.group) ? [{ source: hubId(node.group), target: node.id, kind: "hub" }] : []
+      node.group !== null && hubAt.has(node.group)
+        ? [{ source: hubId(node.group), target: node.id, kind: "hub" }]
+        : []
     ),
-    ...graph.edges.map((edge): ForceLink => ({ source: edge.source, target: edge.target, kind: "relation" })),
-    ...graph.agendaEdges.map((edge): ForceLink => ({ ...edge, kind: "agenda" })),
+    ...graph.edges.map(
+      (edge): ForceLink => ({
+        source: edge.source,
+        target: edge.target,
+        kind: "relation",
+      })
+    ),
+    ...graph.agendaEdges.map(
+      (edge): ForceLink => ({ ...edge, kind: "agenda" })
+    ),
     // 다른 주제에도 속한 항목은 그 주제의 허브와 약하게 잇는다
     ...graph.nodes.flatMap((node): ForceLink[] =>
       node.alsoGroups.flatMap((group): ForceLink[] =>
-        hubAt.has(group) ? [{ source: hubId(group), target: node.id, kind: "also" }] : []
+        hubAt.has(group)
+          ? [{ source: hubId(group), target: node.id, kind: "also" }]
+          : []
       )
     ),
   ];
@@ -218,9 +266,12 @@ export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: F
       id,
       hub: true,
       item: null,
-      label: `${topicNumber(ordinal)} ${graph.topics.get(ordinal) ?? ""}`.trim(),
+      label:
+        `${topicNumber(ordinal)} ${graph.topics.get(ordinal) ?? ""}`.trim(),
       degree: d,
-      memberCount: graph.nodes.filter((node) => node.group === ordinal || node.alsoGroups.includes(ordinal)).length,
+      memberCount: graph.nodes.filter(
+        (node) => node.group === ordinal || node.alsoGroups.includes(ordinal)
+      ).length,
       radius: nodeRadius(d, true),
       ...hubAt.get(ordinal)!,
     };
@@ -244,7 +295,9 @@ export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: F
   return { nodes: [...hubs, ...items], links };
 }
 
-export function neighborsOf(links: readonly ForceLink[]): Map<string, Set<string>> {
+export function neighborsOf(
+  links: readonly ForceLink[]
+): Map<string, Set<string>> {
   const map = new Map<string, Set<string>>();
   for (const { source, target } of links) {
     map.set(source, (map.get(source) ?? new Set()).add(target));

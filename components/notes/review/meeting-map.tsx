@@ -7,7 +7,12 @@ import { tickLabel, ticksOf } from "@/lib/notes/review/moments";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
-export type MapMark = { itemId: string; kind: "DECISION" | "ACTION_ITEM"; atMs: number; content: string };
+export type MapMark = {
+  itemId: string;
+  kind: "DECISION" | "ACTION_ITEM";
+  atMs: number;
+  content: string;
+};
 export type MapChapter = { ordinal: number; title: string; startMs: number };
 
 const MARK = {
@@ -15,7 +20,8 @@ const MARK = {
   ACTION_ITEM: { name: "할 일", color: ROLE_COLOR.ACTION },
 } as const;
 
-const at = (ms: number, lengthMs: number) => `${Math.min(100, Math.max(0, (ms / lengthMs) * 100)).toFixed(2)}%`;
+const at = (ms: number, lengthMs: number) =>
+  `${Math.min(100, Math.max(0, (ms / lengthMs) * 100)).toFixed(2)}%`;
 
 /**
  * 막대 위에서 겹치는 표시를 한 묶음으로 모은다. 같은 줄을 인용한 항목은 때가 같아 완전히 포개지고,
@@ -23,7 +29,10 @@ const at = (ms: number, lengthMs: number) => `${Math.min(100, Math.max(0, (ms / 
  * 누를 자리를 넓히지 않으므로, 막대가 250px 이상이면 묶이지 않은 이웃끼리 겹치지 않는다. 고정 칸으로
  * 자르면 칸 경계 양쪽의 두 표시가 따로 묶여 다시 포개진다.
  */
-export function groupMarks(marks: readonly MapMark[], lengthMs: number): MapMark[][] {
+export function groupMarks(
+  marks: readonly MapMark[],
+  lengthMs: number
+): MapMark[][] {
   const gap = lengthMs * 0.012;
   const groups: MapMark[][] = [];
   for (const mark of [...marks].sort((a, b) => a.atMs - b.atMs)) {
@@ -54,7 +63,8 @@ export function MeetingMap({
   const [turns, setTurns] = useState<Record<string, number>>({});
   if (marks.length === 0 || lengthMs <= 0) return null;
   const ordered = [...chapters].sort((a, b) => a.startMs - b.startMs);
-  const count = (kind: MapMark["kind"]) => marks.filter((mark) => mark.kind === kind).length;
+  const count = (kind: MapMark["kind"]) =>
+    marks.filter((mark) => mark.kind === kind).length;
   const ticks = ticksOf(lengthMs);
   const lastTick = ticks[ticks.length - 1];
 
@@ -67,13 +77,23 @@ export function MeetingMap({
         <h2 className="font-medium text-[var(--el-body)]">언제 정해졌나</h2>
         <span className="flex items-center gap-3">
           <span className="inline-flex items-center gap-[5px]">
-            <span aria-hidden className="h-1.5 w-3 rounded-[2px] bg-[var(--el-hairline)]" />
+            <span
+              aria-hidden
+              className="h-1.5 w-3 rounded-[2px] bg-[var(--el-hairline)]"
+            />
             주제 구간
           </span>
           {(["DECISION", "ACTION_ITEM"] as const).map((kind) =>
             count(kind) > 0 ? (
-              <span key={kind} className="inline-flex items-center gap-[5px] tabular-nums">
-                <span aria-hidden className="h-2.5 w-[3px] rounded-[2px]" style={{ background: MARK[kind].color }} />
+              <span
+                key={kind}
+                className="inline-flex items-center gap-[5px] tabular-nums"
+              >
+                <span
+                  aria-hidden
+                  className="h-2.5 w-[3px] rounded-[2px]"
+                  style={{ background: MARK[kind].color }}
+                />
                 {MARK[kind].name} {count(kind)}
               </span>
             ) : null
@@ -89,7 +109,10 @@ export function MeetingMap({
               title={chapter.title}
               aria-hidden
               className="absolute top-2.5 h-1.5 rounded-[2px] bg-[var(--el-hairline)]"
-              style={{ left: at(chapter.startMs, lengthMs), width: `calc(${at(end - chapter.startMs, lengthMs)} - 2px)` }}
+              style={{
+                left: at(chapter.startMs, lengthMs),
+                width: `calc(${at(end - chapter.startMs, lengthMs)} - 2px)`,
+              }}
             />
           );
         })}
@@ -110,7 +133,10 @@ export function MeetingMap({
               aria-label={label}
               title={label}
               onClick={() => {
-                setTurns((current) => ({ ...current, [key]: (current[key] ?? 0) + 1 }));
+                setTurns((current) => ({
+                  ...current,
+                  [key]: (current[key] ?? 0) + 1,
+                }));
                 onSelect(next.itemId);
               }}
               // 누를 자리를 옆으로 넓히지 않는다 — 넓히면 가까운 이웃의 표시를 덮어 다른 항목이 열린다.
@@ -119,19 +145,30 @@ export function MeetingMap({
                 "absolute -ml-[1.5px] w-[3px] rounded-[2px] transition-transform duration-200 ease-out before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:scale-y-[1.35] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)] motion-reduce:transition-none",
                 group.length === 1 ? "top-1.5 h-3.5" : "top-1 h-[18px]"
               )}
-              style={{ left: at(group[0].atMs, lengthMs), background: MARK[group[0].kind].color }}
+              style={{
+                left: at(group[0].atMs, lengthMs),
+                background: MARK[group[0].kind].color,
+              }}
             />
           );
         })}
       </div>
-      <div aria-hidden className="relative h-4 text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+      <div
+        aria-hidden
+        className="relative h-4 text-[11px] tabular-nums text-[var(--el-muted-soft)]"
+      >
         {ticks.map((minute) => (
           <span
             key={minute}
             className="absolute top-0 whitespace-nowrap"
             style={{
               left: `${(minute / lastTick) * 100}%`,
-              transform: minute === 0 ? "none" : minute === lastTick ? "translateX(-100%)" : "translateX(-50%)",
+              transform:
+                minute === 0
+                  ? "none"
+                  : minute === lastTick
+                    ? "translateX(-100%)"
+                    : "translateX(-50%)",
             }}
           >
             {tickLabel(minute)}

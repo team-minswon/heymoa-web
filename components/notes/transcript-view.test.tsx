@@ -406,7 +406,11 @@ describe("TranscriptView", () => {
     fireEvent.scroll(viewport!);
     scrollTo.mockClear();
     noteRealtime.transcript.finalSegments = [
-      { type: "transcript.final", utteranceId: "01K0000000401", ...NEW_POLLED_SEGMENT },
+      {
+        type: "transcript.final",
+        utteranceId: "01K0000000401",
+        ...NEW_POLLED_SEGMENT,
+      },
     ];
 
     rerenderTranscript();
@@ -609,10 +613,7 @@ describe("TranscriptView", () => {
       "sm:grid-cols-[max-content_minmax(0,1fr)]"
     );
     expect(partialLabel).toHaveClass("whitespace-nowrap", "shrink-0");
-    expect(partialBody).toHaveClass(
-      "min-w-0",
-      "whitespace-normal"
-    );
+    expect(partialBody).toHaveClass("min-w-0", "whitespace-normal");
     expect(partialBody).not.toHaveClass("truncate", "break-all");
     // **본문 x 좌표가 확정 행과 같아야 한다.** 확정되는 순간 같은 자리에서 바뀌어야지,
     // 글자가 옆으로 튀면 읽던 줄을 놓친다. 실시간 행은 바탕이 있어 안쪽 여백이 필요한데,
