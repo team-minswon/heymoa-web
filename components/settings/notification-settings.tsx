@@ -22,7 +22,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { track } from "@/lib/analytics/track";
-import type { NotificationSettingsResponseDataItemsItemChannelsItem as ChannelSetting } from "@/lib/api/generated/models";
+import type {
+  NotificationSettingsResponseData,
+  NotificationSettingsResponseDataItemsItemChannelsItem as ChannelSetting,
+} from "@/lib/api/generated/models";
 import {
   getGetNotificationSettingsQueryKey,
   useGetNotificationSettingsSuspense,
@@ -92,6 +95,13 @@ function Header() {
   );
 }
 
+type Settings = NotificationSettingsResponseData;
+/** 알림 설정을 쓰는 요청의 표식 — 연타한 요청이 모두 끝났는지 센다. */
+const SETTINGS_WRITE = ["notification-settings-write"];
+const isSettingsWrite = (mutation: { options: { mutationKey?: unknown } }) =>
+  JSON.stringify(mutation.options.mutationKey) ===
+  JSON.stringify(SETTINGS_WRITE);
+
 const CARD =
   "rounded-panel border border-[var(--el-hairline)] bg-white px-6 py-2";
 const ROW = "flex min-h-14 items-center justify-between gap-4 py-3";
@@ -105,20 +115,89 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   const settings = response.data.data;
   const [confirm, setConfirm] = useState<Mute | "reset" | null>(null);
 
-  /** 서버가 돌려준 설정이 곧 화면이다. */
+  const key = getGetNotificationSettingsQueryKey();
+  /** 서버가 돌려준 설정이 곧 화면이다(되돌리기). */
   const apply = (next: { status: number }) => {
-    if (next.status === 200)
-      queryClient.setQueryData(getGetNotificationSettingsQueryKey(), next);
+    if (next.status === 200) queryClient.setQueryData(key, next);
   };
 
-  const mutes = useUpdateNotificationMutes({ mutation: { onSuccess: apply } });
-  const preference = useUpdateNotificationPreference({
-    mutation: { onSuccess: apply },
+  /**
+   * 스위치는 **누르는 즉시** 바뀐다(APP-1349). 캐시를 먼저 고치고, 실패하면 누르기 전 값으로 되돌린다(토스트는 전역 훅).
+   * 진행 중 조회를 취소해 늦게 온 옛 응답이 덮지 못하게 하고, 연타한 요청이 모두 끝난 뒤에 한 번만 서버 값으로 맞춘다 —
+   * 응답 순서가 뒤집혀도 마지막으로 누른 값이 남는다.
+   */
+  const optimistic = <V,>(
+    change: (current: Settings, variables: V) => Settings
+  ) => ({
+    onMutate: async (variables: V) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<typeof response>(key);
+      queryClient.setQueryData<typeof response>(key, (cached) =>
+        cached?.status === 200 && cached.data.success
+          ? {
+              ...cached,
+              data: {
+                ...cached.data,
+                data: change(cached.data.data, variables),
+              },
+            }
+          : cached
+      );
+      return { previous };
+    },
+    onError: (
+      _error: unknown,
+      _variables: V,
+      context: { previous?: typeof response } | undefined
+    ) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
+    onSettled: () => {
+      // 이 요청이 마지막이면(자기 자신만 남았으면) 서버 값으로 맞춘다.
+      if (queryClient.isMutating({ predicate: isSettingsWrite }) <= 1)
+        void queryClient.invalidateQueries({ queryKey: key });
+    },
   });
+
+  const mutes = useUpdateNotificationMutes({
+    mutation: {
+      mutationKey: SETTINGS_WRITE,
+      ...optimistic<{ data?: { muteAll: boolean; muteEmail: boolean } }>(
+        (current, { data }) => ({ ...current, ...data })
+      ),
+    },
+  });
+  const preference = useUpdateNotificationPreference({
+    mutation: {
+      mutationKey: SETTINGS_WRITE,
+      ...optimistic<{
+        data?: { type: string; channel: string; enabled: boolean };
+      }>((current, { data }) =>
+        !data
+          ? current
+          : {
+              ...current,
+              items: current.items.map((item) =>
+                item.type === data.type
+                  ? {
+                      ...item,
+                      channels: item.channels.map((entry) =>
+                        entry.channel === data.channel
+                          ? { ...entry, enabled: data.enabled }
+                          : entry
+                      ),
+                    }
+                  : item
+              ),
+            }
+      ),
+    },
+  });
+  // 되돌리기는 확인 창 안에서 응답을 기다린다 — 무엇으로 돌아가는지는 서버만 안다.
   const reset = useResetNotificationSettings({
     mutation: { onSuccess: apply },
   });
-  const busy = mutes.isPending || preference.isPending || reset.isPending;
+  const busy = reset.isPending;
 
   const setMute = (key: Mute, on: boolean) =>
     mutes.mutate(
@@ -130,15 +209,13 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: () =>
           track("notification_setting_changed", {
             workspace_id: workspaceId,
             scope: key === "muteAll" ? "all" : "email",
             // 「모두 끄기」를 켜면 받는 것이 꺼진다.
             enabled: !on,
-          });
-          setConfirm(null);
-        },
+          }),
       }
     );
 
@@ -307,7 +384,11 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
                       setConfirm(null);
                     },
                   });
-                else if (confirm) setMute(confirm, true);
+                else if (confirm) {
+                  // 확인을 누른 순간 반영하고 창을 닫는다.
+                  setMute(confirm, true);
+                  setConfirm(null);
+                }
               }}
             >
               {confirm === "reset" ? "되돌리기" : "끄기"}

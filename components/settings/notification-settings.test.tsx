@@ -135,6 +135,98 @@ describe("NotificationSettings", () => {
     ]);
   });
 
+  it("스위치는 누르는 즉시 바뀌고, 서버가 실패하면 누르기 전 값으로 돌아온다", async () => {
+    let release: () => void = () => {};
+    server.use(
+      http.put(
+        "*/v1/notification-settings/items",
+        () =>
+          new Promise<Response>((resolve) => {
+            release = () =>
+              resolve(
+                HttpResponse.json(
+                  {
+                    success: false,
+                    data: null,
+                    error: { code: "X", message: "x" },
+                  },
+                  { status: 500 }
+                )
+              );
+          })
+      )
+    );
+    renderSettings();
+    fireEvent.click(
+      await screen.findByRole("switch", { name: "중지된 회의 메일" })
+    );
+    // 응답 전인데 이미 꺼져 있다.
+    await waitFor(() => expect(switchOf("중지된 회의 메일")).not.toBeChecked());
+    expect(switchOf("중지된 회의 메일")).toBeEnabled();
+    release();
+    await waitFor(() => expect(switchOf("중지된 회의 메일")).toBeChecked());
+  });
+
+  it("연타하면 응답 순서가 뒤집혀도 마지막으로 누른 값이 남는다", async () => {
+    let stored = true;
+    let calls = 0;
+    server.use(
+      http.get("*/v1/notification-settings", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            muteAll: false,
+            muteEmail: false,
+            items: [
+              {
+                type: "MEETING_PAUSED_REMINDER",
+                required: false,
+                channels: [
+                  {
+                    channel: "WEB",
+                    provided: false,
+                    enabled: false,
+                    effective: false,
+                  },
+                  {
+                    channel: "EMAIL",
+                    provided: true,
+                    enabled: stored,
+                    effective: stored,
+                  },
+                ],
+              },
+            ],
+          },
+          error: null,
+        })
+      ),
+      http.put("*/v1/notification-settings/items", async ({ request }) => {
+        const { enabled } = (await request.json()) as { enabled: boolean };
+        stored = enabled;
+        calls += 1;
+        // 첫 요청의 응답이 가장 늦게 온다.
+        await new Promise((resolve) =>
+          setTimeout(resolve, calls === 1 ? 120 : 10)
+        );
+        return HttpResponse.json({ success: true, data: null, error: null });
+      })
+    );
+    renderSettings();
+    const toggle = await screen.findByRole("switch", {
+      name: "중지된 회의 메일",
+    });
+    fireEvent.click(toggle); // 끔
+    await waitFor(() => expect(switchOf("중지된 회의 메일")).not.toBeChecked());
+    fireEvent.click(switchOf("중지된 회의 메일")); // 켬
+    await waitFor(() => expect(switchOf("중지된 회의 메일")).toBeChecked());
+    fireEvent.click(switchOf("중지된 회의 메일")); // 끔
+    await waitFor(() => expect(calls).toBe(3));
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(switchOf("중지된 회의 메일")).not.toBeChecked();
+    expect(stored).toBe(false);
+  });
+
   it.each([
     ["알림 모두 끄기", "알림을 모두 끌까요?"],
     ["메일 모두 끄기", "메일을 모두 끌까요?"],
