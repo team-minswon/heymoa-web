@@ -80,9 +80,10 @@ describe("HeyMoa legal pages", () => {
     expect(
       screen.getAllByRole("navigation", { name: "이용약관 목차" })
     ).toHaveLength(2);
-    // 머리에 공고일·시행일이 있다. 이번 판은 날짜를 정하기 전이라 「미정」이다(`LEGAL_CURRENT`).
+    // 머리에 공고일·시행일이 있다(`LEGAL_CURRENT`). 이번 판은 공고한 날 바로 시행한다.
     expect(screen.getByText("공고일")).toBeVisible();
-    expect(screen.getAllByText("미정")).toHaveLength(2);
+    expect(screen.queryByText("미정")).not.toBeInTheDocument();
+    expect(screen.getAllByText("2026년 10월 23일")).toHaveLength(2);
     // 번역본 고지는 한국어본에 서지 않는다.
     expect(screen.queryByRole("link", { name: "한국어본 보기" })).not.toBeInTheDocument();
   });

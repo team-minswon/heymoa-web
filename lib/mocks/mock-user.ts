@@ -24,7 +24,7 @@ export const MOCK_USER: AuthUser = {
 };
 
 /** 목 서버가 정한 지금 문서 버전. 계약의 `consents[].currentVersion` 이다. */
-export const MOCK_CONSENT_VERSION = "2026-10-22";
+export const MOCK_CONSENT_VERSION = "2026-10-23";
 
 /**
  * 내 정보 응답이 `AuthUser` 에 더해 싣는 칸(APP-1276 동의 · APP-1283 언어). **목 사용자는 이미 동의한 계정으로
