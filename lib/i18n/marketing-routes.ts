@@ -55,6 +55,14 @@ export function marketingRewrites() {
  */
 export function marketingRedirects() {
   return [
+    // 가이드·다운로드가 페이지마다 내던 공유 이미지(`/ko/help/<그룹>/<페이지>/opengraph-image-<해시>`)는 APP-1400 에서
+    // 지웠지만, 미리보기를 캐시한 Meta·Slack 등이 계속 다시 묻는다. 사이트 공통 그림으로 보내 미리보기가 깨지지 않고,
+    // 404 를 그리러 함수가 돌지 않는다(APP-1419). 301 은 크롤러가 가장 널리 따르는 영구 이동이다.
+    {
+      source: `/:path((?:(?:${LOCALES.join("|")})/)?(?:help|download)(?:/.*)?/opengraph-image.*)`,
+      destination: "/opengraph-image.png",
+      statusCode: 301 as const,
+    },
     { source: `/${DEFAULT_LOCALE}`, destination: "/", permanent: true },
     // 공유 이미지(`opengraph-image`)는 빼고 옮긴다. Next 가 한국어 페이지의 og:image 를 rewrite 뒤 주소
     // (`/ko/download/opengraph-image`)로 내므로, 옮기면 크롤러가 이미지마다 이동을 한 번 더 탄다.

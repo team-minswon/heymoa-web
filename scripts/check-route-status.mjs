@@ -44,16 +44,25 @@ const CASES = [
     type: "text/html",
     text: "Page not found",
   })),
+  // 스캐너 경로도 같은 정적 404 다(APP-1419).
+  { path: "/meta.json", status: 404, type: "text/html", text: "Page not found" },
+  // 지운 페이지별 공유 이미지는 사이트 공통 그림으로 301(APP-1419).
+  ...[
+    "/ko/help/situations/record-call-audio/opengraph-image-1a2b3c",
+    "/en/help/start/opengraph-image-1a2b3c",
+    "/ko/download/opengraph-image-9f8e",
+  ].map((path) => ({ path, status: 301, location: "/opengraph-image.png" })),
 ];
 
 let failed = 0;
-for (const { path, status, type, text } of CASES) {
+for (const { path, status, type = "", text, location } of CASES) {
   const response = await fetch(origin + path, { redirect: "manual" });
   const contentType = response.headers.get("content-type") ?? "";
   const body = text ? await response.text() : "";
   const ok =
     response.status === status &&
     contentType.startsWith(type) &&
+    (!location || response.headers.get("location")?.endsWith(location)) &&
     (!text || body.includes(text));
   if (!ok) failed++;
   console.log(

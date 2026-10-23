@@ -123,7 +123,7 @@ async function expectNotFound(page: Page, lang: "ko" | "en") {
 }
 
 /**
- * `/en` 아래 없는 주소는 `app/[lang]/[...rest]` 가 `notFound()` 를 불러 `app/[lang]/not-found.tsx` 가 그린다.
+ * `/en` 아래 없는 주소도 미리 그린 전역 404(`app/global-not-found.tsx`)가 받고, 주소의 언어 접두사로 영어 본문을 고른다(APP-1419).
  * **상태 코드는 여기서 보지 않는다.** 목 모드에서는 `MockProvider` 가 SSR 에서 본문을 그리지 않아 `notFound()` 가
  * 응답 전에 불리지 않으므로 200 이다. 운영 빌드의 404 는 `scripts/check-route-status.mjs` 가 본다.
  */

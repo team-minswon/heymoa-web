@@ -71,6 +71,34 @@ describe("마케팅 경로 목록 하나가 rewrite·크롬 판정을 정한다"
     );
   });
 
+  it("지운 페이지별 공유 이미지 주소는 사이트 공통 그림으로 301 이동한다(APP-1419)", () => {
+    const rule = marketingRedirects()[0];
+    expect(rule).toMatchObject({
+      destination: "/opengraph-image.png",
+      statusCode: 301,
+    });
+    const pattern = new RegExp(`^/${rule.source.slice("/:path(".length, -1)}$`);
+    for (const path of [
+      "/ko/help/opengraph-image-1a2b3c",
+      "/ko/help/start/opengraph-image-1a2b3c",
+      "/ko/help/situations/record-call-audio/opengraph-image-1a2b3c",
+      "/en/help/situations/record-call-audio/opengraph-image",
+      "/ko/download/opengraph-image-9f8e",
+      "/download/opengraph-image",
+      "/help/start/desktop/opengraph-image-1a2b3c",
+    ]) {
+      expect(pattern.test(path), path).toBe(true);
+    }
+    for (const path of [
+      "/opengraph-image.png",
+      "/help/start/desktop",
+      "/help/getting-started/new-meeting.webp",
+      "/w/x/opengraph-image",
+    ]) {
+      expect(pattern.test(path), path).toBe(false);
+    }
+  });
+
   it.each([
     ["/", true],
     ["/en", true],

@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { lang } from "next/root-params";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { cookieLocale } from "@/lib/i18n/current";
-import { isLocale, LOCALES } from "@/lib/i18n/locales";
+import { DEFAULT_LOCALE, isLocale, LOCALES } from "@/lib/i18n/locales";
 import { siteMetadataFor } from "@/lib/site";
 
 /**
  * 언어는 ko·en 뿐이다. 그 밖의 첫 세그먼트(`/foo/help`)는 미리 그린(●) 페이지라면 라우팅 단계에서 떨어져
- * `[...rest]` 의 404 가 된다. **요청 때 그리는(ƒ) 페이지에는 이 설정이 걸리지 않는다** — 마케팅 페이지는 모두
+ * 전역 404(`app/global-not-found.tsx`, 미리 그린 ○)가 된다. 언어 아래의 없는 주소(`/en/nope`)도 같다 — 예전에는
+ * `[...rest]` 가 잡아 요청마다 그렸다(APP-1419). **요청 때 그리는(ƒ) 페이지에는 이 설정이 걸리지 않는다** — 마케팅 페이지는 모두
  * 미리 그리고(APP-1418), 랜딩은 그래도 스스로 언어를 확인한다(`app/[lang]/page.tsx`). 루트 레이아웃에서 `notFound()` 를 부르면 그 위에 경계가 없어
  * Next 기본 404 가 뜬다(16.3.8 실측).
  */
@@ -33,16 +33,9 @@ export default async function MarketingRootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const locale = await lang();
-  if (!isLocale(locale)) {
-    // 첫 세그먼트가 언어가 아닌데 하위 주소가 있으면(`/wp-admin/x`) `[...rest]` 가 잡혀 여기 온다. 그 페이지가
-    // 404 를 내므로 셸 없이 문서만 세운다 — 스캐너가 두드리는 아무 경로마다 SSR 유저 조회가 실서버로 나가지 않게(APP-224).
-    return (
-      <html lang={await cookieLocale()} className="h-full antialiased">
-        <body className="min-h-full">{children}</body>
-      </html>
-    );
-  }
+  // 언어가 아닌 첫 세그먼트는 라우팅 단계에서 전역 404 로 떨어져 여기 오지 않는다(`dynamicParams = false`).
+  const value = await lang();
+  const locale = isLocale(value) ? value : DEFAULT_LOCALE;
   // 랜딩 상단 바 · 푸터는 마케팅 면 전부에 서고(`NavbarGate` · `FooterGate`, 클라이언트) 랜딩 문구를 쓴다.
   return (
     <AppShell
