@@ -75,7 +75,7 @@ test("문의 답변 행을 누르면 「내 문의」가 그 문의를 연다. �
     "aria-selected",
     "true"
   );
-  await expect(feedback.locator('[data-focused]')).toContainText(
+  await expect(feedback.locator("[data-focused]")).toContainText(
     "녹음 중에 전사가 몇 분 멈췄어요"
   );
   await page.keyboard.press("Escape");
@@ -341,7 +341,12 @@ for (const width of [1440, 1024]) {
       const text = row.querySelector("p, button:not([aria-label])")!;
       const aside = row.lastElementChild!.getBoundingClientRect();
       const day = node.querySelector("h3")!;
+      let scroller = row.parentElement!;
+      while (!/auto|scroll/.test(getComputedStyle(scroller).overflowY))
+        scroller = scroller.parentElement!;
       return {
+        // 클래식 막대(15px)는 `scrollbar-gutter: stable` 로 자리를 잡고, 오버레이 막대는 0 이다.
+        gutter: scroller.offsetWidth - scroller.clientWidth,
         dialogLeft: Math.round(box.left),
         dialogRight: Math.round(box.right),
         title: left("h2"),
@@ -366,12 +371,16 @@ for (const width of [1440, 1024]) {
     expect(geometry.title).toBe(base);
     expect(geometry.day).toBe(base);
     // APP-1363 — 카드 바깥 8·12px 이 답답해 24px 로 넓혔다. 행 위아래 14px, 날짜 묶음 사이 20px.
-    expect(geometry.card).toEqual([base, geometry.dialogRight - 24]);
+    // 오른쪽 24px 은 막대 자리 안쪽에서 잰다 — 시험 브라우저는 클래식 막대(15px)라 그만큼 더 들어간다.
+    const right = geometry.dialogRight - geometry.gutter;
+    expect(geometry.card).toEqual([base, right - 24]);
     expect(geometry.text).toBe(base + 16);
-    expect(geometry.asideRight).toBe(geometry.dialogRight - 40);
+    expect(geometry.asideRight).toBe(right - 40);
     expect([geometry.rowPad, geometry.dayTop]).toEqual(["14px", "20px"]);
     if (width === 1440)
-      expect([geometry.text, geometry.asideRight]).toEqual([490, 950]);
+      expect([geometry.text, geometry.asideRight + geometry.gutter]).toEqual([
+        490, 950,
+      ]);
     expect(geometry.dayPosition).toBe("sticky");
     expect(geometry.dayBg).not.toBe(geometry.cardBg);
   });
