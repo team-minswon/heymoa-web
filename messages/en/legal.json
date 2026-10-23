@@ -165,7 +165,7 @@
               ],
               [
                 "Agent",
-                "Questions sent to the agent and its answers, and identifiers of the meeting notes each answer referred to"
+                "Questions sent to the agent and its answers, and references to the meeting notes each answer referred to"
               ],
               [
                 "Integrations",
@@ -198,7 +198,7 @@
         "body": [
           "Providing the Service: identifying members and keeping them signed in, running workspaces, transcribing meetings, saving and viewing notes, AI summaries and agent answers, and exporting to external tools when you approve. This processing is needed to perform the service contract with you.",
           "Sending email and answering inquiries: sending meeting notes sharing emails, invitation emails, and service notification emails (such as reminders about long-paused meetings and notices of automatic ending), and answering inquiries. Service notifications and notification emails never include the meeting content, transcript, summary, or attendee names. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
-          "Automatic meeting ending: meetings paused for a long time are ended automatically after prior notice, and their analysis may proceed under the name of the person who started the meeting (or, if that person has left the workspace, the person who last recorded, then an administrator).",
+          "Automatic meeting ending: meetings paused for a long time are ended automatically after prior notice, and their analysis may proceed under the name of the person who started the meeting (or, if that person has left the workspace, another member who recorded the meeting or an administrator).",
           "Operations and security: access logs, sign-in records, and server logs are used to prevent misuse, analyze outages, support users, and investigate security incidents.",
           "Improving the Service: usage statistics and performance metrics are used to analyze how the Service is used and improve it (Article 5). Reasons for deleting an account are used only as statistics for improving the Service.",
           "The voices and names of attendees who have not signed up are processed only to the extent needed to perform the service contract with the user who recorded the meeting."
@@ -222,8 +222,8 @@
         "body": [
           "HeyMoa does not use your meeting audio, transcripts, notes, questions, or answers to train AI models. The speech recognition and AI providers HeyMoa engages receive this data only on terms that it is not used for training. External AI agents that you connect yourself are subject to their own policies.",
           "To produce summaries, real-time organization, and answers to questions, the meeting's transcript, notes, attendee names, and your questions are sent to large language model providers (Article 7). These requests are made on terms that inputs and outputs are not stored (zero data retention).",
-          "When the agent uses web search, search queries written by the model are sent through OpenRouter to the built-in search of the AI model provider.",
-          "Transcripts and notes are converted into numerical representations (vectors) and kept so that past meeting notes can be found and referenced. Vectors are deleted when the original note is deleted.",
+          "When the agent uses web search, search queries made for your question are sent to the AI model provider's search feature (Article 7).",
+          "A search index is built from transcripts and notes and kept so that past meeting notes can be found and referenced. The index is deleted when the original note is deleted.",
           "HeyMoa does not make decisions based solely on AI results that significantly affect your rights or obligations (automated decisions under Article 37-2 of the Personal Information Protection Act). AI summaries are for reference only.",
           "If you connect Linear or GitHub, an approval screen shows what the agent will write before it writes to that tool. Only actions you approve are executed.",
           "If you allow an external AI agent such as Claude or ChatGPT to read your workspace, that agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view. The agent can only read content and cannot change it.",
@@ -233,36 +233,12 @@
       {
         "title": "5. Automatic Collection and How to Refuse It",
         "body": [
-          "Essential cookies that keep you signed in: they last while you are signed in, expire at most 30 days after you last used the Service, and are deleted when you sign out. If you block them in your browser, you cannot sign in.",
-          "To remember the state of the screen, the following values are stored in your browser.",
-          {
-            "columns": [
-              "Type",
-              "Where it is stored",
-              "What it holds"
-            ],
-            "rows": [
-              [
-                "Sidebar state",
-                "Cookie",
-                "Whether the sidebar is expanded"
-              ],
-              [
-                "Screen settings",
-                "Browser storage",
-                "Screen settings such as the workspace and project you last opened, whether you have already seen guidance, and a temporary marker used to recover a dropped recording"
-              ],
-              [
-                "Recording tab marker",
-                "Tab storage (cleared when the tab is closed)",
-                "Which tab is recording"
-              ]
-            ]
-          },
+          "Essential cookies that keep you signed in: they remain after you close the browser, expire at most 30 days after you last used the Service, and are deleted when you sign out. If you block them in your browser, you cannot sign in.",
+          "To remember the state of the screen, screen settings such as the sidebar state, the workspace and project you last opened, and whether you have already seen guidance, along with recording status used to track the recording tab and recover a dropped recording, are stored in cookies and browser storage.",
           "These values are stored separately for each browser and device. Records of which guidance you have already seen are cleared when you sign out.",
           "To improve the Service, HeyMoa collects navigation paths, performance metrics, and feature usage records with Google Analytics 4, PostHog, Vercel Analytics, and Vercel Speed Insights. These tools may store identifiers in your browser or collect access information.",
-          "Instead of your email or name, PostHog receives internal member and workspace identifiers, the features you used and when (for example, creating a meeting, starting a recording, or completing a review), the address of the screens you visited (without the part after ?), and device and browser information. Session recording and automatic click capture are not used.",
-          "Records processed on the server, such as completed meeting analyses, speaker separation results, dropped recording connections, notifications created, notification emails sent or skipped, automatic meeting endings, email unsubscribes, and account deletions, are sent to PostHog. Only member identifiers, workspace identifiers, and values such as the type, count, or number of days of each record are sent, never meeting titles or email addresses. Account deletion records include the type of reason chosen, but not any text you entered. Records processed on the server cannot be refused through browser settings.",
+          "Instead of your email or name, PostHog receives internal member and workspace identifiers, the features you used and when (for example, creating a meeting, starting a recording, or completing a review), the address of the screens you visited (without extra details such as search conditions attached to the address), and device and browser information. Session recording and automatic click capture are not used.",
+          "Records processed on the server, such as meeting analyses, dropped recording connections, notifications and notification emails sent, automatic meeting endings, and account deletions, are sent to PostHog. Only member identifiers, workspace identifiers, and values such as the type, count, or number of days of each record are sent, never meeting titles or email addresses. Account deletion records include the type of reason chosen, but not any text you entered. Records processed on the server cannot be refused through browser settings.",
           "The contents of meeting audio, transcripts, and notes are never sent to analytics tools.",
           "How to refuse: you can block or delete cookies and site data in your browser settings. For example, in Chrome you can delete cookies and site data under Settings > Privacy and security > Delete browsing data, and in Safari under Settings > Privacy > Manage Website Data. You can also block requests to analytics tools with your browser's tracking prevention or a content-blocking extension. Google Analytics can be refused with the opt-out browser add-on provided by Google (tools.google.com/dlpage/gaoptout).",
           "Refusing analytics tools does not limit your use of the Service. Deleting the authentication cookies, however, means you will need to sign in again."
@@ -285,7 +261,7 @@
                 "Article 3"
               ],
               [
-                "Transcripts, notes, AI summaries, search vectors, agent conversations",
+                "Transcripts, notes, AI summaries, search indexes, agent conversations",
                 "Until you delete them",
                 "Deleted along with the note or workspace. Deleting your account deletes the records of workspaces you used alone and your own agent conversations in every workspace; transcripts, notes, and AI summaries in team workspaces remain (see below)"
               ],
@@ -476,7 +452,7 @@
               ],
               [
                 "Data",
-                "Meeting audio files (delivered through a download link that stays open for 1 hour). Attendee names and transcripts are not sent"
+                "Meeting audio files. Attendee names and transcripts are not sent"
               ],
               [
                 "When",
@@ -514,7 +490,7 @@
               ],
               [
                 "Purpose",
-                "Meeting summaries, extracting decisions and tasks, agent answers, generating search vectors"
+                "Meeting summaries, extracting decisions and tasks, agent answers, building search indexes"
               ],
               [
                 "Retention",
@@ -626,7 +602,7 @@
               ],
               [
                 "Purpose",
-                "Running servers, storing data, sending email (Amazon SES)"
+                "Running servers, storing data, sending email"
               ],
               [
                 "Retention",
@@ -648,7 +624,7 @@
               ],
               [
                 "Data",
-                "Notes and transcripts being viewed (passing through while pages are rendered and delivered), access logs, performance metrics"
+                "Notes and transcripts being viewed (passing through while web pages are delivered), access logs, performance metrics"
               ],
               [
                 "When",
@@ -812,8 +788,8 @@
         "body": [
           "HeyMoa takes the following measures to protect personal information.",
           "Encryption: all data in transit is encrypted. The database and audio storage are encrypted at rest, and external tool integration credentials are additionally encrypted before they are stored.",
-          "Access control: meeting data can be viewed only by workspace members and by the people and services you share it with by email or connect. The audio storage is not public, and only the service servers can read and write it. Audio is delivered to the speaker separation provider through a download link that stays open for 1 hour (Article 7).",
-          "Credential management: sign-in information is kept in cookies that programs running in web pages cannot read. When you delete your account, remaining sign-ins and real-time connections are cut right away; when a workspace is deleted, connections to that workspace are cut.",
+          "Access control: meeting data can be viewed only by workspace members and by the people and services you share it with by email or connect. The audio storage is not public, and audio is delivered to the speaker separation provider through a temporary link that expires after a short time.",
+          "Credential management: cookies used to keep you signed in are protected so that scripts on web pages cannot read them. When you delete your account, remaining sign-ins and real-time connections are cut right away; when a workspace is deleted, connections to that workspace are cut.",
           "Log management: meeting content is not written to server logs, and logs are deleted after the set period (Article 6)."
         ]
       },
