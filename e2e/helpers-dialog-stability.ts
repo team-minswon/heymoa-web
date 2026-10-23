@@ -116,7 +116,10 @@ export function notificationScrollbarTests(classic: boolean) {
       }, classic);
       expect(g.scrollable).toBe(true);
       expect(g.primitive).toBe(0);
-      expect(g.bar).toBe(classic ? 15 : 0);
+      // 오버레이 쪽은 막대 폭을 안 본다. 헤드리스의 --hide-scrollbars 는 막대를 숨길 뿐 `scrollbar-gutter: stable` 자리(15px)는
+      // 그대로 잡는다 — 진짜 오버레이 막대(트랙패드)에서는 이 자리가 0 이라 시험 브라우저로는 그 조건을 못 만든다.
+      // 카드와 겹치지 않는지는 아래 cardGap·hits 가 막대 자리 안쪽 기준으로 본다.
+      if (classic) expect(g.bar).toBe(15);
       expect(new Set(g.cardGap)).toEqual(new Set([24]));
       if (classic)
         expect(g.hits).toEqual(["list"]); // 머리글(H3)·카드에 끊기지 않는다
