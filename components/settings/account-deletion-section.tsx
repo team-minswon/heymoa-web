@@ -102,7 +102,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
   const recordingNow = isRecordingLive(recording);
   const plan = useDeletionPlan(true);
   const deleteAccount = useDeleteAccount();
-  const reauth = useReauth("ACCOUNT_DELETE");
+  const reauth = useReauth("ACCOUNT_DELETION");
   const reasonId = useId();
 
   const [choices, setChoices] = useState<Record<string, Choice>>({});
@@ -141,7 +141,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
     try {
       await deleteAccount.mutateAsync({
         confirmation: typed.trim(),
-        reauthProof: verified.proof,
         workspaces: workspaces
           .filter((row) => row.action === "TRANSFER_OR_DELETE")
           .map((row) => ({ workspaceId: row.workspaceId, ...choiceOf(row) })),

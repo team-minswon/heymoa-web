@@ -56,8 +56,6 @@ export type WorkspaceDecision =
 
 export type DeleteAccountRequest = {
   confirmation: string;
-  /** Google 재로그인 증명. 서버가 쿠키로 주면 비어 있다 */
-  reauthProof?: string;
   /** `TRANSFER_OR_DELETE` 워크스페이스마다 하나. 나머지는 서버가 정한 대로 한다 */
   workspaces: WorkspaceDecision[];
   reason?: { code: WithdrawalReasonCode; detail?: string };
@@ -65,7 +63,6 @@ export type DeleteAccountRequest = {
 
 export type DeleteWorkspaceRequest = {
   workspaceName: string;
-  reauthProof?: string;
 };
 
 type Envelope<T> = { data: { success: boolean; data: T }; status: number };

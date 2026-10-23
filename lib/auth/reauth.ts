@@ -10,24 +10,24 @@ import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
  * `/auth/reauth` 에 닿고, 그 페이지가 결과를 `BroadcastChannel` 로 알린다. `window.opener` 로 받지 않는 이유:
  * Google 로그인 페이지의 COOP 가 창 관계를 끊어 돌아와도 opener 가 null 이고, 같은 이유로 `popup.closed` 도 믿을 수 없다.
  *
- * server 방식(APP-1378 spec)이 정해지기 전의 가정: 시작 주소는 로그인과 같은 authorize 에 `reauth=<목적>` 을 붙인 것,
- * 증명은 server 가 쿠키로 심거나 돌아오는 주소의 `proof` 로 준다. 둘 다 받는다. 다르면 여기만 고친다.
+ * server 계약(APP-1378): 시작은 로그인과 같은 authorize 에 `reauth=<목적>`, 증명은 HttpOnly 쿠키 `reauth_proof`(5분)라
+ * 화면은 증명을 만지지 않는다. 결과는 돌아오는 주소의 `reauth=ok|failed`(실패면 `reason`)로만 온다.
  */
-export type ReauthPurpose = "ACCOUNT_DELETE" | "WORKSPACE_DELETE";
+export type ReauthPurpose = "ACCOUNT_DELETION" | "WORKSPACE_DELETION";
 
-export type ReauthResult = { ok: true; proof?: string } | { ok: false };
+export type ReauthResult = { ok: boolean };
 
 export const REAUTH_CHANNEL = "heymoa:reauth";
 export const REAUTH_RETURN_PATH = "/auth/reauth";
 /** Google 창에서 아무것도 하지 않고 떠난 경우. 지나면 확인 화면으로 돌아간다. */
 const REAUTH_TIMEOUT_MS = 5 * 60_000;
 
-export type ReauthMessage = { purpose: string; ok: boolean; proof?: string };
+export type ReauthMessage = { purpose: string; ok: boolean };
 
 export function reauthUrl(purpose: ReauthPurpose) {
   const returnTo = `${REAUTH_RETURN_PATH}?purpose=${purpose}`;
   // 목 환경에는 Google 이 없다 — 돌아올 페이지로 바로 간다(`/mock-oauth` 와 같은 까닭).
-  if (shouldEnableMocking()) return `${returnTo}&proof=mock-reauth-proof`;
+  if (shouldEnableMocking()) return `${returnTo}&reauth=ok`;
   return buildApiUrl(
     `/v1/auth/oauth2/authorize/google?reauth=${purpose}&returnTo=${encodeURIComponent(returnTo)}`
   );
@@ -63,7 +63,7 @@ export function startReauth(purpose: ReauthPurpose): {
 
   channel.onmessage = (event: MessageEvent<ReauthMessage>) => {
     if (event.data?.purpose !== purpose) return;
-    done(event.data.ok ? { ok: true, proof: event.data.proof } : { ok: false });
+    done({ ok: event.data.ok });
   };
 
   return { result, cancel: () => done({ ok: false }) };

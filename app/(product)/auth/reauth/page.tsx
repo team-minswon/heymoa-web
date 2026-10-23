@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ReauthLanding } from "@/components/auth/reauth-landing";
 import { privateRouteMetadata } from "@/lib/site";
 
-// 증명이 주소에 실려 올 수 있는 입구라 noindex 다(콜백과 같은 까닭).
+// 로그인 왕복의 끝이라 noindex 다(콜백과 같은 까닭).
 export const metadata: Metadata = privateRouteMetadata;
 
 function first(value: string | string[] | undefined) {
@@ -20,8 +20,7 @@ export default async function ReauthPage({
   return (
     <ReauthLanding
       purpose={first(query.purpose) ?? ""}
-      proof={first(query.proof)}
-      failed={first(query.error) !== undefined}
+      ok={first(query.reauth) === "ok"}
     />
   );
 }

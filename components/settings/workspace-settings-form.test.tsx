@@ -182,7 +182,6 @@ describe("WorkspaceSettingsForm", () => {
     expect(mutations.deleteWorkspace).toHaveBeenCalledWith({
       workspaceId: "01K0000000007",
       workspaceName: "제품 팀",
-      reauthProof: undefined,
     });
   });
 });

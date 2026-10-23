@@ -112,7 +112,7 @@ describe("AccountDeletionSection", () => {
     state.deleteAccount.mockReset().mockResolvedValue({ status: 204 });
     state.refetch.mockReset();
     state.leave.mockReset();
-    state.reauth.mockReset().mockResolvedValue({ ok: true, proof: "P" });
+    state.reauth.mockReset().mockResolvedValue({ ok: true });
     state.phase = "idle";
   });
   afterEach(cleanup);
@@ -148,7 +148,6 @@ describe("AccountDeletionSection", () => {
     expect(state.reauth).toHaveBeenCalledTimes(1);
     expect(state.deleteAccount).toHaveBeenCalledWith({
       confirmation: "회원 탈퇴",
-      reauthProof: "P",
       workspaces: [
         { workspaceId: "W4", decision: "TRANSFER", successorUserId: "U1" },
       ],

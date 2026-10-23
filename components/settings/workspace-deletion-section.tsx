@@ -51,7 +51,7 @@ export function WorkspaceDeletionSection({
   const workspaces = okData(useGetWorkspaces().data)?.workspaces ?? [];
   const recordingHere = isWorkspaceRecordingActive(useRecording(), workspaceId);
   const remove = useDeleteWorkspace();
-  const reauth = useReauth("WORKSPACE_DELETE");
+  const reauth = useReauth("WORKSPACE_DELETION");
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,6 @@ export function WorkspaceDeletionSection({
       await remove.mutateAsync({
         workspaceId,
         workspaceName: typed.trim(),
-        reauthProof: verified.proof,
       });
     } catch (failure) {
       setError(errorMessageOf(failure, "워크스페이스를 삭제하지 못했습니다."));

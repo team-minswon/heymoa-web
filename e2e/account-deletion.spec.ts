@@ -34,7 +34,6 @@ test("탈퇴는 「회원 탈퇴」 입력과 재로그인 창을 거쳐 완료 
   await popup;
   expect((await request).postDataJSON()).toMatchObject({
     confirmation: "회원 탈퇴",
-    reauthProof: "mock-reauth-proof",
     workspaces: [
       {
         workspaceId: "01K0000000000",

@@ -793,7 +793,9 @@ describe("워크스페이스 나가기", () => {
     fireEvent.change(within(dialog).getByLabelText(/확인하려면/), {
       target: { value: "  테스트 워크스페이스 " },
     });
-    expect(within(dialog).getByRole("button", { name: "나가기" })).toBeEnabled();
+    expect(
+      within(dialog).getByRole("button", { name: "나가기" })
+    ).toBeEnabled();
   });
 
   // 목적지 규칙은 `auth-callback-client.tsx`의 `pickWorkspaceId`를 그대로 쓴다.
