@@ -476,7 +476,7 @@
               ],
               [
                 "Data",
-                "Meeting audio files (delivered through a download link that stays open for 1 hour)"
+                "Meeting audio files (delivered through a download link that stays open for 1 hour), processing settings (model, expected number of speakers), and the HeyMoa address that receives results. Attendee names and transcripts are not sent"
               ],
               [
                 "When",
@@ -488,7 +488,7 @@
               ],
               [
                 "Retention",
-                "No copy of the audio is kept. Processing results are deleted after 24 hours. Not used for training"
+                "No copy of the audio is kept after processing, and processing results are deleted after 24 hours. Processing records such as job settings and timestamps (excluding audio and transcript content) are kept for the contract term and 18 months after it ends, then aggregated and anonymized. Not used for training"
               ]
             ]
           },
