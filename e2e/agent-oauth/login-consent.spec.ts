@@ -53,28 +53,39 @@ test.beforeEach(async ({ page }) => {
   await page.request.post(`${API}/__test/reset`);
 });
 
-test("체크하기 전에는 Google 로그인이 시작되지 않고 이유가 체크박스 옆에 보인다", async ({
+test("체크하기 전에는 Google 로그인이 시작되지 않고, 누르면 높이 변화 없이 체크박스로 보낸다", async ({
   page,
 }) => {
   const dialog = await openLoginModal(page);
   const google = dialog.getByRole("button", { name: "Google로 로그인" });
+  const agreement = dialog.getByRole("checkbox");
+  // 레이아웃 높이다. 창이 열리며 커지는 transform 은 빼고 본다.
+  const height = () =>
+    dialog.evaluate((element) => (element as HTMLElement).offsetHeight);
 
-  await expect(google).toBeDisabled();
-  await expect(
-    dialog.getByText("동의해야 로그인할 수 있습니다.")
-  ).toBeVisible();
+  // 흐리게만 보이고 클릭은 받는다. 이유 문장은 스크린리더에만 있다(APP-1402).
+  await expect(google).toHaveAttribute("aria-disabled", "true");
+  await expect(google).toHaveAccessibleDescription(
+    "동의해야 로그인할 수 있습니다."
+  );
+  const before = await height();
 
+  // Playwright 는 aria-disabled 버튼을 「누를 수 없음」으로 보고 기다린다. 실제 브라우저에서는 눌린다.
   await google.click({ force: true });
+  await expect(agreement).toBeFocused();
+  await expect(dialog.getByRole("status")).toHaveText(
+    "동의해야 로그인할 수 있습니다."
+  );
   await expect(page).toHaveURL("/");
   expect((await fakeLog(page)).google).toBe(0);
+  expect(await height()).toBe(before);
 
-  // 체크하면 열리고, 풀면 다시 닫힌다.
-  const agreement = dialog.getByRole("checkbox");
+  // 체크하면 열리고, 풀면 다시 막힌다. 어느 쪽이든 창 높이는 그대로다.
   await agreement.check();
-  await expect(google).toBeEnabled();
-  await expect(dialog.getByText("동의해야 로그인할 수 있습니다.")).toBeHidden();
+  await expect(google).not.toHaveAttribute("aria-disabled");
+  expect(await height()).toBe(before);
   await agreement.uncheck();
-  await expect(google).toBeDisabled();
+  await expect(google).toHaveAttribute("aria-disabled", "true");
 });
 
 test("문서 이름은 각 문서로 가는 링크이고 체크박스의 이름에 들어 있다", async ({
@@ -176,8 +187,12 @@ test("로그인 창을 거치지 않은 로그인은 동의를 기록하지 않�
     page.getByRole("heading", { name: "약관에 동의해 주세요" })
   ).toBeVisible();
   const agree = page.getByRole("button", { name: "동의하고 계속" });
-  await expect(agree).toBeDisabled();
-  await expect(page.getByText("동의해야 계속할 수 있습니다.")).toBeVisible();
+  await expect(agree).toHaveAttribute("aria-disabled", "true");
+  await agree.click({ force: true });
+  await expect(page.getByRole("checkbox")).toBeFocused();
+  await expect(page.getByRole("status")).toHaveText(
+    "동의해야 계속할 수 있습니다."
+  );
   expect((await fakeLog(page)).consentAttempts).toBe(0);
   await expect(page).toHaveURL(/\/auth\/callback/);
 
@@ -196,10 +211,10 @@ test("영어판 로그인 창은 영어 문구와 /en 문서 링크를 쓴다", 
   const dialog = await openLoginModal(page, "/en", "Get started free");
   const google = dialog.getByRole("button", { name: "Sign in with Google" });
 
-  await expect(google).toBeDisabled();
-  await expect(
-    dialog.getByText("You need to agree before you can sign in.")
-  ).toBeVisible();
+  await expect(google).toHaveAttribute("aria-disabled", "true");
+  await expect(google).toHaveAccessibleDescription(
+    "You need to agree before you can sign in."
+  );
   await expect(
     dialog.getByRole("checkbox", {
       name: "I have read and agree to the Privacy Policy and the Terms of Service",
@@ -213,5 +228,5 @@ test("영어판 로그인 창은 영어 문구와 /en 문서 링크를 쓴다", 
   ).toHaveAttribute("href", "/en/terms");
 
   await dialog.getByRole("checkbox").check();
-  await expect(google).toBeEnabled();
+  await expect(google).not.toHaveAttribute("aria-disabled");
 });

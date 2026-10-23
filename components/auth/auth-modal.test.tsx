@@ -38,19 +38,29 @@ describe("AuthModal 약관 동의", () => {
   });
   afterEach(cleanup);
 
-  it("체크하기 전에는 로그인 버튼이 눌리지 않고 이유가 체크박스 옆에 보인다", () => {
+  it("체크하기 전에는 로그인이 시작되지 않고, 누르면 체크박스로 초점이 가며 이유를 스크린리더에 알린다", () => {
     render(<AuthModal open />);
 
     expect(agreement()).not.toBeChecked();
-    expect(loginButton()).toBeDisabled();
-    const reason = screen.getByText("동의해야 로그인할 수 있습니다.");
-    expect(reason).toBeInTheDocument();
-    expect(agreement()).toHaveAttribute("aria-describedby", reason.id);
+    // 흐리게 보이지만 클릭은 받는다 — 화면에 줄을 두지 않아 체크 전후 높이가 같다(APP-1402).
+    expect(loginButton()).toBeEnabled();
+    expect(loginButton()).toHaveAttribute("aria-disabled", "true");
+    expect(loginButton()).toHaveAccessibleDescription(
+      "동의해야 로그인할 수 있습니다."
+    );
+    expect(agreement()).toHaveAccessibleDescription(
+      "동의해야 로그인할 수 있습니다."
+    );
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
 
     fireEvent.click(loginButton());
 
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
     expect(window.sessionStorage.length).toBe(0);
+    expect(agreement()).toHaveFocus();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "동의해야 로그인할 수 있습니다."
+    );
   });
 
   it("체크하면 로그인이 시작되고, 체크하고 시작했다는 표시가 이동 전에 남는다", () => {
@@ -59,7 +69,7 @@ describe("AuthModal 약관 동의", () => {
     fireEvent.click(agreement());
 
     expect(agreement()).toBeChecked();
-    expect(loginButton()).toBeEnabled();
+    expect(loginButton()).not.toHaveAttribute("aria-disabled");
     expect(
       screen.queryByText("동의해야 로그인할 수 있습니다.")
     ).not.toBeInTheDocument();
@@ -78,10 +88,9 @@ describe("AuthModal 약관 동의", () => {
     fireEvent.click(agreement());
     fireEvent.click(agreement());
 
-    expect(loginButton()).toBeDisabled();
-    expect(
-      screen.getByText("동의해야 로그인할 수 있습니다.")
-    ).toBeInTheDocument();
+    expect(loginButton()).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(loginButton());
+    expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
   });
 
   it("문서 이름은 각 문서로 가는 링크이고 창을 닫지 않게 새 탭으로 열린다", () => {
@@ -106,16 +115,16 @@ describe("AuthModal 약관 동의", () => {
         name: "I have read and agree to the Privacy Policy and the Terms of Service",
       })
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("You need to agree before you can sign in.")
-    ).toBeInTheDocument();
+    expect(loginButton()).toHaveAccessibleDescription(
+      "You need to agree before you can sign in."
+    );
     expect(
       screen.getByRole("link", { name: "Privacy Policy" })
     ).toHaveAttribute("href", "/en/privacy");
     expect(
       screen.getByRole("link", { name: "Terms of Service" })
     ).toHaveAttribute("href", "/en/terms");
-    expect(loginButton()).toBeDisabled();
+    expect(loginButton()).toHaveAttribute("aria-disabled", "true");
   });
 
   it("창을 닫았다 열면 체크가 풀려 있다 — 동의는 로그인할 때마다 직접 한다", async () => {
@@ -130,14 +139,14 @@ describe("AuthModal 약관 동의", () => {
     rerender(<AuthModal open />);
 
     expect(agreement()).not.toBeChecked();
-    expect(loginButton()).toBeDisabled();
+    expect(loginButton()).toHaveAttribute("aria-disabled", "true");
   });
 
   it("로그인 안 한 채 연 워크스페이스 주소의 로그인 카드도 같은 동의를 거친다", () => {
     render(<WorkspaceLoginCard />);
 
-    expect(loginButton()).toBeDisabled();
+    expect(loginButton()).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(agreement());
-    expect(loginButton()).toBeEnabled();
+    expect(loginButton()).not.toHaveAttribute("aria-disabled");
   });
 });

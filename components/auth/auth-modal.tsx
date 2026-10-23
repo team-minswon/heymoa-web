@@ -24,18 +24,23 @@ interface AuthModalProps {
 }
 
 /**
- * 로그인 버튼과 약관 동의(APP-1277). **체크하기 전에는 버튼이 눌리지 않는다.** 창이 열릴 때마다 새로 마운트되어
+ * 로그인 버튼과 약관 동의(APP-1277). **체크하기 전에는 로그인이 시작되지 않는다** — 누르면 체크박스를
+ * 강조한다(APP-1402). 창이 열릴 때마다 새로 마운트되어
  * 닫았다 열면 체크가 풀린다 — 동의는 로그인할 때마다 직접 한다.
  */
 export function LoginForm() {
   const t = useTranslations("auth.consent");
   const [agreed, setAgreed] = React.useState(false);
+  const [nudge, setNudge] = React.useState(0);
+  const hintId = React.useId();
 
   return (
     <div className="w-full max-w-sm">
       <GoogleLoginButton
         className="w-full flex justify-center [&>button]:w-full"
-        disabled={!agreed}
+        blocked={!agreed}
+        onBlocked={() => setNudge((count) => count + 1)}
+        describedBy={hintId}
         onLoginStart={rememberLoginConsent}
       />
       <div className="mt-5">
@@ -43,6 +48,8 @@ export function LoginForm() {
           checked={agreed}
           onCheckedChange={setAgreed}
           hint={t("requiredToLogin")}
+          hintId={hintId}
+          nudge={nudge}
         />
       </div>
     </div>

@@ -168,15 +168,23 @@ describe("GoogleLoginButton", () => {
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
-  it("is not pressable while disabled and never starts login", () => {
+  it("while blocked it looks disabled, hands the click to onBlocked and never starts login", () => {
     paths.configured = true;
     const onLoginStart = vi.fn();
-    render(<GoogleLoginButton disabled onLoginStart={onLoginStart} />);
+    const onBlocked = vi.fn();
+    render(
+      <GoogleLoginButton
+        blocked
+        onBlocked={onBlocked}
+        onLoginStart={onLoginStart}
+      />
+    );
     const button = screen.getByRole("button", { name: "Google로 로그인" });
 
-    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(button);
 
+    expect(onBlocked).toHaveBeenCalledTimes(1);
     expect(onLoginStart).not.toHaveBeenCalled();
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();

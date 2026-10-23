@@ -18,8 +18,13 @@ import { desktopAuthBridge } from "@/lib/desktop/auth";
 type GoogleLoginButtonProps = {
   compact?: boolean;
   className?: string;
-  /** 약관 동의 전에는 누를 수 없다(APP-1277). 누르지 못하는 이유는 호출한 쪽이 옆에 보인다. */
-  disabled?: boolean;
+  /**
+   * 약관 동의 전에는 로그인이 시작되지 않는다(APP-1277). 흐리게 보이지만 `disabled` 가 아니라 클릭을 받아
+   * `onBlocked` 로 넘긴다 — 호출한 쪽이 이유를 알린다(APP-1402). `describedBy` 가 그 이유 문장이다.
+   */
+  blocked?: boolean;
+  onBlocked?: () => void;
+  describedBy?: string;
   /** 로그인을 실제로 시작하는 순간 한 번. Google 을 다녀오면 창이 사라지므로 그 전에 남길 것을 여기서 남긴다. */
   onLoginStart?: () => void;
 };
@@ -27,7 +32,9 @@ type GoogleLoginButtonProps = {
 export function GoogleLoginButton({
   compact = false,
   className,
-  disabled = false,
+  blocked = false,
+  onBlocked,
+  describedBy,
   onLoginStart,
 }: GoogleLoginButtonProps) {
   const t = useTranslations("auth.login");
@@ -42,6 +49,10 @@ export function GoogleLoginButton({
 
   const handleLogin = async () => {
     if (pending) return;
+    if (blocked) {
+      onBlocked?.();
+      return;
+    }
     if (!isAuthApiConfigured) {
       toast.error(t("unavailable"), {
         id: "google-login-unavailable",
@@ -107,10 +118,11 @@ export function GoogleLoginButton({
         size={compact ? "icon-xl" : "xl"}
         onClick={handleLogin}
         loading={pending}
-        disabled={disabled}
+        aria-disabled={blocked || undefined}
+        aria-describedby={blocked ? describedBy : undefined}
         className={cn(
           // Google branding: light theme = #FFF fill, 1px #747775 stroke, #1F1F1F text
-          "rounded-full border-[#747775] bg-white font-medium text-[#1F1F1F] hover:bg-[#F8F9FA] hover:text-[#1F1F1F]",
+          "rounded-full border-[#747775] bg-white font-medium text-[#1F1F1F] hover:bg-[#F8F9FA] hover:text-[#1F1F1F] aria-disabled:hover:bg-white aria-disabled:active:translate-y-0",
           compact ? "p-0" : "pl-3.5 pr-4"
         )}
         aria-label={t("googleLabel")}

@@ -131,13 +131,20 @@ it("로그인 창에서 체크하지 않은 로그인은 체크박스를 받고,
   render(<CallbackProcessor returnTo="/settings" />);
 
   const agree = await screen.findByRole("button", { name: "동의하고 계속" });
-  expect(agree).toBeDisabled();
-  expect(screen.getByText("동의해야 계속할 수 있습니다.")).toBeInTheDocument();
+  expect(agree).toHaveAttribute("aria-disabled", "true");
+  expect(agree).toHaveAccessibleDescription("동의해야 계속할 수 있습니다.");
+
+  // 체크 전에 누르면 기록하지 않고 체크박스로 보낸다(APP-1402).
+  fireEvent.click(agree);
+  expect(screen.getByRole("checkbox")).toHaveFocus();
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "동의해야 계속할 수 있습니다."
+  );
   expect(mocked.recordNow).not.toHaveBeenCalled();
   expect(mocked.replace).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("checkbox"));
-  expect(agree).toBeEnabled();
+  expect(agree).not.toHaveAttribute("aria-disabled");
   fireEvent.click(agree);
 
   await waitFor(() => expect(mocked.replace).toHaveBeenCalledWith("/settings"));

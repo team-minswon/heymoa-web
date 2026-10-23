@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -31,10 +31,14 @@ export function ConsentStep({
   const t = useTranslations("auth.consent");
   const { logout, isLoggingOut } = useAuth();
   const [agreed, setAgreed] = useState(false);
+  const [nudge, setNudge] = useState(0);
+  const hintId = useId();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const ask = mode === "ask";
+  // 체크 전에는 흐린 버튼이 클릭을 받아 체크박스를 강조한다(APP-1402).
+  const blocked = ask && !agreed;
 
   const submit = async () => {
     setPending(true);
@@ -73,6 +77,8 @@ export function ConsentStep({
             checked={agreed}
             onCheckedChange={setAgreed}
             hint={t("requiredToContinue")}
+            hintId={hintId}
+            nudge={nudge}
           />
         </div>
       )}
@@ -87,8 +93,11 @@ export function ConsentStep({
           size="xl"
           className="w-full rounded-full"
           loading={pending}
-          disabled={ask && !agreed}
-          onClick={() => void submit()}
+          aria-disabled={blocked || undefined}
+          aria-describedby={blocked ? hintId : undefined}
+          onClick={() =>
+            blocked ? setNudge((count) => count + 1) : void submit()
+          }
         >
           {ask ? t("step.agree") : t("step.retry")}
         </Button>
