@@ -37,7 +37,7 @@ Delete your account from **[Delete account]** at the bottom of **[Account settin
 Admins can delete a whole workspace from **[Delete workspace]** at the bottom of **[Workspace settings]** → **[General]** by typing the workspace name. Every member gets an email.
 
 > [!Can't be undone]
-> ==Deleting your account signs you out on every device right away and can't be undone.== Your name and what you said stay in past meeting records of team workspaces that remain. Signing up again with the same Google account creates a new account.
+> ==Deleting your account signs you out on every device right away and can't be undone.== Your name and what you said stay in past meeting records of workspaces you shared with others. Some information, such as your inquiries, is kept for a set period and then deleted. Section 6 of the [Privacy Policy](/privacy#section-6) lists the periods. Signing up again with the same Google account creates a new account.
 
 For a short overview of where and how your data is processed, read [Where and how is my data stored?](help:data-privacy).
 

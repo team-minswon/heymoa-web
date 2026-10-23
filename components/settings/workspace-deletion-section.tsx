@@ -82,8 +82,10 @@ export function WorkspaceDeletionSection({
         워크스페이스 삭제
       </h3>
       <p className="mt-1 text-xs leading-5 text-[var(--el-muted)]">
-        노트·전사·음성·채팅·연동·초대를 모두 지우고, 멤버 모두의 접근을 바로
-        막습니다. 멤버에게는 메일로 알립니다.
+        회의 기록
+        <span className="whitespace-nowrap">(노트·스크립트·음성)을</span> 비롯한
+        모든 내용을 지우고, 멤버 모두의 접근을 바로 막습니다. 멤버에게는 메일로
+        알립니다.
       </p>
       <Button
         variant="outline"
@@ -117,7 +119,11 @@ export function WorkspaceDeletionSection({
               이 워크스페이스를 삭제할까요?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              노트·전사·음성·채팅·연동·초대가 모두 지워지고 되돌릴 수 없습니다.
+              회의 기록
+              <span className="whitespace-nowrap">
+                (노트·스크립트·음성)을
+              </span>{" "}
+              비롯한 이 워크스페이스의 모든 내용이 지워지고 되돌릴 수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <ConfirmPhraseField

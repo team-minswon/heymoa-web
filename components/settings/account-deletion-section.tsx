@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { SitePageLink } from "@/components/heymoa/site-page-link";
 import { ConfirmPhraseField } from "@/components/settings/confirm-phrase-field";
 import {
   isRecordingLive,
@@ -45,7 +46,7 @@ import { cn } from "@/lib/utils";
 const REASON_LABEL: Record<WithdrawalReasonCode, string> = {
   MISSING_FEATURE: "필요한 기능이 없음",
   SECURITY_CONCERN: "보안·데이터가 걱정됨",
-  TRANSCRIPTION_QUALITY: "전사·정리 품질",
+  TRANSCRIPTION_QUALITY: "스크립트·요약 품질",
   OTHER_SERVICE: "다른 서비스를 씀",
   RARELY_USED: "자주 쓰지 않음",
   OTHER: "기타",
@@ -265,18 +266,28 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
 
           <section aria-label="지워지는 것과 남는 것">
             <SectionLabel>지워지는 것과 남는 것</SectionLabel>
+            {/* 사업자 이름·내부 항목은 나열하지 않는다. 기간은 처리방침 6조가 원본이다(APP-1403). */}
             <ul className="list-disc space-y-1 pl-5 text-[13px] leading-relaxed text-[var(--el-body)]">
               <li>
-                계정 정보와 삭제하는 워크스페이스의 노트·전사·음성·채팅·연동이
-                지워집니다. 백업에는 최대 7일 남았다가 사라집니다.
+                계정 정보와, 혼자 쓰던 워크스페이스·삭제하기로 고른
+                워크스페이스의{" "}
+                <span className="whitespace-nowrap">
+                  회의 기록(노트·스크립트·음성)이
+                </span>{" "}
+                바로 삭제됩니다.
               </li>
               <li>
-                남는 팀 워크스페이스의 지난 회의 기록에는 내 이름과 발언이
+                함께 쓰던 워크스페이스의 지난 회의 기록에는 이름과 발언이
                 남습니다.
               </li>
               <li>
-                보낸 문의 기록과 이용 통계(PostHog, 1년)는 처리방침에 적힌 기간
-                동안 남습니다.
+                문의 기록 등 일부 정보는 정해진 기간 동안 보관한 뒤 삭제됩니다.{" "}
+                <SitePageLink
+                  href="/privacy#section-6"
+                  className="whitespace-nowrap underline underline-offset-2 hover:text-[var(--el-ink)]"
+                >
+                  보관 기간 자세히 보기
+                </SitePageLink>
               </li>
             </ul>
           </section>

@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -114,6 +115,19 @@ describe("AccountDeletionSection", () => {
       screen.getAllByText("나가기 — 다른 사람은 계속 씁니다")
     ).toHaveLength(2);
     expect(screen.getByRole("radio", { name: "관리자 넘기기" })).toBeChecked();
+  });
+
+  it("지워지는 것과 남는 것은 세 줄이고, 보관 기간은 처리방침 6조로 보낸다", () => {
+    open();
+    const list = within(
+      screen.getByRole("region", { name: "지워지는 것과 남는 것" })
+    );
+    expect(list.getAllByRole("listitem")).toHaveLength(3);
+    expect(
+      list.getByRole("link", { name: "보관 기간 자세히 보기" })
+    ).toHaveAttribute("href", "/privacy#section-6");
+    // 사업자 이름·백업 일수는 처리방침에 둔다(APP-1403).
+    expect(screen.queryByText(/PostHog|7일/)).not.toBeInTheDocument();
   });
 
   it("「회원 탈퇴」를 정확히 입력해야 버튼이 켜진다", () => {
