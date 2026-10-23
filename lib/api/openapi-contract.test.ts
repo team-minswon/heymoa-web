@@ -364,7 +364,8 @@ describe("contract sync 2026-07-29", () => {
     // PRO-67(server APP-1331·1337)에서 이벤트 스트림 `events`, 알림 `unread-count`·모두 읽음 `read` 셋이 늘었다 (87 → 90).
     // APP-1399(server APP-1398)에서 운영자 답변 등록 `admin/feedbacks/{feedbackId}/answer` 한 경로가 늘었다 (90 → 91).
     // APP-1383(server APP-1378)에서 탈퇴 처리 목록 `users/me/deletion-plan` 한 경로가 늘었다 (91 → 92).
-    expect(paths).toHaveLength(92);
+    // APP-1409 에서 내 대화 삭제 `agent-chats/{chatId}`(DELETE) 한 경로가 늘었다 (92 → 93).
+    expect(paths).toHaveLength(93);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  dropChatFromList,
   groupChatsByRecency,
   relativeUpdatedAt,
   runningLabel,
@@ -140,5 +141,25 @@ describe("그리는 시각이 정렬 기준과 같은 값이다", () => {
     expect(relativeUpdatedAt("2026-08-22T12:00:00Z", NOW, "ko")).toContain("3");
     expect(relativeUpdatedAt("2026-06-01T12:00:00Z", NOW, "ko")).toContain("2");
     expect(relativeUpdatedAt("2024-08-25T12:00:00Z", NOW, "ko")).toContain("2");
+  });
+});
+
+describe("dropChatFromList", () => {
+  const ok = (ids: string[]) => ({
+    status: 200,
+    data: {
+      success: true,
+      data: { chats: ids.map((chatId) => ({ chatId })), hasMore: false },
+    },
+  });
+
+  it("그 대화 줄만 빼고 나머지 모양은 그대로 둔다", () => {
+    expect(dropChatFromList(ok(["a", "b"]), "a")).toEqual(ok(["b"]));
+  });
+
+  it("실패 응답과 빈 캐시는 손대지 않는다", () => {
+    const failed = { status: 404, data: { success: false } };
+    expect(dropChatFromList(failed, "a")).toBe(failed);
+    expect(dropChatFromList(undefined, "a")).toBeUndefined();
   });
 });

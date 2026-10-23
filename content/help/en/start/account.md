@@ -30,7 +30,7 @@ Usage statistics only say which features you used. HeyMoa never sends what was s
 
 ## Deleting your data {#data}
 
-When you delete a note, the meeting's audio, transcript, and summary are deleted with it. To see which meetings can be deleted, read [Screen layout and projects](help:workspace-basics#note-list).
+When you delete a note, the meeting's audio, transcript, and summary are deleted with it, along with agent conversations that asked only about that note. You can delete agent conversations yourself in [My agent](help:agent#ask). To see which meetings can be deleted, read [Screen layout and projects](help:workspace-basics#note-list).
 
 Delete your account from **[Delete account]** at the bottom of **[Account settings]**. You don't need to sign in again.
 

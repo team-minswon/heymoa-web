@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { LoadMoreButton } from "@/components/ui/load-more-button";
@@ -37,6 +37,7 @@ export function ChatList({
   chats,
   currentChatId,
   onSelect,
+  onDelete,
   onBack,
   backRef,
   hasMore = false,
@@ -46,6 +47,8 @@ export function ChatList({
   chats: ChatListRow[];
   currentChatId: string | null;
   onSelect: (chatId: string) => void;
+  /** 그 줄의 휴지통. 확인은 부르는 쪽이 띄운다(APP-1409). 없으면 휴지통을 안 그린다. */
+  onDelete?: (chat: ChatListRow) => void;
   onBack: () => void;
   backRef?: React.Ref<HTMLButtonElement>;
   /** 서버에 이 뒤로 더 있다. 목록 끝에 「이전 대화 더 보기」를 둔다. */
@@ -85,36 +88,55 @@ export function ChatList({
                 className="px-2 pt-3 pb-1.5"
               />
               {group.chats.map((chat) => (
-                <button
-                  key={chat.chatId}
-                  type="button"
-                  // 선택을 색만으로 말하지 않는다.
-                  aria-current={chat.chatId === currentChatId || undefined}
-                  onClick={() => onSelect(chat.chatId)}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-block px-3 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                    "transition-colors duration-150 motion-reduce:transition-none",
-                    // 평소에는 배경이 없어야 hover·선택·선택+hover 셋이 안 뭉개진다.
-                    chat.chatId === currentChatId
-                      ? "bg-[var(--el-hairline)] font-medium"
-                      : "hover:bg-[var(--el-surface-strong)]"
-                  )}
-                >
-                  <span className="min-w-0 flex-1 truncate text-sm text-[var(--el-ink)]">
-                    {chat.title}
-                  </span>
-                  {chat.label ? (
-                    <Badge
-                      variant="secondary"
-                      className={cn("shrink-0", LABEL_TONE)}
+                // 줄 버튼과 휴지통은 형제다 — 버튼 안에 버튼을 못 둔다. 휴지통은 줄에 올리거나 포커스가 닿으면 보인다.
+                <div key={chat.chatId} className="group/chat relative">
+                  <button
+                    type="button"
+                    // 선택을 색만으로 말하지 않는다.
+                    aria-current={chat.chatId === currentChatId || undefined}
+                    onClick={() => onSelect(chat.chatId)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-block px-3 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      // 휴지통이 덮는 자리만큼 비운다
+                      onDelete && "pr-10",
+                      "transition-colors duration-150 motion-reduce:transition-none",
+                      // 평소에는 배경이 없어야 hover·선택·선택+hover 셋이 안 뭉개진다.
+                      chat.chatId === currentChatId
+                        ? "bg-[var(--el-hairline)] font-medium"
+                        : "hover:bg-[var(--el-surface-strong)]"
+                    )}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm text-[var(--el-ink)]">
+                      {chat.title}
+                    </span>
+                    {chat.label ? (
+                      <Badge
+                        variant="secondary"
+                        className={cn("shrink-0", LABEL_TONE)}
+                      >
+                        {chat.label}
+                      </Badge>
+                    ) : null}
+                    <span className="shrink-0 text-[11px] tabular-nums text-[var(--el-muted)]">
+                      {relativeUpdatedAt(chat.updatedAt, now)}
+                    </span>
+                  </button>
+                  {onDelete ? (
+                    <button
+                      type="button"
+                      aria-label="대화 삭제"
+                      title="대화 삭제"
+                      onClick={() => onDelete(chat)}
+                      className={cn(
+                        "absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-block text-[var(--el-muted)] outline-none",
+                        "hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50",
+                        "opacity-0 transition-opacity duration-150 group-hover/chat:opacity-100 focus-visible:opacity-100 motion-reduce:transition-none"
+                      )}
                     >
-                      {chat.label}
-                    </Badge>
+                      <Trash2 aria-hidden className="size-3.5" />
+                    </button>
                   ) : null}
-                  <span className="shrink-0 text-[11px] tabular-nums text-[var(--el-muted)]">
-                    {relativeUpdatedAt(chat.updatedAt, now)}
-                  </span>
-                </button>
+                </div>
               ))}
             </section>
           ))}

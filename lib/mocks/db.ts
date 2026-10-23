@@ -2956,6 +2956,19 @@ export const mockDb = {
     );
   },
 
+  /** 대화와 그 메시지를 지운다(APP-1409). 없으면 404 `AGENT_CHAT_NOT_FOUND` — 이미 지운 대화도 그렇다. */
+  deleteAgentChat(chatId: string) {
+    if (!state.agentChats.some((chat) => chat.chatId === chatId)) {
+      fail("AGENT_CHAT_NOT_FOUND");
+    }
+    state.agentChats = state.agentChats.filter(
+      (chat) => chat.chatId !== chatId
+    );
+    state.agentChatMessages = state.agentChatMessages.filter(
+      (message) => message.chatId !== chatId
+    );
+  },
+
   /** 이 대화가 어느 워크스페이스의 것인가. 범위 확장 제안이 실재하는 프로젝트를 고르는 데 쓴다. */
   findAgentChat(chatId: string) {
     return state.agentChats.find((chat) => chat.chatId === chatId) ?? null;
@@ -4626,8 +4639,24 @@ export const mockDb = {
       (row) => !sessionIds.has(row.transcriptionSessionId)
     );
     state.analyses = state.analyses.filter((row) => row.noteId !== noteId);
-    // **대화는 안 지운다.** 대화가 노트를 참조하지 않게 되면서 이 사슬에서 빠졌다.
-    // 메시지의 `scope`에 남은 죽은 id는 조회할 때 서버가 재검증해 「삭제됨」으로 접는다.
+    // 서버와 같다(APP-1409) — 모든 질문의 범위가 정확히 이 노트 하나인 대화만 함께 지운다. 다른 범위도 물은
+    // 대화는 남고, 메시지의 `scope`에 남은 죽은 id는 조회할 때 서버가 재검증해 「삭제됨」으로 접는다.
+    state.agentChats
+      .filter((chat) => {
+        const questions = state.agentChatMessages.filter(
+          (message) => message.chatId === chat.chatId && message.role === "USER"
+        );
+        return (
+          questions.length > 0 &&
+          questions.every(
+            (message) =>
+              message.scope?.length === 1 &&
+              message.scope[0].kind === "NOTE" &&
+              message.scope[0].id === noteId
+          )
+        );
+      })
+      .forEach((chat) => mockDb.deleteAgentChat(chat.chatId));
   },
 
   createSession(

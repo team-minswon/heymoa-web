@@ -134,3 +134,29 @@ export function relativeUpdatedAt(at: string, now: Date, locale?: string) {
   if (days < 365) return format.format(-Math.floor(days / 30), "month");
   return format.format(-Math.floor(days / 365), "year");
 }
+
+/**
+ * 대화 목록 캐시(`GET /agent-chats` 응답)에서 그 대화 줄만 뺀다(APP-1409). 모양이 예상과 다르면 손대지 않는다 —
+ * 실패 응답이나 아직 안 읽은 캐시를 지운 것처럼 바꾸면 안 된다.
+ */
+export function dropChatFromList(current: unknown, chatId: string): unknown {
+  const response = current as
+    | {
+        status?: number;
+        data?: { success?: boolean; data?: { chats?: { chatId: string }[] } };
+      }
+    | undefined;
+  const chats = response?.data?.data?.chats;
+  if (response?.status !== 200 || !response.data?.success || !chats)
+    return current;
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      data: {
+        ...response.data.data,
+        chats: chats.filter((chat) => chat.chatId !== chatId),
+      },
+    },
+  };
+}

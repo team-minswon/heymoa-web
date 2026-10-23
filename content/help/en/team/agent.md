@@ -30,7 +30,9 @@ It also answers questions like “my tasks”, “tasks with no assignee”, “
 
 When you open the agent from a note, that meeting's notes are added to the scope automatically. To ask about decisions and tasks confirmed in a project, add the project too.
 
-**[+]** starts a new conversation, and **[History]** lists past ones. You can't delete or rename conversations. Each conversation is titled after its first question.
+**[+]** starts a new conversation, and **[History]** lists past ones. Each conversation is titled after its first question, and you can't rename it.
+
+To delete a conversation, click **[Delete conversation]** at the top of the conversation, or the trash icon on its row in **[History]**. Deleted conversations can't be restored. You can delete a conversation while an answer is being written; the answer stops. Deleting a note also deletes conversations whose questions were scoped only to that note. Conversations that also asked about other notes or projects stay.
 
 > [!Note]
 > When a conversation gets very long, the earlier part is summarized and collapsed. Repeat any important context in your new question.

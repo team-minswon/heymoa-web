@@ -24,7 +24,7 @@ The legally binding explanation is the Privacy Policy. This page sums up only th
 - When the agent uses web search, it sends search terms written by the AI to the AI model provider's search feature. Web search isn't covered by zero data retention (the condition that sent content isn't stored).
 - To have work done in Linear or GitHub, you must click **[Approve]** on the approval card.
 - External AI apps can only read what you've given them access to. A connection expires after 90 days without use.
-- Deleting a note also deletes that meeting's audio, transcript, and summary. Only admins can delete notes, and while a meeting is being analyzed you can delete it once the analysis finishes.
+- Deleting a note also deletes that meeting's audio, transcript, and summary, and any agent conversations that asked only about that note. You can also delete your agent conversations yourself. Only admins can delete notes, and while a meeting is being analyzed you can delete it once the analysis finishes.
 - Deleted data stays in backups for up to 7 days, then is removed automatically.
 - Meeting notes PDFs shared by email are kept for 30 days after sending. ==Invite links are valid for 1 day (24 hours) only.==
 - You can opt out of usage statistics with your browser settings or a content blocker. Section 5 of the [Privacy Policy](/privacy#section-5) explains how.

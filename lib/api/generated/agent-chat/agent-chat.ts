@@ -1905,3 +1905,125 @@ export function useSubscribeAgentChatTurnEventsSuspense<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type deleteAgentChatResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteAgentChatResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type deleteAgentChatResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type deleteAgentChatResponseSuccess = deleteAgentChatResponse204 & {
+  headers: Headers;
+};
+export type deleteAgentChatResponseError = (
+  | deleteAgentChatResponse401
+  | deleteAgentChatResponse404
+) & {
+  headers: Headers;
+};
+
+export type deleteAgentChatResponse =
+  | deleteAgentChatResponseSuccess
+  | deleteAgentChatResponseError;
+
+export const getDeleteAgentChatUrl = (chatId: string) => {
+  return `/v1/agent-chats/${chatId}`;
+};
+
+/**
+ * 내 대화를 지운다. 메시지·턴·승인이 함께 사라지고 heymoa-ai 의 대화 기억도 지운다(CHAT_DELETED). 답이 도는 중이어도 지운다 — 그 턴은 멈추고 붙어 있던 스트림은 더 이어지지 않는다. 없거나 소유하지 않은 대화는 404 AGENT_CHAT_NOT_FOUND 다 — 이미 지운 대화를 다시 지워도 404 다.
+ * @summary 대화 삭제
+ */
+export const deleteAgentChat = async (
+  chatId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<deleteAgentChatResponse> => {
+  return apiFetch<deleteAgentChatResponse>(getDeleteAgentChatUrl(chatId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAgentChatMutationKey = () => ["deleteAgentChat"] as const;
+
+export const getDeleteAgentChatMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAgentChat>>,
+    TError,
+    DeleteAgentChatMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAgentChat>>,
+  TError,
+  DeleteAgentChatMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteAgentChatMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAgentChat>>,
+    DeleteAgentChatMutationVariables
+  > = (props) => {
+    const { chatId } = props ?? {};
+
+    return deleteAgentChat(chatId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAgentChatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAgentChat>>
+>;
+
+export type DeleteAgentChatMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+export type DeleteAgentChatMutationVariables = { chatId: string };
+
+/**
+ * @summary 대화 삭제
+ */
+export const useDeleteAgentChat = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAgentChat>>,
+      TError,
+      DeleteAgentChatMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAgentChat>>,
+  TError,
+  DeleteAgentChatMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteAgentChatMutationOptions(options), queryClient);
+};

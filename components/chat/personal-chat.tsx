@@ -10,12 +10,13 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { History, Plus, X } from "lucide-react";
+import { History, Plus, Trash2, X } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 
 import { AgentFab } from "@/components/chat/agent-fab";
 import { ChatComposer } from "@/components/chat/chat-composer";
+import { ChatDeleteDialog } from "@/components/chat/chat-delete-dialog";
 import { ChatList } from "@/components/chat/chat-list";
 import { ChatStarter } from "@/components/chat/chat-starter";
 import type { MentionHandle } from "@/components/chat/mention-input";
@@ -485,6 +486,22 @@ function PersonalChatPanel({
       ? Math.max(0, viewportHeight - 24)
       : null;
 
+  /** 삭제를 확인 중인 대화(APP-1409). 기록 줄과 헤더가 함께 연다. */
+  const [deleteTarget, setDeleteTarget] = useState<{
+    chatId: string;
+    title: string;
+  } | null>(null);
+  const deleteChat = useCallback(
+    async (chatId: string) => {
+      const wasOpen = chatId === turn.sessionId;
+      const deleted = await turn.deleteChat(chatId);
+      // 열려 있던 대화를 지웠으면 빈 새 대화로 섰다. 쓰던 문장·범위도 그 대화 것이라 비운다
+      if (deleted && wasOpen) resetComposer();
+      return deleted;
+    },
+    [resetComposer, turn]
+  );
+
   /** 헤더 첫 줄. 아직 목록에 없는 새 대화는 기본 제목으로 선다. */
   const headerTitle =
     turn.chatRows.find((chat) => chat.chatId === turn.sessionId)?.title ??
@@ -565,6 +582,23 @@ function PersonalChatPanel({
         >
           <Plus className="size-4" />
         </Button>
+        {/* 아직 서버에 없는 빈 새 대화에는 지울 것이 없다. */}
+        {turn.sessionId ? (
+          <Button
+            data-testid="chat-delete"
+            variant="ghost"
+            size="icon"
+            aria-label="대화 삭제"
+            title="대화 삭제"
+            disabled={turn.isSwitchBlocked || turn.isDeletingChat}
+            onClick={() => {
+              if (!turn.sessionId) return;
+              setDeleteTarget({ chatId: turn.sessionId, title: headerTitle });
+            }}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : null}
         <Button
           ref={historyButtonRef}
           variant="ghost"
@@ -754,6 +788,9 @@ function PersonalChatPanel({
             chats={turn.chatRows}
             currentChatId={turn.sessionId}
             onSelect={switchChat}
+            onDelete={(chat) =>
+              setDeleteTarget({ chatId: chat.chatId, title: chat.title })
+            }
             onBack={() => setView("thread")}
             backRef={backButtonRef}
             hasMore={turn.hasMoreChats}
@@ -762,6 +799,13 @@ function PersonalChatPanel({
           />
         </div>
       </div>
+      <ChatDeleteDialog
+        target={deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onConfirm={deleteChat}
+      />
     </aside>
   );
 

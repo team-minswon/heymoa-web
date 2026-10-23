@@ -52,7 +52,8 @@ function dropNoteFromList(current: unknown, noteId: string) {
 /**
  * 회의 삭제 확인.
  *
- * 회의 소유 데이터는 함께 지우며, 프로젝트로 승계된 결정사항·할 일과 개인 대화는 유지합니다.
+ * 회의 소유 데이터와 이 회의록만 물어본 에이전트 대화는 함께 지우며(APP-1409), 프로젝트로 승계된 결정사항·할 일과
+ * 다른 자료도 함께 물어본 대화는 유지합니다.
  *
  * 실패 토스트는 안 띄운다. `MutationCache.onError`가 전역으로 잡으므로 여기서 또 부르면 두 개가
  * 겹친다(rule `error-loading`).
@@ -112,8 +113,9 @@ export function NoteDeleteDialog({
               수 없습니다.
             </p>
             <p>
-              같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로
-              남습니다.
+              이 회의록만 물어본 에이전트 대화도 함께 삭제됩니다. 같은
+              프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본
+              대화는 그대로 남습니다.
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>

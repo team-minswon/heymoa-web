@@ -42,7 +42,7 @@ Click a note row to open it in side view (a panel that shows the note beside the
 To load older meetings, click **[Show older notes]** at the bottom of the list.
 
 > [!Can't be undone]
-> ==Deleting a note permanently removes the meeting's recording, transcript, summary, and evidence.== Decisions and tasks you've already confirmed stay. Only admins can delete notes. Deleting a meeting that is recording also ends the recording. While a meeting is being analyzed, you can delete it once the analysis finishes.
+> ==Deleting a note permanently removes the meeting's recording, transcript, summary, and evidence.== Decisions and tasks you've already confirmed stay. Agent conversations that asked only about this note are deleted too. Only admins can delete notes. Deleting a meeting that is recording also ends the recording. While a meeting is being analyzed, you can delete it once the analysis finishes.
 
 ## Reading a note {#note-view}
 

@@ -368,6 +368,27 @@ export const getSubscribeAgentChatTurnEventsMockHandler = (
     options
   );
 };
+
+export const getDeleteAgentChatMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.delete(
+    "*/v1/agent-chats/:chatId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
 export const getAgentChatMock = () => [
   getGetAgentChatMessagesMockHandler(),
   getSendAgentChatMessageMockHandler(),
@@ -376,4 +397,5 @@ export const getAgentChatMock = () => [
   getResolveToolApprovalMockHandler(),
   getCancelAgentChatTurnMockHandler(),
   getSubscribeAgentChatTurnEventsMockHandler(),
+  getDeleteAgentChatMockHandler(),
 ];

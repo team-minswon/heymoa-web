@@ -13,9 +13,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   getGetAgentChatMessagesQueryOptions,
   getAgentChats,
+  getGetAgentChatMessagesQueryKey,
   getGetAgentChatsQueryKey,
   useCancelAgentChatTurn,
   useCreateAgentChat,
+  useDeleteAgentChat,
   useGetAgentChatMessages,
   useGetAgentChats,
   useResolveToolApproval,
@@ -26,7 +28,7 @@ import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { isAuthError } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
 import { type ApprovalDecision, decideApproval } from "@/lib/chat/blocks";
-import { runningLabel } from "@/lib/chat/chat-list";
+import { dropChatFromList, runningLabel } from "@/lib/chat/chat-list";
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import {
   failedTurnState,
@@ -268,6 +270,10 @@ export function useChatTurn({
     mutation: { meta: { suppressErrorToast: true } },
   });
   const cancelTurn = useCancelAgentChatTurn();
+  // 404(이미 지운 대화)는 바라던 결과라 성공으로 접는다. 그 밖의 실패만 `deleteChat` 이 알린다
+  const deleteChatMutation = useDeleteAgentChat({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
 
   const ensureSession = useCallback(async () => {
     if (sessionId && !isSessionGone) {
@@ -662,6 +668,49 @@ export function useChatTurn({
     return true;
   }, [isDraftChat, isSwitchBlocked, leaveTurn]);
 
+  /**
+   * 대화를 지운다(APP-1409). 지운 대화가 열려 있었으면 빈 새 대화로 선다 — 그 대화의 스트림은 서버가 멈추므로 먼저 끊는다.
+   * 이미 지운 대화(404)도 성공이다. 지웠으면 true.
+   */
+  const deleteChat = useCallback(
+    async (chatId: string) => {
+      const ok = await deleteChatMutation
+        .mutateAsync({ chatId })
+        .then(() => true)
+        .catch((error: unknown) => {
+          if (errorCodeOf(error) === "AGENT_CHAT_NOT_FOUND") return true;
+          if (!isAuthError(error)) {
+            toast.error(errorMessageOf(error, "대화를 삭제하지 못했습니다."));
+          }
+          return false;
+        });
+      if (!ok) return false;
+      if (chatId === sessionId) {
+        leaveTurn();
+        setSelectedChatId(null);
+        setCreatedChatId(null);
+        setIsDraftChat(true);
+      }
+      setOlder((current) => ({
+        ...current,
+        chats: current.chats.filter((chat) => chat.chatId !== chatId),
+      }));
+      // 목록에서 그 줄을 먼저 뺀다 — 재조회가 실패해도 지운 대화가 남아 보이지 않게
+      queryClient.setQueriesData(
+        { queryKey: getGetAgentChatsQueryKey(workspaceId) },
+        (current: unknown) => dropChatFromList(current, chatId)
+      );
+      queryClient.removeQueries({
+        queryKey: getGetAgentChatMessagesQueryKey(chatId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: getGetAgentChatsQueryKey(workspaceId),
+      });
+      return true;
+    },
+    [deleteChatMutation, leaveTurn, queryClient, sessionId, workspaceId]
+  );
+
   const streamPhase = stream.state.phase;
   const streamTurnId = stream.state.turnId;
   const threadMessages = useMemo(
@@ -771,6 +820,8 @@ export function useChatTurn({
     stop,
     switchChat,
     startNewChat,
+    deleteChat,
+    isDeletingChat: deleteChatMutation.isPending,
     retry,
   };
 }

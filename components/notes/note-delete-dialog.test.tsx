@@ -161,7 +161,7 @@ describe("NoteDeleteDialog", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다."
+        "이 회의록만 물어본 에이전트 대화도 함께 삭제됩니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
       )
     ).toBeInTheDocument();
   });

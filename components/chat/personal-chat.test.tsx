@@ -93,6 +93,7 @@ const state = vi.hoisted(() => ({
   order: [] as string[],
   createMock: vi.fn(),
   cancelMock: vi.fn(),
+  deleteMock: vi.fn(),
   approveMock: vi.fn(),
   /** 지금 스트림이 어느 흐름을 흘려야 하나. 202 가 오면 send, 승인 202 가 오면 approval 이다. */
   mode: "resume" as "resume" | "send" | "approval",
@@ -303,6 +304,10 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
     useCreateAgentChat: () => ({
       mutateAsync: state.createMock,
       isPending: state.createPending,
+    }),
+    useDeleteAgentChat: () => ({
+      mutateAsync: state.deleteMock,
+      isPending: false,
     }),
     // 204는 접수가 아니라 확정이고 멱등이다. 화면이 멈추는 신호로는 안 쓴다.
     useCancelAgentChatTurn: () => ({
@@ -600,6 +605,7 @@ describe("PersonalChatProvider", () => {
     state.resumeFrames = [];
     state.resumeUrls = [];
     state.cancelMock.mockReset();
+    state.deleteMock.mockReset().mockResolvedValue({ status: 204 });
     state.createMock.mockReset().mockResolvedValue({
       status: 201,
       data: { success: true, data: { chatId: NEW_CHAT_ID } },
@@ -974,6 +980,51 @@ describe("PersonalChatProvider", () => {
     expect(
       screen.getByRole("button", { name: new RegExp(CHAT_ID) })
     ).toBeTruthy();
+  });
+
+  it("열린 대화를 지우면 확인한 뒤 서버에서 지우고 빈 새 대화로 선다 (APP-1409)", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.messages = [
+      {
+        createdAt: "2026-07-24T00:00:00Z",
+        role: "ASSISTANT",
+        content: "이전 대화입니다.",
+        toolEvent: null,
+      },
+    ];
+    renderChat();
+    openPanel();
+    await waitFor(() =>
+      expect(screen.getByText("이전 대화입니다.")).toBeTruthy()
+    );
+
+    fireEvent.click(screen.getByTestId("chat-delete"));
+    // 확인 전에는 아무것도 안 나간다
+    expect(state.deleteMock).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
+
+    await waitFor(() =>
+      expect(state.deleteMock).toHaveBeenCalledWith({ chatId: CHAT_ID })
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("이전 대화입니다.")).toBeNull()
+    );
+    expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy();
+  });
+
+  it("이미 지운 대화(404)는 성공으로 접고 다른 실패는 알린다 (APP-1409)", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.deleteMock.mockRejectedValueOnce({
+      status: 500,
+      envelope: { code: "INTERNAL_ERROR", message: "서버 오류" },
+    });
+    renderChat();
+    openPanel();
+    await waitFor(() => expect(screen.getByTestId("chat-delete")).toBeTruthy());
+
+    fireEvent.click(screen.getByTestId("chat-delete"));
+    fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledOnce());
   });
 
   it("★ ＋ 는 서버를 안 부르고 화면만 빈 새 대화로 바꾼다", async () => {

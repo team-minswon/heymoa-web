@@ -1760,6 +1760,17 @@ export const restHandlers = [
       });
     }
   ),
+  // 내 대화 삭제(APP-1409). 계약상 204 무본문, 없거나 이미 지운 대화는 404.
+  http.delete("*/v1/agent-chats/:chatId", ({ params }) => {
+    const chat = mockDb.findAgentChat(id(params.chatId));
+    const response = commandResult(
+      () => mockDb.deleteAgentChat(id(params.chatId)),
+      204
+    );
+    if (response.status !== 204) return response;
+    if (chat) emitChatsChanged();
+    return new HttpResponse(null, { status: 204 });
+  }),
   // 히스토리와 **이어받기 상태**를 함께 준다. 커서·도는 턴·마지막 턴이 없으면 돌아온
   // 브라우저는 무엇을 어디서부터 이어야 하는지 알 방법이 없다.
   http.get("*/v1/agent-chats/:chatId/messages", ({ params }) =>

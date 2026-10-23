@@ -229,7 +229,7 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
   await page.getByRole("menuitem", { name: "삭제" }).click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText(
-    "같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 개인 대화는 그대로 남습니다."
+    "이 회의록만 물어본 에이전트 대화도 함께 삭제됩니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
   );
   await dialog.getByRole("button", { name: "삭제", exact: true }).click();
 
@@ -677,6 +677,51 @@ test("stops a running turn and lets the next message through", async ({
  *
  * 넷 중 하나라도 빠지면 「대화가 여럿 산다」가 화면에서 거짓이 된다.
  */
+test("deletes a chat from the header and from history (APP-1409)", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
+
+  const compose = async (text: string) => {
+    await page.getByLabel("메시지").fill(text);
+    await page.getByRole("button", { name: "보내기", exact: true }).click();
+  };
+  const history = page.getByTestId("chat-history-view");
+
+  // 두 대화를 만든다. 둘째가 열린 채로 남는다.
+  for (const question of ["첫째 대화 요약해줘", "둘째 대화 요약해줘"]) {
+    await page.getByTestId("chat-list-new").click();
+    await compose(question);
+    await expect(page.getByTestId("assistant-message").last()).toContainText(
+      "습니다",
+      { timeout: 20_000 }
+    );
+  }
+
+  // 헤더에서 열린 대화를 지우면 확인 뒤 빈 새 대화로 선다.
+  await page.getByTestId("chat-delete").click();
+  const confirm = page.getByRole("alertdialog");
+  await expect(confirm).toContainText("둘째 대화 요약해줘");
+  await confirm.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(confirm).toBeHidden();
+  await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
+
+  // 기록 줄의 휴지통으로 남은 대화도 지운다.
+  await page.getByRole("button", { name: "기록" }).click();
+  await expect(
+    history.getByRole("button", { name: /둘째 대화 요약해줘/ })
+  ).toHaveCount(0);
+  const first = history.getByRole("button", { name: /첫째 대화 요약해줘/ });
+  await first.hover();
+  await first.locator("..").getByRole("button", { name: "대화 삭제" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "삭제", exact: true })
+    .click();
+  await expect(first).toHaveCount(0);
+});
+
 test("keeps a second chat alive while the first waits for approval", async ({
   page,
 }) => {
