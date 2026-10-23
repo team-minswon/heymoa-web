@@ -269,11 +269,16 @@ const MEMBER_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
   AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
-  // PRO-69 삭제·나가기 확인(server APP-1380·1381 계약 전의 제안 코드)
-  WORKSPACE_NAME_MISMATCH: "워크스페이스 이름이 맞지 않습니다.",
-  WITHDRAWAL_CONFIRMATION_MISMATCH: "확인 문구가 맞지 않습니다.",
+  // PRO-69 삭제·나가기 확인(server APP-1378·1380·1381 계약 예시 문구)
+  WORKSPACE_NAME_MISMATCH:
+    "워크스페이스 이름이 맞지 않습니다. 다시 입력해 주세요.",
+  WITHDRAWAL_CONFIRMATION_MISMATCH:
+    "확인 문구가 맞지 않습니다. 「회원 탈퇴」를 정확히 입력해 주세요.",
   DELETION_PLAN_CHANGED:
-    "그사이 워크스페이스 멤버가 바뀌었습니다. 처리 목록을 다시 확인해 주세요.",
+    "그사이 워크스페이스 상황이 바뀌었습니다. 목록을 다시 확인해 주세요.",
+  REAUTH_REQUIRED: "본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.",
+  RECORDING_IN_PROGRESS:
+    "녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.",
 };
 
 // 외부 에이전트 관리(APP-939·940)도 ADMIN 전용 204 조작이라 같은 묶음을 쓴다
@@ -282,7 +287,10 @@ const MEMBER_NOT_FOUND_CODES = new Set([
   "WORKSPACE_NOT_FOUND",
   "AGENT_DELEGATION_NOT_FOUND",
 ]);
-const MEMBER_FORBIDDEN_CODES = new Set(["WORKSPACE_ACCESS_DENIED"]);
+const MEMBER_FORBIDDEN_CODES = new Set([
+  "WORKSPACE_ACCESS_DENIED",
+  "REAUTH_REQUIRED",
+]);
 const MEMBER_BAD_REQUEST_CODES = new Set([
   "BAD_REQUEST",
   "WORKSPACE_NAME_MISMATCH",
@@ -609,7 +617,7 @@ export const restHandlers = [
     data: mockDb.getCurrentUser(),
     error: null,
   })),
-  // PRO-69 탈퇴·워크스페이스 삭제 — 계약 전 제안 경로(docs contract.md). server 계약이 나오면 생성 목 경로에 맞춘다.
+  // PRO-69 탈퇴·워크스페이스 삭제 — 계약(openapi3.yml deleteAccount·deleteWorkspace·getDeletionPlan)과 같은 경로
   http.get("*/v1/users/me/deletion-plan", () =>
     respond(() => mockDb.deletionPlan())
   ),

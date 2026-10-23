@@ -1,73 +1,49 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { apiFetch } from "@/lib/api/fetcher";
+import {
+  deleteAccount,
+  getDeletionPlan,
+  getGetDeletionPlanQueryKey,
+} from "@/lib/api/generated/account/account";
+import { deleteWorkspace } from "@/lib/api/generated/workspaces/workspaces";
+import {
+  DeleteAccountRequestReasonCode,
+  type AccountDeletionPlanResponseData,
+  type AccountDeletionPlanResponseDataWorkspacesItem,
+  type AccountDeletionPlanResponseDataWorkspacesItemAction,
+  type DeleteAccountRequest,
+  type WorkspaceNameConfirmationRequest,
+} from "@/lib/api/generated/models";
+import { okData } from "@/lib/api/ok-data";
 
 /**
  * 계정 탈퇴 · 워크스페이스 삭제 · 이름 확인 나가기 API (PRO-69, APP-1383).
  *
- * **임시 손 계약이다.** server(APP-1378·1380·1381)가 계약을 아직 내지 않아 docs
- * `projects/PRO-69-…/docs/contract.md` 의 제안 경로로 적었다. server openapi 가 나오면 `openapi3.yml` 사본을
- * 맞추고 `pnpm orval` 의 생성 훅으로 바꾼 뒤 이 파일을 지운다(rule `api-data`). 그때 이름·필드가 다르면 여기만 고친다.
+ * 계약은 server openapi(APP-1378·1380·1381)에서 생성한 클라이언트다. 여기는 화면이 쓰는 이름과
+ * 훅 모양(처리 목록은 매번 새로, 실패 토스트는 화면이 직접)만 붙인다.
+ * 재로그인 증명이 없거나 만료되면 403 `REAUTH_REQUIRED`, 녹음 중이면 409 `RECORDING_IN_PROGRESS` —
+ * 화면은 서버 문구를 그대로 보인다(`errorMessageOf`).
  */
 
 export type DeletionPlanAction =
-  /** 나 혼자 쓰는 워크스페이스 — 지운다 */
-  | "DELETE"
-  /** 다른 관리자가 있거나 내가 멤버 — 나간다 */
-  | "LEAVE"
-  /** 내가 유일한 관리자이고 다른 멤버가 있다 — 관리자를 넘기거나 지운다 */
-  | "TRANSFER_OR_DELETE";
+  AccountDeletionPlanResponseDataWorkspacesItemAction;
+export type DeletionPlanWorkspace =
+  AccountDeletionPlanResponseDataWorkspacesItem;
+export type DeletionPlan = AccountDeletionPlanResponseData;
 
-export type DeletionPlanMember = {
-  userId: string;
-  name: string;
-  email: string;
-};
-
-export type DeletionPlanWorkspace = {
-  workspaceId: string;
-  name: string;
-  action: DeletionPlanAction;
-  /** `TRANSFER_OR_DELETE` 일 때 넘겨받을 수 있는 멤버, 가입순 */
-  successorCandidates: DeletionPlanMember[];
-  /** 기본으로 고를 사람(가장 오래된 멤버). `TRANSFER_OR_DELETE` 가 아니면 null */
-  defaultSuccessorUserId: string | null;
-};
-
-export type DeletionPlan = { workspaces: DeletionPlanWorkspace[] };
-
-export const WITHDRAWAL_REASON_CODES = [
-  "MISSING_FEATURE",
-  "SECURITY_CONCERN",
-  "TRANSCRIPTION_QUALITY",
-  "OTHER_SERVICE",
-  "RARELY_USED",
-  "OTHER",
-] as const;
-export type WithdrawalReasonCode = (typeof WITHDRAWAL_REASON_CODES)[number];
+export const WITHDRAWAL_REASON_CODES = Object.values(
+  DeleteAccountRequestReasonCode
+);
+export type WithdrawalReasonCode = DeleteAccountRequestReasonCode;
 
 /** 탈퇴 확인 문구. 서버도 앞뒤 공백만 걷고 정확히 같은지 본다. */
 export const WITHDRAWAL_CONFIRMATION = "회원 탈퇴";
 export const WITHDRAWAL_DETAIL_MAX = 500;
 
-export type WorkspaceDecision =
-  | { workspaceId: string; decision: "TRANSFER"; successorUserId: string }
-  | { workspaceId: string; decision: "DELETE" };
+export type { DeleteAccountRequest };
+export type DeleteWorkspaceRequest = WorkspaceNameConfirmationRequest;
 
-export type DeleteAccountRequest = {
-  confirmation: string;
-  /** `TRANSFER_OR_DELETE` 워크스페이스마다 하나. 나머지는 서버가 정한 대로 한다 */
-  workspaces: WorkspaceDecision[];
-  reason?: { code: WithdrawalReasonCode; detail?: string };
-};
-
-export type DeleteWorkspaceRequest = {
-  workspaceName: string;
-};
-
-type Envelope<T> = { data: { success: boolean; data: T }; status: number };
-
-export const DELETION_PLAN_QUERY_KEY = ["/v1/users/me/deletion-plan"] as const;
+export const DELETION_PLAN_QUERY_KEY = getGetDeletionPlanQueryKey();
 
 export function useDeletionPlan(enabled: boolean) {
   return useQuery({
@@ -76,11 +52,9 @@ export function useDeletionPlan(enabled: boolean) {
     // 열 때마다 지금 상태로 다시 받는다 — 그사이 멤버가 나가면 처리가 바뀐다.
     staleTime: 0,
     queryFn: async ({ signal }) => {
-      const response = await apiFetch<Envelope<DeletionPlan>>(
-        DELETION_PLAN_QUERY_KEY[0],
-        { method: "GET", signal }
-      );
-      return response.data.data;
+      const plan = okData(await getDeletionPlan({ signal }));
+      if (!plan) throw new Error("처리 목록을 불러오지 못했습니다.");
+      return plan;
     },
   });
 }
@@ -89,8 +63,7 @@ export function useDeleteAccount() {
   return useMutation({
     mutationKey: ["deleteAccount"],
     meta: { suppressErrorToast: true },
-    mutationFn: (data: DeleteAccountRequest) =>
-      apiFetch<{ status: number }>("/v1/users/me", { method: "DELETE", data }),
+    mutationFn: (data: DeleteAccountRequest) => deleteAccount(data),
   });
 }
 
@@ -102,10 +75,7 @@ export function useDeleteWorkspace() {
       workspaceId,
       ...data
     }: DeleteWorkspaceRequest & { workspaceId: string }) =>
-      apiFetch<{ status: number }>(`/v1/workspaces/${workspaceId}`, {
-        method: "DELETE",
-        data,
-      }),
+      deleteWorkspace(workspaceId, data),
   });
 }
 

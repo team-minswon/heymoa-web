@@ -521,14 +521,14 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
   const workspacesQuery = useGetWorkspaces();
   /**
    * **워크스페이스 이름을 본문에 싣는다(PRO-69, APP-1383).** server 가 현재 이름과 정확히 같은지 다시 본다(APP-1381).
-   * 생성 훅은 본문을 못 받아(계약 미반영) 생성 함수를 같은 mutationKey 로 감싼다 — 위 잠금(`useMemberMutationBusy`)이 그 키를 센다.
+   * 생성 함수를 같은 mutationKey 로 감싼다 — 위 잠금(`useMemberMutationBusy`)이 그 키를 센다.
    */
   const leave = useMutation({
     mutationKey: getLeaveWorkspaceMutationKey(),
     meta: { suppressErrorToast: true },
     mutationFn: (variables: { workspaceId: string; workspaceName: string }) =>
       leaveWorkspace(variables.workspaceId, {
-        data: { workspaceName: variables.workspaceName },
+        workspaceName: variables.workspaceName,
       }),
   });
   const [confirmOpen, setConfirmOpen] = useState(false);

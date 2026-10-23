@@ -38,6 +38,7 @@ import type {
   WorkspaceGuestListResponse,
   WorkspaceGuestResponse,
   WorkspaceListResponse,
+  WorkspaceNameConfirmationRequest,
   WorkspaceResponse,
 } from "../models";
 
@@ -1010,6 +1011,177 @@ export const useUpdateWorkspace = <
   TContext
 > => {
   return useMutation(getUpdateWorkspaceMutationOptions(options), queryClient);
+};
+export type deleteWorkspaceResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteWorkspaceResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type deleteWorkspaceResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type deleteWorkspaceResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type deleteWorkspaceResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type deleteWorkspaceResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type deleteWorkspaceResponseSuccess = deleteWorkspaceResponse204 & {
+  headers: Headers;
+};
+export type deleteWorkspaceResponseError = (
+  | deleteWorkspaceResponse400
+  | deleteWorkspaceResponse401
+  | deleteWorkspaceResponse403
+  | deleteWorkspaceResponse404
+  | deleteWorkspaceResponse409
+) & {
+  headers: Headers;
+};
+
+export type deleteWorkspaceResponse =
+  | deleteWorkspaceResponseSuccess
+  | deleteWorkspaceResponseError;
+
+export const getDeleteWorkspaceUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}`;
+};
+
+/**
+ * ADMIN 만. 본문의 이름이 지금 이름과(앞뒤 공백만 걷고) 같고, HttpOnly 쿠키 reauth_proof 에 WORKSPACE_DELETION 재로그인 증명(`/v1/auth/oauth2/authorize/google?reauth=WORKSPACE_DELETION`, 5분·1회)이 있어야 한다. 성공하면 모든 멤버의 접근이 즉시 막히고(이후 404) 실제 삭제는 비동기로 끝나며 멤버 전원에게 메일이 간다. 녹음 중인 회의가 있으면 409. 성공 응답은 증명 쿠키를 지운다.
+ * @summary 워크스페이스 삭제
+ */
+export const deleteWorkspace = async (
+  workspaceId: string,
+  workspaceNameConfirmationRequest?: WorkspaceNameConfirmationRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<deleteWorkspaceResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<deleteWorkspaceResponse>(getDeleteWorkspaceUrl(workspaceId), {
+    ...options,
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(workspaceNameConfirmationRequest),
+  });
+};
+
+export const getDeleteWorkspaceMutationKey = () => ["deleteWorkspace"] as const;
+
+export const getDeleteWorkspaceMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWorkspace>>,
+    TError,
+    DeleteWorkspaceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWorkspace>>,
+  TError,
+  DeleteWorkspaceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteWorkspaceMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWorkspace>>,
+    DeleteWorkspaceMutationVariables
+  > = (props) => {
+    const { workspaceId, data } = props ?? {};
+
+    return deleteWorkspace(workspaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteWorkspaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWorkspace>>
+>;
+export type DeleteWorkspaceMutationBody =
+  | WorkspaceNameConfirmationRequest
+  | undefined;
+export type DeleteWorkspaceMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type DeleteWorkspaceMutationVariables = {
+  workspaceId: string;
+  data?: WorkspaceNameConfirmationRequest;
+};
+
+/**
+ * @summary 워크스페이스 삭제
+ */
+export const useDeleteWorkspace = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWorkspace>>,
+      TError,
+      DeleteWorkspaceMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWorkspace>>,
+  TError,
+  DeleteWorkspaceMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteWorkspaceMutationOptions(options), queryClient);
 };
 export type getWorkspaceGuestsResponse200 = {
   data: WorkspaceGuestListResponse;

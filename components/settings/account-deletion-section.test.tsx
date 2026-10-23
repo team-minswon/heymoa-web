@@ -222,4 +222,31 @@ describe("AccountDeletionSection", () => {
     expect(state.refetch).toHaveBeenCalled();
     expect(state.leave).not.toHaveBeenCalled();
   });
+
+  it.each([
+    [
+      "REAUTH_REQUIRED",
+      "본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.",
+    ],
+    [
+      "RECORDING_IN_PROGRESS",
+      "녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.",
+    ],
+  ])(
+    "%s 로 거절되면 서버 문구를 남기고 나가지 않는다",
+    async (code, message) => {
+      state.deleteAccount.mockRejectedValue({
+        success: false,
+        data: null,
+        error: { code, message },
+      });
+      open();
+      type("회원 탈퇴");
+      fireEvent.click(submit());
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(state.refetch).not.toHaveBeenCalled();
+      expect(state.leave).not.toHaveBeenCalled();
+    }
+  );
 });

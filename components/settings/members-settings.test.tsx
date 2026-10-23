@@ -111,9 +111,9 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
   getLeaveWorkspaceMutationKey: () => ["leaveWorkspace"],
   leaveWorkspace: async (
     workspaceId: string,
-    options?: { data?: Record<string, unknown> }
+    body?: Record<string, unknown>
   ) => {
-    state.leaveCalls.push({ workspaceId, ...options?.data });
+    state.leaveCalls.push({ workspaceId, ...body });
     if (state.leaveHang) return new Promise(() => {});
     if (state.leaveError) throw state.leaveError;
     return { status: 204 };

@@ -222,6 +222,27 @@ export const getUpdateWorkspaceMockHandler = (
   );
 };
 
+export const getDeleteWorkspaceMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.delete(
+    "*/v1/workspaces/:workspaceId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
+
 export const getGetWorkspaceGuestsMockHandler = (
   overrideResponse?:
     | WorkspaceGuestListResponse
@@ -348,6 +369,7 @@ export const getWorkspacesMock = () => [
   getCreateWorkspaceMockHandler(),
   getGetWorkspaceMockHandler(),
   getUpdateWorkspaceMockHandler(),
+  getDeleteWorkspaceMockHandler(),
   getGetWorkspaceGuestsMockHandler(),
   getDeleteWorkspaceGuestMockHandler(),
   getRenameWorkspaceGuestMockHandler(),

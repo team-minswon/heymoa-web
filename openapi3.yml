@@ -1180,6 +1180,145 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+    delete:
+      tags:
+      - Account
+      summary: 회원 탈퇴
+      description: 유예 없이 즉시 탈퇴한다(PRO-69). HttpOnly 쿠키 reauth_proof 에 ACCOUNT_DELETION 재로그인 증명(5분·1회)이 있어야 한다. 서버가 처리 목록을 다시 계산해 보낸 선택과 다르면 409 DELETION_PLAN_CHANGED, 녹음 중이면 409. 성공하면 모든 기기의 접근이 끊기고 로그인·증명 쿠키를 지운다.
+      operationId: deleteAccount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+            examples:
+              deleteAccount_DeletionPlanChangedException:
+                value:
+                  confirmation: 회원 탈퇴
+                  workspaces:
+                  - workspaceId: 0HZX2K7M9Q4AD
+                    decision: TRANSFER
+                    successorUserId: 0HZX2K7M9Q4AM
+                  reason:
+                    code: OTHER
+                    detail: 직접 적은 사유
+              deleteAccount_Success:
+                value:
+                  confirmation: 회원 탈퇴
+                  workspaces:
+                  - workspaceId: 0HZX2K7M9Q4AD
+                    decision: TRANSFER
+                    successorUserId: 0HZX2K7M9Q4AM
+                  reason:
+                    code: OTHER
+                    detail: 직접 적은 사유
+              deleteAccount_BadRequest:
+                value:
+                  confirmation: 회원 탈퇴
+                  workspaces: []
+                  reason:
+                    code: OTHER
+                    detail: 가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가
+              deleteAccount_ReauthRequiredException:
+                value:
+                  confirmation: 회원 탈퇴
+                  workspaces:
+                  - workspaceId: 0HZX2K7M9Q4AD
+                    decision: TRANSFER
+                    successorUserId: 0HZX2K7M9Q4AM
+                  reason:
+                    code: OTHER
+                    detail: 직접 적은 사유
+              deleteAccount_RecordingInProgressException:
+                value:
+                  confirmation: 회원 탈퇴
+                  workspaces:
+                  - workspaceId: 0HZX2K7M9Q4AD
+                    decision: TRANSFER
+                    successorUserId: 0HZX2K7M9Q4AM
+                  reason:
+                    code: OTHER
+                    detail: 직접 적은 사유
+              deleteAccount_WithdrawalConfirmationMismatchException:
+                value:
+                  confirmation: 회원 탈퇴
+                  workspaces:
+                  - workspaceId: 0HZX2K7M9Q4AD
+                    decision: TRANSFER
+                    successorUserId: 0HZX2K7M9Q4AM
+                  reason:
+                    code: OTHER
+                    detail: 직접 적은 사유
+      responses:
+        '204':
+          description: 처리 성공
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: reason.detail
+                        message: 길이는 0~500 여야 합니다.
+                WITHDRAWAL_CONFIRMATION_MISMATCH:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WITHDRAWAL_CONFIRMATION_MISMATCH
+                      message: 확인 문구가 맞지 않습니다. 「회원 탈퇴」를 정확히 입력해 주세요.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                REAUTH_REQUIRED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REAUTH_REQUIRED
+                      message: 본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                DELETION_PLAN_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: DELETION_PLAN_CHANGED
+                      message: 그사이 워크스페이스 상황이 바뀌었습니다. 목록을 다시 확인해 주세요.
+                      details: null
+                RECORDING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: RECORDING_IN_PROGRESS
+                      message: 녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
   /v1/workspaces/{workspaceId}:
     get:
       tags:
@@ -1339,6 +1478,135 @@ paths:
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+    delete:
+      tags:
+      - Workspaces
+      summary: 워크스페이스 삭제
+      description: ADMIN 만. 본문의 이름이 지금 이름과(앞뒤 공백만 걷고) 같고, HttpOnly 쿠키 reauth_proof 에 WORKSPACE_DELETION 재로그인 증명(`/v1/auth/oauth2/authorize/google?reauth=WORKSPACE_DELETION`, 5분·1회)이 있어야 한다. 성공하면 모든 멤버의 접근이 즉시 막히고(이후 404) 실제 삭제는 비동기로 끝나며 멤버 전원에게 메일이 간다. 녹음 중인 회의가 있으면 409. 성공 응답은 증명 쿠키를 지운다.
+      operationId: deleteWorkspace
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceNameConfirmationRequest'
+            examples:
+              deleteWorkspace_RecordingInProgressException:
+                value:
+                  workspaceName: 제품 팀
+              deleteWorkspace_BadRequest:
+                value:
+                  workspaceName: null
+              deleteWorkspace_WorkspaceAccessDeniedException:
+                value:
+                  workspaceName: 제품 팀
+              deleteWorkspace_ReauthRequiredException:
+                value:
+                  workspaceName: 제품 팀
+              deleteWorkspace_WorkspaceNameMismatchException:
+                value:
+                  workspaceName: 제품 팀
+              deleteWorkspace_WorkspaceNotFoundException:
+                value:
+                  workspaceName: 제품 팀
+              deleteWorkspace_Success:
+                value:
+                  workspaceName: 제품 팀
+      responses:
+        '204':
+          description: 처리 성공
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: workspaceName
+                        message: 값이 필요합니다.
+                WORKSPACE_NAME_MISMATCH:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NAME_MISMATCH
+                      message: 워크스페이스 이름이 맞지 않습니다. 다시 입력해 주세요.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+                REAUTH_REQUIRED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REAUTH_REQUIRED
+                      message: 본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                RECORDING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: RECORDING_IN_PROGRESS
+                      message: 녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.
+                      details: null
       security:
       - accessCookie: []
   /v1/agent-chats/{chatId}/messages:
@@ -5704,7 +5972,7 @@ paths:
       tags:
       - Workspace Members
       summary: 워크스페이스 나가기
-      description: 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다.
+      description: 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다. 확인으로 입력한 워크스페이스 이름을 본문으로 받아 지금 이름과 다르면 400 WORKSPACE_NAME_MISMATCH 다.
       operationId: leaveWorkspace
       parameters:
       - name: workspaceId
@@ -5752,8 +6020,53 @@ paths:
           description: 처리 성공
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NAME_MISMATCH:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NAME_MISMATCH
+                      message: 워크스페이스 이름이 맞지 않습니다. 다시 입력해 주세요.
+                      details: null
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: workspaceName
+                        message: 값이 필요합니다.
       security:
       - accessCookie: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceNameConfirmationRequest'
+            examples:
+              leaveWorkspace_WorkspaceNotFoundException:
+                value:
+                  workspaceName: 제품 팀
+              leaveWorkspace_WorkspaceNameMismatchException:
+                value:
+                  workspaceName: 제품 팀
+              leaveWorkspace_LastWorkspaceAdminException:
+                value:
+                  workspaceName: 제품 팀
+              leaveWorkspace_Success:
+                value:
+                  workspaceName: 제품 팀
+              leaveWorkspace_BadRequest:
+                value: {}
   /v1/workspaces/{workspaceId}/members/{userId}:
     delete:
       tags:
@@ -10035,6 +10348,39 @@ paths:
                       feedbackId: 0HZX2K7M9Q4AJ
                       answeredAt: '2026-07-14T01:02:03Z'
                       notified: true
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/users/me/deletion-plan:
+    get:
+      tags:
+      - Account
+      summary: 탈퇴 처리 목록 조회
+      description: 내가 속한 워크스페이스마다 탈퇴하면 무엇을 하는지 지금 상태로 계산해 돌려준다(PRO-69).
+      operationId: getDeletionPlan
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeletionPlanResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      workspaces:
+                      - workspaceId: 0HZX2K7M9Q4AD
+                        name: 제품 팀
+                        action: TRANSFER_OR_DELETE
+                        successorCandidates:
+                        - userId: 0HZX2K7M9Q4AM
+                          name: 홍길동
+                          email: hong@example.com
+                        defaultSuccessorUserId: 0HZX2K7M9Q4AM
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -19375,6 +19721,167 @@ components:
           description: 이미 답한 문의를 고칠 때 다시 알릴지. 기본 false. 처음 등록은 이 값과 관계없이 알린다
           nullable: false
           example: false
+    AccountDeletionPlanResponse:
+      title: AccountDeletionPlanResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - workspaces
+          type: object
+          properties:
+            workspaces:
+              type: array
+              description: 내가 속한 워크스페이스, id 순
+              items:
+                required:
+                - action
+                - defaultSuccessorUserId
+                - name
+                - successorCandidates
+                - workspaceId
+                type: object
+                properties:
+                  defaultSuccessorUserId:
+                    type: string
+                    description: 기본으로 고를 사람(가장 오래된 멤버). TRANSFER_OR_DELETE 가 아니면 null
+                    nullable: true
+                    example: 0HZX2K7M9Q4AM
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  name:
+                    type: string
+                    description: 워크스페이스 이름
+                    nullable: false
+                  successorCandidates:
+                    type: array
+                    description: TRANSFER_OR_DELETE 일 때 넘겨받을 수 있는 멤버, 가입순. 아니면 빈 목록
+                    items:
+                      required:
+                      - email
+                      - name
+                      - userId
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: 워크스페이스에서 보이는 이름
+                          nullable: false
+                        userId:
+                          type: string
+                          description: 멤버 사용자 식별자
+                          nullable: false
+                          example: 0HZX2K7M9Q4AM
+                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        email:
+                          type: string
+                          description: 이메일
+                          nullable: false
+                    nullable: false
+                  action:
+                    type: string
+                    description: 탈퇴하면 하는 일. DELETE 나 혼자라 지운다, LEAVE 다른 관리자가 있거나 멤버라 나간다, TRANSFER_OR_DELETE 내가 유일한 관리자이고 다른 멤버가 있어 넘기거나 지운다(요청에서 고른다)
+                    nullable: false
+                    enum:
+                    - DELETE
+                    - LEAVE
+                    - TRANSFER_OR_DELETE
+                  workspaceId:
+                    type: string
+                    description: 워크스페이스 식별자
+                    nullable: false
+                    example: 0HZX2K7M9Q4AD
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    DeleteAccountRequest:
+      title: DeleteAccountRequest
+      required:
+      - confirmation
+      type: object
+      properties:
+        reason:
+          required:
+          - code
+          type: object
+          properties:
+            code:
+              type: string
+              description: 사유 코드
+              nullable: false
+              enum:
+              - MISSING_FEATURE
+              - SECURITY_CONCERN
+              - TRANSCRIPTION_QUALITY
+              - OTHER_SERVICE
+              - RARELY_USED
+              - OTHER
+            detail:
+              type: string
+              description: 기타 자유 입력(선택, 500자 이하). 로그·분석 도구에 남기지 않는다
+              nullable: true
+              maxLength: 500
+          description: 탈퇴 사유(선택). 사용자와 떼어 통계로만 남는다
+          nullable: true
+        workspaces:
+          type: array
+          description: 처리 목록에서 TRANSFER_OR_DELETE 인 워크스페이스마다 하나. 나머지는 서버가 정한 대로 한다
+          items:
+            required:
+            - decision
+            - workspaceId
+            type: object
+            properties:
+              decision:
+                type: string
+                description: TRANSFER 관리자를 넘기고 나간다, DELETE 워크스페이스를 지운다
+                nullable: false
+                enum:
+                - TRANSFER
+                - DELETE
+              successorUserId:
+                type: string
+                description: TRANSFER 일 때 넘겨받을 멤버. 처리 목록의 후보여야 한다
+                nullable: true
+                example: 0HZX2K7M9Q4AM
+                pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              workspaceId:
+                type: string
+                description: 워크스페이스 식별자
+                nullable: false
+                example: 0HZX2K7M9Q4AD
+                pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          nullable: false
+        confirmation:
+          type: string
+          description: 확인 문구. 「회원 탈퇴」와 앞뒤 공백만 걷고 정확히 같아야 한다
+          nullable: false
+          maxLength: 50
+    WorkspaceNameConfirmationRequest:
+      title: WorkspaceNameConfirmationRequest
+      required:
+      - workspaceName
+      type: object
+      properties:
+        workspaceName:
+          type: string
+          description: 확인으로 입력한 워크스페이스 이름. 지금 이름과 앞뒤 공백만 걷고 정확히 같아야 한다(PRO-69)
+          nullable: false
+          maxLength: 200
   securitySchemes:
     accessCookie:
       type: apiKey

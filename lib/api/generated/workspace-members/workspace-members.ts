@@ -30,6 +30,7 @@ import type {
   UnauthorizedResponse,
   WorkspaceMemberListResponse,
   WorkspaceMemberResponse,
+  WorkspaceNameConfirmationRequest,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -427,6 +428,11 @@ export type leaveWorkspaceResponse204 = {
   status: 204;
 };
 
+export type leaveWorkspaceResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type leaveWorkspaceResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -446,6 +452,7 @@ export type leaveWorkspaceResponseSuccess = leaveWorkspaceResponse204 & {
   headers: Headers;
 };
 export type leaveWorkspaceResponseError = (
+  | leaveWorkspaceResponse400
   | leaveWorkspaceResponse401
   | leaveWorkspaceResponse404
   | leaveWorkspaceResponse409
@@ -462,23 +469,50 @@ export const getLeaveWorkspaceUrl = (workspaceId: string) => {
 };
 
 /**
- * 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다.
+ * 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다. 확인으로 입력한 워크스페이스 이름을 본문으로 받아 지금 이름과 다르면 400 WORKSPACE_NAME_MISMATCH 다.
  * @summary 워크스페이스 나가기
  */
 export const leaveWorkspace = async (
   workspaceId: string,
+  workspaceNameConfirmationRequest?: WorkspaceNameConfirmationRequest,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<leaveWorkspaceResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
   return apiFetch<leaveWorkspaceResponse>(getLeaveWorkspaceUrl(workspaceId), {
     ...options,
     method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(workspaceNameConfirmationRequest),
   });
 };
 
 export const getLeaveWorkspaceMutationKey = () => ["leaveWorkspace"] as const;
 
 export const getLeaveWorkspaceMutationOptions = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -507,9 +541,9 @@ export const getLeaveWorkspaceMutationOptions = <
     Awaited<ReturnType<typeof leaveWorkspace>>,
     LeaveWorkspaceMutationVariables
   > = (props) => {
-    const { workspaceId } = props ?? {};
+    const { workspaceId, data } = props ?? {};
 
-    return leaveWorkspace(workspaceId, requestOptions);
+    return leaveWorkspace(workspaceId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -518,17 +552,22 @@ export const getLeaveWorkspaceMutationOptions = <
 export type LeaveWorkspaceMutationResult = NonNullable<
   Awaited<ReturnType<typeof leaveWorkspace>>
 >;
-
+export type LeaveWorkspaceMutationBody =
+  | WorkspaceNameConfirmationRequest
+  | undefined;
 export type LeaveWorkspaceMutationError =
-  | UnauthorizedResponse
-  | AppErrorResponse;
-export type LeaveWorkspaceMutationVariables = { workspaceId: string };
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type LeaveWorkspaceMutationVariables = {
+  workspaceId: string;
+  data?: WorkspaceNameConfirmationRequest;
+};
 
 /**
  * @summary 워크스페이스 나가기
  */
 export const useLeaveWorkspace = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(
   options?: {
