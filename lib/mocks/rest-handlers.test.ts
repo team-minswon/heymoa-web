@@ -523,7 +523,7 @@ describe("meeting and integration handlers", () => {
       );
 
     expect(foreignNote).toBeDefined();
-    // 시드의 진행 중 회의에는 실제 열린 세션이 있다. 그 세션이 중지된 뒤
+    // 시드의 진행 중 회의에는 실제 열린 세션이 있다. 그 세션이 일시정지된 뒤
     // 비시작자 멤버가 재개할 수 있는지를 본다.
     const current = mockDb.getCurrentSession(foreignNote!.noteId);
     expect(current?.status).toBe("ACTIVE");
@@ -580,7 +580,7 @@ describe("meeting and integration handlers", () => {
     expect(response.status).toBe(409);
     expect((await response.json()).error).toMatchObject({
       code: "MEETING_RECORDING",
-      message: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
+      message: "기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다.",
     });
   });
 

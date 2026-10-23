@@ -3,11 +3,16 @@
 import { track } from "@/lib/analytics/track";
 
 import Link from "next/link";
-import { Square } from "lucide-react";
+import { Pause } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { RecordingConnectionNotice } from "@/components/transcription/recording-connection-notice";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import {
@@ -92,17 +97,26 @@ function GlobalRecordingPill({
           </span>
         </Link>
         <div className="h-5 w-px bg-[var(--el-hairline)]" />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="녹음 종료"
-          onClick={onStop}
-          disabled={phase !== "recording"}
-          className="size-7 rounded-full text-destructive hover:bg-destructive/8 hover:text-destructive"
-        >
-          <Square className="size-3.5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="녹음 일시정지"
+                onClick={onStop}
+                disabled={phase !== "recording"}
+                className="size-7 rounded-full text-destructive hover:bg-destructive/8 hover:text-destructive"
+              />
+            }
+          >
+            <Pause className="size-3.5" aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            녹음 일시정지 — 회의는 끝나지 않습니다
+          </TooltipContent>
+        </Tooltip>
       </div>
       {notice}
     </motion.aside>

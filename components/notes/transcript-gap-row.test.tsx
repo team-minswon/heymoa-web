@@ -9,7 +9,7 @@ function pause(partial: Partial<TranscriptGap> = {}) {
     {
       gapId: "p1",
       kind: "PAUSE",
-      // 중지는 회의 축에서 점이다 — 두 좌표가 같다.
+      // 일시정지는 회의 축에서 점이다 — 두 좌표가 같다.
       startedAtMs: 612_000,
       endedAtMs: 612_000,
       startedAt: "2026-08-18T01:00:00Z",
@@ -27,7 +27,7 @@ describe("TranscriptGapRow", () => {
   it("대충 말한다 — 270분도 4시간 30분도 아니고 약 5시간이다", () => {
     render(<TranscriptGapRow row={pause()} />);
 
-    expect(screen.getByText(/약 5시간 중지했습니다/)).toBeTruthy();
+    expect(screen.getByText(/약 5시간 일시정지했습니다/)).toBeTruthy();
   });
 
   it("같은 날이면 시:분만 쓴다", () => {
@@ -43,7 +43,7 @@ describe("TranscriptGapRow", () => {
       <TranscriptGapRow row={pause({ endedAt: "2026-08-20T13:30:00Z" })} />
     );
 
-    expect(screen.getByText(/약 3일 중지했습니다/)).toBeTruthy();
+    expect(screen.getByText(/약 3일 일시정지했습니다/)).toBeTruthy();
     expect(
       screen.getByText(
         /^\d{1,2}\/\d{1,2} \d{2}:\d{2}에 멈추고 \d{1,2}\/\d{1,2} \d{2}:\d{2}에 재개했습니다$/

@@ -167,7 +167,7 @@ describe("NoteListRow", () => {
   it.each([
     ["NOT_STARTED", "시작 전"],
     ["IN_PROGRESS", "기록 중"],
-    ["PAUSED", "중지됨"],
+    ["PAUSED", "일시정지됨"],
     ["ENDED", "종료됨"],
   ] as const)("shows the exact %s status copy", (meetingStatus, label) => {
     recording.current = {
@@ -231,7 +231,7 @@ describe("NoteListRow", () => {
       Date.parse("2026-08-11T00:23:41Z")
     );
 
-    expect(screen.getByText("중지됨")).toBeInTheDocument();
+    expect(screen.getByText("일시정지됨")).toBeInTheDocument();
     // 진행자는 아바타 배지만으로 안 읽혀서 둘째 줄에 글자로도 적는다.
     // 진행자는 둘째 줄이 아니라 오른쪽 아바타 줄에서 구분선으로 갈라 선다.
     expect(screen.queryByText("김민수")).toBeNull();
@@ -241,7 +241,7 @@ describe("NoteListRow", () => {
     expect(screen.getByText("기록 3분")).toBeInTheDocument();
   });
 
-  it("오래 멈춘 회의에만 중지 기간을 붙인다", () => {
+  it("오래 멈춘 회의에만 일시정지 기간을 붙인다", () => {
     // KST 10월 22일 09:00
     const now = Date.parse("2026-10-22T00:00:00Z");
     const { unmount } = renderRow(
@@ -252,10 +252,10 @@ describe("NoteListRow", () => {
       }),
       now
     );
-    expect(screen.getByText("3일째 중지됨")).toBeInTheDocument();
+    expect(screen.getByText("3일째 일시정지됨")).toBeInTheDocument();
     unmount();
 
-    // 오늘 멈춘 회의와 중지가 아닌 회의에는 기간이 없다
+    // 오늘 멈춘 회의와 일시정지가 아닌 회의에는 기간이 없다
     renderRow(
       note({
         meetingStatus: "PAUSED",
@@ -264,7 +264,7 @@ describe("NoteListRow", () => {
       }),
       now
     );
-    expect(screen.getByText("중지됨")).toBeInTheDocument();
+    expect(screen.getByText("일시정지됨")).toBeInTheDocument();
     expect(screen.queryByText(/일째/)).toBeNull();
   });
 

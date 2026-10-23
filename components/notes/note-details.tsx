@@ -308,7 +308,7 @@ export function NoteDetails({
               <span className="font-normal text-[var(--el-muted)]">
                 {` · 자동 종료${
                   note.autoEnd?.pausedBusinessDays
-                    ? `(마지막 중지 후 ${note.autoEnd.pausedBusinessDays}영업일)`
+                    ? `(마지막 일시정지 후 ${note.autoEnd.pausedBusinessDays}영업일)`
                     : ""
                 }`}
               </span>

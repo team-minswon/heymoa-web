@@ -309,9 +309,14 @@ footer button {
   color: light-dark(#b4501f, #f6a87f);
 }
 #stop span {
+  display: inline-flex;
   color: var(--orange);
-  font-size: 10px;
   margin-right: 4px;
+  vertical-align: -1px;
+}
+#stop svg {
+  width: 11px;
+  height: 11px;
 }
 [hidden] {
   display: none !important;

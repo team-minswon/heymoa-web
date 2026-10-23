@@ -146,7 +146,7 @@ function contractSamples() {
   const notes = tuples.filter((tuple) => tuple.noteId).map((t) => t.noteId!);
 
   // 분석 표본을 만들 노트에는 열린 세션이 없어야 한다. 진행 중인 시드는 실제
-  // ACTIVE 세션을 가지므로, 미시작·중지된 노트만 골라 세션 생성 → 종료를 검사한다.
+  // ACTIVE 세션을 가지므로, 미시작·일시정지된 노트만 골라 세션 생성 → 종료를 검사한다.
   // **위치가 아니라 상태로 고른다** — 시드가 늘어도 표본 생성이 흔들리지 않는다.
   // 현재 목 DB의 정본인 상세 상태로 고른다.
   const operable = notes.filter((noteId) => {

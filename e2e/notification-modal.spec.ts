@@ -44,7 +44,7 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
   await entry.click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(
-    dialog.getByText("마지막 중지 후 3영업일이 지나 자동으로 종료했습니다.")
+    dialog.getByText("마지막 일시정지 후 3영업일이 지나 자동으로 종료했습니다.")
   ).toBeVisible();
   // 검토 화면이 결과를 그리면 그 알림만 읽는다.
   const read = page.waitForRequest(

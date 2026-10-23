@@ -698,8 +698,8 @@ describe("TranscriptView", () => {
     ).toBeNull();
   });
 
-  it("중지 drain 동안에도 내 소켓의 partial을 그린다", () => {
-    // 중지 요청 뒤에도 같은 소켓이 마지막 final을 drain한다. 그 구간에 토픽으로 넘기면
+  it("일시정지 drain 동안에도 내 소켓의 partial을 그린다", () => {
+    // 일시정지 요청 뒤에도 같은 소켓이 마지막 final을 drain한다. 그 구간에 토픽으로 넘기면
     // 토픽이 재연결·catch-up으로 비어 있을 때 화면이 빈다.
     useRecording.mockReturnValue({
       ...recordingState(),

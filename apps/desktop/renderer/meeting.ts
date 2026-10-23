@@ -292,7 +292,7 @@ function receive(view: MeetingPopoverView) {
       : view.phase === "requesting-permission" || view.phase === "connecting"
         ? "녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요."
         : view.phase === "stopping"
-          ? "녹음 중지와 전송 완료를 기다리고 있습니다."
+          ? "녹음 일시정지와 전송 완료를 기다리고 있습니다."
           : view.warning || "녹음 중인 회의가 없습니다.";
   element("open").textContent =
     view.phase !== null && view.phase !== "idle"
@@ -311,10 +311,12 @@ function receive(view: MeetingPopoverView) {
         : timeline?.failed
           ? "회의 내용을 갱신하지 못했습니다."
           : "");
-  // 뷰어로 보는 중에는 「녹음 중지」 대신 「보기 종료」로 목록에 돌아간다.
-  const label = viewing ? " 보기 종료" : " 녹음 중지";
+  // 뷰어로 보는 중에는 「녹음 일시정지」 대신 「보기 종료」로 목록에 돌아간다.
+  const label = viewing ? " 보기 종료" : " 녹음 일시정지";
   if (stop.lastChild?.textContent !== label)
     stop.lastChild!.textContent = label;
+  // ⏸ 는 녹음 일시정지에만 붙는다. 보기 종료는 회의를 멈추지 않는다.
+  (stop.firstElementChild as HTMLElement).hidden = viewing;
   stop.disabled = !(view.canStop || viewing);
   renderItems(animateNew);
   const listing = !timeline && !recording && view.meetings.length > 0;

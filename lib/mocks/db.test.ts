@@ -36,7 +36,7 @@ describe("mockDb", () => {
       )
       // 13 + 후보 e2e 전용 셋(커버리지 추종 0008·정리 실패 0006·합성 원장 0007)
       // + 실제 멘토링 회의 하나(화자 패널용 실데이터) + 실시간 안건 회의 0016
-      // + 오래 멈춘 회의 0040(APP-1313 중지 기간).
+      // + 오래 멈춘 회의 0040(APP-1313 일시정지 기간).
     ).toHaveLength(19);
   });
 
@@ -54,7 +54,7 @@ describe("mockDb", () => {
     ).toEqual([]);
   });
 
-  it("진행 중인 시드는 실제 열린 세션을 갖고 중지된 시드에는 없다", () => {
+  it("진행 중인 시드는 실제 열린 세션을 갖고 일시정지된 시드에는 없다", () => {
     const notes = mockDb
       .listWorkspaces()
       .flatMap((workspace) => mockDb.listProjects(workspace.workspaceId))
@@ -241,7 +241,7 @@ describe("mockDb", () => {
 
     mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
     expect(
-      mockDb.updateNote(note.noteId, { title: "중지된 제목" })
+      mockDb.updateNote(note.noteId, { title: "일시정지된 제목" })
     ).toMatchObject({
       activeSessionStartedAt: null,
       recordedDurationMs: 1000,
@@ -301,7 +301,7 @@ describe("mockDb", () => {
     }
   );
 
-  it("★ 중지한 뒤 끝낸 회의의 봉인은 COMPLETE 다", () => {
+  it("★ 일시정지한 뒤 끝낸 회의의 봉인은 COMPLETE 다", () => {
     const [project] = mockDb.listProjects("01K0000000000");
     const note = mockDb.createNote(project.projectId, { title: "끝낸 회의" });
     const session = mockDb.createSession(note.noteId);

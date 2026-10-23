@@ -220,7 +220,7 @@ describe("데스크톱 입력 상태와 캡처 실패 안내", () => {
     expect(harness.result.current.systemAudio).toBeNull();
   });
 
-  it("캡처 오류 코드를 버리지 않고 안내와 콘솔에 남겨 사용자 중지와 구별한다", async () => {
+  it("캡처 오류 코드를 버리지 않고 안내와 콘솔에 남겨 사용자 일시정지와 구별한다", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1289,7 +1289,7 @@ describe("같은 세션에 다시 붙는 동안", () => {
     }
   );
 
-  it("회의가 일시중지됐으면 녹음을 멈춘다", async () => {
+  it("회의가 일시정지됐으면 녹음을 멈춘다", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     sessionQuery.current = interrupted("MEETING_PAUSED");
@@ -1298,7 +1298,7 @@ describe("같은 세션에 다시 붙는 동안", () => {
 
     await waitFor(() =>
       expect(harness.result.current.error).toBe(
-        "회의가 일시중지되어 기록을 멈췄습니다."
+        "회의가 일시정지되어 기록을 멈췄습니다."
       )
     );
     expect(harness.result.current.phase).toBe("failed");

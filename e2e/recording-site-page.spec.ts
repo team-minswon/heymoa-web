@@ -28,7 +28,7 @@ test("데스크톱 앱에서 녹음 중 사용 가이드를 누르면 이동하�
 
   const dock = page.getByLabel("녹음 제어");
   await dock.getByRole("button", { name: "회의 시작" }).click();
-  await expect(dock.getByRole("button", { name: "중지" })).toBeVisible({
+  await expect(dock.getByRole("button", { name: "일시정지" })).toBeVisible({
     timeout: 20_000,
   });
 
@@ -43,5 +43,5 @@ test("데스크톱 앱에서 녹음 중 사용 가이드를 누르면 이동하�
   await expect(page.getByText("녹음 중에는 앱에서 다른 페이지를 열 수 없습니다")).toBeVisible();
   expect(dialogs).toEqual([]);
   expect(new URL(page.url()).pathname).toBe(notePath);
-  await expect(dock.getByRole("button", { name: "중지" })).toBeVisible();
+  await expect(dock.getByRole("button", { name: "일시정지" })).toBeVisible();
 });

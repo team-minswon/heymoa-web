@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ExternalLink, Plus, Square } from "lucide-react";
+import { ExternalLink, Pause, Plus } from "lucide-react";
 
 import {
   type RecordingPhase,
@@ -11,6 +11,11 @@ import {
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { siteConfig } from "@/lib/site";
@@ -77,17 +82,26 @@ function WorkspaceRecordingIndicator({
       <span className="font-mono text-[13px] font-medium tabular-nums text-[var(--el-ink)]">
         {formatElapsed(elapsedMs)}
       </span>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        className="size-7 rounded-full text-destructive"
-        aria-label="녹음 종료"
-        disabled={phase !== "recording"}
-        onClick={onStop}
-      >
-        <Square className="size-3.5" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="size-7 rounded-full text-destructive"
+              aria-label="녹음 일시정지"
+              disabled={phase !== "recording"}
+              onClick={onStop}
+            />
+          }
+        >
+          <Pause className="size-3.5" aria-hidden />
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          녹음 일시정지 — 회의는 끝나지 않습니다
+        </TooltipContent>
+      </Tooltip>
     </motion.div>
   );
 }

@@ -162,7 +162,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         },
       },
       {
-        label: "녹음 중지",
+        label: "녹음 일시정지",
         enabled: lifecycle.isRecording(),
         click: () => {
           sendAction("stop");

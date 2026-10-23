@@ -18,7 +18,7 @@ import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 
 /**
- * 이 노트의 중지 시각을 읽어 둔 목록 캐시에서 찾는다. 노트 상세 응답도 `pausedAt` 을 싣지만(APP-1317) 생성·수정·종료
+ * 이 노트의 일시정지 시각을 읽어 둔 목록 캐시에서 찾는다. 노트 상세 응답도 `pausedAt` 을 싣지만(APP-1317) 생성·수정·종료
  * 응답이 노트 캐시를 덮어쓰면 비므로 목록을 예비로 둔다.
  */
 function cachedPausedAt(queryClient: QueryClient, noteId: string) {
@@ -36,12 +36,12 @@ function cachedPausedAt(queryClient: QueryClient, noteId: string) {
 /**
  * 노트 상단바 바로 아래의 한 줄 띠.
  *
- * - **오래 멈춘 회의**(APP-1313): 「N일째 중지 상태입니다」. 오늘 멈춘 회의는 중지 직후 안내(`EndNudge`)가 이미
+ * - **오래 멈춘 회의**(APP-1313): 「N일째 일시정지 상태입니다」. 오늘 멈춘 회의는 일시정지 직후 안내(`EndNudge`)가 이미
  *   종료를 권했으므로 서지 않는다. 자동 종료가 예고된 회의(응답에 예정 시각이 있을 때만, APP-1319)는 일수 대신
- *   「계속 중지 상태라면 {시각} 이후 자동 종료될 예정입니다」 — 예정이 없으면 약속하지 않는다.
+ *   「계속 일시정지 상태라면 {시각} 이후 자동 종료될 예정입니다」 — 예정이 없으면 약속하지 않는다.
  * - **자동 종료된 회의**(APP-1319): 탭과 무관한 고정 안내(`NoteAutoEndNotice`). 메일로 도착해도 이것이 대신한다.
- * - **메일 링크로 도착**(APP-1312): 메일은 과거의 중지를 말하므로 **도착한 시점의 상태**를 말한다 — 여전히 중지면
- *   (기간을 몰라도) 중지 안내, 그새 녹음이 다시 시작됐거나 회의가 끝났으면 그 사실. 도착한 뒤 상태가 바뀌면 거둔다.
+ * - **메일 링크로 도착**(APP-1312): 메일은 과거의 일시정지를 말하므로 **도착한 시점의 상태**를 말한다 — 여전히 일시정지면
+ *   (기간을 몰라도) 일시정지 안내, 그새 녹음이 다시 시작됐거나 회의가 끝났으면 그 사실. 도착한 뒤 상태가 바뀌면 거둔다.
  *
  * 버튼은 두지 않는다: 재개는 레코더 독, 종료는 상단바 「회의 종료」, 종료 전 참여자 확인은 종료 확인 창이 한다
  * (PRO-67 userflow 「메일 링크로 도착한 사람」). 기기를 말하지 않는다 — web 의 재개는 기기를 가리지 않는다.
@@ -87,10 +87,10 @@ export function NoteStatusBand({
     const days = pausedDayCount(pausedAt, now);
     const scheduledAt = note.autoEnd?.scheduledAt;
     if (scheduledAt)
-      lead = `계속 중지 상태라면 ${formatPromiseTime(scheduledAt)} 이후 자동 종료될 예정입니다.`;
-    else if (days !== null) lead = `${days}일째 중지 상태입니다.`;
-    else if (landed) lead = "중지 상태입니다.";
-    // 띠는 중지 일수(예고된 회의면 자동 종료 시각)만 말한다(userflow 표). 할 수 있는 일은 메일로 온 사람에게만 덧붙인다(userflow 「모바일 메일」).
+      lead = `계속 일시정지 상태라면 ${formatPromiseTime(scheduledAt)} 이후 자동 종료될 예정입니다.`;
+    else if (days !== null) lead = `${days}일째 일시정지 상태입니다.`;
+    else if (landed) lead = "일시정지 상태입니다.";
+    // 띠는 일시정지 일수(예고된 회의면 자동 종료 시각)만 말한다(userflow 표). 할 수 있는 일은 메일로 온 사람에게만 덧붙인다(userflow 「모바일 메일」).
     if (landed) rest = "이어서 녹음하거나 종료할 수 있습니다.";
   } else if (landed && note.meetingStatus === "IN_PROGRESS") {
     lead = "메일을 보낸 뒤 녹음이 다시 시작되었습니다.";

@@ -128,8 +128,8 @@ describe("GlobalRecordingIndicator", () => {
       expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
       expect(screen.queryByText("연결 중")).toBeNull();
       expect(screen.queryByText("마무리 중")).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
-      expect(screen.getByRole("button", { name: "녹음 종료" })).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: "녹음 일시정지" }));
+      expect(screen.getByRole("button", { name: "녹음 일시정지" })).toBeDisabled();
       expect(recording.stop).not.toHaveBeenCalled();
     }
   );
@@ -140,7 +140,7 @@ describe("GlobalRecordingIndicator", () => {
     expect(
       screen.queryByRole("button", { name: "구간 확정" })
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
+    fireEvent.click(screen.getByRole("button", { name: "녹음 일시정지" }));
     expect(recording.stop).toHaveBeenCalledOnce();
     expect(
       screen.queryByRole("button", { name: /일시 정지|재개/ })

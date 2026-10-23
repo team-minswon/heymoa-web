@@ -255,7 +255,7 @@ function describeAnalysisReady(
       : null;
   const reason =
     payload?.autoEnded && payload.pausedBusinessDays
-      ? `마지막 중지 후 ${payload.pausedBusinessDays}영업일이 지나 자동으로 종료했습니다.`
+      ? `마지막 일시정지 후 ${payload.pausedBusinessDays}영업일이 지나 자동으로 종료했습니다.`
       : null;
   return {
     title: (

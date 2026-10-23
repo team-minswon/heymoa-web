@@ -296,7 +296,7 @@ export function TranscriptView({
           <div className="sticky top-0 z-10 -mt-5 flex justify-end bg-white pb-2 pt-5">
             <CopyMarkdownButton
               label="스크립트"
-              // 중지 뒤 최종 재조회가 도는 동안은 무엇이 최종본인지 모른다.
+              // 일시정지 뒤 최종 재조회가 도는 동안은 무엇이 최종본인지 모른다.
               disabled={transcriptQuery.isFetching}
               build={() =>
                 transcriptToMarkdown({

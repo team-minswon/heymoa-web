@@ -28,8 +28,8 @@ export function isAutoEnded(note: NoteResponseData) {
 export function autoEndReason(note: NoteResponseData) {
   const days = note.autoEnd?.pausedBusinessDays;
   return days
-    ? `마지막 중지 후 ${days}영업일이 지나 종료했습니다.`
-    : "중지 상태가 오래 이어져 종료했습니다.";
+    ? `마지막 일시정지 후 ${days}영업일이 지나 종료했습니다.`
+    : "일시정지 상태가 오래 이어져 종료했습니다.";
 }
 
 /**

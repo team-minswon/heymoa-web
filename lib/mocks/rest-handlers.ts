@@ -98,7 +98,7 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
     "연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.",
   AGENT_ACCESS_DISABLED:
     "이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다.",
-  MEETING_RECORDING: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
+  MEETING_RECORDING: "기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다.",
   MEETING_ALREADY_ENDED: "이미 종료된 회의입니다.",
 };
 
@@ -382,7 +382,7 @@ function pageOfNotes(
   const afterNoteId = url.searchParams.get("afterNoteId");
   const sortedAt = (note: NoteListResponseDataNotesItem) =>
     note.meetingStartedAt ?? note.createdAt;
-  // 회의 상태 필터는 서버처럼 **쪽을 자르기 전에** 건다(APP-1310) — 뒤에 걸면 뒤쪽 쪽의 중지 회의가 빠진다.
+  // 회의 상태 필터는 서버처럼 **쪽을 자르기 전에** 건다(APP-1310) — 뒤에 걸면 뒤쪽 쪽의 일시정지 회의가 빠진다.
   const meetingStatus = url.searchParams.get("meetingStatus");
   const matching = meetingStatus
     ? notes.filter((note) => note.meetingStatus === meetingStatus)
@@ -435,7 +435,7 @@ export function seedShareMail(
 }
 
 /**
- * 알림 설정(server APP-1303 · 화면 APP-1341). server 정책 표를 흉내 낸다 — 필수는 초대, 선택은 중지된 회의 메일(기본 켜짐)과 검토할 결과 준비 웹(기본 켜짐).
+ * 알림 설정(server APP-1303 · 화면 APP-1341). server 정책 표를 흉내 낸다 — 필수는 초대, 선택은 일시정지된 회의 메일(기본 켜짐)과 검토할 결과 준비 웹(기본 켜짐).
  * 사용자의 선택(`enabled`)과 두 「모두 끄기」를 따로 들고 `effective` 는 둘을 합쳐 낸다. 이 문서 안에서만 산다.
  */
 type MockChannel = {

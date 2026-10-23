@@ -36,7 +36,7 @@ export const scenes = [
       await p.waitForTimeout(700);
       await click(p, button(p, "회의 시작"), 100, 450);
       await p.getByTestId("note-recording-waveform").waitFor();
-      // 커서가 중지 버튼 위에 남아 있으면 누르려는 것처럼 보인다. 받아쓰기 쪽으로 비켜 준다.
+      // 커서가 일시정지 버튼 위에 남아 있으면 누르려는 것처럼 보인다. 받아쓰기 쪽으로 비켜 준다.
       await p.mouse.move(700, 330, { steps: 14 });
       // 받아쓰기 줄이 하나둘 쌓이는 걸 보여 준다.
       await p.getByTestId("transcript-block").first().waitFor({ timeout: 30000 });

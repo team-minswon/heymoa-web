@@ -109,7 +109,7 @@ function NoteRowIcon({
 /**
  * 행의 둘째 줄. **모든 행이 같은 항목을 같은 순서로** 왼쪽 정렬로 낸다.
  *
- * 예전에는 한 줄 오른쪽 끝에 몰아넣고 상태마다 항목을 갈랐다 — 진행자는 중지됨에만,
+ * 예전에는 한 줄 오른쪽 끝에 몰아넣고 상태마다 항목을 갈랐다 — 진행자는 일시정지됨에만,
  * 상대 시각은 종료됨에만 떠서 행마다 길이도 구성도 달랐고, 오른쪽 정렬이라 시작 x까지
  * 어긋나 **세로로 훑을 수가 없었다.** 브레이크포인트별 숨김(`hidden sm:`·`md:`)도 같은
  * 불일치를 화면 폭마다 다시 만들었다.
@@ -150,9 +150,9 @@ function MeetingMeta({
           status === "IN_PROGRESS" && "text-destructive"
         )}
       >
-        {/* 오래 멈춘 회의는 기간을 붙인다(APP-1313). 목록 시계가 서기 전(SSR)에는 「중지됨」만 쓴다. */}
+        {/* 오래 멈춘 회의는 기간을 붙인다(APP-1313). 목록 시계가 서기 전(SSR)에는 「일시정지됨」만 쓴다. */}
         {status === "PAUSED" && pausedDays !== null
-          ? `${pausedDays}일째 중지됨`
+          ? `${pausedDays}일째 일시정지됨`
           : MEETING_STATUS_LABEL[status]}
       </span>
       {status !== "NOT_STARTED" ? (

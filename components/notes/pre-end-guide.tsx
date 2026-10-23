@@ -11,7 +11,7 @@ import type { NoteResponseData } from "@/lib/api/generated/models";
 /**
  * 종료 전 요약 탭. **회의를 종료하면 무엇이 생기는지를 말한다.**
  *
- * 운영에서 회의를 중지만 하고 종료하지 않는 사람이 많았다. 종료해야 화자 분리·요약·검토가 생기는데,
+ * 운영에서 회의를 일시정지만 하고 종료하지 않는 사람이 많았다. 종료해야 화자 분리·요약·검토가 생기는데,
  * 한 줄짜리 안내는 그것을 알려 주지 못했다. 점이나 배지로 끌지 않고, 이 탭을 연 사람에게 충분히
  * 알린다.
  *
@@ -49,7 +49,7 @@ export function PreEndGuide({
 }) {
   const [endOpen, setEndOpen] = useState(false);
   const reduced = useReducedMotion();
-  // 기록 중에는 서버가 종료를 거절한다. 중지한 뒤에만 버튼을 둔다.
+  // 기록 중에는 서버가 종료를 거절한다. 일시정지한 뒤에만 버튼을 둔다.
   const canEnd = note?.meetingStatus === "PAUSED";
   const recording = note?.meetingStatus === "IN_PROGRESS";
   const lonely = note != null && note.participants.length <= 1;
@@ -137,7 +137,7 @@ export function PreEndGuide({
           ) : null}
           <p className="text-xs text-[var(--el-muted-soft)]">
             {recording
-              ? "기록을 중지하면 회의를 종료할 수 있어요."
+              ? "기록을 일시정지하면 회의를 종료할 수 있어요."
               : canEnd
                 ? "종료한 뒤에는 이어서 녹음할 수 없어요."
                 : null}

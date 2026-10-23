@@ -38,7 +38,7 @@ import type { NoteResponseData } from "@/lib/api/generated/models";
 import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import { cn } from "@/lib/utils";
 
-/** 중지된 회의를 확인 한 번으로 종료한다. 기록 중이면 서버가 409 MEETING_RECORDING 을 준다. */
+/** 일시정지된 회의를 확인 한 번으로 종료한다. 기록 중이면 서버가 409 MEETING_RECORDING 을 준다. */
 export function MeetingEndDialog({
   noteId,
   meetingStatus,
@@ -83,7 +83,7 @@ export function MeetingEndDialog({
           setBlocked(
             errorMessageOf(
               error,
-              "기록 중인 회의는 중지한 뒤 종료할 수 있습니다."
+              "기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다."
             )
           );
           void queryClient.invalidateQueries({
@@ -220,7 +220,7 @@ export function MeetingEndDialog({
 
         <div className="flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5 text-xs text-[var(--el-muted)]">
           <Mic className="size-3.5" />
-          녹음 상태 · {meetingStatus === "IN_PROGRESS" ? "기록 중" : "중지됨"}
+          녹음 상태 · {meetingStatus === "IN_PROGRESS" ? "기록 중" : "일시정지됨"}
         </div>
 
         {blocked ? (

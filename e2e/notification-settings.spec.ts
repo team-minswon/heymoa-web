@@ -16,7 +16,7 @@ test("알림 탭에서 바꾼 값이 다시 열어도 남고, 모두 끄기는 �
     page.getByRole("button", { name: "알림", exact: true })
   ).toHaveAttribute("aria-current", "page");
 
-  const mail = page.getByRole("switch", { name: "중지된 회의 메일" });
+  const mail = page.getByRole("switch", { name: "일시정지된 회의 메일" });
   await expect(mail).toBeChecked();
   await mail.click();
   await expect(mail).not.toBeChecked();
@@ -36,7 +36,7 @@ test("알림 탭에서 바꾼 값이 다시 열어도 남고, 모두 끄기는 �
   await expect(
     page.getByRole("switch", { name: "메일 모두 끄기" })
   ).toBeChecked();
-  // 메일을 보내는 선택 종류(중지된 회의·문의 답변)의 메일 열이 가려진다.
+  // 메일을 보내는 선택 종류(일시정지된 회의·문의 답변)의 메일 열이 가려진다.
   await expect(dialog(page).getByText("꺼짐")).toHaveCount(2);
 
   await page.getByRole("button", { name: "기본값으로 되돌리기" }).click();
@@ -57,6 +57,6 @@ test("메일 푸터의 알림 설정 주소는 마지막 워크스페이스의 �
   await expect(page).toHaveURL(/\/w\/[0-9A-Z]{13}\?settings=notifications$/);
   await expect(dialog(page)).toBeVisible();
   await expect(
-    page.getByRole("switch", { name: "중지된 회의 메일" })
+    page.getByRole("switch", { name: "일시정지된 회의 메일" })
   ).toBeVisible();
 });

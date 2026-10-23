@@ -20,7 +20,7 @@ In the note's **[Summary]** tab, look at the progress stages (**[Speaker separat
 
 1. **Check that the meeting status is [Ended]**
    The status is shown at the top.
-2. **If it's [Recording], click [Stop]**
+2. **If it's [Recording], click [Pause]**
    The recording hasn't finished yet.
 3. **If it's [Paused], click [End meeting]**
    Analysis starts only after the meeting ends.

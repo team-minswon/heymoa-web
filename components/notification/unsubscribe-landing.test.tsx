@@ -84,10 +84,10 @@ describe("UnsubscribeLanding", () => {
 
     expect(await screen.findByText("al***@example.com")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "중지된 회의 메일을 받지 않을까요?" })
+      screen.getByRole("heading", { name: "일시정지된 회의 메일을 받지 않을까요?" })
     ).toBeInTheDocument();
     expect(
-      screen.getByText("회의를 중지한 다음 영업일에 보내는 안내")
+      screen.getByText("회의를 일시정지한 다음 영업일에 보내는 안내")
     ).toBeInTheDocument();
     expect(
       screen.getByText("자동 종료했을 때 보내는 안내")
@@ -106,7 +106,7 @@ describe("UnsubscribeLanding", () => {
 
     expect(
       await screen.findByText(
-        "메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다. 초대 등 다른 메일은 그대로 받습니다."
+        "메일을 꺼도 일시정지된 회의는 일정대로 자동 종료됩니다. 초대 등 다른 메일은 그대로 받습니다."
       )
     ).toBeInTheDocument();
   });
@@ -126,7 +126,7 @@ describe("UnsubscribeLanding", () => {
     expect(
       screen.getByText("보낸 문의에 HeyMoa 팀이 답했을 때 보내는 안내")
     ).toBeInTheDocument();
-    expect(screen.queryByText(/중지된 회의/)).toBeNull();
+    expect(screen.queryByText(/일시정지된 회의/)).toBeNull();
     const button = screen.getByRole("button", { name: "메일 끄기" });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
@@ -147,7 +147,7 @@ describe("UnsubscribeLanding", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "중지된 회의 메일을 껐습니다",
+        name: "일시정지된 회의 메일을 껐습니다",
       })
     ).toBeInTheDocument();
     expect(requests).toEqual(["GET", "POST"]);
@@ -170,9 +170,9 @@ describe("UnsubscribeLanding", () => {
 
     await waitFor(() => expect(requests).toEqual(["GET", "POST"]));
     await waitFor(() => expect(button).toBeEnabled());
-    expect(screen.queryByText("중지된 회의 메일을 껐습니다")).toBeNull();
+    expect(screen.queryByText("일시정지된 회의 메일을 껐습니다")).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "중지된 회의 메일을 받지 않을까요?" })
+      screen.getByRole("heading", { name: "일시정지된 회의 메일을 받지 않을까요?" })
     ).toBeInTheDocument();
   });
 
@@ -196,7 +196,7 @@ describe("UnsubscribeLanding", () => {
     const second = renderLanding();
     expect(
       await screen.findByRole("heading", {
-        name: "중지된 회의 메일은 이미 꺼져 있습니다",
+        name: "일시정지된 회의 메일은 이미 꺼져 있습니다",
       })
     ).toBeInTheDocument();
     second.unmount();

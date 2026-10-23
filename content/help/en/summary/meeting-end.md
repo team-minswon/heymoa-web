@@ -9,10 +9,10 @@ modified: 2026-10-23
 
 ## End a meeting {#end}
 
-You can't click the end button while recording. Stop recording first. A meeting that hasn't started yet can't be ended.
+You can't click the end button while recording. Pause recording first. A meeting that hasn't started yet can't be ended.
 
-1. **Click [Stop]**
-   When you stop, “Recording stopped. Ready to wrap up?” appears below the button for 15 seconds. Choose **[End now]**, **[Later]**, or **[Don't show again]**.
+1. **Click [Pause]**
+   When you pause, “Recording stopped. Ready to wrap up?” appears below the button for 15 seconds. Choose **[End now]**, **[Later]**, or **[Don't show again]**.
 2. **Click [End meeting] at the top**
    A confirmation shows the participants' names and the recording status.
 3. **Check the participants**

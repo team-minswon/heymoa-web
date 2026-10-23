@@ -25,7 +25,7 @@ test("열기만 하면 GET 만 나가고, 메일 끄기를 눌러야 POST 하고
   await page.goto("/unsubscribe?t=e2e");
 
   await expect(
-    page.getByRole("heading", { name: "중지된 회의 메일을 받지 않을까요?" })
+    page.getByRole("heading", { name: "일시정지된 회의 메일을 받지 않을까요?" })
   ).toBeVisible();
   await expect(page.getByText("mo***@heymoa.app")).toBeVisible();
   // 개발 서버의 StrictMode·서비스 워커 경유로 GET 이 두 번 잡힐 수 있다. 세는 것은 POST 다.
@@ -33,7 +33,7 @@ test("열기만 하면 GET 만 나가고, 메일 끄기를 눌러야 POST 하고
 
   await page.getByRole("button", { name: "메일 끄기" }).click();
   await expect(
-    page.getByRole("heading", { name: "중지된 회의 메일을 껐습니다" })
+    page.getByRole("heading", { name: "일시정지된 회의 메일을 껐습니다" })
   ).toBeVisible();
   expect(methods.filter((method) => method === "POST")).toHaveLength(1);
 });

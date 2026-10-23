@@ -13,7 +13,7 @@ test("lost recording state is not rendered as no recording, and idle has an hone
   f.update(null, false, "연결 중", { phase: "connecting" });
   assert.match(f.document.querySelector("#empty").textContent, /녹음 시작을 기다리/);
   assert.equal(f.document.querySelector("#open").textContent, "현재 회의 열기 ↗");
-  f.update(null, false, "녹음 중지 중", { phase: "stopping" });
+  f.update(null, false, "녹음 일시정지 중", { phase: "stopping" });
   assert.match(f.document.querySelector("#empty").textContent, /전송 완료를 기다리/);
   f.update(null, false, "녹음 대기");
   assert.match(f.document.querySelector("#empty").textContent, /녹음 중인 회의가 없습니다/);

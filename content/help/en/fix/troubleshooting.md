@@ -30,7 +30,7 @@ modified: 2026-10-23
 :::problem
 **Symptom:** The **[End meeting]** button doesn't respond
 **Cause:** You can't click this button while recording.
-**Fix:** Click **[Stop]**, then click **[End meeting]**.
+**Fix:** Click **[Pause]**, then click **[End meeting]**.
 :::
 
 ## Can't connect {#connection}
@@ -44,7 +44,7 @@ modified: 2026-10-23
 :::problem
 **Symptom:** “This meeting is being recorded in another tab or on another device” appears
 **Cause:** The same meeting is already being recorded in another tab or on another device.
-**Fix:** Stop recording in that tab or on that device.
+**Fix:** Pause recording in that tab or on that device.
 :::
 
 :::problem

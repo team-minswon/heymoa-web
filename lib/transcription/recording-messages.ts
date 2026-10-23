@@ -79,7 +79,7 @@ export function runtimeFailureMessage(
 }
 
 /**
- * 회의 종료·일시중지는 오류로 말하지 않는다. 멤버 누구나 회의를 끝낼 수 있어서, 녹음하던
+ * 회의 종료·일시정지는 오류로 말하지 않는다. 멤버 누구나 회의를 끝낼 수 있어서, 녹음하던
  * 사람에게는 정상 종료가 자주 일어난다.
  */
 export function interruptedMessage(
@@ -89,7 +89,7 @@ export function interruptedMessage(
     case "MEETING_ENDED":
       return "회의가 종료되어 기록을 마쳤습니다.";
     case "MEETING_PAUSED":
-      return "회의가 일시중지되어 기록을 멈췄습니다.";
+      return "회의가 일시정지되어 기록을 멈췄습니다.";
     case "STT_PROVIDER_ERROR":
       return "음성 인식 서비스 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
     case "CLIENT_DISCONNECTED":

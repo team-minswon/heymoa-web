@@ -81,7 +81,7 @@ type StoredSegment = TranscriptResponseDataSegmentsItem & {
  * note_offset_ms(N) = Σ (session_i.ended_at − session_i.started_at)  for i < N
  * ```
  *
- * **세션 길이만 더하고 사이는 안 더한다** — 중지는 회의 축에서 제외다. 서버의 V25
+ * **세션 길이만 더하고 사이는 안 더한다** — 일시정지는 회의 축에서 제외다. 서버의 V25
  * 마이그레이션이 쓰는 것과 같은 식이다.
  */
 function noteOffsetsMs(sessions: MockSession[]) {
@@ -1088,7 +1088,7 @@ function createSeedState(): StoreState {
       contextTopic: note.contextTopic ?? null,
       contextBackground: note.contextBackground ?? null,
       autoEnd: note.autoEnd ?? null,
-      // 중지 시각은 세션에서 읽어 낸다(`pausedAtOf`). 저장하지 않는다.
+      // 일시정지 시각은 세션에서 읽어 낸다(`pausedAtOf`). 저장하지 않는다.
       pausedAt: null,
     };
   };
@@ -1231,8 +1231,8 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
       participants: [],
     },
-    // 오래 멈춘 회의(APP-1313). 녹음한 세션이 있어 목록이 중지 시각(`pausedAt`)을 낸다 — 「N일째 중지됨」과
-    // 노트 상단 띠가 이 노트로 선다. 다른 중지 시드는 녹음 없는 READY 만료이거나 다른 e2e 가 끝내 버린다.
+    // 오래 멈춘 회의(APP-1313). 녹음한 세션이 있어 목록이 일시정지 시각(`pausedAt`)을 낸다 — 「N일째 일시정지됨」과
+    // 노트 상단 띠가 이 노트로 선다. 다른 일시정지 시드는 녹음 없는 READY 만료이거나 다른 e2e 가 끝내 버린다.
     {
       noteId: "01K0000000040",
       projectId: projects[2].projectId,
@@ -2833,7 +2833,7 @@ function reset() {
 reset();
 
 /** 노트 목록의 조립부. 프로젝트 단위와 워크스페이스 단위가 **같은 것을 쓴다**. */
-/** 중지 시각(APP-1310): 실제로 녹음이 시작된 마지막 세션의 종료 시각. 녹음 없이 끝난 시도는 세지 않는다. */
+/** 일시정지 시각(APP-1310): 실제로 녹음이 시작된 마지막 세션의 종료 시각. 녹음 없이 끝난 시도는 세지 않는다. */
 function pausedAtOf(note: NoteResponseData) {
   if (note.meetingStatus !== "PAUSED") return null;
   return (
@@ -4565,7 +4565,7 @@ export const mockDb = {
     const note = findNote(noteId);
     return copy({
       ...note,
-      // 노트 상세도 중지 시각을 싣는다(APP-1317). 자동 종료 예정은 중지 상태일 때만 의미가 있다.
+      // 노트 상세도 일시정지 시각을 싣는다(APP-1317). 자동 종료 예정은 일시정지 상태일 때만 의미가 있다.
       pausedAt: pausedAtOf(note),
       autoEnd:
         note.meetingStatus === "PAUSED" || note.autoEnd?.endedBy === "SYSTEM"

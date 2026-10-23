@@ -3,7 +3,7 @@
 import { track } from "@/lib/analytics/track";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Mic, RotateCcw, Square, X } from "lucide-react";
+import { Mic, Pause, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -40,7 +40,9 @@ function PendingStatus({ label }: { label: string }) {
   }, []);
   return (
     <Tooltip open={slow}>
-      <TooltipTrigger render={<span className="flex h-9 min-w-0 items-center px-1" />}>
+      <TooltipTrigger
+        render={<span className="flex h-9 min-w-0 items-center px-1" />}
+      >
         <RecordingPendingSpinner />
         <span role="status" className="sr-only">
           {label}
@@ -154,22 +156,32 @@ export function RecordingDock({
                 />
               ))}
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-lg"
-              // 시작 전 원형 버튼과 같은 지름이어야 시작 전후로 독이 안 흔들린다.
-              // `after:-inset-1`은 **보이는 크기는 36px로 두고 누르는 영역만 44px**로 넓힌다 —
-              // 독을 44px로 줄이면서 탭 영역까지 같이 줄면 모바일에서 가장자리가 안 먹는다.
-              className="size-9 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)] after:absolute after:-inset-1 after:content-['']"
-              aria-label="중지"
-              onClick={() => {
-                track("recording_stop_clicked", { surface: "note" });
-                void recording.stop();
-              }}
-            >
-              <Square className="size-3.5" />
-            </Button>
+            {/* ■ 만 있을 때 회의를 끝내는 버튼으로 읽혔다(문의 0S0GK6XAQX97H) — ⏸ 로 바꾸고 회의가 이어진다는 것을
+              툴팁으로 말한다. 시작 버튼과 같은 지름·툴팁 방향이라 시작 전후로 독이 안 흔들린다. */}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-lg"
+                    // `after:-inset-1`은 **보이는 크기는 36px로 두고 누르는 영역만 44px**로 넓힌다 —
+                    // 독을 44px로 줄이면서 탭 영역까지 같이 줄면 모바일에서 가장자리가 안 먹는다.
+                    className="size-9 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)] after:absolute after:-inset-1 after:content-['']"
+                    aria-label="일시정지"
+                    onClick={() => {
+                      track("recording_stop_clicked", { surface: "note" });
+                      void recording.stop();
+                    }}
+                  />
+                }
+              >
+                <Pause className="size-3.5" aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                일시정지 — 회의는 끝나지 않습니다
+              </TooltipContent>
+            </Tooltip>
           </motion.div>
         ) : state === "requesting-permission" ||
           state === "connecting" ||

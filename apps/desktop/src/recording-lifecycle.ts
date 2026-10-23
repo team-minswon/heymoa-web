@@ -15,7 +15,7 @@ const LABELS: Record<RecordingSummary["phase"], string> = {
   "requesting-permission": "권한 확인 중",
   connecting: "연결 중",
   recording: "녹음 중",
-  stopping: "녹음 중지 중",
+  stopping: "녹음 일시정지 중",
   completed: "녹음 완료",
   failed: "녹음 중단",
 };

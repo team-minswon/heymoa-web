@@ -1,25 +1,25 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * 리마인더 메일의 「회의 열기」로 도착한 사람(APP-1312, PRO-67 userflow). 메일은 과거의 중지를 말하므로 노트는
+ * 리마인더 메일의 「회의 열기」로 도착한 사람(APP-1312, PRO-67 userflow). 메일은 과거의 일시정지를 말하므로 노트는
  * **도착한 시점의 상태**를 말해야 한다. 서버는 메일의 앱 링크에 `utm_medium=email` 을 붙인다.
  */
 
 const WORKSPACE_ID = "01K0000000000";
-/** 녹음한 세션이 있는 중지 노트(`lib/mocks/db.ts` 커버리지 추종 확인). */
+/** 녹음한 세션이 있는 일시정지 노트(`lib/mocks/db.ts` 커버리지 추종 확인). */
 const PAUSED_NOTE_ID = "01K0000000008";
 /** 화자 분리까지 끝난 종료 노트. */
 const ENDED_NOTE_ID = "01K0000000020";
 const MAIL =
   "utm_source=heymoa&utm_medium=email&utm_campaign=meeting_paused_reminder";
 
-test("여전히 중지된 회의는 중지 기간과 할 수 있는 일을 말한다", async ({
+test("여전히 일시정지된 회의는 일시정지 기간과 할 수 있는 일을 말한다", async ({
   page,
 }) => {
   await page.goto(`/w/${WORKSPACE_ID}/notes/${PAUSED_NOTE_ID}?${MAIL}`);
 
   await expect(page.getByTestId("note-status-band")).toHaveText(
-    /중지 상태입니다\. 이어서 녹음하거나 종료할 수 있습니다\./
+    /일시정지 상태입니다\. 이어서 녹음하거나 종료할 수 있습니다\./
   );
   // 띠는 안내만 한다 — 종료는 상단바 「회의 종료」가 한다.
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();

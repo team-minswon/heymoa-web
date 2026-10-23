@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * 잠깐 떴다 저절로 사라지는 안내 말풍선이 같이 쓰는 움직임과 남은 시간 막대.
- * 회의 중지 뒤 종료 안내(`meeting-controls`)와 타임라인 첫 항목 안내(`timeline-hint`)가 쓴다 —
+ * 회의 일시정지 뒤 종료 안내(`meeting-controls`)와 타임라인 첫 항목 안내(`timeline-hint`)가 쓴다 —
  * 같은 면에서 뜨는 말풍선이 저마다 다르게 움직이면 한 물건으로 안 읽힌다.
  *
  * `AnimatePresence` 안의 `motion.div` 에 펼쳐 넣는다. 둘 다 버튼·탭 **아래**에 서고 위 꼬리가

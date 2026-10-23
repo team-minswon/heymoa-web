@@ -149,7 +149,7 @@ const recording = (seconds, count) => ({
 });
 
 /**
- * 메뉴 막대 아이콘 → 팝오버 열림 → 녹음 중 실시간 카드가 쌓임 → 탭 고르기 → 녹음 중지. 클립 프레임워크(`clips.mjs`)가 요구하는
+ * 메뉴 막대 아이콘 → 팝오버 열림 → 녹음 중 실시간 카드가 쌓임 → 탭 고르기 → 녹음 일시정지. 클립 프레임워크(`clips.mjs`)가 요구하는
  * `{ name, path, ready, run }` 꼴을 돌려준다. 가짜 서버 경로 `/__help-media/` 에서 틀과 렌더러 파일을 내준다.
  */
 export async function desktopScene(context, base) {
@@ -211,7 +211,7 @@ export async function desktopScene(context, base) {
       await push({
         ...recording(seconds, 4),
         phase: "stopping",
-        label: "녹음 중지 중",
+        label: "녹음 일시정지 중",
         canStop: false,
       });
       await wait(700);

@@ -82,7 +82,7 @@ afterEach(async () => {
 });
 
 describe("timelineHintEligible", () => {
-  it("진행 중이거나 중지된 회의에서 항목이 있고 스크립트를 볼 때만 띄운다", () => {
+  it("진행 중이거나 일시정지된 회의에서 항목이 있고 스크립트를 볼 때만 띄운다", () => {
     const base = { phase: "active" as const, tab: "transcript", itemCount: 1 };
     expect(timelineHintEligible(base)).toBe(true);
     expect(timelineHintEligible({ ...base, phase: "paused" })).toBe(true);

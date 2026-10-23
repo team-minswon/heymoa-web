@@ -459,7 +459,7 @@ describe("MeetingEndDialog", () => {
         data: null,
         error: {
           code: "MEETING_RECORDING",
-          message: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
+          message: "기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다.",
         },
       })
     );
@@ -476,7 +476,7 @@ describe("MeetingEndDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "기록 중인 회의는 중지한 뒤 종료할 수 있습니다."
+      "기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다."
     );
     expect(client.getQueryState(["note", "01K0000000002"])?.isInvalidated).toBe(
       true

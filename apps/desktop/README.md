@@ -15,4 +15,4 @@ Bridge는 `window.heymoaDesktop.getCapabilities()`, `reportRecording(summary)` �
 
 summary에는 phase, startedAt, pendingMs, microphone, systemAudio만 허용하며 제목·전사·인증 정보를 담지 않습니다. summary는 녹음 제어와 종료 보호를 위해 메모리에 유지하며 사용자 전사나 토큰을 포함하지 않습니다. macOS 시스템 오디오는 CoreAudio Tap 경로를 사용하며 실제 OS 권한·Windows loopback 검증은 별도 확인이 필요합니다.
 
-메뉴바 왼쪽 클릭은 현재 회의 팝오버, 오른쪽 클릭은 기존 제어 메뉴를 엽니다. 팝오버의 필터·근거 펼침·아래 화살표와 「녹음 중지」는 기존 회의·녹음 상태를 사용합니다. optional `reportMeetingTimeline`으로 전달한 최근 120개 항목만 메모리에 유지하며 녹음 중지·로그아웃·문서 교체 때 비웁니다. 새 웹 전달 코드가 없는 버전에서는 타임라인 대기 상태를 표시합니다. 팝오버는 별도 네트워크·인증 세션을 만들지 않습니다.
+메뉴바 왼쪽 클릭은 현재 회의 팝오버, 오른쪽 클릭은 기존 제어 메뉴를 엽니다. 팝오버의 필터·근거 펼침·아래 화살표와 「녹음 일시정지」는 기존 회의·녹음 상태를 사용합니다. optional `reportMeetingTimeline`으로 전달한 최근 120개 항목만 메모리에 유지하며 녹음 일시정지·로그아웃·문서 교체 때 비웁니다. 새 웹 전달 코드가 없는 버전에서는 타임라인 대기 상태를 표시합니다. 팝오버는 별도 네트워크·인증 세션을 만들지 않습니다.

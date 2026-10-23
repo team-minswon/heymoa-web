@@ -173,7 +173,7 @@ describe("두 입력의 PCM 캡처", () => {
     expect(f.system.onended).toBeNull();
   });
 
-  it("worklet 로딩 중 중지하면 다시 캡처를 연결하지 않고 자원을 닫는다", async () => {
+  it("worklet 로딩 중 일시정지하면 다시 캡처를 연결하지 않고 자원을 닫는다", async () => {
     const f = fixture();
     let resolve!: () => void;
     let requested!: () => void;

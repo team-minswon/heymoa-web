@@ -8,7 +8,7 @@ import {
 import { formatOffset } from "@/lib/transcription/presentation";
 
 /**
- * 날짜는 **필요할 때만** 붙인다. 중지가 날을 넘기면 `14:05에 멈추고 09:20에 재개했습니다`
+ * 날짜는 **필요할 때만** 붙인다. 일시정지가 날을 넘기면 `14:05에 멈추고 09:20에 재개했습니다`
  * 가 시간을 거슬러 올라간 것처럼 읽힌다 — 실제로는 이틀 뒤다.
  */
 function clockTime(iso: string, withDate: boolean) {
@@ -33,7 +33,7 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
   const open = isGapOpen(row);
   const withDate = spansCalendarDays(row);
 
-  // 중지는 회의 축에서 점이다 — 축이 안 나아갔으니 끝 좌표가 없다.
+  // 일시정지는 회의 축에서 점이다 — 축이 안 나아갔으니 끝 좌표가 없다.
   const offsetLabel = paused
     ? formatOffset(row.startedAtMs)
     : `${formatOffset(row.startedAtMs)} – ${

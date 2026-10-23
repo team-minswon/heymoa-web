@@ -69,7 +69,7 @@ describe("toGapRows", () => {
     expect(rows).toHaveLength(2);
   });
 
-  it("중지는 점이고 길이가 벽시계에서 온다", () => {
+  it("일시정지는 점이고 길이가 벽시계에서 온다", () => {
     const rows = toGapRows([
       gap({
         gapId: "p",
@@ -159,7 +159,7 @@ describe("formatGapDuration", () => {
 });
 
 describe("spansCalendarDays", () => {
-  it("날을 넘긴 중지를 가려낸다", () => {
+  it("날을 넘긴 일시정지를 가려낸다", () => {
     const [sameDay] = toGapRows([
       gap({
         kind: "PAUSE",

@@ -55,9 +55,9 @@ import {
  */
 const TYPE_LABELS: Record<string, string> = {
   WORKSPACE_INVITATION: "워크스페이스 초대",
-  MEETING_PAUSED_REMINDER: "중지된 회의",
+  MEETING_PAUSED_REMINDER: "일시정지된 회의",
   ANALYSIS_READY: "검토할 결과 준비",
-  // 서버는 이 종류를 따로 내지 않는다 — 중지된 회의 메일을 따른다.
+  // 서버는 이 종류를 따로 내지 않는다 — 일시정지된 회의 메일을 따른다.
   MEETING_AUTO_ENDED: "회의 자동 종료",
   INQUIRY_ANSWERED: "문의 답변",
 };
@@ -71,7 +71,7 @@ const TYPE_HELP: Record<string, React.ReactNode> = {
   MEETING_PAUSED_REMINDER: (
     <>
       <span className="block">
-        회의를 중지한 채 두면 1영업일 뒤 메일로 알려 드립니다.
+        회의를 일시정지한 채 두면 1영업일 뒤 메일로 알려 드립니다.
       </span>
       <span className="mt-1 block">
         3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을
@@ -80,7 +80,7 @@ const TYPE_HELP: Record<string, React.ReactNode> = {
     </>
   ),
 };
-/** 행 순서는 시안을 따른다(중지된 회의 → 검토할 결과 준비). 서버가 주는 순서와 다를 수 있다. */
+/** 행 순서는 시안을 따른다(일시정지된 회의 → 검토할 결과 준비). 서버가 주는 순서와 다를 수 있다. */
 const TYPE_ORDER = Object.keys(TYPE_LABELS);
 const CHANNELS = [
   {
@@ -164,7 +164,7 @@ const TYPE_NAME_CELL = "py-3 text-left font-normal";
 const CHANNEL_COLUMN = "w-[72px] text-center";
 const TYPE_CHANNEL_CELL = cn(CHANNEL_COLUMN, "py-3 align-middle");
 /**
- * skeleton 이 세우는 종류 행 수. 운영이 내는 선택 종류는 둘이다(중지된 회의 · 검토할 결과 준비). 목(`NOTIFICATION_DEFAULTS`)은
+ * skeleton 이 세우는 종류 행 수. 운영이 내는 선택 종류는 둘이다(일시정지된 회의 · 검토할 결과 준비). 목(`NOTIFICATION_DEFAULTS`)은
  * 아직 하나라 e2e 는 행 수가 아니라 행 하나의 높이와 첫 행 위치를 비교한다.
  */
 const SKELETON_TYPE_ROWS = 2;
@@ -416,7 +416,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm === "reset"
-                ? "중지된 회의 메일과 검토할 결과 웹 알림이 다시 켜집니다."
+                ? "일시정지된 회의 메일과 검토할 결과 웹 알림이 다시 켜집니다."
                 : confirm
                   ? MUTE_CONFIRM[confirm].body
                   : null}

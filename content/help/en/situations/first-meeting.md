@@ -36,8 +36,8 @@ Start on the **[All notes]** screen in the sidebar. The **[New note]** button at
    Allow it when your browser asks.
 8. **Watch the transcript come in**
    What's said is transcribed in the **[Transcript]** tab.
-9. **When the meeting is over, click [Stop]**
-   Recording stops.
+9. **When the meeting is over, click [Pause]**
+   Recording pauses.
 10. **Click [End meeting] at the top**
     A confirmation dialog opens.
 11. **Click [End meeting] again in the dialog**
@@ -54,7 +54,7 @@ Start on the **[All notes]** screen in the sidebar. The **[New note]** button at
 ## Related pages {#related}
 
 - [Quick start](help:getting-started) — Logging in and the first screen
-- [Recording and your microphone](help:recording) — Start, stop, and resume recording
+- [Recording and your microphone](help:recording) — Start, pause, and resume recording
 - [Ending a meeting and analysis](help:meeting-end) — The analysis stages after you end
 - [Attendees and speakers](help:speakers) — Choosing attendees and naming speakers
 - [Reviewing and confirming the summary](help:review) — Editing and confirming

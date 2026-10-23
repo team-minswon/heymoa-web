@@ -156,7 +156,7 @@ describe("WorkspaceToolbar", () => {
       "42"
     );
     expect(screen.getByText("00:12")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
+    fireEvent.click(screen.getByRole("button", { name: "녹음 일시정지" }));
     expect(recording.stop).toHaveBeenCalledOnce();
     expect(
       screen.queryByRole("button", { name: /일시 정지|재개/ })
@@ -256,7 +256,7 @@ describe("WorkspaceToolbar", () => {
       screen.getByRole("status", { name: "녹음 처리 중" })
     ).toBeInTheDocument();
     expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
-    expect(screen.getByRole("button", { name: "녹음 종료" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "녹음 일시정지" })).toBeDisabled();
   });
 
   it.each(["requesting-permission", "connecting"] as const)(
@@ -276,7 +276,7 @@ describe("WorkspaceToolbar", () => {
         </SidebarProvider>
       );
 
-      const stop = screen.getByRole("button", { name: "녹음 종료" });
+      const stop = screen.getByRole("button", { name: "녹음 일시정지" });
       fireEvent.click(stop);
       expect(stop).toBeDisabled();
       expect(recording.stop).not.toHaveBeenCalled();

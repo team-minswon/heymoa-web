@@ -131,7 +131,7 @@ const RecordingNoteContext = createContext<string | null>(null);
 /**
  * 지금 붙들고 있는 전사 세션이 아직 살아 있는가. 무엇의 녹음인지는 아래 두 함수가 묻는다.
  *
- * 살아 있으면 회의 중지·종료가 계약상 `ACTIVE_TRANSCRIPTION_SESSION`(409)로 막힌다. stop 이
+ * 살아 있으면 회의 일시정지·종료가 계약상 `ACTIVE_TRANSCRIPTION_SESSION`(409)로 막힌다. stop 이
  * 실패해 `failed` 여도 READY/ACTIVE 세션이 남아 있으면 서버가 여전히 거절하므로 활성이다.
  */
 export function isRecordingLive(
@@ -188,7 +188,7 @@ export function isRecordingStoppable(
 /**
  * 이 노트의 녹음이 아직 시작 중인가(권한 요청·연결). 이 창에서는 회의를 끝내면 안 된다 —
  * 서버 세션이 아직 없어 종료가 성공해 버리고, 진행 중인 start()가 이어져 종료된 노트에 고아
- * 전사 세션을 만든다. 연결이 끝나 `recording`이 되면 곱게 중지한 뒤 종료할 수 있다.
+ * 전사 세션을 만든다. 연결이 끝나 `recording`이 되면 곱게 일시정지한 뒤 종료할 수 있다.
  */
 export function isRecordingStarting(
   recording: Pick<RecordingContextValue, "activeNoteId" | "phase">,

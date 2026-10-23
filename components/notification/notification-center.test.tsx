@@ -621,7 +621,7 @@ describe("검토할 결과 준비 행", () => {
       "스프린트 회고의 검토할 결과가 준비되었습니다"
     );
     expect(auto).toHaveTextContent(
-      "마지막 중지 후 3영업일이 지나 자동으로 종료했습니다."
+      "마지막 일시정지 후 3영업일이 지나 자동으로 종료했습니다."
     );
     const normal = dialog.querySelector<HTMLElement>(
       '[data-notification-id="A2"]'

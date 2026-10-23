@@ -58,7 +58,7 @@ export function buildNoteHeaderMeta(
     };
   }
 
-  // 중지·종료는 누적 기록 시간이다. **`now`를 안 받는다** — 여기까지 오는 상태에서는
+  // 일시정지·종료는 누적 기록 시간이다. **`now`를 안 받는다** — 여기까지 오는 상태에서는
   // 진행 중 구간이 0이라(`getRecordedDurationMs`) 시계가 필요 없고, 렌더 중에 `Date.now()`를
   // 읽으면 서버 HTML과 첫 클라이언트 렌더가 갈려 하이드레이션이 어긋난다.
   const minutes = Math.floor(getRecordedDurationMs(note, 0) / 60_000);

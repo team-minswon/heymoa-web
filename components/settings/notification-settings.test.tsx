@@ -60,7 +60,7 @@ function renderSettings() {
 const switchOf = (name: string) => screen.getByRole("switch", { name });
 
 describe("NotificationSettings", () => {
-  it("검토할 결과 준비는 중지된 회의 다음, 문의 답변은 마지막에 이름과 함께 서고, 이름을 모르는 종류는 숨긴다", async () => {
+  it("검토할 결과 준비는 일시정지된 회의 다음, 문의 답변은 마지막에 이름과 함께 서고, 이름을 모르는 종류는 숨긴다", async () => {
     const channels = [
       { channel: "WEB", provided: true, enabled: true, effective: true },
       { channel: "EMAIL", provided: false, enabled: false, effective: false },
@@ -87,7 +87,7 @@ describe("NotificationSettings", () => {
     renderSettings();
     const rows = await screen.findAllByRole("rowheader");
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent(/^중지된 회의/);
+    expect(rows[0]).toHaveTextContent(/^일시정지된 회의/);
     expect(rows[1]).toHaveTextContent(
       "검토할 결과 준비회의 분석이 끝나 결과를 검토할 수 있을 때"
     );
@@ -98,7 +98,7 @@ describe("NotificationSettings", () => {
 
   it("선택 알림만 줄로 그리고 필수 알림은 안내 없이 뺀다", async () => {
     renderSettings();
-    expect(await screen.findByText("중지된 회의")).toBeInTheDocument();
+    expect(await screen.findByText("일시정지된 회의")).toBeInTheDocument();
     expect(screen.queryByText("워크스페이스 초대")).toBeNull();
     // 필수 알림 안내 문장은 두지 않는다(APP-1348).
     expect(screen.queryByText(/필수 알림/)).toBeNull();
@@ -106,13 +106,13 @@ describe("NotificationSettings", () => {
     expect(
       screen.getByLabelText("이 알림은 인앱으로 보내지 않습니다")
     ).toHaveTextContent("—");
-    // 기본값은 서버가 정한다 — 중지된 회의 메일은 켜짐
-    expect(switchOf("중지된 회의 메일")).toBeChecked();
-    // 중지된 회의 이름 옆 ? 도움말이 언제 무엇이 오는지 읽힌다(APP-1348).
+    // 기본값은 서버가 정한다 — 일시정지된 회의 메일은 켜짐
+    expect(switchOf("일시정지된 회의 메일")).toBeChecked();
+    // 일시정지된 회의 이름 옆 ? 도움말이 언제 무엇이 오는지 읽힌다(APP-1348).
     expect(
-      screen.getByRole("button", { name: "도움말: 중지된 회의 알림 안내" })
+      screen.getByRole("button", { name: "도움말: 일시정지된 회의 알림 안내" })
     ).toHaveAccessibleDescription(
-      "회의를 중지한 채 두면 1영업일 뒤 메일로 알려 드립니다.3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을 한 번 더 보냅니다."
+      "회의를 일시정지한 채 두면 1영업일 뒤 메일로 알려 드립니다.3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을 한 번 더 보냅니다."
     );
     // 메일 받는 주소 카드는 걷었다(APP-1348).
     expect(screen.queryByRole("textbox")).toBeNull();
@@ -125,9 +125,9 @@ describe("NotificationSettings", () => {
     );
     renderSettings();
     fireEvent.click(
-      await screen.findByRole("switch", { name: "중지된 회의 메일" })
+      await screen.findByRole("switch", { name: "일시정지된 회의 메일" })
     );
-    await waitFor(() => expect(switchOf("중지된 회의 메일")).not.toBeChecked());
+    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
     stop();
     expect(writes).toEqual([
       'PUT /v1/notification-settings/items {"type":"MEETING_PAUSED_REMINDER","channel":"EMAIL","enabled":false}',
@@ -169,13 +169,13 @@ describe("NotificationSettings", () => {
     );
     renderSettings();
     fireEvent.click(
-      await screen.findByRole("switch", { name: "중지된 회의 메일" })
+      await screen.findByRole("switch", { name: "일시정지된 회의 메일" })
     );
     // 응답 전인데 이미 꺼져 있다.
-    await waitFor(() => expect(switchOf("중지된 회의 메일")).not.toBeChecked());
-    expect(switchOf("중지된 회의 메일")).toBeEnabled();
+    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
+    expect(switchOf("일시정지된 회의 메일")).toBeEnabled();
     release();
-    await waitFor(() => expect(switchOf("중지된 회의 메일")).toBeChecked());
+    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).toBeChecked());
   });
 
   it("연타하면 응답 순서가 뒤집혀도 마지막으로 누른 값이 남는다", async () => {
@@ -225,16 +225,16 @@ describe("NotificationSettings", () => {
     );
     renderSettings();
     const toggle = await screen.findByRole("switch", {
-      name: "중지된 회의 메일",
+      name: "일시정지된 회의 메일",
     });
     fireEvent.click(toggle); // 끔
-    await waitFor(() => expect(switchOf("중지된 회의 메일")).not.toBeChecked());
-    fireEvent.click(switchOf("중지된 회의 메일")); // 켬
-    await waitFor(() => expect(switchOf("중지된 회의 메일")).toBeChecked());
-    fireEvent.click(switchOf("중지된 회의 메일")); // 끔
+    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
+    fireEvent.click(switchOf("일시정지된 회의 메일")); // 켬
+    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).toBeChecked());
+    fireEvent.click(switchOf("일시정지된 회의 메일")); // 끔
     await waitFor(() => expect(calls).toBe(3));
     await new Promise((resolve) => setTimeout(resolve, 250));
-    expect(switchOf("중지된 회의 메일")).not.toBeChecked();
+    expect(switchOf("일시정지된 회의 메일")).not.toBeChecked();
     expect(stored).toBe(false);
   });
 
@@ -268,7 +268,7 @@ describe("NotificationSettings", () => {
       })
     );
     await waitFor(() => expect(switchOf("인앱 알림 모두 끄기")).toBeChecked());
-    // 인앱 열(검토할 결과 준비)만 가려지고, 메일 열(중지된 회의)은 그대로 켜져 있고 누를 수 있다.
+    // 인앱 열(검토할 결과 준비)만 가려지고, 메일 열(일시정지된 회의)은 그대로 켜져 있고 누를 수 있다.
     expect(
       screen.getByLabelText("검토할 결과 준비 인앱 꺼짐")
     ).toBeInTheDocument();
@@ -278,8 +278,8 @@ describe("NotificationSettings", () => {
     // 문의 답변(APP-1399)의 인앱 열도 같이 가려진다.
     expect(screen.getByLabelText("문의 답변 인앱 꺼짐")).toBeInTheDocument();
     expect(screen.getAllByText("꺼짐")).toHaveLength(2);
-    expect(switchOf("중지된 회의 메일")).toBeChecked();
-    expect(switchOf("중지된 회의 메일")).not.toHaveAttribute("data-disabled");
+    expect(switchOf("일시정지된 회의 메일")).toBeChecked();
+    expect(switchOf("일시정지된 회의 메일")).not.toHaveAttribute("data-disabled");
 
     fireEvent.click(switchOf("인앱 알림 모두 끄기"));
     await waitFor(() =>
@@ -304,7 +304,7 @@ describe("NotificationSettings", () => {
       })
     );
     await waitFor(() => expect(switchOf("메일 모두 끄기")).toBeChecked());
-    expect(screen.getByLabelText("중지된 회의 메일 꺼짐")).toBeInTheDocument();
+    expect(screen.getByLabelText("일시정지된 회의 메일 꺼짐")).toBeInTheDocument();
     expect(switchOf("검토할 결과 준비 인앱")).toBeChecked();
     expect(switchOf("검토할 결과 준비 인앱")).not.toHaveAttribute(
       "data-disabled"
@@ -316,9 +316,9 @@ describe("NotificationSettings", () => {
     const stop = onTrack((event) => heard.push(event));
     renderSettings();
     fireEvent.click(
-      await screen.findByRole("switch", { name: "중지된 회의 메일" })
+      await screen.findByRole("switch", { name: "일시정지된 회의 메일" })
     );
-    await waitFor(() => expect(switchOf("중지된 회의 메일")).not.toBeChecked());
+    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
     writes.length = 0;
 
     fireEvent.click(
@@ -336,7 +336,7 @@ describe("NotificationSettings", () => {
     );
     dialog = await screen.findByRole("alertdialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "되돌리기" }));
-    await waitFor(() => expect(switchOf("중지된 회의 메일")).toBeChecked());
+    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).toBeChecked());
     stop();
     expect(writes).toEqual(["DELETE /v1/notification-settings"]);
     expect(heard).toContain("notification_settings_reset");

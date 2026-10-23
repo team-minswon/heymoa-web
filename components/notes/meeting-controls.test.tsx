@@ -102,7 +102,7 @@ describe("MeetingStatusChip", () => {
     expect(screen.getByText("시작 전")).toBeInTheDocument();
 
     rerender(<MeetingStatusChip status="PAUSED" />);
-    expect(screen.getByText("중지됨")).toBeInTheDocument();
+    expect(screen.getByText("일시정지됨")).toBeInTheDocument();
   });
 });
 
@@ -124,13 +124,13 @@ describe("MeetingControls", () => {
   });
 
   // APP-694: 서버가 기록 중인 회의의 종료를 409 MEETING_RECORDING 으로 거절한다.
-  it("기록 중이면 회의 종료를 잠그고 이 창의 녹음자에게는 중지부터 하라고 알린다", () => {
+  it("기록 중이면 회의 종료를 잠그고 이 창의 녹음자에게는 일시정지부터 하라고 알린다", () => {
     state.activeNoteId = "01K0000000002";
     renderControls(note({ meetingStatus: "IN_PROGRESS" }));
 
     const end = screen.getByRole("button", { name: "회의 종료" });
     expect(end).toBeDisabled();
-    expect(end).toHaveAccessibleDescription("중지한 뒤 종료할 수 있습니다");
+    expect(end).toHaveAccessibleDescription("일시정지한 뒤 종료할 수 있습니다");
   });
 
   it("다른 사람이 기록 중이면 누가 기록 중인지 알린다", () => {
@@ -140,7 +140,7 @@ describe("MeetingControls", () => {
     const end = screen.getByRole("button", { name: "회의 종료" });
     expect(end).toBeDisabled();
     expect(end).toHaveAccessibleDescription(
-      "테스트 유저 님이 기록 중 — 중지한 뒤 종료할 수 있습니다"
+      "테스트 유저 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다"
     );
   });
 
@@ -151,7 +151,7 @@ describe("MeetingControls", () => {
 
     expect(
       screen.getByRole("button", { name: "회의 종료" })
-    ).toHaveAccessibleDescription("중지한 뒤 종료할 수 있습니다");
+    ).toHaveAccessibleDescription("일시정지한 뒤 종료할 수 있습니다");
   });
 
   it("잠긴 버튼 위에서도 툴팁이 뜬다", async () => {
@@ -168,7 +168,7 @@ describe("MeetingControls", () => {
 
     expect(
       await screen.findByText(
-        "테스트 유저 님이 기록 중 — 중지한 뒤 종료할 수 있습니다",
+        "테스트 유저 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다",
         {
           selector:
             "[data-slot=tooltip-content] *, [data-slot=tooltip-content]",
@@ -177,7 +177,7 @@ describe("MeetingControls", () => {
     ).toBeInTheDocument();
   });
 
-  it("중지됨이면 누구나 회의를 끝낼 수 있다", () => {
+  it("일시정지됨이면 누구나 회의를 끝낼 수 있다", () => {
     state.userId = "user-other";
     renderControls(
       note({ meetingStatus: "PAUSED", activeSessionStartedAt: null })
@@ -225,7 +225,7 @@ describe("MeetingControls", () => {
   });
 });
 
-describe("회의 중지 직후 종료 안내", () => {
+describe("회의 일시정지 직후 종료 안내", () => {
   beforeEach(() => {
     state.userId = "user-12345";
     state.activeNoteId = null;
@@ -244,7 +244,7 @@ describe("회의 중지 직후 종료 안내", () => {
       />
     );
 
-  it("기록 중에서 중지됨으로 바뀐 순간에 말풍선이 뜨고 종료 버튼이 채워진다", () => {
+  it("기록 중에서 일시정지됨으로 바뀐 순간에 말풍선이 뜨고 종료 버튼이 채워진다", () => {
     const { rerender } = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
     expect(screen.queryByTestId("end-nudge")).toBeNull();
 
@@ -255,7 +255,7 @@ describe("회의 중지 직후 종료 안내", () => {
     expect(screen.getByRole("button", { name: "지금 종료" })).toBeTruthy();
   });
 
-  it("열었을 때 이미 중지된 노트에서는 뜨지 않는다", () => {
+  it("열었을 때 이미 일시정지된 노트에서는 뜨지 않는다", () => {
     renderControls(
       note({ meetingStatus: "PAUSED", activeSessionStartedAt: null })
     );

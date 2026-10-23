@@ -507,7 +507,7 @@ describe("NotePanel", () => {
     expect(
       screen.queryByRole("button", { name: /일시 정지|재개/ })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "중지" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "일시정지" })).toBeEnabled();
   });
 
   it("blocks a second note from starting while another note records", async () => {
@@ -1155,7 +1155,7 @@ describe("NotePanel", () => {
       screen.getByTestId("note-details").getAttribute("data-auto-open");
 
     beforeEach(() => {
-      // 기록 중에는 회의 종료가 잠긴다(APP-694) — 중지된 회의로 연다.
+      // 기록 중에는 회의 종료가 잠긴다(APP-694) — 일시정지된 회의로 연다.
       noteState.value.meetingStatus = "PAUSED";
       noteState.value.activeSessionStartedAt = null;
     });
@@ -1213,7 +1213,7 @@ describe("NotePanel", () => {
   });
 
   it("회의 종료 확인창이 노트 전환을 따라가지 않는다", async () => {
-    // 기록 중에는 회의 종료가 잠긴다(APP-694) — 중지된 회의로 연다.
+    // 기록 중에는 회의 종료가 잠긴다(APP-694) — 일시정지된 회의로 연다.
     noteState.value.meetingStatus = "PAUSED";
     noteState.value.activeSessionStartedAt = null;
     // 삭제 확인창과 같은 함정인데 결과가 더 나쁘다 — 대상만 B로 바뀌어 **다른 회의가
@@ -1344,7 +1344,7 @@ describe("NotePanel", () => {
     expect(onTabChange).not.toHaveBeenCalled();
   });
 
-  it("중지된 회의를 종료하면 요약 탭으로 이동한다", () => {
+  it("일시정지된 회의를 종료하면 요약 탭으로 이동한다", () => {
     noteState.value.meetingStatus = "PAUSED";
     noteState.value.activeSessionStartedAt = null;
     const onTabChange = vi.fn();
@@ -1429,7 +1429,7 @@ describe("NotePanel", () => {
    * 블록에 묶어 두면 정보 탭까지 다녀와야 한다.
    *
    * 노트 메뉴(`⋯`)와 한 자리를 나눠 쓴다 — 삭제는 기록 중에 숨고(서버 409) 회의 종료는
-   * 기록 중·중지됨에만 뜨니 겹치지 않는다.
+   * 기록 중·일시정지됨에만 뜨니 겹치지 않는다.
    */
   it("살아 있는 회의는 전사에서도 회의 종료에 닿는다", () => {
     renderNotePanel(
@@ -1654,13 +1654,13 @@ describe("NotePanel", () => {
       expect(screen.getByText("저장 마무리 중… 40%")).toBeInTheDocument();
     });
 
-    it("IN_PROGRESS 로컬 시작자는 중지 독을 본다", () => {
+    it("IN_PROGRESS 로컬 시작자는 일시정지 독을 본다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "recording";
 
       renderDock(view);
 
-      expect(screen.getByRole("button", { name: "중지" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "일시정지" })).toBeEnabled();
       if (view === "side") {
         expect(
           screen.getByRole("button", { name: "회의 종료" })
@@ -1773,10 +1773,10 @@ describe("NotePanel", () => {
       ).toBeInTheDocument();
     });
 
-    // 중지 직후의 창이다. 소켓이 completed를 주면 phase는 활성 밖으로 나가는데 노트 쿼리는
+    // 일시정지 직후의 창이다. 소켓이 completed를 주면 phase는 활성 밖으로 나가는데 노트 쿼리는
     // 아직 IN_PROGRESS라, 자기가 방금 끈 것을 남이 켠 것으로 읽어 진행자 본인에게
     // "다른 탭·기기에서 기록 중입니다"가 떴다.
-    it("방금 이 창에서 중지한 진행자에게는 다른 탭 안내를 띄우지 않는다", () => {
+    it("방금 이 창에서 일시정지한 진행자에게는 다른 탭 안내를 띄우지 않는다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "completed";
       recordingState.sessionStatus = "COMPLETED";

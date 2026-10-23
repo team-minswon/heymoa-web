@@ -169,7 +169,7 @@ describe("transcriptToMarkdown", () => {
       speakerNameOf: named,
     });
 
-    expect(markdown).toContain("> 약 12분 중지했습니다");
+    expect(markdown).toContain("> 약 12분 일시정지했습니다");
     expect(markdown).toContain("**홍길동** [26:00] 다시 시작합니다.");
   });
 });

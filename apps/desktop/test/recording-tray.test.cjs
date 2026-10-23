@@ -16,11 +16,11 @@ test("starting, stopping and failed sessions reject stale menu and popup stop co
   const f = fixture(); t.after(() => f.adapter.dispose());
   f.adapter.lifecycle.update({ ...idle, phase: "recording" });
   f.tray.emit("right-click");
-  const staleStop = f.tray.menu.find((item) => item.label === "녹음 중지");
+  const staleStop = f.tray.menu.find((item) => item.label === "녹음 일시정지");
   for (const phase of ["requesting-permission", "connecting", "stopping", "failed", "completed", "idle"]) {
     f.adapter.lifecycle.update({ ...idle, phase, pendingMs: 1000 });
     f.tray.emit("right-click");
-    assert.equal(f.tray.menu.find((item) => item.label === "녹음 중지").enabled, false);
+    assert.equal(f.tray.menu.find((item) => item.label === "녹음 일시정지").enabled, false);
     staleStop.click(); f.popoverAction("stop");
   }
   assert.deepEqual(f.sent, []);
@@ -323,7 +323,7 @@ test("window close hides rather than stops; current meeting and stop are separat
   f.adapter.lifecycle.update({ ...idle, phase: "recording" });
   f.tray.emit("right-click");
   f.tray.menu.find((item) => item.label === "현재 회의 열기").click();
-  f.tray.menu.find((item) => item.label === "녹음 중지").click();
+  f.tray.menu.find((item) => item.label === "녹음 일시정지").click();
   assert.deepEqual(f.sent, [
     ["heymoa:recording-action", "show-current"],
     ["heymoa:recording-action", "stop"],
@@ -439,7 +439,7 @@ test("popover and context stop stay in the background while open and failure rev
   const f = fixture(); t.after(() => f.adapter.dispose());
   f.adapter.lifecycle.update({ ...idle, phase: "recording" });
   f.tray.emit("right-click");
-  f.tray.menu.find((item) => item.label === "녹음 중지").click();
+  f.tray.menu.find((item) => item.label === "녹음 일시정지").click();
   f.popoverAction("stop");
   assert.equal(f.shows, 0);
   assert.deepEqual(f.sent, [["heymoa:recording-action", "stop"], ["heymoa:recording-action", "stop"]]);

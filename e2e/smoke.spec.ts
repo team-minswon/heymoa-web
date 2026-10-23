@@ -99,7 +99,7 @@ async function startRecording(page: Page, name: "회의 시작" | "재개") {
   const dock = page.getByLabel("녹음 제어");
   await dock.getByRole("button", { name }).click();
   await expect(
-    dock.getByRole("button", { name: "중지", exact: true })
+    dock.getByRole("button", { name: "일시정지", exact: true })
   ).toBeVisible({
     timeout: 20_000,
   });
@@ -111,10 +111,10 @@ async function startRecording(page: Page, name: "회의 시작" | "재개") {
 async function stopRecording(page: Page) {
   await page
     .getByLabel("녹음 제어")
-    .getByRole("button", { name: "중지", exact: true })
+    .getByRole("button", { name: "일시정지", exact: true })
     .click();
   await expect(
-    noteTopBar(page).getByText("중지됨", { exact: true })
+    noteTopBar(page).getByText("일시정지됨", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "재개" })
@@ -237,7 +237,7 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
     page.getByText("회의를 삭제했습니다.", { exact: true })
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "중지", exact: true })
+    page.getByRole("button", { name: "일시정지", exact: true })
   ).toHaveCount(0);
   await expect(page.locator(`a[href*="/notes/${noteId}"]`)).toHaveCount(0);
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=full`);
@@ -1317,7 +1317,7 @@ test("shows a persistent explanation for a remotely active starter note", async 
   await expect(
     page
       .getByLabel("녹음 제어")
-      .getByRole("button", { name: /회의 시작|재개|중지/ })
+      .getByRole("button", { name: /회의 시작|재개|일시정지/ })
   ).toHaveCount(0);
 });
 
@@ -1366,7 +1366,7 @@ test("starts, stops, and ends a meeting through one confirmation", async ({
     recordedSeconds(await (await cumulativeTimer(page)).textContent())
   ).toBeLessThan(60);
 
-  // 기록 중에는 끝낼 수 없다(APP-694) — 중지해야 풀린다.
+  // 기록 중에는 끝낼 수 없다(APP-694) — 일시정지해야 풀린다.
   await expect(
     meetingControls(page).getByRole("button", { name: "회의 종료" })
   ).toBeDisabled();
@@ -1510,7 +1510,7 @@ test("locks ending a remotely recorded meeting in the side panel", async ({
   // disabled 버튼은 포인터 이벤트를 안 내므로 감싼 요소에 올린다.
   await end.locator("..").hover();
   await expect(page.locator('[data-slot="tooltip-content"]')).toHaveText(
-    /님이 기록 중 — 중지한 뒤 종료할 수 있습니다/
+    /님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다/
   );
 });
 
@@ -1550,7 +1550,7 @@ test("ends a stopped meeting from the side panel and opens the ended summary", a
     .getByRole("button", { name: "회의 종료" })
     .click();
   const dialog = page.getByRole("dialog", { name: "회의를 종료할까요?" });
-  await expect(dialog.getByText("녹음 상태 · 중지됨")).toBeVisible();
+  await expect(dialog.getByText("녹음 상태 · 일시정지됨")).toBeVisible();
   await dialog.getByRole("button", { name: "회의 종료" }).click();
 
   // 종료 → 분석 PENDING → 요약 탭이 분석 진행으로.
@@ -2698,14 +2698,14 @@ test("녹음 컨트롤은 전체·사이드 보기와 좁은 화면에서 영역
     for (const label of ["사이드 뷰로 보기", "전체 화면으로 보기"]) {
       await page.getByRole("button", { name: label, exact: true }).click();
       await expect(
-        dock.getByRole("button", { name: "중지", exact: true })
+        dock.getByRole("button", { name: "일시정지", exact: true })
       ).toBeVisible();
       await expect
         .poll(() =>
           dock.evaluate((node) => {
             const rect = node.getBoundingClientRect();
             const button = node
-              .querySelector('button[aria-label="중지"]')!
+              .querySelector('button[aria-label="일시정지"]')!
               .getBoundingClientRect();
             return (
               rect.left >= 0 &&

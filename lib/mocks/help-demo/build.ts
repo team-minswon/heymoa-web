@@ -36,7 +36,7 @@ import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
 type Segment = StoreState["segments"][number];
 type Session = StoreState["sessions"][number];
 
-/** 중지된 회의(FAQ 초안 리뷰)에 남은 앞부분 전사. */
+/** 일시정지된 회의(FAQ 초안 리뷰)에 남은 앞부분 전사. */
 const PAUSED_SCRIPT: ParsedScript = {
   lines: [
     { label: "A", text: "FAQ 초안 스무 개 중에 열두 개를 먼저 같이 볼게요." },

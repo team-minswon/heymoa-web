@@ -6,13 +6,13 @@ import { getAppDateKey } from "@/lib/format/date";
 export const MEETING_STATUS_LABEL = {
   NOT_STARTED: "시작 전",
   IN_PROGRESS: "기록 중",
-  PAUSED: "중지됨",
+  PAUSED: "일시정지됨",
   ENDED: "종료됨",
 } as const satisfies Record<NoteResponseDataMeetingStatus, string>;
 
 export const MEETING_PRIMARY_ACTION_LABEL = {
   NOT_STARTED: "회의 시작",
-  IN_PROGRESS: "중지",
+  IN_PROGRESS: "일시정지",
   PAUSED: "재개",
   ENDED: "요약 보기",
 } as const satisfies Record<NoteResponseDataMeetingStatus, string>;
@@ -45,8 +45,8 @@ export function deriveMeetingPhase(
 }
 
 /**
- * 중지 며칠째인가(APP-1313). 앱 시간대의 달력일로 세고 **중지한 날이 1일째**다 — 어제 중지했으면 2일째.
- * 메일(I17)의 「2일째」와 같은 셈이다. 중지 시각을 모르거나 오늘 중지했으면 `null` — 「1일째」는
+ * 일시정지 며칠째인가(APP-1313). 앱 시간대의 달력일로 세고 **일시정지한 날이 1일째**다 — 어제 일시정지했으면 2일째.
+ * 메일(I17)의 「2일째」와 같은 셈이다. 일시정지 시각을 모르거나 오늘 일시정지했으면 `null` — 「1일째」는
  * 방금 멈춘 회의에 기간을 붙이는 것이라 말하지 않는다.
  */
 export function pausedDayCount(

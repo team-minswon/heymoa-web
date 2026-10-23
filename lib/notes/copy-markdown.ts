@@ -28,7 +28,7 @@ export type NoteMeta = {
   participantNames?: string[];
   /** 전사 응답의 `recording.durationMs`. 요약에는 없으므로 선택이다. */
   durationMs?: number;
-  /** 회의가 실제로 끝난 시각 ISO. 중지한 시간이 있으면 시작 + 기록 길이보다 늦다 */
+  /** 회의가 실제로 끝난 시각 ISO. 일시정지한 시간이 있으면 시작 + 기록 길이보다 늦다 */
   endedIso?: string;
   /** 검토 화면 머리의 프로젝트 칩(APP-865). 복사본 머리말에는 싣지 않는다 */
   projectName?: string;

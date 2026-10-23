@@ -75,7 +75,7 @@ export function toGapRows(
         endedAtMs: gap.endedAtMs,
         startedAt: gap.startedAt,
         endedAt,
-        // 중지는 회의 축에서 빠지므로 축의 차가 항상 0이다. 길이는 벽시계에서만 나온다.
+        // 일시정지는 회의 축에서 빠지므로 축의 차가 항상 0이다. 길이는 벽시계에서만 나온다.
         durationMs: wallClockMs(gap.startedAt, endedAt),
       });
       continue;
@@ -162,7 +162,7 @@ function subtractSpans(span: Span, lost: GapRow[]): [number, number][] {
 /**
  * **대충 말한다.** 단위 하나만, 반올림해서, 「약」을 붙인다.
  *
- * 정확한 값이 필요한 자리가 아니다 — 「9분 48초」의 48초로 하는 일이 없고, 중지는 정확한
+ * 정확한 값이 필요한 자리가 아니다 — 「9분 48초」의 48초로 하는 일이 없고, 일시정지는 정확한
  * 두 끝을 아랫줄(`10:00에 멈추고 …`)이 이미 말한다. 여기가 답하는 질문은 **「많이 비었나」**
  * 하나다.
  *
@@ -202,7 +202,7 @@ export function spansCalendarDays(row: GapRow) {
 export function gapHeadline(row: GapRow) {
   const duration = isGapOpen(row) ? null : formatGapDuration(row.durationMs);
   if (row.kind === "PAUSE") {
-    return duration ? `${duration} 중지했습니다` : "중지했습니다";
+    return duration ? `${duration} 일시정지했습니다` : "일시정지했습니다";
   }
   if (row.kind === "UNTRANSCRIBED") {
     return `${duration} 받아쓰지 못했어요 · 소리는 저장됨`;

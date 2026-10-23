@@ -228,8 +228,8 @@ describe("WorkspacePage", () => {
    * **목록에 필터가 없다.** 「전체 / 내가 시작」이었는데 시작자로 걸러 보는 요구가 실제로
    * 없었고, 「내가 시작」을 걷으면 남는 칩이 「전체」 하나라 고르는 것이 아니게 된다 —
    * 줄을 통째로 없앴다. 시작자는 각 행의 아바타가 이미 말한다.
-   * 「전체 / 중지됨」(APP-1313)도 2026-10-22 사용자 결정으로 걷었다(APP-1347) — 중지는 행의
-   * 「N일째 중지됨」과 노트 띠가 말한다. 목록 요청에 `meetingStatus` 를 싣지 않는다.
+   * 「전체 / 일시정지됨」(APP-1313)도 2026-10-22 사용자 결정으로 걷었다(APP-1347) — 일시정지는 행의
+   * 「N일째 일시정지됨」과 노트 띠가 말한다. 목록 요청에 `meetingStatus` 를 싣지 않는다.
    */
   it("시작자 필터 없이 모든 노트를 그린다", async () => {
     renderPage();
@@ -240,7 +240,7 @@ describe("WorkspacePage", () => {
     // 내가 시작한 것(주간 제품 회의)과 남이 시작한 것(리서치 공유)이 함께 선다.
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("리서치 공유")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "중지됨" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "일시정지됨" })).toBeNull();
     expect(getNotes).toHaveBeenCalled();
     for (const [, params] of getNotes.mock.calls) {
       expect(params).not.toHaveProperty("meetingStatus");

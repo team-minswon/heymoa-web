@@ -659,7 +659,7 @@ describe("NoteRealtimeProvider", () => {
     expect(screen.getByTestId("partials").textContent).toBe("null");
   });
 
-  it("현재 세션이 중지되면 확정되지 않은 partial을 지운다", async () => {
+  it("현재 세션이 일시정지되면 확정되지 않은 partial을 지운다", async () => {
     renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
@@ -667,7 +667,7 @@ describe("NoteRealtimeProvider", () => {
       type: "transcript.partial",
       transcriptionSessionId: SESSION_ID,
       utteranceId: UTTERANCE_ID,
-      confirmedText: "중지 전에 남은",
+      confirmedText: "일시정지 전에 남은",
       pendingText: " 초안",
     });
     emit({

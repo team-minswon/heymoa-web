@@ -21,7 +21,7 @@ const note = (overrides: Partial<NoteResponseData>) =>
 describe("PreEndGuide", () => {
   afterEach(cleanup);
 
-  it("중지됨이면 종료 버튼이 있고 이어서 녹음할 수 없다고 알린다", () => {
+  it("일시정지됨이면 종료 버튼이 있고 이어서 녹음할 수 없다고 알린다", () => {
     render(<PreEndGuide note={note({})} />);
     expect(
       screen.getByText("종료한 뒤에는 이어서 녹음할 수 없어요.")
@@ -30,11 +30,11 @@ describe("PreEndGuide", () => {
     expect(screen.getByTestId("end-dialog")).toBeTruthy();
   });
 
-  it("기록 중에는 종료 버튼을 두지 않고 중지부터 하라고 알린다", () => {
+  it("기록 중에는 종료 버튼을 두지 않고 일시정지부터 하라고 알린다", () => {
     render(<PreEndGuide note={note({ meetingStatus: "IN_PROGRESS" })} />);
     expect(screen.queryByRole("button", { name: "회의 종료" })).toBeNull();
     expect(
-      screen.getByText("기록을 중지하면 회의를 종료할 수 있어요.")
+      screen.getByText("기록을 일시정지하면 회의를 종료할 수 있어요.")
     ).toBeTruthy();
   });
 

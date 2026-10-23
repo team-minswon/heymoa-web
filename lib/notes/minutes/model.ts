@@ -161,8 +161,8 @@ const clock = (value: Date | string) =>
   });
 
 /**
- * 일시 칸. 끝 시각은 회의가 실제로 끝난 시각([endedIso])으로만 적는다 — 시작에 기록 길이를 더하면 중지했던 시간이
- * 빠져 실제보다 이르게 찍혔다(09:00 시작 · 20분 중지 · 60분 기록이면 10:20 에 끝났는데 10:00). 모르면 시작 시각만.
+ * 일시 칸. 끝 시각은 회의가 실제로 끝난 시각([endedIso])으로만 적는다 — 시작에 기록 길이를 더하면 일시정지했던 시간이
+ * 빠져 실제보다 이르게 찍혔다(09:00 시작 · 20분 일시정지 · 60분 기록이면 10:20 에 끝났는데 10:00). 모르면 시작 시각만.
  */
 function dateLabelOf(whenIso: string, endedIso: string | undefined) {
   const day = formatAppDate(whenIso, {

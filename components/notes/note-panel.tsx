@@ -391,9 +391,9 @@ export function NotePanel({
    * **이 창이 방금 이 노트의 세션을 닫았다.** 서버가 종료를 확인해 준 상태(`COMPLETED`)이거나,
    * 죽음이 확인된 실패(`INTERRUPTED`)다.
    *
-   * 둘 다 원격 기록으로 취급하면 안 된다. 특히 중지 직후가 그렇다 — 소켓이 `completed`를
+   * 둘 다 원격 기록으로 취급하면 안 된다. 특히 일시정지 직후가 그렇다 — 소켓이 `completed`를
    * 주는 순간 phase는 `ACTIVE_PHASES` 밖으로 나가는데 노트 쿼리는 아직 `IN_PROGRESS`라,
-   * **중지를 누른 진행자 본인에게 "다른 탭·기기에서 기록 중입니다"가 떴다.** 자기가 방금
+   * **일시정지를 누른 진행자 본인에게 "다른 탭·기기에서 기록 중입니다"가 떴다.** 자기가 방금
    * 끈 것을 남이 켠 것으로 읽던 자리다.
    *
    * `failed`+`ACTIVE`(서버 상태 미확인)와 세션 없는 실패는 여전히 원격으로 본다.
@@ -541,7 +541,7 @@ export function NotePanel({
             탭이 제자리라는 약속은 그대로다. */}
           <div
             data-slot="note-top-bar"
-            className="flex shrink-0 flex-wrap items-center gap-x-3 border-b border-[var(--el-hairline)] px-4 sm:h-14 sm:flex-nowrap sm:px-8"
+            className="@container/topbar flex shrink-0 flex-wrap items-center gap-x-3 border-b border-[var(--el-hairline)] px-4 sm:h-14 sm:flex-nowrap sm:px-8"
           >
             <div className="flex h-14 min-w-0 flex-1 items-center gap-2">
               {/* 이동과 창 제어를 한 그룹으로 묶는다 — 스크린리더에서 「목록으로」와 「전체 화면」이
@@ -608,8 +608,8 @@ export function NotePanel({
                 제목이 「회의 노트」였다 — 그 문자열은 이 노트의 이름으로 읽히고, 도착하면
                 제목이 칩 폭(41) + gap(8)만큼 오른쪽으로 밀렸다.
 
-                지금은 칩과 제목이 **같은 자리를 잡은 채** 비어 있다. 상태 라벨 넷은 모두
-                세 글자(시작 전·기록 중·중지됨·종료됨)라 칩 자리표시가 실제와 같은 폭이다. */}
+                지금은 칩과 제목이 **같은 자리를 잡은 채** 비어 있다. 상태 라벨은 대부분 세 글자(시작 전·기록 중·종료됨)라
+                칩 자리표시가 실제와 거의 같은 폭이다. 「일시정지됨」만 길어서, 상단바가 좁으면 칩이 ⏸ 아이콘만 남긴다(APP-1406). */}
               {note ? (
                 <MeetingStatusChip status={note.meetingStatus} />
               ) : (

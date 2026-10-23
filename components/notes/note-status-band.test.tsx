@@ -57,13 +57,13 @@ function renderBand(
 describe("NoteStatusBand", () => {
   afterEach(cleanup);
 
-  it("오래 멈춘 회의에 중지 기간만 말한다", () => {
+  it("오래 멈춘 회의에 일시정지 기간만 말한다", () => {
     const client = new QueryClient();
     seedList(client, "2026-10-20T05:00:00Z");
     renderBand(client, note("PAUSED"));
 
     expect(screen.getByTestId("note-status-band")).toHaveTextContent(
-      /^3일째 중지 상태입니다\.$/
+      /^3일째 일시정지 상태입니다\.$/
     );
     // 버튼은 없다 — 재개는 레코더 독, 종료는 상단바가 한다.
     expect(screen.queryByRole("button")).toBeNull();
@@ -78,7 +78,7 @@ describe("NoteStatusBand", () => {
     expect(screen.getByTestId("note-status-band")).toBeInTheDocument();
   });
 
-  it("중지가 아니거나 오늘 멈춘 회의에는 서지 않는다", () => {
+  it("일시정지가 아니거나 오늘 멈춘 회의에는 서지 않는다", () => {
     const client = new QueryClient();
     seedList(client, "2026-10-20T05:00:00Z");
     const { unmount } = renderBand(client, note("ENDED"));
@@ -94,10 +94,10 @@ describe("NoteStatusBand", () => {
   describe("메일 링크로 도착 (APP-1312)", () => {
     const band = () => screen.queryByTestId("note-status-band");
 
-    it("여전히 중지면 기간을 몰라도 할 수 있는 일을 말한다", () => {
+    it("여전히 일시정지면 기간을 몰라도 할 수 있는 일을 말한다", () => {
       renderBand(new QueryClient(), note("PAUSED"), true);
       expect(band()).toHaveTextContent(
-        "중지 상태입니다. 이어서 녹음하거나 종료할 수 있습니다."
+        "일시정지 상태입니다. 이어서 녹음하거나 종료할 수 있습니다."
       );
     });
 
@@ -146,7 +146,7 @@ describe("NoteStatusBand", () => {
       ...over,
     });
 
-    it("예고된 중지 회의는 일수 대신 자동 종료 예정 시각을 말한다", () => {
+    it("예고된 일시정지 회의는 일수 대신 자동 종료 예정 시각을 말한다", () => {
       const client = new QueryClient();
       seedList(client, "2026-10-20T05:00:00Z");
       renderBand(client, {
@@ -154,18 +154,18 @@ describe("NoteStatusBand", () => {
         autoEnd: autoEnd({ scheduledAt: "2026-10-23T07:20:00Z" }),
       });
       expect(band()).toHaveTextContent(
-        /^계속 중지 상태라면 10월 23일\(금\) 오후 4시 20분 이후 자동 종료될 예정입니다\.$/
+        /^계속 일시정지 상태라면 10월 23일\(금\) 오후 4시 20분 이후 자동 종료될 예정입니다\.$/
       );
       expect(screen.queryByRole("button")).toBeNull();
     });
 
-    it("예정 시각이 없으면 약속하지 않고 노트의 중지 시각으로 일수만 말한다", () => {
+    it("예정 시각이 없으면 약속하지 않고 노트의 일시정지 시각으로 일수만 말한다", () => {
       renderBand(new QueryClient(), {
         ...note("PAUSED"),
         pausedAt: "2026-10-20T05:00:00Z",
         autoEnd: null,
       });
-      expect(band()).toHaveTextContent(/^3일째 중지 상태입니다\.$/);
+      expect(band()).toHaveTextContent(/^3일째 일시정지 상태입니다\.$/);
     });
 
     function renderEnded(
@@ -202,7 +202,7 @@ describe("NoteStatusBand", () => {
       (status, copy) => {
         renderEnded(status);
         expect(band()).toHaveTextContent(
-          `회의를 자동으로 종료했습니다. 마지막 중지 후 3영업일이 지나 종료했습니다. 이 회의에는 이어서 녹음할 수 없습니다. ${copy}`
+          `회의를 자동으로 종료했습니다. 마지막 일시정지 후 3영업일이 지나 종료했습니다. 이 회의에는 이어서 녹음할 수 없습니다. ${copy}`
         );
       }
     );

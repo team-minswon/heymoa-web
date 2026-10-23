@@ -69,7 +69,7 @@ describe("buildNoteHeaderMeta", () => {
     );
   });
 
-  it("종료·중지는 누적 기록 시간이다", () => {
+  it("종료·일시정지는 누적 기록 시간이다", () => {
     const ended = buildNoteHeaderMeta(
       note({ meetingStatus: "ENDED", activeSessionStartedAt: null }),
       { isStarter: true }

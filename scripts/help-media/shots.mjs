@@ -66,7 +66,7 @@ const SHOTS = {
     );
   },
 
-  // 기록 중 도크 — 새 회의를 만들어 시작한 뒤 「중지」에 링
+  // 기록 중 도크 — 새 회의를 만들어 시작한 뒤 「일시정지」에 링
   async "recording/dock"({ page }) {
     // 도크가 위쪽 내용과 가깝게 보이도록 낮은 창으로 찍는다
     await page.setViewportSize({ width: 900, height: 520 });
@@ -75,14 +75,14 @@ const SHOTS = {
     await dialog(page).getByRole("button", { name: "만들기" }).click();
     await page.getByRole("button", { name: "회의 시작" }).click();
     await page
-      .getByRole("button", { name: "중지" })
+      .getByRole("button", { name: "일시정지" })
       .waitFor({ timeout: 15000 });
     // 목 전사가 첫 줄을 낼 때까지(가짜 마이크가 소리를 내면 목이 발화로 읽는다)
     await page
       .getByText("첫 발화를 기다리고 있습니다")
       .waitFor({ state: "detached", timeout: 40000 });
     await wait(13000);
-    await ring(page, page.getByRole("button", { name: "중지" }));
+    await ring(page, page.getByRole("button", { name: "일시정지" }));
     await shoot(
       page,
       { x: 0, y: 0, width: 900, height: 520 },

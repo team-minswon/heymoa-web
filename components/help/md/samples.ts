@@ -76,7 +76,7 @@ brew install --cask team-minswon/tap/heymoa
     name: "움직이는 설명, 그림",
     source: `::clip{name="new-meeting-record" alt="새 노트에서 회의를 만들고 기록하는 영상" caption="새 회의를 만들고 기록을 시작했다가 멈추는 모습이에요."}
 
-![기록 중 도크에 경과 시간과 중지 버튼이 강조된 화면](img:recording/dock.webp "기록 중 도크예요. [중지]로 멈추고 [재개]로 이어서 기록해요.")`,
+![기록 중 도크에 경과 시간과 일시정지 버튼이 강조된 화면](img:recording/dock.webp "기록 중 도크예요. [일시정지]로 멈추고 [재개]로 이어서 기록해요.")`,
   },
   {
     name: "링크 카드 (관련 페이지)",

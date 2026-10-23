@@ -19,9 +19,9 @@ import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
  */
 const MAILS = {
   MEETING_PAUSED_REMINDER: {
-    name: "중지된 회의 메일",
+    name: "일시정지된 회의 메일",
     items: [
-      "회의를 중지한 다음 영업일에 보내는 안내",
+      "회의를 일시정지한 다음 영업일에 보내는 안내",
       "자동 종료했을 때 보내는 안내",
     ],
   },
@@ -132,7 +132,7 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
       <p className="mt-3">
         {/* 자동 종료가 실제로 돌 때만 고지한다(PRO-67 userflow). 판정은 서버가 싣는다(APP-1328) */}
         {kind === "MEETING_PAUSED_REMINDER" && info?.autoEndActive
-          ? "메일을 꺼도 중지된 회의는 일정대로 자동 종료됩니다. "
+          ? "메일을 꺼도 일시정지된 회의는 일정대로 자동 종료됩니다. "
           : null}
         초대 등 다른 메일은 그대로 받습니다.
       </p>

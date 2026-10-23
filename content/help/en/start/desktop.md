@@ -74,7 +74,7 @@ If you don't sign in within 5 minutes, you see “Sign-in timed out”. Click th
 
 ## Recording meetings in the app {#recording}
 
-When you record in the app, both your microphone and the sound your computer plays are recorded. The other people's voices in a video call are part of that computer sound. The record button, **[Stop]**, **[Resume]**, and **[End meeting]** work the same as on the web.
+When you record in the app, both your microphone and the sound your computer plays are recorded. The other people's voices in a video call are part of that computer sound. The record button, **[Pause]**, **[Resume]**, and **[End meeting]** work the same as on the web.
 
 However, we're still checking how well other people's voices are recorded in each app, such as Zoom and Webex.
 
@@ -85,15 +85,15 @@ If you see “Microphone disconnected” or “Computer sound disconnected” wh
 
 ## Using the menu bar and tray {#menubar}
 
-::clip{name="desktop-menubar" alt="Clicking the menu bar icon opens a popover, decisions, tasks, and open questions pile up during recording, and stopping the recording returns it to standby" caption="Sample screen. Click the menu bar icon to open the current meeting's timeline."}
+::clip{name="desktop-menubar" alt="Clicking the menu bar icon opens a popover, decisions, tasks, and open questions pile up during recording, and pausing the recording returns it to standby" caption="Sample screen. Click the menu bar icon to open the current meeting's timeline."}
 
 The icon in the menu bar (Mac) or the notification area of the taskbar (Windows) shows the recording status.
 
-Click the icon to open the current meeting's timeline. Choose what to see from **[All]**, **[Decisions]**, **[Tasks]**, **[Open questions]**, and **[References]**. Click **[Open current meeting ↗]** to open the meeting screen, or **[■ Stop recording]** to stop recording.
+Click the icon to open the current meeting's timeline. Choose what to see from **[All]**, **[Decisions]**, **[Tasks]**, **[Open questions]**, and **[References]**. Click **[Open current meeting ↗]** to open the meeting screen, or **[⏸ Pause recording]** to pause recording.
 
 If nothing new arrives for more than 30 seconds, you see “Updates paused”. Open the meeting to check on it.
 
-When you're not recording, it opens as “Ready to record” and shows “No meeting is being recorded.” While you're viewing a meeting someone else is recording, the stop recording button becomes **[Stop viewing]**. On Mac, the time since recording started appears next to the icon while you record.
+When you're not recording, it opens as “Ready to record” and shows “No meeting is being recorded.” While you're viewing a meeting someone else is recording, the pause recording button becomes **[Stop viewing]**. On Mac, the time since recording started appears next to the icon while you record.
 
 Right-click the icon and the first line of the menu shows the current status, for example “Recording · 12:34 since start”. The status names mean:
 
@@ -102,9 +102,9 @@ Right-click the icon and the first line of the menu shows the current status, fo
 - **Waiting to quit**: The app is finishing the recording and waiting to quit.
 - **Recording status unknown**: Open the meeting screen to check the recording status.
 
-## Stopping recording and quitting the app {#quit}
+## Pausing recording and quitting the app {#quit}
 
-**[Stop recording]** only stops recording. The meeting doesn't end, so you can keep recording later. To finish the meeting, click **[End meeting]** on the meeting screen.
+**[Pause recording]** only pauses recording. The meeting doesn't end, so you can keep recording later. To finish the meeting, click **[End meeting]** on the meeting screen.
 
 If you choose **[Quit app]** from the menu or press `kbd:⌘Q` on Mac while recording or while some audio hasn't been sent, a confirmation window opens. The app doesn't quit right away.
 
@@ -120,7 +120,7 @@ If you choose **[Quit app]** from the menu or press `kbd:⌘Q` on Mac while reco
 
 There are no automatic updates. Check the [official release page](https://github.com/team-minswon/homebrew-tap/releases) for new versions. Most screens and features change along with the web right away. However, the app's own features, such as sound recording and the menu bar, change only when you install a new version.
 
-1. **Stop recording**
+1. **Pause recording**
    Don't update while recording.
 2. **Quit the app**
    The app must be fully closed before you can install the new version.
@@ -168,7 +168,7 @@ If you see “Update the app, then sign in again” when signing in, you need to
 :::
 
 > [!Note]
-> We're still checking recordings made with Bluetooth headsets and recordings after your computer wakes from sleep. If you see a disconnection message while recording, stop recording and start again.
+> We're still checking recordings made with Bluetooth headsets and recordings after your computer wakes from sleep. If you see a disconnection message while recording, pause recording and start again.
 
 Problems like the microphone not being found or the live transcript not connecting can happen on the web too. See [Troubleshooting](help:troubleshooting).
 

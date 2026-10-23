@@ -27,8 +27,8 @@ To use HeyMoa with your team, invite your colleagues. [Members and guest partici
    The note opens.
 4. **Click the red dot button**
    This is the **[Start meeting]** button at the bottom center of the note. If you're asked for microphone access, allow it. [Recording and your microphone](help:recording) has the details.
-5. **Click [Stop]**
-   Recording stops.
+5. **Click [Pause]**
+   Recording pauses.
 6. **Click [End meeting]**
    When the meeting ends, HeyMoa starts separating speakers and writing the summary. [Ending a meeting and analysis](help:meeting-end) covers what happens next.
 
@@ -62,6 +62,6 @@ Yes, click your name at the bottom of the sidebar and choose **[Show the intro a
 
 ## Related pages {#related}
 
-- [Recording and your microphone](help:recording) — Start and stop recording, and microphone access
+- [Recording and your microphone](help:recording) — Start and pause recording, and microphone access
 - [Screen layout and projects](help:workspace-basics) — The sidebar and the note list
 - [Ending a meeting and analysis](help:meeting-end) — How the summary is made after a meeting ends

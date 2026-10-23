@@ -54,7 +54,7 @@ export function useDoc() {
 /**
  * 히어로 한 바퀴의 장면. 쪽지 · 커서 · 섬광 · 자막이 이것만 보고 바뀐다.
  * listen 받아 적기 → timeline 타임라인으로 → task 할 일이 붙음 → open 열린 질문 → ask 내 에이전트 →
- * stop 독에서 중지 → paused 중지됨 → press 회의 종료 누름 → ended 종료됨 → analyzing 분석 대기 →
+ * stop 독에서 일시정지 → paused 일시정지됨 → press 회의 종료 누름 → ended 종료됨 → analyzing 분석 대기 →
  * doc 검토 문서 → evidence 근거 발언 → confirm 검토 막대.
  */
 export type Scene =
@@ -181,7 +181,7 @@ export const HOLD_MS: Partial<Record<Moment, number>> = {
   answered: 1700,
   /** 좁은 화면 자막 「① 먼저 멈춥니다」(1.8 + 1.4 − 0.1 = 3.1초). 커서는 이 동안 ■ 위에 와 있고, 풀리면 누른다. */
   stop: 1800,
-  /** 「② 그다음 회의 종료」(0.25 지연: 1.2 + 0.9 + 1.4 − 0.25 − 0.1 ≈ 3.15초). 중지됨 · 누름 두 장면 동안 선다. */
+  /** 「② 그다음 회의 종료」(0.25 지연: 1.2 + 0.9 + 1.4 − 0.25 − 0.1 ≈ 3.15초). 일시정지됨 · 누름 두 장면 동안 선다. */
   paused: 1200,
   /** 「회의가 끝나면 요약 탭으로 넘어갑니다」(1.9 + 1.3 − 0.1 = 3.1초). */
   ended: 1900,

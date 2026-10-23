@@ -91,7 +91,7 @@ describe("MockTranscriptionScenario", () => {
       send,
       requestClose,
       config: { partialEveryMs: 40, minimumVoiceMs: 40 },
-      script: ["중지 전 확정 문장"],
+      script: ["일시정지 전 확정 문장"],
     });
     scenario.open();
     await scenario.receiveFrame(new Int16Array(960).fill(12_000).buffer, {

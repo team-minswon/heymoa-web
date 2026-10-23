@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
  * 회의 상태 칩. design.pen `u3yYCX`/`XtEMZ`의 Note Header 첫 줄 — 6px 점 또는 아이콘 하나에
  * 11px semibold 라벨이 붙는다. 배경 없는 칩이라 프로젝트 pill과 나란히 놓여도 안 싸운다.
  *
- * **기록 중만 붉다.** 나머지는 muted다 — 종료·중지·시작 전은 사건이 아니라 상태다.
+ * **기록 중만 붉다.** 나머지는 muted다 — 종료·일시정지·시작 전은 사건이 아니라 상태다.
  * 라벨은 `MEETING_STATUS_LABEL`을 그대로 쓴다(목록 행과 같은 이름). 정본은 「예정」이라고
  * 적혀 있지만 목록이 「시작 전」으로 부르는 같은 상태라, 화면마다 다르게 부르지 않는다.
  */
@@ -57,6 +57,7 @@ export function MeetingStatusChip({
         "flex shrink-0 items-center gap-1.5 text-[11px] font-semibold",
         live ? "text-destructive" : "text-[var(--el-muted)]"
       )}
+      title={status === "PAUSED" ? MEETING_STATUS_LABEL[status] : undefined}
     >
       {Icon ? (
         <Icon className="size-3.5" aria-hidden />
@@ -69,7 +70,15 @@ export function MeetingStatusChip({
           )}
         />
       )}
-      {MEETING_STATUS_LABEL[status]}
+      {status === "PAUSED" ? (
+        // 「일시정지됨」은 다른 라벨보다 두 글자 길다. 좁은 상단바(1024 사이드 보기 등)에서는 탭을 덮지 않게
+        // ⏸ 아이콘만 남기고 글자는 스크린리더와 툴팁으로 둔다(APP-1406).
+        <span className="@max-[640px]/topbar:sr-only">
+          {MEETING_STATUS_LABEL[status]}
+        </span>
+      ) : (
+        MEETING_STATUS_LABEL[status]
+      )}
     </span>
   );
 }
@@ -89,7 +98,7 @@ const NUDGE_ITEMS = [
 ] as const;
 
 /**
- * 회의를 중지한 **직후**에만 뜨는 안내. 운영에서 중지만 하고 종료하지 않는 사람이 많았다 — 종료해야
+ * 회의를 일시정지한 **직후**에만 뜨는 안내. 운영에서 일시정지만 하고 종료하지 않는 사람이 많았다 — 종료해야
  * 화자 분리·요약·검토가 생긴다는 것을 그 순간에 말한다. 「나중에」는 그냥 닫는 것이고(회의를 이어
  * 하겠다는 뜻이 아니다), 「다시 보지 않기」만 기억한다.
  */
@@ -180,7 +189,7 @@ export function MeetingControls({
   const recording = useRecording();
   const userId = useAuthUserId();
   const reasonId = useId();
-  // **이 화면에서 기록 중 → 중지됨으로 바뀐 순간에만** 안내를 띄운다. 열어 보니 이미 중지된
+  // **이 화면에서 기록 중 → 일시정지됨으로 바뀐 순간에만** 안내를 띄운다. 열어 보니 이미 일시정지된
   // 노트에서 매번 뜨면 잔소리다.
   const [prevStatus, setPrevStatus] = useState(note.meetingStatus);
   const [nudge, setNudge] = useState(false);
@@ -214,17 +223,17 @@ export function MeetingControls({
       ? null
       : note.meetingStartedBy.name;
   const blockedReason = recorder
-    ? `${recorder} 님이 기록 중 — 중지한 뒤 종료할 수 있습니다`
-    : "중지한 뒤 종료할 수 있습니다";
+    ? `${recorder} 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다`
+    : "일시정지한 뒤 종료할 수 있습니다";
 
-  // 중지됨이면 종료가 다음 할 일이다 — 채워진 주 버튼으로 바꾼다. 기록 중(막힌 상태)은 붉은 외곽선 그대로.
+  // 일시정지됨이면 종료가 다음 할 일이다 — 채워진 주 버튼으로 바꾼다. 기록 중(막힌 상태)은 붉은 외곽선 그대로.
   const paused = note.meetingStatus === "PAUSED";
   const endButton = (
     <Button
       type="button"
       variant={paused ? "default" : "outline"}
       // design.pen `Dpy5O`: h32 · r8 · 12px. 기록 중에는 destructive 테두리와 글자(정본)이고,
-      // 중지됨에서는 채워진 주 버튼이다(APP-1172).
+      // 일시정지됨에서는 채워진 주 버튼이다(APP-1172).
       className={cn(
         "relative h-8 gap-1.5 rounded-control px-2.5 text-xs",
         !paused && "border-destructive text-destructive hover:text-destructive"

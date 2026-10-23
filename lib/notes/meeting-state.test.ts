@@ -76,8 +76,8 @@ describe("isMeetingActive", () => {
 describe("meeting presentation", () => {
   it.each([
     ["NOT_STARTED", "시작 전", "회의 시작"],
-    ["IN_PROGRESS", "기록 중", "중지"],
-    ["PAUSED", "중지됨", "재개"],
+    ["IN_PROGRESS", "기록 중", "일시정지"],
+    ["PAUSED", "일시정지됨", "재개"],
     ["ENDED", "종료됨", "요약 보기"],
   ] as const)("%s 문구와 주 액션을 제공한다", (status, label, action) => {
     expect(MEETING_STATUS_LABEL[status]).toBe(label);
@@ -143,7 +143,7 @@ describe("getRecordedDurationMs", () => {
     ).toBe(0);
   });
 
-  it("재개한 스냅샷은 이전 구간에 현재 구간만 더하고 다음 중지에서 고정한다", () => {
+  it("재개한 스냅샷은 이전 구간에 현재 구간만 더하고 다음 일시정지에서 고정한다", () => {
     const resumed = getRecordedDurationMs(
       {
         meetingStatus: "IN_PROGRESS",
@@ -171,14 +171,14 @@ describe("pausedDayCount", () => {
   // KST 10월 22일 09:00
   const now = Date.parse("2026-10-22T00:00:00Z");
 
-  it("앱 시간대 달력일로 세고 중지한 날이 1일째다", () => {
+  it("앱 시간대 달력일로 세고 일시정지한 날이 1일째다", () => {
     // KST 10월 21일 23:30 — 9시간 반 전이지만 어제라 2일째
     expect(pausedDayCount("2026-10-21T14:30:00Z", now)).toBe(2);
     // KST 10월 19일
     expect(pausedDayCount("2026-10-19T05:00:00Z", now)).toBe(4);
   });
 
-  it("오늘 중지했거나 시각을 모르면 날수를 말하지 않는다", () => {
+  it("오늘 일시정지했거나 시각을 모르면 날수를 말하지 않는다", () => {
     expect(pausedDayCount("2026-10-21T16:00:00Z", now)).toBeNull();
     expect(pausedDayCount(null, now)).toBeNull();
     expect(pausedDayCount("2026-10-19T05:00:00Z", null)).toBeNull();
