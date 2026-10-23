@@ -15,7 +15,6 @@ const state = vi.hoisted(() => ({
   deleteAccount: vi.fn(),
   refetch: vi.fn(),
   leave: vi.fn(),
-  reauth: vi.fn(),
   phase: "idle",
 }));
 
@@ -35,16 +34,6 @@ vi.mock("@/lib/account/deletion-api", async () => {
       isPending: false,
       mutateAsync: state.deleteAccount,
     }),
-  };
-});
-vi.mock("@/lib/auth/reauth", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/auth/reauth")>(
-      "@/lib/auth/reauth"
-    );
-  return {
-    ...actual,
-    useReauth: () => ({ waiting: false, run: state.reauth, cancel: vi.fn() }),
   };
 });
 vi.mock("@/components/auth/auth-provider", () => ({
@@ -112,7 +101,6 @@ describe("AccountDeletionSection", () => {
     state.deleteAccount.mockReset().mockResolvedValue({ status: 204 });
     state.refetch.mockReset();
     state.leave.mockReset();
-    state.reauth.mockReset().mockResolvedValue({ ok: true });
     state.phase = "idle";
   });
   afterEach(cleanup);
@@ -137,15 +125,13 @@ describe("AccountDeletionSection", () => {
     expect(submit()).toBeEnabled();
   });
 
-  it("사유를 고르지 않아도 탈퇴하고, 기본 승계자에게 넘긴 뒤 완료 화면으로 간다", async () => {
+  it("사유를 고르지 않아도 탈퇴하고, 기본 승계자에게 넘긴 뒤 홈으로 간다", async () => {
     open();
     type("회원 탈퇴");
     fireEvent.click(submit());
 
-    await waitFor(() =>
-      expect(state.leave).toHaveBeenCalledWith("/account-deleted")
-    );
-    expect(state.reauth).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(state.leave).toHaveBeenCalledWith("/"));
+    expect(window.sessionStorage.getItem("heymoa:account-deleted")).toBe("1");
     expect(state.deleteAccount).toHaveBeenCalledWith({
       confirmation: "회원 탈퇴",
       workspaces: [
@@ -191,18 +177,6 @@ describe("AccountDeletionSection", () => {
     ).toBeInTheDocument();
   });
 
-  it("재로그인을 안 하면 요청하지 않는다", async () => {
-    state.reauth.mockResolvedValue({ ok: false });
-    open();
-    type("회원 탈퇴");
-    fireEvent.click(submit());
-
-    expect(
-      await screen.findByText(/다시 로그인하지 않아 아무것도 바뀌지 않았습니다/)
-    ).toBeInTheDocument();
-    expect(state.deleteAccount).not.toHaveBeenCalled();
-  });
-
   it("그사이 멤버가 바뀌어 거절되면 문구를 남기고 목록을 새로 받는다", async () => {
     state.deleteAccount.mockRejectedValue({
       success: false,
@@ -224,10 +198,6 @@ describe("AccountDeletionSection", () => {
   });
 
   it.each([
-    [
-      "REAUTH_REQUIRED",
-      "본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.",
-    ],
     [
       "RECORDING_IN_PROGRESS",
       "녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.",

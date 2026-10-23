@@ -21,8 +21,7 @@ import { okData } from "@/lib/api/ok-data";
  *
  * 계약은 server openapi(APP-1378·1380·1381)에서 생성한 클라이언트다. 여기는 화면이 쓰는 이름과
  * 훅 모양(처리 목록은 매번 새로, 실패 토스트는 화면이 직접)만 붙인다.
- * 재로그인 증명이 없거나 만료되면 403 `REAUTH_REQUIRED`, 녹음 중이면 409 `RECORDING_IN_PROGRESS` —
- * 화면은 서버 문구를 그대로 보인다(`errorMessageOf`).
+ * 재로그인은 받지 않는다(2026-10-23 결정). 녹음 중이면 409 `RECORDING_IN_PROGRESS` — 화면은 서버 문구를 그대로 보인다(`errorMessageOf`).
  */
 
 export type DeletionPlanAction =

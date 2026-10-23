@@ -39,11 +39,7 @@ import {
   type WithdrawalReasonCode,
 } from "@/lib/account/deletion-api";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
-import {
-  REAUTH_BLOCKED_MESSAGE,
-  REAUTH_FAILED_MESSAGE,
-  useReauth,
-} from "@/lib/auth/reauth";
+import { markAccountDeleted } from "@/components/auth/account-deleted-notice";
 import { cn } from "@/lib/utils";
 
 const REASON_LABEL: Record<WithdrawalReasonCode, string> = {
@@ -102,7 +98,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
   const recordingNow = isRecordingLive(recording);
   const plan = useDeletionPlan(true);
   const deleteAccount = useDeleteAccount();
-  const reauth = useReauth("ACCOUNT_DELETION");
   const reasonId = useId();
 
   const [choices, setChoices] = useState<Record<string, Choice>>({});
@@ -111,7 +106,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const busy = reauth.waiting || deleteAccount.isPending;
+  const busy = deleteAccount.isPending;
   const workspaces = plan.data?.workspaces;
   const ready =
     workspaces !== undefined &&
@@ -134,10 +129,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
   async function submit() {
     if (!ready || !workspaces) return;
     setError(null);
-    // 새 창은 클릭 처리기 안에서 기다리기 전에 연다(팝업 차단).
-    const verified = await reauth.run();
-    if (verified === "blocked") return setError(REAUTH_BLOCKED_MESSAGE);
-    if (!verified.ok) return setError(REAUTH_FAILED_MESSAGE);
     try {
       await deleteAccount.mutateAsync({
         confirmation: typed.trim(),
@@ -161,7 +152,9 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
       setError(errorMessageOf(failure, "계정을 삭제하지 못했습니다."));
       return;
     }
-    leave("/account-deleted");
+    // 홈으로 보낸다. 완료 안내는 홈에서 짧은 토스트로 한 번 띄운다(`AccountDeletedNotice`).
+    markAccountDeleted();
+    leave("/");
   }
 
   return (
@@ -169,10 +162,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
       open
       onOpenChange={(next) => {
         // 요청 중에는 닫지 않는다 — 창만 사라지면 취소한 줄 알지만 탈퇴는 계속 간다.
-        if (!next && !deleteAccount.isPending) {
-          reauth.cancel();
-          onClose();
-        }
+        if (!next && !deleteAccount.isPending) onClose();
       }}
     >
       <DialogContent
@@ -190,6 +180,52 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pt-3.5 pb-4">
+          <section aria-labelledby={reasonId}>
+            <SectionLabel id={reasonId}>
+              탈퇴 사유{" "}
+              <span className="font-normal text-[var(--el-muted)]">(선택)</span>
+            </SectionLabel>
+            <div className="flex flex-wrap gap-2">
+              {WITHDRAWAL_REASON_CODES.map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  aria-pressed={reason === code}
+                  disabled={busy}
+                  // 하나만 고른다. 다시 누르면 고르지 않은 상태로 돌아간다(건너뛸 수 있다).
+                  onClick={() => setReason(reason === code ? null : code)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors disabled:opacity-50",
+                    reason === code
+                      ? "border-[var(--el-ink)] bg-[var(--el-ink)] text-white"
+                      : "border-[var(--el-hairline)] text-[var(--el-body)] hover:bg-[var(--el-canvas-soft)]"
+                  )}
+                >
+                  {REASON_LABEL[code]}
+                </button>
+              ))}
+            </div>
+            {reason === "OTHER" ? (
+              <div className="mt-3 grid gap-1.5">
+                <Textarea
+                  aria-label="기타 사유"
+                  value={detail}
+                  maxLength={WITHDRAWAL_DETAIL_MAX}
+                  disabled={busy}
+                  rows={3}
+                  placeholder="개인정보는 적지 마세요."
+                  onChange={(event) => setDetail(event.target.value)}
+                />
+                <span className="justify-self-end text-xs text-[var(--el-muted)] tabular-nums">
+                  {detail.length} / {WITHDRAWAL_DETAIL_MAX}
+                </span>
+              </div>
+            ) : null}
+            <p className="mt-2 text-xs text-[var(--el-muted)]">
+              사유는 개인을 알 수 없게 통계로만 남습니다.
+            </p>
+          </section>
+
           <section aria-label="워크스페이스별 처리">
             <SectionLabel>워크스페이스별 처리</SectionLabel>
             {plan.isPending ? (
@@ -245,52 +281,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
             </ul>
           </section>
 
-          <section aria-labelledby={reasonId}>
-            <SectionLabel id={reasonId}>
-              탈퇴 사유{" "}
-              <span className="font-normal text-[var(--el-muted)]">(선택)</span>
-            </SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {WITHDRAWAL_REASON_CODES.map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  aria-pressed={reason === code}
-                  disabled={busy}
-                  // 하나만 고른다. 다시 누르면 고르지 않은 상태로 돌아간다(건너뛸 수 있다).
-                  onClick={() => setReason(reason === code ? null : code)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors disabled:opacity-50",
-                    reason === code
-                      ? "border-[var(--el-ink)] bg-[var(--el-ink)] text-white"
-                      : "border-[var(--el-hairline)] text-[var(--el-body)] hover:bg-[var(--el-canvas-soft)]"
-                  )}
-                >
-                  {REASON_LABEL[code]}
-                </button>
-              ))}
-            </div>
-            {reason === "OTHER" ? (
-              <div className="mt-3 grid gap-1.5">
-                <Textarea
-                  aria-label="기타 사유"
-                  value={detail}
-                  maxLength={WITHDRAWAL_DETAIL_MAX}
-                  disabled={busy}
-                  rows={3}
-                  placeholder="개인정보는 적지 마세요."
-                  onChange={(event) => setDetail(event.target.value)}
-                />
-                <span className="justify-self-end text-xs text-[var(--el-muted)] tabular-nums">
-                  {detail.length} / {WITHDRAWAL_DETAIL_MAX}
-                </span>
-              </div>
-            ) : null}
-            <p className="mt-2 text-xs text-[var(--el-muted)]">
-              사유는 개인을 알 수 없게 통계로만 남습니다.
-            </p>
-          </section>
-
           <ConfirmPhraseField
             phrase={WITHDRAWAL_CONFIRMATION}
             value={typed}
@@ -303,11 +293,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
               녹음을 끝낸 뒤 탈퇴할 수 있습니다.
             </p>
           ) : null}
-          {reauth.waiting ? (
-            <p role="status" className="text-xs text-[var(--el-muted)]">
-              Google 창에서 다시 로그인해 주세요.
-            </p>
-          ) : null}
           {error ? <ErrorNote>{error}</ErrorNote> : null}
         </div>
 
@@ -315,10 +300,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
           <Button
             variant="outline"
             disabled={deleteAccount.isPending}
-            onClick={() => {
-              reauth.cancel();
-              onClose();
-            }}
+            onClick={onClose}
           >
             취소
           </Button>
@@ -328,7 +310,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
             disabled={!ready}
             onClick={() => void submit()}
           >
-            Google로 확인하고 탈퇴
+            탈퇴
           </Button>
         </DialogFooter>
       </DialogContent>

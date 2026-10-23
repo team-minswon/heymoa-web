@@ -13,7 +13,6 @@ const mutations = vi.hoisted(() => ({
   updateWorkspace: vi.fn(),
   deleteWorkspace: vi.fn(),
   replace: vi.fn(),
-  reauth: vi.fn(),
   role: undefined as "ADMIN" | "MEMBER" | undefined,
 }));
 
@@ -33,20 +32,6 @@ vi.mock("@/lib/account/deletion-api", async () => {
     useDeleteWorkspace: () => ({
       isPending: false,
       mutateAsync: mutations.deleteWorkspace,
-    }),
-  };
-});
-vi.mock("@/lib/auth/reauth", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/auth/reauth")>(
-      "@/lib/auth/reauth"
-    );
-  return {
-    ...actual,
-    useReauth: () => ({
-      waiting: false,
-      run: mutations.reauth,
-      cancel: vi.fn(),
     }),
   };
 });
@@ -99,7 +84,6 @@ describe("WorkspaceSettingsForm", () => {
     mutations.updateWorkspace.mockResolvedValue({ status: 200 });
     mutations.deleteWorkspace.mockReset().mockResolvedValue({ status: 204 });
     mutations.replace.mockReset();
-    mutations.reauth.mockReset().mockResolvedValue({ ok: true });
     mutations.role = undefined;
     toast.error.mockReset();
     toast.success.mockReset();
@@ -164,7 +148,7 @@ describe("WorkspaceSettingsForm", () => {
     renderForm();
     fireEvent.click(screen.getByRole("button", { name: "워크스페이스 삭제" }));
     const confirm = screen.getByRole("button", {
-      name: "Google로 확인하고 삭제",
+      name: "삭제",
     });
     expect(confirm).toBeDisabled();
     fireEvent.change(screen.getByLabelText(/확인하려면/), {

@@ -1064,7 +1064,7 @@ export const getDeleteWorkspaceUrl = (workspaceId: string) => {
 };
 
 /**
- * ADMIN 만. 본문의 이름이 지금 이름과(앞뒤 공백만 걷고) 같고, HttpOnly 쿠키 reauth_proof 에 WORKSPACE_DELETION 재로그인 증명(`/v1/auth/oauth2/authorize/google?reauth=WORKSPACE_DELETION`, 5분·1회)이 있어야 한다. 성공하면 모든 멤버의 접근이 즉시 막히고(이후 404) 실제 삭제는 비동기로 끝나며 멤버 전원에게 메일이 간다. 녹음 중인 회의가 있으면 409. 성공 응답은 증명 쿠키를 지운다.
+ * ADMIN 만. 본문의 이름이 지금 이름과(앞뒤 공백만 걷고) 같아야 한다. 재로그인은 받지 않는다. 성공하면 모든 멤버의 접근이 즉시 막히고(이후 404) 실제 삭제는 비동기로 끝나며 멤버 전원에게 메일이 간다. 녹음 중인 회의가 있으면 409.
  * @summary 워크스페이스 삭제
  */
 export const deleteWorkspace = async (

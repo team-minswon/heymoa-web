@@ -276,7 +276,6 @@ const MEMBER_ERROR_MESSAGES: Record<string, string> = {
     "확인 문구가 맞지 않습니다. 「회원 탈퇴」를 정확히 입력해 주세요.",
   DELETION_PLAN_CHANGED:
     "그사이 워크스페이스 상황이 바뀌었습니다. 목록을 다시 확인해 주세요.",
-  REAUTH_REQUIRED: "본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.",
   RECORDING_IN_PROGRESS:
     "녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.",
 };
@@ -287,10 +286,7 @@ const MEMBER_NOT_FOUND_CODES = new Set([
   "WORKSPACE_NOT_FOUND",
   "AGENT_DELEGATION_NOT_FOUND",
 ]);
-const MEMBER_FORBIDDEN_CODES = new Set([
-  "WORKSPACE_ACCESS_DENIED",
-  "REAUTH_REQUIRED",
-]);
+const MEMBER_FORBIDDEN_CODES = new Set(["WORKSPACE_ACCESS_DENIED"]);
 const MEMBER_BAD_REQUEST_CODES = new Set([
   "BAD_REQUEST",
   "WORKSPACE_NAME_MISMATCH",

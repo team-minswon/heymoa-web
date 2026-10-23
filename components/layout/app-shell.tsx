@@ -20,6 +20,7 @@ import { NavbarGate } from "@/components/NavbarGate";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
 import { DesktopRecordingControls } from "@/components/transcription/desktop-recording-controls";
 import { Toaster } from "@/components/ui/toast";
+import { AccountDeletedNotice } from "@/components/auth/account-deleted-notice";
 import { messagesFor, type Namespace } from "@/i18n/messages";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import type { Locale } from "@/lib/i18n/locales";
@@ -83,6 +84,7 @@ export async function AppShell({
               </FooterGate>
             </div>
             <Toaster />
+            <AccountDeletedNotice />
             {/* Providers 안이어야 PostHog가 로그인한 사람(`useAuth`)을 안다. */}
             {analytics ? <SiteAnalytics /> : null}
           </Providers>

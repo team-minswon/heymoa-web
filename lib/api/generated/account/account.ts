@@ -67,11 +67,6 @@ export type deleteAccountResponse401 = {
   status: 401;
 };
 
-export type deleteAccountResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
-};
-
 export type deleteAccountResponse409 = {
   data: AppErrorResponse;
   status: 409;
@@ -83,7 +78,6 @@ export type deleteAccountResponseSuccess = deleteAccountResponse204 & {
 export type deleteAccountResponseError = (
   | deleteAccountResponse400
   | deleteAccountResponse401
-  | deleteAccountResponse403
   | deleteAccountResponse409
 ) & {
   headers: Headers;
@@ -98,7 +92,7 @@ export const getDeleteAccountUrl = () => {
 };
 
 /**
- * 유예 없이 즉시 탈퇴한다(PRO-69). HttpOnly 쿠키 reauth_proof 에 ACCOUNT_DELETION 재로그인 증명(5분·1회)이 있어야 한다. 서버가 처리 목록을 다시 계산해 보낸 선택과 다르면 409 DELETION_PLAN_CHANGED, 녹음 중이면 409. 성공하면 모든 기기의 접근이 끊기고 로그인·증명 쿠키를 지운다.
+ * 유예 없이 즉시 탈퇴한다(PRO-69). 재로그인은 받지 않는다. 서버가 처리 목록을 다시 계산해 보낸 선택과 다르면 409 DELETION_PLAN_CHANGED, 녹음 중이면 409. 성공하면 모든 기기의 접근이 끊기고 로그인 쿠키를 지운다.
  * @summary 회원 탈퇴
  */
 export const deleteAccount = async (

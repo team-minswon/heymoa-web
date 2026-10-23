@@ -1184,7 +1184,7 @@ paths:
       tags:
       - Account
       summary: 회원 탈퇴
-      description: 유예 없이 즉시 탈퇴한다(PRO-69). HttpOnly 쿠키 reauth_proof 에 ACCOUNT_DELETION 재로그인 증명(5분·1회)이 있어야 한다. 서버가 처리 목록을 다시 계산해 보낸 선택과 다르면 409 DELETION_PLAN_CHANGED, 녹음 중이면 409. 성공하면 모든 기기의 접근이 끊기고 로그인·증명 쿠키를 지운다.
+      description: 유예 없이 즉시 탈퇴한다(PRO-69). 재로그인은 받지 않는다. 서버가 처리 목록을 다시 계산해 보낸 선택과 다르면 409 DELETION_PLAN_CHANGED, 녹음 중이면 409. 성공하면 모든 기기의 접근이 끊기고 로그인 쿠키를 지운다.
       operationId: deleteAccount
       requestBody:
         content:
@@ -1219,16 +1219,6 @@ paths:
                   reason:
                     code: OTHER
                     detail: 가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가
-              deleteAccount_ReauthRequiredException:
-                value:
-                  confirmation: 회원 탈퇴
-                  workspaces:
-                  - workspaceId: 0HZX2K7M9Q4AD
-                    decision: TRANSFER
-                    successorUserId: 0HZX2K7M9Q4AM
-                  reason:
-                    code: OTHER
-                    detail: 직접 적은 사유
               deleteAccount_RecordingInProgressException:
                 value:
                   confirmation: 회원 탈퇴
@@ -1279,21 +1269,6 @@ paths:
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: 권한 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                REAUTH_REQUIRED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: REAUTH_REQUIRED
-                      message: 본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.
-                      details: null
         '409':
           description: 요청 상태 충돌
           content:
@@ -1484,7 +1459,7 @@ paths:
       tags:
       - Workspaces
       summary: 워크스페이스 삭제
-      description: ADMIN 만. 본문의 이름이 지금 이름과(앞뒤 공백만 걷고) 같고, HttpOnly 쿠키 reauth_proof 에 WORKSPACE_DELETION 재로그인 증명(`/v1/auth/oauth2/authorize/google?reauth=WORKSPACE_DELETION`, 5분·1회)이 있어야 한다. 성공하면 모든 멤버의 접근이 즉시 막히고(이후 404) 실제 삭제는 비동기로 끝나며 멤버 전원에게 메일이 간다. 녹음 중인 회의가 있으면 409. 성공 응답은 증명 쿠키를 지운다.
+      description: ADMIN 만. 본문의 이름이 지금 이름과(앞뒤 공백만 걷고) 같아야 한다. 재로그인은 받지 않는다. 성공하면 모든 멤버의 접근이 즉시 막히고(이후 404) 실제 삭제는 비동기로 끝나며 멤버 전원에게 메일이 간다. 녹음 중인 회의가 있으면 409.
       operationId: deleteWorkspace
       parameters:
       - name: workspaceId
@@ -1510,9 +1485,6 @@ paths:
                 value:
                   workspaceName: null
               deleteWorkspace_WorkspaceAccessDeniedException:
-                value:
-                  workspaceName: 제품 팀
-              deleteWorkspace_ReauthRequiredException:
                 value:
                   workspaceName: 제품 팀
               deleteWorkspace_WorkspaceNameMismatchException:
@@ -1568,14 +1540,6 @@ paths:
                     error:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
-                      details: null
-                REAUTH_REQUIRED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: REAUTH_REQUIRED
-                      message: 본인 확인이 필요합니다. Google 로 다시 로그인해 주세요.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
