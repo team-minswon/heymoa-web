@@ -32,7 +32,7 @@ When you open the agent from a note, that meeting's notes are added to the scope
 
 **[+]** starts a new conversation, and **[History]** lists past ones. Each conversation is titled after its first question, and you can't rename it.
 
-To delete a conversation, click **[Delete conversation]** at the top of the conversation, or the trash icon on its row in **[History]**. Deleted conversations can't be restored. You can delete a conversation while an answer is being written; the answer stops. Deleting a note also deletes conversations whose questions were scoped only to that note. Conversations that also asked about other notes or projects stay.
+To delete a conversation, click **[Delete conversation]** at the top of the conversation, or the trash icon on its row in **[History]**. Deleted conversations can't be restored. You can delete a conversation while an answer is being written; the answer stops. Deleting a note also deletes conversations whose questions were scoped only to that note. Conversations that also asked about other notes or projects stay. If you leave a workspace or are removed from it, all your conversations in that workspace are deleted.
 
 > [!Note]
 > When a conversation gets very long, the earlier part is summarized and collapsed. Repeat any important context in your new question.

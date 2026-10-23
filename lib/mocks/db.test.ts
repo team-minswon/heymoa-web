@@ -610,6 +610,15 @@ describe("workspace member management", () => {
     expect(after?.revokeReason).toBe("MEMBERSHIP_ENDED");
   });
 
+  it("나가면 그 워크스페이스의 내 에이전트 대화가 지워진다", () => {
+    addSecondAdmin();
+    const { chatId } = mockDb.createAgentChat({ workspaceId: WORKSPACE_ID });
+
+    mockDb.leaveWorkspace(WORKSPACE_ID, mockDb.getWorkspace(WORKSPACE_ID).name);
+
+    expect(mockDb.findAgentChat(chatId)).toBeNull();
+  });
+
   it("외부 에이전트 연결은 만료 시각이 지나면 조회할 때 만료됨이다", () => {
     vi.useFakeTimers();
     try {

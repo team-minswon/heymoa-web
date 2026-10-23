@@ -48,9 +48,9 @@ You can change your own name, and admins can change anyone's. The new name shows
 
 Your account name and email are shown in **[Settings]** → **[Account]** → **[My account]**, where you can view them but not change them.
 
-Only admins can use **[Remove]**. Removing someone also disconnects the Linear and GitHub integrations and the outside AI app connections they set up.
+Only admins can use **[Remove]**. Removing someone also disconnects the Linear and GitHub integrations and the outside AI app connections they set up. Their agent conversations in this workspace are deleted too.
 
-**[Leave workspace]** is at the bottom of the Members tab. Type the workspace name exactly in the confirmation window to leave. You can't leave while you're recording in this workspace.
+**[Leave workspace]** is at the bottom of the Members tab. Type the workspace name exactly in the confirmation window to leave. You can't leave while you're recording in this workspace. ==Leaving deletes your agent conversations in this workspace, and they don't come back if you're invited again.==
 
 ## Manage guest participants {#guests}
 

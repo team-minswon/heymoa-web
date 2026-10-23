@@ -263,7 +263,7 @@
               [
                 "Transcripts, notes, AI summaries, search indexes, agent conversations",
                 "Until you delete them",
-                "Deleted along with the note or workspace. Deleting your account deletes the records of workspaces you used alone and your own agent conversations in every workspace; transcripts, notes, and AI summaries in team workspaces remain (see below)"
+                "Deleted along with the note or workspace. Leaving a workspace also deletes your own agent conversations in that workspace. Deleting your account deletes the records of workspaces you used alone and your own agent conversations in every workspace; transcripts, notes, and AI summaries in team workspaces remain (see below)"
               ],
               [
                 "Account information (email, profile photo, sign-in method)",

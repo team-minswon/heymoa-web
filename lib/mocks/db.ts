@@ -3610,6 +3610,19 @@ export const mockDb = {
       delegation.revokeReason = "MEMBERSHIP_ENDED";
     }
 
+    // 떠나면 그 워크스페이스의 내 에이전트 대화가 지워진다(server APP-1415). 목의 대화는 모두 내 것이다.
+    const leftChats = new Set(
+      state.agentChats
+        .filter((chat) => chat.workspaceId === workspaceId)
+        .map((chat) => chat.chatId)
+    );
+    state.agentChats = state.agentChats.filter(
+      (chat) => !leftChats.has(chat.chatId)
+    );
+    state.agentChatMessages = state.agentChatMessages.filter(
+      (message) => !leftChats.has(message.chatId)
+    );
+
     // 멤버십이 사라지면 그 워크스페이스는 목록에서도 빠진다 — 초대 수락(합류)의 역이다.
     const workspaceIndex = state.workspaces.findIndex(
       (w) => w.workspaceId === workspaceId

@@ -440,7 +440,8 @@ function MemberRow({
             <AlertDialogTitle>{member.name}님을 내보낼까요?</AlertDialogTitle>
             <AlertDialogDescription>
               {member.email} 계정이 이 워크스페이스의 멤버 목록과 접근 권한을
-              잃습니다.
+              잃고, 그 멤버가 이 워크스페이스에서 나눈 에이전트 대화가
+              삭제됩니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -606,7 +607,8 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>이 워크스페이스를 나갈까요?</AlertDialogTitle>
             <AlertDialogDescription>
-              회의 기록과 프로젝트에 더 이상 접근할 수 없게 됩니다.
+              회의 기록과 프로젝트에 더 이상 접근할 수 없게 되고, 이
+              워크스페이스에서 나눈 에이전트 대화가 삭제됩니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
