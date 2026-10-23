@@ -31,7 +31,7 @@ While recording, the dock (the control bar at the bottom) shows a ⏸ **[Pause]*
 
 If you leave a meeting paused, we email you after 1 business day. If it's still paused after 3 business days, the meeting ends automatically and analysis starts. The scheduled time is shown in the notice at the top of the note.
 
-![A note being recorded, with lines being transcribed in the transcript and the elapsed time and Pause button highlighted in the dock at the bottom](img:recording/dock.webp "The dock while recording. Click [Pause] to pause and [Resume] to continue.")
+![A note being recorded, with lines being transcribed in the transcript and a tooltip saying the meeting doesn't end shown on the ⏸ Pause button in the dock at the bottom](img:recording/dock.webp "The dock while recording. Click [Pause] to pause and [Resume] to continue.")
 
 To finish the meeting, pause the recording and click **[End meeting]**. See [Ending a meeting and analysis](help:meeting-end) for details.
 

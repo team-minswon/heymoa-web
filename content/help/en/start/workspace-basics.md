@@ -35,7 +35,7 @@ Meetings are grouped by the date they started, newest first. Each row shows:
 - **Recording time and number of participants**: In the middle of the row.
 - **Participant profile photos**: On the right, up to 4 people.
 
-![The project list in the left sidebar, with meetings grouped by date in the note list on the right](img:workspace-basics/note-list.webp "The sidebar and the note list. Hover over a row to see [⋯] at the right end.")
+![Notifications, All notes, Tasks, and the project list in the left sidebar, with meetings grouped by date in the note list on the right](img:workspace-basics/note-list.webp "The sidebar and the note list. Hover over a row to see [⋯] at the right end.")
 
 Click a note row to open it in side view (a panel that shows the note beside the list). From **[⋯]** at the end of the row, you can open it in **[Full screen]**. Admins also see **[Delete]**.
 

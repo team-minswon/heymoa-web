@@ -100,11 +100,16 @@ try {
       await context.addCookies([
         { name: "heymoa-help-demo", value: "1", url: base },
       ]);
-      await context.addInitScript(() => {
+      // 일시정지 직후 종료 안내는 그것을 보여 주는 장면(`endNudge`)에서만 띄운다.
+      const endNudge = Boolean(
+        scenes.find((s) => s.name === name)?.endNudge
+      );
+      await context.addInitScript((endNudge) => {
         localStorage.setItem("heymoa:helpDemo", "1");
         localStorage.setItem("heymoa:analytics-opt-out", "1");
         localStorage.setItem("heymoa:u:user-12345:agent-intro-dismissed", "1");
-        localStorage.setItem("heymoa:u:user-12345:end-nudge-off", "1");
+        if (!endNudge)
+          localStorage.setItem("heymoa:u:user-12345:end-nudge-off", "1");
         localStorage.setItem(
           "heymoa:onboarding:user-12345",
           JSON.stringify({ status: "dismissed", done: [] })
@@ -121,7 +126,7 @@ try {
             return fixed + NativeDate.now() - epoch;
           }
         };
-      });
+      }, endNudge);
       await context.addInitScript(installCursor);
       const scene =
         name === "desktop-menubar"

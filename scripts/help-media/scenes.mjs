@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { click, quietClick, type } from "./cursor.mjs";
 const workspace = "/w/01K0000000000";
 const note = (id, tab) => `${workspace}/notes/${id}?tab=${tab}&view=full`;
+// 설정 창이 열리며 첫 탭에 남는 포커스 링을 지운다(영상에서는 누른 것처럼 보인다).
+const blur = (p) => p.evaluate(() => document.activeElement?.blur?.());
 const button = (p, name) => p.getByRole("button", { name, exact: true });
 
 export const scenes = [
@@ -43,6 +45,80 @@ export const scenes = [
       await p.getByTestId("partial-pending").waitFor({ timeout: 30000 });
       await p.waitForTimeout(300);
       mark();
+    },
+  },
+  {
+    // 기록 중 ⏸ → 「일시정지됨」 칩 → 종료 안내 말풍선(APP-1406·1411)
+    name: "pause-end-nudge",
+    path: workspace,
+    viewport: { width: 1024, height: 576 },
+    endNudge: true,
+    endHold: 2600,
+    async ready(p) {
+      // 새 회의를 만들어 기록을 켜 두는 데까지는 준비 구간이다(영상에서 잘린다).
+      await button(p, "새 노트").click();
+      await p.getByRole("dialog").getByRole("button", { name: "만들기" }).click();
+      await button(p, "회의 시작").waitFor();
+      await button(p, "내 에이전트 접기").click();
+      await button(p, "회의 시작").click();
+      await p.getByTestId("transcript-block").first().waitFor({ timeout: 40000 });
+      await p.waitForTimeout(3000);
+    },
+    async run(p, mark) {
+      // 툴팁이 읽히게 잠깐 올려 둔 뒤 누른다.
+      await click(p, button(p, "일시정지"), 300, 1600);
+      await p.getByTestId("end-nudge").waitFor();
+      await p.mouse.move(560, 420, { steps: 14 });
+      await p.waitForTimeout(1200);
+      mark();
+    },
+  },
+  {
+    name: "notification-settings",
+    path: workspace,
+    ready: (p) => p.getByRole("button", { name: /^알림/ }).first().waitFor(),
+    async run(p, mark) {
+      await click(p, p.getByRole("button", { name: /^알림/ }).first());
+      const modal = p.getByRole("dialog", { name: "알림" });
+      await modal.waitFor();
+      await p.waitForTimeout(900);
+      await click(p, modal.getByRole("tab", { name: /^처리 필요/ }), 900);
+      await click(p, modal.getByRole("button", { name: "알림 설정" }));
+      await p.getByRole("region", { name: "종류별 알림" }).waitFor();
+      await blur(p);
+      await p.waitForTimeout(700);
+      mark();
+      const mail = p.getByRole("switch", { name: "문의 답변 메일" });
+      await click(p, mail, 900);
+      assert.equal(await mail.getAttribute("aria-checked"), "false");
+    },
+  },
+  {
+    name: "account-delete",
+    path: `${workspace}?settings=account`,
+    async ready(p) {
+      const open = button(p, "계정 삭제");
+      await open.waitFor();
+      await open.scrollIntoViewIfNeeded();
+      await blur(p);
+    },
+    async run(p, mark) {
+      await click(p, button(p, "계정 삭제"));
+      const dialog = p.getByRole("dialog", { name: "계정을 삭제할까요?" });
+      await dialog.waitFor();
+      await dialog.getByRole("region", { name: "워크스페이스별 처리" }).waitFor();
+      await p.waitForTimeout(700);
+      await click(p, dialog.getByRole("button", { name: "자주 쓰지 않음" }), 900);
+      mark();
+      await type(p, dialog.getByRole("textbox").last(), "회원 탈퇴", {
+        hold: 500,
+        delay: 90,
+      });
+      const submit = dialog.getByRole("button", { name: "탈퇴", exact: true });
+      assert.ok(await submit.isEnabled());
+      // 누르지 않는다 — 켜진 [탈퇴]를 보여 주는 데서 끝낸다.
+      const box = await submit.boundingBox();
+      await p.mouse.move(box.x - 40, box.y + 60, { steps: 14 });
     },
   },
   {

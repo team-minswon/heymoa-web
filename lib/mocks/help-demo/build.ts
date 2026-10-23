@@ -10,7 +10,7 @@ import {
   helpDemoIntegrations,
 } from "@/lib/mocks/help-demo/misc";
 import { MID_MEETINGS } from "@/lib/mocks/help-demo/mid";
-import { NOTE_DEFS, type NoteDef } from "@/lib/mocks/help-demo/notes";
+import { HD_NOTE_IDS, NOTE_DEFS, type NoteDef } from "@/lib/mocks/help-demo/notes";
 import {
   HD_GUESTS,
   HD_ME,
@@ -280,6 +280,17 @@ export function createHelpDemoState(now = Date.now()): StoreState {
       expiresAt: iso(now + 5 * DAY_MS),
     },
   ];
+  const notificationPayload = {
+    workspaceId: HD_WORKSPACE_ID,
+    workspaceName: "봄바람 스튜디오",
+    invitationId: null,
+    inviterUserId: null,
+    noteId: null,
+    noteTitle: null,
+    autoEnded: false,
+    pausedBusinessDays: null,
+    feedbackId: null,
+  };
   const notifications: StoreState["notifications"] = [
     {
       notificationId: "01KH000009101",
@@ -296,6 +307,32 @@ export function createHelpDemoState(now = Date.now()): StoreState {
         expiresAt: invitations[0].expiresAt,
       },
       payload: null,
+    },
+    // 가이드의 알림 클립(APP-1411)이 세 종류를 다 보이게 — 검토할 결과 준비 · 문의 답변
+    {
+      notificationId: "01KH000009102",
+      type: "ANALYSIS_READY",
+      readAt: null,
+      createdAt: iso(now - 2 * 60 * 60 * 1000),
+      invitation: null,
+      payload: {
+        ...notificationPayload,
+        noteId: HD_NOTE_IDS.campaign,
+        noteTitle: "4월 캠페인 성과 리뷰",
+      },
+    },
+    {
+      notificationId: "01KH000009103",
+      type: "INQUIRY_ANSWERED",
+      readAt: iso(now - 60 * 60 * 1000),
+      createdAt: iso(now - 3 * 60 * 60 * 1000),
+      invitation: null,
+      payload: {
+        ...notificationPayload,
+        workspaceId: null,
+        workspaceName: null,
+        feedbackId: "01KH000007001",
+      },
     },
   ];
 

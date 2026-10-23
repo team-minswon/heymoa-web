@@ -19,7 +19,15 @@ const url = (path) => `${BASE}${path}`;
 
 /** 화면을 연 뒤 일회성 안내(내 에이전트 카드·시작하기 카드)를 치워 컷이 같은 모습이 되게 한다. */
 async function open(page, path, { settle = 1200 } = {}) {
-  await page.goto(url(path), { waitUntil: "networkidle" });
+  // networkidle 은 오지 않는다 — 앱이 이벤트 스트림(`/v1/events`, APP-1335)을 늘 열어 둔다.
+  // clips.mjs 처럼 DOM 이 서고 MSW 가 요청을 받기 시작한 뒤 잠깐 기다린다.
+  await page.goto(url(path), { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() =>
+    navigator.serviceWorker.controller?.scriptURL.endsWith(
+      "/mockServiceWorker.js"
+    )
+  );
+  await page.evaluate(() => document.fonts.ready);
   await wait(settle);
   const nudge = page.getByRole("button", { name: "다시 보지 않기" });
   if (await nudge.count()) {
@@ -31,6 +39,8 @@ async function open(page, path, { settle = 1200 } = {}) {
     await close.first().click();
     await wait(300);
   }
+  // 안내를 닫은 자리에 남은 포인터가 그 아래 줄을 hover 상태로 찍히게 하지 않는다
+  await page.mouse.move(1, 1);
 }
 
 const dialog = (page) => page.getByRole("dialog");
@@ -61,7 +71,7 @@ const SHOTS = {
     await wait(400);
     await shoot(
       page,
-      { x: 0, y: 0, width: 1280, height: 640 },
+      { x: 0, y: 0, width: 1440, height: 720 },
       "workspace-basics/note-list"
     );
   },
@@ -82,7 +92,11 @@ const SHOTS = {
       .getByText("첫 발화를 기다리고 있습니다")
       .waitFor({ state: "detached", timeout: 40000 });
     await wait(13000);
-    await ring(page, page.getByRole("button", { name: "일시정지" }));
+    // ⏸ 에 올려 툴팁(「일시정지 — 회의는 끝나지 않습니다」)까지 보이게 한다
+    const pause = page.getByRole("button", { name: "일시정지", exact: true });
+    await pause.hover();
+    await page.getByText("회의는 끝나지 않습니다").waitFor();
+    await ring(page, pause);
     await shoot(
       page,
       { x: 0, y: 0, width: 900, height: 520 },
@@ -104,7 +118,7 @@ const SHOTS = {
     await wait(700);
     await shoot(
       page,
-      { x: 0, y: 0, width: 1280, height: 720 },
+      { x: 0, y: 0, width: 1440, height: 810 },
       "speakers/assign-menu"
     );
   },
@@ -130,9 +144,10 @@ const SHOTS = {
       `/w/${IDS.workspace}/notes/${IDS.reviewing}?view=full&tab=summary`
     );
     await wait(1500);
+    await blurFocus(page);
     await shoot(
       page,
-      { x: 0, y: 0, width: 1280, height: 800 },
+      { x: 0, y: 0, width: 1440, height: 900 },
       "review/proposals"
     );
   },
@@ -141,7 +156,7 @@ const SHOTS = {
   async "tasks/table"({ page }) {
     await open(page, `/w/${IDS.workspace}/tasks`);
     await wait(800);
-    await shoot(page, { x: 0, y: 0, width: 1280, height: 800 }, "tasks/table");
+    await shoot(page, { x: 0, y: 0, width: 1440, height: 900 }, "tasks/table");
   },
 
   // 설정 › 멤버 › 이름 변경
@@ -186,7 +201,7 @@ const SHOTS = {
     await open(page, `/w/${IDS.workspace}/tasks`);
     await page.getByRole("button", { name: "내 에이전트 열기" }).click();
     await wait(1200);
-    await shoot(page, { x: 0, y: 0, width: 1280, height: 800 }, "agent/chat");
+    await shoot(page, { x: 0, y: 0, width: 1440, height: 900 }, "agent/chat");
   },
 
   // 설정 › 내 MCP 연결 › 새 연결
@@ -213,9 +228,10 @@ for (const [name, shot] of Object.entries(SHOTS)) {
   console.log(`shot ${name}`);
   // 가짜 마이크 전사처럼 타이밍에 기대는 컷이 가끔 늦는다 — 새 컨텍스트로 최대 3번 다시 찍는다
   for (let attempt = 1; ; attempt += 1) {
+    // 가이드는 데스크톱 1440 폭 화면을 기준으로 찍는다(APP-1411). 도크처럼 좁게 찍을 컷만 컷 안에서 줄인다.
     const { context, page } = await openDemo(browser, {
-      width: 1280,
-      height: 800,
+      width: 1440,
+      height: 900,
       scale: 2,
     });
     try {

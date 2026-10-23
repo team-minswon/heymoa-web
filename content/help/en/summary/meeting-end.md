@@ -20,6 +20,8 @@ You can't click the end button while recording. Pause recording first. A meeting
 4. **Click [End meeting] in the confirmation**
    You're taken to the **[Summary]** tab.
 
+::clip{name="pause-end-nudge" alt="Clicking the Pause button in the dock while recording, the status changing to Paused, and a bubble below the End meeting button asking whether to wrap up" caption="When you pause, a wrap-up prompt appears below [End meeting]."}
+
 Any workspace member can end a meeting. ==You can't record again in a meeting that has ended.==
 
 Before the meeting ends, the **[Summary]** tab explains the steps: creating the summary, separating speakers, then review and confirmation.

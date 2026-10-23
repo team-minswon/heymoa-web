@@ -41,6 +41,8 @@ Delete your account from **[Delete account]** at the bottom of **[Account settin
 3. **Type the confirmation phrase exactly and confirm**
    When it's done, you're taken to the home page.
 
+::clip{name="account-delete" alt="Clicking Delete account in Account settings, choosing a reason, checking what happens to each workspace, and typing the confirmation phrase so the confirm button turns on" caption="Choose a reason and type the confirmation phrase to turn on the confirm button. The clip doesn't click it."}
+
 You can't delete your account while one of your meetings is recording. Stop the recording, then try again.
 
 Admins can delete a whole workspace from **[Delete workspace]** at the bottom of **[Workspace settings]** → **[General]** by typing the workspace name. Every member loses access right away and gets an email. You can't delete a workspace while one of its meetings is recording.
@@ -62,6 +64,8 @@ You get notifications for:
 - **Inquiry replies**: When the HeyMoa team replies to your inquiry.
 
 Choose what you receive in **[Account settings]** → **[Notifications]**, where you turn **[In-app]** and **[Email]** on or off for each kind. **[Turn off all in-app notifications]** and **[Turn off all email]** switch them all off at once. The settings apply to all your workspaces. Workspace invite notifications can't be turned off.
+
+::clip{name="notification-settings" alt="Clicking Notifications in the sidebar, choosing the Needs action tab, then opening notification settings and turning off email for inquiry replies" caption="From [Notification settings] in the notifications window, turn [In-app] and [Email] on or off for each kind."}
 
 > [!Note]
 > Even with email turned off, a paused meeting still ends automatically after 3 business days.
