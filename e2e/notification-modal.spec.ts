@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * 알림 모달(PRO-67 I09). 사이드바 첫 항목과 전체 화면 노트의 헤더가 같은 모달을 연다 — 전체 화면은 사이드바를 덮는다.
+ * 알림 모달(PRO-67 I09). 사이드바 첫 항목이 연다. 노트 상단바에는 진입점이 없다(APP-1401).
  */
 const WS = "/w/01K0000000000";
-const NOTE = `${WS}/notes/01K0000000002?view=full&tab=details`;
 
 test("사이드바 「알림」이 모달을 열고 초대를 거절하려면 확인 창을 거친다", async ({
   page,
@@ -34,16 +33,6 @@ test("사이드바 「알림」이 모달을 열고 초대를 거절하려면 �
   await expect(dialog.getByText("수락함")).toBeHidden();
 });
 
-test("전체 화면 노트에서도 헤더 진입점으로 같은 모달이 열린다", async ({
-  page,
-}) => {
-  await page.goto(NOTE);
-  const open = page.getByRole("button", { name: /^알림 열기/ });
-  await expect(open).toBeVisible();
-  await open.click();
-  await expect(page.getByRole("dialog", { name: "알림" })).toBeVisible();
-});
-
 test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결과가 보이면 그 알림이 읽음이 된다", async ({
   page,
 }) => {
@@ -70,8 +59,6 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
     .click();
   await expect(page).toHaveURL(/tab=summary&source=notification/);
   await read;
-  await page.getByRole("button", { name: "알림 목록으로 돌아가기" }).click();
-  await expect(page.getByRole("dialog", { name: "알림" })).toBeVisible();
 });
 
 test("문의 답변 행을 누르면 「내 문의」가 그 문의를 연다. 메일의 /inquiries/{id} 도 같은 창으로 온다", async ({

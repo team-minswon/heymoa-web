@@ -25,7 +25,6 @@ import {
   MeetingStatusChip,
 } from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
-import { NoteNotificationEntry } from "@/components/notification/note-notification-entry";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import {
   NoteDetails,
@@ -127,7 +126,6 @@ export function NotePanel({
   onDeleted,
   linkedSegmentId = null,
   fromMail = false,
-  fromNotification = false,
 }: {
   workspaceId: string;
   noteId: string;
@@ -152,8 +150,6 @@ export function NotePanel({
   linkedSegmentId?: string | null;
   /** 메일 링크로 들어왔다(APP-1312). 상단 띠가 도착한 시점의 상태를 말한다. */
   fromMail?: boolean;
-  /** 알림 모달에서 들어왔다(PRO-67 I09). 상단바에 「알림 목록으로」가 선다. */
-  fromNotification?: boolean;
 }) {
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
@@ -540,9 +536,6 @@ export function NotePanel({
             상태 칩도 여기다. 전사를 읽는 동안 「지금 실시간인가」는 계속 필요한 정보인데,
             제목 블록과 함께 사라지면 그걸 알 길이 없어진다.
 
-            알림 진입점은 전체 화면에만 작은 벨로 둔다 — 전체 화면이 사이드바를 덮어 「알림」에 닿을 수
-            없다(PRO-67 I09). 알림에서 들어왔으면 어느 뷰든 「알림 목록으로」가 선다.
-
             좁은 화면(sm 미만)에서는 탭이 둘째 줄로 내려간다. 한 줄에 창 제어 · 상태 · 탭 · 메뉴가
             다 서면 제목이 0px로 줄어 어느 회의인지 안 보였다. 줄 수는 탭과 상관없이 늘 둘이라
             탭이 제자리라는 약속은 그대로다. */}
@@ -697,10 +690,6 @@ export function NotePanel({
                 onEditParticipants={editParticipants}
               />
             ) : null}
-            <NoteNotificationEntry
-              view={view}
-              fromNotification={fromNotification}
-            />
             {note && !canDelete ? null : note ? (
               <div className="flex shrink-0 items-center gap-2">
                 <DropdownMenu>

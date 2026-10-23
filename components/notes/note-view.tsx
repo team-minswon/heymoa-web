@@ -274,7 +274,6 @@ export function NoteView({
         // **replace다.** push하면 목록에서 뒤로가기가 방금 지운 노트 URL로 돌아가 404가 된다.
         onDeleted={() => router.replace(`/w/${workspaceId}`)}
         fromMail={fromMail}
-        fromNotification={source === "notification"}
         // **지금 주소의 값이다.** 서버가 처음 넘긴 값을 쓰면 같은 링크로 다시 들어왔을 때
         // 「읽고 걷힘 → 다시 들어옴」이 값 변화로 안 보여 점프하지 않는다.
         linkedSegmentId={searchParams.get("segment")}
