@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   CircleHelp,
   Lightbulb,
@@ -425,7 +425,7 @@ function MyFeedbacks({
               {item.answer ? "답변 완료" : "접수됨"}
             </span>
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--el-ink)]">
+          <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--el-ink)] [overflow-wrap:anywhere]">
             {userPart(item.message)}
           </p>
           {item.answer ? (
@@ -436,8 +436,8 @@ function MyFeedbacks({
                 aria-hidden
               />
               <div>
-                <p className="whitespace-pre-wrap text-sm text-[var(--el-ink)]">
-                  {item.answer}
+                <p className="whitespace-pre-wrap text-sm text-[var(--el-ink)] [overflow-wrap:anywhere]">
+                  {linkified(item.answer)}
                 </p>
                 {item.answeredAt ? (
                   <p className="mt-1 text-[11px] text-[var(--el-muted-soft)]">
@@ -457,4 +457,34 @@ function MyFeedbacks({
 function userPart(message: string) {
   const at = message.indexOf("\n\n---\n화면: ");
   return at === -1 ? message : message.slice(0, at);
+}
+
+const URL_PATTERN = /https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/g;
+const URL_TRAILING = /[.,;:!?)\]}'"]+$/;
+
+/**
+ * 답변 속 http·https 주소만 링크로 바꾼다(APP-1404, 문의 답변 메일과 같은 규칙). 끝 문장부호는 링크에서 빼고, 나머지는 글자
+ * 그대로라 React 가 이스케이프한다. 괄호 짝은 보지 않는다 — `)` 로 끝나는 주소는 `)` 가 빠진다.
+ */
+export function linkified(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let at = 0;
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const url = match[0].replace(URL_TRAILING, "");
+    parts.push(text.slice(at, match.index));
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2"
+      >
+        {url}
+      </a>
+    );
+    at = match.index + url.length;
+  }
+  parts.push(text.slice(at));
+  return parts;
 }

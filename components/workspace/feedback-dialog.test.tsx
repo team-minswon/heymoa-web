@@ -20,6 +20,7 @@ import {
   FeedbackDialog,
   UnseenCount,
   composeFeedback,
+  linkified,
 } from "@/components/workspace/feedback-dialog";
 import { useFeedbackAnswers } from "@/components/workspace/use-feedback-answers";
 
@@ -352,5 +353,29 @@ describe("composeFeedback", () => {
     expect(text.startsWith("안녕\n")).toBe(true);
     expect(text).toContain("화면: /w/1/notes/2\n");
     expect(text).not.toContain("view=full");
+  });
+});
+
+describe("linkified", () => {
+  it("http·https 주소만 링크로 바꾸고 끝 문장부호는 뺀다", () => {
+    const { container } = render(
+      <p>
+        {linkified(
+          "자세한 내용은 https://heymoa.app/privacy. <b>&</b> (http://x.io/y)\njavascript:alert(1) ftp://x.io https://heymoa.app/terms에서"
+        )}
+      </p>
+    );
+    const hrefs = [...container.querySelectorAll("a")].map((a) =>
+      a.getAttribute("href")
+    );
+    expect(hrefs).toEqual([
+      "https://heymoa.app/privacy",
+      "http://x.io/y",
+      "https://heymoa.app/terms",
+    ]);
+    expect(container.querySelector("b")).toBeNull();
+    expect(container.textContent).toBe(
+      "자세한 내용은 https://heymoa.app/privacy. <b>&</b> (http://x.io/y)\njavascript:alert(1) ftp://x.io https://heymoa.app/terms에서"
+    );
   });
 });
