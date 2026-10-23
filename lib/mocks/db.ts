@@ -2575,6 +2575,25 @@ function assertWorkspaceOrInvited(workspaceId: string) {
   if (!known) fail("WORKSPACE_NOT_FOUND");
 }
 
+/** 확인 입력 비교 — 앞뒤 공백만 걷고 정확히 같아야 한다(PRO-69 contract 경계 조건). */
+function assertWorkspaceName(workspaceId: string, workspaceName: unknown) {
+  const workspace = assertWorkspace(workspaceId);
+  if (
+    typeof workspaceName !== "string" ||
+    workspaceName.trim() !== workspace.name.trim()
+  ) {
+    fail("WORKSPACE_NAME_MISMATCH");
+  }
+}
+
+/** 워크스페이스와 그 멤버십을 목록에서 걷어낸다. 노트·프로젝트 행은 남아도 목록에 닿을 길이 없다. */
+function removeWorkspace(workspaceId: string) {
+  state.members = state.members.filter((m) => m.workspaceId !== workspaceId);
+  state.workspaces = state.workspaces.filter(
+    (w) => w.workspaceId !== workspaceId
+  );
+}
+
 function assertWorkspace(workspaceId: string) {
   return (
     state.workspaces.find(
@@ -3548,11 +3567,13 @@ export const mockDb = {
    * 비멤버의 404 코드는 추방과 달리 WORKSPACE_MEMBER_NOT_FOUND가 아니라 WORKSPACE_NOT_FOUND다
    * (계약 — 본인 접근 관점에서는 멤버가 아닌 워크스페이스가 곧 "없는" 워크스페이스다).
    */
-  leaveWorkspace(workspaceId: string) {
+  leaveWorkspace(workspaceId: string, workspaceName?: unknown) {
     const index = state.members.findIndex(
       (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
     );
     if (index < 0) fail("WORKSPACE_NOT_FOUND");
+    // 본문의 이름이 현재 이름과 같아야 나간다(PRO-69 contract, server APP-1381). 없거나 틀리면 400.
+    assertWorkspaceName(workspaceId, workspaceName);
     const member = state.members[index];
     const admins = state.members.filter(
       (m) => m.workspaceId === workspaceId && m.role === "ADMIN"
@@ -3582,6 +3603,111 @@ export const mockDb = {
     );
     if (workspaceIndex < 0) return;
     state.workspaces.splice(workspaceIndex, 1);
+  },
+
+  /**
+   * 탈퇴 처리 목록(PRO-69 contract 제안 `GET /v1/users/me/deletion-plan`). 규칙은 userflow 「워크스페이스별 처리 규칙」:
+   * 혼자 → 삭제, 다른 관리자가 있거나 내가 멤버 → 나가기, 유일 관리자 + 다른 멤버 → 넘기기 또는 삭제(기본 가장 오래된 멤버).
+   */
+  deletionPlan() {
+    const me = state.user.userId;
+    return {
+      workspaces: state.workspaces.flatMap((workspace) => {
+        const rows = state.members
+          .filter((m) => m.workspaceId === workspace.workspaceId)
+          .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
+        const mine = rows.find((m) => m.userId === me);
+        if (!mine) return [];
+        const others = rows.filter((m) => m.userId !== me);
+        const action =
+          others.length === 0
+            ? ("DELETE" as const)
+            : mine.role !== "ADMIN" || others.some((m) => m.role === "ADMIN")
+              ? ("LEAVE" as const)
+              : ("TRANSFER_OR_DELETE" as const);
+        const candidates =
+          action === "TRANSFER_OR_DELETE"
+            ? others.map((m) => ({
+                userId: m.userId,
+                name: memberView(m).name,
+                email: m.email,
+              }))
+            : [];
+        return [
+          {
+            workspaceId: workspace.workspaceId,
+            name: workspace.name,
+            action,
+            successorCandidates: candidates,
+            defaultSuccessorUserId: candidates[0]?.userId ?? null,
+          },
+        ];
+      }),
+    };
+  },
+
+  /** 관리자의 워크스페이스 삭제(제안 `DELETE /v1/workspaces/{id}`). 본문의 이름이 현재 이름과 같아야 한다. */
+  deleteWorkspace(workspaceId: string, workspaceName?: unknown) {
+    requireWorkspaceAdmin(workspaceId);
+    assertWorkspaceName(workspaceId, workspaceName);
+    removeWorkspace(workspaceId);
+  },
+
+  /**
+   * 탈퇴(제안 `DELETE /v1/users/me`). 서버처럼 지금 상태로 처리를 다시 판정하고, 화면의 선택이 맞지 않으면 아무것도 바꾸지 않는다.
+   */
+  deleteAccount(body: {
+    confirmation?: unknown;
+    workspaces?: {
+      workspaceId: string;
+      decision: string;
+      successorUserId?: string;
+    }[];
+    reason?: { code?: unknown; detail?: unknown };
+  }) {
+    if (
+      typeof body.confirmation !== "string" ||
+      body.confirmation.trim() !== "회원 탈퇴"
+    ) {
+      fail("WITHDRAWAL_CONFIRMATION_MISMATCH");
+    }
+    const detail = body.reason?.detail;
+    if (typeof detail === "string" && detail.length > 500) fail("BAD_REQUEST");
+    const plan = mockDb.deletionPlan().workspaces;
+    const decisions = body.workspaces ?? [];
+    for (const row of plan) {
+      if (row.action !== "TRANSFER_OR_DELETE") continue;
+      const decision = decisions.find((d) => d.workspaceId === row.workspaceId);
+      const valid =
+        decision?.decision === "DELETE" ||
+        (decision?.decision === "TRANSFER" &&
+          row.successorCandidates.some(
+            (c) => c.userId === decision.successorUserId
+          ));
+      if (!valid) fail("DELETION_PLAN_CHANGED");
+    }
+    for (const row of plan) {
+      const decision = decisions.find((d) => d.workspaceId === row.workspaceId);
+      if (row.action === "DELETE" || decision?.decision === "DELETE") {
+        removeWorkspace(row.workspaceId);
+        continue;
+      }
+      if (decision?.decision === "TRANSFER") {
+        const successor = state.members.find(
+          (m) =>
+            m.workspaceId === row.workspaceId &&
+            m.userId === decision.successorUserId
+        );
+        if (successor) successor.role = "ADMIN";
+      }
+      state.members = state.members.filter(
+        (m) =>
+          !(m.workspaceId === row.workspaceId && m.userId === state.user.userId)
+      );
+      state.workspaces = state.workspaces.filter(
+        (w) => w.workspaceId !== row.workspaceId
+      );
+    }
   },
 
   listInvitations(

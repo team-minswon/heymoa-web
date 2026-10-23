@@ -27,11 +27,11 @@ const state = vi.hoisted(() => ({
   removeCalls: [] as unknown[],
   replaceMock: vi.fn(),
   /** 나가기 뒤 어디로 갈지는 이 목록에서 고른다. 떠나는 곳(01K0000000000)도 아직 들어 있다. */
-  workspaces: [] as { workspaceId: string }[],
+  workspaces: [] as { workspaceId: string; name?: string }[],
   leaveCalls: [] as unknown[],
-  leaveOptions: null as { mutation?: Record<string, unknown> } | null,
   leaveError: null as unknown,
-  leavePending: false,
+  /** 나가기 응답이 오지 않는 상태(요청 중) */
+  leaveHang: false,
   renameMock: vi.fn(),
   toastError: vi.fn(),
   renameArgs: [] as unknown[],
@@ -108,15 +108,16 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
       return { status: 204 };
     },
   }),
-  useLeaveWorkspace: (options?: { mutation?: Record<string, unknown> }) => ({
-    isPending: state.leavePending,
-    mutateAsync: async (vars: unknown) => {
-      state.leaveCalls.push(vars);
-      state.leaveOptions = options ?? null;
-      if (state.leaveError) throw state.leaveError;
-      return { status: 204 };
-    },
-  }),
+  getLeaveWorkspaceMutationKey: () => ["leaveWorkspace"],
+  leaveWorkspace: async (
+    workspaceId: string,
+    options?: { data?: Record<string, unknown> }
+  ) => {
+    state.leaveCalls.push({ workspaceId, ...options?.data });
+    if (state.leaveHang) return new Promise(() => {});
+    if (state.leaveError) throw state.leaveError;
+    return { status: 204 };
+  },
   useGetWorkspaceMembers: () => ({
     isLoading: false,
     isError: state.membersError,
@@ -275,13 +276,12 @@ describe("MembersSettings", () => {
     state.removeCalls = [];
     state.replaceMock.mockReset();
     state.workspaces = [
-      { workspaceId: "01K0000000000" },
-      { workspaceId: "01K0000000006" },
+      { workspaceId: "01K0000000000", name: "테스트 워크스페이스" },
+      { workspaceId: "01K0000000006", name: "제품 팀" },
     ];
     state.leaveCalls = [];
-    state.leaveOptions = null;
     state.leaveError = null;
-    state.leavePending = false;
+    state.leaveHang = false;
     state.recording = null;
     state.renameMock.mockReset();
     state.renameArgs = [];
@@ -640,22 +640,28 @@ describe("워크스페이스 나가기", () => {
     state.invitations = [];
     state.replaceMock.mockReset();
     state.workspaces = [
-      { workspaceId: "01K0000000000" },
-      { workspaceId: "01K0000000006" },
+      { workspaceId: "01K0000000000", name: "테스트 워크스페이스" },
+      { workspaceId: "01K0000000006", name: "제품 팀" },
     ];
     state.leaveCalls = [];
-    state.leaveOptions = null;
     state.leaveError = null;
-    state.leavePending = false;
+    state.leaveHang = false;
   });
   afterEach(cleanup);
 
-  /** 확인 다이얼로그까지 열어 준다. 나가기는 되돌릴 수 없어 한 번 묻는다. */
-  function openLeaveDialog() {
+  /**
+   * 확인 다이얼로그까지 열어 준다. 나가기는 되돌릴 수 없어 한 번 묻고, 워크스페이스 이름을 입력해야 「나가기」가 켜진다
+   * (PRO-69, APP-1383). `typed` 를 안 주면 맞는 이름을 넣는다.
+   */
+  function openLeaveDialog(typed = "테스트 워크스페이스") {
     fireEvent.click(
       screen.getByRole("button", { name: "워크스페이스 나가기" })
     );
-    return screen.getByRole("alertdialog");
+    const dialog = screen.getByRole("alertdialog");
+    fireEvent.change(within(dialog).getByLabelText(/확인하려면/), {
+      target: { value: typed },
+    });
+    return dialog;
   }
 
   // 역할 변경과 나가기는 같은 「ADMIN 최소 1명」 판정을 놓고 겹친다. 마지막 관리자가 다른
@@ -730,7 +736,7 @@ describe("워크스페이스 나가기", () => {
 
   // 요청 중에 창만 사라지면 취소한 줄 알지만 요청은 계속 간다 — 뒤늦게 성공하면 갑자기
   // 다른 워크스페이스로 튕긴다. 버튼만 잠그고 Escape를 열어 두면 그 구멍이 남는다.
-  it("요청 중에는 Escape로 닫히지 않는다", () => {
+  it("요청 중에는 Escape로 닫히지 않는다", async () => {
     const client = new QueryClient();
     // 같은 엘리먼트 참조로 rerender하면 React가 렌더를 건너뛴다 — 매번 새로 만든다.
     const view = () => (
@@ -738,12 +744,13 @@ describe("워크스페이스 나가기", () => {
         <MembersSettings workspaceId="01K0000000000" />
       </QueryClientProvider>
     );
-    const { rerender } = render(view());
+    render(view());
     const dialog = openLeaveDialog();
 
     // 확인을 누른 뒤 응답을 기다리는 상태를 만든다.
-    state.leavePending = true;
-    rerender(view());
+    state.leaveHang = true;
+    fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
+    await waitFor(() => expect(state.leaveCalls).toHaveLength(1));
 
     fireEvent.keyDown(dialog, { key: "Escape", code: "Escape" });
 
@@ -770,8 +777,23 @@ describe("워크스페이스 나가기", () => {
     await waitFor(() =>
       expect(state.leaveCalls).toContainEqual({
         workspaceId: "01K0000000000",
+        workspaceName: "테스트 워크스페이스",
       })
     );
+  });
+
+  // 앞뒤 공백만 걷고 정확히 같아야 한다 — server 도 같은 규칙으로 다시 본다(PRO-69 contract).
+  it("워크스페이스 이름이 다르면 나가기가 꺼져 있다", () => {
+    renderSettings();
+    const dialog = openLeaveDialog("테스트 워크스페이");
+
+    expect(
+      within(dialog).getByRole("button", { name: "나가기" })
+    ).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText(/확인하려면/), {
+      target: { value: "  테스트 워크스페이스 " },
+    });
+    expect(within(dialog).getByRole("button", { name: "나가기" })).toBeEnabled();
   });
 
   // 목적지 규칙은 `auth-callback-client.tsx`의 `pickWorkspaceId`를 그대로 쓴다.
@@ -823,7 +845,9 @@ describe("워크스페이스 나가기", () => {
   });
 
   it("남은 워크스페이스가 없으면 홈으로 보낸다", async () => {
-    state.workspaces = [{ workspaceId: "01K0000000000" }];
+    state.workspaces = [
+      { workspaceId: "01K0000000000", name: "테스트 워크스페이스" },
+    ];
     renderSettings();
     const dialog = openLeaveDialog();
 
@@ -843,7 +867,12 @@ describe("워크스페이스 나가기", () => {
         message: "워크스페이스에는 관리자가 최소 한 명 있어야 합니다.",
       },
     };
-    renderSettings();
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <MembersSettings workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
     const dialog = openLeaveDialog();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
@@ -856,11 +885,7 @@ describe("워크스페이스 나가기", () => {
     expect(state.replaceMock).not.toHaveBeenCalled();
     // 인라인으로 그리므로 전역 토스트는 꺼야 한다 — 안 그러면 같은 문구가 두 번 뜬다.
     expect(
-      (
-        state.leaveOptions?.mutation as
-          | { meta?: { suppressErrorToast?: boolean } }
-          | undefined
-      )?.meta?.suppressErrorToast
+      client.getMutationCache().getAll()[0]?.options.meta?.suppressErrorToast
     ).toBe(true);
   });
 });

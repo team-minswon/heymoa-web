@@ -11,7 +11,45 @@ import { WorkspaceSettingsForm } from "@/components/settings/workspace-settings-
 
 const mutations = vi.hoisted(() => ({
   updateWorkspace: vi.fn(),
+  deleteWorkspace: vi.fn(),
+  replace: vi.fn(),
+  reauth: vi.fn(),
+  role: undefined as "ADMIN" | "MEMBER" | undefined,
 }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: mutations.replace }),
+}));
+vi.mock("@/components/transcription/recording-provider", () => ({
+  isWorkspaceRecordingActive: () => false,
+  useRecording: () => ({ phase: "idle", session: null }),
+}));
+vi.mock("@/lib/account/deletion-api", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/account/deletion-api")
+  >("@/lib/account/deletion-api");
+  return {
+    ...actual,
+    useDeleteWorkspace: () => ({
+      isPending: false,
+      mutateAsync: mutations.deleteWorkspace,
+    }),
+  };
+});
+vi.mock("@/lib/auth/reauth", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/auth/reauth")>(
+      "@/lib/auth/reauth"
+    );
+  return {
+    ...actual,
+    useReauth: () => ({
+      waiting: false,
+      run: mutations.reauth,
+      cancel: vi.fn(),
+    }),
+  };
+});
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
@@ -26,6 +64,21 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
           workspaceId: "01K0000000007",
           name: "제품 팀",
           description: null,
+          role: mutations.role,
+        },
+      },
+    },
+  }),
+  useGetWorkspaces: () => ({
+    data: {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          workspaces: [
+            { workspaceId: "01K0000000007" },
+            { workspaceId: "01K0000000009" },
+          ],
         },
       },
     },
@@ -44,6 +97,10 @@ describe("WorkspaceSettingsForm", () => {
   beforeEach(() => {
     mutations.updateWorkspace.mockReset();
     mutations.updateWorkspace.mockResolvedValue({ status: 200 });
+    mutations.deleteWorkspace.mockReset().mockResolvedValue({ status: 204 });
+    mutations.replace.mockReset();
+    mutations.reauth.mockReset().mockResolvedValue({ ok: true });
+    mutations.role = undefined;
     toast.error.mockReset();
     toast.success.mockReset();
   });
@@ -84,5 +141,48 @@ describe("WorkspaceSettingsForm", () => {
       )
     );
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  const renderForm = () =>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkspaceSettingsForm workspaceId="01K0000000007" />
+      </QueryClientProvider>
+    );
+
+  // 워크스페이스 삭제는 관리자 전용이다(PRO-69). 서버도 관리자 여부를 다시 본다.
+  it("MEMBER 에게는 워크스페이스 삭제 구역이 없다", () => {
+    mutations.role = "MEMBER";
+    renderForm();
+    expect(
+      screen.queryByRole("button", { name: "워크스페이스 삭제" })
+    ).toBeNull();
+  });
+
+  it("이름을 정확히 입력해야 삭제가 켜지고, 지우면 남은 워크스페이스로 간다", async () => {
+    mutations.role = "ADMIN";
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스 삭제" }));
+    const confirm = screen.getByRole("button", {
+      name: "Google로 확인하고 삭제",
+    });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/확인하려면/), {
+      target: { value: "제품" },
+    });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/확인하려면/), {
+      target: { value: "제품 팀" },
+    });
+    fireEvent.click(confirm);
+
+    await waitFor(() =>
+      expect(mutations.replace).toHaveBeenCalledWith("/w/01K0000000009")
+    );
+    expect(mutations.deleteWorkspace).toHaveBeenCalledWith({
+      workspaceId: "01K0000000007",
+      workspaceName: "제품 팀",
+      reauthProof: undefined,
+    });
   });
 });

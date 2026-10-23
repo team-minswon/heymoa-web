@@ -589,16 +589,19 @@ describe("workspace member management", () => {
   });
 
   it("나가기는 마지막 ADMIN을 막는다", () => {
-    expect(() => mockDb.leaveWorkspace(WORKSPACE_ID)).toThrow(
-      "LAST_WORKSPACE_ADMIN"
-    );
+    expect(() =>
+      mockDb.leaveWorkspace(
+        WORKSPACE_ID,
+        mockDb.getWorkspace(WORKSPACE_ID).name
+      )
+    ).toThrow("LAST_WORKSPACE_ADMIN");
   });
 
   it("나가면 그 워크스페이스에 맡긴 외부 에이전트 연결이 탈퇴로 회수된다", () => {
     addSecondAdmin();
     const { delegation } = mockDb.createAgentDelegation(WORKSPACE_ID, "노트북");
 
-    mockDb.leaveWorkspace(WORKSPACE_ID);
+    mockDb.leaveWorkspace(WORKSPACE_ID, mockDb.getWorkspace(WORKSPACE_ID).name);
 
     const after = mockDb
       .listAgentDelegations()
@@ -636,7 +639,12 @@ describe("workspace member management", () => {
       mockDb.listWorkspaces().some((w) => w.workspaceId === WORKSPACE_ID)
     ).toBe(true);
 
-    expect(() => mockDb.leaveWorkspace(WORKSPACE_ID)).not.toThrow();
+    expect(() =>
+      mockDb.leaveWorkspace(
+        WORKSPACE_ID,
+        mockDb.getWorkspace(WORKSPACE_ID).name
+      )
+    ).not.toThrow();
 
     // 멤버 행만 지우면 목록·조회가 떠난 공간을 계속 반환한다 — 합류(초대 수락)가 두 곳에
     // 넣으므로 탈퇴도 두 곳에서 빼야 한다.
@@ -905,7 +913,10 @@ describe("노트 삭제", () => {
     const note = mockDb.createNote(project.projectId, {});
 
     mockDb.changeMemberRole("01K0000000000", "01K0000000020", "ADMIN");
-    mockDb.leaveWorkspace("01K0000000000");
+    mockDb.leaveWorkspace(
+      "01K0000000000",
+      mockDb.getWorkspace("01K0000000000").name
+    );
 
     expect(() => mockDb.createSession(note.noteId)).toThrow(
       "WORKSPACE_NOT_FOUND"
@@ -914,7 +925,10 @@ describe("노트 삭제", () => {
 
   it("워크스페이스를 나가면 그 노트 목록도 404다", () => {
     mockDb.changeMemberRole("01K0000000000", "01K0000000020", "ADMIN");
-    mockDb.leaveWorkspace("01K0000000000");
+    mockDb.leaveWorkspace(
+      "01K0000000000",
+      mockDb.getWorkspace("01K0000000000").name
+    );
     expect(() => mockDb.listWorkspaceNotes("01K0000000000")).toThrow(
       "WORKSPACE_NOT_FOUND"
     );
@@ -933,7 +947,10 @@ describe("노트 삭제", () => {
 
     // 나 혼자 ADMIN이면 나갈 수 없다(`LAST_WORKSPACE_ADMIN`). 다른 멤버를 올리고 나간다.
     mockDb.changeMemberRole("01K0000000000", "01K0000000020", "ADMIN");
-    mockDb.leaveWorkspace("01K0000000000");
+    mockDb.leaveWorkspace(
+      "01K0000000000",
+      mockDb.getWorkspace("01K0000000000").name
+    );
 
     expect(() => mockDb.getSession(session.sessionId)).toThrow(
       "WORKSPACE_NOT_FOUND"
@@ -1098,5 +1115,58 @@ describe("대화가 여럿 산다", () => {
     expect(() =>
       mockDb.listAgentChats({ workspaceId: "01KNOTAMEMBER" })
     ).toThrow("WORKSPACE_NOT_FOUND");
+  });
+});
+
+// PRO-69 탈퇴 처리 규칙(userflow 「워크스페이스별 처리 규칙」)을 목이 서버와 같게 계산하는지.
+describe("계정 탈퇴 · 워크스페이스 삭제", () => {
+  beforeEach(() => mockDb.reset());
+
+  const TEAM = "01K0000000000"; // 나(ADMIN) + 한지원(MEMBER)
+  const SOLO = "01K0000000006"; // 나 혼자
+  const MEMBER_ID = "01K0000000020";
+
+  const actionOf = (workspaceId: string) =>
+    mockDb.deletionPlan().workspaces.find((w) => w.workspaceId === workspaceId);
+
+  it("혼자면 삭제, 유일 관리자 + 멤버면 넘기기(기본 가장 오래된 멤버), 다른 관리자가 있으면 나가기", () => {
+    expect(actionOf(SOLO)?.action).toBe("DELETE");
+    expect(actionOf(TEAM)).toMatchObject({
+      action: "TRANSFER_OR_DELETE",
+      defaultSuccessorUserId: MEMBER_ID,
+    });
+    mockDb.changeMemberRole(TEAM, MEMBER_ID, "ADMIN");
+    expect(actionOf(TEAM)?.action).toBe("LEAVE");
+  });
+
+  it("문구가 틀리거나 넘기기 선택이 빠지면 아무것도 바꾸지 않는다", () => {
+    expect(() =>
+      mockDb.deleteAccount({ confirmation: "회원탈퇴", workspaces: [] })
+    ).toThrow("WITHDRAWAL_CONFIRMATION_MISMATCH");
+    expect(() =>
+      mockDb.deleteAccount({ confirmation: "회원 탈퇴", workspaces: [] })
+    ).toThrow("DELETION_PLAN_CHANGED");
+    expect(mockDb.listWorkspaces()).toHaveLength(3);
+  });
+
+  it("넘기면 승계자가 관리자가 되고 내 워크스페이스는 모두 사라진다", () => {
+    mockDb.deleteAccount({
+      confirmation: " 회원 탈퇴 ",
+      workspaces: [
+        { workspaceId: TEAM, decision: "TRANSFER", successorUserId: MEMBER_ID },
+      ],
+    });
+    expect(mockDb.listWorkspaces()).toHaveLength(0);
+  });
+
+  it("워크스페이스 삭제와 나가기는 이름이 맞아야 한다", () => {
+    expect(() => mockDb.deleteWorkspace(SOLO, "제품")).toThrow(
+      "WORKSPACE_NAME_MISMATCH"
+    );
+    expect(() => mockDb.leaveWorkspace(TEAM)).toThrow(
+      "WORKSPACE_NAME_MISMATCH"
+    );
+    mockDb.deleteWorkspace(SOLO, "제품 팀");
+    expect(actionOf(SOLO)).toBeUndefined();
   });
 });

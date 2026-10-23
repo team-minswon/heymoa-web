@@ -1,6 +1,7 @@
 "use client";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
+import { AccountDeletionSection } from "@/components/settings/account-deletion-section";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +44,7 @@ export function AccountSettingsForm() {
         {/* 계정 이름은 로그인한 계정에서 와 여기서 못 고친다. 고칠 길이 어디 있는지만 한 줄로 알린다(APP-1206). */}
         <NameHint id="account-name-hint" />
       </div>
+      <AccountDeletionSection />
     </div>
   );
 }
@@ -72,6 +74,8 @@ export function AccountSettingsFormSkeleton() {
         <Skeleton className="h-8 rounded-control" />
         <NameHint />
       </div>
+      {/* 고정 구역이라 스켈레톤에도 실물을 세운다(도착할 때 아래가 안 밀린다). */}
+      <AccountDeletionSection />
     </div>
   );
 }

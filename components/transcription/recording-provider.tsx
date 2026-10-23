@@ -134,7 +134,7 @@ const RecordingNoteContext = createContext<string | null>(null);
  * 살아 있으면 회의 중지·종료가 계약상 `ACTIVE_TRANSCRIPTION_SESSION`(409)로 막힌다. stop 이
  * 실패해 `failed` 여도 READY/ACTIVE 세션이 남아 있으면 서버가 여전히 거절하므로 활성이다.
  */
-function isRecordingLive(
+export function isRecordingLive(
   recording: Pick<RecordingContextValue, "session" | "phase">
 ): boolean {
   // 진행 phase는 세션 id가 붙기 전(권한 요청·연결 중)이라도 활성이다 — 그 사이 pause/end를

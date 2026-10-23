@@ -452,7 +452,13 @@ describe("workspace member management handlers", () => {
 
     const response = await fetch(
       `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/me`,
-      { method: "DELETE" }
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceName: mockDb.getWorkspace(WORKSPACE_ID).name,
+        }),
+      }
     );
 
     expect(response.status).toBe(204);
@@ -465,7 +471,13 @@ describe("workspace member management handlers", () => {
   it("나가기에서 마지막 ADMIN은 409, 비멤버는 404 WORKSPACE_NOT_FOUND다", async () => {
     const lastAdmin = await fetch(
       `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/me`,
-      { method: "DELETE" }
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceName: mockDb.getWorkspace(WORKSPACE_ID).name,
+        }),
+      }
     );
     expect(lastAdmin.status).toBe(409);
     expect((await lastAdmin.json()).error.code).toBe("LAST_WORKSPACE_ADMIN");

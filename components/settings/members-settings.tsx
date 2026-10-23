@@ -1,7 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useIsMutating, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -67,8 +71,9 @@ import {
 import {
   getGetWorkspaceMembersQueryKey,
   useChangeWorkspaceMemberRole,
+  getLeaveWorkspaceMutationKey,
+  leaveWorkspace,
   useGetWorkspaceMembers,
-  useLeaveWorkspace,
   useRemoveWorkspaceMember,
 } from "@/lib/api/generated/workspace-members/workspace-members";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
@@ -79,6 +84,8 @@ import type {
   WorkspaceMemberListResponseDataMembersItem,
 } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
+import { confirmationMatches } from "@/lib/account/deletion-api";
+import { ConfirmPhraseField } from "@/components/settings/confirm-phrase-field";
 
 const inviteSchema = z.object({
   email: z
@@ -512,10 +519,26 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const workspacesQuery = useGetWorkspaces();
-  const leave = useLeaveWorkspace({
-    mutation: { meta: { suppressErrorToast: true } },
+  /**
+   * **워크스페이스 이름을 본문에 싣는다(PRO-69, APP-1383).** server 가 현재 이름과 정확히 같은지 다시 본다(APP-1381).
+   * 생성 훅은 본문을 못 받아(계약 미반영) 생성 함수를 같은 mutationKey 로 감싼다 — 위 잠금(`useMemberMutationBusy`)이 그 키를 센다.
+   */
+  const leave = useMutation({
+    mutationKey: getLeaveWorkspaceMutationKey(),
+    meta: { suppressErrorToast: true },
+    mutationFn: (variables: { workspaceId: string; workspaceName: string }) =>
+      leaveWorkspace(variables.workspaceId, {
+        data: { workspaceName: variables.workspaceName },
+      }),
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [typedName, setTypedName] = useState("");
+  const workspaceName = workspaceItems().find(
+    (item) => item.workspaceId === workspaceId
+  )?.name;
+  const nameMatches =
+    workspaceName !== undefined &&
+    confirmationMatches(typedName, workspaceName);
   const [leaveError, setLeaveError] = useState<unknown>(null);
   const busy = useMemberMutationBusy(workspaceId);
   /**
@@ -547,8 +570,9 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
         loading={leave.isPending}
         disabled={busy || recordingHere}
         onClick={() => {
-          // 지난 실패 안내를 지우고 연다 — 상황이 바뀐 뒤에도 옛 문구가 붙어 있으면 안 된다.
+          // 지난 실패 안내와 입력을 지우고 연다 — 상황이 바뀐 뒤에도 옛 문구가 붙어 있으면 안 된다.
           setLeaveError(null);
+          setTypedName("");
           setConfirmOpen(true);
         }}
       >
@@ -586,6 +610,15 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
 
+          {workspaceName !== undefined ? (
+            <ConfirmPhraseField
+              phrase={workspaceName}
+              value={typedName}
+              onChange={setTypedName}
+              disabled={leave.isPending}
+            />
+          ) : null}
+
           {leaveMessage ? (
             <div
               role="alert"
@@ -605,11 +638,12 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
             <AlertDialogAction
               variant="destructive"
               loading={leave.isPending}
-              disabled={leave.isPending}
+              disabled={leave.isPending || !nameMatches}
               onClick={async () => {
+                if (!workspaceName || !nameMatches) return;
                 setLeaveError(null);
                 const response = await leave
-                  .mutateAsync({ workspaceId })
+                  .mutateAsync({ workspaceId, workspaceName: typedName.trim() })
                   .catch((error: unknown) => {
                     setLeaveError(error);
                     return null;
@@ -639,13 +673,19 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
    *
    * 떠난 곳이 마지막 방문으로 기억돼 있어도 목록에서 뺀 뒤 고르므로 그리로 되돌아가지 않는다.
    */
-  function nextWorkspacePath() {
+  function workspaceItems() {
     const response = workspacesQuery.data;
-    const items =
-      response !== undefined && response.status === 200 && response.data.success
-        ? (response.data.data?.workspaces ?? [])
-        : [];
-    const remaining = items.filter((item) => item.workspaceId !== workspaceId);
+    return response !== undefined &&
+      response.status === 200 &&
+      response.data.success
+      ? (response.data.data?.workspaces ?? [])
+      : [];
+  }
+
+  function nextWorkspacePath() {
+    const remaining = workspaceItems().filter(
+      (item) => item.workspaceId !== workspaceId
+    );
     const next = pickWorkspaceId(remaining);
     // 남은 워크스페이스가 없으면 홈으로 보낸다 — 랜딩 CTA가 그 상태를 받아 생성 폼을 연다.
     return next ? `/w/${next}` : "/";

@@ -32,6 +32,8 @@ type AuthContextValue = {
   setUser: (user: AuthUser | null) => void;
   refreshUser: () => Promise<AuthUser | null>;
   logout: () => Promise<void>;
+  /** 서버가 이미 세션을 끝낸 뒤(탈퇴) 로컬 흔적을 지우고 새 문서로 떠난다. */
+  leave: (destination: string) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -203,8 +205,17 @@ export function AuthProvider({
       setUser,
       refreshUser,
       logout,
+      leave: leaveAuthenticatedApp,
     }),
-    [user, status, isLoggingOut, setUser, refreshUser, logout]
+    [
+      user,
+      status,
+      isLoggingOut,
+      setUser,
+      refreshUser,
+      logout,
+      leaveAuthenticatedApp,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

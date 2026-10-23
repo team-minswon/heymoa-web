@@ -4,7 +4,7 @@ description: Invite members to your workspace and change their roles and display
 group: team
 slug: members
 order: 3
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Invite members {#invite}
@@ -50,7 +50,7 @@ Your account name and email are shown in **[Settings]** → **[Account]** → **
 
 Only admins can use **[Remove]**. Removing someone also disconnects the Linear and GitHub integrations and the outside AI app connections they set up.
 
-**[Leave workspace]** is at the bottom of the Members tab. You can't leave while you're recording in this workspace.
+**[Leave workspace]** is at the bottom of the Members tab. Type the workspace name exactly in the confirmation window to leave. You can't leave while you're recording in this workspace.
 
 ## Manage guest participants {#guests}
 

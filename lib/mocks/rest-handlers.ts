@@ -269,6 +269,11 @@ const MEMBER_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
   AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
+  // PRO-69 삭제·나가기 확인(server APP-1380·1381 계약 전의 제안 코드)
+  WORKSPACE_NAME_MISMATCH: "워크스페이스 이름이 맞지 않습니다.",
+  WITHDRAWAL_CONFIRMATION_MISMATCH: "확인 문구가 맞지 않습니다.",
+  DELETION_PLAN_CHANGED:
+    "그사이 워크스페이스 멤버가 바뀌었습니다. 처리 목록을 다시 확인해 주세요.",
 };
 
 // 외부 에이전트 관리(APP-939·940)도 ADMIN 전용 204 조작이라 같은 묶음을 쓴다
@@ -278,7 +283,19 @@ const MEMBER_NOT_FOUND_CODES = new Set([
   "AGENT_DELEGATION_NOT_FOUND",
 ]);
 const MEMBER_FORBIDDEN_CODES = new Set(["WORKSPACE_ACCESS_DENIED"]);
-const MEMBER_BAD_REQUEST_CODES = new Set(["BAD_REQUEST"]);
+const MEMBER_BAD_REQUEST_CODES = new Set([
+  "BAD_REQUEST",
+  "WORKSPACE_NAME_MISMATCH",
+  "WITHDRAWAL_CONFIRMATION_MISMATCH",
+]);
+
+/** 본문 JSON. 없거나 깨졌으면 빈 객체 — 검사는 목 DB 가 한다. */
+async function jsonBody(request: Request): Promise<Record<string, unknown>> {
+  return ((await request.json().catch(() => null)) ?? {}) as Record<
+    string,
+    unknown
+  >;
+}
 
 async function memberResult(run: () => void | Promise<void>) {
   try {
@@ -592,6 +609,21 @@ export const restHandlers = [
     data: mockDb.getCurrentUser(),
     error: null,
   })),
+  // PRO-69 탈퇴·워크스페이스 삭제 — 계약 전 제안 경로(docs contract.md). server 계약이 나오면 생성 목 경로에 맞춘다.
+  http.get("*/v1/users/me/deletion-plan", () =>
+    respond(() => mockDb.deletionPlan())
+  ),
+  http.delete("*/v1/users/me", ({ request }) =>
+    memberResult(async () => mockDb.deleteAccount(await jsonBody(request)))
+  ),
+  http.delete("*/v1/workspaces/:workspaceId", ({ params, request }) =>
+    memberResult(async () =>
+      mockDb.deleteWorkspace(
+        id(params.workspaceId),
+        (await jsonBody(request)).workspaceName
+      )
+    )
+  ),
   // 계약상 204 무본문, 지금 버전이 아니면 409 `CONSENT_VERSION_OUTDATED` (APP-1276)
   http.post("*/v1/users/me/consents", async ({ request }) =>
     respond(
@@ -1388,8 +1420,15 @@ export const restHandlers = [
       })
   ),
   // 정적 경로(/members/me)가 :userId보다 먼저 와야 한다 — MSW는 등록 순서대로 매칭한다.
-  http.delete("*/v1/workspaces/:workspaceId/members/me", ({ params }) =>
-    memberResult(() => mockDb.leaveWorkspace(id(params.workspaceId)))
+  http.delete(
+    "*/v1/workspaces/:workspaceId/members/me",
+    ({ params, request }) =>
+      memberResult(async () =>
+        mockDb.leaveWorkspace(
+          id(params.workspaceId),
+          (await jsonBody(request)).workspaceName
+        )
+      )
   ),
   http.delete("*/v1/workspaces/:workspaceId/members/:userId", ({ params }) =>
     memberResult(() =>

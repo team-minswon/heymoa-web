@@ -32,7 +32,12 @@ Usage statistics only say which features you used. HeyMoa never sends what was s
 
 When you delete a note, the meeting's audio, transcript, and summary are deleted with it. To see which meetings can be deleted, read [Screen layout and projects](help:workspace-basics#note-list).
 
-You can't delete your account from inside the app. To see, correct, or delete your personal information, send a request using the method in the [Privacy Policy](/privacy).
+Delete your account from **[Delete account]** at the bottom of **[Account settings]**. It shows what happens to each workspace. Workspaces you use alone are deleted, and you leave workspaces that have another admin or where you're a member. For a team where you're the only admin, choose whether to hand over the admin role (by default to the longest-standing member) or delete the workspace. Type the confirmation phrase shown in the window exactly, then sign in with Google again to finish. You can't delete your account while recording.
+
+Admins can delete a whole workspace from **[Delete workspace]** at the bottom of **[Workspace settings]** → **[General]** by typing the workspace name and signing in with Google again. Every member gets an email.
+
+> [!Can't be undone]
+> ==Deleting your account signs you out on every device right away and can't be undone.== Your name and what you said stay in past meeting records of team workspaces that remain. Signing up again with the same Google account creates a new account.
 
 For a short overview of where and how your data is processed, read [Where and how is my data stored?](help:data-privacy).
 
@@ -45,7 +50,7 @@ No. Only the browser you're using now is logged out. Your other devices stay sig
 Not in **[Account settings]**. You can change the name people see in the workspace in the **[Members]** tab instead.
 
 ### Can I delete my account from the app?
-No. The app has no account deletion feature. Ask for deletion using the method in the [Privacy Policy](/privacy).
+Yes. Use **[Delete account]** at the bottom of **[Account settings]**. You don't have to choose a reason.
 
 ## Related pages {#related}
 

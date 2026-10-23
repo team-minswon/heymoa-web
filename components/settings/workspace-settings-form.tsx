@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { SettingsHeader } from "@/components/settings/settings-layout";
+import { WorkspaceDeletionSection } from "@/components/settings/workspace-deletion-section";
 import {
   getGetWorkspaceQueryKey,
   getGetWorkspacesQueryKey,
@@ -113,6 +114,13 @@ export function WorkspaceSettingsForm({
           변경사항 저장
         </Button>
       </form>
+      {/* 관리자에게만 보인다(PRO-69). 이름은 저장된 값과 비교한다 — 폼에 고치는 중인 값이 아니다. */}
+      {workspace?.role === "ADMIN" && workspaceName ? (
+        <WorkspaceDeletionSection
+          workspaceId={workspaceId}
+          workspaceName={workspaceName}
+        />
+      ) : null}
     </div>
   );
 }
