@@ -4,12 +4,12 @@ description: When an admin connects tools like Linear and GitHub to the workspac
 group: connect
 slug: integrations
 order: 1
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Connect a tool {#connect}
 
-Integrations connect HeyMoa to the tools your team already uses. Right now you can connect Linear (issue tracking) and GitHub (code hosting), and more tools are coming. Integrations belong to a workspace (the space your team shares), and you can have one per tool.
+Integrations connect HeyMoa to the tools your team already uses. Right now you can connect Linear (issue tracking) and GitHub (code hosting). Integrations belong to a workspace (the space your team shares), and you can have one per tool.
 
 Only admins can connect and disconnect integrations. If you're not an admin, the buttons are hidden and a message says only admins can do this. If you need a new integration, ask an admin.
 

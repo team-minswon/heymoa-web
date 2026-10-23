@@ -108,7 +108,7 @@ modified: 2026-10-23
 :::problem
 **Symptom:** “A project with notes can't be deleted.” appears
 **Cause:** You can't delete a project that has even one note.
-**Fix:** Only admins can delete projects. A project can't be deleted while it has any notes.
+**Fix:** Ask an admin to delete the project's notes first, then delete the project.
 :::
 
 :::problem

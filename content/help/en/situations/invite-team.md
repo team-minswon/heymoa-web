@@ -5,7 +5,7 @@ description: How to invite a teammate to your workspace and get them to accept. 
 group: situations
 slug: invite-team
 order: 5
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## What's happening {#problem}
@@ -29,7 +29,7 @@ Go to **[Settings]** → **[Workspace]** → the **[Members]** tab. ==Only admin
 5. **Click [Invite]**
    The invite email is sent.
 6. **Tell your teammate to accept**
-   They can click the link in the invite email or click **[Accept]** in the notification bell.
+   They can click the link in the invite email or click **[Accept]** in **[Notifications]** in the sidebar.
 7. **Make sure your teammate logs in with the right account**
    It must be the Google account for the invited email.
 8. **If they don't accept within a day, click [Cancel]**

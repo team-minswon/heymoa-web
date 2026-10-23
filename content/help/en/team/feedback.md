@@ -4,7 +4,7 @@ description: Send problem reports, questions, and feature requests from the side
 group: team
 slug: feedback
 order: 4
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Send a request {#send}
@@ -32,7 +32,7 @@ modified: 2026-10-21
 
 Requests you send appear in the **[My requests]** tab as **[Received]**. When the team replies, the status changes to **[Answered]**.
 
-When there's a new reply, a number appears next to **[Help & feedback]** in the sidebar. Opening **[My requests]** marks replies as read.
+When a reply arrives, we also let you know with a [notification](help:account#notifications) and an email. When there's a new reply, a number appears next to **[Help & feedback]** in the sidebar. Opening **[My requests]** marks replies as read.
 
 ## Frequently asked questions {#faq}
 

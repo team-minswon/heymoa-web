@@ -33,9 +33,19 @@ function walk(node: Node, fn: (n: Node, parent: Node | null, index: number) => v
 
 const MARK = /==([^=\n][^\n]*?)==/g;
 
+/**
+ * `**[새 노트]** 를` 의 띄어쓰기. 마크다운은 `]**를` 처럼 붙이면 굵게가 풀려서 원문은 띄워 쓴다.
+ * 굵은 글 바로 뒤 낱말이 조사로만 이뤄졌으면 앞 공백을 지워 「[새 노트]를」로 붙인다(줄 머리에 조사만 넘어가지 않게).
+ */
+const PARTICLE = /^ (?:으로|에서|에게|까지|부터|처럼|보다|이나|이라|이에요|예요|이요|은|는|이|가|을|를|도|만|의|에|로|와|과|나|라|요)+(?=[^가-힣]|$)/;
+
 export function remarkHelp() {
   return (tree: Node) => {
     walk(tree, (node, parent, index) => {
+      if (node.type === "text" && index > 0 && parent?.children?.[index - 1]?.type === "strong" && PARTICLE.test(node.value ?? "")) {
+        node.value = (node.value ?? "").slice(1);
+      }
+
       // ==핵심 문구==
       if (node.type === "text" && node.value?.includes("==") && parent?.children) {
         const parts: Node[] = [];

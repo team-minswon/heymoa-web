@@ -27,7 +27,7 @@ Only admins can invite. There are just two roles: **[Admin]** and **[Member]**.
 
 There's a daily limit on how many invites you can send. If you go over it, you'll see “Invites can't be sent right now. Please try again later.”
 
-The invited person clicks **[Accept]** or **[Decline]** from the notification bell at the top. They can also use the link in the invite email. They need to sign in with the Google account for the invited email. Workspace invites are the only kind of notification.
+The invited person clicks **[Accept]** or **[Decline]** in **[Notifications]** in the sidebar. They can also use the link in the invite email. They need to sign in with the Google account for the invited email.
 
 ## Change roles and display names {#manage}
 
@@ -54,7 +54,7 @@ Only admins can use **[Remove]**. Removing someone also disconnects the Linear a
 
 ## Manage guest participants {#guests}
 
-A guest participant is someone who appears in a meeting by name without an account. You add them with **[Add participant]** in the Details tab or from the speaker assignment menu. Names can be up to 100 characters. See the list in **[Settings]** → **[Workspace]** → **[Guest participants]**.
+A guest participant is someone who appears in a meeting by name without an account. You add them with **[Add participant]** in the **[Details]** tab or from the speaker assignment menu. Names can be up to 100 characters. See the list in **[Settings]** → **[Workspace]** → **[Guest participants]**.
 
 Only admins see the **[⋯]** menu at the end of each row. Use it to **[Rename]**, **[Link to account]**, or **[Delete]**. **[Link to account]** shows how many meetings will change before you go ahead.
 
@@ -67,7 +67,7 @@ Only admins see the **[⋯]** menu at the end of each row. Use it to **[Rename]*
 No. There's no way to resend. Click **[Cancel]** in **[Pending invites]**, then invite again.
 
 ### I'm the only admin. Can I leave?
-No. A workspace must have at least one admin. Make another member an admin, then leave.
+No. A workspace must have at least one admin. Make another member an admin, then leave. If you use the workspace alone, use **[Delete workspace]** in **[General]** instead.
 
 ### Can members change their own display name?
 Yes, you can change your own name. Only admins can change other people's names.

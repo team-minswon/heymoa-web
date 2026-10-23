@@ -4,7 +4,7 @@ description: When you end a meeting, AI sorts out the summary, decisions, and ta
 group: summary
 slug: meeting-end
 order: 1
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## End a meeting {#end}
@@ -33,7 +33,7 @@ The **[Summary]** tab shows four steps: **[Speaker separation]**, **[Analysis]**
 Assignees and due dates are filled in separately after speaker separation finishes. Items someone has already edited aren't overwritten. If speaker separation fails, you review without suggested assignees and due dates.
 
 > [!Note]
-> For a moment right after the meeting ends, it shows **[Analyzing]** even if no request has been made yet.
+> For a moment right after the meeting ends, it may show **[Analyzing]**. When the analysis is done, the person who requested it gets a [notification](help:account#notifications).
 
 ## When analysis doesn't finish or fails {#failed}
 

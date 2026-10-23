@@ -45,6 +45,9 @@ kind: facts
 | Invite link | 1 day after it's sent |
 | Outside AI app connection | Expires after 90 days without use |
 | Meeting notes PDF sent by email | Kept for 30 days |
+| Meeting audio | Deleted when speaker separation finishes, 30 days at the latest |
+| Backups of deleted data | Up to 7 days |
+| Paused meeting | Email after 1 business day, ends automatically after 3 business days |
 
 - Meeting analysis: If it doesn't finish within 12 minutes, it shows as failed. Click **[Reanalyze]** to request it again.
 - Lost connection to the recording device: After about 1 minute, you can continue recording from somewhere else.
@@ -53,7 +56,7 @@ kind: facts
 
 There are only two roles: admin and member.
 
-- Only admins can: Change workspace settings, manage integrations and MCP, invite and remove members, rename, link, and delete guest participants, and delete notes and projects.
+- Only admins can: Change workspace settings, manage integrations and MCP, invite and remove members, rename, link, and delete guest participants, and delete notes, projects, and workspaces.
 - Any member can: View notes, record, end meetings, confirm reviews, and edit tasks.
 
 > [!Can't be undone]

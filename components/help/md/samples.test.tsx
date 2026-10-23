@@ -22,6 +22,13 @@ describe("가이드 마크다운 표현", () => {
     expect(ol.querySelector("li > strong")?.textContent).toBe("[새 노트]를 눌러요");
   });
 
+  it("굵은 라벨 뒤 조사는 붙이고 다른 낱말은 띄운다", () => {
+    const text = render(
+      <MdBlock source={"**[설정]** 에서 **[정보]** 탭을 열고 **[저장]** 을 눌러요. **[A]** 이름"} />,
+    ).container.textContent;
+    expect(text).toBe("[설정]에서 [정보] 탭을 열고 [저장]을 눌러요. [A] 이름");
+  });
+
   it("알림 네 종류가 종류 이름과 함께 그려진다", () => {
     const notes = [...html("알림").querySelectorAll("aside[role=note]")];
     expect(notes.map((n) => n.querySelector("strong")?.textContent)).toEqual([

@@ -4,7 +4,7 @@ description: How to start and pause a meeting recording, allow microphone access
 group: record
 slug: recording
 order: 1
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Start recording {#start}
@@ -27,7 +27,9 @@ On the web you can't choose a microphone device. While recording, a bar shows ho
 
 ## Pause and resume {#pause}
 
-While recording, the dock (the control bar at the bottom) shows a square **[Stop]** button, the elapsed time, and the microphone input. **[Stop]** pauses the recording. It doesn't end the meeting. Any audio not yet saved is saved when you stop.
+While recording, the dock (the control bar at the bottom) shows a square **[Stop]** button, the elapsed time, and the microphone input. **[Stop]** pauses the recording. It doesn't end the meeting. Any audio not yet sent to the server is sent when you stop.
+
+If you leave a meeting paused, we email you after 1 business day. If it's still paused after 3 business days, the meeting ends automatically and analysis starts. The scheduled time is shown in the notice at the top of the note.
 
 ![A note being recorded, with lines being transcribed in the transcript and the elapsed time and Stop button highlighted in the dock at the bottom](img:recording/dock.webp "The dock while recording. Click [Stop] to pause and [Resume] to continue.")
 

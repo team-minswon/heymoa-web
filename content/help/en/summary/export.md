@@ -34,7 +34,7 @@ Click **[Copy]** at the top of the summary and choose a format.
 2. **Choose what to send under [Content]**
    Meeting notes are the default. Add **[Transcript]** to send the transcript too.
 3. **Fill in [To]**
-   Click **[Add all attendees]** or type addresses. Separate addresses with a comma or `Enter`. Addresses outside the workspace are fine.
+   Click **[Add all attendees]** or type addresses. Separate addresses with a comma or `kbd:Enter`. Addresses outside the workspace are fine.
 4. **Add a message if you like**
    The message is optional and can be up to 1,000 characters.
 5. **Send the email**

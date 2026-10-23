@@ -4,7 +4,7 @@ description: Ask your agent about past meetings and choose where it searches. It
 group: team
 slug: agent
 order: 2
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Open your agent {#open}
@@ -20,7 +20,7 @@ When you view a note in full screen, the agent opens in the right panel and uses
 2. **Set the search scope**
    Type `@` in the input box to pick projects and meeting notes. You can add up to 20.
 3. **Send it**
-   Press `Enter` to send and `Shift+Enter` for a new line.
+   Press `kbd:Enter` to send and `kbd:Shift+Enter` for a new line.
 
 ![The My agent panel with a question about the May budget and an answer with sources](img:agent/chat.webp "The My agent panel. Type @ in the input box to add projects and meeting notes.")
 
@@ -41,7 +41,7 @@ The agent first searches and reads meeting notes, transcripts, and the decisions
 
 If it can't find anything, it says so and tells you how far it searched. If a decision has changed, it shows the current decision separately from the earlier one. It's still an AI answer, so check anything important against the meeting notes.
 
-**[Search the web]** is only for outside information that isn't in your meetings. It searches once per question. It never puts meeting text or attendee names in the search query. Results from the web are shown with source links, kept apart from meeting content.
+**[Search the web]** is only for outside information that isn't in your meetings. Results from the web are shown with source links, kept apart from meeting content.
 
 > [!Note]
 > ==You can't send a new message while an answer is being written or while an approval is pending.== Click **[Stop]** to stop and keep the answer so far.

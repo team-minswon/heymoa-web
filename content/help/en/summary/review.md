@@ -23,7 +23,7 @@ Topics that continue from an earlier meeting in the same project get a “Contin
 1. **Click an item to see its source**
    The source remarks expand. Click a remark to jump to that line in the transcript.
 2. **Edit or exclude it**
-   In an expanded item, use **[Edit]**, **[Exclude]**, or **[Undo exclude]**. Excluded items are left out when you confirm. In **[Edit]**, press `Enter` to save, `Esc` to cancel, and `Shift+Enter` for a new line.
+   In an expanded item, use **[Edit]**, **[Exclude]**, or **[Undo exclude]**. Excluded items are left out when you confirm. In **[Edit]**, press `kbd:Enter` to save, `kbd:Esc` to cancel, and `kbd:Shift+Enter` for a new line.
 3. **Add your own**
    Click **[Add decision]** or **[Add task]** below a section. Items you add are marked **[Added manually]**, and items you edit are marked **[Edited]**.
 4. **Set an assignee and due date**
@@ -37,16 +37,16 @@ Any workspace member can edit and confirm a review. If someone else edited it fi
 
 AI makes two kinds of suggestions. To confirm, you need to choose what to do with each one.
 
-- **[Replaces an earlier decision]**: Asks whether to close a decision already confirmed in the project. Choose **[Close]** or **[Continue]**. A decision that's already closed is locked as **[Already closed]**.
+- **[Earlier decision]**: Asks whether to replace a decision already confirmed in the project with the new one. Under “What should happen to the earlier decision?”, choose **[Replace]** or **[Keep]**. A decision that has already ended is marked “Already ended.”
 - **[Change existing task]**: Suggests changing the status, assignee, or due date of a task that already exists. Choose **[Apply]** or **[Skip]**.
 
 > [!Caution]
-> When you click **[Apply]**, the change is saved to the task right away, even before you confirm. The change is kept in the task's history, and ==you can't undo an applied change.==
+> When you choose **[Apply]**, it changes to **[Will apply]**, and the change is made to the task when you click **[Finish review]**. The change is kept in the task's history, and ==you can't undo an applied change.==
 
 ## Finish the review and confirm {#confirm}
 
 1. **Check the bar at the bottom**
-   It tells you “Adding N decisions and N tasks to the project.” If any suggestions are still unchosen, you're blocked with **[N suggestions to review]**. Click **[Go to suggestions]** to get to them.
+   It tells you “Add N decisions · N tasks.” If any suggestions are still unchosen, you're blocked with **[N suggestions to review]**. Click **[Go to suggestions]** to get to them.
 2. **Click [Finish review]**
    A confirmation appears.
 3. **Click again in the confirmation**

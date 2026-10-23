@@ -4,7 +4,7 @@ description: How to read the Timeline tab, which sorts decisions, tasks, open qu
 group: record
 slug: live-timeline
 order: 4
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## What shows up {#what}
@@ -31,6 +31,8 @@ An item becomes **[Retracted]** only when someone actually reverses the decision
 ## How to read the timeline {#view}
 
 Filter by **[All]**, **[Decisions]**, **[Tasks]**, **[Open questions]**, or **[References]**. During recording the list follows the newest item. For an ended meeting it starts from the top.
+
+If you're on the **[Transcript]** tab while recording, a tip bubble appears for 60 seconds when the first timeline item shows up. Click it to go to the **[Timeline]** tab.
 
 The copy icon copies the whole timeline, whatever filter you picked. If a message says some changes were missed and the timeline is catching up, click **[Resync]**.
 

@@ -11,7 +11,7 @@ modified: 2026-10-23
 
 Click the workspace name at the top to switch to another workspace or create a **[New workspace]**. You also open **[Workspace settings]** from here.
 
-Below that are **[All notes]**, **[Tasks]**, and your list of projects. **[User guide]** and **[Help & feedback]** sit below the projects. Click your name at the very bottom to find **[Account settings]**, **[Show the intro again]**, and **[Log out]**.
+Below that are **[Notifications]**, **[All notes]**, **[Tasks]**, and your list of projects. **[User guide]** and **[Help & feedback]** sit below the projects. Click your name at the very bottom to find **[Account settings]**, **[Show the intro again]**, and **[Log out]**.
 
 Press `kbd:⌘B` (`kbd:Ctrl+B` on Windows) to collapse or expand the sidebar.
 
@@ -42,7 +42,7 @@ Click a note row to open it in side view (a panel that shows the note beside the
 To load older meetings, click **[Show older notes]** at the bottom of the list.
 
 > [!Can't be undone]
-> ==Deleting a note permanently removes its transcript, summary, and chatbot conversations.== Only admins can delete notes. Deleting a meeting that is recording also ends the recording. While a meeting is being analyzed, you can delete it once the analysis finishes.
+> ==Deleting a note permanently removes the meeting's recording, transcript, summary, and evidence.== Decisions and tasks you've already confirmed stay. Only admins can delete notes. Deleting a meeting that is recording also ends the recording. While a meeting is being analyzed, you can delete it once the analysis finishes.
 
 ## Reading a note {#note-view}
 
@@ -53,7 +53,7 @@ Use the full screen icon at the top to switch between side view and full screen.
 In the **[Details]** tab, you can edit the title. Titles can be up to 200 characters. Click **[Save changes]** when you're done. **[Meeting info]** at the bottom shows the host, total recording time, who can see the note (workspace members), when it was created, and when it was last edited.
 
 > [!Note]
-> Admins and members can do the same things in a note. Any workspace member can view, record, end, and edit it.
+> Any workspace member can view, record, end, and edit a note. Only deleting a note is limited to admins.
 
 ## Opening settings {#settings}
 
@@ -65,7 +65,7 @@ The left side of the window has two groups.
 | Group | What's in it |
 |---|---|
 | **[Workspace]** | **[General]**, **[Members]**, **[Guest participants]**, **[Glossary]**, **[Integrations]**, **[MCP connections]** |
-| **[Account]** | **[My account]**, **[My MCP connections]** |
+| **[Account]** | **[My account]**, **[Notifications]**, **[My MCP connections]** |
 
 In **[General]**, you edit the workspace name and description. Only admins can do this.
 

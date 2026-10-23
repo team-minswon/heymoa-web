@@ -27,7 +27,7 @@ Use **[My agent]** in the bottom right, and the note's **[Summary]**, **[Timelin
 3. **Type @ in the input field to add a scope**
    ==Adding the project or meeting notes to search makes answers more accurate.==
 4. **Ask a specific question**
-   Type something like “How did we split the May budget?” and press Enter.
+   Type something like “How did we split the May budget?” and press `kbd:Enter`.
 5. **Click [Referenced meeting notes] under the answer**
    See ==which meeting the answer came from==.
 6. **In that meeting's [Timeline] tab, click the [Decisions] filter**

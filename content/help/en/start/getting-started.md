@@ -4,12 +4,14 @@ description: Sign in to HeyMoa, then record and end your first meeting. It takes
 group: start
 slug: getting-started
 order: 1
-modified: 2026-10-21
+modified: 2026-10-23
 ---
 
 ## Sign in with your Google account {#login}
 
 You sign in to HeyMoa with a Google account. There are no accounts made with an email and password.
+
+In the sign-in window, check the box agreeing to the Privacy Policy and the Terms of Service before you sign in. If you come in from an invite email link, you're asked for the same agreement once after signing in.
 
 The first time you sign in, your account is created automatically. HeyMoa also creates a workspace (a space your team shares) with you as its admin, and it comes with a **[General]** project.
 
