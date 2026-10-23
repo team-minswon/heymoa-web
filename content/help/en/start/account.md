@@ -32,9 +32,9 @@ Usage statistics only say which features you used. HeyMoa never sends what was s
 
 When you delete a note, the meeting's audio, transcript, and summary are deleted with it. To see which meetings can be deleted, read [Screen layout and projects](help:workspace-basics#note-list).
 
-Delete your account from **[Delete account]** at the bottom of **[Account settings]**. It shows what happens to each workspace. Workspaces you use alone are deleted, and you leave workspaces that have another admin or where you're a member. For a team where you're the only admin, choose whether to hand over the admin role (by default to the longest-standing member) or delete the workspace. Type the confirmation phrase shown in the window exactly, then sign in with Google again to finish. You can't delete your account while recording.
+Delete your account from **[Delete account]** at the bottom of **[Account settings]**. It shows what happens to each workspace. Workspaces you use alone are deleted, and you leave workspaces that have another admin or where you're a member. For a team where you're the only admin, choose whether to hand over the admin role (by default to the longest-standing member) or delete the workspace. Type the confirmation phrase shown in the window exactly to finish, and you're taken back to the home page. You can't delete your account while recording.
 
-Admins can delete a whole workspace from **[Delete workspace]** at the bottom of **[Workspace settings]** → **[General]** by typing the workspace name and signing in with Google again. Every member gets an email.
+Admins can delete a whole workspace from **[Delete workspace]** at the bottom of **[Workspace settings]** → **[General]** by typing the workspace name. Every member gets an email.
 
 > [!Can't be undone]
 > ==Deleting your account signs you out on every device right away and can't be undone.== Your name and what you said stay in past meeting records of team workspaces that remain. Signing up again with the same Google account creates a new account.
