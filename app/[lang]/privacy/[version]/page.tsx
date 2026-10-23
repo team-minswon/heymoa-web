@@ -5,6 +5,7 @@ import {
 } from "@/app/[lang]/legal-document";
 
 /** 이전 판 고정 주소(`/privacy/2026-10-22`). 판 목록은 `lib/legal-archive.ts`. */
+export const dynamic = "force-static";
 export const dynamicParams = false;
 export const generateStaticParams = () => archivedParams("privacy");
 

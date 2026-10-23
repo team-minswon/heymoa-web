@@ -130,6 +130,17 @@ export function LandingCta({
     );
   }
 
+  // 마케팅 면은 정적이라(APP-1418) 서버가 로그인 상태를 싣지 않는다. 확인 전에 「Google 계정으로 시작」을 눌리게
+  // 두면 로그인한 사람이 로그인 창을 연다 — 같은 라벨을 로딩으로 세워 폭을 지킨다(`AuthStatus` 와 같은 방식).
+  if (status === "checking") {
+    return (
+      <Button type="button" loading disabled className={cn(MARKETING_PILL, className)}>
+        {label}
+        <ArrowRight className="size-4" />
+      </Button>
+    );
+  }
+
   const button = (
     <Button type="button" aria-describedby={tooltip ? tooltipId : undefined} className={cn(MARKETING_PILL, className)}>
       {label}

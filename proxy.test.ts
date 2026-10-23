@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LOCALES, localePath } from "@/lib/i18n/locales";
+import { MARKETING_PAGES } from "@/lib/i18n/marketing-routes";
 import { config } from "@/proxy";
 
 function requestWithRefreshToken() {
@@ -52,6 +54,31 @@ describe("proxy matcher", () => {
     "/opengraph-image",
   ])("skips static guide assets: %s", (url) => {
     expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
+  });
+
+  // 마케팅 면은 미리 그린 페이지라 서버 갱신이 쓸 데가 없다(APP-1418). 목록이 늘면 matcher 도 같이 고친다.
+  it.each(
+    MARKETING_PAGES.flatMap(({ path }) =>
+      LOCALES.flatMap((locale) => {
+        const url = localePath(locale, path);
+        return [url, url === "/" ? "/en/sub" : `${url}/sub`];
+      })
+    )
+  )("skips marketing pages: %s", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
+  });
+
+  it.each([
+    "/w/01K0000000000",
+    "/settings/notifications",
+    "/invite",
+    "/oauth/consent",
+    "/auth/callback",
+    "/inquiries/01K0000000000",
+    "/unsubscribe",
+    "/help-samples",
+  ])("keeps product pages matched: %s", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
   });
 
   it("keeps normal document requests matched", () => {

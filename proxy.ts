@@ -173,6 +173,11 @@ export async function proxy(request: NextRequest) {
  * 가이드의 정적 자산(영상 `.mp4`·`.webm`, 검색 색인 `.json`)과 공유 카드(`opengraph-image`)도 뺀다 — 인증과 상관없는 정적
  * 응답이 요청마다 프록시 실행량을 쓰지 않게(APP-1236). 데이터 응답용 `.json` 라우트를 새로 만들 때는 여기에 걸리는지 본다.
  *
+ * **마케팅 면(`/`, `/en/**`, `/help/**`, `/download/**`, `/terms/**`, `/privacy/**`)도 뺀다(APP-1418).** 모두 미리 그린
+ * 페이지라 서버가 쿠키를 읽지 않으니 SSR 전 갱신이 쓸 데가 없고, 봇·방문자의 문서 요청마다 함수 CPU 만 쓴다. 로그인
+ * 상태는 클라이언트가 묻고 401 이면 `lib/api/fetcher.ts` 가 갱신한다. proxy 는 rewrite 앞에서 돌아 무접두 주소를 본다.
+ * 경로 목록은 `lib/i18n/marketing-routes.ts` 의 `MARKETING_PAGES` 와 같아야 한다(`proxy.test.ts` 가 맞춰 본다).
+ *
  * 목록을 상수로 빼지 않는다 — Next는 `config`를 정적으로 읽으므로 변수 참조를 쓰면
  * "Invalid segment configuration export"로 빌드가 깨진다.
  */
@@ -180,7 +185,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!_next/static|_next/image|favicon.ico|.*opengraph-image|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|json|webmanifest|woff2|ttf|mp4|webm)$).*)",
+        "/((?!$|(?:en|help|download|terms|privacy)(?:/|$)|_next/static|_next/image|favicon.ico|.*opengraph-image|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|json|webmanifest|woff2|ttf|mp4|webm)$).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "next-router-segment-prefetch" },
