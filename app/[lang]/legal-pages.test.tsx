@@ -54,7 +54,7 @@ describe("HeyMoa legal pages", () => {
     expect(screen.getByText(/서버에서 처리된 기록은/)).toBeVisible();
     // 운영 알림으로 나가는 이용자 이름은 Grafana Cloud·Slack 카드에 적는다(APP-1217)
     expect(document.body.textContent).toMatch(/운영 알림에 쓰는 이용자 이름/);
-    expect(document.body.textContent).toMatch(/운영자 알림/);
+    expect(document.body.textContent).toMatch(/운영 알림과 문의 처리/);
     // 보관 기간은 숫자로 적는다(APP-1385). 「필요한 기간 동안」으로 비워 두면 문의에 답할 근거가 없었다.
     expect(document.getElementById("section-6")).toHaveTextContent(/늦어도 저장한 날부터 30일/);
     expect(document.getElementById("section-6")).toHaveTextContent(/나가거나 탈퇴해도 그 워크스페이스의 지난 회의 기록에는 이름이 남습니다/);

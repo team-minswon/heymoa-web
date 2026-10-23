@@ -76,7 +76,7 @@ function ProcessorCard({ vendor, role, rows }: LegalProcessor) {
 function TableBlock({ columns, rows }: LegalTable) {
   return (
     <div className="overflow-x-auto border-y border-[var(--el-hairline-strong)] print:overflow-visible">
-      <table className="w-full min-w-[520px] border-collapse text-left text-[13.5px] leading-[1.65] [overflow-wrap:anywhere]">
+      <table className="w-full min-w-[520px] border-collapse text-left text-[13.5px] leading-[1.65] [overflow-wrap:break-word]">
         <thead>
           <tr className="border-b border-border">
             {columns.map((column) => (

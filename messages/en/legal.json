@@ -65,7 +65,7 @@
         "title": "5. Automatic Summaries and the Agent",
         "body": [
           "Summaries, real-time organization, and answers to questions are produced by large language models and may be factually wrong or miss context. The sources attached to an answer only indicate the material the model referred to and do not guarantee that its conclusions are accurate.",
-          "The agent answers only from materials in the workspaces you belong to. You can narrow that scope by specifying a project or meeting notes.",
+          "The agent answers from materials in the workspaces you belong to and, when needed, also uses web search results. You can narrow that scope by specifying a project or meeting notes.",
           "You must check the original before using generated summaries and answers in your work."
         ]
       },
@@ -73,7 +73,7 @@
         "title": "6. External Tools and External AI Agents",
         "body": [
           "You can connect Linear or GitHub to a workspace, and you decide when to connect and disconnect them.",
-          "Before the agent writes to an external tool, an approval screen shows what it will write. Only approved calls are actually executed, and links to the results remain in the conversation history.",
+          "Before the agent writes to an external tool, an approval screen shows what it will write. Only actions you approve are executed, and links to the results remain in the conversation history.",
           "You can allow external AI agents such as Claude and ChatGPT to read your workspace. Once allowed, the agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view, but it cannot change the content.",
           "An external AI agent's access expires automatically if it is not used for 90 days, and you can revoke it at any time in Settings.",
           "Data passed to external tools and external AI agents is subject to the terms and policies of those services. You must make sure the accounts used for these connections have only the permissions they need."
@@ -185,7 +185,7 @@
               ],
               [
                 "Reasons for deleting an account",
-                "The reason chosen and any text entered (optional), deletion time, and days since sign-up. The statistics record is not linked to member identifiers, names, or email addresses"
+                "The reason chosen and any text entered (optional), deletion time, and days since sign-up. The statistics record kept in the service is not linked to member identifiers, names, or email addresses. The type of reason chosen is sent to PostHog with your member identifier (Article 5)"
               ]
             ]
           },
@@ -197,8 +197,8 @@
         "title": "2. Purposes of Processing",
         "body": [
           "Providing the Service: identifying members and keeping them signed in, running workspaces, transcribing meetings, saving and viewing notes, AI summaries and agent answers, and exporting to external tools when you approve. This processing is needed to perform the service contract with you.",
-          "Sending email and answering inquiries: sending meeting notes sharing emails, invitation emails, and service notification emails (such as reminders about long-paused meetings and notices of automatic ending), and answering inquiries. Service notifications and notification emails include only the meeting title, never the meeting content, transcript, summary, or attendee names. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
-          "Automatic meeting ending: meetings paused for a long time are ended automatically after prior notice, and their analysis may proceed under the name of the person who requested it.",
+          "Sending email and answering inquiries: sending meeting notes sharing emails, invitation emails, and service notification emails (such as reminders about long-paused meetings and notices of automatic ending), and answering inquiries. Service notifications and notification emails never include the meeting content, transcript, summary, or attendee names. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
+          "Automatic meeting ending: meetings paused for a long time are ended automatically after prior notice, and their analysis may proceed under the name of the person who started the meeting (or, if that person has left the workspace, the person who last recorded, then an administrator).",
           "Operations and security: access logs, sign-in records, and server logs are used to prevent misuse, analyze outages, support users, and investigate security incidents.",
           "Improving the Service: usage statistics and performance metrics are used to analyze how the Service is used and improve it (Article 5). Reasons for deleting an account are used only as statistics for improving the Service.",
           "The voices and names of attendees who have not signed up are processed only to the extent needed to perform the service contract with the user who recorded the meeting."
@@ -222,11 +222,11 @@
         "body": [
           "HeyMoa does not use your meeting audio, transcripts, notes, questions, or answers to train AI models. The speech recognition and AI providers HeyMoa engages receive this data only on terms that it is not used for training. External AI agents that you connect yourself are subject to their own policies.",
           "To produce summaries, real-time organization, and answers to questions, the meeting's transcript, notes, attendee names, and your questions are sent to large language model providers (Article 7). These requests are made on terms that inputs and outputs are not stored (zero data retention).",
-          "When the agent uses web search, search queries written by the model are sent to a search engine through OpenRouter. Queries are not sent to search engines that use them for training or improving their services.",
+          "When the agent uses web search, search queries written by the model are sent through OpenRouter to the built-in search of the AI model provider.",
           "Transcripts and notes are converted into numerical representations (vectors) and kept so that past meeting notes can be found and referenced. Vectors are deleted when the original note is deleted.",
           "HeyMoa does not make decisions based solely on AI results that significantly affect your rights or obligations (automated decisions under Article 37-2 of the Personal Information Protection Act). AI summaries are for reference only.",
-          "If you connect Linear or GitHub, an approval screen shows what the agent will write before it writes to that tool. Only approved calls are executed, and nothing is exported automatically without approval.",
-          "If you allow an external AI agent such as Claude or ChatGPT to read your workspace, that agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view. The agent only reads content and does not change it.",
+          "If you connect Linear or GitHub, an approval screen shows what the agent will write before it writes to that tool. Only actions you approve are executed.",
+          "If you allow an external AI agent such as Claude or ChatGPT to read your workspace, that agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view. The agent can only read content and cannot change it.",
           "An external AI agent's access expires automatically if it is not used for 90 days. You can disconnect Linear and GitHub integrations and external AI agents at any time, and stored access grants are destroyed when you do."
         ]
       },
@@ -259,11 +259,11 @@
               ]
             ]
           },
-          "These values are stored separately for each browser and device. Per-user guidance markers are cleared when you sign out.",
+          "These values are stored separately for each browser and device. Records of which guidance you have already seen are cleared when you sign out.",
           "To improve the Service, HeyMoa collects navigation paths, performance metrics, and feature usage records with Google Analytics 4, PostHog, Vercel Analytics, and Vercel Speed Insights. These tools may store identifiers in your browser or collect access information.",
-          "Instead of your email or name, PostHog receives internal member and workspace identifiers, the features you used and when (for example, creating a meeting, starting a recording, or completing a review), the address of the screens you visited (without the query string), and device and browser information. Session recording and automatic click capture are not used.",
-          "Records processed on the server, such as completed meeting analyses, speaker separation results, dropped recording connections, notifications created, notification emails sent or skipped, automatic meeting endings, email unsubscribes, and account deletions, are sent to PostHog regardless of your browser settings. Only member identifiers, workspace identifiers, and the type and count of events are sent, never meeting titles or email addresses. Account deletion records include the type of reason chosen, but not any text you entered. Records processed on the server cannot be refused through browser settings.",
-          "Analytics tools run only in the production environment. The contents of meeting audio, transcripts, and notes are never sent to analytics tools.",
+          "Instead of your email or name, PostHog receives internal member and workspace identifiers, the features you used and when (for example, creating a meeting, starting a recording, or completing a review), the address of the screens you visited (without the part after ?), and device and browser information. Session recording and automatic click capture are not used.",
+          "Records processed on the server, such as completed meeting analyses, speaker separation results, dropped recording connections, notifications created, notification emails sent or skipped, automatic meeting endings, email unsubscribes, and account deletions, are sent to PostHog. Only member identifiers, workspace identifiers, and values such as the type, count, or number of days of each record are sent, never meeting titles or email addresses. Account deletion records include the type of reason chosen, but not any text you entered. Records processed on the server cannot be refused through browser settings.",
+          "The contents of meeting audio, transcripts, and notes are never sent to analytics tools.",
           "How to refuse: you can block or delete cookies and site data in your browser settings. For example, in Chrome you can delete cookies and site data under Settings > Privacy and security > Delete browsing data, and in Safari under Settings > Privacy > Manage Website Data. You can also block requests to analytics tools with your browser's tracking prevention or a content-blocking extension. Google Analytics can be refused with the opt-out browser add-on provided by Google (tools.google.com/dlpage/gaoptout).",
           "Refusing analytics tools does not limit your use of the Service. Deleting the authentication cookies, however, means you will need to sign in again."
         ]
@@ -287,7 +287,7 @@
               [
                 "Transcripts, notes, AI summaries, search vectors, agent conversations",
                 "Until you delete them",
-                "Deleted along with the note or workspace. Deleting your account deletes the records of workspaces you used alone; records in team workspaces remain (see below)"
+                "Deleted along with the note or workspace. Deleting your account deletes the records of workspaces you used alone and your own agent conversations in every workspace; transcripts, notes, and AI summaries in team workspaces remain (see below)"
               ],
               [
                 "Account information (email, profile photo, sign-in method)",
@@ -302,7 +302,7 @@
               [
                 "Integration tokens for external tools",
                 "Until you disconnect",
-                ""
+                "Also deleted when the person who connected it leaves the workspace or deletes their account, or when the workspace is deleted"
               ],
               [
                 "Workspace invitation links",
@@ -357,7 +357,7 @@
             ]
           },
           "Account deletion: when you delete your account, you are signed out on every device right away and can no longer access the account. Account information and the data of workspaces you used alone are deleted from the service storage in turn, and remain in backups for up to 7 days before being removed automatically.",
-          "Names that remain in team records: even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Attendee, speaker, approval, and task assignee labels, and your own utterances in transcripts, are the team's records, so the remaining members can still see them. Information other than your name, such as your email, profile photo, and sign-in method, is deleted. If you want your utterances in team records deleted, you can ask the workspace administrator or HeyMoa (Article 8).",
+          "Names that remain in team records: even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Attendee, speaker, approval, and task assignee labels, and your own utterances in transcripts, are the team's records, so the remaining members can still see them. Your email, profile photo, and sign-in method are deleted. If you want your utterances in team records deleted, you can ask the workspace administrator or HeyMoa (Article 8).",
           "Workspace deletion: when an administrator deletes a workspace, all members lose access right away. The workspace's notes, transcripts, audio, agent conversations, integrations, and invitations are deleted in turn and remain in backups for up to 7 days.",
           "Service notifications: a notification stores the meeting title and workspace name as they were when it was received. So even if a meeting note is deleted or someone leaves the workspace, the title remains in the recipient's notification list. When you open a notification, access permissions are checked again, and nothing is shown without permission.",
           "Copies that cannot be recalled: emails already sent remain in recipients' mailboxes, and HeyMoa cannot recall or delete them. Inquiry content forwarded to Slack as an operations alert cannot be recalled either (Article 7). This is the same even if you delete a note or your account.",
@@ -371,7 +371,7 @@
           "To operate the Service, HeyMoa entrusts processing to the providers below to the extent necessary. Personal information is transferred abroad to providers outside the Republic of Korea. This entrustment is necessary to perform the service contract. The following is disclosed under Article 28-8(1)(3) of the Personal Information Protection Act.",
           "All transfers use encrypted network transmission. The retention periods below are taken from each provider's published policy as of October 22, 2026.",
           "OpenRouter further entrusts processing to AI model providers (OpenAI, Microsoft, TypeSafe) (sub-processing). HeyMoa sends these requests on terms that inputs and outputs are not stored (zero data retention) and are not used for training.",
-          "If you do not want your information transferred abroad, you can refuse by not using the feature or by disconnecting it. If you refuse transfers needed for speech recognition, speaker separation, AI summaries, or web hosting, you cannot use those features. Analytics tools can be refused as described in Article 5, and refusing them does not limit your use of the Service.",
+          "If you do not want your information transferred abroad, you can refuse by not using the feature or by disconnecting it. If you refuse transfers needed for speech recognition, speaker separation, AI summaries, or web hosting, you cannot use those features. Analytics tools can be refused as described in Article 5 (except records the server sends to PostHog), and refusing them does not limit your use of the Service.",
           {
             "columns": [
               "Provider",
@@ -476,7 +476,7 @@
               ],
               [
                 "Data",
-                "Meeting audio files (delivered through a download link that stays open for 1 hour), processing settings (model, expected number of speakers), and the HeyMoa address that receives results. Attendee names and transcripts are not sent"
+                "Meeting audio files (delivered through a download link that stays open for 1 hour). Attendee names and transcripts are not sent"
               ],
               [
                 "When",
@@ -488,7 +488,7 @@
               ],
               [
                 "Retention",
-                "No copy of the audio is kept after processing, and processing results are deleted after 24 hours. Processing records such as job settings and timestamps (excluding audio and transcript content) are kept for the contract term and 18 months after it ends, then aggregated and anonymized. Not used for training"
+                "No copy of the audio is kept after processing, and processing results are deleted after 24 hours. Processing records such as job settings and timestamps (excluding audio and transcript content) are kept for the term of the contract between HeyMoa and pyannote.ai and 18 months after it ends, then aggregated and anonymized. Not used for training"
               ]
             ]
           },
@@ -548,7 +548,7 @@
               ],
               [
                 "Retention",
-                "Processed only through routes that meet zero data retention. Not used for training"
+                "Processed under zero data retention, so inputs and outputs are not stored. Not used for training"
               ]
             ]
           },
@@ -578,7 +578,7 @@
               ],
               [
                 "Retention",
-                "Processed through zero data retention routes. Not used for training"
+                "Processed under zero data retention, so inputs and outputs are not stored. Not used for training"
               ]
             ]
           },
@@ -600,7 +600,7 @@
               ],
               [
                 "When",
-                "Same as OpenRouter"
+                "During live organization in a meeting"
               ],
               [
                 "Purpose",
@@ -608,7 +608,7 @@
               ],
               [
                 "Retention",
-                "Processed through zero data retention routes. Not used for training"
+                "Processed under zero data retention, so inputs and outputs are not stored. Not used for training"
               ]
             ]
           },
@@ -724,7 +724,7 @@
               ],
               [
                 "How to refuse",
-                "As described in Article 5. Refusing does not limit your use of the Service"
+                "As described in Article 5 (except records sent from the server). Refusing does not limit your use of the Service"
               ]
             ]
           },
@@ -788,7 +788,7 @@
               ],
               [
                 "Retention",
-                "Follows the Slack free plan retention setting (90 days or 1 year)"
+                "Up to 1 year under the Slack retention setting"
               ]
             ]
           },
@@ -804,7 +804,7 @@
           "You can also make requests through a legal representative or an authorized agent, who must include a power of attorney.",
           "Meeting attendees who have not signed up: you can ask the user who started the recording or that workspace's administrator, or email HeyMoa. HeyMoa confirms that you attended the meeting and then handles the request together with the workspace administrator.",
           "For meeting records in a workspace that a company or organization uses for work, that company or organization decides how they are handled. In that case, HeyMoa forwards the request to the workspace administrator.",
-          "Information that must be kept under other laws may be deleted after that period ends."
+          "Information that must be kept under other laws is deleted after that retention period ends, even if you request deletion earlier."
         ]
       },
       {
@@ -812,7 +812,7 @@
         "body": [
           "HeyMoa takes the following measures to protect personal information.",
           "Encryption: all data in transit is encrypted. The database and audio storage are encrypted at rest, and external tool access tokens are additionally encrypted before they are stored.",
-          "Access control: meeting data is open only to workspace members and to the people and services you share it with by email or connect. Only the service servers can read and write the audio storage, and public access to it is blocked.",
+          "Access control: meeting data can be viewed only by workspace members and by the people and services you share it with by email or connect. The audio storage is not public, and only the service servers can read and write it. Audio is delivered to the speaker separation provider through a download link that stays open for 1 hour (Article 7).",
           "Credential management: authentication tokens are handled as HttpOnly cookies that web page JavaScript cannot read. When you delete your account, remaining sign-ins and real-time connections are cut right away; when a workspace is deleted, connections to that workspace are cut.",
           "Log management: meeting content is not written to server logs, and logs are deleted after the set period (Article 6)."
         ]

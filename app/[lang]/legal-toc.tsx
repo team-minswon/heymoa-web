@@ -24,12 +24,14 @@ export function LegalToc({
   useEffect(() => {
     // 관찰자(IntersectionObserver)는 빠르게 건너뛸 때 지나친 조를 놓쳐 낡은 조에 머물렀다 — 스크롤마다 위치를 잰다.
     // 조 열두 개의 위치를 재는 정도라 프레임 묶음(rAF) 없이 바로 잰다.
+    // 기준선은 조항 도착점(scroll-mt-20, 80px) 바로 아래다. 화면 1/3 이면 목차로 짧은 조(제1조)에 가도 다음 조가 짚혔다.
+    const LINE = 120;
     const update = () => {
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
       let current: string | null = null;
       for (const { id } of items) {
         const element = document.getElementById(id);
-        if (element && element.getBoundingClientRect().top <= window.innerHeight / 3) current = id;
+        if (element && element.getBoundingClientRect().top <= LINE) current = id;
       }
       setActive(atBottom ? (items.at(-1)?.id ?? current) : current);
     };
