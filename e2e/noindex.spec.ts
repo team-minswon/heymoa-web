@@ -78,7 +78,7 @@ test("다운로드·약관·개인정보는 JSON-LD 를 내고 다운로드는 �
   const og =
     html.match(/property="og:image" content="https?:\/\/[^/]+([^"]*)"/)?.[1] ??
     "";
-  expect(og).toContain("/download/opengraph-image");
+  expect(og).toBe("/opengraph-image.png");
   const res = await request.get(og);
   expect(res.status()).toBe(200);
   expect(res.headers()["content-type"]).toBe("image/png");

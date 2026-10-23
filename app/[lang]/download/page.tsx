@@ -40,27 +40,13 @@ export async function generateMetadata(): Promise<Metadata> {
     "brandLabel"
   );
   const description = t("meta.description", { brand });
-  const share = localizedMetadata(locale, "/download", {
-    title: t("meta.title"),
-    description,
-  });
-  // 공유 이미지 파일(`opengraph-image.tsx`)의 `alt` 는 언어마다 바꿀 수 없어 여기서 단다. 이 세그먼트에서
-  // `openGraph.images` 를 주면 Next 는 파일 규칙의 이미지를 덧붙이지 않는다. 트위터 카드도 같은 그림이다.
-  const images = [
-    {
-      url: `${localePath(locale, "/download")}/opengraph-image`,
-      width: 1200,
-      height: 630,
-      type: "image/png",
-      alt: t("og.alt", { brand }),
-    },
-  ];
   return {
     title: t("meta.title"),
     description,
-    ...share,
-    openGraph: { ...share.openGraph, images },
-    twitter: { ...share.twitter, images },
+    ...localizedMetadata(locale, "/download", {
+      title: t("meta.title"),
+      description,
+    }),
   };
 }
 

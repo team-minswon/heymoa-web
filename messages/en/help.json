@@ -9,11 +9,6 @@
     "byFeature": "Browse by feature",
     "bySituation": "Browse by situation"
   },
-  "og": {
-    "hubSummary": "From recording meetings to reviewing summaries, tasks, and My agent, find answers by feature or by situation.",
-    "label": "HeyMoa Guide",
-    "fallbackTitle": "Guide"
-  },
   "groups": {
     "start": {
       "title": "Getting started",

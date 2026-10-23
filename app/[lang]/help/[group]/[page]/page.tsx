@@ -30,24 +30,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const topic = helpTopicByPath(group, page, locale);
   if (!topic) return {};
   const title = `${topic.title} · ${helpT(locale)("brandTitle")}`;
-  const url = localePath(locale, helpPathOf(topic));
+  const description = topic.summary;
+  const share = localizedMetadata(locale, helpPathOf(topic));
   return {
     title: { absolute: title },
-    description: topic.summary,
-    ...localizedMetadata(locale, helpPathOf(topic)),
-    openGraph: {
-      siteName: siteConfig.name,
-      type: "article",
-      url,
-      title,
-      description: topic.summary,
-      locale: locale === "en" ? "en_US" : "ko_KR",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description: topic.summary,
-    },
+    description,
+    ...share,
+    openGraph: { ...share.openGraph, type: "article", title, description },
+    twitter: { ...share.twitter, title, description },
   };
 }
 

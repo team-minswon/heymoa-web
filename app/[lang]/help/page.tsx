@@ -38,19 +38,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = helpT(locale);
   const title = `${t("guide")} · ${t("brandTitle")}`;
   const description = t("hub.description");
+  // 공유 이미지는 사이트 공통 그림(`localizedMetadata`)이고, 제목·설명만 이 페이지 것으로 바꾼다.
+  const share = localizedMetadata(locale, "/help");
   return {
     title: { absolute: title },
     description,
-    ...localizedMetadata(locale, "/help"),
-    openGraph: {
-      siteName: siteConfig.name,
-      type: "website",
-      url: localePath(locale, "/help"),
-      title,
-      description,
-      locale: locale === "en" ? "en_US" : "ko_KR",
-    },
-    twitter: { card: "summary_large_image", title, description },
+    ...share,
+    openGraph: { ...share.openGraph, title, description },
+    twitter: { ...share.twitter, title, description },
   };
 }
 

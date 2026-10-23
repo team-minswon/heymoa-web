@@ -3,12 +3,6 @@
     "title": "데스크톱 앱 다운로드",
     "description": "{brand} 데스크톱 앱을 설치하고 업데이트하는 방법입니다. Mac과 Windows에서 내 목소리와 컴퓨터 소리를 함께 기록합니다."
   },
-  "og": {
-    "alt": "{brand} 데스크톱 앱 다운로드",
-    "title": "데스크톱 앱 다운로드",
-    "summary": "Mac과 Windows에서 화상회의 소리까지 기록합니다",
-    "label": "헤이모아 데스크톱 앱"
-  },
   "heading": "HeyMoa 앱 설치",
   "lead": "회의실에서 나눈 대화는 물론, 화상회의나 강의, 유튜브에서 들리는 말까지 기록합니다.",
   "stepsLabel": "{platform} 설치 방법",

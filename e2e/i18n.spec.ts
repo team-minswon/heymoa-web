@@ -320,23 +320,13 @@ for (const { path, title } of [
   });
 }
 
-test("다운로드 공유 이미지는 언어마다 따로 나오고 alt 도 그 언어다", async ({ request }) => {
-  const en = await (await request.get("/en/download")).text();
-  expect(en).toContain('property="og:image" content="https://heymoa.app/en/download/opengraph-image"');
-  expect(en).toContain('property="og:image:alt" content="Download the HeyMoa desktop app"');
-  const ko = await (await request.get("/download")).text();
-  expect(ko).toContain('property="og:image" content="https://heymoa.app/download/opengraph-image"');
-  expect(ko).toContain('property="og:image:alt" content="HeyMoa(헤이모아) 데스크톱 앱 다운로드"');
-
-  const [enImage, koImage] = await Promise.all(
-    ["/en/download/opengraph-image", "/download/opengraph-image"].map((url) => request.get(url))
-  );
-  for (const image of [enImage, koImage]) {
-    expect(image.status()).toBe(200);
-    expect(image.headers()["content-type"]).toBe("image/png");
+// 공유 이미지는 페이지·언어와 상관없이 메인 그림 하나다(APP-1400). 제목·설명만 페이지마다 다르다.
+test("모든 페이지의 공유 이미지는 메인 그림 하나다", async ({ request }) => {
+  for (const path of ["/", "/en", "/help", "/en/help", "/help/start", "/privacy", "/terms", "/download", "/en/download"]) {
+    const html = await (await request.get(path)).text();
+    expect(html, path).toContain('property="og:image" content="https://heymoa.app/opengraph-image.png"');
+    expect(html, path).toContain('name="twitter:image" content="https://heymoa.app/opengraph-image.png"');
   }
-  // 글이 다르면 그림도 다르다.
-  expect(Buffer.compare(await enImage.body(), await koImage.body())).not.toBe(0);
 });
 
 test("약관 영어판의 한국어본 링크는 같은 문서의 한국어 주소로 간다", async ({ page }) => {

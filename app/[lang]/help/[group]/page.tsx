@@ -33,20 +33,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const group = helpGroupBySlug((await params).group, locale);
   if (!group) return {};
   const title = `${group.title} · ${helpT(locale)("brandTitle")}`;
-  const url = localePath(locale, `/help/${group.slug}`);
+  const description = group.summary;
+  const share = localizedMetadata(locale, `/help/${group.slug}`);
   return {
     title: { absolute: title },
-    description: group.summary,
-    ...localizedMetadata(locale, `/help/${group.slug}`),
-    openGraph: {
-      siteName: siteConfig.name,
-      type: "website",
-      url,
-      title,
-      description: group.summary,
-      locale: locale === "en" ? "en_US" : "ko_KR",
-    },
-    twitter: { card: "summary_large_image", title, description: group.summary },
+    description,
+    ...share,
+    openGraph: { ...share.openGraph, title, description },
+    twitter: { ...share.twitter, title, description },
   };
 }
 
