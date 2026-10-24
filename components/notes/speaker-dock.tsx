@@ -62,13 +62,6 @@ const TONES = ["#4fb59d", "#e79468", "#6f9fd8", "#9a84d4", "#df7f98"];
 /** 줄 높이(px). 막대의 최대 높이가 이 안에 든다. */
 const ROW_H = 24;
 
-function ticksOf(stat: SpeakerStat) {
-  return stat.jumpStartsMs.map((start, index) => ({
-    start,
-    segmentId: stat.jumpTargets[index],
-  }));
-}
-
 /**
  * 파형. **지금 위치가 바뀌어도 다시 그리지 않는다** — 막대가 줄마다 48개라, 스크롤 중에 프레임마다
  * 그리면 그것만으로 수백 노드가 흔들린다. 바뀌는 것은 [active] 뿐이다.
@@ -128,18 +121,19 @@ function DockRow({
   assign: ReactNode;
   onJump: (segmentId: string, via: SpeakerJumpVia) => void;
 }) {
-  const ticks = ticksOf(stat);
-  const prev = [...ticks]
+  // ◀ ▶ 는 맞장구를 건너뛰고, 띠는 모든 발화로 간다 — 띠에 선 막대는 다 실제로 말한 자리다.
+  const steps = stat.stepTargets;
+  const prev = [...steps]
     .reverse()
-    .find((t) => t.start < currentMs - EPSILON_MS);
-  const next = ticks.find((t) => t.start > currentMs + EPSILON_MS);
+    .find((t) => t.startedAtMs < currentMs - EPSILON_MS);
+  const next = steps.find((t) => t.startedAtMs > currentMs + EPSILON_MS);
   const [hover, setHover] = useState<number | null>(null);
   const now = Math.min(1, Math.max(0, currentMs / durationMs));
   const reduced = useReducedMotion();
 
   const seek = (ratio: number) => {
-    if (!ticks.length) return;
-    onJump(ticks[jumpIndexAt(stat, ratio * durationMs)].segmentId, "strip");
+    const index = jumpIndexAt(stat.utterances, ratio * durationMs);
+    if (index >= 0) onJump(stat.utterances[index].segmentId, "strip");
   };
   const ratioOf = (event: { clientX: number; currentTarget: HTMLElement }) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -272,15 +266,15 @@ export function SpeakerDock({
     () => 0
   );
   // 말한 기록이 없는 참여자는 줄에 그릴 것이 없다(패널에는 선다).
-  const stats = allStats.filter((stat) => stat.jumpTargets.length > 0);
+  const stats = allStats.filter((stat) => stat.utterances.length > 0);
   if (!stats.length || durationMs <= 0) return null;
 
   // 지금 시각에 가장 가까운 앞선 발화를 가진 화자가 말하는 중이다.
   let activeKey: string | null = null;
   let best = Infinity;
   for (const stat of stats) {
-    for (const start of stat.jumpStartsMs) {
-      const gap = currentMs - start;
+    for (const { startedAtMs } of stat.utterances) {
+      const gap = currentMs - startedAtMs;
       if (gap >= -EPSILON_MS && gap < best) {
         best = gap;
         activeKey = stat.key;

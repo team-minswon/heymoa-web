@@ -4,6 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SpeakerPanel } from "@/components/notes/speaker-panel";
 import { TIMELINE_BINS, type SpeakerStat } from "@/lib/notes/speaker-stats";
 
+const three = [
+  { segmentId: "s1", startedAtMs: 0, endedAtMs: 10_000 },
+  { segmentId: "s2", startedAtMs: 100_000, endedAtMs: 110_000 },
+  { segmentId: "s3", startedAtMs: 400_000, endedAtMs: 410_000 },
+];
+
 function stat(overrides: Partial<SpeakerStat> = {}): SpeakerStat {
   return {
     key: "label:A",
@@ -19,9 +25,8 @@ function stat(overrides: Partial<SpeakerStat> = {}): SpeakerStat {
     unassigned: true,
     firstSegmentId: "s1",
     firstStartedAtMs: 0,
-    jumpTargets: ["s1", "s2", "s3"],
-    jumpStartsMs: [0, 100_000, 400_000],
-    jumpEndsMs: [10_000, 110_000, 410_000],
+    utterances: three,
+    stepTargets: three,
     ...overrides,
   };
 }
@@ -85,7 +90,7 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
 
   it("발화가 하나뿐이면 개수 표시 없이 그 발화로만 간다", () => {
     renderPanel([
-      stat({ jumpTargets: ["s1"], jumpStartsMs: [0], jumpEndsMs: [10_000] }),
+      stat({ utterances: three.slice(0, 1), stepTargets: three.slice(0, 1) }),
     ]);
     expect(
       screen.getByRole("button", { name: "지정하러 가기" })
@@ -105,6 +110,28 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
     expect(
       screen.getByRole("button", { name: /다음 발화로/ })
     ).toHaveTextContent("2 / 3");
+  });
+
+  it("띠로 맞장구에 가도 「다음 발화로」는 그 뒤의 대목으로 이어 간다", () => {
+    const short = { segmentId: "ne", startedAtMs: 200_000, endedAtMs: 201_000 };
+    renderPanel([
+      stat({
+        utterances: [three[0], three[1], short, three[2]],
+        stepTargets: three,
+      }),
+    ]);
+    const strip = screen.getByTestId("speaker-panel-strip");
+    strip.getBoundingClientRect = () =>
+      ({ left: 0, width: 600, top: 0, height: 24 }) as DOMRect;
+
+    // 200_000ms 를 품은 것은 맞장구 「ne」다 — 점 목록에 없으니 n / m 대신 개수만.
+    fireEvent.click(strip, { clientX: 200 });
+    const button = screen.getByRole("button", { name: /다음 발화로/ });
+    expect(button).toHaveTextContent("3곳");
+    fireEvent.click(button);
+    expect(
+      screen.getByRole("button", { name: /다음 발화로/ })
+    ).toHaveTextContent("3 / 3");
   });
 
   it("띠에 올리면 커서 위치의 시각이 바로 보이고 벗어나면 사라진다", () => {

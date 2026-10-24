@@ -13,6 +13,12 @@ import {
 } from "@/components/notes/speaker-dock";
 import { TIMELINE_BINS, type SpeakerStat } from "@/lib/notes/speaker-stats";
 
+const three = [
+  { segmentId: "a1", startedAtMs: 0, endedAtMs: 10_000 },
+  { segmentId: "a2", startedAtMs: 100_000, endedAtMs: 110_000 },
+  { segmentId: "a3", startedAtMs: 400_000, endedAtMs: 410_000 },
+];
+
 const stat = (overrides: Partial<SpeakerStat> = {}): SpeakerStat => ({
   key: "label:A",
   avatarName: "A",
@@ -27,9 +33,8 @@ const stat = (overrides: Partial<SpeakerStat> = {}): SpeakerStat => ({
   unassigned: false,
   firstSegmentId: "a1",
   firstStartedAtMs: 0,
-  jumpTargets: ["a1", "a2", "a3"],
-  jumpStartsMs: [0, 100_000, 400_000],
-  jumpEndsMs: [10_000, 110_000, 410_000],
+  utterances: three,
+  stepTargets: three,
   ...overrides,
 });
 
@@ -88,9 +93,11 @@ describe("SpeakerDock", () => {
       <SpeakerDock
         stats={[
           stat({
-            jumpTargets: targets.map((t) => t.id),
-            jumpStartsMs: targets.map((t) => t.start),
-            jumpEndsMs: targets.map((t) => t.end),
+            utterances: targets.map((t) => ({
+              segmentId: t.id,
+              startedAtMs: t.start,
+              endedAtMs: t.end,
+            })),
           }),
         ]}
         durationMs={durationMs}
@@ -126,6 +133,20 @@ describe("SpeakerDock", () => {
     expect(onJump).toHaveBeenCalledWith("m1", "strip");
   });
 
+  // 실제 회의(약 1시간): 김민수가 58:36 에 「네.」(1초 남짓)라고 했는데 띠에 안 보이고
+  // 눌러도 거기로 가지 않았다. 띠와 클릭은 짧은 발화도 다 대상이다.
+  it("1시간 회의 끝부분의 1초 발화를 누르면 그 발화로 간다", () => {
+    const onJump = clickAt(
+      3516,
+      [
+        { id: "early", start: 60_000, end: 90_000 },
+        { id: "ne", start: 3_516_000, end: 3_517_200 },
+      ],
+      3_600_000
+    );
+    expect(onJump).toHaveBeenCalledWith("ne", "strip");
+  });
+
   it("마지막 발화 뒤를 눌러도 마지막 발화로 간다", () => {
     const onJump = clickAt(3000, [
       { id: "m1", start: 100_000, end: 110_000 },
@@ -145,9 +166,8 @@ describe("SpeakerDock", () => {
       stat({
         key: "p",
         name: "조용한 사람",
-        jumpTargets: [],
-        jumpStartsMs: [],
-        jumpEndsMs: [],
+        utterances: [],
+        stepTargets: [],
       }),
     ]);
     expect(screen.getAllByTestId("speaker-dock-row")).toHaveLength(1);

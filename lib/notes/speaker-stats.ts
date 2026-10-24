@@ -55,18 +55,33 @@ export type SpeakerStat = {
   /** 그 발화의 회의 축 좌표. 타임라인 칸에서 되짚으면 칸 하나만큼 틀린다. */
   firstStartedAtMs: number | null;
   /**
-   * 「다음 발화로」가 차례로 도는 발화들(시간순). **맞장구를 건너뛴다** — 「네」 한 마디는 누구인지
-   * 알아보는 데 쓸모가 없다. 짧은 발화뿐인 사람은 전부 대상이다.
+   * 이 줄의 **모든** 발화(시간순). 띠를 그리고, 띠를 눌러 고르고, 도크가 지금 누가 말하는지
+   * 가르는 데 이 목록 하나를 쓴다 — 그리는 것과 가는 곳이 갈리면 막대를 눌러 엉뚱한 데로 간다.
    */
-  jumpTargets: string[];
-  /** [jumpTargets] 와 같은 순서의 회의 축 좌표(ms). 띠 위에 이동 지점을 찍고 눌러서 고르는 데 쓴다. */
-  jumpStartsMs: number[];
-  /** [jumpStartsMs] 의 끝. 띠를 누른 시각을 **품은** 발화를 고르는 데 쓴다. */
-  jumpEndsMs: number[];
+  utterances: SpeakerUtterance[];
+  /**
+   * 이전·다음 버튼이 차례로 도는 발화(시간순, [utterances] 의 부분집합). **맞장구를 건너뛴다** —
+   * 「네」 한 마디는 누구인지 알아보는 데 쓸모가 없다(APP-1163). 짧은 발화뿐인 사람은 전부 대상이다.
+   * 띠에는 이 규칙을 쓰지 않는다 — 실제 말한 자리는 짧아도 다 보여야 한다.
+   */
+  stepTargets: SpeakerUtterance[];
 };
 
-/** 이보다 짧은 발화는 누구인지 알아보는 단서로 안 친다. */
-export const MIN_JUMP_SEGMENT_MS = 1500;
+/** 발화 하나의 회의 축 구간. */
+export type SpeakerUtterance = {
+  segmentId: string;
+  startedAtMs: number;
+  endedAtMs: number;
+};
+
+/** 이보다 짧은 발화는 이전·다음 버튼이 건너뛴다 — 누구인지 알아보는 단서로 안 친다. */
+export const MIN_STEP_SEGMENT_MS = 1500;
+
+/**
+ * 말한 칸의 최소 높이(0~1). 긴 회의에서 칸 하나는 1분 남짓이라, 그 칸에 1초 「네.」 하나뿐이면
+ * 가장 바쁜 칸 대비 2% 남짓으로 말 없는 칸과 구분이 안 됐다. 말한 칸은 적어도 이만큼 선다.
+ */
+export const TIMELINE_MIN_VISIBLE = 0.25;
 
 type SpeakerInput = {
   label: string;
@@ -142,10 +157,7 @@ export function summarizeSpeakers({
   const hashKeyOf = new Map<string, string>();
   const rows = new Map<string, SpeakerStat>();
   const firstStartedAtMs = new Map<string, number>();
-  const spoken = new Map<
-    string,
-    { segmentId: string; startedAtMs: number; endedAtMs: number }[]
-  >();
+  const spoken = new Map<string, SpeakerUtterance[]>();
   /**
    * 칸의 기준은 **회의 전체**다. 사람마다 제 발화 구간을 나누면 누구나 꽉 찬 띠가 된다.
    *
@@ -195,9 +207,8 @@ export function summarizeSpeakers({
         unassigned: !participantId,
         firstSegmentId: null,
         firstStartedAtMs: null,
-        jumpTargets: [],
-        jumpStartsMs: [],
-        jumpEndsMs: [],
+        utterances: [],
+        stepTargets: [],
       } satisfies SpeakerStat);
 
     if (!row.labels.includes(label)) row.labels.push(label);
@@ -238,9 +249,8 @@ export function summarizeSpeakers({
       unassigned: false,
       firstSegmentId: null,
       firstStartedAtMs: null,
-      jumpTargets: [],
-      jumpStartsMs: [],
-      jumpEndsMs: [],
+      utterances: [],
+      stepTargets: [],
     });
   }
 
@@ -256,19 +266,16 @@ export function summarizeSpeakers({
       (a, b) => a.startedAtMs - b.startedAtMs
     );
     const meaningful = all.filter(
-      (item) => item.endedAtMs - item.startedAtMs >= MIN_JUMP_SEGMENT_MS
+      (item) => item.endedAtMs - item.startedAtMs >= MIN_STEP_SEGMENT_MS
     );
-    const targets = meaningful.length > 0 ? meaningful : all;
-    row.jumpTargets = targets.map((item) => item.segmentId);
-    row.jumpStartsMs = targets.map((item) => item.startedAtMs);
-    row.jumpEndsMs = targets.map((item) => item.endedAtMs);
-    /**
-     * **띠는 이동 대상으로만 그린다.** 맞장구까지 그리면 막대는 서는데 눌러도 갈 발화가 없어,
-     * 그 막대를 누르면 멀리 떨어진 다른 발화로 간다(APP-1429). 그리는 것과 가는 곳이 한 목록이다.
-     */
+    row.utterances = all;
+    row.stepTargets = meaningful.length > 0 ? meaningful : all;
+    // **띠는 모든 발화로 그린다.** 맞장구도 실제로 말한 자리다 — 이동 대상만 그리면 1초짜리
+    // 「네.」가 띠에서 사라져 그 사람이 거기서 말한 적이 없는 것처럼 읽힌다.
     // **칸을 넘는 발화는 걸친 만큼 나눠 담는다.** 시작 칸에 다 몰면 긴 발언이 봉우리 하나가
     // 되어, 5분을 쉬지 않고 말한 사람과 그 자리에서 한마디 한 사람이 같은 모양이 된다.
-    for (const item of binMs > 0 ? targets : []) {
+    const spokenBins = new Set<number>();
+    for (const item of binMs > 0 ? all : []) {
       const firstBin = Math.min(
         TIMELINE_BINS - 1,
         Math.floor(item.startedAtMs / binMs)
@@ -277,10 +284,13 @@ export function summarizeSpeakers({
         TIMELINE_BINS - 1,
         Math.floor(Math.max(item.startedAtMs, item.endedAtMs) / binMs)
       );
+      // 시작 칸은 길이가 0이어도 말한 칸이다.
+      spokenBins.add(firstBin);
       for (let bin = firstBin; bin <= lastBin; bin += 1) {
         const overlap =
           Math.min(item.endedAtMs, (bin + 1) * binMs) -
           Math.max(item.startedAtMs, bin * binMs);
+        if (overlap > 0) spokenBins.add(bin);
         row.timeline[bin] += Math.max(0, overlap);
       }
     }
@@ -292,7 +302,11 @@ export function summarizeSpeakers({
       hashKey: hashKeyOf.get(row.key) ?? row.key,
     });
     const peak = Math.max(...row.timeline);
-    if (peak > 0) row.timeline = row.timeline.map((ms) => ms / peak);
+    row.timeline = row.timeline.map((ms, bin) =>
+      spokenBins.has(bin)
+        ? Math.max(TIMELINE_MIN_VISIBLE, peak > 0 ? ms / peak : 0)
+        : 0
+    );
   }
 
   // 0초인 사람이 여럿이면 이름으로 가른다 — 안 그러면 목록을 열 때마다 순서가 흔들린다.
@@ -302,23 +316,20 @@ export function summarizeSpeakers({
 }
 
 /**
- * 띠를 누른 시각([atMs])이 가리키는 이동 대상의 인덱스. **그 시각을 품은 발화**가 먼저고,
- * 없으면 앞뒤로 가장 가까운 발화다. 대상이 없으면 -1.
+ * 띠를 누른 시각([atMs])이 가리키는 발화의 인덱스. **그 시각을 품은 발화**가 먼저고,
+ * 없으면 앞뒤로 가장 가까운 발화다. 발화가 없으면 -1. 보통 [SpeakerStat.utterances] 를 넘긴다.
  *
  * 「그 시각 이후 첫 발화」로 고르면 안 된다 — 막대는 발화가 걸친 칸에 서므로, 긴 발언 한가운데를
  * 누르면 그 발언은 이미 시작한 뒤라 건너뛰고 몇 분 뒤 다음 발화로 간다(APP-1429).
  */
 export function jumpIndexAt(
-  {
-    jumpStartsMs,
-    jumpEndsMs,
-  }: Pick<SpeakerStat, "jumpStartsMs" | "jumpEndsMs">,
+  utterances: Pick<SpeakerUtterance, "startedAtMs" | "endedAtMs">[],
   atMs: number
 ) {
   let best = -1;
   let bestGap = Infinity;
-  jumpStartsMs.forEach((start, index) => {
-    const end = Math.max(start, jumpEndsMs[index] ?? start);
+  utterances.forEach(({ startedAtMs: start, endedAtMs }, index) => {
+    const end = Math.max(start, endedAtMs);
     const gap = atMs < start ? start - atMs : atMs > end ? atMs - end : 0;
     if (gap < bestGap) {
       best = index;

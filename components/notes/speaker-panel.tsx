@@ -24,6 +24,7 @@ import {
   jumpIndexAt,
   type SpeakerJumpVia,
   type SpeakerStat,
+  type SpeakerUtterance,
 } from "@/lib/notes/speaker-stats";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
@@ -46,24 +47,24 @@ function Sparkline({
   timeline,
   dim,
   durationMs,
-  startsMs,
-  endsMs,
+  utterances,
+  steps,
   current,
   onPick,
 }: {
   timeline: number[];
   dim: boolean;
   durationMs: number;
-  /** 이동 대상 발화들의 회의 축 좌표(시간순). */
-  startsMs: number[];
-  /** [startsMs] 와 같은 순서의 끝 좌표. */
-  endsMs: number[];
-  /** 지금 위치(마지막으로 이동한 발화)의 인덱스. 아직 안 갔으면 -1. */
+  /** 이 화자의 모든 발화(시간순). 띠를 누르면 이 중에서 고른다. */
+  utterances: SpeakerUtterance[];
+  /** 「다음 발화로」가 도는 발화. 띠 아래 점으로 찍는다. */
+  steps: SpeakerUtterance[];
+  /** 지금 위치(마지막으로 이동한 발화)의 [steps] 인덱스. 없으면 -1. */
   current: number;
-  /** 눌린 시각에 가장 가까운 대상 발화의 인덱스. */
-  onPick: (index: number) => void;
+  /** 눌린 시각을 품은(없으면 가장 가까운) 발화. */
+  onPick: (utterance: SpeakerUtterance) => void;
 }) {
-  const clickable = startsMs.length > 0 && durationMs > 0;
+  const clickable = utterances.length > 0 && durationMs > 0;
   // 커서가 가리키는 위치(0..1). 기본 `title` 은 1초쯤 늦고 커서를 안 따라와 안 보였다.
   const [hover, setHover] = useState<number | null>(null);
   const ratioOf = (event: { clientX: number; currentTarget: HTMLElement }) => {
@@ -81,12 +82,8 @@ function Sparkline({
       onPointerLeave={() => setHover(null)}
       onClick={(event) => {
         if (!clickable) return;
-        onPick(
-          jumpIndexAt(
-            { jumpStartsMs: startsMs, jumpEndsMs: endsMs },
-            ratioOf(event) * durationMs
-          )
-        );
+        const index = jumpIndexAt(utterances, ratioOf(event) * durationMs);
+        if (index >= 0) onPick(utterances[index]);
       }}
     >
       <div className={cn("flex h-6 items-end gap-px", dim && "opacity-45")}>
@@ -119,10 +116,10 @@ function Sparkline({
           </span>
         </>
       )}
-      {/* 이동 지점. 띠 아래 한 줄에 점으로 찍고, 지금 위치만 강조색이다. */}
+      {/* 「다음 발화로」가 도는 지점. 띠 아래 한 줄에 점으로 찍고, 지금 위치만 강조색이다. */}
       {clickable ? (
         <div className="relative mt-0.5 h-1">
-          {startsMs.map((start, index) => (
+          {steps.map(({ startedAtMs: start }, index) => (
             <span
               key={index}
               className={cn(
@@ -143,25 +140,33 @@ function Sparkline({
 function SpeakerRow({
   stat,
   index,
-  visited,
+  lastSegmentId,
   durationMs,
   onJump,
 }: {
   stat: SpeakerStat;
   index: number;
-  /** 지금까지 이 화자의 발화로 간 횟수. 패널을 닫으면 행이 언마운트되므로 패널이 들고 있다. */
-  visited: number;
+  /** 마지막으로 간 이 화자의 발화. 패널을 닫으면 행이 언마운트되므로 패널이 들고 있다. */
+  lastSegmentId: string | undefined;
   durationMs: number;
-  onJump: (segmentId: string, visited: number, via: SpeakerJumpVia) => void;
+  onJump: (segmentId: string, via: SpeakerJumpVia) => void;
 }) {
   const reduced = useReducedMotion();
   const silent = stat.speakingMs === 0;
   // **누를 때마다 그 사람의 다음 발화로 간다.** 첫 발화는 「네」 같은 맞장구가 많아 누구인지 알아보기
   // 어렵다 — 말을 길게 한 대목들을 차례로 듣고(읽고) 지정한다. 끝에서는 처음으로 돌아온다.
-  const targets = stat.jumpTargets;
+  // 띠로 맞장구에 갔어도 그 시각 다음의 대목으로 이어 간다.
+  const targets = stat.stepTargets;
+  const last = stat.utterances.find((u) => u.segmentId === lastSegmentId);
+  const position = last
+    ? targets.findIndex((t) => t.segmentId === last.segmentId)
+    : -1;
+  const after = last
+    ? targets.findIndex((t) => t.startedAtMs > last.startedAtMs)
+    : 0;
   const next = () => {
     if (targets.length === 0) return;
-    onJump(targets[visited % targets.length], visited + 1, "step");
+    onJump(targets[Math.max(0, after)].segmentId, "step");
   };
 
   return (
@@ -198,10 +203,10 @@ function SpeakerRow({
             timeline={stat.timeline}
             dim={stat.unassigned}
             durationMs={durationMs}
-            startsMs={stat.jumpStartsMs}
-            endsMs={stat.jumpEndsMs}
-            current={visited === 0 ? -1 : (visited - 1) % targets.length}
-            onPick={(index) => onJump(targets[index], index + 1, "strip")}
+            utterances={stat.utterances}
+            steps={targets}
+            current={position}
+            onPick={(utterance) => onJump(utterance.segmentId, "strip")}
           />
           <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--el-muted-soft)]">
             {/* **세그먼트 개수를 「발화 N개」로 내보내지 않는다.** 그것은 전사가 문장을
@@ -217,7 +222,7 @@ function SpeakerRow({
                 onClick={next}
               >
                 <CornerDownRight data-icon="inline-start" />
-                {visited === 0
+                {!last
                   ? stat.unassigned
                     ? "지정하러 가기"
                     : "첫 발화로"
@@ -225,9 +230,9 @@ function SpeakerRow({
                 {targets.length > 1 ? (
                   <span className="tabular-nums text-[var(--el-muted-soft)]">
                     {/* 지금 있는 위치. 아직 안 갔으면 전체 개수만 — 누르면 첫 번째로 간다. */}
-                    {visited === 0
+                    {position < 0
                       ? `${targets.length}곳`
-                      : `${((visited - 1) % targets.length) + 1} / ${targets.length}`}
+                      : `${position + 1} / ${targets.length}`}
                   </span>
                 ) : null}
               </Button>
@@ -286,15 +291,13 @@ export function SpeakerPanel({
       skipReturnFocus.current = false;
     }
   }, [open]);
-  const [visitedByKey, setVisitedByKey] = useState<Record<string, number>>({});
-  const jump =
-    (key: string) =>
-    (segmentId: string, visited: number, via: SpeakerJumpVia) => {
-      setVisitedByKey((all) => ({ ...all, [key]: visited }));
-      pendingJump.current = { segmentId, via };
-      skipReturnFocus.current = true;
-      onOpenChange(false);
-    };
+  const [lastByKey, setLastByKey] = useState<Record<string, string>>({});
+  const jump = (key: string) => (segmentId: string, via: SpeakerJumpVia) => {
+    setLastByKey((all) => ({ ...all, [key]: segmentId }));
+    pendingJump.current = { segmentId, via };
+    skipReturnFocus.current = true;
+    onOpenChange(false);
+  };
 
   return (
     <Sheet
@@ -343,7 +346,7 @@ export function SpeakerPanel({
                   key={stat.key}
                   stat={stat}
                   index={index}
-                  visited={visitedByKey[stat.key] ?? 0}
+                  lastSegmentId={lastByKey[stat.key]}
                   durationMs={durationMs}
                   onJump={jump(stat.key)}
                 />

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { TIMELINE_BINS, summarizeSpeakers } from "@/lib/notes/speaker-stats";
+import {
+  TIMELINE_BINS,
+  TIMELINE_MIN_VISIBLE,
+  summarizeSpeakers,
+} from "@/lib/notes/speaker-stats";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
 
 const segment = (
@@ -185,7 +189,11 @@ describe("summarizeSpeakers", () => {
     });
 
     // 도착 순서가 아니라 시간순이고, 1.5초 미만인 s1 은 빠진다.
-    expect(rows[0].jumpTargets).toEqual(["s3", "s5"]);
+    const ids = (list: { segmentId: string }[]) =>
+      list.map((item) => item.segmentId);
+    expect(ids(rows[0].stepTargets)).toEqual(["s3", "s5"]);
+    // 띠와 띠 클릭은 맞장구까지 전부다.
+    expect(ids(rows[0].utterances)).toEqual(["s1", "s3", "s5"]);
     // 첫 발화(맞장구 포함)는 그대로다.
     expect(rows[0].firstSegmentId).toBe("s1");
   });
@@ -196,7 +204,10 @@ describe("summarizeSpeakers", () => {
       speakers: [speaker("A", null, null)],
     });
 
-    expect(rows[0].jumpTargets).toEqual(["s1", "s2"]);
+    expect(rows[0].stepTargets.map((item) => item.segmentId)).toEqual([
+      "s1",
+      "s2",
+    ]);
   });
 
   it("첫 발화를 들고 있다 — 거기로 스크롤해 붙이러 간다", () => {
@@ -236,9 +247,8 @@ describe("summarizeSpeakers", () => {
       labels: [],
       unassigned: false,
       firstSegmentId: null,
-      jumpTargets: [],
-      jumpStartsMs: [],
-      jumpEndsMs: [],
+      utterances: [],
+      stepTargets: [],
     });
   });
 
@@ -286,17 +296,35 @@ describe("summarizeSpeakers", () => {
       expect(rows.find((row) => row.key === "p2")!.timeline.at(-1)).toBe(1);
     });
 
-    // 맞장구까지 그리면 막대는 서는데 눌러도 갈 발화가 없어 멀리 다른 발화로 간다(APP-1429).
-    it("띠는 이동 대상만 그린다 — 짧은 맞장구 칸은 비어 있다", () => {
+    // 실제 회의(약 1시간): 김민수의 58:36 「네.」(1초 남짓)가 띠에서 사라졌다(APP-1429 회귀).
+    it("1시간 회의 끝부분의 1초 발화도 띠에 보인다 — 말 없는 칸과 구분된다", () => {
       const rows = summarizeSpeakers({
-        segments: [at(1, "A", 0, 5000), at(2, "A", 47_000, 47_500)],
+        segments: [at(1, "A", 0, 600_000), at(2, "A", 3_516_000, 3_517_200)],
+        speakers: [speaker("A", "p1", "김민수")],
+        durationMs: 3_600_000,
+      });
+
+      const timeline = rows[0].timeline;
+      const bin = Math.floor(3_516_000 / (3_600_000 / TIMELINE_BINS));
+      expect(timeline[bin]).toBeGreaterThanOrEqual(TIMELINE_MIN_VISIBLE);
+      expect(timeline[bin - 1]).toBe(0);
+      expect(rows[0].utterances.at(-1)).toEqual({
+        segmentId: "s2",
+        startedAtMs: 3_516_000,
+        endedAtMs: 3_517_200,
+      });
+      // 이전·다음 버튼만 맞장구를 건너뛴다.
+      expect(rows[0].stepTargets.map((item) => item.segmentId)).toEqual(["s1"]);
+    });
+
+    it("길이 0인 발화도 시작 칸에 선다", () => {
+      const rows = summarizeSpeakers({
+        segments: [at(1, "A", 0, 5000), at(2, "A", 47_000, 47_000)],
         speakers: [speaker("A", "p1", "한지원")],
         durationMs: 48_000,
       });
 
-      expect(rows[0].jumpTargets).toEqual(["s1"]);
-      expect(rows[0].jumpEndsMs).toEqual([5000]);
-      expect(rows[0].timeline.at(-1)).toBe(0);
+      expect(rows[0].timeline.at(-1)).toBe(TIMELINE_MIN_VISIBLE);
     });
 
     // 칸보다 긴 발화를 한 칸에 몰면 그 사람만 봉우리 하나로 보인다.
