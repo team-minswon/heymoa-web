@@ -33,13 +33,30 @@ import { cn } from "@/lib/utils";
  */
 export function createCurrentMsStore() {
   let value = 0;
+  // 이동으로 고정된 위치. 스크롤 측정은 화면 가운데 줄을 짚는데, 끝 근처 발화처럼 가운데로
+  // 올 수 없는 줄로 가면 다른 화자의 줄을 짚어 세로선·◀ ▶ 기준이 엉뚱한 곳으로 간다.
+  // 사용자가 직접 스크롤하기 전까지는 이동한 발화의 시각을 그대로 둔다.
+  let pinned = false;
   const listeners = new Set<() => void>();
+  const emit = (next: number) => {
+    if (next === value) return;
+    value = next;
+    listeners.forEach((listener) => listener());
+  };
   return {
     get: () => value,
+    /** 스크롤 측정 값. 이동으로 고정된 동안에는 무시한다. */
     set(next: number) {
-      if (next === value) return;
-      value = next;
-      listeners.forEach((listener) => listener());
+      if (!pinned) emit(next);
+    },
+    /** 이동한 발화의 시각으로 고정한다. */
+    pin(next: number) {
+      pinned = true;
+      emit(next);
+    },
+    /** 사용자가 직접 스크롤하면 다시 측정을 따른다. */
+    release() {
+      pinned = false;
     },
     subscribe(listener: () => void) {
       listeners.add(listener);

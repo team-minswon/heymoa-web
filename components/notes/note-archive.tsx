@@ -714,8 +714,11 @@ export const NoteArchive = memo(function NoteArchive({
     [jumpToSegment]
   );
   // 화자 띠 · 이전/다음으로 발화를 찾아가는지 센다. 노트 id 는 싣지 않는다.
+  const [currentMsStore] = useState(createCurrentMsStore);
   const speakerJump = useCallback(
     (surface: "dock" | "panel") => (segmentId: string, via: SpeakerJumpVia) => {
+      const at = segments.find((s) => s.segmentId === segmentId)?.startedAtMs;
+      if (at !== undefined) currentMsStore.pin(at);
       if (workspaceId)
         track("speaker_timeline_jumped", {
           workspace_id: workspaceId,
@@ -724,7 +727,7 @@ export const NoteArchive = memo(function NoteArchive({
         });
       jumpToSegment(segmentId);
     },
-    [jumpToSegment, workspaceId]
+    [jumpToSegment, workspaceId, segments, currentMsStore]
   );
   const dockJump = useMemo(() => speakerJump("dock"), [speakerJump]);
   const panelJump = useMemo(() => speakerJump("panel"), [speakerJump]);
@@ -893,7 +896,6 @@ export const NoteArchive = memo(function NoteArchive({
    * 도크의 「지금 위치」. **저장한 번호가 아니라 화면 가운데 발화의 시각**이다 —
    * 직접 스크롤해도 어긋나지 않는다.
    */
-  const [currentMsStore] = useState(createCurrentMsStore);
   const startedAtOf = useMemo(
     () =>
       new Map(
@@ -933,10 +935,17 @@ export const NoteArchive = memo(function NoteArchive({
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(measure);
     };
+    // 사람이 직접 움직인 스크롤만 고정을 푼다. 이동이 일으킨 scroll 이벤트로는 풀지 않는다.
+    const release = () => currentMsStore.release();
+    const inputs = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
     measure();
     viewport.addEventListener("scroll", onScroll, { passive: true });
+    inputs.forEach((type) =>
+      viewport.addEventListener(type, release, { passive: true })
+    );
     return () => {
       viewport.removeEventListener("scroll", onScroll);
+      inputs.forEach((type) => viewport.removeEventListener(type, release));
       if (frame) cancelAnimationFrame(frame);
     };
   }, [viewportRef, startedAtOf, rows.length, currentMsStore]);

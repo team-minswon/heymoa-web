@@ -229,3 +229,15 @@ describe("SpeakerDock", () => {
     expect(await screen.findAllByTestId("speaker-dock-row")).toHaveLength(1);
   });
 });
+
+describe("createCurrentMsStore 고정", () => {
+  it("이동으로 고정한 시각은 스크롤 측정이 덮지 않고, 직접 스크롤하면 다시 따른다", () => {
+    const store = createCurrentMsStore();
+    store.pin(2_760_000);
+    store.set(2_700_000);
+    expect(store.get()).toBe(2_760_000);
+    store.release();
+    store.set(2_700_000);
+    expect(store.get()).toBe(2_700_000);
+  });
+});
