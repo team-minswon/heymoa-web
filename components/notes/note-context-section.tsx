@@ -25,6 +25,18 @@ const SAVE_DELAY_MS = 800;
 const HELP =
   "회의가 무엇에 관한 것인지 알려 주면 받아 적을 때 참고해요. 프로젝트 이름·회의 제목·참석자 이름은 적지 않아도 자동으로 들어가요.";
 
+/**
+ * 정보 탭의 타입 위계. 「회의 맥락」·「회의 정보」 두 구역이 **같은 머리글**을 쓰고, 그 아래 라벨은 한 단 작고 흐리게,
+ * 값은 라벨보다 크고 진하게 둔다. 예전에는 머리글 13 · 라벨 12 · 값 12~14 가 섞여 무엇이 무엇의 제목인지 안 보였다.
+ */
+export const INFO_SECTION_TITLE =
+  "text-base font-semibold text-[var(--el-ink)]";
+export const INFO_LABEL =
+  "text-[13px] font-medium tracking-[0.01em] text-[var(--el-muted)]";
+/** 구역 사이를 가르는 얇은 선과 여백. 두 구역이 같은 층이라는 것을 선이 말한다. */
+export const INFO_SECTION =
+  "flex flex-col border-t border-[var(--el-hairline)] pt-6";
+
 type Context = { topic: string; background: string };
 /** 서버와 같은 정규화 — 앞뒤 공백을 떼고 빈 값은 지운다(null). */
 const normalize = (value: Context) => ({
@@ -52,10 +64,7 @@ function FieldLabel({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <Label
-        htmlFor={htmlFor}
-        className="text-xs font-semibold text-[var(--el-ink)]"
-      >
+      <Label htmlFor={htmlFor} className={INFO_LABEL}>
         {label}
       </Label>
       {/* 글자 수는 라벨 줄 오른쪽에 둔다 — 줄을 새로 만들지 않아 나타나도 아래가 안 밀린다. 비어 있으면 「0 / 200」을
@@ -78,10 +87,10 @@ function FieldLabel({
 
 function SectionHeading({ status }: { status?: React.ReactNode }) {
   return (
-    <div className="mb-2.5 flex min-h-6 items-center justify-between gap-3">
+    <div className="mb-4 flex min-h-6 items-center justify-between gap-3">
       <h2
         id="note-context-title"
-        className="flex items-center gap-1 text-[13px] font-semibold text-[var(--el-ink)]"
+        className={cn("flex items-center gap-1", INFO_SECTION_TITLE)}
       >
         회의 맥락
         <HelpTip label="회의 맥락">{HELP}</HelpTip>
@@ -119,11 +128,11 @@ export function NoteContextSection({
 
   if (phase === "ended") {
     return (
-      <section aria-labelledby="note-context-title" className="flex flex-col">
+      <section aria-labelledby="note-context-title" className={INFO_SECTION}>
         <SectionHeading />
         {server.topic || server.background ? (
-          <dl className="flex flex-col gap-3 text-sm">
-            <ReadOnlyValue label="주제" value={server.topic} />
+          <dl className="flex flex-col gap-5">
+            <ReadOnlyValue label="주제" value={server.topic} emphasis />
             <ReadOnlyValue label="배경" value={server.background} />
           </dl>
         ) : (
@@ -136,8 +145,8 @@ export function NoteContextSection({
             <p className="text-xs text-[var(--el-body)]">
               회의가 끝나 저장하지 못한 내용이에요. 필요하면 복사해 두세요.
             </p>
-            <dl className="flex flex-col gap-3 text-sm select-text">
-              <ReadOnlyValue label="주제" value={unsaved.topic} />
+            <dl className="flex flex-col gap-5 select-text">
+              <ReadOnlyValue label="주제" value={unsaved.topic} emphasis />
               <ReadOnlyValue label="배경" value={unsaved.background} />
             </dl>
           </div>
@@ -156,17 +165,34 @@ export function NoteContextSection({
   );
 }
 
-function ReadOnlyValue({ label, value }: { label: string; value: string }) {
+/** 읽기 전용 값. 주제는 한 줄 요지라 본문보다 한 단 굵게, 배경은 빈 줄을 문단으로 나눠 읽힌다. */
+function ReadOnlyValue({
+  label,
+  value,
+  emphasis,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-xs font-semibold text-[var(--el-ink)]">{label}</dt>
+    <div className="flex flex-col gap-1.5">
+      <dt className={INFO_LABEL}>{label}</dt>
       <dd
         className={cn(
-          "whitespace-pre-wrap break-words",
-          value ? "text-[var(--el-body)]" : "text-[var(--el-muted)]"
+          "flex flex-col gap-3 break-words text-[15px] leading-[1.7]",
+          !value
+            ? "text-[var(--el-muted)]"
+            : cn("text-[var(--el-ink)]", emphasis && "font-medium")
         )}
       >
-        {value || "적지 않았어요"}
+        {value
+          ? value.split(/\n\s*\n/).map((paragraph, index) => (
+              <p key={index} className="whitespace-pre-wrap">
+                {paragraph}
+              </p>
+            ))
+          : "적지 않았어요"}
       </dd>
     </div>
   );
@@ -300,7 +326,7 @@ function EditableContext({
   return (
     <section
       aria-labelledby="note-context-title"
-      className="flex flex-col"
+      className={INFO_SECTION}
       onBlur={(event) => {
         if (event.currentTarget.contains(event.relatedTarget as Node | null))
           return;
@@ -376,11 +402,9 @@ function EditableContext({
  */
 export function NoteContextSkeleton() {
   return (
-    <section className="flex flex-col">
-      <div className="mb-2.5 flex min-h-6 items-center">
-        <h2 className="text-[13px] font-semibold text-[var(--el-ink)]">
-          회의 맥락
-        </h2>
+    <section className={INFO_SECTION}>
+      <div className="mb-4 flex min-h-6 items-center">
+        <h2 className={INFO_SECTION_TITLE}>회의 맥락</h2>
       </div>
       <div className="flex h-5 items-center">
         <Skeleton className="h-3.5 w-40 rounded-chip" />

@@ -531,7 +531,6 @@ function DetailsPanel({ ended, at, panel }: { ended: boolean; at: string; panel:
       t("details.recorded"),
       <>
         <span className="tabular-nums">{ended ? LENGTH : at}</span>
-        <span className={cn("font-normal", APP.muted)}>· {t("details.recordedNote")}</span>
       </>,
     ],
     [t("details.sharing"), t("details.sharingValue")],

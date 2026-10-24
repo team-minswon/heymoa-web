@@ -60,13 +60,13 @@ function noteTitleBlock(page: Page) {
 }
 
 /**
- * 누적 기록 시간은 **정보 탭**에 있다. 헤더는 정본대로 분 단위 요약만 그린다
+ * 기록 길이는 **정보 탭**에 있다. 헤더는 정본대로 분 단위 요약만 그린다
  * (「기록 42분」) — 초 단위로 바뀌는 값은 이 탭이 맡는다.
  */
 async function cumulativeTimer(page: Page) {
   const tab = page.getByRole("tab", { name: "정보" });
   if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
-  return page.getByRole("timer", { name: "누적 기록 시간" });
+  return page.getByRole("timer", { name: "기록 길이" });
 }
 
 function recordedSeconds(value: string | null) {

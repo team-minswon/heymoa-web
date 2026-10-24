@@ -6,6 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
 import {
+  INFO_LABEL,
+  INFO_SECTION,
+  INFO_SECTION_TITLE,
   NoteContextSection,
   NoteContextSkeleton,
 } from "@/components/notes/note-context-section";
@@ -21,6 +24,7 @@ import {
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
 import { formatAppDate } from "@/lib/format/date";
+import { cn } from "@/lib/utils";
 import {
   deriveMeetingPhase,
   getRecordedDurationMs,
@@ -36,7 +40,7 @@ function formatRecordedClock(elapsedMs: number) {
   ).padStart(2, "0")}`;
 }
 
-/** 라벨 + 컨트롤 한 칸. design.pen `OmVNh`: vertical · gap 6 · 라벨 12/600. */
+/** 라벨 + 컨트롤 한 칸. design.pen `OmVNh`: vertical · gap 6. 라벨은 정보 탭 공용 위계(`INFO_LABEL`). */
 function Field({
   label,
   htmlFor,
@@ -48,10 +52,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label
-        htmlFor={htmlFor}
-        className="text-xs font-semibold text-[var(--el-ink)]"
-      >
+      <Label htmlFor={htmlFor} className={INFO_LABEL}>
         {label}
       </Label>
       {children}
@@ -60,7 +61,7 @@ function Field({
 }
 
 /**
- * 「회의 정보」 표의 한 줄. design.pen `M0Bfl`: 키 열 **124 고정** · 값 12px.
+ * 「회의 정보」 표의 한 줄. design.pen `M0Bfl`: 키 열 **124 고정**. 키는 라벨(13 · 흐림), 값은 본문(14 · 진함).
  *
  * 키 열을 고정하는 이유는 값이 세로로 훑히기 때문이다 — 키 길이에 따라 값이 들쭉날쭉하면
  * 「무엇이 무엇인지」를 한 줄씩 다시 읽어야 한다.
@@ -73,11 +74,9 @@ function Fact({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-[30px] items-center gap-3">
-      <dt className="w-[124px] shrink-0 text-xs text-[var(--el-body)]">
-        {label}
-      </dt>
-      <dd className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-[var(--el-ink)]">
+    <div className="flex min-h-9 items-center gap-3">
+      <dt className={cn("w-[124px] shrink-0", INFO_LABEL)}>{label}</dt>
+      <dd className="flex min-w-0 items-center gap-1.5 text-sm text-[var(--el-ink)]">
         {children}
       </dd>
     </div>
@@ -255,15 +254,12 @@ export function NoteDetails({
        *
        * 그래서 남긴 기준은 「한 줄 요약에 안 들어가는 사실」이다 —
        * - 진행자: 헤더는 참관자에게만 이름을 말한다
-       * - 누적 기록 시간: 헤더는 분 단위 요약이고 기록 중에는 아예 안 적는다
+       * - 기록 길이: 헤더는 분 단위 요약이고 기록 중에는 아예 안 적는다
        * - 공유 범위: 헤더 메타 둘째 줄은 종료되면 누적 시간으로 바뀌어 이 값을 놓는다
        * - 생성·최종 수정: 회의의 사실이 아니라 문서의 이력이라 헤더에 없다
        */}
-      <section aria-labelledby="note-facts-title" className="flex flex-col">
-        <h2
-          id="note-facts-title"
-          className="mb-2.5 text-[13px] font-semibold text-[var(--el-ink)]"
-        >
+      <section aria-labelledby="note-facts-title" className={INFO_SECTION}>
+        <h2 id="note-facts-title" className={cn("mb-3", INFO_SECTION_TITLE)}>
           회의 정보
         </h2>
         <dl className="flex flex-col">
@@ -274,7 +270,7 @@ export function NoteDetails({
                 size="sm"
                 isStarter
               />
-              <span className="ml-1">
+              <span className="ml-1 font-medium">
                 {note.meetingStartedBy.name}
                 <span className="font-normal text-[var(--el-muted)]">
                   {" · 기록 제어 권한"}
@@ -283,17 +279,12 @@ export function NoteDetails({
             </Fact>
           ) : null}
           {/* 초 단위로 바뀌는 값은 여기 하나뿐이다 — 노트 헤더는 같은 값을 분 단위로 요약하고
-              (「기록 42분」), 진행 중 라이브 타이머는 레코더 독이 갖는다. */}
-          <Fact label="누적 기록 시간">
-            <span
-              role="timer"
-              aria-label="누적 기록 시간"
-              className="tabular-nums"
-            >
+              (「기록 42분」), 진행 중 라이브 타이머는 레코더 독이 갖는다.
+              **「종료된 구간만 합산」을 적지 않는다.** `recordedDurationMs` 는 이제 회의 축의 끝이고(APP-1432)
+              진행 중이면 원점부터 지금까지 자란다 — 구간 합이 아니라 회의 길이다. */}
+          <Fact label="기록 길이">
+            <span role="timer" aria-label="기록 길이" className="tabular-nums">
               {formatRecordedClock(getRecordedDurationMs(note, now ?? 0))}
-            </span>
-            <span className="font-normal text-[var(--el-muted)]">
-              · 종료된 구간만 합산
             </span>
           </Fact>
           {/* 정본은 「워크스페이스 멤버 4명 공개」지만 그 수는 노트 계약에 없다 — 참석자 수와
@@ -353,10 +344,8 @@ export function NoteDetailsSkeleton() {
         <Skeleton className="h-8 w-[105px] rounded-control" />
       </div>
       <NoteContextSkeleton />
-      <section className="flex flex-col">
-        <h2 className="mb-2.5 text-[13px] font-semibold text-[var(--el-ink)]">
-          회의 정보
-        </h2>
+      <section className={INFO_SECTION}>
+        <h2 className={cn("mb-3", INFO_SECTION_TITLE)}>회의 정보</h2>
         <dl className="flex flex-col">
           {FACT_ROWS.map(({ label, width }) => (
             <Fragment key={label}>
@@ -377,7 +366,7 @@ export function NoteDetailsSkeleton() {
 /** 사실 표의 키 열은 데이터가 아니다 — 실제 화면과 같은 순서·같은 라벨을 그린다. */
 const FACT_ROWS = [
   { label: "진행자", width: 180 },
-  { label: "누적 기록 시간", width: 148 },
+  { label: "기록 길이", width: 48 },
   { label: "공유 범위", width: 132 },
   { label: "생성", width: 156 },
   { label: "최종 수정", width: 156 },

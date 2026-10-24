@@ -186,7 +186,7 @@ describe("NoteDetails", () => {
     const rows = [...facts.querySelectorAll("dt")].map((dt) => dt.textContent);
     expect(rows).toEqual([
       "진행자",
-      "누적 기록 시간",
+      "기록 길이",
       "공유 범위",
       "생성",
       "최종 수정",
@@ -196,13 +196,13 @@ describe("NoteDetails", () => {
     expect(container.querySelectorAll(".rounded-block")).toHaveLength(0);
   });
 
-  it("누적 기록 시간은 초 단위 timer로 남는다", () => {
+  it("기록 길이는 초 단위 timer로 남는다", () => {
     // 노트 헤더는 같은 값을 분 단위로 요약하고(「기록 42분」), 초 단위는 이 탭 하나뿐이다.
     renderDetails();
 
-    expect(
-      screen.getByRole("timer", { name: "누적 기록 시간" })
-    ).toHaveTextContent("42:00");
+    expect(screen.getByRole("timer", { name: "기록 길이" })).toHaveTextContent(
+      "42:00"
+    );
   });
 
   it("헤더가 이미 말하는 것을 표에 다시 적지 않는다", () => {
@@ -234,7 +234,7 @@ describe("NoteDetails", () => {
     expect(
       screen.getByRole("heading", { name: "회의 정보" })
     ).toBeInTheDocument();
-    ["진행자", "누적 기록 시간", "공유 범위", "생성", "최종 수정"].forEach(
+    ["진행자", "기록 길이", "공유 범위", "생성", "최종 수정"].forEach(
       (label) => {
         expect(screen.getByText(label)).toBeInTheDocument();
       }
