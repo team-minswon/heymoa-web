@@ -1023,7 +1023,7 @@ export function NoteTimeline({
                       <ol id={listId} className="relative mt-1.5">
                         <span
                           aria-hidden
-                          className="absolute top-4 bottom-4 left-[63px] w-px bg-[var(--el-hairline)]"
+                          className="absolute top-4 bottom-4 left-[75px] w-px bg-[var(--el-hairline)]"
                         />
                         <AnimatePresence initial={false}>
                           {group.items.map((item) => (
@@ -1151,7 +1151,7 @@ function TimelineRow({
             type="button"
             aria-label={`스크립트 ${formatOffset(first.startedAtMs)}로 가기`}
             onClick={() => onEvidenceSelect(first.segmentId)}
-            className="self-start text-right text-[12px] leading-6 tabular-nums text-[var(--el-muted-soft)] transition-colors hover:text-[var(--el-ink)]"
+            className="self-start whitespace-nowrap text-right text-[12px] leading-6 tabular-nums text-[var(--el-muted-soft)] transition-colors hover:text-[var(--el-ink)]"
           >
             {formatOffset(first.startedAtMs)}
           </button>
@@ -1260,9 +1260,9 @@ function TimelineRow({
                                 onClick={() =>
                                   onEvidenceSelect(citation.segmentId)
                                 }
-                                className="grid w-full grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 rounded-[7px] px-1.5 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+                                className="grid w-full grid-cols-[52px_minmax(0,1fr)] gap-x-2.5 rounded-[7px] px-1.5 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
                               >
-                                <time className="text-[12px] leading-[22px] tabular-nums text-[var(--el-muted-soft)]">
+                                <time className="whitespace-nowrap text-[12px] leading-[22px] tabular-nums text-[var(--el-muted-soft)]">
                                   {formatOffset(citation.startedAtMs)}
                                 </time>
                                 <span className="flex min-w-0 flex-col gap-1">

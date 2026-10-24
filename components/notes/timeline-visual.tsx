@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  */
 
 /** 시각 · 유형 아이콘 · 본문 세 칸. 받아 적는 줄과 스켈레톤도 같은 칸을 쓴다. */
-export const TIMELINE_ROW_GRID = "grid grid-cols-[44px_40px_minmax(0,1fr)]";
+export const TIMELINE_ROW_GRID = "grid grid-cols-[56px_40px_minmax(0,1fr)]";
 
 /** 유형 이름의 색. 역할 색을 글자로 쓰면 흰 바탕에서 옅어서 한 단 진하게 둔다. */
 export const TONE_TEXT: Record<TimelineTone, string> = {
