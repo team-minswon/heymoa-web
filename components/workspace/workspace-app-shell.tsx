@@ -81,6 +81,11 @@ export function useOpenSettings() {
   return useContext(WorkspaceShellContext)?.openSettings ?? null;
 }
 
+/** 새 회의 창을 여는 함수. 셸 밖이면 `null` 이다(`useOpenSettings` 와 같은 이유). */
+export function useRequestNewMeeting() {
+  return useContext(WorkspaceShellContext)?.requestNewMeeting ?? null;
+}
+
 export function useWorkspaceShell() {
   const context = useContext(WorkspaceShellContext);
   if (!context) {

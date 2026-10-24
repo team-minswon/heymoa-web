@@ -55,6 +55,64 @@
       "title": "대화 기록",
       "emptyTitle": "아직 대화가 없어요",
       "emptyBody": "회의록에 대해 물어보면 여기에 쌓여요."
+    },
+    "starter": {
+      "greeting": "무엇을 도와드릴까요?",
+      "intro": "회의에서 정한 것과 바뀐 것, 남은 일을 근거와 함께 찾아 드려요.",
+      "introNote": "「{title}」 회의를 보고 답해요. 바꾸는 일은 먼저 물어봐요.",
+      "firstMeeting": "첫 회의를 기록하면 결정과 할 일을 정리해 드려요.",
+      "newMeeting": "새 회의 기록",
+      "examplesLabel": "예시 질문",
+      "examples": {
+        "decisions": {
+          "label": "최근 결정",
+          "question": "최근 2주간 회의에서 정한 것을 근거와 함께 정리해줘"
+        },
+        "changes": {
+          "label": "바뀐 결정",
+          "question": "최근 회의에서 이전 결정과 달라진 것이 있는지 찾아줘"
+        },
+        "openTasks": {
+          "label": "남은 할 일",
+          "question": "아직 끝나지 않은 할 일을 담당자별로 정리해줘"
+        },
+        "summary": {
+          "label": "지난 회의 요약",
+          "question": "지난 회의를 요약해줘"
+        },
+        "summaryRecent": {
+          "label": "지난 회의 요약",
+          "question": "이 회의를 요약해줘"
+        },
+        "noteDecisions": {
+          "label": "이 회의 결정",
+          "question": "이 회의에서 정한 것을 근거와 함께 정리해줘"
+        },
+        "noteSummary": {
+          "label": "이 회의 요약",
+          "question": "이 회의를 요약해줘"
+        },
+        "noteChanges": {
+          "label": "바뀐 결정",
+          "question": "이 회의에서 이전 결정과 달라진 것이 있는지 찾아줘"
+        },
+        "actionItems": {
+          "label": "할 일로 만들기",
+          "question": "이 회의의 액션 아이템을 할 일로 만들어줘"
+        },
+        "web": {
+          "label": "웹에서 찾기",
+          "question": "회의에서 언급된 도구의 최신 버전을 웹에서 찾아줘"
+        },
+        "webFirst": {
+          "label": "웹에서 찾기",
+          "question": "Next.js 최신 버전에서 바뀐 점을 웹에서 찾아줘"
+        },
+        "newTask": {
+          "label": "할 일 만들기",
+          "question": "금요일까지 발표 자료 준비를 할 일로 만들어줘"
+        }
+      }
     }
   }
 }

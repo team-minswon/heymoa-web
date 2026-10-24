@@ -55,6 +55,64 @@
       "title": "Chat history",
       "emptyTitle": "No chats yet",
       "emptyBody": "Ask about your meeting notes and your chats will show up here."
+    },
+    "starter": {
+      "greeting": "How can I help?",
+      "intro": "I find what your meetings decided, what changed, and what's left — with sources.",
+      "introNote": "I'll answer from “{title}”. I'll ask before changing anything.",
+      "firstMeeting": "Record your first meeting and I'll organize its decisions and tasks.",
+      "newMeeting": "Record a meeting",
+      "examplesLabel": "Example questions",
+      "examples": {
+        "decisions": {
+          "label": "Recent decisions",
+          "question": "Summarize what we decided in the last two weeks, with sources"
+        },
+        "changes": {
+          "label": "Changed decisions",
+          "question": "Find anything in recent meetings that differs from earlier decisions"
+        },
+        "openTasks": {
+          "label": "Open tasks",
+          "question": "List unfinished tasks grouped by assignee"
+        },
+        "summary": {
+          "label": "Last meeting",
+          "question": "Summarize the last meeting"
+        },
+        "summaryRecent": {
+          "label": "Last meeting",
+          "question": "Summarize this meeting"
+        },
+        "noteDecisions": {
+          "label": "Decisions",
+          "question": "Summarize what this meeting decided, with sources"
+        },
+        "noteSummary": {
+          "label": "Summary",
+          "question": "Summarize this meeting"
+        },
+        "noteChanges": {
+          "label": "Changed decisions",
+          "question": "Find anything in this meeting that differs from earlier decisions"
+        },
+        "actionItems": {
+          "label": "Make tasks",
+          "question": "Turn this meeting's action items into tasks"
+        },
+        "web": {
+          "label": "Search the web",
+          "question": "Search the web for the latest version of the tools mentioned"
+        },
+        "webFirst": {
+          "label": "Search the web",
+          "question": "Search the web for what changed in the latest Next.js"
+        },
+        "newTask": {
+          "label": "New task",
+          "question": "Create a task to prepare the slides by Friday"
+        }
+      }
     }
   }
 }

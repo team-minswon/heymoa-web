@@ -331,6 +331,12 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
   };
 });
 
+/** 빈 대화 예시가 읽는 워크스페이스 회의 목록. 기본은 「아직 모름」이다. */
+const noteList = vi.hoisted(() => ({ data: undefined as unknown }));
+vi.mock("@/lib/workspace/use-note-list-pages", () => ({
+  useNoteListPages: () => ({ data: noteList.data, isPlaceholderData: false }),
+}));
+
 /** `@` 목록. 프로젝트 수만큼 조회가 나가는 팬아웃이라 목록 자체를 목으로 준다. */
 vi.mock("@/lib/chat/use-scope-catalog", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/chat/use-scope-catalog")>()),
@@ -718,38 +724,69 @@ describe("PersonalChatProvider", () => {
     );
     renderChat();
     openPanel();
-    fireEvent.click(
-      screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "최근 결정" }));
 
     expect(state.createMock).not.toHaveBeenCalled();
     expect(state.streamCalls).toHaveLength(0);
     expect(screen.getByRole("textbox", { name: "메시지" }).textContent).toBe(
-      "지난 회의에서 정한 것만 정리해줘"
+      "최근 2주간 회의에서 정한 것을 근거와 함께 정리해줘"
     );
     expect(events).toContainEqual([
       "chat_example_clicked",
-      { workspace_id: WORKSPACE_ID, kind: "notes" },
+      { workspace_id: WORKSPACE_ID, kind: "decisions", state: "workspace" },
     ]);
     off();
 
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect((state.streamCalls[0].body as { message: string }).message).toBe(
-      "지난 회의에서 정한 것만 정리해줘"
+      "최근 2주간 회의에서 정한 것을 근거와 함께 정리해줘"
     );
   });
 
-  it("회의록에서 열면 그 회의 예시가 첫 줄이고, 고르면 칩을 지닌 채 그 범위로 보낸다", async () => {
+  it("지난 회의 요약 칩을 고르면 가장 최근 회의록이 범위 칩으로 붙고 그 범위로 보낸다", async () => {
+    noteList.data = {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          notes: [
+            {
+              noteId: "01K0000000002",
+              title: "주간 제품 회의",
+              meetingStatus: "ENDED",
+            },
+          ],
+          hasMore: false,
+        },
+      },
+    };
+    try {
+      renderChat();
+      openPanel();
+      fireEvent.click(
+        await screen.findByRole("button", { name: "지난 회의 요약" })
+      );
+      expect(chipsInInput()).toEqual(["주간 제품 회의"]);
+      expect(
+        screen.getByRole("textbox", { name: "메시지" }).textContent
+      ).toContain("「주간 제품 회의」 회의를 요약해줘");
+      fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+      await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+      expect(state.streamCalls[0].body).toMatchObject({
+        noteIds: ["01K0000000002"],
+      });
+    } finally {
+      noteList.data = undefined;
+    }
+  });
+
+  it("회의록에서 열면 그 회의 기준 칩이 서고, 고르면 칩을 지닌 채 그 범위로 보낸다", async () => {
     renderChat(<NoteScope hidden={false} />);
     openPanel();
     await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "이 회의에서 정한 것과 남은 일을 정리해줘",
-      })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "이 회의 결정" }));
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
@@ -758,21 +795,19 @@ describe("PersonalChatProvider", () => {
     });
     expect(
       (state.streamCalls[0].body as { message: string }).message
-    ).toContain("이 회의에서 정한 것과 남은 일을 정리해줘");
+    ).toContain("이 회의에서 정한 것을 근거와 함께 정리해줘");
   });
 
   it("쓰던 글이 있으면 시작 카드가 보내지 않고 문장만 덧붙인다", async () => {
     renderChat();
     openPanel();
     write("회의 하나만");
-    fireEvent.click(
-      screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "최근 결정" }));
 
     expect(state.createMock).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox").textContent).toContain("회의 하나만");
     expect(screen.getByRole("textbox").textContent).toContain(
-      "지난 회의에서 정한 것만 정리해줘"
+      "최근 2주간 회의에서 정한 것을 근거와 함께 정리해줘"
     );
   });
 

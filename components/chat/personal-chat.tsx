@@ -581,14 +581,24 @@ function PersonalChatPanel({
   }, [attention, onAttentionChange]);
   useEffect(() => () => onAttentionChange?.(null), [onAttentionChange]);
 
-  /** 예시 질문을 골랐다. 보내지 않고 입력창만 채운다 — 쓰던 글이 있으면 뒤에 덧붙인다. 칩은 그대로 둔다. */
+  /**
+   * 예시 질문을 골랐다. 보내지 않고 입력창만 채운다 — 쓰던 글이 있으면 뒤에 덧붙인다. 붙은 칩은 그대로 두고, 예시가 기대는
+   * 회의록이 아직 안 붙었으면 범위 칩으로 앞에 붙인다.
+   */
   const pickExample = useCallback(
     (example: ChatExample) => {
       track("chat_example_clicked", {
         workspace_id: workspaceId,
         kind: example.kind,
+        state: example.state,
       });
       const draft = editorRef.current?.read();
+      const scope = example.scope;
+      if (
+        scope &&
+        !draft?.chips.some((chip) => scopeKey(chip) === scopeKey(scope))
+      )
+        editorRef.current?.prepend(scope);
       // 칩은 글자로도 읽힌다(`@[제목](noteId:…)`) — 마커를 걷어 내고 남는 글이 있을 때만 「쓰던 글」로 본다.
       const written = draft
         ? dropScopeMarkers(
@@ -602,6 +612,12 @@ function PersonalChatPanel({
     },
     [workspaceId]
   );
+
+  /** 붙어 있는 회의록. 빈 대화의 예시가 이 회의 기준으로 선다. */
+  const noteChip = chips.find((chip) => chip.kind === "note");
+  const contextNote = noteChip
+    ? { noteId: noteChip.id, title: noteChip.title }
+    : null;
 
   const retry = (
     <Button
@@ -881,10 +897,7 @@ function PersonalChatPanel({
                   emptyState={
                     <ChatStarter
                       workspaceId={workspaceId}
-                      contextTitle={
-                        chips.find((chip) => chip.kind === "note")?.title ??
-                        null
-                      }
+                      context={contextNote}
                       // 답을 만드는 중 · 승인을 기다리는 중 · 대화를 못 읽은 때는 보낼 수 없다
                       disabled={
                         turn.isBusy ||
