@@ -61,10 +61,10 @@ describe("in-app Google login handoff", () => {
     expect(url.hash).toBe("");
   });
 
-  it("retains a note destination while dropping OAuth credentials", () => {
+  it("retains a note destination while dropping OAuth credentials and handoff analytics IDs", () => {
     const target = new URL(
       buildBrowserLoginUrl(
-        "https://heymoa.app/w/01K0000000000/notes/new?projectId=01K0000000001&code=secret&state=secret&access_token=secret",
+        "https://heymoa.app/w/01K0000000000/notes/new?projectId=01K0000000001&code=secret&state=secret&access_token=secret&ph_did=secret&ph_sid=secret",
         { app: "threads", os: "ios" }
       )
     );

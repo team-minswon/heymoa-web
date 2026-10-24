@@ -11,7 +11,7 @@ import {
 import { useTranslations } from "next-intl";
 import { ExternalLink, Globe2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { track } from "@/lib/analytics/track";
+import { track, withAnalyticsHandoff } from "@/lib/analytics/track";
 import {
   buildBrowserLoginUrl,
   detectInAppBrowser,
@@ -69,7 +69,8 @@ export function BrowserHandoffPrompt({
   const openBrowser = useCallback(
     (interaction: "automatic" | "click") => {
       const context = { app, os };
-      const link = externalBrowserUrl(target, context);
+      // Only a launched link carries analytics IDs; a copied one may be forwarded to someone else.
+      const link = externalBrowserUrl(withAnalyticsHandoff(target), context);
       track("browser_handoff_attempted", {
         ...context,
         method: !link

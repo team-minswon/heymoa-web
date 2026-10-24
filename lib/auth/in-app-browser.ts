@@ -69,6 +69,9 @@ export function parseHandoffContext(
   return { app: app as InAppBrowser, os: os as HandoffOs };
 }
 
+/** Anonymous PostHog IDs carried across a handoff (`withAnalyticsHandoff`); never kept in returnTo. */
+export const HANDOFF_ANALYTICS_PARAMS = ["ph_did", "ph_sid", "ph_ts"] as const;
+
 export function buildBrowserLoginUrl(
   href: string,
   context: HandoffContext,
@@ -91,6 +94,7 @@ export function buildBrowserLoginUrl(
     "id_token",
     "handoff_app",
     "handoff_os",
+    ...HANDOFF_ANALYTICS_PARAMS,
   ]) {
     back.searchParams.delete(key);
   }

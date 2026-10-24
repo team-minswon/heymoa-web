@@ -13,7 +13,10 @@ import { BrowserHandoff } from "./browser-handoff";
 const track = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ status: "anonymous" }));
 const externalBrowserUrl = vi.hoisted(() => vi.fn().mockReturnValue(null));
-vi.mock("@/lib/analytics/track", () => ({ track }));
+vi.mock("@/lib/analytics/track", () => ({
+  track,
+  withAnalyticsHandoff: (target: string) => target,
+}));
 vi.mock("./auth-provider", () => ({ useAuth: () => auth }));
 vi.mock("@/lib/auth/in-app-browser", async (original) => ({
   ...(await original<typeof import("@/lib/auth/in-app-browser")>()),

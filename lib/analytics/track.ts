@@ -4,7 +4,10 @@ import type { NotificationListResponseDataNotificationsItemType } from "@/lib/ap
 import type { NotificationSettingsResponseDataItemsItemChannelsItemChannel } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemChannelsItemChannel";
 import type { NotificationSettingsResponseDataItemsItemType } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemType";
 import { desktopAuthBridge } from "@/lib/desktop/auth";
-import type { HandoffContext } from "@/lib/auth/in-app-browser";
+import {
+  HANDOFF_ANALYTICS_PARAMS,
+  type HandoffContext,
+} from "@/lib/auth/in-app-browser";
 
 /**
  * 보내는 이벤트 이름. **여기 없는 이름은 보낼 수 없다** — PostHog 깔때기는 이름 문자열로
@@ -425,12 +428,73 @@ export function trackMutation(mutationKey: unknown, variables: unknown) {
   track(event, Object.keys(properties).length > 0 ? properties : undefined);
 }
 
+const HANDOFF_MAX_AGE_S = 10 * 60;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * 핸드오프 목적지를 자동 전환·버튼으로 여는 순간 여기를 거친다(`BrowserHandoffPrompt`). 복사 링크는 남에게 갈 수 있어 붙이지 않는다. PostHog가 만든 무작위 익명 ID라
+ * 개인정보가 아니다. 켜기 전·거부·식별 뒤에는 그대로 둔다 — userId는 주소·복사 링크로 남에게 갈 수 있다.
+ */
+export function withAnalyticsHandoff(target: string) {
+  if (!posthog.__loaded || isAnalyticsOptedOut() || posthog._isIdentified())
+    return target;
+  const url = new URL(target);
+  url.searchParams.set("ph_did", posthog.get_distinct_id());
+  const sessionId = posthog.get_session_id();
+  if (sessionId) url.searchParams.set("ph_sid", sessionId);
+  url.searchParams.set("ph_ts", String(Math.floor(Date.now() / 1000)));
+  return url.href;
+}
+
+/** 이 브라우저에 PostHog가 저장한 ID가 있나(`localStorage+cookie` 저장소의 기본 이름). */
+function hasStoredAnalyticsId(apiKey: string) {
+  const name = `ph_${apiKey}_posthog`;
+  try {
+    if (localStorage.getItem(name)) return true;
+  } catch {
+    // 저장소가 막혀도 쿠키는 볼 수 있다.
+  }
+  return document.cookie.split("; ").some((c) => c.startsWith(`${name}=`));
+}
+
+/** 핸드오프로 온 익명 ID를 주소에서 걷어 낸다. 로그인·공유 링크·returnTo에 남지 않게 형식과 무관하게 지운다. */
+function takeHandoffBootstrap(apiKey: string) {
+  const url = new URL(window.location.href);
+  const distinctID = url.searchParams.get("ph_did");
+  const sessionID = url.searchParams.get("ph_sid");
+  const issuedAt = Number(url.searchParams.get("ph_ts"));
+  if (distinctID === null && sessionID === null) return undefined;
+  for (const key of HANDOFF_ANALYTICS_PARAMS) url.searchParams.delete(key);
+  window.history.replaceState(
+    window.history.state,
+    "",
+    url.pathname + url.search + url.hash
+  );
+  // SDK 1.438은 익명 bootstrap이 이미 저장된 ID(식별된 사람 포함)를 덮어쓴다 — 이 브라우저의 기존 ID를 지킨다.
+  // 복사한 링크가 남에게 가면 같은 ID로 묶인다 — 발급 10분 안의 도착만 이어 붙인다.
+  const fresh = Math.abs(Date.now() / 1000 - issuedAt) <= HANDOFF_MAX_AGE_S;
+  if (
+    !distinctID ||
+    !UUID.test(distinctID) ||
+    !fresh ||
+    hasStoredAnalyticsId(apiKey)
+  )
+    return undefined;
+  return sessionID && UUID.test(sessionID)
+    ? { distinctID, sessionID }
+    : { distinctID };
+}
+
 export function initAnalytics(apiKey: string) {
+  if (posthog.__loaded) return;
+  const bootstrap = takeHandoffBootstrap(apiKey);
   // 거부한 브라우저에서는 켜지 않는다 — 켜면 이벤트가 아니어도 SDK가 스스로 요청을 보낸다. 다시 허용하면 다음에
   // 열 때부터 켜진다. 거부의 원본은 우리 키 하나이고 SDK의 동의 저장(opt_out_capturing)은 쓰지 않는다 —
   // `reset()`이 그것을 지우고 저장소가 꽉 차면 저장도 안 돼 우리 키와 어긋났다(codex 리뷰 4·5회차).
-  if (posthog.__loaded || isAnalyticsOptedOut()) return;
+  if (isAnalyticsOptedOut()) return;
   posthog.init(apiKey, {
+    // 켜기 전에 쌓인 browser_handoff_arrived도 아래에서 이 ID로 나간다.
+    ...(bootstrap && { bootstrap }),
     // ponytail: 광고 차단기에 막히는 만큼 덜 잡힌다. 많이 빠지면 next.config rewrites로
     // `/ingest` 프록시를 둔다(proxy.ts matcher에서 그 경로를 빼야 토큰 갱신이 안 돈다).
     api_host: "https://us.i.posthog.com",

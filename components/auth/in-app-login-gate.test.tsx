@@ -11,7 +11,11 @@ import { LoginForm } from "./auth-modal";
 import { intlWrapper } from "@/components/help/test-intl";
 
 const track = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/analytics/track", () => ({ track }));
+vi.mock("@/lib/analytics/track", () => ({
+  track,
+  // Marks launched links so copied ones can be shown to carry no analytics IDs.
+  withAnalyticsHandoff: (target: string) => `${target}&ph_did=launched`,
+}));
 const render = (ui: ReactElement) =>
   baseRender(ui, { wrapper: intlWrapper("ko") });
 const safari =
@@ -70,6 +74,7 @@ describe("in-app login UI", () => {
     const link = new URL(writeText.mock.calls[0][0]);
     expect(link.searchParams.get("utm_source")).toBe("instagram");
     expect(link.searchParams.get("fbclid")).toBe("click");
+    expect(link.searchParams.has("ph_did")).toBe(false);
     expect(track).not.toHaveBeenCalledWith("login_started");
     expect(window.sessionStorage.getItem("heymoa:login-consent")).toBeNull();
   });
@@ -89,6 +94,7 @@ describe("in-app login UI", () => {
     expect(
       new URL((input as HTMLInputElement).value).searchParams.get("returnTo")
     ).toBe("/settings");
+    expect((input as HTMLInputElement).value).not.toContain("ph_did");
     expect(track).not.toHaveBeenCalledWith(
       "browser_handoff_link_copied",
       expect.anything()
