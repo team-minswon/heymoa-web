@@ -550,9 +550,18 @@ function write(text: string) {
   return input;
 }
 
-/** 칩은 문장 밖(입력창 아래 줄)에 산다(APP-1436) — 글을 써도 칩이 지워지지 않는다. */
+/** 칩을 **남기고** 뒤에 문장을 붙인다. `write()` 는 `textContent` 를 덮어써서 문장 안의 칩 노드를 지운다. */
 function appendAfterChips(text: string) {
-  return write(text);
+  const input = screen.getByRole("textbox", { name: "메시지" });
+  input.append(document.createTextNode(text));
+  const range = document.createRange();
+  range.selectNodeContents(input);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+  fireEvent.input(input);
+  return input;
 }
 
 /**
@@ -563,18 +572,23 @@ function putProjectChip(title: string) {
   fireEvent.click(screen.getByRole("option", { name: new RegExp(title) }));
 }
 
-/** 입력창 아래 줄의 범위 칩 제목. */
+/** 문장 안에 박힌 범위 칩 제목. */
 function chipsInInput() {
   return [
     ...screen
-      .getByTestId("composer-chips")
-      .querySelectorAll("[data-chip-title]"),
+      .getByRole("textbox", { name: "메시지" })
+      .querySelectorAll("[data-scope-chip]"),
   ].map((el) => el.textContent?.trim());
 }
 
-/** 칩의 ✕ 로 뗀다. */
+/** 칩을 백스페이스로 지운다 — 브라우저가 하는 일을 흉내 낸다. */
 function removeChipFromInput(title: string) {
-  fireEvent.click(screen.getByRole("button", { name: `${title} 빼기` }));
+  const input = screen.getByRole("textbox", { name: "메시지" });
+  const chip = [...input.querySelectorAll("[data-scope-chip]")].find((el) =>
+    el.textContent?.includes(title)
+  );
+  chip?.remove();
+  fireEvent.input(input);
 }
 
 async function sendMessage(text: string) {
@@ -1752,19 +1766,14 @@ describe("PersonalChatProvider", () => {
       );
     });
 
-    it("입력창 안내는 대화의 처음과 이어 묻기를 가른다", async () => {
+    it("입력창 안내는 @ 로 참조하는 법을 말한다", () => {
       renderChat();
       openPanel();
-      const input = () => screen.getByRole("textbox", { name: "메시지" });
-      expect(input().getAttribute("data-placeholder")).toBe(
-        "회의록에 대해 물어보세요 · @로 회의록 고르기"
-      );
-      await sendMessage("정리해줘");
-      await waitFor(() =>
-        expect(input().getAttribute("data-placeholder")).toBe(
-          "이어서 물어보세요 · @로 회의록 고르기"
-        )
-      );
+      expect(
+        screen
+          .getByRole("textbox", { name: "메시지" })
+          .getAttribute("data-placeholder")
+      ).toBe("@로 프로젝트·회의록을 참조해 물어보세요");
     });
 
     it("맨 아래에 있으면 「맨 아래로」는 흐려지고 눌리지 않는다", () => {

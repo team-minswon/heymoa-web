@@ -603,21 +603,6 @@ function PersonalChatPanel({
     [workspaceId]
   );
 
-  /** 입력창의 안내. 범위는 입력창 위 줄이 말하므로 여기서는 다음에 할 일만 말한다. */
-  const hasConversation =
-    turn.threadMessages.length > 0 || turn.pendingUserMessage !== null;
-  const placeholder = turn.isStreaming
-    ? "답을 받는 중이에요"
-    : hasConversation
-      ? "이어서 물어보세요 · @로 회의록 고르기"
-      : "회의록에 대해 물어보세요 · @로 회의록 고르기";
-  /** 좁은 폭(모바일·좁은 레일)용. 긴 안내가 잘리면 문장이 끊겨 읽힌다. 범위는 입력창 아래 「회의록」 버튼이 말한다. */
-  const shortPlaceholder = turn.isStreaming
-    ? "답을 받는 중이에요"
-    : hasConversation
-      ? "이어서 물어보세요"
-      : "회의록에 대해 물어보세요";
-
   const retry = (
     <Button
       variant="outline"
@@ -920,8 +905,7 @@ function PersonalChatPanel({
             onStop={turn.stop}
             isBusy={turn.isBusy}
             isStreaming={turn.isStreaming}
-            placeholder={placeholder}
-            shortPlaceholder={shortPlaceholder}
+            placeholder="@로 프로젝트·회의록을 참조해 물어보세요"
             onChipsChange={handleChipsChange}
             onMentioningChange={setMentioning}
             scope={{

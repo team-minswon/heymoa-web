@@ -57,15 +57,6 @@ function renderComposer(
 }
 
 /** 편집기에 글자를 넣는다. contenteditable 이라 value 가 아니라 DOM 이다. */
-/** 입력창 아래 줄의 범위 칩 제목. 칩은 문장 밖에 산다(APP-1436). */
-function chipTitles() {
-  return [
-    ...screen
-      .getByTestId("composer-chips")
-      .querySelectorAll("[data-chip-title]"),
-  ].map((el) => el.textContent);
-}
-
 function write(input: HTMLElement, text: string) {
   input.textContent = text;
   const range = document.createRange();
@@ -212,7 +203,7 @@ describe("ChatComposer", () => {
 
     expect(seen).toEqual([]);
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(chipTitles()).toHaveLength(1);
+    expect(input.querySelectorAll("[data-scope-chip]")).toHaveLength(1);
   });
 
   it("피커를 닫으면 Enter가 다시 전송한다", () => {
@@ -225,8 +216,9 @@ describe("ChatComposer", () => {
     expect(onSubmit).toHaveBeenCalledWith({ text: "이 회의", chips: [] });
   });
 
-  it("고르면 @질의가 문장에서 사라지고 칩이 범위 줄에 붙는다 — 보내는 문장은 마커가 앞에 선다", () => {
-    // 남으면 피커가 다시 열려 같은 칩이 두 번 붙는다.
+  it("고르면 @질의가 문장에서 사라지고 그 자리가 마커가 된다", () => {
+    // 남으면 피커가 다시 열려 같은 칩이 두 번 박힌다. 캐럿이 텍스트 노드가 아니라
+    // 노드 사이에 서 있을 때도 지워져야 한다.
     //
     // ★ **칩은 마커로 나간다.** 맨살 제목으로 내면 id 도 구분자도 안 실려서
     // 말풍선이 제목을 정규식으로 되찾아야 하고, 되찾은 칩은 못 누른다.
@@ -234,56 +226,43 @@ describe("ChatComposer", () => {
     write(input, "이 @주간");
     fireEvent.click(screen.getByText("주간 배포 회의"));
 
-    expect(input.textContent).toBe("이 ");
-    expect(ref.current?.read().text).toBe("@[주간 배포 회의](noteId:n1) 이");
+    expect(ref.current?.read().text).toBe("이 @[주간 배포 회의](noteId:n1)");
     expect(screen.queryByTestId("scope-picker")).toBeNull();
-    expect(chipTitles()).toEqual(["주간 배포 회의"]);
+    expect(input.querySelectorAll("[data-scope-chip]")).toHaveLength(1);
+  });
+
+  it("칩 뒤에 공백이 하나 붙고 캐럿이 그 뒤에 선다", () => {
+    // 없으면 다음 글자가 칩에 딱 붙어 칩 안으로 들어간 것처럼 보인다.
+    const { input, ref } = renderComposer();
+    write(input, "이 @주간");
+    fireEvent.click(screen.getByText("주간 배포 회의"));
+
+    const chip = input.querySelector("[data-scope-chip]");
+    expect(chip?.nextSibling?.textContent).toBe(" ");
+    // 이어 쓴 글자가 칩 밖에 남는다.
+    expect(ref.current?.read().chips).toHaveLength(1);
+  });
+
+  it("고르면 칩이 문장 안에 박힌다", () => {
+    // 칩이 입력 밖에 있으면 「무엇을 붙였나」와 「무엇을 쓰나」가 두 덩어리로 갈린다.
+    const onChipsChange = vi.fn();
+    const { input, ref } = renderComposer({ onChipsChange });
+    write(input, "이 @주간");
+    fireEvent.click(screen.getByText("주간 배포 회의"));
+
+    expect(input.querySelector("[data-scope-chip]")).toBeTruthy();
     expect(ref.current?.read().chips).toEqual([
       { kind: "note", id: "n1", title: "주간 배포 회의" },
     ]);
   });
 
-  it("★ 선택이 편집기를 떠난 뒤 골라도(터치) `@` 가 남지 않는다", () => {
-    // 터치로 목록을 누르면 선택이 편집기 밖으로 갈 수 있다 — 그때도 문장 끝의 `@질의` 를 걷는다(재검사 N-3).
-    const { input, ref } = renderComposer();
-    write(input, "여러 번 @");
-    window.getSelection()?.removeAllRanges();
-    fireEvent.click(screen.getByText("주간 배포 회의"));
-    expect(input.textContent).toBe("여러 번 ");
-    expect(ref.current?.read().text).toBe(
-      "@[주간 배포 회의](noteId:n1) 여러 번"
-    );
-  });
-
-  it("「회의록」 버튼이 넣은 `@` 는 고르지 않고 닫으면 걷히고, 고르면 남지 않는다", () => {
-    const { input } = renderComposer();
-    write(input, "지난 회의");
-    fireEvent.click(
-      screen.getByRole("button", { name: "회의록·프로젝트 고르기" })
-    );
-    expect(input.textContent).toBe("지난 회의 @");
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(input.textContent).toBe("지난 회의");
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "회의록·프로젝트 고르기" })
-    );
-    window.getSelection()?.removeAllRanges();
-    fireEvent.click(screen.getByText("주간 배포 회의"));
-    expect(input.textContent).toBe("지난 회의 ");
-    expect(chipTitles()).toEqual(["주간 배포 회의"]);
-  });
-
   it("프로젝트와 회의록 칩을 갈라 그린다", () => {
     // 「프로젝트 하나」와 「그 안의 회의록 하나」는 범위 크기가 크게 다르다.
-    const { ref } = renderComposer();
-    act(() => {
-      ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" });
-      ref.current?.prepend({ kind: "project", id: "p1", title: "결제 개편" });
-    });
-    const row = screen.getByTestId("composer-chips");
-    const note = row.querySelector('[data-scope-chip="note"]');
-    const project = row.querySelector('[data-scope-chip="project"]');
+    const { input, ref } = renderComposer();
+    ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" });
+    ref.current?.prepend({ kind: "project", id: "p1", title: "결제 개편" });
+    const note = input.querySelector('[data-scope-chip="note"]');
+    const project = input.querySelector('[data-scope-chip="project"]');
     expect(note).toBeTruthy();
     expect(project).toBeTruthy();
     expect(note?.className).not.toBe(project?.className);
@@ -322,55 +301,30 @@ describe("ChatComposer", () => {
         ref.current?.prepend(many[index] as ScopeChip);
       }
     });
-    expect(chipTitles()).toHaveLength(20);
+    expect(input.querySelectorAll("[data-scope-chip]")).toHaveLength(20);
 
     // 스물한 번째 — 여기서 막혀야 한다.
     fireEvent.click(screen.getByText("회의 24"));
 
-    expect(chipTitles()).toHaveLength(20);
+    expect(input.querySelectorAll("[data-scope-chip]")).toHaveLength(20);
     expect(toastError).toHaveBeenCalledWith(
       "범위는 20개까지 붙일 수 있습니다."
     );
   });
 
-  it("칩의 ✕ 나 빈 문장의 백스페이스로 떼면 부모가 바로 안다", () => {
+  it("칩을 지우면 부모가 바로 안다", () => {
+    // 삭제는 브라우저가 원자로 한다 — `contentEditable="false"` 라 백스페이스 한 번에
+    // 통째로 지워지고, 「지웠다」 이벤트가 따로 없어 목록 변화로 알아낸다.
     const onChipsChange = vi.fn();
     const { input, ref } = renderComposer({ onChipsChange });
-    act(() => {
-      ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" });
-      ref.current?.prepend({ kind: "project", id: "p1", title: "결제 개편" });
-    });
-    fireEvent.click(screen.getByRole("button", { name: "결제 개편 빼기" }));
+    ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" });
     expect(onChipsChange).toHaveBeenLastCalledWith([
       { kind: "note", id: "n1", title: "주간 배포 회의" },
     ]);
 
-    fireEvent.keyDown(input, { key: "Backspace" });
-    expect(onChipsChange).toHaveBeenLastCalledWith([]);
-  });
-
-  it("★ 범위 칩은 제목을 자르지 않는다 — 길면 칩 안에서 줄을 바꾼다", () => {
-    const { ref } = renderComposer();
-    const long = "강상진 멘토님 특강 - 쿠버네티스_2 실습 환경과 포트 설정 정리";
-    act(() => ref.current?.prepend({ kind: "note", id: "n9", title: long }));
-    const chip = screen
-      .getByTestId("composer-chips")
-      .querySelector("[data-scope-chip]")!;
-    expect(chip.textContent).toContain(long);
-    expect(chip.className).toContain("whitespace-normal");
-    expect(chip.innerHTML).not.toContain("truncate");
-  });
-
-  it("빈 편집기는 아무 노드도 안 남긴다 — 캐럿이 플레이스홀더 첫 글자 자리에 선다", () => {
-    const { input } = renderComposer();
-    write(input, "가");
-    input.replaceChildren(
-      document.createTextNode(""),
-      document.createElement("br")
-    );
+    input.querySelector("[data-scope-chip]")?.remove();
     fireEvent.input(input);
-    expect(input.childNodes).toHaveLength(0);
-    expect(input.getAttribute("data-empty")).toBe("true");
+    expect(onChipsChange).toHaveBeenLastCalledWith([]);
   });
 
   it("맞는 것이 없으면 피커가 닫힌다", () => {
@@ -391,21 +345,24 @@ describe("ChatComposer", () => {
   it("append 는 이미 있는 칩을 안 건드린다", () => {
     // 추천 질문이 이걸 쓴다. 붙여 둔 칩이 딸려 나가거나 지워지면 뜻밖이다.
     const { input, ref } = renderComposer();
-    act(() =>
-      ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" })
-    );
+    ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" });
     ref.current?.append("남은 액션 아이템이 뭐야?");
 
     expect(ref.current?.read().chips).toHaveLength(1);
     expect(input.textContent).toContain("남은 액션 아이템이 뭐야?");
   });
 
-  it("글자를 다 지워도 빈 줄이 안 남는다", () => {
-    // 글자를 다 지우면 Chrome 이 자리표시 `<br>` 을 남긴다. 남으면 빈 첫 줄이 생겨 캐럿이 한 줄 아래에 선다.
-    const { input } = renderComposer();
+  it("칩 앞 글자를 다 지워도 빈 줄이 안 남는다", () => {
+    // 글자를 다 지우면 Chrome 이 자리표시 `<br>` 을 남긴다. 칩이 아직 있으면 편집기가
+    // 비지 않았으므로 그 `<br>` 이 빈 첫 줄을 만들고, 칩이 둘째 줄로 밀려 상자가 두 줄
+    // 높이로 벌어진다.
+    const { input, ref } = renderComposer();
+    ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" });
     input.prepend(document.createElement("br"));
     fireEvent.input(input);
+
     expect(input.querySelector("br")).toBeNull();
+    expect(ref.current?.read().chips).toHaveLength(1);
   });
 
   it("문장 중간의 줄바꿈은 지우지 않는다", () => {
@@ -424,69 +381,24 @@ describe("ChatComposer", () => {
   it("clear가 문장과 칩을 함께 비운다", () => {
     const { input, ref } = renderComposer();
     write(input, "안녕");
-    act(() =>
-      ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" })
-    );
-    act(() => ref.current?.clear());
+    ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" });
+    ref.current?.clear();
     expect(ref.current?.read()).toEqual({ text: "", chips: [] });
   });
 });
 
-describe("개편된 컴포저 (APP-1436)", () => {
-  it("★ 범위는 입력창 아래 왼쪽 줄에 서고, 입력창 위에는 아무 줄도 없다", () => {
-    const { ref, container } = renderComposer();
-    act(() =>
-      ref.current?.prepend({ kind: "note", id: "n1", title: "주간 배포 회의" })
-    );
-    expect(screen.queryByTestId("composer-scope")).toBeNull();
-    const row = screen.getByRole("textbox").parentElement!;
-    const box = row.parentElement!;
-    // 쓰는 줄이 상자의 첫 줄이고, 범위 줄이 그 아래다
-    expect(box.firstElementChild).toBe(row);
-    expect(row.contains(screen.getByTestId("composer-chips"))).toBe(false);
-    expect(box.contains(screen.getByTestId("composer-chips"))).toBe(true);
-    expect(container.querySelector("form")?.firstElementChild).toBe(box);
-  });
-
-  it("범위 줄이 없을 때(답 받는 중·범위 없음)는 한 줄이다 — 중지가 쓰는 줄 끝에 선다", () => {
-    renderComposer({ isBusy: true, isStreaming: true });
-    expect(screen.queryByTestId("composer-chips")).toBeNull();
-    const row = screen.getByRole("textbox").parentElement!;
-    expect(row.contains(screen.getByRole("button", { name: "중지" }))).toBe(
-      true
-    );
-  });
-
-  it("답 받는 동안에는 「회의록」 버튼이 숨는다", () => {
-    renderComposer({ isBusy: true, isStreaming: true });
-    expect(
-      screen.queryByRole("button", { name: "회의록·프로젝트 고르기" })
-    ).toBeNull();
-  });
-
-  it("「회의록」 버튼이 캐럿 자리에 @ 를 넣어 목록을 연다 — 앞 글자에 붙지 않게 띄운다", () => {
-    const { input } = renderComposer();
-    write(input, "지난 회의");
-    fireEvent.click(
-      screen.getByRole("button", { name: "회의록·프로젝트 고르기" })
-    );
-    expect(input.textContent).toBe("지난 회의 @");
-    expect(screen.getByTestId("scope-picker")).toBeTruthy();
-  });
-
-  it("목록이 열리면 편집기가 목록과 겨눈 항목을 가리킨다 — 포커스는 편집기에 남는다", () => {
-    const { input } = renderComposer();
-    write(input, "@");
-    const listbox = screen.getByRole("listbox");
-    expect(input.getAttribute("aria-controls")).toBe(listbox.id);
-    const active = screen.getAllByRole("option")[0];
-    expect(active.getAttribute("aria-selected")).toBe("true");
-    expect(input.getAttribute("aria-activedescendant")).toBe(active.id);
-
-    fireEvent.keyDown(document, { key: "ArrowDown" });
-    expect(input.getAttribute("aria-activedescendant")).toBe(
-      screen.getAllByRole("option")[1].id
-    );
+describe("범위 칩 줄바꿈 (APP-1436 에서 남긴 것)", () => {
+  it("★ 범위 칩은 제목을 자르지 않는다 — 길면 칩 안에서 줄을 바꾼다", () => {
+    const { ref, input } = renderComposer();
+    const long = "강상진 멘토님 특강 - 쿠버네티스_2 실습 환경과 포트 설정 정리";
+    act(() => ref.current?.prepend({ kind: "note", id: "n9", title: long }));
+    const chip = input.querySelector("[data-scope-chip]")!;
+    expect(chip.textContent).toBe(long);
+    expect(chip.className).toContain("whitespace-normal");
+    expect(chip.className).toContain("[word-break:keep-all]");
+    expect(chip.className).toContain("[overflow-wrap:anywhere]");
+    expect(chip.className).not.toContain("max-w-[13rem]");
+    expect(chip.innerHTML).not.toContain("truncate");
   });
 
   it("회의록 줄 오른쪽에 회의한 날을 흐리게 적는다", () => {
@@ -511,13 +423,5 @@ describe("개편된 컴포저 (APP-1436)", () => {
     expect(screen.getByRole("option").textContent).toMatch(
       /주간 배포 회의10\/2[45]/
     );
-  });
-
-  it("답을 받는 동안 보내기 자리에 중지가 선다", () => {
-    const onStop = vi.fn();
-    renderComposer({ isBusy: true, isStreaming: true, onStop });
-    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "중지" }));
-    expect(onStop).toHaveBeenCalled();
   });
 });

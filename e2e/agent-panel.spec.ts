@@ -174,31 +174,27 @@ for (const width of [1440, 1024]) {
       ).toBeVisible();
     });
 
-    test("입력창 왼쪽 아래 「회의록」 버튼이 목록을 열고, 고르면 그 줄에 범위 칩이 제목 전체로 선다", async ({
+    test("@ 를 치면 목록이 열리고, 고르면 범위 칩이 문장 안에 제목 전체로 박힌다 — 오른쪽에는 보내기만 선다", async ({
       page,
     }) => {
       await openPanel(page);
       await page.getByTestId("chat-list-new").click();
       const composer = page.getByTestId("chat-thread-view").locator("form");
       const input = page.getByLabel("메시지");
-      const button = page.getByRole("button", {
-        name: "회의록·프로젝트 고르기",
-      });
-      // 버튼은 쓰는 줄 아래 왼쪽, 보내기는 오른쪽이다
-      const buttonBox = (await button.boundingBox())!;
+      // 개편 때의 「회의록」 버튼·칩 줄은 없다
+      await expect(
+        page.getByRole("button", { name: "회의록·프로젝트 고르기" })
+      ).toHaveCount(0);
+      await expect(page.getByTestId("composer-chips")).toHaveCount(0);
+      await expect(composer.getByRole("button")).toHaveCount(1);
       const inputBox = (await input.boundingBox())!;
       const sendBox = (await page
         .getByRole("button", { name: "보내기", exact: true })
         .boundingBox())!;
-      expect(buttonBox.y).toBeGreaterThanOrEqual(
-        inputBox.y + inputBox.height - 1
-      );
-      expect(buttonBox.x).toBeLessThan(sendBox.x);
-      // 범위가 없으면 입력창 위에 따로 선 줄이 없다 — 상자가 폼의 첫 줄이다
-      const formTop = (await composer.boundingBox())!.y;
-      expect(inputBox.y - formTop).toBeLessThan(20);
+      expect(sendBox.x).toBeGreaterThan(inputBox.x + inputBox.width - 1);
 
-      await button.click();
+      await input.click();
+      await page.keyboard.type("@");
       const picker = page.getByTestId("scope-picker");
       await expect(picker).toBeVisible();
       // 약 여섯 줄 높이를 넘지 않는다
@@ -211,14 +207,13 @@ for (const width of [1440, 1024]) {
         .filter({ hasText: "주간 제품 회의" })
         .first()
         .click();
-      const chips = page.getByTestId("composer-chips");
-      await expect(chips.locator("[data-chip-title]")).toHaveText([
-        "주간 제품 회의",
-      ]);
+      const chip = input.locator("[data-scope-chip]");
+      await expect(chip).toHaveText(["주간 제품 회의"]);
       // `@` 는 문장에 남지 않는다
       await expect(input).not.toContainText("@");
-      await page.getByRole("button", { name: "주간 제품 회의 빼기" }).click();
-      await expect(chips.locator("[data-chip-title]")).toHaveCount(0);
+      // 이어 쓰면 칩 뒤에 붙는다
+      await page.keyboard.type("결정만 정리해줘");
+      await expect(input).toHaveText(/주간 제품 회의\s결정만 정리해줘/);
     });
 
     test("빈 입력창에 포커스하면 캐럿이 플레이스홀더 첫 글자 자리에 선다", async ({
@@ -324,17 +319,17 @@ test("390px 에서는 화면 전체를 덮는 시트다", async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test("390px 에서도 긴 URL·영문 토큰 답이 가로로 넘치지 않고, 안내는 짧은 문구로 잘리지 않는다", async ({
+test("390px 에서도 긴 URL·영문 토큰 답이 가로로 넘치지 않는다", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const panel = await openPanel(page);
   await page.getByTestId("chat-list-new").click();
   const input = page.getByLabel("메시지");
-  const placeholder = await input.evaluate(
-    (el) => getComputedStyle(el, "::before").content
+  await expect(input).toHaveAttribute(
+    "data-placeholder",
+    "@로 프로젝트·회의록을 참조해 물어보세요"
   );
-  expect(placeholder).toBe('"회의록에 대해 물어보세요"');
   await input.fill("마크다운 보여줘");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
   await expect(page.getByTestId("assistant-message").last()).toContainText(
