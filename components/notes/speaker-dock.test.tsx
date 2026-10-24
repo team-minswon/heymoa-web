@@ -241,3 +241,22 @@ describe("createCurrentMsStore 고정", () => {
     expect(store.get()).toBe(2_700_000);
   });
 });
+
+describe("SpeakerDock 활성 줄", () => {
+  it("같은 초에 다른 화자가 바로 뒤이어 말해도 이동한 화자 줄이 켜진다", () => {
+    const kim = stat({
+      key: "label:K",
+      name: "김민수",
+      utterances: [{ segmentId: "k1", startedAtMs: 589_000, endedAtMs: 589_400 }],
+    });
+    const kang = stat({
+      key: "label:G",
+      name: "강상진",
+      utterances: [{ segmentId: "g1", startedAtMs: 589_300, endedAtMs: 590_500 }],
+    });
+    renderDock(589_000, vi.fn(), [kang, kim]);
+    const rows = screen.getAllByTestId("speaker-dock-row");
+    const active = rows.find((row) => row.hasAttribute("data-active"));
+    expect(active).toHaveTextContent("김민수");
+  });
+});

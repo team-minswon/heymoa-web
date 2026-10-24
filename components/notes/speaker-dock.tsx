@@ -288,18 +288,24 @@ export function SpeakerDock({
   const stats = allStats.filter((stat) => stat.utterances.length > 0);
   if (!stats.length || durationMs <= 0) return null;
 
-  // 지금 시각에 가장 가까운 앞선 발화를 가진 화자가 말하는 중이다.
+  // 지금 시각에 가장 가까운 **앞선**(이미 시작한) 발화를 가진 화자가 말하는 중이다.
+  // 여유([EPSILON_MS])는 앞선 발화가 하나도 없을 때만 쓴다 — 함께 쓰면 같은 초에 바로 뒤이어
+  // 말한 다른 화자(음수 gap)가 「더 가깝다」로 뽑혀, 방금 이동한 화자 대신 그 화자 줄이 켜진다.
   let activeKey: string | null = null;
   let best = Infinity;
+  let ahead: { key: string; gap: number } | null = null;
   for (const stat of stats) {
     for (const { startedAtMs } of stat.utterances) {
       const gap = currentMs - startedAtMs;
-      if (gap >= -EPSILON_MS && gap < best) {
+      if (gap >= 0 && gap < best) {
         best = gap;
         activeKey = stat.key;
+      } else if (gap < 0 && gap >= -EPSILON_MS && (!ahead || gap > ahead.gap)) {
+        ahead = { key: stat.key, gap };
       }
     }
   }
+  if (activeKey === null && ahead) activeKey = ahead.key;
   const unassigned = stats.filter((stat) => stat.unassigned).length;
 
   return (
