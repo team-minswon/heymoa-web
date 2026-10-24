@@ -178,7 +178,7 @@ export function ChatThread({
                 key={`steps-${at}`}
                 blocks={group.blocks}
                 live={false}
-                startedAt={item.at}
+                startedAt={item.startedAt}
                 endedAt={item.endedAt}
                 onOpenNote={onOpenNote}
               />
@@ -405,7 +405,12 @@ type HistoryRow = { at: string } & (
       kind: "steps";
       turnId: string | null;
       blocks: StepBlock[];
-      /** 마지막 단계 행의 시각. `at` 부터 여기까지가 생각한 시간이다. */
+      /**
+       * 생각을 시작한 시각. 바로 앞이 질문이면 그 시각이다 — 흐를 때 초를 질문을 보낸 시각부터 세므로, 첫 단계 행부터 세면
+       * 새로고침한 뒤 초가 짧아지고 단계 행이 하나뿐이면 0초라 시간이 아예 빠진다.
+       */
+      startedAt: string;
+      /** 마지막 단계 행의 시각. 첫 본문 토큰 바로 앞이라 흐를 때 「생각 중」이 끝난 시각과 맞는다. */
       endedAt: string;
     }
   | { kind: "message"; message: ThreadMessage }
@@ -499,6 +504,10 @@ function groupHistory(
         rows.push({
           kind: "steps",
           at: message.createdAt,
+          startedAt:
+            last?.kind === "message" && last.message.role === "USER"
+              ? last.at
+              : message.createdAt,
           turnId: message.turnId ?? null,
           blocks: [step],
           endedAt: message.createdAt,
@@ -720,7 +729,7 @@ function StreamBlocks({
 }: {
   stream: ChatStreamState;
   /** 커서 앞 히스토리 단계. 스트림 앞에 붙여 한 묶음으로 그린다. */
-  carried: { at: string; blocks: StepBlock[] } | null;
+  carried: { startedAt: string; blocks: StepBlock[] } | null;
   /** 이 탭이 질문을 보낸 시각. 첫 묶음의 초가 「생각 중」 줄에서 끊기지 않고 이어진다. */
   startedAt: string | null;
   onOpenNote?: (noteId: string) => void;
@@ -754,7 +763,9 @@ function StreamBlocks({
           <ChainOfThought
             key={`steps-${index}`}
             blocks={group.blocks}
-            startedAt={index === 0 ? (carried?.at ?? startedAt) : undefined}
+            startedAt={
+              index === 0 ? (carried?.startedAt ?? startedAt) : undefined
+            }
             live={
               (stream.phase === "streaming" ||
                 stream.phase === "awaiting_approval") &&

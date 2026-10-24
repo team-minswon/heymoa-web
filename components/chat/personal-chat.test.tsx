@@ -3223,7 +3223,7 @@ describe("PersonalChatProvider", () => {
       expect(state.resumeUrls).toHaveLength(0);
 
       // 끝난 묶음은 접힌 채로 선다. 안쪽 줄을 보려면 머리글을 한 번 눌러야 한다.
-      fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+      fireEvent.click(screen.getByRole("button", { name: "생각" }));
       expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(
         1
       );
@@ -3271,7 +3271,7 @@ describe("PersonalChatProvider", () => {
       expect(await screen.findByRole("button", { name: "승인" })).toBeTruthy();
       expect(state.resumeUrls).toHaveLength(0);
 
-      fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+      fireEvent.click(screen.getByRole("button", { name: "생각" }));
       expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(
         1
       );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Check,
@@ -61,7 +61,7 @@ export function ChainOfThought({
   onOpenNote,
 }: {
   blocks: StepBlock[];
-  /** 이 묶음이 아직 흐르는 중인가. 도는 동안은 지금 단계 한 줄로 접고 끝나면 요약 한 줄로 접는다. */
+  /** 이 묶음이 아직 흐르는 중인가. 도는 동안은 최근 몇 줄만 펴 두고 끝나면 요약 한 줄로 접는다. */
   live: boolean;
   /**
    * 첫 단계의 시각(ISO). 히스토리 행, 커서 앞 히스토리, 또는 이 탭이 질문을 보낸 시각이 준다. 없으면 흐르는 동안
@@ -165,8 +165,8 @@ function stepSignature(blocks: StepBlock[]) {
 }
 
 /**
- * 흐르는 동안의 머리줄 「생각 중 · 8초」와 그 아래 지금 하는 일 한 줄. 첫 단계가 오기 전(`ThinkingLine`)과 단계가 흐르는
- * 동안(`Disclosure`)이 같은 이 모양을 써서, 첫 단계가 와도 줄이 바뀌거나 튀지 않는다. 두 줄 다 높이가 고정이다.
+ * 흐르는 동안의 머리줄 「생각 중 · 8초」. 첫 단계가 오기 전(`ThinkingLine`)과 단계가 흐르는 동안(`Disclosure`)이 같은
+ * 이 모양을 써서, 첫 단계가 와도 머리줄이 바뀌거나 튀지 않는다.
  *
  * 매초 바뀌는 초는 접근성 이름에서 뺀다 — 포커스가 있으면 매초 다시 읽힌다.
  */
@@ -207,7 +207,7 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-/** 지금 하는 일 한 줄. 높이를 잡아 두어 문구가 바뀌거나 비어도 아래가 안 움직인다. */
+/** 첫 단계 전 지금 하는 일 한 줄. 높이를 잡아 두어 문구가 바뀌어도 아래가 안 움직인다. */
 export function CurrentLine({
   id,
   text,
@@ -267,7 +267,7 @@ function Disclosure({
   /** 이 턴이 아직 안 끝났나. 서랍 여닫기는 이 값을 따른다. */
   live: boolean;
   /**
-   * 지금 도는 단계가 있나. 지금 단계 줄은 이 값을 따른다. 승인을 기다리는 동안은 `live` 인데
+   * 지금 도는 단계가 있나. 최근 줄만 보이는 꼬리 모양은 이 값을 따른다. 승인을 기다리는 동안은 `live` 인데
    * 도는 것은 없다.
    */
   running: boolean;
@@ -275,21 +275,29 @@ function Disclosure({
   onOpenNote?: (noteId: string) => void;
 }) {
   const lines = groupSteps(blocks);
-  // 도는 동안은 지금 단계 한 줄로 접는다. 승인을 기다릴 때는 무엇을 하려다 물었는지 보이게
-  // 펴 둔다. 끝나면 접는다 — 본문은 답만 담고, 과정은 누른 사람만 본다.
-  const auto = live && !running;
-  const [open, setOpen] = useState(auto);
+  // 흐르는 동안은 펴 두고(도는 중이면 최근 몇 줄만, 승인을 기다리면 무엇을 하려다 물었는지 전부) 끝나면 접는다 —
+  // 본문은 답만 담고, 과정은 누른 사람만 본다.
+  const [open, setOpen] = useState(live);
   const reduced = useReducedMotion();
   // 사용자가 손으로 건드렸으면 자동 접힘/펼침이 그걸 덮지 않는다.
   const touched = useRef(false);
 
   useEffect(() => {
     if (touched.current) return;
-    setOpen(auto);
-  }, [auto]);
+    setOpen(live);
+  }, [live]);
 
-  const current = running ? currentStep(blocks, lines) : null;
   const stalled = useStalled(stepSignature(blocks), running);
+  // 도는 동안은 높이를 `LIVE_TAIL` 로 묶고 아래에 붙여, 새 줄이 아래에서 올라오고 위 줄은 흐려지며 밀려난다.
+  const tail = running && open;
+  const tailRef = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState(false);
+  // 넘칠 때만 위를 흐린다. 줄 수로 세면 줄바꿈된 문장·칩이 든 줄에서 틀린다 — 그려진 높이로 잰다.
+  useLayoutEffect(() => {
+    const el = tailRef.current;
+    const next = !!el && el.scrollHeight > el.clientHeight;
+    if (next !== overflow) setOverflow(next);
+  });
 
   return (
     <div
@@ -311,7 +319,7 @@ function Disclosure({
         className="-ml-1 flex h-6 w-fit max-w-full cursor-pointer items-center gap-0 rounded-control px-1 text-left text-[13px] outline-none hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className="flex min-w-0 items-center truncate">
-          {current ? (
+          {running ? (
             <LiveHead seconds={seconds} open={open} />
           ) : (
             <>
@@ -323,30 +331,10 @@ function Disclosure({
           )}
         </span>
       </button>
-      {/* 접혀서 도는 동안에만 지금 하는 일을 한 줄로 말한다. 펴져 있으면 타임라인의 마지막 줄이 같은 말을 하므로
-          되풀이하지 않는다. 사라질 때는 높이를 접어 아래 답이 한 번에 튀어 오르지 않게 한다. */}
-      <AnimatePresence initial={false}>
-        {/* 지금 하는 일 문장이 없으면 줄을 세우지 않는다 — 「생각하는 중」을 대신 적으면 머리줄 「생각 중」을 되풀이한다. */}
-        {current && !open && (current.text || stalled) ? (
-          <motion.div
-            key="current"
-            initial={false}
-            exit={{ height: 0, opacity: 0 }}
-            transition={reduced ? { duration: 0 } : COLLAPSE_TRANSITION}
-            className="overflow-hidden"
-          >
-            <CurrentLine
-              id={current.id}
-              text={current.text}
-              stalled={stalled}
-            />
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-      {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면 글자마다 읽힌다. 보이는 줄이 없어도 알린다. */}
-      {current && !open ? (
+      {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면 글자마다 읽힌다. 보이는 줄은 숨긴다. */}
+      {running ? (
         <span className="sr-only" aria-live="polite">
-          {stalled ? STALLED_TEXT : current.announce}
+          {stalled ? STALLED_TEXT : announceStep(blocks)}
         </span>
       ) : null}
       {/* `initial={false}` 는 흐르는 중 이미 펴진 채로 다시 그려질 때 매 토큰 다시 자라지 않게 한다. */}
@@ -360,26 +348,45 @@ function Disclosure({
             transition={reduced ? { duration: 0 } : COLLAPSE_TRANSITION}
             className="overflow-hidden"
           >
-            <div className={cn("mt-1.5 mb-1 ml-1 space-y-1.5", RAIL)}>
-              {lines.map((line, index) => (
-                <TimelineLine
-                  key={line.key}
-                  line={line}
-                  live={running && index === lines.length - 1}
-                  animate={live}
-                  onOpenNote={onOpenNote}
-                />
-              ))}
-              {/* 도구 결과가 오고 다음 생각·토큰이 오기까지 모델이 도는 사이. 마지막 줄이
-                  이미 체크로 굳어 멈춘 것처럼 보이므로 이 줄을 세운다. */}
-              {running && betweenSteps(blocks) ? (
-                <div className="flex gap-2" data-step="pending">
-                  <Dot state="active" />
-                  <p className="chat-shimmer min-w-0 flex-1 text-xs leading-relaxed">
-                    {stalled ? STALLED_TEXT : "생각하는 중"}
-                  </p>
-                </div>
-              ) : null}
+            <div
+              ref={tailRef}
+              data-tail={tail || undefined}
+              data-overflow={(tail && overflow) || undefined}
+              className={cn(
+                "mt-1.5 mb-1 ml-1",
+                RAIL,
+                tail &&
+                  `${LIVE_TAIL} flex flex-col justify-end overflow-hidden`,
+                tail &&
+                  overflow &&
+                  "[mask-image:linear-gradient(to_bottom,transparent,black_2.5rem)]"
+              )}
+            >
+              {/* 줄이 늘어 위로 밀릴 때 자리 이동만 옮긴다(크기는 안 건드려 글자가 늘어나지 않는다). */}
+              <motion.div
+                layout={tail && !reduced ? "position" : false}
+                data-motion={tail && !reduced ? "slide" : undefined}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="space-y-1.5"
+              >
+                {lines.map((line, index) => (
+                  <TimelineLine
+                    key={line.key}
+                    line={line}
+                    live={running && index === lines.length - 1}
+                    animate={live}
+                    onOpenNote={onOpenNote}
+                  />
+                ))}
+                {running && stalled ? (
+                  <div className="chat-rise flex gap-2" data-stalled>
+                    <Dot state="pending" />
+                    <p className="min-w-0 flex-1 text-xs leading-relaxed text-[var(--el-muted)]">
+                      {STALLED_TEXT}
+                    </p>
+                  </div>
+                ) : null}
+              </motion.div>
             </div>
           </motion.div>
         ) : null}
@@ -387,6 +394,12 @@ function Disclosure({
     </div>
   );
 }
+
+/**
+ * 도는 동안 보이는 높이. 한 줄(12px·1.625)과 줄 간격(6px)이 25.5px 라 네 줄쯤이다 — 칩이 든 줄이나 줄바꿈된 문장이
+ * 섞이면 셋. 근거 있는 값이 아니라 답 위가 덜 출렁이는 선에서 고른 값이다.
+ */
+const LIVE_TAIL = "max-h-[6.5rem]";
 
 /** 「45초」·「2분 5초」. */
 function duration(seconds: number) {
@@ -405,62 +418,18 @@ function thinkingLines(text: string) {
 }
 
 /**
- * 지금 도는 단계. 결과를 기다리는 도구가 있으면 그것, 아니면 마지막 생각의 마지막 문장이다.
- * 승인 대기는 이미 걸러졌다(`drawable`). `announce` 는 화면 읽기에 알릴 짧은 말로, 생각이면
- * 문장 대신 「생각하는 중」이다. 하는 일을 말할 문장이 없으면 `text` 는 비어 있다.
+ * 화면 읽기에 알릴 지금 단계. 결과를 기다리는 도구가 있으면 그 라벨(인자·결과를 뺀 「연관 스크립트 읽기 중」 — 길게 읽으면
+ * 다음 단계에 밀린다), 아니면 「생각하는 중」이다. 승인 대기는 이미 걸러졌다(`drawable`).
  */
-function currentStep(
-  blocks: StepBlock[],
-  lines: StepLine[]
-): {
-  id: string;
-  text: string;
-  announce: string;
-} {
+function announceStep(blocks: StepBlock[]): string {
   const pending = blocks.findLast(
     (block) => block.kind === "tool" && block.status === null
   );
-  if (pending?.kind === "tool") {
-    const text = pending.summary || pending.tool || "";
-    // 인자·결과를 뺀 라벨만 알린다(「연관 스크립트 읽기 중」). 길게 읽으면 다음 단계에 밀린다.
-    const label = text.split(" · ")[0];
-    return {
-      id: `tool-${pending.toolCallId}`,
-      text,
-      announce: label ? `${label} 중` : "생각하는 중",
-    };
-  }
-  // 줄에서 읽는다. 커서 경계에서 갈려 온 생각은 줄에서 한 문단으로 합쳐져 있다.
-  const last = lines.at(-1);
-  if (last?.kind === "single" && last.block.kind === "thinking") {
-    const rows = thinkingLines(last.block.text);
-    const sentence = rows
-      .at(-1)
-      ?.split(/(?<=[.!?。])\s+/)
-      .at(-1)
-      ?.trim();
-    return {
-      // 줄이 늘 때마다 새 줄로 떠오른다. 같은 줄에 글자가 붙는 동안은 그대로다
-      id: `${last.key}:${rows.length}`,
-      text: sentence ?? "",
-      announce: "생각하는 중",
-    };
-  }
-  return { id: "pending", text: "", announce: "생각하는 중" };
-}
-
-/**
- * 마지막 단계는 끝났는데 다음이 아직 안 왔다. 마지막이 생각이면 그 줄이 아직 도는 중이다.
- */
-function betweenSteps(blocks: StepBlock[]): boolean {
-  const last = blocks.at(-1);
-  if (!last || last.kind === "thinking") return false;
-  // 승인된 도구는 승인 블록 앞에 서 있고 결과가 올 때까지 `status: null` 이다. 마지막만 보면
-  // 그 실행 중에 「생각하는 중」이 겹친다.
-  if (blocks.some((block) => block.kind === "tool" && block.status === null)) {
-    return false;
-  }
-  return true;
+  const label =
+    pending?.kind === "tool"
+      ? (pending.summary || pending.tool || "").split(" · ")[0]
+      : "";
+  return label ? `${label} 중` : "생각하는 중";
 }
 
 /**
@@ -568,12 +537,12 @@ function headline(
         : []
     )
   );
-  const lead =
-    !live && seconds !== null
+  // 걸린 시간을 모르면(옛 대화·1초 미만) 시간만 뺀다. 흐를 때와 새로고침 뒤가 같은 말이어야 한다.
+  const lead = live
+    ? "확인을 기다리는 중"
+    : seconds !== null
       ? `${duration(seconds)} 동안 생각`
-      : live
-        ? "확인을 기다리는 중"
-        : "생각 과정";
+      : "생각";
   const what = [
     notes.size > 0 ? `회의록 ${notes.size}건` : null,
     projects.size > 0 ? `프로젝트 ${projects.size}개` : null,

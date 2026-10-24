@@ -178,7 +178,7 @@ for (const width of [1440, 1024]) {
       await expect(answer).toContainText("기본값을 끄고");
     });
 
-    test("보내면 「생각 중 · N초」와 지금 하는 일 한 줄이 서고, 끝나면 접히고 AI 제목이 머리글에 늦게 붙는다", async ({
+    test("보내면 「생각 중 · N초」와 진행 줄이 서고, 끝나면 접히고 AI 제목이 머리글에 늦게 붙는다", async ({
       page,
     }) => {
       const panel = await openPanel(page);
@@ -191,7 +191,10 @@ for (const width of [1440, 1024]) {
       await expect(thread.getByText("생각 중", { exact: true })).toBeVisible({
         timeout: 10_000,
       });
-      await expect(thread.locator("[data-current]").first()).toBeVisible();
+      // 첫 단계 전에는 지금 하는 일 한 줄, 단계가 오면 최근 줄만 보이는 꼬리가 같은 자리에 선다
+      await expect(
+        thread.locator("[data-current], [data-tail]").first()
+      ).toBeVisible();
       // 답 받는 동안 보내기 자리에 중지가 선다
       await expect(
         page.getByRole("button", { name: "중지", exact: true })

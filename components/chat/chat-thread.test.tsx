@@ -1475,9 +1475,22 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
     read("2026-07-24T00:00:05Z", "연관 스크립트 읽기 · 10:01"),
   ];
 
-  it("히스토리는 행 시각으로 걸린 시간을 말한다", () => {
+  // 흐를 때처럼 질문을 보낸 시각부터 마지막 단계까지 잰다 — 첫 단계 행부터 재면 새로고침 뒤 초가 줄어든다.
+  it("히스토리는 질문 시각부터 마지막 단계 행까지 걸린 시간을 말한다", () => {
     renderThread({ messages: HISTORY });
-    expect(screen.getByText("3초 동안 생각")).toBeTruthy();
+    expect(screen.getByText("5초 동안 생각")).toBeTruthy();
+  });
+
+  // 단계 행이 하나뿐이어도 질문 시각이 있으면 시간을 안다. 예전에는 0초로 재여 「생각 과정」이 떴다.
+  it("단계 행이 하나여도 질문 시각부터 잰다", () => {
+    renderThread({ messages: HISTORY.slice(0, 2) });
+    expect(screen.getByText("2초 동안 생각")).toBeTruthy();
+  });
+
+  it("걸린 시간을 모르면 시간 없이 「생각」이라 한다", () => {
+    renderThread({ messages: HISTORY.slice(1, 2) });
+    expect(screen.getByText("생각")).toBeTruthy();
+    expect(screen.queryByText(/생각 과정/)).toBeNull();
   });
 
   it("커서로 이어받은 턴은 히스토리 단계와 스트림 단계가 한 묶음이다", () => {
