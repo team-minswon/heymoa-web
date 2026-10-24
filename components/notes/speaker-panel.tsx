@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   formatSpeakingTime,
+  jumpIndexAt,
   type SpeakerStat,
 } from "@/lib/notes/speaker-stats";
 import { formatOffset } from "@/lib/transcription/presentation";
@@ -45,6 +46,7 @@ function Sparkline({
   dim,
   durationMs,
   startsMs,
+  endsMs,
   current,
   onPick,
 }: {
@@ -53,9 +55,11 @@ function Sparkline({
   durationMs: number;
   /** 이동 대상 발화들의 회의 축 좌표(시간순). */
   startsMs: number[];
+  /** [startsMs] 와 같은 순서의 끝 좌표. */
+  endsMs: number[];
   /** 지금 위치(마지막으로 이동한 발화)의 인덱스. 아직 안 갔으면 -1. */
   current: number;
-  /** 눌린 시각 이후 첫 대상 발화의 인덱스. */
+  /** 눌린 시각에 가장 가까운 대상 발화의 인덱스. */
   onPick: (index: number) => void;
 }) {
   const clickable = startsMs.length > 0 && durationMs > 0;
@@ -76,9 +80,12 @@ function Sparkline({
       onPointerLeave={() => setHover(null)}
       onClick={(event) => {
         if (!clickable) return;
-        const at = ratioOf(event) * durationMs;
-        const next = startsMs.findIndex((start) => start >= at);
-        onPick(next === -1 ? startsMs.length - 1 : next);
+        onPick(
+          jumpIndexAt(
+            { jumpStartsMs: startsMs, jumpEndsMs: endsMs },
+            ratioOf(event) * durationMs
+          )
+        );
       }}
     >
       <div className={cn("flex h-6 items-end gap-px", dim && "opacity-45")}>
@@ -191,6 +198,7 @@ function SpeakerRow({
             dim={stat.unassigned}
             durationMs={durationMs}
             startsMs={stat.jumpStartsMs}
+            endsMs={stat.jumpEndsMs}
             current={visited === 0 ? -1 : (visited - 1) % targets.length}
             onPick={(index) => onJump(targets[index], index + 1)}
           />

@@ -58,6 +58,8 @@ export type SpeakerStat = {
   jumpTargets: string[];
   /** [jumpTargets] 와 같은 순서의 회의 축 좌표(ms). 띠 위에 이동 지점을 찍고 눌러서 고르는 데 쓴다. */
   jumpStartsMs: number[];
+  /** [jumpStartsMs] 의 끝. 띠를 누른 시각을 **품은** 발화를 고르는 데 쓴다. */
+  jumpEndsMs: number[];
 };
 
 /** 이보다 짧은 발화는 누구인지 알아보는 단서로 안 친다. */
@@ -192,29 +194,12 @@ export function summarizeSpeakers({
         firstStartedAtMs: null,
         jumpTargets: [],
         jumpStartsMs: [],
+        jumpEndsMs: [],
       } satisfies SpeakerStat);
 
     if (!row.labels.includes(label)) row.labels.push(label);
     row.speakingMs += Math.max(0, segment.endedAtMs - segment.startedAtMs);
     row.segmentCount += 1;
-    // **칸을 넘는 발화는 걸친 만큼 나눠 담는다.** 시작 칸에 다 몰면 긴 발언이 봉우리 하나가
-    // 되어, 5분을 쉬지 않고 말한 사람과 그 자리에서 한마디 한 사람이 같은 모양이 된다.
-    if (binMs > 0) {
-      const firstBin = Math.min(
-        TIMELINE_BINS - 1,
-        Math.floor(segment.startedAtMs / binMs)
-      );
-      const lastBin = Math.min(
-        TIMELINE_BINS - 1,
-        Math.floor(Math.max(segment.startedAtMs, segment.endedAtMs) / binMs)
-      );
-      for (let bin = firstBin; bin <= lastBin; bin += 1) {
-        const overlap =
-          Math.min(segment.endedAtMs, (bin + 1) * binMs) -
-          Math.max(segment.startedAtMs, bin * binMs);
-        row.timeline[bin] += Math.max(0, overlap);
-      }
-    }
     const list = spoken.get(key) ?? [];
     list.push({
       segmentId: segment.segmentId,
@@ -252,6 +237,7 @@ export function summarizeSpeakers({
       firstStartedAtMs: null,
       jumpTargets: [],
       jumpStartsMs: [],
+      jumpEndsMs: [],
     });
   }
 
@@ -272,6 +258,29 @@ export function summarizeSpeakers({
     const targets = meaningful.length > 0 ? meaningful : all;
     row.jumpTargets = targets.map((item) => item.segmentId);
     row.jumpStartsMs = targets.map((item) => item.startedAtMs);
+    row.jumpEndsMs = targets.map((item) => item.endedAtMs);
+    /**
+     * **띠는 이동 대상으로만 그린다.** 맞장구까지 그리면 막대는 서는데 눌러도 갈 발화가 없어,
+     * 그 막대를 누르면 멀리 떨어진 다른 발화로 간다(APP-1429). 그리는 것과 가는 곳이 한 목록이다.
+     */
+    // **칸을 넘는 발화는 걸친 만큼 나눠 담는다.** 시작 칸에 다 몰면 긴 발언이 봉우리 하나가
+    // 되어, 5분을 쉬지 않고 말한 사람과 그 자리에서 한마디 한 사람이 같은 모양이 된다.
+    for (const item of binMs > 0 ? targets : []) {
+      const firstBin = Math.min(
+        TIMELINE_BINS - 1,
+        Math.floor(item.startedAtMs / binMs)
+      );
+      const lastBin = Math.min(
+        TIMELINE_BINS - 1,
+        Math.floor(Math.max(item.startedAtMs, item.endedAtMs) / binMs)
+      );
+      for (let bin = firstBin; bin <= lastBin; bin += 1) {
+        const overlap =
+          Math.min(item.endedAtMs, (bin + 1) * binMs) -
+          Math.max(item.startedAtMs, bin * binMs);
+        row.timeline[bin] += Math.max(0, overlap);
+      }
+    }
     row.share = total > 0 ? row.speakingMs / total : 0;
     // **라벨을 정렬한 뒤다.** `speakerAvatarName` 이 「가장 이른 라벨」을 쓰는데,
     // 정렬 전에 부르면 도착 순서가 얼굴을 정해 새로고침마다 색이 튄다.
@@ -287,6 +296,33 @@ export function summarizeSpeakers({
   return [...rows.values()].sort(
     (a, b) => b.speakingMs - a.speakingMs || a.name.localeCompare(b.name, "ko")
   );
+}
+
+/**
+ * 띠를 누른 시각([atMs])이 가리키는 이동 대상의 인덱스. **그 시각을 품은 발화**가 먼저고,
+ * 없으면 앞뒤로 가장 가까운 발화다. 대상이 없으면 -1.
+ *
+ * 「그 시각 이후 첫 발화」로 고르면 안 된다 — 막대는 발화가 걸친 칸에 서므로, 긴 발언 한가운데를
+ * 누르면 그 발언은 이미 시작한 뒤라 건너뛰고 몇 분 뒤 다음 발화로 간다(APP-1429).
+ */
+export function jumpIndexAt(
+  {
+    jumpStartsMs,
+    jumpEndsMs,
+  }: Pick<SpeakerStat, "jumpStartsMs" | "jumpEndsMs">,
+  atMs: number
+) {
+  let best = -1;
+  let bestGap = Infinity;
+  jumpStartsMs.forEach((start, index) => {
+    const end = Math.max(start, jumpEndsMs[index] ?? start);
+    const gap = atMs < start ? start - atMs : atMs > end ? atMs - end : 0;
+    if (gap < bestGap) {
+      best = index;
+      bestGap = gap;
+    }
+  });
+  return best;
 }
 
 /** `12분 30초` — 분량은 초까지만 보면 된다. */

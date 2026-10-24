@@ -7,7 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
-import type { SpeakerStat } from "@/lib/notes/speaker-stats";
+import { jumpIndexAt, type SpeakerStat } from "@/lib/notes/speaker-stats";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
@@ -135,10 +135,7 @@ function DockRow({
 
   const seek = (ratio: number) => {
     if (!ticks.length) return;
-    const at = ratio * durationMs;
-    onJump(
-      (ticks.find((t) => t.start >= at) ?? ticks[ticks.length - 1]).segmentId
-    );
+    onJump(ticks[jumpIndexAt(stat, ratio * durationMs)].segmentId);
   };
   const ratioOf = (event: { clientX: number; currentTarget: HTMLElement }) => {
     const box = event.currentTarget.getBoundingClientRect();

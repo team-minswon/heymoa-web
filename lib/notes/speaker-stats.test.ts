@@ -238,6 +238,7 @@ describe("summarizeSpeakers", () => {
       firstSegmentId: null,
       jumpTargets: [],
       jumpStartsMs: [],
+      jumpEndsMs: [],
     });
   });
 
@@ -283,6 +284,19 @@ describe("summarizeSpeakers", () => {
       expect(early[0]).toBe(1);
       expect(early.slice(1).every((value) => value === 0)).toBe(true);
       expect(rows.find((row) => row.key === "p2")!.timeline.at(-1)).toBe(1);
+    });
+
+    // 맞장구까지 그리면 막대는 서는데 눌러도 갈 발화가 없어 멀리 다른 발화로 간다(APP-1429).
+    it("띠는 이동 대상만 그린다 — 짧은 맞장구 칸은 비어 있다", () => {
+      const rows = summarizeSpeakers({
+        segments: [at(1, "A", 0, 5000), at(2, "A", 47_000, 47_500)],
+        speakers: [speaker("A", "p1", "한지원")],
+        durationMs: 48_000,
+      });
+
+      expect(rows[0].jumpTargets).toEqual(["s1"]);
+      expect(rows[0].jumpEndsMs).toEqual([5000]);
+      expect(rows[0].timeline.at(-1)).toBe(0);
     });
 
     // 칸보다 긴 발화를 한 칸에 몰면 그 사람만 봉우리 하나로 보인다.

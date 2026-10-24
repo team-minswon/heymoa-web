@@ -21,6 +21,7 @@ function stat(overrides: Partial<SpeakerStat> = {}): SpeakerStat {
     firstStartedAtMs: 0,
     jumpTargets: ["s1", "s2", "s3"],
     jumpStartsMs: [0, 100_000, 400_000],
+    jumpEndsMs: [10_000, 110_000, 410_000],
     ...overrides,
   };
 }
@@ -83,25 +84,27 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
   });
 
   it("발화가 하나뿐이면 개수 표시 없이 그 발화로만 간다", () => {
-    renderPanel([stat({ jumpTargets: ["s1"], jumpStartsMs: [0] })]);
+    renderPanel([
+      stat({ jumpTargets: ["s1"], jumpStartsMs: [0], jumpEndsMs: [10_000] }),
+    ]);
     expect(
       screen.getByRole("button", { name: "지정하러 가기" })
     ).not.toHaveTextContent("/");
   });
 
-  it("띠를 누르면 그 시각 이후 첫 발화로 가고 n / m 이 그 위치로 맞춰진다", () => {
+  it("띠를 누르면 누른 시각에 가장 가까운 발화로 가고 n / m 이 그 위치로 맞춰진다", () => {
     renderPanel([stat()]);
     const strip = screen.getByTestId("speaker-panel-strip");
     // jsdom 은 레이아웃이 없어 상자를 직접 준다: 폭 600, 회의 600_000ms → 1px = 1000ms.
     strip.getBoundingClientRect = () =>
       ({ left: 0, width: 600, top: 0, height: 24 }) as DOMRect;
 
-    // 200_000ms 이후 첫 발화는 3번째(400_000ms).
+    // 200_000ms 에서 가장 가까운 발화는 2번째(100_000ms) — 3번째(400_000ms)보다 가깝다.
     fireEvent.click(strip, { clientX: 200 });
 
     expect(
       screen.getByRole("button", { name: /다음 발화로/ })
-    ).toHaveTextContent("3 / 3");
+    ).toHaveTextContent("2 / 3");
   });
 
   it("띠에 올리면 커서 위치의 시각이 바로 보이고 벗어나면 사라진다", () => {
