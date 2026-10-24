@@ -95,7 +95,11 @@ test("stop cancels the turn and keeps the partial answer in history", async ({
   // 다른 대화에 들렀다 돌아온다 — 로컬 스트림은 비워지고 히스토리를 다시 읽는다.
   await page.getByRole("button", { name: "기록" }).click();
   const history = page.getByTestId("chat-history-view");
-  const rows = history.getByRole("button").filter({ hasNotText: "뒤로가기" });
+  // 기록 행 옆의 아이콘 전용 「대화 삭제」 버튼은 대화 선택이 아니다.
+  const rows = history
+    .getByRole("button")
+    .filter({ hasText: /\S/ })
+    .filter({ hasNotText: "뒤로가기" });
   await rows.filter({ hasNotText: "길게 답해줘" }).first().click();
   await page.getByRole("button", { name: "기록" }).click();
   await history.getByRole("button", { name: /길게 답해줘/ }).click();

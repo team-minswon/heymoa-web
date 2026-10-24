@@ -33,19 +33,22 @@ test("느린 로그아웃 요청 중 대기를 표시하고 성공하면 익명 
     authenticated = false;
     await route.fulfill({ status: 204 });
   });
-  await page.goto("/terms");
+  // 랜딩 크롬은 시작 CTA만 둔다. 로그아웃이 있는 인증 카드 크롬에서 상태를 확인한다.
+  await page.goto("/oauth/authorize");
   const logout = page.getByRole("button", { name: "로그아웃", exact: true });
   await logout.click();
   try {
     await expect(logout).toBeDisabled();
     await expect(logout).toHaveAttribute("aria-busy", "true");
-    expect(logoutRequests).toBe(1);
+    await expect.poll(() => logoutRequests).toBe(1);
   } finally {
     completeLogout();
   }
   await expect(page).toHaveURL("/");
   await expect(
-    page.getByRole("button", { name: "로그인", exact: true })
+    page
+      .getByRole("banner")
+      .getByRole("button", { name: "무료로 시작하기", exact: true })
   ).toBeVisible();
 });
 
@@ -66,12 +69,14 @@ test("SSR 사용자가 없는 첫 익명 방문은 세션만 읽고 refresh를 �
   });
   await page.goto("/terms");
   await expect(
-    page.getByRole("button", { name: "로그인", exact: true })
+    page
+      .getByRole("banner")
+      .getByRole("button", { name: "무료로 시작하기", exact: true })
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "로그인 상태 확인 중" })
   ).toHaveCount(0);
-  expect(reads).toBe(1);
+  await expect.poll(() => reads).toBe(1);
   expect(refreshes).toBe(0);
 });
 
@@ -104,12 +109,12 @@ test("SSR 사용자가 없어도 브라우저 갱신 후보는 한 번 복구하
       json: { success: true, data: { workspaces: [] }, error: null },
     })
   );
-  await page.goto("/terms");
+  await page.goto("/oauth/authorize");
   await expect(
     page.getByRole("button", { name: "로그아웃", exact: true })
   ).toBeVisible();
-  expect(reads).toBe(2);
-  expect(refreshes).toBe(1);
+  await expect.poll(() => reads).toBe(2);
+  await expect.poll(() => refreshes).toBe(1);
 });
 
 test("invalid refresh는 한 번 실패한 뒤 익명이며 만료 toast나 logout 요청이 없다", async ({
@@ -139,12 +144,14 @@ test("invalid refresh는 한 번 실패한 뒤 익명이며 만료 toast나 logo
   });
   await page.goto("/terms");
   await expect(
-    page.getByRole("button", { name: "로그인", exact: true })
+    page
+      .getByRole("banner")
+      .getByRole("button", { name: "무료로 시작하기", exact: true })
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "로그인 상태 확인 중" })
   ).toHaveCount(0);
-  expect(refreshes).toBe(1);
+  await expect.poll(() => refreshes).toBe(1);
   expect(logouts).toBe(0);
   await expect(
     page.getByText("세션이 만료되었습니다. 다시 로그인해 주세요.")

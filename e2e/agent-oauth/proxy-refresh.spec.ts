@@ -1,8 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 /**
- * `proxy.ts` 의 SSR 전 토큰 갱신이 언어 경로(PRO-66)를 들인 뒤에도 그대로인지 본다. 언어 rewrite 는
- * `next.config.ts` 에 있고 proxy 는 바뀌지 않았다 — 그 경계가 지켜지는지가 이 시험의 목적이다.
+ * 제품 화면의 SSR 전 토큰 갱신과 정적 가이드의 proxy 제외(APP-1418)를 함께 본다.
  *
  * - 일반 요청: 만료면 갱신하고, 새 쿠키가 **SSR**(서버가 그린 사용자)과 **브라우저**(`Set-Cookie`)에 전달된다.
  * - 투기적 요청(prefetch): matcher 의 `missing` 이 proxy 를 건너뛰므로 갱신도 쿠키 변경도 없다.
@@ -28,9 +27,11 @@ async function session(request: APIRequestContext, expired: boolean) {
 }
 
 async function attempts(request: APIRequestContext) {
-  return ((await (await request.get(`${API}/__test/state`)).json()) as {
-    refreshAttempts: number;
-  }).refreshAttempts;
+  return (
+    (await (await request.get(`${API}/__test/state`)).json()) as {
+      refreshAttempts: number;
+    }
+  ).refreshAttempts;
 }
 
 async function open(
@@ -61,8 +62,11 @@ test.beforeEach(async ({ request }) => {
 });
 
 for (const path of PATHS) {
+  const product = path === "/invite";
   test.describe(path, () => {
-    test("정상 토큰: 일반 요청도 prefetch 도 갱신하지 않는다", async ({ request }) => {
+    test("정상 토큰: 일반 요청도 prefetch 도 갱신하지 않는다", async ({
+      request,
+    }) => {
       const live = await session(request, false);
       for (const prefetch of [false, true]) {
         const result = await open(request, path, live, prefetch);
@@ -72,23 +76,33 @@ for (const path of PATHS) {
       expect(await attempts(request)).toBe(0);
     });
 
-    test("만료: 일반 요청은 갱신해 SSR 과 브라우저에 새 쿠키를 넘기고, prefetch 는 갱신하지 않는다", async ({
-      request,
-    }) => {
-      const expired = await session(request, true);
+    test(
+      product
+        ? "만료: 일반 요청은 갱신해 SSR 과 브라우저에 새 쿠키를 넘기고, prefetch 는 갱신하지 않는다"
+        : "정적 가이드는 만료 토큰도 갱신하거나 쿠키를 바꾸지 않는다",
+      async ({ request }) => {
+        const expired = await session(request, true);
 
-      const prefetched = await open(request, path, expired, true);
-      expect(prefetched.setCookie).toEqual([]);
-      expect(await attempts(request)).toBe(0);
+        const prefetched = await open(request, path, expired, true);
+        expect(prefetched.setCookie).toEqual([]);
+        expect(await attempts(request)).toBe(0);
 
-      const result = await open(request, path, expired, false);
-      expect(result.status).toBe(200);
-      expect(await attempts(request)).toBe(1);
-      expect(result.setCookie.some((c) => c.startsWith("access_token="))).toBe(true);
-      expect(result.setCookie.some((c) => c.startsWith("refresh_token="))).toBe(true);
-      // 정적 마케팅 페이지는 SSR 이 사용자를 읽지 않는다. 요청마다 그리는 제품 화면에서 SSR 전달을 본다.
-      if (path === "/invite") expect(result.body).toContain(USER_EMAIL);
-    });
+        const result = await open(request, path, expired, false);
+        expect(result.status).toBe(200);
+        expect(await attempts(request)).toBe(product ? 1 : 0);
+        if (product) {
+          expect(
+            result.setCookie.some((c) => c.startsWith("access_token="))
+          ).toBe(true);
+          expect(
+            result.setCookie.some((c) => c.startsWith("refresh_token="))
+          ).toBe(true);
+          expect(result.body).toContain(USER_EMAIL);
+        } else {
+          expect(result.setCookie).toEqual([]);
+        }
+      }
+    );
 
     test("일시 실패: 쿠키를 건드리지 않고, prefetch 는 시도조차 하지 않는다", async ({
       request,
@@ -102,30 +116,38 @@ for (const path of PATHS) {
 
       const result = await open(request, path, expired, false);
       expect(result.status).toBe(200);
-      expect(await attempts(request)).toBe(1);
+      expect(await attempts(request)).toBe(product ? 1 : 0);
       expect(result.setCookie).toEqual([]);
     });
 
-    test("폐기 토큰: 일반 요청은 인증 쿠키를 지우고, prefetch 는 지우지 않는다", async ({
-      request,
-    }) => {
-      const revoked = { ...(await session(request, true)), refresh: "revoked" };
+    test(
+      product
+        ? "폐기 토큰: 일반 요청은 인증 쿠키를 지우고, prefetch 는 지우지 않는다"
+        : "정적 가이드는 폐기 토큰도 갱신하거나 쿠키를 지우지 않는다",
+      async ({ request }) => {
+        const revoked = {
+          ...(await session(request, true)),
+          refresh: "revoked",
+        };
 
-      const prefetched = await open(request, path, revoked, true);
-      expect(prefetched.setCookie).toEqual([]);
-      expect(await attempts(request)).toBe(0);
+        const prefetched = await open(request, path, revoked, true);
+        expect(prefetched.setCookie).toEqual([]);
+        expect(await attempts(request)).toBe(0);
 
-      const result = await open(request, path, revoked, false);
-      expect(result.status).toBe(200);
-      expect(await attempts(request)).toBe(1);
-      for (const name of ["access_token", "refresh_token"]) {
-        expect(
-          result.setCookie.some(
-            (c) => c.startsWith(`${name}=;`) && /expires=Thu, 01 Jan 1970/i.test(c)
-          ),
-          name
-        ).toBe(true);
+        const result = await open(request, path, revoked, false);
+        expect(result.status).toBe(200);
+        expect(await attempts(request)).toBe(product ? 1 : 0);
+        if (!product) expect(result.setCookie).toEqual([]);
+        for (const name of product ? ["access_token", "refresh_token"] : []) {
+          expect(
+            result.setCookie.some(
+              (c) =>
+                c.startsWith(`${name}=;`) && /expires=Thu, 01 Jan 1970/i.test(c)
+            ),
+            name
+          ).toBe(true);
+        }
       }
-    });
+    );
   });
 }
