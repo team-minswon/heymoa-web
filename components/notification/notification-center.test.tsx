@@ -72,6 +72,8 @@ const store = {
   failCount: false,
   legacy: false,
   muteAll: false,
+  /** 있으면 하나 읽기 응답이 이것을 기다린다 — 응답 전 화면을 보려고 */
+  readGate: null as Promise<void> | null,
 };
 const requests: string[] = [];
 
@@ -202,8 +204,9 @@ const server = setupServer(
       error: null,
     });
   }),
-  http.put("*/v1/notifications/:id/read", ({ params }) => {
+  http.put("*/v1/notifications/:id/read", async ({ params }) => {
     requests.push(`PUT read ${params.id}`);
+    if (store.readGate) await store.readGate;
     const item = store.items.find((i) => i.notificationId === params.id);
     if (item) item.readAt ??= store.serverTime;
     return HttpResponse.json({
@@ -256,6 +259,7 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
   push.mockReset();
   store.items = [];
+  store.readGate = null;
   store.failCount = false;
   store.legacy = false;
   store.muteAll = false;
@@ -650,6 +654,31 @@ describe("검토할 결과 준비 행", () => {
       expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull()
     );
     expect(requests.some((r) => r.startsWith("PUT read"))).toBe(false);
+  });
+
+  it("점(읽음으로 표시)은 이동 없이 그 알림만 읽고, 사이드바 배지는 응답 전에 먼저 하나 내려간다", async () => {
+    store.items = [analysisReady("A1", at(1)), analysisReady("A2", at(2))];
+    renderCenter();
+    await screen.findByRole("button", { name: "알림 2" });
+    const dialog = await openModal();
+    await within(dialog).findAllByRole("button", { name: "읽음으로 표시" });
+    const row = dialog.querySelector<HTMLElement>(
+      '[data-notification-id="A1"]'
+    )!;
+    let release = () => {};
+    store.readGate = new Promise((resolve) => (release = resolve));
+    fireEvent.click(within(row).getByRole("button", { name: "읽음으로 표시" }));
+    await waitFor(() => expect(requests).toContain("PUT read A1"));
+    // 서버가 아직 답하지 않았는데 배지는 이미 1이다(모달 뒤라 접근성 트리에서는 가려져 있다).
+    expect(
+      await screen.findByRole("button", { name: "알림 1", hidden: true })
+    ).toBeInTheDocument();
+    expect(row).not.toHaveAttribute("data-unread");
+    release();
+    store.readGate = null;
+    expect(requests).not.toContain("PUT read A2");
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "알림" })).toBeVisible();
   });
 
   it("원본이 없거나 권한이 없는 워크스페이스면 행은 남고 이동만 막힌다", async () => {

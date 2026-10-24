@@ -347,14 +347,12 @@ export function NotificationModal({
       <Dialog open={open} onOpenChange={(next) => !next && close()}>
         {/*
           크기는 내용과 상관없이 고정이다 — 탭을 바꾸거나 로딩·빈 상태가 되어도 창이 줄었다 늘었다 하지 않고, 목록 칸만
-          스크롤한다. 왼쪽 기준선은 24px(제목·탭·날짜 머리글·카드 테두리)이고 행의 글은 카드 안 40px 이다. 안 읽음 점은 행의 왼쪽 안쪽 여백에 매달린다.
+          스크롤한다. 왼쪽 기준선은 24px(제목·탭·날짜 머리글·카드 테두리)이고 행의 글은 카드 안 52px 이다. 안 읽음 점은 그 사이 칸에 매달린다.
           열 때 포커스는 창 자체에 둔다 — 첫 탭에 두면 열자마자 포커스 링이 뜬다. Tab 으로 탭부터 차례로 간다.
         */}
         <DialogContent
           ref={popupRef}
           initialFocus={popupRef}
-          // 키보드로 닫았을 때만 「알림」으로 포커스를 돌려준다. 마우스로 닫고 남은 포커스가 링으로 보이지 않게.
-          finalFocus={(closeType) => closeType === "keyboard"}
           className="flex h-[min(600px,calc(100dvh-4rem))] flex-col gap-0 overflow-hidden bg-[var(--el-canvas)] p-0 outline-none sm:max-w-[540px] [&>[data-slot=dialog-close]]:top-5 [&>[data-slot=dialog-close]]:right-[18px]"
         >
           {/* 머리(제목·탭·동작)는 흰 면, 목록은 회색 캔버스 위의 흰 카드 — 두 층이 한눈에 갈린다(APP-1361). */}
@@ -436,7 +434,7 @@ export function NotificationModal({
                 </div>
               ) : null}
               {webMuted ? (
-                <div className="mx-6 mt-4 flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] py-2 pr-2 pl-[15px] text-[13px] text-[var(--el-body)]">
+                <div className="mx-6 mt-4 flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] py-2 pr-2 pl-[27px] text-[13px] text-[var(--el-body)]">
                   <BellOff
                     aria-hidden
                     className="size-4 text-[var(--el-muted)]"
@@ -579,7 +577,7 @@ function NotificationListBody({
         {filter === "ALL" ? <div className={DAY}>&nbsp;</div> : null}
         <ul className={CARD}>
           {[0, 1, 2, 3, 4].map((index) => (
-            <li key={index} className="flex gap-3 px-[15px] py-3.5">
+            <li key={index} className="flex gap-3 py-3.5 pr-[15px] pl-[27px]">
               <div className="flex flex-1 flex-col gap-0.5">
                 <Skeleton className="my-[5px] h-[11px] w-4/5 rounded-chip" />
                 <Skeleton className="mt-1.5 mb-1 h-[10px] w-2/5 rounded-chip" />

@@ -48,6 +48,15 @@ describe("읽음 표시", () => {
     expect(hidden.className).toContain("invisible");
     expect(hidden.className).toContain("absolute");
   });
+
+  it("안 읽음은 스크린리더에 글로 말하고, 바탕을 칠하지 않는다", () => {
+    const { rerender, container } = render(row(null));
+    const li = container.querySelector("li")!;
+    expect(li).toHaveTextContent(/^안 읽음/);
+    expect(li.className).not.toMatch(/(^|\s)bg-/);
+    rerender(row("2026-10-22T03:00:00Z"));
+    expect(li).not.toHaveTextContent("안 읽음");
+  });
 });
 
 describe("workspaceLabel", () => {

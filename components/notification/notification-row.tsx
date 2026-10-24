@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { formatAppDate } from "@/lib/format/date";
 import type { NotificationItem } from "@/lib/notification/notification-list";
@@ -34,8 +36,13 @@ export type NotificationRowView = {
 
 /**
  * 알림 한 줄. 날짜 묶음의 흰 카드 안에 서고, 줄 사이 hairline 은 카드(`divide-y`)가 긋는다.
- * 안 읽음은 옅은 회색 바탕 + 점이다. 점은 글 왼쪽 여백(15px)에 매달려(hanging) 있어서, 읽음·안 읽음과 상관없이 모든
- * 행의 글이 같은 왼쪽 기준선(날짜 머리글·모달 제목과 같은 선)에서 시작한다. 읽으면 점과 바탕만 흐려진다 — 글은 안 움직인다.
+ *
+ * 안 읽음은 **왼쪽 점 하나 + 진한 글**이다(GitHub·Gmail·Linear 인박스처럼 신호는 하나, 조용하게). 바탕은 칠하지 않는다 —
+ * 회색 바탕은 hover·「마지막으로 누른 행」과 겹치고, 회색 캔버스 위 흰 카드를 얼룩지게 했다. 굵기도 바꾸지 않는다 —
+ * 굵기가 바뀌면 글 폭이 달라져 읽는 순간 줄바꿈이 다시 일어난다(레이아웃 이동).
+ *
+ * 점은 행 왼쪽의 고정 칸(27px)에 매달려 있어서, 읽음·안 읽음과 상관없이 모든 행의 글이 같은 기준선에서 시작한다.
+ * 읽으면 점이 흐려지고 글색이 한 단계 내려갈 뿐 — 아무것도 움직이지 않는다. 점 색은 사이드바 개수 배지와 같은 ink 다.
  */
 export function NotificationRow({
   notification,
@@ -69,11 +76,8 @@ export function NotificationRow({
       data-notification-id={notification.notificationId}
       data-unread={unread || undefined}
       className={cn(
-        "group/row relative flex cursor-pointer gap-3 px-[15px] py-3.5 transition-colors duration-150",
-        unread
-          ? "bg-[var(--el-surface-strong)]/80 hover:bg-[var(--el-surface-strong)]"
-          : "hover:bg-[var(--el-surface-strong)]/50",
-        // 마지막으로 누른 행 — 왼쪽 가장자리의 짧은 회색 띠. 바탕색은 안 읽음·hover 가 이미 쓴다.
+        "group/row relative flex cursor-pointer gap-3 py-3.5 pr-[15px] pl-[27px] transition-colors duration-150 hover:bg-[var(--el-surface-strong)]/60",
+        // 마지막으로 누른 행 — 왼쪽 가장자리의 짧은 회색 띠. 바탕색은 hover 가 쓴다.
         highlighted && "shadow-[inset_2px_0_0_var(--el-hairline-strong)]"
       )}
       onClick={(event) => {
@@ -82,37 +86,56 @@ export function NotificationRow({
         activate();
       }}
     >
-      {/* 점은 글 왼쪽 여백(15px)의 가운데에 매달린다. 읽으면 흐려지고, 다 흐려진 뒤 보이지 않게 된다(탭 순서에서도 빠진다). */}
+      {/*
+        읽음 처리는 이동과 따로다 — 점 자리가 그 버튼이다(Gmail·GitHub 인박스처럼 이동 없이 읽음). 마우스를 올리거나
+        Tab 으로 닿으면 점이 ✓ 로 바뀌어 누를 수 있음을 보인다. 터치에는 hover 가 없어 점 그대로 누른다(누름 칸은 첫 줄
+        높이 × 27px). 읽으면 흐려지고, 다 흐려진 뒤 보이지 않게 된다(탭 순서에서도 빠진다). 서버에 「안 읽음으로」 API 가
+        없어 되돌리기는 없다.
+      */}
       <button
         type="button"
         aria-label="읽음으로 표시"
+        title="읽음으로 표시"
         disabled={!unread}
         onClick={onRead}
         className={cn(
-          "absolute top-3.5 left-0 flex h-[21px] w-[15px] items-center justify-center rounded-full transition-[opacity,visibility] duration-[180ms] ease-out motion-reduce:transition-none",
+          "group/dot absolute top-3.5 left-0 flex h-[21px] w-[27px] items-center justify-center outline-none transition-[opacity,visibility] duration-[180ms] ease-out motion-reduce:transition-none",
           unread ? "visible opacity-100" : "invisible opacity-0"
         )}
       >
         <span
           aria-hidden
-          className="block size-[7px] rounded-full bg-[var(--el-primary)]"
-        />
+          className="relative flex size-[18px] items-center justify-center rounded-full transition-colors duration-150 group-hover/dot:bg-[var(--el-hairline)] group-focus-visible/dot:bg-[var(--el-hairline)] group-focus-visible/dot:ring-2 group-focus-visible/dot:ring-[var(--el-ink)]/30"
+        >
+          <span className="size-1.5 rounded-full bg-[var(--el-ink)] transition-opacity duration-150 group-hover/dot:opacity-0 group-focus-visible/dot:opacity-0" />
+          <Check
+            strokeWidth={2.5}
+            className="absolute size-3 text-[var(--el-ink)] opacity-0 transition-opacity duration-150 group-hover/dot:opacity-100 group-focus-visible/dot:opacity-100"
+          />
+        </span>
       </button>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {/* 점은 보이는 표시라 스크린리더에는 글로 말한다 — 행을 읽을 때 맨 앞에 「안 읽음」. */}
+        {unread ? <span className="sr-only">안 읽음</span> : null}
         {view.onActivate ? (
           // 키보드로도 닿게 첫 줄이 버튼이다. 행 어디를 눌러도 같은 일을 한다.
           <button
             type="button"
             onClick={view.onActivate}
             className={cn(
-              "rounded-[2px] text-left text-[13.5px] leading-[21px] text-pretty outline-none focus-visible:underline focus-visible:underline-offset-2",
+              "rounded-[2px] text-left text-[13.5px] leading-[21px] text-pretty transition-colors duration-[180ms] outline-none focus-visible:underline focus-visible:underline-offset-2",
               tone
             )}
           >
             {view.title}
           </button>
         ) : (
-          <p className={cn("text-[13.5px] leading-[21px] text-pretty", tone)}>
+          <p
+            className={cn(
+              "text-[13.5px] leading-[21px] text-pretty transition-colors duration-[180ms]",
+              tone
+            )}
+          >
             {view.title}
           </p>
         )}

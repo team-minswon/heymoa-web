@@ -323,7 +323,7 @@ test("목에서 초대를 수락하면 다시 열어도 결과가 남고, 새 �
 });
 
 for (const width of [1440, 1024]) {
-  test(`${width}px 에서 카드 테두리·날짜 머리글이 모달 제목과 같은 24px 선이고, 행 글은 40px 선, 날짜 머리글은 흰 카드 밖 회색 띠다`, async ({
+  test(`${width}px 에서 카드 테두리·날짜 머리글이 모달 제목과 같은 24px 선이고, 행 글은 52px 선(그 사이 칸에 안 읽음 점), 날짜 머리글은 흰 카드 밖 회색 띠다`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -374,14 +374,69 @@ for (const width of [1440, 1024]) {
     // 오른쪽 24px 은 막대 자리 안쪽에서 잰다 — 시험 브라우저는 클래식 막대(15px)라 그만큼 더 들어간다.
     const right = geometry.dialogRight - geometry.gutter;
     expect(geometry.card).toEqual([base, right - 24]);
-    expect(geometry.text).toBe(base + 16);
+    expect(geometry.text).toBe(base + 28);
     expect(geometry.asideRight).toBe(right - 40);
     expect([geometry.rowPad, geometry.dayTop]).toEqual(["14px", "20px"]);
     if (width === 1440)
       expect([geometry.text, geometry.asideRight + geometry.gutter]).toEqual([
-        490, 950,
+        502, 950,
       ]);
     expect(geometry.dayPosition).toBe("sticky");
     expect(geometry.dayBg).not.toBe(geometry.cardBg);
   });
 }
+
+test("마우스로 연 알림을 Esc 로 닫으면 「알림」에 포커스는 돌아오되 링은 없고, 키보드로 열었으면 링도 돌아온다", async ({
+  page,
+}) => {
+  await page.goto(WS);
+  const entry = page
+    .getByRole("navigation", { name: "워크스페이스" })
+    .getByRole("button", { name: /^알림/ });
+  const dialog = page.getByRole("dialog", { name: "알림" });
+  const ring = () =>
+    entry.evaluate(
+      (node) =>
+        document.activeElement === node && node.matches(":focus-visible")
+    );
+
+  await entry.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(entry).toBeFocused();
+  expect(await ring()).toBe(false);
+
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  expect(await ring()).toBe(true);
+});
+
+test("안 읽음 점은 이동 없이 그 알림만 읽고 사이드바 개수가 하나 준다", async ({
+  page,
+}) => {
+  await page.goto(`${WS}?notifications=all`);
+  const dialog = page.getByRole("dialog", { name: "알림" });
+  const unread = dialog.locator("[data-unread]");
+  await expect(unread.first()).toBeVisible();
+  const before = await unread.count();
+  const row = unread.first();
+  const id = await row.getAttribute("data-notification-id");
+  await row.hover();
+  await row.getByRole("button", { name: "읽음으로 표시" }).click();
+  await expect(
+    dialog.locator(`[data-notification-id="${id}"]`)
+  ).not.toHaveAttribute("data-unread");
+  await expect(unread).toHaveCount(before - 1);
+  await expect(page).toHaveURL(/notifications=all/);
+  await page.keyboard.press("Escape");
+  await expect(
+    page
+      .getByRole("navigation", { name: "워크스페이스" })
+      .getByLabel("안 읽은 알림 6개")
+  ).toBeVisible();
+});
