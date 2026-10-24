@@ -12,6 +12,7 @@ import { useAcceptInvitationByToken } from "@/lib/api/generated/workspace-invita
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import { CenteredCard } from "@/components/layout/centered-card";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
+import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 
 const ERROR_COPY: Record<string, { title: string; description: string }> = {
   INVITATION_NOT_FOUND: {
@@ -109,15 +110,17 @@ function InviteCard({
         <p className="mt-2 text-base text-[var(--el-muted)]">
           로그인하면 초대를 수락하고 바로 워크스페이스에 합류합니다.
         </p>
-        <a
-          href={buildGoogleOAuthUrl(
-            `/invite?token=${encodeURIComponent(token)}`
-          )}
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
-        >
-          <LogIn className="size-4" aria-hidden />
-          Google로 계속하기
-        </a>
+        <InAppLoginGate returnTo={`/invite?token=${encodeURIComponent(token)}`}>
+          <a
+            href={buildGoogleOAuthUrl(
+              `/invite?token=${encodeURIComponent(token)}`
+            )}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
+          >
+            <LogIn className="size-4" aria-hidden />
+            Google로 계속하기
+          </a>
+        </InAppLoginGate>
       </CenteredCard>
     );
   }

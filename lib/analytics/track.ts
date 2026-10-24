@@ -4,6 +4,7 @@ import type { NotificationListResponseDataNotificationsItemType } from "@/lib/ap
 import type { NotificationSettingsResponseDataItemsItemChannelsItemChannel } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemChannelsItemChannel";
 import type { NotificationSettingsResponseDataItemsItemType } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemType";
 import { desktopAuthBridge } from "@/lib/desktop/auth";
+import type { HandoffContext } from "@/lib/auth/in-app-browser";
 
 /**
  * 보내는 이벤트 이름. **여기 없는 이름은 보낼 수 없다** — PostHog 깔때기는 이름 문자열로
@@ -19,6 +20,10 @@ export type AnalyticsEvent =
   | "sign_up"
   | "first_recording"
   | "login_started"
+  | "browser_handoff_attempted"
+  | "browser_handoff_guide_shown"
+  | "browser_handoff_link_copied"
+  | "browser_handoff_arrived"
   | "login_completed"
   | "workspace_created"
   | "project_created"
@@ -85,6 +90,14 @@ type HelpLanguage = "ko" | "en";
 
 /** 새 행동의 속성은 정해진 종류·개수·워크스페이스 식별자만 받습니다. */
 export type WebEventProperties = {
+  browser_handoff_attempted: HandoffContext & {
+    method: "app_scheme" | "android_intent" | "app_parameter" | "manual";
+    trigger: "entry" | "login";
+    interaction: "automatic" | "click";
+  };
+  browser_handoff_guide_shown: HandoffContext;
+  browser_handoff_link_copied: HandoffContext;
+  browser_handoff_arrived: HandoffContext;
   recording_start_clicked: { workspace_id: string; retry: boolean };
   recording_stop_clicked: { surface: "note" | "global" };
   // source: 어디서 노트에 들어왔나. 목록 행 클릭은 list, 메일 링크(utm_medium=email)는 mail,

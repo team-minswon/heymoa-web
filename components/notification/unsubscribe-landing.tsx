@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/generated/mail-unsubscribe/mail-unsubscribe";
 import { useUpdateNotificationPreference } from "@/lib/api/generated/notification-settings/notification-settings";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
+import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 
 /**
  * 링크가 끄는 설정 항목(응답 `kind`)별 문구. 자동 종료 안내 메일의 링크도 리마인더 항목으로 온다(계약).
@@ -183,38 +184,43 @@ function ResubscribeCard({
   return (
     <Card title={title}>
       <Footer>
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          loading={resubscribe.isPending}
-          onClick={() => {
-            if (status !== "authenticated") {
-              // 로그인한 뒤 같은 링크로 돌아온다(`normalizeReturnTo` 가 `/unsubscribe` 를 허용한다).
-              window.location.assign(
-                buildGoogleOAuthUrl(
-                  `/unsubscribe?t=${encodeURIComponent(token)}`
-                )
-              );
-              return;
-            }
-            resubscribe
-              .mutateAsync({
-                data: {
-                  type: kind,
-                  channel: "EMAIL",
-                  enabled: true,
-                },
-              })
-              .then((response) => {
-                if (response.status === 200 && response.data.success)
-                  setResubscribed(true);
-              })
-              .catch(() => {});
-          }}
+        <InAppLoginGate
+          enabled={status !== "authenticated"}
+          returnTo={`/unsubscribe?t=${encodeURIComponent(token)}`}
         >
-          다시 켜기
-        </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            loading={resubscribe.isPending}
+            onClick={() => {
+              if (status !== "authenticated") {
+                // 로그인한 뒤 같은 링크로 돌아온다(`normalizeReturnTo` 가 `/unsubscribe` 를 허용한다).
+                window.location.assign(
+                  buildGoogleOAuthUrl(
+                    `/unsubscribe?t=${encodeURIComponent(token)}`
+                  )
+                );
+                return;
+              }
+              resubscribe
+                .mutateAsync({
+                  data: {
+                    type: kind,
+                    channel: "EMAIL",
+                    enabled: true,
+                  },
+                })
+                .then((response) => {
+                  if (response.status === 200 && response.data.success)
+                    setResubscribed(true);
+                })
+                .catch(() => {});
+            }}
+          >
+            다시 켜기
+          </Button>
+        </InAppLoginGate>
       </Footer>
     </Card>
   );

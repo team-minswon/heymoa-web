@@ -9,7 +9,11 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   // 목을 끄고 따로 도는 묶음이다 — 인증(APP-902)·외부 에이전트 OAuth(APP-888) 각자의 설정이 띄운다.
-  testIgnore: ["**/auth-session-probe/**", "**/agent-oauth/**"],
+  testIgnore: [
+    "**/auth-session-probe/**",
+    "**/agent-oauth/**",
+    "**/browser-handoff.spec.ts",
+  ],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

@@ -3,6 +3,7 @@ import { AlertTriangle, LogIn } from "lucide-react";
 
 import { CenteredCard } from "@/components/layout/centered-card";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
+import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 
 /**
  * 동의 흐름 카드의 머리 표시. 무엇에 연결하는지가 HeyMoa 라 HeyMoa 로고를 둔다 — 요청한 앱(Claude · Codex …)의
@@ -29,16 +30,17 @@ export function AgentOAuthLoginCard({ returnTo }: { returnTo: string }) {
         AI 앱을 HeyMoa 에 연결하려면 로그인하세요
       </h1>
       <p className="mt-2 text-base text-[var(--el-muted)]">
-        로그인하면 이 앱에 워크스페이스를 맡길지 고르는 화면으로
-        이어집니다.
+        로그인하면 이 앱에 워크스페이스를 맡길지 고르는 화면으로 이어집니다.
       </p>
-      <a
-        href={buildGoogleOAuthUrl(returnTo)}
-        className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
-      >
-        <LogIn className="size-4" aria-hidden />
-        Google로 계속하기
-      </a>
+      <InAppLoginGate returnTo={returnTo}>
+        <a
+          href={buildGoogleOAuthUrl(returnTo)}
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
+        >
+          <LogIn className="size-4" aria-hidden />
+          Google로 계속하기
+        </a>
+      </InAppLoginGate>
     </CenteredCard>
   );
 }

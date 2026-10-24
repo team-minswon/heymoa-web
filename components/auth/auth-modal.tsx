@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { ConsentCheckbox } from "@/components/auth/consent-checkbox";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ interface AuthModalProps {
  * 강조한다(APP-1402). 창이 열릴 때마다 새로 마운트되어
  * 닫았다 열면 체크가 풀린다 — 동의는 로그인할 때마다 직접 한다.
  */
-export function LoginForm() {
+export function LoginForm({ returnTo }: { returnTo?: string } = {}) {
   const t = useTranslations("auth.consent");
   const [agreed, setAgreed] = React.useState(false);
   const [nudge, setNudge] = React.useState(0);
@@ -36,22 +37,25 @@ export function LoginForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <GoogleLoginButton
-        className="w-full flex justify-center [&>button]:w-full"
-        blocked={!agreed}
-        onBlocked={() => setNudge((count) => count + 1)}
-        describedBy={hintId}
-        onLoginStart={rememberLoginConsent}
-      />
-      <div className="mt-5">
-        <ConsentCheckbox
-          checked={agreed}
-          onCheckedChange={setAgreed}
-          hint={t("requiredToLogin")}
-          hintId={hintId}
-          nudge={nudge}
+      <InAppLoginGate returnTo={returnTo}>
+        <GoogleLoginButton
+          returnTo={returnTo}
+          className="w-full flex justify-center [&>button]:w-full"
+          blocked={!agreed}
+          onBlocked={() => setNudge((count) => count + 1)}
+          describedBy={hintId}
+          onLoginStart={rememberLoginConsent}
         />
-      </div>
+        <div className="mt-5">
+          <ConsentCheckbox
+            checked={agreed}
+            onCheckedChange={setAgreed}
+            hint={t("requiredToLogin")}
+            hintId={hintId}
+            nudge={nudge}
+          />
+        </div>
+      </InAppLoginGate>
     </div>
   );
 }

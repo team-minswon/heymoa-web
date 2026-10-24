@@ -21,6 +21,7 @@ import { GlobalRecordingIndicator } from "@/components/transcription/global-reco
 import { DesktopRecordingControls } from "@/components/transcription/desktop-recording-controls";
 import { Toaster } from "@/components/ui/toast";
 import { AccountDeletedNotice } from "@/components/auth/account-deleted-notice";
+import { BrowserHandoff } from "@/components/auth/browser-handoff";
 import { messagesFor, type Namespace } from "@/i18n/messages";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import type { Locale } from "@/lib/i18n/locales";
@@ -57,6 +58,7 @@ export async function AppShell({
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider locale={locale} messages={clientMessages}>
           <Providers initialUser={initialUser}>
+            <BrowserHandoff />
             <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
               {/* 키보드 첫 탭이 nav 링크 전부를 지나지 않게. 키보드로 포커스를 받기 전에는 화면 밖에 있다.
                   `focus-visible`인 것은 마우스·프로그램 포커스(다이얼로그가 닫히며 문서 앞으로 돌아오는 등)에

@@ -20,12 +20,15 @@ describe("isWorkspaceRoute", () => {
 
 // 동의 · 초대는 카드 하나만 세운다 — 마케팅 메뉴 없이 로고 · 로그아웃만(`focus-chrome.tsx`)
 describe("isFocusChromeRoute", () => {
-  it.each(["/invite", "/unsubscribe", "/oauth/consent", "/oauth/authorize"])(
-    "gives %s the focus chrome",
-    (pathname) => {
-      expect(isFocusChromeRoute(pathname)).toBe(true);
-    }
-  );
+  it.each([
+    "/invite",
+    "/auth/login",
+    "/unsubscribe",
+    "/oauth/consent",
+    "/oauth/authorize",
+  ])("gives %s the focus chrome", (pathname) => {
+    expect(isFocusChromeRoute(pathname)).toBe(true);
+  });
 
   it.each(["/", "/terms", "/oauth", "/invitations", "/w/01K0000000000"])(
     "leaves %s alone",

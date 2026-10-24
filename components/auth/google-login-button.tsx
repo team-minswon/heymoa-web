@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { desktopAuthBridge } from "@/lib/desktop/auth";
 
 type GoogleLoginButtonProps = {
+  returnTo?: string;
   compact?: boolean;
   className?: string;
   /**
@@ -30,6 +31,7 @@ type GoogleLoginButtonProps = {
 };
 
 export function GoogleLoginButton({
+  returnTo,
   compact = false,
   className,
   blocked = false,
@@ -83,11 +85,11 @@ export function GoogleLoginButton({
           setPending(false);
           return;
         }
-        const returnTo = getCurrentReturnTo();
+        const destination = returnTo ?? getCurrentReturnTo();
         // Call immediately while the click's activation is still live.
         const outcome = await desktop.beginLogin();
         if (outcome.status === "success") {
-          window.location.href = `/auth/callback?returnTo=${encodeURIComponent(returnTo)}`;
+          window.location.href = `/auth/callback?returnTo=${encodeURIComponent(destination)}`;
           return;
         }
         if (outcome.status !== "cancelled") {
@@ -101,7 +103,9 @@ export function GoogleLoginButton({
         setPending(false);
         return;
       }
-      window.location.href = buildGoogleOAuthUrl(getCurrentReturnTo());
+      window.location.href = buildGoogleOAuthUrl(
+        returnTo ?? getCurrentReturnTo()
+      );
     } catch {
       toast.error(t("redirectFailed"), {
         id: "google-login-redirect",

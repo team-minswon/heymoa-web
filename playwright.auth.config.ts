@@ -2,7 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 // Run after the regular MSW suite: both dev servers use this worktree's .next.
 export default defineConfig({
-  testDir: "./e2e/auth-session-probe",
+  testDir: "./e2e",
+  testMatch: ["auth-session-probe/**/*.spec.ts", "browser-handoff.spec.ts"],
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   workers: 2,

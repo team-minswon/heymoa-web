@@ -168,6 +168,17 @@ describe("GoogleLoginButton", () => {
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
+  it("starts OAuth with the handed-off destination rather than the login page", () => {
+    paths.configured = true;
+    paths.buildGoogleOAuthUrl.mockImplementation(() => {
+      throw new Error("navigation boundary");
+    });
+    render(<GoogleLoginButton returnTo="/settings/notifications" />);
+    fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
+    expect(paths.buildGoogleOAuthUrl).toHaveBeenCalledWith(
+      "/settings/notifications"
+    );
+  });
   it("while blocked it looks disabled, hands the click to onBlocked and never starts login", () => {
     paths.configured = true;
     const onLoginStart = vi.fn();

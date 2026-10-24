@@ -35,6 +35,7 @@ export const isLandingHome = (pathname: string) =>
 export function isFocusChromeRoute(pathname: string) {
   return (
     pathname === "/invite" ||
+    pathname === "/auth/login" ||
     pathname === "/unsubscribe" ||
     pathname.startsWith("/oauth/")
   );
