@@ -43,6 +43,7 @@ export type AnalyticsEvent =
   | "chat_renamed"
   | "chat_deleted"
   | "chat_diagram_expanded"
+  | "chat_example_clicked"
   | "integration_connected"
   | "agent_connected"
   | "desktop_download_clicked"
@@ -177,6 +178,12 @@ export type WebEventProperties = {
   chat_deleted: { workspace_id: string };
   // 답변 속 mermaid 도표의 「크게 보기」. 도표 원문·대화 식별자는 싣지 않는다.
   chat_diagram_expanded: Record<string, never>;
+  // 빈 대화의 예시 질문을 눌렀다(입력창을 채우기만 한다 — 보냈는지는 chat_message_sent 가 센다).
+  // kind: 어떤 예시였나. context 는 열어 둔 회의록에 대한 예시다. 예시 문장·회의록 id 는 싣지 않는다.
+  chat_example_clicked: {
+    workspace_id: string;
+    kind: "context" | "notes" | "tasks" | "tools" | "web";
+  };
   feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
   // 회의 종료 뒤 묻는 카드. 띄움은 `feedback_opened {from: "meeting_end"}`, 보냄은 `feedback_sent` 가 센다.
   feedback_dismissed: { from: "meeting_end"; forever: boolean };

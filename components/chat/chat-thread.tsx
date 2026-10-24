@@ -1,13 +1,23 @@
 "use client";
 
 import { Fragment, memo, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, Copy, FileText, Folder } from "lucide-react";
+import { useLocale } from "next-intl";
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  FileText,
+  Folder,
+  Square,
+} from "lucide-react";
 
 import {
   AnswerRefs,
   ChainOfThought,
+  PendingProgress,
   type StepBlock,
 } from "@/components/chat/chain-of-thought";
+import { ChatIconButton } from "@/components/chat/chat-icon-button";
 import { Markdown } from "@/components/chat/markdown";
 import { copyText } from "@/lib/ui/copy-text";
 import { useSmoothText } from "@/lib/chat/use-smooth-text";
@@ -36,10 +46,12 @@ const THREAD_PAD_PX = 24;
 
 // 토큰마다 스레드가 다시 그려져도 `at` 이 같으면 포매터를 다시 만들지 않는다.
 const TimeDivider = memo(function TimeDivider({ at }: { at: string }) {
+  // 앱 언어로 적는다. 비우면 브라우저 언어를 따라 「어제 11:44 PM」이 섞인다
+  const locale = useLocale();
   return (
     <TimeRule
       data-testid="thread-divider"
-      label={dividerLabel(at, new Date())}
+      label={dividerLabel(at, new Date(), locale)}
     />
   );
 });
@@ -57,6 +69,7 @@ export function ChatThread({
   emptyState,
   onOpenNote,
   activeTurnId = null,
+  cancelledTurnId = null,
 }: {
   messages: ThreadMessage[];
   stream: ChatStreamState;
@@ -83,6 +96,8 @@ export function ChatThread({
   onOpenNote?: (noteId: string) => void;
   /** 지금 도는 턴(`activeTurn.turnId`). 이 턴의 히스토리 행만 끝난 턴으로 닫지 않는다. */
   activeTurnId?: string | null;
+  /** 사용자가 멈춘 턴(`lastTurn` 이 CANCELLED). 그 답 끝에 「중지됨」을 단다. */
+  cancelledTurnId?: string | null;
 }) {
   // 스트리밍 중에는 토큰마다 다시 그려지므로 구분선 계산을 붙든다. 구분선은 메시지가 아니라
   // 묶음의 첫 시각으로 잰다 — 화면에 안 그려지는 행이 구분선을 삼키지 않게.
@@ -138,6 +153,15 @@ export function ChatThread({
       ? lastRow
       : null;
 
+  // 마지막 답의 손잡이 줄은 늘 보인다. 흐르다 끝난 로컬 답이 있으면 그쪽이 마지막이다
+  const localAnswerLast =
+    stream.phase === "done" && pendingUserMessage !== null;
+  const lastAnswerIndex = localAnswerLast
+    ? -1
+    : rows.findLastIndex(
+        (each) => each.kind === "message" && each.message.role === "ASSISTANT"
+      );
+
   const row = (item: HistoryRow, index: number) =>
     item === carried ? null : (
       <Fragment key={`${item.at}-${index}`}>
@@ -161,7 +185,15 @@ export function ChatThread({
             ) : null
           )
         ) : (
-          <HistoryMessage message={item.message} onOpenNote={onOpenNote} />
+          <HistoryMessage
+            message={item.message}
+            onOpenNote={onOpenNote}
+            last={index === lastAnswerIndex}
+            stopped={
+              cancelledTurnId !== null &&
+              item.message.turnId === cancelledTurnId
+            }
+          />
         )}
       </Fragment>
     );
@@ -169,7 +201,7 @@ export function ChatThread({
   return (
     // 위에서부터 쌓는다. 아래 정렬이면 짧은 대화 위에 빈 띠가 크게 남는다. 하단 추적은
     // 스크롤 로직이 맡는다.
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-5">
       {rows.slice(0, pinStart).map(row)}
 
       {/*
@@ -185,7 +217,7 @@ export function ChatThread({
          * `minHeight` 안에 들어가고 스크롤 끝을 밀지 않는다.
          */
         className={cn(
-          "flex flex-col gap-4",
+          "flex flex-col gap-5",
           slack && pinStart > 0 && "pt-6",
           stream.phase === "done" && pendingUserMessage && "group/msg"
         )}
@@ -209,9 +241,14 @@ export function ChatThread({
         <StreamBlocks
           stream={stream}
           carried={carried}
+          startedAt={pendingUserAt ?? null}
           onOpenNote={onOpenNote}
         />
-        <ThinkingLine stream={stream} pending={pendingUserMessage !== null} />
+        <ThinkingLine
+          stream={stream}
+          pending={pendingUserMessage !== null}
+          startedAt={pendingUserAt ?? null}
+        />
 
         {approvalCard ? (
           <ApprovalCard
@@ -222,9 +259,18 @@ export function ChatThread({
           />
         ) : null}
 
-        <StreamTail stream={stream} onOpenNote={onOpenNote} />
-        {stream.phase === "done" && pendingUserMessage && pendingUserAt ? (
-          <MessageActions content={stream.content ?? ""} at={pendingUserAt} />
+        {/* 답 꼬리(참고 회의록 · 손잡이 줄)는 히스토리 행과 같은 간격으로 붙는다. 답이 히스토리로 넘어가도 자리가 같다. */}
+        {stream.phase === "done" ? (
+          <div className="-mt-2.5 flex flex-col gap-2.5 empty:hidden">
+            <StreamTail stream={stream} onOpenNote={onOpenNote} />
+            {pendingUserMessage && pendingUserAt ? (
+              <MessageActions
+                content={stream.content ?? ""}
+                at={pendingUserAt}
+                pinned
+              />
+            ) : null}
+          </div>
         ) : null}
         <StreamNotice stream={stream} />
       </div>
@@ -250,9 +296,15 @@ function usableRefs(scope: HistoryScope | undefined) {
 function HistoryMessage({
   message,
   onOpenNote,
+  last = false,
+  stopped = false,
 }: {
   message: ThreadMessage;
   onOpenNote?: (noteId: string) => void;
+  /** 대화의 마지막 답. 손잡이 줄이 늘 보인다. */
+  last?: boolean;
+  /** 사용자가 멈춘 답. 끝에 「중지됨」을 단다. */
+  stopped?: boolean;
 }) {
   if (message.role === "USER")
     return (
@@ -265,12 +317,17 @@ function HistoryMessage({
   if (message.role === "ASSISTANT") {
     return (
       // `group/msg` 로 이름을 붙여야 이 답에 손이 닿았을 때만 손잡이 줄이 뜬다.
-      <div className="group/msg flex flex-col gap-1.5">
+      <div className="group/msg flex flex-col gap-2.5">
         <AssistantText content={message.content} />
+        {stopped ? <StoppedMark /> : null}
         {/* 스트림이 끝나면 이 행이 라이브 말풍선을 대신한다. 여기서 안 그리면
             근거 줄이 몇 초 떴다가 사라진다. */}
         <AnswerRefs refs={usableRefs(message.scope)} onOpenNote={onOpenNote} />
-        <MessageActions content={message.content} at={message.createdAt} />
+        <MessageActions
+          content={message.content}
+          at={message.createdAt}
+          pinned={last}
+        />
       </div>
     );
   }
@@ -283,11 +340,21 @@ function HistoryMessage({
 const COPIED_MS = 1600;
 
 /**
- * 답 하나에 딸린 손잡이 줄. 조건부로 그리면 손이 닿을 때 아래가 밀려서 투명하게 자리를
- * 잡아 둔다. 투명도만 쓰면 키보드 초점이 안 보이는 버튼에 가므로 포커스에도 뜬다.
+ * 답 하나에 딸린 손잡이 줄(복사 · 시각). 조건부로 그리면 손이 닿을 때 아래가 밀려서 투명하게 자리를 잡아 둔다. 데스크톱은
+ * 답에 손이 닿거나 키보드 포커스가 들어올 때 뜨고, 마지막 답(`pinned`)과 마우스가 없는 화면(터치)에서는 늘 보인다 — 「복사가
+ * 어디 있지」를 줄인다.
  */
-function MessageActions({ content, at }: { content: string; at: string }) {
+function MessageActions({
+  content,
+  at,
+  pinned = false,
+}: {
+  content: string;
+  at: string;
+  pinned?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
+  const locale = useLocale();
 
   useEffect(() => {
     if (!copied) return;
@@ -305,26 +372,28 @@ function MessageActions({ content, at }: { content: string; at: string }) {
   return (
     <div
       data-testid="message-actions"
+      data-pinned={pinned || undefined}
       className={cn(
-        "flex h-6 items-center gap-1 text-[var(--el-muted)]",
-        "opacity-0 transition-opacity group-hover/msg:opacity-100",
-        "focus-within:opacity-100 motion-reduce:transition-none"
+        "-mt-1 -ml-2 flex h-8 items-center gap-1 text-[var(--el-muted)] pointer-coarse:h-11",
+        pinned
+          ? "opacity-100"
+          : "opacity-0 transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100"
       )}
     >
-      <button
-        type="button"
-        aria-label={copied ? "복사함" : "복사"}
+      <ChatIconButton
+        label={copied ? "복사함" : "복사"}
+        tooltipSide="bottom"
         onClick={copy}
-        className="flex size-6 cursor-pointer items-center justify-center rounded-control transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
+        className="text-[var(--el-muted)]"
       >
-        {copied ? (
-          <Check aria-hidden className="size-3.5" />
-        ) : (
-          <Copy aria-hidden className="size-3.5" />
-        )}
-      </button>
-      <span className="text-[11px] tabular-nums">
-        {relativeUpdatedAt(at, new Date())}
+        {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+      </ChatIconButton>
+      <span className="text-xs tabular-nums">
+        {relativeUpdatedAt(at, new Date(), locale)}
+      </span>
+      {/* 눌렀는지 화면 읽기에도 한 번 말한다 */}
+      <span className="sr-only" aria-live="polite">
+        {copied ? "답을 복사했어요" : ""}
       </span>
     </div>
   );
@@ -460,7 +529,7 @@ function UserBubble({
 }) {
   return (
     <div className="flex justify-end">
-      <p className="max-w-[85%] rounded-panel bg-[var(--el-surface-strong)] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-[var(--el-ink)]">
+      <p className="max-w-[85%] min-w-0 rounded-panel bg-[var(--el-surface-strong)] px-3.5 py-2.5 text-[14.5px] leading-[1.6] whitespace-pre-wrap text-[var(--el-ink)] [overflow-wrap:anywhere]">
         {withScopeChips(content, scope, onOpenNote)}
       </p>
     </div>
@@ -559,8 +628,9 @@ function ScopeChipMark({
   const Icon = kind === "project" ? Folder : FileText;
   const inside = (
     <>
-      <Icon aria-hidden className="size-3.5 shrink-0" />
-      <span className="truncate">{title}</span>
+      <Icon aria-hidden className="size-3.5 shrink-0 self-start mt-[2px]" />
+      {/* 자르지 않는다 — 범위가 무엇인지 끝까지 보여야 한다. 길면 칩 안에서 줄을 바꾼다 */}
+      <span>{title}</span>
     </>
   );
   if (!onOpen) {
@@ -618,27 +688,24 @@ function AssistantText({
   );
 }
 
-/** 보낸 뒤 첫 블록이 오기 전까지 서는 줄. */
+/**
+ * 보낸 뒤 첫 블록이 오기 전까지 서는 줄. 단계가 흐를 때의 머리줄과 같은 모양·같은 자리라 첫 단계가 와도 줄이 안 바뀐다.
+ * 초는 질문을 보낸 시각부터 센다 — 첫 단계의 묶음도 같은 시각에서 세어 이어진다.
+ */
 function ThinkingLine({
   stream,
   pending,
+  startedAt,
 }: {
   stream: ChatStreamState;
   /** 말풍선은 섰는데 스트림이 아직 안 열렸다. 새 대화는 대화를 만드는 동안 `phase` 가 `idle` 이다. */
   pending: boolean;
+  startedAt: string | null;
 }) {
   const waiting =
     stream.phase === "streaming" || (stream.phase === "idle" && pending);
   if (!waiting || stream.blocks.length > 0) return null;
-  return (
-    <p
-      data-testid="chat-thinking"
-      aria-live="polite"
-      className="chat-shimmer text-xs"
-    >
-      생각하는 중
-    </p>
-  );
+  return <PendingProgress startedAt={startedAt} />;
 }
 
 /**
@@ -648,11 +715,14 @@ function ThinkingLine({
 function StreamBlocks({
   stream,
   carried,
+  startedAt,
   onOpenNote,
 }: {
   stream: ChatStreamState;
   /** 커서 앞 히스토리 단계. 스트림 앞에 붙여 한 묶음으로 그린다. */
   carried: { at: string; blocks: StepBlock[] } | null;
+  /** 이 탭이 질문을 보낸 시각. 첫 묶음의 초가 「생각 중」 줄에서 끊기지 않고 이어진다. */
+  startedAt: string | null;
   onOpenNote?: (noteId: string) => void;
 }) {
   const ended =
@@ -684,7 +754,7 @@ function StreamBlocks({
           <ChainOfThought
             key={`steps-${index}`}
             blocks={group.blocks}
-            startedAt={index === 0 ? carried?.at : undefined}
+            startedAt={index === 0 ? (carried?.at ?? startedAt) : undefined}
             live={
               (stream.phase === "streaming" ||
                 stream.phase === "awaiting_approval") &&
@@ -698,15 +768,35 @@ function StreamBlocks({
             group={group}
           />
         ) : (
-          <AssistantText
-            key={`text-${index}`}
-            content={group.text}
-            partial={isPartial}
-            streaming={stream.phase === "streaming" && index === lastIndex}
-          />
+          <Fragment key={`text-${index}`}>
+            <AssistantText
+              content={group.text}
+              partial={isPartial}
+              streaming={stream.phase === "streaming" && index === lastIndex}
+            />
+            {stream.phase === "cancelled" && index === lastIndex ? (
+              <StoppedMark />
+            ) : null}
+          </Fragment>
         )
       )}
     </>
+  );
+}
+
+/**
+ * 사용자가 멈춘 답의 끝. 끊긴 문장이 완성된 답과 똑같아 보이면 「여기까지가 전부인가」를 잘못 읽는다(처음 사용자 재검사 N-2).
+ * 배너가 아니라 작은 회색 한 줄이다 — 멈춘 것은 사용자가 한 일이라 오류처럼 보이면 안 된다.
+ */
+function StoppedMark() {
+  return (
+    <p
+      data-testid="answer-stopped"
+      className="flex items-center gap-1.5 text-xs text-[var(--el-muted)]"
+    >
+      <Square aria-hidden className="size-2.5 fill-current" />
+      중지됨
+    </p>
   );
 }
 

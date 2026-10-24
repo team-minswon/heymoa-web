@@ -48,6 +48,16 @@ describe("NoteAgentRail", () => {
   it("탭이 없다 — 실시간 정리는 본문 타임라인으로 갔다", () => {
     render(<NoteAgentRail onCollapse={vi.fn()} collapseDisabled={false} />);
     expect(screen.queryByRole("tab")).toBeNull();
-    expect(screen.getByRole("heading", { name: "내 에이전트" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "내 에이전트" })).toBeTruthy();
+  });
+
+  it("★ 머리글 줄을 따로 두지 않는다 — 패널 머리글 한 줄에 접기 버튼만 겹쳐 선다", () => {
+    const { container } = render(
+      <NoteAgentRail onCollapse={vi.fn()} collapseDisabled={false} />
+    );
+    expect(container.textContent).not.toContain("나만 보는 대화");
+    expect(
+      screen.getByRole("button", { name: "내 에이전트 접기" }).className
+    ).toContain("absolute");
   });
 });

@@ -8,11 +8,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { useOpenSettings } from "@/components/workspace/workspace-app-shell";
+import { cn } from "@/lib/utils";
 import { useGetWorkspaceIntegrations } from "@/lib/api/generated/workspace-integration/workspace-integration";
 
 type Starter = {
-  key: string;
+  key: "notes" | "tasks" | "tools" | "web";
   Icon: LucideIcon;
   /** 에이전트가 하는 일. 이 화면이 알려 줄 것은 문장보다 이쪽이다 */
   title: string;
@@ -69,74 +69,100 @@ function useLinearConnected(workspaceId: string) {
   return linear ? linear.connected : null;
 }
 
+/** 예시 한 줄. `kind` 는 계측(`chat_example_clicked`)이 받는 값이다. */
+export type ChatExample = {
+  kind: "context" | Starter["key"];
+  Icon: LucideIcon;
+  /** 화면에 서는 한 줄이자 입력창에 채우는 질문이다. */
+  question: string;
+};
+
 /**
- * 빈 대화 화면. 가운데에 서서 에이전트가 하는 일을 카드로 보여 주고, 누르면 바로 보낸다.
- * [disabled] 는 답을 만드는 중이거나 승인·불러오기를 기다리는 때다 — 그때 보내면 요청이 겹치거나 거절된다.
+ * 보여 줄 예시 서너 줄. 회의록 안에서 열었으면 그 회의 예시가 첫 줄이다(칩이 이미 붙어 있어 「이 회의」로 말한다). 연동 도구 예시는
+ * Linear 가 연동됐다고 **확인된** 때만 넣는다 — 안 된 사람에게 못 하는 일을 권하지 않는다. 모르면 웹 예시를 쓴다.
+ */
+export function chatExamples(
+  contextTitle: string | null,
+  linearConnected: boolean | null
+): ChatExample[] {
+  const pick = (key: Starter["key"]): ChatExample => {
+    const starter = STARTERS.find((each) => each.key === key)!;
+    return { kind: key, Icon: starter.Icon, question: starter.question };
+  };
+  const examples: ChatExample[] = [];
+  if (contextTitle) {
+    examples.push({
+      kind: "context",
+      Icon: FileText,
+      question: "이 회의에서 정한 것과 남은 일을 정리해줘",
+    });
+  } else {
+    examples.push(pick("notes"));
+  }
+  examples.push(pick("tasks"));
+  if (linearConnected === true) examples.push(pick("tools"));
+  examples.push(pick("web"));
+  return examples;
+}
+
+/**
+ * 빈 대화 화면. 위쪽에 인사 한 줄과 할 수 있는 일 한 문장, 그 아래 예시 질문 서너 줄이다. 예시를 누르면 **입력창을 채우기만**
+ * 한다 — 고쳐 묻거나 범위를 바꾼 뒤 보낼 수 있다. 바로 보내면 의도와 다른 질문이 한 턴을 쓴다.
+ *
+ * 연동 안내 줄은 두지 않는다(사용자 지시) — 연동 도구 예시는 연동이 확인된 때만 선다. [disabled] 는 답을 만드는 중이거나 승인·불러오기를 기다리는 때다.
  */
 export function ChatStarter({
   workspaceId,
-  scopeTitles,
+  contextTitle,
   disabled,
-  onAsk,
+  onPick,
 }: {
   workspaceId: string;
-  /** 지금 붙어 있는 범위 칩의 이름. 비면 범위가 없다 */
-  scopeTitles: readonly string[];
+  /** 회의록 화면에서 열어 그 회의록이 범위로 붙어 있으면 그 제목. */
+  contextTitle: string | null;
   disabled: boolean;
-  onAsk: (question: string) => void;
+  /** 예시를 골랐다. 부르는 쪽이 입력창을 채운다. */
+  onPick: (example: ChatExample) => void;
 }) {
   const linearConnected = useLinearConnected(workspaceId);
-  const openSettings = useOpenSettings();
+  const examples = chatExamples(contextTitle, linearConnected);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5 py-6 text-center">
+    <div data-testid="chat-starter" className="flex flex-1 flex-col gap-5 pt-2">
       <div className="space-y-1.5">
-        <h2 className="text-xl text-[var(--el-ink)]">무엇을 도와드릴까요?</h2>
-        <p className="mx-auto max-w-[19rem] text-xs leading-relaxed text-[var(--el-muted)]">
-          {scopeTitles.length > 0
-            ? `${scopeTitles.join(", ")}에 대해 물어봐요.`
-            : "@로 프로젝트·회의록을 고르면 그 범위로 물어봐요."}
+        <h2 className="text-[17px] font-medium text-[var(--el-ink)]">
+          무엇을 도와드릴까요?
+        </h2>
+        <p className="text-[13px] leading-relaxed text-[var(--el-muted)]">
+          {contextTitle
+            ? `「${contextTitle}」 회의록을 보고 답해요. 할 일·이슈도 만들고, 바꾸는 일은 먼저 물어봐요.`
+            : "회의록을 찾아 근거와 함께 답해요. 할 일·이슈도 만들고, 바꾸는 일은 먼저 물어봐요."}
         </p>
       </div>
 
-      <div className="grid w-full max-w-[22rem] gap-2 text-left">
-        {STARTERS.map(({ key, Icon, title, hint, question }) => {
-          // 연동이 없다고 **확인된** 때만 연동으로 보낸다. 설정을 못 여는 곳이면 그대로 보낸다.
-          const connect =
-            key === "tools" &&
-            linearConnected === false &&
-            openSettings !== null;
-          return (
+      <ul aria-label="예시 질문" className="-mx-2 flex flex-col gap-0.5">
+        {examples.map((example) => (
+          <li key={example.kind}>
             <button
-              key={key}
               type="button"
               disabled={disabled}
-              onClick={() =>
-                connect ? openSettings("integrations") : onAsk(question)
-              }
-              className="group flex items-start gap-3 rounded-block text-left border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-3 transition-colors hover:bg-[var(--el-canvas-soft)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--el-surface-card)]"
+              onClick={() => onPick(example)}
+              className="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-block px-2 py-2 text-left text-sm text-[var(--el-body)] outline-none transition-colors pointer-coarse:min-h-12 hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
             >
-              <Icon
+              <example.Icon
                 aria-hidden
-                className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
+                className={cn(
+                  "size-4 shrink-0",
+                  example.kind === "context"
+                    ? "text-[var(--el-scope-note)]"
+                    : "text-[var(--el-muted)]"
+                )}
               />
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-[var(--el-ink)]">
-                  {title}
-                </span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-[var(--el-muted)]">
-                  {connect
-                    ? "Linear 연동이 필요해요. 설정에서 연동할 수 있어요."
-                    : hint}
-                </span>
-                <span className="mt-1.5 block text-[13px] text-[var(--el-body)]">
-                  {connect ? "연동하기" : `“${question}”`}
-                </span>
-              </span>
+              <span className="min-w-0 flex-1">{example.question}</span>
             </button>
-          );
-        })}
-      </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

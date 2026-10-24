@@ -703,7 +703,7 @@ test("renames a chat in place from the header and from history (APP-1433)", asyn
   await expect(header).toBeFocused();
 
   // 기록 줄 메뉴에서 다시 고친다. Esc 는 취소다.
-  await page.getByRole("button", { name: "기록" }).click();
+  await page.getByRole("button", { name: "대화 기록" }).click();
   const history = page.getByTestId("chat-history-view");
   const menu = history.getByRole("button", { name: "「스프린트 회고」 메뉴" });
   await menu.click();
@@ -742,23 +742,35 @@ test("deletes a chat from the header and from history (APP-1409)", async ({
     );
   }
 
-  // 헤더에서 열린 대화를 지우면 확인 뒤 빈 새 대화로 선다.
-  await page.getByTestId("chat-delete").click();
+  // 첫 답 뒤 목이 AI 제목을 단다(1.5초). 머리글이 그 제목으로 바뀐 뒤에 지운다.
+  await expect(
+    page.getByTestId("personal-chat-panel").locator("header")
+  ).toContainText("둘째 대화 정리", { timeout: 10_000 });
+
+  // 머리글 제목 옆 [⋯] 메뉴에서 열린 대화를 지우면 확인 뒤 빈 새 대화로 선다.
+  await page.getByTestId("chat-menu").click();
+  await page.getByRole("menuitem", { name: "삭제" }).click();
   const confirm = page.getByRole("alertdialog");
-  await expect(confirm).toContainText("둘째 대화 요약해줘");
+  await expect(confirm).toContainText("둘째 대화 정리");
   await confirm.getByRole("button", { name: "삭제", exact: true }).click();
   await expect(confirm).toBeHidden();
   await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
 
   // 기록 줄의 [⋯] 메뉴로 남은 대화도 지운다.
-  await page.getByRole("button", { name: "기록" }).click();
+  await page.getByRole("button", { name: "대화 기록" }).click();
   await expect(
-    history.getByRole("button", { name: /^둘째 대화 요약해줘/ })
+    history.getByRole("button", {
+      name: /^(둘째 대화 요약해줘|둘째 대화 정리)/,
+    })
   ).toHaveCount(0);
-  const first = history.getByRole("button", { name: /^첫째 대화 요약해줘/ });
+  const first = history.getByRole("button", {
+    name: /^(첫째 대화 요약해줘|첫째 대화 정리)/,
+  });
   await first.hover();
   await history
-    .getByRole("button", { name: "「첫째 대화 요약해줘」 메뉴" })
+    .getByRole("button", {
+      name: /^「(첫째 대화 요약해줘|첫째 대화 정리)」 메뉴$/,
+    })
     .click();
   await page.getByRole("menuitem", { name: "삭제" }).click();
   await page
@@ -802,14 +814,16 @@ test("keeps a second chat alive while the first waits for approval", async ({
 
   // 목록이 둘을 말한다. 제목은 첫 USER 메시지가 채웠고, 열려 있지 않은 A의 배지는
   // 폴링이 유일한 출처다.
-  await page.getByRole("button", { name: "기록" }).click();
+  await page.getByRole("button", { name: "대화 기록" }).click();
   const history = page.getByTestId("chat-history-view");
   const waiting = history.getByRole("button", {
     name: /^Linear 이슈 만들어줘/,
   });
   await expect(waiting).toContainText("승인 대기", { timeout: 20_000 });
   // 방금 끝난 B에는 배지가 없다 — 목록이 늦어도 열린 대화는 SSE 가 이긴다.
-  const finished = history.getByRole("button", { name: /^요약해줘/ });
+  const finished = history.getByRole("button", {
+    name: /^(요약해줘|대화 정리)/,
+  });
   await expect(finished).toBeVisible({ timeout: 20_000 });
   await expect(finished).not.toContainText("진행 중");
 
@@ -1023,7 +1037,7 @@ test("keeps the question near the top when a divider joins a multi-line send", a
     timeout: 20_000,
   });
 
-  await page.getByRole("button", { name: "기록" }).click();
+  await page.getByRole("button", { name: "대화 기록" }).click();
   const history = page.getByTestId("chat-history-view");
   await expect(history).toBeVisible();
   await history.getByRole("button", { name: /^배포 일정 확인/ }).click();
@@ -1144,11 +1158,11 @@ test("does not create a chat row until the first message is sent", async ({
   // ＋ 를 누르고 아무 말도 안 한 채 기록으로 간다.
   await page.getByTestId("chat-list-new").click();
   await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
-  await page.getByRole("button", { name: "기록" }).click();
+  await page.getByRole("button", { name: "대화 기록" }).click();
 
   const history = page.getByTestId("chat-history-view");
   await expect(
-    history.getByRole("button", { name: /^요약해줘/ })
+    history.getByRole("button", { name: /^(요약해줘|대화 정리)/ })
   ).toBeVisible();
   // 빈 줄이 없다. 기본 제목이 「새 대화」라 만들어졌다면 여기 섰을 것이다.
   await expect(history.getByRole("button", { name: /^새 대화/ })).toHaveCount(
@@ -1186,10 +1200,10 @@ test("opens a blank agent chat in the rail of a newly created note", async ({
   await expect(panel.getByText("무엇을 도와드릴까요?")).toBeVisible();
   await expect(panel.getByTestId("assistant-message")).toHaveCount(0);
   // 앞 대화는 기록에 그대로 있다.
-  await panel.getByRole("button", { name: "기록" }).click();
+  await panel.getByRole("button", { name: "대화 기록" }).click();
   await expect(
     panel.getByTestId("chat-history-view").getByRole("button", {
-      name: /^요약해줘/,
+      name: /^(요약해줘|대화 정리)/,
     })
   ).toBeVisible();
 });
@@ -1223,13 +1237,16 @@ test("swaps the chat history in and back out inside the panel", async ({
   await expect(history).toBeHidden();
 
   // ⟲ — 목록이 스레드 자리에 선다. 스레드는 가려질 뿐 DOM 에 남는다.
-  await page.getByRole("button", { name: "기록" }).click();
+  await page.getByRole("button", { name: "대화 기록" }).click();
   await expect(history).toBeVisible();
   await expect(thread).toBeHidden();
-  await expect(history.getByRole("button", { name: "뒤로가기" })).toBeVisible();
+  // 머리글이 기록 화면의 것으로 바뀐다 — 같은 자리의 ←가 돌아간다
+  await expect(
+    page.getByRole("button", { name: "대화로 돌아가기" })
+  ).toBeVisible();
 
   // 다른 대화를 고르면 곧바로 스레드로 돌아오고, 그 대화가 열려 있다.
-  await history.getByRole("button", { name: /^요약해줘/ }).click();
+  await history.getByRole("button", { name: /^(요약해줘|대화 정리)/ }).click();
   await expect(thread).toBeVisible();
   await expect(history).toBeHidden();
   await expect(page.getByTestId("assistant-message").last()).toContainText(
@@ -1363,7 +1380,10 @@ test("opens the note from a scope chip inside the sent bubble", async ({
   await expect(chip).toBeVisible({ timeout: 20_000 });
   await chip.click();
 
-  await expect(page).toHaveURL(/\/notes\/01K0000000021\?view=side/);
+  // 근거를 확인하러 누른 것이다 — 스크립트를 전체 화면으로 열고 대화는 옆 레일에 남는다
+  await expect(page).toHaveURL(
+    /\/notes\/01K0000000021\?view=full&tab=transcript/
+  );
 });
 
 /**
@@ -1390,7 +1410,9 @@ test("shows the out-of-scope note in the answer refs after widening", async ({
   });
 
   // 둘을 봤다 — 붙인 회의록 하나와 넓혀서 본 하나.
-  await expect(page.getByText("참고한 회의록 2개")).toBeVisible({
+  await expect(
+    page.getByRole("group", { name: "참고한 회의록 2개" }).last()
+  ).toBeVisible({
     timeout: 20_000,
   });
 });
@@ -1666,32 +1688,27 @@ test("ends a stopped meeting from the side panel and opens the ended summary", a
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });
 
-/** 시작 카드를 누르면 입력 없이 바로 보내진다(APP-1117). 연동 전인 외부 도구 카드는 설정의 연동 섹션을 연다. */
-test("sends a starter question straight from the empty chat", async ({
+/** 빈 대화의 예시를 누르면 입력창이 채워지고, 보내기는 사람이 한다(APP-1436). */
+test("fills the composer from an empty-chat example and sends on demand", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByTestId("chat-list-new").click();
-  await page.getByRole("button", { name: /회의록에서 찾기/ }).click();
+  await page
+    .getByRole("button", { name: "지난 회의에서 정한 것만 정리해줘" })
+    .click();
+  await expect(page.getByLabel("메시지")).toHaveText(
+    "지난 회의에서 정한 것만 정리해줘"
+  );
+  await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
 
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
   await expect(page.getByTestId("assistant-message").last()).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.getByText("무엇을 도와드릴까요?")).toBeHidden();
-});
-
-test("opens integration settings from the starter when Linear is not connected", async ({
-  page,
-}) => {
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-
-  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
-  await page.getByTestId("chat-list-new").click();
-  await page.getByRole("button", { name: /외부 도구로 잇기/ }).click();
-
-  await expect(page.getByRole("dialog", { name: /설정/ })).toBeVisible();
 });
 
 /**
@@ -1702,8 +1719,8 @@ test("approves a write tool from the chat card", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
-  // 시드된 대화가 열리므로 ＋ 로 빈 대화를 연다. 목의 Linear 는 연동 전이라 시작 카드가 연동하기로
-  // 바뀌어 있다 — 직접 쓴 문장으로 쓰기 도구 승인 흐름을 굴린다.
+  // 시드된 대화가 열리므로 ＋ 로 빈 대화를 연다. 목의 Linear 는 연동 전이라 연동 예시가 없다 — 직접 쓴 문장으로
+  // 쓰기 도구 승인 흐름을 굴린다.
   await page.getByTestId("chat-list-new").click();
   await page.getByLabel("메시지").fill("논의된 이슈를 Linear 이슈로 만들어줘");
   await page.getByRole("button", { name: "보내기" }).click();
@@ -2202,7 +2219,7 @@ test("switches note tabs without an RSC round trip", async ({ page }) => {
 test("draws the thinking rail from history alone", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
-  await page.getByRole("button", { name: "기록" }).click();
+  await page.getByRole("button", { name: "대화 기록" }).click();
 
   const history = page.getByTestId("chat-history-view");
   await history.getByRole("button", { name: /^생각이 남은 대화/ }).click();
@@ -2213,11 +2230,11 @@ test("draws the thinking rail from history alone", async ({ page }) => {
     timeout: 20_000,
   });
 
-  // 과정 레일이 답변과 함께 서 있다. **확정 전 승인은 안 그린다** — 헤더가 화면에
-  // 실제로 그려진 줄 수와 같아야 한다.
-  const rail = thread.getByText(/생각 과정/).last();
+  // 과정 줄이 답변과 함께 「N초 동안 생각」으로 접혀 서 있고, 펴면 히스토리의 단계가 그대로 선다.
+  const rail = thread.getByRole("button", { name: /초 동안 생각/ }).last();
   await expect(rail).toBeVisible();
-  await expect(rail).toContainText("생각 과정");
+  await rail.click();
+  await expect(thread.locator('[data-step="tool"]').first()).toBeVisible();
 
   // 흐르는 중이 아니다 — 스트림을 한 번도 안 열었다.
   await expect(

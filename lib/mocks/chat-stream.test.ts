@@ -288,15 +288,12 @@ describe("streamed tokens match the persisted content", () => {
     ["Linear 이슈 만들어줘"],
     ["범위 밖인가"],
     ["시나리오"],
-  ])(
-    "holds for %s",
-    (message) => {
-      const events = buildChatEvents({ chatId: "chat-1", message });
-      const end = events.find((event) => event.event === "message_end");
+  ])("holds for %s", (message) => {
+    const events = buildChatEvents({ chatId: "chat-1", message });
+    const end = events.find((event) => event.event === "message_end");
 
-      expect(joined(events).trim()).toBe(JSON.parse(end!.data).content);
-    }
-  );
+    expect(joined(events).trim()).toBe(JSON.parse(end!.data).content);
+  });
 
   it("holds on the rejected path too", () => {
     const plan = buildApprovalPlan({
@@ -355,5 +352,28 @@ describe("★ 목의 id 가 서로 다르다", () => {
     const b = buildApprovalPlan({ chatId: "chat-2", message: "이슈" })!;
 
     expect(a.approvalId).not.toBe(b.approvalId);
+  });
+});
+
+describe("진행 문장(APP-1435)", () => {
+  it("★ 진행 문장은 thinking_delta 이고 ai 처럼 줄바꿈으로 끝난다 — 본문 token 에 안 섞인다", () => {
+    const events = buildChatEvents({ chatId: "chat-1", message: "요약해줘" });
+    const lines = events
+      .filter((event) => event.event === "thinking_delta")
+      .map((event) => JSON.parse(event.data).text as string);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.every((line) => line.endsWith("\n"))).toBe(true);
+    const answer = payloadOf(events, "message_end").content as string;
+    expect(lines.some((line) => answer.includes(line.trim()))).toBe(false);
+  });
+
+  it("「옛 방식」은 진행 문장을 본문 token 으로 흘린다 — 이관 안 한 옛 대화의 모양이다", () => {
+    const events = buildChatEvents({
+      chatId: "chat-1",
+      message: "옛 방식으로",
+    });
+    expect(names(events)).not.toContain("thinking_delta");
+    const answer = payloadOf(events, "message_end").content as string;
+    expect(answer.split("\n\n")[0]).toMatch(/찾아볼게요\.$/);
   });
 });

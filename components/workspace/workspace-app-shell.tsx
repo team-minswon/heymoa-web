@@ -290,10 +290,7 @@ export function WorkspaceAppShell({
 
   return (
     <WorkspaceShellContext.Provider value={value}>
-      <PersonalChatProvider
-        workspaceId={workspaceId}
-        workspaceName={workspace?.name}
-      >
+      <PersonalChatProvider workspaceId={workspaceId}>
         <TooltipProvider>
           {/* 알림 개수와 모달은 셸이 한 번 소유한다 — 사이드바와 전체 화면 노트 헤더가 같은 것을 연다(PRO-67 I09). */}
           <NotificationCenterProvider

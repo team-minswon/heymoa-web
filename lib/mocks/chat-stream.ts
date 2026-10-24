@@ -11,7 +11,10 @@
 
 import { faker } from "@faker-js/faker";
 
-import { HELP_DEMO_CHAT_ANSWERS, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
+import {
+  HELP_DEMO_CHAT_ANSWERS,
+  isHelpDemoEnabled,
+} from "@/lib/mocks/help-demo";
 import {
   APPROVAL_SCENARIOS,
   SCENARIO_HELP,
@@ -163,18 +166,12 @@ function frame(event: string, payload: unknown): MockSseEvent {
 }
 
 /**
- * 생각 문장. **`token`이 아니라 `thinking_delta`다** — 계획은 답이 아니라서 갈라 보낸다.
- * 한 문장이 한 프레임이고, 화면은 이걸 「생각」 묶음으로 접는다.
- */
-/**
- * 연속된 `thinking_delta`는 리듀서가 **한 블록으로 이어붙인다**(`appendThinking`).
- * 그래서 생각이 둘이면 사이에 줄바꿈을 넣어야 한다 — 안 넣으면 화면에
- * 「찾습니다.전사에서」처럼 두 문장이 붙어 버린다.
+ * 진행 문장. **`token`이 아니라 `thinking_delta`다** — 계획은 답이 아니라서 갈라 보낸다(APP-1435). 한 문장이 한 프레임이고
+ * ai 처럼 **줄바꿈으로 끝낸다.** 리듀서가 연속된 `thinking_delta` 를 한 블록으로 이어 붙여도 줄 경계가 남고, 화면은 줄마다 한
+ * 단계로 펼친다. 흐르는 동안에는 마지막 줄이 「지금 하는 일」이다.
  */
 function thinking(...lines: string[]): MockSseEvent[] {
-  return lines.map((line, index) =>
-    frame("thinking_delta", { text: index === 0 ? line : `\n${line}` })
-  );
+  return lines.map((line) => frame("thinking_delta", { text: `${line}\n` }));
 }
 
 /**
@@ -383,6 +380,24 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
     ];
   }
 
+  /**
+   * ★ **옛 ai 의 모양(APP-1057).** 진행 문장이 생각이 아니라 본문 `token` 으로 와서 답 앞에 문단으로 쌓인다. 이미 저장된 옛 대화는
+   * 이 모양 그대로 남으므로(이관하지 않는다) 화면이 그것을 깨지 않고 그리는지 여기서 본다.
+   */
+  if (hasScenario(input.message, "legacyNarration")) {
+    const note = scopedNote(input);
+    const content = [
+      `${note.title}에서 물어보신 내용을 찾아볼게요.`,
+      "스크립트에서 관련 발화를 먼저 확인할게요.",
+      pickGeneralAnswer(`${input.chatId}:${input.turn ?? 0}:legacy`),
+    ].join("\n\n");
+    return [
+      start,
+      ...tokens(content),
+      frame("message_end", { messageId, content, refs: scopedNotes(input) }),
+    ];
+  }
+
   // 마크다운이 낼 수 있는 모양을 한 답에 모아 흘린다. 좁은 패널에서 넘치는 것과
   // 반쯤 온 표·코드펜스가 여기서 보인다.
   if (hasScenario(input.message, "markdown")) {
@@ -477,33 +492,39 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
    */
   if (hasScenario(input.message, "multiTool")) {
     const note = scopedNote(input);
-    const steps: { tool: string; summary: string; found: string; plan: string }[] =
-      [
-        {
-          tool: "transcripts.search",
-          summary: "스크립트에서 결제 실패 언급 검색",
-          found: "3건 찾음",
-          plan: "먼저 스크립트에서 결제 실패가 언급된 자리를 찾습니다.",
-        },
-        {
-          tool: "notes_read",
-          summary: `${note.title} 본문 읽기`,
-          found: "요약 + 스크립트 8000자",
-          plan: "찾은 대목이 어느 회의인지 확인하려고 그 회의록을 폅니다.",
-        },
-        {
-          tool: "linear.search_issues",
-          summary: "Linear 에 같은 이슈가 있나 검색",
-          found: "1건 찾음",
-          plan: "같은 얘기로 이미 만들어 둔 이슈가 있는지 봅니다.",
-        },
-      ];
+    const steps: {
+      tool: string;
+      summary: string;
+      found: string;
+      plan: string;
+    }[] = [
+      {
+        tool: "transcripts.search",
+        summary: "스크립트에서 결제 실패 언급 검색",
+        found: "3건 찾음",
+        plan: "먼저 스크립트에서 결제 실패가 언급된 자리를 찾습니다.",
+      },
+      {
+        tool: "notes_read",
+        summary: `${note.title} 본문 읽기`,
+        found: "요약 + 스크립트 8000자",
+        plan: "찾은 대목이 어느 회의인지 확인하려고 그 회의록을 폅니다.",
+      },
+      {
+        tool: "linear.search_issues",
+        summary: "Linear 에 같은 이슈가 있나 검색",
+        found: "1건 찾음",
+        plan: "같은 얘기로 이미 만들어 둔 이슈가 있는지 봅니다.",
+      },
+    ];
     const content =
       "두 회의에서 나왔고, 이슈는 APP-12 로 이미 만들어져 있습니다. 새로 만들지 않았습니다.";
     return [
       start,
       ...steps.flatMap((step, index) => {
-        const toolCallId = tsid(`${input.chatId}:${input.turn ?? 0}:multi:${index}`);
+        const toolCallId = tsid(
+          `${input.chatId}:${input.turn ?? 0}:multi:${index}`
+        );
         return [
           ...thinking(step.plan),
           frame("tool_call_start", {

@@ -12,6 +12,8 @@ export type ScopeCandidate = {
   title: string;
   /** 회의록일 때 그것이 속한 프로젝트. 겹침 안내가 추가 조회 없이 이 값으로 판정한다. */
   projectId?: string;
+  /** 회의록일 때 회의한 날(없으면 만든 날). 동명 회의록을 날짜로 가른다. */
+  at?: string;
 };
 
 /** 피커가 한 번에 그리는 묶음. */
@@ -82,6 +84,7 @@ export function useScopeCatalog(workspaceId: string, enabled: boolean) {
           id: note.noteId,
           title: note.title,
           projectId: note.projectId,
+          at: note.meetingStartedAt ?? note.createdAt,
         })
       ),
     isPending: projectsQuery.isPending || notes.isPending,

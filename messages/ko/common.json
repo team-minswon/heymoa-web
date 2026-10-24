@@ -43,6 +43,17 @@
       "zoomIn": "확대",
       "fit": "맞춤",
       "hint": "끌어서 이동 · Ctrl/⌘+휠로 확대 · 두 번 누르면 맞춤"
+    },
+    "panelLabel": "내 에이전트",
+    "newChat": "새 대화",
+    "openHistory": "대화 기록",
+    "back": "대화로 돌아가기",
+    "close": "닫기",
+    "chatMenu": "대화 메뉴",
+    "history": {
+      "title": "대화 기록",
+      "emptyTitle": "아직 대화가 없어요",
+      "emptyBody": "회의록에 대해 물어보면 여기에 쌓여요."
     }
   }
 }

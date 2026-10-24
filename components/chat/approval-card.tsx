@@ -102,7 +102,7 @@ export function ApprovalCard({
       data-testid="approval-card"
       data-approval={status.kind}
       className={cn(
-        "flex flex-col gap-3 rounded-panel border bg-white p-4",
+        "flex flex-col gap-3 rounded-panel border bg-[var(--el-surface-card)] p-4",
         BORDERS[status.kind]
       )}
     >

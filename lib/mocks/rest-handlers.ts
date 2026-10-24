@@ -1761,8 +1761,23 @@ export const restHandlers = [
     }
   ),
   // 이름 바꾸기(APP-1431). 바꾸면 그 뒤로 첫 질문·AI 제목이 덮지 않는다(USER). 같은 이름이면 아무것도 안 바꾼다.
+  // 새 이름에 「오류」가 들면 500 으로 실패한다 — 화면이 낙관값을 되돌리고 알리는지 목에서 보는 자리다.
   http.patch("*/v1/agent-chats/:chatId", async ({ params, request }) => {
     const { title } = (await request.json()) as { title: string };
+    if (title.includes("오류")) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "잠시 후 다시 시도해 주세요.",
+            details: null,
+          },
+        },
+        { status: 500 }
+      );
+    }
     return commandResult(() => {
       const chat = mockDb.findAgentChat(id(params.chatId));
       if (!chat) throw new Error("AGENT_CHAT_NOT_FOUND");

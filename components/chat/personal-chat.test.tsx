@@ -17,6 +17,7 @@ import {
   usePersonalChatScope,
 } from "@/components/chat/personal-chat";
 import { messagesFor } from "@/i18n/messages";
+import { onTrack } from "@/lib/analytics/track";
 
 // 근거 칩·도구 칩을 누르면 그 회의록으로 간다 — 이 테스트는 라우터 밖에서 돈다.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -330,6 +331,16 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
   };
 });
 
+/** `@` 목록. 프로젝트 수만큼 조회가 나가는 팬아웃이라 목록 자체를 목으로 준다. */
+vi.mock("@/lib/chat/use-scope-catalog", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/chat/use-scope-catalog")>()),
+  useScopeCatalog: () => ({
+    projects: [{ kind: "project", id: "01K0000000009", title: "결제 개편" }],
+    notes: [],
+    isPending: false,
+  }),
+}));
+
 vi.mock("@/lib/api/sse", () => ({
   /**
    * 첫 연결도 재접속도 재진입도 이 문 하나다. 무엇을 흘릴지는 `state.mode` 가 가른다 —
@@ -470,7 +481,7 @@ function renderChat(child?: React.ReactNode) {
   // 언어 공급자는 `wrapper` 라야 `rerender` 도 그 안에서 다시 그린다. 나머지 모양은 `rerender` 들과 같아야 다시 마운트되지 않는다
   const view = render(
     <QueryClientProvider client={client}>
-      <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+      <PersonalChatProvider workspaceId={WORKSPACE_ID}>
         {child}
       </PersonalChatProvider>
     </QueryClientProvider>,
@@ -491,7 +502,22 @@ function openPanel() {
 
 /** 헤더의 ⟲. 누르면 기록 목록이 스레드 자리로 밀려 들어온다. */
 function historyButton() {
-  return screen.getByRole("button", { name: "기록" });
+  return screen.getByRole("button", { name: "대화 기록" });
+}
+
+/** 끝난 생각 묶음은 접혀 선다(APP-1436). 안쪽 줄을 보려면 머리줄을 눌러 편다. */
+function expandSteps() {
+  for (const button of screen.queryAllByRole("button", {
+    name: /생각/,
+    expanded: false,
+  }))
+    fireEvent.click(button);
+}
+
+/** 머리글 제목 옆 ⋯ 메뉴의 「삭제」. 확인창이 뜬다(지우기는 확인한 뒤다). */
+async function deleteFromHeader() {
+  fireEvent.click(await screen.findByTestId("chat-menu"));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
 }
 
 function clickNewChat() {
@@ -524,57 +550,31 @@ function write(text: string) {
   return input;
 }
 
-/**
- * 칩을 **남기고** 뒤에 문장을 붙인다. `write()` 는 `textContent` 를 덮어써서 칩 노드를
- * 통째로 지운다 — 「칩이 붙은 채로 보낸다」를 재현하려면 이쪽이어야 한다.
- */
+/** 칩은 문장 밖(입력창 아래 줄)에 산다(APP-1436) — 글을 써도 칩이 지워지지 않는다. */
 function appendAfterChips(text: string) {
-  const input = screen.getByRole("textbox", { name: "메시지" });
-  input.append(document.createTextNode(text));
-  const range = document.createRange();
-  range.selectNodeContents(input);
-  range.collapse(false);
-  const sel = window.getSelection();
-  sel?.removeAllRanges();
-  sel?.addRange(range);
-  fireEvent.input(input);
-  return input;
+  return write(text);
 }
 
 /**
- * 프로젝트 칩을 편집기에 박는다. `usePersonalChatScope` 는 회의록만 미리 붙이므로,
- * 프로젝트 범위를 재현하려면 편집기가 만드는 DOM 을 그대로 흉내 내야 한다
- * (칩은 React 밖에서 만드는 노드라 컴포넌트를 못 부른다 — `mention-input.tsx:52` 참고).
+ * 프로젝트 칩을 붙인다. `usePersonalChatScope` 는 회의록만 미리 붙이므로 `@` 로 목록을 열어 고른다(목록은 아래 목이 준다).
  */
-function putProjectChip(id: string, title: string) {
-  const input = screen.getByRole("textbox", { name: "메시지" });
-  const chip = document.createElement("span");
-  chip.setAttribute("data-scope-chip", "project");
-  chip.setAttribute("data-scope-id", id);
-  chip.setAttribute("data-scope-title", title);
-  chip.textContent = title;
-  input.prepend(chip);
-  fireEvent.input(input);
-  return input;
+function putProjectChip(title: string) {
+  write(`@${title}`);
+  fireEvent.click(screen.getByRole("option", { name: new RegExp(title) }));
 }
 
-/** 편집기 안에 박힌 칩. 칩이 문장 안에 살아서 별도 목록이 없다. */
+/** 입력창 아래 줄의 범위 칩 제목. */
 function chipsInInput() {
   return [
     ...screen
-      .getByRole("textbox", { name: "메시지" })
-      .querySelectorAll("[data-scope-chip]"),
+      .getByTestId("composer-chips")
+      .querySelectorAll("[data-chip-title]"),
   ].map((el) => el.textContent?.trim());
 }
 
-/** 칩을 백스페이스로 지운다 — 브라우저가 하는 일을 흉내 낸다. */
+/** 칩의 ✕ 로 뗀다. */
 function removeChipFromInput(title: string) {
-  const input = screen.getByRole("textbox", { name: "메시지" });
-  const chip = [...input.querySelectorAll("[data-scope-chip]")].find((el) =>
-    el.textContent?.includes(title)
-  );
-  chip?.remove();
-  fireEvent.input(input);
+  fireEvent.click(screen.getByRole("button", { name: `${title} 빼기` }));
 }
 
 async function sendMessage(text: string) {
@@ -697,35 +697,54 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(state.refetchedChatIds).toEqual([NEW_CHAT_ID]));
   });
 
-  it("시작 카드를 누르면 입력 없이 바로 보낸다", async () => {
+  it("예시를 누르면 보내지 않고 입력창만 채운다 — 보내기는 사람이 한다", async () => {
+    const events: unknown[] = [];
+    const off = onTrack((event, properties) =>
+      events.push([event, properties])
+    );
     renderChat();
     openPanel();
     fireEvent.click(
       screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ })
     );
 
+    expect(state.createMock).not.toHaveBeenCalled();
+    expect(state.streamCalls).toHaveLength(0);
+    expect(screen.getByRole("textbox", { name: "메시지" }).textContent).toBe(
+      "지난 회의에서 정한 것만 정리해줘"
+    );
+    expect(events).toContainEqual([
+      "chat_example_clicked",
+      { workspace_id: WORKSPACE_ID, kind: "notes" },
+    ]);
+    off();
+
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect((state.streamCalls[0].body as { message: string }).message).toBe(
       "지난 회의에서 정한 것만 정리해줘"
     );
   });
 
-  it("회의록 칩만 붙은 빈 대화에서도 시작 카드가 그 범위로 바로 보낸다", async () => {
+  it("회의록에서 열면 그 회의 예시가 첫 줄이고, 고르면 칩을 지닌 채 그 범위로 보낸다", async () => {
     renderChat(<NoteScope hidden={false} />);
     openPanel();
-    await waitFor(() =>
-      expect(screen.getByText("주간 제품 회의")).toBeTruthy()
-    );
+    await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
 
     fireEvent.click(
-      screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ })
+      screen.getByRole("button", {
+        name: "이 회의에서 정한 것과 남은 일을 정리해줘",
+      })
     );
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.streamCalls[0].body).toMatchObject({
-      message: "지난 회의에서 정한 것만 정리해줘",
-      noteIds: [expect.any(String)],
+      noteIds: [NOTE_ID],
     });
+    expect(
+      (state.streamCalls[0].body as { message: string }).message
+    ).toContain("이 회의에서 정한 것과 남은 일을 정리해줘");
   });
 
   it("쓰던 글이 있으면 시작 카드가 보내지 않고 문장만 덧붙인다", async () => {
@@ -854,7 +873,7 @@ describe("PersonalChatProvider", () => {
     expect(screen.getByText("정리했습니다.")).toBeTruthy();
     expect(screen.getByText("정리해줘")).toBeTruthy();
     expect(screen.getByRole("alert").textContent).toContain(
-      "답변은 화면에 남아 있습니다."
+      "답은 화면에 남아 있어요."
     );
   });
 
@@ -868,17 +887,14 @@ describe("PersonalChatProvider", () => {
     state.chatsFail = true;
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider
-          workspaceId={WORKSPACE_ID}
-          workspaceName="헤이모아"
-        >
+        <PersonalChatProvider workspaceId={WORKSPACE_ID}>
           {null}
         </PersonalChatProvider>
       </QueryClientProvider>
     );
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "대화 목록을 다시 읽지 못했습니다."
+      "대화 목록을 다시 읽지 못했어요."
     );
     expect(screen.getByText("정리했습니다.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
@@ -905,7 +921,7 @@ describe("PersonalChatProvider", () => {
     openPanel();
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "대화를 불러오지 못했습니다."
+      "대화를 불러오지 못했어요."
     );
     expect(screen.queryByText("무엇을 도와드릴까요?")).toBeNull();
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
@@ -935,7 +951,7 @@ describe("PersonalChatProvider", () => {
     ];
     renderChat();
     openPanel();
-    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+    fireEvent.click(await screen.findByRole("button", { name: "대화 기록" }));
 
     fireEvent.click(
       await screen.findByRole("button", { name: "이전 대화 더 보기" })
@@ -963,7 +979,7 @@ describe("PersonalChatProvider", () => {
     ];
     renderChat();
     openPanel();
-    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+    fireEvent.click(await screen.findByRole("button", { name: "대화 기록" }));
     fireEvent.click(
       await screen.findByRole("button", { name: "이전 대화 더 보기" })
     );
@@ -971,8 +987,8 @@ describe("PersonalChatProvider", () => {
 
     // 폴링이 새 첫 쪽을 가져왔다: 끝 대화가 달라졌다. 기록을 닫았다 열어 다시 그린다.
     state.chatsNextId = "01KOTHERNEXT00";
-    fireEvent.click(screen.getByRole("button", { name: "뒤로가기" }));
-    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+    fireEvent.click(screen.getByRole("button", { name: "대화로 돌아가기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "대화 기록" }));
 
     expect(
       screen.queryByRole("button", { name: /^대화 01KOLDERCHAT01/ })
@@ -988,7 +1004,7 @@ describe("PersonalChatProvider", () => {
     state.olderFails = true;
     renderChat();
     openPanel();
-    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+    fireEvent.click(await screen.findByRole("button", { name: "대화 기록" }));
 
     fireEvent.click(
       await screen.findByRole("button", { name: "이전 대화 더 보기" })
@@ -1021,7 +1037,7 @@ describe("PersonalChatProvider", () => {
       expect(screen.getByText("이전 대화입니다.")).toBeTruthy()
     );
 
-    fireEvent.click(screen.getByTestId("chat-delete"));
+    await deleteFromHeader();
     // 확인 전에는 아무것도 안 나간다
     expect(state.deleteMock).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
@@ -1045,9 +1061,7 @@ describe("PersonalChatProvider", () => {
     });
     renderChat();
     openPanel();
-    await waitFor(() => expect(screen.getByTestId("chat-delete")).toBeTruthy());
-
-    fireEvent.click(screen.getByTestId("chat-delete"));
+    await deleteFromHeader();
     fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
     await waitFor(() => expect(toastError).toHaveBeenCalledOnce());
   });
@@ -1317,10 +1331,7 @@ describe("PersonalChatProvider", () => {
       const refetched = () =>
         rerender(
           <QueryClientProvider client={client}>
-            <PersonalChatProvider
-              workspaceId={WORKSPACE_ID}
-              workspaceName="헤이모아"
-            >
+            <PersonalChatProvider workspaceId={WORKSPACE_ID}>
               {null}
             </PersonalChatProvider>
           </QueryClientProvider>
@@ -1367,10 +1378,7 @@ describe("PersonalChatProvider", () => {
       return () =>
         rerender(
           <QueryClientProvider client={client}>
-            <PersonalChatProvider
-              workspaceId={WORKSPACE_ID}
-              workspaceName="헤이모아"
-            >
+            <PersonalChatProvider workspaceId={WORKSPACE_ID}>
               {null}
             </PersonalChatProvider>
           </QueryClientProvider>
@@ -1421,7 +1429,7 @@ describe("PersonalChatProvider", () => {
       state.deleteMock.mockReturnValueOnce(pending.promise);
       const { rerender, client } = renderChat();
       openPanel();
-      fireEvent.click(await screen.findByTestId("chat-delete"));
+      await deleteFromHeader();
       fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
       await waitFor(() => expect(state.deleteMock).toHaveBeenCalled());
 
@@ -1623,6 +1631,90 @@ describe("PersonalChatProvider", () => {
     });
   });
 
+  describe("개편된 머리글·런처 (APP-1436)", () => {
+    it("머리글 ⋯ 메뉴의 「이름 바꾸기」는 그 자리 편집을 연다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      fireEvent.click(await screen.findByTestId("chat-menu"));
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+      );
+      const input = await screen.findByRole("textbox", { name: "대화 제목" });
+      fireEvent.change(input, { target: { value: "메뉴로 바꾼 이름" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() =>
+        expect(renameMock).toHaveBeenCalledWith(
+          renamed(CHAT_ID, "메뉴로 바꾼 이름")
+        )
+      );
+    });
+
+    it("빈 새 대화에는 ⋯ 메뉴가 없다 — 바꿀 이름도 지울 것도 없다", () => {
+      renderChat();
+      openPanel();
+      expect(screen.queryByTestId("chat-menu")).toBeNull();
+    });
+
+    it("★ 답이 흐르는 동안 패널을 닫으면 런처에 점이 서고, 끝나면 사라진다", async () => {
+      state.holdStream = true;
+      renderChat();
+      openPanel();
+      await sendMessage("정리해줘");
+      await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+      fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+
+      const fab = screen.getByRole("button", { name: "내 에이전트 열기" });
+      await waitFor(() =>
+        expect(fab.querySelector('[data-attention="running"]')).toBeTruthy()
+      );
+      expect(fab.getAttribute("aria-describedby")).toBe("agent-fab-attention");
+
+      await act(async () => state.releaseStream?.());
+      await waitFor(() =>
+        expect(fab.querySelector("[data-attention]")).toBeNull()
+      );
+    });
+
+    it("★ 승인을 기다리면 런처가 「확인이 필요해요」로 알린다", async () => {
+      state.approvalStream = true;
+      renderChat();
+      openPanel();
+      await sendMessage("이슈 만들어줘");
+      await screen.findByTestId("approval-card");
+      fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+
+      const fab = screen.getByRole("button", { name: "내 에이전트 열기" });
+      expect(fab.querySelector('[data-attention="approval"]')).toBeTruthy();
+      expect(document.getElementById("agent-fab-attention")?.textContent).toBe(
+        "확인이 필요해요"
+      );
+    });
+
+    it("입력창 안내는 대화의 처음과 이어 묻기를 가른다", async () => {
+      renderChat();
+      openPanel();
+      const input = () => screen.getByRole("textbox", { name: "메시지" });
+      expect(input().getAttribute("data-placeholder")).toBe(
+        "회의록에 대해 물어보세요 · @로 회의록 고르기"
+      );
+      await sendMessage("정리해줘");
+      await waitFor(() =>
+        expect(input().getAttribute("data-placeholder")).toBe(
+          "이어서 물어보세요 · @로 회의록 고르기"
+        )
+      );
+    });
+
+    it("맨 아래에 있으면 「맨 아래로」는 흐려지고 눌리지 않는다", () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      const button = screen.getByRole("button", { name: "맨 아래로" });
+      expect(button.closest("[inert]")).toBeTruthy();
+    });
+  });
+
   it("★ ＋ 는 서버를 안 부르고 화면만 빈 새 대화로 바꾼다", async () => {
     // 누르는 즉시 만들면 아무 말도 안 하고 나간 빈 대화가 기록에 줄로 쌓인다.
     // **＋ 를 눌렀는데 아무 말도 안 했으면 그 대화는 존재한 적이 없다.**
@@ -1785,19 +1877,14 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider
-          workspaceId={WORKSPACE_ID}
-          workspaceName="헤이모아"
-        >
+        <PersonalChatProvider workspaceId={WORKSPACE_ID}>
           <NoteScope hidden={false} />
         </PersonalChatProvider>
       </QueryClientProvider>
     );
 
-    await waitFor(() =>
-      expect(screen.getByText("주간 제품 회의")).toBeTruthy()
-    );
-    expect(screen.queryByText("헤이모아 전체")).toBeNull();
+    await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+    expect(chipsInInput()).toEqual(["주간 제품 회의"]);
     // 회의록이 붙어도 조회 params 는 워크스페이스 하나뿐이다 — 대화가 안 갈린다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
   });
@@ -1811,7 +1898,7 @@ describe("PersonalChatProvider", () => {
 
     removeChipFromInput("주간 제품 회의");
     await waitFor(() => expect(chipsInInput()).toEqual([]));
-    expect(screen.getByText("헤이모아 전체")).toBeTruthy();
+    expect(chipsInInput()).toEqual([]);
 
     // 회의록을 나갔다 온다.
     rerender(
@@ -1865,7 +1952,7 @@ describe("PersonalChatProvider", () => {
     openPanel();
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "대화를 불러오지 못했습니다."
+      "대화를 불러오지 못했어요."
     );
     expect(screen.queryByText("무엇을 도와드릴까요?")).toBeNull();
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
@@ -1884,10 +1971,7 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider
-          workspaceId={WORKSPACE_ID}
-          workspaceName="헤이모아"
-        >
+        <PersonalChatProvider workspaceId={WORKSPACE_ID}>
           <NoteScope hidden />
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -1911,10 +1995,7 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider
-          workspaceId={WORKSPACE_ID}
-          workspaceName="헤이모아"
-        >
+        <PersonalChatProvider workspaceId={WORKSPACE_ID}>
           <NoteScope hidden />
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -1944,10 +2025,7 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider
-          workspaceId={WORKSPACE_ID}
-          workspaceName="헤이모아"
-        >
+        <PersonalChatProvider workspaceId={WORKSPACE_ID}>
           <NoteScope hidden />
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -2083,10 +2161,7 @@ describe("PersonalChatProvider", () => {
     ];
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider
-          workspaceId={WORKSPACE_ID}
-          workspaceName="헤이모아"
-        >
+        <PersonalChatProvider workspaceId={WORKSPACE_ID}>
           {null}
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -2397,10 +2472,7 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider
-          workspaceId={WORKSPACE_ID}
-          workspaceName="헤이모아"
-        >
+        <PersonalChatProvider workspaceId={WORKSPACE_ID}>
           {null}
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -2460,7 +2532,7 @@ describe("PersonalChatProvider", () => {
     state.chats = [chatRow(CHAT_ID)];
     renderChat();
     openPanel();
-    putProjectChip("01K0000000009", "결제 개편");
+    putProjectChip("결제 개편");
     appendAfterChips("이번 분기 결정 정리해줘");
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 
@@ -2594,6 +2666,7 @@ describe("PersonalChatProvider", () => {
       // 조각이 따로 남아 있으면 안 된다.
       expect(screen.queryByText("안녕")).toBeNull();
       // 생각 줄은 히스토리가 유일한 출처다 — 재생은 커서 뒤부터라 다시 안 온다.
+      expandSteps();
       expect(screen.getByText("전사를 봅니다.")).toBeTruthy();
     });
 
@@ -2770,9 +2843,10 @@ describe("PersonalChatProvider", () => {
         await vi.advanceTimersByTimeAsync(60_000);
 
         await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
-        await waitFor(() =>
-          expect(screen.getAllByText("전사를 훑습니다")).toHaveLength(1)
-        );
+        await waitFor(() => {
+          expandSteps();
+          expect(screen.getAllByText("전사를 훑습니다")).toHaveLength(1);
+        });
       } finally {
         vi.useRealTimers();
       }
@@ -3434,9 +3508,10 @@ describe("PersonalChatProvider", () => {
 
       fireEvent.click(await screen.findByRole("button", { name: "중지" }));
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
-      await waitFor(() =>
-        expect(screen.getAllByText("전사를 훑습니다")).toHaveLength(1)
-      );
+      await waitFor(() => {
+        expandSteps();
+        expect(screen.getAllByText("전사를 훑습니다")).toHaveLength(1);
+      });
       expect(screen.getAllByText("정리해줘")).toHaveLength(1);
     });
 
@@ -3619,9 +3694,9 @@ describe("PersonalChatProvider", () => {
       const rows = within(screen.getByTestId("chat-history-view"))
         .getAllByRole("button")
         .filter((row) => row.textContent?.startsWith("대화 "));
-      // 줄 끝의 「방금」은 마지막으로 쓴 시각이다 — 배지는 그 앞에 선다.
+      // 줄 끝 한 자리를 시각과 배지가 나눠 쓴다 — 배지가 있으면 시각 대신 배지다(제목 자리를 넓힌다).
       expect(rows[0].textContent).toBe(`대화 ${CHAT_ID}방금`);
-      expect(rows[1].textContent).toBe(`대화 ${OTHER_CHAT_ID}승인 대기방금`);
+      expect(rows[1].textContent).toBe(`대화 ${OTHER_CHAT_ID}승인 대기`);
     });
   });
 
@@ -3652,7 +3727,7 @@ describe("PersonalChatProvider", () => {
       expect(views().history.hasAttribute("inert")).toBe(true);
       expect(views().thread.hasAttribute("inert")).toBe(false);
       // 가려져 있는 동안에도 목록은 DOM 에 있다 — 여닫는 것이 아니라 교대다.
-      expect(views().history.textContent).toContain("뒤로가기");
+      expect(views().history.textContent).toContain(`대화 ${CHAT_ID}`);
 
       fireEvent.click(historyButton());
 
@@ -3664,7 +3739,7 @@ describe("PersonalChatProvider", () => {
         "가려져도 남아 있어야 합니다."
       );
       // 목록도 마찬가지로 남는다 — 교대일 뿐 여닫는 것이 아니다.
-      expect(views().history.textContent).toContain("뒤로가기");
+      expect(views().history.textContent).toContain(`대화 ${CHAT_ID}`);
     });
 
     it("★ 뷰가 갈리면 포커스를 손으로 옮긴다", () => {
@@ -3674,7 +3749,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
 
       fireEvent.click(historyButton());
-      const back = screen.getByRole("button", { name: "뒤로가기" });
+      const back = screen.getByRole("button", { name: "대화로 돌아가기" });
       expect(document.activeElement).toBe(back);
 
       fireEvent.click(back);
@@ -3700,17 +3775,46 @@ describe("PersonalChatProvider", () => {
       expect(views().history.hasAttribute("inert")).toBe(true);
     });
 
-    it("★ 뒤로가는 줄은 아무 데나 눌러도 스레드로 돌아온다", () => {
-      // 아이콘만 버튼이면 맞출 곳이 24px 뿐이다. 줄 전체가 누르는 곳이라야 한다.
+    it("★ 머리글은 하나다 — 기록 화면에서 같은 자리의 ←가 돌아가고, 목록 위 뒤로가기 줄은 없다", () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      const header = () =>
+        screen.getByTestId("personal-chat-panel").querySelector("header")!;
+      // 진입(기록)과 복귀(←)가 머리글의 같은 첫 자리다 — 손이 안 움직인다
+      expect(header().querySelector("button")).toBe(historyButton());
+      fireEvent.click(historyButton());
+
+      const back = screen.getByRole("button", { name: "대화로 돌아가기" });
+      expect(header().querySelector("button")).toBe(back);
+      expect(header().textContent).toContain("대화 기록");
+      expect(
+        within(views().history).queryByRole("button", { name: /뒤로/ })
+      ).toBeNull();
+
+      fireEvent.click(back);
+      expect(views().history.hasAttribute("inert")).toBe(true);
+    });
+
+    it("★ 기록에서 Esc 를 누르면 대화로 돌아간다", () => {
       state.chats = [chatRow(CHAT_ID)];
       renderChat();
       openPanel();
       fireEvent.click(historyButton());
+      fireEvent.keyDown(
+        screen.getByRole("button", { name: "대화로 돌아가기" }),
+        { key: "Escape" }
+      );
+      expect(views().history.hasAttribute("inert")).toBe(true);
+    });
 
-      const back = screen.getByRole("button", { name: "뒤로가기" });
-      // 글자 노드를 눌러도 같은 버튼이 받는다 — 아이콘 옆 여백까지 한 버튼이다.
-      fireEvent.click(back.lastChild as Node);
-
+    it("기록이 비었으면 비었다고 말하고 새 대화로 이끈다", () => {
+      renderChat();
+      openPanel();
+      fireEvent.click(historyButton());
+      const empty = screen.getByTestId("chat-history-empty");
+      expect(empty.textContent).toContain("아직 대화가 없어요");
+      fireEvent.click(within(empty).getByRole("button", { name: "새 대화" }));
       expect(views().history.hasAttribute("inert")).toBe(true);
     });
 
@@ -3763,7 +3867,7 @@ describe("PersonalChatProvider", () => {
           [...history.querySelectorAll('[data-testid="chat-group"]')].map(
             (each) => each.textContent
           )
-        ).toEqual(["오늘", "최근"]);
+        ).toEqual(["오늘", "지난 7일"]);
 
         const rows = [...history.querySelectorAll("button")].filter((row) =>
           row.textContent?.startsWith("대화 ")
@@ -3794,10 +3898,14 @@ describe("PersonalChatProvider", () => {
         .getByTestId("personal-chat-panel")
         .querySelector("header");
       expect(header?.textContent).toContain(`대화 ${CHAT_ID}`);
-      // 부제가 말하는 것은 **범위 하나**다 — 칩이 없으면 워크스페이스 전체라고 적는다
-      // [W-20]. 「나만 보는 대화」는 개인 챗봇에 개인이라고 적는 것이라 뺐다.
-      expect(header?.textContent).toContain("헤이모아 전체");
-      expect(header?.textContent).not.toContain("나만 보는 대화");
+      // 범위는 턴마다 다르다 — 머리글에 범위 부제를 두지 않는다(입력창 위 줄이 말한다). 휴지통도 머리글 1급 버튼이 아니다.
+      expect(header?.textContent).not.toContain("전체");
+      expect(
+        within(header!).queryByRole("button", { name: "대화 삭제" })
+      ).toBeNull();
+      expect(
+        within(header!).getByRole("button", { name: "대화 메뉴" })
+      ).toBeTruthy();
     });
   });
 });

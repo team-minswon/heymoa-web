@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { MessageSquare, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
-import { Badge } from "@/components/ui/badge";
-import { LoadMoreButton } from "@/components/ui/load-more-button";
+import {
+  CHAT_ICON_BUTTON_LOOK,
+  CHAT_ICON_BUTTON_SIZE,
+} from "@/components/chat/chat-icon-button";
 import { ChatTitleInput } from "@/components/chat/chat-title-input";
-import { TimeRule } from "@/components/chat/time-rule";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   groupChatsByRecency,
@@ -32,21 +35,22 @@ export type ChatListRow = {
 };
 
 /**
- * 진행 배지의 색. 「진행 중」과 「승인 대기」는 같은 색이고 글자로 가른다. `secondary` 는
- * 배경이 선택된 줄과 같아 배지가 사라지므로 범위 칩의 파랑을 빌린다.
+ * 줄 메뉴(⋯)가 서는 때. 줄에 올렸거나, 줄 안에 키보드 포커스가 있거나, 메뉴가 열렸거나, 지금 보는 대화이거나, 마우스가 없는
+ * 화면(터치)이다. ⋯는 시각 자리에 겹쳐 선다 — 따로 칸을 비우면 시각 열이 오른쪽 끝에서 떨어진다.
  */
-/**
- * 줄 메뉴 버튼은 줄에 올리거나 줄 안에 포커스가 있거나 메뉴가 열렸을 때 보인다. 마우스가 없는 화면(터치)에서는 늘 보인다.
- */
-const MENU_REVEAL =
-  "opacity-0 group-hover/chat:opacity-100 group-has-[:focus-visible]/chat:opacity-100 group-has-[[data-popup-open]]/chat:opacity-100 [@media(hover:none)]:opacity-100";
+const SHOW_MENU =
+  "group-hover/chat:opacity-100 group-has-[:focus-visible]/chat:opacity-100 group-has-[[data-popup-open]]/chat:opacity-100 group-data-[current]/chat:opacity-100 [@media(hover:none)]:opacity-100";
+/** ⋯가 설 때 시각은 물러난다. 둘이 같은 자리라 겹쳐 보이면 안 된다. */
+const HIDE_META =
+  "group-hover/chat:opacity-0 group-has-[:focus-visible]/chat:opacity-0 group-has-[[data-popup-open]]/chat:opacity-0 group-data-[current]/chat:opacity-0 [@media(hover:none)]:opacity-0";
 
+/** 진행 배지의 색. 「진행 중」과 「승인 대기」는 같은 색이고 글자로 가른다. */
 const LABEL_TONE =
-  "bg-[var(--el-scope-project-soft)] text-[var(--el-scope-project)]";
+  "rounded-full bg-[var(--el-scope-project-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--el-scope-project)]";
 
 /**
- * 대화 기록. 스레드와 같은 자리를 나눠 쓰며 교대한다. 답이 흐르는 중에도 열린다 — 서버의
- * 턴은 계속 돌고 돌아오면 `activeTurn` 으로 이어받는다. 포커스는 부모가 `backRef` 로 옮긴다.
+ * 대화 기록. 스레드와 같은 자리를 나눠 쓰며 교대한다. 머리글(← 대화 기록)은 패널이 그린다 — 이 안에 뒤로가기 줄을 또 두지 않는다.
+ * 답이 흐르는 중에도 열린다. 서버의 턴은 계속 돌고 돌아오면 `activeTurn` 으로 이어받는다.
  */
 export function ChatList({
   chats,
@@ -54,8 +58,7 @@ export function ChatList({
   onSelect,
   onDelete,
   onRename,
-  onBack,
-  backRef,
+  onNewChat,
   editingId,
   onEditingChange,
   hasMore = false,
@@ -69,8 +72,8 @@ export function ChatList({
   onDelete?: (chat: ChatListRow) => void;
   /** 줄 메뉴의 「이름 바꾸기」가 저장한 제목. 비었거나 그대로면 부르지 않는다. */
   onRename?: (chatId: string, title: string) => void;
-  onBack: () => void;
-  backRef?: React.Ref<HTMLButtonElement>;
+  /** 빈 기록의 「새 대화」. */
+  onNewChat?: () => void;
   /**
    * 그 자리에서 이름을 고치는 줄. 부르는 쪽이 쥔다 — 그 대화가 실제로 지워졌을 때만 부르는 쪽이 끝낸다. 목록이
    * 다시 읽혀 줄이 빠지거나 자리를 옮겨도 편집은 이어진다.
@@ -85,6 +88,7 @@ export function ChatList({
   // 「지금」은 한 번만 읽는다. 줄마다 읽으면 같은 목록 안에서 기준이 어긋난다.
   const now = new Date();
   const t = useTranslations("common.agentChat");
+  const locale = useLocale();
   const setEditingId = onEditingChange;
   const rows = useFrozenRows(chats, editingId !== null);
   const groups = groupChatsByRecency(rows, now);
@@ -100,37 +104,68 @@ export function ChatList({
     focusAfterEdit.current = null;
   }, [editingId]);
 
-  return (
-    <>
-      {/* 줄 전체가 누르는 곳이다. 아이콘만 버튼이면 맞출 곳이 24px 뿐이다. */}
-      <div className="border-b border-[var(--el-hairline)] p-2">
-        <button
-          ref={backRef}
-          type="button"
-          onClick={onBack}
-          className="flex w-full items-center gap-2 rounded-block px-3 py-2.5 text-left text-sm text-[var(--el-ink)] outline-none hover:bg-[var(--el-surface-strong)] focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <ArrowLeft aria-hidden className="size-4 shrink-0" />
-          뒤로가기
-        </button>
+  if (rows.length === 0 && !hasMore) {
+    return (
+      <div
+        data-testid="chat-history-empty"
+        className="flex flex-1 flex-col items-center justify-center gap-3 px-6 pb-16 text-center"
+      >
+        <MessageSquare
+          aria-hidden
+          className="size-5 text-[var(--el-muted-soft)]"
+        />
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[var(--el-ink)]">
+            {t("history.emptyTitle")}
+          </p>
+          <p className="text-[13px] leading-relaxed text-[var(--el-muted)]">
+            {t("history.emptyBody")}
+          </p>
+        </div>
+        {onNewChat ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-1 rounded-full"
+            onClick={onNewChat}
+          >
+            {t("newChat")}
+          </Button>
+        ) : null}
       </div>
+    );
+  }
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="p-2">
-          {groups.map((group) => (
-            // 줄 간격이 묶음 간격만큼 벌어지면 묶음 경계가 안 보인다.
-            <section key={group.key} className="flex flex-col gap-0.5">
-              {/* 스레드의 날짜 구분선과 같은 줄을 쓴다. */}
-              <TimeRule
-                data-testid="chat-group"
-                label={group.label}
-                align="start"
-                className="px-2 pt-3 pb-1.5"
-              />
-              {group.chats.map((chat) => (
-                <div key={chat.chatId} className="group/chat relative">
+  return (
+    <ScrollArea
+      className="min-h-0 flex-1"
+      quietScrollbar
+      viewportClassName="overflow-x-hidden"
+    >
+      <div className="px-2 pt-1 pb-4">
+        {groups.map((group) => (
+          <section
+            key={group.key}
+            aria-labelledby={`chat-group-${group.key}`}
+            className="flex flex-col gap-px"
+          >
+            <h3
+              id={`chat-group-${group.key}`}
+              data-testid="chat-group"
+              className="px-3 pt-4 pb-1.5 text-xs font-medium text-[var(--el-muted)]"
+            >
+              {group.label}
+            </h3>
+            {group.chats.map((chat) => {
+              const current = chat.chatId === currentChatId;
+              return (
+                <div
+                  key={chat.chatId}
+                  data-current={current || undefined}
+                  className="group/chat relative"
+                >
                   {editingId === chat.chatId && onRename ? (
-                    <div className="px-1 py-0.5">
+                    <div className="flex h-10 items-center px-1 pointer-coarse:h-12">
                       <ChatTitleInput
                         initial={chat.title}
                         label={t("titleInput")}
@@ -146,36 +181,42 @@ export function ChatList({
                     <button
                       type="button"
                       // 선택을 색만으로 말하지 않는다.
-                      aria-current={chat.chatId === currentChatId || undefined}
+                      aria-current={current || undefined}
                       onClick={() => onSelect(chat.chatId)}
                       className={cn(
-                        "flex w-full items-center gap-2 rounded-block px-3 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                        // 메뉴 버튼이 덮는 자리만큼 비운다
-                        hasMenu && "pr-10",
+                        "flex h-10 w-full items-center gap-3 rounded-block pr-2 pl-3 text-left outline-none pointer-coarse:h-12",
+                        "focus-visible:ring-3 focus-visible:ring-ring/50",
                         "transition-colors duration-150 motion-reduce:transition-none",
                         // 평소에는 배경이 없어야 hover·선택·선택+hover 셋이 안 뭉개진다.
-                        chat.chatId === currentChatId
-                          ? "bg-[var(--el-hairline)] font-medium"
-                          : "hover:bg-[var(--el-surface-strong)]"
+                        current
+                          ? "bg-[var(--el-surface-strong)]"
+                          : "hover:bg-[var(--el-canvas-soft)]"
                       )}
                     >
                       {/* 잘린 제목은 올려 보면 전체가 보인다 */}
                       <span
                         title={chat.title}
-                        className="min-w-0 flex-1 truncate text-sm text-[var(--el-ink)]"
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-sm text-[var(--el-ink)]",
+                          current && "font-medium"
+                        )}
                       >
                         {chat.title}
                       </span>
-                      {chat.label ? (
-                        <Badge
-                          variant="secondary"
-                          className={cn("shrink-0", LABEL_TONE)}
-                        >
-                          {chat.label}
-                        </Badge>
-                      ) : null}
-                      <span className="shrink-0 text-[11px] tabular-nums text-[var(--el-muted)]">
-                        {relativeUpdatedAt(chat.updatedAt, now)}
+                      {/* 배지와 시각은 한 자리를 나눠 쓴다. 둘 다 서면 좁은 폭에서 제목 자리가 준다. */}
+                      <span
+                        className={cn(
+                          "flex min-w-8 shrink-0 justify-end transition-opacity duration-150 motion-reduce:transition-none",
+                          hasMenu && HIDE_META
+                        )}
+                      >
+                        {chat.label ? (
+                          <span className={LABEL_TONE}>{chat.label}</span>
+                        ) : (
+                          <span className="text-xs text-[var(--el-muted)] tabular-nums">
+                            {relativeUpdatedAt(chat.updatedAt, now, locale)}
+                          </span>
+                        )}
                       </span>
                     </button>
                   )}
@@ -190,69 +231,95 @@ export function ChatList({
                         }}
                         aria-label={t("menu", { title: chat.title })}
                         className={cn(
-                          "absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-block text-[var(--el-muted)] outline-none",
-                          "hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50",
-                          "transition-opacity duration-150 motion-reduce:transition-none",
-                          MENU_REVEAL
+                          CHAT_ICON_BUTTON_LOOK,
+                          CHAT_ICON_BUTTON_SIZE.md,
+                          "absolute top-1/2 right-1 -translate-y-1/2 text-[var(--el-muted)] opacity-0 transition-opacity",
+                          SHOW_MENU
                         )}
                       >
-                        <MoreHorizontal aria-hidden className="size-3.5" />
+                        <MoreHorizontal aria-hidden />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-36 rounded-panel"
+                      <ChatMenuItems
+                        onRename={
+                          onRename
+                            ? () => {
+                                keepFocus.current = true;
+                                setEditingId(chat.chatId);
+                              }
+                            : undefined
+                        }
+                        onDelete={onDelete ? () => onDelete(chat) : undefined}
                         finalFocus={() => {
                           const restore = !keepFocus.current;
                           keepFocus.current = false;
                           return restore;
                         }}
-                      >
-                        {onRename ? (
-                          <DropdownMenuItem
-                            onClick={() => {
-                              keepFocus.current = true;
-                              setEditingId(chat.chatId);
-                            }}
-                            className="gap-2 rounded-control py-1.5 text-xs"
-                          >
-                            <Pencil
-                              aria-hidden
-                              className="size-3.5 text-[var(--el-muted)]"
-                            />
-                            <span>{t("rename")}</span>
-                          </DropdownMenuItem>
-                        ) : null}
-                        {onDelete ? (
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => onDelete(chat)}
-                            className="gap-2 rounded-control py-1.5 text-xs text-destructive"
-                          >
-                            <Trash2 aria-hidden className="size-3.5" />
-                            <span>{t("delete")}</span>
-                          </DropdownMenuItem>
-                        ) : null}
-                      </DropdownMenuContent>
+                      />
                     </DropdownMenu>
                   ) : null}
                 </div>
-              ))}
-            </section>
-          ))}
-          {hasMore && onLoadMore ? (
-            <div className="flex justify-center py-3">
-              <LoadMoreButton
-                loading={isLoadingMore}
-                loadingLabel="이전 대화 불러오는 중"
-                onClick={onLoadMore}
-              >
-                이전 대화 더 보기
-              </LoadMoreButton>
-            </div>
-          ) : null}
-        </div>
-      </ScrollArea>
-    </>
+              );
+            })}
+          </section>
+        ))}
+        {hasMore && onLoadMore ? (
+          <div className="flex justify-center py-3">
+            <LoadMoreButton
+              loading={isLoadingMore}
+              loadingLabel="이전 대화 불러오는 중"
+              onClick={onLoadMore}
+            >
+              이전 대화 더 보기
+            </LoadMoreButton>
+          </div>
+        ) : null}
+      </div>
+    </ScrollArea>
+  );
+}
+
+/**
+ * 대화 하나의 메뉴(이름 바꾸기 · 삭제). 기록 줄의 ⋯와 머리글 제목 옆 ⋯가 같은 것을 연다 — 같은 기능은 같은 자리·같은 순서다.
+ * 삭제는 부르는 쪽이 확인창을 띄운다.
+ */
+export function ChatMenuItems({
+  onRename,
+  onDelete,
+  finalFocus,
+  align = "end",
+}: {
+  onRename?: () => void;
+  onDelete?: () => void;
+  finalFocus?: () => boolean;
+  align?: "start" | "end";
+}) {
+  const t = useTranslations("common.agentChat");
+  return (
+    <DropdownMenuContent
+      align={align}
+      className="w-40 rounded-panel"
+      finalFocus={finalFocus}
+    >
+      {onRename ? (
+        <DropdownMenuItem
+          onClick={onRename}
+          className="gap-2 rounded-control py-2 text-[13px] pointer-coarse:py-3"
+        >
+          <Pencil aria-hidden className="size-4 text-[var(--el-muted)]" />
+          <span>{t("rename")}</span>
+        </DropdownMenuItem>
+      ) : null}
+      {onDelete ? (
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={onDelete}
+          className="gap-2 rounded-control py-2 text-[13px] text-destructive pointer-coarse:py-3"
+        >
+          <Trash2 aria-hidden className="size-4" />
+          <span>{t("delete")}</span>
+        </DropdownMenuItem>
+      ) : null}
+    </DropdownMenuContent>
   );
 }
 

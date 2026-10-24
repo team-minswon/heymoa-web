@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PanelRightClose, Sparkles } from "lucide-react";
+import { PanelRightClose } from "lucide-react";
 
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import { Button } from "@/components/ui/button";
@@ -37,38 +37,27 @@ export function NoteAgentRail({
   }, [setRailSlot, slot]);
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col">
-      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-[var(--el-hairline)] pr-2 pl-4 lg:h-12">
-        <Sparkles
-          aria-hidden
-          className="size-[15px] shrink-0 text-[var(--el-ink)]"
-        />
-        <h2 className="shrink-0 text-[13px] font-semibold text-[var(--el-ink)]">
-          내 에이전트
-        </h2>
-        {/* 누가 이 대화를 보는지를 말한다 — 남의 눈에 안 보인다는 사실은 화면 어디에도 다시
-            안 나온다. */}
-        <span className="min-w-0 truncate text-[12px] text-[var(--el-muted-soft)]">
-          나만 보는 대화 · 현재 회의 범위
-        </span>
-        <span className="flex-1" />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="rounded-control text-[var(--el-muted)]"
-          aria-label={
-            collapseDisabled
-              ? "답변이 끝나면 접을 수 있습니다"
-              : "내 에이전트 접기"
-          }
-          aria-expanded
-          disabled={collapseDisabled}
-          onClick={onCollapse}
-        >
-          <PanelRightClose />
-        </Button>
-      </div>
+    // 머리글은 패널의 것 한 줄뿐이다(APP-1436) — 「내 에이전트 · 나만 보는 대화」 줄을 따로 두면 머리글이 두 줄이 된다.
+    // 접기 버튼만 패널 머리글의 맨 오른쪽 자리(패널이 레일에서 비워 둔 닫기 자리)에 겹쳐 선다.
+    <div className="relative flex min-h-0 w-full flex-1 flex-col">
+      <h2 className="sr-only">내 에이전트</h2>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute top-[7px] right-3 z-10 size-[34px] rounded-control text-[var(--el-body)] aria-expanded:bg-transparent hover:bg-[var(--el-surface-strong)] pointer-coarse:top-0.5 pointer-coarse:size-11 [&_svg]:size-[18px]"
+        aria-label={
+          collapseDisabled
+            ? "답변이 끝나면 접을 수 있습니다"
+            : "내 에이전트 접기"
+        }
+        title={collapseDisabled ? "답변이 끝나면 접을 수 있습니다" : "접기"}
+        aria-expanded
+        disabled={collapseDisabled}
+        onClick={onCollapse}
+      >
+        <PanelRightClose />
+      </Button>
       {/* 셸의 개인 챗봇 패널이 이 안으로 들어온다. */}
       <div ref={setSlot} className="flex min-h-0 flex-1" />
     </div>

@@ -101,17 +101,39 @@ describe("시간으로 묶는다", () => {
     ).toEqual(["오늘"]);
   });
 
-  it("셋뿐이다 — 오늘 · 최근 · 지난", () => {
+  it("넷뿐이다 — 오늘 · 어제 · 지난 7일 · 이전", () => {
     const groups = groupChatsByRecency(
       [
         at("2026-08-25T09:00:00Z"),
+        at("2026-08-24T09:00:00Z"),
         at("2026-08-21T09:00:00Z"),
         at("2026-07-01T09:00:00Z"),
       ],
       NOW,
       TZ
     );
-    expect(groups.map((g) => g.label)).toEqual(["오늘", "최근", "지난"]);
+    expect(groups.map((g) => g.label)).toEqual([
+      "오늘",
+      "어제",
+      "지난 7일",
+      "이전",
+    ]);
+  });
+
+  it("「지난 7일」은 날짜 차이 2~6일, 7일째부터 「이전」이다", () => {
+    const groups = groupChatsByRecency(
+      [
+        at("2026-08-23T09:00:00Z"),
+        at("2026-08-19T09:00:00Z"),
+        at("2026-08-18T09:00:00Z"),
+      ],
+      NOW,
+      TZ
+    );
+    expect(groups.map((g) => [g.label, g.chats.length])).toEqual([
+      ["지난 7일", 2],
+      ["이전", 1],
+    ]);
   });
 
   // 「어제 오후 11시」와 「오늘 오전 1시」는 두 시간 차이지만 다른 묶음이다
@@ -121,7 +143,7 @@ describe("시간으로 묶는다", () => {
       NOW,
       TZ
     );
-    expect(groups.map((g) => g.label)).toEqual(["오늘", "최근"]);
+    expect(groups.map((g) => g.label)).toEqual(["오늘", "어제"]);
   });
 
   it("여기서 다시 정렬하지 않는다 — 순서의 주인은 서버다", () => {
@@ -249,5 +271,23 @@ describe("revertChatTitle", () => {
     expect(
       revertChatTitle(changed, "a", "낙관", { title: "원래" })[0].title
     ).toBe("다른 탭");
+  });
+});
+
+describe("상대 시각은 앱 언어로", () => {
+  it("한국어 화면은 「57분 전」·「방금」이다", () => {
+    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, "ko")).toBe(
+      "57분 전"
+    );
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "ko")).toBe("방금");
+  });
+
+  it("영어 화면은 영어다", () => {
+    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, "en")).toMatch(
+      /57.*ago/
+    );
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "en")).toBe(
+      "just now"
+    );
   });
 });

@@ -36,8 +36,11 @@ export function dividerLabel(
   const day = viewerDateKey(at, timeZone);
   const today = viewerDateKey(now, timeZone);
 
-  if (day === today) return `오늘 ${time}`;
-  if (day === previousDayKey(today)) return `어제 ${time}`;
+  // 「오늘」·「어제」도 앱 언어로 적는다. 숫자·오전오후는 `Intl` 이 같은 언어로 낸다
+  const english = Boolean(locale && !locale.startsWith("ko"));
+  if (day === today) return `${english ? "Today" : "오늘"} ${time}`;
+  if (day === previousDayKey(today))
+    return `${english ? "Yesterday" : "어제"} ${time}`;
 
   const sameYear = day.slice(0, 4) === today.slice(0, 4);
   const date = formatViewerDate(

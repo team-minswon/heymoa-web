@@ -10,23 +10,33 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { History, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, History, MoreHorizontal, Plus, X } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { AgentFab } from "@/components/chat/agent-fab";
+import { AgentFab, type AgentAttention } from "@/components/chat/agent-fab";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatDeleteDialog } from "@/components/chat/chat-delete-dialog";
-import { ChatList } from "@/components/chat/chat-list";
+import {
+  CHAT_ICON_BUTTON_LOOK,
+  CHAT_ICON_BUTTON_SIZE,
+  ChatIconButton,
+} from "@/components/chat/chat-icon-button";
+import { ChatList, ChatMenuItems } from "@/components/chat/chat-list";
 import { ChatTitleInput } from "@/components/chat/chat-title-input";
-import { ChatStarter } from "@/components/chat/chat-starter";
+import { ChatStarter, type ChatExample } from "@/components/chat/chat-starter";
 import type { MentionHandle } from "@/components/chat/mention-input";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { track } from "@/lib/analytics/track";
 import { answerText } from "@/lib/chat/blocks";
 import { scopeKey, type ScopeChip } from "@/lib/chat/scope-chip";
 import { dropScopeMarkers } from "@/lib/chat/scope-marker";
@@ -72,16 +82,16 @@ const CHAT_MOTION =
   "transition-[opacity,translate,scale,visibility] duration-200 ease-out motion-reduce:transition-none";
 
 /**
- * 스레드와 기록이 같은 자리에서 겹쳐 교대하는 움직임. `hidden` 을 쓰면 안 된다 — 스레드가 레이아웃에서
- * 빠지는 순간 `scrollHeight` 가 0 이 되어 `useStickToBottom` 이 붙들던 자리를 잃는다.
+ * 스레드와 기록이 같은 자리에서 겹쳐 교대하는 움직임. 투명도와 아주 작은 크기 변화만 쓴다(합성만 하는 속성이라 레이아웃을
+ * 다시 안 잰다). `hidden` 을 쓰면 안 된다 — 스레드가 레이아웃에서 빠지는 순간 `scrollHeight` 가 0 이 되어
+ * `useStickToBottom` 이 붙들던 자리를 잃는다.
  */
 const CHAT_VIEW_MOTION =
-  "transition-[filter,opacity,scale,visibility] duration-200 ease-out motion-reduce:transition-none";
+  "transition-[opacity,scale,visibility] duration-200 ease-out motion-reduce:transition-none";
 
-/** 나가는 쪽의 끝 상태. 잰 값이 아니라 브라우저에서 보고 고른 값이다. */
-const CHAT_VIEW_OUT =
-  "pointer-events-none invisible scale-[0.985] opacity-0 blur-[5px]";
-const CHAT_VIEW_IN = "visible scale-100 opacity-100 blur-0";
+/** 나가는 쪽의 끝 상태. 흐림은 쓰지 않는다 — 큰 면에 걸면 비싸고 「초점을 잡는다」로 읽힌다. */
+const CHAT_VIEW_OUT = "pointer-events-none invisible scale-[0.985] opacity-0";
+const CHAT_VIEW_IN = "visible scale-100 opacity-100";
 
 export function usePersonalChat() {
   const context = useContext(PersonalChatContext);
@@ -115,11 +125,9 @@ export function usePersonalChatScope(scope: NoteScope | null) {
 
 export function PersonalChatProvider({
   workspaceId,
-  workspaceName,
   children,
 }: {
   workspaceId: string;
-  workspaceName?: string;
   children: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -168,6 +176,8 @@ export function PersonalChatProvider({
 
   // 좁은 화면의 노트 레일이 이 값을 보고 답이 흐르는 동안 자기를 접지 않는다
   const [isTurnActive, setIsTurnActive] = useState(false);
+  /** 패널이 닫힌 동안 런처가 알릴 턴 상태(도는 중 · 승인 대기). */
+  const [attention, setAttention] = useState<AgentAttention>(null);
 
   // 레일에 들어가 있으면 떠 있는 카드의 여닫기와 무관하다 — 레일 탭이 곧 열림이다.
   const railed = railSlot !== null;
@@ -206,6 +216,7 @@ export function PersonalChatProvider({
       <AgentFab
         hidden={fabHidden}
         engaged={hasOpened || railed}
+        attention={attention}
         onOpen={value.open}
         className={cn(
           CHAT_MOTION,
@@ -222,11 +233,11 @@ export function PersonalChatProvider({
           hidden={railed ? false : hidden || !isOpen}
           railSlot={railSlot}
           workspaceId={workspaceId}
-          workspaceName={workspaceName}
           suggestedNote={scopeNote}
           freshChatPending={freshChatPending}
           onFreshChatConsumed={consumeFreshChat}
           onTurnActiveChange={setIsTurnActive}
+          onAttentionChange={setAttention}
           onClose={value.close}
         />
       ) : null}
@@ -238,24 +249,25 @@ function PersonalChatPanel({
   hidden,
   railSlot = null,
   workspaceId,
-  workspaceName,
   suggestedNote,
   freshChatPending = false,
   onFreshChatConsumed,
   onTurnActiveChange,
+  onAttentionChange,
   onClose,
 }: {
   hidden: boolean;
   /** 있으면 이 자리로 포털한다. 노트 전체 화면의 「내 에이전트」 레일이다. */
   railSlot?: HTMLElement | null;
   workspaceId: string;
-  workspaceName?: string;
   /** 회의록 화면이 미리 붙여 주는 칩. 강제가 아니다 — 사용자가 지우면 다시 안 붙는다. */
   suggestedNote: { noteId: string; title: string | null } | null;
   /** 새 노트가 빈 새 대화를 요청했다. 이 요청을 안고 마운트되면 처음부터 빈 대화로 선다. */
   freshChatPending?: boolean;
   onFreshChatConsumed?: () => void;
   onTurnActiveChange: (active: boolean) => void;
+  /** 닫힌 패널 대신 런처가 알릴 턴 상태. */
+  onAttentionChange?: (attention: AgentAttention) => void;
   onClose: () => void;
 }) {
   /** 서버에 없어 치운 대화. 열려 있던 대화면 쓰던 문장·범위도, 고치던 제목도 그 대화 것이라 비운다. */
@@ -431,7 +443,9 @@ function PersonalChatPanel({
   const router = useRouter();
   const openNote = useCallback(
     (noteId: string) => {
-      router.push(`/w/${workspaceId}/notes/${noteId}?view=side&tab=details`);
+      // 근거를 확인하러 누른 것이다 — 회의 정보 폼이 아니라 스크립트로 연다. 전체 화면이라 이 패널이 노트 옆 레일로
+      // 옮겨 가 답과 원문을 나란히 본다(사이드 뷰는 패널을 감춘다). 근거에 발화 위치가 없어 스크립트 첫머리에 선다
+      router.push(`/w/${workspaceId}/notes/${noteId}?view=full&tab=transcript`);
     },
     [router, workspaceId]
   );
@@ -523,6 +537,8 @@ function PersonalChatPanel({
   // 편집이 끝나면 제목 버튼으로 돌아간다. 입력이 사라지고 버튼이 다시 선 뒤라야 한다
   const titleButtonRef = useRef<HTMLButtonElement>(null);
   const focusTitleAfterEdit = useRef(false);
+  /** 머리글 ⋯ 메뉴의 「이름 바꾸기」로 메뉴가 닫히는 중. 그때는 메뉴 버튼으로 포커스를 돌려주지 않는다. */
+  const menuRenameRef = useRef(false);
   useEffect(() => {
     if (editingTitleId !== null || !focusTitleAfterEdit.current) return;
     focusTitleAfterEdit.current = false;
@@ -545,6 +561,55 @@ function PersonalChatPanel({
   /** 첫 턴에서 server 가 제목을 지어 줄 때까지 「곧 바뀐다」를 빛으로 알린다. */
   const isTitlePending = headerTitle === "새 대화" && turn.isBusy;
 
+  // 닫힌 패널 대신 런처가 알린다. 승인 대기는 사람을 기다리는 중이라 따로 말한다
+  const attention: AgentAttention =
+    turn.stream.phase === "awaiting_approval"
+      ? "approval"
+      : turn.isStreaming || (turn.isBusy && turn.pendingUserMessage !== null)
+        ? "running"
+        : null;
+  useEffect(() => {
+    onAttentionChange?.(attention);
+  }, [attention, onAttentionChange]);
+  useEffect(() => () => onAttentionChange?.(null), [onAttentionChange]);
+
+  /** 예시 질문을 골랐다. 보내지 않고 입력창만 채운다 — 쓰던 글이 있으면 뒤에 덧붙인다. 칩은 그대로 둔다. */
+  const pickExample = useCallback(
+    (example: ChatExample) => {
+      track("chat_example_clicked", {
+        workspace_id: workspaceId,
+        kind: example.kind,
+      });
+      const draft = editorRef.current?.read();
+      // 칩은 글자로도 읽힌다(`@[제목](noteId:…)`) — 마커를 걷어 내고 남는 글이 있을 때만 「쓰던 글」로 본다.
+      const written = draft
+        ? dropScopeMarkers(
+            draft.text,
+            new Set(draft.chips.map((chip) => chip.id))
+          ).trim()
+        : "";
+      editorRef.current?.append(
+        written ? ` ${example.question}` : example.question
+      );
+    },
+    [workspaceId]
+  );
+
+  /** 입력창의 안내. 범위는 입력창 위 줄이 말하므로 여기서는 다음에 할 일만 말한다. */
+  const hasConversation =
+    turn.threadMessages.length > 0 || turn.pendingUserMessage !== null;
+  const placeholder = turn.isStreaming
+    ? "답을 받는 중이에요"
+    : hasConversation
+      ? "이어서 물어보세요 · @로 회의록 고르기"
+      : "회의록에 대해 물어보세요 · @로 회의록 고르기";
+  /** 좁은 폭(모바일·좁은 레일)용. 긴 안내가 잘리면 문장이 끊겨 읽힌다. 범위는 입력창 아래 「회의록」 버튼이 말한다. */
+  const shortPlaceholder = turn.isStreaming
+    ? "답을 받는 중이에요"
+    : hasConversation
+      ? "이어서 물어보세요"
+      : "회의록에 대해 물어보세요";
+
   const retry = (
     <Button
       variant="outline"
@@ -556,131 +621,182 @@ function PersonalChatPanel({
     </Button>
   );
 
+  const titleBlock =
+    editingTitleId !== null ? (
+      <ChatTitleInput
+        initial={editingTitle}
+        label={t("titleInput")}
+        onSubmit={(title) => renameChat(editingTitleId, title)}
+        onDone={(restoreFocus) => {
+          focusTitleAfterEdit.current = restoreFocus;
+          setEditingTitleId(null);
+        }}
+        className="h-8 font-medium"
+      />
+    ) : (
+      // 서버에 있는 대화만 이름을 바꾼다. 누르면 그 자리에서 고친다.
+      <button
+        ref={titleButtonRef}
+        type="button"
+        disabled={!turn.sessionId}
+        aria-label={
+          turn.sessionId ? `${t("editTitle")}: ${headerTitle}` : undefined
+        }
+        title={headerTitle}
+        onClick={() => setEditingTitleId(turn.sessionId)}
+        className="flex h-8 w-full min-w-0 items-center rounded-control px-2 text-left outline-none enabled:cursor-text enabled:hover:bg-[var(--el-canvas-soft)] focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default"
+      >
+        {/* 제목이 정해지면 `key` 가 바뀌어 다시 마운트되고, 마운트 애니메이션이 건너오기를 그린다.
+            빛(정해지는 중)과 건너오기(정해졌다)는 둘 다 `animation` 이라 같이 못 선다. */}
+        <span
+          key={headerTitle}
+          className={cn(
+            "truncate text-sm font-medium",
+            isTitlePending
+              ? "chat-shimmer"
+              : "chat-title-in text-[var(--el-ink)]"
+          )}
+        >
+          {headerTitle}
+        </span>
+      </button>
+    );
+
   const panel = (
     <aside
       data-testid="personal-chat-panel"
       data-hidden={hidden || undefined}
       data-railed={railSlot ? "" : undefined}
-      aria-label="개인 챗봇"
+      aria-label={t("panelLabel")}
       inert={hidden}
+      // 캡처로 듣는다. 포커스를 받으면 뜨는 툴팁이 Esc 를 먼저 먹고 전파를 끊기 때문이다(툴팁은 함께 닫힌다).
+      onKeyDownCapture={(event) => {
+        // 글을 쓰는 자리(이름 편집 · 입력창)의 Esc 는 그 자리 것이다. 포털로 뜬 메뉴·확인창의 Esc 는 React 트리를 타고
+        // 여기 오지만 DOM 으로는 패널 밖이라 거른다 — 메뉴를 닫는 Esc 가 화면까지 바꾸면 안 된다.
+        const target = event.target as HTMLElement;
+        if (
+          event.key !== "Escape" ||
+          view !== "history" ||
+          !event.currentTarget.contains(target) ||
+          target.closest("input, textarea, [contenteditable='true']")
+        )
+          return;
+        event.preventDefault();
+        setView("thread");
+      }}
       className={cn(
-        "flex min-h-0 flex-col bg-white",
+        "flex min-h-0 flex-col overflow-hidden bg-[var(--el-surface-card)]",
         railSlot
           ? // 레일에 들어가면 테두리·radius·그림자와 여닫는 움직임은 레일이 갖는다
             "h-full w-full"
           : cn(
               // 부양 카드는 e2 2연타다. 단일 티어 0_4px_16px 는 흰 마케팅 면 전용이다
               "fixed top-2 right-2 bottom-2 z-30 w-[min(448px,calc(100vw-1rem))] rounded-panel border border-[var(--el-hairline)] shadow-e2",
+              // 좁은 화면에서는 떠 있는 카드가 아니라 화면 전체를 덮는 시트다 — 여백 8px 과 둥근 모서리가 읽는 폭만 깎는다
+              "max-md:inset-0 max-md:w-full max-md:rounded-none max-md:border-0 max-md:shadow-none",
               CHAT_MOTION,
-              "starting:translate-x-4 starting:opacity-0",
+              "starting:translate-x-4 starting:opacity-0 max-md:starting:translate-x-0 max-md:starting:translate-y-4",
               hidden
-                ? "invisible translate-x-4 opacity-0"
-                : "visible translate-x-0 opacity-100"
+                ? "invisible translate-x-4 opacity-0 max-md:translate-x-0 max-md:translate-y-4"
+                : "visible translate-x-0 translate-y-0 opacity-100"
             )
       )}
     >
+      {/* 머리글은 화면마다 하나다. 높이를 고정해 대화↔기록을 오가도 아래가 안 움직이고, 왼쪽 첫 버튼(기록 ↔ 뒤로)이
+          같은 자리라 손이 안 움직인다. */}
       <header
         className={cn(
-          "flex items-center gap-1 border-b border-[var(--el-hairline)] pr-3 pl-6",
-          railSlot ? "py-2" : "py-4"
+          "flex shrink-0 items-center gap-0.5 border-b border-[var(--el-hairline)] px-3",
+          railSlot ? "h-12" : "h-[52px]"
         )}
       >
-        <div className="min-w-0 flex-1">
-          {/* 제목이 정해지면 `key` 가 바뀌어 다시 마운트되고, 마운트 애니메이션이 건너오기를 그린다.
-              빛(정해지는 중)과 건너오기(정해졌다)는 둘 다 `animation` 이라 같이 못 선다. */}
-          {editingTitleId !== null ? (
-            <ChatTitleInput
-              initial={editingTitle}
-              label={t("titleInput")}
-              onSubmit={(title) => renameChat(editingTitleId, title)}
-              onDone={(restoreFocus) => {
-                focusTitleAfterEdit.current = restoreFocus;
-                setEditingTitleId(null);
-              }}
-              className="-ml-2 py-0.5 font-medium"
-            />
-          ) : (
-            // 서버에 있는 대화만 이름을 바꾼다. 누르면 그 자리에서 고친다.
-            <button
-              ref={titleButtonRef}
-              type="button"
-              disabled={!turn.sessionId}
-              aria-label={
-                turn.sessionId ? `${t("editTitle")}: ${headerTitle}` : undefined
-              }
-              title={headerTitle}
-              onClick={() => setEditingTitleId(turn.sessionId)}
-              className="block w-full min-w-0 rounded-block text-left outline-none enabled:cursor-text focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default"
+        {view === "history" ? (
+          <>
+            <ChatIconButton
+              ref={backButtonRef}
+              size="header"
+              label={t("back")}
+              onClick={() => setView("thread")}
             >
-              <p
-                key={headerTitle}
-                className={cn(
-                  "truncate text-sm font-medium",
-                  isTitlePending
-                    ? "chat-shimmer"
-                    : "chat-title-in text-[var(--el-ink)]"
-                )}
-              >
-                {headerTitle}
-              </p>
-            </button>
-          )}
-          {/* 참조 칩이 없으면 전체 범위를 알린다. 빈 부제 줄은 남기지 않는다. */}
-          {chips.length ? null : (
-            <p className="truncate text-[11px] text-[var(--el-muted)]">
-              {`${workspaceName ?? "워크스페이스"} 전체`}
-            </p>
-          )}
-        </div>
-        {/* 대화 전환은 `isSwitchBlocked` 로 잠근다. `isBusy` 로 잠그면 답이 흐르는 동안 다른 대화를
-            못 연다. */}
-        <Button
+              <ArrowLeft aria-hidden />
+            </ChatIconButton>
+            <h2 className="min-w-0 flex-1 truncate px-2 text-sm font-medium text-[var(--el-ink)]">
+              {t("history.title")}
+            </h2>
+          </>
+        ) : (
+          <>
+            {/* 대화 전환은 `isSwitchBlocked` 로 잠근다. `isBusy` 로 잠그면 답이 흐르는 동안 다른 대화를 못 연다. */}
+            <ChatIconButton
+              ref={historyButtonRef}
+              size="header"
+              label={t("openHistory")}
+              disabled={turn.isSwitchBlocked}
+              onClick={() => setView("history")}
+            >
+              <History aria-hidden />
+            </ChatIconButton>
+            <div className="flex min-w-0 flex-1 items-center gap-0.5">
+              <div className="min-w-0 flex-1">{titleBlock}</div>
+              {/* 아직 서버에 없는 빈 새 대화에는 바꿀 이름도 지울 것도 없다. 기록 줄과 같은 ⋯ 메뉴다. */}
+              {turn.sessionId && editingTitleId === null ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    data-testid="chat-menu"
+                    aria-label={t("chatMenu")}
+                    disabled={turn.isSwitchBlocked || turn.isDeletingChat}
+                    className={cn(
+                      CHAT_ICON_BUTTON_LOOK,
+                      CHAT_ICON_BUTTON_SIZE.md,
+                      "text-[var(--el-muted)]"
+                    )}
+                  >
+                    <MoreHorizontal aria-hidden />
+                  </DropdownMenuTrigger>
+                  <ChatMenuItems
+                    align="start"
+                    onRename={() => {
+                      menuRenameRef.current = true;
+                      setEditingTitleId(turn.sessionId);
+                    }}
+                    onDelete={() => {
+                      if (!turn.sessionId) return;
+                      setDeleteTarget({
+                        chatId: turn.sessionId,
+                        title: headerTitle,
+                      });
+                    }}
+                    finalFocus={() => {
+                      // 「이름 바꾸기」로 닫히면 방금 연 입력에 포커스를 둔다
+                      const restore = !menuRenameRef.current;
+                      menuRenameRef.current = false;
+                      return restore;
+                    }}
+                  />
+                </DropdownMenu>
+              ) : null}
+            </div>
+          </>
+        )}
+        <ChatIconButton
           data-testid="chat-list-new"
-          variant="ghost"
-          size="icon"
-          aria-label="새 대화"
+          size="header"
+          label={t("newChat")}
           disabled={turn.isSwitchBlocked}
           onClick={startNewChat}
         >
-          <Plus className="size-4" />
-        </Button>
-        {/* 아직 서버에 없는 빈 새 대화에는 지울 것이 없다. */}
-        {turn.sessionId ? (
-          <Button
-            data-testid="chat-delete"
-            variant="ghost"
-            size="icon"
-            aria-label="대화 삭제"
-            title="대화 삭제"
-            disabled={turn.isSwitchBlocked || turn.isDeletingChat}
-            onClick={() => {
-              if (!turn.sessionId) return;
-              setDeleteTarget({ chatId: turn.sessionId, title: headerTitle });
-            }}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        ) : null}
-        <Button
-          ref={historyButtonRef}
-          variant="ghost"
-          size="icon"
-          aria-label="기록"
-          disabled={turn.isSwitchBlocked}
-          onClick={() => setView("history")}
-        >
-          <History className="size-4" />
-        </Button>
-        {/* 레일에서는 탭이 자리를 가르므로 닫기가 없다. */}
-        {railSlot ? null : (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="닫기"
-            onClick={onClose}
-          >
-            <X className="size-4" />
-          </Button>
+          <Plus aria-hidden />
+        </ChatIconButton>
+        {/* 레일에서는 닫기 대신 레일의 접기 버튼이 이 자리에 겹쳐 선다(`NoteAgentRail`) — 자리만 비워 둔다. */}
+        {railSlot ? (
+          <span
+            aria-hidden
+            className="size-[34px] shrink-0 pointer-coarse:size-11"
+          />
+        ) : (
+          <ChatIconButton size="header" label={t("close")} onClick={onClose}>
+            <X aria-hidden />
+          </ChatIconButton>
         )}
       </header>
 
@@ -697,22 +813,27 @@ function PersonalChatPanel({
           <ScrollArea
             className="min-h-0 flex-1"
             viewportRef={viewportRef}
+            quietScrollbar
+            // 바닥 16px 을 흐려 컴포저 앞에서 글자가 칼로 자른 듯 끊기지 않게 한다. 바닥 여백(24px) 안이라 다 내리면 안 가린다
+            // 가로로는 넘치지 않는다 — 끊을 자리가 없는 긴 URL·영문이 패널을 옆으로 밀면 안 된다. 코드 블록·표는 제 안에서
+            // 가로로 스크롤한다
+            viewportClassName="overflow-x-hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-16px),transparent)]"
             overlay={
-              atBottom ? null : (
-                <ScrollToBottomButton
-                  label="맨 아래로"
-                  onClick={scrollToBottom}
-                />
-              )
+              <ScrollToBottomButton
+                label="맨 아래로"
+                placement="end"
+                visible={!atBottom}
+                onClick={scrollToBottom}
+              />
             }
           >
-            <div className="flex min-h-full flex-col justify-end p-6">
+            <div className="flex min-h-full flex-col justify-end px-5 pt-5 pb-6">
               {isThreadLoading ? (
-                // 대화의 모양 그대로 — 오른쪽 내 말풍선 하나와 왼쪽 답 몇 줄(`ChatThread` 의 `gap-4` · 말풍선 `rounded-panel`).
+                // 대화의 모양 그대로 — 오른쪽 내 말풍선 하나와 왼쪽 답 몇 줄(`ChatThread` 의 `gap-5` · 말풍선 `rounded-panel`).
                 // 막대 세 줄만 세우면 도착할 때 말풍선이 옆에서 끼어들어 자리가 바뀐 것처럼 보였다 (APP-1212).
                 <div
                   aria-label="대화 불러오는 중"
-                  className="flex flex-1 flex-col justify-end gap-4"
+                  className="flex flex-1 flex-col justify-end gap-5"
                 >
                   <div className="flex justify-end">
                     <Skeleton className="h-10 w-1/2 rounded-panel" />
@@ -727,12 +848,12 @@ function PersonalChatPanel({
                 // 빈 상태로 그리면 이미 있는 대화를 없는 것처럼 보인다
                 <div role="alert" className="space-y-2">
                   <p className="text-sm text-[var(--el-ink)]">
-                    대화를 불러오지 못했습니다.
+                    대화를 불러오지 못했어요.
                   </p>
-                  <p className="text-xs text-[var(--el-muted)]">
+                  <p className="text-xs leading-relaxed text-[var(--el-muted)]">
                     {turn.isChatsUnavailable
-                      ? "기존 대화가 있는지 확인하지 못해 새 대화를 시작하지 않습니다."
-                      : "이어서 보내면 화면과 실제 대화가 어긋나므로 전송을 막아 둡니다."}
+                      ? "기존 대화가 있는지 확인하지 못해 새 대화를 시작하지 않아요."
+                      : "이어서 보내면 화면과 실제 대화가 어긋나서 전송을 막아 두었어요."}
                   </p>
                   {retry}
                 </div>
@@ -758,33 +879,21 @@ function PersonalChatPanel({
                   approvalCard={turn.approval.card}
                   onOpenNote={openNote}
                   activeTurnId={turn.activeTurnId}
+                  cancelledTurnId={turn.cancelledTurnId}
                   emptyState={
                     <ChatStarter
                       workspaceId={workspaceId}
-                      scopeTitles={chips.map((chip) => chip.title)}
+                      contextTitle={
+                        chips.find((chip) => chip.kind === "note")?.title ??
+                        null
+                      }
                       // 답을 만드는 중 · 승인을 기다리는 중 · 대화를 못 읽은 때는 보낼 수 없다
                       disabled={
                         turn.isBusy ||
                         turn.isUnavailable ||
                         turn.stream.phase === "awaiting_approval"
                       }
-                      onAsk={(question) => {
-                        // 쓰던 글이 있으면 보내면서 지우지 말고 문장만 덧붙인다. 비었으면 바로 보낸다
-                        // 칩은 글자로도 읽힌다(`@[제목](noteId:…)`) — 회의록 안에서는 칩이 자동으로 붙어 있어,
-                        // 마커를 걷어 내고 남는 글이 있을 때만 「쓰던 글」로 본다. 칩만 있으면 그 범위로 바로 보낸다.
-                        const draft = editorRef.current?.read();
-                        const written = draft
-                          ? dropScopeMarkers(
-                              draft.text,
-                              new Set(draft.chips.map((chip) => chip.id))
-                            ).trim()
-                          : "";
-                        if (written) {
-                          editorRef.current?.append(question);
-                        } else {
-                          void send(question);
-                        }
-                      }}
+                      onPick={pickExample}
                     />
                   }
                 />
@@ -798,7 +907,8 @@ function PersonalChatPanel({
             onStop={turn.stop}
             isBusy={turn.isBusy}
             isStreaming={turn.isStreaming}
-            placeholder="@로 프로젝트·회의록을 참조해 물어보세요"
+            placeholder={placeholder}
+            shortPlaceholder={shortPlaceholder}
             onChipsChange={handleChipsChange}
             onMentioningChange={setMentioning}
             scope={{
@@ -810,12 +920,12 @@ function PersonalChatPanel({
               <>
                 {overlap ? (
                   <p className="mt-2 text-xs text-[var(--el-muted)]">
-                    {`'${overlap.note.title}'는 '${overlap.project?.title ?? "그 프로젝트"}' 안에 있습니다. 회의록 칩만 남길까요?`}
+                    {`'${overlap.note.title}'는 '${overlap.project?.title ?? "그 프로젝트"}' 안에 있어요. 회의록 칩만 남길까요?`}
                   </p>
                 ) : null}
                 {turn.stream.phase === "awaiting_approval" ? (
                   <p className="mt-2 text-xs text-[var(--el-muted)]">
-                    승인을 기다리는 동안에는 입력할 수 없습니다.
+                    승인을 기다리는 동안에는 보낼 수 없어요.
                   </p>
                 ) : null}
                 {turn.isUnavailable && turn.showingLocalTurn ? (
@@ -825,7 +935,7 @@ function PersonalChatPanel({
                   >
                     <span>
                       {turn.isChatsUnavailable ? "대화 목록" : "대화 기록"}을
-                      다시 읽지 못했습니다. 답변은 화면에 남아 있습니다.
+                      다시 읽지 못했어요. 답은 화면에 남아 있어요.
                     </span>
                     <Button variant="outline" size="sm" onClick={turn.retry}>
                       다시 시도
@@ -854,8 +964,7 @@ function PersonalChatPanel({
               setDeleteTarget({ chatId: chat.chatId, title: chat.title })
             }
             onRename={renameChat}
-            onBack={() => setView("thread")}
-            backRef={backButtonRef}
+            onNewChat={startNewChat}
             editingId={editingRowId}
             onEditingChange={setEditingRowId}
             hasMore={turn.hasMoreChats}

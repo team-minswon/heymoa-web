@@ -1,5 +1,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { messagesFor } from "@/i18n/messages";
 
 import { ChatThread, type ThreadMessage } from "@/components/chat/chat-thread";
 import {
@@ -21,8 +24,18 @@ function message(overrides: Partial<ThreadMessage>): ThreadMessage {
   } as ThreadMessage;
 }
 
+/** 끝난 생각 묶음은 접혀 선다(APP-1436). 안쪽 줄을 보려면 머리줄을 눌러 편다. */
+function expandSteps() {
+  for (const button of screen.queryAllByRole("button", {
+    name: /생각/,
+    expanded: false,
+  }))
+    fireEvent.click(button);
+}
+
 function renderThread(
-  props: Partial<React.ComponentProps<typeof ChatThread>> = {}
+  props: Partial<React.ComponentProps<typeof ChatThread>> = {},
+  locale: "ko" | "en" = "ko"
 ) {
   return render(
     <ChatThread
@@ -31,7 +44,14 @@ function renderThread(
       pendingUserMessage={null}
       onApprove={vi.fn()}
       {...props}
-    />
+    />,
+    {
+      wrapper: ({ children }) => (
+        <NextIntlClientProvider locale={locale} messages={messagesFor(locale)}>
+          {children}
+        </NextIntlClientProvider>
+      ),
+    }
   );
 }
 
@@ -92,7 +112,13 @@ describe("★★ [W-12] 답이 히스토리로 넘어가도 화면이 안 밀린
         onApprove={vi.fn()}
       />
     );
-    const { container, rerender } = render(sending);
+    const { container, rerender } = render(sending, {
+      wrapper: ({ children }) => (
+        <NextIntlClientProvider locale="ko" messages={messagesFor("ko")}>
+          {children}
+        </NextIntlClientProvider>
+      ),
+    });
     const before = dividerTexts(container);
 
     // 히스토리로 넘어간다. **질문의 시각은 보낼 때 쓴 값 그대로다** — 패널이 그것을
@@ -169,14 +195,22 @@ describe("ChatThread", () => {
 
     it("★ 자리를 늘 잡아 둔다 — 손이 닿을 때 아래가 밀리면 안 된다", () => {
       const { container } = renderThread({
-        messages: [message({ role: "ASSISTANT", content: "답입니다." })],
+        messages: [
+          message({ role: "ASSISTANT", content: "앞 답입니다." }),
+          message({ role: "ASSISTANT", content: "답입니다." }),
+        ],
       });
-      const actions = container.querySelector(
+      const [earlier, last] = container.querySelectorAll(
         '[data-testid="message-actions"]'
       );
       // 보임/안 보임은 투명도로만 가른다. 조건부 렌더면 뜰 때마다 아래가 밀린다.
-      expect(actions?.className).toContain("opacity-0");
-      expect(actions?.className).toContain("group-hover/msg:opacity-100");
+      expect(earlier.className).toContain("opacity-0");
+      expect(earlier.className).toContain("group-hover/msg:opacity-100");
+      // 터치 화면에는 손이 닿는 hover 가 없어 늘 보인다
+      expect(earlier.className).toContain("[@media(hover:none)]:opacity-100");
+      // ★ 마지막 답은 늘 보인다 — 「복사가 어디 있지」를 줄인다
+      expect(last.getAttribute("data-pinned")).toBe("true");
+      expect(last.className).not.toContain("opacity-0");
     });
 
     it("복사를 누르면 그 답의 글이 클립보드로 간다", async () => {
@@ -227,7 +261,9 @@ describe("ChatThread", () => {
       });
 
       const stamps = [
-        ...container.querySelectorAll('[data-testid="message-actions"] span'),
+        ...container.querySelectorAll(
+          '[data-testid="message-actions"] span:not(.sr-only)'
+        ),
       ].map((node) => node.textContent ?? "");
       expect(stamps).toHaveLength(2);
       expect(stamps[0]).not.toBe(stamps[1]);
@@ -285,6 +321,7 @@ describe("ChatThread", () => {
         }),
       ],
     });
+    expandSteps();
     expect(container.querySelector('[data-step="tool"]')).toBeTruthy();
     const link = screen.getByRole("link");
     expect(link.getAttribute("href")).toBe(
@@ -310,6 +347,7 @@ describe("ChatThread", () => {
         }),
       ],
     });
+    expandSteps();
     expect(
       screen.getByText("스크립트에서 관련 발화 검색 · 3건 찾음")
     ).toBeTruthy();
@@ -417,6 +455,7 @@ describe("ChatThread", () => {
       screen.getByRole("link", { name: /열기/ }).getAttribute("href")
     ).toBe("https://linear.app/heymoa/issue/APP-12");
     // 앞의 조회는 생각 과정에 남고, 쓰기 줄은 거기 없다.
+    expandSteps();
     expect(container.querySelectorAll('[data-step="tool"]')).toHaveLength(1);
   });
 
@@ -657,6 +696,7 @@ describe("ChatThread", () => {
         ],
       }),
     });
+    expandSteps();
     expect(container.querySelector('[data-step="tool"]')).toBeTruthy();
     expect(
       container.querySelector('[data-testid="assistant-message"]')?.textContent
@@ -902,7 +942,9 @@ describe("ChatThread", () => {
         }),
       ],
     });
-    expect(screen.getByText("참고한 회의록 1개")).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: "참고한 회의록 1개" })
+    ).toBeTruthy();
   });
 
   it("쓸 수 없는 근거는 근거 줄에서 뺀다", () => {
@@ -1065,10 +1107,13 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
       ],
     });
 
+    expandSteps();
+    // 한 블록으로 이어 붙고, 펼치면 줄바꿈마다 한 줄이다 — 흐를 때와 같다.
     const rows = container.querySelectorAll('[data-step="thinking"]');
-    expect(rows).toHaveLength(1);
-    expect(rows[0].textContent).toContain("전사를 훑습니다.");
-    expect(rows[0].textContent).toContain("찾은 것으로 정리합니다.");
+    expect([...rows].map((row) => row.textContent)).toEqual([
+      "전사를 훑습니다.",
+      "찾은 것으로 정리합니다.",
+    ]);
   });
 
   it("사이에 도구가 끼면 안 잇는다", () => {
@@ -1100,7 +1145,7 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
       ],
     });
     // 줄이 셋이라 접혀 있다 — 펴야 안이 보인다.
-    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+    expandSteps();
 
     expect(container.querySelectorAll('[data-step="thinking"]')).toHaveLength(
       2
@@ -1146,7 +1191,7 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
         }),
       ],
     });
-    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+    expandSteps();
 
     // 눌러서 그 회의록으로 가는 문이다 — 글자만 있으면 반쪽이다.
     fireEvent.click(screen.getByRole("button", { name: /주간 배포 회의/ }));
@@ -1184,7 +1229,7 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
         }),
       ],
     });
-    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+    expandSteps();
 
     expect(container.querySelector("[data-target]")).toBeNull();
   });
@@ -1218,11 +1263,9 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
       messages: [message({ role: "THINKING", content: "혼자 남은 생각" })],
     });
 
-    // 하나여도 서랍이다. 다만 **접어서 아낄 것이 없으므로 편 채로** 선다.
+    // 하나여도 서랍이다. 접혀 서고, 펴면 그 생각이 있다.
     expect(container.querySelector('[data-cot="group"]')).toBeTruthy();
-    expect(
-      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
-    ).toBe("true");
+    expandSteps();
     expect(container.textContent).toContain("혼자 남은 생각");
   });
 });
@@ -1245,7 +1288,9 @@ describe("message_end 뒤의 근거 줄", () => {
         refs: [{ kind: "note", id: "n1", title: "주간 배포 회의" }],
       },
     });
-    expect(screen.getByText("참고한 회의록 1개")).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: "참고한 회의록 1개" })
+    ).toBeTruthy();
   });
 
   it("흐르는 중에는 아직 안 선다 — 결론을 미리 붙이지 않는다", () => {
@@ -1255,7 +1300,7 @@ describe("message_end 뒤의 근거 줄", () => {
         refs: [{ kind: "note", id: "n1", title: "주간 배포 회의" }],
       }),
     });
-    expect(screen.queryByText(/참고한 회의록/)).toBeNull();
+    expect(screen.queryByRole("group", { name: /참고한 회의록/ })).toBeNull();
   });
 });
 
@@ -1268,7 +1313,7 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
     return { event, data: JSON.stringify(payload) };
   }
   function openSteps() {
-    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+    expandSteps();
   }
 
   it("실시간 — 결과 없이 실패하면 조회는 「중단됨」, 승인받은 쓰기는 「확인 필요」다", () => {
@@ -1324,6 +1369,7 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
     const { container } = renderThread({
       stream: endStream(flowing, "gaveUp"),
     });
+    expandSteps();
     expect(screen.queryByText("중단됨")).toBeNull();
     expect(screen.getByText("확인 필요")).toBeTruthy();
     expect(container.querySelector(".animate-spin")).toBeNull();
@@ -1431,7 +1477,7 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
 
   it("히스토리는 행 시각으로 걸린 시간을 말한다", () => {
     renderThread({ messages: HISTORY });
-    expect(screen.getByText("생각 과정 · 3초 · 2단계")).toBeTruthy();
+    expect(screen.getByText("3초 동안 생각")).toBeTruthy();
   });
 
   it("커서로 이어받은 턴은 히스토리 단계와 스트림 단계가 한 묶음이다", () => {
@@ -1492,5 +1538,100 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
       },
     });
     expect(container.querySelectorAll('[data-cot="group"]')).toHaveLength(1);
+  });
+});
+
+describe("APP-1436 재검사", () => {
+  it("★ 상대 시각은 앱 언어로 적는다 — 한국어 화면에 「57m ago」가 섞이지 않는다", () => {
+    const at = new Date(Date.now() - 57 * 60_000).toISOString();
+    const stamp = (container: HTMLElement) =>
+      container.querySelector(
+        '[data-testid="message-actions"] span:not(.sr-only)'
+      )?.textContent;
+    const ko = renderThread({
+      messages: [message({ role: "ASSISTANT", content: "답", createdAt: at })],
+    });
+    expect(stamp(ko.container)).toBe("57분 전");
+    cleanup();
+    const en = renderThread(
+      {
+        messages: [
+          message({ role: "ASSISTANT", content: "답", createdAt: at }),
+        ],
+      },
+      "en"
+    );
+    expect(stamp(en.container)).toMatch(/57.*ago/);
+  });
+
+  it("★ 멈춘 답은 끝에 「중지됨」이 선다 — 흐르다 멈춘 것도, 히스토리로 넘어간 것도", () => {
+    renderThread({
+      stream: {
+        ...initialStreamState,
+        phase: "cancelled",
+        blocks: body("지금까지 확정된"),
+      },
+      pendingUserMessage: "정리해줘",
+    });
+    expect(screen.getByTestId("answer-stopped").textContent).toBe("중지됨");
+    cleanup();
+
+    renderThread({
+      messages: [
+        message({ role: "USER", content: "정리해줘", turnId: "t1" }),
+        message({ role: "ASSISTANT", content: "지금까지", turnId: "t1" }),
+      ],
+      cancelledTurnId: "t1",
+    });
+    expect(screen.getByTestId("answer-stopped")).toBeTruthy();
+    cleanup();
+
+    // 끝까지 받은 답에는 없다
+    renderThread({
+      messages: [
+        message({ role: "ASSISTANT", content: "다 받은 답", turnId: "t2" }),
+      ],
+      cancelledTurnId: "t1",
+    });
+    expect(screen.queryByTestId("answer-stopped")).toBeNull();
+  });
+
+  it("★ 범위·참고 칩은 제목을 자르지 않는다", () => {
+    const long = "강상진 멘토님 특강 - 쿠버네티스_2 실습 환경과 포트 설정 정리";
+    const { container } = renderThread({
+      messages: [
+        message({
+          role: "USER",
+          content: `@[${long}](noteId:0HZX2K7M9Q4AF) 정리`,
+          scope: [
+            {
+              kind: "NOTE",
+              id: "0HZX2K7M9Q4AF",
+              title: long,
+              unavailable: false,
+            },
+          ],
+        }),
+        message({
+          role: "ASSISTANT",
+          content: "답",
+          scope: [
+            {
+              kind: "NOTE",
+              id: "0HZX2K7M9Q4AF",
+              title: long,
+              unavailable: false,
+            },
+          ],
+        }),
+      ],
+      onOpenNote: vi.fn(),
+    });
+    for (const chip of container.querySelectorAll(
+      "[data-scope-chip], [data-refs] button"
+    )) {
+      expect(chip.textContent).toContain(long);
+      expect(chip.innerHTML).not.toContain("truncate");
+    }
   });
 });

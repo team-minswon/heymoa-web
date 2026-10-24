@@ -177,27 +177,31 @@ const COMPONENTS: Components = {
       <CodeBlock language={languageOf(node)}>{children}</CodeBlock>
     ),
   ul: ({ children }) => (
-    <ul className="my-1.5 list-disc space-y-0.5 pl-5">{children}</ul>
+    <ul className="my-3.5 list-disc space-y-1.5 pl-5 first:mt-0 last:mb-0 marker:text-[var(--el-muted)] [&_ol]:my-1.5 [&_ul]:my-1.5">
+      {children}
+    </ul>
   ),
   ol: ({ children }) => (
-    <ol className="my-1.5 list-decimal space-y-0.5 pl-5">{children}</ol>
+    <ol className="my-3.5 list-decimal space-y-1.5 pl-5 first:mt-0 last:mb-0 marker:text-[var(--el-muted)] [&_ol]:my-1.5 [&_ul]:my-1.5">
+      {children}
+    </ol>
   ),
   p: ({ children }) => (
-    <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>
+    <p className="my-3.5 [text-wrap:pretty] first:mt-0 last:mb-0">{children}</p>
   ),
-  // 본문이 14px 이라 h1·h2 는 17·15px, h3 는 굵기와 색으로만 가른다.
+  // 본문이 14.5px 이라 h1·h2 는 17·15px, h3 는 굵기와 색으로만 가른다. 위 여백은 16·14·12px 로 문단 간격보다 넓다.
   h1: ({ children }) => (
-    <h1 className="mt-4 mb-1.5 text-[1.0625rem] leading-snug font-semibold text-[var(--el-ink)] first:mt-0">
+    <h1 className="mt-5 mb-2 text-[1.0625rem] leading-snug font-semibold text-[var(--el-ink)] first:mt-0">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="mt-3.5 mb-1 text-[0.9375rem] leading-snug font-semibold text-[var(--el-ink)] first:mt-0">
+    <h2 className="mt-5 mb-1.5 text-[0.9375rem] leading-snug font-semibold text-[var(--el-ink)] first:mt-0">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="mt-3 mb-0.5 font-semibold text-[var(--el-body-strong)] first:mt-0">
+    <h3 className="mt-4 mb-1 font-semibold text-[var(--el-body-strong)] first:mt-0">
       {children}
     </h3>
   ),
@@ -224,10 +228,12 @@ export function Markdown({
   streaming?: boolean;
 }) {
   return (
-    // `break-words` 는 긴 URL 이 좁은 패널 밖으로 삐져나가지 않게 한다.
+    // 한국어 어절 단위 줄바꿈(`keep-all`)은 body 전역이 맡는다. 여기서는 끊을 자리가 없는 긴 URL·영문을 아무 데서나 끊어
+    // 패널 밖으로 안 나가게 한다.
+    // 본문 14.5px · 줄 간격 1.7, 문단 간격(14px)은 줄 사이 여백보다 넓어 문단 경계가 보인다.
     // 체크박스 목록은 표식을 뗀다. `li:has(input)` 은 자손을 봐서 상위 `li` 의 불릿까지 떼므로
     // gfm 이 붙이는 `task-list-item` 을 짚는다.
-    <div className="chat-md text-sm leading-[1.65] break-words text-[var(--el-body)] [&_.task-list-item]:list-none">
+    <div className="chat-md text-[14.5px] leading-[1.7] text-[var(--el-ink)] [overflow-wrap:anywhere] [&_.task-list-item]:list-none">
       <StreamingContext value={streaming}>
         <ReactMarkdown remarkPlugins={REMARK} components={COMPONENTS}>
           {content}

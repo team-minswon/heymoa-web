@@ -83,6 +83,16 @@ export const CHAT_SCENARIOS = {
     kind: "transport",
     what: "턴만 서고 이벤트가 하나도 안 온다. 굳혀 주는 것이 없으면 무한 스피너",
   },
+  stall: {
+    keyword: "멈칫",
+    kind: "transport",
+    what: "도구 결과 앞에서 25초 동안 아무 이벤트도 안 온다. 진행 줄이 「응답이 늦어지고 있어요」로 바뀌었다가 이벤트가 오면 돌아오는지",
+  },
+  legacyNarration: {
+    keyword: "옛 방식",
+    kind: "stream",
+    what: "진행 문장이 생각(thinking)이 아니라 **본문 token** 으로 오던 옛 ai(APP-1057). 옛 대화가 그 모양 그대로 그려지는지",
+  },
   resync: {
     keyword: "밀리게 해줘",
     kind: "transport",
@@ -130,6 +140,13 @@ export function leadSilenceMs(message: string): number {
   return hasScenario(message, "slow") ? 3_000 : 0;
 }
 
+/** `"멈칫"` 이 도구 결과 앞에 두는 침묵(ms). 화면이 「늦어지고 있어요」로 바꾸는 문턱(20초)을 넘겨야 그 자리가 보인다. */
+export function stallSilenceMs(message: string, event: string): number {
+  return hasScenario(message, "stall") && event === "tool_call_result"
+    ? 25_000
+    : 0;
+}
+
 /**
  * `"시나리오"`라고 치면 목이 답하는 글. **표에서 만든다** — 손으로 적으면 표와 갈린다.
  *
@@ -139,7 +156,9 @@ export function leadSilenceMs(message: string): number {
 export const SCENARIO_HELP = [
   "이 화면은 목(MSW)으로 돕니다. 메시지에 아래 키워드를 넣으면 그 상황이 재현됩니다.",
   "",
-  ...IDS.map((id) => `- \`${CHAT_SCENARIOS[id].keyword}\` — ${CHAT_SCENARIOS[id].what}`),
+  ...IDS.map(
+    (id) => `- \`${CHAT_SCENARIOS[id].keyword}\` — ${CHAT_SCENARIOS[id].what}`
+  ),
   "",
-  "스트림이 느리면 콘솔에서 `localStorage.mockChatSpeed = \"4\"`로 배속을 올릴 수 있습니다.",
+  '스트림이 느리면 콘솔에서 `localStorage.mockChatSpeed = "4"`로 배속을 올릴 수 있습니다.',
 ].join("\n");

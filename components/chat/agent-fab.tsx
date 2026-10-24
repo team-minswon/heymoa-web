@@ -57,13 +57,24 @@ function useAgentIntro() {
  * 우하단 에이전트 버튼. 아이콘만 있던 원을 이름이 적힌 알약으로 바꾸고, 이 브라우저에서 처음이면 하는 일을
  * 알리는 카드를 띄운다. 패널이 열려 버튼이 물러나면(`hidden`) 카드도 함께 보이지 않는다.
  */
+/** 패널이 닫힌 동안 알약이 알릴 턴 상태. 승인 대기는 놓치면 일이 멈추므로 따로 말한다. */
+export type AgentAttention = "running" | "approval" | null;
+
+const ATTENTION_TEXT: Record<Exclude<AgentAttention, null>, string> = {
+  running: "답을 준비하고 있어요",
+  approval: "확인이 필요해요",
+};
+
 export function AgentFab({
   hidden,
   engaged = false,
+  attention = null,
   onOpen,
   className,
 }: {
   hidden: boolean;
+  /** 닫힌 패널에서 턴이 도는 중이거나 승인을 기다린다. 알약 오른쪽 위에 점을 단다. */
+  attention?: AgentAttention;
   /** 이 버튼 밖(노트 레일 등)에서 에이전트를 이미 써 봤다 */
   engaged?: boolean;
   onOpen: () => void;
@@ -143,6 +154,11 @@ export function AgentFab({
           </div>
         </section>
       ) : null}
+      {attention ? (
+        <span id="agent-fab-attention" className="sr-only">
+          {ATTENTION_TEXT[attention]}
+        </span>
+      ) : null}
       {/* 카드가 떠 있을 때는 카드가 말하므로 툴팁을 끈다 */}
       <Tooltip disabled={showIntro} onOpenChange={setUserOpen}>
         <TooltipTrigger
@@ -150,13 +166,15 @@ export function AgentFab({
             <Button
               size="xl"
               aria-label="내 에이전트 열기"
+              // 이름은 그대로 두고 상태는 설명으로 덧붙여 읽힌다
+              aria-describedby={attention ? "agent-fab-attention" : undefined}
               data-nudge={nudging || undefined}
               aria-hidden={hidden || undefined}
               inert={hidden}
               tabIndex={hidden ? -1 : undefined}
               onClick={open}
               className={cn(
-                "group/fab fixed right-8 bottom-8 z-40 h-11 rounded-full pr-5 pl-4 shadow-e2",
+                "group/fab fixed right-8 bottom-8 z-40 h-11 gap-1.5 rounded-full pr-5 pl-4 shadow-e2",
                 className
               )}
             />
@@ -173,9 +191,23 @@ export function AgentFab({
             />
           ) : null}
           <MessageCircle aria-hidden className="size-4" />내 에이전트
+          {attention ? (
+            <>
+              <span
+                aria-hidden
+                data-attention={attention}
+                className={cn(
+                  "absolute -top-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--el-surface-card)]",
+                  attention === "approval"
+                    ? "bg-[var(--el-warning-strong)]"
+                    : "bg-[var(--el-scope-note)] motion-safe:animate-pulse"
+                )}
+              />
+            </>
+          ) : null}
         </TooltipTrigger>
         <TooltipContent side="top" align="end">
-          무엇이든 질문해보세요!
+          {attention ? ATTENTION_TEXT[attention] : "회의록을 보고 답해요"}
         </TooltipContent>
       </Tooltip>
     </>

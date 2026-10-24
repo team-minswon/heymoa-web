@@ -64,8 +64,8 @@ export function ChainOfThought({
   /** 이 묶음이 아직 흐르는 중인가. 도는 동안은 지금 단계 한 줄로 접고 끝나면 요약 한 줄로 접는다. */
   live: boolean;
   /**
-   * 첫 단계의 시각(ISO). 히스토리 행이나 커서 앞 히스토리가 준다. 없으면 흐르는 동안 마운트된
-   * 시각부터 잰다 — 처음부터 흐른 묶음은 첫 프레임과 함께 마운트된다.
+   * 첫 단계의 시각(ISO). 히스토리 행, 커서 앞 히스토리, 또는 이 탭이 질문을 보낸 시각이 준다. 없으면 흐르는 동안
+   * 마운트된 시각부터 잰다. 보낸 시각을 주면 첫 단계 전 「생각 중」 줄의 초가 이 묶음으로 끊기지 않고 이어진다.
    */
   startedAt?: string | null;
   /** 마지막 단계의 시각(ISO). 히스토리만 준다. 흐른 묶음은 `live` 가 꺼진 시각이 끝이다. */
@@ -95,10 +95,10 @@ export function ChainOfThought({
 /**
  * 생각한 초. 시각이 없는 경로는 짐작하지 않고 null 이다. 흐르는 동안은 1초마다 다시 잰다.
  */
-function useThinkingSeconds(
+export function useThinkingSeconds(
   live: boolean,
   startedAt: string | null | undefined,
-  endedAt: string | null | undefined
+  endedAt?: string | null
 ): number | null {
   const [mountedAt] = useState(() => (live ? Date.now() : null));
   const [now, setNow] = useState(() => Date.now());
@@ -121,6 +121,141 @@ function useThinkingSeconds(
   return seconds >= 1 ? seconds : null;
 }
 
+/**
+ * 새 이벤트가 이만큼 없으면 「늦어지고 있어요」로 바꿔 말한다. 근거 있는 값이 아니다 — 도구 하나가 보통 몇 초 안에 끝나는
+ * 목·실측 감각에서 고른 값이고, 연결이 죽었다고 판정하는 값(스트림 유휴 40초)보다 먼저 와야 한다.
+ */
+export const STALL_MS = 20_000;
+
+/**
+ * `signature` 가 `STALL_MS` 동안 안 바뀌었나. 초 타이머는 이벤트가 없어도 오르므로, 멈춘 것과 오래 걸리는 것을 가르려면
+ * 마지막 이벤트로부터 잰다. 흐르지 않으면(`active` 거짓) 늘 거짓이다.
+ */
+export function useStalled(signature: string, active: boolean): boolean {
+  const [stalled, setStalled] = useState<{ at: string; on: boolean }>({
+    at: signature,
+    on: false,
+  });
+  // 새 이벤트가 오면 렌더 중에 바로 푼다. effect 로 미루면 낡은 「늦어져요」가 한 번 그려진다
+  if (stalled.at !== signature) setStalled({ at: signature, on: false });
+  useEffect(() => {
+    if (!active) return;
+    const timer = setTimeout(
+      () => setStalled({ at: signature, on: true }),
+      STALL_MS
+    );
+    return () => clearTimeout(timer);
+  }, [active, signature]);
+  return active && stalled.at === signature && stalled.on;
+}
+
+const STALLED_TEXT = "응답이 늦어지고 있어요. 계속 기다리거나 멈출 수 있어요";
+
+/** 블록이 바뀌었는지 가르는 값. 생각은 글자 수, 도구는 상태까지 본다. */
+function stepSignature(blocks: StepBlock[]) {
+  return blocks
+    .map((block) =>
+      block.kind === "thinking"
+        ? `t${block.text.length}`
+        : block.kind === "tool"
+          ? `${block.toolCallId}:${block.status ?? "-"}`
+          : `${block.approvalId}:${block.decision ?? "-"}`
+    )
+    .join("|");
+}
+
+/**
+ * 흐르는 동안의 머리줄 「생각 중 · 8초」와 그 아래 지금 하는 일 한 줄. 첫 단계가 오기 전(`ThinkingLine`)과 단계가 흐르는
+ * 동안(`Disclosure`)이 같은 이 모양을 써서, 첫 단계가 와도 줄이 바뀌거나 튀지 않는다. 두 줄 다 높이가 고정이다.
+ *
+ * 매초 바뀌는 초는 접근성 이름에서 뺀다 — 포커스가 있으면 매초 다시 읽힌다.
+ */
+export function LiveHead({
+  seconds,
+  open,
+}: {
+  seconds: number | null;
+  /** 펼칠 수 있는 머리줄이면 지금 펼쳐져 있는가. 없으면 버튼이 아니다(첫 단계 전). */
+  open?: boolean;
+}) {
+  return (
+    <>
+      <span className="font-medium text-[var(--el-body-strong)]">생각 중</span>
+      {seconds !== null ? (
+        // 플렉스 안이라 앞 공백이 접힌다 — `pre` 로 공백을 지킨다
+        <span
+          aria-hidden
+          className="whitespace-pre text-[var(--el-muted)] tabular-nums"
+        >
+          {` · ${duration(seconds)}`}
+        </span>
+      ) : null}
+      {open !== undefined ? <Chevron open={open} /> : null}
+    </>
+  );
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <ChevronRight
+      aria-hidden
+      className={cn(
+        "ml-0.5 size-3.5 shrink-0 text-[var(--el-muted)] transition-transform duration-200 motion-reduce:transition-none",
+        open && "rotate-90"
+      )}
+    />
+  );
+}
+
+/** 지금 하는 일 한 줄. 높이를 잡아 두어 문구가 바뀌거나 비어도 아래가 안 움직인다. */
+export function CurrentLine({
+  id,
+  text,
+  stalled,
+}: {
+  id: string;
+  text: string;
+  stalled: boolean;
+}) {
+  return (
+    <p
+      // 키는 단계의 정체로 준다. 문구로 주면 생각 델타마다 다시 마운트되어 떠오르기를 끝없이 되풀이한다.
+      key={stalled ? "stalled" : id}
+      data-current
+      data-stalled={stalled || undefined}
+      aria-hidden
+      className="chat-rise h-5 min-w-0 truncate text-[13px] leading-5"
+    >
+      {stalled ? (
+        <span className="text-[var(--el-muted)]">{STALLED_TEXT}</span>
+      ) : (
+        <span className="chat-shimmer">{text}</span>
+      )}
+    </p>
+  );
+}
+
+/** 첫 단계가 오기 전의 진행 줄. 보낸 시각부터 초를 세고, 이벤트가 오래 없으면 늦어진다고 말한다. */
+export function PendingProgress({ startedAt }: { startedAt: string | null }) {
+  const seconds = useThinkingSeconds(true, startedAt);
+  const stalled = useStalled("pending", true);
+  return (
+    <div data-testid="chat-thinking" className="flex flex-col gap-0.5">
+      <p className="flex h-6 items-center text-[13px]">
+        <LiveHead seconds={seconds} />
+      </p>
+      <CurrentLine
+        id="pending"
+        text="질문을 살펴보고 있어요"
+        stalled={stalled}
+      />
+      <span className="sr-only" aria-live="polite">
+        {stalled ? STALLED_TEXT : "생각하는 중"}
+      </span>
+    </div>
+  );
+}
+
 function Disclosure({
   blocks,
   live,
@@ -141,13 +276,8 @@ function Disclosure({
 }) {
   const lines = groupSteps(blocks);
   // 도는 동안은 지금 단계 한 줄로 접는다. 승인을 기다릴 때는 무엇을 하려다 물었는지 보이게
-  // 펴 둔다. 끝나면 접되, 줄이 하나면 접어도 아낄 자리가 없어 편 채로 둔다.
-  const steps = lines.reduce(
-    (sum, line) => sum + (line.kind === "run" ? line.blocks.length : 1),
-    0
-  );
-  const roomToSave = steps > 1;
-  const auto = live ? !running : !roomToSave;
+  // 펴 둔다. 끝나면 접는다 — 본문은 답만 담고, 과정은 누른 사람만 본다.
+  const auto = live && !running;
   const [open, setOpen] = useState(auto);
   const reduced = useReducedMotion();
   // 사용자가 손으로 건드렸으면 자동 접힘/펼침이 그걸 덮지 않는다.
@@ -159,14 +289,15 @@ function Disclosure({
   }, [auto]);
 
   const current = running ? currentStep(blocks, lines) : null;
+  const stalled = useStalled(stepSignature(blocks), running);
 
   return (
     <div
       data-cot="group"
       data-open={open ? "true" : "false"}
       // 떠오르는 것은 흐를 때 한 번이다. 끝난 묶음은 히스토리로 다시 마운트되는데 거기서 또
-      // 떠오르면 레일이 한 번 더 번쩍인다.
-      className={cn(live && "chat-rise", RAIL)}
+      // 떠오르면 한 번 더 번쩍인다.
+      className={cn(live && "chat-rise", "flex flex-col")}
     >
       <button
         type="button"
@@ -177,48 +308,44 @@ function Disclosure({
         }}
         // 커서를 여기서 준다. `@layer base` 의 `button { cursor: pointer }` 에 기대면 Tailwind 를
         // 올릴 때 조용히 뒤집힌다.
-        className="-ml-1 flex w-full cursor-pointer items-center gap-1.5 py-0.5 text-left"
+        className="-ml-1 flex h-6 w-fit max-w-full cursor-pointer items-center gap-0 rounded-control px-1 text-left text-[13px] outline-none hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <ChevronRight
-          aria-hidden
-          className={
-            open
-              ? "size-3.5 shrink-0 rotate-90 text-[var(--el-muted)] transition-transform"
-              : "size-3.5 shrink-0 text-[var(--el-muted)] transition-transform"
-          }
-        />
-        <span className="min-w-0 truncate text-xs text-[var(--el-muted)] tabular-nums">
+        <span className="flex min-w-0 items-center truncate">
           {current ? (
-            <RunningHeadline
-              seconds={seconds}
-              done={steps - activeSteps(blocks)}
-            />
+            <LiveHead seconds={seconds} open={open} />
           ) : (
-            headline(blocks, live, seconds, steps)
+            <>
+              <span className="truncate text-[var(--el-muted)] tabular-nums">
+                {headline(blocks, live, seconds)}
+              </span>
+              <Chevron open={open} />
+            </>
           )}
         </span>
       </button>
-      {/* 접혀서 도는 동안에만 지금 하는 일을 한 줄로 말한다. 펴져 있으면 타임라인의 마지막
-          줄이 같은 말을 하므로 되풀이하지 않는다. */}
-      {current && !open ? (
-        <div className="flex min-w-0 pl-5">
-          {/* 키는 단계의 정체로 준다. 문구로 주면 생각 델타마다 다시 마운트되어 떠오르기를
-              끝없이 되풀이한다. */}
-          <p
-            key={current.id}
-            data-current
-            aria-hidden
-            className="chat-rise min-w-0 truncate text-xs leading-relaxed"
+      {/* 접혀서 도는 동안에만 지금 하는 일을 한 줄로 말한다. 펴져 있으면 타임라인의 마지막 줄이 같은 말을 하므로
+          되풀이하지 않는다. 사라질 때는 높이를 접어 아래 답이 한 번에 튀어 오르지 않게 한다. */}
+      <AnimatePresence initial={false}>
+        {current && !open ? (
+          <motion.div
+            key="current"
+            initial={false}
+            exit={{ height: 0, opacity: 0 }}
+            transition={reduced ? { duration: 0 } : COLLAPSE_TRANSITION}
+            className="overflow-hidden"
           >
-            <span className="chat-shimmer">{current.text}</span>
-          </p>
-          {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면
-              글자마다 읽힌다. */}
-          <span className="sr-only" aria-live="polite">
-            {current.announce}
-          </span>
-        </div>
-      ) : null}
+            <CurrentLine
+              id={current.id}
+              text={current.text}
+              stalled={stalled}
+            />
+            {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면 글자마다 읽힌다. */}
+            <span className="sr-only" aria-live="polite">
+              {stalled ? STALLED_TEXT : current.announce}
+            </span>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       {/* `initial={false}` 는 흐르는 중 이미 펴진 채로 다시 그려질 때 매 토큰 다시 자라지 않게 한다. */}
       <AnimatePresence initial={false}>
         {open ? (
@@ -230,7 +357,7 @@ function Disclosure({
             transition={reduced ? { duration: 0 } : COLLAPSE_TRANSITION}
             className="overflow-hidden"
           >
-            <div className="space-y-1.5 pt-1.5 pb-0.5">
+            <div className={cn("mt-1.5 mb-1 ml-1 space-y-1.5", RAIL)}>
               {lines.map((line, index) => (
                 <TimelineLine
                   key={line.key}
@@ -246,7 +373,7 @@ function Disclosure({
                 <div className="flex gap-2" data-step="pending">
                   <Dot state="active" />
                   <p className="chat-shimmer min-w-0 flex-1 text-xs leading-relaxed">
-                    생각하는 중
+                    {stalled ? STALLED_TEXT : "생각하는 중"}
                   </p>
                 </div>
               ) : null}
@@ -258,28 +385,6 @@ function Disclosure({
   );
 }
 
-/**
- * 「생각 중 · 12초 · 3단계 완료」. 시각이 없거나 끝난 단계가 없으면 그 마디를 뺀다. 매초 바뀌는
- * 초는 버튼 이름에서 뺀다 — 포커스가 있으면 매초 다시 읽힌다.
- */
-function RunningHeadline({
-  seconds,
-  done,
-}: {
-  seconds: number | null;
-  done: number;
-}) {
-  return (
-    <>
-      생각 중
-      {seconds !== null ? (
-        <span aria-hidden> · {duration(seconds)}</span>
-      ) : null}
-      {done > 0 ? ` · ${done}단계 완료` : null}
-    </>
-  );
-}
-
 /** 「45초」·「2분 5초」. */
 function duration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -288,12 +393,12 @@ function duration(seconds: number) {
   return rest === 0 ? `${minutes}분` : `${minutes}분 ${rest}초`;
 }
 
-/** 아직 안 끝난 단계 수. 결과를 기다리는 도구 전부와, 흐르는 중인 마지막 생각이다. */
-function activeSteps(blocks: StepBlock[]) {
-  const pending = blocks.filter(
-    (block) => block.kind === "tool" && block.status === null
-  ).length;
-  return pending + (blocks.at(-1)?.kind === "thinking" ? 1 : 0);
+/** 생각 블록의 줄. ai 는 진행 문장 하나를 줄바꿈으로 끝내 보낸다 — 줄마다 한 단계다. 줄바꿈 없는 옛 생각은 한 줄이다. */
+function thinkingLines(text: string) {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -325,13 +430,15 @@ function currentStep(
   // 줄에서 읽는다. 커서 경계에서 갈려 온 생각은 줄에서 한 문단으로 합쳐져 있다.
   const last = lines.at(-1);
   if (last?.kind === "single" && last.block.kind === "thinking") {
-    const sentence = last.block.text
-      .trim()
-      .split(/\n|(?<=[.!?。])\s+/)
+    const rows = thinkingLines(last.block.text);
+    const sentence = rows
+      .at(-1)
+      ?.split(/(?<=[.!?。])\s+/)
       .at(-1)
       ?.trim();
     return {
-      id: last.key,
+      // 줄이 늘 때마다 새 줄로 떠오른다. 같은 줄에 글자가 붙는 동안은 그대로다
+      id: `${last.key}:${rows.length}`,
       text: sentence || "생각하는 중",
       announce: "생각하는 중",
     };
@@ -434,14 +541,13 @@ function TimelineLine({
 }
 
 /**
- * 묶음의 이름. 끝나면 얼마나 생각했는지, 몇 단계였는지, 무엇을 봤는지 말한다. 승인을 기다리며
- * 펴져 있을 때는 아직 끝나지 않아 시간과 단계 수를 안 붙인다.
+ * 끝난 묶음의 이름. 얼마나 생각했는지와 무엇을 봤는지만 말한다 — 단계 수는 사용자에게 뜻이 약해 펼쳐야 보인다.
+ * 승인을 기다리며 펴져 있을 때는 아직 끝나지 않아 시간을 안 붙인다.
  */
 function headline(
   blocks: StepBlock[],
   live: boolean,
-  seconds: number | null,
-  steps: number
+  seconds: number | null
 ): string {
   const notes = new Set(
     blocks.flatMap((block) =>
@@ -459,14 +565,18 @@ function headline(
         : []
     )
   );
+  const lead =
+    !live && seconds !== null
+      ? `${duration(seconds)} 동안 생각`
+      : live
+        ? "확인을 기다리는 중"
+        : "생각 과정";
   const what = [
-    !live && seconds !== null ? duration(seconds) : null,
-    live ? null : `${steps}단계`,
     notes.size > 0 ? `회의록 ${notes.size}건` : null,
     projects.size > 0 ? `프로젝트 ${projects.size}개` : null,
   ].filter(Boolean);
 
-  return what.length > 0 ? `생각 과정 · ${what.join(" · ")}` : "생각 과정";
+  return [lead, ...what].join(" · ");
 }
 
 function StepRow({
@@ -483,19 +593,27 @@ function StepRow({
 }) {
   const row = cn(animate && "chat-rise", "flex gap-2");
   if (block.kind === "thinking") {
+    // 진행 문장은 줄마다 한 단계다. 줄바꿈 없이 이어진 옛 생각은 한 문단으로 읽힌다.
+    const rows = thinkingLines(block.text);
     return (
-      <div className={row} data-step="thinking">
-        <Dot state={live ? "active" : "complete"} />
-        {/* 도구 사이의 생각은 한 문단으로 읽힌다. 조각 사이 줄바꿈은 띄어쓰기로 접는다. */}
-        <p
-          className={cn(
-            "min-w-0 flex-1 text-xs leading-relaxed",
-            live ? "chat-shimmer" : "text-[var(--el-body)]"
-          )}
-        >
-          {block.text}
-        </p>
-      </div>
+      <>
+        {rows.map((text, index) => {
+          const active = live && index === rows.length - 1;
+          return (
+            <div key={index} className={row} data-step="thinking">
+              <Dot state={active ? "active" : "complete"} />
+              <p
+                className={cn(
+                  "min-w-0 flex-1 text-xs leading-relaxed",
+                  active ? "chat-shimmer" : "text-[var(--el-muted)]"
+                )}
+              >
+                {text}
+              </p>
+            </div>
+          );
+        })}
+      </>
     );
   }
 
@@ -634,14 +752,14 @@ function Dot({
   );
 }
 
+/** 근거 칩을 접지 않고 보이는 수. 넘으면 「+N」 하나로 접는다. */
+const REFS_SHOWN = 3;
+
 /**
- * 답변 아래 근거 줄. 문구는 `refs` 의 회의록 수로 web 이 만든다. `refs` 는 「본 것」이지
- * 「어느 문장을 뒷받침하는지」가 아니라서 번호 각주로 그리지 않는다.
+ * 답변 아래 참고한 회의록. 머리말 없이 칩만 바로 보인다 — 1건짜리 접힘 서랍은 누를 일 하나를 늘릴 뿐이다. 칩을 누르면
+ * 그 회의록으로 간다. `refs` 는 「본 것」이지 「어느 문장을 뒷받침하는지」가 아니라서 번호 각주로 그리지 않는다.
  *
- * 1건이면 펴 두고 여럿이면 접어 둔다. 하나뿐이면 접어도 아낄 자리가 없고, 그 칩이
- * 회의록으로 가는 유일한 문이다.
- *
- * `<details>` 는 여는 움직임을 못 만들어서 `Disclosure` 와 같은 버튼 + state 로 쓴다.
+ * 3개가 넘으면 「+N」으로 접고, 누르면 나머지가 선다. 답이 끝난 뒤에만 한 번 선다(부르는 쪽).
  */
 export function AnswerRefs({
   refs,
@@ -653,64 +771,46 @@ export function AnswerRefs({
   animate?: boolean;
   onOpenNote?: (noteId: string) => void;
 }) {
-  const [open, setOpen] = useState(refs.length === 1);
-  const reduced = useReducedMotion();
+  const [expanded, setExpanded] = useState(false);
   if (refs.length === 0) return null;
+  const shown = expanded ? refs : refs.slice(0, REFS_SHOWN);
+  const hidden = refs.length - shown.length;
 
   return (
     <div
       data-refs="answer"
-      data-open={open ? "true" : "false"}
-      className={cn(
-        animate && "chat-rise",
-        "mt-2 border-t border-[var(--el-hairline)] pt-2"
-      )}
+      role="group"
+      // 「출처」가 아니다. 계약이 싣는 것은 인용한 것이 아니라 본 것이다.
+      aria-label={`참고한 회의록 ${refs.length}개`}
+      className={cn(animate && "chat-rise", "flex flex-wrap gap-1.5")}
     >
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="-ml-1 flex w-full cursor-pointer items-center gap-1.5 py-0.5 text-left"
-      >
-        <ChevronRight
-          aria-hidden
-          className={cn(
-            "size-3.5 shrink-0 text-[var(--el-muted)] transition-transform",
-            open && "rotate-90"
-          )}
-        />
-        {/* 「출처」가 아니다. 계약이 싣는 것은 인용한 것이 아니라 본 것이다. */}
-        <span className="text-xs text-[var(--el-muted)]">
-          참고한 회의록 {refs.length}개
-        </span>
-      </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            key="refs"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={reduced ? { duration: 0 } : COLLAPSE_TRANSITION}
-            className="overflow-hidden"
-          >
-            <div className="flex flex-wrap gap-1.5 pt-1.5">
-              {refs.map((ref) => (
-                <button
-                  key={ref.id}
-                  type="button"
-                  onClick={() => onOpenNote?.(ref.id)}
-                  disabled={!onOpenNote}
-                  className="inline-flex max-w-full cursor-pointer items-center gap-1 rounded-full border border-[var(--el-hairline-strong)] px-2 py-0.5 text-[11px] text-[var(--el-body)] transition-colors disabled:cursor-default disabled:opacity-60 enabled:hover:border-[var(--el-ink)]"
-                >
-                  <FileText aria-hidden className="size-3 shrink-0" />
-                  <span className="truncate">{ref.title}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {shown.map((ref) => (
+        <button
+          key={ref.id}
+          type="button"
+          onClick={() => onOpenNote?.(ref.id)}
+          disabled={!onOpenNote}
+          title={`${ref.title} 열기`}
+          className="inline-flex min-h-7 max-w-full cursor-pointer items-center gap-1.5 rounded-[14px] border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-2.5 py-1 text-left text-xs leading-[1.4] text-[var(--el-body)] outline-none transition-colors pointer-coarse:min-h-9 enabled:hover:border-[var(--el-hairline-strong)] enabled:hover:bg-[var(--el-canvas-soft)] enabled:hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-60"
+        >
+          <FileText
+            aria-hidden
+            className="size-3.5 shrink-0 self-start mt-px text-[var(--el-scope-note)]"
+          />
+          {/* 자르지 않는다 — 길면 칩 안에서 줄을 바꾼다 */}
+          <span className="[overflow-wrap:anywhere]">{ref.title}</span>
+        </button>
+      ))}
+      {hidden > 0 ? (
+        <button
+          type="button"
+          aria-label={`참고한 회의록 ${hidden}개 더 보기`}
+          onClick={() => setExpanded(true)}
+          className="inline-flex h-7 cursor-pointer items-center rounded-full border border-dashed border-[var(--el-hairline-strong)] px-2.5 text-xs text-[var(--el-muted)] outline-none tabular-nums pointer-coarse:h-9 hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          +{hidden}
+        </button>
+      ) : null}
     </div>
   );
 }

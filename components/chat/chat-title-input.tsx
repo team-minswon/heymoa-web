@@ -69,7 +69,7 @@ export function ChatTitleInput({
         finish(event.currentTarget.value, event.relatedTarget === null)
       }
       className={cn(
-        "w-full min-w-0 rounded-block border border-[var(--el-hairline)] bg-white px-2 py-1 text-sm text-[var(--el-ink)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "w-full min-w-0 rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-2 py-1 text-sm text-[var(--el-ink)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         className
       )}
     />

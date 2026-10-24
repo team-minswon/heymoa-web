@@ -38,7 +38,7 @@ import type {
   TranscriptResponseDataGapsItem,
   TranscriptResponseDataTranscriptGapsItem,
 } from "@/lib/api/generated/models";
-import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
+import { scopeMarker, unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
 import { createHelpDemoState, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
 import { failWith } from "@/lib/mocks/mock-envelope";
@@ -203,7 +203,26 @@ const DEFAULT_AGENT_CHAT_TITLE = "새 대화";
 
 /** 시드 대화의 제목 출처. 서버 백필 규칙과 같다 — 기본 제목이면 DEFAULT, 그 밖은 QUESTION. */
 const seededTitleSource = (title: string) =>
-  title === DEFAULT_AGENT_CHAT_TITLE ? ("DEFAULT" as const) : ("QUESTION" as const);
+  title === DEFAULT_AGENT_CHAT_TITLE
+    ? ("DEFAULT" as const)
+    : ("QUESTION" as const);
+
+/**
+ * 목이 짓는 「AI 제목」. 실제 AI 처럼 질문을 짧은 명사구로 줄인다 — 요청 어미(「~해줘」「~알려줘」)와 물음표를 떼고 24자에서
+ * 자른다. 첫 질문 제목(QUESTION)과 눈으로 갈려야 「제목이 늦게 바뀐다」가 화면에서 보인다.
+ */
+function aiTitleFor(question: string) {
+  const core = question
+    .replace(/\s+/g, " ")
+    .replace(/[?？!.。]+$/u, "")
+    .replace(
+      /\s*(정리|요약|설명|찾아|알려|만들어|확인)?\s*(해\s*)?(줘|주세요|줄래|줄 수 있어)$/u,
+      ""
+    )
+    .trim();
+  const title = core.length > 24 ? `${core.slice(0, 24).trim()}…` : core;
+  return title ? `${title} 정리` : "대화 정리";
+}
 
 /** 제목 컬럼 상한(`AgentChat.MAX_TITLE_LENGTH`). 목록에서 한 줄로 자르는 것은 CSS가 한다. */
 const MAX_AGENT_CHAT_TITLE_LENGTH = 200;
@@ -833,6 +852,106 @@ function seedAgentChats(workspaceId: string) {
     });
   }
 
+  /**
+   * ★ **진행 문장이 생각(thinking)으로 굳은 대화(APP-1435).** 지금 ai 의 모양이다 — 진행 문장은 줄바꿈으로 끝나는 THINKING 행이고,
+   * 답 본문에는 답만 있다. 열면 「N초 동안 생각 · 회의록 1건」 한 줄로 접혀 있고, 펴면 줄마다 한 단계다. 질문에는 회의록 칩이,
+   * 답 아래에는 누르면 그 회의록으로 가는 참고 칩이 선다. 제목은 AI 가 지었다.
+   */
+  const ordered = chat(
+    "01K0000000209",
+    "주간 제품 회의 진행 순서",
+    minutesAgo(58)
+  );
+  {
+    const turnId = `01K${String(turn).padStart(10, "0")}`;
+    turn += 1;
+    const askedAt = minutesAgo(58);
+    const at = (seconds: number) =>
+      new Date(Date.parse(askedAt) + seconds * 1_000).toISOString();
+    const note = {
+      kind: "NOTE" as const,
+      id: "01K0000000002",
+      title: "주간 제품 회의",
+      unavailable: false,
+    };
+    const row = (
+      seconds: number,
+      role: MockAgentChatMessage["role"],
+      content: string,
+      extra: Partial<MockAgentChatMessage> = {}
+    ) =>
+      messages.push({
+        chatId: ordered,
+        turnId,
+        createdAt: at(seconds),
+        role,
+        content,
+        scope: [],
+        toolEvent: null,
+        ...extra,
+      });
+    row(
+      0,
+      "USER",
+      `${scopeMarker({ kind: "note", id: note.id, title: note.title })} 어떤 흐름으로 진행했나 순서대로`,
+      { scope: [note] }
+    );
+    row(2, "THINKING", "주간 제품 회의가 진행된 순서를 찾아볼게요.\n");
+    row(3, "THINKING", "안건 요약에서 진행 순서를 확인할게요.\n");
+    row(6, "TOOL", "안건 요약 읽기 · 안건 4개", {
+      scope: [note],
+      toolEvent: {
+        tool: "notes_read",
+        decision: null,
+        status: "success",
+        url: null,
+        card: null,
+      },
+    });
+    row(8, "THINKING", "스크립트에서 각 안건이 나온 시각을 확인할게요.\n");
+    row(11, "TOOL", "스크립트에서 관련 발화 검색 · 3건 찾음", {
+      scope: [note],
+      toolEvent: {
+        tool: "transcripts.search",
+        decision: null,
+        status: "success",
+        url: null,
+        card: null,
+      },
+    });
+    row(
+      12,
+      "ASSISTANT",
+      [
+        "확인된 발언 기준으로 이런 흐름이었어요.",
+        "",
+        "1. 지난주 액션 아이템 점검 — 온보딩 축소안이 끝났는지부터 봤어요",
+        "2. 온보딩 이탈 지표 공유 — 프로필 설정 단계 이탈이 41%로 가장 컸어요",
+        "3. 알림 정책 논의 — 묶어서 보내는 방향으로 좁혔어요",
+        "4. 다음 주 사용자 테스트 일정 확정",
+        "",
+        "필요하면 안건별 발언 시각도 정리해 드릴게요.",
+      ].join("\n"),
+      { scope: [note] }
+    );
+  }
+
+  /**
+   * ★ **옛 대화(APP-1057 시절).** 진행 문장이 본문 `token` 으로 와서 답 앞에 문단으로 굳어 있다. 이관하지 않으므로 화면이 이
+   * 모양을 깨지 않고 그대로 그리는지 보는 자리다.
+   */
+  const legacy = chat("01K0000000210", "알림 정책 결정 사항", dayAt(4, 90));
+  exchange(
+    legacy,
+    dayAt(4, 90),
+    "알림 정책 어떻게 정했어?",
+    [
+      "회의록에서 알림 정책 얘기를 찾아볼게요.",
+      "스크립트에서 관련 발화를 먼저 확인할게요.",
+      "알림은 기본값을 끄고, 켤 사람만 설정에서 켜는 쪽으로 정했어요. 묶어서 보내는 주기는 다음 사이클에 정하기로 했어요.",
+    ].join("\n\n")
+  );
+
   const hiring = chat("01K0000000206", "채용 프로세스 정리", dayAt(40, 180));
   exchange(
     hiring,
@@ -848,6 +967,10 @@ function seedAgentChats(workspaceId: string) {
     "지난 분기에 뭘 냈지?",
     "회의 기록과 요약까지 냈고, 연동은 다음 분기로 미뤘습니다."
   );
+
+  // AI 가 제목을 지은 대화. 시드 규칙(`seededTitleSource`)은 첫 질문 제목으로 보므로 여기서 고친다
+  for (const each of chats)
+    if (each.chatId === ordered) each.titleSource = "AI";
 
   // **`updatedAt` 은 마지막 메시지 시각이다.** 목록 정렬과 줄에 적히는 시각이 같은 값이라야
   // 「1분 전인데 왜 세 번째 줄」이 안 생긴다.
@@ -2952,7 +3075,12 @@ export const mockDb = {
           b.updatedAt.localeCompare(a.updatedAt) ||
           b.chatId.localeCompare(a.chatId)
       )
-      .map(({ chatId, title, updatedAt }) => ({ chatId, title, updatedAt }));
+      .map(({ chatId, title, titleSource, updatedAt }) => ({
+        chatId,
+        title,
+        titleSource,
+        updatedAt,
+      }));
   },
 
   /**
@@ -2966,6 +3094,22 @@ export const mockDb = {
     return (
       state.projects.find((project) => project.projectId === projectId) ?? null
     );
+  },
+
+  /**
+   * 첫 답이 끝난 뒤 AI 가 지은 제목을 단다(APP-1430). **첫 질문 제목(QUESTION)일 때만 덮는다** — 사용자가 정한 제목과
+   * 이미 단 AI 제목은 안 바꾼다. `updatedAt` 은 안 바꾼다(계약: 이름 변경·AI 제목은 정렬을 안 흔든다). 바꿨으면 true.
+   */
+  retitleAgentChatByAi(chatId: string) {
+    const chat = state.agentChats.find((each) => each.chatId === chatId);
+    if (!chat || chat.titleSource !== "QUESTION") return false;
+    const question = state.agentChatMessages.find(
+      (message) => message.chatId === chatId && message.role === "USER"
+    );
+    if (!question) return false;
+    chat.title = aiTitleFor(unwrapScopeMarkers(question.content));
+    chat.titleSource = "AI";
+    return true;
   },
 
   /** 대화와 그 메시지를 지운다(APP-1409). 없으면 404 `AGENT_CHAT_NOT_FOUND` — 이미 지운 대화도 그렇다. */

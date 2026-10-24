@@ -6,7 +6,11 @@ import {
   buildChatEvents,
   type MockSseEvent,
 } from "@/lib/mocks/chat-stream";
-import { hasScenario, leadSilenceMs } from "@/lib/mocks/chat-scenarios";
+import {
+  hasScenario,
+  leadSilenceMs,
+  stallSilenceMs,
+} from "@/lib/mocks/chat-scenarios";
 import { joinSummary } from "@/lib/chat/blocks";
 import type { ScopeRef } from "@/lib/mocks/db";
 import { mockDb } from "@/lib/mocks/db";
@@ -112,7 +116,11 @@ function delayOf(event: string, message: string) {
     event === "message_start" || event === "tool_approval_resolved"
       ? leadSilenceMs(message)
       : 0;
-  return ((EVENT_DELAY_MS[event] ?? TOKEN_DELAY_MS) + lead) / speed();
+  // 멈칫은 배속을 안 탄다 — 화면의 문턱이 실제 초라서 줄이면 그 자리를 못 본다
+  return (
+    ((EVENT_DELAY_MS[event] ?? TOKEN_DELAY_MS) + lead) / speed() +
+    stallSilenceMs(message, event)
+  );
 }
 
 function wait(ms: number) {
@@ -362,6 +370,7 @@ function publish(stream: MockTurnStream, event: string, payload: unknown) {
   if (CHAT_LIST_EVENTS.has(event)) emitChatsChanged();
   if (TERMINAL_EVENTS.has(event)) {
     settleTurn(stream, TERMINAL_STATUS[event], payloadOf(frame).code);
+    if (event === "message_end") scheduleAiTitle(stream.chatId);
     return;
   }
   // **승인 요청도 종료 프레임이다** — 다만 턴을 굳히지 않는다. `accumulate`가 턴을
@@ -465,8 +474,10 @@ function accumulate(stream: MockTurnStream, frame: Frame) {
    * 목으로는 확인할 수 없다.
    */
   if (frame.event === "thinking_delta") {
-    const text = String(payload.text ?? "").trim();
-    if (text) {
+    // 다듬지 않고 그대로 둔다. 진행 줄은 줄바꿈으로 끝나고(APP-1435), 화면은 이어 붙인 뒤 줄바꿈으로 줄을 가른다 —
+    // 여기서 줄바꿈을 떼면 새로고침한 히스토리에서 줄이 한 덩어리로 붙는다.
+    const text = String(payload.text ?? "");
+    if (text.trim()) {
       mockDb.appendAgentChatMessage(chatId, {
         role: "THINKING",
         turnId: turn.turnId,
@@ -574,6 +585,18 @@ function accumulate(stream: MockTurnStream, frame: Frame) {
       toolEvent: null,
     });
   }
+}
+
+/**
+ * 첫 답이 끝나고 AI 제목이 붙기까지의 지연(ms). 실서버는 턴을 정산한 뒤 따로 제목을 지어 `chats.changed` 로 알린다 —
+ * 목도 늦게 붙여야 「새 대화 → 첫 질문 → AI 제목」으로 머리글이 두 번 바뀌는 것이 보인다. 값은 눈으로 보이게 고른 것이다.
+ */
+const AI_TITLE_DELAY_MS = 1_500;
+
+function scheduleAiTitle(chatId: string) {
+  setTimeout(() => {
+    if (mockDb.retitleAgentChatByAi(chatId)) emitChatsChanged();
+  }, AI_TITLE_DELAY_MS / speed());
 }
 
 /**

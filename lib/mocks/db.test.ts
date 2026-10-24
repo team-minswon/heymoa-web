@@ -1101,6 +1101,46 @@ describe("대화가 여럿 산다", () => {
     ).toHaveLength(200);
   });
 
+  it("목록 줄이 제목의 출처(titleSource)를 싣는다 — 계약 필드다", () => {
+    const chat = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    expect(
+      mockDb
+        .listAgentChats({ workspaceId: workspaceId() })
+        .find((each) => each.chatId === chat.chatId)?.titleSource
+    ).toBe("DEFAULT");
+  });
+
+  it("★ AI 제목은 첫 질문 제목(QUESTION)만 덮고, 사람이 지은 이름과 정렬 시각은 건드리지 않는다", () => {
+    const chat = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    mockDb.appendAgentChatMessage(chat.chatId, {
+      role: "USER",
+      content: "@[주간 회의](noteId:01K0000000002) 배포 일정 정리해줘",
+      scope: [],
+      toolEvent: null,
+    });
+    const row = () =>
+      mockDb
+        .listAgentChats({ workspaceId: workspaceId() })
+        .find((each) => each.chatId === chat.chatId)!;
+    const before = row();
+    expect(before.titleSource).toBe("QUESTION");
+
+    expect(mockDb.retitleAgentChatByAi(chat.chatId)).toBe(true);
+    expect(row()).toMatchObject({
+      title: "주간 회의 배포 일정 정리",
+      titleSource: "AI",
+      updatedAt: before.updatedAt,
+    });
+    // 이미 AI 제목이면 다시 안 짓는다
+    expect(mockDb.retitleAgentChatByAi(chat.chatId)).toBe(false);
+
+    const named = mockDb.createAgentChat({
+      workspaceId: workspaceId(),
+      title: "내가 지은 이름",
+    });
+    expect(mockDb.retitleAgentChatByAi(named.chatId)).toBe(false);
+  });
+
   it("최근 50개까지만 준다", () => {
     // 상한이 없으면 51번째가 실서버에서 처음 사라진다 — 목이 관대하면 안 보인다.
     for (let i = 0; i < 55; i += 1) {

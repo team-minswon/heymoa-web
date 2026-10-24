@@ -967,6 +967,8 @@ export function useChatTurn({
     messageCount: messages.length,
     threadMessages,
     activeTurnId: activeTurn?.turnId ?? null,
+    /** 마지막 턴이 사용자가 멈춘 턴이면 그 id. 히스토리가 그 답 끝에 「중지됨」을 단다. 서버가 마지막 턴만 알려 준다. */
+    cancelledTurnId: lastTurn?.status === "CANCELLED" ? lastTurn.turnId : null,
     pendingUserMessage,
     pendingUserAt,
     pendingScope,

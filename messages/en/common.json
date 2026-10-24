@@ -43,6 +43,17 @@
       "zoomIn": "Zoom in",
       "fit": "Fit",
       "hint": "Drag to move · Ctrl/⌘+scroll to zoom · Double-click to fit"
+    },
+    "panelLabel": "My agent",
+    "newChat": "New chat",
+    "openHistory": "Chat history",
+    "back": "Back to chat",
+    "close": "Close",
+    "chatMenu": "Chat menu",
+    "history": {
+      "title": "Chat history",
+      "emptyTitle": "No chats yet",
+      "emptyBody": "Ask about your meeting notes and your chats will show up here."
     }
   }
 }

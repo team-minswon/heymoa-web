@@ -52,10 +52,10 @@ export function runningLabel(
 const DAY_MS = 86_400_000;
 
 /**
- * 목록 묶음은 오늘 · 최근 · 지난 셋뿐이다. 정확한 자리는 줄 오른쪽의 상대 시각이 말한다.
+ * 목록 묶음은 오늘 · 어제 · 지난 7일 · 이전 넷이다. 정확한 자리는 줄 오른쪽의 상대 시각이 말한다.
  */
 export type ChatGroup<T> = {
-  key: "today" | "week" | "older";
+  key: "today" | "yesterday" | "week" | "older";
   label: string;
   chats: T[];
 };
@@ -68,7 +68,7 @@ function daysBetween(from: string, to: string) {
 }
 
 /**
- * 경계는 시각이 아니라 날짜다. 「최근」은 날짜 차이가 1~6일인 것이다.
+ * 경계는 시각이 아니라 날짜다. 「어제」는 날짜 차이가 1일, 「지난 7일」은 2~6일인 것이다.
  */
 function bucketOf(
   at: string,
@@ -81,8 +81,9 @@ function bucketOf(
   );
 
   if (days <= 0) return { key: "today", label: "오늘" };
-  if (days < 7) return { key: "week", label: "최근" };
-  return { key: "older", label: "지난" };
+  if (days === 1) return { key: "yesterday", label: "어제" };
+  if (days < 7) return { key: "week", label: "지난 7일" };
+  return { key: "older", label: "이전" };
 }
 
 /**
@@ -112,12 +113,14 @@ export function groupChatsByRecency<T extends { updatedAt: string }>(
 }
 
 /**
- * 「1분 전」·「3일 전」 같은 상대 시각. 숫자와 단위는 `Intl` 이 낸다. 1분 미만은 「방금」이다 —
+ * 「1분 전」·「3일 전」 같은 상대 시각. **앱 언어(`locale`)를 꼭 넘긴다.** 숫자와 단위는 `Intl` 이 낸다. 1분 미만은 「방금」이다 —
  * `Intl` 에 0을 넘기면 「이번 분」이 나온다. 달·해는 30일·365일 관용값으로 자른다.
  */
 export function relativeUpdatedAt(at: string, now: Date, locale?: string) {
   const elapsed = now.getTime() - Date.parse(at);
-  if (elapsed < 60_000) return "방금";
+  // 로케일은 앱 언어를 받는다(`useLocale`). 비우면 브라우저 언어를 따라 한국어 화면에 「57m ago」가 섞인다
+  if (elapsed < 60_000)
+    return locale && !locale.startsWith("ko") ? "just now" : "방금";
 
   const format = new Intl.RelativeTimeFormat(locale, {
     numeric: "always",

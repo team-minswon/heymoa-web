@@ -38,8 +38,12 @@ describe("구분선은 날짜가 바뀔 때만 선다", () => {
 
 describe("구분선 라벨", () => {
   it("오늘과 어제는 이 화면의 말이다", () => {
-    expect(dividerLabel("2026-08-25T01:00:00Z", NOW, "ko", TZ)).toMatch(/^오늘 /);
-    expect(dividerLabel("2026-08-24T01:00:00Z", NOW, "ko", TZ)).toMatch(/^어제 /);
+    expect(dividerLabel("2026-08-25T01:00:00Z", NOW, "ko", TZ)).toMatch(
+      /^오늘 /
+    );
+    expect(dividerLabel("2026-08-24T01:00:00Z", NOW, "ko", TZ)).toMatch(
+      /^어제 /
+    );
   });
 
   it("그 이전은 날짜로 적는다", () => {
@@ -50,7 +54,23 @@ describe("구분선 라벨", () => {
 
   // 「1월 3일」만 있으면 올해인지 재작년인지 알 수 없다
   it("해가 바뀌면 연도를 함께 적는다", () => {
-    expect(dividerLabel("2025-01-03T01:00:00Z", NOW, "ko", TZ)).toContain("2025");
-    expect(dividerLabel("2026-01-03T01:00:00Z", NOW, "ko", TZ)).not.toContain("2026년");
+    expect(dividerLabel("2025-01-03T01:00:00Z", NOW, "ko", TZ)).toContain(
+      "2025"
+    );
+    expect(dividerLabel("2026-01-03T01:00:00Z", NOW, "ko", TZ)).not.toContain(
+      "2026년"
+    );
+  });
+});
+
+describe("앱 언어로 적는다", () => {
+  const NOW_EN = new Date("2026-08-25T12:00:00Z");
+  it("영어 화면에서는 Today·Yesterday 다", () => {
+    expect(dividerLabel("2026-08-25T01:00:00Z", NOW_EN, "en", "UTC")).toMatch(
+      /^Today /
+    );
+    expect(dividerLabel("2026-08-24T01:00:00Z", NOW_EN, "en", "UTC")).toMatch(
+      /^Yesterday /
+    );
   });
 });

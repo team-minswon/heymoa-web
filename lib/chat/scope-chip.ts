@@ -18,8 +18,9 @@ export function scopeChipClass(
   options?: { extra?: string }
 ) {
   return cn(
+    // 제목을 자르지 않는다 — 길면 칩 안에서 줄을 바꾼다(어절 단위, 끊을 자리가 없으면 아무 데서나)
     "mx-[3px] inline-flex max-w-full items-center gap-1.5 rounded-chip px-2 py-[3px]",
-    "align-middle text-[13.5px] leading-[1.35] font-medium",
+    "align-middle text-[13.5px] leading-[1.35] font-medium whitespace-normal text-left [overflow-wrap:anywhere]",
     kind === "project"
       ? "bg-[var(--el-scope-project-soft)] text-[var(--el-scope-project)]"
       : "bg-[var(--el-scope-note-soft)] text-[var(--el-scope-note)]",
