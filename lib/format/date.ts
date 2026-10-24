@@ -78,6 +78,15 @@ export function formatAppDate(
     .join("");
 }
 
+/** 앱 시간대의 24시간 시:분 — 「09:05」. 회의록 일시 · 일시정지 줄이 같은 벽시계를 쓴다. */
+export function formatAppClock(value: string | Date) {
+  return formatAppDate(value, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
 /** `2026-09-19` → 「9월 19일 (토)」. 날짜만 있는 값이라 서울 자정으로 읽는다. */
 export function formatDueDate(value: string) {
   return formatAppDate(`${value}T00:00:00+09:00`, {

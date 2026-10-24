@@ -1,5 +1,10 @@
 import { describeAssignee } from "@/lib/assignees/describe";
-import { formatAppDate, formatDueDate, getAppDateKey } from "@/lib/format/date";
+import {
+  formatAppClock,
+  formatAppDate,
+  formatDueDate,
+  getAppDateKey,
+} from "@/lib/format/date";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import type { TimelineGroup } from "@/lib/notes/proposals/timeline";
 import type { ReviewItem, ReviewSection } from "@/lib/notes/review/sections";
@@ -153,13 +158,6 @@ export function durationLabel(ms: number | null | undefined) {
     : `${Math.floor(minutes / 60)}시간`;
 }
 
-const clock = (value: Date | string) =>
-  formatAppDate(value, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-
 /**
  * 일시 칸. 끝 시각은 회의가 실제로 끝난 시각([endedIso])으로만 적는다 — 시작에 기록 길이를 더하면 일시정지했던 시간이
  * 빠져 실제보다 이르게 찍혔다(09:00 시작 · 20분 일시정지 · 60분 기록이면 10:20 에 끝났는데 10:00). 모르면 시작 시각만.
@@ -171,7 +169,7 @@ function dateLabelOf(whenIso: string, endedIso: string | undefined) {
     day: "numeric",
     weekday: "short",
   });
-  const start = clock(whenIso);
+  const start = formatAppClock(whenIso);
   if (!endedIso) return `${day} ${start}`;
   // 자정을 넘긴 회의는 끝난 날도 적는다 — 시각만 두면 같은 날 23:30 – 00:30 으로 읽힌다
   if (getAppDateKey(endedIso) !== getAppDateKey(whenIso)) {
@@ -181,9 +179,9 @@ function dateLabelOf(whenIso: string, endedIso: string | undefined) {
       day: "numeric",
       weekday: "short",
     });
-    return `${day} ${start} – ${endDay} ${clock(endedIso)}`;
+    return `${day} ${start} – ${endDay} ${formatAppClock(endedIso)}`;
   }
-  return `${day} ${start} – ${clock(endedIso)}`;
+  return `${day} ${start} – ${formatAppClock(endedIso)}`;
 }
 
 /** 파일 이름에 못 쓰는 글자를 걷어 낸다. 운영체제마다 막는 글자가 달라 가장 좁은 쪽(Windows)에 맞춘다 */

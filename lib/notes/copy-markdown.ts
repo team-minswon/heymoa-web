@@ -26,7 +26,7 @@ export type NoteMeta = {
   participantCount: number;
   /** 참석자 이름. 없으면 인원수만 적는다. 복사본은 화면 밖으로 나가 누가 있었는지가 문서에 남아야 한다(APP-1109) */
   participantNames?: string[];
-  /** 전사 응답의 `recording.durationMs`. 요약에는 없으므로 선택이다. */
+  /** 회의 길이(`meetingLengthOf`). 요약에는 없으므로 선택이다. */
   durationMs?: number;
   /** 회의가 실제로 끝난 시각 ISO. 일시정지한 시간이 있으면 시작 + 기록 길이보다 늦다 */
   endedIso?: string;

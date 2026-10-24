@@ -68,6 +68,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
+import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
@@ -477,7 +478,19 @@ export function NotePanel({
   const paneChrome = isFull
     ? "rounded-panel border border-[var(--el-hairline)] shadow-e2"
     : "";
-  const meta = note ? buildNoteHeaderMeta(note, { isStarter }) : null;
+  // 머리글의 회의 길이를 화자 패널 · 회의록과 같은 값으로 맞추려고 전사를 같이 본다. 전사 · 검토 탭이 같은
+  // 키로 받아 요청은 겹치지 않는다. 길이를 말하는 상태(일시정지 · 종료)에서만 켠다.
+  const headerTranscriptQuery = useGetNoteTranscript(noteId, {
+    query: { enabled: phase === "paused" || phase === "ended" },
+  });
+  const headerTranscript =
+    headerTranscriptQuery.data?.status === 200 &&
+    headerTranscriptQuery.data.data.success
+      ? headerTranscriptQuery.data.data.data
+      : null;
+  const meta = note
+    ? buildNoteHeaderMeta(note, { isStarter, transcript: headerTranscript })
+    : null;
   /**
    * 회의 제어(`MeetingControls`)가 실제로 그릴 것이 있는가. **조건을 여기서 한 번 더 적는
    * 이유는 제어가 제목 블록과 따로 켜지기 때문이다** — 전사·요약에서 제어만 세우려면 그

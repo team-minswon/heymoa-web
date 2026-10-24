@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { NoteResponseData } from "@/lib/api/generated/models";
+import type {
+  NoteResponseData,
+  TranscriptResponseData,
+} from "@/lib/api/generated/models";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 
 function note(overrides: Partial<NoteResponseData> = {}): NoteResponseData {
@@ -69,12 +72,12 @@ describe("buildNoteHeaderMeta", () => {
     );
   });
 
-  it("종료·일시정지는 누적 기록 시간이다", () => {
+  it("종료·일시정지는 회의 길이다", () => {
     const ended = buildNoteHeaderMeta(
       note({ meetingStatus: "ENDED", activeSessionStartedAt: null }),
       { isStarter: true }
     );
-    expect(ended.secondary).toBe("기록 42분 (종료 세션 누적)");
+    expect(ended.secondary).toBe("기록 42분");
 
     const paused = buildNoteHeaderMeta(
       note({
@@ -84,7 +87,21 @@ describe("buildNoteHeaderMeta", () => {
       }),
       { isStarter: true }
     );
-    expect(paused.secondary).toBe("기록 12분 (종료 세션 누적)");
+    expect(paused.secondary).toBe("기록 12분");
+  });
+
+  it("받아 둔 전사가 있으면 화자 패널 · 회의록과 같은 회의 길이를 쓴다 — 발화 · 공백 끝이 더 늦으면 그 끝까지다", () => {
+    const transcript = {
+      segments: [{ endedAtMs: 2_400_000 }],
+      gaps: [],
+      transcriptGaps: [{ endedAtMs: 2_700_000 }],
+    } as unknown as TranscriptResponseData;
+    expect(
+      buildNoteHeaderMeta(
+        note({ meetingStatus: "ENDED", activeSessionStartedAt: null }),
+        { isStarter: true, transcript }
+      ).secondary
+    ).toBe("기록 45분");
   });
 
   it("참석자가 없으면 그 조각을 뺀다 — 「참석자 0명」은 정보가 아니다", () => {

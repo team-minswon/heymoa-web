@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { ActiveMeeting, DesktopBridge } from "@heymoa/desktop-contracts";
 
+import { recordingClockOriginMs } from "@/lib/notes/meeting-state";
 import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
 
 const REPORT_MS = 30_000;
@@ -53,9 +54,8 @@ function ActiveMeetingsReporter() {
               workspaceId,
               noteId: note.noteId,
               title: note.title,
-              startedAt: note.activeSessionStartedAt
-                ? Date.parse(note.activeSessionStartedAt)
-                : null,
+              // 트레이가 `지금 − startedAt` 으로 경과를 잰다. 녹음 시계의 원점이라 재개한 회의도 처음부터 센다.
+              startedAt: recordingClockOriginMs(note),
             }))
         : [],
     [settled, workspaceId]

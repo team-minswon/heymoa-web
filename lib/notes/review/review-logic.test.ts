@@ -423,7 +423,10 @@ describe("topicDigests", () => {
   const digests = topicDigests(
     summary,
     new Map(items.map((row) => [row.itemId, row])),
-    (row) => at[row.itemId] ?? null
+    (row) =>
+      at[row.itemId] === undefined
+        ? null
+        : { startMs: at[row.itemId], endMs: at[row.itemId] + 4_000 }
   );
 
   it("뺀 항목 · 없는 항목은 싣지 않고, 결정 · 할 일 · 열린 질문으로 나눈다", () => {
@@ -437,7 +440,8 @@ describe("topicDigests", () => {
       gist: "한 줄 요약",
       text: "첫 문장. 둘째 문장.",
       startMs: 5_000,
-      endMs: 9_000,
+      // 범위 끝은 마지막 근거 발화의 **끝**이다 — 시작(9초)으로 적으면 그 발화가 범위 밖에 놓인다
+      endMs: 13_000,
     });
     expect(digests.find((row) => row.ordinal === 2)?.gist).toBeNull();
   });

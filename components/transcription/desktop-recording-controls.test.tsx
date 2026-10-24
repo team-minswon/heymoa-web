@@ -9,7 +9,8 @@ import { DesktopRecordingControls } from "./desktop-recording-controls";
 const push = vi.hoisted(() => vi.fn());
 const recording = vi.hoisted(() => ({
   phase: "recording",
-  session: { startedAt: "2026-10-05T00:00:00Z" },
+  // 녹음 시계의 원점 — 세션 시작이 아니다. 재개한 회의면 앞 구간 길이만큼 이르다.
+  clockOriginMs: Date.parse("2026-10-05T00:00:00Z"),
   activeNoteId: "note-A",
   activeWorkspaceId: "workspace-A",
   buffer: { pendingMs: 1250 },
@@ -57,7 +58,14 @@ describe("desktop recording controls", () => {
   it("ignores delayed stop commands after recording moved into another phase", () => {
     const bridge = native();
     const view = render(<DesktopRecordingControls />);
-    for (const phase of ["requesting-permission", "connecting", "stopping", "failed", "completed", "idle"]) {
+    for (const phase of [
+      "requesting-permission",
+      "connecting",
+      "stopping",
+      "failed",
+      "completed",
+      "idle",
+    ]) {
       recording.phase = phase;
       view.rerender(<DesktopRecordingControls />);
       act(() => bridge.action("stop"));

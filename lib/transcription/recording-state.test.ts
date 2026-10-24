@@ -49,7 +49,6 @@ describe("recordingReducer", () => {
       },
       { type: "degraded", shown: true },
       { type: "microphone", microphone: "muted" },
-      { type: "tick", ms: 1_000 },
       { type: "window-exhausted", message: "멈췄다", droppedMs: 3_000 },
       { type: "started", noteId: "other", workspaceId: "ws", session: null }
     );

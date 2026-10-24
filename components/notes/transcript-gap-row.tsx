@@ -5,18 +5,21 @@ import {
   spansVisibleClockMinutes,
   type GapRow,
 } from "@/lib/transcription/gaps";
+import { formatAppClock, getAppDateKey } from "@/lib/format/date";
 import { formatOffset } from "@/lib/transcription/presentation";
 
 /**
  * 날짜는 **필요할 때만** 붙인다. 일시정지가 날을 넘기면 `14:05에 멈추고 09:20에 재개했습니다`
  * 가 시간을 거슬러 올라간 것처럼 읽힌다 — 실제로는 이틀 뒤다.
+ *
+ * **앱 시간대로 적는다**(`formatAppClock`). 기기 시간대로 적으면 해외에서 머리글 · 회의록은 서울 시각인데
+ * 이 줄만 현지 시각이 된다.
  */
 function clockTime(iso: string, withDate: boolean) {
-  const date = new Date(iso);
-  const time = `${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes()
-  ).padStart(2, "0")}`;
-  return withDate ? `${date.getMonth() + 1}/${date.getDate()} ${time}` : time;
+  const time = formatAppClock(iso);
+  if (!withDate) return time;
+  const [, month, day] = getAppDateKey(iso).split("-").map(Number);
+  return `${month}/${day} ${time}`;
 }
 
 /**

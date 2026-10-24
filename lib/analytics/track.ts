@@ -73,6 +73,7 @@ export type AnalyticsEvent =
   | "timeline_hint_shown"
   | "timeline_hint_clicked"
   | "timeline_hint_dismissed"
+  | "speaker_timeline_jumped"
   | "agent_opened"
   | "feedback_sent"
   | "feedback_dismissed"
@@ -155,6 +156,12 @@ export type WebEventProperties = {
   timeline_hint_shown: { workspace_id: string; role: "recorder" | "viewer" };
   timeline_hint_clicked: { workspace_id: string; role: "recorder" | "viewer" };
   timeline_hint_dismissed: { workspace_id: string; reason: "auto" | "close" };
+  // 화자 띠로 발화를 찾아갔다. surface: 전사 아래 도크(dock) · 화자 패널(panel), via: 띠를 눌렀나(strip) · 이전/다음 버튼(step).
+  speaker_timeline_jumped: {
+    workspace_id: string;
+    surface: "dock" | "panel";
+    via: "strip" | "step";
+  };
   agent_opened: { surface: "fab" };
   feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
   // 회의 종료 뒤 묻는 카드. 띄움은 `feedback_opened {from: "meeting_end"}`, 보냄은 `feedback_sent` 가 센다.

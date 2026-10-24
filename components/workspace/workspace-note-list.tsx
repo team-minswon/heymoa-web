@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
-import { isMeetingActive } from "@/lib/notes/meeting-state";
+import {
+  isMeetingActive,
+  recordingClockOriginMs,
+} from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 import { groupNotesByRecency } from "@/lib/workspace/note-groups";
 import { cn } from "@/lib/utils";
@@ -47,10 +50,9 @@ export function WorkspaceNoteList({
   const retryRef = useRef(onRetry);
   const activeMeetingStarts = notes
     .filter(isMeetingActive)
-    .map((note) => Date.parse(note.activeSessionStartedAt ?? ""))
-    .filter(Number.isFinite);
+    .flatMap((note) => recordingClockOriginMs(note) ?? []);
   // 목록 전체가 이 타이머 하나만 공유하되, 각 활성 회의의 다음 경과 분 경계 중 가장 가까운
-  // 시각에 깨운다. 시작 초가 다른 회의도 최대 59초 늦게 바뀌지 않는다.
+  // 시각에 깨운다. 원점(녹음 시계)이 다른 회의도 최대 59초 늦게 바뀌지 않는다.
   const now = useAlignedNow(60_000, true, activeMeetingStarts);
 
   /**

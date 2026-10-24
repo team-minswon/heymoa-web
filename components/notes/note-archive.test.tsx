@@ -55,6 +55,12 @@ const members = vi.hoisted(() => ({ rows: [] as unknown[] }));
 const guests = vi.hoisted(() => ({ rows: [] as unknown[] }));
 
 // 이 파일이 보는 것은 아카이브지 실시간 배선이 아니다 — 커버리지 원장은 비워 둔다.
+const track = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics/track", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/analytics/track")>()),
+  track,
+}));
+
 vi.mock("@/components/notes/note-realtime-provider", () => ({
   useNoteRealtime: () => ({
     context: { state: { runs: [] } },
@@ -1139,6 +1145,12 @@ describe("NoteArchive", () => {
         .filter((block) => block.hasAttribute("data-focused"));
       expect(focused).toHaveLength(1);
       expect(focused[0].textContent).toContain("발화 2");
+    });
+    // 띠로 찾아갔다는 것만 센다 — 노트 id 는 싣지 않는다
+    expect(track).toHaveBeenCalledWith("speaker_timeline_jumped", {
+      workspace_id: WORKSPACE_ID,
+      surface: "dock",
+      via: "strip",
     });
   });
 

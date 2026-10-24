@@ -49,6 +49,7 @@ beforeEach(() => {
       noteId: "a",
       title: "진행",
       meetingStatus: "IN_PROGRESS",
+      recordedDurationMs: 600_000,
       activeSessionStartedAt: "2026-10-13T03:00:00Z",
     },
     {
@@ -83,14 +84,14 @@ describe("DesktopActiveMeetings", () => {
     expect(listOptions.value?.refetchIntervalInBackground).toBe(true);
   });
 
-  it("진행 중인 회의만 id와 제목, 시작 시각으로 보고한다", () => {
+  it("진행 중인 회의만 id와 제목, 녹음 시계 원점으로 보고한다 — 재개한 회의는 앞 구간만큼 이르다", () => {
     render(<DesktopActiveMeetings />);
     expect(report).toHaveBeenCalledWith([
       {
         workspaceId: "w1",
         noteId: "a",
         title: "진행",
-        startedAt: Date.parse("2026-10-13T03:00:00Z"),
+        startedAt: Date.parse("2026-10-13T03:00:00Z") - 600_000,
       },
     ]);
   });

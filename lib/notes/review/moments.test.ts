@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { TranscriptResponseDataSegmentsItem } from "@/lib/api/generated/models";
 import {
-  citedAtOf,
+  citedSpanOf,
   lengthLabel,
-  meetingLengthOf,
   quotesOf,
-  segmentStarts,
+  segmentsById,
   tickLabel,
   ticksOf,
 } from "@/lib/notes/review/moments";
@@ -27,12 +26,15 @@ const cite = (...ids: string[]) => ({
   citations: ids.map((segmentId) => ({ segmentId, role: "SUPPORTS" as const })),
 });
 
-describe("citedAtOf", () => {
-  it("인용한 구간 중 가장 이른 시작이고, 못 찾으면 null 이다", () => {
-    const starts = segmentStarts(segments);
-    expect(citedAtOf(cite("s3", "s1"), starts)).toBe(10_000);
-    expect(citedAtOf(cite("gone"), starts)).toBeNull();
-    expect(citedAtOf(cite(), starts)).toBeNull();
+describe("citedSpanOf", () => {
+  it("인용한 줄의 가장 이른 시작부터 가장 늦은 끝까지이고, 못 찾으면 null 이다", () => {
+    const byId = segmentsById(segments);
+    expect(citedSpanOf(cite("s3", "s1"), byId)).toEqual({
+      startMs: 10_000,
+      endMs: 39_000,
+    });
+    expect(citedSpanOf(cite("gone"), byId)).toBeNull();
+    expect(citedSpanOf(cite(), byId)).toBeNull();
   });
 });
 
@@ -45,13 +47,6 @@ describe("quotesOf", () => {
       ["s2", true],
       ["s3", true],
     ]);
-  });
-});
-
-describe("meetingLengthOf", () => {
-  it("녹음 길이와 마지막 구간 끝 중 큰 값이다", () => {
-    expect(meetingLengthOf(10_000, segments)).toBe(49_000);
-    expect(meetingLengthOf(90_000, segments)).toBe(90_000);
   });
 });
 

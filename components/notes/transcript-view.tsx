@@ -24,7 +24,7 @@ import {
   interleaveTranscript,
   mergeLiveSegments,
 } from "@/lib/transcription/presentation";
-import type { MeetingPhase } from "@/lib/notes/meeting-state";
+import { meetingLengthOf, type MeetingPhase } from "@/lib/notes/meeting-state";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import { useLivePartial } from "@/components/notes/use-live-partial";
 import {
@@ -302,7 +302,10 @@ export function TranscriptView({
                 transcriptToMarkdown({
                   note: {
                     ...noteMeta,
-                    durationMs: transcript?.recording?.durationMs ?? 0,
+                    durationMs: meetingLengthOf(
+                      transcript?.recording?.durationMs,
+                      transcript
+                    ),
                   },
                   // 관전자가 종료 안내에서 안 넘어가면 종료된 회의도 여기 남는다 —
                   // 아카이브와 같은 봉인 상태를 말해야 한다.

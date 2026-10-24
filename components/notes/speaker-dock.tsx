@@ -7,7 +7,11 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
-import { jumpIndexAt, type SpeakerStat } from "@/lib/notes/speaker-stats";
+import {
+  jumpIndexAt,
+  type SpeakerJumpVia,
+  type SpeakerStat,
+} from "@/lib/notes/speaker-stats";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
@@ -122,7 +126,7 @@ function DockRow({
   currentMs: number;
   active: boolean;
   assign: ReactNode;
-  onJump: (segmentId: string) => void;
+  onJump: (segmentId: string, via: SpeakerJumpVia) => void;
 }) {
   const ticks = ticksOf(stat);
   const prev = [...ticks]
@@ -135,7 +139,7 @@ function DockRow({
 
   const seek = (ratio: number) => {
     if (!ticks.length) return;
-    onJump(ticks[jumpIndexAt(stat, ratio * durationMs)].segmentId);
+    onJump(ticks[jumpIndexAt(stat, ratio * durationMs)].segmentId, "strip");
   };
   const ratioOf = (event: { clientX: number; currentTarget: HTMLElement }) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -225,7 +229,7 @@ function DockRow({
           type="button"
           aria-label={`${stat.name} 이전 발화`}
           disabled={!prev}
-          onClick={() => prev && onJump(prev.segmentId)}
+          onClick={() => prev && onJump(prev.segmentId, "step")}
           className="rounded-full p-0.5 text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)] disabled:opacity-30"
         >
           <ChevronLeft className="size-3.5" />
@@ -234,7 +238,7 @@ function DockRow({
           type="button"
           aria-label={`${stat.name} 다음 발화`}
           disabled={!next}
-          onClick={() => next && onJump(next.segmentId)}
+          onClick={() => next && onJump(next.segmentId, "step")}
           className="rounded-full p-0.5 text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)] disabled:opacity-30"
         >
           <ChevronRight className="size-3.5" />
@@ -255,7 +259,8 @@ export function SpeakerDock({
   durationMs: number;
   /** 화면 가운데 발화의 시각. 스크롤을 따라간다. */
   currentMsStore: CurrentMsStore;
-  onJump: (segmentId: string) => void;
+  /** 그 발화로 간다. [via] 는 띠를 눌렀나(strip) · 이전/다음 버튼인가(step) — 계측이 가른다. */
+  onJump: (segmentId: string, via: SpeakerJumpVia) => void;
   /** 미지정 화자 줄의 이름 자리. 지정 메뉴를 그대로 넘긴다. 없으면 이름만 그린다. */
   renderAssign: (stat: SpeakerStat) => ReactNode;
 }) {

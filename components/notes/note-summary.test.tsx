@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   isFetching: false,
   requestMock: vi.fn(),
   refetchMock: vi.fn(),
+  segments: [] as { segmentId: string; startedAtMs: number }[],
 }));
 
 // 배너는 화자 상태만 읽는다. 이 스펙의 대상이 아니므로 목으로 눌러 둔다.
@@ -34,6 +35,16 @@ vi.mock("@/lib/api/generated/analysis/analysis", () => ({
       : undefined,
   }),
   useRequestAnalysis: () => ({ mutate: state.requestMock, isPending: false }),
+}));
+
+// 근거 시각은 스크립트 줄(회의 축)에서 읽는다.
+vi.mock("@/lib/api/generated/transcription/transcription", () => ({
+  useGetNoteTranscript: () => ({
+    data: {
+      status: 200,
+      data: { success: true, data: { segments: state.segments } },
+    },
+  }),
 }));
 
 const onEvidenceSelect = vi.fn();
@@ -95,6 +106,10 @@ const SUCCEEDED = {
 describe("NoteSummary 항목 리스트", () => {
   beforeEach(() => {
     state.analysis = structuredClone(SUCCEEDED);
+    state.segments = [
+      { segmentId: "01K0000000061", startedAtMs: 252000 },
+      { segmentId: "01K0000000062", startedAtMs: 271000 },
+    ];
     state.missing = false;
     state.isLoading = false;
     state.isFetching = false;
@@ -137,6 +152,38 @@ describe("NoteSummary 항목 리스트", () => {
     expect(claim).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/그럼 결제 쪽부터 보죠/)).toBeInTheDocument();
     expect(screen.getByText("04:12")).toBeInTheDocument();
+  });
+
+  // 근거의 startedAtMs 는 세션 기준이다. 30분 회의 뒤 재개한 세션의 2분 10초 발화는 스크립트에서 32:10 이다.
+  it("재개한 회의의 근거 시각은 세션 기준이 아니라 스크립트 줄의 회의 축 시각이다", () => {
+    state.segments = [
+      { segmentId: "01K0000000061", startedAtMs: 32 * 60_000 + 10_000 },
+      { segmentId: "01K0000000062", startedAtMs: 32 * 60_000 + 40_000 },
+    ];
+    (
+      state.analysis as typeof SUCCEEDED
+    ).sections[0].items[0].evidence[0].startedAtMs = 130_000;
+    renderSummary(true);
+    fireEvent.click(
+      screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ })
+    );
+
+    expect(screen.getByText("32:10")).toBeInTheDocument();
+    expect(screen.queryByText("02:10")).toBeNull();
+  });
+
+  it("스크립트에서 근거 줄을 못 찾으면 시각을 적지 않는다 — 틀린 시각보다 없는 편이 낫다", () => {
+    state.segments = [{ segmentId: "01K0000000061", startedAtMs: 252000 }];
+    renderSummary(true);
+    fireEvent.click(
+      screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ })
+    );
+
+    expect(screen.getByText("04:12")).toBeInTheDocument();
+    const missing = screen
+      .getByText(/실패율이 어제부터 3%예요/)
+      .closest("button")!;
+    expect(missing.querySelector("time")).toBeNull();
   });
 
   // 마커는 그림이라 스크린리더에서 사라진다. 개수는 펼칠지 말지의 근거라 말로도 있어야 한다.

@@ -1,6 +1,7 @@
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models/noteListResponseDataNotesItem";
 import type { NoteResponseData } from "@/lib/api/generated/models/noteResponseData";
 import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models/noteResponseDataMeetingStatus";
+import type { TranscriptResponseData } from "@/lib/api/generated/models/transcriptResponseData";
 import { getAppDateKey } from "@/lib/format/date";
 
 export const MEETING_STATUS_LABEL = {
@@ -78,24 +79,65 @@ type MeetingTimingFields =
       "meetingStatus" | "recordedDurationMs" | "activeSessionStartedAt"
     >;
 
+const recordedOf = (note: MeetingTimingFields) =>
+  Number.isFinite(note.recordedDurationMs)
+    ? Math.max(0, note.recordedDurationMs)
+    : 0;
+
+/**
+ * 녹음 시계의 원점(epoch ms) — 시계는 `now − 원점`이다. 진행 중이 아니면 null.
+ *
+ * 계약(APP-1432): `recordedDurationMs` 는 회의 축의 끝이고 열린 세션은 원점까지만 센다. 화면은 그 위에
+ * `activeSessionStartedAt` 부터 잰다. 그래서 원점은 `activeSessionStartedAt − recordedDurationMs` 하나다.
+ * 브라우저 타이머를 쌓지 않으므로 백그라운드 탭에서 타이머가 조여도 늦지 않고, 재개해도 0으로 돌아가지 않는다.
+ */
+export function recordingClockOriginMs(
+  note: MeetingTimingFields
+): number | null {
+  if (note.meetingStatus !== "IN_PROGRESS" || !note.activeSessionStartedAt)
+    return null;
+  const startedAt = Date.parse(note.activeSessionStartedAt);
+  return Number.isFinite(startedAt) ? startedAt - recordedOf(note) : null;
+}
+
+/** 지금까지의 회의 축 길이. 진행 중이면 [recordingClockOriginMs] 부터 잰 녹음 시계와 같다. */
 export function getRecordedDurationMs(
   note: MeetingTimingFields,
   now: number
 ): number {
   if (note.meetingStatus === "NOT_STARTED") return 0;
-  const recorded = Number.isFinite(note.recordedDurationMs)
-    ? Math.max(0, note.recordedDurationMs)
-    : 0;
-  const activeStartedAt = note.activeSessionStartedAt
-    ? Date.parse(note.activeSessionStartedAt)
-    : Number.NaN;
-  const live =
-    note.meetingStatus === "IN_PROGRESS" &&
-    Number.isFinite(activeStartedAt) &&
-    Number.isFinite(now)
-      ? Math.max(0, now - activeStartedAt)
-      : 0;
-  return recorded + live;
+  const recorded = recordedOf(note);
+  const origin = recordingClockOriginMs(note);
+  return origin !== null && Number.isFinite(now)
+    ? Math.max(recorded, now - origin)
+    : recorded;
+}
+
+type AxisTranscript = Pick<
+  TranscriptResponseData,
+  "segments" | "gaps" | "transcriptGaps"
+>;
+
+/**
+ * 회의 길이. 머리글 · 화자 도크와 패널 · 검토 머리 칩 · 회의 지도 · 회의록 · 스크립트 복사본이 **모두 이 값**이다.
+ *
+ * 원천은 서버의 회의 축 끝이다 — 전사 `recording.durationMs` 와 노트 `recordedDurationMs` 는 같은 함수가
+ * 낸다(APP-1432). 다만 그 값이 발화 · 공백 끝보다 짧게 온 옛 노트가 있어(APP-1427), 축 위에 놓인 것 중
+ * 가장 늦은 끝까지는 늘린다. 안 늘리면 띠와 지도 표식이 막대 밖으로 나간다.
+ */
+export function meetingLengthOf(
+  axisEndMs: number | null | undefined,
+  transcript: Partial<AxisTranscript> | null | undefined
+): number {
+  const ends = [
+    ...(transcript?.segments ?? []),
+    ...(transcript?.gaps ?? []),
+    ...(transcript?.transcriptGaps ?? []),
+  ].map((span) => span.endedAtMs);
+  return Math.max(
+    Number.isFinite(axisEndMs) ? Math.max(0, axisEndMs!) : 0,
+    ...ends
+  );
 }
 
 type NoteOrderFields = Pick<

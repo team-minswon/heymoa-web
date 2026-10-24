@@ -1,4 +1,5 @@
 import type { TranscriptResponseDataTranscriptGapsItem } from "@/lib/api/generated/models";
+import { getAppDateKey } from "@/lib/format/date";
 
 export type TranscriptGap = {
   gapId: string;
@@ -184,12 +185,10 @@ export function formatGapDuration(milliseconds: number) {
   return `약 ${Math.round(hours / 24)}일`;
 }
 
-/** 두 끝이 다른 날이면 시:분만으로는 거꾸로 읽힌다. */
+/** 두 끝이 (앱 시간대에서) 다른 날이면 시:분만으로는 거꾸로 읽힌다. */
 export function spansCalendarDays(row: GapRow) {
   if (!row.startedAt || !row.endedAt) return false;
-  const started = new Date(row.startedAt);
-  const ended = new Date(row.endedAt);
-  return started.toDateString() !== ended.toDateString();
+  return getAppDateKey(row.startedAt) !== getAppDateKey(row.endedAt);
 }
 
 /**

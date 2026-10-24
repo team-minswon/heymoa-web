@@ -29,7 +29,6 @@ export type RecordingState = {
   activeNoteId: string | null;
   activeWorkspaceId: string | null;
   phase: RecordingPhase;
-  elapsedMs: number;
   transcriptionDegraded: boolean;
   connectionNotice: ConnectionNotice | null;
   buffer: BufferState | null;
@@ -47,7 +46,6 @@ export const initialRecordingState: RecordingState = {
   activeNoteId: null,
   activeWorkspaceId: null,
   phase: "idle",
-  elapsedMs: 0,
   transcriptionDegraded: false,
   connectionNotice: null,
   buffer: null,
@@ -82,8 +80,7 @@ export type RecordingAction =
   | { type: "notice"; notice: ConnectionNotice | null }
   | { type: "buffer"; buffer: BufferState }
   | { type: "microphone"; microphone: MicrophoneState }
-  | { type: "system-audio"; systemAudio: MicrophoneState | null }
-  | { type: "tick"; ms: number };
+  | { type: "system-audio"; systemAudio: MicrophoneState | null };
 
 export type RecordingFailure = Extract<
   RecordingAction,
@@ -168,7 +165,5 @@ export function recordingReducer(
       return patch(state, { microphone: action.microphone });
     case "system-audio":
       return patch(state, { systemAudio: action.systemAudio });
-    case "tick":
-      return patch(state, { elapsedMs: state.elapsedMs + action.ms });
   }
 }

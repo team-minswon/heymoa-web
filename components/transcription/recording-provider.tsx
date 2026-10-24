@@ -21,6 +21,11 @@ import {
 } from "@/lib/api/generated/transcription/transcription";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import {
+  getRecordedDurationMs,
+  recordingClockOriginMs,
+} from "@/lib/notes/meeting-state";
+import { useAlignedNow } from "@/lib/notes/use-aligned-now";
+import {
   invalidateNoteLifecycle,
   invalidateNoteTranscript,
 } from "@/lib/notes/invalidate";
@@ -95,7 +100,13 @@ export type RecordingContextValue = {
    */
   activeWorkspaceId: string | null;
   phase: RecordingPhase;
+  /**
+   * 녹음 시계(회의 축 위 지금 위치). 녹음 중인 노트의 `recordedDurationMs` 위에 `activeSessionStartedAt`
+   * 부터 잰다(계약). 스크립트 줄 시각과 같은 축이라 재개해도 0으로 돌아가지 않는다.
+   */
   elapsedMs: number;
+  /** 녹음 시계의 원점(epoch ms). 시계 = 지금 − 원점. 노트가 아직 진행 중으로 안 읽혔으면 null. */
+  clockOriginMs: number | null;
   /**
    * 소리는 쌓이는데 글자만 멈춘 상태. 받아쓰기 업체 소켓이 끊긴 것은 서버만 안다. 회복하면
    * 서버가 `LIVE` 를 보내 되돌린다.
@@ -289,18 +300,51 @@ export function RecordingProvider({
     phase === "failed" &&
     state.windowExhausted &&
     activeNoteId !== null;
-  const droppedNoteQuery = useGetNote(activeNoteId ?? "", {
+  /** 녹음 시계는 노트의 회의 축 끝과 활성 세션 시작에서 잰다. 노트 화면이 아닌 곳(다른 노트 · 목록)에서도 같다. */
+  const noteQuery = useGetNote(activeNoteId ?? "", {
     query: {
-      enabled: watchMeetingEnd,
+      enabled:
+        enablePolling &&
+        activeNoteId !== null &&
+        (ACTIVE_PHASES.has(phase) || watchMeetingEnd),
       refetchInterval: watchMeetingEnd ? 3_000 : false,
       refetchIntervalInBackground: true,
     },
   });
-  const droppedNoteResponse = droppedNoteQuery.data;
+  const recordingNote =
+    noteQuery.data?.status === 200 && noteQuery.data.data.success
+      ? noteQuery.data.data.data
+      : undefined;
+  /**
+   * 세션이 활성이 된 시각. 그보다 먼저 받은 노트는 **이전 세션의 원점**을 들고 있을 수 있다 — 재개 직후
+   * 캐시가 `이전 시작 − 이전 누적`을 말하면 시계가 일시정지한 시간만큼 튀었다가 다시 읽은 뒤 돌아온다.
+   * 그동안은 마지막 녹음 시계에서 멈춰 두고, 이 뒤에 받은 노트(재조회 · 실시간 이벤트)부터 잰다.
+   */
+  const [activatedAt, setActivatedAt] = useState<number | null>(null);
+  const noteIsCurrent =
+    recordingNote !== undefined &&
+    activatedAt !== null &&
+    noteQuery.dataUpdatedAt >= activatedAt;
+  const clockOriginMs =
+    phase === "recording" && noteIsCurrent
+      ? recordingClockOriginMs(recordingNote)
+      : null;
+  // 브라우저 타이머를 쌓지 않는다 — 숨긴 탭에서 조여지면 늦어진다. 매번 지금 시각을 다시 읽고, 원점에 맞춰 초가 넘어간다.
+  const clockNow = useAlignedNow(
+    1_000,
+    clockOriginMs !== null,
+    clockOriginMs === null ? [] : [clockOriginMs]
+  );
+  const [heldClock, setHeldClock] = useState(0);
+  const liveClock =
+    clockOriginMs !== null && recordingNote
+      ? getRecordedDurationMs(recordingNote, clockNow ?? Number.NaN)
+      : null;
+  // 마지막으로 잰 녹음 시계. 새 원점이 오기 전에는 이 값에서 멈춘다(역행 · 점프 없이).
+  if (liveClock !== null && liveClock !== heldClock) setHeldClock(liveClock);
+  const elapsedMs = liveClock ?? heldClock;
   const meetingEndedAfterDrop =
-    watchMeetingEnd &&
-    droppedNoteResponse?.status === 200 &&
-    droppedNoteResponse.data.data?.meetingStatus === "ENDED";
+    watchMeetingEnd && recordingNote?.meetingStatus === "ENDED";
 
   useEffect(() => {
     if (!meetingEndedAfterDrop) return;
@@ -694,6 +738,10 @@ export function RecordingProvider({
           },
         });
         dispatch({ type: "phase", phase: "recording" });
+        // 세션이 활성이 되며 노트의 `activeSessionStartedAt` · `recordedDurationMs` 가 바뀌었다. 녹음 시계는
+        // 이 뒤에 받은 노트에서 잰다.
+        setActivatedAt(Date.now());
+        invalidateLifecycleQueries(noteId);
         track("recording_started", { workspace_id: workspaceId });
       } catch (cause) {
         await controller.close();
@@ -804,15 +852,6 @@ export function RecordingProvider({
     sessionQuery.failureReason,
   ]);
 
-  useEffect(() => {
-    if (phase !== "recording") return;
-    const timer = window.setInterval(
-      () => dispatch({ type: "tick", ms: 1000 }),
-      1000
-    );
-    return () => window.clearInterval(timer);
-  }, [dispatch, phase]);
-
   useEffect(
     () => () => {
       void controllerRef.current?.close();
@@ -838,7 +877,8 @@ export function RecordingProvider({
       activeNoteId: state.activeNoteId,
       activeWorkspaceId: state.activeWorkspaceId,
       phase: state.phase,
-      elapsedMs: state.elapsedMs,
+      elapsedMs,
+      clockOriginMs,
       transcriptionDegraded: state.transcriptionDegraded,
       connectionNotice: state.connectionNotice,
       buffer: state.buffer,
@@ -849,7 +889,7 @@ export function RecordingProvider({
       stop,
       disconnect,
     }),
-    [state, start, stop, disconnect]
+    [state, elapsedMs, clockOriginMs, start, stop, disconnect]
   );
   const meterValue = useMemo<RecordingMeterValue>(
     () => ({ level, levelHistory }),

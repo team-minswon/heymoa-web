@@ -3,34 +3,31 @@ import type { ReviewItem } from "@/lib/notes/review/sections";
 
 type Segment = TranscriptResponseDataSegmentsItem;
 
+export type CitedSpan = { startMs: number; endMs: number };
+
+export const segmentsById = (segments: readonly Segment[]) =>
+  new Map(segments.map((segment) => [segment.segmentId, segment]));
+
 /**
- * 항목이 회의에서 나온 때(ms) — 인용한 스크립트 구간 중 가장 이른 시작이다. server 는 항목에 시각을 싣지
- * 않으므로 인용으로 계산한다(APP-865). 인용이 없거나 전사에서 못 찾으면 null 이다.
+ * 항목이 회의에서 나온 구간(ms) — 인용한 스크립트 줄의 가장 이른 시작부터 가장 늦은 끝까지다. server 는 항목에
+ * 시각을 싣지 않으므로 인용으로 계산한다(APP-865). 인용이 없거나 전사에서 못 찾으면 null 이다.
  */
-export function citedAtOf(
+export function citedSpanOf(
   item: Pick<ReviewItem, "citations">,
-  startOf: ReadonlyMap<string, number>
-): number | null {
-  let earliest: number | null = null;
+  byId: ReadonlyMap<string, Segment>
+): CitedSpan | null {
+  let span: CitedSpan | null = null;
   for (const { segmentId } of item.citations) {
-    const at = startOf.get(segmentId);
-    if (at !== undefined && (earliest === null || at < earliest)) earliest = at;
+    const segment = byId.get(segmentId);
+    if (!segment) continue;
+    span = span
+      ? {
+          startMs: Math.min(span.startMs, segment.startedAtMs),
+          endMs: Math.max(span.endMs, segment.endedAtMs),
+        }
+      : { startMs: segment.startedAtMs, endMs: segment.endedAtMs };
   }
-  return earliest;
-}
-
-export const segmentStarts = (segments: readonly Segment[]) =>
-  new Map(segments.map((segment) => [segment.segmentId, segment.startedAtMs]));
-
-/** 회의 길이. 녹음 길이가 마지막 구간보다 짧게 오면 막대 밖으로 표시가 나가므로 둘 중 큰 값이다. */
-export function meetingLengthOf(
-  recordedMs: number | null | undefined,
-  segments: readonly Segment[]
-) {
-  return Math.max(
-    recordedMs ?? 0,
-    ...segments.map((segment) => segment.endedAtMs)
-  );
+  return span;
 }
 
 export type Quote = { segment: Segment; cited: boolean };

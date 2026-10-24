@@ -80,11 +80,11 @@ import {
   hasMissingApply,
   missingChoicesOf,
 } from "@/lib/notes/review/saved-choices";
+import { meetingLengthOf } from "@/lib/notes/meeting-state";
 import {
-  citedAtOf,
-  meetingLengthOf,
+  citedSpanOf,
   quotesOf,
-  segmentStarts,
+  segmentsById,
 } from "@/lib/notes/review/moments";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 import {
@@ -363,14 +363,18 @@ export function ReviewBoard({
     ]
   );
   // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
-  const starts = useMemo(() => segmentStarts(segments), [segments]);
+  const byId = useMemo(() => segmentsById(segments), [segments]);
+  const spanOf = useCallback(
+    (item: ReviewItem) => citedSpanOf(item, byId),
+    [byId]
+  );
   const citedAt = useCallback(
-    (item: ReviewItem) => citedAtOf(item, starts),
-    [starts]
+    (item: ReviewItem) => spanOf(item)?.startMs ?? null,
+    [spanOf]
   );
   const digests = useMemo(
-    () => topicDigests(summary, itemsById, citedAt),
-    [summary, itemsById, citedAt]
+    () => topicDigests(summary, itemsById, spanOf),
+    [summary, itemsById, spanOf]
   );
 
   const unnamedSpeakers = useMemo<AssigneeChoice[]>(
@@ -789,7 +793,7 @@ export function ReviewBoard({
   const selected = openItemId ? itemsById.get(openItemId) : undefined;
 
   const lengthMs = transcript
-    ? meetingLengthOf(transcript.recording.durationMs, segments)
+    ? meetingLengthOf(transcript.recording.durationMs, transcript)
     : null;
   const included = items.filter((item) => item.included);
   const marks = included.flatMap((item) => {

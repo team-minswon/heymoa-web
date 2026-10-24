@@ -24,6 +24,7 @@ import { formatAppDate } from "@/lib/format/date";
 import {
   deriveMeetingPhase,
   getRecordedDurationMs,
+  recordingClockOriginMs,
 } from "@/lib/notes/meeting-state";
 import { invalidateNoteLifecycle } from "@/lib/notes/invalidate";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
@@ -139,13 +140,12 @@ export function NoteDetails({
       ? noteResponse.data.data
       : undefined;
   // **throw보다 먼저 부른다.** 아래 경계로 던지는 렌더와 정상 렌더가 훅 개수까지 달라지면
-  // 안 된다. 진행 중일 때만 돌고, 세션 시작 초에 맞춰 눈금이 튀지 않게 원점을 넘긴다.
+  // 안 된다. 진행 중일 때만 돌고, 녹음 시계의 초에 맞춰 눈금이 튀지 않게 원점을 넘긴다.
+  const clockOrigin = loaded ? recordingClockOriginMs(loaded) : null;
   const now = useAlignedNow(
     1_000,
     loaded?.meetingStatus === "IN_PROGRESS",
-    loaded?.activeSessionStartedAt
-      ? [Date.parse(loaded.activeSessionStartedAt)]
-      : []
+    clockOrigin === null ? [] : [clockOrigin]
   );
   // **프로젝트를 여기서 조회하지 않는다.** 노트 헤더의 pill이 이미 그 이름을 말하고, 계약에
   // 노트의 프로젝트를 바꾸는 길도 없다(`NoteRequest`는 `title`만 받는다).

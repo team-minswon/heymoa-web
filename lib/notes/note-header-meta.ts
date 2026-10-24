@@ -1,6 +1,12 @@
-import type { NoteResponseData } from "@/lib/api/generated/models";
+import type {
+  NoteResponseData,
+  TranscriptResponseData,
+} from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
-import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
+import {
+  getRecordedDurationMs,
+  meetingLengthOf,
+} from "@/lib/notes/meeting-state";
 
 /**
  * 노트 헤더 메타 두 줄. design.pen `u3yYCX`/`XtEMZ`의 Meta Row —
@@ -16,7 +22,14 @@ import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
  */
 export function buildNoteHeaderMeta(
   note: NoteResponseData,
-  { isStarter }: { isStarter: boolean }
+  {
+    isStarter,
+    transcript,
+  }: {
+    isStarter: boolean;
+    /** 받아 둔 전사. 있으면 회의 길이를 화자 패널 · 회의록과 같은 값(`meetingLengthOf`)으로 맞춘다. */
+    transcript?: TranscriptResponseData | null;
+  }
 ): {
   /** 참석자 수. 계약이 빈 배열을 줄 수 있어 없으면 `null`이다 — 「참석자 0명」은 정보가 아니다. */
   participantLabel: string | null;
@@ -58,9 +71,11 @@ export function buildNoteHeaderMeta(
     };
   }
 
-  // 일시정지·종료는 누적 기록 시간이다. **`now`를 안 받는다** — 여기까지 오는 상태에서는
+  // 일시정지·종료는 회의 길이다. **`now`를 안 받는다** — 여기까지 오는 상태에서는
   // 진행 중 구간이 0이라(`getRecordedDurationMs`) 시계가 필요 없고, 렌더 중에 `Date.now()`를
   // 읽으면 서버 HTML과 첫 클라이언트 렌더가 갈려 하이드레이션이 어긋난다.
-  const minutes = Math.floor(getRecordedDurationMs(note, 0) / 60_000);
-  return { ...head, secondary: `기록 ${minutes}분 (종료 세션 누적)` };
+  const minutes = Math.floor(
+    meetingLengthOf(getRecordedDurationMs(note, 0), transcript) / 60_000
+  );
+  return { ...head, secondary: `기록 ${minutes}분` };
 }

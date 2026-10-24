@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
@@ -18,6 +18,9 @@ import type {
   AnalysisResultResponseDataSectionsItemItemsItem,
   AnalysisResultResponseDataSectionsItemKind,
 } from "@/lib/api/generated/models";
+import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
+import type { TranscriptResponseDataSegmentsItem } from "@/lib/api/generated/models";
+import { segmentsById } from "@/lib/notes/review/moments";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { SECTION_LABELS, SECTION_ORDER } from "@/lib/notes/analysis-sections";
 import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
@@ -114,6 +117,16 @@ export function NoteSummary({
     },
   });
   const requestAnalysis = useRequestAnalysis();
+  // 근거 시각은 스크립트 줄에서 읽는다(아래 `SummaryItem`). 검토 화면과 같은 키라 요청이 겹치지 않는다.
+  const transcriptQuery = useGetNoteTranscript(noteId);
+  const transcriptSegments =
+    transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
+      ? transcriptQuery.data.data.data.segments
+      : undefined;
+  const segmentById = useMemo(
+    () => segmentsById(transcriptSegments ?? []),
+    [transcriptSegments]
+  );
 
   // 회의가 (다른 참가자에 의해) 종료된 순간 곧바로 다시 읽는다 — 폴링 간격을 기다리지 않게.
   const refetch = analysisQuery.refetch;
@@ -209,6 +222,7 @@ export function NoteSummary({
         </div>
         <SummarySections
           analysis={analysis}
+          segmentById={segmentById}
           onEvidenceSelect={onEvidenceSelect}
         />
       </>
@@ -462,11 +476,15 @@ function RetryStrip({
  * 붙는다(설계 §heymoa-web). 예전 주석이 "요약은 끝까지 읽는 글"이라고 적었는데, 그 판정은
  * 이 개편이 뒤집었다 — 읽는 글이면 근거를 매달 자리가 없다.
  */
+type SegmentById = ReadonlyMap<string, TranscriptResponseDataSegmentsItem>;
+
 function SummarySections({
   analysis,
+  segmentById,
   onEvidenceSelect,
 }: {
   analysis: AnalysisResultResponseData;
+  segmentById: SegmentById;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
   const byKind = new Map<string, AnalysisResultResponseDataSectionsItem>(
@@ -498,6 +516,7 @@ function SummarySections({
                       key={item.itemId}
                       item={item}
                       kind={kind}
+                      segmentById={segmentById}
                       onEvidenceSelect={onEvidenceSelect}
                     />
                   ))}
@@ -528,10 +547,13 @@ function SummarySections({
 function SummaryItem({
   item,
   kind,
+  segmentById,
   onEvidenceSelect,
 }: {
   item: AnalysisResultResponseDataSectionsItemItemsItem;
   kind: AnalysisResultResponseDataSectionsItemKind;
+  /** 근거 줄의 회의 축 시각을 찾는 스크립트. 근거의 `startedAtMs` 는 세션 기준이라 쓰지 않는다. */
+  segmentById: SegmentById;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -632,31 +654,39 @@ function SummaryItem({
               id={evidenceId}
               className="mt-3 space-y-2 border-l border-[var(--el-hairline-strong)] pl-4"
             >
-              {item.evidence.map((evidence) => (
-                <li key={evidence.segmentId}>
-                  {/* 누르면 전사의 그 줄로 간다. **`segmentId`로만 찾는다** — `startedAtMs`는
-                  세션별 오프셋이라 세션이 둘 이상이면 화면의 시각과 어긋난다(APP-398). */}
-                  <button
-                    type="button"
-                    onClick={() => onEvidenceSelect(evidence.segmentId)}
-                    /* **여백은 음수 마진으로 낸다.** hover 배경이 글자에 딱 붙어 있어서 짚을
+              {item.evidence.map((evidence) => {
+                // 누르면 전사의 그 줄로 간다. 이동도 시각도 **`segmentId`로 찾은 스크립트 줄**이 정한다 —
+                // 근거의 `startedAtMs`는 세션 기준이라 재개한 회의에서는 스크립트의 시각보다 앞선다(APP-398).
+                // 줄을 못 찾으면 시각을 적지 않는다. 틀린 시각보다 없는 편이 낫다.
+                const startedAtMs = segmentById.get(
+                  evidence.segmentId
+                )?.startedAtMs;
+                return (
+                  <li key={evidence.segmentId}>
+                    <button
+                      type="button"
+                      onClick={() => onEvidenceSelect(evidence.segmentId)}
+                      /* **여백은 음수 마진으로 낸다.** hover 배경이 글자에 딱 붙어 있어서 짚을
                    자리처럼 보이지 않았는데, 그냥 `px-2`를 주면 인용문만 오른쪽으로 밀려
                    위 항목과 줄이 안 맞는다. 안쪽으로 넓히고 밖으로 같은 만큼 당긴다. */
-                    className="group -mx-2 flex w-full items-baseline gap-2 rounded-block px-2 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
-                  >
-                    <span className="min-w-0 text-[15px] leading-7 text-[var(--el-body)]">
-                      {evidence.text}
-                    </span>
-                    <span
-                      aria-hidden
-                      className="min-w-0 flex-1 translate-y-[-4px] border-b border-dotted border-[var(--el-hairline)]"
-                    />
-                    <time className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-muted)]">
-                      {formatOffset(evidence.startedAtMs)}
-                    </time>
-                  </button>
-                </li>
-              ))}
+                      className="group -mx-2 flex w-full items-baseline gap-2 rounded-block px-2 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+                    >
+                      <span className="min-w-0 text-[15px] leading-7 text-[var(--el-body)]">
+                        {evidence.text}
+                      </span>
+                      <span
+                        aria-hidden
+                        className="min-w-0 flex-1 translate-y-[-4px] border-b border-dotted border-[var(--el-hairline)]"
+                      />
+                      {startedAtMs === undefined ? null : (
+                        <time className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-muted)]">
+                          {formatOffset(startedAtMs)}
+                        </time>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </motion.div>
         ) : null}

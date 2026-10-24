@@ -3,6 +3,9 @@ import type { TranscriptPresentationSegment } from "@/lib/transcription/presenta
 import { personAvatarKey } from "@/lib/people/avatar-key";
 import { speakerAvatarName } from "@/lib/transcription/speaker-identity";
 
+/** 화자 띠에서 발화로 가는 길. 띠를 눌렀나(strip) · 이전/다음 버튼인가(step). */
+export type SpeakerJumpVia = "strip" | "step";
+
 /** 화자 하나가 말한 분량. 저장하지 않고 화면이 그릴 때 센다. */
 export type SpeakerStat = {
   /**

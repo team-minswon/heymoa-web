@@ -1,3 +1,4 @@
+import type { CitedSpan } from "@/lib/notes/review/moments";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import {
   summaryTopics,
@@ -35,7 +36,7 @@ export type TopicDigest = TopicChip & {
   openItems: SummarySentence[];
   /** 주제 서술 전체 */
   text: string;
-  /** 이 주제 항목이 처음 · 마지막으로 나온 때(ms). 인용으로 계산하고, 하나도 없으면 null */
+  /** 이 주제 근거 발화의 첫 시작 · 마지막 끝(ms). 인용으로 계산하고, 하나도 없으면 null */
   startMs: number | null;
   endMs: number | null;
   decisions: ReviewItem[];
@@ -52,7 +53,7 @@ export type TopicDigest = TopicChip & {
 export function topicDigests(
   summary: MeetingReviewSummary | null | undefined,
   itemsById: ReadonlyMap<string, ReviewItem>,
-  citedAt: (item: ReviewItem) => number | null
+  spanOf: (item: ReviewItem) => CitedSpan | null
 ): TopicDigest[] {
   const pick = (ids: readonly string[]) =>
     ids.flatMap((id) => {
@@ -72,9 +73,9 @@ export function topicDigests(
         )
         .map((item) => item.itemId);
       const open = pick([...new Set([...topic.openItemIds, ...added])]);
-      const times = [...members, ...open].flatMap((item) => {
-        const at = citedAt(item);
-        return at === null ? [] : [at];
+      const spans = [...members, ...open].flatMap((item) => {
+        const span = spanOf(item);
+        return span === null ? [] : [span];
       });
       const narrative = topic.description;
       // 옛 응답에는 한 줄 summary와 긴 description이 함께 있다. 펼친 내용과 내보내기에서 전문을 보존한다.
@@ -97,8 +98,14 @@ export function topicDigests(
         gist: topic.summary?.trim() || text || null,
         text,
         count: decisions.length + tasks.length,
-        startMs: times.length > 0 ? Math.min(...times) : null,
-        endMs: times.length > 0 ? Math.max(...times) : null,
+        startMs:
+          spans.length > 0
+            ? Math.min(...spans.map((span) => span.startMs))
+            : null,
+        endMs:
+          spans.length > 0
+            ? Math.max(...spans.map((span) => span.endMs))
+            : null,
         decisions,
         tasks,
         open,

@@ -47,13 +47,18 @@ import {
   isSpeakerAssigneeQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
-import { meetingLengthOf } from "@/lib/notes/review/moments";
+import { meetingLengthOf } from "@/lib/notes/meeting-state";
 import {
   SpeakerDock,
   createCurrentMsStore,
 } from "@/components/notes/speaker-dock";
 import { SpeakerPanel, SpeakerTools } from "@/components/notes/speaker-panel";
-import { summarizeSpeakers, type SpeakerStat } from "@/lib/notes/speaker-stats";
+import {
+  summarizeSpeakers,
+  type SpeakerJumpVia,
+  type SpeakerStat,
+} from "@/lib/notes/speaker-stats";
+import { track } from "@/lib/analytics/track";
 import { toast } from "@/lib/ui/toast";
 import { toGapRows } from "@/lib/transcription/gaps";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
@@ -708,6 +713,21 @@ export const NoteArchive = memo(function NoteArchive({
     (id: string) => jumpToSegment(id, true),
     [jumpToSegment]
   );
+  // 화자 띠 · 이전/다음으로 발화를 찾아가는지 센다. 노트 id 는 싣지 않는다.
+  const speakerJump = useCallback(
+    (surface: "dock" | "panel") => (segmentId: string, via: SpeakerJumpVia) => {
+      if (workspaceId)
+        track("speaker_timeline_jumped", {
+          workspace_id: workspaceId,
+          surface,
+          via,
+        });
+      jumpToSegment(segmentId);
+    },
+    [jumpToSegment, workspaceId]
+  );
+  const dockJump = useMemo(() => speakerJump("dock"), [speakerJump]);
+  const panelJump = useMemo(() => speakerJump("panel"), [speakerJump]);
   const viewAnchor = useRef<{ id: string; offset: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [listOffset, setListOffset] = useState(0);
@@ -924,12 +944,12 @@ export const NoteArchive = memo(function NoteArchive({
   const [panelOpen, setPanelOpen] = useState(false);
   /**
    * 회의 길이. 패널의 머리글, 띠를 그리는 축(`summarizeSpeakers`), 띠를 누른 자리를 시각으로
-   * 되짚는 축이 **같은 값**을 써야 한다. 녹음 길이가 발화 끝보다 짧게 오면 띠는 발화 끝까지로
+   * 되짚는 축, 스크립트 복사본이 **같은 값**을 써야 한다(`meetingLengthOf`). 녹음 길이가 발화 끝보다 짧게 오면 띠는 발화 끝까지로
    * 그려지는데 누른 자리는 녹음 길이로 되짚혀, 뒤쪽을 눌러도 앞쪽 발화로 갔다(APP-1427).
    */
   const meetingDurationMs = meetingLengthOf(
     transcript?.recording?.durationMs,
-    segments
+    transcript
   );
   const speakerStats = useMemo(
     () =>
@@ -1139,7 +1159,7 @@ export const NoteArchive = memo(function NoteArchive({
               stats={speakerStats}
               durationMs={meetingDurationMs}
               currentMsStore={currentMsStore}
-              onJump={jumpToSegment}
+              onJump={dockJump}
               renderAssign={renderDockAssign}
             />
           ) : null}
@@ -1202,7 +1222,7 @@ export const NoteArchive = memo(function NoteArchive({
                 transcriptToMarkdown({
                   note: {
                     ...noteMeta,
-                    durationMs: transcript?.recording?.durationMs ?? 0,
+                    durationMs: meetingDurationMs,
                   },
                   rows,
                   truncated,
@@ -1419,7 +1439,7 @@ export const NoteArchive = memo(function NoteArchive({
           onOpenChange={setPanelOpen}
           stats={speakerStats}
           durationMs={meetingDurationMs}
-          onJump={jumpToSegment}
+          onJump={panelJump}
           onReset={() => void requestReset()}
           resetting={resetting}
           // 지정이 도는 동안에는 초기화도 못 누른다 — 반대 방향의 같은 경쟁이다.

@@ -193,6 +193,92 @@ function setup({
   };
 }
 
+describe("녹음 시계 (계약: recordedDurationMs 위에 activeSessionStartedAt 부터)", () => {
+  const ACTIVE_AT = Date.parse("2026-10-24T01:00:00Z");
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  /** 노트 캐시에 회의 축 끝과 활성 세션 시작을 넣는다. 재조회 · 실시간 이벤트가 하는 일이다. */
+  function seedNote(
+    harness: ReturnType<typeof setup>,
+    recordedDurationMs: number,
+    activeSessionStartedAt: number
+  ) {
+    act(() => {
+      harness.queryClient.setQueryData(getGetNoteQueryKey(session.noteId), {
+        status: 200,
+        data: {
+          success: true,
+          data: {
+            noteId: session.noteId,
+            meetingStatus: "IN_PROGRESS",
+            recordedDurationMs,
+            activeSessionStartedAt: new Date(
+              activeSessionStartedAt
+            ).toISOString(),
+          },
+        },
+      });
+    });
+  }
+
+  it("재개해도 0으로 돌아가지 않고 회의 축(스크립트 줄 시각) 위에서 센다", async () => {
+    vi.useFakeTimers({ now: ACTIVE_AT });
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    // 20분 녹음하고 일시정지한 뒤 재개한 회의. 노트는 회의 축 끝(20:00)과 새 세션 시작을 말한다.
+    seedNote(harness, 20 * 60_000, ACTIVE_AT);
+    await act(() => vi.advanceTimersByTimeAsync(5_000));
+
+    expect(harness.result.current.phase).toBe("recording");
+    expect(harness.result.current.clockOriginMs).toBe(ACTIVE_AT - 20 * 60_000);
+    expect(harness.result.current.elapsedMs).toBe(20 * 60_000 + 5_000);
+  });
+
+  it("숨긴 탭에서 타이머가 멈춰도 돌아오면 실제 경과를 읽는다 — 틱을 쌓지 않는다", async () => {
+    vi.useFakeTimers({ now: ACTIVE_AT });
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    seedNote(harness, 20 * 60_000, ACTIVE_AT);
+    await act(() => vi.advanceTimersByTimeAsync(5_000));
+
+    // 백그라운드 탭: 5분이 흘렀는데 타이머는 한 번도 안 돌았다.
+    vi.setSystemTime(ACTIVE_AT + 5_000 + 5 * 60_000);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(harness.result.current.elapsedMs).toBe(25 * 60_000 + 5_000);
+  });
+
+  it("20분 녹음 → 10분 일시정지 → 재개 직후, 캐시가 이전 세션을 말하는 동안 20분에서 멈췄다가 이어 간다", async () => {
+    vi.useFakeTimers({ now: ACTIVE_AT });
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    seedNote(harness, 0, ACTIVE_AT);
+    await act(() => vi.advanceTimersByTimeAsync(20 * 60_000));
+    expect(harness.result.current.elapsedMs).toBe(20 * 60_000);
+
+    await act(() => harness.result.current.stop());
+    await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
+    // 재개. 캐시는 아직 첫 세션(원점 0, 시작 ACTIVE_AT)이다 — 그대로 재면 30:00 으로 튄다.
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
+    expect(harness.result.current.phase).toBe("recording");
+    expect(harness.result.current.elapsedMs).toBe(20 * 60_000);
+
+    // 재조회가 새 원점을 가져오면 그 자리부터 이어 간다.
+    const resumedAt = ACTIVE_AT + 30 * 60_000;
+    seedNote(harness, 20 * 60_000, resumedAt);
+    await act(() => vi.advanceTimersByTimeAsync(3_000));
+    expect(harness.result.current.elapsedMs).toBe(
+      20 * 60_000 + (Date.now() - resumedAt)
+    );
+  });
+});
+
 describe("데스크톱 입력 상태와 캡처 실패 안내", () => {
   beforeEach(() => toastError.mockReset());
   afterEach(() => toastError.mockReset());
@@ -1732,10 +1818,12 @@ describe("끊김 창과 끝 (APP-705)", () => {
     });
 
     it("버린 소리가 없으면 회의 종료 문구를 쓴다", async () => {
-      apiFetchMock.mockResolvedValue(noteWith("ENDED"));
+      // 녹음하는 동안 시계가 같은 노트 캐시를 읽는다. 그때는 아직 진행 중이다.
+      apiFetchMock.mockResolvedValue(noteWith("IN_PROGRESS"));
       const harness = await dropAfterWindow(0);
 
-      await act(() => vi.advanceTimersByTimeAsync(3_000));
+      apiFetchMock.mockResolvedValue(noteWith("ENDED"));
+      await act(() => vi.advanceTimersByTimeAsync(3_100));
 
       expect(harness.result.current.error).toBe(
         "회의가 종료되어 기록을 마쳤습니다."

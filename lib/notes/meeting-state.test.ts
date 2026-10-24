@@ -7,7 +7,9 @@ import {
   isPersonalChatHiddenInNote,
   MEETING_PRIMARY_ACTION_LABEL,
   MEETING_STATUS_LABEL,
+  meetingLengthOf,
   pausedDayCount,
+  recordingClockOriginMs,
 } from "@/lib/notes/meeting-state";
 
 describe("deriveMeetingPhase", () => {
@@ -164,6 +166,66 @@ describe("getRecordedDurationMs", () => {
         Date.parse("2026-07-29T11:00:00Z")
       )
     ).toBe(120_000);
+  });
+});
+
+describe("recordingClockOriginMs", () => {
+  it("재개한 회의의 원점은 활성 세션 시작보다 앞 구간(회의 축 끝)만큼 이르다 — 시계가 0으로 돌아가지 않는다", () => {
+    const resumed = {
+      meetingStatus: "IN_PROGRESS" as const,
+      recordedDurationMs: 20 * 60_000,
+      activeSessionStartedAt: "2026-07-29T10:00:00Z",
+    };
+    const origin = Date.parse("2026-07-29T10:00:00Z") - 20 * 60_000;
+    expect(recordingClockOriginMs(resumed)).toBe(origin);
+    // 재개 5초 뒤 시계는 20:05 다. 스크립트 줄(회의 축)과 같은 수다.
+    expect(
+      getRecordedDurationMs(resumed, Date.parse("2026-07-29T10:00:05Z"))
+    ).toBe(20 * 60_000 + 5_000);
+  });
+
+  it.each([
+    ["PAUSED", "2026-07-29T10:00:00Z"],
+    ["IN_PROGRESS", null],
+    ["IN_PROGRESS", "not-a-date"],
+  ] as const)("%s · %s 이면 잴 원점이 없다", (meetingStatus, startedAt) => {
+    expect(
+      recordingClockOriginMs({
+        meetingStatus,
+        recordedDurationMs: 60_000,
+        activeSessionStartedAt: startedAt,
+      })
+    ).toBeNull();
+  });
+});
+
+describe("meetingLengthOf", () => {
+  const span = (endedAtMs: number) => ({ endedAtMs });
+
+  it("서버 회의 축 끝이 원천이다", () => {
+    expect(
+      meetingLengthOf(90_000, {
+        segments: [span(49_000)],
+        gaps: [],
+        transcriptGaps: [],
+      } as never)
+    ).toBe(90_000);
+  });
+
+  it("축 끝이 발화 · 소리 없는 구간 · 받아쓰지 못한 구간 끝보다 짧으면 그 끝까지 늘린다", () => {
+    const transcript = {
+      segments: [span(49_000)],
+      gaps: [span(70_000)],
+      transcriptGaps: [span(80_000)],
+    } as never;
+    expect(meetingLengthOf(10_000, transcript)).toBe(80_000);
+    // 미시작 세션이 마지막에 정렬돼 0으로 온 옛 응답(APP-1432 이전)도 끝까지 그린다
+    expect(meetingLengthOf(0, transcript)).toBe(80_000);
+  });
+
+  it("전사가 아직 없으면 축 끝 그대로다", () => {
+    expect(meetingLengthOf(42_000, null)).toBe(42_000);
+    expect(meetingLengthOf(undefined, undefined)).toBe(0);
   });
 });
 

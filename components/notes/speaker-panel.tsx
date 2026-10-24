@@ -22,6 +22,7 @@ import {
 import {
   formatSpeakingTime,
   jumpIndexAt,
+  type SpeakerJumpVia,
   type SpeakerStat,
 } from "@/lib/notes/speaker-stats";
 import { formatOffset } from "@/lib/transcription/presentation";
@@ -151,7 +152,7 @@ function SpeakerRow({
   /** 지금까지 이 화자의 발화로 간 횟수. 패널을 닫으면 행이 언마운트되므로 패널이 들고 있다. */
   visited: number;
   durationMs: number;
-  onJump: (segmentId: string, visited: number) => void;
+  onJump: (segmentId: string, visited: number, via: SpeakerJumpVia) => void;
 }) {
   const reduced = useReducedMotion();
   const silent = stat.speakingMs === 0;
@@ -160,7 +161,7 @@ function SpeakerRow({
   const targets = stat.jumpTargets;
   const next = () => {
     if (targets.length === 0) return;
-    onJump(targets[visited % targets.length], visited + 1);
+    onJump(targets[visited % targets.length], visited + 1, "step");
   };
 
   return (
@@ -200,7 +201,7 @@ function SpeakerRow({
             startsMs={stat.jumpStartsMs}
             endsMs={stat.jumpEndsMs}
             current={visited === 0 ? -1 : (visited - 1) % targets.length}
-            onPick={(index) => onJump(targets[index], index + 1)}
+            onPick={(index) => onJump(targets[index], index + 1, "strip")}
           />
           <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--el-muted-soft)]">
             {/* **세그먼트 개수를 「발화 N개」로 내보내지 않는다.** 그것은 전사가 문장을
@@ -260,8 +261,11 @@ export function SpeakerPanel({
   stats: SpeakerStat[];
   /** 회의 길이. 타임라인 축의 끝 눈금이다. */
   durationMs: number;
-  /** 그 발화로 전사를 스크롤한다. 패널은 닫는다 — 안 닫으면 도착한 자리를 자기가 가린다. */
-  onJump: (segmentId: string) => void;
+  /**
+   * 그 발화로 전사를 스크롤한다. 패널은 닫는다 — 안 닫으면 도착한 자리를 자기가 가린다.
+   * [via] 는 띠를 눌렀나(strip) · 「다음 발화로」인가(step) — 계측이 가른다.
+   */
+  onJump: (segmentId: string, via: SpeakerJumpVia) => void;
   onReset: () => void;
   resetting: boolean;
   /** 되돌릴 지정이 하나라도 있나. 없으면 초기화는 아무 일도 안 하는 버튼이다. */
@@ -272,7 +276,9 @@ export function SpeakerPanel({
   const unassigned = stats.filter((stat) => stat.unassigned);
   const assigned = stats.filter((stat) => !stat.unassigned);
 
-  const pendingJump = useRef<string | null>(null);
+  const pendingJump = useRef<{ segmentId: string; via: SpeakerJumpVia } | null>(
+    null
+  );
   const skipReturnFocus = useRef(false);
   useEffect(() => {
     if (open) {
@@ -281,12 +287,14 @@ export function SpeakerPanel({
     }
   }, [open]);
   const [visitedByKey, setVisitedByKey] = useState<Record<string, number>>({});
-  const jump = (key: string) => (segmentId: string, visited: number) => {
-    setVisitedByKey((all) => ({ ...all, [key]: visited }));
-    pendingJump.current = segmentId;
-    skipReturnFocus.current = true;
-    onOpenChange(false);
-  };
+  const jump =
+    (key: string) =>
+    (segmentId: string, visited: number, via: SpeakerJumpVia) => {
+      setVisitedByKey((all) => ({ ...all, [key]: visited }));
+      pendingJump.current = { segmentId, via };
+      skipReturnFocus.current = true;
+      onOpenChange(false);
+    };
 
   return (
     <Sheet
@@ -294,9 +302,9 @@ export function SpeakerPanel({
       onOpenChange={onOpenChange}
       onOpenChangeComplete={(next) => {
         if (!next && pendingJump.current) {
-          const segmentId = pendingJump.current;
+          const { segmentId, via } = pendingJump.current;
           pendingJump.current = null;
-          onJump(segmentId);
+          onJump(segmentId, via);
         }
       }}
     >

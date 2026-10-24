@@ -54,9 +54,9 @@ describe("SpeakerDock", () => {
   it("◀ ▶ 는 지금 시각 기준 이전·다음 발화로 간다", () => {
     const onJump = renderDock(100_000);
     fireEvent.click(screen.getByRole("button", { name: "화자 A 다음 발화" }));
-    expect(onJump).toHaveBeenLastCalledWith("a3");
+    expect(onJump).toHaveBeenLastCalledWith("a3", "step");
     fireEvent.click(screen.getByRole("button", { name: "화자 A 이전 발화" }));
-    expect(onJump).toHaveBeenLastCalledWith("a1");
+    expect(onJump).toHaveBeenLastCalledWith("a1", "step");
   });
 
   it("처음·끝에서는 그쪽 버튼이 잠긴다", () => {
@@ -72,9 +72,9 @@ describe("SpeakerDock", () => {
     strip.getBoundingClientRect = () =>
       ({ left: 0, width: 600, top: 0, height: 20 }) as DOMRect;
     fireEvent.click(strip, { clientX: 200 });
-    expect(onJump).toHaveBeenCalledWith("a2");
+    expect(onJump).toHaveBeenCalledWith("a2", "strip");
     fireEvent.click(strip, { clientX: 300 });
-    expect(onJump).toHaveBeenLastCalledWith("a3");
+    expect(onJump).toHaveBeenLastCalledWith("a3", "strip");
   });
 
   /** 1px = 1000ms 인 띠에서 [clientX] 를 누르고 고른 발화를 돌려준다. */
@@ -111,7 +111,7 @@ describe("SpeakerDock", () => {
       { id: "long", start: 100_000, end: 400_000 },
       { id: "after", start: 450_000, end: 460_000 },
     ]);
-    expect(onJump).toHaveBeenCalledWith("long");
+    expect(onJump).toHaveBeenCalledWith("long", "strip");
   });
 
   /**
@@ -123,7 +123,7 @@ describe("SpeakerDock", () => {
       { id: "m1", start: 2_782_560, end: 2_785_000 },
       { id: "m2", start: 2_919_240, end: 2_922_000 },
     ]);
-    expect(onJump).toHaveBeenCalledWith("m1");
+    expect(onJump).toHaveBeenCalledWith("m1", "strip");
   });
 
   it("마지막 발화 뒤를 눌러도 마지막 발화로 간다", () => {
@@ -131,7 +131,7 @@ describe("SpeakerDock", () => {
       { id: "m1", start: 100_000, end: 110_000 },
       { id: "last", start: 2_900_000, end: 2_950_000 },
     ]);
-    expect(onJump).toHaveBeenCalledWith("last");
+    expect(onJump).toHaveBeenCalledWith("last", "strip");
   });
 
   it("지금 시각이 세로선 위치로 선다", () => {

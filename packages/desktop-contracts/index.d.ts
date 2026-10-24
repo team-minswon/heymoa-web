@@ -10,6 +10,7 @@ export type RecordingSummary = {
     | "stopping"
     | "completed"
     | "failed";
+  /** Recording clock origin (epoch ms). The tray shows `now - startedAt`; it is not the session start. */
   startedAt: number | null;
   pendingMs: number;
   microphone: AudioInputState | null;
@@ -52,6 +53,7 @@ export type ActiveMeeting = {
   workspaceId: string;
   noteId: string;
   title: string;
+  /** Recording clock origin (epoch ms), same meaning as `RecordingSummary.startedAt`. */
   startedAt: number | null;
 };
 
