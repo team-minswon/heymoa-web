@@ -251,3 +251,50 @@ export function titleSourceOf(
     ? (source as TitleSource)
     : "UNKNOWN";
 }
+
+/** 턴이 도는 동안 AI 제목을 기다리는 상한(ms). 그 탭이 끝을 못 본 턴(대화를 옮겼다 등)이 빛을 남기지 않게 한다. */
+export const TITLE_TURN_WAIT_MS = 10 * 60_000;
+/** 첫 턴이 끝난 뒤 AI 제목을 기다리는 시간(ms). 지나면 서버의 임시 제목(첫 질문)을 보인다. */
+export const AI_TITLE_WAIT_MS = 15_000;
+
+/**
+ * 이 탭에서 시작한 대화별 「AI 제목을 기다리는 마감 시각」. 서버는 AI 제목을 요청했는지 알려 주지 않아서 클라이언트가
+ * 가른다 — 새 대화로 보낸 턴이 돌면 `TITLE_TURN_WAIT_MS`, 정상으로 끝나면 그때부터 `AI_TITLE_WAIT_MS`, 실패·취소면
+ * 기다리지 않는다(서버가 이 턴으로는 제목을 안 짓는다).
+ */
+export type TitleWaits = Readonly<Record<string, number>>;
+
+export function settleTitleWait(
+  waits: TitleWaits,
+  chatId: string,
+  done: boolean,
+  now: number
+): TitleWaits {
+  if (!(chatId in waits)) return waits;
+  if (done) return { ...waits, [chatId]: now + AI_TITLE_WAIT_MS };
+  return Object.fromEntries(
+    Object.entries(waits).filter(([waiting]) => waiting !== chatId)
+  );
+}
+
+/** 마감이 지난 대기를 걷는다. 그대로면 같은 객체다 — 상태 갱신이 다시 그리지 않게. */
+export function pruneTitleWaits(waits: TitleWaits, now: number): TitleWaits {
+  const kept = Object.entries(waits).filter(([, deadline]) => deadline > now);
+  return kept.length === Object.keys(waits).length
+    ? waits
+    : Object.fromEntries(kept);
+}
+
+/**
+ * 제목 자리에 빛(「새 대화」)을 세우는가. 기다리는 대화이고 제목이 아직 기본·첫 질문일 때뿐이다 — AI 제목이나 사용자가
+ * 붙인 이름이 오면 곧바로 그것이 선다. 기다리지 않는 옛 대화의 첫 질문 제목은 그대로 보인다.
+ */
+export function isTitlePending(
+  chat: { chatId: string; titleSource?: unknown },
+  waits: TitleWaits
+): boolean {
+  return (
+    chat.chatId in waits &&
+    (chat.titleSource === "DEFAULT" || chat.titleSource === "QUESTION")
+  );
+}

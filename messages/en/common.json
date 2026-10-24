@@ -22,6 +22,7 @@
   "agentChat": {
     "titleInput": "Chat title",
     "editTitle": "Rename",
+    "titlePending": "Generating title",
     "menu": "Menu for “{title}”",
     "rename": "Rename",
     "delete": "Delete",

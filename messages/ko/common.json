@@ -22,6 +22,7 @@
   "agentChat": {
     "titleInput": "대화 제목",
     "editTitle": "제목 바꾸기",
+    "titlePending": "제목 만드는 중",
     "menu": "「{title}」 메뉴",
     "rename": "이름 바꾸기",
     "delete": "삭제",

@@ -589,9 +589,10 @@ function accumulate(stream: MockTurnStream, frame: Frame) {
 
 /**
  * 첫 답이 끝나고 AI 제목이 붙기까지의 지연(ms). 실서버는 턴을 정산한 뒤 따로 제목을 지어 `chats.changed` 로 알린다 —
- * 목도 늦게 붙여야 「새 대화 → 첫 질문 → AI 제목」으로 머리글이 두 번 바뀌는 것이 보인다. 값은 눈으로 보이게 고른 것이다.
+ * 목도 늦게 붙여야 이 탭이 기다리는 동안 「새 대화」 빛이 서다가 AI 제목으로 건너오는 것이 보인다(APP-1440). 값은 눈으로
+ * 보이게 고른 것이고, 웹이 기다리는 15초(`AI_TITLE_WAIT_MS`) 안이다.
  */
-const AI_TITLE_DELAY_MS = 1_500;
+const AI_TITLE_DELAY_MS = 3_000;
 
 function scheduleAiTitle(chatId: string) {
   setTimeout(() => {

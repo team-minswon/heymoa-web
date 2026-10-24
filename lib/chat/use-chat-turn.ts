@@ -33,10 +33,15 @@ import type { ChatMutationContext } from "@/lib/analytics/track";
 import {
   type ChatTitleSnapshot,
   dropChatFromList,
+  isTitlePending,
+  pruneTitleWaits,
   retitleChatInList,
   revertChatTitle,
   revertChatTitleInList,
   runningLabel,
+  settleTitleWait,
+  TITLE_TURN_WAIT_MS,
+  type TitleWaits,
   titleSourceOf,
 } from "@/lib/chat/chat-list";
 import type { ScopeChip } from "@/lib/chat/scope-chip";
@@ -119,6 +124,18 @@ export function useChatTurn({
   const [isSending, setIsSending] = useState(false);
   /** 이 턴을 시작할 때의 히스토리 길이. 뒤에 붙은 것만 이 턴으로 본다. */
   const [turnBaseline, setTurnBaseline] = useState(0);
+  /** 이 탭에서 시작한 대화가 AI 제목을 기다리는 마감(APP-1440). 그동안 제목 자리는 빛으로 선다. */
+  const [titleWaits, setTitleWaits] = useState<TitleWaits>({});
+  // 가장 이른 마감에 맞춰 걷는다. 걷히면 그 대화는 서버의 임시 제목을 보인다
+  useEffect(() => {
+    const deadlines = Object.values(titleWaits);
+    if (deadlines.length === 0) return;
+    const timer = setTimeout(
+      () => setTitleWaits((current) => pruneTitleWaits(current, Date.now())),
+      Math.max(0, Math.min(...deadlines) - Date.now())
+    );
+    return () => clearTimeout(timer);
+  }, [titleWaits]);
 
   // 건강한 이벤트 스트림이면 `chats.changed` 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I04).
   const streamHealthy = useEventStreamHealthy();
@@ -377,11 +394,22 @@ export function useChatTurn({
         setPendingUserAt(new Date().toISOString());
         setPendingScope(scope);
 
+        // 아직 제목이 없는 대화(새로 만들 대화 포함)면 AI 제목을 기다린다. 첫 질문 문장을 제목으로 먼저 내보이지 않는다
+        const untitled =
+          !sessionId ||
+          isSessionGone ||
+          titleSourceOf(chats, sessionId) === "DEFAULT";
         // 실패 문구는 전역 MutationCache 가 토스트한다
         const chatId = await ensureSession().catch(() => null);
         if (!chatId) {
           setPendingUserMessage(null);
           return false;
+        }
+        if (untitled) {
+          setTitleWaits((current) => ({
+            ...current,
+            [chatId]: Date.now() + TITLE_TURN_WAIT_MS,
+          }));
         }
 
         // 범위는 본문이 아니라 칩 배열이 정한다
@@ -428,13 +456,16 @@ export function useChatTurn({
       }
     },
     [
+      chats,
       ensureSession,
       isBusy,
+      isSessionGone,
       messages.length,
       onTurnActiveChange,
       pendingUserMessage,
       reconcile,
       sendMessage,
+      sessionId,
       stream,
     ]
   );
@@ -906,6 +937,13 @@ export function useChatTurn({
   // 렌더 중에 맞춘다. effect 로 미루면 낡은 값으로 한 번 그리는 것이 곧 깜빡임이다
   if (settledTurnId !== null && settledTurnId !== finishedTurn) {
     setFinishedTurn(settledTurnId);
+    // 정상으로 끝난 턴 뒤에야 서버가 AI 제목을 짓는다. 실패·취소면 기다리지 않고 임시 제목을 보인다
+    if (sessionId) {
+      const done = stream.state.phase === "done";
+      setTitleWaits((current) =>
+        settleTitleWait(current, sessionId, done, Date.now())
+      );
+    }
   }
 
   // 첫 쪽에 올라온 대화는 옛 쪽에서 뺀다 — 옛 대화에 이어 쓰면 두 쪽에 다 있다.
@@ -921,6 +959,8 @@ export function useChatTurn({
       listedChats.map((chat) => ({
         chatId: chat.chatId,
         title: chat.title,
+        titlePending: isTitlePending(chat, titleWaits),
+        titleAwaited: chat.chatId in titleWaits,
         // 목록 정렬 기준과 같은 값을 적어야 「1분 전인데 세 번째 줄」이 안 생긴다
         updatedAt: chat.updatedAt,
         label: runningLabel(chat, {
@@ -936,6 +976,7 @@ export function useChatTurn({
       sessionId,
       stream.state.phase,
       stream.state.turnId,
+      titleWaits,
     ]
   );
 

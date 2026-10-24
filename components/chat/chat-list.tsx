@@ -28,6 +28,10 @@ import { cn } from "@/lib/utils";
 export type ChatListRow = {
   chatId: string;
   title: string;
+  /** AI 제목을 기다리는 중(APP-1440). 제목 대신 「새 대화」가 빛난다. */
+  titlePending?: boolean;
+  /** 이 탭이 제목을 기다린 대화. 기다림이 끝나 제목이 서는 순간만 건너오기를 그린다 — 기록을 열 때마다 줄이 번지지 않게. */
+  titleAwaited?: boolean;
   /** 진행 배지. null이면 그 대화는 지금 아무것도 안 한다. */
   label: RunningLabel | null;
   /** 마지막으로 쓴 시각. 정렬 기준과 같은 값이어야 순서와 표시가 안 어긋난다. */
@@ -193,16 +197,32 @@ export function ChatList({
                           : "hover:bg-[var(--el-canvas-soft)]"
                       )}
                     >
-                      {/* 잘린 제목은 올려 보면 전체가 보인다 */}
-                      <span
-                        title={chat.title}
-                        className={cn(
-                          "min-w-0 flex-1 truncate text-sm text-[var(--el-ink)]",
-                          current && "font-medium"
-                        )}
-                      >
-                        {chat.title}
-                      </span>
+                      {/* 잘린 제목은 올려 보면 전체가 보인다. 정해지면 `key` 가 바뀌어 건너오기를 그린다 */}
+                      {chat.titlePending ? (
+                        <span
+                          key="pending"
+                          aria-busy
+                          aria-label={t("titlePending")}
+                          className={cn(
+                            "chat-shimmer min-w-0 flex-1 truncate text-sm",
+                            current && "font-medium"
+                          )}
+                        >
+                          {t("newChat")}
+                        </span>
+                      ) : (
+                        <span
+                          key="title"
+                          title={chat.title}
+                          className={cn(
+                            "min-w-0 flex-1 truncate text-sm text-[var(--el-ink)]",
+                            chat.titleAwaited && "chat-title-in",
+                            current && "font-medium"
+                          )}
+                        >
+                          {chat.title}
+                        </span>
+                      )}
                       {/* 배지와 시각은 한 자리를 나눠 쓴다. 둘 다 서면 좁은 폭에서 제목 자리가 준다. */}
                       <span
                         className={cn(

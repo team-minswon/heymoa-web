@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AI_TITLE_WAIT_MS,
   dropChatFromList,
+  isTitlePending,
+  pruneTitleWaits,
+  settleTitleWait,
   groupChatsByRecency,
   relativeUpdatedAt,
   retitleChatInList,
@@ -289,5 +293,42 @@ describe("상대 시각은 앱 언어로", () => {
     expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "en")).toBe(
       "just now"
     );
+  });
+});
+
+describe("AI 제목 기다림 (APP-1440)", () => {
+  it("정상으로 끝난 턴은 그때부터 기다리고, 실패·취소면 바로 걷는다", () => {
+    const waits = { A: 99, B: 99 };
+    expect(settleTitleWait(waits, "A", true, 1_000)).toEqual({
+      A: 1_000 + AI_TITLE_WAIT_MS,
+      B: 99,
+    });
+    expect(settleTitleWait(waits, "A", false, 1_000)).toEqual({ B: 99 });
+    expect(settleTitleWait(waits, "Z", true, 1_000)).toBe(waits);
+  });
+
+  it("마감이 지난 것만 걷고, 걷을 게 없으면 같은 객체다", () => {
+    const waits = { A: 10, B: 20 };
+    expect(pruneTitleWaits(waits, 15)).toEqual({ B: 20 });
+    expect(pruneTitleWaits(waits, 5)).toBe(waits);
+  });
+
+  it("기다리는 대화의 기본·첫 질문 제목만 빛난다", () => {
+    const waits = { A: 1 };
+    expect(isTitlePending({ chatId: "A", titleSource: "DEFAULT" }, waits)).toBe(
+      true
+    );
+    expect(
+      isTitlePending({ chatId: "A", titleSource: "QUESTION" }, waits)
+    ).toBe(true);
+    expect(isTitlePending({ chatId: "A", titleSource: "AI" }, waits)).toBe(
+      false
+    );
+    expect(isTitlePending({ chatId: "A", titleSource: "USER" }, waits)).toBe(
+      false
+    );
+    expect(
+      isTitlePending({ chatId: "B", titleSource: "QUESTION" }, waits)
+    ).toBe(false);
   });
 });

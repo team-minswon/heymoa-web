@@ -558,8 +558,16 @@ function PersonalChatPanel({
   const editingTitle =
     turn.chatRows.find((chat) => chat.chatId === editingTitleId)?.title ??
     headerTitle;
-  /** 첫 턴에서 server 가 제목을 지어 줄 때까지 「곧 바뀐다」를 빛으로 알린다. */
-  const isTitlePending = headerTitle === "새 대화" && turn.isBusy;
+  /**
+   * 제목이 정해질 때까지 「곧 바뀐다」를 빛으로 알린다. 아직 목록에 없는 새 대화의 첫 턴이거나, AI 제목을 기다리는
+   * 대화다(APP-1440) — 그동안 첫 질문 문장 대신 「새 대화」가 빛난다.
+   */
+  const isTitlePending =
+    (turn.chatRows.find((chat) => chat.chatId === turn.sessionId)
+      ?.titlePending ??
+      false) ||
+    (headerTitle === "새 대화" && turn.isBusy);
+  const shownTitle = isTitlePending ? "새 대화" : headerTitle;
 
   // 닫힌 패널 대신 런처가 알린다. 승인 대기는 사람을 기다리는 중이라 따로 말한다
   const attention: AgentAttention =
@@ -640,16 +648,21 @@ function PersonalChatPanel({
         type="button"
         disabled={!turn.sessionId}
         aria-label={
-          turn.sessionId ? `${t("editTitle")}: ${headerTitle}` : undefined
+          isTitlePending
+            ? t("titlePending")
+            : turn.sessionId
+              ? `${t("editTitle")}: ${headerTitle}`
+              : undefined
         }
-        title={headerTitle}
+        aria-busy={isTitlePending || undefined}
+        title={shownTitle}
         onClick={() => setEditingTitleId(turn.sessionId)}
         className="flex h-8 w-full min-w-0 items-center rounded-control px-2 text-left outline-none enabled:cursor-text enabled:hover:bg-[var(--el-canvas-soft)] focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default"
       >
         {/* 제목이 정해지면 `key` 가 바뀌어 다시 마운트되고, 마운트 애니메이션이 건너오기를 그린다.
             빛(정해지는 중)과 건너오기(정해졌다)는 둘 다 `animation` 이라 같이 못 선다. */}
         <span
-          key={headerTitle}
+          key={isTitlePending ? "" : headerTitle}
           className={cn(
             "truncate text-sm font-medium",
             isTitlePending
@@ -657,7 +670,7 @@ function PersonalChatPanel({
               : "chat-title-in text-[var(--el-ink)]"
           )}
         >
-          {headerTitle}
+          {shownTitle}
         </span>
       </button>
     );

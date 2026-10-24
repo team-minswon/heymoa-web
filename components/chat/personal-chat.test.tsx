@@ -1352,6 +1352,67 @@ describe("PersonalChatProvider", () => {
     });
   });
 
+  describe("AI 제목을 기다리는 동안 (APP-1440)", () => {
+    function rerendered(
+      rerender: (ui: React.ReactNode) => void,
+      client: QueryClient
+    ) {
+      rerender(
+        <QueryClientProvider client={client}>
+          <PersonalChatProvider workspaceId={WORKSPACE_ID}>
+            {null}
+          </PersonalChatProvider>
+        </QueryClientProvider>
+      );
+    }
+
+    it("이 탭에서 연 새 대화는 첫 질문 문장 대신 「새 대화」가 빛나다가 AI 제목으로 바뀐다", async () => {
+      const { rerender, client } = renderChat();
+      openPanel();
+      await sendMessage("정리해줘");
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+          "disabled",
+          false
+        )
+      );
+
+      // 서버가 첫 질문으로 임시 제목을 붙였다 — 아직 보이지 않는다
+      state.chats = [
+        { ...chatRow(NEW_CHAT_ID), title: "정리해줘", titleSource: "QUESTION" },
+      ] as never;
+      rerendered(rerender, client);
+      const pending = await screen.findByRole("button", {
+        name: "제목 만드는 중",
+      });
+      expect(pending.getAttribute("aria-busy")).toBe("true");
+      expect(pending.querySelector(".chat-shimmer")?.textContent).toBe(
+        "새 대화"
+      );
+
+      state.chats = [
+        { ...chatRow(NEW_CHAT_ID), title: "회의 정리", titleSource: "AI" },
+      ] as never;
+      rerendered(rerender, client);
+      const titled = await screen.findByRole("button", {
+        name: "제목 바꾸기: 회의 정리",
+      });
+      expect(titled.getAttribute("aria-busy")).toBeNull();
+      expect(titled.querySelector(".chat-title-in")).toBeTruthy();
+    });
+
+    it("이 탭에서 시작하지 않은 옛 대화의 첫 질문 제목은 곧바로 보인다", async () => {
+      state.chats = [
+        { ...chatRow(CHAT_ID), title: "지난 질문", titleSource: "QUESTION" },
+      ] as never;
+      renderChat();
+      openPanel();
+      expect(
+        await screen.findByRole("button", { name: "제목 바꾸기: 지난 질문" })
+      ).toBeTruthy();
+    });
+  });
+
   describe("겹친 요청과 외부 갱신 (APP-1433 리뷰)", () => {
     /** 손으로 끝내는 약속. 요청이 떠 있는 사이를 재현한다. */
     function deferred<T>() {
