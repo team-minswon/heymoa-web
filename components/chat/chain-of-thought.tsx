@@ -369,7 +369,7 @@ function Disclosure({
                   `${LIVE_TAIL} overflow-y-auto overscroll-contain [scrollbar-width:thin]`,
                 tail &&
                   overflow &&
-                  "[mask-image:linear-gradient(to_bottom,transparent,black_2.5rem)]"
+                  "[mask-image:linear-gradient(to_bottom,transparent,black_0.75lh)]"
               )}
             >
               {/* 줄이 늘어 위로 밀릴 때 자리 이동만 옮긴다(크기는 안 건드려 글자가 늘어나지 않는다). */}
@@ -409,7 +409,12 @@ function Disclosure({
  * 도는 동안 보이는 높이. 한 줄(12px·1.625)과 줄 간격(6px)이 25.5px 라 네 줄쯤이다 — 칩이 든 줄이나 줄바꿈된 문장이
  * 섞이면 셋. 근거 있는 값이 아니라 답 위가 덜 출렁이는 선에서 고른 값이다.
  */
-const LIVE_TAIL = "max-h-[6.5rem]";
+/**
+ * 꼬리 높이 = **단계 줄 4줄**. 줄 글자(`text-xs leading-relaxed`)의 줄 높이(`lh`)로 재고, 줄 사이 간격
+ * (`space-y-1.5` = 0.375rem) 세 번을 더한다. 고정 px 로 두면 글자 크기·줄 높이가 바뀔 때 보이는 줄 수가 같이 바뀐다.
+ * 줄바꿈된 단계나 칩이 든 단계는 그만큼 자리를 더 쓴다 — 넘친 위쪽은 스크롤로 본다.
+ */
+const LIVE_TAIL = "text-xs leading-relaxed max-h-[calc(4lh+1.125rem)]";
 
 /** 「45초」·「2분 5초」. */
 function duration(seconds: number) {

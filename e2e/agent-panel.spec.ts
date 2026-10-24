@@ -195,6 +195,13 @@ for (const width of [1440, 1024]) {
       await expect(
         thread.locator("[data-current], [data-tail]").first()
       ).toBeVisible();
+      // 꼬리 높이는 단계 줄 4줄(12px × 1.625 = 19.5px × 4 + 간격 6px × 3 = 96px)이다
+      const tail = thread.locator("[data-tail]").first();
+      await expect(tail).toBeVisible({ timeout: 10_000 });
+      const maxHeight = await tail.evaluate(
+        (el) => parseFloat(getComputedStyle(el).maxHeight)
+      );
+      expect(maxHeight).toBeCloseTo(96, 0);
       // 답 받는 동안 보내기 자리에 중지가 선다
       await expect(
         page.getByRole("button", { name: "중지", exact: true })
