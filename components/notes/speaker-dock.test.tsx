@@ -71,6 +71,49 @@ describe("SpeakerDock", () => {
     ).toBeDisabled();
   });
 
+  // 띠에는 짧은 발화도 다 보이는데 ◀ ▶ 가 1.5초 이상만 밟아 큰 덩어리로 건너뛰었다.
+  // 도크는 모든 발화를 세로선 기준으로 하나씩 밟는다(맞장구 건너뛰기는 패널 지정 흐름 몫).
+  describe("짧은 발화 사이 이동", () => {
+    const short = [
+      { segmentId: "s1", startedAtMs: 10_000, endedAtMs: 11_000 },
+      { segmentId: "s2", startedAtMs: 11_300, endedAtMs: 11_800 },
+      { segmentId: "long", startedAtMs: 50_000, endedAtMs: 60_000 },
+      { segmentId: "s3", startedAtMs: 90_000, endedAtMs: 90_800 },
+    ];
+    const shortStat = stat({ utterances: short, stepTargets: [short[2]] });
+    const buttons = () => ({
+      prev: screen.getByRole("button", { name: "화자 A 이전 발화" }),
+      next: screen.getByRole("button", { name: "화자 A 다음 발화" }),
+    });
+
+    it.each([
+      [0, null, "s1"],
+      [10_000, null, "s2"],
+      [11_300, "s1", "long"],
+      [50_000, "s2", "s3"],
+      [90_000, "long", null],
+    ])("세로선 %i ms 에서 이전 %s · 다음 %s", (at, prev, next) => {
+      const onJump = renderDock(at, vi.fn(), [shortStat]);
+      const { prev: prevButton, next: nextButton } = buttons();
+      if (next) {
+        fireEvent.click(nextButton);
+        expect(onJump).toHaveBeenLastCalledWith(next, "step");
+      } else expect(nextButton).toBeDisabled();
+      if (prev) {
+        fireEvent.click(prevButton);
+        expect(onJump).toHaveBeenLastCalledWith(prev, "step");
+      } else expect(prevButton).toBeDisabled();
+    });
+
+    it("두 발화 사이에서는 세로선 바로 앞뒤 발화로 간다", () => {
+      const onJump = renderDock(30_000, vi.fn(), [shortStat]);
+      fireEvent.click(buttons().next);
+      expect(onJump).toHaveBeenLastCalledWith("long", "step");
+      fireEvent.click(buttons().prev);
+      expect(onJump).toHaveBeenLastCalledWith("s2", "step");
+    });
+  });
+
   it("띠를 누르면 누른 시각에 가장 가까운 발화로 간다", () => {
     const onJump = renderDock(0);
     const strip = screen.getByTestId("speaker-dock-strip");

@@ -121,12 +121,14 @@ function DockRow({
   assign: ReactNode;
   onJump: (segmentId: string, via: SpeakerJumpVia) => void;
 }) {
-  // ◀ ▶ 는 맞장구를 건너뛰고, 띠는 모든 발화로 간다 — 띠에 선 막대는 다 실제로 말한 자리다.
-  const steps = stat.stepTargets;
-  const prev = [...steps]
-    .reverse()
-    .find((t) => t.startedAtMs < currentMs - EPSILON_MS);
-  const next = steps.find((t) => t.startedAtMs > currentMs + EPSILON_MS);
+  // **◀ ▶ 는 이 화자의 모든 발화를 하나씩 밟는다** — 띠에 보이는 짧은 발화도 건너뛰지 않는다.
+  // 맞장구 건너뛰기([SpeakerStat.stepTargets], APP-1163)는 화자 패널의 지정 흐름(「다음 발화로」)
+  // 몫이다. 도크에서 그 규칙을 쓰면 띠에 보이는 점을 두고 큰 덩어리로만 건너뛴다.
+  // 기준은 세로선([currentMs]) — 이동하면 그 발화의 시작 시각이 되므로 여유 없이 엄격히 비교한다.
+  // 여유를 두면 0.5초 안에 이어진 짧은 발화(「네. 네.」)를 건너뛴다.
+  const steps = stat.utterances;
+  const prev = steps.findLast((t) => t.startedAtMs < currentMs);
+  const next = steps.find((t) => t.startedAtMs > currentMs);
   const [hover, setHover] = useState<number | null>(null);
   const now = Math.min(1, Math.max(0, currentMs / durationMs));
   const reduced = useReducedMotion();

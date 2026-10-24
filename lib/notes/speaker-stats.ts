@@ -60,9 +60,9 @@ export type SpeakerStat = {
    */
   utterances: SpeakerUtterance[];
   /**
-   * 이전·다음 버튼이 차례로 도는 발화(시간순, [utterances] 의 부분집합). **맞장구를 건너뛴다** —
+   * 화자 패널의 지정 흐름(「다음 발화로」)이 차례로 도는 발화(시간순, [utterances] 의 부분집합). **맞장구를 건너뛴다** —
    * 「네」 한 마디는 누구인지 알아보는 데 쓸모가 없다(APP-1163). 짧은 발화뿐인 사람은 전부 대상이다.
-   * 띠에는 이 규칙을 쓰지 않는다 — 실제 말한 자리는 짧아도 다 보여야 한다.
+   * 띠와 도크의 ◀ ▶ 에는 이 규칙을 쓰지 않는다 — 실제 말한 자리는 짧아도 다 보이고 다 밟혀야 한다.
    */
   stepTargets: SpeakerUtterance[];
 };
@@ -74,7 +74,7 @@ export type SpeakerUtterance = {
   endedAtMs: number;
 };
 
-/** 이보다 짧은 발화는 이전·다음 버튼이 건너뛴다 — 누구인지 알아보는 단서로 안 친다. */
+/** 이보다 짧은 발화는 화자 패널의 「다음 발화로」가 건너뛴다 — 누구인지 알아보는 단서로 안 친다. */
 export const MIN_STEP_SEGMENT_MS = 1500;
 
 /**
