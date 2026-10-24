@@ -340,6 +340,19 @@ describe("UnseenCount", () => {
     expect(faded).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("채운 배지로 그리고 99를 넘으면 99+로 줄인다", () => {
+    const view = render(<UnseenCount count={7} />);
+    expect(screen.getByLabelText("새 답변 7개")).toHaveClass(
+      "rounded-full",
+      "min-w-[18px]",
+      "bg-[var(--el-primary)]",
+      "tabular-nums"
+    );
+
+    view.rerender(<UnseenCount count={120} />);
+    expect(screen.getByLabelText("새 답변 120개")).toHaveTextContent("99+");
+  });
+
   it("숫자가 없었으면 아무것도 그리지 않는다", () => {
     const { container } = render(<UnseenCount count={0} />);
     expect(container).toBeEmptyDOMElement();

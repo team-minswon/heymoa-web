@@ -312,7 +312,7 @@ export function WorkspaceSidebar({
                       <UnseenCount
                         count={notifications.unreadCount ?? 0}
                         label={(n) => `안 읽은 알림 ${n}개`}
-                        className="ml-auto text-[11px] text-[var(--el-muted)]"
+                        className="ml-auto"
                       />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -514,7 +514,7 @@ export function WorkspaceSidebar({
                 <span>문의·피드백</span>
                 <UnseenCount
                   count={feedbackUnseen}
-                  className="ml-auto text-[11px] text-[var(--el-muted)]"
+                  className="ml-auto"
                 />
               </SidebarMenuButton>
             </SidebarMenuItem>

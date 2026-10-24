@@ -105,6 +105,8 @@ export function composeFeedback(message: string): string {
 /**
  * 새 답변 수. 읽어서 0 이 되면 마지막 숫자를 남긴 채 150ms 동안 흐려지며 사라진다 — 숫자가 「0」으로 바뀌거나 자리가
  * 툭 빠지지 않게. 한 번도 숫자가 없었으면 아무것도 그리지 않는다. 사이드바와 「내 문의」 탭이 같이 쓴다.
+ * 맨 숫자는 "새로 볼 것"으로 안 읽혀서 채운 배지로 그린다 — 한 자리는 원, 두 자리부터 알약. 채움은 primary 하나라
+ * 선택된 항목(옅은 회색 배경) 위에서도 대비가 그대로다.
  */
 export function UnseenCount({
   count,
@@ -125,7 +127,7 @@ export function UnseenCount({
       aria-hidden={!visible}
       aria-label={visible ? label(count) : undefined}
       className={cn(
-        "tabular-nums transition-opacity duration-150 motion-reduce:transition-none",
+        "inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] px-[5px] text-[11px] leading-none font-semibold text-[var(--el-on-primary)] tabular-nums transition-opacity duration-150 motion-reduce:transition-none",
         visible ? "opacity-100" : "opacity-0",
         className
       )}
@@ -284,7 +286,7 @@ export function FeedbackDialog({
               내 문의
               <UnseenCount
                 count={unseen}
-                className="ml-1.5 text-[11px] text-[var(--el-ink)]"
+                className="ml-1.5"
               />
             </TabsTrigger>
           </TabsList>
