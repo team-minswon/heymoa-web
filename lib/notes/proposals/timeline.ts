@@ -76,8 +76,9 @@ export type TimelineGroup = {
   previous: { key: string; startMs: number | null } | null;
   /** 머리 주제. 어느 주제에도 들지 않은 줄의 묶음이면 `null`. */
   agenda: TimelineAgenda | null;
+  /** 묶음 근거 중 가장 이른 시각. 근거는 만든 순서로 오므로 첫 근거가 가장 이르지 않을 수 있다. */
   startMs: number | null;
-  /** 다음 안건이 시작한 시각. 마지막 묶음이면 `null`. */
+  /** 묶음 근거 중 가장 늦은 시각. 맨 아래 묶음은 아직 이어질 수 있어 `null`. */
   endMs: number | null;
   /** 지금 이야기하는 주제다 — 기록 중이면 「논의 중」이다. */
   last: boolean;
@@ -228,6 +229,13 @@ export function selectTimeline(
   let current: TimelineGroup | null = null;
   let currentAgendaId: string | null = null;
   const lastByAgenda = new Map<string, TimelineGroup>();
+  // 근거는 만든 순서(`byOrder`)로 와서 시각이 거꾸로 설 수 있다. 머리 구간은 시각의 최소·최대로 잡는다.
+  const latest = new Map<TimelineGroup, number>();
+  const widen = (group: TimelineGroup, at: number | null) => {
+    if (at === null) return;
+    if (group.startMs === null || at < group.startMs) group.startMs = at;
+    latest.set(group, Math.max(latest.get(group) ?? at, at));
+  };
   const agendaOf = new Map<string, AgendaList["agendas"][number]>(
     (byAgenda?.list.agendas ?? []).map((agenda) => [agenda.agendaId, agenda])
   );
@@ -241,7 +249,6 @@ export function selectTimeline(
         : null;
       if (!current || placed !== currentAgendaId) {
         const startMs = firstAt(proposal);
-        if (current) current.endMs = startMs;
         const agenda: AgendaList["agendas"][number] | undefined = placed
           ? agendaOf.get(placed)
           : undefined;
@@ -273,7 +280,6 @@ export function selectTimeline(
       }
     } else if (proposal.kind === "AGENDA") {
       const startMs = firstAt(proposal);
-      if (current) current.endMs = startMs;
       current = {
         key: proposal.proposalId,
         previous: null,
@@ -290,6 +296,7 @@ export function selectTimeline(
         items: [],
       };
       groups.push(current);
+      widen(current, startMs);
       continue;
     }
     if (!current) {
@@ -310,6 +317,7 @@ export function selectTimeline(
     counts.ALL += 1;
     counts[FILTER_OF[tone]] += 1;
     current.total += 1;
+    widen(current, firstAt(proposal));
 
     if (!inFilter(tone, filter)) continue;
 
@@ -323,6 +331,9 @@ export function selectTimeline(
         : null,
     });
   }
+
+  for (const group of groups.slice(0, -1))
+    group.endMs = latest.get(group) ?? null;
 
   // 옛 방식은 마지막 안건이, 안건 정본은 맨 아래 묶음이 끝나지 않은 주제일 때 지금 주제다
   const lastAgenda = byAgenda

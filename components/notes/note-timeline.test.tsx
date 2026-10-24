@@ -334,6 +334,48 @@ describe("NoteTimeline", () => {
     );
   });
 
+  it("앞선 논의로 가면 그 묶음을 가운데로 옮겨 같은 형광펜을 긋고, 획이 끝나면 걷는다", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const a = head({ content: "온보딩 이탈률 보고", atMs: 60_000 });
+    const b = head({ content: "결제 방식을 정한다", atMs: 120_000 });
+    const c = head({ content: "온보딩 단계를 줄인다", atMs: 180_000 });
+    withLedger(a, b, c);
+    agendas.data = agendaResponse(c.createdSequence, [
+      {
+        agendaId: "onboarding",
+        title: "온보딩 개편",
+        proposalIds: [a.proposalId, c.proposalId],
+      },
+      {
+        agendaId: "payment",
+        title: "결제 실패 대응",
+        proposalIds: [b.proposalId],
+      },
+    ]);
+    render(
+      <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
+    );
+    // 근거가 하나인 묶음은 같은 시각을 두 번 쓰지 않는다
+    expect(screen.queryByText(/01:00 – 01:00/)).toBeNull();
+    expect(document.querySelectorAll(".evidence-mark")).toHaveLength(0);
+    vi.useFakeTimers();
+    fireEvent.click(
+      screen.getByRole("button", { name: "앞선 온보딩 개편 논의 01:00로 가기" })
+    );
+    const marks = document.querySelectorAll(".evidence-mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toHaveTextContent("온보딩 개편");
+    expect(marks[0].closest("button")?.getAttribute("aria-expanded")).toBe(
+      "true"
+    );
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(document.querySelectorAll(".evidence-mark")).toHaveLength(0);
+    // @ts-expect-error jsdom 에는 없는 메서드를 걷어 다른 테스트에 남기지 않는다
+    delete Element.prototype.scrollIntoView;
+  });
+
   it("요약에서 짚은 안건의 첫 묶음을 펼쳐 머리에 형광펜을 긋고, 획이 지워지면 비우라고 알린다 (APP-1290)", () => {
     vi.useFakeTimers();
     const a = head({ content: "온보딩 단계를 줄인다", atMs: 60_000 });

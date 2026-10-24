@@ -198,7 +198,7 @@ export function minutesFileName(title: string, whenIso: string) {
 const rangeOf = (startMs: number | null, endMs: number | null) =>
   startMs === null
     ? null
-    : endMs === null
+    : endMs === null || endMs === startMs
       ? formatOffset(startMs)
       : `${formatOffset(startMs)} – ${formatOffset(endMs)}`;
 

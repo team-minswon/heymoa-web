@@ -82,10 +82,10 @@ describe("selectTimeline", () => {
     expect(
       groups.map((g) => g.items.map((i) => i.proposal.proposalId))
     ).toEqual([[early.proposalId], [d1.proposalId], [t1.proposalId]]);
-    // 안건의 끝은 다음 안건의 시작이고, 마지막 안건만 열려 있다.
+    // 안건의 끝은 묶음 근거의 가장 늦은 시각이고, 마지막 안건만 열려 있다.
     expect(groups[1]).toMatchObject({
       startMs: 120_000,
-      endMs: 240_000,
+      endMs: 180_000,
       last: false,
     });
     expect(groups[2]).toMatchObject({
@@ -93,6 +93,15 @@ describe("selectTimeline", () => {
       endMs: null,
       last: true,
     });
+  });
+
+  it("근거 시각이 만든 순서와 거꾸로여도 구간은 시각의 최소·최대다", () => {
+    const a1 = head({ kind: "AGENDA", content: "배포", atMs: 3_325_000 });
+    const d1 = head({ kind: "DECISION", atMs: 3_208_000 });
+    const d2 = head({ kind: "DECISION", atMs: 3_400_000 });
+    const a2 = head({ kind: "AGENDA", content: "회고", atMs: 3_100_000 });
+    const { groups } = selectTimeline(stateOf(a1, d1, d2, a2), "ALL");
+    expect(groups[0]).toMatchObject({ startMs: 3_208_000, endMs: 3_400_000 });
   });
 
   it("안건이 없으면 머리 없는 묶음 하나다", () => {

@@ -167,7 +167,8 @@ const NO_PLACEMENT: AgendaPlacement = new Map();
 function groupRange(group: TimelineGroup, recording: boolean) {
   if (group.startMs === null) return null;
   const start = formatOffset(group.startMs);
-  if (group.endMs !== null) return `${start} – ${formatOffset(group.endMs)}`;
+  if (group.endMs !== null && group.endMs !== group.startMs)
+    return `${start} – ${formatOffset(group.endMs)}`;
   if (group.last && recording) return `${start} – 지금`;
   return start;
 }
@@ -449,9 +450,9 @@ export function NoteTimeline({
       flipped: NONE,
     }));
   };
-  const jumpToGroup = (key: string) => {
+  const jumpToGroup = (key: string, block: ScrollLogicalPosition = "start") => {
     updateFollowing(false);
-    pendingScroll.current = { id: groupId(key), block: "start" };
+    pendingScroll.current = { id: groupId(key), block };
     setView((current) => {
       const flipped = new Set(current.flipped);
       if (current.foldByDefault) flipped.add(key);
@@ -533,6 +534,28 @@ export function NoteTimeline({
     ? evidenceMarkOf(focusGroup.agenda.title, { holdMs: SCREEN_CHANGE_HOLD_MS })
     : null;
   const focusLifetimeMs = focusMark?.lifetimeMs ?? 0;
+  // 「앞선 논의」도 같은 형광펜을 긋는다. 화면이 그대로인 이동이라 근거 점프와 같은 시간만 머문다.
+  // `nonce` 는 같은 링크를 다시 누를 때 획을 처음부터 다시 긋게 한다.
+  const [priorMark, setPriorMark] = useState<{
+    key: string;
+    nonce: number;
+  } | null>(null);
+  const priorGroup = priorMark
+    ? allTimeline.groups.find((group) => group.key === priorMark.key)
+    : undefined;
+  const priorPen = priorGroup?.agenda
+    ? evidenceMarkOf(priorGroup.agenda.title)
+    : null;
+  const priorLifetimeMs = priorPen?.lifetimeMs ?? 0;
+  useEffect(() => {
+    if (!priorMark) return;
+    const timer = window.setTimeout(() => setPriorMark(null), priorLifetimeMs);
+    return () => window.clearTimeout(timer);
+  }, [priorMark, priorLifetimeMs]);
+  const jumpToPrior = (key: string) => {
+    setPriorMark((current) => ({ key, nonce: (current?.nonce ?? 0) + 1 }));
+    jumpToGroup(key, "center");
+  };
   useEffect(() => {
     if (!focusKey) return;
     // 탭을 막 바꾼 참이라 다음 프레임에 옮긴다(전사 점프와 같다).
@@ -931,6 +954,10 @@ export function NoteTimeline({
                       >
                         {key === focusKey && focusMark ? (
                           <span {...focusMark.props}>{group.agenda.title}</span>
+                        ) : key === priorMark?.key && priorPen ? (
+                          <span key={priorMark.nonce} {...priorPen.props}>
+                            {group.agenda.title}
+                          </span>
                         ) : (
                           group.agenda.title
                         )}
@@ -962,7 +989,7 @@ export function NoteTimeline({
                       <button
                         type="button"
                         aria-label={`앞선 ${group.agenda.title} 논의${group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}로 가기`}
-                        onClick={() => jumpToGroup(group.previous!.key)}
+                        onClick={() => jumpToPrior(group.previous!.key)}
                         className={cn(
                           "h-[26px] shrink-0 justify-self-start rounded-[7px] px-2 text-xs text-[var(--el-muted)] underline decoration-[var(--el-hairline-strong)] underline-offset-2 hover:text-[var(--el-ink)] sm:h-full",
                           group.agenda.citation ? "col-start-2" : "col-start-1"
