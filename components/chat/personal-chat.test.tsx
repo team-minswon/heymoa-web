@@ -770,7 +770,7 @@ describe("PersonalChatProvider", () => {
       expect(chipsInInput()).toEqual(["주간 제품 회의"]);
       expect(
         screen.getByRole("textbox", { name: "메시지" }).textContent
-      ).toContain("「주간 제품 회의」 회의를 요약해줘");
+      ).toContain("이 회의를 요약해줘");
       fireEvent.click(screen.getByRole("button", { name: "보내기" }));
       await waitFor(() => expect(state.streamCalls).toHaveLength(1));
       expect(state.streamCalls[0].body).toMatchObject({

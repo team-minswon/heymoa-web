@@ -157,7 +157,7 @@ describe("ChatStarter", () => {
         expect.objectContaining({
           kind: "summary",
           state: "workspace",
-          question: "「주간 제품 회의」 회의를 요약해줘",
+          question: "이 회의를 요약해줘",
           scope: { kind: "note", id: "n1", title: "주간 제품 회의" },
         })
       );
