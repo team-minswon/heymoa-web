@@ -18,5 +18,31 @@
   "globalError": {
     "title": "Something went wrong",
     "description": "HeyMoa couldn't load. Please try again."
+  },
+  "agentChat": {
+    "titleInput": "Chat title",
+    "editTitle": "Rename",
+    "menu": "Menu for “{title}”",
+    "rename": "Rename",
+    "delete": "Delete",
+    "renameFailed": "Couldn't rename the chat.",
+    "deleteFailed": "Couldn't delete the chat.",
+    "deleteDialog": {
+      "title": "Delete this chat?",
+      "description": "Its questions, answers, and approval history will be deleted and can't be restored. If an answer is being generated, it will stop.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "diagram": {
+      "label": "Diagram",
+      "showDiagram": "Show diagram",
+      "showCode": "Show code",
+      "expand": "Expand",
+      "failed": "Couldn't draw the diagram",
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "fit": "Fit",
+      "hint": "Drag to move · Ctrl/⌘+scroll to zoom · Double-click to fit"
+    }
   }
 }

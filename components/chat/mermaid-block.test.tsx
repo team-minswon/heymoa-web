@@ -1,8 +1,17 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Markdown } from "@/components/chat/markdown";
 import { renderMermaid } from "@/components/chat/mermaid-block";
+import { messagesFor } from "@/i18n/messages";
+import { onTrack } from "@/lib/analytics/track";
+
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <NextIntlClientProvider locale="ko" messages={messagesFor("ko")}>
+    {children}
+  </NextIntlClientProvider>
+);
 
 const mermaid = vi.hoisted(() => ({
   initialize: vi.fn(),
@@ -22,7 +31,7 @@ describe("mermaid 코드펜스", () => {
     mermaid.render.mockResolvedValue({
       svg: '<svg viewBox="0 0 100 50"><text>A</text></svg>',
     });
-    const { container } = render(<Markdown content={FENCE} />);
+    const { container } = render(<Markdown content={FENCE} />, { wrapper });
 
     const diagram = await screen.findByTestId("mermaid-diagram");
     expect(diagram.querySelector("svg")).toBeTruthy();
@@ -42,7 +51,7 @@ describe("mermaid 코드펜스", () => {
   });
 
   it("스트리밍 중에는 그리지 않고 코드로 둔다", async () => {
-    render(<Markdown content={FENCE} streaming />);
+    render(<Markdown content={FENCE} streaming />, { wrapper });
     await Promise.resolve();
     expect(screen.getByText("mermaid")).toBeTruthy();
     expect(screen.queryByTestId("mermaid-diagram")).toBeNull();
@@ -51,7 +60,7 @@ describe("mermaid 코드펜스", () => {
 
   it("문법 오류면 코드블록으로 되돌리고 한 줄 알린다", async () => {
     mermaid.render.mockRejectedValue(new Error("Parse error"));
-    const { container } = render(<Markdown content={FENCE} />);
+    const { container } = render(<Markdown content={FENCE} />, { wrapper });
 
     expect(await screen.findByText("도표를 그리지 못했어요")).toBeTruthy();
     expect(container.querySelector("pre")?.textContent).toContain("A-->B");
@@ -62,7 +71,7 @@ describe("mermaid 코드펜스", () => {
     mermaid.render.mockResolvedValue({
       svg: '<svg viewBox="0 0 100 50"><text>A</text></svg>',
     });
-    render(<Markdown content={FENCE} />);
+    render(<Markdown content={FENCE} />, { wrapper });
     fireEvent.click(await screen.findByRole("button", { name: "크게 보기" }));
 
     // jsdom 은 크기를 못 재 맞춤이 원래 크기(100%)다.
@@ -81,11 +90,40 @@ describe("mermaid 코드펜스", () => {
     expect(zoom.textContent).toBe("100%");
   });
 
+  it("크게 보기를 열면 속성 없이 한 번 센다", async () => {
+    mermaid.render.mockResolvedValue({
+      svg: '<svg viewBox="0 0 100 50"><text>A</text></svg>',
+    });
+    const events: unknown[][] = [];
+    const stop = onTrack((...args) => events.push(args));
+    render(<Markdown content={FENCE} />, { wrapper });
+    fireEvent.click(await screen.findByRole("button", { name: "크게 보기" }));
+    await screen.findByTestId("mermaid-zoom");
+    stop();
+
+    expect(events).toEqual([["chat_diagram_expanded", undefined]]);
+  });
+
+  it("영문판에서는 도표 문구가 영어다", async () => {
+    mermaid.render.mockResolvedValue({
+      svg: '<svg viewBox="0 0 100 50"><text>A</text></svg>',
+    });
+    render(<Markdown content={FENCE} />, {
+      wrapper: ({ children }) => (
+        <NextIntlClientProvider locale="en" messages={messagesFor("en")}>
+          {children}
+        </NextIntlClientProvider>
+      ),
+    });
+    expect(await screen.findByRole("button", { name: "Expand" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show code" })).toBeTruthy();
+  });
+
   it("크게 보기는 레일과 다른 id 로 다시 그린다", async () => {
     mermaid.render.mockResolvedValue({
       svg: '<svg viewBox="0 0 100 50"><text>A</text></svg>',
     });
-    render(<Markdown content={FENCE} />);
+    render(<Markdown content={FENCE} />, { wrapper });
     fireEvent.click(await screen.findByRole("button", { name: "크게 보기" }));
     await screen.findByTestId("mermaid-zoom");
 

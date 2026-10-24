@@ -32,7 +32,7 @@ export function helpDemoChats(now: number): Chats {
   let turn = 0;
 
   const open = (chatId: string, title: string, createdAt: string) => {
-    chats.push({ chatId, workspaceId: HD_WORKSPACE_ID, title, createdAt, updatedAt: createdAt });
+    chats.push({ chatId, workspaceId: HD_WORKSPACE_ID, title, titleSource: "QUESTION", createdAt, updatedAt: createdAt });
     return chatId;
   };
   const exchange = (

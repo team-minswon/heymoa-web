@@ -13,11 +13,13 @@ import { createPortal } from "react-dom";
 import { History, Plus, Trash2, X } from "lucide-react";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { AgentFab } from "@/components/chat/agent-fab";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatDeleteDialog } from "@/components/chat/chat-delete-dialog";
 import { ChatList } from "@/components/chat/chat-list";
+import { ChatTitleInput } from "@/components/chat/chat-title-input";
 import { ChatStarter } from "@/components/chat/chat-starter";
 import type { MentionHandle } from "@/components/chat/mention-input";
 import { ChatThread } from "@/components/chat/chat-thread";
@@ -256,10 +258,15 @@ function PersonalChatPanel({
   onTurnActiveChange: (active: boolean) => void;
   onClose: () => void;
 }) {
+  /** 서버에 없어 치운 대화. 열려 있던 대화면 쓰던 문장·범위도, 고치던 제목도 그 대화 것이라 비운다. */
+  const forgottenRef = useRef<(chatId: string, wasOpen: boolean) => void>(
+    () => {}
+  );
   const turn = useChatTurn({
     workspaceId,
     onTurnActiveChange,
     startAsDraft: freshChatPending,
+    onChatForgotten: (chatId, wasOpen) => forgottenRef.current(chatId, wasOpen),
   });
   const {
     isBusy,
@@ -486,26 +493,55 @@ function PersonalChatPanel({
       ? Math.max(0, viewportHeight - 24)
       : null;
 
+  const t = useTranslations("common.agentChat");
+
   /** 삭제를 확인 중인 대화(APP-1409). 기록 줄과 헤더가 함께 연다. */
   const [deleteTarget, setDeleteTarget] = useState<{
     chatId: string;
     title: string;
   } | null>(null);
+  // 열려 있던 대화를 지웠는지는 지운 요청이 끝난 순간에 `useChatTurn` 이 가른다(`onChatForgotten`)
   const deleteChat = useCallback(
-    async (chatId: string) => {
-      const wasOpen = chatId === turn.sessionId;
-      const deleted = await turn.deleteChat(chatId);
-      // 열려 있던 대화를 지웠으면 빈 새 대화로 섰다. 쓰던 문장·범위도 그 대화 것이라 비운다
-      if (deleted && wasOpen) resetComposer();
-      return deleted;
-    },
-    [resetComposer, turn]
+    (chatId: string) => turn.deleteChat(chatId, t("deleteFailed")),
+    [t, turn]
+  );
+
+  /**
+   * 헤더에서 이름을 고치는 중인 대화. 열린 대화가 아니라 **편집을 시작한 대화**를 쥔다 — 목록 재조회(`chats.changed`)로
+   * 열린 대화가 바뀌어도 입력이 내려가지 않는다. 끝나는 것은 사용자가 끝냈거나 그 대화가 실제로 지워졌을 때뿐이다.
+   */
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  /** 기록 줄에서 이름을 고치는 대화. 머리글 편집과 같은 규칙이다. */
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  useEffect(() => {
+    forgottenRef.current = (chatId, wasOpen) => {
+      if (wasOpen) resetComposer();
+      setEditingTitleId((current) => (current === chatId ? null : current));
+      setEditingRowId((current) => (current === chatId ? null : current));
+    };
+  });
+  // 편집이 끝나면 제목 버튼으로 돌아간다. 입력이 사라지고 버튼이 다시 선 뒤라야 한다
+  const titleButtonRef = useRef<HTMLButtonElement>(null);
+  const focusTitleAfterEdit = useRef(false);
+  useEffect(() => {
+    if (editingTitleId !== null || !focusTitleAfterEdit.current) return;
+    focusTitleAfterEdit.current = false;
+    titleButtonRef.current?.focus();
+  }, [editingTitleId]);
+  const renameChat = useCallback(
+    (chatId: string, title: string) =>
+      void turn.renameChat(chatId, title, t("renameFailed")),
+    [t, turn]
   );
 
   /** 헤더 첫 줄. 아직 목록에 없는 새 대화는 기본 제목으로 선다. */
   const headerTitle =
     turn.chatRows.find((chat) => chat.chatId === turn.sessionId)?.title ??
     "새 대화";
+  /** 고치는 중인 대화의 처음 제목. 입력은 처음 한 번만 읽으므로 그 뒤 바뀌어도 쓰던 글자를 덮지 않는다. */
+  const editingTitle =
+    turn.chatRows.find((chat) => chat.chatId === editingTitleId)?.title ??
+    headerTitle;
   /** 첫 턴에서 server 가 제목을 지어 줄 때까지 「곧 바뀐다」를 빛으로 알린다. */
   const isTitlePending = headerTitle === "새 대화" && turn.isBusy;
 
@@ -552,17 +588,43 @@ function PersonalChatPanel({
         <div className="min-w-0 flex-1">
           {/* 제목이 정해지면 `key` 가 바뀌어 다시 마운트되고, 마운트 애니메이션이 건너오기를 그린다.
               빛(정해지는 중)과 건너오기(정해졌다)는 둘 다 `animation` 이라 같이 못 선다. */}
-          <p
-            key={headerTitle}
-            className={cn(
-              "truncate text-sm font-medium",
-              isTitlePending
-                ? "chat-shimmer"
-                : "chat-title-in text-[var(--el-ink)]"
-            )}
-          >
-            {headerTitle}
-          </p>
+          {editingTitleId !== null ? (
+            <ChatTitleInput
+              initial={editingTitle}
+              label={t("titleInput")}
+              onSubmit={(title) => renameChat(editingTitleId, title)}
+              onDone={(restoreFocus) => {
+                focusTitleAfterEdit.current = restoreFocus;
+                setEditingTitleId(null);
+              }}
+              className="-ml-2 py-0.5 font-medium"
+            />
+          ) : (
+            // 서버에 있는 대화만 이름을 바꾼다. 누르면 그 자리에서 고친다.
+            <button
+              ref={titleButtonRef}
+              type="button"
+              disabled={!turn.sessionId}
+              aria-label={
+                turn.sessionId ? `${t("editTitle")}: ${headerTitle}` : undefined
+              }
+              title={headerTitle}
+              onClick={() => setEditingTitleId(turn.sessionId)}
+              className="block w-full min-w-0 rounded-block text-left outline-none enabled:cursor-text focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default"
+            >
+              <p
+                key={headerTitle}
+                className={cn(
+                  "truncate text-sm font-medium",
+                  isTitlePending
+                    ? "chat-shimmer"
+                    : "chat-title-in text-[var(--el-ink)]"
+                )}
+              >
+                {headerTitle}
+              </p>
+            </button>
+          )}
           {/* 참조 칩이 없으면 전체 범위를 알린다. 빈 부제 줄은 남기지 않는다. */}
           {chips.length ? null : (
             <p className="truncate text-[11px] text-[var(--el-muted)]">
@@ -791,8 +853,11 @@ function PersonalChatPanel({
             onDelete={(chat) =>
               setDeleteTarget({ chatId: chat.chatId, title: chat.title })
             }
+            onRename={renameChat}
             onBack={() => setView("thread")}
             backRef={backButtonRef}
+            editingId={editingRowId}
+            onEditingChange={setEditingRowId}
             hasMore={turn.hasMoreChats}
             isLoadingMore={turn.isLoadingMoreChats}
             onLoadMore={() => void turn.loadMoreChats()}

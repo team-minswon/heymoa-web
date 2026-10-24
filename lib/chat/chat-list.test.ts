@@ -4,9 +4,13 @@ import {
   dropChatFromList,
   groupChatsByRecency,
   relativeUpdatedAt,
+  retitleChatInList,
+  revertChatTitle,
+  titleSourceOf,
   runningLabel,
   type OpenChatStatus,
 } from "@/lib/chat/chat-list";
+import { normalizeChatTitle } from "@/lib/chat/rename-chat";
 
 const NOW = new Date("2026-08-25T12:00:00Z");
 const TZ = "UTC";
@@ -161,5 +165,89 @@ describe("dropChatFromList", () => {
     const failed = { status: 404, data: { success: false } };
     expect(dropChatFromList(failed, "a")).toBe(failed);
     expect(dropChatFromList(undefined, "a")).toBeUndefined();
+  });
+});
+
+describe("retitleChatInList", () => {
+  it("그 줄의 제목만 바꾸고 순서는 그대로 둔다", () => {
+    const list = {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          chats: [
+            { chatId: "A", title: "가" },
+            { chatId: "B", title: "나" },
+          ],
+        },
+      },
+    };
+    // 출처도 사람으로 바뀐다 — 다시 바꿀 때 계측이 「USER 를 또 고쳤다」를 안다
+    expect(retitleChatInList(list, "B", "새")).toEqual({
+      ...list,
+      data: {
+        ...list.data,
+        data: {
+          chats: [
+            { chatId: "A", title: "가" },
+            { chatId: "B", title: "새", titleSource: "USER" },
+          ],
+        },
+      },
+    });
+  });
+
+  it("실패 응답은 손대지 않는다", () => {
+    const failed = { status: 500, data: { success: false, data: null } };
+    expect(retitleChatInList(failed, "A", "새")).toBe(failed);
+  });
+});
+
+describe("normalizeChatTitle", () => {
+  it("한 줄로 접고 앞뒤 공백을 지우며, 비면 null", () => {
+    expect(normalizeChatTitle("  주간\n  회의  ")).toBe("주간 회의");
+    expect(normalizeChatTitle(" \t ")).toBeNull();
+    expect(normalizeChatTitle("가".repeat(120))).toHaveLength(100);
+  });
+});
+
+describe("titleSourceOf", () => {
+  it("계약 값만 믿고, 없거나 모르는 값은 UNKNOWN 이다", () => {
+    const chats = [
+      { chatId: "A", titleSource: "AI" },
+      { chatId: "B" },
+      { chatId: "C", titleSource: "SOMETHING" },
+    ];
+    expect(titleSourceOf(chats, "A")).toBe("AI");
+    expect(titleSourceOf(chats, "B")).toBe("UNKNOWN");
+    expect(titleSourceOf(chats, "C")).toBe("UNKNOWN");
+    expect(titleSourceOf(chats, "Z")).toBe("UNKNOWN");
+  });
+});
+
+describe("revertChatTitle", () => {
+  const rows = [
+    { chatId: "a", title: "낙관", titleSource: "USER" },
+    { chatId: "b", title: "낙관", titleSource: "USER" },
+  ];
+
+  it("그 대화가 아직 낙관값일 때만 그 한 줄을 되돌린다", () => {
+    const reverted = revertChatTitle(rows, "a", "낙관", {
+      title: "원래",
+      titleSource: "AI",
+    });
+    expect(reverted[0]).toEqual({
+      chatId: "a",
+      title: "원래",
+      titleSource: "AI",
+    });
+    expect(reverted[1]).toBe(rows[1]);
+  });
+
+  it("그 사이 다른 값이 들어왔으면 건드리지 않는다", () => {
+    const changed = [{ ...rows[0], title: "다른 탭" }];
+    expect(
+      revertChatTitle(changed, "a", "낙관", { title: "원래" })[0].title
+    ).toBe("다른 탭");
   });
 });

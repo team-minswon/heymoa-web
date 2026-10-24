@@ -18,5 +18,31 @@
   "globalError": {
     "title": "심각한 오류가 발생했습니다",
     "description": "애플리케이션을 로드할 수 없습니다. 다시 시도해 주세요."
+  },
+  "agentChat": {
+    "titleInput": "대화 제목",
+    "editTitle": "제목 바꾸기",
+    "menu": "「{title}」 메뉴",
+    "rename": "이름 바꾸기",
+    "delete": "삭제",
+    "renameFailed": "이름을 바꾸지 못했습니다.",
+    "deleteFailed": "대화를 삭제하지 못했습니다.",
+    "deleteDialog": {
+      "title": "대화를 삭제할까요?",
+      "description": "이 대화의 질문과 답, 승인 기록이 함께 삭제되며 되돌릴 수 없습니다. 답이 만들어지는 중이라면 멈춥니다.",
+      "cancel": "취소",
+      "confirm": "삭제"
+    },
+    "diagram": {
+      "label": "도표",
+      "showDiagram": "도표 보기",
+      "showCode": "코드 보기",
+      "expand": "크게 보기",
+      "failed": "도표를 그리지 못했어요",
+      "zoomOut": "축소",
+      "zoomIn": "확대",
+      "fit": "맞춤",
+      "hint": "끌어서 이동 · Ctrl/⌘+휠로 확대 · 두 번 누르면 맞춤"
+    }
   }
 }

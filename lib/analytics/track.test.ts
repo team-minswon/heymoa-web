@@ -180,6 +180,21 @@ describe("trackMutation", () => {
   });
 
 
+  // 대화 이름·삭제는 계측용 워크스페이스·출처를 변수에 싣는다(`ChatMutationContext`). 제목·chat_id 는 안 나간다
+  it("대화 이름 바꾸기·삭제는 워크스페이스와 바꾸기 전 출처만 보낸다", () => {
+    expect(
+      heardFrom([
+        ["renameAgentChat", { chatId: "C1", data: { title: "비밀 제목" }, workspaceId: "W1", previousTitleSource: "AI" }],
+        ["renameAgentChat", { chatId: "C1", data: { title: "x" }, workspaceId: "W1", previousTitleSource: "SOMETHING" }],
+        ["deleteAgentChat", { chatId: "C1", workspaceId: "W1" }],
+      ])
+    ).toEqual([
+      ["chat_renamed", { workspace_id: "W1", previous_source: "AI" }],
+      ["chat_renamed", { workspace_id: "W1", previous_source: "UNKNOWN" }],
+      ["chat_deleted", { workspace_id: "W1" }],
+    ]);
+  });
+
   it("표에 있는 operationId만 이벤트로 바꾼다", () => {
     const heard: string[] = [];
     const stop = onTrack((event) => heard.push(event));

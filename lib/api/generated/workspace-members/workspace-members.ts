@@ -469,7 +469,7 @@ export const getLeaveWorkspaceUrl = (workspaceId: string) => {
 };
 
 /**
- * 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다. 확인으로 입력한 워크스페이스 이름을 본문으로 받아 지금 이름과 다르면 400 WORKSPACE_NAME_MISMATCH 다.
+ * 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다. 확인으로 입력한 워크스페이스 이름을 본문으로 받아 지금 이름과 다르면 400 WORKSPACE_NAME_MISMATCH 다. 본인이 이 워크스페이스에서 연 녹음이 열려 있으면 409 RECORDING_IN_PROGRESS 다(탈퇴와 같다).
  * @summary 워크스페이스 나가기
  */
 export const leaveWorkspace = async (

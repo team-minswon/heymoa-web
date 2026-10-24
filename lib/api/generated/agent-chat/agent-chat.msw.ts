@@ -158,12 +158,14 @@ export const getGetAgentChatsResponseMock = (): AgentChatsResponse => ({
         title: "배포 게이트를 만들어줘",
         updatedAt: "2026-07-22T00:00:02Z",
         runningTurn: { turnId: "0K9GVJT2C4Q3B", status: "WAITING_APPROVAL" },
+        titleSource: "QUESTION",
       },
       {
         chatId: "0K9GVJT2C4Q9Z",
         title: "새 대화",
         updatedAt: "2026-07-21T00:00:00Z",
         runningTurn: null,
+        titleSource: "DEFAULT",
       },
     ],
     hasMore: true,
@@ -180,6 +182,7 @@ export const getCreateAgentChatResponseMock = (): AgentChatResponse => ({
     workspaceId: "0HZX2K7M9Q4AD",
     title: "질문",
     createdAt: "2026-07-22T00:00:00Z",
+    titleSource: "USER",
   },
   error: null,
 });
@@ -193,6 +196,18 @@ export const getResolveToolApprovalResponseMock =
 
 export const getSubscribeAgentChatTurnEventsResponseMock = (): string =>
   'id:1735689600001-0\nevent:token\ndata:{"delta":"안"}\n\nid:1735689600002-0\nevent:message_end\ndata:{"messageId":"m1","content":"안녕하세요"}\n\n';
+
+export const getRenameAgentChatResponseMock = (): AgentChatResponse => ({
+  success: true,
+  data: {
+    chatId: "0K9GVJT2C4Q2A",
+    workspaceId: "0HZX2K7M9Q4AD",
+    title: "배포 게이트 정리",
+    titleSource: "USER",
+    createdAt: "2026-07-22T00:00:00Z",
+  },
+  error: null,
+});
 
 export const getGetAgentChatMessagesMockHandler = (
   overrideResponse?:
@@ -389,6 +404,30 @@ export const getDeleteAgentChatMockHandler = (
     options
   );
 };
+
+export const getRenameAgentChatMockHandler = (
+  overrideResponse?:
+    | AgentChatResponse
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0]
+      ) => Promise<AgentChatResponse> | AgentChatResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.patch(
+    "*/v1/agent-chats/:chatId",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRenameAgentChatResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getAgentChatMock = () => [
   getGetAgentChatMessagesMockHandler(),
   getSendAgentChatMessageMockHandler(),
@@ -398,4 +437,5 @@ export const getAgentChatMock = () => [
   getCancelAgentChatTurnMockHandler(),
   getSubscribeAgentChatTurnEventsMockHandler(),
   getDeleteAgentChatMockHandler(),
+  getRenameAgentChatMockHandler(),
 ];

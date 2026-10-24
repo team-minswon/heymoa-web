@@ -677,6 +677,49 @@ test("stops a running turn and lets the next message through", async ({
  *
  * 넷 중 하나라도 빠지면 「대화가 여럿 산다」가 화면에서 거짓이 된다.
  */
+test("renames a chat in place from the header and from history (APP-1433)", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
+  await page.getByTestId("chat-list-new").click();
+  await page.getByLabel("메시지").fill("이름 바꿀 대화");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await expect(page.getByTestId("assistant-message").last()).toContainText(
+    "습니다",
+    { timeout: 20_000 }
+  );
+
+  // 머리글 제목을 눌러 고치고 Enter. 포커스는 제목 버튼으로 돌아온다.
+  await page
+    .getByRole("button", { name: "제목 바꾸기: 이름 바꿀 대화" })
+    .click();
+  const input = page.getByRole("textbox", { name: "대화 제목" });
+  await input.fill("스프린트 회고");
+  await input.press("Enter");
+  const header = page.getByRole("button", {
+    name: "제목 바꾸기: 스프린트 회고",
+  });
+  await expect(header).toBeFocused();
+
+  // 기록 줄 메뉴에서 다시 고친다. Esc 는 취소다.
+  await page.getByRole("button", { name: "기록" }).click();
+  const history = page.getByTestId("chat-history-view");
+  const menu = history.getByRole("button", { name: "「스프린트 회고」 메뉴" });
+  await menu.click();
+  await page.getByRole("menuitem", { name: "이름 바꾸기" }).click();
+  await history.getByRole("textbox", { name: "대화 제목" }).press("Escape");
+  await expect(menu).toBeFocused();
+  await menu.click();
+  await page.getByRole("menuitem", { name: "이름 바꾸기" }).click();
+  const row = history.getByRole("textbox", { name: "대화 제목" });
+  await row.fill("회고 정리");
+  await row.press("Enter");
+  await expect(
+    history.getByRole("button", { name: /^회고 정리/ })
+  ).toBeVisible();
+});
+
 test("deletes a chat from the header and from history (APP-1409)", async ({
   page,
 }) => {
@@ -707,14 +750,17 @@ test("deletes a chat from the header and from history (APP-1409)", async ({
   await expect(confirm).toBeHidden();
   await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
 
-  // 기록 줄의 휴지통으로 남은 대화도 지운다.
+  // 기록 줄의 [⋯] 메뉴로 남은 대화도 지운다.
   await page.getByRole("button", { name: "기록" }).click();
   await expect(
-    history.getByRole("button", { name: /둘째 대화 요약해줘/ })
+    history.getByRole("button", { name: /^둘째 대화 요약해줘/ })
   ).toHaveCount(0);
-  const first = history.getByRole("button", { name: /첫째 대화 요약해줘/ });
+  const first = history.getByRole("button", { name: /^첫째 대화 요약해줘/ });
   await first.hover();
-  await first.locator("..").getByRole("button", { name: "대화 삭제" }).click();
+  await history
+    .getByRole("button", { name: "「첫째 대화 요약해줘」 메뉴" })
+    .click();
+  await page.getByRole("menuitem", { name: "삭제" }).click();
   await page
     .getByRole("alertdialog")
     .getByRole("button", { name: "삭제", exact: true })
@@ -759,11 +805,11 @@ test("keeps a second chat alive while the first waits for approval", async ({
   await page.getByRole("button", { name: "기록" }).click();
   const history = page.getByTestId("chat-history-view");
   const waiting = history.getByRole("button", {
-    name: /Linear 이슈 만들어줘/,
+    name: /^Linear 이슈 만들어줘/,
   });
   await expect(waiting).toContainText("승인 대기", { timeout: 20_000 });
   // 방금 끝난 B에는 배지가 없다 — 목록이 늦어도 열린 대화는 SSE 가 이긴다.
-  const finished = history.getByRole("button", { name: /요약해줘/ });
+  const finished = history.getByRole("button", { name: /^요약해줘/ });
   await expect(finished).toBeVisible({ timeout: 20_000 });
   await expect(finished).not.toContainText("진행 중");
 
@@ -980,7 +1026,7 @@ test("keeps the question near the top when a divider joins a multi-line send", a
   await page.getByRole("button", { name: "기록" }).click();
   const history = page.getByTestId("chat-history-view");
   await expect(history).toBeVisible();
-  await history.getByRole("button", { name: /배포 일정 확인/ }).click();
+  await history.getByRole("button", { name: /^배포 일정 확인/ }).click();
 
   const viewport = page
     .getByTestId("chat-thread-view")
@@ -1101,9 +1147,13 @@ test("does not create a chat row until the first message is sent", async ({
   await page.getByRole("button", { name: "기록" }).click();
 
   const history = page.getByTestId("chat-history-view");
-  await expect(history.getByRole("button", { name: /요약해줘/ })).toBeVisible();
+  await expect(
+    history.getByRole("button", { name: /^요약해줘/ })
+  ).toBeVisible();
   // 빈 줄이 없다. 기본 제목이 「새 대화」라 만들어졌다면 여기 섰을 것이다.
-  await expect(history.getByRole("button", { name: /새 대화/ })).toHaveCount(0);
+  await expect(history.getByRole("button", { name: /^새 대화/ })).toHaveCount(
+    0
+  );
 });
 
 /**
@@ -1139,7 +1189,7 @@ test("opens a blank agent chat in the rail of a newly created note", async ({
   await panel.getByRole("button", { name: "기록" }).click();
   await expect(
     panel.getByTestId("chat-history-view").getByRole("button", {
-      name: /요약해줘/,
+      name: /^요약해줘/,
     })
   ).toBeVisible();
 });
@@ -1179,7 +1229,7 @@ test("swaps the chat history in and back out inside the panel", async ({
   await expect(history.getByRole("button", { name: "뒤로가기" })).toBeVisible();
 
   // 다른 대화를 고르면 곧바로 스레드로 돌아오고, 그 대화가 열려 있다.
-  await history.getByRole("button", { name: /요약해줘/ }).click();
+  await history.getByRole("button", { name: /^요약해줘/ }).click();
   await expect(thread).toBeVisible();
   await expect(history).toBeHidden();
   await expect(page.getByTestId("assistant-message").last()).toContainText(
@@ -2155,7 +2205,7 @@ test("draws the thinking rail from history alone", async ({ page }) => {
   await page.getByRole("button", { name: "기록" }).click();
 
   const history = page.getByTestId("chat-history-view");
-  await history.getByRole("button", { name: /생각이 남은 대화/ }).click();
+  await history.getByRole("button", { name: /^생각이 남은 대화/ }).click();
 
   const thread = page.getByTestId("chat-thread-view");
   await expect(thread).toBeVisible();

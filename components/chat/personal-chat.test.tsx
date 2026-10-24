@@ -6,7 +6,9 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -14,6 +16,7 @@ import {
   usePersonalChat,
   usePersonalChatScope,
 } from "@/components/chat/personal-chat";
+import { messagesFor } from "@/i18n/messages";
 
 // 근거 칩·도구 칩을 누르면 그 회의록으로 간다 — 이 테스트는 라우터 밖에서 돈다.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -21,6 +24,12 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 /** 보내기 실패의 토스트는 `send()` 가 직접 띄운다 — 409 만 조용해야 한다. */
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
+
+/** 이름 바꾸기 `PATCH`(생성 훅 `useRenameAgentChat`). */
+const renameMock = vi.hoisted(() => vi.fn());
+/** 이름을 그 대화에 이 제목으로 바꾸는 요청이었나. 계측용 변수는 따로 본다. */
+const renamed = (chatId: string, title: string) =>
+  expect.objectContaining({ chatId, data: { title } });
 
 const WORKSPACE_ID = "01K0000000001";
 const NOTE_ID = "01K0000000002";
@@ -309,6 +318,7 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
       mutateAsync: state.deleteMock,
       isPending: false,
     }),
+    useRenameAgentChat: () => ({ mutateAsync: renameMock, isPending: false }),
     // 204는 접수가 아니라 확정이고 멱등이다. 화면이 멈추는 신호로는 안 쓴다.
     useCancelAgentChatTurn: () => ({
       mutate: (variables: unknown, options?: { onSuccess?: () => void }) => {
@@ -457,12 +467,20 @@ function renderChat(child?: React.ReactNode) {
     defaultOptions: { queries: { retry: false } },
   });
   const invalidate = vi.spyOn(client, "invalidateQueries");
+  // 언어 공급자는 `wrapper` 라야 `rerender` 도 그 안에서 다시 그린다. 나머지 모양은 `rerender` 들과 같아야 다시 마운트되지 않는다
   const view = render(
     <QueryClientProvider client={client}>
       <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
         {child}
       </PersonalChatProvider>
-    </QueryClientProvider>
+    </QueryClientProvider>,
+    {
+      wrapper: ({ children }) => (
+        <NextIntlClientProvider locale="ko" messages={messagesFor("ko")}>
+          {children}
+        </NextIntlClientProvider>
+      ),
+    }
   );
   return { ...view, invalidate, client };
 }
@@ -484,7 +502,9 @@ function clickNewChat() {
 /** 기록을 열고 그 대화를 고른다. 고르면 곧바로 스레드로 돌아온다. */
 function pickChat(chatId: string) {
   fireEvent.click(historyButton());
-  fireEvent.click(screen.getByRole("button", { name: new RegExp(chatId) }));
+  fireEvent.click(
+    screen.getByRole("button", { name: new RegExp(`^대화 ${chatId}`) })
+  );
 }
 
 /**
@@ -606,6 +626,7 @@ describe("PersonalChatProvider", () => {
     state.resumeUrls = [];
     state.cancelMock.mockReset();
     state.deleteMock.mockReset().mockResolvedValue({ status: 204 });
+    renameMock.mockReset().mockResolvedValue({ status: 200 });
     state.createMock.mockReset().mockResolvedValue({
       status: 201,
       data: { success: true, data: { chatId: NEW_CHAT_ID } },
@@ -920,7 +941,7 @@ describe("PersonalChatProvider", () => {
       await screen.findByRole("button", { name: "이전 대화 더 보기" })
     );
 
-    await screen.findByRole("button", { name: /01KOLDERCHAT01/ });
+    await screen.findByRole("button", { name: /^대화 01KOLDERCHAT01/ });
     // 첫 쪽의 다음 커서를 그대로 달고 읽는다.
     expect(state.olderCalls[0]?.[1]).toEqual({
       limit: "30",
@@ -946,14 +967,16 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "이전 대화 더 보기" })
     );
-    await screen.findByRole("button", { name: /01KOLDERCHAT01/ });
+    await screen.findByRole("button", { name: /^대화 01KOLDERCHAT01/ });
 
     // 폴링이 새 첫 쪽을 가져왔다: 끝 대화가 달라졌다. 기록을 닫았다 열어 다시 그린다.
     state.chatsNextId = "01KOTHERNEXT00";
     fireEvent.click(screen.getByRole("button", { name: "뒤로가기" }));
     fireEvent.click(await screen.findByRole("button", { name: "기록" }));
 
-    expect(screen.queryByRole("button", { name: /01KOLDERCHAT01/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^대화 01KOLDERCHAT01/ })
+    ).toBeNull();
     expect(
       screen.getByRole("button", { name: "이전 대화 더 보기" })
     ).toBeTruthy();
@@ -978,7 +1001,7 @@ describe("PersonalChatProvider", () => {
       ).toBeEnabled()
     );
     expect(
-      screen.getByRole("button", { name: new RegExp(CHAT_ID) })
+      screen.getByRole("button", { name: new RegExp(`^대화 ${CHAT_ID}`) })
     ).toBeTruthy();
   });
 
@@ -1004,7 +1027,9 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
 
     await waitFor(() =>
-      expect(state.deleteMock).toHaveBeenCalledWith({ chatId: CHAT_ID })
+      expect(state.deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ chatId: CHAT_ID })
+      )
     );
     await waitFor(() =>
       expect(screen.queryByText("이전 대화입니다.")).toBeNull()
@@ -1025,6 +1050,577 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(screen.getByTestId("chat-delete"));
     fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
     await waitFor(() => expect(toastError).toHaveBeenCalledOnce());
+  });
+
+  describe("이름 바꾸기", () => {
+    async function editHeader() {
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+        })
+      );
+      return screen.getByRole("textbox", {
+        name: "대화 제목",
+      }) as HTMLInputElement;
+    }
+
+    it("머리글 제목을 그 자리에서 고치고 Enter 로 저장한다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      const input = await editHeader();
+      // 편집을 시작하면 전체가 선택돼 있다
+      expect(input.selectionStart).toBe(0);
+      expect(input.selectionEnd).toBe(input.value.length);
+
+      fireEvent.change(input, { target: { value: "  스프린트   회고  " } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() =>
+        expect(renameMock).toHaveBeenCalledWith(
+          renamed(CHAT_ID, "스프린트 회고")
+        )
+      );
+      expect(screen.queryByRole("textbox", { name: "대화 제목" })).toBeNull();
+    });
+
+    it("Esc 는 취소, 빈 값은 저장하지 않고 원래 이름으로 돌아간다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+
+      let input = await editHeader();
+      fireEvent.change(input, { target: { value: "버릴 이름" } });
+      fireEvent.keyDown(input, { key: "Escape" });
+
+      input = await editHeader();
+      fireEvent.change(input, { target: { value: "   " } });
+      fireEvent.blur(input);
+
+      expect(renameMock).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: `제목 바꾸기: 대화 ${CHAT_ID}` })
+      ).toBeTruthy();
+    });
+
+    it("한글 조합 중 Enter 는 저장하지 않고, 바깥 클릭은 저장한다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      const input = await editHeader();
+      fireEvent.change(input, { target: { value: "회의" } });
+      fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+      fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+      expect(renameMock).not.toHaveBeenCalled();
+
+      fireEvent.blur(input);
+      await waitFor(() =>
+        expect(renameMock).toHaveBeenCalledWith(renamed(CHAT_ID, "회의"))
+      );
+    });
+
+    it("저장이 실패하면 원래 이름으로 되돌리고 알린다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renameMock.mockRejectedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "INVALID_INPUT", message: "잘못된 입력" },
+      });
+      renderChat();
+      openPanel();
+      const input = await editHeader();
+      fireEvent.change(input, { target: { value: "새 이름" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith("이름을 바꾸지 못했습니다.")
+      );
+      expect(
+        screen.getByRole("button", { name: `제목 바꾸기: 대화 ${CHAT_ID}` })
+      ).toBeTruthy();
+    });
+
+    it("이미 없는 대화(404)면 목록에서 빼고 빈 새 대화로 선다", async () => {
+      state.chats = [chatRow(CHAT_ID), chatRow(OTHER_CHAT_ID)];
+      renameMock.mockRejectedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "AGENT_CHAT_NOT_FOUND", message: "없음" },
+      });
+      renderChat();
+      openPanel();
+      const input = await editHeader();
+      state.chats = [chatRow(OTHER_CHAT_ID)];
+      fireEvent.change(input, { target: { value: "새 이름" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() =>
+        expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy()
+      );
+      fireEvent.click(historyButton());
+      const history = within(screen.getByTestId("chat-history-view"));
+      expect(history.queryByText(`대화 ${CHAT_ID}`)).toBeNull();
+      expect(toastError).not.toHaveBeenCalled();
+    });
+
+    it("기록 줄의 메뉴에서 그 줄을 그 자리에서 고친다", async () => {
+      state.chats = [chatRow(CHAT_ID), chatRow(OTHER_CHAT_ID)];
+      renderChat();
+      openPanel();
+      fireEvent.click(historyButton());
+
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: `「대화 ${OTHER_CHAT_ID}」 메뉴`,
+        })
+      );
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+      );
+      const input = screen.getByRole("textbox", { name: "대화 제목" });
+      fireEvent.change(input, { target: { value: "두 번째" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() =>
+        expect(renameMock).toHaveBeenCalledWith(
+          renamed(OTHER_CHAT_ID, "두 번째")
+        )
+      );
+    });
+
+    it("기록 줄의 메뉴 삭제는 헤더와 같은 확인·삭제 경로를 탄다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      fireEvent.click(historyButton());
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: `「대화 ${CHAT_ID}」 메뉴` })
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
+      expect(state.deleteMock).not.toHaveBeenCalled();
+      fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
+
+      await waitFor(() =>
+        expect(state.deleteMock).toHaveBeenCalledWith(
+          expect.objectContaining({ chatId: CHAT_ID })
+        )
+      );
+    });
+
+    it("Enter·Esc 로 끝내면 포커스가 머리글 제목 버튼으로 돌아온다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      const titleName = `제목 바꾸기: 대화 ${CHAT_ID}`;
+
+      let input = await editHeader();
+      fireEvent.change(input, { target: { value: "새 이름" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole("button", { name: titleName })
+        )
+      );
+
+      input = await editHeader();
+      fireEvent.keyDown(input, { key: "Escape" });
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole("button", { name: titleName })
+        )
+      );
+    });
+
+    it("다른 버튼을 눌러 빠지면 그 버튼에서 포커스를 뺏지 않는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      const input = await editHeader();
+      const history = historyButton();
+      history.focus();
+      fireEvent.blur(input, { relatedTarget: history });
+
+      await waitFor(() =>
+        expect(screen.queryByRole("textbox", { name: "대화 제목" })).toBeNull()
+      );
+      expect(document.activeElement).toBe(history);
+    });
+
+    it("기록 줄에서 편집을 끝내면 그 줄의 메뉴 버튼으로 돌아온다", async () => {
+      state.chats = [chatRow(CHAT_ID), chatRow(OTHER_CHAT_ID)];
+      renderChat();
+      openPanel();
+      fireEvent.click(historyButton());
+      const menuName = `「대화 ${OTHER_CHAT_ID}」 메뉴`;
+
+      fireEvent.click(await screen.findByRole("button", { name: menuName }));
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+      );
+      const input = await screen.findByRole("textbox", { name: "대화 제목" });
+      await waitFor(() => expect(document.activeElement).toBe(input));
+      fireEvent.keyDown(input, { key: "Escape" });
+
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole("button", { name: menuName })
+        )
+      );
+    });
+
+    it("계측이 읽도록 워크스페이스와 바꾸기 전 출처를 요청 변수에 싣는다", async () => {
+      state.chats = [{ ...chatRow(CHAT_ID), titleSource: "AI" } as never];
+      renderChat();
+      openPanel();
+      const input = await editHeader();
+      fireEvent.change(input, { target: { value: "두 번째" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() =>
+        expect(renameMock).toHaveBeenCalledWith({
+          chatId: CHAT_ID,
+          data: { title: "두 번째" },
+          workspaceId: WORKSPACE_ID,
+          previousTitleSource: "AI",
+        })
+      );
+    });
+
+    it("기록 줄 메뉴의 삭제도 계측이 읽을 워크스페이스를 싣는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat();
+      openPanel();
+      fireEvent.click(historyButton());
+      fireEvent.click(
+        await screen.findByRole("button", { name: `「대화 ${CHAT_ID}」 메뉴` })
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
+      fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
+
+      await waitFor(() =>
+        expect(state.deleteMock).toHaveBeenCalledWith({
+          chatId: CHAT_ID,
+          workspaceId: WORKSPACE_ID,
+        })
+      );
+    });
+
+    it("서버가 바꾼 제목은 목록을 다시 읽으면 머리글에 서고, 편집 중인 글자는 덮지 않는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      const { rerender, client } = renderChat();
+      openPanel();
+      await screen.findByRole("button", {
+        name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+      });
+      // 이벤트 힌트(`chats.changed`)가 목록을 다시 읽은 자리다. 이 목은 캐시가 아니라 다시 그릴 때 읽는다
+      const refetched = () =>
+        rerender(
+          <QueryClientProvider client={client}>
+            <PersonalChatProvider
+              workspaceId={WORKSPACE_ID}
+              workspaceName="헤이모아"
+            >
+              {null}
+            </PersonalChatProvider>
+          </QueryClientProvider>
+        );
+
+      state.chats = [{ ...chatRow(CHAT_ID), title: "AI 제목" }];
+      refetched();
+      fireEvent.click(
+        await screen.findByRole("button", { name: "제목 바꾸기: AI 제목" })
+      );
+      const input = screen.getByRole("textbox", {
+        name: "대화 제목",
+      }) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "내가 쓰는 중" } });
+      state.chats = [{ ...chatRow(CHAT_ID), title: "다른 탭 제목" }];
+      refetched();
+      expect(input.value).toBe("내가 쓰는 중");
+    });
+  });
+
+  describe("겹친 요청과 외부 갱신 (APP-1433 리뷰)", () => {
+    /** 손으로 끝내는 약속. 요청이 떠 있는 사이를 재현한다. */
+    function deferred<T>() {
+      let resolve!: (value: T) => void;
+      let reject!: (error: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+    const FAIL = {
+      success: false,
+      data: null,
+      error: { code: "INVALID_INPUT", message: "잘못된 입력" },
+    };
+    const OLDER_A = "01KOLDERCHAT0A";
+    const OLDER_B = "01KOLDERCHAT0B";
+
+    function refetchedWith(
+      rerender: (ui: React.ReactElement) => void,
+      client: QueryClient
+    ) {
+      return () =>
+        rerender(
+          <QueryClientProvider client={client}>
+            <PersonalChatProvider
+              workspaceId={WORKSPACE_ID}
+              workspaceName="헤이모아"
+            >
+              {null}
+            </PersonalChatProvider>
+          </QueryClientProvider>
+        );
+    }
+
+    async function openOlder() {
+      fireEvent.click(historyButton());
+      fireEvent.click(
+        await screen.findByRole("button", { name: "이전 대화 더 보기" })
+      );
+      await screen.findByRole("button", {
+        name: new RegExp(`^대화 ${OLDER_B}`),
+      });
+    }
+
+    async function renameRow(
+      chatId: string,
+      currentTitle: string,
+      title: string
+    ) {
+      fireEvent.click(
+        await screen.findByRole("button", { name: `「${currentTitle}」 메뉴` })
+      );
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+      );
+      const input = screen.getByRole("textbox", { name: "대화 제목" });
+      fireEvent.change(input, { target: { value: title } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() =>
+        expect(renameMock).toHaveBeenCalledWith(renamed(chatId, title))
+      );
+    }
+
+    function olderSetup() {
+      state.chats = [chatRow(CHAT_ID)];
+      state.chatsHasMore = true;
+      state.olderChats = [
+        chatRow(OLDER_A, null, "2026-06-30T00:00:00Z"),
+        chatRow(OLDER_B, null, "2026-06-29T00:00:00Z"),
+      ];
+    }
+
+    it("삭제가 끝나기 전에 다른 대화로 옮겼으면 옮겨 간 대화의 입력과 화면을 건드리지 않는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      const pending = deferred<{ status: number }>();
+      state.deleteMock.mockReturnValueOnce(pending.promise);
+      const { rerender, client } = renderChat();
+      openPanel();
+      fireEvent.click(await screen.findByTestId("chat-delete"));
+      fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
+      await waitFor(() => expect(state.deleteMock).toHaveBeenCalled());
+
+      // 지우는 사이 다른 대화가 맨 위로 올라와 그 대화가 열렸다
+      state.chats = [chatRow(OTHER_CHAT_ID), chatRow(CHAT_ID)];
+      refetchedWith(rerender, client)();
+      // 확인창이 떠 있는 동안 뒤쪽은 접근성 트리에서 숨는다
+      await screen.findByRole("button", {
+        name: `제목 바꾸기: 대화 ${OTHER_CHAT_ID}`,
+        hidden: true,
+      });
+      const composer = screen.getByRole("textbox", {
+        name: "메시지",
+        hidden: true,
+      });
+      composer.textContent = "B에 쓰던 문장";
+      fireEvent.input(composer);
+
+      state.chats = [chatRow(OTHER_CHAT_ID)];
+      await act(async () => pending.resolve({ status: 204 }));
+
+      expect(screen.getByRole("textbox", { name: "메시지" }).textContent).toBe(
+        "B에 쓰던 문장"
+      );
+      expect(
+        screen.getByRole("button", {
+          name: `제목 바꾸기: 대화 ${OTHER_CHAT_ID}`,
+        })
+      ).toBeTruthy();
+    });
+
+    it("서로 다른 대화의 이름 바꾸기가 겹쳐도 실패한 쪽만 되돌린다", async () => {
+      olderSetup();
+      const first = deferred<{ status: number }>();
+      const second = deferred<{ status: number }>();
+      renameMock
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise);
+      renderChat();
+      openPanel();
+      await openOlder();
+
+      await renameRow(OLDER_A, `대화 ${OLDER_A}`, "첫째");
+      await renameRow(OLDER_B, `대화 ${OLDER_B}`, "둘째");
+      await act(async () => first.reject(FAIL));
+
+      expect(screen.getByRole("button", { name: /^둘째/ })).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: new RegExp(`^대화 ${OLDER_A}`) })
+      ).toBeTruthy();
+      await act(async () => second.resolve({ status: 200 }));
+      expect(screen.getByRole("button", { name: /^둘째/ })).toBeTruthy();
+    });
+
+    it("같은 대화에 겹친 이름 바꾸기는 마지막 요청만 되돌릴 수 있고, 되돌릴 곳은 서버가 확인한 제목이다", async () => {
+      olderSetup();
+      const first = deferred<{ status: number }>();
+      const second = deferred<{ status: number }>();
+      renameMock
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise);
+      renderChat();
+      openPanel();
+      await openOlder();
+
+      await renameRow(OLDER_A, `대화 ${OLDER_A}`, "하나");
+      await renameRow(OLDER_A, "하나", "둘");
+      // 앞 요청의 실패가 뒤 요청의 낙관값을 덮지 않는다
+      await act(async () => first.reject(FAIL));
+      expect(screen.getByRole("button", { name: /^둘/ })).toBeTruthy();
+      // 뒤 요청이 실패하면 서버가 마지막으로 확인한 원래 제목으로 돌아간다
+      await act(async () => second.reject(FAIL));
+      expect(
+        screen.getByRole("button", { name: new RegExp(`^대화 ${OLDER_A}`) })
+      ).toBeTruthy();
+    });
+
+    it("되돌리기는 그 사이 서버가 준 다른 제목을 덮지 않는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      const pending = deferred<{ status: number }>();
+      renameMock.mockReturnValueOnce(pending.promise);
+      const { client } = renderChat();
+      const key = ["/v1/workspaces", WORKSPACE_ID, "agent-chats"];
+      const listed = (title: string) => ({
+        status: 200,
+        data: {
+          success: true,
+          data: { chats: [{ ...chatRow(CHAT_ID), title }] },
+        },
+      });
+      client.setQueryData(key, listed(`대화 ${CHAT_ID}`));
+      openPanel();
+      const input = await (async () => {
+        fireEvent.click(
+          await screen.findByRole("button", {
+            name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+          })
+        );
+        return screen.getByRole("textbox", { name: "대화 제목" });
+      })();
+      fireEvent.change(input, { target: { value: "내 이름" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() => expect(renameMock).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(
+          (client.getQueryData(key) as ReturnType<typeof listed>).data.data
+            .chats[0].title
+        ).toBe("내 이름")
+      );
+
+      // AI·다른 탭이 그 사이 제목을 바꿨다
+      client.setQueryData(key, listed("다른 탭 제목"));
+      await act(async () => pending.reject(FAIL));
+      expect(
+        (client.getQueryData(key) as ReturnType<typeof listed>).data.data
+          .chats[0].title
+      ).toBe("다른 탭 제목");
+    });
+
+    it("머리글 편집 중 목록 재조회로 열린 대화가 바뀌어도 입력은 남고 편집하던 대화에 저장한다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      const { rerender, client } = renderChat();
+      openPanel();
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+        })
+      );
+      const input = screen.getByRole("textbox", {
+        name: "대화 제목",
+      }) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "쓰던 이름" } });
+
+      state.chats = [chatRow(OTHER_CHAT_ID), chatRow(CHAT_ID)];
+      refetchedWith(rerender, client)();
+
+      const still = screen.getByRole("textbox", {
+        name: "대화 제목",
+      }) as HTMLInputElement;
+      expect(still).toBe(input);
+      expect(still.value).toBe("쓰던 이름");
+      fireEvent.keyDown(still, { key: "Enter" });
+      await waitFor(() =>
+        expect(renameMock).toHaveBeenCalledWith(renamed(CHAT_ID, "쓰던 이름"))
+      );
+    });
+
+    it("기록 줄 편집 중 재조회로 그 줄이 다른 묶음으로 옮겨 가도 입력이 다시 마운트되지 않는다", async () => {
+      const old = new Date(Date.now() - 10 * 86_400_000).toISOString();
+      state.chats = [chatRow(CHAT_ID), chatRow(OTHER_CHAT_ID, null, old)];
+      const { rerender, client } = renderChat();
+      openPanel();
+      fireEvent.click(historyButton());
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: `「대화 ${OTHER_CHAT_ID}」 메뉴`,
+        })
+      );
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+      );
+      const input = screen.getByRole("textbox", {
+        name: "대화 제목",
+      }) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "옮겨도 남는다" } });
+
+      // 다른 탭에서 그 대화에 이어 써서 맨 위(오늘)로 올라왔다
+      state.chats = [chatRow(OTHER_CHAT_ID), chatRow(CHAT_ID)];
+      refetchedWith(rerender, client)();
+
+      const still = screen.getByRole("textbox", {
+        name: "대화 제목",
+      }) as HTMLInputElement;
+      expect(still).toBe(input);
+      expect(still.value).toBe("옮겨도 남는다");
+    });
+
+    it("편집하던 대화가 실제로 지워지면 편집이 끝난다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renameMock.mockRejectedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "AGENT_CHAT_NOT_FOUND", message: "없음" },
+      });
+      renderChat();
+      openPanel();
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+        })
+      );
+      const input = screen.getByRole("textbox", { name: "대화 제목" });
+      state.chats = [];
+      fireEvent.change(input, { target: { value: "없는 대화" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() =>
+        expect(screen.queryByRole("textbox", { name: "대화 제목" })).toBeNull()
+      );
+    });
   });
 
   it("★ ＋ 는 서버를 안 부르고 화면만 빈 새 대화로 바꾼다", async () => {
@@ -3020,7 +3616,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
       fireEvent.click(historyButton());
 
-      const rows = screen
+      const rows = within(screen.getByTestId("chat-history-view"))
         .getAllByRole("button")
         .filter((row) => row.textContent?.startsWith("대화 "));
       // 줄 끝의 「방금」은 마지막으로 쓴 시각이다 — 배지는 그 앞에 선다.
@@ -3125,7 +3721,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
       fireEvent.click(historyButton());
 
-      const rows = screen
+      const rows = within(screen.getByTestId("chat-history-view"))
         .getAllByRole("button")
         .filter((row) => row.textContent?.startsWith("대화 "));
       expect(rows[0].getAttribute("aria-current")).toBe("true");

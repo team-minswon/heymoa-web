@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AgentChatResponseDataTitleSource } from "./agentChatResponseDataTitleSource";
 
 /**
  * 성공 응답 데이터
@@ -24,4 +25,6 @@ export type AgentChatResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;
+  /** 제목이 어디서 왔나(DEFAULT 새 대화 · QUESTION 첫 질문 · AI 첫 답변 뒤 요약 · USER 사용자가 지음). 표시용이 아니다 — 모르는 클라이언트는 무시해도 된다 */
+  titleSource: AgentChatResponseDataTitleSource;
 };

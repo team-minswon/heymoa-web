@@ -1760,6 +1760,22 @@ export const restHandlers = [
       });
     }
   ),
+  // 이름 바꾸기(APP-1431). 바꾸면 그 뒤로 첫 질문·AI 제목이 덮지 않는다(USER). 같은 이름이면 아무것도 안 바꾼다.
+  http.patch("*/v1/agent-chats/:chatId", async ({ params, request }) => {
+    const { title } = (await request.json()) as { title: string };
+    return commandResult(() => {
+      const chat = mockDb.findAgentChat(id(params.chatId));
+      if (!chat) throw new Error("AGENT_CHAT_NOT_FOUND");
+      const next = title.replace(/\s+/g, " ").trim();
+      if (!next || next.length > 100) throw new Error("BAD_REQUEST");
+      if (next !== chat.title) {
+        chat.title = next;
+        chat.titleSource = "USER";
+        emitChatsChanged();
+      }
+      return chat;
+    });
+  }),
   // 내 대화 삭제(APP-1409). 계약상 204 무본문, 없거나 이미 지운 대화는 404.
   http.delete("*/v1/agent-chats/:chatId", ({ params }) => {
     const chat = mockDb.findAgentChat(id(params.chatId));

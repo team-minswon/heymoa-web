@@ -40,6 +40,9 @@ export type AnalyticsEvent =
   | "invite_accepted"
   | "task_created"
   | "chat_message_sent"
+  | "chat_renamed"
+  | "chat_deleted"
+  | "chat_diagram_expanded"
   | "integration_connected"
   | "agent_connected"
   | "desktop_download_clicked"
@@ -163,6 +166,17 @@ export type WebEventProperties = {
     via: "strip" | "step";
   };
   agent_opened: { surface: "fab" };
+  // 에이전트 대화 이름 바꾸기·삭제. 제목 본문·chat_id 는 싣지 않는다(APP-1072).
+  // previous_source: 바꾸기 전 제목이 어디서 왔나(계약 `titleSource`). AI 제목을 얼마나 고쳐 쓰는지 본다.
+  // 목록 응답에 아직 없으면 UNKNOWN 이다.
+  chat_renamed: {
+    workspace_id: string;
+    previous_source: "DEFAULT" | "QUESTION" | "AI" | "USER" | "UNKNOWN";
+  };
+  // 서버가 실제로 지웠을 때만 센다(mutation 성공). 이미 지운 대화(404)를 화면에서 성공으로 접은 것은 세지 않는다.
+  chat_deleted: { workspace_id: string };
+  // 답변 속 mermaid 도표의 「크게 보기」. 도표 원문·대화 식별자는 싣지 않는다.
+  chat_diagram_expanded: Record<string, never>;
   feedback_sent: { kind: "INCIDENT" | "QUESTION" | "SUGGESTION" | "OTHER" };
   // 회의 종료 뒤 묻는 카드. 띄움은 `feedback_opened {from: "meeting_end"}`, 보냄은 `feedback_sent` 가 센다.
   feedback_dismissed: { from: "meeting_end"; forever: boolean };
@@ -247,6 +261,17 @@ const assignsSomeone = (variables: MutationVariables) => {
  * 성공한 mutation(orval operationId) → 이벤트. 호출부마다 `track()`을 흩지 않고
  * `MutationCache.onSuccess` 한 곳에서 본다(`lib/query/query-client.ts`).
  */
+/**
+ * 생성 훅 변수에 계측용으로 함께 싣는 값. 생성 함수는 경로·본문에 쓰는 키만 꺼내므로 서버로 가지 않는다.
+ * 대화 이름 바꾸기·삭제의 경로에는 워크스페이스가 없고, 바꾸기 전 제목 출처는 요청 어디에도 없다.
+ */
+export type ChatMutationContext = {
+  workspaceId: string;
+  previousTitleSource?: WebEventProperties["chat_renamed"]["previous_source"];
+};
+
+const TITLE_SOURCES = new Set(["DEFAULT", "QUESTION", "AI", "USER"]);
+
 const MUTATION_EVENTS: Record<string, MutationEvent> = {
   createFeedback: (v) => {
     const kind = bodyOf(v).kind;
@@ -269,6 +294,16 @@ const MUTATION_EVENTS: Record<string, MutationEvent> = {
   acceptWorkspaceInvitation: "invite_accepted",
   createProjectTask: "task_created",
   sendAgentChatMessage: "chat_message_sent",
+  // 워크스페이스는 `ChatMutationContext` 로 실려 온다. 제목 본문은 싣지 않는다.
+  renameAgentChat: (v) => [
+    "chat_renamed",
+    {
+      previous_source: TITLE_SOURCES.has(String(v.previousTitleSource))
+        ? String(v.previousTitleSource)
+        : "UNKNOWN",
+    },
+  ],
+  deleteAgentChat: "chat_deleted",
   approveAgentOAuthConsent: "agent_connected",
   createAgentDelegation: "agent_connected",
   assignNoteSpeaker: (v) => (assignsSomeone(v) ? ["speaker_assigned"] : null),

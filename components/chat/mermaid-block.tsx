@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Maximize2, Minus, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 
 import {
@@ -10,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { track } from "@/lib/analytics/track";
 
 /*
  * ```mermaid 코드펜스를 도표로 그린다.
@@ -96,6 +98,7 @@ export function MermaidBlock({
   const theme = useMermaidTheme();
   const result = useMermaidSvg(id, source, theme);
   const [showCode, setShowCode] = useState(false);
+  const t = useTranslations("common.agentChat.diagram");
 
   if (result === null) return fallback;
   if ("failed" in result) {
@@ -103,7 +106,7 @@ export function MermaidBlock({
       <div>
         {fallback}
         <p className="-mt-1 mb-2 text-[11px] text-[var(--el-muted)]">
-          도표를 그리지 못했어요
+          {t("failed")}
         </p>
       </div>
     );
@@ -113,7 +116,7 @@ export function MermaidBlock({
     <div className="my-2 overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--el-hairline)] px-2.5 py-1">
         <span className="truncate font-mono text-[11px] text-[var(--el-muted)]">
-          도표
+          {t("label")}
         </span>
         <div className="flex items-center gap-0.5">
           <button
@@ -122,13 +125,17 @@ export function MermaidBlock({
             className={BUTTON}
             onClick={() => setShowCode((v) => !v)}
           >
-            {showCode ? "도표 보기" : "코드 보기"}
+            {showCode ? t("showDiagram") : t("showCode")}
           </button>
           {copyButton}
-          <Dialog>
+          <Dialog
+            onOpenChange={(open) => {
+              if (open) track("chat_diagram_expanded");
+            }}
+          >
             <DialogTrigger className={BUTTON}>
               <Maximize2 aria-hidden className="size-3" />
-              크게 보기
+              {t("expand")}
             </DialogTrigger>
             <DialogContent className="grid h-[85vh] w-[90vw] max-w-[90vw] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-[90vw]">
               <ModalDiagram id={`${id}-lg`} source={source} />
@@ -153,16 +160,15 @@ export function MermaidBlock({
  */
 function ModalDiagram({ id, source }: { id: string; source: string }) {
   const result = useMermaidSvg(id, source, useMermaidTheme());
+  const t = useTranslations("common.agentChat.diagram");
   if (result === null) {
-    return <DialogTitle>도표</DialogTitle>;
+    return <DialogTitle>{t("label")}</DialogTitle>;
   }
   if ("failed" in result) {
     return (
       <>
-        <DialogTitle>도표</DialogTitle>
-        <p className="text-[11px] text-[var(--el-muted)]">
-          도표를 그리지 못했어요
-        </p>
+        <DialogTitle>{t("label")}</DialogTitle>
+        <p className="text-[11px] text-[var(--el-muted)]">{t("failed")}</p>
       </>
     );
   }
@@ -246,6 +252,7 @@ function ZoomView({ svg }: { svg: string }) {
     view: { s: 1, x: 0, y: 0 },
   });
   const { view } = state;
+  const t = useTranslations("common.agentChat.diagram");
   /** 눌린 손가락·포인터. 하나면 이동, 둘이면 핀치. */
   const pts = useRef(new Map<number, { x: number; y: number }>());
   /** 포인터 수가 바뀐 순간의 기준. 움직임은 늘 이 기준에서 다시 계산한다. */
@@ -337,10 +344,10 @@ function ZoomView({ svg }: { svg: string }) {
   return (
     <>
       <div className="flex items-center gap-1 pr-8">
-        <DialogTitle className="mr-auto">도표</DialogTitle>
+        <DialogTitle className="mr-auto">{t("label")}</DialogTitle>
         <button
           type="button"
-          aria-label="축소"
+          aria-label={t("zoomOut")}
           className={BUTTON}
           onClick={() => zoomCenter(1 / ZOOM_STEP)}
         >
@@ -354,14 +361,14 @@ function ZoomView({ svg }: { svg: string }) {
         </span>
         <button
           type="button"
-          aria-label="확대"
+          aria-label={t("zoomIn")}
           className={BUTTON}
           onClick={() => zoomCenter(ZOOM_STEP)}
         >
           <Plus aria-hidden className="size-3.5" />
         </button>
         <button type="button" className={BUTTON} onClick={reset}>
-          맞춤
+          {t("fit")}
         </button>
       </div>
       <div
@@ -394,7 +401,7 @@ function ZoomView({ svg }: { svg: string }) {
         />
       </div>
       <p className="text-center text-[11px] text-[var(--el-muted)]">
-        끌어서 이동 · Ctrl/⌘+휠로 확대 · 두 번 누르면 맞춤
+        {t("hint")}
       </p>
     </>
   );

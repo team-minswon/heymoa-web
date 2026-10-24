@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   AlertDialog,
@@ -29,12 +30,13 @@ export function ChatDeleteDialog({
   onConfirm: (chatId: string) => Promise<boolean>;
 }) {
   const [busy, setBusy] = useState(false);
+  const t = useTranslations("common.agentChat.deleteDialog");
 
   return (
     <AlertDialog open={target !== null} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>대화를 삭제할까요?</AlertDialogTitle>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           <AlertDialogDescription
             render={<div />}
             className="space-y-3 text-left"
@@ -42,14 +44,11 @@ export function ChatDeleteDialog({
             <p className="break-words font-medium text-foreground">
               {target?.title}
             </p>
-            <p>
-              이 대화의 질문과 답, 승인 기록이 함께 삭제되며 되돌릴 수 없습니다.
-              답이 만들어지는 중이라면 멈춥니다.
-            </p>
+            <p>{t("description")}</p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>취소</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             loading={busy}
@@ -62,7 +61,7 @@ export function ChatDeleteDialog({
               if (deleted) onOpenChange(false);
             }}
           >
-            삭제
+            {t("confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

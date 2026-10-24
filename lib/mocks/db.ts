@@ -201,6 +201,10 @@ const AGENT_CHAT_LIST_LIMIT = 50;
 /** 생성 시점의 제목. 첫 USER 메시지가 이 값일 때만 덮는다. */
 const DEFAULT_AGENT_CHAT_TITLE = "새 대화";
 
+/** 시드 대화의 제목 출처. 서버 백필 규칙과 같다 — 기본 제목이면 DEFAULT, 그 밖은 QUESTION. */
+const seededTitleSource = (title: string) =>
+  title === DEFAULT_AGENT_CHAT_TITLE ? ("DEFAULT" as const) : ("QUESTION" as const);
+
 /** 제목 컬럼 상한(`AgentChat.MAX_TITLE_LENGTH`). 목록에서 한 줄로 자르는 것은 CSS가 한다. */
 const MAX_AGENT_CHAT_TITLE_LENGTH = 200;
 
@@ -681,7 +685,14 @@ function seedAgentChats(workspaceId: string) {
   };
 
   const chat = (chatId: string, title: string, createdAt: string) => {
-    chats.push({ chatId, workspaceId, title, createdAt, updatedAt: createdAt });
+    chats.push({
+      chatId,
+      workspaceId,
+      title,
+      titleSource: seededTitleSource(title),
+      createdAt,
+      updatedAt: createdAt,
+    });
     return chatId;
   };
 
@@ -2910,6 +2921,7 @@ export const mockDb = {
       chatId: nextId(),
       workspaceId: input.workspaceId,
       title: input.title ?? DEFAULT_AGENT_CHAT_TITLE,
+      titleSource: input.title ? "USER" : "DEFAULT",
       createdAt: now,
       // 아직 아무것도 안 썼어도 방금 만든 것이 맨 위다 — 만들자마자 그 대화로 들어간다.
       updatedAt: now,
@@ -3017,11 +3029,12 @@ export const mockDb = {
     //
     // ★ **마커를 사람 말로 되돌린 뒤 자른다.** 안 그러면 목록에
     // `@[주간 회의](noteId:…) 액션 정리해줘` 가 그대로 뜬다 — 서버가 하는 일과 같다.
-    if (message.role === "USER" && chat.title === DEFAULT_AGENT_CHAT_TITLE) {
+    if (message.role === "USER" && chat.titleSource === "DEFAULT") {
       chat.title = unwrapScopeMarkers(message.content)
         .replace(/\s+/g, " ")
         .trim()
         .slice(0, MAX_AGENT_CHAT_TITLE_LENGTH);
+      chat.titleSource = "QUESTION";
     }
   },
 

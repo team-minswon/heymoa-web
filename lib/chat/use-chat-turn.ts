@@ -18,6 +18,7 @@ import {
   useCancelAgentChatTurn,
   useCreateAgentChat,
   useDeleteAgentChat,
+  useRenameAgentChat,
   useGetAgentChatMessages,
   useGetAgentChats,
   useResolveToolApproval,
@@ -28,7 +29,16 @@ import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { isAuthError } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
 import { type ApprovalDecision, decideApproval } from "@/lib/chat/blocks";
-import { dropChatFromList, runningLabel } from "@/lib/chat/chat-list";
+import type { ChatMutationContext } from "@/lib/analytics/track";
+import {
+  type ChatTitleSnapshot,
+  dropChatFromList,
+  retitleChatInList,
+  revertChatTitle,
+  revertChatTitleInList,
+  runningLabel,
+  titleSourceOf,
+} from "@/lib/chat/chat-list";
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import {
   failedTurnState,
@@ -73,12 +83,18 @@ export function useChatTurn({
   workspaceId,
   onTurnActiveChange,
   startAsDraft = false,
+  onChatForgotten,
 }: {
   workspaceId: string;
   /** 턴이 도는 동안 참. 그 사이 패널을 치우면 중지·승인에 닿을 길을 잃는다. */
   onTurnActiveChange: (active: boolean) => void;
   /** 처음부터 빈 새 대화로 선다. 목록 첫 줄을 한 번 열었다가 비우면 앞 대화가 스친다(APP-1278). */
   startAsDraft?: boolean;
+  /**
+   * 서버에 없는 대화(지웠거나 이미 없던 대화)를 화면에서 치웠다. `wasOpen` 은 **치우는 그 순간** 열려 있던
+   * 대화였는가다 — 요청을 보낼 때가 아니다. 그 사이 다른 대화로 옮겼으면 거짓이라 옮겨 간 대화를 건드리지 않는다.
+   */
+  onChatForgotten?: (chatId: string, wasOpen: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const stream = useChatStream();
@@ -198,6 +214,14 @@ export function useChatTurn({
     selectedChatId ??
     (isDraftChat ? null : (chats[0]?.chatId ?? null));
 
+  /** 비동기 요청이 끝난 시점에 「지금 열린 대화」를 읽는다. 클로저의 값은 요청을 보낸 렌더의 것이다. */
+  const sessionIdRef = useRef(sessionId);
+  const onChatForgottenRef = useRef(onChatForgotten);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+    onChatForgottenRef.current = onChatForgotten;
+  });
+
   // 턴이 도는 동안(승인 대기 포함)에는 켜지 않는다. server 가 USER 행을 스트림 전에 저장해서, 켜면
   // 그 행이 낙관적 말풍선과 겹쳐 두 벌이 되고 흐르는 스레드를 스켈레톤이 덮는다.
   const messagesQuery = useGetAgentChatMessages(sessionId ?? "", {
@@ -272,6 +296,10 @@ export function useChatTurn({
   const cancelTurn = useCancelAgentChatTurn();
   // 404(이미 지운 대화)는 바라던 결과라 성공으로 접는다. 그 밖의 실패만 `deleteChat` 이 알린다
   const deleteChatMutation = useDeleteAgentChat({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
+  // 실패는 `renameChat` 이 되돌리며 알린다
+  const renameChatMutation = useRenameAgentChat({
     mutation: { meta: { suppressErrorToast: true } },
   });
 
@@ -668,29 +696,18 @@ export function useChatTurn({
     return true;
   }, [isDraftChat, isSwitchBlocked, leaveTurn]);
 
-  /**
-   * 대화를 지운다(APP-1409). 지운 대화가 열려 있었으면 빈 새 대화로 선다 — 그 대화의 스트림은 서버가 멈추므로 먼저 끊는다.
-   * 이미 지운 대화(404)도 성공이다. 지웠으면 true.
-   */
-  const deleteChat = useCallback(
-    async (chatId: string) => {
-      const ok = await deleteChatMutation
-        .mutateAsync({ chatId })
-        .then(() => true)
-        .catch((error: unknown) => {
-          if (errorCodeOf(error) === "AGENT_CHAT_NOT_FOUND") return true;
-          if (!isAuthError(error)) {
-            toast.error(errorMessageOf(error, "대화를 삭제하지 못했습니다."));
-          }
-          return false;
-        });
-      if (!ok) return false;
-      if (chatId === sessionId) {
+  /** 서버에 없는 대화를 화면에서 치운다. 열려 있었으면 빈 새 대화로 선다 — 그 대화의 스트림은 먼저 끊는다. */
+  const forgetChat = useCallback(
+    (chatId: string) => {
+      // 지우기·이름 바꾸기 요청을 보낸 렌더의 `sessionId` 가 아니라 지금 열린 대화와 견준다
+      const wasOpen = chatId === sessionIdRef.current;
+      if (wasOpen) {
         leaveTurn();
         setSelectedChatId(null);
         setCreatedChatId(null);
         setIsDraftChat(true);
       }
+      onChatForgottenRef.current?.(chatId, wasOpen);
       setOlder((current) => ({
         ...current,
         chats: current.chats.filter((chat) => chat.chatId !== chatId),
@@ -706,9 +723,147 @@ export function useChatTurn({
       void queryClient.invalidateQueries({
         queryKey: getGetAgentChatsQueryKey(workspaceId),
       });
+    },
+    [leaveTurn, queryClient, workspaceId]
+  );
+
+  /**
+   * 대화를 지운다(APP-1409). 지운 대화가 열려 있었으면 빈 새 대화로 선다 — 그 대화의 스트림은 서버가 멈추므로 먼저 끊는다.
+   * 이미 지운 대화(404)도 성공이다. 지웠으면 true. 서버 문구가 없을 때의 실패 문구는 부르는 쪽 언어로 받는다.
+   *
+   * 계측은 `MUTATION_EVENTS.deleteAgentChat` 이 한다. 생성 훅의 변수에는 워크스페이스가 없어 계측용으로 함께 싣는다
+   * (생성 함수는 `chatId` 만 꺼내 쓴다). 404 는 실패라 세지 않는다.
+   */
+  const deleteChat = useCallback(
+    async (chatId: string, failureMessage: string) => {
+      const variables: { chatId: string } & ChatMutationContext = {
+        chatId,
+        workspaceId,
+      };
+      const ok = await deleteChatMutation
+        .mutateAsync(variables)
+        .then(() => true)
+        .catch((error: unknown) => {
+          if (errorCodeOf(error) === "AGENT_CHAT_NOT_FOUND") return true;
+          if (!isAuthError(error)) {
+            toast.error(errorMessageOf(error, failureMessage));
+          }
+          return false;
+        });
+      if (!ok) return false;
+      forgetChat(chatId);
       return true;
     },
-    [deleteChatMutation, leaveTurn, queryClient, sessionId, workspaceId]
+    [deleteChatMutation, forgetChat, workspaceId]
+  );
+
+  /**
+   * 대화별 이름 바꾸기 장부. `seq` 는 그 대화에 마지막으로 보낸 요청의 순번, `base` 는 서버가 마지막으로 확인해 준
+   * 제목(처음엔 요청 전 제목)이다. 같은 대화에 요청이 겹치면 마지막 요청만 실패를 되돌릴 자격이 있다.
+   */
+  const renameLedgerRef = useRef(
+    new Map<
+      string,
+      { seq: number; inFlight: number; base: ChatTitleSnapshot | null }
+    >()
+  );
+
+  /**
+   * 제목을 바꾼다. 목록 캐시를 먼저 고치고(헤더도 그 캐시를 읽는다) 실패하면 되돌린다. 되돌리기는 **그 대화 한 줄만**,
+   * 그 줄이 **아직 이 요청의 낙관값일 때만**, 그 대화의 **마지막 요청일 때만** 한다 — 다른 대화의 변경, 같은 대화의
+   * 뒤 요청, 그 사이 도착한 AI·다른 탭 제목을 덮지 않는다. 404 는 이미 없는 대화라 목록에서 뺀다. 정렬은 서버가
+   * 바꾸지 않으므로 줄 자리는 그대로다.
+   */
+  const renameChat = useCallback(
+    async (chatId: string, title: string, failureMessage: string) => {
+      const listKey = { queryKey: getGetAgentChatsQueryKey(workspaceId) };
+      const ledger = renameLedgerRef.current;
+      const known = [...chats, ...olderHere.chats].find(
+        (chat) => chat.chatId === chatId
+      );
+      const previousSource = titleSourceOf(
+        [...chats, ...olderHere.chats],
+        chatId
+      );
+      const entry = ledger.get(chatId);
+      const seq = (entry?.seq ?? 0) + 1;
+      ledger.set(chatId, {
+        seq,
+        inFlight: (entry?.inFlight ?? 0) + 1,
+        base:
+          entry?.base ??
+          (known
+            ? {
+                title: known.title,
+                titleSource: (known as { titleSource?: unknown }).titleSource,
+              }
+            : null),
+      });
+      // 떠 있는 폴링이 옛 제목으로 덮지 않게 먼저 멈춘다
+      await queryClient.cancelQueries(listKey);
+      queryClient.setQueriesData(listKey, (current: unknown) =>
+        retitleChatInList(current, chatId, title)
+      );
+      setOlder((current) => ({
+        ...current,
+        chats: current.chats.map((chat) =>
+          chat.chatId === chatId
+            ? { ...chat, title, titleSource: "USER" }
+            : chat
+        ),
+      }));
+      const settle = (confirmed: boolean) => {
+        const now = ledger.get(chatId);
+        if (!now) return null;
+        if (confirmed) now.base = { title, titleSource: "USER" };
+        now.inFlight -= 1;
+        const latest = now.seq === seq;
+        const base = now.base;
+        if (now.inFlight === 0) ledger.delete(chatId);
+        return { latest, base };
+      };
+      try {
+        // 계측(`MUTATION_EVENTS.renameAgentChat`)이 읽을 워크스페이스·바꾸기 전 출처를 변수에 함께 싣는다
+        const variables: {
+          chatId: string;
+          data: { title: string };
+        } & ChatMutationContext = {
+          chatId,
+          data: { title },
+          workspaceId,
+          previousTitleSource: previousSource,
+        };
+        await renameChatMutation.mutateAsync(variables);
+        settle(true);
+        return true;
+      } catch (error) {
+        const settled = settle(false);
+        if (errorCodeOf(error) === "AGENT_CHAT_NOT_FOUND") {
+          forgetChat(chatId);
+          return false;
+        }
+        if (settled?.latest && settled.base) {
+          const restore = settled.base;
+          queryClient.setQueriesData(listKey, (current: unknown) =>
+            revertChatTitleInList(current, chatId, title, restore)
+          );
+          setOlder((current) => ({
+            ...current,
+            chats: revertChatTitle(current.chats, chatId, title, restore),
+          }));
+        }
+        if (!isAuthError(error)) toast.error(failureMessage);
+        return false;
+      }
+    },
+    [
+      chats,
+      forgetChat,
+      olderHere.chats,
+      queryClient,
+      renameChatMutation,
+      workspaceId,
+    ]
   );
 
   const streamPhase = stream.state.phase;
@@ -821,6 +976,7 @@ export function useChatTurn({
     switchChat,
     startNewChat,
     deleteChat,
+    renameChat,
     isDeletingChat: deleteChatMutation.isPending,
     retry,
   };

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { AgentChatsResponseDataChatsItemRunningTurn } from "./agentChatsResponseDataChatsItemRunningTurn";
+import type { AgentChatsResponseDataChatsItemTitleSource } from "./agentChatsResponseDataChatsItemTitleSource";
 
 export type AgentChatsResponseDataChatsItem = {
   /**
@@ -20,6 +21,8 @@ export type AgentChatsResponseDataChatsItem = {
   chatId: string;
   /** 대화 제목. **절대 null 이 아니다** — 빈 값이면 「새 대화」다 */
   title: string;
-  /** 마지막 활동 시각 */
+  /** 마지막 활동 시각. 이름 변경·AI 제목은 이 값을 안 바꾼다 */
   updatedAt: string;
+  /** 제목이 어디서 왔나(DEFAULT 새 대화 · QUESTION 첫 질문 · AI 첫 답변 뒤 요약 · USER 사용자가 지음). 표시용이 아니다 — 모르는 클라이언트는 무시해도 된다 */
+  titleSource: AgentChatsResponseDataChatsItemTitleSource;
 };

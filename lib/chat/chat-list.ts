@@ -135,28 +135,116 @@ export function relativeUpdatedAt(at: string, now: Date, locale?: string) {
   return format.format(-Math.floor(days / 365), "year");
 }
 
+type ChatListResponse<T> = {
+  status: 200;
+  data: { success: true; data: { chats: T[] } };
+};
+
 /**
- * 대화 목록 캐시(`GET /agent-chats` 응답)에서 그 대화 줄만 뺀다(APP-1409). 모양이 예상과 다르면 손대지 않는다 —
- * 실패 응답이나 아직 안 읽은 캐시를 지운 것처럼 바꾸면 안 된다.
+ * 대화 목록 캐시(`GET /agent-chats` 응답)가 줄을 가진 성공 응답일 때만 돌려준다. 실패 응답이나 아직 안 읽은
+ * 캐시를 바꾼 것처럼 만들거나 빈 목록으로 읽으면 안 된다.
  */
-export function dropChatFromList(current: unknown, chatId: string): unknown {
+function chatListOf<T>(current: unknown): ChatListResponse<T> | null {
   const response = current as
     | {
         status?: number;
-        data?: { success?: boolean; data?: { chats?: { chatId: string }[] } };
+        data?: { success?: boolean; data?: { chats?: T[] } };
       }
     | undefined;
-  const chats = response?.data?.data?.chats;
-  if (response?.status !== 200 || !response.data?.success || !chats)
-    return current;
+  return response?.status === 200 &&
+    response.data?.success &&
+    response.data.data?.chats
+    ? (response as ChatListResponse<T>)
+    : null;
+}
+
+function mapChatList<T extends { chatId: string }>(
+  current: unknown,
+  update: (chats: T[]) => T[]
+): unknown {
+  const response = chatListOf<T>(current);
+  if (!response) return current;
   return {
     ...response,
     data: {
       ...response.data,
-      data: {
-        ...response.data.data,
-        chats: chats.filter((chat) => chat.chatId !== chatId),
-      },
+      data: { ...response.data.data, chats: update(response.data.data.chats) },
     },
   };
+}
+
+/** 그 대화 줄만 뺀다(APP-1409). */
+export function dropChatFromList(current: unknown, chatId: string): unknown {
+  return mapChatList(current, (chats) =>
+    chats.filter((chat) => chat.chatId !== chatId)
+  );
+}
+
+/**
+ * 그 대화 줄의 제목을 바꾼다. 이름 바꾸기의 낙관적 갱신이 쓴다. 출처도 `USER` 로 둔다 — 다시 바꿀 때의 계측이
+ * 다음 조회를 기다리지 않고 「사람이 붙인 이름을 또 고쳤다」를 알게.
+ */
+export function retitleChatInList(
+  current: unknown,
+  chatId: string,
+  title: string
+): unknown {
+  return mapChatList<{ chatId: string; title: string }>(current, (chats) =>
+    chats.map((chat) =>
+      chat.chatId === chatId ? { ...chat, title, titleSource: "USER" } : chat
+    )
+  );
+}
+
+/** 이름 바꾸기가 실패했을 때 돌아갈 제목과 출처. */
+export type ChatTitleSnapshot = { title: string; titleSource?: unknown };
+
+/**
+ * 그 대화의 제목이 아직 `optimistic`(이 요청이 낙관적으로 세운 값)일 때만 `restore` 로 되돌린다. 그 사이 다른
+ * 이름 바꾸기·AI 제목·다른 탭의 변경이 들어왔으면 그쪽이 더 새 값이라 건드리지 않는다. 다른 줄은 그대로다.
+ */
+export function revertChatTitle<T extends { chatId: string; title: string }>(
+  chats: readonly T[],
+  chatId: string,
+  optimistic: string,
+  restore: ChatTitleSnapshot
+): T[] {
+  return chats.map((chat) =>
+    chat.chatId === chatId && chat.title === optimistic
+      ? { ...chat, title: restore.title, titleSource: restore.titleSource }
+      : chat
+  );
+}
+
+/** 목록 캐시 응답에 `revertChatTitle` 을 적용한다. */
+export function revertChatTitleInList(
+  current: unknown,
+  chatId: string,
+  optimistic: string,
+  restore: ChatTitleSnapshot
+): unknown {
+  return mapChatList<{ chatId: string; title: string }>(current, (chats) =>
+    revertChatTitle(chats, chatId, optimistic, restore)
+  );
+}
+
+export type TitleSource = "DEFAULT" | "QUESTION" | "AI" | "USER" | "UNKNOWN";
+const TITLE_SOURCES = new Set(["DEFAULT", "QUESTION", "AI", "USER"]);
+
+/**
+ * 그 대화 제목의 출처(계약 `titleSource`). 목록 응답에 아직 없는 서버면 UNKNOWN 이다 — 생성 타입이 이 필드를
+ * 갖게 되면 이 좁히기는 타입이 대신한다.
+ */
+export function titleSourceOf(
+  chats: readonly { chatId: string }[],
+  chatId: string
+): TitleSource {
+  const source = (
+    chats.find((chat) => chat.chatId === chatId) as
+      | { titleSource?: unknown }
+      | undefined
+  )?.titleSource;
+  return typeof source === "string" && TITLE_SOURCES.has(source)
+    ? (source as TitleSource)
+    : "UNKNOWN";
 }

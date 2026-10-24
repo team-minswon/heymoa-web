@@ -3796,10 +3796,12 @@ paths:
                         runningTurn:
                           turnId: 0K9GVJT2C4Q3B
                           status: WAITING_APPROVAL
+                        titleSource: QUESTION
                       - chatId: 0K9GVJT2C4Q9Z
                         title: 새 대화
                         updatedAt: '2026-07-21T00:00:00Z'
                         runningTurn: null
+                        titleSource: DEFAULT
                       hasMore: true
                       nextUpdatedAt: '2026-07-21T00:00:00Z'
                       nextChatId: 0K9GVJT2C4Q9Z
@@ -3868,6 +3870,7 @@ paths:
                       workspaceId: 0HZX2K7M9Q4AD
                       title: 질문
                       createdAt: '2026-07-22T00:00:00Z'
+                      titleSource: USER
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -5936,7 +5939,7 @@ paths:
       tags:
       - Workspace Members
       summary: 워크스페이스 나가기
-      description: 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다. 확인으로 입력한 워크스페이스 이름을 본문으로 받아 지금 이름과 다르면 400 WORKSPACE_NAME_MISMATCH 다.
+      description: 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다. 확인으로 입력한 워크스페이스 이름을 본문으로 받아 지금 이름과 다르면 400 WORKSPACE_NAME_MISMATCH 다. 본인이 이 워크스페이스에서 연 녹음이 열려 있으면 409 RECORDING_IN_PROGRESS 다(탈퇴와 같다).
       operationId: leaveWorkspace
       parameters:
       - name: workspaceId
@@ -5979,6 +5982,14 @@ paths:
                     error:
                       code: LAST_WORKSPACE_ADMIN
                       message: 워크스페이스에는 관리자가 최소 한 명 있어야 합니다.
+                      details: null
+                RECORDING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: RECORDING_IN_PROGRESS
+                      message: 녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.
                       details: null
         '204':
           description: 처리 성공
@@ -6031,6 +6042,9 @@ paths:
                   workspaceName: 제품 팀
               leaveWorkspace_BadRequest:
                 value: {}
+              leaveWorkspace_RecordingInProgressException:
+                value:
+                  workspaceName: 제품 팀
   /v1/workspaces/{workspaceId}/members/{userId}:
     delete:
       tags:
@@ -10390,6 +10404,92 @@ paths:
                       details: null
       security:
       - accessCookie: []
+    patch:
+      tags:
+      - AgentChat
+      summary: 대화 이름 변경
+      description: 내 대화의 이름을 바꾼다. 한 줄로 접고 양끝 공백을 걷은 뒤 1~100자이고 빈 값·초과는 400 BAD_REQUEST 다(길이는 새 값에만 본다). **바꾼 뒤로는 첫 질문·AI 제목이 덮지 않는다**(titleSource USER). 같은 이름이면 아무것도 안 바꾸고 200 이다. 목록 정렬 시각(updatedAt)은 안 바뀐다. 바뀌면 사용자 이벤트 스트림에 chats.changed 가 나간다. 없거나 소유하지 않은 대화는 404 AGENT_CHAT_NOT_FOUND 다.
+      operationId: renameAgentChat
+      parameters:
+      - name: chatId
+        in: path
+        description: 채팅 세션의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 채팅 세션의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0K9GVJT2C4Q2A
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameAgentChatRequest'
+            examples:
+              renameAgentChat_Success:
+                value:
+                  title: 배포 게이트 정리
+              renameAgentChat_BadRequest:
+                value:
+                  title: '   '
+              renameAgentChat_AgentChatNotFoundException:
+                value:
+                  title: 새 이름
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentChatResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      chatId: 0K9GVJT2C4Q2A
+                      workspaceId: 0HZX2K7M9Q4AD
+                      title: 배포 게이트 정리
+                      titleSource: USER
+                      createdAt: '2026-07-22T00:00:00Z'
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: title
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_CHAT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_NOT_FOUND
+                      message: 채팅 세션을 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
 components:
   schemas:
     AcceptInvitationByTokenRequest:
@@ -11330,6 +11430,7 @@ components:
           - chatId
           - createdAt
           - title
+          - titleSource
           - workspaceId
           type: object
           properties:
@@ -11356,6 +11457,16 @@ components:
               nullable: false
               example: 0HZX2K7M9Q4AD
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            titleSource:
+              type: string
+              description: 제목이 어디서 왔나(DEFAULT 새 대화 · QUESTION 첫 질문 · AI 첫 답변 뒤 요약 · USER 사용자가 지음). 표시용이 아니다 — 모르는 클라이언트는 무시해도 된다
+              nullable: false
+              example: USER
+              enum:
+              - DEFAULT
+              - QUESTION
+              - AI
+              - USER
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -11422,6 +11533,7 @@ components:
                 required:
                 - chatId
                 - title
+                - titleSource
                 - updatedAt
                 - runningTurn
                 type: object
@@ -11461,10 +11573,20 @@ components:
                     example: 배포 게이트를 만들어줘
                   updatedAt:
                     type: string
-                    description: 마지막 활동 시각
+                    description: 마지막 활동 시각. 이름 변경·AI 제목은 이 값을 안 바꾼다
                     nullable: false
                     example: '2026-07-14T01:02:03Z'
                     format: date-time
+                  titleSource:
+                    type: string
+                    description: 제목이 어디서 왔나(DEFAULT 새 대화 · QUESTION 첫 질문 · AI 첫 답변 뒤 요약 · USER 사용자가 지음). 표시용이 아니다 — 모르는 클라이언트는 무시해도 된다
+                    nullable: false
+                    example: QUESTION
+                    enum:
+                    - DEFAULT
+                    - QUESTION
+                    - AI
+                    - USER
               nullable: false
             hasMore:
               type: boolean
@@ -19886,6 +20008,18 @@ components:
           description: 확인으로 입력한 워크스페이스 이름. 지금 이름과 앞뒤 공백만 걷고 정확히 같아야 한다(PRO-69)
           nullable: false
           maxLength: 200
+    RenameAgentChatRequest:
+      title: RenameAgentChatRequest
+      required:
+      - title
+      type: object
+      properties:
+        title:
+          type: string
+          description: 새 이름. 한 줄로 접고 양끝 공백을 걷은 뒤 1~100자
+          nullable: false
+          example: 배포 게이트 정리
+          maxLength: 100
   securitySchemes:
     accessCookie:
       type: apiKey

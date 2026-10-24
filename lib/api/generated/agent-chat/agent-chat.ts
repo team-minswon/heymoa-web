@@ -31,6 +31,7 @@ import type {
   AppErrorResponse,
   CreateAgentChatRequest,
   GetAgentChatsParams,
+  RenameAgentChatRequest,
   ResolveToolApprovalRequest,
   SendAgentChatMessageRequest,
   SubscribeAgentChatTurnEventsParams,
@@ -2026,4 +2027,161 @@ export const useDeleteAgentChat = <
   TContext
 > => {
   return useMutation(getDeleteAgentChatMutationOptions(options), queryClient);
+};
+export type renameAgentChatResponse200 = {
+  data: AgentChatResponse;
+  status: 200;
+};
+
+export type renameAgentChatResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type renameAgentChatResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type renameAgentChatResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type renameAgentChatResponseSuccess = renameAgentChatResponse200 & {
+  headers: Headers;
+};
+export type renameAgentChatResponseError = (
+  | renameAgentChatResponse400
+  | renameAgentChatResponse401
+  | renameAgentChatResponse404
+) & {
+  headers: Headers;
+};
+
+export type renameAgentChatResponse =
+  | renameAgentChatResponseSuccess
+  | renameAgentChatResponseError;
+
+export const getRenameAgentChatUrl = (chatId: string) => {
+  return `/v1/agent-chats/${chatId}`;
+};
+
+/**
+ * 내 대화의 이름을 바꾼다. 한 줄로 접고 양끝 공백을 걷은 뒤 1~100자이고 빈 값·초과는 400 BAD_REQUEST 다(길이는 새 값에만 본다). **바꾼 뒤로는 첫 질문·AI 제목이 덮지 않는다**(titleSource USER). 같은 이름이면 아무것도 안 바꾸고 200 이다. 목록 정렬 시각(updatedAt)은 안 바뀐다. 바뀌면 사용자 이벤트 스트림에 chats.changed 가 나간다. 없거나 소유하지 않은 대화는 404 AGENT_CHAT_NOT_FOUND 다.
+ * @summary 대화 이름 변경
+ */
+export const renameAgentChat = async (
+  chatId: string,
+  renameAgentChatRequest?: RenameAgentChatRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<renameAgentChatResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<renameAgentChatResponse>(getRenameAgentChatUrl(chatId), {
+    ...options,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(renameAgentChatRequest),
+  });
+};
+
+export const getRenameAgentChatMutationKey = () => ["renameAgentChat"] as const;
+
+export const getRenameAgentChatMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renameAgentChat>>,
+    TError,
+    RenameAgentChatMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renameAgentChat>>,
+  TError,
+  RenameAgentChatMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRenameAgentChatMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renameAgentChat>>,
+    RenameAgentChatMutationVariables
+  > = (props) => {
+    const { chatId, data } = props ?? {};
+
+    return renameAgentChat(chatId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenameAgentChatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renameAgentChat>>
+>;
+export type RenameAgentChatMutationBody = RenameAgentChatRequest | undefined;
+export type RenameAgentChatMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type RenameAgentChatMutationVariables = {
+  chatId: string;
+  data?: RenameAgentChatRequest;
+};
+
+/**
+ * @summary 대화 이름 변경
+ */
+export const useRenameAgentChat = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof renameAgentChat>>,
+      TError,
+      RenameAgentChatMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof renameAgentChat>>,
+  TError,
+  RenameAgentChatMutationVariables,
+  TContext
+> => {
+  return useMutation(getRenameAgentChatMutationOptions(options), queryClient);
 };
