@@ -22,6 +22,7 @@ const NOTE_META = {
 const data = vi.hoisted(() => ({
   segments: [] as unknown[],
   diarization: null as unknown,
+  recording: undefined as unknown,
   /** 다시 읽었을 때 서버가 주는 발화. `null`이면 캐시와 같은 것을 준다. */
   refetched: null as unknown[] | null,
   transcriptFails: false,
@@ -106,7 +107,11 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
             status: 200,
             data: {
               success: true,
-              data: { segments: data.segments, diarization: data.diarization },
+              data: {
+                segments: data.segments,
+                diarization: data.diarization,
+                recording: data.recording,
+              },
             },
           },
     };
@@ -155,6 +160,7 @@ describe("NoteArchive", () => {
     cleanup();
     data.segments = [];
     data.diarization = null;
+    data.recording = undefined;
     data.transcriptFails = false;
     spies.assignLabel.mockReset();
     spies.assignLabelAsync.mockClear();
@@ -1080,6 +1086,62 @@ describe("NoteArchive", () => {
    * 인용으로 간 뒤 형광이 사라지기 전에 패널에서 이동을 누르면, 예전에는 패널만 닫히고
    * 화면이 안 움직였다 — 소유자가 든 옛 `focusSegmentId` 가 새 점프를 이겼다.
    */
+  /**
+   * 녹음 길이(`recording.durationMs`)가 발화의 회의 축보다 짧게 오면, 띠는 발화 끝까지로 그리고
+   * 누른 자리는 녹음 길이로 시각을 되짚어 뒤쪽 점을 눌러도 앞쪽 발화로 갔다(40분대 → 9분대).
+   */
+  it("도크 띠의 뒤쪽 점을 누르면 그 발화로 간다 — 녹음 길이가 짧게 와도", async () => {
+    data.refetched = null;
+    data.recording = { durationMs: 500_000 };
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        {
+          label: "A",
+          speakingMs: 30_000,
+          segmentCount: 3,
+          representativeSegmentId: "s1",
+          assignedParticipantId: null,
+          assignedName: null,
+          confirmed: false,
+        },
+      ],
+    };
+    data.segments = [60_000, 540_000, 2_400_000].map((start, index) => ({
+      segmentId: `s${index + 1}`,
+      transcriptionSessionId: "sess1",
+      sequence: index,
+      startedAtMs: start,
+      endedAtMs: start + 10_000,
+      text: `발화 ${index}`,
+      speakerLabel: "A",
+      assignedParticipantId: null,
+    }));
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={[]}
+      />
+    );
+    const strip = screen.getByTestId("speaker-dock-strip");
+    strip.getBoundingClientRect = () =>
+      ({ left: 0, width: 1000, top: 0, height: 24 }) as DOMRect;
+    // 맨 끝 칸 — 40분대 발화가 그려진 자리다.
+    fireEvent.click(strip, { clientX: 995 });
+
+    await waitFor(() => {
+      const focused = screen
+        .getAllByTestId("archive-transcript-block")
+        .filter((block) => block.hasAttribute("data-focused"));
+      expect(focused).toHaveLength(1);
+      expect(focused[0].textContent).toContain("발화 2");
+    });
+  });
+
   it("형광이 남아 있어도 방금 누른 이동이 이긴다", async () => {
     data.refetched = null;
     data.diarization = {

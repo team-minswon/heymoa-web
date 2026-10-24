@@ -47,6 +47,7 @@ import {
   isSpeakerAssigneeQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
+import { meetingLengthOf } from "@/lib/notes/review/moments";
 import {
   SpeakerDock,
   createCurrentMsStore,
@@ -921,10 +922,15 @@ export const NoteArchive = memo(function NoteArchive({
   }, [viewportRef, startedAtOf, rows.length, currentMsStore]);
 
   const [panelOpen, setPanelOpen] = useState(false);
-  /** 회의 길이. 패널의 머리글과 타임라인 축이 **같은 값**을 써야 둘이 같은 회의를 그린다. */
-  const meetingDurationMs =
-    transcript?.recording?.durationMs ||
-    (segments.length ? segments[segments.length - 1].endedAtMs : 0);
+  /**
+   * 회의 길이. 패널의 머리글, 띠를 그리는 축(`summarizeSpeakers`), 띠를 누른 자리를 시각으로
+   * 되짚는 축이 **같은 값**을 써야 한다. 녹음 길이가 발화 끝보다 짧게 오면 띠는 발화 끝까지로
+   * 그려지는데 누른 자리는 녹음 길이로 되짚혀, 뒤쪽을 눌러도 앞쪽 발화로 갔다(APP-1427).
+   */
+  const meetingDurationMs = meetingLengthOf(
+    transcript?.recording?.durationMs,
+    segments
+  );
   const speakerStats = useMemo(
     () =>
       diarized
