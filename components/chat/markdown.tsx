@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { MermaidBlock } from "@/components/chat/mermaid-block";
 import { copyText } from "@/lib/ui/copy-text";
 
 /*
@@ -33,6 +34,36 @@ function languageOf(node: unknown): string | null {
   return typeof hit === "string" ? hit.slice("language-".length) : null;
 }
 
+/** 머리줄의 복사 버튼. `read` 는 누른 순간에 읽는다 — 렌더 시점 값이면 스트리밍 중 글이 낡는다. */
+function CopyButton({ label, read }: { label: string; read: () => string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      // 고정 `aria-label` 이면 「복사됨」으로 바뀐 글자를 덮어 화면 낭독기에는 변화가 없다.
+      aria-label={copied ? `${label} 복사됨` : `${label} 복사`}
+      className="inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 py-0.5 text-[11px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+      onClick={async () => {
+        try {
+          await copyText(read());
+        } catch {
+          // 클립보드가 없거나 권한이 없다. 「복사됨」이라고 거짓말하지 않는다.
+          return;
+        }
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+    >
+      {copied ? (
+        <Check aria-hidden className="size-3" />
+      ) : (
+        <Copy aria-hidden className="size-3" />
+      )}
+      {copied ? "복사됨" : "복사"}
+    </button>
+  );
+}
+
 /**
  * 코드블록. 머리줄에 언어와 복사가 선다.
  *
@@ -50,7 +81,6 @@ function CodeBlock({
   children?: React.ReactNode;
 }) {
   const ref = useRef<HTMLPreElement>(null);
-  const [copied, setCopied] = useState(false);
 
   return (
     <div className="my-2 overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]">
@@ -58,29 +88,7 @@ function CodeBlock({
         <span className="truncate font-mono text-[11px] text-[var(--el-muted)]">
           {language ?? "코드"}
         </span>
-        <button
-          type="button"
-          // 고정 `aria-label` 이면 「복사됨」으로 바뀐 글자를 덮어 화면 낭독기에는 변화가 없다.
-          aria-label={copied ? "코드 복사됨" : "코드 복사"}
-          className="inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 py-0.5 text-[11px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
-          onClick={async () => {
-            try {
-              await copyText(ref.current?.textContent ?? "");
-            } catch {
-              // 클립보드가 없거나 권한이 없다. 「복사됨」이라고 거짓말하지 않는다.
-              return;
-            }
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          }}
-        >
-          {copied ? (
-            <Check aria-hidden className="size-3" />
-          ) : (
-            <Copy aria-hidden className="size-3" />
-          )}
-          {copied ? "복사됨" : "복사"}
-        </button>
+        <CopyButton label="코드" read={() => ref.current?.textContent ?? ""} />
       </div>
       {/* 긴 줄은 자기 안에서 가로 스크롤한다. 접으면 들여쓰기가 뭉개진다. */}
       <pre
@@ -90,6 +98,38 @@ function CodeBlock({
         {children}
       </pre>
     </div>
+  );
+}
+
+/** hast 노드 아래 글자를 모은다. 코드펜스 원문이다. */
+function textOf(node: unknown): string {
+  const n = node as { value?: unknown; children?: unknown[] } | undefined;
+  if (typeof n?.value === "string") return n.value;
+  return Array.isArray(n?.children) ? n.children.map(textOf).join("") : "";
+}
+
+/**
+ * 답이 아직 흐르는 중인가. `COMPONENTS` 는 모듈 스코프라 prop 으로 못 넘겨 context 로 내린다.
+ * 흐르는 동안은 펜스가 닫혔는지 몰라 도표를 안 그린다 — 토큰마다 다시 그리면 깜빡이고 무겁다.
+ */
+const StreamingContext = createContext(false);
+
+function MermaidPre({
+  source,
+  children,
+}: {
+  source: string;
+  children?: React.ReactNode;
+}) {
+  const streaming = useContext(StreamingContext);
+  const code = <CodeBlock language="mermaid">{children}</CodeBlock>;
+  if (streaming) return code;
+  return (
+    <MermaidBlock
+      source={source}
+      fallback={code}
+      copyButton={<CopyButton label="코드" read={() => source} />}
+    />
   );
 }
 
@@ -130,9 +170,12 @@ const COMPONENTS: Components = {
         {children}
       </code>
     ),
-  pre: ({ node, children }) => (
-    <CodeBlock language={languageOf(node)}>{children}</CodeBlock>
-  ),
+  pre: ({ node, children }) =>
+    languageOf(node) === "mermaid" ? (
+      <MermaidPre source={textOf(node)}>{children}</MermaidPre>
+    ) : (
+      <CodeBlock language={languageOf(node)}>{children}</CodeBlock>
+    ),
   ul: ({ children }) => (
     <ul className="my-1.5 list-disc space-y-0.5 pl-5">{children}</ul>
   ),
@@ -172,15 +215,24 @@ const COMPONENTS: Components = {
 const REMARK = [remarkGfm];
 
 /** 낱말마다 span 을 세우지 않는다. 매끄러움은 `use-smooth-text` 가 토큰을 고르게 푸는 데서 온다. */
-export function Markdown({ content }: { content: string }) {
+export function Markdown({
+  content,
+  streaming = false,
+}: {
+  content: string;
+  /** 토큰이 흐르는 중. 켜져 있으면 mermaid 를 그리지 않고 코드로 둔다. */
+  streaming?: boolean;
+}) {
   return (
     // `break-words` 는 긴 URL 이 좁은 패널 밖으로 삐져나가지 않게 한다.
     // 체크박스 목록은 표식을 뗀다. `li:has(input)` 은 자손을 봐서 상위 `li` 의 불릿까지 떼므로
     // gfm 이 붙이는 `task-list-item` 을 짚는다.
     <div className="chat-md text-sm leading-[1.65] break-words text-[var(--el-body)] [&_.task-list-item]:list-none">
-      <ReactMarkdown remarkPlugins={REMARK} components={COMPONENTS}>
-        {content}
-      </ReactMarkdown>
+      <StreamingContext value={streaming}>
+        <ReactMarkdown remarkPlugins={REMARK} components={COMPONENTS}>
+          {content}
+        </ReactMarkdown>
+      </StreamingContext>
     </div>
   );
 }

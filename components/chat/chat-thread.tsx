@@ -609,7 +609,11 @@ function AssistantText({
       data-partial={partial ? "true" : undefined}
       className={cn(partial && "opacity-60")}
     >
-      <Markdown content={shown} />
+      {/* 흐름이 끝난 직후 한 렌더는 아직 덜 푼 글이다. 그때도 도표를 그리지 않는다. */}
+      <Markdown
+        content={shown}
+        streaming={Boolean(streaming) || shown !== content}
+      />
     </div>
   );
 }
