@@ -835,7 +835,6 @@ function PersonalChatPanel({
             overlay={
               <ScrollToBottomButton
                 label="맨 아래로"
-                placement="end"
                 visible={!atBottom}
                 onClick={scrollToBottom}
               />

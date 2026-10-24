@@ -94,6 +94,41 @@ for (const width of [1440, 1024]) {
       expect(overflow).toBe(0);
     });
 
+    test("보낸 질문의 턴이 스크롤 맨 위에 서고(구분선 포함), 위로 올리면 「맨 아래로」가 가로 가운데에 선다", async ({
+      page,
+    }) => {
+      const panel = await openPanel(page);
+      // 어제 대화라 오늘 첫 질문 위에 날짜 구분선이 새로 선다
+      await openChat(page, /^배포 일정 확인/);
+      await page.getByLabel("메시지").fill("배포 일정 정리해줘");
+      await page.getByRole("button", { name: "보내기", exact: true }).click();
+
+      const thread = panel.getByTestId("chat-thread-view");
+      const viewport = thread.locator('[data-slot="scroll-area-viewport"]');
+      const pinned = thread.getByTestId("chat-pinned-turn");
+      const divider = pinned.getByTestId("thread-divider");
+      await expect(divider).toBeVisible();
+      // 부드러운 이동(700ms)이 끝난 뒤의 자리: 턴의 위 끝 = 뷰포트 위 끝, 그 아래 위 여백(24px) 뒤에 구분선
+      await expect
+        .poll(async () => {
+          const top = (await viewport.boundingBox())!.y;
+          return [
+            Math.round((await pinned.boundingBox())!.y - top) + 0,
+            Math.round((await divider.boundingBox())!.y - top) + 0,
+          ];
+        })
+        .toEqual([0, 24]);
+
+      await viewport.evaluate((el) => (el.scrollTop = 0));
+      const toBottom = thread.getByRole("button", { name: "맨 아래로" });
+      await expect(toBottom).toBeVisible();
+      const button = (await toBottom.boundingBox())!;
+      const box = (await viewport.boundingBox())!;
+      expect(
+        Math.abs(button.x + button.width / 2 - (box.x + box.width / 2))
+      ).toBeLessThan(2);
+    });
+
     test("끝난 진행은 「N초 동안 생각 · 회의록 1건」 한 줄로 접히고, 펴면 줄마다 한 단계다", async ({
       page,
     }) => {

@@ -326,7 +326,8 @@ function Disclosure({
       {/* 접혀서 도는 동안에만 지금 하는 일을 한 줄로 말한다. 펴져 있으면 타임라인의 마지막 줄이 같은 말을 하므로
           되풀이하지 않는다. 사라질 때는 높이를 접어 아래 답이 한 번에 튀어 오르지 않게 한다. */}
       <AnimatePresence initial={false}>
-        {current && !open ? (
+        {/* 지금 하는 일 문장이 없으면 줄을 세우지 않는다 — 「생각하는 중」을 대신 적으면 머리줄 「생각 중」을 되풀이한다. */}
+        {current && !open && (current.text || stalled) ? (
           <motion.div
             key="current"
             initial={false}
@@ -339,13 +340,15 @@ function Disclosure({
               text={current.text}
               stalled={stalled}
             />
-            {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면 글자마다 읽힌다. */}
-            <span className="sr-only" aria-live="polite">
-              {stalled ? STALLED_TEXT : current.announce}
-            </span>
           </motion.div>
         ) : null}
       </AnimatePresence>
+      {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면 글자마다 읽힌다. 보이는 줄이 없어도 알린다. */}
+      {current && !open ? (
+        <span className="sr-only" aria-live="polite">
+          {stalled ? STALLED_TEXT : current.announce}
+        </span>
+      ) : null}
       {/* `initial={false}` 는 흐르는 중 이미 펴진 채로 다시 그려질 때 매 토큰 다시 자라지 않게 한다. */}
       <AnimatePresence initial={false}>
         {open ? (
@@ -404,7 +407,7 @@ function thinkingLines(text: string) {
 /**
  * 지금 도는 단계. 결과를 기다리는 도구가 있으면 그것, 아니면 마지막 생각의 마지막 문장이다.
  * 승인 대기는 이미 걸러졌다(`drawable`). `announce` 는 화면 읽기에 알릴 짧은 말로, 생각이면
- * 문장 대신 「생각하는 중」이다.
+ * 문장 대신 「생각하는 중」이다. 하는 일을 말할 문장이 없으면 `text` 는 비어 있다.
  */
 function currentStep(
   blocks: StepBlock[],
@@ -418,13 +421,13 @@ function currentStep(
     (block) => block.kind === "tool" && block.status === null
   );
   if (pending?.kind === "tool") {
-    const text = pending.summary || pending.tool || "생각하는 중";
+    const text = pending.summary || pending.tool || "";
     // 인자·결과를 뺀 라벨만 알린다(「연관 스크립트 읽기 중」). 길게 읽으면 다음 단계에 밀린다.
     const label = text.split(" · ")[0];
     return {
       id: `tool-${pending.toolCallId}`,
       text,
-      announce: `${label} 중`,
+      announce: label ? `${label} 중` : "생각하는 중",
     };
   }
   // 줄에서 읽는다. 커서 경계에서 갈려 온 생각은 줄에서 한 문단으로 합쳐져 있다.
@@ -439,11 +442,11 @@ function currentStep(
     return {
       // 줄이 늘 때마다 새 줄로 떠오른다. 같은 줄에 글자가 붙는 동안은 그대로다
       id: `${last.key}:${rows.length}`,
-      text: sentence || "생각하는 중",
+      text: sentence ?? "",
       announce: "생각하는 중",
     };
   }
-  return { id: "pending", text: "생각하는 중", announce: "생각하는 중" };
+  return { id: "pending", text: "", announce: "생각하는 중" };
 }
 
 /**

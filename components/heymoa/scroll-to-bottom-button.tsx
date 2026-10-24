@@ -23,7 +23,6 @@ export function ScrollToBottomButton({
   label,
   onClick,
   className,
-  placement = "center",
   visible = true,
 }: {
   /** 화면에는 안 보이고 접근성 이름이 된다. */
@@ -31,10 +30,6 @@ export function ScrollToBottomButton({
   onClick: () => void;
   /** 하단 offset 조정용. 컴포저 위로 띄워야 하는 화면이 있다. */
   className?: string;
-  /**
-   * 놓는 자리. 좁은 채팅 패널은 오른쪽 아래(`end`)다 — 가운데에 서면 본문 글줄 한가운데를 가린다.
-   */
-  placement?: "center" | "end";
   /**
    * 보일지. 끄면 자리를 지킨 채 흐려지고 눌리지 않는다 — 언마운트하면 나타나고 사라지는 움직임을 못 준다. 안 주면 늘 보인다.
    */
@@ -45,8 +40,7 @@ export function ScrollToBottomButton({
       data-visible={visible || undefined}
       inert={!visible}
       className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-4 z-20 flex",
-        placement === "end" ? "justify-end pr-4" : "justify-center",
+        "pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center",
         "transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none",
         visible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0",
         className
@@ -55,13 +49,12 @@ export function ScrollToBottomButton({
       <Button
         type="button"
         variant="outline"
-        size={placement === "end" ? "icon" : "icon-lg"}
+        size="icon-lg"
         aria-label={label}
         // 플로팅은 e2 부양이다(ELEVATION SPEC). 단일 티어는 흰 마케팅 면 전용이라
         // 제품 캔버스에서 뭉개진다.
         className={cn(
           "rounded-full bg-[var(--el-surface-card)]/95 shadow-e2 backdrop-blur-xl",
-          placement === "end" && "pointer-coarse:size-11",
           visible && "pointer-events-auto"
         )}
         onClick={onClick}

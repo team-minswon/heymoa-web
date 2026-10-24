@@ -392,11 +392,19 @@ describe("등장 애니메이션", () => {
  * 체크로 굳어 있고 빛나는 글자가 하나도 없어서 **멈춘 것처럼 보였다.**
  */
 describe("단계 사이의 「생각하는 중」", () => {
-  it("도구가 끝났는데 다음 단계가 아직이면 「생각하는 중」이 선다", () => {
+  it("도구가 끝났는데 다음 단계가 아직이면 머리줄 「생각 중」 한 줄만 선다 — 「생각하는 중」을 되풀이하지 않는다", () => {
     const { container } = render(<ChainOfThought blocks={[tool("c1")]} live />);
-    expect(container.querySelector("[data-current]")?.textContent).toBe(
-      "생각하는 중"
+    expect(container.querySelector("[data-current]")).toBeNull();
+    expect(screen.getByRole("button", { expanded: false }).textContent).toBe(
+      "생각 중"
     );
+  });
+
+  it("문장이 아직 빈 생각도 두 번째 줄을 세우지 않는다", () => {
+    const { container } = render(
+      <ChainOfThought blocks={[{ kind: "thinking", text: "" }]} live />
+    );
+    expect(container.querySelector("[data-current]")).toBeNull();
   });
 
   it("접혀 있으면 머리글이 그 말을 한다", () => {
