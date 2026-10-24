@@ -128,7 +128,7 @@ describe("ChainOfThought", () => {
     expect(group?.getAttribute("data-open")).toBe("true");
     const tail = container.querySelector("[data-tail]");
     expect(tail?.className).toContain("max-h-");
-    expect(tail?.className).toContain("justify-end");
+    expect(tail?.className).toContain("overflow-y-auto");
     expect(screen.queryByText(/단계/)).toBeNull();
     expect(screen.getByRole("button", { expanded: true }).textContent).toBe(
       "생각 중"

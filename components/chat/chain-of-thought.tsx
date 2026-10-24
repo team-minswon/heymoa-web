@@ -292,9 +292,14 @@ function Disclosure({
   const tail = running && open;
   const tailRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState(false);
+  // 꼬리는 스크롤할 수 있어야 한다 — 위로 올려 지난 단계를 읽는 사람이 있다. 바닥에 붙어 있을 때만
+  // 새 줄을 따라 내려가고, 위로 올린 동안은 그 자리를 지킨다.
+  // (`justify-end` 로 아래에 붙이면 넘친 윗부분이 스크롤 영역 밖으로 나가 닿을 수 없다.)
+  const pinned = useRef(true);
   // 넘칠 때만 위를 흐린다. 줄 수로 세면 줄바꿈된 문장·칩이 든 줄에서 틀린다 — 그려진 높이로 잰다.
   useLayoutEffect(() => {
     const el = tailRef.current;
+    if (el && tail && pinned.current) el.scrollTop = el.scrollHeight;
     const next = !!el && el.scrollHeight > el.clientHeight;
     if (next !== overflow) setOverflow(next);
   });
@@ -350,13 +355,18 @@ function Disclosure({
           >
             <div
               ref={tailRef}
+              onScroll={(event) => {
+                const el = event.currentTarget;
+                pinned.current =
+                  el.scrollHeight - el.scrollTop - el.clientHeight < 8;
+              }}
               data-tail={tail || undefined}
               data-overflow={(tail && overflow) || undefined}
               className={cn(
                 "mt-1.5 mb-1 ml-1",
                 RAIL,
                 tail &&
-                  `${LIVE_TAIL} flex flex-col justify-end overflow-hidden`,
+                  `${LIVE_TAIL} overflow-y-auto overscroll-contain [scrollbar-width:thin]`,
                 tail &&
                   overflow &&
                   "[mask-image:linear-gradient(to_bottom,transparent,black_2.5rem)]"
