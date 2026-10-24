@@ -122,7 +122,7 @@ describe("AccountDeletionSection", () => {
     const list = within(
       screen.getByRole("region", { name: "지워지는 것과 남는 것" })
     );
-    expect(list.getAllByRole("listitem")).toHaveLength(3);
+    expect(list.getAllByRole("listitem")).toHaveLength(5);
     expect(
       list.getByRole("link", { name: "보관 기간 자세히 보기" })
     ).toHaveAttribute("href", "/privacy#section-6");

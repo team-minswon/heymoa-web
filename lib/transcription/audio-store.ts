@@ -64,6 +64,7 @@ const seqRange = (sessionId: string, fromSeq: number, toSeq: number) =>
   IDBKeyRange.bound([sessionId, fromSeq], [sessionId, toSeq, Infinity]);
 
 let shared: AudioStore | null | undefined;
+let sharedDatabase: Promise<IDBDatabase> | undefined;
 
 /** IndexedDB 가 없으면(Node 실험 틀, 일부 사생활 보호 창) null. 한 페이지에 연결 하나를 나눠 쓴다. */
 export function openAudioStore(): AudioStore | null {
@@ -78,6 +79,7 @@ export function openAudioStore(): AudioStore | null {
   });
   // 열기 실패는 첫 쓰기가 거절로 받아 메모리로 물러난다. 그 전에 unhandled 로 새지 않게
   database.catch(() => undefined);
+  sharedDatabase = database;
 
   function run<T>(
     mode: IDBTransactionMode,
@@ -123,6 +125,22 @@ export function openAudioStore(): AudioStore | null {
       ),
   };
   return shared;
+}
+
+/**
+ * 저장소를 통째로 지운다(탈퇴). 이 페이지의 연결을 먼저 닫아야 삭제가 막히지 않는다.
+ * ponytail: 다른 탭이 연결을 쥐고 있으면(blocked) 기다리지 않는다 — 그 탭이 닫히면 브라우저가 마저 지운다.
+ */
+export async function deleteAudioStore() {
+  if (typeof indexedDB === "undefined") return;
+  const open = sharedDatabase;
+  shared = undefined;
+  sharedDatabase = undefined;
+  await open?.then((db) => db.close()).catch(() => undefined);
+  await new Promise<void>((resolve) => {
+    const request = indexedDB.deleteDatabase(DATABASE);
+    request.onsuccess = request.onerror = request.onblocked = () => resolve();
+  });
 }
 
 /** 지난 탭이 못 올리고 남긴 녹음들. 세션마다 번호 순서다. */

@@ -1052,7 +1052,7 @@ describe("녹음 중에 워크스페이스에서 쫓겨나면", () => {
     // 안내가 없으면 녹음 표시가 이유 없이 없어진다. **닫을 때까지 남아야 한다** — 숨긴
     // 탭에서 감지되면 기본 5초가 사용자 없이 다 지나간다.
     expect(toastError).toHaveBeenCalledWith(
-      "이 워크스페이스에서 나가게 되었습니다.",
+      "이 워크스페이스에 더 이상 접근할 수 없습니다.",
       expect.objectContaining({ id: expect.any(String), duration: Infinity })
     );
     expect(harness.controller.close).toHaveBeenCalled();
@@ -1232,7 +1232,7 @@ describe("시작하는 사이에 쫓겨나면", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
     expect(toastError).toHaveBeenCalledWith(
-      "이 워크스페이스에서 나가게 되었습니다.",
+      "이 워크스페이스에 더 이상 접근할 수 없습니다.",
       expect.objectContaining({ id: expect.any(String) })
     );
     expect(harness.invalidate).toHaveBeenCalledWith({

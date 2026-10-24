@@ -124,6 +124,7 @@ export function WorkspaceDeletionSection({
                 (노트·스크립트·음성)을
               </span>{" "}
               비롯한 이 워크스페이스의 모든 내용이 지워지고 되돌릴 수 없습니다.
+              이미 외부 도구(Linear·GitHub)로 보낸 내용과 보낸 메일은 남습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <ConfirmPhraseField

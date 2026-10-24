@@ -14,6 +14,9 @@
  * - 서버가 첫 화면을 그릴 때 알아야 하면 쿠키 `sidebar_state`
  * - 기기를 넘어 같아야 하거나 잃으면 곤란하면 DB 다(문의 답변 읽음이 그렇다 — `answerSeen`, APP-1214)
  */
+import { clearChecklist } from "@/lib/onboarding/checklist";
+import { deleteAudioStore } from "@/lib/transcription/audio-store";
+
 const PREFIX = "heymoa:u:";
 
 export const USER_FLAGS = {
@@ -98,4 +101,14 @@ export function clearUserFlags() {
   } catch {
     // 저장소를 못 쓰는 브라우저는 지울 것도 없다.
   }
+}
+
+/**
+ * 탈퇴한 계정이 이 브라우저에 남긴 것을 지운다. 로그아웃(`clearUserFlags`)과 달리 **시작 안내와 못 올린 녹음
+ * 조각까지** 지운다 — 다시 로그인해 이어받을 계정이 없다. 기기 범위 키는 그대로 둔다.
+ */
+export async function forgetDeletedAccount(userId: string) {
+  clearUserFlags();
+  clearChecklist(userId);
+  await deleteAudioStore().catch(() => undefined);
 }

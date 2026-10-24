@@ -158,6 +158,16 @@ export function markStepDone(userId: string, step: ChecklistStepId) {
   );
 }
 
+/** 이 사용자의 체크리스트를 지운다 — 탈퇴한 계정의 흔적이 브라우저에 남지 않게(`forgetDeletedAccount`). */
+export function clearChecklist(userId: string) {
+  unsaved.delete(userId);
+  try {
+    localStorage.removeItem(keyOf(userId));
+  } catch {
+    // 저장소를 못 쓰는 브라우저는 지울 것도 없다.
+  }
+}
+
 export function subscribeChecklist(onChange: () => void) {
   // `storage`는 다른 탭에서 바꾼 것을, 우리 이벤트는 같은 탭에서 바꾼 것을 알린다.
   window.addEventListener("storage", onChange);

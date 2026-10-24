@@ -78,7 +78,7 @@ const props = {
     workspaceId: "01K0000000000",
     name: "김민수의 워크스페이스",
     description: null,
-    role: "ADMIN" as const,
+    role: "ADMIN" as "ADMIN" | "MEMBER",
     agentAccessAllowed: true,
   },
   projects: [
@@ -223,6 +223,15 @@ describe("WorkspaceSidebar", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
 
     expect(await screen.findByRole("alertdialog")).toHaveTextContent("주간");
+  });
+
+  it("멤버에게는 프로젝트 삭제 메뉴를 두지 않는다", async () => {
+    renderSidebar({ workspace: { ...props.workspace, role: "MEMBER" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "주간 프로젝트 메뉴" }));
+    await screen.findByRole("menuitem", { name: "이름 변경" });
+
+    expect(screen.queryByRole("menuitem", { name: "삭제" })).toBeNull();
   });
 
   it("switches workspace", async () => {

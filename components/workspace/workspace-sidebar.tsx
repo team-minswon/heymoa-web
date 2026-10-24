@@ -89,6 +89,7 @@ import type {
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { sortByLastVisited } from "@/lib/workspaces/last-workspace";
 import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
@@ -141,6 +142,7 @@ export function WorkspaceSidebar({
   const deleteProject = useDeleteProject({
     mutation: { meta: { suppressErrorToast: true } },
   });
+  const canDeleteProject = workspace?.role === "ADMIN";
   const isProjectMutationPending = updateProject.isPending;
   const [projectDialog, setProjectDialog] = useState<ProjectDialogState>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponseData | null>(
@@ -452,14 +454,17 @@ export function WorkspaceSidebar({
                                 <Pencil className="size-3.5 text-[var(--el-muted)]" />
                                 <span>이름 변경</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => setDeleteTarget(project)}
-                                className="gap-2 rounded-control py-1.5 text-xs text-destructive"
-                              >
-                                <Trash2 className="size-3.5" />
-                                <span>삭제</span>
-                              </DropdownMenuItem>
+                              {/* 삭제는 서버가 ADMIN 에게만 허락한다(`DeleteProjectService`) — 눌러 봐야 403인 메뉴는 두지 않는다. */}
+                              {canDeleteProject && (
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={() => setDeleteTarget(project)}
+                                  className="gap-2 rounded-control py-1.5 text-xs text-destructive"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                  <span>삭제</span>
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </SidebarMenuItem>
@@ -663,9 +668,12 @@ export function WorkspaceSidebar({
           <AlertDialogHeader>
             <AlertDialogTitle>프로젝트를 삭제할까요?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.name} 프로젝트가 삭제됩니다.
+              {deleteTarget?.name} 프로젝트와 이 프로젝트에서 나눈 에이전트
+              대화가 삭제되고 되돌릴 수 없습니다. 노트가 있는 프로젝트는 삭제할
+              수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteProject.isPending}>
               취소
@@ -675,23 +683,30 @@ export function WorkspaceSidebar({
               loading={deleteProject.isPending}
               onClick={async () => {
                 if (!deleteTarget) return;
-                try {
-                  const response = await deleteProject.mutateAsync({
+                const failure = await deleteProject
+                  .mutateAsync({
                     workspaceId,
                     projectId: deleteTarget.projectId,
-                  });
-                  if (response.status === 204) {
-                    if (selectedProjectId === deleteTarget.projectId) {
-                      onSelectProject(null);
-                      if (!onNotes) router.push(notesHref);
-                    }
-                    await refreshProjects();
-                    toast.success("프로젝트가 삭제되었습니다.");
-                  } else {
-                    toast.error("프로젝트 삭제에 실패했습니다.");
+                  })
+                  .then(() => null)
+                  .catch((error: unknown) => error);
+                // 404 는 그사이 다른 사람이 먼저 지운 것이다 — 바라던 결과라 성공과 같이 다룬다.
+                const code = errorCodeOf(failure);
+                if (failure === null || code === "PROJECT_NOT_FOUND") {
+                  if (selectedProjectId === deleteTarget.projectId) {
+                    onSelectProject(null);
+                    if (!onNotes) router.push(notesHref);
                   }
-                } catch {
-                  toast.error("프로젝트에 노트가 있어 삭제할 수 없습니다.");
+                  await refreshProjects();
+                  toast.success("프로젝트가 삭제되었습니다.");
+                } else if (code === "PROJECT_HAS_NOTES") {
+                  toast.error("노트가 있는 프로젝트는 삭제할 수 없습니다.");
+                } else if (code === "WORKSPACE_ACCESS_DENIED") {
+                  toast.error("관리자만 프로젝트를 삭제할 수 있습니다.");
+                } else {
+                  toast.error(
+                    errorMessageOf(failure, "프로젝트를 삭제하지 못했습니다.")
+                  );
                 }
                 setDeleteTarget(null);
               }}

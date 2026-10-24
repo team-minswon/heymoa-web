@@ -397,7 +397,7 @@ describe("강제로 나가질 때 안내", () => {
 
     await waitFor(() =>
       expect(route.toastMock).toHaveBeenCalledWith(
-        "이 워크스페이스에서 나가게 되었습니다.",
+        "이 워크스페이스에 더 이상 접근할 수 없습니다.",
         expect.objectContaining({ id: expect.any(String) })
       )
     );
@@ -406,7 +406,7 @@ describe("강제로 나가질 때 안내", () => {
 
   // **나가기 DELETE와 30초 폴링이 겹칠 수 있다.** 서버에서 탈퇴가 먼저 커밋되고 그 GET의
   // 404가 DELETE의 204보다 먼저 도착하면, 캐시에는 아직 성공 데이터가 남아 있어 내가 누른
-  // 나가기에 「나가게 되었습니다」가 뜬다.
+  // 나가기에 「더 이상 접근할 수 없습니다」가 뜬다.
   it("내가 나가는 중이면 안 띄운다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const client = makeQueryClient();
@@ -436,7 +436,7 @@ describe("강제로 나가질 때 안내", () => {
   });
 
   // **들어온 적이 없으면 나가진 것도 아니다.** 남의 워크스페이스 URL·다른 계정으로 받은 메일 링크를 열면 첫
-  // 조회부터 404다. 홈으로 보내는 것은 맞지만 「나가게 되었습니다」는 거짓말이다 — 대신 왜 열 수 없는지와
+  // 조회부터 404다. 홈으로 보내는 것은 맞지만 「더 이상 접근할 수 없습니다」는 거짓말이다 — 대신 왜 열 수 없는지와
   // 다른 계정으로 로그인할 길을 둔다(APP-1312).
   it("한 번도 들어가 본 적 없는 곳이면 열 수 없다고 말하고 계정을 바꿀 길을 둔다", async () => {
     route.workspaceFetch = alwaysGone();

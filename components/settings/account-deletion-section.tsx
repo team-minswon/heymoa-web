@@ -41,6 +41,7 @@ import {
 } from "@/lib/account/deletion-api";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { markAccountDeleted } from "@/components/auth/account-deleted-notice";
+import { forgetDeletedAccount } from "@/lib/storage/user-flags";
 import { cn } from "@/lib/utils";
 
 const REASON_LABEL: Record<WithdrawalReasonCode, string> = {
@@ -94,7 +95,7 @@ export function AccountDeletionSection() {
 }
 
 function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
-  const { leave } = useAuth();
+  const { user, leave } = useAuth();
   const recording = useRecording();
   const recordingNow = isRecordingLive(recording);
   const plan = useDeletionPlan(true);
@@ -155,6 +156,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
     }
     // 홈으로 보낸다. 완료 안내는 홈에서 짧은 토스트로 한 번 띄운다(`AccountDeletedNotice`).
     markAccountDeleted();
+    if (user) await forgetDeletedAccount(user.userId);
     leave("/");
   }
 
@@ -277,7 +279,14 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
                 바로 삭제됩니다.
               </li>
               <li>
+                모든 워크스페이스에서 내가 나눈 에이전트 대화가 삭제됩니다.
+              </li>
+              <li>
                 함께 쓰던 워크스페이스의 지난 회의 기록에는 이름과 발언이
+                남습니다.
+              </li>
+              <li>
+                이미 외부 도구(Linear·GitHub)로 보낸 내용과 보낸 메일은
                 남습니다.
               </li>
               <li>

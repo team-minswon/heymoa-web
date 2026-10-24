@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 import { toast } from "@/lib/ui/toast";
 
@@ -17,6 +18,7 @@ export function markAccountDeleted() {
 
 /** 탈퇴하고 홈에 닿으면 짧은 완료 토스트를 한 번 띄운다(PRO-69, APP-1383). */
 export function AccountDeletedNotice() {
+  const t = useTranslations("auth.accountDeleted");
   useEffect(() => {
     try {
       if (window.sessionStorage.getItem(KEY) !== "1") return;
@@ -24,9 +26,7 @@ export function AccountDeletedNotice() {
     } catch {
       return;
     }
-    toast.success("계정을 삭제했습니다.", {
-      description: "모든 기기에서 로그아웃되었습니다.",
-    });
-  }, []);
+    toast.success(t("title"), { description: t("description") });
+  }, [t]);
   return null;
 }
