@@ -17,7 +17,7 @@ export type TranscriptResponseDataRecording = {
   /** false 면 소리가 남지 않아 화자 분리를 못 한다 */
   audioRetained: boolean;
   /**
-   * 회의 축 길이. OPEN 이면 지금까지
+   * 회의 축 길이. 시작한 세션마다 원점 + 길이 중 가장 늦은 자리이고, 진행 중 세션은 지금까지
    * @minimum 0
    */
   durationMs: number;

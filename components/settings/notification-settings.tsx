@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useFormatter, useTranslations } from "next-intl";
 
 import {
   AlertDialog,
@@ -26,11 +27,13 @@ import { track } from "@/lib/analytics/track";
 import type {
   NotificationSettingsResponseData,
   NotificationSettingsResponseDataItemsItemChannelsItem as ChannelSetting,
+  NotificationSettingsResponseDataMarketingEmail as MarketingEmail,
 } from "@/lib/api/generated/models";
 import {
   getGetNotificationSettingsQueryKey,
   useGetNotificationSettingsSuspense,
   useResetNotificationSettings,
+  useUpdateMarketingConsent,
   useUpdateNotificationMutes,
   useUpdateNotificationPreference,
 } from "@/lib/api/generated/notification-settings/notification-settings";
@@ -175,7 +178,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   if (response.status !== 200 || !response.data.success) {
     throw new Error("알림 설정을 불러오지 못했습니다.");
   }
-  const settings = response.data.data;
+  const settings: Settings = response.data.data;
   const [confirm, setConfirm] = useState<Mute | "reset" | null>(null);
 
   const key = getGetNotificationSettingsQueryKey();
@@ -253,6 +256,23 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
                   : item
               ),
             }
+      ),
+    },
+  });
+  // 광고 수신 동의(APP-1392). 같은 응답을 돌려받으므로 다른 스위치와 같은 낙관 갱신·되돌림을 탄다.
+  const marketing = useUpdateMarketingConsent({
+    mutation: {
+      mutationKey: SETTINGS_WRITE,
+      ...optimistic<{ data?: { agreed: boolean } }>((current, { data }) =>
+        data
+          ? {
+              ...current,
+              marketingEmail: {
+                agreed: data.agreed,
+                changedAt: new Date().toISOString(),
+              },
+            }
+          : current
       ),
     },
   });
@@ -398,6 +418,13 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
         </Button>
       </div>
 
+      {/* 되돌리기 아래에 따로 둔다 — 법적 동의라 되돌리기가 건드리지 않는다(APP-1392). */}
+      <MarketingConsentCard
+        value={settings.marketingEmail}
+        muteEmail={settings.muteEmail}
+        onChange={(agreed) => marketing.mutate({ data: { agreed } })}
+      />
+
       <AlertDialog
         open={confirm !== null}
         onOpenChange={(open) => {
@@ -505,6 +532,65 @@ function ChannelCell({
       disabled={disabled}
       onCheckedChange={onChange}
     />
+  );
+}
+
+/**
+ * 광고성 정보 수신 동의(APP-1392). 서비스 알림 표와 섞지 않는 별도 묶음이고 기본 꺼짐이다. 「메일 모두 끄기」와는 따로
+ * 저장하지만, 켜져 있으면 이 메일도 가지 않는다고 알린다. 서버가 아직 필드를 내지 않으면 묶음째 숨긴다.
+ */
+function MarketingConsentCard({
+  value,
+  muteEmail,
+  onChange,
+}: {
+  value: MarketingEmail;
+  muteEmail: boolean;
+  onChange: (agreed: boolean) => void;
+}) {
+  const t = useTranslations("common.marketingConsent");
+  const format = useFormatter();
+  const date = value.changedAt
+    ? format.dateTime(new Date(value.changedAt), {
+        month: "long",
+        day: "numeric",
+        timeZone: "Asia/Seoul",
+      })
+    : null;
+
+  return (
+    <section aria-label={t("title")}>
+      <h3 className="mb-2 text-xs text-[var(--el-muted)]">{t("title")}</h3>
+      <div className={CARD}>
+        <div className={ROW}>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-[var(--el-ink)]">
+              {t("label")}
+            </span>
+            <span className="mt-0.5 block text-xs text-[var(--el-muted)]">
+              {t("description")}
+            </span>
+            {muteEmail ? (
+              <span className="mt-0.5 block text-xs text-[var(--el-muted)]">
+                {t("mutedNote")}
+              </span>
+            ) : null}
+            {date ? (
+              <span className="mt-0.5 block text-xs text-[var(--el-muted)]">
+                {t(value.agreed ? "agreedOn" : "declinedOn", { date })}
+              </span>
+            ) : null}
+          </span>
+          <span className={cn(CHANNEL_COLUMN, "flex shrink-0 justify-center")}>
+            <Switch
+              aria-label={t("label")}
+              checked={value.agreed}
+              onCheckedChange={onChange}
+            />
+          </span>
+        </div>
+      </div>
+    </section>
   );
 }
 

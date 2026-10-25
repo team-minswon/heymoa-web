@@ -479,6 +479,9 @@ const KNOWN_ONE_SIDED = new Set([
   // 「진행 중인 재요약」을 담았다 — 셋째 조합을 놓을 노트가 없다 (APP-421).
   "AnalysisResultResponse.data.retry.errorCode",
   "AnalysisResultResponse.data.retry.errorMessage",
+  // 광고 수신 동의(APP-1392)는 바꾼 적이 없는 기본 상태(null)로 시작하고, 값은 PUT 뒤에만 생긴다.
+  // 이 표본은 GET 만 훑는다 — 비-null 쪽은 설정 화면 시험이 PUT 으로 본다.
+  "NotificationSettingsResponse.data.marketingEmail.changedAt",
 ]);
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */

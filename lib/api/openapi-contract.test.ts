@@ -365,7 +365,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-1399(server APP-1398)에서 운영자 답변 등록 `admin/feedbacks/{feedbackId}/answer` 한 경로가 늘었다 (90 → 91).
     // APP-1383(server APP-1378)에서 탈퇴 처리 목록 `users/me/deletion-plan` 한 경로가 늘었다 (91 → 92).
     // APP-1409 에서 내 대화 삭제 `agent-chats/{chatId}`(DELETE) 한 경로가 늘었다 (92 → 93).
-    expect(paths).toHaveLength(93);
+    // APP-1392 에서 광고 수신 동의 `notification-settings/marketing-email`(PUT) 한 경로가 늘었다 (93 → 94).
+    expect(paths).toHaveLength(94);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

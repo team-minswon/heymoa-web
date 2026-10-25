@@ -15,9 +15,11 @@ import {
   NotificationSettings,
   NotificationSettingsSkeleton,
 } from "@/components/settings/notification-settings";
+import { intlWrapper } from "@/components/help/test-intl";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { onTrack } from "@/lib/analytics/track";
 import {
+  resetMarketingConsentMock,
   resetNotificationSettingsMock,
   restHandlers,
 } from "@/lib/mocks/rest-handlers";
@@ -36,6 +38,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 afterEach(() => {
   cleanup();
   resetNotificationSettingsMock();
+  resetMarketingConsentMock();
   server.resetHandlers();
   writes.length = 0;
 });
@@ -45,15 +48,18 @@ function renderSettings() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  const Intl = intlWrapper();
   return render(
-    <QueryClientProvider client={client}>
-      <DataBoundary
-        fallback={<NotificationSettingsSkeleton />}
-        errorLabel="알림 설정을 불러오지 못했습니다"
-      >
-        <NotificationSettings workspaceId="W1" />
-      </DataBoundary>
-    </QueryClientProvider>
+    <Intl>
+      <QueryClientProvider client={client}>
+        <DataBoundary
+          fallback={<NotificationSettingsSkeleton />}
+          errorLabel="알림 설정을 불러오지 못했습니다"
+        >
+          <NotificationSettings workspaceId="W1" />
+        </DataBoundary>
+      </QueryClientProvider>
+    </Intl>
   );
 }
 
@@ -70,6 +76,7 @@ describe("NotificationSettings", () => {
         HttpResponse.json({
           success: true,
           data: {
+            marketingEmail: { agreed: false, changedAt: null },
             muteAll: false,
             muteEmail: false,
             // 서버 순서는 시안과 다르다 — 화면이 순서를 맞춘다.
@@ -127,7 +134,9 @@ describe("NotificationSettings", () => {
     fireEvent.click(
       await screen.findByRole("switch", { name: "일시정지된 회의 메일" })
     );
-    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
+    await waitFor(() =>
+      expect(switchOf("일시정지된 회의 메일")).not.toBeChecked()
+    );
     stop();
     expect(writes).toEqual([
       'PUT /v1/notification-settings/items {"type":"MEETING_PAUSED_REMINDER","channel":"EMAIL","enabled":false}',
@@ -172,7 +181,9 @@ describe("NotificationSettings", () => {
       await screen.findByRole("switch", { name: "일시정지된 회의 메일" })
     );
     // 응답 전인데 이미 꺼져 있다.
-    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
+    await waitFor(() =>
+      expect(switchOf("일시정지된 회의 메일")).not.toBeChecked()
+    );
     expect(switchOf("일시정지된 회의 메일")).toBeEnabled();
     release();
     await waitFor(() => expect(switchOf("일시정지된 회의 메일")).toBeChecked());
@@ -186,6 +197,7 @@ describe("NotificationSettings", () => {
         HttpResponse.json({
           success: true,
           data: {
+            marketingEmail: { agreed: false, changedAt: null },
             muteAll: false,
             muteEmail: false,
             items: [
@@ -228,7 +240,9 @@ describe("NotificationSettings", () => {
       name: "일시정지된 회의 메일",
     });
     fireEvent.click(toggle); // 끔
-    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
+    await waitFor(() =>
+      expect(switchOf("일시정지된 회의 메일")).not.toBeChecked()
+    );
     fireEvent.click(switchOf("일시정지된 회의 메일")); // 켬
     await waitFor(() => expect(switchOf("일시정지된 회의 메일")).toBeChecked());
     fireEvent.click(switchOf("일시정지된 회의 메일")); // 끔
@@ -279,7 +293,9 @@ describe("NotificationSettings", () => {
     expect(screen.getByLabelText("문의 답변 인앱 꺼짐")).toBeInTheDocument();
     expect(screen.getAllByText("꺼짐")).toHaveLength(2);
     expect(switchOf("일시정지된 회의 메일")).toBeChecked();
-    expect(switchOf("일시정지된 회의 메일")).not.toHaveAttribute("data-disabled");
+    expect(switchOf("일시정지된 회의 메일")).not.toHaveAttribute(
+      "data-disabled"
+    );
 
     fireEvent.click(switchOf("인앱 알림 모두 끄기"));
     await waitFor(() =>
@@ -304,7 +320,9 @@ describe("NotificationSettings", () => {
       })
     );
     await waitFor(() => expect(switchOf("메일 모두 끄기")).toBeChecked());
-    expect(screen.getByLabelText("일시정지된 회의 메일 꺼짐")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("일시정지된 회의 메일 꺼짐")
+    ).toBeInTheDocument();
     expect(switchOf("검토할 결과 준비 인앱")).toBeChecked();
     expect(switchOf("검토할 결과 준비 인앱")).not.toHaveAttribute(
       "data-disabled"
@@ -318,7 +336,9 @@ describe("NotificationSettings", () => {
     fireEvent.click(
       await screen.findByRole("switch", { name: "일시정지된 회의 메일" })
     );
-    await waitFor(() => expect(switchOf("일시정지된 회의 메일")).not.toBeChecked());
+    await waitFor(() =>
+      expect(switchOf("일시정지된 회의 메일")).not.toBeChecked()
+    );
     writes.length = 0;
 
     fireEvent.click(
@@ -340,5 +360,80 @@ describe("NotificationSettings", () => {
     stop();
     expect(writes).toEqual(["DELETE /v1/notification-settings"]);
     expect(heard).toContain("notification_settings_reset");
+  });
+
+  describe("제품 소식·혜택(APP-1392)", () => {
+    const MARKETING = "제품 소식·혜택 메일 받기(선택)";
+    /** 조회 전에는 스위치가 잠겨 있다(base-ui 는 `disabled` 속성 대신 `data-disabled` 로 표시한다). */
+    const ready = () =>
+      waitFor(() =>
+        expect(switchOf(MARKETING)).not.toHaveAttribute("data-disabled")
+      );
+
+    it("기본은 꺼져 있고, 켜면 바로 바뀌어 동의한 날을 보인 뒤 서버에 보낸다", async () => {
+      renderSettings();
+      await ready();
+      expect(switchOf(MARKETING)).not.toBeChecked();
+      expect(screen.queryByText(/동의했어요|거부했어요/)).toBeNull();
+
+      fireEvent.click(switchOf(MARKETING));
+      await waitFor(() => expect(switchOf(MARKETING)).toBeChecked());
+      expect(
+        await screen.findByText(/^\d+월 \d+일에 동의했어요$/)
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(writes).toEqual([
+          'PUT /v1/notification-settings/marketing-email {"agreed":true}',
+        ])
+      );
+
+      fireEvent.click(switchOf(MARKETING));
+      expect(await screen.findByText(/에 거부했어요$/)).toBeInTheDocument();
+    });
+
+    it("서버가 실패하면 누르기 전 값으로 돌아온다", async () => {
+      server.use(
+        http.put("*/v1/notification-settings/marketing-email", () =>
+          HttpResponse.json(
+            { success: false, data: null, error: { code: "X", message: "x" } },
+            { status: 500 }
+          )
+        )
+      );
+      renderSettings();
+      await ready();
+      fireEvent.click(switchOf(MARKETING));
+      await waitFor(() => expect(writes).toHaveLength(1));
+      await waitFor(() => expect(switchOf(MARKETING)).not.toBeChecked());
+      expect(screen.queryByText(/동의했어요/)).toBeNull();
+    });
+
+    it("「기본값으로 되돌리기」는 동의를 건드리지 않는다", async () => {
+      renderSettings();
+      await ready();
+      fireEvent.click(switchOf(MARKETING));
+      await waitFor(() => expect(writes).toHaveLength(1));
+      fireEvent.click(
+        screen.getByRole("button", { name: "기본값으로 되돌리기" })
+      );
+      fireEvent.click(await screen.findByRole("button", { name: "되돌리기" }));
+      await waitFor(() =>
+        expect(writes).toEqual([
+          'PUT /v1/notification-settings/marketing-email {"agreed":true}',
+          "DELETE /v1/notification-settings",
+        ])
+      );
+      expect(switchOf(MARKETING)).toBeChecked();
+    });
+
+    it("「메일 모두 끄기」가 켜져 있으면 이 메일도 가지 않는다고 알린다", async () => {
+      renderSettings();
+      const note = /메일 모두 끄기」가 켜져 있어/;
+      await screen.findByRole("switch", { name: "메일 모두 끄기" });
+      expect(screen.queryByText(note)).toBeNull();
+      fireEvent.click(switchOf("메일 모두 끄기"));
+      fireEvent.click(await screen.findByRole("button", { name: "끄기" }));
+      expect(await screen.findByText(note)).toBeInTheDocument();
+    });
   });
 });

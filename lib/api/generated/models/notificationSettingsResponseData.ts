@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { NotificationSettingsResponseDataItemsItem } from "./notificationSettingsResponseDataItemsItem";
+import type { NotificationSettingsResponseDataMarketingEmail } from "./notificationSettingsResponseDataMarketingEmail";
 
 /**
  * 성공 응답 데이터
@@ -17,4 +18,6 @@ export type NotificationSettingsResponseData = {
   muteEmail: boolean;
   /** 설정 화면의 종류별 줄. 설정을 공유하는 종류(자동 종료 안내)는 따로 나오지 않는다 */
   items: NotificationSettingsResponseDataItemsItem[];
+  /** 광고성 정보(제품 소식·혜택 메일) 수신 동의. 서비스 알림과 별개이고 기본은 동의하지 않음 */
+  marketingEmail: NotificationSettingsResponseDataMarketingEmail;
 };

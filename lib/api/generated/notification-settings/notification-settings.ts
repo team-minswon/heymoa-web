@@ -27,6 +27,7 @@ import type {
   AppErrorResponse,
   NotificationSettingsResponse,
   UnauthorizedResponse,
+  UpdateMarketingConsentRequest,
   UpdateNotificationMutesRequest,
   UpdateNotificationPreferenceRequest,
 } from "../models";
@@ -571,7 +572,7 @@ export const getResetNotificationSettingsUrl = () => {
 };
 
 /**
- * 종류별 선택을 지우고 두 전체 끄기를 풀어 기본값으로 되돌린 설정을 돌려준다. 멱등이고 필수 알림은 영향이 없다.
+ * 종류별 선택을 지우고 두 전체 끄기를 풀어 기본값으로 되돌린 설정을 돌려준다. 멱등이고 필수 알림과 광고성 정보 수신 동의는 영향이 없다.
  * @summary 알림 설정 기본값으로 되돌리기
  */
 export const resetNotificationSettings = async (
@@ -815,6 +816,156 @@ export const useUpdateNotificationPreference = <
 > => {
   return useMutation(
     getUpdateNotificationPreferenceMutationOptions(options),
+    queryClient
+  );
+};
+export type updateMarketingConsentResponse200 = {
+  data: NotificationSettingsResponse;
+  status: 200;
+};
+
+export type updateMarketingConsentResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type updateMarketingConsentResponseSuccess =
+  updateMarketingConsentResponse200 & {
+    headers: Headers;
+  };
+export type updateMarketingConsentResponseError =
+  updateMarketingConsentResponse401 & {
+    headers: Headers;
+  };
+
+export type updateMarketingConsentResponse =
+  | updateMarketingConsentResponseSuccess
+  | updateMarketingConsentResponseError;
+
+export const getUpdateMarketingConsentUrl = () => {
+  return `/v1/notification-settings/marketing-email`;
+};
+
+/**
+ * 제품 소식·혜택 메일(광고성 정보) 수신에 동의하거나 거부하고 바뀐 설정을 돌려준다. 실제로 바뀌면 그 시각을 적고 처리 결과 확인 메일을 보낸다. 같은 값을 다시 보내면 아무것도 바꾸지 않고 메일도 보내지 않는다.
+ * @summary 광고성 정보 수신 동의 변경
+ */
+export const updateMarketingConsent = async (
+  updateMarketingConsentRequest?: UpdateMarketingConsentRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<updateMarketingConsentResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<updateMarketingConsentResponse>(
+    getUpdateMarketingConsentUrl(),
+    {
+      ...options,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(updateMarketingConsentRequest),
+    }
+  );
+};
+
+export const getUpdateMarketingConsentMutationKey = () =>
+  ["updateMarketingConsent"] as const;
+
+export const getUpdateMarketingConsentMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMarketingConsent>>,
+    TError,
+    UpdateMarketingConsentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMarketingConsent>>,
+  TError,
+  UpdateMarketingConsentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateMarketingConsentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMarketingConsent>>,
+    UpdateMarketingConsentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMarketingConsent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMarketingConsentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMarketingConsent>>
+>;
+export type UpdateMarketingConsentMutationBody =
+  | UpdateMarketingConsentRequest
+  | undefined;
+export type UpdateMarketingConsentMutationError = UnauthorizedResponse;
+export type UpdateMarketingConsentMutationVariables = {
+  data?: UpdateMarketingConsentRequest;
+};
+
+/**
+ * @summary 광고성 정보 수신 동의 변경
+ */
+export const useUpdateMarketingConsent = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateMarketingConsent>>,
+      TError,
+      UpdateMarketingConsentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMarketingConsent>>,
+  TError,
+  UpdateMarketingConsentMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getUpdateMarketingConsentMutationOptions(options),
     queryClient
   );
 };

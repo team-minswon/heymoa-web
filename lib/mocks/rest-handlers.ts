@@ -30,6 +30,7 @@ import { getGetNotificationsMockHandler } from "@/lib/api/generated/notification
 
 import type {
   NotificationSettingsResponse,
+  NotificationSettingsResponseDataMarketingEmail,
   CreateFeedbackRequest,
   CreateWorkspaceRequest,
   NoteListResponseData,
@@ -489,6 +490,14 @@ const NOTIFICATION_DEFAULTS: {
 ];
 let notificationPrefs = structuredClone(NOTIFICATION_DEFAULTS);
 let notificationMutes = { muteAll: false, muteEmail: false };
+/** 광고 수신 동의(APP-1392). 기본 꺼짐이고 「기본값으로 되돌리기」(DELETE)가 건드리지 않는다 — 시험만 되돌린다. */
+let marketingEmail: NotificationSettingsResponseDataMarketingEmail = {
+  agreed: false,
+  changedAt: null,
+};
+export function resetMarketingConsentMock() {
+  marketingEmail = { agreed: false, changedAt: null };
+}
 
 /** 시험이 사이마다 되돌린다. 화면에서는 「기본값으로 되돌리기」(DELETE)와 같다. */
 export function resetNotificationSettingsMock() {
@@ -501,6 +510,7 @@ function notificationSettings(): NotificationSettingsResponse {
     success: true,
     data: {
       ...notificationMutes,
+      marketingEmail,
       items: notificationPrefs.map((item) => ({
         ...item,
         channels: item.channels.map((entry) => ({
@@ -601,6 +611,16 @@ export const restHandlers = [
     target.enabled = body.enabled;
     return HttpResponse.json(notificationSettings());
   }),
+  // 광고 수신 동의(APP-1392). 같은 값은 server 처럼 바꾸지 않는다(일시 유지).
+  http.put(
+    "*/v1/notification-settings/marketing-email",
+    async ({ request }) => {
+      const { agreed } = (await request.json()) as { agreed: boolean };
+      if (agreed !== marketingEmail.agreed)
+        marketingEmail = { agreed, changedAt: new Date().toISOString() };
+      return HttpResponse.json(notificationSettings());
+    }
+  ),
   // 메일 수신거부(APP-1314). 토큰 `invalid` 는 서명이 맞지 않는 링크다. 끈 상태는 이 문서 안에서만 산다.
   http.get("*/v1/mail/unsubscribe", ({ request }) =>
     unsubscribeResult(request, () => mailUnsubscribed)

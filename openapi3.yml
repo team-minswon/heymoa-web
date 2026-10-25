@@ -9726,6 +9726,9 @@ paths:
                           provided: true
                           enabled: true
                           effective: false
+                      marketingEmail:
+                        agreed: false
+                        changedAt: '2026-10-20T01:00:00Z'
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -9809,6 +9812,9 @@ paths:
                           provided: true
                           enabled: true
                           effective: false
+                      marketingEmail:
+                        agreed: false
+                        changedAt: '2026-10-20T01:00:00Z'
                     error: null
         '400':
           description: 잘못된 요청
@@ -9835,7 +9841,7 @@ paths:
       tags:
       - NotificationSettings
       summary: 알림 설정 기본값으로 되돌리기
-      description: 종류별 선택을 지우고 두 전체 끄기를 풀어 기본값으로 되돌린 설정을 돌려준다. 멱등이고 필수 알림은 영향이 없다.
+      description: 종류별 선택을 지우고 두 전체 끄기를 풀어 기본값으로 되돌린 설정을 돌려준다. 멱등이고 필수 알림과 광고성 정보 수신 동의는 영향이 없다.
       operationId: resetNotificationSettings
       responses:
         '200':
@@ -9896,6 +9902,9 @@ paths:
                           provided: true
                           enabled: true
                           effective: true
+                      marketingEmail:
+                        agreed: true
+                        changedAt: '2026-10-25T13:30:00Z'
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -9983,6 +9992,9 @@ paths:
                           provided: true
                           enabled: true
                           effective: false
+                      marketingEmail:
+                        agreed: false
+                        changedAt: '2026-10-20T01:00:00Z'
                     error: null
         '400':
           description: 잘못된 요청
@@ -10488,6 +10500,89 @@ paths:
                       code: AGENT_CHAT_NOT_FOUND
                       message: 채팅 세션을 찾을 수 없습니다.
                       details: null
+      security:
+      - accessCookie: []
+  /v1/notification-settings/marketing-email:
+    put:
+      tags:
+      - NotificationSettings
+      summary: 광고성 정보 수신 동의 변경
+      description: 제품 소식·혜택 메일(광고성 정보) 수신에 동의하거나 거부하고 바뀐 설정을 돌려준다. 실제로 바뀌면 그 시각을 적고 처리 결과 확인 메일을 보낸다. 같은 값을 다시 보내면 아무것도 바꾸지 않고 메일도 보내지 않는다.
+      operationId: updateMarketingConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMarketingConsentRequest'
+            examples:
+              updateMarketingConsent_Success:
+                value:
+                  agreed: true
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettingsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      muteAll: false
+                      muteEmail: true
+                      items:
+                      - type: WORKSPACE_INVITATION
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
+                      - type: ANALYSIS_READY
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: false
+                          enabled: false
+                          effective: false
+                      - type: MEETING_PAUSED_REMINDER
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: false
+                          enabled: false
+                          effective: false
+                        - channel: EMAIL
+                          provided: true
+                          enabled: false
+                          effective: false
+                      - type: INQUIRY_ANSWERED
+                        required: false
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: false
+                      marketingEmail:
+                        agreed: true
+                        changedAt: '2026-10-25T13:30:00Z'
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
 components:
@@ -14687,7 +14782,7 @@ components:
                     - image
                   recordedDurationMs:
                     type: integer
-                    description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
+                    description: 회의 축의 끝(ms). 시작한 세션마다 원점 + 길이(봉인된 캡처 길이, 없으면 벽시계) 중 가장 늦은 자리이고, 진행 중 세션은 원점까지만 센다(그 뒤는 activeSessionStartedAt 부터). 시작한 세션이 없으면 0
                     nullable: false
                     example: 6500
                     format: int64
@@ -14990,7 +15085,7 @@ components:
               - image
             recordedDurationMs:
               type: integer
-              description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
+              description: 회의 축의 끝(ms). 시작한 세션마다 원점 + 길이(봉인된 캡처 길이, 없으면 벽시계) 중 가장 늦은 자리이고, 진행 중 세션은 원점까지만 센다(그 뒤는 activeSessionStartedAt 부터). 시작한 세션이 없으면 0
               nullable: false
               example: 0
               format: int64
@@ -16591,7 +16686,7 @@ components:
                   nullable: false
                 durationMs:
                   type: integer
-                  description: 회의 축 길이. OPEN 이면 지금까지
+                  description: 회의 축 길이. 시작한 세션마다 원점 + 길이 중 가장 늦은 자리이고, 진행 중 세션은 지금까지
                   nullable: false
                   example: 1820000
                   format: int64
@@ -19486,6 +19581,7 @@ components:
         data:
           required:
           - items
+          - marketingEmail
           - muteAll
           - muteEmail
           type: object
@@ -19555,6 +19651,24 @@ components:
                     type: boolean
                     description: 필수 알림. 설정과 관계없이 항상 받고 바꿀 수 없다(잠금)
                     nullable: false
+              nullable: false
+            marketingEmail:
+              required:
+              - agreed
+              - changedAt
+              type: object
+              properties:
+                changedAt:
+                  type: string
+                  description: 마지막으로 동의·거부한 시각. 바꾼 적이 없으면 null
+                  nullable: true
+                  example: '2026-07-14T01:02:03Z'
+                  format: date-time
+                agreed:
+                  type: boolean
+                  description: 수신 동의 여부. 두 전체 끄기·기본값으로 되돌리기와 무관하다
+                  nullable: false
+              description: 광고성 정보(제품 소식·혜택 메일) 수신 동의. 서비스 알림과 별개이고 기본은 동의하지 않음
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -20020,6 +20134,16 @@ components:
           nullable: false
           example: 배포 게이트 정리
           maxLength: 100
+    UpdateMarketingConsentRequest:
+      title: UpdateMarketingConsentRequest
+      required:
+      - agreed
+      type: object
+      properties:
+        agreed:
+          type: boolean
+          description: 제품 소식·혜택 메일을 받을지 여부
+          nullable: false
   securitySchemes:
     accessCookie:
       type: apiKey

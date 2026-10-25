@@ -75,6 +75,7 @@ export const getGetNotificationSettingsResponseMock =
           ],
         },
       ],
+      marketingEmail: { agreed: false, changedAt: "2026-10-20T01:00:00Z" },
     },
     error: null,
   });
@@ -144,6 +145,7 @@ export const getUpdateNotificationMutesResponseMock =
           ],
         },
       ],
+      marketingEmail: { agreed: false, changedAt: "2026-10-20T01:00:00Z" },
     },
     error: null,
   });
@@ -213,6 +215,7 @@ export const getResetNotificationSettingsResponseMock =
           ],
         },
       ],
+      marketingEmail: { agreed: true, changedAt: "2026-10-25T13:30:00Z" },
     },
     error: null,
   });
@@ -282,6 +285,77 @@ export const getUpdateNotificationPreferenceResponseMock =
           ],
         },
       ],
+      marketingEmail: { agreed: false, changedAt: "2026-10-20T01:00:00Z" },
+    },
+    error: null,
+  });
+
+export const getUpdateMarketingConsentResponseMock =
+  (): NotificationSettingsResponse => ({
+    success: true,
+    data: {
+      muteAll: false,
+      muteEmail: true,
+      items: [
+        {
+          type: "WORKSPACE_INVITATION",
+          required: true,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
+              effective: true,
+            },
+          ],
+        },
+        {
+          type: "ANALYSIS_READY",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
+          type: "MEETING_PAUSED_REMINDER",
+          required: false,
+          channels: [
+            {
+              channel: "WEB",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
+          type: "INQUIRY_ANSWERED",
+          required: false,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: true,
+              enabled: true,
+              effective: false,
+            },
+          ],
+        },
+      ],
+      marketingEmail: { agreed: true, changedAt: "2026-10-25T13:30:00Z" },
     },
     error: null,
   });
@@ -389,9 +463,36 @@ export const getUpdateNotificationPreferenceMockHandler = (
     options
   );
 };
+
+export const getUpdateMarketingConsentMockHandler = (
+  overrideResponse?:
+    | NotificationSettingsResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) =>
+        | Promise<NotificationSettingsResponse>
+        | NotificationSettingsResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notification-settings/marketing-email",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateMarketingConsentResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getNotificationSettingsMock = () => [
   getGetNotificationSettingsMockHandler(),
   getUpdateNotificationMutesMockHandler(),
   getResetNotificationSettingsMockHandler(),
   getUpdateNotificationPreferenceMockHandler(),
+  getUpdateMarketingConsentMockHandler(),
 ];

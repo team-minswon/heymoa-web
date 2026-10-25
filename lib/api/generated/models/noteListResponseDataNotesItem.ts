@@ -45,7 +45,7 @@ export type NoteListResponseDataNotesItem = {
    */
   meetingStartedBy: NoteListResponseDataNotesItemMeetingStartedBy;
   /**
-   * ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
+   * 회의 축의 끝(ms). 시작한 세션마다 원점 + 길이(봉인된 캡처 길이, 없으면 벽시계) 중 가장 늦은 자리이고, 진행 중 세션은 원점까지만 센다(그 뒤는 activeSessionStartedAt 부터). 시작한 세션이 없으면 0
    * @minimum 0
    */
   recordedDurationMs: number;

@@ -114,5 +114,13 @@
         }
       }
     }
+  },
+  "marketingConsent": {
+    "title": "Product news & offers",
+    "label": "Get product news & offers by email (optional)",
+    "description": "We'll email you about new features, events, and offers. You can turn this off anytime.",
+    "mutedNote": "“Turn off all email” is on, so these emails won't be sent either.",
+    "agreedOn": "Agreed on {date}",
+    "declinedOn": "Declined on {date}"
   }
 }
