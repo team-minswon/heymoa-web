@@ -283,7 +283,21 @@ export function MentionInput({
     prepend: (chip) => {
       const node = box.current;
       if (!node) return;
-      node.prepend(chipElement(chip), document.createTextNode(" "));
+      const space = document.createTextNode(" ");
+      node.prepend(chipElement(chip), space);
+      // 캐럿이 입력칸 맨 앞(보낸 뒤 비운 입력칸 등)에 있으면 칩 앞에 남아 글자가 칩 앞에 쓰인다.
+      // 칩 뒤로 옮긴다. 이미 글 중간에 있으면 그 자리를 지킨다.
+      const sel = window.getSelection();
+      if (sel?.rangeCount && node.contains(sel.anchorNode)) {
+        const range = sel.getRangeAt(0);
+        const after = document.createRange();
+        after.setStartAfter(space);
+        if (range.compareBoundaryPoints(Range.START_TO_START, after) < 0) {
+          after.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(after);
+        }
+      }
       sync();
     },
     remove: (chip) => {
