@@ -461,11 +461,13 @@ vi.mock("@/lib/api/sse", () => ({
 function NoteScope({
   hidden,
   noteId = NOTE_ID,
+  title = "주간 제품 회의",
 }: {
   hidden: boolean;
   noteId?: string;
+  title?: string;
 }) {
-  usePersonalChatScope({ noteId, title: "주간 제품 회의", hidden });
+  usePersonalChatScope({ noteId, title, hidden });
   return null;
 }
 
@@ -2021,6 +2023,103 @@ describe("PersonalChatProvider", () => {
       </QueryClientProvider>
     );
     expect(chipsInInput()).toEqual([]);
+  });
+
+  describe("노트 화면의 기본 범위 칩", () => {
+    const OTHER_NOTE_ID = "01K0000000006";
+
+    function at(child: React.ReactNode, client: QueryClient) {
+      return (
+        <QueryClientProvider client={client}>
+          <PersonalChatProvider workspaceId={WORKSPACE_ID}>
+            {child}
+          </PersonalChatProvider>
+        </QueryClientProvider>
+      );
+    }
+
+    /** 사용자가 `@` 로 고른 회의록 칩. 편집기가 만드는 것과 같은 모양을 박는다. */
+    function pickNoteByHand(id: string, title: string) {
+      const input = screen.getByRole("textbox", { name: "메시지" });
+      const chip = document.createElement("span");
+      chip.setAttribute("data-scope-chip", "note");
+      chip.setAttribute("data-scope-id", id);
+      chip.setAttribute("data-scope-title", title);
+      chip.textContent = title;
+      input.append(chip, document.createTextNode(" "));
+      fireEvent.input(input);
+    }
+
+    it("기록에서 연 기존 대화에도 그 노트 칩이 붙는다", async () => {
+      state.chats = [chatRow(CHAT_ID), chatRow(OTHER_CHAT_ID)];
+      renderChat(<NoteScope hidden={false} />);
+      openPanel();
+      await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+
+      pickChat(OTHER_CHAT_ID);
+      await waitFor(() =>
+        expect(state.messagesArgs.at(-1)).toMatchObject({
+          chatId: OTHER_CHAT_ID,
+        })
+      );
+      expect(chipsInInput()).toEqual(["주간 제품 회의"]);
+    });
+
+    it("빼낸 칩은 같은 노트에서 보낸 뒤에도 다시 안 붙는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      renderChat(<NoteScope hidden={false} />);
+      openPanel();
+      await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+      removeChipFromInput("주간 제품 회의");
+
+      appendAfterChips("정리해줘");
+      fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+      await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+      expect(state.streamCalls[0].body).toMatchObject({ noteIds: [] });
+      expect(chipsInInput()).toEqual([]);
+    });
+
+    it("다른 노트로 옮기면 기본 칩만 새 노트로 바뀌고 손으로 고른 칩은 남는다", async () => {
+      const { rerender, client } = renderChat(<NoteScope hidden={false} />);
+      openPanel();
+      await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+      pickNoteByHand("01K0000000007", "킥오프");
+
+      rerender(
+        at(
+          <NoteScope hidden={false} noteId={OTHER_NOTE_ID} title="회고" />,
+          client
+        )
+      );
+      await waitFor(() => expect(chipsInInput()).toEqual(["회고", "킥오프"]));
+    });
+
+    it("노트 밖으로 나가면 기본 칩이 빠진다", async () => {
+      const { rerender, client } = renderChat(<NoteScope hidden={false} />);
+      openPanel();
+      await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+
+      rerender(at(null, client));
+      await waitFor(() => expect(chipsInInput()).toEqual([]));
+    });
+
+    it("이미 그 노트 칩이 붙어 있으면 겹쳐 붙이지 않는다", async () => {
+      const { rerender, client } = renderChat(<NoteScope hidden={false} />);
+      openPanel();
+      await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+      pickNoteByHand(OTHER_NOTE_ID, "회고");
+
+      rerender(
+        at(
+          <NoteScope hidden={false} noteId={OTHER_NOTE_ID} title="회고" />,
+          client
+        )
+      );
+      await waitFor(() => expect(chipsInInput()).toEqual(["회고"]));
+      // 손으로 고른 칩이라 노트를 나가도 남는다
+      rerender(at(null, client));
+      expect(chipsInInput()).toEqual(["회고"]);
+    });
   });
 
   it("닫아도 패널을 언마운트하지 않는다", async () => {

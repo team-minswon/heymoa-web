@@ -30,6 +30,8 @@ export type MentionHandle = {
   commitMention: (chip: ScopeChip) => void;
   /** 문장 맨 앞에 칩을 넣는다. 회의록 프리필이 쓴다. */
   prepend: (chip: ScopeChip) => void;
+  /** 그 칩을 뒤따르는 공백과 함께 뺀다. 노트를 옮길 때 기본 칩을 갈아 끼우는 데 쓴다. */
+  remove: (chip: ScopeChip) => void;
   /** 문장 끝에 글자를 붙인다. 추천 질문이 쓴다 — 이미 있는 칩은 그대로 둔다. */
   append: (text: string) => void;
 };
@@ -282,6 +284,25 @@ export function MentionInput({
       const node = box.current;
       if (!node) return;
       node.prepend(chipElement(chip), document.createTextNode(" "));
+      sync();
+    },
+    remove: (chip) => {
+      const node = box.current;
+      if (!node) return;
+      node.querySelectorAll(`[${CHIP}]`).forEach((el) => {
+        if (
+          el.getAttribute(CHIP) !== chip.kind ||
+          el.getAttribute("data-scope-id") !== chip.id
+        )
+          return;
+        const next = el.nextSibling;
+        if (
+          next?.nodeType === Node.TEXT_NODE &&
+          next.nodeValue?.startsWith(" ")
+        )
+          (next as Text).deleteData(0, 1);
+        el.remove();
+      });
       sync();
     },
     append: (text) => {

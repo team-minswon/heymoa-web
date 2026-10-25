@@ -303,10 +303,24 @@ function PersonalChatPanel({
   const prefillSuggested = useCallback(() => {
     const noteId = suggestedNote?.noteId;
     const title = suggestedNote?.title;
+    // 다른 노트로 옮겼거나 노트를 나왔다 — 앞 노트의 기본 칩만 뺀다. 사용자가 고른 칩은 기본 칩이 아니라 남는다.
+    // 기억에서 먼저 지워야 빠진 칩이 거절로 읽히지 않는다
+    prefilledRef.current.forEach((id) => {
+      if (id === noteId) return;
+      prefilledRef.current.delete(id);
+      editorRef.current?.remove({ kind: "note", id, title: "" });
+    });
     // 제목이 와야 붙는다 — id 만 있는 칩은 누른 사람이 무엇을 붙였는지 모른다
     if (!noteId || !title) return;
     if (dismissedRef.current.has(noteId)) return;
     if (prefilledRef.current.has(noteId)) return;
+    // 이미 손으로 붙인 회의록이면 겹쳐 박지 않는다. 그 칩은 사용자의 것이라 기본 칩으로 세지 않는다
+    if (
+      editorRef.current
+        ?.read()
+        .chips.some((chip) => chip.kind === "note" && chip.id === noteId)
+    )
+      return;
     prefilledRef.current.add(noteId);
     editorRef.current?.prepend({ kind: "note", id: noteId, title });
   }, [suggestedNote]);
