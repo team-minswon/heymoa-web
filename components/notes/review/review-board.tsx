@@ -1022,6 +1022,7 @@ export function ReviewBoard({
                   onOpenTimeline={onOpenTimeline}
                   links={meetingLinks}
                   workspaceId={workspaceId}
+                  projectId={projectId}
                 />
                 {relationsNotice}
                 {enrichmentStatus === "PENDING" ||

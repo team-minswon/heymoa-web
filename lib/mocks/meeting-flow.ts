@@ -45,6 +45,7 @@ import {
   type SeedWho,
 } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
+import { projectAgendaMapMock, projectAgendaMapSummary } from "@/lib/mocks/project-agenda-map";
 import { projectTasks } from "@/lib/mocks/project-tasks";
 import type {
   MeetingReviewSummary,
@@ -1211,7 +1212,8 @@ export const meetingFlowHandlers = [
     respond(() => {
       // 브라우저도 옛 필드를 생략한 응답으로 검사합니다. 저장 목은 현행·호환 표현을 함께 유지합니다.
       const summary = structuredClone(
-        meetingFlow.summaryOf(paramId(params.noteId))
+        projectAgendaMapSummary(paramId(params.noteId)) ??
+          meetingFlow.summaryOf(paramId(params.noteId))
       );
       Reflect.deleteProperty(summary, "topics");
       for (const agenda of summary.agendas) {
@@ -1575,6 +1577,8 @@ export const meetingFlowHandlers = [
         conflicts: [],
         agendaLinks: [],
       };
+      // 노트를 주지 않으면 프로젝트 전체 — 안건 지도(APP-1455)가 쓰는 여덟 회의 목을 돌려준다
+      if (!noteId) return projectAgendaMapMock();
       if (noteId !== MENTORING_NOTE_ID) return empty;
       const summary = store().summaries.get(MENTORING_NOTE_ID);
       const review = store().reviews.get(MENTORING_NOTE_ID);

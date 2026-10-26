@@ -9,6 +9,7 @@ import {
   Folder,
   MoreHorizontal,
   NotebookText,
+  Orbit,
   Pencil,
   Plus,
   Settings,
@@ -132,6 +133,11 @@ export function WorkspaceSidebar({
   const tasksHref = `/w/${workspaceId}/tasks`;
   const pathname = usePathname();
   const onTasks = pathname === tasksHref;
+  // 안건 지도(`/projects/{id}`)는 노트 목록이 아니다 — 「모든 노트」 대신 그 프로젝트를 밝힌다
+  const projectMapPrefix = `/w/${workspaceId}/projects/`;
+  const mapProjectId = pathname.startsWith(projectMapPrefix)
+    ? pathname.slice(projectMapPrefix.length)
+    : null;
   const onNotes = pathname === notesHref;
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
@@ -327,7 +333,9 @@ export function WorkspaceSidebar({
                         />
                       )
                     }
-                    isActive={selectedProjectId === null && !onTasks}
+                    isActive={
+                      selectedProjectId === null && !onTasks && !mapProjectId
+                    }
                     onClick={onNotes ? () => onSelectProject(null) : undefined}
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
@@ -417,8 +425,10 @@ export function WorkspaceSidebar({
                               )
                             }
                             isActive={
-                              !onTasks &&
-                              selectedProjectId === project.projectId
+                              mapProjectId
+                                ? mapProjectId === project.projectId
+                                : !onTasks &&
+                                  selectedProjectId === project.projectId
                             }
                             onClick={
                               onNotes
@@ -447,6 +457,17 @@ export function WorkspaceSidebar({
                               align="start"
                               className="rounded-panel"
                             >
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(
+                                    `/w/${workspaceId}/projects/${project.projectId}`
+                                  )
+                                }
+                                className="gap-2 rounded-control py-1.5 text-xs"
+                              >
+                                <Orbit className="size-3.5 text-[var(--el-muted)]" />
+                                <span>안건 지도</span>
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setProjectDialog({ project })}
                                 className="gap-2 rounded-control py-1.5 text-xs"
