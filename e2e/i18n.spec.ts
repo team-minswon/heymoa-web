@@ -5,7 +5,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
  * 크롤러가 읽는 상태 코드·이동·`<head>` 는 서버 응답으로 보고, 화면 전환은 브라우저로 본다.
  */
 
-/** 변경 전 운영 `sitemap.xml` 의 주소 전부(2026-10-21, `app/robots.test.ts` 의 옛 고정 목록). */
+/** 운영 sitemap 주소(2026-10-21 목록에서 삭제한 페이지는 제외). */
 const PRODUCTION_SITEMAP = [
   "/",
   "/download",
@@ -35,7 +35,6 @@ const PRODUCTION_SITEMAP = [
   "/help/connect/integrations",
   "/help/connect/agent-mcp",
   "/help/fix/troubleshooting",
-  "/help/fix/limits",
   "/help/situations/first-meeting",
   "/help/situations/summary-missing",
   "/help/situations/confirm-summary",
@@ -72,6 +71,22 @@ test("변경 전 운영 sitemap 주소와 옛 가이드 주소가 같은 상태 
   const legacy = await get(request, "/help/desktop");
   expect(legacy.status()).toBe(308);
   expect(legacy.headers().location).toBe("/help/start/desktop");
+});
+
+test("삭제한 한도 가이드는 두 언어에서 404이고 sitemap과 검색 색인에 없다", async ({
+  request,
+}) => {
+  for (const prefix of ["", "/en"]) {
+    expect((await get(request, `${prefix}/help/fix/limits`)).status()).toBe(
+      404
+    );
+    const index = await get(request, `${prefix}/help/search-index.json`);
+    expect(index.status()).toBe(200);
+    expect(await index.text()).not.toContain("/help/fix/limits");
+  }
+  const sitemap = await get(request, "/sitemap.xml");
+  expect(sitemap.status()).toBe(200);
+  expect(await sitemap.text()).not.toContain("/help/fix/limits");
 });
 
 test("영어판은 /en 아래에서 lang=en 으로 열린다", async ({ request }) => {

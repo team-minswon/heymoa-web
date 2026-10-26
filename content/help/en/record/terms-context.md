@@ -4,7 +4,7 @@ description: Describe the meeting's topic and background, and add product names 
 group: record
 slug: terms-context
 order: 3
-modified: 2026-10-21
+modified: 2026-10-26
 ---
 
 ## Write the meeting context {#context}
@@ -52,4 +52,3 @@ No. The glossary is a hint used while transcribing, so words in it can still be 
 
 - [Technical terms keep coming out wrong](help:fix-terms) — Step-by-step guide
 - [Attendees and speakers](help:speakers) — Attendee names are hints too
-- [Limits and rules](help:limits) — 200 words, 40 characters

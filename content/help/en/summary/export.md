@@ -4,7 +4,7 @@ description: How to copy meeting notes and transcripts, download them as a PDF, 
 group: summary
 slug: export
 order: 3
-modified: 2026-10-21
+modified: 2026-10-26
 ---
 
 ## Copy {#copy}
@@ -76,4 +76,3 @@ Yes. Add **[Transcript]** under **[Content]**. When you export to PDF, turn on t
 
 - [Reviewing and confirming the summary](help:review) — Fix the summary before you send it
 - [Attendees and speakers](help:speakers) — Name unnamed speakers
-- [Limits and rules](help:limits) — How often and how much you can send

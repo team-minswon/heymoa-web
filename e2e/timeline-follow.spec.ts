@@ -38,7 +38,7 @@ test("새 내용의 높이 변화는 하단을 유지하고 수동 스크롤은 
 
   await viewport.hover();
   await page.mouse.wheel(0, -80);
-  await expect(page.getByRole("button", { name: "맨 아래로" })).toBeVisible();
+  await expect(page.getByRole("tabpanel", { name: "타임라인" }).getByRole("button", { name: "맨 아래로" })).toBeVisible();
   const readTop = await viewport.evaluate((node) => node.scrollTop);
   await lateContent.evaluate((node) => {
     (node as HTMLElement).style.height = "2900px";
@@ -52,7 +52,7 @@ test("새 내용의 높이 변화는 하단을 유지하고 수동 스크롤은 
     readTop,
     0
   );
-  await page.getByRole("button", { name: "맨 아래로" }).click();
+  await page.getByRole("tabpanel", { name: "타임라인" }).getByRole("button", { name: "맨 아래로" }).click();
   await expect.poll(distance).toBeLessThan(2);
 });
 
@@ -69,6 +69,6 @@ test("실시간 항목을 펼칠 때는 자동 추종을 멈추고 읽던 위치
   await row.click();
   await expect(row).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("button", { name: /백엔드 두 명 예산은 승인이 났습니다/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "맨 아래로" })).toBeVisible();
+  await expect(page.getByRole("tabpanel", { name: "타임라인" }).getByRole("button", { name: "맨 아래로" })).toBeVisible();
   expect(await viewport.evaluate((node) => node.scrollTop)).toBeLessThanOrEqual(top + 2);
 });

@@ -4,7 +4,7 @@ description: 회의 주제와 배경을 적고 제품명과 약어를 용어 사
 group: record
 slug: terms-context
 order: 3
-modified: 2026-10-21
+modified: 2026-10-26
 ---
 
 ## 회의 맥락 적는 법 {#context}
@@ -52,4 +52,3 @@ modified: 2026-10-21
 
 - [전문 용어가 자꾸 다른 말로 기록돼요](help:fix-terms) — 단계별로 따라 하기
 - [참석자와 화자](help:speakers) — 참석자 이름도 힌트로 쓰여요
-- [한도와 규칙](help:limits) — 용어 200개, 40자

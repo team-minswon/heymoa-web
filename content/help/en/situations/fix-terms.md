@@ -5,7 +5,7 @@ description: When product names, internal terms, or English acronyms are transcr
 group: situations
 slug: fix-terms
 order: 6
-modified: 2026-10-21
+modified: 2026-10-26
 ---
 
 ## What's happening {#problem}
@@ -41,4 +41,3 @@ Go to **[Settings]** → **[Workspace]** → **[Glossary]**, and to **[Meeting c
 
 - [Meeting context and glossary](help:terms-context) — Input rules and limits
 - [Attendees and speakers](help:speakers) — Attendee names are used as hints too
-- [Limits and rules](help:limits) — 200 terms, 40 characters each

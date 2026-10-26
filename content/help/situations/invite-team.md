@@ -5,7 +5,7 @@ description: 워크스페이스에 동료를 초대하고 동료가 수락하기
 group: situations
 slug: invite-team
 order: 5
-modified: 2026-10-23
+modified: 2026-10-26
 ---
 
 ## 이런 상황이에요 {#problem}
@@ -40,5 +40,4 @@ modified: 2026-10-23
 ## 관련 기능 페이지 {#related}
 
 - [멤버와 임시 참여자](help:members) — 역할, 표시 이름, 알림
-- [한도와 규칙](help:limits) — 초대 횟수와 만료
 - [문제 해결](help:troubleshooting) — 초대 링크 오류

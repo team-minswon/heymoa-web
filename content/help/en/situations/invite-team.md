@@ -5,7 +5,7 @@ description: How to invite a teammate to your workspace and get them to accept. 
 group: situations
 slug: invite-team
 order: 5
-modified: 2026-10-23
+modified: 2026-10-26
 ---
 
 ## What's happening {#problem}
@@ -40,5 +40,4 @@ Go to **[Settings]** → **[Workspace]** → the **[Members]** tab. ==Only admin
 ## Related pages {#related}
 
 - [Members and guest participants](help:members) — Roles, display names, and notifications
-- [Limits and rules](help:limits) — Invite counts and expiry
 - [Troubleshooting](help:troubleshooting) — Invite link errors

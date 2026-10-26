@@ -4,7 +4,7 @@ description: 녹음이 안 되거나 연결이 끊기고, 요약이 안 보이�
 group: fix
 slug: troubleshooting
 order: 1
-modified: 2026-10-23
+modified: 2026-10-26
 ---
 
 ## 녹음이 시작되지 않을 때 {#recording}
@@ -119,12 +119,11 @@ modified: 2026-10-23
 
 ## 해결되지 않을 때 {#more}
 
-데스크톱 앱에서 생기는 문제는 [데스크톱 앱](help:desktop#trouble)의 문제 해결에 있어요. 숫자 한도는 [한도와 규칙](help:limits)에서 확인하세요.
+데스크톱 앱에서 생기는 문제는 [데스크톱 앱](help:desktop#trouble)의 문제 해결에 있어요.
 
 그래도 해결되지 않으면 사이드바 **[문의·피드백]** 에서 **[장애·오류]** 로 보내세요. 보내는 방법은 [문의·피드백](help:feedback)에 있어요.
 
 ## 관련 페이지 {#related}
 
-- [한도와 규칙](help:limits) — 입력 길이, 횟수 제한, 만료 시간
 - [데스크톱 앱](help:desktop#trouble) — 데스크톱 앱에서 생기는 문제
 - [문의·피드백](help:feedback) — 해결되지 않을 때 보내는 방법

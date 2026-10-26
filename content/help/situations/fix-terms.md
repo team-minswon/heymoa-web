@@ -5,7 +5,7 @@ description: 제품명, 사내 용어, 영어 약어가 틀리게 받아 적힐 
 group: situations
 slug: fix-terms
 order: 6
-modified: 2026-10-19
+modified: 2026-10-26
 ---
 
 ## 이런 상황이에요 {#problem}
@@ -41,4 +41,3 @@ modified: 2026-10-19
 
 - [회의 맥락과 용어 사전](help:terms-context) — 입력 규칙과 한도
 - [참석자와 화자](help:speakers) — 참석자 이름도 힌트로 쓰여요
-- [한도와 규칙](help:limits) — 용어 200개, 40자

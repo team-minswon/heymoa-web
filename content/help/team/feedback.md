@@ -4,7 +4,7 @@ description: 사이드바에서 장애, 사용 문의, 기능 제안을 보내�
 group: team
 slug: feedback
 order: 4
-modified: 2026-10-23
+modified: 2026-10-26
 ---
 
 ## 문의 보내는 법 {#send}
@@ -48,4 +48,3 @@ modified: 2026-10-23
 ## 관련 페이지 {#related}
 
 - [문제 해결](help:troubleshooting) — 먼저 확인해 볼 오류와 해결 방법
-- [한도와 규칙](help:limits) — 횟수와 글자 수 한도 모음

@@ -4,7 +4,7 @@ description: Fixes for each on-screen message when recording won't start, the co
 group: fix
 slug: troubleshooting
 order: 1
-modified: 2026-10-23
+modified: 2026-10-26
 ---
 
 ## Recording won't start {#recording}
@@ -119,12 +119,11 @@ modified: 2026-10-23
 
 ## Still not fixed {#more}
 
-For problems in the desktop app, see the troubleshooting section of [Desktop app](help:desktop#trouble). For number limits, see [Limits and rules](help:limits).
+For problems in the desktop app, see the troubleshooting section of [Desktop app](help:desktop#trouble).
 
 If that doesn't help, send a **[Problem or error]** request from **[Help & feedback]** in the sidebar. See [Help & feedback](help:feedback) for how to send one.
 
 ## Related pages {#related}
 
-- [Limits and rules](help:limits) — Input lengths, rate limits, and expiration times
 - [Desktop app](help:desktop#trouble) — Problems in the desktop app
 - [Help & feedback](help:feedback) — How to reach us when nothing else works

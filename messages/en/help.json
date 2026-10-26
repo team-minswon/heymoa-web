@@ -31,8 +31,8 @@
       "summary": "Connect tools like Linear and GitHub, and let outside AI apps read your meetings over MCP."
     },
     "fix": {
-      "title": "Troubleshooting and rules",
-      "summary": "Fixes for the messages you may see in HeyMoa, plus the limits and rules for recording, summaries, and invites, all in one place."
+      "title": "When something goes wrong",
+      "summary": "Fixes for the messages you may see when using HeyMoa."
     },
     "situations": {
       "title": "Browse by situation",

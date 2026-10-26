@@ -4,7 +4,7 @@ description: 회의록과 스크립트를 복사하거나 PDF로 받고, 참석�
 group: summary
 slug: export
 order: 3
-modified: 2026-10-19
+modified: 2026-10-26
 ---
 
 ## 복사하는 법 {#copy}
@@ -76,4 +76,3 @@ modified: 2026-10-19
 
 - [요약 검토와 확정](help:review) — 보내기 전에 요약을 고치는 방법
 - [참석자와 화자](help:speakers) — 이름 없는 화자에게 이름 붙이기
-- [한도와 규칙](help:limits) — 보낼 수 있는 횟수와 용량

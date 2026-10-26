@@ -22,7 +22,6 @@ export const HELP_PAGES = {
   integrations: "connect",
   "agent-mcp": "connect",
   troubleshooting: "fix",
-  limits: "fix",
   // 상황별
   "first-meeting": "situations",
   "summary-missing": "situations",

@@ -812,12 +812,11 @@ test("keeps a second chat alive while the first waits for approval", async ({
     { timeout: 20_000 }
   );
 
-  // 목록이 둘을 말한다. 제목은 첫 USER 메시지가 채웠고, 열려 있지 않은 A의 배지는
-  // 폴링이 유일한 출처다.
+  // 승인 대기 중에는 AI 제목이 아직 없을 수 있다. 대기 배지는 폴링으로 확인한다.
   await page.getByRole("button", { name: "대화 기록" }).click();
   const history = page.getByTestId("chat-history-view");
   const waiting = history.getByRole("button", {
-    name: /^Linear 이슈 만들어줘/,
+    name: /승인 대기/,
   });
   await expect(waiting).toContainText("승인 대기", { timeout: 20_000 });
   // 방금 끝난 B에는 배지가 없다 — 목록이 늦어도 열린 대화는 SSE 가 이긴다.
@@ -1697,10 +1696,10 @@ test("fills the composer from an empty-chat example and sends on demand", async 
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByTestId("chat-list-new").click();
   await page
-    .getByRole("button", { name: "지난 회의에서 정한 것만 정리해줘" })
+    .getByRole("button", { name: "최근 결정" })
     .click();
   await expect(page.getByLabel("메시지")).toHaveText(
-    "지난 회의에서 정한 것만 정리해줘"
+    "최근 2주간 회의에서 정한 것을 근거와 함께 정리해줘"
   );
   await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
 
