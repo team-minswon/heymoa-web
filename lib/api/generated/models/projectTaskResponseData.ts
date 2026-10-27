@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ProjectTaskResponseDataAssignee } from "./projectTaskResponseDataAssignee";
+import type { ProjectTaskResponseDataExternalAgentChange } from "./projectTaskResponseDataExternalAgentChange";
 import type { ProjectTaskResponseDataTaskStatus } from "./projectTaskResponseDataTaskStatus";
 
 /**
@@ -47,4 +48,9 @@ export type ProjectTaskResponseData = {
    * @minimum 1
    */
   revision: number;
+  /**
+   * 지금 판을 외부 에이전트 연결이 썼으면 그 표시. 사람이 이어서 고치거나 다른 쪽이 쓴 판이면 null
+   * @nullable
+   */
+  externalAgentChange: ProjectTaskResponseDataExternalAgentChange;
 };

@@ -277,6 +277,7 @@ type MockAgentDelegation = AgentDelegationsResponseDataDelegationsItem & {
 type MockAgentOAuthConsent = {
   clientName: string;
   redirectUri: string;
+  scopes: string[];
 };
 
 type MockAgentDelegationUsage = AgentDelegationUsagesResponseDataUsagesItem & {
@@ -2425,6 +2426,15 @@ function createSeedState(): StoreState {
       "mock-consent": {
         clientName: "Codex",
         redirectUri: "http://127.0.0.1:1455/callback",
+        // 서버는 범위가 없는 인가 요청을 읽기·쓰기 둘로 채운다(APP-1461). 목도 쓰기를 요청한 것으로 둬
+        // 동의 화면의 할 일 변경 스위치가 보인다
+        scopes: ["mcp:read", "mcp:write"],
+      },
+      // 읽기만 요청한 에이전트. 동의 화면에 할 일 변경 스위치가 없다
+      "mock-consent-read": {
+        clientName: "Codex",
+        redirectUri: "http://127.0.0.1:1455/callback",
+        scopes: ["mcp:read"],
       },
     },
   };
@@ -2495,6 +2505,8 @@ function seedAgentDelegations(
       name: "노트북 Claude Code",
       tokenHint: "hm_Q7xKp2a",
       credentialKind: "PERSONAL_TOKEN",
+      // 목 모드에서 「할 일 변경 허용」 배지와 에이전트 변경 표시를 볼 수 있게 하나는 허용한 연결이다(APP-1369)
+      allowTaskChanges: true,
       status: "ACTIVE",
       createdAt: "2026-09-20T09:00:00Z",
       lastUsedAt: "2026-09-30T13:00:00Z",
@@ -2508,6 +2520,7 @@ function seedAgentDelegations(
       name: "예전 Codex CLI",
       tokenHint: "hm_m3Zr8Td",
       credentialKind: "PERSONAL_TOKEN",
+      allowTaskChanges: false,
       status: "REVOKED",
       createdAt: "2026-09-02T09:00:00Z",
       lastUsedAt: null,
@@ -2522,6 +2535,7 @@ function seedAgentDelegations(
       // 계약상 hint 가 없는 것은 OAuth 연결이다(APP-886)
       tokenHint: null,
       credentialKind: "OAUTH",
+      allowTaskChanges: false,
       status: "REVOKED",
       createdAt: "2026-08-20T09:00:00Z",
       lastUsedAt: "2026-08-25T09:00:00Z",
@@ -2537,6 +2551,7 @@ function seedAgentDelegations(
       name: "지원의 Codex",
       tokenHint: null,
       credentialKind: "OAUTH",
+      allowTaskChanges: false,
       status: "ACTIVE",
       createdAt: "2026-09-25T09:00:00Z",
       lastUsedAt: null,
@@ -3385,7 +3400,8 @@ export const mockDb = {
    */
   createAgentDelegation(
     workspaceId: string,
-    name: string
+    name: string,
+    allowTaskChanges = false
   ): {
     delegation: AgentDelegationsResponseDataDelegationsItem;
     token: string;
@@ -3410,6 +3426,7 @@ export const mockDb = {
       userId: state.user.userId,
       tokenHint: token.slice(0, 10),
       credentialKind: "PERSONAL_TOKEN",
+      allowTaskChanges,
       status: "ACTIVE",
       createdAt,
       lastUsedAt: null,
@@ -3472,7 +3489,7 @@ export const mockDb = {
 
   /**
    * 동의 화면이 읽는 요청(APP-888). 없거나 이미 처리했으면 서버처럼 `AGENT_OAUTH_REQUEST_NOT_FOUND` 다.
-   * 권한은 이 계약이 정하는 `mcp:read` 하나다.
+   * 권한은 에이전트가 요청한 범위다 — `mcp:read` 는 늘 있고, `mcp:write` 는 요청했을 때만 있다(APP-1461).
    */
   getAgentOAuthConsent(consentState: string) {
     const consent = state.agentOAuthConsents[consentState];
@@ -3480,14 +3497,20 @@ export const mockDb = {
     return {
       clientName: consent.clientName,
       redirectHost: new URL(consent.redirectUri).host,
-      scopes: ["mcp:read"],
+      scopes: consent.scopes,
     };
   },
 
   /** 허락하면 그 워크스페이스로 OAuth 연결이 하나 생기고, 돌아갈 주소에 `code`·`state` 가 붙는다. */
-  approveAgentOAuthConsent(consentState: string, workspaceId: string) {
+  approveAgentOAuthConsent(
+    consentState: string,
+    workspaceId: string,
+    allowTaskChanges = false
+  ) {
     const consent = state.agentOAuthConsents[consentState];
     if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
+    // 에이전트가 쓰기를 요청하지 않았는데 허용하면 서버는 400 이다(APP-1461)
+    if (allowTaskChanges && !consent.scopes.includes("mcp:write")) fail("BAD_REQUEST");
     const workspace = state.workspaces.find(
       (candidate) => candidate.workspaceId === workspaceId
     );
@@ -3505,6 +3528,7 @@ export const mockDb = {
       userId: state.user.userId,
       tokenHint: null,
       credentialKind: "OAUTH",
+      allowTaskChanges,
       status: "ACTIVE",
       createdAt,
       lastUsedAt: null,
@@ -3591,6 +3615,7 @@ export const mockDb = {
           delegationId: delegation.delegationId,
           name: delegation.name,
           credentialKind: delegation.credentialKind,
+          allowTaskChanges: delegation.allowTaskChanges,
           userId: delegation.userId,
           userName: ((member) => (member ? memberView(member).name : ""))(
             state.members.find(

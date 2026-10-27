@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { revisionChanges, TaskHistorySheet } from "@/components/tasks/task-history-sheet";
@@ -28,6 +28,8 @@ const revision = (over: Partial<Revision>): Revision => ({
   changedAt: "2026-09-16T05:00:00Z",
   changedBy: null,
   approvalId: null,
+  changeSource: null,
+  connection: null,
   ...over,
 });
 
@@ -119,6 +121,97 @@ describe("TaskHistorySheet", () => {
     expect(items[0]).toHaveTextContent("이민형이 바꿨습니다");
     expect(items[0]).toHaveTextContent(/기한없음.*9월 19일 \(토\)/);
     expect(items[1]).toHaveTextContent("회의 확정으로 생겼습니다");
+  });
+
+  it("에이전트가 바꾼 판은 누구의 에이전트인지와 연결 이름을 붙여 말한다", async () => {
+    revisionsQuery.fetch.mockResolvedValue(
+      answer([
+        revision({ changedBy: "u1", changeSource: "AGENT_CHAT" }),
+        revision({
+          revision: 2,
+          changedBy: "u1",
+          due: "2026-09-19",
+          changeSource: "EXTERNAL_AGENT",
+          connection: null,
+        }),
+        revision({
+          revision: 3,
+          changedBy: "u1",
+          due: "2026-09-20",
+          changeSource: "EXTERNAL_AGENT",
+          connection: { delegationId: "d1", name: "노트북 Claude Code" },
+        }),
+      ])
+    );
+    renderSheet({ entry: entry({ revision: 3 }) });
+
+    const items = await screen.findAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("이민형의 에이전트(노트북 Claude Code)가 바꿨습니다");
+    expect(items[1]).toHaveTextContent("이민형의 에이전트가 바꿨습니다");
+    expect(items[2]).toHaveTextContent("이민형이 HeyMoa 에이전트로 만들었습니다");
+  });
+
+  it("가장 최근 판이 외부 에이전트 변경이면 확인을 거쳐 바로 앞 판의 네 값으로 되돌린다", async () => {
+    const speaker = { type: "SPEAKER_LABEL" as const, noteId: "n1", label: "C" };
+    revisionsQuery.fetch.mockResolvedValue(
+      answer([
+        revision({ changedBy: "u1", changeSource: "MEMBER", assignee: speaker, due: "2026-09-19" }),
+        revision({
+          revision: 2,
+          changedBy: "u1",
+          changeSource: "EXTERNAL_AGENT",
+          connection: { delegationId: "d1", name: "노트북 Claude Code" },
+          taskStatus: "COMPLETED",
+          assignee: speaker,
+          due: "2026-09-25",
+        }),
+      ])
+    );
+    const { onSave } = renderSheet({ entry: entry({ taskStatus: "COMPLETED", due: "2026-09-25" }) });
+
+    const [latest, first] = await screen.findAllByRole("listitem");
+    expect(first).not.toHaveTextContent("되돌리기");
+    fireEvent.click(within(latest).getByRole("button", { name: "되돌리기" }));
+    const dialog = await screen.findByRole("alertdialog");
+    // 바뀐 칸만 지금 → 앞 값으로 보인다
+    expect(dialog).toHaveTextContent(/상태완료.*진행 중/);
+    expect(dialog).toHaveTextContent(/기한9월 25일.*9월 19일/);
+    expect(dialog).not.toHaveTextContent("담당");
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "되돌리기" }));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        content: "스테이징에 올린다",
+        taskStatus: "OPEN",
+        assignee: speaker,
+        due: "2026-09-19",
+      })
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+  });
+
+  it("되돌리기는 외부 에이전트가 바꾼 가장 최근 판에만 있다", async () => {
+    const agent = { changedBy: "u1", changeSource: "EXTERNAL_AGENT" as const };
+    // 에이전트가 만든 판(1)은 되돌릴 앞 값이 없다
+    revisionsQuery.fetch.mockResolvedValueOnce(answer([revision(agent)]));
+    renderSheet({ entry: entry({ revision: 1 }) });
+    await screen.findAllByRole("listitem");
+    expect(screen.queryByRole("button", { name: "되돌리기" })).not.toBeInTheDocument();
+    cleanup();
+
+    // 에이전트 뒤에 사람이 고쳤으면 사람의 변경을 덮지 않는다
+    revisionsQuery.fetch.mockResolvedValueOnce(
+      answer([
+        revision({ changedBy: "u1" }),
+        revision({ ...agent, revision: 2, due: "2026-09-19" }),
+        revision({ revision: 3, changedBy: "u1", changeSource: "MEMBER", due: "2026-09-20" }),
+      ])
+    );
+    renderSheet({ entry: entry({ revision: 3 }) });
+    await screen.findAllByRole("listitem");
+    expect(screen.queryByRole("button", { name: "되돌리기" })).not.toBeInTheDocument();
   });
 
   it("이력을 불러오지 못하면 다시 시도를 두고, 누르면 다시 묻는다", async () => {

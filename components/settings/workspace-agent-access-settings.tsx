@@ -329,6 +329,9 @@ function WorkspaceDelegationRow({
             <Badge variant="outline">
               {CREDENTIAL_LABEL[delegation.credentialKind]}
             </Badge>
+            {delegation.allowTaskChanges ? (
+              <Badge variant="outline">할 일 변경 허용</Badge>
+            ) : null}
           </div>
           <p className="mt-1 text-xs text-[var(--el-muted)]">
             {delegation.userName}

@@ -1,7 +1,7 @@
 "use client";
 
 import { ARRIVE_CLASS } from "@/components/heymoa/motion";
-import { Check, Folder } from "lucide-react";
+import { Bot, Check, Folder } from "lucide-react";
 import { motion, useIsPresent } from "motion/react";
 
 import { AssigneeCell } from "@/components/heymoa/assignee-cell";
@@ -122,6 +122,17 @@ export function TaskRow({
           >
             {task.content}
           </button>
+          {/* 지금 판을 외부 에이전트가 썼다(APP-1369). 멤버가 이어서 고치면 다음 조회에서 사라진다 */}
+          {task.externalAgentChange ? (
+            <span className="inline-flex max-w-[40%] shrink-0 items-center gap-1 text-xs text-[var(--el-muted)]">
+              <Bot aria-hidden className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {task.externalAgentChange.connectionName
+                  ? `에이전트 · ${task.externalAgentChange.connectionName}`
+                  : "에이전트"}
+              </span>
+            </span>
+          ) : null}
           {/* 넓은 화면(lg)에서 줄을 가리키면 이력과 수정이 선다. 담당 · 기한 칸은 가리지 않는다. 그보다 좁으면 고정 칸 사이의
               제목이 100px 남짓이라 두 버튼이 제목을 지운다 — 줄을 눌러 시트를 연다 */}
           <span className="hidden shrink-0 items-center gap-3 text-xs lg:group-hover:flex">

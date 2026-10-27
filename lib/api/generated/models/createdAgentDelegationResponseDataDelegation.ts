@@ -55,4 +55,6 @@ export type CreatedAgentDelegationResponseDataDelegation = {
   revokeReason: CreatedAgentDelegationResponseDataDelegationRevokeReason;
   /** 연결 자격 종류. 개인 토큰으로 만든 연결과 OAuth 동의로 만든 연결이 있다 */
   credentialKind: CreatedAgentDelegationResponseDataDelegationCredentialKind;
+  /** 에이전트가 할 일을 만들고 고쳐도 되는가. 연결할 때 정하고 바뀌지 않는다 */
+  allowTaskChanges: boolean;
 };

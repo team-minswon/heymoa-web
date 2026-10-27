@@ -67,6 +67,10 @@ export const getGetWorkspaceTasksResponseMock =
             image: "https://cdn.example.com/avatars/hong.png",
           },
           due: "2026-09-18",
+          externalAgentChange: {
+            connectionName: "노트북의 Claude Code",
+            changedAt: "2026-07-14T01:02:03Z",
+          },
         },
       ],
       totalCount: 57,
@@ -122,6 +126,7 @@ export const getGetProjectTasksResponseMock = (): ProjectTaskListResponse => ({
           image: "https://cdn.example.com/avatars/hong.png",
         },
         due: "2026-09-18",
+        externalAgentChange: null,
       },
     ],
   },
@@ -144,6 +149,7 @@ export const getCreateProjectTaskResponseMock = (): ProjectTaskResponse => ({
       image: "https://cdn.example.com/avatars/hong.png",
     },
     due: "2026-09-18",
+    externalAgentChange: null,
   },
   error: null,
 });
@@ -164,6 +170,7 @@ export const getUpdateProjectTaskResponseMock = (): ProjectTaskResponse => ({
       image: "https://cdn.example.com/avatars/hong.png",
     },
     due: "2026-09-18",
+    externalAgentChange: null,
   },
   error: null,
 });
@@ -187,6 +194,11 @@ export const getGetProjectTaskRevisionsResponseMock =
           approvalId: null,
           changedBy: "0HZX2K7M9Q4AC",
           changedAt: "2026-07-14T01:02:03Z",
+          changeSource: "EXTERNAL_AGENT",
+          connection: {
+            delegationId: "0HZX2K7M9Q4BD",
+            name: "노트북의 Claude Code",
+          },
         },
       ],
     },

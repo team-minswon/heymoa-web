@@ -37,6 +37,8 @@ type StoredRevision = {
   changedAt: string;
   changedBy: string | null;
   approvalId: string | null;
+  changeSource: ProjectTaskRevisionListResponseDataRevisionsItem["changeSource"];
+  connection: { delegationId: string; name: string } | null;
 };
 
 type StoredTask = {
@@ -124,6 +126,8 @@ function seed(): StoredTask[] {
       status: "OPEN",
       assignee: { type: "USER", id: "01K0000000020" },
       due: 9,
+      // 외부 에이전트 연결이 기한을 당긴 판. 목 모드에서 변경 표시와 되돌리기를 손으로 본다 (APP-1369).
+      edit: { by: me, due: -3, via: { delegationId: "01K00000000Q1", name: "노트북 Claude Code" } },
     },
     {
       key: "retro",
@@ -173,6 +177,8 @@ function seed(): StoredTask[] {
       status: "OPEN",
       assignee: { type: "USER", id: me },
       due: 12,
+      // 연결을 지운 뒤에도 그 연결이 쓴 판은 남는다. 이름 없이 「에이전트」로만 보인다.
+      edit: { by: me, due: 7, via: null },
     },
   ];
 
@@ -190,6 +196,8 @@ function build(rows: TaskSeedRow[], approvalId: string, me: string): StoredTask[
       changedAt: hoursAgo(72 + index),
       changedBy: row.fromApproval ? null : me,
       approvalId: row.fromApproval ? approvalId : null,
+      changeSource: row.fromApproval ? null : "MEMBER",
+      connection: null,
     };
     const history = [first];
     if (row.edit) {
@@ -201,6 +209,8 @@ function build(rows: TaskSeedRow[], approvalId: string, me: string): StoredTask[
         changedAt: hoursAgo(20 + index),
         changedBy: row.edit.by,
         approvalId: null,
+        changeSource: row.edit.via === undefined ? "MEMBER" : "EXTERNAL_AGENT",
+        connection: row.edit.via ?? null,
       });
     }
     return { taskId: nextId("01KT"), projectId: row.projectId, key: row.key, history };
@@ -232,6 +242,10 @@ function view(task: StoredTask): ProjectTaskResponseData {
     assignee: resolveAssignee(workspaceOfProject(task.projectId), head.assignee),
     due: head.due,
     revision: head.revision,
+    externalAgentChange:
+      head.changeSource === "EXTERNAL_AGENT"
+        ? { connectionName: head.connection?.name ?? null, changedAt: head.changedAt }
+        : null,
   };
 }
 
@@ -248,6 +262,8 @@ function revisionView(
     changedAt: row.changedAt,
     changedBy: row.changedBy,
     approvalId: row.approvalId,
+    changeSource: row.changeSource,
+    connection: row.connection,
   };
 }
 
@@ -372,6 +388,8 @@ export const projectTasks = {
           changedAt: new Date().toISOString(),
           changedBy: null,
           approvalId,
+          changeSource: null,
+          connection: null,
         },
       };
     });
@@ -398,6 +416,8 @@ export const projectTasks = {
             changedAt: new Date().toISOString(),
             changedBy: null,
             approvalId,
+            changeSource: null,
+            connection: null,
           },
         ],
       };
@@ -444,6 +464,8 @@ export const projectTaskHandlers = [
               changedAt: new Date().toISOString(),
               changedBy: mockDb.getCurrentUser().userId,
               approvalId: null,
+              changeSource: "MEMBER",
+              connection: null,
             },
           ],
         };
@@ -488,6 +510,8 @@ export const projectTaskHandlers = [
             changedAt: new Date().toISOString(),
             changedBy: mockDb.getCurrentUser().userId,
             approvalId: null,
+            changeSource: "MEMBER",
+            connection: null,
           });
         }
         return view(task);

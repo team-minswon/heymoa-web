@@ -9,6 +9,7 @@ import {
   BLOCKED_SUFFIX,
 } from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
+import { TaskChangesToggle } from "@/components/agent-connections/task-changes-toggle";
 import {
   AgentOAuthEndCard,
   HEYMOA_MARK,
@@ -36,7 +37,7 @@ import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 const REQUEST_NOT_FOUND = "AGENT_OAUTH_REQUEST_NOT_FOUND";
 
 /** 계약이 정한 권한을 사람이 읽는 말로. 모르는 값은 이름 그대로 둔다. */
-const SCOPE_LABELS: Record<string, string> = { "mcp:read": "읽기" };
+const SCOPE_LABELS: Record<string, string> = { "mcp:read": "읽기", "mcp:write": "할 일 만들기·고치기" };
 
 /**
  * server 가 돌려준 돌아갈 주소로 간다. server 가 등록 때 주소를 검사하지만, `javascript:` 같은 다른 scheme 으로는
@@ -61,6 +62,8 @@ export function isNavigableRedirect(uri: string) {
  *   대신 이 화면이 그린다
  * - 외부 에이전트를 끈 워크스페이스는 고를 수 없다(APP-941). 고르는 사이 꺼져 허락이 403 이면 목록을 다시
  *   읽고 같은 안내를 띄운다 — 요청은 server 에 남아 있어 화면을 닫지 않는다
+ * - 할 일 변경 허용은 에이전트가 `mcp:write` 를 요청했을 때만 고르게 한다(APP-1369). 요청하지 않은 쓰기를 참으로
+ *   보내면 server 가 400 이라, 그때는 본문에 싣지도 않는다
  */
 export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   const consent = useGetAgentOAuthConsent({ state: consentState });
@@ -75,6 +78,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
     null
   );
   const [leaving, setLeaving] = useState(false);
+  const [allowTaskChanges, setAllowTaskChanges] = useState(false);
   const [invalidRedirect, setInvalidRedirect] = useState(false);
 
   const workspaces =
@@ -120,6 +124,8 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
     consent.data?.status === 200 && consent.data.data.success
       ? consent.data.data.data
       : null;
+  const writeRequested =
+    request?.scopes.some((scope) => String(scope) === "mcp:write") ?? false;
 
   const leave = (redirectUri: string) => {
     if (!isNavigableRedirect(redirectUri)) {
@@ -136,7 +142,13 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
     deny.reset();
     setInvalidRedirect(false);
     const response = await approve
-      .mutateAsync({ data: { state: consentState, workspaceId } })
+      .mutateAsync({
+        data: {
+          state: consentState,
+          workspaceId,
+          ...(writeRequested ? { allowTaskChanges } : {}),
+        },
+      })
       .catch(async (error) => {
         // 다시 읽은 목록이 그 워크스페이스를 꺼짐으로 바꿔 안내가 뜬다. 잠금은 목록만 보고 가르고 이 오류
         // 문구는 아래에서 거른다 — 여기서 reset 하면 그사이 시작한 새 허락의 관찰까지 끊는다
@@ -266,8 +278,20 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
         ) : null}
       </div>
 
+      {writeRequested ? (
+        <TaskChangesToggle
+          className="mt-4"
+          checked={allowTaskChanges}
+          disabled={busy}
+          onCheckedChange={setAllowTaskChanges}
+        />
+      ) : null}
+
       <div className="mt-4">
-        <AgentAccessNotice className="text-sm" />
+        <AgentAccessNotice
+          allowTaskChanges={writeRequested && allowTaskChanges}
+          className="text-sm"
+        />
       </div>
 
       {((failure && errorCodeOf(failure) !== AGENT_ACCESS_DISABLED) ||

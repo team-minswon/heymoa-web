@@ -107,7 +107,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
     expect(
       screen.getByText("허락하면 127.0.0.1:1455 로 돌아갑니다")
     ).toBeTruthy();
-    expect(screen.getByText("읽기")).toBeTruthy();
+    expect(screen.getByText("읽기, 할 일 만들기·고치기")).toBeTruthy();
     expect(
       screen.getByText("회의 전사(참석자의 발화와 이름)도 이 앱이 읽습니다.")
     ).toBeTruthy();
@@ -124,12 +124,58 @@ describe("외부 에이전트 연결 동의 화면", () => {
 
     await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
     expect(approved).toEqual([
-      { state: "mock-consent", workspaceId: only.workspaceId },
+      { state: "mock-consent", workspaceId: only.workspaceId, allowTaskChanges: false },
     ]);
     const target = new URL(assign.mock.calls[0][0]);
     expect(target.host).toBe("127.0.0.1:1455");
     expect(target.searchParams.get("state")).toBe("mock-consent");
     expect(target.searchParams.get("code")).toBeTruthy();
+  });
+
+  it("쓰기를 요청했으면 할 일 변경을 켜고 허락해 허용을 보내고 안내도 바꾼다", async () => {
+    const [only] = mockDb.listWorkspaces();
+    withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);
+    renderConsent();
+
+    const toggle = await screen.findByRole("switch", {
+      name: "할 일 만들기·고치기 허용",
+    });
+    expect(screen.queryByText(/만든 뒤 바꿀 수 없습니다/)).toBeNull();
+    fireEvent.click(toggle);
+    expect(screen.getByText(/만든 뒤 바꿀 수 없습니다/)).toBeTruthy();
+    expect(
+      screen.getByText(/앱은 읽기·화면 열기와 할 일 만들기·고치기를 합니다/)
+    ).toBeTruthy();
+
+    const allow = screen.getByRole("button", { name: "허락" });
+    await waitFor(() => expect(allow.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(allow);
+
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    expect(approved).toEqual([
+      { state: "mock-consent", workspaceId: only.workspaceId, allowTaskChanges: true },
+    ]);
+  });
+
+  it("읽기만 요청했으면 할 일 변경을 고르지 않고 허용을 싣지 않는다", async () => {
+    const [only] = mockDb.listWorkspaces();
+    withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);
+    renderConsent("mock-consent-read");
+
+    expect(await screen.findByText("읽기")).toBeTruthy();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(
+      screen.getByText(/앱은 읽기와 화면 열기만 하고 아무것도 바꾸지 않습니다/)
+    ).toBeTruthy();
+
+    const allow = screen.getByRole("button", { name: "허락" });
+    await waitFor(() => expect(allow.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(allow);
+
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    expect(approved).toEqual([
+      { state: "mock-consent-read", workspaceId: only.workspaceId },
+    ]);
   });
 
   it("워크스페이스가 둘 이상이면 고르기 전에는 허락할 수 없다", async () => {
@@ -274,7 +320,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
 
       expect(await screen.findByText(BLOCKED)).toBeTruthy();
       expect(approved).toEqual([
-        { state: "mock-consent", workspaceId: only.workspaceId },
+        { state: "mock-consent", workspaceId: only.workspaceId, allowTaskChanges: false },
       ]);
       expect(assign).not.toHaveBeenCalled();
       expect(

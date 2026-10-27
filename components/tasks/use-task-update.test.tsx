@@ -41,6 +41,7 @@ const task = (over: Partial<TaskEntry> = {}): TaskEntry => ({
   assignee: null,
   due: "2026-09-15",
   revision: 3,
+  externalAgentChange: null,
   ...over,
 });
 const list = (tasks: TaskEntry[]) => ({

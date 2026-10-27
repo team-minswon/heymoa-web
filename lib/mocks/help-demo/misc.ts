@@ -161,19 +161,19 @@ export function helpDemoDelegations(now: number): Pick<StoreState, "agentDelegat
   const agentDelegations: StoreState["agentDelegations"] = [
     {
       ...base, delegationId: "01KH000008001", name: "Claude", tokenHint: "hm_Kq3Vn8x", credentialKind: "PERSONAL_TOKEN",
-      status: "ACTIVE", createdAt: iso(-30), lastUsedAt: new Date(now - 2 * 3_600_000).toISOString(), expiresAt: iso(88), revokedAt: null, revokeReason: null,
+      allowTaskChanges: true, status: "ACTIVE", createdAt: iso(-30), lastUsedAt: new Date(now - 2 * 3_600_000).toISOString(), expiresAt: iso(88), revokedAt: null, revokeReason: null,
     },
     {
       ...base, delegationId: "01KH000008002", name: "ChatGPT", tokenHint: null, credentialKind: "OAUTH",
-      status: "ACTIVE", createdAt: iso(-12), lastUsedAt: iso(-1), expiresAt: iso(79), revokedAt: null, revokeReason: null,
+      allowTaskChanges: false, status: "ACTIVE", createdAt: iso(-12), lastUsedAt: iso(-1), expiresAt: iso(79), revokedAt: null, revokeReason: null,
     },
     {
       ...base, delegationId: "01KH000008003", name: "Claude Code", tokenHint: "hm_Tz7Ld2m", credentialKind: "PERSONAL_TOKEN",
-      status: "REVOKED", createdAt: iso(-60), lastUsedAt: iso(-25), expiresAt: iso(30), revokedAt: iso(-20), revokeReason: "USER",
+      allowTaskChanges: false, status: "REVOKED", createdAt: iso(-60), lastUsedAt: iso(-25), expiresAt: iso(30), revokedAt: iso(-20), revokeReason: "USER",
     },
     {
       ...base, userId: HD_MEMBERS.harin.userId, delegationId: "01KH000008004", name: "하린의 ChatGPT", tokenHint: null, credentialKind: "OAUTH",
-      status: "ACTIVE", createdAt: iso(-8), lastUsedAt: iso(-2), expiresAt: iso(82), revokedAt: null, revokeReason: null,
+      allowTaskChanges: false, status: "ACTIVE", createdAt: iso(-8), lastUsedAt: iso(-2), expiresAt: iso(82), revokedAt: null, revokeReason: null,
     },
   ];
   const tools = ["list_projects", "list_project_items", "get_project_item", "list_open_tasks", "open_screen", "get_meeting_transcript"];

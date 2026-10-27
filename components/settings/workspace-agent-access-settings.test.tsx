@@ -88,7 +88,7 @@ const toggle = () => screen.findByRole("switch", { name: "MCP 연결 허용" });
 const list = () => screen.findByRole("region", { name: "열린 연결" });
 
 describe("워크스페이스 외부 에이전트 관리", () => {
-  it("ADMIN 에게 허용 토글과 열린 연결 목록을 보이고, 행에는 이름·자격 종류·맡긴 사람·연결·마지막 사용만 있다", async () => {
+  it("ADMIN 에게 허용 토글과 열린 연결 목록을 보이고, 행에는 이름·자격 종류·할 일 변경 허용·맡긴 사람·연결·마지막 사용만 있다", async () => {
     renderSettings();
 
     expect((await toggle()).getAttribute("aria-checked")).toBe("true");
@@ -104,6 +104,9 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(within(mine).getByText("노트북 Claude Code")).toBeTruthy();
     expect(within(mine).getByText("개인 토큰")).toBeTruthy();
     expect(within(mine).getByText(MOCK_USER.name)).toBeTruthy();
+    // 할 일 변경을 허용한 연결에만 단다(APP-1369)
+    expect(within(mine).getByText("할 일 변경 허용")).toBeTruthy();
+    expect(within(jiwon).queryByText("할 일 변경 허용")).toBeNull();
     // 사용 내역·토큰 앞자리는 관리자에게 보이지 않는다
     expect(within(region).queryByText(/hm_/)).toBeNull();
     expect(within(region).queryByText("사용 내역")).toBeNull();

@@ -31,4 +31,6 @@ export type WorkspaceAgentDelegationsResponseDataDelegationsItem = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   delegationId: string;
+  /** 에이전트가 할 일을 만들고 고쳐도 되는가. 연결할 때 맡긴 사람이 정했다 */
+  allowTaskChanges: boolean;
 };

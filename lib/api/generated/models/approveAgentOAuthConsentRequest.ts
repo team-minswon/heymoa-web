@@ -17,4 +17,6 @@ export interface ApproveAgentOAuthConsentRequest {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;
+  /** 에이전트가 내 이름으로 할 일을 만들고 고쳐도 되는가. 안 보내면 거짓이고 읽기만 허락한다. 참이면 쓰기 범위(`mcp:write`)도 허락한다 — 에이전트가 그 범위를 요청하지 않았으면 400 이다 */
+  allowTaskChanges?: boolean;
 }

@@ -24,7 +24,13 @@ export type TaskSeedRow = {
   due: number | null;
   /** 회의 확정에서 생긴 할 일이다 */
   fromApproval?: boolean;
-  edit?: { by: string; due?: number; status?: "OPEN" | "COMPLETED" | "CANCELLED" };
+  edit?: {
+    by: string;
+    due?: number;
+    status?: "OPEN" | "COMPLETED" | "CANCELLED";
+    /** 외부 에이전트 연결이 `by` 의 이름으로 고친 판이다. null 이면 그 연결 행이 지워졌다 */
+    via?: { delegationId: string; name: string } | null;
+  };
 };
 
 const person = (ref: PersonRef | null): TaskSeedRow["assignee"] => {

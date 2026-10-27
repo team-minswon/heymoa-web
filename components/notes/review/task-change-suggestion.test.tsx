@@ -23,6 +23,7 @@ const task: Props["task"] = {
   assignee: { type: "USER", id: "user", name: "민수" },
   due: "2026-10-20",
   revision: 3,
+  externalAgentChange: null,
 };
 
 function props(over: Partial<Props> = {}): Props {

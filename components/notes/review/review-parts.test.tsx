@@ -164,6 +164,7 @@ it.each([
               taskStatus: "OPEN",
               assignee: null,
               due: null,
+              externalAgentChange: null,
             }}
             noteId="note"
             choices={[{ type: "USER", id: "saved", name: "저장한 담당" }]}

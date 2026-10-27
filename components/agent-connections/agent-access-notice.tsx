@@ -4,10 +4,16 @@ import { cn } from "@/lib/utils";
 
 /**
  * 외부 에이전트에 워크스페이스를 맡길 때 알리는 것. 설정의 새 연결(APP-804)과 OAuth 동의 화면(APP-888)이
- * 같은 문구를 쓴다 — PRD 「정한 것」 1·4·5: 범위는 워크스페이스 전체이고, 회의 전사도 읽히며, 이 연결은
- * 아무것도 바꾸지 않는다.
+ * 같은 문구를 쓴다 — PRD 「정한 것」 1·4·5: 범위는 워크스페이스 전체이고, 회의 전사도 읽히며, 할 일 변경을
+ * 허용하지 않은 연결은 아무것도 바꾸지 않는다. 허용하면 그 줄만 달라진다(APP-1369).
  */
-export function AgentAccessNotice({ className }: { className?: string }) {
+export function AgentAccessNotice({
+  allowTaskChanges = false,
+  className,
+}: {
+  allowTaskChanges?: boolean;
+  className?: string;
+}) {
   return (
     <div
       className={cn(
@@ -24,8 +30,10 @@ export function AgentAccessNotice({ className }: { className?: string }) {
         {/* 게스트를 포함한 다른 참석자의 말이 내가 고른 외부 AI 로 간다 — 알고 맡기게 한다(APP-844) */}
         <li>회의 전사(참석자의 발화와 이름)도 이 앱이 읽습니다.</li>
         <li>
-          앱은 읽기와 화면 열기만 하고 아무것도 바꾸지 않습니다. 내가 볼
-          수 없는 것은 앱도 볼 수 없습니다.
+          {allowTaskChanges
+            ? "앱은 읽기·화면 열기와 할 일 만들기·고치기를 합니다."
+            : "앱은 읽기와 화면 열기만 하고 아무것도 바꾸지 않습니다."}{" "}
+          내가 볼 수 없는 것은 앱도 볼 수 없습니다.
         </li>
         <li>90일 동안 쓰지 않으면 저절로 만료됩니다.</li>
       </ul>

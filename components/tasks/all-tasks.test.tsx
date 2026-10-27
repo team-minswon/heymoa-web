@@ -25,8 +25,29 @@ const TASKS = vi.hoisted(() => ({
     },
   ],
   p2: [
-    { projectId: "p2", projectName: "리서치", taskId: "t3", content: "다음 주 할 일", taskStatus: "OPEN", assignee: null, due: "2026-09-25", revision: 1 },
-    { projectId: "p2", projectName: "리서치", taskId: "t4", content: "기한 없는 할 일", taskStatus: "OPEN", assignee: null, due: null, revision: 1 },
+    {
+      projectId: "p2",
+      projectName: "리서치",
+      taskId: "t3",
+      content: "다음 주 할 일",
+      taskStatus: "OPEN",
+      assignee: null,
+      due: "2026-09-25",
+      revision: 1,
+      externalAgentChange: { connectionName: "노트북 Claude Code", changedAt: "2026-09-15T03:00:00Z" },
+    },
+    {
+      projectId: "p2",
+      projectName: "리서치",
+      taskId: "t4",
+      content: "기한 없는 할 일",
+      taskStatus: "OPEN",
+      assignee: null,
+      due: null,
+      revision: 1,
+      // 연결 행이 지워졌다
+      externalAgentChange: { connectionName: null, changedAt: "2026-09-15T03:00:00Z" },
+    },
     { projectId: "p2", projectName: "리서치", taskId: "t5", content: "끝낸 할 일", taskStatus: "COMPLETED", assignee: null, due: null, revision: 2 },
     { projectId: "p2", projectName: "리서치", taskId: "t6", content: "접은 할 일", taskStatus: "CANCELLED", assignee: null, due: null, revision: 2 },
   ],
@@ -162,6 +183,16 @@ describe("AllTasks", () => {
     expect(within(regions[2]).getByText("리서치")).toBeTruthy();
     expect(screen.queryByText("끝낸 할 일")).toBeNull();
     expect(screen.getByText("프로젝트 2개 · 진행 중 4개")).toBeTruthy();
+  });
+
+  it("지금 판을 외부 에이전트가 쓴 할 일에만 에이전트와 연결 이름을 붙인다", async () => {
+    renderScreen();
+    await screen.findByText("지난 할 일");
+
+    const rowOf = (content: string) => screen.getByText(content).closest("li")!;
+    expect(within(rowOf("다음 주 할 일")).getByText("에이전트 · 노트북 Claude Code")).toBeTruthy();
+    expect(within(rowOf("기한 없는 할 일")).getByText("에이전트")).toBeTruthy();
+    expect(within(rowOf("지난 할 일")).queryByText(/에이전트/)).toBeNull();
   });
 
   it("프로젝트가 하나뿐이면 모든 줄이 같은 이름이라 프로젝트 칸을 세우지 않는다", async () => {

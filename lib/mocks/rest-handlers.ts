@@ -1563,6 +1563,7 @@ export const restHandlers = [
     const body = (await request.json()) as {
       workspaceId: string;
       name: string;
+      allowTaskChanges?: boolean;
     };
     // 계약의 이름은 앞뒤 공백을 걷고 1~50자다. 넘으면 실서버처럼 400 이다 — 목에서만 통과하면
     // 실서버에서 처음 깨진다.
@@ -1582,7 +1583,12 @@ export const restHandlers = [
       );
     }
     return commandResult(
-      () => mockDb.createAgentDelegation(body.workspaceId, name),
+      () =>
+        mockDb.createAgentDelegation(
+          body.workspaceId,
+          name,
+          body.allowTaskChanges ?? false
+        ),
       201
     );
   }),
@@ -1608,9 +1614,14 @@ export const restHandlers = [
     const body = (await request.json()) as {
       state: string;
       workspaceId: string;
+      allowTaskChanges?: boolean;
     };
     return commandResult(() =>
-      mockDb.approveAgentOAuthConsent(body.state, body.workspaceId)
+      mockDb.approveAgentOAuthConsent(
+        body.state,
+        body.workspaceId,
+        body.allowTaskChanges ?? false
+      )
     );
   }),
   http.post("*/v1/agent-oauth/consent/deny", async ({ request }) => {

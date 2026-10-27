@@ -39,6 +39,7 @@ paths:
                         revokedAt: '2026-10-02T09:00:00Z'
                         revokeReason: USER
                         credentialKind: PERSONAL_TOKEN
+                        allowTaskChanges: true
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -60,6 +61,7 @@ paths:
                 value:
                   workspaceId: 0HZX2K7M9Q4AD
                   name: 노트북 Claude Code
+                  allowTaskChanges: true
               createAgentDelegation_WorkspaceNotFoundException:
                 value:
                   workspaceId: 0HZX2K7M9Q4AD
@@ -97,6 +99,7 @@ paths:
                         revokedAt: null
                         revokeReason: null
                         credentialKind: PERSONAL_TOKEN
+                        allowTaskChanges: true
                       token: hm_4f9Qz8LmT2vXc7Rb1NkYp0Hs6JdWe3UaGi5OtCyB2
                     error: null
         '404':
@@ -3967,90 +3970,87 @@ paths:
       - accessCookie: []
     post:
       tags:
-      - "Workspaces"
-      summary: "워크스페이스 임시 참여자 생성"
-      description: "계정 없는 임시 참여자를 어느 회의에도 붙이지 않고 만든다. 멤버 누구나 부를 수 있고(회의의 참여자 추가와 같\
-        은 권한), 같은 이름의 임시 참여자를 허용한다. 이름은 앞뒤 공백을 지우고 1~100자여야 하며, 응답은 목록 항목과 같은 모양이고\
-        \ noteCount 는 0이다. 회의에 넣으면서 만들려면 /v1/notes/{noteId}/participants/guests 를\
-        \ 쓴다."
-      operationId: "createWorkspaceGuest"
+      - Workspaces
+      summary: 워크스페이스 임시 참여자 생성
+      description: 계정 없는 임시 참여자를 어느 회의에도 붙이지 않고 만든다. 멤버 누구나 부를 수 있고(회의의 참여자 추가와 같은 권한), 같은 이름의 임시 참여자를 허용한다. 이름은 앞뒤 공백을 지우고 1~100자여야 하며, 응답은 목록 항목과 같은 모양이고 noteCount 는 0이다. 회의에 넣으면서 만들려면 /v1/notes/{noteId}/participants/guests 를 쓴다.
+      operationId: createWorkspaceGuest
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
         required: true
         schema:
-          type: "string"
-          description: "워크스페이스의 13자리 TSID"
+          type: string
+          description: 워크스페이스의 13자리 TSID
           nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-        example: "0HZX2K7M9Q4AD"
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateWorkspaceGuestRequest"
+              $ref: '#/components/schemas/CreateWorkspaceGuestRequest'
             examples:
               createWorkspaceGuest_BadRequest:
                 value:
-                  displayName: " "
+                  displayName: ' '
               createWorkspaceGuest_Success:
                 value:
-                  displayName: "박서준"
+                  displayName: 박서준
               createWorkspaceGuest_WorkspaceNotFoundException:
                 value:
-                  displayName: "박서준"
+                  displayName: 박서준
       responses:
-        "400":
-          description: "잘못된 요청"
+        '400':
+          description: 잘못된 요청
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppErrorResponse"
+                $ref: '#/components/schemas/AppErrorResponse'
               examples:
                 BAD_REQUEST:
                   value:
                     success: false
                     data: null
                     error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details:
-                      - field: "displayName"
-                        message: "비울 수 없습니다."
-        "201":
-          description: "생성 성공"
+                      - field: displayName
+                        message: 비울 수 없습니다.
+        '201':
+          description: 생성 성공
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspaceGuestResponse"
+                $ref: '#/components/schemas/WorkspaceGuestResponse'
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
-                      guestId: "0HZX2K7M9Q4AR"
-                      displayName: "박서준"
+                      guestId: 0HZX2K7M9Q4AR
+                      displayName: 박서준
                       noteCount: 0
-                      createdAt: "2026-07-14T01:02:03Z"
+                      createdAt: '2026-07-14T01:02:03Z'
                     error: null
-        "404":
-          description: "요청한 리소스를 찾을 수 없음"
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppErrorResponse"
+                $ref: '#/components/schemas/AppErrorResponse'
               examples:
                 WORKSPACE_NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: "WORKSPACE_NOT_FOUND"
-                      message: "워크스페이스를 찾을 수 없습니다."
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
                       details: null
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
   /v1/workspaces/{workspaceId}/integrations:
@@ -4770,6 +4770,9 @@ paths:
                           name: 민수
                           image: https://cdn.example.com/avatars/hong.png
                         due: '2026-09-18'
+                        externalAgentChange:
+                          connectionName: 노트북의 Claude Code
+                          changedAt: '2026-07-14T01:02:03Z'
                       totalCount: 57
                       counts:
                         open: 57
@@ -7773,6 +7776,7 @@ paths:
                           name: 민수
                           image: https://cdn.example.com/avatars/hong.png
                         due: '2026-09-18'
+                        externalAgentChange: null
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -7864,6 +7868,7 @@ paths:
                         name: 민수
                         image: https://cdn.example.com/avatars/hong.png
                       due: '2026-09-18'
+                      externalAgentChange: null
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -7988,6 +7993,7 @@ paths:
                         name: 민수
                         image: https://cdn.example.com/avatars/hong.png
                       due: '2026-09-18'
+                      externalAgentChange: null
                     error: null
         '400':
           description: 잘못된 요청
@@ -8088,6 +8094,10 @@ paths:
                         approvalId: null
                         changedBy: 0HZX2K7M9Q4AC
                         changedAt: '2026-07-14T01:02:03Z'
+                        changeSource: EXTERNAL_AGENT
+                        connection:
+                          delegationId: 0HZX2K7M9Q4BD
+                          name: 노트북의 Claude Code
                     error: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -8404,6 +8414,7 @@ paths:
                       redirectHost: localhost
                       scopes:
                       - mcp:read
+                      - mcp:write
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -8453,10 +8464,16 @@ paths:
                 value:
                   state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
                   workspaceId: 0HZX2K7M9Q4AD
+                  allowTaskChanges: true
               approveAgentOAuthConsent_AgentAccessDisabledException:
                 value:
                   state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
                   workspaceId: 0HZX2K7M9Q4AD
+              approveAgentOAuthConsent_AgentOAuthWriteScopeNotRequestedException:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+                  workspaceId: 0HZX2K7M9Q4AD
+                  allowTaskChanges: true
       responses:
         '200':
           description: 요청 성공
@@ -8485,9 +8502,7 @@ paths:
                     error:
                       code: BAD_REQUEST
                       message: 잘못된 요청입니다.
-                      details:
-                      - field: workspaceId
-                        message: 비울 수 없습니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -8709,6 +8724,7 @@ paths:
                         userName: 김팀원
                         createdAt: '2026-10-01T09:00:00Z'
                         lastUsedAt: '2026-10-07T09:00:00Z'
+                        allowTaskChanges: false
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -11907,6 +11923,7 @@ components:
               description: 내 연결 목록
               items:
                 required:
+                - allowTaskChanges
                 - createdAt
                 - credentialKind
                 - delegationId
@@ -12000,6 +12017,11 @@ components:
                     enum:
                     - PERSONAL_TOKEN
                     - OAUTH
+                  allowTaskChanges:
+                    type: boolean
+                    description: 에이전트가 할 일을 만들고 고쳐도 되는가. 연결할 때 정하고 바뀌지 않는다
+                    nullable: false
+                    example: true
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -12373,6 +12395,11 @@ components:
           nullable: false
           example: 0HZX2K7M9Q4AD
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        allowTaskChanges:
+          type: boolean
+          description: 에이전트가 내 이름으로 할 일을 만들고 고쳐도 되는가. 안 보내면 거짓이고, 만든 뒤에는 바꿀 수 없다
+          nullable: false
+          example: true
     CreateFeedbackRequest:
       title: CreateFeedbackRequest
       required:
@@ -12437,16 +12464,16 @@ components:
           example: 배포 체크리스트를 만든다
           minLength: 1
     CreateWorkspaceGuestRequest:
-      title: "CreateWorkspaceGuestRequest"
+      title: CreateWorkspaceGuestRequest
       required:
-      - "displayName"
-      type: "object"
+      - displayName
+      type: object
       properties:
         displayName:
-          type: "string"
-          description: "새 임시 참여자 이름. 앞뒤 공백과 제어문자는 저장 전에 정리된다"
+          type: string
+          description: 새 임시 참여자 이름. 앞뒤 공백과 제어문자는 저장 전에 정리된다
           nullable: false
-          example: "박서준"
+          example: 박서준
           minLength: 1
           maxLength: 100
     CreateWorkspaceInvitationRequest:
@@ -12559,6 +12586,7 @@ components:
           properties:
             delegation:
               required:
+              - allowTaskChanges
               - createdAt
               - credentialKind
               - delegationId
@@ -12652,6 +12680,11 @@ components:
                   enum:
                   - PERSONAL_TOKEN
                   - OAUTH
+                allowTaskChanges:
+                  type: boolean
+                  description: 에이전트가 할 일을 만들고 고쳐도 되는가. 연결할 때 정하고 바뀌지 않는다
+                  nullable: false
+                  example: true
               description: 만든 연결
               nullable: false
             token:
@@ -15752,6 +15785,7 @@ components:
                 - taskStatus
                 - assignee
                 - due
+                - externalAgentChange
                 type: object
                 properties:
                   due:
@@ -15843,6 +15877,25 @@ components:
                     example: 1
                     format: int64
                     minimum: 1
+                  externalAgentChange:
+                    type: object
+                    properties:
+                      changedAt:
+                        type: string
+                        description: 그 판을 저장한 시각
+                        nullable: false
+                        example: '2026-07-14T01:02:03Z'
+                        format: date-time
+                      connectionName:
+                        type: string
+                        description: 그 판을 쓴 연결의 이름(연결을 만든 사람이 붙인 이름). 연결 행이 없으면 null
+                        nullable: true
+                        maxLength: 50
+                    description: 지금 판을 외부 에이전트 연결이 썼으면 그 표시. 사람이 이어서 고치거나 다른 쪽이 쓴 판이면 null
+                    nullable: true
+                    required:
+                    - connectionName
+                    - changedAt
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -15874,6 +15927,7 @@ components:
           - taskStatus
           - assignee
           - due
+          - externalAgentChange
           type: object
           properties:
             due:
@@ -15965,6 +16019,25 @@ components:
               example: 1
               format: int64
               minimum: 1
+            externalAgentChange:
+              type: object
+              properties:
+                changedAt:
+                  type: string
+                  description: 그 판을 저장한 시각
+                  nullable: false
+                  example: '2026-07-14T01:02:03Z'
+                  format: date-time
+                connectionName:
+                  type: string
+                  description: 그 판을 쓴 연결의 이름(연결을 만든 사람이 붙인 이름). 연결 행이 없으면 null
+                  nullable: true
+                  maxLength: 50
+              description: 지금 판을 외부 에이전트 연결이 썼으면 그 표시. 사람이 이어서 고치거나 다른 쪽이 쓴 판이면 null
+              nullable: true
+              required:
+              - connectionName
+              - changedAt
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -16003,6 +16076,8 @@ components:
                 - due
                 - approvalId
                 - changedBy
+                - changeSource
+                - connection
                 type: object
                 properties:
                   due:
@@ -16093,6 +16168,36 @@ components:
                     example: 1
                     format: int64
                     minimum: 1
+                  changeSource:
+                    type: string
+                    description: 이 판을 누가 바꿨나. MEMBER 는 멤버가 화면에서, AGENT_CHAT 은 앱 안 에이전트가 멤버의 승인을 받아, EXTERNAL_AGENT 는 외부 에이전트 연결이 changedBy 의 이름으로. 회의 확정이 만든 판이면 null
+                    nullable: true
+                    example: EXTERNAL_AGENT
+                    enum:
+                    - MEMBER
+                    - AGENT_CHAT
+                    - EXTERNAL_AGENT
+                  connection:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: 연결을 만든 사람이 붙인 이름. 회수된 연결도 나온다
+                        nullable: false
+                        example: 노트북의 Claude Code
+                        minLength: 1
+                        maxLength: 50
+                      delegationId:
+                        type: string
+                        description: 연결의 13자리 TSID
+                        nullable: false
+                        example: 0HZX2K7M9Q4BD
+                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    description: 외부 에이전트(EXTERNAL_AGENT)가 바꾼 판이면 그 연결. 그 밖의 판이거나 연결 행이 없으면 null
+                    nullable: true
+                    required:
+                    - delegationId
+                    - name
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -18023,6 +18128,7 @@ components:
                 - taskStatus
                 - assignee
                 - due
+                - externalAgentChange
                 type: object
                 properties:
                   due:
@@ -18114,6 +18220,25 @@ components:
                     example: 1
                     format: int64
                     minimum: 1
+                  externalAgentChange:
+                    type: object
+                    properties:
+                      changedAt:
+                        type: string
+                        description: 그 판을 저장한 시각
+                        nullable: false
+                        example: '2026-07-14T01:02:03Z'
+                        format: date-time
+                      connectionName:
+                        type: string
+                        description: 그 판을 쓴 연결의 이름(연결을 만든 사람이 붙인 이름). 연결 행이 없으면 null
+                        nullable: true
+                        maxLength: 50
+                    description: 지금 판을 외부 에이전트 연결이 썼으면 그 표시. 사람이 이어서 고치거나 다른 쪽이 쓴 판이면 null
+                    nullable: true
+                    required:
+                    - connectionName
+                    - changedAt
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -18345,7 +18470,7 @@ components:
               example: Claude Code (heymoa)
             scopes:
               type: array
-              description: 요청한 범위. 지금은 읽기 하나다
+              description: 요청한 범위. mcp:read 는 읽기이고 늘 있다(없이 요청해도 서버가 더한다). mcp:write 는 할 일 만들기·고치기이고, 있을 때만 허락하며 할 일 변경 허용(allowTaskChanges)을 고르게 한다
               items:
                 oneOf:
                 - type: object
@@ -18355,6 +18480,7 @@ components:
               nullable: false
               example:
               - mcp:read
+              - mcp:write
             redirectHost:
               type: string
               description: 허락하면 브라우저가 돌아갈 곳의 호스트(에이전트의 콜백)
@@ -18391,6 +18517,11 @@ components:
           nullable: false
           example: 0HZX2K7M9Q4AD
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        allowTaskChanges:
+          type: boolean
+          description: 에이전트가 내 이름으로 할 일을 만들고 고쳐도 되는가. 안 보내면 거짓이고 읽기만 허락한다. 참이면 쓰기 범위(`mcp:write`)도 허락한다 — 에이전트가 그 범위를 요청하지 않았으면 400 이다
+          nullable: false
+          example: true
     DenyAgentOAuthConsentRequest:
       title: DenyAgentOAuthConsentRequest
       required:
@@ -18432,6 +18563,7 @@ components:
               description: 살아 있는 연결 목록. 연결 시각 최근 것부터
               items:
                 required:
+                - allowTaskChanges
                 - createdAt
                 - credentialKind
                 - delegationId
@@ -18483,6 +18615,11 @@ components:
                     nullable: false
                     example: 0HZX2K7M9Q4BD
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  allowTaskChanges:
+                    type: boolean
+                    description: 에이전트가 할 일을 만들고 고쳐도 되는가. 연결할 때 맡긴 사람이 정했다
+                    nullable: false
+                    example: false
               nullable: false
           description: 성공 응답 데이터
           nullable: false

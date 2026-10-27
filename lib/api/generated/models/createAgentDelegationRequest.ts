@@ -18,4 +18,6 @@ export interface CreateAgentDelegationRequest {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;
+  /** 에이전트가 내 이름으로 할 일을 만들고 고쳐도 되는가. 안 보내면 거짓이고, 만든 뒤에는 바꿀 수 없다 */
+  allowTaskChanges?: boolean;
 }

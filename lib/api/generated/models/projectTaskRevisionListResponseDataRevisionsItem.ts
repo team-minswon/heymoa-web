@@ -6,6 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ProjectTaskRevisionListResponseDataRevisionsItemAssignee } from "./projectTaskRevisionListResponseDataRevisionsItemAssignee";
+import type { ProjectTaskRevisionListResponseDataRevisionsItemChangeSource } from "./projectTaskRevisionListResponseDataRevisionsItemChangeSource";
+import type { ProjectTaskRevisionListResponseDataRevisionsItemConnection } from "./projectTaskRevisionListResponseDataRevisionsItemConnection";
 import type { ProjectTaskRevisionListResponseDataRevisionsItemTaskStatus } from "./projectTaskRevisionListResponseDataRevisionsItemTaskStatus";
 
 export type ProjectTaskRevisionListResponseDataRevisionsItem = {
@@ -42,4 +44,14 @@ export type ProjectTaskRevisionListResponseDataRevisionsItem = {
    * @minimum 1
    */
   revision: number;
+  /**
+   * 이 판을 누가 바꿨나. MEMBER 는 멤버가 화면에서, AGENT_CHAT 은 앱 안 에이전트가 멤버의 승인을 받아, EXTERNAL_AGENT 는 외부 에이전트 연결이 changedBy 의 이름으로. 회의 확정이 만든 판이면 null
+   * @nullable
+   */
+  changeSource: ProjectTaskRevisionListResponseDataRevisionsItemChangeSource;
+  /**
+   * 외부 에이전트(EXTERNAL_AGENT)가 바꾼 판이면 그 연결. 그 밖의 판이거나 연결 행이 없으면 null
+   * @nullable
+   */
+  connection: ProjectTaskRevisionListResponseDataRevisionsItemConnection;
 };

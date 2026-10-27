@@ -180,6 +180,45 @@ describe("AgentConnectionsSettings", () => {
     });
   });
 
+  // 기본은 읽기만이다. 켜면 그 자리에서 무엇이 달라지고 되돌릴 수 없는지를 말한다(APP-1369)
+  it("할 일 변경을 켜고 만들면 허용을 보내고 안내도 바뀐다", async () => {
+    created.mutateAsync.mockResolvedValue({
+      status: 201,
+      data: {
+        success: true,
+        data: { token: "hm_secret-token", delegation: {} },
+      },
+    });
+    renderSettings();
+
+    openTokenForm();
+    const toggle = screen.getByRole("switch", {
+      name: "할 일 만들기·고치기 허용",
+    });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(
+      screen.getByText(/앱은 읽기와 화면 열기만 하고 아무것도 바꾸지 않습니다/)
+    ).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(screen.getByText(/만든 뒤 바꿀 수 없습니다/)).toBeTruthy();
+    expect(
+      screen.getByText(/앱은 읽기·화면 열기와 할 일 만들기·고치기를 합니다/)
+    ).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("연결 이름"), {
+      target: { value: "노트북" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "토큰 만들기" }));
+
+    expect(await screen.findByText("hm_secret-token")).toBeTruthy();
+    expect(created.mutateAsync).toHaveBeenCalledWith({
+      data: {
+        workspaceId: "01K0000000000",
+        name: "노트북",
+        allowTaskChanges: true,
+      },
+    });
+  });
+
   // 붙여 넣기 한 번으로 끝나야 한다 — Codex 도 환경 변수 없이(APP-869)
   it("새 토큰 화면은 에이전트마다 붙여 넣을 것 하나씩만 보인다", async () => {
     created.mutateAsync.mockResolvedValue({
@@ -396,7 +435,11 @@ describe("AgentConnectionsSettings", () => {
 
       expect(await screen.findByText("hm_secret-token")).toBeTruthy();
       expect(created.mutateAsync).toHaveBeenCalledWith({
-        data: { workspaceId: "01K0000000000", name: "CI 에이전트" },
+        data: {
+          workspaceId: "01K0000000000",
+          name: "CI 에이전트",
+          allowTaskChanges: false,
+        },
       });
     });
 
@@ -452,6 +495,7 @@ describe("AgentConnectionsSettings", () => {
           | "AGENT_ACCESS_DISABLED"
           | "ADMIN"
           | null;
+        allowTaskChanges: boolean;
       }>
     ) => ({
       delegationId: "01K00000000Q1",
@@ -466,6 +510,7 @@ describe("AgentConnectionsSettings", () => {
       expiresAt: "2026-12-29T13:00:00Z",
       revokedAt: null,
       revokeReason: null,
+      allowTaskChanges: false,
       ...over,
     });
 
@@ -506,6 +551,18 @@ describe("AgentConnectionsSettings", () => {
         );
       }
       expect(revoked.mutateAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it("할 일 변경을 허용한 연결에만 허용 표시를 단다", () => {
+      state.delegations = [
+        delegation({ allowTaskChanges: true }),
+        delegation({ delegationId: "01K00000000Q2", allowTaskChanges: false }),
+      ];
+      renderSettings();
+
+      const [allowed, readOnly] = screen.getAllByRole("listitem");
+      expect(within(allowed).getByText("할 일 변경 허용")).toBeTruthy();
+      expect(within(readOnly).queryByText("할 일 변경 허용")).toBeNull();
     });
 
     it("지난 연결에 왜 끊겼는지 사유마다 다른 문구로 보이고 만료는 사유가 없다", () => {
@@ -808,7 +865,7 @@ describe("AgentConnectionsSettings", () => {
         }));
       usages.fetch
         .mockResolvedValueOnce(
-          page(rows(0, 10, ["get_meeting_transcript", "list_meetings"]), {
+          page(rows(0, 10, ["get_meeting_transcript", "list_meetings", "search", "update_tasks"]), {
             at: "2026-10-03T06:15:00Z",
             id: "01K0000000V09",
           })
@@ -820,6 +877,8 @@ describe("AgentConnectionsSettings", () => {
       const history = await screen.findByRole("region", { name: "사용 내역" });
       expect(await within(history).findByText("회의 전사")).toBeTruthy();
       expect(within(history).getByText("회의 목록")).toBeTruthy();
+      expect(within(history).getByText("검색")).toBeTruthy();
+      expect(within(history).getByText("할 일 고치기")).toBeTruthy();
       expect(within(history).getAllByRole("listitem")).toHaveLength(8);
 
       fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));

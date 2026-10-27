@@ -11,6 +11,16 @@ import { formatDueDate } from "@/lib/format/date";
 import { ARRIVE_CLASS } from "@/components/heymoa/motion";
 import type { TaskPatch } from "@/components/tasks/use-task-update";
 import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -76,7 +86,10 @@ const STATUS_ICON = {
   CANCELLED: CircleSlash,
 } as const;
 
-/** 누가 바꿨나. 사람은 얼굴과 굵은 이름으로, 회의 확정은 문장으로만 선다. */
+/**
+ * 누가 바꿨나. 사람은 얼굴과 굵은 이름으로, 회의 확정은 문장으로만 선다. 에이전트가 사람 이름으로 바꾼 판은
+ * 무엇으로 바꿨는지를 붙인다(APP-1369) — 안 붙이면 그 사람이 직접 바꾼 것으로 읽힌다.
+ */
 function Author({
   revision,
   personOf,
@@ -97,6 +110,7 @@ function Author({
   }
   const person = revision.changedBy ? personOf(revision.changedBy) : undefined;
   const name = person?.name || "알 수 없는 사람";
+  const verb = revision.revision === 1 ? "만들었습니다" : "바꿨습니다";
   return (
     <span className="inline-flex items-center gap-1.5">
       <PersonAvatar
@@ -106,10 +120,112 @@ function Author({
       />
       <span>
         <b className="font-semibold">{name}</b>
-        {subject(name).slice(name.length)}{" "}
-        {revision.revision === 1 ? "만들었습니다" : "바꿨습니다"}
+        {revision.changeSource === "EXTERNAL_AGENT" ? (
+          <>
+            의 에이전트
+            {revision.connection ? `(${revision.connection.name})` : null}가{" "}
+            {verb}
+          </>
+        ) : revision.changeSource === "AGENT_CHAT" ? (
+          <>
+            {subject(name).slice(name.length)} HeyMoa 에이전트로 {verb}
+          </>
+        ) : (
+          <>
+            {subject(name).slice(name.length)} {verb}
+          </>
+        )}
       </span>
     </span>
+  );
+}
+
+/**
+ * 외부 에이전트가 바꾼 가장 최근 판을 바로 앞 판으로 되돌린다(APP-1369). 직전 판의 네 값을 지금 판 번호로 다시
+ * 저장하는 것이라 저장 길은 다른 수정과 같다 — 그사이 누가 고쳤으면 판 충돌로 거절되고 이력을 다시 읽는다.
+ * 되돌리면 팀원에게도 곧바로 보이므로 무엇이 무엇으로 돌아가는지 한 번 보이고 묻는다.
+ */
+function RevertAgentChange({
+  latest,
+  previous,
+  pending,
+  onSave,
+}: {
+  latest: Revision;
+  previous: Revision;
+  pending: boolean;
+  onSave: (patch: TaskPatch) => Promise<boolean>;
+}) {
+  const [open, setOpen] = useState(false);
+  const changes = revisionChanges(latest, previous);
+  if (changes.length === 0) return null;
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 rounded-full px-3 text-xs"
+        disabled={pending}
+        onClick={() => setOpen(true)}
+      >
+        되돌리기
+      </Button>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>에이전트가 바꾼 것을 되돌릴까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              바로 앞 값으로 돌아가고 팀원에게도 곧바로 보입니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <dl className="grid grid-cols-[32px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[13px]">
+            {changes.map((change) => (
+              <div key={change.label} className="contents">
+                <dt className="text-[var(--el-muted)]">{change.label}</dt>
+                <dd className="min-w-0 text-[var(--el-body)]">
+                  <span className="text-[var(--el-muted-soft)] line-through">
+                    {change.before}
+                  </span>
+                  <span aria-hidden className="px-1.5 text-[var(--el-muted-soft)]">
+                    →
+                  </span>
+                  <span className="sr-only">에서 </span>
+                  <span className="font-semibold text-[var(--el-ink)]">
+                    {change.after}
+                  </span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>그대로 두기</AlertDialogCancel>
+            <AlertDialogAction
+              loading={pending}
+              disabled={pending}
+              onClick={async () => {
+                // 실패는 저장 길이 그 자리에 알린다(충돌 안내·토스트). 창은 어느 쪽이든 닫아 안내가 보이게 한다
+                await onSave({
+                  content: previous.content,
+                  taskStatus: previous.taskStatus,
+                  assignee: previous.assignee,
+                  due: previous.due,
+                });
+                setOpen(false);
+              }}
+            >
+              되돌리기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -418,6 +534,17 @@ function HistoryBody({
                         minute: "2-digit",
                       })}
                     </span>
+                    {/* 가장 최근 변경만 되돌린다 — 그 뒤 사람이 한 변경을 덮지 않는다. 에이전트가 만든 판(1)은 앞 값이 없다 */}
+                    {index === 0 &&
+                    revision.changeSource === "EXTERNAL_AGENT" &&
+                    previous ? (
+                      <RevertAgentChange
+                        latest={revision}
+                        previous={previous}
+                        pending={pending}
+                        onSave={onSave}
+                      />
+                    ) : null}
                   </p>
                   <dl className="mt-1.5 grid grid-cols-[32px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[13px]">
                     {revisionChanges(previous, revision).map((change) => (

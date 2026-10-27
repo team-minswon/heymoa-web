@@ -13,7 +13,7 @@ import type { AgentOAuthConsentResponseDataScopesItem } from "./agentOAuthConsen
 export type AgentOAuthConsentResponseData = {
   /** 에이전트가 스스로 등록한 이름. HeyMoa 가 확인한 값이 아니라 사칭될 수 있어 돌아갈 호스트와 함께 보인다 */
   clientName: string;
-  /** 요청한 범위. 지금은 읽기 하나다 */
+  /** 요청한 범위. mcp:read 는 읽기이고 늘 있다(없이 요청해도 서버가 더한다). mcp:write 는 할 일 만들기·고치기이고, 있을 때만 허락하며 할 일 변경 허용(allowTaskChanges)을 고르게 한다 */
   scopes: AgentOAuthConsentResponseDataScopesItem[];
   /** 허락하면 브라우저가 돌아갈 곳의 호스트(에이전트의 콜백) */
   redirectHost: string;

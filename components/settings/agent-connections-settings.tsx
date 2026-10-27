@@ -10,6 +10,7 @@ import {
   BLOCKED_SUFFIX,
 } from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
+import { TaskChangesToggle } from "@/components/agent-connections/task-changes-toggle";
 import { AgentOAuthGuide } from "@/components/agent-connections/agent-oauth-guide";
 import { CopyBlock } from "@/components/agent-connections/copy-block";
 
@@ -114,9 +115,17 @@ const TOOL_LABEL: Record<string, string> = {
   list_project_items: "프로젝트 항목 목록",
   get_project_item: "항목 상세",
   expand_relations: "관계 따라가기",
-  list_open_tasks: "미완료 할 일",
+  list_open_tasks: "할 일",
   list_meetings: "회의 목록",
+  get_meeting: "회의 정보",
+  get_meeting_record: "회의록",
+  get_meeting_summary: "회의 요약",
+  list_meeting_agendas: "회의 안건",
+  list_meeting_links: "회의 간 연결",
   get_meeting_transcript: "회의 전사",
+  search: "검색",
+  create_tasks: "할 일 만들기",
+  update_tasks: "할 일 고치기",
   open_screen: "화면 열기",
 };
 
@@ -349,6 +358,7 @@ function NewConnectionForm({
     (workspacesQuery.data !== undefined && workspaces.length === 0);
   const [workspaceId, setWorkspaceId] = useState(defaultWorkspaceId);
   const [name, setName] = useState("");
+  const [allowTaskChanges, setAllowTaskChanges] = useState(false);
   // 응답에 토큰 원문이 실린다. **mutation 캐시에도 남기지 않는다** — 읽자마자 `reset()` 하고,
   // 관찰자가 떠나는 즉시 지워지게 `gcTime: 0` 이다. 안 그러면 창을 닫아도 기본 보존 기간 동안
   // MutationCache 가 원문을 들고 있다.
@@ -393,7 +403,7 @@ function NewConnectionForm({
     // 거절은 여기서 소비한다 — 토스트는 전역 `MutationCache.onError` 가 띄운다. 고르는 사이 꺼졌으면
     // 토스트 대신 워크스페이스를 다시 읽는다 — 그 워크스페이스가 꺼짐으로 바뀌어 안내가 남는다(APP-941)
     const response = await create
-      .mutateAsync({ data: { workspaceId, name: trimmed } })
+      .mutateAsync({ data: { workspaceId, name: trimmed, allowTaskChanges } })
       .catch(async (error) => {
         if (errorCodeOf(error) === AGENT_ACCESS_DISABLED)
           await workspacesQuery.refetch();
@@ -476,7 +486,12 @@ function NewConnectionForm({
           onChange={(event) => setName(event.target.value)}
         />
       </div>
-      <AgentAccessNotice />
+      <TaskChangesToggle
+        checked={allowTaskChanges}
+        disabled={create.isPending}
+        onCheckedChange={setAllowTaskChanges}
+      />
+      <AgentAccessNotice allowTaskChanges={allowTaskChanges} />
       <div className="flex justify-end gap-2">
         <Button
           type="button"
@@ -602,6 +617,9 @@ function DelegationRow({
               <Badge variant="outline">
                 {CREDENTIAL_LABEL[delegation.credentialKind]}
               </Badge>
+              {delegation.allowTaskChanges ? (
+                <Badge variant="outline">할 일 변경 허용</Badge>
+              ) : null}
             </div>
             <p className="mt-1 text-xs text-[var(--el-muted)]">
               {delegation.workspaceName}

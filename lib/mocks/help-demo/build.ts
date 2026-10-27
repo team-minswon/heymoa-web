@@ -360,7 +360,11 @@ export function createHelpDemoState(now = Date.now()): StoreState {
     ...helpDemoDelegations(now),
     // 동의 화면(`/oauth/consent?state=mock-consent`)을 찍을 수 있게 하나 둔다.
     agentOAuthConsents: {
-      "mock-consent": { clientName: "Claude", redirectUri: "http://127.0.0.1:1455/callback" },
+      "mock-consent": {
+        clientName: "Claude",
+        redirectUri: "http://127.0.0.1:1455/callback",
+        scopes: ["mcp:read", "mcp:write"],
+      },
     },
   };
 }

@@ -19,7 +19,7 @@ export const getGetAgentOAuthConsentResponseMock =
     data: {
       clientName: "Claude Code (heymoa)",
       redirectHost: "localhost",
-      scopes: ["mcp:read"],
+      scopes: ["mcp:read", "mcp:write"],
     },
     error: null,
   });

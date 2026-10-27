@@ -21,6 +21,7 @@ const entry = (
   assignee: null,
   due,
   revision: 1,
+  externalAgentChange: null,
 });
 
 describe("groupTasks", () => {
