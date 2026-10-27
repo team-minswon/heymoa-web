@@ -88,6 +88,18 @@ export const getGetWorkspaceGuestsResponseMock =
     error: null,
   });
 
+export const getCreateWorkspaceGuestResponseMock =
+  (): WorkspaceGuestResponse => ({
+    success: true,
+    data: {
+      guestId: "0HZX2K7M9Q4AR",
+      displayName: "박서준",
+      noteCount: 0,
+      createdAt: "2026-07-14T01:02:03Z",
+    },
+    error: null,
+  });
+
 export const getDeleteWorkspaceGuestResponseMock =
   (): DeleteWorkspaceGuestResponse => ({
     success: true,
@@ -267,6 +279,30 @@ export const getGetWorkspaceGuestsMockHandler = (
   );
 };
 
+export const getCreateWorkspaceGuestMockHandler = (
+  overrideResponse?:
+    | WorkspaceGuestResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<WorkspaceGuestResponse> | WorkspaceGuestResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/guests",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateWorkspaceGuestResponseMock(),
+        { status: 201 }
+      );
+    },
+    options
+  );
+};
+
 export const getDeleteWorkspaceGuestMockHandler = (
   overrideResponse?:
     | DeleteWorkspaceGuestResponse
@@ -371,6 +407,7 @@ export const getWorkspacesMock = () => [
   getUpdateWorkspaceMockHandler(),
   getDeleteWorkspaceMockHandler(),
   getGetWorkspaceGuestsMockHandler(),
+  getCreateWorkspaceGuestMockHandler(),
   getDeleteWorkspaceGuestMockHandler(),
   getRenameWorkspaceGuestMockHandler(),
   getLinkWorkspaceGuestMockHandler(),

@@ -133,6 +133,7 @@ export * from "./createFeedbackRequestKind";
 export * from "./createProjectTaskRequest";
 export * from "./createProjectTaskRequestAssignee";
 export * from "./createProjectTaskRequestAssigneeType";
+export * from "./createWorkspaceGuestRequest";
 export * from "./createWorkspaceInvitationRequest";
 export * from "./createWorkspaceInvitationRequestRole";
 export * from "./createWorkspaceRequest";

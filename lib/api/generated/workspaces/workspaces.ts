@@ -25,6 +25,7 @@ import type {
 
 import type {
   AppErrorResponse,
+  CreateWorkspaceGuestRequest,
   CreateWorkspaceRequest,
   CreateWorkspaceResponse,
   DeleteWorkspaceGuestResponse,
@@ -1595,6 +1596,173 @@ export function useGetWorkspaceGuestsSuspense<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type createWorkspaceGuestResponse201 = {
+  data: WorkspaceGuestResponse;
+  status: 201;
+};
+
+export type createWorkspaceGuestResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type createWorkspaceGuestResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type createWorkspaceGuestResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type createWorkspaceGuestResponseSuccess =
+  createWorkspaceGuestResponse201 & {
+    headers: Headers;
+  };
+export type createWorkspaceGuestResponseError = (
+  | createWorkspaceGuestResponse400
+  | createWorkspaceGuestResponse401
+  | createWorkspaceGuestResponse404
+) & {
+  headers: Headers;
+};
+
+export type createWorkspaceGuestResponse =
+  | createWorkspaceGuestResponseSuccess
+  | createWorkspaceGuestResponseError;
+
+export const getCreateWorkspaceGuestUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/guests`;
+};
+
+/**
+ * 계정 없는 임시 참여자를 어느 회의에도 붙이지 않고 만든다. 멤버 누구나 부를 수 있고(회의의 참여자 추가와 같은 권한), 같은 이름의 임시 참여자를 허용한다. 이름은 앞뒤 공백을 지우고 1~100자여야 하며, 응답은 목록 항목과 같은 모양이고 noteCount 는 0이다. 회의에 넣으면서 만들려면 /v1/notes/{noteId}/participants/guests 를 쓴다.
+ * @summary 워크스페이스 임시 참여자 생성
+ */
+export const createWorkspaceGuest = async (
+  workspaceId: string,
+  createWorkspaceGuestRequest?: CreateWorkspaceGuestRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<createWorkspaceGuestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<createWorkspaceGuestResponse>(
+    getCreateWorkspaceGuestUrl(workspaceId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(createWorkspaceGuestRequest),
+    }
+  );
+};
+
+export const getCreateWorkspaceGuestMutationKey = () =>
+  ["createWorkspaceGuest"] as const;
+
+export const getCreateWorkspaceGuestMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWorkspaceGuest>>,
+    TError,
+    CreateWorkspaceGuestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWorkspaceGuest>>,
+  TError,
+  CreateWorkspaceGuestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateWorkspaceGuestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWorkspaceGuest>>,
+    CreateWorkspaceGuestMutationVariables
+  > = (props) => {
+    const { workspaceId, data } = props ?? {};
+
+    return createWorkspaceGuest(workspaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWorkspaceGuestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWorkspaceGuest>>
+>;
+export type CreateWorkspaceGuestMutationBody =
+  | CreateWorkspaceGuestRequest
+  | undefined;
+export type CreateWorkspaceGuestMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type CreateWorkspaceGuestMutationVariables = {
+  workspaceId: string;
+  data?: CreateWorkspaceGuestRequest;
+};
+
+/**
+ * @summary 워크스페이스 임시 참여자 생성
+ */
+export const useCreateWorkspaceGuest = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createWorkspaceGuest>>,
+      TError,
+      CreateWorkspaceGuestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createWorkspaceGuest>>,
+  TError,
+  CreateWorkspaceGuestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getCreateWorkspaceGuestMutationOptions(options),
+    queryClient
+  );
+};
 export type deleteWorkspaceGuestResponse200 = {
   data: DeleteWorkspaceGuestResponse;
   status: 200;

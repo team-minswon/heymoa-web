@@ -4574,6 +4574,29 @@ export const mockDb = {
     return copy({ participants: note.participants });
   },
 
+  /** 회의에 붙이지 않고 임시 참여자를 만든다. 멤버 누구나 만든다 — 회의의 참여자 추가와 같은 권한이다. */
+  createWorkspaceGuest(workspaceId: string, displayName: string) {
+    requireWorkspaceMember(workspaceId);
+    const name = displayName
+      .replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ")
+      .trim();
+    if (name.length === 0 || name.length > 100) fail("BAD_REQUEST");
+
+    const guest: MockWorkspaceGuest = {
+      guestId: nextId(),
+      workspaceId,
+      displayName: name,
+      createdAt: nextTimestamp(),
+    };
+    state.workspaceGuests.push(guest);
+    return copy({
+      guestId: guest.guestId,
+      displayName: name,
+      noteCount: 0,
+      createdAt: guest.createdAt,
+    });
+  },
+
   /**
    * 임시 참여자의 이름을 고친다 (APP-1193). **같은 행의 이름만 바뀐다** — 참여 기록 id 와 화자 지정은
    * 그대로고, 회의가 들고 있는 이름 사본(참여자·화자 목록)만 따라 바뀐다. 같은 이름은 막지 않는다.

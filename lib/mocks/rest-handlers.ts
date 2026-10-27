@@ -1101,6 +1101,20 @@ export const restHandlers = [
       };
     });
   }),
+  http.post(
+    "*/v1/workspaces/:workspaceId/guests",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.createWorkspaceGuest(
+            id(params.workspaceId),
+            ((await request.json()) as { displayName?: string }).displayName ??
+              ""
+          ),
+        notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다."),
+        201
+      )
+  ),
   http.patch(
     "*/v1/workspaces/:workspaceId/guests/:guestId",
     async ({ request, params }) =>
