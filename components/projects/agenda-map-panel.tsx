@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
 import { useState } from "react";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
@@ -285,6 +286,7 @@ function AgendaDetail({
 
       <Link
         href={summaryHref(workspaceId, agenda.noteId, agenda.agendaId)}
+        onClick={() => track("agenda_map_note_opened", { workspace_id: workspaceId, surface: "panel" })}
         className="inline-flex items-center gap-1 self-start text-xs text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
       >
         회의록에서 보기

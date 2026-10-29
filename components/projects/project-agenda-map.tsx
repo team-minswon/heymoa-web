@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics/track";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Orbit } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
@@ -169,6 +170,11 @@ function MapStage({
   onFocused: (focused: boolean) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    track("agenda_map_opened", { workspace_id: workspaceId, meetings: map.meetings.length, topics: rows.length });
+    // 열 때 한 번만 센다. 포커스를 오가도 같은 화면이라 다시 세지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // 처음 자리와, 판의 화면 상태(펼친 열·고른 것·패널·가로 스크롤). 상태는 포커스로 들어갔다 돌아와도 되살린다
   const [seed] = useState(() => {
     // 기록 항목에 남은 화면이 있으면(뒤로 가기·새로고침) 그대로 되살린다 — 첫 렌더부터 서 있어 깜빡임·펼침 움직임이 없다

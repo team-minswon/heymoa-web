@@ -13,6 +13,7 @@ import {
 } from "react";
 import { motion, useReducedMotion, type TargetAndTransition } from "motion/react";
 
+import { track } from "@/lib/analytics/track";
 import { EdgeButtons } from "@/components/projects/agenda-edge-buttons";
 import { SidePanel, type Selection, type Tab } from "@/components/projects/agenda-map-panel";
 import {
@@ -405,6 +406,7 @@ export function RibbonBoard({
     const scroller = scrollRef.current;
     anchor.current = scroller ? { noteId, offset: BOARD_END_GUTTER + geoRef.current.xs[at] - scroller.scrollLeft } : null;
     hover.current?.hide(true);
+    if (!openNow.current.has(noteId)) track("agenda_map_column_expanded", { workspace_id: workspaceId });
     const ids = noteIds.current;
     setAnim({ moving: [ids[at - 1], noteId, ids[at + 1]].filter(Boolean), snap: false, closing: openNow.current.has(noteId), toggle: true });
     setOpen((current) => {
@@ -412,7 +414,7 @@ export function RibbonBoard({
       if (!next.delete(noteId)) next.add(noteId);
       return next;
     });
-  }, [setAnim]);
+  }, [setAnim, workspaceId]);
   useLayoutEffect(() => {
     const held = anchor.current;
     const scroller = scrollRef.current;
@@ -551,6 +553,7 @@ export function RibbonBoard({
   // 점을 눌러도 올려 보던 카드는 닫지 않는다 — 같은 카드가 그대로 있다가 마우스가 점을 떠나면 닫힌다
   const pick = (agenda: MapAgenda) => {
     lastPick.current = performance.now();
+    track("agenda_map_agenda_selected", { workspace_id: workspaceId });
     setAnim((current) => (current.snap || current.toggle ? { ...current, snap: false, toggle: false } : current));
     setSelection({ rowId: rowOfAgenda.get(agenda.agendaId)?.id ?? null, agendaId: agenda.agendaId });
     setPanelOpen(true);
@@ -570,6 +573,7 @@ export function RibbonBoard({
   };
   const focusTopic = (topicId: string) => {
     hover.current?.hide(true);
+    track("agenda_map_topic_focused", { workspace_id: workspaceId });
     onFocusTopic(topicId);
   };
   // 이름표(memo)가 쓰는 안 변하는 핸들러

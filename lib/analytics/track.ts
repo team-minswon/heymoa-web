@@ -66,6 +66,11 @@ export type AnalyticsEvent =
   | "recording_start_clicked"
   | "recording_stop_clicked"
   | "note_opened"
+  | "agenda_map_opened"
+  | "agenda_map_column_expanded"
+  | "agenda_map_agenda_selected"
+  | "agenda_map_topic_focused"
+  | "agenda_map_note_opened"
   | "note_tab_opened"
   | "review_confirmation_clicked"
   | "settings_tab_opened"
@@ -115,6 +120,12 @@ export type WebEventProperties = {
     view: "side" | "full";
     source: "list" | "notification" | "mail";
   };
+  // 연결 지도(APP-1466). 회의·안건 제목은 싣지 않는다.
+  agenda_map_opened: { workspace_id: string; meetings: number; topics: number };
+  agenda_map_column_expanded: { workspace_id: string };
+  agenda_map_agenda_selected: { workspace_id: string };
+  agenda_map_topic_focused: { workspace_id: string };
+  agenda_map_note_opened: { workspace_id: string; surface: "panel" | "focus" };
   note_tab_opened: {
     workspace_id: string;
     tab: "context" | "details" | "transcript" | "summary";

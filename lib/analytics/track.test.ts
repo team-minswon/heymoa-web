@@ -17,6 +17,23 @@ afterEach(() => {
   localStorage.clear();
 });
 
+describe("연결 지도 이벤트", () => {
+  it("제목 없이 개수·화면 이름만 받는다", () => {
+    expectTypeOf<
+      "agenda_map_opened" | "agenda_map_column_expanded" | "agenda_map_agenda_selected" | "agenda_map_topic_focused" | "agenda_map_note_opened"
+    >().toExtend<AnalyticsEvent>();
+    expectTypeOf(track<"agenda_map_opened">).parameter(1).exclude<undefined>().toEqualTypeOf<{
+      workspace_id: string;
+      meetings: number;
+      topics: number;
+    }>();
+    expectTypeOf(track<"agenda_map_note_opened">).parameter(1).exclude<undefined>().toEqualTypeOf<{
+      workspace_id: string;
+      surface: "panel" | "focus";
+    }>();
+  });
+});
+
 describe("이벤트 타입", () => {
   it("등록한 행동만 허용하고 탭 속성은 enum으로 제한합니다", () => {
     expectTypeOf<"note_opened" | "feedback_sent">().toExtend<AnalyticsEvent>();
