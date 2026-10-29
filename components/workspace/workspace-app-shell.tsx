@@ -279,7 +279,9 @@ export function WorkspaceAppShell({
   const currentLabel =
     pathname === `/w/${workspaceId}/tasks`
       ? "할 일"
-      : (projects.find((project) => project.projectId === selectedProjectId)
+      : pathname.startsWith(`/w/${workspaceId}/projects/`)
+        ? "연결 지도"
+        : (projects.find((project) => project.projectId === selectedProjectId)
           ?.name ?? "모든 노트");
   // 노트 전체 화면은 이 셸을 통째로 덮는다(design.pen `XtEMZ`). side 시트는 안 덮는다.
   const isFullNote =

@@ -9,6 +9,7 @@ import {
   helpDemoFeedbacks,
   helpDemoIntegrations,
 } from "@/lib/mocks/help-demo/misc";
+import { guideAgendaMapSeed } from "@/lib/mocks/guide-agenda-map";
 import { MID_MEETINGS } from "@/lib/mocks/help-demo/mid";
 import { HD_NOTE_IDS, NOTE_DEFS, type NoteDef } from "@/lib/mocks/help-demo/notes";
 import {
@@ -335,6 +336,11 @@ export function createHelpDemoState(now = Date.now()): StoreState {
       },
     },
   ];
+
+  // 가이드 「연결 지도」 촬영용 프로젝트와 회의(`lib/mocks/guide-agenda-map.ts`)
+  const guideMap = guideAgendaMapSeed(HD_WORKSPACE_ID, notes[0]);
+  projects.push(guideMap.project);
+  notes.push(...guideMap.notes);
 
   const chats = helpDemoChats(now);
 

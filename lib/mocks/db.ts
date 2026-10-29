@@ -2968,12 +2968,65 @@ const MOCK_RECORDER_CLIENT_ID = "mock-recorder-tab";
 /** 남은 동의 기록 실패 횟수(`failNextConsents`). */
 let consentFailures = 0;
 
+/** 로컬 전용 시드(public/mock-local, git 제외)가 싣는 프로젝트와 그 회의. `loadLocalProjects` 가 채운다. */
+export type LocalSeedProject = {
+  projectId: string;
+  workspaceId?: string;
+  name: string;
+  description: string | null;
+  notes: { noteId: string; title: string; startedAt: string }[];
+};
+
+let localSeed: LocalSeedProject[] = [];
+
+/** 프로젝트와 끝난 회의를 목 DB 에 올린다. 같은 id 는 두 번 올리지 않는다. 참석자는 같은 워크스페이스의 첫 시드 노트에서 빌린다. */
+function seedLocal(target: StoreState) {
+  for (const entry of localSeed) {
+    const workspaceId = entry.workspaceId ?? target.workspaces[0].workspaceId;
+    if (!target.projects.some((project) => project.projectId === entry.projectId)) {
+      target.projects.push({
+        projectId: entry.projectId,
+        workspaceId,
+        name: entry.name,
+        description: entry.description,
+        createdAt: entry.notes.at(-1)?.startedAt ?? "2026-07-01T00:00:00Z",
+        updatedAt: entry.notes[0]?.startedAt ?? "2026-07-01T00:00:00Z",
+      });
+    }
+    const template = target.notes.find((note) => note.workspaceId === workspaceId) ?? target.notes[0];
+    for (const meeting of entry.notes) {
+      if (target.notes.some((note) => note.noteId === meeting.noteId)) continue;
+      const startedMs = Date.parse(meeting.startedAt);
+      target.notes.push({
+        ...structuredClone(template),
+        noteId: meeting.noteId,
+        projectId: entry.projectId,
+        projectName: entry.name,
+        workspaceId,
+        title: meeting.title,
+        createdAt: meeting.startedAt,
+        updatedAt: meeting.startedAt,
+        meetingStatus: "ENDED",
+        meetingStartedAt: meeting.startedAt,
+        meetingEndedAt: new Date(startedMs + 40 * 60_000).toISOString(),
+        recordedDurationMs: 40 * 60_000,
+        activeSessionStartedAt: null,
+        pausedAt: null,
+        contextTopic: null,
+        contextBackground: null,
+        autoEnd: null,
+      });
+    }
+  }
+}
+
 function reset() {
   idCounter = 100;
   consentFailures = 0;
   mockClock = 0;
   // 가이드 캡처용 프리셋이 켜져 있으면 그것으로, 아니면 기본 시드로 연다(help-demo/index.ts)
   state = isHelpDemoEnabled() ? createHelpDemoState() : createSeedState();
+  if (localSeed.length > 0) seedLocal(state);
   sessionOpeners.clear();
   sessionOpeners.set("01K0000000402", MOCK_RECORDER_CLIENT_ID);
   for (const listener of resetListeners) listener();
@@ -4298,6 +4351,12 @@ export const mockDb = {
     workspace.name = name;
     workspace.description = input.description ?? null;
     return copy(workspace);
+  },
+
+  /** 로컬 전용 시드를 올린다(public/mock-local). 목을 리셋해도 다시 올라가게 기억해 둔다. */
+  applyLocalSeed(list: LocalSeedProject[]) {
+    localSeed = list;
+    seedLocal(state);
   },
 
   listProjects(workspaceId: string): ProjectResponseData[] {

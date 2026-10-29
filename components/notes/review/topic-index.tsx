@@ -35,6 +35,7 @@ export function TopicIndex({
   onOpenTimeline,
   links,
   workspaceId,
+  projectId,
 }: {
   topics: readonly TopicDigest[];
   noteId?: string;
@@ -42,6 +43,8 @@ export function TopicIndex({
   /** 이 회의에서 나가는 회의 간 연결. 없으면(조회 전 · 프로젝트 없음) 연결 줄을 그리지 않는다 */
   links?: MeetingLinkIndex;
   workspaceId?: string;
+  /** 있으면 연결 줄 끝에 그 프로젝트의 안건 지도로 가는 링크를 단다 */
+  projectId?: string;
 }) {
   const [openOrdinals, setOpenOrdinals] = useState<ReadonlySet<number>>(
     () => new Set()
@@ -148,6 +151,7 @@ export function TopicIndex({
             onOpenTimeline={onOpenTimeline}
             links={links}
             workspaceId={workspaceId}
+            projectId={projectId}
           />
         ))}
       </ul>
@@ -189,11 +193,14 @@ function ContinuedFrom({
   workspaceId,
   noteId,
   onSelectAgenda,
+  mapHref,
 }: {
   notes: readonly PastNote[];
   workspaceId?: string;
   noteId?: string;
   onSelectAgenda: (agendaId: string) => void;
+  /** 이 안건을 고른 채 여는 안건 지도 주소 */
+  mapHref?: string;
 }) {
   if (notes.length === 0) return null;
   return (
@@ -231,6 +238,14 @@ function ContinuedFrom({
           에서 이어짐
         </span>
       ))}
+      {mapHref ? (
+        <Link
+          href={mapHref}
+          className="underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
+        >
+          연결 지도에서 보기
+        </Link>
+      ) : null}
     </span>
   );
 }
@@ -245,6 +260,7 @@ function TopicRow({
   onOpenTimeline,
   links,
   workspaceId,
+  projectId,
 }: {
   topic: TopicDigest;
   noteId?: string;
@@ -256,6 +272,7 @@ function TopicRow({
   onOpenTimeline?: (agendaId: string | null) => void;
   links?: MeetingLinkIndex;
   workspaceId?: string;
+  projectId?: string;
 }) {
   const continued = topic.agendaId
     ? (links?.byAgendaId.get(topic.agendaId) ?? [])
@@ -338,6 +355,11 @@ function TopicRow({
             workspaceId={workspaceId}
             noteId={noteId}
             onSelectAgenda={onSelectAgenda}
+            mapHref={
+              workspaceId && projectId && topic.agendaId
+                ? `/w/${workspaceId}/projects/${projectId}?agenda=${topic.agendaId}`
+                : undefined
+            }
           />
         </div>
       ) : null}

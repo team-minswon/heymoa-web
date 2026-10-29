@@ -31,7 +31,7 @@ export const situationClusters: readonly {
   },
   {
     key: "summary",
-    pages: ["summary-missing", "confirm-summary", "fix-speakers", "assign-tasks"],
+    pages: ["summary-missing", "confirm-summary", "fix-speakers", "assign-tasks", "agenda-map"],
   },
   { key: "connect", pages: ["find-decisions", "use-mcp", "data-privacy"] },
 ];

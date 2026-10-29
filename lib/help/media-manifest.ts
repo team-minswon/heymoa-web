@@ -1,5 +1,30 @@
 // 자동 생성: `pnpm help:shots` · `pnpm help:clips` 가 쓴다. 손으로 고치지 않는다.
 export const HELP_MEDIA = {
+  "agenda-map/entry.webp": {
+    "width": 1100,
+    "height": 428,
+    "bytes": 14484
+  },
+  "agenda-map/expand.webp": {
+    "width": 1200,
+    "height": 867,
+    "bytes": 28436
+  },
+  "agenda-map/focus.webp": {
+    "width": 1200,
+    "height": 600,
+    "bytes": 34554
+  },
+  "agenda-map/overview.webp": {
+    "width": 1200,
+    "height": 867,
+    "bytes": 26416
+  },
+  "agenda-map/panel.webp": {
+    "width": 1200,
+    "height": 867,
+    "bytes": 35454
+  },
   "agent-mcp/new-connection.webp": {
     "width": 1200,
     "height": 923,

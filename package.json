@@ -28,7 +28,8 @@
     "desktop:package": "pnpm --filter @heymoa/desktop package:dir",
     "install:vercel": "node scripts/install-vercel.mjs",
     "help:shots": "node scripts/help-media/shots.mjs",
-    "help:clips": "node scripts/help-media/clips.mjs"
+    "help:clips": "node scripts/help-media/clips.mjs",
+    "help:agenda-map": "node scripts/help-media/agenda-map.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

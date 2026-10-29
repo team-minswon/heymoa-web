@@ -899,6 +899,7 @@ export function ReviewBoard({
           participants={participants}
           lengthMs={lengthMs}
           confirmed={confirmed}
+          mapHref={workspaceId && projectId ? `/w/${workspaceId}/projects/${projectId}` : undefined}
           aside={
             <div className="flex items-center gap-2">
               <ReviewActions
@@ -1022,6 +1023,7 @@ export function ReviewBoard({
                   onOpenTimeline={onOpenTimeline}
                   links={meetingLinks}
                   workspaceId={workspaceId}
+                  projectId={projectId}
                 />
                 {relationsNotice}
                 {enrichmentStatus === "PENDING" ||

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { ProjectViewBody, ProjectViewTabs } from "@/components/projects/project-view-tabs";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { DesktopAppPromo } from "@/components/workspace/desktop-app-promo";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
@@ -143,8 +144,18 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
             {/* **hairline은 헤더가 갖는다.** 예전에는 아래 필터 줄이 들고 있었는데, 「내가 시작」이
                 없어지자 남는 칩이 「전체」 하나뿐이라 줄을 통째로 걷었다(고를 것이 하나면 고르는
                 것이 아니다). 선은 목록의 위 끝을 정하므로 함께 없앨 수 없어 헤더로 옮겼다. */}
-            <header className="relative mb-4 border-b border-[var(--el-hairline)] pb-6">
-              <h2 className="text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
+            <header
+              className={cn(
+                "relative mb-4 border-b border-[var(--el-hairline)]",
+                // 프로젝트를 골랐으면 「노트 | 연결 지도」 탭이 머리 아래 선에 앉는다
+                selectedProject ? "pb-0" : "pb-6"
+              )}
+            >
+              <h2
+                // 프로젝트를 골랐으면 「연결 지도」의 제목과 같은 틀(한 줄·같은 높이). `cn` 은 쓰지 않는다 — tailwind-merge 가
+                // 글자 크기 `text-screen-title` 을 색 `text-[var(--el-ink)]` 와 겹친다고 보고 지운다
+                className={`text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]${selectedProject ? " min-h-[1.05em] truncate" : ""}`}
+              >
                 {selectedProject?.name ?? "모든 노트"}
               </h2>
               {/* `p` 가 아니라 `div` — 자리표시(`Skeleton`)가 `div` 라 `p` 안에 두면 잘못 포갠 HTML 이 된다. */}
@@ -164,20 +175,30 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
                 )}{" "}
                 · 발화와 결정이 시간순으로 보관됩니다.
               </div>
+              {selectedProject ? (
+                <ProjectViewTabs
+                  workspaceId={workspaceId}
+                  projectId={selectedProject.projectId}
+                  current="notes"
+                  className="mt-5"
+                />
+              ) : null}
             </header>
-            <DesktopAppPromo />
-            <WorkspaceNoteList
-              workspaceId={workspaceId}
-              notes={notes}
-              isPending={isPending}
-              isError={isError}
-              onRetry={retry}
-              onNewMeeting={requestNewMeeting}
-              hasMore={page?.hasMore ?? false}
-              isLoadingMore={isLoadingMore}
-              stale={stale}
-              onLoadMore={loadMore}
-            />
+            <ProjectViewBody enabled={Boolean(selectedProject)}>
+              <DesktopAppPromo />
+              <WorkspaceNoteList
+                workspaceId={workspaceId}
+                notes={notes}
+                isPending={isPending}
+                isError={isError}
+                onRetry={retry}
+                onNewMeeting={requestNewMeeting}
+                hasMore={page?.hasMore ?? false}
+                isLoadingMore={isLoadingMore}
+                stale={stale}
+                onLoadMore={loadMore}
+              />
+            </ProjectViewBody>
           </>
         )}
       </div>

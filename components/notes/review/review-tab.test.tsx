@@ -365,7 +365,11 @@ describe("검토 가능한 회의", () => {
       screen.getByRole("button", { name: /^나머지 주제 \d+개$/ })
     );
     const index = screen.getByRole("list", { name: "주제 목차" });
-    expect(await within(index).findAllByRole("link")).toHaveLength(3);
+    // 이어진 주제마다 지난 회의 링크 하나와 연결 지도 링크 하나
+    const mapLinks = await within(index).findAllByRole("link", { name: "연결 지도에서 보기" });
+    expect(mapLinks).toHaveLength(3);
+    expect(mapLinks[0]).toHaveAttribute("href", expect.stringMatching(/\/projects\/[^/?]+\?agenda=/));
+    expect(within(index).getAllByRole("link")).toHaveLength(6);
     expect(screen.queryByText("회의 연결을 불러오지 못했습니다.")).toBeNull();
   });
 

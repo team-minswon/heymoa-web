@@ -55,3 +55,6 @@ apps/desktop/node_modules/
 apps/desktop/dist/
 apps/desktop/release/
 scripts/help-media/.work/
+
+# 로컬 전용 목 데이터(실제 팀 데이터). 저장소에 두지 않는다
+/public/mock-local/

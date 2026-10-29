@@ -4,7 +4,7 @@ description: Where to find the sidebar, projects, the note list, and the setting
 group: start
 slug: workspace-basics
 order: 2
-modified: 2026-10-23
+modified: 2026-10-29
 ---
 
 ## Sidebar {#sidebar}
@@ -87,3 +87,4 @@ Side view is the panel that opens on the right when you click a note row. You op
 - [Quick start](help:getting-started) — From signing in to your first meeting
 - [Members and guest participants](help:members) — Inviting colleagues and roles
 - [Recording and your microphone](help:recording) — Starting and stopping recording
+- [I want to see how agendas connected across meetings](help:agenda-map) — The project Connection map

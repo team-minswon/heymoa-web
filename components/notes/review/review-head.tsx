@@ -1,4 +1,5 @@
-import { CalendarDays, Clock, Folder } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Clock, Folder, Orbit } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
@@ -33,6 +34,7 @@ export function ReviewHead({
   lengthMs,
   confirmed,
   aside,
+  mapHref,
 }: {
   meta: NoteMeta | null | undefined;
   participants: readonly SpeakerFace[];
@@ -40,6 +42,8 @@ export function ReviewHead({
   lengthMs: number | null;
   confirmed: boolean;
   aside?: ReactNode;
+  /** 이 회의가 속한 프로젝트의 안건 지도. 프로젝트가 없으면 비운다(링크도 숨는다). 이어진 안건이 없어도 늘 보인다 */
+  mapHref?: string;
 }) {
   const names = participants
     .map((face) => face.name)
@@ -105,6 +109,16 @@ export function ReviewHead({
         ) : null}
         {meta?.projectName ? (
           <Chip icon={<Folder aria-hidden />}>{meta.projectName}</Chip>
+        ) : null}
+        {mapHref ? (
+          <Link
+            href={mapHref}
+            className="inline-flex h-[26px] min-w-0 items-center gap-1.5 rounded-control border border-[var(--el-hairline-strong)] px-[9px] text-[12.5px] text-[var(--el-ink)] transition-colors hover:bg-[var(--el-surface-strong)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)] motion-reduce:transition-none [&>svg]:size-[13px] [&>svg]:shrink-0"
+          >
+            <Orbit aria-hidden className="text-[var(--el-muted)]" />
+            <span className="truncate">연결 지도</span>
+            <ArrowUpRight aria-hidden className="text-[var(--el-muted)]" />
+          </Link>
         ) : null}
       </div>
     </header>

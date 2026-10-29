@@ -82,7 +82,7 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
         `/v1/workspaces/${WORKSPACE}/projects`
       );
       expect(projects.projects.map((row) => row.name).sort()).toEqual(
-        ["봄 캠페인", "신제품 출시 준비", "고객 인터뷰", "주간 운영", "브랜드 리뉴얼"].sort()
+        ["봄 캠페인", "신제품 출시 준비", "고객 인터뷰", "주간 운영", "브랜드 리뉴얼", "앱 출시 준비"].sort()
       );
       expect(projects.projects.filter((row) => row.description === null)).toHaveLength(1);
 
@@ -105,8 +105,8 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
       const { notes } = await get<{ notes: { noteId: string; meetingStatus: string; participants: unknown[]; createdAt: string }[] }>(
         `/v1/workspaces/${WORKSPACE}/notes`
       );
-      expect(notes.length).toBeGreaterThanOrEqual(27);
-      expect(notes.length).toBeLessThanOrEqual(33);
+      expect(notes.length).toBeGreaterThanOrEqual(34);
+      expect(notes.length).toBeLessThanOrEqual(40);
       const count = (status: string) => notes.filter((row) => row.meetingStatus === status).length;
       expect(count("ENDED")).toBeGreaterThan(15);
       expect(count("IN_PROGRESS")).toBeGreaterThanOrEqual(1);

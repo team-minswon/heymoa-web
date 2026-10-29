@@ -48,8 +48,11 @@ export function WorkspaceRouteLayout({
   // side 시트는 안 덮으므로 그대로 둔다.
   const searchParams = useSearchParams();
   const isFullNote = Boolean(noteId) && searchParams.get("view") !== "side";
-  // 할 일 화면은 노트 목록 자리를 대신한다. 뒤에 목록을 두면 보이지도 않는데 계속 폴링한다.
-  const isTasks = usePathname() === `/w/${workspaceId}/tasks`;
+  // 할 일·안건 지도 화면은 노트 목록 자리를 대신한다. 뒤에 목록을 두면 보이지도 않는데 계속 폴링한다.
+  const pathname = usePathname();
+  const replacesList =
+    pathname === `/w/${workspaceId}/tasks` ||
+    pathname.startsWith(`/w/${workspaceId}/projects/`);
 
   useRedirectWhenWorkspaceGone(workspaceId);
 
@@ -92,7 +95,7 @@ export function WorkspaceRouteLayout({
       }
     >
       <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>
-        {isTasks ? null : (
+        {replacesList ? null : (
           <div inert={isFullNote} className="contents">
             <WorkspacePage workspaceId={workspaceId} />
           </div>

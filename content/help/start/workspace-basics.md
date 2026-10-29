@@ -4,7 +4,7 @@ description: 사이드바, 프로젝트, 노트 목록, 설정 창이 어디 있
 group: start
 slug: workspace-basics
 order: 2
-modified: 2026-10-23
+modified: 2026-10-29
 ---
 
 ## 사이드바 {#sidebar}
@@ -87,3 +87,4 @@ modified: 2026-10-23
 - [처음 시작하기](help:getting-started) — 로그인부터 첫 회의까지
 - [멤버와 임시 참여자](help:members) — 동료 초대와 역할
 - [회의 기록과 마이크](help:recording) — 녹음 시작과 멈춤
+- [회의가 쌓였을 때 안건이 어떻게 이어졌는지 보고 싶어요](help:agenda-map) — 프로젝트의 연결 지도

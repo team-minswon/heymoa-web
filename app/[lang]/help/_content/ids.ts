@@ -35,6 +35,7 @@ export const HELP_PAGES = {
   "desktop-no-audio": "situations",
   "use-mcp": "situations",
   "data-privacy": "situations",
+  "agenda-map": "situations",
 } as const;
 
 export type HelpPageId = keyof typeof HELP_PAGES;

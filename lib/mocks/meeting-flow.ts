@@ -45,6 +45,7 @@ import {
   type SeedWho,
 } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
+import { projectAgendaMapMock, projectAgendaMapSummary } from "@/lib/mocks/project-agenda-map";
 import { projectTasks } from "@/lib/mocks/project-tasks";
 import type {
   MeetingReviewSummary,
@@ -1211,7 +1212,8 @@ export const meetingFlowHandlers = [
     respond(() => {
       // 브라우저도 옛 필드를 생략한 응답으로 검사합니다. 저장 목은 현행·호환 표현을 함께 유지합니다.
       const summary = structuredClone(
-        meetingFlow.summaryOf(paramId(params.noteId))
+        projectAgendaMapSummary(paramId(params.noteId)) ??
+          meetingFlow.summaryOf(paramId(params.noteId))
       );
       Reflect.deleteProperty(summary, "topics");
       for (const agenda of summary.agendas) {
@@ -1566,7 +1568,7 @@ export const meetingFlowHandlers = [
 
   // 회의 간 연결. 멘토링 노트만 지난 회의(PREVIOUS_NOTE_ID)와 이어져 있다 — 카드에 가려지는 대체 연결,
   // 카드 없이 서는 「마침」 연결 하나, 주제 이어짐 둘.
-  http.get("*/v1/projects/:projectId/meeting-links", ({ request }) =>
+  http.get("*/v1/projects/:projectId/meeting-links", ({ request, params }) =>
     respond(() => {
       const noteId = new URL(request.url).searchParams.get("noteId");
       const empty = {
@@ -1575,6 +1577,8 @@ export const meetingFlowHandlers = [
         conflicts: [],
         agendaLinks: [],
       };
+      // 노트를 주지 않으면 프로젝트 전체 — 안건 지도(APP-1455)가 쓰는 여덟 회의 목을 돌려준다
+      if (!noteId) return projectAgendaMapMock(paramId(params.projectId));
       if (noteId !== MENTORING_NOTE_ID) return empty;
       const summary = store().summaries.get(MENTORING_NOTE_ID);
       const review = store().reviews.get(MENTORING_NOTE_ID);
