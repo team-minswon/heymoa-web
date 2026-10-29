@@ -14,6 +14,25 @@ import { prefersReducedMotion } from "@/lib/help/scroll";
 import { cn } from "@/lib/utils";
 
 /** 스크린리더 안내는 일치 수가 정해진 뒤 한 번만 읽는다. */
+/* 사용 가이드 검색 (APP-1232) — CSS Custom Highlight API. 본문 DOM 은 그대로 두고 일치 구간만 칠한다.
+   색에만 기대지 않게 모든 일치에 밑줄을 긋고, 활성 일치는 더 진한 노랑 + 굵은 밑줄이다. 글자색은 본문 그대로(잉크 위 노랑 12:1 이상).
+   globals.css 에 두면 빌드의 CSS 최적화기가 `::highlight` 를 못 읽어 경고하므로 여기서 style 로 낸다. */
+const HIGHLIGHT_CSS = `
+::highlight(help-search) {
+  background-color: var(--tv-butter);
+  color: var(--tv-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--tv-brand);
+  text-decoration-thickness: 1px;
+}
+::highlight(help-search-active) {
+  background-color: var(--tv-pop);
+  color: var(--tv-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--tv-brand-deep);
+  text-decoration-thickness: 2px;
+}`;
+
 const ANNOUNCE_MS = 600;
 /** 상단바(97) 아래로 이 높이 안에 든 일치는 가려진 것으로 본다. */
 const TOP_SAFE = 120;
@@ -173,6 +192,7 @@ export function HelpSearch({ targetId }: { targetId: string }) {
 
   return (
     <>
+      <style>{HIGHLIGHT_CSS}</style>
       <Suspense fallback={null}>
         <UrlQuerySync onChange={syncFromUrl} />
       </Suspense>

@@ -738,22 +738,6 @@ html:has([data-help-root]) {
   }
 }
 
-/* 사용 가이드 검색 (APP-1232) — CSS Custom Highlight API. 본문 DOM 은 그대로 두고 일치 구간만 칠한다.
-   색에만 기대지 않게 모든 일치에 밑줄을 긋고, 활성 일치는 더 진한 노랑 + 굵은 밑줄이다. 글자색은 본문 그대로(잉크 위 노랑 12:1 이상). */
-::highlight(help-search) {
-  background-color: var(--tv-butter);
-  color: var(--tv-ink);
-  text-decoration: underline;
-  text-decoration-color: var(--tv-brand);
-  text-decoration-thickness: 1px;
-}
-::highlight(help-search-active) {
-  background-color: var(--tv-pop);
-  color: var(--tv-ink);
-  text-decoration: underline;
-  text-decoration-color: var(--tv-brand-deep);
-  text-decoration-thickness: 2px;
-}
 /* 검색 중 일치가 없는 조항의 목차 항목 */
 [data-toc-link][data-miss] {
   opacity: 0.5;
