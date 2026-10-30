@@ -63,6 +63,12 @@ export function marketingRedirects() {
       destination: "/opengraph-image.png",
       statusCode: 301 as const,
     },
+    // Search Console에 남은 옛 홈 동적 이미지도 같은 그림으로 보낸다(APP-1468).
+    {
+      source: "/opengraph-image",
+      destination: "/opengraph-image.png",
+      statusCode: 301 as const,
+    },
     { source: `/${DEFAULT_LOCALE}`, destination: "/", permanent: true },
     // 공유 이미지(`opengraph-image`)는 빼고 옮긴다. Next 가 한국어 페이지의 og:image 를 rewrite 뒤 주소
     // (`/ko/download/opengraph-image`)로 내므로, 옮기면 크롤러가 이미지마다 이동을 한 번 더 탄다.

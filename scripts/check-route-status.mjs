@@ -24,6 +24,7 @@ const CASES = [
   { path: "/en", status: 200, type: "text/html" },
   { path: "/help/start/desktop", status: 200, type: "text/html" },
   { path: "/download", status: 200, type: "text/html" },
+  { path: "/opengraph-image.png", status: 200, type: "image/png" },
   // 없는 주소는 404 다. 언어 접두사가 없으면 쿠키 언어(없으면 한국어), `/en` 아래는 영어.
   ...[
     "/nope",
@@ -52,6 +53,12 @@ const CASES = [
     "/en/help/start/opengraph-image-1a2b3c",
     "/ko/download/opengraph-image-9f8e",
   ].map((path) => ({ path, status: 301, location: "/opengraph-image.png" })),
+  // 옛 홈 공유 이미지도 쿼리를 보존해 한 번에 공통 PNG로 이동한다(APP-1468).
+  ...["4568eca8368142d7", "4a933a1097fa88c1"].map((hash) => ({
+    path: `/opengraph-image?${hash}`,
+    status: 301,
+    location: `/opengraph-image.png?${hash}`,
+  })),
 ];
 
 let failed = 0;
@@ -59,10 +66,14 @@ for (const { path, status, type = "", text, location } of CASES) {
   const response = await fetch(origin + path, { redirect: "manual" });
   const contentType = response.headers.get("content-type") ?? "";
   const body = text ? await response.text() : "";
+  const redirected = new URL(response.headers.get("location") ?? "", origin);
+  const expected = location ? new URL(location, origin) : null;
   const ok =
     response.status === status &&
     contentType.startsWith(type) &&
-    (!location || response.headers.get("location")?.endsWith(location)) &&
+    (!expected ||
+      (redirected.pathname === expected.pathname &&
+        redirected.searchParams.toString() === expected.searchParams.toString())) &&
     (!text || body.includes(text));
   if (!ok) failed++;
   console.log(
