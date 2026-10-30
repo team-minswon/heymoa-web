@@ -21,3 +21,8 @@ HeyMoa의 웹 프론트엔드. Next.js 16 App Router입니다.
 
 사람에게 말을 거는 표면은 존댓말입니다. 이슈, 커밋, 리뷰가 여기 해당합니다.
 코드 주석과 `docs/` 산문의 문체는 지적 대상이 아니고, 주변 코드에 맞춥니다.
+
+## SEO 운영
+
+SEO 점검·개선은 프로젝트에 설치한 [`seo`](.claude/skills/seo/SKILL.md)와
+[`HeyMoa 운영 기준`](.claude/skills/seo/HEYMOA.md)을 먼저 읽습니다.
