@@ -1,16 +1,18 @@
 ---
-title: I want to record video calls too
+title: How to record video call audio
 navTitle: Record video calls
-description: In the browser, only your own microphone is recorded. Here's how to use the desktop app so the other people on a video call are transcribed too.
+description: Record both sides of a video call with the HeyMoa desktop app. Set up computer audio and microphone access, then turn the recording into AI meeting notes.
 group: situations
 slug: record-call-audio
 order: 9
-modified: 2026-10-21
+modified: 2026-10-30
 ---
 
 ## What's happening {#problem}
 
-On a video call like Zoom, only your voice is transcribed. What the other people say isn't in the transcript.
+Use the HeyMoa desktop app to record computer audio and your microphone together so the other people's voices are transcribed too. The browser records only your microphone.
+
+This guide covers transcribing meeting audio and turning it into meeting notes. For a video recording of your screen, check your video call tool's recording settings.
 
 ## Where to look first {#where}
 
@@ -19,7 +21,7 @@ Look for the “Record video calls with the desktop app” notice above the note
 ## Try these steps {#steps}
 
 1. **Install the desktop app**
-   Get it from **[Download for macOS]** above the note list or from the download page.
+   Get the installer for your operating system from the [app download page](/download).
 2. **Sign in to the app**
    ==The app and the browser sign in separately.== You need to sign in once more.
 3. **Click [Allow microphone] in the [Get started with HeyMoa] window**
@@ -34,6 +36,8 @@ Look for the “Record video calls with the desktop app” notice above the note
    ==Sound you can't hear isn't recorded.==
 8. **Click the menu bar icon to open the popover**
    You can see the live timeline and recording status.
+
+After recording, follow the guide to [creating and reviewing AI meeting notes](help:first-meeting). You can then [share the notes as a PDF or by email](help:export).
 
 ## Related pages {#related}
 

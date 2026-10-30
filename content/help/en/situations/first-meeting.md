@@ -1,7 +1,7 @@
 ---
 title: Create AI meeting notes
 navTitle: Your first meeting
-description: Create AI meeting notes with HeyMoa, from live transcription to summary review. Choose which decisions and tasks to add to your project, then confirm.
+description: Use a meeting notes template and example, then follow HeyMoa from recording to AI summary review and confirming selected decisions and tasks.
 group: situations
 slug: first-meeting
 order: 1
@@ -11,6 +11,37 @@ modified: 2026-10-30
 ## New here? Where do I start? {#problem}
 
 HeyMoa transcribes your meeting as you record. After you end the meeting, AI organizes a summary, decisions, and tasks. Review the results, then choose which items to add to your project.
+
+## Meeting notes template and example {#template}
+
+Copy this template when writing meeting notes yourself. Separate what the team agreed from what needs to happen next, rather than transcribing every remark.
+
+```text
+Meeting name:
+Date, time, and attendees:
+Topics discussed:
+Agreed decisions:
+Action item / assignee / due date:
+Open questions:
+What to check next:
+```
+
+This fictional example shows how to fill it in.
+
+- **Topic**: Decide the scope of a new welcome screen.
+- **Decision**: Show the setup process in three steps on the first screen.
+- **Action item**: The designer will prepare a draft before the next meeting.
+- **Open question**: Choose where to put the skip button after reviewing the draft.
+
+## What to check before sharing AI meeting notes {#check}
+
+Treat the AI summary as a draft. Check these points against the source remarks.
+
+- Make sure a suggestion hasn't been recorded as a decision everyone agreed to.
+- Check that the assignee and due date were actually agreed. Leave them blank and ask the team if they weren't.
+- Review open questions and changed decisions. Choose whether an earlier decision should be replaced or kept.
+
+After reviewing, you can [save the meeting notes as a PDF or email them](help:export). For video calls, first check [how to record the other people's voices](help:record-call-audio).
 
 ## Where to look first {#where}
 

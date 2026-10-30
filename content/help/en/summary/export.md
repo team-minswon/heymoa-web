@@ -1,11 +1,16 @@
 ---
-title: Copy, export to PDF, and email
-description: How to copy meeting notes and transcripts, download them as a PDF, and email them to attendees, plus the recipient and file size limits.
+title: Save meeting notes as PDF and share
+navTitle: Copy, export to PDF, and email
+description: Save HeyMoa meeting notes as a PDF or share them by email. Copy text or Markdown, choose whether to include the transcript, and check sharing limits.
 group: summary
 slug: export
 order: 3
-modified: 2026-10-26
+modified: 2026-10-30
 ---
+
+## Meeting notes formats {#formats}
+
+Save meeting notes as a PDF or copy them as text or Markdown. Email sharing sends the notes as a PDF attachment, with an optional transcript. Check that the decisions and tasks are accurate before sharing.
 
 ## Copy {#copy}
 
@@ -74,5 +79,7 @@ Yes. Add **[Transcript]** under **[Content]**. When you export to PDF, turn on t
 
 ## Related pages {#related}
 
+- [AI meeting notes template and writing guide](help:first-meeting) — From recording to writing and review
+- [Recording video call audio](help:record-call-audio) — Capture computer audio and your microphone together
 - [Reviewing and confirming the summary](help:review) — Fix the summary before you send it
 - [Attendees and speakers](help:speakers) — Name unnamed speakers
