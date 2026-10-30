@@ -1,16 +1,16 @@
 ---
-title: I want to run my first meeting end to end
+title: Create AI meeting notes
 navTitle: Your first meeting
-description: Follow along in one go: create a meeting, record it, end it, and confirm the summary the AI writes.
+description: Create AI meeting notes with HeyMoa, from live transcription to summary review. Choose which decisions and tasks to add to your project, then confirm.
 group: situations
 slug: first-meeting
 order: 1
-modified: 2026-10-21
+modified: 2026-10-30
 ---
 
 ## New here? Where do I start? {#problem}
 
-You're new to HeyMoa and want to know the order of steps that turns a meeting into a summary and tasks.
+HeyMoa transcribes your meeting as you record. After you end the meeting, AI organizes a summary, decisions, and tasks. Review the results, then choose which items to add to your project.
 
 ## Where to look first {#where}
 
@@ -48,8 +48,12 @@ Start on the **[All notes]** screen in the sidebar. The **[New note]** button at
     Click a speaker name and choose who it is.
 14. **Check the decisions and tasks**
     Skim them for anything wrong.
-15. **Click [Finish review]**
-    The summary is added to the project.
+15. **Turn on [Add to project] for the items you want to add**
+    Choose each decision and task. Items you leave off stay in the meeting notes.
+16. **Choose what to do with suggestions on selected items**
+    For earlier decisions, choose **[Replace]** or **[Keep]**. For existing task changes, choose **[Apply]** or **[Skip]**.
+17. **Click [Finish review], then click it again in the confirmation**
+    Only the selected decisions and tasks are added to the project. You can't undo a confirmed review, so check your selections and edits first.
 
 ## Related pages {#related}
 

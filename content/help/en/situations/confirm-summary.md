@@ -1,11 +1,11 @@
 ---
 title: I want to check the summary and confirm it
 navTitle: Confirm a summary
-description: Check the decisions and tasks the AI pulled from your meeting, fix what's wrong, and add them to the project with Finish review.
+description: Review and edit the AI meeting notes, choose which decisions and tasks to add to your project, then confirm with Finish review.
 group: situations
 slug: confirm-summary
 order: 3
-modified: 2026-10-21
+modified: 2026-10-30
 ---
 
 ## What's happening {#problem}
@@ -38,12 +38,14 @@ The **[Summary]** tab must be open in **[In review]**. If it already shows **[Co
    You can set one for each task.
 9. **Choose a date from [Set due date]**
    Click a date to set it.
-10. **If there are suggestions, choose them one at a time**
-    These are **[Replaces an earlier decision]** and **[Change existing task]** suggestions.
-11. **Click [Finish review] in the bar at the bottom**
+10. **Turn on [Add to project] for the items you want to add**
+    Choose each decision and task. Items you leave off stay in the meeting notes.
+11. **Choose what to do with suggestions on selected items**
+    For earlier decisions, choose **[Replace]** or **[Keep]**. For existing task changes, choose **[Apply]** or **[Skip]**.
+12. **Click [Finish review] in the bar at the bottom**
     A confirmation dialog opens.
-12. **Click [Finish review] again in the dialog**
-    ==This is what adds everything to the project.== Nothing is added before you click it.
+13. **Click [Finish review] again in the dialog**
+    ==Only the selected decisions and tasks are added to the project.== Nothing is added before you click it.
 
 ## Related pages {#related}
 

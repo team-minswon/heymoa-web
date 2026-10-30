@@ -1,10 +1,10 @@
 ---
 title: Reviewing and confirming the summary
-description: How to check and edit the decisions and tasks AI sorted out, then add them to the project. Nothing goes to the project until you confirm.
+description: Review and edit decisions and tasks in your AI meeting notes, then choose which to confirm in your project. Unselected items stay in the meeting notes.
 group: summary
 slug: review
 order: 2
-modified: 2026-10-23
+modified: 2026-10-30
 ---
 
 ## The review screen {#screen}
@@ -35,7 +35,9 @@ Any workspace member can edit and confirm a review. If someone else edited it fi
 
 ## Choose what to do with AI suggestions {#suggestions}
 
-AI makes two kinds of suggestions. To confirm, you need to choose what to do with each one.
+The **[Add to project]** switches on decisions and tasks start off. Turn them on for the items you want to add. Items you leave off stay in the meeting notes.
+
+If a selected item has an AI suggestion, choose what to do with it.
 
 - **[Earlier decision]**: Asks whether to replace a decision already confirmed in the project with the new one. Under “What should happen to the earlier decision?”, choose **[Replace]** or **[Keep]**. A decision that has already ended is marked “Already ended.”
 - **[Change existing task]**: Suggests changing the status, assignee, or due date of a task that already exists. Choose **[Apply]** or **[Skip]**.
@@ -46,11 +48,11 @@ AI makes two kinds of suggestions. To confirm, you need to choose what to do wit
 ## Finish the review and confirm {#confirm}
 
 1. **Check the bar at the bottom**
-   It tells you “Add N decisions · N tasks.” If any suggestions are still unchosen, you're blocked with **[N suggestions to review]**. Click **[Go to suggestions]** to get to them.
+   It tells you “Add N decisions · N tasks.” If a selected item has an unchosen suggestion, you're blocked with **[N suggestions to review]**. Click **[Go to suggestions]** to get to them.
 2. **Click [Finish review]**
    A confirmation appears.
 3. **Click again in the confirmation**
-   The included items are confirmed in the project.
+   The selected decisions and tasks are confirmed in the project.
 
 ::clip{name="review-confirm" alt="Expanding items on the review screen to check their sources, then clicking Finish review to confirm" caption="Expanding items to check their sources and confirming with [Finish review]."}
 
@@ -69,7 +71,7 @@ Nothing goes to the project until you click **[Finish review]**.
 No. After you confirm, you can't edit the review items. You can still edit the tasks it created on the **[Tasks]** screen.
 
 ### Can I confirm without choosing on the suggestions?
-No. You can't confirm until you choose on every suggestion. Use **[Go to suggestions]** to go through them one by one.
+Yes, if the suggestions belong to items you aren't adding to the project. For selected items, use **[Go to suggestions]** and choose what to do with each suggestion before confirming.
 
 ### Can other members edit the review?
 Yes. Any workspace member can edit and confirm a review.
