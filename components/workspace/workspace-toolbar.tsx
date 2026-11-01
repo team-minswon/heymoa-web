@@ -10,6 +10,7 @@ import {
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
+import { ACTIVE_PHASES } from "@/lib/transcription/recording-state";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -139,12 +140,7 @@ export function WorkspaceToolbar({
   // 두 창이 한 자리에 있어야 이어 붙는다(`workspace-app-shell`).
   const { requestNewMeeting } = useWorkspaceShell();
 
-  const isActive = [
-    "requesting-permission",
-    "connecting",
-    "recording",
-    "stopping",
-  ].includes(recording.phase);
+  const isActive = ACTIVE_PHASES.has(recording.phase);
 
   /**
    * 녹음 중인 노트로 돌아간다.

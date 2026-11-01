@@ -385,8 +385,9 @@ export function NotePanel({
   );
   const clearFocusSegment = useCallback(() => setFocusSegmentId(null), []);
   const recording = useRecording();
+  const recordingNoteLive = isNoteRecordingActive(recording, noteId);
   const localProviderCanControlNote =
-    isNoteRecordingActive(recording, noteId) &&
+    recordingNoteLive &&
     !(recording.phase === "failed" && recording.session?.status === "ACTIVE");
   /**
    * **이 창이 방금 이 노트의 세션을 닫았다.** 서버가 종료를 확인해 준 상태(`COMPLETED`)이거나,
@@ -427,11 +428,9 @@ export function NotePanel({
    *
    * 노트 조회는 워크스페이스로 범위가 좁혀지지 않아 `/w/B/notes/<A의 노트>`도 A의 노트를
    * 그대로 그린다. 그 화면에서 녹음을 시작하면 세션은 A에 생기는데 소속은 B로 기록돼
-   * A의 나가기 잠금과 추방 정리가 둘 다 빗나간다. 프로젝트 조회가 그 조합을 판정해 준다 —
-   * 서버가 `findByWorkspaceIdAndProjectId` 한 번으로 찾고 없으면 `PROJECT_NOT_FOUND`다.
-   * `failureReason`도 본다: `error`는 재시도를 소진해야 채워진다(APP-385).
+   * A의 나가기 잠금과 추방 정리가 둘 다 빗나간다. 노트 응답의 `workspaceId` 를 URL 과 견줘
+   * 안다(전에는 프로젝트 조회의 404 로 알았다).
    */
-  // URL 의 워크스페이스와 노트의 실제 소속이 다르다. 전에는 프로젝트 조회의 404 로 알았다.
   const noteNotInThisWorkspace =
     note !== undefined && note.workspaceId !== workspaceId;
   /**
@@ -455,7 +454,6 @@ export function NotePanel({
   // 회의가 녹음 중을 벗어났으면 그 녹음은 끝났다. 남겨 두면 다른 기기가 재개한 녹음까지 이어받으려 한다.
   const meetingNotRecording =
     note !== undefined && note.meetingStatus !== "IN_PROGRESS";
-  const recordingNoteLive = isNoteRecordingActive(recording, noteId);
   useEffect(() => {
     if (meetingNotRecording && !recordingNoteLive && recordingClaim) {
       forgetNoteRecordings(noteId);

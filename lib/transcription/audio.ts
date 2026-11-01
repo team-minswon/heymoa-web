@@ -130,8 +130,8 @@ export type AudioInputLevels = {
   microphone: number;
   systemAudio: number | null;
 };
-export const AUDIO_METER_INTERVAL_MS = 50;
-export const DUAL_INPUT_GAIN = 0.5;
+const AUDIO_METER_INTERVAL_MS = 50;
+const DUAL_INPUT_GAIN = 0.5;
 export type PcmAudioCaptureOptions = {
   workletUrl?: string;
   onChunk: PcmBatchListener;

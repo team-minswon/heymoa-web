@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
 import {
   getGetProjectsQueryKey,
@@ -46,7 +47,7 @@ export function CreateProjectDialog({
   const createProject = useCreateProject({
     mutation: { meta: { suppressErrorToast: true } },
     // 연결이 반쯤 끊기면 응답이 영영 안 오고 창이 잠긴다 — 한도를 둔다(APP-1139)
-    request: { timeoutMs: 20_000 },
+    request: { timeoutMs: REQUEST_TIMEOUT_MS },
   });
 
   const submit = async (formData: FormData) => {

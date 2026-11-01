@@ -151,6 +151,7 @@ export function ReviewTab({
       <FlowNotice
         noteId={noteId}
         status={flow.status}
+        retryable={flow.retryable}
         verified={flowQuery.isFetchedAfterMount && !flowQuery.isError}
         onOpenTranscript={onOpenTranscript}
       />
@@ -164,6 +165,7 @@ export function ReviewTab({
           compact
           noteId={noteId}
           status={flow.status}
+          retryable={flow.retryable}
           verified={flowQuery.isFetchedAfterMount && !flowQuery.isError}
           onOpenTranscript={onOpenTranscript}
         />
@@ -173,6 +175,7 @@ export function ReviewTab({
         key={noteId}
         noteId={noteId}
         flow={flow}
+        flowUpdatedAt={flowQuery.dataUpdatedAt}
         workspaceId={workspaceId}
         projectId={projectId}
         confirmed={flow.status === "CONFIRMED"}

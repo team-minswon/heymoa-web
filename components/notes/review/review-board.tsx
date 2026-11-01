@@ -142,6 +142,7 @@ const unfiledOpen = (
 export function ReviewBoard({
   noteId,
   flow,
+  flowUpdatedAt = 0,
   workspaceId,
   projectId,
   confirmed,
@@ -157,6 +158,8 @@ export function ReviewBoard({
 }: {
   noteId: string;
   flow?: MeetingAnalysisFlowResponseData;
+  /** 흐름 조회가 마지막으로 성공한 시각. 같은 값이 다시 와도 바뀐다 — 지난 조회 실패 안내를 걷는 데 쓴다. */
+  flowUpdatedAt?: number;
   workspaceId: string | undefined;
   projectId: string | undefined;
   confirmed: boolean;
@@ -899,7 +902,11 @@ export function ReviewBoard({
           participants={participants}
           lengthMs={lengthMs}
           confirmed={confirmed}
-          mapHref={workspaceId && projectId ? `/w/${workspaceId}/projects/${projectId}` : undefined}
+          mapHref={
+            workspaceId && projectId
+              ? `/w/${workspaceId}/projects/${projectId}`
+              : undefined
+          }
           aside={
             <div className="flex items-center gap-2">
               <ReviewActions
@@ -974,10 +981,17 @@ export function ReviewBoard({
             </button>
           </div>
         ) : null}
+        {/* 담당·관계가 대기 중이든 실패했든, 다시 보낼 수 있는지는 서버가 정한다(APP-1475). 요청 뒤 조회
+            실패 안내가 사라지지 않게 버튼만 그 값을 따르고 자리는 남긴다 */}
         {flow?.status === "REVIEWABLE" &&
-        (relationsStatus === "PENDING" || enrichmentStatus === "PENDING") ? (
+        (flow.retryable ||
+          [relationsStatus, enrichmentStatus].some(
+            (status) => status === "PENDING" || status === "FAILED"
+          )) ? (
           <PendingAnalysisRetry
             noteId={noteId}
+            retryable={flow.retryable}
+            flowUpdatedAt={flowUpdatedAt}
             disabled={
               !editable || saving || refreshingAnalysis || refreshFailed
             }

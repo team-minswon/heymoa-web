@@ -60,7 +60,7 @@ export function RecordingConnectionNotice({
     );
   } else if (notice) {
     lines.push(
-      "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 기기에 저장 중"
+      "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 탭에 모아 두는 중 · 연결될 때까지 탭을 열어 두세요"
     );
   }
   if (lines.length === 0) return null;

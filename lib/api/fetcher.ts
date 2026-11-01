@@ -16,10 +16,14 @@ type ApiFetchOptions = RequestInit & {
    * 응답 헤더가 오기까지 기다릴 한도(ms). 없으면 기다리는 한도가 없다.
    *
    * 연결이 반쯤 끊기면 fetch 는 몇 분이 지나도 실패하지 않는다. 만들기 창은 그동안 닫기·취소를 잠가서
-   * 사용자가 앱을 껐다 켜야 빠져나온다(APP-1139). 만들기처럼 사람이 결과를 기다리는 호출에만 준다.
+   * 사용자가 앱을 껐다 켜야 빠져나온다(APP-1139). 사람이 결과를 기다리는 호출에만
+   * `REQUEST_TIMEOUT_MS` 로 준다.
    */
   timeoutMs?: number;
 };
+
+/** 사람이 결과를 기다리는 호출(만들기·녹음 시작·회의 종료)의 `timeoutMs`. 정상 응답은 닿지 않는다. */
+export const REQUEST_TIMEOUT_MS = 20_000;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 

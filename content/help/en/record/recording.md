@@ -57,9 +57,9 @@ Find the message on your screen and follow the steps.
 :::
 
 :::problem
-**Symptom:** You see “Connection lost. Transcription and live analysis paused. Recording is being saved on this device.”
-**Cause:** Your internet connection dropped. Audio is still being saved on this device.
-**Fix:** Keep this tab open until the connection comes back. HeyMoa then sends the saved audio to the server.
+**Symptom:** You see “Connection lost. Transcription and live analysis paused. Recording is held in this tab. Keep this tab open until you're reconnected.”
+**Cause:** Your internet connection dropped. Audio that hasn't reached the server is held in this tab. If you close or reload the tab, that audio is lost.
+**Fix:** Keep this tab open until the connection comes back. HeyMoa then sends the held audio to the server.
 :::
 
 :::problem

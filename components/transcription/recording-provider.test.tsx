@@ -1245,6 +1245,24 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.result.current.error).toBe("이미 종료된 회의입니다.");
   });
 
+  // 응답만 못 받았어도 서버는 세션을 만들고 회의를 진행 중으로 바꿨을 수 있다. 노트를 다시 읽지 않으면
+  // 화면은 일시정지로 남고 회의 종료가 MEETING_RECORDING 으로 막힌다(APP-1472)
+  it("응답 시한으로 실패해도 노트를 다시 읽는다", async () => {
+    const harness = setup();
+    vi.mocked(harness.api.startSession).mockRejectedValueOnce({
+      success: false,
+      data: null,
+      error: { code: "REQUEST_TIMEOUT", message: "응답이 오지 않습니다." },
+    });
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(harness.result.current.phase).toBe("failed");
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetNoteQueryKey(session.noteId),
+    });
+  });
+
   // 자동 종료된 회의는 사용자가 끝낸 적이 없어 「이미 종료」로는 왜 막혔는지 모른다(APP-1328). 서버 문구를 그대로 쓴다
   it("자동 종료된 회의면 서버가 준 자동 종료 문구를 그대로 보여 준다", async () => {
     const harness = setup();

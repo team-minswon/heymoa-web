@@ -49,6 +49,16 @@ const COPY: Record<WaitingStatus, { title: string; body: string }> = {
   },
 };
 
+/**
+ * 분석 실패로 보이지만 다시 요청해도 서버가 받지 않는 경우(`retryable` 거짓). 종료 뒤 상한이 지나도
+ * 녹음 반영이 끝나지 않은 회의다(APP-1475). 실패 버튼을 주면 누를 때마다 409 만 돌아온다. 반영이 끝나면
+ * 서버가 요청하지만 끝난다는 보장은 없어 「진행 중」이나 「자동으로 시작」이라고 말하지 않는다.
+ */
+const INPUT_DELAYED_COPY = {
+  title: "회의 기록 준비가 늦어지고 있습니다",
+  body: "스크립트는 지금 확인할 수 있습니다. 분석은 녹음 기록 반영이 끝나야 시작할 수 있어 아직 요청할 수 없습니다.",
+};
+
 export function isWaitingStatus(status: FlowStatus): status is WaitingStatus {
   return status in CURRENT;
 }
@@ -60,12 +70,15 @@ export function isWaitingStatus(status: FlowStatus): status is WaitingStatus {
 export function FlowNotice({
   noteId,
   status,
+  retryable,
   verified = true,
   compact = false,
   onOpenTranscript,
 }: {
   noteId: string;
   status: WaitingStatus;
+  /** 지금 다시 요청하면 서버가 받는지. 버튼은 상태가 아니라 이 값을 따른다(APP-1475). */
+  retryable: boolean;
   /** 이번 화면에서 서버의 최신 상태를 확인한 뒤에만 수동 요청을 제공한다. */
   verified?: boolean;
   compact?: boolean;
@@ -73,10 +86,11 @@ export function FlowNotice({
 }) {
   const queryClient = useQueryClient();
   const request = useRequestAnalysis();
-  const { index, state } = CURRENT[status];
-  const copy = COPY[status];
-  const canRequest =
-    verified && (status === "ANALYSIS_FAILED" || status === "NOT_REQUESTED");
+  const inputDelayed = status === "ANALYSIS_FAILED" && !retryable;
+  const { index } = CURRENT[status];
+  const state = inputDelayed ? "waiting" : CURRENT[status].state;
+  const copy = inputDelayed ? INPUT_DELAYED_COPY : COPY[status];
+  const canRequest = verified && retryable;
 
   const requestAction = canRequest ? (
     <div className="col-start-2 mt-3">

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { STOP_UNCONFIRMED_MESSAGE } from "@/lib/transcription/recording-messages";
 import {
   initialRecordingState,
   recordingReducer,
@@ -104,6 +105,42 @@ describe("recordingReducer", () => {
 
     expect(state.connectionNotice).toBeNull();
     expect(state.transcriptionDegraded).toBe(false);
+  });
+
+  it("종료 확인 실패 뒤 서버 완료가 오면 그 문구를 걷는다", () => {
+    const state = run(
+      ...recording(),
+      { type: "failed", message: STOP_UNCONFIRMED_MESSAGE },
+      { type: "completed", session: { ...session, status: "COMPLETED" } }
+    );
+
+    expect(state.phase).toBe("completed");
+    expect(state.error).toBeNull();
+  });
+
+  // 다른 탭·부착이 같은 세션을 자기 끝 번호로 완료해도, 이 탭이 버린 소리는 저장되지 않았다
+  it("버린 소리를 알린 문구는 서버 완료 뒤에도 남는다", () => {
+    const message = "마지막 기록을 정리하지 못해 3초를 올리지 못했어요.";
+    const state = run(
+      ...recording(),
+      { type: "failed", message },
+      { type: "completed", session: { ...session, status: "COMPLETED" } }
+    );
+
+    expect(state.phase).toBe("completed");
+    expect(state.error).toBe(message);
+  });
+
+  it("녹음 중에 선 문구는 완료 뒤에도 남는다", () => {
+    const message = "소리 캡처가 중단됐습니다.";
+    const state = run(
+      ...recording(),
+      { type: "error", message },
+      { type: "phase", phase: "stopping" },
+      { type: "completed", session: { ...session, status: "COMPLETED" } }
+    );
+
+    expect(state.error).toBe(message);
   });
 
   it("바뀐 값이 없으면 같은 상태를 돌려준다", () => {

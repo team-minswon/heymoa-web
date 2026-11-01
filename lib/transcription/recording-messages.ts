@@ -4,13 +4,17 @@ import type { RealtimeFailureKind } from "@/lib/transcription/realtime-session";
 
 const START_FAILED = "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 const DROPPED = "연결이 끊겨 녹음을 멈췄어요.";
-const DESKTOP_AUDIO_HELP =
-  "권한을 허용한 뒤 다시 녹음해 주세요.";
+const DESKTOP_AUDIO_HELP = "권한을 허용한 뒤 다시 녹음해 주세요.";
 
 export const SUPERSEDED_MESSAGE =
   "다른 탭이나 기기에서 이 녹음을 이어받았습니다.";
 export const STOP_FAILED_MESSAGE = "녹음을 종료하는 중 오류가 발생했습니다.";
 export const STOP_UNCONFIRMED_MESSAGE = "녹음 종료 상태를 확인하지 못했습니다.";
+/** 소리 캡처가 중간에 끊겼다. 화면 안내는 남고, 토스트는 녹음 상태를 확인하라고 말한다. */
+export const CAPTURE_STOPPED_MESSAGE =
+  "소리 캡처가 중단됐습니다. 마지막 소리 일부가 저장되지 않았을 수 있습니다.";
+export const CAPTURE_STOPPED_TOAST =
+  "소리 캡처가 중단됐습니다. 녹음 상태를 확인해 주세요.";
 
 const lostAudio = (droppedMs: number) =>
   `이 기기에 남은 소리 ${Math.max(1, Math.round(droppedMs / 1_000))}초를 올리지 못했어요.`;

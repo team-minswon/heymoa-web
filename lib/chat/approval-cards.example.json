@@ -157,15 +157,6 @@
     "summary": "할 일 한 번에 바꾸기 · 2건"
   },
   {
-    "tool": "heymoa_create_agenda",
-    "card": {
-      "title": "안건 더하기",
-      "target": "주간 회의 · 출시 일정",
-      "fields": []
-    },
-    "summary": "안건 더하기 · 주간 회의 · 출시 일정"
-  },
-  {
     "tool": "heymoa_create_note",
     "card": {
       "title": "회의록 만들기",
@@ -218,21 +209,6 @@
       ]
     },
     "summary": "할 일 만들기 · 출시 · QA 체크리스트"
-  },
-  {
-    "tool": "heymoa_delete_agenda",
-    "card": {
-      "title": "안건 지우기",
-      "target": "주간 회의 · 출시 일정",
-      "warning": "지운 안건은 되돌릴 수 없습니다",
-      "fields": [
-        {
-          "label": "지울 내용",
-          "value": "지울 안건 본문"
-        }
-      ]
-    },
-    "summary": "안건 지우기 · 주간 회의 · 출시 일정"
   },
   {
     "tool": "heymoa_mark_notification_read",
@@ -302,21 +278,6 @@
       }
     },
     "summary": "회의 결과 메일 보내기 · 주간 회의"
-  },
-  {
-    "tool": "heymoa_update_agenda",
-    "card": {
-      "title": "안건 바꾸기",
-      "target": "주간 회의 · 출시 일정",
-      "fields": [
-        {
-          "label": "내용",
-          "before": "출시 일정",
-          "after": "출시 일정 확정"
-        }
-      ]
-    },
-    "summary": "안건 바꾸기 · 주간 회의 · 출시 일정"
   },
   {
     "tool": "heymoa_update_note",

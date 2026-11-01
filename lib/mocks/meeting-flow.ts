@@ -45,7 +45,10 @@ import {
   type SeedWho,
 } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
-import { projectAgendaMapMock, projectAgendaMapSummary } from "@/lib/mocks/project-agenda-map";
+import {
+  projectAgendaMapMock,
+  projectAgendaMapSummary,
+} from "@/lib/mocks/project-agenda-map";
 import { projectTasks } from "@/lib/mocks/project-tasks";
 import type {
   MeetingReviewSummary,
@@ -957,6 +960,11 @@ function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
   });
 }
 
+/** 목은 입력 준비가 늦어지는 회의를 만들지 않는다. 서버의 `retryable` 중 요청 전·실패 칸만 흉내 낸다. */
+function retryableOf(status: FlowStatus) {
+  return status === "ANALYSIS_FAILED" || status === "NOT_REQUESTED";
+}
+
 function flowOf(noteId: string): FlowStatus {
   mockDb.getNote(noteId);
   const target = store();
@@ -1187,7 +1195,7 @@ export const meetingFlowHandlers = [
               region,
               status: regionStatus,
             }));
-      return { noteId, status, regions };
+      return { noteId, status, regions, retryable: retryableOf(status) };
     })
   ),
 
@@ -1195,8 +1203,7 @@ export const meetingFlowHandlers = [
     respond(() => {
       const noteId = paramId(params.noteId);
       mockDb.getNote(noteId);
-      const status = flowOf(noteId);
-      if (status !== "ANALYSIS_FAILED" && status !== "NOT_REQUESTED") {
+      if (!retryableOf(flowOf(noteId))) {
         failWith(
           "MEETING_ANALYSIS_CONFLICT",
           409,

@@ -35,22 +35,38 @@ it("요약 뒤에도 관계나 담당 영역이 남았으면 빠른 폴링을 �
 });
 
 describe("moveFlowStatus", () => {
-  it("읽어 둔 흐름의 상태만 옮기고, 읽은 적 없으면 만들지 않는다", () => {
+  it("읽어 둔 흐름의 상태를 옮기고 다시 요청할 수 없다고 적으며, 읽은 적 없으면 만들지 않는다", () => {
     const client = new QueryClient();
     const key = getGetAnalysisFlowQueryKey("n1");
     client.setQueryData(key, {
       status: 200,
       data: {
         success: true,
-        data: { noteId: "n1", status: "REVIEWABLE" },
+        data: { noteId: "n1", status: "REVIEWABLE", retryable: true },
         error: null,
       },
       headers: new Headers(),
     });
 
     moveFlowStatus(client, "n1", "CONFIRMED");
+    // 받아들여진 요청이 진행 중이라 재조회 전까지 다시 요청할 수 없다고 본다(APP-1475)
     expect(client.getQueryData(key)).toMatchObject({
-      data: { data: { noteId: "n1", status: "CONFIRMED" } },
+      data: { data: { noteId: "n1", status: "CONFIRMED", retryable: false } },
+    });
+
+    // 분석 재요청이 받아들여진 경우. 재조회 전까지 요청 버튼이 다시 서지 않는다
+    client.setQueryData(key, {
+      status: 200,
+      data: {
+        success: true,
+        data: { noteId: "n1", status: "ANALYSIS_FAILED", retryable: true },
+        error: null,
+      },
+      headers: new Headers(),
+    });
+    moveFlowStatus(client, "n1", "ANALYZING");
+    expect(client.getQueryData(key)).toMatchObject({
+      data: { data: { status: "ANALYZING", retryable: false } },
     });
 
     moveFlowStatus(client, "n2", "ANALYZING");

@@ -212,16 +212,14 @@ export function MeetingControls({
 
   if (!canEnd) return null;
 
+  const recordingHere = isNoteRecordingActive(recording, note.noteId);
   // 기록 중인 회의는 서버가 409 MEETING_RECORDING 으로 거절한다(APP-694). 활성 세션 없이
   // IN_PROGRESS 로 남은 회의(시작만 누르고 연결 못 함)는 서버가 받으므로 막지 않는다.
   const recordingBlocked =
     note.meetingStatus === "IN_PROGRESS" &&
-    (note.activeSessionStartedAt != null ||
-      isNoteRecordingActive(recording, note.noteId));
+    (note.activeSessionStartedAt != null || recordingHere);
   const recorder =
-    isNoteRecordingActive(recording, note.noteId) || !note.meetingStartedBy
-      ? null
-      : note.meetingStartedBy.name;
+    recordingHere || !note.meetingStartedBy ? null : note.meetingStartedBy.name;
   const blockedReason = recorder
     ? `${recorder} 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다`
     : "일시정지한 뒤 종료할 수 있습니다";

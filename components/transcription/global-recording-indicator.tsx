@@ -21,15 +21,9 @@ import {
   type RecordingPhase,
 } from "@/components/transcription/recording-provider";
 import { isWorkspaceRoute } from "@/lib/routes/app-route";
+import { ACTIVE_PHASES } from "@/lib/transcription/recording-state";
 
-const VISIBLE_PHASES = new Set([
-  "requesting-permission",
-  "connecting",
-  "recording",
-  "stopping",
-]);
-
-export const GLOBAL_RECORDING_EXIT_DURATION = 0.3;
+const GLOBAL_RECORDING_EXIT_DURATION = 0.3;
 
 function formatElapsed(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1000);
@@ -145,7 +139,7 @@ export function GlobalRecordingIndicator() {
   const isVisible =
     (!isWorkspaceRoute(pathname) || (alerting && away)) &&
     Boolean(session) &&
-    VISIBLE_PHASES.has(phase);
+    ACTIVE_PHASES.has(phase);
   /**
    * **녹음 중인 워크스페이스로 돌아간다.** 예전에는 기본 워크스페이스(`find(isDefault) ?? [0]`)를
    * 골랐는데, 그것은 지금 녹음 중인 곳이 아닐 수 있다 — 기본이 아닌 A를 녹음하다 홈에 오면

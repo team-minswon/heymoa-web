@@ -366,9 +366,14 @@ describe("검토 가능한 회의", () => {
     );
     const index = screen.getByRole("list", { name: "주제 목차" });
     // 이어진 주제마다 지난 회의 링크 하나와 연결 지도 링크 하나
-    const mapLinks = await within(index).findAllByRole("link", { name: "연결 지도에서 보기" });
+    const mapLinks = await within(index).findAllByRole("link", {
+      name: "연결 지도에서 보기",
+    });
     expect(mapLinks).toHaveLength(3);
-    expect(mapLinks[0]).toHaveAttribute("href", expect.stringMatching(/\/projects\/[^/?]+\?agenda=/));
+    expect(mapLinks[0]).toHaveAttribute(
+      "href",
+      expect.stringMatching(/\/projects\/[^/?]+\?agenda=/)
+    );
     expect(within(index).getAllByRole("link")).toHaveLength(6);
     expect(screen.queryByText("회의 연결을 불러오지 못했습니다.")).toBeNull();
   });
@@ -1835,10 +1840,12 @@ describe("검토본이 서기 전과 뒤", () => {
 describe("최종 요약과 늦은 관계 결과", () => {
   const flow = (
     relations: "PENDING" | "SUCCEEDED" | "FAILED",
-    status: MeetingAnalysisFlowResponseData["status"] = "REVIEWABLE"
+    status: MeetingAnalysisFlowResponseData["status"] = "REVIEWABLE",
+    retryable = relations === "PENDING"
   ): MeetingAnalysisFlowResponseData => ({
     noteId: MENTORING_NOTE_ID,
     status,
+    retryable,
     regions: [
       { region: "SUMMARY", status: "SUCCEEDED" },
       { region: "RELATIONS", status: relations },
@@ -1927,6 +1934,34 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(input).toHaveValue("편집 중인 내용");
   });
 
+  // 대기 중이 아니라 실패한 후속 분석도 서버가 받으면 다시 보낼 수 있어야 한다(APP-1475)
+  it("실패한 후속 분석도 서버가 받으면 재요청 버튼을 내놓는다", async () => {
+    installFlow(() => ({
+      ...flow("SUCCEEDED", "REVIEWABLE", true),
+      regions: [
+        { region: "SUMMARY", status: "SUCCEEDED" },
+        { region: "RELATIONS", status: "SUCCEEDED" },
+        { region: "ITEM_ENRICHMENT", status: "FAILED" },
+      ],
+    }));
+    renderTab();
+    expect(
+      await screen.findByRole("button", { name: "분석 재요청" })
+    ).toBeInTheDocument();
+  });
+
+  // 담당·관계가 대기 중이어도 이미 보냈으면 서버는 다시 받지 않는다(APP-1475). 버튼은 그 판정을 따른다
+  it("서버가 다시 받지 않는 대기 중 분석에는 재요청 버튼을 내놓지 않는다", async () => {
+    installFlow(() => flow("PENDING", "REVIEWABLE", false));
+    renderTab();
+    expect(
+      await screen.findByText(
+        REVIEW_SEED_LEAD.map((line) => line.text).join(" ")
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "분석 재요청" })).toBeNull();
+  });
+
   it("후속 분석이 이미 진행 중인 409는 안내하고 자동으로 다시 요청하지 않는다", async () => {
     installFlow(() => flow("PENDING"));
     const requests = vi.fn();
@@ -1957,6 +1992,61 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(requests).toHaveBeenCalledTimes(1);
     expect(toast.error).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
+  });
+
+  // 요청 직후 조회가 한 번 실패해도, 뒤이은 폴링이 성공하면 실패 안내는 낡은 말이다(APP-1475)
+  it("재요청 뒤 조회 실패 안내는 다음 성공 조회에서 걷힌다", async () => {
+    let readFailed = false;
+    server.use(
+      http.get("*/v1/notes/:noteId/analyses/flow", () =>
+        readFailed
+          ? HttpResponse.json(
+              {
+                success: false,
+                data: null,
+                error: { code: "INTERNAL", message: "조회 실패" },
+              },
+              { status: 500 }
+            )
+          : HttpResponse.json({
+              success: true,
+              data: flow("PENDING"),
+              error: null,
+            })
+      ),
+      http.post("*/v1/notes/:noteId/analyses", () => {
+        readFailed = true;
+        return HttpResponse.json(
+          {
+            success: true,
+            data: {
+              noteId: MENTORING_NOTE_ID,
+              requestId: "0HZX2K7M9Q4AD",
+              flowStatus: "REVIEWABLE",
+            },
+            error: null,
+          },
+          { status: 202 }
+        );
+      })
+    );
+    const { client } = renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "분석 재요청" }));
+    expect(
+      await screen.findByText("분석 상태를 불러오지 못했습니다.")
+    ).toBeInTheDocument();
+
+    readFailed = false;
+    await act(() =>
+      client.refetchQueries({
+        queryKey: getGetAnalysisFlowQueryKey(MENTORING_NOTE_ID),
+      })
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText("분석 상태를 불러오지 못했습니다.")).toBeNull()
+    );
+    expect(screen.queryByRole("button", { name: "상태 다시 확인" })).toBeNull();
   });
 
   it("분석 재요청 후 상태 조회 실패는 POST 없이 상태만 다시 확인한다", async () => {

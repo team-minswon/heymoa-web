@@ -1,5 +1,6 @@
 import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import type { MicrophoneState } from "@/lib/transcription/audio";
+import { STOP_UNCONFIRMED_MESSAGE } from "@/lib/transcription/recording-messages";
 import type {
   BufferState,
   ConnectionNotice,
@@ -144,6 +145,10 @@ export function recordingReducer(
         session: action.session ?? state.session,
         phase: "completed",
         transcriptionDegraded: false,
+        // 「확인하지 못했다」는 이 탭이 소리를 다 보낸 뒤에만 서므로, 누가 세션을 완료했든 잃은 것이
+        // 없다(APP-1473). 다른 실패 문구는 남긴다 — 다른 탭·부착이 자기 끝 번호로 완료해도 이 탭이 버린
+        // 소리는 돌아오지 않는다. 이 상수와 같은 값일 때만 걷는다
+        error: state.error === STOP_UNCONFIRMED_MESSAGE ? null : state.error,
       });
     case "error":
       return patch(state, { error: action.message, windowExhausted: false });

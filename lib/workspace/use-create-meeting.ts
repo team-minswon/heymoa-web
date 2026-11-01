@@ -5,14 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
+import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
 import {
   getGetNotesQueryKey,
   type getNotesResponse,
   useCreateNote,
 } from "@/lib/api/generated/notes/notes";
-
-/** 만들기 요청이 응답 없이 기다리는 한도. 정상은 수십 ms 라 닿지 않는다. */
-const CREATE_TIMEOUT_MS = 20_000;
 
 /**
  * "새 노트" 진입점의 단일 출처 —
@@ -24,7 +22,7 @@ export function useCreateMeeting(workspaceId: string) {
   const queryClient = useQueryClient();
   // 연결이 반쯤 끊기면 응답이 영영 안 온다 — 만들기 창이 그동안 잠겨 있어 한도를 둔다(APP-1139)
   const createNote = useCreateNote({
-    request: { timeoutMs: CREATE_TIMEOUT_MS },
+    request: { timeoutMs: REQUEST_TIMEOUT_MS },
   });
   const { selectedProjectId, projects } = useWorkspaceShell();
   const { startFreshChat } = usePersonalChat();

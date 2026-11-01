@@ -13,6 +13,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 import { track, trackConversion } from "@/lib/analytics/track";
+import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { toast } from "@/lib/ui/toast";
 import {
@@ -44,6 +45,8 @@ import {
   type RecordingSession,
 } from "@/lib/transcription/recording-state";
 import {
+  CAPTURE_STOPPED_MESSAGE,
+  CAPTURE_STOPPED_TOAST,
   interruptedMessage,
   meetingEndedMessage,
   runtimeFailureMessage,
@@ -82,8 +85,6 @@ export type RecordingRuntime = {
   createSession: (options: RealtimeSessionOptions) => RealtimeSessionController;
 };
 
-export type LocalRecordingSession = RecordingSession;
-
 export type RecordingApi = {
   startSession: (noteId: string) => Promise<RecordingSession>;
 };
@@ -91,12 +92,11 @@ export type RecordingApi = {
 export type { RecordingPhase };
 
 export type RecordingContextValue = {
-  session: LocalRecordingSession | null;
+  session: RecordingSession | null;
   activeNoteId: string | null;
   /**
-   * 녹음 중인 노트의 워크스페이스. 계약이 안 알려줘서(노트 응답에는 `projectId` 만, 세션
-   * 응답에는 둘 다 없다) `start()` 가 받아 든다. 세션이 생기는 길은 `start()` 하나뿐이라
-   * 녹음 중인데 이 값이 비는 일은 없다.
+   * 녹음 중인 노트의 워크스페이스. 세션 응답에는 없어서 `start()` 가 받아 든다. 세션이 생기는
+   * 길은 `start()` 하나뿐이라 녹음 중인데 이 값이 비는 일은 없다.
    */
   activeWorkspaceId: string | null;
   phase: RecordingPhase;
@@ -183,20 +183,6 @@ export function isWorkspaceRecordingActive(
 }
 
 /**
- * `stop()`이 이 노트의 녹음을 곱게 끝낼 수 있는가 — 연결돼 녹음 중일 때(`recording`)만이다.
- * `requesting-permission`/`connecting`은 `start()`가 아직 세션을 만드는 중이고 취소 안전하지
- * 않아, 여기서 `stop()`을 부르면 컨트롤러만 닫히고 시작 흐름이 이어져 고아 세션을 남긴다 —
- * 그래서 stoppable이 아니라 "차단(대기)"으로 둔다. `stopping`은 이미 멈추는 중, `failed`는
- * 컨트롤러가 비어 no-op이라 모두 빠진다.
- */
-export function isRecordingStoppable(
-  recording: Pick<RecordingContextValue, "activeNoteId" | "phase">,
-  noteId: string
-): boolean {
-  return recording.activeNoteId === noteId && recording.phase === "recording";
-}
-
-/**
  * 이 노트의 녹음이 아직 시작 중인가(권한 요청·연결). 이 창에서는 회의를 끝내면 안 된다 —
  * 서버 세션이 아직 없어 종료가 성공해 버리고, 진행 중인 start()가 이어져 종료된 노트에 고아
  * 전사 세션을 만든다. 연결이 끝나 `recording`이 되면 곱게 일시정지한 뒤 종료할 수 있다.
@@ -219,6 +205,9 @@ const browserRuntime: RecordingRuntime = {
 /** 받아쓰기가 이만큼 이어서 멈춰 있을 때만 알린다. 업체 503 은 대개 1초 안에 풀린다. */
 const DEGRADED_NOTICE_AFTER_MS = 5_000;
 
+/** 레벨 막대가 보여 주는 최근 값의 수. */
+const LEVEL_HISTORY_LENGTH = 24;
+
 export function RecordingProvider({
   children,
   api: apiOverride,
@@ -231,9 +220,12 @@ export function RecordingProvider({
   enablePolling?: boolean;
 }) {
   const queryClient = useQueryClient();
-  // 시작 실패 문구는 이 provider 가 `error` 로 띄운다. 전역 토스트까지 뜨면 같은 실패에 둘이 선다
   const startSessionMutation = useStartTranscriptionSession({
+    // 시작 실패 문구는 이 provider 가 `error` 로 띄운다. 전역 토스트까지 뜨면 같은 실패에 둘이 선다
     mutation: { meta: { suppressErrorToast: true } },
+    // 연결이 반쯤 끊기면 응답이 영영 안 와 「녹음 시작 중」에 갇히고 회의 종료도 잠긴다(APP-1472).
+    // 시한 뒤 다시 눌러도 서버가 같은 READY 세션을 200 으로 돌려줘 세션이 둘 생기지 않는다
+    request: { timeoutMs: REQUEST_TIMEOUT_MS },
   });
   /**
    * 녹음 상태는 reducer 하나가 정하고, 마지막 값은 `latest` 로 곧바로 읽는다. `stop()` 은 `await`
@@ -259,7 +251,7 @@ export function RecordingProvider({
   );
   const [level, setLevel] = useState(0);
   const [levelHistory, setLevelHistory] = useState<number[]>(() =>
-    Array(24).fill(0)
+    Array(LEVEL_HISTORY_LENGTH).fill(0)
   );
   const smoothedLevelRef = useRef(0);
   const degradedTimerRef = useRef<number | undefined>(undefined);
@@ -274,12 +266,8 @@ export function RecordingProvider({
    * 세션만 되살아나면 아무도 안 보는 고아가 만료될 때까지 남는다.
    */
   const teardownCountRef = useRef(0);
-  const hasOpenSession =
-    session?.status === "READY" || session?.status === "ACTIVE";
-  const shouldPoll =
-    enablePolling &&
-    Boolean(session?.sessionId) &&
-    (ACTIVE_PHASES.has(phase) || (phase === "failed" && hasOpenSession));
+  const live = isRecordingLive({ phase, session });
+  const shouldPoll = enablePolling && Boolean(session?.sessionId) && live;
   const sessionQuery = useGetTranscriptionSession(session?.sessionId ?? "", {
     query: {
       enabled: shouldPoll,
@@ -365,8 +353,7 @@ export function RecordingProvider({
     degradedTimerRef.current = undefined;
   }, []);
 
-  const liveNoteId =
-    activeNoteId && isRecordingLive({ phase, session }) ? activeNoteId : null;
+  const liveNoteId = activeNoteId && live ? activeNoteId : null;
   // 새로고침한 탭의 첫 상태가 idle 이다. 그때 지우면 독이 제 녹음에 잠기고, 식게 두면 다른 탭이
   // 산 탭의 ID 를 이어받는다. 그래서 idle 은 제 기록의 박동만 이어 간다.
   useEffect(() => {
@@ -397,7 +384,7 @@ export function RecordingProvider({
   const clearLevel = useCallback(() => {
     smoothedLevelRef.current = 0;
     setLevel(0);
-    setLevelHistory(Array(24).fill(0));
+    setLevelHistory(Array(LEVEL_HISTORY_LENGTH).fill(0));
   }, []);
 
   const api = useMemo<RecordingApi>(
@@ -448,7 +435,7 @@ export function RecordingProvider({
   );
 
   const completeRecording = useCallback(
-    (completed: LocalRecordingSession | null) => {
+    (completed: RecordingSession | null) => {
       cancelDegradedTimer();
       dispatch({ type: "completed", session: completed });
       clearLevel();
@@ -630,7 +617,7 @@ export function RecordingProvider({
     });
     stopPromiseRef.current = stopPromise;
     return stopPromise;
-  }, [clearLevel, dispatch, failRecording, latest]);
+  }, [clearLevel, dispatch, failRecording]);
 
   const start = useCallback(
     async (noteId: string, workspaceId: string) => {
@@ -681,13 +668,9 @@ export function RecordingProvider({
         onCaptureError: (code) => {
           if (controllerRef.current !== controller) return;
           logTranscription("capture_error", { noteId, code });
-          // Drain queued audio and end the server session after a fatal native failure.
-          dispatch({
-            type: "error",
-            message:
-              "소리 캡처가 중단됐습니다. 마지막 소리 일부가 저장되지 않았을 수 있습니다.",
-          });
-          toast.error("소리 캡처가 중단됐습니다. 녹음 상태를 확인해 주세요.", {
+          // 캡처가 되살아나지 않는다. 쌓인 소리를 마저 올리고 서버 세션을 끝낸다
+          dispatch({ type: "error", message: CAPTURE_STOPPED_MESSAGE });
+          toast.error(CAPTURE_STOPPED_TOAST, {
             id: "desktop-capture-failed",
             description: `오류 코드: ${code}`,
           });
@@ -769,10 +752,9 @@ export function RecordingProvider({
         });
         dispatch({ type: "start-failed", message: startErrorMessage(cause) });
         clearLevel();
-        // 연 뒤에 회의가 끝났다(APP-1319). 자동 종료는 코드가 따로다(APP-1328). 노트를 다시 읽어야 상단 안내가 왜 끝났는지 말한다.
-        const code = errorCodeOf(cause);
-        if (code === "MEETING_ALREADY_ENDED" || code === "MEETING_AUTO_ENDED")
-          invalidateLifecycleQueries(noteId);
+        // 실패가 무엇이든 노트를 다시 읽는다. 연 뒤에 회의가 끝났으면(APP-1319·1328) 상단 안내가 왜
+        // 끝났는지 말하고, 응답만 못 받았으면(APP-1472) 서버가 만든 세션으로 바뀐 회의 상태를 따라간다
+        invalidateLifecycleQueries(noteId);
       }
     },
     [

@@ -44,8 +44,9 @@ function wordsOf(card: Record<string, unknown>): string[] {
 afterEach(cleanup);
 
 describe("공용 승인 카드 예시", () => {
-  it("승인을 묻는 도구 23종이 전부 있다", () => {
-    expect((examples as Example[]).map((each) => each.tool)).toHaveLength(23);
+  // 안건 쓰기 카드 셋은 ai 가 도구를 걷어 원본에서 빠졌다(APP-1054). 사본이 늦게 따라왔다(APP-1479)
+  it("승인을 묻는 도구 20종이 전부 있다", () => {
+    expect((examples as Example[]).map((each) => each.tool)).toHaveLength(20);
   });
 
   it.each((examples as Example[]).map((each) => [each.tool, each] as const))(

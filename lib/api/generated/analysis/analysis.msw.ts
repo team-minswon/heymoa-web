@@ -76,6 +76,7 @@ export const getGetAnalysisFlowResponseMock =
         { region: "RELATIONS", status: "SUCCEEDED" },
         { region: "ITEM_ENRICHMENT", status: "PENDING" },
       ],
+      retryable: false,
     },
     error: null,
   });

@@ -1629,7 +1629,7 @@ describe("NotePanel", () => {
       const { rerender } = renderDock(view);
 
       expect(screen.getByRole("status")).toHaveTextContent(
-        "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 기기에 저장 중"
+        "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 탭에 모아 두는 중 · 연결될 때까지 탭을 열어 두세요"
       );
 
       recordingState.connectionNotice = null;

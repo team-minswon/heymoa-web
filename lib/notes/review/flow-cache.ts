@@ -36,6 +36,9 @@ export function flowPollInterval(
  * 흐름 상태를 바꾸는 요청(분석 재요청 · 확정)이 받아들여지면 캐시의 상태를 먼저 옮긴다. 뒤따르는 재조회가
  * 실패해도 화면이 옛 상태(분석 실패 · 검토 가능)에 머물러 이미 끝난 조작을 다시 내밀지 않게 한다.
  * 서버 값으로의 수렴은 호출부의 재조회가 맡는다.
+ *
+ * `retryable` 은 거짓으로 둔다. 방금 받아들여진 요청이 진행 중이라 서버도 다시 받지 않는다 — 옛 참이 남으면
+ * 재조회가 오는 동안 「분석 중」 옆에 요청 버튼이 다시 선다(APP-1475).
  */
 export function moveFlowStatus(
   queryClient: QueryClient,
@@ -48,7 +51,10 @@ export function moveFlowStatus(
       previous?.status === 200 && previous.data.success
         ? ({
             ...previous,
-            data: { ...previous.data, data: { ...previous.data.data, status } },
+            data: {
+              ...previous.data,
+              data: { ...previous.data.data, status, retryable: false },
+            },
           } as getAnalysisFlowResponse)
         : previous
   );

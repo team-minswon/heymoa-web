@@ -2242,7 +2242,7 @@ paths:
       tags:
       - Analysis
       summary: 분석 재요청
-      description: '**워크스페이스 멤버 누구나** 분석 실패·요청 전 노트의 회의 분석을 다시 요청한다. 다른 상태면 409 이고, 결과는 콜백으로 온다. 응답에 **요청 뒤의 흐름 상태**가 실린다.'
+      description: '**워크스페이스 멤버 누구나** 노트의 회의 분석을 다시 요청한다. 흐름 조회의 retryable 이 true 일 때만 받고 아니면 409 이다(분석 입력 준비 전 포함). 결과는 콜백으로 온다. 응답에 **요청 뒤의 흐름 상태**가 실린다.'
       operationId: requestAnalysis
       parameters:
       - name: noteId
@@ -4791,7 +4791,7 @@ paths:
       tags:
       - Analysis
       summary: 회의 뒤 분석 흐름 조회
-      description: 노트의 회의 뒤 분석 흐름 상태를 조회한다. 워크스페이스 멤버가 읽고, 저장된 사실에서 조회 때 계산한다.
+      description: 노트의 회의 뒤 분석 흐름 상태를 조회한다. 워크스페이스 멤버가 읽고, 저장된 사실에서 조회 때 계산한다. retryable 은 지금 다시 요청하면 받아들여지는지이고 다시 요청 API 와 같은 판정이다.
       operationId: getAnalysisFlow
       parameters:
       - name: noteId
@@ -4825,6 +4825,7 @@ paths:
                         status: SUCCEEDED
                       - region: ITEM_ENRICHMENT
                         status: PENDING
+                      retryable: false
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -13261,6 +13262,7 @@ components:
           required:
           - noteId
           - regions
+          - retryable
           - status
           type: object
           properties:
@@ -13272,7 +13274,7 @@ components:
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
             status:
               type: string
-              description: 흐름 상태. 분석 실패·요청 전이면 회의 시작자가 다시 요청할 수 있다. DIARIZING 은 이름만 옛 것이고 회의 종료 전이거나 녹음 봉인 전(분석 전)을 뜻한다
+              description: 흐름 상태. 다시 요청할 수 있는지는 retryable 이 정한다. DIARIZING 은 이름만 옛 것이고 회의 종료 전이거나, 종료 뒤 녹음 봉인·발화 반영이 끝나지 않아 분석 입력이 준비 전인 것이다. 종료 뒤 analysis.request-timeout 이 지나도 준비되지 않으면 ANALYSIS_FAILED(retryable=false) 다
               nullable: false
               example: REVIEWABLE
               enum:
@@ -13310,6 +13312,9 @@ components:
                     - SUCCEEDED
                     - FAILED
                     - SKIPPED
+            retryable:
+              type: boolean
+              description: 지금 분석을 다시 요청하면(POST /v1/notes/{noteId}/analyses) 서버가 받아들이는지. 수동 재요청과 같은 판정이다. 요청 전·분석 실패라도 분석 입력이 준비 전이면 false 이고 그때 요청은 409 다. 검토 가능이면 담당·관계를 다시 보낼 수 있을 때만 true
           description: 성공 응답 데이터
           nullable: false
         success:

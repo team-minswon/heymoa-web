@@ -94,7 +94,7 @@ export const getRequestAnalysisUrl = (noteId: string) => {
 };
 
 /**
- * **워크스페이스 멤버 누구나** 분석 실패·요청 전 노트의 회의 분석을 다시 요청한다. 다른 상태면 409 이고, 결과는 콜백으로 온다. 응답에 **요청 뒤의 흐름 상태**가 실린다.
+ * **워크스페이스 멤버 누구나** 노트의 회의 분석을 다시 요청한다. 흐름 조회의 retryable 이 true 일 때만 받고 아니면 409 이다(분석 입력 준비 전 포함). 결과는 콜백으로 온다. 응답에 **요청 뒤의 흐름 상태**가 실린다.
  * @summary 분석 재요청
  */
 export const requestAnalysis = async (
@@ -332,7 +332,7 @@ export const getGetAnalysisFlowUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 회의 뒤 분석 흐름 상태를 조회한다. 워크스페이스 멤버가 읽고, 저장된 사실에서 조회 때 계산한다.
+ * 노트의 회의 뒤 분석 흐름 상태를 조회한다. 워크스페이스 멤버가 읽고, 저장된 사실에서 조회 때 계산한다. retryable 은 지금 다시 요청하면 받아들여지는지이고 다시 요청 API 와 같은 판정이다.
  * @summary 회의 뒤 분석 흐름 조회
  */
 export const getAnalysisFlow = async (

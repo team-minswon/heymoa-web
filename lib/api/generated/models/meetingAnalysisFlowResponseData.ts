@@ -17,8 +17,10 @@ export type MeetingAnalysisFlowResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
-  /** 흐름 상태. 분석 실패·요청 전이면 회의 시작자가 다시 요청할 수 있다. DIARIZING 은 이름만 옛 것이고 회의 종료 전이거나 녹음 봉인 전(분석 전)을 뜻한다 */
+  /** 흐름 상태. 다시 요청할 수 있는지는 retryable 이 정한다. DIARIZING 은 이름만 옛 것이고 회의 종료 전이거나, 종료 뒤 녹음 봉인·발화 반영이 끝나지 않아 분석 입력이 준비 전인 것이다. 종료 뒤 analysis.request-timeout 이 지나도 준비되지 않으면 ANALYSIS_FAILED(retryable=false) 다 */
   status: MeetingAnalysisFlowResponseDataStatus;
   /** 분석 영역별 진행. 분석 요청 전이면 빈 배열 */
   regions: MeetingAnalysisFlowResponseDataRegionsItem[];
+  /** 지금 분석을 다시 요청하면(POST /v1/notes/{noteId}/analyses) 서버가 받아들이는지. 수동 재요청과 같은 판정이다. 요청 전·분석 실패라도 분석 입력이 준비 전이면 false 이고 그때 요청은 409 다. 검토 가능이면 담당·관계를 다시 보낼 수 있을 때만 true */
+  retryable: boolean;
 };

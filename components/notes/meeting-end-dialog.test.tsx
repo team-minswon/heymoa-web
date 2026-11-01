@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
+import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
 import type { Participant } from "@/components/notes/note-participants";
 
 const participant = (id: string, name: string): Participant => ({
@@ -54,6 +55,7 @@ const state = vi.hoisted(() => ({
   pending: false,
   realMutation: false,
   request: vi.fn(),
+  requestOptions: undefined as unknown,
 }));
 
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: state.toastError } }));
@@ -64,7 +66,6 @@ vi.mock("@/components/transcription/recording-provider", async () => {
   >("@/components/transcription/recording-provider");
   return {
     isNoteRecordingActive: actual.isNoteRecordingActive,
-    isRecordingStoppable: actual.isRecordingStoppable,
     isRecordingStarting: actual.isRecordingStarting,
     useRecording: () => ({
       activeNoteId: state.activeNoteId,
@@ -87,7 +88,8 @@ vi.mock("@/lib/api/generated/analysis/analysis", async () => {
     typeof import("@tanstack/react-query")
   >("@tanstack/react-query");
   return {
-    useEndMeeting: (options?: { mutation?: object }) => {
+    useEndMeeting: (options?: { mutation?: object; request?: object }) => {
+      state.requestOptions = options?.request;
       const mutation = useMutation({
         mutationFn: () => state.request(),
         ...options?.mutation,
@@ -494,6 +496,43 @@ describe("MeetingEndDialog", () => {
 
     expect(state.stopMock).not.toHaveBeenCalled();
     expect(state.endMock).toHaveBeenCalledOnce();
+  });
+
+  // 시한이 지나 끊기는 동작 자체는 `fetcher.test.ts` 가 본다. 여기서는 이 창이 시한을 넘기는지와
+  // 시한 오류를 받은 뒤 다시 누를 수 있게 풀리는지를 본다(APP-1472)
+  it("종료 요청에 사람을 기다리게 하는 호출의 시한을 넘긴다", () => {
+    renderDialog();
+
+    expect(state.requestOptions).toEqual({ timeoutMs: REQUEST_TIMEOUT_MS });
+  });
+
+  it("종료 요청이 시한 오류로 끝나면 알리고 다시 누를 수 있게 풀린다", async () => {
+    state.realMutation = true;
+    let fail!: (error: unknown) => void;
+    state.request.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          fail = reject;
+        })
+    );
+    renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "회의 종료" })).toBeDisabled()
+    );
+
+    await act(async () =>
+      fail({
+        success: false,
+        data: null,
+        error: { code: "REQUEST_TIMEOUT", message: "응답이 오지 않습니다." },
+      })
+    );
+
+    await waitFor(() =>
+      expect(state.toastError).toHaveBeenCalledWith("응답이 오지 않습니다.")
+    );
+    expect(screen.getByRole("button", { name: "회의 종료" })).toBeEnabled();
   });
 
   /**

@@ -30,7 +30,7 @@ function notice(
 
 const DISCONNECTED = { cause: "disconnected", sinceMs: 0 } as const;
 const WARNING =
-  "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 기기에 저장 중";
+  "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 탭에 모아 두는 중 · 연결될 때까지 탭을 열어 두세요";
 
 describe("RecordingConnectionNotice", () => {
   afterEach(() => {
@@ -93,7 +93,7 @@ describe("RecordingConnectionNotice", () => {
 
       const alert = screen.getByRole("alert");
       expect(alert).toHaveTextContent("저장이 밀려 녹음을 잠시 멈췄어요");
-      expect(alert).not.toHaveTextContent("이 기기에 저장 중");
+      expect(alert).not.toHaveTextContent("이 탭에 모아 두는 중");
       expect(screen.queryByRole("status")).toBeNull();
     }
   );

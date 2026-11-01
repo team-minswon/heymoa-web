@@ -11,7 +11,7 @@ const tsidSchema = z
  *
  * 총 샘플 수는 안 보낸다 — 서버가 바이트를 세면 되고, 브라우저에게 물으면 추측이 계약으로 굳는다.
  */
-export const clientCommandSchema = z.discriminatedUnion("type", [
+const clientCommandSchema = z.discriminatedUnion("type", [
   // 나가는 쪽은 web 이 producer 라 아래 서버 이벤트와 달리 엄격하게 둔다.
   z.strictObject({
     type: z.literal("stop"),
@@ -60,7 +60,7 @@ const partialEventSchema = z.object({
  *
  * 드리프트는 server 의 `AsyncApiContractTest`·`AsyncApiMessageCoverageTest` 가 잡는다.
  */
-export const serverEventSchema = z.discriminatedUnion("type", [
+const serverEventSchema = z.discriminatedUnion("type", [
   // 세션에 붙었다(부착). 브라우저는 durableThroughSeq 다음 조각부터 버퍼에서 다시 보낸다.
   z.object({
     type: z.literal("connected"),

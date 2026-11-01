@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
   type endMeetingResponse,
@@ -66,8 +67,11 @@ export function MeetingEndDialog({
 }) {
   const queryClient = useQueryClient();
   const recording = useRecording();
-  // 인라인 차단 안내가 사유를 소유하므로 전역 토스트는 끈다 — 인라인이 없는 실패만 토스트한다.
   const endMeeting = useEndMeeting({
+    // 응답이 안 오면 이 창이 잠긴 채 남는다(APP-1472). 시한 뒤 다시 누르면 이미 끝난 회의는
+    // MEETING_ALREADY_ENDED 로 수렴한다
+    request: { timeoutMs: REQUEST_TIMEOUT_MS },
+    // 인라인 차단 안내가 사유를 소유하므로 전역 토스트는 끈다 — 인라인이 없는 실패만 토스트한다.
     mutation: {
       meta: { suppressErrorToast: true },
       // meeting.ended가 HTTP 응답보다 먼저 제어를 제거해도 종료 결과를 반영한다.
@@ -220,7 +224,8 @@ export function MeetingEndDialog({
 
         <div className="flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5 text-xs text-[var(--el-muted)]">
           <Mic className="size-3.5" />
-          녹음 상태 · {meetingStatus === "IN_PROGRESS" ? "기록 중" : "일시정지됨"}
+          녹음 상태 ·{" "}
+          {meetingStatus === "IN_PROGRESS" ? "기록 중" : "일시정지됨"}
         </div>
 
         {blocked ? (

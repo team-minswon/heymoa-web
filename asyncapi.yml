@@ -1083,7 +1083,7 @@ components:
             format: date-time
             nullable: true
           recordedDurationMs:
-            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            description: 회의 축의 끝(ms) — 시작한 세션마다 원점 + 길이 중 가장 늦은 자리. 열린 세션은 원점까지만 센다. 화면의 녹음 시계가 이 값 위에 activeSessionStartedAt 부터 잰다
             type: integer
             format: int64
             minimum: 0
@@ -1120,7 +1120,7 @@ components:
             format: date-time
             nullable: true
           recordedDurationMs:
-            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            description: 회의 축의 끝(ms) — 시작한 세션마다 원점 + 길이 중 가장 늦은 자리. 열린 세션은 원점까지만 센다. 화면의 녹음 시계가 이 값 위에 activeSessionStartedAt 부터 잰다
             type: integer
             format: int64
             minimum: 0
@@ -1159,7 +1159,7 @@ components:
             format: date-time
             nullable: true
           recordedDurationMs:
-            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            description: 회의 축의 끝(ms) — 시작한 세션마다 원점 + 길이 중 가장 늦은 자리. 열린 세션은 원점까지만 센다. 화면의 녹음 시계가 이 값 위에 activeSessionStartedAt 부터 잰다
             type: integer
             format: int64
             minimum: 0
@@ -1200,7 +1200,7 @@ components:
             format: date-time
             nullable: true
           recordedDurationMs:
-            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            description: 회의 축의 끝(ms) — 시작한 세션마다 원점 + 길이 중 가장 늦은 자리. 열린 세션은 원점까지만 센다. 화면의 녹음 시계가 이 값 위에 activeSessionStartedAt 부터 잰다
             type: integer
             format: int64
             minimum: 0
