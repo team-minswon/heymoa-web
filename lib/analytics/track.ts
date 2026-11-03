@@ -565,9 +565,8 @@ export function initAnalytics(apiKey: string) {
   posthog.init(apiKey, {
     // 켜기 전에 쌓인 browser_handoff_arrived도 아래에서 이 ID로 나간다.
     ...(bootstrap && { bootstrap }),
-    // ponytail: 광고 차단기에 막히는 만큼 덜 잡힌다. 많이 빠지면 next.config rewrites로
-    // `/ingest` 프록시를 둔다(proxy.ts matcher에서 그 경로를 빼야 토큰 갱신이 안 돈다).
-    api_host: "https://us.i.posthog.com",
+    api_host: "https://t.heymoa.app",
+    ui_host: "https://us.posthog.com",
     defaults: "2026-08-30",
     person_profiles: "identified_only",
     // 화면 글자를 가져가는 수집은 전부 끈다. 전사·요약이 화면에 그대로 있고, 처리방침이

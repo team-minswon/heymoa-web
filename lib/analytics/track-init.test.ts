@@ -32,6 +32,8 @@ describe("PostHog를 켜기 전에 난 이벤트", () => {
 
     // 기능 플래그 요청은 identify 때 userId 를 before_send 밖으로 보낸다 — 쓰지 않으므로 끈다
     expect(posthog.init.mock.calls[0][1]).toMatchObject({
+      api_host: "https://t.heymoa.app",
+      ui_host: "https://us.posthog.com",
       advanced_disable_flags: true,
       autocapture: false,
       disable_session_recording: true,
