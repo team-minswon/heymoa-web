@@ -3,6 +3,7 @@ import privacy20260904 from "@/content/legal/privacy/2026-09-04.json";
 import privacy20261012 from "@/content/legal/privacy/2026-10-12.json";
 import privacy20261018 from "@/content/legal/privacy/2026-10-18.json";
 import privacy20261022 from "@/content/legal/privacy/2026-10-22.json";
+import privacy20261023 from "@/content/legal/privacy/2026-10-23.json";
 import terms20260717 from "@/content/legal/terms/2026-07-17.json";
 import terms20260904 from "@/content/legal/terms/2026-09-04.json";
 import terms20261018 from "@/content/legal/terms/2026-10-18.json";
@@ -37,6 +38,7 @@ export const LEGAL_ARCHIVE = {
     "2026-10-12": privacy20261012,
     "2026-10-18": privacy20261018,
     "2026-10-22": privacy20261022,
+    "2026-10-23": privacy20261023,
   },
   terms: {
     "2026-07-17": terms20260717,

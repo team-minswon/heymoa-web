@@ -222,7 +222,7 @@
         "title": "4. AI Processing and Training",
         "body": [
           "HeyMoa does not use your meeting audio, transcripts, notes, questions, or answers to train AI models. The speech recognition and AI providers HeyMoa engages receive this data only on terms that it is not used for training. External AI agents that you connect yourself are subject to their own policies.",
-          "To produce summaries, real-time organization, and answers to questions, the meeting's transcript, notes, attendee names, and your questions are sent to large language model providers (Article 7). These requests are made on terms that inputs and outputs are not stored (zero data retention).",
+          "To produce summaries, real-time organization, and answers to questions, the meeting's transcript, notes, attendee names, and your questions are sent to large language model providers (Article 7). These requests are made on terms that the data is not used for training.",
           "When the agent uses web search, search queries made for your question are sent to the AI model provider's search feature (Article 7).",
           "A search index is built from transcripts and notes and kept so that past meeting notes can be found and referenced. The index is deleted when the original note is deleted.",
           "HeyMoa does not make decisions based solely on AI results that significantly affect your rights or obligations (automated decisions under Article 37-2 of the Personal Information Protection Act). AI summaries are for reference only.",
@@ -347,7 +347,7 @@
           "HeyMoa does not provide or sell your personal information to third parties. When you share meeting notes by email yourself or connect an external tool or external AI agent, the data goes where you chose.",
           "To operate the Service, HeyMoa entrusts processing to the providers below to the extent necessary. Personal information is transferred abroad to providers outside the Republic of Korea. This entrustment is necessary to perform the service contract. The following is disclosed under Article 28-8(1)(3) of the Personal Information Protection Act.",
           "All transfers use encrypted network transmission. The retention periods below are taken from each provider's published policy as of October 22, 2026.",
-          "OpenRouter further entrusts processing to AI model providers (OpenAI, Microsoft, TypeSafe) (sub-processing). HeyMoa sends these requests on terms that inputs and outputs are not stored (zero data retention) and are not used for training.",
+          "OpenRouter further entrusts processing to AI model providers (OpenAI, Microsoft, TypeSafe) (sub-processing). HeyMoa sends these requests on terms that the data is not used for training. Retention of inputs and outputs follows each provider's policy.",
           "If you do not want your information transferred abroad, you can refuse by not using the feature or by disconnecting it. If you refuse transfers needed for speech recognition, speaker separation, AI summaries, or web hosting, you cannot use those features. Analytics tools can be refused as described in Article 5 (except records the server sends to PostHog), and refusing them does not limit your use of the Service.",
           {
             "columns": [
@@ -495,7 +495,7 @@
               ],
               [
                 "Retention",
-                "Requested with zero data retention, so inputs and outputs are not stored. Processing records such as request time and usage follow the OpenRouter privacy policy (no period is published)"
+                "Requested on terms that the data is not used for training. Inputs, outputs, and processing records such as request time and usage follow the OpenRouter privacy policy"
               ]
             ]
           },
@@ -525,7 +525,7 @@
               ],
               [
                 "Retention",
-                "Processed under zero data retention, so inputs and outputs are not stored. Not used for training"
+                "Not used for training. Retention of inputs and outputs follows the provider's policy"
               ]
             ]
           },
@@ -555,7 +555,7 @@
               ],
               [
                 "Retention",
-                "Processed under zero data retention, so inputs and outputs are not stored. Not used for training"
+                "Not used for training. Retention of inputs and outputs follows the provider's policy"
               ]
             ]
           },
@@ -585,7 +585,7 @@
               ],
               [
                 "Retention",
-                "Processed under zero data retention, so inputs and outputs are not stored. Not used for training"
+                "Not used for training. Retention of inputs and outputs follows the provider's policy"
               ]
             ]
           },

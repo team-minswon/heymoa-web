@@ -22,9 +22,9 @@ type LegalDates = { announced: string | null; effective: string | null };
  * 시행하고 나서 본문을 다시 고치면, 그 전에 지금 본문을 `lib/legal-archive.ts` 에 얼려 넣고 여기 날짜를 새로 쓴다.
  */
 export const LEGAL_CURRENT: Record<LegalDoc, LegalDates> = {
-  // APP-1385 개정본. 탈퇴·워크스페이스 삭제·음성 자동 삭제가 운영에 나가는 날 시행한다. 베타라 7일 공고·별도 공지 없이
-  // 공고일과 같은 날 시행한다(사용자 결정, 2026-10-23). 직전 판(2026-10-22)은 `lib/legal-archive.ts` 에 있다.
-  privacy: { announced: "2026-10-23", effective: "2026-10-23" },
+  // APP-1481 개정본. 외부 AI 요청에서 무보관 조건을 뺀 날 시행한다. 베타·무상이라 공고 기간 없이 같은 날 시행한다
+  // (사용자 결정, 2026-11-03). 직전 판(2026-10-23)은 `lib/legal-archive.ts` 에 있다. 동의 버전은 올리지 않는다.
+  privacy: { announced: "2026-11-03", effective: "2026-11-03" },
   terms: { announced: "2026-10-23", effective: "2026-10-23" },
 };
 
