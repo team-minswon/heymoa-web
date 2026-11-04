@@ -4,6 +4,7 @@ import { getGetNoteAgendasQueryOptions } from "@/lib/api/generated/notes/notes";
 import { getGetProposalsQueryOptions } from "@/lib/api/generated/proposals/proposals";
 import { getGetNoteTranscriptQueryOptions } from "@/lib/api/generated/transcription/transcription";
 import { okData } from "@/lib/api/ok-data";
+import { webMessage } from "@/lib/i18n/web-message";
 import {
   initialContextState,
   reduceContextEvent,
@@ -81,7 +82,7 @@ export async function loadTranscript(
       staleTime: FRESH_MS,
     })
   );
-  if (!transcript) throw new Error("전사를 불러오지 못했습니다");
+  if (!transcript) throw new Error(webMessage("transcriptLoadFailed"));
   const diarized = transcript.diarization.status === "MAPPED";
   return {
     rows: interleaveTranscript(

@@ -415,7 +415,12 @@ export function ShareMailDialog({
 
               {problem ? (
                 <InlineNote id={problemId} role="alert" tone="error">
-                  {problem}
+                  {problem.kind === "invalid"
+                    ? t("problem.invalid", { emails: problem.emails })
+                    : t("problem.tooMany", {
+                        max: problem.max,
+                        extra: problem.extra,
+                      })}
                 </InlineNote>
               ) : null}
 

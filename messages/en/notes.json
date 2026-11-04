@@ -887,6 +887,10 @@
         "attachment": "Attached: {contents}",
         "contentsMinutes": "Meeting notes",
         "contentsBoth": "Meeting notes · Transcript"
+      },
+      "problem": {
+        "invalid": "{emails}: Invalid email format. Remove these addresses and enter them again.",
+        "tooMany": "{extra, plural, one {You can send to up to {max} people at once. Remove # person.} other {You can send to up to {max} people at once. Remove # people.}}"
       }
     }
   },

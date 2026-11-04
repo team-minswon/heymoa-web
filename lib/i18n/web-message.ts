@@ -12,6 +12,13 @@ export type WebMessageKey = keyof typeof ko;
  *
  * `i18n/messages.ts` 를 import 하지 않는다. 랜딩·가이드 문구까지 fetcher 를 쓰는 모든 번들에 실린다.
  */
-export function webMessage(key: WebMessageKey): string {
-  return (documentLocale() === "en" ? en : ko)[key];
+export function webMessage(
+  key: WebMessageKey,
+  values: Record<string, string> = {}
+): string {
+  // 자리표시자는 `{name}` 하나뿐이다(복수·select 가 필요한 문구는 컴포넌트가 `useTranslations` 로 그린다)
+  return (documentLocale() === "en" ? en : ko)[key].replace(
+    /\{(\w+)\}/g,
+    (whole, name: string) => values[name] ?? whole
+  );
 }

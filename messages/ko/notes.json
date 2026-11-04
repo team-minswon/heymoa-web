@@ -887,6 +887,10 @@
         "attachment": "첨부에 든 것: {contents}",
         "contentsMinutes": "회의록",
         "contentsBoth": "회의록 · 녹취록"
+      },
+      "problem": {
+        "invalid": "{emails}: 이메일 주소 형식이 아닙니다. 빼고 다시 입력해 주세요.",
+        "tooMany": "한 번에 {max}명까지 보낼 수 있습니다. {extra}명을 빼 주세요."
       }
     }
   },

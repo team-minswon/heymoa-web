@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Home, Loader2, LogIn } from "lucide-react";
@@ -67,6 +68,7 @@ export function CallbackProcessor({
   returnTo?: string;
 } = {}) {
   const router = useRouter();
+  const t = useTranslations("auth.callback");
   const { setUser } = useAuth();
   const [errorDetails, setErrorDetails] = useState<{
     title: string;
@@ -81,8 +83,8 @@ export function CallbackProcessor({
       if (urlError) {
         if (!ignore) {
           setErrorDetails({
-            title: "로그인 거부",
-            description: "로그인이 취소되었거나 거부되었습니다.",
+            title: t("failedTitle"),
+            description: t("failedDescription"),
           });
         }
         return;
@@ -124,8 +126,8 @@ export function CallbackProcessor({
         if (!ignore) {
           console.error("Auth check failed:", error);
           setErrorDetails({
-            title: "로그인에 실패했습니다",
-            description: "인증 정보를 가져오지 못했습니다. 다시 시도해 주세요.",
+            title: t("failedTitle"),
+            description: t("failedDescription"),
           });
         }
       }
@@ -136,7 +138,7 @@ export function CallbackProcessor({
     return () => {
       ignore = true;
     };
-  }, [returnTo, router, setUser, urlError]);
+  }, [returnTo, router, setUser, urlError, t]);
 
   /** 동의 화면의 버튼. 기록이 끝나면 앱으로 들어간다. 기록·확인 실패는 던져 화면이 사유를 보이게 한다. */
   const submitConsent = async () => {
@@ -153,8 +155,8 @@ export function CallbackProcessor({
       console.error("Auth check failed:", error);
       setConsentMode(null);
       setErrorDetails({
-        title: "로그인에 실패했습니다",
-        description: "인증 정보를 가져오지 못했습니다. 다시 시도해 주세요.",
+        title: t("failedTitle"),
+        description: t("failedDescription"),
       });
     }
   };
@@ -185,14 +187,14 @@ export function CallbackProcessor({
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[var(--el-primary)] text-sm font-medium text-white transition hover:bg-[var(--el-primary-active)]"
           >
             <LogIn className="size-4" />
-            다시 로그인
+            {t("retry")}
           </Link>
           <Link
             href="/"
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-[var(--el-hairline-strong)] bg-white text-sm font-medium text-[var(--el-ink)] transition hover:bg-[var(--el-canvas-soft)]"
           >
             <Home className="size-4" />
-            홈으로 이동
+            {t("home")}
           </Link>
         </div>
       </div>
@@ -210,11 +212,9 @@ export function CallbackProcessor({
     <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
       <Loader2 className="mb-5 size-8 animate-spin text-[var(--el-ink)]" />
       <h1 className="text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-        로그인 중입니다
+        {t("signingIn")}
       </h1>
-      <p className="mt-2 text-sm text-[var(--el-muted)]">
-        워크스페이스를 준비하고 있습니다.
-      </p>
+      <p className="mt-2 text-sm text-[var(--el-muted)]">{t("preparing")}</p>
     </div>
   );
 }

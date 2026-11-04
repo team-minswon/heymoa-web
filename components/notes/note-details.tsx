@@ -156,7 +156,8 @@ export function NoteDetails({
 
   // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
   if (!loaded) {
-    throw new Error("노트를 불러오지 못했습니다.");
+    // 경계(`DataBoundary`)가 자기 문구로 그린다. 이 메시지는 화면에 나가지 않는다
+    throw new Error("Note response was empty");
   }
   const note = loaded;
 

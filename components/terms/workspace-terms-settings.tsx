@@ -54,7 +54,10 @@ export function useWorkspaceTermDictionary(workspaceId: string) {
     addKey: getAddWorkspaceTermMutationKey(),
     removeKey: getDeleteWorkspaceTermMutationKey(),
     addOne: async (term) =>
-      termOfResponse(await addWorkspaceTerm(workspaceId, { term })),
+      termOfResponse(
+        await addWorkspaceTerm(workspaceId, { term }),
+        t("addFailed")
+      ),
     addBatch: async (terms): Promise<BatchResult> => {
       const response = await addWorkspaceTerms(workspaceId, { terms });
       const data =

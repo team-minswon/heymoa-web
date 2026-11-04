@@ -21,4 +21,13 @@ describe("webMessage", () => {
     document.documentElement.lang = "fr";
     expect(webMessage("timeout")).toBe(ko.timeout);
   });
+
+  it("자리표시자에 값을 넣는다", () => {
+    document.documentElement.lang = "en";
+    expect(
+      webMessage("pageBlockedByRecordingDetail", { url: "https://x.test/a" })
+    ).toBe(
+      "Finish recording, then try again. To see it now, open it in your browser: https://x.test/a"
+    );
+  });
 });

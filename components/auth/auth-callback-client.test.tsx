@@ -57,7 +57,7 @@ afterEach(() => {
 it("익명 callback은 로그인 실패이며 사용자·제품 조회·returnTo 이동을 시작하지 않는다", async () => {
   mocked.getMe.mockResolvedValue(null);
   render(<CallbackProcessor returnTo="/settings" />);
-  await screen.findByRole("heading", { name: "로그인에 실패했습니다" });
+  await screen.findByRole("heading", { name: "로그인을 마치지 못했습니다" });
   expect(mocked.setUser).not.toHaveBeenCalled();
   expect(mocked.getWorkspaces).not.toHaveBeenCalled();
   expect(mocked.replace).not.toHaveBeenCalled();
