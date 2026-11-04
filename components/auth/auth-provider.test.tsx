@@ -115,6 +115,26 @@ describe("AuthProvider", () => {
     expect(authApi.logout).toHaveBeenCalledOnce();
   });
 
+  it("영어 화면에서 로그아웃하면 영어 랜딩(/en)으로 간다 (APP-1285)", async () => {
+    document.documentElement.lang = "en";
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider initialUser={user}>{children}</AuthProvider>
+      </QueryClientProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(hardNavigate).toHaveBeenCalledWith("/en");
+    document.documentElement.lang = "";
+  });
+
   it("한 렌더에서 연속 클릭해도 리소스 정리와 로그아웃은 한 번만 시작한다", async () => {
     const resources = deferred<void>();
     const beforeLogout = vi.fn(() => resources.promise);
