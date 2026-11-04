@@ -40,7 +40,7 @@ import type {
   RecordConsentRequest,
   UpdateWorkspaceRequest,
 } from "@/lib/api/generated/models";
-import { respond } from "@/lib/mocks/mock-envelope";
+import { failWith, respond } from "@/lib/mocks/mock-envelope";
 import { isEmail } from "@/lib/notes/share-mail/recipients";
 import {
   emitChatsChanged,
@@ -633,6 +633,16 @@ export const restHandlers = [
     data: mockDb.getCurrentUser(),
     error: null,
   })),
+  // 계정 화면 언어(APP-1283 계약 `updateCurrentUser`). 잘못된 값은 계약처럼 400 `BAD_REQUEST` 다.
+  http.patch("*/v1/users/me", async ({ request }) =>
+    respond(async () => {
+      const { language } = (await jsonBody(request)) as { language?: unknown };
+      if (language !== "ko" && language !== "en") {
+        failWith("BAD_REQUEST", 400, "잘못된 요청입니다.");
+      }
+      return mockDb.updateCurrentUserLanguage(language);
+    })
+  ),
   // PRO-69 탈퇴·워크스페이스 삭제 — 계약(openapi3.yml deleteAccount·deleteWorkspace·getDeletionPlan)과 같은 경로
   http.get("*/v1/users/me/deletion-plan", () =>
     respond(() => mockDb.deletionPlan())
