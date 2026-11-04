@@ -5,6 +5,7 @@ import enErrors from "@/messages/en/errors.json";
 import enHelp from "@/messages/en/help.json";
 import enLanding from "@/messages/en/landing.json";
 import enLegal from "@/messages/en/legal.json";
+import enNotes from "@/messages/en/notes.json";
 import enSettings from "@/messages/en/settings.json";
 import enShell from "@/messages/en/shell.json";
 import enWorkspace from "@/messages/en/workspace.json";
@@ -15,6 +16,7 @@ import koErrors from "@/messages/ko/errors.json";
 import koHelp from "@/messages/ko/help.json";
 import koLanding from "@/messages/ko/landing.json";
 import koLegal from "@/messages/ko/legal.json";
+import koNotes from "@/messages/ko/notes.json";
 import koSettings from "@/messages/ko/settings.json";
 import koShell from "@/messages/ko/shell.json";
 import koWorkspace from "@/messages/ko/workspace.json";
@@ -35,6 +37,7 @@ const ko = {
   shell: koShell,
   settings: koSettings,
   workspace: koWorkspace,
+  notes: koNotes,
 };
 
 export type Messages = typeof ko;
@@ -55,6 +58,7 @@ const en: DeepPartial<Messages> = {
   shell: enShell,
   settings: enSettings,
   workspace: enWorkspace,
+  notes: enNotes,
 };
 
 /**

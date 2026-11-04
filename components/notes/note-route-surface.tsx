@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   Sheet,
@@ -25,6 +26,7 @@ export function NoteRouteSurface({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("notes.surface");
   const isFull = view === "full";
   const [hasOpened, setHasOpened] = useState(isOpen);
   if (isOpen && !hasOpened) setHasOpened(true);
@@ -41,7 +43,7 @@ export function NoteRouteSurface({
         onOpenChange={(open) => !open && !isFull && onClose()}
       >
         <SheetContent
-          aria-label="노트"
+          aria-label={t("label")}
           data-surface={isFull ? "full" : "sheet"}
           side="none"
           showCloseButton={false}
@@ -55,8 +57,8 @@ export function NoteRouteSurface({
           )}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>노트</SheetTitle>
-            <SheetDescription>선택한 회의 노트 상세</SheetDescription>
+            <SheetTitle>{t("label")}</SheetTitle>
+            <SheetDescription>{t("description")}</SheetDescription>
           </SheetHeader>
           {children}
         </SheetContent>

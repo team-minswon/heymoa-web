@@ -82,7 +82,7 @@ export function RecordingDock({
    * 이 문구가 대신 선다 — 눌러서 실패하게 두면 "지금 할 수 없음"이 오류로 읽힌다.
    */
   disabledReason?: string | null;
-  startLabel?: "회의 시작" | "재개";
+  startLabel?: string;
   onStart?: () => void;
 }) {
   const recording = useRecording();

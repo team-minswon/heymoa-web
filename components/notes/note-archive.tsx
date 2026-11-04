@@ -3,6 +3,7 @@
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { TranscriptSearch } from "@/components/notes/transcript-search";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
@@ -230,6 +231,8 @@ export const NoteArchive = memo(function NoteArchive({
   /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
   noteMeta?: NoteMeta | null;
 } & TranscriptFocus) {
+  const t = useTranslations("notes.archive");
+  const tActions = useTranslations("common.actions");
   // 종료 뒤에 연 화면에는 노트 소켓이 없어 화자 분리 결과가 오지 않는다. 분리가 끝날
   // 때까지만 전사를 다시 읽는다. 봉인 전에는 전사가 NOT_REQUESTED 라 흐름 상태로 가른다.
   // 흐름은 건강한 이벤트 스트림이면 힌트가 다시 읽는다(PRO-67 I03). 아래 전사 5초는 그대로다 — 화자 분리 상태 변화에는 힌트가 없다.
@@ -1092,18 +1095,18 @@ export const NoteArchive = memo(function NoteArchive({
           ? fresh.data.data.data
           : null;
       if (!payload) {
-        toast.error("화자를 다시 읽지 못해 초기화를 멈췄습니다.");
+        toast.error(t("resetReadFailed"));
         return;
       }
       const labels = labelsToReset(payload.diarization, payload.segments ?? []);
       if (!labels.length) return;
       setPendingReset(labels);
     } catch {
-      toast.error("화자를 다시 읽지 못해 초기화를 멈췄습니다.");
+      toast.error(t("resetReadFailed"));
     } finally {
       setResetting(false);
     }
-  }, [transcriptQuery]);
+  }, [transcriptQuery, t]);
 
   const resetSpeakers = useCallback(
     async (labels: string[]) => {
@@ -1131,7 +1134,7 @@ export const NoteArchive = memo(function NoteArchive({
         }
         // **부분 실패를 성공으로 보이지 않는다.** 몇은 되돌아가고 몇은 남은 화면을 말없이
         // 내주면, 사람은 남은 이름을 「초기화가 안 지우는 것」으로 읽는다.
-        if (failed) toast.error(`화자 ${failed}개를 되돌리지 못했습니다.`);
+        if (failed) toast.error(t("resetFailed", { count: failed }));
       } finally {
         // **다시 읽을 때까지 잠근 채로 둔다.** PUT 이 끝난 순간에 풀면 화면은 아직 옛 이름을
         // 들고 있고, 그 사이 누른 지정이 곧 도착할 초기화 결과에 덮인다.
@@ -1139,7 +1142,7 @@ export const NoteArchive = memo(function NoteArchive({
         setResetting(false);
       }
     },
-    [resetSpeaker, noteId, refreshAfterAssign]
+    [resetSpeaker, noteId, refreshAfterAssign, t]
   );
 
   /**
@@ -1174,7 +1177,7 @@ export const NoteArchive = memo(function NoteArchive({
           ) : null}
           {away ? (
             <ScrollToBottomButton
-              label="맨 아래로"
+              label={t("scrollToBottom")}
               onClick={() =>
                 virtualized
                   ? virtualizer.scrollToIndex(rows.length - 1, { align: "end" })
@@ -1222,7 +1225,7 @@ export const NoteArchive = memo(function NoteArchive({
               본문은 오류·재시도로 바뀌는데 여기만 남으면 그 숨은 캐시가 복사된다. */}
           {noteMeta && rows.length && !transcriptQuery.isError ? (
             <CopyMarkdownButton
-              label="스크립트"
+              kind="transcript"
               // **최종 조회가 끝나기 전에는 못 누른다.** 아카이브는 종료 직후 마운트되어
               // 라이브 캐시를 그대로 보여주며 다시 읽는다(`refetchOnMount: "always"`).
               // 그 창에서 복사하면 마지막 발화가 빠진 회의록이 남는다.
@@ -1250,12 +1253,12 @@ export const NoteArchive = memo(function NoteArchive({
           ) : null}
         </TranscriptSearch>
 
-        <div aria-label="회의 스크립트">
+        <div aria-label={t("transcriptLabel")}>
           {transcriptQuery.isPending ? (
             /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `mt-6`에 `h-24`/`h-28` 막대
                  둘이라 248이었고 실제는 288이었다 — 첫 줄이 12px 아래에서 시작했고 행
                  경계도 없어 도착하는 순간 모양이 통째로 바뀌었다. */
-            <div className="mt-3" aria-label="대화 기록 불러오는 중">
+            <div className="mt-3" aria-label={t("loading")}>
               {[0, 1, 2].map((row) => (
                 <div
                   key={row}
@@ -1278,7 +1281,7 @@ export const NoteArchive = memo(function NoteArchive({
             // 대체하므로 그 실패 피드백을 여기서 되살린다.
             <div role="alert" className="mt-6 space-y-2">
               <p className="text-sm text-[var(--el-ink)]">
-                스크립트를 불러오지 못했습니다.
+                {t("loadFailed")}
               </p>
               <Button
                 variant="outline"
@@ -1286,7 +1289,7 @@ export const NoteArchive = memo(function NoteArchive({
                 className="h-[30px]"
                 onClick={() => void transcriptQuery.refetch()}
               >
-                다시 시도
+                {tActions("retry")}
               </Button>
             </div>
           ) : (
@@ -1431,12 +1434,12 @@ export const NoteArchive = memo(function NoteArchive({
                   data-testid="recording-truncated"
                   className="py-4 text-sm text-[var(--el-muted)]"
                 >
-                  기록이 끝까지 저장되지 못했습니다.
+                  {t("truncated")}
                 </p>
               ) : null}
               {!rows.length ? (
                 <p className="py-8 text-sm text-[var(--el-muted)]">
-                  스크립트가 없습니다.
+                  {t("empty")}
                 </p>
               ) : null}
             </>
@@ -1465,13 +1468,15 @@ export const NoteArchive = memo(function NoteArchive({
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>지정한 화자를 모두 되돌립니다</AlertDialogTitle>
+              <AlertDialogTitle>{t("resetDialog.title")}</AlertDialogTitle>
               <AlertDialogDescription>
-                {`화자 ${pendingReset?.length ?? 0}개에 붙인 이름과 개별로 고친 발화가 사라지고, AI가 나눈 「화자 A」로 돌아갑니다. 되돌릴 수 없습니다.`}
+                {t("resetDialog.description", {
+                  count: pendingReset?.length ?? 0,
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogCancel>{tActions("cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   if (!pendingReset) return;
@@ -1480,7 +1485,7 @@ export const NoteArchive = memo(function NoteArchive({
                   setPendingReset(null);
                 }}
               >
-                전체 초기화
+                {t("resetDialog.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1500,16 +1505,21 @@ export const NoteArchive = memo(function NoteArchive({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                개별로 고친 발화도 함께 바뀝니다
+                {t("applyAllDialog.title")}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {pendingLabelAssign?.overrides === null
-                  ? `화자 ${pendingLabelAssign?.label}에 개별로 지정한 발화가 있는지 확인하지 못했습니다. 모든 발화에 적용하면 그 지정이 사라집니다.`
-                  : `화자 ${pendingLabelAssign?.label}에 개별로 지정한 발화가 ${pendingLabelAssign?.overrides ?? 0}개 있습니다. 모든 발화에 적용하면 그 지정이 사라집니다.`}
+                  ? t("applyAllDialog.unknown", {
+                      label: pendingLabelAssign?.label ?? "",
+                    })
+                  : t("applyAllDialog.description", {
+                      label: pendingLabelAssign?.label ?? "",
+                      count: pendingLabelAssign?.overrides ?? 0,
+                    })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogCancel>{tActions("cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   if (!pendingLabelAssign) return;
@@ -1522,7 +1532,7 @@ export const NoteArchive = memo(function NoteArchive({
                   setPendingLabelAssign(null);
                 }}
               >
-                모든 발화에 적용
+                {t("applyAllDialog.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

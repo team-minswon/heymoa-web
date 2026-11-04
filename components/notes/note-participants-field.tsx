@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Settings2, UserPlus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import {
-  EXTERNAL_LABEL,
   NoteParticipantAvatars,
   ParticipantAvatar,
   type Participant,
@@ -70,14 +70,12 @@ type Candidate = {
 };
 
 /**
- * 워크스페이스를 떠난 참여자의 부표시.
+ * 워크스페이스를 떠난 참여자의 부표시(`notes.participantsField.departed`).
  *
  * 이메일 대신 이걸 세운다 — 이메일은 「이 사람이 누구인가」를 말하는데, 여기서 답해야 할
  * 물음은 「멤버 목록에 없는 사람이 왜 후보에 있나」다. 나갔다/내보내졌다를 가르지 않는다.
  * 화면에서 할 수 있는 일이 같고, 가르려면 멤버십 이력이 있어야 한다.
  */
-const DEPARTED_LABEL = "워크스페이스에 없음";
-
 /** 참여자 저장이 그 사이 바뀐 목록 위에서 거절됐다는 서버 코드(APP-777). */
 const PARTICIPANTS_CONFLICT = "NOTE_PARTICIPANTS_CONFLICT";
 
@@ -124,6 +122,9 @@ export function NoteParticipantsField({
   autoOpen?: boolean;
   onAutoOpened?: () => void;
 }) {
+  const t = useTranslations("notes.participantsField");
+  const tParticipants = useTranslations("notes.participants");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   // 셸 밖(설정을 열 수 없는 곳)에서는 없다 — 그때는 관리 줄을 안 그린다.
   const openSettings = useOpenSettings();
@@ -343,7 +344,7 @@ export function NoteParticipantsField({
   const trimmedSearch = typed.trim();
   /** 콤보박스가 거르는 문자열과 **같은 값**이어야 한다. 갈리면 조합 전후로 목록이 튄다. */
   const searchTextOf = (candidate: Candidate) =>
-    `${candidate.name} ${candidate.email ?? EXTERNAL_LABEL}`;
+    `${candidate.name} ${candidate.email ?? tParticipants("external")}`;
   /**
    * **후보를 다 못 읽었으면 새 이름을 만들 수 없다.**
    *
@@ -426,7 +427,7 @@ export function NoteParticipantsField({
           }
         }
         for (const error of failures) {
-          toast.error(errorMessageOf(error, "참여자를 저장하지 못했습니다."));
+          toast.error(errorMessageOf(error, t("saveFailed")));
         }
         return null;
       }
@@ -570,7 +571,7 @@ export function NoteParticipantsField({
   useEffect(() => {
     if (!autoOpen) return;
     const trigger = anchorRef.current?.querySelector<HTMLButtonElement>(
-      'button[aria-label="참여자 추가"]'
+      'button[data-slot="participants-add"]'
     );
     // **저장 중에는 트리거가 잠겨 클릭이 무시된다.** 그때 요청을 거두면 저장이 끝나도 안 열린다
     // — 열지 못했으면 거두지 않고 `saving` 이 풀릴 때 다시 시도한다(codex 리뷰 1회차).
@@ -591,7 +592,7 @@ export function NoteParticipantsField({
         />
       ) : (
         <span className="text-sm text-[var(--el-muted)]">
-          아직 참여자가 없습니다.
+          {t("empty")}
         </span>
       )}
 
@@ -664,20 +665,21 @@ export function NoteParticipantsField({
                 variant="outline"
                 size="sm"
                 // combobox 롤은 내용에서 이름을 안 가져온다 — 라벨을 명시해야 읽힌다.
-                aria-label="참여자 추가"
+                aria-label={t("add")}
+                data-slot="participants-add"
                 className="rounded-full"
               >
-                <UserPlus /> 참여자 추가
+                <UserPlus /> {t("add")}
               </Button>
             }
           />
           <ComboboxContent anchor={anchorRef} align="start" className="w-72">
             <ComboboxInput
               // 이 입력도 role="combobox"라 placeholder로는 이름이 안 붙는다.
-              aria-label="이름이나 이메일로 참여자 검색"
+              aria-label={t("searchLabel")}
               // 이름을 쳐서 새 외부인을 만들 수 있다는 것도 말한다. 입력창이 「검색」만 말하면 목록에 없는
               // 사람을 더할 수 있다는 것을 알 길이 없다(APP-1106). 팝업이 좁아 긴 문장은 안 들어간다
-              placeholder="이름으로 검색 또는 외부인 추가"
+              placeholder={t("searchPlaceholder")}
               // 일치하는 사람이 없을 때 Enter 는 「＋ 추가」의 확인이다. 한글 조합 중 Enter 는 글자를 확정할 뿐이라 거른다.
               onKeyDown={(event) => {
                 if (
@@ -697,12 +699,12 @@ export function NoteParticipantsField({
             />
             <ComboboxEmpty>
               {membersPending || guestsPending
-                ? "참여자를 불러오는 중입니다."
+                ? t("loading")
                 : membersFailed
-                  ? "멤버를 불러오지 못했습니다."
+                  ? t("membersFailed")
                   : guestsFailed
-                    ? "임시 참여자를 불러오지 못했습니다."
-                    : "일치하는 사람이 없습니다."}
+                    ? t("guestsFailed")
+                    : t("noMatch")}
             </ComboboxEmpty>
             <ComboboxList>
               {(candidate: Candidate) => (
@@ -721,8 +723,8 @@ export function NoteParticipantsField({
                       {/* **왜 여기 있는지 말한다.** 멤버 목록에 없는 사람이 후보에 서
                           있으면, 이유가 안 보이면 잘못 남은 것으로 읽고 지운다 */}
                       {candidate.departed
-                        ? DEPARTED_LABEL
-                        : (candidate.email ?? EXTERNAL_LABEL)}
+                        ? t("departed")
+                        : (candidate.email ?? tParticipants("external"))}
                     </span>
                   </span>
                 </ComboboxItem>
@@ -740,11 +742,11 @@ export function NoteParticipantsField({
                   loading={createGuestParticipant.isPending}
                   onClick={() => void createGuest(trimmedSearch)}
                 >
-                  ＋ &quot;{trimmedSearch}&quot; 추가
+                  {t("createGuest", { name: trimmedSearch })}
                 </Button>
                 {/* 버튼 이름은 그대로 둔다(테스트·e2e 가 이름으로 집는다). 무엇이 만들어지는지만 말한다 */}
                 <p className="px-2 pt-0.5 pb-1 text-xs text-[var(--el-muted)]">
-                  계정 없이 이 회의의 외부인으로 추가됩니다.
+                  {t("createGuestHint")}
                 </p>
               </div>
             ) : null}
@@ -755,10 +757,10 @@ export function NoteParticipantsField({
                     모른 채 없는 사람으로 여기고 같은 이름을 또 만든다 */}
                 <p className="px-2 pb-1 text-xs text-[var(--el-muted)]">
                   {membersFailed && guestsFailed
-                    ? "멤버와 임시 참여자를 불러오지 못했습니다."
+                    ? t("bothFailed")
                     : membersFailed
-                      ? "멤버를 불러오지 못했습니다."
-                      : "임시 참여자를 불러오지 못했습니다."}
+                      ? t("membersFailed")
+                      : t("guestsFailed")}
                 </p>
                 <Button
                   type="button"
@@ -770,7 +772,7 @@ export function NoteParticipantsField({
                     if (guestsFailed) void guestsResponse.refetch();
                   }}
                 >
-                  다시 시도
+                  {tActions("retry")}
                 </Button>
               </div>
             ) : null}
@@ -788,7 +790,7 @@ export function NoteParticipantsField({
                 }}
               >
                 <Settings2 aria-hidden className="size-3.5 shrink-0" />
-                임시 참여자 관리
+                {t("manageGuests")}
               </button>
             ) : null}
           </ComboboxContent>

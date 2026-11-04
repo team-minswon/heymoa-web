@@ -208,7 +208,7 @@ export function NoteSummary({
             )}
             {noteMeta ? (
               <CopyMarkdownButton
-                label="요약"
+                kind="summary"
                 className="h-[30px]"
                 build={() =>
                   summaryToMarkdown({

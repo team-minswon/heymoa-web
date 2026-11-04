@@ -11,6 +11,7 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { useAuthUserId } from "@/components/auth/auth-provider";
 import { isWaitingStatus } from "@/components/notes/review/flow-notice";
@@ -51,36 +52,15 @@ export const END_FEEDBACK_DELAY_MS = 1000;
 const PREFIX = "[회의 종료 후]";
 /** 머리와 항목 이름이 앞에 붙으니 문의 한도에서 그만큼 덜어 둔다. */
 const MESSAGE_MAX = FEEDBACK_MAX - 100;
-/** 문의 창의 분류 카드와 같은 모양으로 하나를 고른다. 이름이 저장 글의 머리에 그대로 실린다. */
+/**
+ * 문의 창의 분류 카드와 같은 모양으로 하나를 고른다. 화면 이름은 `notes.endFeedback.reasons` 이고,
+ * 저장 글의 머리에는 화면 언어와 상관없이 `tag` 가 실린다 — 운영자가 읽고 거르는 데이터라 한국어로 고정한다.
+ */
 const REASONS = [
-  {
-    value: "recording",
-    label: "녹음·소리",
-    hint: "녹음이 끊기거나 소리가 안 잡혔어요",
-    icon: MicOff,
-    placeholder: "언제쯤 끊겼는지, 어떤 장치로 녹음했는지 적어 주세요.",
-  },
-  {
-    value: "caption",
-    label: "실시간 자막",
-    hint: "자막이나 말한 사람이 틀렸어요",
-    icon: Captions,
-    placeholder: "어떤 말이 어떻게 틀리게 나왔는지 적어 주세요.",
-  },
-  {
-    value: "flow",
-    label: "속도·사용법",
-    hint: "느리거나 쓰는 법이 헷갈렸어요",
-    icon: MousePointerClick,
-    placeholder: "어느 화면에서 무엇이 느리거나 헷갈렸는지 적어 주세요.",
-  },
-  {
-    value: "other",
-    label: "기타",
-    hint: "그 밖의 이야기예요",
-    icon: MessageCircle,
-    placeholder: "하고 싶은 말을 편하게 적어 주세요.",
-  },
+  { value: "recording", tag: "녹음·소리", icon: MicOff },
+  { value: "caption", tag: "실시간 자막", icon: Captions },
+  { value: "flow", tag: "속도·사용법", icon: MousePointerClick },
+  { value: "other", tag: "기타", icon: MessageCircle },
 ] as const;
 type Reason = (typeof REASONS)[number]["value"];
 
@@ -123,6 +103,7 @@ export function MeetingEndFeedback({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("notes.endFeedback");
   const userId = useAuthUserId();
   const queryClient = useQueryClient();
   // 목록 갱신은 훅에 건다 — `mutate` 의 콜백은 보내는 중에 창이 내려가면(다른 노트로 이동) 돌지 않는다.
@@ -159,12 +140,18 @@ export function MeetingEndFeedback({
   const progress =
     settled === "running" && flowQuery.isError ? "unknown" : settled;
   const picked = REASONS.find((item) => item.value === reason);
+  const reasons = REASONS.map(({ value, icon }) => ({
+    value,
+    icon,
+    label: t(`reasons.${value}.label`),
+    hint: t(`reasons.${value}.hint`),
+  }));
   const drafting = picked != null || message.trim().length > 0;
 
   function submit() {
     if (!drafting || create.isPending) return;
     const text = message.trim();
-    const body = [picked?.label, text].filter(Boolean).join("\n");
+    const body = [picked?.tag, text].filter(Boolean).join("\n");
     create.mutate(
       {
         data: {
@@ -174,9 +161,7 @@ export function MeetingEndFeedback({
       },
       {
         onSuccess: () => {
-          toast.success(
-            "고마워요. 보낸 의견은 「문의·피드백」에서 볼 수 있어요."
-          );
+          toast.success(t("sent"));
           onClose();
         },
       }
@@ -217,7 +202,7 @@ export function MeetingEndFeedback({
           {progress === "ready" ? (
             <>
               <Check aria-hidden className="size-4 text-[var(--el-ink)]" />
-              요약이 준비됐어요
+              {t("progress.ready")}
             </>
           ) : progress === "failed" ? (
             <>
@@ -225,43 +210,45 @@ export function MeetingEndFeedback({
                 aria-hidden
                 className="size-4 text-[var(--el-error)]"
               />
-              회의를 분석하지 못했어요 · 요약 탭에서 다시 분석할 수 있어요
+              {t("progress.failed")}
             </>
           ) : progress === "unknown" ? (
             <>
               <AlertTriangle aria-hidden className="size-4" />
-              요약 상태를 불러오지 못했어요 · 요약 탭에서 다시 시도할 수 있어요
+              {t("progress.unknown")}
             </>
           ) : (
             <>
               <Loader2 aria-hidden className="size-4 animate-spin" />
-              회의를 정리하고 있어요 · 창을 닫아도 계속돼요
+              {t("progress.running")}
             </>
           )}
         </p>
         <DialogTitle className="mt-4 text-xl">
-          방금 회의, 아쉬운 점이 있었나요?
+          {t("title")}
         </DialogTitle>
         <DialogDescription className="mt-1.5 text-sm">
-          남겨 주시면 운영팀이 읽고 답해요.
+          {t("description")}
         </DialogDescription>
 
         <div className="mt-6 grid gap-4">
           <ChoiceCards
-            label="아쉬웠던 점"
-            items={REASONS}
+            label={t("reasonsLabel")}
+            items={reasons}
             value={reason}
             onChange={setReason}
           />
           <div>
             <Textarea
-              aria-label="내용"
+              aria-label={t("messageLabel")}
               value={message}
               maxLength={MESSAGE_MAX}
               rows={5}
               className="max-h-60 min-h-32"
               placeholder={
-                picked?.placeholder ?? "아쉬웠던 점을 편하게 적어 주세요."
+                picked
+                  ? t(`reasons.${picked.value}.placeholder`)
+                  : t("placeholder")
               }
               onChange={(event) => setMessage(event.target.value)}
             />
@@ -277,11 +264,11 @@ export function MeetingEndFeedback({
             onClick={() => dismiss(true)}
             className="text-xs text-[var(--el-muted-soft)] underline underline-offset-2 hover:text-[var(--el-ink)]"
           >
-            회의 후 의견 묻지 않기
+            {t("never")}
           </button>
           <div className="flex items-center gap-3">
             <span className="text-xs text-[var(--el-muted-soft)]">
-              회의 내용은 자동으로 붙지 않아요.
+              {t("privacy")}
             </span>
             <Button
               type="button"
@@ -290,7 +277,7 @@ export function MeetingEndFeedback({
               loading={create.isPending}
               onClick={submit}
             >
-              보내기
+              {t("send")}
             </Button>
           </div>
         </div>

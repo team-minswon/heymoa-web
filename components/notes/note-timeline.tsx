@@ -795,7 +795,7 @@ export function NoteTimeline({
                 복사한다. 원장을 다 받기 전이나 못 받았으면 막는다 — 빠진 타임라인이 완전한 것처럼 붙여넣어진다 */}
             {header ? (
               <CopyMarkdownButton
-                label="타임라인"
+                kind="timeline"
                 iconOnly
                 disabled={!settled || context.failed}
                 build={() =>

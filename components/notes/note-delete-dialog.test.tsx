@@ -22,6 +22,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
+import { intlWrapper } from "@/components/help/test-intl";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import type { MeetingAnalysisFlowResponseDataStatus } from "@/lib/api/generated/models";
@@ -96,7 +97,8 @@ function notesIn(client: QueryClient, key: readonly unknown[]) {
 
 function renderDialog(
   onDeleted?: () => void,
-  flowStatus: MeetingAnalysisFlowResponseDataStatus = "NOT_APPLICABLE"
+  flowStatus: MeetingAnalysisFlowResponseDataStatus = "NOT_APPLICABLE",
+  wrapper?: ReturnType<typeof intlWrapper>
 ) {
   liveStatus = flowStatus;
   const client = new QueryClient({
@@ -132,7 +134,8 @@ function renderDialog(
         onOpenChange={() => {}}
         onDeleted={onDeleted}
       />
-    </QueryClientProvider>
+    </QueryClientProvider>,
+    { wrapper }
   );
   return client;
 }
@@ -154,16 +157,37 @@ describe("NoteDeleteDialog", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(
-      screen.getByText(/발언에 연결된 근거가 함께 삭제됩니다/)
+      screen.getByText(/발언에 연결된 근거를 함께 삭제합니다/)
     ).toBeInTheDocument();
     expect(
       screen.getByText(/삭제한 회의록은 되돌릴 수 없습니다/)
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "이 회의록만 물어본 에이전트 대화도 함께 삭제됩니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
+        "이 회의록만 물어본 에이전트 대화도 함께 삭제합니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
       )
     ).toBeInTheDocument();
+  });
+
+  it("영어 화면에서는 확인창이 영어로 보인다", () => {
+    renderDialog(undefined, "ANALYZING", intlWrapper("en"));
+
+    expect(
+      screen.getByRole("heading", { name: "Delete these meeting notes?" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Deleted meeting notes can't be restored\./)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("You can delete it once the meeting analysis finishes.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    // 회의 제목(사용자 데이터)만 한국어로 남는다.
+    const dialog = screen.getByRole("alertdialog");
+    expect(
+      dialog.textContent?.replace("주간 제품 회의", "")
+    ).not.toMatch(/[가-힣]/);
   });
 
   it("204면 목록을 무효화하고 성공을 알린 뒤 호출자에게 넘긴다", async () => {

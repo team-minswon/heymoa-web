@@ -34,6 +34,7 @@ import {
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
   getRecordedDurationMs,
+  MEETING_STATUS_KEY,
   pausedDayCount,
 } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
@@ -45,14 +46,6 @@ import { useIsWorkspaceAdmin } from "@/lib/workspace/use-is-workspace-admin";
  * 동안(`aria-expanded`), 아바타 툴팁이 열려 있는 동안(`data-popup-open` — 툴팁은 포털이라 포인터가 거기 닿으면 행 hover 가 풀린다), 그리고 hover 가 없는 터치 환경에서 늘 켠다.
  * Tailwind 는 클래스를 정적 문자열로만 읽으므로 두 곳에서 같은 목록을 그대로 쓴다.
  */
-/** 회의 상태 → `common.meetingStatus` 키. 노트 화면도 같은 이름을 쓴다. */
-const STATUS_KEY = {
-  NOT_STARTED: "notStarted",
-  IN_PROGRESS: "inProgress",
-  PAUSED: "paused",
-  ENDED: "ended",
-} as const satisfies Record<NoteListResponseDataNotesItem["meetingStatus"], string>;
-
 const SHIFT_WHEN_OPEN =
   "group-hover/row:-translate-x-9 group-has-[:focus-visible]/row:-translate-x-9 group-has-[[aria-expanded=true]]/row:-translate-x-9 group-has-[[data-popup-open]]/row:-translate-x-9 [@media(hover:none)]:-translate-x-9";
 const REVEAL_WHEN_OPEN =
@@ -164,7 +157,7 @@ function MeetingMeta({
         {/* 오래 멈춘 회의는 기간을 붙인다(APP-1313). 목록 시계가 서기 전(SSR)에는 「일시정지됨」만 쓴다. */}
         {status === "PAUSED" && pausedDays !== null
           ? t("pausedDays", { count: pausedDays })
-          : tStatus(STATUS_KEY[status])}
+          : tStatus(MEETING_STATUS_KEY[status])}
       </span>
       {status !== "NOT_STARTED" ? (
         <>

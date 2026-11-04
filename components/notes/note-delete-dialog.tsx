@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import {
@@ -74,6 +75,8 @@ export function NoteDeleteDialog({
   /** 삭제 성공 뒤 — 상세는 목록으로 되돌아간다. */
   onDeleted?: () => void;
 }) {
+  const t = useTranslations("notes.deleteDialog");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const recording = useRecording();
   const deleteNote = useDeleteNote();
@@ -101,41 +104,35 @@ export function NoteDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>회의록을 삭제할까요?</AlertDialogTitle>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           <AlertDialogDescription
             render={<div />}
             className="space-y-3 text-left"
           >
             <p className="break-words font-medium text-foreground">{title}</p>
-            <p>
-              이 회의의 녹음과 스크립트, 요약, 발언에 연결된 근거가 함께
-              삭제됩니다. 녹음 중이라면 녹음도 끝납니다. 삭제한 회의록은 되돌릴
-              수 없습니다.
-            </p>
-            <p>
-              이 회의록만 물어본 에이전트 대화도 함께 삭제됩니다. 같은
-              프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본
-              대화는 그대로 남습니다.
-            </p>
+            <p>{t("description")}</p>
+            <p>{t("chats")}</p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         {analyzing ? (
           <p role="status" className="text-sm text-muted-foreground">
-            회의 분석이 끝나면 삭제할 수 있습니다.
+            {t("analyzing")}
           </p>
         ) : flowQuery.isError ? (
           <InlineRetry
             variant="line"
-            label="분석 상태를 불러오지 못했습니다."
+            label={t("flowFailed")}
             onRetry={() => void flowQuery.refetch()}
           />
         ) : flowQuery.isFetching ? (
           <p className="text-sm text-muted-foreground">
-            분석 상태를 확인하고 있습니다.
+            {t("flowChecking")}
           </p>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={locked}>취소</AlertDialogCancel>
+          <AlertDialogCancel disabled={locked}>
+            {tActions("cancel")}
+          </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             loading={locked}
@@ -191,12 +188,12 @@ export function NoteDeleteDialog({
                     })
                   : Promise.resolve(),
               ]);
-              toast.success("회의를 삭제했습니다.");
+              toast.success(t("deleted"));
               onOpenChange(false);
               onDeleted?.();
             }}
           >
-            삭제
+            {tActions("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

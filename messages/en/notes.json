@@ -1,0 +1,283 @@
+{
+  "panel": {
+    "windowControls": "Window controls",
+    "backToList": "Back to list",
+    "expand": "Open full screen",
+    "expandBusy": "You can open full screen once the answer finishes",
+    "collapse": "Open side view",
+    "collapseBusy": "You can switch to side view once the answer finishes",
+    "loading": "Loading note",
+    "titleLoading": "Loading note title",
+    "tabs": {
+      "details": "Details",
+      "transcript": "Transcript",
+      "timeline": "Timeline",
+      "summary": "Summary"
+    },
+    "menu": "Note menu",
+    "openAgent": "Open My agent",
+    "gone": {
+      "title": "This meeting can't be opened",
+      "description": "It was deleted, or your account doesn't have access to it.",
+      "back": "Back to notes"
+    },
+    "statusLoadFailed": "Couldn't check the meeting status.",
+    "reconnecting": "The live connection dropped and is reconnecting. New lines may show up late until then.",
+    "subscription": {
+      "alreadySubscribed": "A duplicate live connection is blocking updates. Refresh the page.",
+      "unavailable": "Couldn't reach the live connection. Reconnecting shortly.",
+      "full": "The live connection is full. Reconnecting shortly."
+    },
+    "viewerEnded": {
+      "region": "Meeting ended notice",
+      "title": "The meeting has ended",
+      "description": "Finish reading, then move to the transcript and summary of the ended meeting.",
+      "action": "View transcript and summary"
+    },
+    "detailsLoadFailed": "Couldn't load the note",
+    "desktopHint": "Record video calls with the <link>desktop app</link>",
+    "askAboutMeeting": "Ask about this meeting",
+    "startBlocked": {
+      "otherWorkspace": "This note isn't in this workspace.",
+      "otherDevice": "Recording in another tab or on another device."
+    },
+    "start": "Start meeting",
+    "resume": "Resume"
+  },
+  "surface": {
+    "label": "Note",
+    "description": "Details of the selected meeting note"
+  },
+  "view": {
+    "statusChange": {
+      "label": "Meeting status change",
+      "message": "Meeting status changed: {status}."
+    }
+  },
+  "controls": {
+    "group": "Meeting status and controls",
+    "end": "End meeting",
+    "blocked": "Pause recording to end the meeting",
+    "blockedBy": "{name} is recording. Pause recording to end the meeting"
+  },
+  "endNudge": {
+    "title": "Recording paused. Wrap up now?",
+    "items": {
+      "speakers": {
+        "title": "Speaker separation",
+        "body": "Separates speakers so you can name them"
+      },
+      "summary": {
+        "title": "Summary",
+        "body": "Collects decisions and tasks in one place"
+      },
+      "review": {
+        "title": "Review and confirm",
+        "body": "Confirms them as project knowledge"
+      }
+    },
+    "later": "Later",
+    "endNow": "End now",
+    "never": "Don't show again"
+  },
+  "endDialog": {
+    "title": "End this meeting?",
+    "description": "Ending the meeting starts the summary. You can't record more after it ends.",
+    "participantsLabel": "Meeting participants",
+    "participantCount": "{count, plural, one {# participant} other {# participants}}",
+    "participantsNone": "With no participants, speakers are separated without a set number. Add the people who spoke as participants for more accurate speaker separation.",
+    "participantsOne": "With one participant, everyone who spoke is treated as the same speaker. If several people spoke, add them as participants first. Participants added after the meeting ends aren't used for this speaker separation.",
+    "participantsMany": "Is everyone who spoke listed? With fewer participants than speakers, some speakers may be merged. Participants added after the meeting ends aren't used for this speaker separation.",
+    "recordingStatus": "Recording status · {status}",
+    "recordingBlocked": "Pause recording to end the meeting.",
+    "failed": "Couldn't end the meeting.",
+    "editParticipants": "Go to participants",
+    "confirm": "End meeting"
+  },
+  "endFeedback": {
+    "progress": {
+      "ready": "The summary is ready",
+      "failed": "Couldn't analyze the meeting. You can reanalyze it on the Summary tab.",
+      "unknown": "Couldn't load the summary status. You can try again on the Summary tab.",
+      "running": "Wrapping up the meeting. This continues if you close this window."
+    },
+    "title": "Anything that didn't go well in this meeting?",
+    "description": "Our team reads your feedback and replies.",
+    "reasonsLabel": "What could be better",
+    "reasons": {
+      "recording": {
+        "label": "Recording or audio",
+        "hint": "Recording cut out or audio wasn't picked up",
+        "placeholder": "When did it cut out, and what device were you recording on?"
+      },
+      "caption": {
+        "label": "Live captions",
+        "hint": "Captions or speakers were wrong",
+        "placeholder": "What was said, and how did it come out wrong?"
+      },
+      "flow": {
+        "label": "Speed or ease of use",
+        "hint": "Something was slow or confusing",
+        "placeholder": "Which screen was slow or confusing, and what happened?"
+      },
+      "other": {
+        "label": "Other",
+        "hint": "Anything else",
+        "placeholder": "Tell us anything you'd like."
+      }
+    },
+    "messageLabel": "Details",
+    "placeholder": "Tell us what didn't go well.",
+    "never": "Don't ask after meetings",
+    "privacy": "Meeting content isn't sent with this.",
+    "send": "Send",
+    "sent": "Thanks. You can find your feedback in Help & feedback."
+  },
+  "preEnd": {
+    "title": "What you get when the meeting ends",
+    "description": "Usually ready within a minute of ending. Not available before then.",
+    "steps": {
+      "summary": {
+        "title": "Summary",
+        "body": "Automatically collects the overview, decisions, and tasks."
+      },
+      "speakers": {
+        "title": "Speaker separation",
+        "body": "Splits voices by person so you can name each one."
+      },
+      "review": {
+        "title": "Review and confirm",
+        "body": "Check and edit the items, then confirm them as project knowledge."
+      }
+    },
+    "loneParticipant": "There's only one participant. If others spoke, add them before ending.",
+    "addParticipant": "Add participant",
+    "end": "End meeting",
+    "pauseToEnd": "Pause recording to end the meeting.",
+    "noResume": "You can't record more after the meeting ends."
+  },
+  "statusBand": {
+    "autoEndScheduled": "If it stays paused, the meeting ends automatically after {time}.",
+    "pausedDays": "Paused for {count, plural, one {# day} other {# days}}.",
+    "paused": "This meeting is paused.",
+    "pausedActions": "You can resume recording or end the meeting.",
+    "resumedSinceMail": "Recording resumed after the email was sent.",
+    "endedSinceMail": "The meeting ended after the email was sent."
+  },
+  "autoEnd": {
+    "title": "The meeting ended automatically.",
+    "reasonDays": "It ended {days, plural, one {# business day} other {# business days}} after the last pause.",
+    "reason": "It ended after staying paused for a long time.",
+    "noResume": "You can't record more in this meeting.",
+    "analysis": {
+      "analyzing": "Analyzing.",
+      "reviewable": "Results are ready to review.",
+      "failed": "Couldn't analyze the meeting."
+    },
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "deleteDialog": {
+    "title": "Delete these meeting notes?",
+    "description": "This deletes the meeting's recording, transcript, summary, and the sources linked to what was said. If it's recording, the recording stops. Deleted meeting notes can't be restored.",
+    "chats": "Agent conversations that asked only about these meeting notes are deleted too. Conversations that also asked about other meeting notes, decisions, tasks, or materials in the same project stay.",
+    "analyzing": "You can delete it once the meeting analysis finishes.",
+    "flowFailed": "Couldn't load the analysis status.",
+    "flowChecking": "Checking the analysis status.",
+    "deleted": "Meeting deleted."
+  },
+  "details": {
+    "loading": "Loading note details",
+    "title": "Title",
+    "attendees": "Attendees",
+    "untitled": "Untitled note",
+    "saveFailed": "Couldn't save. Your edits are still here.",
+    "saved": "Saved",
+    "facts": {
+      "title": "Meeting details",
+      "host": "Host",
+      "controlsRecording": "Controls recording",
+      "duration": "Recorded time",
+      "sharedWith": "Shared with",
+      "workspaceMembers": "Workspace members",
+      "ended": "Ended",
+      "autoEnded": "Ended automatically",
+      "autoEndedDays": "Ended automatically ({days, plural, one {# business day} other {# business days}} after the last pause)",
+      "created": "Created",
+      "updated": "Last edited"
+    }
+  },
+  "participants": {
+    "external": "Guest",
+    "host": "Host",
+    "hostLabel": "Host {who}",
+    "count": "{count, plural, one {# participant} other {# participants}}",
+    "more": "{count} more"
+  },
+  "participantsField": {
+    "empty": "No participants yet.",
+    "add": "Add participant",
+    "searchLabel": "Search participants by name or email",
+    "searchPlaceholder": "Search or add a guest participant",
+    "loading": "Loading participants.",
+    "membersFailed": "Couldn't load members.",
+    "guestsFailed": "Couldn't load guest participants.",
+    "bothFailed": "Couldn't load members or guest participants.",
+    "noMatch": "No one matches.",
+    "departed": "No longer in this workspace",
+    "createGuest": "+ Add \"{name}\"",
+    "createGuestHint": "Adds them to this meeting as a guest participant, without an account.",
+    "manageGuests": "Manage guest participants",
+    "saveFailed": "Couldn't save participants."
+  },
+  "context": {
+    "title": "Meeting context",
+    "help": "Tell us what the meeting is about, and transcription uses it as a reference. The project name, meeting title, and attendee names are added automatically.",
+    "topic": "Topic",
+    "background": "Background",
+    "empty": "No context was added.",
+    "unsaved": "The meeting ended before this was saved. Copy it if you need it.",
+    "blank": "Not filled in",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Couldn't save",
+    "recording": "Recording. Your edits apply when recording resumes.",
+    "topicPlaceholder": "e.g., Weekly product meeting: payment errors and next week's release",
+    "backgroundPlaceholder": "e.g., Payment approval failures rose last week and we're finding the cause. Today we'll review the PG logs and decide on a temporary fix."
+  },
+  "archive": {
+    "scrollToBottom": "Jump to bottom",
+    "transcriptLabel": "Meeting transcript",
+    "loading": "Loading transcript",
+    "loadFailed": "Couldn't load the transcript.",
+    "truncated": "The transcript wasn't saved to the end.",
+    "empty": "No transcript.",
+    "resetReadFailed": "Couldn't reload speakers, so the reset was stopped.",
+    "resetFailed": "Couldn't reset {count, plural, one {# speaker} other {# speakers}}.",
+    "resetDialog": {
+      "title": "Reset all assigned speakers?",
+      "description": "This clears the names on {count, plural, one {# speaker} other {# speakers}} and the speakers assigned to individual lines. They go back to AI labels such as Speaker A. This can't be undone.",
+      "confirm": "Reset all"
+    },
+    "applyAllDialog": {
+      "title": "Lines you edited one by one will change too",
+      "unknown": "Couldn't check whether any lines were individually assigned to speaker {label}. Applying to all lines clears those assignments.",
+      "description": "{count, plural, one {# line was} other {# lines were}} individually assigned to speaker {label}. Applying to all lines clears those assignments.",
+      "confirm": "Apply to all lines"
+    }
+  },
+  "agentRail": {
+    "title": "My agent",
+    "collapse": "Collapse My agent",
+    "collapseBusy": "You can collapse once the answer finishes",
+    "collapseShort": "Collapse"
+  },
+  "copy": {
+    "button": "Copy",
+    "iconLabel": "Copy {label}",
+    "tooltip": "Copy as Markdown",
+    "copied": "{label} copied to clipboard.",
+    "failed": "Couldn't copy.",
+    "blocked": "The browser blocked clipboard access."
+  }
+}

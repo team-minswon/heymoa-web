@@ -1829,7 +1829,7 @@ describe("검토본이 서기 전과 뒤", () => {
   it("회의가 끝나기 전에는 종료하면 무엇이 생기는지 말한다", () => {
     renderTab(MENTORING_NOTE_ID, { isEnded: false });
     expect(
-      screen.getByText("회의를 종료하면 이런 것들이 만들어져요")
+      screen.getByText("회의를 종료하면 이렇게 정리됩니다")
     ).toBeInTheDocument();
     for (const title of ["요약", "화자 분리", "검토 후 확정"]) {
       expect(screen.getByText(title)).toBeInTheDocument();

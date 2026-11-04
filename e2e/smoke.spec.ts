@@ -37,7 +37,7 @@ const MEMBER_NAME = "한지원";
 const MEMBER_EMAIL = "jiwon@heymoa.com";
 
 function meetingControls(page: Page) {
-  return page.getByRole("group", { name: "회의 상태 및 제어" });
+  return page.getByRole("group", { name: "회의 상태와 제어" });
 }
 
 /**
@@ -162,7 +162,7 @@ async function expectForeignViewerTranscript(
     );
     await expect(page.getByLabel("녹음 제어")).toBeVisible();
     await expect(
-      page.getByText("다른 탭·기기에서 기록 중입니다.")
+      page.getByText("다른 탭이나 기기에서 기록 중입니다.")
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
     if (viewportSize.width === 375) {
@@ -229,7 +229,7 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
   await page.getByRole("menuitem", { name: "삭제" }).click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText(
-    "이 회의록만 물어본 에이전트 대화도 함께 삭제됩니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
+    "이 회의록만 물어본 에이전트 대화도 함께 삭제합니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
   );
   await dialog.getByRole("button", { name: "삭제", exact: true }).click();
 
@@ -1428,7 +1428,7 @@ test("shows a persistent explanation for a remotely active starter note", async 
 
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(
-    page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
+    page.getByText("다른 탭이나 기기에서 기록 중입니다.", { exact: true })
   ).toBeVisible();
   await expect(
     page
@@ -1617,7 +1617,7 @@ test("locks ending a remotely recorded meeting in the side panel", async ({
   ).toBeVisible();
   await page.getByRole("tab", { name: "스크립트" }).click();
   await expect(
-    page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
+    page.getByText("다른 탭이나 기기에서 기록 중입니다.", { exact: true })
   ).toBeVisible();
 
   // 회의 종료는 상단바에 있으니 어느 탭에서든 닿는다. 다만 기록 중에는 잠겨 있다.
@@ -1626,7 +1626,7 @@ test("locks ending a remotely recorded meeting in the side panel", async ({
   // disabled 버튼은 포인터 이벤트를 안 내므로 감싼 요소에 올린다.
   await end.locator("..").hover();
   await expect(page.locator('[data-slot="tooltip-content"]')).toHaveText(
-    /님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다/
+    /님이 기록 중입니다\. 일시정지한 뒤 종료할 수 있습니다/
   );
 });
 

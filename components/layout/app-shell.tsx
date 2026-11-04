@@ -38,6 +38,7 @@ export const PRODUCT_NAMESPACES: readonly Namespace[] = [
   "shell",
   "settings",
   "workspace",
+  "notes",
 ];
 
 /**

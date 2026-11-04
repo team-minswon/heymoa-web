@@ -1,0 +1,283 @@
+{
+  "panel": {
+    "windowControls": "창 제어",
+    "backToList": "목록으로",
+    "expand": "전체 화면으로 보기",
+    "expandBusy": "답변이 끝나면 전체 화면으로 볼 수 있습니다",
+    "collapse": "사이드 뷰로 보기",
+    "collapseBusy": "답변이 끝나면 사이드 뷰로 바꿀 수 있습니다",
+    "loading": "노트 불러오는 중",
+    "titleLoading": "노트 제목 불러오는 중",
+    "tabs": {
+      "details": "정보",
+      "transcript": "스크립트",
+      "timeline": "타임라인",
+      "summary": "요약"
+    },
+    "menu": "노트 메뉴",
+    "openAgent": "내 에이전트 열기",
+    "gone": {
+      "title": "이 회의를 열 수 없습니다",
+      "description": "삭제되었거나 지금 계정으로는 볼 수 없는 회의입니다.",
+      "back": "노트 목록으로"
+    },
+    "statusLoadFailed": "회의 상태를 확인하지 못했습니다.",
+    "reconnecting": "실시간 연결이 끊겨 다시 연결하는 중입니다. 그동안 새 발화가 늦게 보일 수 있습니다.",
+    "subscription": {
+      "alreadySubscribed": "실시간 연결이 중복되어 새 소식을 받지 못하고 있습니다. 화면을 새로고침해 주세요.",
+      "unavailable": "실시간 연결을 잠시 확인하지 못했습니다. 잠시 뒤 다시 연결합니다.",
+      "full": "실시간 연결 인원이 가득 찼습니다. 잠시 뒤 다시 연결합니다."
+    },
+    "viewerEnded": {
+      "region": "회의 종료 안내",
+      "title": "회의가 종료되었습니다",
+      "description": "읽던 내용을 확인한 뒤 종료된 회의의 스크립트와 요약으로 이동할 수 있습니다.",
+      "action": "스크립트와 요약 보기"
+    },
+    "detailsLoadFailed": "노트를 불러오지 못했습니다",
+    "desktopHint": "화상회의 녹음은 <link>데스크톱 앱</link>으로",
+    "askAboutMeeting": "이 회의에 대해 물어보기",
+    "startBlocked": {
+      "otherWorkspace": "이 노트는 이 워크스페이스에 없습니다.",
+      "otherDevice": "다른 탭이나 기기에서 기록 중입니다."
+    },
+    "start": "회의 시작",
+    "resume": "재개"
+  },
+  "surface": {
+    "label": "노트",
+    "description": "선택한 회의 노트 상세"
+  },
+  "view": {
+    "statusChange": {
+      "label": "회의 상태 변경",
+      "message": "회의 상태가 바뀌었습니다: {status}"
+    }
+  },
+  "controls": {
+    "group": "회의 상태와 제어",
+    "end": "회의 종료",
+    "blocked": "일시정지한 뒤 종료할 수 있습니다",
+    "blockedBy": "{name} 님이 기록 중입니다. 일시정지한 뒤 종료할 수 있습니다"
+  },
+  "endNudge": {
+    "title": "녹음을 멈췄습니다. 이제 마무리할까요?",
+    "items": {
+      "speakers": {
+        "title": "화자 분리",
+        "body": "누가 말했는지 나누고 이름을 붙일 수 있습니다"
+      },
+      "summary": {
+        "title": "요약",
+        "body": "결정과 할 일을 한 번에 정리합니다"
+      },
+      "review": {
+        "title": "검토 후 확정",
+        "body": "프로젝트 지식으로 확정합니다"
+      }
+    },
+    "later": "나중에",
+    "endNow": "지금 종료",
+    "never": "다시 보지 않기"
+  },
+  "endDialog": {
+    "title": "회의를 종료할까요?",
+    "description": "회의를 종료하고 요약을 시작합니다. 종료한 뒤에는 이어서 녹음할 수 없습니다.",
+    "participantsLabel": "회의 참여자",
+    "participantCount": "참여자 {count}명",
+    "participantsNone": "참여자가 없어 화자 수를 정하지 않고 나눕니다. 말한 사람을 참여자로 지정하면 화자 분리가 더 정확해집니다.",
+    "participantsOne": "참여자가 1명이라 말한 사람을 모두 같은 화자로 봅니다. 여러 명이 말했다면 먼저 참여자를 지정해 주세요. 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다.",
+    "participantsMany": "말한 사람이 모두 들어 있나요? 실제로 말한 사람보다 참여자가 적으면 화자가 합쳐질 수 있고, 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다.",
+    "recordingStatus": "녹음 상태 · {status}",
+    "recordingBlocked": "기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다.",
+    "failed": "회의를 종료하지 못했습니다.",
+    "editParticipants": "참여자 지정하러 가기",
+    "confirm": "회의 종료"
+  },
+  "endFeedback": {
+    "progress": {
+      "ready": "요약이 준비되었습니다",
+      "failed": "회의를 분석하지 못했습니다. 요약 탭에서 다시 분석할 수 있습니다.",
+      "unknown": "요약 상태를 불러오지 못했습니다. 요약 탭에서 다시 시도할 수 있습니다.",
+      "running": "회의를 정리하고 있습니다. 창을 닫아도 계속됩니다."
+    },
+    "title": "방금 회의, 아쉬운 점이 있었나요?",
+    "description": "남겨 주시면 운영팀이 읽고 답합니다.",
+    "reasonsLabel": "아쉬웠던 점",
+    "reasons": {
+      "recording": {
+        "label": "녹음·소리",
+        "hint": "녹음이 끊기거나 소리가 안 잡혔어요",
+        "placeholder": "언제쯤 끊겼는지, 어떤 장치로 녹음했는지 적어 주세요."
+      },
+      "caption": {
+        "label": "실시간 자막",
+        "hint": "자막이나 말한 사람이 틀렸어요",
+        "placeholder": "어떤 말이 어떻게 틀리게 나왔는지 적어 주세요."
+      },
+      "flow": {
+        "label": "속도·사용법",
+        "hint": "느리거나 쓰는 법이 헷갈렸어요",
+        "placeholder": "어느 화면에서 무엇이 느리거나 헷갈렸는지 적어 주세요."
+      },
+      "other": {
+        "label": "기타",
+        "hint": "그 밖의 이야기예요",
+        "placeholder": "하고 싶은 말을 편하게 적어 주세요."
+      }
+    },
+    "messageLabel": "내용",
+    "placeholder": "아쉬웠던 점을 편하게 적어 주세요.",
+    "never": "회의 후 의견 묻지 않기",
+    "privacy": "회의 내용은 함께 보내지 않습니다.",
+    "send": "보내기",
+    "sent": "고맙습니다. 보낸 의견은 「문의·피드백」에서 볼 수 있습니다."
+  },
+  "preEnd": {
+    "title": "회의를 종료하면 이렇게 정리됩니다",
+    "description": "보통 종료 후 1분 안에 준비됩니다. 종료 전에는 볼 수 없습니다.",
+    "steps": {
+      "summary": {
+        "title": "요약",
+        "body": "개요와 결정, 할 일을 자동으로 정리합니다."
+      },
+      "speakers": {
+        "title": "화자 분리",
+        "body": "목소리를 사람별로 나누고 이름을 붙일 수 있습니다."
+      },
+      "review": {
+        "title": "검토 후 확정",
+        "body": "정리된 항목을 확인하고 고친 뒤 프로젝트 지식으로 확정합니다."
+      }
+    },
+    "loneParticipant": "참여자가 1명입니다. 여러 명이 말했다면 종료 전에 추가해 주세요.",
+    "addParticipant": "참여자 추가",
+    "end": "회의 종료",
+    "pauseToEnd": "기록을 일시정지하면 회의를 종료할 수 있습니다.",
+    "noResume": "종료한 뒤에는 이어서 녹음할 수 없습니다."
+  },
+  "statusBand": {
+    "autoEndScheduled": "일시정지가 이어지면 {time} 이후 자동으로 종료합니다.",
+    "pausedDays": "{count}일째 일시정지 상태입니다.",
+    "paused": "일시정지 상태입니다.",
+    "pausedActions": "이어서 녹음하거나 종료할 수 있습니다.",
+    "resumedSinceMail": "메일을 보낸 뒤 녹음이 다시 시작되었습니다.",
+    "endedSinceMail": "메일을 보낸 뒤 회의가 종료되었습니다."
+  },
+  "autoEnd": {
+    "title": "회의를 자동으로 종료했습니다.",
+    "reasonDays": "마지막 일시정지 후 {days}영업일이 지나 종료했습니다.",
+    "reason": "일시정지 상태가 오래 이어져 종료했습니다.",
+    "noResume": "이 회의에는 이어서 녹음할 수 없습니다.",
+    "analysis": {
+      "analyzing": "분석 중입니다.",
+      "reviewable": "검토할 결과가 준비되었습니다.",
+      "failed": "분석하지 못했습니다."
+    },
+    "collapse": "접기",
+    "expand": "펼치기"
+  },
+  "deleteDialog": {
+    "title": "회의록을 삭제할까요?",
+    "description": "이 회의의 녹음과 스크립트, 요약, 발언에 연결된 근거를 함께 삭제합니다. 녹음 중이라면 녹음도 끝납니다. 삭제한 회의록은 되돌릴 수 없습니다.",
+    "chats": "이 회의록만 물어본 에이전트 대화도 함께 삭제합니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다.",
+    "analyzing": "회의 분석이 끝나면 삭제할 수 있습니다.",
+    "flowFailed": "분석 상태를 불러오지 못했습니다.",
+    "flowChecking": "분석 상태를 확인하고 있습니다.",
+    "deleted": "회의를 삭제했습니다."
+  },
+  "details": {
+    "loading": "노트 정보 불러오는 중",
+    "title": "제목",
+    "attendees": "참석자",
+    "untitled": "제목 없는 노트",
+    "saveFailed": "저장하지 못했습니다. 입력한 내용은 그대로 남아 있습니다.",
+    "saved": "저장했습니다",
+    "facts": {
+      "title": "회의 정보",
+      "host": "진행자",
+      "controlsRecording": "기록 제어 권한",
+      "duration": "기록 길이",
+      "sharedWith": "공유 범위",
+      "workspaceMembers": "워크스페이스 멤버에게 공개",
+      "ended": "종료",
+      "autoEnded": "자동 종료",
+      "autoEndedDays": "자동 종료(마지막 일시정지 후 {days}영업일)",
+      "created": "생성",
+      "updated": "최종 수정"
+    }
+  },
+  "participants": {
+    "external": "외부",
+    "host": "진행자",
+    "hostLabel": "진행자 {who}",
+    "count": "참여자 {count}명",
+    "more": "외 {count}명"
+  },
+  "participantsField": {
+    "empty": "아직 참여자가 없습니다.",
+    "add": "참여자 추가",
+    "searchLabel": "이름이나 이메일로 참여자 검색",
+    "searchPlaceholder": "이름 검색 또는 임시 참여자 추가",
+    "loading": "참여자를 불러오는 중입니다.",
+    "membersFailed": "멤버를 불러오지 못했습니다.",
+    "guestsFailed": "임시 참여자를 불러오지 못했습니다.",
+    "bothFailed": "멤버와 임시 참여자를 불러오지 못했습니다.",
+    "noMatch": "일치하는 사람이 없습니다.",
+    "departed": "워크스페이스에 없는 사람",
+    "createGuest": "＋ \"{name}\" 추가",
+    "createGuestHint": "계정 없이 이 회의의 임시 참여자로 추가합니다.",
+    "manageGuests": "임시 참여자 관리",
+    "saveFailed": "참여자를 저장하지 못했습니다."
+  },
+  "context": {
+    "title": "회의 맥락",
+    "help": "회의가 무엇에 관한 것인지 적어 두면 받아 적을 때 참고합니다. 프로젝트 이름과 회의 제목, 참석자 이름은 적지 않아도 자동으로 들어갑니다.",
+    "topic": "주제",
+    "background": "배경",
+    "empty": "적어 둔 맥락이 없습니다.",
+    "unsaved": "회의가 끝나 저장하지 못한 내용입니다. 필요하면 복사해 두세요.",
+    "blank": "적지 않았습니다",
+    "saving": "저장하는 중…",
+    "saved": "저장했습니다",
+    "saveFailed": "저장하지 못했습니다",
+    "recording": "녹음 중입니다. 고친 내용은 녹음을 다시 이어 갈 때부터 반영됩니다.",
+    "topicPlaceholder": "예: 주간 제품 회의 · 결제 오류 대응과 다음 주 출시 일정",
+    "backgroundPlaceholder": "예: 지난주 결제 승인 실패가 늘어 원인을 찾는 중이에요. 오늘은 PG사 로그를 살펴보고 임시 조치를 정해요."
+  },
+  "archive": {
+    "scrollToBottom": "맨 아래로",
+    "transcriptLabel": "회의 스크립트",
+    "loading": "스크립트 불러오는 중",
+    "loadFailed": "스크립트를 불러오지 못했습니다.",
+    "truncated": "기록을 끝까지 저장하지 못했습니다.",
+    "empty": "스크립트가 없습니다.",
+    "resetReadFailed": "화자를 다시 읽지 못해 초기화를 멈췄습니다.",
+    "resetFailed": "화자 {count}개를 초기화하지 못했습니다.",
+    "resetDialog": {
+      "title": "지정한 화자를 모두 초기화할까요?",
+      "description": "화자 {count}개에 붙인 이름과 발화별로 지정한 화자를 지웁니다. AI가 붙인 「화자 A」 같은 이름으로 돌아가고, 되돌릴 수 없습니다.",
+      "confirm": "전체 초기화"
+    },
+    "applyAllDialog": {
+      "title": "개별로 고친 발화도 함께 바뀝니다",
+      "unknown": "화자 {label}에 개별로 지정한 발화가 있는지 확인하지 못했습니다. 모든 발화에 적용하면 그 지정이 사라집니다.",
+      "description": "화자 {label}에 개별로 지정한 발화가 {count}개 있습니다. 모든 발화에 적용하면 그 지정이 사라집니다.",
+      "confirm": "모든 발화에 적용"
+    }
+  },
+  "agentRail": {
+    "title": "내 에이전트",
+    "collapse": "내 에이전트 접기",
+    "collapseBusy": "답변이 끝나면 접을 수 있습니다",
+    "collapseShort": "접기"
+  },
+  "copy": {
+    "button": "복사",
+    "iconLabel": "{label} 복사",
+    "tooltip": "마크다운으로 복사합니다",
+    "copied": "{label} 내용을 클립보드에 복사했습니다.",
+    "failed": "복사하지 못했습니다.",
+    "blocked": "브라우저가 클립보드 접근을 막았습니다."
+  }
+}

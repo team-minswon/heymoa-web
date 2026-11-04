@@ -72,7 +72,7 @@ describe("NoteContextSection", () => {
     // 저장 응답이 입력란을 덮지 않는다(뒤 공백이 그대로)
     expect(topic).toHaveValue("결제 오류 ");
     await waitFor(() =>
-      expect(screen.getByText("저장했어요")).toBeInTheDocument()
+      expect(screen.getByText("저장했습니다")).toBeInTheDocument()
     );
   });
 
@@ -116,7 +116,7 @@ describe("NoteContextSection", () => {
     );
     expect(
       screen.getByText(
-        "녹음 중이에요. 고친 내용은 녹음을 다시 이어 갈 때부터 반영돼요."
+        "녹음 중입니다. 고친 내용은 녹음을 다시 이어 갈 때부터 반영됩니다."
       )
     ).toBeInTheDocument();
     rerender(
@@ -131,7 +131,7 @@ describe("NoteContextSection", () => {
     );
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByText("주간 회의")).toBeInTheDocument();
-    expect(screen.getByText("적지 않았어요")).toBeInTheDocument();
+    expect(screen.getByText("적지 않았습니다")).toBeInTheDocument();
   });
 
   it("저장에 실패하면 입력을 지키고 다시 시도를 둔다", async () => {
@@ -163,7 +163,7 @@ describe("NoteContextSection", () => {
     fireEvent.change(background, { target: { value: "배경 설명" } });
     fireEvent.blur(background);
     await waitFor(() =>
-      expect(screen.getByText("저장하지 못했어요")).toBeInTheDocument()
+      expect(screen.getByText("저장하지 못했습니다")).toBeInTheDocument()
     );
     expect(background).toHaveValue("배경 설명");
     expect(

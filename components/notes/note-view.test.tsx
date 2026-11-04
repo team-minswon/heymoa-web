@@ -213,7 +213,7 @@ describe("NoteView", () => {
     });
     expect(announcement).toHaveAttribute("aria-live", "polite");
     expect(announcement).toHaveTextContent(
-      "회의 상태가 기록 중으로 변경되었습니다."
+      "회의 상태가 바뀌었습니다: 기록 중"
     );
 
     state.note = {
@@ -228,7 +228,7 @@ describe("NoteView", () => {
       screen.getAllByRole("status", { name: "회의 상태 변경" })
     ).toHaveLength(1);
     expect(announcement).toHaveTextContent(
-      "회의 상태가 종료됨으로 변경되었습니다."
+      "회의 상태가 바뀌었습니다: 종료됨"
     );
   });
 

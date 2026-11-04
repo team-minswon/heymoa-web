@@ -140,7 +140,7 @@ describe("MeetingControls", () => {
     const end = screen.getByRole("button", { name: "회의 종료" });
     expect(end).toBeDisabled();
     expect(end).toHaveAccessibleDescription(
-      "테스트 유저 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다"
+      "테스트 유저 님이 기록 중입니다. 일시정지한 뒤 종료할 수 있습니다"
     );
   });
 
@@ -168,7 +168,7 @@ describe("MeetingControls", () => {
 
     expect(
       await screen.findByText(
-        "테스트 유저 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다",
+        "테스트 유저 님이 기록 중입니다. 일시정지한 뒤 종료할 수 있습니다",
         {
           selector:
             "[data-slot=tooltip-content] *, [data-slot=tooltip-content]",

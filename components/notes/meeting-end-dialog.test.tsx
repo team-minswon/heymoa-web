@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { intlWrapper } from "@/components/help/test-intl";
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
 import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
 import type { Participant } from "@/components/notes/note-participants";
@@ -227,9 +228,47 @@ describe("MeetingEndDialog", () => {
     ]);
     const section = screen.getByRole("region", { name: "회의 참여자" });
     expect(section.textContent).toContain("참여자 1명");
-    expect(section.textContent).toContain("말한 사람이 1명으로 처리됩니다");
+    expect(section.textContent).toContain("말한 사람을 모두 같은 화자로 봅니다");
     expect(section.textContent).toContain("먼저 참여자를 지정해 주세요");
     expect(section.textContent).not.toContain("말한 사람이 모두 들어 있나요?");
+  });
+
+  it("영어 화면에서는 참여자 수를 복수형으로 세고 상태를 영어로 말한다", () => {
+    const client = new QueryClient();
+    const ui = (participants: Participant[]) => (
+      <QueryClientProvider client={client}>
+        <MeetingEndDialog
+          noteId="01K0000000002"
+          meetingStatus="PAUSED"
+          participants={participants}
+          open
+          onOpenChange={vi.fn()}
+          onEditParticipants={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+    const view = render(ui([participant("p1", "김민수")]), {
+      wrapper: intlWrapper("en"),
+    });
+    expect(
+      screen.getByRole("heading", { name: "End this meeting?" })
+    ).toBeInTheDocument();
+    const section = screen.getByRole("region", { name: "Meeting participants" });
+    expect(section.textContent).toContain("1 participant");
+    expect(section.textContent).toContain("treated as the same speaker");
+    expect(screen.getByText("Recording status · Paused")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Go to participants" })
+    ).toBeInTheDocument();
+
+    view.rerender(ui(TWO_PARTICIPANTS));
+    expect(section.textContent).toContain("2 participants");
+    // 참여자 이름(사용자 데이터)과 공용 창의 닫기 버튼(`components/ui/dialog`, 이 모듈 밖)만 한국어로 남는다.
+    expect(
+      screen
+        .getByRole("dialog")
+        .textContent?.replace(/김민수|한지원|닫기/g, "")
+    ).not.toMatch(/[가-힣]/);
   });
 
   it("참여자가 없으면 이름 목록 없이 경고만 보인다", () => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { HelpTip } from "@/components/ui/help-tip";
 import { Input } from "@/components/ui/input";
@@ -22,9 +23,6 @@ export const TOPIC_MAX = 200;
 export const BACKGROUND_MAX = 1000;
 /** 입력을 멈추고 이만큼 지나면 저장한다. 포커스가 빠지면 기다리지 않는다. */
 const SAVE_DELAY_MS = 800;
-
-const HELP =
-  "회의가 무엇에 관한 것인지 알려 주면 받아 적을 때 참고해요. 프로젝트 이름·회의 제목·참석자 이름은 적지 않아도 자동으로 들어가요.";
 
 /**
  * 정보 탭의 타입 위계. 「회의 맥락」·「회의 정보」 두 구역이 **같은 머리글**을 쓰고, 그 아래 라벨은 한 단 작고 흐리게,
@@ -88,14 +86,15 @@ function FieldLabel({
 }
 
 function SectionHeading({ status }: { status?: React.ReactNode }) {
+  const t = useTranslations("notes.context");
   return (
     <div className="mb-4 flex min-h-6 items-center justify-between gap-3">
       <h2
         id="note-context-title"
         className={cn("flex items-center gap-1", INFO_SECTION_TITLE)}
       >
-        회의 맥락
-        <HelpTip label="회의 맥락">{HELP}</HelpTip>
+        {t("title")}
+        <HelpTip label={t("title")}>{t("help")}</HelpTip>
       </h2>
       {status}
     </div>
@@ -124,6 +123,7 @@ export function NoteContextSection({
   topic: string | null;
   background: string | null;
 }) {
+  const t = useTranslations("notes.context");
   const server: Context = { topic: topic ?? "", background: background ?? "" };
   // 저장하려던 사이 회의가 끝났다(409). 읽기 전용으로 바뀌어도 쓴 글을 버리지 않고 복사할 수 있게 보인다.
   const [unsaved, setUnsaved] = useState<Context | null>(null);
@@ -134,22 +134,29 @@ export function NoteContextSection({
         <SectionHeading />
         {server.topic || server.background ? (
           <dl className="flex flex-col gap-5">
-            <ReadOnlyValue label="주제" value={server.topic} emphasis />
-            <ReadOnlyValue label="배경" value={server.background} />
+            <ReadOnlyValue label={t("topic")} value={server.topic} emphasis />
+            <ReadOnlyValue label={t("background")} value={server.background} />
           </dl>
         ) : (
           <p className="text-sm text-[var(--el-muted)]">
-            적어 둔 맥락이 없어요.
+            {t("empty")}
           </p>
         )}
         {unsaved && !sameContext(unsaved, server) ? (
           <div className="mt-4 flex flex-col gap-2 rounded-control border border-dashed border-[var(--el-hairline-strong)] p-3">
             <p className="text-xs text-[var(--el-body)]">
-              회의가 끝나 저장하지 못한 내용이에요. 필요하면 복사해 두세요.
+              {t("unsaved")}
             </p>
             <dl className="flex flex-col gap-5 select-text">
-              <ReadOnlyValue label="주제" value={unsaved.topic} emphasis />
-              <ReadOnlyValue label="배경" value={unsaved.background} />
+              <ReadOnlyValue
+                label={t("topic")}
+                value={unsaved.topic}
+                emphasis
+              />
+              <ReadOnlyValue
+                label={t("background")}
+                value={unsaved.background}
+              />
             </dl>
           </div>
         ) : null}
@@ -177,6 +184,7 @@ function ReadOnlyValue({
   value: string;
   emphasis?: boolean;
 }) {
+  const t = useTranslations("notes.context");
   return (
     <div className="flex flex-col gap-1.5">
       <dt className={INFO_LABEL}>{label}</dt>
@@ -194,7 +202,7 @@ function ReadOnlyValue({
                 {paragraph}
               </p>
             ))
-          : "적지 않았어요"}
+          : t("blank")}
       </dd>
     </div>
   );
@@ -211,6 +219,8 @@ function EditableContext({
   server: Context;
   onEnded: (draft: Context) => void;
 }) {
+  const t = useTranslations("notes.context");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const update = useUpdateNoteContext();
   const [draft, setDraft] = useState<Context>(server);
@@ -309,18 +319,18 @@ function EditableContext({
 
   const status =
     state === "saving" ? (
-      <span className="text-xs text-[var(--el-muted)]">저장하는 중…</span>
+      <span className="text-xs text-[var(--el-muted)]">{t("saving")}</span>
     ) : state === "saved" ? (
-      <span className="text-xs text-[var(--el-muted)]">저장했어요</span>
+      <span className="text-xs text-[var(--el-muted)]">{t("saved")}</span>
     ) : state === "error" ? (
       <span className="flex items-center gap-1.5 text-xs text-[var(--el-error-strong)]">
-        저장하지 못했어요
+        {t("saveFailed")}
         <button
           type="button"
           onClick={() => void save()}
           className="cursor-pointer font-medium underline underline-offset-2 hover:text-[var(--el-ink)]"
         >
-          다시 시도
+          {tActions("retry")}
         </button>
       </span>
     ) : null;
@@ -349,14 +359,14 @@ function EditableContext({
             aria-hidden
             className="size-1.5 shrink-0 rounded-full bg-[var(--el-error)]"
           />
-          녹음 중이에요. 고친 내용은 녹음을 다시 이어 갈 때부터 반영돼요.
+          {t("recording")}
         </p>
       ) : null}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <FieldLabel
             htmlFor="note-context-topic"
-            label="주제"
+            label={t("topic")}
             length={draft.topic.length}
             max={TOPIC_MAX}
           />
@@ -365,7 +375,7 @@ function EditableContext({
             value={draft.topic}
             maxLength={TOPIC_MAX}
             autoComplete="off"
-            placeholder="예: 주간 제품 회의 · 결제 오류 대응과 다음 주 출시 일정"
+            placeholder={t("topicPlaceholder")}
             onChange={(event) =>
               change({ ...draft, topic: event.target.value })
             }
@@ -375,7 +385,7 @@ function EditableContext({
         <div className="flex flex-col gap-1.5">
           <FieldLabel
             htmlFor="note-context-background"
-            label="배경"
+            label={t("background")}
             length={draft.background.length}
             max={BACKGROUND_MAX}
           />
@@ -383,7 +393,7 @@ function EditableContext({
             id="note-context-background"
             value={draft.background}
             maxLength={BACKGROUND_MAX}
-            placeholder="예: 지난주 결제 승인 실패가 늘어 원인을 찾는 중이에요. 오늘은 PG사 로그 결과와 임시 조치를 정해요."
+            placeholder={t("backgroundPlaceholder")}
             onChange={(event) =>
               change({ ...draft, background: event.target.value })
             }
@@ -403,10 +413,11 @@ function EditableContext({
  * 그 회의는 대개 맥락이 비어 한 줄이다(`e2e/skeleton-geometry`).
  */
 export function NoteContextSkeleton() {
+  const t = useTranslations("notes.context");
   return (
     <section className={INFO_SECTION}>
       <div className="mb-4 flex min-h-6 items-center">
-        <h2 className={INFO_SECTION_TITLE}>회의 맥락</h2>
+        <h2 className={INFO_SECTION_TITLE}>{t("title")}</h2>
       </div>
       <div className="flex h-5 items-center">
         <Skeleton className="h-3.5 w-40 rounded-chip" />

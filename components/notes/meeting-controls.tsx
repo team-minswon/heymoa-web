@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import {
   CalendarDays,
   CircleCheck,
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models";
-import { MEETING_STATUS_LABEL } from "@/lib/notes/meeting-state";
+import { MEETING_STATUS_KEY } from "@/lib/notes/meeting-state";
 import { useAuthUserId } from "@/components/auth/auth-provider";
 import { readUserFlag, writeUserFlag } from "@/lib/storage/user-flags";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,7 @@ import { cn } from "@/lib/utils";
  * 11px semibold 라벨이 붙는다. 배경 없는 칩이라 프로젝트 pill과 나란히 놓여도 안 싸운다.
  *
  * **기록 중만 붉다.** 나머지는 muted다 — 종료·일시정지·시작 전은 사건이 아니라 상태다.
- * 라벨은 `MEETING_STATUS_LABEL`을 그대로 쓴다(목록 행과 같은 이름). 정본은 「예정」이라고
+ * 라벨은 `common.meetingStatus`를 그대로 쓴다(목록 행과 같은 이름). 정본은 「예정」이라고
  * 적혀 있지만 목록이 「시작 전」으로 부르는 같은 상태라, 화면마다 다르게 부르지 않는다.
  */
 export function MeetingStatusChip({
@@ -43,6 +44,8 @@ export function MeetingStatusChip({
 }: {
   status: NoteResponseDataMeetingStatus;
 }) {
+  const tStatus = useTranslations("common.meetingStatus");
+  const label = tStatus(MEETING_STATUS_KEY[status]);
   const live = status === "IN_PROGRESS";
   const Icon =
     status === "NOT_STARTED"
@@ -57,7 +60,7 @@ export function MeetingStatusChip({
         "flex shrink-0 items-center gap-1.5 text-[11px] font-semibold",
         live ? "text-destructive" : "text-[var(--el-muted)]"
       )}
-      title={status === "PAUSED" ? MEETING_STATUS_LABEL[status] : undefined}
+      title={status === "PAUSED" ? label : undefined}
     >
       {Icon ? (
         <Icon className="size-3.5" aria-hidden />
@@ -73,11 +76,9 @@ export function MeetingStatusChip({
       {status === "PAUSED" ? (
         // 「일시정지됨」은 다른 라벨보다 두 글자 길다. 좁은 상단바(1024 사이드 보기 등)에서는 탭을 덮지 않게
         // ⏸ 아이콘만 남기고 글자는 스크린리더와 툴팁으로 둔다(APP-1406).
-        <span className="@max-[640px]/topbar:sr-only">
-          {MEETING_STATUS_LABEL[status]}
-        </span>
+        <span className="@max-[640px]/topbar:sr-only">{label}</span>
       ) : (
-        MEETING_STATUS_LABEL[status]
+        label
       )}
     </span>
   );
@@ -92,9 +93,9 @@ function nudgeSuppressed(userId: string | undefined) {
 }
 
 const NUDGE_ITEMS = [
-  { icon: Users, title: "화자 분리", body: "누가 말했는지 나눠 이름을 붙여요" },
-  { icon: FileText, title: "요약", body: "결정과 할 일을 한 번에 정리해요" },
-  { icon: CircleCheck, title: "검토 완료", body: "프로젝트 지식으로 확정해요" },
+  { icon: Users, key: "speakers" },
+  { icon: FileText, key: "summary" },
+  { icon: CircleCheck, key: "review" },
 ] as const;
 
 /**
@@ -111,6 +112,7 @@ function EndNudge({
   onEnd: () => void;
   onNever: () => void;
 }) {
+  const t = useTranslations("notes.endNudge");
   // 툭 나오고 툭 사라지지 않게 — 버튼 쪽(오른쪽 위)에서 부드럽게 펴지고 접힌다.
   const motionProps = useNudgeMotion("top right");
   return (
@@ -128,18 +130,20 @@ function EndNudge({
       />
       <div className="p-4">
         <p className="text-sm font-medium text-[var(--el-ink)]">
-          녹음을 멈췄어요. 이제 마무리할까요?
+          {t("title")}
         </p>
         <ul className="mt-3 grid gap-2.5">
-          {NUDGE_ITEMS.map(({ icon: Icon, title, body }) => (
-            <li key={title} className="flex gap-2.5 text-xs leading-snug">
+          {NUDGE_ITEMS.map(({ icon: Icon, key }) => (
+            <li key={key} className="flex gap-2.5 text-xs leading-snug">
               <Icon
                 className="mt-0.5 size-4 shrink-0 text-[var(--el-ink)]"
                 aria-hidden
               />
               <span className="text-[var(--el-muted)]">
-                <b className="font-medium text-[var(--el-ink)]">{title}</b> —{" "}
-                {body}
+                <b className="font-medium text-[var(--el-ink)]">
+                  {t(`items.${key}.title`)}
+                </b>{" "}
+                — {t(`items.${key}.body`)}
               </span>
             </li>
           ))}
@@ -147,17 +151,17 @@ function EndNudge({
       </div>
       <div className="flex items-center gap-2 border-t border-[var(--el-hairline)] px-4 py-3">
         <Button type="button" variant="outline" size="sm" onClick={onLater}>
-          나중에
+          {t("later")}
         </Button>
         <Button type="button" size="sm" onClick={onEnd}>
-          지금 종료
+          {t("endNow")}
         </Button>
         <button
           type="button"
           onClick={onNever}
           className="ml-auto text-[11px] text-[var(--el-muted-soft)] underline underline-offset-2 hover:text-[var(--el-ink)]"
         >
-          다시 보지 않기
+          {t("never")}
         </button>
       </div>
       <CountdownBar
@@ -185,6 +189,7 @@ export function MeetingControls({
   /** 종료 접수 후 호출 — note-panel이 요약 탭으로 넘긴다. */
   onMeetingEnded?: () => void;
 }) {
+  const t = useTranslations("notes.controls");
   const [endOpen, setEndOpen] = useState(false);
   const recording = useRecording();
   const userId = useAuthUserId();
@@ -221,8 +226,8 @@ export function MeetingControls({
   const recorder =
     recordingHere || !note.meetingStartedBy ? null : note.meetingStartedBy.name;
   const blockedReason = recorder
-    ? `${recorder} 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다`
-    : "일시정지한 뒤 종료할 수 있습니다";
+    ? t("blockedBy", { name: recorder })
+    : t("blocked");
 
   // 일시정지됨이면 종료가 다음 할 일이다 — 채워진 주 버튼으로 바꾼다. 기록 중(막힌 상태)은 붉은 외곽선 그대로.
   const paused = note.meetingStatus === "PAUSED";
@@ -241,7 +246,7 @@ export function MeetingControls({
       onClick={() => setEndOpen(true)}
     >
       <CircleStop className="size-4" />
-      회의 종료
+      {t("end")}
       {nudge ? (
         <span
           aria-hidden
@@ -255,7 +260,7 @@ export function MeetingControls({
   return (
     <div
       role="group"
-      aria-label="회의 상태 및 제어"
+      aria-label={t("group")}
       className="flex shrink-0 items-center gap-3"
     >
       {recordingBlocked ? (

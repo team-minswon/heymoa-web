@@ -3,6 +3,7 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { Info, Pause } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   isAutoEnded,
@@ -53,6 +54,7 @@ export function NoteStatusBand({
   note: NoteResponseData;
   fromMail?: boolean;
 }) {
+  const t = useTranslations("notes.statusBand");
   const queryClient = useQueryClient();
   // 목록이 노트보다 늦게 도착해도 띠가 서도록 캐시를 구독한다. 값은 문자열이라 매 알림에 다시 그리지 않는다.
   const subscribe = useCallback(
@@ -87,15 +89,15 @@ export function NoteStatusBand({
     const days = pausedDayCount(pausedAt, now);
     const scheduledAt = note.autoEnd?.scheduledAt;
     if (scheduledAt)
-      lead = `계속 일시정지 상태라면 ${formatPromiseTime(scheduledAt)} 이후 자동 종료될 예정입니다.`;
-    else if (days !== null) lead = `${days}일째 일시정지 상태입니다.`;
-    else if (landed) lead = "일시정지 상태입니다.";
+      lead = t("autoEndScheduled", { time: formatPromiseTime(scheduledAt) });
+    else if (days !== null) lead = t("pausedDays", { count: days });
+    else if (landed) lead = t("paused");
     // 띠는 일시정지 일수(예고된 회의면 자동 종료 시각)만 말한다(userflow 표). 할 수 있는 일은 메일로 온 사람에게만 덧붙인다(userflow 「모바일 메일」).
-    if (landed) rest = "이어서 녹음하거나 종료할 수 있습니다.";
+    if (landed) rest = t("pausedActions");
   } else if (landed && note.meetingStatus === "IN_PROGRESS") {
-    lead = "메일을 보낸 뒤 녹음이 다시 시작되었습니다.";
+    lead = t("resumedSinceMail");
   } else if (landed && note.meetingStatus === "ENDED") {
-    lead = "메일을 보낸 뒤 회의가 종료되었습니다.";
+    lead = t("endedSinceMail");
   }
   if (lead === null) return null;
   const Icon = note.meetingStatus === "PAUSED" ? Pause : Info;

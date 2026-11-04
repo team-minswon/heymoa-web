@@ -134,11 +134,11 @@ describe("NoteDetails", () => {
 
     const title = screen.getByRole("textbox", { name: "제목" });
     fireEvent.change(title, { target: { value: "수정 중인 회의 제목" } });
-    fireEvent.click(screen.getByRole("button", { name: "변경 저장" }));
+    fireEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "저장하지 못했습니다. 입력한 내용은 유지됩니다.",
+        "저장하지 못했습니다. 입력한 내용은 그대로 남아 있습니다.",
         { id: `note-save-${NOTE_ID}` }
       )
     );
@@ -161,7 +161,7 @@ describe("NoteDetails", () => {
       </QueryClientProvider>
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "변경 저장" }));
+    fireEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
 
     await waitFor(() =>
       expect(client.getQueryState(projectNotesKey)?.isInvalidated).toBe(true)
