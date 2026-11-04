@@ -18,7 +18,7 @@ import {
   WifiOff,
 } from "lucide-react";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { usePersonalChat } from "@/components/chat/personal-chat";
@@ -85,6 +85,7 @@ import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
 import { useIsWorkspaceAdmin } from "@/lib/workspace/use-is-workspace-admin";
+import { localePath } from "@/lib/i18n/locales";
 
 /** 노트 조회가 「없다」로 끝난 코드. 노트·프로젝트가 지워졌거나 남의 것이다. */
 const NOTE_GONE_CODES = new Set(["NOTE_NOT_FOUND", "PROJECT_NOT_FOUND"]);
@@ -159,6 +160,7 @@ export function NotePanel({
   const tActions = useTranslations("common.actions");
   const tDates = useTranslations("dates");
   const dateLocale = useDisplayLocale();
+  const locale = useLocale();
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
   const isDesktopApp = useDesktopApp();
@@ -1095,7 +1097,7 @@ export function NotePanel({
                     {t.rich("desktopHint", {
                       link: (chunks) => (
                         <a
-                          href="/download"
+                          href={localePath(locale, "/download")}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="rounded-sm font-semibold text-[var(--el-ink)] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"

@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { PlatformIcon } from "@/components/heymoa/desktop-platform-icon";
 import { track } from "@/lib/analytics/track";
 import { desktopDownload } from "@/lib/desktop/downloads";
 import { cn } from "@/lib/utils";
+import { localePath } from "@/lib/i18n/locales";
 
 export function DesktopDownloadLink({ className }: { className?: string }) {
   const t = useTranslations("shell.desktopDownload");
+  const locale = useLocale();
   const [os, setOs] = useState<"mac" | "windows" | "other" | null>(null);
   useEffect(() => {
     let active = true;
@@ -24,7 +26,7 @@ export function DesktopDownloadLink({ className }: { className?: string }) {
 
   return (
     <a
-      href="/download?start=1"
+      href={localePath(locale, "/download?start=1")}
       target="_blank"
       rel="noopener noreferrer"
       aria-busy={os === null || undefined}

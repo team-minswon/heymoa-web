@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { AlertTriangle } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { SitePageLink } from "@/components/heymoa/site-page-link";
@@ -44,6 +44,7 @@ import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { markAccountDeleted } from "@/components/auth/account-deleted-notice";
 import { forgetDeletedAccount } from "@/lib/storage/user-flags";
 import { cn } from "@/lib/utils";
+import { localePath } from "@/lib/i18n/locales";
 
 /** 유일 관리자 워크스페이스에서 고른 것. 기본은 서버가 정한 가장 오래된 멤버에게 넘기기다. */
 type Choice =
@@ -87,6 +88,7 @@ export function AccountDeletionSection() {
 }
 
 function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
+  const locale = useLocale();
   const t = useTranslations("settings.accountDeletion");
   const tActions = useTranslations("common.actions");
   const { user, leave } = useAuth();
@@ -283,7 +285,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
               <li>
                 {t("effects.retained")}{" "}
                 <SitePageLink
-                  href="/privacy#section-6"
+                  href={localePath(locale, "/privacy#section-6")}
                   className="whitespace-nowrap underline underline-offset-2 hover:text-[var(--el-ink)]"
                 >
                   {t("effects.retentionLink")}

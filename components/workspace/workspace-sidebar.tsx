@@ -26,7 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -98,6 +98,7 @@ import { cn } from "@/lib/utils";
 import { Collapse } from "@/components/heymoa/collapse";
 import { openSitePage } from "@/lib/desktop/open-site-page";
 import { updateChecklist } from "@/lib/onboarding/checklist";
+import { localePath } from "@/lib/i18n/locales";
 
 /** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
 type ProjectDialogState = { project: ProjectResponseData } | null;
@@ -132,6 +133,7 @@ export function WorkspaceSidebar({
   const router = useRouter();
   const t = useTranslations("shell.sidebar");
   const tNav = useTranslations("shell.nav");
+  const locale = useLocale();
   const tActions = useTranslations("common.actions");
   const notesHref = `/w/${workspaceId}`;
   const tasksHref = `/w/${workspaceId}/tasks`;
@@ -518,7 +520,7 @@ export function WorkspaceSidebar({
               <SidebarMenuButton
                 onClick={() => {
                   track("help_opened", { from: "sidebar" });
-                  openSitePage("/help", router.push);
+                  openSitePage(localePath(locale, "/help"), router.push);
                 }}
                 className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
               >

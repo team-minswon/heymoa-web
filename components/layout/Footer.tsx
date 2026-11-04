@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { siteConfig } from "@/lib/site";
+import { localePath } from "@/lib/i18n/locales";
 
 /**
  * 범용 푸터. 랜딩 크롬 경로(`isLandingChromeRoute`)는 `FooterGate` 가 랜딩 푸터를 세우므로 여기 오지 않고,
@@ -17,6 +18,7 @@ export function Footer() {
   const t = useTranslations("shell.footer");
   const tNavbar = useTranslations("shell.navbar.sections");
   const tLegal = useTranslations("shell.focusChrome");
+  const locale = useLocale();
 
   const handleScroll = (id: string) => {
     router.push(`/#${id}`);
@@ -79,7 +81,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/download"
+                  href={localePath(locale, "/download")}
                   className="text-[15px] font-medium text-[var(--el-muted)] hover:text-[var(--el-ink)]"
                 >
                   {t("download")}
@@ -94,7 +96,7 @@ export function Footer() {
             <ul className="mt-4 space-y-3">
               <li>
                 <Link
-                  href="/terms"
+                  href={localePath(locale, "/terms")}
                   className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)]"
                 >
                   {tLegal("terms")}
@@ -102,7 +104,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/privacy"
+                  href={localePath(locale, "/privacy")}
                   className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)]"
                 >
                   {tLegal("privacy")}

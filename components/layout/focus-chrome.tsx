@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
+import { localePath } from "@/lib/i18n/locales";
 
 /**
  * 카드 하나만 세우는 흐름(`isFocusChromeRoute` — 외부 에이전트 동의 · 초대)의 머리글. 메뉴 없이 로고와 로그아웃만 둔다.
@@ -58,13 +59,14 @@ const LINK =
 /** 같은 흐름의 발. 약관 · 개인정보만 둔다. */
 export function FocusFooter() {
   const t = useTranslations("shell.focusChrome");
+  const locale = useLocale();
   return (
     <footer className="flex items-center justify-center gap-2 px-4 pt-2 pb-6 text-sm text-[var(--el-muted)]">
-      <Link href="/terms" className={LINK}>
+      <Link href={localePath(locale, "/terms")} className={LINK}>
         {t("terms")}
       </Link>
       <span aria-hidden>·</span>
-      <Link href="/privacy" className={LINK}>
+      <Link href={localePath(locale, "/privacy")} className={LINK}>
         {t("privacy")}
       </Link>
     </footer>

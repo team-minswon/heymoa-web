@@ -3,17 +3,19 @@
 import { helpPathById } from "@/app/[lang]/help/_content/path-by-id";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { openSitePage } from "@/lib/desktop/open-site-page";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
+import { localePath } from "@/lib/i18n/locales";
 
 const RECORDING_ERROR_TOAST_ID = "recording-error";
 
 export function RecordingErrorToast() {
   const t = useTranslations("recording.errorToast");
+  const locale = useLocale();
   const { error } = useRecording();
   const router = useRouter();
   const isDesktopApp = useDesktopApp();
@@ -35,14 +37,17 @@ export function RecordingErrorToast() {
         label: t("help"),
         onClick: () =>
           openSitePage(
-            isDesktopApp
-              ? `${helpPathById("desktop")}#first-run`
-              : helpPathById("troubleshooting"),
+            localePath(
+              locale,
+              isDesktopApp
+                ? `${helpPathById("desktop")}#first-run`
+                : helpPathById("troubleshooting")
+            ),
             router.push
           ),
       },
     });
-  }, [error, router, isDesktopApp, t]);
+  }, [error, router, isDesktopApp, t, locale]);
 
   return null;
 }
