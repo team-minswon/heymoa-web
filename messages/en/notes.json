@@ -250,7 +250,7 @@
     "transcriptLabel": "Meeting transcript",
     "loading": "Loading transcript",
     "loadFailed": "Couldn't load the transcript.",
-    "truncated": "The transcript wasn't saved to the end.",
+    "truncated": "The recording wasn't fully saved.",
     "empty": "No transcript.",
     "resetReadFailed": "Couldn't reload speakers, so the reset was stopped.",
     "resetFailed": "Couldn't reset {count, plural, one {# speaker} other {# speakers}}.",

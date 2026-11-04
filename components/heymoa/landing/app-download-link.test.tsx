@@ -100,3 +100,19 @@ it("Mac은 CPU 선택 메뉴 없이 Apple Silicon 파일로 연결합니다", as
   ).toHaveAttribute("href", DESKTOP_INSTALLERS.mac[0].href);
   expect(screen.queryByRole("menu")).toBeNull();
 });
+
+it("OS를 모르면 화면 언어의 다운로드 페이지로 연결합니다", async () => {
+  vi.mocked(desktopDownload).mockResolvedValue({
+    os: "other",
+    href: "/download",
+  });
+  baseRender(
+    <NextIntlClientProvider locale="en" messages={messagesFor("en")}>
+      <AppDownloadLink />
+    </NextIntlClientProvider>
+  );
+  expect(await screen.findByRole("link")).toHaveAttribute(
+    "href",
+    "/en/download"
+  );
+});

@@ -772,7 +772,7 @@ function InlineNote({
 /**
  * 서버 메일 템플릿의 문구. **화면 언어와 상관없이 서버가 한국어로 보낸다** — 발송 계약에 언어가 없고, 첨부 이름도
  * 서버가 정한다. 미리보기가 받는 사람이 실제로 받는 메일과 같아야 해서 언어 파일로 옮기지 않는다.
- * 서버가 메일을 언어별로 보내게 되면 이 상수를 언어 파일로 옮긴다.
+ * 서버가 메일을 언어별로 보내게 되면 이 상수를 언어 파일로 옮긴다. 그때까지 이 문구를 그리는 요소에는 `lang="ko"` 를 단다.
  */
 const MAIL_TEMPLATE = {
   subject: (title: string) => `[회의록] ${title}`,
@@ -831,11 +831,11 @@ function MailPreview({
             {to}
           </dd>
           <dt className="text-[var(--el-muted)]">{t("subject")}</dt>
-          <dd className="text-[var(--el-ink)]">
+          <dd lang="ko" className="text-[var(--el-ink)]">
             {MAIL_TEMPLATE.subject(meeting.title)}
           </dd>
         </dl>
-        <p>{MAIL_TEMPLATE.sharedBy(sender)}</p>
+        <p lang="ko">{MAIL_TEMPLATE.sharedBy(sender)}</p>
         {message ? (
           <p className="border-l-2 border-[var(--el-hairline-strong)] pl-2.5 whitespace-pre-wrap text-[var(--el-ink)]">
             {message}
@@ -845,12 +845,14 @@ function MailPreview({
           <p className="text-[15px] font-semibold text-[var(--el-ink)]">
             {meeting.title}
           </p>
-          <p className="text-xs text-[var(--el-muted)]">{day}</p>
+          <p lang="ko" className="text-xs text-[var(--el-muted)]">
+            {day}
+          </p>
         </div>
-        <p>{MAIL_TEMPLATE.body}</p>
+        <p lang="ko">{MAIL_TEMPLATE.body}</p>
         <div className="flex items-center gap-2 rounded-control border border-[var(--el-hairline)] px-2.5 py-2 text-[12.5px] text-[var(--el-ink)]">
           <Paperclip className="size-3.5 shrink-0" aria-hidden />
-          <span className="min-w-0 [overflow-wrap:anywhere]">
+          <span lang="ko" className="min-w-0 [overflow-wrap:anywhere]">
             {MAIL_TEMPLATE.attachment(
               meeting.title,
               getAppDateKey(meeting.whenIso).replaceAll("-", "")
