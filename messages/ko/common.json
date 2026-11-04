@@ -101,5 +101,6 @@
     "copy": "{label} 복사",
     "copied": "{label}{particle} 복사했습니다.",
     "failed": "복사하지 못했습니다. 직접 선택해 복사해 주세요."
-  }
+  },
+  "helpTip": "도움말: {label}"
 }

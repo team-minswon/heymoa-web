@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { CircleHelp } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   Tooltip,
@@ -31,6 +32,7 @@ export function HelpTip({
   children: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("common");
   const [open, setOpen] = useState(false);
   const descriptionId = useId();
   return (
@@ -39,7 +41,7 @@ export function HelpTip({
         closeOnClick={false}
         delay={150}
         onClick={() => setOpen(true)}
-        aria-label={`도움말: ${label}`}
+        aria-label={t("helpTip", { label })}
         aria-describedby={descriptionId}
         render={<button type="button" />}
         className={cn(

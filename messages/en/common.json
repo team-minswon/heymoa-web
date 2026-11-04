@@ -101,5 +101,6 @@
     "copy": "Copy {label}",
     "copied": "Copied to clipboard.",
     "failed": "Couldn't copy. Select the text and copy it manually."
-  }
+  },
+  "helpTip": "Help: {label}"
 }

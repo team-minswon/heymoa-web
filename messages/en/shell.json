@@ -43,6 +43,12 @@
       "hasNotes": "Projects that have notes can't be deleted.",
       "adminOnly": "Only admins can delete projects.",
       "deleteFailed": "Couldn't delete the project."
+    },
+    "primitive": {
+      "mobileTitle": "Workspace menu",
+      "mobileDescription": "Browse workspaces and projects.",
+      "open": "Open sidebar",
+      "toggle": "Toggle sidebar"
     }
   },
   "appShell": {
