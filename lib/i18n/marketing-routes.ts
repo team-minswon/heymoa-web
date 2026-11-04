@@ -1,4 +1,11 @@
-import { DEFAULT_LOCALE, LOCALES, splitLocale } from "./locales";
+import { ACCEPT_LANGUAGE_EN_ONLY } from "./accept-language";
+import {
+  DEFAULT_LOCALE,
+  LANG_COOKIE,
+  LOCALES,
+  localePath,
+  splitLocale,
+} from "./locales";
 
 /**
  * **마케팅 경로 목록 하나.** 한국어 무접두 rewrite(`next.config.ts`), 랜딩 크롬 판정
@@ -88,5 +95,21 @@ export function marketingRedirects() {
         permanent: true,
       };
     }),
+    // 처음 온 사람의 초기 기본값(APP-1285). 언어를 고른 적이 없고(쿠키 없음) 브라우저 언어 판정이 en 이면 홈만
+    // 영어 홈으로 보낸다. 홈은 정적 페이지라 헤더를 읽을 수 없어 여기서 건다. 공유·검색으로 받은 다른 주소는 그
+    // 언어판 그대로 둔다. 임시 이동(307)이라 캐시에 남지 않고, 쿠키를 쓰지 않으므로 고른 것으로 치지 않는다.
+    {
+      source: "/",
+      has: [
+        {
+          type: "header" as const,
+          key: "accept-language",
+          value: ACCEPT_LANGUAGE_EN_ONLY,
+        },
+      ],
+      missing: [{ type: "cookie" as const, key: LANG_COOKIE }],
+      destination: localePath("en", "/"),
+      permanent: false,
+    },
   ];
 }
