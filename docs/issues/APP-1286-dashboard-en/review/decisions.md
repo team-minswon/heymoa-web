@@ -130,3 +130,12 @@ spec: docs `docs/app-1286/dashboard-en` @ `e455d14e` (`projects/PRO-66-웹-국�
 - **랜딩 `meta.keywords`의 meeting minutes·action items는 그대로**: 화면 용어가 아니라 검색어입니다
 - **회의 대화를 뜻하는 conversation은 그대로**: chat으로 바꾼 것은 내 에이전트와의 대화뿐입니다
 - **1024px 노트 상단바 겹침 수정**: 좁은 상단바(640px 이하)에서 모든 상태 칩과 「End meeting」 버튼이 글자를 접고 아이콘·점만 남깁니다(`title`로 이름 보존). 한국어 화면도 같은 폭에서 접힙니다. 되돌리기: `meeting-controls.tsx`의 `@max-[640px]/topbar:sr-only` 범위를 일시정지 칩으로 되돌림
+
+## D20. 회의 노트 검토·회의록·공유의 판단들 (`06326516`)
+
+- **회의록 PDF도 화면 언어로**: `render-minutes-pdf`가 `<html lang>`을 워커에 넘기고 PDF가 `notes.minutes.pdf`를 읽습니다. 영어 제목은 본문 글꼴 굵게(세리프 제목 글꼴에 「회의록」 세 글자만 있음). 되돌리기: `locale`을 "ko"로 고정
+- **공유 메일 본문은 한국어 그대로 (사용자 확인 필요)**: 서버 `NoteShareEmailContent`가 언어 구분 없이 한국어로 보냅니다. 미리보기도 서버와 같게 둡니다. 영어 메일은 server 이슈가 필요합니다
+- **「녹취록」(PDF·메일에 붙는 문서)과 「스크립트」(탭 이름)를 나눔 (사용자 확인 필요)**: 영어는 둘 다 Transcript입니다. 한국어도 하나로 모을지 정해 주세요
+- **「이전 결정 N개 끝남」은 랜딩 미리보기와 같아서 그대로**, 공유 결과 칩 「보내지 못함」→「보내기 실패」
+- **할 일 상태는 `common.taskStatus`**(In progress / Done / Canceled). 할 일 모듈이 `TASK_STATUS_LABEL`을 이것으로 바꿉니다
+- **후속 후보(이번 범위 밖, 기존 문제)**: 1024에서 옆 채팅 패널을 연 채 전체 화면이면 검토 할 일 줄의 내용 칸이 한 글자 폭으로 줄어듭니다(`review-row.tsx`의 `sm:grid-cols`가 화면 폭 기준). 한국어도 같습니다
