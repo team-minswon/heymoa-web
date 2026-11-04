@@ -12,3 +12,39 @@ vi.mock("next/root-params", () => ({ lang: async () => "ko" }));
 vi.mock("@/lib/i18n/use-display-locale", () => ({
   useDisplayLocale: () => "ko-KR",
 }));
+
+// 컴포넌트가 `useTranslations` 로 문구를 읽는다(APP-1286). 운영에서는 `AppShell` 이 늘 Provider 를 세우므로, 시험도
+// `render`·`renderHook` 의 기본 wrapper 로 한국어 Provider 를 씌운다. 시험이 자기 `wrapper` 를 넘기면 그 안쪽에 둔다 —
+// 영어를 보는 시험은 자기 Provider(`intlWrapper("en")`)가 안쪽에서 이긴다.
+vi.mock("@testing-library/react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@testing-library/react")>();
+  const { createElement } = await import("react");
+  const { NextIntlClientProvider } = await vi.importActual<typeof import("next-intl")>("next-intl");
+  const { messagesFor } = await import("@/i18n/messages");
+  const messages = messagesFor("ko");
+
+  type Wrapper = React.JSXElementConstructor<{ children: React.ReactNode }>;
+  const withIntl = (Inner?: Wrapper) =>
+    function IntlTestWrapper({ children }: { children: React.ReactNode }) {
+      return createElement(NextIntlClientProvider, {
+        locale: "ko",
+        messages,
+        timeZone: "Asia/Seoul",
+        children: Inner ? createElement(Inner, null, children) : children,
+      });
+    };
+
+  return {
+    ...actual,
+    render: ((ui: React.ReactNode, options: Parameters<typeof actual.render>[1] = {}) =>
+      actual.render(ui, {
+        ...options,
+        wrapper: withIntl(options.wrapper as Wrapper | undefined),
+      })) as typeof actual.render,
+    renderHook: ((callback: (props: unknown) => unknown, options: Record<string, unknown> = {}) =>
+      actual.renderHook(callback, {
+        ...options,
+        wrapper: withIntl(options.wrapper as Wrapper | undefined),
+      })) as typeof actual.renderHook,
+  };
+});
