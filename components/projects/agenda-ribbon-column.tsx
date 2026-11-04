@@ -741,8 +741,6 @@ export type HeadColumnProps = {
   markStrong: boolean;
   total: number;
   linked: number;
-  /** 앞 회의에서 며칠 뒤인가. 첫 회의는 null */
-  days: number | null;
   hover: RefObject<HoverApi | null>;
   onToggle: (noteId: string, at: number) => void;
   /** 이동 없이 바로 바꾼다(`Column` 과 같은 값) */
@@ -752,7 +750,7 @@ export type HeadColumnProps = {
 /**
  * 열 머리 한 칸: 해·달 눈금, 날짜(굵게)·회의 이름·건수, 고른 회의의 강조. 판 위에 붙은 머리 띠 안에서 판과 같은 가로 자리를 쓴다.
  * 접힌 열은 날짜·회의 이름·안건 수(옆 칸 막대 = 그중 이어진 안건)이고, 펼친 열은 날짜·「안건 N · 이어짐 M」·회의 이름이다. 열이 좁아지면(회의가 많으면)
- * 글자를 줄이고 막대만 남긴다. 눌리는 면은 늘 열 폭 전체다. 같은 날짜가 이어지면 「+N일」로 구분된다. 열 폭과 면의 바탕은 아래 열(`Column`)과 같은 스프링으로 움직이고,
+ * 글자를 줄이고 막대만 남긴다. 눌리는 면은 늘 열 폭 전체다. 열 폭과 면의 바탕은 아래 열(`Column`)과 같은 스프링으로 움직이고,
  * 접힘 ↔ 펼침으로 글이 바뀔 때는 바로 바뀐다.
  */
 export const HeadColumn = memo(function HeadColumn({
@@ -768,7 +766,6 @@ export const HeadColumn = memo(function HeadColumn({
   markStrong,
   total,
   linked,
-  days,
   hover,
   onToggle,
   instant,
@@ -788,7 +785,6 @@ export const HeadColumn = memo(function HeadColumn({
       <>
         <span className="flex h-[18px] items-baseline justify-center gap-1.5 text-xs leading-[18px] whitespace-nowrap tabular-nums">
           <span className="text-[13px] font-bold text-[var(--el-ink)]">{date}</span>
-          {days !== null ? <span className={SUBTLE}>+{days}일</span> : null}
         </span>
         <span className="mt-px block h-4 max-w-full truncate text-xs leading-4 text-[var(--el-body)]">{heading}</span>
         <span className={cn("mt-0.5 block h-4 text-xs leading-4 whitespace-nowrap tabular-nums", SUBTLE)}>
@@ -799,7 +795,6 @@ export const HeadColumn = memo(function HeadColumn({
       <>
         <span className="flex h-[18px] items-baseline justify-center gap-1 text-[13px] leading-[18px] whitespace-nowrap tabular-nums">
           <span className="font-bold text-[var(--el-ink)]">{date}</span>
-          {days !== null && width >= 84 ? <span className={cn("text-xs font-normal", SUBTLE)}>+{days}일</span> : null}
         </span>
         <span className="mt-px block h-4 max-w-full truncate text-xs leading-4 text-[var(--el-body)]">{heading}</span>
         <span className={cn("mt-0.5 flex h-4 items-center gap-1 text-xs leading-4 tabular-nums", SUBTLE)}>

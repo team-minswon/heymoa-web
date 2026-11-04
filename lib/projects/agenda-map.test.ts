@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { ProjectMeetingLinksResponseData } from "@/lib/api/generated/models";
 import {
   buildAgendaMap,
-  daysAfterPrevious,
   laneLayout,
   meetingHeading,
   shortMeetingDate,
@@ -166,13 +165,5 @@ describe("laneLayout", () => {
   it("keeps agendas without continuations apart, per meeting", () => {
     const layout = laneLayout(forked, rows, new Set());
     expect(layout.loose.get(0)?.map((item) => item.agendaId)).toEqual(["A2"]);
-  });
-});
-
-describe("daysAfterPrevious", () => {
-  it("counts calendar days in the app time zone from the meeting before", () => {
-    const map = buildAgendaMap(data);
-    expect(daysAfterPrevious(map, 0)).toBeNull();
-    expect(daysAfterPrevious(map, 1)).toBe(7);
   });
 });

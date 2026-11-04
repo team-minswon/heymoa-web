@@ -293,11 +293,3 @@ export function laneLayout(map: AgendaMap, rows: TopicRow[], expanded: ReadonlyS
   }
   return { seats, laneCount: next, loose, folded };
 }
-
-/** 앞 회의에서 며칠 뒤인가. 첫 회의는 null */
-export function daysAfterPrevious(map: AgendaMap, index: number): number | null {
-  if (index === 0) return null;
-  // 앱 시간대(서울)의 날짜끼리 센다. 자정 넘긴 회의가 하루를 더 먹지 않게
-  const day = (startedAt: string) => Date.parse(`${getAppDateKey(startedAt)}T00:00:00Z`) / 86_400_000;
-  return day(map.meetings[index].startedAt) - day(map.meetings[index - 1].startedAt);
-}

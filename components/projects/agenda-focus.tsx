@@ -28,7 +28,6 @@ import {
   type TopicIndex,
 } from "@/lib/projects/agenda-focus";
 import {
-  daysAfterPrevious,
   meetingHeading,
   meetingYear,
   shortMeetingDate,
@@ -515,7 +514,7 @@ function FocusTimeline({
     <div ref={boxRef} data-focus-box="" className="relative border-t border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]">
       <style>{HEAD_SYNC_CSS}</style>
       <div ref={sentinelRef} aria-hidden className="pointer-events-none absolute top-0 left-0 h-px w-px" />
-      {/* 날짜 머리 줄: 판의 열 머리와 같은 문법(날짜 굵게 + 옅은 +N일, 아래 회의 이름). 세로로 스크롤하면 화면 위에 붙고, 가로로는 카드와 함께 움직인다 */}
+      {/* 날짜 머리 줄: 판의 열 머리와 같은 문법(날짜 굵게, 아래 회의 이름). 세로로 스크롤하면 화면 위에 붙고, 가로로는 카드와 함께 움직인다 */}
       <div
         data-focus-strip=""
         data-stuck={stuck ? "" : undefined}
@@ -525,7 +524,6 @@ function FocusTimeline({
         <div ref={headRef} data-focus-head="" className="relative mx-auto h-full" style={{ width: layout.width }}>
           {cells.map(({ noteId, from, to, agenda }) => {
             const meeting = meetingOf.get(noteId)!;
-            const days = daysAfterPrevious(map, meeting.index);
             return (
               <div
                 key={noteId}
@@ -535,7 +533,6 @@ function FocusTimeline({
               >
                 <span className="flex h-[18px] items-baseline gap-1 text-[13px] leading-[18px] tabular-nums">
                   <span className="font-bold text-[var(--el-ink)]">{dateLabel(map, agenda)}</span>
-                  {days !== null ? <span className="text-xs font-normal text-[color-mix(in_srgb,var(--el-muted)_85%,var(--el-ink))]">+{days}일</span> : null}
                 </span>
                 <span className="mt-px block h-4 max-w-full truncate text-xs leading-4 text-[var(--el-body)]">{meetingHeading(meeting.title)}</span>
               </div>
@@ -595,26 +592,6 @@ function FocusTimeline({
               );
             })}
           </svg>
-
-          {layout.links
-            .filter((link) => !link.fork)
-            .map((link) => {
-              const [a, b] = [map.agendaById.get(link.from)!, map.agendaById.get(link.to)!];
-              if (a.noteId === b.noteId) return null;
-              const days = daysBetween(map, a, b);
-              return (
-                <span
-                  key={`gap:${link.from}>${link.to}`}
-                  className="absolute -translate-x-1/2 text-xs leading-4 text-[var(--el-muted)] tabular-nums"
-                  style={{
-                    left: (dotX(link.from) + dotX(link.to)) / 2,
-                    top: lineY(layout.rowOf.get(link.from)!) - 20,
-                  }}
-                >
-                  +{days}일
-                </span>
-              );
-            })}
 
           {/* 갈래 줄의 이름표: 줄이 화면 오른쪽에 있어도 왼쪽에 붙어 따라와서 갈래가 있다는 걸 알린다. 한 줄에 갈래가 여럿이면 하나로 묶는다 */}
           {[...new Set(layout.branches.map((branch) => branch.row))].map((row) => {
@@ -681,13 +658,6 @@ function dateLabel(map: AgendaMap, agenda: MapAgenda) {
   return year === meetingYear(map.meetings.at(-1)!.startedAt)
     ? shortMeetingDate(meeting.startedAt)
     : `${year}.${shortMeetingDate(meeting.startedAt)}`;
-}
-
-function daysBetween(map: AgendaMap, a: MapAgenda, b: MapAgenda) {
-  const [x, y] = [a, b].map((agenda) => map.meetings.findIndex((meeting) => meeting.noteId === agenda.noteId));
-  let days = 0;
-  for (let at = x + 1; at <= y; at += 1) days += daysAfterPrevious(map, at) ?? 0;
-  return days;
 }
 
 const MEMBER_NAME: Record<string, string> = {

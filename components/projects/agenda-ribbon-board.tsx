@@ -40,7 +40,6 @@ import { DIM_MS, layoutOf, moveOf, widthOf } from "@/components/projects/agenda-
 import { useDragPan } from "@/components/projects/use-drag-pan";
 import { getAppDateKey } from "@/lib/format/date";
 import {
-  daysAfterPrevious,
   shortMeetingDate,
   topicOfRows,
   type AgendaMap,
@@ -328,7 +327,6 @@ export function RibbonBoard({
       })),
     [map, layout]
   );
-  const days = useMemo(() => map.meetings.map((_, at) => daysAfterPrevious(map, at)), [map]);
   const dateKeys = useMemo(() => map.meetings.map((meeting) => getAppDateKey(meeting.startedAt)), [map]);
   const monthOf = useMemo(() => dateKeys.map((key) => key.slice(0, 7)), [dateKeys]);
   const marks = useMemo(() => headerMarks(dateKeys, xs, widths), [dateKeys, xs, widths]);
@@ -733,7 +731,6 @@ export function RibbonBoard({
               markStrong={mark?.strong ?? false}
               total={stats[at].total}
               linked={stats[at].linked}
-              days={days[at]}
               hover={hover}
               onToggle={onToggle}
               instant={reduced || anim.snap || !anim.moving.includes(meeting.noteId)}
