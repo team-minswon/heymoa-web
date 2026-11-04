@@ -139,3 +139,12 @@ spec: docs `docs/app-1286/dashboard-en` @ `e455d14e` (`projects/PRO-66-웹-국�
 - **「이전 결정 N개 끝남」은 랜딩 미리보기와 같아서 그대로**, 공유 결과 칩 「보내지 못함」→「보내기 실패」
 - **할 일 상태는 `common.taskStatus`**(In progress / Done / Canceled). 할 일 모듈이 `TASK_STATUS_LABEL`을 이것으로 바꿉니다
 - **후속 후보(이번 범위 밖, 기존 문제)**: 1024에서 옆 채팅 패널을 연 채 전체 화면이면 검토 할 일 줄의 내용 칸이 한 글자 폭으로 줄어듭니다(`review-row.tsx`의 `sm:grid-cols`가 화면 폭 기준). 한국어도 같습니다
+
+## D21. 채팅의 판단들 (`0d768a89`)
+
+- **실패 문구는 코드로 고름**: 스트림 리듀서는 서버 문구만 담고, 코드만 온 실패는 배너가 `chat.errors.turnFailures.<코드>`로 그립니다(모르는 코드는 `chat.errors.noResponse`). 되돌리기: 리듀서에 문구 표를 다시 넣음
+- **순수 함수는 문구 대신 키**: 진행 배지·대화 기록 날짜 묶음·피커 묶음
+- **서버 기본 제목 「새 대화」는 화면 언어로 그림 (server 후속 후보)**: `titleSource === "DEFAULT"`이면 `chat.newChat`. 근본 해결은 서버가 기본 제목을 비우거나 언어별로 주는 것
+- **「이름 바꾸기」「제목 바꾸기」를 공용 「이름 변경」으로**
+- **예시 질문의 「액션 아이템」은 D18과 함께 정함**
+- **`lib/chat/time-divider.ts`·`chat-list.ts`의 「오늘/어제/방금」**: APP-1285가 이미 locale로 영어를 고르는 코드라 그대로 두고, 13단계에서 `dates`로 모을지 봅니다
