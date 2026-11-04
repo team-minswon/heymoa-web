@@ -48,7 +48,8 @@
     "learnMore": "Learn more",
     "add": "Add",
     "edit": "Edit",
-    "collapse": "Show less"
+    "collapse": "Show less",
+    "copy": "Copy"
   },
   "createWorkspace": {
     "ariaLabel": "Create a new workspace",
@@ -95,5 +96,10 @@
     "typed": "Typed address",
     "sendTo": "Add as recipient"
   },
-  "loadFailed": "Couldn't load"
+  "loadFailed": "Couldn't load",
+  "copyBlock": {
+    "copy": "Copy {label}",
+    "copied": "Copied to clipboard.",
+    "failed": "Couldn't copy. Select the text and copy it manually."
+  }
 }

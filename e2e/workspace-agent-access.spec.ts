@@ -59,7 +59,7 @@ test("ADMIN 이 외부 에이전트를 끄면 열린 연결이 비고, 내 지�
       "관리자가 이 워크스페이스의 MCP 연결을 꺼 두었습니다."
     )
   ).toBeVisible();
-  await expect(page.getByLabel("맡길 워크스페이스")).toContainText(
+  await expect(page.getByLabel("연결할 워크스페이스")).toContainText(
     "(MCP 꺼짐)"
   );
   await expect(

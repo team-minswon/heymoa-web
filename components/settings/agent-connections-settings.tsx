@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import {
   AGENT_ACCESS_DISABLED,
   AgentAccessBlockedNotice,
-  BLOCKED_SUFFIX,
+  useWorkspaceOptionLabel,
 } from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
 import { TaskChangesToggle } from "@/components/agent-connections/task-changes-toggle";
@@ -331,6 +331,7 @@ function NewConnectionForm({
 }) {
   const t = useTranslations("settings.agentConnections.form");
   const tActions = useTranslations("common.actions");
+  const optionLabel = useWorkspaceOptionLabel();
   const workspacesQuery = useGetWorkspaces();
   const workspaces =
     workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
@@ -364,9 +365,7 @@ function NewConnectionForm({
   const items = Object.fromEntries(
     workspaces.map((workspace) => [
       workspace.workspaceId,
-      workspace.agentAccessAllowed === false
-        ? workspace.name + BLOCKED_SUFFIX
-        : workspace.name,
+      optionLabel(workspace),
     ])
   );
   const selected = workspaces.find(

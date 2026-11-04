@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import {
-  AGENT_OAUTH_RECONNECT_MESSAGE,
   AgentOAuthEndCard,
   AgentOAuthLoginCard,
 } from "@/components/agent-connections/agent-oauth-cards";
@@ -22,7 +21,7 @@ export default async function AgentOAuthAuthorizePage({
 }) {
   const query = searchParamsOf(await searchParams);
   if (query.toString() === "") {
-    return <AgentOAuthEndCard message={AGENT_OAUTH_RECONNECT_MESSAGE} />;
+    return <AgentOAuthEndCard />;
   }
   if (await getCurrentUserForSsr()) {
     redirect(buildAgentAuthorizeUrl(query));

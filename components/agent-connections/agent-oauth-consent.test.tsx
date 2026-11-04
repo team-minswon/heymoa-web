@@ -103,11 +103,11 @@ describe("외부 에이전트 연결 동의 화면", () => {
     renderConsent();
 
     expect(await screen.findByRole("heading", { name: "Codex" })).toBeTruthy();
-    expect(screen.getByText("HeyMoa 가 확인한 앱이 아닙니다")).toBeTruthy();
+    expect(screen.getByText("HeyMoa가 확인한 앱이 아닙니다")).toBeTruthy();
     expect(
-      screen.getByText("허락하면 127.0.0.1:1455 로 돌아갑니다")
+      screen.getByText("허락하면 127.0.0.1:1455로 돌아갑니다")
     ).toBeTruthy();
-    expect(screen.getByText("읽기, 할 일 만들기·고치기")).toBeTruthy();
+    expect(screen.getByText("읽기, 할 일 만들고 고치기")).toBeTruthy();
     expect(
       screen.getByText("회의 전사(참석자의 발화와 이름)도 이 앱이 읽습니다.")
     ).toBeTruthy();
@@ -138,13 +138,13 @@ describe("외부 에이전트 연결 동의 화면", () => {
     renderConsent();
 
     const toggle = await screen.findByRole("switch", {
-      name: "할 일 만들기·고치기 허용",
+      name: "할 일 변경 허용",
     });
     expect(screen.queryByText(/만든 뒤 바꿀 수 없습니다/)).toBeNull();
     fireEvent.click(toggle);
     expect(screen.getByText(/만든 뒤 바꿀 수 없습니다/)).toBeTruthy();
     expect(
-      screen.getByText(/앱은 읽기·화면 열기와 할 일 만들기·고치기를 합니다/)
+      screen.getByText(/앱은 내용을 읽고 화면을 열며, 할 일을 만들고 고칩니다/)
     ).toBeTruthy();
 
     const allow = screen.getByRole("button", { name: "허락" });
@@ -187,7 +187,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
     renderConsent();
 
     await screen.findByRole("heading", { name: "Codex" });
-    await screen.findByRole("combobox", { name: "맡길 워크스페이스" });
+    await screen.findByRole("combobox", { name: "연결할 워크스페이스" });
     expect(
       screen.getByRole("button", { name: "허락" }).hasAttribute("disabled")
     ).toBe(true);
@@ -290,7 +290,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
 
       expect(await screen.findByText(BLOCKED)).toBeTruthy();
       expect(
-        screen.queryByRole("combobox", { name: "맡길 워크스페이스" })
+        screen.queryByRole("combobox", { name: "연결할 워크스페이스" })
       ).toBeNull();
       expect(
         screen.getByRole("button", { name: "허락" }).hasAttribute("disabled")
@@ -375,7 +375,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
       );
       renderConsent();
       const select = await screen.findByRole("combobox", {
-        name: "맡길 워크스페이스",
+        name: "연결할 워크스페이스",
       });
       fireEvent.click(select);
       const option = await screen.findByRole("option", { name: "영업팀" });
@@ -390,7 +390,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
       await waitFor(() =>
         expect(
           screen
-            .getByRole("combobox", { name: "맡길 워크스페이스" })
+            .getByRole("combobox", { name: "연결할 워크스페이스" })
             .hasAttribute("data-disabled")
         ).toBe(true)
       );
@@ -450,7 +450,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
       renderConsent();
       const pick = async (name: string) => {
         fireEvent.click(
-          await screen.findByRole("combobox", { name: "맡길 워크스페이스" })
+          await screen.findByRole("combobox", { name: "연결할 워크스페이스" })
         );
         const option = await screen.findByRole("option", { name });
         fireEvent.pointerDown(option, { pointerType: "mouse", button: 0 });

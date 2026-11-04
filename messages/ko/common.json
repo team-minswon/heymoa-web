@@ -48,7 +48,8 @@
     "learnMore": "자세히",
     "add": "추가",
     "edit": "수정",
-    "collapse": "접기"
+    "collapse": "접기",
+    "copy": "복사"
   },
   "createWorkspace": {
     "ariaLabel": "새 워크스페이스 만들기",
@@ -95,5 +96,10 @@
     "typed": "직접 입력한 주소",
     "sendTo": "받는 사람으로 추가"
   },
-  "loadFailed": "불러오지 못했습니다"
+  "loadFailed": "불러오지 못했습니다",
+  "copyBlock": {
+    "copy": "{label} 복사",
+    "copied": "{label}{particle} 복사했습니다.",
+    "failed": "복사하지 못했습니다. 직접 선택해 복사해 주세요."
+  }
 }

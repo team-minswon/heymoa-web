@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   AGENT_ACCESS_DISABLED,
   AgentAccessBlockedNotice,
-  BLOCKED_SUFFIX,
+  useWorkspaceOptionLabel,
 } from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
 import { TaskChangesToggle } from "@/components/agent-connections/task-changes-toggle";
@@ -36,8 +37,8 @@ import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 
 const REQUEST_NOT_FOUND = "AGENT_OAUTH_REQUEST_NOT_FOUND";
 
-/** 계약이 정한 권한을 사람이 읽는 말로. 모르는 값은 이름 그대로 둔다. */
-const SCOPE_LABELS: Record<string, string> = { "mcp:read": "읽기", "mcp:write": "할 일 만들기·고치기" };
+/** 계약이 정한 권한을 사람이 읽는 말(`agents.consent.scope`)로. 모르는 값은 이름 그대로 둔다. */
+const SCOPE_KEYS: Record<string, "read" | "write"> = { "mcp:read": "read", "mcp:write": "write" };
 
 /**
  * server 가 돌려준 돌아갈 주소로 간다. server 가 등록 때 주소를 검사하지만, `javascript:` 같은 다른 scheme 으로는
@@ -66,6 +67,8 @@ export function isNavigableRedirect(uri: string) {
  *   보내면 server 가 400 이라, 그때는 본문에 싣지도 않는다
  */
 export function AgentOAuthConsent({ consentState }: { consentState: string }) {
+  const t = useTranslations("agents.consent");
+  const optionLabel = useWorkspaceOptionLabel();
   const consent = useGetAgentOAuthConsent({ state: consentState });
   const workspacesQuery = useGetWorkspaces();
   const approve = useApproveAgentOAuthConsent({
@@ -105,7 +108,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   if (errorCodeOf(failure) === REQUEST_NOT_FOUND) {
     return (
       <AgentOAuthEndCard
-        message={errorMessageOf(failure, "연결 요청을 찾을 수 없습니다.")}
+        message={errorMessageOf(failure, t("notFound"))}
       />
     );
   }
@@ -113,7 +116,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
     return (
       <CenteredCard icon={HEYMOA_MARK}>
         <InlineRetry
-          label="연결 요청을 불러오지 못했습니다"
+          label={t("loadFailed")}
           onRetry={() => void consent.refetch()}
         />
       </CenteredCard>
@@ -173,12 +176,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   };
 
   const items = Object.fromEntries(
-    workspaces.map((workspace) => [
-      workspace.workspaceId,
-      workspace.agentAccessAllowed === false
-        ? workspace.name + BLOCKED_SUFFIX
-        : workspace.name,
-    ])
+    workspaces.map((workspace) => [workspace.workspaceId, optionLabel(workspace)])
   );
 
   return (
@@ -190,31 +188,34 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
       ) : (
         <Skeleton
           className="mx-auto h-8 w-44 rounded-control"
-          aria-label="연결 요청을 불러오는 중"
+          aria-label={t("loading")}
         />
       )}
       <p className="mt-2 text-base text-[var(--el-muted)]">
-        이 앱이 HeyMoa 워크스페이스를 맡겨 달라고 요청합니다.
+        {t("intro")}
       </p>
       <p className="mt-3 inline-flex items-center gap-1.5 rounded-chip bg-[var(--el-canvas-soft)] px-3 py-1 text-sm text-[var(--el-muted)]">
         <ShieldAlert className="size-4" aria-hidden />
-        HeyMoa 가 확인한 앱이 아닙니다
+        {t("unverified")}
       </p>
 
       <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-left text-base">
-        <dt className="text-[var(--el-muted)]">돌아갈 곳</dt>
+        <dt className="text-[var(--el-muted)]">{t("redirect")}</dt>
         <dd className="min-w-0 wrap-anywhere">
           {request ? (
-            <>허락하면 {request.redirectHost} 로 돌아갑니다</>
+            t("redirectTo", { host: request.redirectHost })
           ) : (
             <Skeleton className="h-6 w-48 rounded-control" />
           )}
         </dd>
-        <dt className="text-[var(--el-muted)]">권한</dt>
+        <dt className="text-[var(--el-muted)]">{t("scopes")}</dt>
         <dd>
           {request ? (
             request.scopes
-              .map((scope) => SCOPE_LABELS[String(scope)] ?? String(scope))
+              .map((scope) => {
+                const key = SCOPE_KEYS[String(scope)];
+                return key ? t(`scope.${key}`) : String(scope);
+              })
               .join(", ")
           ) : (
             <Skeleton className="h-6 w-12 rounded-control" />
@@ -223,20 +224,20 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
       </dl>
 
       <div className="mt-6 grid gap-2 text-left">
-        <Label htmlFor="agent-oauth-workspace" className="text-base">맡길 워크스페이스</Label>
+        <Label htmlFor="agent-oauth-workspace" className="text-base">{t("workspace")}</Label>
         {workspacesQuery.isLoading ? (
           <Skeleton
             className="h-11 rounded-control"
-            aria-label="워크스페이스를 불러오는 중"
+            aria-label={t("workspacesLoading")}
           />
         ) : workspacesQuery.isError ? (
           <InlineRetry
-            label="워크스페이스를 불러오지 못했습니다"
+            label={t("workspacesFailed")}
             onRetry={() => void workspacesQuery.refetch()}
           />
         ) : workspaces.length === 0 ? (
           <p className="text-base text-[var(--el-muted)]">
-            연결할 워크스페이스가 없습니다.
+            {t("noWorkspaces")}
           </p>
         ) : allBlocked ? (
           <AgentAccessBlockedNotice {...recheck} className="text-sm" />
@@ -255,10 +256,10 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
           >
             <SelectTrigger
               id="agent-oauth-workspace"
-              aria-label="맡길 워크스페이스"
+              aria-label={t("workspace")}
               className="h-11 w-full text-base"
             >
-              <SelectValue placeholder="워크스페이스를 고르세요" />
+              <SelectValue placeholder={t("workspacePlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {workspaces.map((workspace) => (
@@ -298,8 +299,8 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
         invalidRedirect) && (
         <p role="alert" className="mt-4 text-base text-[var(--el-error-strong)]">
           {invalidRedirect
-            ? "에이전트로 돌아갈 주소가 올바르지 않습니다. 에이전트에서 다시 연결해 주세요."
-            : errorMessageOf(failure, "요청을 처리하지 못했습니다.")}
+            ? t("invalidRedirect")
+            : errorMessageOf(failure, t("failed"))}
         </p>
       )}
 
@@ -313,7 +314,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
           disabled={busy || !request}
           onClick={() => void onDeny()}
         >
-          거절
+          {t("deny")}
         </Button>
         {workspaces.length > 0 && (
           <Button
@@ -324,7 +325,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
             disabled={busy || !request || !workspaceId || blocked}
             onClick={() => void onApprove()}
           >
-            허락
+            {t("allow")}
           </Button>
         )}
       </div>
