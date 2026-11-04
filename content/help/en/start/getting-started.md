@@ -4,14 +4,14 @@ description: Sign in to HeyMoa, then record and end your first meeting. It takes
 group: start
 slug: getting-started
 order: 1
-modified: 2026-10-23
+modified: 2026-11-05
 ---
 
 ## Sign in with your Google account {#login}
 
 You sign in to HeyMoa with a Google account. There are no accounts made with an email and password.
 
-In the sign-in window, check the box agreeing to the Privacy Policy and the Terms of Service before you sign in. If you come in from an invite email link, you're asked for the same agreement once after signing in.
+In the sign-in window, check the box agreeing to the Privacy Policy and the Terms of Service before you sign in. If you come in from an invitation email link, you're asked for the same agreement once after signing in.
 
 The first time you sign in, your account is created automatically. HeyMoa also creates a workspace (a space your team shares) with you as its admin, and it comes with a **[General]** project.
 
@@ -30,7 +30,7 @@ To use HeyMoa with your team, invite your colleagues. [Members and guest partici
 5. **Click [Pause]**
    Recording pauses.
 6. **Click [End meeting]**
-   When the meeting ends, HeyMoa starts separating speakers and writing the summary. [Ending a meeting and analysis](help:meeting-end) covers what happens next.
+   When the meeting ends, HeyMoa starts identifying speakers and writing the summary. [Ending a meeting and analysis](help:meeting-end) covers what happens next.
 
 ![The New meeting window with the meeting name filled in with today's date and the Create button highlighted](img:getting-started/new-meeting.webp "The [New meeting] window. Click [Create] to open the note.")
 

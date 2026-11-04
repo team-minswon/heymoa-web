@@ -1,10 +1,10 @@
 ---
 title: Troubleshooting
-description: Fixes for each on-screen message when recording won't start, the connection drops, the summary doesn't appear, or an invite link doesn't work.
+description: Fixes for each on-screen message when recording won't start, the connection drops, the summary doesn't appear, or an invitation link doesn't work.
 group: fix
 slug: troubleshooting
 order: 1
-modified: 2026-10-26
+modified: 2026-11-05
 ---
 
 ## Recording won't start {#recording}
@@ -50,7 +50,7 @@ modified: 2026-10-26
 :::problem
 **Symptom:** “Lost connection to the recording device” appears
 **Cause:** The connection to the device that was recording was lost.
-**Fix:** ==Try again in about 1 minute, once that device's recording has been closed out.==
+**Fix:** ==Wait about 1 minute for the other device's recording session to close, then try again.==
 :::
 
 :::problem
@@ -74,34 +74,34 @@ modified: 2026-10-26
 :::
 
 :::problem
-**Symptom:** “The meeting couldn't be analyzed” appears
+**Symptom:** “Couldn't analyze the meeting” appears
 **Cause:** Analysis failed.
-**Fix:** Click **[Reanalyze]**. Your transcript and meeting record are still there.
+**Fix:** Click **[Regenerate]**. Your transcript and meeting record are still there.
 :::
 
 :::problem
-**Symptom:** “Speakers couldn't be separated” appears
-**Cause:** Speaker separation failed.
+**Symptom:** “Couldn't identify speakers.” appears
+**Cause:** Speaker identification failed.
 **Fix:** The summary is created without speakers. Add names yourself in the transcript.
 :::
 
-## Invite, delete, or permission messages {#workspace}
+## Invitation, delete, or permission messages {#workspace}
 
 :::problem
-**Symptom:** “This invite has expired” appears
-**Cause:** The invite link is past its valid period.
-**Fix:** ==Invite links are valid for only 1 day.== Ask an admin to invite you again.
+**Symptom:** “This invitation has expired” appears
+**Cause:** The invitation link is past its valid period.
+**Fix:** ==Invitation links are valid for only 1 day.== Ask an admin to invite you again.
 :::
 
 :::problem
-**Symptom:** “This invite is for a different email account” appears
+**Symptom:** “This invitation is for a different email” appears
 **Cause:** You signed in with an account other than the invited email.
 **Fix:** Sign in with the Google account for the invited email.
 :::
 
 :::problem
 **Symptom:** “Invites can't be sent right now. Please try again later.” appears
-**Cause:** You went over the number of invites you can send in a day.
+**Cause:** You went over the number of invitations you can send in a day.
 **Fix:** Send it again after some time has passed.
 :::
 

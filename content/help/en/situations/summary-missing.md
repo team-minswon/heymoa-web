@@ -5,7 +5,7 @@ description: Where to check, and how to request analysis again, when the Summary
 group: situations
 slug: summary-missing
 order: 2
-modified: 2026-10-21
+modified: 2026-11-05
 ---
 
 ## What's happening {#problem}
@@ -14,7 +14,7 @@ The meeting is over, but there's no summary in the **[Summary]** tab. Or you see
 
 ## Where to look first {#where}
 
-In the note's **[Summary]** tab, look at the progress stages (**[Speaker separation]**, **[Analysis]**, **[Review]**, **[Confirm]**) and the message shown.
+In the note's **[Summary]** tab, look at the progress stages (**[Organize meeting]**, **[Check conflicts and assignees]**, **[Review]**, **[Confirm]**) and the message shown.
 
 ## Try these steps {#steps}
 
@@ -30,7 +30,7 @@ In the note's **[Summary]** tab, look at the progress stages (**[Speaker separat
    It can take a few minutes. You can go to another screen in the meantime.
 6. **If you see “Waiting for analysis”, click [Request analysis]**
    Analysis starts.
-7. **If you see “Couldn't analyze the meeting”, click [Reanalyze]**
+7. **If you see “Couldn't analyze the meeting”, click [Regenerate]**
    ==Your transcript and meeting record are still there.==
 8. **Check whether the [Transcript] tab has content**
    ==If the transcript is nearly empty, there's nothing to analyze.==

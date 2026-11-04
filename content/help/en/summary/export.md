@@ -5,7 +5,7 @@ description: Save HeyMoa meeting notes as a PDF or share them by email. Copy tex
 group: summary
 slug: export
 order: 3
-modified: 2026-10-30
+modified: 2026-11-05
 ---
 
 ## Meeting notes formats {#formats}
@@ -36,10 +36,10 @@ Click **[Copy]** at the top of the summary and choose a format.
 
 1. **In [Share], choose [Send by email]**
    The **[Send meeting notes]** window opens.
-2. **Choose what to send under [Content]**
+2. **Choose what to send under [What to send]**
    Meeting notes are the default. Add **[Transcript]** to send the transcript too.
 3. **Fill in [To]**
-   Click **[Add all attendees]** or type addresses. Separate addresses with a comma or `kbd:Enter`. Addresses outside the workspace are fine.
+   Click **[Add all attendees (N people)]** or type addresses. Separate addresses with a comma or `kbd:Enter`. Addresses outside the workspace are fine.
 4. **Add a message if you like**
    The message is optional and can be up to 1,000 characters.
 5. **Send the email**
@@ -54,7 +54,7 @@ Recipients get an email titled “[Meeting notes] meeting title” with the PDF 
 
 ## Check the result {#result}
 
-Each recipient shows **[Sending]**, **[Sent]**, or **[Not sent]**. If some weren't sent, click **[Resend to N not sent]**.
+Each recipient shows **[Sending]**, **[Sent]**, or **[Failed]**. If some failed, click **[Resend to N failed recipients]**.
 
 **[Sent]** means the mail server accepted the email. It doesn't guarantee the email reached the recipient's inbox.
 
@@ -75,7 +75,7 @@ Yes. You can send to addresses outside the workspace.
 No. The meeting notes go only as the attached PDF, not in the body.
 
 ### Can I send the transcript too?
-Yes. Add **[Transcript]** under **[Content]**. When you export to PDF, turn on the **[Transcript]** switch.
+Yes. Add **[Transcript]** under **[What to send]**. When you export to PDF, turn on the **[Transcript]** switch.
 
 ## Related pages {#related}
 

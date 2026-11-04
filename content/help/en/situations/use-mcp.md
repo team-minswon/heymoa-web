@@ -1,11 +1,11 @@
 ---
 title: I want to use HeyMoa from an AI app (MCP)
 navTitle: Use from an AI app
-description: Connect an AI app like Claude or ChatGPT so it can read your meetings and projects. Connected apps can only read, and you can disconnect at any time.
+description: Connect an AI app like Claude or ChatGPT so it can read your meetings and projects. Apps only read unless you allow task changes, and you can disconnect anytime.
 group: situations
 slug: use-mcp
 order: 11
-modified: 2026-10-21
+modified: 2026-11-05
 ---
 
 ## What's happening {#problem}
@@ -14,7 +14,7 @@ You want to pull HeyMoa meeting notes and project decisions into the AI app you 
 
 ## Where to look first {#where}
 
-Go to **[Account settings]** → **[My MCP connections]**. If an admin has turned off **[Allow MCP connection]** for the workspace, you can't connect.
+Go to **[Account settings]** → **[My MCP connections]**. If an admin has turned off **[Allow MCP connections]** for the workspace, you can't connect.
 
 ## Try these steps {#steps}
 
@@ -29,13 +29,13 @@ Go to **[Account settings]** → **[My MCP connections]**. If an admin has turne
 5. **Paste the address shown into the app**
    Follow the steps on the screen.
 6. **Choose a workspace in the browser the app opens**
-   Decide which workspace to give it access to.
+   Decide which workspace to give it access to. To let the app create and edit tasks, also turn on **[Allow task changes]**. You can't change this after you connect.
 7. **Click [Allow]**
    The app can now read it.
 8. **Check that [Connected] appears in your [My MCP connections] list**
    If it does, the connection is done.
 9. **Ask the app about your meetings or projects**
-   ==It can only read.==
+   ==If you didn't allow task changes, it only reads.==
 10. **When you no longer need it, click [Revoke]**
     ==Revoke connections you don't use.==
 

@@ -5,7 +5,7 @@ description: Review and edit the AI meeting notes, choose which decisions and ta
 group: situations
 slug: confirm-summary
 order: 3
-modified: 2026-10-30
+modified: 2026-11-05
 ---
 
 ## What's happening {#problem}
@@ -33,7 +33,7 @@ The **[Summary]** tab must be open in **[In review]**. If it already shows **[Co
 6. **Click [Exclude] on items you don't want to keep**
    ==Excluded items aren't added to the project.==
 7. **Add anything that's missing**
-   Click **[Add decision]** or **[Add task]** under the section.
+   Click **[Add to Decisions]** or **[Add to Tasks]** under the section.
 8. **Choose an assignee from [Set assignee] on a task**
    You can set one for each task.
 9. **Choose a date from [Set due date]**

@@ -5,7 +5,7 @@ description: How to use the Connection map, which shows on one screen how a proj
 group: situations
 slug: agenda-map
 order: 13
-modified: 2026-10-29
+modified: 2026-11-05
 ---
 
 ## What's happening {#problem}
@@ -16,7 +16,7 @@ The Connection map draws how a project's meetings were linked through their agen
 
 ## Where to look first {#where}
 
-Use the **[Notes]** **[Connection map]** tabs that appear when you click a project. You can also use the **[Connection map]** chip at the top of a meeting summary, or **[⋯]** → **[Connection map]** on the project row in the sidebar.
+Use the **[Notes]** and **[Connection map]** tabs that appear when you click a project. You can also use the **[Connection map]** chip at the top of a meeting summary, or **[⋯]** → **[Connection map]** on the project row in the sidebar.
 
 ![A project's note list with the Notes and Connection map tabs above it](img:agenda-map/entry.webp "The [Notes] and [Connection map] tabs appear when you click a project.")
 
@@ -28,7 +28,7 @@ Use the **[Notes]** **[Connection map]** tabs that appear when you click a proje
 - Capsule with a number: several agenda items on the same topic were covered in one meeting.
 - Thin line: the topic was not covered in the meetings in between.
 - Curve that splits: another line of agenda items continued from one item.
-- **[+number]**: how many collapsed agenda items are not drawn on the screen. Click it to expand them.
+- **[+N]**: how many collapsed agenda items are not drawn on the screen. Click it to expand them.
 
 Agenda titles are hidden at first. Click around as below.
 
