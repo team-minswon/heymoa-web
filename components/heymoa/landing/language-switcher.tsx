@@ -3,10 +3,9 @@
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 
+import { writeLocaleCookie } from "@/lib/i18n/cookie";
 import {
   DEFAULT_LOCALE,
-  LANG_COOKIE,
-  LANG_COOKIE_MAX_AGE,
   LOCALE_NAMES,
   LOCALES,
   localePath,
@@ -16,11 +15,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import { FOCUS } from "./tokens";
-
-/** 고른 언어를 남긴다. 사용자가 직접 고를 때만 쓴다 — `/en` 에 들어온 것만으로는 쓰지 않는다. */
-function rememberLocale(locale: Locale) {
-  document.cookie = `${LANG_COOKIE}=${locale}; path=/; max-age=${LANG_COOKIE_MAX_AGE}; samesite=lax`;
-}
 
 /**
  * 랜딩 푸터의 언어 선택. 같은 페이지의 다른 언어판으로 간다(`/help` ↔ `/en/help`).
@@ -45,7 +39,7 @@ export function LanguageSwitcher() {
           lang={locale}
           hrefLang={locale}
           aria-current={locale === current ? "true" : undefined}
-          onClick={() => rememberLocale(locale)}
+          onClick={() => writeLocaleCookie(locale)}
           className={cn(
             "inline-flex min-h-8 items-center rounded-[4px] underline-offset-4 hover:text-[var(--tv-ink)] hover:underline",
             locale === current && "font-bold text-[var(--tv-ink)]",
