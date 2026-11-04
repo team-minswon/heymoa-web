@@ -2,6 +2,7 @@
 
 import { insertTaskIntoLists } from "@/lib/tasks/task-list-cache";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { AssigneeCell } from "@/components/heymoa/assignee-cell";
@@ -50,6 +51,9 @@ export function NewTaskDialog({
   defaultProjectId: string | null;
   choices: AssigneeChoice[];
 }) {
+  const t = useTranslations("tasks");
+  const tFields = useTranslations("common.fields");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const create = useCreateProjectTask();
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -100,18 +104,18 @@ export function NewTaskDialog({
     >
       {open && (
         <DialogContent
-          aria-label="할 일 추가"
+          aria-label={t("add")}
           showCloseButton={!create.isPending}
         >
           <form onSubmit={submit}>
             <DialogHeader>
-              <DialogTitle>할 일 추가</DialogTitle>
+              <DialogTitle>{t("add")}</DialogTitle>
               <DialogDescription>
-                회의 밖에서 생긴 일도 프로젝트 할 일로 둡니다.
+                {t("newTask.description")}
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 py-5 text-[13px]">
-              <Label htmlFor="new-task-content">내용</Label>
+              <Label htmlFor="new-task-content">{tFields("content")}</Label>
               <Input
                 id="new-task-content"
                 required
@@ -119,7 +123,7 @@ export function NewTaskDialog({
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
               />
-              <span className="text-[var(--el-muted)]">프로젝트</span>
+              <span className="text-[var(--el-muted)]">{tFields("project")}</span>
               <Select
                 items={Object.fromEntries(
                   projects.map((p) => [p.projectId, p.name])
@@ -127,7 +131,7 @@ export function NewTaskDialog({
                 value={target}
                 onValueChange={(value) => setProjectId(value as string)}
               >
-                <SelectTrigger aria-label="프로젝트" className="w-fit">
+                <SelectTrigger aria-label={tFields("project")} className="w-fit">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,7 +145,7 @@ export function NewTaskDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-[var(--el-muted)]">담당</span>
+              <span className="text-[var(--el-muted)]">{tFields("assignee")}</span>
               <AssigneeCell
                 value={assignee}
                 choices={choices}
@@ -149,7 +153,7 @@ export function NewTaskDialog({
                 onChange={setAssignee}
                 className="w-fit"
               />
-              <span className="text-[var(--el-muted)]">기한</span>
+              <span className="text-[var(--el-muted)]">{tFields("due")}</span>
               <DueCell
                 value={due}
                 editable
@@ -164,14 +168,14 @@ export function NewTaskDialog({
                 disabled={create.isPending}
                 onClick={close}
               >
-                닫기
+                {tActions("close")}
               </Button>
               <Button
                 type="submit"
                 loading={create.isPending}
                 disabled={!trimmed || !target}
               >
-                추가
+                {tActions("add")}
               </Button>
             </DialogFooter>
           </form>

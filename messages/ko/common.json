@@ -45,7 +45,10 @@
     "confirm": "확인",
     "create": "만들기",
     "close": "닫기",
-    "learnMore": "자세히"
+    "learnMore": "자세히",
+    "add": "추가",
+    "edit": "수정",
+    "collapse": "접기"
   },
   "createWorkspace": {
     "ariaLabel": "새 워크스페이스 만들기",
@@ -63,5 +66,33 @@
     "OPEN": "진행 중",
     "COMPLETED": "완료",
     "CANCELLED": "취소"
+  },
+  "fields": {
+    "content": "내용",
+    "status": "상태",
+    "assignee": "담당",
+    "due": "기한",
+    "project": "프로젝트"
+  },
+  "assigneeCell": {
+    "placeholder": "담당 정하기",
+    "change": "담당 {name} 바꾸기",
+    "speaker": "화자 {label}",
+    "unnamedSpeaker": "이름 없는 화자",
+    "search": "이름으로 찾기",
+    "noMatch": "맞는 사람이 없습니다.",
+    "clear": "담당 비우기"
+  },
+  "dueCell": {
+    "placeholder": "기한 정하기",
+    "change": "기한 {date} 바꾸기"
+  },
+  "recipients": {
+    "placeholder": "이름이나 이메일을 입력하세요",
+    "invalid": "(주소 형식 오류)",
+    "remove": "{label} 빼기",
+    "candidates": "받는 사람 후보",
+    "typed": "직접 입력한 주소",
+    "sendTo": "받는 사람으로 추가"
   }
 }

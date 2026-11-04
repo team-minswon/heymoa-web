@@ -1,6 +1,7 @@
 "use client";
 
 import { Mail, XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
@@ -39,7 +40,7 @@ export function EmailRecipientsInput({
   disabled,
   invalid,
   describedBy,
-  placeholder = "이름이나 이메일을 입력하세요",
+  placeholder,
 }: {
   id: string;
   value: Recipient[];
@@ -50,6 +51,7 @@ export function EmailRecipientsInput({
   describedBy?: string;
   placeholder?: string;
 }) {
+  const t = useTranslations("common.recipients");
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   // 칩을 뺀 뒤 입력칸으로 포커스를 돌려줄 때는 후보 목록을 열지 않는다 — 빼기는 고르기가 아니라서
@@ -178,10 +180,10 @@ export function EmailRecipientsInput({
               )}
             >
               <span className="truncate">{label}</span>
-              {recipient.valid ? null : <span className="sr-only">(주소 형식 오류)</span>}
+              {recipient.valid ? null : <span className="sr-only">{t("invalid")}</span>}
               <button
                 type="button"
-                aria-label={`${label} 빼기`}
+                aria-label={t("remove", { label })}
                 disabled={disabled}
                 className="grid size-5 shrink-0 place-items-center rounded-full opacity-70 hover:bg-[var(--el-ink)]/10 hover:opacity-100"
                 // 누르는 순간 입력칸 포커스가 빠지면 blur 가 칩을 다시 그려 누른 버튼이 사라지고 클릭이 삼켜진다
@@ -210,7 +212,7 @@ export function EmailRecipientsInput({
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
           disabled={disabled}
-          placeholder={value.length ? undefined : placeholder}
+          placeholder={value.length ? undefined : (placeholder ?? t("placeholder"))}
           className="min-w-[8.75rem] flex-1 bg-transparent px-0.5 py-1 text-base outline-none placeholder:text-[var(--el-muted)] md:text-sm"
           value={query}
           onChange={(event) => {
@@ -248,7 +250,7 @@ export function EmailRecipientsInput({
       <div
         id={listId}
         role="listbox"
-        aria-label="받는 사람 후보"
+        aria-label={t("candidates")}
         hidden={!expanded}
         className="absolute inset-x-0 top-[calc(100%+6px)] z-10 max-h-64 overflow-y-auto rounded-block border border-[var(--el-hairline)] bg-popover p-1.5 shadow-e3"
       >
@@ -275,9 +277,9 @@ export function EmailRecipientsInput({
           </div>
         ))}
         {options.at(-1)?.typed ? (
-          <div role="group" aria-label="직접 입력">
+          <div role="group" aria-label={t("typed")}>
             <div role="presentation" className="px-2.5 pt-2 pb-1 text-[11.5px] text-[var(--el-muted)]">
-              직접 입력
+              {t("typed")}
             </div>
             <OptionRow
               id={optionId(options.length - 1)}
@@ -290,7 +292,7 @@ export function EmailRecipientsInput({
                 </span>
               }
               title={typed}
-              detail="이 주소로 보내기"
+              detail={t("sendTo")}
             />
           </div>
         ) : null}

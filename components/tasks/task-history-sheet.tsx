@@ -40,45 +40,72 @@ import {
   type AssigneeChoice,
 } from "@/lib/assignees/describe";
 import { formatAppDate } from "@/lib/format/date";
-import { TASK_STATUS_LABEL, type TaskEntry } from "@/lib/tasks/task-groups";
+import type { TaskEntry } from "@/lib/tasks/task-groups";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { useTranslations } from "next-intl";
 
 type Revision = ProjectTaskRevisionListResponseDataRevisionsItem;
 
-function fieldsOf(revision: Revision) {
+/** 이력이 견주는 칸. 이름은 `common.fields.<field>` 다. */
+type Field = "content" | "status" | "assignee" | "due";
+
+/** 판의 칸 값. 문구가 아니라 견줄 값이다 — 상태는 코드, 담당은 이름(없으면 `null`), 기한은 날짜 키. */
+function fieldsOf(revision: Revision, speakerName?: (label: string) => string) {
   return {
-    내용: revision.content,
-    상태: TASK_STATUS_LABEL[revision.taskStatus],
-    담당: describeAssignee(revision.assignee)?.name ?? "없음",
-    기한: revision.due ? formatDueDate(revision.due) : "없음",
-  };
+    content: revision.content,
+    status: revision.taskStatus,
+    assignee: describeAssignee(revision.assignee, speakerName)?.name ?? null,
+    due: revision.due ?? null,
+  } satisfies Record<Field, string | null>;
 }
+
+export type RevisionChange = {
+  field: Field;
+  /** 첫 판에는 앞 값이 없다(`undefined`). `null` 은 「없음」이다 */
+  before?: string | null;
+  after: string | null;
+};
 
 /** 앞 판과 달라진 칸. 첫 판은 무엇으로 시작했는지 담당·기한만 보인다. */
 export function revisionChanges(
   previous: Revision | undefined,
-  current: Revision
-) {
-  const after = fieldsOf(current);
+  current: Revision,
+  speakerName?: (label: string) => string
+): RevisionChange[] {
+  const after = fieldsOf(current, speakerName);
   if (!previous) {
-    return (["담당", "기한"] as const).map((label) => ({
-      label,
-      before: null,
-      after: after[label],
-    }));
+    return (["assignee", "due"] as const).map((field) => ({ field, after: after[field] }));
   }
-  const before = fieldsOf(previous);
-  return (Object.keys(after) as Array<keyof typeof after>)
-    .filter((label) => before[label] !== after[label])
-    .map((label) => ({ label, before: before[label], after: after[label] }));
+  const before = fieldsOf(previous, speakerName);
+  return (Object.keys(after) as Field[])
+    .filter((field) => before[field] !== after[field])
+    .map((field) => ({ field, before: before[field], after: after[field] }));
 }
 
-/** 이름 뒤 주격 조사. 받침이 있으면 「이」, 없으면 「가」. */
-function subject(name: string) {
+/** 이름 뒤 주격 조사. 받침이 있으면 「이」, 없으면 「가」. 영어 문장은 쓰지 않는다. */
+function subjectParticle(name: string) {
   const code = name.charCodeAt(name.length - 1) - 0xac00;
-  if (code < 0 || code > 11171) return `${name}이(가)`;
-  return `${name}${code % 28 === 0 ? "가" : "이"}`;
+  if (code < 0 || code > 11171) return "이(가)";
+  return code % 28 === 0 ? "가" : "이";
+}
+
+/** 이력 칸의 이름과 값을 화면 언어로 그린다. */
+function useChangeText() {
+  const tFields = useTranslations("common.fields");
+  const tStatus = useTranslations("common.taskStatus");
+  const tCell = useTranslations("common.assigneeCell");
+  const t = useTranslations("tasks.sheet");
+  const locale = useDisplayLocale();
+  return {
+    speakerName: (label: string) => tCell("speaker", { label }),
+    label: (field: Field) => tFields(field),
+    value: (field: Field, value: string | null) => {
+      if (value === null) return t("none");
+      if (field === "status") return tStatus(value as Revision["taskStatus"]);
+      if (field === "due") return formatDueDate(value, locale);
+      return value;
+    },
+  };
 }
 
 const STATUS_ICON = {
@@ -100,18 +127,19 @@ function Author({
     userId: string
   ) => { name: string; image?: string | null } | undefined;
 }) {
+  const t = useTranslations("tasks.sheet.author");
   if (revision.approvalId) {
-    return (
-      <>
-        {revision.revision === 1
-          ? "회의 확정으로 생겼습니다"
-          : "회의 확정으로 바뀌었습니다"}
-      </>
-    );
+    return <>{t(revision.revision === 1 ? "meetingCreated" : "meetingChanged")}</>;
   }
   const person = revision.changedBy ? personOf(revision.changedBy) : undefined;
-  const name = person?.name || "알 수 없는 사람";
-  const verb = revision.revision === 1 ? "만들었습니다" : "바꿨습니다";
+  const name = person?.name || t("unknown");
+  const values = {
+    name,
+    particle: subjectParticle(name),
+    verb: revision.revision === 1 ? "created" : "changed",
+    connection: revision.connection?.name ?? "",
+    b: (chunks: React.ReactNode) => <b className="font-semibold">{chunks}</b>,
+  };
   return (
     <span className="inline-flex items-center gap-1.5">
       <PersonAvatar
@@ -120,21 +148,15 @@ function Author({
         size={18}
       />
       <span>
-        <b className="font-semibold">{name}</b>
-        {revision.changeSource === "EXTERNAL_AGENT" ? (
-          <>
-            의 에이전트
-            {revision.connection ? `(${revision.connection.name})` : null}가{" "}
-            {verb}
-          </>
-        ) : revision.changeSource === "AGENT_CHAT" ? (
-          <>
-            {subject(name).slice(name.length)} HeyMoa 에이전트로 {verb}
-          </>
-        ) : (
-          <>
-            {subject(name).slice(name.length)} {verb}
-          </>
+        {t.rich(
+          revision.changeSource === "EXTERNAL_AGENT"
+            ? revision.connection
+              ? "agentNamed"
+              : "agent"
+            : revision.changeSource === "AGENT_CHAT"
+              ? "chat"
+              : "self",
+          values
         )}
       </span>
     </span>
@@ -157,8 +179,11 @@ function RevertAgentChange({
   pending: boolean;
   onSave: (patch: TaskPatch) => Promise<boolean>;
 }) {
+  const t = useTranslations("tasks.revert");
+  const tSheet = useTranslations("tasks.sheet");
+  const text = useChangeText();
   const [open, setOpen] = useState(false);
-  const changes = revisionChanges(latest, previous);
+  const changes = revisionChanges(latest, previous, text.speakerName);
   if (changes.length === 0) return null;
 
   return (
@@ -170,7 +195,7 @@ function RevertAgentChange({
         disabled={pending}
         onClick={() => setOpen(true)}
       >
-        되돌리기
+        {t("button")}
       </Button>
       <AlertDialog
         open={open}
@@ -181,32 +206,30 @@ function RevertAgentChange({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>에이전트가 바꾼 것을 되돌릴까요?</AlertDialogTitle>
-            <AlertDialogDescription>
-              바로 앞 값으로 돌아가고 팀원에게도 곧바로 보입니다.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("description")}</AlertDialogDescription>
           </AlertDialogHeader>
-          <dl className="grid grid-cols-[32px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[13px]">
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]">
             {changes.map((change) => (
-              <div key={change.label} className="contents">
-                <dt className="text-[var(--el-muted)]">{change.label}</dt>
+              <div key={change.field} className="contents">
+                <dt className="text-[var(--el-muted)]">{text.label(change.field)}</dt>
                 <dd className="min-w-0 text-[var(--el-body)]">
                   <span className="text-[var(--el-muted-soft)] line-through">
-                    {change.before}
+                    {text.value(change.field, change.before ?? null)}
                   </span>
                   <span aria-hidden className="px-1.5 text-[var(--el-muted-soft)]">
                     →
                   </span>
-                  <span className="sr-only">에서 </span>
+                  <span className="sr-only">{tSheet("changedTo")}</span>
                   <span className="font-semibold text-[var(--el-ink)]">
-                    {change.after}
+                    {text.value(change.field, change.after)}
                   </span>
                 </dd>
               </div>
             ))}
           </dl>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>그대로 두기</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>{t("keep")}</AlertDialogCancel>
             <AlertDialogAction
               loading={pending}
               disabled={pending}
@@ -221,7 +244,7 @@ function RevertAgentChange({
                 setOpen(false);
               }}
             >
-              되돌리기
+              {t("button")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -297,7 +320,12 @@ function HistoryBody({
   conflict: boolean;
   onSave: (patch: TaskPatch) => Promise<boolean>;
 }) {
+  const t = useTranslations("tasks");
+  const tFields = useTranslations("common.fields");
+  const tStatus = useTranslations("common.taskStatus");
+  const tActions = useTranslations("common.actions");
   const tError = useTranslations("errors");
+  const text = useChangeText();
   const dateLocale = useDisplayLocale();
   const task = entry;
   const done = task.taskStatus !== "OPEN";
@@ -361,16 +389,16 @@ function HistoryBody({
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="flex h-14 items-center border-b border-[var(--el-hairline)] px-6 text-[13px] font-semibold text-[var(--el-ink)]">
-        할 일
+        {t("title")}
       </div>
       <SheetHeader className="gap-3 border-b border-[var(--el-hairline)] px-6 pb-6 pt-5">
         <span className="inline-flex h-5 w-fit items-center gap-1 rounded-chip bg-[var(--el-surface-strong)] px-2 text-[11px] font-semibold text-[var(--el-ink)]">
           <StatusIcon aria-hidden className="size-3" />
-          {TASK_STATUS_LABEL[task.taskStatus]}
+          {tStatus(task.taskStatus)}
         </span>
         {draft ? (
           <Input
-            aria-label="내용"
+            aria-label={tFields("content")}
             autoFocus
             value={draft.content}
             onChange={(event) =>
@@ -383,10 +411,10 @@ function HistoryBody({
           </SheetTitle>
         )}
         <SheetDescription className="sr-only">
-          할 일의 담당 · 기한과 바뀐 이력
+          {t("sheet.description")}
         </SheetDescription>
         <dl className="mt-2 grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3 text-[13px]">
-          <dt className="text-[var(--el-muted)]">담당</dt>
+          <dt className="text-[var(--el-muted)]">{tFields("assignee")}</dt>
           <dd>
             {draft ? (
               <AssigneeCell
@@ -398,12 +426,12 @@ function HistoryBody({
             ) : (
               <AssigneeFace
                 value={task.assignee}
-                placeholder="없음"
+                placeholder={t("sheet.none")}
                 image={assigneeImageOf(choices, task.assignee)}
               />
             )}
           </dd>
-          <dt className="text-[var(--el-muted)]">기한</dt>
+          <dt className="text-[var(--el-muted)]">{tFields("due")}</dt>
           <dd className="text-[var(--el-ink)]">
             {draft ? (
               <DueCell
@@ -411,13 +439,11 @@ function HistoryBody({
                 editable
                 onChange={(due) => setDraft({ ...draft, due })}
               />
-            ) : task.due ? (
-              formatDueDate(task.due)
             ) : (
-              "없음"
+              text.value("due", task.due)
             )}
           </dd>
-          <dt className="text-[var(--el-muted)]">프로젝트</dt>
+          <dt className="text-[var(--el-muted)]">{tFields("project")}</dt>
           <dd className="truncate text-[var(--el-ink)]">{entry.projectName}</dd>
         </dl>
 
@@ -429,14 +455,14 @@ function HistoryBody({
                 disabled={pending || !draft.content.trim()}
                 onClick={finishEdit}
               >
-                저장
+                {tActions("save")}
               </Button>
               <Button
                 variant="ghost"
                 className="h-10 text-[var(--el-muted)] sm:h-8"
                 onClick={() => setDraft(null)}
               >
-                그대로 두기
+                {t("sheet.discard")}
               </Button>
             </>
           ) : (
@@ -447,7 +473,7 @@ function HistoryBody({
                 disabled={pending || done}
                 onClick={() => setDraft(draftOf(task))}
               >
-                수정
+                {tActions("edit")}
               </Button>
               <Button
                 className="h-10 rounded-full sm:h-8"
@@ -456,7 +482,7 @@ function HistoryBody({
                   onSave({ taskStatus: done ? "OPEN" : "COMPLETED" })
                 }
               >
-                {done ? "다시 열기" : "완료로 표시"}
+                {t(done ? "sheet.reopen" : "sheet.markDone")}
               </Button>
               {task.taskStatus === "OPEN" ? (
                 <Button
@@ -465,7 +491,7 @@ function HistoryBody({
                   disabled={pending}
                   onClick={() => onSave({ taskStatus: "CANCELLED" })}
                 >
-                  취소
+                  {t("sheet.cancelTask")}
                 </Button>
               ) : null}
             </>
@@ -481,18 +507,18 @@ function HistoryBody({
         ) : null}
       </SheetHeader>
 
-      <section aria-label="이력" className="px-6 py-5">
+      <section aria-label={t("sheet.history")} className="px-6 py-5">
         <div className="flex items-baseline justify-between">
           <h3 className="text-[13px] font-semibold text-[var(--el-ink)]">
-            이력
+            {t("sheet.history")}
           </h3>
           <span className="text-xs text-[var(--el-muted-soft)]">
-            최근 것부터
+            {t("sheet.newestFirst")}
           </span>
         </div>
 
         {query.isPending ? (
-          <div aria-label="이력 불러오는 중" className="mt-4 space-y-5">
+          <div aria-label={t("sheet.historyLoading")} className="mt-4 space-y-5">
             {["70%", "55%", "62%"].map((width) => (
               <div key={width} className="space-y-2">
                 <Skeleton className="h-4 rounded-chip" style={{ width }} />
@@ -503,7 +529,7 @@ function HistoryBody({
         ) : !revisions ? (
           <InlineRetry
             variant="line"
-            label="이력을 불러오지 못했습니다."
+            label={t("sheet.historyFailed")}
             onRetry={() => void query.refetch()}
             className="mt-4"
           />
@@ -549,17 +575,17 @@ function HistoryBody({
                       />
                     ) : null}
                   </p>
-                  <dl className="mt-1.5 grid grid-cols-[32px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[13px]">
-                    {revisionChanges(previous, revision).map((change) => (
-                      <div key={change.label} className="contents">
+                  <dl className="mt-1.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]">
+                    {revisionChanges(previous, revision, text.speakerName).map((change) => (
+                      <div key={change.field} className="contents">
                         <dt className="text-[var(--el-muted)]">
-                          {change.label}
+                          {text.label(change.field)}
                         </dt>
                         <dd className="min-w-0 text-[var(--el-body)]">
-                          {change.before !== null ? (
+                          {change.before !== undefined ? (
                             <>
                               <span className="text-[var(--el-muted-soft)] line-through">
-                                {change.before}
+                                {text.value(change.field, change.before)}
                               </span>
                               <span
                                 aria-hidden
@@ -567,17 +593,17 @@ function HistoryBody({
                               >
                                 →
                               </span>
-                              <span className="sr-only">에서 </span>
+                              <span className="sr-only">{t("sheet.changedTo")}</span>
                             </>
                           ) : null}
                           <span
                             className={
-                              change.before !== null
+                              change.before !== undefined
                                 ? "font-semibold text-[var(--el-ink)]"
                                 : "text-[var(--el-ink)]"
                             }
                           >
-                            {change.after}
+                            {text.value(change.field, change.after)}
                           </span>
                         </dd>
                       </div>

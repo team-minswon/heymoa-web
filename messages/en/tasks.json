@@ -1,0 +1,66 @@
+{
+  "title": "Tasks",
+  "summary": "{projects, plural, one {# project} other {# projects}} · {open, plural, one {# task} other {# tasks}} in progress",
+  "statusLabel": "Task status",
+  "mine": "My tasks",
+  "allProjects": "All projects",
+  "add": "Add task",
+  "empty": {
+    "OPEN": "No tasks.",
+    "COMPLETED": "No completed tasks.",
+    "CANCELLED": "No canceled tasks."
+  },
+  "noProjects": "No projects.",
+  "noMatch": "No tasks match these filters.",
+  "choicesFailed": "Couldn't load people to assign.",
+  "loadFailed": "Couldn't load tasks.",
+  "loading": "Loading tasks",
+  "loadingMore": "Loading more tasks",
+  "loadMore": "Show more tasks",
+  "sheetClosed": "Couldn't save, so the task panel closed. Open it again from the list.",
+  "saveFailed": "Couldn't save the task.",
+  "groups": {
+    "OVERDUE": "Overdue",
+    "THIS_WEEK": "This week",
+    "LATER": "Next week and later",
+    "NO_DUE": "No due date"
+  },
+  "newTask": {
+    "description": "Add work that came up outside a meeting as a project task."
+  },
+  "row": {
+    "reopen": "Reopen {content}",
+    "complete": "Mark {content} as done",
+    "agent": "Agent",
+    "agentNamed": "Agent ({name})",
+    "history": "History"
+  },
+  "sheet": {
+    "description": "Assignee, due date, and change history for this task",
+    "none": "None",
+    "discard": "Cancel",
+    "reopen": "Reopen",
+    "markDone": "Mark as done",
+    "cancelTask": "Cancel task",
+    "history": "History",
+    "newestFirst": "Newest first",
+    "historyLoading": "Loading history",
+    "historyFailed": "Couldn't load history.",
+    "changedTo": "to ",
+    "author": {
+      "meetingCreated": "Created when the meeting review was finished",
+      "meetingChanged": "Changed when the meeting review was finished",
+      "unknown": "Someone",
+      "self": "<b>{name}</b> {verb, select, created {created this} other {made changes}}",
+      "chat": "<b>{name}</b> {verb, select, created {created this} other {made changes}} with the HeyMoa agent",
+      "agent": "<b>{name}</b>'s agent {verb, select, created {created this} other {made changes}}",
+      "agentNamed": "<b>{name}</b>'s agent ({connection}) {verb, select, created {created this} other {made changes}}"
+    }
+  },
+  "revert": {
+    "button": "Revert",
+    "title": "Revert the agent's change?",
+    "description": "The task goes back to its previous state, and your team sees it right away.",
+    "keep": "Keep"
+  }
+}

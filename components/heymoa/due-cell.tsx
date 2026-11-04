@@ -3,7 +3,10 @@
 import { CalendarDays } from "lucide-react";
 import { useRef } from "react";
 
+import { useTranslations } from "next-intl";
+
 import { formatDueDate } from "@/lib/format/date";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,10 +15,9 @@ import { cn } from "@/lib/utils";
  */
 export function DueCell({
   value,
-  placeholder = "기한 정하기",
+  placeholder,
   editable = false,
   overdue = false,
-  label = "기한",
   chip = false,
   quiet = false,
   onChange,
@@ -25,7 +27,6 @@ export function DueCell({
   placeholder?: string;
   editable?: boolean;
   overdue?: boolean;
-  label?: string;
   /**
    * 달력 아이콘이 붙은 칩 모양(검토 화면 · APP-865). 기한이 없으면 점선 테두리의 「기한 정하기」라
    * 정해야 할 것이 남았다는 것이 눈에 띈다.
@@ -36,8 +37,11 @@ export function DueCell({
   onChange?: (next: string | null) => void;
   className?: string;
 }) {
+  const t = useTranslations("common.dueCell");
+  const locale = useDisplayLocale();
   const input = useRef<HTMLInputElement>(null);
-  const text = value ? formatDueDate(value) : placeholder;
+  const empty = placeholder ?? t("placeholder");
+  const text = value ? formatDueDate(value, locale) : empty;
   const tone = value
     ? overdue
       ? "text-[var(--el-error-strong)]"
@@ -72,7 +76,7 @@ export function DueCell({
       ) : null;
     }
     return (
-      <span className={cn("inline-flex h-7 items-center text-[13px] tabular-nums", tone, className)}>
+      <span className={cn("inline-flex h-7 items-center whitespace-nowrap text-[13px] tabular-nums", tone, className)}>
         {value ? text : ""}
       </span>
     );
@@ -82,7 +86,7 @@ export function DueCell({
     <span className={cn("relative inline-flex", className)}>
       <button
         type="button"
-        aria-label={value ? `${label} ${text} 바꾸기` : placeholder}
+        aria-label={value ? t("change", { date: text }) : empty}
         className={cn(
           chip
             ? cn(
@@ -90,7 +94,7 @@ export function DueCell({
                 chipClass
               )
             : cn(
-                "inline-flex h-9 items-center rounded-control px-1.5 -mx-1.5 text-[13px] tabular-nums hover:bg-[var(--el-surface-strong)] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)] sm:h-7",
+                "inline-flex h-9 items-center whitespace-nowrap rounded-control px-1.5 -mx-1.5 text-[13px] tabular-nums hover:bg-[var(--el-surface-strong)] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)] sm:h-7",
                 tone
               )
         )}

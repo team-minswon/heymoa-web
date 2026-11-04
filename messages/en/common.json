@@ -45,7 +45,10 @@
     "confirm": "OK",
     "create": "Create",
     "close": "Close",
-    "learnMore": "Learn more"
+    "learnMore": "Learn more",
+    "add": "Add",
+    "edit": "Edit",
+    "collapse": "Show less"
   },
   "createWorkspace": {
     "ariaLabel": "Create a new workspace",
@@ -63,5 +66,33 @@
     "OPEN": "In progress",
     "COMPLETED": "Done",
     "CANCELLED": "Canceled"
+  },
+  "fields": {
+    "content": "Task",
+    "status": "Status",
+    "assignee": "Assignee",
+    "due": "Due date",
+    "project": "Project"
+  },
+  "assigneeCell": {
+    "placeholder": "Set assignee",
+    "change": "Change assignee ({name})",
+    "speaker": "Speaker {label}",
+    "unnamedSpeaker": "Unnamed speaker",
+    "search": "Search by name",
+    "noMatch": "No matching people.",
+    "clear": "Remove assignee"
+  },
+  "dueCell": {
+    "placeholder": "Set due date",
+    "change": "Change due date ({date})"
+  },
+  "recipients": {
+    "placeholder": "Enter a name or email",
+    "invalid": "(invalid address)",
+    "remove": "Remove {label}",
+    "candidates": "Suggested recipients",
+    "typed": "Typed address",
+    "sendTo": "Add as recipient"
   }
 }
