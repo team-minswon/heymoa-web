@@ -54,6 +54,7 @@ import {
   createCurrentMsStore,
 } from "@/components/notes/speaker-dock";
 import { SpeakerPanel, SpeakerTools } from "@/components/notes/speaker-panel";
+import { useSpeakerFallbackNames } from "@/components/notes/speaker-chip";
 import {
   summarizeSpeakers,
   type SpeakerJumpVia,
@@ -232,6 +233,7 @@ export const NoteArchive = memo(function NoteArchive({
   noteMeta?: NoteMeta | null;
 } & TranscriptFocus) {
   const t = useTranslations("notes.archive");
+  const fallbackNames = useSpeakerFallbackNames();
   const tActions = useTranslations("common.actions");
   // 종료 뒤에 연 화면에는 노트 소켓이 없어 화자 분리 결과가 오지 않는다. 분리가 끝날
   // 때까지만 전사를 다시 읽는다. 봉인 전에는 전사가 NOT_REQUESTED 라 흐름 상태로 가른다.
@@ -295,9 +297,10 @@ export const NoteArchive = memo(function NoteArchive({
     () =>
       createSpeakerIdentityResolver(
         diarized ? transcript!.diarization.speakers : [],
-        participants
+        participants,
+        fallbackNames.speaker
       ),
-    [diarized, transcript, participants]
+    [diarized, transcript, participants, fallbackNames]
   );
   const truncated = transcript?.recording?.seal === "TRUNCATED";
   // **한 사람이 여러 화자를 맡을 수 있다** (V31). 예전에는 하나였고 「고르면 저쪽에서
@@ -971,9 +974,17 @@ export const NoteArchive = memo(function NoteArchive({
             speakers: transcript!.diarization.speakers,
             participants,
             durationMs: meetingDurationMs,
+            names: fallbackNames,
           })
         : [],
-    [diarized, transcript, segments, participants, meetingDurationMs]
+    [
+      diarized,
+      transcript,
+      segments,
+      participants,
+      meetingDurationMs,
+      fallbackNames,
+    ]
   );
   /** 아직 누구인지 모르는 화자. 갈 곳이 있는 것만 — 발화가 없으면 넘길 자리가 없다. */
   const unassignedStats = speakerStats.filter(

@@ -170,3 +170,123 @@
 | 2 | P2 비운 제목의 기본값이 화면 언어로 저장됨 | 의도입니다(위 판단). 새 회의 창 기본 제목과 같은 결정입니다 |
 | 2 | P3 복사 버튼 언어별 시험이 없음 | `copy-markdown-button.test.tsx`(ko·en)를 더했습니다 |
 | 3 | 지적 없음 | |
+
+## 2. 타임라인·전사·화자·요약
+
+맡은 파일(`components/notes/` 바로 아래):
+
+- 타임라인: `note-timeline.tsx`, `timeline-hint.tsx`, `timeline-visual.tsx`(「논의 중」 칩), `timeline-tone-icon.tsx`(한글 없음)
+- 전사: `transcript-view.tsx`, `transcript-row.tsx`(한글 없음), `transcript-gap-row.tsx`, `transcript-search.tsx`, `use-live-partial.ts`·`use-transcript-focus.ts`(한글 없음)
+- 화자: `speaker-assign-menu.tsx`, `speaker-chip.tsx`, `speaker-dock.tsx`, `speaker-nudge-banner.tsx`, `speaker-panel.tsx`
+- 요약: `note-summary.tsx`
+- 이 컴포넌트들이 쓰는 `lib`: `lib/transcription/gaps.ts`(공백 길이를 단위·값으로 돌려주는 `gapDurationOf`), `lib/notes/speaker-stats.ts`(이름 모르는 줄의 이름을 `names`로 받음, `formatSpeakingTime` → `speakingTimeParts`), `lib/transcription/speaker-identity.ts`(이름 모르는 화자의 이름을 셋째 인자로 받음), `lib/notes/proposals/timeline.ts`(`TIMELINE_FILTERS`에서 이름 제거), `lib/notes/proposals/presentation.ts`(쓰는 곳이 없어진 `CONTEXT_OPERATION_LABEL` 제거)
+- 언어 파일: `messages/<ko|en>/notes.json`에 최상위 `kinds`·`timeline`·`transcript`·`speakers`·`summary`를 더했습니다
+
+범위 밖 파일을 조금 건드렸습니다.
+
+- `note-archive.tsx`(1묶음): 화자 이름 기본값(「화자 A / Speaker A」, 「이름 없는 참여자」)을 화면 언어로 넘기려고 `useSpeakerFallbackNames()`를 부릅니다
+- `note-participants.tsx`(1묶음): `EXTERNAL_LABEL` 상수를 지웠습니다. 화자 지정 메뉴가 `notes.participants.external`(외부 / Guest)을 읽습니다
+- 시험·e2e의 한국어 기대값: 윤문한 문장만(`timeline-hint`·`note-summary`·`transcript-view`·`transcript-gap-row`·`speaker-assign-menu` 시험, `e2e/smoke.spec.ts`의 스크립트 검색, `e2e/deep-links.spec.ts`의 요약 안내)
+
+판단:
+
+- **복사본·회의록용 한국어는 남겼습니다.** `gapHeadline`·`formatGapDuration`(gaps.ts), `SECTION_LABELS`(analysis-sections.ts), `CONTEXT_KIND_LABEL`, 화자 resolver·`summarizeSpeakers`의 한국어 기본값은 `copy-markdown.ts`·`minutes/**`(plan 13단계)와 검토 화면(다음 묶음)이 아직 읽습니다. 화면은 같은 문구를 언어 파일에서 그리고, 공백 줄 한국어는 두 곳이 같아야 해서 `gaps.ts` 주석에 「한쪽을 고치면 다른 쪽도」를 적었습니다
+- **유형 이름은 `notes.kinds`(최상위)에 두었습니다.** 타임라인이 쓰고, 다음 묶음의 검토 화면(`review-graph`·`suggestion-row` 등)이 같은 키를 쓰면 됩니다
+- **`LiveChip`의 `label`을 필수로 바꿨습니다.** 한국어 기본값 「논의 중」이 있으면 영어 화면에서 빠뜨려도 알아챌 수 없습니다. 랜딩은 이미 자기 문구를 넘깁니다
+- **요약 영어 섹션 이름은 Tasks입니다.** 용어집(2026-11-04 재검토)이 할 일을 task로 모았습니다. 한국어 「액션 아이템」은 복사본(`copy-markdown`)과 같아야 해서 그대로 두었습니다(용어집 「정하지 않은 것」)
+- **철회 표시는 둘로 나눴습니다.** 항목 철회는 용어집대로 Reversed, 안건(주제) 철회는 Withdrawn(`timeline.agendaRetracted`). 한국어는 둘 다 「철회됨」입니다
+- 화자 도크의 「이름 없음 N」을 상단바와 같은 「미지정 N」(용어집 Unassigned N)으로 맞췄습니다
+
+## 문구 평가 (2. 타임라인·전사·화자·요약)
+
+| 축 | 1차 | 2차 |
+|---|---|---|
+| slop | 4 | 4 |
+| 용어 | 3 | 4 |
+| 적합도 | 4 | 4 |
+| 일관성 | 3 | 3 |
+| **평균** | **3.5** | **3.8** |
+
+2차 지적 일부를 반영했으나 다시 평가하지는 않았습니다. 최종 점수는 2차 3.8입니다. 1차 평가 사이에 용어집이 갱신되어(Reversed·Regenerate·identify speakers·task) 용어 지적 대부분이 그 갱신분이었습니다.
+
+## 반영한 지적 (2묶음)
+
+1차
+- `summary.sections.ACTION_ITEM`·`missing.*Body`(en): Action items → Tasks
+- `timeline.retracted`(en): Retracted → Reversed
+- `speakers.nudge.*`·`panel.empty`(en): separate → identify
+- `summary.failed.reanalyze`(en): Reanalyze → Regenerate
+- `timeline.resync.*`(en): Sync again → Resync
+- `timeline.relation.answeredQuestion`(en): Answers → Answered question
+- `timeline.hint.message`(en): 「first items」가 한국어에 없는 뜻이라 「New items in the timeline」
+- `timeline.status.liveUpdated`: 가운뎃점 나열을 괄호로(ko 「(마지막 갱신: {freshness})」)
+- `transcript.gap.untranscribed`(en): 「The audio is saved.」(ko와 같은 시제)
+- `speakers.assign.noName`(ko): 버튼 동작이 보이게 「이름 없이 두기」
+- `speakers.assign.trigger`·`panel.goAssign`(en): 「Assign a name to {name}」, 「Start assigning」
+
+2차
+- `timeline.status.*`(en): 「Updated」가 두 번 나와 「Refreshes each time someone finishes speaking」
+- `transcript.search.count`(ko): 「{count}개」 → 「결과 {count}개」
+- `speakers.panel.spots`(en): spots → lines
+- `speakers.tools.nextUnassignedHint`: 화자가 아니라 그 화자의 발화로 간다고(ko·en)
+- `summary.failed.fallback`(en): 「Couldn't complete the analysis.」
+- `summary.missing.liveTitle`(en): 「Summary available after the meeting」
+- 안건 철회: `timeline.agendaRetracted` 분리(en Withdrawn)
+
+## 남긴 지적과 이유 (2묶음)
+
+- `timeline.resync.*`(ko) 「다시 맞추기」를 「다시 동기화」로(1·2차): 용어집의 다시 동기화는 외부 연동의 Resync입니다. 여기는 놓친 변경을 다시 받는 일이라 쉬운 말을 두었습니다
+- `summary.failed.reanalyze`(ko) 「다시 분석」 → 「요약 다시 만들기」(2차): 걸리지 않는 문장(D7)이고, 실패 상자 안 짧은 버튼이라 그대로 두었습니다
+- `timeline.status.ended` 「남길 만한 변화만 기록했습니다」가 모호하다(1차): 이 화면이 실시간 요약이 아니라는 설계(`note-timeline.tsx` 머리 주석)를 말하는 문장이라 그대로 두었습니다
+- `transcript.notStarted.*`의 「첫 대화」「자연스러운 문단」(1차): 걸리지 않는 문장이라 그대로 두었습니다
+- `timeline.empty.ended`(en) recorded/organized(2차): 같은 뜻으로 읽혀 그대로 두었습니다
+- `speakers.panel.goAssign`을 「첫 발화로」로(1차): 미지정 화자의 첫 발화로 가서 거기서 이름을 붙이는 버튼이라 「지정하러 가기」가 맞습니다
+
+## 한국어에서 바뀐 문장 (2묶음)
+
+| 키 | 전 | 후 |
+|---|---|---|
+| `timeline.hint.message` | 타임라인에 정리된 항목이 생겼어요 | 타임라인에 정리된 항목이 생겼습니다 |
+| `timeline.status.liveUpdated` | 말이 끝날 때마다 정리됩니다 · {freshness} 갱신 | 말이 끝날 때마다 정리됩니다 (마지막 갱신: {freshness}) |
+| `timeline.empty.live` | 아직 정리할 발화가 없습니다. 결정·할 일·질문이 나오면 여기에 쌓입니다. | 아직 정리할 발화가 없습니다. 결정이나 할 일, 질문이 나오면 여기에 쌓입니다. |
+| `summary.missing.liveTitle` | 요약은 회의가 끝나면 생성됩니다 | 회의가 끝나면 요약을 만듭니다 |
+| `summary.missing.liveBody` | 회의를 종료하면 개요·액션 아이템·결정이 자동으로 정리됩니다. | 회의를 종료하면 개요와 액션 아이템, 결정을 자동으로 정리합니다. |
+| `summary.missing.endedBody` | 이 회의의 요약을 만들어 개요·액션 아이템·결정을 정리합니다. | 이 회의의 요약을 만들어 개요와 액션 아이템, 결정을 정리합니다. |
+| `speakers.nudge.pending` | 화자를 나누는 중입니다. 끝나면 누가 누구인지 알려주실 수 있습니다. | 화자를 나누는 중입니다. 끝나면 누가 누구인지 지정할 수 있습니다. |
+| `speakers.dock.unassigned` | 이름 없음 {n} | 미지정 {count} |
+| `speakers.assign.noName` | 이름 안 붙임 | 이름 없이 두기 |
+| `speakers.tools.nextUnassignedHint` | 아직 누구인지 모르는 화자로 넘어갑니다 | 미지정 화자의 다음 발화로 이동합니다 |
+| `transcript.loading` | 대화 기록 불러오는 중 | 스크립트 불러오는 중 |
+| `transcript.loadFailed` | 대화 기록을 불러오지 못했습니다. | 스크립트를 불러오지 못했습니다. |
+| `transcript.search.region`·`input`·`placeholder` | 전사 검색 / 전사 검색어 / 전사에서 검색 | 스크립트 검색 / 스크립트 검색어 / 스크립트에서 검색 |
+| `transcript.search.count` | {n}개 | 결과 {count}개 |
+| `transcript.gap.untranscribed`(복사본 `gapHeadline`도) | {duration} 받아쓰지 못했어요 · 소리는 저장됨 | {duration} 받아쓰지 못했습니다. 소리는 남아 있습니다. |
+
+## 렌더 확인 (2묶음)
+
+영어 계정, 1440·1024. `check-load.mjs`와, 눌러야 나오는 것을 여는 임시 스크립트(scratch, 레포에 남기지 않음)로 봤습니다. 타임라인 탭 주소는 `tab=context`입니다.
+
+| 경로·화면 | 넘침 | 비고 |
+|---|---|---|
+| `/w/01K0000000000/notes/01K0000000002?view=full&tab=context` 진행 중 노트 타임라인(빈 상태) | 없음 | |
+| `…/01K0000000016?view=full&tab=context` 안건이 있는 타임라인, 항목 펼침 | 없음 | 1024에서 필터의 「Reference」가 둘째 줄로 갑니다(`flex-wrap`, 의도된 배치) |
+| `…/01K0000000020?view=full&tab=context` 끝난 노트 타임라인 | 없음 | |
+| `…/01K0000000002?view=full&tab=transcript` 진행 중 전사 | 없음 | |
+| `…/01K0000000020?view=full&tab=transcript` 끝난 노트 전사·화자 도크·공백 줄 | 없음 | |
+| 화자 지정 메뉴(전사 칩 클릭) | 없음 | 「Apply to all lines from this speaker」가 메뉴 폭(256px)에서 두 줄로 꺾입니다 |
+| 전사 검색(「Search」 → 검색어 입력) | 없음 | |
+| 화자 패널(「Speakers」) | 없음 | |
+| `…/01K0000000002?view=full&tab=summary`, `…/01K0000000020?view=full&tab=summary`(근거 펼침) | 없음 | 넘침 목록의 「2 sources」는 sr-only입니다 |
+
+남은 한글 중 이 묶음이 아닌 것:
+
+- 노트 머리·타임라인 머리의 날짜 「2026년 11월 4일 오전 10:00」, 「참석자 2명 ·」「기록 10분」「워크스페이스 멤버에게 공개」(`lib/notes/note-header-meta.ts`, `whenLabel`): plan 13단계
+- 시트·창의 닫기 버튼 「닫기」(`components/ui/sheet.tsx`·`dialog.tsx`), 「사이드바 열기」, 「내 에이전트 열기」: 셸·채팅 모듈
+- 회의 제목·참여자 이름·전사 본문·요약 본문·근거 인용·대화 내용: 목 데이터·사용자 데이터
+- 1024 전체 화면에서 노트 머리의 상태 칩 「Recording」과 탭 「Details」가 겹쳐 보입니다(1묶음 `note-panel` 머리 레이아웃)
+
+## 코드 리뷰 (2묶음)
+
+| 회차 | 지적 | 처리 |
+|---|---|---|
+| 1 | P3 영어 ICU 분기(공백 길이·복수형)를 그리는 시험이 없음 | `transcript-gap-row.test.tsx`에 영어 시험을 더했습니다. 화자 시간·복수형은 `speaker-panel.test.tsx`의 영어 시험이 봅니다 |

@@ -30,15 +30,13 @@ export type TimelineFilter =
   | "OPEN"
   | "REFERENCE";
 
-export const TIMELINE_FILTERS: ReadonlyArray<{
-  value: TimelineFilter;
-  label: string;
-}> = [
-  { value: "ALL", label: "전체" },
-  { value: "DECISION", label: "결정" },
-  { value: "ACTION_ITEM", label: "할 일" },
-  { value: "OPEN", label: "열린 질문" },
-  { value: "REFERENCE", label: "참고" },
+/** 「유형으로 골라 보기」의 차례. 이름은 `notes.timeline.filter` 가 정한다. */
+export const TIMELINE_FILTERS: ReadonlyArray<TimelineFilter> = [
+  "ALL",
+  "DECISION",
+  "ACTION_ITEM",
+  "OPEN",
+  "REFERENCE",
 ];
 
 export type TimelineItem = {

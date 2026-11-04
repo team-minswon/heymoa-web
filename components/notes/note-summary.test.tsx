@@ -369,7 +369,7 @@ describe("NoteSummary", () => {
   it("종료 전에는 안내만 보이고 요약 만들기 버튼이 없다", () => {
     state.missing = true;
     renderSummary(false);
-    expect(screen.getByText("요약은 회의가 끝나면 생성됩니다")).toBeTruthy();
+    expect(screen.getByText("회의가 끝나면 요약을 만듭니다")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "요약 만들기" })).toBeNull();
   });
 

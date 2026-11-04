@@ -250,7 +250,9 @@ describe("전사 공백 줄 (APP-706)", () => {
   it("소리는 저장됐다고 말하고, 끝이 있는 구간이다", () => {
     const [row] = toGapRows([], [untranscribed("t1", 0, 90_000)]);
 
-    expect(gapHeadline(row)).toBe("약 2분 받아쓰지 못했어요 · 소리는 저장됨");
+    expect(gapHeadline(row)).toBe(
+      "약 2분 받아쓰지 못했습니다. 소리는 남아 있습니다."
+    );
     expect(isGapOpen(row)).toBe(false);
   });
 });

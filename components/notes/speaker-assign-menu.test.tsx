@@ -99,7 +99,7 @@ describe("SpeakerAssignMenu", () => {
       screen.getAllByRole("option").map((item) => item.textContent)
     ).toEqual(["김철수kim@example.com", "박서준park@example.com"]);
     expect(
-      screen.getByRole("button", { name: "이름 안 붙임" })
+      screen.getByRole("button", { name: "이름 없이 두기" })
     ).toBeInTheDocument();
   });
 
@@ -363,7 +363,7 @@ describe("SpeakerAssignMenu", () => {
     );
 
     open();
-    fireEvent.click(screen.getByRole("button", { name: "이름 안 붙임" }));
+    fireEvent.click(screen.getByRole("button", { name: "이름 없이 두기" }));
 
     expect(onAssign).toHaveBeenCalledWith(null, "label");
   });
@@ -396,7 +396,7 @@ describe("SpeakerAssignMenu", () => {
 
     expect(screen.queryAllByRole("option")).toHaveLength(0);
     expect(
-      screen.getByRole("button", { name: "이름 안 붙임" })
+      screen.getByRole("button", { name: "이름 없이 두기" })
     ).toBeInTheDocument();
   });
 
@@ -754,12 +754,12 @@ describe("SpeakerAssignMenu", () => {
 
     open();
     expect(
-      screen.getByRole("button", { name: "이름 안 붙임" })
+      screen.getByRole("button", { name: "이름 없이 두기" })
     ).toBeInTheDocument();
 
     chooseScope("현재 발화에만 적용");
 
-    expect(screen.queryByRole("button", { name: "이름 안 붙임" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "이름 없이 두기" })).toBeNull();
     expect(
       screen.getByRole("button", { name: "개별 지정 해제" })
     ).toBeInTheDocument();

@@ -61,6 +61,7 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
 vi.mock("@/components/notes/speaker-chip", async (original) => {
   const actual = await original<typeof import("./speaker-chip")>();
   return {
+    ...actual,
     SpeakerChip: (props: Parameters<typeof actual.SpeakerChip>[0]) => {
       fixture.speakerRender();
       return actual.SpeakerChip(props);

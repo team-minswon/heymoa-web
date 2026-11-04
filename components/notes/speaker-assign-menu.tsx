@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
-import { EXTERNAL_LABEL } from "@/components/notes/note-participants";
 import { SpeakerChip } from "@/components/notes/speaker-chip";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,9 +91,12 @@ export function targetOf(candidate: SpeakerCandidate): SpeakerTarget | null {
   return null;
 }
 
-/** 콤보박스가 거르는 문자열과 **같은 값**이어야 한다. 두 곳이 갈리면 조합 전후로 목록이 튄다. */
-const searchTextOf = (candidate: SpeakerCandidate) =>
-  `${candidate.name} ${candidate.email ?? EXTERNAL_LABEL}`;
+/**
+ * 콤보박스가 거르는 문자열과 **같은 값**이어야 한다. 두 곳이 갈리면 조합 전후로 목록이 튄다.
+ * [guest]는 계정 없는 사람의 이메일 자리에 서는 말(`notes.participants.external`)이다.
+ */
+const searchTextOf = (candidate: SpeakerCandidate, guest: string) =>
+  `${candidate.name} ${candidate.email ?? guest}`;
 
 /** 참여 기록이 없는 후보도 있어 목록 키를 따로 만든다. */
 export const candidateKey = (candidate: SpeakerCandidate) =>
@@ -105,10 +108,7 @@ export const candidateKey = (candidate: SpeakerCandidate) =>
 /** 지정 범위. 기본은 라벨 전체다 — 대개 그 화자의 말 전부가 같은 사람이다. */
 export type AssignScope = "label" | "segment";
 
-const SCOPES: ReadonlyArray<{ value: AssignScope; label: string }> = [
-  { value: "label", label: "이 화자의 모든 발화에 적용" },
-  { value: "segment", label: "현재 발화에만 적용" },
-];
+const SCOPES: ReadonlyArray<AssignScope> = ["label", "segment"];
 
 /**
  * 읽다가 「이 사람 아닌데」를 알아본 **그 자리**가 고치는 자리다.
@@ -180,6 +180,12 @@ export function SpeakerAssignMenu({
   /** `false` 면 「현재 발화에만 적용」을 감추고 라벨 단위로만 지정한다(도크처럼 현재 발화가 없는 자리). */
   allowSegmentScope?: boolean;
 }) {
+  const t = useTranslations("notes.speakers.assign");
+  const tNotes = useTranslations("notes");
+  const tActions = useTranslations("common.actions");
+  const guest = tNotes("participants.external");
+  const textOf = (candidate: SpeakerCandidate) =>
+    searchTextOf(candidate, guest);
   const [open, setOpen] = useState(false);
   /** base-ui 가 후보를 거를 때 쓰는 값. 조합 중에는 안 올라온다 — 그게 맞는 동작이다. */
   const [search, setSearch] = useState("");
@@ -246,7 +252,7 @@ export function SpeakerAssignMenu({
   const shown = filterByTyped(
     trimmedSearch ? candidates : candidates.filter((c) => !c.searchOnly),
     trimmedSearch,
-    searchTextOf
+    textOf
   );
   // 정확히 같은 이름이 없을 때만 만들기를 보여준다. 부분 일치로 열어 두면 「박」을 치는
   // 동안 계속 떠서, 이미 있는 사람을 옆에 두고 같은 이름을 하나 더 만들기 쉬워진다.
@@ -274,7 +280,7 @@ export function SpeakerAssignMenu({
         // 지우기 버튼처럼 입력 이벤트 없이 값이 바뀌는 길도 있다
         setTyped(value);
       }}
-      itemToStringLabel={searchTextOf}
+      itemToStringLabel={textOf}
       onValueChange={(candidate: SpeakerCandidate | null) => {
         const target = candidate && targetOf(candidate);
         if (target) onAssign(target, scope);
@@ -293,7 +299,7 @@ export function SpeakerAssignMenu({
                 close();
               }
             }}
-            aria-label={`${identity.displayName} 화자 지정`}
+            aria-label={t("trigger", { name: identity.displayName })}
             className="mb-1 -mx-1 flex items-center rounded-chip px-1 transition-colors hover:bg-[var(--el-canvas-soft)]"
           >
             <SpeakerChip identity={identity} />
@@ -312,8 +318,8 @@ export function SpeakerAssignMenu({
         }}
       >
         <ComboboxInput
-          aria-label="이름으로 참석자 검색"
-          placeholder="이름으로 검색"
+          aria-label={t("searchLabel")}
+          placeholder={t("searchPlaceholder")}
           showTrigger={false}
           onTypedValueChange={setTyped}
           // 일치하는 사람이 없을 때 Enter 는 「＋ 추가」의 확인이다. 한글 조합 중 Enter 는 글자를 확정할 뿐이라 거른다.
@@ -335,20 +341,18 @@ export function SpeakerAssignMenu({
             role="alert"
             className="px-2 py-1.5 text-[13px] text-[var(--el-danger)]"
           >
-            후보를 불러오지 못했습니다.{" "}
+            {t("loadFailed")}{" "}
             <button
               type="button"
               className="underline underline-offset-2"
               onClick={() => onRetryCandidates?.()}
             >
-              다시 시도
+              {tActions("retry")}
             </button>
           </div>
         ) : null}
         <ComboboxEmpty>
-          {candidatesPending
-            ? "후보를 불러오는 중입니다…"
-            : "일치하는 참석자가 없습니다."}
+          {candidatesPending ? t("loading") : t("empty")}
         </ComboboxEmpty>
         <ComboboxList>
           {(candidate: SpeakerCandidate) => (
@@ -377,13 +381,15 @@ export function SpeakerAssignMenu({
                   {/* 「저기에도 붙어 있다」는 정보다. 골라도 저쪽은 안 떨어진다 */}
                   {candidate.assignedLabels?.length ? (
                     <span className="shrink-0 text-[11px] text-[var(--el-muted-soft)]">
-                      화자 {candidate.assignedLabels.join("·")}
+                      {t("assignedLabels", {
+                        labels: candidate.assignedLabels.join("·"),
+                      })}
                     </span>
                   ) : null}
                 </span>
                 {/* 동명이인이 갈리는 유일한 단서다. 계정 없는 사람에게는 그 단서가 없다 */}
                 <span className="block truncate text-[11px] text-[var(--el-muted-soft)]">
-                  {candidate.email ?? EXTERNAL_LABEL}
+                  {candidate.email ?? guest}
                 </span>
               </span>
             </ComboboxItem>
@@ -402,7 +408,7 @@ export function SpeakerAssignMenu({
                 close();
               }}
             >
-              ＋ &quot;{trimmedSearch}&quot; 추가
+              {t("create", { name: trimmedSearch })}
             </Button>
           </div>
         ) : null}
@@ -411,20 +417,20 @@ export function SpeakerAssignMenu({
             남의 말로 붙은 경우가 따로 있다. 그 둘은 고치는 범위가 다르다. */}
         {allowSegmentScope ? (
           <fieldset className="border-t border-border p-1">
-            <legend className="sr-only">화자 지정 범위</legend>
+            <legend className="sr-only">{t("scope.legend")}</legend>
             {SCOPES.map((option) => (
               <label
-                key={option.value}
+                key={option}
                 className="flex cursor-pointer items-center gap-2 rounded-chip px-2 py-1.5 text-[13px] hover:bg-[var(--el-canvas-soft)]"
               >
                 <input
                   type="radio"
                   name="speaker-assign-scope"
                   className="accent-[var(--el-ink)]"
-                  checked={scope === option.value}
-                  onChange={() => setScope(option.value)}
+                  checked={scope === option}
+                  onChange={() => setScope(option)}
                 />
-                {option.label}
+                {t(`scope.${option}`)}
               </label>
             ))}
           </fieldset>
@@ -451,7 +457,7 @@ export function SpeakerAssignMenu({
                 close();
               }}
             >
-              이름 안 붙임
+              {t("noName")}
             </Button>
           ) : (
             <Button
@@ -466,7 +472,7 @@ export function SpeakerAssignMenu({
                 close();
               }}
             >
-              개별 지정 해제
+              {t("clearOverride")}
             </Button>
           )}
         </div>

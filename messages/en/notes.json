@@ -279,5 +279,207 @@
     "copied": "{label} copied to clipboard.",
     "failed": "Couldn't copy.",
     "blocked": "The browser blocked clipboard access."
+  },
+  "kinds": {
+    "AGENDA": "Agenda item",
+    "DECISION": "Decision",
+    "ACTION_ITEM": "Task",
+    "ISSUE": "Issue",
+    "QUESTION": "Question",
+    "STATUS_REPORT": "Update",
+    "INSIGHT": "Insight"
+  },
+  "timeline": {
+    "freshness": {
+      "justNow": "just now",
+      "minutesAgo": "{count, plural, one {# minute ago} other {# minutes ago}}",
+      "hoursAgo": "{count, plural, one {# hour ago} other {# hours ago}}"
+    },
+    "retracted": "Reversed",
+    "operations": {
+      "AMEND": "Expanded",
+      "CORRECT": "Corrected"
+    },
+    "awaitingAnswer": "Awaiting an answer",
+    "answered": "Answered",
+    "answeredAt": "Answered at {time}",
+    "rangeNow": "{start} – now",
+    "hint": {
+      "message": "New items in the timeline",
+      "dismiss": "Dismiss"
+    },
+    "status": {
+      "ended": "Only changes worth keeping from this meeting are recorded",
+      "live": "Refreshes each time someone finishes speaking",
+      "liveUpdated": "Refreshes each time someone finishes speaking (last updated {freshness})"
+    },
+    "scrollToBottom": "Jump to latest",
+    "participants": "{count, plural, one {# participant} other {# participants}}",
+    "headerLoading": "Loading timeline title",
+    "filter": {
+      "label": "Filter by type",
+      "ALL": "All",
+      "DECISION": "Decisions",
+      "ACTION_ITEM": "Tasks",
+      "OPEN": "Open questions",
+      "REFERENCE": "Reference"
+    },
+    "resync": {
+      "message": "Some changes were missed. Resyncing the timeline.",
+      "action": "Resync"
+    },
+    "citationSpeakersFailed": "Couldn't load speakers for the sources.",
+    "loading": "Loading timeline",
+    "loadFailed": "Couldn't load the timeline.",
+    "agendasRefreshFailed": "Couldn't refresh topic titles.",
+    "agendasFailed": "Couldn't load topic titles.",
+    "empty": {
+      "ended": "No items were recorded in this meeting.",
+      "live": "Nothing to organize yet. Decisions, tasks, and questions will appear here as they come up.",
+      "filtered": "No items of this type."
+    },
+    "jumpToTranscript": "Go to {time} in the transcript",
+    "continued": "Continued",
+    "live": "Discussing",
+    "previous": {
+      "aria": "Go to the earlier discussion of {title}",
+      "ariaAt": "Go to the earlier discussion of {title} at {time}",
+      "button": "Earlier discussion"
+    },
+    "transcribing": "Transcribing",
+    "relation": {
+      "answer": "Answer",
+      "answeredQuestion": "Answered question"
+    },
+    "agendaRetracted": "Withdrawn"
+  },
+  "transcript": {
+    "loadFailed": "Couldn't load the transcript.",
+    "scrollToBottom": "Jump to latest",
+    "label": "Meeting transcript",
+    "loading": "Loading transcript",
+    "transcribing": "Transcribing",
+    "notStarted": {
+      "title": "Your conversation will appear here.",
+      "body": "Start recording and talk as usual. HeyMoa turns it into readable paragraphs."
+    },
+    "waiting": {
+      "title": "Waiting for someone to speak",
+      "body": "Speak naturally."
+    },
+    "empty": "No transcript.",
+    "search": {
+      "open": "Search",
+      "region": "Search transcript",
+      "input": "Search terms",
+      "placeholder": "Search the transcript",
+      "count": "{count, plural, one {# result} other {# results}}",
+      "none": "No results",
+      "previous": "Previous result",
+      "next": "Next result",
+      "close": "Close search"
+    },
+    "gap": {
+      "ongoing": "ongoing",
+      "duration": "{unit, select, brief {briefly} minutes {for about {value, plural, one {# minute} other {# minutes}}} hours {for about {value, plural, one {# hour} other {# hours}}} other {for about {value, plural, one {# day} other {# days}}}}",
+      "pause": "Paused {duration}",
+      "pauseOpen": "Paused",
+      "lost": "No audio {duration}",
+      "lostOpen": "No audio",
+      "untranscribed": "Couldn't transcribe {duration}. The audio is saved.",
+      "pausedBetween": "Paused at {start}, resumed at {end}"
+    }
+  },
+  "speakers": {
+    "fallback": "Speaker {label}",
+    "unnamedParticipant": "Unnamed participant",
+    "unconfirmed": "Speaker not yet confirmed",
+    "speakingTime": "{minutes, plural, =0 {{seconds}s} other {{seconds, plural, =0 {{minutes}m} other {{minutes}m {seconds}s}}}}",
+    "assign": {
+      "trigger": "Assign a name to {name}",
+      "searchLabel": "Search attendees by name",
+      "searchPlaceholder": "Search by name",
+      "loadFailed": "Couldn't load people.",
+      "loading": "Loading people…",
+      "empty": "No matching attendees.",
+      "assignedLabels": "Speaker {labels}",
+      "create": "＋ Add \"{name}\"",
+      "scope": {
+        "legend": "Apply to",
+        "label": "Apply to all lines from this speaker",
+        "segment": "Apply to this line only"
+      },
+      "noName": "Leave unnamed",
+      "clearOverride": "Remove line assignment"
+    },
+    "dock": {
+      "previous": "Previous line from {name}",
+      "next": "Next line from {name}",
+      "expand": "Expand speaker dock",
+      "collapse": "Collapse speaker dock",
+      "unassigned": "Unassigned {count}",
+      "speakers": "{count, plural, one {# speaker} other {# speakers}}"
+    },
+    "nudge": {
+      "failed": "Couldn't identify speakers.",
+      "pending": "Identifying speakers. When it's done, you can name each speaker.",
+      "howTo": "How to assign"
+    },
+    "panel": {
+      "title": "Speakers",
+      "silent": "Didn't speak",
+      "share": "{percent}%",
+      "goAssign": "Start assigning",
+      "firstLine": "Go to first line",
+      "nextLine": "Next line",
+      "spots": "{count, plural, one {# line} other {# lines}}",
+      "position": "{current} / {total}",
+      "firstAt": "First spoke at {time}",
+      "participants": "{count, plural, one {# participant} other {# participants}}",
+      "unassigned": "{count, plural, one {# unassigned speaker} other {# unassigned speakers}}",
+      "meetingLength": "Meeting {time}",
+      "empty": "No speakers identified yet.",
+      "reset": "Reset all speaker assignments"
+    },
+    "tools": {
+      "open": "Speakers",
+      "openHint": "See who spoke and for how long",
+      "nextUnassigned": "Unassigned {count}",
+      "nextUnassignedHint": "Go to the next line from an unassigned speaker"
+    }
+  },
+  "summary": {
+    "sections": {
+      "OVERVIEW": "Overview",
+      "ACTION_ITEM": "Tasks",
+      "DECISION": "Decisions"
+    },
+    "regenerate": "Regenerate summary",
+    "failed": {
+      "title": "Analysis failed",
+      "fallback": "Couldn't complete the analysis.",
+      "reanalyze": "Regenerate"
+    },
+    "missing": {
+      "endedTitle": "No summary yet",
+      "liveTitle": "Summary available after the meeting",
+      "liveBody": "End the meeting to get an overview, tasks, and decisions automatically.",
+      "readOnlyBody": "This meeting has no saved summary.",
+      "endedBody": "Create a summary to get an overview, tasks, and decisions for this meeting."
+    },
+    "create": "Create summary",
+    "loadFailed": "Couldn't load the summary.",
+    "loading": "Loading summary",
+    "analyzing": {
+      "title": "Summarizing the meeting",
+      "body": "You can leave this screen. The summary will appear in this tab when it's ready."
+    },
+    "retryStrip": {
+      "failed": "Couldn't regenerate the summary. The one below is the previous version.",
+      "running": "Regenerating the summary.",
+      "runningHint": "The summary below will be replaced when it's done."
+    },
+    "sectionEmpty": "None came up in this meeting.",
+    "evidenceCount": "{count, plural, one {# source} other {# sources}}"
   }
 }

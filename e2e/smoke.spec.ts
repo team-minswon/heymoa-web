@@ -2481,7 +2481,7 @@ test("confirms a speaker as unnamed without clearing the human answer", async ({
   await expect(trigger.locator("[data-unassigned]")).toHaveCount(1);
 
   await trigger.click();
-  await page.getByRole("button", { name: "이름 안 붙임" }).click();
+  await page.getByRole("button", { name: "이름 없이 두기" }).click();
 
   // 이름은 여전히 `화자 B`다 — 그 사람이 누구인지 우리가 모른다는 것이 사실이다.
   await expect(trigger).toBeVisible();
@@ -2567,7 +2567,7 @@ function transcriptLine(page: Page, text: string) {
 }
 
 async function revealTranscriptLine(page: Page, text: string) {
-  const input = page.getByRole("textbox", { name: "전사 검색어" });
+  const input = page.getByRole("textbox", { name: "스크립트 검색어" });
   if (!(await input.count()))
     await page.getByRole("button", { name: "검색", exact: true }).click();
   await input.fill(text);
@@ -2771,12 +2771,12 @@ test("searches the full transcript locally without stealing input focus", async 
       requests++;
   });
   await page.getByRole("button", { name: "검색", exact: true }).click();
-  const input = page.getByRole("textbox", { name: "전사 검색어" });
+  const input = page.getByRole("textbox", { name: "스크립트 검색어" });
   await input.fill(OVERRIDDEN_LINE);
   await input.press("Enter");
   await expect(transcriptLine(page, OVERRIDDEN_LINE)).toBeInViewport();
   await expect(input).toBeFocused();
-  await expect(page.getByRole("search", { name: "전사 검색" })).toContainText(
+  await expect(page.getByRole("search", { name: "스크립트 검색" })).toContainText(
     "1/1"
   );
   await input.press("Shift+Enter");

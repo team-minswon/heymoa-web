@@ -38,12 +38,6 @@ export type ParticipantFace = Pick<Participant, "name" | "email" | "image"> &
   Partial<Pick<Participant, "participantId" | "userId" | "guestId">>;
 
 /**
- * 계정 없는 사람에게 이메일 자리에 대신 세우는 말. 이 파일과 참여자 선택은 `notes.participants.external` 을 쓴다.
- * 화자 지정 메뉴(`speaker-assign-menu`)가 아직 이 상수를 읽는다.
- */
-export const EXTERNAL_LABEL = "외부";
-
-/**
  * `Avatar` 의 크기 이름을 실제 px 로. **`components/ui/avatar.tsx` 의 값과 같아야 한다** —
  * 거기서 `sm`=`size-6`(24), 기본=`size-8`(32), `lg`=`size-10`(40) 이다. 한 단계씩 작게
  * 잡아 두었더니 참석자 스택만 다른 화면보다 작았다.

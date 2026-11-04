@@ -58,7 +58,7 @@ for (const [tab, label] of [
     await expect(
       page.getByRole("button", { name: "목록으로", exact: true })
     ).toBeVisible();
-    await expect(page.getByText("요약은 회의가 끝나면 정리됩니다")).toHaveCount(
+    await expect(page.getByText("회의가 끝나면 요약을 만듭니다")).toHaveCount(
       0
     );
     if (tab === "summary") {

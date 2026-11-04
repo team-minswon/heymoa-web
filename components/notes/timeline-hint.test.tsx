@@ -15,7 +15,7 @@ import {
 } from "@/components/notes/timeline-hint";
 import { onTrack } from "@/lib/analytics/track";
 
-const TEXT = "타임라인에 정리된 항목이 생겼어요";
+const TEXT = "타임라인에 정리된 항목이 생겼습니다";
 
 // 움직임 줄이기 설정만 바꿔 끼운다. 나머지 motion 은 진짜다 — 퇴장이 끝나야 빠지는지를 본다.
 let reducedMotion = false;

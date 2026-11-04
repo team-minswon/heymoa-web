@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useTranslations } from "next-intl";
 import {
   ArrowUpRight,
   Calendar,
@@ -32,7 +33,10 @@ import { flowPollInterval } from "@/lib/notes/review/flow-cache";
 import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
-import { SpeakerChip } from "@/components/notes/speaker-chip";
+import {
+  SpeakerChip,
+  useSpeakerFallbackNames,
+} from "@/components/notes/speaker-chip";
 import { useGetNoteAgendas } from "@/lib/api/generated/notes/notes";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { okData } from "@/lib/api/ok-data";
@@ -56,10 +60,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { timelineToMarkdown } from "@/lib/notes/minutes/markdown";
 import { minutesTimeline } from "@/lib/notes/minutes/model";
 import type { ProposalHead } from "@/lib/notes/proposals/contract";
-import {
-  CONTEXT_KIND_LABEL,
-  CONTEXT_OPERATION_LABEL,
-} from "@/lib/notes/proposals/presentation";
 import {
   inFilter,
   placeAgendas,
@@ -108,15 +108,21 @@ export type TimelineHeader = {
   projectName: string | null;
 };
 
+type TimelineT = ReturnType<typeof useTranslations<"notes.timeline">>;
+
 /** 마지막 갱신을 사람 말로. 서버 시각과 지금의 차이다. */
-export function formatFreshness(lastBatchAt: string | null, now: number) {
+export function formatFreshness(
+  lastBatchAt: string | null,
+  now: number,
+  t: TimelineT
+) {
   if (!lastBatchAt) return null;
   const elapsed = now - Date.parse(lastBatchAt);
   if (!Number.isFinite(elapsed)) return null;
-  if (elapsed < 45_000) return "방금";
+  if (elapsed < 45_000) return t("freshness.justNow");
   const minutes = Math.round(elapsed / 60_000);
-  if (minutes < 60) return `${minutes}분 전`;
-  return `${Math.floor(minutes / 60)}시간 전`;
+  if (minutes < 60) return t("freshness.minutesAgo", { count: minutes });
+  return t("freshness.hoursAgo", { count: Math.floor(minutes / 60) });
 }
 
 /**
@@ -139,24 +145,30 @@ const NONE: ReadonlySet<string> = new Set();
 const itemId = (proposalId: string) => `timeline-item-${proposalId}`;
 const groupId = (key: string) => `timeline-agenda-${key}`;
 
-function metaOf(item: TimelineItem): Array<{ text: string; tone?: "error" }> {
+function metaOf(
+  item: TimelineItem,
+  t: TimelineT
+): Array<{ text: string; tone?: "error" }> {
   const { proposal } = item;
   const parts: Array<{ text: string; tone?: "error" }> = [];
   if (proposal.closeReason === "RETRACTED") {
-    parts.push({ text: "철회됨", tone: "error" });
+    parts.push({ text: t("retracted"), tone: "error" });
   } else if (
     proposal.operation === "AMEND" ||
     proposal.operation === "CORRECT"
   ) {
-    parts.push({ text: CONTEXT_OPERATION_LABEL[proposal.operation] });
+    parts.push({ text: t(`operations.${proposal.operation}`) });
   }
   if (item.tone === "open" && proposal.kind === "QUESTION") {
-    parts.push({ text: "답을 기다리는 중" });
+    parts.push({ text: t("awaitingAnswer") });
   }
   if (item.tone === "answered") {
     const at = item.answers[0]?.citations[0]?.startedAtMs;
     parts.push({
-      text: at === undefined ? "답함" : `${formatOffset(at)}에 답함`,
+      text:
+        at === undefined
+          ? t("answered")
+          : t("answeredAt", { time: formatOffset(at) }),
     });
   }
   return parts;
@@ -164,12 +176,12 @@ function metaOf(item: TimelineItem): Array<{ text: string; tone?: "error" }> {
 
 const NO_PLACEMENT: AgendaPlacement = new Map();
 
-function groupRange(group: TimelineGroup, recording: boolean) {
+function groupRange(group: TimelineGroup, recording: boolean, t: TimelineT) {
   if (group.startMs === null) return null;
   const start = formatOffset(group.startMs);
   if (group.endMs !== null && group.endMs !== group.startMs)
     return `${start} – ${formatOffset(group.endMs)}`;
-  if (group.last && recording) return `${start} – 지금`;
+  if (group.last && recording) return t("rangeNow", { start });
   return start;
 }
 
@@ -201,6 +213,8 @@ export function NoteTimeline({
    */
   recording?: boolean;
 }) {
+  const t = useTranslations("notes.timeline");
+  const fallbackNames = useSpeakerFallbackNames();
   const { context, noteId, transcript: topicTranscript } = useNoteRealtime();
   const ownRecording = useRecording();
   const ownTranscript = useRecordingTranscript();
@@ -297,7 +311,8 @@ export function NoteTimeline({
       transcript?.diarization.status === "MAPPED"
         ? transcript.diarization.speakers
         : [],
-      participants
+      participants,
+      fallbackNames.speaker
     );
     return new Map(
       mergeLiveSegments(
@@ -312,6 +327,7 @@ export function NoteTimeline({
   }, [
     transcript,
     participants,
+    fallbackNames,
     liveForNote,
     ownTranscript.finalSegments,
     topicTranscript.finalSegments,
@@ -691,12 +707,12 @@ export function NoteTimeline({
   const settled = !listLoading && !context.failed;
   const now = useNow(20_000);
   const freshness =
-    now === null ? null : formatFreshness(context.state.lastBatchAt, now);
+    now === null ? null : formatFreshness(context.state.lastBatchAt, now, t);
   const hint = meetingEnded
-    ? "이 회의에서 남길 만한 변화만 기록했습니다"
+    ? t("status.ended")
     : freshness
-      ? `말이 끝날 때마다 정리됩니다 · ${freshness} 갱신`
-      : "말이 끝날 때마다 정리됩니다";
+      ? t("status.liveUpdated", { freshness })
+      : t("status.live");
 
   return (
     <ScrollArea
@@ -706,7 +722,7 @@ export function NoteTimeline({
       overlay={
         !isFollowing ? (
           <ScrollToBottomButton
-            label="맨 아래로"
+            label={t("scrollToBottom")}
             onClick={scrollToLatest}
             className="lg:bottom-20"
           />
@@ -727,9 +743,9 @@ export function NoteTimeline({
                 <time dateTime={header.whenIso}>{header.whenLabel}</time>
               </HeaderChip>
               {header.participantCount > 0 ? (
-                <HeaderChip
-                  icon={Users}
-                >{`${header.participantCount}명`}</HeaderChip>
+                <HeaderChip icon={Users}>
+                  {t("participants", { count: header.participantCount })}
+                </HeaderChip>
               ) : null}
               {header.projectName ? (
                 <HeaderChip icon={Folder}>{header.projectName}</HeaderChip>
@@ -737,7 +753,7 @@ export function NoteTimeline({
             </div>
           </header>
         ) : listLoading ? (
-          <header aria-label="타임라인 제목 불러오는 중">
+          <header aria-label={t("headerLoading")}>
             <div aria-hidden="true">
               <Skeleton className="h-[38px] w-2/3 max-w-80 motion-reduce:animate-none" />
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -757,22 +773,21 @@ export function NoteTimeline({
         >
           <div
             role="group"
-            aria-label="유형으로 골라 보기"
+            aria-label={t("filter.label")}
             className="flex flex-wrap items-center gap-0.5"
           >
             {TIMELINE_FILTERS.map((option) => {
-              const active = option.value === filter;
-              const count = timeline.counts[option.value];
+              const active = option === filter;
+              const count = timeline.counts[option];
+              const label = t(`filter.${option}`);
               return (
                 <button
-                  key={option.value}
+                  key={option}
                   type="button"
                   aria-pressed={active}
-                  aria-label={
-                    settled ? `${option.label} ${count}` : option.label
-                  }
+                  aria-label={settled ? `${label} ${count}` : label}
                   onClick={() =>
-                    setView((current) => ({ ...current, filter: option.value }))
+                    setView((current) => ({ ...current, filter: option }))
                   }
                   className={cn(
                     "inline-flex h-7 items-center gap-1.5 rounded-[7px] px-[9px] text-[13px] transition-colors",
@@ -781,7 +796,7 @@ export function NoteTimeline({
                       : "text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
                   )}
                 >
-                  {option.label}
+                  {label}
                   <span className="text-[12px] font-normal tabular-nums text-[var(--el-muted-soft)]">
                     {settled ? count : "–"}
                   </span>
@@ -832,13 +847,13 @@ export function NoteTimeline({
             role="status"
             className="mt-4 flex items-center justify-between gap-3 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3.5 py-2.5 text-[13px] text-[var(--el-body)]"
           >
-            <span>놓친 변경이 있어 타임라인을 다시 맞추는 중입니다.</span>
+            <span>{t("resync.message")}</span>
             <button
               type="button"
               onClick={context.retry}
               className="shrink-0 text-[13px] font-medium text-[var(--el-ink)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px]"
             >
-              다시 맞추기
+              {t("resync.action")}
             </button>
           </div>
         ) : null}
@@ -847,16 +862,13 @@ export function NoteTimeline({
           <InlineRetry
             className="mt-4"
             variant="line"
-            label="근거의 화자 정보를 불러오지 못했습니다."
+            label={t("citationSpeakersFailed")}
             onRetry={() => void transcriptQuery.refetch()}
           />
         ) : null}
 
         {listLoading ? (
-          <ul
-            aria-label="타임라인을 불러오는 중"
-            className="mt-7 flex flex-col"
-          >
+          <ul aria-label={t("loading")} className="mt-7 flex flex-col">
             {[0, 1, 2, 3, 4].map((row) => (
               <li
                 key={row}
@@ -885,7 +897,7 @@ export function NoteTimeline({
         ) : context.failed ? (
           <InlineRetry
             className="mt-7"
-            label="타임라인을 불러오지 못했습니다."
+            label={t("loadFailed")}
             onRetry={context.retry}
           />
         ) : null}
@@ -893,11 +905,7 @@ export function NoteTimeline({
           <InlineRetry
             variant="line"
             className="mt-7"
-            label={
-              agendaList
-                ? "주제 제목을 새로 불러오지 못했습니다."
-                : "주제 제목을 불러오지 못했습니다."
-            }
+            label={agendaList ? t("agendasRefreshFailed") : t("agendasFailed")}
             onRetry={() => void agendasQuery.refetch()}
           />
         ) : null}
@@ -906,9 +914,9 @@ export function NoteTimeline({
           <p className="mt-7 text-[14px] leading-relaxed text-[var(--el-muted)]">
             {timeline.counts.ALL === 0
               ? meetingEnded
-                ? "이 회의에서 정리된 항목이 없습니다."
-                : "아직 정리할 발화가 없습니다. 결정·할 일·질문이 나오면 여기에 쌓입니다."
-              : "이 유형으로 정리된 항목이 없습니다."}
+                ? t("empty.ended")
+                : t("empty.live")
+              : t("empty.filtered")}
           </p>
         ) : (
           timeline.groups.map((group) => {
@@ -926,13 +934,15 @@ export function NoteTimeline({
                     {group.agenda.citation ? (
                       <button
                         type="button"
-                        aria-label={`스크립트 ${formatOffset(group.agenda.citation.startedAtMs)}로 가기`}
+                        aria-label={t("jumpToTranscript", {
+                          time: formatOffset(group.agenda.citation.startedAtMs),
+                        })}
                         onClick={() =>
                           onEvidenceSelect(group.agenda!.citation!.segmentId)
                         }
                         className="h-[30px] shrink-0 rounded-[7px] px-2 text-[12px] tabular-nums text-[var(--el-muted-soft)] transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
                       >
-                        {groupRange(group, recording)}
+                        {groupRange(group, recording, t)}
                       </button>
                     ) : null}
                     <button
@@ -964,12 +974,12 @@ export function NoteTimeline({
                       </span>
                       {group.previous ? (
                         <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">
-                          이어서
+                          {t("continued")}
                         </span>
                       ) : null}
                       {group.agenda.retracted ? (
                         <span className="shrink-0 text-[12px] font-medium text-[var(--el-error-strong)]">
-                          철회됨
+                          {t("agendaRetracted")}
                         </span>
                       ) : null}
                       <span className="-ml-1 shrink-0 text-[12.5px] tabular-nums text-[var(--el-muted-soft)]">
@@ -983,19 +993,28 @@ export function NoteTimeline({
                         )}
                       />
                       <span className="flex-1" />
-                      {group.last && recording ? <LiveChip /> : null}
+                      {group.last && recording ? (
+                        <LiveChip label={t("live")} />
+                      ) : null}
                     </button>
                     {group.previous ? (
                       <button
                         type="button"
-                        aria-label={`앞선 ${group.agenda.title} 논의${group.previous.startMs === null ? "" : ` ${formatOffset(group.previous.startMs)}`}로 가기`}
+                        aria-label={
+                          group.previous.startMs === null
+                            ? t("previous.aria", { title: group.agenda.title })
+                            : t("previous.ariaAt", {
+                                title: group.agenda.title,
+                                time: formatOffset(group.previous.startMs),
+                              })
+                        }
                         onClick={() => jumpToPrior(group.previous!.key)}
                         className={cn(
                           "h-[26px] shrink-0 justify-self-start rounded-[7px] px-2 text-xs text-[var(--el-muted)] underline decoration-[var(--el-hairline-strong)] underline-offset-2 hover:text-[var(--el-ink)] sm:h-full",
                           group.agenda.citation ? "col-start-2" : "col-start-1"
                         )}
                       >
-                        앞선 논의
+                        {t("previous.button")}
                         {group.previous.startMs === null
                           ? ""
                           : ` ${formatOffset(group.previous.startMs)}`}
@@ -1074,7 +1093,7 @@ export function NoteTimeline({
                 {partial.pendingText}
               </span>
               <span className="text-[12.5px] leading-[19px] text-[var(--el-muted)]">
-                받아 적는 중
+                {t("transcribing")}
               </span>
             </span>
           </div>
@@ -1114,6 +1133,8 @@ function TimelineRow({
   onEvidenceSelect: (segmentId: string) => void;
   onJump: (proposal: ProposalHead) => void;
 }) {
+  const t = useTranslations("notes.timeline");
+  const tNotes = useTranslations("notes");
   const { proposal, tone } = item;
   const reduced = useReducedMotion();
   const [opened, setOpened] = useState(open);
@@ -1126,14 +1147,17 @@ function TimelineRow({
   const retracted = proposal.closeReason === "RETRACTED";
   const first = proposal.citations[0];
   const relations = [
-    ...item.answers.map((answer) => ({ lead: "답", proposal: answer })),
+    ...item.answers.map((answer) => ({
+      lead: t("relation.answer"),
+      proposal: answer,
+    })),
     ...(item.answersTo
-      ? [{ lead: "답한 질문", proposal: item.answersTo }]
+      ? [{ lead: t("relation.answeredQuestion"), proposal: item.answersTo }]
       : []),
   ];
   const expandable = proposal.citations.length > 0 || relations.length > 0;
   const detailsId = `${itemId(proposal.proposalId)}-details`;
-  const meta = metaOf(item);
+  const meta = metaOf(item, t);
 
   return (
     <motion.li
@@ -1149,7 +1173,9 @@ function TimelineRow({
         {first ? (
           <button
             type="button"
-            aria-label={`스크립트 ${formatOffset(first.startedAtMs)}로 가기`}
+            aria-label={t("jumpToTranscript", {
+              time: formatOffset(first.startedAtMs),
+            })}
             onClick={() => onEvidenceSelect(first.segmentId)}
             className="self-start whitespace-nowrap text-right text-[12px] leading-6 tabular-nums text-[var(--el-muted-soft)] transition-colors hover:text-[var(--el-ink)]"
           >
@@ -1188,7 +1214,7 @@ function TimelineRow({
               </span>
               <span className="text-[12.5px] leading-[19px] text-[var(--el-muted)]">
                 <span className={TONE_TEXT[tone]}>
-                  {CONTEXT_KIND_LABEL[proposal.kind]}
+                  {tNotes(`kinds.${proposal.kind}`)}
                 </span>
                 {meta.map((part) => (
                   <span key={part.text}>

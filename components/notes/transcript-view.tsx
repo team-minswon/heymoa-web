@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import {
@@ -14,6 +15,7 @@ import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcri
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
 import { TranscriptRow } from "@/components/notes/transcript-row";
 import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
+import { useSpeakerFallbackNames } from "@/components/notes/speaker-chip";
 import { transcriptToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { toGapRows } from "@/lib/transcription/gaps";
 import {
@@ -59,6 +61,9 @@ export function TranscriptView({
   /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
   noteMeta?: NoteMeta | null;
 } & TranscriptFocus) {
+  const t = useTranslations("notes.transcript");
+  const tActions = useTranslations("common.actions");
+  const fallbackNames = useSpeakerFallbackNames();
   const recording = useRecording();
   const liveTranscript = useRecordingTranscript();
   const noteRealtime = useNoteRealtime();
@@ -104,8 +109,13 @@ export function TranscriptView({
   // 바뀌면 화자 객체가 전부 새로 만들어져 모든 줄이 다시 그려진다. 같은 목록이면 참조가 같다.
   const speakers = diarized ? transcript!.diarization.speakers : EMPTY_SPEAKERS;
   const speakerOf = useMemo(
-    () => createSpeakerIdentityResolver(speakers, participants),
-    [speakers, participants]
+    () =>
+      createSpeakerIdentityResolver(
+        speakers,
+        participants,
+        fallbackNames.speaker
+      ),
+    [speakers, participants, fallbackNames]
   );
 
   const partial = useLivePartial(noteId);
@@ -115,14 +125,14 @@ export function TranscriptView({
   useEffect(() => {
     if (!isTranscriptError) return;
 
-    toast.error("대화 기록을 불러오지 못했습니다.", {
+    toast.error(t("loadFailed"), {
       id: `transcript-load-${noteId}`,
       action: {
-        label: "다시 시도",
+        label: tActions("retry"),
         onClick: () => void refetchTranscript(),
       },
     });
-  }, [isTranscriptError, noteId, refetchTranscript]);
+  }, [isTranscriptError, noteId, refetchTranscript, t, tActions]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
   const programmaticScrollRef = useRef(false);
@@ -276,7 +286,7 @@ export function TranscriptView({
   // 바닥으로 돌아갈 수 있어야 한다.
   const followAction = !isFollowing ? (
     <ScrollToBottomButton
-      label="맨 아래로"
+      label={t("scrollToBottom")}
       onClick={() => scrollToLatest("smooth")}
       // desktop에서는 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
       className="lg:bottom-20"
@@ -321,11 +331,11 @@ export function TranscriptView({
         ) : null}
         <section
           role={transcriptQuery.isPending ? undefined : "log"}
-          aria-label="회의 스크립트"
+          aria-label={t("label")}
         >
           {transcriptQuery.isPending ? (
             /* 실제 행과 같은 격자·여백이라 도착해도 모양이 안 바뀐다. */
-            <div aria-label="대화 기록 불러오는 중">
+            <div aria-label={t("loading")}>
               {TRANSCRIPT_SKELETON_WIDTHS.map((width, row) => (
                 <div
                   key={row}
@@ -355,7 +365,7 @@ export function TranscriptView({
                   {/* 확정 행의 시각 열과 같은 크기·색이다. 살아 있다는 신호는 점이 한다. */}
                   <span className="flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap pt-1 text-[11px] text-[var(--el-muted)] sm:w-32">
                     <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
-                    받아 적는 중
+                    {t("transcribing")}
                   </span>
                   {/* 업체가 확정한 앞부분은 다시 안 바뀌므로 확정 행과 같은 농도로, 다음
                       snapshot 이 갈아치울 뒷부분만 옅게 둔다. */}
@@ -387,11 +397,10 @@ export function TranscriptView({
                     “
                   </span>
                   <h2 className="mt-2 max-w-md text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-                    첫 대화가 이곳에 기록됩니다.
+                    {t("notStarted.title")}
                   </h2>
                   <p className="mt-3 max-w-md text-sm leading-6 text-[var(--el-muted)]">
-                    기록을 시작하고 평소처럼 대화하세요. 자연스러운 문단으로
-                    정리해 보여드립니다.
+                    {t("notStarted.body")}
                   </p>
                 </div>
               ) : null}
@@ -411,17 +420,17 @@ export function TranscriptView({
                     ))}
                   </span>
                   <p className="mt-5 text-sm font-medium text-[var(--el-ink)]">
-                    첫 발화를 기다리고 있습니다
+                    {t("waiting.title")}
                   </p>
                   <p className="mt-1 text-xs text-[var(--el-muted)]">
-                    자연스럽게 말씀해 주세요.
+                    {t("waiting.body")}
                   </p>
                 </div>
               ) : null}
 
               {!segments.length && !viewerLive && phase !== "not-started" ? (
                 <p className="py-8 text-sm text-[var(--el-muted)]">
-                  스크립트가 없습니다.
+                  {t("empty")}
                 </p>
               ) : null}
             </div>

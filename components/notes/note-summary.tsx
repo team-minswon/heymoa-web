@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +23,7 @@ import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcri
 import type { TranscriptResponseDataSegmentsItem } from "@/lib/api/generated/models";
 import { segmentsById } from "@/lib/notes/review/moments";
 import { formatOffset } from "@/lib/transcription/presentation";
-import { SECTION_LABELS, SECTION_ORDER } from "@/lib/notes/analysis-sections";
+import { SECTION_ORDER } from "@/lib/notes/analysis-sections";
 import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { summaryToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,8 @@ export function NoteSummary({
   /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
   onEvidenceSelect: (segmentId: string) => void;
 }) {
+  const t = useTranslations("notes.summary");
+  const tActions = useTranslations("common.actions");
   const streamHealthy = useEventStreamHealthy();
   const analysisQuery = useGetLatestAnalysis(noteId, {
     query: {
@@ -203,7 +206,7 @@ export function NoteSummary({
                 loading={isRequesting}
                 onClick={startAnalysis}
               >
-                요약 다시 만들기
+                {t("regenerate")}
               </Button>
             )}
             {noteMeta ? (
@@ -240,10 +243,10 @@ export function NoteSummary({
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-[var(--el-ink)]">
-                분석에 실패했습니다
+                {t("failed.title")}
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-[var(--el-muted)]">
-                {analysis.errorMessage ?? "분석을 완료하지 못했습니다."}
+                {analysis.errorMessage ?? t("failed.fallback")}
                 {analysis.errorCode ? ` (${analysis.errorCode})` : null}
               </p>
               {readOnly ? null : (
@@ -254,7 +257,7 @@ export function NoteSummary({
                   disabled={isRequesting}
                   onClick={startAnalysis}
                 >
-                  다시 분석
+                  {t("failed.reanalyze")}
                 </Button>
               )}
             </div>
@@ -270,16 +273,14 @@ export function NoteSummary({
       <Shell>
         <div className="rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-5">
           <p className="text-sm font-medium text-[var(--el-ink)]">
-            {isEnded
-              ? "아직 요약이 없습니다"
-              : "요약은 회의가 끝나면 생성됩니다"}
+            {isEnded ? t("missing.endedTitle") : t("missing.liveTitle")}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
             {!isEnded
-              ? "회의를 종료하면 개요·액션 아이템·결정이 자동으로 정리됩니다."
+              ? t("missing.liveBody")
               : readOnly
-                ? "이 회의에는 만들어 둔 요약이 없습니다."
-                : "이 회의의 요약을 만들어 개요·액션 아이템·결정을 정리합니다."}
+                ? t("missing.readOnlyBody")
+                : t("missing.endedBody")}
           </p>
           {/* 읽기 전용(분석 흐름 밖의 지난 노트)은 새 요약을 요청할 수 없다 */}
           {isEnded && !readOnly ? (
@@ -289,7 +290,7 @@ export function NoteSummary({
               disabled={isRequesting}
               onClick={startAnalysis}
             >
-              요약 만들기
+              {t("create")}
             </Button>
           ) : null}
         </div>
@@ -300,16 +301,14 @@ export function NoteSummary({
   return (
     <Shell>
       <div role="alert" className="space-y-2">
-        <p className="text-sm text-[var(--el-ink)]">
-          요약을 불러오지 못했습니다.
-        </p>
+        <p className="text-sm text-[var(--el-ink)]">{t("loadFailed")}</p>
         <Button
           variant="outline"
           size="sm"
           className="h-[30px]"
           onClick={() => void analysisQuery.refetch()}
         >
-          다시 시도
+          {tActions("retry")}
         </Button>
       </div>
     </Shell>
@@ -339,14 +338,15 @@ const SUMMARY_SKELETON_WIDTHS: Record<string, string[]> = {
  * (`SECTION_ORDER`). 회색 막대로 덮으면 기하만 어긋나고 얻는 것이 없다.
  */
 function SummaryFetchSkeleton() {
+  const t = useTranslations("notes.summary");
   return (
     <Shell>
-      <div className="space-y-14" aria-label="요약 불러오는 중">
+      <div className="space-y-14" aria-label={t("loading")}>
         {SECTION_ORDER.map((kind) => (
           <section key={kind}>
             <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
               <h2 className="text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-                {SECTION_LABELS[kind]}
+                {t(`sections.${kind}`)}
               </h2>
             </div>
             <div className="mt-5 space-y-5">
@@ -375,6 +375,7 @@ function SummaryFetchSkeleton() {
  * 저마다 다르게 생기면 무엇이 상태이고 무엇이 내용인지 읽히지 않는다.
  */
 function AnalyzingProgress() {
+  const t = useTranslations("notes.summary.analyzing");
   return (
     <Shell>
       <div
@@ -387,12 +388,12 @@ function AnalyzingProgress() {
             className="size-4 shrink-0 animate-spin text-[var(--el-muted)]"
           />
           <p className="text-sm font-medium text-[var(--el-ink)]">
-            회의를 정리하고 있습니다
+            {t("title")}
           </p>
         </div>
         {/* 분석은 몇 분이 걸린다 — 여기 붙들려 기다릴 필요가 없다는 것을 말해 준다. */}
         <p className="mt-1.5 pl-[26px] text-xs leading-relaxed text-[var(--el-muted)]">
-          다른 화면으로 옮겨도 됩니다. 정리가 끝나면 이 탭에 나타납니다.
+          {t("body")}
         </p>
       </div>
     </Shell>
@@ -418,6 +419,8 @@ function RetryStrip({
   onRetry: () => void;
   isRetrying: boolean;
 }) {
+  const t = useTranslations("notes.summary.retryStrip");
+  const tActions = useTranslations("common.actions");
   if (retry.status === "FAILED") {
     return (
       <div
@@ -429,7 +432,7 @@ function RetryStrip({
           className="size-4 shrink-0 text-[var(--el-error)]"
         />
         <p className="text-xs leading-relaxed text-[var(--el-ink)]">
-          요약을 다시 만들지 못했습니다. 아래는 그 전에 만든 요약입니다.
+          {t("failed")}
           <span className="text-[var(--el-muted)]">
             {retry.errorMessage ? ` ${retry.errorMessage}` : null}
             {retry.errorCode ? ` (${retry.errorCode})` : null}
@@ -442,7 +445,7 @@ function RetryStrip({
           disabled={isRetrying}
           onClick={onRetry}
         >
-          다시 시도
+          {tActions("retry")}
         </Button>
       </div>
     );
@@ -458,10 +461,8 @@ function RetryStrip({
         className="size-4 shrink-0 animate-spin text-[var(--el-muted)]"
       />
       <p className="text-xs leading-relaxed text-[var(--el-ink)]">
-        요약을 다시 만들고 있습니다.
-        <span className="text-[var(--el-muted)]">
-          {" 끝나면 아래 요약이 새것으로 바뀝니다."}
-        </span>
+        {t("running")}
+        <span className="text-[var(--el-muted)]">{` ${t("runningHint")}`}</span>
       </p>
     </div>
   );
@@ -487,6 +488,7 @@ function SummarySections({
   segmentById: SegmentById;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
+  const t = useTranslations("notes.summary");
   const byKind = new Map<string, AnalysisResultResponseDataSectionsItem>(
     analysis.sections.map((section) => [section.kind, section])
   );
@@ -496,12 +498,12 @@ function SummarySections({
         {SECTION_ORDER.map((kind) => {
           const items = byKind.get(kind)?.items ?? [];
           return (
-            <section key={kind} aria-label={SECTION_LABELS[kind]}>
+            <section key={kind} aria-label={t(`sections.${kind}`)}>
               {/* 개수는 장식이 아니라 훑기 위한 것이다 — 액션이 16개인지 2개인지가
                   스크롤하기 전에 보여야 어디를 읽을지 정한다. */}
               <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
                 <h2 className="text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-                  {SECTION_LABELS[kind]}
+                  {t(`sections.${kind}`)}
                 </h2>
                 {items.length ? (
                   <span className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
@@ -523,7 +525,7 @@ function SummarySections({
                 </ul>
               ) : (
                 <p className="mt-5 text-sm text-[var(--el-muted)]">
-                  이 회의에서는 나오지 않았습니다.
+                  {t("sectionEmpty")}
                 </p>
               )}
             </section>
@@ -556,6 +558,7 @@ function SummaryItem({
   segmentById: SegmentById;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
+  const t = useTranslations("notes.summary");
   const [open, setOpen] = useState(false);
   const reduced = useReducedMotion();
   const evidenceId = `evidence-${item.itemId}`;
@@ -571,7 +574,7 @@ function SummaryItem({
         <>
           {/* 마커는 그림이라 `aria-hidden`이다. 개수는 화면에만 남고 스크린리더에서
               사라지므로 여기서 말로 준다 — 몇 개인지가 펼칠지 말지의 근거다. */}
-          <span className="sr-only">{` 근거 ${item.evidence.length}개`}</span>
+          <span className="sr-only">{` ${t("evidenceCount", { count: item.evidence.length })}`}</span>
         </>
       ) : null}
       {hasEvidence ? (
