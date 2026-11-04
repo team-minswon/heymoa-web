@@ -84,3 +84,11 @@ spec: docs `docs/app-1286/dashboard-en` @ `e455d14e` (`projects/PRO-66-웹-국�
 - 용어 사전 탭(`components/terms`)은 설정에서만 쓰여 `settings.terms`에 둡니다. `lib/terms/term-bulk.ts`의 `summaryParts`는 문구 대신 개수를 돌려줍니다
 - 공용 확인 버튼의 영어는 「OK」입니다(`common.actions.confirm`)
 - 사용 내역은 가이드 영어판을 따라 「Usage history」입니다(용어집의 Usage를 고침)
+
+## D14. 워크스페이스 모듈의 판단들 (`7480448c`)
+
+- **새 워크스페이스 창 문구는 `common.createWorkspace`**: 랜딩(마케팅 루트)도 이 창을 엽니다. 마케팅에 `workspace` 이름공간 전체를 보내지 않으려는 것입니다. 되돌리기: 키를 `workspace`로 옮기고 마케팅 `clientNamespaces`에 `workspace`를 더함
+- **회의 상태는 `common.meetingStatus`**(Not started / Recording / Paused / Ended): 노트 목록과 노트 화면이 같이 씁니다. 옛 상수 `MEETING_STATUS_LABEL`은 notes 모듈이 바꾼 뒤 지웁니다
+- **문의 본문의 「화면:·환경:」 꼬리는 한국어 그대로**: 운영자가 읽는 데이터이고 `userPart`가 이 표식으로 잘라 냅니다
+- **온보딩 체크리스트 단계 이름은 컴포넌트가 그림**: `lib/onboarding/checklist.ts`에는 id만 남습니다
+- **연결 지도 옆 패널 영어 탭을 「Item」으로 줄임**: 「Agenda item」이면 1440·1024에서 「View this topic larger」 버튼이 닫기를 덮었습니다. 되돌리기: 키 값만 바꾸고 패널 머리 레이아웃을 손봄
