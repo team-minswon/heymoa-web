@@ -3,6 +3,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Loader2, Plus, Search, XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,6 @@ import {
 } from "@/lib/terms/term-list";
 import type { AddManyOutcome } from "@/lib/terms/use-term-dictionary";
 
-/** 처음 열었을 때 칩이 없으면 눌러 넣어 보는 예시. 구분자가 쉼표인 것도 함께 보인다. */
-export const TERM_EXAMPLE = "ROAS, CTR, 전환율, 리타겟팅";
-
 /** 미리보기 칩은 이만큼만 그린다 — 엑셀 열을 통째로 붙여 넣어도 입력이 버벅이지 않게. 나머지는 개수로 말한다. */
 const PREVIEW_CHIPS_MAX = 120;
 /** 등록한 칩이 이보다 많으면 칩 하나하나의 움직임(등장·퇴장·자리 이동)을 끈다. */
@@ -35,26 +33,24 @@ const PREVIEW_CLASS: Record<PlanStatus, string> = {
   overLimit:
     "border-dashed border-[var(--el-hairline)] bg-transparent text-[var(--el-muted)] opacity-60",
 };
-const PREVIEW_LABEL: Record<PlanStatus, string | null> = {
-  fresh: null,
-  duplicate: "이미 있어요",
-  tooLong: `${TERM_MAX_LENGTH}자 초과`,
-  overLimit: "한도 초과",
-};
+type Translate = ReturnType<typeof useTranslations<"settings.terms">>;
 
 /** 한 번의 추가가 끝난 결과를 한 줄로. */
-export function outcomeNotice(outcome: AddManyOutcome): string | null {
+function outcomeNotice(
+  outcome: AddManyOutcome,
+  t: Translate
+): string | null {
   const limit = outcome.rejected.filter((item) => item.reason === "LIMIT");
   const invalid = outcome.rejected.length - limit.length;
   const parts = [
-    outcome.added > 0 ? `${outcome.added}개를 더했어요` : null,
+    outcome.added > 0 ? t("outcome.added", { count: outcome.added }) : null,
     outcome.existing > 0
-      ? `이미 있던 ${outcome.existing}개는 건너뛰었어요`
+      ? t("outcome.existing", { count: outcome.existing })
       : null,
-    limit.length > 0 ? `한도를 넘어 ${limit.length}개는 못 넣었어요` : null,
-    invalid > 0 ? `${invalid}개는 형식이 맞지 않아 뺐어요` : null,
+    limit.length > 0 ? t("outcome.overLimit", { count: limit.length }) : null,
+    invalid > 0 ? t("outcome.invalid", { count: invalid }) : null,
     outcome.failed.length > 0
-      ? `${outcome.failed.length}개는 보내지 못했어요. 입력란에 남겼으니 다시 눌러 주세요`
+      ? t("outcome.failed", { count: outcome.failed.length })
       : null,
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -64,7 +60,7 @@ export function outcomeNotice(outcome: AddManyOutcome): string | null {
  * 워크스페이스 용어 사전의 입력 카드 + 등록한 칩 목록 (APP-1189 · APP-1227).
  *
  * **입력은 처음부터 여러 줄이다.** 쉼표(기본)·줄바꿈·세미콜론·탭으로 나눈 글을 쓰거나 붙여 넣으면 입력하는 동안 아래에
- * 칩 미리보기와 요약(새 · 이미 있어요 · 제외 · 한도)이 보이고 「n개 추가」가 한 번의 동작으로 모두 넣는다. 용어 하나만 적어도
+ * 칩 미리보기와 요약(새 · 중복 · 제외 · 한도)이 보이고 「n개 추가」가 한 번의 동작으로 모두 넣는다. 용어 하나만 적어도
  * 똑같이 Enter 로 들어간다(Shift+Enter 는 줄바꿈, 한글 조합 중 Enter 는 무시).
  *
  * **자리가 안 움직인다.** 미리보기 칸과 카드 아랫줄은 높이가 고정이고 글자만 바뀐다. 판단(중복·한도)은 받아 둔 목록만 본다.
@@ -91,6 +87,7 @@ export function TermEditor({
   progress?: { done: number; total: number } | null;
   inputId: string;
 }) {
+  const t = useTranslations("settings.terms");
   const [value, setValue] = useState("");
   /** 방금 끝난 추가의 결과. 다음 입력에서 지운다. */
   const [notice, setNotice] = useState<string | null>(null);
@@ -117,7 +114,7 @@ export function TermEditor({
     if (!canAdd) return;
     onAddMany(plan.fresh, {
       onDone: (outcome) => {
-        setNotice(outcomeNotice(outcome));
+        setNotice(outcomeNotice(outcome, t));
         // 못 보낸 것은 입력란에 돌려놓는다 — 그 사이 다른 것을 쓰고 있으면 두지 않는다.
         if (outcome.failed.length > 0)
           setValue((current) =>
@@ -141,7 +138,7 @@ export function TermEditor({
   };
 
   const footer: { text: string; tone: "warn" | "muted" | "ink" } | null = full
-    ? { text: "다 채웠어요. 하나를 지우면 더할 수 있어요.", tone: "muted" }
+    ? { text: t("full"), tone: "muted" }
     : null;
 
   return (
@@ -155,12 +152,12 @@ export function TermEditor({
           disabled={full}
           autoComplete="off"
           spellCheck={false}
-          aria-label="추가할 용어"
+          aria-label={t("input")}
           aria-describedby={`${inputId}-status`}
           placeholder={
             full
-              ? "더 넣을 자리가 없어요"
-              : `용어를 쉼표나 줄바꿈으로 구분해 한 번에 붙여 넣으세요\n예: ${TERM_EXAMPLE}`
+              ? t("fullPlaceholder")
+              : `${t("placeholder")}\n${t("examplePrefix", { example: t("example") })}`
           }
           onChange={(event) => {
             setValue(event.target.value);
@@ -172,12 +169,12 @@ export function TermEditor({
 
         {/* 미리보기 칸: 높이가 고정이다. 비어 있어도 같은 자리를 지키고, 많으면 안에서 스크롤한다. */}
         <div
-          aria-label="추가할 용어 미리보기"
+          aria-label={t("preview")}
           className="h-[104px] overflow-y-auto border-t border-[var(--el-hairline)] px-4 py-2.5"
         >
           {plan.total === 0 ? (
             <p className="text-xs leading-5 text-[var(--el-muted)]">
-              쉼표(,)·줄바꿈·세미콜론·탭으로 나누면 여기에 미리 보여 드려요.
+              {t("previewHint")}
             </p>
           ) : (
             <ul className="flex flex-wrap gap-1.5">
@@ -193,10 +190,14 @@ export function TermEditor({
                     <span className="min-w-0 truncate" title={item.term}>
                       {item.term}
                     </span>
-                    {PREVIEW_LABEL[item.status] ? (
+                    {item.status !== "fresh" ? (
                       <span className="sr-only">
                         {" "}
-                        ({PREVIEW_LABEL[item.status]})
+                        (
+                        {t(`previewStatus.${item.status}`, {
+                          max: TERM_MAX_LENGTH,
+                        })}
+                        )
                       </span>
                     ) : null}
                   </Badge>
@@ -204,7 +205,7 @@ export function TermEditor({
               ))}
               {plan.items.length > PREVIEW_CHIPS_MAX ? (
                 <li className="self-center text-xs text-[var(--el-muted)]">
-                  외 {plan.items.length - PREVIEW_CHIPS_MAX}개
+                  {t("more", { count: plan.items.length - PREVIEW_CHIPS_MAX })}
                 </li>
               ) : null}
             </ul>
@@ -223,7 +224,7 @@ export function TermEditor({
               >
                 <Loader2 className="size-3.5 animate-spin" aria-hidden />
                 <span className="tabular-nums">
-                  {progress.done} / {progress.total} 추가 중
+                  {t("progress", { done: progress.done, total: progress.total })}
                 </span>
               </p>
             ) : parts.length > 0 ? (
@@ -242,15 +243,16 @@ export function TermEditor({
                         {" · "}
                       </span>
                     ) : null}
-                    {part.text}
+                    {t(`summary.${part.key}`, {
+                      count: part.count,
+                      max: TERM_MAX_LENGTH,
+                    })}
                   </span>
                 ))}
               </p>
             ) : (
               <p role="status" className="text-[var(--el-muted)]">
-                {footer?.text ??
-                  notice ??
-                  "Enter 로 추가 · Shift+Enter 로 줄바꿈"}
+                {footer?.text ?? notice ?? t("keyHint")}
               </p>
             )}
           </div>
@@ -262,7 +264,7 @@ export function TermEditor({
             className="min-w-[92px] shrink-0 px-3"
           >
             <Plus />
-            {canAdd ? `${plan.fresh.length}개 추가` : "추가"}
+            {canAdd ? t("addCount", { count: plan.fresh.length }) : t("add")}
           </Button>
         </div>
       </div>
@@ -271,7 +273,7 @@ export function TermEditor({
       <div className="mt-4 flex items-center gap-3">
         <div
           role="progressbar"
-          aria-label="넣은 용어"
+          aria-label={t("added")}
           aria-valuemin={0}
           aria-valuemax={limit}
           aria-valuenow={terms.length}
@@ -288,14 +290,14 @@ export function TermEditor({
           />
         </div>
         <p className="shrink-0 text-xs tabular-nums text-[var(--el-muted)]">
-          <span className="sr-only">넣은 용어 </span>
+          <span className="sr-only">{t("added")} </span>
           {terms.length} / {limit}
         </p>
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium text-[var(--el-ink)]">
-          등록한 용어
+          {t("listTitle")}
         </h3>
         <div className="relative w-44 max-w-[50%]">
           <Search
@@ -306,8 +308,8 @@ export function TermEditor({
             value={query}
             disabled={terms.length === 0}
             onChange={(event) => setQuery(event.target.value)}
-            aria-label="용어 찾기"
-            placeholder="용어 찾기"
+            aria-label={t("search")}
+            placeholder={t("search")}
             autoComplete="off"
             className="h-8 pl-8 text-xs md:text-xs"
           />
@@ -319,29 +321,29 @@ export function TermEditor({
         {terms.length === 0 ? (
           <div className="flex min-h-28 flex-col items-start justify-center gap-2">
             <p className="text-sm text-[var(--el-muted)]">
-              아직 등록한 용어가 없어요.
+              {t("empty")}
             </p>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => {
-                setValue(TERM_EXAMPLE);
+                setValue(t("example"));
                 setNotice(null);
                 inputRef.current?.focus();
               }}
             >
-              예시 넣어 보기
+              {t("tryExample")}
             </Button>
           </div>
         ) : shown.length === 0 ? (
           <p className="pt-2 text-sm text-[var(--el-muted)]">
-            찾는 용어가 없어요.
+            {t("noMatch")}
           </p>
         ) : (
           <ul
             ref={listRef}
-            aria-label="넣은 용어"
+            aria-label={t("added")}
             // 지우기 버튼의 포커스 링이 스크롤 상자에 잘리지 않게 안쪽 여백을 둔다
             className="-mx-1 flex flex-wrap gap-1.5 px-1 pt-0.5 pb-1"
           >
@@ -371,7 +373,7 @@ export function TermEditor({
                       variant="ghost"
                       size="icon-xs"
                       data-chip-remove={normalizeTerm(item.term)}
-                      aria-label={`${item.term} 지우기`}
+                      aria-label={t("remove", { term: item.term })}
                       className="size-6 text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
                       onClick={() => {
                         onRemove(item.termId);
@@ -402,8 +404,9 @@ export function TermEditor({
 
 /** 칩 목록을 불러오는 동안. 카드·용량·머리글은 실제와 같은 기하로 두고 칩만 막대로 둔다 — 도착해도 안 밀린다. */
 export function TermEditorSkeleton() {
+  const t = useTranslations("settings.terms");
   return (
-    <div aria-label="용어 사전 불러오는 중" className="flex flex-col">
+    <div aria-label={t("loading")} className="flex flex-col">
       <Skeleton className="h-[255px] w-full rounded-panel" />
       <div className="mt-4 flex items-center gap-3">
         <Skeleton className="h-1 flex-1 rounded-full" />

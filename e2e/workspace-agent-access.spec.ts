@@ -35,7 +35,7 @@ test("ADMIN 이 외부 에이전트를 끄면 열린 연결이 비고, 내 지�
 
   await expect(open.getByText("열린 연결이 없습니다.")).toBeVisible();
   await expect(
-    page.getByText("꺼짐 — 새 연결을 만들 수 없습니다.")
+    page.getByText("꺼져 있어 새 연결을 만들 수 없습니다.")
   ).toBeVisible();
 
   await page

@@ -239,7 +239,7 @@ describe("WorkspaceGuestsSettings", () => {
       ).toBeNull();
       // **다만 왜 관리가 잠겼는지는 말한다.** 안 그러면 권한이 사라진 것으로 읽는다
       expect(
-        screen.getByText(/최신 목록을 확인하지 못해 연동·삭제를 잠갔습니다/)
+        screen.getByText(/최신 목록을 확인하지 못해 연동하거나 삭제할 수 없습니다/)
       ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "다시 시도" })
@@ -487,7 +487,7 @@ describe("WorkspaceGuestsSettings", () => {
     renderSection();
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      /끝까지 불러오지 못해 연동·삭제를 잠갔습니다/
+      /끝까지 불러오지 못해 연동하거나 삭제할 수 없습니다/
     );
     expect(await menuItem("삭제")).toHaveAttribute("aria-disabled", "true");
   });

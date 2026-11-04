@@ -19,7 +19,7 @@ test("설정에서 쉼표로 나눈 용어를 한 번에 더한다", async ({ pa
   const input = page.getByRole("textbox", { name: "추가할 용어" });
   await input.fill("mcp, Soniox, kubernetes, k8s");
   await expect(page.getByText("새로 3개")).toBeVisible();
-  await expect(page.getByText("이미 있어요 1개")).toBeVisible();
+  await expect(page.getByText("중복 1개")).toBeVisible();
   await expect(page.getByRole("button", { name: "3개 추가" })).toBeEnabled();
 
   await input.press("Enter");

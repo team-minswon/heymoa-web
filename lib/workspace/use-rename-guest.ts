@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { errorMessageOf } from "@/lib/api/error-message";
 import { useRenameWorkspaceGuest } from "@/lib/api/generated/workspaces/workspaces";
@@ -39,6 +40,7 @@ export function useRenameGuest({
   /** 지금 화면이 그리는 이름. 요청이 하나도 안 떠 있을 때 이 값이 서버가 확인한 이름이다. */
   displayName: string;
 }) {
+  const t = useTranslations("settings.renameDialog");
   const queryClient = useQueryClient();
 
   function rollback() {
@@ -114,9 +116,9 @@ export function useRenameGuest({
         });
         return response.status === 200 && response.data.success
           ? null
-          : "이름을 바꾸지 못했습니다.";
+          : t("failed");
       } catch (error) {
-        return errorMessageOf(error, "이름을 바꾸지 못했습니다.");
+        return errorMessageOf(error, t("failed"));
       }
     },
   };

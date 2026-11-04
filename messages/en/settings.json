@@ -1,0 +1,466 @@
+{
+  "nav": {
+    "title": "Settings",
+    "description": "Manage your account and workspace settings.",
+    "groups": {
+      "workspace": "Workspace",
+      "account": "Account"
+    },
+    "items": {
+      "workspace": "General",
+      "members": "Members",
+      "guests": "Guest participants",
+      "terms": "Glossary",
+      "integrations": "Integrations",
+      "workspaceAgents": "MCP connections",
+      "account": "My account",
+      "notifications": "Notifications",
+      "agents": "My MCP connections"
+    },
+    "loadFailed": {
+      "account": "Couldn't load your account",
+      "notifications": "Couldn't load notification settings",
+      "workspace": "Couldn't load the workspace"
+    }
+  },
+  "notificationsPage": {
+    "loginRequired": "Log in to change your notification settings."
+  },
+  "confirmPhrase": {
+    "label": "To confirm, type <strong>{phrase}</strong> exactly."
+  },
+  "renameDialog": {
+    "title": "Rename",
+    "description": "Change the name of {name}.",
+    "failed": "Couldn't change the name."
+  },
+  "account": {
+    "title": "My account",
+    "description": "Check your profile information.",
+    "label": "Account settings",
+    "loading": "Loading account settings",
+    "loadFailed": "Couldn't load your account.",
+    "avatarAlt": "{name}'s profile",
+    "email": "Email",
+    "name": "Account name",
+    "nameHint": "Change the name shown in a workspace on the Members tab."
+  },
+  "accountDeletion": {
+    "title": "Delete account",
+    "description": "Deletes your account and the workspaces only you use, and logs you out on every device. This can't be undone.",
+    "dialog": {
+      "title": "Delete your account?",
+      "description": "This can't be undone. If you sign up again with the same Google account, you'll get a new account."
+    },
+    "reason": {
+      "label": "Reason for leaving",
+      "optional": "(optional)",
+      "codes": {
+        "MISSING_FEATURE": "Missing a feature I need",
+        "SECURITY_CONCERN": "Security or data concerns",
+        "TRANSCRIPTION_QUALITY": "Transcript or summary quality",
+        "OTHER_SERVICE": "Using another service",
+        "RARELY_USED": "Don't use it often",
+        "OTHER": "Other"
+      },
+      "otherLabel": "Other reason",
+      "otherPlaceholder": "Don't include personal information.",
+      "note": "Reasons are kept only as anonymous statistics."
+    },
+    "plan": {
+      "label": "What happens to each workspace",
+      "loading": "Loading workspaces",
+      "loadFailed": "Couldn't load your workspaces.",
+      "empty": "You don't belong to any workspace.",
+      "deleteSolo": "Only you use this workspace, so it will be deleted.",
+      "leaveShared": "Others still use this workspace, so you'll only leave it.",
+      "legend": "What happens to {name}",
+      "soleAdmin": "You're the only admin. Transfer the admin role or delete the workspace.",
+      "transfer": "Transfer admin role",
+      "successor": "New admin for {name}",
+      "deleteWorkspace": "Delete workspace (every member gets an email)"
+    },
+    "effects": {
+      "label": "What's deleted and what stays",
+      "deleted": "We immediately delete your account information and the <nowrap>meeting records (notes, transcripts, audio)</nowrap> of workspaces only you use or chose to delete.",
+      "conversations": "Your agent conversations in every workspace are deleted.",
+      "sharedHistory": "Your name and what you said stay in past meeting records of shared workspaces.",
+      "external": "Anything already sent to outside tools (Linear, GitHub) and emails already sent stay.",
+      "retained": "Some information, like inquiry history, is kept for a set period and then deleted.",
+      "retentionLink": "See retention periods"
+    },
+    "recordingBlocked": "Stop recording before you delete your account.",
+    "failed": "Couldn't delete your account.",
+    "submit": "Delete account",
+    "confirmPhrase": "delete my account"
+  },
+  "workspace": {
+    "title": "General",
+    "intro": "Manage this workspace's name and description.",
+    "loading": "Loading workspace settings",
+    "name": "Workspace name",
+    "nameRequired": "Enter a workspace name.",
+    "description": "Description",
+    "saved": "Changes saved.",
+    "saveFailed": "Couldn't save the workspace details."
+  },
+  "workspaceDeletion": {
+    "title": "Delete workspace",
+    "description": "Deletes everything, including <nowrap>meeting records (notes, transcripts, audio),</nowrap> and immediately blocks access for every member. Members are notified by email.",
+    "recordingBlocked": "Stop recording before you delete the workspace.",
+    "failed": "Couldn't delete the workspace.",
+    "dialog": {
+      "title": "Delete this workspace?",
+      "description": "Everything in this workspace, including <nowrap>meeting records (notes, transcripts, audio),</nowrap> will be deleted. This can't be undone. Anything already sent to outside tools (Linear, GitHub) and emails already sent stay."
+    }
+  },
+  "members": {
+    "title": "Members",
+    "description": "Manage this workspace's members and pending invites.",
+    "loading": "Loading members",
+    "loadFailed": "Couldn't load members.",
+    "roles": {
+      "ADMIN": "Admin",
+      "MEMBER": "Member"
+    },
+    "me": "(you)",
+    "accountName": "Account name {name}",
+    "roleLabel": "Role for {member}",
+    "manageLabel": "Manage {member}",
+    "remove": "Remove",
+    "removeDialog": {
+      "title": "Remove {name}?",
+      "description": "{email} will lose access to this workspace. Their agent conversations here will also be deleted."
+    },
+    "renameDialog": {
+      "label": "Name shown in this workspace",
+      "hint": "Leave it empty to show the account name ({name})."
+    },
+    "leave": {
+      "title": "Leave workspace",
+      "description": "You'll lose access to this workspace's meeting records and projects. To come back, you'll need a new invite.",
+      "recordingBlocked": "Stop recording before you leave.",
+      "failed": "Couldn't leave the workspace.",
+      "dialog": {
+        "title": "Leave this workspace?",
+        "description": "You'll lose access to its meeting records and projects, and your agent conversations in this workspace will be deleted.",
+        "confirm": "Leave"
+      }
+    },
+    "invite": {
+      "title": "Invite members",
+      "description": "Invite people by email. People without an account can sign up through the link in the invite.",
+      "emailLabel": "Email to invite",
+      "emailRequired": "Enter an email address.",
+      "emailInvalid": "Enter a valid email address.",
+      "roleLabel": "Role",
+      "submit": "Invite",
+      "failed": "Couldn't send the invite."
+    },
+    "pending": {
+      "title": "Pending invites",
+      "loading": "Loading pending invites",
+      "loadFailed": "Couldn't load pending invites.",
+      "empty": "No pending invites.",
+      "expired": "Expired"
+    }
+  },
+  "guests": {
+    "title": "Guest participants",
+    "description": "People who joined meetings without an account. You can link them to their accounts later.",
+    "add": "Add",
+    "count": "{count, plural, one {# person} other {# people}}",
+    "loading": "Loading guest participants",
+    "loadFailed": "Couldn't load guest participants.",
+    "empty": "No guest participants yet.",
+    "lockedPartial": "Couldn't load the full list, so you can't link or delete guest participants.",
+    "lockedStale": "Couldn't check the latest list, so you can't link or delete guest participants.",
+    "loadingMore": "Loading",
+    "loadMore": "Show more guest participants",
+    "noteCount": "{count, plural, one {# meeting note} other {# meeting notes}}",
+    "manageLabel": "Manage {name}",
+    "link": "Link to account",
+    "nameLabel": "Name",
+    "addDialog": {
+      "title": "Add guest participant",
+      "description": "Add someone who'll join meetings without an account.",
+      "failed": "Couldn't add the guest participant."
+    },
+    "linkDialog": {
+      "title": "Link {name} to an account",
+      "resultTitle": "Linked {name}",
+      "done": "Linking complete.",
+      "target": "Link to the account {name} ({email}).",
+      "choose": "Choose the member to link this person to.",
+      "membersFailed": "Couldn't load members.",
+      "submit": "Link",
+      "pairSeparator": "links to this account:",
+      "willChange": "{count, plural, one {# meeting note will change.} other {# meeting notes will change.}}",
+      "changed": "{count, plural, one {# meeting note changed.} other {# meeting notes changed.}}",
+      "truncated": "Showing only the {count} most recent.",
+      "irreversible": "This can't be undone."
+    },
+    "deleteDialog": {
+      "title": "Delete {name}?",
+      "lookupFailed": "Couldn't check what this affects. Nothing is deleted until we know how many meeting notes would change.",
+      "gone": "Already deleted. Someone else probably deleted it first.",
+      "checking": "Checking what this affects…",
+      "description": "{count, plural, one {This person is removed from # meeting note} other {This person is removed from # meeting notes}}, and their speaker links are removed too. This can't be undone."
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Choose which notifications you get. These apply to every workspace.",
+    "label": "Notification settings",
+    "loading": "Loading notification settings",
+    "loadFailed": "Couldn't load notification settings.",
+    "muteSection": "Turn off all",
+    "typeSection": "Notifications by type",
+    "typeColumn": "Type",
+    "types": {
+      "WORKSPACE_INVITATION": "Workspace invites",
+      "MEETING_PAUSED_REMINDER": "Paused meetings",
+      "ANALYSIS_READY": "Results ready to review",
+      "MEETING_AUTO_ENDED": "Meeting ended automatically",
+      "INQUIRY_ANSWERED": "Inquiry replies"
+    },
+    "descriptions": {
+      "MEETING_PAUSED_REMINDER": "Reminders and notices when a meeting ends automatically",
+      "ANALYSIS_READY": "When a meeting's analysis is done and results are ready to review",
+      "INQUIRY_ANSWERED": "When the HeyMoa team replies to your inquiry"
+    },
+    "helpLabel": "About {type} notifications",
+    "help": {
+      "pausedReminder": "If you leave a meeting paused, we'll email you after 1 business day.",
+      "pausedAutoEnd": "After 3 business days, we end the meeting, start the analysis, and send one more email."
+    },
+    "channels": {
+      "web": {
+        "label": "In-app",
+        "missing": "This notification isn't sent in the app"
+      },
+      "email": {
+        "label": "Email",
+        "missing": "This notification isn't sent by email"
+      }
+    },
+    "channelLabel": "{type} {channel}",
+    "off": "Off",
+    "offLabel": "{label} off",
+    "mute": {
+      "muteAll": {
+        "label": "Turn off all in-app notifications",
+        "title": "Turn off all in-app notifications?",
+        "body": "You won't get optional in-app notifications. Turn this back on to restore your previous settings."
+      },
+      "muteEmail": {
+        "label": "Turn off all email",
+        "title": "Turn off all email?",
+        "body": "You won't get optional notification emails. Turn this back on to restore your previous settings."
+      }
+    },
+    "muteConfirm": "Turn off",
+    "reset": {
+      "button": "Reset to defaults",
+      "title": "Reset notification settings to defaults?",
+      "body": "Paused meeting emails and in-app notifications for results ready to review will turn back on.",
+      "confirm": "Reset"
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "description": "The chatbot uses this workspace's integrations to create or look up issues from meetings.",
+    "loading": "Loading integrations",
+    "loadFailed": "Couldn't load integrations.",
+    "roleFailed": "Couldn't check your permissions, so you can't connect or disconnect.",
+    "adminOnly": "Only admins can connect or disconnect integrations. If you need a new integration, ask an admin.",
+    "toast": {
+      "updateApp": "Update the app, then connect again.",
+      "viewRelease": "See new version",
+      "connectFailed": "Couldn't connect. Try again.",
+      "startFailed": "Couldn't start connecting. Try again.",
+      "startFailedLater": "Couldn't start connecting. Try again in a moment."
+    },
+    "card": {
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "adminFallback": "Admin",
+      "needsConnection": "Connect this tool so the chatbot can use it.",
+      "disconnect": "Disconnect",
+      "connect": "Connect"
+    }
+  },
+  "workspaceAgents": {
+    "title": "MCP connections",
+    "description": "Decide whether teammates can connect this workspace to AI apps like Claude or ChatGPT. Admins can see connected apps and disconnect them.",
+    "loading": "Loading MCP settings",
+    "loadFailed": "Couldn't load MCP settings.",
+    "roleFailed": "Couldn't check your permissions, so you can't change MCP settings.",
+    "adminOnly": "Only admins can change MCP connections.",
+    "allow": {
+      "title": "Allow MCP connection",
+      "on": "Teammates can give AI apps like Claude or ChatGPT access to this workspace.",
+      "off": "Off, so no new connections can be made.",
+      "onBadge": "On",
+      "offBadge": "Off"
+    },
+    "open": {
+      "title": "Open connections",
+      "loading": "Loading open connections",
+      "loadFailed": "Couldn't load connections.",
+      "empty": "No open connections."
+    },
+    "offDialog": {
+      "title": "Turn off MCP connections?",
+      "descriptionCount": "{count, plural, one {The # open connection will be disconnected} other {All # open connections will be disconnected}} and won't come back if you turn this on again. While it's off, no one can connect to this workspace.",
+      "description": "All open connections will be disconnected and won't come back if you turn this on again. While it's off, no one can connect to this workspace.",
+      "confirm": "Turn off"
+    },
+    "row": {
+      "meta": "Connected {connected} · Last used {lastUsed}",
+      "neverUsed": "never",
+      "disconnect": "Disconnect",
+      "dialog": {
+        "title": "Disconnect “{name}”?",
+        "description": "{user} granted this connection. Agents using it are blocked from their next request. This can't be undone, and the person who granted it has to connect again to use it."
+      }
+    }
+  },
+  "agentConnections": {
+    "title": "My MCP connections",
+    "description": "Connect AI apps like Claude or ChatGPT so they can read meetings and projects in the workspaces you choose.",
+    "newConnection": "New connection",
+    "taskChanges": "Task changes allowed",
+    "status": {
+      "ACTIVE": "Connected",
+      "EXPIRED": "Expired",
+      "REVOKED": "Revoked"
+    },
+    "credential": {
+      "PERSONAL_TOKEN": "Personal token",
+      "OAUTH": "OAuth"
+    },
+    "revokeReason": {
+      "USER": "You revoked it.",
+      "MEMBERSHIP_ENDED": "Disconnected because you left the workspace.",
+      "REFRESH_TOKEN_REUSED": "Disconnected because the token was reused. It may have leaked, so connect again from your agent.",
+      "AGENT_ACCESS_DISABLED": "Disconnected because the workspace turned off MCP connections.",
+      "ADMIN": "An admin disconnected it."
+    },
+    "list": {
+      "label": "My connections",
+      "loading": "Loading connections",
+      "loadFailed": "Couldn't load connections.",
+      "emptyNever": "You haven't connected an agent yet.",
+      "emptyNow": "No agents are connected right now.",
+      "emptyHint": "Add the address from New connection to your agent and allow it in the browser. It will show up here."
+    },
+    "past": {
+      "toggle": "{count, plural, one {# past connection} other {# past connections}}",
+      "label": "Past connections"
+    },
+    "form": {
+      "workspace": "Workspace to connect",
+      "workspacesLoading": "Loading workspaces",
+      "workspacesFailed": "Couldn't load workspaces.",
+      "name": "Connection name",
+      "namePlaceholder": "e.g. Laptop Claude Code",
+      "submit": "Create token"
+    },
+    "issued": {
+      "label": "New token",
+      "title": "Created the “{name}” connection",
+      "once": "This token is shown only once. Copy it now, because you can't see it again after closing.",
+      "token": "Token",
+      "claudeCode": "Claude Code: paste in your terminal",
+      "codex": "Codex CLI: paste in your terminal",
+      "scopeNote": "Claude Code connects only in the folder where you ran the command. To use it in any folder, add <code>--scope user</code>. Codex connects in every folder. The Codex block replaces any existing heymoa entry, so it's safe to paste again. If you already added Claude Code, remove it first with <code>claude mcp remove heymoa</code>.",
+      "close": "I copied it, close"
+    },
+    "row": {
+      "meta": "Connected {connected} · Last used {lastUsed}",
+      "neverUsed": "never",
+      "expires": "Expires on {date} if unused",
+      "revoke": "Revoke",
+      "dialog": {
+        "title": "Revoke “{name}”?",
+        "description": "Agents using this token are blocked from their next request. This can't be undone. To use it again, connect again."
+      }
+    },
+    "usage": {
+      "label": "Usage history",
+      "loading": "Loading usage history",
+      "loadFailed": "Couldn't load usage history.",
+      "empty": "No agent has used a tool through this connection yet.",
+      "failed": "Failed",
+      "resultCount": "{count, plural, one {# result} other {# results}}",
+      "nextFailed": "Couldn't load more history. Try Show more again.",
+      "loadingMore": "Loading more usage history",
+      "more": "Show more",
+      "tools": {
+        "get_connection": "Check connection",
+        "list_projects": "List projects",
+        "list_project_items": "List project items",
+        "get_project_item": "Item details",
+        "expand_relations": "Follow relations",
+        "list_open_tasks": "Tasks",
+        "list_meetings": "List meetings",
+        "get_meeting": "Meeting details",
+        "get_meeting_record": "Meeting notes",
+        "get_meeting_summary": "Meeting summary",
+        "list_meeting_agendas": "Meeting agenda",
+        "list_meeting_links": "Links between meetings",
+        "get_meeting_transcript": "Meeting transcript",
+        "search": "Search",
+        "create_tasks": "Create tasks",
+        "update_tasks": "Update tasks",
+        "open_screen": "Open screen"
+      }
+    }
+  },
+  "terms": {
+    "title": "Glossary",
+    "help": "Add product names, internal terms, and acronyms that transcription often gets wrong. HeyMoa uses them when transcribing every meeting in this workspace. You don't need to add common words.",
+    "loading": "Loading glossary",
+    "loadFailed": "Couldn't load the glossary.",
+    "addFailed": "Couldn't add terms.",
+    "example": "ROAS, CTR, conversion rate, retargeting",
+    "examplePrefix": "e.g. {example}",
+    "input": "Terms to add",
+    "placeholder": "Paste terms separated by commas or line breaks",
+    "fullPlaceholder": "No room for more terms",
+    "full": "The glossary is full. Delete a term to add another.",
+    "preview": "Preview of terms to add",
+    "previewHint": "Separate terms with commas (,), line breaks, semicolons, or tabs to preview them here.",
+    "previewStatus": {
+      "duplicate": "duplicate",
+      "tooLong": "over {max} characters",
+      "overLimit": "over limit"
+    },
+    "more": "+{count} more",
+    "summary": {
+      "fresh": "{count} new",
+      "duplicates": "{count, plural, one {# duplicate} other {# duplicates}}",
+      "tooLong": "{count} over {max} characters, skipped",
+      "overLimit": "{count} over limit"
+    },
+    "progress": "Adding {done} of {total}",
+    "keyHint": "Enter to add · Shift+Enter for a new line",
+    "add": "Add",
+    "addCount": "Add {count}",
+    "added": "Added terms",
+    "listTitle": "Your terms",
+    "search": "Find a term",
+    "empty": "No terms yet.",
+    "tryExample": "Try an example",
+    "noMatch": "No matching terms.",
+    "remove": "Remove {term}",
+    "outcome": {
+      "added": "Added {count}",
+      "existing": "Skipped {count} already in the glossary",
+      "overLimit": "Couldn't add {count} over the limit",
+      "invalid": "Skipped {count} with an invalid format",
+      "failed": "Couldn't send {count}. They're back in the input, so try again"
+    }
+  }
+}

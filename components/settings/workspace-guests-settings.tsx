@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   ArrowRight,
@@ -34,6 +35,7 @@ import {
   SkeletonLine,
 } from "@/components/settings/settings-layout";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
+import { objectParticle } from "@/components/settings/confirm-phrase-field";
 import {
   RenamePersonDialog,
   SoftName,
@@ -91,6 +93,8 @@ export function WorkspaceGuestsSettings({
    * 낡고, 사람은 **틀린 영향 범위를 보고 되돌릴 수 없는 삭제**를 누른다.
    * 전사 화면(`note-archive`)이 같은 쿼리를 같은 이유로 이렇게 부른다.
    */
+  const t = useTranslations("settings.guests");
+  const tActions = useTranslations("common.actions");
   const [pages, setPages] = useState(1);
   const guestsQuery = useGuestListPages({ workspaceId, pages });
   /**
@@ -130,7 +134,9 @@ export function WorkspaceGuestsSettings({
     >
       {standalone ? (
         page ? (
-          <p className="text-sm text-[var(--el-muted)]">{page.totalCount}명</p>
+          <p className="text-sm text-[var(--el-muted)]">
+            {t("count", { count: page.totalCount })}
+          </p>
         ) : guestsQuery.isLoading ? (
           // 인원 줄도 응답이 채운다 — 자리를 안 잡으면 도착하며 목록을 한 줄 민다.
           <SkeletonLine className="w-10" />
@@ -138,16 +144,15 @@ export function WorkspaceGuestsSettings({
       ) : (
         <>
           <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">
-            임시 참여자
+            {t("title")}
             {page ? (
               <span className="ml-1.5 font-normal text-[var(--el-muted)]">
-                {page.totalCount}명
+                {t("count", { count: page.totalCount })}
               </span>
             ) : null}
           </h3>
           <p className="mt-1.5 text-sm text-[var(--el-muted)]">
-            계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 이어 붙일
-            수 있습니다.
+            {t("description")}
           </p>
         </>
       )}
@@ -155,7 +160,7 @@ export function WorkspaceGuestsSettings({
       {guestsQuery.isLoading ? (
         <ul
           className={cn("mt-4", SETTINGS_LIST)}
-          aria-label="임시 참여자 불러오는 중"
+          aria-label={t("loading")}
         >
           {Array.from({ length: SKELETON_GUEST_ROWS }, (_, index) => (
             <GuestRowSkeleton key={index} />
@@ -173,7 +178,7 @@ export function WorkspaceGuestsSettings({
       guestsQuery.isError && guestsQuery.data === undefined ? (
         <div role="alert" className="mt-4 space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
-            임시 참여자를 불러오지 못했습니다.
+            {t("loadFailed")}
           </p>
           <Button
             variant="outline"
@@ -181,13 +186,13 @@ export function WorkspaceGuestsSettings({
             className="h-[30px]"
             onClick={() => void guestsQuery.refetch()}
           >
-            다시 시도
+            {tActions("retry")}
           </Button>
         </div>
       ) : guests.length === 0 ? (
         // **빈 상태는 오류가 아니다.** 한 명도 없는 것이 정상이다.
         <p className="mt-4 text-sm text-[var(--el-muted)]">
-          아직 임시 참여자가 없습니다.
+          {t("empty")}
         </p>
       ) : (
         <>
@@ -202,8 +207,8 @@ export function WorkspaceGuestsSettings({
             >
               <span>
                 {partial
-                  ? "목록을 끝까지 불러오지 못해 연동·삭제를 잠갔습니다."
-                  : "최신 목록을 확인하지 못해 연동·삭제를 잠갔습니다."}
+                  ? t("lockedPartial")
+                  : t("lockedStale")}
               </span>
               <Button
                 variant="outline"
@@ -211,7 +216,7 @@ export function WorkspaceGuestsSettings({
                 className="h-[30px]"
                 onClick={() => void guestsQuery.refetch()}
               >
-                다시 시도
+                {tActions("retry")}
               </Button>
             </div>
           ) : null}
@@ -255,10 +260,10 @@ export function WorkspaceGuestsSettings({
               >
                 {isLoadingMore ? (
                   <>
-                    <Loader2Icon className="animate-spin" /> 불러오는 중
+                    <Loader2Icon className="animate-spin" /> {t("loadingMore")}
                   </>
                 ) : (
-                  "임시 참여자 더 보기"
+                  t("loadMore")
                 )}
               </Button>
             </div>
@@ -319,6 +324,8 @@ function GuestRow({
   canRename: boolean;
   onOpen: (kind: GuestDialogKind) => void;
 }) {
+  const t = useTranslations("settings.guests");
+  const tActions = useTranslations("common.actions");
   return (
     <li className={SETTINGS_LIST_ROW}>
       {/* 색은 `guestId` 가 정한다 — 이름은 겹치고(박도현·박순영) 개명하면 튄다. */}
@@ -329,7 +336,7 @@ function GuestRow({
           className="truncate text-sm text-[var(--el-ink)]"
         />
         <span className="text-xs text-[var(--el-muted)]">
-          회의록 {guest.noteCount}개
+          {t("noteCount", { count: guest.noteCount })}
         </span>
       </span>
 
@@ -342,7 +349,7 @@ function GuestRow({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${guest.displayName} 관리`}
+                  aria-label={t("manageLabel", { name: guest.displayName })}
                   className="rounded-full text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]"
                 />
               }
@@ -351,14 +358,14 @@ function GuestRow({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-36">
               <DropdownMenuItem onClick={() => onOpen("rename")}>
-                이름 변경
+                {tActions("rename")}
               </DropdownMenuItem>
               {/* 목록이 낡았을 때는 숨기지 않고 잠근다 — 위 안내가 왜 잠겼는지 말한다. */}
               <DropdownMenuItem
                 disabled={!canManage}
                 onClick={() => onOpen("link")}
               >
-                계정과 연동
+                {t("link")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -366,7 +373,7 @@ function GuestRow({
                 disabled={!canManage}
                 onClick={() => onOpen("delete")}
               >
-                삭제
+                {tActions("delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -403,6 +410,7 @@ function RenameGuestDialog({
   workspaceId: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("settings.guests");
   const { rename } = useRenameGuest({
     workspaceId,
     guestId: guest.guestId,
@@ -412,8 +420,8 @@ function RenameGuestDialog({
     <RenamePersonDialog
       avatarKey={guest.guestId}
       currentName={guest.displayName}
-      secondary={`임시 참여자 · 회의록 ${guest.noteCount}개`}
-      label="이름"
+      secondary={`${t("title")} · ${t("noteCount", { count: guest.noteCount })}`}
+      label={t("nameLabel")}
       initialValue={guest.displayName}
       onSubmit={rename}
       onClose={onClose}
@@ -436,6 +444,8 @@ function LinkGuestDialog({
   workspaceId: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("settings.guests.linkDialog");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   /**
    * **대화상자를 열 때 다시 읽는다.** 이 대화상자는 조건부 렌더라 열릴 때 마운트된다.
@@ -565,31 +575,34 @@ function LinkGuestDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>
             {result
-              ? `${guest.displayName} 연동 결과`
-              : `${guest.displayName}을(를) 계정과 연동`}
+              ? t("resultTitle", { name: guest.displayName })
+              : t("title", {
+                  name: guest.displayName,
+                  particle: objectParticle(guest.displayName),
+                })}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {result
-              ? "연동이 끝났습니다."
+              ? t("done")
               : target
                 ? // **이름만으로는 어느 계정인지 말할 수 없다.** 표시 이름은 OAuth 에서 와
                   // 유일하지 않고, 연동은 되돌릴 수 없다. 고르는 목록이 이메일을 함께
                   // 그리는 이유가 그것이라 확인 단계도 같은 식별자를 쓴다.
-                  `${target.name}(${target.email}) 계정으로 잇습니다.`
-                : "이 사람을 어느 멤버와 이을지 고릅니다."}
+                  t("target", { name: target.name, email: target.email })
+                : t("choose")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         {!target && membersFailed ? (
           <div role="alert" className="space-y-2 text-sm">
-            <p className="text-[var(--el-ink)]">멤버를 불러오지 못했습니다.</p>
+            <p className="text-[var(--el-ink)]">{t("membersFailed")}</p>
             <Button
               variant="outline"
               size="sm"
               className="h-[30px]"
               onClick={() => void membersQuery.refetch()}
             >
-              다시 시도
+              {tActions("retry")}
             </Button>
           </div>
         ) : !target && (membersPending || !membersSettled) ? (
@@ -642,12 +655,12 @@ function LinkGuestDialog({
                 void finish();
               }}
             >
-              확인
+              {tActions("confirm")}
             </AlertDialogAction>
           ) : (
             <>
               <AlertDialogCancel disabled={pending} onClick={onClose}>
-                취소
+                {tActions("cancel")}
               </AlertDialogCancel>
               {target && shown ? (
                 <AlertDialogAction
@@ -661,7 +674,7 @@ function LinkGuestDialog({
                   loading={link.isPending}
                   disabled={pending}
                 >
-                  연동
+                  {t("submit")}
                 </AlertDialogAction>
               ) : null}
             </>
@@ -679,6 +692,7 @@ function LinkPair({
   guest: WorkspaceGuestListResponseDataGuestsItem;
   target: WorkspaceMemberListResponseDataMembersItem;
 }) {
+  const t = useTranslations("settings.guests.linkDialog");
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-block border border-[var(--el-hairline)] px-3 py-2.5">
       <PersonAvatar name={guest.guestId} size={24} />
@@ -689,7 +703,9 @@ function LinkPair({
         className="size-4 shrink-0 text-[var(--el-muted)]"
         aria-hidden
       />
-      <span className="sr-only">을(를) 다음 계정과 잇습니다:</span>
+      <span className="sr-only">
+        {t("pairSeparator", { particle: objectParticle(guest.displayName) })}
+      </span>
       <PersonAvatar name={target.userId} image={target.image} size={24} />
       <span className="min-w-0 truncate text-sm font-medium text-[var(--el-ink)]">
         {target.name}
@@ -715,11 +731,13 @@ function LinkPlanSummary({
   plan: GuestLinkResponseData;
   executed: boolean;
 }) {
+  const t = useTranslations("settings.guests.linkDialog");
   return (
     <div className="space-y-3 text-sm">
       <p className="text-[var(--el-ink)]">
-        회의록 {plan.changedNoteCount}개가{" "}
-        {executed ? "바뀌었습니다" : "바뀝니다"}.
+        {t(executed ? "changed" : "willChange", {
+          count: plan.changedNoteCount,
+        })}
       </p>
 
       {/* **어느 회의인지 이름으로 보여준다.** 되돌릴 수 없는데 개수만 보면, 같은 이름의 임시
@@ -737,14 +755,14 @@ function LinkPlanSummary({
       {/* 개수는 안 자르고 목록만 자른다 — 둘이 다르면 잘린 것이다 (계약) */}
       {plan.changedNoteCount > plan.changedNotes.length ? (
         <p className="text-[var(--el-muted-soft)]">
-          최근 {plan.changedNotes.length}개만 보여줍니다.
+          {t("truncated", { count: plan.changedNotes.length })}
         </p>
       ) : null}
 
       {!executed ? (
         <p className="flex items-start gap-1.5 text-[var(--el-error)]">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>되돌릴 수 없습니다.</span>
+          <span>{t("irreversible")}</span>
         </p>
       ) : null}
     </div>
@@ -775,6 +793,8 @@ function DeleteGuestDialog({
   onRetry: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("settings.guests.deleteDialog");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const remove = useDeleteWorkspaceGuest();
   const goneAlready = settled && fresh === undefined;
@@ -813,16 +833,19 @@ function DeleteGuestDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {guest.displayName}을(를) 삭제할까요?
+            {t("title", {
+              name: guest.displayName,
+              particle: objectParticle(guest.displayName),
+            })}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {lookupFailed
-              ? "영향 범위를 확인하지 못했습니다. 몇 개의 회의록이 바뀌는지 모르는 채로는 지우지 않습니다."
+              ? t("lookupFailed")
               : goneAlready
-                ? "이미 지워졌습니다. 다른 사람이 먼저 지운 것 같습니다."
+                ? t("gone")
                 : !settled
-                  ? "영향 범위를 확인하고 있습니다…"
-                  : `회의록 ${noteCount}개에서 이 사람이 사라지고, 붙어 있던 화자 연결도 함께 풀립니다. 되돌릴 수 없습니다.`}
+                  ? t("checking")
+                  : t("description", { count: noteCount })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {lookupFailed ? (
@@ -833,13 +856,13 @@ function DeleteGuestDialog({
               className="h-[30px]"
               onClick={onRetry}
             >
-              다시 시도
+              {tActions("retry")}
             </Button>
           </div>
         ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={remove.isPending} onClick={onClose}>
-            취소
+            {tActions("cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(event) => {
@@ -849,7 +872,7 @@ function DeleteGuestDialog({
             loading={remove.isPending}
             disabled={!settled || goneAlready}
           >
-            삭제
+            {tActions("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

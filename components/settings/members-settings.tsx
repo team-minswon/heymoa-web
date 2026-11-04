@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { AlertTriangle, Info, MoreHorizontal } from "lucide-react";
@@ -92,13 +93,24 @@ const inviteSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, "이메일을 입력해 주세요.")
-    .email("올바른 이메일을 입력해 주세요."),
+    // 문구는 그릴 때 `settings.members.invite` 에서 고른다 — 스키마는 모듈 수준이라 화면 언어를 모른다.
+    .min(1, "emailRequired")
+    .email("emailInvalid"),
   role: z.enum(["MEMBER", "ADMIN"]),
 });
 type InviteValues = z.infer<typeof inviteSchema>;
 
-const ROLE_LABEL: Record<string, string> = { ADMIN: "관리자", MEMBER: "멤버" };
+function isEmailErrorKey(
+  message: string
+): message is "emailRequired" | "emailInvalid" {
+  return message === "emailRequired" || message === "emailInvalid";
+}
+
+/** 역할 라벨. `Select` 의 `items` 와 칩이 같은 말을 쓴다. */
+function useRoleLabels(): Record<string, string> {
+  const t = useTranslations("settings.members.roles");
+  return { ADMIN: t("ADMIN"), MEMBER: t("MEMBER") };
+}
 
 /** orval이 operationId로 만드는 mutationKey. 멤버 목록을 바꾸는 셋을 잠금에 센다. */
 const MEMBER_MUTATION_KEYS = new Set([
@@ -138,9 +150,10 @@ function memberLabel(member: WorkspaceMemberListResponseDataMembersItem) {
 }
 
 function RoleChip({ role }: { role: string }) {
+  const roleLabels = useRoleLabels();
   return (
     <Badge variant={role === "ADMIN" ? "secondary" : "outline"}>
-      {ROLE_LABEL[role] ?? role}
+      {roleLabels[role] ?? role}
     </Badge>
   );
 }
@@ -151,6 +164,8 @@ function RoleChip({ role }: { role: string }) {
  * 붙은 지속 상태라 인라인이다.
  */
 export function MembersSettings({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("settings.members");
+  const tActions = useTranslations("common.actions");
   const { user } = useAuth();
   const membersQuery = useGetWorkspaceMembers(workspaceId);
 
@@ -190,12 +205,12 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <SettingsHeader
-        title="멤버"
-        description="이 워크스페이스의 멤버와 대기 중인 초대를 관리합니다."
+        title={t("title")}
+        description={t("description")}
       />
 
       {membersQuery.isLoading ? (
-        <ul className={SETTINGS_LIST} aria-label="멤버 불러오는 중">
+        <ul className={SETTINGS_LIST} aria-label={t("loading")}>
           {Array.from({ length: SKELETON_MEMBER_ROWS }, (_, index) => (
             <MemberRowSkeleton key={index} />
           ))}
@@ -203,7 +218,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
       ) : membersQuery.isError ? (
         <div role="alert" className="space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
-            멤버를 불러오지 못했습니다.
+            {t("loadFailed")}
           </p>
           <Button
             variant="outline"
@@ -211,7 +226,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
             className="h-[30px]"
             onClick={() => void membersQuery.refetch()}
           >
-            다시 시도
+            {tActions("retry")}
           </Button>
         </div>
       ) : (
@@ -300,6 +315,9 @@ function MemberRow({
   workspaceId: string;
   onRename: () => void;
 }) {
+  const t = useTranslations("settings.members");
+  const tActions = useTranslations("common.actions");
+  const roleLabels = useRoleLabels();
   const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
   const invalidateMembers = () =>
@@ -331,7 +349,7 @@ function MemberRow({
           <SoftName name={member.name} className="truncate" />
           {isMe ? (
             <span className="shrink-0 text-xs font-normal text-[var(--el-muted)]">
-              (나)
+              {t("me")}
             </span>
           ) : null}
         </p>
@@ -340,7 +358,7 @@ function MemberRow({
         <p className="truncate text-xs text-[var(--el-muted)]">
           {names.displayName !== null &&
           names.displayName !== names.accountName ? (
-            <>계정 이름 {names.accountName} · </>
+            <>{t("accountName", { name: names.accountName })} · </>
           ) : null}
           {member.email}
         </p>
@@ -354,7 +372,7 @@ function MemberRow({
           <Select
             // **값이 아니라 라벨을 그린다.** 안 주면 트리거에 `ADMIN`·`MEMBER` 가 그대로
             // 서서 목록의 「관리자」·「멤버」와 두 말이 섞인다.
-            items={ROLE_LABEL}
+            items={roleLabels}
             value={member.role}
             onValueChange={(role) =>
               changeRole.mutate({
@@ -365,12 +383,12 @@ function MemberRow({
             }
             disabled={busy}
           >
-            <SelectTrigger aria-label={`${memberLabel(member)} 역할`}>
+            <SelectTrigger aria-label={t("roleLabel", { member: memberLabel(member) })}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="MEMBER">멤버</SelectItem>
-              <SelectItem value="ADMIN">관리자</SelectItem>
+              <SelectItem value="MEMBER">{roleLabels.MEMBER}</SelectItem>
+              <SelectItem value="ADMIN">{roleLabels.ADMIN}</SelectItem>
             </SelectContent>
           </Select>
         ) : (
@@ -407,7 +425,7 @@ function MemberRow({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${memberLabel(member)} 관리`}
+                  aria-label={t("manageLabel", { member: memberLabel(member) })}
                   className="rounded-full text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]"
                 />
               }
@@ -415,7 +433,9 @@ function MemberRow({
               <MoreHorizontal />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-36">
-              <DropdownMenuItem onClick={onRename}>이름 변경</DropdownMenuItem>
+              <DropdownMenuItem onClick={onRename}>
+                {tActions("rename")}
+              </DropdownMenuItem>
               {canRemove ? (
                 <>
                   <DropdownMenuSeparator />
@@ -424,7 +444,7 @@ function MemberRow({
                     disabled={busy}
                     onClick={() => setConfirmOpen(true)}
                   >
-                    내보내기
+                    {t("remove")}
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -443,16 +463,16 @@ function MemberRow({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{member.name}님을 내보낼까요?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("removeDialog.title", { name: member.name })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {member.email} 계정이 이 워크스페이스의 멤버 목록과 접근 권한을
-              잃고, 그 멤버가 이 워크스페이스에서 나눈 에이전트 대화가
-              삭제됩니다.
+              {t("removeDialog.description", { email: member.email })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={remove.isPending}>
-              취소
+              {tActions("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -470,7 +490,7 @@ function MemberRow({
                 setConfirmOpen(false);
               }}
             >
-              내보내기
+              {t("remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -492,6 +512,7 @@ function RenameMemberDialog({
   member: WorkspaceMemberListResponseDataMembersItem;
   onClose: () => void;
 }) {
+  const t = useTranslations("settings.members.renameDialog");
   // 연 순간의 모습을 든다 — 저장 중 낙관적 이름이 목록에 먼저 써져도 대화상자의 「지금 이름」은 흔들리지 않는다.
   const [opened] = useState(() => memberNameOf(member));
   const { rename } = useRenameMember({ workspaceId, member: opened });
@@ -501,10 +522,10 @@ function RenameMemberDialog({
       image={member.image}
       currentName={opened.name}
       secondary={member.email}
-      label="이 워크스페이스에서 보일 이름"
+      label={t("label")}
       initialValue={opened.displayName ?? ""}
       placeholder={opened.accountName}
-      hint={`비우면 계정 이름(${opened.accountName})으로 보입니다.`}
+      hint={t("hint", { name: opened.accountName })}
       allowEmpty
       onSubmit={rename}
       onClose={onClose}
@@ -523,6 +544,8 @@ function RenameMemberDialog({
  * 그래서 전역 토스트를 `suppressErrorToast`로 끈다. 안 끄면 같은 문구가 두 번 뜬다.
  */
 function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("settings.members.leave");
+  const tActions = useTranslations("common.actions");
   const router = useRouter();
   const queryClient = useQueryClient();
   const workspacesQuery = useGetWorkspaces();
@@ -558,17 +581,16 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
   const recordingHere = isWorkspaceRecordingActive(useRecording(), workspaceId);
 
   const leaveMessage = leaveError
-    ? errorMessageOf(leaveError, "워크스페이스를 나가지 못했습니다.")
+    ? errorMessageOf(leaveError, t("failed"))
     : null;
 
   return (
     <section className="mt-8 border-t border-[var(--el-hairline)] pt-8">
       <h3 className="text-sm font-medium text-[var(--el-ink)]">
-        워크스페이스 나가기
+        {t("title")}
       </h3>
       <p className="mt-1 text-xs text-[var(--el-muted)]">
-        이 워크스페이스의 회의 기록과 프로젝트에 더 이상 접근할 수 없게 됩니다.
-        다시 들어오려면 초대를 받아야 합니다.
+        {t("description")}
       </p>
       <Button
         variant="outline"
@@ -583,7 +605,7 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
           setConfirmOpen(true);
         }}
       >
-        워크스페이스 나가기
+        {t("title")}
       </Button>
 
       {/*
@@ -594,7 +616,7 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
       */}
       {recordingHere ? (
         <p role="status" className="mt-2 text-xs text-[var(--el-muted)]">
-          녹음을 끝낸 뒤 나갈 수 있습니다.
+          {t("recordingBlocked")}
         </p>
       ) : null}
 
@@ -611,10 +633,9 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>이 워크스페이스를 나갈까요?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              회의 기록과 프로젝트에 더 이상 접근할 수 없게 되고, 이
-              워크스페이스에서 나눈 에이전트 대화가 삭제됩니다.
+              {t("dialog.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -641,7 +662,7 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={leave.isPending}>
-              취소
+              {tActions("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -667,7 +688,7 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
                 router.replace(destination);
               }}
             >
-              나가기
+              {t("dialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -701,6 +722,8 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
 }
 
 function InviteForm({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("settings.members.invite");
+  const roleLabels = useRoleLabels();
   const queryClient = useQueryClient();
   // 초대 실패는 인라인으로 그리니 전역 토스트를 끈다.
   const create = useCreateWorkspaceInvitation({
@@ -732,10 +755,11 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
   });
 
   const inviteMessage = inviteError
-    ? errorMessageOf(inviteError, "초대에 실패했습니다.")
+    ? errorMessageOf(inviteError, t("failed"))
     : null;
 
   const emailField = form.register("email");
+  const emailError = form.formState.errors.email?.message;
 
   return (
     <section>
@@ -744,7 +768,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
         <div className={INVITE_ROW}>
           <div className="min-w-0 flex-1 space-y-1">
             <Label htmlFor="invite-email" className="sr-only">
-              초대할 이메일
+              {t("emailLabel")}
             </Label>
             <Input
               id="invite-email"
@@ -760,15 +784,15 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
                 void emailField.onChange(event);
               }}
             />
-            {form.formState.errors.email ? (
+            {emailError !== undefined ? (
               <p className="text-xs text-[var(--el-error)]">
-                {form.formState.errors.email.message}
+                {isEmailErrorKey(emailError) ? t(emailError) : emailError}
               </p>
             ) : null}
           </div>
           <div className="space-y-1">
             <Label htmlFor="invite-role" className="sr-only">
-              역할
+              {t("roleLabel")}
             </Label>
             {/* **`Controller` 로 잇는다.** `form.watch()` 는 매번 새 값을 돌려주는 API 라
                 React Compiler 가 이 컴포넌트의 메모를 통째로 포기한다(컴파일 경고). */}
@@ -777,7 +801,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
               name="role"
               render={({ field }) => (
                 <Select
-                  items={ROLE_LABEL}
+                  items={roleLabels}
                   value={field.value}
                   onValueChange={field.onChange}
                 >
@@ -785,15 +809,15 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MEMBER">멤버</SelectItem>
-                    <SelectItem value="ADMIN">관리자</SelectItem>
+                    <SelectItem value="MEMBER">{roleLabels.MEMBER}</SelectItem>
+                    <SelectItem value="ADMIN">{roleLabels.ADMIN}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
             />
           </div>
           <Button type="submit" loading={isSubmitting} className="rounded-full">
-            초대
+            {t("submit")}
           </Button>
         </div>
 
@@ -826,6 +850,8 @@ function PendingInvitations({
   invitations: WorkspaceInvitationListResponseDataInvitationsItem[];
   onRetry: () => void;
 }) {
+  const t = useTranslations("settings.members.pending");
+  const tActions = useTranslations("common.actions");
   const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
   // 만료 판정은 렌더 시점 1회 고정 — hydration 불일치 방지. 서버는 만료 PENDING을
@@ -849,7 +875,7 @@ function PendingInvitations({
       ) : isError ? (
         <div role="alert" className="space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
-            대기 중인 초대를 불러오지 못했습니다.
+            {t("loadFailed")}
           </p>
           <Button
             variant="outline"
@@ -857,14 +883,14 @@ function PendingInvitations({
             className="h-[30px]"
             onClick={onRetry}
           >
-            다시 시도
+            {tActions("retry")}
           </Button>
         </div>
       ) : invitations.length === 0 ? (
         <div className={PENDING_EMPTY}>
           <Info className="size-4 shrink-0 text-[var(--el-muted)]" />
           <p className="text-sm text-[var(--el-muted)]">
-            대기 중인 초대가 없습니다.
+            {t("empty")}
           </p>
         </div>
       ) : (
@@ -883,7 +909,7 @@ function PendingInvitations({
                 )}
               </div>
               {Date.parse(invitation.expiresAt) < now && (
-                <Badge variant="outline">만료됨</Badge>
+                <Badge variant="outline">{t("expired")}</Badge>
               )}
               <RoleChip role={invitation.role} />
               <p className="hidden w-[160px] shrink-0 text-right text-xs text-[var(--el-muted)] sm:block">
@@ -909,7 +935,7 @@ function PendingInvitations({
                   })
                 }
               >
-                취소
+                {tActions("cancel")}
               </Button>
             </li>
           ))}
@@ -921,10 +947,11 @@ function PendingInvitations({
 
 /** 「대기 중인 초대」 머리글과 본문 자리. 실제와 skeleton 이 같이 쓴다. */
 function PendingInvitationsFrame({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("settings.members.pending");
   return (
     <section>
       <h3 className="text-sm font-medium text-[var(--el-ink)]">
-        대기 중인 초대
+        {t("title")}
       </h3>
       <div className="mt-3">{children}</div>
     </section>
@@ -932,13 +959,13 @@ function PendingInvitationsFrame({ children }: { children: React.ReactNode }) {
 }
 
 function InviteHeading() {
+  const t = useTranslations("settings.members.invite");
   return (
     <>
-      <h3 className="text-sm font-medium text-[var(--el-ink)]">멤버 초대</h3>
-      <p className="mt-1 text-xs text-[var(--el-muted)]">
-        이메일로 초대합니다. 미가입자도 초대 메일의 링크로 가입해 합류할 수
-        있습니다.
-      </p>
+      <h3 className="text-sm font-medium text-[var(--el-ink)]">
+        {t("title")}
+      </h3>
+      <p className="mt-1 text-xs text-[var(--el-muted)]">{t("description")}</p>
     </>
   );
 }
@@ -988,8 +1015,9 @@ function InviteFormSkeleton() {
 }
 
 function PendingInvitationsSkeleton() {
+  const t = useTranslations("settings.members.pending");
   return (
-    <div className={PENDING_EMPTY} aria-label="대기 중인 초대 불러오는 중">
+    <div className={PENDING_EMPTY} aria-label={t("loading")}>
       <SkeletonLine className="w-40" />
     </div>
   );

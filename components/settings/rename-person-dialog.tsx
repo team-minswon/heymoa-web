@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
@@ -63,6 +64,8 @@ export function RenamePersonDialog({
   onSubmit: (value: string) => Promise<string | null>;
   onClose: () => void;
 }) {
+  const t = useTranslations("settings.renameDialog");
+  const tActions = useTranslations("common.actions");
   const inputId = useId();
   const hintId = useId();
   const [value, setValue] = useState(initialValue);
@@ -115,9 +118,9 @@ export function RenamePersonDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>이름 변경</AlertDialogTitle>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           <AlertDialogDescription className="sr-only">
-            {currentName}의 이름을 바꿉니다.
+            {t("description", { name: currentName })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form
@@ -180,10 +183,12 @@ export function RenamePersonDialog({
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel type="button">취소</AlertDialogCancel>
+            <AlertDialogCancel type="button">
+              {tActions("cancel")}
+            </AlertDialogCancel>
             {/* 대화상자를 닫는 `AlertDialogAction` 이 아니라 폼 제출 버튼이다 — 실패하면 열어 둔다. Enter 도 같은 길이다. */}
             <Button type="submit" loading={pending} disabled={blocked}>
-              저장
+              {tActions("save")}
             </Button>
           </AlertDialogFooter>
         </form>

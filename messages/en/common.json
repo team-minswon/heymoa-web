@@ -135,6 +135,9 @@
     "cancel": "Cancel",
     "save": "Save",
     "delete": "Delete",
-    "retry": "Try again"
+    "retry": "Try again",
+    "saveChanges": "Save changes",
+    "rename": "Rename",
+    "confirm": "OK"
   }
 }

@@ -1,0 +1,466 @@
+{
+  "nav": {
+    "title": "설정",
+    "description": "계정과 워크스페이스 설정을 관리합니다.",
+    "groups": {
+      "workspace": "워크스페이스",
+      "account": "계정"
+    },
+    "items": {
+      "workspace": "일반",
+      "members": "멤버",
+      "guests": "임시 참여자",
+      "terms": "용어 사전",
+      "integrations": "연동",
+      "workspaceAgents": "MCP 연결",
+      "account": "내 계정",
+      "notifications": "알림",
+      "agents": "내 MCP 연결"
+    },
+    "loadFailed": {
+      "account": "계정 정보를 불러오지 못했습니다",
+      "notifications": "알림 설정을 불러오지 못했습니다",
+      "workspace": "워크스페이스 정보를 불러오지 못했습니다"
+    }
+  },
+  "notificationsPage": {
+    "loginRequired": "알림 설정을 바꾸려면 로그인해 주세요."
+  },
+  "confirmPhrase": {
+    "label": "확인하려면 <strong>{phrase}</strong>{particle} 그대로 입력하세요."
+  },
+  "renameDialog": {
+    "title": "이름 변경",
+    "description": "{name}의 이름을 바꿉니다.",
+    "failed": "이름을 바꾸지 못했습니다."
+  },
+  "account": {
+    "title": "내 계정",
+    "description": "프로필 정보를 확인합니다.",
+    "label": "내 계정 설정",
+    "loading": "내 계정 설정 불러오는 중",
+    "loadFailed": "계정 정보를 불러오지 못했습니다.",
+    "avatarAlt": "{name} 프로필",
+    "email": "이메일",
+    "name": "계정 이름",
+    "nameHint": "워크스페이스에서 보일 이름은 멤버 탭에서 바꿉니다."
+  },
+  "accountDeletion": {
+    "title": "계정 삭제",
+    "description": "계정과 혼자 쓰던 워크스페이스를 지우고 모든 기기에서 로그아웃합니다. 되돌릴 수 없습니다.",
+    "dialog": {
+      "title": "계정을 삭제할까요?",
+      "description": "삭제하면 되돌릴 수 없고, 같은 Google 계정으로 다시 가입하면 새 계정이 됩니다."
+    },
+    "reason": {
+      "label": "탈퇴 사유",
+      "optional": "(선택)",
+      "codes": {
+        "MISSING_FEATURE": "필요한 기능 부족",
+        "SECURITY_CONCERN": "보안과 데이터 걱정",
+        "TRANSCRIPTION_QUALITY": "스크립트와 요약 품질",
+        "OTHER_SERVICE": "다른 서비스 이용",
+        "RARELY_USED": "낮은 사용 빈도",
+        "OTHER": "기타"
+      },
+      "otherLabel": "기타 사유",
+      "otherPlaceholder": "개인정보는 적지 마세요.",
+      "note": "사유는 개인을 알 수 없게 통계로만 남습니다."
+    },
+    "plan": {
+      "label": "워크스페이스별 처리",
+      "loading": "처리 목록 불러오는 중",
+      "loadFailed": "처리 목록을 불러오지 못했습니다.",
+      "empty": "속한 워크스페이스가 없습니다.",
+      "deleteSolo": "혼자 쓰는 워크스페이스라 삭제합니다.",
+      "leaveShared": "다른 사람이 계속 쓰므로 나가기만 합니다.",
+      "legend": "{name} 처리",
+      "soleAdmin": "내가 유일한 관리자입니다. 관리자 권한을 넘기거나 워크스페이스를 삭제하세요.",
+      "transfer": "관리자 권한 넘기기",
+      "successor": "{name} 관리자를 넘겨받을 사람",
+      "deleteWorkspace": "워크스페이스 삭제(멤버 모두에게 메일로 알립니다)"
+    },
+    "effects": {
+      "label": "지워지는 것과 남는 것",
+      "deleted": "계정 정보, 그리고 혼자 쓰던 워크스페이스와 삭제하기로 고른 워크스페이스의 <nowrap>회의 기록(노트, 스크립트, 음성)을</nowrap> 바로 지웁니다.",
+      "conversations": "모든 워크스페이스에서 내가 나눈 에이전트 대화를 지웁니다.",
+      "sharedHistory": "함께 쓰던 워크스페이스의 지난 회의 기록에는 이름과 발언이 남습니다.",
+      "external": "이미 외부 도구(Linear, GitHub)로 보낸 내용과 보낸 메일은 남습니다.",
+      "retained": "문의 기록 등 일부 정보는 정해진 기간 동안 보관한 뒤 지웁니다.",
+      "retentionLink": "보관 기간 자세히 보기"
+    },
+    "recordingBlocked": "녹음을 끝낸 뒤 탈퇴할 수 있습니다.",
+    "failed": "계정을 삭제하지 못했습니다.",
+    "submit": "탈퇴",
+    "confirmPhrase": "회원 탈퇴"
+  },
+  "workspace": {
+    "title": "일반",
+    "intro": "이 공간의 이름과 설명을 관리합니다.",
+    "loading": "워크스페이스 설정 불러오는 중",
+    "name": "워크스페이스 이름",
+    "nameRequired": "워크스페이스 이름을 입력해 주세요.",
+    "description": "설명",
+    "saved": "변경사항을 저장했습니다.",
+    "saveFailed": "워크스페이스 정보를 저장하지 못했습니다."
+  },
+  "workspaceDeletion": {
+    "title": "워크스페이스 삭제",
+    "description": "회의 기록<nowrap>(노트, 스크립트, 음성)을</nowrap> 비롯한 모든 내용을 지우고, 멤버 모두의 접근을 바로 막습니다. 멤버에게는 메일로 알립니다.",
+    "recordingBlocked": "녹음을 끝낸 뒤 삭제할 수 있습니다.",
+    "failed": "워크스페이스를 삭제하지 못했습니다.",
+    "dialog": {
+      "title": "이 워크스페이스를 삭제할까요?",
+      "description": "회의 기록<nowrap>(노트, 스크립트, 음성)을</nowrap> 비롯한 이 워크스페이스의 모든 내용을 지웁니다. 되돌릴 수 없습니다. 이미 외부 도구(Linear, GitHub)로 보낸 내용과 보낸 메일은 남습니다."
+    }
+  },
+  "members": {
+    "title": "멤버",
+    "description": "이 워크스페이스의 멤버와 대기 중인 초대를 관리합니다.",
+    "loading": "멤버 불러오는 중",
+    "loadFailed": "멤버를 불러오지 못했습니다.",
+    "roles": {
+      "ADMIN": "관리자",
+      "MEMBER": "멤버"
+    },
+    "me": "(나)",
+    "accountName": "계정 이름 {name}",
+    "roleLabel": "{member} 역할",
+    "manageLabel": "{member} 관리",
+    "remove": "내보내기",
+    "removeDialog": {
+      "title": "{name}님을 내보낼까요?",
+      "description": "{email} 계정은 이 워크스페이스에 더 이상 접근할 수 없습니다. 이 멤버가 여기서 나눈 에이전트 대화도 지웁니다."
+    },
+    "renameDialog": {
+      "label": "이 워크스페이스에서 보일 이름",
+      "hint": "비우면 계정 이름({name})으로 보입니다."
+    },
+    "leave": {
+      "title": "워크스페이스 나가기",
+      "description": "이 워크스페이스의 회의 기록과 프로젝트에 더 이상 접근할 수 없게 됩니다. 다시 들어오려면 초대를 받아야 합니다.",
+      "recordingBlocked": "녹음을 끝낸 뒤 나갈 수 있습니다.",
+      "failed": "워크스페이스를 나가지 못했습니다.",
+      "dialog": {
+        "title": "이 워크스페이스를 나갈까요?",
+        "description": "회의 기록과 프로젝트에 더 이상 접근할 수 없고, 이 워크스페이스에서 나눈 에이전트 대화도 지웁니다.",
+        "confirm": "나가기"
+      }
+    },
+    "invite": {
+      "title": "멤버 초대",
+      "description": "이메일로 초대합니다. 미가입자도 초대 메일의 링크로 가입해 합류할 수 있습니다.",
+      "emailLabel": "초대할 이메일",
+      "emailRequired": "이메일을 입력해 주세요.",
+      "emailInvalid": "올바른 이메일을 입력해 주세요.",
+      "roleLabel": "역할",
+      "submit": "초대",
+      "failed": "초대하지 못했습니다."
+    },
+    "pending": {
+      "title": "대기 중인 초대",
+      "loading": "대기 중인 초대 불러오는 중",
+      "loadFailed": "대기 중인 초대를 불러오지 못했습니다.",
+      "empty": "대기 중인 초대가 없습니다.",
+      "expired": "만료됨"
+    }
+  },
+  "guests": {
+    "title": "임시 참여자",
+    "description": "계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 그 계정과 연동할 수 있습니다.",
+    "add": "추가",
+    "count": "{count}명",
+    "loading": "임시 참여자 불러오는 중",
+    "loadFailed": "임시 참여자를 불러오지 못했습니다.",
+    "empty": "아직 임시 참여자가 없습니다.",
+    "lockedPartial": "목록을 끝까지 불러오지 못해 연동하거나 삭제할 수 없습니다.",
+    "lockedStale": "최신 목록을 확인하지 못해 연동하거나 삭제할 수 없습니다.",
+    "loadingMore": "불러오는 중",
+    "loadMore": "임시 참여자 더 보기",
+    "noteCount": "회의록 {count}개",
+    "manageLabel": "{name} 관리",
+    "link": "계정과 연동",
+    "nameLabel": "이름",
+    "addDialog": {
+      "title": "임시 참여자 추가",
+      "description": "계정 없이 회의에 참여할 사람을 미리 추가합니다.",
+      "failed": "임시 참여자를 추가하지 못했습니다."
+    },
+    "linkDialog": {
+      "title": "{name}{particle} 계정과 연동",
+      "resultTitle": "{name} 연동 결과",
+      "done": "연동이 끝났습니다.",
+      "target": "{name}({email}) 계정으로 잇습니다.",
+      "choose": "이 사람을 어느 멤버와 이을지 고릅니다.",
+      "membersFailed": "멤버를 불러오지 못했습니다.",
+      "submit": "연동",
+      "pairSeparator": "{particle} 다음 계정과 잇습니다:",
+      "willChange": "회의록 {count}개가 바뀝니다.",
+      "changed": "회의록 {count}개가 바뀌었습니다.",
+      "truncated": "최근 {count}개만 보여줍니다.",
+      "irreversible": "되돌릴 수 없습니다."
+    },
+    "deleteDialog": {
+      "title": "{name}{particle} 삭제할까요?",
+      "lookupFailed": "영향 범위를 확인하지 못했습니다. 몇 개의 회의록이 바뀌는지 모르는 채로는 지우지 않습니다.",
+      "gone": "이미 지워졌습니다. 다른 사람이 먼저 지운 것 같습니다.",
+      "checking": "영향 범위를 확인하고 있습니다…",
+      "description": "회의록 {count}개에서 이 사람이 사라지고, 붙어 있던 화자 연결도 함께 풀립니다. 되돌릴 수 없습니다."
+    }
+  },
+  "notifications": {
+    "title": "알림",
+    "description": "받을 알림을 고릅니다. 모든 워크스페이스에 같이 적용됩니다.",
+    "label": "알림 설정",
+    "loading": "알림 설정 불러오는 중",
+    "loadFailed": "알림 설정을 불러오지 못했습니다.",
+    "muteSection": "전체 끄기",
+    "typeSection": "종류별 알림",
+    "typeColumn": "종류",
+    "types": {
+      "WORKSPACE_INVITATION": "워크스페이스 초대",
+      "MEETING_PAUSED_REMINDER": "일시정지된 회의",
+      "ANALYSIS_READY": "검토할 결과 준비",
+      "MEETING_AUTO_ENDED": "회의 자동 종료",
+      "INQUIRY_ANSWERED": "문의 답변"
+    },
+    "descriptions": {
+      "MEETING_PAUSED_REMINDER": "리마인더와 자동 종료 안내",
+      "ANALYSIS_READY": "회의 분석이 끝나 결과를 검토할 수 있을 때",
+      "INQUIRY_ANSWERED": "보낸 문의에 HeyMoa 팀이 답했을 때"
+    },
+    "helpLabel": "{type} 알림 안내",
+    "help": {
+      "pausedReminder": "회의를 일시정지한 채 두면 1영업일 뒤 메일로 알려 드립니다.",
+      "pausedAutoEnd": "3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을 한 번 더 보냅니다."
+    },
+    "channels": {
+      "web": {
+        "label": "인앱",
+        "missing": "이 알림은 인앱으로 보내지 않습니다"
+      },
+      "email": {
+        "label": "메일",
+        "missing": "이 알림은 메일로 보내지 않습니다"
+      }
+    },
+    "channelLabel": "{type} {channel}",
+    "off": "꺼짐",
+    "offLabel": "{label} 꺼짐",
+    "mute": {
+      "muteAll": {
+        "label": "인앱 알림 모두 끄기",
+        "title": "인앱 알림을 모두 끌까요?",
+        "body": "선택 알림을 인앱으로 받지 않습니다. 다시 켜면 이전 설정이 그대로 돌아옵니다."
+      },
+      "muteEmail": {
+        "label": "메일 모두 끄기",
+        "title": "메일을 모두 끌까요?",
+        "body": "선택 알림을 메일로 받지 않습니다. 다시 켜면 이전 설정이 그대로 돌아옵니다."
+      }
+    },
+    "muteConfirm": "끄기",
+    "reset": {
+      "button": "기본값으로 되돌리기",
+      "title": "알림 설정을 기본값으로 되돌릴까요?",
+      "body": "일시정지된 회의 메일과 검토할 결과 인앱 알림이 다시 켜집니다.",
+      "confirm": "되돌리기"
+    }
+  },
+  "integrations": {
+    "title": "연동",
+    "description": "챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을 씁니다.",
+    "loading": "연동 불러오는 중",
+    "loadFailed": "연동 정보를 불러오지 못했습니다.",
+    "roleFailed": "권한을 확인하지 못해 연결하거나 해제할 수 없습니다.",
+    "adminOnly": "관리자만 연동을 연결하거나 해제할 수 있습니다. 새 연동이 필요하면 관리자에게 요청하세요.",
+    "toast": {
+      "updateApp": "앱을 업데이트한 뒤 다시 연결해 주세요.",
+      "viewRelease": "새 버전 보기",
+      "connectFailed": "연결하지 못했습니다. 다시 시도해 주세요.",
+      "startFailed": "연결을 시작하지 못했습니다. 다시 시도해 주세요.",
+      "startFailedLater": "연결을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요."
+    },
+    "card": {
+      "connected": "연결됨",
+      "notConnected": "연결되지 않음",
+      "adminFallback": "관리자",
+      "needsConnection": "챗봇이 이 도구를 쓰려면 연결이 필요합니다.",
+      "disconnect": "연결 해제",
+      "connect": "연결"
+    }
+  },
+  "workspaceAgents": {
+    "title": "MCP 연결",
+    "description": "팀원이 Claude나 ChatGPT 같은 AI 앱에 이 워크스페이스를 연결해도 되는지 정합니다. 관리자는 연결된 앱을 보고 끊을 수 있습니다.",
+    "loading": "MCP 설정 불러오는 중",
+    "loadFailed": "MCP 설정을 불러오지 못했습니다.",
+    "roleFailed": "권한을 확인하지 못해 MCP 설정을 바꿀 수 없습니다.",
+    "adminOnly": "MCP 연결은 관리자만 바꿀 수 있습니다.",
+    "allow": {
+      "title": "MCP 연결 허용",
+      "on": "팀원이 이 워크스페이스를 Claude나 ChatGPT 같은 AI 앱에 맡길 수 있습니다.",
+      "off": "꺼져 있어 새 연결을 만들 수 없습니다.",
+      "onBadge": "켜짐",
+      "offBadge": "꺼짐"
+    },
+    "open": {
+      "title": "열린 연결",
+      "loading": "열린 연결 불러오는 중",
+      "loadFailed": "연결 목록을 불러오지 못했습니다.",
+      "empty": "열린 연결이 없습니다."
+    },
+    "offDialog": {
+      "title": "MCP 연결을 끌까요?",
+      "descriptionCount": "지금 연결된 {count}개가 모두 끊기고, 다시 켜도 되살아나지 않습니다. 끈 동안은 누구도 이 워크스페이스로 연결할 수 없습니다.",
+      "description": "지금 열린 연결이 모두 끊기고, 다시 켜도 되살아나지 않습니다. 끈 동안은 누구도 이 워크스페이스로 연결할 수 없습니다.",
+      "confirm": "끄기"
+    },
+    "row": {
+      "meta": "{connected}에 연결 · 최근 사용 {lastUsed}",
+      "neverUsed": "없음",
+      "disconnect": "끊기",
+      "dialog": {
+        "title": "「{name}」 연결을 끊을까요?",
+        "description": "{user} 님이 맡긴 연결입니다. 이 연결을 쓰는 에이전트는 다음 요청부터 막힙니다. 되돌릴 수 없고, 다시 쓰려면 맡긴 사람이 새로 연결해야 합니다."
+      }
+    }
+  },
+  "agentConnections": {
+    "title": "내 MCP 연결",
+    "description": "Claude나 ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와 프로젝트를 읽을 수 있게 연결합니다.",
+    "newConnection": "새 연결",
+    "taskChanges": "할 일 변경 허용",
+    "status": {
+      "ACTIVE": "연결됨",
+      "EXPIRED": "만료됨",
+      "REVOKED": "회수됨"
+    },
+    "credential": {
+      "PERSONAL_TOKEN": "개인 토큰",
+      "OAUTH": "OAuth"
+    },
+    "revokeReason": {
+      "USER": "직접 회수했습니다.",
+      "MEMBERSHIP_ENDED": "워크스페이스를 떠나 끊겼습니다.",
+      "REFRESH_TOKEN_REUSED": "토큰 재사용이 감지돼 끊겼습니다. 토큰이 새어 나갔을 수 있으니 에이전트에서 다시 연결하세요.",
+      "AGENT_ACCESS_DISABLED": "워크스페이스에서 MCP 연결을 막아 끊겼습니다.",
+      "ADMIN": "관리자가 끊었습니다."
+    },
+    "list": {
+      "label": "내 연결",
+      "loading": "연결 목록 불러오는 중",
+      "loadFailed": "연결 목록을 불러오지 못했습니다.",
+      "emptyNever": "아직 연결한 에이전트가 없습니다.",
+      "emptyNow": "지금 연결된 에이전트가 없습니다.",
+      "emptyHint": "「새 연결」의 주소를 에이전트에 등록하고 브라우저에서 허락하면 여기에 보입니다."
+    },
+    "past": {
+      "toggle": "지난 연결 {count}개",
+      "label": "지난 연결"
+    },
+    "form": {
+      "workspace": "맡길 워크스페이스",
+      "workspacesLoading": "워크스페이스 목록 불러오는 중",
+      "workspacesFailed": "워크스페이스 목록을 불러오지 못했습니다.",
+      "name": "연결 이름",
+      "namePlaceholder": "예: 노트북 Claude Code",
+      "submit": "토큰 만들기"
+    },
+    "issued": {
+      "label": "새 토큰",
+      "title": "「{name}」 연결을 만들었습니다",
+      "once": "이 토큰은 지금 한 번만 보입니다. 닫으면 다시 볼 수 없으니 복사해 두세요.",
+      "token": "토큰",
+      "claudeCode": "Claude Code — 터미널에 붙여 넣기",
+      "codex": "Codex CLI — 터미널에 붙여 넣기",
+      "scopeNote": "Claude Code는 명령을 실행한 폴더에서만 연결됩니다. 어느 폴더에서나 쓰려면 <code>--scope user</code>를 붙이세요. Codex는 모든 폴더에서 연결됩니다. Codex 블록은 기존 heymoa 등록을 대체하므로 다시 붙여 넣어도 됩니다. Claude Code에 이미 등록했다면 먼저 <code>claude mcp remove heymoa</code>로 지우세요.",
+      "close": "복사했습니다, 닫기"
+    },
+    "row": {
+      "meta": "{connected}에 연결 · 최근 사용 {lastUsed}",
+      "neverUsed": "없음",
+      "expires": "{date}까지 쓰지 않으면 만료",
+      "revoke": "회수",
+      "dialog": {
+        "title": "「{name}」 연결을 회수할까요?",
+        "description": "이 토큰을 쓰는 에이전트는 다음 요청부터 막힙니다. 되돌릴 수 없고, 다시 쓰려면 새로 연결해야 합니다."
+      }
+    },
+    "usage": {
+      "label": "사용 내역",
+      "loading": "사용 내역 불러오는 중",
+      "loadFailed": "사용 내역을 불러오지 못했습니다.",
+      "empty": "아직 이 연결로 에이전트가 부른 도구가 없습니다.",
+      "failed": "실패",
+      "resultCount": "{count}건",
+      "nextFailed": "다음 내역을 불러오지 못했습니다. 「더 보기」로 다시 시도해 주세요.",
+      "loadingMore": "사용 내역 더 불러오는 중",
+      "more": "더 보기",
+      "tools": {
+        "get_connection": "연결 확인",
+        "list_projects": "프로젝트 목록",
+        "list_project_items": "프로젝트 항목 목록",
+        "get_project_item": "항목 상세",
+        "expand_relations": "관계 따라가기",
+        "list_open_tasks": "할 일",
+        "list_meetings": "회의 목록",
+        "get_meeting": "회의 정보",
+        "get_meeting_record": "회의록",
+        "get_meeting_summary": "회의 요약",
+        "list_meeting_agendas": "회의 안건",
+        "list_meeting_links": "회의 간 연결",
+        "get_meeting_transcript": "회의 전사",
+        "search": "검색",
+        "create_tasks": "할 일 만들기",
+        "update_tasks": "할 일 고치기",
+        "open_screen": "화면 열기"
+      }
+    }
+  },
+  "terms": {
+    "title": "용어 사전",
+    "help": "받아쓰기가 자주 틀리는 제품명, 사내 용어, 영어 약어를 적어 두면 이 워크스페이스의 모든 회의를 받아 적을 때 참고합니다. 흔한 단어는 넣지 않아도 됩니다.",
+    "loading": "용어 사전 불러오는 중",
+    "loadFailed": "용어 사전을 불러오지 못했습니다.",
+    "addFailed": "용어를 더하지 못했습니다.",
+    "example": "ROAS, CTR, 전환율, 리타겟팅",
+    "examplePrefix": "예: {example}",
+    "input": "추가할 용어",
+    "placeholder": "용어를 쉼표나 줄바꿈으로 구분해 한 번에 붙여 넣으세요",
+    "fullPlaceholder": "더 넣을 자리가 없습니다",
+    "full": "다 채웠습니다. 하나를 지우면 더할 수 있습니다.",
+    "preview": "추가할 용어 미리보기",
+    "previewHint": "쉼표(,), 줄바꿈, 세미콜론, 탭으로 나누면 여기에 미리 보여 드립니다.",
+    "previewStatus": {
+      "duplicate": "중복",
+      "tooLong": "{max}자 초과",
+      "overLimit": "한도 초과"
+    },
+    "more": "외 {count}개",
+    "summary": {
+      "fresh": "새로 {count}개",
+      "duplicates": "중복 {count}개",
+      "tooLong": "{max}자를 넘어 제외 {count}개",
+      "overLimit": "한도 초과 {count}개"
+    },
+    "progress": "{done} / {total} 추가 중",
+    "keyHint": "Enter 로 추가 · Shift+Enter 로 줄바꿈",
+    "add": "추가",
+    "addCount": "{count}개 추가",
+    "added": "넣은 용어",
+    "listTitle": "등록한 용어",
+    "search": "용어 찾기",
+    "empty": "아직 등록한 용어가 없습니다.",
+    "tryExample": "예시 넣어 보기",
+    "noMatch": "찾는 용어가 없습니다.",
+    "remove": "{term} 지우기",
+    "outcome": {
+      "added": "{count}개를 더했습니다",
+      "existing": "이미 있던 {count}개는 건너뛰었습니다",
+      "overLimit": "한도를 넘어 {count}개는 넣지 못했습니다",
+      "invalid": "{count}개는 형식이 맞지 않아 뺐습니다",
+      "failed": "{count}개는 보내지 못했습니다. 입력란에 남겼으니 다시 눌러 주세요"
+    }
+  }
+}

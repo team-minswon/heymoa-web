@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,12 +22,17 @@ export function ConfirmPhraseField({
   disabled?: boolean;
 }) {
   const id = useId();
+  const t = useTranslations("settings.confirmPhrase");
   return (
     <div className="grid gap-1.5">
       <Label htmlFor={id} className="block font-normal leading-5">
-        확인하려면{" "}
-        <span className="font-medium text-[var(--el-ink)]">{phrase}</span>
-        {objectParticle(phrase)} 그대로 입력하세요.
+        {t.rich("label", {
+          phrase,
+          particle: objectParticle(phrase),
+          strong: (chunks) => (
+            <span className="font-medium text-[var(--el-ink)]">{chunks}</span>
+          ),
+        })}
       </Label>
       <Input
         id={id}
@@ -40,8 +46,11 @@ export function ConfirmPhraseField({
   );
 }
 
-/** 받침이 있으면 「을」, 없으면 「를」. 한글로 끝나지 않으면(영문 이름 등) 둘 다 적는다. */
-function objectParticle(word: string) {
+/**
+ * 받침이 있으면 「을」, 없으면 「를」. 한글로 끝나지 않으면(영문 이름 등) 둘 다 적는다.
+ * 한국어 문구의 `{particle}` 자리에 넘긴다 — 영어 문구는 이 값을 쓰지 않는다.
+ */
+export function objectParticle(word: string) {
   const code = word.trim().charCodeAt(word.trim().length - 1) - 0xac00;
   if (Number.isNaN(code) || code < 0 || code > 11171) return "을(를)";
   return code % 28 === 0 ? "를" : "을";

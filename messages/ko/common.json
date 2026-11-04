@@ -135,6 +135,9 @@
     "cancel": "취소",
     "save": "저장",
     "delete": "삭제",
-    "retry": "다시 시도"
+    "retry": "다시 시도",
+    "saveChanges": "변경사항 저장",
+    "rename": "이름 변경",
+    "confirm": "확인"
   }
 }
