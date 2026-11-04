@@ -176,7 +176,11 @@ export function ShareMailDialog({
   const remainingAttendees = attendees.filter(
     (person) => !hasRecipient(recipients, person.email)
   );
-  const day = formatAppDate(meeting.whenIso, { month: "long", day: "numeric" });
+  const day = formatAppDate(
+    meeting.whenIso,
+    { month: "long", day: "numeric" },
+    dateLocale
+  );
 
   const changeRecipients = (next: Recipient[]) => {
     setRecipients(next);

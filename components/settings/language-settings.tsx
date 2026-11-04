@@ -16,6 +16,7 @@ import {
 } from "@/components/transcription/recording-provider";
 import { useUpdateCurrentUser } from "@/lib/api/generated/users/users";
 import { writeLocaleCookie } from "@/lib/i18n/cookie";
+import { initialLanguageSaveSettled } from "@/lib/i18n/initial-language-save";
 import { LOCALE_NAMES, LOCALES, type Locale } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
@@ -45,16 +46,19 @@ export function LanguageSettings() {
   const choose = (language: Locale) => {
     if (locked || pending || language === current) return;
     setPending(language);
-    mutate(
-      { data: { language } },
-      {
-        onSuccess: () => {
-          if (user) setUser({ ...user, language });
-          writeLocaleCookie(language);
-          reloadDocument.run();
-        },
-        onError: () => setPending(null),
-      }
+    // 로그인 직후 초기값 저장이 아직 가는 중이면 끝난 뒤에 보낸다 — 늦게 닿은 초기값이 고른 언어를 되돌리지 않게.
+    void initialLanguageSaveSettled().then(() =>
+      mutate(
+        { data: { language } },
+        {
+          onSuccess: () => {
+            if (user) setUser({ ...user, language });
+            writeLocaleCookie(language);
+            reloadDocument.run();
+          },
+          onError: () => setPending(null),
+        }
+      )
     );
   };
 

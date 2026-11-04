@@ -10,6 +10,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { messagesFor } from "@/i18n/messages";
+import { trackInitialLanguageSave } from "@/lib/i18n/initial-language-save";
 
 const state = vi.hoisted(() => ({
   phase: "idle" as string,
@@ -68,9 +69,11 @@ describe("설정 > 언어", () => {
     expect(screen.getByText(/meetings and chats you start from now on/)).toBeTruthy();
   });
 
-  it("고르면 계정에 저장하고, 성공한 뒤 쿠키를 쓰고 문서를 새로 연다", () => {
+  it("고르면 계정에 저장하고, 성공한 뒤 쿠키를 쓰고 문서를 새로 연다", async () => {
     render(<LanguageSettings />);
-    fireEvent.click(screen.getByRole("radio", { name: "English" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("radio", { name: "English" }));
+    });
 
     expect(state.mutate).toHaveBeenCalledTimes(1);
     expect(state.mutate.mock.calls[0][0]).toEqual({ data: { language: "en" } });
@@ -86,14 +89,35 @@ describe("설정 > 언어", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("저장이 실패하면 새로고침하지 않고 다시 고를 수 있다", () => {
+  it("저장이 실패하면 새로고침하지 않고 다시 고를 수 있다", async () => {
     render(<LanguageSettings />);
-    fireEvent.click(screen.getByRole("radio", { name: "English" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("radio", { name: "English" }));
+    });
     act(() => state.mutate.mock.calls[0][1].onError(new Error("x")));
 
     expect(reload).not.toHaveBeenCalled();
     expect(document.cookie).not.toContain("heymoa-lang=en");
     expect(screen.getByRole("radio", { name: "English" })).not.toBeDisabled();
+  });
+
+  it("로그인 직후 초기값 저장이 가는 중이면 끝난 뒤에 보낸다", async () => {
+    let finish!: () => void;
+    trackInitialLanguageSave(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      })
+    );
+    render(<LanguageSettings />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("radio", { name: "English" }));
+    });
+    expect(state.mutate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finish();
+    });
+    expect(state.mutate).toHaveBeenCalledTimes(1);
   });
 
   it("녹음 중에는 고를 수 없고 이유를 보인다", () => {
