@@ -41,6 +41,7 @@ export const PRODUCT_NAMESPACES: readonly Namespace[] = [
   "notes",
   "chat",
   "tasks",
+  "notification",
 ];
 
 /**

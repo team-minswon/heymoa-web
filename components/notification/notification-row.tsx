@@ -1,23 +1,30 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { formatAppDate } from "@/lib/format/date";
 import type { NotificationItem } from "@/lib/notification/notification-list";
 import { cn } from "@/lib/utils";
 
-const INVITATION_RESULT: Record<string, string> = {
-  ACCEPTED: "수락함",
-  DECLINED: "거절함",
-  CANCELED: "취소됨",
-  EXPIRED: "만료됨",
-};
+const INVITATION_RESULTS = ["ACCEPTED", "DECLINED", "CANCELED", "EXPIRED"] as const;
+type InvitationResult = (typeof INVITATION_RESULTS)[number];
+const isInvitationResult = (status: string): status is InvitationResult =>
+  (INVITATION_RESULTS as readonly string[]).includes(status);
 
-/** 이름이 이미 「워크스페이스」로 끝나면 접미어를 붙이지 않는다(server APP-1330 과 같은 규칙). */
-export function workspaceLabel(name: string) {
-  return /워크스페이스$/.test(name.trim()) ? "" : " 워크스페이스";
+/** 행 문구를 고르는 번역 함수(`notification.row`). 종류별 렌더러가 React 밖 함수라 부르는 쪽이 넘긴다. */
+export type RowTranslator = ReturnType<typeof useTranslations<"notification.row">>;
+
+/**
+ * 한국어 문장에서 이름 뒤에 「워크스페이스」를 붙이는가. 이름이 이미 「워크스페이스」로 끝나면 붙이지 않는다
+ * (server APP-1330 과 같은 규칙). 언어 파일이 `{suffix, select, yes {…} other {}}` 로 받는다.
+ */
+export function workspaceSuffix(name: string): "yes" | "no" {
+  return /워크스페이스$/.test(name.trim()) ? "no" : "yes";
 }
+
+const bold = (chunks: React.ReactNode) => <b className="font-medium">{chunks}</b>;
 
 export type NotificationRowView = {
   /** 첫 줄. 이름·제목은 굵게 */
@@ -59,6 +66,7 @@ export function NotificationRow({
   highlighted: boolean;
   onRead: () => void;
 }) {
+  const t = useTranslations("notification.row");
   const unread = notification.readAt === null;
   const tone = view.gone
     ? "text-[var(--el-muted)]"
@@ -94,8 +102,8 @@ export function NotificationRow({
       */}
       <button
         type="button"
-        aria-label="읽음으로 표시"
-        title="읽음으로 표시"
+        aria-label={t("markRead")}
+        title={t("markRead")}
         disabled={!unread}
         onClick={onRead}
         className={cn(
@@ -116,7 +124,7 @@ export function NotificationRow({
       </button>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* 점은 보이는 표시라 스크린리더에는 글로 말한다 — 행을 읽을 때 맨 앞에 「안 읽음」. */}
-        {unread ? <span className="sr-only">안 읽음</span> : null}
+        {unread ? <span className="sr-only">{t("unread")}</span> : null}
         {view.onActivate ? (
           // 키보드로도 닿게 첫 줄이 버튼이다. 행 어디를 눌러도 같은 일을 한다.
           <button
@@ -162,19 +170,20 @@ export function NotificationRow({
  */
 export function describeNotification(
   notification: NotificationItem,
-  actions: RowActions
+  actions: RowActions,
+  t: RowTranslator
 ): NotificationRowView {
   if (notification.type === "WORKSPACE_INVITATION") {
-    return describeInvitation(notification, actions);
+    return describeInvitation(notification, actions, t);
   }
   if (notification.type === "ANALYSIS_READY") {
-    return describeAnalysisReady(notification, actions);
+    return describeAnalysisReady(notification, actions, t);
   }
   if (notification.type === "INQUIRY_ANSWERED") {
-    return describeInquiryAnswered(notification, actions);
+    return describeInquiryAnswered(notification, actions, t);
   }
   return {
-    title: "새 알림이 도착했습니다",
+    title: t("generic"),
     workspaceName: notification.payload?.workspaceName ?? null,
   };
 }
@@ -195,21 +204,21 @@ export type RowActions = {
 
 function describeInvitation(
   notification: NotificationItem,
-  actions: RowActions
+  actions: RowActions,
+  t: RowTranslator
 ): NotificationRowView {
   const invitation = notification.invitation;
   if (!invitation) {
     // 원본(초대)이 지워졌다. 표시용 값만 남아 있고 초대한 사람 이름은 싣지 않는다(계약).
     return {
-      title: notification.payload?.workspaceName ? (
-        <>
-          <b className="font-medium">{notification.payload.workspaceName}</b>
-          {workspaceLabel(notification.payload.workspaceName)} 초대
-        </>
-      ) : (
-        "워크스페이스 초대"
-      ),
-      detail: "취소되었거나 더 이상 볼 수 없는 초대입니다",
+      title: notification.payload?.workspaceName
+        ? t.rich("invitation.goneTitle", {
+            workspace: notification.payload.workspaceName,
+            suffix: workspaceSuffix(notification.payload.workspaceName),
+            b: bold,
+          })
+        : t("invitation.goneTitleUnnamed"),
+      detail: t("invitation.goneDetail"),
       // 첫 줄이 이미 워크스페이스 이름이다
       workspaceName: null,
       gone: true,
@@ -219,13 +228,12 @@ function describeInvitation(
     invitation.status === "PENDING" &&
     Date.parse(invitation.expiresAt) < actions.now;
   return {
-    title: (
-      <>
-        <b className="font-medium">{invitation.inviterName}</b>님이{" "}
-        <b className="font-medium">{invitation.workspaceName}</b>
-        {workspaceLabel(invitation.workspaceName)}에 초대했습니다
-      </>
-    ),
+    title: t.rich("invitation.title", {
+      inviter: invitation.inviterName,
+      workspace: invitation.workspaceName,
+      suffix: workspaceSuffix(invitation.workspaceName),
+      b: bold,
+    }),
     // 첫 줄이 이미 워크스페이스 이름이다
     workspaceName: null,
     aside:
@@ -238,7 +246,7 @@ function describeInvitation(
             disabled={actions.pending}
             onClick={() => actions.decline(notification)}
           >
-            거절
+            {t("invitation.decline")}
           </Button>
           <Button
             size="sm"
@@ -246,15 +254,17 @@ function describeInvitation(
             disabled={actions.pending}
             onClick={() => actions.accept(notification)}
           >
-            수락
+            {t("invitation.accept")}
           </Button>
         </>
       ) : (
         // 처리 결과는 동작이 아니라 상태라 버튼과 다른 모양 — 작은 회색 칩이다.
         <span className="rounded-chip bg-[var(--el-surface-strong)] px-1.5 text-[11.5px] leading-5 whitespace-nowrap text-[var(--el-body)]">
           {expired
-            ? "만료됨"
-            : (INVITATION_RESULT[invitation.status] ?? invitation.status)}
+            ? t("invitation.result.EXPIRED")
+            : isInvitationResult(invitation.status)
+              ? t(`invitation.result.${invitation.status}`)
+              : invitation.status}
         </span>
       ),
   };
@@ -266,10 +276,11 @@ function describeInvitation(
  */
 function describeAnalysisReady(
   notification: NotificationItem,
-  actions: RowActions
+  actions: RowActions,
+  t: RowTranslator
 ): NotificationRowView {
   const payload = notification.payload;
-  const title = payload?.noteTitle ?? "회의";
+  const title = payload?.noteTitle ?? t("analysis.untitled");
   const target =
     payload?.workspaceId &&
     payload.noteId &&
@@ -278,22 +289,22 @@ function describeAnalysisReady(
       : null;
   const reason =
     payload?.autoEnded && payload.pausedBusinessDays
-      ? `마지막 일시정지 후 ${payload.pausedBusinessDays}영업일이 지나 자동으로 종료했습니다.`
+      ? t("analysis.autoEnded", { days: payload.pausedBusinessDays })
       : null;
   return {
-    title: (
-      <>
-        {/* 제목은 따옴표 없이 굵게, 길면 한 줄로 자르고 전체는 툴팁으로 */}
+    title: t.rich("analysis.title", {
+      title,
+      // 제목은 따옴표 없이 굵게, 길면 한 줄로 자르고 전체는 툴팁으로
+      b: (chunks) => (
         <b
           title={title}
           className="inline-block max-w-[16rem] truncate align-bottom font-medium"
         >
-          {title}
+          {chunks}
         </b>
-        의 검토할 결과가 준비되었습니다
-      </>
-    ),
-    detail: target ? reason : "삭제되었거나 볼 권한이 없는 회의입니다",
+      ),
+    }),
+    detail: target ? reason : t("analysis.gone"),
     workspaceName: payload?.workspaceName ?? null,
     gone: !target,
     onActivate: target
@@ -308,7 +319,7 @@ function describeAnalysisReady(
             : "text-xs whitespace-nowrap text-[var(--el-muted)]"
         }
       >
-        검토하기 →
+        {t("analysis.review")}
       </span>
     ),
   };
@@ -317,11 +328,12 @@ function describeAnalysisReady(
 /** 문의 답변(APP-1399). 워크스페이스와 상관없는 계정 알림이라 메타 줄에 워크스페이스가 없다. */
 function describeInquiryAnswered(
   notification: NotificationItem,
-  actions: RowActions
+  actions: RowActions,
+  t: RowTranslator
 ): NotificationRowView {
   const feedbackId = notification.payload?.feedbackId;
   return {
-    title: "문의에 답변이 등록되었습니다",
+    title: t("inquiry.title"),
     workspaceName: null,
     onActivate: feedbackId
       ? () => actions.openInquiry(notification, feedbackId)
@@ -331,7 +343,7 @@ function describeInquiryAnswered(
         aria-hidden
         className="text-xs font-medium whitespace-nowrap text-[var(--el-ink)] group-hover/row:underline"
       >
-        답변 보기 →
+        {t("inquiry.view")}
       </span>
     ) : undefined,
   };

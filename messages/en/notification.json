@@ -1,0 +1,87 @@
+{
+  "modal": {
+    "title": "Notifications",
+    "description": "All workspaces",
+    "tabs": {
+      "ALL": "All",
+      "UNREAD": "Unread",
+      "ACTION_REQUIRED": "Needs action"
+    },
+    "markAllRead": "Mark all as read",
+    "settings": "Notification settings",
+    "newCount": "{count, plural, one {# new notification} other {# new notifications}}",
+    "muted": "In-app notifications are off",
+    "openSettings": "Open settings",
+    "loadMoreFailed": "Couldn't load more notifications",
+    "loadingMore": "Loading more notifications",
+    "loadMore": "Show more",
+    "loading": "Loading notifications",
+    "loadFailed": "Couldn't load notifications",
+    "showAll": "Show all",
+    "empty": {
+      "ALL": "New notifications show up here.",
+      "allSub": "Notifications stay here after you read them.",
+      "UNREAD": "No unread notifications.",
+      "ACTION_REQUIRED": "No invitations to answer or results to review."
+    },
+    "declineDialog": {
+      "title": "Decline this invitation?",
+      "description": "To join later, you'll need a new invitation."
+    }
+  },
+  "row": {
+    "markRead": "Mark as read",
+    "unread": "Unread",
+    "generic": "You have a new notification",
+    "invitation": {
+      "title": "<b>{inviter}</b> invited you to <b>{workspace}</b>",
+      "goneTitle": "Invitation to <b>{workspace}</b>",
+      "goneTitleUnnamed": "Workspace invitation",
+      "goneDetail": "This invitation was canceled or is no longer available.",
+      "accept": "Accept",
+      "decline": "Decline",
+      "result": {
+        "ACCEPTED": "Accepted",
+        "DECLINED": "Declined",
+        "CANCELED": "Canceled",
+        "EXPIRED": "Expired"
+      }
+    },
+    "analysis": {
+      "title": "Results from <b>{title}</b> are ready to review",
+      "untitled": "Untitled meeting",
+      "autoEnded": "The meeting ended automatically {days, plural, one {# business day} other {# business days}} after the last pause.",
+      "gone": "This meeting was deleted or you don't have access.",
+      "review": "Review →"
+    },
+    "inquiry": {
+      "title": "Your request has a reply",
+      "view": "View reply →"
+    }
+  },
+  "unsubscribe": {
+    "names": {
+      "MEETING_PAUSED_REMINDER": "paused meeting emails",
+      "INQUIRY_ANSWERED": "request reply emails"
+    },
+    "items": {
+      "pausedNextDay": "A reminder the business day after you pause a meeting",
+      "autoEnded": "A notice when a meeting ends automatically",
+      "inquiryAnswered": "A notice when the HeyMoa team replies to your request"
+    },
+    "invalidTitle": "This link isn't valid",
+    "invalidBody": "The link may be cut off or may no longer work. Open the link in the email again.",
+    "checkFailed": "Couldn't check the link",
+    "retryLater": "Try again in a moment.",
+    "off": "You turned off {name}",
+    "alreadyOff": "Your {name} are already off",
+    "confirm": "Stop getting {name}?",
+    "resubscribed": "You turned {name} back on",
+    "loadingEmail": "Loading account email",
+    "body": "If you turn off emails, we'll stop sending {count, plural, =1 {this email} other {these emails}} to <email></email>.",
+    "autoEndNote": "Paused meetings still end automatically on schedule.",
+    "otherMail": "You'll still get other emails, like invitations.",
+    "turnOff": "Turn off emails",
+    "turnOn": "Turn back on"
+  }
+}

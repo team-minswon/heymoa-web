@@ -94,5 +94,6 @@
     "candidates": "Suggested recipients",
     "typed": "Typed address",
     "sendTo": "Add as recipient"
-  }
+  },
+  "loadFailed": "Couldn't load"
 }

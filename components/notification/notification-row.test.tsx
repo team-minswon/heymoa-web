@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   NotificationRow,
-  workspaceLabel,
+  workspaceSuffix,
 } from "@/components/notification/notification-row";
 import type { NotificationItem } from "@/lib/notification/notification-list";
 
@@ -59,10 +59,10 @@ describe("읽음 표시", () => {
   });
 });
 
-describe("workspaceLabel", () => {
+describe("workspaceSuffix", () => {
   it("이름이 「워크스페이스」로 끝나면 접미어를 붙이지 않는다", () => {
-    expect(workspaceLabel("새로운 워크스페이스")).toBe("");
-    expect(workspaceLabel("테스트 유저의 워크스페이스 ")).toBe("");
-    expect(workspaceLabel("디자인 팀")).toBe(" 워크스페이스");
+    expect(workspaceSuffix("새로운 워크스페이스")).toBe("no");
+    expect(workspaceSuffix("테스트 유저의 워크스페이스 ")).toBe("no");
+    expect(workspaceSuffix("디자인 팀")).toBe("yes");
   });
 });
