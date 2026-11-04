@@ -8,10 +8,10 @@ import { AssigneeCell } from "@/components/heymoa/assignee-cell";
 import { DueCell } from "@/components/heymoa/due-cell";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import type { TaskEntry } from "@/lib/tasks/task-groups";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 /**
  * 머리글 · 행 · 불러오는 동안의 자리가 같은 칸을 쓴다. 칸이 갈리면 도착할 때 줄이 튄다.
@@ -71,6 +71,7 @@ export function TaskRow({
   /** 이력 시트를 내용 고치기로 연다 */
   onEdit: () => void;
 }) {
+  const tError = useTranslations("errors");
   const task = entry;
   const done = task.taskStatus !== "OPEN";
   const struck = done || completing;
@@ -189,7 +190,7 @@ export function TaskRow({
       </div>
       {conflict ? (
         <p role="alert" className={cn("pb-2 pl-[52px] pr-2 text-xs text-[var(--el-error-strong)]", ARRIVE_CLASS)}>
-          {CONFLICT_MESSAGE}
+          {tError("conflict")}
         </p>
       ) : null}
     </motion.li>

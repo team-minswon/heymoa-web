@@ -1,0 +1,8 @@
+{
+  "requestFailed": "Couldn't complete the request.",
+  "tooManyRequests": "Too many requests. Try again in a moment.",
+  "serverUnavailable": "Can't reach the server right now. Try again in a moment.",
+  "timeout": "No response. Check your connection and try again.",
+  "conflict": "Someone else edited this first, so the latest version is now shown.",
+  "reviewConfirmed": "This review is already confirmed and can't be edited."
+}

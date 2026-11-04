@@ -10,7 +10,6 @@ import { DueCell } from "@/components/heymoa/due-cell";
 import { formatDueDate } from "@/lib/format/date";
 import { ARRIVE_CLASS } from "@/components/heymoa/motion";
 import type { TaskPatch } from "@/components/tasks/use-task-update";
-import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +42,7 @@ import {
 import { formatAppDate } from "@/lib/format/date";
 import { TASK_STATUS_LABEL, type TaskEntry } from "@/lib/tasks/task-groups";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
+import { useTranslations } from "next-intl";
 
 type Revision = ProjectTaskRevisionListResponseDataRevisionsItem;
 
@@ -297,6 +297,7 @@ function HistoryBody({
   conflict: boolean;
   onSave: (patch: TaskPatch) => Promise<boolean>;
 }) {
+  const tError = useTranslations("errors");
   const dateLocale = useDisplayLocale();
   const task = entry;
   const done = task.taskStatus !== "OPEN";
@@ -475,7 +476,7 @@ function HistoryBody({
             role="alert"
             className={`text-xs text-[var(--el-error-strong)] ${ARRIVE_CLASS}`}
           >
-            {CONFLICT_MESSAGE}
+            {tError("conflict")}
           </p>
         ) : null}
       </SheetHeader>

@@ -15,11 +15,11 @@ import {
   assigneeRequestOf,
   type AssigneeChoice,
 } from "@/lib/assignees/describe";
-import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
 import type { UpdateMeetingReviewItemRequest } from "@/lib/api/generated/models";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 export type ItemPatch = Omit<
   UpdateMeetingReviewItemRequest,
@@ -42,7 +42,7 @@ export function ReviewRow({
   busy,
   locked = false,
   conflict,
-  conflictMessage = CONFLICT_MESSAGE,
+  conflictMessage,
   fresh,
   choices,
   onToggle,
@@ -75,6 +75,7 @@ export function ReviewRow({
   /** 줄을 펼치지 않아도 서는 제안. 사람이 골라야 하는 것이라 접어 두지 않는다 */
   suggestions?: ReactNode;
 }) {
+  const tError = useTranslations("errors");
   const [editing, setEditing] = useState(false);
   const cellsEditable = canEdit && item.included && !busy && !locked;
 
@@ -209,7 +210,7 @@ export function ReviewRow({
           role="alert"
           className="my-1.5 flex items-center gap-3 rounded-control bg-[var(--el-canvas-soft)] px-3 py-2 text-[12.5px] text-[var(--el-body)]"
         >
-          <span className="min-w-0 flex-1">{conflictMessage}</span>
+          <span className="min-w-0 flex-1">{conflictMessage ?? tError("conflict")}</span>
           <button
             type="button"
             className="shrink-0 text-[var(--el-muted)] underline underline-offset-2"

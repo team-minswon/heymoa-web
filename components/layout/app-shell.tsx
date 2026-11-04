@@ -28,12 +28,18 @@ import type { Locale } from "@/lib/i18n/locales";
 import "@/app/globals.css";
 
 /**
+ * 제품 루트(`app/(product)`)가 클라이언트로 보내는 이름공간. 마케팅 루트(`app/[lang]/layout.tsx`)는 자기 목록을 따로 넘긴다.
+ * 제품 이름공간을 더하면 여기에도 더한다.
+ */
+export const PRODUCT_NAMESPACES: readonly Namespace[] = ["common", "auth", "errors"];
+
+/**
  * 두 루트 레이아웃(마케팅 `app/[lang]`, 제품 `app/(product)`)이 같이 세우는 `<html>` 과 셸.
  * 루트가 둘이라 둘 사이 이동(랜딩 → 대시보드, 로그아웃 → 랜딩)은 전체 페이지 로드다.
  */
 export async function AppShell({
   locale,
-  clientNamespaces = ["common", "auth"],
+  clientNamespaces = PRODUCT_NAMESPACES,
   analytics = true,
   children,
 }: {

@@ -18,6 +18,7 @@ const REQUIRED_EN: readonly Namespace[] = [
   "download",
   "legal",
   "help",
+  "errors",
 ];
 
 function keyPaths(value: unknown, prefix = ""): string[] {

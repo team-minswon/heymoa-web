@@ -6,6 +6,7 @@ import {
   SessionExpiredError,
 } from "@/lib/auth/session-gate";
 import { acceptLanguageHeader } from "@/lib/i18n/document-locale";
+import { webMessage } from "@/lib/i18n/web-message";
 
 type ApiFetchOptions = RequestInit & {
   headers?: HeadersInit;
@@ -189,9 +190,9 @@ export class ApiError extends Error {
  * `response.json()` 이 터져 「Unexpected token '<'」 가 사용자 토스트까지 갔다.
  */
 function fallbackMessage(status: number) {
-  if (status === 429) return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
-  if (status >= 500) return "서버에 잠시 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.";
-  return "요청을 처리하지 못했습니다.";
+  if (status === 429) return webMessage("tooManyRequests");
+  if (status >= 500) return webMessage("serverUnavailable");
+  return webMessage("requestFailed");
 }
 
 // ponytail: 초 단위만 읽는다. 서버(`RetryLater`)가 초로 싣는다 — HTTP-date 를 보내는 상대가 생기면 그때 더한다
@@ -294,8 +295,7 @@ async function request<T>(
       408,
       {
         code: "REQUEST_TIMEOUT",
-        message:
-          "응답이 오지 않습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.",
+        message: webMessage("timeout"),
       },
       null
     );
