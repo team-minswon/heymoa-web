@@ -15,6 +15,7 @@ import { okData } from "@/lib/api/ok-data";
 import { formatAppDate } from "@/lib/format/date";
 import { meetingHeading, shortMeetingDate, type MapAgenda, type MapMeeting } from "@/lib/projects/agenda-map";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 /** 이 점에 접혀 숨은 갈래의 미리보기: 갈래마다 시작 날짜·첫 안건·안건 수 */
 export type FoldPreview = { date: string; title: string; count: number };
@@ -264,6 +265,7 @@ export function HoverCard({ workspaceId, ref }: { workspaceId: string; ref: Reac
 }
 
 function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<HoverInfo, { meeting: MapMeeting }> }) {
+  const dateLocale = useDisplayLocale();
   const { meeting, agendas, topicName, fold, foldOnly } = info;
   const [dwelled, setDwelled] = useState(false);
   useEffect(() => {
@@ -313,7 +315,7 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
     <div className="flex flex-col gap-2.5">
       <p className="flex items-baseline gap-1.5 text-xs text-[var(--el-muted)]">
         <span className="font-semibold whitespace-nowrap text-[var(--el-ink)] tabular-nums">
-          {formatAppDate(meeting.startedAt, { month: "long", day: "numeric", weekday: "short" })}
+          {formatAppDate(meeting.startedAt, { month: "long", day: "numeric", weekday: "short" }, dateLocale)}
         </span>
         <span className="truncate">{meetingHeading(meeting.title)}</span>
       </p>

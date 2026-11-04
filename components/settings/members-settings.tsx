@@ -78,6 +78,7 @@ import {
 } from "@/lib/api/generated/workspace-members/workspace-members";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { forgetWorkspace } from "@/lib/workspace/cache";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 import type {
   WorkspaceInvitationListResponseDataInvitationsItem,
@@ -299,6 +300,7 @@ function MemberRow({
   workspaceId: string;
   onRename: () => void;
 }) {
+  const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
   const invalidateMembers = () =>
     queryClient.invalidateQueries({
@@ -382,11 +384,15 @@ function MemberRow({
         누구를 내보내는지 못 보고 버튼을 누르게 된다. 셋 중 없어도 되는 것은 날짜다.
       */}
       <p className="hidden w-[120px] shrink-0 text-right text-xs text-[var(--el-muted)] sm:block">
-        {formatAppDate(member.joinedAt, {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
+        {formatAppDate(
+          member.joinedAt,
+          {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          },
+          dateLocale
+        )}
       </p>
 
       {/* **관리 메뉴 자리는 버튼이 없어도 비워 둔다.** 내 행·MEMBER 의 남 행에는 고칠 것이 없거나 적은데, 자리까지 없애면
@@ -820,6 +826,7 @@ function PendingInvitations({
   invitations: WorkspaceInvitationListResponseDataInvitationsItem[];
   onRetry: () => void;
 }) {
+  const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
   // 만료 판정은 렌더 시점 1회 고정 — hydration 불일치 방지. 서버는 만료 PENDING을
   // 처리 시점에 EXPIRED로 밀므로 이 판정은 그 사이의 표시용이다.
@@ -881,10 +888,14 @@ function PendingInvitations({
               <RoleChip role={invitation.role} />
               <p className="hidden w-[160px] shrink-0 text-right text-xs text-[var(--el-muted)] sm:block">
                 {invitation.inviterName} ·{" "}
-                {formatAppDate(invitation.createdAt, {
-                  month: "long",
-                  day: "numeric",
-                })}
+                {formatAppDate(
+                  invitation.createdAt,
+                  {
+                    month: "long",
+                    day: "numeric",
+                  },
+                  dateLocale
+                )}
               </p>
               <Button
                 variant="outline"

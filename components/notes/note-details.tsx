@@ -32,6 +32,7 @@ import {
 } from "@/lib/notes/meeting-state";
 import { invalidateNoteLifecycle } from "@/lib/notes/invalidate";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 function formatRecordedClock(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1_000);
@@ -127,6 +128,7 @@ export function NoteDetails({
    */
   workspaceId?: string;
 }) {
+  const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
   const noteResponse = useGetNoteSuspense(noteId).data;
   const updateNote = useUpdateNote({
@@ -158,7 +160,7 @@ export function NoteDetails({
   const refresh = () => invalidateNoteLifecycle(queryClient, noteId);
 
   const timestamp = (iso: string) =>
-    formatAppDate(iso, { dateStyle: "medium", timeStyle: "short" });
+    formatAppDate(iso, { dateStyle: "medium", timeStyle: "short" }, dateLocale);
 
   return (
     // **카드가 없다.** 예전에는 제목·참여자·사실이 각자 `rounded-block` 상자에 들어 있었는데,

@@ -72,6 +72,7 @@ import {
 } from "@/lib/notification/notification-list";
 import { useReadNotification } from "@/lib/notification/use-notification-read";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 /** 목록 칸의 스크롤을 옮긴다. 렌더 밖(이벤트·ref 콜백)에서만 부른다. */
 function scrollListTo(node: HTMLElement | null, top: number) {
@@ -571,6 +572,7 @@ function NotificationListBody({
   onShowAll: () => void;
   renderRow: (item: NotificationItem, timeLabel: string) => React.ReactNode;
 }) {
+  const dateLocale = useDisplayLocale();
   if (isLoading) {
     return (
       <div aria-label="알림 불러오는 중" className={LIST}>
@@ -632,7 +634,7 @@ function NotificationListBody({
           ) : null}
           <ul className={CARD}>
             {group.items.map((item) => {
-              const time = notificationTime(item.createdAt);
+              const time = notificationTime(item.createdAt, dateLocale);
               return (
                 <Fragment key={item.notificationId}>
                   {renderRow(

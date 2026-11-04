@@ -11,6 +11,7 @@ import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import { lengthLabel } from "@/lib/notes/review/moments";
 import type { SpeakerFace } from "@/lib/transcription/speaker-identity";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 const FACES = 4;
 
@@ -45,6 +46,7 @@ export function ReviewHead({
   /** 이 회의가 속한 프로젝트의 안건 지도. 프로젝트가 없으면 비운다(링크도 숨는다). 이어진 안건이 없어도 늘 보인다 */
   mapHref?: string;
 }) {
+  const dateLocale = useDisplayLocale();
   const names = participants
     .map((face) => face.name)
     .filter((name): name is string => Boolean(name));
@@ -72,13 +74,17 @@ export function ReviewHead({
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {meta ? (
           <Chip icon={<CalendarDays aria-hidden />}>
-            {formatAppDate(meta.whenIso, {
-              month: "long",
-              day: "numeric",
-              weekday: "short",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
+            {formatAppDate(
+              meta.whenIso,
+              {
+                month: "long",
+                day: "numeric",
+                weekday: "short",
+                hour: "numeric",
+                minute: "2-digit",
+              },
+              dateLocale
+            )}
           </Chip>
         ) : null}
         {lengthMs !== null && lengthMs > 0 ? (
