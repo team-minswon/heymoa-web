@@ -101,3 +101,8 @@ fallback, 실패는 `InlineRetry`로 통일합니다.
 문구는 서버 것을 씁니다. `lib/api/error-message.ts`의 `errorMessageOf()`가 봉투에서 뽑고,
 코드로 분기해야 할 때만 `errorCodeOf()`를 씁니다. web이 코드별 문구를 다시 만들면 서버가
 바뀔 때마다 갈라집니다.
+
+**서버 문구는 화면 언어로 옵니다.** 브라우저 요청(`apiFetch`·SSE·세션 확인)이 `<html lang>`을
+`Accept-Language`로 실어 보내고, 서버는 그 값(ko·en, 없으면 ko)으로 `error.message`를 고릅니다
+(APP-1285). 그래서 영어 화면에 web이 따로 영어 문구를 만들 필요가 없습니다. 새 transport를 만들면
+`lib/i18n/document-locale.ts`의 `acceptLanguageHeader()`를 같이 붙입니다.
