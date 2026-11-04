@@ -84,7 +84,7 @@ test("안내 문구가 길어져도 여백이 같고 탭을 오가도 창 높이
   await openDialog(page);
   const before = await dialogHeight(page);
   // 영어 문구 등으로 글이 늘어난 경우를 흉내 낸다.
-  await page.getByText("현재 화면 경로와 사용 환경이").evaluate((el) => {
+  await page.getByText("현재 화면 경로와 사용 환경을").evaluate((el) => {
     el.append(" Longer notice text that wraps over several lines.".repeat(8));
   });
 
