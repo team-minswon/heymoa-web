@@ -1,6 +1,7 @@
 import { ArrowUpRight, CalendarDays, Clock, Folder, Orbit } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   PersonAvatar,
@@ -8,7 +9,7 @@ import {
 } from "@/components/heymoa/person-avatar";
 import { formatAppDate } from "@/lib/format/date";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
-import { lengthLabel } from "@/lib/notes/review/moments";
+import { lengthParts } from "@/lib/notes/review/moments";
 import type { SpeakerFace } from "@/lib/transcription/speaker-identity";
 import { cn } from "@/lib/utils";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
@@ -46,7 +47,9 @@ export function ReviewHead({
   /** 이 회의가 속한 프로젝트의 안건 지도. 프로젝트가 없으면 비운다(링크도 숨는다). 이어진 안건이 없어도 늘 보인다 */
   mapHref?: string;
 }) {
+  const t = useTranslations("notes.review.head");
   const dateLocale = useDisplayLocale();
+  const length = lengthMs === null ? null : lengthParts(lengthMs);
   const names = participants
     .map((face) => face.name)
     .filter((name): name is string => Boolean(name));
@@ -62,7 +65,7 @@ export function ReviewHead({
               : "bg-[var(--el-surface-strong)] text-[var(--el-body)]"
           )}
         >
-          {confirmed ? "확정됨" : "검토 중"}
+          {confirmed ? t("confirmed") : t("inReview")}
         </span>
         {aside ? <span className="ml-auto">{aside}</span> : null}
       </div>
@@ -88,7 +91,9 @@ export function ReviewHead({
           </Chip>
         ) : null}
         {lengthMs !== null && lengthMs > 0 ? (
-          <Chip icon={<Clock aria-hidden />}>{lengthLabel(lengthMs)}</Chip>
+          <Chip icon={<Clock aria-hidden />}>
+            {length ? t("length", length) : t("lengthUnderMinute")}
+          </Chip>
         ) : null}
         {names.length > 0 ? (
           <span className="inline-flex h-[26px] min-w-0 items-center gap-1.5 rounded-control border border-[var(--el-hairline)] pr-[9px] pl-1 text-[12.5px] text-[var(--el-body)]">
@@ -108,7 +113,10 @@ export function ReviewHead({
             </span>
             <span className="truncate">
               {names.length > 1
-                ? `${names[0]} 외 ${names.length - 1}명`
+                ? t("participantsMore", {
+                    name: names[0],
+                    count: names.length - 1,
+                  })
                 : names[0]}
             </span>
           </span>
@@ -122,7 +130,7 @@ export function ReviewHead({
             className="inline-flex h-[26px] min-w-0 items-center gap-1.5 rounded-control border border-[var(--el-hairline-strong)] px-[9px] text-[12.5px] text-[var(--el-ink)] transition-colors hover:bg-[var(--el-surface-strong)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)] motion-reduce:transition-none [&>svg]:size-[13px] [&>svg]:shrink-0"
           >
             <Orbit aria-hidden className="text-[var(--el-muted)]" />
-            <span className="truncate">연결 지도</span>
+            <span className="truncate">{t("map")}</span>
             <ArrowUpRight aria-hidden className="text-[var(--el-muted)]" />
           </Link>
         ) : null}

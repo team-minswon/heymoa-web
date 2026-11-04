@@ -4,31 +4,36 @@ import type {
   ProjectMeetingLinksResponseDataMeetingLinksItem,
 } from "@/lib/api/generated/models";
 
-/** 서버가 판정한 종류를 그대로 표시한다. 관계를 읽는 것으로 대상 상태나 승인을 바꾸지 않는다. */
-export const LINK_LABEL: Readonly<Record<string, string>> = {
-  CONFLICTS_WITH: "충돌",
-  SUPERSEDES: "대체",
-  CANCELS: "취소",
-  RESOLVES: "해결",
-  SUCCEEDS: "이어짐",
-  COMPLETES: "마침",
-};
-export const SHOWN_LINK_KINDS: ReadonlySet<string> = new Set(
-  Object.keys(LINK_LABEL)
-);
+/**
+ * 서버가 판정한 종류 중 그리는 것. 이름은 화면이 `notes.review.suggestions.relation.kinds` 에서 고른다.
+ * 관계를 읽는 것으로 대상 상태나 승인을 바꾸지 않는다.
+ */
+export const SHOWN_LINK_KINDS = [
+  "CONFLICTS_WITH",
+  "SUPERSEDES",
+  "CANCELS",
+  "RESOLVES",
+  "SUCCEEDS",
+  "COMPLETES",
+] as const;
+export type ShownLinkKind = (typeof SHOWN_LINK_KINDS)[number];
+const SHOWN: ReadonlySet<string> = new Set(SHOWN_LINK_KINDS);
 
+/** 제목을 모르면 null 이다. 화면이 「이전 회의」·「안건」 같은 말을 제 언어로 채운다 */
 export type PastNote = {
   noteId: string;
-  title: string;
+  title: string | null;
   agendaId: string;
-  agendaTitle: string;
+  agendaTitle: string | null;
 };
 export type MeetingRelation =
   ProjectMeetingLinksResponseDataMeetingLinksItem & {
     key: string;
     sourceItemId: string | null;
     targetItemId: string | null;
-    targetTitle: string;
+    kind: ShownLinkKind;
+    /** 이전 회의 제목. 확정 항목이거나 제목을 모르면 null */
+    targetTitle: string | null;
     scope: "same" | "past" | "approved";
   };
 export type MeetingLinkIndex = {
@@ -102,8 +107,7 @@ export function indexMeetingLinks(
   const relations: MeetingRelation[] = [];
   // 강한 관계를 먼저 둔다. 같은 방향·끝점·종류만 중복으로 처리한다.
   for (const link of [...(data.conflicts ?? []), ...data.meetingLinks]) {
-    if (link.source.noteId !== noteId || !SHOWN_LINK_KINDS.has(link.kind))
-      continue;
+    if (link.source.noteId !== noteId || !SHOWN.has(link.kind)) continue;
     const key = JSON.stringify([
       endpointKey(link.source),
       endpointKey(link.target),
@@ -116,9 +120,10 @@ export function indexMeetingLinks(
       key,
       sourceItemId: itemIdOf(link.source),
       targetItemId: itemIdOf(link.target),
+      kind: link.kind as ShownLinkKind,
       targetTitle: link.target.noteId
-        ? (notes.get(link.target.noteId)?.title ?? "이전 회의")
-        : "프로젝트 확정 항목",
+        ? (notes.get(link.target.noteId)?.title ?? null)
+        : null,
       scope:
         link.target.type === "APPROVED"
           ? "approved"
@@ -144,11 +149,11 @@ export function indexMeetingLinks(
     const targetNote = notes.get(target.noteId);
     list.push({
       noteId: target.noteId,
-      title: targetNote?.title ?? "이전 회의",
+      title: targetNote?.title ?? null,
       agendaId: target.agendaId,
       agendaTitle:
         targetNote?.agendas.find((row) => row.agendaId === target.agendaId)
-          ?.title ?? "안건",
+          ?.title ?? null,
     });
     byAgendaId.set(source.agendaId, list);
   }

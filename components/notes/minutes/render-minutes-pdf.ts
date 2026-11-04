@@ -1,3 +1,4 @@
+import { documentLocale } from "@/lib/i18n/document-locale";
 import type { MinutesDocument } from "@/lib/notes/minutes/model";
 
 /** 글꼴을 읽을 자리. 워커 안에서는 상대 경로의 기준이 워커 스크립트라 절대 URL 로 넘긴다 */
@@ -14,10 +15,12 @@ export async function renderMinutesPdf(
   signal?: AbortSignal
 ): Promise<Blob> {
   signal?.throwIfAborted();
+  // 회의록은 지금 화면 언어로 만든다. 문서 수명 동안 언어가 바뀌지 않는다(언어를 바꾸면 새로 연다)
+  const locale = documentLocale() ?? "ko";
   if (typeof Worker === "undefined") {
     const { renderMinutesPdfInline } =
       await import("@/components/notes/minutes/minutes-pdf");
-    const blob = await renderMinutesPdfInline(doc, fontBase());
+    const blob = await renderMinutesPdfInline(doc, fontBase(), locale);
     signal?.throwIfAborted();
     return blob;
   }
@@ -29,7 +32,7 @@ export async function renderMinutesPdf(
   try {
     return await new Promise<Blob>((resolve, reject) => {
       abort = () =>
-        reject(new DOMException("PDF 생성이 취소되었습니다", "AbortError"));
+        reject(new DOMException("PDF rendering was canceled", "AbortError"));
       signal?.addEventListener("abort", abort, { once: true });
       worker.onmessage = (
         event: MessageEvent<
@@ -41,10 +44,10 @@ export async function renderMinutesPdf(
           : reject(new Error(event.data.message));
       worker.onerror = (event) =>
         reject(
-          event.error ??
-            new Error(event.message || "회의록 PDF 워커가 멈췄습니다")
+          // 문구가 없으면 호출부가 화면 언어의 「PDF를 만들지 못했습니다」를 띄운다
+          event.error ?? new Error(event.message)
         );
-      worker.postMessage({ doc, fontBase: fontBase() });
+      worker.postMessage({ doc, fontBase: fontBase(), locale });
     });
   } finally {
     if (abort) signal?.removeEventListener("abort", abort);

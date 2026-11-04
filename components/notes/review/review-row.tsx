@@ -76,6 +76,8 @@ export function ReviewRow({
   suggestions?: ReactNode;
 }) {
   const tError = useTranslations("errors");
+  const t = useTranslations("notes.review.row");
+  const tAction = useTranslations("common.actions");
   const [editing, setEditing] = useState(false);
   const cellsEditable = canEdit && item.included && !busy && !locked;
 
@@ -136,14 +138,14 @@ export function ReviewRow({
                 value={item.assignee}
                 choices={choices}
                 editable={cellsEditable}
-                placeholder={cellsEditable ? "담당 정하기" : ""}
+                placeholder={cellsEditable ? t("assigneePlaceholder") : ""}
                 onChange={(choice) =>
                   void onSave({ assignee: assigneeRequestOf(choice) })
                 }
               />
               {mine ? (
                 <span className="inline-flex h-[18px] shrink-0 items-center rounded-[5px] bg-[var(--el-surface-strong)] px-[5px] text-[11px] text-[var(--el-muted)]">
-                  나
+                  {t("me")}
                 </span>
               ) : null}
             </span>
@@ -173,7 +175,7 @@ export function ReviewRow({
         >
           {requiresProjectSelection(item.kind) ? (
             <Switch
-              aria-label={`프로젝트에 추가: ${item.content}`}
+              aria-label={t("projectSwitch", { content: item.content })}
               checked={item.projectSelected}
               disabled={!cellsEditable}
               onCheckedChange={(projectSelected) =>
@@ -216,7 +218,7 @@ export function ReviewRow({
             className="shrink-0 text-[var(--el-muted)] underline underline-offset-2"
             onClick={onDismissConflict}
           >
-            닫기
+            {tAction("close")}
           </button>
         </div>
       </Collapse>
@@ -241,12 +243,12 @@ export function ReviewRow({
                 <Button
                   variant="ghost"
                   size="xs"
-                  aria-label="수정"
+                  aria-label={t("edit")}
                   disabled={busy || locked}
                   onClick={() => setEditing(true)}
                 >
                   <Pencil aria-hidden className="size-3.5" />
-                  수정
+                  {t("edit")}
                 </Button>
               ) : null}
               <Button
@@ -260,7 +262,7 @@ export function ReviewRow({
                 ) : (
                   <Undo2 aria-hidden className="size-3.5" />
                 )}
-                {item.included ? "제외" : "제외 취소"}
+                {item.included ? t("exclude") : t("include")}
               </Button>
             </div>
           ) : null}
@@ -276,10 +278,11 @@ export function ReviewRow({
 }
 
 function ItemState({ item }: { item: ReviewItem }) {
+  const t = useTranslations("notes.review.row");
   const notes = [
-    !item.included && "제외됨",
-    item.edited && "수정됨",
-    item.originalProposalRef === null && "직접 추가",
+    !item.included && t("excluded"),
+    item.edited && t("edited"),
+    item.originalProposalRef === null && t("authored"),
   ].filter(Boolean);
   if (notes.length === 0) return null;
   return <p className="text-xs text-[var(--el-muted)]">{notes.join(" · ")}</p>;
@@ -298,6 +301,8 @@ function ContentEditor({
   onSubmit: (content: string) => Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslations("notes.review.row");
+  const tAction = useTranslations("common.actions");
   const [value, setValue] = useState(initial);
   const trimmed = value.trim();
   return (
@@ -310,7 +315,7 @@ function ContentEditor({
     >
       <textarea
         autoFocus
-        aria-label="항목 내용"
+        aria-label={t("contentLabel")}
         value={value}
         rows={1}
         onChange={(event) => setValue(event.target.value)}
@@ -329,7 +334,7 @@ function ContentEditor({
       />
       <div className="mt-2 flex justify-end gap-1.5">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          취소
+          {tAction("cancel")}
         </Button>
         <Button
           type="submit"
@@ -337,7 +342,7 @@ function ContentEditor({
           loading={busy}
           disabled={!trimmed || disabled}
         >
-          저장
+          {tAction("save")}
         </Button>
       </div>
     </form>

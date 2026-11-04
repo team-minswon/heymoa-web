@@ -154,5 +154,10 @@
     "inProgress": "Recording",
     "paused": "Paused",
     "ended": "Ended"
+  },
+  "taskStatus": {
+    "OPEN": "In progress",
+    "COMPLETED": "Done",
+    "CANCELLED": "Canceled"
   }
 }

@@ -33,6 +33,7 @@ export function widerExports({
   citedAt,
   unfiledOpen,
   unnamedSpeakers,
+  speakerName,
 }: {
   queryClient: QueryClient;
   noteId: string;
@@ -52,9 +53,12 @@ export function widerExports({
   unfiledOpen: readonly ReviewItem[];
   /** 이름이 정해지지 않은 화자 수 */
   unnamedSpeakers: number;
+  /** 이름 모르는 화자의 이름(「화자 A」). 공유 창의 안내와 첨부 녹취록이 같은 말을 쓰게 화면 언어로 받는다 */
+  speakerName?: (label: string) => string;
 }) {
   const groups = () => loadTimelineGroups(queryClient, noteId);
-  const transcript = () => loadTranscript(queryClient, noteId, participants);
+  const transcript = () =>
+    loadTranscript(queryClient, noteId, participants, speakerName);
 
   return {
     minutes: async (include: MinutesInclude): Promise<MinutesDocument> => {

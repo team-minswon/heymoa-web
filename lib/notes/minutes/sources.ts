@@ -72,7 +72,8 @@ export type TranscriptSource = {
 export async function loadTranscript(
   queryClient: QueryClient,
   noteId: string,
-  participants: SpeakerFace[]
+  participants: SpeakerFace[],
+  speakerName?: (label: string) => string
 ): Promise<TranscriptSource> {
   const transcript = okData(
     await queryClient.fetchQuery({
@@ -90,7 +91,8 @@ export async function loadTranscript(
     speakerOf: diarized
       ? createSpeakerIdentityResolver(
           transcript.diarization.speakers,
-          participants
+          participants,
+          speakerName
         )
       : null,
     truncated: transcript.recording.seal === "TRUNCATED",

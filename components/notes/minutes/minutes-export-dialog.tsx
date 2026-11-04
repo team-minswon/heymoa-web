@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   downloadBlob,
@@ -45,6 +46,8 @@ export function MinutesExportDialog({
   preparePdf?: PrepareMinutesPdf;
   version?: string;
 }) {
+  const t = useTranslations("notes.minutes");
+  const tAction = useTranslations("common.actions");
   const id = useId();
   const [include, setInclude] = useState<MinutesInclude>({ transcript: false });
   const [pending, setPending] = useState(false);
@@ -80,7 +83,7 @@ export function MinutesExportDialog({
       setPreviewed(true);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError"))
-        toast.error("회의록 PDF를 만들지 못했습니다.");
+        toast.error(t("pdfFailed"));
     }
   };
 
@@ -100,9 +103,9 @@ export function MinutesExportDialog({
       if (error instanceof DOMException && error.name === "AbortError") return;
       // 다시 시도는 창의 「PDF 받기」로 한다 — 토스트에 다시 시도를 달면 실패한 그때의 녹취록 선택으로 다시 만들어,
       // 그 사이 끈 녹취록이 실렸다. 창은 열린 채라 지금 고른 대로 다시 받는다
-      toast.error("회의록 PDF를 만들지 못했습니다.", {
+      toast.error(t("pdfFailed"), {
         id: "export-minutes",
-        description: "잠시 후 「PDF 받기」를 다시 눌러 주세요.",
+        description: t("export.retryHint"),
       });
     } finally {
       downloading.current = false;
@@ -122,11 +125,8 @@ export function MinutesExportDialog({
         className={`max-h-[calc(100dvh-2rem)] overflow-y-auto ${previewed ? "sm:max-w-4xl" : ""}`}
       >
         <DialogHeader>
-          <DialogTitle>회의록 PDF로 내보내기</DialogTitle>
-          <DialogDescription>
-            회의록(핵심 요약 · 결정 · 할 일 · 미결 사항)은 늘 들어갑니다.
-            녹취록을 붙일지 고르세요.
-          </DialogDescription>
+          <DialogTitle>{t("export.title")}</DialogTitle>
+          <DialogDescription>{t("export.description")}</DialogDescription>
         </DialogHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-0.5">
@@ -134,14 +134,13 @@ export function MinutesExportDialog({
               htmlFor={`${id}-transcript`}
               className="font-medium text-foreground"
             >
-              녹취록
+              {t("export.transcript")}
             </label>
             <span
               id={`${id}-transcript-hint`}
               className="text-xs text-muted-foreground"
             >
-              회의에서 한 말을 그대로 붙입니다. 받는 사람이 모든 발언을 읽게
-              됩니다.
+              {t("export.transcriptHint")}
             </span>
           </div>
           <Switch
@@ -159,7 +158,7 @@ export function MinutesExportDialog({
             disabled={pending}
             onClick={() => void preview()}
           >
-            PDF 미리보기
+            {t("export.preview")}
           </Button>
           {previewed ? (
             <PdfPreview blob={pdf.artifact?.blob ?? null}>
@@ -171,14 +170,14 @@ export function MinutesExportDialog({
         </div>
         <DialogFooter>
           <DialogClose render={<Button variant="outline" disabled={pending} />}>
-            취소
+            {tAction("cancel")}
           </DialogClose>
           <Button
             loading={pending}
             disabled={pdf.pending}
             onClick={() => void download()}
           >
-            PDF 받기
+            {t("export.download")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -187,9 +186,10 @@ export function MinutesExportDialog({
 }
 
 function Invalidated({ className }: { className?: string }) {
+  const t = useTranslations("notes.minutes");
   return (
     <p role="status" className={cn("text-sm text-muted-foreground", className)}>
-      내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.
+      {t("invalidated")}
     </p>
   );
 }

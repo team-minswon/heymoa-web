@@ -290,3 +290,129 @@
 | 회차 | 지적 | 처리 |
 |---|---|---|
 | 1 | P3 영어 ICU 분기(공백 길이·복수형)를 그리는 시험이 없음 | `transcript-gap-row.test.tsx`에 영어 시험을 더했습니다. 화자 시간·복수형은 `speaker-panel.test.tsx`의 영어 시험이 봅니다 |
+
+## 3. 검토·회의록·공유
+
+맡은 파일:
+
+- 검토: `components/notes/review/` 아래 `review-tab`·`review-board`·`review-head`·`review-overview`·`review-section`·`review-row`·`add-item-form`·`confirm-bar`·`flow-notice`·`pending-analysis-retry`·`evidence-quotes`·`item-trail`·`item-detail`·`meeting-map`·`review-graph`·`topic-index`·`saved-choices`·`suggestion-row` (`review-graph-canvas`·`role-dot`·`section-block`은 한글 없음)
+- 회의록·공유: `review-actions`(복사·공유 메뉴), `share-mail-dialog`, `components/notes/minutes/` 아래 `minutes-export-dialog`·`pdf-preview`·`minutes-pdf`(PDF 본문)·`minutes-pdf.worker`·`render-minutes-pdf`·`use-pdf-artifact`
+- 이 화면들만 쓰는 lib: `lib/notes/review/confirm.ts`(막힌 까닭을 문구 대신 코드로), `moments.ts`(`tickLabel`이 단위 낱말을 받고 `lengthLabel` → `lengthParts`), `meeting-links.ts`(`LINK_LABEL` → `SHOWN_LINK_KINDS`, 모르는 제목은 null), `topics.ts`(관계 이름 대신 `kind`), `trail.ts`(`CITATION_ROLE_LABEL` → `LABELED_CITATION_ROLES`), `graph-model.ts`(`GRAPH_ROLE_LABEL` 제거), `use-review-editor.ts`(토스트)
+- 언어 파일: `messages/<ko|en>/notes.json`에 최상위 `review`·`share`·`minutes`를 더했습니다
+
+범위 밖 파일을 조금 건드렸습니다.
+
+- `lib/notes/minutes/exports.ts`·`sources.ts`: 공유 창이 「Speaker A」가 나간다고 안내하는데 첨부 녹취록에는 「화자 A」가 실리지 않게 이름 모르는 화자의 이름(`speakerName`)을 넘깁니다
+- `lib/format/date.ts`: `formatDueDate`에 선택 인자 `locale`을 더했습니다(기본은 그대로 한국어). 할 일 변경 제안의 기존 기한이 화면 언어로 나옵니다
+- `messages/<ko|en>/common.json`: 할 일 상태 이름 `common.taskStatus`(진행 중·완료·취소 / In progress·Done·Canceled)를 새로 두었습니다. 할 일 모듈(8단계)이 `TASK_STATUS_LABEL`을 바꿀 때 같은 키를 쓰면 됩니다
+- 시험·e2e의 한국어 기대값: 윤문한 문장만(`review-parts`·`share-mail-dialog` 시험, `e2e/meeting-review.spec.ts`의 확정 창 문장)
+
+판단:
+
+- **유형 이름은 `notes.kinds`, 화자 이름은 `useSpeakerFallbackNames()`**: 검토 화면의 `KIND_LABEL`·`CONTEXT_KIND_LABEL`을 걷고, `review-board`의 화자 resolver와 공유 창의 이름 없는 화자 목록이 화면 언어 이름을 씁니다. `lib/notes/review/sections.ts`의 `REVIEW_SECTIONS.label`·`KIND_LABEL`은 요약 복사본(`lib/notes/review/markdown.ts`)만 읽으므로 13단계까지 남깁니다
+- **회의록 PDF는 화면 언어로 만듭니다**: 워커 안이라 훅을 못 써서 `render-minutes-pdf`가 `<html lang>`(`documentLocale()`)을 워커에 넘기고 `minutes-pdf`가 `createTranslator`로 `notes.minutes.pdf`를 읽습니다. 복사본과 같은 결정(spec 「회의록 Markdown 복사 → 화면 언어」)입니다. 영어 PDF는 세리프 제목 글꼴(「회의록」 세 글자 판)을 못 써서 본문 글꼴 굵게로, 칸 제목을 글자마다 벌리는 배치는 한국어에만 둡니다. 영어 칸 머리가 길어 수 칸(20mm)·안건 칸(18mm)을 넓혔습니다. PDF의 날짜·길이·바닥글·본문 참조·공백 줄(`lib/notes/minutes/model.ts`)은 13단계라 영어 PDF에 아직 한국어로 남습니다
+- **공유 메일 미리보기의 메일 본문은 한국어 그대로**: 서버 메일 템플릿(`heymoa-server` `NoteShareEmailContent`)이 언어 없이 한국어로만 보내고, 첨부 이름도 서버가 정합니다. 미리보기가 실제 메일과 달라지면 안 되어 `MAIL_TEMPLATE` 상수로 모으고 언어 파일로 옮기지 않았습니다. 미리보기의 칸 이름(From·To·Subject)과 안내는 번역합니다. 참고로 서버 안내 문장은 「첨부한 회의록 PDF를 확인하세요.」라 미리보기의 「첨부한 회의록을 확인하세요.」와 이미 조금 다릅니다
+- **「녹취록」과 「스크립트」를 나눠 둡니다**: 녹취록은 PDF·메일에 붙는 문서 이름, 스크립트는 노트 탭 이름입니다. 영어는 둘 다 Transcript입니다
+- **관계 이름의 영어**: 「충돌과 이어짐」은 conflicts and connections로 옮겼습니다(follow-ups는 후속 할 일로 읽힘). 관계 종류 SUCCEEDS는 용어집 「〈회의〉에서 이어짐 / Continued from」에 맞춰 Continues입니다
+- 확정 막대의 「이전 결정 N개 끝남」은 공개된 랜딩 미리보기와 같은 문구라 그대로 둡니다. 공유 결과 칩 「보내지 못함」은 「~함」 조각이라 「보내기 실패」로 바꿨습니다
+
+## 문구 평가 (3. 검토·회의록·공유)
+
+| 축 | 1차 | 2차 |
+|---|---|---|
+| slop | 4 | 4 |
+| 용어 | 4 | 4 |
+| 적합도 | 4 | 4 |
+| 일관성 | 4 | 4 |
+| **평균** | **4.0** | **4.0** |
+
+2차 지적 일부를 반영했으나 다시 평가하지는 않았습니다. 최종 점수는 2차 4.0입니다.
+
+## 반영한 지적 (3묶음)
+
+1차
+- `review.confirm.dialog.adds`(en): 할 일에도 selected를 붙여 ko와 같은 범위로
+- `review.flow.outcomes.replacements`(en): 「Earlier decisions to replace」(끝난 일처럼 읽히지 않게)
+- `minutes.pdf.owners`·`columns.owner`(en): owner → 용어집 Assignee(s)
+- `minutes.pdf.ownerCount`(en): 숫자만 → 「# task(s)」
+- `share.mail.addAttendees`·`resendFailed`: 단위와 대상을 밝힘(ko 「…명에게 다시 보내기」)
+- `share.mail.stillSending`(en): 「Some messages are still sending」
+- `review.confirm.ending`·`dialog.ends`(en): 「will end」
+- 「이어짐」 영어: follow-ups → connections(`relations.*`·`linksLoading`·`blocked.relationsPending`·`flow.status.ANALYZING.body`)
+
+2차
+- `share.mail.resendFailed`(en): 「Resend to # failed recipient(s)」
+- `share.mail.resultFailed`·`checking`(en): delivery → send(받은 메일함까지 확인한 것처럼 읽히지 않게)
+- `share.mail.transcriptHint`(en): 「Times, speakers, and words exactly as recorded」
+
+## 남긴 지적과 이유 (3묶음)
+
+- 「녹취록」을 「스크립트」로 모으자(1차): 위 판단대로 문서 이름과 탭 이름을 나눕니다. 한국어를 하나로 모을지는 사용자 확인 사항으로 남깁니다
+- `review.board.confirmed`(en) 「Review finished」 → Reviewed(1차): 토스트는 방금 누른 「Finish review」의 결과 문장이라 그대로 둡니다
+- `review.suggestions.showReason`(en) View source(2차): 용어집 「근거 보기 → View source」를 따릅니다
+- `review.graph.fit` 「맞춤」 → 「화면에 맞추기」(2차): 채팅의 Mermaid 그림 조작(`mermaid-block`)도 「맞춤」이라 한쪽만 바꾸지 않았습니다. 채팅 모듈에서 함께 바꾸면 됩니다
+- `review.graph.hubCount` 「주제 · 항목 {count}」(2차): 주제 이름 위에 붙는 짧은 머리라 그대로 둡니다
+- `minutes.pdf.meta.when`(en) Date → Date and time, `columns.agenda`(en) → Agenda item, `columns.line`(en) → Statement, `columns.refs` → 본문 번호(2차): PDF 칸 폭(17~18mm)에 들어가지 않거나 표 머리로 더 어색해 그대로 둡니다
+
+## 한국어에서 바뀐 문장 (3묶음)
+
+| 키 | 전 | 후 |
+|---|---|---|
+| `review.flow.status.ANALYZING.body` | 회의 정리와 안건 요약을 만들고 있습니다. 화자 확인 뒤 충돌·이어짐과 담당·기한을 정리합니다. | 회의 정리와 안건 요약을 만들고 있습니다. 화자를 확인한 뒤 충돌과 이어짐, 담당과 기한을 정리합니다. |
+| `review.flow.kept` | 받은 회의 정리와 검토 내용은 유지됩니다. | 받아 둔 회의 정리와 검토 내용은 그대로 남아 있습니다. |
+| `review.confirm.nothingToAdd` | 추가할 결정·할 일이 없습니다. | 추가할 결정이나 할 일이 없습니다. |
+| `review.confirm.dialog.adds` | 선택한 결정 {decisions}개와 할 일 {tasks}개를 프로젝트에 추가합니다. 선택하지 않은 결정·할 일은 회의록에만 남습니다. | 선택한 결정 {decisions}개와 할 일 {tasks}개를 프로젝트에 추가합니다. 선택하지 않은 결정과 할 일은 회의록에만 남습니다. |
+| `review.confirm.dialog.changes` | 기존 할 일 {count}개가 변경됩니다. | 기존 할 일 {count}개를 바꿉니다. |
+| `review.board.switchHint` | 스위치를 켠 항목만 검토 완료 후 프로젝트에 추가됩니다. | 검토를 완료하면 스위치를 켠 항목만 프로젝트에 추가합니다. |
+| `review.trail.title` | 수정이력 | 수정 이력 |
+| `review.trail.loading` | 수정이력 불러오는 중 | 수정 이력 불러오는 중 |
+| `review.trail.failed` | 수정이력을 불러오지 못했습니다. | 수정 이력을 불러오지 못했습니다. |
+| `review.suggestions.task.stale` | 기존 할 일이 변경되어 이 제안을 반영할 수 없습니다. 넘기기를 선택해 주세요. | 기존 할 일이 바뀌어 이 제안을 반영할 수 없습니다. 넘기기를 선택해 주세요. |
+| `share.formats.markdown.hint` | Notion·Obsidian·LLM에 잘 맞는 형식입니다 | Notion, Obsidian, LLM에 잘 맞는 형식입니다 |
+| `share.copied` | 요약이 클립보드에 복사되었습니다. | 요약을 클립보드에 복사했습니다. |
+| `share.mail.transcriptHint` | 시각 · 화자 · 발언을 고치지 않고 그대로 옮긴 기록입니다 | 시각과 화자, 발언을 고치지 않고 그대로 옮긴 기록입니다 |
+| `share.mail.unnamed` | 녹취록에 이름 없는 화자 {count}명이 {names} 그대로 나갑니다. 보내기 전에 스크립트에서 이름을 지정할 수 있습니다. | 녹취록에 이름을 붙이지 않은 화자 {count}명({names})이 그대로 나갑니다. 보내기 전에 스크립트에서 이름을 지정할 수 있습니다. |
+| `share.mail.status.FAILED` | 보내지 못함 | 보내기 실패 |
+| `minutes.export.description` | 회의록(핵심 요약 · 결정 · 할 일 · 미결 사항)은 늘 들어갑니다. 녹취록을 붙일지 고르세요. | 회의록에는 핵심 요약과 결정, 할 일, 미결 사항이 늘 들어갑니다. 녹취록을 붙일지 고르세요. |
+| `minutes.export.transcriptHint` | 회의에서 한 말을 그대로 붙입니다. 받는 사람이 모든 발언을 읽게 됩니다. | 회의에서 한 말을 그대로 붙입니다. 받는 사람이 모든 발언을 볼 수 있습니다. |
+| `minutes.pdf.annexNote` | 발언 시각은 녹음 시작 기준입니다. 본문 번호는 해당 발언을 근거로 한 결정·할 일·미결 사항을 가리킵니다. | 발언 시각은 녹음 시작 기준입니다. 본문 번호는 해당 발언을 근거로 한 결정과 할 일, 미결 사항을 가리킵니다. |
+| `minutes.pdf.truncated` | 기록이 끝까지 저장되지 못했습니다 | 기록을 끝까지 저장하지 못했습니다 |
+| `share.mail.resendFailed` | 보내지 못한 {count}명 다시 보내기 | 보내지 못한 {count}명에게 다시 보내기 |
+
+## 렌더 확인 (3묶음)
+
+영어 계정, 1440·1024. `check-load.mjs`와, 눌러야 나오는 것을 여는 임시 스크립트(scratch, 레포에 남기지 않음)로 봤습니다. 헤드리스 브라우저는 PDF를 iframe에 그리지 못해 영어 PDF는 node에서 만들어 `pdftoppm`으로 1쪽을 그림으로 봤습니다.
+
+| 경로·화면 | 넘침 | 비고 |
+|---|---|---|
+| `/w/01K0000000000/notes/01K0000000920?view=full&tab=summary` 검토 화면(머리·지도·요약·주제·결정·할 일·확정 막대) | 없음 | 넘침 목록의 「Decisions·Tasks·Open questions」는 주제 줄의 sr-only입니다 |
+| 같은 노트, 결정 줄 펼침·수정 폼·「Add to Decisions」 폼 | 없음 | |
+| 같은 노트, 그래프 보기 | 없음 | |
+| 같은 노트, 복사 메뉴·공유 메뉴 | 없음 | |
+| 같은 노트, 「Export as PDF」 창과 미리보기 | 없음 | 넘침 목록의 「닫기」는 공용 창 닫기 버튼(sr-only)입니다 |
+| 같은 노트, 「Send by email」 창(녹취록 켬, 메일 미리보기 펼침) | 없음 | 메일 본문 한국어는 위 판단대로 의도입니다 |
+| 같은 노트, 「Finish review」 확인 창 | 없음 | |
+| `…/01K0000000022?view=full&tab=summary` 분석 중 안내 | 없음 | 1024에서 분석 단계 넷이 두 줄로 접힙니다(`flex-wrap`, 의도된 배치) |
+| 영어 회의록 PDF 1쪽(node 렌더) | 없음 | 제목·칸 머리·담당 줄이 영어로 섭니다. 일시 「2026. 10. 15. (목) 14:00 52분」, 바닥글 「회의록」은 13단계 |
+
+남은 한글 중 이 묶음이 아닌 것:
+
+- 할 일 줄의 「기한 정하기」와 기한 날짜(`components/heymoa/due-cell.tsx`), 「더 불러오기」 옆 「접기」(`components/heymoa/show-more-button.tsx`), 받는 사람 입력의 「이름이나 이메일을 입력하세요」「받는 사람 후보」(`components/heymoa/email-recipients-input.tsx`), 창의 「닫기」(`components/ui/dialog.tsx`), 「내 에이전트 열기」·사이드바: 다른 모듈
+- 할 일 기록 시트(`components/tasks/task-history-sheet.tsx`)의 `formatDueDate`·「기한:」: 할 일 모듈
+- 회의록 PDF·요약 복사본의 날짜·길이·바닥글·본문 참조·공백 줄(`lib/notes/minutes/model.ts`, `lib/notes/review/markdown.ts`, `lib/notes/copy-markdown.ts`): plan 13단계. 복사본의 「기록이 끝까지 저장되지 못했습니다」도 13단계에서 화면·PDF와 같은 「기록을 끝까지 저장하지 못했습니다」로 맞추면 됩니다
+- 회의 제목·주제·항목 내용·참여자 이름·대화 내용: 목 데이터·사용자 데이터
+
+발견한 레이아웃 문제(이 묶음 문구와 무관, 고치지 않음): 1024에서 옆 채팅 패널이 열린 채 전체 화면이면 할 일 줄의 내용 칸이 한 글자 폭으로 줄어 세로로 늘어섭니다. `review-row.tsx`의 `sm:grid-cols-[…_132px_150px_…]`가 화면 폭(`sm`) 기준이라 좁은 본문 칸에서도 고정 칸을 잡기 때문입니다. 한국어 화면도 같습니다.
+
+## 코드 리뷰 (3묶음)
+
+| 회차 | 지적 | 처리 |
+|---|---|---|
+| 1 | P2 영어 PDF에 model.ts가 만든 한국어(바닥글·길이·본문 참조·「화자 A」)가 남음 | 13단계 범위(지시문)라 남겼습니다. 이름 모르는 화자 이름만 아래에서 고쳤습니다 |
+| 1 | P2 공유 창 안내의 「Speaker A」와 첨부 녹취록의 「화자 A」가 다름 | `widerExports` → `loadTranscript`에 `speakerName`을 넘겼습니다 |
+| 2 | P2 할 일 변경 제안의 상태 이름이 한국어 상수(`TASK_STATUS_LABEL`) | `common.taskStatus`를 두고 그것을 읽습니다 |
+| 2 | P2 기존 기한 날짜가 한국어 형식 | `formatDueDate(value, locale)`로 화면 언어를 넘깁니다 |
+| 2 | P3 영어 PDF 시험이 언어를 보지 않음 | 압축되지 않는 `/Lang (en)`과 책갈피 제목을 확인합니다 |
+| 3 | P2 영어 PDF 안건 칸이 머리만 넓고 행은 좁음 | 행에도 언어별 폭을 씁니다 |
+| 3 | P3 기한 없는 할 일에 「Unassigned」 | `minutes.pdf.noDue`(미지정 / Not set)를 따로 둡니다 |
+| 4 | P3 워커 경로(`<html lang>` → 워커 → PDF)를 보는 시험이 없음 | 남깁니다. jsdom에는 Worker가 없어 단위 시험으로 닿지 않고, 14단계 영어 화면 e2e에서 내려받은 PDF의 `/Lang`을 보면 됩니다 |

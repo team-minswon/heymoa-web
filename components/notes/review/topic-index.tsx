@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Collapse } from "@/components/heymoa/collapse";
@@ -46,6 +47,7 @@ export function TopicIndex({
   /** 있으면 연결 줄 끝에 그 프로젝트의 안건 지도로 가는 링크를 단다 */
   projectId?: string;
 }) {
+  const t = useTranslations("notes.review.topics");
   const [openOrdinals, setOpenOrdinals] = useState<ReadonlySet<number>>(
     () => new Set()
   );
@@ -130,9 +132,9 @@ export function TopicIndex({
     });
 
   return (
-    <SectionBlock title="주제" count={topics.length}>
+    <SectionBlock title={t("title")} count={topics.length}>
       <ul
-        aria-label="주제 목차"
+        aria-label={t("label")}
         className="border-t border-[var(--el-hairline-soft)]"
       >
         {shown.map((topic) => (
@@ -170,19 +172,13 @@ export function TopicIndex({
             )}
           />
           {expanded
-            ? `처음 ${VISIBLE_TOPICS}개만`
-            : `나머지 주제 ${topics.length - VISIBLE_TOPICS}개`}
+            ? t("showFirst", { count: VISIBLE_TOPICS })
+            : t("showRest", { count: topics.length - VISIBLE_TOPICS })}
         </button>
       ) : null}
     </SectionBlock>
   );
 }
-
-const COUNT_NAME: Record<Tone, string> = {
-  decision: "결정",
-  task: "할 일",
-  open: "열린 질문",
-};
 
 /**
  * 「〈회의 이름〉에서 이어짐」. 회의 이름이 그 회의 요약으로 가는 링크다. 이어짐만 말하고 무엇이 바뀌었다고
@@ -202,6 +198,7 @@ function ContinuedFrom({
   /** 이 안건을 고른 채 여는 안건 지도 주소 */
   mapHref?: string;
 }) {
+  const t = useTranslations("notes.review.topics");
   if (notes.length === 0) return null;
   return (
     <span className="flex flex-wrap items-baseline gap-x-2 text-[12.5px] leading-5 text-[var(--el-muted)]">
@@ -214,28 +211,36 @@ function ContinuedFrom({
             aria-hidden
             className="border-l border-b border-[var(--el-hairline-strong)] w-3 h-2"
           />
-          {note.noteId === noteId ? (
-            <a
-              href={`#summary-agenda-${note.agendaId}`}
-              onClick={(event) => {
-                event.preventDefault();
-                onSelectAgenda(note.agendaId);
-              }}
-              className="text-[var(--el-body)] underline underline-offset-[3px]"
-            >
-              {note.agendaTitle}
-            </a>
-          ) : workspaceId ? (
-            <Link
-              href={`/w/${workspaceId}/notes/${note.noteId}?view=full&tab=summary#summary-agenda-${note.agendaId}`}
-              className="text-[var(--el-body)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
-            >
-              {note.title}
-            </Link>
-          ) : (
-            note.title
-          )}
-          에서 이어짐
+          {note.noteId === noteId
+            ? t.rich("continuedFrom", {
+                title: note.agendaTitle ?? t("agenda"),
+                meeting: (chunks) => (
+                  <a
+                    href={`#summary-agenda-${note.agendaId}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onSelectAgenda(note.agendaId);
+                    }}
+                    className="text-[var(--el-body)] underline underline-offset-[3px]"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              })
+            : t.rich("continuedFrom", {
+                title: note.title ?? t("earlierMeeting"),
+                meeting: (chunks) =>
+                  workspaceId ? (
+                    <Link
+                      href={`/w/${workspaceId}/notes/${note.noteId}?view=full&tab=summary#summary-agenda-${note.agendaId}`}
+                      className="text-[var(--el-body)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
+                    >
+                      {chunks}
+                    </Link>
+                  ) : (
+                    chunks
+                  ),
+              })}
         </span>
       ))}
       {mapHref ? (
@@ -243,7 +248,7 @@ function ContinuedFrom({
           href={mapHref}
           className="underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
         >
-          연결 지도에서 보기
+          {t("openMap")}
         </Link>
       ) : null}
     </span>
@@ -274,6 +279,7 @@ function TopicRow({
   workspaceId?: string;
   projectId?: string;
 }) {
+  const t = useTranslations("notes.review.topics");
   const continued = topic.agendaId
     ? (links?.byAgendaId.get(topic.agendaId) ?? [])
     : [];
@@ -334,7 +340,7 @@ function TopicRow({
           {counts.map(([tone, count]) => (
             <span key={tone} className="inline-flex items-center gap-1">
               <TimelineToneIcon tone={tone} />
-              <span className="sr-only">{COUNT_NAME[tone]} </span>
+              <span className="sr-only">{t(`counts.${tone}`)} </span>
               {count}
             </span>
           ))}
@@ -386,7 +392,7 @@ function TopicRow({
                     <TimelineToneIcon tone={tone} />
                   </span>
                   <span>
-                    <span className="sr-only">{COUNT_NAME[tone]} · </span>
+                    <span className="sr-only">{t(`counts.${tone}`)} · </span>
                     {item.content}
                   </span>
                 </li>
@@ -399,7 +405,7 @@ function TopicRow({
               onClick={() => onOpenTimeline(topic.agendaId)}
               className="inline-flex items-center gap-1.5 self-start text-[12.5px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
             >
-              타임라인에서 보기{span ? ` · ${span}` : ""}
+              {span ? t("openTimelineAt", { span }) : t("openTimeline")}
               <ArrowUpRight aria-hidden className="size-3" />
             </button>
           ) : null}

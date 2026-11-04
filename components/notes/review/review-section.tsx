@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { Collapse } from "@/components/heymoa/collapse";
 import { ShowMoreButton } from "@/components/heymoa/show-more-button";
@@ -19,13 +20,6 @@ import {
   type ReviewKind,
   type ReviewSection as Section,
 } from "@/lib/notes/review/sections";
-
-const EMPTY_TEXT: Record<Section["key"], string> = {
-  DECISION: "정한 것이 없습니다.",
-  ACTION_ITEM: "할 일이 없습니다.",
-  OPEN: "남은 이슈나 질문이 없습니다.",
-  REFERENCE: "참고할 항목이 없습니다.",
-};
 
 /**
  * 한 섹션. 앞의 몇 줄만 서고 나머지는 「더 불러오기」로 접힌다 — 항목이 백 개 가까운 회의에서
@@ -75,6 +69,8 @@ export function ReviewSection({
   /** 줄 아래에 늘 서는 제안 */
   suggestionsOf?: (item: ReviewItem) => ReactNode;
 }) {
+  const t = useTranslations("notes.review.sections");
+  const name = t(`names.${section.key}`);
   const kinds =
     REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds ?? [];
   const assignable = kinds.every((kind) => ASSIGNABLE_KINDS.has(kind));
@@ -118,12 +114,12 @@ export function ReviewSection({
 
   return (
     <SectionBlock
-      title={section.label}
+      title={name}
       count={section.includedCount}
       aside={
         section.key === "DECISION" || section.key === "ACTION_ITEM" ? (
           <span className="w-[92px] shrink-0 text-center text-xs text-[var(--el-muted)]">
-            프로젝트에 추가
+            {t("addToProject")}
           </span>
         ) : null
       }
@@ -139,7 +135,7 @@ export function ReviewSection({
 
       {section.items.length === 0 ? (
         <p className="border-t border-[var(--el-hairline-soft)] py-2.5 text-[13px] text-[var(--el-muted-soft)]">
-          {EMPTY_TEXT[section.key]}
+          {t(`empty.${section.key}`)}
         </p>
       ) : null}
 
@@ -156,8 +152,8 @@ export function ReviewSection({
       {rest.length > 0 ? (
         <ShowMoreButton
           open={showRest}
-          moreLabel="더 불러오기"
-          subject={section.label}
+          moreLabel={t("more")}
+          subject={name}
           onToggle={() => setExpanded((value) => !value)}
           className="pt-2.5"
         />
@@ -186,7 +182,7 @@ export function ReviewSection({
             className="mt-1.5 flex items-center gap-1 text-[12.5px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
           >
             <Plus aria-hidden className="size-3.5" />
-            {section.label} 추가
+            {t("add", { section: name })}
           </button>
         )
       ) : null}

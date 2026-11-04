@@ -17,13 +17,6 @@ export const GRAPH_ROLE_ORDER: readonly GraphRole[] = [
   "REFERENCE",
 ];
 
-export const GRAPH_ROLE_LABEL: Record<GraphRole, string> = {
-  DECISION: "결정",
-  ACTION: "할 일",
-  OPEN: "미해결",
-  REFERENCE: "참고",
-};
-
 export type GraphNode = {
   id: string;
   group: number | null;

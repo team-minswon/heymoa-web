@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import {
   getGetMeetingReviewSummaryQueryKey,
@@ -66,6 +67,7 @@ export function ReviewTab({
   onEditParticipants?: () => void;
   onMeetingEnded?: () => void;
 }) {
+  const t = useTranslations("notes.review");
   const queryClient = useQueryClient();
   const streamHealthy = useEventStreamHealthy();
   const flowQuery = useGetAnalysisFlow(noteId, {
@@ -113,7 +115,7 @@ export function ReviewTab({
     <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-6">
       <InlineRetry
         variant="line"
-        label="요약 상태를 불러오지 못했습니다."
+        label={t("statusFailed")}
         onRetry={() => void flowQuery.refetch()}
       />
     </div>
