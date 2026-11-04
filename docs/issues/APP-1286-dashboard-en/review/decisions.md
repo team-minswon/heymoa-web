@@ -92,3 +92,12 @@ spec: docs `docs/app-1286/dashboard-en` @ `e455d14e` (`projects/PRO-66-웹-국�
 - **문의 본문의 「화면:·환경:」 꼬리는 한국어 그대로**: 운영자가 읽는 데이터이고 `userPart`가 이 표식으로 잘라 냅니다
 - **온보딩 체크리스트 단계 이름은 컴포넌트가 그림**: `lib/onboarding/checklist.ts`에는 id만 남습니다
 - **연결 지도 옆 패널 영어 탭을 「Item」으로 줄임**: 「Agenda item」이면 1440·1024에서 「View this topic larger」 버튼이 닫기를 덮었습니다. 되돌리기: 키 값만 바꾸고 패널 머리 레이아웃을 손봄
+
+## D15. 회의 노트 머리·상태·정보의 판단들 (`4e071007`)
+
+- **종료 후 의견의 저장 머리 「[회의 종료 후] 녹음·소리」는 한국어 고정**: 운영자가 읽고 거르는 데이터입니다(D14와 같은 판단). 화면 분류 이름은 번역합니다
+- **제목을 비우고 저장할 때의 기본 제목은 화면 언어**(「제목 없는 노트 / Untitled note」): 만든 사람의 언어로 데이터가 남습니다. 되돌리기: `details.untitled` 대신 한국어 상수를 보냄
+- **`CopyMarkdownButton`은 `label` 대신 `kind`**(transcript·summary·timeline)를 받아 탭 이름으로 번역합니다
+- **회의 상태 이름은 `MEETING_STATUS_KEY` 한 곳**에서 `common.meetingStatus`로 바꿉니다. `MEETING_STATUS_LABEL`은 지웠습니다
+- **참여자 자동 열기의 버튼 찾기 기준을 `data-slot="participants-add"`로**: 영어 화면에서는 한국어 aria-label로 찾지 못합니다
+- **「변경사항 저장」 vs 「변경 저장」 (사용자 확인 필요)**: 대시보드 공용 키 `common.actions.saveChanges`는 「변경사항 저장」, 랜딩 미리보기는 「변경 저장」입니다. 영어는 둘 다 Save changes입니다. 대시보드 쪽(변경사항 저장)을 그대로 두고 용어집에 둘 다 적었습니다
