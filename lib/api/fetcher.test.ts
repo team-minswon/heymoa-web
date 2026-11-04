@@ -445,3 +445,47 @@ describe("apiFetch timeoutMs", () => {
     await pending;
   });
 });
+
+describe("화면 언어를 Accept-Language 로 싣는다 (APP-1285)", () => {
+  afterEach(() => {
+    document.documentElement.lang = "";
+  });
+
+  it("영어 화면이면 en 을 보낸다", async () => {
+    document.documentElement.lang = "en";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ success: true, data: { ok: true }, error: null })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiFetch("/v1/ping", { method: "GET" });
+
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      "Accept-Language": "en",
+    });
+  });
+
+  it("호출부가 준 헤더가 이기고, 모르는 lang 이면 붙이지 않는다", async () => {
+    document.documentElement.lang = "en";
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () =>
+        Response.json({ success: true, data: null, error: null })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiFetch("/v1/ping", {
+      method: "GET",
+      headers: { "Accept-Language": "ko" },
+    });
+    expect(fetchMock.mock.calls[0][1].headers["Accept-Language"]).toBe("ko");
+
+    document.documentElement.lang = "ja";
+    await apiFetch("/v1/ping", { method: "GET" });
+    expect(fetchMock.mock.calls[1][1].headers).not.toHaveProperty(
+      "Accept-Language"
+    );
+  });
+});
