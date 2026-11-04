@@ -5,6 +5,7 @@ import { track } from "@/lib/analytics/track";
 import { memo, useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Expand,
   FileText,
@@ -33,7 +34,6 @@ import {
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
   getRecordedDurationMs,
-  MEETING_STATUS_LABEL,
   pausedDayCount,
 } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,14 @@ import { useIsWorkspaceAdmin } from "@/lib/workspace/use-is-workspace-admin";
  * 동안(`aria-expanded`), 아바타 툴팁이 열려 있는 동안(`data-popup-open` — 툴팁은 포털이라 포인터가 거기 닿으면 행 hover 가 풀린다), 그리고 hover 가 없는 터치 환경에서 늘 켠다.
  * Tailwind 는 클래스를 정적 문자열로만 읽으므로 두 곳에서 같은 목록을 그대로 쓴다.
  */
+/** 회의 상태 → `common.meetingStatus` 키. 노트 화면도 같은 이름을 쓴다. */
+const STATUS_KEY = {
+  NOT_STARTED: "notStarted",
+  IN_PROGRESS: "inProgress",
+  PAUSED: "paused",
+  ENDED: "ended",
+} as const satisfies Record<NoteListResponseDataNotesItem["meetingStatus"], string>;
+
 const SHIFT_WHEN_OPEN =
   "group-hover/row:-translate-x-9 group-has-[:focus-visible]/row:-translate-x-9 group-has-[[aria-expanded=true]]/row:-translate-x-9 group-has-[[data-popup-open]]/row:-translate-x-9 [@media(hover:none)]:-translate-x-9";
 const REVEAL_WHEN_OPEN =
@@ -52,11 +60,12 @@ const REVEAL_WHEN_OPEN =
 
 function ActiveRecordingMeter({ title }: { title: string }) {
   const meter = useRecordingMeter();
+  const t = useTranslations("workspace.noteRow");
 
   return (
     <div
       role="meter"
-      aria-label={`${title} 마이크 입력`}
+      aria-label={t("micInput", { title })}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(
@@ -131,6 +140,8 @@ function MeetingMeta({
   note: NoteListResponseDataNotesItem;
   now: number | null;
 }) {
+  const t = useTranslations("workspace.noteRow");
+  const tStatus = useTranslations("common.meetingStatus");
   const status = note.meetingStatus;
   const minutes = Math.floor(getRecordedDurationMs(note, now ?? 0) / 60_000);
   // 계약상 필수지만 배포 직후 남은 옛 응답·캐시에는 없을 수 있다. 여기서 그냥 `.length`를
@@ -152,15 +163,17 @@ function MeetingMeta({
       >
         {/* 오래 멈춘 회의는 기간을 붙인다(APP-1313). 목록 시계가 서기 전(SSR)에는 「일시정지됨」만 쓴다. */}
         {status === "PAUSED" && pausedDays !== null
-          ? `${pausedDays}일째 일시정지됨`
-          : MEETING_STATUS_LABEL[status]}
+          ? t("pausedDays", { count: pausedDays })
+          : tStatus(STATUS_KEY[status])}
       </span>
       {status !== "NOT_STARTED" ? (
         <>
           <span aria-hidden="true" className="shrink-0">
             ·
           </span>
-          <span className="shrink-0 tabular-nums">기록 {minutes}분</span>
+          <span className="shrink-0 tabular-nums">
+            {t("recordedMinutes", { count: minutes })}
+          </span>
         </>
       ) : null}
       {participantCount > 0 ? (
@@ -169,7 +182,7 @@ function MeetingMeta({
             ·
           </span>
           <span className="shrink-0 tabular-nums">
-            참여 {participantCount}명
+            {t("participants", { count: participantCount })}
           </span>
         </>
       ) : null}
@@ -190,6 +203,8 @@ export const NoteListRow = memo(function NoteListRow({
   /** 「더 보기」로 방금 이어 붙은 행. 짧게 옅은 데서 들어온다 — 자리는 처음부터 잡혀 있어 아래가 밀리지 않는다. */
   arrived?: boolean;
 }) {
+  const t = useTranslations("workspace.noteRow");
+  const tActions = useTranslations("common.actions");
   const isRecording = useRecordingNoteId() === note.noteId;
   // `전체 화면으로 열기`는 메뉴 안에 있고, 누르면 메뉴가 닫히며 그 안의 표시도 사라진다.
   // 그래서 진행 상태를 포털 밖(이 행)에 둔다.
@@ -241,7 +256,7 @@ export const NoteListRow = memo(function NoteListRow({
             source: "list",
           })
         }
-        aria-label={`${note.title} 노트 열기`}
+        aria-label={t("open", { title: note.title })}
         // self-stretch로 행 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
         className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none"
       >
@@ -298,7 +313,7 @@ export const NoteListRow = memo(function NoteListRow({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`${note.title} 노트 메뉴`}
+              aria-label={t("menu", { title: note.title })}
               data-slot="note-row-menu"
               // 숨겨진 동안은 클릭도 받지 않는다 — 오른쪽 끝의 링크 영역을 가리지 않게.
               // 키보드 포커스는 그대로 닿고(탭 순서 불변), 포커스되면 위 REVEAL 로 나타난다.
@@ -325,14 +340,14 @@ export const NoteListRow = memo(function NoteListRow({
             // `onClick`으로 하면 새 탭을 열어도 이 탭의 스피너가 영원히 남는다.
             onNavigate={() => setOpenedFullViewFrom(routeKey)}
           >
-            <Expand /> 전체 화면
+            <Expand /> {t("fullScreen")}
           </DropdownMenuLinkItem>
           {canDelete ? (
             <DropdownMenuItem
               variant="destructive"
               onClick={() => setDeleteOpen(true)}
             >
-              <Trash2 /> 삭제
+              <Trash2 /> {tActions("delete")}
             </DropdownMenuItem>
           ) : null}
         </DropdownMenuContent>

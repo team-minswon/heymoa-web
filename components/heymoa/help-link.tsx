@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { SitePageLink } from "@/components/heymoa/site-page-link";
 import type { HelpPageId } from "@/app/[lang]/help/_content/ids";
@@ -13,18 +14,19 @@ import { track } from "@/lib/analytics/track";
  */
 export function HelpLink({
   topic,
-  children = "자세히",
+  children,
 }: {
   topic: HelpPageId;
   children?: ReactNode;
 }) {
+  const t = useTranslations("common.actions");
   return (
     <SitePageLink
       href={helpPathById(topic)}
       onClick={() => track("help_opened", { topic })}
       className="font-medium text-[var(--el-ink)] underline underline-offset-2 hover:text-[var(--el-body)]"
     >
-      {children}
+      {children ?? t("learnMore")}
     </SitePageLink>
   );
 }

@@ -138,6 +138,21 @@
     "retry": "다시 시도",
     "saveChanges": "변경사항 저장",
     "rename": "이름 변경",
-    "confirm": "확인"
+    "confirm": "확인",
+    "create": "만들기",
+    "close": "닫기",
+    "learnMore": "자세히"
+  },
+  "createWorkspace": {
+    "ariaLabel": "새 워크스페이스 만들기",
+    "title": "새 워크스페이스",
+    "description": "회의 기록을 모을 공간의 이름을 정해 주세요.",
+    "nameLabel": "워크스페이스 이름"
+  },
+  "meetingStatus": {
+    "notStarted": "시작 전",
+    "inProgress": "기록 중",
+    "paused": "일시정지됨",
+    "ended": "종료됨"
   }
 }

@@ -21,6 +21,7 @@ const REQUIRED_EN: readonly Namespace[] = [
   "errors",
   "shell",
   "settings",
+  "workspace",
 ];
 
 function keyPaths(value: unknown, prefix = ""): string[] {

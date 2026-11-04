@@ -138,6 +138,21 @@
     "retry": "Try again",
     "saveChanges": "Save changes",
     "rename": "Rename",
-    "confirm": "OK"
+    "confirm": "OK",
+    "create": "Create",
+    "close": "Close",
+    "learnMore": "Learn more"
+  },
+  "createWorkspace": {
+    "ariaLabel": "Create a new workspace",
+    "title": "New workspace",
+    "description": "Name the workspace for your meeting notes.",
+    "nameLabel": "Workspace name"
+  },
+  "meetingStatus": {
+    "notStarted": "Not started",
+    "inProgress": "Recording",
+    "paused": "Paused",
+    "ended": "Ended"
   }
 }

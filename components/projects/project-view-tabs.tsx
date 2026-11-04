@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { animate, motion, useReducedMotion } from "motion/react";
@@ -44,6 +45,7 @@ export function ProjectViewTabs({
   current: View;
   className?: string;
 }) {
+  const t = useTranslations("workspace.projectTabs");
   const { setSelectedProjectId } = useWorkspaceShell();
   const router = useRouter();
   const reduced = useReducedMotion() ?? false;
@@ -74,12 +76,12 @@ export function ProjectViewTabs({
 
   return (
     <Tabs value={current} className={cn("gap-0", className)}>
-      <TabsList ref={listRef} variant="line" aria-label="프로젝트 보기" className="relative gap-5 p-0 group-data-horizontal/tabs:h-10">
+      <TabsList ref={listRef} variant="line" aria-label={t("label")} className="relative gap-5 p-0 group-data-horizontal/tabs:h-10">
         <TabsTrigger value="notes" nativeButton={false} render={<Link href={notesHref} onNavigate={go("notes", notesHref)} />} className={TAB_ITEM}>
-          노트
+          {t("notes")}
         </TabsTrigger>
         <TabsTrigger value="map" nativeButton={false} render={<Link href={mapHref} onNavigate={go("map", mapHref)} />} className={TAB_ITEM}>
-          연결 지도
+          {t("map")}
         </TabsTrigger>
         {box ? (
           <motion.span

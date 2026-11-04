@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { ProjectViewBody, ProjectViewTabs } from "@/components/projects/project-view-tabs";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
@@ -28,6 +29,8 @@ export function noteListRefetchInterval(
 }
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("workspace.page");
+  const tShell = useTranslations("shell.nav");
   const {
     selectedProjectId,
     projects,
@@ -156,7 +159,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
                 // 글자 크기 `text-screen-title` 을 색 `text-[var(--el-ink)]` 와 겹친다고 보고 지운다
                 className={`text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]${selectedProject ? " min-h-[1.05em] truncate" : ""}`}
               >
-                {selectedProject?.name ?? "모든 노트"}
+                {selectedProject?.name ?? tShell("allNotes")}
               </h2>
               {/* `p` 가 아니라 `div` — 자리표시(`Skeleton`)가 `div` 라 `p` 안에 두면 잘못 포갠 HTML 이 된다. */}
               <div className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
@@ -170,10 +173,13 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
                       stale && "opacity-60"
                     )}
                   >
-                    {notes.length}개{page?.hasMore ? " 이상" : ""}의 회의 기록
+                    {t("noteCount", {
+                      count: notes.length,
+                      more: String(page?.hasMore ?? false),
+                    })}
                   </span>
                 )}{" "}
-                · 발화와 결정이 시간순으로 보관됩니다.
+                · {t("subtitle")}
               </div>
               {selectedProject ? (
                 <ProjectViewTabs

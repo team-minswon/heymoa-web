@@ -7,6 +7,7 @@ import enLanding from "@/messages/en/landing.json";
 import enLegal from "@/messages/en/legal.json";
 import enSettings from "@/messages/en/settings.json";
 import enShell from "@/messages/en/shell.json";
+import enWorkspace from "@/messages/en/workspace.json";
 import koAuth from "@/messages/ko/auth.json";
 import koCommon from "@/messages/ko/common.json";
 import koDownload from "@/messages/ko/download.json";
@@ -16,6 +17,7 @@ import koLanding from "@/messages/ko/landing.json";
 import koLegal from "@/messages/ko/legal.json";
 import koSettings from "@/messages/ko/settings.json";
 import koShell from "@/messages/ko/shell.json";
+import koWorkspace from "@/messages/ko/workspace.json";
 import type { Locale } from "@/lib/i18n/locales";
 
 /**
@@ -32,6 +34,7 @@ const ko = {
   errors: koErrors,
   shell: koShell,
   settings: koSettings,
+  workspace: koWorkspace,
 };
 
 export type Messages = typeof ko;
@@ -51,6 +54,7 @@ const en: DeepPartial<Messages> = {
   errors: enErrors,
   shell: enShell,
   settings: enSettings,
+  workspace: enWorkspace,
 };
 
 /**

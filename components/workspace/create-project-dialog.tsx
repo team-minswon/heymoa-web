@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import {
   Dialog,
@@ -43,6 +44,8 @@ export function CreateProjectDialog({
   /** 실제로 만들어졌을 때만 호출된다 — 호출부가 다음 단계로 이어 갈 신호다. */
   onCreated?: () => void;
 }) {
+  const t = useTranslations("workspace.createProject");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const createProject = useCreateProject({
     mutation: { meta: { suppressErrorToast: true } },
@@ -64,11 +67,11 @@ export function CreateProjectDialog({
       await queryClient.invalidateQueries({
         queryKey: getGetProjectsQueryKey(workspaceId),
       });
-      toast.success("프로젝트가 생성되었습니다.");
+      toast.success(t("created"));
       onOpenChange(false);
       onCreated?.();
     } catch {
-      toast.error("프로젝트 생성에 실패했습니다.");
+      toast.error(t("failed"));
     }
   };
 
@@ -81,27 +84,25 @@ export function CreateProjectDialog({
     >
       {open && (
         <DialogContent
-          aria-label={first ? "첫 프로젝트 만들기" : "새 프로젝트 만들기"}
+          aria-label={first ? t("titleFirst") : t("title")}
           showCloseButton={!createProject.isPending}
         >
           <form action={(formData) => void submit(formData)}>
             <DialogHeader>
               <DialogTitle>
-                {first ? "첫 프로젝트 만들기" : "새 프로젝트 만들기"}
+                {first ? t("titleFirst") : t("title")}
               </DialogTitle>
               <DialogDescription>
-                {first
-                  ? "회의는 프로젝트 안에 만들어집니다. 팀·제품·고객처럼 회의가 반복되는 단위로 지으면 지난 맥락을 찾기 쉬워집니다."
-                  : "노트를 분류할 프로젝트 이름을 입력하세요."}
+                {first ? t("descriptionFirst") : t("description")}
               </DialogDescription>
             </DialogHeader>
             <div className="py-5">
-              <Label htmlFor="project-name">프로젝트 이름</Label>
+              <Label htmlFor="project-name">{t("nameLabel")}</Label>
               <Input
                 id="project-name"
                 name="name"
                 className="mt-2"
-                placeholder={first ? "주간" : undefined}
+                placeholder={first ? t("namePlaceholder") : undefined}
                 // 서버 계약이 1~50자다.
                 maxLength={50}
                 required
@@ -115,10 +116,10 @@ export function CreateProjectDialog({
                 disabled={createProject.isPending}
                 onClick={() => onOpenChange(false)}
               >
-                취소
+                {tActions("cancel")}
               </Button>
               <Button type="submit" loading={createProject.isPending}>
-                만들기
+                {tActions("create")}
               </Button>
             </DialogFooter>
           </form>

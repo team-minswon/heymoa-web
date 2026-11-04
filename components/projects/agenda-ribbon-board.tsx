@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import {
   memo,
   useCallback,
@@ -144,6 +146,7 @@ export function RibbonBoard({
   restore?: { topicId: string; pageTop: number };
   onFocusTopic: (topicId: string) => void;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const layout = useMemo(() => ribbonLayout(map, rows), [map, rows]);
   const columns = useMemo(() => ribbonColumns(map, layout), [map, layout]);
   const topicOf = useMemo(() => topicOfRows(rows), [rows]);
@@ -331,7 +334,10 @@ export function RibbonBoard({
   const days = useMemo(() => map.meetings.map((_, at) => daysAfterPrevious(map, at)), [map]);
   const dateKeys = useMemo(() => map.meetings.map((meeting) => getAppDateKey(meeting.startedAt)), [map]);
   const monthOf = useMemo(() => dateKeys.map((key) => key.slice(0, 7)), [dateKeys]);
-  const marks = useMemo(() => headerMarks(dateKeys, xs, widths), [dateKeys, xs, widths]);
+  const marks = useMemo(
+    () => headerMarks(dateKeys, xs, widths, (month) => t("monthMark", { month })),
+    [dateKeys, xs, widths, t]
+  );
   const joinTargets = useMemo(() => new Set(layout.joins.map((join) => join.to)), [layout]);
   const joinTouches = useMemo(() => new Set(layout.joins.flatMap((join) => [join.from, join.to])), [layout]);
 
@@ -746,8 +752,17 @@ export function RibbonBoard({
   // 이름표 목록: 이름표 위치가 바뀌지 않은 렌더에서는 요소를 다시 만들지 않는다(250개 안팎의 `NameLabel` 요소 생성·비교를 건너뛴다)
   // 이름 옆 규모 문구는 줄기마다 한 번만 만든다
   const metaOf = useMemo(
-    () => new Map(layout.lanes.flat().map((topic) => [topic.id, `안건 ${topic.agendaCount} · 회의 ${new Set(topic.routes.flatMap((route) => route.stops.map((stop) => stop.meeting))).size}`])),
-    [layout]
+    () =>
+      new Map(
+        layout.lanes.flat().map((topic) => [
+          topic.id,
+          t("topicMeta", {
+            agendas: topic.agendaCount,
+            meetings: new Set(topic.routes.flatMap((route) => route.stops.map((stop) => stop.meeting))).size,
+          }),
+        ])
+      ),
+    [layout, t]
   );
   const nameLabels = useMemo(() => {
     const cx = (meeting: number) => xs[meeting] + widths[meeting] * (openAt[meeting] ? 0.25 : 0.5);
@@ -785,7 +800,7 @@ export function RibbonBoard({
     height: `calc((var(--lt-${lane + 1}) - var(--lt-${lane})) * 1px)`,
   });
 
-  const hint = roomy ? "회의가 적어 안건 제목을 바로 보여 줍니다" : "회의 날짜를 누르면 그 회의의 안건 제목이 펼쳐집니다";
+  const hint = roomy ? t("hintRoomy") : t("hintNarrow");
   const sideEdge = (at: number) => (at === 0 ? 1 : 0) + (at === count - 1 ? 2 : 0);
 
   return (
@@ -793,7 +808,7 @@ export function RibbonBoard({
       <style>{DIM_CSS}</style>
       {leavingRule ? <style>{leavingRule}</style> : null}
       <div ref={boxRef} className="relative flex">
-        <section aria-label="연결 지도" className="min-w-0 flex-1 contain-inline-size">
+        <section aria-label={t("title")} className="min-w-0 flex-1 contain-inline-size">
           <div className="mb-2.5 flex h-7 items-center justify-between gap-3 text-xs text-[var(--el-muted)]">
             <span>{hint}</span>
             {!roomy && open.size > 0 ? (
@@ -807,7 +822,7 @@ export function RibbonBoard({
                 }}
                 className="inline-flex h-7 items-center gap-1 rounded-control px-2 hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
               >
-                펼친 회의 {open.size}개 모두 접기
+                {t("collapseAll", { count: open.size })}
               </button>
             ) : null}
           </div>
@@ -869,7 +884,7 @@ export function RibbonBoard({
                   <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-0">
                     <div className="absolute z-[3] h-5" style={{ left: 0, width: total + BOARD_END_GUTTER * 2, top: `calc(var(--zt) * 1px + 2px)` }}>
                       <span className="sticky left-2 inline-block rounded-sm bg-[var(--el-canvas-soft)] px-1 text-xs leading-5 text-[var(--el-muted)]">
-                        그 밖의 안건
+                        {t("otherAgendas")}
                       </span>
                     </div>
                   </div>
@@ -1054,7 +1069,7 @@ function PanelHost({ open, reduced, children }: { open: boolean; reduced: boolea
 const BAND = "bg-[color-mix(in_srgb,var(--el-hairline-soft)_55%,transparent)]";
 
 /** 열 머리 위쪽의 글자(해, 달). 열이 넓으면 해가 바뀌는 자리에만, 좁으면 달이 바뀌는 자리에 적는다. `dateKeys` 는 회의마다 `YYYY-MM-DD` */
-function headerMarks(dateKeys: string[], xs: number[], widths: number[]) {
+function headerMarks(dateKeys: string[], xs: number[], widths: number[], monthLabel: (month: number) => string) {
   type Mark = { text: string; top: number; strong: boolean };
   const marks: (Mark | null)[] = dateKeys.map(() => null);
   let lastEnd = -1e9;
@@ -1067,7 +1082,7 @@ function headerMarks(dateKeys: string[], xs: number[], widths: number[]) {
     if (widths[at] >= 60) {
       if (newYear) marks[at] = { text: year, top: 3, strong: false };
     } else if (newMonth && left >= lastEnd) {
-      const text = newYear ? `${year}.${month}` : `${Number(month)}월`;
+      const text = newYear ? `${year}.${month}` : monthLabel(Number(month));
       const end = left + text.length * 7.5 + 8;
       // 뒤에 펼친 열이 바싹 서 있으면 그 열 머리 글자와 겹치니 달 글자를 적지 않는다
       let wide = false;
@@ -1115,6 +1130,7 @@ const NameLabel = memo(function NameLabel({
   hover: RefObject<HoverApi | null>;
   onFocusTopic: (topicId: string) => void;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   return (
     <motion.div
       data-label={topic.id}
@@ -1129,13 +1145,13 @@ const NameLabel = memo(function NameLabel({
       <button
         type="button"
         data-topic-name={topic.id}
-        aria-label={`${topic.name} · 눌러서 이 줄기만 크게 보기`}
+        aria-label={`${topic.name} · ${t("focusTopicHint")}`}
         onClick={() => onFocusTopic(topic.id)}
         onPointerEnter={(event) =>
           hover.current?.show({
             rect: event.currentTarget.getBoundingClientRect(),
             el: event.currentTarget,
-            tip: { title: topic.name, text: "눌러서 이 줄기만 크게 보기" },
+            tip: { title: topic.name, text: t("focusTopicHint") },
           })
         }
         onPointerLeave={() => hover.current?.hide()}

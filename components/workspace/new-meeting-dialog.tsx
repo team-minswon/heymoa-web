@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   Dialog,
@@ -35,9 +36,11 @@ import {
  * 값을 우리가 들고 있으면 둘 다 걸리지 않는다.
  */
 /** 오늘 날짜로 채우는 기본 이름 「MM/DD 회의록」. 보는 사람의 시간대 기준이다(`viewerDateKey`). */
-function defaultMeetingTitle() {
+function defaultMeetingTitle(
+  t: ReturnType<typeof useTranslations<"workspace.newMeeting">>
+) {
   const [, month, day] = viewerDateKey(new Date()).split("-");
-  return `${month}/${day} 회의록`;
+  return t("defaultTitle", { month, day });
 }
 
 export function NewMeetingDialog({
@@ -59,7 +62,11 @@ export function NewMeetingDialog({
   /** 지금 보고 있는 프로젝트. 「모든 노트」에서 열었으면 null 이다. */
   defaultProjectId: string | null;
 }) {
-  const [title, setTitle] = useState(() => (open ? defaultMeetingTitle() : ""));
+  const t = useTranslations("workspace.newMeeting");
+  const tActions = useTranslations("common.actions");
+  const [title, setTitle] = useState(() =>
+    open ? defaultMeetingTitle(t) : ""
+  );
   const [picked, setPicked] = useState<string | null>(null);
   const trimmed = title.trim();
   // **부모가 창을 닫아도(뒤로가기·화면 이동) 쓰던 이름과 고른 프로젝트를 비운다.** 이 컴포넌트는 그대로 남아 있어
@@ -73,7 +80,7 @@ export function NewMeetingDialog({
       setPicked(null);
     } else {
       // 열 때마다 오늘 날짜로 이름을 채운다 — 매번 이름을 새로 짓지 않아도 되고, 입력은 전체 선택돼 바로 덮어쓸 수 있다.
-      setTitle(defaultMeetingTitle());
+      setTitle(defaultMeetingTitle(t));
     }
   }
   /**
@@ -101,7 +108,7 @@ export function NewMeetingDialog({
     <Dialog open={open} onOpenChange={(next) => !isPending && !next && close()}>
       {open && (
         <DialogContent
-          aria-label="새 회의 만들기"
+          aria-label={t("title")}
           // 처리 중에는 X를 안 그린다 — onOpenChange가 닫기를 무시하므로, 두면 눌러도
           // 아무 일이 없어 고장으로 읽힌다.
           showCloseButton={!isPending}
@@ -126,21 +133,19 @@ export function NewMeetingDialog({
             }}
           >
             <DialogHeader>
-              <DialogTitle>새 회의 만들기</DialogTitle>
+              <DialogTitle>{t("title")}</DialogTitle>
               <DialogDescription>
-                <span className="block">
-                  이름을 지어 두면 나중에 찾기 쉽습니다.
-                </span>
-                <span className="block">기록은 만든 뒤에 시작합니다.</span>
+                <span className="block">{t("descriptionName")}</span>
+                <span className="block">{t("descriptionRecord")}</span>
               </DialogDescription>
             </DialogHeader>
             <div className="py-5">
-              <Label htmlFor="meeting-title">회의 이름</Label>
+              <Label htmlFor="meeting-title">{t("nameLabel")}</Label>
               <Input
                 id="meeting-title"
                 name="title"
                 className="mt-2"
-                placeholder="주간 제품 회의"
+                placeholder={t("namePlaceholder")}
                 // 서버 계약이 1~200자다.
                 maxLength={200}
                 required
@@ -150,7 +155,7 @@ export function NewMeetingDialog({
                 onChange={(event) => setTitle(event.target.value)}
               />
               <div className="mt-4">
-                <Label htmlFor="meeting-project">프로젝트</Label>
+                <Label htmlFor="meeting-project">{t("projectLabel")}</Label>
                 {projects.length > 1 ? (
                   <Select
                     items={Object.fromEntries(
@@ -161,7 +166,7 @@ export function NewMeetingDialog({
                   >
                     <SelectTrigger
                       id="meeting-project"
-                      aria-label="프로젝트"
+                      aria-label={t("projectLabel")}
                       className="mt-2 w-full"
                     >
                       <SelectValue />
@@ -186,7 +191,7 @@ export function NewMeetingDialog({
                   </p>
                 )}
                 <p className="mt-2 text-xs text-[var(--el-muted)]">
-                  회의를 만든 뒤에는 프로젝트를 바꿀 수 없습니다.
+                  {t("projectLocked")}
                 </p>
               </div>
             </div>
@@ -197,14 +202,14 @@ export function NewMeetingDialog({
                 disabled={isPending}
                 onClick={close}
               >
-                취소
+                {tActions("cancel")}
               </Button>
               <Button
                 type="submit"
                 loading={isPending}
                 disabled={!trimmed || !target}
               >
-                만들기
+                {tActions("create")}
               </Button>
             </DialogFooter>
           </form>

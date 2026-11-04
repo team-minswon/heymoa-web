@@ -1,6 +1,7 @@
 "use client";
 
 import { AudioLines, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 
@@ -28,24 +29,16 @@ export function WorkspaceOnboarding({
   onCreateProject: () => void;
   onNewMeeting: () => void;
 }) {
+  const t = useTranslations("workspace.onboarding");
   const first = stage === "no-project";
-  const steps = first
-    ? [
-        {
-          title: "프로젝트 만들기",
-          detail: "회의를 묶는 상자입니다. 팀·제품·고객 단위로 짓습니다",
-        },
-        { title: "회의 만들기", detail: "프로젝트 안에 회의를 만듭니다" },
-        { title: "기록하고 요약 확인", detail: "종료하면 자동으로 정리됩니다" },
-      ]
-    : [
-        {
-          title: "회의 만들기",
-          detail: "이름을 지어 두면 나중에 찾기 쉽습니다",
-        },
-        { title: "기록 시작", detail: "마이크 권한이 필요합니다" },
-        { title: "요약 확인", detail: "종료하면 자동으로 정리됩니다" },
-      ];
+  const keys = first
+    ? (["createProject", "createMeeting", "recordAndReview"] as const)
+    : (["nameMeeting", "startRecording", "reviewSummary"] as const);
+  const steps = keys.map((key) => ({
+    key,
+    title: t(`steps.${key}.title`),
+    detail: t(`steps.${key}.detail`),
+  }));
 
   return (
     <div
@@ -55,18 +48,16 @@ export function WorkspaceOnboarding({
     >
       <AudioLines className="size-8 text-[var(--el-muted)]" aria-hidden />
       <h2 className="mt-4 text-2xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-        {first ? "회의를 담을 프로젝트부터" : "첫 회의를 기록해 보세요"}
+        {first ? t("titleNoProject") : t("titleNoNote")}
       </h2>
       <p className="mt-2 max-w-md text-sm leading-6 text-[var(--el-body)]">
-        {first
-          ? "회의는 프로젝트 안에 만들어집니다. 하나만 만들어 두면 바로 회의를 시작할 수 있습니다."
-          : "회의를 만들고 시작하면 대화가 실시간으로 스크립트에 쌓이고, 끝나면 개요 · 액션 아이템 · 인사이트로 정리됩니다."}
+        {first ? t("descriptionNoProject") : t("descriptionNoNote")}
       </p>
       {/* 좁은 화면에서는 세로로 쌓는다 — 250×3이면 750이라 셸 패널 안에서 감긴다. */}
       <ol className="mt-7 flex w-full max-w-3xl flex-col gap-3 text-left sm:flex-row">
         {steps.map((step, index) => (
           <li
-            key={step.title}
+            key={step.key}
             className="flex-1 rounded-control border border-[var(--el-hairline)] bg-white p-4"
           >
             <span className="text-[11px] font-bold text-[var(--el-muted)]">
@@ -88,7 +79,7 @@ export function WorkspaceOnboarding({
         onClick={first ? onCreateProject : onNewMeeting}
       >
         <Plus className="size-3.5" />
-        {first ? "첫 프로젝트 만들기" : "새 회의 만들기"}
+        {first ? t("ctaNoProject") : t("ctaNoNote")}
       </Button>
     </div>
   );
