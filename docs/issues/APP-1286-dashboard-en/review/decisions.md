@@ -123,3 +123,10 @@ spec: docs `docs/app-1286/dashboard-en` @ `e455d14e` (`projects/PRO-66-웹-국�
 - **항목 철회는 Withdrawn, 결정 번복은 Reversed**로 나눴습니다
 - **한국어 표기 통일**: 「대화 기록」「전사」→「스크립트」(탭 이름), 도크 「이름 없음 N」→「미지정 N」
 - **`LiveChip`의 `label`을 필수로**: 한국어 기본값이 있으면 영어 화면에서 빠뜨려도 모릅니다
+
+## D19. 용어 정리 커밋의 판단들 (`42100780`)
+
+- **약관·개인정보 영어판(`messages/en/legal.json`)의 옛 표기는 그대로 (사용자 확인 필요)**: glossary·speaker separation·agent conversations가 남아 있습니다. 법률 문서라 손대지 않았습니다. 고치려면 별도 커밋으로 하고 한국어본이 우선한다는 고지는 그대로 둡니다
+- **랜딩 `meta.keywords`의 meeting minutes·action items는 그대로**: 화면 용어가 아니라 검색어입니다
+- **회의 대화를 뜻하는 conversation은 그대로**: chat으로 바꾼 것은 내 에이전트와의 대화뿐입니다
+- **1024px 노트 상단바 겹침 수정**: 좁은 상단바(640px 이하)에서 모든 상태 칩과 「End meeting」 버튼이 글자를 접고 아이콘·점만 남깁니다(`title`로 이름 보존). 한국어 화면도 같은 폭에서 접힙니다. 되돌리기: `meeting-controls.tsx`의 `@max-[640px]/topbar:sr-only` 범위를 일시정지 칩으로 되돌림
