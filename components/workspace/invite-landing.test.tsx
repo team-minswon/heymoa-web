@@ -162,7 +162,7 @@ describe("영어 화면", () => {
       { wrapper: intlWrapper("en") }
     );
     expect(
-      await screen.findByRole("heading", { name: "This invite has expired" })
+      await screen.findByRole("heading", { name: "This invitation has expired" })
     ).toBeTruthy();
     expect(screen.getByRole("link", { name: "Go home" })).toBeTruthy();
     expect(container.textContent).not.toMatch(/[가-힣]/);

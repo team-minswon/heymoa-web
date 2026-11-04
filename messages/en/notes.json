@@ -64,8 +64,8 @@
     "title": "Recording paused. Wrap up now?",
     "items": {
       "speakers": {
-        "title": "Speaker separation",
-        "body": "Separates speakers so you can name them"
+        "title": "Speaker identification",
+        "body": "Identifies speakers so you can name them"
       },
       "summary": {
         "title": "Summary",
@@ -85,9 +85,9 @@
     "description": "Ending the meeting starts the summary. You can't record more after it ends.",
     "participantsLabel": "Meeting participants",
     "participantCount": "{count, plural, one {# participant} other {# participants}}",
-    "participantsNone": "With no participants, speakers are separated without a set number. Add the people who spoke as participants for more accurate speaker separation.",
-    "participantsOne": "With one participant, everyone who spoke is treated as the same speaker. If several people spoke, add them as participants first. Participants added after the meeting ends aren't used for this speaker separation.",
-    "participantsMany": "Is everyone who spoke listed? With fewer participants than speakers, some speakers may be merged. Participants added after the meeting ends aren't used for this speaker separation.",
+    "participantsNone": "With no participants, speakers are identified without a set number. Add the people who spoke as participants for more accurate speaker identification.",
+    "participantsOne": "With one participant, everyone who spoke is treated as the same speaker. If several people spoke, add them as participants first. Participants added after the meeting ends aren't used for this speaker identification.",
+    "participantsMany": "Is everyone who spoke listed? With fewer participants than speakers, some speakers may be merged. Participants added after the meeting ends aren't used for this speaker identification.",
     "recordingStatus": "Recording status · {status}",
     "recordingBlocked": "Pause recording to end the meeting.",
     "failed": "Couldn't end the meeting.",
@@ -97,7 +97,7 @@
   "endFeedback": {
     "progress": {
       "ready": "The summary is ready",
-      "failed": "Couldn't analyze the meeting. You can reanalyze it on the Summary tab.",
+      "failed": "Couldn't analyze the meeting. You can regenerate the summary on the Summary tab.",
       "unknown": "Couldn't load the summary status. You can try again on the Summary tab.",
       "running": "Wrapping up the meeting. This continues if you close this window."
     },
@@ -142,7 +142,7 @@
         "body": "Automatically collects the overview, decisions, and tasks."
       },
       "speakers": {
-        "title": "Speaker separation",
+        "title": "Speaker identification",
         "body": "Splits voices by person so you can name each one."
       },
       "review": {
@@ -180,7 +180,7 @@
   "deleteDialog": {
     "title": "Delete these meeting notes?",
     "description": "This deletes the meeting's recording, transcript, summary, and the sources linked to what was said. If it's recording, the recording stops. Deleted meeting notes can't be restored.",
-    "chats": "Agent conversations that asked only about these meeting notes are deleted too. Conversations that also asked about other meeting notes, decisions, tasks, or materials in the same project stay.",
+    "chats": "Agent chats that asked only about these meeting notes are deleted too. Chats that also asked about other meeting notes, decisions, tasks, or materials in the same project stay.",
     "analyzing": "You can delete it once the meeting analysis finishes.",
     "flowFailed": "Couldn't load the analysis status.",
     "flowChecking": "Checking the analysis status.",
@@ -197,7 +197,7 @@
       "title": "Meeting details",
       "host": "Host",
       "controlsRecording": "Controls recording",
-      "duration": "Recorded time",
+      "duration": "Duration",
       "sharedWith": "Shared with",
       "workspaceMembers": "Workspace members",
       "ended": "Ended",

@@ -34,7 +34,7 @@
     },
     "deleteDialog": {
       "title": "Delete this project?",
-      "description": "The project {name} and the agent conversations in it will be deleted. This can't be undone. Projects that have notes can't be deleted."
+      "description": "The project {name} and the agent chats in it will be deleted. This can't be undone. Projects that have notes can't be deleted."
     },
     "toast": {
       "renamed": "Project renamed.",

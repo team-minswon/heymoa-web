@@ -106,7 +106,7 @@
         },
         "actionItems": {
           "label": "Make tasks",
-          "question": "Turn this meeting's action items into tasks"
+          "question": "Turn what this meeting agreed to do into tasks"
         },
         "web": {
           "label": "Search the web",

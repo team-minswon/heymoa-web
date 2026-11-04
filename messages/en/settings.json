@@ -10,7 +10,7 @@
       "workspace": "General",
       "members": "Members",
       "guests": "Guest participants",
-      "terms": "Glossary",
+      "terms": "Custom vocabulary",
       "integrations": "Integrations",
       "workspaceAgents": "MCP connections",
       "account": "My account",
@@ -83,7 +83,7 @@
     "effects": {
       "label": "What's deleted and what stays",
       "deleted": "We immediately delete your account information and the <nowrap>meeting records (notes, transcripts, audio)</nowrap> of workspaces only you use or chose to delete.",
-      "conversations": "Your agent conversations in every workspace are deleted.",
+      "conversations": "Your agent chats in every workspace are deleted.",
       "sharedHistory": "Your name and what you said stay in past meeting records of shared workspaces.",
       "external": "Anything already sent to outside tools (Linear, GitHub) and emails already sent stay.",
       "retained": "Some information, like inquiry history, is kept for a set period and then deleted.",
@@ -116,7 +116,7 @@
   },
   "members": {
     "title": "Members",
-    "description": "Manage this workspace's members and pending invites.",
+    "description": "Manage this workspace's members and pending invitations.",
     "loading": "Loading members",
     "loadFailed": "Couldn't load members.",
     "roles": {
@@ -130,7 +130,7 @@
     "remove": "Remove",
     "removeDialog": {
       "title": "Remove {name}?",
-      "description": "{email} will lose access to this workspace. Their agent conversations here will also be deleted."
+      "description": "{email} will lose access to this workspace. Their agent chats here will also be deleted."
     },
     "renameDialog": {
       "label": "Name shown in this workspace",
@@ -138,30 +138,30 @@
     },
     "leave": {
       "title": "Leave workspace",
-      "description": "You'll lose access to this workspace's meeting records and projects. To come back, you'll need a new invite.",
+      "description": "You'll lose access to this workspace's meeting records and projects. To come back, you'll need a new invitation.",
       "recordingBlocked": "Stop recording before you leave.",
       "failed": "Couldn't leave the workspace.",
       "dialog": {
         "title": "Leave this workspace?",
-        "description": "You'll lose access to its meeting records and projects, and your agent conversations in this workspace will be deleted.",
+        "description": "You'll lose access to its meeting records and projects, and your agent chats in this workspace will be deleted.",
         "confirm": "Leave"
       }
     },
     "invite": {
       "title": "Invite members",
-      "description": "Invite people by email. People without an account can sign up through the link in the invite.",
+      "description": "Invite people by email. People without an account can sign up through the link in the invitation.",
       "emailLabel": "Email to invite",
       "emailRequired": "Enter an email address.",
       "emailInvalid": "Enter a valid email address.",
       "roleLabel": "Role",
       "submit": "Invite",
-      "failed": "Couldn't send the invite."
+      "failed": "Couldn't send the invitation."
     },
     "pending": {
-      "title": "Pending invites",
-      "loading": "Loading pending invites",
-      "loadFailed": "Couldn't load pending invites.",
-      "empty": "No pending invites.",
+      "title": "Pending invitations",
+      "loading": "Loading pending invitations",
+      "loadFailed": "Couldn't load pending invitations.",
+      "empty": "No pending invitations.",
       "expired": "Expired"
     }
   },
@@ -218,7 +218,7 @@
     "typeSection": "Notifications by type",
     "typeColumn": "Type",
     "types": {
-      "WORKSPACE_INVITATION": "Workspace invites",
+      "WORKSPACE_INVITATION": "Workspace invitations",
       "MEETING_PAUSED_REMINDER": "Paused meetings",
       "ANALYSIS_READY": "Results ready to review",
       "MEETING_AUTO_ENDED": "Meeting ended automatically",
@@ -298,22 +298,22 @@
     "roleFailed": "Couldn't check your permissions, so you can't change MCP settings.",
     "adminOnly": "Only admins can change MCP connections.",
     "allow": {
-      "title": "Allow MCP connection",
+      "title": "Allow MCP connections",
       "on": "Teammates can give AI apps like Claude or ChatGPT access to this workspace.",
       "off": "Off, so no new connections can be made.",
       "onBadge": "On",
       "offBadge": "Off"
     },
     "open": {
-      "title": "Open connections",
-      "loading": "Loading open connections",
+      "title": "Active connections",
+      "loading": "Loading active connections",
       "loadFailed": "Couldn't load connections.",
-      "empty": "No open connections."
+      "empty": "No active connections."
     },
     "offDialog": {
       "title": "Turn off MCP connections?",
-      "descriptionCount": "{count, plural, one {The # open connection will be disconnected} other {All # open connections will be disconnected}} and won't come back if you turn this on again. While it's off, no one can connect to this workspace.",
-      "description": "All open connections will be disconnected and won't come back if you turn this on again. While it's off, no one can connect to this workspace.",
+      "descriptionCount": "{count, plural, one {The # active connection will be disconnected} other {All # active connections will be disconnected}} and won't come back if you turn this on again. While it's off, no one can connect to this workspace.",
+      "description": "All active connections will be disconnected and won't come back if you turn this on again. While it's off, no one can connect to this workspace.",
       "confirm": "Turn off"
     },
     "row": {
@@ -337,7 +337,7 @@
       "REVOKED": "Revoked"
     },
     "credential": {
-      "PERSONAL_TOKEN": "Personal token",
+      "PERSONAL_TOKEN": "Personal access token",
       "OAUTH": "OAuth"
     },
     "revokeReason": {
@@ -388,14 +388,14 @@
       }
     },
     "usage": {
-      "label": "Usage history",
-      "loading": "Loading usage history",
-      "loadFailed": "Couldn't load usage history.",
+      "label": "Activity",
+      "loading": "Loading activity",
+      "loadFailed": "Couldn't load activity.",
       "empty": "No agent has used a tool through this connection yet.",
       "failed": "Failed",
       "resultCount": "{count, plural, one {# result} other {# results}}",
-      "nextFailed": "Couldn't load more history. Try Show more again.",
-      "loadingMore": "Loading more usage history",
+      "nextFailed": "Couldn't load more activity. Try Show more again.",
+      "loadingMore": "Loading more activity",
       "more": "Show more",
       "tools": {
         "get_connection": "Check connection",
@@ -419,17 +419,17 @@
     }
   },
   "terms": {
-    "title": "Glossary",
+    "title": "Custom vocabulary",
     "help": "Add product names, internal terms, and acronyms that transcription often gets wrong. HeyMoa uses them when transcribing every meeting in this workspace. You don't need to add common words.",
-    "loading": "Loading glossary",
-    "loadFailed": "Couldn't load the glossary.",
+    "loading": "Loading custom vocabulary",
+    "loadFailed": "Couldn't load custom vocabulary.",
     "addFailed": "Couldn't add terms.",
     "example": "ROAS, CTR, conversion rate, retargeting",
     "examplePrefix": "e.g. {example}",
     "input": "Terms to add",
     "placeholder": "Paste terms separated by commas or line breaks",
     "fullPlaceholder": "No room for more terms",
-    "full": "The glossary is full. Delete a term to add another.",
+    "full": "Your custom vocabulary is full. Delete a term to add another.",
     "preview": "Preview of terms to add",
     "previewHint": "Separate terms with commas (,), line breaks, semicolons, or tabs to preview them here.",
     "previewStatus": {
@@ -457,7 +457,7 @@
     "remove": "Remove {term}",
     "outcome": {
       "added": "Added {count}",
-      "existing": "Skipped {count} already in the glossary",
+      "existing": "Skipped {count} already in your vocabulary",
       "overLimit": "Couldn't add {count} over the limit",
       "invalid": "Skipped {count} with an invalid format",
       "failed": "Couldn't send {count}. They're back in the input, so try again"

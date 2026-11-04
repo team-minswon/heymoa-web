@@ -60,7 +60,7 @@ export function MeetingStatusChip({
         "flex shrink-0 items-center gap-1.5 text-[11px] font-semibold",
         live ? "text-destructive" : "text-[var(--el-muted)]"
       )}
-      title={status === "PAUSED" ? label : undefined}
+      title={label}
     >
       {Icon ? (
         <Icon className="size-3.5" aria-hidden />
@@ -73,13 +73,10 @@ export function MeetingStatusChip({
           )}
         />
       )}
-      {status === "PAUSED" ? (
-        // 「일시정지됨」은 다른 라벨보다 두 글자 길다. 좁은 상단바(1024 사이드 보기 등)에서는 탭을 덮지 않게
-        // ⏸ 아이콘만 남기고 글자는 스크린리더와 툴팁으로 둔다(APP-1406).
-        <span className="@max-[640px]/topbar:sr-only">{label}</span>
-      ) : (
-        label
-      )}
+      {/* 좁은 상단바(1024 사이드·전체 보기)에서는 탭을 덮지 않게 아이콘·점만 남기고 글자는
+        스크린리더와 툴팁으로 둔다(APP-1406). 영어 라벨(Recording·Not started)은 한국어보다
+        길어서 「일시정지됨」만 접던 때에는 칩이 탭 밑으로 들어갔다. */}
+      <span className="@max-[640px]/topbar:sr-only">{label}</span>
     </span>
   );
 }
@@ -243,10 +240,13 @@ export function MeetingControls({
       )}
       disabled={recordingBlocked}
       aria-describedby={recordingBlocked ? reasonId : undefined}
+      // 좁은 상단바에서 글자가 접혀도 마우스로 이름을 볼 수 있게. 막힌 때는 감싼 툴팁이 이유를 말한다.
+      title={recordingBlocked ? undefined : t("end")}
       onClick={() => setEndOpen(true)}
     >
       <CircleStop className="size-4" />
-      {t("end")}
+      {/* 좁은 상단바에서는 칩과 같은 이유로 아이콘만 남긴다. 이름은 스크린리더에 남는다. */}
+      <span className="@max-[640px]/topbar:sr-only">{t("end")}</span>
       {nudge ? (
         <span
           aria-hidden

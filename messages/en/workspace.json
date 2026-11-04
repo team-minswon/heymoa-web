@@ -87,39 +87,39 @@
   },
   "invite": {
     "home": "Go home",
-    "missingToken": "The link is wrong or cut off. Check the link in the invite email.",
+    "missingToken": "The link is wrong or cut off. Check the link in the invitation email.",
     "anonymous": {
       "title": "You've been invited to a workspace",
-      "description": "Sign in to accept the invite and join the workspace.",
+      "description": "Sign in to accept the invitation and join the workspace.",
       "continueWithGoogle": "Continue with Google"
     },
     "alreadyMember": {
       "title": "You're already a member of this workspace",
-      "description": "There's no need to accept the invite again. Continue in the workspace."
+      "description": "There's no need to accept the invitation again. Continue in the workspace."
     },
     "checking": {
-      "title": "Checking your invite",
+      "title": "Checking your invitation",
       "description": "You'll go to the workspace once it's accepted."
     },
     "acceptFailed": {
-      "title": "Couldn't accept the invite",
+      "title": "Couldn't accept the invitation",
       "description": "Try again in a moment."
     },
     "errors": {
       "notFound": {
-        "title": "This invite link isn't valid",
-        "description": "The link is wrong or the invite was deleted. Check the link in the invite email."
+        "title": "This invitation link isn't valid",
+        "description": "The link is wrong or the invitation was deleted. Check the link in the invitation email."
       },
       "expired": {
-        "title": "This invite has expired",
-        "description": "Invite links are valid for only 1 day. Ask a workspace admin to invite you again."
+        "title": "This invitation has expired",
+        "description": "Invitation links are valid for only 1 day. Ask a workspace admin to invite you again."
       },
       "notPending": {
-        "title": "This invite was already handled",
-        "description": "It was already accepted or canceled. Ask an admin for a new invite."
+        "title": "This invitation was already handled",
+        "description": "It was already accepted or canceled. Ask an admin for a new invitation."
       },
       "emailMismatch": {
-        "title": "This invite is for a different email",
+        "title": "This invitation is for a different email",
         "description": "The invited email doesn't match the account you're signed in with. Sign in again with the invited account."
       }
     }
