@@ -11,11 +11,15 @@ import {
 import { buildMinutes, type MinutesInclude } from "@/lib/notes/minutes/model";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import type { TranscriptRow } from "@/lib/transcription/presentation";
+import { testAppT } from "@/components/help/test-intl";
+
+const ko = { locale: "ko-KR", t: testAppT() };
 
 const FONTS = path.resolve(__dirname, "../../../public/fonts/minutes");
 
 const doc = (include: MinutesInclude) =>
   buildMinutes({
+    doc: ko,
     note: {
       title: "공유 기능 범위 정리",
       whenIso: "2026-10-15T05:00:00Z",
@@ -200,6 +204,7 @@ describe("renderMinutesPdfInline", () => {
       open: [],
     }));
     const big = buildMinutes({
+      doc: ko,
       note: {
         title: "긴 회의",
         whenIso: "2026-10-15T05:00:00Z",

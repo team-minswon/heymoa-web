@@ -5,6 +5,7 @@ import {
   formatDueDate,
   getAppDateKey,
 } from "@/lib/format/date";
+import type { DocLanguage } from "@/lib/i18n/translator";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import type { TimelineGroup } from "@/lib/notes/proposals/timeline";
 import type { ReviewItem, ReviewSection } from "@/lib/notes/review/sections";
@@ -139,60 +140,65 @@ export type MinutesGroup<Row> = {
 /** 붙임 선택. 본문은 늘 들어간다 */
 export type MinutesInclude = { transcript: boolean };
 
-export const TONE_LABEL: Record<MinutesTone, string> = {
-  decision: "결정",
-  task: "후속 조치",
-  open: "미결",
-};
-
-/** 안건에 들지 않은 줄의 머리. 회의록 양식이 끝 안건을 부르는 이름이다 */
-const OTHER_AGENDA = "기타";
-
-export function durationLabel(ms: number | null | undefined) {
+/** 「52분」 · 「1시간 5분」 · 「1 hr 5 min」. 1분 미만이거나 모르면 null */
+export function durationLabel(
+  ms: number | null | undefined,
+  { t }: DocLanguage
+) {
   if (!ms || ms < 60_000) return null;
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}분`;
+  if (minutes < 60) return t("dates.duration.minutes", { minutes });
+  const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return rest
-    ? `${Math.floor(minutes / 60)}시간 ${rest}분`
-    : `${Math.floor(minutes / 60)}시간`;
+    ? t("dates.duration.hoursMinutes", { hours, minutes: rest })
+    : t("dates.duration.hours", { hours });
 }
 
 /**
  * 일시 칸. 끝 시각은 회의가 실제로 끝난 시각([endedIso])으로만 적는다 — 시작에 기록 길이를 더하면 일시정지했던 시간이
  * 빠져 실제보다 이르게 찍혔다(09:00 시작 · 20분 일시정지 · 60분 기록이면 10:20 에 끝났는데 10:00). 모르면 시작 시각만.
  */
-function dateLabelOf(whenIso: string, endedIso: string | undefined) {
-  const day = formatAppDate(whenIso, {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    weekday: "short",
-  });
+function dateLabelOf(
+  whenIso: string,
+  endedIso: string | undefined,
+  locale: string
+) {
+  const day = formatAppDate(
+    whenIso,
+    { year: "numeric", month: "numeric", day: "numeric", weekday: "short" },
+    locale
+  );
   const start = formatAppClock(whenIso);
   if (!endedIso) return `${day} ${start}`;
   // 자정을 넘긴 회의는 끝난 날도 적는다 — 시각만 두면 같은 날 23:30 – 00:30 으로 읽힌다
   if (getAppDateKey(endedIso) !== getAppDateKey(whenIso)) {
-    const endDay = formatAppDate(endedIso, {
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      weekday: "short",
-    });
+    const endDay = formatAppDate(
+      endedIso,
+      { year: "numeric", month: "numeric", day: "numeric", weekday: "short" },
+      locale
+    );
     return `${day} ${start} – ${endDay} ${formatAppClock(endedIso)}`;
   }
   return `${day} ${start} – ${formatAppClock(endedIso)}`;
 }
 
 /** 파일 이름에 못 쓰는 글자를 걷어 낸다. 운영체제마다 막는 글자가 달라 가장 좁은 쪽(Windows)에 맞춘다 */
-export function minutesFileName(title: string, whenIso: string) {
+export function minutesFileName(
+  title: string,
+  whenIso: string,
+  { t }: DocLanguage
+) {
   const safe = title
     .replace(/[\\/:*?"<>|\u0000-\u001f]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 80)
     .replace(/[. ]+$/, "");
-  return `회의록_${safe || "회의"}_${getAppDateKey(whenIso).replaceAll("-", "")}.pdf`;
+  return t("dates.document.minutesFile", {
+    title: safe || t("dates.document.minutesFileUntitled"),
+    date: getAppDateKey(whenIso).replaceAll("-", ""),
+  });
 }
 
 const rangeOf = (startMs: number | null, endMs: number | null) =>
@@ -203,10 +209,16 @@ const rangeOf = (startMs: number | null, endMs: number | null) =>
       : `${formatOffset(startMs)} – ${formatOffset(endMs)}`;
 
 /** 묶음 머리. 안건이 하나라도 있으면 안건 밖 묶음은 「기타」, 하나도 없으면 머리를 세우지 않는다 */
-function headsOf(groups: readonly TimelineGroup[], lengthMs: number | null) {
+function headsOf(
+  groups: readonly TimelineGroup[],
+  lengthMs: number | null,
+  { t }: DocLanguage
+) {
   const anyAgenda = groups.some((group) => group.agenda !== null);
   return groups.map((group) => ({
-    title: anyAgenda ? (group.agenda?.title ?? OTHER_AGENDA) : null,
+    title: anyAgenda
+      ? (group.agenda?.title ?? t("dates.document.otherAgenda"))
+      : null,
     range: anyAgenda ? rangeOf(group.startMs, group.endMs ?? lengthMs) : null,
   }));
 }
@@ -218,9 +230,10 @@ function headsOf(groups: readonly TimelineGroup[], lengthMs: number | null) {
  */
 export function minutesTimeline(
   groups: readonly TimelineGroup[],
+  doc: DocLanguage,
   lengthMs: number | null = null
 ) {
-  const heads = headsOf(groups, lengthMs);
+  const heads = headsOf(groups, lengthMs, doc);
   return groups
     .map(
       (group, index): MinutesGroup<MinutesTimelineRow> => ({
@@ -237,7 +250,7 @@ export function minutesTimeline(
             {
               at: item.atMs === null ? null : formatOffset(item.atMs),
               tone: item.tone,
-              label: TONE_LABEL[item.tone],
+              label: doc.t(`dates.document.tones.${item.tone}`),
               text: item.proposal.content.trim(),
             },
           ];
@@ -340,6 +353,7 @@ export function buildMinutes({
   unnamedSpeakers = 0,
   transcript = null,
   include,
+  doc,
 }: {
   note: NoteMeta;
   sharedBy?: string | null;
@@ -357,15 +371,19 @@ export function buildMinutes({
   unnamedSpeakers?: number;
   transcript?: MinutesTranscriptSource | null;
   include: MinutesInclude;
+  doc: DocLanguage;
 }): MinutesDocument {
+  const { t, locale } = doc;
+  const speakerName = (label: string) =>
+    t("notes.speakers.fallback", { label });
   const attendees = (note.participantNames ?? [])
     .map((name) => name.trim())
     .filter(Boolean);
-  const date = formatAppDate(note.whenIso, {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  });
+  const date = formatAppDate(
+    note.whenIso,
+    { year: "numeric", month: "numeric", day: "numeric" },
+    locale
+  );
 
   // 같은 항목이 두 안건에 걸려도 처음 안건에만 싣는다 — 두 번 세면 할 일이 늘어난다
   const seen = new Set<string>();
@@ -408,28 +426,28 @@ export function buildMinutes({
         agendaNo: no,
         at: pointAt(citedAt(item)),
       });
-      cite(item, `결정 ${decisions.length}`);
+      cite(item, t("dates.document.refs.decision", { no: decisions.length }));
     }
     for (const item of picked.tasks) {
       actions.push({
         no: actions.length + 1,
         content: item.content.trim(),
-        assignee: describeAssignee(item.assignee)?.name ?? null,
-        due: item.due ? formatDueDate(item.due) : null,
+        assignee: describeAssignee(item.assignee, speakerName)?.name ?? null,
+        due: item.due ? formatDueDate(item.due, locale) : null,
         agendaNo: no,
         at: pointAt(citedAt(item)),
       });
-      cite(item, `할 일 ${actions.length}`);
+      cite(item, t("dates.document.refs.task", { no: actions.length }));
     }
     for (const item of picked.open) {
       open.push({
         no: open.length + 1,
         content: item.content.trim(),
-        assignee: describeAssignee(item.assignee)?.name ?? null,
+        assignee: describeAssignee(item.assignee, speakerName)?.name ?? null,
         agendaNo: no,
         at: pointAt(citedAt(item)),
       });
-      cite(item, `미결 ${open.length}`);
+      cite(item, t("dates.document.refs.open", { no: open.length }));
     }
     const counts = {
       decisions: picked.decisions.length,
@@ -469,8 +487,8 @@ export function buildMinutes({
 
   return {
     title: note.title,
-    dateLabel: dateLabelOf(note.whenIso, note.endedIso),
-    durationLabel: durationLabel(note.durationMs),
+    dateLabel: dateLabelOf(note.whenIso, note.endedIso, locale),
+    durationLabel: durationLabel(note.durationMs, doc),
     attendees,
     attendeeCount: attendees.length || note.participantCount,
     unnamedSpeakers,
@@ -490,12 +508,12 @@ export function buildMinutes({
     open,
     transcript:
       include.transcript && transcript
-        ? transcriptLines(transcript, refsOf, agendaStarts)
+        ? transcriptLines(transcript, refsOf, agendaStarts, doc)
         : null,
     transcriptTruncated:
       include.transcript && transcript ? transcript.truncated : false,
-    footer: `${date} · ${note.title} 회의록`,
-    fileName: minutesFileName(note.title, note.whenIso),
+    footer: t("dates.document.minutesFooter", { date, title: note.title }),
+    fileName: minutesFileName(note.title, note.whenIso, doc),
   };
 }
 
@@ -539,7 +557,8 @@ function splitRun(text: string): string[] {
 function transcriptLines(
   { rows, speakerOf }: MinutesTranscriptSource,
   refsOf: ReadonlyMap<string, string[]>,
-  agendaStarts: readonly { ms: number; no: number; title: string }[]
+  agendaStarts: readonly { ms: number; no: number; title: string }[],
+  { t }: DocLanguage
 ): MinutesLine[] {
   const starts = [...agendaStarts].sort((a, b) => a.ms - b.ms);
   const lines: MinutesLine[] = [];
@@ -554,7 +573,7 @@ function transcriptLines(
       lines.push({
         type: "gap",
         at: formatOffset(row.gap.startedAtMs),
-        text: gapHeadline(row.gap),
+        text: gapHeadline(row.gap, t),
       });
       lastKey = null;
       continue;
@@ -606,7 +625,10 @@ function transcriptLines(
         // 사람이 안 붙은 화자는 라벨 이름(「화자 A」)으로 선다. 확인 여부(`unassigned`)와는 다르다 — 이름이 붙었으면 사람이다
         unnamed:
           who !== null &&
-          who.displayName === `화자 ${row.segment.speakerLabel}`,
+          who.displayName ===
+            t("notes.speakers.fallback", {
+              label: row.segment.speakerLabel ?? "",
+            }),
         text: part,
         refs: index === 0 ? refs : [],
       })

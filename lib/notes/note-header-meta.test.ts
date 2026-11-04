@@ -4,7 +4,10 @@ import type {
   NoteResponseData,
   TranscriptResponseData,
 } from "@/lib/api/generated/models";
+import { testDatesT } from "@/components/help/test-intl";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
+
+const KO = { locale: "ko-KR", t: testDatesT() };
 
 function note(overrides: Partial<NoteResponseData> = {}): NoteResponseData {
   return {
@@ -33,7 +36,7 @@ function note(overrides: Partial<NoteResponseData> = {}): NoteResponseData {
 
 describe("buildNoteHeaderMeta", () => {
   it("첫 줄은 참석자 수와 회의 시각이다", () => {
-    const meta = buildNoteHeaderMeta(note(), { isStarter: true });
+    const meta = buildNoteHeaderMeta(note(), { ...KO, isStarter: true });
 
     expect(meta.participantLabel).toBe("참석자 2명");
     // 시각은 Asia/Seoul 기준이다 — 00:00Z는 같은 날 9시다.
@@ -51,7 +54,7 @@ describe("buildNoteHeaderMeta", () => {
         recordedDurationMs: 0,
         activeSessionStartedAt: null,
       }),
-      { isStarter: false }
+      { ...KO, isStarter: false }
     );
 
     // 시작 시각이 없으면 생성 시각으로 떨어진다.
@@ -61,21 +64,21 @@ describe("buildNoteHeaderMeta", () => {
   });
 
   it("기록 중 · 시작자에게는 공개 범위만 말한다", () => {
-    expect(buildNoteHeaderMeta(note(), { isStarter: true }).secondary).toBe(
-      "워크스페이스 멤버에게 공개"
-    );
+    expect(
+      buildNoteHeaderMeta(note(), { ...KO, isStarter: true }).secondary
+    ).toBe("워크스페이스 멤버에게 공개");
   });
 
   it("기록 중 · 참관에게는 누가 기록 중인지 먼저 말한다", () => {
-    expect(buildNoteHeaderMeta(note(), { isStarter: false }).secondary).toBe(
-      "김서연님이 기록 중 · 워크스페이스 멤버에게 공개"
-    );
+    expect(
+      buildNoteHeaderMeta(note(), { ...KO, isStarter: false }).secondary
+    ).toBe("김서연님이 기록 중 · 워크스페이스 멤버에게 공개");
   });
 
   it("종료·일시정지는 회의 길이다", () => {
     const ended = buildNoteHeaderMeta(
       note({ meetingStatus: "ENDED", activeSessionStartedAt: null }),
-      { isStarter: true }
+      { ...KO, isStarter: true }
     );
     expect(ended.secondary).toBe("기록 42분");
 
@@ -85,7 +88,7 @@ describe("buildNoteHeaderMeta", () => {
         activeSessionStartedAt: null,
         recordedDurationMs: 720_000,
       }),
-      { isStarter: true }
+      { ...KO, isStarter: true }
     );
     expect(paused.secondary).toBe("기록 12분");
   });
@@ -99,26 +102,46 @@ describe("buildNoteHeaderMeta", () => {
     expect(
       buildNoteHeaderMeta(
         note({ meetingStatus: "ENDED", activeSessionStartedAt: null }),
-        { isStarter: true, transcript }
+        { ...KO, isStarter: true, transcript }
       ).secondary
     ).toBe("기록 45분");
   });
 
   it("참석자가 없으면 그 조각을 뺀다 — 「참석자 0명」은 정보가 아니다", () => {
     expect(
-      buildNoteHeaderMeta(note({ participants: [] }), { isStarter: true })
-        .participantLabel
+      buildNoteHeaderMeta(note({ participants: [] }), {
+        ...KO,
+        isStarter: true,
+      }).participantLabel
     ).toBeNull();
   });
 
   it("진행 중 회의도 시계를 읽지 않는다 — 하이드레이션이 어긋난다", () => {
     // 같은 노트를 두 번 접으면 언제 접었는지와 무관하게 같은 문자열이어야 한다.
     const first = buildNoteHeaderMeta(note({ meetingStatus: "ENDED" }), {
+      ...KO,
       isStarter: true,
     });
     const second = buildNoteHeaderMeta(note({ meetingStatus: "ENDED" }), {
+      ...KO,
       isStarter: true,
     });
     expect(first).toEqual(second);
+  });
+
+  it("영어 화면은 영어 낱말이다", () => {
+    const en = { locale: "en-US", t: testDatesT("en") };
+    const live = buildNoteHeaderMeta(note(), { ...en, isStarter: false });
+    expect(live.participantLabel).toBe("2 attendees");
+    expect(live.whenLabel).toBe("July 30, 2026 at 9:00 AM");
+    expect(live.secondary).toBe(
+      "김서연 is recording · Visible to workspace members"
+    );
+    expect(
+      buildNoteHeaderMeta(
+        note({ meetingStatus: "ENDED", activeSessionStartedAt: null }),
+        { ...en, isStarter: true }
+      ).secondary
+    ).toBe("42 min recorded");
   });
 });

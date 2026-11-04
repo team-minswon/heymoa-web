@@ -50,7 +50,7 @@ type Revision = ProjectTaskRevisionListResponseDataRevisionsItem;
 type Field = "content" | "status" | "assignee" | "due";
 
 /** 판의 칸 값. 문구가 아니라 견줄 값이다 — 상태는 코드, 담당은 이름(없으면 `null`), 기한은 날짜 키. */
-function fieldsOf(revision: Revision, speakerName?: (label: string) => string) {
+function fieldsOf(revision: Revision, speakerName: (label: string) => string) {
   return {
     content: revision.content,
     status: revision.taskStatus,
@@ -70,7 +70,7 @@ export type RevisionChange = {
 export function revisionChanges(
   previous: Revision | undefined,
   current: Revision,
-  speakerName?: (label: string) => string
+  speakerName: (label: string) => string
 ): RevisionChange[] {
   const after = fieldsOf(current, speakerName);
   if (!previous) {

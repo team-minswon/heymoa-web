@@ -7,11 +7,15 @@ import {
 } from "@/components/notes/minutes/render-minutes-pdf";
 import { usePdfArtifact } from "@/components/notes/minutes/use-pdf-artifact";
 import { buildMinutes } from "@/lib/notes/minutes/model";
+import { testAppT } from "@/components/help/test-intl";
+
+const doc = { locale: "ko-KR", t: testAppT() };
 
 const blob = new Blob(["%PDF-test"], { type: "application/pdf" });
 const artifact = { blob, fileName: "회의록.pdf" };
 const document = () =>
   buildMinutes({
+    doc,
     note: {
       title: "회의",
       whenIso: "2026-10-18T00:00:00Z",

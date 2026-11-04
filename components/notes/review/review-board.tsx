@@ -3,6 +3,7 @@
 import { track } from "@/lib/analytics/track";
 import { useSummaryViewed } from "@/lib/analytics/use-summary-viewed";
 
+import { useDocLanguage } from "@/lib/i18n/use-doc-language";
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
 import { createMinutesPdfRenderer } from "@/components/notes/minutes/render-minutes-pdf";
 import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
@@ -181,6 +182,7 @@ export function ReviewBoard({
   const tKind = useTranslations("notes.kinds");
   const tAction = useTranslations("common.actions");
   const fallbackNames = useSpeakerFallbackNames();
+  const doc = useDocLanguage();
   const queryClient = useQueryClient();
   const editor = useReviewEditor(noteId);
   const reviewQuery = useGetMeetingReview(noteId, {
@@ -817,6 +819,7 @@ export function ReviewBoard({
   });
   const summaryMarkdown = () =>
     reviewToMarkdown({
+      doc,
       note: { ...noteMeta!, durationMs: lengthMs ?? undefined },
       summary,
       topics: digests,
@@ -855,7 +858,7 @@ export function ReviewBoard({
           citedAt,
           unfiledOpen: unfiledOpen(items, topicOf),
           unnamedSpeakers: unnamedSpeakers.length,
-          speakerName: fallbackNames.speaker,
+          doc,
         })
       : undefined;
   const preparePdf: PrepareMinutesPdf = async (include, signal) => {

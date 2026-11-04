@@ -93,6 +93,7 @@ export function ChatList({
   const now = new Date();
   const t = useTranslations("chat");
   const locale = useLocale();
+  const tDates = useTranslations("dates");
   const setEditingId = onEditingChange;
   const rows = useFrozenRows(chats, editingId !== null);
   const groups = groupChatsByRecency(rows, now);
@@ -236,7 +237,12 @@ export function ChatList({
                           </span>
                         ) : (
                           <span className="text-xs text-[var(--el-muted)] tabular-nums">
-                            {relativeUpdatedAt(chat.updatedAt, now, locale)}
+                            {relativeUpdatedAt(
+                              chat.updatedAt,
+                              now,
+                              tDates,
+                              locale
+                            )}
                           </span>
                         )}
                       </span>

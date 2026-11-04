@@ -1,6 +1,7 @@
 import { viewerDateKey } from "@/lib/format/date";
 import type { AgentChatsResponseDataChatsItem } from "@/lib/api/generated/models";
 import type { ChatStreamPhase } from "@/lib/chat/stream-protocol";
+import type { DatesT } from "@/lib/i18n/translator";
 
 /** 목록 한 줄에 서는 배지(`chat.running.<값>`). 없으면 그 대화는 지금 아무것도 안 한다. */
 export type RunningLabel = "streaming" | "approval";
@@ -116,11 +117,15 @@ export function groupChatsByRecency<T extends { updatedAt: string }>(
  * 「1분 전」·「3일 전」 같은 상대 시각. **앱 언어(`locale`)를 꼭 넘긴다.** 숫자와 단위는 `Intl` 이 낸다. 1분 미만은 「방금」이다 —
  * `Intl` 에 0을 넘기면 「이번 분」이 나온다. 달·해는 30일·365일 관용값으로 자른다.
  */
-export function relativeUpdatedAt(at: string, now: Date, locale?: string) {
+export function relativeUpdatedAt(
+  at: string,
+  now: Date,
+  t: DatesT,
+  locale?: string
+) {
   const elapsed = now.getTime() - Date.parse(at);
   // 로케일은 앱 언어를 받는다(`useLocale`). 비우면 브라우저 언어를 따라 한국어 화면에 「57m ago」가 섞인다
-  if (elapsed < 60_000)
-    return locale && !locale.startsWith("ko") ? "just now" : "방금";
+  if (elapsed < 60_000) return t("justNow");
 
   const format = new Intl.RelativeTimeFormat(locale, {
     numeric: "always",

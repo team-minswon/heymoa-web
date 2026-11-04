@@ -15,6 +15,10 @@ import {
   type OpenChatStatus,
 } from "@/lib/chat/chat-list";
 import { normalizeChatTitle } from "@/lib/chat/rename-chat";
+import { testDatesT } from "@/components/help/test-intl";
+
+const tKo = testDatesT();
+const tEn = testDatesT("en");
 
 const NOW = new Date("2026-08-25T12:00:00Z");
 const TZ = "UTC";
@@ -163,14 +167,24 @@ describe("시간으로 묶는다", () => {
 // 다른 값을 그리면 「1분 전인데 왜 세 번째 줄」이 된다
 describe("그리는 시각이 정렬 기준과 같은 값이다", () => {
   it("1분 미만은 방금이다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "ko")).toBe("방금");
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, tKo, "ko")).toBe(
+      "방금"
+    );
   });
 
   it("분·시간·일·달·해로 넘어간다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:00:00Z", NOW, "ko")).toContain("1");
-    expect(relativeUpdatedAt("2026-08-22T12:00:00Z", NOW, "ko")).toContain("3");
-    expect(relativeUpdatedAt("2026-06-01T12:00:00Z", NOW, "ko")).toContain("2");
-    expect(relativeUpdatedAt("2024-08-25T12:00:00Z", NOW, "ko")).toContain("2");
+    expect(relativeUpdatedAt("2026-08-25T11:00:00Z", NOW, tKo, "ko")).toContain(
+      "1"
+    );
+    expect(relativeUpdatedAt("2026-08-22T12:00:00Z", NOW, tKo, "ko")).toContain(
+      "3"
+    );
+    expect(relativeUpdatedAt("2026-06-01T12:00:00Z", NOW, tKo, "ko")).toContain(
+      "2"
+    );
+    expect(relativeUpdatedAt("2024-08-25T12:00:00Z", NOW, tKo, "ko")).toContain(
+      "2"
+    );
   });
 });
 
@@ -280,17 +294,19 @@ describe("revertChatTitle", () => {
 
 describe("상대 시각은 앱 언어로", () => {
   it("한국어 화면은 「57분 전」·「방금」이다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, "ko")).toBe(
+    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, tKo, "ko")).toBe(
       "57분 전"
     );
-    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "ko")).toBe("방금");
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, tKo, "ko")).toBe(
+      "방금"
+    );
   });
 
   it("영어 화면은 영어다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, "en")).toMatch(
+    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, tEn, "en")).toMatch(
       /57.*ago/
     );
-    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "en")).toBe(
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, tEn, "en")).toBe(
       "just now"
     );
   });

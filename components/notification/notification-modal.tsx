@@ -560,6 +560,7 @@ function NotificationListBody({
   renderRow: (item: NotificationItem, timeLabel: string) => React.ReactNode;
 }) {
   const t = useTranslations("notification.modal");
+  const tDates = useTranslations("dates");
   const dateLocale = useDisplayLocale();
   if (isLoading) {
     return (
@@ -605,7 +606,7 @@ function NotificationListBody({
   const grouped = filter === "ALL";
   const groups: { day: string | null; items: NotificationItem[] }[] = [];
   for (const item of items) {
-    const day = grouped ? dayLabel(item.createdAt) : null;
+    const day = grouped ? dayLabel(item.createdAt, dateLocale, tDates) : null;
     const last = groups.at(-1);
     if (last && last.day === day) last.items.push(item);
     else groups.push({ day, items: [item] });
@@ -626,7 +627,7 @@ function NotificationListBody({
                 <Fragment key={item.notificationId}>
                   {renderRow(
                     item,
-                    grouped ? time : `${dayLabel(item.createdAt)} ${time}`
+                    grouped ? time : `${dayLabel(item.createdAt, dateLocale, tDates)} ${time}`
                   )}
                 </Fragment>
               );

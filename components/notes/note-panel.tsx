@@ -72,6 +72,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
 import {
@@ -156,6 +157,8 @@ export function NotePanel({
 }) {
   const t = useTranslations("notes.panel");
   const tActions = useTranslations("common.actions");
+  const tDates = useTranslations("dates");
+  const dateLocale = useDisplayLocale();
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
   const isDesktopApp = useDesktopApp();
@@ -492,7 +495,12 @@ export function NotePanel({
       ? headerTranscriptQuery.data.data.data
       : null;
   const meta = note
-    ? buildNoteHeaderMeta(note, { isStarter, transcript: headerTranscript })
+    ? buildNoteHeaderMeta(note, {
+        isStarter,
+        transcript: headerTranscript,
+        locale: dateLocale,
+        t: tDates,
+      })
     : null;
   /**
    * 회의 제어(`MeetingControls`)가 실제로 그릴 것이 있는가. **조건을 여기서 한 번 더 적는

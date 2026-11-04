@@ -122,9 +122,7 @@ describe("NoteSummary 항목 리스트", () => {
     renderSummary(true);
 
     expect(screen.getByRole("region", { name: "개요" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "액션 아이템" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "할 일" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "결정" })).toBeInTheDocument();
     expect(screen.getByText("결제 실패율이 3%로 올랐다")).toBeInTheDocument();
     expect(screen.queryByRole("tab")).toBeNull();
@@ -264,7 +262,7 @@ describe("NoteSummary", () => {
     const { container } = renderSummary(true);
 
     // 섹션 제목 셋은 응답이 아니라 고정 순서다 — 스켈레톤이 가리지 않는다.
-    ["개요", "액션 아이템", "결정"].forEach((label) => {
+    ["개요", "할 일", "결정"].forEach((label) => {
       expect(screen.getByRole("heading", { name: label })).toBeTruthy();
     });
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBe(7);

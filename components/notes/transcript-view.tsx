@@ -308,8 +308,9 @@ export function TranscriptView({
               kind="transcript"
               // 일시정지 뒤 최종 재조회가 도는 동안은 무엇이 최종본인지 모른다.
               disabled={transcriptQuery.isFetching}
-              build={() =>
+              build={(doc) =>
                 transcriptToMarkdown({
+                  doc,
                   note: {
                     ...noteMeta,
                     durationMs: meetingLengthOf(

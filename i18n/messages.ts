@@ -2,6 +2,7 @@ import enAgents from "@/messages/en/agents.json";
 import enAuth from "@/messages/en/auth.json";
 import enChat from "@/messages/en/chat.json";
 import enCommon from "@/messages/en/common.json";
+import enDates from "@/messages/en/dates.json";
 import enDownload from "@/messages/en/download.json";
 import enErrors from "@/messages/en/errors.json";
 import enHelp from "@/messages/en/help.json";
@@ -18,6 +19,7 @@ import koAgents from "@/messages/ko/agents.json";
 import koAuth from "@/messages/ko/auth.json";
 import koChat from "@/messages/ko/chat.json";
 import koCommon from "@/messages/ko/common.json";
+import koDates from "@/messages/ko/dates.json";
 import koDownload from "@/messages/ko/download.json";
 import koErrors from "@/messages/ko/errors.json";
 import koHelp from "@/messages/ko/help.json";
@@ -53,6 +55,7 @@ const ko = {
   notification: koNotification,
   agents: koAgents,
   recording: koRecording,
+  dates: koDates,
 };
 
 export type Messages = typeof ko;
@@ -79,6 +82,7 @@ const en: DeepPartial<Messages> = {
   notification: enNotification,
   agents: enAgents,
   recording: enRecording,
+  dates: enDates,
 };
 
 /**

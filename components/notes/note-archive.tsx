@@ -1241,8 +1241,9 @@ export const NoteArchive = memo(function NoteArchive({
               // 라이브 캐시를 그대로 보여주며 다시 읽는다(`refetchOnMount: "always"`).
               // 그 창에서 복사하면 마지막 발화가 빠진 회의록이 남는다.
               disabled={transcriptQuery.isFetching}
-              build={() =>
+              build={(doc) =>
                 transcriptToMarkdown({
+                  doc,
                   note: {
                     ...noteMeta,
                     durationMs: meetingDurationMs,

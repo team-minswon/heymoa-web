@@ -6,10 +6,13 @@ import {
   describeAssignee,
 } from "@/lib/assignees/describe";
 
+// 시험의 한국어 화자 이름. 화면은 `notes.speakers.fallback` 을 넘긴다
+const speakerName = (label: string) => `화자 ${label}`;
+
 describe("describeAssignee", () => {
   it("사람은 이름과 식별자 얼굴로 선다", () => {
     expect(
-      describeAssignee({ type: "GUEST", id: "01K0000000991", name: "한지원" })
+      describeAssignee({ type: "GUEST", id: "01K0000000991", name: "한지원" }, speakerName)
     ).toEqual({
       name: "한지원",
       avatarKey: "01K0000000991",
@@ -27,13 +30,13 @@ describe("describeAssignee", () => {
         id: "01K0000000992",
         name: "김민수",
         image: "https://example.test/a.png",
-      })?.image
+      }, speakerName)?.image
     ).toBe("https://example.test/a.png");
   });
 
   it("이름 없는 화자에는 사진이 없다", () => {
     expect(
-      describeAssignee({ type: "SPEAKER_LABEL", noteId: "n1", label: "F" })?.image
+      describeAssignee({ type: "SPEAKER_LABEL", noteId: "n1", label: "F" }, speakerName)?.image
     ).toBeNull();
   });
 
@@ -42,9 +45,9 @@ describe("describeAssignee", () => {
       type: "SPEAKER_LABEL",
       noteId: "01K0000000920",
       label: "F",
-    });
+    }, speakerName);
     expect(view).toMatchObject({ name: "화자 F", unnamed: true });
-    expect(describeAssignee(null)).toBeNull();
+    expect(describeAssignee(null, speakerName)).toBeNull();
   });
 
   it("같은 사람은 같은 열쇠이고, 요청 본문은 종류마다 필요한 값만 싣는다", () => {

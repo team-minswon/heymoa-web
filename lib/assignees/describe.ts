@@ -28,8 +28,8 @@ export type AssigneeView = {
 
 export function describeAssignee(
   value: AssigneeValue | null | undefined,
-  /** 이름 없는 화자를 부르는 말. 화면은 언어 파일로 넘긴다. 기본값은 한국어 복사본·회의록용 */
-  speakerName: (label: string) => string = (label) => `화자 ${label}`
+  /** 이름 없는 화자를 부르는 말. 화면 언어(`notes.speakers.fallback`)로 넘긴다 */
+  speakerName: (label: string) => string
 ): AssigneeView | null {
   if (!value) return null;
   if (value.type === "SPEAKER_LABEL") {

@@ -28,6 +28,7 @@ const REQUIRED_EN: readonly Namespace[] = [
   "notification",
   "agents",
   "recording",
+  "dates",
 ];
 
 function keyPaths(value: unknown, prefix = ""): string[] {

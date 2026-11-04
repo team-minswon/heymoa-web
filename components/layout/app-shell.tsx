@@ -44,6 +44,7 @@ export const PRODUCT_NAMESPACES: readonly Namespace[] = [
   "notification",
   "agents",
   "recording",
+  "dates",
 ];
 
 /**

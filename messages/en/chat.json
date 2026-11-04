@@ -80,7 +80,7 @@
       },
       "actionItems": {
         "label": "Create tasks",
-        "question": "Turn what this meeting agreed to do into tasks"
+        "question": "Create tasks for what we agreed to do in this meeting"
       },
       "web": {
         "label": "Search the web",

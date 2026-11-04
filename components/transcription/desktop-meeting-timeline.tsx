@@ -27,6 +27,7 @@ export function DesktopMeetingTimelineReporter() {
 
 function MeetingTimelineReporter() {
   const t = useTranslations("recording.desktopTimeline");
+  const tKinds = useTranslations("notes.kinds");
   const { activeNoteId, phase } = useRecording();
   const { noteId, context, reconnecting, subscriptionIssue } =
     useNoteRealtime();
@@ -50,12 +51,19 @@ function MeetingTimelineReporter() {
   const title = noteData?.title ?? t("untitled");
   const snapshot = useMemo(
     () =>
-      meetingTimelineSnapshot(noteId, title, context.state, {
-        loading: context.loading,
-        failed: context.failed || subscriptionIssue !== null,
-        reconnecting,
-      }),
+      meetingTimelineSnapshot(
+        noteId,
+        title,
+        context.state,
+        {
+          loading: context.loading,
+          failed: context.failed || subscriptionIssue !== null,
+          reconnecting,
+        },
+        (kind) => tKinds(kind)
+      ),
     [
+      tKinds,
       noteId,
       title,
       context.state,

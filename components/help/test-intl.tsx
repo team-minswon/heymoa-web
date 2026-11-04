@@ -1,4 +1,4 @@
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, createTranslator } from "next-intl";
 
 import { messagesFor } from "@/i18n/messages";
 import type { Locale } from "@/lib/i18n/locales";
@@ -19,3 +19,14 @@ export const intlWrapper = (locale: Locale = "ko") =>
       </NextIntlClientProvider>
     );
   };
+
+/** React 밖 순수 함수 시험이 넘기는 번역 함수. 화면이 넘기는 `useTranslations("dates")` · `useTranslations()` 와 같은 꼴이다. */
+export const testDatesT = (locale: Locale = "ko") =>
+  createTranslator({
+    locale,
+    messages: messagesFor(locale),
+    namespace: "dates",
+  });
+
+export const testAppT = (locale: Locale = "ko") =>
+  createTranslator({ locale, messages: messagesFor(locale) });

@@ -203,7 +203,7 @@ describe("ChatStarter", () => {
         expect.objectContaining({
           kind: "action_items",
           state: "note",
-          question: "이 회의의 액션 아이템을 할 일로 만들어줘",
+          question: "이 회의에서 하기로 한 것을 할 일로 만들어줘",
         })
       );
     });

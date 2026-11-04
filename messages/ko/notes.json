@@ -451,7 +451,7 @@
   "summary": {
     "sections": {
       "OVERVIEW": "개요",
-      "ACTION_ITEM": "액션 아이템",
+      "ACTION_ITEM": "할 일",
       "DECISION": "결정"
     },
     "regenerate": "요약 다시 만들기",
@@ -463,9 +463,9 @@
     "missing": {
       "endedTitle": "아직 요약이 없습니다",
       "liveTitle": "회의가 끝나면 요약을 만듭니다",
-      "liveBody": "회의를 종료하면 개요와 액션 아이템, 결정을 자동으로 정리합니다.",
+      "liveBody": "회의를 종료하면 개요와 할 일, 결정을 자동으로 정리합니다.",
       "readOnlyBody": "이 회의에는 만들어 둔 요약이 없습니다.",
-      "endedBody": "이 회의의 요약을 만들어 개요와 액션 아이템, 결정을 정리합니다."
+      "endedBody": "이 회의의 요약을 만들어 개요와 할 일, 결정을 정리합니다."
     },
     "create": "요약 만들기",
     "loadFailed": "요약을 불러오지 못했습니다.",

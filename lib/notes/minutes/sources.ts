@@ -73,7 +73,7 @@ export async function loadTranscript(
   queryClient: QueryClient,
   noteId: string,
   participants: SpeakerFace[],
-  speakerName?: (label: string) => string
+  speakerName: (label: string) => string
 ): Promise<TranscriptSource> {
   const transcript = okData(
     await queryClient.fetchQuery({

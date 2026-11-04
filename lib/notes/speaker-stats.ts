@@ -112,11 +112,6 @@ export type SpeakerFallbackNames = {
   speaker: (label: string) => string;
 };
 
-const KOREAN_NAMES: SpeakerFallbackNames = {
-  unnamedParticipant: "이름 없는 참여자",
-  speaker: (label) => `화자 ${label}`,
-};
-
 /**
  * 화자별 말한 분량. **세그먼트에서 직접 센다.**
  *
@@ -135,15 +130,15 @@ export function summarizeSpeakers({
   speakers,
   participants = [],
   durationMs,
-  names = KOREAN_NAMES,
+  names,
 }: {
   segments: TranscriptPresentationSegment[];
   speakers: SpeakerInput[];
   participants?: ParticipantInput[];
   /** 녹음 길이. 타임라인 축의 끝이다 — 없으면 마지막 발화로 대신한다. */
   durationMs?: number;
-  /** 이름을 모르는 줄에 세우는 말. 화면은 화면 언어로 넘긴다. */
-  names?: SpeakerFallbackNames;
+  /** 이름을 모르는 줄에 세우는 말. 화면 언어(`useSpeakerFallbackNames`)로 넘긴다. */
+  names: SpeakerFallbackNames;
 }): SpeakerStat[] {
   const byLabel = new Map(speakers.map((speaker) => [speaker.label, speaker]));
   const personOf = new Map(

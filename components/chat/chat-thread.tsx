@@ -48,10 +48,11 @@ const THREAD_PAD_PX = 24;
 const TimeDivider = memo(function TimeDivider({ at }: { at: string }) {
   // 앱 언어로 적는다. 비우면 브라우저 언어를 따라 「어제 11:44 PM」이 섞인다
   const locale = useLocale();
+  const tDates = useTranslations("dates");
   return (
     <TimeRule
       data-testid="thread-divider"
-      label={dividerLabel(at, new Date(), locale)}
+      label={dividerLabel(at, new Date(), tDates, locale)}
     />
   );
 });
@@ -356,6 +357,7 @@ function MessageActions({
   const [copied, setCopied] = useState(false);
   const locale = useLocale();
   const t = useTranslations("chat.thread");
+  const tDates = useTranslations("dates");
 
   useEffect(() => {
     if (!copied) return;
@@ -390,7 +392,7 @@ function MessageActions({
         {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
       </ChatIconButton>
       <span className="text-xs tabular-nums">
-        {relativeUpdatedAt(at, new Date(), locale)}
+        {relativeUpdatedAt(at, new Date(), tDates, locale)}
       </span>
       {/* 눌렀는지 화면 읽기에도 한 번 말한다 */}
       <span className="sr-only" aria-live="polite">

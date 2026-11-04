@@ -14,6 +14,7 @@ import type {
   NoteResponseData,
 } from "@/lib/api/generated/models";
 import { formatPromiseTime } from "@/lib/format/date";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { pausedDayCount } from "@/lib/notes/meeting-state";
 import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
@@ -55,6 +56,8 @@ export function NoteStatusBand({
   fromMail?: boolean;
 }) {
   const t = useTranslations("notes.statusBand");
+  const tDates = useTranslations("dates");
+  const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
   // 목록이 노트보다 늦게 도착해도 띠가 서도록 캐시를 구독한다. 값은 문자열이라 매 알림에 다시 그리지 않는다.
   const subscribe = useCallback(
@@ -89,7 +92,9 @@ export function NoteStatusBand({
     const days = pausedDayCount(pausedAt, now);
     const scheduledAt = note.autoEnd?.scheduledAt;
     if (scheduledAt)
-      lead = t("autoEndScheduled", { time: formatPromiseTime(scheduledAt) });
+      lead = t("autoEndScheduled", {
+        time: formatPromiseTime(scheduledAt, dateLocale, tDates),
+      });
     else if (days !== null) lead = t("pausedDays", { count: days });
     else if (landed) lead = t("paused");
     // 띠는 일시정지 일수(예고된 회의면 자동 종료 시각)만 말한다(userflow 표). 할 수 있는 일은 메일로 온 사람에게만 덧붙인다(userflow 「모바일 메일」).

@@ -213,8 +213,9 @@ export function NoteSummary({
               <CopyMarkdownButton
                 kind="summary"
                 className="h-[30px]"
-                build={() =>
+                build={(doc) =>
                   summaryToMarkdown({
+                    doc,
                     note: noteMeta,
                     sections: analysis.sections,
                   })

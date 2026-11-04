@@ -813,7 +813,7 @@ export function NoteTimeline({
                 kind="timeline"
                 iconOnly
                 disabled={!settled || context.failed}
-                build={() =>
+                build={(doc) =>
                   timelineToMarkdown(
                     {
                       title: header.title,
@@ -830,8 +830,10 @@ export function NoteTimeline({
                         agendaList && placement
                           ? { list: agendaList, placement }
                           : null
-                      ).groups
-                    )
+                      ).groups,
+                      doc
+                    ),
+                    doc
                   )
                 }
               />

@@ -55,6 +55,7 @@ import type { MinutesInclude } from "@/lib/notes/minutes/model";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
+import { useDocLanguage } from "@/lib/i18n/use-doc-language";
 
 /**
  * 보낸 사람이 남기는 말의 상한. 정본은 서버의 공유 메일 도메인 상수(`NoteShareMail.MAX_MESSAGE_LENGTH`)이고
@@ -104,6 +105,7 @@ export function ShareMailDialog({
   const tMinutes = useTranslations("notes.minutes");
   const tAction = useTranslations("common.actions");
   const dateLocale = useDisplayLocale();
+  const doc = useDocLanguage();
   const { user } = useAuth();
   const recipientsId = useId();
   const problemId = useId();
@@ -160,7 +162,7 @@ export function ShareMailDialog({
     preparePdf ??
       (async (option) => ({
         blob: await buildPdf(option),
-        fileName: minutesFileName(meeting.title, meeting.whenIso),
+        fileName: minutesFileName(meeting.title, meeting.whenIso, doc),
       }))
   );
   const preview = async () => {
@@ -466,7 +468,11 @@ export function ShareMailDialog({
                 sender={user?.name ?? ""}
                 recipients={recipients}
                 meeting={meeting}
-                day={day}
+                // 받는 사람의 메일은 서버가 한국어로 보낸다. 미리보기 날짜도 메일과 같은 한국어다
+                day={formatAppDate(meeting.whenIso, {
+                  month: "long",
+                  day: "numeric",
+                })}
                 message={message.trim()}
                 include={include}
               />

@@ -117,9 +117,9 @@ export type SpeakerFace = {
  */
 export function createSpeakerIdentityResolver(
   speakers: SpeakerIdentitySource[],
-  participants: SpeakerFace[] = [],
-  /** 이름을 모르는 화자의 이름. 화면은 화면 언어(`notes.speakers.fallback`)로 넘긴다. */
-  speakerName: (label: string) => string = (label) => `화자 ${label}`
+  participants: SpeakerFace[],
+  /** 이름을 모르는 화자의 이름. 화면 언어(`notes.speakers.fallback`)로 넘긴다. */
+  speakerName: (label: string) => string
 ) {
   const byLabel = new Map(speakers.map((speaker) => [speaker.label, speaker]));
   /** 사람 → 그 사람이 **가진** 라벨. 색은 [speakerOrb] 이 이것으로 정한다. */

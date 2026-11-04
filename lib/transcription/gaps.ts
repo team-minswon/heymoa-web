@@ -1,5 +1,6 @@
 import type { TranscriptResponseDataTranscriptGapsItem } from "@/lib/api/generated/models";
 import { getAppDateKey } from "@/lib/format/date";
+import type { AppT } from "@/lib/i18n/translator";
 
 export type TranscriptGap = {
   gapId: string;
@@ -191,13 +192,9 @@ export type GapDuration = {
   value: number;
 };
 
-/** 한국어 길이. 복사본·회의록이 쓴다 — 화면은 `gapDurationOf` 를 언어 파일로 옮긴다. */
-export function formatGapDuration(milliseconds: number) {
-  const { unit, value } = gapDurationOf(milliseconds);
-  if (unit === "brief") return "잠깐";
-  if (unit === "minutes") return `약 ${value}분`;
-  if (unit === "hours") return `약 ${value}시간`;
-  return `약 ${value}일`;
+/** 화면 언어의 길이(「약 10분」·「for about 10 minutes」). 복사본·회의록이 쓴다 — 화면과 같은 키(`notes.transcript.gap.duration`)다. */
+export function formatGapDuration(milliseconds: number, t: AppT) {
+  return t("notes.transcript.gap.duration", gapDurationOf(milliseconds));
 }
 
 /** 두 끝이 (앱 시간대에서) 다른 날이면 시:분만으로는 거꾸로 읽힌다. */
@@ -207,20 +204,25 @@ export function spansCalendarDays(row: GapRow) {
 }
 
 /**
- * 빈 구간 한 줄의 한국어. 복사본·회의록이 쓴다. **화면(`notes.transcript.gap`)과 같은 문구여야
- * 한다** — 회의록을 붙여넣은 사람과 화면을 보는 사람이 같은 10분을 다르게 읽으면 안 된다.
- * 한쪽을 고치면 다른 쪽도 고친다.
+ * 빈 구간 한 줄. 복사본·회의록이 쓴다. **화면(`notes.transcript.gap`)과 같은 키를 읽는다** — 회의록을 붙여넣은 사람과
+ * 화면을 보는 사람이 같은 10분을 다르게 읽으면 안 된다.
  *
  * 진행 중(`endedAt === null`)이면 길이를 말하지 않는다. 아직 안 끝난 구간이라 「약 3분」이
  * 곧 거짓이 된다.
  */
-export function gapHeadline(row: GapRow) {
-  const duration = isGapOpen(row) ? null : formatGapDuration(row.durationMs);
+export function gapHeadline(row: GapRow, t: AppT) {
+  const duration = isGapOpen(row) ? null : formatGapDuration(row.durationMs, t);
   if (row.kind === "PAUSE") {
-    return duration ? `${duration} 일시정지했습니다` : "일시정지했습니다";
+    return duration
+      ? t("notes.transcript.gap.pause", { duration })
+      : t("notes.transcript.gap.pauseOpen");
   }
   if (row.kind === "UNTRANSCRIBED") {
-    return `${duration} 받아쓰지 못했습니다. 소리는 남아 있습니다.`;
+    return t("notes.transcript.gap.untranscribed", {
+      duration: duration ?? "",
+    });
   }
-  return duration ? `${duration} 소리가 없습니다` : "소리가 없습니다";
+  return duration
+    ? t("notes.transcript.gap.lost", { duration })
+    : t("notes.transcript.gap.lostOpen");
 }

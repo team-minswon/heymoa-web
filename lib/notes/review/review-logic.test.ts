@@ -81,7 +81,7 @@ describe("sectionsOf", () => {
     expect(decisions.items.map((row) => row.itemId)).toEqual(["d2", "d1"]);
     expect(actions.items).toHaveLength(1);
     expect(actions.includedCount).toBe(0);
-    expect(open.label).toBe("이슈 · 질문");
+    expect(open.key).toBe("OPEN");
     expect(reference.items.map((row) => row.itemId)).toEqual(["r1"]);
   });
 

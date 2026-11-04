@@ -16,6 +16,7 @@ import {
   recordingClockOriginMs,
 } from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { groupNotesByRecency } from "@/lib/workspace/note-groups";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,8 @@ export function WorkspaceNoteList({
 }) {
   const t = useTranslations("workspace.noteList");
   const tActions = useTranslations("common.actions");
+  const tDates = useTranslations("dates");
+  const dateLocale = useDisplayLocale();
   const retryRef = useRef(onRetry);
   const activeMeetingStarts = notes
     .filter(isMeetingActive)
@@ -157,7 +160,7 @@ export function WorkspaceNoteList({
         stale && "opacity-60"
       )}
     >
-      {groupNotesByRecency(notes).map((group) => (
+      {groupNotesByRecency(notes, dateLocale, tDates).map((group) => (
         <section key={group.key}>
           <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">
             {group.label}

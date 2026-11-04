@@ -34,6 +34,7 @@ const revision = (over: Partial<Revision>): Revision => ({
 });
 
 describe("revisionChanges", () => {
+  const speakerName = (label: string) => `화자 ${label}`;
   it("첫 판은 무엇으로 시작했는지 담당과 기한만 보인다", () => {
     expect(
       revisionChanges(
@@ -41,7 +42,8 @@ describe("revisionChanges", () => {
         revision({
           assignee: { type: "SPEAKER_LABEL", noteId: "n1", label: "C" },
           due: "2026-09-19",
-        })
+        }),
+        speakerName
       )
     ).toEqual([
       { field: "assignee", after: "화자 C" },
@@ -57,13 +59,16 @@ describe("revisionChanges", () => {
           revision: 2,
           taskStatus: "COMPLETED",
           assignee: { type: "USER", id: "u1", name: "이민형" },
-        })
+        }),
+        speakerName
       )
     ).toEqual([
       { field: "status", before: "OPEN", after: "COMPLETED" },
       { field: "assignee", before: null, after: "이민형" },
     ]);
-    expect(revisionChanges(revision({}), revision({ revision: 2 }))).toEqual([]);
+    expect(
+      revisionChanges(revision({}), revision({ revision: 2 }), speakerName)
+    ).toEqual([]);
   });
 });
 
