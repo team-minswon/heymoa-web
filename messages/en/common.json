@@ -130,5 +130,11 @@
     "mutedNote": "“Turn off all email” is on, so these emails won't be sent either.",
     "agreedOn": "Agreed on {date}",
     "declinedOn": "Declined on {date}"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "retry": "Try again"
   }
 }

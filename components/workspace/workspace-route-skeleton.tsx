@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -20,9 +22,10 @@ import { Skeleton } from "@/components/ui/skeleton";
  * 각진 셸(사이드바 255 + `border-r`, 여백 0)을 그리고 있어 패널 셸로 바뀌며 어긋났다.
  */
 export function WorkspaceRouteSkeleton() {
+  const t = useTranslations("shell.routeSkeleton");
   return (
     <div
-      aria-label="워크스페이스 불러오는 중"
+      aria-label={t("loading")}
       className="flex min-h-svh bg-[var(--el-canvas)]"
     >
       <aside className="hidden w-[232px] shrink-0 md:flex md:flex-col">

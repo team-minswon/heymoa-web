@@ -265,7 +265,7 @@ describe("WorkspaceAppShell", () => {
 
     await waitFor(() => {
       expect(toastMock.success).toHaveBeenCalledWith(
-        "Linear 연동을 연결했습니다."
+        "Linear 연결을 마쳤습니다."
       );
     });
     // 라우터 왕복 없이 주소만 바꾼다 — 복귀 항목이 곧 `?settings=integrations` 다.
@@ -289,7 +289,7 @@ describe("WorkspaceAppShell", () => {
 
     await waitFor(() => {
       expect(toastMock.error).toHaveBeenCalledWith(
-        "연동 연결에 실패했습니다. 잠시 후 다시 시도해 주세요."
+        "연동하지 못했습니다. 잠시 후 다시 시도해 주세요."
       );
     });
   });

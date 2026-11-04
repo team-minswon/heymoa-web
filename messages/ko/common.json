@@ -130,5 +130,11 @@
     "mutedNote": "「메일 모두 끄기」가 켜져 있어 지금은 이 메일도 보내지 않아요.",
     "agreedOn": "{date}에 동의했어요",
     "declinedOn": "{date}에 거부했어요"
+  },
+  "actions": {
+    "cancel": "취소",
+    "save": "저장",
+    "delete": "삭제",
+    "retry": "다시 시도"
   }
 }

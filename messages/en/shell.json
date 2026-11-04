@@ -1,0 +1,154 @@
+{
+  "nav": {
+    "notifications": "Notifications",
+    "allNotes": "All notes",
+    "tasks": "Tasks",
+    "connectionMap": "Connection map"
+  },
+  "sidebar": {
+    "label": "Workspace",
+    "switchWorkspace": "Switch workspace",
+    "workspaceFallback": "Workspace",
+    "newWorkspace": "New workspace",
+    "workspaceSettings": "Workspace settings",
+    "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}",
+    "projects": "Projects",
+    "newProject": "New project",
+    "createProject": "Create project",
+    "projectsHint": "Group meetings by topic to find past context faster.",
+    "projectMenu": "Menu for project {name}",
+    "rename": "Rename",
+    "guide": "User guide",
+    "feedback": "Help & feedback",
+    "userFallback": "User",
+    "loggingOut": "Logging out",
+    "pleaseWait": "Just a moment",
+    "accountSettings": "Account settings",
+    "reopenOnboarding": "Show the intro again",
+    "logout": "Log out",
+    "navigating": "Opening page",
+    "renameDialog": {
+      "title": "Rename project",
+      "description": "Enter a name for the project that groups your notes.",
+      "nameLabel": "Project name"
+    },
+    "deleteDialog": {
+      "title": "Delete this project?",
+      "description": "The project {name} and the agent conversations in it will be deleted. This can't be undone. Projects that have notes can't be deleted."
+    },
+    "toast": {
+      "renamed": "Project renamed.",
+      "renameFailed": "Couldn't rename the project.",
+      "deleted": "Project deleted.",
+      "hasNotes": "Projects that have notes can't be deleted.",
+      "adminOnly": "Only admins can delete projects.",
+      "deleteFailed": "Couldn't delete the project."
+    }
+  },
+  "appShell": {
+    "integrationConnected": "Connected {provider}.",
+    "integrationFailed": "Couldn't connect. Try again in a moment.",
+    "meetingProjectNotFound": "Couldn't find the project to start the meeting in."
+  },
+  "toolbar": {
+    "location": "Current location",
+    "newNote": "New note",
+    "currentRecording": "Now recording",
+    "micInput": "Microphone input",
+    "pauseRecording": "Pause recording",
+    "pauseTooltip": "Pause recording. The meeting won't end."
+  },
+  "routeLayout": {
+    "loadFailed": "Couldn't load the workspace"
+  },
+  "routeSkeleton": {
+    "loading": "Loading workspace"
+  },
+  "desktopPromo": {
+    "label": "Desktop app",
+    "body": "Record the room and audio from video calls, lectures, and YouTube.",
+    "compare": "Compare the web and desktop apps",
+    "compareTooltip": "Compare the web and desktop apps"
+  },
+  "desktopDownload": {
+    "checking": "Checking which app to download",
+    "mac": "Download for macOS",
+    "windows": "Download for Windows",
+    "other": "Download app"
+  },
+  "desktopCompare": {
+    "steps": {
+      "sound": {
+        "title": "What you can record",
+        "description": "The web app records your mic. The desktop app adds computer audio."
+      },
+      "background": {
+        "title": "Keep recording after you close the window",
+        "description": "Keep working on other things while you record."
+      },
+      "sameData": {
+        "title": "Keep using your existing notes",
+        "description": "The web and desktop apps share the same notes and projects."
+      }
+    },
+    "stepGroup": "Step {current} of {total}",
+    "stepNav": "Desktop app steps",
+    "stepLabel": "{number}. {title}",
+    "previous": "Back",
+    "next": "Next",
+    "done": "Done",
+    "table": {
+      "caption": "What the web and the desktop app can record",
+      "sound": "Audio",
+      "web": "Web",
+      "app": "App",
+      "mic": "Microphone",
+      "micExamples": "Your voice, people in the room",
+      "system": "Computer audio",
+      "systemExamples": "People on a video call, lectures, YouTube videos",
+      "supported": "Can record",
+      "unsupported": "Can't record"
+    },
+    "menuBar": {
+      "label": "Example of the recording status and meeting timeline in the Mac menu bar",
+      "name": "Mac menu bar",
+      "recording": "Recording · 12:34",
+      "meeting": "Weekly meeting",
+      "timeline": "Timeline",
+      "item1": "Next meeting on Friday",
+      "item2": "Share the meeting materials",
+      "keepsRecording": "Recording continues when you close the window.",
+      "checkMenuBar": "Check the recording status and timeline in the Mac menu bar."
+    },
+    "install": {
+      "body": "Install the app, then sign in with the Google account you use now.",
+      "macRequirement": "macOS 14.2 or later · Apple Silicon"
+    }
+  },
+  "focusChrome": {
+    "logout": "Log out",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
+  },
+  "navbar": {
+    "sections": {
+      "meetings": "Meeting notes",
+      "evidence": "Sources"
+    },
+    "logout": "Log out",
+    "dashboardShort": "Dashboard",
+    "dashboard": "Go to dashboard",
+    "retryLabel": "Retry loading the dashboard",
+    "start": "Get started",
+    "loadFailed": "Couldn't load the dashboard.",
+    "loadFailedDescription": "Try again in a moment."
+  },
+  "footer": {
+    "tagline": "An AI agent that takes meeting notes and organizes decisions and tasks with their sources",
+    "contact": "Contact:",
+    "service": "Product",
+    "download": "Desktop app",
+    "policy": "Legal",
+    "disclaimer": "The AI meeting agent is a tool to support your work."
+  }
+}

@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 import { track } from "@/lib/analytics/track";
 import {
@@ -108,6 +109,8 @@ export function WorkspaceAppShell({
   );
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const t = useTranslations("shell.appShell");
+  const tNav = useTranslations("shell.nav");
 
   // **첫 커밋 뒤에만 URL을 읽고 쓴다.** 링크로 바로 들어오면 셸이 첫 hydration과 함께 마운트되는데,
   // 그때 자식 effect는 App Router가 `history.replaceState`를 패치하기 전에 돈다 — 네이티브
@@ -174,14 +177,16 @@ export function WorkspaceAppShell({
     if (status === "connected") {
       track("integration_connected", { provider });
       toast.success(
-        `${INTEGRATION_LABEL[provider] ?? provider} 연동을 연결했습니다.`
+        t("integrationConnected", {
+          provider: INTEGRATION_LABEL[provider] ?? provider,
+        })
       );
     } else {
-      toast.error("연동 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      toast.error(t("integrationFailed"));
     }
     pushedRef.current = false;
     replaceSettings("integrations", ["provider", "status"]);
-  }, [committed, searchParams]);
+  }, [committed, searchParams, t]);
 
   // suspense — 로딩/에러는 route-layout의 DataBoundary가 잡는다. isPending/isError는 항상 false라
   // context 인터페이스(workspace-page가 소비)는 그대로 두어도 값이 자연히 false가 된다.
@@ -238,7 +243,7 @@ export function WorkspaceAppShell({
       setSelectedProjectId(newMeetingProjectId);
       setNewMeetingOpen(true);
     } else {
-      toast.error("회의를 시작할 프로젝트를 찾을 수 없습니다.");
+      toast.error(t("meetingProjectNotFound"));
     }
     /* eslint-enable react-hooks/set-state-in-effect */
     const next = new URLSearchParams(searchParams);
@@ -249,7 +254,7 @@ export function WorkspaceAppShell({
       "",
       `${pathname}${query ? `?${query}` : ""}`
     );
-  }, [committed, newMeetingProjectId, projects, searchParams, pathname]);
+  }, [committed, newMeetingProjectId, projects, searchParams, pathname, t]);
 
   const value = useMemo(
     () => ({
@@ -278,11 +283,11 @@ export function WorkspaceAppShell({
   );
   const currentLabel =
     pathname === `/w/${workspaceId}/tasks`
-      ? "할 일"
+      ? tNav("tasks")
       : pathname.startsWith(`/w/${workspaceId}/projects/`)
-        ? "연결 지도"
+        ? tNav("connectionMap")
         : (projects.find((project) => project.projectId === selectedProjectId)
-          ?.name ?? "모든 노트");
+            ?.name ?? tNav("allNotes"));
   // 노트 전체 화면은 이 셸을 통째로 덮는다(design.pen `XtEMZ`). side 시트는 안 덮는다.
   const isFullNote =
     Boolean(activeNoteId) && searchParams.get("view") !== "side";
