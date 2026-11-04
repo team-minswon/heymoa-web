@@ -39,6 +39,7 @@ const user: AuthUser = {
   name: "테스트 유저",
   email: "test@heymoa.com",
   image: null,
+  language: null,
 };
 
 function deferred<T>() {
