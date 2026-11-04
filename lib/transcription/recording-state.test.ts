@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { STOP_UNCONFIRMED_MESSAGE } from "@/lib/transcription/recording-messages";
 import {
   initialRecordingState,
   recordingReducer,
@@ -110,7 +109,11 @@ describe("recordingReducer", () => {
   it("종료 확인 실패 뒤 서버 완료가 오면 그 문구를 걷는다", () => {
     const state = run(
       ...recording(),
-      { type: "failed", message: STOP_UNCONFIRMED_MESSAGE },
+      {
+        type: "failed",
+        message: "녹음이 멈췄는지 확인하지 못했습니다.",
+        unconfirmedStop: true,
+      },
       { type: "completed", session: { ...session, status: "COMPLETED" } }
     );
 
@@ -120,7 +123,7 @@ describe("recordingReducer", () => {
 
   // 다른 탭·부착이 같은 세션을 자기 끝 번호로 완료해도, 이 탭이 버린 소리는 저장되지 않았다
   it("버린 소리를 알린 문구는 서버 완료 뒤에도 남는다", () => {
-    const message = "마지막 기록을 정리하지 못해 3초를 올리지 못했어요.";
+    const message = "마지막 소리를 저장하지 못해 3초를 올리지 못했습니다.";
     const state = run(
       ...recording(),
       { type: "failed", message },

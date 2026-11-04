@@ -44,6 +44,7 @@ function WorkspaceRecordingIndicator({
 }) {
   const meter = useRecordingMeter();
   const t = useTranslations("shell.toolbar");
+  const tRecording = useTranslations("recording");
 
   return (
     <motion.div
@@ -65,7 +66,7 @@ function WorkspaceRecordingIndicator({
       {phase === "recording" ? (
         <span
           role="meter"
-          aria-label={t("micInput")}
+          aria-label={tRecording("micInput")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(meter.level * 100)}
@@ -93,7 +94,7 @@ function WorkspaceRecordingIndicator({
               variant="outline"
               size="icon-sm"
               className="size-7 rounded-full text-destructive"
-              aria-label={t("pauseRecording")}
+              aria-label={tRecording("pause.label")}
               disabled={phase !== "recording"}
               onClick={onStop}
             />
@@ -102,7 +103,7 @@ function WorkspaceRecordingIndicator({
           <Pause className="size-3.5" aria-hidden />
         </TooltipTrigger>
         <TooltipContent side="bottom">
-          {t("pauseTooltip")}
+          {tRecording("pause.tooltip")}
         </TooltipContent>
       </Tooltip>
     </motion.div>

@@ -10,6 +10,7 @@ import enLegal from "@/messages/en/legal.json";
 import enNotes from "@/messages/en/notes.json";
 import enNotification from "@/messages/en/notification.json";
 import enSettings from "@/messages/en/settings.json";
+import enRecording from "@/messages/en/recording.json";
 import enShell from "@/messages/en/shell.json";
 import enTasks from "@/messages/en/tasks.json";
 import enWorkspace from "@/messages/en/workspace.json";
@@ -25,6 +26,7 @@ import koLegal from "@/messages/ko/legal.json";
 import koNotes from "@/messages/ko/notes.json";
 import koNotification from "@/messages/ko/notification.json";
 import koSettings from "@/messages/ko/settings.json";
+import koRecording from "@/messages/ko/recording.json";
 import koShell from "@/messages/ko/shell.json";
 import koTasks from "@/messages/ko/tasks.json";
 import koWorkspace from "@/messages/ko/workspace.json";
@@ -50,6 +52,7 @@ const ko = {
   tasks: koTasks,
   notification: koNotification,
   agents: koAgents,
+  recording: koRecording,
 };
 
 export type Messages = typeof ko;
@@ -75,6 +78,7 @@ const en: DeepPartial<Messages> = {
   tasks: enTasks,
   notification: enNotification,
   agents: enAgents,
+  recording: enRecording,
 };
 
 /**

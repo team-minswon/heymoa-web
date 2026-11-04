@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { track, trackConversion } from "@/lib/analytics/track";
 import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
@@ -45,15 +46,10 @@ import {
   type RecordingSession,
 } from "@/lib/transcription/recording-state";
 import {
-  CAPTURE_STOPPED_MESSAGE,
-  CAPTURE_STOPPED_TOAST,
   interruptedMessage,
   meetingEndedMessage,
   runtimeFailureMessage,
   startErrorMessage,
-  STOP_FAILED_MESSAGE,
-  STOP_UNCONFIRMED_MESSAGE,
-  SUPERSEDED_MESSAGE,
 } from "@/lib/transcription/recording-messages";
 import { transcriptionWebSocketUrl } from "@/lib/transcription/socket";
 import {
@@ -220,6 +216,8 @@ export function RecordingProvider({
   enablePolling?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("recording.errors");
+  const tToast = useTranslations("recording.errorToast");
   const startSessionMutation = useStartTranscriptionSession({
     // 시작 실패 문구는 이 provider 가 `error` 로 띄운다. 전역 토스트까지 뜨면 같은 실패에 둘이 선다
     mutation: { meta: { suppressErrorToast: true } },
@@ -342,8 +340,8 @@ export function RecordingProvider({
       cause: "meeting_ended_after_drop",
       droppedMs,
     });
-    dispatch({ type: "error", message: meetingEndedMessage(droppedMs) });
-  }, [dispatch, meetingEndedAfterDrop]);
+    dispatch({ type: "error", message: meetingEndedMessage(t, droppedMs) });
+  }, [dispatch, meetingEndedAfterDrop, t]);
 
   useEffect(() => () => window.clearTimeout(degradedTimerRef.current), []);
 
@@ -490,14 +488,14 @@ export function RecordingProvider({
           type: "failed",
           message:
             event.reason === "MEETING_ENDED"
-              ? meetingEndedMessage(latest.current.buffer?.pendingMs ?? 0)
+              ? meetingEndedMessage(t, latest.current.buffer?.pendingMs ?? 0)
               : event.message,
         });
       }
 
       // 이 세션은 이제 다른 탭·기기의 것이다. 들고 있으면 이 탭이 회의 제어를 막는다.
       if (event.type === "superseded") {
-        failRecording({ type: "failed", message: SUPERSEDED_MESSAGE });
+        failRecording({ type: "failed", message: t("superseded") });
         dispatch({ type: "session", session: null });
       }
     },
@@ -507,6 +505,7 @@ export function RecordingProvider({
       dispatch,
       failRecording,
       invalidateLifecycleQueries,
+      t,
     ]
   );
 
@@ -561,13 +560,13 @@ export function RecordingProvider({
         serverSession.endReason === "MEETING_ENDED" &&
         pendingMs > 0 &&
         (phase === "failed" || connectionNotice?.cause === "disconnected")
-          ? meetingEndedMessage(pendingMs)
+          ? meetingEndedMessage(t, pendingMs)
           : null;
       if (phase !== "failed") {
         controllerRef.current?.reconcile("INTERRUPTED");
         failRecording({
           type: "failed",
-          message: lostMessage ?? interruptedMessage(serverSession.endReason),
+          message: lostMessage ?? interruptedMessage(t, serverSession.endReason),
         });
       } else if (lostMessage) {
         dispatch({ type: "error", message: lostMessage });
@@ -581,6 +580,7 @@ export function RecordingProvider({
     invalidateLifecycleQueries,
     phase,
     sessionQuery.data,
+    t,
   ]);
 
   const stop = useCallback((): Promise<boolean> => {
@@ -594,7 +594,7 @@ export function RecordingProvider({
       try {
         await controller.stop();
       } catch {
-        failRecording({ type: "failed", message: STOP_FAILED_MESSAGE });
+        failRecording({ type: "failed", message: t("stopFailed") });
         return false;
       }
       const reconciled =
@@ -602,7 +602,11 @@ export function RecordingProvider({
         latest.current.session?.status === "COMPLETED";
       if (!reconciled) {
         if (controllerRef.current === controller) {
-          failRecording({ type: "failed", message: STOP_UNCONFIRMED_MESSAGE });
+          failRecording({
+            type: "failed",
+            message: t("stopUnconfirmed"),
+            unconfirmedStop: true,
+          });
         }
         return false;
       }
@@ -617,7 +621,7 @@ export function RecordingProvider({
     });
     stopPromiseRef.current = stopPromise;
     return stopPromise;
-  }, [clearLevel, dispatch, failRecording]);
+  }, [clearLevel, dispatch, failRecording, t]);
 
   const start = useCallback(
     async (noteId: string, workspaceId: string) => {
@@ -652,7 +656,7 @@ export function RecordingProvider({
         onFailure: (kind, { droppedMs }) => {
           // 같은 사건을 이벤트로 이미 받아 서버 문구로 끝냈다
           if (controllerRef.current !== controller) return;
-          const message = runtimeFailureMessage(kind, droppedMs);
+          const message = runtimeFailureMessage(t, kind, droppedMs);
           failRecording(
             kind === "resume_window_exhausted"
               ? { type: "window-exhausted", message, droppedMs }
@@ -669,10 +673,10 @@ export function RecordingProvider({
           if (controllerRef.current !== controller) return;
           logTranscription("capture_error", { noteId, code });
           // 캡처가 되살아나지 않는다. 쌓인 소리를 마저 올리고 서버 세션을 끝낸다
-          dispatch({ type: "error", message: CAPTURE_STOPPED_MESSAGE });
-          toast.error(CAPTURE_STOPPED_TOAST, {
+          dispatch({ type: "error", message: t("captureStopped") });
+          toast.error(t("captureStoppedToast"), {
             id: "desktop-capture-failed",
-            description: `오류 코드: ${code}`,
+            description: tToast("code", { code }),
           });
           void stop();
         },
@@ -750,7 +754,7 @@ export function RecordingProvider({
                 : cause.name
               : "unknown"),
         });
-        dispatch({ type: "start-failed", message: startErrorMessage(cause) });
+        dispatch({ type: "start-failed", message: startErrorMessage(t, cause) });
         clearLevel();
         // 실패가 무엇이든 노트를 다시 읽는다. 연 뒤에 회의가 끝났으면(APP-1319·1328) 상단 안내가 왜
         // 끝났는지 말하고, 응답만 못 받았으면(APP-1472) 서버가 만든 세션으로 바뀐 회의 상태를 따라간다
@@ -770,6 +774,8 @@ export function RecordingProvider({
       queryClient,
       runtime,
       stop,
+      t,
+      tToast,
     ]
   );
 

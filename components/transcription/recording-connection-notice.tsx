@@ -1,6 +1,7 @@
 "use client";
 
 import { CloudUpload, MicOff, PauseCircle, WifiOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { MicrophoneState } from "@/lib/transcription/audio";
 import type {
@@ -30,38 +31,35 @@ export function RecordingConnectionNotice({
   systemAudio?: MicrophoneState | null;
   finishing: boolean;
 }) {
+  const t = useTranslations("recording.connection");
   // 한도에 닿아 새 소리를 받지 않는다. 노랑(영수증 10초)이 먼저 떠 있어도 「저장 중」이라 하면 거짓이다
   if (buffer?.paused && !finishing) {
     return (
       <Pill role="alert" tone="danger" Icon={PauseCircle}>
-        저장이 밀려 녹음을 잠시 멈췄어요 · 저장되면 이어서 녹음해요
+        {t("bufferPaused")}
       </Pill>
     );
   }
 
   const lines: string[] = [];
   if (microphone !== "live") {
-    lines.push("마이크가 끊겼습니다. 이 동안의 소리는 녹음되지 않습니다.");
+    lines.push(t("microphoneLost"));
   }
   if (systemAudio !== null && systemAudio !== "live") {
-    lines.push(
-      "컴퓨터 소리가 끊겼습니다. 이 동안 상대방의 소리는 녹음되지 않습니다."
-    );
+    lines.push(t("systemAudioLost"));
   }
   if (buffer?.upload) {
     lines.push(
       finishing
-        ? `저장 마무리 중… ${buffer.upload.percent}%`
-        : `밀린 소리 올리는 중 ${buffer.upload.percent}%`
+        ? t("finishingUpload", { percent: buffer.upload.percent })
+        : t("uploading", { percent: buffer.upload.percent })
     );
   } else if (notice && finishing) {
     lines.push(
-      `올릴 소리 ${seconds(buffer?.pendingMs ?? 0)}초가 이 기기에 있어요 · 연결될 때까지 이 탭을 열어 두세요`
+      t("pendingOnDevice", { seconds: seconds(buffer?.pendingMs ?? 0) })
     );
   } else if (notice) {
-    lines.push(
-      "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 탭에 모아 두는 중 · 연결될 때까지 탭을 열어 두세요"
-    );
+    lines.push(t("disconnected"));
   }
   if (lines.length === 0) return null;
 

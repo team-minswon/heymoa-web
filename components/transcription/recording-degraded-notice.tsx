@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /**
  * **소리는 남고 있는데 글자만 멈췄다** (APP-416).
@@ -11,6 +12,7 @@ import { AlertTriangle } from "lucide-react";
  * 막지 않는다 — 알림 한 줄이고 버튼이 없다. 할 일이 없기 때문이다. 회복하면 사라진다.
  */
 export function RecordingDegradedNotice() {
+  const t = useTranslations("recording.degraded");
   return (
     <div
       role="status"
@@ -18,10 +20,8 @@ export function RecordingDegradedNotice() {
     >
       <AlertTriangle className="size-4 shrink-0 text-amber-600" />
       <span>
-        받아쓰기가 잠깐 멈췄습니다.{" "}
-        <span className="text-[var(--el-muted)]">
-          소리는 그대로 저장되고 있습니다.
-        </span>
+        {t("title")}{" "}
+        <span className="text-[var(--el-muted)]">{t("detail")}</span>
       </span>
     </div>
   );

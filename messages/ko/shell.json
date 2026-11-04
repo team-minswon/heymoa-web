@@ -53,10 +53,7 @@
   "toolbar": {
     "location": "현재 위치",
     "newNote": "새 노트",
-    "currentRecording": "현재 녹음",
-    "micInput": "마이크 입력",
-    "pauseRecording": "녹음 일시정지",
-    "pauseTooltip": "녹음 일시정지 — 회의는 끝나지 않습니다"
+    "currentRecording": "현재 녹음"
   },
   "routeLayout": {
     "loadFailed": "워크스페이스를 불러오지 못했습니다"

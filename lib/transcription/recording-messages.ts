@@ -1,25 +1,20 @@
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import type { TranscriptionSessionResponseDataEndReason } from "@/lib/api/generated/models";
 import type { RealtimeFailureKind } from "@/lib/transcription/realtime-session";
+import type { useTranslations } from "next-intl";
 
-const START_FAILED = "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-const DROPPED = "연결이 끊겨 녹음을 멈췄어요.";
-const DESKTOP_AUDIO_HELP = "권한을 허용한 뒤 다시 녹음해 주세요.";
+/**
+ * 녹음 실패 문구(`recording.errors`). 부르는 곳이 `RecordingProvider` 하나라 그 `useTranslations` 를 받는다.
+ * 문구는 화면 상태(`RecordingState.error`)로 들어가 토스트가 그린다. 문구로 상태를 가르지 않는다 —
+ * 「종료 확인 실패」는 액션의 `unconfirmedStop` 이 표시한다.
+ */
+export type RecordingErrorsT = ReturnType<
+  typeof useTranslations<"recording.errors">
+>;
 
-export const SUPERSEDED_MESSAGE =
-  "다른 탭이나 기기에서 이 녹음을 이어받았습니다.";
-export const STOP_FAILED_MESSAGE = "녹음을 종료하는 중 오류가 발생했습니다.";
-export const STOP_UNCONFIRMED_MESSAGE = "녹음 종료 상태를 확인하지 못했습니다.";
-/** 소리 캡처가 중간에 끊겼다. 화면 안내는 남고, 토스트는 녹음 상태를 확인하라고 말한다. */
-export const CAPTURE_STOPPED_MESSAGE =
-  "소리 캡처가 중단됐습니다. 마지막 소리 일부가 저장되지 않았을 수 있습니다.";
-export const CAPTURE_STOPPED_TOAST =
-  "소리 캡처가 중단됐습니다. 녹음 상태를 확인해 주세요.";
+const lostSeconds = (ms: number) => Math.max(1, Math.round(ms / 1_000));
 
-const lostAudio = (droppedMs: number) =>
-  `이 기기에 남은 소리 ${Math.max(1, Math.round(droppedMs / 1_000))}초를 올리지 못했어요.`;
-
-export function startErrorMessage(cause: unknown) {
+export function startErrorMessage(t: RecordingErrorsT, cause: unknown) {
   const error =
     cause instanceof Error || cause instanceof DOMException ? cause : null;
   const message = error?.message ?? "";
@@ -28,57 +23,60 @@ export function startErrorMessage(cause: unknown) {
   const captureCode = /(?:^|: )([A-Z][A-Z_]+)$/.exec(message)?.[1];
 
   if (captureCode === "AUDIO_PERMISSION_DENIED") {
-    return `마이크 또는 컴퓨터 소리 권한이 필요합니다. ${DESKTOP_AUDIO_HELP}`;
+    return t("audioPermission");
   }
   if (captureCode === "SYSTEM_AUDIO_INPUT_MISSING") {
-    return `컴퓨터 소리 입력을 찾지 못했습니다. ${DESKTOP_AUDIO_HELP}`;
+    return t("systemAudioMissing");
   }
   if (captureCode === "AUDIO_CAPTURE_FAILED") {
-    return "소리를 연결하지 못했습니다. 권한을 확인한 뒤 다시 시도해 주세요.";
+    return t("audioCaptureFailed");
   }
   if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-    return "마이크 권한이 필요합니다. 브라우저 설정에서 마이크 사용을 허용해 주세요.";
+    return t("microphonePermission");
   }
   if (name === "NotFoundError" || captureCode === "MICROPHONE_INPUT_MISSING") {
-    return "사용할 수 있는 마이크를 찾지 못했습니다.";
+    return t("microphoneMissing");
   }
   if (
     message === "WEBSOCKET_CLOSED" ||
     message === "WEBSOCKET_CONNECTION_FAILED" ||
     message === "STOMP_APPLICATION_READY_TIMEOUT"
   ) {
-    return "실시간 스크립트 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요.";
+    return t("socketFailed");
   }
   if (errorCodeOf(cause) === "ACTIVE_TRANSCRIPTION_SESSION") {
-    return "다른 탭이나 기기에서 이 회의를 녹음하고 있어요.";
+    return t("activeSession");
   }
   // 녹음자 기기의 리스가 식어 server 가 세션을 정리(60초)하기를 기다리는 중이다. 기다리면 된다고 말한다
   if (errorCodeOf(cause) === "RECORDER_DISCONNECTED") {
-    return "녹음하던 기기와 연결이 끊겼어요. 그 기기의 녹음이 정리되면(약 1분) 녹음할 수 있어요.";
+    return t("recorderDisconnected");
   }
   if (message === "SESSION_CREATE_FAILED") {
-    return "스크립트 세션을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    return t("sessionCreateFailed");
   }
   // 봉투면 서버 문구를 쓴다. 전역 mutation 토스트를 꺼서 이 문구가 유일한 안내이고, web 이 코드별
   // 문구를 다시 만들면 서버와 갈라진다(rule `error-loading`).
-  if (errorCodeOf(cause) !== null) return errorMessageOf(cause, START_FAILED);
-  return START_FAILED;
+  if (errorCodeOf(cause) !== null)
+    return errorMessageOf(cause, t("startFailed"));
+  return t("startFailed");
 }
 
 export function runtimeFailureMessage(
+  t: RecordingErrorsT,
   kind: RealtimeFailureKind,
   droppedMs: number
 ) {
+  const seconds = lostSeconds(droppedMs);
   switch (kind) {
     case "resume_window_exhausted":
-      return droppedMs > 0 ? `${DROPPED} ${lostAudio(droppedMs)}` : DROPPED;
+      return droppedMs > 0 ? t("droppedLost", { seconds }) : t("dropped");
     case "stop_timeout":
     case "stop_send_failed":
       return droppedMs > 0
-        ? `마지막 기록을 정리하지 못해 ${lostAudio(droppedMs)}`
-        : "마지막 기록을 정리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        ? t("stopTimeoutLost", { seconds })
+        : t("stopTimeout");
     case "server_error":
-      return "실시간 스크립트 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
+      return t("serverError");
   }
 }
 
@@ -87,31 +85,27 @@ export function runtimeFailureMessage(
  * 사람에게는 정상 종료가 자주 일어난다.
  */
 export function interruptedMessage(
+  t: RecordingErrorsT,
   endReason: TranscriptionSessionResponseDataEndReason
 ) {
   switch (endReason) {
     case "MEETING_ENDED":
-      return "회의가 종료되어 기록을 마쳤습니다.";
     case "MEETING_PAUSED":
-      return "회의가 일시정지되어 기록을 멈췄습니다.";
     case "STT_PROVIDER_ERROR":
-      return "음성 인식 서비스 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
     case "CLIENT_DISCONNECTED":
-      return "실시간 연결이 종료되어 녹음을 중단했습니다.";
     case "READY_TIMEOUT":
-      return "녹음을 시작하지 못해 세션이 만료되었습니다. 다시 시도해 주세요.";
     case "HEARTBEAT_TIMEOUT":
-      return "연결이 끊긴 채로 오래 있어 기록을 중단했습니다.";
+      return t(`interrupted.${endReason}`);
     case "CLIENT_PROTOCOL_ERROR":
     case "INTERNAL_ERROR":
     case null:
-      return "서버에서 스크립트 세션이 중단되었습니다.";
+      return t("interrupted.other");
   }
 }
 
 /** 끊긴 사이 회의가 끝나면 이 기기에 남은 소리는 올릴 세션이 없다. */
-export function meetingEndedMessage(pendingMs: number) {
+export function meetingEndedMessage(t: RecordingErrorsT, pendingMs: number) {
   return pendingMs > 0
-    ? `회의가 끝나 ${lostAudio(pendingMs)}`
-    : interruptedMessage("MEETING_ENDED");
+    ? t("meetingEndedLost", { seconds: lostSeconds(pendingMs) })
+    : interruptedMessage(t, "MEETING_ENDED");
 }

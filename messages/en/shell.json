@@ -53,10 +53,7 @@
   "toolbar": {
     "location": "Current location",
     "newNote": "New note",
-    "currentRecording": "Now recording",
-    "micInput": "Microphone input",
-    "pauseRecording": "Pause recording",
-    "pauseTooltip": "Pause recording. The meeting won't end."
+    "currentRecording": "Now recording"
   },
   "routeLayout": {
     "loadFailed": "Couldn't load the workspace"

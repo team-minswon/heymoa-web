@@ -233,7 +233,7 @@ describe("RecordingDock", () => {
     expect(pause.textContent).toBe("");
     fireEvent.focus(pause);
     expect(
-      await screen.findByText("일시정지 — 회의는 끝나지 않습니다")
+      await screen.findByText("녹음을 일시정지합니다. 회의는 끝나지 않습니다.")
     ).toBeInTheDocument();
   });
 

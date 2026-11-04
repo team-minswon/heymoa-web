@@ -1629,13 +1629,13 @@ describe("NotePanel", () => {
       const { rerender } = renderDock(view);
 
       expect(screen.getByRole("status")).toHaveTextContent(
-        "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 탭에 모아 두는 중 · 연결될 때까지 탭을 열어 두세요"
+        "연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다. 녹음한 소리는 이 탭에 모아 둡니다. 다시 연결될 때까지 탭을 열어 두세요."
       );
 
       recordingState.connectionNotice = null;
       rerender(dockElement(view));
 
-      expect(screen.queryByText(/연결이 끊겼어요/)).toBeNull();
+      expect(screen.queryByText(/연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다/)).toBeNull();
     });
 
     it("멈추는 중에 밀린 것을 올리면 저장 마무리 진행률을 보인다", () => {

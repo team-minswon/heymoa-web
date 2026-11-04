@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Pause } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,12 +46,13 @@ function GlobalRecordingPill({
   notice: React.ReactNode;
   onStop: () => void;
 }) {
+  const t = useTranslations("recording");
   const { level, levelHistory } = useRecordingMeter();
   const isRecording = phase === "recording";
 
   return (
     <motion.aside
-      aria-label="진행 중인 녹음"
+      aria-label={t("indicator.label")}
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0, transition: { duration: 0.15 } }}
       exit={{
@@ -68,7 +70,7 @@ function GlobalRecordingPill({
           {isRecording ? (
             <span
               role="meter"
-              aria-label="마이크 입력"
+              aria-label={t("micInput")}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(level * 100)}
@@ -98,7 +100,7 @@ function GlobalRecordingPill({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label="녹음 일시정지"
+                aria-label={t("pause.label")}
                 onClick={onStop}
                 disabled={phase !== "recording"}
                 className="size-7 rounded-full text-destructive hover:bg-destructive/8 hover:text-destructive"
@@ -108,7 +110,7 @@ function GlobalRecordingPill({
             <Pause className="size-3.5" aria-hidden />
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            녹음 일시정지 — 회의는 끝나지 않습니다
+            {t("pause.tooltip")}
           </TooltipContent>
         </Tooltip>
       </div>

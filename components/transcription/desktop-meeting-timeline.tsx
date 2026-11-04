@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { DesktopBridge } from "@heymoa/desktop-contracts";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
@@ -25,6 +26,7 @@ export function DesktopMeetingTimelineReporter() {
 }
 
 function MeetingTimelineReporter() {
+  const t = useTranslations("recording.desktopTimeline");
   const { activeNoteId, phase } = useRecording();
   const { noteId, context, reconnecting, subscriptionIssue } =
     useNoteRealtime();
@@ -45,7 +47,7 @@ function MeetingTimelineReporter() {
     ((phase === "recording" && noteId === activeNoteId) || viewing) &&
     !note.isError
   );
-  const title = noteData?.title ?? "진행 중인 회의";
+  const title = noteData?.title ?? t("untitled");
   const snapshot = useMemo(
     () =>
       meetingTimelineSnapshot(noteId, title, context.state, {
