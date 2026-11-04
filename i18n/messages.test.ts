@@ -23,6 +23,7 @@ const REQUIRED_EN: readonly Namespace[] = [
   "settings",
   "workspace",
   "notes",
+  "chat",
 ];
 
 function keyPaths(value: unknown, prefix = ""): string[] {

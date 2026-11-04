@@ -13,6 +13,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,18 +33,23 @@ const BODY_CHARS = 280;
 
 type BadgeVariant = "secondary" | "success" | "destructive" | "outline";
 
+/** 배지 이름은 `chat.approval.badges.<label>` 이다. 보낸 뒤(`submitted`)도 확정 전이라 「승인 대기」다. */
 const BADGES: Record<
   ApprovalCardStatus["kind"],
-  { label: string; icon: LucideIcon; variant: BadgeVariant }
+  {
+    label: Exclude<ApprovalCardStatus["kind"], "submitted">;
+    icon: LucideIcon;
+    variant: BadgeVariant;
+  }
 > = {
-  open: { label: "승인 대기", icon: Clock, variant: "secondary" },
-  submitted: { label: "승인 대기", icon: Clock, variant: "secondary" },
-  running: { label: "실행 중", icon: Loader2, variant: "secondary" },
-  done: { label: "완료", icon: Check, variant: "success" },
-  rejected: { label: "거절됨", icon: Minus, variant: "outline" },
-  failed: { label: "실패", icon: X, variant: "destructive" },
-  invalid: { label: "무효", icon: Minus, variant: "destructive" },
-  check: { label: "확인 필요", icon: CircleHelp, variant: "outline" },
+  open: { label: "open", icon: Clock, variant: "secondary" },
+  submitted: { label: "open", icon: Clock, variant: "secondary" },
+  running: { label: "running", icon: Loader2, variant: "secondary" },
+  done: { label: "done", icon: Check, variant: "success" },
+  rejected: { label: "rejected", icon: Minus, variant: "outline" },
+  failed: { label: "failed", icon: X, variant: "destructive" },
+  invalid: { label: "invalid", icon: Minus, variant: "destructive" },
+  check: { label: "check", icon: CircleHelp, variant: "outline" },
 };
 
 /** 결정 뒤 상태는 테두리로도 말한다. 결정 전은 진한 테두리로 「지금 답할 것」을 세운다. */
@@ -58,10 +64,13 @@ const BORDERS: Record<ApprovalCardStatus["kind"], string> = {
   check: "border-[var(--el-hairline)]",
 };
 
-/** 실행하지 않았거나 결과를 모르는 카드는 무엇을 하려 했는지보다 왜 끝났는지를 말한다. */
-const REASONS: Partial<Record<ApprovalCardStatus["kind"], string>> = {
-  rejected: "실행하지 않았습니다.",
-  failed: "승인했지만 실행하지 못했습니다.",
+/** 실행하지 않았거나 결과를 모르는 카드는 무엇을 하려 했는지보다 왜 끝났는지를 말한다(`chat.approval.reasons.<값>`). */
+const REASONS: Partial<
+  Record<ApprovalCardStatus["kind"], "rejected" | "failed" | "unknown">
+> = {
+  rejected: "rejected",
+  failed: "failed",
+  check: "unknown",
 };
 
 /**
@@ -82,6 +91,7 @@ export function ApprovalCard({
   status: ApprovalCardStatus;
   onApprove?: (decision: ApprovalDecision) => void;
 }) {
+  const t = useTranslations("chat.approval");
   const asking = status.kind === "open" || status.kind === "submitted";
   const showContent =
     asking || status.kind === "running" || status.kind === "done";
@@ -90,12 +100,15 @@ export function ApprovalCard({
   const count = card?.items.length ?? 0;
   // 무엇을 하는지 모르는 쓰기는 승인하게 두지 않는다. 도구 id 로 대신 채우지도 않는다.
   const blind = !card && !summary;
+  const fallbackReason = REASONS[status.kind];
   const reason =
-    "reason" in status
+    "reason" in status && status.reason
       ? status.reason
       : asking && blind
-        ? "무엇을 하는지 알 수 없어 승인할 수 없습니다. 거절해 주세요."
-        : (REASONS[status.kind] ?? null);
+        ? t("reasons.blind")
+        : fallbackReason
+          ? t(`reasons.${fallbackReason}`)
+          : null;
 
   return (
     <div
@@ -115,7 +128,7 @@ export function ApprovalCard({
               showContent ? "text-[var(--el-ink)]" : "text-[var(--el-body)]"
             )}
           >
-            {card?.title ?? summary ?? "쓰기 작업 승인"}
+            {card?.title ?? summary ?? t("fallbackTitle")}
           </p>
           {card?.target ? (
             // 대상은 승인의 근거라 자르지 않는다. 길면 줄을 바꾼다.
@@ -132,7 +145,7 @@ export function ApprovalCard({
                 "animate-spin motion-reduce:animate-none"
             )}
           />
-          {badge.label}
+          {t(`badges.${badge.label}`)}
         </Badge>
       </div>
 
@@ -147,7 +160,10 @@ export function ApprovalCard({
           {card.fields.length > 0 ? <Fields fields={card.fields} /> : null}
           {count > 0 ? <Items items={card.items} /> : null}
           {card.body ? (
-            <Body label={card.body.label} text={card.body.text} />
+            <Body
+              label={card.body.label ?? t("bodyLabel")}
+              text={card.body.text}
+            />
           ) : null}
         </>
       ) : null}
@@ -164,7 +180,7 @@ export function ApprovalCard({
           rel="noopener noreferrer"
           className="inline-flex w-fit items-center gap-1 text-xs font-medium text-[var(--el-body-strong)] underline-offset-4 hover:underline"
         >
-          열기
+          {t("open")}
           <ExternalLink aria-hidden className="size-3" />
         </a>
       ) : null}
@@ -173,8 +189,8 @@ export function ApprovalCard({
         <div className="flex flex-wrap items-center justify-end gap-3">
           <p className="mr-auto text-[11px] leading-relaxed text-[var(--el-muted)]">
             {status.kind === "submitted"
-              ? "확정은 응답이 재개되면 반영됩니다."
-              : "답할 때까지 기다립니다. 그만두려면 「중지」를 누르세요."}
+              ? t("submittedHint")
+              : t("waitingHint")}
           </p>
           {/* 누른 것만으로 뒤집지 않는다. 확정은 재개 스트림의 첫 프레임이 정한다. */}
           <div className="flex gap-2">
@@ -184,14 +200,14 @@ export function ApprovalCard({
               disabled={status.kind === "submitted"}
               onClick={() => onApprove?.("REJECTED")}
             >
-              거절
+              {t("reject")}
             </Button>
             <Button
               size="sm"
               disabled={status.kind === "submitted" || blind}
               onClick={() => onApprove?.("APPROVED")}
             >
-              {count > 1 ? `${count}건 승인` : "승인"}
+              {count > 1 ? t("approveCount", { count }) : t("approve")}
             </Button>
           </div>
         </div>
@@ -219,18 +235,19 @@ function Fields({ fields }: { fields: ApprovalCardField[] }) {
 
 /** 값 하나. 명단 > 「전 → 후」 > 일반 값 순서로 읽는다. */
 function FieldValue({ field }: { field: ApprovalCardField }) {
+  const t = useTranslations("chat.approval");
   if (field.added.length + field.removed.length + field.kept.length > 0) {
     return (
       <span className="flex flex-wrap gap-1.5">
         {field.added.map((name) => (
           <Badge key={`+${name}`} variant="success">
-            <Plus aria-label="더함" />
+            <Plus aria-label={t("added")} />
             {name}
           </Badge>
         ))}
         {field.removed.map((name) => (
           <Badge key={`-${name}`} variant="outline" className="line-through">
-            <span className="sr-only">뺌 </span>
+            <span className="sr-only">{t("removed")} </span>
             {name}
           </Badge>
         ))}
@@ -246,9 +263,12 @@ function FieldValue({ field }: { field: ApprovalCardField }) {
     return (
       <>
         <span className="text-[var(--el-muted-soft)] line-through">
-          {field.before ?? "없음"}
+          {field.before ?? t("none")}
         </span>
-        <span aria-label="에서" className="mx-1.5 text-[var(--el-muted-soft)]">
+        <span
+          aria-label={t("from")}
+          className="mx-1.5 text-[var(--el-muted-soft)]"
+        >
           →
         </span>
         <span
@@ -258,7 +278,7 @@ function FieldValue({ field }: { field: ApprovalCardField }) {
               : "text-[var(--el-muted-soft)]"
           }
         >
-          {field.after ?? "없음"}
+          {field.after ?? t("none")}
         </span>
       </>
     );
@@ -267,6 +287,7 @@ function FieldValue({ field }: { field: ApprovalCardField }) {
 }
 
 function Items({ items }: { items: ApprovalCardData["items"] }) {
+  const t = useTranslations("chat.approval");
   const rest = items.slice(ITEMS_SHOWN);
   return (
     <div className="overflow-hidden rounded-block border border-[var(--el-hairline)]">
@@ -275,8 +296,10 @@ function Items({ items }: { items: ApprovalCardData["items"] }) {
         // 열림을 React state 로 들면 카드가 다시 그려질 때마다 접힌다.
         <details className="details-motion group border-t border-[var(--el-hairline)]">
           <summary className="flex cursor-pointer list-none items-center gap-1 bg-[var(--el-canvas-soft)] px-3 py-2 text-xs font-medium text-[var(--el-body-strong)] [&::-webkit-details-marker]:hidden">
-            <span className="group-open:hidden">{rest.length}건 더 보기</span>
-            <span className="hidden group-open:inline">접기</span>
+            <span className="group-open:hidden">
+              {t("showMore", { count: rest.length })}
+            </span>
+            <span className="hidden group-open:inline">{t("collapse")}</span>
             <ChevronDown
               aria-hidden
               className="size-3.5 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
@@ -333,6 +356,7 @@ function ItemList({
 
 /** 긴 평문. 줄바꿈을 지키고, 길면 미리보기로 접어 둔다. */
 function Body({ label, text }: { label: string; text: string }) {
+  const t = useTranslations("chat.approval");
   const long = text.split("\n").length > BODY_LINES || text.length > BODY_CHARS;
   const content = (
     <>
@@ -357,8 +381,8 @@ function Body({ label, text }: { label: string; text: string }) {
       <summary className="block cursor-pointer list-none px-3 pt-2.5 [&::-webkit-details-marker]:hidden">
         {content}
         <span className="flex items-center gap-1 py-2 text-xs font-medium text-[var(--el-body-strong)]">
-          <span className="group-open:hidden">펼치기</span>
-          <span className="hidden group-open:inline">접기</span>
+          <span className="group-open:hidden">{t("expand")}</span>
+          <span className="hidden group-open:inline">{t("collapse")}</span>
           <ChevronDown
             aria-hidden
             className="size-3.5 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"

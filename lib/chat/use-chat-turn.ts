@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import {
   getGetAgentChatMessagesQueryOptions,
@@ -102,6 +103,8 @@ export function useChatTurn({
   onChatForgotten?: (chatId: string, wasOpen: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("chat");
+  const tErrors = useTranslations("errors");
   const stream = useChatStream();
   const isStreaming =
     stream.state.phase === "streaming" ||
@@ -198,7 +201,7 @@ export function useChatTurn({
         ...nextCursor,
       });
       if (response.status !== 200 || !response.data.success) {
-        toast.error("이전 대화를 더 불러오지 못했습니다.");
+        toast.error(t("errors.loadMoreFailed"));
         return;
       }
       const page = response.data.data;
@@ -217,11 +220,18 @@ export function useChatTurn({
             : null,
       });
     } catch {
-      toast.error("이전 대화를 더 불러오지 못했습니다.");
+      toast.error(t("errors.loadMoreFailed"));
     } finally {
       setIsLoadingMoreChats(false);
     }
-  }, [firstTail, isLoadingMoreChats, nextCursor, olderHere.chats, workspaceId]);
+  }, [
+    firstTail,
+    isLoadingMoreChats,
+    nextCursor,
+    olderHere.chats,
+    t,
+    workspaceId,
+  ]);
   /** 빈 목록과 조회 실패는 다르다. 실패를 빈 목록으로 접으면 이미 있는 대화 옆에 하나를 더 만든다. */
   const isChatsUnavailable =
     chatsQuery.isError || (chatsResponse !== undefined && !chatsOk);
@@ -432,7 +442,7 @@ export function useChatTurn({
             errorCodeOf(failure) !== "AGENT_CHAT_TURN_IN_PROGRESS" &&
             !isAuthError(failure)
           ) {
-            toast.error(errorMessageOf(failure, "요청을 처리하지 못했습니다."));
+            toast.error(errorMessageOf(failure, tErrors("requestFailed")));
           }
           setPendingUserMessage(null);
           stream.reset();
@@ -467,6 +477,7 @@ export function useChatTurn({
       sendMessage,
       sessionId,
       stream,
+      tErrors,
     ]
   );
 
@@ -487,10 +498,7 @@ export function useChatTurn({
         if ("error" in accepted) {
           return {
             code: errorCodeOf(accepted.error) ?? "STREAM_FAILED",
-            message: errorMessageOf(
-              accepted.error,
-              "승인을 처리하지 못했습니다."
-            ),
+            message: errorMessageOf(accepted.error, t("errors.approvalFailed")),
           };
         }
         // 결정을 먼저 적는다. 재접속이 끊겨 끝나도 승인받은 쓰기가 「중단됨」이 아니라 「확인 필요」로
@@ -529,6 +537,7 @@ export function useChatTurn({
       resolveApprovalMutation,
       sessionId,
       stream,
+      t,
     ]
   );
 
@@ -958,7 +967,8 @@ export function useChatTurn({
     () =>
       listedChats.map((chat) => ({
         chatId: chat.chatId,
-        title: chat.title,
+        // 서버의 기본 제목(「새 대화」)은 계약 값이라 한국어다. 기본 제목이면 화면 언어로 그린다
+        title: chat.titleSource === "DEFAULT" ? t("newChat") : chat.title,
         titlePending: isTitlePending(chat, titleWaits),
         titleAwaited: chat.chatId in titleWaits,
         // 목록 정렬 기준과 같은 값을 적어야 「1분 전인데 세 번째 줄」이 안 생긴다
@@ -976,6 +986,7 @@ export function useChatTurn({
       sessionId,
       stream.state.phase,
       stream.state.turnId,
+      t,
       titleWaits,
     ]
   );

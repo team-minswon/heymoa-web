@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Folder } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { viewerDateKey } from "@/lib/format/date";
 import type {
@@ -37,6 +38,7 @@ export function ScopePicker({
   /** 겨눈 항목의 id. 포커스는 편집기에 남으므로 편집기가 `aria-activedescendant` 로 알린다. */
   onActiveChange?: (optionId: string | null) => void;
 }) {
+  const t = useTranslations("chat.picker");
   const flat = useMemo(() => sections.flatMap((s) => s.items), [sections]);
 
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -111,7 +113,7 @@ export function ScopePicker({
     return isPending ? (
       <Shell>
         <p className="px-3.5 py-2.5 text-[13px] text-[var(--el-muted)]">
-          불러오는 중…
+          {t("loading")}
         </p>
       </Shell>
     ) : null;
@@ -124,16 +126,20 @@ export function ScopePicker({
         ref={listRef}
         id={id}
         role="listbox"
-        aria-label="범위에 더할 프로젝트·회의록"
+        aria-label={t("label")}
         className="max-h-[min(15rem,40vh)] overflow-y-auto overscroll-contain px-1.5 py-1 [scrollbar-color:transparent_transparent] [scrollbar-width:thin] hover:[scrollbar-color:var(--el-hairline-strong)_transparent]"
       >
         {sections.map((section) => (
-          <div key={section.label} role="group" aria-label={section.label}>
+          <div
+            key={section.kind}
+            role="group"
+            aria-label={t(section.kind === "project" ? "projects" : "notes")}
+          >
             <p
               aria-hidden
               className="px-2 pt-2 pb-1 text-[11.5px] font-medium text-[var(--el-muted)]"
             >
-              {section.label}
+              {t(section.kind === "project" ? "projects" : "notes")}
             </p>
             {section.items.map((item) => {
               const index = flat.indexOf(item);
@@ -186,7 +192,7 @@ export function ScopePicker({
         aria-hidden
         className="border-t border-[var(--el-hairline)] px-3.5 py-1.5 text-[11.5px] text-[var(--el-muted)] pointer-coarse:hidden"
       >
-        ↑↓ 이동 · Enter 선택 · Esc 닫기 · 계속 입력하면 좁혀져요
+        {t("hint")}
       </p>
     </Shell>
   );

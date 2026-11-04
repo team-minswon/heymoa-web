@@ -11,6 +11,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   groupSteps,
@@ -149,7 +150,7 @@ export function useStalled(signature: string, active: boolean): boolean {
   return active && stalled.at === signature && stalled.on;
 }
 
-const STALLED_TEXT = "응답이 늦어지고 있어요. 계속 기다리거나 멈출 수 있어요";
+type ThoughtT = ReturnType<typeof useTranslations<"chat.thought">>;
 
 /** 블록이 바뀌었는지 가르는 값. 생각은 글자 수, 도구는 상태까지 본다. */
 function stepSignature(blocks: StepBlock[]) {
@@ -178,16 +179,19 @@ export function LiveHead({
   /** 펼칠 수 있는 머리줄이면 지금 펼쳐져 있는가. 없으면 버튼이 아니다(첫 단계 전). */
   open?: boolean;
 }) {
+  const t = useTranslations("chat.thought");
   return (
     <>
-      <span className="font-medium text-[var(--el-body-strong)]">생각 중</span>
+      <span className="font-medium text-[var(--el-body-strong)]">
+        {t("thinking")}
+      </span>
       {seconds !== null ? (
         // 플렉스 안이라 앞 공백이 접힌다 — `pre` 로 공백을 지킨다
         <span
           aria-hidden
           className="whitespace-pre text-[var(--el-muted)] tabular-nums"
         >
-          {` · ${duration(seconds)}`}
+          {` · ${duration(seconds, t)}`}
         </span>
       ) : null}
       {open !== undefined ? <Chevron open={open} /> : null}
@@ -217,6 +221,7 @@ export function CurrentLine({
   text: string;
   stalled: boolean;
 }) {
+  const t = useTranslations("chat.thought");
   return (
     <p
       // 키는 단계의 정체로 준다. 문구로 주면 생각 델타마다 다시 마운트되어 떠오르기를 끝없이 되풀이한다.
@@ -227,7 +232,7 @@ export function CurrentLine({
       className="chat-rise h-5 min-w-0 truncate text-[13px] leading-5"
     >
       {stalled ? (
-        <span className="text-[var(--el-muted)]">{STALLED_TEXT}</span>
+        <span className="text-[var(--el-muted)]">{t("stalled")}</span>
       ) : (
         <span className="chat-shimmer">{text}</span>
       )}
@@ -239,6 +244,7 @@ export function CurrentLine({
 export function PendingProgress({ startedAt }: { startedAt: string | null }) {
   const seconds = useThinkingSeconds(true, startedAt);
   const stalled = useStalled("pending", true);
+  const t = useTranslations("chat.thought");
   return (
     <div data-testid="chat-thinking" className="flex flex-col gap-0.5">
       <p className="flex h-6 items-center text-[13px]">
@@ -246,11 +252,11 @@ export function PendingProgress({ startedAt }: { startedAt: string | null }) {
       </p>
       <CurrentLine
         id="pending"
-        text="질문을 살펴보고 있어요"
+        text={t("pending")}
         stalled={stalled}
       />
       <span className="sr-only" aria-live="polite">
-        {stalled ? STALLED_TEXT : "생각하는 중"}
+        {stalled ? t("stalled") : t("thinkingNow")}
       </span>
     </div>
   );
@@ -274,6 +280,7 @@ function Disclosure({
   seconds: number | null;
   onOpenNote?: (noteId: string) => void;
 }) {
+  const t = useTranslations("chat.thought");
   const lines = groupSteps(blocks);
   // 흐르는 동안은 펴 두고(도는 중이면 최근 몇 줄만, 승인을 기다리면 무엇을 하려다 물었는지 전부) 끝나면 접는다 —
   // 본문은 답만 담고, 과정은 누른 사람만 본다.
@@ -329,7 +336,7 @@ function Disclosure({
           ) : (
             <>
               <span className="truncate text-[var(--el-muted)] tabular-nums">
-                {headline(blocks, live, seconds)}
+                {headline(blocks, live, seconds, t)}
               </span>
               <Chevron open={open} />
             </>
@@ -339,7 +346,7 @@ function Disclosure({
       {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면 글자마다 읽힌다. 보이는 줄은 숨긴다. */}
       {running ? (
         <span className="sr-only" aria-live="polite">
-          {stalled ? STALLED_TEXT : announceStep(blocks)}
+          {stalled ? t("stalled") : announceStep(blocks, t)}
         </span>
       ) : null}
       {/* `initial={false}` 는 흐르는 중 이미 펴진 채로 다시 그려질 때 매 토큰 다시 자라지 않게 한다. */}
@@ -392,7 +399,7 @@ function Disclosure({
                   <div className="chat-rise flex gap-2" data-stalled>
                     <Dot state="pending" />
                     <p className="min-w-0 flex-1 text-xs leading-relaxed text-[var(--el-muted)]">
-                      {STALLED_TEXT}
+                      {t("stalled")}
                     </p>
                   </div>
                 ) : null}
@@ -417,11 +424,13 @@ function Disclosure({
 const LIVE_TAIL = "text-xs leading-relaxed max-h-[calc(4lh+1.125rem)]";
 
 /** 「45초」·「2분 5초」. */
-function duration(seconds: number) {
+function duration(seconds: number, t: ThoughtT) {
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
-  if (minutes === 0) return `${rest}초`;
-  return rest === 0 ? `${minutes}분` : `${minutes}분 ${rest}초`;
+  if (minutes === 0) return t("duration.seconds", { seconds: rest });
+  return rest === 0
+    ? t("duration.minutes", { minutes })
+    : t("duration.minutesSeconds", { minutes, seconds: rest });
 }
 
 /** 생각 블록의 줄. ai 는 진행 문장 하나를 줄바꿈으로 끝내 보낸다 — 줄마다 한 단계다. 줄바꿈 없는 옛 생각은 한 줄이다. */
@@ -436,7 +445,7 @@ function thinkingLines(text: string) {
  * 화면 읽기에 알릴 지금 단계. 결과를 기다리는 도구가 있으면 그 라벨(인자·결과를 뺀 「연관 스크립트 읽기 중」 — 길게 읽으면
  * 다음 단계에 밀린다), 아니면 「생각하는 중」이다. 승인 대기는 이미 걸러졌다(`drawable`).
  */
-function announceStep(blocks: StepBlock[]): string {
+function announceStep(blocks: StepBlock[], t: ThoughtT): string {
   const pending = blocks.findLast(
     (block) => block.kind === "tool" && block.status === null
   );
@@ -444,7 +453,7 @@ function announceStep(blocks: StepBlock[]): string {
     pending?.kind === "tool"
       ? (pending.summary || pending.tool || "").split(" · ")[0]
       : "";
-  return label ? `${label} 중` : "생각하는 중";
+  return label ? t("step", { label }) : t("thinkingNow");
 }
 
 /**
@@ -534,7 +543,8 @@ function TimelineLine({
 function headline(
   blocks: StepBlock[],
   live: boolean,
-  seconds: number | null
+  seconds: number | null,
+  t: ThoughtT
 ): string {
   const notes = new Set(
     blocks.flatMap((block) =>
@@ -554,13 +564,13 @@ function headline(
   );
   // 걸린 시간을 모르면(옛 대화·1초 미만) 시간만 뺀다. 흐를 때와 새로고침 뒤가 같은 말이어야 한다.
   const lead = live
-    ? "확인을 기다리는 중"
+    ? t("awaiting")
     : seconds !== null
-      ? `${duration(seconds)} 동안 생각`
-      : "생각";
+      ? t("thoughtFor", { duration: duration(seconds, t) })
+      : t("thought");
   const what = [
-    notes.size > 0 ? `회의록 ${notes.size}건` : null,
-    projects.size > 0 ? `프로젝트 ${projects.size}개` : null,
+    notes.size > 0 ? t("notes", { count: notes.size }) : null,
+    projects.size > 0 ? t("projects", { count: projects.size }) : null,
   ].filter(Boolean);
 
   return [lead, ...what].join(" · ");
@@ -578,6 +588,7 @@ function StepRow({
   animate: boolean;
   onOpenNote?: (noteId: string) => void;
 }) {
+  const t = useTranslations("chat.thought");
   const row = cn(animate && "chat-rise", "flex gap-2");
   if (block.kind === "thinking") {
     // 진행 문장은 줄마다 한 단계다. 줄바꿈 없이 이어진 옛 생각은 한 문단으로 읽힌다.
@@ -637,14 +648,14 @@ function StepRow({
         <TargetChip target={block.target} onOpenNote={onOpenNote} />
         {/* 성공은 왼쪽 체크가 말하므로 배지를 안 단다. 실패·중단만 한 줄로 적는다. */}
         {block.status === "error" ? (
-          <p className="text-xs text-[var(--el-error)]">실행하지 못했습니다</p>
+          <p className="text-xs text-[var(--el-error)]">{t("failed")}</p>
         ) : null}
         {block.status === "stopped" ? (
-          <p className="text-xs text-[var(--el-muted)]">중단됨</p>
+          <p className="text-xs text-[var(--el-muted)]">{t("stopped")}</p>
         ) : null}
         {block.status === "unknown" ? (
           <p className="text-xs font-medium text-[var(--el-body-strong)]">
-            확인 필요
+            {t("check")}
           </p>
         ) : null}
         {block.url ? (
@@ -654,7 +665,7 @@ function StepRow({
             rel="noopener noreferrer"
             className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[var(--el-ink)] underline underline-offset-2"
           >
-            열어 보기
+            {t("open")}
             <ExternalLink aria-hidden className="size-3" />
           </a>
         ) : null}
@@ -759,6 +770,7 @@ export function AnswerRefs({
   onOpenNote?: (noteId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const t = useTranslations("chat.thought");
   if (refs.length === 0) return null;
   const shown = expanded ? refs : refs.slice(0, REFS_SHOWN);
   const hidden = refs.length - shown.length;
@@ -768,7 +780,7 @@ export function AnswerRefs({
       data-refs="answer"
       role="group"
       // 「출처」가 아니다. 계약이 싣는 것은 인용한 것이 아니라 본 것이다.
-      aria-label={`참고한 회의록 ${refs.length}개`}
+      aria-label={t("refs", { count: refs.length })}
       className={cn(animate && "chat-rise", "flex flex-wrap gap-1.5")}
     >
       {shown.map((ref) => (
@@ -777,7 +789,7 @@ export function AnswerRefs({
           type="button"
           onClick={() => onOpenNote?.(ref.id)}
           disabled={!onOpenNote}
-          title={`${ref.title} 열기`}
+          title={t("openRef", { title: ref.title })}
           className="inline-flex min-h-7 max-w-full cursor-pointer items-center gap-1.5 rounded-[14px] border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-2.5 py-1 text-left text-xs leading-[1.4] text-[var(--el-body)] outline-none transition-colors pointer-coarse:min-h-9 enabled:hover:border-[var(--el-hairline-strong)] enabled:hover:bg-[var(--el-canvas-soft)] enabled:hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-60"
         >
           <FileText
@@ -791,7 +803,7 @@ export function AnswerRefs({
       {hidden > 0 ? (
         <button
           type="button"
-          aria-label={`참고한 회의록 ${hidden}개 더 보기`}
+          aria-label={t("moreRefs", { count: hidden })}
           onClick={() => setExpanded(true)}
           className="inline-flex h-7 cursor-pointer items-center rounded-full border border-dashed border-[var(--el-hairline-strong)] px-2.5 text-xs text-[var(--el-muted)] outline-none tabular-nums pointer-coarse:h-9 hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50"
         >

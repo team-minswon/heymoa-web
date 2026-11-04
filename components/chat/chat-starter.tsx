@@ -20,13 +20,10 @@ import { useGetMeetingReview } from "@/lib/api/generated/meeting-review/meeting-
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
 
+/** 에이전트가 하는 일. 이름은 `chat.starter.capabilities.<key>` 다 — 이 화면이 알려 줄 것은 문장보다 이쪽이다 */
 type Starter = {
   key: "notes" | "tasks" | "tools" | "web";
   Icon: LucideIcon;
-  /** 에이전트가 하는 일. 이 화면이 알려 줄 것은 문장보다 이쪽이다 */
-  title: string;
-  /** 무엇을 하는지, 바꾸는 일이면 어떻게 확인받는지 */
-  hint: string;
 };
 
 /**
@@ -34,30 +31,10 @@ type Starter = {
  * 연동 도구(Linear), 웹 검색.
  */
 export const STARTERS: readonly Starter[] = [
-  {
-    key: "notes",
-    Icon: FileText,
-    title: "회의록에서 찾기",
-    hint: "회의에서 정한 것과 남은 일을 찾아 정리해요.",
-  },
-  {
-    key: "tasks",
-    Icon: ListChecks,
-    title: "할 일 만들기",
-    hint: "할 일을 만들고 고쳐요. 바꾸기 전에 먼저 물어봐요.",
-  },
-  {
-    key: "tools",
-    Icon: Plug,
-    title: "외부 도구로 잇기",
-    hint: "연동한 Linear에 이슈를 만들어요.",
-  },
-  {
-    key: "web",
-    Icon: Globe,
-    title: "웹에서 찾기",
-    hint: "회의에 없는 내용은 웹에서 찾아와요.",
-  },
+  { key: "notes", Icon: FileText },
+  { key: "tasks", Icon: ListChecks },
+  { key: "tools", Icon: Plug },
+  { key: "web", Icon: Globe },
 ];
 
 /** 빈 대화가 놓인 자리. `first` 는 기록한 회의가 아직 없는 워크스페이스다. 계측(`chat_example_clicked.state`)도 이 값을 받는다. */
@@ -131,7 +108,7 @@ type MessageKey =
  */
 export function chatExamples(
   facts: StarterFacts,
-  t: ReturnType<typeof useTranslations<"common.agentChat.starter">>
+  t: ReturnType<typeof useTranslations<"chat.starter">>
 ): ChatExample[] {
   const state = starterState(facts);
   const chip = (
@@ -242,7 +219,7 @@ export function ChatStarter({
   /** 예시를 골랐다. 부르는 쪽이 입력창을 채운다. */
   onPick: (example: ChatExample) => void;
 }) {
-  const t = useTranslations("common.agentChat.starter");
+  const t = useTranslations("chat.starter");
   const requestNewMeeting = useRequestNewMeeting();
   const hasActionItems = useHasActionItems(context?.noteId ?? null);
   const { recorded, recent } = useRecordedMeetings(workspaceId, !context);

@@ -1,4 +1,5 @@
 import enAuth from "@/messages/en/auth.json";
+import enChat from "@/messages/en/chat.json";
 import enCommon from "@/messages/en/common.json";
 import enDownload from "@/messages/en/download.json";
 import enErrors from "@/messages/en/errors.json";
@@ -10,6 +11,7 @@ import enSettings from "@/messages/en/settings.json";
 import enShell from "@/messages/en/shell.json";
 import enWorkspace from "@/messages/en/workspace.json";
 import koAuth from "@/messages/ko/auth.json";
+import koChat from "@/messages/ko/chat.json";
 import koCommon from "@/messages/ko/common.json";
 import koDownload from "@/messages/ko/download.json";
 import koErrors from "@/messages/ko/errors.json";
@@ -38,6 +40,7 @@ const ko = {
   settings: koSettings,
   workspace: koWorkspace,
   notes: koNotes,
+  chat: koChat,
 };
 
 export type Messages = typeof ko;
@@ -59,6 +62,7 @@ const en: DeepPartial<Messages> = {
   settings: enSettings,
   workspace: enWorkspace,
   notes: enNotes,
+  chat: enChat,
 };
 
 /**

@@ -225,7 +225,7 @@ describe("ChatThread", () => {
       fireEvent.click(screen.getByRole("button", { name: "복사" }));
 
       expect(writeText).toHaveBeenCalledWith("이렇게 정리했습니다.");
-      await screen.findByRole("button", { name: "복사함" });
+      await screen.findByRole("button", { name: "복사됨" });
       vi.unstubAllGlobals();
     });
 
@@ -302,7 +302,7 @@ describe("ChatThread", () => {
     // ★ 도구 id 도, 「테스트 유저님이 승인」(content)도 제목으로 쓰지 않는다.
     expect(screen.queryByText(/linear\.create_issue/)).toBeNull();
     expect(screen.queryByText(/테스트 유저님이 승인/)).toBeNull();
-    expect(screen.getByText("쓰기 작업 승인")).toBeTruthy();
+    expect(screen.getByText("변경 작업 승인")).toBeTruthy();
   });
 
   it("status가 있는 TOOL 메시지는 스트림과 같은 도구 단계로 렌더한다", () => {
@@ -612,7 +612,7 @@ describe("ChatThread", () => {
     renderThread({ approvalCard: openCard, onApprove });
     expect(screen.getByText("Linear 이슈 'APP 버그 수정' 생성")).toBeTruthy();
     // 만료가 없다는 문구가 있다. 「중지」가 유일한 탈출구다.
-    expect(screen.getByText(/답할 때까지 기다립니다/)).toBeTruthy();
+    expect(screen.getByText(/승인하거나 거절할 때까지 기다립니다/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "거절" }));
     expect(onApprove).toHaveBeenCalledWith("REJECTED");
   });
@@ -634,7 +634,7 @@ describe("ChatThread", () => {
     });
 
     expect(screen.getByTestId("approval-summary").textContent).toBe(
-      "쓰기 작업 승인"
+      "변경 작업 승인"
     );
     expect(screen.getByText(/무엇을 하는지 알 수 없어/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "승인" })).toHaveProperty(
@@ -660,7 +660,7 @@ describe("ChatThread", () => {
       "disabled",
       true
     );
-    expect(screen.getByText(/확정은 응답이 재개되면/)).toBeTruthy();
+    expect(screen.getByText(/응답이 다시 이어지면 확정됩니다/)).toBeTruthy();
   });
 
   it("invalidated면 버튼을 지우고 사유를 보인다", () => {

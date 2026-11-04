@@ -43,7 +43,7 @@ function renderComposer(
       onStop={vi.fn()}
       isBusy={false}
       isStreaming={false}
-      placeholder="@로 프로젝트·회의록을 참조해 물어보세요"
+      placeholder="@로 프로젝트나 회의록을 붙여 물어보세요"
       onChipsChange={vi.fn()}
       scope={{
         candidates: CANDIDATES,

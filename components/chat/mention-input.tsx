@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useImperativeHandle, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import { scopeChipClass } from "@/lib/chat/scope-chip";
@@ -188,6 +189,7 @@ export function MentionInput({
   onChipsChange: (chips: ScopeChip[]) => void;
   onSubmit: () => void;
 }) {
+  const t = useTranslations("chat.composer");
   const box = useRef<HTMLDivElement | null>(null);
   const composing = useRef(false);
   const [empty, setEmpty] = useState(true);
@@ -340,7 +342,7 @@ export function MentionInput({
       ref={box}
       role="textbox"
       aria-multiline="true"
-      aria-label="메시지"
+      aria-label={t("message")}
       contentEditable={!disabled}
       suppressContentEditableWarning
       data-placeholder={placeholder}

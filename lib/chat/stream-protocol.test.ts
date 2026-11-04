@@ -328,9 +328,9 @@ describe("턴 종료", () => {
     expect(state.blocks.some((b) => b.kind === "thinking")).toBe(true);
   });
 
-  it("모르는 실패 코드도 기본 문구로 접는다", () => {
+  it("모르는 실패 코드도 코드만 싣는다 — 문구는 화면이 코드로 고른다", () => {
     const state = fold(START, frame("2-0", "turn_failed", { turnId: "t1", code: "미래코드" }));
-    expect(state.error).toEqual({ code: "미래코드", message: "응답을 받지 못했습니다." });
+    expect(state.error).toEqual({ code: "미래코드", message: null });
     expect(state.retryable).toBeNull();
   });
 
@@ -402,25 +402,24 @@ describe("복원", () => {
     });
   });
 
-  it("SERVICE_RESTARTING 은 업데이트 문구로 접히고 retryable 은 server 값을 따른다", () => {
-    const msg = "서버가 업데이트되어 응답이 멈췄습니다. 다시 보내 주세요.";
+  it("SERVICE_RESTARTING 은 코드로 접히고 retryable 은 server 값을 따른다", () => {
     expect(failedTurnState("SERVICE_RESTARTING", true)).toMatchObject({
       phase: "failed",
       retryable: true,
-      error: { code: "SERVICE_RESTARTING", message: msg },
+      error: { code: "SERVICE_RESTARTING", message: null },
     });
     const live = fold(
       START,
       frame("3-0", "turn_failed", { turnId: "t1", code: "SERVICE_RESTARTING", retryable: true })
     );
     expect(live).toMatchObject({ phase: "failed", retryable: true });
-    expect(live.error?.message).toBe(msg);
+    expect(live.error).toEqual({ code: "SERVICE_RESTARTING", message: null });
   });
 
-  it("모르는 코드는 기본 문구로 접힌다", () => {
+  it("모르는 코드도 코드 그대로 싣는다", () => {
     expect(failedTurnState("SOMETHING_NEW", false).error).toEqual({
       code: "SOMETHING_NEW",
-      message: "응답을 받지 못했습니다.",
+      message: null,
     });
   });
 

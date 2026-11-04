@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import type {
@@ -8,11 +9,9 @@ import type {
   ChatStreamPhase,
   ChatStreamState,
 } from "@/lib/chat/stream-protocol";
-import {
-  type ApprovalCardData,
-  type ApprovalCardStatus,
-  ENDED_REASON,
-  UNKNOWN_REASON,
+import type {
+  ApprovalCardData,
+  ApprovalCardStatus,
 } from "@/lib/chat/approval-card";
 
 /** 결정 전 카드가 지날 수 있는 상태. 확정은 스트림이 한다 — 결정된 블록이 제자리에 카드로 선다. */
@@ -31,12 +30,18 @@ export type PendingApprovalCard = {
  * 다시 눌러도 소용없는 종료 오류와 그 사유. `AGENT_CHAT_CAPACITY_EXCEEDED`(503)는 잠시 뒤
  * 다시 누르면 되므로 여기 없다.
  */
-const TERMINAL_REASON: Record<string, string> = {
+const TERMINAL_REASON = {
   // 승인 만료는 없다. 404 는 이미 처리됐거나 그 턴이 승인 대기가 아닌 것이다.
-  APPROVAL_NOT_FOUND: "이미 처리됐거나 지나간 승인입니다.",
-  AGENT_CHAT_NOT_FOUND: "대화를 찾을 수 없어 처리할 수 없습니다.",
-  NOT_APPROVAL_OWNER: "이 승인은 요청한 사람만 처리할 수 있습니다.",
-};
+  APPROVAL_NOT_FOUND: "notFound",
+  AGENT_CHAT_NOT_FOUND: "chatNotFound",
+  NOT_APPROVAL_OWNER: "notOwner",
+} as const;
+
+function terminalReason(code: string) {
+  return code in TERMINAL_REASON
+    ? TERMINAL_REASON[code as keyof typeof TERMINAL_REASON]
+    : null;
+}
 
 type Pending = {
   approvalId: string;
@@ -82,6 +87,7 @@ export function useToolApproval({
   approve: (decision: ApprovalDecision) => void;
   card: PendingApprovalCard | null;
 } {
+  const t = useTranslations("chat");
   const [submitted, setSubmitted] = useState<{
     approvalId: string;
     decision: ApprovalDecision;
@@ -110,8 +116,9 @@ export function useToolApproval({
       status:
         submitted?.approvalId === trackedPending.approvalId &&
         submitted.decision === "APPROVED"
-          ? { kind: "check", reason: UNKNOWN_REASON }
-          : { kind: "invalid", reason: ENDED_REASON },
+          ? { kind: "check" }
+          : // 승인을 안 누른 채 대화가 끝난 자리. 만료가 아니다.
+            { kind: "invalid", reason: t("approval.reasons.ended") },
     });
   } else if (!isAbnormalEnd(streamPhase)) {
     // 새 턴이 시작됐거나, 결정이 적혀 대기가 걷혔다(202 뒤). 결정된 블록이 제자리에 카드로 서므로
@@ -130,21 +137,25 @@ export function useToolApproval({
         if (!error) return;
         // 스트림이 먼저 확정했으면 늦게 온 오류다. 죽은 카드를 되살리거나 헛토스트를 띄우지 않는다.
         if (pendingRef.current?.approvalId !== target.approvalId) return;
-        if (error.code in TERMINAL_REASON) {
+        const terminal = terminalReason(error.code);
+        if (terminal) {
           // 다시 눌러도 같은 오류라 카드를 무효화한다.
           setInvalidation({
             approvalId: target.approvalId,
             approval: target,
-            status: { kind: "invalid", reason: TERMINAL_REASON[error.code] },
+            status: {
+              kind: "invalid",
+              reason: t(`approval.reasons.${terminal}`),
+            },
           });
           return;
         }
         // 재시도할 수 있는 실패다. 잠금을 풀고, 그릴 인라인 자리가 없어 토스트한다.
         setSubmitted(null);
-        toast.error(error.message || "승인을 처리하지 못했습니다.");
+        toast.error(error.message || t("errors.approvalFailed"));
       });
     },
-    [pending, resolve]
+    [pending, resolve, t]
   );
 
   let card: PendingApprovalCard | null = null;

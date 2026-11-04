@@ -95,7 +95,7 @@ describe("ChatStarter", () => {
     it("회의록 전제 칩 없이 웹 찾기·할 일 만들기만 권한다", () => {
       renderStarter();
       expect(chips()).toEqual(["웹에서 찾기", "할 일 만들기"]);
-      expect(screen.queryByText(/근거와 함께 찾아 드려요/)).toBeNull();
+      expect(screen.queryByText(/근거와 함께 찾아 드립니다/)).toBeNull();
     });
 
     it("프로젝트가 없으면 할 일 칩을 뺀다 — 할 일은 프로젝트에 만들어진다", () => {
@@ -107,7 +107,7 @@ describe("ChatStarter", () => {
     it("칩 위에 첫 회의 안내와 [새 회의 기록]이 서고, 누르면 새 회의 창을 연다", () => {
       renderStarter();
       expect(
-        screen.getByText("첫 회의를 기록하면 결정과 할 일을 정리해 드려요.")
+        screen.getByText("첫 회의를 기록하면 결정과 할 일을 정리해 드립니다.")
       ).toBeTruthy();
       fireEvent.click(screen.getByRole("button", { name: "새 회의 기록" }));
       expect(data.requestNewMeeting).toHaveBeenCalledOnce();
@@ -146,7 +146,7 @@ describe("ChatStarter", () => {
         "남은 할 일",
         "지난 회의 요약",
       ]);
-      expect(screen.getByText(/근거와 함께 찾아 드려요/)).toBeTruthy();
+      expect(screen.getByText(/근거와 함께 찾아 드립니다/)).toBeTruthy();
       expect(screen.queryByRole("button", { name: "새 회의 기록" })).toBeNull();
     });
 
@@ -184,7 +184,7 @@ describe("ChatStarter", () => {
         "바뀐 결정",
         "웹에서 찾기",
       ]);
-      expect(screen.getByText(/「주간 회의」 회의를 보고 답해요/)).toBeTruthy();
+      expect(screen.getByText(/「주간 회의」 회의를 보고 답합니다/)).toBeTruthy();
       // 빈 목록이어도 처음 안내로 읽지 않는다 — 회의록 안에 있다
       expect(screen.queryByText(/첫 회의를 기록하면/)).toBeNull();
       expect(data.reviewNoteIds).toContain("n1");

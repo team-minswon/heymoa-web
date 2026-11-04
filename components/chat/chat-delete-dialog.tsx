@@ -30,7 +30,8 @@ export function ChatDeleteDialog({
   onConfirm: (chatId: string) => Promise<boolean>;
 }) {
   const [busy, setBusy] = useState(false);
-  const t = useTranslations("common.agentChat.deleteDialog");
+  const t = useTranslations("chat.deleteDialog");
+  const tActions = useTranslations("common.actions");
 
   return (
     <AlertDialog open={target !== null} onOpenChange={onOpenChange}>
@@ -48,7 +49,7 @@ export function ChatDeleteDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>{t("cancel")}</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{tActions("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             loading={busy}
@@ -61,7 +62,7 @@ export function ChatDeleteDialog({
               if (deleted) onOpenChange(false);
             }}
           >
-            {t("confirm")}
+            {tActions("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

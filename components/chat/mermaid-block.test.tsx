@@ -62,7 +62,7 @@ describe("mermaid 코드펜스", () => {
     mermaid.render.mockRejectedValue(new Error("Parse error"));
     const { container } = render(<Markdown content={FENCE} />, { wrapper });
 
-    expect(await screen.findByText("도표를 그리지 못했어요")).toBeTruthy();
+    expect(await screen.findByText("도표를 그리지 못했습니다")).toBeTruthy();
     expect(container.querySelector("pre")?.textContent).toContain("A-->B");
     expect(screen.queryByTestId("mermaid-diagram")).toBeNull();
   });
