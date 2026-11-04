@@ -39,7 +39,7 @@
 | `next.config.ts` | 언어 이동 없음 | `/` → `/en` 307. 조건은 `has` 헤더 `accept-language` = `ACCEPT_LANGUAGE_EN_ONLY`, `missing` 쿠키 `heymoa-lang` |
 | `components/auth/auth-provider.tsx` | 로그아웃 뒤 `/` | `localePath(현재 언어, "/")` |
 | `formatAppDate`·`"ko-KR"` 호출부 19파일 | 대부분 locale 생략 | 호출부가 `displayLocale(useLocale())`를 넘깁니다. 순수 함수(`lib/notes/minutes/model.ts` 등)는 `locale` 인자를 받게 바꿉니다. 목록은 `rg -n 'formatAppDate\(\|"ko-KR"' app components lib -g '!*.test.*' -g '!lib/format/date.ts'` |
-| `app/(product)/not-found.tsx`, `app/(product)/error.tsx`, `components/workspace/workspace-sidebar.tsx` | 한국어 직접 | `common` 이름공간 키로. 화면별 나머지는 APP-1286 |
+| `app/(product)/not-found.tsx`, `app/(product)/error.tsx` | `locale="ko"` 고정 | 제품 루트 언어(`productLocale`·`useLocale`). 문구는 이미 `common.notFound`·`common.error`에 있습니다 |
 | `messages/ko/common.json`, `messages/en/common.json` | `language` 등 | `language.settings.*`, 제품 셸 키 추가 |
 | `harness/v002-2026-08-13/rules/error-loading.md` | 서버 문구 정책 | "서버 문구는 `Accept-Language`(화면 언어)로 온다" 한 줄 |
 | `e2e/product-language.spec.ts` | (신규) | spec 성공 기준 중 e2e 항목 |
@@ -106,10 +106,10 @@
 - 검증: `pnpm vitest run lib components`, `pnpm typecheck`. `lib/format/date.test.ts`에 서울 자정 전후 시각을 en으로 포맷해도 날짜 키가 같은지 확인하는 테스트를 더합니다
 - 되돌리기: revert 한 번
 
-### 10. 제품 셸 문구
+### 10. 제품 404·오류 화면의 언어
 
-- 바꾸는 것: `app/(product)/not-found.tsx`, `app/(product)/error.tsx`, `components/workspace/workspace-sidebar.tsx`, `messages/<ko|en>/common.json`. 영어 키 완전성 테스트(`i18n/messages.test.ts`)의 대상에 새 키가 들어가는지 확인합니다
-- 검증: `pnpm vitest run i18n components/workspace`
+- 바꾸는 것: `app/(product)/not-found.tsx`, `app/(product)/error.tsx`. 사이드바·토스트 fallback은 아래 「안 하는 것」으로 옮겼습니다
+- 검증: `pnpm vitest run app i18n`, 11단계 e2e에서 영어 계정으로 없는 노트 주소를 엽니다
 - 되돌리기: revert 한 번
 
 ### 11. 규칙 문서와 e2e
@@ -131,6 +131,9 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 그 뒤 `codex exec review --base pro-66/웹-국제화`로 리뷰를 받고, P1·P2를 고친 다음 사용자 검토를 받습니다. 실제 server로 확인하는 항목(영어 오류 문구)은 로컬 server를 띄워 수동으로 봅니다.
 
 ## 안 하는 것
+
+- 사이드바(`components/workspace/workspace-sidebar.tsx`)와 토스트 fallback(`lib/query/query-client.ts`) 문구: 구현 중에 APP-1286으로 옮겼습니다. 사이드바 문구는 대부분 제품 용어(프로젝트·노트·할 일)라 APP-1286이 먼저 정하는 용어집 없이 옮기면 다시 고치게 됩니다. 토스트 fallback은 React 밖 모듈이라 fetcher의 web 자체 오류 문구와 같은 방식으로 함께 옮깁니다
+- 날짜를 한국어 문장으로 조립하는 순수 함수(`dayLabel`, `note-groups`, 회의록 모델 등)의 locale: APP-1286. Linear ③ 댓글 참고
 
 - 화면별 문구 번역과 윤문: APP-1286. 이번에는 셸 세 파일만 옮깁니다
 - `lib/api/fetcher.ts`의 web 자체 오류 문구(시한 초과 등) 영어판: React 밖 모듈이라 메시지를 받는 방식이 따로 필요합니다. APP-1286에서 web 자체 오류를 옮길 때 같이 합니다
