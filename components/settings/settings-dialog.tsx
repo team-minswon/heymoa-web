@@ -9,6 +9,7 @@ import {
   BellRing,
   BookA,
   Bot,
+  Languages,
   Plug,
   Settings,
   ShieldCheck,
@@ -22,6 +23,7 @@ import {
 } from "@/components/settings/account-settings-form";
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
 import { GuestsSettings } from "@/components/settings/guests-settings";
+import { LanguageSettings } from "@/components/settings/language-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
 import {
   NotificationSettings,
@@ -84,6 +86,8 @@ const SETTINGS_GROUPS: {
     label: "계정",
     items: [
       { key: "account", label: "내 계정", Icon: UserRound },
+      // 화면 언어와 상관없이 두 언어로 적는다 — 언어를 바꾸려는 사람은 아직 못 읽는 언어의 화면을 보고 있다(APP-1285).
+      { key: "language", label: "언어 · Language", Icon: Languages },
       { key: "notifications", label: "알림", Icon: BellRing },
       { key: "agents", label: "내 MCP 연결", Icon: Bot },
     ],
@@ -176,6 +180,8 @@ function SettingsSections({
           >
             <AccountSettingsForm />
           </DataBoundary>
+        ) : section === "language" ? (
+          <LanguageSettings />
         ) : section === "notifications" ? (
           <DataBoundary
             fallback={<NotificationSettingsSkeleton />}
