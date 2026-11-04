@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { LanguageSync } from "@/components/auth/language-sync";
 import { AppShell } from "@/components/layout/app-shell";
 import { productLocale } from "@/lib/i18n/current";
 import { noindexDirective, siteMetadata } from "@/lib/site";
@@ -25,5 +26,10 @@ export default async function ProductRootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AppShell locale={await productLocale()}>{children}</AppShell>;
+  return (
+    <AppShell locale={await productLocale()}>
+      <LanguageSync />
+      {children}
+    </AppShell>
+  );
 }
