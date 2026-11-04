@@ -47,3 +47,40 @@ spec: docs `docs/app-1286/dashboard-en` @ `e455d14e` (`projects/PRO-66-웹-국�
 - **무엇을**: 평서문 해요체→합니다체, 가운뎃점 나열·한두 줄 글머리표→문장, 번역투·피동을 고칩니다. 걸리지 않는 문장은 그대로 둡니다. 바뀐 문장은 모듈별 평가 파일에 남깁니다
 - **왜**: 이관과 윤문을 한 번에 하면서도 검토할 양을 줄이려는 것입니다
 - **되돌리는 법**: 모듈 커밋 단위로 한국어 JSON만 되돌림
+
+## D8. 공용 버튼 문구는 `common.actions`
+
+- **무엇을**: 「취소」「저장」「삭제」「다시 시도」를 `common.actions`에 두고 모듈마다 새로 만들지 않습니다(셸 모듈 `cd30417d`에서 시작)
+- **왜**: 같은 버튼이 수십 곳에 있고, 영어 표기를 한 곳에서 맞추려는 것입니다
+- **되돌리는 법**: 각 모듈 이름공간에 키를 복사하고 `useTranslations` 인자를 바꿈
+
+## D9. Navbar·Footer·focus-chrome 문구를 `shell`에 둠
+
+- **무엇을**: 마케팅 루트의 `clientNamespaces`는 바꾸지 않았습니다
+- **왜**: 마케팅 경로는 `NavbarGate`·`FooterGate`가 랜딩 크롬을 세웁니다. 이 Navbar·Footer는 제품 루트의 `/mock-oauth`, `/help-samples`, 로그아웃 상태의 `/inquiries/*`에서만 그려집니다(렌더로 확인)
+- **되돌리는 법**: `navbar`·`footer`·`focusChrome` 키를 `common`으로 옮김
+
+## D10. `desktop-download-link.tsx`는 `shell.desktopDownload`
+
+- **무엇을**: `components/heymoa`에 있지만 데스크톱 앱 안내와 비교 창에서만 쓰여 셸에 넣었습니다. 랜딩은 `landing.download`를 따로 씁니다
+- **되돌리는 법**: 키를 다른 이름공간으로 옮김
+
+## D11. 영어 화면의 마케팅 링크는 아직 한국어 주소로 감 (사용자 확인 필요)
+
+- **무엇을**: 제품 면의 `/terms`·`/privacy`·`/download`·`/download?start=1` 링크가 영어 화면에서도 무접두(한국어) 주소입니다. 이번 문구 이관 범위 밖이라 그대로 두었습니다
+- **추천**: 마지막 관문 전에 `lib/i18n/locales.ts`의 언어별 주소 함수로 한 번에 바꾸는 작은 커밋을 더합니다
+- **되돌리는 법**: 그 커밋 revert
+
+## D12. 영어 화면의 계정 삭제 확인 문구 (사용자 확인 필요)
+
+- **무엇을**: 영어 화면에서는 「delete my account」를 입력받고, 맞으면 서버에는 계약 값 「회원 탈퇴」를 그대로 보냅니다(`settings.accountDeletion.confirmPhrase`, 설정 모듈 `1547997d`)
+- **왜**: 영어 사용자가 한국어 입력기 없이 탈퇴할 수 있어야 합니다. 실수 방지 관문(입력 확인)은 그대로입니다
+- **되돌리는 법**: 그 키를 지우고 `WITHDRAWAL_CONFIRMATION`을 다시 씁니다. 근본 해결은 서버 계약이 확인 문구를 언어별로 받거나 아예 받지 않게 바꾸는 것입니다(server 이슈 필요)
+
+## D13. 설정 모듈의 작은 판단들
+
+- 「언어 · Language」 탭 이름은 화면 언어와 무관하게 두 언어로 적는 의도라 언어 파일 밖 상수로 둡니다
+- 이름 뒤 조사 「을(를)」은 `objectParticle`로 받침에 맞춰 `{particle}` 자리에 넣습니다
+- 용어 사전 탭(`components/terms`)은 설정에서만 쓰여 `settings.terms`에 둡니다. `lib/terms/term-bulk.ts`의 `summaryParts`는 문구 대신 개수를 돌려줍니다
+- 공용 확인 버튼의 영어는 「OK」입니다(`common.actions.confirm`)
+- 사용 내역은 가이드 영어판을 따라 「Usage history」입니다(용어집의 Usage를 고침)
