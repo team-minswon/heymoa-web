@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 import { Maximize2, Pause, Play } from "lucide-react";
 
@@ -9,6 +9,7 @@ import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
+import { localizedHelpMedia } from "@/lib/help/localized-media";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,7 +38,8 @@ export function HelpClip({
   alt: string;
   caption?: string;
 }) {
-  const { width, height } = HELP_MEDIA[`clips/${name}`];
+  // 페이지 언어의 영상(영어는 `en/clips/…`, 없으면 한국어)
+  const { path, width, height } = localizedHelpMedia(`clips/${name}`, useLocale());
   const video = useRef<HTMLVideoElement>(null);
   const figure = useRef<HTMLElement>(null);
   const captionId = useId();
@@ -110,7 +112,7 @@ export function HelpClip({
           loop
           playsInline
           preload="metadata"
-          poster={helpAssetUrl(`clips/${name}.webp`)}
+          poster={helpAssetUrl(`${path}.webp`)}
           width={width}
           height={height}
           aria-label={alt}
@@ -126,8 +128,8 @@ export function HelpClip({
           onPause={() => setPlaying(false)}
           className="block h-auto w-full"
         >
-          <source src={helpAssetUrl(`clips/${name}.webm`)} type="video/webm" />
-          <source src={helpAssetUrl(`clips/${name}.mp4`)} type="video/mp4" />
+          <source src={helpAssetUrl(`${path}.webm`)} type="video/webm" />
+          <source src={helpAssetUrl(`${path}.mp4`)} type="video/mp4" />
         </video>
         {/* 마우스용 덮개. 키보드는 아래 크게 보기 버튼으로 같은 곳에 닿는다. */}
         <button
@@ -174,7 +176,7 @@ export function HelpClip({
         finalFocus={() => zoomButton.current ?? true}
       >
         <ZoomPlayer
-          name={name}
+          path={path}
           alt={alt}
           width={width}
           height={height}
@@ -198,13 +200,14 @@ export function HelpClip({
  * Space 는 일시정지/재생이다(버튼·막대에 포커스가 있으면 그 컨트롤의 기본 동작).
  */
 function ZoomPlayer({
-  name,
+  path,
   alt,
   width,
   height,
   reduced,
 }: {
-  name: ClipName;
+  /** `localizedHelpMedia` 가 고른 확장자 없는 경로 */
+  path: string;
   alt: string;
   width: number;
   height: number;
@@ -239,7 +242,7 @@ function ZoomPlayer({
         loop
         playsInline
         autoPlay={!reduced}
-        poster={helpAssetUrl(`clips/${name}.webp`)}
+        poster={helpAssetUrl(`${path}.webp`)}
         width={width}
         height={height}
         aria-label={alt}
@@ -249,8 +252,8 @@ function ZoomPlayer({
         onTimeUpdate={(event) => setTime(event.currentTarget.currentTime)}
         className="block h-auto max-h-[calc(92vh-6rem)] w-full rounded-[12px] bg-[var(--tv-lav-soft)] object-contain"
       >
-        <source src={helpAssetUrl(`clips/${name}.webm`)} type="video/webm" />
-        <source src={helpAssetUrl(`clips/${name}.mp4`)} type="video/mp4" />
+        <source src={helpAssetUrl(`${path}.webm`)} type="video/webm" />
+        <source src={helpAssetUrl(`${path}.mp4`)} type="video/mp4" />
       </video>
       <div className="flex items-center gap-3 px-1">
         <button

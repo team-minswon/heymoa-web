@@ -6,6 +6,7 @@
  * 출력: public/help/agenda-map/{entry,overview,expand,panel,focus}.webp (+ lib/help/media-manifest.ts). 화면이 바뀌면 이 명령 한 줄로 다시 찍는다.
  */
 import { BASE, chromium, openDemo, shoot, wait } from "./common.mjs";
+import { K, L } from "./ui.mjs";
 
 const WS = "01K0000000000";
 const PROJECT = "0PGP000000001";
@@ -17,7 +18,7 @@ async function open(page, url) {
   await page.waitForFunction(() => navigator.serviceWorker.controller?.scriptURL.endsWith("/mockServiceWorker.js"));
   await page.evaluate(() => document.fonts.ready);
   await wait(2500);
-  for (const name of ["다시 보지 않기", "시작하기 닫기"]) {
+  for (const name of [L("다시 보지 않기"), L("시작하기 닫기")]) {
     const button = page.getByRole("button", { name });
     if (await button.count()) {
       await button.first().click();
@@ -43,7 +44,7 @@ const clip = (height) => ({ x: 0, y: 0, width: 1440, height });
 const SCENES = {
   async entry(page) {
     await open(page, `${BASE}/w/${WS}`);
-    await page.getByText("앱 출시 준비", { exact: true }).first().click();
+    await page.getByText(L("앱 출시 준비", "App Launch Prep"), { exact: true }).first().click();
     await wait(1500);
     await page.mouse.move(1, 1);
     await shoot(page, clip(560), "agenda-map/entry", { maxWidth: 1100, budget: 70 * 1024 });
@@ -56,14 +57,15 @@ const SCENES = {
   },
   async expand(page) {
     await openMap(page);
-    await page.locator("button[data-head]", { hasText: "고객 인터뷰 정리" }).first().click();
+    await page.locator("button[data-head]", { hasText: L("고객 인터뷰 정리", "Customer interview debrief") }).first().click();
     await wait(1200);
     await wait(400);
     await shoot(page, clip(1040), "agenda-map/expand", { budget: 90 * 1024 });
   },
   async panel(page) {
     await openMap(page);
-    await page.getByRole("button", { name: "09.24 요금제 경쟁사 비교", exact: true }).click();
+    // 안건 칩의 이름은 「날짜 제목」 이다. 날짜 모양이 언어마다 달라 끝 제목으로 찾는다
+    await page.getByRole("button", { name: new RegExp(`${L("요금제 경쟁사 비교", "Competitor pricing comparison")}$`) }).first().click();
     await wait(1200);
     await page.mouse.move(600, 160);
     await wait(900);
@@ -71,7 +73,7 @@ const SCENES = {
   },
   async focus(page) {
     await openMap(page);
-    await page.getByRole("button", { name: /^베타 피드백 반영 목록 · 눌러서 이 줄기만 크게 보기/ }).click();
+    await page.getByRole("button", { name: new RegExp(`^${L("베타 피드백 반영 목록", "Beta feedback fix list")} · ${K("workspace.agendaMap.focusTopicHint")}`) }).click();
     await wait(1800);
     await page.mouse.move(1, 1);
     await wait(300);
