@@ -30,11 +30,16 @@ function scriptOf(pack: HelpDemoPack, def: NoteDef): ParsedScript | null {
   return pack.scripts[source.id];
 }
 
-/** 발화 길이로 말하는 데 걸린 시간을 정한다. 무작위 없이 인덱스로 사이 간격을 벌린다. */
-function timed(script: ParsedScript) {
+/**
+ * 발화 길이로 말하는 데 걸린 시간을 정한다. 무작위 없이 인덱스로 사이 간격을 벌린다.
+ *
+ * 길이는 **한국어 대사**(`timing`)로 잰다. 영어판은 같은 순번의 한국어 발화와 같은 시각을 받는다 —
+ * 글자 수가 달라 시각이 밀리면 검토본·챗봇 답변이 가리키는 「약 31분」 같은 근거 위치가 어긋난다.
+ */
+function timed(script: ParsedScript, timing: ParsedScript) {
   let at = 1_200;
   return script.lines.map((line, index) => {
-    const duration = Math.min(28_000, 700 + line.text.length * 175);
+    const duration = Math.min(28_000, 700 + (timing.lines[index] ?? line).text.length * 175);
     const row = { ...line, startedAtMs: at, endedAtMs: at + duration };
     at += duration + 350 + ((index * 211) % 1_100);
     return row;
@@ -145,7 +150,8 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
       .sort((a, b) => a.name.localeCompare(b.name) || a.participantId.localeCompare(b.participantId));
 
     const script = scriptOf(pack, def);
-    const lines = script ? timed(script) : [];
+    const timing = scriptOf(helpDemoPack("ko"), def);
+    const lines = script && timing ? timed(script, timing) : [];
     const lastEnd = lines.at(-1)?.endedAtMs ?? 0;
     const sessionLength = lastEnd + 15_000;
 
