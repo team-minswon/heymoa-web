@@ -6,7 +6,7 @@
  * - 세리프(EB Garamond · Noto Serif KR)는 싣지 않는다(APP-1161) — 제목도 Inter 와 시스템 고딕이다.
  * - 변수(`--font-*`)는 `globals.css`의 `:root`가 선언한다. next/font가 `<html>` 클래스에 심던 자리다.
  */
-import "@fontsource-variable/inter";
+import "@fontsource-variable/inter/opsz.css";
 import "@fontsource-variable/geist-mono";
 
 import { NextIntlClientProvider } from "next-intl";
