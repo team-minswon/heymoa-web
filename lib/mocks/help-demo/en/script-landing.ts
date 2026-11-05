@@ -12,106 +12,106 @@ import { parseScript } from "@/lib/mocks/help-demo/script";
  * 한지호는 참석했지만 말하지 않았다(참석자만 있고 화자가 없는 경우의 표본).
  */
 export const LANDING_SCRIPT = parseScript(`
-A 시작할게요. 오늘은 신제품 소개 페이지 문구를 확정하는 자리예요. 다음 주 월요일에 개발팀에 넘겨야 해서 오늘 끝내야 합니다. @opening
-A 순서는 위에서부터 갈게요. 맨 위 제목, 혜택 세 가지, 성분 설명, 후기 영역, 마지막에 신청 버튼 문구까지요.
-B 네, 시안은 어제 공유드린 두 번째 버전 기준으로 볼게요.
-C 저는 그 시안을 보면서 회의록 정리할게요. 문구가 바뀌는 건 바뀐 문장 그대로 적어 두겠습니다.
-A 고마워요. 그러면 제목부터요. 지금 시안에는 하루 종일 촉촉한 피부, 새로운 수분 크림 이렇게 되어 있죠.
-B 네. 근데 저는 이 제목이 너무 평범하다는 생각이 들어요. 다른 수분 크림 광고에서 다 쓰는 말이잖아요.
-A 맞아요. 그럼 대안이 있어요?
-B 두 가지 생각해 봤어요. 하나는 아침에 바르면 저녁까지 촉촉하다는 걸 시간으로 보여 주는 거고, 다른 하나는 가볍게 발리는 걸 앞세우는 거예요.
-B 예를 들어 열두 시간 촉촉함, 가볍게 바르는 수분 크림 이런 식이요. @title-options
-C 열두 시간은 근거가 있어야 하지 않나요? 이런 숫자는 광고 심의에서 걸릴 수 있잖아요.
-A 좋은 지적이에요. 열두 시간 보습은 시험 성적서가 있어야 쓸 수 있어요. 지호님한테 성적서 있는지 확인해 달라고 했는데 아직 답이 없어요.
-B 성적서가 없으면 숫자는 못 쓰는 거죠.
-A 네. 그래서 일단 숫자 없는 버전으로 제목을 정하고, 성적서가 확인되면 부제에만 숫자를 넣는 걸로 하면 어떨까요?
-B 좋아요. 그럼 제목은 가볍게 스며드는 수분 크림, 부제는 성적서 확인 후에 숫자를 넣는 걸로 해요. @title-decision
-C 제목은 가볍게 스며드는 수분 크림으로 적을게요. 부제는 보류고요.
-A 네, 맞아요. 그리고 이건 제가 확인해 볼게요. 성적서 건은 오늘 안에 지호님께 다시 물어보겠습니다. @report-check
-A 다음은 혜택 세 가지예요. 지금 시안에는 첫째 깊은 수분, 둘째 부드러운 사용감, 셋째 민감한 피부도 편안하게라고 되어 있어요.
-B 저는 첫째 둘째가 거의 같은 말처럼 읽혀요. 깊은 수분이랑 부드러운 사용감은 소비자 입장에서는 하나로 느껴질 거예요.
-A 그렇긴 하네요. 그러면 어떻게 나눌까요?
-B 수분과 사용감을 하나로 묶고, 대신 향이 거의 없다는 점을 따로 빼는 건 어때요? 지난 인터뷰에서 향에 민감한 분들이 꽤 있었잖아요.
-C 맞아요. 인터뷰 2차에서 향 때문에 바르다 마는 크림이 있다는 얘기가 세 분이나 나왔어요.
-A 그럼 혜택은 첫째 가볍게 스며드는 수분, 둘째 향이 거의 없어 부담 없는 사용감, 셋째 민감한 피부도 편안하게, 이렇게 가는 걸로 하죠. @benefits-decision
-B 좋아요. 아, 근데 향이 없다고 쓰면 안 되고 향이 거의 없다고 써야 해요. 완전 무향은 아니라서요.
-A 맞아요, 그 표현은 꼭 지켜야 해요. 서윤님, 이 부분 메모해 주세요.
-C 네, 향이 거의 없다까지만 쓰고 무향이라는 단어는 쓰지 않는다고 적어 둘게요. @no-fragrance
-A 세 번째 혜택에 민감한 피부라는 표현도 확인이 필요해요. 이것도 시험 결과가 있어야 하거든요.
-B 저는 민감한 피부용이라고 단정하지 않고, 민감한 피부도 편안하게 쓸 수 있도록 만들었다 정도로 쓰면 괜찮다고 알고 있어요.
-A 그 정도면 괜찮을 거예요. 그래도 확인은 해야 하니까 문구 최종본은 법무 검토 한 번 거치죠. @legal-review
-C 법무 검토는 제가 요청 메일 보낼까요?
-A 네, 서윤님이 맡아 주세요. 최종 문구가 정리되면 바로 보내는 걸로요.
-C 알겠습니다.
-A 다음, 성분 설명이에요. 지금은 히알루론산, 세라마이드, 판테놀 세 가지를 이름만 나열하고 있어요.
-B 이름만 있으면 읽는 사람이 그게 뭔지 모르잖아요. 한 줄씩 설명을 달아야 할 것 같아요.
-A 맞아요. 설명은 어떤 톤으로 갈까요? 너무 전문적이면 어려울 것 같고요.
-B 쉬운 말로요. 히알루론산은 수분을 붙잡아 주는 성분, 세라마이드는 피부 장벽을 단단하게, 판테놀은 건조한 피부를 진정시키는 성분 이런 식으로요. @ingredient-copy
-C 이렇게 설명하면 이해하기 쉽네요. 효능을 단정한 표현은 아니라서 심의에도 괜찮을 것 같고요.
-A 좋아요. 그러면 성분은 이름 옆에 한 줄 설명을 붙이는 방식으로 하죠. 설명 문구는 민재님이 정리해서 보내 주실래요?
-B 네, 오늘 안으로 보낼게요.
-A 이제 후기 영역이에요. 지금은 베타 테스터 후기 세 개가 올라가 있어요.
-B 이 세 개가 다 비슷한 말이에요. 촉촉하다, 가볍다, 흡수가 빠르다. 후기가 한 가지 톤으로만 나오면 광고처럼 보여서 신뢰가 떨어져요.
-A 그러면 어떻게 하죠?
-B 장점만 있는 후기 말고, 처음에는 끈적일까 걱정했는데 의외로 산뜻했다 같은 후기를 한두 개 넣고 싶어요.
-C 그런 후기는 베타 설문에 있어요. 제가 찾아볼게요. 사용 동의 받은 것만 쓸게요. @review-pick
-A 좋습니다. 후기는 총 네 개로 하고, 서윤님이 동의 받은 것 중에 톤이 다른 걸로 두 개 더 골라 주세요.
-C 네, 다음 주 월요일까지 고르겠습니다.
-B 후기 위에 별점 평균을 같이 넣으면 어떨까요? 4.6 정도 나왔잖아요.
-A 베타 테스터는 열두 명이라 표본이 너무 작아요. 평균을 크게 보여 주면 오해할 수 있어요.
-B 맞네요. 그럼 별점은 안 넣고 후기 문장만 쓸게요.
-A 그게 안전하겠어요. 후기 영역에는 베타 테스터 후기라는 출처만 작게 적고요. @review-source
-C 출처 문구는 베타 테스터 후기라고 적을게요.
-A 이제 마지막, 신청 버튼 문구예요. 지금은 사전 신청하기로 되어 있어요.
-B 사전 신청하기도 나쁘지 않은데, 클릭하면 무슨 일이 생기는지가 안 보여요. 신청하면 출시 알림을 받는다는 걸 알려 주는 게 좋겠어요.
-A 그럼 버튼은 출시 알림 신청하기로 하고, 버튼 바로 아래에 신청하신 분께만 출시 소식을 보내 드립니다 같은 한 줄을 넣죠. @cta-decision
-B 좋아요. 조금 길어도 괜찮다고 봐요.
-C 버튼은 출시 알림 신청하기, 아래 한 줄은 신청하신 분께만 출시 소식을 보내 드립니다로 적을게요.
-A 네. 그리고 알림 받는 방식은 이메일로만 할 건가요, 문자도 해요?
-B 이번에는 이메일만 하는 게 좋겠어요. 문자는 수신 동의 절차가 따로 있어서 일정이 늘어나요.
-A 동의해요. 그럼 이메일만으로 하죠. 문자는 다음 출시 때 다시 보고요. @email-only
-C 이메일 수신 동의 문구도 함께 들어가야 하는 거죠?
-A 네, 개인정보 수집 동의 체크박스가 필요해요. 문구는 법무에서 쓰던 표준 문구가 있으니 그걸 쓰면 돼요.
-C 그 문구는 제가 찾아서 시안에 넣을게요.
-B 그러면 신청 폼에는 이메일, 개인정보 동의 두 가지만 받으면 되겠네요.
-A 이름은 안 받아도 되겠죠? 신청 장벽을 낮추려면 하나라도 줄이는 게 좋아요.
-B 이름은 빼는 게 맞아요. 출시 알림에 이름이 필요하진 않으니까요.
-A 정리할게요. 폼은 이메일 하나, 동의 하나. 알림은 이메일만. 맞죠?
-C 맞아요. 적었습니다.
-A 한 가지만 더 물을게요. 페이지 맨 아래 자주 묻는 질문 영역은 어떻게 하죠? 지금 시안에는 없어요.
-B 저는 출시 전 페이지라서 FAQ는 세 개 정도만 넣으면 충분하다고 생각해요. 언제 나오는지, 가격은 얼마인지, 어디서 살 수 있는지요.
-A 가격이랑 출시일은 아직 확정이 안 됐잖아요.
-C 출시일은 5월 중순 예정이고 가격은 가격 정책 회의에서 정해진다고 들었어요.
-A 그러면 FAQ는 출시일과 가격이 확정되면 그때 채우고, 이번 시안에서는 영역만 비워 두죠. @faq-hold
-B 네, 그렇게 해요. 영역은 접힌 상태로 만들어 두면 나중에 채우기 쉬워요.
-C 열린 질문으로 남길게요. 출시일과 가격이 정해지면 FAQ 문구를 채운다고요.
-A 좋아요. 다음 주 월요일에 개발팀에 넘기는 건 FAQ 영역 빼고 나머지 전부로 하죠.
-B 일정이 빠듯하긴 한데 해볼 만해요. 금요일까지 문구 최종본을 제가 정리할게요. @deadline
-A 그러면 법무 검토는 금요일 최종본이 나오는 대로 서윤님이 요청하고, 월요일 오전까지 받는 걸 목표로 해요.
-C 법무 쪽에 회신 기한을 월요일 오전으로 요청드릴게요. 안 되면 바로 공유하겠습니다.
-A 네. 그리고 디자인은요? 문구가 바뀌면 시안도 바뀌잖아요.
-B 문구 확정되면 디자인은 사흘이면 돼요. 이번 주 안에 하는 건 어렵고, 다음 주 수요일에 최종 디자인을 드릴 수 있어요.
-A 그러면 개발팀에는 월요일에 문구를 먼저 넘기고, 디자인은 수요일에 따로 넘기는 걸로 하죠.
-B 그게 현실적이에요.
-C 일정을 다시 읽어 볼게요. 이번 주 금요일에 문구 최종본, 다음 주 월요일 오전에 법무 회신, 월요일에 개발팀 전달, 수요일에 최종 디자인이에요.
-A 맞아요, 정확해요.
-A 아, 하나 빠졌네요. 맨 위 이미지 위에 올라가는 짧은 문구요. 제목이랑 겹치면 안 돼요.
-B 이미지 위에는 신제품이라는 말 한 줄만 올리려고 했어요. 제목이 이미 충분히 길어서요.
-A 그건 좋아요. 신제품 소개 대신 그냥 새로 나왔어요 정도로 가볍게 가도 되고요.
-B 새로 나왔어요가 더 부드럽네요. 그걸로 갈게요. @hero-label
-C 모바일에서는 제목이 두 줄로 넘어가요? 글자 수가 좀 많아 보여서요.
-B 제목은 열네 글자라서 모바일에서도 두 줄이면 되는데 부제까지 붙으면 세 줄이 돼요. 그래서 부제는 모바일에서 숨기려고 해요.
-A 부제는 지금 보류 상태이니 나중에 숫자 넣을 때 다시 보죠.
-C 이미지 설명 문구도 필요하죠? 화면 낭독하는 분들을 위해서요.
-B 네, 이미지마다 설명을 붙일 거예요. 제품 사진은 수분 크림 용기와 질감 컷이라고 적을게요.
-A 접근성 부분은 놓치기 쉬운데 챙겨 줘서 고마워요. 그것도 민재님 몫으로 해 주세요.
-B 알겠습니다.
-A 오늘 결정한 것도 한 번에 정리할게요. 제목은 가볍게 스며드는 수분 크림, 혜택은 수분과 사용감을 묶고 향이 거의 없다는 점을 따로 빼기. 성분은 한 줄 설명. 후기는 네 개에 별점은 안 넣기. 버튼은 출시 알림 신청하기. @summary-decisions
-C 폼은 이메일과 동의만, 알림은 이메일로만, FAQ는 영역만 두고 비워 두기도 있어요.
-A 맞아요. 서윤님 정리 고마워요. 마지막으로 할 일 확인할게요.
-A 지호님은 오늘 성적서 확인을 해 주셔야 하는데 이 자리에 안 계시니까 제가 따로 연락할게요.
-C 지호님 참석자로는 들어와 계셨는데 말씀을 못 하셨네요. 회의록에서 그 건은 세라님 담당으로 적을게요.
-A 네, 그렇게 해요. 오늘 회의는 여기까지입니다. 다들 고생했어요. @closing
-B 고생하셨어요.
-C 수고하셨습니다.
+A Let's get started. Today we're locking the copy for the new product landing page. It goes to the dev team next Monday, so we need to finish today. @opening
+A We'll go top to bottom. Headline, three benefits, ingredients, reviews, and the sign-up button copy at the end.
+B Sure. I'll work from the second version I shared yesterday.
+C I'll take notes against that draft. Any copy that changes, I'll write down word for word.
+A Thanks. Headline first. Right now the draft says "All-day hydration, our new moisturizer."
+B Yeah. Honestly, I think it's too generic. Every moisturizer ad says that.
+A Agreed. Any alternatives?
+B I had two ideas. One shows it in time, like put it on in the morning and you're still hydrated at night. The other leads with how light it feels.
+B Something like "12-hour hydration, a lightweight moisturizer." @title-options
+C Don't we need proof for twelve hours? Numbers like that can get flagged in ad review.
+A Good point. We can only claim 12-hour hydration with a lab report. I asked Jake to check if we have one, but haven't heard back.
+B No report, no numbers.
+A Right. So how about we pick a headline without numbers now, and add the number to the subhead only once the report's confirmed?
+B Works for me. Headline is "A lightweight moisturizer that sinks right in," and the subhead gets a number after we see the report. @title-decision
+C I'll write the headline as "A lightweight moisturizer that sinks right in." Subhead's on hold.
+A Yep. And I'll follow up on this. I'll ask Jake about the lab report again today. @report-check
+A Next, the three benefits. The draft has one, deep hydration, two, a soft feel, and three, gentle on sensitive skin.
+B One and two read like the same thing to me. Deep hydration and a soft feel will feel like one point to customers.
+A Fair. So how do we split them?
+B What if we combine hydration and feel, and call out that it's nearly fragrance-free on its own? In the last interviews, a lot of people were sensitive to scent.
+C Right. In round two, three people said they'd stopped using a cream halfway because of the scent.
+A Then the benefits are one, lightweight hydration that sinks in, two, nearly fragrance-free so it's easy to wear, and three, gentle on sensitive skin. @benefits-decision
+B Good. Oh, but we can't say fragrance-free. It has to be nearly fragrance-free. It's not completely unscented.
+A Right, we have to stick to that. Emma, can you note that?
+C Sure, I'll note that we only say nearly fragrance-free and never use the word unscented. @no-fragrance
+A The sensitive skin wording in the third benefit needs checking too. That also needs test results.
+B My understanding is it's fine if we don't say it's for sensitive skin, just that it's made to be gentle on sensitive skin.
+A That should be fine. But we still need to confirm, so let's run the final copy past legal. @legal-review
+C Should I send the request to legal?
+A Yes, please take that, Emma. Send it as soon as the final copy is ready.
+C Will do.
+A Next, ingredients. Right now we just list three names: hyaluronic acid, ceramides, and panthenol.
+B Just names won't mean anything to people. I think we need a one-line explanation for each.
+A Agreed. What tone? Too technical will lose people.
+B Plain language. Hyaluronic acid holds in moisture, ceramides strengthen the skin barrier, panthenol soothes dry skin. Something like that. @ingredient-copy
+C That's easy to follow. And it doesn't make hard claims, so it should be fine for ad review.
+A Great. So each ingredient gets a one-line explanation next to the name. Marcus, can you write those up and send them?
+B Sure, I'll send them today.
+A Now the reviews section. Right now we have three beta tester reviews.
+B All three say the same thing. Hydrating, light, absorbs fast. When every review sounds the same, it looks like an ad and people trust it less.
+A So what do we do?
+B Instead of only praise, I'd add one or two like "I was worried it'd be sticky, but it felt surprisingly fresh."
+C There are reviews like that in the beta survey. I'll look. I'll only use ones with consent. @review-pick
+A Great. Let's do four reviews total. Emma, pick two more with a different tone from the ones with consent.
+C Sure, I'll have them by next Monday.
+B What if we put the average star rating above the reviews? It came out around 4.6.
+A We only had twelve beta testers, so the sample's too small. Showing an average big could mislead people.
+B True. Then no stars, just the review text.
+A That's safer. And we'll add a small source line saying they're beta tester reviews. @review-source
+C I'll write the source line as "Beta tester reviews."
+A Last one, the sign-up button. Right now it says "Pre-register."
+B Pre-register isn't bad, but it doesn't say what happens when you click. It'd be better to say you'll get a launch alert.
+A Then let's make the button "Notify me at launch," with a line right below like "We'll only email you about the launch if you sign up." @cta-decision
+B Good. I think it's fine if it's a little long.
+C Button is "Notify me at launch," and the line below is "We'll only email you about the launch if you sign up."
+A Yep. And are we only sending alerts by email, or text too?
+B Let's do email only this time. Texts need a separate opt-in process, and that adds time.
+A Agreed. Email only. We'll revisit texts next launch. @email-only
+C We need email consent copy too, right?
+A Yes, we need a privacy consent checkbox. Legal has standard wording we can use.
+C I'll find that and add it to the draft.
+B So the sign-up form only needs two things, email and privacy consent.
+A We don't need a name, right? Every field we cut makes it easier to sign up.
+B Let's drop the name. We don't need it for a launch alert.
+A Let me recap. Form is one email field and one consent box. Alerts by email only. Right?
+C Right. Got it.
+A One more question. What about the FAQ at the bottom of the page? It's not in the draft.
+B Since it's a pre-launch page, I think three FAQs is enough. When it's coming out, how much it costs, and where to buy it.
+A We haven't locked the price or launch date yet.
+C I heard launch is planned for mid-May, and price gets set in the pricing meeting.
+A Then let's fill in the FAQ once the date and price are set, and just leave the section empty in this draft. @faq-hold
+B Sounds good. If we build it collapsed, it'll be easy to fill in later.
+C I'll leave it as an open question. Fill in the FAQ once the launch date and price are set.
+A Great. So next Monday we hand off everything to dev except the FAQ.
+B It's tight, but doable. I'll pull together the final copy by Friday. @deadline
+A Then Emma sends it to legal as soon as the Friday final is ready, and we aim to hear back by Monday morning.
+C I'll ask legal to reply by Monday morning. If that doesn't work, I'll let everyone know right away.
+A Okay. What about design? If the copy changes, the mockup changes too.
+B Once the copy's locked, design takes three days. This week won't work, but I can deliver final design next Wednesday.
+A Then we send dev the copy on Monday and the design separately on Wednesday.
+B That's realistic.
+C Let me read back the schedule. Final copy this Friday, legal reply next Monday morning, copy to dev Monday, final design Wednesday.
+A That's right, exactly.
+A Oh, we missed one. The short label over the hero image. It can't repeat the headline.
+B I was going to put just one line saying it's new. The headline's already long enough.
+A I like that. Instead of "New product," we could keep it light with "Just launched."
+B "Just launched" feels friendlier. Let's go with that. @hero-label
+C Does the headline wrap to two lines on mobile? It looks a bit long.
+B The headline fits on two lines on mobile, but with the subhead it's three. So I'm planning to hide the subhead on mobile.
+A The subhead's on hold anyway, so let's revisit when we add the number.
+C We need alt text for the images too, right? For people using screen readers.
+B Yes, every image gets alt text. For the product shot, I'll write "Moisturizer jar and texture close-up."
+A Accessibility is easy to miss, so thanks for catching it. Marcus, can you own that too?
+B Will do.
+A Let me recap today's decisions. Headline is "A lightweight moisturizer that sinks right in." Benefits combine hydration and feel, with nearly fragrance-free on its own. One-line ingredient descriptions. Four reviews, no star rating. Button is "Notify me at launch." @summary-decisions
+C Also, the form is just email and consent, alerts are email only, and the FAQ section stays empty for now.
+A Right. Thanks for keeping track, Emma. Last, let's confirm tasks.
+A Jake needs to check the lab report today, but he's not on the call, so I'll reach out to him.
+C Jake was on the invite but didn't speak. In the notes, I'll put that one under Sophie.
+A Yes, do that. That's it for today. Thanks, everyone. @closing
+B Thanks, everyone.
+C Thanks.
 `);

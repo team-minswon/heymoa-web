@@ -13,217 +13,217 @@ import { parseScript } from "@/lib/mocks/help-demo/script";
  * 숫자는 한 번 정한 값을 끝까지 쓴다 — 광고비 4,800만 원, 클릭 22만 6천, 전환 5,420건, 매출 1억 9,300만 원.
  */
 export const CAMPAIGN_SCRIPT = parseScript(`
-B 자, 다들 들어오셨죠. 그러면 4월 캠페인 성과 리뷰 시작할게요. @opening
-B 오늘 안건은 크게 네 가지예요. 전체 성과 숫자 보고, 채널별 비교, 소재 테스트 결과, 그리고 5월 예산이랑 목표 정하는 거까지.
-A 네, 숫자는 어제 저녁에 한 번 더 뽑아 놨어요. 화면 공유할게요.
-D 서윤입니다. 녹음 잘 되고 있는지 확인했고요, 정리는 제가 맡을게요.
-B 고마워요. 시간은 한 시간 안에 끝내는 걸로 하죠.
-C 저는 소재 쪽에서 드릴 말씀이 좀 있어서 세 번째 안건 때 이어서 말씀드릴게요.
-B 네, 그렇게 해요. 도윤님 먼저 가볼까요.
-A 공유 화면 보이시나요?
-D 네 보여요. 글씨만 조금 키워 주실 수 있을까요?
-A 이 정도면 괜찮을까요?
-B 좋아요, 지금 딱 보여요.
-A 먼저 4월 한 달 전체 숫자부터 말씀드릴게요. 기간은 4월 1일부터 30일까지고, 총 광고비는 4,800만 원을 썼습니다. 계획했던 5,000만 원보다 200만 원 덜 썼어요. @spend
-A 노출은 1,260만 회, 클릭은 22만 6천 회가 나왔고요. 그래서 CTR이 1.8%입니다. @ctr
-B 지난달 CTR이 얼마였죠?
-A 3월은 1.5%였어요. 0.3%포인트 올랐습니다. 평균 CPC는 대략 210원이고 3월보다 20원 정도 낮아졌어요.
-B 오, CPC까지 내려갔으면 좋은 신호네요.
-A 네. 그리고 전환은 구매 기준으로 5,420건이고 전환율은 2.4%예요. 3월이 2.1%였으니까 이것도 올랐습니다. @conversion
-C 전환율이 오른 건 상세 페이지 개편한 영향도 있었을 거예요. 4월 둘째 주에 바뀌었잖아요.
-A 맞아요, 그 부분은 뒤에 퍼널에서 다시 볼게요. 일단 매출부터 말씀드리면, 광고로 잡힌 매출이 1억 9,300만 원입니다. @revenue
-A 그러면 ROAS가 약 402%예요. 목표가 380%였으니까 목표를 22%포인트 넘겼습니다. @roas
-B 좋네요. 목표 넘긴 건 이번 분기 들어 처음이죠?
-A 네, 처음입니다. 1월부터 3월까지는 350에서 370 사이에서 계속 못 넘었어요.
-D 방금 숫자 정리해서 적어 둘게요. 광고비 4,800, 클릭 22만 6천, 전환 5,420, 매출 1억 9,300, ROAS 402. 맞죠?
-A 네, 맞아요. 반올림한 거라 시트 원본이랑 십만 단위로는 조금 다를 수 있어요.
-B 괜찮아요. 회의록엔 반올림 숫자로 가고, 원본은 시트 링크 붙이죠.
-D 네, 그렇게 할게요.
-A 한 가지만 더요. 이 ROAS는 마지막 클릭 기준이에요. 이메일이나 소셜에서 처음 알게 되고 검색으로 들어온 구매는 전부 검색에 잡혀 있습니다.
-B 그건 늘 있는 한계죠. 채널별로 볼 때 감안해서 듣겠습니다.
-C 질문 하나만요. 신규 고객이랑 기존 고객 비중은 따로 나오나요?
-A 나오긴 하는데 오늘 자료에는 안 넣었어요. 대충 신규가 38% 정도였던 것 같은데 정확한 건 확인해서 공유드릴게요. @newcust
-B 그거 5월 목표 정할 때 필요하니까 오늘 중으로 부탁해요.
-A 알겠습니다. 오늘 안에 보낼게요.
-B 전체 숫자는 여기까지 질문 없으면 채널별로 넘어가죠.
-D 저는 없어요.
-C 저도 없습니다.
-A 그러면 다음 장으로 넘길게요. 채널별 비교입니다. 검색, 소셜, 디스플레이, 이메일 이렇게 네 개로 나눴어요.
-A 광고비 비중부터 보면 소셜이 2,100만 원으로 제일 크고요, 검색이 1,800만 원, 디스플레이 600만 원, 이메일이 300만 원입니다. @channels
-B 소셜이 제일 큰 건 계획대로인가요?
-A 네, 4월에는 신규 유입을 늘리려고 소셜에 일부러 더 실었어요. 대신 효율은 검색보다 낮게 나왔습니다.
-A 채널별 ROAS를 말씀드리면, 검색이 520%, 소셜이 310%, 디스플레이가 180%, 이메일이 780%예요. @channel-roas
-C 이메일이 780이면 압도적이네요.
-A 이메일은 원래 이미 가입한 사람한테 보내는 거라 비용이 거의 안 들어요. 그래서 비교 자체가 좀 불공정한 면은 있습니다.
-B 그래도 예산 대비로 보면 제일 효율 좋은 건 사실이잖아요. 이메일 쪽은 유나님이 담당이셨죠?
-A 네, 유나님이 세그먼트 나눠서 발송해 주셨어요. 오늘은 사정이 있어서 못 들어오셨고요.
-B 알겠어요. 그럼 이메일은 나중에 유나님한테 직접 물어보죠.
-D 이메일 세그먼트 건은 할 일로 기록해 둘게요.
-A 검색은 키워드 그룹별로 편차가 컸어요. 브랜드 키워드는 ROAS가 900%까지 나오는데, 일반 키워드는 280%밖에 안 됩니다. @search-keyword
-B 브랜드 키워드는 어차피 우리 이름 검색해서 들어오는 사람들이잖아요.
-A 맞습니다. 그래서 브랜드를 빼고 보면 검색 실제 효율은 소셜이랑 비슷한 수준이에요.
-B 그 부분은 보고서에 따로 구분해서 적어 줘요. 위에서 보면 검색이 너무 좋아 보일 수 있어서.
-A 네, 브랜드와 일반을 나눠서 표로 만들겠습니다.
-C 소셜은 어느 매체가 제일 잘 나왔어요?
-A 영상 광고 쪽이 클릭률은 높았는데 구매 전환은 이미지 광고가 더 좋았어요. 영상은 2.6%, 이미지는 1.4% 정도 CTR이고, 전환율은 거꾸로였습니다. @video-image
-C 영상은 보기만 하고 나가고, 이미지는 사러 들어온다는 거네요.
-A 그렇게 해석할 수 있죠. 그래서 영상은 인지, 이미지는 구매 쪽으로 역할을 나누는 게 맞을 것 같아요.
-B 그 역할 분담은 괜찮은 생각 같아요. 그럼 디스플레이는요?
-A 디스플레이는 솔직히 제일 아쉬웠습니다. 광고비 600만 원 써서 매출이 1,080만 원밖에 안 나왔어요. ROAS 180%고 목표 380%의 절반도 안 돼요. @display
-B 디스플레이는 지난달에도 비슷했죠?
-A 네, 3월에는 200% 근처였어요. 개선하려고 타깃을 좁혀 봤는데 크게 달라지진 않았습니다.
-B 그러면 5월에는 디스플레이를 줄이는 쪽으로 가야겠네요. 이건 예산 얘기할 때 같이 결정하죠. @display-cut
-D 디스플레이는 예산 축소 후보로 적어 두겠습니다.
-A 하나만 덧붙이면, 디스플레이가 직접 전환은 낮은데 뒤에서 도와주는 효과가 있을 수 있어요. 노출 받은 사람이 나중에 검색으로 오는 경우요.
-B 그건 증명이 안 되잖아요. 그걸 근거로 계속 쓰기엔 600만 원이 작지 않아서요.
-A 맞아요. 그래서 한 달 정도 노출 안 한 지역이랑 비교해 보는 방법을 제안드리고 싶었어요. 간단한 지역 비교 테스트요. @holdout
-B 그걸 하려면 예산이 또 들어가지 않나요?
-A 디스플레이를 줄이는 만큼 일부를 그쪽에 쓰면 추가 비용은 거의 없어요.
-B 그럼 그 방향으로 설계안 한번 가져와 봐요. 다음 주 회의 때 보죠.
-A 네, 알겠습니다.
-D 지역 비교 테스트 설계는 도윤님 할 일로 적을게요.
-A 네 좋아요.
-B 채널별은 이 정도로 정리하고, 이제 세 번째 안건으로 넘어갈게요. 민재님.
-C 네, 소재 테스트 결과를 말씀드릴게요. 4월에는 소재 A와 B 두 가지로 돌렸어요. A는 제품 사진 중심이고 B는 실제 사용 후기를 크게 넣은 거예요. @abtest
-C 노출은 거의 반반으로 나눴고 기간은 3주였습니다. A 소재의 CTR이 1.5%, B 소재가 2.3%였어요.
-B 꽤 차이가 나네요. 전환율은요?
-C 전환율도 B가 높았어요. A가 2.1%, B가 2.9%예요. @abtest-result
-A 표본이 충분한지는 확인했어요. 각각 클릭이 10만 회 넘게 나와서 통계적으로 의미 있는 차이라고 봐도 됩니다.
-B 그럼 B 소재가 확실히 이겼다고 보면 되겠네요.
-C 네. 후기를 크게 보여 주는 쪽이 반응이 좋았어요. 특히 20대 후반에서 30대 초반 여성층에서 차이가 컸습니다.
-D 연령대별로 따로 나눈 표가 있나요? 회의록에 넣고 싶어서요.
-C 있어요. 이따 시트 링크 같이 드릴게요.
-B 후기 소재를 더 만들어야 할 것 같은데, 후기 원본은 충분히 있어요?
-C 지금 확보한 게 열두 건 정도 있는데, 사진 사용 동의 받은 건 일곱 건이에요. 나머지는 다시 연락해야 해요. @review-consent
-B 동의 못 받은 건 쓰지 말고, 받은 일곱 건 안에서 소재 세 종류 만들 수 있나요?
-C 일곱 건이면 조합을 바꿔서 세 종은 충분히 나옵니다. 5월 둘째 주까지는 시안 드릴 수 있어요. @creative-three
-B 좋아요. 도윤님은 그 소재 나오면 바로 돌릴 수 있게 광고 세팅 준비해 주세요.
-A 네, 세팅은 하루면 됩니다.
-C 한 가지 우려되는 건 후기가 같은 톤으로 반복되면 피로도가 빨리 올 수 있다는 거예요. 4주 넘으면 CTR이 떨어지는 경향이 있었거든요.
-A 맞아요. 빈도 상한도 같이 걸어 둘게요. 사람당 일주일에 세 번 넘게는 안 보이게요.
-B 좋습니다. 그건 도윤님 쪽에서 챙겨 주세요.
-D 소재 B 변형 세 종은 민재님, 빈도 상한은 도윤님으로 적었어요.
-C 네 맞아요.
-B 소재 얘기 더 없으면 퍼널로 넘어가죠. 아까 전환율이 올랐다는 얘기가 나왔으니 어디서 올랐는지 봐야겠어요.
-A 퍼널은 상품 상세, 장바구니, 결제 시작, 결제 완료 네 단계로 봤어요.
-A 상세 페이지에 들어온 사람 중에 장바구니까지 가는 비율이 38%고요, 장바구니에서 결제 시작까지 가는 비율이 61%, 결제를 시작한 사람이 실제로 끝내는 비율이 72%입니다. @funnel
-B 3월에는 어땠어요?
-A 장바구니 도달이 34%, 결제 시작이 60%, 완료가 69%였어요. 그러니까 제일 많이 오른 게 상세에서 장바구니 가는 구간이에요.
-C 그게 아까 말한 상세 페이지 개편 효과죠. 구성 정보를 위로 올리고 후기 영역을 앞으로 당겼으니까요.
-A 네 맞습니다. 반면에 결제 시작에서 완료로 가는 구간은 72%로 아직 4명 중 1명 넘게 빠져요.
-B 거기가 아깝죠. 결제 단계에서 빠지는 이유는 뭘로 보나요?
-A 데이터상으로는 결제 수단 선택 화면에서 많이 빠져요. 간편 결제를 하나 더 붙이면 어떨까 하는 의견이 있었습니다. @checkout-drop
-B 그건 개발 일정이 걸리는 일이라 우리끼리 정할 수 없어요. 일단 이슈로만 올려 두죠.
-D 결제 수단 추가는 개발팀에 요청할 이슈로 적어 둘게요.
-B 네. 그리고 장바구니에서 나간 사람들한테는 리타겟팅이 있었죠.
-A 네, 7일 윈도우로 장바구니 이탈자한테 리타겟팅을 돌렸는데 그 ROAS가 560%예요. 일반 소셜의 거의 두 배입니다. @retarget
-C 리타겟팅은 소재가 중요한데, 지금은 어떤 소재가 나가고 있어요?
-A 지금은 소재 A가 나가고 있어요. 방금 B가 이겼으니까 리타겟팅도 B로 바꾸면 더 오를 가능성이 있습니다.
-B 그럼 리타겟팅은 B 소재로 먼저 바꾸죠. 시안 기다릴 것 없이 현재 있는 B를 쓰면 되잖아요.
-A 네, 바로 바꿀게요. 오늘부터 적용하겠습니다. @retarget-switch
-C 리타겟팅은 윈도우를 14일로 늘려서 비교해 보면 어때요? 7일은 너무 짧을 수도 있어서요.
-A 해 보고 싶긴 한데, 윈도우를 늘리면 이미 산 사람한테 계속 광고가 나가서 낭비가 생겨요. 구매자 제외 목록을 같이 걸어야 해요.
-B 제외 목록은 이미 있어요?
-A 있습니다. 구매 후 30일 제외로 걸려 있어요.
-B 그럼 14일 윈도우도 작게 테스트해 보세요. 예산은 리타겟팅 안에서 30%만 쓰죠. @retarget-test
-A 알겠습니다. 14일 대 7일 비교로 진행하겠습니다.
-D 리타겟팅 윈도우 테스트도 도윤님 할 일에 넣을게요.
-A 네 부탁드려요.
-B 퍼널은 정리됐고요. 이제 마지막 안건, 5월 예산이랑 목표예요. 먼저 5월 총 예산은 위에서 5,000만 원으로 내려왔어요. @may-budget
-B 4월에 4,800만 원 썼으니까 200만 원 늘어난 거예요. 어떻게 나눌지 의견 주세요.
-A 제 의견은 이래요. 디스플레이를 600만 원에서 300만 원으로 줄이고, 줄인 300만 원 중에 200만 원은 검색 일반 키워드에, 100만 원은 이메일 쪽에 쓰는 거예요. 소셜은 그대로 2,100만 원 유지하고요. @budget-shift
-B 총합이 어떻게 되죠? 늘어난 200만 원은 어디에 가요?
-A 아, 그러니까 늘어난 200만 원은 리타겟팅 쪽에 넣으면 좋겠습니다. 리타겟팅이 560%라서요.
-D 정리하면 검색 1,800에서 2,000, 소셜 2,100 그대로, 디스플레이 600에서 300, 이메일 300에서 400, 리타겟팅 신규 편성으로 200, 맞나요?
-A 네, 검색 2,000, 소셜 2,100, 디스플레이 300, 이메일 400, 리타겟팅 200이면 합쳐서 5,000이에요.
-B 더해 보니까 정확히 5,000이네요. 소셜 2,100이 아직 크다는 생각이 들어서 하나 더 물을게요. 소셜을 조금 줄이고 검색에 더 주면 안 될까요?
-A 검색 일반 키워드는 한계가 있어요. 예산을 더 줘도 검색량이 정해져 있어서 효율이 급격히 떨어집니다. 2,000이 한계선이라고 봐요. @search-limit
-B 알겠어요. 그럼 소셜은 유지하는 걸로 하죠. 소셜은 신규 고객을 데려오는 역할도 하니까요.
-C 소셜에서 영상은 인지 역할로 줄이고 이미지 쪽으로 더 실으면 효율이 좀 오를 것 같아요.
-A 맞아요. 소셜 안에서의 영상 대 이미지 비율은 제가 3대 7 정도로 바꿔 볼게요. @social-ratio
-B 좋아요. 그러면 예산안은 그 방향으로 정리해서 올릴게요. 제가 위에 최종 보고하겠습니다. @budget-confirm
-D 예산안 확정 보고는 하린님 할 일로 적습니다.
-B 네, 이번 주 금요일까지 올릴게요.
-B 이제 목표 얘기예요. 5월 ROAS 목표는 450%로 하고 싶은데 어때요? 4월이 402%였으니까 좀 올려 잡은 거예요. @okr
-A 450은 쉽진 않지만 리타겟팅이랑 소재 B 효과를 감안하면 해볼 만하다고 생각해요. 디스플레이 줄이는 효과만으로도 평균은 올라갈 거고요.
-C 저도 가능하다고 봐요. 다만 후기 소재가 5월 둘째 주에야 나오니까 첫 주에는 효과가 제한적일 거예요.
-B 그러면 5월 전체 평균으로 450을 보고, 첫 주는 예외로 두죠.
-A 좋습니다.
-B 전환율 목표는 2.4%에서 2.6%로 올리고 싶고요. 신규 고객 비중은 지금 38% 정도라고 했죠?
-A 네, 정확한 값은 오늘 보내드린다고 했는데 일단 38% 전후예요.
-B 그걸 45%까지 올리는 게 두 번째 핵심 결과예요. 소셜 신규 유입이 그걸 받쳐 줄 거고요. @kr-newcust
-D OKR로 정리하면, 목표는 봄 캠페인 효율 개선이고, KR1이 5월 ROAS 450%, KR2가 신규 고객 비중 45%, 전환율 2.6%는 보조 지표로 적을게요.
-B 네, 그렇게 가요. 전환율은 KR로 올리진 말고 보조 지표로 두죠.
-A 분기 KPI 문서에도 같이 반영해야 하죠?
-B 맞아요. 서윤님이 KPI 문서 업데이트까지 같이 부탁해요.
-D 네, 알겠습니다. 이번 주 안에 반영할게요.
-C 5월에 연휴가 있어서 첫 주랑 마지막 주 광고 효율이 떨어질 수 있어요. 목표 잡을 때 반영해야 할까요?
-B 좋은 지적이에요. 작년 5월 연휴 때 성과 자료가 있나요?
-A 작년 기록은 있어요. 연휴 기간에는 클릭은 늘었는데 전환율은 오히려 0.5%포인트 정도 떨어졌습니다. @holiday
-B 그러면 연휴 기간은 목표를 다르게 봐야 할까요, 아니면 평균에 맡기죠?
-A 평균에 맡기는 게 단순할 것 같아요. 대신 연휴 직전에 한 번 점검하는 자리를 만들죠.
-B 좋아요. 연휴 직전 점검은 그때 일정 보고 잡을게요.
-D 연휴 기간 목표를 어떻게 볼지는 열린 질문으로 남겨 둘게요.
-B 네 그렇게 해요.
-B 목표 얘기는 여기까지 하고, 보고 방식도 잠깐 정하고 갈게요. 지금 성과 보고가 월말에 한 번뿐이라 중간에 뭐가 틀어지는지 몰랐잖아요.
-A 맞아요. 이번 4월도 디스플레이가 안 좋은 걸 둘째 주에 이미 알았는데 월말에야 같이 봤어요.
-B 그러니까 5월부터는 주간으로 가고 싶어요. 매주 월요일 아침에 한 장짜리로요.
-A 한 장에 뭘 넣을까요? 너무 많이 넣으면 아무도 안 읽어요.
-B 저는 네 가지면 된다고 생각해요. 광고비 소진율, ROAS, 전환율, 신규 고객 비중. 채널별로는 ROAS만 보고요. @weekly-report
-A 알겠습니다. 그럼 CTR이나 CPC는 빼도 되죠?
-B 그건 필요하면 상세 시트에서 보면 돼요. 한 장에는 안 넣어도 됩니다.
-C 저는 소재별 CTR이 한 줄은 있었으면 좋겠어요. 소재 피로도 보려면요.
-A 그럼 소재 부분만 따로 두 줄 넣을게요. 현재 노출 중인 소재 이름이랑 CTR 이렇게요.
-B 좋아요. 그 한 장 만드는 건 서윤님이 맡아 주면 좋겠는데, 도윤님이 시트만 열어 주면 되겠죠?
-D 시트 구조만 잡히면 반자동으로 만들 수 있어요. 매주 월요일 오전 열 시까지 올려 둘게요.
-A 시트 구조는 이번 주에 정리해서 드릴게요. 열 개 정도 칸만 있으면 될 거예요.
-D 감사합니다. 그럼 첫 주간 리포트는 다음 주 월요일부터 내보낼게요. @weekly-start
-B 좋아요. 그리고 숫자 정의는 통일해야 해요. ROAS를 어떤 사람은 매출 기준, 어떤 사람은 결제 금액 기준으로 보잖아요.
-A 지금은 환불 제외한 순매출 기준이에요. 4월 402%도 순매출 기준입니다.
-B 그럼 리포트 맨 아래에 정의를 한 줄 적어 두죠. 순매출 기준, 마지막 클릭 기준이라고요.
-D 네, 리포트 하단에 기준 문구로 고정해 둘게요.
-C 마지막 클릭 기준이면 아까 말씀하신 것처럼 소셜의 기여는 낮게 잡히겠네요.
-A 그래서 소셜을 볼 때는 따로 기여 분석을 해 보고 싶어요. 소셜 광고를 본 사람이 일주일 안에 검색으로 구매한 비율이요.
-B 그건 데이터가 되나요?
-A 쿠키 기준으로는 가능한데 정확도는 떨어져요. 대략적인 감만 잡는 수준이에요. @attribution
-B 감만 잡는 거라도 괜찮으니 한 번만 해 보세요. 소셜 예산을 정할 때 참고만 하죠.
-A 네, 다음 회의 전까지 해 보겠습니다.
-D 어트리뷰션 추정도 도윤님 할 일에 넣어 둘게요.
-A 네, 부탁드립니다. 아, 그리고 이메일 쪽 이야기를 조금만 더 할게요. 유나님이 4월 말에 쿠폰을 넣은 메일을 한 번 보냈는데 그게 ROAS를 많이 끌어올렸어요.
-B 쿠폰 메일이었나요? 그건 몰랐네요. 얼마나 할인이었죠?
-A 10% 쿠폰이었고 발송 3일 동안 전환이 평소의 두 배쯤 나왔어요. 쿠폰 때문에 이메일 ROAS 780%가 나온 거라 쿠폰 없이 보면 더 낮을 수 있어요. @coupon
-B 아, 그럼 이메일이 항상 780%는 아니겠네요. 쿠폰 마진까지 고려하면 실제로는 훨씬 낮을 수도 있고요.
-A 맞습니다. 그래서 이메일 예산을 늘릴 때는 쿠폰 없는 메일 효율을 따로 봐야 해요.
-B 그러면 이메일 예산 증액 100만 원은 쿠폰 없는 메일 테스트 용도로 써 보죠.
-A 좋아요. 유나님한테 쿠폰 없는 발송이랑 있는 발송을 나눠서 해 달라고 부탁드릴게요.
-B 그건 제가 유나님한테 말할게요. 세그먼트 기준 물어볼 때 같이요.
-D 이메일 쿠폰 유무 비교는 하린님이 유나님께 전달하는 걸로 적습니다.
-B 네. 그리고 하나 더, 쿠폰 프로모션 자체가 장기적으로 브랜드에 좋은지는 우리가 결정할 사안은 아닌 것 같아요. 가격 정책이랑 연결되니까요.
-A 동의합니다. 쿠폰은 참고 사항으로만 남기죠.
-D 참고로 적을게요. 쿠폰 메일이 전환을 두 배로 올렸다는 내용으로요.
-C 저는 신규 고객 쪽도 궁금해요. 신규 고객이 한 번 사고 다시 사는 비율도 보고 싶어요.
-A 재구매율은 이번 캠페인 범위가 아니라서 따로 뽑아야 해요. 30일 재구매 기준이면 4월 신규는 아직 다 안 지나서 5월 말에야 나옵니다.
-B 그건 6월 초 회의에 안건으로 올려 두죠. @repurchase
-D 6월 초 재구매율 확인은 열린 질문으로 적어 둘게요.
-B 마무리 전에 오늘 나온 할 일을 다시 읽어 볼게요. 서윤님이 읽어 주시겠어요?
-D 네. 첫째, 도윤님이 오늘 안에 신규 고객 비중 정확한 수치를 공유합니다. 둘째, 도윤님이 브랜드와 일반 키워드를 나눈 검색 표를 만들어요. @owners
-D 셋째, 도윤님이 디스플레이 지역 비교 테스트 설계안을 다음 주 회의 전까지 가져오고, 넷째, 리타겟팅을 소재 B로 바꾸고 14일 윈도우 테스트를 설정합니다.
-D 다섯째, 민재님이 후기 소재 변형 세 종 시안을 5월 둘째 주까지 만들고, 여섯째, 하린님이 5월 예산안을 이번 주 금요일까지 올리십니다.
-D 일곱째, 제가 KPI 문서를 이번 주에 업데이트하고, 여덟째, 결제 수단 추가는 개발팀에 이슈로 올립니다. 아홉째, 유나님께 이메일 세그먼트 기준을 따로 물어보기예요.
-B 거의 맞는데 결제 수단 이슈는 제가 올릴게요. 개발팀하고 이야기해야 해서요.
-D 아, 그럼 그 건은 하린님으로 바꿀게요.
-B 네. 그리고 이메일 세그먼트는 제가 유나님한테 직접 물어볼게요. 서윤님 일 늘리지 말고요.
-D 감사합니다. 그렇게 바꿔 적을게요.
-A 저는 숫자 자료 정리할 때 서윤님이 시트 권한만 열어 주시면 바로 공유할게요.
-D 지금 열어 드릴게요. 도윤님 계정으로 편집 권한 드렸어요.
-A 확인했습니다. 감사해요.
-C 민재님 쪽 질문인데, 후기 소재에 제품명 노출을 어느 정도로 해야 할까요? 법무 쪽 검토가 필요한가요?
-B 후기 문구가 효능을 단정하는 표현만 아니면 괜찮아요. 시안 나오면 제가 한 번 볼게요. @legal-check
-C 알겠습니다. 단정 표현은 빼고 만들게요.
-B 오늘 결정한 것만 다시 정리하면, 리타겟팅은 소재 B로 바로 교체, 5월 예산은 검색 2,000, 소셜 2,100, 디스플레이 300, 이메일 400, 리타겟팅 200, ROAS 목표는 450%, 신규 고객 비중 목표는 45%예요.
-D 맞아요. 회의록에도 그대로 정리할게요.
-B 고생 많았어요. 다음 회의는 다음 주 같은 시간으로 하죠. 디스플레이 테스트 설계안 가지고 만나요. @closing
-A 수고하셨습니다.
-C 수고하셨어요.
-D 수고하셨습니다. 정리 끝나면 바로 공유드릴게요.
+B Okay, looks like everyone's here. Let's kick off the April campaign review. @opening
+B We've got four things today. Overall numbers, channel comparison, creative test results, and then the May budget and targets.
+A Yep, I reran the numbers last night. Let me share my screen.
+D Emma here. I checked that the recording's working, and I'll take notes.
+B Thanks. Let's wrap this up within an hour.
+C I've got a few things on creative, so I'll jump in on the third item.
+B Sounds good. Daniel, want to start?
+A Can you all see my screen?
+D Yes. Could you zoom in a little?
+A Is this better?
+B Perfect, I can read it now.
+A Let's start with the totals for April. That's April 1 through 30, and we spent $48,000 on ads. That's $2,000 under the $50,000 plan. @spend
+A We got 12.6 million impressions and 226,000 clicks. So CTR is 1.8%. @ctr
+B What was CTR last month?
+A March was 1.5%, so we're up 0.3 points. Average CPC was about 21 cents, roughly 2 cents lower than March.
+B Oh, CPC came down too? That's a good sign.
+A Yeah. Purchases came in at 5,420, so the conversion rate is 2.4%. March was 2.1%, so that's up too. @conversion
+C Some of that lift is probably the product page redesign. It went live the second week of April.
+A Right, we'll come back to that in the funnel. On revenue, ad-attributed revenue was $193,000. @revenue
+A That puts ROAS at about 402%. The target was 380%, so we beat it by 22 points. @roas
+B Nice. That's the first time we've hit target this quarter, right?
+A Yep, first time. January through March we were stuck between 350 and 370.
+D Let me write those down. Spend $48K, clicks 226K, purchases 5,420, revenue $193K, ROAS 402. Right?
+A That's right. They're rounded, so they may be a little off from the source sheet.
+B That's fine. Rounded numbers in the notes, and we'll link the sheet.
+D Will do.
+A One more thing. This ROAS is last-click. Anyone who found us through email or social and then came in through search gets counted as search.
+B That's always the catch. We'll keep it in mind on the channel breakdown.
+C Quick question. Do we have the split between new and returning customers?
+A We do, but it's not in today's deck. I think new customers were around 38%, but I'll confirm and send the exact number. @newcust
+B We need that for the May targets, so please get it out today.
+A Got it. I'll send it today.
+B If there are no more questions on totals, let's move to channels.
+D None from me.
+C Me neither.
+A Next slide, then. Channel comparison. I split it into search, social, display, and email.
+A By spend, social was the biggest at $21,000, then search at $18,000, display $6,000, and email $3,000. @channels
+B Was social being the biggest part of the plan?
+A Yes, in April we put extra into social to bring in new customers. But it was less efficient than search.
+A ROAS by channel: search 520%, social 310%, display 180%, and email 780%. @channel-roas
+C Email at 780 is way ahead.
+A Email goes to people who've already signed up, so it costs almost nothing. It's not really a fair comparison.
+B Still, per dollar it's the most efficient. Grace runs email, right?
+A Yes, Grace segmented the list and sent those. She couldn't make it today.
+B Okay. We'll ask Grace about email directly later.
+D I'll log the email segments as a task.
+A Search varied a lot by keyword group. Brand keywords hit 900% ROAS, but generic keywords were only 280%. @search-keyword
+B Brand keywords are people already searching for our name anyway.
+A Exactly. Take brand out, and search is about as efficient as social.
+B Call that out separately in the report. Otherwise search looks too good to leadership.
+A Will do. I'll make a table that splits brand and generic.
+C Which placement did best on social?
+A Video had the higher click-through, but image ads converted better. Video CTR was about 2.6%, image about 1.4%, and conversion rate was the other way around. @video-image
+C So people watch the video and leave, but they come in from images to buy.
+A That's one way to read it. So video should do awareness and images should do conversion.
+B I like that split. What about display?
+A Honestly, display was the weakest. We spent $6,000 and only got $10,800 in revenue. That's 180% ROAS, less than half the 380% target. @display
+B Display was about the same last month, wasn't it?
+A Yes, March was around 200%. I tried narrowing the targeting, but it didn't change much.
+B Then we should cut display in May. Let's decide that with the budget. @display-cut
+D I'll note display as a candidate for cuts.
+A One thing to add. Display doesn't convert directly, but it may help behind the scenes. People see the ad and search for us later.
+B We can't prove that, though. $6,000 is too much to keep spending on a hunch.
+A Fair. That's why I wanted to propose comparing against a region with no display for a month. A simple holdout test. @holdout
+B Wouldn't that cost more money?
+A If we use part of what we cut from display, there's almost no extra cost.
+B Then bring me a test design. We'll look at it next week.
+A Okay, will do.
+D I'll put the holdout test design down as Daniel's task.
+A Sounds good.
+B Let's leave channels there and move to the third item. Marcus.
+C Sure, here are the creative test results. In April we ran two versions, A and B. A was product photos, B put real customer reviews front and center. @abtest
+C We split impressions about 50/50 over three weeks. Creative A had a 1.5% CTR and B had 2.3%.
+B That's a big gap. Conversion rate?
+C B was higher there too. A was 2.1%, B was 2.9%. @abtest-result
+A I checked the sample size. Each had over 100,000 clicks, so the difference is statistically significant.
+B So B is the clear winner.
+C Yes. Big customer reviews got a better response. The gap was biggest with women in their late 20s to early 30s.
+D Is there a breakdown by age? I'd like it in the notes.
+C There is. I'll send the sheet link after.
+B Sounds like we need more review creative. Do we have enough reviews to work with?
+C We have about twelve, but only seven gave photo consent. We'd need to reach out to the rest. @review-consent
+B Don't use any without consent. Can you make three versions from those seven?
+C Seven is enough to mix into three. I can have drafts by the second week of May. @creative-three
+B Great. Daniel, have the ads set up so they can go live as soon as those are ready.
+A Sure, setup takes a day.
+C My one worry is that reviews in the same tone wear out fast. CTR tended to drop after four weeks.
+A Good point. I'll add a frequency cap too. No more than three times a week per person.
+B Great. Daniel, you own that.
+D Got it: three B variations for Marcus, frequency cap for Daniel.
+C That's right.
+B If that's it for creative, let's look at the funnel. We said conversion went up, so let's see where.
+A I looked at four steps: product page, cart, checkout start, and purchase.
+A Of people who land on the product page, 38% add to cart, 61% of those start checkout, and 72% of those finish. @funnel
+B What was March?
+A Add to cart was 34%, checkout start 60%, and completion 69%. So the biggest jump is product page to cart.
+C That's the redesign. We moved the product details up and pulled reviews higher.
+A Exactly. But checkout start to purchase is still 72%, so more than one in four drop off.
+B That's a shame. Why are people dropping at checkout?
+A The data says it's mostly the payment method screen. Someone suggested adding another one-click payment option. @checkout-drop
+B That needs dev time, so we can't decide it here. Let's just log it as an issue.
+D I'll log adding a payment method as an issue for the dev team.
+B Okay. And we were retargeting people who left the cart, right?
+A Yes, we retargeted cart abandoners with a 7-day window, and that ROAS was 560%. Almost double regular social. @retarget
+C Creative matters a lot for retargeting. What's running there now?
+A Creative A. Since B just won, switching retargeting to B could push it higher.
+B Then let's switch retargeting to B first. No need to wait for new drafts, we can use the B we have.
+A Okay, I'll switch it today. @retarget-switch
+C What about testing a 14-day window? Seven days might be too short.
+A I'd like to, but a longer window keeps showing ads to people who already bought. That's wasted spend. We'd need a buyer exclusion list.
+B Do we have one?
+A We do. Buyers are excluded for 30 days.
+B Then run a small 14-day test. Use 30% of the retargeting budget. @retarget-test
+A Got it. I'll run 14 days against 7.
+D I'll add the window test to Daniel's tasks.
+A Thanks.
+B That covers the funnel. Last item, May budget and targets. Leadership set May at $50,000. @may-budget
+B We spent $48,000 in April, so that's $2,000 more. How should we split it?
+A Here's my take. Cut display from $6,000 to $3,000. Of that $3,000, put $2,000 into generic search and $1,000 into email. Keep social at $21,000. @budget-shift
+B What's the total? Where does the extra $2,000 go?
+A Oh, right. I'd put the extra $2,000 into retargeting, since it's at 560%.
+D So: search $18K to $20K, social stays at $21K, display $6K to $3K, email $3K to $4K, and $2K new for retargeting. Right?
+A Yep. Search 20, social 21, display 3, email 4, retargeting 2. That's $50K total.
+B Adds up to exactly 50. Social at 21 still feels high, though. Could we move some of it to search?
+A Generic search has a ceiling. Search volume is fixed, so more budget gets much less efficient. I'd say 20K is the limit. @search-limit
+B Okay. Then social stays. It brings in new customers too.
+C If we shift social from video toward images, efficiency should go up a bit.
+A Agreed. I'll move the video-to-image split within social to about 30/70. @social-ratio
+B Great. I'll write up the budget that way and send it to leadership. @budget-confirm
+D Final budget sign-off goes to Olivia.
+B Yep, I'll send it by this Friday.
+B Now targets. I'd like May ROAS at 450%. April was 402%, so that's a stretch. Thoughts? @okr
+A 450 won't be easy, but with retargeting and creative B, it's doable. Cutting display alone will lift the average.
+C I think it's doable too. But the review creative won't land until the second week of May, so the first week won't see much impact.
+B Then let's measure 450 as the May average and treat the first week as an exception.
+A Sounds good.
+B I'd like to raise conversion rate from 2.4% to 2.6%. And new customers were around 38%, right?
+A Yes, I'll send the exact number today, but it's about 38%.
+B Getting that to 45% is our second key result. New traffic from social should support it. @kr-newcust
+D So for OKRs: the objective is a more efficient spring campaign. KR1 is 450% May ROAS, KR2 is 45% new customers, and I'll list 2.6% conversion rate as a supporting metric.
+B Yes, let's do that. Keep conversion rate as a supporting metric, not a KR.
+A Should we update the quarterly KPI doc too?
+B Yes. Emma, could you update the KPI doc as well?
+D Sure. I'll update it this week.
+C May has holidays, so the first and last weeks could be weaker. Should we account for that in the targets?
+B Good catch. Do we have numbers from last year's May holidays?
+A We do. Clicks went up over the holidays, but conversion rate actually dropped about 0.5 points. @holiday
+B So do we set different targets for the holidays, or just let it average out?
+A Averaging is simpler. But let's do a check-in right before the holidays.
+B Okay. I'll schedule the pre-holiday check-in when we get closer.
+D I'll leave how to handle holiday targets as an open question.
+B Sounds good.
+B That's it for targets. Let's quickly settle reporting too. Right now we only report at month end, so we didn't see what was going off track.
+A Right. In April we knew display was weak by week two, but we only looked at it together at month end.
+B So starting in May, I want weekly reporting. A one-pager every Monday morning.
+A What goes on it? If we put too much, nobody reads it.
+B I think four things. Budget pacing, ROAS, conversion rate, and new customer share. By channel, just ROAS. @weekly-report
+A Got it. So we can drop CTR and CPC?
+B Those can live in the detail sheet. They don't need to be on the one-pager.
+C I'd like one line for CTR by creative. That's how we'll catch creative fatigue.
+A Then I'll add two lines just for creative. The live creative names and their CTR.
+B Great. Emma, could you own the one-pager? Daniel just needs to give you access to the sheet.
+D Once the sheet's set up, I can mostly automate it. I'll have it up every Monday by 10 a.m.
+A I'll set up the sheet this week. It only needs about ten columns.
+D Thanks. Then the first weekly report goes out next Monday. @weekly-start
+B Great. We also need to agree on definitions. Some people calculate ROAS on revenue, some on gross order value.
+A Right now it's net revenue after refunds. April's 402% is net revenue too.
+B Then let's add one line at the bottom of the report with the definition. Net revenue, last-click.
+D Sure, I'll make that a fixed footer on the report.
+C If it's last-click, then like you said, social gets less credit.
+A That's why I want to do a separate attribution look for social. The share of people who saw a social ad and then bought through search within a week.
+B Do we have the data for that?
+A We can do it with cookies, but it's not very accurate. It's more of a rough read. @attribution
+B A rough read is fine. Try it once, just as input for the social budget.
+A Okay, I'll have it before the next meeting.
+D I'll add the attribution estimate to Daniel's tasks too.
+A Thanks. Oh, and one more thing on email. Grace sent an email with a coupon at the end of April, and that pushed ROAS up a lot.
+B It was a coupon email? I didn't know that. How much off?
+A It was a 10% coupon, and conversions were about double normal for three days after it went out. The 780% email ROAS is partly the coupon, so without it the number could be lower. @coupon
+B Oh, so email isn't always 780%. And if you count the coupon margin, it could be a lot lower.
+A Exactly. So before we put more into email, we need to look at non-coupon emails on their own.
+B Then let's use the extra $1,000 for email to test emails without a coupon.
+A Sounds good. I'll ask Grace to split the sends into with and without coupon.
+B I'll talk to Grace about that. I'll bring it up when I ask about the segments.
+D I'll note that Olivia will pass the coupon comparison on to Grace.
+B Okay. And one more thing. Whether coupon promos are good for the brand long term isn't really our call. It ties into pricing.
+A Agreed. Let's just keep the coupon as a note.
+D I'll add it as a note. The coupon email doubled conversions.
+C I'm also curious about new customers. I'd like to see how many come back and buy again.
+A Repeat purchase isn't in this campaign's scope, so I'd have to pull it separately. On a 30-day basis, April's new customers won't be done until the end of May.
+B Let's put that on the agenda for early June. @repurchase
+D I'll log the early-June repeat purchase check as an open question.
+B Before we wrap, let's go through today's tasks. Emma, could you read them out?
+D Sure. One, Daniel shares the exact new customer share today. Two, Daniel builds a search table split by brand and generic keywords. @owners
+D Three, Daniel brings the display holdout design before next week's meeting. Four, he switches retargeting to creative B and sets up the 14-day window test.
+D Five, Marcus makes drafts of three review creative variations by the second week of May. Six, Olivia sends the May budget by this Friday.
+D Seven, I update the KPI doc this week. Eight, the payment method request goes to the dev team as an issue. Nine, someone asks Grace about the email segments.
+B Almost. I'll file the payment method issue, since I need to talk to the dev team.
+D Oh, then I'll change that one to Olivia.
+B Yep. And I'll ask Grace about the segments myself. No need to add to your plate, Emma.
+D Thanks. I'll update those.
+A For the numbers, Emma, just give me access to the sheet and I'll share right away.
+D Doing it now. You've got edit access on your account, Daniel.
+A Got it. Thanks.
+C Quick question on the review creative. How prominent should the product name be? Do we need legal to look at it?
+B As long as the review copy doesn't make definitive claims about results, it's fine. I'll take a look when the drafts are ready. @legal-check
+C Got it. I'll leave out any definitive claims.
+B To recap what we decided: retargeting switches to creative B right away, the May budget is search 20K, social 21K, display 3K, email 4K, retargeting 2K, the ROAS target is 450%, and the new customer target is 45%.
+D That's right. It'll all be in the meeting notes.
+B Thanks, everyone. Same time next week. Bring the display test design. @closing
+A Thanks, everyone.
+C Thanks.
+D Thanks. I'll share the notes as soon as they're done.
 `);

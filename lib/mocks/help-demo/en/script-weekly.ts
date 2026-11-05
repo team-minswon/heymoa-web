@@ -5,27 +5,27 @@ import { parseScript } from "@/lib/mocks/help-demo/script";
  * 라벨 칸은 문법상 자리만 채운다(`speakerLabel` 은 null 로 심는다).
  */
 export const WEEKLY_SCRIPT = parseScript(`
-A 다들 오셨죠. 그러면 이번 주 운영 점검 시작하겠습니다.
-A 오늘은 고객 문의 현황, 배송 지연 건, 재고 부족 상품, 이렇게 세 가지를 보고 마무리하려고 해요.
-B 네, 문의부터 보면 이번 주에 들어온 문의는 모두 312건이에요. 지난주보다 14% 늘었어요.
-B 가장 많았던 건 배송 문의가 118건이고, 교환 환불이 76건, 상품 사용법이 52건이에요.
-C 사용법 문의는 새로 나온 크림 때문에 늘어난 것 같아요. 사용 순서를 묻는 분이 많았거든요.
-A 그럼 사용법 안내를 상세 페이지에 한 장 더 넣는 게 좋겠네요.
-C 네, 사진 한 장이랑 세 줄 정도면 충분해요. 제가 문구는 정리해 볼게요.
-B 평균 첫 응답 시간은 지난주 41분에서 이번 주 58분으로 늘었어요. 목표가 30분인데 많이 벗어났죠.
-A 원인이 인력인가요, 아니면 문의 유형 분류 문제인가요?
-B 둘 다 있어요. 수요일 오후에 한 분이 휴가였고, 분류가 잘못돼서 담당이 바뀐 문의도 열두 건 있었어요.
-A 분류 규칙을 다시 보죠. 어떤 키워드에서 틀렸는지 알 수 있어요?
-B 배송이라는 단어가 들어간 교환 문의가 배송 담당한테 간 경우가 대부분이에요.
-A 그건 규칙을 고치면 해결될 것 같네요. 이번 주 안에 바꿔 주세요.
-B 알겠습니다. 교환 환불 키워드가 있으면 우선으로 분류하도록 바꿀게요.
-A 그리고 휴가 때 대체 인력이 없는 건 일정 짤 때 반영해야 하는데, 이건 다음 안건에서 같이 얘기해요.
-C 배송 지연 건도 말씀드릴게요. 이번 주 지연 신고가 23건이었는데 그중 17건이 같은 택배사 구간이에요.
-A 같은 구간이면 그쪽 문제일 가능성이 크네요. 택배사에 연락했어요?
-C 월요일에 한 번 연락했고 화요일에 지연 원인을 받았어요. 물량이 몰려서 분류가 밀렸다고 하더라고요.
-A 그럼 고객 안내는 이미 나갔나요?
-C 지연 알림 문자는 나갔는데 보상 쿠폰은 아직 안 나갔어요. 기준을 정해야 해서요.
-A 사흘 이상 지연된 분들께만 작은 쿠폰을 드리는 걸로 하죠.
+A Looks like everyone's here. Let's start this week's ops check-in.
+A Today we'll go over three things: support tickets, late deliveries, and low-stock products.
+B Sure. Starting with tickets, we got 312 this week. That's up 14% from last week.
+B Shipping questions were the biggest at 118, then exchanges and refunds at 76, and how-to questions at 52.
+C I think the how-to questions went up because of the new cream. A lot of people asked what order to use it in.
+A Then we should add a how-to section to the product page.
+C Yeah, one photo and about three lines would do it. I'll draft the copy.
+B Average first response time went from 41 minutes last week to 58 this week. Our target is 30, so we're way off.
+A Is it staffing, or a problem with how tickets get sorted?
+B Both. One person was out Wednesday afternoon, and twelve tickets got sorted wrong and had to be reassigned.
+A Let's look at the routing rules again. Can you tell which keywords tripped it up?
+B Mostly exchange requests that mentioned shipping got sent to the shipping team.
+A That sounds like a rule fix. Please change it this week.
+B Got it. I'll make exchange and refund keywords take priority.
+A And we need to plan for having no backup when someone's out. Let's cover that in the next item.
+C Let me cover late deliveries too. We had 23 reports this week, and 17 of them were on the same carrier route.
+A If it's the same route, it's probably on their end. Did you contact the carrier?
+C I reached out Monday and heard back Tuesday. They said volume spiked and sorting fell behind.
+A Have customers been notified?
+C The delay texts went out, but the make-good coupons haven't. We need to set a rule first.
+A Let's give a small coupon only to people delayed three days or more.
 `);
 
 /**
@@ -34,12 +34,12 @@ A 사흘 이상 지연된 분들께만 작은 쿠폰을 드리는 걸로 하죠.
  * 어절 단위로 나뉘어 partial 로 먼저 보이므로 한 문장은 7어절 이상으로 둔다.
  */
 export const HELP_DEMO_LIVE_SCRIPT = [
-  "자, 시작하겠습니다. 오늘은 4월 캠페인 성과부터 확인하고 다음 달 예산을 정하겠습니다.",
-  "채널별로 보면 검색 광고의 전환율이 가장 높고 디스플레이는 많이 떨어졌습니다.",
-  "디스플레이 예산을 일부 줄여서 검색과 이메일 쪽으로 옮기는 안을 논의해 볼게요.",
-  "재배분안은 이번 주 금요일까지 하린님이 표로 정리해서 공유해 주세요.",
-  "소재 테스트 결과도 같이 보고 싶은데 리포트 초안은 언제 나오나요?",
-  "초안은 수요일 오후까지 나오고 최종본은 금요일 회의에 올리겠습니다.",
-  "그럼 랜딩 페이지 문구 시안은 두 개로 비교하는 걸로 정하죠.",
-  "다음 주 월요일 같은 시간에 이어서 점검하겠습니다.",
+  "Okay, let's get started. Today we'll check April campaign results first and then set next month's budget.",
+  "By channel, search ads have the highest conversion rate and display dropped off a lot.",
+  "Let's talk about cutting some of the display budget and moving it to search and email.",
+  "Olivia, please put the reallocation in a table and share it by this Friday.",
+  "I'd also like to see the creative test results. When will the report draft be ready?",
+  "The draft will be ready by Wednesday afternoon, and the final goes to Friday's meeting.",
+  "Then let's compare two versions of the landing page copy.",
+  "We'll pick this back up next Monday at the same time.",
 ] as const;

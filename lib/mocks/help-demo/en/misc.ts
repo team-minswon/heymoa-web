@@ -4,18 +4,18 @@ import { HD_ME, HD_MEMBERS, HD_PRACTICE_WORKSPACE_ID, HD_WORKSPACE_ID } from "@/
 
 /** 용어 사전. 쉼표 일괄 등록 시연용 「코호트, 리텐션, 이탈률」은 일부러 넣지 않는다. */
 export const HELP_DEMO_TERMS = [
-  "ROAS", "CTR", "CPC", "CPA", "전환율", "리타겟팅", "퍼널", "OKR", "KPI", "A/B 테스트",
-  "랜딩 페이지", "브랜드 가이드", "CRM", "리드", "온보딩", "세그먼트", "키비주얼", "톤앤매너",
-  "인플루언서", "어트리뷰션", "장바구니 이탈", "사전 신청", "상세 페이지", "소재", "마지막 클릭", "노출 빈도",
+  "ROAS", "CTR", "CPC", "CPA", "conversion rate", "retargeting", "funnel", "OKR", "KPI", "A/B test",
+  "landing page", "brand guide", "CRM", "lead", "onboarding", "Brightside", "key visual", "lookalike audience",
+  "UGC", "attribution", "cart abandonment", "waitlist", "product detail page", "ad creative", "last-click", "frequency cap",
 ];
 
 /** 챗봇이 일반 질문에 답하는 문장. 목의 기본 답변 대신 가이드 화면에 어울리는 업무 이야기를 쓴다. */
 export const HELP_DEMO_CHAT_ANSWERS = [
-  "4월 캠페인 성과 리뷰에서는 ROAS 402%로 목표 380%를 넘겼다고 정리됐습니다. 채널 중에서는 디스플레이가 180%로 가장 낮아, 5월에는 예산을 600만 원에서 300만 원으로 줄이기로 했습니다.",
-  "지금 남은 할 일은 김서윤님 몫으로 두 가지입니다. KPI 문서 업데이트(이번 주)와 주간 성과 한 장 리포트(다음 주 월요일부터)입니다. 둘 다 4월 캠페인 성과 리뷰에서 맡았습니다.",
-  "신제품 소개 페이지 문구는 제목을 「가볍게 스며드는 수분 크림」으로 정했고, 부제의 숫자는 시험 성적서를 확인한 뒤에 넣기로 했습니다. 법무 검토는 최종 문구가 나온 뒤 요청합니다.",
-  "고객 인터뷰에서는 구매 전에 낮은 별점 후기를 먼저 읽는다는 말이 가장 많이 반복됐습니다. 가격은 용량 대비 사용 기간을 알고 나면 괜찮다는 반응이 많았습니다.",
-  "이번 주 운영 점검에서는 첫 응답 시간이 목표를 넘은 원인이 문의 분류 오류와 휴가 공백으로 좁혀졌습니다. 분류 규칙은 이번 주 안에 고치기로 했습니다.",
+  "The April campaign performance review recorded a ROAS of 402%, beating the 380% target. Display was the weakest channel at 180%, so its May budget goes from $6,000 down to $3,000.",
+  "You have two open tasks: update the KPI doc (this week) and send a one-page weekly performance report (starting next Monday). Both came out of the April campaign performance review.",
+  "For the new product landing page, the headline is set to \"A lightweight moisturizer that sinks right in.\" The number in the subheadline waits until the lab report is confirmed. Legal review will be requested once the final copy is ready.",
+  "The most repeated point in the customer interviews was that people read the low-star reviews first before buying. On price, most were fine with it once they knew how long one jar lasts.",
+  "This week's ops check-in narrowed the slow first response time down to two causes: misrouted tickets and gaps from people being out on vacation. The routing rules will be fixed this week.",
 ];
 
 type Chats = Pick<StoreState, "agentChats" | "agentChatMessages">;
@@ -52,7 +52,7 @@ export function helpDemoChats(now: number): Chats {
     if (options.tool) {
       messages.push({
         chatId, turnId, createdAt: at(3), role: "THINKING",
-        content: "회의 스크립트에서 관련 발화를 찾아 근거를 확인합니다.", scope: [], toolEvent: null,
+        content: "Searching the meeting transcript for relevant lines to back up the answer.", scope: [], toolEvent: null,
       });
       messages.push({
         chatId, turnId, createdAt: at(5), role: "TOOL", content: options.tool, scope: [],
@@ -64,36 +64,36 @@ export function helpDemoChats(now: number): Chats {
     });
   };
 
-  const followUp = open("01KH000005001", "4월 캠페인 후속 정리", minutesAgo(26 * 60));
+  const followUp = open("01KH000005001", "April campaign follow-ups", minutesAgo(26 * 60));
   exchange(
-    followUp, minutesAgo(26 * 60), `${marker} 에서 정한 것만 정리해줘`,
-    "결정은 아홉 가지입니다. 핵심은 세 가지예요.\n\n1. 디스플레이는 5월에 600만 원에서 300만 원으로 줄입니다.\n2. 리타겟팅은 오늘부터 소재 B로 바꿉니다.\n3. 5월 ROAS 목표는 450%, 신규 고객 비중 목표는 45%입니다.\n\n근거: 이하린이 예산안을 정리한 대목(약 31분)과 박도윤이 리타겟팅 성과를 설명한 대목(약 22분)입니다.",
-    { scoped: true, tool: "스크립트에서 관련 발화 검색 · 4건 찾음" }
+    followUp, minutesAgo(26 * 60), `Just list what was decided in ${marker}`,
+    "There were nine decisions. These three matter most:\n\n1. Display drops from $6,000 to $3,000 in May.\n2. Retargeting switches to creative B starting today.\n3. The May ROAS target is 450%, and the new-customer share target is 45%.\n\nSources: Olivia Brooks walking through the budget plan (around 31 min) and Daniel Reyes explaining retargeting results (around 22 min).",
+    { scoped: true, tool: "Searched the transcript for relevant lines · 4 found" }
   );
   exchange(
-    followUp, minutesAgo(25 * 60), "내가 맡은 할 일은 뭐야?",
-    "김서윤님 몫은 두 가지입니다. KPI 문서를 이번 주 안에 업데이트하는 일, 그리고 주간 성과 한 장 리포트를 다음 주 월요일부터 올리는 일입니다. 둘 다 회의 마지막에 정리한 할 일 목록에 있습니다.",
+    followUp, minutesAgo(25 * 60), "What tasks are mine?",
+    "You have two: update the KPI doc by the end of this week, and post a one-page weekly performance report starting next Monday. Both are on the task list wrapped up at the end of the meeting.",
     { scoped: true }
   );
   exchange(
-    followUp, minutesAgo(180), "5월 예산은 어떻게 나눴지?",
-    "5월 총 예산 5,000만 원을 이렇게 나눴습니다.\n\n- 검색 2,000만 원\n- 소셜 2,100만 원\n- 이메일 400만 원\n- 디스플레이 300만 원\n- 리타겟팅 200만 원\n\n검색은 한계선이 2,000만 원이라는 박도윤의 설명(약 41분)이 근거였습니다.",
+    followUp, minutesAgo(180), "How did we split the May budget?",
+    "The $50,000 May budget was split like this:\n\n- Search $20,000\n- Social $21,000\n- Email $4,000\n- Display $3,000\n- Retargeting $2,000\n\nThe search cap came from Daniel Reyes pointing out that returns flatten past $20,000 (around 41 min).",
     { scoped: true }
   );
   exchange(
-    followUp, minutesAgo(7), "디스플레이를 줄이는 이유가 뭐였지?",
-    "ROAS가 180%로 목표 380%의 절반에도 못 미쳤고, 3월에도 200% 근처였기 때문입니다. 타깃을 좁혀 봤지만 크게 달라지지 않았다는 설명이 있었습니다(박도윤, 약 17분). 대신 지역 비교 테스트로 간접 효과를 확인해 보기로 했습니다.",
+    followUp, minutesAgo(7), "Why are we cutting display again?",
+    "Its ROAS was 180%, less than half the 380% target, and it was around 200% in March too. Daniel Reyes mentioned that narrowing the targeting didn't change much (around 17 min). Instead, the team will run a regional comparison test to check for indirect effects.",
     { scoped: true }
   );
 
-  const landing = open("01KH000005002", "신제품 문구 확정 사항", minutesAgo(3 * 24 * 60));
-  exchange(landing, minutesAgo(3 * 24 * 60), "신제품 소개 페이지 문구에서 아직 못 정한 게 뭐야?", HELP_DEMO_CHAT_ANSWERS[2]);
+  const landing = open("01KH000005002", "New product copy decisions", minutesAgo(3 * 24 * 60));
+  exchange(landing, minutesAgo(3 * 24 * 60), "What's still undecided in the landing page copy?", HELP_DEMO_CHAT_ANSWERS[2]);
 
-  const weekly = open("01KH000005003", "운영 점검 요약", minutesAgo(8 * 24 * 60));
-  exchange(weekly, minutesAgo(8 * 24 * 60), "지난주 운영 점검에서 나온 얘기 요약해줘", HELP_DEMO_CHAT_ANSWERS[4]);
+  const weekly = open("01KH000005003", "Ops check-in summary", minutesAgo(8 * 24 * 60));
+  exchange(weekly, minutesAgo(8 * 24 * 60), "Summarize last week's ops check-in", HELP_DEMO_CHAT_ANSWERS[4]);
 
-  const interview = open("01KH000005004", "인터뷰에서 반복된 말", minutesAgo(5 * 24 * 60));
-  exchange(interview, minutesAgo(5 * 24 * 60), "고객 인터뷰에서 반복된 얘기 있어?", HELP_DEMO_CHAT_ANSWERS[3]);
+  const interview = open("01KH000005004", "Recurring interview themes", minutesAgo(5 * 24 * 60));
+  exchange(interview, minutesAgo(5 * 24 * 60), "Did anything come up again and again in the customer interviews?", HELP_DEMO_CHAT_ANSWERS[3]);
 
   // 목록 정렬 기준은 마지막 메시지 시각이다.
   for (const chat of chats) {
@@ -109,35 +109,35 @@ export function helpDemoFeedbacks(now: number): StoreState["feedbacks"] {
   return [
     {
       feedbackId: "01KH000007001", kind: "INCIDENT",
-      message: "회의 녹음 중에 전사가 몇 분 멈춘 것처럼 보였어요. 데스크톱 앱이고 노트 화면이었습니다.",
-      answer: "불편을 드려 죄송합니다. 네트워크가 잠깐 끊긴 구간이 있었고, 다시 연결되면서 이어서 받아쓰도록 고쳤습니다.",
+      message: "While I was recording a meeting, the transcript seemed to freeze for a few minutes. This was in the desktop app, on the meeting notes screen.",
+      answer: "Sorry for the trouble. Your connection dropped briefly, and we've fixed it so transcription picks up where it left off once you reconnect.",
       answeredAt: ago(3), answerSeen: false, createdAt: ago(20),
     },
     {
       feedbackId: "01KH000007002", kind: "SUGGESTION",
-      message: "회의 요약을 참석자에게 메일로 자동 전송하는 옵션이 있으면 좋겠어요.",
+      message: "It would be great to have an option that automatically emails the meeting summary to attendees.",
       answer: null, answeredAt: null, answerSeen: false, createdAt: ago(30),
     },
     {
       feedbackId: "01KH000007003", kind: "QUESTION",
-      message: "회의가 시작된 뒤에도 참석자를 추가할 수 있나요?",
-      answer: "네, 노트 정보 탭의 참석자에서 언제든 추가할 수 있습니다. 이미 지나간 발화의 화자는 그대로 두고, 이후 지정부터 반영됩니다.",
+      message: "Can I add attendees after a meeting has already started?",
+      answer: "Yes, you can add them anytime under Attendees in the note's Info tab. Speakers on earlier lines stay as they are, and the change applies to assignments from then on.",
       answeredAt: ago(24 * 5), answerSeen: true, createdAt: ago(24 * 6),
     },
     {
       feedbackId: "01KH000007004", kind: "OTHER",
-      message: "사용 가이드에 화자 지정 방법이 더 자세히 있으면 좋겠어요.",
+      message: "Could the user guide explain how to assign speakers in more detail?",
       answer: null, answeredAt: null, answerSeen: false, createdAt: ago(24 * 9),
     },
     {
       feedbackId: "01KH000007005", kind: "SUGGESTION",
-      message: "할 일에 담당자를 두 명 이상 지정하고 싶어요.",
-      answer: "의견 감사합니다. 지금은 한 명으로 지정하는 방식인데, 여러 명 지정은 검토 목록에 올려 두었습니다.",
+      message: "I'd like to assign more than one person to a task.",
+      answer: "Thanks for the suggestion. Tasks take one assignee for now, but we've added multiple assignees to our list to look into.",
       answeredAt: ago(24 * 12), answerSeen: true, createdAt: ago(24 * 13),
     },
     {
       feedbackId: "01KH000007006", kind: "INCIDENT",
-      message: "초대 메일이 평소보다 늦게 도착했어요. 한 시간쯤 걸렸습니다.",
+      message: "An invite email arrived much later than usual. It took about an hour.",
       answer: null, answeredAt: null, answerSeen: false, createdAt: ago(24 * 15),
     },
   ];
@@ -146,7 +146,7 @@ export function helpDemoFeedbacks(now: number): StoreState["feedbacks"] {
 /** 연동: Linear 는 연결됨(관리자 본인), GitHub 는 연결 안 됨. 연습 공간은 둘 다 안 됨. */
 export function helpDemoIntegrations(now: number): StoreState["integrations"] {
   return [
-    { workspaceId: HD_WORKSPACE_ID, provider: "LINEAR", connected: true, connectedBy: "김서윤", connectedAt: new Date(now - 40 * 86_400_000).toISOString() },
+    { workspaceId: HD_WORKSPACE_ID, provider: "LINEAR", connected: true, connectedBy: "Emma Carter", connectedAt: new Date(now - 40 * 86_400_000).toISOString() },
     { workspaceId: HD_WORKSPACE_ID, provider: "GITHUB", connected: false, connectedBy: null, connectedAt: null },
     { workspaceId: HD_PRACTICE_WORKSPACE_ID, provider: "LINEAR", connected: false, connectedBy: null, connectedAt: null },
     { workspaceId: HD_PRACTICE_WORKSPACE_ID, provider: "GITHUB", connected: false, connectedBy: null, connectedAt: null },
@@ -157,7 +157,7 @@ export function helpDemoIntegrations(now: number): StoreState["integrations"] {
 export function helpDemoDelegations(now: number): Pick<StoreState, "agentDelegations" | "agentDelegationUsages"> {
   const day = 86_400_000;
   const iso = (offsetDays: number) => new Date(now + offsetDays * day).toISOString();
-  const base = { workspaceId: HD_WORKSPACE_ID, workspaceName: "봄바람 스튜디오", userId: HD_ME };
+  const base = { workspaceId: HD_WORKSPACE_ID, workspaceName: "Brightside Studio", userId: HD_ME };
   const agentDelegations: StoreState["agentDelegations"] = [
     {
       ...base, delegationId: "01KH000008001", name: "Claude", tokenHint: "hm_Kq3Vn8x", credentialKind: "PERSONAL_TOKEN",
@@ -172,7 +172,7 @@ export function helpDemoDelegations(now: number): Pick<StoreState, "agentDelegat
       allowTaskChanges: false, status: "REVOKED", createdAt: iso(-60), lastUsedAt: iso(-25), expiresAt: iso(30), revokedAt: iso(-20), revokeReason: "USER",
     },
     {
-      ...base, userId: HD_MEMBERS.harin.userId, delegationId: "01KH000008004", name: "하린의 ChatGPT", tokenHint: null, credentialKind: "OAUTH",
+      ...base, userId: HD_MEMBERS.harin.userId, delegationId: "01KH000008004", name: "Olivia's ChatGPT", tokenHint: null, credentialKind: "OAUTH",
       allowTaskChanges: false, status: "ACTIVE", createdAt: iso(-8), lastUsedAt: iso(-2), expiresAt: iso(82), revokedAt: null, revokeReason: null,
     },
   ];
