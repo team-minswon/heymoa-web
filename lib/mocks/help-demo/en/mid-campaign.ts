@@ -11,65 +11,65 @@ export type MidMeeting = {
 
 /** 봄 캠페인 키비주얼 시안 검토. 화자 A 이하린, B 최민재, C 박도윤. */
 const visualScript = parseScript(`
-A 키비주얼 시안 세 개 올라왔죠. 오늘은 하나로 좁히는 게 목표예요. 먼저 민재님이 시안마다 의도를 간단히 말씀해 주세요.
-B 네. 1안은 꽃잎이 흩날리는 사진 위주고요, 2안은 제품을 가운데 크게 놓고 배경을 연한 초록으로 했어요. 3안은 사람 손에 제품을 들고 있는 장면이에요.
-A 3안은 모델 섭외가 아직인데 가능한 건가요?
-B 이번 시안은 임시 사진이고, 선택되면 촬영을 따로 잡아야 해요.
-C 광고 쪽 입장에서는 2안이 제일 안정적이에요. 제품이 크게 보이니까 작은 썸네일에서도 뭔지 알아봐요.
-C 1안은 예쁘긴 한데 모바일 피드에서 보면 제품이 너무 작아요.
-A 저도 1안은 분위기는 좋은데 제품이 안 보여서 아쉬워요. 3안은 어떻게 보세요?
-C 사람이 들어간 소재가 클릭률이 좋은 경우가 많긴 해요. 그래도 촬영 비용이 따로 드니까 이번엔 부담이죠.
-B 비용은 대략 이백오십만 원 정도 예상해요. 반나절 촬영에 모델 한 분 기준이에요.
-A 그건 이번 예산에는 없어요. 3안은 이번 캠페인에서는 접고 다음 캠페인 후보로 남겨 두죠. @drop-three
-B 알겠습니다. 그럼 1안과 2안 사이에서 정하면 되겠네요.
-C 저는 2안으로 가되, 1안의 꽃잎 느낌을 가져오면 좋겠어요. 완전 정적인 배경은 봄 분위기가 덜 나요.
-B 2안 배경에 꽃잎을 옅게 흩뿌리는 정도는 가능해요. 제품 가림만 안 하면 되니까요.
-A 그럼 그렇게 가요. 2안을 기본으로 하고 꽃잎 요소를 약하게 얹는 걸로 정하죠. @pick-two
-A 색감은요? 연한 초록이 너무 차갑지 않을까요?
-B 초록에 아주 살짝 노란 기를 섞으면 따뜻해져요. 두 가지 색 버전을 만들어서 비교해 볼게요.
-C 색 비교는 광고 돌릴 때 테스트로 확인해도 좋겠네요. 어차피 두 버전을 다 쓰면 되니까요.
-A 좋아요. 그러면 색 버전 두 가지를 다 제작해 주세요. @color-two
-B 문구는 어떻게 할까요? 지금은 봄이 왔어요라는 문구가 들어 있어요.
-A 너무 흔해요. 제품 이야기가 한 줄이라도 들어가면 좋겠어요.
-C 문구가 길어지면 모바일에서 잘려요. 열두 글자 안쪽이어야 해요.
-B 가볍게 스며드는 봄 정도면 열 글자니까 괜찮겠어요.
-A 좋네요. 그 문구로 시안에 넣어 보세요. @copy-line
-B 알겠습니다. 크기별 규격도 필요하죠? 정사각형이랑 세로형이랑요.
-C 네, 정사각형과 세로형 두 가지는 꼭 필요하고, 가능하면 가로형도요.
-B 가로형은 일정이 빠듯하니 먼저 두 가지만 드릴게요.
-A 마감은 언제까지 가능해요?
-B 다음 주 화요일에 최종 파일 전달하겠습니다. @deadline
-C 그때 받으면 수요일부터 광고에 올릴 수 있어요.
-A 그런데 하나 걱정되는 건 심의예요. 꽃잎 이미지가 제품을 가리는 것처럼 보이면 문제가 될 수 있어요?
-C 심의는 문구에서 걸리지 이미지에서는 보통 안 걸려요. 그래도 확인은 해 볼게요. @ask-review
-A 네, 확인 부탁해요. 오늘은 여기까지 하죠. 고생하셨어요.
+A So we've got three key visual drafts. The goal today is to narrow it down to one. Marcus, can you walk us through the idea behind each?
+B Sure. Option 1 is mostly a shot of drifting petals. Option 2 puts the product big in the center on a soft green background. Option 3 is someone holding the product.
+A We haven't booked a model for option 3 yet. Is that doable?
+B This draft uses a placeholder photo. If we pick it, we'd need to schedule a separate shoot.
+C From the ads side, option 2 is the safest. The product is big, so you can tell what it is even in a small thumbnail.
+C Option 1 is pretty, but in a mobile feed the product is way too small.
+A Same here. Option 1 has a nice mood, but you can't see the product. What do you think of option 3?
+C Creative with people in it often gets a better CTR. But the shoot costs extra, so it's a stretch this time.
+B I'd estimate around $2,500. That's a half-day shoot with one model.
+A That's not in this budget. Let's drop option 3 for this campaign and keep it as a candidate for the next one. @drop-three
+B Got it. So it's between option 1 and option 2.
+C I'd go with option 2 but borrow the petal feel from option 1. A totally static background doesn't feel much like spring.
+B I can scatter a few faint petals over the option 2 background. As long as they don't cover the product.
+A Let's do that. Option 2 as the base, with a light layer of petals. @pick-two
+A What about the color? Is the soft green too cold?
+B If I add a hint of yellow to the green, it warms up. I'll make two color versions so we can compare.
+C We could test the colors once the ads are running. We'd be using both versions anyway.
+A Good. Then please produce both color versions. @color-two
+B What about the copy? Right now it says "Spring is here."
+A That's too generic. I'd like at least one line about the product.
+C If the copy runs long, it gets cut off on mobile. It needs to stay under 25 characters.
+B "Spring sinks right in" is 21 characters, so that should work.
+A I like it. Put that line in the draft. @copy-line
+B Will do. We need different sizes too, right? Square and vertical?
+C Yes, square and vertical are a must, and horizontal if you can.
+B The timeline's tight for horizontal, so I'll send the first two to start.
+A When can you have them done?
+B I'll deliver the final files next Tuesday. @deadline
+C If we get them then, we can have them in ads starting Wednesday.
+A One thing I'm worried about is ad review. If the petals look like they're hiding the product, could that be a problem?
+C Ad review usually flags copy, not images. I'll still double-check. @ask-review
+A Thanks, please do. That's it for today. Nice work, everyone.
 `);
 const v = anchorsOf(visualScript);
 
 export const VISUAL_MEETING: MidMeeting = {
   script: visualScript,
-  headline: "키비주얼은 제품을 크게 보여 주는 2안으로 정했다",
+  headline: "Key visual goes with option 2, which shows the product large",
   lead: [
     {
-      text: "2안에 꽃잎 요소를 약하게 얹고 색 버전 두 가지를 만든다. 모델 촬영이 필요한 3안은 다음 캠페인으로 미뤘다.",
+      text: "Option 2 gets a light layer of petals and comes in two color versions. Option 3 needs a model shoot, so it moves to the next campaign.",
       topics: [1],
     },
   ],
   topics: [
     {
-      title: "키비주얼 안 정하기",
+      title: "Choosing the key visual",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "키비주얼은 2안을 기본으로 하고 꽃잎 요소를 약하게 얹는다", at: v("pick-two") },
-        { kind: "DECISION", content: "3안은 촬영 비용 때문에 이번 캠페인에서 빼고 다음 후보로 남긴다", at: v("drop-three") },
-        { kind: "DECISION", content: "문구는 「가볍게 스며드는 봄」으로 시안에 넣는다", at: v("copy-line") },
-        { kind: "ACTION_ITEM", content: "색 버전 두 가지로 시안을 제작한다", at: v("color-two"), who: "B", dueIn: 5 },
-        { kind: "ACTION_ITEM", content: "정사각형과 세로형 최종 파일을 전달한다", at: v("deadline"), who: "B", dueIn: 6 },
-        { kind: "ACTION_ITEM", content: "광고 심의에서 이미지가 문제되는지 확인한다", at: v("ask-review"), who: "C" },
+        { kind: "DECISION", content: "Use option 2 as the base key visual, with a light layer of petals", at: v("pick-two") },
+        { kind: "DECISION", content: "Drop option 3 from this campaign because of the shoot cost and keep it for the next one", at: v("drop-three") },
+        { kind: "DECISION", content: "Use \"Spring sinks right in\" as the copy line in the draft", at: v("copy-line") },
+        { kind: "ACTION_ITEM", content: "Produce the draft in two color versions", at: v("color-two"), who: "B", dueIn: 5 },
+        { kind: "ACTION_ITEM", content: "Deliver the final files in square and vertical formats", at: v("deadline"), who: "B", dueIn: 6 },
+        { kind: "ACTION_ITEM", content: "Check whether the image could cause problems in ad review", at: v("ask-review"), who: "C" },
       ],
       sentences: [
-        { text: "2안에 꽃잎 요소를 얹기로 하고 3안은 다음 캠페인으로 미뤘다.", items: [0, 1] },
-        { text: "색 버전 두 가지를 만들어 다음 주 화요일에 전달한다.", items: [3, 4] },
+        { text: "Option 2 gets petals, and option 3 moves to the next campaign.", items: [0, 1] },
+        { text: "Two color versions will be delivered next Tuesday.", items: [3, 4] },
       ],
     },
   ],
@@ -77,68 +77,68 @@ export const VISUAL_MEETING: MidMeeting = {
 
 /** 광고 소재 A/B 테스트 설계. 화자 A 박도윤, B 최민재, C 이하린. */
 const abScript = parseScript(`
-A 이번 회의는 5월 소재 A/B 테스트를 어떻게 설계할지 정하는 자리예요. 4월에는 소재 A와 B를 그냥 돌렸는데, 이번엔 변수를 하나씩만 바꿔서 보려고 해요.
-C 좋아요. 4월에는 소재 두 개가 이것저것 다 달라서 왜 이겼는지 정확히 몰랐잖아요.
-A 맞아요. 후기를 넣은 게 이긴 건지, 색이 달라서인지 구분이 안 됐어요. 그래서 이번엔 첫 단계로 후기 유무만 바꾸는 테스트를 하려고 해요. @one-variable
-B 같은 이미지에서 후기 문구만 있고 없고로 두 가지를 만들면 되죠?
-A 네. 이미지, 색, 버튼 문구는 완전히 같게 하고요.
-C 노출은 반반으로 나누는 거죠? 같은 타깃에 같은 시간대에요.
-A 그렇습니다. 광고 플랫폼의 자동 최적화는 끄고 균등 배분으로 돌릴 거예요. 자동으로 두면 한쪽에 몰아주거든요. @even-split
-C 기간은 얼마로 잡아요?
-A 최소 2주는 돌려야 요일 영향이 빠져요. 클릭이 각각 3만 회 이상 모이면 판단할 수 있어요.
-B 3만 회 모이려면 예산이 얼마나 들어요?
-A 평균 CPC 210원이면 한쪽에 630만 원쯤이니까 두 소재 합쳐서 1,260만 원 정도예요.
-C 부담스러운 금액은 아니네요. 5월 소셜 예산 안에서 돌리면 되겠어요.
-A 네, 새 예산 없이 기존 소셜 예산 안에서 진행할게요. @budget-inside
-B 판단 기준은 뭘로 해요? CTR만 보면 클릭만 많고 안 사는 경우가 있잖아요.
-A 1차 지표는 전환율, 보조로 CTR이랑 ROAS를 볼 거예요. 전환율에서 유의한 차이가 나야 이겼다고 판단해요. @metric
-C 유의하다는 기준은요?
-A 신뢰수준 95%로 보겠습니다. 계산기는 제가 시트에 만들어 둘게요.
-B 두 번째 테스트로는 뭘 하죠? 이번에 이기면 다음엔 그 위에서 또 바꿔 보는 거죠?
-A 네. 후기가 이기면 후기 안에서 사진을 넣느냐 글만 쓰느냐를 두 번째로 보려고 해요. 일단 첫 번째 결과를 보고 정하는 걸로요.
-C 결과가 비슷하게 나오면 어떻게 해요?
-A 차이가 없으면 단순한 쪽을 택할게요. 후기가 없는 쪽이 제작이 쉬우니까요. @tie-rule
-C 합리적이네요. 그 규칙도 문서에 남겨 주세요.
-A 네. 그리고 결과는 어떻게 공유할까요?
-C 테스트가 끝나면 한 장짜리로 정리해서 회의에서 보여 주세요. 숫자랑 결론만요.
-A 알겠습니다. 테스트는 다음 주 월요일부터 시작할게요. @start
-B 소재 두 개는 제가 이번 주 안에 만들게요. 후기 있는 버전과 없는 버전이요.
-C 중간에 결과를 슬쩍 보는 건 안 되겠죠? 일주일쯤 되면 궁금할 것 같은데요.
-A 중간 확인은 해도 되는데 그걸로 판단하면 안 돼요. 일주일 시점에서는 클릭 수 확인까지만 하죠.
-C 그건 좋은 약속이네요. 중간에 한쪽이 앞선다고 일찍 끝내는 실수를 많이 하잖아요.
-A 맞아요. 규칙으로 문서에 적어 둘게요. 2주 전에는 결론 내지 않는다고요.
-B 광고 문구 길이도 두 소재가 같아야 하죠? 후기 있는 쪽이 문구가 길어지는데요.
-A 후기가 들어가면 길이가 달라지긴 해요. 제목과 버튼 문구는 같고 후기 한 줄만 추가하는 걸로 맞추죠.
-B 알겠습니다. 후기 한 줄은 열여덟 글자 안쪽으로 쓸게요.
-A 고마워요. 그러면 제가 세팅하고 시작할게요.
+A This meeting is to decide how we design the May creative A/B test. In April we just ran creative A and B side by side, but this time we want to change one variable at a time.
+C Good. In April the two creatives differed in a bunch of ways, so we never really knew why one won.
+A Right. We couldn't tell if it was the review or the different color. So step one this time is a test that only changes whether there's a review. @one-variable
+B So I make two versions of the same image, one with the review quote and one without?
+A Yes. Image, color, and button copy stay exactly the same.
+C And we split impressions evenly? Same audience, same time slots?
+A Exactly. We'll turn off the platform's auto-optimization and run an even split. If you leave it on auto, it pushes everything to one side. @even-split
+C How long do we run it?
+A At least two weeks, so day-of-week effects wash out. Once each side gets 30,000 clicks or more, we can call it.
+B What does 30,000 clicks cost?
+A At an average CPC of $0.21, that's about $6,300 per side, so roughly $12,600 for both.
+C That's not bad. We can run it inside the May social budget.
+A Yeah, no new budget. We'll run it out of the existing social budget. @budget-inside
+B What's the success metric? If we only look at CTR, we could get lots of clicks and no sales.
+A Conversion rate is the primary metric, with CTR and ROAS as secondary. We only call a winner if there's a significant difference in conversion rate. @metric
+C What counts as significant?
+A We'll use a 95% confidence level. I'll set up a calculator in the sheet.
+B What's the second test? If this one wins, we change something else on top of it?
+A Yes. If the review wins, the second test would be a photo review versus text only. We'll decide after we see the first results.
+C What if the results come out about the same?
+A If there's no difference, we go with the simpler one. The version without a review is easier to produce. @tie-rule
+C Makes sense. Please put that rule in the doc too.
+A Will do. And how should we share the results?
+C When the test's done, put it on one page and show it in a meeting. Just the numbers and the conclusion.
+A Got it. The test starts next Monday. @start
+B I'll make the two creatives this week. One with the review, one without.
+C We can't peek at results halfway through, right? I'll be curious after a week.
+A You can check, but don't make a call from it. At the one-week mark, let's only check click counts.
+C Good rule. People make that mistake a lot, ending early because one side is ahead.
+A Right. I'll write it in the doc as a rule. No conclusions before two weeks.
+B The ad copy should be the same length on both, right? The review version gets longer.
+A Adding a review does change the length. Let's keep the headline and button copy identical and just add one review line.
+B Got it. I'll keep the review line under 40 characters.
+A Thanks. I'll set it up and get it started.
 `);
 const a = anchorsOf(abScript);
 
 export const AB_MEETING: MidMeeting = {
   script: abScript,
-  headline: "5월 소재 테스트는 후기 유무 하나만 바꿔 2주간 돌린다",
+  headline: "The May creative test changes only the review and runs for two weeks",
   lead: [
     {
-      text: "변수를 후기 유무 하나로 줄이고 균등 배분으로 2주간 진행한다. 전환율을 1차 지표로 본다.",
+      text: "We cut it to one variable, whether there's a review, and run an even split for two weeks. Conversion rate is the primary metric.",
       topics: [1],
     },
   ],
   topics: [
     {
-      title: "A/B 테스트 설계",
+      title: "A/B test design",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "첫 테스트는 후기 유무 하나만 바꾼다", at: a("one-variable") },
-        { kind: "DECISION", content: "노출은 균등 배분으로 하고 최소 2주 돌린다", at: a("even-split") },
-        { kind: "DECISION", content: "1차 지표는 전환율, 유의수준은 95%로 한다", at: a("metric") },
-        { kind: "DECISION", content: "차이가 없으면 제작이 쉬운 후기 없는 쪽을 택한다", at: a("tie-rule") },
-        { kind: "ACTION_ITEM", content: "후기 있는 소재와 없는 소재를 제작한다", at: a("start"), who: "B", dueIn: 4 },
-        { kind: "ACTION_ITEM", content: "균등 배분으로 세팅하고 테스트를 시작한다", at: a("start"), who: "A", dueIn: 6 },
-        { kind: "QUESTION", content: "후기가 이기면 두 번째 테스트는 사진 유무로 할지", at: a("budget-inside") },
+        { kind: "DECISION", content: "The first test changes only whether there's a review", at: a("one-variable") },
+        { kind: "DECISION", content: "Split impressions evenly and run for at least two weeks", at: a("even-split") },
+        { kind: "DECISION", content: "Conversion rate is the primary metric, at a 95% confidence level", at: a("metric") },
+        { kind: "DECISION", content: "If there's no difference, go with the no-review version, which is easier to produce", at: a("tie-rule") },
+        { kind: "ACTION_ITEM", content: "Create creatives with and without a review", at: a("start"), who: "B", dueIn: 4 },
+        { kind: "ACTION_ITEM", content: "Set up an even split and start the test", at: a("start"), who: "A", dueIn: 6 },
+        { kind: "QUESTION", content: "If the review wins, should the second test compare photo vs. no photo?", at: a("budget-inside") },
       ],
       sentences: [
-        { text: "변수를 하나로 줄이고 2주간 균등 배분으로 돌리기로 했다.", items: [0, 1] },
-        { text: "전환율을 1차 지표로 보고 차이가 없으면 단순한 쪽을 택한다.", items: [2, 3] },
+        { text: "We cut it to one variable and will run an even split for two weeks.", items: [0, 1] },
+        { text: "Conversion rate is the primary metric, and a tie goes to the simpler version.", items: [2, 3] },
       ],
     },
   ],

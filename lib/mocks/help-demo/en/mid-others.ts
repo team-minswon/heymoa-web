@@ -3,60 +3,60 @@ import type { MidMeeting } from "@/lib/mocks/help-demo/en/mid-campaign";
 
 /** 출시 일정 점검. 화자 A 오세라, B 한지호, C 최민재. */
 const launchScript = parseScript(`
-A 출시까지 3주 남았어요. 오늘은 남은 일을 날짜 기준으로 점검하고 늦어지는 게 있는지 확인할게요.
-A 지호님, 개발 쪽부터 말씀해 주세요.
-B 사전 신청 페이지는 80% 정도 됐고, 알림 메일 발송 기능이 남았어요. 다음 주 수요일에 스테이징에 올릴 수 있어요.
-A 메일 발송은 템플릿이 확정돼야 하잖아요. 그건 다른 회의에서 보고 있으니 이번 주 안에 정해질 거예요.
-C 템플릿 시안은 제가 내일까지 드릴 수 있어요. 문구만 확정되면 반영 하루예요.
-B 그럼 문구 확정이 금요일이면 월요일에 반영하고 수요일 스테이징은 맞출 수 있어요.
-A 좋아요. 그다음 QA는요?
-B QA는 스테이징 올라간 뒤 이틀이에요. 그러니까 다음 주 금요일에 끝낼 수 있어요. @qa
-A 출시 주간이 월요일 시작이잖아요. 금요일 QA 끝이면 주말 버퍼가 있으니까 괜찮아요.
-C 디자인 쪽은 제품 상세 이미지가 남았는데 촬영본이 아직 반 정도만 와서요.
-A 촬영본 일정은 어떻게 돼요?
-C 업체에서 이번 주 목요일에 나머지 절반을 보내겠다고 했어요. 보정에 이틀 걸려요.
-A 그럼 상세 이미지는 다음 주 화요일이면 끝나네요. 개발 반영은 그다음 날이고요.
-B 이미지 반영은 반나절이면 돼요. 크게 문제없어요.
-A 가장 위험한 게 뭐라고 보세요?
-B 저는 결제 연동이 제일 걱정이에요. 사전 구매 기능을 넣기로 했는데 결제 쪽 심사가 아직 안 끝났어요. @payment-risk
-A 심사는 언제 끝나는데요?
-B 담당자가 영업일 5일이라고 했는데 접수한 지 벌써 4일 됐어요. 이번 주 안에 답이 와야 해요.
-A 만약 늦어지면 어떻게 하죠?
-B 사전 구매는 빼고 사전 신청만 열어도 출시는 할 수 있어요. 구매는 출시일에 열고요.
-A 그럼 심사가 금요일까지 안 오면 사전 구매는 포기하는 걸로 정해 둘게요. @fallback
-C 사전 구매를 포기하면 마케팅 문구도 바꿔야 해요. 미리 대비해 둘게요.
-A 고마워요. 마케팅 쪽 일정은 다음 회의에서 따로 보죠.
-A 오늘 결정한 건 두 가지예요. QA는 다음 주 금요일까지, 결제 심사는 금요일까지 확인해서 안 오면 사전 구매는 뺀다. @decision-date
-B 네, 맞아요.
-A 그리고 출시일은 5월 14일로 그대로 가는 걸로 하죠. @launch-date
-C 알겠습니다.
-A 지호님은 결제 심사 담당자한테 오늘 다시 연락해 주세요.
-B 네, 오늘 오후에 전화해 볼게요.
-A 민재님은 템플릿 시안이랑 상세 이미지 보정 일정 챙겨 주세요.
-C 네.
+A Three weeks to launch. Today let's go through what's left by date and see if anything's slipping.
+A Jake, can you start with dev?
+B The waitlist page is about 80% done. Sending the reminder emails is what's left. We can put it on staging next Wednesday.
+A Email sending needs the template locked first. That's being handled in another meeting, so it should be settled this week.
+C I can get you the template draft by tomorrow. Once the copy's final, it takes a day to put in.
+B So if the copy is final Friday, it goes in Monday and we still hit staging Wednesday.
+A Great. And QA after that?
+B QA takes two days after staging. So we can wrap it up next Friday. @qa
+A Launch week starts on a Monday. If QA's done Friday, we have the weekend as a buffer, so we're fine.
+C On design, the product detail images are left, but only about half the photos have come in.
+A What's the timeline on the photos?
+C The studio said they'll send the other half this Thursday. Retouching takes two days.
+A So the detail images are done next Tuesday, and dev puts them in the day after.
+B Adding images takes half a day. Not a big deal.
+A What do you see as the biggest risk?
+B Checkout integration worries me most. We decided to add pre-orders, but the payment provider hasn't finished reviewing us. @payment-risk
+A When does the review finish?
+B Our contact said five business days, and it's already been four since we applied. We should hear back this week.
+A What if it runs late?
+B We can still launch with just the waitlist and no pre-orders. Purchases would open on launch day.
+A Then let's set it now: if the review isn't back by Friday, we drop pre-orders. @fallback
+C If we drop pre-orders, the marketing copy has to change. I'll get that ready just in case.
+A Thanks. Let's cover the marketing timeline separately next meeting.
+A So we decided two things today. QA wraps by next Friday, and if the payment review isn't back by Friday, pre-orders come out. @decision-date
+B Yep, that's right.
+A And launch day stays May 14. @launch-date
+C Got it.
+A Jake, please follow up with the payment review contact today.
+B Will do. I'll call this afternoon.
+A Marcus, please keep track of the template draft and the retouching schedule for the detail images.
+C Sure.
 `);
 const l = anchorsOf(launchScript);
 
 export const LAUNCH_MEETING: MidMeeting = {
   script: launchScript,
-  headline: "출시일 5월 14일은 유지하고 결제 심사 결과에 따라 사전 구매를 정한다",
-  lead: [{ text: "QA는 다음 주 금요일까지 끝낸다. 결제 심사가 금요일까지 안 오면 사전 구매는 빼고 신청만 연다.", topics: [1] }],
+  headline: "Launch stays on May 14, and pre-orders depend on the payment review",
+  lead: [{ text: "QA wraps by next Friday. If the payment review isn't back by Friday, we skip pre-orders and open only the waitlist.", topics: [1] }],
   topics: [
     {
-      title: "출시 일정과 위험",
+      title: "Launch timeline and risks",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "출시일은 5월 14일로 유지한다", at: l("launch-date") },
-        { kind: "DECISION", content: "결제 심사가 금요일까지 안 오면 사전 구매는 빼고 신청만 연다", at: l("fallback") },
-        { kind: "DECISION", content: "QA는 다음 주 금요일까지 끝낸다", at: l("qa") },
-        { kind: "ACTION_ITEM", content: "결제 심사 담당자에게 오늘 다시 연락한다", at: l("payment-risk"), who: "B", dueIn: 0 },
-        { kind: "ACTION_ITEM", content: "알림 메일 템플릿 시안을 전달한다", at: l("qa"), who: "C", dueIn: 1 },
-        { kind: "ACTION_ITEM", content: "사전 구매를 뺄 경우의 마케팅 문구를 준비한다", at: l("fallback"), who: "C", dueIn: 5 },
-        { kind: "ISSUE", content: "결제 연동 심사가 지연되면 사전 구매 기능을 못 연다", at: l("payment-risk") },
+        { kind: "DECISION", content: "Keep launch day on May 14", at: l("launch-date") },
+        { kind: "DECISION", content: "If the payment review isn't back by Friday, skip pre-orders and open only the waitlist", at: l("fallback") },
+        { kind: "DECISION", content: "Finish QA by next Friday", at: l("qa") },
+        { kind: "ACTION_ITEM", content: "Follow up with the payment review contact today", at: l("payment-risk"), who: "B", dueIn: 0 },
+        { kind: "ACTION_ITEM", content: "Send the reminder email template draft", at: l("qa"), who: "C", dueIn: 1 },
+        { kind: "ACTION_ITEM", content: "Prepare marketing copy for launching without pre-orders", at: l("fallback"), who: "C", dueIn: 5 },
+        { kind: "ISSUE", content: "If the payment review is delayed, pre-orders can't open", at: l("payment-risk") },
       ],
       sentences: [
-        { text: "출시일은 유지하고 QA는 다음 주 금요일에 끝낸다.", items: [0, 2] },
-        { text: "결제 심사가 늦어지면 사전 구매는 포기하고 신청만 연다.", items: [1, 6] },
+        { text: "Launch day holds, and QA wraps next Friday.", items: [0, 2] },
+        { text: "If the payment review runs late, we skip pre-orders and open only the waitlist.", items: [1, 6] },
       ],
     },
   ],
@@ -64,61 +64,61 @@ export const LAUNCH_MEETING: MidMeeting = {
 
 /** 사전 신청 안내 메일 검토. 화자 A 오세라, B 정유나, C 김서윤. */
 const mailScript = parseScript(`
-A 사전 신청 안내 메일 초안을 같이 볼게요. 유나님이 쓰신 거죠?
-B 네, 두 가지 버전으로 써 봤어요. 하나는 짧게 혜택만, 하나는 제품 설명이 들어간 길이 있는 버전이에요.
-A 짧은 버전부터 읽어 볼게요. 제목이 출시 알림 신청해 주셔서 감사합니다네요.
-B 네, 그런데 제목이 너무 딱딱한 것 같아서 바꿀까 고민했어요.
-C 저도 제목이 열리지 않을 것 같아요. 신청 확인 메일은 열어 보긴 하는데, 다음에 오는 소식 메일은 제목이 중요해요.
-A 이 메일은 신청 직후에 가는 확인 메일이죠. 거기서는 제목이 크게 중요하진 않고 내용에서 다음에 뭘 받는지를 알려주는 게 중요해요.
-B 맞아요. 그래서 본문에 출시 3일 전에 소식을 보내 드린다고 넣었어요. @notice-date
-A 그게 좋네요. 그럼 출시일 3일 전과 당일, 두 번 보낸다고 적죠. @two-mails
-C 두 번만 보낸다고 명시하면 신뢰가 생겨요. 스팸처럼 느껴지지 않고요.
-B 그 문구는 넣을게요. 수신 거부 링크도 맨 아래에 들어가고요.
-A 길이 있는 버전에는 성분 설명이 들어갔네요. 이건 확인 메일에는 너무 많아요.
-B 저도 그렇게 생각해요. 확인 메일은 짧은 버전으로 가고, 긴 버전은 출시 3일 전 메일로 쓰면 어때요?
-A 좋아요. 짧은 버전은 확인용, 긴 버전은 출시 직전용으로 나누죠. @split-use
-C 긴 버전의 첫 문장이 조금 길어요. 한 문장이 70자가 넘어가면 모바일에서 읽기 힘들어요.
-B 두 문장으로 나눌게요.
-A 버튼 문구는 지금 자세히 보기로 되어 있는데, 출시 3일 전 메일이라면 지금 만나보기가 더 맞겠네요.
-C 저도 지금 만나보기가 좋아요. 클릭하면 상세 페이지로 가니까요.
-A 그럼 그걸로 바꾸죠. @button
-B 발송 시각은 언제가 좋을까요? 오전 아홉 시요, 점심 직전이요?
-C 이전 이메일 데이터를 보면 오전 열 시 반 근처에서 열람률이 제일 높았어요.
-A 그럼 오전 열 시 반으로 하죠. @send-time
-B 알겠습니다. 발송 도구에 예약해 둘게요.
-A 마지막으로 보낼 대상은 사전 신청자 전체죠? 중복 신청은 어떻게 처리해요?
-B 같은 이메일로 여러 번 신청하면 한 번만 가도록 되어 있어요.
-C 수신 거부 비율도 보고 싶어요. 메일을 두 번 보내는 게 부담이 되는지 확인하려고요.
-B 발송 도구에서 거부 수는 나와요. 출시 후 일주일 뒤에 한번 뽑아 볼게요.
-A 좋아요. 거부율이 1%를 넘으면 빈도를 다시 보죠.
-C 내부 발송은 어떻게 해요? 실제로 보내기 전에 우리끼리 먼저 받아 보고 싶어요.
-B 내부 주소 다섯 개로 먼저 보내 볼게요. 모바일에서 어떻게 보이는지도 확인하고요.
-A 모바일 확인이 제일 중요해요. 이미지가 안 뜨는 환경에서도 읽히는지 봐 주세요.
-B 이미지 없이 보이는 버전도 확인하겠습니다.
-A 좋습니다. 그럼 수정본은 내일까지 공유해 주세요.
-B 네, 내일 오후까지 보내드릴게요.
+A Let's go over the waitlist email drafts together. Grace, you wrote these?
+B Yes, I wrote two versions. One's short and just covers the perks. The other's longer and includes a product description.
+A Let me read the short one first. The subject line is "Thanks for signing up for launch updates."
+B Yeah, but it felt kind of stiff, so I was thinking of changing it.
+C I don't think people will open it either. They'll open a confirmation email, but for the updates after that, the subject line matters.
+A This one's the confirmation that goes out right after sign-up. The subject isn't a big deal there. What matters is that the body tells them what they'll get next.
+B Right. That's why the body says we'll send an update three days before launch. @notice-date
+A Good. Then let's say we'll email twice: three days before launch and on launch day. @two-mails
+C Saying it's only two emails builds trust. It won't feel like spam.
+B I'll add that line. The unsubscribe link goes at the very bottom too.
+A The longer version has an ingredients section. That's too much for a confirmation email.
+B I agree. What if we use the short one for confirmation and the long one for the email three days before launch?
+A Let's do it. Short version for confirmation, long version right before launch. @split-use
+C The first sentence of the long version is a bit long. Once a sentence goes past 25 words, it's hard to read on mobile.
+B I'll split it into two sentences.
+A The button says "Learn more" right now, but for the email three days before launch, "See it now" fits better.
+C I like "See it now" too. Clicking it goes to the product page.
+A Then let's switch to that. @button
+B When should it go out? 9 a.m., or right before lunch?
+C Our past email data shows open rates peak around 10:30 a.m.
+A Then 10:30 a.m. it is. @send-time
+B Got it. I'll schedule it in the email tool.
+A Last thing, the audience is everyone on the waitlist, right? What about duplicate sign-ups?
+B If someone signs up more than once with the same email, they only get one.
+C I'd like to see the unsubscribe rate too. I want to know if two emails is too many.
+B The email tool shows unsubscribes. I'll pull the numbers a week after launch.
+A Good. If unsubscribes go over 1%, we'll revisit the frequency.
+C What about an internal send? I'd like us to get it ourselves before it goes out for real.
+B I'll send it to five internal addresses first. And check how it looks on mobile.
+A Mobile is the most important part. Please check that it still reads well when images don't load.
+B I'll check the no-image version too.
+A Great. Please share the revised drafts by tomorrow.
+B Will do. I'll send them by tomorrow afternoon.
 `);
 const m = anchorsOf(mailScript);
 
 export const MAIL_MEETING: MidMeeting = {
   script: mailScript,
-  headline: "안내 메일은 신청 직후 확인용과 출시 3일 전 소개용으로 나눠 보낸다",
-  lead: [{ text: "확인 메일은 짧게, 출시 3일 전 메일은 길게 쓴다. 발송은 오전 열 시 반으로 예약한다.", topics: [1] }],
+  headline: "Waitlist emails split into a sign-up confirmation and a launch preview three days out",
+  lead: [{ text: "The confirmation stays short and the three-days-out email goes long. Sends are scheduled for 10:30 a.m.", topics: [1] }],
   topics: [
     {
-      title: "안내 메일 구성",
+      title: "Waitlist email structure",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "확인 메일은 짧은 버전, 출시 3일 전 메일은 긴 버전으로 나눠 쓴다", at: m("split-use") },
-        { kind: "DECISION", content: "안내는 출시 3일 전과 당일, 두 번만 보낸다고 본문에 적는다", at: m("two-mails") },
-        { kind: "DECISION", content: "버튼 문구는 「지금 만나보기」로 바꾼다", at: m("button") },
-        { kind: "DECISION", content: "발송 시각은 오전 열 시 반으로 한다", at: m("send-time") },
-        { kind: "ACTION_ITEM", content: "수정한 메일 두 버전을 공유한다", at: m("notice-date"), who: "B", dueIn: 1 },
-        { kind: "ACTION_ITEM", content: "긴 버전의 첫 문장을 두 문장으로 나눈다", at: m("split-use"), who: "B", dueIn: 1 },
+        { kind: "DECISION", content: "Use the short version for confirmation and the long version for the email three days before launch", at: m("split-use") },
+        { kind: "DECISION", content: "State in the body that we'll only email twice: three days before launch and on launch day", at: m("two-mails") },
+        { kind: "DECISION", content: "Change the button copy to \"See it now\"", at: m("button") },
+        { kind: "DECISION", content: "Send at 10:30 a.m.", at: m("send-time") },
+        { kind: "ACTION_ITEM", content: "Share both revised email versions", at: m("notice-date"), who: "B", dueIn: 1 },
+        { kind: "ACTION_ITEM", content: "Split the first sentence of the long version into two", at: m("split-use"), who: "B", dueIn: 1 },
       ],
       sentences: [
-        { text: "메일을 용도별로 나누고 출시 3일 전과 당일 두 번만 보내기로 했다.", items: [0, 1] },
-        { text: "버튼 문구와 발송 시각을 정했다.", items: [2, 3] },
+        { text: "Emails are split by purpose, and we'll only send two: three days before launch and on launch day.", items: [0, 1] },
+        { text: "Button copy and send time are set.", items: [2, 3] },
       ],
     },
   ],
@@ -126,61 +126,61 @@ export const MAIL_MEETING: MidMeeting = {
 
 /** 고객 인터뷰 3차. 화자 A 최민재(진행), B 박도윤, C 김서윤. */
 const int3Script = parseScript(`
-A 3차 인터뷰 내용을 같이 정리할게요. 이번에는 다섯 분을 만났고 모두 30대 직장인이에요.
-B 저는 두 번 참관했는데 공통적으로 나온 게 하나 있어요. 구매 전에 후기를 꼭 찾아보는데, 후기를 믿지는 않는다는 거예요.
-C 믿지 않는데 찾아본다는 게 모순처럼 들리는데 맥락이 있었나요?
-B 광고 같은 후기가 많다고 했어요. 그래서 별점이 낮은 후기를 일부러 먼저 읽는다고요. @low-review
-A 맞아요. 저도 두 분이 같은 얘기를 했어요. 단점이 적힌 후기에 오히려 신뢰를 느낀대요.
-C 그러면 우리 상세 페이지에 단점을 감추지 않고 보여 주는 게 도움이 될 수 있겠네요.
-A 단점을 어떻게 보여 주느냐가 문제죠. 제품이 별로라는 뜻이 되면 안 되니까요.
-B 예를 들어 향이 거의 없어서 심심하게 느끼는 분도 있다 같은 식이면 솔직하면서 부담이 없어요.
-A 그런 문구를 후기 영역에 한두 개 넣어 보죠. @honest-copy
-C 다른 건 뭐가 있었나요?
-A 가격에 대한 반응이 갈렸어요. 두 분은 비싸다고 했고 세 분은 이 정도면 괜찮다고 했어요.
-B 비싸다고 한 분들은 용량을 몰랐어요. 용량 설명을 보고 나서 다시 말하니 괜찮다고 했어요.
-A 그럼 가격만 보여 주지 말고 용량 대비 사용 기간을 같이 알려 주는 게 좋겠네요. 한 통으로 두 달 쓴다는 식으로요. @price-frame
-C 그건 근거가 있어야 하는데, 베타 테스터 사용 기간이 평균 몇 주였죠?
-B 평균 8주였어요. 최소 6주, 최대 11주였고요.
-C 그럼 평균 8주를 근거로 쓰되 개인차가 있다고 덧붙이면 되겠네요.
-A 좋아요. 또 하나, 배송 포장에 대한 이야기가 두 번 나왔어요. 선물하려고 샀는데 포장이 평범해서 아쉬웠다고요.
-B 선물 수요가 따로 있을 수 있다는 건데 이건 우리가 아직 확인 안 한 가설이에요. @gift-question
-C 선물 포장 옵션이 필요한지는 다음 인터뷰에서 물어보죠.
-A 다음 인터뷰 질문에 선물 경험을 추가할게요.
-B 저는 사용 순서 질문이 많았다는 걸 말하고 싶어요. 토너 다음에 바르는지 에센스 다음인지 헷갈린다는 분이 세 명이었어요.
-C 사용 순서는 상세 페이지에 한 장 넣는 걸로 이미 얘기가 있었죠?
-A 네, 그건 이번 인터뷰로 확실히 필요하다는 근거가 생겼어요. @usage-guide
-B 한 가지 더요. 두 분이 후기 사진을 먼저 본다고 했어요. 글보다 사진에서 사용감을 가늠한다고요.
-A 그건 후기 영역에 사진을 넣는 쪽이 낫다는 뜻이네요. 사진 사용 동의는 이미 받고 있죠?
-C 네, 동의서에 사진 항목이 따로 있어요. 일곱 건 중에 사진까지 동의한 건 다섯 건이에요.
-A 다섯 건이면 충분해요. 후기 네 개에 사진을 모두 붙일 수 있겠네요.
-B 사용 기간에 대한 질문도 한 번 나왔어요. 한 통으로 얼마나 쓰는지 궁금해했어요.
-A 그건 아까 말한 평균 8주 정보를 상세 페이지 아래쪽에 넣으면 되겠네요.
-C 그 문구는 법무 검토가 필요하니 같이 올릴게요.
-C 알겠습니다. 요약은 제가 인터뷰 공유 문서에 올릴게요.
-A 감사합니다. 4차 인터뷰는 다음 주에 일정 잡을게요.
+A Let's go through round 3 together. We talked to five people this time, all working professionals in their 30s.
+B I sat in on two, and one thing came up in both. They always look up reviews before buying, but they don't trust them.
+C Looking them up but not trusting them sounds like a contradiction. Was there context?
+B They said a lot of reviews read like ads. So they read the low-star reviews first on purpose. @low-review
+A Yep. Two of mine said the same thing. Reviews that mention downsides actually feel more trustworthy to them.
+C Then it might help to show downsides on our product page instead of hiding them.
+A The question is how. It can't come across as the product being bad.
+B Something like "Some people find it a little plain since it's nearly unscented" is honest without being a turnoff.
+A Let's put one or two lines like that in the reviews section. @honest-copy
+C What else came up?
+A Reactions to price were split. Two said it's expensive, three said it's reasonable.
+B The two who said expensive didn't know the size. After they saw the size info, they said it was fine.
+A So instead of just the price, we should show how long one jar lasts. Something like "one jar lasts two months." @price-frame
+C That needs backing. How many weeks did beta testers use it on average?
+B Eight weeks on average. Six at the shortest, eleven at the longest.
+C Then we use the eight-week average and add that it varies by person.
+A Good. One more thing, packaging came up twice. They bought it as a gift and wished the packaging was nicer.
+B That suggests separate gift demand, but it's a hypothesis we haven't checked yet. @gift-question
+C Let's ask in the next round whether people want a gift wrap option.
+A I'll add a gift question to the next interview guide.
+B I want to flag that lots of people asked about the order of use. Three weren't sure if it goes on after toner or after serum.
+C We already talked about adding a how-to-use section to the product page, right?
+A Yes, and this round gives us clear evidence that we need it. @usage-guide
+B One more. Two people said they look at review photos first. Photos tell them more about the texture than the text does.
+A So we should put photos in the reviews section. We're already getting photo consent, right?
+C Yes, the consent form has a separate photo item. Five of the seven agreed to photos.
+A Five is plenty. We can put a photo on all four reviews.
+B Someone also asked how long it lasts. They wanted to know how long one jar goes.
+A We can put that eight-week average near the bottom of the product page.
+C That line needs a legal review, so I'll send it over with the rest.
+C Got it. I'll post the summary in the shared interview doc.
+A Thanks. I'll schedule round 4 for next week.
 `);
 const i3 = anchorsOf(int3Script);
 
 export const INTERVIEW3_MEETING: MidMeeting = {
   script: int3Script,
-  headline: "인터뷰 3차에서 후기는 단점이 적힌 것을 신뢰한다는 점이 확인됐다",
-  lead: [{ text: "가격은 용량 대비 사용 기간으로 보여 주고, 사용 순서 안내는 확실히 필요하다고 확인했다.", topics: [1] }],
+  headline: "Round 3 confirmed that people trust reviews that mention downsides",
+  lead: [{ text: "Price will be shown with how long one jar lasts, and a how-to-use guide is clearly needed.", topics: [1] }],
   topics: [
     {
-      title: "인터뷰 3차 정리",
+      title: "Round 3 interview recap",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "후기 영역에 솔직한 단점이 담긴 문구를 한두 개 넣는다", at: i3("honest-copy") },
-        { kind: "DECISION", content: "가격은 용량 대비 사용 기간(평균 8주)과 함께 보여 준다", at: i3("price-frame") },
-        { kind: "DECISION", content: "사용 순서 안내를 상세 페이지에 넣는다", at: i3("usage-guide") },
-        { kind: "ACTION_ITEM", content: "인터뷰 요약을 공유 문서에 올린다", at: i3("usage-guide"), who: "C", dueIn: 1 },
-        { kind: "ACTION_ITEM", content: "4차 인터뷰 질문에 선물 경험을 추가한다", at: i3("gift-question"), who: "A", dueIn: 3 },
-        { kind: "ACTION_ITEM", content: "4차 인터뷰 일정을 잡는다", at: i3("gift-question"), who: "A", dueIn: 5 },
-        { kind: "QUESTION", content: "선물 수요가 따로 있는지, 포장 옵션이 필요한지", at: i3("gift-question") },
+        { kind: "DECISION", content: "Add one or two honest downside lines to the reviews section", at: i3("honest-copy") },
+        { kind: "DECISION", content: "Show price together with how long one jar lasts (8 weeks on average)", at: i3("price-frame") },
+        { kind: "DECISION", content: "Add a how-to-use guide to the product page", at: i3("usage-guide") },
+        { kind: "ACTION_ITEM", content: "Post the interview summary to the shared doc", at: i3("usage-guide"), who: "C", dueIn: 1 },
+        { kind: "ACTION_ITEM", content: "Add a gift question to the round 4 interview guide", at: i3("gift-question"), who: "A", dueIn: 3 },
+        { kind: "ACTION_ITEM", content: "Schedule round 4 interviews", at: i3("gift-question"), who: "A", dueIn: 5 },
+        { kind: "QUESTION", content: "Is there separate gift demand, and do we need a gift wrap option?", at: i3("gift-question") },
       ],
       sentences: [
-        { text: "후기는 단점이 보이는 쪽을 신뢰한다는 것을 확인했다.", items: [0] },
-        { text: "가격과 사용 순서를 상세 페이지에서 보완한다.", items: [1, 2] },
+        { text: "People trust reviews that show downsides.", items: [0] },
+        { text: "The product page will do a better job on price and order of use.", items: [1, 2] },
       ],
     },
   ],
@@ -188,60 +188,60 @@ export const INTERVIEW3_MEETING: MidMeeting = {
 
 /** 고객 인터뷰 2차. 화자 A 최민재, B 이하린, C 박도윤. */
 const int2Script = parseScript(`
-A 2차 인터뷰 결과 공유할게요. 이번에는 첫 구매 이후 재구매한 분들을 만났어요. 네 분이에요.
-B 재구매하게 된 계기가 궁금하네요. 어떤 분들이었어요?
-A 세 분은 쓰던 게 떨어져서 다시 샀고, 한 분은 가족에게 권했다가 다시 샀대요.
-C 쓰던 게 떨어져서 다시 산 분들은 같은 제품을 바로 샀나요, 아니면 비교를 했나요?
-A 비교 안 했어요. 쓰던 게 좋아서 이름 검색해서 바로 샀다고 했어요. @repurchase
-C 그럼 재구매 고객은 브랜드 검색으로 들어오는 사람들이겠네요. 검색 광고 브랜드 키워드 성과가 높은 이유가 그거예요.
-B 이건 광고 성과 볼 때 구분해서 봐야 한다는 얘기네요.
-C 맞아요. 지난 회의에서도 그 이야기를 했었어요.
-A 첫 구매 때 뭐가 결정적이었는지도 물어봤는데, 세 분이 지인 추천이라고 했어요. 광고를 보고 산 분은 한 분뿐이에요.
-B 표본이 작긴 하지만 광고보다 입소문 영향이 크다는 거네요.
-A 그래서 추천 이벤트 얘기가 나왔어요. 친구에게 추천하면 둘 다 혜택을 받는 방식이요.
-C 추천 이벤트는 효과가 좋은 대신 관리가 번거로워요. 어뷰징 대비도 필요하고요.
-B 당장 하지는 않더라도 검토 항목에는 올려 두죠. @referral
-A 불만이나 불편했던 점도 있었어요. 두 분이 정기 구독이 없어서 매번 사야 하는 게 번거롭다고 했어요.
-B 정기 구독은 지금 계획에 없죠. 이건 제품 쪽 이야기라 제가 대표님께 전달할게요.
-A 부탁드립니다. 그리고 포장 크기에 대한 이야기도 나왔는데, 파우치형 소용량이 있으면 좋겠다는 의견이 있었어요.
-C 소용량은 샘플이랑 같은 개념이니까 마케팅에서도 쓰기 좋아요. 첫 구매 허들도 낮추고요.
-B 소용량 샘플 제작 비용이 어느 정도인지 알아봐야겠네요.
-C 제가 업체에 견적을 물어볼게요. 이번 주 안에 알아볼 수 있어요. @sample-quote
-A 감사합니다. 마지막으로 인터뷰 참가자 모집은 3차부터 다른 경로로 해 보려고 해요.
-B 어떤 경로요?
-A 기존 구매 고객 메일로 설문을 먼저 돌리고, 응답한 분 중에 연락 가능한 분을 뽑는 방식이에요. @recruit
-B 좋아요. 설문 문항은 몇 개로 하죠?
-A 다섯 개 이내로 하고, 마지막에 인터뷰 참여 의사를 묻는 한 문항을 넣을게요.
-C 재구매 간격은 물어봤어요? 보통 몇 주 만에 다시 사는지요.
-A 대체로 7주에서 9주 사이였어요. 앞서 8주 정도 쓴다는 얘기와 맞아요.
-C 그러면 재구매 안내 메일을 7주쯤에 보내면 타이밍이 맞겠네요.
-B 그건 이메일 쪽 아이디어로 넘기죠. 유나님께 전달해 둘게요.
-A 한 분은 다른 브랜드와 번갈아 쓴다고도 했어요. 우리 제품만 쓰는 건 아니더라고요.
-C 그건 당연한 일이에요. 충성 고객보다 선택받는 횟수를 높이는 관점이 맞겠어요.
-B 좋은 정리네요.
-B 알겠습니다. 그럼 설문 초안 만들면 공유해 주세요.
+A Here's what we heard in round 2. This time we met people who bought again after their first purchase. Four of them.
+B I'm curious what made them buy again. Who were they?
+A Three ran out and bought more. One recommended it to family and then bought again.
+C The ones who ran out, did they buy the same product right away or compare first?
+A No comparing. They liked it, searched the name, and bought it right away. @repurchase
+C So repeat customers come in through brand search. That explains why our branded search keywords perform so well.
+B So we should separate those out when we look at ad performance.
+C Right. We talked about that in the last meeting too.
+A I also asked what tipped the first purchase, and three said a friend recommended it. Only one bought from an ad.
+B Small sample, but word of mouth matters more than ads.
+A That's where the referral idea came from. You refer a friend and you both get a perk.
+C Referral programs work well, but they're a hassle to manage. We'd need abuse protection too.
+B Even if we don't do it now, let's put it on the list to review. @referral
+A There were complaints too. Two said it's a pain to rebuy every time since there's no subscription.
+B A subscription isn't in the plan right now. That's a product call, so I'll pass it to the CEO.
+A Thanks. Packaging size came up too. Some wanted a small pouch size.
+C A small size works like a sample, so it's great for marketing. It lowers the bar for a first purchase too.
+B We should find out what small samples would cost to make.
+C I'll ask the vendor for a quote. I can get it this week. @sample-quote
+A Thanks. Last thing, starting with round 3 I want to recruit participants a different way.
+B How?
+A Send a survey to existing customers first, then pick people who say they're open to being contacted. @recruit
+B Nice. How many questions in the survey?
+A Five or fewer, with one at the end asking if they'd join an interview.
+C Did you ask about repurchase timing? How many weeks before they buy again?
+A Mostly between seven and nine weeks. That lines up with the eight weeks of use we heard earlier.
+C Then a repurchase reminder email around week seven would hit the right timing.
+B Let's hand that idea to email. I'll pass it on to Grace.
+A One person said they switch back and forth with another brand. They don't only use ours.
+C That's normal. We should focus on getting picked more often, not on loyalty.
+B Good way to put it.
+B Got it. Share the survey draft once you have it.
 `);
 const i2 = anchorsOf(int2Script);
 
 export const INTERVIEW2_MEETING: MidMeeting = {
   script: int2Script,
-  headline: "재구매 고객은 이름을 검색해서 바로 사고, 첫 구매는 지인 추천이 컸다",
-  lead: [{ text: "추천 이벤트는 검토 항목으로 올리고, 소용량 샘플 견적을 알아본다. 모집은 구매 고객 설문으로 바꾼다.", topics: [1] }],
+  headline: "Repeat buyers search our name and buy, and first purchases came from friends' recommendations",
+  lead: [{ text: "The referral program goes on the review list, and we'll get a quote for small samples. Recruiting switches to a customer survey.", topics: [1] }],
   topics: [
     {
-      title: "인터뷰 2차 정리",
+      title: "Round 2 interview recap",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "추천 이벤트는 바로 하지 않고 검토 항목에 올린다", at: i2("referral") },
-        { kind: "DECISION", content: "참가자 모집은 구매 고객 설문을 먼저 돌려 뽑는 방식으로 바꾼다", at: i2("recruit") },
-        { kind: "ACTION_ITEM", content: "소용량 샘플 제작 견적을 업체에 문의한다", at: i2("sample-quote"), who: "C", dueIn: 5 },
-        { kind: "ACTION_ITEM", content: "구매 고객 설문 초안을 다섯 문항 이내로 만든다", at: i2("recruit"), who: "A", dueIn: 4 },
-        { kind: "ACTION_ITEM", content: "정기 구독 요청을 대표님께 전달한다", at: i2("referral"), who: "B", dueIn: 2 },
-        { kind: "STATUS_REPORT", content: "재구매 고객은 이름을 검색해 바로 구매했다", at: i2("repurchase") },
+        { kind: "DECISION", content: "Hold off on a referral program and add it to the review list", at: i2("referral") },
+        { kind: "DECISION", content: "Recruit participants by surveying existing customers first", at: i2("recruit") },
+        { kind: "ACTION_ITEM", content: "Ask the vendor for a quote on small samples", at: i2("sample-quote"), who: "C", dueIn: 5 },
+        { kind: "ACTION_ITEM", content: "Draft a customer survey with five questions or fewer", at: i2("recruit"), who: "A", dueIn: 4 },
+        { kind: "ACTION_ITEM", content: "Pass the subscription request to the CEO", at: i2("referral"), who: "B", dueIn: 2 },
+        { kind: "STATUS_REPORT", content: "Repeat customers searched our name and bought right away", at: i2("repurchase") },
       ],
       sentences: [
-        { text: "재구매는 브랜드 검색으로, 첫 구매는 추천으로 이어졌다.", items: [5] },
-        { text: "추천 이벤트는 검토만 하고 모집 방식은 설문으로 바꾼다.", items: [0, 1] },
+        { text: "Repeat purchases came through brand search, and first purchases through recommendations.", items: [5] },
+        { text: "The referral program is on hold for review, and recruiting moves to a survey.", items: [0, 1] },
       ],
     },
   ],
@@ -249,60 +249,60 @@ export const INTERVIEW2_MEETING: MidMeeting = {
 
 /** 주간 운영 점검(지난주). 화자 A 정유나, B 한지호, C 오세라. */
 const weeklyScript = parseScript(`
-A 지난주 운영 지표부터 볼게요. 문의는 273건으로 그 전주보다 8% 줄었어요. @inquiry
-B 첫 응답 시간도 평균 36분으로 줄었어요. 목표 30분에 가까워졌어요.
-C 무엇 때문에 줄었는지 알아요? 분류 규칙을 바꿨던 효과인가요?
-B 분류를 고친 영향도 있고, 자주 묻는 질문을 홈페이지에 올린 영향도 있어요. 사용법 문의가 25% 줄었어요.
-A 두 가지 다 효과가 있었네요. FAQ를 더 늘리면 문의가 더 줄까요?
-C 반복 문의 상위 다섯 개를 FAQ에 넣어 둔 게 이번에 효과가 있었으니, 그다음 다섯 개를 추가하면 좋겠어요. @faq
-B 상위 다섯 개 뽑는 건 제가 할게요. 이번 주 안에 정리해서 드릴게요.
-A 다음은 환불 건이에요. 환불 요청이 31건인데 사유 1위가 단순 변심이에요.
-C 단순 변심은 어쩔 수 없는 부분이고, 포장 훼손이나 오배송은 몇 건이에요?
-A 오배송이 두 건 있었어요. 모두 같은 날 같은 담당자의 작업이었는데 이건 확인이 필요해요.
-C 담당자 개인 문제인지 작업 방식 문제인지 보려면 그날 출고 목록을 봐야 하겠네요.
-A 출고 목록은 제가 물류 쪽에 요청할게요. 담당자를 탓하려는 건 아니고 원인을 보려는 거예요. @misship
-C 그건 명확히 해 주세요. 확인 방식을 바꿀 수 있는지 보는 걸로요.
-B 바코드 확인 단계를 추가하면 오배송을 거의 없앨 수 있어요. 비용은 스캐너 두 대 정도예요.
-C 스캐너 비용은 얼마예요?
-B 한 대에 십이만 원 정도 해요. 두 대면 이십사만 원이에요.
-C 그 정도면 바로 결재 올려도 되겠어요. 오배송 보상 비용 한 건이 더 크니까요. @scanner
-B 그러면 이번 주 안에 구매 요청 올릴게요.
-A 마지막으로 다음 주 휴무 일정이에요. 목요일에 두 분이 휴가인데 응대 공백이 생겨요.
-C 목요일은 제가 오전 근무를 대신 맡을게요. 오후는 유나님이 해 주세요.
-B 휴무 전에 인수인계 메모도 남겨 주세요. 급한 문의가 어떤 건지 알아야 해요.
-A 메모 양식이 없는데 간단히 만들어 볼게요. 처리 중인 건, 대기 중인 건, 주의할 고객 세 칸이요.
-C 주의할 고객은 개인정보라 이름 대신 문의 번호만 적으면 좋겠어요.
-A 맞아요. 번호만 적고 내용은 시스템에서 보게 하죠.
-B 그럼 양식은 제가 만들게요. 이번 주 안에 공유드릴게요. @handover-form
-C 그리고 주말 문의는 월요일에 몰리는데, 월요일 오전에 인력을 하나 더 두는 건 어때요?
-A 월요일 오전 열 시까지가 제일 바쁘니까 그 시간에는 둘이 보는 게 좋겠어요.
-C 제가 월요일 오전은 문의 쪽으로 합류할게요.
-B 환불 처리 현황도 다음 회의 때 숫자로 보여 드릴게요.
-A 고마워요. 둘 다 일정표에 반영해 둘게요.
-A 네, 알겠습니다. 그렇게 일정표에 올려 둘게요.
+A Let's start with last week's ops numbers. We got 273 support tickets, down 8% from the week before. @inquiry
+B Average first response time is down to 36 minutes too. That's getting close to the 30-minute target.
+C Do we know why it dropped? Is that from changing the routing rules?
+B Partly the routing fix, and partly putting the FAQ on the website. How-to questions dropped 25%.
+A So both worked. If we add more to the FAQ, will tickets drop further?
+C Adding the top five repeat questions to the FAQ worked this time, so let's add the next five. @faq
+B I'll pull the top five. I'll have them to you this week.
+A Next is refunds. We had 31 refund requests, and the top reason is change of mind.
+C There's not much we can do about change of mind. How many were damaged packaging or wrong items?
+A Two wrong shipments. Both were the same day, same packer, so we need to look into it.
+C To see if it's a person issue or a process issue, we'd need that day's shipping list.
+A I'll ask logistics for the shipping list. This isn't about blaming anyone, just finding the cause. @misship
+C Please make that clear. We're checking whether we can change how orders get verified.
+B Adding a barcode scan step would nearly eliminate wrong shipments. It'd cost about two scanners.
+C How much is a scanner?
+B About $120 each. So $240 for two.
+C At that price we can submit for approval right away. One wrong-shipment refund costs more than that. @scanner
+B Then I'll put in the purchase request this week.
+A Last, next week's time off. Two people are out Thursday, so we'll have a gap in coverage.
+C I'll cover Thursday morning. Grace, can you take the afternoon?
+B Please leave handoff notes before you're out too. We need to know which tickets are urgent.
+A We don't have a notes template, but I'll make a simple one. Three columns: in progress, waiting, and customers to watch.
+C Customers to watch is personal info, so let's use ticket numbers instead of names.
+A Agreed. Just the numbers, and people can look up details in the system.
+B Then I'll build the template. I'll share it this week. @handover-form
+C Also, weekend tickets pile up on Monday. What if we add one more person Monday morning?
+A Monday until 10 a.m. is the busiest, so two people on it then makes sense.
+C I'll join support on Monday mornings.
+B I'll show refund numbers at the next meeting too.
+A Thanks. I'll add both to the schedule.
+A Okay, sounds good. I'll put that on the schedule.
 `);
 const w = anchorsOf(weeklyScript);
 
 export const WEEKLY_PAST_MEETING: MidMeeting = {
   script: weeklyScript,
-  headline: "문의는 줄었고 오배송 원인 확인과 스캐너 구매를 진행한다",
-  lead: [{ text: "문의 273건에 평균 첫 응답 36분이다. 오배송 두 건은 출고 목록으로 원인을 보고 바코드 스캐너를 구매한다.", topics: [1] }],
+  headline: "Tickets are down, and we're tracing the wrong shipments and buying scanners",
+  lead: [{ text: "273 tickets with a 36-minute average first response. We'll trace the two wrong shipments through the shipping list and buy barcode scanners.", topics: [1] }],
   topics: [
     {
-      title: "지난주 운영 지표",
+      title: "Last week's ops numbers",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "자주 묻는 질문을 다섯 개 더 추가한다", at: w("faq") },
-        { kind: "DECISION", content: "출고 바코드 확인 단계를 추가하고 스캐너 두 대를 구매한다", at: w("scanner") },
-        { kind: "ACTION_ITEM", content: "반복 문의 상위 다섯 개를 뽑아 정리한다", at: w("faq"), who: "B", dueIn: 4 },
-        { kind: "ACTION_ITEM", content: "오배송 두 건의 출고 목록을 물류팀에 요청한다", at: w("misship"), who: "A", dueIn: 2 },
-        { kind: "ACTION_ITEM", content: "스캐너 구매 요청을 올린다", at: w("scanner"), who: "B", dueIn: 5 },
-        { kind: "ACTION_ITEM", content: "문의 인수인계 메모 양식을 만들어 공유한다", at: w("handover-form"), who: "B", dueIn: 4 },
-        { kind: "STATUS_REPORT", content: "지난주 문의는 273건으로 전주보다 8% 줄었다", at: w("inquiry") },
+        { kind: "DECISION", content: "Add five more questions to the FAQ", at: w("faq") },
+        { kind: "DECISION", content: "Add a barcode scan step at shipping and buy two scanners", at: w("scanner") },
+        { kind: "ACTION_ITEM", content: "Pull the top five repeat questions and write them up", at: w("faq"), who: "B", dueIn: 4 },
+        { kind: "ACTION_ITEM", content: "Ask logistics for the shipping list behind the two wrong shipments", at: w("misship"), who: "A", dueIn: 2 },
+        { kind: "ACTION_ITEM", content: "Submit the scanner purchase request", at: w("scanner"), who: "B", dueIn: 5 },
+        { kind: "ACTION_ITEM", content: "Create and share a support handoff notes template", at: w("handover-form"), who: "B", dueIn: 4 },
+        { kind: "STATUS_REPORT", content: "Last week had 273 tickets, down 8% from the week before", at: w("inquiry") },
       ],
       sentences: [
-        { text: "문의가 줄었고 FAQ를 더 늘린다.", items: [6, 0] },
-        { text: "오배송 원인은 출고 목록으로 보고 스캐너를 도입한다.", items: [1, 3] },
+        { text: "Tickets are down, and we're expanding the FAQ.", items: [6, 0] },
+        { text: "We'll trace the wrong shipments through the shipping list and bring in scanners.", items: [1, 3] },
       ],
     },
   ],
@@ -310,62 +310,62 @@ export const WEEKLY_PAST_MEETING: MidMeeting = {
 
 /** 브랜드 리뉴얼 방향 논의. 화자 A 이하린, B 최민재, C 강태오(외부 디자인). */
 const brandScript = parseScript(`
-A 브랜드 리뉴얼 방향부터 정해 볼게요. 지금 로고랑 색을 얼마나 바꿀지가 핵심 질문이에요.
-B 저는 완전히 바꾸는 것보다 지금 것의 장점을 남기고 다듬는 쪽을 추천해요. 지금 브랜드 인지도가 아주 낮진 않으니까요.
-C 외부에서 보면 지금 로고는 글자가 가늘어서 작은 크기에서 잘 안 보여요. 앱 아이콘이나 인스타 프로필에서 특히요.
-A 맞아요. 작은 크기에서 안 보이는 건 저도 불편했어요. 그럼 글자를 굵게 하는 쪽으로요?
-C 굵게 하면서 모서리를 살짝 둥글게 하는 것도 방법이에요. 지금의 부드러운 이미지는 지키고요. @logo-direction
-B 색은요? 지금 주조색이 연한 보라인데 화면에서 대비가 약해요.
-C 같은 계열에서 한 단계 진하게 가는 게 안전해요. 완전히 다른 색으로 가면 기존 고객이 낯설어해요. @color-direction
-A 그럼 로고와 색 모두 기존 이미지를 유지하면서 가독성을 높이는 방향으로 가요.
-B 이 방향이면 작업량도 줄어서 일정을 앞당길 수 있어요.
-A 일정은 어떻게 보세요?
-C 시안 1차는 2주 뒤에 드릴 수 있어요. 로고 두 가지와 색 팔레트 두 가지요. @schedule
-A 좋아요. 시안이 나오면 내부에서 먼저 투표하고 고객 몇 분께도 보여 주죠.
-B 고객 의견은 인터뷰 일정과 겹치니까 마지막 10분에 보여 드리는 식으로 하면 돼요.
-A 그건 인터뷰 담당과 상의해 주세요.
-B 네, 제가 이야기해 볼게요.
-A 가이드 문서는 어떤 범위로 만들까요? 로고 사용법, 색, 글꼴 정도?
-C 보통 거기에 사진 톤과 문구 톤까지 넣어요. 그래야 마케팅할 때 일관돼요.
-B 문구 톤은 제가 정리할 수 있어요. 지금 쓰는 해요체와 합쇼체 기준도 같이요.
-A 그러면 가이드에는 로고, 색, 글꼴, 사진 톤, 문구 톤 다섯 가지를 넣는 걸로 하죠. @guide-scope
-C 알겠습니다. 구성안을 먼저 보내 드릴게요.
-A 비용은 어떻게 돼요? 처음 말씀하신 견적이 있었잖아요.
-C 로고와 가이드를 합쳐서 오백오십만 원이에요. 범위가 지금 얘기한 대로면 그대로 유지할 수 있어요. @budget
-B 기존 로고를 쓰던 자료들은 어떻게 하죠? 명함이나 포장지요.
-C 새 로고가 확정되면 소진 시점까지는 기존 것을 써도 되지만, 신규 제작분부터는 바꾸는 게 좋아요.
-A 포장지 재고가 두 달 치 남아 있어요. 그 뒤부터 새 로고를 적용하죠.
-B 온라인 쪽은 한 번에 바꾸는 편이 낫겠어요. 소셜 프로필이나 앱 아이콘은 같은 날 바꿔야 해요.
-A 맞아요. 전환일을 하루 정해서 한꺼번에 바꾸죠. @switch-day
-C 전환일에 맞춰 안내 문구도 같이 준비할게요.
-B 기존 고객에게 로고가 바뀌었다고 알리는 메일은 어떻게 할까요?
-A 크게 알릴 일은 아니고, 소식 메일 끝에 한 줄만 넣으면 충분해요.
-B 알겠습니다.
-A 알겠습니다. 정식 발주는 시안 확인 후에 하는 걸로 해요.
+A Let's start with the direction for the brand refresh. The key question is how much we change the logo and colors.
+B I'd rather refine what we have and keep its strengths than change everything. Our brand recognition isn't that low.
+C From the outside, the current logo's letters are thin, so it's hard to read at small sizes. Especially app icons and Instagram profiles.
+A Agreed. It bugs me too that you can't read it small. So we make the letters bolder?
+C Bolder, and you could also round the corners slightly. That keeps the soft feel you have now. @logo-direction
+B And color? Our main color is a light purple, and the contrast is weak on screen.
+C The safe move is one shade darker in the same family. A totally different color would feel unfamiliar to existing customers. @color-direction
+A So for both logo and color, we keep the current look and make it easier to read.
+B With this direction there's less work, so we can pull the timeline in.
+A What timeline are you thinking?
+C I can deliver the first drafts in two weeks. Two logo options and two color palettes. @schedule
+A Great. When the drafts come in, we'll vote internally first and show a few customers too.
+B Customer feedback overlaps with the interview schedule, so we could show them in the last 10 minutes.
+A Please work that out with whoever's running the interviews.
+B Sure, I'll talk to them.
+A How much should the guide cover? Logo usage, color, fonts?
+C Usually you'd add photo style and voice too. That keeps marketing consistent.
+B I can put together the voice section. Including our rules for casual versus formal tone.
+A Then the guide covers five things: logo, color, fonts, photo style, and voice. @guide-scope
+C Got it. I'll send an outline first.
+A What about cost? You gave us a quote at the start.
+C Logo and guide together come to $5,500. If the scope stays as we just discussed, that holds. @budget
+B What about materials with the old logo? Business cards, packaging?
+C Once the new logo is final, you can use up the old stock, but anything newly printed should switch.
+A We have two months of packaging left. We'll switch to the new logo after that.
+B Online, it's better to switch all at once. Social profiles and the app icon should change on the same day.
+A Right. Let's pick one switch day and change everything together. @switch-day
+C I'll have announcement copy ready for the switch day.
+B How do we tell existing customers the logo changed?
+A It's not a big announcement. One line at the end of the newsletter is enough.
+B Got it.
+A Okay. We'll place the formal order after we review the drafts.
 `);
 const b = anchorsOf(brandScript);
 
 export const BRAND_MEETING: MidMeeting = {
   script: brandScript,
-  headline: "로고와 색은 기존 이미지를 지키며 가독성을 높이는 방향으로 간다",
-  lead: [{ text: "글자를 굵게 하고 모서리를 둥글게, 주조색은 한 단계 진하게 한다. 시안 1차는 2주 뒤에 받는다.", topics: [1] }],
+  headline: "Logo and color keep the current look and get easier to read",
+  lead: [{ text: "Bolder letters with rounded corners, and the main color goes one shade darker. First drafts arrive in two weeks.", topics: [1] }],
   topics: [
     {
-      title: "리뉴얼 방향",
+      title: "Refresh direction",
       hasAgenda: false,
       items: [
-        { kind: "DECISION", content: "로고는 글자를 굵게 하고 모서리를 둥글게 해 작은 크기에서도 보이게 한다", at: b("logo-direction") },
-        { kind: "DECISION", content: "주조색은 같은 계열에서 한 단계 진하게 한다", at: b("color-direction") },
-        { kind: "DECISION", content: "가이드는 로고·색·글꼴·사진 톤·문구 톤 다섯 가지로 구성한다", at: b("guide-scope") },
-        { kind: "DECISION", content: "온라인 로고는 전환일을 정해 같은 날 한꺼번에 바꾼다", at: b("switch-day") },
-        { kind: "ACTION_ITEM", content: "로고 두 가지와 색 팔레트 두 가지 시안 1차를 전달한다", at: b("schedule"), who: "C", dueIn: 14 },
-        { kind: "ACTION_ITEM", content: "문구 톤 기준을 정리한다", at: b("guide-scope"), who: "B", dueIn: 10 },
-        { kind: "ACTION_ITEM", content: "시안을 인터뷰 마지막에 보여 드릴 수 있는지 인터뷰 담당과 상의한다", at: b("schedule"), who: "B", dueIn: 7 },
-        { kind: "STATUS_REPORT", content: "로고와 가이드 합쳐 견적은 550만 원이다", at: b("budget") },
+        { kind: "DECISION", content: "Make the logo letters bolder with rounded corners so it reads at small sizes", at: b("logo-direction") },
+        { kind: "DECISION", content: "Take the main color one shade darker in the same family", at: b("color-direction") },
+        { kind: "DECISION", content: "Build the guide around five parts: logo, color, fonts, photo style, and voice", at: b("guide-scope") },
+        { kind: "DECISION", content: "Switch the logo everywhere online on one set day", at: b("switch-day") },
+        { kind: "ACTION_ITEM", content: "Deliver first drafts: two logo options and two color palettes", at: b("schedule"), who: "C", dueIn: 14 },
+        { kind: "ACTION_ITEM", content: "Write up the voice guidelines", at: b("guide-scope"), who: "B", dueIn: 10 },
+        { kind: "ACTION_ITEM", content: "Check with the interview lead about showing drafts at the end of interviews", at: b("schedule"), who: "B", dueIn: 7 },
+        { kind: "STATUS_REPORT", content: "The quote for logo and guide together is $5,500", at: b("budget") },
       ],
       sentences: [
-        { text: "기존 이미지를 유지하면서 가독성을 높이는 방향으로 정했다.", items: [0, 1] },
-        { text: "시안은 2주 뒤, 발주는 시안을 확인한 뒤에 한다.", items: [4, 7] },
+        { text: "We'll keep the current look while making it easier to read.", items: [0, 1] },
+        { text: "Drafts come in two weeks, and the order goes in after we review them.", items: [4, 7] },
       ],
     },
   ],
