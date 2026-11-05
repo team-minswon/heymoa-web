@@ -170,7 +170,7 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(
       within(dialog).getByText("「지원의 Codex」 연결을 끊을까요?")
     ).toBeTruthy();
-    expect(dialog.textContent).toContain("한지원 님이 맡긴 연결입니다.");
+    expect(dialog.textContent).toContain("한지원 님이 허용한 연결입니다.");
     fireEvent.click(within(dialog).getByRole("button", { name: "끊기" }));
 
     await waitFor(() => expect(screen.queryByText("지원의 Codex")).toBeNull());

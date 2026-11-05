@@ -299,7 +299,7 @@
     "adminOnly": "MCP 연결은 관리자만 바꿀 수 있습니다.",
     "allow": {
       "title": "MCP 연결 허용",
-      "on": "팀원이 이 워크스페이스를 Claude나 ChatGPT 같은 AI 앱에 맡길 수 있습니다.",
+      "on": "팀원이 이 워크스페이스를 Claude나 ChatGPT 같은 AI 앱에 연결할 수 있습니다.",
       "off": "꺼져 있어 새 연결을 만들 수 없습니다.",
       "onBadge": "켜짐",
       "offBadge": "꺼짐"
@@ -322,13 +322,13 @@
       "disconnect": "끊기",
       "dialog": {
         "title": "「{name}」 연결을 끊을까요?",
-        "description": "{user} 님이 맡긴 연결입니다. 이 연결을 쓰는 에이전트는 다음 요청부터 막힙니다. 되돌릴 수 없고, 다시 쓰려면 맡긴 사람이 새로 연결해야 합니다."
+        "description": "{user} 님이 허용한 연결입니다. 이 연결을 쓰는 에이전트는 다음 요청부터 막힙니다. 되돌릴 수 없고, 다시 쓰려면 허용한 사람이 새로 연결해야 합니다."
       }
     }
   },
   "agentConnections": {
     "title": "내 MCP 연결",
-    "description": "Claude나 ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와 프로젝트를 읽을 수 있게 연결합니다.",
+    "description": "Claude나 ChatGPT 같은 AI 앱이 내가 고른 워크스페이스의 회의와 프로젝트를 읽을 수 있게 연결합니다.",
     "newConnection": "새 연결",
     "taskChanges": "할 일 변경 허용",
     "status": {
