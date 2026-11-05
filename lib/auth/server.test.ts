@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const mockCookies = vi.hoisted(() => ({ getAll: vi.fn() }));
-vi.mock("next/headers", () => ({ cookies: async () => mockCookies }));
+const mockCookies = vi.hoisted(() => ({
+  getAll: vi.fn(),
+  get: vi.fn(() => undefined),
+}));
+const mockHeaders = vi.hoisted(() => ({ get: vi.fn(() => null) }));
+vi.mock("next/headers", () => ({
+  cookies: async () => mockCookies,
+  headers: async () => mockHeaders,
+}));
 beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "https://api.heymoa.test");
@@ -45,9 +52,30 @@ it("전달된 쿠키로 세션을 읽고 유효 사용자만 hydration에 제공
     expect.objectContaining({
       method: "GET",
       cache: "no-store",
-      headers: { Cookie: "access_token=fixture" },
+      // 계정을 알기 전이라 쿠키 → 브라우저 언어 → ko 다. 이 시험은 둘 다 없다.
+      headers: { Cookie: "access_token=fixture", "Accept-Language": "ko" },
     })
   );
+});
+
+it("SSR 세션 조회는 언어 쿠키를 Accept-Language 로 싣는다", async () => {
+  mockCookies.getAll.mockReturnValue([
+    { name: "access_token", value: "fixture" },
+  ]);
+  mockCookies.get.mockImplementation(((name: string) =>
+    name === "heymoa-lang" ? { name, value: "en" } : undefined) as never);
+  vi.mocked(fetch).mockResolvedValue(
+    Response.json({ success: true, data: { state: "anonymous" }, error: null })
+  );
+  const { getCurrentUserForSsr } = await import("./server");
+  await getCurrentUserForSsr();
+  expect(fetch).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.objectContaining({
+      headers: expect.objectContaining({ "Accept-Language": "en" }),
+    })
+  );
+  mockCookies.get.mockImplementation(() => undefined);
 });
 
 it("SSR 갱신 후보는 POST 없이 클라이언트 탐침으로 넘긴다", async () => {

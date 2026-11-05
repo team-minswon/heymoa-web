@@ -8,6 +8,7 @@ import {
   openSessionGateQuietly,
   SessionExpiredError,
 } from "@/lib/auth/session-gate";
+import { acceptLanguageHeader } from "@/lib/i18n/document-locale";
 
 class AuthApiError extends Error {
   code?: string;
@@ -54,6 +55,7 @@ async function postAuth<T>(
   const response = await fetch(buildApiUrl(path), {
     method: "POST",
     credentials: "include",
+    headers: acceptLanguageHeader(),
     signal,
   });
 
@@ -70,6 +72,7 @@ async function fetchMe(hasRetried = false): Promise<AuthUser | null> {
   const response = await fetch(url, {
     method: "GET",
     credentials: "include",
+    headers: acceptLanguageHeader(),
     cache: "no-store",
   });
 

@@ -22,6 +22,8 @@ import { clearUserFlags } from "@/lib/storage/user-flags";
 import { getMe, logout as requestLogout } from "@/lib/auth/api";
 import { isSessionExpired } from "@/lib/auth/session-gate";
 import type { AuthUser } from "@/lib/auth/types";
+import { documentLocale } from "@/lib/i18n/document-locale";
+import { DEFAULT_LOCALE, localePath } from "@/lib/i18n/locales";
 
 type AuthStatus = "checking" | "authenticated" | "anonymous";
 
@@ -37,6 +39,14 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+/**
+ * 인증된 앱을 떠날 때 가는 랜딩 홈. **지금 화면 언어의 홈**이다(`/` 또는 `/en`, APP-1285). 언어 쿠키는 지우지 않으므로
+ * 다음 방문에도 같은 언어로 뜬다.
+ */
+function landingHome() {
+  return localePath(documentLocale() ?? DEFAULT_LOCALE, "/");
+}
 
 export function AuthProvider({
   children,
@@ -116,7 +126,7 @@ export function AuthProvider({
     try {
       if (beforeLogout) await beforeLogout();
       await requestLogout();
-      leaveAuthenticatedApp("/");
+      leaveAuthenticatedApp(landingHome());
     } catch {
       logoutStarted.current = false;
       setIsLoggingOut(false);
@@ -146,7 +156,7 @@ export function AuthProvider({
       void requestLogout().catch(() => undefined);
 
       // 사유는 쿼리로 넘긴다 — 토스트는 새 문서와 함께 사라진다.
-      leaveAuthenticatedApp(`/?${SESSION_EXPIRED_PARAM}`);
+      leaveAuthenticatedApp(`${landingHome()}?${SESSION_EXPIRED_PARAM}`);
     };
 
     window.addEventListener(AUTH_STATE_CHANGED_EVENT, handleAuthStateChanged);

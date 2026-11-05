@@ -16,11 +16,18 @@ const MOCK_AVATAR =
     '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#d8cfc0"/><circle cx="32" cy="25" r="11" fill="#8a7f6d"/><path d="M8 64c0-13 11-21 24-21s24 8 24 21z" fill="#8a7f6d"/></svg>'
   );
 
+/**
+ * 목 계정의 언어를 서버(SSR 목 사용자)와 브라우저(MSW)가 같이 읽는 쿠키. MSW 상태는 새로고침마다 시드로 돌아가므로,
+ * 설정에서 고른 언어가 새로고침 뒤에도 남으려면 둘 밖에 있어야 한다. 목 모드에서만 쓴다.
+ */
+export const MOCK_ACCOUNT_LANGUAGE_COOKIE = "heymoa-mock-account-lang";
+
 export const MOCK_USER: AuthUser = {
   userId: "user-12345",
   name: "테스트 유저",
   email: "test@heymoa.com",
   image: MOCK_AVATAR,
+  language: null,
 };
 
 /** 목 서버가 정한 지금 문서 버전. 계약의 `consents[].currentVersion` 이다. */

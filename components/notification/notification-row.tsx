@@ -338,6 +338,10 @@ function describeInquiryAnswered(
 }
 
 /** 날짜로 묶은 목록은 시각만, 아니면 날짜 머리를 앞에 붙인다. */
-export function notificationTime(createdAt: string) {
-  return formatAppDate(createdAt, { hour: "numeric", minute: "2-digit" });
+export function notificationTime(createdAt: string, locale?: string) {
+  return formatAppDate(
+    createdAt,
+    { hour: "numeric", minute: "2-digit" },
+    locale
+  );
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { formatAppDate, formatPromiseTime } from "@/lib/format/date";
+import {
+  formatAppDate,
+  formatPromiseTime,
+  getAppDateKey,
+} from "@/lib/format/date";
 
 describe("formatAppDate", () => {
   // Node 22·24 의 ICU 78 은 ko-KR 오전·오후를 「AM」「PM」으로 내고 브라우저는 「오전」「오후」를
@@ -29,5 +33,30 @@ describe("formatPromiseTime", () => {
     expect(formatPromiseTime("2026-10-26T01:00:00Z")).toBe(
       "10월 26일(월) 오전 10시"
     );
+  });
+});
+
+describe("영어 화면의 날짜 (APP-1285)", () => {
+  // 서울 2026-10-31 23:30 = UTC 14:30. 보는 사람이 어디 있든 서울 날짜로 그린다.
+  const lateNightSeoul = "2026-10-31T14:30:00Z";
+
+  it("en-US 형식으로 쓰되 날짜 경계는 서울 기준 그대로다", () => {
+    expect(
+      formatAppDate(lateNightSeoul, { month: "long", day: "numeric" }, "en-US")
+    ).toBe("October 31");
+    expect(
+      formatAppDate(
+        lateNightSeoul,
+        { hour: "numeric", minute: "2-digit" },
+        "en-US"
+      )
+    ).toBe("11:30\u202fPM");
+    expect(getAppDateKey(lateNightSeoul)).toBe("2026-10-31");
+  });
+
+  it("한국어 화면은 지금처럼 오전·오후로 쓴다", () => {
+    expect(
+      formatAppDate(lateNightSeoul, { hour: "numeric", minute: "2-digit" })
+    ).toContain("오후");
   });
 });

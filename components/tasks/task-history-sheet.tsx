@@ -42,6 +42,7 @@ import {
 } from "@/lib/assignees/describe";
 import { formatAppDate } from "@/lib/format/date";
 import { TASK_STATUS_LABEL, type TaskEntry } from "@/lib/tasks/task-groups";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 type Revision = ProjectTaskRevisionListResponseDataRevisionsItem;
 
@@ -296,6 +297,7 @@ function HistoryBody({
   conflict: boolean;
   onSave: (patch: TaskPatch) => Promise<boolean>;
 }) {
+  const dateLocale = useDisplayLocale();
   const task = entry;
   const done = task.taskStatus !== "OPEN";
   const StatusIcon = STATUS_ICON[task.taskStatus];
@@ -532,7 +534,7 @@ function HistoryBody({
                         day: "numeric",
                         hour: "numeric",
                         minute: "2-digit",
-                      })}
+                      }, dateLocale)}
                     </span>
                     {/* 가장 최근 변경만 되돌린다 — 그 뒤 사람이 한 변경을 덮지 않는다. 에이전트가 만든 판(1)은 앞 값이 없다 */}
                     {index === 0 &&

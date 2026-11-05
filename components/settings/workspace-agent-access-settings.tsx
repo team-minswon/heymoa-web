@@ -43,6 +43,7 @@ import {
 } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 type Delegation = WorkspaceAgentDelegationsResponseDataDelegationsItem;
 
@@ -311,6 +312,7 @@ function WorkspaceDelegationRow({
   busy: boolean;
   onRevoked: () => Promise<unknown>;
 }) {
+  const dateLocale = useDisplayLocale();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const revoke = useRevokeWorkspaceAgentDelegation();
 
@@ -337,9 +339,10 @@ function WorkspaceDelegationRow({
             {delegation.userName}
           </p>
           <p className="mt-0.5 text-xs text-[var(--el-muted)]">
-            {formatAppDate(delegation.createdAt, DATE)} 연결 · 최근 사용{" "}
+            {formatAppDate(delegation.createdAt, DATE, dateLocale)} 연결 · 최근
+            사용{" "}
             {delegation.lastUsedAt
-              ? formatAppDate(delegation.lastUsedAt, DATE)
+              ? formatAppDate(delegation.lastUsedAt, DATE, dateLocale)
               : "아직 안 씀"}
           </p>
         </div>

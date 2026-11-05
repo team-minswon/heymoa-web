@@ -7,7 +7,15 @@
     "home": "Back to home"
   },
   "language": {
-    "heading": "Language"
+    "heading": "Language",
+    "settings": {
+      "title": "언어 · Language",
+      "description": "Choose the language for HeyMoa.",
+      "options": "Display language",
+      "saving": "Saving",
+      "aiNote": "AI meeting summaries and chat replies use this language for meetings and chats you start from now on. Existing summaries and ongoing chats stay as they are.",
+      "recordingLocked": "You can't change the language while recording. Stop the recording first."
+    }
   },
   "error": {
     "title": "This page couldn't load",

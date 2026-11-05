@@ -53,6 +53,7 @@ import {
 import type { MinutesInclude } from "@/lib/notes/minutes/model";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 /**
  * 보낸 사람이 남기는 말의 상한. 정본은 서버의 공유 메일 도메인 상수(`NoteShareMail.MAX_MESSAGE_LENGTH`)이고
@@ -98,6 +99,7 @@ export function ShareMailDialog({
   preparePdf?: PrepareMinutesPdf;
   version?: string;
 }) {
+  const dateLocale = useDisplayLocale();
   const { user } = useAuth();
   const recipientsId = useId();
   const problemId = useId();
@@ -174,7 +176,11 @@ export function ShareMailDialog({
   const remainingAttendees = attendees.filter(
     (person) => !hasRecipient(recipients, person.email)
   );
-  const day = formatAppDate(meeting.whenIso, { month: "long", day: "numeric" });
+  const day = formatAppDate(
+    meeting.whenIso,
+    { month: "long", day: "numeric" },
+    dateLocale
+  );
 
   const changeRecipients = (next: Recipient[]) => {
     setRecipients(next);
@@ -408,7 +414,7 @@ export function ShareMailDialog({
                   htmlFor={`${recipientsId}-message`}
                   aside={
                     message.length
-                      ? `${message.length} / ${MAX_MESSAGE_LENGTH.toLocaleString("ko-KR")}`
+                      ? `${message.length} / ${MAX_MESSAGE_LENGTH.toLocaleString(dateLocale)}`
                       : undefined
                   }
                 >

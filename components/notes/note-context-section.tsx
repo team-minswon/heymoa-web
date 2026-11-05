@@ -16,6 +16,7 @@ import {
 import type { MeetingPhase } from "@/lib/notes/meeting-state";
 import { invalidateNoteLifecycle } from "@/lib/notes/invalidate";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 export const TOPIC_MAX = 200;
 export const BACKGROUND_MAX = 1000;
@@ -62,6 +63,7 @@ function FieldLabel({
   length?: number;
   max?: number;
 }) {
+  const dateLocale = useDisplayLocale();
   return (
     <div className="flex items-baseline justify-between gap-3">
       <Label htmlFor={htmlFor} className={INFO_LABEL}>
@@ -78,7 +80,7 @@ function FieldLabel({
               : "text-[var(--el-muted-soft)]"
           )}
         >
-          {length.toLocaleString("ko-KR")} / {max.toLocaleString("ko-KR")}
+          {length.toLocaleString(dateLocale)} / {max.toLocaleString(dateLocale)}
         </span>
       ) : null}
     </div>

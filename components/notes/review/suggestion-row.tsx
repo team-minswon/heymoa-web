@@ -31,6 +31,7 @@ import {
 } from "@/lib/assignees/describe";
 import { TASK_STATUS_LABEL } from "@/lib/tasks/task-groups";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 /** 제안 한 줄의 틀. 무엇에 대한 제안인지 · 무엇이 바뀌는지 · 받을지를 한 줄에 둔다. */
 function SuggestionShell({
@@ -102,6 +103,7 @@ export function ReplacementSuggestion({
   onChoose: (next: Choice) => void;
   context?: ReactNode;
 }) {
+  const dateLocale = useDisplayLocale();
   const { target } = replacement;
   // 다른 확정이 먼저 끝낸 결정은 여기서 끝낼 것이 없다. 확정도 그 노드를 건너뛴다.
   const ended = target.endedAt !== null;
@@ -174,7 +176,11 @@ export function ReplacementSuggestion({
       )}
       <span className="text-xs text-[var(--el-muted)]">
         {target.noteTitle ?? "프로젝트 결정"} ·{" "}
-        {formatAppDate(target.approvedAt, { month: "long", day: "numeric" })}{" "}
+        {formatAppDate(
+          target.approvedAt,
+          { month: "long", day: "numeric" },
+          dateLocale
+        )}{" "}
         확정
         {ended ? " · 이미 종료됨" : ""}
       </span>

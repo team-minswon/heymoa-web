@@ -63,6 +63,7 @@ import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 import { HelpLink } from "@/components/heymoa/help-link";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 type Delegation = AgentDelegationsResponseDataDelegationsItem;
 
@@ -591,6 +592,7 @@ function DelegationRow({
   delegation: Delegation;
   onRevoked: () => Promise<unknown>;
 }) {
+  const dateLocale = useDisplayLocale();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const revoke = useRevokeAgentDelegation();
@@ -631,12 +633,13 @@ function DelegationRow({
               ) : null}
             </p>
             <p className="mt-0.5 text-xs text-[var(--el-muted)]">
-              {formatAppDate(delegation.createdAt, DATE)} 연결 · 최근 사용{" "}
+              {formatAppDate(delegation.createdAt, DATE, dateLocale)} 연결 ·
+              최근 사용{" "}
               {delegation.lastUsedAt
-                ? formatAppDate(delegation.lastUsedAt, DATE)
+                ? formatAppDate(delegation.lastUsedAt, DATE, dateLocale)
                 : "없음"}
               {active
-                ? ` · ${formatAppDate(delegation.expiresAt, DATE)}까지 쓰지 않으면 만료`
+                ? ` · ${formatAppDate(delegation.expiresAt, DATE, dateLocale)}까지 쓰지 않으면 만료`
                 : null}
             </p>
             {!active && delegation.revokeReason ? (
@@ -773,6 +776,7 @@ function UsageHistory({
   id: string;
   delegationId: string;
 }) {
+  const dateLocale = useDisplayLocale();
   const query = useInfiniteQuery({
     // 생성 훅의 단건 키와 모양이 달라 꼬리를 붙여 나눈다 — 같은 키를 두 모양이 쓰면 캐시가 섞인다.
     queryKey: [...getGetAgentDelegationUsagesQueryKey(delegationId), "pages"],
@@ -847,7 +851,7 @@ function UsageHistory({
                 className="flex items-center gap-3 py-1 text-xs"
               >
                 <span className="w-28 shrink-0 text-[var(--el-muted)] tabular-nums">
-                  {formatAppDate(usage.occurredAt, DATE_TIME)}
+                  {formatAppDate(usage.occurredAt, DATE_TIME, dateLocale)}
                 </span>
                 <span className="min-w-0 truncate text-[var(--el-ink)]">
                   {TOOL_LABEL[usage.toolName] ?? usage.toolName}

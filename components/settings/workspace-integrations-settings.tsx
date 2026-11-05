@@ -31,6 +31,7 @@ import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { cn } from "@/lib/utils";
 import { desktopAuthBridge } from "@/lib/desktop/auth";
 import { HelpLink } from "@/components/heymoa/help-link";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 type Provider = "LINEAR" | "GITHUB";
 
@@ -261,6 +262,7 @@ function IntegrationCard({
   onConnect: () => void;
   onDisconnect: () => void;
 }) {
+  const dateLocale = useDisplayLocale();
   const provider = integration.provider as Provider;
   // 카드 안의 카드에는 그림자를 주지 않는다 — hairline만. (ELEVATION SPEC)
   //
@@ -302,11 +304,15 @@ function IntegrationCard({
             {integration.connected
               ? `${integration.connectedBy ?? "관리자"} · ${
                   integration.connectedAt
-                    ? formatAppDate(integration.connectedAt, {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
+                    ? formatAppDate(
+                        integration.connectedAt,
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        },
+                        dateLocale
+                      )
                     : "-"
                 }`
               : "챗봇이 이 도구를 쓰려면 연결이 필요합니다."}

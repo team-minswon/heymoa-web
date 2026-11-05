@@ -5,6 +5,7 @@ import {
   openSessionGate,
   SessionExpiredError,
 } from "@/lib/auth/session-gate";
+import { acceptLanguageHeader } from "@/lib/i18n/document-locale";
 
 type ApiFetchOptions = RequestInit & {
   headers?: HeadersInit;
@@ -306,6 +307,7 @@ async function request<T>(
       ...requestOptions,
       credentials: "include",
       headers: {
+        ...acceptLanguageHeader(),
         ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
         ...headers,
       },

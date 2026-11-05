@@ -36,6 +36,7 @@ import type {
 import { formatAppDate } from "@/lib/format/date";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 /**
  * 문의·피드백. 서버가 받아 저장하고(`POST /v1/feedbacks`) 운영자에게 Slack 으로 알린다.
@@ -387,6 +388,7 @@ function MyFeedbacks({
   feedbacks: FeedbackResponseData[];
   focusId: string | null;
 }) {
+  const dateLocale = useDisplayLocale();
   if (feedbacks.length === 0) {
     return (
       <p className="flex h-full items-center justify-center text-sm text-[var(--el-muted)]">
@@ -414,7 +416,7 @@ function MyFeedbacks({
         >
           <div className="flex items-center justify-between gap-2 text-xs text-[var(--el-muted)]">
             <span>
-              {KIND_LABEL[item.kind]} · {formatAppDate(item.createdAt, SENT_AT)}
+              {KIND_LABEL[item.kind]} · {formatAppDate(item.createdAt, SENT_AT, dateLocale)}
             </span>
             <span
               className={cn(
@@ -443,7 +445,7 @@ function MyFeedbacks({
                 </p>
                 {item.answeredAt ? (
                   <p className="mt-1 text-[11px] text-[var(--el-muted-soft)]">
-                    HeyMoa 팀 · {formatAppDate(item.answeredAt, SENT_AT)}
+                    HeyMoa 팀 · {formatAppDate(item.answeredAt, SENT_AT, dateLocale)}
                   </p>
                 ) : null}
               </div>

@@ -13,6 +13,40 @@ import {
   isLandingHome,
 } from "@/lib/routes/app-route";
 
+describe("랜딩 홈 첫 방문 이동 (APP-1285)", () => {
+  const rule = () => {
+    const found = marketingRedirects().find(
+      (item) => item.source === "/" && "has" in item
+    );
+    if (!found || !("has" in found)) throw new Error("홈 이동 규칙이 없다");
+    return found;
+  };
+
+  it("쿠키가 없고 브라우저 언어가 en 일 때만 /en 으로 임시 이동한다", () => {
+    expect(rule()).toMatchObject({
+      destination: "/en",
+      permanent: false,
+      missing: [{ type: "cookie", key: "heymoa-lang" }],
+    });
+    const header = rule().has![0];
+    expect(header).toMatchObject({ type: "header", key: "accept-language" });
+    const matches = (value: string) =>
+      new RegExp(`^${header.value}$`).test(value);
+    expect(matches("en-US,en;q=0.9")).toBe(true);
+    expect(matches("en-US,en;q=0.9,ko;q=0.8")).toBe(false);
+    expect(matches("ko-KR")).toBe(false);
+  });
+
+  it("홈 말고 다른 마케팅 주소는 브라우저 언어로 옮기지 않는다", () => {
+    const languageRules = marketingRedirects().filter((item) =>
+      "has" in item
+        ? item.has?.some((h) => h.key === "accept-language")
+        : false
+    );
+    expect(languageRules.map((item) => item.source)).toEqual(["/"]);
+  });
+});
+
 describe("언어 경로", () => {
   it("한국어는 무접두, 영어는 /en 아래다", () => {
     expect(localePath("ko", "/help")).toBe("/help");

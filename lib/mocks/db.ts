@@ -42,7 +42,11 @@ import { scopeMarker, unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
 import { createHelpDemoState, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
 import { failWith } from "@/lib/mocks/mock-envelope";
-import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
+import {
+  MOCK_ACCOUNT,
+  MOCK_ACCOUNT_LANGUAGE_COOKIE,
+  MOCK_USER,
+} from "@/lib/mocks/mock-user";
 import {
   MENTORING_GUEST_IDS,
   MENTORING_NOTE_ID,
@@ -563,6 +567,17 @@ function repointSpeakers(noteId: string, fromId: string, toId: string) {
   }
 }
 
+/** 목 계정 언어 쿠키(`MOCK_ACCOUNT_LANGUAGE_COOKIE`). 브라우저 밖(vitest node·SSR 시드)에서는 없음이다. */
+function readMockAccountLanguage(): "ko" | "en" | null {
+  if (typeof document === "undefined") return null;
+  const value = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${MOCK_ACCOUNT_LANGUAGE_COOKIE}=`))
+    ?.slice(MOCK_ACCOUNT_LANGUAGE_COOKIE.length + 1);
+  return value === "ko" || value === "en" ? value : null;
+}
+
 function copy<T>(value: T): T {
   return structuredClone(value);
 }
@@ -991,6 +1006,8 @@ function createSeedState(): StoreState {
   const user: CurrentUserResponseData = {
     ...MOCK_USER,
     ...structuredClone(MOCK_ACCOUNT),
+    // 설정에서 고른 언어는 새로고침 뒤에도 남는다(서버 SSR 목 사용자도 같은 쿠키를 읽는다).
+    language: readMockAccountLanguage(),
   };
   const workspaces: WorkspaceResponseData[] = [
     {
@@ -4251,6 +4268,18 @@ export const mockDb = {
   },
 
   getCurrentUser(): CurrentUserResponseData {
+    return copy(state.user);
+  },
+
+  /**
+   * 계정 화면 언어(`PATCH /v1/users/me`, APP-1283). 같은 값을 다시 보내도 결과가 같다. 새로고침해도 남도록
+   * 쿠키에도 적는다 — SSR 목 사용자(`lib/auth/server.ts`)가 그 쿠키로 같은 언어를 그린다.
+   */
+  updateCurrentUserLanguage(language: "ko" | "en"): CurrentUserResponseData {
+    state.user.language = language;
+    if (typeof document !== "undefined") {
+      document.cookie = `${MOCK_ACCOUNT_LANGUAGE_COOKIE}=${language}; path=/; samesite=lax`;
+    }
     return copy(state.user);
   },
 
