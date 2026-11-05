@@ -11,7 +11,7 @@ import {
   type ConsentStepMode,
 } from "@/components/auth/consent-step";
 import { WELCOME_PARAM } from "@/components/heymoa/landing-cta";
-import { track, trackConversion } from "@/lib/analytics/track";
+import { identifyUser, track, trackConversion } from "@/lib/analytics/track";
 import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { getMe } from "@/lib/auth/api";
 import { recordConsentNow, settleLoginConsent } from "@/lib/auth/login-consent";
@@ -95,6 +95,7 @@ export function CallbackProcessor({
 
         if (!ignore) {
           setUser(user);
+          identifyUser(user.userId);
           track("login_completed");
           // 서버가 신규 가입에만 붙이는 표식입니다. 새로고침·effect 재실행 전에 URL 에서 걷습니다.
           const callbackUrl = new URL(window.location.href);

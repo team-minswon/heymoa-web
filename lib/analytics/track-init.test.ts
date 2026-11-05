@@ -6,11 +6,15 @@ const posthog = vi.hoisted(() => ({
   init: vi.fn(),
   capture: vi.fn(),
   register: vi.fn(),
+  identify: vi.fn(),
+  get_distinct_id: vi.fn(() => "anonymous"),
 }));
 vi.mock("posthog-js", () => ({ default: posthog }));
 
 import {
   initAnalytics,
+  identifyUser,
+  resetAnalytics,
   setAnalyticsOptOut,
   track,
   trackMutation,
@@ -45,6 +49,30 @@ describe("PostHog를 켜기 전에 난 이벤트", () => {
       ["meeting_ended", undefined],
     ]);
   });
+});
+
+it("가입 직후 SDK가 늦게 켜져도 식별을 가입 이벤트 전 처리한다", () => {
+  posthog.__loaded = false;
+  posthog.init.mockImplementation(() => { posthog.__loaded = true; });
+  posthog.capture.mockClear();
+  posthog.identify.mockClear();
+  identifyUser("new-user");
+  track("sign_up", { method: "google" });
+  initAnalytics("phc_test");
+  expect(posthog.identify).toHaveBeenCalledWith("new-user");
+  expect(posthog.identify.mock.invocationCallOrder[0]).toBeLessThan(posthog.capture.mock.invocationCallOrder[0]);
+});
+
+it("초기화 전 로그아웃이나 수집 거부 시 대기 중인 식별자를 버린다", () => {
+  for (const clear of [resetAnalytics, () => setAnalyticsOptOut(true)]) {
+    posthog.__loaded = false;
+    posthog.identify.mockClear();
+    identifyUser("departed-user");
+    clear();
+    setAnalyticsOptOut(false);
+    initAnalytics("phc_test");
+    expect(posthog.identify).not.toHaveBeenCalled();
+  }
 });
 
 describe("거부한 브라우저", () => {

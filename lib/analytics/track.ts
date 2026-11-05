@@ -555,6 +555,8 @@ function takeHandoffBootstrap(apiKey: string) {
     : { distinctID };
 }
 
+let pendingUserId: string | undefined;
+
 export function initAnalytics(apiKey: string) {
   if (posthog.__loaded) return;
   const bootstrap = takeHandoffBootstrap(apiKey);
@@ -583,6 +585,10 @@ export function initAnalytics(apiKey: string) {
     before_send: beforeSend,
   });
   posthog.register({ client: desktopAuthBridge() ? "desktop" : "web" });
+  if (pendingUserId) {
+    identifyUser(pendingUserId);
+    pendingUserId = undefined;
+  }
   for (const [event, properties] of beforeInit.splice(0)) {
     posthog.capture(event, properties);
   }
@@ -618,6 +624,7 @@ export function setAnalyticsOptOut(optOut: boolean) {
   if (optOut) {
     beforeInit.length = 0;
     beforeGoogleInit.length = 0;
+    pendingUserId = undefined;
   }
   try {
     if (optOut) localStorage.setItem(OPT_OUT_KEY, "1");
@@ -631,6 +638,11 @@ export function setAnalyticsOptOut(optOut: boolean) {
 
 /** userId만 쓴다. 이메일·이름은 보내지 않는다 — PostHog를 켤 때 처리방침 7절에 이 항목만 적는다. */
 export function identifyUser(userId: string) {
+  if (isAnalyticsOptedOut()) return;
+  if (!posthog.__loaded) {
+    pendingUserId = userId;
+    return;
+  }
   if (posthog.__loaded && posthog.get_distinct_id() !== userId) {
     posthog.identify(userId);
   }
@@ -638,6 +650,7 @@ export function identifyUser(userId: string) {
 
 /** 로그아웃·세션 만료로 앱을 떠날 때. 같은 브라우저의 다음 사람이 이전 사람으로 묶이지 않게 한다. */
 export function resetAnalytics() {
+  pendingUserId = undefined;
   if (posthog.__loaded) posthog.reset();
 }
 
