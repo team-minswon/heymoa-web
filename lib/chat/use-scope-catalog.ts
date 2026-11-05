@@ -16,8 +16,11 @@ export type ScopeCandidate = {
   at?: string;
 };
 
-/** 피커가 한 번에 그리는 묶음. */
-export type ScopeSection = { label: string; items: ScopeCandidate[] };
+/** 피커가 한 번에 그리는 묶음. 이름은 피커가 `kind` 로 그린다. */
+export type ScopeSection = {
+  kind: ScopeCandidate["kind"];
+  items: ScopeCandidate[];
+};
 
 /**
  * 질의에 맞는 후보만 추린다. 결과가 비면 컴포저가 피커를 닫아 Enter 가 문장으로 돌아간다.
@@ -34,8 +37,14 @@ export function matchScope(
     (needle === "" || each.title.toLowerCase().includes(needle));
   // 섹션 순서는 「프로젝트」 → 「회의록」이다(design.pen).
   return [
-    { label: "프로젝트", items: candidates.projects.filter(match).slice(0, 5) },
-    { label: "회의록", items: candidates.notes.filter(match).slice(0, 8) },
+    {
+      kind: "project" as const,
+      items: candidates.projects.filter(match).slice(0, 5),
+    },
+    {
+      kind: "note" as const,
+      items: candidates.notes.filter(match).slice(0, 8),
+    },
   ].filter((section) => section.items.length > 0);
 }
 

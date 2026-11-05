@@ -1,0 +1,240 @@
+{
+  "titleInput": "Chat title",
+  "editTitle": "Rename",
+  "titlePending": "Generating title",
+  "menu": "Menu for “{title}”",
+  "renameFailed": "Couldn't rename the chat.",
+  "deleteFailed": "Couldn't delete the chat.",
+  "deleteDialog": {
+    "title": "Delete this chat?",
+    "description": "Its questions, answers, and approval history will be deleted and can't be restored. If an answer is being generated, it will stop."
+  },
+  "diagram": {
+    "label": "Diagram",
+    "showDiagram": "Show diagram",
+    "showCode": "Show code",
+    "expand": "Expand",
+    "failed": "Couldn't draw the diagram",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "fit": "Fit to view",
+    "hint": "Drag to move, Ctrl/⌘+scroll to zoom, or double-click to fit"
+  },
+  "panelLabel": "My agent",
+  "newChat": "New chat",
+  "openHistory": "Chat history",
+  "back": "Back to chat",
+  "chatMenu": "Chat menu",
+  "history": {
+    "title": "Chat history",
+    "emptyTitle": "No chats yet",
+    "emptyBody": "Ask about your meeting notes and your chats will show up here.",
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Previous 7 days",
+      "older": "Older"
+    },
+    "loadingMore": "Loading older chats",
+    "loadMore": "Show older chats"
+  },
+  "starter": {
+    "greeting": "How can I help?",
+    "intro": "I find decisions, changes, and what's left from your meetings, with sources.",
+    "introNote": "I answer from “{title}” and ask for approval before making changes.",
+    "firstMeeting": "Record your first meeting and I'll organize its decisions and tasks.",
+    "newMeeting": "Record a meeting",
+    "examplesLabel": "Example questions",
+    "examples": {
+      "decisions": {
+        "label": "Recent decisions",
+        "question": "Summarize what we decided in the last two weeks, with sources"
+      },
+      "changes": {
+        "label": "What changed",
+        "question": "Find anything in recent meetings that differs from earlier decisions"
+      },
+      "openTasks": {
+        "label": "Open tasks",
+        "question": "List unfinished tasks grouped by assignee"
+      },
+      "summary": {
+        "label": "Last meeting",
+        "question": "Summarize the last meeting"
+      },
+      "summaryRecent": {
+        "label": "Last meeting",
+        "question": "Summarize this meeting"
+      },
+      "noteDecisions": {
+        "label": "Decisions",
+        "question": "Summarize what this meeting decided, with sources"
+      },
+      "noteSummary": {
+        "label": "Summary",
+        "question": "Summarize this meeting"
+      },
+      "noteChanges": {
+        "label": "What changed",
+        "question": "Find anything in this meeting that differs from earlier decisions"
+      },
+      "actionItems": {
+        "label": "Create tasks",
+        "question": "Create tasks for what we agreed to do in this meeting"
+      },
+      "web": {
+        "label": "Search the web",
+        "question": "Search the web for the latest versions of the tools mentioned in the meeting"
+      },
+      "webFirst": {
+        "label": "Search the web",
+        "question": "Search the web for what changed in the latest version of Next.js"
+      },
+      "newTask": {
+        "label": "Create a task",
+        "question": "Create a task to prepare the slides by Friday"
+      }
+    },
+    "capabilities": {
+      "notes": "Search meeting notes",
+      "tasks": "Create tasks",
+      "tools": "Connect to other tools",
+      "web": "Search the web"
+    }
+  },
+  "running": {
+    "streaming": "In progress",
+    "approval": "Needs approval"
+  },
+  "fab": {
+    "introLabel": "About My agent",
+    "title": "My agent",
+    "intro": "I answer from your meeting notes and ask for approval before making changes.",
+    "dismiss": "Don't show again",
+    "open": "Open",
+    "openLabel": "Open My agent",
+    "name": "My agent",
+    "tooltip": "Answers from your meeting notes",
+    "attention": {
+      "running": "Preparing an answer",
+      "approval": "Needs your approval"
+    }
+  },
+  "panel": {
+    "scrollToBottom": "Scroll to bottom",
+    "loading": "Loading chat",
+    "loadFailed": "Couldn't load the chat.",
+    "loadFailedChats": "We couldn't check for existing chats, so a new chat won't start.",
+    "loadFailedMessages": "Sending is paused because this view may not match the actual chat.",
+    "placeholder": "Ask about projects or notes with @",
+    "overlap": "“{note}” is already in “{project}”. Keep only the meeting note?",
+    "overlapProjectFallback": "that project",
+    "awaitingApproval": "You can't send while an approval is pending.",
+    "refetchFailedChats": "Couldn't reload the chat list. Your answer is still on screen.",
+    "refetchFailedMessages": "Couldn't reload the chat history. Your answer is still on screen."
+  },
+  "composer": {
+    "message": "Message",
+    "stop": "Stop",
+    "send": "Send",
+    "scopeLimit": "You can add up to {max} items."
+  },
+  "picker": {
+    "loading": "Loading…",
+    "label": "Projects and meeting notes to add",
+    "projects": "Projects",
+    "notes": "Meeting notes",
+    "hint": "↑↓ to move · Enter to select · Esc to close · Keep typing to filter"
+  },
+  "thread": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "copiedAnnounce": "Answer copied",
+    "openScope": "Open {title}",
+    "stopped": "Stopped",
+    "failedTitle": "Couldn't generate a response",
+    "disconnected": "The connection was lost. Refresh to see the answer saved so far."
+  },
+  "code": {
+    "language": "Code",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyLabel": "Copy code",
+    "copiedLabel": "Code copied"
+  },
+  "thought": {
+    "thinking": "Thinking",
+    "pending": "Reviewing your question",
+    "thinkingNow": "Thinking",
+    "stalled": "This is taking longer than usual. Keep waiting or stop.",
+    "step": "{label}…",
+    "awaiting": "Waiting for your approval",
+    "thoughtFor": "Thought for {duration}",
+    "thought": "Thought",
+    "notes": "{count, plural, one {# meeting note} other {# meeting notes}}",
+    "projects": "{count, plural, one {# project} other {# projects}}",
+    "failed": "Couldn't run",
+    "stopped": "Stopped",
+    "check": "Needs checking",
+    "open": "Open",
+    "refs": "{count, plural, one {# meeting note referenced} other {# meeting notes referenced}}",
+    "moreRefs": "{count, plural, one {Show # more meeting note} other {Show # more meeting notes}}",
+    "openRef": "Open {title}",
+    "duration": {
+      "seconds": "{seconds}s",
+      "minutes": "{minutes}m",
+      "minutesSeconds": "{minutes}m {seconds}s"
+    }
+  },
+  "approval": {
+    "badges": {
+      "open": "Needs approval",
+      "running": "Running",
+      "done": "Done",
+      "rejected": "Declined",
+      "failed": "Failed",
+      "invalid": "Invalid",
+      "check": "Needs checking"
+    },
+    "reasons": {
+      "rejected": "Not run.",
+      "failed": "Approved, but it couldn't run.",
+      "blind": "It's unclear what this would do, so it can't be approved. Decline it.",
+      "ended": "The chat ended before this approval was handled.",
+      "unknown": "The approval was sent, but the chat ended before the result came back.",
+      "notFound": "This approval was already handled or is no longer active.",
+      "chatNotFound": "The chat couldn't be found, so this can't be handled.",
+      "notOwner": "Only the person who asked can handle this approval."
+    },
+    "fallbackTitle": "Approve changes",
+    "open": "Open",
+    "submittedHint": "This is confirmed once the response resumes.",
+    "waitingHint": "Waiting for you to approve or decline. To cancel, press Stop.",
+    "reject": "Decline",
+    "approve": "Approve",
+    "approveCount": "{count, plural, one {Approve # item} other {Approve # items}}",
+    "added": "Added",
+    "removed": "Removed",
+    "none": "None",
+    "from": "to",
+    "showMore": "Show {count} more",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "bodyLabel": "Body"
+  },
+  "errors": {
+    "noResponse": "Couldn't get a response.",
+    "loadMoreFailed": "Couldn't load older chats.",
+    "approvalFailed": "Couldn't process the approval.",
+    "turnFailures": {
+      "TURN_TIMEOUT": "The response took too long and stopped.",
+      "UPSTREAM_ERROR": "Couldn't generate a response. Try again in a moment.",
+      "UPSTREAM_REJECTED": "Couldn't generate a response.",
+      "APPROVAL_EXPIRED": "Stopped after waiting too long for approval.",
+      "STREAM_INTERRUPTED": "The response was cut off.",
+      "CAPACITY_EXCEEDED": "We're getting a lot of requests right now. Try again in a moment.",
+      "SERVICE_RESTARTING": "The response stopped because the server restarted. Send your message again.",
+      "INTERNAL_ERROR": "Couldn't generate a response."
+    }
+  }
+}

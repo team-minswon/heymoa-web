@@ -1,5 +1,7 @@
+import { useTranslations } from "next-intl";
+
 import {
-  gapHeadline,
+  gapDurationOf,
   isGapOpen,
   spansCalendarDays,
   spansVisibleClockMinutes,
@@ -32,6 +34,7 @@ function clockTime(iso: string, withDate: boolean) {
  * 자기가 멈췄나. 그 밖은 전부 사고이고 사고끼리는 사용자가 할 일이 같다.
  */
 export function TranscriptGapRow({ row }: { row: GapRow }) {
+  const t = useTranslations("notes.transcript.gap");
   const paused = row.kind === "PAUSE";
   const open = isGapOpen(row);
   const withDate = spansCalendarDays(row);
@@ -40,11 +43,20 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
   const offsetLabel = paused
     ? formatOffset(row.startedAtMs)
     : `${formatOffset(row.startedAtMs)} – ${
-        open ? "진행 중" : formatOffset(row.endedAtMs)
+        open ? t("ongoing") : formatOffset(row.endedAtMs)
       }`;
 
-  // 문구는 `gaps.ts`가 만든다 — 복사한 회의록도 같은 줄을 쓴다.
-  const headline = gapHeadline(row);
+  // 복사한 회의록은 `gapHeadline`(gaps.ts)으로 같은 줄을 쓴다. 문구를 고치면 둘 다 고친다.
+  const duration = open ? null : t("duration", gapDurationOf(row.durationMs));
+  const kind =
+    row.kind === "PAUSE"
+      ? "pause"
+      : row.kind === "UNTRANSCRIBED"
+        ? "untranscribed"
+        : "lost";
+  const headline = duration
+    ? t(kind, { duration })
+    : t(`${kind}Open` as "pauseOpen" | "lostOpen");
 
   return (
     <div
@@ -62,8 +74,10 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
             「왜」는 이 줄이 말한다. 두 끝이 같은 분이면 숨긴다. */}
         {paused && spansVisibleClockMinutes(row) ? (
           <span className="ml-2 text-[13px] text-[var(--el-muted-soft)]">
-            {clockTime(row.startedAt!, withDate)}에 멈추고{" "}
-            {clockTime(row.endedAt!, withDate)}에 재개했습니다
+            {t("pausedBetween", {
+              start: clockTime(row.startedAt!, withDate),
+              end: clockTime(row.endedAt!, withDate),
+            })}
           </span>
         ) : null}
       </p>

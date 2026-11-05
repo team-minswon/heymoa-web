@@ -40,11 +40,11 @@ describe("groupTasks", () => {
       "2026-09-16"
     );
 
-    expect(groups.map((group) => [group.label, group.entries.map((e) => e.content)])).toEqual([
-      ["기한 지남", ["지남"]],
-      ["이번 주", ["오늘", "나중 이번 주"]],
-      ["다음 주 이후", ["다음 주"]],
-      ["기한 없음", ["기한 없음"]],
+    expect(groups.map((group) => [group.key, group.entries.map((e) => e.content)])).toEqual([
+      ["OVERDUE", ["지남"]],
+      ["THIS_WEEK", ["오늘", "나중 이번 주"]],
+      ["LATER", ["다음 주"]],
+      ["NO_DUE", ["기한 없음"]],
     ]);
   });
 

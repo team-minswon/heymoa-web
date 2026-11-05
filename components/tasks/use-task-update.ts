@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
@@ -40,6 +41,7 @@ export function useTaskUpdate(
   /** 저장이 받아들여진 행. 목록이 걸러 주는 화면에서는 저장한 줄이 목록을 떠날 수 있어 부르는 쪽이 따로 붙들 때 쓴다 */
   onSaved?: (saved: TaskEntry) => void
 ) {
+  const t = useTranslations("tasks");
   const queryClient = useQueryClient();
   const [conflictTaskId, setConflictTaskId] = useState<string | null>(null);
   /**
@@ -158,7 +160,7 @@ export function useTaskUpdate(
           await refresh();
         }
       } else {
-        toast.error(errorMessageOf(error, "할 일을 저장하지 못했습니다."));
+        toast.error(errorMessageOf(error, t("saveFailed")));
       }
       return false;
     } finally {

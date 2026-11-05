@@ -5,6 +5,9 @@ import {
   transcriptToMarkdown,
 } from "@/lib/notes/copy-markdown";
 import type { TranscriptRow } from "@/lib/transcription/presentation";
+import { testAppT } from "@/components/help/test-intl";
+
+const doc = { locale: "ko-KR", t: testAppT() };
 
 const NOTE = {
   title: "2월 스프린트 회의",
@@ -57,7 +60,7 @@ const named = (label: string | null | undefined) =>
 
 describe("머리말의 참석자", () => {
   const head = (note: typeof NOTE & { participantNames?: string[] }) =>
-    summaryToMarkdown({ note, sections: [] }).split("\n")[2];
+    summaryToMarkdown({ note, sections: [], doc }).split("\n")[2];
 
   it("이름을 알면 인원수 대신 이름을 적는다", () => {
     expect(
@@ -84,6 +87,7 @@ describe("머리말의 참석자", () => {
 describe("transcriptToMarkdown", () => {
   it("머리말에 제목과 회의 사실을 적는다", () => {
     const markdown = transcriptToMarkdown({
+      doc,
       note: NOTE,
       rows: [segment(0, "안녕하세요.")],
       speakerNameOf: () => null,
@@ -95,6 +99,7 @@ describe("transcriptToMarkdown", () => {
 
   it("서버가 가른 대로 발화마다 한 줄이고 저마다 시각을 단다", () => {
     const markdown = transcriptToMarkdown({
+      doc,
       note: NOTE,
       rows: [
         segment(750_000, "결제 실패율이 3%로 올랐습니다.", "A"),
@@ -116,6 +121,7 @@ describe("transcriptToMarkdown", () => {
 
   it("줄 사이를 비운다 — 안 그러면 렌더러가 한 문단으로 이어 붙인다", () => {
     const markdown = transcriptToMarkdown({
+      doc,
       note: NOTE,
       rows: [
         segment(0, "먼저 이것부터.", "A"),
@@ -131,6 +137,7 @@ describe("transcriptToMarkdown", () => {
 
   it("화자 분리 전에는 화자 없이 시각만 남는다", () => {
     const markdown = transcriptToMarkdown({
+      doc,
       note: NOTE,
       // 실시간 final은 라벨이 늘 null이고, 분리 전에는 호출부가 항상 null을 준다.
       rows: [
@@ -147,6 +154,7 @@ describe("transcriptToMarkdown", () => {
 
   it("끝까지 저장되지 못한 기록은 그 사실을 달고 나간다", () => {
     const markdown = transcriptToMarkdown({
+      doc,
       note: NOTE,
       rows: [segment(0, "여기서 끊깁니다.", "A")],
       speakerNameOf: named,
@@ -154,12 +162,13 @@ describe("transcriptToMarkdown", () => {
     });
 
     expect(
-      markdown.trimEnd().endsWith("> 기록이 끝까지 저장되지 못했습니다")
+      markdown.trimEnd().endsWith("> 기록을 끝까지 저장하지 못했습니다")
     ).toBe(true);
   });
 
   it("빈 구간을 인용 줄로 남긴다", () => {
     const markdown = transcriptToMarkdown({
+      doc,
       note: NOTE,
       rows: [
         segment(0, "잠깐 쉬죠.", "A"),
@@ -176,6 +185,7 @@ describe("transcriptToMarkdown", () => {
 
 describe("summaryToMarkdown", () => {
   const markdown = summaryToMarkdown({
+    doc,
     note: { ...NOTE, durationMs: undefined },
     sections: [
       {
@@ -205,9 +215,7 @@ describe("summaryToMarkdown", () => {
 
   it("섹션 헤딩 아래 항목만 불릿으로 적는다", () => {
     expect(markdown).toContain("## 개요\n\n- 결제 실패율이 3%로 올랐다");
-    expect(markdown).toContain(
-      "## 액션 아이템\n\n- 카드사 응답 지연 로그 확인"
-    );
+    expect(markdown).toContain("## 할 일\n\n- 카드사 응답 지연 로그 확인");
   });
 
   it("근거는 싣지 않는다 — 요약이 서너 배로 불어난다", () => {
@@ -217,5 +225,28 @@ describe("summaryToMarkdown", () => {
 
   it("응답에서 빠진 섹션도 헤딩을 남긴다", () => {
     expect(markdown).toContain("## 결정\n\n_없음_");
+  });
+});
+
+describe("영어 화면의 복사본", () => {
+  const en = { locale: "en-US", t: testAppT("en") };
+
+  it("머리말·섹션·빈 섹션·끊긴 기록을 영어로 적는다", () => {
+    const summary = summaryToMarkdown({ note: NOTE, sections: [], doc: en });
+    expect(summary).toContain("# 2월 스프린트 회의 — Summary");
+    expect(summary).toContain("3 attendees · 30 min recorded");
+    expect(summary).toContain("## Tasks\n\n_None_");
+    const transcript = transcriptToMarkdown({
+      doc: en,
+      note: { ...NOTE, participantNames: ["Ann", "Bo"] },
+      rows: [gap(0, "PAUSE")],
+      speakerNameOf: () => null,
+      truncated: true,
+    });
+    expect(transcript).toContain("Attendees: Ann, Bo");
+    expect(transcript).toContain("> Paused for about 12 minutes");
+    expect(transcript).toContain("> The recording wasn't fully saved");
+    // 제목(사용자 데이터) 줄 밖에는 한글이 없다
+    expect(transcript.split("\n").slice(1).join("\n")).not.toMatch(/[가-힣]/);
   });
 });

@@ -15,6 +15,10 @@ import {
   type OpenChatStatus,
 } from "@/lib/chat/chat-list";
 import { normalizeChatTitle } from "@/lib/chat/rename-chat";
+import { testDatesT } from "@/components/help/test-intl";
+
+const tKo = testDatesT();
+const tEn = testDatesT("en");
 
 const NOW = new Date("2026-08-25T12:00:00Z");
 const TZ = "UTC";
@@ -38,7 +42,7 @@ const open = (
 describe("배지는 두 출처를 턴 id 로 맞춘다", () => {
   it("다른 대화는 목록을 믿는다 — 이 탭은 그 스트림을 안 듣고 있다", () => {
     expect(runningLabel(row("c2", "t9"), open("c1", "t1", "streaming"))).toBe(
-      "진행 중"
+      "streaming"
     );
   });
 
@@ -48,26 +52,26 @@ describe("배지는 두 출처를 턴 id 로 맞춘다", () => {
 
   it("목록엔 없는데 스트림이 흐르면 스트림이 이긴다", () => {
     expect(runningLabel(row("c1", null), open("c1", "t1", "streaming"))).toBe(
-      "진행 중"
+      "streaming"
     );
   });
 
   it("다른 턴 id 면 목록이 유일한 소식이다", () => {
     expect(runningLabel(row("c1", "t2"), open("c1", "t1", "done"))).toBe(
-      "진행 중"
+      "streaming"
     );
   });
 
   it("승인 대기는 다른 라벨이고 양쪽 출처가 같은 말을 한다", () => {
     expect(
       runningLabel(row("c1", "t1"), open("c1", "t1", "awaiting_approval"))
-    ).toBe("승인 대기");
+    ).toBe("approval");
     expect(
       runningLabel(
         row("c2", "t9", "WAITING_APPROVAL"),
         open("c1", null, "idle")
       )
-    ).toBe("승인 대기");
+    ).toBe("approval");
   });
 
   it("★ 끝나는 것을 본 턴은 목록이 아직 들고 있어도 배지를 안 세운다", () => {
@@ -82,13 +86,13 @@ describe("배지는 두 출처를 턴 id 로 맞춘다", () => {
   it("끝난 턴을 기억해도 그 뒤에 시작한 남의 턴은 가리지 않는다", () => {
     // 다른 탭이 t2 를 열었다. 우리가 t1 이 끝나는 것을 봤다는 사실과 무관하다.
     expect(runningLabel(row("c1", "t2"), open("c1", null, "idle", "t1"))).toBe(
-      "진행 중"
+      "streaming"
     );
   });
 
   it("아무 대화도 안 열려 있으면 목록이 전부다", () => {
     expect(runningLabel(row("c1", "t1"), open(null, null, "idle"))).toBe(
-      "진행 중"
+      "streaming"
     );
     expect(runningLabel(row("c1", null), open(null, null, "idle"))).toBeNull();
   });
@@ -100,9 +104,9 @@ describe("시간으로 묶는다", () => {
   it("없는 묶음은 안 그린다", () => {
     expect(
       groupChatsByRecency([at("2026-08-25T09:00:00Z")], NOW, TZ).map(
-        (g) => g.label
+        (g) => g.key
       )
-    ).toEqual(["오늘"]);
+    ).toEqual(["today"]);
   });
 
   it("넷뿐이다 — 오늘 · 어제 · 지난 7일 · 이전", () => {
@@ -116,11 +120,11 @@ describe("시간으로 묶는다", () => {
       NOW,
       TZ
     );
-    expect(groups.map((g) => g.label)).toEqual([
-      "오늘",
-      "어제",
-      "지난 7일",
-      "이전",
+    expect(groups.map((g) => g.key)).toEqual([
+      "today",
+      "yesterday",
+      "week",
+      "older",
     ]);
   });
 
@@ -134,9 +138,9 @@ describe("시간으로 묶는다", () => {
       NOW,
       TZ
     );
-    expect(groups.map((g) => [g.label, g.chats.length])).toEqual([
-      ["지난 7일", 2],
-      ["이전", 1],
+    expect(groups.map((g) => [g.key, g.chats.length])).toEqual([
+      ["week", 2],
+      ["older", 1],
     ]);
   });
 
@@ -147,7 +151,7 @@ describe("시간으로 묶는다", () => {
       NOW,
       TZ
     );
-    expect(groups.map((g) => g.label)).toEqual(["오늘", "어제"]);
+    expect(groups.map((g) => g.key)).toEqual(["today", "yesterday"]);
   });
 
   it("여기서 다시 정렬하지 않는다 — 순서의 주인은 서버다", () => {
@@ -163,14 +167,24 @@ describe("시간으로 묶는다", () => {
 // 다른 값을 그리면 「1분 전인데 왜 세 번째 줄」이 된다
 describe("그리는 시각이 정렬 기준과 같은 값이다", () => {
   it("1분 미만은 방금이다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "ko")).toBe("방금");
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, tKo, "ko")).toBe(
+      "방금"
+    );
   });
 
   it("분·시간·일·달·해로 넘어간다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:00:00Z", NOW, "ko")).toContain("1");
-    expect(relativeUpdatedAt("2026-08-22T12:00:00Z", NOW, "ko")).toContain("3");
-    expect(relativeUpdatedAt("2026-06-01T12:00:00Z", NOW, "ko")).toContain("2");
-    expect(relativeUpdatedAt("2024-08-25T12:00:00Z", NOW, "ko")).toContain("2");
+    expect(relativeUpdatedAt("2026-08-25T11:00:00Z", NOW, tKo, "ko")).toContain(
+      "1"
+    );
+    expect(relativeUpdatedAt("2026-08-22T12:00:00Z", NOW, tKo, "ko")).toContain(
+      "3"
+    );
+    expect(relativeUpdatedAt("2026-06-01T12:00:00Z", NOW, tKo, "ko")).toContain(
+      "2"
+    );
+    expect(relativeUpdatedAt("2024-08-25T12:00:00Z", NOW, tKo, "ko")).toContain(
+      "2"
+    );
   });
 });
 
@@ -280,17 +294,19 @@ describe("revertChatTitle", () => {
 
 describe("상대 시각은 앱 언어로", () => {
   it("한국어 화면은 「57분 전」·「방금」이다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, "ko")).toBe(
+    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, tKo, "ko")).toBe(
       "57분 전"
     );
-    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "ko")).toBe("방금");
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, tKo, "ko")).toBe(
+      "방금"
+    );
   });
 
   it("영어 화면은 영어다", () => {
-    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, "en")).toMatch(
+    expect(relativeUpdatedAt("2026-08-25T11:03:00Z", NOW, tEn, "en")).toMatch(
       /57.*ago/
     );
-    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, "en")).toBe(
+    expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, tEn, "en")).toBe(
       "just now"
     );
   });

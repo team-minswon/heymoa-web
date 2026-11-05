@@ -1,6 +1,5 @@
 import { AgentOAuthConsent } from "@/components/agent-connections/agent-oauth-consent";
 import {
-  AGENT_OAUTH_RECONNECT_MESSAGE,
   AgentOAuthEndCard,
   AgentOAuthLoginCard,
 } from "@/components/agent-connections/agent-oauth-cards";
@@ -21,7 +20,7 @@ export default async function AgentOAuthConsentPage({
   const query = searchParamsOf(await searchParams);
   const consentState = query.get("state");
   if (!consentState) {
-    return <AgentOAuthEndCard message={AGENT_OAUTH_RECONNECT_MESSAGE} />;
+    return <AgentOAuthEndCard />;
   }
   if (!(await getCurrentUserForSsr())) {
     return (

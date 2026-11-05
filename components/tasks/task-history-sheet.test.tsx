@@ -34,6 +34,7 @@ const revision = (over: Partial<Revision>): Revision => ({
 });
 
 describe("revisionChanges", () => {
+  const speakerName = (label: string) => `화자 ${label}`;
   it("첫 판은 무엇으로 시작했는지 담당과 기한만 보인다", () => {
     expect(
       revisionChanges(
@@ -41,11 +42,12 @@ describe("revisionChanges", () => {
         revision({
           assignee: { type: "SPEAKER_LABEL", noteId: "n1", label: "C" },
           due: "2026-09-19",
-        })
+        }),
+        speakerName
       )
     ).toEqual([
-      { label: "담당", before: null, after: "화자 C" },
-      { label: "기한", before: null, after: "9월 19일 (토)" },
+      { field: "assignee", after: "화자 C" },
+      { field: "due", after: "2026-09-19" },
     ]);
   });
 
@@ -57,13 +59,16 @@ describe("revisionChanges", () => {
           revision: 2,
           taskStatus: "COMPLETED",
           assignee: { type: "USER", id: "u1", name: "이민형" },
-        })
+        }),
+        speakerName
       )
     ).toEqual([
-      { label: "상태", before: "진행 중", after: "완료" },
-      { label: "담당", before: "없음", after: "이민형" },
+      { field: "status", before: "OPEN", after: "COMPLETED" },
+      { field: "assignee", before: null, after: "이민형" },
     ]);
-    expect(revisionChanges(revision({}), revision({ revision: 2 }))).toEqual([]);
+    expect(
+      revisionChanges(revision({}), revision({ revision: 2 }), speakerName)
+    ).toEqual([]);
   });
 });
 
@@ -120,7 +125,7 @@ describe("TaskHistorySheet", () => {
     const items = await screen.findAllByRole("listitem");
     expect(items[0]).toHaveTextContent("이민형이 바꿨습니다");
     expect(items[0]).toHaveTextContent(/기한없음.*9월 19일 \(토\)/);
-    expect(items[1]).toHaveTextContent("회의 확정으로 생겼습니다");
+    expect(items[1]).toHaveTextContent("회의 검토를 마치며 생겼습니다");
   });
 
   it("에이전트가 바꾼 판은 누구의 에이전트인지와 연결 이름을 붙여 말한다", async () => {
@@ -266,7 +271,7 @@ describe("TaskHistorySheet", () => {
     const { onSave } = renderSheet({ entry: entry({ taskStatus: "COMPLETED" }), conflict: true });
 
     expect(await screen.findByRole("button", { name: "수정" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "취소" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "할 일 취소" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다시 열기" }));
     expect(onSave).toHaveBeenCalledWith({ taskStatus: "OPEN" });
     expect(screen.getByRole("alert")).toHaveTextContent("다른 사람이 먼저 수정해");

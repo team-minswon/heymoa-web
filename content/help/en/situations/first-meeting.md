@@ -5,7 +5,7 @@ description: Use a meeting notes template and example, then follow HeyMoa from r
 group: situations
 slug: first-meeting
 order: 1
-modified: 2026-10-30
+modified: 2026-11-05
 ---
 
 ## New here? Where do I start? {#problem}
@@ -21,7 +21,7 @@ Meeting name:
 Date, time, and attendees:
 Topics discussed:
 Agreed decisions:
-Action item / assignee / due date:
+Task / assignee / due date:
 Open questions:
 What to check next:
 ```
@@ -30,7 +30,7 @@ This fictional example shows how to fill it in.
 
 - **Topic**: Decide the scope of a new welcome screen.
 - **Decision**: Show the setup process in three steps on the first screen.
-- **Action item**: The designer will prepare a draft before the next meeting.
+- **Task**: The designer will prepare a draft before the next meeting.
 - **Open question**: Choose where to put the skip button after reviewing the draft.
 
 ## What to check before sharing AI meeting notes {#check}

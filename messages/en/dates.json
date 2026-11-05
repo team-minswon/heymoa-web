@@ -1,0 +1,53 @@
+{
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "justNow": "just now",
+  "todayAt": "Today at {time}",
+  "yesterdayAt": "Yesterday at {time}",
+  "dayHeading": "{weekday}, {date}",
+  "noteGroup": "{weekday}, {date}",
+  "promiseTime": "{weekday}, {month} {day} at {minute, plural, =0 {{hour} {period}} other {{hour}:{minutePadded} {period}}}",
+  "noteMeta": {
+    "participants": "{count, plural, one {# attendee} other {# attendees}}",
+    "notStarted": "Not started yet",
+    "recordingBy": "{name} is recording",
+    "visibleToMembers": "Visible to workspace members",
+    "recorded": "{minutes} min recorded"
+  },
+  "duration": {
+    "minutes": "{minutes} min",
+    "hours": "{hours} hr",
+    "hoursMinutes": "{hours} hr {minutes} min"
+  },
+  "document": {
+    "participantsNamed": "Attendees: {names}",
+    "participantsMore": "Attendees: {names} and {rest} more",
+    "summaryTitle": "{title} — Summary",
+    "timelineTitle": "{title} — Timeline",
+    "summaryHeading": "Summary",
+    "topicsHeading": "Topics",
+    "none": "None",
+    "timelineEmpty": "No decisions, tasks, or open items yet",
+    "truncated": "The recording wasn't fully saved",
+    "assignee": "Assignee: {name}",
+    "due": "Due {date}",
+    "topic": "Topic: {title}",
+    "project": "Project: {name}",
+    "confirmed": "Confirmed",
+    "inReview": "In review",
+    "tones": {
+      "decision": "Decision",
+      "task": "Task",
+      "open": "Open item"
+    },
+    "refs": {
+      "decision": "Decision {no}",
+      "task": "Task {no}",
+      "open": "Open item {no}"
+    },
+    "otherAgenda": "Other",
+    "minutesFooter": "{date} · {title} meeting notes",
+    "minutesFile": "Meeting notes_{title}_{date}.pdf",
+    "minutesFileUntitled": "Meeting"
+  }
+}

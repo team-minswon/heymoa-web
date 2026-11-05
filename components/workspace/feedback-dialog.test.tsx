@@ -23,6 +23,7 @@ import {
   linkified,
 } from "@/components/workspace/feedback-dialog";
 import { useFeedbackAnswers } from "@/components/workspace/use-feedback-answers";
+import { intlWrapper } from "@/components/help/test-intl";
 
 const mutate = vi.fn();
 const markOnServer = vi.fn<() => Promise<unknown>>();
@@ -158,22 +159,52 @@ describe("FeedbackDialog", () => {
     render(<FeedbackDialog open onOpenChange={vi.fn()} />, { wrapper });
     fireEvent.click(screen.getByRole("tab", { name: /내 문의/ }));
     expect(screen.getByLabelText("내 문의를 불러오는 중")).toBeTruthy();
-    expect(screen.queryByText("아직 보낸 문의가 없어요.")).toBeNull();
+    expect(screen.queryByText("아직 보낸 문의가 없습니다.")).toBeNull();
   });
 
   it("조회에 실패하면 빈 상태가 아니라 오류와 다시 시도를 보여 준다", () => {
     state = "error";
     render(<FeedbackDialog open onOpenChange={vi.fn()} />, { wrapper });
     fireEvent.click(screen.getByRole("tab", { name: /내 문의/ }));
-    expect(screen.getByText("내 문의를 불러오지 못했어요")).toBeTruthy();
+    expect(screen.getByText("내 문의를 불러오지 못했습니다")).toBeTruthy();
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
-    expect(screen.queryByText("아직 보낸 문의가 없어요.")).toBeNull();
+    expect(screen.queryByText("아직 보낸 문의가 없습니다.")).toBeNull();
+  });
+
+  it("영어 화면에서는 창과 내 문의가 영어로 보인다", () => {
+    seed([answered]);
+    const English = intlWrapper("en");
+    const { baseElement } = render(
+      <FeedbackDialog open onOpenChange={vi.fn()} />,
+      {
+        wrapper: ({ children }) => (
+          <English>{wrapper({ children })}</English>
+        ),
+      }
+    );
+    expect(
+      screen.getByRole("heading", { name: "Help & feedback" })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: /Problem or error/ })
+    ).toBeTruthy();
+    expect(screen.getByLabelText("1 new reply")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /My requests/ }));
+    expect(screen.getByText("Answered")).toBeTruthy();
+    // 사용자 데이터(문의 본문·답변)와 공용 Dialog 의 닫기 버튼(`components/ui/dialog.tsx`)은 이 모듈 문구가 아니다.
+    const text = (baseElement.textContent ?? "")
+      .replace("전사가 멈췄어요", "")
+      .replace("고쳤습니다", "")
+      .replace("닫기", "")
+      // 날짜 언어는 `useDisplayLocale` 목(`vitest.setup.ts`)이 한국어로 고정한다.
+      .replace(/오[전후]/g, "");
+    expect(text.match(/[가-힣]+/g)).toBeNull();
   });
 
   it("보낸 문의가 없으면 빈 상태를 보여 준다", () => {
     render(<FeedbackDialog open onOpenChange={vi.fn()} />, { wrapper });
     fireEvent.click(screen.getByRole("tab", { name: /내 문의/ }));
-    expect(screen.getByText("아직 보낸 문의가 없어요.")).toBeTruthy();
+    expect(screen.getByText("아직 보낸 문의가 없습니다.")).toBeTruthy();
   });
 });
 

@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 
 import { siteConfig } from "@/lib/site";
+import { localePath } from "@/lib/i18n/locales";
 
 /**
  * 범용 푸터. 랜딩 크롬 경로(`isLandingChromeRoute`)는 `FooterGate` 가 랜딩 푸터를 세우므로 여기 오지 않고,
@@ -13,6 +15,10 @@ import { siteConfig } from "@/lib/site";
  */
 export function Footer() {
   const router = useRouter();
+  const t = useTranslations("shell.footer");
+  const tNavbar = useTranslations("shell.navbar.sections");
+  const tLegal = useTranslations("shell.focusChrome");
+  const locale = useLocale();
 
   const handleScroll = (id: string) => {
     router.push(`/#${id}`);
@@ -39,10 +45,10 @@ export function Footer() {
             </span>
           </Link>
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-[var(--el-muted)]">
-            회의를 받아 적고, 결정과 할 일을 근거와 함께 정리하는 AI 에이전트
+            {t("tagline")}
           </p>
           <p className="mt-4 text-[15px] text-[var(--el-muted)]">
-            문의:{" "}
+            {t("contact")}{" "}
             <a
               href={`mailto:${siteConfig.contactEmail}`}
               className="font-medium text-[var(--el-ink)] underline underline-offset-4 hover:text-[var(--el-primary-active)]"
@@ -54,7 +60,7 @@ export function Footer() {
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <h2 className="text-[12px] font-semibold tracking-wider text-[var(--el-ink)] uppercase">
-              서비스
+              {t("service")}
             </h2>
             <ul className="mt-4 space-y-3">
               <li>
@@ -62,7 +68,7 @@ export function Footer() {
                   onClick={() => handleScroll("meetings")}
                   className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)] cursor-pointer"
                 >
-                  회의 정리
+                  {tNavbar("meetings")}
                 </button>
               </li>
               <li>
@@ -70,38 +76,38 @@ export function Footer() {
                   onClick={() => handleScroll("evidence")}
                   className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)] cursor-pointer"
                 >
-                  근거 확인
+                  {tNavbar("evidence")}
                 </button>
               </li>
               <li>
                 <Link
-                  href="/download"
+                  href={localePath(locale, "/download")}
                   className="text-[15px] font-medium text-[var(--el-muted)] hover:text-[var(--el-ink)]"
                 >
-                  데스크톱 다운로드
+                  {t("download")}
                 </Link>
               </li>
             </ul>
           </div>
           <div>
             <h2 className="text-[12px] font-semibold tracking-wider text-[var(--el-ink)] uppercase">
-              정책
+              {t("policy")}
             </h2>
             <ul className="mt-4 space-y-3">
               <li>
                 <Link
-                  href="/terms"
+                  href={localePath(locale, "/terms")}
                   className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)]"
                 >
-                  이용약관
+                  {tLegal("terms")}
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/privacy"
+                  href={localePath(locale, "/privacy")}
                   className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)]"
                 >
-                  개인정보 처리방침
+                  {tLegal("privacy")}
                 </Link>
               </li>
             </ul>
@@ -112,7 +118,7 @@ export function Footer() {
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-[15px] text-[var(--el-muted)] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <span>© 2026 {siteConfig.name}. All rights reserved.</span>
           <span>
-            AI 회의 에이전트는 사용자의 업무 효율을 높이는 보조 수단입니다.
+            {t("disclaimer")}
           </span>
         </div>
       </div>

@@ -351,7 +351,7 @@ describe("알림 모달", () => {
       });
     const first = await rowOf("N1");
     fireEvent.click(within(first).getByRole("button", { name: "수락" }));
-    expect(await within(first).findByText("수락함")).toBeVisible();
+    expect(await within(first).findByText("수락됨")).toBeVisible();
     expect(requests).toContain("POST accept inv-N1");
 
     const second = await rowOf("N2");
@@ -359,7 +359,7 @@ describe("알림 모달", () => {
     const confirm = await screen.findByRole("alertdialog");
     expect(requests).not.toContain("POST decline inv-N2");
     fireEvent.click(within(confirm).getByRole("button", { name: "거절" }));
-    expect(await within(second).findByText("거절함")).toBeVisible();
+    expect(await within(second).findByText("거절됨")).toBeVisible();
     expect(requests).toContain("POST decline inv-N2");
   });
 
@@ -370,7 +370,7 @@ describe("알림 모달", () => {
     const dialog = await openModal();
     expect(
       await within(dialog).findByText(
-        "취소되었거나 더 이상 볼 수 없는 초대입니다"
+        "취소되었거나 더 이상 볼 수 없는 초대입니다."
       )
     ).toBeVisible();
     expect(within(dialog).queryByRole("button", { name: "수락" })).toBeNull();
@@ -543,7 +543,7 @@ describe("알림 모달", () => {
     const dialog = await openModal();
     expect(
       await within(dialog).findByText(
-        "초대와 검토할 결과 알림이 여기에 도착합니다."
+        "새 알림이 여기에 도착합니다."
       )
     ).toBeVisible();
     expect(
@@ -625,7 +625,7 @@ describe("검토할 결과 준비 행", () => {
       "스프린트 회고의 검토할 결과가 준비되었습니다"
     );
     expect(auto).toHaveTextContent(
-      "마지막 일시정지 후 3영업일이 지나 자동으로 종료했습니다."
+      "마지막 일시정지 후 3영업일이 지나 회의를 자동으로 종료했습니다."
     );
     const normal = dialog.querySelector<HTMLElement>(
       '[data-notification-id="A2"]'
@@ -686,7 +686,7 @@ describe("검토할 결과 준비 행", () => {
     renderCenter();
     const dialog = await openModal();
     expect(
-      await within(dialog).findByText("삭제되었거나 볼 권한이 없는 회의입니다")
+      await within(dialog).findByText("삭제되었거나 볼 권한이 없는 회의입니다.")
     ).toBeVisible();
     fireEvent.click(dialog.querySelector('[data-notification-id="A1"]')!);
     expect(push).not.toHaveBeenCalled();
@@ -719,7 +719,7 @@ describe("문의 답변 행", () => {
     const dialog = await openModal();
     fireEvent.click(
       await within(dialog).findByRole("button", {
-        name: "문의에 답변이 등록되었습니다",
+        name: "문의에 답변이 왔습니다",
       })
     );
     await waitFor(() =>

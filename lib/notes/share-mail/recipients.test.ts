@@ -9,6 +9,7 @@ import {
   isEmail,
   splitAddresses,
 } from "@/lib/notes/share-mail/recipients";
+import { testAppT } from "@/components/help/test-intl";
 
 const PEOPLE = [
   { name: "강성재", email: "sungjae@mentor.kr" },
@@ -116,9 +117,10 @@ describe("recipientProblem", () => {
   });
 
   it("틀린 주소를 짚는다", () => {
-    expect(recipientProblem(addRecipients([], ["a@x.com", "bad"]))).toContain(
-      "bad"
-    );
+    expect(recipientProblem(addRecipients([], ["a@x.com", "bad"]))).toEqual({
+      kind: "invalid",
+      emails: "bad",
+    });
   });
 
   it(`${MAX_RECIPIENTS}명을 넘으면 몇 명을 빼야 하는지 알린다`, () => {
@@ -126,8 +128,32 @@ describe("recipientProblem", () => {
       [],
       Array.from({ length: MAX_RECIPIENTS + 2 }, (_, i) => `p${i}@x.com`)
     );
-    expect(recipientProblem(many)).toContain("2명을 빼");
+    expect(recipientProblem(many)).toEqual({
+      kind: "tooMany",
+      max: MAX_RECIPIENTS,
+      extra: 2,
+    });
     expect(recipientProblem(many.slice(0, MAX_RECIPIENTS))).toBeNull();
+  });
+});
+
+describe("받는 사람 문제 문구", () => {
+  it("화면이 값을 두 언어로 그린다", () => {
+    const en = testAppT("en");
+    expect(
+      en("notes.share.mail.problem.tooMany", { max: MAX_RECIPIENTS, extra: 1 })
+    ).toContain("Remove 1 person.");
+    expect(
+      en("notes.share.mail.problem.tooMany", { max: MAX_RECIPIENTS, extra: 2 })
+    ).toContain("Remove 2 people.");
+    expect(
+      testAppT()("notes.share.mail.problem.tooMany", {
+        max: MAX_RECIPIENTS,
+        extra: 2,
+      })
+    ).toBe(
+      `한 번에 ${MAX_RECIPIENTS}명까지 보낼 수 있습니다. 2명을 빼 주세요.`
+    );
   });
 });
 

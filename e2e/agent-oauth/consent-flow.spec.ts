@@ -66,7 +66,7 @@ test("로그인 안 된 인가 요청이 로그인을 거쳐 동의 화면에 �
 
   await expect(
     page.getByRole("heading", {
-      name: "AI 앱을 HeyMoa 에 연결하려면 로그인하세요",
+      name: "AI 앱을 HeyMoa에 연결하려면 로그인하세요",
     })
   ).toBeVisible();
   await page.getByRole("link", { name: "Google로 계속하기" }).click();
@@ -74,9 +74,9 @@ test("로그인 안 된 인가 요청이 로그인을 거쳐 동의 화면에 �
   await expect(
     page.getByRole("heading", { name: "E2E 에이전트" })
   ).toBeVisible();
-  await expect(page.getByText("HeyMoa 가 확인한 앱이 아닙니다")).toBeVisible();
+  await expect(page.getByText("HeyMoa가 확인한 앱이 아닙니다")).toBeVisible();
   await expect(
-    page.getByText(`허락하면 localhost:${API_PORT} 로 돌아갑니다`)
+    page.getByText(`허락하면 localhost:${API_PORT}로 돌아갑니다`)
   ).toBeVisible();
   await expect(
     page.getByText("회의 전사(참석자의 발화와 이름)도 이 앱이 읽습니다.")
@@ -134,7 +134,7 @@ test("access 쿠키만 만료된 인가 요청은 로그인 카드 없이 동의
   ).toBeVisible();
   expect(new URL(page.url()).pathname).toBe("/oauth/consent");
   await expect(
-    page.getByText("AI 앱을 HeyMoa 에 연결하려면 로그인하세요")
+    page.getByText("AI 앱을 HeyMoa에 연결하려면 로그인하세요")
   ).toHaveCount(0);
   // proxy 가 한 번 갱신했고, 그 쿠키로 server 인가 엔드포인트를 다시 지났다
   const log = await fakeLog(page);

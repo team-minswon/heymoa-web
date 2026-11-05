@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { BellOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   describeNotification,
@@ -90,11 +91,7 @@ const TAB_ITEM =
 const ACTION =
   "h-7 px-2 text-xs font-normal text-[var(--el-body)] hover:text-[var(--el-ink)]";
 
-const TABS: { value: NotificationFilter; label: string }[] = [
-  { value: "ALL", label: "전체" },
-  { value: "UNREAD", label: "안 읽음" },
-  { value: "ACTION_REQUIRED", label: "처리 필요" },
-];
+const TABS: readonly NotificationFilter[] = ["ALL", "UNREAD", "ACTION_REQUIRED"];
 
 /** 무한 목록은 모달이 닫혀도 오래 남긴다 — 다시 열 때 불러온 쪽을 그대로 보여 준다. */
 const LIST_GC_MS = 30 * 60_000;
@@ -130,6 +127,9 @@ export function NotificationModal({
   /** 다른 화면으로 간다(검토할 결과 준비 행) */
   onNavigate: (href: string) => void;
 }) {
+  const t = useTranslations("notification.modal");
+  const tRow = useTranslations("notification.row");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const setFilter = (next: NotificationFilter) => {
@@ -319,7 +319,7 @@ export function NotificationModal({
   };
 
   const rowsFor = (item: NotificationItem) => {
-    const view = describeNotification(item, invitationActions);
+    const view = describeNotification(item, invitationActions, tRow);
     const activate = view.onActivate;
     return {
       ...view,
@@ -359,9 +359,9 @@ export function NotificationModal({
           {/* 머리(제목·탭·동작)는 흰 면, 목록은 회색 캔버스 위의 흰 카드 — 두 층이 한눈에 갈린다(APP-1361). */}
           <div className="bg-[var(--el-surface-card)]">
             <DialogHeader className="gap-1 px-6 pt-5 pb-1">
-              <DialogTitle className="leading-7">알림</DialogTitle>
+              <DialogTitle className="leading-7">{t("title")}</DialogTitle>
               <DialogDescription className="text-xs leading-[18px]">
-                모든 워크스페이스
+                {t("description")}
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-end gap-1 border-b border-[var(--el-hairline)] px-6">
@@ -376,12 +376,8 @@ export function NotificationModal({
                   className="gap-5 p-0 group-data-horizontal/tabs:h-10"
                 >
                   {TABS.map((tab) => (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
-                      className={TAB_ITEM}
-                    >
-                      {tab.label}
+                    <TabsTrigger key={tab} value={tab} className={TAB_ITEM}>
+                      {t(`tabs.${tab}`)}
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -397,7 +393,7 @@ export function NotificationModal({
                   loading={markAll.isPending}
                   onClick={readAll}
                 >
-                  모두 읽음으로 표시
+                  {t("markAllRead")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -405,7 +401,7 @@ export function NotificationModal({
                   className={ACTION}
                   onClick={openSettings}
                 >
-                  알림 설정
+                  {t("settings")}
                 </Button>
               </div>
             </div>
@@ -430,7 +426,7 @@ export function NotificationModal({
                     onClick={showNew}
                     className="rounded-full bg-[var(--el-ink)] px-2.5 py-[3px] text-xs text-white shadow-e2"
                   >
-                    새 알림 {newCount}개
+                    {t("newCount", { count: newCount })}
                   </button>
                 </div>
               ) : null}
@@ -440,14 +436,14 @@ export function NotificationModal({
                     aria-hidden
                     className="size-4 text-[var(--el-muted)]"
                   />
-                  인앱 알림이 꺼져 있습니다
+                  {t("muted")}
                   <Button
                     variant="outline"
                     size="sm"
                     className="ml-auto h-[26px]"
                     onClick={openSettings}
                   >
-                    설정 열기
+                    {t("openSettings")}
                   </Button>
                 </div>
               ) : null}
@@ -475,7 +471,7 @@ export function NotificationModal({
               {list.isFetchNextPageError ? (
                 <InlineRetry
                   variant="line"
-                  label="알림을 더 불러오지 못했습니다"
+                  label={t("loadMoreFailed")}
                   className="justify-center px-4 py-3"
                   onRetry={() => void list.fetchNextPage()}
                 />
@@ -483,10 +479,10 @@ export function NotificationModal({
                 <div className="flex justify-center pt-2 pb-4">
                   <LoadMoreButton
                     loading={list.isFetchingNextPage}
-                    loadingLabel="알림 더 불러오는 중"
+                    loadingLabel={t("loadingMore")}
                     onClick={() => void list.fetchNextPage()}
                   >
-                    더 보기
+                    {t("loadMore")}
                   </LoadMoreButton>
                 </div>
               ) : null}
@@ -501,14 +497,14 @@ export function NotificationModal({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>초대를 거절할까요?</AlertDialogTitle>
+            <AlertDialogTitle>{t("declineDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              거절하면 다시 참여하려면 새 초대가 필요합니다.
+              {t("declineDialog.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={decline.isPending}>
-              취소
+              {tActions("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -526,7 +522,7 @@ export function NotificationModal({
                 );
               }}
             >
-              거절
+              {tRow("invitation.decline")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -546,15 +542,6 @@ const CARD =
 const DAY =
   "sticky top-0 z-10 -mx-6 bg-[var(--el-canvas)] px-6 pt-5 pb-2 text-xs leading-[18px] font-medium text-[var(--el-body)]";
 
-const EMPTY: Record<NotificationFilter, { line: string; sub?: string }> = {
-  ALL: {
-    line: "초대와 검토할 결과 알림이 여기에 도착합니다.",
-    sub: "읽은 알림도 사라지지 않습니다.",
-  },
-  UNREAD: { line: "안 읽은 알림이 없습니다." },
-  ACTION_REQUIRED: { line: "응답할 초대나 검토할 결과가 없습니다." },
-};
-
 function NotificationListBody({
   filter,
   items,
@@ -572,10 +559,12 @@ function NotificationListBody({
   onShowAll: () => void;
   renderRow: (item: NotificationItem, timeLabel: string) => React.ReactNode;
 }) {
+  const t = useTranslations("notification.modal");
+  const tDates = useTranslations("dates");
   const dateLocale = useDisplayLocale();
   if (isLoading) {
     return (
-      <div aria-label="알림 불러오는 중" className={LIST}>
+      <div aria-label={t("loading")} className={LIST}>
         {filter === "ALL" ? <div className={DAY}>&nbsp;</div> : null}
         <ul className={CARD}>
           {[0, 1, 2, 3, 4].map((index) => (
@@ -594,21 +583,20 @@ function NotificationListBody({
   if (isError) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
-        <InlineRetry label="알림을 불러오지 못했습니다" onRetry={onRetry} />
+        <InlineRetry label={t("loadFailed")} onRetry={onRetry} />
       </div>
     );
   }
   if (items.length === 0) {
-    const empty = EMPTY[filter];
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 pb-10 text-center">
-        <p className="text-sm text-[var(--el-ink)]">{empty.line}</p>
-        {empty.sub ? (
-          <p className="text-xs text-[var(--el-muted)]">{empty.sub}</p>
+        <p className="text-sm text-[var(--el-ink)]">{t(`empty.${filter}`)}</p>
+        {filter === "ALL" ? (
+          <p className="text-xs text-[var(--el-muted)]">{t("empty.allSub")}</p>
         ) : null}
         {filter === "UNREAD" ? (
           <Button variant="outline" size="sm" onClick={onShowAll}>
-            전체 보기
+            {t("showAll")}
           </Button>
         ) : null}
       </div>
@@ -618,7 +606,7 @@ function NotificationListBody({
   const grouped = filter === "ALL";
   const groups: { day: string | null; items: NotificationItem[] }[] = [];
   for (const item of items) {
-    const day = grouped ? dayLabel(item.createdAt) : null;
+    const day = grouped ? dayLabel(item.createdAt, dateLocale, tDates) : null;
     const last = groups.at(-1);
     if (last && last.day === day) last.items.push(item);
     else groups.push({ day, items: [item] });
@@ -639,7 +627,7 @@ function NotificationListBody({
                 <Fragment key={item.notificationId}>
                   {renderRow(
                     item,
-                    grouped ? time : `${dayLabel(item.createdAt)} ${time}`
+                    grouped ? time : `${dayLabel(item.createdAt, dateLocale, tDates)} ${time}`
                   )}
                 </Fragment>
               );

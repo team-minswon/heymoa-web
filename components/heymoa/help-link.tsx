@@ -1,11 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { SitePageLink } from "@/components/heymoa/site-page-link";
 import type { HelpPageId } from "@/app/[lang]/help/_content/ids";
 import { helpPathById } from "@/app/[lang]/help/_content/path-by-id";
 import { track } from "@/lib/analytics/track";
+import { localePath } from "@/lib/i18n/locales";
 
 /**
  * 제품 화면에서 도움말(`/help`)의 그 항목으로 가는 글자 링크. 브라우저에서는 새 탭, 데스크톱 앱에서는 앱 안에서
@@ -13,18 +15,20 @@ import { track } from "@/lib/analytics/track";
  */
 export function HelpLink({
   topic,
-  children = "자세히",
+  children,
 }: {
   topic: HelpPageId;
   children?: ReactNode;
 }) {
+  const t = useTranslations("common.actions");
+  const locale = useLocale();
   return (
     <SitePageLink
-      href={helpPathById(topic)}
+      href={localePath(locale, helpPathById(topic))}
       onClick={() => track("help_opened", { topic })}
       className="font-medium text-[var(--el-ink)] underline underline-offset-2 hover:text-[var(--el-body)]"
     >
-      {children}
+      {children ?? t("learnMore")}
     </SitePageLink>
   );
 }

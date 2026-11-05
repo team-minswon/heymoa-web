@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PanelRightClose } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export function NoteAgentRail({
    */
   collapseDisabled: boolean;
 }) {
+  const t = useTranslations("notes.agentRail");
   const { setRailSlot } = usePersonalChat();
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
 
@@ -40,18 +42,14 @@ export function NoteAgentRail({
     // 머리글은 패널의 것 한 줄뿐이다(APP-1436) — 「내 에이전트 · 나만 보는 대화」 줄을 따로 두면 머리글이 두 줄이 된다.
     // 접기 버튼만 패널 머리글의 맨 오른쪽 자리(패널이 레일에서 비워 둔 닫기 자리)에 겹쳐 선다.
     <div className="relative flex min-h-0 w-full flex-1 flex-col">
-      <h2 className="sr-only">내 에이전트</h2>
+      <h2 className="sr-only">{t("title")}</h2>
       <Button
         type="button"
         variant="ghost"
         size="icon"
         className="absolute top-[7px] right-3 z-10 size-[34px] rounded-control text-[var(--el-body)] aria-expanded:bg-transparent hover:bg-[var(--el-surface-strong)] pointer-coarse:top-0.5 pointer-coarse:size-11 [&_svg]:size-[18px]"
-        aria-label={
-          collapseDisabled
-            ? "답변이 끝나면 접을 수 있습니다"
-            : "내 에이전트 접기"
-        }
-        title={collapseDisabled ? "답변이 끝나면 접을 수 있습니다" : "접기"}
+        aria-label={collapseDisabled ? t("collapseBusy") : t("collapse")}
+        title={collapseDisabled ? t("collapseBusy") : t("collapseShort")}
         aria-expanded
         disabled={collapseDisabled}
         onClick={onCollapse}

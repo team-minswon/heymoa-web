@@ -1,5 +1,16 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { startErrorMessage } from "./recording-messages";
+
+import { messagesFor } from "@/i18n/messages";
+
+import { startErrorMessage as startErrorMessageIn } from "./recording-messages";
+
+const t = createTranslator({
+  locale: "ko",
+  messages: messagesFor("ko"),
+  namespace: "recording.errors",
+});
+const startErrorMessage = (cause: unknown) => startErrorMessageIn(t, cause);
 
 describe("녹음 시작 실패 안내", () => {
   it.each([

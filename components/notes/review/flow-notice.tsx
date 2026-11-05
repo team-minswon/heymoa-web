@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, LoaderCircle, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +18,7 @@ type WaitingStatus = Extract<
   "DIARIZING" | "NOT_REQUESTED" | "ANALYZING" | "ANALYSIS_FAILED"
 >;
 
-const STEPS = ["회의 정리", "충돌·담당 확인", "검토", "확정"] as const;
+const STEPS = ["organize", "check", "review", "confirm"] as const;
 
 /** 흐름 상태 → 지금 선 단계와 그 단계의 모양. */
 const CURRENT: Record<
@@ -30,34 +31,11 @@ const CURRENT: Record<
   ANALYSIS_FAILED: { index: 0, state: "failed" },
 };
 
-const COPY: Record<WaitingStatus, { title: string; body: string }> = {
-  DIARIZING: {
-    title: "녹음 기록을 정리하고 있습니다",
-    body: "스크립트 저장이 마무리되면 회의 정리를 시작합니다. 화자 확인 뒤 충돌과 담당도 이어서 정리합니다.",
-  },
-  NOT_REQUESTED: {
-    title: "분석을 기다리고 있습니다",
-    body: "스크립트가 모두 저장되면 분석을 시작합니다. 오래 걸리면 직접 요청할 수 있습니다.",
-  },
-  ANALYZING: {
-    title: "회의를 분석하는 중입니다",
-    body: "회의 정리와 안건 요약을 만들고 있습니다. 화자 확인 뒤 충돌·이어짐과 담당·기한을 정리합니다.",
-  },
-  ANALYSIS_FAILED: {
-    title: "회의를 분석하지 못했습니다",
-    body: "스크립트와 회의 기록은 그대로 남아 있습니다.",
-  },
-};
-
 /**
  * 분석 실패로 보이지만 다시 요청해도 서버가 받지 않는 경우(`retryable` 거짓). 종료 뒤 상한이 지나도
  * 녹음 반영이 끝나지 않은 회의다(APP-1475). 실패 버튼을 주면 누를 때마다 409 만 돌아온다. 반영이 끝나면
  * 서버가 요청하지만 끝난다는 보장은 없어 「진행 중」이나 「자동으로 시작」이라고 말하지 않는다.
  */
-const INPUT_DELAYED_COPY = {
-  title: "회의 기록 준비가 늦어지고 있습니다",
-  body: "스크립트는 지금 확인할 수 있습니다. 분석은 녹음 기록 반영이 끝나야 시작할 수 있어 아직 요청할 수 없습니다.",
-};
 
 export function isWaitingStatus(status: FlowStatus): status is WaitingStatus {
   return status in CURRENT;
@@ -84,12 +62,17 @@ export function FlowNotice({
   compact?: boolean;
   onOpenTranscript: () => void;
 }) {
+  const t = useTranslations("notes.review.flow");
   const queryClient = useQueryClient();
   const request = useRequestAnalysis();
   const inputDelayed = status === "ANALYSIS_FAILED" && !retryable;
   const { index } = CURRENT[status];
   const state = inputDelayed ? "waiting" : CURRENT[status].state;
-  const copy = inputDelayed ? INPUT_DELAYED_COPY : COPY[status];
+  const copyKey = inputDelayed ? "INPUT_DELAYED" : status;
+  const copy = {
+    title: t(`status.${copyKey}.title`),
+    body: t(`status.${copyKey}.body`),
+  };
   const canRequest = verified && retryable;
 
   const requestAction = canRequest ? (
@@ -122,7 +105,7 @@ export function FlowNotice({
           )
         }
       >
-        {status === "ANALYSIS_FAILED" ? "다시 분석" : "분석 요청"}
+        {status === "ANALYSIS_FAILED" ? t("reanalyze") : t("request")}
       </Button>
     </div>
   ) : null;
@@ -135,7 +118,7 @@ export function FlowNotice({
       >
         <div className="rounded-block border border-[var(--el-hairline)] px-4 py-3 text-sm leading-6 text-[var(--el-body)]">
           <p className="font-medium text-[var(--el-ink)]">{copy.title}</p>
-          <p>받은 회의 정리와 검토 내용은 유지됩니다.</p>
+          <p>{t("kept")}</p>
           {requestAction}
         </div>
       </div>
@@ -144,25 +127,22 @@ export function FlowNotice({
   return (
     <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-16">
       <ol
-        aria-label="분석 단계"
+        aria-label={t("stepsLabel")}
         className="flex flex-wrap items-center gap-2.5 text-xs"
       >
-        {STEPS.map((label, at) => {
+        {STEPS.map((step, at) => {
+          const label = t(`steps.${step}`);
           const done = at < index;
           const now = at === index;
           const failed = now && state === "failed";
           const running = now && state === "running";
-          const stepState = done
-            ? "완료"
-            : failed
-              ? "실패"
-              : running
-                ? "진행 중"
-                : "대기";
+          const stepState = t(
+            `stepState.${done ? "done" : failed ? "failed" : running ? "running" : "waiting"}`
+          );
           return (
             <li
-              key={label}
-              aria-label={`${label}: ${stepState}`}
+              key={step}
+              aria-label={t("step", { label, state: stepState })}
               className="flex items-center gap-2.5"
             >
               {at > 0 ? (
@@ -244,30 +224,32 @@ export function FlowNotice({
 
       <div className="mt-10 grid gap-2.5 border-t border-[var(--el-hairline)] pt-5">
         <span className="text-xs text-[var(--el-muted-soft)]">
-          분석이 끝나면 보이는 것
+          {t("outcomesTitle")}
         </span>
         <p className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-[var(--el-muted)]">
-          {[
-            "주제 요약",
-            "결정",
-            "할 일 · 담당과 기한",
-            "이슈 · 질문",
-            "이전 결정 대체",
-            "기존 할 일 변경",
-          ].map((label) => (
-            <span key={label}>{label}</span>
+          {(
+            [
+              "topics",
+              "decisions",
+              "tasks",
+              "open",
+              "replacements",
+              "taskChanges",
+            ] as const
+          ).map((key) => (
+            <span key={key}>{t(`outcomes.${key}`)}</span>
           ))}
         </p>
       </div>
 
       <p className="mt-10 text-[13px] text-[var(--el-muted)]">
-        스크립트는 지금 볼 수 있습니다.{" "}
+        {t("transcriptReady")}{" "}
         <button
           type="button"
           className="text-[var(--el-ink)] underline underline-offset-[3px]"
           onClick={onOpenTranscript}
         >
-          스크립트 보기
+          {t("openTranscript")}
         </button>
       </p>
     </div>

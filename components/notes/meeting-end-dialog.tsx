@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Mic, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import {
@@ -37,6 +38,7 @@ import {
 } from "@/lib/api/generated/notes/notes";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import { invalidateNoteLists } from "@/lib/notes/invalidate";
+import { MEETING_STATUS_KEY } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
 /** 일시정지된 회의를 확인 한 번으로 종료한다. 기록 중이면 서버가 409 MEETING_RECORDING 을 준다. */
@@ -65,6 +67,9 @@ export function MeetingEndDialog({
   /** 창을 닫고 참여자를 고칠 수 있는 정보 탭으로 보낸다. 뷰(side·full)는 호출부가 유지한다. */
   onEditParticipants?: () => void;
 }) {
+  const t = useTranslations("notes.endDialog");
+  const tActions = useTranslations("common.actions");
+  const tStatus = useTranslations("common.meetingStatus");
   const queryClient = useQueryClient();
   const recording = useRecording();
   const endMeeting = useEndMeeting({
@@ -84,18 +89,13 @@ export function MeetingEndDialog({
         }
         // 그 사이 누군가 기록을 시작했다(APP-694). 화면이 따라잡도록 노트를 다시 묻는다.
         if (code === "MEETING_RECORDING") {
-          setBlocked(
-            errorMessageOf(
-              error,
-              "기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다."
-            )
-          );
+          setBlocked(errorMessageOf(error, t("recordingBlocked")));
           void queryClient.invalidateQueries({
             queryKey: getGetNoteQueryKey(noteId),
           });
           return;
         }
-        toast.error(errorMessageOf(error, "회의를 종료하지 못했습니다."));
+        toast.error(errorMessageOf(error, t("failed")));
       },
     },
   });
@@ -169,17 +169,14 @@ export function MeetingEndDialog({
       {/* 진행 중에는 X 를 그리지 않고 취소를 잠근다 — 눌러도 안 닫히는 활성 버튼을 두지 않는다 */}
       <DialogContent showCloseButton={!busy}>
         <DialogHeader>
-          <DialogTitle>회의를 종료할까요?</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           {/* 참여자 안내도 설명 안에 둔다 — 창의 `aria-describedby`가 이 요소 하나만 가리켜서
               밖에 두면 스크린리더가 창을 열 때 읽지 않는다(codex 리뷰 1회차). 칩 목록(`ul`)이
               들어가므로 기본 `<p>` 가 아니라 `<div>` 로 그린다. */}
           <DialogDescription render={<div />}>
-            <p>
-              회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할
-              수 없습니다.
-            </p>
+            <p>{t("description")}</p>
             <section
-              aria-label="회의 참여자"
+              aria-label={t("participantsLabel")}
               className={cn(
                 "mt-3 rounded-block border p-3",
                 few
@@ -193,7 +190,7 @@ export function MeetingEndDialog({
                 ) : (
                   <Users className="size-3.5 text-[var(--el-muted)]" />
                 )}
-                참여자 {participants.length}명
+                {t("participantCount", { count: participants.length })}
               </div>
               {participants.length > 0 ? (
                 <ul className="mt-2 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
@@ -213,10 +210,10 @@ export function MeetingEndDialog({
               ) : null}
               <p className="mt-2 text-xs leading-relaxed text-[var(--el-body)]">
                 {participants.length === 0
-                  ? "참여자가 없어 화자 수를 정하지 않고 나눕니다. 말한 사람을 참여자로 지정하면 화자 분리가 더 정확해집니다."
+                  ? t("participantsNone")
                   : few
-                    ? "참여자가 1명이라 말한 사람이 1명으로 처리됩니다. 여러 명이 말했다면 먼저 참여자를 지정해 주세요. 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다."
-                    : "말한 사람이 모두 들어 있나요? 실제로 말한 사람보다 참여자가 적으면 화자가 합쳐질 수 있고, 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다."}
+                    ? t("participantsOne")
+                    : t("participantsMany")}
               </p>
             </section>
           </DialogDescription>
@@ -224,8 +221,13 @@ export function MeetingEndDialog({
 
         <div className="flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5 text-xs text-[var(--el-muted)]">
           <Mic className="size-3.5" />
-          녹음 상태 ·{" "}
-          {meetingStatus === "IN_PROGRESS" ? "기록 중" : "일시정지됨"}
+          {t("recordingStatus", {
+            status: tStatus(
+              MEETING_STATUS_KEY[
+                meetingStatus === "IN_PROGRESS" ? "IN_PROGRESS" : "PAUSED"
+              ]
+            ),
+          })}
         </div>
 
         {blocked ? (
@@ -243,7 +245,7 @@ export function MeetingEndDialog({
         <DialogFooter>
           {/* 우측 상단 X 의 이름이 「닫기」라 같은 이름을 또 두지 않는다 */}
           <DialogClose render={<Button variant="outline" disabled={busy} />}>
-            취소
+            {tActions("cancel")}
           </DialogClose>
           {onEditParticipants ? (
             // 종료 요청이 떠 있는 동안은 막는다 — 응답이 오면 `onEnded`가 요약 탭으로 다시
@@ -256,13 +258,13 @@ export function MeetingEndDialog({
                 onEditParticipants();
               }}
             >
-              참여자 지정하러 가기
+              {t("editParticipants")}
             </Button>
           ) : null}
           {/* 높이를 손으로 주지 않는다 — `h-11`(44)이 `닫기`의 기본 높이와 달라 같은 줄에서
               두 버튼 크기가 어긋났다. 진행 표시는 문구 교체가 아니라 `loading`으로 준다. */}
           <Button loading={busy} disabled={busy} onClick={requestEnd}>
-            회의 종료
+            {t("confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

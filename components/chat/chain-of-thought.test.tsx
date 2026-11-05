@@ -756,7 +756,7 @@ describe("진행 문장(thinking) 줄", () => {
 describe("멈춘 것과 오래 걸리는 것", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("★ 새 이벤트가 오래 없으면 「응답이 늦어지고 있어요」로 바꿔 말하고, 다음 이벤트가 오면 되돌린다", () => {
+  it("★ 새 이벤트가 오래 없으면 「응답이 늦어지고 있습니다」로 바꿔 말하고, 다음 이벤트가 오면 되돌린다", () => {
     vi.useFakeTimers();
     const first = [{ ...tool("c1"), status: null }];
     const { container, rerender } = render(
@@ -766,7 +766,7 @@ describe("멈춘 것과 오래 걸리는 것", () => {
     expect(container.querySelector("[data-stalled]")).toBeNull();
     act(() => vi.advanceTimersByTime(1_000));
     expect(container.querySelector("[data-stalled]")?.textContent).toMatch(
-      /응답이 늦어지고 있어요/
+      /응답이 늦어지고 있습니다/
     );
 
     rerender(

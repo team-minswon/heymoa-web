@@ -2,9 +2,8 @@
   "guide": "User guide",
   "brandTitle": "HeyMoa Guide",
   "hub": {
-    "description": "Learn how to record meetings in HeyMoa, name speakers, add meeting context and a glossary, review summaries, and connect the desktop app and AI apps.",
+    "description": "Learn how to record meetings in HeyMoa, name speakers, add meeting context and custom vocabulary, review summaries, and connect the desktop app and AI apps.",
     "lead": "Search for a word, or browse by feature or by situation.",
-    "uiNote": "The HeyMoa app is in Korean for now. This guide refers to its buttons and screens by their English names.",
     "featured": "Popular topics",
     "byFeature": "Browse by feature",
     "bySituation": "Browse by situation"
@@ -16,7 +15,7 @@
     },
     "record": {
       "title": "Recording and transcription",
-      "summary": "Record and transcribe meetings, set attendees and speakers as you go, and use the glossary and the timeline."
+      "summary": "Record and transcribe meetings, set attendees, name speakers after the meeting, and use custom vocabulary and the timeline."
     },
     "summary": {
       "title": "Summary and review",
@@ -88,8 +87,8 @@
   "search": {
     "label": "Search the whole guide",
     "placeholder": "Search the guide",
-    "placeholderExample": "Search the guide (e.g. recording, glossary)",
-    "opener": "Search the guide (e.g. recording, glossary) {hint}",
+    "placeholderExample": "Search the guide (e.g. recording, vocabulary)",
+    "opener": "Search the guide (e.g. recording, vocabulary) {hint}",
     "dialogTitle": "Search the guide",
     "dialogHelp": "Type to search the whole guide. Use the up and down arrow keys to pick a result, then press Enter to go there.",
     "results": "Search results",

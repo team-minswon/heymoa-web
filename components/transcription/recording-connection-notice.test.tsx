@@ -30,7 +30,7 @@ function notice(
 
 const DISCONNECTED = { cause: "disconnected", sinceMs: 0 } as const;
 const WARNING =
-  "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 탭에 모아 두는 중 · 연결될 때까지 탭을 열어 두세요";
+  "연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다. 녹음한 소리는 이 탭에 모아 둡니다. 다시 연결될 때까지 탭을 열어 두세요.";
 
 describe("RecordingConnectionNotice", () => {
   afterEach(() => {
@@ -59,7 +59,7 @@ describe("RecordingConnectionNotice", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "올릴 소리 12초가 이 기기에 있어요 · 연결될 때까지 이 탭을 열어 두세요"
+      "올리지 못한 소리 12초가 이 기기에 있습니다. 연결될 때까지 이 탭을 열어 두세요."
     );
   });
 
@@ -76,7 +76,7 @@ describe("RecordingConnectionNotice", () => {
     render(notice({ buffer: buffer({ pendingMs: 300_000, paused: true }) }));
 
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("저장이 밀려 녹음을 잠시 멈췄어요");
+    expect(alert).toHaveTextContent("소리 저장이 밀려 녹음을 잠시 멈췄습니다");
     expect(alert).not.toHaveTextContent("이 기기에");
   });
 
@@ -92,7 +92,7 @@ describe("RecordingConnectionNotice", () => {
       );
 
       const alert = screen.getByRole("alert");
-      expect(alert).toHaveTextContent("저장이 밀려 녹음을 잠시 멈췄어요");
+      expect(alert).toHaveTextContent("소리 저장이 밀려 녹음을 잠시 멈췄습니다");
       expect(alert).not.toHaveTextContent("이 탭에 모아 두는 중");
       expect(screen.queryByRole("status")).toBeNull();
     }
@@ -106,7 +106,7 @@ describe("RecordingConnectionNotice", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "밀린 소리 올리는 중 63%"
+      "대기 중인 소리 올리는 중 63%"
     );
   });
 
@@ -153,10 +153,10 @@ describe("RecordingConnectionNotice", () => {
       })
     );
     const microphone = screen.getByText(
-      "마이크가 끊겼습니다. 이 동안의 소리는 녹음되지 않습니다."
+      "마이크가 끊겼습니다. 다시 연결될 때까지 소리가 녹음되지 않습니다."
     );
     const computer = screen.getByText(
-      "컴퓨터 소리가 끊겼습니다. 이 동안 상대방의 소리는 녹음되지 않습니다."
+      "컴퓨터 소리가 끊겼습니다. 다시 연결될 때까지 상대방의 소리가 녹음되지 않습니다."
     );
     expect(microphone).not.toBe(computer);
     expect(microphone).toHaveClass("block");

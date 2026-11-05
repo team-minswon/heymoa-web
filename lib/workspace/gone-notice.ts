@@ -1,3 +1,4 @@
+import { webMessage } from "@/lib/i18n/web-message";
 import { toast } from "@/lib/ui/toast";
 
 /**
@@ -31,7 +32,7 @@ export function notifyWorkspaceGone() {
   // **닫을 때까지 남는다.** 숨긴 탭에서도 추방을 감지하는데(세션 폴링이 배경에서도 돈다),
   // 기본 5초로 두면 그 타이머가 사용자가 안 보는 사이에 다 지나가 돌아왔을 때는 녹음과
   // 워크스페이스만 사라져 있다 — 안내를 만든 이유가 통째로 없어진다(codex 병합 리뷰).
-  toast.error("이 워크스페이스에 더 이상 접근할 수 없습니다.", {
+  toast.error(webMessage("workspaceGone"), {
     id: TOAST_ID,
     duration: Infinity,
   });
@@ -43,10 +44,10 @@ export function notifyWorkspaceGone() {
  * 권한을 대신하지 않는다(PRO-67 userflow).
  */
 export function notifyWorkspaceUnavailable(onSwitchAccount: () => void) {
-  toast.error("이 워크스페이스의 회의를 열 수 없습니다.", {
+  toast.error(webMessage("workspaceUnavailable"), {
     id: TOAST_ID,
     duration: Infinity,
-    description: "지금 계정이 이 워크스페이스의 멤버가 아닙니다.",
-    action: { label: "다른 계정으로 로그인", onClick: onSwitchAccount },
+    description: webMessage("workspaceUnavailableDetail"),
+    action: { label: webMessage("switchAccount"), onClick: onSwitchAccount },
   });
 }

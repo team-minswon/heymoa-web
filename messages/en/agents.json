@@ -1,0 +1,87 @@
+{
+  "blocked": {
+    "name": "{name} (MCP off)",
+    "message": "An admin turned off MCP connections for this workspace.",
+    "recheck": "Check again"
+  },
+  "accessNotice": {
+    "allProjects": "The app can access every project in this workspace, including projects created after you connect.",
+    "transcripts": "The app also reads meeting transcripts, including what attendees said and their names.",
+    "readOnly": "The app only reads and opens screens. It doesn't change anything.",
+    "readAndTasks": "The app reads, opens screens, and creates and edits tasks.",
+    "sameView": "It can't see anything you can't see.",
+    "expiry": "The connection expires if it isn't used for 90 days."
+  },
+  "taskChanges": {
+    "label": "Allow task changes",
+    "effect": "The app on this connection creates and edits tasks in your name without asking first. It doesn't change decisions or meeting reviews.",
+    "irreversible": "You can't change this after the connection is created. To change it, connect again."
+  },
+  "login": {
+    "title": "Sign in to connect an AI app to HeyMoa",
+    "description": "After you sign in, you'll choose which workspace this app can access.",
+    "google": "Continue with Google"
+  },
+  "end": {
+    "title": "Can't continue connecting",
+    "reconnect": "Couldn't find the connection request. Connect again from your agent."
+  },
+  "consent": {
+    "notFound": "Couldn't find the connection request.",
+    "loadFailed": "Couldn't load the connection request.",
+    "loading": "Loading the connection request",
+    "intro": "This app is requesting access to a HeyMoa workspace.",
+    "unverified": "Not verified by HeyMoa",
+    "redirect": "Returns to",
+    "redirectTo": "After you click Allow, you'll go back to {host}.",
+    "scopes": "Permissions",
+    "scope": {
+      "read": "Read",
+      "write": "Create and edit tasks"
+    },
+    "workspace": "Workspace to connect",
+    "workspacesLoading": "Loading workspaces",
+    "workspacesFailed": "Couldn't load workspaces.",
+    "noWorkspaces": "There are no workspaces to connect.",
+    "workspacePlaceholder": "Choose a workspace",
+    "invalidRedirect": "The agent's return address isn't valid. Connect again from your agent.",
+    "failed": "Couldn't process the request.",
+    "deny": "Decline",
+    "allow": "Allow"
+  },
+  "guide": {
+    "label": "How to connect with OAuth",
+    "title": "Which app do you use?",
+    "description": "The AI in the app you choose reads meetings and projects in this workspace. If the app asks to change tasks, you decide whether to allow it when you connect.",
+    "address": "HeyMoa URL",
+    "apps": {
+      "claudeApp": "Claude app",
+      "terminal": "Terminal",
+      "developerMode": "Developer mode"
+    },
+    "allow": "In the browser that opens, choose a workspace and click Allow.",
+    "claudeApp": {
+      "openSettings": "In the Claude app or claude.ai, open Settings › Connectors.",
+      "addConnector": "Click Add › Add custom connector and paste the URL.",
+      "connect": "Click Connect. In the browser that opens, choose a workspace and click Allow.",
+      "trouble": "On Team and Enterprise plans, an organization owner may need to add the connector first. If you use Claude Code with the same account, this connection shows up there too."
+    },
+    "claudeCode": {
+      "command": "Claude Code command",
+      "authenticate": "In your terminal, run <code>claude</code>, then choose <code>/mcp</code> → heymoa → Authenticate.",
+      "trouble": "If it says heymoa already exists, remove it with <code>claude mcp remove heymoa</code> and paste the command again. If you connected through a connector in the Claude app, you don't need to add it here."
+    },
+    "codex": {
+      "command": "Codex command",
+      "trouble": "If the browser doesn't open, run <code>codex mcp login heymoa</code>. If it says heymoa already exists, remove it with <code>codex mcp remove heymoa</code> and paste the command again."
+    },
+    "chatgpt": {
+      "developerMode": "Turn on developer mode in Settings. <link>See which plans support it</link>",
+      "addConnector": "Paste the URL into a new connector."
+    },
+    "pasteInTerminal": "Paste this in your terminal.",
+    "done": "Once connected, the app shows up in the list below",
+    "trouble": "Having trouble?",
+    "noBrowser": "Can't use a browser? <token>Create personal access token</token>"
+  }
+}

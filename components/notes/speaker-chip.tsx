@@ -1,4 +1,8 @@
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/utils";
+import type { SpeakerFallbackNames } from "@/lib/notes/speaker-stats";
 import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 
@@ -17,6 +21,7 @@ export function SpeakerChip({
   identity: SpeakerIdentity;
   className?: string;
 }) {
+  const t = useTranslations("notes.speakers");
   return (
     <span
       data-testid="speaker-chip"
@@ -31,10 +36,25 @@ export function SpeakerChip({
       {/* 아직 아무도 안 본 화자. 눈에 띄어야 이름을 붙일 이유가 생긴다. */}
       {identity.unassigned ? (
         <span
-          aria-label="아직 확인하지 않은 화자"
+          aria-label={t("unconfirmed")}
           className="size-1.5 shrink-0 rounded-full bg-[var(--el-muted-soft)]"
         />
       ) : null}
     </span>
+  );
+}
+
+/**
+ * 이름을 모르는 화자·참여자에게 세우는 말을 화면 언어로 만든다. 전사·타임라인·화자 집계가
+ * 같은 말을 쓰도록 `createSpeakerIdentityResolver`·`summarizeSpeakers` 에 넘긴다.
+ */
+export function useSpeakerFallbackNames(): SpeakerFallbackNames {
+  const t = useTranslations("notes.speakers");
+  return useMemo(
+    () => ({
+      unnamedParticipant: t("unnamedParticipant"),
+      speaker: (label: string) => t("fallback", { label }),
+    }),
+    [t]
   );
 }

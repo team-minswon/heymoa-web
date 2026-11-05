@@ -89,7 +89,7 @@ If you see “Microphone disconnected” or “Computer sound disconnected” wh
 
 The icon in the menu bar (Mac) or the notification area of the taskbar (Windows) shows the recording status.
 
-Click the icon to open the current meeting's timeline. Choose what to see from **[All]**, **[Decisions]**, **[Tasks]**, **[Open questions]**, and **[References]**. Click **[Open current meeting ↗]** to open the meeting screen, or **[⏸ Pause recording]** to pause recording.
+Click the icon to open the current meeting's timeline. Choose what to see from **[All]**, **[Decisions]**, **[Tasks]**, **[Open questions]**, and **[Reference]**. Click **[Open current meeting ↗]** to open the meeting screen, or **[⏸ Pause recording]** to pause recording.
 
 If nothing new arrives for more than 30 seconds, you see “Updates paused”. Open the meeting to check on it.
 

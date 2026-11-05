@@ -203,7 +203,8 @@ test.describe("제품 면 언어", () => {
     await expect.poll(() => cookieValue(context, "heymoa-lang")).toBe("en");
 
     await page.getByRole("button", { name: /테스트 유저/ }).click();
-    await page.getByRole("menuitem", { name: "로그아웃" }).click();
+    // 계정 언어가 영어라 사이드바 계정 메뉴도 영어다.
+    await page.getByRole("menuitem", { name: "Log out" }).click();
     await expect(page).toHaveURL(`${BASE}/en`);
 
     await page.goto("/");

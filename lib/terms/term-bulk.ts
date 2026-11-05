@@ -87,36 +87,37 @@ export function planBulk({
 
 export type SummaryPart = {
   key: "fresh" | "duplicates" | "tooLong" | "overLimit";
-  text: string;
+  /** 문구는 그리는 쪽이 언어 파일(`settings.terms.summary`)에서 고른다. */
+  count: number;
   /** warn 은 사용자가 고쳐야 할 것(잘리거나 못 들어가는 것), 나머지는 담담히. */
   tone: "ink" | "muted" | "warn";
 };
 
-/** 미리보기 요약. 0인 항목은 말하지 않는다 — 「새로 n개 · 이미 있어요 m개 · …」. */
+/** 미리보기 요약. 0인 항목은 말하지 않는다 — 「새로 n개 · 중복 m개 · …」. */
 export function summaryParts(plan: BulkPlan): SummaryPart[] {
   const parts: SummaryPart[] = [];
   if (plan.fresh.length > 0)
     parts.push({
       key: "fresh",
-      text: `새로 ${plan.fresh.length}개`,
+      count: plan.fresh.length,
       tone: "ink",
     });
   if (plan.duplicates.length > 0)
     parts.push({
       key: "duplicates",
-      text: `이미 있어요 ${plan.duplicates.length}개`,
+      count: plan.duplicates.length,
       tone: "muted",
     });
   if (plan.tooLong.length > 0)
     parts.push({
       key: "tooLong",
-      text: `${TERM_MAX_LENGTH}자를 넘어 제외 ${plan.tooLong.length}개`,
+      count: plan.tooLong.length,
       tone: "warn",
     });
   if (plan.overLimit.length > 0)
     parts.push({
       key: "overLimit",
-      text: `한도를 넘어 못 넣어요 ${plan.overLimit.length}개`,
+      count: plan.overLimit.length,
       tone: "warn",
     });
   return parts;

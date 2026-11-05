@@ -3,6 +3,7 @@ import type {
   TranscriptResponseData,
 } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
+import type { DatesT } from "@/lib/i18n/translator";
 import {
   getRecordedDurationMs,
   meetingLengthOf,
@@ -25,8 +26,13 @@ export function buildNoteHeaderMeta(
   {
     isStarter,
     transcript,
+    locale,
+    t,
   }: {
     isStarter: boolean;
+    /** 화면 언어의 날짜 표시 locale(`useDisplayLocale`)과 `useTranslations("dates")` */
+    locale: string;
+    t: DatesT;
     /** 받아 둔 전사. 있으면 회의 길이를 화자 패널 · 회의록과 같은 값(`meetingLengthOf`)으로 맞춘다. */
     transcript?: TranscriptResponseData | null;
   }
@@ -42,19 +48,25 @@ export function buildNoteHeaderMeta(
   const whenIso = note.meetingStartedAt ?? note.createdAt;
   const head = {
     participantLabel:
-      participantCount > 0 ? `참석자 ${participantCount}명` : null,
+      participantCount > 0
+        ? t("noteMeta.participants", { count: participantCount })
+        : null,
     whenIso,
-    whenLabel: formatAppDate(whenIso, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
+    whenLabel: formatAppDate(
+      whenIso,
+      {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      },
+      locale
+    ),
   };
 
   if (note.meetingStatus === "NOT_STARTED") {
-    return { ...head, secondary: "아직 시작하지 않았습니다" };
+    return { ...head, secondary: t("noteMeta.notStarted") };
   }
 
   if (note.meetingStatus === "IN_PROGRESS") {
@@ -63,8 +75,10 @@ export function buildNoteHeaderMeta(
       ...head,
       secondary: [
         // 참관 중일 때만 누가 기록 중인지 적는다. 시작자에게는 자기 이름이라 군더더기다.
-        !isStarter && starter ? `${starter.name}님이 기록 중` : null,
-        "워크스페이스 멤버에게 공개",
+        !isStarter && starter
+          ? t("noteMeta.recordingBy", { name: starter.name })
+          : null,
+        t("noteMeta.visibleToMembers"),
       ]
         .filter(Boolean)
         .join(" · "),
@@ -77,5 +91,5 @@ export function buildNoteHeaderMeta(
   const minutes = Math.floor(
     meetingLengthOf(getRecordedDurationMs(note, 0), transcript) / 60_000
   );
-  return { ...head, secondary: `기록 ${minutes}분` };
+  return { ...head, secondary: t("noteMeta.recorded", { minutes }) };
 }

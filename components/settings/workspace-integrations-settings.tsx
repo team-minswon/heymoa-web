@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Info, Link2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,8 @@ export function WorkspaceIntegrationsSettings({
 }: {
   workspaceId: string;
 }) {
+  const t = useTranslations("settings.integrations");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const [connecting, setConnecting] = useState(false);
   const { user } = useAuth();
@@ -102,9 +105,9 @@ export function WorkspaceIntegrationsSettings({
     const desktop = desktopAuthBridge();
     if (desktop) {
       if (!desktop.beginConnection) {
-        toast.error("앱을 업데이트한 뒤 다시 연결해 주세요.", {
+        toast.error(t("toast.updateApp"), {
           action: {
-            label: "새 버전 보기",
+            label: t("toast.viewRelease"),
             onClick: () =>
               window.open(
                 DESKTOP_RELEASES_URL,
@@ -128,10 +131,10 @@ export function WorkspaceIntegrationsSettings({
             queryKey: getGetWorkspaceIntegrationsQueryKey(workspaceId),
           });
         } else if (outcome.status !== "cancelled") {
-          toast.error("연결하지 못했습니다. 다시 시도해 주세요.");
+          toast.error(t("toast.connectFailed"));
         }
       } catch {
-        toast.error("연결을 시작하지 못했습니다. 다시 시도해 주세요.");
+        toast.error(t("toast.startFailed"));
       } finally {
         setConnecting(false);
       }
@@ -149,7 +152,7 @@ export function WorkspaceIntegrationsSettings({
         window.location.assign("/");
         return;
       }
-      toast.error("연결을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      toast.error(t("toast.startFailedLater"));
       return;
     }
     window.location.assign(
@@ -162,17 +165,16 @@ export function WorkspaceIntegrationsSettings({
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <SettingsHeader
-        title="연동"
+        title={t("title")}
         description={
           <>
-            챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을
-            씁니다. <HelpLink topic="integrations" />
+            {t("description")} <HelpLink topic="integrations" />
           </>
         }
       />
 
       {integrationsQuery.isLoading ? (
-        <div className="space-y-3" aria-label="연동 불러오는 중">
+        <div className="space-y-3" aria-label={t("loading")}>
           {Array.from({ length: SKELETON_INTEGRATIONS }, (_, index) => (
             <IntegrationCardSkeleton key={index} />
           ))}
@@ -180,7 +182,7 @@ export function WorkspaceIntegrationsSettings({
       ) : integrationsQuery.isError ? (
         <div role="alert" className="space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
-            연동 정보를 불러오지 못했습니다.
+            {t("loadFailed")}
           </p>
           <Button
             variant="outline"
@@ -188,7 +190,7 @@ export function WorkspaceIntegrationsSettings({
             className="h-[30px]"
             onClick={() => void integrationsQuery.refetch()}
           >
-            다시 시도
+            {tActions("retry")}
           </Button>
         </div>
       ) : (
@@ -221,7 +223,7 @@ export function WorkspaceIntegrationsSettings({
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <div className="min-w-0 flex-1">
             <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-              권한을 확인하지 못해 연결·해제를 할 수 없습니다.
+              {t("roleFailed")}
             </p>
             <Button
               variant="outline"
@@ -229,7 +231,7 @@ export function WorkspaceIntegrationsSettings({
               className="mt-2 h-[30px]"
               onClick={() => void membersQuery.refetch()}
             >
-              다시 시도
+              {tActions("retry")}
             </Button>
           </div>
         </div>
@@ -240,8 +242,7 @@ export function WorkspaceIntegrationsSettings({
         >
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-            연동 연결·해제는 관리자만 할 수 있습니다. 새 연동이 필요하면
-            ADMIN에게 요청하세요.
+            {t("adminOnly")}
           </p>
         </div>
       ) : null}
@@ -262,6 +263,7 @@ function IntegrationCard({
   onConnect: () => void;
   onDisconnect: () => void;
 }) {
+  const t = useTranslations("settings.integrations.card");
   const dateLocale = useDisplayLocale();
   const provider = integration.provider as Provider;
   // 카드 안의 카드에는 그림자를 주지 않는다 — hairline만. (ELEVATION SPEC)
@@ -297,12 +299,12 @@ function IntegrationCard({
               {PROVIDER_LABEL[provider]}
             </p>
             <Badge variant={integration.connected ? "success" : "outline"}>
-              {integration.connected ? "연결됨" : "연결되지 않음"}
+              {integration.connected ? t("connected") : t("notConnected")}
             </Badge>
           </div>
           <p className="mt-1 text-xs text-[var(--el-muted)]">
             {integration.connected
-              ? `${integration.connectedBy ?? "관리자"} · ${
+              ? `${integration.connectedBy ?? t("adminFallback")} · ${
                   integration.connectedAt
                     ? formatAppDate(
                         integration.connectedAt,
@@ -315,7 +317,7 @@ function IntegrationCard({
                       )
                     : "-"
                 }`
-              : "챗봇이 이 도구를 쓰려면 연결이 필요합니다."}
+              : t("needsConnection")}
           </p>
         </div>
       </div>
@@ -331,7 +333,7 @@ function IntegrationCard({
             disabled={isBusy}
             onClick={onDisconnect}
           >
-            연결 해제
+            {t("disconnect")}
           </Button>
         ) : (
           <Button
@@ -340,7 +342,7 @@ function IntegrationCard({
             disabled={isBusy}
             onClick={onConnect}
           >
-            연결
+            {t("connect")}
           </Button>
         )
       ) : null}

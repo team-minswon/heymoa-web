@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   MessageCircle,
@@ -23,30 +24,38 @@ const CHATGPT_HELP_URL =
 
 type AppKey = "claude-app" | "claude-code" | "codex" | "chatgpt";
 
-/** 고르는 카드 네 장. 이름 아래 한 줄은 「어디서 하는 일인가」 — 터미널이 필요한지 먼저 보이게 한다. */
+/**
+ * 고르는 카드 네 장. 이름 아래 한 줄은 「어디서 하는 일인가」 — 터미널이 필요한지 먼저 보이게 한다.
+ * 이름·자리 중 번역할 것은 `agents.guide.apps` 의 키이고, 제품 이름은 그대로 쓴다.
+ */
 const APPS: {
   key: AppKey;
-  name: string;
-  where: string;
+  name: string | { key: "claudeApp" };
+  where: string | { key: "terminal" | "developerMode" };
   Icon: ComponentType<{ className?: string }>;
 }[] = [
   {
     key: "claude-app",
-    name: "Claude 앱",
+    name: { key: "claudeApp" },
     where: "claude.ai",
     Icon: MessageCircle,
   },
   {
     key: "claude-code",
     name: "Claude Code",
-    where: "터미널",
+    where: { key: "terminal" },
     Icon: SquareTerminal,
   },
-  { key: "codex", name: "Codex", where: "터미널", Icon: Terminal },
-  { key: "chatgpt", name: "ChatGPT", where: "개발자 모드", Icon: Sparkles },
+  { key: "codex", name: "Codex", where: { key: "terminal" }, Icon: Terminal },
+  {
+    key: "chatgpt",
+    name: "ChatGPT",
+    where: { key: "developerMode" },
+    Icon: Sparkles,
+  },
 ];
 
-const ALLOW = "열린 브라우저에서 워크스페이스를 고르고 「허락」";
+const code = (chunks: ReactNode) => <code>{chunks}</code>;
 
 /**
  * OAuth 로 연결하는 안내(APP-889 · APP-1031). 앱 카드 하나를 고르면 그 앱의 단계만 타임라인으로 보인다 — 네 앱을
@@ -61,20 +70,23 @@ export function AgentOAuthGuide({
   onPersonalToken: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("agents.guide");
+  const tActions = useTranslations("common.actions");
+  const word = (value: string | { key: "claudeApp" | "terminal" | "developerMode" }) =>
+    typeof value === "string" ? value : t(`apps.${value.key}`);
   const mcpUrl = buildUrl("/mcp");
-  const address = <CopyBlock inline label="HeyMoa 주소" value={mcpUrl} />;
+  const address = <CopyBlock inline label={t("address")} value={mcpUrl} />;
 
   return (
     <section
-      aria-label="OAuth 연결 안내"
+      aria-label={t("label")}
       className="rounded-panel border border-[var(--el-hairline)] bg-white p-6"
     >
       <h3 className="text-xl font-light tracking-[-0.02em] text-[var(--el-ink)]">
-        어떤 앱에서 쓰시나요?
+        {t("title")}
       </h3>
       <p className="mt-1 text-sm text-[var(--el-muted)]">
-        고른 앱의 AI 가 이 워크스페이스의 회의와 프로젝트를 읽습니다. 읽기만
-        합니다.
+        {t("description")}
       </p>
 
       {/* 기본은 Claude 앱이다 — 터미널이 필요 없고, 같은 계정의 Claude Code 에도 들어온다(APP-1031 spec) */}
@@ -85,7 +97,7 @@ export function AgentOAuthGuide({
             <TabsTrigger
               key={key}
               value={key}
-              aria-label={name}
+              aria-label={word(name)}
               className={cn(
                 "h-auto flex-col items-start gap-0 rounded-block border border-[var(--el-hairline-strong)] bg-white px-3 py-2.5 text-left whitespace-normal shadow-none",
                 "data-active:border-[var(--el-ink)] data-active:bg-[var(--el-canvas-soft)] data-active:shadow-none data-active:ring-1 data-active:ring-[var(--el-ink)]"
@@ -93,10 +105,10 @@ export function AgentOAuthGuide({
             >
               <Icon className="size-4 text-[var(--el-ink)]" />
               <span className="mt-2 text-sm font-medium text-[var(--el-ink)]">
-                {name}
+                {word(name)}
               </span>
               <span className="text-xs font-normal text-[var(--el-muted)]">
-                {where}
+                {word(where)}
               </span>
             </TabsTrigger>
           ))}
@@ -112,16 +124,14 @@ export function AgentOAuthGuide({
             className={PANEL}
           >
             <Steps>
-              <Step n={1}>
-                Claude 앱이나 claude.ai 에서 설정 › 커넥터를 엽니다
-              </Step>
+              <Step n={1}>{t("claudeApp.openSettings")}</Step>
               <Step n={2}>
-                「추가」 › 「사용자 지정 커넥터」에 주소를 붙여 넣습니다
+                {t("claudeApp.addConnector")}
                 {address}
               </Step>
-              <Step n={3}>「연결」을 누르고 {ALLOW}</Step>
+              <Step n={3}>{t("claudeApp.connect")}</Step>
             </Steps>
-            <Done trouble="Team·Enterprise 플랜은 조직 소유자가 먼저 커넥터를 추가해야 할 수 있습니다. 같은 계정으로 Claude Code 를 쓰면 여기서 연결한 것이 Claude Code 에도 들어옵니다." />
+            <Done trouble={t("claudeApp.trouble")} />
           </TabsContent>
 
           <TabsContent
@@ -132,30 +142,21 @@ export function AgentOAuthGuide({
           >
             <Steps>
               <Step n={1}>
-                터미널에 붙여 넣습니다
+                {t("pasteInTerminal")}
                 {/* 어느 폴더에서나 쓰이게 한다 — 폴더 범위(기본)로 등록하면 다른 폴더에서 heymoa 가 보이지 않았다(APP-1031) */}
                 <CopyBlock
                   inline
-                  label="Claude Code 명령"
+                  label={t("claudeCode.command")}
                   value={`claude mcp add --transport http --scope user heymoa ${mcpUrl}`}
                 />
               </Step>
               <Step n={2}>
                 {/* 「Claude Code 에서」만 쓰면 데스크톱 앱의 Code 탭으로 읽힌다 — 터미널 CLI 임을 적는다(APP-1031) */}
-                터미널에서 <code>claude</code> 를 실행하고 <code>/mcp</code> →
-                heymoa → 인증
+                {t.rich("claudeCode.authenticate", { code })}
               </Step>
-              <Step n={3}>{ALLOW}</Step>
+              <Step n={3}>{t("allow")}</Step>
             </Steps>
-            <Done
-              trouble={
-                <>
-                  「이미 있다」고 나오면 <code>claude mcp remove heymoa</code>{" "}
-                  로 지운 뒤 다시 붙여 넣으세요. Claude 앱에서 커넥터로
-                  연결했다면 따로 등록하지 않아도 됩니다.
-                </>
-              }
-            />
+            <Done trouble={t.rich("claudeCode.trouble", { code })} />
           </TabsContent>
 
           <TabsContent
@@ -166,27 +167,18 @@ export function AgentOAuthGuide({
           >
             <Steps>
               <Step n={1}>
-                터미널에 붙여 넣습니다
+                {t("pasteInTerminal")}
                 {/* Codex 는 OAuth 서버를 등록하면 바로 로그인을 시작한다 — `codex mcp login` 을 같이 붙여 넣으면 허락을
                   두 번 하게 되고 연결도 둘 생긴다(APP-889 로컬 확인) */}
                 <CopyBlock
                   inline
-                  label="Codex 명령"
+                  label={t("codex.command")}
                   value={`codex mcp add heymoa --url ${mcpUrl}`}
                 />
               </Step>
-              <Step n={2}>{ALLOW}</Step>
+              <Step n={2}>{t("allow")}</Step>
             </Steps>
-            <Done
-              trouble={
-                <>
-                  브라우저가 열리지 않으면 <code>codex mcp login heymoa</code>{" "}
-                  를 실행하세요. 「이미 있다」고 나오면{" "}
-                  <code>codex mcp remove heymoa</code> 로 지운 뒤 다시 붙여
-                  넣으세요.
-                </>
-              }
-            />
+            <Done trouble={t.rich("codex.trouble", { code })} />
           </TabsContent>
 
           <TabsContent
@@ -198,21 +190,24 @@ export function AgentOAuthGuide({
             {/* 메뉴 이름이 자주 바뀌어 화면 경로를 자세히 적지 않는다(APP-1031 spec) */}
             <Steps>
               <Step n={1}>
-                설정에서 개발자 모드를 켭니다 ·{" "}
-                <a
-                  href={CHATGPT_HELP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline underline-offset-2"
-                >
-                  쓸 수 있는 요금제 보기
-                </a>
+                {t.rich("chatgpt.developerMode", {
+                  link: (chunks) => (
+                    <a
+                      href={CHATGPT_HELP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                })}
               </Step>
               <Step n={2}>
-                새 커넥터에 주소를 붙여 넣습니다
+                {t("chatgpt.addConnector")}
                 {address}
               </Step>
-              <Step n={3}>{ALLOW}</Step>
+              <Step n={3}>{t("allow")}</Step>
             </Steps>
             <Done />
           </TabsContent>
@@ -222,19 +217,22 @@ export function AgentOAuthGuide({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--el-hairline)] pt-4">
         {/* 공용 Button 은 줄바꿈하지 않는다 — 긴 설명은 버튼 밖에 두고 버튼은 짧게 둔다 */}
         <p className="text-xs text-[var(--el-muted)]">
-          브라우저가 없는 곳이면{" "}
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className="h-auto p-0 text-xs underline underline-offset-2"
-            onClick={onPersonalToken}
-          >
-            개인 토큰 만들기
-          </Button>
+          {t.rich("noBrowser", {
+            token: (chunks) => (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs underline underline-offset-2"
+                onClick={onPersonalToken}
+              >
+                {chunks}
+              </Button>
+            ),
+          })}
         </p>
         <Button type="button" size="sm" className="h-8" onClick={onClose}>
-          닫기
+          {tActions("close")}
         </Button>
       </div>
     </section>
@@ -269,6 +267,7 @@ function Step({ n, children }: { n: number; children: ReactNode }) {
 
 /** 끝 상태 한 줄. 예외는 본 단계와 같은 무게로 섞지 않고 「잘 안 될 때」를 눌러야 보인다(APP-1031). */
 function Done({ trouble }: { trouble?: ReactNode }) {
+  const t = useTranslations("agents.guide");
   const [open, setOpen] = useState(false);
   return (
     <div className="mt-5 text-xs text-[var(--el-muted)]">
@@ -277,7 +276,7 @@ function Done({ trouble }: { trouble?: ReactNode }) {
           className="size-3.5 text-[var(--el-success-strong)]"
           aria-hidden
         />
-        연결되면 아래 목록에 나타납니다
+        {t("done")}
         {trouble ? (
           <>
             {" · "}
@@ -287,7 +286,7 @@ function Done({ trouble }: { trouble?: ReactNode }) {
               className="underline underline-offset-2 hover:text-[var(--el-ink)]"
               onClick={() => setOpen((value) => !value)}
             >
-              잘 안 될 때
+              {t("trouble")}
             </button>
           </>
         ) : null}

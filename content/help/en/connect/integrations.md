@@ -4,7 +4,7 @@ description: When an admin connects tools like Linear and GitHub to the workspac
 group: connect
 slug: integrations
 order: 1
-modified: 2026-10-23
+modified: 2026-11-05
 ---
 
 ## Connect a tool {#connect}
@@ -18,7 +18,7 @@ Only admins can connect and disconnect integrations. If you're not an admin, the
 2. **Click [Connect]**
    You're taken to the tool's sign-in page. Sign in and allow access, and you'll come back.
 3. **Check the result**
-   Once connected, you'll see **[Connected]** with who connected it and when. If it fails, you'll see “The integration couldn't be connected. Please try again later.”
+   Once connected, you'll see **[Connected]** with who connected it and when. If it fails, you'll see “Couldn't connect. Try again.”
 
 ![The Integrations tab in Settings, with Linear connected and GitHub not connected](img:integrations/settings.webp "Integration settings. Only admins can connect and disconnect.")
 

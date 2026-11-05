@@ -1,3 +1,4 @@
+import type { DocLanguage } from "@/lib/i18n/translator";
 import { headingLines, type NoteMeta } from "@/lib/notes/copy-markdown";
 import type {
   MinutesGroup,
@@ -10,11 +11,12 @@ import type {
  */
 export function timelineToMarkdown(
   note: NoteMeta,
-  groups: readonly MinutesGroup<MinutesTimelineRow>[]
+  groups: readonly MinutesGroup<MinutesTimelineRow>[],
+  doc: DocLanguage
 ) {
-  const lines = [...headingLines(note, " — 타임라인")];
+  const lines = [...headingLines(note, doc, "timeline")];
   if (groups.length === 0)
-    lines.push("", "_정해진 것 · 남은 것이 아직 없습니다_");
+    lines.push("", `_${doc.t("dates.document.timelineEmpty")}_`);
   for (const group of groups) {
     if (group.title !== null)
       lines.push(

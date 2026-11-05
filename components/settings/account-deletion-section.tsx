@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { SitePageLink } from "@/components/heymoa/site-page-link";
@@ -43,15 +44,7 @@ import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { markAccountDeleted } from "@/components/auth/account-deleted-notice";
 import { forgetDeletedAccount } from "@/lib/storage/user-flags";
 import { cn } from "@/lib/utils";
-
-const REASON_LABEL: Record<WithdrawalReasonCode, string> = {
-  MISSING_FEATURE: "필요한 기능이 없음",
-  SECURITY_CONCERN: "보안·데이터가 걱정됨",
-  TRANSCRIPTION_QUALITY: "스크립트·요약 품질",
-  OTHER_SERVICE: "다른 서비스를 씀",
-  RARELY_USED: "자주 쓰지 않음",
-  OTHER: "기타",
-};
+import { localePath } from "@/lib/i18n/locales";
 
 /** 유일 관리자 워크스페이스에서 고른 것. 기본은 서버가 정한 가장 오래된 멤버에게 넘기기다. */
 type Choice =
@@ -65,6 +58,7 @@ type Choice =
  * 사유는 건너뛸 수 있다. 버튼은 「회원 탈퇴」 입력만으로 켜진다(권리 행사를 어렵게 하지 않는다).
  */
 export function AccountDeletionSection() {
+  const t = useTranslations("settings.accountDeletion");
   const [open, setOpen] = useState(false);
   return (
     <section
@@ -75,11 +69,10 @@ export function AccountDeletionSection() {
         id="account-deletion-title"
         className="text-sm font-medium text-[var(--el-ink)]"
       >
-        계정 삭제
+        {t("title")}
       </h3>
       <p className="mt-1 text-xs leading-5 text-[var(--el-muted)]">
-        계정과 혼자 쓰던 워크스페이스를 지우고 모든 기기에서 로그아웃합니다.
-        되돌릴 수 없습니다.
+        {t("description")}
       </p>
       <Button
         variant="outline"
@@ -87,7 +80,7 @@ export function AccountDeletionSection() {
         className="mt-3 h-[30px]"
         onClick={() => setOpen(true)}
       >
-        계정 삭제
+        {t("title")}
       </Button>
       {open ? <AccountDeletionDialog onClose={() => setOpen(false)} /> : null}
     </section>
@@ -95,6 +88,9 @@ export function AccountDeletionSection() {
 }
 
 function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
+  const locale = useLocale();
+  const t = useTranslations("settings.accountDeletion");
+  const tActions = useTranslations("common.actions");
   const { user, leave } = useAuth();
   const recording = useRecording();
   const recordingNow = isRecordingLive(recording);
@@ -108,11 +104,16 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * 화면 언어로 입력받는 확인 문구. 계약(`confirmation`)은 「회원 탈퇴」 하나라, 영어 화면에서 맞게 입력하면 계약 값을
+   * 대신 보낸다 — 한국어 입력기가 없는 사람도 탈퇴할 수 있어야 한다. 실수로 지우지 않게 하는 관문은 이 입력 그대로다.
+   */
+  const phrase = t("confirmPhrase");
   const busy = deleteAccount.isPending;
   const workspaces = plan.data?.workspaces;
   const ready =
     workspaces !== undefined &&
-    confirmationMatches(typed, WITHDRAWAL_CONFIRMATION) &&
+    confirmationMatches(typed, phrase) &&
     !recordingNow &&
     !busy;
 
@@ -133,7 +134,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       await deleteAccount.mutateAsync({
-        confirmation: typed.trim(),
+        confirmation: WITHDRAWAL_CONFIRMATION,
         workspaces: workspaces
           .filter((row) => row.action === "TRANSFER_OR_DELETE")
           .map((row) => ({ workspaceId: row.workspaceId, ...choiceOf(row) })),
@@ -151,7 +152,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
         setChoices({});
         void plan.refetch();
       }
-      setError(errorMessageOf(failure, "계정을 삭제하지 못했습니다."));
+      setError(errorMessageOf(failure, t("failed")));
       return;
     }
     // 홈으로 보낸다. 완료 안내는 홈에서 짧은 토스트로 한 번 띄운다(`AccountDeletedNotice`).
@@ -174,19 +175,20 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
       >
         <DialogHeader className="gap-1 px-5 pt-5 pb-1">
           <DialogTitle className="text-[17px] font-semibold text-balance">
-            계정을 삭제할까요?
+            {t("dialog.title")}
           </DialogTitle>
           <DialogDescription className="text-[13px]">
-            삭제하면 되돌릴 수 없고, 같은 Google 계정으로 다시 가입하면 새
-            계정이 됩니다.
+            {t("dialog.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pt-3.5 pb-4">
           <section aria-labelledby={reasonId}>
             <SectionLabel id={reasonId}>
-              탈퇴 사유{" "}
-              <span className="font-normal text-[var(--el-muted)]">(선택)</span>
+              {t("reason.label")}{" "}
+              <span className="font-normal text-[var(--el-muted)]">
+                {t("reason.optional")}
+              </span>
             </SectionLabel>
             <div className="flex flex-wrap gap-2">
               {WITHDRAWAL_REASON_CODES.map((code) => (
@@ -204,19 +206,19 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
                       : "border-[var(--el-hairline)] text-[var(--el-body)] hover:bg-[var(--el-canvas-soft)]"
                   )}
                 >
-                  {REASON_LABEL[code]}
+                  {t(`reason.codes.${code}`)}
                 </button>
               ))}
             </div>
             {reason === "OTHER" ? (
               <div className="mt-3 grid gap-1.5">
                 <Textarea
-                  aria-label="기타 사유"
+                  aria-label={t("reason.otherLabel")}
                   value={detail}
                   maxLength={WITHDRAWAL_DETAIL_MAX}
                   disabled={busy}
                   rows={3}
-                  placeholder="개인정보는 적지 마세요."
+                  placeholder={t("reason.otherPlaceholder")}
                   onChange={(event) => setDetail(event.target.value)}
                 />
                 <span className="justify-self-end text-xs text-[var(--el-muted)] tabular-nums">
@@ -225,21 +227,21 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
               </div>
             ) : null}
             <p className="mt-2 text-xs text-[var(--el-muted)]">
-              사유는 개인을 알 수 없게 통계로만 남습니다.
+              {t("reason.note")}
             </p>
           </section>
 
-          <section aria-label="워크스페이스별 처리">
-            <SectionLabel>워크스페이스별 처리</SectionLabel>
+          <section aria-label={t("plan.label")}>
+            <SectionLabel>{t("plan.label")}</SectionLabel>
             {plan.isPending ? (
-              <div className="space-y-2" aria-label="처리 목록 불러오는 중">
+              <div className="space-y-2" aria-label={t("plan.loading")}>
                 <Skeleton className="h-12 rounded-block" />
                 <Skeleton className="h-12 rounded-block" />
               </div>
             ) : plan.isError ? (
               <InlineRetry
                 variant="line"
-                label="처리 목록을 불러오지 못했습니다."
+                label={t("plan.loadFailed")}
                 onRetry={() => void plan.refetch()}
               />
             ) : workspaces && workspaces.length > 0 ? (
@@ -261,48 +263,39 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
               </ul>
             ) : (
               <p className="text-[13px] text-[var(--el-muted)]">
-                속한 워크스페이스가 없습니다.
+                {t("plan.empty")}
               </p>
             )}
           </section>
 
-          <section aria-label="지워지는 것과 남는 것">
-            <SectionLabel>지워지는 것과 남는 것</SectionLabel>
+          <section aria-label={t("effects.label")}>
+            <SectionLabel>{t("effects.label")}</SectionLabel>
             {/* 사업자 이름·내부 항목은 나열하지 않는다. 기간은 처리방침 6조가 원본이다(APP-1403). */}
             <ul className="list-disc space-y-1 pl-5 text-[13px] leading-relaxed text-[var(--el-body)]">
               <li>
-                계정 정보와, 혼자 쓰던 워크스페이스·삭제하기로 고른
-                워크스페이스의{" "}
-                <span className="whitespace-nowrap">
-                  회의 기록(노트·스크립트·음성)이
-                </span>{" "}
-                바로 삭제됩니다.
+                {t.rich("effects.deleted", {
+                  nowrap: (chunks) => (
+                    <span className="whitespace-nowrap">{chunks}</span>
+                  ),
+                })}
               </li>
+              <li>{t("effects.conversations")}</li>
+              <li>{t("effects.sharedHistory")}</li>
+              <li>{t("effects.external")}</li>
               <li>
-                모든 워크스페이스에서 내가 나눈 에이전트 대화가 삭제됩니다.
-              </li>
-              <li>
-                함께 쓰던 워크스페이스의 지난 회의 기록에는 이름과 발언이
-                남습니다.
-              </li>
-              <li>
-                이미 외부 도구(Linear·GitHub)로 보낸 내용과 보낸 메일은
-                남습니다.
-              </li>
-              <li>
-                문의 기록 등 일부 정보는 정해진 기간 동안 보관한 뒤 삭제됩니다.{" "}
+                {t("effects.retained")}{" "}
                 <SitePageLink
-                  href="/privacy#section-6"
+                  href={localePath(locale, "/privacy#section-6")}
                   className="whitespace-nowrap underline underline-offset-2 hover:text-[var(--el-ink)]"
                 >
-                  보관 기간 자세히 보기
+                  {t("effects.retentionLink")}
                 </SitePageLink>
               </li>
             </ul>
           </section>
 
           <ConfirmPhraseField
-            phrase={WITHDRAWAL_CONFIRMATION}
+            phrase={phrase}
             value={typed}
             onChange={setTyped}
             disabled={busy}
@@ -310,7 +303,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
 
           {recordingNow ? (
             <p role="status" className="text-xs text-[var(--el-muted)]">
-              녹음을 끝낸 뒤 탈퇴할 수 있습니다.
+              {t("recordingBlocked")}
             </p>
           ) : null}
           {error ? <ErrorNote>{error}</ErrorNote> : null}
@@ -322,7 +315,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
             disabled={deleteAccount.isPending}
             onClick={onClose}
           >
-            취소
+            {tActions("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -330,7 +323,7 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
             disabled={!ready}
             onClick={() => void submit()}
           >
-            탈퇴
+            {t("submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -349,12 +342,13 @@ function PlanRow({
   disabled: boolean;
   onChange: (choice: Choice) => void;
 }) {
+  const t = useTranslations("settings.accountDeletion.plan");
   const groupName = useId();
   const fixed =
     row.action === "DELETE"
-      ? "삭제 — 혼자 쓰는 워크스페이스입니다"
+      ? t("deleteSolo")
       : row.action === "LEAVE"
-        ? "나가기 — 다른 사람은 계속 씁니다"
+        ? t("leaveShared")
         : null;
 
   return (
@@ -366,10 +360,9 @@ function PlanRow({
         <p className="mt-0.5 text-xs text-[var(--el-muted)]">{fixed}</p>
       ) : (
         <fieldset className="mt-1.5 grid gap-1.5" disabled={disabled}>
-          <legend className="sr-only">{row.name} 처리</legend>
+          <legend className="sr-only">{t("legend", { name: row.name })}</legend>
           <p className="text-xs text-[var(--el-muted)]">
-            내가 유일한 관리자입니다. 관리자를 넘기거나 워크스페이스를
-            삭제하세요.
+            {t("soleAdmin")}
           </p>
           <div className="flex items-center gap-2 text-[13px] text-[var(--el-body)]">
             <label className="flex shrink-0 items-center gap-2">
@@ -387,7 +380,7 @@ function PlanRow({
                   })
                 }
               />
-              <span className="whitespace-nowrap">관리자 넘기기</span>
+              <span className="whitespace-nowrap">{t("transfer")}</span>
             </label>
             <Select
               items={Object.fromEntries(
@@ -411,7 +404,7 @@ function PlanRow({
             >
               <SelectTrigger
                 className="min-w-0 flex-1"
-                aria-label={`${row.name} 관리자를 넘겨받을 사람`}
+                aria-label={t("successor", { name: row.name })}
               >
                 <SelectValue />
               </SelectTrigger>
@@ -431,7 +424,7 @@ function PlanRow({
               checked={choice.decision === "DELETE"}
               onChange={() => onChange({ decision: "DELETE" })}
             />
-            워크스페이스 삭제 — 멤버 모두에게 메일이 갑니다
+            {t("deleteWorkspace")}
           </label>
         </fieldset>
       )}

@@ -1,0 +1,73 @@
+{
+  "micInput": "마이크 입력",
+  "pending": "녹음 처리 중",
+  "pause": {
+    "label": "녹음 일시정지",
+    "tooltip": "녹음을 일시정지합니다. 회의는 끝나지 않습니다."
+  },
+  "indicator": {
+    "label": "진행 중인 녹음"
+  },
+  "dock": {
+    "label": "녹음 제어",
+    "pause": "일시정지",
+    "start": "회의 시작",
+    "requestingPermission": "권한 확인 중",
+    "connecting": "녹음 시작 중",
+    "stopping": "녹음 마무리 중",
+    "retry": "다시 녹음",
+    "otherNote": "다른 노트에서 녹음 중"
+  },
+  "degraded": {
+    "title": "받아쓰기가 멈췄습니다.",
+    "detail": "소리는 그대로 저장되고 있습니다."
+  },
+  "connection": {
+    "bufferPaused": "소리 저장이 밀려 녹음을 잠시 멈췄습니다. 밀린 저장이 끝나면 자동으로 이어서 녹음합니다.",
+    "microphoneLost": "마이크가 끊겼습니다. 다시 연결될 때까지 소리가 녹음되지 않습니다.",
+    "systemAudioLost": "컴퓨터 소리가 끊겼습니다. 다시 연결될 때까지 상대방의 소리가 녹음되지 않습니다.",
+    "finishingUpload": "저장 마무리 중… {percent}%",
+    "uploading": "대기 중인 소리 올리는 중 {percent}%",
+    "pendingOnDevice": "올리지 못한 소리 {seconds}초가 이 기기에 있습니다. 연결될 때까지 이 탭을 열어 두세요.",
+    "disconnected": "연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다. 녹음한 소리는 이 탭에 모아 둡니다. 다시 연결될 때까지 탭을 열어 두세요."
+  },
+  "errorToast": {
+    "help": "해결 방법",
+    "code": "오류 코드: {code}"
+  },
+  "desktopTimeline": {
+    "untitled": "진행 중인 회의"
+  },
+  "errors": {
+    "startFailed": "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    "audioPermission": "마이크 또는 컴퓨터 소리 권한이 필요합니다. 권한을 허용한 뒤 다시 녹음해 주세요.",
+    "systemAudioMissing": "컴퓨터 소리 입력을 찾지 못했습니다. 입력과 권한을 확인한 뒤 다시 녹음해 주세요.",
+    "audioCaptureFailed": "소리를 연결하지 못했습니다. 권한을 확인한 뒤 다시 시도해 주세요.",
+    "microphonePermission": "마이크 권한이 필요합니다. 브라우저 설정에서 마이크 사용을 허용해 주세요.",
+    "microphoneMissing": "사용할 수 있는 마이크를 찾지 못했습니다.",
+    "socketFailed": "실시간 스크립트 서버에 연결하지 못했습니다. 로그인 상태와 인터넷 연결을 확인해 주세요.",
+    "activeSession": "다른 탭이나 기기에서 이 회의를 녹음하고 있습니다.",
+    "recorderDisconnected": "녹음하던 기기와 연결이 끊겼습니다. 약 1분 뒤 다시 녹음할 수 있습니다.",
+    "sessionCreateFailed": "스크립트 세션을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    "superseded": "다른 탭이나 기기에서 이 녹음을 이어받았습니다.",
+    "stopFailed": "녹음을 종료하는 중 오류가 발생했습니다.",
+    "stopUnconfirmed": "녹음이 멈췄는지 확인하지 못했습니다.",
+    "captureStopped": "소리 캡처가 중단됐습니다. 마지막 소리 일부가 저장되지 않았을 수 있습니다.",
+    "captureStoppedToast": "소리 캡처가 중단됐습니다. 녹음 상태를 확인해 주세요.",
+    "dropped": "연결이 끊겨 녹음을 멈췄습니다.",
+    "droppedLost": "연결이 끊겨 녹음을 멈췄습니다. 이 기기에 남은 소리 {seconds}초를 올리지 못했습니다.",
+    "stopTimeout": "마지막 소리를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    "stopTimeoutLost": "마지막 소리를 저장하지 못해 이 기기에 남은 소리 {seconds}초를 올리지 못했습니다.",
+    "serverError": "실시간 스크립트 연결이 끊겼습니다. 잠시 후 다시 시도해 주세요.",
+    "meetingEndedLost": "회의가 끝나 이 기기에 남은 소리 {seconds}초를 올리지 못했습니다.",
+    "interrupted": {
+      "MEETING_ENDED": "회의가 끝나 녹음을 마쳤습니다.",
+      "MEETING_PAUSED": "회의가 일시정지되어 녹음을 멈췄습니다.",
+      "STT_PROVIDER_ERROR": "음성 인식 서비스 연결이 끊겼습니다. 잠시 후 다시 시도해 주세요.",
+      "CLIENT_DISCONNECTED": "실시간 연결이 종료되어 녹음을 중단했습니다.",
+      "READY_TIMEOUT": "녹음이 시작되기 전에 세션이 만료되었습니다. 다시 시도해 주세요.",
+      "HEARTBEAT_TIMEOUT": "연결이 오래 끊겨 녹음을 멈췄습니다.",
+      "other": "서버에서 스크립트 세션이 중단되었습니다."
+    }
+  }
+}

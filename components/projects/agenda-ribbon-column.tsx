@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { motion, type TargetAndTransition, type Transition } from "motion/react";
 
 import { Badge } from "@/components/ui/badge";
@@ -287,6 +288,7 @@ type Lane = { topic: string; lines: ReactNode[]; nodes: ReactNode[]; titles: Rea
  */
 export const Column = memo(function Column(props: ColumnProps) {
   const { at, meeting, data, layout, joinTargets, zone, g, laneT, width, col, open, selected, edge, monthEdge, topicId, agendaId, instant, reduced, titles, rove } = props;
+  const t = useTranslations("workspace.agendaMap");
 
   const date = shortMeetingDate(meeting.startedAt);
   /** 접힌 열에서 굵은 선이 점 양옆으로 닿는 길이, 갈래 곡선이 점에서 빠지는 길이 */
@@ -441,7 +443,7 @@ export const Column = memo(function Column(props: ColumnProps) {
               >
                 {shownAgenda.title}
               </span>
-              {n > 1 ? <span className="shrink-0 text-xs text-[var(--el-muted)] tabular-nums">외 {n - 1}</span> : null}
+              {n > 1 ? <span className="shrink-0 text-xs text-[var(--el-muted)] tabular-nums">{t("more", { count: n - 1 })}</span> : null}
             </button>
             {cell.next !== null || carried.has(rowKey(topic, y)) ? (
               <span className="min-w-0 flex-1" style={!branch && nextAdj ? { height: paint.ribbonW, background: paint.ribbon, borderRadius: paint.ribbonW / 2 } : { height: paint.thinW, background: paint.thin }} />
@@ -608,7 +610,8 @@ function FoldBadge({
   stroke: string;
   line: string;
 }) {
-  const label = `접힌 안건 ${folded}개 보기`;
+  const t = useTranslations("workspace.agendaMap");
+  const label = t("showFolded", { count: folded });
   if (narrow)
     return (
       <span
@@ -665,6 +668,7 @@ function Zone({
   agendaId: string | null;
   g: Grid;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const rows = zoneRowsOf(zone, layout, topicId);
   if (rows.length === 0) return null;
   return (
@@ -700,7 +704,7 @@ function Zone({
             </span>
             {topic ? (
               <Badge variant="outline" className="text-[var(--el-muted)]">
-                갈래
+                {t("branch")}
               </Badge>
             ) : null}
           </button>
@@ -770,12 +774,15 @@ export const HeadColumn = memo(function HeadColumn({
   onToggle,
   instant,
 }: HeadColumnProps) {
+  const t = useTranslations("workspace.agendaMap");
   const date = shortMeetingDate(meeting.startedAt);
   const day = String(Number(getAppDateKey(meeting.startedAt).slice(8, 10)));
   const heading = meetingHeading(meeting.title);
   const tip = {
     title: `${date} ${heading}`,
-    text: `안건 ${total}개 · 이어진 안건 ${linked}개${toggle ? ` · ${open ? "눌러서 접기" : "눌러서 펼치기"}` : ""}`,
+    text: [t("columnTip", { total, linked }), toggle ? (open ? t("clickToCollapse") : t("clickToExpand")) : null]
+      .filter(Boolean)
+      .join(" · "),
   };
   const show = (event: { currentTarget: Element }) => hover.current?.show({ rect: event.currentTarget.getBoundingClientRect(), el: event.currentTarget, tip });
   const hide = () => hover.current?.hide();
@@ -788,7 +795,7 @@ export const HeadColumn = memo(function HeadColumn({
         </span>
         <span className="mt-px block h-4 max-w-full truncate text-xs leading-4 text-[var(--el-body)]">{heading}</span>
         <span className={cn("mt-0.5 block h-4 text-xs leading-4 whitespace-nowrap tabular-nums", SUBTLE)}>
-          안건 {total} · 이어짐 {linked}
+          {t("columnMeta", { total, linked })}
         </span>
       </>
     ) : mode === "c" ? (

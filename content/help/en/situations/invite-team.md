@@ -1,11 +1,11 @@
 ---
 title: I want to invite teammates to work together
 navTitle: Invite teammates
-description: How to invite a teammate to your workspace and get them to accept. Only admins can send invites, and links are valid for 1 day (24 hours).
+description: How to invite a teammate to your workspace and get them to accept. Only admins can send invitations, and links are valid for 1 day (24 hours).
 group: situations
 slug: invite-team
 order: 5
-modified: 2026-10-26
+modified: 2026-11-05
 ---
 
 ## What's happening {#problem}
@@ -27,17 +27,17 @@ Go to **[Settings]** → **[Workspace]** → the **[Members]** tab. ==Only admin
 4. **Choose a role**
    Choose **[Member]** or **[Admin]**.
 5. **Click [Invite]**
-   The invite email is sent.
+   The invitation email is sent.
 6. **Tell your teammate to accept**
-   They can click the link in the invite email or click **[Accept]** in **[Notifications]** in the sidebar.
+   They can click the link in the invitation email or click **[Accept]** in **[Notifications]** in the sidebar.
 7. **Make sure your teammate logs in with the right account**
    It must be the Google account for the invited email.
 8. **If they don't accept within a day, click [Cancel]**
-   It's under **[Pending invites]**.
+   It's under **[Pending invitations]**.
 9. **Invite the same email again**
    A new link is sent. ==Links are valid for 1 day (24 hours) only.==
 
 ## Related pages {#related}
 
 - [Members and guest participants](help:members) — Roles, display names, and notifications
-- [Troubleshooting](help:troubleshooting) — Invite link errors
+- [Troubleshooting](help:troubleshooting) — Invitation link errors

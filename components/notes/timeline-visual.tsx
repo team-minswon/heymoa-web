@@ -30,11 +30,11 @@ export const TONE_TITLE: Record<TimelineTone, string> = {
 /** 「논의 중」 칩. 기록 중인 회의의 마지막 안건에만 선다. 점 움직임은 `dotClassName` 으로 얹는다. */
 export function LiveChip({
   dotClassName,
-  label = "논의 중",
+  label,
 }: {
   dotClassName?: string;
-  /** 랜딩 영어판처럼 다른 언어로 그릴 때만 넘긴다. 제품 면 언어는 PRO-66-I07. */
-  label?: string;
+  /** 노트는 `notes.timeline.live`, 랜딩은 랜딩 언어 파일의 문구를 넘긴다. */
+  label: string;
 }) {
   return (
     <span className="inline-flex h-[22px] shrink-0 items-center gap-[5px] rounded-[6px] bg-[var(--el-success)]/10 px-2 text-[12px] text-[var(--el-success-strong)]">

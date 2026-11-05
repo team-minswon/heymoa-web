@@ -4,7 +4,7 @@ description: How to sign in and out with Google, use the My account screen, set 
 group: start
 slug: account
 order: 3
-modified: 2026-10-23
+modified: 2026-11-05
 ---
 
 ## Signing in and out {#sign-in}
@@ -30,7 +30,7 @@ Usage statistics only say which features you used. HeyMoa never sends what was s
 
 ## Deleting your data {#data}
 
-When you delete a note, the meeting's audio, transcript, and summary are deleted with it, along with agent conversations that asked only about that note. You can delete agent conversations yourself in [My agent](help:agent#ask). To see which meetings can be deleted, read [Screen layout and projects](help:workspace-basics#note-list).
+When you delete a note, the meeting's audio, transcript, and summary are deleted with it, along with agent chats that asked only about that note. You can delete agent chats yourself in [My agent](help:agent#ask). To see which meetings can be deleted, read [Screen layout and projects](help:workspace-basics#note-list).
 
 Delete your account from **[Delete account]** at the bottom of **[Account settings]**. You don't need to sign in again.
 
@@ -58,7 +58,7 @@ Click **[Notifications]** in the sidebar to see notifications from all your work
 
 You get notifications for:
 
-- **Workspace invites**: When you're invited. You can **[Accept]** or **[Decline]** right in the notification.
+- **Workspace invitations**: When you're invited. You can **[Accept]** or **[Decline]** right in the notification.
 - **Paused meetings**: If you leave a meeting paused, you get an email after 1 business day. After 3 business days, the meeting ends automatically, analysis starts, and you get one more email.
 - **Results ready to review**: When a meeting's analysis is done and the results are ready to review.
 - **Inquiry replies**: When the HeyMoa team replies to your inquiry.

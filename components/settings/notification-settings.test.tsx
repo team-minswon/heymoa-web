@@ -44,11 +44,11 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderSettings() {
+function renderSettings(locale: "ko" | "en" = "ko") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const Intl = intlWrapper();
+  const Intl = intlWrapper(locale);
   return render(
     <Intl>
       <QueryClientProvider client={client}>
@@ -66,6 +66,29 @@ function renderSettings() {
 const switchOf = (name: string) => screen.getByRole("switch", { name });
 
 describe("NotificationSettings", () => {
+  it("영어 화면에서는 표와 확인 창이 영어로 보이고 한글이 없다", async () => {
+    const { container, baseElement } = renderSettings("en");
+    expect(
+      await screen.findByRole("switch", { name: "Turn off all email" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Notifications" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "In-app" })).toBeTruthy();
+    // 광고 수신 동의 카드는 `common.marketingConsent` 라 이 모듈 밖이다 — 표 부분만 본다.
+    const table = container.querySelector("table");
+    expect(table?.textContent).not.toMatch(/[\uAC00-\uD7A3]/);
+    fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(
+      dialog.getByText("Reset notification settings to defaults?")
+    ).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "Cancel" })).toBeTruthy();
+    expect(baseElement.querySelector("[role=alertdialog]")?.textContent).not.toMatch(
+      /[\uAC00-\uD7A3]/
+    );
+  });
+
   it("검토할 결과 준비는 일시정지된 회의 다음, 문의 답변은 마지막에 이름과 함께 서고, 이름을 모르는 종류는 숨긴다", async () => {
     const channels = [
       { channel: "WEB", provided: true, enabled: true, effective: true },

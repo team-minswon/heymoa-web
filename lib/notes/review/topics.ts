@@ -118,7 +118,8 @@ export function topicDigests(
     );
 }
 
-export type LinkedItem = { itemId: string; label: string };
+/** [label] 은 서버가 붙인 이름이다. 화면은 아는 [kind] 면 자기 언어로 바꿔 그린다 */
+export type LinkedItem = { itemId: string; kind: string; label: string };
 
 /**
  * 이 항목과 관계로 이어진 다른 항목. 한 쌍에 관계가 여럿이면 처음 것만 쓴다.
@@ -151,15 +152,10 @@ export function linkedItemsOf(
           : relation.sourceItemId;
       if (other === itemId || seen.has(other)) continue;
       seen.add(other);
-      const labels: Record<string, string> = {
-        LEADS_TO: "연결",
-        SUPPORTS: "보완",
-        PROGRESS: "보고",
-        RESOLVES: "해결",
-      };
       linked.push({
         itemId: other,
-        label: labels[relation.kind] ?? relation.label,
+        kind: relation.kind,
+        label: relation.label,
       });
     }
   }

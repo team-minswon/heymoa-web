@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { HelpLink } from "@/components/heymoa/help-link";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 
@@ -15,6 +17,7 @@ import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcri
  * 「아직 화자를 모른다」는 사실뿐이고, 그건 실제로 여기서만 알 수 있다.
  */
 export function SpeakerNudgeBanner({ noteId }: { noteId: string }) {
+  const t = useTranslations("notes.speakers.nudge");
   // 아카이브가 이미 같은 키로 구독 중이면 TanStack Query가 왕복을 합쳐 준다.
   const transcriptQuery = useGetNoteTranscript(noteId);
   const transcript =
@@ -24,7 +27,7 @@ export function SpeakerNudgeBanner({ noteId }: { noteId: string }) {
   const status = transcript?.diarization?.status;
 
   if (status === "FAILED") {
-    return <Note>화자를 나누지 못했습니다.</Note>;
+    return <Note>{t("failed")}</Note>;
   }
 
   // **분리가 도는 몇 분 동안 화면이 아무 말도 안 하면** 사용자는 화자 기능이 없는 줄
@@ -32,8 +35,7 @@ export function SpeakerNudgeBanner({ noteId }: { noteId: string }) {
   if (status === "ASSEMBLING" || status === "SUBMITTED") {
     return (
       <Note testId="speaker-nudge-pending">
-        화자를 나누는 중입니다. 끝나면 누가 누구인지 알려주실 수 있습니다.{" "}
-        <HelpLink topic="speakers">지정하는 법</HelpLink>
+        {t("pending")} <HelpLink topic="speakers">{t("howTo")}</HelpLink>
       </Note>
     );
   }

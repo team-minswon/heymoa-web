@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
@@ -25,6 +26,7 @@ export function PendingAnalysisRetry({
   flowUpdatedAt: number;
   disabled: boolean;
 }) {
+  const t = useTranslations("notes.review.retry");
   const queryClient = useQueryClient();
   const request = useRequestAnalysis({
     mutation: { meta: { suppressErrorToast: true } },
@@ -59,21 +61,21 @@ export function PendingAnalysisRetry({
           const response = await request.mutateAsync({ noteId });
           if (response.status === 202 && response.data.success) {
             moveFlowStatus(queryClient, noteId, response.data.data.flowStatus);
-            setMessage("분석을 요청했습니다.");
+            setMessage(t("requested"));
           }
         } catch (error) {
           if (errorCodeOf(error) !== "MEETING_ANALYSIS_CONFLICT") throw error;
-          setMessage("분석이 진행 중이거나 요청 상태가 바뀌었습니다.");
+          setMessage(t("conflict"));
         }
       }
       try {
         await refresh();
       } catch {
         setReadFailed(true);
-        setMessage("분석 상태를 불러오지 못했습니다.");
+        setMessage(t("readFailed"));
       }
     } catch (error) {
-      setMessage(errorMessageOf(error, "분석을 요청하지 못했습니다."));
+      setMessage(errorMessageOf(error, t("requestFailed")));
     } finally {
       // 이 요청 자신의 재조회까지는 이미 본 것으로 친다. 걷는 것은 그 뒤의 조회다
       setSeenUpdatedAt(
@@ -98,7 +100,7 @@ export function PendingAnalysisRetry({
           disabled={disabled}
           onClick={() => void run(!readFailed)}
         >
-          {readFailed ? "상태 다시 확인" : "분석 재요청"}
+          {readFailed ? t("recheck") : t("requestAgain")}
         </Button>
       ) : null}
       {message ? (

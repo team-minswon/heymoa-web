@@ -373,7 +373,7 @@ test("390px 에서도 긴 URL·영문 토큰 답이 가로로 넘치지 않는�
   const input = page.getByLabel("메시지");
   await expect(input).toHaveAttribute(
     "data-placeholder",
-    "@로 프로젝트·회의록을 참조해 물어보세요"
+    "@로 프로젝트나 회의록을 붙여 물어보세요"
   );
   await input.fill("마크다운 보여줘");
   await page.getByRole("button", { name: "보내기", exact: true }).click();

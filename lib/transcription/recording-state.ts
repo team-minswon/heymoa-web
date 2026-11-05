@@ -1,6 +1,5 @@
 import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import type { MicrophoneState } from "@/lib/transcription/audio";
-import { STOP_UNCONFIRMED_MESSAGE } from "@/lib/transcription/recording-messages";
 import type {
   BufferState,
   ConnectionNotice,
@@ -36,9 +35,11 @@ export type RecordingState = {
   microphone: MicrophoneState;
   systemAudio: MicrophoneState | null;
   error: string | null;
+  /** 지금 `error` 가 「종료 상태를 확인하지 못했다」인가. 서버 완료가 오면 그 문구만 걷는다. */
+  unconfirmedStop: boolean;
   /** 재개 창이 끝나 멈췄다는 문구가 서 있다. 그동안만 회의 종료를 따로 감시한다. */
   windowExhausted: boolean;
-  /** 재개 창이 끝나 버린 소리. 그 뒤 회의가 끝나면 「N초를 올리지 못했어요」가 쓴다. */
+  /** 재개 창이 끝나 버린 소리. 그 뒤 회의가 끝나면 「N초를 올리지 못했습니다」가 쓴다. */
   droppedMs: number;
 };
 
@@ -53,6 +54,7 @@ export const initialRecordingState: RecordingState = {
   microphone: "live",
   systemAudio: null,
   error: null,
+  unconfirmedStop: false,
   windowExhausted: false,
   droppedMs: 0,
 };
@@ -67,7 +69,7 @@ export type RecordingAction =
   | { type: "phase"; phase: RecordingPhase }
   | { type: "session"; session: RecordingSession | null }
   /** 녹음이 실패로 끝났다. 알림과 받아쓰기 멈춤 표시를 걷는다. */
-  | { type: "failed"; message: string }
+  | { type: "failed"; message: string; unconfirmedStop?: boolean }
   /** 재개 창이 끝나 멈췄다. 이 탭이 버린 세션이라 열린 세션으로 들지 않는다. */
   | { type: "window-exhausted"; message: string; droppedMs: number }
   /** 시작하다 실패했다. 녹음이 시작되기 전이라 걷을 알림이 없다. */
@@ -99,10 +101,15 @@ function patch(
   return changed ? { ...state, ...changes } : state;
 }
 
-function failed(state: RecordingState, message: string): RecordingState {
+function failed(
+  state: RecordingState,
+  message: string,
+  unconfirmedStop = false
+): RecordingState {
   return patch(state, {
     phase: "failed",
     error: message,
+    unconfirmedStop,
     windowExhausted: false,
     connectionNotice: null,
     transcriptionDegraded: false,
@@ -127,7 +134,7 @@ export function recordingReducer(
     case "session":
       return patch(state, { session: action.session });
     case "failed":
-      return failed(state, action.message);
+      return failed(state, action.message, action.unconfirmedStop);
     case "window-exhausted":
       return patch(failed(state, action.message), {
         windowExhausted: true,
@@ -138,6 +145,7 @@ export function recordingReducer(
       return patch(state, {
         phase: "failed",
         error: action.message,
+        unconfirmedStop: false,
         windowExhausted: false,
       });
     case "completed":
@@ -147,11 +155,16 @@ export function recordingReducer(
         transcriptionDegraded: false,
         // 「확인하지 못했다」는 이 탭이 소리를 다 보낸 뒤에만 서므로, 누가 세션을 완료했든 잃은 것이
         // 없다(APP-1473). 다른 실패 문구는 남긴다 — 다른 탭·부착이 자기 끝 번호로 완료해도 이 탭이 버린
-        // 소리는 돌아오지 않는다. 이 상수와 같은 값일 때만 걷는다
-        error: state.error === STOP_UNCONFIRMED_MESSAGE ? null : state.error,
+        // 소리는 돌아오지 않는다. 그 실패로 선 문구일 때만 걷는다
+        error: state.unconfirmedStop ? null : state.error,
+        unconfirmedStop: false,
       });
     case "error":
-      return patch(state, { error: action.message, windowExhausted: false });
+      return patch(state, {
+        error: action.message,
+        unconfirmedStop: false,
+        windowExhausted: false,
+      });
     case "evicted":
       return patch(state, {
         phase: "idle",

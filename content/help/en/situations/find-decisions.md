@@ -5,7 +5,7 @@ description: Find decisions from past meetings and the reasons behind them using
 group: situations
 slug: find-decisions
 order: 8
-modified: 2026-10-21
+modified: 2026-11-05
 ---
 
 ## What's happening {#problem}
@@ -28,7 +28,7 @@ Use **[My agent]** in the bottom right, and the note's **[Summary]**, **[Timelin
    ==Adding the project or meeting notes to search makes answers more accurate.==
 4. **Ask a specific question**
    Type something like “How did we split the May budget?” and press `kbd:Enter`.
-5. **Click [Referenced meeting notes] under the answer**
+5. **Click a meeting note listed under the answer**
    See ==which meeting the answer came from==.
 6. **In that meeting's [Timeline] tab, click the [Decisions] filter**
    This gives you a closer look.

@@ -6,6 +6,7 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const sheetSideClasses = {
   none: "",
@@ -59,6 +60,7 @@ function SheetContent({
   showCloseButton?: boolean;
   overlayClassName?: string;
 }) {
+  const tActions = useTranslations("common.actions");
   return (
     <SheetPortal>
       <SheetOverlay className={overlayClassName} />
@@ -87,7 +89,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className="sr-only">닫기</span>
+            <span className="sr-only">{tActions("close")}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

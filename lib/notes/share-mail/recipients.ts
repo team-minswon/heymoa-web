@@ -91,14 +91,28 @@ export function addRecipients(
 export const removeRecipient = (list: readonly Recipient[], email: string) =>
   list.filter((recipient) => keyOf(recipient.email) !== keyOf(email));
 
+/** 보내기를 막는 사유. 문구는 화면이 `notes.share.mail.problem.<kind>` 로 그린다 */
+export type RecipientProblem =
+  | { kind: "invalid"; emails: string }
+  | { kind: "tooMany"; max: number; extra: number };
+
 /** 보내기를 막는 사유. 없으면 null. 틀린 주소가 먼저다 — 고칠 칩을 짚어 준다 */
-export function recipientProblem(list: readonly Recipient[]): string | null {
+export function recipientProblem(
+  list: readonly Recipient[]
+): RecipientProblem | null {
   const invalid = list.filter((recipient) => !recipient.valid);
   if (invalid.length) {
-    return `${invalid.map((r) => r.email).join(", ")}: 이메일 주소 형식이 아닙니다. 빼고 다시 입력해 주세요.`;
+    return {
+      kind: "invalid",
+      emails: invalid.map((r) => r.email).join(", "),
+    };
   }
   if (list.length > MAX_RECIPIENTS) {
-    return `한 번에 ${MAX_RECIPIENTS}명까지 보낼 수 있습니다. ${list.length - MAX_RECIPIENTS}명을 빼 주세요.`;
+    return {
+      kind: "tooMany",
+      max: MAX_RECIPIENTS,
+      extra: list.length - MAX_RECIPIENTS,
+    };
   }
   return null;
 }

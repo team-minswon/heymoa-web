@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, memo, useEffect, useMemo, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Check,
@@ -48,10 +48,11 @@ const THREAD_PAD_PX = 24;
 const TimeDivider = memo(function TimeDivider({ at }: { at: string }) {
   // 앱 언어로 적는다. 비우면 브라우저 언어를 따라 「어제 11:44 PM」이 섞인다
   const locale = useLocale();
+  const tDates = useTranslations("dates");
   return (
     <TimeRule
       data-testid="thread-divider"
-      label={dividerLabel(at, new Date(), locale)}
+      label={dividerLabel(at, new Date(), tDates, locale)}
     />
   );
 });
@@ -355,6 +356,8 @@ function MessageActions({
 }) {
   const [copied, setCopied] = useState(false);
   const locale = useLocale();
+  const t = useTranslations("chat.thread");
+  const tDates = useTranslations("dates");
 
   useEffect(() => {
     if (!copied) return;
@@ -381,7 +384,7 @@ function MessageActions({
       )}
     >
       <ChatIconButton
-        label={copied ? "복사함" : "복사"}
+        label={copied ? t("copied") : t("copy")}
         tooltipSide="bottom"
         onClick={copy}
         className="text-[var(--el-muted)]"
@@ -389,11 +392,11 @@ function MessageActions({
         {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
       </ChatIconButton>
       <span className="text-xs tabular-nums">
-        {relativeUpdatedAt(at, new Date(), locale)}
+        {relativeUpdatedAt(at, new Date(), tDates, locale)}
       </span>
       {/* 눌렀는지 화면 읽기에도 한 번 말한다 */}
       <span className="sr-only" aria-live="polite">
-        {copied ? "답을 복사했어요" : ""}
+        {copied ? t("copiedAnnounce") : ""}
       </span>
     </div>
   );
@@ -634,6 +637,7 @@ function ScopeChipMark({
   title: string;
   onOpen?: () => void;
 }) {
+  const t = useTranslations("chat.thread");
   const Icon = kind === "project" ? Folder : FileText;
   const inside = (
     <>
@@ -655,7 +659,7 @@ function ScopeChipMark({
       data-scope-chip={kind}
       onClick={onOpen}
       // 아래 「찾은 곳」 칩과 접근성 이름이 같아지지 않게 「열기」를 붙인다.
-      aria-label={`${title} 열기`}
+      aria-label={t("openScope", { title })}
       className={scopeChipClass(kind, {
         extra: "cursor-pointer hover:brightness-95",
       })}
@@ -800,13 +804,14 @@ function StreamBlocks({
  * 배너가 아니라 작은 회색 한 줄이다 — 멈춘 것은 사용자가 한 일이라 오류처럼 보이면 안 된다.
  */
 function StoppedMark() {
+  const t = useTranslations("chat.thread");
   return (
     <p
       data-testid="answer-stopped"
       className="flex items-center gap-1.5 text-xs text-[var(--el-muted)]"
     >
       <Square aria-hidden className="size-2.5 fill-current" />
-      중지됨
+      {t("stopped")}
     </p>
   );
 }
@@ -842,13 +847,20 @@ function StreamTail({
 
 // 「다시 보내기」는 없다. 서버가 문장을 안 받아 갔으면 `send` 가 컴포저로 되돌린다.
 function StreamNotice({ stream }: { stream: ChatStreamState }) {
+  const t = useTranslations("chat");
   if (stream.phase === "failed") {
+    const error = stream.error;
+    // 서버 문구가 먼저다. 코드만 왔으면 코드의 문구, 모르는 코드면 기본 문구다
+    const failure =
+      `errors.turnFailures.${error?.code}` as "errors.turnFailures.INTERNAL_ERROR";
     return (
       <Notice
-        title="응답을 만들지 못했습니다"
+        title={t("thread.failedTitle")}
         description={
-          stream.error?.message ??
-          "연결이 끊겼습니다. 새로고침하면 지금까지 굳은 답이 보입니다."
+          !error
+            ? t("thread.disconnected")
+            : (error.message ??
+              (t.has(failure) ? t(failure) : t("errors.noResponse")))
         }
       />
     );

@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { errorMessageOf } from "@/lib/api/error-message";
 import { useRenameWorkspaceMember } from "@/lib/api/generated/workspace-members/workspace-members";
@@ -28,6 +29,7 @@ export function useRenameMember({
   /** 지금 화면이 그리는 모습. 요청이 하나도 안 떠 있을 때 이 값이 서버가 확인한 모습이다. */
   member: MemberName;
 }) {
+  const t = useTranslations("settings.renameDialog");
   const queryClient = useQueryClient();
   const key = `${workspaceId}:${member.userId}`;
 
@@ -106,9 +108,9 @@ export function useRenameMember({
         });
         return response.status === 200 && response.data.success
           ? null
-          : "이름을 바꾸지 못했습니다.";
+          : t("failed");
       } catch (error) {
-        return errorMessageOf(error, "이름을 바꾸지 못했습니다.");
+        return errorMessageOf(error, t("failed"));
       }
     },
   };

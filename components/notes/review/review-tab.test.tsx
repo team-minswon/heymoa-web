@@ -38,7 +38,7 @@ import { REVIEW_SEED_LEAD } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers } from "@/lib/mocks/project-tasks";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
-import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
+import koErrors from "@/messages/ko/errors.json";
 import { toast } from "@/lib/ui/toast";
 
 vi.mock("@/lib/ui/toast", () => ({
@@ -604,7 +604,7 @@ describe("검토 가능한 회의", () => {
     expect(
       screen.queryByText(/다른 사람이 먼저 수정해/)
     ).not.toBeInTheDocument();
-    expect(toast.error).not.toHaveBeenCalledWith(CONFLICT_MESSAGE);
+    expect(toast.error).not.toHaveBeenCalledWith(koErrors.conflict);
   });
 
   describe("확정 거절 뒤", () => {
@@ -1738,7 +1738,7 @@ describe("검토 가능한 회의", () => {
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(CONFLICT_MESSAGE)
+      expect(toast.error).toHaveBeenCalledWith(koErrors.conflict)
     );
     expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue(
       "발표는 10분 안에 끝낸다"
@@ -1829,7 +1829,7 @@ describe("검토본이 서기 전과 뒤", () => {
   it("회의가 끝나기 전에는 종료하면 무엇이 생기는지 말한다", () => {
     renderTab(MENTORING_NOTE_ID, { isEnded: false });
     expect(
-      screen.getByText("회의를 종료하면 이런 것들이 만들어져요")
+      screen.getByText("회의를 종료하면 이렇게 정리됩니다")
     ).toBeInTheDocument();
     for (const title of ["요약", "화자 분리", "검토 후 확정"]) {
       expect(screen.getByText(title)).toBeInTheDocument();
@@ -2564,11 +2564,11 @@ it("항목 저장 충돌의 복구 조회가 느려도 최신 판을 읽을 때�
     fireEvent.click(exclude);
     await arrived;
     await waitFor(() => expect(exclude).toBeDisabled());
-    expect(screen.queryByText(CONFLICT_MESSAGE)).toBeNull();
+    expect(screen.queryByText(koErrors.conflict)).toBeNull();
     await act(async () => {
       release();
     });
-    expect(await screen.findByText(CONFLICT_MESSAGE)).toBeInTheDocument();
+    expect(await screen.findByText(koErrors.conflict)).toBeInTheDocument();
     await waitFor(() => expect(exclude).toBeEnabled());
   } finally {
     release();
@@ -2633,7 +2633,7 @@ it("충돌 복구 실패 뒤 자동 조회가 성공해도 충돌 안내와 작�
       "다른 사람이 먼저 수정했습니다. 최신 내용을 확인해 주세요."
     )
   ).toBeInTheDocument();
-  expect(screen.queryByText(CONFLICT_MESSAGE)).toBeNull();
+  expect(screen.queryByText(koErrors.conflict)).toBeNull();
   expect(screen.getByRole("button", { name: "저장" })).toBeEnabled();
 });
 

@@ -96,7 +96,7 @@ const siteOgImage = (alt: string) => ({
 });
 
 /**
- * 사이트 metadata. 제품 루트(`app/(product)`)는 한국어(`siteMetadata`), 마케팅 루트(`app/[lang]`)는 주소 언어로 낸다.
+ * 사이트 metadata. 제품 루트(`app/(product)`)는 화면 언어, 메일 루트는 한국어(`siteMetadata`), 마케팅 루트(`app/[lang]`)는 주소 언어로 낸다.
  * 마케팅 페이지는 canonical·hreflang 을 `lib/i18n/metadata.ts` 에서 따로 만든다.
  */
 export function siteMetadataFor(locale: Locale): Metadata {

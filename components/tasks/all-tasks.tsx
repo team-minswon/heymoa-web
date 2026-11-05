@@ -3,6 +3,7 @@
 import { Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, useReducedMotion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -26,6 +27,7 @@ import {
   groupTasks,
   tasksWithStatus,
   type TaskEntry,
+  type TaskGroupKey,
   type TaskStatus,
 } from "@/lib/tasks/task-groups";
 import { taskListQuery, useTaskListPages } from "@/lib/tasks/use-task-list-pages";
@@ -34,11 +36,7 @@ import { cn } from "@/lib/utils";
 
 const ALL_PROJECTS = "all";
 
-const VIEWS: ReadonlyArray<{ value: TaskStatus; label: string; empty: string }> = [
-  { value: "OPEN", label: "진행 중", empty: "할 일이 없습니다." },
-  { value: "COMPLETED", label: "완료", empty: "완료한 할 일이 없습니다." },
-  { value: "CANCELLED", label: "취소", empty: "취소한 할 일이 없습니다." },
-];
+const VIEWS: readonly TaskStatus[] = ["OPEN", "COMPLETED", "CANCELLED"];
 
 const COUNT_KEY = { OPEN: "open", COMPLETED: "completed", CANCELLED: "cancelled" } as const;
 
@@ -56,6 +54,9 @@ type StatusSnapshot = Map<string, TaskStatus>;
  * 머리글의 「진행 중 N개」는 서버가 센 전체 수(`counts`)다 — 읽어 온 줄 수가 아니다.
  */
 export function AllTasks({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("tasks");
+  const tFields = useTranslations("common.fields");
+  const tStatus = useTranslations("common.taskStatus");
   const { projects, isWorkspacePending } = useWorkspaceShell();
   const { user } = useAuth();
   const { choices, failed: choicesFailed, retry: retryChoices } = useAssigneeChoices(workspaceId);
@@ -92,9 +93,9 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
    * 프로젝트 메뉴는 미리 받지 않는다 — 프로젝트 수만큼 요청이 나가고, 앞 목록을 옅게 두는 것으로 기다림이 이미 가려진다.
    */
   const prefetchViews = () => {
-    for (const option of VIEWS) {
-      if (option.value !== view) {
-        void queryClient.prefetchQuery(taskListQuery({ ...filter, status: option.value, pages: 1 }));
+    for (const status of VIEWS) {
+      if (status !== view) {
+        void queryClient.prefetchQuery(taskListQuery({ ...filter, status, pages: 1 }));
       }
     }
   };
@@ -129,7 +130,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
     () =>
       view === "OPEN"
         ? groupTasks(entries, today)
-        : [{ key: view, label: "", entries: tasksWithStatus(entries, view) }],
+        : [{ key: view, entries: tasksWithStatus(entries, view) }],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 판 · 거르기 · 보기가 같으면 목록도 같다
     [signature, scopeKey, view, today]
   ).filter((group) => group.entries.length > 0);
@@ -216,7 +217,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
         <div className="mx-auto w-full max-w-4xl px-5 pb-16 pt-8 sm:px-8 sm:pt-11">
           <header className="border-b border-[var(--el-hairline)] pb-6">
             <h2 className="text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
-              할 일
+              {t("title")}
             </h2>
             {/* 기다리는 동안의 개수는 앞 거르기의 것이라 목록처럼 옅게 둔다 — 지우면 줄 높이 · 칸 폭이 출렁인다. */}
             <p
@@ -225,7 +226,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                 stale && "opacity-60"
               )}
             >
-              {isPending || !counts ? null : `프로젝트 ${projects.length}개 · 진행 중 ${countOf("OPEN")}개`}
+              {isPending || !counts ? null : t("summary", { projects: projects.length, open: countOf("OPEN") })}
             </p>
           </header>
 
@@ -239,11 +240,11 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               )}
             >
               <SegmentedControl
-                label="할 일 상태"
+                label={t("statusLabel")}
                 value={view}
-                options={VIEWS.map((option) => ({
-                  value: option.value,
-                  label: !counts ? option.label : `${option.label} ${countOf(option.value)}`,
+                options={VIEWS.map((status) => ({
+                  value: status,
+                  label: !counts ? tStatus(status) : `${tStatus(status)} ${countOf(status)}`,
                 }))}
                 onChange={(next) => {
                   setView(next);
@@ -267,11 +268,11 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               )}
             >
               {user ? <PersonAvatar name={user.userId} image={user.image} size={16} /> : null}
-              내 할 일
+              {t("mine")}
             </button>
             <Select
               items={{
-                [ALL_PROJECTS]: "프로젝트 전체",
+                [ALL_PROJECTS]: t("allProjects"),
                 ...Object.fromEntries(projects.map((p) => [p.projectId, p.name])),
               }}
               value={activeProjectId ?? ALL_PROJECTS}
@@ -280,11 +281,11 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                 resetPages();
               }}
             >
-              <SelectTrigger aria-label="프로젝트" className="h-9 text-xs sm:h-[30px]">
+              <SelectTrigger aria-label={tFields("project")} className="h-9 text-xs sm:h-[30px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_PROJECTS}>프로젝트 전체</SelectItem>
+                <SelectItem value={ALL_PROJECTS}>{t("allProjects")}</SelectItem>
                 {projects.map((project) => (
                   <SelectItem key={project.projectId} value={project.projectId}>
                     {project.name}
@@ -299,7 +300,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               onClick={() => setAdding(true)}
             >
               <Plus aria-hidden className="size-3.5" />
-              할 일 추가
+              {t("add")}
             </Button>
           </div>
 
@@ -313,16 +314,16 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               )}
             >
               <span />
-              <span>내용</span>
-              {showProject ? <span>프로젝트</span> : null}
-              <span>담당</span>
-              <span className={TASK_DUE_ALIGN}>기한</span>
+              <span>{tFields("content")}</span>
+              {showProject ? <span>{tFields("project")}</span> : null}
+              <span>{tFields("assignee")}</span>
+              <span className={TASK_DUE_ALIGN}>{tFields("due")}</span>
             </div>
 
             {choicesFailed ? (
               <InlineRetry
                 variant="line"
-                label="담당으로 고를 사람 목록을 불러오지 못했습니다."
+                label={t("choicesFailed")}
                 onRetry={retryChoices}
                 className="p-2"
               />
@@ -331,7 +332,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             {failed ? (
               <InlineRetry
                 variant="line"
-                label="할 일을 불러오지 못했습니다."
+                label={t("loadFailed")}
                 onRetry={failed}
                 className="p-2"
               />
@@ -340,7 +341,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             {loadingRows ? (
               // 도착할 목록과 같은 틀이다 — 진행 중은 묶음(`mt-3` + 머리 `h-8`) 안에, 완료 · 취소는 `mt-1` 안에 줄이 선다.
               // 머리 없이 줄만 세우면 도착할 때 목록이 머리만큼 밀린다(APP-1207 P3).
-              <div aria-label="할 일 불러오는 중" className={view === "OPEN" ? "mt-3" : "mt-1"}>
+              <div aria-label={t("loading")} className={view === "OPEN" ? "mt-3" : "mt-1"}>
                 {view === "OPEN" ? (
                   <div className="flex h-8 items-center px-2">
                     <Skeleton className="h-3.5 w-14 rounded-chip" />
@@ -377,39 +378,43 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                 {groups.length === 0 && failed === null ? (
                   <p className="px-2 py-10 text-center text-sm text-[var(--el-muted)]">
                     {projects.length === 0
-                      ? "프로젝트가 없습니다."
+                      ? t("noProjects")
                       : filtering
-                        ? "조건에 맞는 할 일이 없습니다."
-                        : VIEWS.find((option) => option.value === view)!.empty}
+                        ? t("noMatch")
+                        : t(`empty.${view}`)}
                   </p>
                 ) : view === "OPEN" ? (
-                  groups.map((group) => (
-                    <section key={group.key} aria-label={group.label} className="mt-6 first:mt-3">
-                      {/* 묶음 머리는 열 머리글(옅은 12px)보다 한 단 위다 — 먹색 13px. 기한 지남만 기한 칸과 같은 빨강. */}
-                      <h3
-                        className={cn(
-                          "flex h-8 items-center gap-2 px-2 text-[13px] font-medium",
-                          group.key === "OVERDUE" ? "text-[var(--el-error-strong)]" : "text-[var(--el-ink)]"
-                        )}
-                      >
-                        {group.label}
-                        <span
-                          // 개수가 바뀌면 다시 들어오게 해 무엇이 옮겼는지 눈에 걸리게 한다.
-                          key={previous ? group.entries.length : undefined}
+                  groups.map((group) => {
+                    // 진행 중 탭의 묶음은 기한 묶음뿐이다
+                    const name = t(`groups.${group.key as TaskGroupKey}`);
+                    return (
+                      <section key={group.key} aria-label={name} className="mt-6 first:mt-3">
+                        {/* 묶음 머리는 열 머리글(옅은 12px)보다 한 단 위다 — 먹색 13px. 기한 지남만 기한 칸과 같은 빨강. */}
+                        <h3
                           className={cn(
-                            "text-xs font-normal tabular-nums text-[var(--el-muted-soft)]",
-                            previous &&
-                              "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
+                            "flex h-8 items-center gap-2 px-2 text-[13px] font-medium",
+                            group.key === "OVERDUE" ? "text-[var(--el-error-strong)]" : "text-[var(--el-ink)]"
                           )}
                         >
-                          {/* 쪽이 남았으면 마지막 묶음만 아직 덜 읽었다 — 기한 순이라 앞 묶음은 다 읽은 것이다. */}
-                          {group.entries.length}
-                          {hasMore && group === groups.at(-1) ? "+" : ""}
-                        </span>
-                      </h3>
-                      {renderRows(group.entries)}
-                    </section>
-                  ))
+                          {name}
+                          <span
+                            // 개수가 바뀌면 다시 들어오게 해 무엇이 옮겼는지 눈에 걸리게 한다.
+                            key={previous ? group.entries.length : undefined}
+                            className={cn(
+                              "text-xs font-normal tabular-nums text-[var(--el-muted-soft)]",
+                              previous &&
+                                "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
+                            )}
+                          >
+                            {/* 쪽이 남았으면 마지막 묶음만 아직 덜 읽었다 — 기한 순이라 앞 묶음은 다 읽은 것이다. */}
+                            {group.entries.length}
+                            {hasMore && group === groups.at(-1) ? "+" : ""}
+                          </span>
+                        </h3>
+                        {renderRows(group.entries)}
+                      </section>
+                    );
+                  })
                 ) : (
                   <div className="mt-1">{renderRows(groups[0].entries)}</div>
                 )}
@@ -417,10 +422,10 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                   <div className="mt-4 flex justify-center">
                     <LoadMoreButton
                       loading={isLoadingMore}
-                      loadingLabel="할 일 더 불러오는 중"
+                      loadingLabel={t("loadingMore")}
                       onClick={() => setPages((current) => current + 1)}
                     >
-                      할 일 더 보기
+                      {t("loadMore")}
                     </LoadMoreButton>
                   </div>
                 ) : null}
@@ -444,7 +449,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
           // 시트를 닫아 목록에서 다시 열게 한다.
           if (!ok && !entries.some((e) => e.taskId === historyEntry.taskId)) {
             setHistoryTaskId(null);
-            toast.error("저장하지 못해 시트를 닫았습니다. 목록에서 다시 열어 주세요.");
+            toast.error(t("sheetClosed"));
           }
           return ok;
         }}

@@ -33,7 +33,7 @@ describe("parseApprovalCard", () => {
     });
     expect(card?.fields.map((field) => field.label)).toEqual(["내용"]);
     expect(card?.items.map((item) => item.title)).toEqual(["1번"]);
-    expect(card?.body).toEqual({ label: "본문", text: "본문" });
+    expect(card?.body).toEqual({ label: null, text: "본문" });
   });
 });
 
@@ -98,7 +98,7 @@ describe("ApprovalCard", () => {
     expect(details?.querySelector("summary")?.textContent).toContain("접기");
   });
 
-  it("명단 바꾸기는 더함·뺌·그대로를 사람 칩으로 가른다", () => {
+  it("명단 바꾸기는 추가·제거·그대로를 사람 칩으로 가른다", () => {
     const card = parseApprovalCard({
       title: "참석 멤버 바꾸기",
       warning: "아래 명단에 없는 멤버는 참석자에서 빠집니다.",
@@ -117,7 +117,7 @@ describe("ApprovalCard", () => {
     expect(
       screen.getByText("아래 명단에 없는 멤버는 참석자에서 빠집니다.")
     ).toBeTruthy();
-    expect(screen.getByLabelText("더함")).toBeTruthy();
+    expect(screen.getByLabelText("추가")).toBeTruthy();
     expect(screen.getByText("박도윤").className).toContain("line-through");
     expect(screen.getByText("이민호")).toBeTruthy();
   });

@@ -107,14 +107,6 @@ export default async function HelpHubPage() {
       <HelpHubProvider>
         <div data-help-main="" className={HELP_PAD}>
           <HelpPageHead title={t("brandTitle")} description={t("hub.lead")}>
-            {t("hub.uiNote") ? (
-              <p
-                data-help-ui-note=""
-                className="m-0 mt-3 max-w-[760px] rounded-[10px] bg-[var(--tv-lav-soft)] px-3 py-2 text-[14px] leading-[1.6] text-[var(--tv-body)]"
-              >
-                {t("hub.uiNote")}
-              </p>
-            ) : null}
             <HelpHubInput />
           </HelpPageHead>
           <div className="mt-8">

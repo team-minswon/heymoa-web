@@ -4,19 +4,19 @@ description: Ask your agent about past meetings and choose where it searches. It
 group: team
 slug: agent
 order: 2
-modified: 2026-10-23
+modified: 2026-11-05
 ---
 
 ## Open your agent {#open}
 
-Click the **[My agent]** button in the bottom-right corner. The first time, an intro card appears. Click **[Open it]** to start, or **[Don't show again]** to close it.
+Click the **[My agent]** button in the bottom-right corner. The first time, an intro card appears. Click **[Open]** to start, or **[Don't show again]** to close it.
 
-When you view a note in full screen, the agent opens in the right panel and uses the current meeting as its search scope. You can't use the agent in the side view that opens next to the notes list. Only you can see your conversations.
+When you view a note in full screen, the agent opens in the right panel and uses the current meeting as its search scope. You can't use the agent in the side view that opens next to the notes list. Only you can see your chats.
 
 ## Ask a question {#ask}
 
 1. **Click a card or type a question**
-   In an empty conversation, click **[Search meeting notes]**, **[Create a task]**, **[Connect to other tools]**, or **[Search the web]** to send that question right away.
+   In an empty chat, click **[Search meeting notes]**, **[Create tasks]**, **[Connect to other tools]**, or **[Search the web]** to send that question right away.
 2. **Set the search scope**
    Type `@` in the input box to pick projects and meeting notes. You can add up to 20.
 3. **Send it**
@@ -24,22 +24,22 @@ When you view a note in full screen, the agent opens in the right panel and uses
 
 ![The My agent panel with a question about the May budget and an answer with sources](img:agent/chat.webp "The My agent panel. Type @ in the input box to add projects and meeting notes.")
 
-::clip{name="agent-ask" alt="Opening a new conversation in My agent, clicking Search meeting notes, and the answer streaming in" caption="Asking your agent about a past meeting."}
+::clip{name="agent-ask" alt="Opening a new chat in My agent, clicking Search meeting notes, and the answer streaming in" caption="Asking your agent about a past meeting."}
 
 It also answers questions like “my tasks”, “tasks with no assignee”, “overdue tasks”, or “how much of this meeting is left to review”.
 
 When you open the agent from a note, that meeting's notes are added to the scope automatically. To ask about decisions and tasks confirmed in a project, add the project too.
 
-**[+]** starts a new conversation, and **[History]** lists past ones. Each conversation is titled after its first question, and you can't rename it.
+**[New chat]** (the + button) starts a new chat, and **[Chat history]** lists past ones. Each chat is titled after its first question. To rename it, choose **[Rename]** from the ⋯ menu.
 
-To delete a conversation, click **[Delete conversation]** at the top of the conversation, or the trash icon on its row in **[History]**. Deleted conversations can't be restored. You can delete a conversation while an answer is being written; the answer stops. Deleting a note also deletes conversations whose questions were scoped only to that note. Conversations that also asked about other notes or projects stay. If you leave a workspace or are removed from it, all your conversations in that workspace are deleted.
+To delete a chat, choose **[Delete]** from the ⋯ menu at the top of the chat or on its row in **[Chat history]**. Deleted chats can't be restored. You can delete a chat while an answer is being written, and the answer stops. Deleting a note also deletes chats whose questions were scoped only to that note. Chats that also asked about other notes or projects stay. If you leave a workspace or are removed from it, all your chats in that workspace are deleted.
 
 > [!Note]
-> When a conversation gets very long, the earlier part is summarized and collapsed. Repeat any important context in your new question.
+> When a chat gets very long, the earlier part is summarized and collapsed. Repeat any important context in your new question.
 
 ## How answers are made {#answers}
 
-The agent first searches and reads meeting notes, transcripts, and the decisions and tasks confirmed in projects, then answers. **[Referenced meeting notes]** under an answer lists the meeting notes it actually read for that answer. It doesn't cite a source for each sentence.
+The agent first searches and reads meeting notes, transcripts, and the decisions and tasks confirmed in projects, then answers. Under an answer, you see the meeting notes it actually read for that answer. It doesn't cite a source for each sentence.
 
 If it can't find anything, it says so and tells you how far it searched. If a decision has changed, it shows the current decision separately from the earlier one. It's still an AI answer, so check anything important against the meeting notes.
 
@@ -63,15 +63,15 @@ It doesn't confirm reviews or start recordings. Do those yourself on screen.
 
 1. **Check the approval card**
    It shows each change as before → after.
-2. **Click [Approve] or [Reject]**
+2. **Click [Approve] or [Decline]**
    The card doesn't expire until you decide.
 
-If you reject, the agent doesn't run the action or retry it. It tells you only what it couldn't do. If someone else changed the same value after you approved, your approved value overwrites it and the agent tells you.
+If you decline, the agent doesn't run the action or retry it. It tells you only what it couldn't do. If someone else changed the same value after you approved, your approved value overwrites it and the agent tells you.
 
-The card badge moves through **[Awaiting approval]**, **[Running]**, **[Done]**, **[Rejected]**, and **[Failed]**.
+The card badge moves through **[Needs approval]**, **[Running]**, **[Done]**, **[Declined]**, and **[Failed]**.
 
-- **[Void]**: The conversation ended before you approved.
-- **[Needs check]**: The agent couldn't confirm whether the action ran. Check on screen whether the change was applied. It doesn't retry automatically.
+- **[Invalid]**: The chat ended before you approved.
+- **[Needs checking]**: The agent couldn't confirm whether the action ran. Check on screen whether the change was applied. It doesn't retry automatically.
 
 > [!Can't be undone]
 > Meeting result emails can only go to workspace members. ==You can't recall an email once it's sent.== There's also a daily limit on how many you can send.
@@ -81,7 +81,7 @@ Creating and editing Linear issues and creating GitHub issues only work in works
 ## When no answer comes {#errors}
 
 :::problem
-**Symptom:** “The response took too long and was stopped.” appears
+**Symptom:** “The response took too long and stopped.” appears
 **Cause:** The answer went over the time allowed for one request.
 **Fix:** Split your question into smaller ones and send them again.
 :::
@@ -94,14 +94,14 @@ Creating and editing Linear issues and creating GitHub issues only work in works
 
 :::problem
 **Symptom:** “An answer is already being written.” appears
-**Cause:** An earlier question in the same conversation is still being processed.
+**Cause:** An earlier question in the same chat is still being processed.
 **Fix:** Wait for it to finish, or click **[Stop]**.
 :::
 
 ## Frequently asked questions {#faq}
 
-### Can other people see my conversations?
-No. Only you can see your conversations.
+### Can other people see my chats?
+No. Only you can see your chats.
 
 ### Can the agent confirm a review or start a recording for me?
 No. It doesn't confirm reviews or start recordings. Do those yourself on screen.

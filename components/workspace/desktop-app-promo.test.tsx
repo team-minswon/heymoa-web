@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DesktopAppPromo } from "@/components/workspace/desktop-app-promo";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { intlWrapper } from "@/components/help/test-intl";
 
 const desktop = vi.hoisted(() => ({ value: false as boolean | null }));
 const track = vi.hoisted(() => vi.fn());
@@ -37,7 +38,7 @@ describe("DesktopAppPromo", () => {
     );
     expect(
       screen.getByText(
-        "회의실 대화도, 화상회의·강의·유튜브에서 듣는 말도 기록하세요."
+        "회의실 대화도, 화상회의와 강의, 유튜브에서 듣는 말도 기록하세요."
       )
     ).toBeInTheDocument();
     const link = await screen.findByRole("link", { name: "앱 다운로드" });
@@ -59,7 +60,7 @@ describe("DesktopAppPromo", () => {
       );
       expect(
         screen.queryByText(
-          "회의실 대화도, 화상회의·강의·유튜브에서 듣는 말도 기록하세요."
+          "회의실 대화도, 화상회의와 강의, 유튜브에서 듣는 말도 기록하세요."
         )
       ).toBeNull();
     }
@@ -119,5 +120,32 @@ describe("DesktopAppPromo", () => {
     expect(
       screen.getByRole("heading", { name: "기록할 수 있는 소리" })
     ).toBeInTheDocument();
+  });
+  it("영어 화면에서는 안내와 비교 창이 영어로 보인다", async () => {
+    const { baseElement } = render(
+      <TooltipProvider>
+        <DesktopAppPromo />
+      </TooltipProvider>,
+      { wrapper: intlWrapper("en") }
+    );
+    expect(
+      await screen.findByRole("link", { name: "Download app" })
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Compare the web and desktop apps" })
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(
+      dialog.getByRole("heading", { name: "What you can record" })
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "Next" }));
+    fireEvent.click(dialog.getByRole("button", { name: "Next" }));
+    expect(
+      dialog.getByRole("heading", { name: "Keep using your existing notes" })
+    ).toBeInTheDocument();
+    // 공용 Dialog 의 닫기 버튼(`components/ui/dialog.tsx`)은 이 모듈 문구가 아니다.
+    expect(baseElement.textContent?.replace("닫기", "")).not.toMatch(
+      /[가-힣]/
+    );
   });
 });

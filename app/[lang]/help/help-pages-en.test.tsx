@@ -130,8 +130,8 @@ describe("사용 가이드 영어판", () => {
     expect(
       screen.getByRole("heading", { name: "HeyMoa Guide", level: 1 })
     ).toBeInTheDocument();
-    // 대시보드가 아직 한국어라는 안내가 첫 화면에 한 줄 선다
-    expect(hub.container.querySelector("[data-help-ui-note]")).not.toBeNull();
+    // 대시보드가 영어로 나오므로 「앱은 아직 한국어」 안내를 두지 않는다
+    expect(hub.container.querySelector("[data-help-ui-note]")).toBeNull();
     expect(hangulIn(hub.container)).toEqual([]);
     for (const topic of en)
       expect(
@@ -195,8 +195,10 @@ describe("영어판 검색 색인", () => {
       (t) => (t.group === "situations" ? "situation" : "feature"),
       "en"
     );
-    const hits = searchHelp(entries, "glossary");
+    const hits = searchHelp(entries, "vocabulary");
     expect(hits.length).toBeGreaterThan(0);
+    // 옛 이름(glossary)으로 찾아도 용어 페이지가 나온다
+    expect(searchHelp(entries, "glossary").length).toBeGreaterThan(0);
     expect(hits.every((h) => h.path.startsWith("/en/help/"))).toBe(true);
     expect(searchHelp(entries, "용어 사전")).toEqual([]);
   });

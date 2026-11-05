@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { ROLE_COLOR } from "@/components/notes/review/role-dot";
 import { tickLabel, ticksOf } from "@/lib/notes/review/moments";
@@ -15,9 +16,9 @@ export type MapMark = {
 };
 export type MapChapter = { ordinal: number; title: string; startMs: number };
 
-const MARK = {
-  DECISION: { name: "결정", color: ROLE_COLOR.DECISION },
-  ACTION_ITEM: { name: "할 일", color: ROLE_COLOR.ACTION },
+const MARK_COLOR = {
+  DECISION: ROLE_COLOR.DECISION,
+  ACTION_ITEM: ROLE_COLOR.ACTION,
 } as const;
 
 const at = (ms: number, lengthMs: number) =>
@@ -60,6 +61,8 @@ export function MeetingMap({
   onSelect: (itemId: string) => void;
 }) {
   // 묶음마다 몇 번 눌렀나. 누를 때마다 묶음 안의 다음 항목으로 간다
+  const t = useTranslations("notes.review.map");
+  const tKind = useTranslations("notes.kinds");
   const [turns, setTurns] = useState<Record<string, number>>({});
   if (marks.length === 0 || lengthMs <= 0) return null;
   const ordered = [...chapters].sort((a, b) => a.startMs - b.startMs);
@@ -70,18 +73,18 @@ export function MeetingMap({
 
   return (
     <section
-      aria-label="언제 정해졌나"
+      aria-label={t("title")}
       className="mt-[26px] rounded-[12px] border border-[var(--el-hairline-soft)] px-4 pt-3.5 pb-2.5"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-[var(--el-muted)]">
-        <h2 className="font-medium text-[var(--el-body)]">언제 정해졌나</h2>
+        <h2 className="font-medium text-[var(--el-body)]">{t("title")}</h2>
         <span className="flex items-center gap-3">
           <span className="inline-flex items-center gap-[5px]">
             <span
               aria-hidden
               className="h-1.5 w-3 rounded-[2px] bg-[var(--el-hairline)]"
             />
-            주제 구간
+            {t("chapters")}
           </span>
           {(["DECISION", "ACTION_ITEM"] as const).map((kind) =>
             count(kind) > 0 ? (
@@ -92,9 +95,9 @@ export function MeetingMap({
                 <span
                   aria-hidden
                   className="h-2.5 w-[3px] rounded-[2px]"
-                  style={{ background: MARK[kind].color }}
+                  style={{ background: MARK_COLOR[kind] }}
                 />
-                {MARK[kind].name} {count(kind)}
+                {tKind(kind)} {count(kind)}
               </span>
             ) : null
           )}
@@ -122,9 +125,9 @@ export function MeetingMap({
           const next = group[(turns[key] ?? 0) % group.length];
           const label =
             group.length === 1
-              ? `${MARK[next.kind].name} · ${formatOffset(next.atMs)} · ${next.content}`
-              : `${formatOffset(group[0].atMs)} · ${group.length}개 · ${group
-                  .map((mark) => `${MARK[mark.kind].name} ${mark.content}`)
+              ? `${tKind(next.kind)} · ${formatOffset(next.atMs)} · ${next.content}`
+              : `${formatOffset(group[0].atMs)} · ${t("groupCount", { count: group.length })} · ${group
+                  .map((mark) => `${tKind(mark.kind)} ${mark.content}`)
                   .join(" / ")}`;
           return (
             <button
@@ -147,7 +150,7 @@ export function MeetingMap({
               )}
               style={{
                 left: at(group[0].atMs, lengthMs),
-                background: MARK[group[0].kind].color,
+                background: MARK_COLOR[group[0].kind],
               }}
             />
           );
@@ -171,7 +174,10 @@ export function MeetingMap({
                     : "translateX(-50%)",
             }}
           >
-            {tickLabel(minute)}
+            {tickLabel(minute, {
+              minutes: (count) => t("tickMinutes", { count }),
+              hours: (count) => t("tickHours", { count }),
+            })}
           </span>
         ))}
       </div>

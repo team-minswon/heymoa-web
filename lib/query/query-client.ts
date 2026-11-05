@@ -5,6 +5,7 @@ import { trackMutation } from "@/lib/analytics/track";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { ApiError, isAuthError } from "@/lib/api/fetcher";
 import { isSessionExpired } from "@/lib/auth/session-gate";
+import { webMessage } from "@/lib/i18n/web-message";
 
 /** 재시도로 기다려 줄 최대 시간. v5 기본 백오프의 상한과 같다. */
 const MAX_RETRY_AFTER_MS = 30_000;
@@ -69,7 +70,7 @@ export function makeQueryClient() {
         // 세션이 끝난 뒤의 실패는 만료 토스트 하나로 충분하다. 여기서 또 띄우면
         // "세션이 만료되었습니다"와 "요청을 처리하지 못했습니다"가 겹친다.
         if (isSessionExpired() || isAuthError(error)) return;
-        toast.error(errorMessageOf(error, "요청을 처리하지 못했습니다."));
+        toast.error(errorMessageOf(error, webMessage("requestFailed")));
       },
     }),
   });

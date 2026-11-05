@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { useAuth } from "@/components/auth/auth-provider";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { Button } from "@/components/ui/button";
@@ -7,6 +9,7 @@ import { isAuthApiConfigured } from "@/lib/auth/paths";
 
 export function AuthStatus() {
   const { user, status } = useAuth();
+  const t = useTranslations("auth.status");
 
   if (status === "checking") {
     return (
@@ -16,10 +19,10 @@ export function AuthStatus() {
         size="xl"
         loading
         disabled
-        aria-label="로그인 상태 확인 중"
+        aria-label={t("checking")}
         className="rounded-full font-medium"
       >
-        로그인
+        {t("signIn")}
       </Button>
     );
   }
@@ -37,7 +40,7 @@ export function AuthStatus() {
         className="rounded-full font-medium"
         disabled
       >
-        로그인
+        {t("signIn")}
       </Button>
     );
   }
@@ -47,7 +50,7 @@ export function AuthStatus() {
   return (
     <AuthModal>
       <Button variant="outline" size="xl" className="rounded-full font-medium">
-        로그인
+        {t("signIn")}
       </Button>
     </AuthModal>
   );

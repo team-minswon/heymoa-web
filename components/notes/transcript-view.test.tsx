@@ -781,7 +781,7 @@ describe("TranscriptView", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "대화 기록을 불러오지 못했습니다.",
+        "스크립트를 불러오지 못했습니다.",
         expect.objectContaining({
           id: `transcript-load-${NOTE_ID}`,
           action: expect.objectContaining({ label: "다시 시도" }),

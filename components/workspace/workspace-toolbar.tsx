@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ExternalLink, Pause, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   type RecordingPhase,
@@ -42,6 +43,8 @@ function WorkspaceRecordingIndicator({
   onStop: () => void;
 }) {
   const meter = useRecordingMeter();
+  const t = useTranslations("shell.toolbar");
+  const tRecording = useTranslations("recording");
 
   return (
     <motion.div
@@ -57,13 +60,13 @@ function WorkspaceRecordingIndicator({
         onClick={() => onOpen(noteId)}
         className="h-7 rounded-full px-2.5 text-[13px] font-medium text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
       >
-        <ExternalLink className="size-3.5" /> 현재 녹음
+        <ExternalLink className="size-3.5" /> {t("currentRecording")}
       </Button>
       <div className="h-4 w-px bg-[var(--el-hairline)]" />
       {phase === "recording" ? (
         <span
           role="meter"
-          aria-label="마이크 입력"
+          aria-label={tRecording("micInput")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(meter.level * 100)}
@@ -91,7 +94,7 @@ function WorkspaceRecordingIndicator({
               variant="outline"
               size="icon-sm"
               className="size-7 rounded-full text-destructive"
-              aria-label="녹음 일시정지"
+              aria-label={tRecording("pause.label")}
               disabled={phase !== "recording"}
               onClick={onStop}
             />
@@ -100,7 +103,7 @@ function WorkspaceRecordingIndicator({
           <Pause className="size-3.5" aria-hidden />
         </TooltipTrigger>
         <TooltipContent side="bottom">
-          녹음 일시정지 — 회의는 끝나지 않습니다
+          {tRecording("pause.tooltip")}
         </TooltipContent>
       </Tooltip>
     </motion.div>
@@ -135,6 +138,7 @@ export function WorkspaceToolbar({
   covered?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("shell.toolbar");
   const recording = useRecording();
   // 창은 셸이 소유한다 — 프로젝트가 없으면 프로젝트부터 묻고 회의 창으로 이어 가야 해서,
   // 두 창이 한 자리에 있어야 이어 붙는다(`workspace-app-shell`).
@@ -173,7 +177,7 @@ export function WorkspaceToolbar({
         <div className="flex h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
           <nav
-            aria-label="현재 위치"
+            aria-label={t("location")}
             className="flex min-w-0 flex-1 items-baseline gap-2"
           >
             {/* 좁은 화면(full 노트)에서는 앞 세그먼트를 접어 노트 제목·우측 액션을 확보한다. */}
@@ -195,13 +199,13 @@ export function WorkspaceToolbar({
             <Button
               type="button"
               size="sm"
-              aria-label="새 노트"
+              aria-label={t("newNote")}
               className="h-8 shrink-0 rounded-full px-3"
               onClick={requestNewMeeting}
             >
               <Plus className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만 — 노트 액션이 잘리지 않게. */}
-              <span>새 노트</span>
+              <span>{t("newNote")}</span>
             </Button>
           </div>
         </div>

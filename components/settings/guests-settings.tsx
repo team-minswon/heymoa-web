@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { UserPlus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { SettingsHeader } from "@/components/settings/settings-layout";
@@ -35,6 +36,7 @@ import {
  * **추가는 전원이 한다** — 회의의 「참여자 추가」가 이미 멤버 누구에게나 임시 참여자를 만들게 한다.
  */
 export function GuestsSettings({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("settings.guests");
   const { user } = useAuth();
   const membersQuery = useGetWorkspaceMembers(workspaceId);
   const response = membersQuery.data;
@@ -49,8 +51,8 @@ export function GuestsSettings({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <SettingsHeader
-        title="임시 참여자"
-        description="계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 이어 붙일 수 있습니다."
+        title={t("title")}
+        description={t("description")}
         action={
           <Button
             size="sm"
@@ -58,7 +60,7 @@ export function GuestsSettings({ workspaceId }: { workspaceId: string }) {
             onClick={() => setAdding(true)}
           >
             <UserPlus />
-            추가
+            {t("add")}
           </Button>
         }
       />
@@ -91,6 +93,8 @@ function AddGuestDialog({
   workspaceId: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("settings.guests");
+  const tActions = useTranslations("common.actions");
   const inputId = useId();
   const queryClient = useQueryClient();
   const [value, setValue] = useState("");
@@ -111,11 +115,11 @@ function AddGuestDialog({
         data: { displayName: trimmed },
       });
       if (response.status !== 201 || !response.data.success) {
-        setError("임시 참여자를 추가하지 못했습니다.");
+        setError(t("addDialog.failed"));
         return;
       }
     } catch (caught) {
-      setError(errorMessageOf(caught, "임시 참여자를 추가하지 못했습니다."));
+      setError(errorMessageOf(caught, t("addDialog.failed")));
       return;
     }
     // 목록(쪽 단위)과 회의의 참석자 후보가 같은 키 아래에 있다 — 둘 다 새 사람을 보게 한다.
@@ -134,9 +138,9 @@ function AddGuestDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>임시 참여자 추가</AlertDialogTitle>
+          <AlertDialogTitle>{t("addDialog.title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            계정 없이 회의에 참여하는 사람을 미리 만들어 둡니다.
+            {t("addDialog.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form
@@ -148,7 +152,7 @@ function AddGuestDialog({
         >
           <div className="grid gap-1.5">
             <div className="flex items-baseline justify-between gap-2">
-              <Label htmlFor={inputId}>이름</Label>
+              <Label htmlFor={inputId}>{t("nameLabel")}</Label>
               <span
                 className="text-xs text-[var(--el-muted)] tabular-nums"
                 aria-hidden
@@ -176,9 +180,11 @@ function AddGuestDialog({
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel type="button">취소</AlertDialogCancel>
+            <AlertDialogCancel type="button">
+              {tActions("cancel")}
+            </AlertDialogCancel>
             <Button type="submit" loading={create.isPending} disabled={blocked}>
-              추가
+              {t("add")}
             </Button>
           </AlertDialogFooter>
         </form>

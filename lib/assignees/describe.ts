@@ -27,12 +27,14 @@ export type AssigneeView = {
 };
 
 export function describeAssignee(
-  value: AssigneeValue | null | undefined
+  value: AssigneeValue | null | undefined,
+  /** 이름 없는 화자를 부르는 말. 화면 언어(`notes.speakers.fallback`)로 넘긴다 */
+  speakerName: (label: string) => string
 ): AssigneeView | null {
   if (!value) return null;
   if (value.type === "SPEAKER_LABEL") {
     return {
-      name: `화자 ${value.label ?? ""}`.trim(),
+      name: speakerName(value.label ?? "").trim(),
       avatarKey: unnamedSpeakerAvatarKey(value.label ?? ""),
       image: null,
       unnamed: true,

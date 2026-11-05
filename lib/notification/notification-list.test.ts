@@ -6,6 +6,7 @@ import {
   nextCursor,
   type NotificationItem,
 } from "@/lib/notification/notification-list";
+import { testDatesT } from "@/components/help/test-intl";
 
 const item = (id: string, createdAt: string) =>
   ({ notificationId: id, createdAt }) as NotificationItem;
@@ -13,9 +14,22 @@ const item = (id: string, createdAt: string) =>
 describe("notification-list", () => {
   it("dayLabel 은 서울 날짜로 오늘·어제·「10월 14일(수)」", () => {
     const now = new Date("2026-10-22T03:00:00Z"); // 서울 12시
-    expect(dayLabel("2026-10-21T16:00:00Z", now)).toBe("오늘"); // 서울 22일 01시
-    expect(dayLabel("2026-10-21T03:00:00Z", now)).toBe("어제");
-    expect(dayLabel("2026-10-14T03:00:00Z", now)).toBe("10월 14일(수)");
+    const t = testDatesT();
+    expect(dayLabel("2026-10-21T16:00:00Z", "ko-KR", t, now)).toBe("오늘"); // 서울 22일 01시
+    expect(dayLabel("2026-10-21T03:00:00Z", "ko-KR", t, now)).toBe("어제");
+    expect(dayLabel("2026-10-14T03:00:00Z", "ko-KR", t, now)).toBe(
+      "10월 14일(수)"
+    );
+  });
+
+  it("dayLabel 은 영어 화면에서 영어 낱말과 어순이다", () => {
+    const now = new Date("2026-10-22T03:00:00Z");
+    const t = testDatesT("en");
+    expect(dayLabel("2026-10-21T16:00:00Z", "en-US", t, now)).toBe("Today");
+    expect(dayLabel("2026-10-21T03:00:00Z", "en-US", t, now)).toBe("Yesterday");
+    expect(dayLabel("2026-10-14T03:00:00Z", "en-US", t, now)).toBe(
+      "Wed, October 14"
+    );
   });
 
   it("countNewer 는 보던 목록 맨 위보다 새것만 센다", () => {

@@ -4,6 +4,7 @@ import { track } from "@/lib/analytics/track";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { MessageCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { STARTERS } from "@/components/chat/chat-starter";
 import { useAuthUserId } from "@/components/auth/auth-provider";
@@ -60,11 +61,6 @@ function useAgentIntro() {
 /** 패널이 닫힌 동안 알약이 알릴 턴 상태. 승인 대기는 놓치면 일이 멈추므로 따로 말한다. */
 export type AgentAttention = "running" | "approval" | null;
 
-const ATTENTION_TEXT: Record<Exclude<AgentAttention, null>, string> = {
-  running: "답을 준비하고 있어요",
-  approval: "확인이 필요해요",
-};
-
 export function AgentFab({
   hidden,
   engaged = false,
@@ -81,6 +77,8 @@ export function AgentFab({
   /** 열림·닫힘 움직임. 패널과 같은 길이로 물러나야 해서 호출부가 준다 */
   className: string;
 }) {
+  const t = useTranslations("chat.fab");
+  const tStarter = useTranslations("chat.starter.capabilities");
   const { visible, dismiss } = useAgentIntro();
   const showIntro = visible && !hidden;
   // 사용자가 hover·포커스로 말풍선을 열었는가(말풍선은 그때만 뜬다). 그동안은 파동을 멈춘다
@@ -115,15 +113,15 @@ export function AgentFab({
       {showIntro ? (
         <section
           data-testid="agent-intro"
-          aria-label="내 에이전트 안내"
+          aria-label={t("introLabel")}
           className="fixed right-8 bottom-[5.25rem] z-40 w-[min(20rem,calc(100vw-4rem))] rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-4 shadow-e2 transition-[opacity,translate] duration-200 ease-out starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none"
         >
-          <h2 className="text-lg text-[var(--el-ink)]">내 에이전트</h2>
+          <h2 className="text-lg text-[var(--el-ink)]">{t("title")}</h2>
           <p className="mt-1 text-xs leading-relaxed text-balance text-[var(--el-muted)]">
-            회의록을 보고 답해요. 바꾸는 일은 먼저 물어봐요.
+            {t("intro")}
           </p>
           <ul className="mt-3 grid gap-2">
-            {STARTERS.map(({ key, Icon, title }) => (
+            {STARTERS.map(({ key, Icon }) => (
               <li
                 key={key}
                 className="flex items-center gap-2 text-[13px] text-[var(--el-body)]"
@@ -132,7 +130,7 @@ export function AgentFab({
                   aria-hidden
                   className="size-4 shrink-0 text-[var(--el-muted)]"
                 />
-                {title}
+                {tStarter(key)}
               </li>
             ))}
           </ul>
@@ -142,21 +140,21 @@ export function AgentFab({
               onClick={dismiss}
               className="rounded-control px-1 py-1 text-xs text-[var(--el-muted)] underline-offset-2 hover:text-[var(--el-ink)] hover:underline focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
-              다시 보지 않기
+              {t("dismiss")}
             </button>
             <Button
               size="sm"
               className="h-8 rounded-full px-3.5"
               onClick={open}
             >
-              열어 보기
+              {t("open")}
             </Button>
           </div>
         </section>
       ) : null}
       {attention ? (
         <span id="agent-fab-attention" className="sr-only">
-          {ATTENTION_TEXT[attention]}
+          {t(`attention.${attention}`)}
         </span>
       ) : null}
       {/* 카드가 떠 있을 때는 카드가 말하므로 툴팁을 끈다 */}
@@ -165,7 +163,7 @@ export function AgentFab({
           render={
             <Button
               size="xl"
-              aria-label="내 에이전트 열기"
+              aria-label={t("openLabel")}
               // 이름은 그대로 두고 상태는 설명으로 덧붙여 읽힌다
               aria-describedby={attention ? "agent-fab-attention" : undefined}
               data-nudge={nudging || undefined}
@@ -190,7 +188,8 @@ export function AgentFab({
               className="pointer-events-none absolute -inset-1 -z-10 rounded-full bg-[var(--el-ink)]/15 motion-safe:animate-pulse"
             />
           ) : null}
-          <MessageCircle aria-hidden className="size-4" />내 에이전트
+          <MessageCircle aria-hidden className="size-4" />
+          {t("name")}
           {attention ? (
             <>
               <span
@@ -207,7 +206,7 @@ export function AgentFab({
           ) : null}
         </TooltipTrigger>
         <TooltipContent side="top" align="end">
-          {attention ? ATTENTION_TEXT[attention] : "회의록을 보고 답해요"}
+          {attention ? t(`attention.${attention}`) : t("tooltip")}
         </TooltipContent>
       </Tooltip>
     </>

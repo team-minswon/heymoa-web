@@ -18,6 +18,8 @@ import {
   WifiOff,
 } from "lucide-react";
 
+import { useLocale, useTranslations } from "next-intl";
+
 import { useAuth } from "@/components/auth/auth-provider";
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import {
@@ -70,6 +72,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
 import {
@@ -82,6 +85,7 @@ import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
 import { useIsWorkspaceAdmin } from "@/lib/workspace/use-is-workspace-admin";
+import { localePath } from "@/lib/i18n/locales";
 
 /** 노트 조회가 「없다」로 끝난 코드. 노트·프로젝트가 지워졌거나 남의 것이다. */
 const NOTE_GONE_CODES = new Set(["NOTE_NOT_FOUND", "PROJECT_NOT_FOUND"]);
@@ -152,6 +156,11 @@ export function NotePanel({
   /** 메일 링크로 들어왔다(APP-1312). 상단 띠가 도착한 시점의 상태를 말한다. */
   fromMail?: boolean;
 }) {
+  const t = useTranslations("notes.panel");
+  const tActions = useTranslations("common.actions");
+  const tDates = useTranslations("dates");
+  const dateLocale = useDisplayLocale();
+  const locale = useLocale();
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
   const isDesktopApp = useDesktopApp();
@@ -460,15 +469,16 @@ export function NotePanel({
     }
   }, [meetingNotRecording, recordingNoteLive, recordingClaim, noteId]);
   const startBlockedReason = noteNotInThisWorkspace
-    ? "이 노트는 이 워크스페이스에 없습니다."
+    ? t("startBlocked.otherWorkspace")
     : note?.meetingStatus === "IN_PROGRESS" &&
         !localProviderCanControlNote &&
         !finishedHere &&
         recordingClaim !== "mine" &&
         recordingClaim !== "dead"
-      ? "다른 탭·기기에서 기록 중입니다."
+      ? t("startBlocked.otherDevice")
       : null;
-  const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
+  const startLabel =
+    note?.meetingStatus === "PAUSED" ? t("resume") : t("start");
 
   // 전체 화면은 **노트(왼쪽) + 에이전트 레일(오른쪽 고정)** 두 패널이다. 사이는 캔버스 10px,
   // 레일 폭 440 — design.pen `XtEMZ` + `L4PpR`. 레일은 **상주이고 닫기가 없다.**
@@ -487,7 +497,12 @@ export function NotePanel({
       ? headerTranscriptQuery.data.data.data
       : null;
   const meta = note
-    ? buildNoteHeaderMeta(note, { isStarter, transcript: headerTranscript })
+    ? buildNoteHeaderMeta(note, {
+        isStarter,
+        transcript: headerTranscript,
+        locale: dateLocale,
+        t: tDates,
+      })
     : null;
   /**
    * 회의 제어(`MeetingControls`)가 실제로 그릴 것이 있는가. **조건을 여기서 한 번 더 적는
@@ -559,7 +574,7 @@ export function NotePanel({
                 제목 빵조각과 섞이면 어느 것이 이동이고 어느 것이 표시인지 알 수 없다. */}
               <div
                 role="group"
-                aria-label="창 제어"
+                aria-label={t("windowControls")}
                 className="flex shrink-0 items-center gap-2"
               >
                 <Button
@@ -567,7 +582,7 @@ export function NotePanel({
                   variant="ghost"
                   size="icon"
                   className="rounded-control text-[var(--el-muted)]"
-                  aria-label="목록으로"
+                  aria-label={t("backToList")}
                   onClick={onClose}
                 >
                   <ArrowLeft />
@@ -579,9 +594,7 @@ export function NotePanel({
                     size="icon"
                     className="rounded-control text-[var(--el-muted)]"
                     aria-label={
-                      turnActive
-                        ? "답변이 끝나면 확장할 수 있습니다"
-                        : "전체 화면으로 보기"
+                      turnActive ? t("expandBusy") : t("expand")
                     }
                     disabled={turnActive}
                     onClick={onExpand}
@@ -600,9 +613,7 @@ export function NotePanel({
                     size="icon"
                     className="rounded-control text-[var(--el-muted)]"
                     aria-label={
-                      turnActive
-                        ? "답변이 끝나면 축소할 수 있습니다"
-                        : "사이드 뷰로 보기"
+                      turnActive ? t("collapseBusy") : t("collapse")
                     }
                     disabled={turnActive}
                     onClick={onCollapse}
@@ -640,7 +651,7 @@ export function NotePanel({
                 </span>
               ) : (
                 <Skeleton
-                  aria-label="노트 불러오는 중"
+                  aria-label={t("loading")}
                   className="h-3.5 w-40 max-w-full rounded-chip"
                 />
               )}
@@ -661,16 +672,16 @@ export function NotePanel({
               className="shrink-0 gap-5 group-data-horizontal/tabs:h-14 max-sm:order-last max-sm:w-full max-sm:justify-start max-sm:group-data-horizontal/tabs:h-11"
             >
               <TabsTrigger value="details" className={TAB_ITEM}>
-                정보
+                {t("tabs.details")}
               </TabsTrigger>
               <TabsTrigger value="transcript" className={TAB_ITEM}>
-                스크립트
+                {t("tabs.transcript")}
               </TabsTrigger>
               {showContextTab ? (
                 // 안내 말풍선이 이 탭 아래에 붙는다 — 감싼 칸이 기준점이다.
                 <span className="relative flex">
                   <TabsTrigger value="context" className={TAB_ITEM}>
-                    타임라인
+                    {t("tabs.timeline")}
                   </TabsTrigger>
                   <TimelineHint
                     noteId={noteId}
@@ -684,7 +695,7 @@ export function NotePanel({
               {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
               {showSummaryTab ? (
                 <TabsTrigger value="summary" className={TAB_ITEM}>
-                  요약
+                  {t("tabs.summary")}
                 </TabsTrigger>
               ) : null}
             </TabsList>
@@ -710,7 +721,7 @@ export function NotePanel({
                         type="button"
                         variant="outline"
                         size="icon"
-                        aria-label="노트 메뉴"
+                        aria-label={t("menu")}
                         className="rounded-control text-[var(--el-muted)]"
                       />
                     }
@@ -722,7 +733,7 @@ export function NotePanel({
                       variant="destructive"
                       onClick={() => setDeleteTargetId(noteId)}
                     >
-                      <Trash2 /> 삭제
+                      <Trash2 /> {tActions("delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -756,7 +767,7 @@ export function NotePanel({
                   "shrink-0 rounded-control text-[var(--el-muted)]",
                   railFoldedOnNarrow && "lg:hidden"
                 )}
-                aria-label="내 에이전트 열기"
+                aria-label={t("openAgent")}
                 aria-expanded={false}
                 onClick={() => setAgentRail(true)}
               >
@@ -791,7 +802,7 @@ export function NotePanel({
                       note.title
                     ) : (
                       <Skeleton
-                        aria-label="노트 제목 불러오는 중"
+                        aria-label={t("titleLoading")}
                         className="h-9 w-64 max-w-full rounded-chip"
                       />
                     )}
@@ -830,10 +841,10 @@ export function NotePanel({
                 className="rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4"
               >
                 <p className="text-sm font-medium text-[var(--el-ink)]">
-                  이 회의를 열 수 없습니다
+                  {t("gone.title")}
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
-                  삭제되었거나 지금 계정으로는 볼 수 없는 회의입니다.
+                  {t("gone.description")}
                 </p>
                 <Button
                   type="button"
@@ -842,14 +853,14 @@ export function NotePanel({
                   className="mt-3 h-[30px]"
                   onClick={onClose}
                 >
-                  노트 목록으로
+                  {t("gone.back")}
                 </Button>
               </div>
             </div>
           ) : noteLoadFailed ? (
             <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-4 pt-4">
               <InlineRetry
-                label="회의 상태를 확인하지 못했습니다."
+                label={t("statusLoadFailed")}
                 onRetry={() => void noteQuery.refetch()}
               />
             </div>
@@ -860,10 +871,7 @@ export function NotePanel({
               className="mx-[var(--note-gutter)] mt-3 flex shrink-0 items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-3 text-sm text-[var(--el-body)]"
             >
               <WifiOff className="size-4 shrink-0 text-amber-600" />
-              <span>
-                실시간 연결이 끊겨 다시 연결하는 중입니다. 그동안 새 발화가 늦게
-                보일 수 있습니다.
-              </span>
+              <span>{t("reconnecting")}</span>
             </div>
           ) : null}
           {noteRealtime.subscriptionIssue ? (
@@ -873,10 +881,10 @@ export function NotePanel({
             >
               <span>
                 {noteRealtime.subscriptionIssue === "ALREADY_SUBSCRIBED"
-                  ? "실시간 연결이 중복되어 새 소식을 받지 못하고 있습니다. 화면을 새로고침해 주세요."
+                  ? t("subscription.alreadySubscribed")
                   : noteRealtime.subscriptionIssue === "UNAVAILABLE"
-                    ? "실시간 연결을 잠시 확인하지 못했습니다. 잠시 뒤 다시 연결합니다."
-                    : "실시간 연결 인원이 가득 찼습니다. 잠시 뒤 다시 연결합니다."}
+                    ? t("subscription.unavailable")
+                    : t("subscription.full")}
               </span>
               {noteRealtime.subscriptionIssue !== "ALREADY_SUBSCRIBED" ? (
                 <Button
@@ -884,7 +892,7 @@ export function NotePanel({
                   size="sm"
                   onClick={noteRealtime.retrySubscription}
                 >
-                  다시 시도
+                  {tActions("retry")}
                 </Button>
               ) : null}
             </div>
@@ -896,16 +904,15 @@ export function NotePanel({
             {showViewerEndNotice ? (
               <div
                 role="region"
-                aria-label="회의 종료 안내"
+                aria-label={t("viewerEnded.region")}
                 className="mx-[var(--note-gutter)] mt-4 flex shrink-0 items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
               >
                 <div>
                   <p className="text-sm font-medium text-[var(--el-ink)]">
-                    회의가 종료되었습니다
+                    {t("viewerEnded.title")}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--el-muted)]">
-                    읽던 기록을 확인한 뒤 종료된 기록과 요약으로 이동할 수
-                    있습니다.
+                    {t("viewerEnded.description")}
                   </p>
                 </div>
                 <Button
@@ -921,7 +928,7 @@ export function NotePanel({
                     }))
                   }
                 >
-                  {false ? "답변이 끝나면 이동합니다" : "기록과 요약 보기"}
+                  {t("viewerEnded.action")}
                 </Button>
               </div>
             ) : null}
@@ -1038,7 +1045,7 @@ export function NotePanel({
               <ScrollArea className="h-full">
                 <DataBoundary
                   fallback={<NoteDetailsSkeleton />}
-                  errorLabel="노트를 불러오지 못했습니다"
+                  errorLabel={t("detailsLoadFailed")}
                   resetKeys={[noteId]}
                 >
                   <NoteDetails
@@ -1087,16 +1094,18 @@ export function NotePanel({
                     // 독을 가리키는 말풍선. 화살표는 EndNudge 와 같이 회전한 정사각형의 두 변만 테두리를 그린다.
                     className="relative rounded-full border border-[var(--el-hairline-strong)] bg-white px-3 whitespace-nowrap py-1.5 text-[12px] text-[var(--el-muted)] shadow-e2 animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
                   >
-                    화상회의 녹음은{" "}
-                    <a
-                      href="/download"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-sm font-semibold text-[var(--el-ink)] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
-                    >
-                      데스크톱 앱
-                    </a>
-                    으로
+                    {t.rich("desktopHint", {
+                      link: (chunks) => (
+                        <a
+                          href={localePath(locale, "/download")}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-sm font-semibold text-[var(--el-ink)] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
+                        >
+                          {chunks}
+                        </a>
+                      ),
+                    })}
                     <span
                       aria-hidden
                       className="pointer-events-none absolute -bottom-[6px] left-1/2 size-2.5 -translate-x-1/2 rotate-45 border-r border-b border-[var(--el-hairline-strong)] bg-white"
@@ -1128,7 +1137,7 @@ export function NotePanel({
                   className="size-[15px] shrink-0 text-[var(--el-muted)]"
                 />
                 <span className="truncate text-[13.5px] text-[var(--el-muted-soft)]">
-                  이 회의에 대해 물어보기
+                  {t("askAboutMeeting")}
                 </span>
               </button>
             ) : null}

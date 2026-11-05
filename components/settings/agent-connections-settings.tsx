@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   AGENT_ACCESS_DISABLED,
   AgentAccessBlockedNotice,
-  BLOCKED_SUFFIX,
+  useWorkspaceOptionLabel,
 } from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
 import { TaskChangesToggle } from "@/components/agent-connections/task-changes-toggle";
@@ -70,33 +71,11 @@ type Delegation = AgentDelegationsResponseDataDelegationsItem;
 /** 서버(APP-801)의 이름 상한과 같다. */
 const NAME_MAX_LENGTH = 50;
 
-const STATUS_LABEL: Record<Delegation["status"], string> = {
-  ACTIVE: "연결됨",
-  EXPIRED: "만료됨",
-  REVOKED: "회수됨",
-};
-
-/** 연결이 무엇으로 붙었나(APP-889). OAuth 연결은 토큰 앞자리가 없어 이것으로만 구분된다. */
-export const CREDENTIAL_LABEL: Record<Delegation["credentialKind"], string> = {
-  PERSONAL_TOKEN: "개인 토큰",
-  OAUTH: "OAuth",
-};
-
-/**
- * 왜 끊겼나(APP-889). 재사용 감지(APP-887)는 토큰이 새어 나갔을 수 있다는 뜻이라 다시 연결할 이유까지 알린다.
- * 값이 늘면 이 표가 타입 검사에 걸려 문구를 빠뜨리지 않는다.
+/*
+ * 상태(`status`)·연결 방식(`credential`, APP-889 — OAuth 연결은 토큰 앞자리가 없어 이것으로만 구분된다)·끊긴 까닭
+ * (`revokeReason`, APP-889 — 재사용 감지 APP-887 은 토큰이 새어 나갔을 수 있다는 뜻이라 다시 연결할 이유까지 알린다)
+ * 문구는 `settings.agentConnections` 에 있다. 값이 늘면 언어 파일 키 타입 검사에 걸려 문구를 빠뜨리지 않는다.
  */
-const REVOKE_REASON_LABEL: Record<
-  NonNullable<Delegation["revokeReason"]>,
-  string
-> = {
-  USER: "직접 회수했습니다.",
-  MEMBERSHIP_ENDED: "워크스페이스를 떠나 끊겼습니다.",
-  REFRESH_TOKEN_REUSED:
-    "토큰 재사용이 감지돼 끊겼습니다. 토큰이 새어 나갔을 수 있으니 에이전트에서 다시 연결하세요.",
-  AGENT_ACCESS_DISABLED: "워크스페이스에서 MCP 연결을 막아 끊겼습니다.",
-  ADMIN: "관리자가 끊었습니다.",
-};
 
 const DATE = { year: "numeric", month: "long", day: "numeric" } as const;
 const DATE_TIME = {
@@ -110,25 +89,27 @@ const DATE_TIME = {
  * MCP 도구 이름(server `agentdelegation/presentation/mcp/`)을 사람이 읽는 말로. 모르는 이름은 그대로
  * 보인다 — server 가 도구를 더해도 화면이 빈칸이 되지 않는다.
  */
-const TOOL_LABEL: Record<string, string> = {
-  get_connection: "연결 확인",
-  list_projects: "프로젝트 목록",
-  list_project_items: "프로젝트 항목 목록",
-  get_project_item: "항목 상세",
-  expand_relations: "관계 따라가기",
-  list_open_tasks: "할 일",
-  list_meetings: "회의 목록",
-  get_meeting: "회의 정보",
-  get_meeting_record: "회의록",
-  get_meeting_summary: "회의 요약",
-  list_meeting_agendas: "회의 안건",
-  list_meeting_links: "회의 간 연결",
-  get_meeting_transcript: "회의 전사",
-  search: "검색",
-  create_tasks: "할 일 만들기",
-  update_tasks: "할 일 고치기",
-  open_screen: "화면 열기",
-};
+const TOOL_NAMES = [
+  "get_connection",
+  "list_projects",
+  "list_project_items",
+  "get_project_item",
+  "expand_relations",
+  "list_open_tasks",
+  "list_meetings",
+  "get_meeting",
+  "get_meeting_record",
+  "get_meeting_summary",
+  "list_meeting_agendas",
+  "list_meeting_links",
+  "get_meeting_transcript",
+  "search",
+  "create_tasks",
+  "update_tasks",
+  "open_screen",
+] as const;
+const isKnownTool = (name: string): name is (typeof TOOL_NAMES)[number] =>
+  (TOOL_NAMES as readonly string[]).includes(name);
 
 /** 사용 내역을 한 번에 보이는 수. server 는 한 쪽에 20개를 주지만 화면은 8개씩 늘린다(APP-867). */
 const USAGE_STEP = 8;
@@ -147,6 +128,8 @@ export function AgentConnectionsSettings({
   /** 토큰을 만드는 요청이 도는 동안 참이다. 설정 창이 이 동안 닫히거나 섹션이 바뀌지 않게 한다. */
   onBusyChange?: (busy: boolean) => void;
 }) {
+  const t = useTranslations("settings.agentConnections");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const delegationsQuery = useGetAgentDelegations();
   // OAuth 연결은 에이전트가 연 다른 브라우저 창에서 허락하므로, 이 창으로 돌아오면 목록을 다시 읽는다(APP-889).
@@ -183,11 +166,10 @@ export function AgentConnectionsSettings({
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <SettingsHeader
-        title="내 MCP 연결"
+        title={t("title")}
         description={
           <>
-            Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와
-            프로젝트를 읽을 수 있게 연결합니다. <HelpLink topic="agent-mcp" />
+            {t("description")} <HelpLink topic="agent-mcp" />
           </>
         }
         action={
@@ -198,7 +180,7 @@ export function AgentConnectionsSettings({
               // 기본은 OAuth 안내다. 개인 토큰은 안내의 「브라우저 없는 환경이면」으로만 연다(PRD 「정한 것」 6, APP-933)
               onClick={() => setMode("guide")}
             >
-              새 연결
+              {t("newConnection")}
             </Button>
           ) : null
         }
@@ -231,9 +213,9 @@ export function AgentConnectionsSettings({
         />
       ) : null}
 
-      <section aria-label="내 연결" className="mt-6">
+      <section aria-label={t("list.label")} className="mt-6">
         {delegationsQuery.isLoading ? (
-          <div aria-label="연결 목록 불러오는 중">
+          <div aria-label={t("list.loading")}>
             <ul className="space-y-3">
               {Array.from({ length: SKELETON_DELEGATIONS }, (_, index) => (
                 <DelegationRowSkeleton key={index} />
@@ -245,7 +227,7 @@ export function AgentConnectionsSettings({
         ) : delegationsQuery.isError ? (
           <div role="alert" className="space-y-2">
             <p className="text-sm text-[var(--el-ink)]">
-              연결 목록을 불러오지 못했습니다.
+              {t("list.loadFailed")}
             </p>
             <Button
               variant="outline"
@@ -253,7 +235,7 @@ export function AgentConnectionsSettings({
               className="h-[30px]"
               onClick={() => void delegationsQuery.refetch()}
             >
-              다시 시도
+              {tActions("retry")}
             </Button>
           </div>
         ) : (
@@ -263,12 +245,11 @@ export function AgentConnectionsSettings({
               <div className="rounded-panel border border-dashed border-[var(--el-hairline)] p-6 text-center">
                 <p className="text-sm text-[var(--el-ink)]">
                   {past.length === 0
-                    ? "아직 연결한 에이전트가 없습니다."
-                    : "지금 연결된 에이전트가 없습니다."}
+                    ? t("list.emptyNever")
+                    : t("list.emptyNow")}
                 </p>
                 <p className="mt-1 text-xs text-[var(--el-muted)]">
-                  「새 연결」의 주소를 에이전트에 등록하고 브라우저에서 허락하면
-                  여기에 보입니다.
+                  {t("list.emptyHint")}
                 </p>
               </div>
             ) : (
@@ -300,6 +281,7 @@ function PastConnections({
   delegations: Delegation[];
   onRevoked: () => Promise<unknown>;
 }) {
+  const t = useTranslations("settings.agentConnections.past");
   const [open, setOpen] = useState(false);
 
   return (
@@ -312,7 +294,7 @@ function PastConnections({
         aria-controls="agent-past-connections"
         onClick={() => setOpen((value) => !value)}
       >
-        지난 연결 {delegations.length}개
+        {t("toggle", { count: delegations.length })}
         <ChevronDown
           className={`size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
         />
@@ -320,7 +302,7 @@ function PastConnections({
       <Collapse open={open} lazy>
         <ul
           id="agent-past-connections"
-          aria-label="지난 연결"
+          aria-label={t("label")}
           className="mt-3 space-y-3"
         >
           {delegations.map((delegation) => (
@@ -347,6 +329,9 @@ function NewConnectionForm({
   onCancel: () => void;
   onCreated: (name: string, token: string) => Promise<void>;
 }) {
+  const t = useTranslations("settings.agentConnections.form");
+  const tActions = useTranslations("common.actions");
+  const optionLabel = useWorkspaceOptionLabel();
   const workspacesQuery = useGetWorkspaces();
   const workspaces =
     workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
@@ -380,9 +365,7 @@ function NewConnectionForm({
   const items = Object.fromEntries(
     workspaces.map((workspace) => [
       workspace.workspaceId,
-      workspace.agentAccessAllowed === false
-        ? workspace.name + BLOCKED_SUFFIX
-        : workspace.name,
+      optionLabel(workspace),
     ])
   );
   const selected = workspaces.find(
@@ -425,16 +408,16 @@ function NewConnectionForm({
       }}
     >
       <div className="grid gap-2">
-        <Label htmlFor="agent-connection-workspace">맡길 워크스페이스</Label>
+        <Label htmlFor="agent-connection-workspace">{t("workspace")}</Label>
         {workspacesQuery.isLoading ? (
           <Skeleton
             className="h-9 rounded-control"
-            aria-label="워크스페이스 목록 불러오는 중"
+            aria-label={t("workspacesLoading")}
           />
         ) : workspacesFailed ? (
           <div role="alert" className="space-y-2">
             <p className="text-sm text-[var(--el-ink)]">
-              워크스페이스 목록을 불러오지 못했습니다.
+              {t("workspacesFailed")}
             </p>
             <Button
               type="button"
@@ -443,7 +426,7 @@ function NewConnectionForm({
               className="h-[30px]"
               onClick={() => void workspacesQuery.refetch()}
             >
-              다시 시도
+              {tActions("retry")}
             </Button>
           </div>
         ) : allBlocked ? (
@@ -457,7 +440,7 @@ function NewConnectionForm({
             >
               <SelectTrigger
                 id="agent-connection-workspace"
-                aria-label="맡길 워크스페이스"
+                aria-label={t("workspace")}
               >
                 <SelectValue />
               </SelectTrigger>
@@ -478,12 +461,12 @@ function NewConnectionForm({
         )}
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="agent-connection-name">연결 이름</Label>
+        <Label htmlFor="agent-connection-name">{t("name")}</Label>
         <Input
           id="agent-connection-name"
           value={name}
           maxLength={NAME_MAX_LENGTH}
-          placeholder="예: 노트북 Claude Code"
+          placeholder={t("namePlaceholder")}
           onChange={(event) => setName(event.target.value)}
         />
       </div>
@@ -502,7 +485,7 @@ function NewConnectionForm({
           disabled={create.isPending}
           onClick={onCancel}
         >
-          취소
+          {tActions("cancel")}
         </Button>
         <Button
           type="submit"
@@ -511,7 +494,7 @@ function NewConnectionForm({
           loading={create.isPending}
           disabled={!canSubmit || create.isPending}
         >
-          토큰 만들기
+          {t("submit")}
         </Button>
       </div>
     </form>
@@ -531,6 +514,7 @@ function IssuedToken({
   token: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("settings.agentConnections.issued");
   const mcpUrl = buildUrl("/mcp");
   // 기본(local)은 명령을 실행한 폴더에서만 등록된다 — 폴더마다 따로 쓰는 사람이 있어 그대로 두고, 전역은 안내만 한다(APP-869)
   const claudeCode = `claude mcp add --transport http heymoa ${mcpUrl} --header "Authorization: Bearer ${token}"`;
@@ -554,31 +538,24 @@ function IssuedToken({
 
   return (
     <section
-      aria-label="새 토큰"
+      aria-label={t("label")}
       className="space-y-5 rounded-panel border border-[var(--el-hairline)] bg-white p-5"
     >
       <div>
         <p className="text-sm font-medium text-[var(--el-ink)]">
-          「{name}」 연결을 만들었습니다
+          {t("title", { name })}
         </p>
-        <p className="mt-1 text-xs text-[var(--el-muted)]">
-          이 토큰은 지금 한 번만 보입니다. 닫으면 다시 볼 수 없으니 복사해
-          두세요.
-        </p>
+        <p className="mt-1 text-xs text-[var(--el-muted)]">{t("once")}</p>
       </div>
-      <CopyBlock label="토큰" value={token} />
-      <CopyBlock label="Claude Code — 터미널에 붙여 넣기" value={claudeCode} />
-      <CopyBlock label="Codex CLI — 터미널에 붙여 넣기" value={codex} />
+      <CopyBlock label={t("token")} value={token} />
+      <CopyBlock label={t("claudeCode")} value={claudeCode} />
+      <CopyBlock label={t("codex")} value={codex} />
       <p className="text-xs text-[var(--el-muted)]">
-        Claude Code 는 명령을 실행한 폴더에서만 연결됩니다. 어느 폴더에서나
-        쓰려면 <code>--scope user</code> 를 붙이세요. Codex 는 모든 폴더에서
-        연결됩니다. Codex 블록은 기존 heymoa 등록을 바꿔 넣으므로 다시 붙여
-        넣어도 됩니다. Claude Code 는 이미 등록했다면 먼저{" "}
-        <code>claude mcp remove heymoa</code> 로 지우세요.
+        {t.rich("scopeNote", { code: (chunks) => <code>{chunks}</code> })}
       </p>
       <div className="flex justify-end">
         <Button size="sm" className="h-8" onClick={onClose}>
-          복사했습니다, 닫기
+          {t("close")}
         </Button>
       </div>
     </section>
@@ -592,6 +569,8 @@ function DelegationRow({
   delegation: Delegation;
   onRevoked: () => Promise<unknown>;
 }) {
+  const t = useTranslations("settings.agentConnections");
+  const tActions = useTranslations("common.actions");
   const dateLocale = useDisplayLocale();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -614,13 +593,13 @@ function DelegationRow({
                 {delegation.name}
               </p>
               <Badge variant={active ? "success" : "outline"}>
-                {STATUS_LABEL[delegation.status]}
+                {t(`status.${delegation.status}`)}
               </Badge>
               <Badge variant="outline">
-                {CREDENTIAL_LABEL[delegation.credentialKind]}
+                {t(`credential.${delegation.credentialKind}`)}
               </Badge>
               {delegation.allowTaskChanges ? (
-                <Badge variant="outline">할 일 변경 허용</Badge>
+                <Badge variant="outline">{t("taskChanges")}</Badge>
               ) : null}
             </div>
             <p className="mt-1 text-xs text-[var(--el-muted)]">
@@ -633,13 +612,16 @@ function DelegationRow({
               ) : null}
             </p>
             <p className="mt-0.5 text-xs text-[var(--el-muted)]">
-              {formatAppDate(delegation.createdAt, DATE, dateLocale)} 연결 ·
-              최근 사용{" "}
-              {delegation.lastUsedAt
-                ? formatAppDate(delegation.lastUsedAt, DATE, dateLocale)
-                : "없음"}
+              {t("row.meta", {
+                connected: formatAppDate(delegation.createdAt, DATE, dateLocale),
+                lastUsed: delegation.lastUsedAt
+                  ? formatAppDate(delegation.lastUsedAt, DATE, dateLocale)
+                  : t("row.neverUsed"),
+              })}
               {active
-                ? ` · ${formatAppDate(delegation.expiresAt, DATE, dateLocale)}까지 쓰지 않으면 만료`
+                ? ` · ${t("row.expires", {
+                    date: formatAppDate(delegation.expiresAt, DATE, dateLocale),
+                  })}`
                 : null}
             </p>
             {!active && delegation.revokeReason ? (
@@ -650,7 +632,7 @@ function DelegationRow({
                     : "text-[var(--el-muted)]"
                 }`}
               >
-                {REVOKE_REASON_LABEL[delegation.revokeReason]}
+                {t(`revokeReason.${delegation.revokeReason}`)}
               </p>
             ) : null}
           </div>
@@ -665,7 +647,7 @@ function DelegationRow({
             aria-controls={historyId}
             onClick={() => setHistoryOpen((open) => !open)}
           >
-            사용 내역
+            {t("usage.label")}
             <ChevronDown
               className={`size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none ${historyOpen ? "rotate-180" : ""}`}
             />
@@ -678,7 +660,7 @@ function DelegationRow({
                 className="h-8 shrink-0"
                 onClick={() => setConfirmOpen(true)}
               >
-                회수
+                {t("row.revoke")}
               </Button>
               <AlertDialog
                 open={confirmOpen}
@@ -690,16 +672,15 @@ function DelegationRow({
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      「{delegation.name}」 연결을 회수할까요?
+                      {t("row.dialog.title", { name: delegation.name })}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      이 토큰을 쓰는 에이전트는 다음 요청부터 막힙니다. 되돌릴
-                      수 없고, 다시 쓰려면 새로 연결해야 합니다.
+                      {t("row.dialog.description")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel disabled={revoke.isPending}>
-                      취소
+                      {tActions("cancel")}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       variant="destructive"
@@ -718,7 +699,7 @@ function DelegationRow({
                         setConfirmOpen(false);
                       }}
                     >
-                      회수
+                      {t("row.revoke")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -776,6 +757,8 @@ function UsageHistory({
   id: string;
   delegationId: string;
 }) {
+  const t = useTranslations("settings.agentConnections.usage");
+  const tActions = useTranslations("common.actions");
   const dateLocale = useDisplayLocale();
   const query = useInfiniteQuery({
     // 생성 훅의 단건 키와 모양이 달라 꼬리를 붙여 나눈다 — 같은 키를 두 모양이 쓰면 캐시가 섞인다.
@@ -809,12 +792,12 @@ function UsageHistory({
   return (
     <section
       id={id}
-      aria-label="사용 내역"
+      aria-label={t("label")}
       className="mt-4 border-t border-[var(--el-hairline)] pt-3"
     >
       {query.isLoading ? (
         // 실제 줄과 같은 간격(`space-y-1`)·높이(`py-1` + 16)로 선다.
-        <ul className="space-y-1" aria-label="사용 내역 불러오는 중">
+        <ul className="space-y-1" aria-label={t("loading")}>
           {Array.from({ length: 3 }, (_, index) => (
             <li key={index} className="flex items-center gap-3 py-1">
               <SkeletonLine size="xs" className="w-28" />
@@ -826,7 +809,7 @@ function UsageHistory({
       query.isError && !query.data ? (
         <div role="alert" className="flex items-center gap-3">
           <p className="text-xs text-[var(--el-ink)]">
-            사용 내역을 불러오지 못했습니다.
+            {t("loadFailed")}
           </p>
           <Button
             variant="outline"
@@ -834,13 +817,13 @@ function UsageHistory({
             className="h-[26px] text-xs"
             onClick={() => void query.refetch()}
           >
-            다시 시도
+            {tActions("retry")}
           </Button>
         </div>
       ) : usages.length === 0 ? (
         // 아직 쓰지 않은 것뿐이다 — 실패처럼 보이지 않게 경고 색을 쓰지 않는다.
         <p className="text-xs text-[var(--el-muted)]">
-          아직 이 연결로 에이전트가 부른 도구가 없습니다.
+          {t("empty")}
         </p>
       ) : (
         <>
@@ -854,13 +837,15 @@ function UsageHistory({
                   {formatAppDate(usage.occurredAt, DATE_TIME, dateLocale)}
                 </span>
                 <span className="min-w-0 truncate text-[var(--el-ink)]">
-                  {TOOL_LABEL[usage.toolName] ?? usage.toolName}
+                  {isKnownTool(usage.toolName)
+                    ? t(`tools.${usage.toolName}`)
+                    : usage.toolName}
                 </span>
                 {usage.outcome === "FAILED" ? (
-                  <Badge variant="outline">실패</Badge>
+                  <Badge variant="outline">{t("failed")}</Badge>
                 ) : usage.resultCount !== null ? (
                   <span className="text-[var(--el-muted)] tabular-nums">
-                    {usage.resultCount}건
+                    {t("resultCount", { count: usage.resultCount })}
                   </span>
                 ) : null}
               </li>
@@ -868,7 +853,7 @@ function UsageHistory({
           </ul>
           {query.isFetchNextPageError ? (
             <p role="alert" className="mt-2 text-xs text-[var(--el-ink)]">
-              다음 내역을 불러오지 못했습니다. 「더 보기」로 다시 시도해 주세요.
+              {t("nextFailed")}
             </p>
           ) : null}
           {usages.length > visible || query.hasNextPage ? (
@@ -876,10 +861,10 @@ function UsageHistory({
               variant="ghost"
               className="mt-2 h-7 rounded-control px-2 text-xs"
               loading={query.isFetchingNextPage}
-              loadingLabel="사용 내역 더 불러오는 중"
+              loadingLabel={t("loadingMore")}
               onClick={showMore}
             >
-              더 보기
+              {t("more")}
             </LoadMoreButton>
           ) : null}
         </>

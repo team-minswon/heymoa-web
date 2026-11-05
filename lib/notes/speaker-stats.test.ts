@@ -7,6 +7,12 @@ import {
 } from "@/lib/notes/speaker-stats";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
 
+// 시험의 한국어 이름. 화면은 `useSpeakerFallbackNames()` 를 넘긴다
+const names = {
+  unnamedParticipant: "이름 없는 참여자",
+  speaker: (label: string) => `화자 ${label}`,
+};
+
 const segment = (
   sequence: number,
   speakerLabel: string | null,
@@ -36,6 +42,7 @@ const speaker = (
 describe("summarizeSpeakers", () => {
   it("등장한 화자만 낸다 — 지정만 있고 발화가 없으면 빼놓는다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000)],
       speakers: [speaker("A", "p1", "한지원"), speaker("B", "p2", "상어")],
       // **참여자를 비워 넘긴다.** 이 함수는 발화가 없는 참여자에게도 빈 줄을 만들어 주므로
@@ -50,6 +57,7 @@ describe("summarizeSpeakers", () => {
   // 사람 기준으로 묶지 않으면 같은 이름이 두 줄로 나와 합이 안 맞는다.
   it("한 사람이 라벨 둘을 가지면 합쳐서 한 줄이다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [
         segment(1, "D", 3000),
         segment(2, "E", 1000),
@@ -77,6 +85,7 @@ describe("summarizeSpeakers", () => {
 
   it("말한 시간이 많은 순으로 세운다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000), segment(2, "B", 5000)],
       speakers: [speaker("A", "p1", "한지원"), speaker("B", "p2", "상어")],
       participants: [
@@ -90,6 +99,7 @@ describe("summarizeSpeakers", () => {
 
   it("비중은 라벨 있는 발화만으로 계산한다 — 라벨 없는 발화는 분모에서 뺀다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [
         segment(1, "A", 3000),
         segment(2, "B", 1000),
@@ -105,6 +115,7 @@ describe("summarizeSpeakers", () => {
   // 아직 아무도 안 붙인 화자도 줄이 있어야 한다 — 그 줄이 곧 붙이러 가는 자리다.
   it("지정 안 된 화자는 라벨 이름으로 남는다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "C", 1000)],
       speakers: [speaker("C", null, null)],
     });
@@ -119,6 +130,7 @@ describe("summarizeSpeakers", () => {
   // 발화 단위 지정은 더 좁은 범위를 사람이 나중에 고른 것이라 라벨의 지정을 이긴다.
   it("발화 단위 지정이 그 줄의 라벨보다 앞선다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000), segment(2, "A", 3000, "p2")],
       speakers: [speaker("A", "p1", "한지원"), speaker("B", "p2", "상어")],
     });
@@ -134,6 +146,7 @@ describe("summarizeSpeakers", () => {
    */
   it("발화 하나만 돌린 사람은 그 라벨을 가진 것이 아니다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000), segment(2, "A", 3000, "p2")],
       speakers: [speaker("A", "p1", "한지원")],
     });
@@ -151,6 +164,7 @@ describe("summarizeSpeakers", () => {
    */
   it("소유는 발화가 아니라 화자 지정이 정한다 — 그 라벨 발화를 다 넘겨도 소유는 남는다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000, "p2"), segment(2, "B", 1000)],
       speakers: [
         speaker("A", "mentor", "이동준"),
@@ -168,6 +182,7 @@ describe("summarizeSpeakers", () => {
   // 여기서 어긋나면 26명 넘는 회의에서 패널과 전사의 색이 갈린다.
   it("라벨은 순번 순으로 선다 — 글자 순이 아니다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "AA", 1000), segment(2, "B", 1000)],
       speakers: [
         speaker("AA", "mentor", "이동준"),
@@ -180,6 +195,7 @@ describe("summarizeSpeakers", () => {
 
   it("다음 발화로 도는 목록은 시간순이고 짧은 맞장구는 건너뛴다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [
         segment(5, "A", 4000), // 길다
         segment(1, "A", 400), // 맞장구
@@ -200,6 +216,7 @@ describe("summarizeSpeakers", () => {
 
   it("맞장구뿐인 사람은 짧은 발화도 전부 대상이다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(2, "A", 500), segment(1, "A", 700)],
       speakers: [speaker("A", null, null)],
     });
@@ -212,6 +229,7 @@ describe("summarizeSpeakers", () => {
 
   it("첫 발화를 들고 있다 — 거기로 스크롤해 붙이러 간다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(4, "A", 1000), segment(2, "A", 1000)],
       speakers: [speaker("A", null, null)],
     });
@@ -223,13 +241,16 @@ describe("summarizeSpeakers", () => {
   });
 
   it("발화가 하나도 없으면 빈 배열이다", () => {
-    expect(summarizeSpeakers({ segments: [], speakers: [] })).toEqual([]);
+    expect(summarizeSpeakers({ names, segments: [], speakers: [] })).toEqual(
+      []
+    );
   });
 
   // 회의에 앉아 있었지만 한 마디도 안 한 사람이 있다. 말한 사람만 세면 그 사람은
   // 목록에서 사라지고, 「내가 왜 없지」가 아니라 「이 회의에 없던 사람」으로 읽힌다.
   it("참여자인데 한 마디도 안 했으면 0으로 맨 뒤에 선다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000)],
       speakers: [speaker("A", "p1", "한지원")],
       participants: [
@@ -254,6 +275,7 @@ describe("summarizeSpeakers", () => {
 
   it("말 안 한 사람이 여럿이면 이름 순으로 선다 — 열 때마다 순서가 흔들리면 안 된다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [],
       speakers: [],
       participants: [
@@ -285,6 +307,7 @@ describe("summarizeSpeakers", () => {
     // 칸은 회의 전체를 나눈 것이다 — 자기 발화 구간만 나누면 모든 사람이 꽉 찬 띠가 된다.
     it("회의 전체를 칸으로 나누고 말한 칸만 채운다", () => {
       const rows = summarizeSpeakers({
+        names,
         segments: [at(1, "A", 0, 1000), at(2, "B", 47_000, 48_000)],
         speakers: [speaker("A", "p1", "한지원"), speaker("B", "p2", "상어")],
       });
@@ -299,6 +322,7 @@ describe("summarizeSpeakers", () => {
     // 실제 회의(약 1시간): 김민수의 58:36 「네.」(1초 남짓)가 띠에서 사라졌다(APP-1429 회귀).
     it("1시간 회의 끝부분의 1초 발화도 띠에 보인다 — 말 없는 칸과 구분된다", () => {
       const rows = summarizeSpeakers({
+        names,
         segments: [at(1, "A", 0, 600_000), at(2, "A", 3_516_000, 3_517_200)],
         speakers: [speaker("A", "p1", "김민수")],
         durationMs: 3_600_000,
@@ -319,6 +343,7 @@ describe("summarizeSpeakers", () => {
 
     it("길이 0인 발화도 시작 칸에 선다", () => {
       const rows = summarizeSpeakers({
+        names,
         segments: [at(1, "A", 0, 5000), at(2, "A", 47_000, 47_000)],
         speakers: [speaker("A", "p1", "한지원")],
         durationMs: 48_000,
@@ -330,6 +355,7 @@ describe("summarizeSpeakers", () => {
     // 칸보다 긴 발화를 한 칸에 몰면 그 사람만 봉우리 하나로 보인다.
     it("칸을 넘는 발화는 걸친 칸에 나눠 담는다", () => {
       const rows = summarizeSpeakers({
+        names,
         segments: [at(1, "A", 0, 48_000)],
         speakers: [speaker("A", "p1", "한지원")],
       });
@@ -341,6 +367,7 @@ describe("summarizeSpeakers", () => {
     // 사람의 띠가 48칸을 꽉 채워, 머리글의 「회의 10분」과 다른 회의를 그린다.
     it("축은 녹음 길이다 — 마지막 발화 뒤의 침묵도 회의다", () => {
       const rows = summarizeSpeakers({
+        names,
         segments: [at(1, "A", 0, 1000)],
         speakers: [speaker("A", "p1", "한지원")],
         durationMs: 48_000,
@@ -354,6 +381,7 @@ describe("summarizeSpeakers", () => {
 
     it("말 안 한 참여자의 칸은 전부 비어 있다", () => {
       const rows = summarizeSpeakers({
+        names,
         segments: [at(1, "A", 0, 1000)],
         speakers: [speaker("A", "p1", "한지원")],
         participants: [
@@ -369,6 +397,7 @@ describe("summarizeSpeakers", () => {
   // 이름의 원본은 참여자 목록이다 — 화자에 실린 이름은 지정 당시의 사본이라 개명하면 낡는다.
   it("이름은 참여자 목록을 따른다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000)],
       speakers: [speaker("A", "p1", "옛 이름")],
       participants: [{ participantId: "p1", name: "한지원", image: "u.png" }],
@@ -379,6 +408,7 @@ describe("summarizeSpeakers", () => {
 
   it("참여자 목록이 없으면 화자에 저장된 옛 이름을 대신 쓰지 않는다", () => {
     const rows = summarizeSpeakers({
+      names,
       segments: [segment(1, "A", 1000)],
       speakers: [speaker("A", "p1", "옛 이름")],
     });

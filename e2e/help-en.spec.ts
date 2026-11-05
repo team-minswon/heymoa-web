@@ -55,7 +55,7 @@ test("영어 검색은 영어 결과와 /en 링크를 내고, 한국어판 색�
   await expect(page).toHaveURL(/\/en\/help$/);
   await page
     .getByRole("searchbox", { name: "Search the whole guide" })
-    .fill("glossary");
+    .fill("vocabulary");
   const results = page.locator("a[href*='?q=']");
   await expect(results.first()).toBeVisible();
   const hrefs = await results.evaluateAll((links) =>
@@ -66,7 +66,7 @@ test("영어 검색은 영어 결과와 /en 링크를 내고, 한국어판 색�
   expect(await page.locator("main").innerText()).not.toMatch(HANGUL);
 
   await results.first().click();
-  await expect(page).toHaveURL(/\/en\/help\/[^/]+\/[^/?]+\?q=glossary/);
+  await expect(page).toHaveURL(/\/en\/help\/[^/]+\/[^/?]+\?q=vocabulary/);
 });
 
 test("⌘K 팔레트도 영어판 색인으로 찾는다", async ({ page }) => {

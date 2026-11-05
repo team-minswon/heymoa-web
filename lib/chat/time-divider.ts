@@ -1,4 +1,5 @@
 import { formatViewerDate, viewerDateKey } from "@/lib/format/date";
+import type { DatesT } from "@/lib/i18n/translator";
 
 /**
  * 메시지마다 그 앞에 구분선을 세울지. 기준은 날짜가 바뀌었나 하나이고 첫 메시지도 여기
@@ -25,6 +26,7 @@ export function threadDividers(
 export function dividerLabel(
   at: string,
   now: Date,
+  t: DatesT,
   locale?: string,
   timeZone?: string
 ) {
@@ -36,11 +38,9 @@ export function dividerLabel(
   const day = viewerDateKey(at, timeZone);
   const today = viewerDateKey(now, timeZone);
 
-  // 「오늘」·「어제」도 앱 언어로 적는다. 숫자·오전오후는 `Intl` 이 같은 언어로 낸다
-  const english = Boolean(locale && !locale.startsWith("ko"));
-  if (day === today) return `${english ? "Today" : "오늘"} ${time}`;
-  if (day === previousDayKey(today))
-    return `${english ? "Yesterday" : "어제"} ${time}`;
+  // 「오늘」·「어제」도 앱 언어(`dates`)로 적는다. 숫자·오전오후는 `Intl` 이 같은 언어로 낸다
+  if (day === today) return t("todayAt", { time });
+  if (day === previousDayKey(today)) return t("yesterdayAt", { time });
 
   const sameYear = day.slice(0, 4) === today.slice(0, 4);
   const date = formatViewerDate(

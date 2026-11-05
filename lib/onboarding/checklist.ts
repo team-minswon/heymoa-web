@@ -14,10 +14,10 @@ import type { NoteListResponseData } from "@/lib/api/generated/models";
  * 있다 — 기기를 넘어 맞추려면 서버에 사용자 설정이 있어야 해서 지금은 받아들인다.
  */
 export const CHECKLIST_STEPS = [
-  { id: "record", label: "첫 회의 기록하기", optional: false },
-  { id: "confirm", label: "요약 검토 완료하기", optional: false },
+  { id: "record", optional: false },
+  { id: "confirm", optional: false },
   // 혼자 쓰는 사람도 끝까지 갈 수 있게 초대는 선택이다 — 필수 셋을 마치면 닫힌다
-  { id: "invite", label: "팀원 초대하기", optional: true },
+  { id: "invite", optional: true },
 ] as const;
 
 const REQUIRED_STEPS = CHECKLIST_STEPS.filter((step) => !step.optional);

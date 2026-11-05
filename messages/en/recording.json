@@ -1,0 +1,73 @@
+{
+  "micInput": "Microphone input",
+  "pending": "Processing recording",
+  "pause": {
+    "label": "Pause recording",
+    "tooltip": "Pause recording. The meeting won't end."
+  },
+  "indicator": {
+    "label": "Recording in progress"
+  },
+  "dock": {
+    "label": "Recording controls",
+    "pause": "Pause",
+    "start": "Start meeting",
+    "requestingPermission": "Checking permissions",
+    "connecting": "Starting recording",
+    "stopping": "Finishing recording",
+    "retry": "Record again",
+    "otherNote": "Recording in another note"
+  },
+  "degraded": {
+    "title": "Transcription is paused.",
+    "detail": "Audio is still being saved."
+  },
+  "connection": {
+    "bufferPaused": "Recording paused while saving catches up. It resumes automatically.",
+    "microphoneLost": "Microphone disconnected. Audio isn't recorded until it reconnects.",
+    "systemAudioLost": "Computer audio disconnected. Other participants' audio isn't recorded until it reconnects.",
+    "finishingUpload": "Finishing upload… {percent}%",
+    "uploading": "Uploading queued audio {percent}%",
+    "pendingOnDevice": "{seconds, plural, one {# second} other {# seconds}} of audio is waiting on this device. Keep this tab open until you reconnect.",
+    "disconnected": "Connection lost. Transcription and live analysis are paused. Recorded audio is held in this tab. Keep it open until you reconnect."
+  },
+  "errorToast": {
+    "help": "How to fix",
+    "code": "Error code: {code}"
+  },
+  "desktopTimeline": {
+    "untitled": "Meeting in progress"
+  },
+  "errors": {
+    "startFailed": "Couldn't start recording. Try again in a moment.",
+    "audioPermission": "HeyMoa needs microphone or computer audio permission. Allow it, then record again.",
+    "systemAudioMissing": "Couldn't find computer audio input. Check the input and permissions, then record again.",
+    "audioCaptureFailed": "Couldn't connect audio. Check permissions and try again.",
+    "microphonePermission": "HeyMoa needs microphone access. Allow the microphone in your browser settings.",
+    "microphoneMissing": "Couldn't find a microphone to use.",
+    "socketFailed": "Couldn't connect to the live transcription server. Check that you're signed in and connected to the internet.",
+    "activeSession": "This meeting is being recorded in another tab or on another device.",
+    "recorderDisconnected": "Lost connection to the device that was recording. You can record again in about a minute.",
+    "sessionCreateFailed": "Couldn't prepare the transcription session. Try again in a moment.",
+    "superseded": "Another tab or device took over this recording.",
+    "stopFailed": "Something went wrong while stopping the recording.",
+    "stopUnconfirmed": "Couldn't confirm that the recording stopped.",
+    "captureStopped": "Audio capture stopped. The last part of the audio may not have been saved.",
+    "captureStoppedToast": "Audio capture stopped. Check the recording status.",
+    "dropped": "Recording stopped because the connection dropped.",
+    "droppedLost": "Recording stopped because the connection dropped. Couldn't upload {seconds, plural, one {# second} other {# seconds}} of audio left on this device.",
+    "stopTimeout": "Couldn't save the last part of the audio. Try again in a moment.",
+    "stopTimeoutLost": "Couldn't save the last part, so {seconds, plural, one {# second} other {# seconds}} of audio left on this device wasn't uploaded.",
+    "serverError": "The live transcription connection stopped. Try again in a moment.",
+    "meetingEndedLost": "The meeting ended, so {seconds, plural, one {# second} other {# seconds}} of audio left on this device couldn't be uploaded.",
+    "interrupted": {
+      "MEETING_ENDED": "The meeting ended, so recording finished.",
+      "MEETING_PAUSED": "The meeting was paused, so recording stopped.",
+      "STT_PROVIDER_ERROR": "The speech recognition service disconnected. Try again in a moment.",
+      "CLIENT_DISCONNECTED": "Recording stopped because the live connection closed.",
+      "READY_TIMEOUT": "The session expired before recording started. Try again.",
+      "HEARTBEAT_TIMEOUT": "Recording stopped after being disconnected for too long.",
+      "other": "The server stopped the transcription session."
+    }
+  }
+}

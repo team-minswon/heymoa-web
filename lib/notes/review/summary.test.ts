@@ -8,6 +8,9 @@ import {
   overviewToMarkdown,
   topicsToMarkdown,
 } from "@/lib/notes/review/markdown";
+import { testAppT } from "@/components/help/test-intl";
+
+const doc = { locale: "ko-KR", t: testAppT() };
 
 const summary = {
   headline: { text: "회의를 구별하는 제목 후보", topics: [1] },
@@ -34,8 +37,10 @@ const summary = {
 describe("최종 요약의 공통 내용 선택", () => {
   it("정리를 제목 후보보다 우선하고 화면과 복사에서 같은 전문을 쓴다", () => {
     expect(overviewText(summary)).toBe("첫 번째 회의 정리. 두 번째 회의 정리.");
-    expect(overviewToMarkdown(summary)).toContain(overviewText(summary));
-    expect(overviewToMarkdown(summary)).not.toContain(summary.headline!.text);
+    expect(overviewToMarkdown(summary, doc)).toContain(overviewText(summary));
+    expect(overviewToMarkdown(summary, doc)).not.toContain(
+      summary.headline!.text
+    );
   });
 
   it("회의 정리가 없거나 공백뿐인 옛 응답은 제목 후보로 대체한다", () => {
@@ -50,7 +55,9 @@ describe("최종 요약의 공통 내용 선택", () => {
     const [topic] = topicDigests(summary, new Map(), () => null);
     expect(topic.text).toBe(summary.agendas[0].summary);
     expect(topic.gist).toBe(topic.text);
-    expect(topicsToMarkdown([topic])).toContain("마지막 문장까지 전달합니다.");
+    expect(topicsToMarkdown([topic], doc)).toContain(
+      "마지막 문장까지 전달합니다."
+    );
   });
 
   it("옛 응답의 한 줄 summary가 설명 전문을 화면·복사·PDF 입력에서 가리지 않는다", () => {
@@ -70,6 +77,6 @@ describe("최종 요약의 공통 내용 선택", () => {
     const [topic] = topicDigests(legacy, new Map(), () => null);
     expect(topic.gist).toBe("짧은 개요");
     expect(topic.text).toBe("이전 형식의 첫 설명. 마지막 설명도 남깁니다.");
-    expect(topicsToMarkdown([topic])).toContain(topic.text);
+    expect(topicsToMarkdown([topic], doc)).toContain(topic.text);
   });
 });

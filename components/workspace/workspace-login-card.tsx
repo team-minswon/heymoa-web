@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { HEYMOA_MARK } from "@/components/agent-connections/agent-oauth-cards";
 import { LoginForm } from "@/components/auth/auth-modal";
 import { CenteredCard } from "@/components/layout/centered-card";
@@ -10,17 +12,20 @@ import { CenteredCard } from "@/components/layout/centered-card";
  * 레이아웃이라 쿼리를 모른다.
  */
 export function WorkspaceLoginCard({
-  description = "회의를 보려면 워크스페이스 멤버 계정으로 로그인해 주세요.",
+  description,
 }: {
   description?: string;
 } = {}) {
+  const t = useTranslations("workspace.loginCard");
   return (
     <div className="flex min-h-dvh items-center justify-center bg-[var(--el-canvas)] p-4 text-[var(--el-ink)]">
       <CenteredCard icon={HEYMOA_MARK}>
         <h1 className="text-2xl font-light tracking-[-0.01em] text-balance">
-          로그인하면 이 화면으로 돌아옵니다
+          {t("title")}
         </h1>
-        <p className="mt-2 text-base text-[var(--el-muted)]">{description}</p>
+        <p className="mt-2 text-base text-[var(--el-muted)]">
+          {description ?? t("description")}
+        </p>
         {/* 로그인 창과 같은 약관 동의를 거친다(APP-1277) */}
         <div className="mx-auto mt-6 w-full max-w-sm">
           <LoginForm />

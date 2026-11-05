@@ -5,8 +5,7 @@ import {
   getRecordedDurationMs,
   isMeetingActive,
   isPersonalChatHiddenInNote,
-  MEETING_PRIMARY_ACTION_LABEL,
-  MEETING_STATUS_LABEL,
+  MEETING_STATUS_KEY,
   meetingLengthOf,
   pausedDayCount,
   recordingClockOriginMs,
@@ -77,13 +76,12 @@ describe("isMeetingActive", () => {
 
 describe("meeting presentation", () => {
   it.each([
-    ["NOT_STARTED", "시작 전", "회의 시작"],
-    ["IN_PROGRESS", "기록 중", "일시정지"],
-    ["PAUSED", "일시정지됨", "재개"],
-    ["ENDED", "종료됨", "요약 보기"],
-  ] as const)("%s 문구와 주 액션을 제공한다", (status, label, action) => {
-    expect(MEETING_STATUS_LABEL[status]).toBe(label);
-    expect(MEETING_PRIMARY_ACTION_LABEL[status]).toBe(action);
+    ["NOT_STARTED", "notStarted"],
+    ["IN_PROGRESS", "inProgress"],
+    ["PAUSED", "paused"],
+    ["ENDED", "ended"],
+  ] as const)("%s 상태는 common.meetingStatus.%s 로 그린다", (status, key) => {
+    expect(MEETING_STATUS_KEY[status]).toBe(key);
   });
 });
 

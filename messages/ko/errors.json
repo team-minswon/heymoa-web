@@ -1,0 +1,16 @@
+{
+  "requestFailed": "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  "tooManyRequests": "요청이 많습니다. 잠시 후 다시 시도해 주세요.",
+  "serverUnavailable": "서버가 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  "timeout": "응답이 오지 않습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.",
+  "conflict": "다른 사람이 먼저 수정해 최신 내용을 불러왔습니다.",
+  "reviewConfirmed": "이미 확정된 검토라 고칠 수 없습니다.",
+  "streamGone": "응답을 이어서 받지 못했습니다.",
+  "transcriptLoadFailed": "스크립트를 불러오지 못했습니다. 다시 시도해 주세요.",
+  "workspaceGone": "이 워크스페이스에 더 이상 접근할 수 없습니다.",
+  "workspaceUnavailable": "이 워크스페이스의 회의를 열 수 없습니다.",
+  "workspaceUnavailableDetail": "지금 계정이 이 워크스페이스의 멤버가 아닙니다.",
+  "switchAccount": "다른 계정으로 로그인",
+  "pageBlockedByRecording": "녹음 중에는 앱에서 다른 페이지를 열 수 없습니다",
+  "pageBlockedByRecordingDetail": "녹음을 마친 뒤 다시 눌러 주세요. 지금 보려면 브라우저에서 여세요: {url}"
+}

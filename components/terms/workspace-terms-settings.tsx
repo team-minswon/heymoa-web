@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { SettingsHeader } from "@/components/settings/settings-layout";
 import { TermEditor, TermEditorSkeleton } from "@/components/terms/term-editor";
 import { DataBoundary } from "@/components/ui/data-boundary";
@@ -25,14 +27,12 @@ import {
   type BatchResult,
 } from "@/lib/terms/use-term-dictionary";
 
-export const WORKSPACE_TERMS_HELP =
-  "받아쓰기가 자주 틀리는 제품명·사내 용어·영어 약어를 적어 두면, 이 워크스페이스의 모든 회의에서 받아 적을 때 참고해요. 흔한 단어는 넣지 않아도 돼요.";
-
 export const workspaceTermsScope = (workspaceId: string) =>
   `terms:workspace:${workspaceId}`;
 
 /** 워크스페이스 용어 사전을 읽는다. */
 export function useWorkspaceTerms(workspaceId: string) {
+  const t = useTranslations("settings.terms");
   const response = useGetWorkspaceTermsSuspense(workspaceId, {
     query: termQueryOptions(() =>
       isDictionaryBusy(workspaceTermsScope(workspaceId))
@@ -42,25 +42,30 @@ export function useWorkspaceTerms(workspaceId: string) {
     response.status === 200 && response.data.success
       ? response.data.data
       : undefined;
-  if (!data) throw new Error("용어 사전을 불러오지 못했습니다.");
+  if (!data) throw new Error(t("loadFailed"));
   return data;
 }
 
 export function useWorkspaceTermDictionary(workspaceId: string) {
+  const t = useTranslations("settings.terms");
   return useTermDictionary({
     scopeId: workspaceTermsScope(workspaceId),
     queryKey: getGetWorkspaceTermsQueryKey(workspaceId),
     addKey: getAddWorkspaceTermMutationKey(),
     removeKey: getDeleteWorkspaceTermMutationKey(),
     addOne: async (term) =>
-      termOfResponse(await addWorkspaceTerm(workspaceId, { term })),
+      termOfResponse(
+        await addWorkspaceTerm(workspaceId, { term }),
+        t("addFailed")
+      ),
     addBatch: async (terms): Promise<BatchResult> => {
       const response = await addWorkspaceTerms(workspaceId, { terms });
       const data =
         response.status === 200 && response.data.success
           ? response.data.data
           : undefined;
-      if (!data) throw new Error("용어를 더하지 못했습니다.");
+      // 전역 토스트가 이 문구를 그대로 띄운다(`errorMessageOf`).
+      if (!data) throw new Error(t("addFailed"));
       return {
         ...data,
         // 계약은 문자열로만 알려 준다 — 값 집합은 LIMIT · TOO_LONG · BLANK(server APP-1226)
@@ -99,19 +104,20 @@ export function WorkspaceTermsSettings({
 }: {
   workspaceId: string;
 }) {
+  const t = useTranslations("settings.terms");
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <SettingsHeader
         title={
           <>
-            용어 사전
-            <HelpTip label="용어 사전">{WORKSPACE_TERMS_HELP}</HelpTip>
+            {t("title")}
+            <HelpTip label={t("title")}>{t("help")}</HelpTip>
           </>
         }
       />
       <DataBoundary
         fallback={<TermEditorSkeleton />}
-        errorLabel="용어 사전을 불러오지 못했습니다"
+        errorLabel={t("loadFailed")}
         resetKeys={["workspace-terms", workspaceId]}
       >
         <WorkspaceTermsEditor workspaceId={workspaceId} />

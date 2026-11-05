@@ -6,6 +6,9 @@ import { reviewToMarkdown } from "@/lib/notes/review/markdown";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 import { topicDigests } from "@/lib/notes/review/topics";
+import { testAppT } from "@/components/help/test-intl";
+
+const doc = { locale: "ko-KR", t: testAppT() };
 
 const items = [
   { itemId: "d", kind: "DECISION", content: "확정한 결론", included: true },
@@ -70,8 +73,9 @@ describe("옛 표시 필드가 없는 요약 계약", () => {
       whenIso: "2026-10-20T00:00:00Z",
       participantCount: 1,
     };
-    const markdown = reviewToMarkdown({ note, summary, topics, sections });
+    const markdown = reviewToMarkdown({ note, summary, topics, sections, doc });
     const minutes = buildMinutes({
+      doc,
       note,
       topics,
       sections,

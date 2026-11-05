@@ -55,7 +55,7 @@ describe("GlobalRecordingIndicator", () => {
 
     render(<GlobalRecordingIndicator />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("녹음을 잠시 멈췄어요");
+    expect(screen.getByRole("alert")).toHaveTextContent("녹음을 잠시 멈췄습니다");
   });
 
   it("워크스페이스 안이라도 녹음 중인 노트를 보고 있지 않으면 멈춤을 알린다", () => {
@@ -64,7 +64,7 @@ describe("GlobalRecordingIndicator", () => {
 
     render(<GlobalRecordingIndicator />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("녹음을 잠시 멈췄어요");
+    expect(screen.getByRole("alert")).toHaveTextContent("녹음을 잠시 멈췄습니다");
   });
 
   it("녹음 중인 노트를 보고 있으면 그 노트의 안내에 맡긴다", () => {
@@ -82,7 +82,7 @@ describe("GlobalRecordingIndicator", () => {
 
     render(<GlobalRecordingIndicator />);
 
-    expect(screen.getByText(/연결이 끊겼어요/)).toBeInTheDocument();
+    expect(screen.getByText(/연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다/)).toBeInTheDocument();
   });
 
   it("노트 밖에서 마이크가 끊겨도 알린다", () => {
@@ -100,7 +100,7 @@ describe("GlobalRecordingIndicator", () => {
 
     render(<GlobalRecordingIndicator />);
 
-    expect(screen.queryByText(/연결이 끊겼어요/)).toBeNull();
+    expect(screen.queryByText(/연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다/)).toBeNull();
   });
 
   it("renders input level as an accessible meter", () => {

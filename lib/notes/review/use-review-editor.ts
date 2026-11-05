@@ -3,12 +3,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
-import {
-  CONFIRMED_MESSAGE,
-  CONFLICT_MESSAGE,
-  errorCodeOf,
-  errorMessageOf,
-} from "@/lib/api/error-message";
+import { useTranslations } from "next-intl";
+
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import {
@@ -60,7 +57,9 @@ export function useReviewEditor(noteId: string) {
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [conflictItemId, setConflictItemId] = useState<string | null>(null);
-  const [conflictMessage, setConflictMessage] = useState(CONFLICT_MESSAGE);
+  const tError = useTranslations("errors");
+  const t = useTranslations("notes.review.editor");
+  const [conflictMessage, setConflictMessage] = useState(() => tError("conflict"));
 
   const cached = () =>
     okData(queryClient.getQueryData<getMeetingReviewResponse>(queryKey));
@@ -131,7 +130,7 @@ export function useReviewEditor(noteId: string) {
       }
       if (errorCodeOf(error) === CONFIRMED) {
         // 다시 읽어도 고칠 수 없다. 흐름 상태를 읽어 화면이 확정(읽기 전용)으로 바뀌게 한다. 입력은 남긴다.
-        toast.error(errorMessageOf(error, CONFIRMED_MESSAGE));
+        toast.error(errorMessageOf(error, tError("reviewConfirmed")));
         // 재조회가 늦거나 실패해도 편집이 다시 켜지지 않게 캐시를 먼저 확정으로 옮긴다. 검토본도 같이 읽는다.
         moveFlowStatus(queryClient, noteId, "CONFIRMED");
         void queryClient.refetchQueries({
@@ -149,9 +148,7 @@ export function useReviewEditor(noteId: string) {
         // 새 항목에는 안내를 그릴 줄이 없다. 쓴 내용은 폼에 남으니 토스트로 알린다.
         if (target !== NEW_ITEM) {
           setConflictItemId(target);
-          setConflictMessage(
-            "다른 사람이 먼저 수정했습니다. 최신 내용을 확인해 주세요."
-          );
+          setConflictMessage(t("conflict"));
         }
         try {
           // 저장 중 비활성화한 쿼리도 직접 읽고, 새 판이 도착할 때까지 잠금을 유지한다.
@@ -159,19 +156,17 @@ export function useReviewEditor(noteId: string) {
             ...getGetMeetingReviewQueryOptions(noteId),
             staleTime: 0,
           });
-          if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
-          else setConflictMessage(CONFLICT_MESSAGE);
+          if (target === NEW_ITEM) toast.error(tError("conflict"));
+          else setConflictMessage(tError("conflict"));
         } catch {
-          toast.error(
-            "다른 사람이 먼저 수정했습니다. 최신 검토본을 불러오지 못했으니 다시 확인해 주세요."
-          );
+          toast.error(t("conflictReloadFailed"));
         }
         // 그 사이 다른 사람이 주제 안에 항목을 더했으면 요약 members 도 달라졌다. 기다리지 않고 같이 읽는다.
         void queryClient.refetchQueries({
           queryKey: getGetMeetingReviewSummaryQueryKey(noteId),
         });
       } else {
-        toast.error(errorMessageOf(error, "저장하지 못했습니다."));
+        toast.error(errorMessageOf(error, t("saveFailed")));
       }
       return false;
     } finally {

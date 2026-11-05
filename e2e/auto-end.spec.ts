@@ -11,7 +11,7 @@ test("예고된 일시정지 회의는 상단 띠에 자동 종료 예정 시각
 }) => {
   await page.goto(`${WORKSPACE}/01K0000000040`);
   await expect(page.getByTestId("note-status-band")).toHaveText(
-    /^계속 일시정지 상태라면 \d+월 \d+일\(.\) 오후 4시 20분 이후 자동 종료될 예정입니다\.$/
+    /^일시정지가 이어지면 \d+월 \d+일\(.\) 오후 4시 20분 이후 자동으로 종료합니다\.$/
   );
 });
 

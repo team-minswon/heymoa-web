@@ -1,0 +1,276 @@
+{
+  "createProject": {
+    "title": "New project",
+    "titleFirst": "Create your first project",
+    "description": "Enter a name for the project that will group your notes.",
+    "descriptionFirst": "Meetings belong to a project. Name the project after a team, product, or customer you meet about regularly, so past context is easy to find.",
+    "nameLabel": "Project name",
+    "namePlaceholder": "Weekly",
+    "created": "Project created.",
+    "failed": "Couldn't create the project."
+  },
+  "newMeeting": {
+    "title": "New meeting",
+    "descriptionName": "A name makes it easier to find later.",
+    "descriptionRecord": "Recording starts after you create it.",
+    "nameLabel": "Meeting name",
+    "namePlaceholder": "Weekly product meeting",
+    "defaultTitle": "{month}/{day} meeting notes",
+    "projectLabel": "Project",
+    "projectLocked": "You can't change the project after you create the meeting."
+  },
+  "page": {
+    "noteCount": "{more, select, true {{count}+ meeting notes} other {{count, plural, one {# meeting note} other {# meeting notes}}}}",
+    "subtitle": "What was said and decided is kept in time order."
+  },
+  "noteList": {
+    "loading": "Loading notes",
+    "loadFailed": "Couldn't load notes.",
+    "loadingMore": "Loading earlier notes",
+    "loadMore": "Show earlier notes"
+  },
+  "noteRow": {
+    "open": "Open note {title}",
+    "menu": "Menu for note {title}",
+    "micInput": "Microphone input for {title}",
+    "pausedDays": "Paused for {count, plural, one {# day} other {# days}}",
+    "recordedMinutes": "{count} min recorded",
+    "participants": "{count, plural, one {# participant} other {# participants}}",
+    "fullScreen": "Full screen"
+  },
+  "onboarding": {
+    "titleNoProject": "Start with a project for your meetings",
+    "titleNoNote": "Record your first meeting",
+    "descriptionNoProject": "Meetings are created inside a project. Create one and you can start a meeting right away.",
+    "descriptionNoNote": "Create and start a meeting, and the conversation is transcribed in real time. When it ends, it's organized into an overview, tasks, and insights.",
+    "ctaNoProject": "Create your first project",
+    "ctaNoNote": "New meeting",
+    "steps": {
+      "createProject": {
+        "title": "Create a project",
+        "detail": "A container for meetings. Name it by team, product, or customer"
+      },
+      "createMeeting": {
+        "title": "Create a meeting",
+        "detail": "Create a meeting inside the project"
+      },
+      "recordAndReview": {
+        "title": "Record and check the summary",
+        "detail": "Organized automatically when it ends"
+      },
+      "nameMeeting": {
+        "title": "Create a meeting",
+        "detail": "A name makes it easier to find later"
+      },
+      "startRecording": {
+        "title": "Start recording",
+        "detail": "Requires microphone access"
+      },
+      "reviewSummary": {
+        "title": "Check the summary",
+        "detail": "Organized automatically when it ends"
+      }
+    }
+  },
+  "checklist": {
+    "title": "Get started",
+    "allDone": "You're all set",
+    "dismiss": "Close Get started",
+    "loadFailed": "Couldn't load your progress",
+    "optional": "Optional",
+    "doneSuffix": " (done)",
+    "steps": {
+      "record": "Record your first meeting",
+      "confirm": "Finish summary review",
+      "invite": "Invite teammates"
+    }
+  },
+  "invite": {
+    "home": "Go home",
+    "missingToken": "The link is wrong or cut off. Check the link in the invitation email.",
+    "anonymous": {
+      "title": "You've been invited to a workspace",
+      "description": "Sign in to accept the invitation and join the workspace.",
+      "continueWithGoogle": "Continue with Google"
+    },
+    "alreadyMember": {
+      "title": "You're already a member of this workspace",
+      "description": "There's no need to accept the invitation again. Continue in the workspace."
+    },
+    "checking": {
+      "title": "Checking your invitation",
+      "description": "You'll go to the workspace once it's accepted."
+    },
+    "acceptFailed": {
+      "title": "Couldn't accept the invitation",
+      "description": "Try again in a moment."
+    },
+    "errors": {
+      "notFound": {
+        "title": "This invitation link isn't valid",
+        "description": "The link is wrong or the invitation was deleted. Check the link in the invitation email."
+      },
+      "expired": {
+        "title": "This invitation has expired",
+        "description": "Invitation links are valid for only 1 day. Ask a workspace admin to invite you again."
+      },
+      "notPending": {
+        "title": "This invitation was already handled",
+        "description": "It was already accepted or canceled. Ask an admin for a new invitation."
+      },
+      "emailMismatch": {
+        "title": "This invitation is for a different email",
+        "description": "The invited email doesn't match the account you're signed in with. Sign in again with the invited account."
+      }
+    }
+  },
+  "loginCard": {
+    "title": "You'll return to this page after signing in",
+    "description": "Sign in with a workspace member account to see this meeting."
+  },
+  "inquiryPage": {
+    "loginRequired": "Sign in to see the reply to your request."
+  },
+  "feedback": {
+    "title": "Help & feedback",
+    "description": "Tell us what bothered you, what you're wondering about, or what you'd like to see.",
+    "tabs": {
+      "send": "Send",
+      "mine": "My requests"
+    },
+    "kindLabel": "Category",
+    "messageLabel": "Message",
+    "privacyNote": "Your current page path and environment are included. Meeting content is never sent.",
+    "submit": "Send",
+    "sent": "Sent. Replies will appear in My requests.",
+    "unseenAnswers": "{count, plural, one {# new reply} other {# new replies}}",
+    "kinds": {
+      "incident": {
+        "label": "Problem or error",
+        "hint": "Something's broken or odd",
+        "placeholder": "Tell us what didn't work, when it happened, and which screen you were on. Include any error message."
+      },
+      "question": {
+        "label": "Question",
+        "hint": "How do I use this?",
+        "placeholder": "Write your question. Telling us which feature it's about helps us answer more precisely."
+      },
+      "suggestion": {
+        "label": "Feature request",
+        "hint": "I wish it had this",
+        "placeholder": "Tell us the situation and what would help."
+      },
+      "other": {
+        "label": "Other",
+        "hint": "Anything else",
+        "placeholder": "Tell us whatever's on your mind."
+      }
+    },
+    "mine": {
+      "loading": "Loading your requests",
+      "loadFailed": "Couldn't load your requests",
+      "empty": "You haven't sent any requests yet.",
+      "answered": "Answered",
+      "received": "Received",
+      "team": "HeyMoa team"
+    }
+  },
+  "projectTabs": {
+    "label": "Project views",
+    "notes": "Notes",
+    "map": "Connection map"
+  },
+  "agendaMap": {
+    "title": "Connection map",
+    "loading": "Loading the connection map",
+    "loadFailed": "Couldn't load the connection map",
+    "summary": "{meetings, plural, one {# meeting} other {# meetings}} · {topics, plural, one {# topic} other {# topics}}",
+    "skipped": "{count, plural, one {# meeting} other {# meetings}} without agenda items left out",
+    "empty": {
+      "title": "Linked agenda items across meetings appear here",
+      "noMeetings": "No meetings have organized agenda items yet. When a meeting ends, its agenda items appear here.",
+      "noLinks": "{count, plural, one {# meeting has} other {# meetings have}} organized agenda items, but none are linked yet. When an item continues from an earlier meeting, it's drawn as a line."
+    },
+    "hintRoomy": "With only a few meetings, agenda titles are shown right away",
+    "hintNarrow": "Click a meeting date to show its agenda titles",
+    "collapseAll": "Collapse {count, plural, one {# open meeting} other {all # open meetings}}",
+    "otherAgendas": "Other agenda items",
+    "monthMark": "{month, select, 1 {Jan} 2 {Feb} 3 {Mar} 4 {Apr} 5 {May} 6 {Jun} 7 {Jul} 8 {Aug} 9 {Sep} 10 {Oct} 11 {Nov} 12 {Dec} other {{month}}}",
+    "topicMeta": "{agendas, plural, one {# item} other {# items}} · {meetings, plural, one {# meeting} other {# meetings}}",
+    "focusTopicHint": "Click to view this topic larger",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
+    "more": "+{count} more",
+    "showFolded": "Show {count, plural, one {# collapsed agenda item} other {# collapsed agenda items}}",
+    "branch": "Branch",
+    "columnTip": "{total, plural, one {# agenda item} other {# agenda items}} · {linked} linked",
+    "columnMeta": "{total} items · {linked} linked",
+    "clickToCollapse": "Click to collapse",
+    "clickToExpand": "Click to expand",
+    "foldedBranches": "{branches, plural, one {# collapsed branch} other {# collapsed branches}} · {agendas, plural, one {# agenda item} other {# agenda items}}",
+    "moreBranches": "{count, plural, one {# more branch} other {# more branches}}",
+    "expandBranchesClick": "Click to expand all branches",
+    "expandBranchesPill": "Click +N to expand all branches",
+    "branchedFrom": "Branch from {title}",
+    "completed": "Done",
+    "notCompleted": "Open",
+    "moreAgendasHint": "Click to see {count} more",
+    "viewInNotes": "View in meeting notes",
+    "members": {
+      "decision": "{count, plural, one {# decision} other {# decisions}}",
+      "actionItem": "{count, plural, one {# task} other {# tasks}}",
+      "issue": "{count, plural, one {# issue} other {# issues}}",
+      "question": "{count, plural, one {# question} other {# questions}}"
+    },
+    "legend": {
+      "symbols": "Key",
+      "single": "1 agenda item",
+      "multiple": "Several agenda items",
+      "gap": "Not covered",
+      "branch": "Branch",
+      "folded": "Collapsed items",
+      "join": "Two earlier items",
+      "controls": "Controls",
+      "hover": "Hover to preview",
+      "click": "Click for details",
+      "drag": "Drag to move"
+    },
+    "panel": {
+      "label": "Selected agenda item",
+      "tabs": "Selected agenda item views",
+      "agendaTab": "Item",
+      "flowTab": "Flow",
+      "focusTopic": "View this topic larger",
+      "siblings": "{count, plural, one {# agenda item} other {# agenda items}} continued in this meeting"
+    },
+    "detail": {
+      "loading": "Loading the agenda item",
+      "loadFailed": "Couldn't load the agenda item",
+      "loadFailedShort": "Couldn't load the content",
+      "empty": "Nothing has been organized for this agenda item.",
+      "previous": "Continued from",
+      "next": "Next agenda item",
+      "splits": "{count, plural, one {# branch from here} other {# branches from here}}",
+      "conclusions": "Conclusions",
+      "openItems": "Open questions"
+    },
+    "flow": {
+      "meta": "{agendas, plural, one {# agenda item} other {# agenda items}} · {meetings, plural, one {# meeting} other {# meetings}}",
+      "branches": "{count, plural, one {# branch} other {# branches}}",
+      "showMore": "Show {count, plural, one {# more agenda item} other {# more agenda items}}"
+    },
+    "focus": {
+      "back": "All topics",
+      "outline": "Full map outline",
+      "switchTopic": "{name}. Click to switch to this topic",
+      "goToBranch": "Go to the branch from {title}",
+      "branchOrdinal": "Branch {n}",
+      "collapse": "Collapse",
+      "showMoreCount": "{count} more",
+      "neighbors": "Topics in the same meetings",
+      "neighborTitle": "{title} · Also in meetings on {dates}",
+      "branchTag": "{count, plural, one {Branch} other {# branches}}",
+      "since": "from {date}"
+    }
+  }
+}

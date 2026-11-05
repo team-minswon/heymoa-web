@@ -86,7 +86,11 @@ export type ChatStreamState = {
     /** 승인 카드 구조. 없으면 `summary` 로 묻는다. */
     card: ApprovalCardData | null;
   } | null;
-  error: { code: string; message: string } | null;
+  /**
+   * `message` 는 서버가 보낸 문구다. 실패 코드만 온 자리(`turn_failed`·재접속 포기)는 null 이고, 화면이 코드로
+   * `chat.errors.turnFailures.<코드>` 를 고른다(모르는 코드는 `chat.errors.noResponse`).
+   */
+  error: { code: string; message: string | null } | null;
   /** 다시 눌러도 되는 실패인가. server 의 닫힌 enum 이 정한다. 아직 화면 분기는 없다. */
   retryable: boolean | null;
   /**
@@ -161,10 +165,7 @@ export function failedTurnState(
     ...initialStreamState,
     phase: "failed",
     retryable,
-    error: {
-      code,
-      message: TURN_FAILURE_MESSAGES[code] ?? "응답을 받지 못했습니다.",
-    },
+    error: { code, message: null },
   };
 }
 
@@ -243,7 +244,7 @@ export function parseApprovalCard(value: unknown): ApprovalCardData | null {
         })
       : [],
     body: bodyText
-      ? { label: text(body.label) ?? "본문", text: bodyText }
+      ? { label: text(body.label), text: bodyText }
       : null,
   };
 }
@@ -267,21 +268,6 @@ function noteRefs(value: unknown): NoteRef[] {
     return [{ kind: "note" as const, id, title }];
   });
 }
-
-/**
- * 실패 코드 → 문구. server 는 닫힌 enum 만 보내고 문구는 web 이 만든다. 모르는 코드는 기본
- * 문구로 접는다.
- */
-const TURN_FAILURE_MESSAGES: Record<string, string> = {
-  TURN_TIMEOUT: "응답이 너무 오래 걸려 중단됐습니다.",
-  UPSTREAM_ERROR: "응답 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-  UPSTREAM_REJECTED: "응답을 만들지 못했습니다.",
-  APPROVAL_EXPIRED: "승인을 기다리다 시간이 지나 중단됐습니다.",
-  STREAM_INTERRUPTED: "응답이 중간에 끊겼습니다.",
-  CAPACITY_EXCEEDED: "지금은 처리량이 많습니다. 잠시 후 다시 시도해 주세요.",
-  SERVICE_RESTARTING: "서버가 업데이트되어 응답이 멈췄습니다. 다시 보내 주세요.",
-  INTERNAL_ERROR: "응답을 만들지 못했습니다.",
-};
 
 /**
  * 마지막에 본 것이 커서다. 프레임은 순서대로 오고 `after` 는 배타라 비교·중복 거르기가 없다.
@@ -343,10 +329,8 @@ export function reduceStreamEvent(
         blocks: base.blocks.filter((block) => block.kind !== "text"),
         pendingApproval: null,
         retryable: typeof payload.retryable === "boolean" ? payload.retryable : null,
-        error: {
-          code,
-          message: TURN_FAILURE_MESSAGES[code] ?? "응답을 받지 못했습니다.",
-        },
+        // server 는 닫힌 enum 만 보내고 문구는 화면이 코드로 고른다.
+        error: { code, message: null },
       };
     }
 
@@ -394,7 +378,7 @@ export function reduceStreamEvent(
         ...base,
         error: {
           code: String(payload.code ?? "UNKNOWN"),
-          message: String(payload.message ?? "응답을 받지 못했습니다."),
+          message: text(payload.message),
         },
       };
 
@@ -497,10 +481,7 @@ export function endStream(
       phase: "failed",
       pendingApproval: null,
       retryable: true,
-      error: {
-        code: "STREAM_INTERRUPTED",
-        message: TURN_FAILURE_MESSAGES.STREAM_INTERRUPTED,
-      },
+      error: { code: "STREAM_INTERRUPTED", message: null },
     };
   }
   // 승인 대기도 정상 종료다. 승인 요청 프레임이 스트림을 끝내므로 여기서 바꾸면 카드가 덮인다.

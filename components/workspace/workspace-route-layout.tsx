@@ -7,6 +7,7 @@ import {
   useRouter,
   useSearchParams,
 } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 
 import { errorCodeOf } from "@/lib/api/error-message";
@@ -37,6 +38,7 @@ export function WorkspaceRouteLayout({
   workspaceId: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("shell.routeLayout");
   const params = useParams<{ noteId?: string | string[] }>();
   const noteId = Array.isArray(params.noteId)
     ? params.noteId[0]
@@ -85,7 +87,7 @@ export function WorkspaceRouteLayout({
   return (
     <DataBoundary
       fallback={fallback}
-      errorLabel="워크스페이스를 불러오지 못했습니다"
+      errorLabel={t("loadFailed")}
       resetKeys={[workspaceId]}
       // 첫 진입부터 404면(남의 워크스페이스 URL 등) 캐시가 없어 여기까지 던져진다. 이동은
       // 위 훅이 하므로 여기서는 「다시 시도」가 번쩍이지 않게 골격만 유지한다. 나머지 실패

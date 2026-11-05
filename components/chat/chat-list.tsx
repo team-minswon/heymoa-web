@@ -91,8 +91,9 @@ export function ChatList({
 }) {
   // 「지금」은 한 번만 읽는다. 줄마다 읽으면 같은 목록 안에서 기준이 어긋난다.
   const now = new Date();
-  const t = useTranslations("common.agentChat");
+  const t = useTranslations("chat");
   const locale = useLocale();
+  const tDates = useTranslations("dates");
   const setEditingId = onEditingChange;
   const rows = useFrozenRows(chats, editingId !== null);
   const groups = groupChatsByRecency(rows, now);
@@ -158,7 +159,7 @@ export function ChatList({
               data-testid="chat-group"
               className="px-3 pt-4 pb-1.5 text-xs font-medium text-[var(--el-muted)]"
             >
-              {group.label}
+              {t(`history.groups.${group.key}`)}
             </h3>
             {group.chats.map((chat) => {
               const current = chat.chatId === currentChatId;
@@ -231,10 +232,17 @@ export function ChatList({
                         )}
                       >
                         {chat.label ? (
-                          <span className={LABEL_TONE}>{chat.label}</span>
+                          <span className={LABEL_TONE}>
+                            {t(`running.${chat.label}`)}
+                          </span>
                         ) : (
                           <span className="text-xs text-[var(--el-muted)] tabular-nums">
-                            {relativeUpdatedAt(chat.updatedAt, now, locale)}
+                            {relativeUpdatedAt(
+                              chat.updatedAt,
+                              now,
+                              tDates,
+                              locale
+                            )}
                           </span>
                         )}
                       </span>
@@ -286,10 +294,10 @@ export function ChatList({
           <div className="flex justify-center py-3">
             <LoadMoreButton
               loading={isLoadingMore}
-              loadingLabel="이전 대화 불러오는 중"
+              loadingLabel={t("history.loadingMore")}
               onClick={onLoadMore}
             >
-              이전 대화 더 보기
+              {t("history.loadMore")}
             </LoadMoreButton>
           </div>
         ) : null}
@@ -313,7 +321,7 @@ export function ChatMenuItems({
   finalFocus?: () => boolean;
   align?: "start" | "end";
 }) {
-  const t = useTranslations("common.agentChat");
+  const tActions = useTranslations("common.actions");
   return (
     <DropdownMenuContent
       align={align}
@@ -326,7 +334,7 @@ export function ChatMenuItems({
           className="gap-2 rounded-control py-2 text-[13px] pointer-coarse:py-3"
         >
           <Pencil aria-hidden className="size-4 text-[var(--el-muted)]" />
-          <span>{t("rename")}</span>
+          <span>{tActions("rename")}</span>
         </DropdownMenuItem>
       ) : null}
       {onDelete ? (
@@ -336,7 +344,7 @@ export function ChatMenuItems({
           className="gap-2 rounded-control py-2 text-[13px] text-destructive pointer-coarse:py-3"
         >
           <Trash2 aria-hidden className="size-4" />
-          <span>{t("delete")}</span>
+          <span>{tActions("delete")}</span>
         </DropdownMenuItem>
       ) : null}
     </DropdownMenuContent>

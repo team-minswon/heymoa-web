@@ -225,7 +225,8 @@ export function useChatStream({
               ),
               error: {
                 code: errorCodeOf(failure) ?? "STREAM_FAILED",
-                message: errorMessageOf(failure, "응답을 받지 못했습니다."),
+                // 서버 문구가 없으면 비워 둔다. 화면이 코드로 문구를 고른다
+                message: errorMessageOf(failure, "") || null,
               },
             });
             return stateRef.current;

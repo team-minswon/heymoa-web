@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { testDatesT } from "@/components/help/test-intl";
 import {
   formatAppDate,
   formatPromiseTime,
@@ -27,11 +28,24 @@ describe("formatAppDate", () => {
 
 describe("formatPromiseTime", () => {
   it("메일과 같은 꼴로 서울 시각을 적는다", () => {
-    expect(formatPromiseTime("2026-10-23T07:20:00Z")).toBe(
-      "10월 23일(금) 오후 4시 20분"
+    expect(
+      formatPromiseTime("2026-10-23T07:20:00Z", "ko-KR", testDatesT())
+    ).toBe("10월 23일(금) 오후 4시 20분");
+    expect(
+      formatPromiseTime("2026-10-26T01:00:00Z", "ko-KR", testDatesT())
+    ).toBe("10월 26일(월) 오전 10시");
+  });
+
+  it("영어 화면은 영어 어순이고 시각은 서울 기준 그대로다", () => {
+    const t = testDatesT("en");
+    expect(formatPromiseTime("2026-10-23T07:20:00Z", "en-US", t)).toBe(
+      "Fri, Oct 23 at 4:20 PM"
     );
-    expect(formatPromiseTime("2026-10-26T01:00:00Z")).toBe(
-      "10월 26일(월) 오전 10시"
+    expect(formatPromiseTime("2026-10-26T01:05:00Z", "en-US", t)).toBe(
+      "Mon, Oct 26 at 10:05 AM"
+    );
+    expect(formatPromiseTime("2026-10-26T01:00:00Z", "en-US", t)).toBe(
+      "Mon, Oct 26 at 10 AM"
     );
   });
 });
@@ -50,7 +64,7 @@ describe("영어 화면의 날짜 (APP-1285)", () => {
         { hour: "numeric", minute: "2-digit" },
         "en-US"
       )
-    ).toBe("11:30\u202fPM");
+    ).toBe("11:30 PM"); // 서버(Node)의 좁은 공백(U+202F)을 브라우저와 같은 보통 공백으로 맞춘다(하이드레이션)
     expect(getAppDateKey(lateNightSeoul)).toBe("2026-10-31");
   });
 

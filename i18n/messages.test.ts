@@ -18,6 +18,17 @@ const REQUIRED_EN: readonly Namespace[] = [
   "download",
   "legal",
   "help",
+  "errors",
+  "shell",
+  "settings",
+  "workspace",
+  "notes",
+  "chat",
+  "tasks",
+  "notification",
+  "agents",
+  "recording",
+  "dates",
 ];
 
 function keyPaths(value: unknown, prefix = ""): string[] {

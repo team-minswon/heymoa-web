@@ -13,14 +13,10 @@ export type TaskEntry = ProjectTask;
 
 export type TaskGroupKey = "OVERDUE" | "THIS_WEEK" | "LATER" | "NO_DUE";
 
-export type TaskGroup = { key: TaskGroupKey; label: string; entries: TaskEntry[] };
+/** 묶음 이름은 화면이 `tasks.groups.<key>` 로 그린다. */
+export type TaskGroup = { key: TaskGroupKey; entries: TaskEntry[] };
 
-const GROUPS: ReadonlyArray<{ key: TaskGroupKey; label: string }> = [
-  { key: "OVERDUE", label: "기한 지남" },
-  { key: "THIS_WEEK", label: "이번 주" },
-  { key: "LATER", label: "다음 주 이후" },
-  { key: "NO_DUE", label: "기한 없음" },
-];
+const GROUPS: readonly TaskGroupKey[] = ["OVERDUE", "THIS_WEEK", "LATER", "NO_DUE"];
 
 /** `today`(YYYY-MM-DD)가 속한 주의 일요일. 주는 월요일에 시작한다. */
 export function endOfWeek(today: string) {
@@ -58,9 +54,8 @@ export function groupTasks(
 ): TaskGroup[] {
   const weekEnd = endOfWeek(today);
   const open = entries.filter((task) => task.taskStatus === "OPEN").sort(compareTasks);
-  return GROUPS.map(({ key, label }) => ({
+  return GROUPS.map((key) => ({
     key,
-    label,
     entries: open.filter((task) => groupOf(task, today, weekEnd) === key),
   })).filter((group) => group.entries.length > 0);
 }
@@ -72,13 +67,6 @@ export function tasksWithStatus(
 ) {
   return entries.filter((task) => task.taskStatus === status).sort(compareTasks);
 }
-
-/** 할 일 상태의 이름. 목록 · 이력 · 검토 제안이 같은 상태를 같은 이름으로 부른다. */
-export const TASK_STATUS_LABEL: Record<ProjectTask["taskStatus"], string> = {
-  OPEN: "진행 중",
-  COMPLETED: "완료",
-  CANCELLED: "취소",
-};
 
 /**
  * 할 일 목록·이력 조회의 키인가. 회의 확정은 프로젝트에 할 일을 만드는데, 그때 노트의

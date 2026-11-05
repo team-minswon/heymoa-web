@@ -10,6 +10,7 @@ import {
   getNotifications,
 } from "@/lib/api/generated/notifications/notifications";
 import { getAppDateKey, formatAppDate } from "@/lib/format/date";
+import type { DatesT } from "@/lib/i18n/translator";
 
 export type NotificationItem = NotificationListResponseDataNotificationsItem;
 export type NotificationPage = NotificationListResponseData;
@@ -120,15 +121,21 @@ export function markReadInCache(
   );
 }
 
-/** 전체 탭의 날짜 머리. 오늘·어제 말고는 「10월 14일(수)」. `now` 는 검사에서만 넘긴다. */
-export function dayLabel(createdAt: string, now = new Date()) {
+/** 전체 탭의 날짜 머리. 오늘·어제 말고는 「10월 14일(수)」 · 「Wed, October 14」. `now` 는 검사에서만 넘긴다. */
+export function dayLabel(
+  createdAt: string,
+  locale: string,
+  t: DatesT,
+  now = new Date()
+) {
   const key = getAppDateKey(createdAt);
-  if (key === getAppDateKey(now)) return "오늘";
+  if (key === getAppDateKey(now)) return t("today");
   if (key === getAppDateKey(new Date(now.getTime() - 86_400_000)))
-    return "어제";
-  const date = formatAppDate(createdAt, { month: "long", day: "numeric" });
-  const weekday = formatAppDate(createdAt, { weekday: "short" });
-  return `${date}(${weekday})`;
+    return t("yesterday");
+  return t("dayHeading", {
+    date: formatAppDate(createdAt, { month: "long", day: "numeric" }, locale),
+    weekday: formatAppDate(createdAt, { weekday: "short" }, locale),
+  });
 }
 
 /**

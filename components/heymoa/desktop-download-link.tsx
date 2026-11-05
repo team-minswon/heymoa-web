@@ -2,13 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { PlatformIcon } from "@/components/heymoa/desktop-platform-icon";
 import { track } from "@/lib/analytics/track";
 import { desktopDownload } from "@/lib/desktop/downloads";
 import { cn } from "@/lib/utils";
+import { localePath } from "@/lib/i18n/locales";
 
 export function DesktopDownloadLink({ className }: { className?: string }) {
+  const t = useTranslations("shell.desktopDownload");
+  const locale = useLocale();
   const [os, setOs] = useState<"mac" | "windows" | "other" | null>(null);
   useEffect(() => {
     let active = true;
@@ -22,11 +26,11 @@ export function DesktopDownloadLink({ className }: { className?: string }) {
 
   return (
     <a
-      href="/download?start=1"
+      href={localePath(locale, "/download?start=1")}
       target="_blank"
       rel="noopener noreferrer"
       aria-busy={os === null || undefined}
-      aria-label={os === null ? "앱 다운로드 확인 중" : undefined}
+      aria-label={os === null ? t("checking") : undefined}
       onClick={() => track("desktop_download_clicked")}
       className={cn(
         "inline-flex h-8 w-fit min-w-11 shrink-0 items-center justify-center gap-2 px-3 whitespace-nowrap",
@@ -44,10 +48,10 @@ export function DesktopDownloadLink({ className }: { className?: string }) {
             <PlatformIcon os={os} />
           </span>
           {os === "mac"
-            ? "macOS 다운로드"
+            ? t("mac")
             : os === "windows"
-              ? "Windows 다운로드"
-              : "앱 다운로드"}
+              ? t("windows")
+              : t("other")}
         </>
       )}
     </a>

@@ -1,0 +1,53 @@
+{
+  "today": "오늘",
+  "yesterday": "어제",
+  "justNow": "방금",
+  "todayAt": "오늘 {time}",
+  "yesterdayAt": "어제 {time}",
+  "dayHeading": "{date}({weekday})",
+  "noteGroup": "{date} ({weekday})",
+  "promiseTime": "{month}월 {day}일({weekday}) {period} {hour}시{minute, plural, =0 {} other { #분}}",
+  "noteMeta": {
+    "participants": "참석자 {count}명",
+    "notStarted": "아직 시작하지 않았습니다",
+    "recordingBy": "{name}님이 기록 중",
+    "visibleToMembers": "워크스페이스 멤버에게 공개",
+    "recorded": "기록 {minutes}분"
+  },
+  "duration": {
+    "minutes": "{minutes}분",
+    "hours": "{hours}시간",
+    "hoursMinutes": "{hours}시간 {minutes}분"
+  },
+  "document": {
+    "participantsNamed": "참석자 {names}",
+    "participantsMore": "참석자 {names} 외 {rest}명",
+    "summaryTitle": "{title} — 요약",
+    "timelineTitle": "{title} — 타임라인",
+    "summaryHeading": "요약",
+    "topicsHeading": "주제",
+    "none": "없음",
+    "timelineEmpty": "아직 결정이나 할 일, 미결 사항이 없습니다",
+    "truncated": "기록을 끝까지 저장하지 못했습니다",
+    "assignee": "담당 {name}",
+    "due": "기한 {date}",
+    "topic": "주제: {title}",
+    "project": "프로젝트 {name}",
+    "confirmed": "확정됨",
+    "inReview": "검토 중",
+    "tones": {
+      "decision": "결정",
+      "task": "할 일",
+      "open": "미결"
+    },
+    "refs": {
+      "decision": "결정 {no}",
+      "task": "할 일 {no}",
+      "open": "미결 {no}"
+    },
+    "otherAgenda": "기타",
+    "minutesFooter": "{date} · {title} 회의록",
+    "minutesFile": "회의록_{title}_{date}.pdf",
+    "minutesFileUntitled": "회의"
+  }
+}

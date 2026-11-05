@@ -39,7 +39,6 @@ const REJECTION_IDENTIFIERS = [
 const CONTEXT_SOURCES = [
   "lib/notes/proposals/contract.ts",
   "lib/notes/proposals/reducer.ts",
-  "lib/notes/proposals/presentation.ts",
   "lib/notes/proposals/select.ts",
   // `api.ts`·`query-keys.ts` 는 계약이 도착하며 사라졌다 — orval 생성 훅과 키로 갔다.
   "lib/notes/proposals/timeline.ts",

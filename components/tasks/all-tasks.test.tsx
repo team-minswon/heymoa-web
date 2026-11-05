@@ -190,7 +190,7 @@ describe("AllTasks", () => {
     await screen.findByText("지난 할 일");
 
     const rowOf = (content: string) => screen.getByText(content).closest("li")!;
-    expect(within(rowOf("다음 주 할 일")).getByText("에이전트 · 노트북 Claude Code")).toBeTruthy();
+    expect(within(rowOf("다음 주 할 일")).getByText("에이전트(노트북 Claude Code)")).toBeTruthy();
     expect(within(rowOf("기한 없는 할 일")).getByText("에이전트")).toBeTruthy();
     expect(within(rowOf("지난 할 일")).queryByText(/에이전트/)).toBeNull();
   });
@@ -301,7 +301,7 @@ describe("AllTasks", () => {
     await waitFor(() => expect(savedData()).toMatchObject({ taskStatus: "COMPLETED", revision: 3 }));
 
     fireEvent.click(screen.getByRole("button", { name: "다음 주 할 일" }));
-    fireEvent.click(await screen.findByRole("button", { name: "취소" }));
+    fireEvent.click(await screen.findByRole("button", { name: "할 일 취소" }));
     await waitFor(() =>
       expect(mutate.mock.calls.at(-1)?.[0]).toMatchObject({
         taskId: "t3",

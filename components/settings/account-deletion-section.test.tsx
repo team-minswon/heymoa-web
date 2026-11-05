@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AccountDeletionSection } from "@/components/settings/account-deletion-section";
 import type { DeletionPlan } from "@/lib/account/deletion-api";
+import { intlWrapper } from "@/components/help/test-intl";
 
 const state = vi.hoisted(() => ({
   plan: null as DeletionPlan | null,
@@ -109,12 +110,12 @@ describe("AccountDeletionSection", () => {
   it("워크스페이스별 처리를 서버가 준 대로 보인다", () => {
     open();
     expect(
-      screen.getByText("삭제 — 혼자 쓰는 워크스페이스입니다")
+      screen.getByText("혼자 쓰는 워크스페이스라 삭제합니다.")
     ).toBeInTheDocument();
     expect(
-      screen.getAllByText("나가기 — 다른 사람은 계속 씁니다")
+      screen.getAllByText("다른 사람이 계속 쓰므로 나가기만 합니다.")
     ).toHaveLength(2);
-    expect(screen.getByRole("radio", { name: "관리자 넘기기" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "관리자 권한 넘기기" })).toBeChecked();
   });
 
   it("지워지는 것과 남는 것은 세 줄이고, 보관 기간은 처리방침 6조로 보낸다", () => {
@@ -137,6 +138,27 @@ describe("AccountDeletionSection", () => {
     expect(submit()).toBeDisabled();
     type(" 회원 탈퇴 ");
     expect(submit()).toBeEnabled();
+  });
+
+  it("영어 화면은 영어 확인 문구를 받고, 계약의 「회원 탈퇴」를 대신 보낸다", async () => {
+    render(<AccountDeletionSection />, { wrapper: intlWrapper("en") });
+    fireEvent.click(screen.getByRole("button", { name: "Delete account" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    const confirm = dialog.getByRole("button", { name: "Delete account" });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(dialog.getByLabelText(/To confirm, type/), {
+      target: { value: "delete my account" },
+    });
+    expect(confirm).toBeEnabled();
+    expect(
+      dialog.getByText("Only you use this workspace, so it will be deleted.")
+    ).toBeInTheDocument();
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(state.deleteAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ confirmation: "회원 탈퇴" })
+      )
+    );
   });
 
   it("사유를 고르지 않아도 탈퇴하고, 기본 승계자에게 넘긴 뒤 홈으로 간다", async () => {
@@ -174,7 +196,7 @@ describe("AccountDeletionSection", () => {
 
   it("사유를 다시 누르면 고르지 않은 상태로 돌아간다", () => {
     open();
-    const reason = screen.getByRole("button", { name: "자주 쓰지 않음" });
+    const reason = screen.getByRole("button", { name: "낮은 사용 빈도" });
     fireEvent.click(reason);
     expect(reason).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(reason);

@@ -239,7 +239,7 @@ test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 �
     .getByRole("radio", { name: "넘기기" }).click();
   await expect(page.getByText(/개 추가/)).toContainText("기존 할 일 1개 변경");
   await page.getByRole("button", { name: "검토 완료" }).click();
-  await expect(page.getByRole("alertdialog")).toContainText("기존 할 일 1개가 변경됩니다.");
+  await expect(page.getByRole("alertdialog")).toContainText("기존 할 일 1개를 바꿉니다.");
   await page.getByRole("alertdialog").getByRole("button", { name: "검토 완료" }).click();
   await expect(page.getByText("확정됨", { exact: true })).toBeVisible({ timeout: 20_000 });
   const applied = (await readTasks()).find((task: { taskId: string }) => task.taskId === target.taskId);

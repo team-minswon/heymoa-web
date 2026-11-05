@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import {
@@ -58,6 +59,7 @@ export function AuthProvider({
   beforeLogout?: () => Promise<void> | void;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("auth");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const logoutStarted = useRef(false);
 
@@ -130,11 +132,11 @@ export function AuthProvider({
     } catch {
       logoutStarted.current = false;
       setIsLoggingOut(false);
-      toast.error("로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      toast.error(t("logoutFailed"));
     }
     // location.replace starts navigation asynchronously. Keep controls locked
     // until the new document replaces this one instead of flashing active again.
-  }, [beforeLogout, leaveAuthenticatedApp]);
+  }, [beforeLogout, leaveAuthenticatedApp, t]);
 
   useEffect(() => {
     const handleAuthStateChanged = (event: Event) => {
@@ -195,10 +197,10 @@ export function AuthProvider({
 
     if (url.searchParams.get(key) !== value) return;
 
-    toast.error("세션이 만료되었습니다. 다시 로그인해 주세요.");
+    toast.error(t("sessionExpired"));
     url.searchParams.delete(key);
     window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-  }, []);
+  }, [t]);
 
   const status = useMemo<AuthStatus>(() => {
     if ((queryStatus as string) === "pending") {

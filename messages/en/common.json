@@ -27,102 +27,6 @@
     "title": "Something went wrong",
     "description": "HeyMoa couldn't load. Please try again."
   },
-  "agentChat": {
-    "titleInput": "Chat title",
-    "editTitle": "Rename",
-    "titlePending": "Generating title",
-    "menu": "Menu for “{title}”",
-    "rename": "Rename",
-    "delete": "Delete",
-    "renameFailed": "Couldn't rename the chat.",
-    "deleteFailed": "Couldn't delete the chat.",
-    "deleteDialog": {
-      "title": "Delete this chat?",
-      "description": "Its questions, answers, and approval history will be deleted and can't be restored. If an answer is being generated, it will stop.",
-      "cancel": "Cancel",
-      "confirm": "Delete"
-    },
-    "diagram": {
-      "label": "Diagram",
-      "showDiagram": "Show diagram",
-      "showCode": "Show code",
-      "expand": "Expand",
-      "failed": "Couldn't draw the diagram",
-      "zoomOut": "Zoom out",
-      "zoomIn": "Zoom in",
-      "fit": "Fit",
-      "hint": "Drag to move · Ctrl/⌘+scroll to zoom · Double-click to fit"
-    },
-    "panelLabel": "My agent",
-    "newChat": "New chat",
-    "openHistory": "Chat history",
-    "back": "Back to chat",
-    "close": "Close",
-    "chatMenu": "Chat menu",
-    "history": {
-      "title": "Chat history",
-      "emptyTitle": "No chats yet",
-      "emptyBody": "Ask about your meeting notes and your chats will show up here."
-    },
-    "starter": {
-      "greeting": "How can I help?",
-      "intro": "I find what your meetings decided, what changed, and what's left — with sources.",
-      "introNote": "I'll answer from “{title}”. I'll ask before changing anything.",
-      "firstMeeting": "Record your first meeting and I'll organize its decisions and tasks.",
-      "newMeeting": "Record a meeting",
-      "examplesLabel": "Example questions",
-      "examples": {
-        "decisions": {
-          "label": "Recent decisions",
-          "question": "Summarize what we decided in the last two weeks, with sources"
-        },
-        "changes": {
-          "label": "Changed decisions",
-          "question": "Find anything in recent meetings that differs from earlier decisions"
-        },
-        "openTasks": {
-          "label": "Open tasks",
-          "question": "List unfinished tasks grouped by assignee"
-        },
-        "summary": {
-          "label": "Last meeting",
-          "question": "Summarize the last meeting"
-        },
-        "summaryRecent": {
-          "label": "Last meeting",
-          "question": "Summarize this meeting"
-        },
-        "noteDecisions": {
-          "label": "Decisions",
-          "question": "Summarize what this meeting decided, with sources"
-        },
-        "noteSummary": {
-          "label": "Summary",
-          "question": "Summarize this meeting"
-        },
-        "noteChanges": {
-          "label": "Changed decisions",
-          "question": "Find anything in this meeting that differs from earlier decisions"
-        },
-        "actionItems": {
-          "label": "Make tasks",
-          "question": "Turn this meeting's action items into tasks"
-        },
-        "web": {
-          "label": "Search the web",
-          "question": "Search the web for the latest version of the tools mentioned"
-        },
-        "webFirst": {
-          "label": "Search the web",
-          "question": "Search the web for what changed in the latest Next.js"
-        },
-        "newTask": {
-          "label": "New task",
-          "question": "Create a task to prepare the slides by Friday"
-        }
-      }
-    }
-  },
   "marketingConsent": {
     "title": "Product news & offers",
     "label": "Get product news & offers by email (optional)",
@@ -130,5 +34,73 @@
     "mutedNote": "“Turn off all email” is on, so these emails won't be sent either.",
     "agreedOn": "Agreed on {date}",
     "declinedOn": "Declined on {date}"
-  }
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "retry": "Try again",
+    "saveChanges": "Save changes",
+    "rename": "Rename",
+    "confirm": "OK",
+    "create": "Create",
+    "close": "Close",
+    "learnMore": "Learn more",
+    "add": "Add",
+    "edit": "Edit",
+    "collapse": "Show less",
+    "copy": "Copy"
+  },
+  "createWorkspace": {
+    "ariaLabel": "Create a new workspace",
+    "title": "New workspace",
+    "description": "Name the workspace for your meeting notes.",
+    "nameLabel": "Workspace name"
+  },
+  "meetingStatus": {
+    "notStarted": "Not started",
+    "inProgress": "Recording",
+    "paused": "Paused",
+    "ended": "Ended"
+  },
+  "taskStatus": {
+    "OPEN": "In progress",
+    "COMPLETED": "Done",
+    "CANCELLED": "Canceled"
+  },
+  "fields": {
+    "content": "Task",
+    "status": "Status",
+    "assignee": "Assignee",
+    "due": "Due date",
+    "project": "Project"
+  },
+  "assigneeCell": {
+    "placeholder": "Set assignee",
+    "change": "Change assignee ({name})",
+    "speaker": "Speaker {label}",
+    "unnamedSpeaker": "Unnamed speaker",
+    "search": "Search by name",
+    "noMatch": "No matching people.",
+    "clear": "Remove assignee"
+  },
+  "dueCell": {
+    "placeholder": "Set due date",
+    "change": "Change due date ({date})"
+  },
+  "recipients": {
+    "placeholder": "Enter a name or email",
+    "invalid": "(invalid address)",
+    "remove": "Remove {label}",
+    "candidates": "Suggested recipients",
+    "typed": "Typed address",
+    "sendTo": "Add as recipient"
+  },
+  "loadFailed": "Couldn't load",
+  "copyBlock": {
+    "copy": "Copy {label}",
+    "copied": "Copied to clipboard.",
+    "failed": "Couldn't copy. Select the text and copy it manually."
+  },
+  "helpTip": "Help: {label}"
 }

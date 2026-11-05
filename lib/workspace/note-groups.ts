@@ -1,4 +1,5 @@
 import { formatAppDate, getAppDateKey } from "@/lib/format/date";
+import type { DatesT } from "@/lib/i18n/translator";
 import { noteOrderedAt } from "@/lib/notes/meeting-state";
 
 /**
@@ -19,19 +20,19 @@ export type NoteGroup<T> = {
 };
 
 /**
- * `2026년 7월 27일 (월)`. 타임존은 `formatAppDate`가 고정한다(hydration).
+ * `2026년 7월 27일 (월)` · `Mon, July 27, 2026`. 타임존은 `formatAppDate`가 고정한다(hydration).
  *
- * 요일을 `Intl`에 함께 넘기면 괄호 없이 `27일 월`로 붙어 읽기 나쁘다 — 따로 뽑아 조립한다.
+ * 요일을 `Intl`에 함께 넘기면 괄호 없이 `27일 월`로 붙어 읽기 나쁘다 — 따로 뽑아 `dates.noteGroup` 의 자리에 넣는다.
  */
-function labelFor(iso: string): string {
-  const date = formatAppDate(iso, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+function labelFor(iso: string, locale: string, t: DatesT): string {
+  return t("noteGroup", {
+    date: formatAppDate(
+      iso,
+      { year: "numeric", month: "long", day: "numeric" },
+      locale
+    ),
+    weekday: formatAppDate(iso, { weekday: "short" }, locale),
   });
-  const weekday = formatAppDate(iso, { weekday: "short" });
-
-  return `${date} (${weekday})`;
 }
 
 /**
@@ -42,7 +43,7 @@ function labelFor(iso: string): string {
  */
 export function groupNotesByRecency<
   T extends { meetingStartedAt: string | null; createdAt: string },
->(sortedNotes: T[]): NoteGroup<T>[] {
+>(sortedNotes: T[], locale: string, t: DatesT): NoteGroup<T>[] {
   const groups: NoteGroup<T>[] = [];
 
   for (const note of sortedNotes) {
@@ -54,7 +55,7 @@ export function groupNotesByRecency<
       last.notes.push(note);
       continue;
     }
-    groups.push({ key, label: labelFor(orderedAt), notes: [note] });
+    groups.push({ key, label: labelFor(orderedAt, locale, t), notes: [note] });
   }
 
   return groups;

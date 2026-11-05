@@ -4,7 +4,7 @@ description: Invite members to your workspace and change their roles and display
 group: team
 slug: members
 order: 3
-modified: 2026-10-23
+modified: 2026-11-05
 ---
 
 ## Invite members {#invite}
@@ -20,14 +20,14 @@ Only admins can invite. There are just two roles: **[Admin]** and **[Member]**.
 4. **Click [Invite]**
    An email goes to that address.
 
-::clip{name="members-invite" alt="Entering a coworker's email in the Members tab of Settings and inviting them, so they appear in Pending invites" caption="Enter an email and click [Invite]. It appears in [Pending invites]."}
+::clip{name="members-invite" alt="Entering a coworker's email in the Members tab of Settings and inviting them, so they appear in Pending invitations" caption="Enter an email and click [Invite]. It appears in [Pending invitations]."}
 
 > [!Caution]
-> ==An invite link is valid for only 1 day after it's sent.== You can't send a new invite to an address that already has a pending one. Click **[Cancel]** in **[Pending invites]**, then invite again. There's no way to resend an invite.
+> ==An invitation link is valid for only 1 day after it's sent.== You can't send a new invitation to an address that already has a pending one. Click **[Cancel]** in **[Pending invitations]**, then invite again. There's no way to resend an invitation.
 
-There's a daily limit on how many invites you can send. If you go over it, you'll see “Invites can't be sent right now. Please try again later.”
+There's a daily limit on how many invitations you can send. If you go over it, you'll see “Invites can't be sent right now. Please try again later.”
 
-The invited person clicks **[Accept]** or **[Decline]** in **[Notifications]** in the sidebar. They can also use the link in the invite email. They need to sign in with the Google account for the invited email.
+The invited person clicks **[Accept]** or **[Decline]** in **[Notifications]** in the sidebar. They can also use the link in the invitation email. They need to sign in with the Google account for the invited email.
 
 ## Change roles and display names {#manage}
 
@@ -48,9 +48,9 @@ You can change your own name, and admins can change anyone's. The new name shows
 
 Your account name and email are shown in **[Settings]** → **[Account]** → **[My account]**, where you can view them but not change them.
 
-Only admins can use **[Remove]**. Removing someone also disconnects the Linear and GitHub integrations and the outside AI app connections they set up. Their agent conversations in this workspace are deleted too.
+Only admins can use **[Remove]**. Removing someone also disconnects the Linear and GitHub integrations and the outside AI app connections they set up. Their agent chats in this workspace are deleted too.
 
-**[Leave workspace]** is at the bottom of the Members tab. Type the workspace name exactly in the confirmation window to leave. You can't leave while you're recording in this workspace. ==Leaving deletes your agent conversations in this workspace, and they don't come back if you're invited again.==
+**[Leave workspace]** is at the bottom of the Members tab. Type the workspace name exactly in the confirmation window to leave. You can't leave while you're recording in this workspace. ==Leaving deletes your agent chats in this workspace, and they don't come back if you're invited again.==
 
 ## Manage guest participants {#guests}
 
@@ -63,8 +63,8 @@ Only admins see the **[⋯]** menu at the end of each row. Use it to **[Rename]*
 
 ## Frequently asked questions {#faq}
 
-### Can I resend an invite link?
-No. There's no way to resend. Click **[Cancel]** in **[Pending invites]**, then invite again.
+### Can I resend an invitation link?
+No. There's no way to resend. Click **[Cancel]** in **[Pending invitations]**, then invite again.
 
 ### I'm the only admin. Can I leave?
 No. A workspace must have at least one admin. Make another member an admin, then leave. If you use the workspace alone, use **[Delete workspace]** in **[General]** instead.

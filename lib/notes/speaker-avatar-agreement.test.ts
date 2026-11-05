@@ -6,6 +6,14 @@ import { personAvatarKey } from "@/components/heymoa/person-avatar";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
 
+// 시험의 한국어 화자 이름. 화면은 `notes.speakers.fallback` 을 넘긴다
+const speakerName = (label: string) => `화자 ${label}`;
+// 시험의 한국어 이름. 화면은 `useSpeakerFallbackNames()` 를 넘긴다
+const names = {
+  unnamedParticipant: "이름 없는 참여자",
+  speaker: (label: string) => `화자 ${label}`,
+};
+
 /**
  * **패널의 얼굴과 전사의 칩은 같은 색이어야 한다.** 목록에서 고른 사람을 본문에서 색으로
  * 되찾는 것이 그 얼굴의 일이고, 두 화면이 갈리면 그 일을 못 한다.
@@ -59,8 +67,12 @@ describe("패널의 얼굴과 전사의 칩", () => {
       },
     ];
     const segments = [segment(1, "A"), segment(2, "D"), segment(3, "E")];
-    const resolve = createSpeakerIdentityResolver(speakers as never);
-    const stats = summarizeSpeakers({ segments, speakers });
+    const resolve = createSpeakerIdentityResolver(
+      speakers as never,
+      [],
+      speakerName
+    );
+    const stats = summarizeSpeakers({ names, segments, speakers });
 
     const mentor = stats.find((stat) => stat.key === "mentor")!;
     expect(panelOrb(mentor)).toEqual(resolve("D")?.avatarName);
@@ -76,8 +88,16 @@ describe("패널의 얼굴과 전사의 칩", () => {
         confirmed: false,
       },
     ];
-    const resolve = createSpeakerIdentityResolver(speakers as never);
-    const stats = summarizeSpeakers({ segments: [segment(1, "C")], speakers });
+    const resolve = createSpeakerIdentityResolver(
+      speakers as never,
+      [],
+      speakerName
+    );
+    const stats = summarizeSpeakers({
+      names,
+      segments: [segment(1, "C")],
+      speakers,
+    });
 
     expect(panelOrb(stats[0])).toEqual(resolve("C")?.avatarName);
   });
@@ -102,9 +122,15 @@ describe("패널의 얼굴과 전사의 칩", () => {
     const segments = [segment(1, "A"), segment(2, "A", "p2")];
     const resolve = createSpeakerIdentityResolver(
       speakers as never,
-      participants
+      participants,
+      speakerName
     );
-    const stats = summarizeSpeakers({ segments, speakers, participants });
+    const stats = summarizeSpeakers({
+      names,
+      segments,
+      speakers,
+      participants,
+    });
 
     const shark = stats.find((stat) => stat.key === "p2")!;
     expect(panelOrb(shark)).toEqual(resolve("A", "p2")?.avatarName);
@@ -129,8 +155,12 @@ describe("패널의 얼굴과 전사의 칩", () => {
       },
     ];
     const segments = [segment(1, "AA"), segment(2, "B")];
-    const resolve = createSpeakerIdentityResolver(speakers as never);
-    const stats = summarizeSpeakers({ segments, speakers });
+    const resolve = createSpeakerIdentityResolver(
+      speakers as never,
+      [],
+      speakerName
+    );
+    const stats = summarizeSpeakers({ names, segments, speakers });
 
     expect(panelOrb(stats[0])).toEqual(resolve("AA")?.avatarName);
     expect(panelOrb(stats[0])).toEqual(resolve("B")?.avatarName);
@@ -166,9 +196,11 @@ describe("계정 없는 임시 참여자", () => {
     ];
     const resolve = createSpeakerIdentityResolver(
       speakers as never,
-      participants
+      participants,
+      speakerName
     );
     const stats = summarizeSpeakers({
+      names,
       segments: [segment(1, "A")],
       speakers,
       participants,
@@ -187,8 +219,13 @@ describe("계정 없는 임시 참여자", () => {
         image: null,
       },
     ];
-    const resolve = createSpeakerIdentityResolver([] as never, participants);
+    const resolve = createSpeakerIdentityResolver(
+      [] as never,
+      participants,
+      speakerName
+    );
     const stats = summarizeSpeakers({
+      names,
       segments: [],
       speakers: [],
       participants,
@@ -207,24 +244,30 @@ describe("계정 없는 임시 참여자", () => {
  */
 describe("요약의 담당 칸과 전사의 칩", () => {
   it("아직 아무도 안 붙은 화자는 같은 얼굴이다", () => {
-    const resolve = createSpeakerIdentityResolver([
-      { label: "B", assignedParticipantId: null, confirmed: false },
-    ] as never);
+    const resolve = createSpeakerIdentityResolver(
+      [{ label: "B", assignedParticipantId: null, confirmed: false }] as never,
+      [],
+      speakerName
+    );
 
     expect(
-      describeAssignee({ type: "SPEAKER_LABEL", noteId: "n1", label: "B" })
-        ?.avatarKey
+      describeAssignee(
+        { type: "SPEAKER_LABEL", noteId: "n1", label: "B" },
+        speakerName
+      )?.avatarKey
     ).toEqual(resolve("B")?.avatarName);
   });
 
   it("사람이 붙은 화자는 담당으로 풀린 그 사람과 같은 얼굴이다", () => {
     const resolve = createSpeakerIdentityResolver(
       [{ label: "B", assignedParticipantId: "p1", confirmed: true }] as never,
-      [{ participantId: "p1", userId: "u1", name: "QA 비" }]
+      [{ participantId: "p1", userId: "u1", name: "QA 비" }],
+      speakerName
     );
 
     expect(
-      describeAssignee({ type: "USER", id: "u1", name: "QA 비" })?.avatarKey
+      describeAssignee({ type: "USER", id: "u1", name: "QA 비" }, speakerName)
+        ?.avatarKey
     ).toEqual(resolve("B")?.avatarName);
   });
 });

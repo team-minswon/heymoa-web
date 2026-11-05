@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { Collapse } from "@/components/heymoa/collapse";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
@@ -12,7 +13,7 @@ import type { TranscriptResponseDataSegmentsItem } from "@/lib/api/generated/mod
 import { useGetProposalRevisions } from "@/lib/api/generated/proposals/proposals";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import {
-  CITATION_ROLE_LABEL,
+  isLabeledRole,
   trailOf,
   type TrailStep,
 } from "@/lib/notes/review/trail";
@@ -47,6 +48,7 @@ export function ItemTrail({
   resolveSpeaker: ResolveSpeaker;
   onOpenScript: (segmentId: string) => void;
 }) {
+  const t = useTranslations("notes.review.trail");
   const proposalId = item.originalProposalRef?.proposalId ?? "";
   const revisionsQuery = useGetProposalRevisions(noteId, proposalId, {
     query: { enabled: Boolean(proposalId) },
@@ -82,7 +84,7 @@ export function ItemTrail({
     return (
       <TrailHeader count={steps.length}>
         <p className="py-1 text-[12.5px] text-[var(--el-muted)]">
-          직접 추가한 항목이라 회의 중 기록이 없습니다.
+          {t("authored")}
         </p>
       </TrailHeader>
     );
@@ -91,7 +93,7 @@ export function ItemTrail({
   if (revisionsQuery.isLoading || scriptState === "pending") {
     return (
       <TrailHeader>
-        <div aria-label="수정이력 불러오는 중" className="space-y-2 py-1">
+        <div aria-label={t("loading")} className="space-y-2 py-1">
           {["72%", "58%", "64%"].map((width) => (
             <Skeleton
               key={width}
@@ -110,7 +112,7 @@ export function ItemTrail({
       <TrailHeader count={revisions ? steps.length : undefined}>
         <InlineRetry
           variant="line"
-          label="스크립트를 불러오지 못했습니다."
+          label={t("scriptFailed")}
           onRetry={onRetryScript}
           className="py-1 text-[12.5px] text-[var(--el-muted)]"
         />
@@ -123,7 +125,7 @@ export function ItemTrail({
       <TrailHeader>
         <InlineRetry
           variant="line"
-          label="수정이력을 불러오지 못했습니다."
+          label={t("failed")}
           onRetry={() => void revisionsQuery.refetch()}
           className="py-1 text-[12.5px] text-[var(--el-muted)]"
         />
@@ -145,7 +147,7 @@ export function ItemTrail({
               )
             }
           >
-            {allOpen ? "모두 접기" : "모두 펼치기"}
+            {allOpen ? t("collapseAll") : t("expandAll")}
           </button>
           {firstScript ? (
             <button
@@ -158,13 +160,13 @@ export function ItemTrail({
                 )
               }
             >
-              스크립트에서 열기
+              {t("openInScript")}
             </button>
           ) : null}
         </>
       }
     >
-      <ol aria-label="수정이력">
+      <ol aria-label={t("title")}>
         {steps.map((step) => (
           <TrailNode
             key={step.key}
@@ -190,11 +192,12 @@ function TrailHeader({
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("notes.review.trail");
   return (
     <div>
       <div className="mb-1.5 flex items-baseline gap-2">
         <b className="text-[12.5px] font-semibold text-[var(--el-ink)]">
-          수정이력
+          {t("title")}
         </b>
         {count ? (
           <span className="font-mono text-[11px] text-[var(--el-muted-soft)]">
@@ -225,6 +228,8 @@ function TrailNode({
   resolveSpeaker: ResolveSpeaker;
   onOpenScript: (segmentId: string) => void;
 }) {
+  const t = useTranslations("notes.review.trail");
+  const tReview = useTranslations("notes.review");
   const hasScript = step.lines.length > 0;
   return (
     <li className="border-t border-[var(--el-hairline-soft)] first:border-t-0">
@@ -264,7 +269,7 @@ function TrailNode({
             ) : null
           ) : (
             <b className="block text-[12.5px] font-semibold text-[var(--el-ink)]">
-              검토에서 수정
+              {t("editedInReview")}
             </b>
           )}
           <span className="mt-0.5 block text-[13.5px] leading-5 break-words [overflow-wrap:anywhere] text-[var(--el-ink)]">
@@ -272,7 +277,9 @@ function TrailNode({
           </span>
         </span>
         <span className="col-start-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-px text-[11.5px] sm:col-start-auto whitespace-nowrap text-[var(--el-muted)]">
-          {hasScript ? `스크립트 ${step.lines.length}줄` : "스크립트 없음"}
+          {hasScript
+            ? t("scriptLines", { count: step.lines.length })
+            : t("noScript")}
           {step.startedAtMs !== null ? (
             <span className="font-mono text-[10.5px] text-[var(--el-muted-soft)]">
               {formatOffset(step.startedAtMs)}
@@ -284,7 +291,7 @@ function TrailNode({
         <Collapse open={open} lazy>
           <div className="relative rounded-b-control bg-[var(--el-canvas-soft)] pt-1 px-2 pb-2.5 sm:pl-[34px] before:max-sm:hidden before:absolute before:top-0 before:bottom-3.5 before:left-4 before:w-px before:bg-[var(--el-hairline-strong)]">
             <p className="relative pt-0.5 pb-1 text-[11.5px] font-semibold text-[var(--el-body)] before:max-sm:hidden before:absolute before:top-2.5 before:-left-[18px] before:h-px before:w-3 before:bg-[var(--el-hairline-strong)]">
-              스크립트
+              {t("script")}
             </p>
             <ul className="space-y-0.5">
               {step.lines.map((line) => {
@@ -292,9 +299,10 @@ function TrailNode({
                   line.speakerLabel,
                   line.assignedParticipantId
                 );
-                const role = line.role
-                  ? CITATION_ROLE_LABEL[line.role]
-                  : undefined;
+                const role =
+                  line.role && isLabeledRole(line.role)
+                    ? t(`roles.${line.role}`)
+                    : undefined;
                 return (
                   <li key={line.segmentId}>
                     <button
@@ -314,7 +322,7 @@ function TrailNode({
                           />
                         ) : null}
                         <span className="truncate">
-                          {speaker?.displayName ?? "화자 없음"}
+                          {speaker?.displayName ?? tReview("noSpeaker")}
                         </span>
                       </span>
                       <span

@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Bot, Info } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { CREDENTIAL_LABEL } from "@/components/settings/agent-connections-settings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +64,8 @@ export function WorkspaceAgentAccessSettings({
 }: {
   workspaceId: string;
 }) {
+  const t = useTranslations("settings.workspaceAgents");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const { user } = useAuth();
   // 허용 상태도 다른 관리자가 바꾼다 — 열 때마다 다시 읽는다(아래 목록과 같은 이유)
@@ -119,13 +121,13 @@ export function WorkspaceAgentAccessSettings({
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <SettingsHeader
-        title="MCP 연결"
-        description="팀원이 Claude·ChatGPT 같은 AI 앱에 이 워크스페이스를 연결해도 되는지 정합니다. 관리자는 연결된 앱을 보고 끊을 수 있습니다."
+        title={t("title")}
+        description={t("description")}
       />
 
       {workspaceQuery.isLoading ? (
         <section
-          aria-label="MCP 설정 불러오는 중"
+          aria-label={t("loading")}
           className={cn(CARD_ROW, SETTINGS_CARD)}
         >
           <div className="min-w-0">
@@ -140,7 +142,7 @@ export function WorkspaceAgentAccessSettings({
       workspaceQuery.isError || !workspace ? (
         <div role="alert" className="space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
-            MCP 설정을 불러오지 못했습니다.
+            {t("loadFailed")}
           </p>
           <Button
             variant="outline"
@@ -148,25 +150,25 @@ export function WorkspaceAgentAccessSettings({
             className="h-[30px]"
             onClick={() => void workspaceQuery.refetch()}
           >
-            다시 시도
+            {tActions("retry")}
           </Button>
         </div>
       ) : (
         <section
-          aria-label="MCP 연결 허용"
+          aria-label={t("allow.title")}
           className={cn(CARD_ROW, SETTINGS_CARD)}
         >
           <div className="min-w-0">
             <AllowTitle />
             <p className="mt-1 text-xs text-[var(--el-muted)]">
               {workspace.agentAccessAllowed
-                ? "팀원이 이 워크스페이스를 Claude·ChatGPT 같은 AI 앱에 맡길 수 있습니다."
-                : "꺼짐 — 새 연결을 만들 수 없습니다."}
+                ? t("allow.on")
+                : t("allow.off")}
             </p>
           </div>
           {isAdmin ? (
             <Switch
-              aria-label="MCP 연결 허용"
+              aria-label={t("allow.title")}
               checked={workspace.agentAccessAllowed}
               disabled={change.isPending}
               onCheckedChange={(checked) =>
@@ -177,7 +179,7 @@ export function WorkspaceAgentAccessSettings({
             <Badge
               variant={workspace.agentAccessAllowed ? "success" : "outline"}
             >
-              {workspace.agentAccessAllowed ? "켜짐" : "꺼짐"}
+              {workspace.agentAccessAllowed ? t("allow.onBadge") : t("allow.offBadge")}
             </Badge>
           )}
         </section>
@@ -191,7 +193,7 @@ export function WorkspaceAgentAccessSettings({
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <div className="min-w-0 flex-1">
             <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-              권한을 확인하지 못해 MCP 설정을 바꿀 수 없습니다.
+              {t("roleFailed")}
             </p>
             <Button
               variant="outline"
@@ -199,7 +201,7 @@ export function WorkspaceAgentAccessSettings({
               className="mt-2 h-[30px]"
               onClick={() => void membersQuery.refetch()}
             >
-              다시 시도
+              {tActions("retry")}
             </Button>
           </div>
         </div>
@@ -210,7 +212,7 @@ export function WorkspaceAgentAccessSettings({
         >
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-            MCP 연결은 관리자만 바꿀 수 있습니다.
+            {t("adminOnly")}
           </p>
         </div>
       ) : null}
@@ -223,7 +225,7 @@ export function WorkspaceAgentAccessSettings({
           delegationsQuery.isError || !delegations ? (
             <div role="alert" className="space-y-2">
               <p className="text-sm text-[var(--el-ink)]">
-                연결 목록을 불러오지 못했습니다.
+                {t("open.loadFailed")}
               </p>
               <Button
                 variant="outline"
@@ -231,14 +233,14 @@ export function WorkspaceAgentAccessSettings({
                 className="h-[30px]"
                 onClick={() => void delegationsQuery.refetch()}
               >
-                다시 시도
+                {tActions("retry")}
               </Button>
             </div>
           ) : delegations.length === 0 ? (
             // 실패가 아니다 — 경고 색·아이콘을 쓰지 않는다
             <div className="rounded-panel border border-dashed border-[var(--el-hairline)] p-6 text-center">
               <p className="text-sm text-[var(--el-ink)]">
-                열린 연결이 없습니다.
+                {t("open.empty")}
               </p>
             </div>
           ) : (
@@ -272,18 +274,18 @@ export function WorkspaceAgentAccessSettings({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>MCP 연결을 끌까요?</AlertDialogTitle>
+            <AlertDialogTitle>{t("offDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
               {delegations && !delegationsQuery.isError
-                ? `지금 연결된 ${delegations.length}개가`
-                : "지금 연결된 연결이"}{" "}
-              모두 끊기고, 다시 켜도 되살아나지 않습니다. 끈 동안은 누구도 이
-              워크스페이스로 연결할 수 없습니다.
+                ? t("offDialog.descriptionCount", {
+                    count: delegations.length,
+                  })
+                : t("offDialog.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={change.isPending}>
-              취소
+              {tActions("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -291,7 +293,7 @@ export function WorkspaceAgentAccessSettings({
               disabled={change.isPending}
               onClick={() => void setAllowed(false)}
             >
-              끄기
+              {t("offDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -312,6 +314,9 @@ function WorkspaceDelegationRow({
   busy: boolean;
   onRevoked: () => Promise<unknown>;
 }) {
+  const t = useTranslations("settings.workspaceAgents");
+  const tAgents = useTranslations("settings.agentConnections");
+  const tActions = useTranslations("common.actions");
   const dateLocale = useDisplayLocale();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const revoke = useRevokeWorkspaceAgentDelegation();
@@ -329,21 +334,22 @@ function WorkspaceDelegationRow({
             </p>
             {/* OAuth 이름은 에이전트가 스스로 정해 사칭될 수 있다 — 무엇으로 붙었는지 함께 보인다 */}
             <Badge variant="outline">
-              {CREDENTIAL_LABEL[delegation.credentialKind]}
+              {tAgents(`credential.${delegation.credentialKind}`)}
             </Badge>
             {delegation.allowTaskChanges ? (
-              <Badge variant="outline">할 일 변경 허용</Badge>
+              <Badge variant="outline">{tAgents("taskChanges")}</Badge>
             ) : null}
           </div>
           <p className="mt-1 text-xs text-[var(--el-muted)]">
             {delegation.userName}
           </p>
           <p className="mt-0.5 text-xs text-[var(--el-muted)]">
-            {formatAppDate(delegation.createdAt, DATE, dateLocale)} 연결 · 최근
-            사용{" "}
-            {delegation.lastUsedAt
-              ? formatAppDate(delegation.lastUsedAt, DATE, dateLocale)
-              : "아직 안 씀"}
+            {t("row.meta", {
+              connected: formatAppDate(delegation.createdAt, DATE, dateLocale),
+              lastUsed: delegation.lastUsedAt
+                ? formatAppDate(delegation.lastUsedAt, DATE, dateLocale)
+                : t("row.neverUsed"),
+            })}
           </p>
         </div>
       </div>
@@ -354,7 +360,7 @@ function WorkspaceDelegationRow({
         disabled={busy}
         onClick={() => setConfirmOpen(true)}
       >
-        끊기
+        {t("row.disconnect")}
       </Button>
       <AlertDialog
         open={confirmOpen}
@@ -366,17 +372,15 @@ function WorkspaceDelegationRow({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              「{delegation.name}」 연결을 끊을까요?
+              {t("row.dialog.title", { name: delegation.name })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {delegation.userName} 님이 맡긴 연결입니다. 이 연결을 쓰는
-              에이전트는 다음 요청부터 막힙니다. 되돌릴 수 없고, 다시 쓰려면
-              맡긴 사람이 새로 연결해야 합니다.
+              {t("row.dialog.description", { user: delegation.userName })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={revoke.isPending}>
-              취소
+              {tActions("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -395,7 +399,7 @@ function WorkspaceDelegationRow({
                 setConfirmOpen(false);
               }}
             >
-              끊기
+              {t("row.disconnect")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -409,8 +413,9 @@ const CARD_ROW = "flex items-center justify-between gap-4";
 const SKELETON_DELEGATIONS = 2;
 
 function AllowTitle() {
+  const t = useTranslations("settings.workspaceAgents.allow");
   return (
-    <p className="text-sm font-medium text-[var(--el-ink)]">MCP 연결 허용</p>
+    <p className="text-sm font-medium text-[var(--el-ink)]">{t("title")}</p>
   );
 }
 
@@ -422,13 +427,14 @@ function OpenConnectionsFrame({
   placeholder?: boolean;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("settings.workspaceAgents.open");
   return (
     <section
-      aria-label="열린 연결"
+      aria-label={t("title")}
       aria-hidden={placeholder || undefined}
       className="mt-8"
     >
-      <h3 className="text-sm font-medium text-[var(--el-ink)]">열린 연결</h3>
+      <h3 className="text-sm font-medium text-[var(--el-ink)]">{t("title")}</h3>
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -436,9 +442,10 @@ function OpenConnectionsFrame({
 
 /** `WorkspaceDelegationRow` 와 같은 틀(이름 줄·팀원 줄·날짜 줄·끊기)에 값만 막대로 둔다. */
 function DelegationRowsSkeleton() {
+  const t = useTranslations("settings.workspaceAgents.open");
   return (
     // 목록(`ul`)으로 세우지 않는다 — 도착 전의 자리가 연결 목록으로 읽히면 안 된다.
-    <div className="space-y-3" aria-label="열린 연결 불러오는 중">
+    <div className="space-y-3" aria-label={t("loading")}>
       {Array.from({ length: SKELETON_DELEGATIONS }, (_, index) => (
         <div key={index} className={cn(CARD_ROW, SETTINGS_CARD)}>
           <div className="flex min-w-0 items-start gap-3">

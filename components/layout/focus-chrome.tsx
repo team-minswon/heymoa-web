@@ -3,10 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
+import { localePath } from "@/lib/i18n/locales";
 
 /**
  * 카드 하나만 세우는 흐름(`isFocusChromeRoute` — 외부 에이전트 동의 · 초대)의 머리글. 메뉴 없이 로고와 로그아웃만 둔다.
@@ -16,6 +18,7 @@ import { siteConfig } from "@/lib/site";
  * 로그인한 사람은 SSR 이 `initialData` 를 채워 `checking` 을 안 지나므로, 로그아웃이 뒤늦게 끼어들며 밀리는 일은 없다.
  */
 export function FocusTopBar() {
+  const t = useTranslations("shell.focusChrome");
   const { status, isLoggingOut, logout } = useAuth();
 
   return (
@@ -43,7 +46,7 @@ export function FocusTopBar() {
           onClick={() => void logout()}
         >
           <LogOut aria-hidden />
-          로그아웃
+          {t("logout")}
         </Button>
       ) : null}
     </header>
@@ -55,14 +58,16 @@ const LINK =
 
 /** 같은 흐름의 발. 약관 · 개인정보만 둔다. */
 export function FocusFooter() {
+  const t = useTranslations("shell.focusChrome");
+  const locale = useLocale();
   return (
     <footer className="flex items-center justify-center gap-2 px-4 pt-2 pb-6 text-sm text-[var(--el-muted)]">
-      <Link href="/terms" className={LINK}>
-        이용약관
+      <Link href={localePath(locale, "/terms")} className={LINK}>
+        {t("terms")}
       </Link>
       <span aria-hidden>·</span>
-      <Link href="/privacy" className={LINK}>
-        개인정보 처리방침
+      <Link href={localePath(locale, "/privacy")} className={LINK}>
+        {t("privacy")}
       </Link>
     </footer>
   );

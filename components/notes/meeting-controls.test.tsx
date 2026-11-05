@@ -91,10 +91,17 @@ describe("MeetingStatusChip", () => {
 
   it("기록 중만 붉게 낸다 — 나머지 상태는 사건이 아니라 상태다", () => {
     const { rerender } = render(<MeetingStatusChip status="IN_PROGRESS" />);
-    expect(screen.getByText("기록 중")).toHaveClass("text-destructive");
+    expect(screen.getByTitle("기록 중")).toHaveClass("text-destructive");
 
     rerender(<MeetingStatusChip status="ENDED" />);
-    expect(screen.getByText("종료됨")).not.toHaveClass("text-destructive");
+    expect(screen.getByTitle("종료됨")).not.toHaveClass("text-destructive");
+  });
+
+  it("좁은 상단바에서는 어느 상태든 글자를 접는다 — 영어 라벨이 탭을 덮지 않게", () => {
+    render(<MeetingStatusChip status="IN_PROGRESS" />);
+    expect(screen.getByText("기록 중")).toHaveClass(
+      "@max-[640px]/topbar:sr-only"
+    );
   });
 
   it("라벨은 목록 행과 같은 이름을 쓴다", () => {
@@ -140,7 +147,7 @@ describe("MeetingControls", () => {
     const end = screen.getByRole("button", { name: "회의 종료" });
     expect(end).toBeDisabled();
     expect(end).toHaveAccessibleDescription(
-      "테스트 유저 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다"
+      "테스트 유저 님이 기록 중입니다. 일시정지한 뒤 종료할 수 있습니다"
     );
   });
 
@@ -168,7 +175,7 @@ describe("MeetingControls", () => {
 
     expect(
       await screen.findByText(
-        "테스트 유저 님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다",
+        "테스트 유저 님이 기록 중입니다. 일시정지한 뒤 종료할 수 있습니다",
         {
           selector:
             "[data-slot=tooltip-content] *, [data-slot=tooltip-content]",

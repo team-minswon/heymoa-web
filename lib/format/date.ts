@@ -1,3 +1,5 @@
+import type { DatesT } from "@/lib/i18n/translator";
+
 export const APP_TIME_ZONE = "Asia/Seoul";
 
 export function getAppDateKey(value: string | Date) {
@@ -69,13 +71,17 @@ export function formatAppDate(
   }).formatToParts(date);
   const korean = locale.startsWith("ko");
 
-  return parts
-    .map((part) =>
-      korean && part.type === "dayPeriod"
-        ? (KO_DAY_PERIOD[part.value] ?? part.value)
-        : part.value
-    )
-    .join("");
+  return (
+    parts
+      .map((part) =>
+        korean && part.type === "dayPeriod"
+          ? (KO_DAY_PERIOD[part.value] ?? part.value)
+          : part.value
+      )
+      .join("")
+      // Node 의 ICU 는 en 의 「9:00 AM」 사이에 좁은 공백(U+202F)을 넣고 브라우저는 보통 공백을 넣는다. 같은 이유로 맞춘다
+      .replace(/\u202f/g, " ")
+  );
 }
 
 /** 앱 시간대의 24시간 시:분 — 「09:05」. 회의록 일시 · 일시정지 줄이 같은 벽시계를 쓴다. */
@@ -88,23 +94,29 @@ export function formatAppClock(value: string | Date) {
 }
 
 /** `2026-09-19` → 「9월 19일 (토)」. 날짜만 있는 값이라 서울 자정으로 읽는다. */
-export function formatDueDate(value: string) {
-  return formatAppDate(`${value}T00:00:00+09:00`, {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
+export function formatDueDate(value: string, locale?: string) {
+  return formatAppDate(
+    `${value}T00:00:00+09:00`,
+    { month: "long", day: "numeric", weekday: "short" },
+    locale
+  );
 }
 
 /**
  * 약속하는 시각을 메일과 같은 꼴로 — 「10월 23일(금) 오후 4시 20분」, 정각이면 「오후 4시」(PRO-67 자동 종료 예고).
+ * 영어는 「Fri, Oct 23 at 4:20 PM」. 숫자·요일·오전오후는 `Intl` 이 그 언어로 내고 어순은 `dates.promiseTime` 이 정한다.
  */
-export function formatPromiseTime(value: string | Date) {
+export function formatPromiseTime(
+  value: string | Date,
+  locale: string,
+  t: DatesT
+) {
   const date = typeof value === "string" ? new Date(value) : value;
+  const korean = locale.startsWith("ko");
   const part = Object.fromEntries(
-    new Intl.DateTimeFormat("ko-KR", {
+    new Intl.DateTimeFormat(locale, {
       timeZone: APP_TIME_ZONE,
-      month: "numeric",
+      month: korean ? "numeric" : "short",
       day: "numeric",
       weekday: "short",
       hour: "numeric",
@@ -115,5 +127,15 @@ export function formatPromiseTime(value: string | Date) {
       .map((item) => [item.type, item.value])
   );
   const minute = Number(part.minute);
-  return `${part.month}월 ${part.day}일(${part.weekday}) ${KO_DAY_PERIOD[part.dayPeriod] ?? part.dayPeriod} ${part.hour}시${minute ? ` ${minute}분` : ""}`;
+  return t("promiseTime", {
+    month: part.month,
+    day: part.day,
+    weekday: part.weekday,
+    period: korean
+      ? (KO_DAY_PERIOD[part.dayPeriod] ?? part.dayPeriod)
+      : part.dayPeriod,
+    hour: part.hour,
+    minute,
+    minutePadded: String(minute).padStart(2, "0"),
+  });
 }

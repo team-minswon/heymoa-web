@@ -1,4 +1,7 @@
+"use client";
+
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -20,11 +23,13 @@ export function ShowMoreButton({
   onToggle: () => void;
   className?: string;
 }) {
+  const t = useTranslations("common.actions");
+  const text = open ? t("collapse") : moreLabel;
   return (
     <button
       type="button"
       aria-expanded={open}
-      aria-label={subject ? `${subject} ${open ? "접기" : moreLabel}` : undefined}
+      aria-label={subject ? `${subject} ${text}` : undefined}
       onClick={onToggle}
       className={cn(
         "inline-flex items-center gap-1 text-[12.5px] text-[var(--el-muted)] hover:text-[var(--el-ink)]",
@@ -38,7 +43,7 @@ export function ShowMoreButton({
           open && "rotate-180"
         )}
       />
-      {open ? "접기" : moreLabel}
+      {text}
     </button>
   );
 }

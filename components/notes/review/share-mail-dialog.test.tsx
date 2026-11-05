@@ -241,7 +241,7 @@ describe("ShareMailDialog", () => {
         })
       );
       fireEvent.click(
-        screen.getByRole("button", { name: "보내지 못한 1명 다시 보내기" })
+        screen.getByRole("button", { name: "보내지 못한 1명에게 다시 보내기" })
       );
       expect(
         screen.getByRole("button", { name: "1명에게 보내기" })

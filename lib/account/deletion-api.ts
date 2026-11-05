@@ -52,7 +52,8 @@ export function useDeletionPlan(enabled: boolean) {
     staleTime: 0,
     queryFn: async ({ signal }) => {
       const plan = okData(await getDeletionPlan({ signal }));
-      if (!plan) throw new Error("처리 목록을 불러오지 못했습니다.");
+      // 화면은 `isError` 로 자기 문구(`settings.accountDeletion.plan.loadFailed`)를 그린다
+      if (!plan) throw new Error("Deletion plan response was empty");
       return plan;
     },
   });

@@ -1,9 +1,10 @@
 import { viewerDateKey } from "@/lib/format/date";
 import type { AgentChatsResponseDataChatsItem } from "@/lib/api/generated/models";
 import type { ChatStreamPhase } from "@/lib/chat/stream-protocol";
+import type { DatesT } from "@/lib/i18n/translator";
 
-/** 목록 한 줄에 서는 배지. 없으면 그 대화는 지금 아무것도 안 한다. */
-export type RunningLabel = "진행 중" | "승인 대기";
+/** 목록 한 줄에 서는 배지(`chat.running.<값>`). 없으면 그 대화는 지금 아무것도 안 한다. */
+export type RunningLabel = "streaming" | "approval";
 
 /** 지금 열려 있는 대화에 대해 SSE 가 아는 것. 목록보다 항상 빠르다. */
 export type OpenChatStatus = {
@@ -19,15 +20,15 @@ export type OpenChatStatus = {
 };
 
 function labelOfPhase(phase: ChatStreamPhase): RunningLabel | null {
-  if (phase === "awaiting_approval") return "승인 대기";
-  return phase === "streaming" ? "진행 중" : null;
+  if (phase === "awaiting_approval") return "approval";
+  return phase === "streaming" ? "streaming" : null;
 }
 
 function labelOfList(
   runningTurn: AgentChatsResponseDataChatsItem["runningTurn"]
 ): RunningLabel | null {
   if (!runningTurn) return null;
-  return runningTurn.status === "WAITING_APPROVAL" ? "승인 대기" : "진행 중";
+  return runningTurn.status === "WAITING_APPROVAL" ? "approval" : "streaming";
 }
 
 /**
@@ -55,8 +56,8 @@ const DAY_MS = 86_400_000;
  * 목록 묶음은 오늘 · 어제 · 지난 7일 · 이전 넷이다. 정확한 자리는 줄 오른쪽의 상대 시각이 말한다.
  */
 export type ChatGroup<T> = {
+  /** 묶음 이름은 화면이 `chat.history.groups.<key>` 로 그린다. */
   key: "today" | "yesterday" | "week" | "older";
-  label: string;
   chats: T[];
 };
 
@@ -74,16 +75,16 @@ function bucketOf(
   at: string,
   now: Date,
   timeZone?: string
-): Pick<ChatGroup<never>, "key" | "label"> {
+): Pick<ChatGroup<never>, "key"> {
   const days = daysBetween(
     viewerDateKey(at, timeZone),
     viewerDateKey(now, timeZone)
   );
 
-  if (days <= 0) return { key: "today", label: "오늘" };
-  if (days === 1) return { key: "yesterday", label: "어제" };
-  if (days < 7) return { key: "week", label: "지난 7일" };
-  return { key: "older", label: "이전" };
+  if (days <= 0) return { key: "today" };
+  if (days === 1) return { key: "yesterday" };
+  if (days < 7) return { key: "week" };
+  return { key: "older" };
 }
 
 /**
@@ -116,11 +117,15 @@ export function groupChatsByRecency<T extends { updatedAt: string }>(
  * 「1분 전」·「3일 전」 같은 상대 시각. **앱 언어(`locale`)를 꼭 넘긴다.** 숫자와 단위는 `Intl` 이 낸다. 1분 미만은 「방금」이다 —
  * `Intl` 에 0을 넘기면 「이번 분」이 나온다. 달·해는 30일·365일 관용값으로 자른다.
  */
-export function relativeUpdatedAt(at: string, now: Date, locale?: string) {
+export function relativeUpdatedAt(
+  at: string,
+  now: Date,
+  t: DatesT,
+  locale?: string
+) {
   const elapsed = now.getTime() - Date.parse(at);
   // 로케일은 앱 언어를 받는다(`useLocale`). 비우면 브라우저 언어를 따라 한국어 화면에 「57m ago」가 섞인다
-  if (elapsed < 60_000)
-    return locale && !locale.startsWith("ko") ? "just now" : "방금";
+  if (elapsed < 60_000) return t("justNow");
 
   const format = new Intl.RelativeTimeFormat(locale, {
     numeric: "always",

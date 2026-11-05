@@ -7,7 +7,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { TERM_EXAMPLE, TermEditor } from "@/components/terms/term-editor";
+import { TermEditor } from "@/components/terms/term-editor";
+
+const TERM_EXAMPLE = "ROAS, CTR, 전환율, 리타겟팅";
 
 const terms = [
   { termId: "1", term: "결제 승인" },
@@ -60,7 +62,7 @@ describe("TermEditor 여러 개 한 번에", () => {
     const { input } = setup();
     type(input, `핀볼, PG사, pg사, ${"가".repeat(41)}`);
     expect(screen.getByText("새로 1개")).toBeInTheDocument();
-    expect(screen.getByText("이미 있어요 2개")).toBeInTheDocument();
+    expect(screen.getByText("중복 2개")).toBeInTheDocument();
     expect(screen.getByText("40자를 넘어 제외 1개")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1개 추가" })).toBeEnabled();
   });
@@ -97,7 +99,7 @@ describe("TermEditor 여러 개 한 번에", () => {
     const { input, onAddMany } = setup({ limit: 4 });
     type(input, "A, B, C");
     expect(screen.getByText("새로 2개")).toBeInTheDocument();
-    expect(screen.getByText("한도를 넘어 못 넣어요 1개")).toBeInTheDocument();
+    expect(screen.getByText("한도 초과 1개")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "2개 추가" }));
     expect(onAddMany.mock.calls[0][0]).toEqual(["A", "B"]);
   });
@@ -113,7 +115,7 @@ describe("TermEditor 여러 개 한 번에", () => {
   it("한도에 닿으면 입력을 막고 안내한다", () => {
     const { input } = setup({ limit: 2 });
     expect(input).toBeDisabled();
-    expect(screen.getByText(/다 채웠어요/)).toBeInTheDocument();
+    expect(screen.getByText(/다 채웠습니다/)).toBeInTheDocument();
     expect(screen.getByText(/2 \/ 2/)).toBeInTheDocument();
   });
 

@@ -5,6 +5,7 @@ import { track } from "@/lib/analytics/track";
 import { AnimatePresence, motion } from "motion/react";
 import { Mic, Pause, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   isNoteRecordingActive,
@@ -64,7 +65,7 @@ export function RecordingDock({
   noteId,
   workspaceId,
   disabledReason = null,
-  startLabel = "회의 시작",
+  startLabel: startLabelProp,
   onStart,
 }: {
   noteId: string;
@@ -82,9 +83,12 @@ export function RecordingDock({
    * 이 문구가 대신 선다 — 눌러서 실패하게 두면 "지금 할 수 없음"이 오류로 읽힌다.
    */
   disabledReason?: string | null;
-  startLabel?: "회의 시작" | "재개";
+  startLabel?: string;
   onStart?: () => void;
 }) {
+  const t = useTranslations("recording");
+  const tActions = useTranslations("common.actions");
+  const startLabel = startLabelProp ?? t("dock.start");
   const recording = useRecording();
   const meter = useRecordingMeter();
   const hasActiveSession = recording.activeNoteId
@@ -98,7 +102,7 @@ export function RecordingDock({
     <motion.div
       layout="size"
       layoutDependency={state}
-      aria-label="녹음 제어"
+      aria-label={t("dock.label")}
       role="group"
       // 상태가 바뀔 때만 너비를 보간하고, 전체·사이드 보기의 위치 변경은 즉시 반영한다.
       // 높이를 44px로 **고정**한다. 예전에는 `min-h-11`(44px)로 의도해 놓고 안쪽 컨트롤이
@@ -142,7 +146,7 @@ export function RecordingDock({
             <span
               role="meter"
               data-testid="note-recording-waveform"
-              aria-label="마이크 입력"
+              aria-label={t("micInput")}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(meter.level * 100)}
@@ -168,7 +172,7 @@ export function RecordingDock({
                     // `after:-inset-1`은 **보이는 크기는 36px로 두고 누르는 영역만 44px**로 넓힌다 —
                     // 독을 44px로 줄이면서 탭 영역까지 같이 줄면 모바일에서 가장자리가 안 먹는다.
                     className="size-9 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)] after:absolute after:-inset-1 after:content-['']"
-                    aria-label="일시정지"
+                    aria-label={t("dock.pause")}
                     onClick={() => {
                       track("recording_stop_clicked", { surface: "note" });
                       void recording.stop();
@@ -179,7 +183,7 @@ export function RecordingDock({
                 <Pause className="size-3.5" aria-hidden />
               </TooltipTrigger>
               <TooltipContent side="right">
-                일시정지 — 회의는 끝나지 않습니다
+                {t("pause.tooltip")}
               </TooltipContent>
             </Tooltip>
           </motion.div>
@@ -203,10 +207,10 @@ export function RecordingDock({
               key={state}
               label={
                 state === "requesting-permission"
-                  ? "권한 확인 중"
+                  ? t("dock.requestingPermission")
                   : state === "connecting"
-                    ? "녹음 시작 중"
-                    : "녹음 마무리 중"
+                    ? t("dock.connecting")
+                    : t("dock.stopping")
               }
             />
           </motion.div>
@@ -266,7 +270,7 @@ export function RecordingDock({
               }}
             >
               <RotateCcw className="size-3.5" />
-              다시 녹음
+              {t("dock.retry")}
             </Button>
             {/* 서버 세션이 열려 있으면(READY/ACTIVE) 닫기를 숨긴다 — disconnect()는 로컬만
                 지우므로 서버에 열린 세션이 남아 회의 종료·재시작이 계속 거절된다. */}
@@ -275,7 +279,7 @@ export function RecordingDock({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label="닫기"
+                aria-label={tActions("close")}
                 className="size-9 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:text-[var(--el-muted)] after:absolute after:-inset-1 after:content-['']"
                 onClick={() => void recording.disconnect()}
               >
@@ -304,7 +308,9 @@ export function RecordingDock({
                     type="button"
                     className="relative flex size-9 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45 after:absolute after:-inset-1 after:content-['']"
                     aria-label={
-                      isOtherNote ? "다른 노트에서 녹음 중" : startLabel
+                      isOtherNote
+                        ? t("dock.otherNote")
+                        : startLabel
                     }
                     // 소속이 확인되기 전에는 못 누른다 — 확인 없이 시작하면 잘못된 워크스페이스로
                     // 기록된다. 조회는 곧 끝나고, 어긋난 URL이면 위 `disabledReason`이 이유를 세운다.
