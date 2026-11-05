@@ -89,7 +89,10 @@ export const scenes = [
       await blur(p);
       await p.waitForTimeout(700);
       mark();
-      const mail = p.getByRole("switch", { name: L("문의 답변 메일") });
+      const mail = p.getByRole("switch", {
+        // 스위치 이름은 「{종류} {채널}」 이다(settings.notifications.channelLabel)
+        name: `${K("settings.notifications.types.INQUIRY_ANSWERED")} ${K("settings.notifications.channels.email.label")}`,
+      });
       await click(p, mail, 900);
       assert.equal(await mail.getAttribute("aria-checked"), "false");
     },
@@ -100,6 +103,8 @@ export const scenes = [
     async ready(p) {
       const open = button(p, L("계정 삭제"));
       await open.waitFor();
+      // 설정 창은 계정 조회가 끝나면 한 번 다시 그려진다 — 그 뒤에 스크롤한다
+      await p.waitForTimeout(1500);
       await open.scrollIntoViewIfNeeded();
       await blur(p);
     },
@@ -229,11 +234,15 @@ export const scenes = [
     async run(p) {
       await click(p, button(p, L("내 에이전트 열기")));
       await click(p, button(p, L("새 대화")));
-      await click(p, p.getByRole("button", { name: new RegExp(L("회의록에서 찾기")) }), 0);
-      await button(p, L("중지")).waitFor();
-      await button(p, L("중지")).waitFor({ state: "hidden" });
+      // 시작 화면의 예시 질문 중 첫 칩(「최근 결정」 등). 칩 구성은 워크스페이스 상태에 따라 고른다
+      await click(p, p.getByRole("list", { name: K("chat.starter.examplesLabel") }).getByRole("button").first(), 0);
+      // 칩은 질문을 입력칸에 채운다 — 보내기를 눌러 답을 받는다
+      await click(p, button(p, K("chat.composer.send")), 600);
+      // 답이 짧으면 「중지」가 잠깐만 보인다 — 나타나기를 기다리지 않고 사라진 뒤(답이 끝난 뒤)를 본다
+      await p.waitForTimeout(1500);
+      await button(p, K("chat.composer.stop")).waitFor({ state: "hidden", timeout: 30000 });
       assert.ok(
-        (await p.getByLabel(K("chat.panelLabel")).innerText()).length > 0
+        (await p.getByTestId("personal-chat-panel").innerText()).length > 0
       );
     },
   },
@@ -272,7 +281,7 @@ export const scenes = [
         dialog.getByPlaceholder(L("받는 분께 남길 말을 적으세요")),
         L("오늘 회의록 공유드립니다.", "Here are the notes from today's meeting.")
       );
-      await click(p, dialog.getByRole("button", { name: new RegExp(`${L("보내기")}$`) }).last());
+      await click(p, dialog.getByRole("button", { name: R(/보내기$/, /^Send( to|$)/) }).last());
       await p.waitForTimeout(1800);
     },
   },

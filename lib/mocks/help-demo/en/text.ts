@@ -8,6 +8,15 @@ export const HD_TEXT = {
   invitingWorkspaceName: "Design Team",
 };
 
+export const CHAT_STREAM_TEXT = {
+  thisNote: "This meeting note",
+  searching: (title: string) => `Looking through ${title} for what you asked.`,
+  skim: "Checking the transcript for related lines first.",
+  toolSummary: "Search the transcript for related lines",
+  found: "3 found",
+  composing: "Putting the answer together from those lines.",
+};
+
 export const PAUSED_SCRIPT: ParsedScript = {
   lines: [
     { label: "A", text: "Let's go through twelve of the twenty FAQ drafts together first." },

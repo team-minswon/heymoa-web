@@ -9,6 +9,16 @@ export const HD_TEXT = {
   invitingWorkspaceName: "디자인 팀",
 };
 
+/** 챗봇 목 스트림(`chat-stream.ts`)의 기본 답변 경로가 흘리는 진행 문구. 가이드 캡처에만 쓴다. */
+export const CHAT_STREAM_TEXT = {
+  thisNote: "이 회의록",
+  searching: (title: string) => `${title}에서 물어보신 내용을 찾습니다.`,
+  skim: "스크립트에서 관련 발화를 먼저 훑겠습니다.",
+  toolSummary: "스크립트에서 관련 발화 검색",
+  found: "3건 찾음",
+  composing: "찾은 발화로 답을 정리합니다.",
+};
+
 /** 일시정지된 회의(FAQ 초안 리뷰)에 남은 앞부분 전사. */
 export const PAUSED_SCRIPT: ParsedScript = {
   lines: [

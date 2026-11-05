@@ -62,6 +62,7 @@ export type HelpDemoPack = {
   scripts: { campaign: ParsedScript; landing: ParsedScript; weekly: ParsedScript };
   pausedScript: ParsedScript;
   text: { workspaceName: string; workspaceDescription: string; practiceWorkspaceName: string; invitingWorkspaceName: string };
+  chatStream: typeof koText.CHAT_STREAM_TEXT;
   chats: (now: number) => Pick<StoreState, "agentChats" | "agentChatMessages">;
   feedbacks: (now: number) => StoreState["feedbacks"];
   integrations: (now: number) => StoreState["integrations"];
@@ -96,6 +97,7 @@ const KO: HelpDemoPack = {
   scripts: { campaign: koCampaign.CAMPAIGN_SCRIPT, landing: koLanding.LANDING_SCRIPT, weekly: koWeekly.WEEKLY_SCRIPT },
   pausedScript: koText.PAUSED_SCRIPT,
   text: koText.HD_TEXT,
+  chatStream: koText.CHAT_STREAM_TEXT,
   chats: koMisc.helpDemoChats,
   feedbacks: koMisc.helpDemoFeedbacks,
   integrations: koMisc.helpDemoIntegrations,
@@ -127,6 +129,7 @@ const EN: HelpDemoPack = {
   scripts: { campaign: enCampaign.CAMPAIGN_SCRIPT, landing: enLanding.LANDING_SCRIPT, weekly: enWeekly.WEEKLY_SCRIPT },
   pausedScript: enText.PAUSED_SCRIPT,
   text: enText.HD_TEXT,
+  chatStream: enText.CHAT_STREAM_TEXT,
   chats: enMisc.helpDemoChats,
   feedbacks: enMisc.helpDemoFeedbacks,
   integrations: enMisc.helpDemoIntegrations,
