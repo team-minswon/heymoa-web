@@ -60,7 +60,7 @@ export function usePdfArtifact(
       .then((result) => {
         controller.signal.throwIfAborted();
         if (currentKey.current !== key)
-          throw new DOMException("문서가 변경되었습니다", "AbortError");
+          throw new DOMException("The document changed", "AbortError");
         setState({ key, artifact: result, pending: false, attempted: true });
         return result;
       })

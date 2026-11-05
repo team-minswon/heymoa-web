@@ -17,6 +17,7 @@ import { ReviewRow } from "@/components/notes/review/review-row";
 import { roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import { ConfirmBar } from "@/components/notes/review/confirm-bar";
+import { intlWrapper } from "@/components/help/test-intl";
 import {
   ReplacementSuggestion,
   TaskChangeSuggestion,
@@ -328,7 +329,7 @@ describe("ItemTrail", () => {
       refetch: vi.fn(),
     };
     const { rerender } = trail();
-    expect(screen.getByLabelText("수정이력 불러오는 중")).toBeInTheDocument();
+    expect(screen.getByLabelText("수정 이력 불러오는 중")).toBeInTheDocument();
 
     const refetch = vi.fn();
     revisionsState.current = { data: undefined, isLoading: false, refetch };
@@ -427,7 +428,7 @@ describe("ItemTrail", () => {
     trail({ item: item({ content: "판 2" }) });
 
     expect(
-      screen.getByRole("list", { name: "수정이력" }).querySelector("li")
+      screen.getByRole("list", { name: "수정 이력" }).querySelector("li")
     ).toHaveTextContent("v2");
     const toggles = screen.getAllByRole("button", { expanded: false });
     expect(toggles.length).toBeGreaterThan(0);
@@ -629,6 +630,45 @@ describe("ConfirmBar", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "프로젝트 승인 기준이 변경되었습니다."
     );
+  });
+});
+
+describe("ConfirmBar (영어)", () => {
+  it("영어 화면은 복수형과 강조 숫자를 영어로 그리고 한글이 남지 않는다", () => {
+    const { container, rerender } = render(
+      <ConfirmBar
+        summary={{ newTasks: 1, endedDecisions: 1, changedTasks: 2 }}
+        decisions={2}
+        pending={false}
+        onConfirm={vi.fn()}
+      />,
+      { wrapper: intlWrapper("en") }
+    );
+    expect(screen.getByText(/^Add/)).toHaveTextContent(
+      "Add 2 decisions and 1 task · 1 earlier decision will end · 2 existing tasks change"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Finish review" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "This adds 2 selected decisions and 1 selected task to the project."
+    );
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "2 existing tasks will change."
+    );
+    expect(screen.getByRole("alertdialog").textContent).not.toMatch(/[가-힣]/);
+
+    rerender(
+      <ConfirmBar
+        summary={{ newTasks: 1, endedDecisions: 0, changedTasks: 0 }}
+        decisions={0}
+        pending={false}
+        blocked="x"
+        unchosen={1}
+        onShowUnchosen={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+    expect(container).toHaveTextContent("1 suggestion to review");
+    expect(container.textContent).not.toMatch(/[가-힣]/);
   });
 });
 

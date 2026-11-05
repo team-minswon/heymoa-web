@@ -38,6 +38,42 @@ describe("REST mock handlers", () => {
     });
   });
 
+  describe("계정 화면 언어 (APP-1283 계약, APP-1285)", () => {
+    // 저장한 언어는 새로고침(시드 재생성)에도 남도록 쿠키에 적힌다. 시험 사이에는 지운다.
+    afterEach(() => {
+      document.cookie = "heymoa-mock-account-lang=; path=/; max-age=0";
+      mockDb.reset();
+    });
+
+    const patch = (body: unknown) =>
+      fetch("http://localhost/v1/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+    it("고른 언어를 저장하고 세션·내 정보가 그 값을 싣는다. 같은 값을 다시 보내도 같다", async () => {
+      const first = await patch({ language: "en" });
+      expect(first.status).toBe(200);
+      expect((await first.json()).data.language).toBe("en");
+      expect((await patch({ language: "en" })).status).toBe(200);
+
+      const session = await (
+        await fetch("http://localhost/v1/auth/session")
+      ).json();
+      expect(session.data.user.language).toBe("en");
+      const me = await (await fetch("http://localhost/v1/users/me")).json();
+      expect(me.data.language).toBe("en");
+    });
+
+    it("모르는 언어는 400 BAD_REQUEST 이고 저장하지 않는다", async () => {
+      const response = await patch({ language: "ja" });
+      expect(response.status).toBe(400);
+      expect((await response.json()).error.code).toBe("BAD_REQUEST");
+      expect(mockDb.getCurrentUser().language).toBeNull();
+    });
+  });
+
   describe("필수 문서 동의 기록 (APP-1276)", () => {
     const record = (version: string) =>
       fetch("http://localhost/v1/users/me/consents", {

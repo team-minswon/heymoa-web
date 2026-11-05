@@ -84,13 +84,16 @@ describe("UnsubscribeLanding", () => {
 
     expect(await screen.findByText("al***@example.com")).toBeInTheDocument();
     expect(
+      screen.getByText(/계정으로 오는 아래 두 메일을 더 이상 보내지 않습니다/)
+    ).toHaveTextContent("메일을 끄면 al***@example.com 계정으로 오는 아래 두 메일을 더 이상 보내지 않습니다.");
+    expect(
       screen.getByRole("heading", { name: "일시정지된 회의 메일을 받지 않을까요?" })
     ).toBeInTheDocument();
     expect(
       screen.getByText("회의를 일시정지한 다음 영업일에 보내는 안내")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("자동 종료했을 때 보내는 안내")
+      screen.getByText("회의를 자동 종료했을 때 보내는 안내")
     ).toBeInTheDocument();
     // 서버가 자동 종료가 돌지 않는다고(`autoEndActive=false`) 하면 일정 고지는 없다.
     expect(
@@ -125,6 +128,9 @@ describe("UnsubscribeLanding", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText("보낸 문의에 HeyMoa 팀이 답했을 때 보내는 안내")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/계정으로 오는 아래 메일을 더 이상 보내지 않습니다/)
     ).toBeInTheDocument();
     expect(screen.queryByText(/일시정지된 회의/)).toBeNull();
     const button = screen.getByRole("button", { name: "메일 끄기" });

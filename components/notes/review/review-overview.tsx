@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { SectionBlock } from "@/components/notes/review/section-block";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,12 +25,14 @@ export function ReviewOverview({
   failed?: boolean;
   onRetry?: () => void;
 }) {
+  const t = useTranslations("notes.review.overview");
+  const tSummary = useTranslations("notes.summary");
   if (failed && onRetry) {
     return (
-      <SectionBlock title="요약">
+      <SectionBlock title={t("title")}>
         <InlineRetry
           variant="line"
-          label="요약을 불러오지 못했습니다."
+          label={tSummary("loadFailed")}
           onRetry={onRetry}
           className="pt-1"
         />
@@ -38,8 +42,8 @@ export function ReviewOverview({
 
   if (pending) {
     return (
-      <SectionBlock title="요약">
-        <div aria-label="요약 불러오는 중">
+      <SectionBlock title={t("title")}>
+        <div aria-label={tSummary("loading")}>
           <Skeleton className="h-7 w-[86%] rounded-chip" />
           <Skeleton className="mt-1 h-7 w-[62%] rounded-chip" />
         </div>
@@ -49,18 +53,16 @@ export function ReviewOverview({
 
   if (!summary || summary.status !== "SUCCEEDED") {
     return (
-      <SectionBlock title="요약">
+      <SectionBlock title={t("title")}>
         <p className="pt-1 text-[13px] text-[var(--el-muted)]">
-          {summary?.status === "FAILED"
-            ? "요약을 만들지 못했습니다. 아래 항목은 그대로 검토할 수 있습니다."
-            : "이 회의에는 주제 요약이 없습니다. 아래 항목은 그대로 검토할 수 있습니다."}
+          {summary?.status === "FAILED" ? t("failed") : t("none")}
         </p>
       </SectionBlock>
     );
   }
 
   return (
-    <SectionBlock title="요약">
+    <SectionBlock title={t("title")}>
       {/* 주제마다의 한 줄은 아래 주제 목차가 맡는다 */}
       <p className="text-[16px] leading-7 text-[var(--el-ink)]">
         {overviewText(summary)}

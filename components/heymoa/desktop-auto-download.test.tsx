@@ -20,7 +20,7 @@ it("새 안내 탭에서 공개 설치 파일을 다운로드합니다", async (
     os: "windows",
     href: DESKTOP_INSTALLERS.windows[0].href,
   });
-  render(<DesktopAutoDownload />);
+  render(<DesktopAutoDownload title="HeyMoa 설치 파일 다운로드" />);
   expect(await screen.findByTitle("HeyMoa 설치 파일 다운로드")).toHaveAttribute(
     "src",
     DESKTOP_INSTALLERS.windows[0].href
@@ -29,7 +29,7 @@ it("새 안내 탭에서 공개 설치 파일을 다운로드합니다", async (
 
 it("다운로드 페이지를 직접 열면 자동으로 파일을 받지 않습니다", () => {
   query.value = new URLSearchParams();
-  render(<DesktopAutoDownload />);
+  render(<DesktopAutoDownload title="HeyMoa 설치 파일 다운로드" />);
   expect(desktopDownload).not.toHaveBeenCalled();
 });
 
@@ -38,7 +38,7 @@ it.each([{ os: "other" as const, href: "/download" }])(
   async (target) => {
     vi.mocked(desktopDownload).mockResolvedValue(target);
     await act(async () => {
-      render(<DesktopAutoDownload />);
+      render(<DesktopAutoDownload title="HeyMoa 설치 파일 다운로드" />);
     });
     expect(screen.queryByTitle("HeyMoa 설치 파일 다운로드")).toBeNull();
   }

@@ -56,67 +56,51 @@ import {
  * 종류별 이름. **여기 없는 종류는 그리지 않는다** — 서버가 web 보다 먼저 새 종류를 내면 이름 없는 빈 행이 섰다(APP-1348).
  * 문자열 키인 이유도 같다: 계약 미러가 따라오기 전에 서버가 낸 종류(`ANALYSIS_READY`)를 이름으로 받는다.
  */
-const TYPE_LABELS: Record<string, string> = {
-  WORKSPACE_INVITATION: "워크스페이스 초대",
-  MEETING_PAUSED_REMINDER: "일시정지된 회의",
-  ANALYSIS_READY: "검토할 결과 준비",
+const TYPE_ORDER = [
+  "WORKSPACE_INVITATION",
+  "MEETING_PAUSED_REMINDER",
+  "ANALYSIS_READY",
   // 서버는 이 종류를 따로 내지 않는다 — 일시정지된 회의 메일을 따른다.
-  MEETING_AUTO_ENDED: "회의 자동 종료",
-  INQUIRY_ANSWERED: "문의 답변",
-};
-const TYPE_DESCRIPTIONS: Record<string, string> = {
-  MEETING_PAUSED_REMINDER: "리마인더와 자동 종료 안내",
-  ANALYSIS_READY: "회의 분석이 끝나 결과를 검토할 수 있을 때",
-  INQUIRY_ANSWERED: "보낸 문의에 HeyMoa 팀이 답했을 때",
-};
-/** 이름 옆 ? 도움말. 언제 무엇이 오는지 — 읽지 않아도 스위치는 쓸 수 있다. 문장마다 한 줄씩 끊는다. */
-const TYPE_HELP: Record<string, React.ReactNode> = {
-  MEETING_PAUSED_REMINDER: (
-    <>
-      <span className="block">
-        회의를 일시정지한 채 두면 1영업일 뒤 메일로 알려 드립니다.
-      </span>
-      <span className="mt-1 block">
-        3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을
-        한 번 더 보냅니다.
-      </span>
-    </>
-  ),
-};
+  "MEETING_AUTO_ENDED",
+  "INQUIRY_ANSWERED",
+] as const;
+type KnownType = (typeof TYPE_ORDER)[number];
+const isKnownType = (type: string): type is KnownType =>
+  (TYPE_ORDER as readonly string[]).includes(type);
+/** 이름 아래 한 줄 설명이 있는 종류. 문구는 `settings.notifications.descriptions`. */
+const DESCRIBED_TYPES = [
+  "MEETING_PAUSED_REMINDER",
+  "ANALYSIS_READY",
+  "INQUIRY_ANSWERED",
+] as const;
+const isDescribedType = (
+  type: string
+): type is (typeof DESCRIBED_TYPES)[number] =>
+  (DESCRIBED_TYPES as readonly string[]).includes(type);
 /** 행 순서는 시안을 따른다(일시정지된 회의 → 검토할 결과 준비). 서버가 주는 순서와 다를 수 있다. */
-const TYPE_ORDER = Object.keys(TYPE_LABELS);
 const CHANNELS = [
-  {
-    channel: "WEB",
-    label: "인앱",
-    missing: "이 알림은 인앱으로 보내지 않습니다",
-  },
-  {
-    channel: "EMAIL",
-    label: "메일",
-    missing: "이 알림은 메일로 보내지 않습니다",
-  },
+  { channel: "WEB", key: "web" },
+  { channel: "EMAIL", key: "email" },
 ] as const;
 
+// 채널별로 따로 끈다(APP-1352). 서버 필드 이름은 그대로 — muteAll 이 인앱, muteEmail 이 메일이다.
 type Mute = "muteAll" | "muteEmail";
-const MUTE_CONFIRM: Record<Mute, { title: string; body: string }> = {
-  // 채널별로 따로 끈다(APP-1352). 서버 필드 이름은 그대로 — muteAll 이 인앱, muteEmail 이 메일이다.
-  muteAll: {
-    title: "인앱 알림을 모두 끌까요?",
-    body: "선택 인앱 알림을 받지 않습니다. 다시 켜면 이전 설정이 그대로 돌아옵니다.",
-  },
-  muteEmail: {
-    title: "메일을 모두 끌까요?",
-    body: "선택 메일을 받지 않습니다. 다시 켜면 이전 설정이 그대로 돌아옵니다.",
-  },
-};
+const MUTES: readonly Mute[] = ["muteAll", "muteEmail"];
 
 function Header() {
+  const t = useTranslations("settings.notifications");
+  return <SettingsHeader title={t("title")} description={t("description")} />;
+}
+
+/** 이름 옆 ? 도움말. 언제 무엇이 오는지 — 읽지 않아도 스위치는 쓸 수 있다. 문장마다 한 줄씩 끊는다. */
+function TypeHelp({ type }: { type: KnownType }) {
+  const t = useTranslations("settings.notifications");
+  if (type !== "MEETING_PAUSED_REMINDER") return null;
   return (
-    <SettingsHeader
-      title="알림"
-      description="받을 알림을 고릅니다. 모든 워크스페이스에 같이 적용됩니다."
-    />
+    <HelpTip label={t("helpLabel", { type: t(`types.${type}`) })}>
+      <span className="block">{t("help.pausedReminder")}</span>
+      <span className="mt-1 block">{t("help.pausedAutoEnd")}</span>
+    </HelpTip>
   );
 }
 
@@ -124,15 +108,16 @@ function Header() {
  * 종류별 표의 틀(카드·머리줄). 실제와 skeleton 이 같이 쓴다 — 머리줄은 고정 문구라 skeleton 에서도 그대로 선다.
  */
 function TypeTable({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("settings.notifications");
   return (
     <div className={CARD}>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-[var(--el-muted)]">
             <th scope="col" className="py-3 text-left font-normal">
-              종류
+              {t("typeColumn")}
             </th>
-            {CHANNELS.map(({ channel, label }) => (
+            {CHANNELS.map(({ channel, key }) => (
               <th
                 key={channel}
                 scope="col"
@@ -140,7 +125,7 @@ function TypeTable({ children }: { children: React.ReactNode }) {
                 // 같은 폭의 칸 가운데라 메일 열과 같은 세로줄이다.
                 className={cn(CHANNEL_COLUMN, "py-3 font-normal")}
               >
-                {label}
+                {t(`channels.${key}.label`)}
               </th>
             ))}
           </tr>
@@ -173,10 +158,12 @@ const TYPE_CHANNEL_CELL = cn(CHANNEL_COLUMN, "py-3 align-middle");
 const SKELETON_TYPE_ROWS = 2;
 
 export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("settings.notifications");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const response = useGetNotificationSettingsSuspense().data;
   if (response.status !== 200 || !response.data.success) {
-    throw new Error("알림 설정을 불러오지 못했습니다.");
+    throw new Error(t("loadFailed"));
   }
   const settings: Settings = response.data.data;
   const [confirm, setConfirm] = useState<Mute | "reset" | null>(null);
@@ -303,23 +290,22 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
     );
 
   const optional = settings.items
-    .filter((item) => !item.required && TYPE_LABELS[item.type])
+    .flatMap((item) =>
+      !item.required && isKnownType(item.type)
+        ? [{ ...item, type: item.type }]
+        : []
+    )
     .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type));
 
   return (
     <div
       className="mx-auto w-full max-w-[720px] space-y-8"
-      aria-label="알림 설정"
+      aria-label={t("label")}
     >
       <Header />
 
-      <section aria-label="전체 끄기" className={CARD}>
-        {(
-          [
-            ["muteAll", "인앱 알림 모두 끄기"],
-            ["muteEmail", "메일 모두 끄기"],
-          ] as const
-        ).map(([key, label], index) => (
+      <section aria-label={t("muteSection")} className={CARD}>
+        {MUTES.map((key, index) => (
           <div
             key={key}
             className={cn(
@@ -328,14 +314,14 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
             )}
           >
             <span className="text-sm font-medium text-[var(--el-ink)]">
-              {label}
+              {t(`mute.${key}.label`)}
             </span>
             {/* 표의 채널 칸과 같은 폭의 칸 가운데 — 아래 메일 열 스위치와 같은 세로줄에 선다. */}
             <span
               className={cn(CHANNEL_COLUMN, "flex shrink-0 justify-center")}
             >
               <Switch
-                aria-label={label}
+                aria-label={t(`mute.${key}.label`)}
                 checked={settings[key]}
                 disabled={busy}
                 // 켤 때만 확인 창을 거친다. 풀 때는 바로 푼다.
@@ -348,26 +334,22 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
         ))}
       </section>
 
-      <section aria-label="종류별 알림">
+      <section aria-label={t("typeSection")}>
         <TypeTable>
           {optional.map((item) => (
             <tr key={item.type} className={TYPE_ROW}>
               <th scope="row" className={TYPE_NAME_CELL}>
                 <span className="flex items-center gap-1 font-medium text-[var(--el-ink)]">
-                  {TYPE_LABELS[item.type]}
-                  {TYPE_HELP[item.type] ? (
-                    <HelpTip label={`${TYPE_LABELS[item.type]} 알림 안내`}>
-                      {TYPE_HELP[item.type]}
-                    </HelpTip>
-                  ) : null}
+                  {t(`types.${item.type}`)}
+                  <TypeHelp type={item.type} />
                 </span>
-                {TYPE_DESCRIPTIONS[item.type] ? (
+                {isDescribedType(item.type) ? (
                   <span className="mt-0.5 block text-xs text-[var(--el-muted)]">
-                    {TYPE_DESCRIPTIONS[item.type]}
+                    {t(`descriptions.${item.type}`)}
                   </span>
                 ) : null}
               </th>
-              {CHANNELS.map(({ channel, label, missing }) => {
+              {CHANNELS.map(({ channel, key: channelKey }) => {
                 const value = item.channels.find(
                   (entry) => entry.channel === channel
                 );
@@ -375,8 +357,11 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
                   <td key={channel} className={TYPE_CHANNEL_CELL}>
                     <ChannelCell
                       value={value}
-                      label={`${TYPE_LABELS[item.type]} ${label}`}
-                      missing={missing}
+                      label={t("channelLabel", {
+                        type: t(`types.${item.type}`),
+                        channel: t(`channels.${channelKey}.label`),
+                      })}
+                      missing={t(`channels.${channelKey}.missing`)}
                       muted={
                         channel === "WEB"
                           ? settings.muteAll
@@ -414,7 +399,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
           disabled={busy}
           onClick={() => setConfirm("reset")}
         >
-          기본값으로 되돌리기
+          {t("reset.button")}
         </Button>
       </div>
 
@@ -436,21 +421,23 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirm === "reset"
-                ? "알림 설정을 기본값으로 되돌릴까요?"
+                ? t("reset.title")
                 : confirm
-                  ? MUTE_CONFIRM[confirm].title
+                  ? t(`mute.${confirm}.title`)
                   : null}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm === "reset"
-                ? "일시정지된 회의 메일과 검토할 결과 웹 알림이 다시 켜집니다."
+                ? t("reset.body")
                 : confirm
-                  ? MUTE_CONFIRM[confirm].body
+                  ? t(`mute.${confirm}.body`)
                   : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>
+              {tActions("cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               loading={busy}
               disabled={busy}
@@ -471,7 +458,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
                 }
               }}
             >
-              {confirm === "reset" ? "되돌리기" : "끄기"}
+              {confirm === "reset" ? t("reset.confirm") : t("muteConfirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -496,6 +483,7 @@ function ChannelCell({
   disabled: boolean;
   onChange: (enabled: boolean) => void;
 }) {
+  const t = useTranslations("settings.notifications");
   if (!value?.provided) {
     return (
       <Tooltip>
@@ -518,10 +506,10 @@ function ChannelCell({
     // 「모두 끄기」가 가린 칸. 스위치와 같은 자리·크기에 「꺼짐」만 둔다 — 옆에 글을 덧붙이면 칸 가운데가 어긋난다.
     return (
       <span
-        aria-label={`${label} 꺼짐`}
+        aria-label={t("offLabel", { label })}
         className="inline-flex h-5 w-9 items-center justify-center text-xs whitespace-nowrap text-[var(--el-muted)]"
       >
-        꺼짐
+        {t("off")}
       </span>
     );
   }
@@ -595,23 +583,24 @@ function MarketingConsentCard({
 }
 
 export function NotificationSettingsSkeleton() {
+  const t = useTranslations("settings.notifications");
   return (
     <div
       className="mx-auto w-full max-w-[720px] space-y-8"
-      aria-label="알림 설정 불러오는 중"
+      aria-label={t("loading")}
     >
       <Header />
       <section className={CARD}>
-        {["인앱 알림 모두 끄기", "메일 모두 끄기"].map((label, index) => (
+        {MUTES.map((key, index) => (
           <div
-            key={label}
+            key={key}
             className={cn(
               ROW,
               index > 0 && "border-t border-[var(--el-hairline)]"
             )}
           >
             <span className="text-sm font-medium text-[var(--el-ink)]">
-              {label}
+              {t(`mute.${key}.label`)}
             </span>
             <span
               className={cn(CHANNEL_COLUMN, "flex shrink-0 justify-center")}
@@ -644,7 +633,7 @@ export function NotificationSettingsSkeleton() {
       </section>
       <div className="flex justify-end">
         <Button type="button" variant="outline" disabled>
-          기본값으로 되돌리기
+          {t("reset.button")}
         </Button>
       </div>
     </div>

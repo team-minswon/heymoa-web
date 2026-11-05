@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -6,8 +7,17 @@ import { cn } from "@/lib/utils";
 /** 외부 에이전트를 끈 워크스페이스로 발급·허락하면 server 가 주는 403 코드(APP-939). */
 export const AGENT_ACCESS_DISABLED = "AGENT_ACCESS_DISABLED";
 
-/** 막힌 워크스페이스도 선택 상자에 남기고 이름 뒤에 붙인다 — 빼면 내 워크스페이스가 왜 없는지 모른다(APP-941). */
-export const BLOCKED_SUFFIX = " (MCP 꺼짐)";
+/**
+ * 막힌 워크스페이스도 선택 상자에 남기고 이름 뒤에 표시를 붙인다 — 빼면 내 워크스페이스가 왜 없는지 모른다(APP-941).
+ * 개인 토큰 폼과 동의 화면이 같이 쓴다.
+ */
+export function useWorkspaceOptionLabel() {
+  const t = useTranslations("agents.blocked");
+  return (workspace: { name: string; agentAccessAllowed?: boolean }) =>
+    workspace.agentAccessAllowed === false
+      ? t("name", { name: workspace.name })
+      : workspace.name;
+}
 
 /**
  * 고른 워크스페이스가 외부 에이전트를 막아 두었다(APP-941). 개인 토큰 폼과 동의 화면이 같이 쓴다 —
@@ -25,6 +35,7 @@ export function AgentAccessBlockedNotice({
   rechecking: boolean;
   className?: string;
 }) {
+  const t = useTranslations("agents.blocked");
   return (
     <div
       role="alert"
@@ -36,7 +47,7 @@ export function AgentAccessBlockedNotice({
       <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
       <div className="min-w-0 flex-1">
         <p className="leading-relaxed text-[var(--el-muted)]">
-          관리자가 이 워크스페이스의 MCP 연결을 꺼 두었습니다.
+          {t("message")}
         </p>
         <Button
           type="button"
@@ -47,7 +58,7 @@ export function AgentAccessBlockedNotice({
           disabled={rechecking}
           onClick={onRecheck}
         >
-          다시 확인
+          {t("recheck")}
         </Button>
       </div>
     </div>

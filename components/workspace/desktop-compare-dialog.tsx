@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { DesktopDownloadLink } from "@/components/heymoa/desktop-download-link";
@@ -15,22 +16,23 @@ import {
 import { cn } from "@/lib/utils";
 
 function SoundComparison() {
+  const t = useTranslations("shell.desktopCompare.table");
   return (
     <table className="w-full table-fixed border-collapse text-[15px]">
-      <caption className="sr-only">웹과 데스크톱 앱 녹음 범위 비교</caption>
+      <caption className="sr-only">{t("caption")}</caption>
       <thead>
         <tr className="border-b border-[var(--el-hairline)] text-[13px] text-[var(--el-muted)]">
           <th scope="col" className="w-[56%] pb-3 text-left font-normal">
-            녹음하는 소리
+            {t("sound")}
           </th>
           <th scope="col" className="pb-3 text-center font-normal">
-            웹
+            {t("web")}
           </th>
           <th
             scope="col"
             className="pb-3 text-center font-semibold text-[var(--el-ink)]"
           >
-            앱
+            {t("app")}
           </th>
         </tr>
       </thead>
@@ -40,18 +42,18 @@ function SoundComparison() {
             scope="row"
             className="py-5 pr-3 text-left align-middle font-medium text-[var(--el-ink)]"
           >
-            마이크로 들어오는 소리
+            {t("mic")}
             <span className="mt-1 block text-[13px] leading-5 font-normal text-[var(--el-muted)]">
-              내 목소리, 회의실 대화
+              {t("micExamples")}
             </span>
           </th>
           <td className="text-center">
             <Check aria-hidden className="mx-auto size-5" />
-            <span className="sr-only">기록 가능</span>
+            <span className="sr-only">{t("supported")}</span>
           </td>
           <td className="text-center">
             <Check aria-hidden className="mx-auto size-5" />
-            <span className="sr-only">기록 가능</span>
+            <span className="sr-only">{t("supported")}</span>
           </td>
         </tr>
         <tr className="border-b border-[var(--el-hairline)]">
@@ -59,18 +61,18 @@ function SoundComparison() {
             scope="row"
             className="py-5 pr-3 text-left align-middle font-medium text-[var(--el-ink)]"
           >
-            컴퓨터에서 재생되는 소리
+            {t("system")}
             <span className="mt-1 block text-[13px] leading-5 font-normal text-[var(--el-muted)]">
-              화상회의 상대방, 강의, 유튜브 영상
+              {t("systemExamples")}
             </span>
           </th>
           <td className="text-center text-[var(--el-muted)]">
             <Minus aria-hidden className="mx-auto size-5" />
-            <span className="sr-only">기록되지 않음</span>
+            <span className="sr-only">{t("unsupported")}</span>
           </td>
           <td className="text-center">
             <Check aria-hidden className="mx-auto size-5" />
-            <span className="sr-only">기록 가능</span>
+            <span className="sr-only">{t("supported")}</span>
           </td>
         </tr>
       </tbody>
@@ -78,20 +80,7 @@ function SoundComparison() {
   );
 }
 
-const STEPS = [
-  {
-    title: "기록할 수 있는 소리",
-    description: "웹은 마이크 소리, 앱은 컴퓨터 소리까지 기록합니다.",
-  },
-  {
-    title: "창을 닫아도 이어지는 녹음",
-    description: "녹음하는 동안 다른 작업을 해도 괜찮습니다.",
-  },
-  {
-    title: "사용하던 기록 그대로",
-    description: "웹과 앱은 같은 노트와 프로젝트를 사용합니다.",
-  },
-] as const;
+const STEPS = ["sound", "background", "sameData"] as const;
 
 export function DesktopCompareDialog({
   open,
@@ -100,6 +89,7 @@ export function DesktopCompareDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("shell.desktopCompare");
   const [index, setIndex] = useState(0);
   const step = STEPS[index];
   const change = (next: boolean) => {
@@ -111,14 +101,16 @@ export function DesktopCompareDialog({
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto bg-white p-6 sm:max-w-[600px] sm:p-8">
         <DialogHeader className="h-[108px] gap-2 pr-6 sm:h-[64px]">
           <DialogTitle className="text-[24px] leading-tight font-light tracking-tight">
-            {step.title}
+            {t(`steps.${step}.title`)}
           </DialogTitle>
-          <DialogDescription>{step.description}</DialogDescription>
+          <DialogDescription>
+            {t(`steps.${step}.description`)}
+          </DialogDescription>
         </DialogHeader>
         <div
           className="mt-6 h-[308px] overflow-y-auto"
           role="group"
-          aria-label={`${index + 1} / 3`}
+          aria-label={t("stepGroup", { current: index + 1, total: STEPS.length })}
         >
           {index === 0 ? (
             <SoundComparison />
@@ -126,25 +118,25 @@ export function DesktopCompareDialog({
             <div>
               <div
                 role="img"
-                aria-label="Mac 메뉴 막대에서 녹음 상태와 회의 타임라인을 보는 예시"
+                aria-label={t("menuBar.label")}
                 className="overflow-hidden rounded-control border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
               >
                 <div
                   aria-hidden
                   className="flex h-9 items-center justify-between border-b border-[var(--el-hairline)] bg-white px-3 text-xs text-[var(--el-muted)]"
                 >
-                  <span>Mac 메뉴 막대</span>
+                  <span>{t("menuBar.name")}</span>
                   <span className="inline-flex items-center gap-2 rounded-chip bg-[var(--el-surface-strong)] px-2 py-1 text-[var(--el-ink)]">
                     <span className="size-1.5 rounded-full bg-red-500" />
-                    녹음 중 · 12:34
+                    {t("menuBar.recording")}
                   </span>
                 </div>
                 <div aria-hidden className="px-6 pt-4 pb-9 sm:px-7">
                   <div className="ml-auto w-[90%] rounded-control border border-[var(--el-hairline)] bg-white p-3 shadow-sm sm:w-[84%]">
                     <p className="text-sm font-medium">
-                      주간 회의{" "}
+                      {t("menuBar.meeting")}{" "}
                       <span className="ml-1 font-normal text-[var(--el-muted)]">
-                        타임라인
+                        {t("menuBar.timeline")}
                       </span>
                     </p>
                     <div className="mt-2.5 space-y-2.5 border-t border-[var(--el-hairline)] pt-2.5 text-[13px]">
@@ -152,35 +144,35 @@ export function DesktopCompareDialog({
                         <span className="shrink-0 text-[var(--el-muted)]">
                           00:32
                         </span>
-                        <span>다음 회의는 금요일에 진행</span>
+                        <span>{t("menuBar.item1")}</span>
                       </p>
                       <p className="flex gap-3">
                         <span className="shrink-0 text-[var(--el-muted)]">
                           01:10
                         </span>
-                        <span>회의 자료 공유하기</span>
+                        <span>{t("menuBar.item2")}</span>
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
               <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
-                창을 닫아도 녹음은 계속됩니다.
+                {t("menuBar.keepsRecording")}
                 <span className="block">
-                  Mac 메뉴 막대에서 녹음 상태와 타임라인을 확인하세요.
+                  {t("menuBar.checkMenuBar")}
                 </span>
               </p>
             </div>
           ) : (
             <div>
               <p className="text-[15px] leading-6">
-                앱을 설치한 뒤, 지금 쓰는 Google 계정으로 로그인하세요.
+                {t("install.body")}
               </p>
               <dl className="my-5 divide-y divide-[var(--el-hairline)] text-sm">
                 <div className="flex justify-between gap-4 py-3">
                   <dt className="font-medium">Mac</dt>
                   <dd className="text-[var(--el-muted)]">
-                    macOS 14.2 이상 · Apple Silicon
+                    {t("install.macRequirement")}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4 py-3">
@@ -199,17 +191,20 @@ export function DesktopCompareDialog({
         </div>
         <div className="mt-5 flex items-center justify-between gap-1 border-t border-[var(--el-hairline)] pt-5">
           <nav
-            aria-label="데스크톱 앱 안내 단계"
+            aria-label={t("stepNav")}
             className="flex shrink-0 items-center gap-1"
           >
             {STEPS.map((item, i) => (
               <Button
                 variant="ghost"
                 size="icon-sm"
-                key={item.title}
+                key={item}
                 type="button"
                 aria-current={index === i ? "step" : undefined}
-                aria-label={`${i + 1}. ${item.title}`}
+                aria-label={t("stepLabel", {
+                  number: i + 1,
+                  title: t(`steps.${item}.title`),
+                })}
                 onClick={() => setIndex(i)}
                 className={cn(
                   "size-7 shrink-0 rounded-full border p-0 text-[13px] leading-none font-medium tabular-nums",
@@ -231,7 +226,7 @@ export function DesktopCompareDialog({
               onClick={() => setIndex(index - 1)}
             >
               <ChevronLeft aria-hidden />
-              이전
+              {t("previous")}
             </Button>
             <Button
               variant="outline"
@@ -241,7 +236,7 @@ export function DesktopCompareDialog({
                 index === STEPS.length - 1 ? change(false) : setIndex(index + 1)
               }
             >
-              {index === STEPS.length - 1 ? "확인" : "다음"}
+              {index === STEPS.length - 1 ? t("done") : t("next")}
               {index < STEPS.length - 1 ? <ChevronRight aria-hidden /> : null}
             </Button>
           </div>

@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "@/lib/ui/toast";
 import { z } from "zod";
@@ -20,8 +21,10 @@ import {
   useUpdateWorkspace,
 } from "@/lib/api/generated/workspaces/workspaces";
 
+const NAME_REQUIRED = "nameRequired";
 const workspaceSchema = z.object({
-  name: z.string().trim().min(1, "워크스페이스 이름을 입력해 주세요.").max(80),
+  // 문구는 그릴 때 언어 파일에서 고른다 — 스키마는 모듈 수준이라 화면 언어를 모른다.
+  name: z.string().trim().min(1, NAME_REQUIRED).max(80),
   description: z
     .string()
     .trim()
@@ -36,6 +39,8 @@ export function WorkspaceSettingsForm({
 }: {
   workspaceId: string;
 }) {
+  const t = useTranslations("settings.workspace");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   // suspense — 로딩/에러는 settings-dialog의 DataBoundary가 잡는다. 200 봉투가 보장되므로
   // 아래 workspace?. 옵셔널은 타입 안전용이며 런타임엔 항상 값이 있다.
@@ -75,11 +80,11 @@ export function WorkspaceSettingsForm({
     try {
       await update.mutateAsync({ workspaceId, data: values });
       await refresh();
-      toast.success("변경사항을 저장했습니다.", {
+      toast.success(t("saved"), {
         id: "workspace-settings-save",
       });
     } catch {
-      toast.error("워크스페이스 정보를 저장하지 못했습니다.", {
+      toast.error(t("saveFailed"), {
         id: "workspace-settings-save",
       });
     }
@@ -90,16 +95,18 @@ export function WorkspaceSettingsForm({
       <Header />
       <form onSubmit={submit} className={FORM}>
         <div className={FIELD}>
-          <Label htmlFor="workspace-name">워크스페이스 이름</Label>
+          <Label htmlFor="workspace-name">{t("name")}</Label>
           <Input id="workspace-name" {...form.register("name")} />
           {form.formState.errors.name && (
             <p className="text-sm text-[var(--el-error)]">
-              {form.formState.errors.name.message}
+              {form.formState.errors.name.message === NAME_REQUIRED
+                ? t("nameRequired")
+                : form.formState.errors.name.message}
             </p>
           )}
         </div>
         <div className={FIELD}>
-          <Label htmlFor="workspace-description">설명</Label>
+          <Label htmlFor="workspace-description">{t("description")}</Label>
           <Textarea
             id="workspace-description"
             {...form.register("description")}
@@ -111,7 +118,7 @@ export function WorkspaceSettingsForm({
           loading={update.isPending}
           className="rounded-full"
         >
-          변경사항 저장
+          {tActions("saveChanges")}
         </Button>
       </form>
       {/* 관리자에게만 보인다(PRO-69). 이름은 저장된 값과 비교한다 — 폼에 고치는 중인 값이 아니다. */}
@@ -133,23 +140,25 @@ export function WorkspaceSettingsForm({
  * 내용이 짧으면 최소 높이(`min-h-16`)에 선다.
  */
 export function WorkspaceSettingsFormSkeleton() {
+  const t = useTranslations("settings.workspace");
+  const tActions = useTranslations("common.actions");
   return (
     <div
       className="mx-auto w-full max-w-[720px] space-y-8"
-      aria-label="워크스페이스 설정 불러오는 중"
+      aria-label={t("loading")}
     >
       <Header />
       <div className={FORM}>
         <div className={FIELD}>
-          <Label>워크스페이스 이름</Label>
+          <Label>{t("name")}</Label>
           <Skeleton className="h-8 rounded-control" />
         </div>
         <div className={FIELD}>
-          <Label>설명</Label>
+          <Label>{t("description")}</Label>
           <Skeleton className="h-16 rounded-control" />
         </div>
         <Button type="button" disabled className="rounded-full">
-          변경사항 저장
+          {tActions("saveChanges")}
         </Button>
       </div>
     </div>
@@ -157,12 +166,8 @@ export function WorkspaceSettingsFormSkeleton() {
 }
 
 function Header() {
-  return (
-    <SettingsHeader
-      title="일반"
-      description="이 공간의 이름과 설명을 관리합니다."
-    />
-  );
+  const t = useTranslations("settings.workspace");
+  return <SettingsHeader title={t("title")} description={t("intro")} />;
 }
 
 const FORM =

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { motion, useReducedMotion } from "motion/react";
 import { CornerDownRight, RotateCcw, SkipForward, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +21,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  formatSpeakingTime,
   jumpIndexAt,
+  speakingTimeParts,
   type SpeakerJumpVia,
   type SpeakerStat,
   type SpeakerUtterance,
@@ -151,6 +152,8 @@ function SpeakerRow({
   durationMs: number;
   onJump: (segmentId: string, via: SpeakerJumpVia) => void;
 }) {
+  const t = useTranslations("notes.speakers.panel");
+  const tSpeakers = useTranslations("notes.speakers");
   const reduced = useReducedMotion();
   const silent = stat.speakingMs === 0;
   // **누를 때마다 그 사람의 다음 발화로 간다.** 첫 발화는 「네」 같은 맞장구가 많아 누구인지 알아보기
@@ -159,10 +162,10 @@ function SpeakerRow({
   const targets = stat.stepTargets;
   const last = stat.utterances.find((u) => u.segmentId === lastSegmentId);
   const position = last
-    ? targets.findIndex((t) => t.segmentId === last.segmentId)
+    ? targets.findIndex((u) => u.segmentId === last.segmentId)
     : -1;
   const after = last
-    ? targets.findIndex((t) => t.startedAtMs > last.startedAtMs)
+    ? targets.findIndex((u) => u.startedAtMs > last.startedAtMs)
     : 0;
   const next = () => {
     if (targets.length === 0) return;
@@ -193,7 +196,9 @@ function SpeakerRow({
           {stat.name}
         </span>
         <span className="ml-auto shrink-0 tabular-nums text-[11px] text-[var(--el-muted)]">
-          {silent ? "말한 기록 없음" : `${Math.round(stat.share * 100)}%`}
+          {silent
+            ? t("silent")
+            : t("share", { percent: Math.round(stat.share * 100) })}
         </span>
       </div>
 
@@ -212,7 +217,7 @@ function SpeakerRow({
             {/* **세그먼트 개수를 「발화 N개」로 내보내지 않는다.** 그것은 전사가 문장을
                 어디서 끊었느냐는 내부 사정이라, 한 번 말한 것이 세 번으로 보인다. */}
             <span className="tabular-nums">
-              {formatSpeakingTime(stat.speakingMs)}
+              {tSpeakers("speakingTime", speakingTimeParts(stat.speakingMs))}
             </span>
             {targets.length > 0 ? (
               <Button
@@ -224,15 +229,18 @@ function SpeakerRow({
                 <CornerDownRight data-icon="inline-start" />
                 {!last
                   ? stat.unassigned
-                    ? "지정하러 가기"
-                    : "첫 발화로"
-                  : "다음 발화로"}
+                    ? t("goAssign")
+                    : t("firstLine")
+                  : t("nextLine")}
                 {targets.length > 1 ? (
                   <span className="tabular-nums text-[var(--el-muted-soft)]">
                     {/* 지금 있는 위치. 아직 안 갔으면 전체 개수만 — 누르면 첫 번째로 간다. */}
                     {position < 0
-                      ? `${targets.length}곳`
-                      : `${position + 1} / ${targets.length}`}
+                      ? t("spots", { count: targets.length })
+                      : t("position", {
+                          current: position + 1,
+                          total: targets.length,
+                        })}
                   </span>
                 ) : null}
               </Button>
@@ -244,7 +252,7 @@ function SpeakerRow({
           칸은 회의 63분을 48로 나눈 79초짜리라 첫 발화가 그만큼 앞당겨진다. */}
       {stat.firstStartedAtMs === null ? null : (
         <span className="sr-only">
-          {`첫 발화 ${formatOffset(stat.firstStartedAtMs)}`}
+          {t("firstAt", { time: formatOffset(stat.firstStartedAtMs) })}
         </span>
       )}
     </motion.li>
@@ -276,6 +284,8 @@ export function SpeakerPanel({
   /** 되돌릴 지정이 하나라도 있나. 없으면 초기화는 아무 일도 안 하는 버튼이다. */
   resettable: boolean;
 }) {
+  const t = useTranslations("notes.speakers.panel");
+  const tSpeakers = useTranslations("notes.speakers");
   // **미지정이 위다.** 이 패널을 여는 이유가 대개 그것이고, 말한 양으로만 세우면 조용한
   // 미지정 화자가 맨 아래에 묻힌다.
   const unassigned = stats.filter((stat) => stat.unassigned);
@@ -321,7 +331,7 @@ export function SpeakerPanel({
         <SheetHeader className="border-b border-[var(--el-hairline)]">
           {/* 컴포넌트 제목은 작고 굵은 Inter 다(`DESIGN.md` Hierarchy) — 큰 제목(`font-light`)과 구분한다. */}
           <SheetTitle className="font-sans text-[13px] font-semibold">
-            화자
+            {t("title")}
           </SheetTitle>
           {/* 둘을 더한 수를 쓰지 않는다 — 미지정 화자와 참여자는 겹칠 수 있어서, 더하면
               넷뿐인 회의가 아홉 명이 된다. 같은 말을 상단바 버튼도 쓴다(「미지정 N」). */}
@@ -329,9 +339,13 @@ export function SpeakerPanel({
               오른쪽 끝이 무엇인지 읽을 방법이 없다. */}
           <SheetDescription>
             {[
-              `참여자 ${assigned.length}명`,
-              unassigned.length ? `미지정 화자 ${unassigned.length}명` : null,
-              `회의 ${formatSpeakingTime(durationMs)}`,
+              t("participants", { count: assigned.length }),
+              unassigned.length
+                ? t("unassigned", { count: unassigned.length })
+                : null,
+              t("meetingLength", {
+                time: tSpeakers("speakingTime", speakingTimeParts(durationMs)),
+              }),
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -354,7 +368,7 @@ export function SpeakerPanel({
             </ul>
           ) : (
             <p className="px-4 py-8 text-sm text-[var(--el-muted)]">
-              아직 나뉜 화자가 없습니다.
+              {t("empty")}
             </p>
           )}
         </ScrollArea>
@@ -369,7 +383,7 @@ export function SpeakerPanel({
             onClick={onReset}
           >
             <RotateCcw data-icon="inline-start" />
-            지정한 화자 전체 초기화
+            {t("reset")}
           </Button>
         </div>
       </SheetContent>
@@ -395,6 +409,7 @@ export function SpeakerTools({
   onNextUnassigned: () => void;
   unassignedCount: number;
 }) {
+  const t = useTranslations("notes.speakers.tools");
   return (
     <>
       <Tooltip>
@@ -404,9 +419,9 @@ export function SpeakerTools({
           }
         >
           <Users data-icon="inline-start" />
-          화자
+          {t("open")}
         </TooltipTrigger>
-        <TooltipContent side="bottom">누가 얼마나 말했는지 보기</TooltipContent>
+        <TooltipContent side="bottom">{t("openHint")}</TooltipContent>
       </Tooltip>
 
       {/* **미지정이 있을 때만 선다.** 다 붙인 회의에서 「다음 미지정」은 누를 곳이 없는
@@ -424,10 +439,10 @@ export function SpeakerTools({
             }
           >
             <SkipForward data-icon="inline-start" />
-            미지정 {unassignedCount}
+            {t("nextUnassigned", { count: unassignedCount })}
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            아직 누구인지 모르는 화자로 넘어갑니다
+            {t("nextUnassignedHint")}
           </TooltipContent>
         </Tooltip>
       ) : null}

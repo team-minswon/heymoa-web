@@ -1,4 +1,5 @@
 import { renderMinutesPdfInline } from "@/components/notes/minutes/minutes-pdf";
+import type { Locale } from "@/lib/i18n/locales";
 import type { MinutesDocument } from "@/lib/notes/minutes/model";
 
 /**
@@ -6,12 +7,17 @@ import type { MinutesDocument } from "@/lib/notes/minutes/model";
  * 3시간 회의는 9초 가까이 화면을 붙든다 — 그동안 버튼의 진행 표시도 멈춘다.
  */
 self.onmessage = async (
-  event: MessageEvent<{ doc: MinutesDocument; fontBase: string }>
+  event: MessageEvent<{
+    doc: MinutesDocument;
+    fontBase: string;
+    locale: Locale;
+  }>
 ) => {
   try {
     const blob = await renderMinutesPdfInline(
       event.data.doc,
-      event.data.fontBase
+      event.data.fontBase,
+      event.data.locale
     );
     self.postMessage({ ok: true, blob });
   } catch (error) {

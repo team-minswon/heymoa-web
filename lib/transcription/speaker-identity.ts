@@ -117,7 +117,9 @@ export type SpeakerFace = {
  */
 export function createSpeakerIdentityResolver(
   speakers: SpeakerIdentitySource[],
-  participants: SpeakerFace[] = []
+  participants: SpeakerFace[],
+  /** 이름을 모르는 화자의 이름. 화면 언어(`notes.speakers.fallback`)로 넘긴다. */
+  speakerName: (label: string) => string
 ) {
   const byLabel = new Map(speakers.map((speaker) => [speaker.label, speaker]));
   /** 사람 → 그 사람이 **가진** 라벨. 색은 [speakerOrb] 이 이것으로 정한다. */
@@ -197,7 +199,7 @@ export function createSpeakerIdentityResolver(
       : null;
     // 「참석자 아님」으로 확정한 화자도 `화자 A` 로 남는다. 그 사람이 누구인지 우리가
     // 모른다는 것이 사실이고, 다른 말로 꾸미면 거짓이 된다.
-    const displayName = name ?? `화자 ${label}`;
+    const displayName = name ?? speakerName(label);
 
     return {
       displayName,

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { useTranslations } from "next-intl";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -164,6 +165,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
+  const t = useTranslations("shell.sidebar.primitive");
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
   if (collapsible === "none") {
@@ -198,10 +200,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>워크스페이스 메뉴</SheetTitle>
-            <SheetDescription>
-              워크스페이스와 프로젝트를 탐색합니다.
-            </SheetDescription>
+            <SheetTitle>{t("mobileTitle")}</SheetTitle>
+            <SheetDescription>{t("mobileDescription")}</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -264,6 +264,7 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
+  const t = useTranslations("shell.sidebar.primitive");
   const { toggleSidebar } = useSidebar();
 
   return (
@@ -280,22 +281,23 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">사이드바 열기</span>
+      <span className="sr-only">{t("open")}</span>
     </Button>
   );
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
+  const t = useTranslations("shell.sidebar.primitive");
   const { toggleSidebar } = useSidebar();
 
   return (
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="사이드바 전환"
+      aria-label={t("toggle")}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="사이드바 전환"
+      title={t("toggle")}
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",

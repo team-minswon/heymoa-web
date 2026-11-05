@@ -42,7 +42,7 @@ describe("selectContextSnapshot", () => {
           data: { success: false, data: null, error: { code: "X" } },
           headers: new Headers(),
         } as never)
-      ).toThrow(/후보 조회 응답/);
+      ).toThrow(/Unexpected proposals response/);
     }
   });
 

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { intlWrapper } from "@/components/help/test-intl";
 import { SpeakerPanel } from "@/components/notes/speaker-panel";
 import { TIMELINE_BINS, type SpeakerStat } from "@/lib/notes/speaker-stats";
 
@@ -31,7 +32,10 @@ function stat(overrides: Partial<SpeakerStat> = {}): SpeakerStat {
   };
 }
 
-function renderPanel(stats: SpeakerStat[]) {
+function renderPanel(
+  stats: SpeakerStat[],
+  wrapper?: ReturnType<typeof intlWrapper>
+) {
   const onOpenChange = vi.fn();
   render(
     <SpeakerPanel
@@ -43,7 +47,8 @@ function renderPanel(stats: SpeakerStat[]) {
       onReset={vi.fn()}
       resetting={false}
       resettable={false}
-    />
+    />,
+    { wrapper }
   );
   return { onOpenChange };
 }
@@ -148,5 +153,37 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
 
     fireEvent.pointerLeave(strip);
     expect(screen.queryByTestId("speaker-panel-strip-time")).toBeNull();
+  });
+});
+
+describe("SpeakerPanel 영어 화면", () => {
+  afterEach(cleanup);
+
+  it("영어 문구로 그리고 한글이 남지 않는다", () => {
+    renderPanel(
+      [
+        stat({ name: "Speaker A" }),
+        stat({
+          key: "p1",
+          name: "Dana",
+          unassigned: false,
+          speakingMs: 0,
+          utterances: [],
+          stepTargets: [],
+        }),
+      ],
+      intlWrapper("en")
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Start assigning/ })
+    ).toHaveTextContent("3 lines");
+    expect(screen.getByText("Didn't speak")).toBeTruthy();
+    expect(
+      screen.getByText("1 participant · 1 unassigned speaker · Meeting 10m")
+    ).toBeTruthy();
+    expect(screen.getByText("1m")).toBeTruthy();
+    // 시트 닫기 버튼(`components/ui/sheet`)은 이 모듈 문구가 아니라 목록만 본다
+    expect(screen.getByRole("list").textContent).not.toMatch(/[가-힣]/);
   });
 });

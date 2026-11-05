@@ -55,13 +55,21 @@ export function quotesOf(
     }));
 }
 
-/** 지도 눈금 이름. 시작은 `0:00`, 정시는 「1시간」, 그 밖은 「15분」 · 「1:15」 다. */
-export function tickLabel(minutes: number) {
+/**
+ * 지도 눈금 이름. 시작은 `0:00`, 정시는 「1시간」, 그 밖은 「15분」 · 「1:15」 다. 분·시간 낱말은 화면이 [units] 로 넘긴다.
+ */
+export function tickLabel(
+  minutes: number,
+  units: {
+    minutes: (count: number) => string;
+    hours: (count: number) => string;
+  }
+) {
   if (minutes === 0) return "0:00";
-  if (minutes < 60) return `${minutes}분`;
+  if (minutes < 60) return units.minutes(minutes);
   const rest = minutes % 60;
   return rest === 0
-    ? `${minutes / 60}시간`
+    ? units.hours(minutes / 60)
     : `${Math.floor(minutes / 60)}:${String(rest).padStart(2, "0")}`;
 }
 
@@ -81,13 +89,9 @@ export function ticksOf(lengthMs: number): number[] {
   return ticks;
 }
 
-/** 회의 길이를 머리 칩에 쓸 말로. 「1시간 15분」 · 「42분」 · 「1분 미만」. */
-export function lengthLabel(lengthMs: number) {
+/** 회의 길이를 머리 칩에 쓸 시간 · 분으로. 1분이 안 되면 null 이다(화면은 「1분 미만」). */
+export function lengthParts(lengthMs: number) {
   const minutes = Math.round(lengthMs / 60_000);
-  if (minutes < 1) return "1분 미만";
-  if (minutes < 60) return `${minutes}분`;
-  const rest = minutes % 60;
-  return rest === 0
-    ? `${minutes / 60}시간`
-    : `${Math.floor(minutes / 60)}시간 ${rest}분`;
+  if (minutes < 1) return null;
+  return { hours: Math.floor(minutes / 60), minutes: minutes % 60 };
 }

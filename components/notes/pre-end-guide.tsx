@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { CircleCheck, FileText, UserPlus, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
 import { Button } from "@/components/ui/button";
@@ -19,21 +20,9 @@ import type { NoteResponseData } from "@/lib/api/generated/models";
  * `MeetingAlreadyEndedException`), 요약은 운영 로그상 종료 후 10~30초에 생긴다.
  */
 const STEPS = [
-  {
-    icon: FileText,
-    title: "요약",
-    body: "개요, 결정, 액션 아이템을 자동으로 정리해요.",
-  },
-  {
-    icon: Users,
-    title: "화자 분리",
-    body: "목소리를 사람별로 나누고, 누구인지 이름을 붙일 수 있어요.",
-  },
-  {
-    icon: CircleCheck,
-    title: "검토 후 확정",
-    body: "정리된 항목을 확인하고 고친 뒤 프로젝트 지식으로 확정해요.",
-  },
+  { icon: FileText, key: "summary" },
+  { icon: Users, key: "speakers" },
+  { icon: CircleCheck, key: "review" },
 ] as const;
 
 export function PreEndGuide({
@@ -47,6 +36,7 @@ export function PreEndGuide({
   /** 종료 접수 후 호출 — note-panel이 요약 탭을 새로 그린다. */
   onMeetingEnded?: () => void;
 }) {
+  const t = useTranslations("notes.preEnd");
   const [endOpen, setEndOpen] = useState(false);
   const reduced = useReducedMotion();
   // 기록 중에는 서버가 종료를 거절한다. 일시정지한 뒤에만 버튼을 둔다.
@@ -63,16 +53,16 @@ export function PreEndGuide({
         transition={{ duration: 0.25, ease: "easeOut" }}
       >
         <h3 className="text-[26px] leading-tight font-light tracking-tight text-[var(--el-ink)]">
-          회의를 종료하면 이런 것들이 만들어져요
+          {t("title")}
         </h3>
         <p className="mt-2 text-sm text-[var(--el-muted)]">
-          보통 종료 후 1분 안에 준비돼요. 종료 전에는 볼 수 없어요.
+          {t("description")}
         </p>
 
         <ol className="mt-7 grid gap-3 sm:grid-cols-3">
-          {STEPS.map(({ icon: Icon, title, body }, index) => (
+          {STEPS.map(({ icon: Icon, key }, index) => (
             <motion.li
-              key={title}
+              key={key}
               // 제목 다음에 카드가 차례로 올라온다.
               initial={reduced ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -97,10 +87,10 @@ export function PreEndGuide({
                 </span>
               </span>
               <span className="mt-4 text-sm font-medium text-[var(--el-ink)]">
-                {title}
+                {t(`steps.${key}.title`)}
               </span>
               <span className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
-                {body}
+                {t(`steps.${key}.body`)}
               </span>
             </motion.li>
           ))}
@@ -115,16 +105,13 @@ export function PreEndGuide({
               className="size-4 shrink-0 text-[var(--el-ink)]"
               aria-hidden
             />
-            <span>
-              참여자가 1명이에요. 종료하기 전에 추가하면 화자를 더 정확히
-              나눠요.
-            </span>
+            <span>{t("loneParticipant")}</span>
             <button
               type="button"
               onClick={onEditParticipants}
               className="shrink-0 text-[var(--el-ink)] underline underline-offset-2"
             >
-              참여자 추가
+              {t("addParticipant")}
             </button>
           </p>
         ) : null}
@@ -132,14 +119,14 @@ export function PreEndGuide({
         <div className="mt-7 flex items-center gap-4">
           {canEnd && note ? (
             <Button type="button" onClick={() => setEndOpen(true)}>
-              회의 종료
+              {t("end")}
             </Button>
           ) : null}
           <p className="text-xs text-[var(--el-muted-soft)]">
             {recording
-              ? "기록을 일시정지하면 회의를 종료할 수 있어요."
+              ? t("pauseToEnd")
               : canEnd
-                ? "종료한 뒤에는 이어서 녹음할 수 없어요."
+                ? t("noResume")
                 : null}
           </p>
         </div>

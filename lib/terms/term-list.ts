@@ -61,17 +61,21 @@ export function applyOps(
 }
 
 /** 추가 응답(200 이미 있음 · 201 새로)에서 항목을 꺼낸다. 비-2xx 는 `apiFetch` 가 이미 던졌다. */
-export function termOfResponse(response: {
-  status: number;
-  data: { success: boolean; data?: Term | null };
-}): Term {
+export function termOfResponse(
+  response: {
+    status: number;
+    data: { success: boolean; data?: Term | null };
+  },
+  /** 전역 토스트가 그대로 띄우는 문구(`errorMessageOf`). 화면 언어로 넘긴다 */
+  failed: string
+): Term {
   if (
     (response.status === 200 || response.status === 201) &&
     response.data.success &&
     response.data.data
   )
     return response.data.data;
-  throw new Error("용어를 더하지 못했습니다.");
+  throw new Error(failed);
 }
 
 /** 조회는 창(탭)을 열 때 한 번이다. 열려 있는 동안 포커스·재연결로 다시 받지 않는다 — 다른 멤버의 편집은 다음에 열 때 보인다. */

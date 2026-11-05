@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar";
 import {
   Tooltip,
@@ -35,9 +37,6 @@ export type Participant = {
 export type ParticipantFace = Pick<Participant, "name" | "email" | "image"> &
   Partial<Pick<Participant, "participantId" | "userId" | "guestId">>;
 
-/** 계정 없는 사람에게 이메일 자리에 대신 세우는 말. */
-export const EXTERNAL_LABEL = "외부";
-
 /**
  * `Avatar` 의 크기 이름을 실제 px 로. **`components/ui/avatar.tsx` 의 값과 같아야 한다** —
  * 거기서 `sm`=`size-6`(24), 기본=`size-8`(32), `lg`=`size-10`(40) 이다. 한 단계씩 작게
@@ -66,6 +65,7 @@ export function ParticipantAvatar({
    */
   interactive?: boolean;
 }) {
+  const t = useTranslations("notes.participants");
   // **전사의 화자 칩·화자 패널과 같은 얼굴이다.** 네 화면에서 같은 사람이 같은 그림으로
   // 선다. 이름은 늘 옆이나 툴팁에 있어 얼굴에 글자를 안 얹는다.
   const avatar = (
@@ -81,7 +81,7 @@ export function ParticipantAvatar({
 
   // 계정 없는 사람은 이메일 자리에 「외부」가 선다. 아바타 모양은 안 바꾼다 — 이 크기에서
   // 배지는 뜻 없는 점으로만 보였고, 구분은 이 라벨이 한다.
-  const who = `${participant.name} (${participant.email ?? EXTERNAL_LABEL})`;
+  const who = `${participant.name} (${participant.email ?? t("external")})`;
 
   return (
     <Tooltip>
@@ -89,7 +89,7 @@ export function ParticipantAvatar({
         render={
           // 툴팁은 포인터·포커스에만 열린다. 스크린리더는 이 라벨을 읽는다.
           <span
-            aria-label={isStarter ? `진행자 ${who}` : who}
+            aria-label={isStarter ? t("hostLabel", { who }) : who}
             className="shrink-0"
           >
             {avatar}
@@ -99,10 +99,10 @@ export function ParticipantAvatar({
       <TooltipContent className="flex-col items-start gap-0.5">
         <span className="font-medium">
           {participant.name}
-          {isStarter ? " · 진행자" : ""}
+          {isStarter ? ` · ${t("host")}` : ""}
         </span>
         <span className="opacity-70">
-          {participant.email ?? EXTERNAL_LABEL}
+          {participant.email ?? t("external")}
         </span>
       </TooltipContent>
     </Tooltip>
@@ -136,6 +136,7 @@ export function NoteParticipantAvatars({
   size?: "sm" | "default" | "lg";
   className?: string;
 }) {
+  const t = useTranslations("notes.participants");
   if (participants.length === 0) return null;
 
   const visible = participants.length > max ? max - 1 : max;
@@ -145,7 +146,7 @@ export function NoteParticipantAvatars({
   return (
     <AvatarGroup
       className={cn("items-center", className)}
-      aria-label={`참여자 ${participants.length}명`}
+      aria-label={t("count", { count: participants.length })}
     >
       {shown.map((participant) => (
         <ParticipantAvatar
@@ -159,7 +160,7 @@ export function NoteParticipantAvatars({
           <TooltipTrigger
             render={
               <AvatarGroupCount
-                aria-label={`외 ${hidden.length}명`}
+                aria-label={t("more", { count: hidden.length })}
                 className={cn(
                   "text-[10px]",
                   size === "sm" && "size-6",

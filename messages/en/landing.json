@@ -37,7 +37,7 @@
     "setDue": "Set due date",
     "edit": "Edit",
     "exclude": "Exclude",
-    "undoExclude": "Undo exclude",
+    "undoExclude": "Include",
     "confirm": {
       "unchosen": "<n></n> {count, plural, one {suggestion} other {suggestions}} to review",
       "goToSuggestions": "Go to suggestions",
@@ -47,7 +47,7 @@
       "button": "Finish review"
     },
     "replacement": "Replaces an earlier decision",
-    "retracted": "Retracted",
+    "retracted": "Reversed",
     "transcribing": "Transcribing",
     "rail": {
       "title": "My agent",
@@ -62,8 +62,8 @@
     "speech": "Where did those meeting notes go?",
     "title": "Every meeting <m>lands</m> in its project",
     "lead1": "No more passing notes around. When you start a meeting, it shows up in the project's list right away, along with how long it was recorded and how many participants were picked in the Details tab.",
-    "lead2": "Admins invite members by email. People who don't have an account yet sign up through the link in the invite. There are two roles: Admin and Member.",
-    "caption": "Sample screen. The Onboarding improvements project lists three meetings by date. Next to it are the member settings for the same workspace, with four members and one pending invite.",
+    "lead2": "Admins invite members by email. People who don't have an account yet sign up through the link in the invitation. There are two roles: Admin and Member.",
+    "caption": "Sample screen. The Onboarding improvements project lists three meetings by date. Next to it are the member settings for the same workspace, with four members and one pending invitation.",
     "project": {
       "name": "Onboarding improvements",
       "description": "Every remark and decision from 3 meetings, kept in order."
@@ -86,14 +86,14 @@
     "participants": "{count, plural, one {# participant} other {# participants}}",
     "members": {
       "title": "Members",
-      "description": "Manage this workspace's members and pending invites.",
+      "description": "Manage this workspace's members and pending invitations.",
       "me": "(you)",
       "roles": {
         "admin": "Admin",
         "member": "Member"
       },
       "remove": "Remove",
-      "pending": "Pending invites",
+      "pending": "Pending invitations",
       "invitedBy": "{name} · Sep 8",
       "cancel": "Cancel"
     },
@@ -118,11 +118,11 @@
       },
       "q3": {
         "q": "What if someone changes their mind mid-meeting?",
-        "a": "The Timeline doesn't delete the reversed item. It strikes it through and marks it Retracted."
+        "a": "The Timeline doesn't delete the reversed item. It strikes it through and marks it Reversed."
       },
       "q4": {
         "q": "What if a line comes out wrong?",
-        "a": "You can edit or exclude any line, and change a task's assignee and due date. Excluded lines aren't deleted. They stay struck through, and Undo exclude brings them back."
+        "a": "You can edit or exclude any line, and change a task's assignee and due date. Excluded lines aren't deleted. They stay struck through, and Include brings them back."
       },
       "q5": {
         "q": "What if a new decision overrides an earlier one?",
@@ -131,7 +131,7 @@
       },
       "q6": {
         "q": "So what does the note-taker do now?",
-        "a": "In the Summary tab, fill in any missing assignees and due dates, fix the lines that came out wrong, and <m>click Finish review.</m> Speakers aren't separated during the meeting, so you put names to them in the Transcript tab after it ends."
+        "a": "In the Summary tab, fill in any missing assignees and due dates, fix the lines that came out wrong, and <m>click Finish review.</m> Speakers aren't identified during the meeting, so you put names to them in the Transcript tab after it ends."
       }
     },
     "retracted": {
@@ -309,7 +309,7 @@
       "label": "External agents",
       "title": "Connect your AI tools and they can look up past meetings",
       "body": "Connect HeyMoa to an AI tool like Claude Code or Codex, and right where you work it can look up decisions, tasks, and meeting notes, then link you to the HeyMoa screen you need. You create each connection yourself and can disconnect it at any time.",
-      "figure": "Figure: one connection on the My MCP connections screen in settings (sample). Laptop Claude Code is connected, and the expanded usage list shows when it fetched what and how many items. Revoking blocks it from the next request and can't be undone.",
+      "figure": "Figure: one connection on the My MCP connections screen in settings (sample). Laptop Claude Code is connected, and the expanded activity list shows when it fetched what and how many items. Revoking blocks it from the next request and can't be undone.",
       "screenTitle": "My MCP connections",
       "screenBody": "Let AI apps like Claude or ChatGPT read the meetings and projects in a workspace you choose.",
       "newConnection": "New connection",
@@ -319,7 +319,7 @@
       "since": "Connected Sep 1, 2026",
       "lastUsed": "Last used Sep 3, 2026",
       "expiry": "<nw>Expires if unused</nw> <nw>by Dec 2, 2026</nw>",
-      "usage": "Usage",
+      "usage": "Activity",
       "revoke": "Revoke",
       "at": {
         "t412": "Sep 3, 4:12 PM",
@@ -523,7 +523,7 @@
       "meetingInfo": "Meeting details",
       "host": "Host",
       "hostRole": "Controls recording",
-      "recorded": "Recording length",
+      "recorded": "Duration",
       "sharing": "Shared with",
       "sharingValue": "Workspace members",
       "created": "Created",

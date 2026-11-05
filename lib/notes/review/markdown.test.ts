@@ -9,6 +9,9 @@ import {
 } from "@/lib/notes/review/markdown";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
+import { testAppT } from "@/components/help/test-intl";
+
+const doc = { locale: "ko-KR", t: testAppT() };
 
 const item = (over: Partial<ReviewItem>): ReviewItem => ({
   itemId: "i",
@@ -66,19 +69,32 @@ describe("reviewSectionToMarkdown", () => {
   );
 
   it("뺀 항목은 싣지 않고, 할 일에는 담당 · 기한을 붙인다", () => {
-    expect(reviewSectionToMarkdown(actions)).toBe(
+    expect(reviewSectionToMarkdown(actions, doc)).toBe(
       "## 할 일\n\n- 요금표를 정리한다 — 담당 김민 · 기한 9월 19일 (토)\n- 화자에게 걸린 일 — 담당 화자 B\n"
     );
   });
 
   it("여러 종류가 섞인 섹션은 종류를 앞에 적고, 주제로 걸렀으면 제목에 밝힌다", () => {
-    expect(reviewSectionToMarkdown(open, "차별점과 요금")).toBe(
+    expect(reviewSectionToMarkdown(open, doc, "차별점과 요금")).toBe(
       "## 이슈 · 질문 — 차별점과 요금\n\n- **질문** 요금 기준은?\n"
     );
   });
 
+  it("영어 화면의 복사본은 영어다", () => {
+    const en = { locale: "en-US", t: testAppT("en") };
+    expect(reviewSectionToMarkdown(actions, en)).toBe(
+      "## Tasks\n\n- 요금표를 정리한다 — Assignee: 김민 · Due Sat, September 19\n- 화자에게 걸린 일 — Assignee: Speaker B\n"
+    );
+    expect(reviewSectionToMarkdown(open, en, "차별점과 요금")).toBe(
+      "## Issues and questions — 차별점과 요금\n\n- **Question** 요금 기준은?\n"
+    );
+    expect(reviewSectionToMarkdown(decisions, en)).toBe(
+      "## Decisions\n\n_None_\n"
+    );
+  });
+
   it("빈 섹션도 비었다고 적는다", () => {
-    expect(reviewSectionToMarkdown(decisions)).toBe("## 결정\n\n_없음_\n");
+    expect(reviewSectionToMarkdown(decisions, doc)).toBe("## 결정\n\n_없음_\n");
   });
 });
 
@@ -90,26 +106,32 @@ describe("overview · topics", () => {
         { text: "요금은\n다시 본다.", topics: [] },
       ],
     } as unknown as MeetingReviewSummary;
-    expect(overviewToMarkdown(summary)).toBe(
+    expect(overviewToMarkdown(summary, doc)).toBe(
       "## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n"
     );
     // 제목 후보가 있어도 회의 정리를 가리지 않는다
     expect(
-      overviewToMarkdown({
-        ...summary,
-        headline: { text: "할 일을 주제별로 확정한다", topics: [] },
-      })
+      overviewToMarkdown(
+        {
+          ...summary,
+          headline: { text: "할 일을 주제별로 확정한다", topics: [] },
+        },
+        doc
+      )
     ).toBe("## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n");
     expect(
-      topicsToMarkdown([
-        {
-          ordinal: 1,
-          title: "문제 정의",
-          count: 2,
-          gist: "한 문장으로 좁혔다.",
-        },
-        { ordinal: 2, title: "요금", count: 1, gist: null },
-      ])
+      topicsToMarkdown(
+        [
+          {
+            ordinal: 1,
+            title: "문제 정의",
+            count: 2,
+            gist: "한 문장으로 좁혔다.",
+          },
+          { ordinal: 2, title: "요금", count: 1, gist: null },
+        ],
+        doc
+      )
     ).toBe("## 주제\n\n1. **문제 정의** — 한 문장으로 좁혔다.\n2. **요금**\n");
   });
 });
@@ -126,7 +148,6 @@ describe("reviewToMarkdown", () => {
   const section = (included: boolean) =>
     ({
       key: "DECISION",
-      label: "결정",
       includedCount: included ? 1 : 0,
       items: [
         {
@@ -141,6 +162,7 @@ describe("reviewToMarkdown", () => {
 
   it("머리말·주제·결정을 한 문서로 잇고 뺀 항목만 있는 섹션은 싣지 않는다", () => {
     const out = reviewToMarkdown({
+      doc,
       note,
       summary: null,
       topics,
@@ -160,6 +182,7 @@ describe("reviewToMarkdown", () => {
       { ordinal: 3, title: "홍보", gist: null, startMs: 248_000 },
     ] as never;
     const out = reviewToMarkdown({
+      doc,
       note: { ...note, durationMs: 540_000, projectName: "멘토링" },
       summary: null,
       topics: withTime,
@@ -177,6 +200,7 @@ describe("reviewToMarkdown", () => {
 
   it("검토 중이면 그렇게 적는다", () => {
     const out = reviewToMarkdown({
+      doc,
       note,
       summary: null,
       topics,

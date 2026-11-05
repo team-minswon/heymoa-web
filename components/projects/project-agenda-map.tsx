@@ -2,6 +2,7 @@
 
 import { track } from "@/lib/analytics/track";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Orbit } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
@@ -76,6 +77,7 @@ export function ProjectAgendaMap({
   projectId: string;
   focus?: Focus;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const { projects } = useWorkspaceShell();
   const project = projects.find((candidate) => candidate.projectId === projectId);
   const query = useGetProjectMeetingLinks(projectId);
@@ -106,8 +108,12 @@ export function ProjectAgendaMap({
             </h2>
             <p className="mt-3 min-h-6 text-sm leading-6 text-[var(--el-muted)]">
               {map && index
-                ? `회의 ${map.meetings.length}개 · 주제 ${index.topics.size}개` +
-                  (skipped > 0 ? ` · 안건 없는 회의 ${skipped}개 제외` : "")
+                ? [
+                    t("summary", { meetings: map.meetings.length, topics: index.topics.size }),
+                    skipped > 0 ? t("skipped", { count: skipped }) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
                 : null}
             </p>
             <ProjectViewTabs workspaceId={workspaceId} projectId={projectId} current="map" className="mt-5" />
@@ -124,7 +130,7 @@ export function ProjectAgendaMap({
             </div>
           ) : !map || !index ? (
             <div className={narrow}>
-              <InlineRetry className="mt-6" label="연결 지도를 불러오지 못했습니다" onRetry={() => void query.refetch()} />
+              <InlineRetry className="mt-6" label={t("loadFailed")} onRetry={() => void query.refetch()} />
             </div>
           ) : map.meetings.length === 0 || index.topics.size === 0 ? (
             <div className={narrow}>
@@ -384,16 +390,15 @@ function MapStage({
  * 안건이 정리된 회의가 아직 없는 경우(`meetings` 가 0)와 회의는 있으나 이어짐이 없는 경우를 가른다.
  */
 function MapEmpty({ meetings }: { meetings: number }) {
+  const t = useTranslations("workspace.agendaMap.empty");
   return (
     <div className="mt-8 flex flex-col items-center gap-2 rounded-block border border-dashed border-[var(--el-hairline-strong)] px-6 py-14 text-center">
       <Orbit aria-hidden className="size-6 text-[var(--el-muted-soft)]" />
       <p className="text-[15px] font-medium text-[var(--el-ink)]">
-        회의가 둘 이상 쌓여 안건이 이어지면 흐름이 여기 보입니다
+        {t("title")}
       </p>
       <p className="max-w-md text-sm leading-6 text-[var(--el-muted)]">
-        {meetings === 0
-          ? "아직 안건이 정리된 회의가 없습니다. 회의가 끝나면 그 회의의 안건이 여기에 모입니다."
-          : `안건이 정리된 회의 ${meetings}개가 있지만 서로 이어진 안건은 아직 없습니다. 앞 회의와 이어지는 안건이 나오면 줄기로 그려집니다.`}
+        {meetings === 0 ? t("noMeetings") : t("noLinks", { count: meetings })}
       </p>
     </div>
   );
@@ -401,8 +406,9 @@ function MapEmpty({ meetings }: { meetings: number }) {
 
 /** 불러오는 동안. 판과 슬라이더 자리만 잡는다 */
 function MapSkeleton() {
+  const t = useTranslations("workspace.agendaMap");
   return (
-    <div aria-label="연결 지도를 불러오는 중" className="mt-6">
+    <div aria-label={t("loading")} className="mt-6">
       <div className="mb-2.5 h-7" />
       <Skeleton className="h-[320px] w-full rounded-block" />
       <div className="mt-2.5 h-3.5" />

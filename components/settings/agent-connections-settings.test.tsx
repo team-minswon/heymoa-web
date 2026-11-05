@@ -135,7 +135,7 @@ describe("AgentConnectionsSettings", () => {
   });
 
   // 실패를 빈 선택지로 삼키면 보이지 않는 기본 워크스페이스로 토큰이 나간다
-  it("맡길 워크스페이스를 못 읽으면 실패를 보이고 토큰을 만들지 못하게 한다", () => {
+  it("연결할 워크스페이스를 못 읽으면 실패를 보이고 토큰을 만들지 못하게 한다", () => {
     state.workspacesError = true;
     renderSettings();
 
@@ -193,7 +193,7 @@ describe("AgentConnectionsSettings", () => {
 
     openTokenForm();
     const toggle = screen.getByRole("switch", {
-      name: "할 일 만들기·고치기 허용",
+      name: "할 일 변경 허용",
     });
     expect(toggle.getAttribute("aria-checked")).toBe("false");
     expect(
@@ -202,7 +202,7 @@ describe("AgentConnectionsSettings", () => {
     fireEvent.click(toggle);
     expect(screen.getByText(/만든 뒤 바꿀 수 없습니다/)).toBeTruthy();
     expect(
-      screen.getByText(/앱은 읽기·화면 열기와 할 일 만들기·고치기를 합니다/)
+      screen.getByText(/앱은 내용을 읽고 화면을 열며, 할 일을 만들고 고칩니다/)
     ).toBeTruthy();
     fireEvent.change(screen.getByLabelText("연결 이름"), {
       target: { value: "노트북" },
@@ -275,7 +275,7 @@ describe("AgentConnectionsSettings", () => {
     expect(onBusyChange).toHaveBeenLastCalledWith(true);
   });
 
-  it("맡길 워크스페이스를 읽는 동안에는 빈 선택창 대신 자리를 잡아 둔다", () => {
+  it("연결할 워크스페이스를 읽는 동안에는 빈 선택창 대신 자리를 잡아 둔다", () => {
     state.workspacesLoading = true;
     renderSettings();
 
@@ -413,7 +413,7 @@ describe("AgentConnectionsSettings", () => {
       // 어느 탭에도 토큰이 없고, 카드 안에서 「에이전트」·「MCP」라는 말을 쓰지 않는다
       expect(guide.textContent).not.toMatch(/Bearer|hm_|에이전트|MCP/);
       // 워크스페이스는 동의 화면에서 고른다 — 안내에는 고르는 칸이 없다
-      expect(within(guide).queryByLabelText("맡길 워크스페이스")).toBeNull();
+      expect(within(guide).queryByLabelText("연결할 워크스페이스")).toBeNull();
     });
 
     it("브라우저 없는 환경이면 안내에서 개인 토큰 폼으로 가서 토큰을 만든다", async () => {
@@ -666,7 +666,7 @@ describe("AgentConnectionsSettings", () => {
       ];
       openForm();
 
-      const trigger = screen.getByLabelText("맡길 워크스페이스");
+      const trigger = screen.getByLabelText("연결할 워크스페이스");
       expect(trigger.textContent).toContain("제품팀 (MCP 꺼짐)");
       expect(screen.getByRole("alert").textContent).toContain(BLOCKED);
       expect(submitDisabled()).toBe(true);
@@ -700,7 +700,7 @@ describe("AgentConnectionsSettings", () => {
       state.workspaces = [{ ...PRODUCT_TEAM, agentAccessAllowed: false }];
       openForm();
 
-      expect(screen.queryByLabelText("맡길 워크스페이스")).toBeNull();
+      expect(screen.queryByLabelText("연결할 워크스페이스")).toBeNull();
       expect(screen.getByRole("alert").textContent).toContain(BLOCKED);
       expect(submitDisabled()).toBe(true);
     });

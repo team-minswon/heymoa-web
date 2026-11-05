@@ -1,0 +1,960 @@
+{
+  "panel": {
+    "windowControls": "Window controls",
+    "backToList": "Back to list",
+    "expand": "Open full screen",
+    "expandBusy": "You can open full screen once the answer finishes",
+    "collapse": "Open side view",
+    "collapseBusy": "You can switch to side view once the answer finishes",
+    "loading": "Loading note",
+    "titleLoading": "Loading note title",
+    "tabs": {
+      "details": "Details",
+      "transcript": "Transcript",
+      "timeline": "Timeline",
+      "summary": "Summary"
+    },
+    "menu": "Note menu",
+    "openAgent": "Open My agent",
+    "gone": {
+      "title": "This meeting can't be opened",
+      "description": "It was deleted, or your account doesn't have access to it.",
+      "back": "Back to notes"
+    },
+    "statusLoadFailed": "Couldn't check the meeting status.",
+    "reconnecting": "The live connection dropped and is reconnecting. New lines may show up late until then.",
+    "subscription": {
+      "alreadySubscribed": "A duplicate live connection is blocking updates. Refresh the page.",
+      "unavailable": "Couldn't reach the live connection. Reconnecting shortly.",
+      "full": "The live connection is full. Reconnecting shortly."
+    },
+    "viewerEnded": {
+      "region": "Meeting ended notice",
+      "title": "The meeting has ended",
+      "description": "Finish reading, then move to the transcript and summary of the ended meeting.",
+      "action": "View transcript and summary"
+    },
+    "detailsLoadFailed": "Couldn't load the note",
+    "desktopHint": "Record video calls with the <link>desktop app</link>",
+    "askAboutMeeting": "Ask about this meeting",
+    "startBlocked": {
+      "otherWorkspace": "This note isn't in this workspace.",
+      "otherDevice": "Recording in another tab or on another device."
+    },
+    "start": "Start meeting",
+    "resume": "Resume"
+  },
+  "surface": {
+    "label": "Note",
+    "description": "Details of the selected meeting note"
+  },
+  "view": {
+    "statusChange": {
+      "label": "Meeting status change",
+      "message": "Meeting status changed: {status}."
+    }
+  },
+  "controls": {
+    "group": "Meeting status and controls",
+    "end": "End meeting",
+    "blocked": "Pause recording to end the meeting",
+    "blockedBy": "{name} is recording. Pause recording to end the meeting"
+  },
+  "endNudge": {
+    "title": "Recording paused. Wrap up now?",
+    "items": {
+      "speakers": {
+        "title": "Speaker identification",
+        "body": "Identifies speakers so you can name them"
+      },
+      "summary": {
+        "title": "Summary",
+        "body": "Collects decisions and tasks in one place"
+      },
+      "review": {
+        "title": "Review and confirm",
+        "body": "Confirms them as project knowledge"
+      }
+    },
+    "later": "Later",
+    "endNow": "End now",
+    "never": "Don't show again"
+  },
+  "endDialog": {
+    "title": "End this meeting?",
+    "description": "Ending the meeting starts the summary. You can't record more after it ends.",
+    "participantsLabel": "Meeting participants",
+    "participantCount": "{count, plural, one {# participant} other {# participants}}",
+    "participantsNone": "With no participants, speakers are identified without a set number. Add the people who spoke as participants for more accurate speaker identification.",
+    "participantsOne": "With one participant, everyone who spoke is treated as the same speaker. If several people spoke, add them as participants first. Participants added after the meeting ends aren't used for this speaker identification.",
+    "participantsMany": "Is everyone who spoke listed? With fewer participants than speakers, some speakers may be merged. Participants added after the meeting ends aren't used for this speaker identification.",
+    "recordingStatus": "Recording status · {status}",
+    "recordingBlocked": "Pause recording to end the meeting.",
+    "failed": "Couldn't end the meeting.",
+    "editParticipants": "Go to participants",
+    "confirm": "End meeting"
+  },
+  "endFeedback": {
+    "progress": {
+      "ready": "The summary is ready",
+      "failed": "Couldn't analyze the meeting. You can regenerate the summary on the Summary tab.",
+      "unknown": "Couldn't load the summary status. You can try again on the Summary tab.",
+      "running": "Wrapping up the meeting. This continues if you close this window."
+    },
+    "title": "Anything that didn't go well in this meeting?",
+    "description": "Our team reads your feedback and replies.",
+    "reasonsLabel": "What could be better",
+    "reasons": {
+      "recording": {
+        "label": "Recording or audio",
+        "hint": "Recording cut out or audio wasn't picked up",
+        "placeholder": "When did it cut out, and what device were you recording on?"
+      },
+      "caption": {
+        "label": "Live captions",
+        "hint": "Captions or speakers were wrong",
+        "placeholder": "What was said, and how did it come out wrong?"
+      },
+      "flow": {
+        "label": "Speed or ease of use",
+        "hint": "Something was slow or confusing",
+        "placeholder": "Which screen was slow or confusing, and what happened?"
+      },
+      "other": {
+        "label": "Other",
+        "hint": "Anything else",
+        "placeholder": "Tell us anything you'd like."
+      }
+    },
+    "messageLabel": "Details",
+    "placeholder": "Tell us what didn't go well.",
+    "never": "Don't ask after meetings",
+    "privacy": "Meeting content isn't sent with this.",
+    "send": "Send",
+    "sent": "Thanks. You can find your feedback in Help & feedback."
+  },
+  "preEnd": {
+    "title": "What you get when the meeting ends",
+    "description": "Usually ready within a minute of ending. Not available before then.",
+    "steps": {
+      "summary": {
+        "title": "Summary",
+        "body": "Automatically collects the overview, decisions, and tasks."
+      },
+      "speakers": {
+        "title": "Speaker identification",
+        "body": "Splits voices by person so you can name each one."
+      },
+      "review": {
+        "title": "Review and confirm",
+        "body": "Check and edit the items, then confirm them as project knowledge."
+      }
+    },
+    "loneParticipant": "There's only one participant. If others spoke, add them before ending.",
+    "addParticipant": "Add participant",
+    "end": "End meeting",
+    "pauseToEnd": "Pause recording to end the meeting.",
+    "noResume": "You can't record more after the meeting ends."
+  },
+  "statusBand": {
+    "autoEndScheduled": "If it stays paused, the meeting ends automatically after {time}.",
+    "pausedDays": "Paused for {count, plural, one {# day} other {# days}}.",
+    "paused": "This meeting is paused.",
+    "pausedActions": "You can resume recording or end the meeting.",
+    "resumedSinceMail": "Recording resumed after the email was sent.",
+    "endedSinceMail": "The meeting ended after the email was sent."
+  },
+  "autoEnd": {
+    "title": "The meeting ended automatically.",
+    "reasonDays": "It ended {days, plural, one {# business day} other {# business days}} after the last pause.",
+    "reason": "It ended after staying paused for a long time.",
+    "noResume": "You can't record more in this meeting.",
+    "analysis": {
+      "analyzing": "Analyzing.",
+      "reviewable": "Results are ready to review.",
+      "failed": "Couldn't analyze the meeting."
+    },
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "deleteDialog": {
+    "title": "Delete these meeting notes?",
+    "description": "This deletes the meeting's recording, transcript, summary, and the sources linked to what was said. If it's recording, the recording stops. Deleted meeting notes can't be restored.",
+    "chats": "Agent chats that asked only about these meeting notes are deleted too. Chats that also asked about other meeting notes, decisions, tasks, or materials in the same project stay.",
+    "analyzing": "You can delete it once the meeting analysis finishes.",
+    "flowFailed": "Couldn't load the analysis status.",
+    "flowChecking": "Checking the analysis status.",
+    "deleted": "Meeting deleted."
+  },
+  "details": {
+    "loading": "Loading note details",
+    "title": "Title",
+    "attendees": "Attendees",
+    "untitled": "Untitled note",
+    "saveFailed": "Couldn't save. Your edits are still here.",
+    "saved": "Saved",
+    "facts": {
+      "title": "Meeting details",
+      "host": "Host",
+      "controlsRecording": "Controls recording",
+      "duration": "Duration",
+      "sharedWith": "Shared with",
+      "workspaceMembers": "Workspace members",
+      "ended": "Ended",
+      "autoEnded": "Ended automatically",
+      "autoEndedDays": "Ended automatically ({days, plural, one {# business day} other {# business days}} after the last pause)",
+      "created": "Created",
+      "updated": "Last edited"
+    }
+  },
+  "participants": {
+    "external": "Guest",
+    "host": "Host",
+    "hostLabel": "Host {who}",
+    "count": "{count, plural, one {# participant} other {# participants}}",
+    "more": "{count} more"
+  },
+  "participantsField": {
+    "empty": "No participants yet.",
+    "add": "Add participant",
+    "searchLabel": "Search participants by name or email",
+    "searchPlaceholder": "Search or add a guest participant",
+    "loading": "Loading participants.",
+    "membersFailed": "Couldn't load members.",
+    "guestsFailed": "Couldn't load guest participants.",
+    "bothFailed": "Couldn't load members or guest participants.",
+    "noMatch": "No one matches.",
+    "departed": "No longer in this workspace",
+    "createGuest": "+ Add \"{name}\"",
+    "createGuestHint": "Adds them to this meeting as a guest participant, without an account.",
+    "manageGuests": "Manage guest participants",
+    "saveFailed": "Couldn't save participants."
+  },
+  "context": {
+    "title": "Meeting context",
+    "help": "Tell us what the meeting is about, and transcription uses it as a reference. The project name, meeting title, and attendee names are added automatically.",
+    "topic": "Topic",
+    "background": "Background",
+    "empty": "No context was added.",
+    "unsaved": "The meeting ended before this was saved. Copy it if you need it.",
+    "blank": "Not filled in",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Couldn't save",
+    "recording": "Recording. Your edits apply when recording resumes.",
+    "topicPlaceholder": "e.g., Weekly product meeting: payment errors and next week's release",
+    "backgroundPlaceholder": "e.g., Payment approval failures rose last week and we're finding the cause. Today we'll review the PG logs and decide on a temporary fix."
+  },
+  "archive": {
+    "scrollToBottom": "Jump to bottom",
+    "transcriptLabel": "Meeting transcript",
+    "loading": "Loading transcript",
+    "loadFailed": "Couldn't load the transcript.",
+    "truncated": "The recording wasn't fully saved.",
+    "empty": "No transcript.",
+    "resetReadFailed": "Couldn't reload speakers, so the reset was stopped.",
+    "resetFailed": "Couldn't reset {count, plural, one {# speaker} other {# speakers}}.",
+    "resetDialog": {
+      "title": "Reset all assigned speakers?",
+      "description": "This clears the names on {count, plural, one {# speaker} other {# speakers}} and the speakers assigned to individual lines. They go back to AI labels such as Speaker A. This can't be undone.",
+      "confirm": "Reset all"
+    },
+    "applyAllDialog": {
+      "title": "Lines you edited one by one will change too",
+      "unknown": "Couldn't check whether any lines were individually assigned to speaker {label}. Applying to all lines clears those assignments.",
+      "description": "{count, plural, one {# line was} other {# lines were}} individually assigned to speaker {label}. Applying to all lines clears those assignments.",
+      "confirm": "Apply to all lines"
+    }
+  },
+  "agentRail": {
+    "title": "My agent",
+    "collapse": "Collapse My agent",
+    "collapseBusy": "You can collapse once the answer finishes",
+    "collapseShort": "Collapse"
+  },
+  "copy": {
+    "button": "Copy",
+    "iconLabel": "Copy {label}",
+    "tooltip": "Copy as Markdown",
+    "copied": "{label} copied to clipboard.",
+    "failed": "Couldn't copy.",
+    "blocked": "The browser blocked clipboard access."
+  },
+  "kinds": {
+    "AGENDA": "Agenda item",
+    "DECISION": "Decision",
+    "ACTION_ITEM": "Task",
+    "ISSUE": "Issue",
+    "QUESTION": "Question",
+    "STATUS_REPORT": "Update",
+    "INSIGHT": "Insight"
+  },
+  "timeline": {
+    "freshness": {
+      "justNow": "just now",
+      "minutesAgo": "{count, plural, one {# minute ago} other {# minutes ago}}",
+      "hoursAgo": "{count, plural, one {# hour ago} other {# hours ago}}"
+    },
+    "retracted": "Reversed",
+    "operations": {
+      "AMEND": "Expanded",
+      "CORRECT": "Corrected"
+    },
+    "awaitingAnswer": "Awaiting an answer",
+    "answered": "Answered",
+    "answeredAt": "Answered at {time}",
+    "rangeNow": "{start} – now",
+    "hint": {
+      "message": "New items in the timeline",
+      "dismiss": "Dismiss"
+    },
+    "status": {
+      "ended": "Only changes worth keeping from this meeting are recorded",
+      "live": "Refreshes each time someone finishes speaking",
+      "liveUpdated": "Refreshes each time someone finishes speaking (last updated {freshness})"
+    },
+    "scrollToBottom": "Jump to latest",
+    "participants": "{count, plural, one {# participant} other {# participants}}",
+    "headerLoading": "Loading timeline title",
+    "filter": {
+      "label": "Filter by type",
+      "ALL": "All",
+      "DECISION": "Decisions",
+      "ACTION_ITEM": "Tasks",
+      "OPEN": "Open questions",
+      "REFERENCE": "Reference"
+    },
+    "resync": {
+      "message": "Some changes were missed. Resyncing the timeline.",
+      "action": "Resync"
+    },
+    "citationSpeakersFailed": "Couldn't load speakers for the sources.",
+    "loading": "Loading timeline",
+    "loadFailed": "Couldn't load the timeline.",
+    "agendasRefreshFailed": "Couldn't refresh topic titles.",
+    "agendasFailed": "Couldn't load topic titles.",
+    "empty": {
+      "ended": "No items were recorded in this meeting.",
+      "live": "Nothing to organize yet. Decisions, tasks, and questions will appear here as they come up.",
+      "filtered": "No items of this type."
+    },
+    "jumpToTranscript": "Go to {time} in the transcript",
+    "continued": "Continued",
+    "live": "Discussing",
+    "previous": {
+      "aria": "Go to the earlier discussion of {title}",
+      "ariaAt": "Go to the earlier discussion of {title} at {time}",
+      "button": "Earlier discussion"
+    },
+    "transcribing": "Transcribing",
+    "relation": {
+      "answer": "Answer",
+      "answeredQuestion": "Answered question"
+    },
+    "agendaRetracted": "Withdrawn"
+  },
+  "transcript": {
+    "loadFailed": "Couldn't load the transcript.",
+    "scrollToBottom": "Jump to latest",
+    "label": "Meeting transcript",
+    "loading": "Loading transcript",
+    "transcribing": "Transcribing",
+    "notStarted": {
+      "title": "Your conversation will appear here.",
+      "body": "Start recording and talk as usual. HeyMoa turns it into readable paragraphs."
+    },
+    "waiting": {
+      "title": "Waiting for someone to speak",
+      "body": "Speak naturally."
+    },
+    "empty": "No transcript.",
+    "search": {
+      "open": "Search",
+      "region": "Search transcript",
+      "input": "Search terms",
+      "placeholder": "Search the transcript",
+      "count": "{count, plural, one {# result} other {# results}}",
+      "none": "No results",
+      "previous": "Previous result",
+      "next": "Next result",
+      "close": "Close search"
+    },
+    "gap": {
+      "ongoing": "ongoing",
+      "duration": "{unit, select, brief {briefly} minutes {for about {value, plural, one {# minute} other {# minutes}}} hours {for about {value, plural, one {# hour} other {# hours}}} other {for about {value, plural, one {# day} other {# days}}}}",
+      "pause": "Paused {duration}",
+      "pauseOpen": "Paused",
+      "lost": "No audio {duration}",
+      "lostOpen": "No audio",
+      "untranscribed": "Couldn't transcribe {duration}. The audio is saved.",
+      "pausedBetween": "Paused at {start}, resumed at {end}"
+    }
+  },
+  "speakers": {
+    "fallback": "Speaker {label}",
+    "unnamedParticipant": "Unnamed participant",
+    "unconfirmed": "Speaker not yet confirmed",
+    "speakingTime": "{minutes, plural, =0 {{seconds}s} other {{seconds, plural, =0 {{minutes}m} other {{minutes}m {seconds}s}}}}",
+    "assign": {
+      "trigger": "Assign a name to {name}",
+      "searchLabel": "Search attendees by name",
+      "searchPlaceholder": "Search by name",
+      "loadFailed": "Couldn't load people.",
+      "loading": "Loading people…",
+      "empty": "No matching attendees.",
+      "assignedLabels": "Speaker {labels}",
+      "create": "＋ Add \"{name}\"",
+      "scope": {
+        "legend": "Apply to",
+        "label": "Apply to all lines from this speaker",
+        "segment": "Apply to this line only"
+      },
+      "noName": "Leave unnamed",
+      "clearOverride": "Remove line assignment"
+    },
+    "dock": {
+      "previous": "Previous line from {name}",
+      "next": "Next line from {name}",
+      "expand": "Expand speaker dock",
+      "collapse": "Collapse speaker dock",
+      "unassigned": "Unassigned {count}",
+      "speakers": "{count, plural, one {# speaker} other {# speakers}}"
+    },
+    "nudge": {
+      "failed": "Couldn't identify speakers.",
+      "pending": "Identifying speakers. When it's done, you can name each speaker.",
+      "howTo": "How to assign"
+    },
+    "panel": {
+      "title": "Speakers",
+      "silent": "Didn't speak",
+      "share": "{percent}%",
+      "goAssign": "Start assigning",
+      "firstLine": "Go to first line",
+      "nextLine": "Next line",
+      "spots": "{count, plural, one {# line} other {# lines}}",
+      "position": "{current} / {total}",
+      "firstAt": "First spoke at {time}",
+      "participants": "{count, plural, one {# participant} other {# participants}}",
+      "unassigned": "{count, plural, one {# unassigned speaker} other {# unassigned speakers}}",
+      "meetingLength": "Meeting {time}",
+      "empty": "No speakers identified yet.",
+      "reset": "Reset all speaker assignments"
+    },
+    "tools": {
+      "open": "Speakers",
+      "openHint": "See who spoke and for how long",
+      "nextUnassigned": "Unassigned {count}",
+      "nextUnassignedHint": "Go to the next line from an unassigned speaker"
+    }
+  },
+  "summary": {
+    "sections": {
+      "OVERVIEW": "Overview",
+      "ACTION_ITEM": "Tasks",
+      "DECISION": "Decisions"
+    },
+    "regenerate": "Regenerate summary",
+    "failed": {
+      "title": "Analysis failed",
+      "fallback": "Couldn't complete the analysis.",
+      "reanalyze": "Regenerate"
+    },
+    "missing": {
+      "endedTitle": "No summary yet",
+      "liveTitle": "Summary available after the meeting",
+      "liveBody": "End the meeting to get an overview, tasks, and decisions automatically.",
+      "readOnlyBody": "This meeting has no saved summary.",
+      "endedBody": "Create a summary to get an overview, tasks, and decisions for this meeting."
+    },
+    "create": "Create summary",
+    "loadFailed": "Couldn't load the summary.",
+    "loading": "Loading summary",
+    "analyzing": {
+      "title": "Summarizing the meeting",
+      "body": "You can leave this screen. The summary will appear in this tab when it's ready."
+    },
+    "retryStrip": {
+      "failed": "Couldn't regenerate the summary. The one below is the previous version.",
+      "running": "Regenerating the summary.",
+      "runningHint": "The summary below will be replaced when it's done."
+    },
+    "sectionEmpty": "None came up in this meeting.",
+    "evidenceCount": "{count, plural, one {# source} other {# sources}}"
+  },
+  "review": {
+    "head": {
+      "confirmed": "Confirmed",
+      "inReview": "In review",
+      "participantsMore": "{name} and {count, plural, one {# other} other {# others}}",
+      "map": "Connection map",
+      "lengthUnderMinute": "Under 1 min",
+      "length": "{hours, plural, =0 {{minutes} min} other {{minutes, plural, =0 {{hours} hr} other {{hours} hr {minutes} min}}}}"
+    },
+    "overview": {
+      "title": "Summary",
+      "failed": "Couldn't create the summary. You can still review the items below.",
+      "none": "This meeting has no topic summary. You can still review the items below."
+    },
+    "flow": {
+      "stepsLabel": "Analysis steps",
+      "steps": {
+        "organize": "Organize meeting",
+        "check": "Check conflicts and assignees",
+        "review": "Review",
+        "confirm": "Confirm"
+      },
+      "stepState": {
+        "done": "Done",
+        "failed": "Failed",
+        "running": "In progress",
+        "waiting": "Waiting"
+      },
+      "step": "{label}: {state}",
+      "status": {
+        "DIARIZING": {
+          "title": "Processing the recording",
+          "body": "Once the transcript is saved, we'll start organizing the meeting. After speakers are identified, we'll also sort out conflicts and assignees."
+        },
+        "NOT_REQUESTED": {
+          "title": "Waiting for analysis",
+          "body": "Analysis starts once the whole transcript is saved. If it takes too long, you can request it yourself."
+        },
+        "ANALYZING": {
+          "title": "Analyzing the meeting",
+          "body": "Organizing the meeting and summarizing agenda items. After speakers are identified, we'll sort out conflicts, connections, assignees, and due dates."
+        },
+        "ANALYSIS_FAILED": {
+          "title": "Couldn't analyze the meeting",
+          "body": "The transcript and meeting record are still here."
+        },
+        "INPUT_DELAYED": {
+          "title": "The meeting record is taking longer than usual",
+          "body": "You can check the transcript now. Analysis can't be requested yet because it starts only after the recording is fully processed."
+        }
+      },
+      "kept": "The meeting summary and review you already have stay as they are.",
+      "reanalyze": "Regenerate",
+      "request": "Request analysis",
+      "outcomesTitle": "What you'll see after analysis",
+      "outcomes": {
+        "topics": "Topic summary",
+        "decisions": "Decisions",
+        "tasks": "Tasks with assignees and due dates",
+        "open": "Issues and questions",
+        "replacements": "Earlier decisions to replace",
+        "taskChanges": "Changes to existing tasks"
+      },
+      "transcriptReady": "The transcript is ready to view.",
+      "openTranscript": "View transcript"
+    },
+    "retry": {
+      "requested": "Analysis requested.",
+      "conflict": "Analysis is already running, or the request status changed.",
+      "readFailed": "Couldn't load the analysis status.",
+      "requestFailed": "Couldn't request analysis.",
+      "recheck": "Check status again",
+      "requestAgain": "Request analysis again"
+    },
+    "confirm": {
+      "unchosen": "{count, plural, one {<b>{count}</b> suggestion to review} other {<b>{count}</b> suggestions to review}}",
+      "goToSuggestions": "Go to suggestions",
+      "nothingToAdd": "No decisions or tasks to add.",
+      "adding": "Add {decisions, plural, one {<b>{decisions}</b> decision} other {<b>{decisions}</b> decisions}} and {tasks, plural, one {<b>{tasks}</b> task} other {<b>{tasks}</b> tasks}}",
+      "ending": "{count, plural, one {<b>{count}</b> earlier decision will end} other {<b>{count}</b> earlier decisions will end}}",
+      "changing": "{count, plural, one {<b>{count}</b> existing task changes} other {<b>{count}</b> existing tasks change}}",
+      "finish": "Finish review",
+      "dialog": {
+        "title": "Finish the review?",
+        "adds": "This adds {decisions, plural, one {# selected decision} other {# selected decisions}} and {tasks, plural, one {# selected task} other {# selected tasks}} to the project. Decisions and tasks you didn't select stay only in the meeting notes.",
+        "ends": "{count, plural, one {# earlier decision will end.} other {# earlier decisions will end.}}",
+        "changes": "{count, plural, one {# existing task will change.} other {# existing tasks will change.}}",
+        "final": "You can't edit the review after you finish."
+      }
+    },
+    "blocked": {
+      "reviewStale": "Check the latest review",
+      "analysisStale": "Check the latest analysis",
+      "analysisRefreshing": "Checking the latest analysis",
+      "relationsPending": "You can finish the review once conflicts and connections are checked",
+      "enrichmentPending": "You can finish the review once assignees and due dates are sorted out",
+      "missingChoice": "Clear your choice from the earlier analysis",
+      "saving": "You can finish once saving is done",
+      "tasksLoading": "Loading suggested changes to existing tasks",
+      "tasksFailed": "Couldn't load existing tasks, so the suggested changes can't be checked",
+      "duplicateApplies": "More than one suggestion applies to the same task. Apply one and skip the rest",
+      "staleApplies": "An existing task changed. Review its suggestion and choose Skip",
+      "unchosen": "{count, plural, one {# suggestion left to choose} other {# suggestions left to choose}}"
+    },
+    "board": {
+      "views": {
+        "summary": "Summary",
+        "graph": "Graph"
+      },
+      "viewLabel": "View",
+      "loading": "Loading review",
+      "loadFailed": "Couldn't load the review.",
+      "confirmed": "Review finished",
+      "confirmFailed": "Couldn't finish the review.",
+      "pdfStale": "Check the latest analysis before creating the PDF.",
+      "pdfSourcesFailed": "Couldn't load the meeting notes content.",
+      "relations": {
+        "PENDING": "Checking conflicts and connections.",
+        "FAILED": "Couldn't analyze conflicts and connections.",
+        "SKIPPED": "Conflicts and connections weren't analyzed because speakers couldn't be identified."
+      },
+      "linksFailed": "Couldn't load meeting connections.",
+      "linksLoading": "Loading conflicts and connections.",
+      "refreshFailed": "Couldn't load the latest analysis.",
+      "reviewRefreshFailed": "Couldn't load the latest review.",
+      "assigneesFailed": "Couldn't load the people you can assign.",
+      "missingChoice": "Clear your choice from the earlier analysis.",
+      "goToChoice": "Go to choice",
+      "enrichment": {
+        "PENDING": "Sorting out assignees and due dates.",
+        "FAILED": "Couldn't analyze assignees and due dates. You can set them yourself.",
+        "SKIPPED": "Assignees and due dates weren't analyzed because speakers couldn't be identified."
+      },
+      "switchHint": "When you finish the review, only items with the switch on are added to the project.",
+      "unnamedAssigned": "Tasks assigned to unnamed speakers: {count}",
+      "nameSpeakers": "Name speakers",
+      "graphSummaryFailed": "Couldn't load the summary, so the graph can't be drawn.",
+      "graphLoading": "Loading graph"
+    },
+    "sections": {
+      "names": {
+        "DECISION": "Decisions",
+        "ACTION_ITEM": "Tasks",
+        "OPEN": "Issues and questions",
+        "REFERENCE": "Reference"
+      },
+      "empty": {
+        "DECISION": "No decisions.",
+        "ACTION_ITEM": "No tasks.",
+        "OPEN": "No open issues or questions.",
+        "REFERENCE": "No reference items."
+      },
+      "addToProject": "Add to project",
+      "more": "Show more",
+      "add": "Add to {section}"
+    },
+    "row": {
+      "assigneePlaceholder": "Set assignee",
+      "me": "Me",
+      "projectSwitch": "Add to project: {content}",
+      "edit": "Edit",
+      "exclude": "Exclude",
+      "include": "Include",
+      "excluded": "Excluded",
+      "edited": "Edited",
+      "authored": "Added manually",
+      "contentLabel": "Item content"
+    },
+    "addItem": {
+      "kindLabel": "Item type",
+      "contentLabel": "New item content",
+      "placeholder": "{kind} details",
+      "submit": "Add"
+    },
+    "evidence": {
+      "label": "Source quotes",
+      "loading": "Loading source quotes",
+      "scriptFailed": "Couldn't load the transcript, so source quotes can't be shown.",
+      "authored": "This item was added manually, so there are no quotes from the meeting.",
+      "notFound": "Couldn't find the quoted lines in the transcript."
+    },
+    "trail": {
+      "title": "Edit history",
+      "authored": "This item was added manually, so there's no record from the meeting.",
+      "loading": "Loading edit history",
+      "scriptFailed": "Couldn't load the transcript.",
+      "failed": "Couldn't load the edit history.",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
+      "openInScript": "Open in transcript",
+      "editedInReview": "Edited in review",
+      "scriptLines": "{count, plural, one {# transcript line} other {# transcript lines}}",
+      "noScript": "No transcript",
+      "script": "Transcript",
+      "roles": {
+        "REFUTES": "Objection",
+        "CONDITIONS": "Condition",
+        "RETRACTS": "Retraction",
+        "REFERENCES": "Mention"
+      }
+    },
+    "detail": {
+      "agendas": "Linked agenda items",
+      "none": "None",
+      "linked": "Linked items",
+      "links": {
+        "LEADS_TO": "Leads to",
+        "SUPPORTS": "Supports",
+        "PROGRESS": "Update",
+        "RESOLVES": "Resolves"
+      }
+    },
+    "map": {
+      "title": "When it was decided",
+      "chapters": "Topic spans",
+      "groupCount": "{count, plural, one {# item} other {# items}}",
+      "tickMinutes": "{count}m",
+      "tickHours": "{count}h"
+    },
+    "graph": {
+      "empty": "No topic groups, so the graph can't be drawn",
+      "legend": {
+        "topic": "Topic",
+        "agenda": "Agenda item",
+        "agendaLink": "Continued agenda item",
+        "relation": "Relation",
+        "alsoTopic": "Also in another topic"
+      },
+      "roles": {
+        "DECISION": "Decision",
+        "ACTION": "Task",
+        "OPEN": "Open",
+        "REFERENCE": "Reference"
+      },
+      "label": "Graph of items grouped by topic",
+      "outsideTopic": "No topic",
+      "hubCount": "Topic · {count, plural, one {# item} other {# items}}",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fit": "Fit to view",
+      "agendaLinks": "Continued agenda items"
+    },
+    "topics": {
+      "title": "Topics",
+      "label": "Topic index",
+      "showFirst": "Show first {count} only",
+      "showRest": "{count, plural, one {Show # more topic} other {Show # more topics}}",
+      "counts": {
+        "decision": "Decisions",
+        "task": "Tasks",
+        "open": "Open questions"
+      },
+      "continuedFrom": "Continued from <meeting>{title}</meeting>",
+      "earlierMeeting": "an earlier meeting",
+      "agenda": "an agenda item",
+      "openMap": "View in connection map",
+      "openTimeline": "View in timeline",
+      "openTimelineAt": "View in timeline · {span}"
+    },
+    "savedChoices": {
+      "decisions": {
+        "END": "Replace",
+        "APPLY": "To apply",
+        "KEEP": "Keep",
+        "APPLIED": "Applied"
+      },
+      "group": "Choice from earlier analysis {index}",
+      "label": "Choice from earlier analysis · {decision}",
+      "clearLabel": "Clear {decision} choice {index}",
+      "clear": "Clear choice"
+    },
+    "suggestions": {
+      "showReason": "View source",
+      "replacement": {
+        "label": "Earlier {kind}",
+        "question": "What should happen to the earlier decision?",
+        "replace": "Replace",
+        "keep": "Keep",
+        "afterReplace": "After replacing",
+        "keepBoth": "Decisions to keep together",
+        "afterConfirm": "After you finish the review",
+        "decisionCount": "{count, plural, one {# decision} other {# decisions}}",
+        "earlier": "Earlier decision",
+        "new": "New decision",
+        "projectDecision": "Project decision",
+        "approved": "{source} · confirmed {date}",
+        "ended": "Already ended"
+      },
+      "relation": {
+        "sameMeeting": "Same meeting",
+        "approved": "Confirmed project item",
+        "earlierMeeting": "Earlier meeting",
+        "quotes": "Source quotes for this relation",
+        "openTarget": "View related item · {content}",
+        "kinds": {
+          "CONFLICTS_WITH": "Conflicts",
+          "SUPERSEDES": "Replaces",
+          "CANCELS": "Cancels",
+          "RESOLVES": "Resolves",
+          "SUCCEEDS": "Continues",
+          "COMPLETES": "Completes"
+        }
+      },
+      "task": {
+        "label": "Change existing task",
+        "toggle": "Apply to the existing task?",
+        "applied": "Applied",
+        "excluded": "Excluded",
+        "planned": "To apply",
+        "apply": "Apply",
+        "skip": "Skip",
+        "stale": "The existing task changed, so this suggestion can't be applied. Choose Skip.",
+        "duplicate": "Another suggestion for the same task is also set to apply. Apply one and skip the rest.",
+        "loadFailed": "Couldn't load the existing task.",
+        "notFound": "Couldn't find the task to change.",
+        "loading": "Loading existing task",
+        "status": "Status",
+        "assignee": "Assignee",
+        "due": "Due date",
+        "none": "None",
+        "noChange": "No changes",
+        "selectedMember": "Selected member"
+      }
+    },
+    "editor": {
+      "conflict": "Someone else edited this first. Check the latest version.",
+      "conflictReloadFailed": "Someone else edited this first, and the latest review couldn't be loaded. Check again.",
+      "saveFailed": "Couldn't save."
+    },
+    "statusFailed": "Couldn't load the summary status.",
+    "noSpeaker": "Unknown speaker"
+  },
+  "share": {
+    "copyLabel": "Copy summary",
+    "copy": "Copy",
+    "formats": {
+      "text": {
+        "label": "Copy as text",
+        "hint": "Plain text without formatting marks"
+      },
+      "markdown": {
+        "label": "Copy as Markdown (.md)",
+        "hint": "Works well in Notion, Obsidian, and LLMs"
+      }
+    },
+    "copied": "Summary copied to clipboard.",
+    "copyFailed": "Couldn't copy.",
+    "copyBlocked": "Your browser blocked clipboard access.",
+    "menuLabel": "Export and share",
+    "menu": "Share",
+    "targets": {
+      "pdf": "Export as PDF",
+      "email": "Send by email"
+    },
+    "materialRetry": "Reloading the transcript. Try again in a moment.",
+    "materialLoading": "Loading",
+    "materialReload": "Reload",
+    "mail": {
+      "title": "Send meeting notes",
+      "groups": {
+        "attendees": "Meeting attendees",
+        "members": "Workspace members"
+      },
+      "unsent": "{count, plural, one {Couldn't send the meeting notes to # person.} other {Couldn't send the meeting notes to # people.}}",
+      "resend": "Resend",
+      "contents": "What to send",
+      "minutes": "Meeting notes",
+      "minutesParts": "Summary · Decisions · Tasks · Open items",
+      "included": "Always included",
+      "transcript": "Transcript",
+      "transcriptHint": "Times, speakers, and words exactly as recorded",
+      "unnamed": "{count, plural, one {# speaker without a name ({names}) will appear as is in the transcript.} other {# speakers without names ({names}) will appear as is in the transcript.}} You can name them in the transcript before sending.",
+      "quotedName": "“{name}”",
+      "recipients": "To",
+      "membersFailed": "Couldn't load workspace members. You can still type addresses.",
+      "addAttendees": "{count, plural, one {Add all attendees (# person)} other {Add all attendees (# people)}}",
+      "attendeesAdded": "All attendees added",
+      "recipientsHint": "Separate addresses with commas or Enter",
+      "message": "Message",
+      "optional": "(optional)",
+      "messagePlaceholder": "Add a note for recipients",
+      "previewPdf": "Preview attached PDF",
+      "send": "{count, plural, one {Send to # person} other {Send to # people}}",
+      "sendEmpty": "Send",
+      "status": {
+        "PENDING": "Sending",
+        "SENT": "Sent",
+        "FAILED": "Failed"
+      },
+      "resultFailed": "Couldn't load the send results.",
+      "resultLabel": "Results by recipient",
+      "checking": "Checking send results",
+      "stillSending": "Some messages are still sending. Check again in a moment.",
+      "recheck": "Check again",
+      "sentMeaning": "Sent means the mail server accepted the message. We can't tell whether it reached the recipient's inbox.",
+      "resendFailed": "{count, plural, one {Resend to # failed recipient} other {Resend to # failed recipients}}",
+      "preview": {
+        "title": "Email recipients will see",
+        "from": "From",
+        "to": "To",
+        "subject": "Subject",
+        "noRecipients": "Add recipients",
+        "attachment": "Attached: {contents}",
+        "contentsMinutes": "Meeting notes",
+        "contentsBoth": "Meeting notes · Transcript"
+      },
+      "problem": {
+        "invalid": "{emails}: Invalid email format. Remove these addresses and enter them again.",
+        "tooMany": "{extra, plural, one {You can send to up to {max} people at once. Remove # person.} other {You can send to up to {max} people at once. Remove # people.}}"
+      }
+    }
+  },
+  "minutes": {
+    "pdfFailed": "Couldn't create the meeting notes PDF.",
+    "invalidated": "The content or included items changed. Check the PDF again.",
+    "export": {
+      "title": "Export meeting notes as PDF",
+      "description": "The meeting notes always include the summary, decisions, tasks, and open items. Choose whether to attach the transcript.",
+      "transcript": "Transcript",
+      "transcriptHint": "Attaches everything said in the meeting, word for word. Recipients will see every line.",
+      "preview": "Preview PDF",
+      "download": "Download PDF",
+      "retryHint": "Click Download PDF again in a moment."
+    },
+    "preview": {
+      "openInTab": "Open PDF in new tab",
+      "frameTitle": "Meeting notes PDF to attach"
+    },
+    "pdf": {
+      "title": "Meeting notes",
+      "documentTitle": "{title} meeting notes",
+      "confirmed": "Confirmed",
+      "inReview": "In review (not confirmed)",
+      "meta": {
+        "title": "Title",
+        "when": "Date",
+        "attendees": "Attendees"
+      },
+      "attendeeCount": "{count, plural, one {# person} other {# people}}",
+      "attendeesUnknown": "Needs checking",
+      "unnamedSpeakers": "{count, plural, one {# unnamed speaker} other {# unnamed speakers}}",
+      "lead": "Meeting summary",
+      "owners": "Assignees",
+      "unassigned": "Unassigned",
+      "noDue": "Not set",
+      "ownerCount": "{count, plural, one {# task} other {# tasks}}",
+      "index": "Agenda",
+      "noAgendas": "No agenda items.",
+      "columns": {
+        "no": "No.",
+        "agenda": "Agenda",
+        "start": "Start",
+        "decisions": "Decisions",
+        "tasks": "Tasks",
+        "open": "Open",
+        "content": "Details",
+        "time": "Time",
+        "owner": "Assignee",
+        "due": "Due",
+        "speaker": "Speaker",
+        "line": "What was said",
+        "refs": "Refs"
+      },
+      "agendaSummaries": "Agenda item summaries",
+      "agendaBookmark": "Agenda item {no} · {title}",
+      "decisions": "1. Decisions",
+      "actions": "2. Tasks",
+      "open": "3. Open items",
+      "none": "None",
+      "annex": "Appendix A. Transcript",
+      "annexNote": "Times are measured from the start of the recording. Reference numbers point to the decisions, tasks, and open items based on that line.",
+      "noLines": "No lines recorded.",
+      "truncated": "The recording wasn't fully saved"
+    }
+  }
+}

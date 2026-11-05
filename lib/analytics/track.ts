@@ -135,6 +135,7 @@ export type WebEventProperties = {
     workspace_id: string;
     section:
       | "account"
+      | "language"
       | "workspace"
       | "members"
       | "guests"

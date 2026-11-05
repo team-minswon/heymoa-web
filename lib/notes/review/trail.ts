@@ -5,13 +5,19 @@ import type {
 
 type Role = ProposalRevision["citations"][number]["role"];
 
-/** 인용된 줄이 그 항목에 한 역할. 뒷받침하는 줄은 표시하지 않는다 — 대부분이 그렇다. */
-export const CITATION_ROLE_LABEL: Partial<Record<Role, string>> = {
-  REFUTES: "반대 의견",
-  CONDITIONS: "조건",
-  RETRACTS: "취소",
-  REFERENCES: "언급",
-};
+/**
+ * 이름표를 다는 인용 역할. 뒷받침하는 줄은 표시하지 않는다 — 대부분이 그렇다.
+ * 이름은 화면이 `notes.review.trail.roles` 에서 고른다.
+ */
+export const LABELED_CITATION_ROLES = [
+  "REFUTES",
+  "CONDITIONS",
+  "RETRACTS",
+  "REFERENCES",
+] as const satisfies readonly Role[];
+export type LabeledCitationRole = (typeof LABELED_CITATION_ROLES)[number];
+export const isLabeledRole = (role: Role): role is LabeledCitationRole =>
+  (LABELED_CITATION_ROLES as readonly Role[]).includes(role);
 
 export type TrailLine = {
   segmentId: string;

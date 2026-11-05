@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -97,6 +98,7 @@ import { cn } from "@/lib/utils";
 import { Collapse } from "@/components/heymoa/collapse";
 import { openSitePage } from "@/lib/desktop/open-site-page";
 import { updateChecklist } from "@/lib/onboarding/checklist";
+import { localePath } from "@/lib/i18n/locales";
 
 /** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
 type ProjectDialogState = { project: ProjectResponseData } | null;
@@ -129,6 +131,10 @@ export function WorkspaceSidebar({
   onboarding?: React.ReactNode;
 }) {
   const router = useRouter();
+  const t = useTranslations("shell.sidebar");
+  const tNav = useTranslations("shell.nav");
+  const locale = useLocale();
+  const tActions = useTranslations("common.actions");
   const notesHref = `/w/${workspaceId}`;
   const tasksHref = `/w/${workspaceId}/tasks`;
   const pathname = usePathname();
@@ -226,10 +232,10 @@ export function WorkspaceSidebar({
       if (response.status === 200 && response.data.success) {
         applyRenamedProject(response.data.data);
       }
-      toast.success("프로젝트 이름이 변경되었습니다.");
+      toast.success(t("toast.renamed"));
       void refreshProjects();
     } catch {
-      toast.error("프로젝트 이름 변경에 실패했습니다.");
+      toast.error(t("toast.renameFailed"));
     }
     setProjectDialog(null);
   };
@@ -243,7 +249,7 @@ export function WorkspaceSidebar({
             render={
               <Button
                 variant="ghost"
-                aria-label="워크스페이스 전환"
+                aria-label={t("switchWorkspace")}
                 className="h-14 w-full justify-start gap-0 rounded-none px-3 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
               />
             }
@@ -253,7 +259,7 @@ export function WorkspaceSidebar({
                 {workspace?.name?.trim().slice(0, 1) || "W"}
               </span>
               <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--el-ink)]">
-                {workspace?.name ?? "워크스페이스"}
+                {workspace?.name ?? t("workspaceFallback")}
               </span>
               <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
             </div>
@@ -284,14 +290,14 @@ export function WorkspaceSidebar({
               className="gap-2 rounded-control py-2 text-sm"
             >
               <Plus className="size-4 text-[var(--el-muted)]" />
-              <span>새 워크스페이스</span>
+              <span>{t("newWorkspace")}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onOpenSettings("workspace")}
               className="gap-2 rounded-control py-2 text-sm"
             >
               <Settings className="size-4 text-[var(--el-muted)]" />
-              <span>워크스페이스 설정</span>
+              <span>{t("workspaceSettings")}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -300,7 +306,7 @@ export function WorkspaceSidebar({
       </SidebarHeader>
 
       <SidebarContent className="px-1.5 py-2">
-        <nav aria-label="워크스페이스">
+        <nav aria-label={t("label")}>
           {/* ── 작업: 알림 · 모든 노트 · 할 일 ──
               도움(가이드·문의)은 작업이 아니라 아래 고정 묶음으로 뗐다(APP-1325). */}
           <SidebarGroup className="py-0.5">
@@ -314,10 +320,10 @@ export function WorkspaceSidebar({
                       className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                     >
                       <NavigationIcon icon={Bell} />
-                      <span>알림</span>
+                      <span>{tNav("notifications")}</span>
                       <UnseenCount
                         count={notifications.unreadCount ?? 0}
-                        label={(n) => `안 읽은 알림 ${n}개`}
+                        label={(count) => t("unreadNotifications", { count })}
                         className="ml-auto"
                       />
                     </SidebarMenuButton>
@@ -340,7 +346,7 @@ export function WorkspaceSidebar({
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
                     <NavigationIcon icon={NotebookText} />
-                    <span>모든 노트</span>
+                    <span>{tNav("allNotes")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -350,7 +356,7 @@ export function WorkspaceSidebar({
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
                     <NavigationIcon icon={ListTodo} />
-                    <span>할 일</span>
+                    <span>{tNav("tasks")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -373,10 +379,10 @@ export function WorkspaceSidebar({
                     !projectsOpen && "-rotate-90"
                   )}
                 />
-                프로젝트
+                {t("projects")}
               </button>
               <button
-                aria-label="새 프로젝트"
+                aria-label={t("newProject")}
                 onClick={onCreateProject}
                 className="flex size-5 items-center justify-center rounded-chip hover:bg-[var(--el-surface-strong)] text-[var(--el-muted)] hover:text-[var(--el-ink)] transition-colors"
               >
@@ -399,12 +405,12 @@ export function WorkspaceSidebar({
                           className="h-8 gap-2.5 rounded-control px-2.5 text-[13px] text-[var(--el-muted)]"
                         >
                           <Plus className="size-4 text-[var(--el-muted)]" />
-                          <span>프로젝트 만들기</span>
+                          <span>{t("createProject")}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </SidebarMenu>
                     <p className="px-2.5 pt-1 pb-1 text-[11px] leading-relaxed text-[var(--el-muted-soft)]">
-                      회의를 주제별로 묶으면 지난 맥락을 찾기 쉬워집니다.
+                      {t("projectsHint")}
                     </p>
                   </SidebarGroupContent>
                 )}
@@ -444,7 +450,7 @@ export function WorkspaceSidebar({
                             <DropdownMenuTrigger
                               render={
                                 <SidebarMenuAction
-                                  aria-label={`${project.name} 프로젝트 메뉴`}
+                                  aria-label={t("projectMenu", { name: project.name })}
                                   showOnHover
                                   className="size-5 rounded-chip text-[var(--el-muted-soft)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
                                 />
@@ -462,7 +468,7 @@ export function WorkspaceSidebar({
                                 className="gap-2 rounded-control py-1.5 text-xs"
                               >
                                 <Pencil className="size-3.5 text-[var(--el-muted)]" />
-                                <span>이름 변경</span>
+                                <span>{t("rename")}</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
@@ -473,7 +479,7 @@ export function WorkspaceSidebar({
                                 className="gap-2 rounded-control py-1.5 text-xs"
                               >
                                 <Orbit className="size-3.5 text-[var(--el-muted)]" />
-                                <span>연결 지도</span>
+                                <span>{tNav("connectionMap")}</span>
                               </DropdownMenuItem>
                               {/* 삭제는 서버가 ADMIN 에게만 허락한다(`DeleteProjectService`) — 눌러 봐야 403인 메뉴는 두지 않는다. */}
                               {canDeleteProject && (
@@ -483,7 +489,7 @@ export function WorkspaceSidebar({
                                   className="gap-2 rounded-control py-1.5 text-xs text-destructive"
                                 >
                                   <Trash2 className="size-3.5" />
-                                  <span>삭제</span>
+                                  <span>{tActions("delete")}</span>
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -514,12 +520,12 @@ export function WorkspaceSidebar({
               <SidebarMenuButton
                 onClick={() => {
                   track("help_opened", { from: "sidebar" });
-                  openSitePage("/help", router.push);
+                  openSitePage(localePath(locale, "/help"), router.push);
                 }}
                 className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
               >
                 <NavigationIcon icon={CircleHelp} />
-                <span>사용 가이드</span>
+                <span>{t("guide")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -532,7 +538,7 @@ export function WorkspaceSidebar({
                 className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
               >
                 <NavigationIcon icon={MessageSquareText} />
-                <span>문의·피드백</span>
+                <span>{t("feedback")}</span>
                 <UnseenCount
                   count={feedbackUnseen}
                   className="ml-auto"
@@ -551,7 +557,7 @@ export function WorkspaceSidebar({
               <Button
                 variant="ghost"
                 disabled={isLoggingOut}
-                aria-label={isLoggingOut ? "로그아웃 중" : undefined}
+                aria-label={isLoggingOut ? t("loggingOut") : undefined}
                 className="h-auto w-full justify-start gap-0 rounded-none px-3 py-3 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
               />
             }
@@ -570,10 +576,10 @@ export function WorkspaceSidebar({
               )}
               <div className="min-w-0 flex-1 text-left">
                 <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">
-                  {isLoggingOut ? "로그아웃 중" : (user?.name ?? "사용자")}
+                  {isLoggingOut ? t("loggingOut") : (user?.name ?? t("userFallback"))}
                 </p>
                 <p className="block truncate text-[11px] text-[var(--el-muted)] leading-tight">
-                  {isLoggingOut ? "잠시만 기다려 주세요" : (user?.email ?? "")}
+                  {isLoggingOut ? t("pleaseWait") : (user?.email ?? "")}
                 </p>
               </div>
               <Settings className="size-4 text-[var(--el-muted-soft)] shrink-0" />
@@ -586,7 +592,7 @@ export function WorkspaceSidebar({
             >
               {/* 설정의 「내 계정」 탭과 같은 아이콘 — 같은 목적지(APP-1325) */}
               <UserRound className="size-4 text-[var(--el-muted)]" />
-              <span>내 계정 설정</span>
+              <span>{t("accountSettings")}</span>
             </DropdownMenuItem>
             {user && (
               <DropdownMenuItem
@@ -600,7 +606,7 @@ export function WorkspaceSidebar({
                 className="gap-2 rounded-control py-2 text-sm"
               >
                 <ListChecks className="size-4 text-[var(--el-muted)]" />
-                <span>시작 안내 다시 보기</span>
+                <span>{t("reopenOnboarding")}</span>
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
@@ -614,7 +620,7 @@ export function WorkspaceSidebar({
               ) : (
                 <LogOut className="size-4" />
               )}
-              <span>{isLoggingOut ? "로그아웃 중" : "로그아웃"}</span>
+              <span>{isLoggingOut ? t("loggingOut") : t("logout")}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -643,16 +649,18 @@ export function WorkspaceSidebar({
         onOpenChange={(open) => !open && setProjectDialog(null)}
       >
         {projectDialog !== null && (
-          <DialogContent aria-label="프로젝트 이름 변경">
+          <DialogContent aria-label={t("renameDialog.title")}>
             <form action={(formData) => void handleProjectRename(formData)}>
               <DialogHeader>
-                <DialogTitle>프로젝트 이름 변경</DialogTitle>
+                <DialogTitle>{t("renameDialog.title")}</DialogTitle>
                 <DialogDescription>
-                  노트를 분류할 프로젝트 이름을 입력하세요.
+                  {t("renameDialog.description")}
                 </DialogDescription>
               </DialogHeader>
               <div className="py-5">
-                <Label htmlFor="project-name">프로젝트 이름</Label>
+                <Label htmlFor="project-name">
+                  {t("renameDialog.nameLabel")}
+                </Label>
                 <Input
                   id="project-name"
                   name="name"
@@ -670,10 +678,10 @@ export function WorkspaceSidebar({
                   disabled={isProjectMutationPending}
                   onClick={() => setProjectDialog(null)}
                 >
-                  취소
+                  {tActions("cancel")}
                 </Button>
                 <Button type="submit" loading={isProjectMutationPending}>
-                  저장
+                  {tActions("save")}
                 </Button>
               </DialogFooter>
             </form>
@@ -687,17 +695,17 @@ export function WorkspaceSidebar({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>프로젝트를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.name} 프로젝트와 이 프로젝트에서 나눈 에이전트
-              대화가 삭제되고 되돌릴 수 없습니다. 노트가 있는 프로젝트는 삭제할
-              수 없습니다.
+              {t("deleteDialog.description", {
+                name: deleteTarget?.name ?? "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteProject.isPending}>
-              취소
+              {tActions("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -719,20 +727,20 @@ export function WorkspaceSidebar({
                     if (!onNotes) router.push(notesHref);
                   }
                   await refreshProjects();
-                  toast.success("프로젝트가 삭제되었습니다.");
+                  toast.success(t("toast.deleted"));
                 } else if (code === "PROJECT_HAS_NOTES") {
-                  toast.error("노트가 있는 프로젝트는 삭제할 수 없습니다.");
+                  toast.error(t("toast.hasNotes"));
                 } else if (code === "WORKSPACE_ACCESS_DENIED") {
-                  toast.error("관리자만 프로젝트를 삭제할 수 있습니다.");
+                  toast.error(t("toast.adminOnly"));
                 } else {
                   toast.error(
-                    errorMessageOf(failure, "프로젝트를 삭제하지 못했습니다.")
+                    errorMessageOf(failure, t("toast.deleteFailed"))
                   );
                 }
                 setDeleteTarget(null);
               }}
             >
-              삭제
+              {tActions("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -744,8 +752,9 @@ export function WorkspaceSidebar({
 /** Link 이동만 진행을 표시한다. 현재 목록의 필터 버튼은 대기 없이 바뀐다. */
 function NavigationIcon({ icon: Icon }: { icon: LucideIcon }) {
   const { pending } = useLinkStatus();
+  const t = useTranslations("shell.sidebar");
   return pending ? (
-    <span role="status" aria-label="화면 이동 중">
+    <span role="status" aria-label={t("navigating")}>
       <Loader2
         className="size-4 animate-spin text-[var(--el-muted)]"
         aria-hidden

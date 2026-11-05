@@ -19,7 +19,7 @@ test("탈퇴는 「회원 탈퇴」 입력만으로 보내고 홈에서 완료 �
     dialog.getByText("테스트 유저의 워크스페이스", { exact: true })
   ).toBeVisible();
   await expect(
-    dialog.getByRole("radio", { name: "관리자 넘기기" })
+    dialog.getByRole("radio", { name: "관리자 권한 넘기기" })
   ).toBeChecked();
 
   const submit = dialog.getByRole("button", { name: "탈퇴", exact: true });

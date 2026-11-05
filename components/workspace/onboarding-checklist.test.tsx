@@ -51,7 +51,7 @@ describe("OnboardingChecklist", () => {
       />
     );
 
-    expect(screen.getByText("준비가 끝났어요")).toBeInTheDocument();
+    expect(screen.getByText("준비가 끝났습니다")).toBeInTheDocument();
     expect(screen.getByText("2/2")).toBeInTheDocument();
   });
 

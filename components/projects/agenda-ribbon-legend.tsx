@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { FoldPill, JoinMark, NORMAL, StopGlyph, THIN, forkPath, stopMetrics } from "@/components/projects/agenda-ribbon-column";
 import { Badge } from "@/components/ui/badge";
 
@@ -33,16 +35,18 @@ function Pair({ glyph, label }: { glyph: React.ReactNode; label: string }) {
  * 기호 설명은 기호 + 짧은 말 쌍(쌍 안은 줄바꿈 없이, 넘치면 쌍 단위로 내려간다)이고 이 판에 있는 기호만 보인다. 두 묶음 사이는 32px 로 벌려 구분한다.
  */
 export function Legend({ has }: { has: LegendHas }) {
+  const t = useTranslations("workspace.agendaMap.legend");
+  const tActions = useTranslations("common.actions");
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-2 text-[12px] text-[var(--el-muted)]">
-      <ul aria-label="기호 설명" className="flex flex-wrap gap-x-5 gap-y-2">
+      <ul aria-label={t("symbols")} className="flex flex-wrap gap-x-5 gap-y-2">
         <Pair
           glyph={
             <Rail>
               <StopGlyph n={1} col={COL} className="relative" />
             </Rail>
           }
-          label="안건 1개"
+          label={t("single")}
         />
         {has.capsule ? (
           <Pair
@@ -51,7 +55,7 @@ export function Legend({ has }: { has: LegendHas }) {
                 <StopGlyph n={3} col={COL} className="relative" />
               </Rail>
             }
-            label="안건 여럿"
+            label={t("multiple")}
           />
         ) : null}
         {has.gap ? (
@@ -61,7 +65,7 @@ export function Legend({ has }: { has: LegendHas }) {
                 <span className="w-full" style={{ height: THIN, background: NORMAL.thin }} />
               </span>
             }
-            label="다루지 않음"
+            label={t("gap")}
           />
         ) : null}
         {has.branch ? (
@@ -75,7 +79,7 @@ export function Legend({ has }: { has: LegendHas }) {
                 <StopGlyph n={1} small col={COL} className="absolute top-[12px] left-[32px] -translate-x-1/2 -translate-y-1/2" />
               </span>
             }
-            label="갈라짐"
+            label={t("branch")}
           />
         ) : null}
         {has.fold ? (
@@ -85,7 +89,7 @@ export function Legend({ has }: { has: LegendHas }) {
                 <FoldPill folded={3} />
               </span>
             }
-            label="접힌 안건"
+            label={t("folded")}
           />
         ) : null}
         {has.join ? (
@@ -96,20 +100,20 @@ export function Legend({ has }: { has: LegendHas }) {
                 <JoinMark half={stopMetrics(1, false, COL).half} className="absolute top-[10px] left-[24px]" />
               </span>
             }
-            label="앞 안건 둘"
+            label={t("join")}
           />
         ) : null}
       </ul>
 
-      <ul aria-label="조작 안내" className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <li className="whitespace-nowrap">올리면 미리 보기</li>
-        <li className="whitespace-nowrap">누르면 자세히</li>
-        <li className="whitespace-nowrap">끌어서 이동</li>
+      <ul aria-label={t("controls")} className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <li className="whitespace-nowrap">{t("hover")}</li>
+        <li className="whitespace-nowrap">{t("click")}</li>
+        <li className="whitespace-nowrap">{t("drag")}</li>
         <li className="inline-flex items-center gap-1.5 whitespace-nowrap">
           <Badge render={<kbd />} variant="outline" className="bg-[var(--el-surface-card)] font-normal text-[var(--el-muted)]">
             Esc
           </Badge>
-          닫기
+          {tActions("close")}
         </li>
       </ul>
     </div>

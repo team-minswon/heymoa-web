@@ -413,7 +413,7 @@ describe("RecordingProvider", () => {
 
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.error).toBe(
-      "실시간 스크립트 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요."
+      "실시간 스크립트 서버에 연결하지 못했습니다. 로그인 상태와 인터넷 연결을 확인해 주세요."
     );
     expect(harness.controller.close).toHaveBeenCalled();
   });
@@ -656,7 +656,7 @@ describe("RecordingProvider", () => {
     });
 
     expect(harness.result.current.error).toBe(
-      "마지막 기록을 정리하지 못해 이 기기에 남은 소리 12초를 올리지 못했어요."
+      "마지막 소리를 저장하지 못해 이 기기에 남은 소리 12초를 올리지 못했습니다."
     );
   });
 
@@ -846,7 +846,7 @@ describe("RecordingProvider", () => {
 
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.error).toBe(
-      "실시간 스크립트 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요."
+      "실시간 스크립트 연결이 끊겼습니다. 잠시 후 다시 시도해 주세요."
     );
     expect(harness.controller.close).toHaveBeenCalled();
   });
@@ -1040,7 +1040,7 @@ describe("RecordingProvider", () => {
 
     await waitFor(() =>
       expect(harness.result.current.error).toBe(
-        "회의가 종료되어 기록을 마쳤습니다."
+        "회의가 끝나 녹음을 마쳤습니다."
       )
     );
   });
@@ -1297,7 +1297,7 @@ describe("시작하는 사이에 쫓겨나면", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
     expect(harness.result.current.error).toBe(
-      "다른 탭이나 기기에서 이 회의를 녹음하고 있어요."
+      "다른 탭이나 기기에서 이 회의를 녹음하고 있습니다."
     );
   });
 
@@ -1318,7 +1318,7 @@ describe("시작하는 사이에 쫓겨나면", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
     expect(harness.result.current.error).toBe(
-      "녹음하던 기기와 연결이 끊겼어요. 그 기기의 녹음이 정리되면(약 1분) 녹음할 수 있어요."
+      "녹음하던 기기와 연결이 끊겼습니다. 약 1분 뒤 다시 녹음할 수 있습니다."
     );
   });
 
@@ -1402,7 +1402,7 @@ describe("같은 세션에 다시 붙는 동안", () => {
 
     await waitFor(() =>
       expect(harness.result.current.error).toBe(
-        "회의가 일시정지되어 기록을 멈췄습니다."
+        "회의가 일시정지되어 녹음을 멈췄습니다."
       )
     );
     expect(harness.result.current.phase).toBe("failed");
@@ -1719,7 +1719,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
         .onFailure("resume_window_exhausted", { droppedMs: 0 })
     );
 
-    expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄어요.");
+    expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄습니다.");
     expect(harness.result.current.phase).toBe("failed");
     // 이 탭이 버린 세션이다. 열린 세션으로 들고 있으면 독이 「다른 탭·기기에서 기록 중」으로 막는다
     expect(harness.result.current.session?.status).toBe("INTERRUPTED");
@@ -1740,7 +1740,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
     );
 
     expect(harness.result.current.error).toBe(
-      "연결이 끊겨 녹음을 멈췄어요. 이 기기에 남은 소리 12초를 올리지 못했어요."
+      "연결이 끊겨 녹음을 멈췄습니다. 이 기기에 남은 소리 12초를 올리지 못했습니다."
     );
   });
 
@@ -1770,7 +1770,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
           .onFailure("resume_window_exhausted", { droppedMs })
       );
       expect(harness.result.current.error).toMatch(
-        /^연결이 끊겨 녹음을 멈췄어요\./
+        /^연결이 끊겨 녹음을 멈췄습니다\./
       );
       return harness;
     }
@@ -1787,14 +1787,14 @@ describe("끊김 창과 끝 (APP-705)", () => {
       const harness = await dropAfterWindow(12_300);
       await act(() => vi.advanceTimersByTimeAsync(3_000));
       expect(harness.result.current.error).toMatch(
-        /^연결이 끊겨 녹음을 멈췄어요\./
+        /^연결이 끊겨 녹음을 멈췄습니다\./
       );
 
       apiFetchMock.mockResolvedValue(noteWith("ENDED"));
       await act(() => vi.advanceTimersByTimeAsync(3_100));
 
       expect(harness.result.current.error).toBe(
-        "회의가 끝나 이 기기에 남은 소리 12초를 올리지 못했어요."
+        "회의가 끝나 이 기기에 남은 소리 12초를 올리지 못했습니다."
       );
       // 종료 화면 규칙: 노트가 ENDED 면 note-panel 이 독을 걷어 [다시 녹음]이 없다. 같은 캐시를 채운다
       expect(
@@ -1844,7 +1844,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
       await act(() => vi.advanceTimersByTimeAsync(3_100));
 
       expect(harness.result.current.error).toBe(
-        "회의가 종료되어 기록을 마쳤습니다."
+        "회의가 끝나 녹음을 마쳤습니다."
       );
     });
   });
@@ -1864,7 +1864,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
 
     await waitFor(() =>
       expect(harness.result.current.error).toBe(
-        "회의가 끝나 이 기기에 남은 소리 12초를 올리지 못했어요."
+        "회의가 끝나 이 기기에 남은 소리 12초를 올리지 못했습니다."
       )
     );
   });
@@ -1888,7 +1888,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
 
     await waitFor(() =>
       expect(harness.result.current.error).toBe(
-        "회의가 끝나 이 기기에 남은 소리 8초를 올리지 못했어요."
+        "회의가 끝나 이 기기에 남은 소리 8초를 올리지 못했습니다."
       )
     );
   });
@@ -1909,7 +1909,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
 
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.error).toBe(
-      "회의가 끝나 이 기기에 남은 소리 8초를 올리지 못했어요."
+      "회의가 끝나 이 기기에 남은 소리 8초를 올리지 못했습니다."
     );
   });
 
@@ -1927,7 +1927,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
     );
 
     expect(harness.result.current.error).toBe(
-      "회의가 종료되어 기록을 마쳤습니다."
+      "회의가 끝나 녹음을 마쳤습니다."
     );
   });
 

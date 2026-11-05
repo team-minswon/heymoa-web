@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import type { ReviewItem } from "@/lib/notes/review/sections";
@@ -9,6 +10,15 @@ import {
 } from "@/lib/notes/review/summary";
 import { linkedItemsOf } from "@/lib/notes/review/topics";
 import { cn } from "@/lib/utils";
+
+/** 화면 언어로 이름을 다는 관계. 나머지는 서버가 붙인 이름을 그대로 쓴다 */
+const LINK_KINDS: ReadonlySet<string> = new Set([
+  "LEADS_TO",
+  "SUPPORTS",
+  "PROGRESS",
+  "RESOLVES",
+]);
+type LinkKind = "LEADS_TO" | "SUPPORTS" | "PROGRESS" | "RESOLVES";
 
 /**
  * 펼친 항목의 속. 붙은 제안(있으면)이 먼저 서고, 그 아래 수정 기록 카드와 관련 항목이다.
@@ -34,6 +44,7 @@ export function ItemDetail({
   onSelectItem: (itemId: string) => void;
   onSelectAgenda?: (agendaId: string) => void;
 }) {
+  const t = useTranslations("notes.review.detail");
   // 열 수 있는 항목으로 거른 뒤 넷까지 — 먼저 자르면 앞 넷이 없는 항목일 때 뒤의 것까지 사라진다.
   const agendas = summaryTopics(summary).filter((topic) =>
     topic.memberships.some((member) => member.itemId === item.itemId)
@@ -48,9 +59,9 @@ export function ItemDetail({
   return (
     <div className="space-y-3">
       {summary?.status === "SUCCEEDED" ? (
-        <section aria-label="연결된 안건" className="px-1">
+        <section aria-label={t("agendas")} className="px-1">
           <h3 className="text-xs font-medium text-[var(--el-muted)]">
-            연결된 안건
+            {t("agendas")}
           </h3>
           {agendas.length > 0 ? (
             <ul className="mt-1.5 space-y-1 border-l-2 border-[var(--el-hairline-strong)] pl-3 text-sm leading-6 text-[var(--el-ink)]">
@@ -74,7 +85,7 @@ export function ItemDetail({
               ))}
             </ul>
           ) : (
-            <p className="mt-1 text-sm text-[var(--el-muted)]">없음</p>
+            <p className="mt-1 text-sm text-[var(--el-muted)]">{t("none")}</p>
           )}
         </section>
       ) : null}
@@ -88,11 +99,11 @@ export function ItemDetail({
         <div className="px-4 py-3">{trail}</div>
         {linked.length > 0 ? (
           <section
-            aria-label="연결된 항목"
+            aria-label={t("linked")}
             className="border-t border-[var(--el-hairline-soft)] px-4 py-3"
           >
             <h3 className="mb-1 text-xs font-medium text-[var(--el-muted)]">
-              연결된 항목
+              {t("linked")}
             </h3>
             <ul className="divide-y divide-[var(--el-hairline-soft)]">
               {linked.map((row) => (
@@ -105,7 +116,9 @@ export function ItemDetail({
                     <RoleDot role={roleOfItem(row.other, summary)} />
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs text-[var(--el-muted)]">
-                        {row.label}
+                        {LINK_KINDS.has(row.kind)
+                          ? t(`links.${row.kind as LinkKind}`)
+                          : row.label}
                       </span>
                       <span className="block whitespace-normal break-words text-sm text-[var(--el-ink)] underline decoration-[var(--el-hairline-strong)] underline-offset-4">
                         {row.other.content}

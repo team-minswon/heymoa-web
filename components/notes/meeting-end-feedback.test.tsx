@@ -97,24 +97,24 @@ describe("MeetingEndFeedback", () => {
   it("머리의 상태 줄이 분석 흐름을 따라 바뀐다", () => {
     flowStatus = "ANALYZING";
     renderCard();
-    expect(screen.getByRole("status").textContent).toContain("정리하고 있어요");
+    expect(screen.getByRole("status").textContent).toContain("정리하고 있습니다");
     cleanup();
     flowStatus = "REVIEWABLE";
     renderCard();
     expect(screen.getByRole("status").textContent).toContain(
-      "요약이 준비됐어요"
+      "요약이 준비되었습니다"
     );
     cleanup();
     flowStatus = "ANALYSIS_FAILED";
     renderCard();
     expect(screen.getByRole("status").textContent).toContain(
-      "분석하지 못했어요"
+      "분석하지 못했습니다"
     );
     cleanup();
     flowStatus = null;
     renderCard();
     expect(screen.getByRole("status").textContent).toContain(
-      "불러오지 못했어요"
+      "불러오지 못했습니다"
     );
     // 분석 중이던 데이터가 캐시에 남은 채 폴링이 실패해도 진행 중이라고 하지 않는다
     cleanup();
@@ -122,7 +122,7 @@ describe("MeetingEndFeedback", () => {
     flowError = true;
     renderCard();
     expect(screen.getByRole("status").textContent).toContain(
-      "불러오지 못했어요"
+      "불러오지 못했습니다"
     );
     flowError = false;
   });

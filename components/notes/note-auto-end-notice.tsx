@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Info } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
@@ -10,26 +11,22 @@ import type {
   NoteResponseData,
 } from "@/lib/api/generated/models";
 
-/** 분석 흐름 상태를 사람이 읽는 한 문장으로. 내부 처리 순서(화자 나누기·담당·기한 보강)는 말하지 않는다. */
-const ANALYSIS_COPY: Partial<
-  Record<MeetingAnalysisFlowResponseDataStatus, string>
+/** 분석 흐름 상태를 사람이 읽는 한 문장(`notes.autoEnd.analysis`)으로. 내부 처리 순서(화자 나누기·담당·기한 보강)는 말하지 않는다. */
+const ANALYSIS_KEY: Partial<
+  Record<
+    MeetingAnalysisFlowResponseDataStatus,
+    "analyzing" | "reviewable" | "failed"
+  >
 > = {
-  DIARIZING: "분석 중입니다.",
-  ANALYZING: "분석 중입니다.",
-  REVIEWABLE: "검토할 결과가 준비되었습니다.",
-  ANALYSIS_FAILED: "분석하지 못했습니다.",
+  DIARIZING: "analyzing",
+  ANALYZING: "analyzing",
+  REVIEWABLE: "reviewable",
+  ANALYSIS_FAILED: "failed",
 };
 
 /** 사람이 종료했거나 옛 노트(`autoEnd` 없음)는 아니다. */
 export function isAutoEnded(note: NoteResponseData) {
   return note.meetingStatus === "ENDED" && note.autoEnd?.endedBy === "SYSTEM";
-}
-
-export function autoEndReason(note: NoteResponseData) {
-  const days = note.autoEnd?.pausedBusinessDays;
-  return days
-    ? `마지막 일시정지 후 ${days}영업일이 지나 종료했습니다.`
-    : "일시정지 상태가 오래 이어져 종료했습니다.";
 }
 
 /**
@@ -40,13 +37,17 @@ export function autoEndReason(note: NoteResponseData) {
  * 분석 상태는 분석 흐름 쿼리를 읽는다 — 요약·스크립트 탭이 같은 키를 갱신한다.
  */
 export function NoteAutoEndNotice({ note }: { note: NoteResponseData }) {
+  const t = useTranslations("notes.autoEnd");
   const [open, setOpen] = useState(true);
   const flow = useGetAnalysisFlow(note.noteId);
   const status =
     flow.data?.status === 200 && flow.data.data.success
       ? flow.data.data.data.status
       : null;
-  const analysis = status ? ANALYSIS_COPY[status] : undefined;
+  const analysisKey = status ? ANALYSIS_KEY[status] : undefined;
+  const analysis = analysisKey ? t(`analysis.${analysisKey}`) : undefined;
+  const days = note.autoEnd?.pausedBusinessDays;
+  const reason = days ? t("reasonDays", { days }) : t("reason");
 
   return (
     <div
@@ -61,11 +62,11 @@ export function NoteAutoEndNotice({ note }: { note: NoteResponseData }) {
         />
         <p className="min-w-0 flex-1 text-pretty">
           <span className="font-medium text-[var(--el-ink)]">
-            회의를 자동으로 종료했습니다.
+            {t("title")}
           </span>
           {open ? (
             <>
-              {` ${autoEndReason(note)} 이 회의에는 이어서 녹음할 수 없습니다.`}
+              {` ${reason} ${t("noResume")}`}
               {analysis ? (
                 <>
                   {" "}
@@ -83,7 +84,7 @@ export function NoteAutoEndNotice({ note }: { note: NoteResponseData }) {
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
         >
-          {open ? "접기" : "펼치기"}
+          {open ? t("collapse") : t("expand")}
         </Button>
       </div>
     </div>

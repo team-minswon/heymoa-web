@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { ErrorNote } from "@/components/settings/account-deletion-section";
 import { ConfirmPhraseField } from "@/components/settings/confirm-phrase-field";
@@ -41,6 +42,8 @@ export function WorkspaceDeletionSection({
   workspaceId: string;
   workspaceName: string;
 }) {
+  const t = useTranslations("settings.workspaceDeletion");
+  const tActions = useTranslations("common.actions");
   const router = useRouter();
   const queryClient = useQueryClient();
   const workspaces = okData(useGetWorkspaces().data)?.workspaces ?? [];
@@ -63,7 +66,7 @@ export function WorkspaceDeletionSection({
         workspaceName: typed.trim(),
       });
     } catch (failure) {
-      setError(errorMessageOf(failure, "워크스페이스를 삭제하지 못했습니다."));
+      setError(errorMessageOf(failure, t("failed")));
       return;
     }
     // 목적지를 먼저 고른 뒤 캐시를 걷는다(나가기와 같은 순서·규칙, `members-settings`).
@@ -79,13 +82,10 @@ export function WorkspaceDeletionSection({
   return (
     <section className="rounded-panel border border-[var(--el-hairline)] bg-white p-6">
       <h3 className="text-sm font-medium text-[var(--el-ink)]">
-        워크스페이스 삭제
+        {t("title")}
       </h3>
       <p className="mt-1 text-xs leading-5 text-[var(--el-muted)]">
-        회의 기록
-        <span className="whitespace-nowrap">(노트·스크립트·음성)을</span> 비롯한
-        모든 내용을 지우고, 멤버 모두의 접근을 바로 막습니다. 멤버에게는 메일로
-        알립니다.
+        {t.rich("description", { nowrap: nowrapChunks })}
       </p>
       <Button
         variant="outline"
@@ -98,11 +98,11 @@ export function WorkspaceDeletionSection({
           setOpen(true);
         }}
       >
-        워크스페이스 삭제
+        {t("title")}
       </Button>
       {recordingHere ? (
         <p role="status" className="mt-2 text-xs text-[var(--el-muted)]">
-          녹음을 끝낸 뒤 삭제할 수 있습니다.
+          {t("recordingBlocked")}
         </p>
       ) : null}
 
@@ -116,15 +116,10 @@ export function WorkspaceDeletionSection({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-balance">
-              이 워크스페이스를 삭제할까요?
+              {t("dialog.title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              회의 기록
-              <span className="whitespace-nowrap">
-                (노트·스크립트·음성)을
-              </span>{" "}
-              비롯한 이 워크스페이스의 모든 내용이 지워지고 되돌릴 수 없습니다.
-              이미 외부 도구(Linear·GitHub)로 보낸 내용과 보낸 메일은 남습니다.
+              {t.rich("dialog.description", { nowrap: nowrapChunks })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <ConfirmPhraseField
@@ -136,7 +131,7 @@ export function WorkspaceDeletionSection({
           {error ? <ErrorNote>{error}</ErrorNote> : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={remove.isPending}>
-              취소
+              {tActions("cancel")}
             </AlertDialogCancel>
             <Button
               variant="destructive"
@@ -144,11 +139,15 @@ export function WorkspaceDeletionSection({
               disabled={!ready}
               onClick={() => void submit()}
             >
-              삭제
+              {tActions("delete")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </section>
   );
+}
+
+function nowrapChunks(chunks: React.ReactNode) {
+  return <span className="whitespace-nowrap">{chunks}</span>;
 }

@@ -20,7 +20,7 @@ export default function HelpSamplesPage() {
   return (
     <NextIntlClientProvider
       locale="ko"
-      messages={{ help: messagesFor("ko").help }}
+      messages={{ common: messagesFor("ko").common, help: messagesFor("ko").help }}
       timeZone="Asia/Seoul"
     >
       <main

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
 import { SettingsReturnRedirect } from "@/components/settings/settings-return-redirect";
@@ -20,7 +21,11 @@ export default async function SettingsNotificationsPage() {
     !AUTH_COOKIE_NAMES.some((name) => jar.has(name))
   ) {
     return (
-      <WorkspaceLoginCard description="알림 설정을 바꾸려면 로그인해 주세요." />
+      <WorkspaceLoginCard
+        description={(await getTranslations("settings.notificationsPage"))(
+          "loginRequired"
+        )}
+      />
     );
   }
   return (

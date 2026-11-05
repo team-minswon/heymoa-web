@@ -481,7 +481,7 @@ function FreshChatTrigger() {
   );
 }
 
-function renderChat(child?: React.ReactNode) {
+function renderChat(child?: React.ReactNode, locale: "ko" | "en" = "ko") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -495,7 +495,7 @@ function renderChat(child?: React.ReactNode) {
     </QueryClientProvider>,
     {
       wrapper: ({ children }) => (
-        <NextIntlClientProvider locale="ko" messages={messagesFor("ko")}>
+        <NextIntlClientProvider locale={locale} messages={messagesFor(locale)}>
           {children}
         </NextIntlClientProvider>
       ),
@@ -924,7 +924,7 @@ describe("PersonalChatProvider", () => {
     expect(screen.getByText("정리했습니다.")).toBeTruthy();
     expect(screen.getByText("정리해줘")).toBeTruthy();
     expect(screen.getByRole("alert").textContent).toContain(
-      "답은 화면에 남아 있어요."
+      "답은 화면에 남아 있습니다."
     );
   });
 
@@ -945,7 +945,7 @@ describe("PersonalChatProvider", () => {
     );
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "대화 목록을 다시 읽지 못했어요."
+      "대화 목록을 다시 읽지 못했습니다."
     );
     expect(screen.getByText("정리했습니다.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
@@ -972,7 +972,7 @@ describe("PersonalChatProvider", () => {
     openPanel();
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "대화를 불러오지 못했어요."
+      "대화를 불러오지 못했습니다."
     );
     expect(screen.queryByText("무엇을 도와드릴까요?")).toBeNull();
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
@@ -1121,7 +1121,7 @@ describe("PersonalChatProvider", () => {
     async function editHeader() {
       fireEvent.click(
         await screen.findByRole("button", {
-          name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+          name: `이름 변경: 대화 ${CHAT_ID}`,
         })
       );
       return screen.getByRole("textbox", {
@@ -1164,7 +1164,7 @@ describe("PersonalChatProvider", () => {
 
       expect(renameMock).not.toHaveBeenCalled();
       expect(
-        screen.getByRole("button", { name: `제목 바꾸기: 대화 ${CHAT_ID}` })
+        screen.getByRole("button", { name: `이름 변경: 대화 ${CHAT_ID}` })
       ).toBeTruthy();
     });
 
@@ -1201,7 +1201,7 @@ describe("PersonalChatProvider", () => {
         expect(toastError).toHaveBeenCalledWith("이름을 바꾸지 못했습니다.")
       );
       expect(
-        screen.getByRole("button", { name: `제목 바꾸기: 대화 ${CHAT_ID}` })
+        screen.getByRole("button", { name: `이름 변경: 대화 ${CHAT_ID}` })
       ).toBeTruthy();
     });
 
@@ -1240,7 +1240,7 @@ describe("PersonalChatProvider", () => {
         })
       );
       fireEvent.click(
-        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+        await screen.findByRole("menuitem", { name: "이름 변경" })
       );
       const input = screen.getByRole("textbox", { name: "대화 제목" });
       fireEvent.change(input, { target: { value: "두 번째" } });
@@ -1277,7 +1277,7 @@ describe("PersonalChatProvider", () => {
       state.chats = [chatRow(CHAT_ID)];
       renderChat();
       openPanel();
-      const titleName = `제목 바꾸기: 대화 ${CHAT_ID}`;
+      const titleName = `이름 변경: 대화 ${CHAT_ID}`;
 
       let input = await editHeader();
       fireEvent.change(input, { target: { value: "새 이름" } });
@@ -1321,7 +1321,7 @@ describe("PersonalChatProvider", () => {
 
       fireEvent.click(await screen.findByRole("button", { name: menuName }));
       fireEvent.click(
-        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+        await screen.findByRole("menuitem", { name: "이름 변경" })
       );
       const input = await screen.findByRole("textbox", { name: "대화 제목" });
       await waitFor(() => expect(document.activeElement).toBe(input));
@@ -1376,7 +1376,7 @@ describe("PersonalChatProvider", () => {
       const { rerender, client } = renderChat();
       openPanel();
       await screen.findByRole("button", {
-        name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+        name: `이름 변경: 대화 ${CHAT_ID}`,
       });
       // 이벤트 힌트(`chats.changed`)가 목록을 다시 읽은 자리다. 이 목은 캐시가 아니라 다시 그릴 때 읽는다
       const refetched = () =>
@@ -1391,7 +1391,7 @@ describe("PersonalChatProvider", () => {
       state.chats = [{ ...chatRow(CHAT_ID), title: "AI 제목" }];
       refetched();
       fireEvent.click(
-        await screen.findByRole("button", { name: "제목 바꾸기: AI 제목" })
+        await screen.findByRole("button", { name: "이름 변경: AI 제목" })
       );
       const input = screen.getByRole("textbox", {
         name: "대화 제목",
@@ -1446,7 +1446,7 @@ describe("PersonalChatProvider", () => {
       ] as never;
       rerendered(rerender, client);
       const titled = await screen.findByRole("button", {
-        name: "제목 바꾸기: 회의 정리",
+        name: "이름 변경: 회의 정리",
       });
       expect(titled.getAttribute("aria-busy")).toBeNull();
       expect(titled.querySelector(".chat-title-in")).toBeTruthy();
@@ -1459,8 +1459,20 @@ describe("PersonalChatProvider", () => {
       renderChat();
       openPanel();
       expect(
-        await screen.findByRole("button", { name: "제목 바꾸기: 지난 질문" })
+        await screen.findByRole("button", { name: "이름 변경: 지난 질문" })
       ).toBeTruthy();
+    });
+
+    it("서버의 기본 제목(「새 대화」)은 화면 언어로 그린다", async () => {
+      state.chats = [
+        { ...chatRow(CHAT_ID), title: "새 대화", titleSource: "DEFAULT" },
+      ] as never;
+      renderChat(undefined, "en");
+      fireEvent.click(screen.getByRole("button", { name: "Open My agent" }));
+      expect(
+        await screen.findByRole("button", { name: "Rename: New chat" })
+      ).toBeTruthy();
+      expect(screen.queryByText("새 대화")).toBeNull();
     });
   });
 
@@ -1516,7 +1528,7 @@ describe("PersonalChatProvider", () => {
         await screen.findByRole("button", { name: `「${currentTitle}」 메뉴` })
       );
       fireEvent.click(
-        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+        await screen.findByRole("menuitem", { name: "이름 변경" })
       );
       const input = screen.getByRole("textbox", { name: "대화 제목" });
       fireEvent.change(input, { target: { value: title } });
@@ -1550,7 +1562,7 @@ describe("PersonalChatProvider", () => {
       refetchedWith(rerender, client)();
       // 확인창이 떠 있는 동안 뒤쪽은 접근성 트리에서 숨는다
       await screen.findByRole("button", {
-        name: `제목 바꾸기: 대화 ${OTHER_CHAT_ID}`,
+        name: `이름 변경: 대화 ${OTHER_CHAT_ID}`,
         hidden: true,
       });
       const composer = screen.getByRole("textbox", {
@@ -1568,7 +1580,7 @@ describe("PersonalChatProvider", () => {
       );
       expect(
         screen.getByRole("button", {
-          name: `제목 바꾸기: 대화 ${OTHER_CHAT_ID}`,
+          name: `이름 변경: 대화 ${OTHER_CHAT_ID}`,
         })
       ).toBeTruthy();
     });
@@ -1637,7 +1649,7 @@ describe("PersonalChatProvider", () => {
       const input = await (async () => {
         fireEvent.click(
           await screen.findByRole("button", {
-            name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+            name: `이름 변경: 대화 ${CHAT_ID}`,
           })
         );
         return screen.getByRole("textbox", { name: "대화 제목" });
@@ -1667,7 +1679,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
       fireEvent.click(
         await screen.findByRole("button", {
-          name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+          name: `이름 변경: 대화 ${CHAT_ID}`,
         })
       );
       const input = screen.getByRole("textbox", {
@@ -1701,7 +1713,7 @@ describe("PersonalChatProvider", () => {
         })
       );
       fireEvent.click(
-        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+        await screen.findByRole("menuitem", { name: "이름 변경" })
       );
       const input = screen.getByRole("textbox", {
         name: "대화 제목",
@@ -1730,7 +1742,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
       fireEvent.click(
         await screen.findByRole("button", {
-          name: `제목 바꾸기: 대화 ${CHAT_ID}`,
+          name: `이름 변경: 대화 ${CHAT_ID}`,
         })
       );
       const input = screen.getByRole("textbox", { name: "대화 제목" });
@@ -1750,7 +1762,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
       fireEvent.click(await screen.findByTestId("chat-menu"));
       fireEvent.click(
-        await screen.findByRole("menuitem", { name: "이름 바꾸기" })
+        await screen.findByRole("menuitem", { name: "이름 변경" })
       );
       const input = await screen.findByRole("textbox", { name: "대화 제목" });
       fireEvent.change(input, { target: { value: "메뉴로 바꾼 이름" } });
@@ -1788,7 +1800,7 @@ describe("PersonalChatProvider", () => {
       );
     });
 
-    it("★ 승인을 기다리면 런처가 「확인이 필요해요」로 알린다", async () => {
+    it("★ 승인을 기다리면 런처가 「승인이 필요합니다」로 알린다", async () => {
       state.approvalStream = true;
       renderChat();
       openPanel();
@@ -1799,7 +1811,7 @@ describe("PersonalChatProvider", () => {
       const fab = screen.getByRole("button", { name: "내 에이전트 열기" });
       expect(fab.querySelector('[data-attention="approval"]')).toBeTruthy();
       expect(document.getElementById("agent-fab-attention")?.textContent).toBe(
-        "확인이 필요해요"
+        "승인이 필요합니다"
       );
     });
 
@@ -1810,7 +1822,7 @@ describe("PersonalChatProvider", () => {
         screen
           .getByRole("textbox", { name: "메시지" })
           .getAttribute("data-placeholder")
-      ).toBe("@로 프로젝트·회의록을 참조해 물어보세요");
+      ).toBe("@로 프로젝트나 회의록을 붙여 물어보세요");
     });
 
     it("맨 아래에 있으면 「맨 아래로」는 흐려지고 눌리지 않는다", () => {
@@ -2156,7 +2168,7 @@ describe("PersonalChatProvider", () => {
     openPanel();
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "대화를 불러오지 못했어요."
+      "대화를 불러오지 못했습니다."
     );
     expect(screen.queryByText("무엇을 도와드릴까요?")).toBeNull();
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
@@ -3255,7 +3267,7 @@ describe("PersonalChatProvider", () => {
 
       expect(
         await screen.findByText(
-          "응답 생성에 실패했습니다. 잠시 후 다시 시도해 주세요."
+          "응답을 만들지 못했습니다. 잠시 후 다시 시도해 주세요."
         )
       ).toBeTruthy();
     });
@@ -4017,7 +4029,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
       fireEvent.click(historyButton());
       const empty = screen.getByTestId("chat-history-empty");
-      expect(empty.textContent).toContain("아직 대화가 없어요");
+      expect(empty.textContent).toContain("아직 대화가 없습니다");
       fireEvent.click(within(empty).getByRole("button", { name: "새 대화" }));
       expect(views().history.hasAttribute("inert")).toBe(true);
     });

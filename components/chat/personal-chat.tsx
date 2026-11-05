@@ -521,7 +521,8 @@ function PersonalChatPanel({
       ? Math.max(0, viewportHeight - 24)
       : null;
 
-  const t = useTranslations("common.agentChat");
+  const t = useTranslations("chat");
+  const tActions = useTranslations("common.actions");
 
   /** 삭제를 확인 중인 대화(APP-1409). 기록 줄과 헤더가 함께 연다. */
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -567,7 +568,7 @@ function PersonalChatPanel({
   /** 헤더 첫 줄. 아직 목록에 없는 새 대화는 기본 제목으로 선다. */
   const headerTitle =
     turn.chatRows.find((chat) => chat.chatId === turn.sessionId)?.title ??
-    "새 대화";
+    t("newChat");
   /** 고치는 중인 대화의 처음 제목. 입력은 처음 한 번만 읽으므로 그 뒤 바뀌어도 쓰던 글자를 덮지 않는다. */
   const editingTitle =
     turn.chatRows.find((chat) => chat.chatId === editingTitleId)?.title ??
@@ -580,8 +581,8 @@ function PersonalChatPanel({
     (turn.chatRows.find((chat) => chat.chatId === turn.sessionId)
       ?.titlePending ??
       false) ||
-    (headerTitle === "새 대화" && turn.isBusy);
-  const shownTitle = isTitlePending ? "새 대화" : headerTitle;
+    (headerTitle === t("newChat") && turn.isBusy);
+  const shownTitle = isTitlePending ? t("newChat") : headerTitle;
 
   // 닫힌 패널 대신 런처가 알린다. 승인 대기는 사람을 기다리는 중이라 따로 말한다
   const attention: AgentAttention =
@@ -640,7 +641,7 @@ function PersonalChatPanel({
       className="h-[30px]"
       onClick={turn.retry}
     >
-      다시 시도
+      {tActions("retry")}
     </Button>
   );
 
@@ -822,7 +823,11 @@ function PersonalChatPanel({
             className="size-[34px] shrink-0 pointer-coarse:size-11"
           />
         ) : (
-          <ChatIconButton size="header" label={t("close")} onClick={onClose}>
+          <ChatIconButton
+            size="header"
+            label={tActions("close")}
+            onClick={onClose}
+          >
             <X aria-hidden />
           </ChatIconButton>
         )}
@@ -848,7 +853,7 @@ function PersonalChatPanel({
             viewportClassName="overflow-x-hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-16px),transparent)]"
             overlay={
               <ScrollToBottomButton
-                label="맨 아래로"
+                label={t("panel.scrollToBottom")}
                 visible={!atBottom}
                 onClick={scrollToBottom}
               />
@@ -859,7 +864,7 @@ function PersonalChatPanel({
                 // 대화의 모양 그대로 — 오른쪽 내 말풍선 하나와 왼쪽 답 몇 줄(`ChatThread` 의 `gap-5` · 말풍선 `rounded-panel`).
                 // 막대 세 줄만 세우면 도착할 때 말풍선이 옆에서 끼어들어 자리가 바뀐 것처럼 보였다 (APP-1212).
                 <div
-                  aria-label="대화 불러오는 중"
+                  aria-label={t("panel.loading")}
                   className="flex flex-1 flex-col justify-end gap-5"
                 >
                   <div className="flex justify-end">
@@ -875,12 +880,12 @@ function PersonalChatPanel({
                 // 빈 상태로 그리면 이미 있는 대화를 없는 것처럼 보인다
                 <div role="alert" className="space-y-2">
                   <p className="text-sm text-[var(--el-ink)]">
-                    대화를 불러오지 못했어요.
+                    {t("panel.loadFailed")}
                   </p>
                   <p className="text-xs leading-relaxed text-[var(--el-muted)]">
                     {turn.isChatsUnavailable
-                      ? "기존 대화가 있는지 확인하지 못해 새 대화를 시작하지 않아요."
-                      : "이어서 보내면 화면과 실제 대화가 어긋나서 전송을 막아 두었어요."}
+                      ? t("panel.loadFailedChats")
+                      : t("panel.loadFailedMessages")}
                   </p>
                   {retry}
                 </div>
@@ -931,7 +936,7 @@ function PersonalChatPanel({
             onStop={turn.stop}
             isBusy={turn.isBusy}
             isStreaming={turn.isStreaming}
-            placeholder="@로 프로젝트·회의록을 참조해 물어보세요"
+            placeholder={t("panel.placeholder")}
             onChipsChange={handleChipsChange}
             onMentioningChange={setMentioning}
             scope={{
@@ -943,12 +948,17 @@ function PersonalChatPanel({
               <>
                 {overlap ? (
                   <p className="mt-2 text-xs text-[var(--el-muted)]">
-                    {`'${overlap.note.title}'는 '${overlap.project?.title ?? "그 프로젝트"}' 안에 있어요. 회의록 칩만 남길까요?`}
+                    {t("panel.overlap", {
+                      note: overlap.note.title,
+                      project:
+                        overlap.project?.title ??
+                        t("panel.overlapProjectFallback"),
+                    })}
                   </p>
                 ) : null}
                 {turn.stream.phase === "awaiting_approval" ? (
                   <p className="mt-2 text-xs text-[var(--el-muted)]">
-                    승인을 기다리는 동안에는 보낼 수 없어요.
+                    {t("panel.awaitingApproval")}
                   </p>
                 ) : null}
                 {turn.isUnavailable && turn.showingLocalTurn ? (
@@ -957,11 +967,12 @@ function PersonalChatPanel({
                     className="mt-2 flex items-center gap-2 text-xs text-[var(--el-muted)]"
                   >
                     <span>
-                      {turn.isChatsUnavailable ? "대화 목록" : "대화 기록"}을
-                      다시 읽지 못했어요. 답은 화면에 남아 있어요.
+                      {turn.isChatsUnavailable
+                        ? t("panel.refetchFailedChats")
+                        : t("panel.refetchFailedMessages")}
                     </span>
                     <Button variant="outline" size="sm" onClick={turn.retry}>
-                      다시 시도
+                      {tActions("retry")}
                     </Button>
                   </div>
                 ) : null}

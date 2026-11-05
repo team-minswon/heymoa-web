@@ -19,6 +19,9 @@ export default defineConfig({
   retries: 0,
   reporter: "list",
   use: {
+    // 화면 언어의 초기 기본값이 브라우저 언어다(APP-1285). Chromium 기본(en-US)이면 모든 시험이 영어 화면을 받으므로
+    // 한국어 사용자로 고정한다. 영어 화면을 보는 시험은 자기 컨텍스트에 `locale: "en-US"` 를 준다.
+    locale: "ko-KR",
     baseURL: "http://localhost:3100",
     trace: "retain-on-failure",
     launchOptions: {

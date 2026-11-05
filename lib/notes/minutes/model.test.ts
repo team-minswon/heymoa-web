@@ -18,6 +18,9 @@ import type {
 import type { ReviewItem, ReviewSection } from "@/lib/notes/review/sections";
 import type { TranscriptRow } from "@/lib/transcription/presentation";
 import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
+import { testAppT } from "@/components/help/test-intl";
+
+const doc = { locale: "ko-KR", t: testAppT() };
 
 const NOTE = {
   title: "공유 기능 범위 정리",
@@ -47,7 +50,6 @@ const section = (
   items: ReviewItem[]
 ): ReviewSection => ({
   key,
-  label: key,
   items,
   includedCount: items.filter((row) => row.included).length,
 });
@@ -76,6 +78,7 @@ const minutes = (
   extra: Partial<Parameters<typeof buildMinutes>[0]> = {}
 ) =>
   buildMinutes({
+    doc,
     note: NOTE,
     topics: [],
     sections: [],
@@ -587,6 +590,7 @@ describe("minutesTimeline", () => {
           ["open", "기한을 넣을 수 있나?", null],
         ]),
       ],
+      doc,
       3_900_000
     );
     expect(rows).toEqual([
@@ -609,7 +613,7 @@ describe("minutesTimeline", () => {
           {
             at: "1:02:05",
             tone: "task",
-            label: "후속 조치",
+            label: "할 일",
             text: "계약을 올린다",
           },
           {
@@ -625,7 +629,10 @@ describe("minutesTimeline", () => {
 
   it("안건 정본이 없는 회의는 머리 없이 한 묶음이다", () => {
     expect(
-      minutesTimeline([group(null, 0, null, [["decision", "정했다", 1000]])])[0]
+      minutesTimeline(
+        [group(null, 0, null, [["decision", "정했다", 1000]])],
+        doc
+      )[0]
     ).toMatchObject({
       title: null,
       range: null,
@@ -636,25 +643,29 @@ describe("minutesTimeline", () => {
 describe("markdown", () => {
   it("타임라인 복사는 요약 · 스크립트 복사와 같은 머리말 아래 안건마다 시각 · 구분 · 내용 한 줄씩이다", () => {
     expect(
-      timelineToMarkdown(NOTE, [
-        {
-          title: "외부 공유",
-          range: "00:00 – 12:30",
-          rows: [
-            {
-              at: "01:05",
-              tone: "decision",
-              label: "결정",
-              text: "PDF로 보낸다",
-            },
-          ],
-        },
-      ])
+      timelineToMarkdown(
+        NOTE,
+        [
+          {
+            title: "외부 공유",
+            range: "00:00 – 12:30",
+            rows: [
+              {
+                at: "01:05",
+                tone: "decision",
+                label: "결정",
+                text: "PDF로 보낸다",
+              },
+            ],
+          },
+        ],
+        doc
+      )
     ).toBe(
       "# 공유 기능 범위 정리 — 타임라인\n\n2026년 10월 15일 오후 2:00 · 참석자 김민수, 강성재, 이서연, 박준호 · 기록 65분\n\n## 외부 공유 (00:00 – 12:30)\n\n- [01:05] **결정** PDF로 보낸다\n"
     );
-    expect(timelineToMarkdown(NOTE, [])).toContain(
-      "_정해진 것 · 남은 것이 아직 없습니다_"
+    expect(timelineToMarkdown(NOTE, [], doc)).toContain(
+      "_아직 결정이나 할 일, 미결 사항이 없습니다_"
     );
   });
 });
@@ -672,10 +683,10 @@ describe("hangulMarker · minutesFileName", () => {
   });
 
   it("파일 이름에서 못 쓰는 글자를 걷는다", () => {
-    expect(minutesFileName('A/B: "결정"?', "2026-10-15T15:30:00Z")).toBe(
+    expect(minutesFileName('A/B: "결정"?', "2026-10-15T15:30:00Z", doc)).toBe(
       "회의록_A B 결정_20261016.pdf"
     );
-    expect(minutesFileName("  ...  ", "2026-10-15T05:00:00Z")).toBe(
+    expect(minutesFileName("  ...  ", "2026-10-15T05:00:00Z", doc)).toBe(
       "회의록_회의_20261015.pdf"
     );
   });

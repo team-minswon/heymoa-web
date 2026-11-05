@@ -257,3 +257,26 @@ describe("id: 줄이 커서다", () => {
     expect(init.headers.Accept).toBe("text/event-stream");
   });
 });
+
+describe("SSE 도 화면 언어를 Accept-Language 로 싣는다 (APP-1285)", () => {
+  it("영어 화면이면 en 을 보내고 Accept 는 그대로다", async () => {
+    document.documentElement.lang = "en";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response("", {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await collect(getEventStream("/v1/stream"));
+
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      "Accept-Language": "en",
+      Accept: "text/event-stream",
+    });
+    document.documentElement.lang = "";
+  });
+});

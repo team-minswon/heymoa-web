@@ -1,5 +1,6 @@
 import type { TranscriptResponseDataTranscriptGapsItem } from "@/lib/api/generated/models";
 import { getAppDateKey } from "@/lib/format/date";
+import type { AppT } from "@/lib/i18n/translator";
 
 export type TranscriptGap = {
   gapId: string;
@@ -170,19 +171,30 @@ function subtractSpans(span: Span, lost: GapRow[]): [number, number][] {
  * 큰 단위까지 올라가는 것은 안 접는다. 분에서 멈추면 두 시간 반이 `150분`, 이틀 반이
  * `3600분` 으로 나와 읽는 사람이 60 으로 두 번 나눠야 한다.
  */
-export function formatGapDuration(milliseconds: number) {
+export function gapDurationOf(milliseconds: number): GapDuration {
   const seconds = Math.max(0, Math.round(milliseconds / 1000));
   // 1분 미만에 「약 40초」라고 쓰면 안 대충이다. 이 구간은 길이가 뜻을 안 바꾼다.
-  if (seconds < 60) return "잠깐";
+  if (seconds < 60) return { unit: "brief", value: 0 };
 
   // 반올림한 뒤에 칸을 다시 고른다. 그래야 59분 40초가 「약 60분」이 아니라 「약 1시간」이다.
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `약 ${minutes}분`;
+  if (minutes < 60) return { unit: "minutes", value: minutes };
 
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `약 ${hours}시간`;
+  if (hours < 24) return { unit: "hours", value: hours };
 
-  return `약 ${Math.round(hours / 24)}일`;
+  return { unit: "days", value: Math.round(hours / 24) };
+}
+
+/** 단위 하나와 그 값. 화면 문구는 `notes.transcript.gap.duration` 이 만든다. */
+export type GapDuration = {
+  unit: "brief" | "minutes" | "hours" | "days";
+  value: number;
+};
+
+/** 화면 언어의 길이(「약 10분」·「for about 10 minutes」). 복사본·회의록이 쓴다 — 화면과 같은 키(`notes.transcript.gap.duration`)다. */
+export function formatGapDuration(milliseconds: number, t: AppT) {
+  return t("notes.transcript.gap.duration", gapDurationOf(milliseconds));
 }
 
 /** 두 끝이 (앱 시간대에서) 다른 날이면 시:분만으로는 거꾸로 읽힌다. */
@@ -192,19 +204,25 @@ export function spansCalendarDays(row: GapRow) {
 }
 
 /**
- * 빈 구간 한 줄. **화면과 복사가 같은 문구를 쓴다** — 회의록을 붙여넣은 사람과 화면을 보는
- * 사람이 같은 10분을 다르게 읽으면 안 된다.
+ * 빈 구간 한 줄. 복사본·회의록이 쓴다. **화면(`notes.transcript.gap`)과 같은 키를 읽는다** — 회의록을 붙여넣은 사람과
+ * 화면을 보는 사람이 같은 10분을 다르게 읽으면 안 된다.
  *
  * 진행 중(`endedAt === null`)이면 길이를 말하지 않는다. 아직 안 끝난 구간이라 「약 3분」이
  * 곧 거짓이 된다.
  */
-export function gapHeadline(row: GapRow) {
-  const duration = isGapOpen(row) ? null : formatGapDuration(row.durationMs);
+export function gapHeadline(row: GapRow, t: AppT) {
+  const duration = isGapOpen(row) ? null : formatGapDuration(row.durationMs, t);
   if (row.kind === "PAUSE") {
-    return duration ? `${duration} 일시정지했습니다` : "일시정지했습니다";
+    return duration
+      ? t("notes.transcript.gap.pause", { duration })
+      : t("notes.transcript.gap.pauseOpen");
   }
   if (row.kind === "UNTRANSCRIBED") {
-    return `${duration} 받아쓰지 못했어요 · 소리는 저장됨`;
+    return t("notes.transcript.gap.untranscribed", {
+      duration: duration ?? "",
+    });
   }
-  return duration ? `${duration} 소리가 없습니다` : "소리가 없습니다";
+  return duration
+    ? t("notes.transcript.gap.lost", { duration })
+    : t("notes.transcript.gap.lostOpen");
 }

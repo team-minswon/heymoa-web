@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { CountdownBar, useNudgeMotion } from "@/components/notes/nudge-bubble";
 import { track } from "@/lib/analytics/track";
@@ -141,6 +142,7 @@ function HintBubble({
   onOpen: () => void;
   onDismiss: (reason: "auto" | "close") => void;
 }) {
+  const t = useTranslations("notes.timeline.hint");
   const hovered = useRef(false);
   const focused = useRef(false);
   // 퇴장 중에는 세지 않는다 — 자격을 잃어 접히는 사이에 시간이 다 되면 「저절로 사라짐」으로 잘못 기록된다.
@@ -206,11 +208,11 @@ function HintBubble({
         onClick={onOpen}
         className="relative whitespace-nowrap py-1 font-medium max-sm:w-40 max-sm:whitespace-normal"
       >
-        타임라인에 정리된 항목이 생겼어요
+        {t("message")}
       </button>
       <button
         type="button"
-        aria-label="안내 닫기"
+        aria-label={t("dismiss")}
         onClick={() => onDismiss("close")}
         className="relative flex size-6 shrink-0 items-center justify-center rounded-full opacity-70 hover:opacity-100"
       >

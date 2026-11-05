@@ -10,6 +10,15 @@ export const choiceOf = (
 ): Choice | null =>
   decision === null ? null : decision === "KEEP" ? "keep" : "change";
 
+/** 확정을 막는 까닭. 문구는 화면이 `notes.review.blocked` 에서 고른다. */
+export type ConfirmBlock =
+  | "saving"
+  | "tasksLoading"
+  | "tasksFailed"
+  | "duplicateApplies"
+  | "staleApplies"
+  | "unchosen";
+
 /**
  * 지금 확정하면 안 되는 까닭. 없으면 null 이다. 확정은 되돌릴 수 없어 선택 저장이 끝나고,
  * 포함 항목에 기존 할 일 변경 제안이 있으면 그 할 일을 읽어 사람이 볼 수 있어야 한다.
@@ -29,18 +38,14 @@ export function confirmBlockReason({
   unchosen: number;
   duplicateApplies?: number;
   staleApplies?: number;
-}): string | null {
-  if (saving) return "저장이 끝나면 완료할 수 있습니다";
-  if (hasTaskChanges && tasks === "pending")
-    return "기존 할 일 변경 제안을 불러오는 중입니다";
-  if (hasTaskChanges && tasks === "failed")
-    return "기존 할 일을 불러오지 못해 변경 제안을 확인할 수 없습니다";
-  if (duplicateApplies > 0)
-    return "같은 기존 할 일에 반영할 제안이 겹칩니다. 하나만 반영하고 나머지는 넘겨 주세요";
-  if (staleApplies > 0)
-    return "변경된 기존 할 일의 제안을 확인하고 넘기기를 선택해 주세요";
+}): ConfirmBlock | null {
+  if (saving) return "saving";
+  if (hasTaskChanges && tasks === "pending") return "tasksLoading";
+  if (hasTaskChanges && tasks === "failed") return "tasksFailed";
+  if (duplicateApplies > 0) return "duplicateApplies";
+  if (staleApplies > 0) return "staleApplies";
   // 사람이 고르는 것은 제안뿐이다. 안 본 제안을 둔 채 되돌릴 수 없는 확정으로 넘기지 않는다.
-  if (unchosen > 0) return `고르지 않은 제안이 ${unchosen}개 남았습니다`;
+  if (unchosen > 0) return "unchosen";
   return null;
 }
 

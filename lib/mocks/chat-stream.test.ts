@@ -158,9 +158,9 @@ describe("buildChatEvents", () => {
 
     const state = events.reduce(reduceStreamEvent, initialStreamState);
     expect(state.phase).toBe("failed");
-    // 다시 눌러도 되는 실패다. 문구는 web이 만든다 — server는 code만 보낸다.
+    // 다시 눌러도 되는 실패다. 문구는 web이 코드로 고른다 — server는 code만 보낸다.
     expect(state.retryable).toBe(true);
-    expect(state.error?.message).toContain("처리량");
+    expect(state.error).toEqual({ code: "CAPACITY_EXCEEDED", message: null });
   });
 
   it("시나리오라고 치면 쓸 수 있는 키워드를 전부 답한다", () => {

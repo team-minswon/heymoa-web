@@ -5,11 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { desktopDownload } from "@/lib/desktop/downloads";
 
 /** 워크스페이스에서 연 새 설치 안내 탭 안에서만 다운로드를 시작합니다. `title` 은 숨은 iframe 의 이름(페이지 언어)입니다. */
-export function DesktopAutoDownload({
-  title = "HeyMoa 설치 파일 다운로드",
-}: {
-  title?: string;
-}) {
+export function DesktopAutoDownload({ title }: { title: string }) {
   const query = useSearchParams();
   const [href, setHref] = useState<string | null>(null);
   useEffect(() => {

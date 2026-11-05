@@ -3,6 +3,7 @@
 import { track } from "@/lib/analytics/track";
 import { useSummaryViewed } from "@/lib/analytics/use-summary-viewed";
 
+import { useDocLanguage } from "@/lib/i18n/use-doc-language";
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
 import { createMinutesPdfRenderer } from "@/components/notes/minutes/render-minutes-pdf";
 import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
@@ -10,6 +11,7 @@ import { widerExports } from "@/lib/notes/minutes/exports";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { SegmentedControl } from "@/components/heymoa/segmented-control";
@@ -36,6 +38,7 @@ import {
   TaskChangeSuggestion,
 } from "@/components/notes/review/suggestion-row";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
+import { useSpeakerFallbackNames } from "@/components/notes/speaker-chip";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
@@ -88,7 +91,6 @@ import {
 } from "@/lib/notes/review/moments";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 import {
-  KIND_LABEL,
   REVIEW_SECTIONS,
   isSummaryKind,
   isSummarySection,
@@ -105,10 +107,7 @@ import { toast } from "@/lib/ui/toast";
 
 type View = "summary" | "graph";
 
-const VIEWS = [
-  { value: "summary", label: "요약" },
-  { value: "graph", label: "그래프" },
-] as const;
+const VIEWS = ["summary", "graph"] as const;
 
 const TSID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -178,6 +177,12 @@ export function ReviewBoard({
   onOpenTranscript: () => void;
   onOpenTimeline?: (agendaId: string | null) => void;
 }) {
+  const t = useTranslations("notes.review.board");
+  const tBlocked = useTranslations("notes.review.blocked");
+  const tKind = useTranslations("notes.kinds");
+  const tAction = useTranslations("common.actions");
+  const fallbackNames = useSpeakerFallbackNames();
+  const doc = useDocLanguage();
   const queryClient = useQueryClient();
   const editor = useReviewEditor(noteId);
   const reviewQuery = useGetMeetingReview(noteId, {
@@ -278,7 +283,7 @@ export function ReviewBoard({
             (key) => queryClient.getQueryState(key)?.isInvalidated !== false
           )
         ) {
-          throw new Error("분석 자료 조회가 끝나지 않았습니다.");
+          throw new Error("analysis refresh did not settle");
         }
         setLoadedRefreshKey(refreshKey);
       })
@@ -397,8 +402,13 @@ export function ReviewBoard({
     retry: retryAssignees,
   } = useAssigneeChoices(workspaceId, unnamedSpeakers);
   const resolveSpeaker = useMemo(
-    () => createSpeakerIdentityResolver(speakers ?? [], participants),
-    [speakers, participants]
+    () =>
+      createSpeakerIdentityResolver(
+        speakers ?? [],
+        participants,
+        fallbackNames.speaker
+      ),
+    [speakers, participants, fallbackNames]
   );
 
   if (reviewQuery.isLoading) return <ReviewBoardSkeleton />;
@@ -407,7 +417,7 @@ export function ReviewBoard({
       <BoardShell>
         <InlineRetry
           variant="line"
-          label="검토본을 불러오지 못했습니다."
+          label={t("loadFailed")}
           onRetry={() => void reviewQuery.refetch()}
           className="pt-6"
         />
@@ -496,30 +506,31 @@ export function ReviewBoard({
   // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
   // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
   const analysisBlock = reviewQuery.isError
-    ? "최신 검토본을 다시 확인해 주세요"
+    ? ("reviewStale" as const)
     : refreshFailed
-      ? "최신 분석 결과를 다시 확인해 주세요"
+      ? ("analysisStale" as const)
       : refreshingAnalysis
-        ? "최신 분석 결과를 확인하고 있습니다"
+        ? ("analysisRefreshing" as const)
         : relationsStatus === "PENDING"
-          ? "충돌과 이어짐 확인이 끝나면 검토를 완료할 수 있습니다"
+          ? ("relationsPending" as const)
           : enrichmentStatus === "PENDING"
-            ? "담당과 기한 정리가 끝나면 검토를 완료할 수 있습니다"
+            ? ("enrichmentPending" as const)
             : null;
   const missingChoiceBlock = firstMissingApply
-    ? "이전 분석의 선택을 해제해 주세요"
+    ? ("missingChoice" as const)
     : null;
-  const choiceBlock = saving
-    ? "저장이 끝나면 완료할 수 있습니다"
-    : missingChoiceBlock;
+  const choiceBlock = saving ? ("saving" as const) : missingChoiceBlock;
   const earlierBlock =
     analysisBlock ??
     choiceBlock ??
     confirmBlockReason({ ...blockInput, unchosen: 0 });
-  const confirmBlocked =
+  const confirmBlock =
     analysisBlock ??
     choiceBlock ??
     confirmBlockReason({ ...blockInput, unchosen });
+  const confirmBlocked = confirmBlock
+    ? tBlocked(confirmBlock, { count: unchosen })
+    : null;
   // 막대의 「제안으로 가기」가 데려갈 줄. 요약 보기에 선 줄만이다.
   const firstUnchosen = sections
     .flatMap((section) => section.items)
@@ -681,7 +692,7 @@ export function ReviewBoard({
               key={change.target.itemId}
               className="rounded-control bg-[var(--el-canvas-soft)] px-3 py-2.5 text-xs text-[var(--el-muted)]"
             >
-              기존 할 일 변경 제안을 불러오는 중입니다
+              {tBlocked("tasksLoading")}
             </p>
           )
         )}
@@ -758,7 +769,7 @@ export function ReviewBoard({
         noteId,
         data: { requestId: lastRequest.current.id, ...body },
       });
-      toast.success("검토를 완료했습니다");
+      toast.success(t("confirmed"));
       moveFlowStatus(queryClient, noteId, "CONFIRMED");
       await Promise.all([
         queryClient.invalidateQueries({
@@ -777,7 +788,7 @@ export function ReviewBoard({
       // 서버 문구를 확정 줄에 남긴다. 판이 낡아 거절됐을 수 있으니 검토본도 다시 읽는다.
       setApproveError({
         version: review.reviewVersion,
-        message: errorMessageOf(error, "검토를 완료하지 못했습니다."),
+        message: errorMessageOf(error, t("confirmFailed")),
       });
       await Promise.all([
         queryClient.invalidateQueries({
@@ -808,6 +819,7 @@ export function ReviewBoard({
   });
   const summaryMarkdown = () =>
     reviewToMarkdown({
+      doc,
       note: { ...noteMeta!, durationMs: lengthMs ?? undefined },
       summary,
       topics: digests,
@@ -846,12 +858,12 @@ export function ReviewBoard({
           citedAt,
           unfiledOpen: unfiledOpen(items, topicOf),
           unnamedSpeakers: unnamedSpeakers.length,
+          doc,
         })
       : undefined;
   const preparePdf: PrepareMinutesPdf = async (include, signal) => {
-    if (refreshingAnalysis || refreshFailed)
-      throw new Error("최신 분석 결과를 확인한 뒤 PDF를 만들 수 있습니다.");
-    if (!exportSources) throw new Error("회의록 자료를 불러오지 못했습니다.");
+    if (refreshingAnalysis || refreshFailed) throw new Error(t("pdfStale"));
+    if (!exportSources) throw new Error(t("pdfSourcesFailed"));
     const doc = await exportSources.minutes(include);
     signal?.throwIfAborted();
     return { blob: await renderPdf(doc, signal), fileName: doc.fileName };
@@ -872,16 +884,12 @@ export function ReviewBoard({
         role={relationsStatus === "FAILED" ? "alert" : "status"}
         className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
       >
-        {relationsStatus === "PENDING"
-          ? "충돌과 이어짐을 확인하고 있습니다."
-          : relationsStatus === "FAILED"
-            ? "충돌과 이어짐을 분석하지 못했습니다."
-            : "화자 정보를 확인하지 못해 충돌과 이어짐을 분석하지 않았습니다."}
+        {t(`relations.${relationsStatus}`)}
       </p>
     ) : projectId && linksQuery.isError && !refreshFailed ? (
       <InlineRetry
         variant="line"
-        label="회의 연결을 불러오지 못했습니다."
+        label={t("linksFailed")}
         onRetry={() => void linksQuery.refetch()}
         className="pb-4"
       />
@@ -890,7 +898,7 @@ export function ReviewBoard({
         role="status"
         className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
       >
-        충돌과 이어짐을 불러오고 있습니다.
+        {t("linksLoading")}
       </p>
     ) : null;
 
@@ -930,9 +938,12 @@ export function ReviewBoard({
                 onSendEmail={() => setMailOpen(true)}
               />
               <SegmentedControl
-                label="보기"
+                label={t("viewLabel")}
                 value={view}
-                options={VIEWS}
+                options={VIEWS.map((value) => ({
+                  value,
+                  label: t(`views.${value}`),
+                }))}
                 onChange={setView}
               />
             </div>
@@ -942,7 +953,7 @@ export function ReviewBoard({
         {refreshFailed ? (
           <InlineRetry
             variant="line"
-            label="최신 분석 결과를 불러오지 못했습니다."
+            label={t("refreshFailed")}
             onRetry={() => setRefreshAttempt((attempt) => attempt + 1)}
             className="pt-4"
           />
@@ -950,7 +961,7 @@ export function ReviewBoard({
         {reviewQuery.isError && !refreshFailed ? (
           <InlineRetry
             variant="line"
-            label="최신 검토본을 불러오지 못했습니다."
+            label={t("reviewRefreshFailed")}
             onRetry={() => void reviewQuery.refetch()}
             className="pt-4"
           />
@@ -961,7 +972,7 @@ export function ReviewBoard({
         {assigneeFailed ? (
           <InlineRetry
             variant="line"
-            label="담당으로 고를 사람 목록을 불러오지 못했습니다."
+            label={t("assigneesFailed")}
             onRetry={retryAssignees}
             className="pb-4 text-xs text-[var(--el-muted)]"
           />
@@ -971,13 +982,13 @@ export function ReviewBoard({
             role="alert"
             className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm text-[var(--el-muted)]"
           >
-            <span>이전 분석의 선택을 해제해 주세요.</span>
+            <span>{t("missingChoice")}</span>
             <button
               type="button"
               onClick={() => showItem(firstMissingApply.itemId, true)}
               className="underline underline-offset-4"
             >
-              선택으로 가기
+              {t("goToChoice")}
             </button>
           </div>
         ) : null}
@@ -1047,16 +1058,12 @@ export function ReviewBoard({
                     role={enrichmentStatus === "FAILED" ? "alert" : "status"}
                     className="pb-4 text-sm leading-6 text-[var(--el-muted)]"
                   >
-                    {enrichmentStatus === "PENDING"
-                      ? "담당과 기한을 정리하고 있습니다."
-                      : enrichmentStatus === "FAILED"
-                        ? "담당과 기한을 분석하지 못했습니다. 직접 지정할 수 있습니다."
-                        : "화자 정보를 확인하지 못해 담당과 기한을 분석하지 않았습니다."}
+                    {t(`enrichment.${enrichmentStatus}`)}
                   </p>
                 ) : null}
                 {!confirmed ? (
                   <p className="mb-5 text-[13px] leading-6 text-[var(--el-muted)]">
-                    스위치를 켠 항목만 검토 완료 후 프로젝트에 추가됩니다.
+                    {t("switchHint")}
                   </p>
                 ) : null}
                 {sections.map((section) => (
@@ -1076,14 +1083,14 @@ export function ReviewBoard({
                       section.key === "ACTION_ITEM" && unnamedAssigned > 0 ? (
                         <>
                           <span>
-                            이름 없는 화자에게 걸린 할 일 {unnamedAssigned}
+                            {t("unnamedAssigned", { count: unnamedAssigned })}
                           </span>
                           <button
                             type="button"
                             onClick={onOpenTranscript}
                             className="inline-flex h-[26px] items-center rounded-full border border-[var(--el-hairline-strong)] px-2.5 text-xs font-medium text-[var(--el-ink)] hover:bg-[var(--el-canvas-soft)]"
                           >
-                            화자 이름 붙이기
+                            {t("nameSpeakers")}
                           </button>
                         </>
                       ) : undefined
@@ -1112,14 +1119,14 @@ export function ReviewBoard({
               {summaryQuery.isError && !summary ? (
                 <InlineRetry
                   variant="line"
-                  label="요약을 불러오지 못해 그래프를 그릴 수 없습니다."
+                  label={t("graphSummaryFailed")}
                   onRetry={() => void summaryQuery.refetch()}
                   className="py-6"
                 />
               ) : summaryQuery.isPending ? (
                 // 요약이 오기 전에 「주제 묶음이 없다」고 말하지 않는다. 그래프 판 크기로 자리만 잡는다.
                 <Skeleton
-                  aria-label="그래프 불러오는 중"
+                  aria-label={t("graphLoading")}
                   className={`aspect-[840/520] ${GRAPH_WIDE} rounded-block`}
                 />
               ) : (
@@ -1153,14 +1160,14 @@ export function ReviewBoard({
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-2 border-b border-[var(--el-hairline-soft)] px-4 py-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-[var(--el-ink)]">
                       <RoleDot role={roleOfItem(selected, summary)} />
-                      {KIND_LABEL[selected.kind]}
+                      {tKind(selected.kind)}
                     </span>
                     <span className="col-span-2 row-start-2 min-w-0 whitespace-normal break-words text-sm leading-6 font-medium text-[var(--el-ink)] [overflow-wrap:anywhere]">
                       {selected.content}
                     </span>
                     <button
                       type="button"
-                      aria-label="닫기"
+                      aria-label={tAction("close")}
                       className="col-start-2 row-start-1 text-[var(--el-muted-soft)] hover:text-[var(--el-ink)]"
                       onClick={() => setOpenItemId(null)}
                     >
@@ -1215,7 +1222,9 @@ export function ReviewBoard({
               : []
           )}
           unnamedSpeakers={unnamedSpeakers.flatMap((speaker) =>
-            speaker.type === "SPEAKER_LABEL" ? [`화자 ${speaker.label}`] : []
+            speaker.type === "SPEAKER_LABEL"
+              ? [fallbackNames.speaker(speaker.label)]
+              : []
           )}
           // 「PDF로 내보내기」와 같은 생성기다 — 받는 사람이 받는 파일과 내려받은 파일이 같다
           buildPdf={async (include) => (await preparePdf(include)).blob}
@@ -1245,9 +1254,10 @@ function BoardShell({ children }: { children: React.ReactNode }) {
 
 /** 검토본 조회 skeleton. 머리 · 섹션 제목은 고정 문구라 가리지 않고 값 자리만 막대로 둔다. */
 export function ReviewBoardSkeleton() {
+  const t = useTranslations("notes.review");
   return (
     <BoardShell>
-      <div aria-label="검토본 불러오는 중">
+      <div aria-label={t("board.loading")}>
         <div className="flex min-h-8 items-center gap-3">
           <Skeleton className="h-5 w-12 rounded-chip" />
           <Skeleton className="ml-auto h-8 w-[120px] rounded-full" />
@@ -1265,7 +1275,10 @@ export function ReviewBoardSkeleton() {
         <div className="pt-[62px]">
           <ReviewOverview summary={null} pending />
           {REVIEW_SECTIONS.slice(0, 2).map((section) => (
-            <SectionBlock key={section.key} title={section.label}>
+            <SectionBlock
+              key={section.key}
+              title={t(`sections.names.${section.key}`)}
+            >
               <div className="border-t border-[var(--el-hairline-soft)]">
                 {["78%", "64%", "71%"].map((width) => (
                   <div

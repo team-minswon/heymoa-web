@@ -20,18 +20,11 @@ export type ApprovalCardStatus =
   | { kind: "failed" }
   /** 답하지 못한 채 끝났거나 이미 처리된 승인. */
   | { kind: "invalid"; reason: string }
-  /** 승인은 갔는데 결과를 못 받았다. 쓰기가 나갔을 수 있어 무효와 가른다. */
-  | { kind: "check"; reason: string };
-
-/** 승인을 안 누른 채 대화가 끝난 자리. 만료가 아니다. */
-export const ENDED_REASON = "승인을 처리하지 못한 채 대화가 끝났습니다.";
-
-/**
- * 승인을 보낸 뒤 끝난 자리. server 는 202 전에 결정을 굳히고 재개를 넘기므로 쓰기가 나갔을 수
- * 있다. 무효로 그리면 나간 쓰기를 안 된 것으로 보인다.
- */
-export const UNKNOWN_REASON =
-  "승인은 전달됐지만 실행 결과를 받지 못한 채 대화가 끝났습니다.";
+  /**
+   * 승인은 갔는데 결과를 못 받았다. 쓰기가 나갔을 수 있어 무효와 가른다. server 는 202 전에 결정을 굳히고 재개를
+   * 넘기므로, 무효로 그리면 나간 쓰기를 안 된 것으로 보인다. 사유가 없으면 카드가 기본 사유(`approval.reasons.unknown`)를 쓴다.
+   */
+  | { kind: "check"; reason?: string };
 
 /**
  * 결정된 승인의 상태. 실행 상태는 짝인 도구 블록이 말한다 — 결과 없이 끝난 턴은
@@ -49,7 +42,7 @@ export function resolvedStatus(
       return { kind: "failed" };
     case "stopped":
     case "unknown":
-      return { kind: "check", reason: UNKNOWN_REASON };
+      return { kind: "check" };
     default:
       return { kind: "running" };
   }
@@ -83,6 +76,6 @@ export type ApprovalCardData = {
   fields: ApprovalCardField[];
   /** 일괄 쓰기의 항목. 모든 항목에 같은 변경이면 그 변경은 바깥 `fields` 에 온다. */
   items: ApprovalCardItem[];
-  /** 메일·이슈 설명처럼 긴 평문. 줄바꿈을 지킨다. */
-  body: { label: string; text: string } | null;
+  /** 메일·이슈 설명처럼 긴 평문. 줄바꿈을 지킨다. 이름이 없으면 카드가 「본문」으로 적는다. */
+  body: { label: string | null; text: string } | null;
 };

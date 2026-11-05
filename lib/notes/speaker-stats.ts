@@ -105,6 +105,13 @@ type ParticipantInput = {
   image?: string | null;
 };
 
+export type SpeakerFallbackNames = {
+  /** 참여자 목록에 이름이 없는 참여자 */
+  unnamedParticipant: string;
+  /** 아직 아무도 안 붙은 화자 라벨 */
+  speaker: (label: string) => string;
+};
+
 /**
  * 화자별 말한 분량. **세그먼트에서 직접 센다.**
  *
@@ -123,12 +130,15 @@ export function summarizeSpeakers({
   speakers,
   participants = [],
   durationMs,
+  names,
 }: {
   segments: TranscriptPresentationSegment[];
   speakers: SpeakerInput[];
   participants?: ParticipantInput[];
   /** 녹음 길이. 타임라인 축의 끝이다 — 없으면 마지막 발화로 대신한다. */
   durationMs?: number;
+  /** 이름을 모르는 줄에 세우는 말. 화면 언어(`useSpeakerFallbackNames`)로 넘긴다. */
+  names: SpeakerFallbackNames;
 }): SpeakerStat[] {
   const byLabel = new Map(speakers.map((speaker) => [speaker.label, speaker]));
   const personOf = new Map(
@@ -193,8 +203,8 @@ export function summarizeSpeakers({
         key,
         avatarName: "",
         name: participantId
-          ? (person?.name ?? "이름 없는 참여자")
-          : `화자 ${label}`,
+          ? (person?.name ?? names.unnamedParticipant)
+          : names.speaker(label),
         image: person?.image ?? null,
         labels: [],
         ownedLabels: participantId
@@ -339,11 +349,8 @@ export function jumpIndexAt(
   return best;
 }
 
-/** `12분 30초` — 분량은 초까지만 보면 된다. */
-export function formatSpeakingTime(ms: number) {
+/** 분과 초로 나눈다 — 분량은 초까지만 보면 된다. 문구는 `notes.speakers.speakingTime` 이 만든다. */
+export function speakingTimeParts(ms: number) {
   const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${seconds}초`;
-  return seconds === 0 ? `${minutes}분` : `${minutes}분 ${seconds}초`;
+  return { minutes: Math.floor(totalSeconds / 60), seconds: totalSeconds % 60 };
 }

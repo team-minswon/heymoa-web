@@ -9,6 +9,8 @@ import {
   openSessionGate,
   SessionExpiredError,
 } from "@/lib/auth/session-gate";
+import { acceptLanguageHeader } from "@/lib/i18n/document-locale";
+import { webMessage } from "@/lib/i18n/web-message";
 
 /** 스트림을 열지 못한 실패에 붙는 HTTP 정보. 네트워크 오류에는 없다. */
 export type SseHttpFailure = {
@@ -51,7 +53,11 @@ async function connect(
   const response = await fetch(buildUrl(url), {
     credentials: "include",
     ...init,
-    headers: { Accept: "text/event-stream", ...init.headers },
+    headers: {
+      ...acceptLanguageHeader(),
+      Accept: "text/event-stream",
+      ...init.headers,
+    },
   });
 
   if (response.status === 401 && !hasRetried) {
@@ -79,7 +85,7 @@ async function connect(
         message:
           typeof envelope?.error?.message === "string"
             ? envelope.error.message
-            : "스트림이 사라졌습니다.",
+            : webMessage("streamGone"),
       },
     };
   }

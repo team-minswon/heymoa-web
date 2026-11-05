@@ -1,0 +1,66 @@
+{
+  "title": "할 일",
+  "summary": "프로젝트 {projects}개 · 진행 중 {open}개",
+  "statusLabel": "할 일 상태",
+  "mine": "내 할 일",
+  "allProjects": "프로젝트 전체",
+  "add": "할 일 추가",
+  "empty": {
+    "OPEN": "할 일이 없습니다.",
+    "COMPLETED": "완료한 할 일이 없습니다.",
+    "CANCELLED": "취소한 할 일이 없습니다."
+  },
+  "noProjects": "프로젝트가 없습니다.",
+  "noMatch": "조건에 맞는 할 일이 없습니다.",
+  "choicesFailed": "담당으로 고를 사람 목록을 불러오지 못했습니다.",
+  "loadFailed": "할 일을 불러오지 못했습니다.",
+  "loading": "할 일 불러오는 중",
+  "loadingMore": "할 일 더 불러오는 중",
+  "loadMore": "할 일 더 보기",
+  "sheetClosed": "저장하지 못해 할 일 창을 닫았습니다. 목록에서 다시 열어 주세요.",
+  "saveFailed": "할 일을 저장하지 못했습니다.",
+  "groups": {
+    "OVERDUE": "기한 지남",
+    "THIS_WEEK": "이번 주",
+    "LATER": "다음 주 이후",
+    "NO_DUE": "기한 없음"
+  },
+  "newTask": {
+    "description": "회의 밖에서 생긴 일도 프로젝트 할 일로 추가합니다."
+  },
+  "row": {
+    "reopen": "{content} 다시 열기",
+    "complete": "{content} 완료로 표시",
+    "agent": "에이전트",
+    "agentNamed": "에이전트({name})",
+    "history": "이력"
+  },
+  "sheet": {
+    "description": "할 일의 담당과 기한, 변경 이력",
+    "none": "없음",
+    "discard": "그대로 두기",
+    "reopen": "다시 열기",
+    "markDone": "완료로 표시",
+    "cancelTask": "할 일 취소",
+    "history": "이력",
+    "newestFirst": "최근 것부터",
+    "historyLoading": "이력 불러오는 중",
+    "historyFailed": "이력을 불러오지 못했습니다.",
+    "changedTo": "에서 ",
+    "author": {
+      "meetingCreated": "회의 검토를 마치며 생겼습니다",
+      "meetingChanged": "회의 검토를 마치며 바뀌었습니다",
+      "unknown": "알 수 없는 사람",
+      "self": "<b>{name}</b>{particle} {verb, select, created {만들었습니다} other {바꿨습니다}}",
+      "chat": "<b>{name}</b>{particle} HeyMoa 에이전트로 {verb, select, created {만들었습니다} other {바꿨습니다}}",
+      "agent": "<b>{name}</b>의 에이전트가 {verb, select, created {만들었습니다} other {바꿨습니다}}",
+      "agentNamed": "<b>{name}</b>의 에이전트({connection})가 {verb, select, created {만들었습니다} other {바꿨습니다}}"
+    }
+  },
+  "revert": {
+    "button": "되돌리기",
+    "title": "에이전트가 바꾼 것을 되돌릴까요?",
+    "description": "할 일이 바로 앞 상태로 돌아가고 팀원에게도 곧바로 보입니다.",
+    "keep": "그대로 두기"
+  }
+}

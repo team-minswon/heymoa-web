@@ -10,6 +10,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import { Minus, Plus, Scan } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type {
   GraphApi,
@@ -20,10 +21,8 @@ import { RoleDot } from "@/components/notes/review/role-dot";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MeetingReviewResponseDataItemsItem } from "@/lib/api/generated/models";
 import type { MeetingLinkIndex } from "@/lib/notes/review/meeting-links";
-import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
 import {
   buildReviewGraph,
-  GRAPH_ROLE_LABEL,
   GRAPH_ROLE_ORDER,
   neighborsOf,
   toForceGraph,
@@ -70,6 +69,8 @@ export function ReviewGraph({
   onSelect: (itemId: string) => void;
   agendaLinks?: MeetingLinkIndex["byAgendaId"];
 }) {
+  const t = useTranslations("notes.review.graph");
+  const tKind = useTranslations("notes.kinds");
   const ready =
     summary.status === "SUCCEEDED" && summaryTopics(summary).length > 0;
   const graph = useMemo(
@@ -166,7 +167,7 @@ export function ReviewGraph({
   if (!ready) {
     return (
       <p className="py-10 text-center text-sm text-[var(--el-muted)]">
-        주제 묶음이 없어 그래프를 그릴 수 없습니다
+        {t("empty")}
       </p>
     );
   }
@@ -196,14 +197,14 @@ export function ReviewGraph({
               aria-hidden
               className="inline-block size-2.5 rounded-full bg-[var(--el-ink)]"
             />
-            주제
+            {t("legend.topic")}
           </span>
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span
               aria-hidden
               className="inline-block size-2 rounded-full border-[1.5px] border-[var(--el-ink)]"
             />
-            안건
+            {t("legend.agenda")}
           </span>
           {GRAPH_ROLE_ORDER.map((role) => (
             <span
@@ -211,7 +212,7 @@ export function ReviewGraph({
               className="inline-flex items-center gap-1.5 whitespace-nowrap"
             >
               <RoleDot role={role} />
-              {GRAPH_ROLE_LABEL[role]}
+              {t(`roles.${role}`)}
             </span>
           ))}
         </span>
@@ -221,7 +222,7 @@ export function ReviewGraph({
               <span aria-hidden className="text-[var(--el-ink)]">
                 ⟶
               </span>
-              안건 이어짐
+              {t("legend.agendaLink")}
             </span>
           ) : null}
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
@@ -229,14 +230,14 @@ export function ReviewGraph({
               aria-hidden
               className="inline-block h-px w-4 bg-[var(--el-muted)]"
             />
-            관계
+            {t("legend.relation")}
           </span>
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span
               aria-hidden
               className="inline-block w-4 border-t border-dashed border-[var(--el-muted-soft)]"
             />
-            다른 주제에도 속함
+            {t("legend.alsoTopic")}
           </span>
         </span>
       </div>
@@ -244,7 +245,7 @@ export function ReviewGraph({
       <div
         ref={panelRef}
         role="group"
-        aria-label="주제별로 묶은 항목 그래프"
+        aria-label={t("label")}
         data-review-graph=""
         data-settled={settledData === data ? "" : undefined}
         className="relative overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
@@ -284,7 +285,7 @@ export function ReviewGraph({
               <button
                 type="button"
                 data-item-id={node.id}
-                aria-label={`${CONTEXT_KIND_LABEL[node.kind]} ${node.content}`}
+                aria-label={`${tKind(node.kind)} ${node.content}`}
                 aria-pressed={node.id === selectedItemId}
                 onClick={() => onSelect(node.id)}
                 onFocus={() => {
@@ -325,10 +326,10 @@ export function ReviewGraph({
               <>
                 <p className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--el-muted)]">
                   <RoleDot role={tooltip.node.item.role} />
-                  {CONTEXT_KIND_LABEL[tooltip.node.item.kind]}
+                  {tKind(tooltip.node.item.kind)}
                   {tooltip.node.item.group !== null
                     ? ` · ${topicNumber(tooltip.node.item.group)} ${graph.topics.get(tooltip.node.item.group) ?? ""}`
-                    : " · 주제 밖"}
+                    : ` · ${t("outsideTopic")}`}
                 </p>
                 <p className="mt-1.5 text-[13px] leading-[19px] text-[var(--el-ink)]">
                   {tooltip.node.item.content}
@@ -338,7 +339,7 @@ export function ReviewGraph({
               // 허브 이름은 그래프 위에서 잘린다. 온전한 이름은 여기서만 읽힌다
               <>
                 <p className="text-[11px] font-medium text-[var(--el-muted)]">
-                  주제 · 항목 {tooltip.node.memberCount ?? 0}
+                  {t("hubCount", { count: tooltip.node.memberCount ?? 0 })}
                 </p>
                 <p className="mt-1.5 text-[13px] leading-[19px] font-semibold text-[var(--el-ink)]">
                   {tooltip.node.label}
@@ -351,20 +352,20 @@ export function ReviewGraph({
         {/* 손가락으로 쓰는 화면에서는 버튼을 40px 로 키우고 가로로 눕혀 그래프를 덜 가린다 */}
         <div className="absolute right-2 bottom-2 flex flex-col divide-y divide-[var(--el-hairline)] overflow-hidden rounded-control border border-[var(--el-hairline)] bg-[var(--el-surface-card)] pointer-coarse:flex-row pointer-coarse:divide-x pointer-coarse:divide-y-0">
           <ControlButton
-            label="확대"
+            label={t("zoomIn")}
             disabled={zoom >= ZOOM_RANGE[1]}
             onClick={() => zoomBy(STEP)}
           >
             <Plus aria-hidden className="size-3.5" />
           </ControlButton>
           <ControlButton
-            label="축소"
+            label={t("zoomOut")}
             disabled={zoom <= ZOOM_RANGE[0]}
             onClick={() => zoomBy(1 / STEP)}
           >
             <Minus aria-hidden className="size-3.5" />
           </ControlButton>
-          <ControlButton label="맞춤" disabled={false} onClick={fit}>
+          <ControlButton label={t("fit")} disabled={false} onClick={fit}>
             <Scan aria-hidden className="size-3.5" />
           </ControlButton>
         </div>
@@ -372,7 +373,7 @@ export function ReviewGraph({
 
       {graph.agendaEdges.length > 0 ? (
         <ul
-          aria-label="안건 이어짐"
+          aria-label={t("agendaLinks")}
           className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--el-muted)]"
         >
           {graph.agendaEdges.map((edge) => (

@@ -1,0 +1,16 @@
+{
+  "requestFailed": "Couldn't complete the request. Try again in a moment.",
+  "tooManyRequests": "Too many requests. Try again in a moment.",
+  "serverUnavailable": "The server couldn't handle the request. Try again in a moment.",
+  "timeout": "No response. Check your connection and try again.",
+  "conflict": "Someone else edited this first, so the latest version is now shown.",
+  "reviewConfirmed": "This review is already confirmed and can't be edited.",
+  "streamGone": "Couldn't keep receiving the response.",
+  "transcriptLoadFailed": "Couldn't load the transcript. Try again.",
+  "workspaceGone": "You no longer have access to this workspace.",
+  "workspaceUnavailable": "Can't open meetings in this workspace.",
+  "workspaceUnavailableDetail": "Your current account isn't a member of this workspace.",
+  "switchAccount": "Sign in with another account",
+  "pageBlockedByRecording": "You can't open another page in the app while recording",
+  "pageBlockedByRecordingDetail": "Finish recording, then try again. To see it now, open it in your browser: {url}"
+}

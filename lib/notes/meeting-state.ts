@@ -4,18 +4,12 @@ import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models/n
 import type { TranscriptResponseData } from "@/lib/api/generated/models/transcriptResponseData";
 import { getAppDateKey } from "@/lib/format/date";
 
-export const MEETING_STATUS_LABEL = {
-  NOT_STARTED: "시작 전",
-  IN_PROGRESS: "기록 중",
-  PAUSED: "일시정지됨",
-  ENDED: "종료됨",
-} as const satisfies Record<NoteResponseDataMeetingStatus, string>;
-
-export const MEETING_PRIMARY_ACTION_LABEL = {
-  NOT_STARTED: "회의 시작",
-  IN_PROGRESS: "일시정지",
-  PAUSED: "재개",
-  ENDED: "요약 보기",
+/** 회의 상태 → `common.meetingStatus` 키. 노트 목록과 노트 화면이 같은 이름을 쓴다. */
+export const MEETING_STATUS_KEY = {
+  NOT_STARTED: "notStarted",
+  IN_PROGRESS: "inProgress",
+  PAUSED: "paused",
+  ENDED: "ended",
 } as const satisfies Record<NoteResponseDataMeetingStatus, string>;
 
 /**

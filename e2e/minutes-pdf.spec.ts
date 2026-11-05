@@ -39,7 +39,7 @@ test("타임라인 탭에서 타임라인을 복사한다 — 머리말 아래 �
   // 거르기와 상관없이 전부 복사한다 — 「할 일」만 보이게 거른 뒤 눌러도 결정이 실린다
   await page.getByRole("button", { name: /^할 일 \d+$/ }).click();
   await page.getByRole("button", { name: "타임라인 복사" }).click();
-  await expect(page.getByText("타임라인 내용이 클립보드에 복사되었습니다.")).toBeVisible();
+  await expect(page.getByText("타임라인 내용을 클립보드에 복사했습니다.")).toBeVisible();
 
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toMatch(/^# .+ — 타임라인\n/);

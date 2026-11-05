@@ -352,7 +352,7 @@ describe("relationMatchesTarget", () => {
     const relation = result.byItemId.get("i1")?.[0];
     expect(relation).toMatchObject({
       scope: "approved",
-      targetTitle: "프로젝트 확정 항목",
+      targetTitle: null,
       targetItemId: null,
     });
     expect(relation?.target.noteId).toBeNull();

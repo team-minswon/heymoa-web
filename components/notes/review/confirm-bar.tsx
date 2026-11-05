@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   AlertDialog,
@@ -16,14 +17,14 @@ import { Button } from "@/components/ui/button";
 import type { ConfirmSummary } from "@/lib/notes/review/confirm";
 import { cn } from "@/lib/utils";
 
-function Count({ value }: { value: number }) {
+function Count({ children }: { children: React.ReactNode }) {
   // 숫자가 바뀌면 그 숫자만 한 번 스며든다 — 방금 고른 것이 무엇을 바꿨는지 눈이 따라간다.
   return (
     <b
-      key={value}
+      key={String(children)}
       className="inline-block font-semibold tabular-nums text-[var(--el-ink)] animate-in fade-in-0 zoom-in-95 duration-200 ease-out motion-reduce:animate-none"
     >
-      {value}
+      {children}
     </b>
   );
 }
@@ -59,7 +60,10 @@ export function ConfirmBar({
   raised?: boolean;
   onConfirm: () => Promise<boolean>;
 }) {
+  const t = useTranslations("notes.review.confirm");
+  const tAction = useTranslations("common.actions");
   const [open, setOpen] = useState(false);
+  const count = (chunks: React.ReactNode) => <Count>{chunks}</Count>;
 
   return (
     <div
@@ -88,9 +92,7 @@ export function ConfirmBar({
                 aria-hidden
                 className="size-1.5 rounded-full bg-[#eb6834]"
               />
-              <span>
-                확인할 제안 <Count value={unchosen} />개
-              </span>
+              <span>{t.rich("unchosen", { count: unchosen, b: count })}</span>
             </span>
             {onShowUnchosen ? (
               <button
@@ -98,7 +100,7 @@ export function ConfirmBar({
                 onClick={onShowUnchosen}
                 className="text-[13px] text-[var(--el-body)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
               >
-                제안으로 가기
+                {t("goToSuggestions")}
               </button>
             ) : null}
           </span>
@@ -106,22 +108,23 @@ export function ConfirmBar({
           <span className="text-[13px] text-[var(--el-muted)]">{blocked}</span>
         ) : (
           <span className="text-[13.5px] text-[var(--el-body)]">
-            {decisions + summary.newTasks === 0 ? (
-              "추가할 결정·할 일이 없습니다."
-            ) : (
-              <>
-                결정 <Count value={decisions} />개 · 할 일{" "}
-                <Count value={summary.newTasks} />개 추가
-              </>
-            )}
+            {decisions + summary.newTasks === 0
+              ? t("nothingToAdd")
+              : t.rich("adding", {
+                  decisions,
+                  tasks: summary.newTasks,
+                  b: count,
+                })}
             {summary.endedDecisions > 0 ? (
               <>
-                {" · "}이전 결정 <Count value={summary.endedDecisions} />개 끝남
+                {" · "}
+                {t.rich("ending", { count: summary.endedDecisions, b: count })}
               </>
             ) : null}
             {summary.changedTasks > 0 ? (
               <>
-                {" · "}기존 할 일 <Count value={summary.changedTasks} />개 변경
+                {" · "}
+                {t.rich("changing", { count: summary.changedTasks, b: count })}
               </>
             ) : null}
           </span>
@@ -136,7 +139,7 @@ export function ConfirmBar({
           disabled={Boolean(blocked)}
           onClick={() => setOpen(true)}
         >
-          검토 완료
+          {t("finish")}
         </Button>
       </div>
       <AlertDialog
@@ -147,18 +150,20 @@ export function ConfirmBar({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>검토를 완료할까요?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              선택한 결정 {decisions}개와 할 일 {summary.newTasks}개를
-              프로젝트에 추가합니다. 선택하지 않은 결정·할 일은 회의록에만
-              남습니다.
-              {summary.endedDecisions > 0
-                ? ` 이전 결정 ${summary.endedDecisions}개가 끝납니다.`
-                : ""}
-              {summary.changedTasks > 0
-                ? ` 기존 할 일 ${summary.changedTasks}개가 변경됩니다.`
-                : ""}{" "}
-              완료한 뒤에는 검토를 고칠 수 없습니다.
+              {[
+                t("dialog.adds", { decisions, tasks: summary.newTasks }),
+                summary.endedDecisions > 0
+                  ? t("dialog.ends", { count: summary.endedDecisions })
+                  : null,
+                summary.changedTasks > 0
+                  ? t("dialog.changes", { count: summary.changedTasks })
+                  : null,
+                t("dialog.final"),
+              ]
+                .filter(Boolean)
+                .join(" ")}
             </AlertDialogDescription>
             {error ? (
               <p role="alert" className="text-sm text-[var(--el-error-strong)]">
@@ -172,7 +177,9 @@ export function ConfirmBar({
             ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>
+              {tAction("cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               loading={pending}
               disabled={Boolean(blocked)}
@@ -180,7 +187,7 @@ export function ConfirmBar({
                 if (await onConfirm()) setOpen(false);
               }}
             >
-              검토 완료
+              {t("finish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

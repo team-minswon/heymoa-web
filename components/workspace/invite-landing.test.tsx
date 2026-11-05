@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { intlWrapper } from "@/components/help/test-intl";
 import { InviteLanding } from "@/components/workspace/invite-landing";
 
 const state = vi.hoisted(() => ({
@@ -145,5 +146,25 @@ describe("InviteLanding", () => {
 
     expect(await screen.findByText(/이미 이 워크스페이스의 멤버/)).toBeTruthy();
     expect(screen.getByRole("link", { name: /홈으로/ })).toBeTruthy();
+  });
+});
+
+describe("영어 화면", () => {
+  it("만료된 초대 안내가 영어로 보인다", async () => {
+    state.mutationError = envelopeError("INVITATION_EXPIRED", "expired");
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <InviteLanding token="token-abc" />
+      </QueryClientProvider>,
+      { wrapper: intlWrapper("en") }
+    );
+    expect(
+      await screen.findByRole("heading", { name: "This invitation has expired" })
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Go home" })).toBeTruthy();
+    expect(container.textContent).not.toMatch(/[가-힣]/);
   });
 });

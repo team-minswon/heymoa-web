@@ -81,7 +81,7 @@ describe("sectionsOf", () => {
     expect(decisions.items.map((row) => row.itemId)).toEqual(["d2", "d1"]);
     expect(actions.items).toHaveLength(1);
     expect(actions.includedCount).toBe(0);
-    expect(open.label).toBe("이슈 · 질문");
+    expect(open.key).toBe("OPEN");
     expect(reference.items.map((row) => row.itemId)).toEqual(["r1"]);
   });
 
@@ -168,17 +168,13 @@ describe("confirmSummaryOf", () => {
       unchosen: 0,
     };
     expect(confirmBlockReason(base)).toBeNull();
-    expect(confirmBlockReason({ ...base, unchosen: 2 })).toBe(
-      "고르지 않은 제안이 2개 남았습니다"
-    );
-    expect(confirmBlockReason({ ...base, saving: true })).toBe(
-      "저장이 끝나면 완료할 수 있습니다"
-    );
+    expect(confirmBlockReason({ ...base, unchosen: 2 })).toBe("unchosen");
+    expect(confirmBlockReason({ ...base, saving: true })).toBe("saving");
     expect(confirmBlockReason({ ...base, tasks: "pending" })).toBe(
-      "기존 할 일 변경 제안을 불러오는 중입니다"
+      "tasksLoading"
     );
-    expect(confirmBlockReason({ ...base, tasks: "failed" })).toMatch(
-      /불러오지 못해/
+    expect(confirmBlockReason({ ...base, tasks: "failed" })).toBe(
+      "tasksFailed"
     );
     // 변경 제안이 없으면 할 일 조회를 기다릴 까닭이 없다.
     expect(
@@ -262,10 +258,10 @@ describe("confirmSummaryOf", () => {
         ...base,
         duplicateApplies: conflicts.duplicates.size,
       })
-    ).toMatch(/하나만 반영/);
+    ).toBe("duplicateApplies");
     expect(
       confirmBlockReason({ ...base, staleApplies: conflicts.stale.size })
-    ).toMatch(/넘기기/);
+    ).toBe("staleApplies");
     const kept = items.map((row) => ({
       ...row,
       taskChanges: [change("KEEP")],
@@ -585,10 +581,10 @@ describe("linkedItemsOf", () => {
       ],
     } as unknown as MeetingReviewSummary;
     expect(linkedItemsOf(summary, "decision")).toEqual([
-      { itemId: "task", label: "연결" },
+      { itemId: "task", kind: "LEADS_TO", label: "후속" },
     ]);
     expect(linkedItemsOf(summary, "task")).toEqual([
-      { itemId: "decision", label: "연결" },
+      { itemId: "decision", kind: "LEADS_TO", label: "후속" },
     ]);
   });
 
@@ -612,7 +608,7 @@ describe("linkedItemsOf", () => {
       ],
     } as unknown as MeetingReviewSummary;
     expect(linkedItemsOf(summary, "d")).toEqual([
-      { itemId: "t", label: "후속" },
+      { itemId: "t", kind: "X", label: "후속" },
     ]);
   });
 });

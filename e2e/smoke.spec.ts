@@ -37,7 +37,7 @@ const MEMBER_NAME = "한지원";
 const MEMBER_EMAIL = "jiwon@heymoa.com";
 
 function meetingControls(page: Page) {
-  return page.getByRole("group", { name: "회의 상태 및 제어" });
+  return page.getByRole("group", { name: "회의 상태와 제어" });
 }
 
 /**
@@ -162,7 +162,7 @@ async function expectForeignViewerTranscript(
     );
     await expect(page.getByLabel("녹음 제어")).toBeVisible();
     await expect(
-      page.getByText("다른 탭·기기에서 기록 중입니다.")
+      page.getByText("다른 탭이나 기기에서 기록 중입니다.")
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
     if (viewportSize.width === 375) {
@@ -229,7 +229,7 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
   await page.getByRole("menuitem", { name: "삭제" }).click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText(
-    "이 회의록만 물어본 에이전트 대화도 함께 삭제됩니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
+    "이 회의록만 물어본 에이전트 대화도 함께 삭제합니다. 같은 프로젝트의 다른 회의록과 결정 사항, 할 일, 다른 자료도 함께 물어본 대화는 그대로 남습니다."
   );
   await dialog.getByRole("button", { name: "삭제", exact: true }).click();
 
@@ -692,13 +692,13 @@ test("renames a chat in place from the header and from history (APP-1433)", asyn
 
   // 머리글 제목을 눌러 고치고 Enter. 포커스는 제목 버튼으로 돌아온다.
   await page
-    .getByRole("button", { name: "제목 바꾸기: 이름 바꿀 대화" })
+    .getByRole("button", { name: "이름 변경: 이름 바꿀 대화" })
     .click();
   const input = page.getByRole("textbox", { name: "대화 제목" });
   await input.fill("스프린트 회고");
   await input.press("Enter");
   const header = page.getByRole("button", {
-    name: "제목 바꾸기: 스프린트 회고",
+    name: "이름 변경: 스프린트 회고",
   });
   await expect(header).toBeFocused();
 
@@ -707,11 +707,11 @@ test("renames a chat in place from the header and from history (APP-1433)", asyn
   const history = page.getByTestId("chat-history-view");
   const menu = history.getByRole("button", { name: "「스프린트 회고」 메뉴" });
   await menu.click();
-  await page.getByRole("menuitem", { name: "이름 바꾸기" }).click();
+  await page.getByRole("menuitem", { name: "이름 변경" }).click();
   await history.getByRole("textbox", { name: "대화 제목" }).press("Escape");
   await expect(menu).toBeFocused();
   await menu.click();
-  await page.getByRole("menuitem", { name: "이름 바꾸기" }).click();
+  await page.getByRole("menuitem", { name: "이름 변경" }).click();
   const row = history.getByRole("textbox", { name: "대화 제목" });
   await row.fill("회고 정리");
   await row.press("Enter");
@@ -1428,7 +1428,7 @@ test("shows a persistent explanation for a remotely active starter note", async 
 
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(
-    page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
+    page.getByText("다른 탭이나 기기에서 기록 중입니다.", { exact: true })
   ).toBeVisible();
   await expect(
     page
@@ -1617,7 +1617,7 @@ test("locks ending a remotely recorded meeting in the side panel", async ({
   ).toBeVisible();
   await page.getByRole("tab", { name: "스크립트" }).click();
   await expect(
-    page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
+    page.getByText("다른 탭이나 기기에서 기록 중입니다.", { exact: true })
   ).toBeVisible();
 
   // 회의 종료는 상단바에 있으니 어느 탭에서든 닿는다. 다만 기록 중에는 잠겨 있다.
@@ -1626,7 +1626,7 @@ test("locks ending a remotely recorded meeting in the side panel", async ({
   // disabled 버튼은 포인터 이벤트를 안 내므로 감싼 요소에 올린다.
   await end.locator("..").hover();
   await expect(page.locator('[data-slot="tooltip-content"]')).toHaveText(
-    /님이 기록 중 — 일시정지한 뒤 종료할 수 있습니다/
+    /님이 기록 중입니다\. 일시정지한 뒤 종료할 수 있습니다/
   );
 });
 
@@ -1725,7 +1725,7 @@ test("approves a write tool from the chat card", async ({ page }) => {
   await page.getByRole("button", { name: "보내기" }).click();
 
   // 승인 카드가 뜨고 만료가 없다는 문구가 있다.
-  await expect(page.getByText(/답할 때까지 기다립니다/)).toBeVisible({
+  await expect(page.getByText(/승인하거나 거절할 때까지 기다립니다/)).toBeVisible({
     timeout: 20_000,
   });
 
@@ -2481,7 +2481,7 @@ test("confirms a speaker as unnamed without clearing the human answer", async ({
   await expect(trigger.locator("[data-unassigned]")).toHaveCount(1);
 
   await trigger.click();
-  await page.getByRole("button", { name: "이름 안 붙임" }).click();
+  await page.getByRole("button", { name: "이름 없이 두기" }).click();
 
   // 이름은 여전히 `화자 B`다 — 그 사람이 누구인지 우리가 모른다는 것이 사실이다.
   await expect(trigger).toBeVisible();
@@ -2567,7 +2567,7 @@ function transcriptLine(page: Page, text: string) {
 }
 
 async function revealTranscriptLine(page: Page, text: string) {
-  const input = page.getByRole("textbox", { name: "전사 검색어" });
+  const input = page.getByRole("textbox", { name: "스크립트 검색어" });
   if (!(await input.count()))
     await page.getByRole("button", { name: "검색", exact: true }).click();
   await input.fill(text);
@@ -2771,12 +2771,12 @@ test("searches the full transcript locally without stealing input focus", async 
       requests++;
   });
   await page.getByRole("button", { name: "검색", exact: true }).click();
-  const input = page.getByRole("textbox", { name: "전사 검색어" });
+  const input = page.getByRole("textbox", { name: "스크립트 검색어" });
   await input.fill(OVERRIDDEN_LINE);
   await input.press("Enter");
   await expect(transcriptLine(page, OVERRIDDEN_LINE)).toBeInViewport();
   await expect(input).toBeFocused();
-  await expect(page.getByRole("search", { name: "전사 검색" })).toContainText(
+  await expect(page.getByRole("search", { name: "스크립트 검색" })).toContainText(
     "1/1"
   );
   await input.press("Shift+Enter");

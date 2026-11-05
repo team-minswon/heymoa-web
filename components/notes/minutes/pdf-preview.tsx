@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ export function PdfPreview({
   blob: Blob | null;
   children?: ReactNode;
 }) {
+  const t = useTranslations("notes.minutes.preview");
   const frame = useRef<HTMLIFrameElement>(null);
   const link = useRef<HTMLAnchorElement>(null);
   useLayoutEffect(() => {
@@ -37,12 +39,12 @@ export function PdfPreview({
           !blob && "invisible"
         )}
       >
-        PDF를 새 탭에서 보기
+        {t("openInTab")}
       </a>
       {blob ? (
         <iframe
           ref={frame}
-          title="첨부할 회의록 PDF"
+          title={t("frameTitle")}
           className="hidden h-[min(50vh,560px)] w-full rounded-control border sm:block"
         />
       ) : (

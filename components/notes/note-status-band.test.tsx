@@ -154,7 +154,7 @@ describe("NoteStatusBand", () => {
         autoEnd: autoEnd({ scheduledAt: "2026-10-23T07:20:00Z" }),
       });
       expect(band()).toHaveTextContent(
-        /^계속 일시정지 상태라면 10월 23일\(금\) 오후 4시 20분 이후 자동 종료될 예정입니다\.$/
+        /^일시정지가 이어지면 10월 23일\(금\) 오후 4시 20분 이후 자동으로 종료합니다\.$/
       );
       expect(screen.queryByRole("button")).toBeNull();
     });

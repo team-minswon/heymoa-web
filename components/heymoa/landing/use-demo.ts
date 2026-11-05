@@ -165,7 +165,7 @@ export const REVIEW_PARTS = 4;
 export const NOTE_TABS = ["info", "script", "timeline", "summary"] as const;
 export type NoteTab = (typeof NOTE_TABS)[number];
 
-/** 회의 상태. 앱의 `MEETING_STATUS_LABEL` 그대로다(「시작 전」은 이 대본에 안 나온다). */
+/** 회의 상태. 앱의 `common.meetingStatus` 그대로다(「시작 전」은 이 대본에 안 나온다). */
 export type Status = "recording" | "paused" | "ended";
 
 /**

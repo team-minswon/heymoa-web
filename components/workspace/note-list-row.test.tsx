@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onTrack } from "@/lib/analytics/track";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
+import { intlWrapper } from "@/components/help/test-intl";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 
 const recording = vi.hoisted(() => ({
@@ -266,6 +267,43 @@ describe("NoteListRow", () => {
     );
     expect(screen.getByText("일시정지됨")).toBeInTheDocument();
     expect(screen.queryByText(/일째/)).toBeNull();
+  });
+
+  it("영어 화면에서는 상태와 기록 시간, 기간이 영어로 보인다", () => {
+    const now = Date.parse("2026-10-22T00:00:00Z");
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NoteListRow
+          workspaceId="01K0000000000"
+          note={note({
+            meetingStatus: "PAUSED",
+            activeSessionStartedAt: null,
+            recordedDurationMs: 185_000,
+            pausedAt: "2026-10-20T05:00:00Z",
+          })}
+          now={now}
+        />
+      </QueryClientProvider>,
+      { wrapper: intlWrapper("en") }
+    );
+    expect(screen.getByText("Paused for 3 days")).toBeInTheDocument();
+    expect(screen.getByText("3 min recorded")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open note 주간 제품 회의" })
+    ).toBeInTheDocument();
+    unmount();
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NoteListRow
+          workspaceId="01K0000000000"
+          note={note({ meetingStatus: "ENDED", activeSessionStartedAt: null })}
+          now={now}
+        />
+      </QueryClientProvider>,
+      { wrapper: intlWrapper("en") }
+    );
+    expect(screen.getByText("Ended")).toBeInTheDocument();
   });
 
   // 진행자가 참여자 명단에 없으면 예전에는 이미지를 빌릴 데가 없어, `email: ""`인 가짜

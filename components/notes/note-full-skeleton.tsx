@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -13,9 +15,10 @@ import { Skeleton } from "@/components/ui/skeleton";
  * 패널 안은 상단바 56 → 노트 헤더다.
  */
 export function NoteFullSkeleton() {
+  const t = useTranslations("notes.panel");
   return (
     <div
-      aria-label="노트 불러오는 중"
+      aria-label={t("loading")}
       className="fixed inset-0 z-30 flex gap-2.5 overflow-hidden bg-[var(--el-canvas)] p-2.5"
     >
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-e2">

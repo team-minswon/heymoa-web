@@ -90,7 +90,10 @@ export function AppDownloadLink({
           : t("app");
   return (
     <a
-      href={target.href}
+      // OS를 모르면 다운로드 페이지로 간다. 그 페이지는 화면 언어 주소에 있다
+      href={
+        target.os === "other" ? localePath(locale, target.href) : target.href
+      }
       target={target.os === "other" ? undefined : "_blank"}
       rel={target.os === "other" ? undefined : "noopener noreferrer"}
       className={className}

@@ -57,7 +57,7 @@
         "body": [
           "Before recording meeting audio, you must confirm for yourself the procedures required by law and by your organization's rules, such as notifying attendees and obtaining their consent. Some attendees may not have signed up for the Service, and their voices are processed as well.",
           "When you record computer audio with the desktop app, the voices of other participants in the video call are recorded too, and the same notice and consent procedures are required for them. Microphone and computer audio recording work only when you have allowed them in your operating system.",
-          "Automatic transcripts and speaker separation may be inaccurate depending on pronunciation, network conditions, background noise, and the processing results of the speech recognition provider. Assigning names to speakers is your choice, and you are also responsible for checking that those names are accurate.",
+          "Automatic transcripts and speaker identification may be inaccurate depending on pronunciation, network conditions, background noise, and the processing results of the speech recognition provider. Assigning names to speakers is your choice, and you are also responsible for checking that those names are accurate.",
           "For important judgments such as those involving contracts, personnel, medical, or legal matters, do not rely on transcripts or automatic summaries alone. They must be checked against the original and by the person in charge."
         ]
       },
@@ -100,7 +100,7 @@
         "title": "9. Suspension and Limitation of Liability",
         "body": [
           "Features may be temporarily suspended because of maintenance, outages, network problems, or issues with external speech recognition or large language model services. HeyMoa will make reasonable efforts to restore the Service and protect data.",
-          "HeyMoa does not guarantee that automatic transcripts, speaker separation, automatic summaries, or agent answers are completely accurate or fit for a particular purpose. HeyMoa is not liable for damages arising from using those results without your own verification, except for damages caused by HeyMoa's intent or gross negligence."
+          "HeyMoa does not guarantee that automatic transcripts, speaker identification, automatic summaries, or agent answers are completely accurate or fit for a particular purpose. HeyMoa is not liable for damages arising from using those results without your own verification, except for damages caused by HeyMoa's intent or gross negligence."
         ]
       },
       {
@@ -109,7 +109,7 @@
           "You can delete your account at any time from My Account in Settings. If a meeting is being recorded, you can delete your account after the recording ends.",
           "When you delete your account, your workspaces are handled as follows. If you are the only administrator and other members remain, you either hand the administrator role to another member or delete the workspace. You leave workspaces that have another administrator or where you are a member. Workspaces you used alone are deleted.",
           "Deleting your account signs you out on every device right away and cannot be undone. If you sign up again with the same Google account, you get a new account that is not linked to your previous records.",
-          "Workspace administrators can delete a workspace. When a workspace is deleted, all members lose access right away; its notes, transcripts, audio, agent conversations, integrations, and invitations are deleted; and every member receives a notice email.",
+          "Workspace administrators can delete a workspace. When a workspace is deleted, all members lose access right away; its notes, transcripts, audio, agent chats, integrations, and invitations are deleted; and every member receives a notice email.",
           "Even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Deletion and retention periods are described in Article 6 of the Privacy Policy."
         ]
       },
@@ -157,7 +157,7 @@
               ],
               [
                 "Meeting records",
-                "Microphone audio, computer audio recorded by the desktop app, transcripts and speaker separation results made from that audio, and meeting information such as note titles, attendee names, and agendas"
+                "Microphone audio, computer audio recorded by the desktop app, transcripts and speaker identification results made from that audio, and meeting information such as note titles, attendee names, and agendas"
               ],
               [
                 "Attendees",
@@ -211,11 +211,11 @@
           "On the web, the microphone is used only when you start recording and allow microphone access in your browser.",
           "The desktop app can record the sound coming from your computer along with your microphone. Computer audio includes the voices of other participants in a video call. Both inputs work only when you have allowed them in your operating system (macOS or Windows).",
           "Audio is sent in real time to a speech recognition provider to be transcribed, and the transcribed sentences are shown on screen.",
-          "To improve recognition accuracy, meeting context may be sent along with the audio. Meeting context consists of the project name, meeting title, attendee names, agenda, the glossary you entered, and the meeting's topic and background.",
-          "After the meeting, audio is kept in encrypted storage (AWS Seoul region, Republic of Korea) so that speakers can be separated. It is deleted as soon as speaker separation finishes, and in any case automatically 30 days after it was stored.",
-          "Speaker separation results are shown with labels such as \"Speaker A\". Assigning a person's name to a label is your choice. HeyMoa does not create information that identifies a specific person by voice (a voiceprint) and does not compare voices across meetings.",
+          "To improve recognition accuracy, meeting context may be sent along with the audio. Meeting context consists of the project name, meeting title, attendee names, agenda, the custom vocabulary you entered, and the meeting's topic and background.",
+          "After the meeting, audio is kept in encrypted storage (AWS Seoul region, Republic of Korea) so that speakers can be identified. It is deleted as soon as speaker identification finishes, and in any case automatically 30 days after it was stored.",
+          "Speaker identification results are shown with labels such as \"Speaker A\". Assigning a person's name to a label is your choice. HeyMoa does not create information that identifies a specific person by voice (a voiceprint) and does not compare voices across meetings.",
           "Some attendees may not have signed up for the Service, and their voices and utterances are processed in the same way. The user who starts recording must confirm the necessary procedures, such as notifying attendees and obtaining their consent.",
-          "Automatic transcripts and speaker separation may contain errors. You should check important decisions and proper nouns yourself."
+          "Automatic transcripts and speaker identification may contain errors. You should check important decisions and proper nouns yourself."
         ]
       },
       {
@@ -258,13 +258,13 @@
             "rows": [
               [
                 "Meeting audio",
-                "Deleted as soon as speaker separation finishes; at most 30 days after it was stored",
+                "Deleted as soon as speaker identification finishes; at most 30 days after it was stored",
                 "Article 3"
               ],
               [
-                "Transcripts, notes, AI summaries, search indexes, agent conversations",
+                "Transcripts, notes, AI summaries, search indexes, agent chats",
                 "Until you delete them",
-                "Deleted along with the note or workspace. Leaving a workspace also deletes your own agent conversations in that workspace. Deleting your account deletes the records of workspaces you used alone and your own agent conversations in every workspace; transcripts, notes, and AI summaries in team workspaces remain (see below)"
+                "Deleted along with the note or workspace. Leaving a workspace also deletes your own agent chats in that workspace. Deleting your account deletes the records of workspaces you used alone and your own agent chats in every workspace; transcripts, notes, and AI summaries in team workspaces remain (see below)"
               ],
               [
                 "Account information (email, profile photo, sign-in method)",
@@ -335,7 +335,7 @@
           },
           "Account deletion: when you delete your account, you are signed out on every device right away and can no longer access the account. Account information and the data of workspaces you used alone are deleted from the service storage in turn, and remain in backups for up to 7 days before being removed automatically.",
           "Names that remain in team records: even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Attendee, speaker, approval, and task assignee labels, and your own utterances in transcripts, are the team's records, so the remaining members can still see them. Your email, profile photo, and sign-in method are deleted. If you want your utterances in team records deleted, you can ask the workspace administrator or HeyMoa (Article 8).",
-          "Workspace deletion: when an administrator deletes a workspace, all members lose access right away. The workspace's notes, transcripts, audio, agent conversations, integrations, and invitations are deleted in turn and remain in backups for up to 7 days.",
+          "Workspace deletion: when an administrator deletes a workspace, all members lose access right away. The workspace's notes, transcripts, audio, agent chats, integrations, and invitations are deleted in turn and remain in backups for up to 7 days.",
           "Service notifications: a notification stores the meeting title and workspace name as they were when it was received. So even if a meeting note is deleted or someone leaves the workspace, the title remains in the recipient's notification list. When you open a notification, access permissions are checked again, and nothing is shown without permission.",
           "Copies that cannot be recalled: emails already sent remain in recipients' mailboxes, and HeyMoa cannot recall or delete them. Inquiry content forwarded to Slack as an operations alert cannot be recalled either (Article 7). This is the same even if you delete a note or your account.",
           "How data is destroyed: electronic files are deleted so that they cannot be recovered. Information that must be kept under other laws is kept separately from other information for that period."
@@ -348,7 +348,7 @@
           "To operate the Service, HeyMoa entrusts processing to the providers below to the extent necessary. Personal information is transferred abroad to providers outside the Republic of Korea. This entrustment is necessary to perform the service contract. The following is disclosed under Article 28-8(1)(3) of the Personal Information Protection Act.",
           "All transfers use encrypted network transmission. The retention periods below are taken from each provider's published policy as of October 22, 2026.",
           "OpenRouter further entrusts processing to AI model providers (OpenAI, Microsoft, TypeSafe) (sub-processing). HeyMoa sends these requests on terms that the data is not used for training. Retention of inputs and outputs follows each provider's policy.",
-          "If you do not want your information transferred abroad, you can refuse by not using the feature or by disconnecting it. If you refuse transfers needed for speech recognition, speaker separation, AI summaries, or web hosting, you cannot use those features. Analytics tools can be refused as described in Article 5 (except records the server sends to PostHog), and refusing them does not limit your use of the Service.",
+          "If you do not want your information transferred abroad, you can refuse by not using the feature or by disconnecting it. If you refuse transfers needed for speech recognition, speaker identification, AI summaries, or web hosting, you cannot use those features. Analytics tools can be refused as described in Article 5 (except records the server sends to PostHog), and refusing them does not limit your use of the Service.",
           {
             "columns": [
               "Provider",
@@ -363,7 +363,7 @@
               ],
               [
                 "pyannote.ai",
-                "Speaker separation",
+                "Speaker identification",
                 "France (EU)"
               ],
               [
@@ -423,7 +423,7 @@
               ],
               [
                 "Data",
-                "Meeting audio and meeting context (project name, meeting title, attendee names, agenda, glossary, meeting topic and background)"
+                "Meeting audio and meeting context (project name, meeting title, attendee names, agenda, custom vocabulary, meeting topic and background)"
               ],
               [
                 "When",
@@ -441,7 +441,7 @@
           },
           {
             "vendor": "Pyannote SAS (pyannote.ai)",
-            "role": "Speaker separation",
+            "role": "Speaker identification",
             "rows": [
               [
                 "Country",
@@ -789,7 +789,7 @@
         "body": [
           "HeyMoa takes the following measures to protect personal information.",
           "Encryption: all data in transit is encrypted. The database and audio storage are encrypted at rest, and external tool integration credentials are additionally encrypted before they are stored.",
-          "Access control: meeting data can be viewed only by workspace members and by the people and services you share it with by email or connect. The audio storage is not public, and audio is delivered to the speaker separation provider through a temporary link that expires after a short time.",
+          "Access control: meeting data can be viewed only by workspace members and by the people and services you share it with by email or connect. The audio storage is not public, and audio is delivered to the speaker identification provider through a temporary link that expires after a short time.",
           "Credential management: cookies used to keep you signed in are protected so that scripts on web pages cannot read them. When you delete your account, remaining sign-ins and real-time connections are cut right away; when a workspace is deleted, connections to that workspace are cut.",
           "Log management: meeting content is not written to server logs, and logs are deleted after the set period (Article 6)."
         ]

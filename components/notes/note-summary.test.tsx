@@ -122,9 +122,7 @@ describe("NoteSummary 항목 리스트", () => {
     renderSummary(true);
 
     expect(screen.getByRole("region", { name: "개요" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "액션 아이템" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "할 일" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "결정" })).toBeInTheDocument();
     expect(screen.getByText("결제 실패율이 3%로 올랐다")).toBeInTheDocument();
     expect(screen.queryByRole("tab")).toBeNull();
@@ -264,7 +262,7 @@ describe("NoteSummary", () => {
     const { container } = renderSummary(true);
 
     // 섹션 제목 셋은 응답이 아니라 고정 순서다 — 스켈레톤이 가리지 않는다.
-    ["개요", "액션 아이템", "결정"].forEach((label) => {
+    ["개요", "할 일", "결정"].forEach((label) => {
       expect(screen.getByRole("heading", { name: label })).toBeTruthy();
     });
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBe(7);
@@ -369,7 +367,7 @@ describe("NoteSummary", () => {
   it("종료 전에는 안내만 보이고 요약 만들기 버튼이 없다", () => {
     state.missing = true;
     renderSummary(false);
-    expect(screen.getByText("요약은 회의가 끝나면 생성됩니다")).toBeTruthy();
+    expect(screen.getByText("회의가 끝나면 요약을 만듭니다")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "요약 만들기" })).toBeNull();
   });
 

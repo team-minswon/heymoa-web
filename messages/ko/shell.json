@@ -1,0 +1,157 @@
+{
+  "nav": {
+    "notifications": "알림",
+    "allNotes": "모든 노트",
+    "tasks": "할 일",
+    "connectionMap": "연결 지도"
+  },
+  "sidebar": {
+    "label": "워크스페이스",
+    "switchWorkspace": "워크스페이스 전환",
+    "workspaceFallback": "워크스페이스",
+    "newWorkspace": "새 워크스페이스",
+    "workspaceSettings": "워크스페이스 설정",
+    "unreadNotifications": "안 읽은 알림 {count}개",
+    "projects": "프로젝트",
+    "newProject": "새 프로젝트",
+    "createProject": "프로젝트 만들기",
+    "projectsHint": "회의를 주제별로 묶으면 지난 맥락을 찾기 쉬워집니다.",
+    "projectMenu": "{name} 프로젝트 메뉴",
+    "rename": "이름 변경",
+    "guide": "사용 가이드",
+    "feedback": "문의·피드백",
+    "userFallback": "사용자",
+    "loggingOut": "로그아웃 중",
+    "pleaseWait": "잠시만 기다려 주세요",
+    "accountSettings": "내 계정 설정",
+    "reopenOnboarding": "시작 안내 다시 보기",
+    "logout": "로그아웃",
+    "navigating": "화면 이동 중",
+    "renameDialog": {
+      "title": "프로젝트 이름 변경",
+      "description": "노트를 분류할 프로젝트 이름을 입력하세요.",
+      "nameLabel": "프로젝트 이름"
+    },
+    "deleteDialog": {
+      "title": "프로젝트를 삭제할까요?",
+      "description": "{name} 프로젝트와 이 프로젝트에서 나눈 에이전트 대화를 삭제합니다. 되돌릴 수 없습니다. 노트가 있는 프로젝트는 삭제할 수 없습니다."
+    },
+    "toast": {
+      "renamed": "프로젝트 이름을 바꿨습니다.",
+      "renameFailed": "프로젝트 이름을 바꾸지 못했습니다.",
+      "deleted": "프로젝트를 삭제했습니다.",
+      "hasNotes": "노트가 있는 프로젝트는 삭제할 수 없습니다.",
+      "adminOnly": "관리자만 프로젝트를 삭제할 수 있습니다.",
+      "deleteFailed": "프로젝트를 삭제하지 못했습니다."
+    },
+    "primitive": {
+      "mobileTitle": "워크스페이스 메뉴",
+      "mobileDescription": "워크스페이스와 프로젝트를 탐색합니다.",
+      "open": "사이드바 열기",
+      "toggle": "사이드바 전환"
+    }
+  },
+  "appShell": {
+    "integrationConnected": "{provider} 연결을 마쳤습니다.",
+    "integrationFailed": "연동하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    "meetingProjectNotFound": "회의를 시작할 프로젝트를 찾을 수 없습니다."
+  },
+  "toolbar": {
+    "location": "현재 위치",
+    "newNote": "새 노트",
+    "currentRecording": "현재 녹음"
+  },
+  "routeLayout": {
+    "loadFailed": "워크스페이스를 불러오지 못했습니다"
+  },
+  "routeSkeleton": {
+    "loading": "워크스페이스 불러오는 중"
+  },
+  "desktopPromo": {
+    "label": "데스크톱 앱 안내",
+    "body": "회의실 대화도, 화상회의와 강의, 유튜브에서 듣는 말도 기록하세요.",
+    "compare": "웹과 앱의 차이",
+    "compareTooltip": "웹과 앱의 차이 보기"
+  },
+  "desktopDownload": {
+    "checking": "앱 다운로드 확인 중",
+    "mac": "macOS 다운로드",
+    "windows": "Windows 다운로드",
+    "other": "앱 다운로드"
+  },
+  "desktopCompare": {
+    "steps": {
+      "sound": {
+        "title": "기록할 수 있는 소리",
+        "description": "웹은 마이크 소리, 앱은 컴퓨터 소리까지 기록합니다."
+      },
+      "background": {
+        "title": "창을 닫아도 이어지는 녹음",
+        "description": "녹음하는 동안 다른 작업을 해도 괜찮습니다."
+      },
+      "sameData": {
+        "title": "사용하던 기록 그대로",
+        "description": "웹과 앱은 같은 노트와 프로젝트를 사용합니다."
+      }
+    },
+    "stepGroup": "{total}단계 중 {current}단계",
+    "stepNav": "데스크톱 앱 안내 단계",
+    "stepLabel": "{number}. {title}",
+    "previous": "이전",
+    "next": "다음",
+    "done": "확인",
+    "table": {
+      "caption": "웹과 데스크톱 앱 녹음 범위 비교",
+      "sound": "녹음하는 소리",
+      "web": "웹",
+      "app": "앱",
+      "mic": "마이크로 들어오는 소리",
+      "micExamples": "내 목소리, 회의실 대화",
+      "system": "컴퓨터에서 재생되는 소리",
+      "systemExamples": "화상회의 상대방, 강의, 유튜브 영상",
+      "supported": "기록 가능",
+      "unsupported": "기록되지 않음"
+    },
+    "menuBar": {
+      "label": "Mac 메뉴 막대에서 녹음 상태와 회의 타임라인을 보는 예시",
+      "name": "Mac 메뉴 막대",
+      "recording": "녹음 중 · 12:34",
+      "meeting": "주간 회의",
+      "timeline": "타임라인",
+      "item1": "다음 회의는 금요일에 진행",
+      "item2": "회의 자료 공유하기",
+      "keepsRecording": "창을 닫아도 녹음은 계속됩니다.",
+      "checkMenuBar": "Mac 메뉴 막대에서 녹음 상태와 타임라인을 확인하세요."
+    },
+    "install": {
+      "body": "앱을 설치한 뒤, 지금 쓰는 Google 계정으로 로그인하세요.",
+      "macRequirement": "macOS 14.2 이상 · Apple Silicon"
+    }
+  },
+  "focusChrome": {
+    "logout": "로그아웃",
+    "terms": "이용약관",
+    "privacy": "개인정보 처리방침"
+  },
+  "navbar": {
+    "sections": {
+      "meetings": "회의 정리",
+      "evidence": "근거 확인"
+    },
+    "logout": "로그아웃",
+    "dashboardShort": "대시보드",
+    "dashboard": "대시보드로 이동",
+    "retryLabel": "대시보드 다시 시도",
+    "start": "시작하기",
+    "loadFailed": "대시보드를 불러오지 못했습니다.",
+    "loadFailedDescription": "잠시 후 다시 시도해 주세요."
+  },
+  "footer": {
+    "tagline": "회의를 받아 적고, 결정과 할 일을 근거와 함께 정리하는 AI 에이전트",
+    "contact": "문의:",
+    "service": "서비스",
+    "download": "데스크톱 다운로드",
+    "policy": "정책",
+    "disclaimer": "AI 회의 에이전트는 업무를 돕는 보조 수단입니다."
+  }
+}

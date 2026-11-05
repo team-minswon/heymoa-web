@@ -98,7 +98,7 @@ export function MermaidBlock({
   const theme = useMermaidTheme();
   const result = useMermaidSvg(id, source, theme);
   const [showCode, setShowCode] = useState(false);
-  const t = useTranslations("common.agentChat.diagram");
+  const t = useTranslations("chat.diagram");
 
   if (result === null) return fallback;
   if ("failed" in result) {
@@ -160,7 +160,7 @@ export function MermaidBlock({
  */
 function ModalDiagram({ id, source }: { id: string; source: string }) {
   const result = useMermaidSvg(id, source, useMermaidTheme());
-  const t = useTranslations("common.agentChat.diagram");
+  const t = useTranslations("chat.diagram");
   if (result === null) {
     return <DialogTitle>{t("label")}</DialogTitle>;
   }
@@ -252,7 +252,7 @@ function ZoomView({ svg }: { svg: string }) {
     view: { s: 1, x: 0, y: 0 },
   });
   const { view } = state;
-  const t = useTranslations("common.agentChat.diagram");
+  const t = useTranslations("chat.diagram");
   /** 눌린 손가락·포인터. 하나면 이동, 둘이면 핀치. */
   const pts = useRef(new Map<number, { x: number; y: number }>());
   /** 포인터 수가 바뀐 순간의 기준. 움직임은 늘 이 기준에서 다시 계산한다. */

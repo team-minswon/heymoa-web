@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { track } from "@/lib/analytics/track";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { usePersonalChatScope } from "@/components/chat/personal-chat";
 import { NotePanel, type NoteTab } from "@/components/notes/note-panel";
@@ -12,7 +13,7 @@ import { useGetNote } from "@/lib/api/generated/notes/notes";
 import {
   deriveMeetingPhase,
   isPersonalChatHiddenInNote,
-  MEETING_STATUS_LABEL,
+  MEETING_STATUS_KEY,
   type MeetingPhase,
 } from "@/lib/notes/meeting-state";
 
@@ -90,6 +91,8 @@ export function NoteView({
   initialQuery: NoteRouteQuery;
 }) {
   const router = useRouter();
+  const t = useTranslations("notes.view");
+  const tStatus = useTranslations("common.meetingStatus");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
@@ -251,11 +254,12 @@ export function NoteView({
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          aria-label="회의 상태 변경"
+          aria-label={t("statusChange.label")}
           className="sr-only"
         >
-          회의 상태가 {MEETING_STATUS_LABEL[note.meetingStatus]}으로
-          변경되었습니다.
+          {t("statusChange.message", {
+            status: tStatus(MEETING_STATUS_KEY[note.meetingStatus]),
+          })}
         </span>
       ) : null}
       <NotePanel

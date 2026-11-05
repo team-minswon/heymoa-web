@@ -2,8 +2,8 @@ import { headingLines, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { describeAssignee } from "@/lib/assignees/describe";
 import { formatDueDate } from "@/lib/format/date";
 import { formatOffset } from "@/lib/transcription/presentation";
+import type { DocLanguage } from "@/lib/i18n/translator";
 import {
-  KIND_LABEL,
   REVIEW_SECTIONS,
   type ReviewItem,
   type ReviewSection,
@@ -23,8 +23,15 @@ import type { TopicChip } from "@/lib/notes/review/topics";
 const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
 const joined = (lines: string[]) => `${lines.join("\n")}\n`;
 
-export function overviewToMarkdown(summary: MeetingReviewSummary) {
-  return joined(["## 요약", "", oneLine(overviewText(summary))]);
+export function overviewToMarkdown(
+  summary: MeetingReviewSummary,
+  { t }: DocLanguage
+) {
+  return joined([
+    `## ${t("dates.document.summaryHeading")}`,
+    "",
+    oneLine(overviewText(summary)),
+  ]);
 }
 
 /**
@@ -32,10 +39,11 @@ export function overviewToMarkdown(summary: MeetingReviewSummary) {
  * 시간순으로 세우면 1·2·5·4·3 처럼 뛰어, 복사본에서는 잘못 센 것으로 읽힌다. 때를 알면 `[00:07]` 을 앞에 붙인다.
  */
 export function topicsToMarkdown(
-  topics: readonly (TopicChip & { startMs?: number | null; text?: string })[]
+  topics: readonly (TopicChip & { startMs?: number | null; text?: string })[],
+  { t }: DocLanguage
 ) {
   return joined([
-    "## 주제",
+    `## ${t("dates.document.topicsHeading")}`,
     "",
     ...topics.map((topic, index) => {
       const at =
@@ -56,33 +64,38 @@ export type ItemContext = {
 
 export function reviewSectionToMarkdown(
   section: ReviewSection,
+  doc: DocLanguage,
   topicTitle: string | null = null,
   context: ItemContext = {}
 ) {
+  const { t, locale } = doc;
+  const name = t(`notes.review.sections.names.${section.key}`);
   const mixed =
     (REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds.length ??
       0) > 1;
   const lines = [
-    topicTitle
-      ? `## ${section.label} — ${oneLine(topicTitle)}`
-      : `## ${section.label}`,
+    topicTitle ? `## ${name} — ${oneLine(topicTitle)}` : `## ${name}`,
     "",
   ];
   const items = section.items.filter((item) => item.included);
-  if (items.length === 0) return joined([...lines, "_없음_"]);
+  if (items.length === 0)
+    return joined([...lines, `_${t("dates.document.none")}_`]);
 
   for (const item of items) {
-    const assignee = describeAssignee(item.assignee)?.name;
+    const assignee = describeAssignee(item.assignee, (label) =>
+      t("notes.speakers.fallback", { label })
+    )?.name;
     const facts = [
-      assignee && `담당 ${assignee}`,
-      item.due && `기한 ${formatDueDate(item.due)}`,
+      assignee && t("dates.document.assignee", { name: assignee }),
+      item.due &&
+        t("dates.document.due", { date: formatDueDate(item.due, locale) }),
     ].filter(Boolean);
-    const kind = mixed ? `**${KIND_LABEL[item.kind]}** ` : "";
+    const kind = mixed ? `**${t(`notes.kinds.${item.kind}`)}** ` : "";
     const when = context.whenOf?.(item) ?? null;
     const topic = topicTitle ? null : context.topicTitleOf?.(item);
     const where = [
       when === null ? null : `[${formatOffset(when)}]`,
-      topic ? `주제: ${oneLine(topic)}` : null,
+      topic ? t("dates.document.topic", { title: oneLine(topic) }) : null,
     ].filter(Boolean);
     lines.push(
       `- ${kind}${oneLine(item.content)}${facts.length ? ` — ${facts.join(" · ")}` : ""}${where.length ? ` (${where.join(" · ")})` : ""}`
@@ -105,6 +118,7 @@ export function reviewToMarkdown({
   sections,
   confirmed,
   context,
+  doc,
 }: {
   note: NoteMeta;
   summary: MeetingReviewSummary | null | undefined;
@@ -113,23 +127,29 @@ export function reviewToMarkdown({
   /** 확정된 요약인가. 검토 중인 줄이 확정본처럼 남에게 가면 안 된다 */
   confirmed?: boolean;
   context?: ItemContext;
+  doc: DocLanguage;
 }) {
+  const { t } = doc;
   // 머리말 사실 줄(날짜 · 참석자 · 기록 시간)에 프로젝트와 확정 여부를 잇는다. 화면 머리에 있는 사실이다.
-  const head = headingLines(note);
+  const head = headingLines(note, doc);
   head[2] = [
     head[2],
-    note.projectName ? `프로젝트 ${note.projectName}` : null,
-    confirmed === undefined ? null : confirmed ? "확정됨" : "검토 중",
+    note.projectName
+      ? t("dates.document.project", { name: note.projectName })
+      : null,
+    confirmed === undefined
+      ? null
+      : t(confirmed ? "dates.document.confirmed" : "dates.document.inReview"),
   ]
     .filter(Boolean)
     .join(" · ");
   const blocks = [joined(head)];
   if (summary?.status === "SUCCEEDED" && overviewText(summary))
-    blocks.push(overviewToMarkdown(summary));
-  if (topics.length > 0) blocks.push(topicsToMarkdown(topics));
+    blocks.push(overviewToMarkdown(summary, doc));
+  if (topics.length > 0) blocks.push(topicsToMarkdown(topics, doc));
   for (const section of sections) {
     if (section.items.some((item) => item.included))
-      blocks.push(reviewSectionToMarkdown(section, null, context));
+      blocks.push(reviewSectionToMarkdown(section, doc, null, context));
   }
   return blocks.join("\n");
 }

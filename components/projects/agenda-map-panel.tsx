@@ -2,6 +2,7 @@
 
 import { track } from "@/lib/analytics/track";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
 import { ArrowRight, ArrowUpRight, X } from "lucide-react";
@@ -72,6 +73,8 @@ export function SidePanel({
   /** 이 줄기 하나를 크게 보는 포커스 화면으로 */
   onFocusTopic: () => void;
 }) {
+  const t = useTranslations("workspace.agendaMap");
+  const tActions = useTranslations("common.actions");
   const agenda = selection.agendaId ? map.agendaById.get(selection.agendaId) : undefined;
   const topic = selection.rowId ? topicOf.get(selection.rowId) : undefined;
   const topicRowsOf = topic ? rows.filter((row) => topicOf.get(row.id) === topic) : [];
@@ -79,15 +82,15 @@ export function SidePanel({
 
   return (
     <aside
-      aria-label="고른 안건"
+      aria-label={t("panel.label")}
       className="relative flex min-w-0 flex-col rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)] lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)] lg:self-start"
     >
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label="닫기"
-        title="닫기"
+        aria-label={tActions("close")}
+        title={tActions("close")}
         onClick={onClose}
         className="absolute top-1.5 right-2 z-10 text-[var(--el-muted)]"
       >
@@ -96,17 +99,17 @@ export function SidePanel({
       <Tabs value={tab} onValueChange={(value) => onTab(value as Tab)} className="min-h-0 gap-0">
         <div className="flex items-center justify-between gap-2 border-b border-[var(--el-hairline)] pr-14 pl-4">
           {/* 위쪽 「노트 | 연결 지도」 탭과 같은 밑줄 탭. 밑줄은 머리의 아래 선 바로 위에 앉는다(공용 탭의 기본 -5px 는 40px 줄에서 선 아래로 떠 보인다) */}
-          <TabsList variant="line" aria-label="고른 안건 보기" className="gap-5 p-0 group-data-horizontal/tabs:h-10">
+          <TabsList variant="line" aria-label={t("panel.tabs")} className="gap-5 p-0 group-data-horizontal/tabs:h-10">
             <TabsTrigger value="agenda" disabled={!agenda} className="flex-none px-0 text-[13px] group-data-horizontal/tabs:after:bottom-[-1px]">
-              안건
+              {t("panel.agendaTab")}
             </TabsTrigger>
             <TabsTrigger value="flow" disabled={!main} className="flex-none px-0 text-[13px] group-data-horizontal/tabs:after:bottom-[-1px]">
-              흐름
+              {t("panel.flowTab")}
             </TabsTrigger>
           </TabsList>
           {main ? (
             <Button type="button" size="sm" onClick={onFocusTopic} className="shrink-0 whitespace-nowrap">
-              이 줄기 크게 보기
+              {t("panel.focusTopic")}
               <ArrowRight aria-hidden data-icon="inline-end" />
             </Button>
           ) : null}
@@ -116,7 +119,7 @@ export function SidePanel({
             {siblings.length > 1 ? (
               <div className="mb-4 flex flex-col gap-2 border-b border-[var(--el-hairline)] pb-4">
                 <h4 className="text-xs font-semibold text-[var(--el-muted)]">
-                  이 회의에서 이어서 다룬 안건 {siblings.length}개
+                  {t("panel.siblings", { count: siblings.length })}
                 </h4>
                 <ol className="flex flex-col gap-1">
                   {siblings.map((sibling, at) => (
@@ -168,11 +171,12 @@ export function SidePanel({
   );
 }
 
-const MEMBER_NAME: Record<string, string> = {
-  DECISION: "결정",
-  ACTION_ITEM: "할 일",
-  ISSUE: "이슈",
-  QUESTION: "질문",
+/** 안건에 묶인 항목 종류 → `workspace.agendaMap.members` 키. 그 밖의 종류는 세지 않는다 */
+export const MEMBER_KEY: Record<string, "decision" | "actionItem" | "issue" | "question"> = {
+  DECISION: "decision",
+  ACTION_ITEM: "actionItem",
+  ISSUE: "issue",
+  QUESTION: "question",
 };
 
 /**
@@ -195,6 +199,7 @@ function AgendaDetail({
   siblings: MapAgenda[];
   onPick: (agenda: MapAgenda) => void;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const meeting = map.meetings.find((candidate) => candidate.noteId === agenda.noteId)!;
   const summaryQuery = useGetMeetingReviewSummary(agenda.noteId);
   const item = okData(summaryQuery.data)?.agendas.find((candidate) => candidate.agendaId === agenda.agendaId);
@@ -229,22 +234,22 @@ function AgendaDetail({
       </div>
 
       {summaryQuery.isLoading ? (
-        <div aria-label="안건 내용을 불러오는 중" className="flex flex-col gap-1.5">
+        <div aria-label={t("detail.loading")} className="flex flex-col gap-1.5">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-4/5" />
           <Skeleton className="mt-1.5 h-3.5 w-2/5" />
         </div>
       ) : summaryQuery.isError ? (
-        <InlineRetry label="안건 내용을 불러오지 못했습니다" onRetry={() => void summaryQuery.refetch()} />
+        <InlineRetry label={t("detail.loadFailed")} onRetry={() => void summaryQuery.refetch()} />
       ) : item ? (
         <AgendaContent item={item} />
       ) : (
-        <p className="text-xs text-[var(--el-muted)]">이 안건은 정리된 내용이 없습니다.</p>
+        <p className="text-xs text-[var(--el-muted)]">{t("detail.empty")}</p>
       )}
 
       {previous.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <h4 className="text-xs font-semibold text-[var(--el-muted)]">이어받은 안건</h4>
+          <h4 className="text-xs font-semibold text-[var(--el-muted)]">{t("detail.previous")}</h4>
           {previous.map((candidate) => (
             <StepButton key={candidate.agendaId} map={map} agenda={candidate} onPick={onPick} />
           ))}
@@ -254,7 +259,7 @@ function AgendaDetail({
       {next.length > 0 ? (
         <div className="flex flex-col gap-2">
           <h4 className="text-xs font-semibold text-[var(--el-muted)]">
-            {next.length > 1 ? `여기서 ${next.length}갈래로 나뉨` : "다음 안건"}
+            {next.length > 1 ? t("detail.splits", { count: next.length }) : t("detail.next")}
           </h4>
           <ul className="flex flex-col gap-2.5">
             {next.map((candidate) => {
@@ -289,7 +294,7 @@ function AgendaDetail({
         onClick={() => track("agenda_map_note_opened", { workspace_id: workspaceId, surface: "panel" })}
         className="inline-flex items-center gap-1 self-start text-xs text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
       >
-        회의록에서 보기
+        {t("viewInNotes")}
         <ArrowUpRight aria-hidden className="size-3.5" />
       </Link>
     </div>
@@ -297,9 +302,10 @@ function AgendaDetail({
 }
 
 function AgendaContent({ item }: { item: MeetingReviewSummaryResponseDataAgendasItem }) {
+  const t = useTranslations("workspace.agendaMap");
   const counts = Object.entries(
     item.members.reduce<Record<string, number>>((acc, member) => {
-      if (MEMBER_NAME[member.kind]) acc[member.kind] = (acc[member.kind] ?? 0) + 1;
+      if (MEMBER_KEY[member.kind]) acc[member.kind] = (acc[member.kind] ?? 0) + 1;
       return acc;
     }, {})
   );
@@ -308,14 +314,14 @@ function AgendaContent({ item }: { item: MeetingReviewSummaryResponseDataAgendas
       {item.summary ? <p>{item.summary}</p> : null}
       {counts.length > 0 ? (
         <p className="text-xs text-[var(--el-muted)] tabular-nums">
-          {counts.map(([kind, count]) => `${MEMBER_NAME[kind]} ${count}`).join(" · ")}
+          {counts.map(([kind, count]) => t(`members.${MEMBER_KEY[kind]}`, { count })).join(" · ")}
         </p>
       ) : null}
       {item.conclusions.length > 0 ? (
-        <TextList title="결론" lines={item.conclusions.map((entry) => entry.text)} />
+        <TextList title={t("detail.conclusions")} lines={item.conclusions.map((entry) => entry.text)} />
       ) : null}
       {item.openItems.length > 0 ? (
-        <TextList title="남은 질문" lines={item.openItems.map((entry) => entry.text)} />
+        <TextList title={t("detail.openItems")} lines={item.openItems.map((entry) => entry.text)} />
       ) : null}
     </div>
   );
@@ -372,6 +378,7 @@ function TopicFlow({
   picked: string | null;
   onPick: (agenda: MapAgenda) => void;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const [opened, setOpened] = useState(false);
   const indexOf = (noteId: string) => map.meetings.findIndex((meeting) => meeting.noteId === noteId);
   const stepsOf = (row: TopicRow) =>
@@ -429,7 +436,7 @@ function TopicFlow({
                 onClick={() => setOpened(true)}
                 className="text-xs text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
               >
-                안건 {steps.length - HEAD - TAIL}개 더 보기
+                {t("flow.showMore", { count: steps.length - HEAD - TAIL })}
               </button>
             </li>
           )
@@ -445,8 +452,8 @@ function TopicFlow({
           {stepsOf(main).at(-1)!.title}
         </h3>
         <p className="mt-1 text-xs text-[var(--el-muted)] tabular-nums">
-          안건 {all.length} · 회의 {notes.length}개 · {date(notes[0])} → {date(notes.at(-1)!)}
-          {rows.length > 1 ? ` · 갈래 ${rows.length - 1}` : ""}
+          {t("flow.meta", { agendas: all.length, meetings: notes.length })} · {date(notes[0])} → {date(notes.at(-1)!)}
+          {rows.length > 1 ? ` · ${t("flow.branches", { count: rows.length - 1 })}` : ""}
         </p>
       </div>
       {list(main, 0)}

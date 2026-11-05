@@ -26,7 +26,7 @@ export function selectContextSnapshot(
   response: getProposalsResponse
 ): ProposalSnapshot {
   if (response.status !== 200) {
-    throw new Error(`예상 못 한 후보 조회 응답: ${response.status}`);
+    throw new Error(`Unexpected proposals response: ${response.status}`);
   }
   return proposalSnapshotSchema.parse(response.data.data);
 }

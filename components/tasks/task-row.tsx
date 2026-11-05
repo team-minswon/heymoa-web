@@ -8,10 +8,10 @@ import { AssigneeCell } from "@/components/heymoa/assignee-cell";
 import { DueCell } from "@/components/heymoa/due-cell";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import type { TaskEntry } from "@/lib/tasks/task-groups";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 /**
  * 머리글 · 행 · 불러오는 동안의 자리가 같은 칸을 쓴다. 칸이 갈리면 도착할 때 줄이 튄다.
@@ -22,8 +22,8 @@ export function taskRowGrid(showProject: boolean) {
   return cn(
     "grid grid-cols-[28px_minmax(0,1fr)] items-center gap-x-4 px-2",
     showProject
-      ? "sm:grid-cols-[28px_minmax(0,1fr)_128px_148px_112px]"
-      : "sm:grid-cols-[28px_minmax(0,1fr)_148px_112px]"
+      ? "sm:grid-cols-[28px_minmax(0,1fr)_128px_148px_128px]"
+      : "sm:grid-cols-[28px_minmax(0,1fr)_148px_128px]"
   );
 }
 
@@ -71,6 +71,9 @@ export function TaskRow({
   /** 이력 시트를 내용 고치기로 연다 */
   onEdit: () => void;
 }) {
+  const t = useTranslations("tasks.row");
+  const tActions = useTranslations("common.actions");
+  const tError = useTranslations("errors");
   const task = entry;
   const done = task.taskStatus !== "OPEN";
   const struck = done || completing;
@@ -94,7 +97,7 @@ export function TaskRow({
         <button
           type="button"
           aria-pressed={done}
-          aria-label={done ? `${task.content} 다시 열기` : `${task.content} 완료로 표시`}
+          aria-label={t(done ? "reopen" : "complete", { content: task.content })}
           disabled={pending}
           onClick={onToggleDone}
           className={cn(
@@ -128,8 +131,8 @@ export function TaskRow({
               <Bot aria-hidden className="size-3.5 shrink-0" />
               <span className="truncate">
                 {task.externalAgentChange.connectionName
-                  ? `에이전트 · ${task.externalAgentChange.connectionName}`
-                  : "에이전트"}
+                  ? t("agentNamed", { name: task.externalAgentChange.connectionName })
+                  : t("agent")}
               </span>
             </span>
           ) : null}
@@ -137,11 +140,11 @@ export function TaskRow({
               제목이 100px 남짓이라 두 버튼이 제목을 지운다 — 줄을 눌러 시트를 연다 */}
           <span className="hidden shrink-0 items-center gap-3 text-xs lg:group-hover:flex">
             <button type="button" onClick={onOpenHistory} className="text-[var(--el-muted)] hover:text-[var(--el-ink)]">
-              이력
+              {t("history")}
             </button>
             {done ? null : (
               <button type="button" onClick={onEdit} className="text-[var(--el-muted)] hover:text-[var(--el-ink)]">
-                수정
+                {tActions("edit")}
               </button>
             )}
           </span>
@@ -171,7 +174,7 @@ export function TaskRow({
             value={task.assignee}
             choices={choices}
             editable={editable}
-            placeholder={done ? "" : "담당 정하기"}
+            placeholder={done ? "" : undefined}
             quiet
             onChange={onAssign}
             // 칸 폭 전체로 늘면 hover 면이 이름보다 훨씬 길게 칠해진다.
@@ -189,7 +192,7 @@ export function TaskRow({
       </div>
       {conflict ? (
         <p role="alert" className={cn("pb-2 pl-[52px] pr-2 text-xs text-[var(--el-error-strong)]", ARRIVE_CLASS)}>
-          {CONFLICT_MESSAGE}
+          {tError("conflict")}
         </p>
       ) : null}
     </motion.li>

@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import type { ResolveSpeaker } from "@/components/notes/review/item-trail";
 import { InlineRetry } from "@/components/ui/inline-retry";
@@ -27,10 +29,12 @@ export function EvidenceQuotes({
   resolveSpeaker: ResolveSpeaker;
   onOpenScript: (segmentId: string) => void;
 }) {
+  const t = useTranslations("notes.review.evidence");
+  const tReview = useTranslations("notes.review");
   if (scriptState === "pending") {
     return (
       <div
-        aria-label="근거 발언 불러오는 중"
+        aria-label={t("loading")}
         className="flex flex-col gap-2.5 rounded-[10px] border border-[var(--el-hairline)] px-3.5 py-3"
       >
         {["72%", "56%"].map((width) => (
@@ -47,7 +51,7 @@ export function EvidenceQuotes({
     return (
       <InlineRetry
         variant="line"
-        label="스크립트를 불러오지 못해 근거 발언을 보일 수 없습니다."
+        label={t("scriptFailed")}
         onRetry={onRetryScript}
         className="text-xs text-[var(--el-muted)]"
       />
@@ -56,16 +60,14 @@ export function EvidenceQuotes({
   if (quotes.length === 0) {
     return (
       <p className="text-[12.5px] text-[var(--el-muted)]">
-        {authored
-          ? "직접 추가한 항목이라 회의 중 발언이 없습니다."
-          : "인용한 발언을 스크립트에서 찾지 못했습니다."}
+        {authored ? t("authored") : t("notFound")}
       </p>
     );
   }
 
   return (
     <ul
-      aria-label="근거 발언"
+      aria-label={t("label")}
       className="flex flex-col gap-1 rounded-[10px] border border-[var(--el-hairline)] px-2 py-1.5"
     >
       {quotes.map(({ segment, cited }) => {
@@ -92,7 +94,7 @@ export function EvidenceQuotes({
               <span className="flex min-w-0 flex-col">
                 <span className="text-[12.5px] leading-5 text-[var(--el-muted-soft)]">
                   <span className="font-medium text-[var(--el-body)]">
-                    {speaker?.displayName ?? "화자 없음"}
+                    {speaker?.displayName ?? tReview("noSpeaker")}
                   </span>
                   {" · "}
                   <span className="tabular-nums">

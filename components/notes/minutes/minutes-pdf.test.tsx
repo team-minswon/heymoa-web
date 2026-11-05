@@ -11,11 +11,15 @@ import {
 import { buildMinutes, type MinutesInclude } from "@/lib/notes/minutes/model";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import type { TranscriptRow } from "@/lib/transcription/presentation";
+import { testAppT } from "@/components/help/test-intl";
+
+const ko = { locale: "ko-KR", t: testAppT() };
 
 const FONTS = path.resolve(__dirname, "../../../public/fonts/minutes");
 
 const doc = (include: MinutesInclude) =>
   buildMinutes({
+    doc: ko,
     note: {
       title: "공유 기능 범위 정리",
       whenIso: "2026-10-15T05:00:00Z",
@@ -72,7 +76,9 @@ const doc = (include: MinutesInclude) =>
 
 async function render(include: MinutesInclude) {
   const bytes = Buffer.from(
-    await (await renderMinutesPdfInline(doc(include), FONTS)).arrayBuffer()
+    await (
+      await renderMinutesPdfInline(doc(include), FONTS, "ko")
+    ).arrayBuffer()
   );
   return {
     head: bytes.subarray(0, 5).toString("latin1"),
@@ -118,11 +124,26 @@ describe("renderMinutesPdfInline", () => {
       ],
     };
     const bytes = Buffer.from(
-      await (await renderMinutesPdfInline(longDoc, FONTS)).arrayBuffer()
+      await (await renderMinutesPdfInline(longDoc, FONTS, "ko")).arrayBuffer()
     );
     expect(
       bytes.toString("latin1").match(/\/Type \/Page\b(?!s)/g)?.length
     ).toBeGreaterThan(2);
+  }, 30_000);
+
+  it("영어 화면에서는 영어 문구로 같은 쪽 구성을 만든다", async () => {
+    const bytes = Buffer.from(
+      await (
+        await renderMinutesPdfInline(doc({ transcript: true }), FONTS, "en")
+      ).arrayBuffer()
+    );
+    const text = bytes.toString("latin1");
+    expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    expect(text.match(/\/Type \/Page\b(?!s)/g)?.length).toBe(4);
+    // 문서 언어와 책갈피(목차)는 압축되지 않아 그대로 읽힌다
+    expect(text).toContain("/Lang (en)");
+    expect(text).toContain("/Title (1. Decisions)");
+    expect(text).toContain("/Title (Appendix A. Transcript)");
   }, 30_000);
 
   it("빈칸 없이 긴 한 줄도 글자 수로 끊고, 글을 하나도 버리지 않는다", () => {
@@ -146,7 +167,7 @@ describe("renderMinutesPdfInline", () => {
       })),
     };
     const bytes = Buffer.from(
-      await (await renderMinutesPdfInline(longDoc, FONTS)).arrayBuffer()
+      await (await renderMinutesPdfInline(longDoc, FONTS, "ko")).arrayBuffer()
     );
     expect(
       bytes.toString("latin1").match(/\/Type \/Page\b(?!s)/g)!.length
@@ -183,6 +204,7 @@ describe("renderMinutesPdfInline", () => {
       open: [],
     }));
     const big = buildMinutes({
+      doc: ko,
       note: {
         title: "긴 회의",
         whenIso: "2026-10-15T05:00:00Z",
@@ -197,7 +219,7 @@ describe("renderMinutesPdfInline", () => {
       include: { transcript: false },
     });
     const bytes = Buffer.from(
-      await (await renderMinutesPdfInline(big, FONTS)).arrayBuffer()
+      await (await renderMinutesPdfInline(big, FONTS, "ko")).arrayBuffer()
     );
     expect(
       bytes.toString("latin1").match(/\/Type \/Page\b(?!s)/g)?.length

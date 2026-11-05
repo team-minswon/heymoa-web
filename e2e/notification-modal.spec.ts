@@ -30,7 +30,7 @@ test("사이드바 「알림」이 모달을 열고 초대를 거절하려면 �
 
   await dialog.getByRole("tab", { name: "처리 필요" }).click();
   await expect(dialog.getByRole("button", { name: "수락" })).toHaveCount(2);
-  await expect(dialog.getByText("수락함")).toBeHidden();
+  await expect(dialog.getByText("수락됨")).toBeHidden();
 });
 
 test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결과가 보이면 그 알림이 읽음이 된다", async ({
@@ -44,7 +44,7 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
   await entry.click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(
-    dialog.getByText("마지막 일시정지 후 3영업일이 지나 자동으로 종료했습니다.")
+    dialog.getByText("마지막 일시정지 후 3영업일이 지나 회의를 자동으로 종료했습니다.")
   ).toBeVisible();
   // 검토 화면이 결과를 그리면 그 알림만 읽는다.
   const read = page.waitForRequest(
@@ -67,7 +67,7 @@ test("문의 답변 행을 누르면 「내 문의」가 그 문의를 연다. �
   await page.goto(`${WS}?notifications=all`);
   await page
     .getByRole("dialog", { name: "알림" })
-    .getByRole("button", { name: "문의에 답변이 등록되었습니다" })
+    .getByRole("button", { name: "문의에 답변이 왔습니다" })
     .click();
   await expect(page).toHaveURL(/inquiry=01K0000000031/);
   const feedback = page.getByRole("dialog", { name: "문의·피드백" });
@@ -307,7 +307,7 @@ test("목에서 초대를 수락하면 다시 열어도 결과가 남고, 새 �
   await entry.click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await dialog.getByRole("button", { name: "수락" }).first().click();
-  await expect(dialog.getByText("수락함").first()).toBeVisible();
+  await expect(dialog.getByText("수락됨").first()).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   // 수락한 초대는 읽음이 된다(모달이 덮는 동안 사이드바는 접근성 트리에서 빠져 닫은 뒤에 본다).

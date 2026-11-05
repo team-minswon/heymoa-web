@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,9 @@ export function CreateWorkspaceDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  // 랜딩(마케팅 루트)도 이 창을 열어서 두 루트가 같이 받는 `common`에 둔다.
+  const t = useTranslations("common.createWorkspace");
+  const tActions = useTranslations("common.actions");
   const router = useRouter();
   const queryClient = useQueryClient();
   // **무효화와 이동을 mutation 안에 둔다.** action 쪽에 두면 POST가 끝나는 순간
@@ -93,7 +97,7 @@ export function CreateWorkspaceDialog({
       {/* 요청 중에는 X도 감춘다 — 눌러도 위 가드가 무시하므로, 보이는 채로 두면 반응 없는
           컨트롤이 된다. */}
       <DialogContent
-        aria-label="새 워크스페이스 만들기"
+        aria-label={t("ariaLabel")}
         showCloseButton={!createWorkspace.isPending}
       >
         <form
@@ -110,13 +114,13 @@ export function CreateWorkspaceDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>새 워크스페이스</DialogTitle>
+            <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription>
-              회의 기록을 모을 공간의 이름을 정해 주세요.
+              {t("description")}
             </DialogDescription>
           </DialogHeader>
           <div className="py-5">
-            <Label htmlFor="new-workspace-name">워크스페이스 이름</Label>
+            <Label htmlFor="new-workspace-name">{t("nameLabel")}</Label>
             <Input
               id="new-workspace-name"
               name="name"
@@ -134,14 +138,14 @@ export function CreateWorkspaceDialog({
               disabled={createWorkspace.isPending}
               onClick={() => setOpen(false)}
             >
-              취소
+              {tActions("cancel")}
             </Button>
             <Button
               type="submit"
               loading={createWorkspace.isPending}
               disabled={createWorkspace.isPending}
             >
-              만들기
+              {tActions("create")}
             </Button>
           </DialogFooter>
         </form>

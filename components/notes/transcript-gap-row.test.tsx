@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { intlWrapper } from "@/components/help/test-intl";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
 import { toGapRows, type TranscriptGap } from "@/lib/transcription/gaps";
 
@@ -23,6 +24,18 @@ function pause(partial: Partial<TranscriptGap> = {}) {
 
 describe("TranscriptGapRow", () => {
   afterEach(cleanup);
+
+  it("영어 화면은 단위와 복수형을 영어로 쓴다", () => {
+    const { container } = render(<TranscriptGapRow row={pause()} />, {
+      wrapper: intlWrapper("en"),
+    });
+
+    expect(screen.getByText(/Paused for about 5 hours/)).toBeTruthy();
+    expect(
+      screen.getByText(/^Paused at \d{2}:\d{2}, resumed at \d{2}:\d{2}$/)
+    ).toBeTruthy();
+    expect(container.textContent).not.toMatch(/[가-힣]/);
+  });
 
   it("대충 말한다 — 270분도 4시간 30분도 아니고 약 5시간이다", () => {
     render(<TranscriptGapRow row={pause()} />);
@@ -106,7 +119,7 @@ describe("TranscriptGapRow — 전사 공백 (APP-706)", () => {
 
     expect(screen.getByText("10:40 – 10:52")).toBeTruthy();
     expect(
-      screen.getByText("잠깐 받아쓰지 못했어요 · 소리는 저장됨")
+      screen.getByText("잠깐 받아쓰지 못했습니다. 소리는 남아 있습니다.")
     ).toBeTruthy();
     expect(screen.getByTestId("transcript-gap").dataset.gapKind).toBe(
       "UNTRANSCRIBED"

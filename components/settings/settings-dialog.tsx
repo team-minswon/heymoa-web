@@ -3,12 +3,14 @@
 import { track } from "@/lib/analytics/track";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
 import {
   BellRing,
   BookA,
   Bot,
+  Languages,
   Plug,
   Settings,
   ShieldCheck,
@@ -22,6 +24,7 @@ import {
 } from "@/components/settings/account-settings-form";
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
 import { GuestsSettings } from "@/components/settings/guests-settings";
+import { LanguageSettings } from "@/components/settings/language-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
 import {
   NotificationSettings,
@@ -62,33 +65,37 @@ export type { SettingsSection };
  * 「연동」은 HeyMoa 가 나가는 연결이라 들어오는 연결과 섞지 않는다.
  */
 const SETTINGS_GROUPS: {
-  label: string;
+  key: "workspace" | "account";
   items: {
     key: SettingsSection;
-    label: string;
     Icon: typeof Settings;
   }[];
 }[] = [
   {
-    label: "워크스페이스",
+    key: "workspace",
     items: [
-      { key: "workspace", label: "일반", Icon: Settings },
-      { key: "members", label: "멤버", Icon: UsersRound },
-      { key: "guests", label: "임시 참여자", Icon: UserRoundPlus },
-      { key: "terms", label: "용어 사전", Icon: BookA },
-      { key: "integrations", label: "연동", Icon: Plug },
-      { key: "workspaceAgents", label: "MCP 연결", Icon: ShieldCheck },
+      { key: "workspace", Icon: Settings },
+      { key: "members", Icon: UsersRound },
+      { key: "guests", Icon: UserRoundPlus },
+      { key: "terms", Icon: BookA },
+      { key: "integrations", Icon: Plug },
+      { key: "workspaceAgents", Icon: ShieldCheck },
     ],
   },
   {
-    label: "계정",
+    key: "account",
     items: [
-      { key: "account", label: "내 계정", Icon: UserRound },
-      { key: "notifications", label: "알림", Icon: BellRing },
-      { key: "agents", label: "내 MCP 연결", Icon: Bot },
+      { key: "account", Icon: UserRound },
+      { key: "language", Icon: Languages },
+      { key: "notifications", Icon: BellRing },
+      { key: "agents", Icon: Bot },
     ],
   },
 ];
+
+// 화면 언어와 상관없이 두 언어로 적는다 — 언어를 바꾸려는 사람은 아직 못 읽는 언어의 화면을 보고 있다(APP-1285).
+// 그래서 언어 파일에 두지 않는다.
+const LANGUAGE_LABEL = "언어 · Language";
 
 function SettingsSections({
   section,
@@ -104,32 +111,33 @@ function SettingsSections({
   locked: boolean;
   onLockChange: (locked: boolean) => void;
 }) {
+  const t = useTranslations("settings.nav");
   return (
     <div className="grid h-full min-h-0 bg-[var(--el-canvas-soft)] md:grid-cols-[220px_1fr]">
       <nav
-        aria-label="설정"
+        aria-label={t("title")}
         className="border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
       >
         {/* 제품 면에 대문자 키커를 두지 않는다 — 세리프 제목만 남긴다. (FORM SPEC) */}
-        <p className="mb-7 text-3xl font-light tracking-[-0.03em]">설정</p>
+        <p className="mb-7 text-3xl font-light tracking-[-0.03em]">{t("title")}</p>
         {/* 워크스페이스 것과 내 계정 것이 섞여 있으면 무엇이 팀에 영향을 주는지 안 읽힌다. */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-1">
           {SETTINGS_GROUPS.map((group) => (
             // 라벨이 `일반`처럼 짧아 그룹 밖에서는 무엇의 일반인지 모른다 — 보조기술이
             // "워크스페이스 그룹, 일반"으로 읽도록 그룹에 이름을 준다.
             <div
-              key={group.label}
+              key={group.key}
               role="group"
-              aria-label={group.label}
+              aria-label={t(`groups.${group.key}`)}
               className="grid content-start gap-1"
             >
               <p
                 aria-hidden
                 className="px-3 pb-1 text-xs text-[var(--el-muted)]"
               >
-                {group.label}
+                {t(`groups.${group.key}`)}
               </p>
-              {group.items.map(({ key, label, Icon }) => (
+              {group.items.map(({ key, Icon }) => (
                 <Button
                   key={key}
                   type="button"
@@ -155,7 +163,7 @@ function SettingsSections({
                   )}
                 >
                   <Icon className="size-4 text-[var(--el-muted)]" aria-hidden />
-                  {label}
+                  {key === "language" ? LANGUAGE_LABEL : t(`items.${key}`)}
                 </Button>
               ))}
             </div>
@@ -171,15 +179,17 @@ function SettingsSections({
         {section === "account" ? (
           <DataBoundary
             fallback={<AccountSettingsFormSkeleton />}
-            errorLabel="계정 정보를 불러오지 못했습니다"
+            errorLabel={t("loadFailed.account")}
             resetKeys={["account"]}
           >
             <AccountSettingsForm />
           </DataBoundary>
+        ) : section === "language" ? (
+          <LanguageSettings />
         ) : section === "notifications" ? (
           <DataBoundary
             fallback={<NotificationSettingsSkeleton />}
-            errorLabel="알림 설정을 불러오지 못했습니다"
+            errorLabel={t("loadFailed.notifications")}
             resetKeys={["notifications"]}
           >
             <NotificationSettings workspaceId={workspaceId} />
@@ -202,7 +212,7 @@ function SettingsSections({
         ) : (
           <DataBoundary
             fallback={<WorkspaceSettingsFormSkeleton />}
-            errorLabel="워크스페이스 정보를 불러오지 못했습니다"
+            errorLabel={t("loadFailed.workspace")}
             resetKeys={["workspace"]}
           >
             <WorkspaceSettingsForm workspaceId={workspaceId} />
@@ -230,6 +240,7 @@ export function SettingsDialog({
   // **응답을 받아야 끝나는 일이 도는 동안은 닫지 않는다.** 외부 에이전트 토큰은 만든 응답에서만
   // 한 번 나오므로, 그 사이 창이 닫히면 발급된 토큰을 아무도 못 본다. 닫기(X·Esc·바깥 클릭)는
   // 전부 여기로 오고, 섹션 이동은 nav 가 같은 값으로 막는다.
+  const t = useTranslations("settings.nav");
   const [locked, setLocked] = useState(false);
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -242,9 +253,9 @@ export function SettingsDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {/* 오버레이는 e3 2연타 + panel 16이다. rounded-[28px]는 스케일 밖 값이라 폐기했다. (ELEVATION SPEC) */}
       <DialogContent className="h-dvh max-h-none w-screen max-w-none gap-0 overflow-hidden rounded-none border border-black/5 bg-[var(--el-canvas)] p-0 shadow-e3 sm:h-[min(780px,calc(100dvh-3rem))] sm:max-w-5xl sm:rounded-panel">
-        <DialogTitle className="sr-only">설정</DialogTitle>
+        <DialogTitle className="sr-only">{t("title")}</DialogTitle>
         <DialogDescription className="sr-only">
-          계정과 워크스페이스 설정을 관리합니다.
+          {t("description")}
         </DialogDescription>
         <SettingsSections
           section={section}

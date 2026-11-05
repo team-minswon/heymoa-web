@@ -1,5 +1,6 @@
 import { desktopAuthBridge } from "@/lib/desktop/auth";
 import { toast } from "@/lib/ui/toast";
+import { webMessage } from "@/lib/i18n/web-message";
 
 /**
  * 우리 사이트의 다른 페이지(`/help`·`/privacy` 등)를 연다. 브라우저에서는 새 탭으로 — 보던 회의를 잃지 않게.
@@ -26,9 +27,11 @@ export function blockedByRecording(href: string): boolean {
   const leaving = new Event("beforeunload", { cancelable: true });
   window.dispatchEvent(leaving);
   if (!leaving.defaultPrevented) return false;
-  toast.info("녹음 중에는 앱에서 다른 페이지를 열 수 없습니다", {
+  toast.info(webMessage("pageBlockedByRecording"), {
     id: "site-page-blocked",
-    description: `녹음을 마친 뒤 다시 눌러 주세요. 지금 보려면 브라우저에서 여세요: ${new URL(href, window.location.origin).href}`,
+    description: webMessage("pageBlockedByRecordingDetail", {
+      url: new URL(href, window.location.origin).href,
+    }),
   });
   return true;
 }

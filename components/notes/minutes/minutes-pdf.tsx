@@ -8,8 +8,23 @@ import {
   View,
   pdf,
 } from "@react-pdf/renderer";
+import { createTranslator } from "next-intl";
 
+import { messagesFor } from "@/i18n/messages";
+import type { Locale } from "@/lib/i18n/locales";
 import type { MinutesDocument, MinutesLine } from "@/lib/notes/minutes/model";
+
+/**
+ * 회의록 PDF 의 문구(`notes.minutes.pdf`). 워커 안에서도 그려서 React 훅 대신 언어를 받아 고른다.
+ * 회의록은 만든 사람이 보던 화면 언어로 나간다(복사본과 같은 결정).
+ */
+const pdfTranslator = (locale: Locale) =>
+  createTranslator({
+    locale,
+    messages: messagesFor(locale),
+    namespace: "notes.minutes.pdf",
+  });
+type PdfT = ReturnType<typeof pdfTranslator>;
 
 /**
  * 회의록 PDF 의 모양. **노트 화면 번들에 들지 않는다** — `render-minutes-pdf` 가 누를 때 워커를 띄워 그 안에서만
@@ -101,6 +116,14 @@ const s = StyleSheet.create({
     color: color.ink,
     // 자간이 마지막 글자 뒤에도 붙어 왼쪽으로 쏠린다. 같은 만큼 밀어 가운데를 맞춘다
     paddingLeft: 12,
+    marginBottom: mm(3.5),
+  },
+  // 영어 제목. 세리프 제목 글꼴은 「회의록」 세 글자만 담은 판이라 영어는 본문 글꼴로 쓴다
+  titleLatin: {
+    fontWeight: 700,
+    fontSize: 20,
+    textAlign: "center",
+    color: color.ink,
     marginBottom: mm(3.5),
   },
   documentStatus: {
@@ -212,6 +235,8 @@ const s = StyleSheet.create({
   // 1쪽 안건 표는 한 쪽에 들어야 해 칸 위아래를 줄인다
   tight: { paddingVertical: mm(1.4), paddingHorizontal: mm(2.5) },
   num: { width: mm(13), textAlign: "center" },
+  // 영어 칸 머리(Decisions · Agenda)는 한글 두 자보다 길다
+  numLatin: { width: mm(20), textAlign: "center" },
   start: { width: mm(15), color: color.muted },
   zero: { color: color.ruleSoft },
   owners: {
@@ -232,6 +257,7 @@ const s = StyleSheet.create({
   ownerCount: { fontWeight: 700, color: color.ink },
   // 상세
   agendaRef: { width: mm(13), color: color.muted, textAlign: "center" },
+  agendaRefLatin: { width: mm(18), color: color.muted, textAlign: "center" },
   at: { width: mm(15), color: color.muted, textAlign: "right" },
   // 부록
   agendaMark: {
@@ -283,23 +309,30 @@ const s = StyleSheet.create({
 
 function MetaRow({
   label,
+  spread,
   last,
   children,
 }: {
   label: string;
+  /** 글자를 칸 폭에 고르게 편다. 한글 두세 자 칸 제목에만 쓴다 — 영어 낱말을 펴면 글자가 흩어진다 */
+  spread: boolean;
   last?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <View style={last ? s.metaRowLast : s.metaRow} wrap={false}>
       <View style={s.metaLabel}>
-        <View style={s.metaLabelText}>
-          {[...label].map((char, index) => (
-            <Text key={index} style={{ lineHeight: LINE }}>
-              {char}
-            </Text>
-          ))}
-        </View>
+        {spread ? (
+          <View style={s.metaLabelText}>
+            {[...label].map((char, index) => (
+              <Text key={index} style={{ lineHeight: LINE }}>
+                {char}
+              </Text>
+            ))}
+          </View>
+        ) : (
+          <Text style={{ lineHeight: LINE, color: color.ink }}>{label}</Text>
+        )}
       </View>
       <Text style={s.metaValue}>{children}</Text>
     </View>
@@ -446,13 +479,13 @@ const agendaDestination = (no: number) => `minutes-agenda-${no}`;
 const countText = (count: number) => (count > 0 ? String(count) : "–");
 
 /** 1쪽 표의 수 칸. 0 은 흐리게 — 숫자 사이에서 「없음」이 먼저 읽히지 않게 한다 */
-function Count({ value }: { value: number | null }) {
+function Count({ value, wide }: { value: number | null; wide: boolean }) {
   return (
     <Text
       style={[
         s.tight,
         s.body,
-        s.num,
+        wide ? s.numLatin : s.num,
         value === 0 ? s.zero : { color: color.ink },
       ]}
     >
@@ -462,14 +495,16 @@ function Count({ value }: { value: number | null }) {
 }
 
 /** 할 일 담당별 수. 누가 몇 개를 들고 나갔는지가 1쪽에서 읽혀야 한다 — 항목은 상세의 할 일 표에 있다 */
-function Owners({ owners }: { owners: MinutesDocument["owners"] }) {
+function Owners({ owners, t }: { owners: MinutesDocument["owners"]; t: PdfT }) {
   return (
     <View style={s.owners}>
-      <Text style={s.ownersLabel}>담당</Text>
+      <Text style={s.ownersLabel}>{t("owners")}</Text>
       {owners.map((owner) => (
         <Text key={owner.name ?? ""} style={[s.owner, owner.name ? {} : s.tbd]}>
-          {owner.name ?? "미지정"}{" "}
-          <Text style={s.ownerCount}>{owner.count}건</Text>
+          {owner.name ?? t("unassigned")}{" "}
+          <Text style={s.ownerCount}>
+            {t("ownerCount", { count: owner.count })}
+          </Text>
         </Text>
       ))}
     </View>
@@ -479,25 +514,29 @@ function Owners({ owners }: { owners: MinutesDocument["owners"] }) {
 function TranscriptTable({
   lines,
   truncated,
+  t,
 }: {
   lines: MinutesLine[];
   truncated: boolean;
+  t: PdfT;
 }) {
   return (
     <View style={s.grid}>
       {/* `fixed` 라 쪽이 넘어가도 칸 머리가 다시 선다 */}
       <View style={s.head} fixed>
-        <Text style={[s.cell, s.time]}>시각</Text>
+        <Text style={[s.cell, s.time]}>{t("columns.time")}</Text>
         <Text
           style={[s.cell, s.speaker, { color: color.muted, fontWeight: 400 }]}
         >
-          화자
+          {t("columns.speaker")}
         </Text>
-        <Text style={[s.cell, { flex: 1 }]}>발언</Text>
-        <Text style={[s.cell, s.refs, { color: color.muted }]}>본문</Text>
+        <Text style={[s.cell, { flex: 1 }]}>{t("columns.line")}</Text>
+        <Text style={[s.cell, s.refs, { color: color.muted }]}>
+          {t("columns.refs")}
+        </Text>
       </View>
       {lines.length === 0 ? (
-        <Text style={[s.cell, s.none]}>기록된 발언이 없습니다.</Text>
+        <Text style={[s.cell, s.none]}>{t("noLines")}</Text>
       ) : null}
       {lines.map((line, index) => {
         if (line.type === "agenda") {
@@ -510,7 +549,7 @@ function TranscriptTable({
             >
               <Text style={[s.compact, s.time]}>{line.at}</Text>
               <Text style={[s.compact, s.markerText]}>
-                안건 {line.no} · {line.title}
+                {t("agendaBookmark", { no: line.no, title: line.title })}
               </Text>
             </View>
           );
@@ -548,9 +587,7 @@ function TranscriptTable({
       })}
       {truncated ? (
         <View style={s.row} wrap={false}>
-          <Text style={[s.compact, s.gap]}>
-            기록이 끝까지 저장되지 못했습니다
-          </Text>
+          <Text style={[s.compact, s.gap]}>{t("truncated")}</Text>
         </View>
       ) : null}
     </View>
@@ -560,9 +597,11 @@ function TranscriptTable({
 function Transcript({
   lines,
   truncated,
+  t,
 }: {
   lines: MinutesLine[];
   truncated: boolean;
+  t: PdfT;
 }) {
   // 수천 행을 한 Yoga 표에 넣으면 고정 칸 머리의 높이가 부풀어 발언이 쪽 밖으로 밀립니다.
   // 각 표의 측정 크기를 제한하되 쪽 넘김은 기존 렌더러가 맡습니다.
@@ -577,6 +616,7 @@ function Transcript({
           key={index}
           lines={batch}
           truncated={truncated && index === batches.length - 1}
+          t={t}
         />
       ))}
     </>
@@ -586,53 +626,61 @@ function Transcript({
 export function MinutesPdf({
   doc,
   logoSrc,
+  locale,
 }: {
   doc: MinutesDocument;
   logoSrc: string;
+  locale: Locale;
 }) {
+  const t = pdfTranslator(locale);
+  const hangul = locale === "ko";
+  const numStyle = hangul ? s.num : s.numLatin;
+  const agendaRef = hangul ? s.agendaRef : s.agendaRefLatin;
   const openHasOwner = doc.open.some((item) => item.assignee !== null);
   return (
     <Document
-      title={`${doc.title} 회의록`}
+      title={t("documentTitle", { title: doc.title })}
       author="HeyMoa"
       creator="HeyMoa"
-      language="ko"
+      language={locale}
     >
       <Sheet footer={doc.footer} logoSrc={logoSrc}>
         {/* ── 1쪽 핵심: 이 쪽만 읽어도 회의를 안다 ── */}
-        <Text style={s.title}>회의록</Text>
+        <Text style={hangul ? s.title : s.titleLatin}>{t("title")}</Text>
         <Text style={[s.documentStatus, doc.confirmed ? s.sub : s.pending]}>
-          {doc.confirmed ? "확정됨" : "검토 중(확정 전)"}
+          {doc.confirmed ? t("confirmed") : t("inReview")}
         </Text>
         <View style={s.meta}>
-          <MetaRow label="회의명">{doc.title}</MetaRow>
-          <MetaRow label="일시">
+          <MetaRow label={t("meta.title")} spread={hangul}>
+            {doc.title}
+          </MetaRow>
+          <MetaRow label={t("meta.when")} spread={hangul}>
             {doc.dateLabel}
             {doc.durationLabel ? (
               <Text style={s.sub}>{`   ${doc.durationLabel}`}</Text>
             ) : null}
           </MetaRow>
-          <MetaRow label="참석자" last>
+          <MetaRow label={t("meta.attendees")} spread={hangul} last>
             {doc.attendees.length > 0 ? doc.attendees.join(", ") : null}
             {doc.attendeeCount > 0 ? (
               <Text
                 style={s.sub}
-              >{`${doc.attendees.length > 0 ? "   " : ""}${doc.attendeeCount}명`}</Text>
+              >{`${doc.attendees.length > 0 ? "   " : ""}${t("attendeeCount", { count: doc.attendeeCount })}`}</Text>
             ) : (
-              <Text style={s.tbd}>확인 필요</Text>
+              <Text style={s.tbd}>{t("attendeesUnknown")}</Text>
             )}
             {/* 녹취록의 「화자 N」이 참석자 밖의 사람처럼 읽히지 않게 함께 센다 */}
             {doc.unnamedSpeakers > 0 ? (
               <Text
                 style={s.sub}
-              >{` · 이름 미확인 화자 ${doc.unnamedSpeakers}`}</Text>
+              >{` · ${t("unnamedSpeakers", { count: doc.unnamedSpeakers })}`}</Text>
             ) : null}
           </MetaRow>
         </View>
 
         {doc.lead.length > 0 ? (
           <View style={s.verdict}>
-            <Text style={s.pageLabel}>회의 요약</Text>
+            <Text style={s.pageLabel}>{t("lead")}</Text>
             {doc.lead.map((line, index) => (
               <View key={index}>
                 {pieces(line).map((piece, part) => (
@@ -643,27 +691,33 @@ export function MinutesPdf({
                 ))}
               </View>
             ))}
-            {doc.owners.length > 0 ? <Owners owners={doc.owners} /> : null}
+            {doc.owners.length > 0 ? (
+              <Owners owners={doc.owners} t={t} />
+            ) : null}
           </View>
         ) : doc.owners.length > 0 ? (
           <View style={s.verdict} wrap={false}>
-            <Owners owners={doc.owners} />
+            <Owners owners={doc.owners} t={t} />
           </View>
         ) : null}
 
-        <Section title="안건 목차" id="minutes-index">
+        <Section title={t("index")} id="minutes-index">
           {doc.agendas.length === 0 ? (
-            <Text style={s.none}>정리된 안건이 없습니다.</Text>
+            <Text style={s.none}>{t("noAgendas")}</Text>
           ) : (
             <View style={s.grid}>
               {/* 안건이 많아 다음 쪽으로 이어지면 칸 머리도 다시 선다 */}
               <View style={s.head} fixed>
-                <Text style={[s.tight, s.no]}>번호</Text>
-                <Text style={[s.tight, { flex: 1 }]}>안건</Text>
-                <Text style={[s.tight, s.start]}>시작</Text>
-                <Text style={[s.tight, s.num]}>결정</Text>
-                <Text style={[s.tight, s.num]}>할 일</Text>
-                <Text style={[s.tight, s.num]}>미결</Text>
+                <Text style={[s.tight, s.no]}>{t("columns.no")}</Text>
+                <Text style={[s.tight, { flex: 1 }]}>
+                  {t("columns.agenda")}
+                </Text>
+                <Text style={[s.tight, s.start]}>{t("columns.start")}</Text>
+                <Text style={[s.tight, numStyle]}>
+                  {t("columns.decisions")}
+                </Text>
+                <Text style={[s.tight, numStyle]}>{t("columns.tasks")}</Text>
+                <Text style={[s.tight, numStyle]}>{t("columns.open")}</Text>
               </View>
               {doc.agendas.map((agenda, index) => (
                 <ItemRows
@@ -680,9 +734,18 @@ export function MinutesPdf({
                       <Text style={[s.tight, s.body, s.start]}>
                         {first ? (agenda.start ?? "") : ""}
                       </Text>
-                      <Count value={first ? agenda.decisions : null} />
-                      <Count value={first ? agenda.actions : null} />
-                      <Count value={first ? agenda.open : null} />
+                      <Count
+                        value={first ? agenda.decisions : null}
+                        wide={!hangul}
+                      />
+                      <Count
+                        value={first ? agenda.actions : null}
+                        wide={!hangul}
+                      />
+                      <Count
+                        value={first ? agenda.open : null}
+                        wide={!hangul}
+                      />
                     </>
                   )}
                 />
@@ -693,12 +756,15 @@ export function MinutesPdf({
 
         {doc.agendas.length > 0 ? (
           <View break>
-            <Section title="안건별 요약" id="minutes-agendas">
+            <Section title={t("agendaSummaries")} id="minutes-agendas">
               {doc.agendas.map((agenda, index) => (
                 <View key={index} style={{ marginBottom: mm(5) }}>
                   <BookmarkText
                     id={agendaDestination(agenda.no)}
-                    bookmark={`안건 ${agendaLabel(agenda.no)} · ${agenda.title}`}
+                    bookmark={t("agendaBookmark", {
+                      no: agendaLabel(agenda.no),
+                      title: agenda.title,
+                    })}
                     style={[s.bold, s.body]}
                     minPresenceAhead={mm(12)}
                   >
@@ -723,16 +789,18 @@ export function MinutesPdf({
 
         {/* 상세 항목은 한 번씩만 싣고 안건 번호를 병기한다. */}
         <View break>
-          <Section title="1. 결정 사항" id="minutes-decisions">
+          <Section title={t("decisions")} id="minutes-decisions">
             {doc.decisions.length === 0 ? (
-              <Text style={s.none}>없음</Text>
+              <Text style={s.none}>{t("none")}</Text>
             ) : (
               <View style={s.grid}>
                 <View style={s.head} fixed>
-                  <Text style={[s.cell, s.no]}>번호</Text>
-                  <Text style={[s.cell, { flex: 1 }]}>내용</Text>
-                  <Text style={[s.cell, s.agendaRef]}>안건</Text>
-                  <Text style={[s.cell, s.at]}>시각</Text>
+                  <Text style={[s.cell, s.no]}>{t("columns.no")}</Text>
+                  <Text style={[s.cell, { flex: 1 }]}>
+                    {t("columns.content")}
+                  </Text>
+                  <Text style={[s.cell, agendaRef]}>{t("columns.agenda")}</Text>
+                  <Text style={[s.cell, s.at]}>{t("columns.time")}</Text>
                 </View>
                 {doc.decisions.map((decision) => (
                   <ItemRows
@@ -753,7 +821,7 @@ export function MinutesPdf({
                         >
                           {piece}
                         </Text>
-                        <Text style={[s.cell, s.body, s.agendaRef]}>
+                        <Text style={[s.cell, s.body, agendaRef]}>
                           {first ? agendaLabel(decision.agendaNo) : ""}
                         </Text>
                         <Text style={[s.cell, s.body, s.at]}>
@@ -768,19 +836,21 @@ export function MinutesPdf({
           </Section>
         </View>
 
-        <Section title="2. 할 일" id="minutes-actions">
+        <Section title={t("actions")} id="minutes-actions">
           {doc.actions.length === 0 ? (
-            <Text style={s.none}>없음</Text>
+            <Text style={s.none}>{t("none")}</Text>
           ) : (
             <View style={s.grid}>
               <View style={s.head} fixed>
-                <Text style={[s.cell, s.no]}>번호</Text>
-                <Text style={[s.cell, { flex: 1 }]}>내용</Text>
-                <Text style={[s.cell, s.who, { color: color.muted }]}>
-                  담당
+                <Text style={[s.cell, s.no]}>{t("columns.no")}</Text>
+                <Text style={[s.cell, { flex: 1 }]}>
+                  {t("columns.content")}
                 </Text>
-                <Text style={[s.cell, s.due]}>기한</Text>
-                <Text style={[s.cell, s.agendaRef]}>안건</Text>
+                <Text style={[s.cell, s.who, { color: color.muted }]}>
+                  {t("columns.owner")}
+                </Text>
+                <Text style={[s.cell, s.due]}>{t("columns.due")}</Text>
+                <Text style={[s.cell, agendaRef]}>{t("columns.agenda")}</Text>
               </View>
               {doc.actions.map((action) => (
                 <ItemRows
@@ -807,15 +877,15 @@ export function MinutesPdf({
                         ]}
                         hyphenationCallback={narrowBreak}
                       >
-                        {first ? (action.assignee ?? "미지정") : ""}
+                        {first ? (action.assignee ?? t("unassigned")) : ""}
                       </Text>
                       <Text
                         style={[s.cell, s.body, s.due, action.due ? {} : s.tbd]}
                         hyphenationCallback={narrowBreak}
                       >
-                        {first ? (action.due ?? "미지정") : ""}
+                        {first ? (action.due ?? t("noDue")) : ""}
                       </Text>
-                      <Text style={[s.cell, s.body, s.agendaRef]}>
+                      <Text style={[s.cell, s.body, agendaRef]}>
                         {first ? agendaLabel(action.agendaNo) : ""}
                       </Text>
                     </>
@@ -827,19 +897,21 @@ export function MinutesPdf({
         </Section>
 
         {doc.open.length > 0 ? (
-          <Section title="3. 미결 사항" id="minutes-open">
+          <Section title={t("open")} id="minutes-open">
             <View style={s.grid}>
               <View style={s.head} fixed>
-                <Text style={[s.cell, s.no]}>번호</Text>
-                <Text style={[s.cell, { flex: 1 }]}>내용</Text>
+                <Text style={[s.cell, s.no]}>{t("columns.no")}</Text>
+                <Text style={[s.cell, { flex: 1 }]}>
+                  {t("columns.content")}
+                </Text>
                 {/* 담당이 지정된 미결 사항이 있을 때만 담당 칸을 표시한다. */}
                 {openHasOwner ? (
                   <Text style={[s.cell, s.who, { color: color.muted }]}>
-                    담당
+                    {t("columns.owner")}
                   </Text>
                 ) : null}
-                <Text style={[s.cell, s.agendaRef]}>안건</Text>
-                <Text style={[s.cell, s.at]}>시각</Text>
+                <Text style={[s.cell, agendaRef]}>{t("columns.agenda")}</Text>
+                <Text style={[s.cell, s.at]}>{t("columns.time")}</Text>
               </View>
               {doc.open.map((item) => (
                 <ItemRows
@@ -866,10 +938,10 @@ export function MinutesPdf({
                           ]}
                           hyphenationCallback={narrowBreak}
                         >
-                          {first ? (item.assignee ?? "미지정") : ""}
+                          {first ? (item.assignee ?? t("unassigned")) : ""}
                         </Text>
                       ) : null}
-                      <Text style={[s.cell, s.body, s.agendaRef]}>
+                      <Text style={[s.cell, s.body, agendaRef]}>
                         {first ? agendaLabel(item.agendaNo) : ""}
                       </Text>
                       <Text style={[s.cell, s.body, s.at]}>
@@ -889,18 +961,16 @@ export function MinutesPdf({
         <Sheet footer={doc.footer} logoSrc={logoSrc}>
           <BookmarkText
             id="minutes-transcript"
-            bookmark="부록 A. 녹취록"
+            bookmark={t("annex")}
             style={s.annexHead}
           >
-            부록 A. 녹취록
+            {t("annex")}
           </BookmarkText>
-          <Text style={s.annexNote}>
-            발언 시각은 녹음 시작 기준입니다. 본문 번호는 해당 발언을 근거로 한
-            결정·할 일·미결 사항을 가리킵니다.
-          </Text>
+          <Text style={s.annexNote}>{t("annexNote")}</Text>
           <Transcript
             lines={doc.transcript}
             truncated={doc.transcriptTruncated}
+            t={t}
           />
         </Sheet>
       ) : null}
@@ -914,10 +984,13 @@ export function MinutesPdf({
  */
 export async function renderMinutesPdfInline(
   doc: MinutesDocument,
-  fontBase: string
+  fontBase: string,
+  locale: Locale
 ): Promise<Blob> {
   registerFonts(fontBase);
   // 브라우저·워커·Node 모두 글꼴과 같은 public 디렉터리의 기존 브랜드 자산을 읽습니다.
   const logoSrc = `${fontBase}/../../apple-touch-icon.png`;
-  return pdf(<MinutesPdf doc={doc} logoSrc={logoSrc} />).toBlob();
+  return pdf(
+    <MinutesPdf doc={doc} logoSrc={logoSrc} locale={locale} />
+  ).toBlob();
 }

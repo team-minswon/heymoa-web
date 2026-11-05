@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -34,14 +35,15 @@ function languageOf(node: unknown): string | null {
   return typeof hit === "string" ? hit.slice("language-".length) : null;
 }
 
-/** 머리줄의 복사 버튼. `read` 는 누른 순간에 읽는다 — 렌더 시점 값이면 스트리밍 중 글이 낡는다. */
-function CopyButton({ label, read }: { label: string; read: () => string }) {
+/** 코드 머리줄의 복사 버튼. `read` 는 누른 순간에 읽는다 — 렌더 시점 값이면 스트리밍 중 글이 낡는다. */
+function CopyButton({ read }: { read: () => string }) {
+  const t = useTranslations("chat.code");
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
       // 고정 `aria-label` 이면 「복사됨」으로 바뀐 글자를 덮어 화면 낭독기에는 변화가 없다.
-      aria-label={copied ? `${label} 복사됨` : `${label} 복사`}
+      aria-label={copied ? t("copiedLabel") : t("copyLabel")}
       className="inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 py-0.5 text-[11px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
       onClick={async () => {
         try {
@@ -59,7 +61,7 @@ function CopyButton({ label, read }: { label: string; read: () => string }) {
       ) : (
         <Copy aria-hidden className="size-3" />
       )}
-      {copied ? "복사됨" : "복사"}
+      {copied ? t("copied") : t("copy")}
     </button>
   );
 }
@@ -81,14 +83,15 @@ function CodeBlock({
   children?: React.ReactNode;
 }) {
   const ref = useRef<HTMLPreElement>(null);
+  const t = useTranslations("chat.code");
 
   return (
     <div className="my-2 overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--el-hairline)] px-2.5 py-1">
         <span className="truncate font-mono text-[11px] text-[var(--el-muted)]">
-          {language ?? "코드"}
+          {language ?? t("language")}
         </span>
-        <CopyButton label="코드" read={() => ref.current?.textContent ?? ""} />
+        <CopyButton read={() => ref.current?.textContent ?? ""} />
       </div>
       {/* 긴 줄은 자기 안에서 가로 스크롤한다. 접으면 들여쓰기가 뭉개진다. */}
       <pre
@@ -128,7 +131,7 @@ function MermaidPre({
     <MermaidBlock
       source={source}
       fallback={code}
-      copyButton={<CopyButton label="코드" read={() => source} />}
+      copyButton={<CopyButton read={() => source} />}
     />
   );
 }

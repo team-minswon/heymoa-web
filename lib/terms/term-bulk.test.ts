@@ -101,10 +101,12 @@ describe("summaryParts", () => {
       terms: [],
       limit: 10,
     });
-    expect(summaryParts(plan).map((part) => part.text)).toEqual([
-      "새로 2개",
-      "이미 있어요 1개",
-      "40자를 넘어 제외 1개",
+    expect(
+      summaryParts(plan).map((part) => [part.key, part.count])
+    ).toEqual([
+      ["fresh", 2],
+      ["duplicates", 1],
+      ["tooLong", 1],
     ]);
     expect(summaryParts(planBulk({ text: "", terms: [], limit: 10 }))).toEqual(
       []

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
@@ -156,6 +157,7 @@ export function OnboardingChecklist({
   workspaceId: string;
   model: OnboardingChecklistModel;
 }) {
+  const t = useTranslations("workspace.checklist");
   const router = useRouter();
   const { requestNewMeeting, openSettings } = useWorkspaceShell();
   const { userId, done, endedNoteId, hasMoreNotes, retry } = model;
@@ -193,20 +195,20 @@ export function OnboardingChecklist({
 
   return (
     <section
-      aria-label="시작하기"
+      aria-label={t("title")}
       data-testid="onboarding-checklist"
       className="mx-2 mb-2 rounded-control border border-[var(--el-hairline)] bg-white px-3 pb-2 pt-2.5"
     >
       <div className="flex items-center gap-2">
         <p className="text-[13px] font-semibold text-[var(--el-ink)]">
-          {allDone ? "준비가 끝났어요" : "시작하기"}
+          {allDone ? t("allDone") : t("title")}
         </p>
         <span className="text-[11px] font-medium text-[var(--el-muted)]">
           {progress.done}/{progress.total}
         </span>
         <button
           type="button"
-          aria-label="시작하기 닫기"
+          aria-label={t("dismiss")}
           onClick={dismiss}
           className="ml-auto flex size-6 items-center justify-center rounded-full text-[var(--el-muted)] transition-colors hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)]"
         >
@@ -216,7 +218,7 @@ export function OnboardingChecklist({
       {retry ? (
         <InlineRetry
           variant="line"
-          label="진행 상황을 불러오지 못했습니다"
+          label={t("loadFailed")}
           onRetry={retry}
           className="mt-2 pb-1"
         />
@@ -243,14 +245,14 @@ export function OnboardingChecklist({
                     isDone && "text-[var(--el-muted)] line-through"
                   )}
                 >
-                  {step.label}
+                  {t(`steps.${step.id}`)}
                 </span>
                 {step.optional && !isDone ? (
                   <span className="text-[11px] text-[var(--el-muted)]">
-                    선택
+                    {t("optional")}
                   </span>
                 ) : null}
-                <span className="sr-only">{isDone ? " (완료)" : ""}</span>
+                <span className="sr-only">{isDone ? t("doneSuffix") : ""}</span>
               </>
             );
             return (

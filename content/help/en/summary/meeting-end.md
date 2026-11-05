@@ -4,7 +4,7 @@ description: When you end a meeting, AI sorts out the summary, decisions, and ta
 group: summary
 slug: meeting-end
 order: 1
-modified: 2026-10-23
+modified: 2026-11-05
 ---
 
 ## End a meeting {#end}
@@ -12,11 +12,11 @@ modified: 2026-10-23
 You can't click the end button while recording. Pause recording first. A meeting that hasn't started yet can't be ended.
 
 1. **Click [Pause]**
-   When you pause, “Recording stopped. Ready to wrap up?” appears below the button for 15 seconds. Choose **[End now]**, **[Later]**, or **[Don't show again]**.
+   When you pause, “Recording paused. Wrap up now?” appears below the button for 15 seconds. Choose **[End now]**, **[Later]**, or **[Don't show again]**.
 2. **Click [End meeting] at the top**
    A confirmation shows the participants' names and the recording status.
 3. **Check the participants**
-   If there are fewer than 2 participants, you see a warning. Click **[Go set participants]** to go back and set them.
+   If there are fewer than 2 participants, you see a warning. Click **[Go to participants]** to go back and set them.
 4. **Click [End meeting] in the confirmation**
    You're taken to the **[Summary]** tab.
 
@@ -24,18 +24,18 @@ You can't click the end button while recording. Pause recording first. A meeting
 
 Any workspace member can end a meeting. ==You can't record again in a meeting that has ended.==
 
-Before the meeting ends, the **[Summary]** tab explains the steps: creating the summary, separating speakers, then review and confirmation.
+Before the meeting ends, the **[Summary]** tab explains the steps: creating the summary, identifying speakers, then reviewing and confirming.
 
 ## What happens after it ends {#analysis}
 
-When you end a meeting, summary creation starts automatically. It doesn't wait for speaker separation to finish, so ==the summary can be ready before speaker separation.==
+When you end a meeting, summary creation starts automatically. It doesn't wait for speaker identification to finish, so ==the summary can be ready before speakers are identified.==
 
-The **[Summary]** tab shows four steps: **[Speaker separation]**, **[Analysis]**, **[Review]**, and **[Confirm]**. It's usually ready within 1 minute after the meeting ends. But it can take a few minutes. You can move to another screen meanwhile, and the transcript stays available.
+The **[Summary]** tab shows four steps: **[Organize meeting]**, **[Check conflicts and assignees]**, **[Review]**, and **[Confirm]**. It's usually ready within 1 minute after the meeting ends. But it can take a few minutes. You can move to another screen meanwhile, and the transcript stays available.
 
-Assignees and due dates are filled in separately after speaker separation finishes. Items someone has already edited aren't overwritten. If speaker separation fails, you review without suggested assignees and due dates.
+Assignees and due dates are filled in separately after speaker identification finishes. Items someone has already edited aren't overwritten. If speaker identification fails, you review without suggested assignees and due dates.
 
 > [!Note]
-> For a moment right after the meeting ends, it may show **[Analyzing]**. When the analysis is done, the person who requested it gets a [notification](help:account#notifications).
+> For a moment right after the meeting ends, it may show “Analyzing the meeting.” When the analysis is done, the person who requested it gets a [notification](help:account#notifications).
 
 ## When analysis doesn't finish or fails {#failed}
 
@@ -48,7 +48,7 @@ Assignees and due dates are filled in separately after speaker separation finish
 :::problem
 **Symptom:** You see “Couldn't analyze the meeting”
 **Cause:** Analysis didn't finish within 12 minutes, or its result couldn't be accepted.
-**Fix:** Click **[Reanalyze]**. Any workspace member can do this. The transcript and meeting record stay as they are.
+**Fix:** Click **[Regenerate]**. Any workspace member can do this. The transcript and meeting record stay as they are.
 :::
 
 If you still don't see a summary, also try [The meeting ended but there's no summary](help:summary-missing).
@@ -71,11 +71,11 @@ To check and edit it, see [Reviewing and confirming the summary](help:review).
 ### Who can end a meeting?
 Any workspace member can end a meeting.
 
-### Can the summary be ready before speaker separation?
-Yes. Summary creation starts right away without waiting for speaker separation to finish.
+### Can the summary be ready before speakers are identified?
+Yes. Summary creation starts right away without waiting for speaker identification to finish.
 
 ### If analysis fails, is the recording lost?
-No. The transcript and meeting record stay as they are. Click **[Reanalyze]**.
+No. The transcript and meeting record stay as they are. Click **[Regenerate]**.
 
 ## Related pages {#related}
 

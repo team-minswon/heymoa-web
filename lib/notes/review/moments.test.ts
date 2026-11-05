@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { TranscriptResponseDataSegmentsItem } from "@/lib/api/generated/models";
 import {
   citedSpanOf,
-  lengthLabel,
+  lengthParts,
   quotesOf,
   segmentsById,
   tickLabel,
@@ -55,7 +55,11 @@ describe("ticksOf", () => {
     expect(ticksOf(75 * 60_000)).toEqual([0, 15, 30, 45, 60, 75]);
     // 끝(42분)에 붙는 40분은 이름이 겹쳐 뺀다.
     expect(ticksOf(42 * 60_000)).toEqual([0, 10, 20, 30, 42]);
-    expect(ticksOf(75 * 60_000).map(tickLabel)).toEqual([
+    const units = {
+      minutes: (count: number) => `${count}분`,
+      hours: (count: number) => `${count}시간`,
+    };
+    expect(ticksOf(75 * 60_000).map((at) => tickLabel(at, units))).toEqual([
       "0:00",
       "15분",
       "30분",
@@ -66,10 +70,15 @@ describe("ticksOf", () => {
   });
 });
 
-describe("lengthLabel", () => {
-  it("분 · 시간 단위로 읽는다", () => {
+describe("lengthParts", () => {
+  it("분 · 시간 단위로 나눈다", () => {
     expect(
-      [20_000, 42 * 60_000, 60 * 60_000, 75 * 60_000].map(lengthLabel)
-    ).toEqual(["1분 미만", "42분", "1시간", "1시간 15분"]);
+      [20_000, 42 * 60_000, 60 * 60_000, 75 * 60_000].map(lengthParts)
+    ).toEqual([
+      null,
+      { hours: 0, minutes: 42 },
+      { hours: 1, minutes: 0 },
+      { hours: 1, minutes: 15 },
+    ]);
   });
 });

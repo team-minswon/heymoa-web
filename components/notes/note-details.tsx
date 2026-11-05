@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import { Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import {
@@ -32,6 +33,7 @@ import {
 } from "@/lib/notes/meeting-state";
 import { invalidateNoteLifecycle } from "@/lib/notes/invalidate";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 function formatRecordedClock(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1_000);
@@ -127,6 +129,9 @@ export function NoteDetails({
    */
   workspaceId?: string;
 }) {
+  const t = useTranslations("notes.details");
+  const tActions = useTranslations("common.actions");
+  const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
   const noteResponse = useGetNoteSuspense(noteId).data;
   const updateNote = useUpdateNote({
@@ -151,14 +156,15 @@ export function NoteDetails({
 
   // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
   if (!loaded) {
-    throw new Error("노트를 불러오지 못했습니다.");
+    // 경계(`DataBoundary`)가 자기 문구로 그린다. 이 메시지는 화면에 나가지 않는다
+    throw new Error("Note response was empty");
   }
   const note = loaded;
 
   const refresh = () => invalidateNoteLifecycle(queryClient, noteId);
 
   const timestamp = (iso: string) =>
-    formatAppDate(iso, { dateStyle: "medium", timeStyle: "short" });
+    formatAppDate(iso, { dateStyle: "medium", timeStyle: "short" }, dateLocale);
 
   return (
     // **카드가 없다.** 예전에는 제목·참여자·사실이 각자 `rounded-block` 상자에 들어 있었는데,
@@ -179,20 +185,20 @@ export function NoteDetails({
             await updateNote.mutateAsync({
               noteId,
               data: {
-                title: title || "제목 없는 노트",
+                title: title || t("untitled"),
               },
             });
             await refresh();
             setTitleSaves((count) => count + 1);
             setFeedback("saved");
           } catch {
-            toast.error("저장하지 못했습니다. 입력한 내용은 유지됩니다.", {
+            toast.error(t("saveFailed"), {
               id: `note-save-${noteId}`,
             });
           }
         }}
       >
-        <Field label="제목" htmlFor="note-title">
+        <Field label={t("title")} htmlFor="note-title">
           <Input
             id="note-title"
             name="title"
@@ -206,7 +212,7 @@ export function NoteDetails({
             못박은 자리다(`PUT /v1/notes/{noteId}/participants`) — 늦게 합류한 사람을 기록 중인
             회의나 끝난 회의에 뒤늦게 넣는 일은 실제로 생긴다. 정본은 시작 전 화면에서만
             편집하게 그려 두었지만, 그러면 그 일을 할 방법이 사라진다. */}
-        <Field label="참석자">
+        <Field label={t("attendees")}>
           <NoteParticipantsField
             noteId={noteId}
             projectId={note.projectId}
@@ -226,11 +232,11 @@ export function NoteDetails({
             loading={updateNote.isPending}
             className="rounded-control px-3.5"
           >
-            <Check /> 변경 저장
+            <Check /> {tActions("saveChanges")}
           </Button>
           {feedback === "saved" ? (
             <span role="status" className="text-xs text-[var(--el-muted)]">
-              저장됨
+              {t("saved")}
             </span>
           ) : null}
         </div>
@@ -260,11 +266,11 @@ export function NoteDetails({
        */}
       <section aria-labelledby="note-facts-title" className={INFO_SECTION}>
         <h2 id="note-facts-title" className={cn("mb-3", INFO_SECTION_TITLE)}>
-          회의 정보
+          {t("facts.title")}
         </h2>
         <dl className="flex flex-col">
           {note.meetingStartedBy ? (
-            <Fact label="진행자">
+            <Fact label={t("facts.host")}>
               <ParticipantAvatar
                 participant={note.meetingStartedBy}
                 size="sm"
@@ -273,7 +279,7 @@ export function NoteDetails({
               <span className="ml-1 font-medium">
                 {note.meetingStartedBy.name}
                 <span className="font-normal text-[var(--el-muted)]">
-                  {" · 기록 제어 권한"}
+                  {` · ${t("facts.controlsRecording")}`}
                 </span>
               </span>
             </Fact>
@@ -282,25 +288,31 @@ export function NoteDetails({
               (「기록 42분」), 진행 중 라이브 타이머는 레코더 독이 갖는다.
               **「종료된 구간만 합산」을 적지 않는다.** `recordedDurationMs` 는 이제 회의 축의 끝이고(APP-1432)
               진행 중이면 원점부터 지금까지 자란다 — 구간 합이 아니라 회의 길이다. */}
-          <Fact label="기록 길이">
-            <span role="timer" aria-label="기록 길이" className="tabular-nums">
+          <Fact label={t("facts.duration")}>
+            <span
+              role="timer"
+              aria-label={t("facts.duration")}
+              className="tabular-nums"
+            >
               {formatRecordedClock(getRecordedDurationMs(note, now ?? 0))}
             </span>
           </Fact>
           {/* 정본은 「워크스페이스 멤버 4명 공개」지만 그 수는 노트 계약에 없다 — 참석자 수와
               헷갈리기도 해서 수를 뺐다(노트 헤더 메타와 같은 판단). */}
-          <Fact label="공유 범위">워크스페이스 멤버에게 공개</Fact>
+          <Fact label={t("facts.sharedWith")}>{t("facts.workspaceMembers")}</Fact>
           {/* 자동 종료의 사유와 시각(APP-1319). 상단 안내를 접어도 여기 남는다 — 시각은 여기에만 있다. */}
           {isAutoEnded(note) && note.meetingEndedAt ? (
-            <Fact label="종료">
+            <Fact label={t("facts.ended")}>
               <time dateTime={note.meetingEndedAt}>
                 {timestamp(note.meetingEndedAt)}
               </time>
               <span className="font-normal text-[var(--el-muted)]">
-                {` · 자동 종료${
+                {` · ${
                   note.autoEnd?.pausedBusinessDays
-                    ? `(마지막 일시정지 후 ${note.autoEnd.pausedBusinessDays}영업일)`
-                    : ""
+                    ? t("facts.autoEndedDays", {
+                        days: note.autoEnd.pausedBusinessDays,
+                      })
+                    : t("facts.autoEnded")
                 }`}
               </span>
             </Fact>
@@ -308,10 +320,10 @@ export function NoteDetails({
 
           {/* 위는 회의의 사실, 아래는 문서의 이력이다 — 선 하나로 가른다. */}
           <FactDivider />
-          <Fact label="생성">
+          <Fact label={t("facts.created")}>
             <time dateTime={note.createdAt}>{timestamp(note.createdAt)}</time>
           </Fact>
-          <Fact label="최종 수정">
+          <Fact label={t("facts.updated")}>
             <time dateTime={note.updatedAt}>{timestamp(note.updatedAt)}</time>
           </Fact>
         </dl>
@@ -331,27 +343,30 @@ export function NoteDetails({
  * 그대로 그리면 기하가 자동으로 맞고, 무엇을 불러오는 중인지도 읽힌다.
  */
 export function NoteDetailsSkeleton() {
+  const t = useTranslations("notes.details");
   return (
-    <Body aria-label="노트 정보 불러오는 중">
+    <Body aria-label={t("loading")}>
       <div className="flex flex-col gap-4">
-        <Field label="제목">
+        <Field label={t("title")}>
           <Skeleton className="h-9 w-full rounded-control" />
         </Field>
         {/* 실측: 참석자 컨트롤 줄은 32(아바타 스택 + `참여자 선택` 버튼), 저장 버튼은 32×105. */}
-        <Field label="참석자">
+        <Field label={t("attendees")}>
           <Skeleton className="h-8 w-56 rounded-control" />
         </Field>
         <Skeleton className="h-8 w-[105px] rounded-control" />
       </div>
       <NoteContextSkeleton />
       <section className={INFO_SECTION}>
-        <h2 className={cn("mb-3", INFO_SECTION_TITLE)}>회의 정보</h2>
+        <h2 className={cn("mb-3", INFO_SECTION_TITLE)}>
+          {t("facts.title")}
+        </h2>
         <dl className="flex flex-col">
-          {FACT_ROWS.map(({ label, width }) => (
-            <Fragment key={label}>
+          {FACT_ROWS.map(({ key, width }) => (
+            <Fragment key={key}>
               {/* 실제와 같은 자리에 선이 있어야 높이가 맞는다 — 회의의 사실과 문서의 이력. */}
-              {label === "생성" ? <FactDivider /> : null}
-              <Fact label={label}>
+              {key === "created" ? <FactDivider /> : null}
+              <Fact label={t(`facts.${key}`)}>
                 {/* 값 폭은 실제와 비슷하게 — 전부 같으면 표가 아니라 블록으로 보인다. */}
                 <Skeleton className="h-3.5 rounded-chip" style={{ width }} />
               </Fact>
@@ -365,9 +380,9 @@ export function NoteDetailsSkeleton() {
 
 /** 사실 표의 키 열은 데이터가 아니다 — 실제 화면과 같은 순서·같은 라벨을 그린다. */
 const FACT_ROWS = [
-  { label: "진행자", width: 180 },
-  { label: "기록 길이", width: 48 },
-  { label: "공유 범위", width: 132 },
-  { label: "생성", width: 156 },
-  { label: "최종 수정", width: 156 },
-];
+  { key: "host", width: 180 },
+  { key: "duration", width: 48 },
+  { key: "sharedWith", width: 132 },
+  { key: "created", width: 156 },
+  { key: "updated", width: 156 },
+] as const;

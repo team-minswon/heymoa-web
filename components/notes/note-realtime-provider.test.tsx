@@ -1,4 +1,3 @@
-import { StrictMode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -186,9 +185,8 @@ function renderProvider({
       </NoteRealtimeProvider>
     </QueryClientProvider>
   );
-  const result = render(
-    strict ? <StrictMode>{provider}</StrictMode> : provider
-  );
+  // 기본 wrapper(언어 Provider, `vitest.setup.ts`)까지 StrictMode 안에 들도록 루트에서 켠다.
+  const result = render(provider, { reactStrictMode: strict });
 
   return { ...result, invalidateQueries, queryClient };
 }

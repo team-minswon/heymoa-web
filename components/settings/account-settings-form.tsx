@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { AccountDeletionSection } from "@/components/settings/account-deletion-section";
 import { Input } from "@/components/ui/input";
@@ -9,32 +11,33 @@ import { SettingsHeader } from "@/components/settings/settings-layout";
 import { useGetCurrentUserSuspense } from "@/lib/api/generated/users/users";
 
 export function AccountSettingsForm() {
+  const t = useTranslations("settings.account");
   const response = useGetCurrentUserSuspense().data;
   if (response.status !== 200 || !response.data.success) {
-    throw new Error("계정 정보를 불러오지 못했습니다.");
+    throw new Error(t("loadFailed"));
   }
   const user = response.data.data;
 
   return (
     <div
       className="mx-auto w-full max-w-[720px] space-y-8"
-      aria-label="내 계정 설정"
+      aria-label={t("label")}
     >
       <Header />
       <div className={PROFILE_CARD}>
         <PersonAvatar
           name={user.userId}
           image={user.image}
-          alt={`${user.name} 프로필`}
+          alt={t("avatarAlt", { name: user.name })}
           size={56}
         />
         <div className={FIELD}>
-          <Label htmlFor="account-email">이메일</Label>
+          <Label htmlFor="account-email">{t("email")}</Label>
           <Input id="account-email" value={user.email} disabled />
         </div>
       </div>
       <div className={NAME_CARD}>
-        <Label htmlFor="account-name">계정 이름</Label>
+        <Label htmlFor="account-name">{t("name")}</Label>
         <Input
           id="account-name"
           value={user.name}
@@ -56,21 +59,22 @@ export function AccountSettingsForm() {
  * 상수를 읽는다.
  */
 export function AccountSettingsFormSkeleton() {
+  const t = useTranslations("settings.account");
   return (
     <div
       className="mx-auto w-full max-w-[720px] space-y-8"
-      aria-label="내 계정 설정 불러오는 중"
+      aria-label={t("loading")}
     >
       <Header />
       <div className={PROFILE_CARD}>
         <Skeleton className="size-14 shrink-0 rounded-full" />
         <div className={FIELD}>
-          <Label>이메일</Label>
+          <Label>{t("email")}</Label>
           <Skeleton className="h-8 rounded-control" />
         </div>
       </div>
       <div className={NAME_CARD}>
-        <Label>계정 이름</Label>
+        <Label>{t("name")}</Label>
         <Skeleton className="h-8 rounded-control" />
         <NameHint />
       </div>
@@ -81,15 +85,15 @@ export function AccountSettingsFormSkeleton() {
 }
 
 function Header() {
-  return (
-    <SettingsHeader title="내 계정" description="프로필 정보를 확인합니다." />
-  );
+  const t = useTranslations("settings.account");
+  return <SettingsHeader title={t("title")} description={t("description")} />;
 }
 
 function NameHint({ id }: { id?: string }) {
+  const t = useTranslations("settings.account");
   return (
     <p id={id} className="text-xs text-[var(--el-muted)]">
-      워크스페이스에서 보일 이름은 멤버 탭에서 바꿉니다.
+      {t("nameHint")}
     </p>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { animate, type AnimationPlaybackControls } from "motion/react";
 import Link from "next/link";
@@ -15,6 +16,7 @@ import { okData } from "@/lib/api/ok-data";
 import { formatAppDate } from "@/lib/format/date";
 import { meetingHeading, shortMeetingDate, type MapAgenda, type MapMeeting } from "@/lib/projects/agenda-map";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 /** 이 점에 접혀 숨은 갈래의 미리보기: 갈래마다 시작 날짜·첫 안건·안건 수 */
 export type FoldPreview = { date: string; title: string; count: number };
@@ -264,6 +266,8 @@ export function HoverCard({ workspaceId, ref }: { workspaceId: string; ref: Reac
 }
 
 function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<HoverInfo, { meeting: MapMeeting }> }) {
+  const t = useTranslations("workspace.agendaMap");
+  const dateLocale = useDisplayLocale();
   const { meeting, agendas, topicName, fold, foldOnly } = info;
   const [dwelled, setDwelled] = useState(false);
   useEffect(() => {
@@ -278,7 +282,7 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
     fold.length > 0 ? (
       <div className={cn("flex flex-col gap-1.5", !foldOnly && "border-t border-[var(--el-hairline)] pt-2")}>
         <p className="text-xs font-semibold text-[var(--el-ink)]">
-          접힌 갈래 {fold.length}개 · 안건 {hidden}개
+          {t("foldedBranches", { branches: fold.length, agendas: hidden })}
         </p>
         <ul className="flex flex-col gap-1">
           {fold.slice(0, 4).map((entry, at) => (
@@ -286,14 +290,14 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
               <span className="shrink-0 text-[var(--el-muted)] tabular-nums">{entry.date}</span>
               <span className="min-w-0 truncate text-[var(--el-ink)]">{entry.title}</span>
               {entry.count > 1 ? (
-                <span className="shrink-0 text-xs text-[var(--el-muted)] tabular-nums">외 {entry.count - 1}</span>
+                <span className="shrink-0 text-xs text-[var(--el-muted)] tabular-nums">{t("more", { count: entry.count - 1 })}</span>
               ) : null}
             </li>
           ))}
         </ul>
-        {fold.length > 4 ? <p className="text-xs text-[var(--el-muted)]">갈래 {fold.length - 4}개 더</p> : null}
+        {fold.length > 4 ? <p className="text-xs text-[var(--el-muted)]">{t("moreBranches", { count: fold.length - 4 })}</p> : null}
         <p className="text-xs text-[var(--el-muted)]">
-          {foldOnly ? "눌러서 갈래를 모두 펼칩니다" : "「+N」을 누르면 갈래를 모두 펼칩니다"}
+          {foldOnly ? t("expandBranchesClick") : t("expandBranchesPill")}
         </p>
       </div>
     ) : null;
@@ -304,7 +308,7 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
           <span className="font-semibold whitespace-nowrap text-[var(--el-ink)] tabular-nums">
             {shortMeetingDate(meeting.startedAt)}
           </span>
-          <span className="truncate">{agendas[0].title}에서 갈라짐</span>
+          <span className="truncate">{t("branchedFrom", { title: agendas[0].title })}</span>
         </p>
         {foldList}
       </div>
@@ -313,7 +317,7 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
     <div className="flex flex-col gap-2.5">
       <p className="flex items-baseline gap-1.5 text-xs text-[var(--el-muted)]">
         <span className="font-semibold whitespace-nowrap text-[var(--el-ink)] tabular-nums">
-          {formatAppDate(meeting.startedAt, { month: "long", day: "numeric", weekday: "short" })}
+          {formatAppDate(meeting.startedAt, { month: "long", day: "numeric", weekday: "short" }, dateLocale)}
         </span>
         <span className="truncate">{meetingHeading(meeting.title)}</span>
       </p>
@@ -327,7 +331,7 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
                   {agenda.title}
                 </span>
                 <Badge variant={agenda.completed ? "secondary" : "outline"} className="mt-px">
-                  {agenda.completed ? "완료" : "미완료"}
+                  {agenda.completed ? t("completed") : t("notCompleted")}
                 </Badge>
               </div>
               {line ? (
@@ -344,7 +348,7 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
         })}
       </ul>
       {agendas.length > CARD_AGENDAS ? (
-        <p className="text-xs text-[var(--el-muted)]">외 {agendas.length - CARD_AGENDAS}개는 눌러서 봅니다</p>
+        <p className="text-xs text-[var(--el-muted)]">{t("moreAgendasHint", { count: agendas.length - CARD_AGENDAS })}</p>
       ) : null}
       {foldList}
       <div className="flex items-center justify-between gap-3 border-t border-[var(--el-hairline)] pt-2">
@@ -357,7 +361,7 @@ function HoverBody({ workspaceId, info }: { workspaceId: string; info: Extract<H
           href={summaryHref(workspaceId, meeting.noteId, agendas[0].agendaId)}
           className="inline-flex shrink-0 items-center gap-0.5 text-xs text-[var(--el-ink)] underline underline-offset-2"
         >
-          회의록에서 보기
+          {t("viewInNotes")}
           <ArrowUpRight aria-hidden className="size-3.5" />
         </Link>
       </div>

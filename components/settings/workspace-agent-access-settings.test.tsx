@@ -100,7 +100,7 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(within(jiwon).getByText("지원의 Codex")).toBeTruthy();
     expect(within(jiwon).getByText("OAuth")).toBeTruthy();
     expect(within(jiwon).getByText("한지원")).toBeTruthy();
-    expect(within(jiwon).getByText(/아직 안 씀/)).toBeTruthy();
+    expect(within(jiwon).getByText(/최근 사용 없음/)).toBeTruthy();
     expect(within(mine).getByText("노트북 Claude Code")).toBeTruthy();
     expect(within(mine).getByText("개인 토큰")).toBeTruthy();
     expect(within(mine).getByText(MOCK_USER.name)).toBeTruthy();
@@ -134,7 +134,7 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     await waitFor(async () =>
       expect((await toggle()).getAttribute("aria-checked")).toBe("false")
     );
-    expect(screen.getByText("꺼짐 — 새 연결을 만들 수 없습니다.")).toBeTruthy();
+    expect(screen.getByText("꺼져 있어 새 연결을 만들 수 없습니다.")).toBeTruthy();
     // ADMIN 본인의 연결도 같은 사유로 끊긴다
     expect(
       mockDb
@@ -170,7 +170,7 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(
       within(dialog).getByText("「지원의 Codex」 연결을 끊을까요?")
     ).toBeTruthy();
-    expect(dialog.textContent).toContain("한지원 님이 맡긴 연결입니다.");
+    expect(dialog.textContent).toContain("한지원 님이 허용한 연결입니다.");
     fireEvent.click(within(dialog).getByRole("button", { name: "끊기" }));
 
     await waitFor(() => expect(screen.queryByText("지원의 Codex")).toBeNull());

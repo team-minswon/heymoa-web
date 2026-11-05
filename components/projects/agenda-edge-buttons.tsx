@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function EdgeButtons({
   inset?: number;
   className?: string;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const [edge, setEdge] = useState({ left: false, right: false });
   useEffect(() => {
     const element = scroller.current;
@@ -79,7 +81,7 @@ export function EdgeButtons({
                   type="button"
                   variant="outline"
                   size="icon"
-                  aria-label={side === "left" ? "왼쪽으로" : "오른쪽으로"}
+                  aria-label={side === "left" ? t("scrollLeft") : t("scrollRight")}
                   onClick={() => go(side === "left" ? -1 : 1)}
                   className={cn(
                     "rounded-full border-border bg-[color-mix(in_srgb,var(--el-surface-card)_94%,transparent)] shadow-e2 transition-opacity duration-[120ms] motion-reduce:duration-100",

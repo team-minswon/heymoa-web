@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -99,6 +100,7 @@ function DialogContent({
   /** 배경 막(오버레이)에 덧입히는 클래스. 기본 오버레이는 `backdrop-blur` 가 닫힐 때 서서히 풀리지 않고 뚝 끊긴다. */
   overlayClassName?: string;
 }) {
+  const tActions = useTranslations("common.actions");
   return (
     <DialogPortal>
       <DialogOverlay className={overlayClassName} />
@@ -124,7 +126,7 @@ function DialogContent({
             }
           >
             <XIcon />
-            <span className="sr-only">닫기</span>
+            <span className="sr-only">{tActions("close")}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>

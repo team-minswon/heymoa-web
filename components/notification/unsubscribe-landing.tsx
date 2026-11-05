@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -15,23 +16,15 @@ import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
 import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 
 /**
- * 링크가 끄는 설정 항목(응답 `kind`)별 문구. 자동 종료 안내 메일의 링크도 리마인더 항목으로 온다(계약).
+ * 링크가 끄는 설정 항목(응답 `kind`)별로 끄는 메일 목록. 문구는 `notification.unsubscribe.items.<키>` 다.
+ * 자동 종료 안내 메일의 링크도 리마인더 항목으로 온다(계약).
  * 모르는 종류·불러오는 중에는 리마인더 문구다 — 이 화면이 처음 생긴 메일이다.
  */
-const MAILS = {
-  MEETING_PAUSED_REMINDER: {
-    name: "일시정지된 회의 메일",
-    items: [
-      "회의를 일시정지한 다음 영업일에 보내는 안내",
-      "자동 종료했을 때 보내는 안내",
-    ],
-  },
-  INQUIRY_ANSWERED: {
-    name: "문의 답변 메일",
-    items: ["보낸 문의에 HeyMoa 팀이 답했을 때 보내는 안내"],
-  },
+const MAIL_ITEMS = {
+  MEETING_PAUSED_REMINDER: ["pausedNextDay", "autoEnded"],
+  INQUIRY_ANSWERED: ["inquiryAnswered"],
 } as const;
-type MailKind = keyof typeof MAILS;
+type MailKind = keyof typeof MAIL_ITEMS;
 const mailKindOf = (kind: string | undefined): MailKind =>
   kind === "INQUIRY_ANSWERED" ? kind : "MEETING_PAUSED_REMINDER";
 
@@ -46,6 +39,8 @@ const mailKindOf = (kind: string | undefined): MailKind =>
  * 「이미 꺼져 있습니다」로 다시 켜기를 보인다. 「알림 설정 열기」는 설정 탭(PRO-67 I10, 트랙 B)이 생기면 둔다.
  */
 export function UnsubscribeLanding({ token }: { token: string | null }) {
+  const t = useTranslations("notification.unsubscribe");
+  const tActions = useTranslations("common.actions");
   const query = useGetMailUnsubscribe(
     { t: token ?? "" },
     { query: { enabled: Boolean(token) } }
@@ -55,11 +50,8 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
 
   if (!token || errorCodeOf(query.error) === "UNSUBSCRIBE_LINK_INVALID") {
     return (
-      <Card title="유효하지 않은 링크입니다">
-        <p>
-          링크가 잘렸거나 더 이상 쓸 수 없습니다. 받은 메일의 링크를 다시 열어
-          주세요.
-        </p>
+      <Card title={t("invalidTitle")}>
+        <p>{t("invalidBody")}</p>
         <Footer>
           <HomeLink />
         </Footer>
@@ -69,8 +61,8 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
 
   if (query.isError) {
     return (
-      <Card title="링크를 확인하지 못했습니다">
-        <p>{errorMessageOf(query.error, "잠시 후 다시 시도해 주세요.")}</p>
+      <Card title={t("checkFailed")}>
+        <p>{errorMessageOf(query.error, t("retryLater"))}</p>
         <Footer>
           <Button
             type="button"
@@ -78,7 +70,7 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
             loading={query.isFetching}
             onClick={() => void query.refetch()}
           >
-            다시 시도
+            {tActions("retry")}
           </Button>
         </Footer>
       </Card>
@@ -90,14 +82,15 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
       ? query.data.data.data
       : null;
   const kind = mailKindOf(info?.kind);
-  const mail = MAILS[kind];
+  const items = MAIL_ITEMS[kind];
+  const name = t(`names.${kind}`);
 
   if (done) {
     return (
       <ResubscribeCard
         token={token}
         kind={kind}
-        title={`${mail.name}을 껐습니다`}
+        title={t("off", { name })}
       />
     );
   }
@@ -106,40 +99,42 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
       <ResubscribeCard
         token={token}
         kind={kind}
-        title={`${mail.name}은 이미 꺼져 있습니다`}
+        title={t("alreadyOff", { name })}
       />
     );
   }
 
   return (
-    <Card title={`${mail.name}을 받지 않을까요?`}>
+    <Card title={t("confirm", { name })}>
       <p>
-        {info ? (
-          <span className="font-medium text-[var(--el-ink)]">{info.email}</span>
-        ) : (
-          <Skeleton
-            aria-label="계정 이메일 불러오는 중"
-            className="inline-block h-4 w-36 translate-y-0.5 rounded-chip"
-          />
-        )}{" "}
-        계정으로 오는 아래 {mail.items.length === 1 ? "" : "두 "}메일을 더 이상
-        보내지 않습니다.
+        {t.rich("body", {
+          count: items.length,
+          email: () =>
+            info ? (
+              <span className="font-medium text-[var(--el-ink)]">{info.email}</span>
+            ) : (
+              <Skeleton
+                aria-label={t("loadingEmail")}
+                className="inline-block h-4 w-36 translate-y-0.5 rounded-chip"
+              />
+            ),
+        })}
       </p>
       <ul className="mt-3 list-disc space-y-1 pl-5">
-        {mail.items.map((item) => (
-          <li key={item}>{item}</li>
+        {items.map((item) => (
+          <li key={item}>{t(`items.${item}`)}</li>
         ))}
       </ul>
       <p className="mt-3">
         {/* 자동 종료가 실제로 돌 때만 고지한다(PRO-67 userflow). 판정은 서버가 싣는다(APP-1328) */}
         {kind === "MEETING_PAUSED_REMINDER" && info?.autoEndActive
-          ? "메일을 꺼도 일시정지된 회의는 일정대로 자동 종료됩니다. "
+          ? `${t("autoEndNote")} `
           : null}
-        초대 등 다른 메일은 그대로 받습니다.
+        {t("otherMail")}
       </p>
       <Footer>
         <LinkButton href="/" variant="outline" size="lg">
-          취소
+          {tActions("cancel")}
         </LinkButton>
         <Button
           type="button"
@@ -157,7 +152,7 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
               .catch(() => {})
           }
         >
-          메일 끄기
+          {t("turnOff")}
         </Button>
       </Footer>
     </Card>
@@ -173,12 +168,13 @@ function ResubscribeCard({
   kind: MailKind;
   title: string;
 }) {
+  const t = useTranslations("notification.unsubscribe");
   const { status } = useAuth();
   const resubscribe = useUpdateNotificationPreference();
   const [resubscribed, setResubscribed] = useState(false);
 
   if (resubscribed) {
-    return <Card title={`${MAILS[kind].name}을 다시 켰습니다`} />;
+    return <Card title={t("resubscribed", { name: t(`names.${kind}`) })} />;
   }
 
   return (
@@ -218,7 +214,7 @@ function ResubscribeCard({
                 .catch(() => {});
             }}
           >
-            다시 켜기
+            {t("turnOn")}
           </Button>
         </InAppLoginGate>
       </Footer>
@@ -255,9 +251,10 @@ function Footer({ children }: { children: React.ReactNode }) {
 }
 
 function HomeLink() {
+  const t = useTranslations("common.error");
   return (
     <LinkButton href="/" variant="outline" size="lg">
-      홈으로
+      {t("home")}
     </LinkButton>
   );
 }

@@ -194,7 +194,7 @@ describe("WorkspaceIntegrationsSettings", () => {
     renderPanel();
     expect(screen.queryByRole("button", { name: "연결" })).toBeNull();
     expect(screen.queryByRole("button", { name: "연결 해제" })).toBeNull();
-    expect(screen.getByText(/관리자만 할 수 있습니다/)).toBeTruthy();
+    expect(screen.getByText(/관리자만 연동을 연결하거나 해제할 수 있습니다/)).toBeTruthy();
   });
 
   it("역할이 아직 안 정해졌으면(멤버 로딩) 버튼을 그리지 않는다", () => {
@@ -204,7 +204,7 @@ describe("WorkspaceIntegrationsSettings", () => {
     expect(screen.queryByRole("button", { name: "연결" })).toBeNull();
     expect(screen.queryByRole("button", { name: "연결 해제" })).toBeNull();
     // 안내 Alert도 아직 안 뜬다(역할 불명).
-    expect(screen.queryByText(/관리자만 할 수 있습니다/)).toBeNull();
+    expect(screen.queryByText(/관리자만 연동을 연결하거나 해제할 수 있습니다/)).toBeNull();
   });
 
   it("역할 조회가 실패하면 조작을 숨기고 사유·재시도를 보인다", () => {
@@ -215,7 +215,7 @@ describe("WorkspaceIntegrationsSettings", () => {
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "연결 해제" })).toBeNull();
     // 관리자 안내(MEMBER용)도 뜨지 않는다(역할 불명).
-    expect(screen.queryByText(/관리자만 할 수 있습니다/)).toBeNull();
+    expect(screen.queryByText(/관리자만 연동을 연결하거나 해제할 수 있습니다/)).toBeNull();
   });
 
   it("목록 로딩 중엔 스켈레톤을 보인다", () => {

@@ -2,6 +2,7 @@
 
 import { track } from "@/lib/analytics/track";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, CornerDownRight } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
@@ -10,7 +11,7 @@ import { EdgeButtons } from "@/components/projects/agenda-edge-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RISE, SWAP_MS, reducedMotion, swapIn } from "@/components/projects/agenda-ribbon-motion";
-import { summaryHref } from "@/components/projects/agenda-map-panel";
+import { MEMBER_KEY, summaryHref } from "@/components/projects/agenda-map-panel";
 import { useDragPan } from "@/components/projects/use-drag-pan";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -102,6 +103,7 @@ function FocusGone({ onBack }: { onBack: () => void }) {
 }
 
 function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, onPick, topic }: Props & { topic: NonNullable<ReturnType<TopicIndex["topics"]["get"]>> }) {
+  const t = useTranslations("workspace.agendaMap");
   const layout = useMemo(() => focusLayout(map, topic), [map, topic]);
   const ribbon = useMemo(() => ribbonLayout(map, rows), [map, rows]);
   const neighbors = useMemo(() => neighborsOf(index, map, topicId), [index, map, topicId]);
@@ -154,7 +156,7 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
         <div className="flex items-center gap-2.5">
           <Button type="button" variant="outline" size="sm" onClick={onBack} className="rounded-full text-[13px]">
             <ArrowLeft aria-hidden data-icon="inline-start" />
-            전체 지도
+            {t("focus.back")}
           </Button>
           <Badge render={<kbd />} variant="outline" className="bg-[var(--el-surface-card)] font-normal text-[var(--el-muted)]">
             esc
@@ -179,19 +181,20 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
             {topic.title}
           </h3>
           <p className="mt-1 text-[13px] text-[var(--el-muted)] tabular-nums">
-            안건 {topic.agendas.length}개 · 회의 {topic.noteIds.size}개 · {dateOf(first.noteId)} → {dateOf(last.noteId)}
-            {topic.branches > 0 ? ` · 갈래 ${topic.branches}` : ""}
+            {t("flow.meta", { agendas: topic.agendas.length, meetings: topic.noteIds.size })} · {dateOf(first.noteId)} →{" "}
+            {dateOf(last.noteId)}
+            {topic.branches > 0 ? ` · ${t("flow.branches", { count: topic.branches })}` : ""}
           </p>
         </div>
 
         {layout.branches.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs text-[var(--el-muted)]">갈래 {layout.branches.length}</span>
+            <span className="mr-1 text-xs text-[var(--el-muted)]">{t("flow.branches", { count: layout.branches.length })}</span>
             {(moreBranches ? layout.branches : layout.branches.slice(0, BRANCH_LIMIT)).map((branch, at) => (
               <Badge
                 key={branch.rowId}
                 variant="outline"
-                render={<button type="button" title={`${branch.fork.title} 에서 갈라진 갈래로 이동`} onClick={() => timelineRef.current?.reveal(branch.first.agendaId)} />}
+                render={<button type="button" title={t("focus.goToBranch", { title: branch.fork.title })} onClick={() => timelineRef.current?.reveal(branch.first.agendaId)} />}
                 className={CHIP + " border-dashed"}
               >
                 <CornerDownRight aria-hidden className="size-3 shrink-0 text-[var(--el-muted)]" />
@@ -199,7 +202,7 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
                   {dateOf(branch.first.noteId)}
                 </span>
                 <span className="truncate">{branch.first.title}</span>
-                <span className="sr-only">{at + 1}번째 갈래</span>
+                <span className="sr-only">{t("focus.branchOrdinal", { n: at + 1 })}</span>
               </Badge>
             ))}
             {layout.branches.length > BRANCH_LIMIT ? (
@@ -208,7 +211,7 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
                 onClick={() => setMoreBranches((open) => !open)}
                 className="h-7 rounded-full px-2 text-xs text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
               >
-                {moreBranches ? "접기" : `${layout.branches.length - BRANCH_LIMIT}개 더`}
+                {moreBranches ? t("focus.collapse") : t("focus.showMoreCount", { count: layout.branches.length - BRANCH_LIMIT })}
               </button>
             ) : null}
           </div>
@@ -216,7 +219,7 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
 
         {neighbors.length > 0 ? (
           <div data-chips="" className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs text-[var(--el-muted)]">같은 회의에서 만난 줄기</span>
+            <span className="mr-1 text-xs text-[var(--el-muted)]">{t("focus.neighbors")}</span>
             {shownNeighbors.map(({ topic: other, noteIds }) => (
               <Badge
                 key={other.id}
@@ -224,7 +227,7 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
                 render={
                   <button
                     type="button"
-                    title={`${other.title} · ${noteIds.map(dateOf).join(", ")} 회의에서 함께`}
+                    title={t("focus.neighborTitle", { title: other.title, dates: noteIds.map(dateOf).join(", ") })}
                     onClick={() => {
                       // 눌러서 줄기를 옮겨도 이 칩 줄이 화면에서 밀려 가지 않게, 옮기기 전 자리를 기억해 둔다
                       const block = stageRef.current?.querySelector("[data-chips]");
@@ -238,7 +241,7 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
                 <span className="truncate font-medium text-[var(--el-ink)]">{other.title}</span>
                 <span className="shrink-0 text-xs text-[var(--el-muted)] tabular-nums">
                   {dateOf(noteIds[0])}
-                  {noteIds.length > 1 ? ` 외 ${noteIds.length - 1}` : ""}
+                  {noteIds.length > 1 ? ` ${t("more", { count: noteIds.length - 1 })}` : ""}
                 </span>
               </Badge>
             ))}
@@ -248,7 +251,7 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
                 onClick={() => setMoreNeighbors((open) => !open)}
                 className="h-7 rounded-full px-2 text-xs text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
               >
-                {moreNeighbors ? "접기" : `${neighbors.length - NEIGHBOR_LIMIT}개 더`}
+                {moreNeighbors ? t("focus.collapse") : t("focus.showMoreCount", { count: neighbors.length - NEIGHBOR_LIMIT })}
               </button>
             ) : null}
           </div>
@@ -288,6 +291,7 @@ function GhostStrip({
   neighbors: ReadonlySet<string>;
   onPick: (topicId: string) => void;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [hover, setHover] = useState<string | null>(null);
@@ -318,7 +322,7 @@ function GhostStrip({
   return (
     <div ref={wrapRef} className="relative">
       {width > 0 ? (
-        <svg aria-label="전체 지도 윤곽" role="group" width={width} height={height} className="block">
+        <svg aria-label={t("focus.outline")} role="group" width={width} height={height} className="block">
           {layout.topics.map((topic) => {
             const state = topic.id === active || topic.id === hover ? "on" : "off";
             const color = state === "on" ? ACCENT : "var(--el-muted)";
@@ -330,7 +334,7 @@ function GhostStrip({
                 data-topic={topic.id}
                 role="button"
                 tabIndex={topic.id === active ? 0 : -1}
-                aria-label={`${topic.name}. 눌러서 이 줄기로 옮기기`}
+                aria-label={t("focus.switchTopic", { name: topic.name })}
                 onPointerEnter={() => setHover(topic.id)}
                 onPointerLeave={() => setHover(null)}
                 onClick={() => onPick(topic.id)}
@@ -407,6 +411,7 @@ function FocusTimeline({
   agendaId?: string;
   meetingOf: Map<string, AgendaMap["meetings"][number]>;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const scrollRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
@@ -608,9 +613,9 @@ function FocusTimeline({
                   className="pointer-events-auto sticky left-3 h-6 cursor-pointer gap-1.5 border-dashed bg-[var(--el-surface-card)] font-normal text-[var(--el-ink)] hover:border-[var(--el-scope-project)] hover:shadow-[0_0_0_1px_var(--el-scope-project)]"
                 >
                   <CornerDownRight aria-hidden className="size-3 text-[var(--el-muted)]" />
-                  갈래{here.length > 1 ? ` ${here.length}개` : ""}
+                  {t("focus.branchTag", { count: here.length })}
                   <span className="text-[var(--el-muted)] tabular-nums">
-                    {shortMeetingDate(meetingOf.get(here[0].first.noteId)!.startedAt)} 부터
+                    {t("focus.since", { date: shortMeetingDate(meetingOf.get(here[0].first.noteId)!.startedAt) })}
                   </span>
                 </Badge>
               </div>
@@ -660,12 +665,6 @@ function dateLabel(map: AgendaMap, agenda: MapAgenda) {
     : `${year}.${shortMeetingDate(meeting.startedAt)}`;
 }
 
-const MEMBER_NAME: Record<string, string> = {
-  DECISION: "결정",
-  ACTION_ITEM: "할 일",
-  ISSUE: "이슈",
-  QUESTION: "질문",
-};
 
 /** 안건 카드. 날짜 · 회의명 · 제목 · 한 줄 요약 · 결정/할 일 수 · 회의록 링크 */
 function AgendaCard({
@@ -681,11 +680,12 @@ function AgendaCard({
   dateLabel: string;
   picked: boolean;
 }) {
+  const t = useTranslations("workspace.agendaMap");
   const query = useGetMeetingReviewSummary(agenda.noteId);
   const item = okData(query.data)?.agendas.find((candidate) => candidate.agendaId === agenda.agendaId);
   const counts = Object.entries(
     (item?.members ?? []).reduce<Record<string, number>>((acc, member) => {
-      if (MEMBER_NAME[member.kind]) acc[member.kind] = (acc[member.kind] ?? 0) + 1;
+      if (MEMBER_KEY[member.kind]) acc[member.kind] = (acc[member.kind] ?? 0) + 1;
       return acc;
     }, {})
   );
@@ -702,27 +702,27 @@ function AgendaCard({
         <span className="font-semibold text-[var(--el-ink)] tabular-nums">{dateLabel}</span>
         <span className="min-w-0 truncate text-[var(--el-muted)]">{meetingHeading(meetingTitle)}</span>
         <Badge variant={agenda.completed ? "secondary" : "outline"} className="ml-auto">
-          {agenda.completed ? "완료" : "미완료"}
+          {agenda.completed ? t("completed") : t("notCompleted")}
         </Badge>
       </p>
       <h4 className="mt-2 line-clamp-2 text-[14px] leading-5 font-semibold text-[var(--el-ink)]">{agenda.title}</h4>
       {query.isLoading ? (
-        <div aria-label="안건 내용을 불러오는 중" className="mt-2 flex flex-col gap-1.5">
+        <div aria-label={t("detail.loading")} className="mt-2 flex flex-col gap-1.5">
           <Skeleton className="h-3.5 w-full" />
           <Skeleton className="h-3.5 w-11/12" />
           <Skeleton className="h-3.5 w-2/5" />
         </div>
       ) : query.isError ? (
-        <InlineRetry className="mt-2" label="내용을 불러오지 못했습니다" onRetry={() => void query.refetch()} />
+        <InlineRetry className="mt-2" label={t("detail.loadFailedShort")} onRetry={() => void query.refetch()} />
       ) : item?.summary ? (
         <p className="mt-1.5 line-clamp-2 text-[13px] leading-[18px] text-[var(--el-body)]">{item.summary}</p>
       ) : (
-        <p className="mt-1.5 text-xs text-[var(--el-muted)]">이 안건은 정리된 내용이 없습니다.</p>
+        <p className="mt-1.5 text-xs text-[var(--el-muted)]">{t("detail.empty")}</p>
       )}
       <div className="mt-auto flex flex-col gap-1.5">
         {counts.length > 0 ? (
           <p className="text-xs text-[var(--el-muted)] tabular-nums">
-            {counts.map(([kind, n]) => `${MEMBER_NAME[kind]} ${n}`).join(" · ")}
+            {counts.map(([kind, n]) => t(`members.${MEMBER_KEY[kind]}`, { count: n })).join(" · ")}
           </p>
         ) : null}
         <Link
@@ -730,7 +730,7 @@ function AgendaCard({
           onClick={() => track("agenda_map_note_opened", { workspace_id: workspaceId, surface: "focus" })}
           className="inline-flex items-center gap-1 self-start text-xs text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
         >
-          회의록에서 보기
+          {t("viewInNotes")}
           <ArrowUpRight aria-hidden className="size-3.5" />
         </Link>
       </div>

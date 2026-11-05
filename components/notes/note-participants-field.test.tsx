@@ -418,7 +418,7 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     await screen.findAllByRole("option");
-    expect(screen.getByText("워크스페이스에 없음")).toBeInTheDocument();
+    expect(screen.getByText("워크스페이스에 없는 사람")).toBeInTheDocument();
   });
 
   it("떠난 참여자를 뺄 수 있다", async () => {
@@ -810,7 +810,7 @@ describe("NoteParticipantsField", () => {
     const input = await screen.findByRole("combobox", { name: /참여자 검색/ });
     expect(input).toHaveAttribute(
       "placeholder",
-      "이름으로 검색 또는 외부인 추가"
+      "이름 검색 또는 임시 참여자 추가"
     );
   });
 
@@ -826,7 +826,7 @@ describe("NoteParticipantsField", () => {
     );
 
     expect(
-      screen.getByText("계정 없이 이 회의의 외부인으로 추가됩니다.")
+      screen.getByText("계정 없이 이 회의의 임시 참여자로 추가합니다.")
     ).toBeInTheDocument();
   });
 

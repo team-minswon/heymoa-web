@@ -3,15 +3,19 @@
 import { helpPathById } from "@/app/[lang]/help/_content/path-by-id";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { openSitePage } from "@/lib/desktop/open-site-page";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
+import { localePath } from "@/lib/i18n/locales";
 
 const RECORDING_ERROR_TOAST_ID = "recording-error";
 
 export function RecordingErrorToast() {
+  const t = useTranslations("recording.errorToast");
+  const locale = useLocale();
   const { error } = useRecording();
   const router = useRouter();
   const isDesktopApp = useDesktopApp();
@@ -30,17 +34,20 @@ export function RecordingErrorToast() {
       duration: Infinity,
       // 권한 거부처럼 브라우저 설정을 바꿔야 풀리는 사유가 많다. 어디를 고치는지는 도움말에 있다.
       action: {
-        label: "해결 방법",
+        label: t("help"),
         onClick: () =>
           openSitePage(
-            isDesktopApp
-              ? `${helpPathById("desktop")}#first-run`
-              : helpPathById("troubleshooting"),
+            localePath(
+              locale,
+              isDesktopApp
+                ? `${helpPathById("desktop")}#first-run`
+                : helpPathById("troubleshooting")
+            ),
             router.push
           ),
       },
     });
-  }, [error, router, isDesktopApp]);
+  }, [error, router, isDesktopApp, t, locale]);
 
   return null;
 }

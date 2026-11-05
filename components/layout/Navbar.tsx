@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { toast } from "@/lib/ui/toast";
 
@@ -18,6 +19,8 @@ import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations("shell.navbar");
+  const tActions = useTranslations("common.actions");
   const { status, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces({
     query: { enabled: status === "authenticated", staleTime: 5 * 60 * 1000 },
@@ -46,15 +49,15 @@ export function Navbar() {
   useEffect(() => {
     if (!isWorkspacesError) return;
 
-    toast.error("대시보드를 불러오지 못했습니다.", {
+    toast.error(t("loadFailed"), {
       id: "navbar-workspaces",
-      description: "잠시 후 다시 확인해 주세요.",
+      description: t("loadFailedDescription"),
       action: {
-        label: "다시 시도",
+        label: tActions("retry"),
         onClick: () => void refetchWorkspaces(),
       },
     });
-  }, [isWorkspacesError, refetchWorkspaces]);
+  }, [isWorkspacesError, refetchWorkspaces, t, tActions]);
 
   // `/` 는 `NavbarGate` 가 랜딩 상단 바를 세워 여기 오지 않는다 — 구간 링크는 늘 랜딩으로 이동한다.
   const handleScroll = (id: string) => {
@@ -92,13 +95,13 @@ export function Navbar() {
             onClick={() => handleScroll("meetings")}
             className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
-            회의 정리
+            {t("sections.meetings")}
           </button>
           <button
             onClick={() => handleScroll("evidence")}
             className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
-            근거 확인
+            {t("sections.evidence")}
           </button>
         </nav>
 
@@ -113,12 +116,12 @@ export function Navbar() {
                   variant="outline"
                   size="xl"
                   loading={isLoggingOut}
-                  aria-label="로그아웃"
+                  aria-label={t("logout")}
                   onClick={() => void logout()}
                   className="rounded-full px-3 sm:px-4"
                 >
                   <LogOut className="size-4" />
-                  <span className="hidden sm:inline">로그아웃</span>
+                  <span className="hidden sm:inline">{t("logout")}</span>
                 </Button>
                 {dashboardHref ? (
                   <LinkButton
@@ -126,8 +129,8 @@ export function Navbar() {
                     size="xl"
                     className="rounded-full bg-[var(--el-primary)] px-4 text-white hover:bg-[var(--el-primary-active)] sm:px-5 sm:text-[15px]"
                   >
-                    <span className="sm:hidden">대시보드</span>
-                    <span className="hidden sm:inline">대시보드로 이동</span>
+                    <span className="sm:hidden">{t("dashboardShort")}</span>
+                    <span className="hidden sm:inline">{t("dashboard")}</span>
                   </LinkButton>
                 ) : isWorkspacesPending ? (
                   // children이 위 확정 버튼과 같아야 폭이 안 튄다. `min-w-24 sm:min-w-36`으로
@@ -140,8 +143,8 @@ export function Navbar() {
                     disabled
                     className="rounded-full px-4 sm:px-5 sm:text-[15px]"
                   >
-                    <span className="sm:hidden">대시보드</span>
-                    <span className="hidden sm:inline">대시보드로 이동</span>
+                    <span className="sm:hidden">{t("dashboardShort")}</span>
+                    <span className="hidden sm:inline">{t("dashboard")}</span>
                   </Button>
                 ) : isWorkspacesError ? (
                   <Button
@@ -149,11 +152,11 @@ export function Navbar() {
                     size="xl"
                     loading={isFetchingWorkspaces}
                     disabled={isFetchingWorkspaces}
-                    aria-label="대시보드 다시 시도"
+                    aria-label={t("retryLabel")}
                     onClick={() => void refetchWorkspaces()}
                     className="min-w-24 rounded-full px-4 sm:min-w-36 sm:px-5"
                   >
-                    다시 시도
+                    {tActions("retry")}
                   </Button>
                 ) : null}
               </div>
@@ -166,7 +169,7 @@ export function Navbar() {
                   size="xl"
                   className="hidden rounded-full bg-[var(--el-primary)] px-5 text-[15px] text-white hover:bg-[var(--el-primary-active)] sm:inline-flex"
                 >
-                  시작하기
+                  {t("start")}
                 </Button>
               </AuthModal>
             ))}

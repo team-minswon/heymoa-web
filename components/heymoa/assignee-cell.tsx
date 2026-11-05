@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
@@ -29,8 +30,15 @@ import { cn } from "@/lib/utils";
 export const QUIET_EMPTY =
   "transition-opacity duration-150 ease-out motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100";
 
-export function choiceName(choice: AssigneeChoice) {
-  return choice.type === "SPEAKER_LABEL" ? `화자 ${choice.label}` : choice.name;
+/** 담당 이름. 이름 없는 화자는 「화자 A」처럼 화면 언어로 부른다. */
+function useAssigneeNames() {
+  const t = useTranslations("common.assigneeCell");
+  const speakerName = (label: string) => t("speaker", { label });
+  return {
+    describe: (value: AssigneeValue | null | undefined) => describeAssignee(value, speakerName),
+    choiceName: (choice: AssigneeChoice) =>
+      choice.type === "SPEAKER_LABEL" ? speakerName(choice.label) : choice.name,
+  };
 }
 
 /** 담당 한 사람. 이름 없는 화자는 점 하나로 「아직 누구인지 모른다」를 붙인다. */
@@ -50,7 +58,8 @@ export function AssigneeFace({
    */
   image?: string | null;
 }) {
-  const view = describeAssignee(value);
+  const t = useTranslations("common.assigneeCell");
+  const view = useAssigneeNames().describe(value);
   if (!view) {
     if (quiet && placeholder) {
       // 빈 얼굴 자리(점선 원)가 「사람이 들어갈 칸」을 말하고, 글은 줄을 가리킬 때만 선다.
@@ -76,7 +85,7 @@ export function AssigneeFace({
       </span>
       {view.unnamed ? (
         <span
-          aria-label="이름 없는 화자"
+          aria-label={t("unnamedSpeaker")}
           className="size-[5px] shrink-0 rounded-full bg-[var(--el-muted-soft)]"
         />
       ) : null}
@@ -92,8 +101,7 @@ export function AssigneeCell({
   value,
   choices,
   editable = false,
-  placeholder = "담당 정하기",
-  label = "담당",
+  placeholder,
   quiet = false,
   onChange,
   className,
@@ -102,13 +110,15 @@ export function AssigneeCell({
   choices: AssigneeChoice[];
   editable?: boolean;
   placeholder?: string;
-  label?: string;
   /** 표 안의 칸이면 빈 값을 점선 원으로만 두고 글은 줄을 가리킬 때 세운다([QUIET_EMPTY]) */
   quiet?: boolean;
   onChange?: (next: AssigneeChoice | null) => void;
   className?: string;
 }) {
+  const t = useTranslations("common.assigneeCell");
+  const names = useAssigneeNames();
   const [open, setOpen] = useState(false);
+  const empty = placeholder ?? t("placeholder");
   const selectedImage = assigneeImageOf(choices, value);
 
   if (!editable) {
@@ -120,14 +130,14 @@ export function AssigneeCell({
   }
 
   const current = assigneeKey(value);
-  const view = describeAssignee(value);
+  const view = names.describe(value);
 
   return (
     <Combobox
       items={choices}
       open={open}
       onOpenChange={setOpen}
-      itemToStringLabel={choiceName}
+      itemToStringLabel={names.choiceName}
       onValueChange={(choice: AssigneeChoice | null) => {
         if (choice) onChange?.(choice);
         setOpen(false);
@@ -137,20 +147,20 @@ export function AssigneeCell({
         render={
           <button
             type="button"
-            aria-label={view ? `${label} ${view.name} 바꾸기` : placeholder}
+            aria-label={view ? t("change", { name: view.name }) : empty}
             className={cn(
               // 좁은 화면은 손가락으로 누르므로 칸을 키운다. 넓은 화면은 표의 줄 높이에 맞춘다.
               "-mx-1.5 inline-flex h-9 min-w-0 items-center rounded-control px-1.5 hover:bg-[var(--el-surface-strong)] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)] sm:h-7 [&>svg]:hidden",
               className
             )}
           >
-            <AssigneeFace value={value} placeholder={placeholder} image={selectedImage} quiet={quiet} />
+            <AssigneeFace value={value} placeholder={empty} image={selectedImage} quiet={quiet} />
           </button>
         }
       />
       <ComboboxContent align="start" className="w-60">
-        <ComboboxInput aria-label="이름으로 찾기" placeholder="이름으로 찾기" showTrigger={false} />
-        <ComboboxEmpty>맞는 사람이 없습니다.</ComboboxEmpty>
+        <ComboboxInput aria-label={t("search")} placeholder={t("search")} showTrigger={false} />
+        <ComboboxEmpty>{t("noMatch")}</ComboboxEmpty>
         <ComboboxList>
           {(choice: AssigneeChoice) => (
             <ComboboxItem
@@ -172,7 +182,7 @@ export function AssigneeCell({
                 setOpen(false);
               }}
             >
-              담당 비우기
+              {t("clear")}
             </button>
           </div>
         ) : null}

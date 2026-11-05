@@ -4,7 +4,7 @@ description: Where to find the sidebar, projects, the note list, and the setting
 group: start
 slug: workspace-basics
 order: 2
-modified: 2026-10-29
+modified: 2026-11-05
 ---
 
 ## Sidebar {#sidebar}
@@ -39,10 +39,10 @@ Meetings are grouped by the date they started, newest first. Each row shows:
 
 Click a note row to open it in side view (a panel that shows the note beside the list). From **[⋯]** at the end of the row, you can open it in **[Full screen]**. Admins also see **[Delete]**.
 
-To load older meetings, click **[Show older notes]** at the bottom of the list.
+To load older meetings, click **[Show earlier notes]** at the bottom of the list.
 
 > [!Can't be undone]
-> ==Deleting a note permanently removes the meeting's recording, transcript, summary, and evidence.== Decisions and tasks you've already confirmed stay. Agent conversations that asked only about this note are deleted too. Only admins can delete notes. Deleting a meeting that is recording also ends the recording. While a meeting is being analyzed, you can delete it once the analysis finishes.
+> ==Deleting a note permanently removes the meeting's recording, transcript, summary, and evidence.== Decisions and tasks you've already confirmed stay. Agent chats that asked only about this note are deleted too. Only admins can delete notes. Deleting a meeting that is recording also ends the recording. While a meeting is being analyzed, you can delete it once the analysis finishes.
 
 ## Reading a note {#note-view}
 
@@ -50,7 +50,7 @@ A note has **[Details]**, **[Transcript]**, **[Timeline]**, and **[Summary]** ta
 
 Use the full screen icon at the top to switch between side view and full screen. Click **[Back to list]** to return to the note list. The view is saved in the address (`?view=`), so a shared link opens in the same view.
 
-In the **[Details]** tab, you can edit the title. Titles can be up to 200 characters. Click **[Save changes]** when you're done. **[Meeting info]** at the bottom shows the host, total recording time, who can see the note (workspace members), when it was created, and when it was last edited.
+In the **[Details]** tab, you can edit the title. Titles can be up to 200 characters. Click **[Save changes]** when you're done. **[Meeting details]** at the bottom shows the host, the recording duration, who can see the note (workspace members), when it was created, and when it was last edited.
 
 > [!Note]
 > Any workspace member can view, record, end, and edit a note. Only deleting a note is limited to admins.
@@ -64,7 +64,7 @@ The left side of the window has two groups.
 
 | Group | What's in it |
 |---|---|
-| **[Workspace]** | **[General]**, **[Members]**, **[Guest participants]**, **[Glossary]**, **[Integrations]**, **[MCP connections]** |
+| **[Workspace]** | **[General]**, **[Members]**, **[Guest participants]**, **[Custom vocabulary]**, **[Integrations]**, **[MCP connections]** |
 | **[Account]** | **[My account]**, **[Notifications]**, **[My MCP connections]** |
 
 In **[General]**, you edit the workspace name and description. Only admins can do this.

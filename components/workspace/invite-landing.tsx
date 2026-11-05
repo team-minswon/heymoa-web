@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Home, LogIn, MailCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
@@ -14,28 +15,13 @@ import { CenteredCard } from "@/components/layout/centered-card";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
 import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 
-const ERROR_COPY: Record<string, { title: string; description: string }> = {
-  INVITATION_NOT_FOUND: {
-    title: "유효하지 않은 초대 링크입니다",
-    description:
-      "링크가 잘못되었거나 삭제된 초대입니다. 초대 메일의 링크를 다시 확인해 주세요.",
-  },
-  INVITATION_EXPIRED: {
-    title: "초대가 만료되었습니다",
-    description:
-      "초대 링크는 1일 동안만 유효합니다. 워크스페이스 관리자에게 다시 초대를 요청해 주세요.",
-  },
-  INVITATION_NOT_PENDING: {
-    title: "이미 처리된 초대입니다",
-    description:
-      "이 초대는 이미 수락되었거나 취소되었습니다. 관리자에게 새 초대를 요청해 주세요.",
-  },
-  INVITATION_EMAIL_MISMATCH: {
-    title: "이 초대는 다른 이메일 계정용입니다",
-    description:
-      "초대받은 이메일과 지금 로그인한 계정이 다릅니다. 초대받은 계정으로 다시 로그인해 주세요.",
-  },
-};
+/** 초대 수락 실패 코드 → `workspace.invite.errors` 키. */
+const ERROR_KEY = {
+  INVITATION_NOT_FOUND: "notFound",
+  INVITATION_EXPIRED: "expired",
+  INVITATION_NOT_PENDING: "notPending",
+  INVITATION_EMAIL_MISMATCH: "emailMismatch",
+} as const;
 
 /**
  * 초대 이메일 링크의 목적지. 로그인돼 있으면 토큰으로 즉시 수락하고 워크스페이스로 이동한다 —
@@ -92,11 +78,12 @@ function InviteCard({
   status: "checking" | "authenticated" | "anonymous";
   error: unknown;
 }) {
+  const t = useTranslations("workspace.invite");
   if (!token) {
     return (
       <ErrorCard
-        title="유효하지 않은 초대 링크입니다"
-        description="링크가 잘못되었거나 잘려 있습니다. 초대 메일의 링크를 다시 확인해 주세요."
+        title={t("errors.notFound.title")}
+        description={t("missingToken")}
       />
     );
   }
@@ -105,10 +92,10 @@ function InviteCard({
     return (
       <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
         <h1 className="text-2xl font-light tracking-[-0.01em]">
-          워크스페이스 초대가 도착했어요
+          {t("anonymous.title")}
         </h1>
         <p className="mt-2 text-base text-[var(--el-muted)]">
-          로그인하면 초대를 수락하고 바로 워크스페이스에 합류합니다.
+          {t("anonymous.description")}
         </p>
         <InAppLoginGate returnTo={`/invite?token=${encodeURIComponent(token)}`}>
           <a
@@ -118,7 +105,7 @@ function InviteCard({
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
           >
             <LogIn className="size-4" aria-hidden />
-            Google로 계속하기
+            {t("anonymous.continueWithGoogle")}
           </a>
         </InAppLoginGate>
       </CenteredCard>
@@ -131,28 +118,32 @@ function InviteCard({
       return (
         <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
           <h1 className="text-2xl font-light tracking-[-0.01em]">
-            이미 이 워크스페이스의 멤버예요
+            {t("alreadyMember.title")}
           </h1>
           <p className="mt-2 text-base text-[var(--el-muted)]">
-            초대를 다시 수락할 필요가 없습니다. 워크스페이스에서 계속하세요.
+            {t("alreadyMember.description")}
           </p>
           <Link
             href="/"
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
           >
             <Home className="size-4" aria-hidden />
-            홈으로
+            {t("home")}
           </Link>
         </CenteredCard>
       );
     }
-    const copy = code ? ERROR_COPY[code] : undefined;
+    const key =
+      code && code in ERROR_KEY
+        ? ERROR_KEY[code as keyof typeof ERROR_KEY]
+        : undefined;
     return (
       <ErrorCard
-        title={copy?.title ?? "초대를 수락하지 못했습니다"}
+        title={key ? t(`errors.${key}.title`) : t("acceptFailed.title")}
         description={
-          copy?.description ??
-          errorMessageOf(error, "잠시 후 다시 시도해 주세요.")
+          key
+            ? t(`errors.${key}.description`)
+            : errorMessageOf(error, t("acceptFailed.description"))
         }
       />
     );
@@ -162,10 +153,10 @@ function InviteCard({
   return (
     <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
       <h1 className="text-2xl font-light tracking-[-0.01em]">
-        초대를 확인하고 있어요
+        {t("checking.title")}
       </h1>
       <p className="mt-2 text-base text-[var(--el-muted)]">
-        잠시만요 — 수락이 끝나면 워크스페이스로 이동합니다.
+        {t("checking.description")}
       </p>
     </CenteredCard>
   );
@@ -178,6 +169,7 @@ function ErrorCard({
   title: string;
   description: string;
 }) {
+  const t = useTranslations("workspace.invite");
   return (
     <CenteredCard icon={<AlertTriangle className="size-5" aria-hidden />}>
       <h1 className="text-2xl font-light tracking-[-0.01em]">{title}</h1>
@@ -187,7 +179,7 @@ function ErrorCard({
         className="mt-6 inline-flex items-center gap-2 rounded-full border border-[var(--el-hairline)] px-7 py-3.5 text-base font-medium"
       >
         <Home className="size-4" aria-hidden />
-        홈으로
+        {t("home")}
       </Link>
     </CenteredCard>
   );

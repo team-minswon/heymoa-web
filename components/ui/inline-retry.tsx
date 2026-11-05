@@ -1,4 +1,5 @@
 import { AlertTriangle, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,7 @@ import { cn } from "@/lib/utils";
  */
 export function InlineRetry({
   onRetry,
-  label = "불러오지 못했습니다",
+  label,
   variant = "block",
   className,
 }: {
@@ -18,15 +19,17 @@ export function InlineRetry({
   variant?: "block" | "line";
   className?: string;
 }) {
+  const t = useTranslations("common");
+  const text = label ?? t("loadFailed");
   if (variant === "line") {
     return (
       <p
         role="alert"
         className={cn("flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-[var(--el-ink)]", className)}
       >
-        {label}
+        {text}
         <Button variant="outline" size="sm" className="h-[26px]" onClick={onRetry}>
-          다시 시도
+          {t("actions.retry")}
         </Button>
       </p>
     );
@@ -41,10 +44,10 @@ export function InlineRetry({
       )}
     >
       <AlertTriangle className="size-5 text-[var(--el-error)]" />
-      <p className="text-sm text-[var(--el-muted)]">{label}</p>
+      <p className="text-sm text-[var(--el-muted)]">{text}</p>
       <Button variant="outline" size="sm" onClick={onRetry}>
         <RotateCcw className="size-4" />
-        다시 시도
+        {t("actions.retry")}
       </Button>
     </div>
   );

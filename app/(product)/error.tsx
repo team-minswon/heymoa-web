@@ -1,13 +1,22 @@
 "use client";
 
-import { ErrorView } from "@/components/layout/error-view";
+import { useLocale } from "next-intl";
 
-/** 제품 면은 한국어만이다(주소에 언어가 없다). */
+import { ErrorView } from "@/components/layout/error-view";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
+
+/** 제품 면 오류 경계. 루트 레이아웃 안이라 Provider 가 있고, 언어는 제품 루트가 정한 값이다(APP-1285). */
 export default function Error({
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorView locale="ko" reset={reset} />;
+  const locale = useLocale();
+  return (
+    <ErrorView
+      locale={isLocale(locale) ? locale : DEFAULT_LOCALE}
+      reset={reset}
+    />
+  );
 }

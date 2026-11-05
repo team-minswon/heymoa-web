@@ -10,6 +10,9 @@ import {
   toGapRows,
   type TranscriptGap,
 } from "@/lib/transcription/gaps";
+import { testAppT } from "@/components/help/test-intl";
+
+const t = testAppT();
 
 function gap(partial: Partial<TranscriptGap>): TranscriptGap {
   return {
@@ -142,19 +145,19 @@ describe("spansVisibleClockMinutes", () => {
 
 describe("formatGapDuration", () => {
   it("1분 미만은 길이를 안 쓴다 — 40초의 40이 뜻을 안 바꾼다", () => {
-    expect(formatGapDuration(16_000)).toBe("잠깐");
-    expect(formatGapDuration(59_000)).toBe("잠깐");
+    expect(formatGapDuration(16_000, t)).toBe("잠깐");
+    expect(formatGapDuration(59_000, t)).toBe("잠깐");
   });
 
   it("단위 하나만 반올림해서 쓴다", () => {
-    expect(formatGapDuration(588_000)).toBe("약 10분");
-    expect(formatGapDuration(9_000_000)).toBe("약 3시간");
-    expect(formatGapDuration(216_000_000)).toBe("약 3일");
+    expect(formatGapDuration(588_000, t)).toBe("약 10분");
+    expect(formatGapDuration(9_000_000, t)).toBe("약 3시간");
+    expect(formatGapDuration(216_000_000, t)).toBe("약 3일");
   });
 
   it("반올림한 뒤에 칸을 고른다 — 약 60분이 아니라 약 1시간이다", () => {
-    expect(formatGapDuration(3_580_000)).toBe("약 1시간");
-    expect(formatGapDuration(86_390_000)).toBe("약 1일");
+    expect(formatGapDuration(3_580_000, t)).toBe("약 1시간");
+    expect(formatGapDuration(86_390_000, t)).toBe("약 1일");
   });
 });
 
@@ -250,7 +253,19 @@ describe("전사 공백 줄 (APP-706)", () => {
   it("소리는 저장됐다고 말하고, 끝이 있는 구간이다", () => {
     const [row] = toGapRows([], [untranscribed("t1", 0, 90_000)]);
 
-    expect(gapHeadline(row)).toBe("약 2분 받아쓰지 못했어요 · 소리는 저장됨");
+    expect(gapHeadline(row, t)).toBe(
+      "약 2분 받아쓰지 못했습니다. 소리는 남아 있습니다."
+    );
     expect(isGapOpen(row)).toBe(false);
+  });
+
+  it("영어 화면의 복사본은 영어 줄이다", () => {
+    const [row] = toGapRows([], [untranscribed("t1", 0, 90_000)]);
+    expect(gapHeadline(row, testAppT("en"))).toBe(
+      "Couldn't transcribe for about 2 minutes. The audio is saved."
+    );
+    expect(formatGapDuration(9_000_000, testAppT("en"))).toBe(
+      "for about 3 hours"
+    );
   });
 });

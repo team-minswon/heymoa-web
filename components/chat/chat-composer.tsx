@@ -2,6 +2,7 @@
 
 import { useCallback, useId, useMemo, useState } from "react";
 import { ArrowUp, Square } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import { toast } from "@/lib/ui/toast";
@@ -53,6 +54,7 @@ export function ChatComposer({
   /** `@` 를 치기 시작했다. 부모가 이때 목록을 받아 온다. */
   onMentioningChange?: (mentioning: boolean) => void;
 }) {
+  const t = useTranslations("chat.composer");
   const pickerId = useId();
   const [query, setQuery] = useState<string | null>(null);
   // Escape 로 닫은 뒤에는 같은 `@` 로 다시 열지 않는다. 렌더가 읽는 값이라 ref 가 아니라 상태다.
@@ -101,9 +103,7 @@ export function ChatComposer({
             onPick={(candidate) => {
               // 스무 개를 다 붙인 뒤 서버에서 거절당하지 않게 상한에서 막고 이유를 말한다.
               if (taken.size >= MAX_SCOPE_ITEMS) {
-                toast.error(
-                  `범위는 ${MAX_SCOPE_ITEMS}개까지 붙일 수 있습니다.`
-                );
+                toast.error(t("scopeLimit", { max: MAX_SCOPE_ITEMS }));
                 setQuery(null);
                 return;
               }
@@ -152,7 +152,7 @@ export function ChatComposer({
             size="icon"
             variant="outline"
             className="size-9 shrink-0 rounded-full"
-            aria-label="중지"
+            aria-label={t("stop")}
             onClick={onStop}
           >
             <Square className="size-3.5" />
@@ -162,7 +162,7 @@ export function ChatComposer({
             type="submit"
             size="icon"
             className="size-9 shrink-0 rounded-full"
-            aria-label="보내기"
+            aria-label={t("send")}
             disabled={isBusy}
           >
             <ArrowUp className="size-4" />

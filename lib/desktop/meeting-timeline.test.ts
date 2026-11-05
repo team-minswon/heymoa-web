@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testAppT } from "@/components/help/test-intl";
 import { meetingTimelineSnapshot } from "./meeting-timeline";
 import { initialContextState } from "@/lib/notes/proposals/reducer";
 import type { ProposalHead } from "@/lib/notes/proposals/contract";
@@ -41,7 +42,8 @@ describe("meeting timeline display snapshot", () => {
           proposals.reverse().map((p) => [p.proposalId, p])
         ),
       },
-      { loading: false, failed: false, reconnecting: true }
+      { loading: false, failed: false, reconnecting: true },
+      (kind) => testAppT()(`notes.kinds.${kind}`)
     );
     expect(result.total).toBe(125);
     expect(result.items).toHaveLength(120);

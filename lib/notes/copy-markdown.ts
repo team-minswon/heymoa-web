@@ -3,7 +3,8 @@ import type {
   NoteResponseData,
 } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
-import { SECTION_LABELS, SECTION_ORDER } from "@/lib/notes/analysis-sections";
+import type { DocLanguage } from "@/lib/i18n/translator";
+import { SECTION_ORDER } from "@/lib/notes/analysis-sections";
 import { gapHeadline } from "@/lib/transcription/gaps";
 import {
   formatOffset,
@@ -53,37 +54,57 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
 /** 머리말에 이름으로 적는 참석자 수의 상한. 넘으면 「외 N명」으로 접는다 */
 const MAX_NAMED_PARTICIPANTS = 8;
 
-function participantsFact(meta: NoteMeta) {
+function participantsFact(meta: NoteMeta, { t }: DocLanguage) {
   const names = (meta.participantNames ?? [])
     .map((name) => name.trim())
     .filter(Boolean);
   if (names.length === 0) {
     return meta.participantCount > 0
-      ? `참석자 ${meta.participantCount}명`
+      ? t("dates.noteMeta.participants", { count: meta.participantCount })
       : null;
   }
   const shown = names.slice(0, MAX_NAMED_PARTICIPANTS).join(", ");
   const rest = names.length - MAX_NAMED_PARTICIPANTS;
-  return `참석자 ${shown}${rest > 0 ? ` 외 ${rest}명` : ""}`;
+  return rest > 0
+    ? t("dates.document.participantsMore", { names: shown, rest })
+    : t("dates.document.participantsNamed", { names: shown });
 }
 
-export function headingLines(meta: NoteMeta, suffix = "") {
+/** 문서 머리말. [kind] 는 전사(없음) · 요약 · 타임라인 복사본을 제목에서 가른다 */
+export function headingLines(
+  meta: NoteMeta,
+  doc: DocLanguage,
+  kind?: "summary" | "timeline"
+) {
+  const { t, locale } = doc;
   const facts = [
-    formatAppDate(meta.whenIso, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
-    participantsFact(meta),
+    formatAppDate(
+      meta.whenIso,
+      {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      },
+      locale
+    ),
+    participantsFact(meta, doc),
     // 1분 미만은 「기록 0분」이 된다 — 수가 뜻을 안 보태면 적지 않는다.
     meta.durationMs && meta.durationMs >= 60_000
-      ? `기록 ${Math.floor(meta.durationMs / 60_000)}분`
+      ? t("dates.noteMeta.recorded", {
+          minutes: Math.floor(meta.durationMs / 60_000),
+        })
       : null,
   ].filter(Boolean);
+  const title =
+    kind === "summary"
+      ? t("dates.document.summaryTitle", { title: meta.title })
+      : kind === "timeline"
+        ? t("dates.document.timelineTitle", { title: meta.title })
+        : meta.title;
 
-  return [`# ${meta.title}${suffix}`, "", facts.join(" · ")];
+  return [`# ${title}`, "", facts.join(" · ")];
 }
 
 /** 발화 한 줄. 회의록 전체 복사도 같은 모양으로 적는다 */
@@ -106,6 +127,7 @@ export function transcriptToMarkdown({
   rows,
   speakerNameOf,
   truncated = false,
+  doc,
 }: {
   note: NoteMeta;
   rows: TranscriptRow[];
@@ -121,12 +143,13 @@ export function transcriptToMarkdown({
   ) => string | null;
   /** 봉인이 `TRUNCATED`인가. 화면이 말하는 손실을 복사본도 말해야 한다. */
   truncated?: boolean;
+  doc: DocLanguage;
 }): string {
-  const lines = headingLines(note);
+  const lines = headingLines(note, doc);
 
   for (const row of rows) {
     if (row.type === "gap") {
-      lines.push("", `> ${gapHeadline(row.gap)}`);
+      lines.push("", `> ${gapHeadline(row.gap, doc.t)}`);
       continue;
     }
 
@@ -145,7 +168,7 @@ export function transcriptToMarkdown({
   }
 
   // **완전한 회의록처럼 붙여넣어지면 안 된다.** 화면은 이 줄을 이미 말하고 있다.
-  if (truncated) lines.push("", "> 기록이 끝까지 저장되지 못했습니다");
+  if (truncated) lines.push("", `> ${doc.t("dates.document.truncated")}`);
 
   return `${lines.join("\n")}\n`;
 }
@@ -157,19 +180,21 @@ export function transcriptToMarkdown({
 export function summaryToMarkdown({
   note,
   sections,
+  doc,
 }: {
   note: NoteMeta;
   sections: AnalysisResultResponseDataSectionsItem[];
+  doc: DocLanguage;
 }): string {
-  const lines = headingLines(note, " — 요약");
+  const lines = headingLines(note, doc, "summary");
   const byKind = new Map(sections.map((section) => [section.kind, section]));
 
   for (const kind of SECTION_ORDER) {
-    lines.push("", `## ${SECTION_LABELS[kind]}`, "");
+    lines.push("", `## ${doc.t(`notes.summary.sections.${kind}`)}`, "");
     const items = byKind.get(kind)?.items ?? [];
     if (!items.length) {
       // 화면과 같다 — 뽑을 것이 없었다는 사실도 요약의 일부다.
-      lines.push("_없음_");
+      lines.push(`_${doc.t("dates.document.none")}_`);
       continue;
     }
     for (const item of items) {

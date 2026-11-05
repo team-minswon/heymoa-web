@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ export function TranscriptSearch({
   onJump: (id: string) => void;
   children: ReactNode;
 }) {
+  const t = useTranslations("notes.transcript.search");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -62,14 +64,14 @@ export function TranscriptSearch({
           onClick={() => (open ? close() : setOpen(true))}
         >
           <Search data-icon="inline-start" />
-          검색
+          {t("open")}
         </Button>
         {children}
       </div>
       {open ? (
         <div
           role="search"
-          aria-label="전사 검색"
+          aria-label={t("region")}
           className="mt-2 flex items-center gap-1 rounded-control border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-1.5"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
@@ -90,8 +92,8 @@ export function TranscriptSearch({
           <Input
             ref={input}
             autoFocus
-            aria-label="전사 검색어"
-            placeholder="전사에서 검색"
+            aria-label={t("input")}
+            placeholder={t("placeholder")}
             className="min-w-0 flex-1 border-0 bg-transparent shadow-none"
             value={query}
             onChange={(event) => {
@@ -106,15 +108,15 @@ export function TranscriptSearch({
             {query.trim()
               ? matches.length
                 ? index < 0
-                  ? `${matches.length}개`
+                  ? t("count", { count: matches.length })
                   : `${index + 1}/${matches.length}`
-                : "결과 없음"
+                : t("none")
               : ""}
           </span>
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="이전 검색 결과"
+            aria-label={t("previous")}
             disabled={!matches.length}
             onClick={() => move(-1)}
           >
@@ -123,7 +125,7 @@ export function TranscriptSearch({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="다음 검색 결과"
+            aria-label={t("next")}
             disabled={!matches.length}
             onClick={() => move(1)}
           >
@@ -132,7 +134,7 @@ export function TranscriptSearch({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="검색 닫기"
+            aria-label={t("close")}
             onClick={close}
           >
             <X />

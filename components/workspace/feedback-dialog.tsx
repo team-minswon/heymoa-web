@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { InlineRetry } from "@/components/ui/inline-retry";
@@ -36,6 +37,7 @@ import type {
 import { formatAppDate } from "@/lib/format/date";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
+import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 /**
  * 문의·피드백. 서버가 받아 저장하고(`POST /v1/feedbacks`) 운영자에게 Slack 으로 알린다.
@@ -51,50 +53,21 @@ const FOOTER_MAX = 250;
 
 type Kind = CreateFeedbackRequestKind;
 
-const KINDS: {
-  value: Kind;
-  label: string;
-  hint: string;
-  icon: LucideIcon;
-  placeholder: string;
-}[] = [
-  {
-    value: "INCIDENT",
-    label: "장애·오류",
-    hint: "안 되거나 이상해요",
-    icon: TriangleAlert,
-    placeholder:
-      "언제, 어떤 화면에서 무엇이 안 됐는지 적어 주세요. 오류 문구가 있으면 같이요.",
-  },
-  {
-    value: "QUESTION",
-    label: "사용 문의",
-    hint: "어떻게 쓰는지 궁금해요",
-    icon: CircleHelp,
-    placeholder:
-      "궁금한 점을 적어 주세요. 어떤 기능인지 알려 주시면 더 정확히 답해요.",
-  },
-  {
-    value: "SUGGESTION",
-    label: "기능 제안",
-    hint: "이런 게 있으면 좋겠어요",
-    icon: Lightbulb,
-    placeholder: "어떤 상황에서 무엇이 있으면 좋을지 적어 주세요.",
-  },
-  {
-    value: "OTHER",
-    label: "기타",
-    hint: "그 밖의 이야기예요",
-    icon: MessageCircle,
-    placeholder: "하고 싶은 말을 편하게 적어 주세요.",
-  },
-];
+const KINDS = [
+  { value: "INCIDENT", key: "incident", icon: TriangleAlert },
+  { value: "QUESTION", key: "question", icon: CircleHelp },
+  { value: "SUGGESTION", key: "suggestion", icon: Lightbulb },
+  { value: "OTHER", key: "other", icon: MessageCircle },
+] as const satisfies readonly { value: Kind; key: string; icon: LucideIcon }[];
 
-const KIND_LABEL = Object.fromEntries(
-  KINDS.map(({ value, label }) => [value, label])
-) as Record<Kind, string>;
+const KIND_KEY = Object.fromEntries(
+  KINDS.map(({ value, key }) => [value, key])
+) as Record<Kind, (typeof KINDS)[number]["key"]>;
 
-/** 보내는 글 전체. 본문 뒤에 어디서 썼는지만 덧붙인다 — 경로에 쿼리는 안 싣는다. */
+/**
+ * 보내는 글 전체. 본문 뒤에 어디서 썼는지만 덧붙인다 — 경로에 쿼리는 안 싣는다.
+ * 꼬리는 운영자가 읽고 `userPart`가 잘라 내는 형식이라 화면 언어와 무관하게 한국어로 둔다.
+ */
 export function composeFeedback(message: string): string {
   const where = typeof window === "undefined" ? "" : window.location.pathname;
   const env = typeof navigator === "undefined" ? "" : navigator.userAgent;
@@ -111,13 +84,14 @@ export function composeFeedback(message: string): string {
 export function UnseenCount({
   count,
   className,
-  label = (n) => `새 답변 ${n}개`,
+  label,
 }: {
   count: number;
   className?: string;
   /** 화면 읽기 프로그램에 읽히는 말 */
   label?: (count: number) => string;
 }) {
+  const t = useTranslations("workspace.feedback");
   const [shown, setShown] = useState(count);
   if (count > 0 && count !== shown) setShown(count);
   if (shown === 0) return null;
@@ -125,7 +99,11 @@ export function UnseenCount({
   return (
     <span
       aria-hidden={!visible}
-      aria-label={visible ? label(count) : undefined}
+      aria-label={
+        visible
+          ? (label?.(count) ?? t("unseenAnswers", { count }))
+          : undefined
+      }
       className={cn(
         "inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] px-[5px] text-[11px] leading-none font-semibold text-[var(--el-on-primary)] tabular-nums transition-opacity duration-150 motion-reduce:transition-none",
         visible ? "opacity-100" : "opacity-0",
@@ -207,6 +185,8 @@ export function FeedbackDialog({
   /** 「내 문의」 탭에서 보여 줄 문의. 목록에 없으면 탭만 연다 */
   focusId?: string | null;
 }) {
+  const t = useTranslations("workspace.feedback");
+  const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const create = useCreateFeedback();
   const {
@@ -222,7 +202,12 @@ export function FeedbackDialog({
   const [kind, setKind] = useState<Kind>("QUESTION");
   const [message, setMessage] = useState("");
   const empty = message.trim().length === 0;
-  const current = KINDS.find((item) => item.value === kind)!;
+  const kinds = KINDS.map(({ value, key, icon }) => ({
+    value,
+    icon,
+    label: t(`kinds.${key}.label`),
+    hint: t(`kinds.${key}.hint`),
+  }));
   // 문의를 가리키며 열리면 「내 문의」 탭부터 보인다.
   const [focused, setFocused] = useState<string | null>(null);
   if (open && focusId && focusId !== focused) {
@@ -250,9 +235,7 @@ export function FeedbackDialog({
       { data: { kind, message: composeFeedback(message) } },
       {
         onSuccess: () => {
-          toast.success(
-            "보냈어요. 답변이 달리면 「내 문의」에서 볼 수 있어요."
-          );
+          toast.success(t("sent"));
           setMessage("");
           setTab("mine");
           void queryClient.invalidateQueries({
@@ -267,9 +250,9 @@ export function FeedbackDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[var(--el-surface-card)] sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>문의·피드백</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            불편했던 점, 궁금한 점, 바라는 점을 알려 주세요.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -281,9 +264,9 @@ export function FeedbackDialog({
             variant="line"
             className="border-b border-[var(--el-hairline)]"
           >
-            <TabsTrigger value="send">보내기</TabsTrigger>
+            <TabsTrigger value="send">{t("tabs.send")}</TabsTrigger>
             <TabsTrigger value="mine">
-              내 문의
+              {t("tabs.mine")}
               <UnseenCount
                 count={unseen}
                 className="ml-1.5"
@@ -305,20 +288,20 @@ export function FeedbackDialog({
               className="col-start-1 row-start-1 flex flex-col gap-4 [&[inert]]:invisible"
             >
               <ChoiceCards
-                label="분류"
-                items={KINDS}
+                label={t("kindLabel")}
+                items={kinds}
                 value={kind}
                 onChange={setKind}
               />
 
               <div>
                 <Textarea
-                  aria-label="내용"
+                  aria-label={t("messageLabel")}
                   value={message}
                   maxLength={FEEDBACK_MAX}
                   rows={6}
                   className="max-h-60 min-h-32"
-                  placeholder={current.placeholder}
+                  placeholder={t(`kinds.${KIND_KEY[kind]}.placeholder`)}
                   onChange={(event) => setMessage(event.target.value)}
                 />
                 <p className="mt-1 text-right text-[11px] tabular-nums text-[var(--el-muted-soft)]">
@@ -327,8 +310,7 @@ export function FeedbackDialog({
               </div>
 
               <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-                현재 화면 경로와 사용 환경이 함께 담겨요. 회의 내용은 보내지
-                않아요.
+                {t("privacyNote")}
               </p>
 
               <DialogFooter className="bg-transparent">
@@ -337,7 +319,7 @@ export function FeedbackDialog({
                   variant="ghost"
                   onClick={() => onOpenChange(false)}
                 >
-                  취소
+                  {tActions("cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -345,7 +327,7 @@ export function FeedbackDialog({
                   loading={create.isPending}
                   onClick={submit}
                 >
-                  보내기
+                  {t("submit")}
                 </Button>
               </DialogFooter>
             </TabsContent>
@@ -357,7 +339,7 @@ export function FeedbackDialog({
               <div className="absolute inset-0">
                 {isLoading ? (
                   <div
-                    aria-label="내 문의를 불러오는 중"
+                    aria-label={t("mine.loading")}
                     className="flex flex-col gap-3"
                   >
                     <Skeleton className="h-24 w-full rounded-panel" />
@@ -365,7 +347,7 @@ export function FeedbackDialog({
                   </div>
                 ) : isError ? (
                   <InlineRetry
-                    label="내 문의를 불러오지 못했어요"
+                    label={t("mine.loadFailed")}
                     onRetry={() => void refetch()}
                   />
                 ) : (
@@ -387,10 +369,12 @@ function MyFeedbacks({
   feedbacks: FeedbackResponseData[];
   focusId: string | null;
 }) {
+  const t = useTranslations("workspace.feedback");
+  const dateLocale = useDisplayLocale();
   if (feedbacks.length === 0) {
     return (
       <p className="flex h-full items-center justify-center text-sm text-[var(--el-muted)]">
-        아직 보낸 문의가 없어요.
+        {t("mine.empty")}
       </p>
     );
   }
@@ -414,7 +398,7 @@ function MyFeedbacks({
         >
           <div className="flex items-center justify-between gap-2 text-xs text-[var(--el-muted)]">
             <span>
-              {KIND_LABEL[item.kind]} · {formatAppDate(item.createdAt, SENT_AT)}
+              {t(`kinds.${KIND_KEY[item.kind]}.label`)} · {formatAppDate(item.createdAt, SENT_AT, dateLocale)}
             </span>
             <span
               className={cn(
@@ -424,7 +408,7 @@ function MyFeedbacks({
                   : "border-[var(--el-hairline-strong)]"
               )}
             >
-              {item.answer ? "답변 완료" : "접수됨"}
+              {item.answer ? t("mine.answered") : t("mine.received")}
             </span>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--el-ink)] [overflow-wrap:anywhere]">
@@ -443,7 +427,7 @@ function MyFeedbacks({
                 </p>
                 {item.answeredAt ? (
                   <p className="mt-1 text-[11px] text-[var(--el-muted-soft)]">
-                    HeyMoa 팀 · {formatAppDate(item.answeredAt, SENT_AT)}
+                    {t("mine.team")} · {formatAppDate(item.answeredAt, SENT_AT, dateLocale)}
                   </p>
                 ) : null}
               </div>

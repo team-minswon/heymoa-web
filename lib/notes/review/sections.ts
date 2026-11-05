@@ -2,7 +2,6 @@ import type {
   MeetingReviewResponseDataItemsItem,
   MeetingReviewResponseDataItemsItemKind,
 } from "@/lib/api/generated/models";
-import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
 import { missingChoicesOf } from "@/lib/notes/review/saved-choices";
 
 export type ReviewItem = MeetingReviewResponseDataItemsItem;
@@ -11,22 +10,17 @@ export type ReviewKind = MeetingReviewResponseDataItemsItemKind;
 export type SectionKey = "DECISION" | "ACTION_ITEM" | "OPEN" | "REFERENCE";
 
 /**
- * 검토 화면의 섹션. 회의가 끝난 사람이 묻는 순서다 — 무엇을 정했나, 누가 무엇을 하나,
+ * 검토 화면의 섹션. 이름은 `notes.review.sections.names.<key>` 다. 회의가 끝난 사람이 묻는 순서다 — 무엇을 정했나, 누가 무엇을 하나,
  * 무엇이 안 풀렸나. 보고·인사이트·안건은 그 질문에 답하지 않아 「참고」로 접는다.
  */
 export const REVIEW_SECTIONS: ReadonlyArray<{
   key: SectionKey;
-  label: string;
   kinds: readonly ReviewKind[];
 }> = [
-  { key: "DECISION", label: "결정", kinds: ["DECISION"] },
-  { key: "ACTION_ITEM", label: "할 일", kinds: ["ACTION_ITEM"] },
-  { key: "OPEN", label: "이슈 · 질문", kinds: ["ISSUE", "QUESTION"] },
-  {
-    key: "REFERENCE",
-    label: "참고",
-    kinds: ["STATUS_REPORT", "INSIGHT", "AGENDA"],
-  },
+  { key: "DECISION", kinds: ["DECISION"] },
+  { key: "ACTION_ITEM", kinds: ["ACTION_ITEM"] },
+  { key: "OPEN", kinds: ["ISSUE", "QUESTION"] },
+  { key: "REFERENCE", kinds: ["STATUS_REPORT", "INSIGHT", "AGENDA"] },
 ];
 
 /**
@@ -54,11 +48,8 @@ export const ASSIGNABLE_KINDS: ReadonlySet<ReviewKind> = new Set<ReviewKind>([
   "QUESTION",
 ]);
 
-export const KIND_LABEL = CONTEXT_KIND_LABEL;
-
 export type ReviewSection = {
   key: SectionKey;
-  label: string;
   /** 보일 차례로 선 항목. 제외한 항목도 자리를 지킨다 — 옮기면 펼친 줄이 닫힌다 */
   items: ReviewItem[];
   /** 포함된 항목 수. 확정되는 것만 센다 */
@@ -87,7 +78,7 @@ export function sectionsOf(
       ? items
       : items.filter((item) => topicOf(item.itemId) === topic);
 
-  return REVIEW_SECTIONS.map(({ key, label, kinds }) => {
+  return REVIEW_SECTIONS.map(({ key, kinds }) => {
     const own = visible
       .filter((item) => kinds.includes(item.kind))
       .sort(
@@ -98,7 +89,6 @@ export function sectionsOf(
       );
     return {
       key,
-      label,
       items: own,
       includedCount: own.filter((item) => item.included).length,
     };

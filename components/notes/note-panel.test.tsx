@@ -1279,7 +1279,7 @@ describe("NotePanel", () => {
     // 갖는다.** 예전에는 셸 상단바의 노트 액션 슬롯이 맡았고, 그 바가 안 보이게 되면서
     // 회의 종료·축소·닫기가 갈 곳이 없어졌다.
     expect(
-      screen.getByRole("group", { name: "회의 상태 및 제어" })
+      screen.getByRole("group", { name: "회의 상태와 제어" })
     ).toBeTruthy();
     // 목록으로 나가는 길은 상단바의 ← 하나다 — 예전에는 같은 곳으로 가는 「노트 닫기」가
     // 헤더에 따로 있었다.
@@ -1336,7 +1336,7 @@ describe("NotePanel", () => {
       screen.getByText("워크스페이스 멤버에게 공개").parentElement?.textContent
     ).toMatch(/^참석자 \d+명 · /);
     expect(
-      screen.getByRole("group", { name: "회의 상태 및 제어" })
+      screen.getByRole("group", { name: "회의 상태와 제어" })
     ).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "창 제어" })).toBeInTheDocument();
     // 기록 중에는 회의 종료가 잠긴다(APP-694).
@@ -1470,7 +1470,7 @@ describe("NotePanel", () => {
     expect(screen.queryByRole("button", { name: "회의 종료" })).toBeNull();
     expect(screen.getByRole("button", { name: "노트 메뉴" })).toBeTruthy();
     expect(
-      screen.queryByRole("group", { name: "회의 상태 및 제어" })
+      screen.queryByRole("group", { name: "회의 상태와 제어" })
     ).toBeNull();
   });
 
@@ -1522,7 +1522,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("transcript-view")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "기록과 요약 보기" }));
+    fireEvent.click(screen.getByRole("button", { name: "스크립트와 요약 보기" }));
 
     expect(screen.queryByTestId("transcript-view")).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
@@ -1629,13 +1629,13 @@ describe("NotePanel", () => {
       const { rerender } = renderDock(view);
 
       expect(screen.getByRole("status")).toHaveTextContent(
-        "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 탭에 모아 두는 중 · 연결될 때까지 탭을 열어 두세요"
+        "연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다. 녹음한 소리는 이 탭에 모아 둡니다. 다시 연결될 때까지 탭을 열어 두세요."
       );
 
       recordingState.connectionNotice = null;
       rerender(dockElement(view));
 
-      expect(screen.queryByText(/연결이 끊겼어요/)).toBeNull();
+      expect(screen.queryByText(/연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다/)).toBeNull();
     });
 
     it("멈추는 중에 밀린 것을 올리면 저장 마무리 진행률을 보인다", () => {
@@ -1672,7 +1672,7 @@ describe("NotePanel", () => {
       renderDock(view);
 
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
       expect(screen.queryByRole("button", { name: "재개" })).toBeNull();
@@ -1685,7 +1685,7 @@ describe("NotePanel", () => {
 
       renderDock(view);
 
-      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+      expect(screen.queryByText("다른 탭이나 기기에서 기록 중입니다.")).toBeNull();
       expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
     });
 
@@ -1695,7 +1695,7 @@ describe("NotePanel", () => {
 
       renderDock(view);
 
-      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+      expect(screen.queryByText("다른 탭이나 기기에서 기록 중입니다.")).toBeNull();
       expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
     });
 
@@ -1706,7 +1706,7 @@ describe("NotePanel", () => {
       renderDock(view);
 
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
     });
 
@@ -1728,7 +1728,7 @@ describe("NotePanel", () => {
       renderDock(view);
 
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
     });
 
@@ -1739,7 +1739,7 @@ describe("NotePanel", () => {
       renderDock(view);
 
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "다시 녹음" })).toBeNull();
     });
@@ -1752,7 +1752,7 @@ describe("NotePanel", () => {
       renderDock(view);
 
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "다시 녹음" })).toBeNull();
     });
@@ -1767,7 +1767,7 @@ describe("NotePanel", () => {
 
       renderDock(view);
 
-      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+      expect(screen.queryByText("다른 탭이나 기기에서 기록 중입니다.")).toBeNull();
       expect(
         screen.getByRole("button", { name: "다시 녹음" })
       ).toBeInTheDocument();
@@ -1785,7 +1785,7 @@ describe("NotePanel", () => {
 
       renderDock(view);
 
-      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+      expect(screen.queryByText("다른 탭이나 기기에서 기록 중입니다.")).toBeNull();
     });
 
     // 완료를 영구 예외로 두면 낡은 로컬 세션이 남의 활성 세션을 계속 가린다.
@@ -1799,7 +1799,7 @@ describe("NotePanel", () => {
       renderDock(view);
 
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
     });
 
@@ -1810,7 +1810,7 @@ describe("NotePanel", () => {
 
       expect(screen.getByLabelText("녹음 제어")).toBeInTheDocument();
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
       if (view === "side") {
         expect(
@@ -1859,7 +1859,7 @@ describe("NotePanel", () => {
 
         expect(screen.getByRole("button", { name: "다시 녹음" })).toBeEnabled();
         expect(
-          screen.queryByText("다른 탭·기기에서 기록 중입니다.")
+          screen.queryByText("다른 탭이나 기기에서 기록 중입니다.")
         ).toBeNull();
       }
     );
@@ -1934,7 +1934,7 @@ describe("NotePanel", () => {
 
       expect(screen.getByLabelText("녹음 제어")).toBeInTheDocument();
       expect(
-        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+        screen.getByText("다른 탭이나 기기에서 기록 중입니다.")
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
     });
@@ -2027,7 +2027,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("transcript-view")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "기록과 요약 보기" }));
+    fireEvent.click(screen.getByRole("button", { name: "스크립트와 요약 보기" }));
 
     expect(screen.queryByTestId("transcript-view")).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();

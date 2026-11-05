@@ -5,6 +5,7 @@ import { memo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
@@ -138,14 +139,15 @@ function DockRow({
   assign: ReactNode;
   onJump: (segmentId: string, via: SpeakerJumpVia) => void;
 }) {
+  const t = useTranslations("notes.speakers.dock");
   // **◀ ▶ 는 이 화자의 모든 발화를 하나씩 밟는다** — 띠에 보이는 짧은 발화도 건너뛰지 않는다.
   // 맞장구 건너뛰기([SpeakerStat.stepTargets], APP-1163)는 화자 패널의 지정 흐름(「다음 발화로」)
   // 몫이다. 도크에서 그 규칙을 쓰면 띠에 보이는 점을 두고 큰 덩어리로만 건너뛴다.
   // 기준은 세로선([currentMs]) — 이동하면 그 발화의 시작 시각이 되므로 여유 없이 엄격히 비교한다.
   // 여유를 두면 0.5초 안에 이어진 짧은 발화(「네. 네.」)를 건너뛴다.
   const steps = stat.utterances;
-  const prev = steps.findLast((t) => t.startedAtMs < currentMs);
-  const next = steps.find((t) => t.startedAtMs > currentMs);
+  const prev = steps.findLast((u) => u.startedAtMs < currentMs);
+  const next = steps.find((u) => u.startedAtMs > currentMs);
   const [hover, setHover] = useState<number | null>(null);
   const now = Math.min(1, Math.max(0, currentMs / durationMs));
   const reduced = useReducedMotion();
@@ -240,7 +242,7 @@ function DockRow({
       >
         <button
           type="button"
-          aria-label={`${stat.name} 이전 발화`}
+          aria-label={t("previous", { name: stat.name })}
           disabled={!prev}
           onClick={() => prev && onJump(prev.segmentId, "step")}
           className="rounded-full p-0.5 text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)] disabled:opacity-30"
@@ -249,7 +251,7 @@ function DockRow({
         </button>
         <button
           type="button"
-          aria-label={`${stat.name} 다음 발화`}
+          aria-label={t("next", { name: stat.name })}
           disabled={!next}
           onClick={() => next && onJump(next.segmentId, "step")}
           className="rounded-full p-0.5 text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)] disabled:opacity-30"
@@ -277,6 +279,7 @@ export function SpeakerDock({
   /** 미지정 화자 줄의 이름 자리. 지정 메뉴를 그대로 넘긴다. 없으면 이름만 그린다. */
   renderAssign: (stat: SpeakerStat) => ReactNode;
 }) {
+  const t = useTranslations("notes.speakers.dock");
   const [collapsed, setCollapsed] = useState(false);
   const reduced = useReducedMotion();
   const currentMs = useSyncExternalStore(
@@ -324,7 +327,7 @@ export function SpeakerDock({
             key="pill"
             type="button"
             onClick={() => setCollapsed(false)}
-            aria-label="화자 도크 펼치기"
+            aria-label={t("expand")}
             aria-expanded={false}
             initial={reduced ? false : { opacity: 0, scale: 0.92, y: 6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -349,7 +352,9 @@ export function SpeakerDock({
               ))}
             </span>
             <span className="text-[11px] text-[var(--el-muted)]">
-              {unassigned ? `이름 없음 ${unassigned}` : `화자 ${stats.length}`}
+              {unassigned
+                ? t("unassigned", { count: unassigned })
+                : t("speakers", { count: stats.length })}
             </span>
             <ChevronsUpDown className="size-3 text-[var(--el-muted)]" />
           </motion.button>
@@ -371,14 +376,14 @@ export function SpeakerDock({
             <button
               type="button"
               onClick={() => setCollapsed(true)}
-              aria-label="화자 도크 접기"
+              aria-label={t("collapse")}
               aria-expanded
               // **누르는 자리는 막대 둘레로 조금만 넓힌다**(가로 24px 씩, 높이 24px). 도크 가로 전체로
               // 넓히면 의도 없이 도크 위쪽 아무 데나 눌러 접힌다. 안쪽 여백(`pt-1.5`)은 음수 여백으로 덮는다.
               className="group mx-auto -mt-1.5 mb-0.5 flex h-6 items-center justify-center gap-1.5 rounded-full px-6 text-[10px] text-[var(--el-muted-soft)] outline-none transition-colors hover:text-[var(--el-ink)] focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
             >
               <span className="h-1 w-11 rounded-full bg-[var(--el-hairline-strong)] transition-colors group-hover:bg-[var(--el-muted)]" />
-              {unassigned ? `이름 없음 ${unassigned}` : null}
+              {unassigned ? t("unassigned", { count: unassigned }) : null}
             </button>
             <ul className="max-h-40 overflow-y-auto">
               {stats.map((stat, index) => (
