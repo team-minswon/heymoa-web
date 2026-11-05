@@ -3,57 +3,31 @@ import type {
   TranscriptResponseDataDiarization,
 } from "@/lib/api/generated/models";
 import type { StoreState } from "@/lib/mocks/db";
+import type { HelpDemoLocale } from "@/lib/mocks/help-demo/locale";
+import { HD_NOTE_IDS, type NoteDef } from "@/lib/mocks/help-demo/notes";
+import { helpDemoPack, type HelpDemoPack } from "@/lib/mocks/help-demo/pack";
 import {
-  helpDemoChats,
-  helpDemoDelegations,
-  helpDemoFeedbacks,
-  helpDemoIntegrations,
-} from "@/lib/mocks/help-demo/misc";
-import { guideAgendaMapSeed } from "@/lib/mocks/guide-agenda-map";
-import { MID_MEETINGS } from "@/lib/mocks/help-demo/mid";
-import { HD_NOTE_IDS, NOTE_DEFS, type NoteDef } from "@/lib/mocks/help-demo/notes";
-import {
-  HD_GUESTS,
   HD_ME,
-  HD_ME_EMAIL,
-  HD_ME_NAME,
-  HD_MEMBERS,
   HD_PRACTICE_WORKSPACE_ID,
-  HD_PROJECTS,
   HD_WORKSPACE_ID,
-  personName,
   type GuestKey,
   type MemberKey,
   type PersonRef,
 } from "@/lib/mocks/help-demo/people";
 import type { ParsedScript } from "@/lib/mocks/help-demo/script";
-import { CAMPAIGN_SCRIPT } from "@/lib/mocks/help-demo/script-campaign";
-import { LANDING_SCRIPT } from "@/lib/mocks/help-demo/script-landing";
-import { WEEKLY_SCRIPT } from "@/lib/mocks/help-demo/script-weekly";
-import { SMALL_SCRIPTS } from "@/lib/mocks/help-demo/small";
 import { DAY_MS, atHour } from "@/lib/mocks/help-demo/time";
 import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
 
 type Segment = StoreState["segments"][number];
 type Session = StoreState["sessions"][number];
 
-/** 일시정지된 회의(FAQ 초안 리뷰)에 남은 앞부분 전사. */
-const PAUSED_SCRIPT: ParsedScript = {
-  lines: [
-    { label: "A", text: "FAQ 초안 스무 개 중에 열두 개를 먼저 같이 볼게요." },
-    { label: "B", text: "네, 출시일과 가격 질문은 아직 확정이 안 돼서 비워 두었어요." },
-    { label: "A", text: "그 두 개는 빼고 나머지부터 문구를 다듬죠." },
-  ],
-  anchors: {},
-};
-
-function scriptOf(def: NoteDef): ParsedScript | null {
-  if (def.status === "PAUSED") return PAUSED_SCRIPT;
+function scriptOf(pack: HelpDemoPack, def: NoteDef): ParsedScript | null {
+  if (def.status === "PAUSED") return pack.pausedScript;
   const source = def.source;
   if (!source) return null;
-  if (source.kind === "small") return SMALL_SCRIPTS[source.id];
-  if (source.kind === "mid") return MID_MEETINGS[source.id].script;
-  return { campaign: CAMPAIGN_SCRIPT, landing: LANDING_SCRIPT, weekly: WEEKLY_SCRIPT }[source.id];
+  if (source.kind === "small") return pack.smallScripts[source.id];
+  if (source.kind === "mid") return pack.midMeetings[source.id].script;
+  return pack.scripts[source.id];
 }
 
 /** 발화 길이로 말하는 데 걸린 시간을 정한다. 무작위 없이 인덱스로 사이 간격을 벌린다. */
@@ -67,23 +41,35 @@ function timed(script: ParsedScript) {
   });
 }
 
-const memberOf = (key: MemberKey) => HD_MEMBERS[key];
-const guestOf = (key: GuestKey) => HD_GUESTS[key];
-
-export function createHelpDemoState(now = Date.now()): StoreState {
+/**
+ * 프리셋 상태 한 벌. 언어를 안 넘기면 지금 문서의 언어다(APP-1511) — 영어 문서는 같은 ID 의 영어 회의를 받는다.
+ */
+export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): StoreState {
+  const pack = helpDemoPack(locale);
+  const {
+    projects: HD_PROJECTS,
+    members: HD_MEMBERS,
+    guests: HD_GUESTS,
+    meName: HD_ME_NAME,
+    meEmail: HD_ME_EMAIL,
+    personName,
+    noteDefs: NOTE_DEFS,
+  } = pack;
+  const memberOf = (key: MemberKey) => HD_MEMBERS[key];
+  const guestOf = (key: GuestKey) => HD_GUESTS[key];
   const iso = (ms: number) => new Date(ms).toISOString();
   const user = { ...MOCK_USER, name: HD_ME_NAME, email: HD_ME_EMAIL };
 
   const workspaces: StoreState["workspaces"] = [
     {
       workspaceId: HD_WORKSPACE_ID,
-      name: "봄바람 스튜디오",
-      description: "캠페인, 신제품 출시, 고객 인터뷰를 함께 챙기는 마케팅 팀의 공간입니다.",
+      name: pack.text.workspaceName,
+      description: pack.text.workspaceDescription,
       role: "ADMIN",
       agentAccessAllowed: true,
     },
     // 프로젝트도 노트도 없는 새 워크스페이스. 온보딩 화면을 찍을 때 쓴다.
-    { workspaceId: HD_PRACTICE_WORKSPACE_ID, name: "연습 공간", description: null, role: "ADMIN", agentAccessAllowed: true },
+    { workspaceId: HD_PRACTICE_WORKSPACE_ID, name: pack.text.practiceWorkspaceName, description: null, role: "ADMIN", agentAccessAllowed: true },
   ];
 
   const projects: StoreState["projects"] = Object.values(HD_PROJECTS).map((project, index) => ({
@@ -158,7 +144,7 @@ export function createHelpDemoState(now = Date.now()): StoreState {
       .map(([, participant]) => participant)
       .sort((a, b) => a.name.localeCompare(b.name) || a.participantId.localeCompare(b.participantId));
 
-    const script = scriptOf(def);
+    const script = scriptOf(pack, def);
     const lines = script ? timed(script) : [];
     const lastEnd = lines.at(-1)?.endedAtMs ?? 0;
     const sessionLength = lastEnd + 15_000;
@@ -283,7 +269,7 @@ export function createHelpDemoState(now = Date.now()): StoreState {
   ];
   const notificationPayload = {
     workspaceId: HD_WORKSPACE_ID,
-    workspaceName: "봄바람 스튜디오",
+    workspaceName: pack.text.workspaceName,
     invitationId: null,
     inviterUserId: null,
     noteId: null,
@@ -303,7 +289,7 @@ export function createHelpDemoState(now = Date.now()): StoreState {
         status: "PENDING",
         role: "MEMBER",
         workspaceId: invitations[0].workspaceId,
-        workspaceName: "디자인 팀",
+        workspaceName: pack.text.invitingWorkspaceName,
         inviterName: invitations[0].inviterName,
         expiresAt: invitations[0].expiresAt,
       },
@@ -319,7 +305,7 @@ export function createHelpDemoState(now = Date.now()): StoreState {
       payload: {
         ...notificationPayload,
         noteId: HD_NOTE_IDS.campaign,
-        noteTitle: "4월 캠페인 성과 리뷰",
+        noteTitle: NOTE_DEFS.find((def) => def.noteId === HD_NOTE_IDS.campaign)!.title,
       },
     },
     {
@@ -338,11 +324,11 @@ export function createHelpDemoState(now = Date.now()): StoreState {
   ];
 
   // 가이드 「연결 지도」 촬영용 프로젝트와 회의(`lib/mocks/guide-agenda-map.ts`)
-  const guideMap = guideAgendaMapSeed(HD_WORKSPACE_ID, notes[0]);
+  const guideMap = pack.agendaMap.seed(HD_WORKSPACE_ID, notes[0]);
   projects.push(guideMap.project);
   notes.push(...guideMap.notes);
 
-  const chats = helpDemoChats(now);
+  const chats = pack.chats(now);
 
   return {
     user: { ...user, ...MOCK_ACCOUNT },
@@ -358,12 +344,12 @@ export function createHelpDemoState(now = Date.now()): StoreState {
     workspaceGuests,
     invitations,
     notifications,
-    feedbacks: helpDemoFeedbacks(now),
+    feedbacks: pack.feedbacks(now),
     analyses: [],
-    integrations: helpDemoIntegrations(now),
+    integrations: pack.integrations(now),
     agentChats: chats.agentChats,
     agentChatMessages: chats.agentChatMessages,
-    ...helpDemoDelegations(now),
+    ...pack.delegations(now),
     // 동의 화면(`/oauth/consent?state=mock-consent`)을 찍을 수 있게 하나 둔다.
     agentOAuthConsents: {
       "mock-consent": {

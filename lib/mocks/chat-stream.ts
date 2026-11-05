@@ -12,7 +12,7 @@
 import { faker } from "@faker-js/faker";
 
 import {
-  HELP_DEMO_CHAT_ANSWERS,
+  helpDemoPack,
   isHelpDemoEnabled,
 } from "@/lib/mocks/help-demo";
 import {
@@ -104,7 +104,7 @@ function pickGeneralAnswer(seed: string) {
   faker.seed(numericSeed(seed));
   // 가이드 캡처 프리셋(help-demo)이 켜져 있으면 업무 이야기 답변 풀을 쓴다
   return faker.helpers.arrayElement(
-    isHelpDemoEnabled() ? HELP_DEMO_CHAT_ANSWERS : GENERAL_CHAT_ANSWERS
+    isHelpDemoEnabled() ? helpDemoPack().chatAnswers : GENERAL_CHAT_ANSWERS
   );
 }
 

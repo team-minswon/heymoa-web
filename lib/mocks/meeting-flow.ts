@@ -28,8 +28,7 @@ import {
 } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
 import {
-  HELP_DEMO_ENDED_ITEMS,
-  helpDemoReviewSets,
+  helpDemoPack,
   isHelpDemoEnabled,
   type HelpDemoReviewSet,
 } from "@/lib/mocks/help-demo";
@@ -237,7 +236,7 @@ const ASSIGNABLE_KINDS: ReadonlySet<Kind> = new Set<Kind>([
 
 function store(): State {
   if (state) return state;
-  const demoSets = isHelpDemoEnabled() ? helpDemoReviewSets() : null;
+  const demoSets = isHelpDemoEnabled() ? helpDemoPack().reviewSets() : null;
   const seededFlows: Record<string, FlowStatus> = demoSets
     ? Object.fromEntries(demoSets.map((set) => [set.noteId, set.flow]))
     : SEEDED_FLOWS;
@@ -1077,7 +1076,7 @@ function completeAnalysis(noteId: string) {
     noteId,
     reviewVersion: 1,
     items: (isHelpDemoEnabled()
-      ? HELP_DEMO_ENDED_ITEMS
+      ? helpDemoPack().endedItems
       : REVIEW_SEED_TOPICS[0].items
     ).map((seed) => ({
       itemId: nextId("01KI"),
