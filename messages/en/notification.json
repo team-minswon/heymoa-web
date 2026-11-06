@@ -55,19 +55,19 @@
       "review": "Review →"
     },
     "inquiry": {
-      "title": "Your request has a reply",
+      "title": "Your inquiry has a reply",
       "view": "View reply →"
     }
   },
   "unsubscribe": {
     "names": {
       "MEETING_PAUSED_REMINDER": "paused meeting emails",
-      "INQUIRY_ANSWERED": "request reply emails"
+      "INQUIRY_ANSWERED": "inquiry reply emails"
     },
     "items": {
       "pausedNextDay": "A reminder the business day after you pause a meeting",
       "autoEnded": "A notice when a meeting ends automatically",
-      "inquiryAnswered": "A notice when the HeyMoa team replies to your request"
+      "inquiryAnswered": "A notice when the HeyMoa team replies to your inquiry"
     },
     "invalidTitle": "This link isn't valid",
     "invalidBody": "The link may be cut off or may no longer work. Open the link in the email again.",
