@@ -18,12 +18,12 @@
   "terms": {
     "title": "Terms of Service",
     "metaDescription": "The terms for using {brand} accounts, workspaces, real-time meeting transcripts, and saved notes.",
-    "description": "The commitments you and HeyMoa keep while you use HeyMoa, covering meeting recording, automatic transcripts, AI summaries, account deletion, and changes to these Terms.",
+    "description": "The commitments you and HeyMoa keep while you use HeyMoa, covering meeting recording, automatic transcripts, AI organization of meetings, account deletion, and changes to these Terms.",
     "sections": [
       {
         "title": "1. Purpose and Scope",
         "body": [
-          "These Terms set out the conditions for using the meeting notes, real-time voice transcription, automatic summaries, agent queries, notes, and workspace features provided by HeyMoa.",
+          "These Terms set out the conditions for using meeting recording, real-time voice transcription, automatic summaries, agent questions, notes, and workspace features provided by HeyMoa.",
           "You can use the Service after agreeing to these Terms and the Privacy Policy when you sign in."
         ]
       },
@@ -34,12 +34,12 @@
           "On the web, HeyMoa records audio from your browser's microphone. In the desktop app, it can also record the sound coming from your computer (including the voices of other participants in a video call) along with your microphone.",
           "During a meeting, decisions, tasks, and questions are organized as they come up, and when the meeting ends it is summarized into an overview, tasks, and decisions. Each organized item is linked to the transcript lines where it was said, as its source.",
           "You can ask the agent questions during and after a meeting. Each answer shows the meeting notes it actually referred to.",
-          "You can register workspace members and temporary participants without an account as meeting attendees.",
-          "You can share meeting notes by email, connect external tools such as Linear and GitHub as well as external AI agents, and send inquiries and feedback from within the Service.",
-          "For a meeting whose recording was paused and never ended, HeyMoa sends one reminder email to the user who last started recording one business day after the pause. After three business days, the meeting may be ended automatically and its analysis may start. When that happens, one more notice email is sent to the same recipient. Business days are Monday through Friday, Korea Standard Time.",
+          "You can register workspace members, and guest participants who don't have an account, as meeting attendees.",
+          "You can share meeting notes by email, connect external tools such as Linear and GitHub as well as external AI apps (MCP connections), and send inquiries and feedback from within the Service.",
+          "For a meeting whose recording was paused and never ended, HeyMoa sends one reminder email to the user who last started recording one business day after the pause. Three business days after the pause, HeyMoa may end the meeting automatically and start its analysis. When that happens, one more notice email is sent to the same recipient. Business days are Monday through Friday, Korea Standard Time.",
           "The scheduled time of automatic ending is shown in the reminder email and on the note screen, and you can resume recording or end the meeting yourself before then. A meeting that was ended automatically cannot be resumed, and automatic ending cannot be canceled. Meetings may be ended on the same schedule even if no email was received.",
           "HeyMoa sends notifications needed to use the Service as in-app notifications and by email. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
-          "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies. Changes that affect you are announced as described in Article 11."
+          "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies. Changes that affect you are announced as described in Section 11."
         ]
       },
       {
@@ -70,13 +70,13 @@
         ]
       },
       {
-        "title": "6. External Tools and External AI Agents",
+        "title": "6. External Tools and External AI Apps",
         "body": [
           "You can connect Linear or GitHub to a workspace, and you decide when to connect and disconnect them.",
-          "Before the agent writes to an external tool, an approval screen shows what it will write. Only actions you approve are executed, and links to the results remain in the conversation history.",
-          "You can allow external AI agents such as Claude and ChatGPT to read your workspace. Once allowed, the agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view, but it cannot change the content.",
-          "An external AI agent's access expires automatically if it is not used for 90 days, and you can revoke it at any time in Settings.",
-          "Data passed to external tools and external AI agents is subject to the terms and policies of those services. You must make sure the accounts used for these connections have only the permissions they need."
+          "Before the agent writes to an external tool, an approval screen shows what it will write. Only actions you approve are executed, and links to the results remain in the agent chat.",
+          "You can allow external AI apps such as Claude and ChatGPT to read your workspace (MCP connections). Once allowed, the app can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view, but it cannot change the content.",
+          "An external AI app's access expires automatically if it is not used for 90 days, and you can revoke it at any time under My MCP connections in Settings.",
+          "Data passed to external tools and external AI apps is subject to the terms and policies of those services. You must make sure the accounts used for these connections have only the permissions they need."
         ]
       },
       {
@@ -97,24 +97,24 @@
         ]
       },
       {
-        "title": "9. Suspension and Limitation of Liability",
+        "title": "9. Service Interruptions and Limitation of Liability",
         "body": [
           "Features may be temporarily suspended because of maintenance, outages, network problems, or issues with external speech recognition or large language model services. HeyMoa will make reasonable efforts to restore the Service and protect data.",
-          "HeyMoa does not guarantee that automatic transcripts, speaker identification, automatic summaries, or agent answers are completely accurate or fit for a particular purpose. HeyMoa is not liable for damages arising from using those results without your own verification, except for damages caused by HeyMoa's intent or gross negligence."
+          "HeyMoa does not guarantee that automatic transcripts, speaker identification, automatic summaries, or agent answers are completely accurate or fit for a particular purpose. HeyMoa is not liable for damages arising from using those results without your own verification, except for damages caused by HeyMoa's willful misconduct or gross negligence."
         ]
       },
       {
         "title": "10. Account Deletion and Workspace Deletion",
         "body": [
-          "You can delete your account at any time from My Account in Settings. If a meeting is being recorded, you can delete your account after the recording ends.",
+          "You can delete your account at any time from My account in Settings. If a meeting is being recorded, you can delete your account after the recording ends.",
           "When you delete your account, your workspaces are handled as follows. If you are the only administrator and other members remain, you either hand the administrator role to another member or delete the workspace. You leave workspaces that have another administrator or where you are a member. Workspaces you used alone are deleted.",
           "Deleting your account signs you out on every device right away and cannot be undone. If you sign up again with the same Google account, you get a new account that is not linked to your previous records.",
           "Workspace administrators can delete a workspace. When a workspace is deleted, all members lose access right away; its notes, transcripts, audio, agent chats, integrations, and invitations are deleted; and every member receives a notice email.",
-          "Even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Deletion and retention periods are described in Article 6 of the Privacy Policy."
+          "Even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Deletion and retention periods are described in Section 6 of the Privacy Policy."
         ]
       },
       {
-        "title": "11. Changes to These Terms and Contact",
+        "title": "11. Changes to These Terms and Inquiries",
         "body": [
           "When these Terms change, HeyMoa announces what is changing and the effective date on this page and in the Service starting 7 days before the effective date. Changes unfavorable to you are announced starting 30 days before the effective date, together with a side-by-side comparison of the old and new text.",
           "If you do not agree to the changed Terms, you can delete your account before the effective date. To keep using the Service after the effective date, you must agree to the changed Terms.",
@@ -161,7 +161,7 @@
               ],
               [
                 "Attendees",
-                "Names of people registered as meeting attendees (including workspace members and temporary participants registered by name only)"
+                "Names of people registered as meeting attendees (including workspace members and guest participants added by name only)"
               ],
               [
                 "Agent",
@@ -169,7 +169,7 @@
               ],
               [
                 "Integrations",
-                "Linear and GitHub account identifiers and the credentials used for the connection; information about connected external AI agent apps and their access grants"
+                "Linear and GitHub account identifiers and the credentials used for the connection; information about connected external AI apps (MCP connections) and their access grants"
               ],
               [
                 "Invitations and sharing",
@@ -185,23 +185,23 @@
               ],
               [
                 "Reasons for deleting an account",
-                "The reason chosen and any text entered (optional), deletion time, and days since sign-up. The statistics record kept in the service is not linked to member identifiers, names, or email addresses. The type of reason chosen is sent to PostHog with your member identifier (Article 5)"
+                "The reason chosen and any text entered (optional), deletion time, and days since sign-up. The statistics record kept in the service is not linked to member identifiers, names, or email addresses. The type of reason chosen is sent to PostHog with your member identifier (Section 5)"
               ]
             ]
           },
-          "Attendee names are used for speaker labels, AI summaries, and improving speech recognition accuracy (Article 3).",
+          "Attendee names are used for speaker labels, AI organization of meetings (summaries, decisions, and tasks), and improving speech recognition accuracy (Section 3).",
           "Children under 14 may not sign up for HeyMoa."
         ]
       },
       {
         "title": "2. Purposes of Processing",
         "body": [
-          "Providing the Service: identifying members and keeping them signed in, running workspaces, transcribing meetings, saving and viewing notes, AI summaries and agent answers, and exporting to external tools when you approve. This processing is needed to perform the service contract with you.",
+          "Providing the Service: identifying members and keeping them signed in, running workspaces, transcribing meetings, saving and viewing notes, AI organization of meetings and agent answers, and exporting to external tools when you approve. This processing is needed to perform the service contract with you.",
           "Sending email and answering inquiries: sending meeting notes sharing emails, invitation emails, and service notification emails (such as reminders about long-paused meetings and notices of automatic ending), and answering inquiries. Service notifications and notification emails never include the meeting content, transcript, summary, or attendee names. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
           "Advertising information (optional): we send product news and offers by email only if you have agreed, and you can withdraw your consent at any time in Settings > Notifications.",
           "Automatic meeting ending: meetings paused for a long time are ended automatically after prior notice, and their analysis may proceed under the name of the person who started the meeting (or, if that person has left the workspace, another member who recorded the meeting or an administrator).",
           "Operations and security: access logs, sign-in records, and server logs are used to prevent misuse, analyze outages, support users, and investigate security incidents.",
-          "Improving the Service: usage statistics and performance metrics are used to analyze how the Service is used and improve it (Article 5). Reasons for deleting an account are used only as statistics for improving the Service.",
+          "Improving the Service: usage statistics and performance metrics are used to analyze how the Service is used and improve it (Section 5). Reasons for deleting an account are used only as statistics for improving the Service.",
           "The voices and names of attendees who have not signed up are processed only to the extent needed to perform the service contract with the user who recorded the meeting."
         ]
       },
@@ -212,9 +212,9 @@
           "The desktop app can record the sound coming from your computer along with your microphone. Computer audio includes the voices of other participants in a video call. Both inputs work only when you have allowed them in your operating system (macOS or Windows).",
           "Audio is sent in real time to a speech recognition provider to be transcribed, and the transcribed sentences are shown on screen.",
           "To improve recognition accuracy, meeting context may be sent along with the audio. Meeting context consists of the project name, meeting title, attendee names, agenda, the custom vocabulary you entered, and the meeting's topic and background.",
-          "After the meeting, audio is kept in encrypted storage (AWS Seoul region, Republic of Korea) so that speakers can be identified. It is deleted as soon as speaker identification finishes, and in any case automatically 30 days after it was stored.",
+          "After the meeting, audio is kept in encrypted storage in Seoul, Republic of Korea so that speakers can be identified. It is deleted as soon as speaker identification finishes, and in any case automatically 30 days after it was stored.",
           "Speaker identification results are shown with labels such as \"Speaker A\". Assigning a person's name to a label is your choice. HeyMoa does not create information that identifies a specific person by voice (a voiceprint) and does not compare voices across meetings.",
-          "Some attendees may not have signed up for the Service, and their voices and utterances are processed in the same way. The user who starts recording must confirm the necessary procedures, such as notifying attendees and obtaining their consent.",
+          "Some attendees may not have signed up for the Service, and their voices and utterances are processed in the same way. The user who starts recording is responsible for taking any required steps, such as notifying attendees and obtaining their consent.",
           "Automatic transcripts and speaker identification may contain errors. You should check important decisions and proper nouns yourself."
         ]
       },
@@ -222,13 +222,13 @@
         "title": "4. AI Processing and Training",
         "body": [
           "HeyMoa does not use your meeting audio, transcripts, notes, questions, or answers to train AI models. The speech recognition and AI providers HeyMoa engages receive this data only on terms that it is not used for training. External AI agents that you connect yourself are subject to their own policies.",
-          "To produce summaries, real-time organization, and answers to questions, the meeting's transcript, notes, attendee names, and your questions are sent to large language model providers (Article 7). These requests are made on terms that the data is not used for training.",
-          "When the agent uses web search, search queries made for your question are sent to the AI model provider's search feature (Article 7).",
+          "To produce summaries, real-time organization, and answers to questions, the meeting's transcript, notes, attendee names, and your questions are sent to large language model providers (Section 7). These requests are made on terms that the data is not used for training.",
+          "When the agent uses web search, search queries made for your question are sent to the AI model provider's search feature (Section 7).",
           "A search index is built from transcripts and notes and kept so that past meeting notes can be found and referenced. The index is deleted when the original note is deleted.",
-          "HeyMoa does not make decisions based solely on AI results that significantly affect your rights or obligations (automated decisions under Article 37-2 of the Personal Information Protection Act). AI summaries are for reference only.",
+          "HeyMoa does not make decisions based solely on AI results that significantly affect your rights or obligations (automated decisions under Article 37-2 of the Personal Information Protection Act). AI organization results are for reference only.",
           "If you connect Linear or GitHub, an approval screen shows what the agent will write before it writes to that tool. Only actions you approve are executed.",
-          "If you allow an external AI agent such as Claude or ChatGPT to read your workspace, that agent can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view. The agent can only read content and cannot change it.",
-          "An external AI agent's access expires automatically if it is not used for 90 days. You can disconnect Linear and GitHub integrations and external AI agents at any time, and stored access grants are destroyed when you do."
+          "If you allow an external AI app such as Claude or ChatGPT to read your workspace (MCP connections), that app can read all projects in the workspace and meeting transcripts (including attendees' utterances and names) within the scope you yourself can view. The agent can only read content and cannot change it.",
+          "An external AI app's access expires automatically if it is not used for 90 days. You can disconnect Linear and GitHub integrations and external AI apps (Settings > My MCP connections) at any time, and stored access grants are destroyed when you do."
         ]
       },
       {
@@ -238,7 +238,7 @@
           "To remember the state of the screen, screen settings such as the sidebar state, the workspace and project you last opened, and whether you have already seen guidance, along with recording status used to track the recording tab and recover a dropped recording, are stored in cookies and browser storage.",
           "These values are stored separately for each browser and device. Records of which guidance you have already seen are cleared when you sign out.",
           "To improve the Service, HeyMoa collects navigation paths, performance metrics, and feature usage records with Google Analytics 4, PostHog, Vercel Analytics, and Vercel Speed Insights. These tools may store identifiers in your browser or collect access information.",
-          "Instead of your email or name, PostHog receives internal member and workspace identifiers, the features you used and when (for example, creating a meeting, starting a recording, or completing a review), the address of the screens you visited (without extra details such as search conditions attached to the address), and device and browser information. Session recording and automatic click capture are not used.",
+          "Instead of your email or name, PostHog receives internal member and workspace identifiers, the features you used and when (for example, creating a meeting, starting a recording, or finishing a review), the address of the screens you visited (without extra details such as search conditions attached to the address), and device and browser information. Session recording and automatic click capture are not used.",
           "Records processed on the server, such as meeting analyses, dropped recording connections, notifications and notification emails sent, automatic meeting endings, and account deletions, are sent to PostHog. Only member identifiers, workspace identifiers, and values such as the type, count, or number of days of each record are sent, never meeting titles or email addresses. Account deletion records include the type of reason chosen, but not any text you entered. Records processed on the server cannot be refused through browser settings.",
           "The contents of meeting audio, transcripts, and notes are never sent to analytics tools.",
           "How to refuse: you can block or delete cookies and site data in your browser settings. For example, in Chrome you can delete cookies and site data under Settings > Privacy and security > Delete browsing data, and in Safari under Settings > Privacy > Manage Website Data. You can also block requests to analytics tools with your browser's tracking prevention or a content-blocking extension. Google Analytics can be refused with the opt-out browser add-on provided by Google (tools.google.com/dlpage/gaoptout).",
@@ -259,10 +259,10 @@
               [
                 "Meeting audio",
                 "Deleted as soon as speaker identification finishes; at most 30 days after it was stored",
-                "Article 3"
+                "Section 3"
               ],
               [
-                "Transcripts, notes, AI summaries, search indexes, agent chats",
+                "Transcripts, notes, AI organization results, search indexes, agent chats",
                 "Until you delete them",
                 "Deleted along with the note or workspace. Leaving a workspace also deletes your own agent chats in that workspace. Deleting your account deletes the records of workspaces you used alone and your own agent chats in every workspace; transcripts, notes, and AI summaries in team workspaces remain (see below)"
               ],
@@ -329,26 +329,26 @@
               [
                 "Reasons for deleting an account",
                 "Kept as statistics",
-                "Not linked to member identifiers, names, or email addresses. The reason type in PostHog deletion records follows the PostHog retention period"
+                "The statistics kept in the Service are not linked to member identifiers, names, or email addresses. The reason type sent to PostHog follows the PostHog retention period"
               ]
             ]
           },
-          "Account deletion: when you delete your account, you are signed out on every device right away and can no longer access the account. Account information and the data of workspaces you used alone are deleted from the service storage in turn, and remain in backups for up to 7 days before being removed automatically.",
-          "Names that remain in team records: even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Attendee, speaker, approval, and task assignee labels, and your own utterances in transcripts, are the team's records, so the remaining members can still see them. Your email, profile photo, and sign-in method are deleted. If you want your utterances in team records deleted, you can ask the workspace administrator or HeyMoa (Article 8).",
-          "Workspace deletion: when an administrator deletes a workspace, all members lose access right away. The workspace's notes, transcripts, audio, agent chats, integrations, and invitations are deleted in turn and remain in backups for up to 7 days.",
+          "Account deletion: when you delete your account, you are signed out on every device right away and can no longer access the account. Account information and the data of workspaces you used alone are deleted progressively from the service storage, and remain in backups for up to 7 days before being removed automatically.",
+          "Names that remain in team records: even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Attendee, speaker, approval, and task assignee labels, and your own utterances in transcripts, are the team's records, so the remaining members can still see them. Your email, profile photo, and sign-in method are deleted. If you want your utterances in team records deleted, you can ask the workspace administrator or HeyMoa (Section 8).",
+          "Workspace deletion: when an administrator deletes a workspace, all members lose access right away. The workspace's notes, transcripts, audio, agent chats, integrations, and invitations are deleted progressively and remain in backups for up to 7 days.",
           "Service notifications: a notification stores the meeting title and workspace name as they were when it was received. So even if a meeting note is deleted or someone leaves the workspace, the title remains in the recipient's notification list. When you open a notification, access permissions are checked again, and nothing is shown without permission.",
-          "Copies that cannot be recalled: emails already sent remain in recipients' mailboxes, and HeyMoa cannot recall or delete them. Inquiry content forwarded to Slack as an operations alert cannot be recalled either (Article 7). This is the same even if you delete a note or your account.",
+          "Copies that cannot be recalled: emails already sent remain in recipients' mailboxes, and HeyMoa cannot recall or delete them. Inquiry content forwarded to Slack as an operations alert cannot be recalled either (Section 7). This is the same even if you delete a note or your account.",
           "How data is destroyed: electronic files are deleted so that they cannot be recovered. Information that must be kept under other laws is kept separately from other information for that period."
         ]
       },
       {
         "title": "7. Processors and International Transfers",
         "body": [
-          "HeyMoa does not provide or sell your personal information to third parties. When you share meeting notes by email yourself or connect an external tool or external AI agent, the data goes where you chose.",
+          "HeyMoa does not provide or sell your personal information to third parties. When you share meeting notes by email yourself or connect an external tool or external AI app, the data goes where you chose.",
           "To operate the Service, HeyMoa entrusts processing to the providers below to the extent necessary. Personal information is transferred abroad to providers outside the Republic of Korea. This entrustment is necessary to perform the service contract. The following is disclosed under Article 28-8(1)(3) of the Personal Information Protection Act.",
           "All transfers use encrypted network transmission. The retention periods below are taken from each provider's published policy as of October 22, 2026.",
           "OpenRouter further entrusts processing to AI model providers (OpenAI, Microsoft, TypeSafe) (sub-processing). HeyMoa sends these requests on terms that the data is not used for training. Retention of inputs and outputs follows each provider's policy.",
-          "If you do not want your information transferred abroad, you can refuse by not using the feature or by disconnecting it. If you refuse transfers needed for speech recognition, speaker identification, AI summaries, or web hosting, you cannot use those features. Analytics tools can be refused as described in Article 5 (except records the server sends to PostHog), and refusing them does not limit your use of the Service.",
+          "If you do not want your information transferred abroad, you can refuse by not using the feature or by disconnecting it. If you refuse transfers needed for speech recognition, speaker identification, AI organization of meetings, or web hosting, you cannot use those features. Analytics tools can be refused as described in Section 5 (except records the server sends to PostHog), and refusing them does not limit your use of the Service.",
           {
             "columns": [
               "Provider",
@@ -607,7 +607,7 @@
               ],
               [
                 "Retention",
-                "Same as the retention periods in Article 6"
+                "Same as the retention periods in Section 6"
               ]
             ]
           },
@@ -701,7 +701,7 @@
               ],
               [
                 "How to refuse",
-                "As described in Article 5 (except records sent from the server). Refusing does not limit your use of the Service"
+                "As described in Section 5 (except records sent from the server). Refusing does not limit your use of the Service"
               ]
             ]
           },
@@ -735,7 +735,7 @@
               ],
               [
                 "How to refuse",
-                "Google Analytics: as described in Article 5"
+                "Google Analytics: as described in Section 5"
               ]
             ]
           },
@@ -776,8 +776,8 @@
         "title": "8. Your Rights and How to Exercise Them",
         "body": [
           "You can at any time ask to access, correct, delete, or stop the processing of your personal information and meeting data, and you can withdraw your consent.",
-          "What you can do directly in the Service: edit your profile, disconnect external tools and external AI agents, delete notes (workspace administrators), leave or delete workspaces, and delete your account (Settings > My Account).",
-          "For other requests, email {email} or the privacy officer in Article 10. After verifying your identity, HeyMoa tells you the outcome within 10 days of receiving the request. If HeyMoa must refuse or delay a request, it tells you why and how to object.",
+          "What you can do directly in the Service: edit your profile, disconnect external tools and external AI apps (Settings > My MCP connections), delete notes (workspace administrators), leave or delete workspaces, and delete your account (Settings > My account).",
+          "For other requests, email {email} or the privacy officer in Section 10. After verifying your identity, HeyMoa tells you the outcome within 10 days of receiving the request. If HeyMoa must refuse or delay a request, it tells you why and how to object.",
           "You can also make requests through a legal representative or an authorized agent, who must include a power of attorney.",
           "Meeting attendees who have not signed up: you can ask the user who started the recording or that workspace's administrator, or email HeyMoa. HeyMoa confirms that you attended the meeting and then handles the request together with the workspace administrator.",
           "For meeting records in a workspace that a company or organization uses for work, that company or organization decides how they are handled. In that case, HeyMoa forwards the request to the workspace administrator.",
@@ -791,7 +791,7 @@
           "Encryption: all data in transit is encrypted. The database and audio storage are encrypted at rest, and external tool integration credentials are additionally encrypted before they are stored.",
           "Access control: meeting data can be viewed only by workspace members and by the people and services you share it with by email or connect. The audio storage is not public, and audio is delivered to the speaker identification provider through a temporary link that expires after a short time.",
           "Credential management: cookies used to keep you signed in are protected so that scripts on web pages cannot read them. When you delete your account, remaining sign-ins and real-time connections are cut right away; when a workspace is deleted, connections to that workspace are cut.",
-          "Log management: meeting content is not written to server logs, and logs are deleted after the set period (Article 6)."
+          "Log management: meeting content is not written to server logs, and logs are deleted after the set period (Section 6)."
         ]
       },
       {
