@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/inter";
+import "@fontsource-variable/inter/opsz.css";
 
 import { NotFoundView } from "@/components/layout/not-found-view";
 import { messagesFor } from "@/i18n/messages";

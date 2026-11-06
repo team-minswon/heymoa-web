@@ -14,6 +14,7 @@ import {
   wait,
 } from "./common.mjs";
 import { IDS } from "./ids.mjs";
+import { K, L, R } from "./ui.mjs";
 
 const url = (path) => `${BASE}${path}`;
 
@@ -29,12 +30,12 @@ async function open(page, path, { settle = 1200 } = {}) {
   );
   await page.evaluate(() => document.fonts.ready);
   await wait(settle);
-  const nudge = page.getByRole("button", { name: "다시 보지 않기" });
+  const nudge = page.getByRole("button", { name: L("다시 보지 않기") });
   if (await nudge.count()) {
     await nudge.first().click();
     await wait(300);
   }
-  const close = page.getByRole("button", { name: "시작하기 닫기" });
+  const close = page.getByRole("button", { name: L("시작하기 닫기") });
   if (await close.count()) {
     await close.first().click();
     await wait(300);
@@ -56,17 +57,17 @@ const SHOTS = {
   // 새 회의 만들기 창 — 「만들기」에 링을 건다
   async "getting-started/new-meeting"({ page }) {
     await open(page, `/w/${IDS.workspace}`);
-    await page.getByRole("button", { name: "새 노트" }).first().click();
+    await page.getByRole("button", { name: L("새 노트") }).first().click();
     await dialog(page).waitFor();
     await wait(500);
-    await ring(page, dialog(page).getByRole("button", { name: "만들기" }));
+    await ring(page, dialog(page).getByRole("button", { name: L("만들기") }));
     await shoot(page, dialog(page), "getting-started/new-meeting", { pad: 28 });
   },
 
   // 사이드바 + 노트 목록(행에 올려 「⋯」가 보이는 모습)
   async "workspace-basics/note-list"({ page }) {
     await open(page, `/w/${IDS.workspace}`);
-    const row = page.getByRole("link", { name: /노트 열기/ }).first();
+    const row = page.getByRole("link", { name: R(/노트 열기/, /^Open note/) }).first();
     await row.hover();
     await wait(400);
     await shoot(
@@ -81,21 +82,21 @@ const SHOTS = {
     // 도크가 위쪽 내용과 가깝게 보이도록 낮은 창으로 찍는다
     await page.setViewportSize({ width: 900, height: 520 });
     await open(page, `/w/${IDS.workspace}`);
-    await page.getByRole("button", { name: "새 노트" }).first().click();
-    await dialog(page).getByRole("button", { name: "만들기" }).click();
-    await page.getByRole("button", { name: "회의 시작" }).click();
+    await page.getByRole("button", { name: L("새 노트") }).first().click();
+    await dialog(page).getByRole("button", { name: L("만들기") }).click();
+    await page.getByRole("button", { name: L("회의 시작") }).click();
     await page
-      .getByRole("button", { name: "일시정지" })
+      .getByRole("button", { name: K("recording.dock.pause") })
       .waitFor({ timeout: 15000 });
     // 목 전사가 첫 줄을 낼 때까지(가짜 마이크가 소리를 내면 목이 발화로 읽는다)
     await page
-      .getByText("첫 발화를 기다리고 있습니다")
+      .getByText(L("첫 발화를 기다리고 있습니다"))
       .waitFor({ state: "detached", timeout: 40000 });
     await wait(13000);
     // ⏸ 에 올려 툴팁(「일시정지 — 회의는 끝나지 않습니다」)까지 보이게 한다
-    const pause = page.getByRole("button", { name: "일시정지", exact: true });
+    const pause = page.getByRole("button", { name: K("recording.dock.pause"), exact: true });
     await pause.hover();
-    await page.getByText("회의는 끝나지 않습니다").waitFor();
+    await page.getByText(K("recording.pause.tooltip")).waitFor();
     await ring(page, pause);
     await shoot(
       page,
@@ -130,7 +131,7 @@ const SHOTS = {
       `/w/${IDS.workspace}/notes/${IDS.details}?view=full&tab=details`
     );
     const section = page
-      .getByRole("heading", { name: "회의 맥락" })
+      .getByRole("heading", { name: L("회의 맥락") })
       .locator("xpath=ancestor::section[1]");
     await section.scrollIntoViewIfNeeded();
     await wait(400);
@@ -165,11 +166,11 @@ const SHOTS = {
     // 멤버 행의 「⋯」(aria 「이름(이메일) 관리」) — 설정 탭 「MCP 연결」와 헷갈리지 않게 이메일이 든 것만
     // 내가 아닌 멤버(두 번째 줄)의 이름을 바꾸는 장면으로 찍는다
     await dialog(page)
-      .getByRole("button", { name: /@.*\) 관리$/ })
+      .getByRole("button", { name: R(/@.*\) 관리$/, /^Manage .*@.*\)$/) })
       .nth(1)
       .click();
-    await page.getByRole("menuitem", { name: "이름 변경" }).click();
-    await page.getByText("이 워크스페이스에서 보일 이름").waitFor();
+    await page.getByRole("menuitem", { name: L("이름 변경") }).click();
+    await page.getByText(L("이 워크스페이스에서 보일 이름")).waitFor();
     await wait(500);
     await shoot(
       page,
@@ -190,7 +191,7 @@ const SHOTS = {
   // 문의·피드백
   async "feedback/dialog"({ page }) {
     await open(page, `/w/${IDS.workspace}`);
-    await page.getByRole("button", { name: /문의·피드백/ }).click();
+    await page.getByRole("button", { name: new RegExp(L("문의·피드백")) }).click();
     await dialog(page).waitFor();
     await wait(500);
     await shoot(page, dialog(page), "feedback/dialog", { pad: 28 });
@@ -199,7 +200,7 @@ const SHOTS = {
   // 내 에이전트 패널
   async "agent/chat"({ page }) {
     await open(page, `/w/${IDS.workspace}/tasks`);
-    await page.getByRole("button", { name: "내 에이전트 열기" }).click();
+    await page.getByRole("button", { name: L("내 에이전트 열기") }).click();
     await wait(1200);
     await shoot(page, { x: 0, y: 0, width: 1440, height: 900 }, "agent/chat");
   },
@@ -207,7 +208,7 @@ const SHOTS = {
   // 설정 › 내 MCP 연결 › 새 연결
   async "agent-mcp/new-connection"({ page }) {
     await open(page, `/w/${IDS.workspace}?settings=agents`);
-    await page.getByRole("button", { name: "새 연결" }).click();
+    await page.getByRole("button", { name: L("새 연결") }).click();
     await wait(800);
     await blurFocus(page);
     await shoot(page, dialog(page).last(), "agent-mcp/new-connection", {

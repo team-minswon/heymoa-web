@@ -1,6 +1,6 @@
 import { mockDb } from "@/lib/mocks/db";
 import {
-  HELP_DEMO_LIVE_SCRIPT,
+  helpDemoPack,
   isHelpDemoEnabled,
 } from "@/lib/mocks/help-demo";
 import {
@@ -128,7 +128,7 @@ export class MockTranscriptionScenario {
     this.script =
       options.script ??
       // 가이드 캡처 프리셋(help-demo)은 주간 운영 점검 대화를 이어서 흘린다
-      (isHelpDemoEnabled() ? HELP_DEMO_LIVE_SCRIPT : undefined) ??
+      (isHelpDemoEnabled() ? helpDemoPack().liveScript : undefined) ??
       KOREAN_MEETING_SCRIPTS[
         stableIndex(options.sessionId, KOREAN_MEETING_SCRIPTS.length)
       ];

@@ -71,7 +71,9 @@ These appear ONLY as soft radial-gradient atmospheric orbs inside `{component.gr
 
 ### Font Family
 
-**Inter** carries everything — display at weight 300, body, navigation, captions, and buttons. Korean glyphs fall through to the system sans. **The display serif (EB Garamond / Noto Serif KR) is retired (APP-1161)** — headings use the same family as body so the two never mix. Fallback: `sans-serif`.
+**Inter** carries everything — display at weight 300, body, navigation, captions, and buttons. Korean glyphs fall through to the system sans.
+
+**영어 제목은 Inter Display 모양(광학 크기)입니다 (APP-1510).** `:lang(en)`의 `h1`~`h3`만 `font-optical-sizing: auto`로 켜고 자간을 `-0.015em`으로 덜어 줍니다(`app/globals.css` 끝). 본문·화면 틀은 본문용 모양(opsz 14) 그대로입니다 — 광학 크기를 16px 본문까지 켜면 글자가 좁아져 가독성이 떨어졌습니다. 한국어 화면은 켜지 않습니다. 제목 속 띄어쓰기·문장부호가 Inter라 폭이 바뀌기 때문입니다. **The display serif (EB Garamond / Noto Serif KR) is retired (APP-1161)** — headings use the same family as body so the two never mix. Fallback: `sans-serif`.
 
 ### Hierarchy
 

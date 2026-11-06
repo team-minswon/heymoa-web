@@ -12,7 +12,7 @@
 import { faker } from "@faker-js/faker";
 
 import {
-  HELP_DEMO_CHAT_ANSWERS,
+  helpDemoPack,
   isHelpDemoEnabled,
 } from "@/lib/mocks/help-demo";
 import {
@@ -104,7 +104,7 @@ function pickGeneralAnswer(seed: string) {
   faker.seed(numericSeed(seed));
   // 가이드 캡처 프리셋(help-demo)이 켜져 있으면 업무 이야기 답변 풀을 쓴다
   return faker.helpers.arrayElement(
-    isHelpDemoEnabled() ? HELP_DEMO_CHAT_ANSWERS : GENERAL_CHAT_ANSWERS
+    isHelpDemoEnabled() ? helpDemoPack().chatAnswers : GENERAL_CHAT_ANSWERS
   );
 }
 
@@ -182,11 +182,14 @@ function thinking(...lines: string[]): MockSseEvent[] {
  * 이상 붙이면 이제 그 자리가 뜬다. 지어낸 이름이 아니라 **실제로 붙인 것**이라 도구
  * `target` 과도 안 어긋난다.
  */
+/** 가이드 캡처 프리셋이면 그 언어의 진행 문구(APP-1511). 시험·기본 목은 한국어 그대로다 */
+const demoText = () => (isHelpDemoEnabled() ? helpDemoPack().chatStream : null);
+
 function scopedNotes(input: BuildInput) {
   const notes = (input.scope ?? []).filter((each) => each.kind === "note");
   return notes.length > 0
     ? notes
-    : [{ kind: "note" as const, id: tsid(input.chatId), title: "이 회의록" }];
+    : [{ kind: "note" as const, id: tsid(input.chatId), title: demoText()?.thisNote ?? "이 회의록" }];
 }
 
 /** 하나만 들어가는 자리(생각 문장·도구 `target`)가 쓴다. */
@@ -558,22 +561,22 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
       // **한 턴이 지나는 길을 그대로 흘린다.** 생각 → 도구 시작 → 도구 결과 → 답.
       // 이 넷이 없으면 진행 표시가 화면에 붙었는지 목으로 확인할 방법이 없다.
       ...thinking(
-        `${note.title}에서 물어보신 내용을 찾습니다.`,
-        "스크립트에서 관련 발화를 먼저 훑겠습니다."
+        demoText()?.searching(note.title) ?? `${note.title}에서 물어보신 내용을 찾습니다.`,
+        demoText()?.skim ?? "스크립트에서 관련 발화를 먼저 훑겠습니다."
       ),
       frame("tool_call_start", {
         toolCallId,
         tool: "transcripts.search",
-        summary: "스크립트에서 관련 발화 검색",
+        summary: demoText()?.toolSummary ?? "스크립트에서 관련 발화 검색",
         target: { kind: "note", id: note.id, title: note.title },
       }),
       frame("tool_call_result", {
         toolCallId,
         tool: "transcripts.search",
         status: "success",
-        summary: "3건 찾음",
+        summary: demoText()?.found ?? "3건 찾음",
       }),
-      ...thinking("찾은 발화로 답을 정리합니다."),
+      ...thinking(demoText()?.composing ?? "찾은 발화로 답을 정리합니다."),
       ...tokens(content),
       frame("message_end", {
         messageId,

@@ -16,7 +16,7 @@ import {
 } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
 import {
-  helpDemoTaskRows,
+  helpDemoPack,
   isHelpDemoEnabled,
   type TaskSeedRow,
 } from "@/lib/mocks/help-demo";
@@ -70,7 +70,7 @@ const current = (task: StoredTask) => task.history[task.history.length - 1];
 function seed(): StoredTask[] {
   const me = mockDb.getCurrentUser().userId;
   // 가이드 캡처 프리셋(help-demo)이 켜져 있으면 그쪽 할 일 목록을 쓴다
-  if (isHelpDemoEnabled()) return build(helpDemoTaskRows(), nextId("01KA"), me);
+  if (isHelpDemoEnabled()) return build(helpDemoPack().taskRows(), nextId("01KA"), me);
   const meetingProject = mockDb.getNote(MENTORING_NOTE_ID).projectId;
   const workspaceId = workspaceOfProject(meetingProject);
   const otherProject =

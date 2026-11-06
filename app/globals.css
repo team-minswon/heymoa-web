@@ -347,6 +347,9 @@
        않고 꺾인다. 영어 줄바꿈에는 영향이 없다. 컴포넌트마다 `break-keep` 을 붙이지 않는다(PRO-66). */
     word-break: keep-all;
     overflow-wrap: break-word;
+    /* 본문·화면 틀은 Inter 본문용 모양(opsz 14)으로 둔다. 광학 크기 자동은 16px 본문까지 좁혀
+       가독성이 떨어졌다(APP-1510). 영어 화면의 제목에서만 Display 모양을 쓴다 — 파일 끝 */
+    font-optical-sizing: none;
   }
   html {
     @apply font-sans;
@@ -741,4 +744,13 @@ html:has([data-help-root]) {
 /* 검색 중 일치가 없는 조항의 목차 항목 */
 [data-toc-link][data-miss] {
   opacity: 0.5;
+}
+
+/* 영어 제목은 Inter Display 모양으로 (APP-1510). 광학 크기를 켜면 큰 글자에서 획이 가늘고 자간이
+   좁은 Display 모양이 된다. 제목 자간(-0.03 ~ -0.045em)은 한국어와 Inter 본문용 모양에 맞춰 잡은
+   값이라, Display 위에 더해지면 낱말 사이까지 붙는다 — 영어 화면에서만 덜어 준다. 한국어 화면은
+   제목 속 띄어쓰기·문장부호도 Inter 라 켜면 폭이 바뀌므로 켜지 않는다. @layer 밖이라 utility 를 이긴다. */
+:root:lang(en) :is(h1, h2, h3) {
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
 }

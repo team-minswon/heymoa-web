@@ -26,16 +26,21 @@
  *
  * 쉼표 일괄 등록 시연용 용어 「코호트, 리텐션, 이탈률」은 일부러 용어 사전에 넣지 않았다.
  *
+ * ## 언어 (APP-1511)
+ *
+ * 문서가 영어(`<html lang="en">`)이면 같은 ID·같은 모양의 영어 회의(`./en/`)를 낸다. 소비자는 `helpDemoPack()` 으로만
+ * 읽는다 — 영어 가이드의 캡처가 영어 화면에 영어 회의를 담게 하려는 것이다.
+ *
  * 참고 — SSR 이 쓰는 `MOCK_USER`(lib/mocks/mock-user.ts)는 바꾸지 않는다. 프리셋의 현재 사용자는 같은 `userId` 에
  * 이름만 「김서윤」이다. 서버가 그리는 첫 HTML 에만 옛 이름이 잠깐 보일 수 있다.
  */
 export { createHelpDemoState } from "@/lib/mocks/help-demo/build";
-export { HELP_DEMO_CHAT_ANSWERS, HELP_DEMO_TERMS } from "@/lib/mocks/help-demo/misc";
+export { helpDemoLocale, type HelpDemoLocale } from "@/lib/mocks/help-demo/locale";
+export { helpDemoPack, type HelpDemoPack } from "@/lib/mocks/help-demo/pack";
 export { HD_NOTE_IDS as HELP_DEMO_NOTE_IDS } from "@/lib/mocks/help-demo/notes";
 export { HD_WORKSPACE_ID as HELP_DEMO_WORKSPACE_ID } from "@/lib/mocks/help-demo/people";
-export { HELP_DEMO_ENDED_ITEMS, helpDemoReviewSets, type HelpDemoReviewSet } from "@/lib/mocks/help-demo/reviews";
-export { HELP_DEMO_LIVE_SCRIPT } from "@/lib/mocks/help-demo/script-weekly";
-export { helpDemoTaskRows, type TaskSeedRow } from "@/lib/mocks/help-demo/tasks";
+export type { HelpDemoReviewSet } from "@/lib/mocks/help-demo/reviews";
+export type { TaskSeedRow } from "@/lib/mocks/help-demo/tasks";
 
 export const HELP_DEMO_STORAGE_KEY = "heymoa:helpDemo";
 
