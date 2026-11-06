@@ -6,7 +6,8 @@ import { installCursor } from "./cursor.mjs";
 import { scenes } from "./scenes.mjs";
 import { desktopScene } from "./desktop-scene.mjs";
 import { encode } from "./encode.mjs";
-import { record } from "./common.mjs";
+import { languageCookies, OUT, record } from "./common.mjs";
+import { BROWSER_LOCALE, LOCALE } from "./ui.mjs";
 
 // cwd에 상관없이 이 워크트리 안에서만 임시 파일과 산출물을 만든다.
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -39,7 +40,8 @@ assert.ok(
   "3100~4100의 다른 서버는 사용하지 않습니다."
 );
 const requested = process.argv.slice(2);
-const names = [...scenes.map((s) => s.name), "desktop-menubar"];
+// 데스크톱 앱 창은 앱 문구가 아직 한국어라(APP-1287) 영어로 찍지 않는다 — 영어 가이드는 한국어 파일로 대체된다
+const names = [...scenes.map((s) => s.name), ...(LOCALE === "en" ? [] : ["desktop-menubar"])];
 for (const name of requested)
   assert.ok(names.includes(name), `알 수 없는 클립: ${name}`);
 const selected = requested.length
@@ -82,7 +84,7 @@ try {
     const context = await browser.newContext({
       viewport: vp,
       recordVideo: { dir: work, size: vp },
-      locale: "ko-KR",
+      locale: BROWSER_LOCALE,
       timezoneId: "Asia/Seoul",
       colorScheme: "light",
       permissions: ["microphone"],
@@ -99,6 +101,7 @@ try {
       });
       await context.addCookies([
         { name: "heymoa-help-demo", value: "1", url: base },
+        ...languageCookies(base),
       ]);
       // 일시정지 직후 종료 안내는 그것을 보여 주는 장면(`endNudge`)에서만 띄운다.
       const endNudge = Boolean(
@@ -179,12 +182,12 @@ try {
     }
   }
   // 선택한 모든 클립 성공 뒤에만 공개 산출물과 manifest를 교체한다.
-  await mkdir("public/help/clips", { recursive: true });
+  await mkdir(path.join(OUT, "clips"), { recursive: true });
   for (const [name, result] of Object.entries(report)) {
     for (const ext of ["webm", "mp4", "webp"])
       await copyFile(
         path.join(work, `${name}.${ext}`),
-        `public/help/clips/${name}.${ext}`
+        path.join(OUT, "clips", `${name}.${ext}`)
       );
     record(`clips/${name}`, {
       width: result.width,

@@ -21,6 +21,8 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { BROWSER_LOCALE, LOCALE } from "./ui.mjs";
+
 export const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../.."
@@ -28,8 +30,11 @@ export const ROOT = path.resolve(
 export const BASE = process.env.HELP_BASE ?? "http://localhost:4200";
 // 점검용: HELP_OUT 을 주면 그 폴더에만 쓰고 목록(manifest)은 건드리지 않는다.
 export const DRY = Boolean(process.env.HELP_OUT);
-export const OUT = process.env.HELP_OUT ?? path.join(ROOT, "public/help");
-export const MANIFEST = path.join(ROOT, "lib/help/media-manifest.ts");
+// 영어(`HELP_LOCALE=en`)는 `public/help/en/` 과 따로 된 목록에 쓴다(APP-1511). 가이드가 언어별로 고르고 없으면 한국어로 대체한다.
+export const OUT =
+  process.env.HELP_OUT ?? path.join(ROOT, LOCALE === "en" ? "public/help/en" : "public/help");
+export const MANIFEST = path.join(ROOT, LOCALE === "en" ? "lib/help/media-manifest-en.ts" : "lib/help/media-manifest.ts");
+const MANIFEST_CONST = LOCALE === "en" ? "HELP_MEDIA_EN" : "HELP_MEDIA";
 export const FFMPEG = process.env.FFMPEG ?? "/opt/homebrew/bin/ffmpeg";
 export const FFPROBE = process.env.FFPROBE ?? "/opt/homebrew/bin/ffprobe";
 
@@ -62,7 +67,7 @@ export function record(key, entry) {
   );
   writeFileSync(
     MANIFEST,
-    `// 자동 생성: \`pnpm help:shots\` · \`pnpm help:clips\` 가 쓴다. 손으로 고치지 않는다.\nexport const HELP_MEDIA = ${JSON.stringify(sorted, null, 2)} as const;\n`
+    `// 자동 생성: ${LOCALE === "en" ? "\`HELP_LOCALE=en pnpm help:shots\` · \`help:clips\`" : "\`pnpm help:shots\` · \`pnpm help:clips\`"} 가 쓴다. 손으로 고치지 않는다.\nexport const ${MANIFEST_CONST} = ${JSON.stringify(sorted, null, 2)} as const;\n`
   );
 }
 
@@ -75,7 +80,7 @@ export async function openDemo(
     viewport: { width, height },
     deviceScaleFactor: scale,
     colorScheme: "light",
-    locale: "ko-KR",
+    locale: BROWSER_LOCALE,
     timezoneId: "Asia/Seoul",
     ...(video
       ? { recordVideo: { dir: video.dir, size: { width, height } } }
@@ -101,6 +106,7 @@ export async function openDemo(
     await context.addCookies([
       { name: "heymoa-help-demo", value: "1", url: BASE },
     ]);
+  await context.addCookies(languageCookies(BASE));
   const page = await context.newPage();
   return { context, page };
 }
@@ -188,3 +194,12 @@ export async function shoot(
 
 export const run = (cmd, args) =>
   execFileSync(cmd, args, { stdio: ["ignore", "ignore", "pipe"] });
+
+/**
+ * 화면 언어 쿠키. 영어면 언어 쿠키와 목 계정 언어를 en 으로 심어 제품 면이 영어로 서고, 프리셋도 영어 회의를 낸다
+ * (`lib/mocks/help-demo/locale.ts` 가 `<html lang>` 을 본다). 한국어는 언어 쿠키를 ko 로 고정한다.
+ */
+export const languageCookies = (base) => [
+  { name: "heymoa-lang", value: LOCALE, url: base },
+  ...(LOCALE === "en" ? [{ name: "heymoa-mock-account-lang", value: "en", url: base }] : []),
+];

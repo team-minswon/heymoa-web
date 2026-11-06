@@ -3,7 +3,8 @@ import { cache } from "react";
 
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
-import { HD_ME_EMAIL, HD_ME_NAME } from "@/lib/mocks/help-demo/people";
+import * as enHelpDemoPeople from "@/lib/mocks/help-demo/en/people";
+import * as helpDemoPeople from "@/lib/mocks/help-demo/people";
 import { MOCK_ACCOUNT_LANGUAGE_COOKIE, MOCK_USER } from "@/lib/mocks/mock-user";
 import { requestLocale } from "@/lib/i18n/request-locale";
 import { isLocale } from "@/lib/i18n/locales";
@@ -37,7 +38,9 @@ export const getCurrentUserForSsr = cache(
       // 가이드 캡처용 목 프리셋(`lib/mocks/help-demo`)은 사용자 이름도 가상이다. 캡처 스크립트가 심는 쿠키가 있을 때만
       // 서버가 그린 첫 화면의 사용자도 같은 이름으로 맞춘다. 목 모드에서만 이 분기를 지난다.
       if (cookieStore.get("heymoa-help-demo")?.value === "1") {
-        return { ...MOCK_USER, name: HD_ME_NAME, email: HD_ME_EMAIL, language };
+        // 영어 계정이면 영어 프리셋의 이름이다(APP-1511) — 브라우저 쪽 프리셋은 문서 언어로 고른다
+        const people = language === "en" ? enHelpDemoPeople : helpDemoPeople;
+        return { ...MOCK_USER, name: people.HD_ME_NAME, email: people.HD_ME_EMAIL, language };
       }
       return { ...MOCK_USER, language };
     }

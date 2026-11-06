@@ -1,6 +1,6 @@
 import type { ProjectMeetingLinksResponseData } from "@/lib/api/generated/models";
-import { GUIDE_AGENDA_PROJECT_ID, guideAgendaMapLinks, guideAgendaMapSummary } from "@/lib/mocks/guide-agenda-map";
-import { isHelpDemoEnabled } from "@/lib/mocks/help-demo";
+import { GUIDE_AGENDA_PROJECT_ID } from "@/lib/mocks/guide-agenda-map";
+import { helpDemoPack, isHelpDemoEnabled } from "@/lib/mocks/help-demo";
 import { localProjectLinks, localProjects } from "@/lib/mocks/local-projects";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 
@@ -158,7 +158,7 @@ function largeAgendaMap(size: number): ProjectMeetingLinksResponseData {
  */
 export function projectAgendaMapSummary(noteId: string): MeetingReviewSummary | null {
   // 가이드 목 프리셋이 켜진 때만: 촬영용 프로젝트의 요약(`guide-agenda-map.ts`)
-  const guide = isHelpDemoEnabled() ? guideAgendaMapSummary(noteId) : null;
+  const guide = isHelpDemoEnabled() ? helpDemoPack().agendaMap.summary(noteId) : null;
   if (guide) return guide;
   const note = [...localProjects().flatMap((project) => project.links.notes), ...projectAgendaMapMock().notes].find(
     (candidate) => candidate.noteId === noteId
@@ -201,7 +201,7 @@ export function projectAgendaMapSummary(noteId: string): MeetingReviewSummary | 
 }
 
 export function projectAgendaMapMock(projectId?: string): ProjectMeetingLinksResponseData {
-  if (projectId === GUIDE_AGENDA_PROJECT_ID && isHelpDemoEnabled()) return guideAgendaMapLinks();
+  if (projectId === GUIDE_AGENDA_PROJECT_ID && isHelpDemoEnabled()) return helpDemoPack().agendaMap.links();
   // 로컬 전용 프로젝트(public/mock-local)는 그 프로젝트의 실제 응답을 돌려준다
   const local = projectId ? localProjectLinks(projectId) : null;
   if (local) return local;

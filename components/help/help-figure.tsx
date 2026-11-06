@@ -1,12 +1,13 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { Maximize2 } from "lucide-react";
 
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
+import { localizedHelpMedia } from "@/lib/help/localized-media";
 import { trackHelp, useHelpSlug } from "@/lib/help/analytics";
 import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { cn } from "@/lib/utils";
@@ -36,9 +37,10 @@ export function HelpFigure({
   const trigger = useRef<HTMLButtonElement>(null);
   const slug = useHelpSlug();
   const t = useTranslations("help.media");
-  const url = helpAssetUrl(src);
-  // 크기는 캡처 스크립트가 쓴 목록(`lib/help/media-manifest.ts`)에서 읽는다 — 자리를 미리 잡는다.
-  const { width, height } = HELP_MEDIA[src];
+  // 페이지 언어의 파일을 고르고(없으면 한국어), 크기는 캡처 스크립트가 쓴 목록에서 읽는다 — 자리를 미리 잡는다.
+  const media = localizedHelpMedia(src, useLocale());
+  const url = helpAssetUrl(media.path);
+  const { width, height } = media;
   const image = (extra?: string) => (
     // eslint-disable-next-line @next/next/no-img-element -- 미리 줄여 둔 정적 WebP 를 그대로 서빙한다(이미지 최적화 한도를 쓰지 않는다)
     <img
