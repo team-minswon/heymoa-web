@@ -497,9 +497,9 @@
       "ended": "Meeting over. On to the Summary tab",
       "analyzing": "Analysis is sped up here",
       "doc": "The Summary tab becomes the meeting notes",
-      "legend": "Sorted like this",
+      "legend": "Sorted into",
       "room": "In the room",
-      "idle": "Not every remark becomes an item",
+      "idle": "Not every line is an item",
       "evidence": "<nw>Where this</nw> <nw>decision</nw> <nw>came from</nw>",
       "railAsk": "Ask quietly, mid-meeting",
       "railRefs": "Answers list the notes they used"
