@@ -54,8 +54,8 @@ async function action(value: OnboardingAction) {
   }
   pending = true;
   // A focus refresh must not dismiss an open native language picker.
-  if (value !== "read") controls.forEach((control) => {
-    control.disabled = true;
+  controls.forEach((control) => {
+    if (value !== "read" || control.tagName !== "SELECT") control.disabled = true;
   });
   element("error").textContent = "";
   try {

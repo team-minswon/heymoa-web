@@ -84,8 +84,11 @@ test("a language choice made during a delayed initial read is saved after the re
   await page.waitForFunction(() => Boolean(window.finishRead));
   assert.equal(await page.locator("#language").isEnabled(), true);
   await page.locator("#language").selectOption("en");
+  assert.equal(await page.locator("#complete").isDisabled(), true);
+  await page.evaluate(() => document.querySelector("#complete").click());
   await page.evaluate(() => window.finishRead());
   await page.waitForFunction(() => document.documentElement.lang === "en");
   assert.deepEqual(await page.evaluate(() => window.requests), ["read", "language-en"]);
   assert.equal(await page.locator("#language").inputValue(), "en");
+  assert.equal(await page.locator("#complete").isEnabled(), true);
 });
