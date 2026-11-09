@@ -1,6 +1,6 @@
 import { localize } from "./i18n";
 import { getLanguage } from "../src/i18n";
-import { t } from "../src/i18n";
+import { formatElapsed, t } from "../src/i18n";
 import type {
   ActiveMeeting,
   MeetingTimelineItem,
@@ -62,7 +62,7 @@ const filterButtons = filters.map(([key, label]) => {
 const offset = (ms: number | null) => {
   if (ms === null) return "—";
   const seconds = Math.floor(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  return formatElapsed(seconds);
 };
 
 function createRow(item: MeetingTimelineItem) {
@@ -265,7 +265,10 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
       if (meeting.startedAt !== null) {
         const time = document.createElement("span");
         time.className = "meeting-time";
-        time.textContent = getLanguage() === "en" ? `Started ${startTime(meeting.startedAt)}` : `${startTime(meeting.startedAt)} 시작`;
+        time.textContent =
+          getLanguage() === "en"
+            ? `Started ${startTime(meeting.startedAt)}`
+            : `${startTime(meeting.startedAt)} 시작`;
         button.append(time);
       }
       button.addEventListener("click", () =>
@@ -295,7 +298,9 @@ function receive(view: MeetingPopoverView) {
     : recording
       ? t("회의 타임라인을 기다리고 있습니다. 현재 회의를 열어 확인해 주세요.")
       : view.phase === "requesting-permission" || view.phase === "connecting"
-        ? t("녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요.")
+        ? t(
+            "녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요."
+          )
         : view.phase === "stopping"
           ? t("녹음 일시정지와 전송 완료를 기다리고 있습니다.")
           : view.warning || t("녹음 중인 회의가 없습니다.");
@@ -369,8 +374,9 @@ function act(
 ) {
   if (value === "stop" || value === "stop-viewing") stop.disabled = true;
   void bridge.action(value).catch(() => {
-    element("notice").textContent =
-      t("처리하지 못했습니다. 현재 회의에서 확인해 주세요.");
+    element("notice").textContent = t(
+      "처리하지 못했습니다. 현재 회의에서 확인해 주세요."
+    );
   });
 }
 stop.addEventListener("click", () => act(viewing ? "stop-viewing" : "stop"));

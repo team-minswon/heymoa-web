@@ -1,4 +1,4 @@
-import { t } from "./i18n";
+import { formatElapsed, t } from "./i18n";
 import type {
   DesktopRecordingAction,
   RecordingSummary,
@@ -119,10 +119,7 @@ export class RecordingLifecycle {
         : neverStarted
           ? t(LABELS.idle)
           : t("녹음 상태 확인 불가"),
-      elapsed:
-        seconds === null
-          ? null
-          : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
+      elapsed: seconds === null ? null : formatElapsed(seconds),
       pending: Boolean(s?.pendingMs),
       inputWarning: warnings.join(" · ") || null,
       unknown: !s && !neverStarted,

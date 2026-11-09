@@ -1,4 +1,4 @@
-import { getLanguage, t } from "./i18n";
+import { formatElapsed, getLanguage, t } from "./i18n";
 import { app, BrowserWindow, dialog, Menu, nativeImage, Tray } from "electron";
 import path from "node:path";
 import type {
@@ -75,8 +75,12 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
           ? t("녹음 종료와 전송 완료를 기다리고 있습니다.")
           : t("녹음이 진행 중이거나 전송되지 않은 소리가 있습니다."),
       detail: discard
-        ? t("아직 서버에 저장되지 않은 소리는 복구할 수 없습니다. 서버의 회의 완료를 의미하지 않습니다.")
-        : t("앱을 유지하면 종료와 전송을 계속할 수 있습니다. 상태를 확인할 수 없는 경우에도 완료로 판단하지 않습니다."),
+        ? t(
+            "아직 서버에 저장되지 않은 소리는 복구할 수 없습니다. 서버의 회의 완료를 의미하지 않습니다."
+          )
+        : t(
+            "앱을 유지하면 종료와 전송을 계속할 수 있습니다. 상태를 확인할 수 없는 경우에도 완료로 판단하지 않습니다."
+          ),
       buttons: discard
         ? [t("취소"), t("소리를 버리고 앱 종료")]
         : waiting
@@ -102,10 +106,12 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   /** 뷰어로 보는 회의의 경과. 시작 시각은 진행 중 회의 목록에서 찾는다(APP-1094). */
   function viewElapsed(): string | null {
     if (!timeline || lifecycle.isRecording()) return null;
-    const start = meetings.find((m) => m.noteId === timeline!.noteId)?.startedAt;
+    const start = meetings.find(
+      (m) => m.noteId === timeline!.noteId
+    )?.startedAt;
     if (start === null || start === undefined) return null;
     const seconds = Math.max(0, Math.floor((Date.now() - start) / 1000));
-    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    return formatElapsed(seconds);
   }
   function refresh() {
     if (disposed) return;
@@ -114,7 +120,11 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     if (wasRecording && !recording) clearTimeline();
     wasRecording = recording;
     // 뷰어 타임라인은 웹이 10초마다 다시 보낸다. 그 두 배가 지나도 안 오면 그만 본다.
-    if (!recording && timeline && Date.now() - timelineAt > TIMELINE_STALE_MS * 2)
+    if (
+      !recording &&
+      timeline &&
+      Date.now() - timelineAt > TIMELINE_STALE_MS * 2
+    )
       clearTimeline();
     if (meetings.length && Date.now() - meetingsAt > ACTIVE_MEETINGS_STALE_MS)
       meetings = [];
@@ -130,7 +140,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     const elapsed = viewing ? viewElapsed() : view.elapsed;
     const status = [
       viewing ? t(VIEWING_LABEL) : view.label,
-      elapsed && (getLanguage() === "en" ? `${elapsed} elapsed` : `시작 후 ${elapsed}`),
+      elapsed &&
+        (getLanguage() === "en" ? `${elapsed} elapsed` : `시작 후 ${elapsed}`),
       view.pending && t("전송 대기"),
       view.inputWarning,
       view.waiting && t("앱 종료 대기"),
@@ -246,8 +257,9 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         .showMessageBox(window, {
           type: "warning",
           message: t("녹음 종료와 전송 완료를 아직 확인하지 못했습니다."),
-          detail:
-            t("앱을 유지하고 현재 회의에서 상태를 확인해 주세요. 앱 종료 메뉴에서 종료 대기를 취소할 수 있습니다."),
+          detail: t(
+            "앱을 유지하고 현재 회의에서 상태를 확인해 주세요. 앱 종료 메뉴에서 종료 대기를 취소할 수 있습니다."
+          ),
           buttons: [t("현재 회의 열기"), t("닫기")],
           defaultId: 0,
           cancelId: 1,
@@ -269,7 +281,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         timeline,
         meetings,
         viewing: timeline !== null && !lifecycle.isRecording(),
-        label: !lifecycle.isRecording() && timeline ? t(VIEWING_LABEL) : view.label,
+        label:
+          !lifecycle.isRecording() && timeline ? t(VIEWING_LABEL) : view.label,
         elapsed: viewElapsed() ?? view.elapsed,
         warning:
           view.inputWarning ||

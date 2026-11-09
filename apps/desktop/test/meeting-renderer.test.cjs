@@ -5,6 +5,22 @@ const path = require("node:path");
 const { JSDOM } = require("jsdom");
 const snapshot = () => ({ noteId: "note-a", title: "회의 A", loading: false, failed: false, reconnecting: false, total: 1,
   items: [{ id: "item-a", tone: "task", label: "할 일", content: "배포 확인", atMs: 1000, citations: [{ atMs: 1000, text: "<img src=x onerror=alert(1)>" }] }] });
+test("hour-long timeline offsets remain on one line in a narrow popover", async (t) => {
+  const { chromium } = require("@playwright/test");
+  const { pathToFileURL } = require("node:url");
+  const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 480, height: 700 } });
+  await page.addInitScript(() => {
+    window.heymoaMeeting = { read: () => new Promise(() => {}), action: async () => {}, subscribe: (listener) => { window.receive = listener; return () => {}; } };
+  });
+  await page.goto(pathToFileURL(path.resolve(__dirname, "../dist/meeting.html")).href);
+  const timeline = snapshot(); timeline.items[0].atMs = 4_680_000;
+  await page.evaluate((timeline) => window.receive({ language: "en", meetings: [], timeline, label: "Recording", elapsed: "1:18:00", warning: null, canStop: true, stale: false, viewing: false, phase: "recording", unknown: false }), timeline);
+  const offset = page.locator("article > .offset");
+  assert.equal(await offset.textContent(), "1:18:00");
+  assert.equal(await offset.evaluate(node => { const range = document.createRange(); range.selectNodeContents(node); return range.getClientRects().length; }), 1);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+});
 test("lost recording state is not rendered as no recording, and idle has an honest app action", (t) => {
   const f = fixture(t);
   f.update(null, false, "녹음 상태 확인 불가", { phase: null, unknown: true });

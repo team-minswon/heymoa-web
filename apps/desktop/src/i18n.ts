@@ -116,3 +116,11 @@ export const english: Record<string, string> = {
 export function t(source: string): string {
   return language === "en" ? english[source] ?? source : source;
 }
+
+export function formatElapsed(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(total / 60);
+  const tail = String(total % 60).padStart(2, "0");
+  if (minutes < 60) return `${minutes}:${tail}`;
+  return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}:${tail}`;
+}
