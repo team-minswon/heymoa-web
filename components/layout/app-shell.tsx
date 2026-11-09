@@ -82,23 +82,12 @@ export async function AppShell({
             <BrowserHandoff />
             <DesktopLanguageSync />
             <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
-              {/* 키보드 첫 탭이 nav 링크 전부를 지나지 않게. 키보드로 포커스를 받기 전에는 화면 밖에 있다.
-                  `focus-visible`인 것은 마우스·프로그램 포커스(다이얼로그가 닫히며 문서 앞으로 돌아오는 등)에
-                  마우스 사용자의 화면 왼쪽 위를 가리지 않게 하려는 것이다. Tab 으로 닿으면 항상 focus-visible 이다. */}
-              <a
-                href="#main"
-                className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:z-50 focus-visible:rounded-lg focus-visible:bg-[var(--el-ink)] focus-visible:px-4 focus-visible:py-2.5 focus-visible:text-[14px] focus-visible:font-semibold focus-visible:text-[var(--el-canvas)]"
-              >
-                {messages.common.skipToContent}
-              </a>
               <NavbarGate>
                 <Navbar />
               </NavbarGate>
               <GlobalRecordingIndicator />
               <DesktopRecordingControls />
 
-              {/* `tabIndex={-1}`이 있어야 건너뛰기 링크가 포커스를 여기로 옮긴다 — 없으면 해시만
-                  바뀌고 포커스는 body에 남아 다음 Tab이 다시 nav로 돌아간다. */}
               <main id="main" tabIndex={-1} className="flex-1 flex flex-col">
                 {children}
               </main>

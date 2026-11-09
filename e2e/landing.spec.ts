@@ -73,23 +73,3 @@ test("랜딩 상단 바에서 회의 정리로 옮겨도 카드가 보인다", a
     .toBe(true);
   await expect.poll(() => inViewHidden(page)).toBe(0);
 });
-
-/**
- * 「본문으로 건너뛰기」는 상단 바까지 건너뛴다. 랜딩 상단 바가 `<main>` 안에 있던 때는 건너뛴 뒤 다음
- * Tab 이 다시 로고 · 메뉴로 들어갔다 — 그래서 바는 `NavbarGate` 가 `<main>` 밖에 세운다. 약관도 같은 바를 쓴다.
- */
-test("본문으로 건너뛰면 다음 Tab 이 상단 바로 돌아가지 않는다", async ({ page }) => {
-  for (const path of ["/", "/terms"]) {
-    await page.goto(path);
-    // 첫 Tab 은 개발 서버의 도구 버튼이 먼저 받을 수 있어 링크에 바로 포커스를 준다.
-    await page.getByRole("link", { name: "본문으로 건너뛰기" }).focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator("main#main")).toBeFocused();
-    await page.keyboard.press("Tab");
-
-    const inTopBar = await page.evaluate(
-      () => document.activeElement?.closest("header.sticky") !== null
-    );
-    expect(inTopBar, path).toBe(false);
-  }
-});

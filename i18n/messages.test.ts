@@ -55,7 +55,7 @@ describe("언어 파일", () => {
     expect(merged.common.notFound.description).toBe(
       ko.common.notFound.description
     );
-    expect(merged.common.skipToContent).toBe(ko.common.skipToContent);
+    expect(merged.common.helpTip).toBe(ko.common.helpTip);
   });
 
   it("목록은 배열 그대로 통째로 바뀐다", () => {

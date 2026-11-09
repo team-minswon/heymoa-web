@@ -16,7 +16,7 @@ test("/en/help 와 주제 페이지에 한글이 남지 않는다", async ({ pag
     "/en/help/fix/troubleshooting",
     "/en/help/situations/fix-speakers",
   ]) {
-    await page.goto(path);
+    await page.goto(path, { waitUntil: "domcontentloaded" });
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     // 상단바 · 사이드바 · 본문 · 푸터까지, 화면에 보이는 글 전부. 푸터 언어 선택의 「한국어」(`lang="ko"`)는 일부러 그 언어로 쓴다.
     // dev 서버는 다른 워커가 새 라우트를 컴파일할 때 HMR 로 문서를 다시 불러, 읽는 도중 실행 문맥이
