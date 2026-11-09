@@ -12,7 +12,7 @@
     "notStarted": "아직 시작하지 않았습니다",
     "recordingBy": "{name}님이 기록 중",
     "visibleToMembers": "워크스페이스 멤버에게 공개",
-    "recorded": "기록 {minutes}분"
+    "recorded": "기록 {hours, plural, =0 {{minutes}분} other {{minutes, plural, =0 {{hours}시간} other {{hours}시간 {minutes}분}}}}"
   },
   "duration": {
     "minutes": "{minutes}분",

@@ -12,12 +12,12 @@
     "notStarted": "Not started yet",
     "recordingBy": "{name} is recording",
     "visibleToMembers": "Visible to workspace members",
-    "recorded": "{minutes} min recorded"
+    "recorded": "{hours, plural, =0 {{minutes} min recorded} other {{minutes, plural, =0 {{hours}h recorded} other {{hours}h {minutes}min recorded}}}}"
   },
   "duration": {
     "minutes": "{minutes} min",
-    "hours": "{hours} hr",
-    "hoursMinutes": "{hours} hr {minutes} min"
+    "hours": "{hours}h",
+    "hoursMinutes": "{hours}h {minutes}min"
   },
   "document": {
     "participantsNamed": "Attendees: {names}",

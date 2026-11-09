@@ -35,6 +35,32 @@ function note(overrides: Partial<NoteResponseData> = {}): NoteResponseData {
 }
 
 describe("buildNoteHeaderMeta", () => {
+  it.each([
+    [59, "기록 59분", "59 min recorded"],
+    [60, "기록 1시간", "1h recorded"],
+    [78, "기록 1시간 18분", "1h 18min recorded"],
+    [120, "기록 2시간", "2h recorded"],
+  ])("%d분을 양 언어의 시간·분으로 표시한다", (minutes, ko, en) => {
+    for (const [locale, expected] of [
+      ["ko", ko],
+      ["en", en],
+    ] as const) {
+      expect(
+        buildNoteHeaderMeta(
+          note({
+            meetingStatus: "ENDED",
+            activeSessionStartedAt: null,
+            recordedDurationMs: minutes * 60_000,
+          }),
+          {
+            locale: locale === "en" ? "en-US" : "ko-KR",
+            t: testDatesT(locale),
+            isStarter: true,
+          }
+        ).secondary
+      ).toBe(expected);
+    }
+  });
   it("첫 줄은 참석자 수와 회의 시각이다", () => {
     const meta = buildNoteHeaderMeta(note(), { ...KO, isStarter: true });
 

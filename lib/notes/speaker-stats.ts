@@ -349,8 +349,12 @@ export function jumpIndexAt(
   return best;
 }
 
-/** 분과 초로 나눈다 — 분량은 초까지만 보면 된다. 문구는 `notes.speakers.speakingTime` 이 만든다. */
+/** 시간·분·초로 나눈다. 문구는 `notes.speakers.speakingTime` 이 만든다. */
 export function speakingTimeParts(ms: number) {
   const totalSeconds = Math.round(ms / 1000);
-  return { minutes: Math.floor(totalSeconds / 60), seconds: totalSeconds % 60 };
+  return {
+    hours: Math.floor(totalSeconds / 3600),
+    minutes: Math.floor(totalSeconds / 60) % 60,
+    seconds: totalSeconds % 60,
+  };
 }

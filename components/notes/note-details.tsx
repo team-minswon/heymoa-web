@@ -35,12 +35,7 @@ import { invalidateNoteLifecycle } from "@/lib/notes/invalidate";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
-function formatRecordedClock(elapsedMs: number) {
-  const totalSeconds = Math.floor(elapsedMs / 1_000);
-  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(
-    totalSeconds % 60
-  ).padStart(2, "0")}`;
-}
+import { formatOffset as formatRecordedClock } from "@/lib/transcription/presentation";
 
 /** 라벨 + 컨트롤 한 칸. design.pen `OmVNh`: vertical · gap 6. 라벨은 정보 탭 공용 위계(`INFO_LABEL`). */
 function Field({
@@ -299,7 +294,9 @@ export function NoteDetails({
           </Fact>
           {/* 정본은 「워크스페이스 멤버 4명 공개」지만 그 수는 노트 계약에 없다 — 참석자 수와
               헷갈리기도 해서 수를 뺐다(노트 헤더 메타와 같은 판단). */}
-          <Fact label={t("facts.sharedWith")}>{t("facts.workspaceMembers")}</Fact>
+          <Fact label={t("facts.sharedWith")}>
+            {t("facts.workspaceMembers")}
+          </Fact>
           {/* 자동 종료의 사유와 시각(APP-1319). 상단 안내를 접어도 여기 남는다 — 시각은 여기에만 있다. */}
           {isAutoEnded(note) && note.meetingEndedAt ? (
             <Fact label={t("facts.ended")}>
@@ -358,9 +355,7 @@ export function NoteDetailsSkeleton() {
       </div>
       <NoteContextSkeleton />
       <section className={INFO_SECTION}>
-        <h2 className={cn("mb-3", INFO_SECTION_TITLE)}>
-          {t("facts.title")}
-        </h2>
+        <h2 className={cn("mb-3", INFO_SECTION_TITLE)}>{t("facts.title")}</h2>
         <dl className="flex flex-col">
           {FACT_ROWS.map(({ key, width }) => (
             <Fragment key={key}>

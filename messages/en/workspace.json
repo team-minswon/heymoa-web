@@ -34,7 +34,7 @@
     "menu": "Menu for note {title}",
     "micInput": "Microphone input for {title}",
     "pausedDays": "Paused for {count, plural, one {# day} other {# days}}",
-    "recordedMinutes": "{count} min recorded",
+    "recordedMinutes": "{hours, plural, =0 {{count} min recorded} other {{count, plural, =0 {{hours}h recorded} other {{hours}h {count}min recorded}}}}",
     "participants": "{count, plural, one {# participant} other {# participants}}",
     "fullScreen": "Full screen"
   },

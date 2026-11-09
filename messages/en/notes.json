@@ -394,7 +394,7 @@
     "fallback": "Speaker {label}",
     "unnamedParticipant": "Unnamed participant",
     "unconfirmed": "Speaker not yet confirmed",
-    "speakingTime": "{minutes, plural, =0 {{seconds}s} other {{seconds, plural, =0 {{minutes}m} other {{minutes}m {seconds}s}}}}",
+    "speakingTime": "{hours, plural, =0 {{minutes, plural, =0 {{seconds}s} other {{seconds, plural, =0 {{minutes}m} other {{minutes}m {seconds}s}}}}} other {{hours}h{minutes, plural, =0 {} other { {minutes}min}}{seconds, plural, =0 {} other { {seconds}s}}}}",
     "assign": {
       "trigger": "Assign a name to {name}",
       "searchLabel": "Search attendees by name",
@@ -489,7 +489,7 @@
       "participantsMore": "{name} and {count, plural, one {# other} other {# others}}",
       "map": "Connection map",
       "lengthUnderMinute": "Under 1 min",
-      "length": "{hours, plural, =0 {{minutes} min} other {{minutes, plural, =0 {{hours} hr} other {{hours} hr {minutes} min}}}}"
+      "length": "{hours, plural, =0 {{minutes} min} other {{minutes, plural, =0 {{hours}h} other {{hours}h {minutes}min}}}}"
     },
     "overview": {
       "title": "Summary",

@@ -394,7 +394,7 @@
     "fallback": "화자 {label}",
     "unnamedParticipant": "이름 없는 참여자",
     "unconfirmed": "아직 확인하지 않은 화자",
-    "speakingTime": "{minutes, plural, =0 {{seconds}초} other {{seconds, plural, =0 {{minutes}분} other {{minutes}분 {seconds}초}}}}",
+    "speakingTime": "{hours, plural, =0 {{minutes, plural, =0 {{seconds}초} other {{seconds, plural, =0 {{minutes}분} other {{minutes}분 {seconds}초}}}}} other {{hours}시간{minutes, plural, =0 {} other { {minutes}분}}{seconds, plural, =0 {} other { {seconds}초}}}}",
     "assign": {
       "trigger": "{name} 화자 지정",
       "searchLabel": "이름으로 참석자 검색",

@@ -79,6 +79,26 @@ function renderRow(row: NoteListResponseDataNotesItem, now?: number) {
 describe("NoteListRow", () => {
   afterEach(cleanup);
 
+  it.each([
+    ["ko", "기록 1시간 18분"],
+    ["en", "1h 18min recorded"],
+  ] as const)("%s 목록의 1시간 이상 기록 길이", (locale, expected) => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NoteListRow
+          workspaceId="01K0000000000"
+          note={note({
+            meetingStatus: "ENDED",
+            activeSessionStartedAt: null,
+            recordedDurationMs: 78 * 60_000,
+          })}
+        />
+      </QueryClientProvider>,
+      { wrapper: intlWrapper(locale) }
+    );
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
   it("노트 열기를 클릭 시점에만 기록하고 제목은 보내지 않습니다", async () => {
     const heard = vi.fn();
     const unsubscribe = onTrack(heard);

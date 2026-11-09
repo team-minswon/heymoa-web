@@ -34,7 +34,7 @@
     "menu": "{title} 노트 메뉴",
     "micInput": "{title} 마이크 입력",
     "pausedDays": "{count}일째 일시정지됨",
-    "recordedMinutes": "기록 {count}분",
+    "recordedMinutes": "기록 {hours, plural, =0 {{count}분} other {{count, plural, =0 {{hours}시간} other {{hours}시간 {count}분}}}}",
     "participants": "참여 {count}명",
     "fullScreen": "전체 화면"
   },

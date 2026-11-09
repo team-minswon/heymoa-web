@@ -22,12 +22,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { siteConfig } from "@/lib/site";
 
-function formatElapsed(elapsedMs: number) {
-  const totalSeconds = Math.floor(elapsedMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
+import { formatOffset as formatElapsed } from "@/lib/transcription/presentation";
 
 function WorkspaceRecordingIndicator({
   noteId,

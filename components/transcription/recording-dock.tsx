@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Mic, Pause, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { formatOffset as formatElapsed } from "@/lib/transcription/presentation";
 
 import {
   isNoteRecordingActive,
@@ -54,12 +55,6 @@ function PendingStatus({ label }: { label: string }) {
   );
 }
 
-function formatElapsed(elapsedMs: number) {
-  const totalSeconds = Math.floor(elapsedMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
 
 export function RecordingDock({
   noteId,

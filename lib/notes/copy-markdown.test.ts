@@ -18,6 +18,11 @@ const NOTE = {
 
 let sequence = 0;
 
+it.each([ ["ko", "기록 1시간 18분"], ["en", "1h 18min recorded"] ] as const)("%s 복사 머리말의 시간·분", (locale, expected) => {
+  const text = summaryToMarkdown({ note: { ...NOTE, durationMs: 78 * 60_000 }, sections: [], doc: { locale: locale === "ko" ? "ko-KR" : "en-US", t: testAppT(locale) } });
+  expect(text).toContain(expected);
+});
+
 function segment(
   startedAtMs: number,
   text: string,

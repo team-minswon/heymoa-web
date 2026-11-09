@@ -183,7 +183,8 @@
     "duration": {
       "seconds": "{seconds}초",
       "minutes": "{minutes}분",
-      "minutesSeconds": "{minutes}분 {seconds}초"
+      "minutesSeconds": "{minutes}분 {seconds}초",
+      "hours": "{hours}시간{minutes, plural, =0 {} other { {minutes}분}}{seconds, plural, =0 {} other { {seconds}초}}"
     }
   },
   "approval": {

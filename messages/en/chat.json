@@ -183,7 +183,8 @@
     "duration": {
       "seconds": "{seconds}s",
       "minutes": "{minutes}m",
-      "minutesSeconds": "{minutes}m {seconds}s"
+      "minutesSeconds": "{minutes}m {seconds}s",
+      "hours": "{hours}h{minutes, plural, =0 {} other { {minutes}min}}{seconds, plural, =0 {} other { {seconds}s}}"
     }
   },
   "approval": {

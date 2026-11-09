@@ -165,7 +165,10 @@ function MeetingMeta({
             ·
           </span>
           <span className="shrink-0 tabular-nums">
-            {t("recordedMinutes", { count: minutes })}
+            {t("recordedMinutes", {
+              hours: Math.floor(minutes / 60),
+              count: minutes % 60,
+            })}
           </span>
         </>
       ) : null}

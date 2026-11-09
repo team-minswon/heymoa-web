@@ -250,11 +250,7 @@ export function PendingProgress({ startedAt }: { startedAt: string | null }) {
       <p className="flex h-6 items-center text-[13px]">
         <LiveHead seconds={seconds} />
       </p>
-      <CurrentLine
-        id="pending"
-        text={t("pending")}
-        stalled={stalled}
-      />
+      <CurrentLine id="pending" text={t("pending")} stalled={stalled} />
       <span className="sr-only" aria-live="polite">
         {stalled ? t("stalled") : t("thinkingNow")}
       </span>
@@ -423,8 +419,15 @@ function Disclosure({
  */
 const LIVE_TAIL = "text-xs leading-relaxed max-h-[calc(4lh+1.125rem)]";
 
-/** 「45초」·「2분 5초」. */
+/** 「45초」·「2분 5초」·「1시간 18분」. */
 function duration(seconds: number, t: ThoughtT) {
+  const hours = Math.floor(seconds / 3600);
+  if (hours > 0)
+    return t("duration.hours", {
+      hours,
+      minutes: Math.floor(seconds / 60) % 60,
+      seconds: seconds % 60,
+    });
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
   if (minutes === 0) return t("duration.seconds", { seconds: rest });

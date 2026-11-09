@@ -91,5 +91,11 @@ export function buildNoteHeaderMeta(
   const minutes = Math.floor(
     meetingLengthOf(getRecordedDurationMs(note, 0), transcript) / 60_000
   );
-  return { ...head, secondary: t("noteMeta.recorded", { minutes }) };
+  return {
+    ...head,
+    secondary: t("noteMeta.recorded", {
+      hours: Math.floor(minutes / 60),
+      minutes: minutes % 60,
+    }),
+  };
 }

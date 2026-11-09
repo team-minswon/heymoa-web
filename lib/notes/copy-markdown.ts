@@ -93,7 +93,8 @@ export function headingLines(
     // 1분 미만은 「기록 0분」이 된다 — 수가 뜻을 안 보태면 적지 않는다.
     meta.durationMs && meta.durationMs >= 60_000
       ? t("dates.noteMeta.recorded", {
-          minutes: Math.floor(meta.durationMs / 60_000),
+          hours: Math.floor(meta.durationMs / 3_600_000),
+          minutes: Math.floor(meta.durationMs / 60_000) % 60,
         })
       : null,
   ].filter(Boolean);
