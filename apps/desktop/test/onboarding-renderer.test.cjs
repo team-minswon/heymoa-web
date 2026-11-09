@@ -65,3 +65,27 @@ test("English onboarding can switch to Korean before login and preserves selecti
   await page.waitForFunction(() => document.querySelector("#error").textContent.length > 0);
   assert.equal(await page.locator("#language").inputValue(), "ko");
 });
+
+test("a language choice made during a delayed initial read is saved after the read", async (t) => {
+  const { chromium } = require("@playwright/test");
+  const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.addInitScript(() => {
+    window.requests = [];
+    window.permissionView = { platform: "darwin", microphone: "denied", language: "ko" };
+    window.heymoaOnboarding = { action: async (action) => {
+      window.requests.push(action);
+      if (action === "read") await new Promise(resolve => { window.finishRead = resolve; });
+      if (action === "language-en") window.permissionView.language = "en";
+      return window.permissionView;
+    } };
+  });
+  await page.goto(pathToFileURL(path.resolve(__dirname, "../dist/onboarding.html")).href);
+  await page.waitForFunction(() => Boolean(window.finishRead));
+  assert.equal(await page.locator("#language").isEnabled(), true);
+  await page.locator("#language").selectOption("en");
+  await page.evaluate(() => window.finishRead());
+  await page.waitForFunction(() => document.documentElement.lang === "en");
+  assert.deepEqual(await page.evaluate(() => window.requests), ["read", "language-en"]);
+  assert.equal(await page.locator("#language").inputValue(), "en");
+});

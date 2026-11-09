@@ -46,8 +46,12 @@ function render(view: OnboardingView) {
       : t("나중에 설정하고 시작하기");
 }
 let pending = false;
+let queued: OnboardingAction | undefined;
 async function action(value: OnboardingAction) {
-  if (pending) return;
+  if (pending) {
+    if (value !== "read") queued = value;
+    return;
+  }
   pending = true;
   // A focus refresh must not dismiss an open native language picker.
   if (value !== "read") controls.forEach((control) => {
@@ -71,6 +75,9 @@ async function action(value: OnboardingAction) {
       )
         control.disabled = false;
     });
+    const next = queued;
+    queued = undefined;
+    if (next) void action(next);
   }
 }
 microphone.addEventListener("click", () => void action("microphone"));
