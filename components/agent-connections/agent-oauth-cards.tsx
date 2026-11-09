@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { AlertTriangle, LogIn } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { CenteredCard } from "@/components/layout/centered-card";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
@@ -26,6 +26,7 @@ export const HEYMOA_MARK = (
  */
 export function AgentOAuthLoginCard({ returnTo }: { returnTo: string }) {
   const t = useTranslations("agents.login");
+  const locale = useLocale();
   return (
     <CenteredCard icon={HEYMOA_MARK}>
       <h1 className="text-2xl font-light tracking-[-0.01em]">
@@ -36,7 +37,7 @@ export function AgentOAuthLoginCard({ returnTo }: { returnTo: string }) {
       </p>
       <InAppLoginGate returnTo={returnTo}>
         <a
-          href={buildGoogleOAuthUrl(returnTo)}
+          href={buildGoogleOAuthUrl(returnTo, locale)}
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
         >
           <LogIn className="size-4" aria-hidden />

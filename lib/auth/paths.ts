@@ -73,13 +73,14 @@ export function buildApiUrl(path: string) {
   return new URL(path, apiBaseUrl).toString();
 }
 
-export function buildGoogleOAuthUrl(returnTo: string) {
+export function buildGoogleOAuthUrl(returnTo: string, language?: string) {
   const normalizedReturnTo = normalizeReturnTo(returnTo);
   const authorizePath = `/v1/auth/oauth2/authorize/google?returnTo=${encodeURIComponent(
     normalizedReturnTo
   )}`;
 
-  return buildApiUrl(authorizePath);
+  const languageQuery = language === "ko" || language === "en" ? `&language=${language}` : "";
+  return buildApiUrl(authorizePath + languageQuery);
 }
 
 /**

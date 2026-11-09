@@ -879,14 +879,19 @@
       "sentMeaning": "「보냄」은 메일 서버가 받았다는 뜻입니다. 받는 분의 메일함에 들어갔는지까지는 알 수 없습니다.",
       "resendFailed": "보내지 못한 {count}명에게 다시 보내기",
       "preview": {
-        "title": "받는 사람에게 보이는 메일",
+        "title": "메일 예시",
         "from": "보낸 사람",
         "to": "받는 사람",
         "subject": "제목",
         "noRecipients": "받는 사람을 추가하세요",
         "attachment": "첨부에 든 것: {contents}",
         "contentsMinutes": "회의록",
-        "contentsBoth": "회의록 · 녹취록"
+        "contentsBoth": "회의록 · 녹취록",
+        "subjectLine": "[회의록] {title}",
+        "sharedBy": "{sender}님이 HeyMoa 에서 보낸 회의록입니다.",
+        "body": "첨부한 회의록 PDF를 확인하세요.",
+        "fileName": "회의록_{title}_{day}.pdf",
+        "languageNote": "화면 언어로 보여 드리는 예시입니다. 실제 메일은 받는 사람의 계정 언어를 따르고, 계정 언어가 없으면 보내는 사람의 언어로 발송됩니다."
       },
       "problem": {
         "invalid": "{emails}: 이메일 주소 형식이 아닙니다. 빼고 다시 입력해 주세요.",

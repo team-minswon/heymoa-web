@@ -8,6 +8,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { NextIntlClientProvider } from "next-intl";
+import { messagesFor } from "@/i18n/messages";
 import { ShareMailDialog } from "@/components/notes/review/share-mail-dialog";
 
 vi.mock("@/components/auth/auth-provider", () => ({
@@ -76,7 +78,8 @@ vi.mock("@/lib/ui/toast", () => ({
 const PDF = new Blob(["%PDF-1.4"], { type: "application/pdf" });
 
 function setup(
-  overrides: Partial<React.ComponentProps<typeof ShareMailDialog>> = {}
+  overrides: Partial<React.ComponentProps<typeof ShareMailDialog>> = {},
+  locale: "ko" | "en" = "ko"
 ) {
   const props = {
     open: true,
@@ -92,10 +95,11 @@ function setup(
     buildPdf: vi.fn(async () => PDF),
     ...overrides,
   };
-  const view = render(<ShareMailDialog {...props} />);
+  const content = (next: Partial<typeof props> = {}) => <NextIntlClientProvider locale={locale} messages={messagesFor(locale)}><ShareMailDialog {...props} {...next} /></NextIntlClientProvider>;
+  const view = render(content());
   return Object.assign(props, {
     rerender: (next: Partial<typeof props>) =>
-      view.rerender(<ShareMailDialog {...props} {...next} />),
+      view.rerender(content(next)),
   });
 }
 
@@ -406,4 +410,14 @@ describe("ShareMailDialog", () => {
       expect(toastError).not.toHaveBeenCalled();
     });
   });
+});
+
+
+it("영어 메일 예시는 화면 언어와 실제 수신자 언어의 차이를 안내하고 사용자 회의명은 보존한다", () => {
+  setup({}, "en");
+  fireEvent.click(screen.getByText("Email example"));
+  expect(screen.getByText(/This example uses your screen language/)).toBeInTheDocument();
+  expect(screen.getByText("[Meeting notes] 공유 기능 범위 정리")).toBeInTheDocument();
+  expect(screen.getByText("The meeting notes are attached as a PDF.")).toBeInTheDocument();
+  expect(screen.getByText(/Meeting_notes_공유 기능 범위 정리_/)).toBeInTheDocument();
 });

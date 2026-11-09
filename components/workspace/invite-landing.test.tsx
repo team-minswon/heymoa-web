@@ -168,3 +168,12 @@ describe("영어 화면", () => {
     expect(container.textContent).not.toMatch(/[가-힣]/);
   });
 });
+
+it("영어 초대의 로그인 링크가 언어와 초대 토큰을 함께 보존한다", () => {
+  state.authStatus = "anonymous";
+  render(<QueryClientProvider client={new QueryClient()}><InviteLanding token="abc123" /></QueryClientProvider>, { wrapper: intlWrapper("en") });
+  const href = screen.getByRole("link", { name: /Google/ }).getAttribute("href")!;
+  const url = new URL(href, "https://heymoa.app");
+  expect(url.searchParams.get("language")).toBe("en");
+  expect(url.searchParams.get("returnTo")).toBe("/invite?token=abc123");
+});

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeReturnTo } from "@/lib/auth/paths";
+import { buildGoogleOAuthUrl, normalizeReturnTo } from "@/lib/auth/paths";
 
 describe("normalizeReturnTo", () => {
   it("초대 랜딩은 토큰 쿼리를 보존한 채 돌아올 수 있다", () => {
@@ -72,4 +72,14 @@ describe("normalizeReturnTo", () => {
   it("절대 URL은 홈으로 떨어진다", () => {
     expect(normalizeReturnTo("https://evil.example/invite")).toBe("/");
   });
+});
+
+
+it("OAuth 로그인은 화면 언어와 돌아올 주소를 각각 보존한다", () => {
+  for (const language of ["ko", "en"]) {
+    const url = new URL(buildGoogleOAuthUrl("/oauth/consent?a=1&b=2", language), "https://heymoa.app");
+    expect(url.searchParams.get("language")).toBe(language);
+    expect(url.searchParams.get("returnTo")).toBe("/oauth/consent?a=1&b=2");
+  }
+  expect(buildGoogleOAuthUrl("/", "fr")).not.toContain("language=");
 });

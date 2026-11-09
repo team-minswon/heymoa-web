@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Home, LogIn, MailCheck } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
@@ -79,6 +79,7 @@ function InviteCard({
   error: unknown;
 }) {
   const t = useTranslations("workspace.invite");
+  const locale = useLocale();
   if (!token) {
     return (
       <ErrorCard
@@ -100,7 +101,7 @@ function InviteCard({
         <InAppLoginGate returnTo={`/invite?token=${encodeURIComponent(token)}`}>
           <a
             href={buildGoogleOAuthUrl(
-              `/invite?token=${encodeURIComponent(token)}`
+              `/invite?token=${encodeURIComponent(token)}`, locale
             )}
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
           >

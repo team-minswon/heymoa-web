@@ -143,7 +143,7 @@ describe("GoogleLoginButton", () => {
     });
     render(<GoogleLoginButton />);
     fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
-    expect(paths.buildGoogleOAuthUrl).toHaveBeenCalledWith("/settings");
+    expect(paths.buildGoogleOAuthUrl).toHaveBeenCalledWith("/settings", "ko");
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Google로 로그인" })
@@ -176,7 +176,7 @@ describe("GoogleLoginButton", () => {
     render(<GoogleLoginButton returnTo="/settings/notifications" />);
     fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
     expect(paths.buildGoogleOAuthUrl).toHaveBeenCalledWith(
-      "/settings/notifications"
+      "/settings/notifications", "ko"
     );
   });
   it("while blocked it looks disabled, hands the click to onBlocked and never starts login", () => {

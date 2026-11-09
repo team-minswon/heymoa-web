@@ -57,7 +57,8 @@ for (const platform of [
         downloads.push(download.suggestedFilename())
       );
     });
-    await context.route(`**/${filename}`, (route) =>
+    // Route the first request: redirects do not re-run Playwright routing.
+    await context.route("**/download/app?**", (route) =>
       route.fulfill({
         contentType: "application/octet-stream",
         headers: {

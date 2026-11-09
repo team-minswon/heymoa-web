@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -171,6 +171,7 @@ function ResubscribeCard({
   const t = useTranslations("notification.unsubscribe");
   const { status } = useAuth();
   const resubscribe = useUpdateNotificationPreference();
+  const locale = useLocale();
   const [resubscribed, setResubscribed] = useState(false);
 
   if (resubscribed) {
@@ -194,7 +195,7 @@ function ResubscribeCard({
                 // 로그인한 뒤 같은 링크로 돌아온다(`normalizeReturnTo` 가 `/unsubscribe` 를 허용한다).
                 window.location.assign(
                   buildGoogleOAuthUrl(
-                    `/unsubscribe?t=${encodeURIComponent(token)}`
+                    `/unsubscribe?t=${encodeURIComponent(token)}`, locale
                   )
                 );
                 return;

@@ -473,11 +473,7 @@ export function ShareMailDialog({
                 sender={user?.name ?? ""}
                 recipients={recipients}
                 meeting={meeting}
-                // 받는 사람의 메일은 서버가 한국어로 보낸다. 미리보기 날짜도 메일과 같은 한국어다
-                day={formatAppDate(meeting.whenIso, {
-                  month: "long",
-                  day: "numeric",
-                })}
+                day={day}
                 message={message.trim()}
                 include={include}
               />
@@ -770,18 +766,6 @@ function InlineNote({
 }
 
 /**
- * 서버 메일 템플릿의 문구. **화면 언어와 상관없이 서버가 한국어로 보낸다** — 발송 계약에 언어가 없고, 첨부 이름도
- * 서버가 정한다. 미리보기가 받는 사람이 실제로 받는 메일과 같아야 해서 언어 파일로 옮기지 않는다.
- * 서버가 메일을 언어별로 보내게 되면 이 상수를 언어 파일로 옮긴다. 그때까지 이 문구를 그리는 요소에는 `lang="ko"` 를 단다.
- */
-const MAIL_TEMPLATE = {
-  subject: (title: string) => `[회의록] ${title}`,
-  sharedBy: (sender: string) => `${sender} 님이 회의록을 공유했습니다.`,
-  body: "첨부한 회의록을 확인하세요.",
-  attachment: (title: string, day: string) => `회의록_${title}_${day}.pdf`,
-};
-
-/**
  * 받는 사람이 볼 메일의 겉모양. 틀의 정본은 서버(메일 템플릿)이고 본문에는 회의록 내용을 싣지 않는다 —
  * 회의록은 첨부로만 간다. 보낸 사람 표시 · 제목 · 첨부 이름은 서버가 정한 모양을 그대로 따른다.
  */
@@ -801,6 +785,8 @@ function MailPreview({
   include: MinutesInclude;
 }) {
   const t = useTranslations("notes.share.mail.preview");
+  const dateLocale = useDisplayLocale();
+  const language = dateLocale === "en-US" ? "en" : "ko";
   const to =
     recipients
       .filter((recipient) => recipient.valid)
@@ -823,6 +809,7 @@ function MailPreview({
         />
       </summary>
       <div className="flex flex-col gap-2.5 border-t border-[var(--el-hairline)] p-3.5 text-[13px] text-[var(--el-body)]">
+        <p className="text-xs text-[var(--el-muted)]">{t("languageNote")}</p>
         <dl className="grid grid-cols-[56px_1fr] gap-x-2 gap-y-0.5 text-xs">
           <dt className="text-[var(--el-muted)]">{t("from")}</dt>
           <dd className="text-[var(--el-ink)]">{sender} (HeyMoa)</dd>
@@ -831,11 +818,11 @@ function MailPreview({
             {to}
           </dd>
           <dt className="text-[var(--el-muted)]">{t("subject")}</dt>
-          <dd lang="ko" className="text-[var(--el-ink)]">
-            {MAIL_TEMPLATE.subject(meeting.title)}
+          <dd lang={language} className="text-[var(--el-ink)]">
+            {t("subjectLine", { title: meeting.title })}
           </dd>
         </dl>
-        <p lang="ko">{MAIL_TEMPLATE.sharedBy(sender)}</p>
+        <p lang={language}>{t("sharedBy", { sender })}</p>
         {message ? (
           <p className="border-l-2 border-[var(--el-hairline-strong)] pl-2.5 whitespace-pre-wrap text-[var(--el-ink)]">
             {message}
@@ -845,18 +832,18 @@ function MailPreview({
           <p className="text-[15px] font-semibold text-[var(--el-ink)]">
             {meeting.title}
           </p>
-          <p lang="ko" className="text-xs text-[var(--el-muted)]">
+          <p lang={language} className="text-xs text-[var(--el-muted)]">
             {day}
           </p>
         </div>
-        <p lang="ko">{MAIL_TEMPLATE.body}</p>
+        <p lang={language}>{t("body")}</p>
         <div className="flex items-center gap-2 rounded-control border border-[var(--el-hairline)] px-2.5 py-2 text-[12.5px] text-[var(--el-ink)]">
           <Paperclip className="size-3.5 shrink-0" aria-hidden />
-          <span lang="ko" className="min-w-0 [overflow-wrap:anywhere]">
-            {MAIL_TEMPLATE.attachment(
-              meeting.title,
-              getAppDateKey(meeting.whenIso).replaceAll("-", "")
-            )}
+          <span lang={language} className="min-w-0 [overflow-wrap:anywhere]">
+            {t("fileName", {
+              title: meeting.title.replace(/[\\/:*?"<>|]/g, "_").slice(0, 50),
+              day: getAppDateKey(meeting.whenIso).replaceAll("-", ""),
+            })}
           </span>
         </div>
         <p className="-mt-1 text-xs text-[var(--el-muted)]">

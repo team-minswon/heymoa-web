@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 import { track } from "@/lib/analytics/track";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
@@ -40,6 +40,7 @@ export function GoogleLoginButton({
   onLoginStart,
 }: GoogleLoginButtonProps) {
   const t = useTranslations("auth.login");
+  const locale = useLocale();
   const [pending, setPending] = useState(false);
 
   // The app holds one native login at a time and the browser never calls back
@@ -104,7 +105,7 @@ export function GoogleLoginButton({
         return;
       }
       window.location.href = buildGoogleOAuthUrl(
-        returnTo ?? getCurrentReturnTo()
+        returnTo ?? getCurrentReturnTo(), locale
       );
     } catch {
       toast.error(t("redirectFailed"), {

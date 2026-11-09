@@ -879,14 +879,19 @@
       "sentMeaning": "Sent means the mail server accepted the message. We can't tell whether it reached the recipient's inbox.",
       "resendFailed": "{count, plural, one {Resend to # failed recipient} other {Resend to # failed recipients}}",
       "preview": {
-        "title": "Email recipients will see",
+        "title": "Email example",
         "from": "From",
         "to": "To",
         "subject": "Subject",
         "noRecipients": "Add recipients",
         "attachment": "Attached: {contents}",
         "contentsMinutes": "Meeting notes",
-        "contentsBoth": "Meeting notes · Transcript"
+        "contentsBoth": "Meeting notes · Transcript",
+        "subjectLine": "[Meeting notes] {title}",
+        "sharedBy": "{sender} sent these meeting notes from HeyMoa.",
+        "body": "The meeting notes are attached as a PDF.",
+        "fileName": "Meeting_notes_{title}_{day}.pdf",
+        "languageNote": "This example uses your screen language. The actual email uses the recipient's account language, or the sender's language if no account language is set."
       },
       "problem": {
         "invalid": "{emails}: Invalid email format. Remove these addresses and enter them again.",

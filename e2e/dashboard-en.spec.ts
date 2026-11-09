@@ -131,7 +131,9 @@ function mockStrings() {
     (value) => !KO_PIECES.has(value) && !PRODUCT_LITERALS.has(value)
   );
   // 긴 것부터 지워야 짧은 이름(「한지원」)이 긴 문장 일부를 먼저 지우지 않는다
-  return [...out, ...BILINGUAL].sort((a, b) => b.length - a.length);
+  // 첨부 파일명에는 사용자 제목의 파일명 금지 문자만 치환되어 남는다.
+  const fileNames = out.map((value) => value.replace(/[\\/:*?"<>|]/g, "_").slice(0, 50));
+  return [...out, ...fileNames, ...BILINGUAL].sort((a, b) => b.length - a.length);
 }
 
 const MOCK_STRINGS = mockStrings();
@@ -349,11 +351,10 @@ test("노트 상세의 탭과 회의록 내보내기", async ({ browser }) => {
   await page.getByRole("menuitem", { name: /email/i }).click();
   const mailDialog = page.getByRole("dialog", { name: "Send meeting notes" });
   await expect(mailDialog).toBeVisible();
-  // 받는 사람이 볼 메일 미리보기를 펼친다. 서버가 한국어로 보내는 메일 틀은 `lang="ko"` 라 검사에서 빠진다
-  await mailDialog.getByText("Email recipients will see").click();
-  await expect(
-    mailDialog.locator('[lang="ko"]', { hasText: HANGUL }).first()
-  ).toBeVisible();
+  // 화면 언어의 예시를 보여 주고 실제 발송 언어는 수신자 설정을 따른다고 알린다.
+  await mailDialog.getByText("Email example").click();
+  await expect(mailDialog.getByText("The meeting notes are attached as a PDF.")).toBeVisible();
+  await expect(mailDialog.getByText(/actual email uses the recipient/)).toBeVisible();
   await expectEnglish(page, "회의록 메일 창");
 
   expect(warnings).toEqual([]);

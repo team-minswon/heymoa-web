@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
+import { productLocale } from "@/lib/i18n/current";
 import { AppShell } from "@/components/layout/app-shell";
-import { noindexDirective, siteMetadata } from "@/lib/site";
+import { noindexDirective, siteMetadataFor } from "@/lib/site";
 
 /**
  * 메일 링크가 토큰을 주소에 싣고 여는 면(`/unsubscribe`, APP-1314). 제품 면과 같지만 **분석을 싣지 않는다** —
@@ -10,20 +11,22 @@ import { noindexDirective, siteMetadata } from "@/lib/site";
  *
  * `Cache-Control: no-store`·`Referrer-Policy: no-referrer` 응답 헤더는 `next.config.ts` 가 붙인다.
  */
-export const metadata: Metadata = {
-  ...siteMetadata,
-  robots: noindexDirective,
-  alternates: null,
-  referrer: "no-referrer",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    ...siteMetadataFor(await productLocale()),
+    robots: noindexDirective,
+    alternates: null,
+    referrer: "no-referrer",
+  };
+}
 
-export default function MailRootLayout({
+export default async function MailRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <AppShell locale="ko" analytics={false}>
+    <AppShell locale={await productLocale()} analytics={false}>
       {children}
     </AppShell>
   );
