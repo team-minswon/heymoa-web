@@ -65,8 +65,10 @@ function shouldRefreshBeforeSsr(request: NextRequest) {
   return !accessToken || isJwtExpired(accessToken);
 }
 
-function clearAuthCookies() {
-  const response = NextResponse.next();
+function clearAuthCookies(request: NextRequest) {
+  // 같은 요청의 SSR도 만료 쿠키 없이 로그인 화면을 그려야 합니다.
+  AUTH_COOKIE_NAMES.forEach((name) => request.cookies.delete(name));
+  const response = NextResponse.next({ request });
 
   AUTH_COOKIE_NAMES.forEach((name) => {
     response.cookies.delete({
@@ -117,7 +119,7 @@ export async function proxy(request: NextRequest) {
     // 지운다. 회전 경쟁에서 진 요청은 정상 동작이고, 그때 지우면 경쟁에서 이긴 쪽이 방금
     // 심은 유효한 리프레시 쿠키까지 날아가 로그인이 풀린다 (APP-347).
     return (await isRefreshTokenDead(refreshResponse))
-      ? clearAuthCookies()
+      ? clearAuthCookies(request)
       : NextResponse.next();
   }
 

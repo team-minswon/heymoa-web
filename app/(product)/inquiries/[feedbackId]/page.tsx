@@ -23,7 +23,7 @@ export default async function InquiryPage({
   const jar = await cookies();
   if (
     !shouldEnableMocking() &&
-    !AUTH_COOKIE_NAMES.some((name) => jar.has(name))
+    !AUTH_COOKIE_NAMES.some((name) => Boolean(jar.get(name)?.value))
   ) {
     return (
       <WorkspaceLoginCard

@@ -151,3 +151,19 @@ for (const path of PATHS) {
     );
   });
 }
+
+for (const path of ["/w/01K0000000000", "/settings/notifications", "/inquiries/01K0000000000"]) {
+test(`폐기 토큰으로 ${path} 진입 시 첫 SSR부터 선택 언어의 로그인 카드를 보여 준다`, async ({ request }) => {
+  const revoked = { ...(await session(request, true)), refresh: "revoked" };
+  const response = await request.get(path, {
+    headers: {
+      cookie: `access_token=${revoked.access}; refresh_token=${revoked.refresh}; heymoa-lang=en`,
+    },
+  });
+  expect(response.status()).toBe(200);
+  const body = await response.text();
+  expect(body).toContain("You&#x27;ll return to this page after signing in");
+  expect(body).toContain('lang="en"');
+  expect(await attempts(request)).toBe(1);
+});
+}

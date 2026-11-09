@@ -185,11 +185,18 @@ describe("proxy token refresh", () => {
     vi.mocked(fetch).mockResolvedValueOnce(invalidRefreshTokenResponse());
     const proxy = await loadProxy();
 
-    const response = await proxy(requestWithRefreshToken());
+    const request = new NextRequest("http://web.example.test/w/01K0000000000", {
+      headers: { cookie: "access_token=expired; refresh_token=dead; heymoa-lang=en" },
+    });
+    const response = await proxy(request);
     const setCookie = response.headers.get("set-cookie") ?? "";
 
     expect(setCookie).toContain("access_token=");
     expect(setCookie).toContain("refresh_token=");
+    expect(request.cookies.has("access_token")).toBe(false);
+    expect(request.cookies.has("refresh_token")).toBe(false);
+    expect(request.cookies.get("heymoa-lang")?.value).toBe("en");
+    expect(response.headers.get("x-middleware-request-cookie")).toBe("heymoa-lang=en");
   });
 
   // 서버가 심은 쿠키와 (name, domain, path)가 같아야 지워진다. Domain이 빠지면 host-only
