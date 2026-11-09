@@ -27,7 +27,7 @@ function fixture(t, platform = "darwin") {
   vm.runInNewContext(fs.readFileSync(filename, "utf8"), { module, exports: module.exports, __dirname: path.dirname(filename), process: { platform }, require: (name) => name === "electron" ? electron : name === "node:fs/promises" ? {
     readFile: async () => { if (marker === "missing") throw Object.assign(new Error(), { code: "ENOENT" }); return marker; },
     mkdir: async () => {}, writeFile: async (file, text, options) => { if (saveFails) throw new Error("disk full"); writes.push({ file, text, options }); }, rename: async () => {},
-  } : require(name) });
+  } : name.startsWith(".") ? require(path.resolve(path.dirname(filename), name)) : require(name) });
   const api = module.exports, intro = api.createOnboarding("/profile");
   t.after(() => intro.dispose());
   const sender = { sender: window.webContents, senderFrame: window.webContents.mainFrame };

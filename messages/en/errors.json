@@ -12,5 +12,6 @@
   "workspaceUnavailableDetail": "Your current account isn't a member of this workspace.",
   "switchAccount": "Sign in with another account",
   "pageBlockedByRecording": "You can't open another page in the app while recording",
-  "pageBlockedByRecordingDetail": "Finish recording, then try again. To see it now, open it in your browser: {url}"
+  "pageBlockedByRecordingDetail": "Finish recording, then try again. To see it now, open it in your browser: {url}",
+  "sitePageOpenFailed": "Could not open the page. Try again."
 }

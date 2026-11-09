@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SitePageLink } from "@/components/heymoa/site-page-link";
 
@@ -38,4 +38,13 @@ describe("SitePageLink", () => {
       window.removeEventListener("beforeunload", hold);
     }
   });
+});
+
+
+it("새 앱의 본문 가이드 링크도 녹음 화면을 떠나지 않고 외부로 연다", () => {
+  const open = vi.fn().mockResolvedValue(undefined);
+  (window as { heymoaDesktop?: unknown }).heymoaDesktop = { openSitePage: open };
+  render(<SitePageLink href="/en/help/start/desktop">Guide</SitePageLink>);
+  expect(fireEvent.click(screen.getByRole("link", { name: "Guide" }))).toBe(false);
+  expect(open).toHaveBeenCalledWith("/en/help/start/desktop");
 });

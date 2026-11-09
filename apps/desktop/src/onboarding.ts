@@ -1,3 +1,5 @@
+import { getLanguage, t, type Language } from "./i18n";
+import { saveLanguage } from "./preferences";
 import { BrowserWindow, ipcMain, shell, systemPreferences } from "electron";
 import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
 import path from "node:path";
@@ -6,11 +8,14 @@ import { pathToFileURL } from "node:url";
 const VERSION = 1;
 export const ONBOARDING_CHANNEL = "heymoa:onboarding";
 export type OnboardingAction =
+  | "language-ko"
+  | "language-en"
   | "read"
   | "microphone"
   | "audio-settings"
   | "complete";
 export type OnboardingView = {
+  language: Language;
   platform: "darwin" | "win32";
   microphone:
     | "not-determined"
@@ -35,7 +40,7 @@ export async function onboardingCompleted(directory: string) {
   }
 }
 
-export function createOnboarding(directory: string) {
+export function createOnboarding(directory: string, languageChanged: () => void = () => {}) {
   const file = path.join(__dirname, "onboarding.html");
   const url = pathToFileURL(file).href;
   const current = new BrowserWindow({
@@ -44,7 +49,7 @@ export function createOnboarding(directory: string) {
     minWidth: 600,
     minHeight: 650,
     show: false,
-    title: "HeyMoa 시작하기",
+    title: t("HeyMoa 시작하기"),
     backgroundColor: "#faf9f6",
     webPreferences: {
       preload: path.join(__dirname, "onboarding-preload.js"),
@@ -86,7 +91,7 @@ export function createOnboarding(directory: string) {
     } catch {
       /* OS status is unavailable, not approved. */
     }
-    return { platform, microphone };
+    return { platform, microphone, language: getLanguage() };
   }
   ipcMain.handle(ONBOARDING_CHANNEL, async (event, action: unknown) => {
     if (
@@ -99,7 +104,7 @@ export function createOnboarding(directory: string) {
     )
       throw new Error("UNTRUSTED_ONBOARDING_REQUEST");
     if (
-      !["read", "microphone", "audio-settings", "complete"].includes(
+      !["read", "microphone", "audio-settings", "complete", "language-ko", "language-en"].includes(
         action as string
       )
     )
@@ -108,7 +113,11 @@ export function createOnboarding(directory: string) {
     if (busy) throw new Error("ONBOARDING_ACTION_PENDING");
     busy = true;
     try {
-      if (action === "microphone") {
+      if (action === "language-ko" || action === "language-en") {
+        await saveLanguage(directory, action === "language-ko" ? "ko" : "en");
+        current.setTitle(t("HeyMoa 시작하기"));
+        languageChanged();
+      } else if (action === "microphone") {
         const status = read().microphone;
         if (platform === "darwin" && status === "not-determined")
           await systemPreferences.askForMediaAccess("microphone");

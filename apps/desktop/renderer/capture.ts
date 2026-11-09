@@ -11,6 +11,7 @@ import {
 declare global {
   interface Window {
     heymoaCaptureLocal: {
+      language: "ko" | "en";
       emit(packet: CapturePacket): void;
       onAck(listener: (sequence: number) => void): void;
     };
@@ -19,6 +20,7 @@ declare global {
     captureLocalStop(): Promise<void>;
   }
 }
+document.documentElement.lang = window.heymoaCaptureLocal.language;
 let capture: PcmAudioCapture | null = null;
 let currentId = "";
 let sender: PcmSender | null = null;

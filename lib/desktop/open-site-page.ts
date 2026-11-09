@@ -2,18 +2,16 @@ import { desktopAuthBridge } from "@/lib/desktop/auth";
 import { toast } from "@/lib/ui/toast";
 import { webMessage } from "@/lib/i18n/web-message";
 
-/**
- * 우리 사이트의 다른 페이지(`/help`·`/privacy` 등)를 연다. 브라우저에서는 새 탭으로 — 보던 회의를 잃지 않게.
- *
- * **데스크톱 앱에서는 앱 안에서 이동한다.** 앱은 새 창 요청을 막고 외부 브라우저로 넘기는데
- * (`apps/desktop/src/security.ts`의 `setWindowOpenHandler`), 같은 사이트 주소는 넘기지 않는다
- * (`policy.ts`의 `externalUrl`). 새 탭으로 열면 앱에서는 아무 일도 안 일어났다(codex 리뷰).
- * 사이트 페이지는 제품 면과 다른 루트 레이아웃이라 이 이동은 전체 로드다 — 녹음 중이면 막는다
- * (`blockedByRecording`).
- */
+/** 새 앱은 공개 사이트 페이지를 외부 브라우저로 열어 녹음을 유지하고, 구버전은 기존 이탈 보호를 따른다. */
 export function openSitePage(href: string, navigate: (href: string) => void) {
   if (!desktopAuthBridge()) window.open(href, "_blank", "noopener,noreferrer");
-  else if (!blockedByRecording(href)) navigate(href);
+  else {
+    const bridge = (window as unknown as { heymoaDesktop?: import("@heymoa/desktop-contracts").DesktopFoundationBridge }).heymoaDesktop;
+    if (bridge?.openSitePage) void bridge.openSitePage(href).catch(() => {
+      toast.error(webMessage("sitePageOpenFailed"));
+    });
+    else if (!blockedByRecording(href)) navigate(href);
+  }
 }
 
 /**

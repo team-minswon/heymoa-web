@@ -367,3 +367,18 @@ test("Chromium animates only new or changed timeline rows and respects reduced m
     await page.close();
   }
 });
+
+test("English and Korean switches update controls and aria labels without translating meeting content", (t) => {
+  const f = fixture(t, true), value = snapshot();
+  f.update(value, true, "Recording", { language: "en" });
+  assert.equal(f.document.documentElement.lang, "en");
+  assert.equal(f.document.title, "HeyMoa · Current meeting");
+  assert.equal(f.document.querySelector("#close").getAttribute("aria-label"), "Close popover");
+  assert.equal(f.document.querySelector("nav button").textContent, "All");
+  assert.equal(f.document.querySelector("#stop").textContent.trim(), "Pause recording");
+  assert.equal(f.document.querySelector("#title").textContent, value.title);
+  assert.equal(f.document.querySelector(".content").textContent, value.items[0].content);
+  f.update(value, true, "녹음 중", { language: "ko" });
+  assert.equal(f.document.querySelector("nav button").textContent, "전체");
+  assert.equal(f.document.querySelector("#close").getAttribute("aria-label"), "팝오버 닫기");
+});

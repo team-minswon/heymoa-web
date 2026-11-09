@@ -308,3 +308,17 @@ test("connection payload rejects unexpected keys and path injection", () => {
   ])
     assert.throws(() => connectionRequest(value));
 });
+
+test("login sends the current app language without leaking it into the exchange or connection schema", async () => {
+  let language = "en";
+  const f = fixture({ dependencies: { language: () => language } });
+  const outcome = f.broker.begin(); await tick();
+  assert.equal(f.requests[0].body.language, "en");
+  language = "ko";
+  await f.broker.receive(`app.heymoa:/auth/callback?state=${f.requests[0].body.state}&code=${code}`);
+  assert.equal((await outcome).status, "success");
+  assert.equal(f.requests[1].body.language, undefined);
+  const next = f.broker.begin(); await tick();
+  assert.equal(f.requests[2].body.language, "ko");
+  f.broker.cancel(); await next;
+});

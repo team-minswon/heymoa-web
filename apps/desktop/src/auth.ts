@@ -9,6 +9,7 @@ import {
 
 type Dependencies = {
   apiOrigin: string;
+  language?: () => "ko" | "en";
   post: (
     path: string,
     body: Record<string, string>,
@@ -128,6 +129,7 @@ export class DesktopAuthBroker {
       ? `/v1/workspaces/${connection.workspaceId}/integrations/${connection.provider}/desktop-ticket`
       : "/v1/auth/desktop/start";
     const body: Record<string, string> = { state: pending.state };
+    if (!connection && this.dependencies.language) body.language = this.dependencies.language();
     if (!connection)
       body.codeChallenge = createHash("sha256")
         .update(pending.verifier)

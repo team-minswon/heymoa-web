@@ -331,3 +331,5 @@ footer button {
     transition: none;
   }
 }
+
+body { word-break: keep-all; overflow-wrap: anywhere; }

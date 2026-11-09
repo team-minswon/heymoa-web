@@ -85,6 +85,8 @@ export type DesktopCapturePacket =
   | { kind: "error"; id: string; code: string };
 
 export type DesktopFoundationBridge = {
+  openSitePage?: (href: string) => Promise<void>;
+  reportLanguage?: (language: "ko" | "en") => Promise<void>;
   getCapabilities(): Promise<DesktopCapabilities>;
   reportRecording(summary: RecordingSummary): Promise<void>;
   reportMeetingTimeline?: (

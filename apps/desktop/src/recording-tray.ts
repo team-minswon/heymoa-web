@@ -1,3 +1,4 @@
+import { getLanguage, t } from "./i18n";
 import { app, BrowserWindow, dialog, Menu, nativeImage, Tray } from "electron";
 import path from "node:path";
 import type {
@@ -69,18 +70,18 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     const result = await dialog.showMessageBox(window, {
       type: "warning",
       message: discard
-        ? "전송되지 않은 소리를 버리고 앱을 종료하시겠습니까?"
+        ? t("전송되지 않은 소리를 버리고 앱을 종료하시겠습니까?")
         : waiting
-          ? "녹음 종료와 전송 완료를 기다리고 있습니다."
-          : "녹음이 진행 중이거나 전송되지 않은 소리가 있습니다.",
+          ? t("녹음 종료와 전송 완료를 기다리고 있습니다.")
+          : t("녹음이 진행 중이거나 전송되지 않은 소리가 있습니다."),
       detail: discard
-        ? "아직 서버에 저장되지 않은 소리는 복구할 수 없습니다. 서버의 회의 완료를 의미하지 않습니다."
-        : "앱을 유지하면 종료와 전송을 계속할 수 있습니다. 상태를 확인할 수 없는 경우에도 완료로 판단하지 않습니다.",
+        ? t("아직 서버에 저장되지 않은 소리는 복구할 수 없습니다. 서버의 회의 완료를 의미하지 않습니다.")
+        : t("앱을 유지하면 종료와 전송을 계속할 수 있습니다. 상태를 확인할 수 없는 경우에도 완료로 판단하지 않습니다."),
       buttons: discard
-        ? ["취소", "소리를 버리고 앱 종료"]
+        ? [t("취소"), t("소리를 버리고 앱 종료")]
         : waiting
-          ? ["계속 기다리기", "앱 종료 취소", "소리를 버리고 종료…"]
-          : ["취소", "녹음 종료 후 앱 종료", "소리를 버리고 종료…"],
+          ? [t("계속 기다리기"), t("앱 종료 취소"), t("소리를 버리고 종료…")]
+          : [t("취소"), t("녹음 종료 후 앱 종료"), t("소리를 버리고 종료…")],
       defaultId: 0,
       cancelId: discard ? 0 : waiting ? 1 : 0,
       noLink: true,
@@ -128,11 +129,11 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     const view = lifecycle.view();
     const elapsed = viewing ? viewElapsed() : view.elapsed;
     const status = [
-      viewing ? VIEWING_LABEL : view.label,
-      elapsed && `시작 후 ${elapsed}`,
-      view.pending && "전송 대기",
+      viewing ? t(VIEWING_LABEL) : view.label,
+      elapsed && (getLanguage() === "en" ? `${elapsed} elapsed` : `시작 후 ${elapsed}`),
+      view.pending && t("전송 대기"),
       view.inputWarning,
-      view.waiting && "앱 종료 대기",
+      view.waiting && t("앱 종료 대기"),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -155,14 +156,14 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       {
         label:
           view.phase !== null && view.phase !== "idle"
-            ? "현재 회의 열기"
-            : "HeyMoa 열기",
+            ? t("현재 회의 열기")
+            : t("HeyMoa 열기"),
         click: () => {
           sendAction("show-current");
         },
       },
       {
-        label: "녹음 일시정지",
+        label: t("녹음 일시정지"),
         enabled: lifecycle.isRecording(),
         click: () => {
           sendAction("stop");
@@ -171,9 +172,9 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       ...(meetings.length
         ? [
             { type: "separator" as const },
-            { label: "진행 중인 회의", enabled: false },
+            { label: t("진행 중인 회의"), enabled: false },
             ...meetings.slice(0, 5).map((meeting) => ({
-              label: meeting.title || "제목 없는 회의",
+              label: meeting.title || t("제목 없는 회의"),
               click: () => openNote(meeting.noteId),
             })),
           ]
@@ -182,7 +183,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       ...(loginItemSupported
         ? [
             {
-              label: "로그인 시 자동 실행",
+              label: t("로그인 시 자동 실행"),
               type: "checkbox" as const,
               checked: openAtLogin,
               click: (item: { checked: boolean }) => {
@@ -194,7 +195,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
             },
           ]
         : []),
-      { label: "앱 종료", click: () => void lifecycle.requestQuit() },
+      { label: t("앱 종료"), click: () => void lifecycle.requestQuit() },
     ]);
     popover?.refresh();
   }
@@ -244,10 +245,10 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       void dialog
         .showMessageBox(window, {
           type: "warning",
-          message: "녹음 종료와 전송 완료를 아직 확인하지 못했습니다.",
+          message: t("녹음 종료와 전송 완료를 아직 확인하지 못했습니다."),
           detail:
-            "앱을 유지하고 현재 회의에서 상태를 확인해 주세요. 앱 종료 메뉴에서 종료 대기를 취소할 수 있습니다.",
-          buttons: ["현재 회의 열기", "닫기"],
+            t("앱을 유지하고 현재 회의에서 상태를 확인해 주세요. 앱 종료 메뉴에서 종료 대기를 취소할 수 있습니다."),
+          buttons: [t("현재 회의 열기"), t("닫기")],
           defaultId: 0,
           cancelId: 1,
         })
@@ -262,16 +263,17 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     () => {
       const view = lifecycle.view();
       return {
+        language: getLanguage(),
         phase: view.phase,
         unknown: view.unknown,
         timeline,
         meetings,
         viewing: timeline !== null && !lifecycle.isRecording(),
-        label: !lifecycle.isRecording() && timeline ? VIEWING_LABEL : view.label,
+        label: !lifecycle.isRecording() && timeline ? t(VIEWING_LABEL) : view.label,
         elapsed: viewElapsed() ?? view.elapsed,
         warning:
           view.inputWarning ||
-          (view.pending ? "전송 대기 중인 소리가 있습니다." : null),
+          (view.pending ? t("전송 대기 중인 소리가 있습니다.") : null),
         canStop: lifecycle.isRecording(),
         stale: timeline !== null && Date.now() - timelineAt > TIMELINE_STALE_MS,
       };
@@ -360,6 +362,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   refresh();
   return {
     lifecycle,
+    refresh,
     reportTimeline(value: MeetingTimelineSnapshot | null) {
       // 녹음 중이 아니어도 받는다 — 내가 뷰어로 보는 진행 중 회의다(APP-1092).
       timeline = value;

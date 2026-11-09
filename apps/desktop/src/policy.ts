@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import type { RecordingSummary } from "@heymoa/desktop-contracts";
 export type { RecordingSummary } from "@heymoa/desktop-contracts";
 
@@ -31,7 +32,7 @@ export function applicationUrl(
   if (packaged || !developmentUrl) return PRODUCTION_ORIGIN;
   const url = parseWebUrl(developmentUrl);
   if (!url || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))
-    throw new Error("개발 URL은 loopback 주소만 사용할 수 있습니다.");
+    throw new Error(t("개발 URL은 loopback 주소만 사용할 수 있습니다."));
   return url.href;
 }
 export function isTrustedUrl(value: string, origin: string): boolean {
@@ -40,6 +41,13 @@ export function isTrustedUrl(value: string, origin: string): boolean {
 export function externalUrl(value: string, origin: string): string | null {
   const url = parseWebUrl(value);
   return url && url.origin !== origin ? url.href : null;
+}
+export function sitePageUrl(value: unknown, origin: string): string | null {
+  if (typeof value !== "string" || value.length > 2048) return null;
+  let url: URL | null;
+  try { url = parseWebUrl(new URL(value, origin).href); } catch { return null; }
+  if (!url || url.origin !== origin || !/^\/(?:en(?:\/|$))?(?:help(?:\/|$)|privacy(?:\/|$)|terms(?:\/|$)|download(?:\/|$))/.test(url.pathname)) return null;
+  return url.href;
 }
 export function trustedSender(
   sender: unknown,
@@ -65,7 +73,7 @@ export function platformSupport(
 ): Support {
   const match = /^(\d+)\.(\d+)(?:\.(\d+))?$/.exec(version);
   if (!match)
-    return { supported: false, reason: "운영체제 버전을 확인하지 못했습니다." };
+    return { supported: false, reason: t("운영체제 버전을 확인하지 못했습니다.") };
   const [major, minor, patch] = match.slice(1).map(Number);
   if (
     platform === "darwin" &&
@@ -84,7 +92,7 @@ export function platformSupport(
   return {
     supported: false,
     reason:
-      "HeyMoa 데스크톱은 macOS 14.2 이상(Apple Silicon), Windows 11 x64를 지원합니다.",
+      t("HeyMoa 데스크톱은 macOS 14.2 이상(Apple Silicon), Windows 11 x64를 지원합니다."),
   };
 }
 const PHASES = [

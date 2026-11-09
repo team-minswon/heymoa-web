@@ -12,5 +12,6 @@
   "workspaceUnavailableDetail": "지금 계정이 이 워크스페이스의 멤버가 아닙니다.",
   "switchAccount": "다른 계정으로 로그인",
   "pageBlockedByRecording": "녹음 중에는 앱에서 다른 페이지를 열 수 없습니다",
-  "pageBlockedByRecordingDetail": "녹음을 마친 뒤 다시 눌러 주세요. 지금 보려면 브라우저에서 여세요: {url}"
+  "pageBlockedByRecordingDetail": "녹음을 마친 뒤 다시 눌러 주세요. 지금 보려면 브라우저에서 여세요: {url}",
+  "sitePageOpenFailed": "페이지를 열지 못했습니다. 다시 시도해 주세요."
 }

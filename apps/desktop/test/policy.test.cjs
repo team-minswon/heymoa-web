@@ -140,3 +140,11 @@ test("summary schema preserves pending audio after stop/failure and rejects unsa
   for (const value of [null, {}, [], "bad"])
     assert.equal(emptyRequest(value), false);
 });
+
+
+test("public site-page opening allows localized help only at the configured origin", () => {
+  const { sitePageUrl } = require("../dist/policy");
+  const origin = "https://heymoa.app";
+  assert.equal(sitePageUrl("/en/help/start/desktop#record", origin), origin + "/en/help/start/desktop#record");
+  for (const href of ["//evil.test/help", "https://heymoa.app.evil.test/help", "javascript:alert(1)", "/w/123", "/helpful", "https://user@heymoa.app/help", "http://heymoa.app/help", null]) assert.equal(sitePageUrl(href, origin), null);
+});

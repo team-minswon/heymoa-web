@@ -38,3 +38,30 @@ test("real first-run screen reads without prompting, supports denial/recheck/ski
   const geometry = await page.locator("footer").evaluate((node) => ({ bottom: node.getBoundingClientRect().bottom, viewport: innerHeight, width: document.documentElement.scrollWidth }));
   assert.ok(geometry.bottom <= geometry.viewport); assert.equal(geometry.width, 720);
 });
+
+test("English onboarding can switch to Korean before login and preserves selection after a failed save", async (t) => {
+  const { chromium } = require("@playwright/test");
+  const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 720, height: 700 } });
+  await page.addInitScript(() => {
+    window.permissionView = { platform: "darwin", microphone: "denied", language: "en" };
+    window.heymoaOnboarding = { action: async (action) => {
+      if (action === "language-ko") window.permissionView.language = "ko";
+      if (action === "language-en") throw new Error("disk full");
+      return window.permissionView;
+    } };
+  });
+  await page.goto(pathToFileURL(path.resolve(__dirname, "../dist/onboarding.html")).href);
+  await page.waitForFunction(() => document.documentElement.lang === "en");
+  assert.equal(await page.evaluate(() => { window.dispatchEvent(new Event("focus")); return document.querySelector("#language").disabled; }), false);
+  assert.equal(await page.locator("h1").textContent(), "Prepare to record");
+  assert.equal(await page.locator("#complete").textContent(), "Set up later and get started");
+  const bounds = await page.locator("footer").evaluate(node => ({ bottom: node.getBoundingClientRect().bottom, height: innerHeight, width: document.documentElement.scrollWidth }));
+  assert.ok(bounds.bottom <= bounds.height); assert.equal(bounds.width, 720);
+  await page.locator("#language").selectOption("ko");
+  await page.waitForFunction(() => document.documentElement.lang === "ko");
+  assert.equal(await page.locator("h1").textContent(), "녹음 준비");
+  await page.locator("#language").selectOption("en");
+  await page.waitForFunction(() => document.querySelector("#error").textContent.length > 0);
+  assert.equal(await page.locator("#language").inputValue(), "ko");
+});

@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import type {
   DesktopRecordingAction,
   RecordingSummary,
@@ -102,22 +103,22 @@ export class RecordingLifecycle {
         : Math.max(0, Math.floor((this.deps.now() - s.startedAt) / 1000));
     const warnings = s
       ? [
-          ["마이크", s.microphone],
-          ["시스템 소리", s.systemAudio],
+          [t("마이크"), s.microphone],
+          [t("시스템 소리"), s.systemAudio],
         ]
           .filter(([, state]) => state !== null && state !== "live")
           .map(
             ([label, state]) =>
-              `${label} ${state === "muted" ? "음소거" : state === "suspended" ? "일시 중단" : "종료"}`
+              `${label} ${state === "muted" ? t("음소거") : state === "suspended" ? t("일시 중단") : t("종료")}`
           )
       : [];
     return {
       phase: s?.phase ?? null,
       label: s
-        ? LABELS[s.phase]
+        ? t(LABELS[s.phase])
         : neverStarted
-          ? LABELS.idle
-          : "녹음 상태 확인 불가",
+          ? t(LABELS.idle)
+          : t("녹음 상태 확인 불가"),
       elapsed:
         seconds === null
           ? null

@@ -1,3 +1,4 @@
+import { getLanguage } from "./i18n";
 import {
   BrowserWindow,
   desktopCapturer,
@@ -174,6 +175,7 @@ export class CaptureHost {
       width: 32,
       height: 32,
       webPreferences: {
+        additionalArguments: [`--heymoa-language=${getLanguage()}`],
         preload: path.join(__dirname, "capture-preload.js"),
         nodeIntegration: false,
         contextIsolation: true,

@@ -3,6 +3,7 @@ if (process.isMainFrame) {
   contextBridge.exposeInMainWorld(
     "heymoaCaptureLocal",
     Object.freeze({
+      language: process.argv.includes("--heymoa-language=en") ? "en" : "ko",
       emit: (packet: unknown) =>
         ipcRenderer.send("heymoa:local-capture-packet", packet),
       onAck: (listener: (sequence: number) => void) => {

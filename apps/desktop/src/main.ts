@@ -1,4 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, session, shell } from "electron";
+import { getLanguage, isLanguage, t } from "./i18n";
+import { loadLanguage, saveLanguage } from "./preferences";
+import { app, BrowserWindow, dialog, ipcMain, session, shell, Menu } from "electron";
 import path from "node:path";
 import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
 import { createOnboarding, onboardingCompleted } from "./onboarding";
@@ -26,6 +28,7 @@ import {
   CHANNELS,
   emptyRequest,
   externalUrl,
+  sitePageUrl,
   platformSupport,
   recordingSummary,
   trustedSender,
@@ -80,6 +83,27 @@ function openExternal(value: string) {
     void shell
       .openExternal(safe)
       .catch(() => console.warn("External link could not be opened"));
+}
+function refreshApplicationMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    ...(process.platform === "darwin" ? [{ label: "HeyMoa", submenu: [
+      { role: "about" as const, label: t("HeyMoa 정보") },
+      { type: "separator" as const }, { role: "services" as const, label: t("서비스") },
+      { type: "separator" as const }, { role: "hide" as const, label: t("HeyMoa 가리기") },
+      { role: "hideOthers" as const, label: t("다른 앱 가리기") }, { role: "unhide" as const, label: t("모두 보기") },
+      { type: "separator" as const }, { role: "quit" as const, label: t("앱 종료") },
+    ] }] : []),
+    { label: t("파일"), submenu: [{ role: "close", label: t("창 닫기") }, ...(process.platform === "darwin" ? [] : [{ role: "quit" as const, label: t("앱 종료") }])] },
+    { label: t("편집"), submenu: [
+      { role: "undo", label: t("실행 취소") }, { role: "redo", label: t("다시 실행") }, { type: "separator" },
+      { role: "cut", label: t("오려두기") }, { role: "copy", label: t("복사") }, { role: "paste", label: t("붙여넣기") }, { role: "selectAll", label: t("전체 선택") },
+    ] },
+    { label: t("보기"), submenu: [
+      { role: "reload", label: t("다시 불러오기") }, { role: "resetZoom", label: t("확대/축소 재설정") },
+      { role: "zoomIn", label: t("확대") }, { role: "zoomOut", label: t("축소") }, { role: "togglefullscreen", label: t("전체 화면") },
+    ] },
+    { label: t("윈도우"), submenu: [{ role: "minimize", label: t("최소화") }, { role: "front", label: t("맨 앞으로 가져오기") }] },
+  ]));
 }
 function createWindow(url: string) {
   const current = new BrowserWindow({
@@ -137,9 +161,9 @@ function createWindow(url: string) {
     void dialog
       .showMessageBox(current, {
         type: "error",
-        message: "앱 화면이 중단되었습니다.",
-        detail: "녹음 중이었다면 아직 전송되지 않은 소리는 사라질 수 있습니다.",
-        buttons: ["다시 열기", "앱 종료"],
+        message: t("앱 화면이 중단되었습니다."),
+        detail: t("녹음 중이었다면 아직 전송되지 않은 소리는 사라질 수 있습니다."),
+        buttons: [t("다시 열기"), t("앱 종료")],
       })
       .then(({ response }) => {
         if (response === 0 && !current.isDestroyed()) void load(current, url);
@@ -156,9 +180,9 @@ async function load(current: BrowserWindow, url: string) {
     current.show();
     const { response } = await dialog.showMessageBox(current, {
       type: "error",
-      message: "HeyMoa에 연결하지 못했습니다.",
-      detail: "인터넷 연결을 확인한 뒤 다시 시도해 주세요.",
-      buttons: ["다시 시도", "앱 종료"],
+      message: t("HeyMoa에 연결하지 못했습니다."),
+      detail: t("인터넷 연결을 확인한 뒤 다시 시도해 주세요."),
+      buttons: [t("다시 시도"), t("앱 종료")],
     });
     if (response === 0 && !current.isDestroyed()) void load(current, url);
     else app.quit();
@@ -168,13 +192,14 @@ app
   .whenReady()
   .then(async () => {
     if (!ownsInstance) return;
+    const storedLanguage = await loadLanguage(userDataPath, app.getLocale());
     const support = platformSupport(
       process.platform,
       process.arch,
       process.getSystemVersion()
     );
     if (!support.supported) {
-      dialog.showErrorBox("지원하지 않는 환경", support.reason!);
+      dialog.showErrorBox(t("지원하지 않는 환경"), support.reason!);
       app.quit();
       return;
     }
@@ -183,8 +208,8 @@ app
       url = applicationUrl(app.isPackaged, process.env.HEYMOA_DESKTOP_DEV_URL);
     } catch {
       dialog.showErrorBox(
-        "개발 URL 오류",
-        "loopback 개발 URL을 확인해 주세요."
+        t("개발 URL 오류"),
+        t("loopback 개발 URL을 확인해 주세요.")
       );
       app.quit();
       return;
@@ -193,8 +218,12 @@ app
     // Native authentication uses the same persistent cookie jar as the web
     // window. Requests stay on the fixed API origin and never follow redirects.
     const jar = session.fromPartition("persist:heymoa");
+    const cookies = await jar.cookies.get({ url, name: "heymoa-lang" });
+    if (!storedLanguage && isLanguage(cookies[0]?.value)) await saveLanguage(userDataPath, cookies[0].value);
+    refreshApplicationMenu();
     auth = new DesktopAuthBroker({
       apiOrigin: PRODUCTION_API_ORIGIN,
+      language: getLanguage,
       post: authPost((value, options) => jar.fetch(value, options), origin),
       openBrowser: (value) => shell.openExternal(value),
     });
@@ -245,6 +274,19 @@ app
       authorize(event);
       if (!emptyRequest(payload)) throw new Error("INVALID_AUTH_REQUEST");
       auth!.cancel();
+    });
+    ipcMain.handle("heymoa:open-site-page", (event, value: unknown) => {
+      authorize(event);
+      const safe = sitePageUrl(value, origin);
+      if (!safe) throw new Error("INVALID_SITE_PAGE");
+      return shell.openExternal(safe);
+    });
+    ipcMain.handle("heymoa:language", async (event, value: unknown) => {
+      authorize(event);
+      if (!isLanguage(value)) throw new Error("INVALID_LANGUAGE");
+      await saveLanguage(userDataPath, value);
+      refreshApplicationMenu();
+      recording?.refresh();
     });
     ipcMain.handle(CHANNELS.summary, (event, payload: unknown) => {
       authorize(event);
@@ -323,9 +365,12 @@ app
       else showOnCurrentSpace(window);
     });
     if (!(await onboardingCompleted(userDataPath))) {
-      onboarding = createOnboarding(userDataPath);
+      onboarding = createOnboarding(userDataPath, refreshApplicationMenu);
       await onboarding.finished;
     }
+    if (onboarding || !cookies.length) await jar.cookies.set({ url: origin, name: "heymoa-lang", value: getLanguage(), path: "/", sameSite: "lax", secure: origin.startsWith("https:"), expirationDate: Date.now() / 1000 + 365 * 86400 });
+    const initial = new URL(url);
+    if (initial.pathname === "/" && getLanguage() === "en") { initial.pathname = "/en"; url = initial.href; }
     createWindow(url);
     starting = false;
     onboarding?.dispose();
@@ -336,7 +381,7 @@ app
     }
   })
   .catch(() => {
-    dialog.showErrorBox("시작 실패", "HeyMoa를 시작하지 못했습니다.");
+    dialog.showErrorBox(t("시작 실패"), t("HeyMoa를 시작하지 못했습니다."));
     app.quit();
   });
 app.on("window-all-closed", () => app.quit());

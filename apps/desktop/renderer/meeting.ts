@@ -1,3 +1,6 @@
+import { localize } from "./i18n";
+import { getLanguage } from "../src/i18n";
+import { t } from "../src/i18n";
 import type {
   ActiveMeeting,
   MeetingTimelineItem,
@@ -33,7 +36,7 @@ const stop = element<HTMLButtonElement>("stop");
 let timeline: MeetingTimelineSnapshot | null = null;
 let filter = "ALL";
 let recording = false;
-let emptyMessage = "녹음 중인 회의가 없습니다.";
+let emptyMessage = t("녹음 중인 회의가 없습니다.");
 let following = true;
 let previousTop = 0;
 let previousHeight = scroll.scrollHeight;
@@ -47,14 +50,14 @@ const filters = [
 ];
 const filterButtons = filters.map(([key, label]) => {
   const button = document.createElement("button");
-  button.textContent = label;
+  button.textContent = t(label);
   button.type = "button";
   button.addEventListener("click", () => {
     filter = key;
     renderItems();
   });
   element("filters").append(button);
-  return { key, button };
+  return { key, label, button };
 });
 const offset = (ms: number | null) => {
   if (ms === null) return "—";
@@ -216,10 +219,10 @@ function renderItems(animateNew = false) {
   element("empty").textContent = !timeline
     ? emptyMessage
     : timeline.loading
-      ? "회의 내용을 불러오는 중입니다."
+      ? t("회의 내용을 불러오는 중입니다.")
       : timeline.failed
-        ? "회의 내용을 확인하지 못했습니다. 현재 회의를 열어 확인해 주세요."
-        : "아직 이 유형의 항목이 없습니다.";
+        ? t("회의 내용을 확인하지 못했습니다. 현재 회의를 열어 확인해 주세요.")
+        : t("아직 이 유형의 항목이 없습니다.");
   followBottom();
   latest.hidden = following || displayed.length === 0;
 }
@@ -230,7 +233,7 @@ function followBottom() {
   previousHeight = scroll.scrollHeight;
 }
 const startTime = (ms: number) =>
-  new Date(ms).toLocaleTimeString("ko-KR", {
+  new Date(ms).toLocaleTimeString(getLanguage() === "en" ? "en-US" : "ko-KR", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -247,7 +250,7 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
   element("empty").hidden = true;
   latest.hidden = true;
   // 트레이가 매초 같은 값을 보낸다. 같으면 버튼을 다시 만들지 않아 키보드 초점이 남는다.
-  const signature = JSON.stringify(list);
+  const signature = getLanguage() + JSON.stringify(list);
   if (signature === meetingsSignature) return;
   meetingsSignature = signature;
   container.replaceChildren(
@@ -257,12 +260,12 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
       button.className = "meeting";
       const title = document.createElement("span");
       title.className = "meeting-title";
-      title.textContent = meeting.title || "제목 없는 회의";
+      title.textContent = meeting.title || t("제목 없는 회의");
       button.append(title);
       if (meeting.startedAt !== null) {
         const time = document.createElement("span");
         time.className = "meeting-time";
-        time.textContent = `${startTime(meeting.startedAt)} 시작`;
+        time.textContent = getLanguage() === "en" ? `Started ${startTime(meeting.startedAt)}` : `${startTime(meeting.startedAt)} 시작`;
         button.append(time);
       }
       button.addEventListener("click", () =>
@@ -273,6 +276,8 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
   );
 }
 function receive(view: MeetingPopoverView) {
+  localize(view.language ?? "ko");
+  for (const { label, button } of filterButtons) button.textContent = t(label);
   const animateNew =
     timeline?.noteId === view.timeline?.noteId &&
     Boolean(timeline?.items.length);
@@ -286,33 +291,33 @@ function receive(view: MeetingPopoverView) {
   recording = view.canStop;
   viewing = Boolean(view.viewing);
   emptyMessage = view.unknown
-    ? "녹음 상태를 확인하지 못했습니다. HeyMoa를 열어 상태를 확인해 주세요."
+    ? t("녹음 상태를 확인하지 못했습니다. HeyMoa를 열어 상태를 확인해 주세요.")
     : recording
-      ? "회의 타임라인을 기다리고 있습니다. 현재 회의를 열어 확인해 주세요."
+      ? t("회의 타임라인을 기다리고 있습니다. 현재 회의를 열어 확인해 주세요.")
       : view.phase === "requesting-permission" || view.phase === "connecting"
-        ? "녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요."
+        ? t("녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요.")
         : view.phase === "stopping"
-          ? "녹음 일시정지와 전송 완료를 기다리고 있습니다."
-          : view.warning || "녹음 중인 회의가 없습니다.";
+          ? t("녹음 일시정지와 전송 완료를 기다리고 있습니다.")
+          : view.warning || t("녹음 중인 회의가 없습니다.");
   element("open").textContent =
     view.phase !== null && view.phase !== "idle"
-      ? "현재 회의 열기 ↗"
-      : "HeyMoa 열기 ↗";
+      ? t("현재 회의 열기 ↗")
+      : t("HeyMoa 열기 ↗");
   element("title").textContent =
-    timeline?.title || (recording ? "진행 중인 회의" : view.label);
+    timeline?.title || (recording ? t("진행 중인 회의") : view.label);
   element("phase").textContent = view.label;
   element("elapsed").textContent = view.elapsed || "";
   element("notice").textContent =
     view.warning ||
     (view.stale
-      ? "갱신이 멈췄습니다. 현재 회의를 열어 확인해 주세요."
+      ? t("갱신이 멈췄습니다. 현재 회의를 열어 확인해 주세요.")
       : timeline?.reconnecting
-        ? "연결을 다시 확인하고 있습니다."
+        ? t("연결을 다시 확인하고 있습니다.")
         : timeline?.failed
-          ? "회의 내용을 갱신하지 못했습니다."
+          ? t("회의 내용을 갱신하지 못했습니다.")
           : "");
   // 뷰어로 보는 중에는 「녹음 일시정지」 대신 「보기 종료」로 목록에 돌아간다.
-  const label = viewing ? " 보기 종료" : " 녹음 일시정지";
+  const label = viewing ? t(" 보기 종료") : t(" 녹음 일시정지");
   if (stop.lastChild?.textContent !== label)
     stop.lastChild!.textContent = label;
   // ⏸ 는 녹음 일시정지에만 붙는다. 보기 종료는 회의를 멈추지 않는다.
@@ -320,7 +325,7 @@ function receive(view: MeetingPopoverView) {
   stop.disabled = !(view.canStop || viewing);
   renderItems(animateNew);
   const listing = !timeline && !recording && view.meetings.length > 0;
-  if (listing) element("title").textContent = "진행 중인 회의";
+  if (listing) element("title").textContent = t("진행 중인 회의");
   renderMeetings(view.meetings, listing);
 }
 scroll.addEventListener("scroll", () => {
@@ -365,7 +370,7 @@ function act(
   if (value === "stop" || value === "stop-viewing") stop.disabled = true;
   void bridge.action(value).catch(() => {
     element("notice").textContent =
-      "처리하지 못했습니다. 현재 회의에서 확인해 주세요.";
+      t("처리하지 못했습니다. 현재 회의에서 확인해 주세요.");
   });
 }
 stop.addEventListener("click", () => act(viewing ? "stop-viewing" : "stop"));
@@ -385,7 +390,7 @@ void bridge
     if (!received) receive(view);
   })
   .catch(() => {
-    element("notice").textContent = "현재 회의를 확인하지 못했습니다.";
+    element("notice").textContent = t("현재 회의를 확인하지 못했습니다.");
   });
 window.addEventListener(
   "unload",

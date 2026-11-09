@@ -15,7 +15,7 @@ const idle = {
 
 // Execute the shipped main entry and its modules together. Only Electron's OS
 // boundary is replaced; broker, session adapter, IPC admission and tray are real.
-async function fixture(t, overriddenProfiles = true, introCompleted = true) {
+async function fixture(t, overriddenProfiles = true, introCompleted = true, options = {}) {
   const app = new EventEmitter();
   const ipcMain = new EventEmitter();
   const handlers = new Map(),
@@ -47,6 +47,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true) {
     return true;
   };
   app.isPackaged = true;
+  app.getLocale = () => options.locale ?? "ko-KR";
   app.setAsDefaultProtocolClient = () => true;
   let quits = 0,
     answer = 0;
@@ -76,6 +77,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true) {
     }
   };
   const jar = {
+    cookies: { get: async () => options.cookie ? [{ value: options.cookie }] : [], set: async (cookie) => { options.lastCookie = cookie; } },
     webRequest: { onBeforeRequest() {} },
     setDisplayMediaRequestHandler() {},
     setPermissionCheckHandler() {},
@@ -123,6 +125,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true) {
     isMinimized() {
       return false;
     }
+    setTitle(title) { this.title = title; }
     show() {}
     focus() {}
     hide() {}
@@ -163,7 +166,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true) {
     BrowserWindow,
     Tray,
     nativeImage: { createFromPath: () => image },
-    Menu: { buildFromTemplate: (value) => value },
+    Menu: { buildFromTemplate: (value) => value, setApplicationMenu() {} },
     session: {
       fromPartition(partition) {
         sessionProfiles.push({ partition, storage: app.getPath("sessionData") });
@@ -210,7 +213,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true) {
         clearInterval,
         require: (name) =>
           name === "node:fs/promises"
-            ? { ...require(name), readFile: async () => JSON.stringify({ version: 1, completed: introCompleted }), mkdir: async () => {}, writeFile: async () => {}, rename: async () => {} }
+            ? { ...require(name), readFile: async (file) => JSON.stringify(file.endsWith("preferences.json") ? { language: options.savedLanguage } : { version: 1, completed: introCompleted }), mkdir: async () => {}, writeFile: async () => {}, rename: async () => {} }
           : name === "electron"
             ? electron
             : name.startsWith(".")
@@ -232,7 +235,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true) {
     sender: window.webContents,
     senderFrame: window.webContents.mainFrame,
   };
-  const invoke = (channel, payload) => handlers.get(channel)(sender, payload);
+  const invoke = (channel, payload, event = sender) => handlers.get(channel)(event, payload);
   t.after(() => {
     for (const current of windows) {
       if (!current.isDestroyed()) current.emit("closed");
@@ -395,4 +398,29 @@ test("first run gates hosted web until intro completion and activation cannot by
   assert.equal(f.windows[0].isDestroyed(), true);
   assert.equal(f.quits, 0);
   assert.deepEqual(f.requests, []);
+});
+
+
+test("onboarding language selection reaches first hosted page and invalid IPC cannot change it", async (t) => {
+  const f = await fixture(t, true, false);
+  await f.invoke("heymoa:onboarding", "language-en");
+  await f.invoke("heymoa:onboarding", "complete"); await tick();
+  assert.equal(f.windows[1].loadedURL, "https://heymoa.app/en");
+  const sender = { sender: f.windows[1].webContents, senderFrame: f.windows[1].webContents.mainFrame };
+  await assert.rejects(f.invoke("heymoa:language", "fr", sender), /INVALID_LANGUAGE/);
+  const login = f.invoke("heymoa:auth-login", undefined, sender); await tick();
+  assert.equal(f.requests[0].body.language, "en");
+  f.app.quit(); await tick(); await login;
+});
+
+
+test("upgrade keeps an existing Korean web choice on English OS; explicit onboarding overrides its stale cookie", async (t) => {
+  const upgrade = await fixture(t, true, true, { locale: "en-US", cookie: "ko" });
+  assert.equal(upgrade.windows[0].loadedURL, "https://heymoa.app");
+  const options = { cookie: "ko" };
+  const intro = await fixture(t, true, false, options);
+  await intro.invoke("heymoa:onboarding", "language-en");
+  await intro.invoke("heymoa:onboarding", "complete"); await tick();
+  assert.equal(options.lastCookie.value, "en");
+  assert.equal(intro.windows[1].loadedURL, "https://heymoa.app/en");
 });

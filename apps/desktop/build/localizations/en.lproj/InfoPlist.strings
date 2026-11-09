@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "HeyMoa uses your microphone to record your voice in meetings.";
+"NSAudioCaptureUsageDescription" = "HeyMoa uses system audio to record the people you hear in meetings.";

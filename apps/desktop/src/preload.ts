@@ -57,6 +57,8 @@ if (process.isMainFrame) {
         return ipcRenderer.invoke("heymoa:auth-connection", request);
       },
       cancelAuth: () => ipcRenderer.invoke("heymoa:auth-cancel"),
+      openSitePage: (href: string) => ipcRenderer.invoke("heymoa:open-site-page", href),
+      reportLanguage: (language: "ko" | "en") => ipcRenderer.invoke("heymoa:language", language),
       reportRecording: (summary: RecordingSummary) =>
         ipcRenderer.invoke("heymoa:recording-summary", summary),
       reportMeetingTimeline: (snapshot: MeetingTimelineSnapshot | null) =>

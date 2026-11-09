@@ -50,3 +50,12 @@ describe("openSitePage", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
+
+it("새 앱에서는 녹음 중에도 공개 페이지를 별도 브라우저로 연다", async () => {
+  const openSitePageInBrowser = vi.fn().mockResolvedValue(undefined);
+  (window as { heymoaDesktop?: unknown }).heymoaDesktop = { openSitePage: openSitePageInBrowser };
+  const navigate = vi.fn();
+  openSitePage("/en/help/start/desktop", navigate);
+  expect(openSitePageInBrowser).toHaveBeenCalledWith("/en/help/start/desktop");
+  expect(navigate).not.toHaveBeenCalled();
+});

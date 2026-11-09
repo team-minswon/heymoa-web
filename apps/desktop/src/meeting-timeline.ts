@@ -128,6 +128,7 @@ export function activeMeetings(value: unknown): ActiveMeeting[] {
 }
 
 export type MeetingPopoverView = {
+  language?: "ko" | "en";
   meetings: ActiveMeeting[];
   /** 내 녹음이 아니라 뷰어로 보는 회의가 있다 */
   viewing: boolean;

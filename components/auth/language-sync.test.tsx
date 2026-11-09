@@ -29,6 +29,8 @@ import {
 } from "@/components/auth/language-sync";
 import { initialLanguageSaveSettled } from "@/lib/i18n/initial-language-save";
 
+import { DesktopLanguageSync } from "@/components/auth/desktop-language-sync";
+
 let queryClient: QueryClient;
 const renderSync = (ui: ReactElement = <LanguageSync />) =>
   render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
@@ -116,4 +118,19 @@ describe("LanguageSync", () => {
       language: null,
     });
   });
+});
+
+
+it("새 앱에는 화면 언어를 알리고 구버전 앱에서는 건너뛴다", async () => {
+  const reportLanguage = vi.fn().mockResolvedValue(undefined);
+  (window as unknown as { heymoaDesktop: unknown }).heymoaDesktop = { reportLanguage };
+  const view = renderSync(<DesktopLanguageSync />);
+  expect(reportLanguage).toHaveBeenCalledWith("en");
+  state.screen = "ko";
+  view.rerender(<QueryClientProvider client={queryClient}><DesktopLanguageSync /></QueryClientProvider>);
+  expect(reportLanguage).toHaveBeenLastCalledWith("ko");
+  view.unmount();
+  (window as unknown as { heymoaDesktop: unknown }).heymoaDesktop = {};
+  expect(() => renderSync(<DesktopLanguageSync />)).not.toThrow();
+  delete (window as unknown as { heymoaDesktop?: unknown }).heymoaDesktop;
 });
