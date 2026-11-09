@@ -127,6 +127,7 @@ function renderDialog(
   render(
     <QueryClientProvider client={client}>
       <NoteDeleteDialog
+        workspaceId="01K0000000000"
         noteId="01K0000000002"
         projectId="01K0000000001"
         title="주간 제품 회의"
@@ -198,7 +199,7 @@ describe("NoteDeleteDialog", () => {
     await clickDelete();
 
     await waitFor(() => {
-      expect(deleteNote).toHaveBeenCalledWith({ noteId: "01K0000000002" });
+      expect(deleteNote).toHaveBeenCalledWith({ noteId: "01K0000000002", workspaceId: "01K0000000000" });
       expect(disconnect).toHaveBeenCalledWith("01K0000000002");
       expect(toastSuccess).toHaveBeenCalledWith("회의를 삭제했습니다.");
       expect(onDeleted).toHaveBeenCalled();

@@ -60,6 +60,7 @@ function dropNoteFromList(current: unknown, noteId: string) {
  * 겹친다(rule `error-loading`).
  */
 export function NoteDeleteDialog({
+  workspaceId,
   noteId,
   projectId,
   title,
@@ -67,6 +68,7 @@ export function NoteDeleteDialog({
   onOpenChange,
   onDeleted,
 }: {
+  workspaceId: string;
   noteId: string;
   projectId?: string;
   title: string;
@@ -148,8 +150,10 @@ export function NoteDeleteDialog({
               // **거절을 여기서 소비한다.** `MutationCache.onError`는 토스트만 띄우고
               // Promise를 삼키지 않아서, catch가 없으면 409·404·네트워크 실패가
               // unhandled rejection으로 남는다.
+              // 생성 함수는 noteId만 꺼냅니다. workspaceId는 공통 성공 계측용이며 서버로 보내지 않습니다.
+              const variables = { noteId, workspaceId };
               const response = await deleteNote
-                .mutateAsync({ noteId })
+                .mutateAsync(variables)
                 .catch(() => null);
               if (response?.status !== 204) {
                 setBusy(false);

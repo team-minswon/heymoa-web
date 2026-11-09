@@ -66,6 +66,7 @@ export type AnalyticsEvent =
   | "recording_start_clicked"
   | "recording_stop_clicked"
   | "note_opened"
+  | "note_deleted"
   | "agenda_map_opened"
   | "agenda_map_column_expanded"
   | "agenda_map_agenda_selected"
@@ -113,6 +114,7 @@ export type WebEventProperties = {
   browser_handoff_arrived: HandoffContext;
   recording_start_clicked: { workspace_id: string; retry: boolean };
   recording_stop_clicked: { surface: "note" | "global" };
+  note_deleted: { workspace_id: string };
   // source: 어디서 노트에 들어왔나. 목록 행 클릭은 list, 메일 링크(utm_medium=email)는 mail,
   // 알림 모달 이동은 notification(발화는 PRO-67 I21·I09). 노트 id·제목은 싣지 않는다.
   note_opened: {
@@ -316,6 +318,7 @@ const MUTATION_EVENTS: Record<string, MutationEvent> = {
   createWorkspace: "workspace_created",
   createProject: "project_created",
   createNote: "meeting_created",
+  deleteNote: "note_deleted",
   endMeeting: "meeting_ended",
   approveMeetingReview: "summary_confirmed",
   createWorkspaceInvitation: "invite_sent",

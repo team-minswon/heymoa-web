@@ -4,6 +4,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: vi.fn() } }));
 
 import { toast } from "@/lib/ui/toast";
+import { onTrack } from "@/lib/analytics/track";
 
 import { makeQueryClient } from "@/lib/query/query-client";
 
@@ -109,5 +110,37 @@ describe("callers that already toast are not doubled up", () => {
     );
 
     expect(toastError).not.toHaveBeenCalled();
+  });
+});
+
+describe("노트 삭제 성공 계측", () => {
+  it("실행하지 않은 삭제와 실패는 세지 않고 성공한 삭제만 한 번 센다", async () => {
+    const client = makeQueryClient();
+    const events: Array<[string, unknown]> = [];
+    const stop = onTrack((event, properties) => events.push([event, properties]));
+    try {
+      const options = { mutationKey: ["deleteNote"], retry: false as const };
+      client.getMutationCache().build(client, {
+        ...options,
+        mutationFn: async () => ({ status: 204 }),
+      });
+      expect(events).toEqual([]);
+      type Variables = { noteId: string; workspaceId: string };
+      const failed = client.getMutationCache().build<never, Error, Variables, unknown>(client, {
+        ...options,
+        mutationFn: async () => { throw new Error("삭제 실패"); },
+      });
+      await failed.execute({ noteId: "N1", workspaceId: "W1" }).catch(() => undefined);
+      expect(events).toEqual([]);
+      const success = client.getMutationCache().build<{ status: number }, Error, Variables, unknown>(client, {
+        ...options,
+        mutationFn: async () => ({ status: 204 }),
+      });
+      await success.execute({ noteId: "N1", workspaceId: "W1" });
+      expect(events).toEqual([["note_deleted", { workspace_id: "W1" }]]);
+    } finally {
+      stop();
+      client.clear();
+    }
   });
 });

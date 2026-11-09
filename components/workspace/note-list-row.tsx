@@ -351,6 +351,7 @@ export const NoteListRow = memo(function NoteListRow({
 
       {canDelete ? (
         <NoteDeleteDialog
+          workspaceId={workspaceId}
           noteId={note.noteId}
           projectId={note.projectId}
           title={note.title}

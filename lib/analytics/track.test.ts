@@ -35,6 +35,10 @@ describe("연결 지도 이벤트", () => {
 });
 
 describe("이벤트 타입", () => {
+  it("노트 삭제에는 워크스페이스만 싣고 노트 식별자와 내용을 받지 않는다", () => {
+    expectTypeOf(track<"note_deleted">).parameter(1).exclude<undefined>().toEqualTypeOf<{ workspace_id: string }>();
+  });
+
   it("등록한 행동만 허용하고 탭 속성은 enum으로 제한합니다", () => {
     expectTypeOf<"note_opened" | "feedback_sent">().toExtend<AnalyticsEvent>();
     expectTypeOf<"not_registered" | "user_signed_up">().not.toExtend<AnalyticsEvent>();
@@ -167,6 +171,12 @@ describe("trackMutation", () => {
     stop();
     return heard;
   };
+
+
+  it("노트 삭제는 노트 식별자·제목·본문 없이 워크스페이스만 보낸다", () => {
+    expect(heardFrom([["deleteNote", { workspaceId: "W1", noteId: "N1", title: "비밀 제목", data: { message: "비밀 본문" } }]]))
+      .toEqual([["note_deleted", { workspace_id: "W1" }]]);
+  });
 
   it("문의 종류만 보내고 본문·이메일·주소는 보내지 않습니다", () => {
     expect(heardFrom([

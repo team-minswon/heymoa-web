@@ -738,6 +738,7 @@ export function NotePanel({
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <NoteDeleteDialog
+                  workspaceId={workspaceId}
                   noteId={noteId}
                   projectId={note.projectId}
                   title={note.title}
