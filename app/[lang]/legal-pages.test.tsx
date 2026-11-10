@@ -68,6 +68,14 @@ describe("HeyMoa legal pages", () => {
     expect(document.getElementById("section-10")).toHaveTextContent("김민수");
   });
 
+  it("새 처리방침은 공고·시행일과 이전 판을 보존한 변경표를 보여 줍니다", async () => {
+    await renderPage(PrivacyPage, "ko");
+    expect(screen.getByText("2026년 11월 11일")).toBeVisible();
+    expect(screen.getByText("2026년 11월 18일")).toBeVisible();
+    expect(document.getElementById("session-replay-changes")).toHaveTextContent("세션 리플레이는 30일");
+    expect(screen.getByRole("link", { name: /2026년 11월 3일/ })).toHaveAttribute("href", "/privacy/2026-11-03");
+  });
+
   it("sets responsible recording expectations in the terms", async () => {
     await renderPage(TermsPage, "ko");
 
@@ -104,7 +112,7 @@ describe("HeyMoa legal pages", () => {
       );
       expect(screen.getByText("October 22, 2026")).toBeVisible();
       // 다른 화면이 링크하는 앵커(`#section-5` 등)가 언어와 상관없이 같은 조를 가리킨다.
-      const sections = container.querySelectorAll("article > section");
+      const sections = container.querySelectorAll('article > section[id^="section-"]');
       expect(sections).toHaveLength(count);
       sections.forEach((section, index) => {
         expect(section.id).toBe(`section-${index + 1}`);
@@ -122,7 +130,7 @@ describe("처리방침·약관 변경 관리(APP-1385)", () => {
   afterEach(cleanup);
 
   it.each([
-    [PrivacyPage, "/privacy", ["2026-10-23", "2026-10-22", "2026-10-18", "2026-10-12", "2026-09-04", "2026-07-17"]],
+    [PrivacyPage, "/privacy", ["2026-11-03", "2026-10-23", "2026-10-22", "2026-10-18", "2026-10-12", "2026-09-04", "2026-07-17"]],
     [TermsPage, "/terms", ["2026-10-22", "2026-10-18", "2026-09-04", "2026-07-17"]],
   ] as const)("이전 판 목록이 판마다 고정 주소로 선다(%#)", async (Page, path, versions) => {
     await renderPage(Page, "ko");

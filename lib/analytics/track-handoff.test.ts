@@ -9,6 +9,8 @@ const posthog = vi.hoisted(() => ({
   get_distinct_id: vi.fn(() => DID),
   get_session_id: vi.fn(() => SID),
   _isIdentified: vi.fn(() => false),
+  startSessionRecording: vi.fn(),
+  stopSessionRecording: vi.fn(),
 }));
 vi.mock("posthog-js", () => ({ default: posthog }));
 

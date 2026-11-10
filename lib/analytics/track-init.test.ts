@@ -8,6 +8,8 @@ const posthog = vi.hoisted(() => ({
   register: vi.fn(),
   identify: vi.fn(),
   get_distinct_id: vi.fn(() => "anonymous"),
+  startSessionRecording: vi.fn(),
+  stopSessionRecording: vi.fn(),
 }));
 vi.mock("posthog-js", () => ({ default: posthog }));
 
@@ -38,7 +40,7 @@ describe("PostHog를 켜기 전에 난 이벤트", () => {
     expect(posthog.init.mock.calls[0][1]).toMatchObject({
       api_host: "https://t.heymoa.app",
       ui_host: "https://us.posthog.com",
-      advanced_disable_flags: true,
+      advanced_disable_feature_flags: true,
       autocapture: false,
       disable_session_recording: true,
     });

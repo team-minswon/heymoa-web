@@ -8,6 +8,10 @@ import {
   HANDOFF_ANALYTICS_PARAMS,
   type HandoffContext,
 } from "@/lib/auth/in-app-browser";
+import {
+  SESSION_REPLAY_CONFIG,
+  SESSION_REPLAY_EFFECTIVE,
+} from "@/lib/analytics/session-replay";
 
 /**
  * 보내는 이벤트 이름. **여기 없는 이름은 보낼 수 없다** — PostHog 깔때기는 이름 문자열로
@@ -575,20 +579,24 @@ export function initAnalytics(apiKey: string) {
     ui_host: "https://us.posthog.com",
     defaults: "2026-08-30",
     person_profiles: "identified_only",
-    // 화면 글자를 가져가는 수집은 전부 끈다. 전사·요약이 화면에 그대로 있고, 처리방침이
-    // 그것을 분석 도구로 보내지 않는다고 약속한다. 이벤트는 `track()`으로만 보낸다.
+    // 기능 이벤트는 `track()`으로만 보냅니다. 리플레이는 본문·입력·속성·미디어를 가립니다.
     autocapture: false,
     rageclick: false,
     capture_dead_clicks: false,
     capture_heatmaps: false,
     disable_session_recording: true,
+    session_recording: SESSION_REPLAY_CONFIG,
+    enable_recording_console_log: false,
+    capture_performance: false,
     disable_surveys: true,
-    // 기능 플래그를 쓰지 않는다. 켜 두면 `identify()`마다 `/flags`로 userId가 나가는데 `before_send`를 거치지
-    // 않는다. 원격 설정도 같이 꺼지므로 쓰는 기능은 위처럼 여기서 모두 정한다.
-    advanced_disable_flags: true,
+    // 녹화 원격 설정은 받아야 합니다. 기능 플래그 평가와 설문은 계속 쓰지 않습니다.
+    advanced_disable_feature_flags: true,
     before_send: beforeSend,
   });
   posthog.register({ client: desktopAuthBridge() ? "desktop" : "web" });
+  window.addEventListener("storage", (event) => {
+    if (event.key === OPT_OUT_KEY || event.key === null) syncSessionReplay();
+  });
   if (pendingUserId) {
     identifyUser(pendingUserId);
     pendingUserId = undefined;
@@ -638,6 +646,40 @@ export function setAnalyticsOptOut(optOut: boolean) {
     // 저장하지 못했다 — 이번 문서 동안은 위 `unsavedOptOut`으로 지킨다.
     unsavedOptOut = optOut;
   }
+  syncSessionReplay();
+}
+
+let replayPrivacyAgreed = false;
+
+/** 서버가 알려준 현재 개인정보 처리방침에 동의한 뒤에만 제품 화면을 녹화합니다. */
+export function setSessionReplayConsent(
+  consents: readonly {
+    documentType: string;
+    currentVersion: string;
+    agreed: boolean;
+  }[]
+) {
+  replayPrivacyAgreed = consents.some(
+    (consent) =>
+      consent.documentType === "PRIVACY" &&
+      consent.currentVersion === SESSION_REPLAY_EFFECTIVE &&
+      consent.agreed
+  );
+  syncSessionReplay();
+}
+
+/** 인증 표면·데스크톱·공고 기간·미동의·수집 거부에서는 녹화하지 않습니다. */
+export function syncSessionReplay() {
+  if (!posthog.__loaded) return;
+  const excluded =
+    isAnalyticsOptedOut() ||
+    !replayPrivacyAgreed ||
+    desktopAuthBridge() ||
+    TEST_WORKSPACES.has(window.location.pathname.split("/")[2]) ||
+    /^\/(auth|oauth|invite)(\/|$)/.test(window.location.pathname) ||
+    Date.now() < Date.parse(`${SESSION_REPLAY_EFFECTIVE}T00:00:00+09:00`);
+  if (excluded) posthog.stopSessionRecording();
+  else posthog.startSessionRecording();
 }
 
 /** userId만 쓴다. 이메일·이름은 보내지 않는다 — PostHog를 켤 때 처리방침 7절에 이 항목만 적는다. */
@@ -655,6 +697,7 @@ export function identifyUser(userId: string) {
 /** 로그아웃·세션 만료로 앱을 떠날 때. 같은 브라우저의 다음 사람이 이전 사람으로 묶이지 않게 한다. */
 export function resetAnalytics() {
   pendingUserId = undefined;
+  setSessionReplayConsent([]);
   if (posthog.__loaded) posthog.reset();
 }
 

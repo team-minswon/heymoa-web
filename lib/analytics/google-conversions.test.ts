@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const posthog = vi.hoisted(() => ({ __loaded: true, capture: vi.fn() }));
+const posthog = vi.hoisted(() => ({
+  __loaded: true,
+  capture: vi.fn(),
+  startSessionRecording: vi.fn(),
+  stopSessionRecording: vi.fn(),
+}));
 vi.mock("posthog-js", () => ({ default: posthog }));
 
 let analytics: typeof import("./track");

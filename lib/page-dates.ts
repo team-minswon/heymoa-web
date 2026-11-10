@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/locales";
 import { archivedVersions, type LegalDoc } from "@/lib/legal-archive";
+import { SESSION_REPLAY_EFFECTIVE } from "@/lib/analytics/session-replay";
 
 /**
  * sitemap `lastmod` 와 JSON-LD `dateModified` 의 원본(`YYYY-MM-DD`).
@@ -22,15 +23,16 @@ type LegalDates = { announced: string | null; effective: string | null };
  * 시행하고 나서 본문을 다시 고치면, 그 전에 지금 본문을 `lib/legal-archive.ts` 에 얼려 넣고 여기 날짜를 새로 쓴다.
  */
 export const LEGAL_CURRENT: Record<LegalDoc, LegalDates> = {
-  // APP-1481 개정본. 외부 AI 요청에서 무보관 조건을 뺀 날 시행한다. 베타·무상이라 공고 기간 없이 같은 날 시행한다
-  // (사용자 결정, 2026-11-03). 직전 판(2026-10-23)은 `lib/legal-archive.ts` 에 있다. 동의 버전은 올리지 않는다.
-  privacy: { announced: "2026-11-03", effective: "2026-11-03" },
+  // APP-1548: 내용이 가려진 화면 흐름을 녹화합니다. 기존 11/3 판은 보존합니다.
+  privacy: { announced: "2026-11-11", effective: SESSION_REPLAY_EFFECTIVE },
   terms: { announced: "2026-10-23", effective: "2026-10-23" },
 };
 
-/** sitemap·JSON-LD 의 최종 수정일. 지금 판 시행일이 미정이면 마지막으로 시행한 판의 날짜다. */
+/** sitemap·JSON-LD는 공고한 본문의 수정일입니다. 미래 시행일을 lastmod로 쓰지 않습니다. */
 const lastEffective = (doc: LegalDoc) =>
-  LEGAL_CURRENT[doc].effective ?? archivedVersions(doc).at(-1)!;
+  LEGAL_CURRENT[doc].announced ??
+  LEGAL_CURRENT[doc].effective ??
+  archivedVersions(doc).at(-1)!;
 export const TERMS_EFFECTIVE = lastEffective("terms");
 export const PRIVACY_EFFECTIVE = lastEffective("privacy");
 
