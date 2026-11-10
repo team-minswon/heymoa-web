@@ -17,7 +17,15 @@ test("열면 주소에 남고, 탭은 기록을 안 쌓아 뒤로 가기 한 번
   page,
 }) => {
   const rsc: string[] = [];
-  page.on("request", (r) => r.url().includes("_rsc=") && rsc.push(r.url()));
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      url.pathname === WS &&
+      url.searchParams.has("_rsc") &&
+      request.headers()["next-router-prefetch"] !== "1"
+    )
+      rsc.push(request.url());
+  });
   await page.goto(WS);
   await openFromSidebar(page);
   await expect(dialog(page)).toBeVisible();

@@ -106,8 +106,9 @@ describe("사용 가이드 영어판", () => {
       expect(cluster.title).not.toMatch(HANGUL);
   });
 
-  it("모든 주제가 영어 본문으로 열리고 한글이 남지 않는다", async () => {
-    for (const topic of en) {
+  it.each(en)(
+    "$group/$slug 는 영어 본문과 영어 링크를 냅니다",
+    async (topic) => {
       const params = Promise.resolve({ group: topic.group, page: topic.slug });
       const { container } = render(await HelpTopicPage({ params }));
       expect(container.querySelector("h1")?.textContent, topic.slug).toBe(
@@ -121,9 +122,8 @@ describe("사용 가이드 영어판", () => {
         throw new Error(
           `${topic.slug}: 한국어판 링크 ${a.getAttribute("href")}`
         );
-      cleanup();
     }
-  });
+  );
 
   it("허브와 그룹 소개가 영어로 열리고 링크가 /en 아래다", async () => {
     const hub = render(await HelpHubPage());

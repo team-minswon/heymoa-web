@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { settled } from "./helpers-ui";
 
 /**
  * 알림 모달(PRO-67 I09). 사이드바 첫 항목이 연다. 노트 상단바에는 진입점이 없다(APP-1401).
@@ -44,7 +45,9 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
   await entry.click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(
-    dialog.getByText("마지막 일시정지 후 3영업일이 지나 회의를 자동으로 종료했습니다.")
+    dialog.getByText(
+      "마지막 일시정지 후 3영업일이 지나 회의를 자동으로 종료했습니다."
+    )
   ).toBeVisible();
   // 검토 화면이 결과를 그리면 그 알림만 읽는다.
   const read = page.waitForRequest(
@@ -109,7 +112,6 @@ test("로그인한 탭에는 이벤트 스트림 연결이 하나이고, 워크�
   await expect(
     page.getByRole("navigation", { name: "워크스페이스" })
   ).toBeVisible();
-  await page.waitForTimeout(500);
   expect(opened).toBe(before);
   expect(opened - closed).toBe(1);
 });
@@ -133,7 +135,7 @@ for (const width of [1440, 1024]) {
       await page.evaluate(() => document.activeElement?.getAttribute("role"))
     ).toBe("dialog");
     const size = async () => {
-      await page.waitForTimeout(300); // 열림 애니메이션(zoom)과 목록 도착이 끝난 뒤에 잰다
+      await settled(dialog);
       const box = (await dialog.boundingBox())!;
       return [Math.round(box.width), Math.round(box.height)];
     };
@@ -163,7 +165,13 @@ test.describe("주소 상태(APP-1361)", () => {
     ).toBeVisible();
     let rsc = 0;
     page.on("request", (request) => {
-      if (request.url().includes("_rsc=")) rsc += 1;
+      const url = new URL(request.url());
+      if (
+        url.pathname === WS &&
+        url.searchParams.has("_rsc") &&
+        request.headers()["next-router-prefetch"] !== "1"
+      )
+        rsc += 1;
     });
     const dialog = await openFromSidebar(page);
     await expect(dialog).toBeVisible();
@@ -332,7 +340,7 @@ for (const width of [1440, 1024]) {
     await expect(
       dialog.getByRole("button", { name: "수락" }).first()
     ).toBeVisible();
-    await page.waitForTimeout(300);
+    await settled(dialog);
     const geometry = await dialog.evaluate((node) => {
       const box = node.getBoundingClientRect();
       const left = (selector: string) =>

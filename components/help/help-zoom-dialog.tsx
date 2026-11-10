@@ -45,7 +45,16 @@ export function HelpZoomDialog({
     <Dialog open={open} onOpenChange={onOpenChange} modal="trap-focus">
       <DialogContent
         overlayClassName={HELP_OVERLAY}
-        finalFocus={finalFocus}
+        finalFocus={
+          finalFocus &&
+          (() => {
+            const target = finalFocus();
+            if (!(target instanceof HTMLElement)) return target;
+            // 긴 이미지 버튼으로 포커스를 돌릴 때 브라우저가 문서를 다시 스크롤하지 않게 합니다.
+            target.focus({ preventScroll: true });
+            return false;
+          })
+        }
         style={{ ...HELP_VARS, width: `min(${width}px, calc(100vw - 2rem))` }}
         className="max-h-[92vh] max-w-none gap-2 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] duration-(--help-base) motion-reduce:duration-0 sm:max-w-none"
       >

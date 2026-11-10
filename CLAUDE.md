@@ -27,7 +27,7 @@ pnpm orval            # openapi3.yml → lib/api/generated/ 재생성
 머지 전에 전부 통과해야 합니다. 각각이 다른 것을 봅니다.
 
 ```bash
-pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
+pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e:all
 ```
 
 | 명령 | 왜 따로 필요한가 |
@@ -36,7 +36,12 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 | `pnpm lint` | eslint |
 | `pnpm typecheck` | `tsc --noEmit`. **`pnpm build`는 Next가 포함하는 파일만 봅니다** — `.test.tsx`가 계약을 어겨도 build는 통과합니다 |
 | `pnpm build` | 실제 빌드가 깨지는지 |
-| `pnpm test:e2e` | Playwright. **MSW의 브라우저 서비스 워커 경로를 덮습니다** — vitest는 jsdom이라 그 경로를 지나지 않습니다 |
+| `pnpm test:e2e` | 목 전용 최적화 빌드를 띄운 Playwright. **MSW의 브라우저 서비스 워커 경로를 덮습니다** — vitest는 jsdom이라 그 경로를 지나지 않습니다 |
+
+브라우저 검사는 자체 빌드·서버를 소유합니다. 같은 체크아웃에서 dev·build·다른 E2E 설정을 동시에 실행하지 않습니다.
+`pnpm test:e2e:all`은 기본 화면 검사 뒤에 `test:e2e:auth`(세션·브라우저 왕복), `test:e2e:oauth`(가짜 API를 통한 인증·동의·갱신)를 순서대로 실행합니다. 인증 검사는 목 서비스 워커로 대체하지 않습니다. 파일을 좁힐 때는 각 개별 명령에 Playwright 인자를 전달합니다.
+화면 준비는 해당 영역의 로딩 종료·사용 가능 상태로 확인합니다. `networkidle`이나 고정 지연으로 전체 앱의 준비를 추측하지 않습니다.
+같은 기능 동작은 대표 화면에서 한 번 검사하고, 여러 폭에서는 줄바꿈·배치처럼 실제로 달라지는 부분만 검사합니다. 계약·인증·녹음의 실패 경계는 단위 검사와 브라우저 통합 검사를 각각 유지합니다.
 
 머지·push 절차는 skill [`merging`](.claude/skills/merging/SKILL.md)에 있습니다.
 커밋·브랜치 제목은 `[APP-N] 제목` 형식입니다.

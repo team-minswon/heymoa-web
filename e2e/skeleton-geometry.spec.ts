@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { settled } from "./helpers-ui";
 
 /**
  * **스켈레톤이 최종 기하와 같은 자리를 잡는가.**
@@ -36,16 +37,25 @@ const MAX_SHIFT_PX = 8;
  * 네트워크 층까지 안 내려온다. 페이지 안에서 `fetch` 를 감싸야 한다 — 앱의 호출이 워커에
  * 닿기 전에 지난다.
  */
-async function holdResponses(page: Page, ms = 1200) {
-  await page.addInitScript((delay) => {
+async function holdResponses(page: Page, pattern: string) {
+  await page.addInitScript((source) => {
+    const target = new RegExp(source);
+    const released = new Promise<void>((resolve) =>
+      window.addEventListener("e2e:release-api", () => resolve(), {
+        once: true,
+      })
+    );
     const original = window.fetch.bind(window);
     window.fetch = async (...args: Parameters<typeof fetch>) => {
-      if (String(args[0]).includes("/v1/")) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
+      const input = args[0] instanceof Request ? args[0].url : String(args[0]);
+      if (target.test(new URL(input, location.origin).pathname)) {
+        await released;
       }
       return original(...args);
     };
-  }, ms);
+  }, pattern);
+  return () =>
+    page.evaluate(() => window.dispatchEvent(new Event("e2e:release-api")));
 }
 
 /**
@@ -53,7 +63,11 @@ async function holdResponses(page: Page, ms = 1200) {
  *
  * 부모는 안 바뀌므로 그 자식의 높이를 두 번 재면 같은 자리를 비교하는 것이 된다.
  */
-async function shiftOf(page: Page, label: string) {
+async function shiftOf(
+  page: Page,
+  label: string,
+  release: () => Promise<boolean>
+) {
   const skeleton = page.locator(`[aria-label="${label}"]`);
   await expect(skeleton).toBeVisible();
 
@@ -66,6 +80,7 @@ async function shiftOf(page: Page, label: string) {
     return [...parent.children].indexOf(el);
   });
 
+  await release();
   await expect(skeleton).toBeHidden({ timeout: 15_000 });
 
   const after = await page.evaluate((index) => {
@@ -79,14 +94,15 @@ async function shiftOf(page: Page, label: string) {
 
 test.describe("스켈레톤 기하", () => {
   test("노트 정보 탭이 도착할 때 자리가 크게 안 밀린다", async ({ page }) => {
-    await holdResponses(page);
+    const release = await holdResponses(page, `/v1/notes/${NOTE_ID}$`);
     await page.goto(
       `/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full&tab=details`
     );
 
     const { before, after, shift } = await shiftOf(
       page,
-      "노트 정보 불러오는 중"
+      "노트 정보 불러오는 중",
+      release
     );
 
     expect(before, "스켈레톤이 자리를 잡아야 한다").toBeGreaterThan(0);
@@ -101,7 +117,7 @@ test.describe("스켈레톤 기하", () => {
    * 다르고, 줄 높이가 어긋나면 개수와 무관하게 전부 밀린다.
    */
   test("할 일 목록의 스켈레톤 줄과 실제 줄의 높이가 같다", async ({ page }) => {
-    await holdResponses(page);
+    const release = await holdResponses(page, "/tasks$");
     await page.goto(`/w/${WORKSPACE_ID}/tasks`);
 
     const loading = page.locator('[aria-label="할 일 불러오는 중"]');
@@ -117,6 +133,7 @@ test.describe("스켈레톤 기하", () => {
       .first()
       .evaluate((el) => Math.round(el.getBoundingClientRect().top));
 
+    await release();
     await expect(loading).toBeHidden({ timeout: 15_000 });
     // **`main li` 로 잡으면 안 된다.** 사이드바 메뉴도 `main` 안의 `li` 라서 그쪽(32)을
     // 집고, 스켈레톤(44)과 안 맞는다며 없는 어긋남을 만들어 낸다. 실제로 한 번 그랬다.
@@ -155,12 +172,21 @@ test.describe("스켈레톤 기하", () => {
       "workspaceAgents",
       "account",
       "agents",
-    ]) {
+    ] as const) {
       test(`설정 「${section}」 탭이 도착할 때 높이가 안 바뀐다 (${width}px)`, async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 900 });
-        await holdResponses(page);
+        const target = {
+          members: "/(members|invitations)$",
+          guests: "/guests$",
+          terms: "/terms$",
+          integrations: "/integrations$",
+          workspaceAgents: "/(members|agent-delegations)$",
+          account: "/v1/users/me$",
+          agents: "/v1/agent-delegations$",
+        }[section];
+        const release = await holdResponses(page, target);
         await page.goto(`/w/${WORKSPACE_ID}?settings=${section}`);
 
         const panel = page.getByTestId("settings-panel");
@@ -173,9 +199,9 @@ test.describe("스켈레톤 기하", () => {
         const before = await tabHeight();
 
         // 뒤따르는 조회(역할 → 대기 중인 초대·열린 연결)가 또 skeleton 을 세웠다 걷을 때까지 기다린다.
+        await release();
         await expect(skeleton).toHaveCount(0, { timeout: 15_000 });
-        await page.waitForTimeout(2_000);
-        await expect(skeleton).toHaveCount(0, { timeout: 15_000 });
+        await settled(panel);
         const after = await tabHeight();
 
         expect(
@@ -193,7 +219,7 @@ test.describe("스켈레톤 기하", () => {
   test("설정 「알림」 탭의 종류 행이 skeleton 과 같은 자리·높이로 선다", async ({
     page,
   }) => {
-    await holdResponses(page);
+    const release = await holdResponses(page, "/v1/notification-settings$");
     await page.goto(`/w/${WORKSPACE_ID}?settings=notifications`);
 
     const loading = page.locator('[aria-label="알림 설정 불러오는 중"]');
@@ -207,6 +233,7 @@ test.describe("스켈레톤 기하", () => {
       loading.locator("tbody tr").first()
     );
 
+    await release();
     await expect(loading).toBeHidden({ timeout: 15_000 });
     const [realRow, realTop] = await rowOf(
       page.locator('[aria-label="알림 설정"] tbody tr').first()

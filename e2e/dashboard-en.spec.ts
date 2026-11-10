@@ -211,12 +211,11 @@ async function screenTexts(page: Page) {
 }
 
 async function expectEnglish(page: Page, screen: string) {
-  // 조회가 도착해 skeleton 이 걷힌 뒤에 본다. 늦게 오는 배지·목록도 그려지게 잠깐 더 둔다
+  // 각 호출자가 연 화면의 조회가 끝난 뒤 보이는 번역을 검사합니다.
   await expect(page.locator('[data-slot="skeleton"]:visible')).toHaveCount(0, {
     timeout: 20_000,
   });
-  await page.waitForTimeout(1_000);
-  expect(leftoverHangul(await screenTexts(page)), screen).toEqual([]);
+  await expect.poll(async () => leftoverHangul(await screenTexts(page)), { message: screen }).toEqual([]);
 }
 
 /**

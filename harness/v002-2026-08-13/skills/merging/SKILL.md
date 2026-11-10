@@ -31,7 +31,7 @@ metadata:
 ### 1. 검증을 통과시킵니다
 
 ```bash
-pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
+pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e:all
 ```
 
 각 명령이 왜 필요한지는 [`CLAUDE.md`](../../../../CLAUDE.md)에 있습니다. 하나라도 실패하면

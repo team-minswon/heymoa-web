@@ -247,6 +247,10 @@ test("기록 중 회의를 삭제하면 녹음을 종료하고 목록에서도 �
 });
 
 test("boots with the MSW service worker registered", async ({ page }) => {
+  const localSeeds: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.startsWith("/mock-local/")) localSeeds.push(request.url());
+  });
   await page.goto("/");
 
   await expect
@@ -254,6 +258,7 @@ test("boots with the MSW service worker registered", async ({ page }) => {
       page.evaluate(() => navigator.serviceWorker.controller !== null)
     )
     .toBe(true);
+  expect(localSeeds).toEqual([]);
 });
 
 test("renders the workspace surface from mock data", async ({ page }) => {
@@ -691,9 +696,7 @@ test("renames a chat in place from the header and from history (APP-1433)", asyn
   );
 
   // 머리글 제목을 눌러 고치고 Enter. 포커스는 제목 버튼으로 돌아온다.
-  await page
-    .getByRole("button", { name: "이름 변경: 이름 바꿀 대화" })
-    .click();
+  await page.getByRole("button", { name: "이름 변경: 이름 바꿀 대화" }).click();
   const input = page.getByRole("textbox", { name: "대화 제목" });
   await input.fill("스프린트 회고");
   await input.press("Enter");
@@ -1695,9 +1698,7 @@ test("fills the composer from an empty-chat example and sends on demand", async 
 
   await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByTestId("chat-list-new").click();
-  await page
-    .getByRole("button", { name: "최근 결정" })
-    .click();
+  await page.getByRole("button", { name: "최근 결정" }).click();
   await expect(page.getByLabel("메시지")).toHaveText(
     "최근 2주간 회의에서 정한 것을 근거와 함께 정리해줘"
   );
@@ -1725,7 +1726,9 @@ test("approves a write tool from the chat card", async ({ page }) => {
   await page.getByRole("button", { name: "보내기" }).click();
 
   // 승인 카드가 뜨고 만료가 없다는 문구가 있다.
-  await expect(page.getByText(/승인하거나 거절할 때까지 기다립니다/)).toBeVisible({
+  await expect(
+    page.getByText(/승인하거나 거절할 때까지 기다립니다/)
+  ).toBeVisible({
     timeout: 20_000,
   });
 
@@ -2166,7 +2169,13 @@ test("switches side and full without reloading note data or remounting the trans
 test("switches note tabs without an RSC round trip", async ({ page }) => {
   const rscRequests: string[] = [];
   page.on("request", (request) => {
-    if (request.url().includes("_rsc=")) rscRequests.push(request.url());
+    const url = new URL(request.url());
+    if (
+      url.pathname === `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}` &&
+      url.searchParams.has("_rsc") &&
+      request.headers()["next-router-prefetch"] !== "1"
+    )
+      rscRequests.push(request.url());
   });
 
   await page.goto(
@@ -2776,9 +2785,9 @@ test("searches the full transcript locally without stealing input focus", async 
   await input.press("Enter");
   await expect(transcriptLine(page, OVERRIDDEN_LINE)).toBeInViewport();
   await expect(input).toBeFocused();
-  await expect(page.getByRole("search", { name: "스크립트 검색" })).toContainText(
-    "1/1"
-  );
+  await expect(
+    page.getByRole("search", { name: "스크립트 검색" })
+  ).toContainText("1/1");
   await input.press("Shift+Enter");
   await expect(input).toBeFocused();
   expect(

@@ -1,13 +1,13 @@
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { helpGroups, situationClusters } from "@/app/[lang]/help/_content/groups";
+import {
+  helpGroups,
+  situationClusters,
+} from "@/app/[lang]/help/_content/groups";
 import { HELP_PAGES } from "@/app/[lang]/help/_content/ids";
 import { LEGACY_HELP_ANCHORS } from "@/app/[lang]/help/_content/legacy-anchors";
-import {
-  helpPathOf,
-  helpTopicByPath,
-} from "@/app/[lang]/help/_content/paths";
+import { helpPathOf, helpTopicByPath } from "@/app/[lang]/help/_content/paths";
 import { helpTopics } from "@/app/[lang]/help/_content/topics";
 import HelpGroupPage, {
   generateStaticParams as groupParams,
@@ -21,7 +21,8 @@ import { buildHelpIndex, searchHelp } from "@/lib/help/search-index";
 import { intlWrapper } from "@/components/help/test-intl";
 
 /** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
-const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: intlWrapper() });
+const render = (ui: React.ReactElement) =>
+  rtlRender(ui, { wrapper: intlWrapper() });
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -71,10 +72,15 @@ describe("도움말 페이지", () => {
   // 데스크톱 앱 전용 페이지만 알약을 붙이고, 붙인 페이지의 라벨에는 「데스크톱」이 또 나오지 않는다.
   it("badge 는 데스크톱 앱 전용 페이지에만 있고 라벨과 겹치지 않는다", () => {
     const badged = helpTopics.filter((t) => t.badge);
-    expect(badged.map((t) => t.slug).sort()).toEqual(["desktop", "desktop-no-audio"]);
+    expect(badged.map((t) => t.slug).sort()).toEqual([
+      "desktop",
+      "desktop-no-audio",
+    ]);
     for (const topic of badged) {
       expect(topic.badge).toBe("desktop");
-      expect(topic.navTitle ?? topic.title, topic.slug).not.toContain("데스크톱");
+      expect(topic.navTitle ?? topic.title, topic.slug).not.toContain(
+        "데스크톱"
+      );
     }
   });
 
@@ -114,16 +120,25 @@ describe("도움말 페이지", () => {
     }
   });
 
-  it("페이지마다 h1 은 하나, 제목은 페이지 이름이고 메타가 고유하다", async () => {
+  it.each(helpTopics)(
+    "$group/$slug 는 제목 하나와 해석된 본문 링크를 냅니다",
+    async (topic) => {
+      const params = Promise.resolve({ group: topic.group, page: topic.slug });
+      const { container } = render(await HelpTopicPage({ params }));
+      expect(container.querySelectorAll("h1")).toHaveLength(1);
+      expect(container.querySelector("h1")?.textContent).toBe(topic.title);
+      expect(container.querySelector("article")).not.toBeEmptyDOMElement();
+      expect(container.querySelector('a[href^="help:"]')).toBeNull();
+    }
+  );
+
+  it("페이지 메타가 고유하고 canonical 이 자기 주소입니다", async () => {
     const titles = new Set<string>();
     const descriptions = new Set<string>();
     for (const topic of helpTopics) {
-      const params = Promise.resolve({ group: topic.group, page: topic.slug });
-      const { container } = render(await HelpTopicPage({ params }));
-      expect(container.querySelectorAll("h1"), topic.slug).toHaveLength(1);
-      expect(container.querySelector("h1")?.textContent).toBe(topic.title);
-      cleanup();
-      const meta = await generateMetadata({ params });
+      const meta = await generateMetadata({
+        params: Promise.resolve({ group: topic.group, page: topic.slug }),
+      });
       expect(meta.alternates?.canonical).toBe(helpPathOf(topic));
       const title = (meta.title as { absolute: string }).absolute;
       expect(title).toMatch(/ · HeyMoa\(헤이모아\) 사용법$/);

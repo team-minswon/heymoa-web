@@ -23,7 +23,13 @@ export function parseLocalProjects(body: unknown): LocalProject[] {
   return body.filter((item): item is LocalProject => {
     if (typeof item !== "object" || item === null) return false;
     const { projectId, name, links } = item as Partial<LocalProject>;
-    return typeof projectId === "string" && typeof name === "string" && typeof links === "object" && links !== null && Array.isArray(links.notes);
+    return (
+      typeof projectId === "string" &&
+      typeof name === "string" &&
+      typeof links === "object" &&
+      links !== null &&
+      Array.isArray(links.notes)
+    );
   });
 }
 
@@ -34,8 +40,12 @@ export const localProjectLinks = (projectId: string) =>
 
 /** 목 워커가 켜지기 전에 한 번 읽는다. 없거나 깨졌으면 조용히 건너뛴다. */
 export async function loadLocalProjects() {
+  // 자동 검증은 체크아웃에 남아 있는 실제 팀 자료 대신 고정 시드만 씁니다.
+  if (process.env.NEXT_PUBLIC_MOCK_LOCAL_PROJECTS === "disabled") return;
   try {
-    const response = await fetch("/mock-local/projects.json", { cache: "no-store" });
+    const response = await fetch("/mock-local/projects.json", {
+      cache: "no-store",
+    });
     if (!response.ok) return;
     const body: unknown = await response.json();
     const valid = parseLocalProjects(body);

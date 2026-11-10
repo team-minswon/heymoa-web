@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { openGuide, settled } from "./helpers-ui";
 
 /**
  * **탭·단계·로딩을 오가도 그릇의 크기와 탭 줄 자리가 그대로인가(APP-1356).**
@@ -18,14 +19,6 @@ const rectOf = (locator: Locator) =>
     const b = el.getBoundingClientRect();
     return [b.x, b.y, b.width, b.height].map(Math.round);
   });
-
-/** 열리는 zoom 애니메이션이 끝난 뒤에 잰다 — 도는 동안은 scale 로 크기가 바뀐다. */
-async function settled(locator: Locator) {
-  await locator.evaluate((el) =>
-    Promise.all(el.getAnimations().map((a) => a.finished))
-  );
-  return locator;
-}
 
 async function openNoteSummary(page: Page) {
   await page.goto(`${NOTE}?view=full&tab=summary`);
@@ -118,8 +111,7 @@ for (const width of [1440, 1024]) {
     test("가이드 검색 — 주제·결과·결과 없음을 오가도 창 높이가 같다", async ({
       page,
     }) => {
-      await page.goto("/help/record/recording");
-      await page.waitForLoadState("networkidle");
+      await openGuide(page, "/help/record/recording");
       await page.keyboard.press("Control+k");
       const dialog = await settled(page.getByRole("dialog"));
       const box = page.getByRole("listbox");

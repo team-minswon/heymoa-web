@@ -1,12 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { openGuide } from "./helpers-ui";
 
 /**
  * 사용 가이드 영어판(APP-1282). 영어 본문 · 영어 검색 색인 · `/en` 링크를 브라우저로 본다. 정적 페이지라 목 서비스 워커와 무관하다.
  */
 const HANGUL = /[가-힣ㄱ-ㆎ]/;
-
-// dev 서버가 처음 보는 라우트를 컴파일하느라 첫 요청이 느리다.
-test.describe.configure({ timeout: 180_000 });
 
 test("/en/help 와 주제 페이지에 한글이 남지 않는다", async ({ page }) => {
   for (const path of [
@@ -32,7 +30,9 @@ test("/en/help 와 주제 페이지에 한글이 남지 않는다", async ({ pag
                 .forEach((el) => el.remove());
               return body.textContent ?? "";
             })
-            .then((text) => text.match(new RegExp(`.{0,20}${HANGUL.source}.{0,20}`, "g")))
+            .then((text) =>
+              text.match(new RegExp(`.{0,20}${HANGUL.source}.{0,20}`, "g"))
+            )
             .catch((error: Error) => [`(읽기 실패) ${error.message}`]),
         { message: path }
       )
@@ -70,8 +70,7 @@ test("영어 검색은 영어 결과와 /en 링크를 내고, 한국어판 색�
 });
 
 test("⌘K 팔레트도 영어판 색인으로 찾는다", async ({ page }) => {
-  await page.goto("/en/help/record/recording");
-  await page.waitForLoadState("networkidle");
+  await openGuide(page, "/en/help/record/recording");
   await page.keyboard.press("Control+k");
   const box = page.getByRole("combobox", { name: "Search the whole guide" });
   await expect(box).toBeFocused();

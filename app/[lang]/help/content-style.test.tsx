@@ -1,15 +1,7 @@
-import { render as rtlRender } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { helpTopics } from "@/app/[lang]/help/_content/topics";
 import { textOf } from "@/lib/help/text";
-import { intlWrapper } from "@/components/help/test-intl";
-
-/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
-const render = (ui: React.ReactElement) =>
-  rtlRender(ui, { wrapper: intlWrapper() });
-
-vi.mock("next/navigation", () => ({ usePathname: () => "/help" }));
 
 /** 따옴표 안(화면에 뜨는 문구)은 화면의 말투 그대로 두므로 검사에서 뺀다. */
 const withoutQuoted = (text: string) => text.replace(/“[^”]*”/g, "");
@@ -21,16 +13,6 @@ const textsOf = (topic: (typeof helpTopics)[number]) => [
 ];
 
 describe("도움말 문체", () => {
-  it("모든 본문이 그려지고 가이드 안 링크가 풀린다", () => {
-    for (const topic of helpTopics) {
-      const { container } = render(
-        <div>{topic.sections.flatMap((s) => s.body)}</div>
-      );
-      expect(container.textContent?.length, topic.slug).toBeGreaterThan(40);
-      expect(container.innerHTML, topic.slug).not.toContain('href="help:');
-    }
-  });
-
   it("낫표를 쓰지 않는다", () => {
     for (const topic of helpTopics) {
       for (const text of textsOf(topic)) {

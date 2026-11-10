@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openGuide, settled } from "./helpers-ui";
 
 /**
  * 가이드 대화상자(검색 팔레트 · 이미지 확대 · 영상 확대, 한 오버레이를 쓴다)를 열고 닫아도 폭과 고정 요소(상단바·사이드바·본문) 자리가
@@ -11,12 +12,12 @@ export function dialogStabilityTests(classic: boolean) {
       page,
     }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto(
+      await openGuide(
+        page,
         kind === "clip"
           ? "/help/situations/fix-speakers"
           : "/help/record/recording"
       );
-      await page.waitForLoadState("networkidle");
       if (classic)
         await page.addStyleTag({
           content:
@@ -27,9 +28,15 @@ export function dialogStabilityTests(classic: boolean) {
         kind === "image"
           ? page.locator("figure button:has(img)").first()
           : page.locator("figure video").first();
-      if (kind === "palette") await page.mouse.wheel(0, 300);
-      else await target.scrollIntoViewIfNeeded();
-      await page.waitForTimeout(500);
+      if (kind === "palette")
+        await page.evaluate(() =>
+          window.scrollTo({ top: 300, behavior: "instant" })
+        );
+      else
+        await target.evaluate((element) =>
+          element.scrollIntoView({ block: "center", behavior: "instant" })
+        );
+      await page.evaluate(() => document.fonts.ready);
       const snap = () =>
         page.evaluate(() => {
           const r = (s: string) => {
@@ -48,8 +55,7 @@ export function dialogStabilityTests(classic: boolean) {
       if (kind === "palette") await page.keyboard.press("Control+k");
       else if (kind === "image") await target.click();
       else await target.click({ force: true });
-      await expect(page.getByRole("dialog")).toBeVisible();
-      await page.waitForTimeout(400);
+      await settled(page.getByRole("dialog"));
       const open = await snap();
       expect(open.width).toBe(before.width);
       expect(open.header).toEqual(before.header);
@@ -82,7 +88,7 @@ export function notificationScrollbarTests(classic: boolean) {
       await expect(
         dialog.getByRole("button", { name: "수락" }).first()
       ).toBeVisible();
-      await page.waitForTimeout(300);
+      await settled(dialog);
       const list = dialog.locator("[data-slot=notification-list]");
       await list.evaluate((node) => (node.scrollTop = 120)); // 날짜 머리글이 sticky 로 붙은 상태에서 본다
       const g = await list.evaluate((node: HTMLElement, classic) => {

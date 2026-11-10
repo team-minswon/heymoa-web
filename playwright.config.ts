@@ -15,6 +15,7 @@ export default defineConfig({
     "**/browser-handoff.spec.ts",
   ],
   fullyParallel: true,
+  workers: 4,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   reporter: "list",
@@ -33,10 +34,17 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm dev --port 3100",
+    // HMR 재시작·라우트 지연 컴파일 없이 배포와 같은 최적화 번들을 검사합니다.
+    command: "pnpm build && pnpm start --port 3100",
     url: "http://localhost:3100",
-    reuseExistingServer: !process.env.CI,
-    env: { NEXT_PUBLIC_API_MOCKING: "enabled" },
-    timeout: 120_000,
+    // 다른 체크아웃·목 설정의 서버를 재사용하면 검증 대상이 바뀝니다.
+    reuseExistingServer: false,
+    env: {
+      NEXT_PUBLIC_API_MOCKING: "enabled",
+      NEXT_PUBLIC_API_BASE_URL: "",
+      NEXT_PUBLIC_MOCK_LOCAL_PROJECTS: "disabled",
+      VERCEL_ENV: "development",
+    },
+    timeout: 180_000,
   },
 });

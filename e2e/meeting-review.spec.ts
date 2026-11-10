@@ -301,48 +301,15 @@ test("재진입 GET에서 사라진 제안의 저장 선택을 해제하고 업�
   expect(writes).toEqual([]);
 });
 
-test("그래프를 확대 · 이동하고, 점이나 목록에서 항목을 고르면 아래에 수정 기록이 서며 닫을 수 있다", async ({ page }) => {
+test("그래프를 열고 키보드로 항목을 골라 수정 기록을 읽고 닫는다", async ({ page }) => {
   await page.goto(reviewUrl(MENTORING_NOTE));
   await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
   await page.getByRole("radio", { name: "그래프" }).click();
-
-  // 힘 배치가 멈추고 판에 맞춘 뒤에 본다. 캔버스라 그린 결과는 화면을 찍어 비교한다.
   const graph = page.locator("[data-review-graph][data-settled]");
   await expect(graph).toBeVisible({ timeout: 20_000 });
-  await page.waitForTimeout(500);
-  const canvas = graph.locator("canvas").first();
-  const shot = () => canvas.screenshot();
-
-  const fitted = await shot();
-  await page.getByRole("button", { name: "확대" }).click();
-  await expect.poll(async () => (await shot()).equals(fitted)).toBe(false);
-
-  // 빈 바탕을 끌면 보이는 영역이 따라온다.
-  await page.waitForTimeout(300);
-  const zoomed = await shot();
-  const box = (await canvas.boundingBox())!;
-  await page.mouse.move(box.x + 8, box.y + 8);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 140, box.y + 90, { steps: 6 });
-  await page.mouse.up();
-  await expect.poll(async () => (await shot()).equals(zoomed)).toBe(false);
-  await page.getByRole("button", { name: "맞춤" }).click();
-
-  // 점을 가리키면 설명 상자가 서고, 누르면 그 항목의 수정 기록이 선다.
-  await page.waitForTimeout(400);
-  let found = false;
-  for (let y = 0.2; y < 0.8 && !found; y += 0.04) {
-    for (let x = 0.2; x < 0.8 && !found; x += 0.02) {
-      await page.mouse.move(box.x + box.width * x, box.y + box.height * y);
-      found = (await page.getByRole("tooltip").count()) > 0;
-    }
-  }
-  expect(found).toBe(true);
-  await page.mouse.down();
-  await page.mouse.up();
-  await expect(page.getByRole("button", { name: "닫기", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "닫기", exact: true }).click();
-
+  await expect(graph.locator("canvas").first()).toBeVisible();
+  // 확대·맞춤·hover·선택 콜백은 review-graph.test.tsx에서 검사합니다.
+  // 랜덤 힘 배치의 픽셀 차이·점 좌표 탐색으로 라이브러리를 다시 검사하지 않습니다.
   // 캔버스를 못 쓰는 사람은 보이지 않는 목록으로 같은 항목을 고른다.
   await graph.getByRole("button", { name: /무료 구간은 월 5시간으로 두고 팀 요금제에서는 뺀다/ }).first().focus();
   await page.keyboard.press("Enter");
