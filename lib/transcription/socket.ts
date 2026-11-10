@@ -38,6 +38,9 @@ export type TranscriptionSocketOptions = {
   onActivity?: () => void;
 };
 
+/** STOMP CONNECTED 전에 실패했다. 만료된 쿠키로 거절된 핸드셰이크(401)도 브라우저에는 이것으로만 보인다. */
+export class SocketHandshakeError extends Error {}
+
 /**
  * OS 소켓 버퍼가 밀렸는지만 본다. 「서버가 내구 저장했는가」는 `ResendBuffer`가 본다 —
  * 소켓을 떠난 조각도 서버가 S3에 쓰기 전에 죽으면 사라지므로 둘은 다른 질문이다.
@@ -79,6 +82,7 @@ export class TranscriptionSocket {
 
     return new Promise((resolve, reject) => {
       let settled = false;
+      let stompConnected = false;
       const resolveOnce = () => {
         if (settled) return;
         settled = true;
@@ -90,7 +94,9 @@ export class TranscriptionSocket {
         settled = true;
         globalThis.clearTimeout(readyTimeout);
         this.reconcileConnection = null;
-        reject(error);
+        reject(
+          stompConnected ? error : new SocketHandshakeError(error.message)
+        );
       };
       const readyTimeout = globalThis.setTimeout(() => {
         rejectOnce(new Error("STOMP_APPLICATION_READY_TIMEOUT"));
@@ -108,6 +114,7 @@ export class TranscriptionSocket {
         onHeartbeatReceived: () => this.options.onActivity?.(),
         debug: () => undefined,
         onConnect: () => {
+          stompConnected = true;
           const replyId = crypto.randomUUID();
           this.subscription = client.subscribe(
             `/user/queue/transcription-sessions/${replyId}/events`,

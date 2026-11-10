@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TranscriptionSocket } from "@/lib/transcription/socket";
+import {
+  SocketHandshakeError,
+  TranscriptionSocket,
+} from "@/lib/transcription/socket";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;
@@ -370,6 +373,21 @@ describe("TranscriptionSocket", () => {
 
     await expect(connection.connected).rejects.toThrow(
       "실시간 스크립트 서버 연결에 실패했습니다."
+    );
+  });
+
+  // 만료된 쿠키의 401 은 상태 코드 없이 이 모양으로만 온다. 다시 붙는 쪽이 이것으로 토큰 갱신을 가른다(APP-1543)
+  it("marks a failure before STOMP CONNECTED as a handshake failure, and a later one not", async () => {
+    const refused = createSocket().connect();
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    FakeWebSocket.instances[0].close(1006);
+    await expect(refused).rejects.toBeInstanceOf(SocketHandshakeError);
+
+    FakeWebSocket.instances = [];
+    const connection = await establish(createSocket());
+    connection.transport.close(1006);
+    await expect(connection.connected).rejects.not.toBeInstanceOf(
+      SocketHandshakeError
     );
   });
 

@@ -4,8 +4,7 @@ import {
   type StompSubscription,
 } from "@stomp/stompjs";
 
-import { AuthRefreshError, refreshAuthOnce } from "@/lib/api/fetcher";
-import { openSessionGate } from "@/lib/auth/session-gate";
+import { refreshAuthBeforeReconnect } from "@/lib/api/refresh-before-reconnect";
 import {
   NOTE_SUBSCRIPTION_FEEDBACK_DESTINATION,
   parseNoteSubscriptionRejected,
@@ -64,21 +63,7 @@ export class NoteTopicClient {
         const refresh = lastAttemptFailed;
         attemptConnected = false;
         if (!refresh) return;
-        let timer: number | undefined;
-        await Promise.race([
-          refreshAuthOnce().catch((error: unknown) => {
-            if (error instanceof AuthRefreshError && error.expired) {
-              openSessionGate();
-            }
-          }),
-          new Promise<void>((resolve) => {
-            timer = window.setTimeout(
-              resolve,
-              REFRESH_BEFORE_CONNECT_TIMEOUT_MS
-            );
-          }),
-        ]);
-        window.clearTimeout(timer);
+        await refreshAuthBeforeReconnect(REFRESH_BEFORE_CONNECT_TIMEOUT_MS);
       },
       onWebSocketClose: () => {
         lastAttemptFailed = !attemptConnected;
