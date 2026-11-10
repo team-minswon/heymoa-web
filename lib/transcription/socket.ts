@@ -1,4 +1,6 @@
 import { Client, type StompSubscription } from "@stomp/stompjs";
+import { ticketedSocketUrl } from "@/lib/api/realtime-ticket";
+import { SessionExpiredError } from "@/lib/auth/session-gate";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import {
   CAPTURE_CONTRACT,
@@ -38,8 +40,8 @@ export type TranscriptionSocketOptions = {
   onActivity?: () => void;
 };
 
-/** STOMP CONNECTED 전에 실패했다. 만료된 쿠키로 거절된 핸드셰이크(401)도 브라우저에는 이것으로만 보인다. */
-export class SocketHandshakeError extends Error {}
+/** 티켓 요청을 기다리는 상한. 재연결 SLO(3초)이고 옛 서버가 새 부착을 기다리는 5초 안쪽이다. 넘으면 티켓 없이 붙어 본다. */
+const TICKET_TIMEOUT_MS = 3_000;
 
 /**
  * OS 소켓 버퍼가 밀렸는지만 본다. 「서버가 내구 저장했는가」는 `ResendBuffer`가 본다 —
@@ -82,7 +84,6 @@ export class TranscriptionSocket {
 
     return new Promise((resolve, reject) => {
       let settled = false;
-      let stompConnected = false;
       const resolveOnce = () => {
         if (settled) return;
         settled = true;
@@ -94,9 +95,7 @@ export class TranscriptionSocket {
         settled = true;
         globalThis.clearTimeout(readyTimeout);
         this.reconcileConnection = null;
-        reject(
-          stompConnected ? error : new SocketHandshakeError(error.message)
-        );
+        reject(error);
       };
       const readyTimeout = globalThis.setTimeout(() => {
         rejectOnce(new Error("STOMP_APPLICATION_READY_TIMEOUT"));
@@ -113,8 +112,20 @@ export class TranscriptionSocket {
         connectHeaders: { clientInstanceId: this.options.clientInstanceId },
         onHeartbeatReceived: () => this.options.onActivity?.(),
         debug: () => undefined,
+        // 시도마다 새 티켓을 붙인다(APP-1547). 다시 로그인해야 하면 붙지 않고 끝낸다 — 게이트는 이미 열렸다.
+        beforeConnect: async () => {
+          const url = await ticketedSocketUrl(
+            this.options.url,
+            TICKET_TIMEOUT_MS
+          );
+          if (url !== null) {
+            client.brokerURL = url;
+            return;
+          }
+          rejectOnce(new SessionExpiredError());
+          void this.close();
+        },
         onConnect: () => {
-          stompConnected = true;
           const replyId = crypto.randomUUID();
           this.subscription = client.subscribe(
             `/user/queue/transcription-sessions/${replyId}/events`,

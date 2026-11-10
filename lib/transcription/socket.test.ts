@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  SocketHandshakeError,
-  TranscriptionSocket,
-} from "@/lib/transcription/socket";
+import { SessionExpiredError } from "@/lib/auth/session-gate";
+import { TranscriptionSocket } from "@/lib/transcription/socket";
+
+const ticket = vi.hoisted(() => ({ ticketedSocketUrl: vi.fn() }));
+vi.mock("@/lib/api/realtime-ticket", () => ticket);
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;
@@ -151,6 +152,9 @@ function createSocket(onClose = vi.fn(), onActivity = vi.fn()) {
 describe("TranscriptionSocket", () => {
   beforeEach(() => {
     FakeWebSocket.instances = [];
+    ticket.ticketedSocketUrl
+      .mockReset()
+      .mockImplementation(async (url: string) => url);
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal("crypto", {
       randomUUID: () => "550e8400-e29b-41d4-a716-446655440000",
@@ -376,19 +380,33 @@ describe("TranscriptionSocket", () => {
     );
   });
 
-  // 만료된 쿠키의 401 은 상태 코드 없이 이 모양으로만 온다. 다시 붙는 쪽이 이것으로 토큰 갱신을 가른다(APP-1543)
-  it("marks a failure before STOMP CONNECTED as a handshake failure, and a later one not", async () => {
-    const refused = createSocket().connect();
+  // 핸드셰이크 401 은 브라우저가 못 본다. 시도마다 REST 로 받은 새 티켓을 주소에 붙인다(APP-1547)
+  it("opens each attempt on a fresh ticket URL", async () => {
+    ticket.ticketedSocketUrl
+      .mockResolvedValueOnce("ws://localhost/ws/transcriptions?ticket=one")
+      .mockResolvedValueOnce("ws://localhost/ws/transcriptions?ticket=two");
+    const first = createSocket();
+    void first.connect().catch(() => undefined);
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
-    FakeWebSocket.instances[0].close(1006);
-    await expect(refused).rejects.toBeInstanceOf(SocketHandshakeError);
+    await first.close();
+    void createSocket()
+      .connect()
+      .catch(() => undefined);
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(2));
 
-    FakeWebSocket.instances = [];
-    const connection = await establish(createSocket());
-    connection.transport.close(1006);
-    await expect(connection.connected).rejects.not.toBeInstanceOf(
-      SocketHandshakeError
+    expect(FakeWebSocket.instances.map((socket) => socket.url)).toEqual([
+      "ws://localhost/ws/transcriptions?ticket=one",
+      "ws://localhost/ws/transcriptions?ticket=two",
+    ]);
+  });
+
+  it("does not open a WebSocket when the session must be renewed by login", async () => {
+    ticket.ticketedSocketUrl.mockResolvedValueOnce(null);
+
+    await expect(createSocket().connect()).rejects.toBeInstanceOf(
+      SessionExpiredError
     );
+    expect(FakeWebSocket.instances).toHaveLength(0);
   });
 
   // 다른 탭·기기와 이 탭을 서버가 가른다. 다시 붙을 때마다 같은 값이어야 한다.

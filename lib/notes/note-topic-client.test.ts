@@ -37,22 +37,8 @@ vi.mock("@stomp/stompjs", () => {
   };
 });
 
-const auth = vi.hoisted(() => ({
-  refreshAuthOnce: vi.fn(),
-  openSessionGate: vi.fn(),
-}));
-
-vi.mock("@/lib/api/fetcher", () => ({
-  refreshAuthOnce: auth.refreshAuthOnce,
-  AuthRefreshError: class AuthRefreshError extends Error {
-    constructor(readonly expired: boolean) {
-      super("AUTH_REFRESH_FAILED");
-    }
-  },
-}));
-vi.mock("@/lib/auth/session-gate", () => ({
-  openSessionGate: auth.openSessionGate,
-}));
+const ticket = vi.hoisted(() => ({ ticketedSocketUrl: vi.fn() }));
+vi.mock("@/lib/api/realtime-ticket", () => ticket);
 
 const NOTE_ID = "01K0000000002";
 
@@ -83,8 +69,7 @@ describe("NoteTopicClient", () => {
   beforeEach(() => {
     stomp.configs.length = 0;
     stomp.instances.length = 0;
-    auth.refreshAuthOnce.mockReset().mockResolvedValue(undefined);
-    auth.openSessionGate.mockReset();
+    ticket.ticketedSocketUrl.mockReset();
     vi.useFakeTimers();
   });
   afterEach(() => {
@@ -263,73 +248,35 @@ describe("NoteTopicClient", () => {
     expect(stomp.configs[0].discardWebsocketOnCommFailure).toBe(true);
   });
 
-  /**
-   * ★ 만료 토큰(30분)이면 핸드셰이크가 매번 거절되는데 stompjs 는 조용히 무한 재시도한다.
-   * 붙어 있다가 끊긴 것(배포 드레인)은 토큰 탓이 아니라 갱신하지 않는다.
-   */
-  describe("다음 시도 전 토큰 갱신", () => {
-    type Hooks = {
-      beforeConnect: () => Promise<void>;
-      onConnect: () => void;
-      onWebSocketClose: () => void;
-    };
-    const hooks = () => stomp.configs[0] as unknown as Hooks;
+  /** ★ 핸드셰이크 401 은 브라우저가 못 본다. 시도마다 새 티켓을 REST 로 받아 주소에 붙인다(APP-1547). */
+  describe("시도마다 연결 티켓", () => {
+    const beforeConnect = () =>
+      (
+        stomp.configs[0] as unknown as { beforeConnect: () => Promise<void> }
+      ).beforeConnect();
+    const URL = "ws://localhost/ws/transcriptions";
 
-    it("★ 직전 시도가 못 붙었을 때만 갱신한다", async () => {
+    it("★ 시도마다 새 티켓 주소로 바꾼다", async () => {
+      ticket.ticketedSocketUrl
+        .mockResolvedValueOnce(`${URL}?ticket=one`)
+        .mockResolvedValueOnce(`${URL}?ticket=two`);
       createClient().client.connect();
-      const { beforeConnect, onConnect, onWebSocketClose } = hooks();
+      const instance = stomp.instances[0] as unknown as { brokerURL?: string };
 
       await beforeConnect();
-      expect(auth.refreshAuthOnce).not.toHaveBeenCalled();
-
-      onWebSocketClose();
+      expect(instance.brokerURL).toBe(`${URL}?ticket=one`);
       await beforeConnect();
-      expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
-
-      onConnect();
-      onWebSocketClose();
-      await beforeConnect();
-      expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
+      expect(instance.brokerURL).toBe(`${URL}?ticket=two`);
+      expect(ticket.ticketedSocketUrl).toHaveBeenCalledWith(URL, 10_000);
     });
 
-    it("★ 갱신이 던져도 삼키고 재연결을 계속한다", async () => {
-      auth.refreshAuthOnce.mockRejectedValue(new Error("NETWORK"));
+    it("다시 로그인해야 하면(null) 티켓 없는 주소로 두드린다", async () => {
+      ticket.ticketedSocketUrl.mockResolvedValue(null);
       createClient().client.connect();
-      const { beforeConnect, onWebSocketClose } = hooks();
+      const instance = stomp.instances[0] as unknown as { brokerURL?: string };
 
-      await beforeConnect();
-      onWebSocketClose();
       await expect(beforeConnect()).resolves.toBeUndefined();
-      expect(auth.openSessionGate).not.toHaveBeenCalled();
-    });
-
-    it("★ 갱신이 끝나지 않아도 10초 뒤에는 연결을 이어 간다", async () => {
-      auth.refreshAuthOnce.mockReturnValue(new Promise(() => undefined));
-      createClient().client.connect();
-      const { beforeConnect, onWebSocketClose } = hooks();
-
-      await beforeConnect();
-      onWebSocketClose();
-      let settled = false;
-      void beforeConnect().then(() => {
-        settled = true;
-      });
-      await vi.advanceTimersByTimeAsync(9_999);
-      expect(settled).toBe(false);
-      await vi.advanceTimersByTimeAsync(1);
-      expect(settled).toBe(true);
-    });
-
-    it("갱신 토큰까지 죽었으면 세션 게이트를 연다", async () => {
-      const { AuthRefreshError } = await import("@/lib/api/fetcher");
-      auth.refreshAuthOnce.mockRejectedValue(new AuthRefreshError(true));
-      createClient().client.connect();
-      const { beforeConnect, onWebSocketClose } = hooks();
-
-      await beforeConnect();
-      onWebSocketClose();
-      await expect(beforeConnect()).resolves.toBeUndefined();
-      expect(auth.openSessionGate).toHaveBeenCalledOnce();
+      expect(instance.brokerURL).toBe(URL);
     });
   });
 

@@ -4,7 +4,7 @@ import {
   type StompSubscription,
 } from "@stomp/stompjs";
 
-import { refreshAuthBeforeReconnect } from "@/lib/api/refresh-before-reconnect";
+import { ticketedSocketUrl } from "@/lib/api/realtime-ticket";
 import {
   NOTE_SUBSCRIPTION_FEEDBACK_DESTINATION,
   parseNoteSubscriptionRejected,
@@ -26,8 +26,8 @@ export type NoteTopicClientOptions = {
 const SAFETY_CATCH_UP_INTERVAL_MS = 60_000;
 /** 녹음 쪽 알림(D-03)과 같은 창이다. 한 화면에서 두 기준을 쓰지 않는다. */
 export const RECONNECT_NOTICE_MS = 30_000;
-/** 토큰 갱신을 기다리는 상한. 넘으면 갱신 없이 시도한다 — 안 끝나는 갱신이 재연결을 세우면 안 된다. */
-const REFRESH_BEFORE_CONNECT_TIMEOUT_MS = 10_000;
+/** 티켓 요청을 기다리는 상한. 넘으면 티켓 없이 시도한다 — 안 끝나는 요청이 재연결을 세우면 안 된다. */
+const TICKET_TIMEOUT_MS = 10_000;
 
 export class NoteTopicClient {
   private client: Client | null = null;
@@ -42,9 +42,6 @@ export class NoteTopicClient {
   connect() {
     if (this.client) return;
 
-    // 이번 시도가 CONNECTED 까지 갔나. 못 갔으면 다음 시도 전에 토큰을 갱신한다.
-    let attemptConnected = false;
-    let lastAttemptFailed = false;
     const client = new Client({
       brokerURL: this.options.url,
       reconnectDelay: 500,
@@ -56,25 +53,19 @@ export class NoteTopicClient {
       // 끊긴 소켓의 close 핸드셰이크를 기다리지 않는다. 배포 드레인 뒤 다시 붙기가 그만큼 늦어진다.
       discardWebsocketOnCommFailure: true,
       debug: () => undefined,
-      // 만료 토큰(30분)이면 핸드셰이크가 매번 거절되고 stompjs 는 조용히 무한 재시도한다.
-      // 붙어 있다 끊긴 것(배포 드레인)은 토큰 탓이 아니라 갱신하지 않는다.
-      // 반드시 삼킨다 — await 중에 던지면 stompjs 의 재연결 루프가 멈춘다.
+      // 시도마다 새 티켓을 붙인다. 다시 로그인해야 하면(null) 게이트가 열렸고, 지금처럼 쿠키 주소로 두드린다.
       beforeConnect: async () => {
-        const refresh = lastAttemptFailed;
-        attemptConnected = false;
-        if (!refresh) return;
-        await refreshAuthBeforeReconnect(REFRESH_BEFORE_CONNECT_TIMEOUT_MS);
+        client.brokerURL =
+          (await ticketedSocketUrl(this.options.url, TICKET_TIMEOUT_MS)) ??
+          this.options.url;
       },
       onWebSocketClose: () => {
-        lastAttemptFailed = !attemptConnected;
-        attemptConnected = false;
         if (this.client !== client) return;
         this.clearSafetyCatchUp();
         this.startReconnectNotice();
       },
       onConnect: () => {
         if (this.client !== client) return;
-        attemptConnected = true;
         this.clearReconnectNotice();
         if (this.reconnecting) {
           this.reconnecting = false;

@@ -1,4 +1,4 @@
-import { refreshAuthBeforeReconnect } from "@/lib/api/refresh-before-reconnect";
+import { SessionExpiredError } from "@/lib/auth/session-gate";
 import {
   PcmAudioCapture,
   type MicrophoneState,
@@ -15,7 +15,6 @@ import {
 } from "@/lib/transcription/protocol";
 import { ResendBuffer, type CatchUp } from "@/lib/transcription/resend-buffer";
 import {
-  SocketHandshakeError,
   TranscriptionSocket,
   type ReconnectReason,
   type TranscriptionSocketOptions,
@@ -113,8 +112,6 @@ const PUMP_MS = 100;
 const REATTACH_FIRST_DELAY_MS = 500;
 const REATTACH_MIN_DELAY_MS = 500;
 const REATTACH_MAX_DELAY_MS = 5_000;
-/** 다시 붙기 전 토큰 갱신 대기의 상한. 재연결 SLO(3초)이고 옛 서버가 새 부착을 기다리는 5초 안쪽이다. 넘으면 갱신 없이 붙어 본다. */
-const REFRESH_BEFORE_REATTACH_TIMEOUT_MS = 3_000;
 /** 끊김을 알아챈 뒤 이만큼 다시 잇지 못하면 녹음을 멈춘다. */
 const RESUME_WINDOW_MS = 30_000;
 const NOTICE_AFTER_MS = 5_000;
@@ -666,8 +663,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private async reattachLoop(firstDelayMs: number) {
     let bouncedDelayMs: number | null = null;
     let bounces = 0;
-    /** 직전 시도가 CONNECTED 전에 실패했다. 첫 시도와 붙어 있다 끊긴 뒤에는 왕복을 더하지 않는다. */
-    let refreshFirst = false;
     for (let attempt = 0; ; attempt += 1) {
       // 첫 돌려보냄만 서버가 준 대로 곧바로. 거듭되면 재시도 간격으로 늦춘다 — delayMs 0 이 이어지면 쉬지 않고 두드린다
       const delayMs =
@@ -685,18 +680,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       });
       await this.waitForRetry(delayMs);
       if (this.closing || this.failed) break;
-      if (
-        refreshFirst &&
-        (await refreshAuthBeforeReconnect(REFRESH_BEFORE_REATTACH_TIMEOUT_MS))
-      ) {
-        // 다시 로그인해야 붙는다. 창을 태우지 않고 닫는다 — 화면은 방금 연 세션 게이트(만료 경로)가 맡는다
-        logTranscription("reconnect", { step: "session_expired" });
-        void this.close();
-        break;
-      }
-      // 갱신을 기다리는 사이 창이 닫혔거나 사용자가 끝냈다
-      if (this.closing || this.failed) break;
-      refreshFirst = false;
       try {
         bouncedDelayMs = await this.attachUnlessBounced();
         if (bouncedDelayMs === null) break;
@@ -704,7 +687,12 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       } catch (error) {
         // 재시도해도 같은 오류였다면 handleEvent 가 이미 실패로 끝냈다
         if (this.closing || this.failed) break;
-        refreshFirst = error instanceof SocketHandshakeError;
+        // 티켓을 받으려다 다시 로그인해야 함을 알았다. 창을 태우지 않고 닫는다 — 화면은 방금 연 세션 게이트(만료 경로)가 맡는다
+        if (error instanceof SessionExpiredError) {
+          logTranscription("reconnect", { step: "session_expired" });
+          void this.close();
+          break;
+        }
       }
     }
     this.reattaching = null;

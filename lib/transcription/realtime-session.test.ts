@@ -5,24 +5,7 @@ import {
 } from "@/lib/transcription/realtime-session";
 import type { ServerEvent } from "@/lib/transcription/protocol";
 import type { MicrophoneState } from "@/lib/transcription/audio";
-import { SocketHandshakeError } from "@/lib/transcription/socket";
-
-const auth = vi.hoisted(() => ({
-  refreshAuthOnce: vi.fn(),
-  openSessionGate: vi.fn(),
-}));
-
-vi.mock("@/lib/api/fetcher", () => ({
-  refreshAuthOnce: auth.refreshAuthOnce,
-  AuthRefreshError: class AuthRefreshError extends Error {
-    constructor(readonly expired: boolean) {
-      super("AUTH_REFRESH_FAILED");
-    }
-  },
-}));
-vi.mock("@/lib/auth/session-gate", () => ({
-  openSessionGate: auth.openSessionGate,
-}));
+import { SessionExpiredError } from "@/lib/auth/session-gate";
 
 const SESSION_ID = "0HZX2K7M9Q4AG";
 /** 창 이벤트(offline·online)를 듣는 컨트롤러가 다음 테스트로 새지 않게 닫는다. */
@@ -61,6 +44,8 @@ function setup({
     durableThroughSeq: -1,
     epoch: 1,
     refuse: false,
+    /** 티켓을 받으려다 다시 로그인해야 함을 알았다(socket 이 연결 전에 SessionExpiredError 로 끝낸다). */
+    sessionExpired: false,
     gate: null as Promise<void> | null,
     /**
      * 100ms 동안 소켓이 받아 주는 조각 수. `bufferedAmount` 가 차면 거절하고 시간이 지나면 빠지는
@@ -131,8 +116,9 @@ function setup({
             );
           throw new Error("WEBSOCKET_CLOSED");
         }
+        if (server.sessionExpired) throw new SessionExpiredError();
         if (server.refuse) {
-          const error = new SocketHandshakeError("WEBSOCKET_CONNECTION_FAILED");
+          const error = new Error("WEBSOCKET_CONNECTION_FAILED");
           queueMicrotask(() => options.onClose(1006, ""));
           throw error;
         }
@@ -268,10 +254,7 @@ function deferred() {
   return { promise, resolve };
 }
 
-beforeEach(() => {
-  auth.refreshAuthOnce.mockReset().mockResolvedValue(undefined);
-  auth.openSessionGate.mockReset();
-});
+beforeEach(() => {});
 
 afterEach(() => {
   for (const controller of opened.splice(0)) void controller.close();
@@ -2015,65 +1998,17 @@ describe("다시 붙거나 정체가 풀리면 가장 새 3초부터 실시간 (
   });
 });
 
-describe("다시 붙기 전 토큰 갱신 (APP-1543)", () => {
-  /** 접근 토큰 쿠키가 만료됐다. 핸드셰이크가 계속 거절되다가 갱신이 끝나면 붙는다. */
-  function expireCookie(harness: ReturnType<typeof setup>) {
-    harness.server.refuse = true;
-    auth.refreshAuthOnce.mockImplementation(async () => {
-      harness.order.push("refresh");
-      harness.server.refuse = false;
-    });
-  }
-
-  // 대기는 Math.random 0.5 기준: 첫 시도 0.5초, 둘째 시도는 그 0.75초 뒤(1.25초)
-  it("★ 시도가 CONNECTED 전에 실패하면 다음 시도 앞에서 한 번 갱신하고, 갱신 뒤 다시 붙는다", async () => {
+describe("다시 로그인해야 하면 (APP-1547)", () => {
+  it("★ 티켓 요청이 세션 만료를 알리면 30초 창을 기다리지 않고 닫는다", async () => {
     vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    expireCookie(harness);
-
-    harness.closeTransport(1006);
-    await vi.advanceTimersByTimeAsync(600);
-    expect(harness.sockets).toHaveLength(2);
-    expect(auth.refreshAuthOnce).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(700);
-    expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
-    expect(harness.sockets).toHaveLength(3);
-    expect(harness.order.slice(-2)).toEqual(["refresh", "socket-connect"]);
-    harness.emitChunk();
-    expect(harness.sentSeqs(harness.socket)).toEqual([0]);
-    expect(auth.openSessionGate).not.toHaveBeenCalled();
-    expect(harness.onFailure).not.toHaveBeenCalled();
-  });
-
-  it("★ 첫 시도에 붙으면 갱신을 부르지 않는다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-
-    harness.closeTransport(1006);
-    await vi.advanceTimersByTimeAsync(600);
-
-    expect(harness.sockets).toHaveLength(2);
-    harness.emitChunk();
-    expect(harness.sentSeqs(harness.socket)).toEqual([0]);
-    expect(auth.refreshAuthOnce).not.toHaveBeenCalled();
-  });
-
-  it("★ 갱신 토큰까지 죽었으면 30초 창을 기다리지 않고 세션 게이트를 열고 닫는다", async () => {
-    vi.useFakeTimers();
-    const { AuthRefreshError } = await import("@/lib/api/fetcher");
     const harness = setup();
     await harness.controller.connect(SESSION_ID);
     harness.emitChunk(new ArrayBuffer(32_000));
-    harness.server.refuse = true;
-    auth.refreshAuthOnce.mockRejectedValue(new AuthRefreshError(true));
+    harness.server.sessionExpired = true;
 
     harness.closeTransport(1006);
     await vi.advanceTimersByTimeAsync(1_300);
 
-    expect(auth.openSessionGate).toHaveBeenCalledOnce();
     expect(harness.audio.stop).toHaveBeenCalled();
     expect(harness.sockets).toHaveLength(2);
 
@@ -2083,69 +2018,20 @@ describe("다시 붙기 전 토큰 갱신 (APP-1543)", () => {
     expect(harness.onFailure).not.toHaveBeenCalled();
   });
 
-  it("★ 갱신이 끝나지 않아도 3초 뒤에는 갱신 없이 붙어 본다", async () => {
+  it("★ 그 밖의 연결 실패는 다시 붙기를 이어 간다", async () => {
     vi.useFakeTimers();
     const harness = setup();
     await harness.controller.connect(SESSION_ID);
     harness.server.refuse = true;
-    auth.refreshAuthOnce.mockReturnValue(new Promise(() => undefined));
-
-    harness.closeTransport(1006);
-    await vi.advanceTimersByTimeAsync(1_250 + 2_900);
-    expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
-    expect(harness.sockets).toHaveLength(2);
-
-    harness.server.refuse = false;
-    await vi.advanceTimersByTimeAsync(200);
-    expect(harness.sockets).toHaveLength(3);
-    harness.emitChunk();
-    expect(harness.sentSeqs(harness.socket)).toEqual([0]);
-    expect(harness.onFailure).not.toHaveBeenCalled();
-  });
-
-  it("★ 갱신이 망 오류로 실패해도 다시 붙기를 이어 간다", async () => {
-    vi.useFakeTimers();
-    const { AuthRefreshError } = await import("@/lib/api/fetcher");
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    harness.server.refuse = true;
-    auth.refreshAuthOnce.mockRejectedValue(new AuthRefreshError(false));
 
     harness.closeTransport(1006);
     await vi.advanceTimersByTimeAsync(1_300);
-    expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
     expect(harness.sockets).toHaveLength(3);
 
     harness.server.refuse = false;
     await vi.advanceTimersByTimeAsync(5_000);
     harness.emitChunk();
     expect(harness.sentSeqs(harness.socket)).toEqual([0]);
-    expect(auth.openSessionGate).not.toHaveBeenCalled();
-    expect(harness.onFailure).not.toHaveBeenCalled();
-  });
-
-  it("서버가 옮겨 붙으라고 한 새 소켓도 첫 시도는 갱신 없이 가고, 그 시도가 못 붙었을 때만 갱신한다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    const first = harness.socket;
-    expireCookie(harness);
-
-    harness.emitEvent({
-      type: "reattach",
-      delayMs: 0,
-      reason: "SERVER_DRAINING",
-      overlap: true,
-    });
-    await vi.advanceTimersByTimeAsync(100);
-    expect(harness.sockets).toHaveLength(2);
-    expect(auth.refreshAuthOnce).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(1_000);
-    expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
-    expect(harness.sockets).toHaveLength(3);
-    // 겹쳐 둔 옛 소켓은 새 소켓이 붙을 때까지 그대로다
-    expect(first.close).not.toHaveBeenCalled();
     expect(harness.onFailure).not.toHaveBeenCalled();
   });
 });
