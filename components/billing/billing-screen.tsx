@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 /**
- * 결제 전용 화면 셋(요금제·주문서·등록 결과)이 같이 쓰는 틀. `AllTasks` 와 같은 폭·머리글 리듬이다.
+ * 결제 대행사에서 돌아오는 카드 등록 결과 화면의 틀(설정 창 밖이라 자기 틀이 있다). `AllTasks` 와 같은 폭·머리글 리듬이다.
  * 제목은 고정 문구라 조회를 기다리지 않고 그린다.
  */
 export function BillingScreen({
@@ -34,21 +34,5 @@ export function BillingScreen({
         <div className="mt-8 flex flex-col gap-10">{children}</div>
       </div>
     </ScrollArea>
-  );
-}
-
-/** 화면 안의 영역 하나. 영역마다 자기 조회를 가지므로 API 가 붙으면 이 안에서 `DataBoundary` 로 감싼다. */
-export function BillingSection({
-  title,
-  children,
-}: {
-  title: string;
-  children?: ReactNode;
-}) {
-  return (
-    <section aria-label={title}>
-      <h3 className="text-lg font-medium text-[var(--el-ink)]">{title}</h3>
-      {children ? <div className="mt-4">{children}</div> : null}
-    </section>
   );
 }

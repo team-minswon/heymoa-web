@@ -1,11 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { ChevronRight, CreditCard } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { BillingNotice } from "@/components/billing/billing-parts";
-import { BillingSection } from "@/components/billing/billing-screen";
+import {
+  SETTINGS_CARD,
+  SETTINGS_CARD_ICON,
+  SETTINGS_LIST,
+} from "@/components/settings/settings-layout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetBillingPayment } from "@/lib/api/generated/billing/billing";
 import type {
@@ -33,9 +37,10 @@ import {
 } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { toast } from "@/lib/ui/toast";
+import { cn } from "@/lib/utils";
 
 type Billing = WorkspaceBillingResponseData;
-type Dialog = "cancel" | "resume" | "refund" | "delete" | null;
+type Dialog = "cancel" | "resume" | "delete" | null;
 
 /** 관리할 구독이 있는가 — 유료·미납이거나, 끝났어도 지울 카드가 남았다. 상세(ADMIN)가 있을 때만이다. */
 export function hasSubscriptionToManage(billing: Billing) {
@@ -47,18 +52,32 @@ export function hasSubscriptionToManage(billing: Billing) {
   );
 }
 
+/** 설정 탭 안의 영역 제목. */
+export function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h3 className="mb-3 text-sm font-medium text-[var(--el-ink)]">
+      {children}
+    </h3>
+  );
+}
+
 /**
- * 요금제 화면의 「구독 관리」(APP-1565). 다음 결제(날짜·금액)·카드·최근 결제와 그 행동을 한 카드에 둔다. 이용 기간·제공량은
- * 바로 위 「현재 상태」가 적으므로 여기서 다시 적지 않는다.
+ * 설정 › 결제 관리의 「결제 수단」과 「구독」(APP-1565). 카드 한 줄과, 요금제·다음 결제·최근 결제를 한 목록에 둔다.
  * **버튼을 보일지는 서버의 `allowedActions` 로만 정한다** — 화면이 조건을 다시 계산하지 않는다. 위험한 행동(해지·환불·카드 삭제)은
  * 확인 창에서 날짜·금액으로 결과를 적은 뒤 실행한다. 결과 안내는 사라지면 안 돼 자리에 둔다.
  */
 export function SubscriptionManagement({
   workspaceId,
   billing,
+  onChangeCard,
+  onOpenPayment,
 }: {
   workspaceId: string;
   billing: Billing;
+  /** 카드 변경 화면으로. */
+  onChangeCard: () => void;
+  /** 그 결제의 상세로. */
+  onOpenPayment: (paymentId: string) => void;
 }) {
   const t = useTranslations("billing.manage");
   const format = useBillingFormat();
@@ -69,7 +88,8 @@ export function SubscriptionManagement({
   const product = billing.product;
   const period = billing.currentPeriod;
   const amount = product ? format.money(product.amountKrw) : null;
-  const card = format.card(detail.maskedCard);
+  const masked = detail.maskedCard;
+  const cardName = [masked?.issuer, masked?.cardType].filter(Boolean).join(" ");
 
   // 최근 결제 한 건. 요약과 환불 금액이 이 조회에서 온다 — 환불 본문의 금액은 상품 가격이 아니라 그 결제의 금액이다.
   const paymentId = detail.currentPaymentId;
@@ -87,6 +107,8 @@ export function SubscriptionManagement({
     if (outcome !== "failed") setDialog(null);
   };
   const busy = commands.pending;
+  const subscribed =
+    billing.status === "ACTIVE" || billing.status === "PAST_DUE";
   const next =
     billing.status === "ACTIVE" &&
     !billing.cancelAtPeriodEnd &&
@@ -94,126 +116,166 @@ export function SubscriptionManagement({
     amount
       ? t("nextChargeValue", { date: format.date(period.end), amount })
       : null;
+  const canCancel = actions.includes("CANCEL_SUBSCRIPTION");
+  const canResume = actions.includes("RESUME_SUBSCRIPTION");
+  const scheduled =
+    billing.cancelAtPeriodEnd && billing.status === "ACTIVE" && period;
 
   return (
-    <BillingSection title={t("title")}>
-      <div className="flex flex-col gap-4">
-        <div className="rounded-panel border border-[var(--el-hairline)] bg-white p-5">
-          <dl className="grid gap-2.5 text-sm">
-            {product &&
-            (billing.status === "ACTIVE" || billing.status === "PAST_DUE") ? (
-              <Row
-                label={t("plan")}
-                value={t("planValue", {
-                  plan: planName(product.planCode),
-                  amount: amount!,
-                })}
-              />
+    <>
+      <section aria-label={t("methodTitle")}>
+        <SectionTitle>{t("methodTitle")}</SectionTitle>
+        <div className={cn(SETTINGS_CARD, "flex items-center gap-3")}>
+          <span
+            className={cn(
+              SETTINGS_CARD_ICON,
+              "mt-0 bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
+            )}
+          >
+            <CreditCard className="size-4" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            {masked?.number || cardName ? (
+              <>
+                <p className="truncate text-sm font-medium text-[var(--el-ink)]">
+                  {cardName || t("card")}
+                </p>
+                {masked?.number ? (
+                  <p className="mt-0.5 font-mono text-xs text-[var(--el-muted)]">
+                    {masked.number}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-sm text-[var(--el-muted)]">{t("noCard")}</p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {actions.includes("CHANGE_CARD") ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={onChangeCard}
+              >
+                {t("changeCard")}
+              </Button>
             ) : null}
-            {billing.status === "ACTIVE" ? (
-              <Row
-                label={t("nextCharge")}
-                value={next ?? t("noNextCharge")}
-                note={
-                  billing.cancelAtPeriodEnd && period
-                    ? t("cancelScheduled", { end: format.date(period.end) })
-                    : undefined
-                }
-              />
+            {actions.includes("DELETE_PAYMENT_METHOD") && detail.methodId ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={commands.removePending}
+                disabled={busy}
+                onClick={() => setDialog("delete")}
+              >
+                {t("deleteMethod")}
+              </Button>
             ) : null}
-            <Row label={t("card")} value={card ?? t("noCard")} />
-            {paymentId ? (
-              <Row
-                label={t("latestPayment")}
-                value={
-                  payment ? (
-                    <span className="inline-flex flex-wrap items-baseline justify-end gap-x-3">
-                      <span className="whitespace-nowrap">
-                        {payment.completedAt
-                          ? t("latestPaymentValue", {
-                              date: format.date(payment.completedAt),
-                              amount: format.money(payment.amountKrw),
-                            })
-                          : format.money(payment.amountKrw)}
-                      </span>
-                      <PaymentStatusText payment={payment} />
-                      <Link
-                        href={`/w/${workspaceId}/billing/payments/${paymentId}`}
-                        className="whitespace-nowrap underline underline-offset-4"
+          </div>
+        </div>
+      </section>
+
+      {subscribed || paymentId ? (
+        <section aria-label={t("title")}>
+          <SectionTitle>{t("title")}</SectionTitle>
+          <div className={SETTINGS_LIST}>
+            <dl className="divide-y divide-[var(--el-hairline)] text-sm">
+              {product && subscribed ? (
+                <Row
+                  label={t("plan")}
+                  value={t("planValue", {
+                    plan: planName(product.planCode),
+                    amount: amount!,
+                  })}
+                />
+              ) : null}
+              {billing.status === "ACTIVE" ? (
+                <Row
+                  label={t("nextCharge")}
+                  value={next ?? t("noNextCharge")}
+                />
+              ) : null}
+              {paymentId ? (
+                <Row
+                  label={t("latestPayment")}
+                  value={
+                    payment ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenPayment(paymentId)}
+                        className="group -mr-1.5 inline-flex items-center gap-2 rounded-control py-0.5 pr-0.5 pl-1.5 hover:bg-[var(--el-surface-strong)]"
                       >
-                        {t("paymentLink")}
-                      </Link>
-                    </span>
-                  ) : (
-                    <Skeleton className="inline-block h-4 w-40 align-middle" />
-                  )
-                }
-              />
+                        <span className="whitespace-nowrap">
+                          {payment.completedAt
+                            ? t("latestPaymentValue", {
+                                date: format.date(payment.completedAt),
+                                amount: format.money(payment.amountKrw),
+                              })
+                            : format.money(payment.amountKrw)}
+                        </span>
+                        <PaymentStatusText payment={payment} />
+                        <span className="sr-only">{t("paymentLink")}</span>
+                        <ChevronRight
+                          className="size-4 text-[var(--el-muted)]"
+                          aria-hidden
+                        />
+                      </button>
+                    ) : (
+                      <Skeleton className="inline-block h-4 w-40 align-middle" />
+                    )
+                  }
+                />
+              ) : null}
+            </dl>
+            {canCancel || canResume || scheduled ? (
+              <div className="flex min-h-[52px] items-center justify-between gap-4 bg-[var(--el-canvas-soft)] px-4 py-2.5">
+                <p className="text-xs leading-5 text-[var(--el-muted)]">
+                  {scheduled
+                    ? canResume || detail.methodPayerIsMe
+                      ? t("cancelScheduled", { end: format.date(period.end) })
+                      : t("notPayerHint")
+                    : period
+                      ? t("cancelHint", { end: format.date(period.end) })
+                      : null}
+                </p>
+                {canResume ? (
+                  <Button
+                    size="sm"
+                    className="shrink-0"
+                    loading={commands.resumePending}
+                    disabled={busy}
+                    onClick={() => setDialog("resume")}
+                  >
+                    {t("resume")}
+                  </Button>
+                ) : canCancel ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    loading={commands.cancelPending}
+                    disabled={busy}
+                    onClick={() => {
+                      billingEvents.cancelDialogOpened(workspaceId);
+                      setDialog("cancel");
+                    }}
+                  >
+                    {t("cancel")}
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
-          </dl>
-        </div>
-
-        {billing.cancelAtPeriodEnd &&
-        !actions.includes("RESUME_SUBSCRIPTION") &&
-        !detail.methodPayerIsMe ? (
-          <p className="text-sm text-[var(--el-muted)]">{t("notPayerHint")}</p>
-        ) : null}
-
+          </div>
+          {commands.notice ? (
+            <div className="mt-3">
+              <NoticeLine notice={commands.notice} billing={billing} />
+            </div>
+          ) : null}
+        </section>
+      ) : commands.notice ? (
         <NoticeLine notice={commands.notice} billing={billing} />
-
-        <div className="flex flex-wrap items-center gap-2">
-          {actions.includes("RESUME_SUBSCRIPTION") ? (
-            <Button
-              loading={commands.resumePending}
-              disabled={busy}
-              onClick={() => setDialog("resume")}
-            >
-              {t("resume")}
-            </Button>
-          ) : null}
-          {actions.includes("CHANGE_CARD") ? (
-            <LinkButton
-              href={`/w/${workspaceId}/billing/card`}
-              variant="outline"
-            >
-              {t("changeCard")}
-            </LinkButton>
-          ) : null}
-          {actions.includes("CANCEL_SUBSCRIPTION") ? (
-            <Button
-              variant="outline"
-              loading={commands.cancelPending}
-              disabled={busy}
-              onClick={() => {
-                billingEvents.cancelDialogOpened(workspaceId);
-                setDialog("cancel");
-              }}
-            >
-              {t("cancel")}
-            </Button>
-          ) : null}
-          {actions.includes("REQUEST_REFUND") && payment ? (
-            <Button
-              variant="outline"
-              loading={commands.refundPending}
-              disabled={busy}
-              onClick={() => setDialog("refund")}
-            >
-              {t("refund")}
-            </Button>
-          ) : null}
-          {actions.includes("DELETE_PAYMENT_METHOD") && detail.methodId ? (
-            <Button
-              variant="outline"
-              loading={commands.removePending}
-              disabled={busy}
-              onClick={() => setDialog("delete")}
-            >
-              {t("deleteMethod")}
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      ) : null}
 
       {period && amount ? (
         <Confirm
@@ -250,23 +312,6 @@ export function SubscriptionManagement({
           }
         />
       ) : null}
-      {payment ? (
-        <RefundConfirm
-          open={dialog === "refund"}
-          onOpenChange={(open) => !busy && setDialog(open ? "refund" : null)}
-          payment={payment}
-          pending={commands.refundPending}
-          onConfirm={async () =>
-            close(
-              await commands.requestRefund({
-                paymentId: payment.paymentId,
-                amountKrw: payment.amountKrw,
-                expectedVersion: detail.subscriptionVersion,
-              })
-            )
-          }
-        />
-      ) : null}
       {detail.methodId ? (
         <Confirm
           open={dialog === "delete"}
@@ -284,7 +329,7 @@ export function SubscriptionManagement({
           }}
         />
       ) : null}
-    </BillingSection>
+    </>
   );
 }
 
@@ -323,15 +368,30 @@ export function NoticeLine({
   }
 }
 
+const STATUS_DOT: Record<ReturnType<typeof paymentStatusOf>, string> = {
+  SUCCEEDED: "bg-[var(--el-success)]",
+  FAILED: "bg-[var(--el-error)]",
+  CHECKING: "bg-[var(--el-muted-soft)]",
+  REFUNDED: "bg-[var(--el-muted-soft)]",
+  REFUNDING: "bg-[var(--el-muted-soft)]",
+  REFUND_FAILED: "bg-[var(--el-error)]",
+};
+
+/** 결제 상태 — 색 점과 글. 색만으로 뜻을 전하지 않는다. */
 export function PaymentStatusText({
   payment,
 }: {
   payment: Pick<BillingPaymentResponseData, "status" | "refundStatus">;
 }) {
   const t = useTranslations("billing.paymentStatus");
+  const status = paymentStatusOf(payment);
   return (
-    <span className="whitespace-nowrap text-[var(--el-muted)]">
-      {t(paymentStatusOf(payment))}
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[var(--el-body)]">
+      <span
+        className={cn("size-1.5 rounded-full", STATUS_DOT[status])}
+        aria-hidden
+      />
+      {t(status)}
     </span>
   );
 }
@@ -427,24 +487,11 @@ function Confirm({
   );
 }
 
-function Row({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: ReactNode;
-  note?: string;
-}) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    <div className="flex min-h-[52px] items-center justify-between gap-4 px-4 py-2.5">
       <dt className="shrink-0 text-[var(--el-muted)]">{label}</dt>
-      <dd className="text-right text-[var(--el-ink)]">
-        <span className="whitespace-nowrap">{value}</span>
-        {note ? (
-          <span className="mt-0.5 block text-[var(--el-muted)]">{note}</span>
-        ) : null}
-      </dd>
+      <dd className="text-right text-[var(--el-ink)]">{value}</dd>
     </div>
   );
 }

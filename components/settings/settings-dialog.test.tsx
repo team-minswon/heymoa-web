@@ -68,8 +68,19 @@ vi.mock("@/components/settings/workspace-integrations-settings", () => ({
 vi.mock("@/components/settings/workspace-agent-access-settings", () => ({
   WorkspaceAgentAccessSettings: () => <p>외부 에이전트 관리 내용</p>,
 }));
-vi.mock("@/components/billing/workspace-billing-settings", () => ({
-  WorkspaceBillingSettings: () => <p>결제 내용</p>,
+vi.mock("@/components/billing/plan-settings", () => ({
+  WorkspacePlanSettings: ({ onOpenPayment }: { onOpenPayment: () => void }) => (
+    <button type="button" onClick={onOpenPayment}>
+      요금제 내용
+    </button>
+  ),
+}));
+vi.mock("@/components/billing/payment-settings", () => ({
+  WorkspacePaymentSettings: ({ onOpenPlans }: { onOpenPlans: () => void }) => (
+    <button type="button" onClick={onOpenPlans}>
+      결제 관리 내용
+    </button>
+  ),
 }));
 vi.mock("@/components/settings/agent-connections-settings", () => ({
   AgentConnectionsSettings: ({
@@ -162,11 +173,32 @@ describe("SettingsDialog", () => {
     expect(screen.getByText("용어 사전 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
     expect(screen.getByText("연동 내용")).toBeInTheDocument();
-    // 결제는 워크스페이스 그룹의 탭이다(PRO-75)
+    // 요금제·결제 관리는 워크스페이스 그룹의 두 탭이다(PRO-75). 결제 내역은 결제 관리 안에 있어 따로 탭이 없다.
     fireEvent.click(
-      within(workspaceGroup).getByRole("button", { name: "결제" })
+      within(workspaceGroup).getByRole("button", { name: "요금제" })
     );
-    expect(screen.getByText("결제 내용")).toBeInTheDocument();
+    expect(screen.getByText("요금제 내용")).toBeInTheDocument();
+    fireEvent.click(
+      within(workspaceGroup).getByRole("button", { name: "결제 관리" })
+    );
+    expect(screen.getByText("결제 관리 내용")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "결제 내역" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("요금제 탭과 결제 관리 탭은 서로의 탭으로 넘어간다", () => {
+    render(
+      <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+    );
+    const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
+    fireEvent.click(
+      within(workspaceGroup).getByRole("button", { name: "요금제" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "요금제 내용" }));
+    expect(screen.getByText("결제 관리 내용")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "결제 관리 내용" }));
+    expect(screen.getByText("요금제 내용")).toBeInTheDocument();
   });
 
   // 같은 말에 누구 것인지를 붙여 가른다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)

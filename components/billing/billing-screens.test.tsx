@@ -23,10 +23,9 @@ import {
   vi,
 } from "vitest";
 
-import { BillingCheckoutPage } from "@/components/billing/billing-checkout-page";
+import { BillingCheckout } from "@/components/billing/billing-checkout";
 import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
-import { WorkspaceBillingPage } from "@/components/billing/workspace-billing-page";
-import { WorkspaceBillingSettings } from "@/components/billing/workspace-billing-settings";
+import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
 import { track } from "@/lib/analytics/track";
 import { getGetWorkspaceBillingQueryKey } from "@/lib/api/generated/billing/billing";
 import { leaveToCardRegistration } from "@/lib/billing/navigate";
@@ -176,47 +175,25 @@ const resultEvents = () =>
     .mock.calls.filter(([name]) => name === "billing_card_setup_resulted")
     .map(([, props]) => props);
 
-// ---- 설정 탭 · 요금제 ----
+// ---- 설정 › 요금제 ----
 
-describe("설정 탭 요약", () => {
-  it("집행 대상이 아니면 그 안내만 그린다", async () => {
-    renderIn(<WorkspaceBillingSettings workspaceId={NOT_ENFORCED} />);
-    expect(
-      await screen.findByText("이 공간은 아직 요금제 대상이 아닙니다.")
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
-  });
-
-  it("Free 와 전용 화면 링크를 그린다", async () => {
-    renderIn(<WorkspaceBillingSettings workspaceId={FREE} />);
-    expect(await screen.findByText("Free")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "요금제·결제 관리" })
-    ).toHaveAttribute("href", `/w/${FREE}/billing`);
-  });
-
-  it("다른 관리자의 구독 처리 중이면 그 사실만 그린다", async () => {
-    serveBilling({ teamSetupInProgress: true, allowedActions: [] });
-    renderIn(<WorkspaceBillingSettings workspaceId={FREE} />);
-    expect(
-      await screen.findByText("팀의 구독 처리 중입니다.")
-    ).toBeInTheDocument();
-  });
-});
+/** 설정 창의 「요금제」 탭. 「결제 관리」로 넘기는 콜백만 받는다. */
+const PlanTab = ({ workspaceId }: { workspaceId: string }) => (
+  <WorkspacePlanSettings workspaceId={workspaceId} onOpenPayment={vi.fn()} />
+);
+const startButton = () =>
+  screen.queryByRole("button", { name: "Pro 시작하기" });
 
 describe("요금제 화면", () => {
-  it("ADMIN 의 Free 는 서버 값으로 상품을 그리고 구매 링크를 준다", async () => {
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
-    expect(await screen.findByText("9,900원 / 월")).toBeInTheDocument();
+  it("ADMIN 의 Free 는 서버 값으로 상품을 그리고 구매 버튼을 준다", async () => {
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(await screen.findByText("9,900원")).toBeInTheDocument();
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
-    expect(screen.getByText("월 30시간")).toBeInTheDocument();
+    expect(screen.getByText("월 30시간 녹음")).toBeInTheDocument();
     expect(
       screen.getByText("이 공간의 모든 멤버가 함께 씁니다")
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Pro 시작하기" })).toHaveAttribute(
-      "href",
-      `/w/${FREE}/billing/checkout`
-    );
+    expect(startButton()).toBeEnabled();
     expect(
       screen.getByText("시험 결제이며 실제로 청구되지 않습니다.")
     ).toBeInTheDocument();
@@ -232,51 +209,45 @@ describe("요금제 화면", () => {
     serveBilling({
       product: { ...billingBody().product, recordingAllowanceMinutes: 1000 },
     });
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    renderIn(<PlanTab workspaceId={FREE} />);
     expect(await screen.findByText("녹음 16시간 40분")).toBeInTheDocument();
   });
 
   it("멤버에게는 구매 버튼 대신 관리자에게 요청하라고 안내한다", async () => {
     asMember();
     serveBilling({ allowedActions: [], detail: null });
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    renderIn(<PlanTab workspaceId={FREE} />);
     expect(
-      await screen.findByText(/관리자에게 요청해 주세요/)
+      await screen.findByText("구매와 결제 관리는 관리자만 할 수 있습니다.")
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Pro 시작하기" })
-    ).not.toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
   });
 
   it("타인의 진행 중 구매는 팀의 구독 처리 중으로만 알린다", async () => {
     serveBilling({ teamSetupInProgress: true, allowedActions: [] });
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(/팀의 구독 처리 중입니다/)
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Pro 시작하기" })
-    ).not.toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
   });
 
   it("집행 대상이 아니면 결제 UI 없이 안내만 그린다", async () => {
-    renderIn(<WorkspaceBillingPage workspaceId={NOT_ENFORCED} />);
+    renderIn(<PlanTab workspaceId={NOT_ENFORCED} />);
     expect(
       await screen.findByText("이 공간은 아직 요금제 대상이 아닙니다.")
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("요금제", { selector: "h3" })
+      screen.queryByRole("heading", { name: "요금제 비교" })
     ).not.toBeInTheDocument();
   });
 
-  it("이미 유료면 구매 링크 없이 기간을 그린다", async () => {
-    renderIn(<WorkspaceBillingPage workspaceId={PAID} />);
+  it("이미 유료면 구매 버튼 없이 다음 결제를 그린다", async () => {
+    renderIn(<PlanTab workspaceId={PAID} />);
     expect(
-      await screen.findByText("2026년 11월 11일부터 2026년 12월 11일 전까지")
+      await screen.findByText("다음 결제 2026년 12월 11일 · 9,900원")
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Pro 시작하기" })
-    ).not.toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
   });
 
   it("결과 확인 중에는 새 결제 버튼이 없다", async () => {
@@ -285,7 +256,7 @@ describe("요금제 화면", () => {
       allowedActions: ["REFRESH_STATUS"],
       detail: detail("UNKNOWN"),
     });
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
         "다시 결제하지 마세요. 확인이 끝나면 이 화면에 반영됩니다."
@@ -294,9 +265,7 @@ describe("요금제 화면", () => {
     expect(
       screen.queryByRole("button", { name: /다시 결제/ })
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Pro 시작하기" })
-    ).not.toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
   });
 
   it("확정 거절 뒤에는 서버 금액으로 다시 결제를 연다", async () => {
@@ -323,7 +292,7 @@ describe("요금제 화면", () => {
         }
       )
     );
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    renderIn(<PlanTab workspaceId={FREE} />);
     fireEvent.click(
       await screen.findByRole("button", { name: "9,900원 다시 결제" })
     );
@@ -347,21 +316,71 @@ describe("공간 전환 캐시", () => {
         await delay(150);
       })
     );
-    const { rerender } = renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    const { rerender } = renderIn(<PlanTab workspaceId={FREE} />);
     expect(
-      await screen.findByRole("link", { name: "Pro 시작하기" })
+      await screen.findByRole("button", { name: "Pro 시작하기" })
     ).toBeInTheDocument();
 
-    rerender(<WorkspaceBillingPage workspaceId={PAID} />);
+    rerender(<PlanTab workspaceId={PAID} />);
     // 새 공간 값이 오기 전에는 skeleton 이다 — Free 공간의 구매 링크가 남아 있으면 안 된다.
-    expect(
-      screen.queryByRole("link", { name: "Pro 시작하기" })
-    ).not.toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
     expect(screen.getByLabelText("요금제를 불러오는 중")).toBeInTheDocument();
-    expect(await screen.findByText(/2026년 11월 11일부터/)).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Pro 시작하기" })
+      await screen.findByText(/다음 결제 2026년 12월 11일/)
+    ).toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
+  });
+});
+
+describe("요금제 탭 안의 단계", () => {
+  it("「Pro 시작하기」를 누르면 같은 탭이 주문 확인으로 바뀌고 「요금제」로 돌아온다", async () => {
+    renderIn(<PlanTab workspaceId={FREE} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Pro 시작하기" })
+    );
+    expect(
+      await screen.findByRole("heading", { name: "주문 확인" })
+    ).toBeInTheDocument();
+    expect(await screen.findByText("오늘 결제")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledWith("billing_checkout_entered", {
+        workspace_id: FREE,
+        role: "admin",
+      })
+    );
+    // 주소를 바꾸지 않는다 — 설정 창 안의 상태다.
+    expect(leaveToCardRegistration).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "요금제" }));
+    expect(
+      await screen.findByRole("heading", { name: "요금제 비교" })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "주문 확인" })
     ).not.toBeInTheDocument();
+  });
+
+  it("유료 공간의 ADMIN 은 「결제 관리」로 결제 관리 탭을 연다", async () => {
+    const onOpenPayment = vi.fn();
+    renderIn(
+      <WorkspacePlanSettings workspaceId={PAID} onOpenPayment={onOpenPayment} />
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "결제 관리" }));
+    expect(onOpenPayment).toHaveBeenCalledTimes(1);
+  });
+
+  it("주문서에서 살 수 없는 상태면 그 안내와 「요금제로 돌아가기」만 준다", async () => {
+    serveBilling({ allowedActions: [] });
+    const onBack = vi.fn();
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={onBack} />
+    );
+    expect(
+      await screen.findByText("지금은 새로 구매할 수 없는 상태입니다.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "요금제로 돌아가기" }));
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -372,9 +391,13 @@ const submit = () => screen.getByRole("button", { name: "동의하고 카드 등
 
 describe("주문서", () => {
   it("공간·상품·금액·제공량·안내를 서버 값으로 그리고 동의 전에는 구매할 수 없다", async () => {
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
     await screen.findByText("테스트 유저의 워크스페이스");
-    expect(screen.getByText("9,900원 / 월")).toBeInTheDocument();
+    expect(screen.getByText("Pro 월 구독")).toBeInTheDocument();
+    // 상품 금액과 오늘 결제 금액 두 자리 모두 서버 값이다.
+    expect(screen.getAllByText("9,900원")).toHaveLength(2);
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     expect(
       screen.getByText("이 공간의 모든 멤버가 함께 씁니다.")
@@ -410,7 +433,9 @@ describe("주문서", () => {
     serveBilling({
       product: { ...billingBody().product, testPaymentNotice: notice },
     });
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
     expect(await screen.findByText(text)).toBeInTheDocument();
   });
 
@@ -418,14 +443,18 @@ describe("주문서", () => {
     serveBilling({
       product: { ...billingBody().product, testPaymentNotice: null },
     });
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
-    await screen.findByText("9,900원 / 월");
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
+    await screen.findByText("오늘 결제");
     expect(screen.queryByText(/시험 결제/)).not.toBeInTheDocument();
   });
 
   it("동의하고 시작하면 등록을 열고 카드 등록으로 이동하며 이벤트에 식별자를 싣지 않는다", async () => {
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
-    await screen.findByText("9,900원 / 월");
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
+    await screen.findByText("오늘 결제");
     fireEvent.click(agree());
     fireEvent.click(submit());
     await waitFor(() => expect(leaveToCardRegistration).toHaveBeenCalled());
@@ -459,8 +488,10 @@ describe("주문서", () => {
         }
       )
     );
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
-    await screen.findByText("9,900원 / 월");
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
+    await screen.findByText("오늘 결제");
     fireEvent.click(agree());
     fireEvent.click(submit());
     await waitFor(() => expect(keys).toHaveLength(1));
@@ -492,8 +523,10 @@ describe("주문서", () => {
         }
       )
     );
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
-    await screen.findByText("9,900원 / 월");
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
+    await screen.findByText("오늘 결제");
     fireEvent.click(agree());
     fireEvent.click(submit());
     expect(
@@ -530,8 +563,10 @@ describe("주문서", () => {
         )
       )
     );
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
-    await screen.findByText("9,900원 / 월");
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
+    await screen.findByText("오늘 결제");
     fireEvent.click(agree());
     fireEvent.click(submit());
     expect(
@@ -554,7 +589,9 @@ describe("주문서", () => {
         agreementVersion: "BILLING_TEST_V1",
       }),
     });
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: "취소하고 다시 시작" })
     );
@@ -570,7 +607,9 @@ describe("주문서", () => {
   it("멤버는 주문서 대신 관리자 요청 안내를 본다", async () => {
     asMember();
     serveBilling({ allowedActions: [] });
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
     expect(
       await screen.findByText(/관리자에게 요청해 주세요/)
     ).toBeInTheDocument();
@@ -649,8 +688,11 @@ describe("등록 결과 — 상태별 화면", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     // 메뉴 없는 화면이라 나갈 길은 있어야 한다.
     expect(
-      screen.getByRole("link", { name: "요금제 화면으로 돌아가기" })
-    ).toHaveAttribute("href", expect.stringMatching(/^\/w\/[^/]+\/billing$/));
+      screen.getByRole("link", { name: "요금제로 돌아가기" })
+    ).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^\/w\/[^/?]+\?settings=billing$/)
+    );
   });
 
   it("승인 뒤 자동 취소된 결제는 닫힘이 아니라 전액 취소로 알리고 새로 시작할 수 있다", async () => {

@@ -1,18 +1,11 @@
-import { HydrationBoundary } from "@tanstack/react-query";
+import { redirect } from "next/navigation";
 
-import { WorkspaceBillingPage } from "@/components/billing/workspace-billing-page";
-import { prefetchWorkspaceBilling } from "@/lib/billing/prefetch";
-
+// 요금제·결제 관리는 설정 창 안에 있다(PRO-75). 옛 주소로 들어오면 그 탭을 연다.
 export default async function WorkspaceBillingRoute({
   params,
 }: {
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const state = await prefetchWorkspaceBilling(workspaceId, { usage: true });
-  return (
-    <HydrationBoundary state={state}>
-      <WorkspaceBillingPage workspaceId={workspaceId} />
-    </HydrationBoundary>
-  );
+  redirect(`/w/${workspaceId}?settings=billing`);
 }

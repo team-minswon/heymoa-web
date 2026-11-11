@@ -13,11 +13,11 @@
       "terms": "용어 사전",
       "integrations": "연동",
       "workspaceAgents": "MCP 연결",
-      "billing": "결제",
+      "billing": "요금제",
+      "payment": "결제 관리",
       "account": "내 계정",
       "notifications": "알림",
       "agents": "내 MCP 연결",
-      "paymentHistory": "결제 내역",
       "appUpdates": "앱 업데이트"
     },
     "loadFailed": {

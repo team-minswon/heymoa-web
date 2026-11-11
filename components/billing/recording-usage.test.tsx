@@ -5,10 +5,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
-import { WorkspaceBillingPage } from "@/components/billing/workspace-billing-page";
-import { WorkspaceBillingSettings } from "@/components/billing/workspace-billing-settings";
+import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
 import { billingHandlers, billingMock } from "@/lib/mocks/billing";
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
@@ -38,6 +45,14 @@ const renderIn = (ui: React.ReactNode) =>
     </QueryClientProvider>
   );
 
+/** 설정 › 요금제 탭. 사용량은 현재 요금제 패널의 오른쪽 칸이다. */
+const PlanTab = ({ workspaceId }: { workspaceId: string }) => (
+  <WorkspacePlanSettings workspaceId={workspaceId} onOpenPayment={vi.fn()} />
+);
+/** 사용량 값 한 줄(사용분과 「/ 한도」)의 글. 두 조각이 한 줄에 붙어 읽힌다. */
+const usageValue = async (used: string) =>
+  (await screen.findByText(used)).parentElement?.textContent;
+
 const freeUsage = (patch: Record<string, unknown> = {}) => ({
   enforced: true,
   periodKind: "FREE",
@@ -61,17 +76,16 @@ const serveUsage = (data: unknown, workspaceId = FREE) =>
     )
   );
 
-describe("녹음 사용량 — 요금제 화면", () => {
+describe("녹음 사용량 — 요금제 탭", () => {
   it("Free 는 이번 달 사용분·한도·진행 막대·초기화 날짜를 서버 값으로 그린다", async () => {
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
-    expect(
-      await screen.findByText("이번 달 45분 / 30시간")
-    ).toBeInTheDocument();
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(await usageValue("45분")).toBe("45분/ 30시간");
+    expect(screen.getByText("이번 달 녹음")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
       "3"
     );
-    expect(screen.getByText("12월 1일 초기화")).toBeInTheDocument();
+    expect(screen.getByText("12월 1일에 초기화됩니다")).toBeInTheDocument();
     expect(
       screen.queryByText("녹음 중인 회의는 끝난 뒤 반영됩니다")
     ).not.toBeInTheDocument();
@@ -85,10 +99,8 @@ describe("녹음 사용량 — 요금제 화면", () => {
         remainingMinutes: 0,
       })
     );
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
-    expect(
-      await screen.findByText("이번 달 2시간 11분 / 2시간")
-    ).toBeInTheDocument();
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(await usageValue("2시간 11분")).toBe("2시간 11분/ 2시간");
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
       "100"
@@ -97,18 +109,17 @@ describe("녹음 사용량 — 요금제 화면", () => {
 
   it("예약분이 있으면 녹음 중인 회의는 끝난 뒤 반영된다고 한 줄 알린다", async () => {
     serveUsage(freeUsage({ reservedSamples: 57600000 }));
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText("녹음 중인 회의는 끝난 뒤 반영됩니다")
     ).toBeInTheDocument();
   });
 
-  it("Pro 는 녹음 무제한과 참고용 사용 시간만 그리고 막대는 없다", async () => {
-    renderIn(<WorkspaceBillingPage workspaceId={PAID} />);
-    expect(
-      await screen.findByText("이번 달 5시간 30분 사용")
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("녹음 무제한").length).toBeGreaterThan(0);
+  it("Pro 는 무제한과 참고용 사용 시간만 그리고 막대는 없다", async () => {
+    renderIn(<PlanTab workspaceId={PAID} />);
+    expect(await screen.findByText("5시간 30분")).toBeInTheDocument();
+    expect(screen.getByText("이번 달 녹음")).toBeInTheDocument();
+    expect(screen.getByText("무제한")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText(/초기화/)).not.toBeInTheDocument();
   });
@@ -121,18 +132,18 @@ describe("녹음 사용량 — 요금제 화면", () => {
         return HttpResponse.json({ success: true, data: {}, error: null });
       })
     );
-    renderIn(<WorkspaceBillingPage workspaceId={NOT_ENFORCED} />);
+    renderIn(<PlanTab workspaceId={NOT_ENFORCED} />);
     await screen.findByText("이 공간은 아직 요금제 대상이 아닙니다.");
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.queryByText(/이번 달/)).not.toBeInTheDocument();
+    expect(screen.queryByText("이번 달 녹음")).not.toBeInTheDocument();
     expect(read).toBe(false);
   });
 
   it("사용량 조회가 집행 대상이 아니라고 하면 아무것도 그리지 않는다", async () => {
     serveUsage({ ...freeUsage(), enforced: false, usedMinutes: null });
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
-    await screen.findByText("9,900원 / 월");
-    expect(screen.queryByText(/이번 달/)).not.toBeInTheDocument();
+    renderIn(<PlanTab workspaceId={FREE} />);
+    await screen.findByRole("heading", { name: "요금제 비교" });
+    expect(screen.queryByText("이번 달 녹음")).not.toBeInTheDocument();
   });
 
   it("사용량 조회가 실패해도 요금제는 그리고 그 자리만 다시 시도를 준다", async () => {
@@ -152,8 +163,10 @@ describe("녹음 사용량 — 요금제 화면", () => {
         )
       )
     );
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
-    expect(await screen.findByText("9,900원 / 월")).toBeInTheDocument();
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(
+      await screen.findByRole("heading", { name: "요금제 비교" })
+    ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", { name: /다시 시도/ })
     ).toBeInTheDocument();
@@ -170,29 +183,13 @@ describe("녹음 사용량 — 요금제 화면", () => {
         });
       })
     );
-    renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
+    renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByLabelText("사용량을 불러오는 중")
     ).toBeInTheDocument();
-    await screen.findByText("이번 달 45분 / 2시간");
+    expect(await usageValue("45분")).toBe("45분/ 2시간");
     expect(
       screen.queryByLabelText("사용량을 불러오는 중")
     ).not.toBeInTheDocument();
-  });
-});
-
-describe("녹음 사용량 — 설정 탭 요약", () => {
-  it("Free 의 사용량을 같은 모양으로 그린다", async () => {
-    renderIn(<WorkspaceBillingSettings workspaceId={FREE} />);
-    expect(
-      await screen.findByText("이번 달 45분 / 30시간")
-    ).toBeInTheDocument();
-    expect(screen.getByText("12월 1일 초기화")).toBeInTheDocument();
-  });
-
-  it("집행 대상이 아니면 사용량 UI 가 없다", async () => {
-    renderIn(<WorkspaceBillingSettings workspaceId={NOT_ENFORCED} />);
-    await screen.findByText("이 공간은 아직 요금제 대상이 아닙니다.");
-    expect(screen.queryByText(/이번 달/)).not.toBeInTheDocument();
   });
 });

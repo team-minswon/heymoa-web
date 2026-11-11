@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 
@@ -10,7 +11,8 @@ import {
   TestPaymentNotice,
   canRetryPayment,
 } from "@/components/billing/billing-parts";
-import { BillingScreen } from "@/components/billing/billing-screen";
+import { SETTINGS_LIST } from "@/components/settings/settings-layout";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button, LinkButton } from "@/components/ui/button";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +38,7 @@ import {
 import { planName } from "@/lib/billing/plan-name";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { nextPollDelay, usePollWindow } from "@/lib/billing/use-poll-window";
+import { cn } from "@/lib/utils";
 
 /**
  * `/billing/setups/{setupId}` — 카드 등록 결과. 워크스페이스 셸 밖이다(PG 복귀 뒤 깨끗한 주소).
@@ -46,9 +49,25 @@ import { nextPollDelay, usePollWindow } from "@/lib/billing/use-poll-window";
 export function BillingSetupResultPage({ setupId }: { setupId: string }) {
   const t = useTranslations("billing.setup");
   return (
-    <BillingScreen title={t("title")} description={t("description")}>
-      <SetupResult setupId={setupId} />
-    </BillingScreen>
+    <ScrollArea
+      className="min-h-0 flex-1"
+      viewportClassName="overflow-x-hidden!"
+    >
+      {/* 한 가지 결과만 읽는 화면이라 좁은 단 하나다. */}
+      <div className="mx-auto w-full max-w-[640px] px-5 pb-16 pt-10 sm:pt-16">
+        <header className="mb-8">
+          <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+            {t("title")}
+          </h2>
+          <p className="mt-2 text-sm text-[var(--el-muted)]">
+            {t("description")}
+          </p>
+        </header>
+        <div className="flex flex-col gap-4">
+          <SetupResult setupId={setupId} />
+        </div>
+      </div>
+    </ScrollArea>
   );
 }
 
@@ -176,7 +195,7 @@ function SetupResult({ setupId }: { setupId: string }) {
       {workspaceId && view !== "completed" ? (
         <LinkButton
           variant="outline"
-          href={`/w/${workspaceId}/billing`}
+          href={`/w/${workspaceId}?settings=billing`}
           className="self-start"
         >
           {t("backToWorkspace")}
@@ -225,7 +244,7 @@ function ViewBody({
   // 카드 변경은 카드만 바꾸고 청구하지 않는다 — 결과 문구·다시 시작할 곳을 구매와 섞지 않는다.
   const replace = setup.purpose === "REPLACE";
   const checkout = workspaceId
-    ? `/w/${workspaceId}/billing/${replace ? "card" : "checkout"}`
+    ? `/w/${workspaceId}?settings=${replace ? "payment" : "billing"}`
     : null;
   const card = (
     title: string,
@@ -335,7 +354,7 @@ function ViewBody({
           t("replace.completed.title"),
           t("replace.completed.body"),
           workspaceId ? (
-            <LinkButton href={`/w/${workspaceId}/billing`}>
+            <LinkButton href={`/w/${workspaceId}?settings=payment`}>
               {t("replace.completed.goPlans")}
             </LinkButton>
           ) : null
@@ -417,27 +436,39 @@ function CompletedBody({
     }).data
   );
   return (
-    <BillingNotice title={t("completed.title")}>
-      <dl className="mt-2 grid gap-1.5">
+    <div className="rounded-panel border border-[var(--el-hairline)] bg-white p-6">
+      <span className="flex size-10 items-center justify-center rounded-full bg-[var(--el-ink)] text-white">
+        <Check className="size-5" aria-hidden />
+      </span>
+      <p
+        role="status"
+        className="mt-5 text-2xl leading-8 font-light tracking-[-0.02em] text-[var(--el-ink)]"
+      >
+        {t("completed.title")}
+      </p>
+      <dl className={cn(SETTINGS_LIST, "mt-6 text-sm")}>
         {workspace ? (
-          <Line label={t("completed.workspace")} value={workspace.name} />
+          <SummaryRow label={t("completed.workspace")} value={workspace.name} />
         ) : null}
         {setup.planCode ? (
-          <Line label={t("completed.plan")} value={planName(setup.planCode)} />
+          <SummaryRow
+            label={t("completed.plan")}
+            value={planName(setup.planCode)}
+          />
         ) : null}
         {setup.amountKrw != null ? (
-          <Line
+          <SummaryRow
             label={t("completed.amount")}
             value={format.money(setup.amountKrw)}
           />
         ) : null}
         {setup.paidPeriod ? (
           <>
-            <Line
+            <SummaryRow
               label={t("completed.period")}
               value={format.period(setup.paidPeriod)}
             />
-            <Line
+            <SummaryRow
               label={t("completed.nextCharge")}
               value={format.date(setup.paidPeriod.end)}
             />
@@ -445,18 +476,19 @@ function CompletedBody({
         ) : null}
       </dl>
       {workspaceId ? (
-        <LinkButton href={`/w/${workspaceId}`} className="mt-4">
+        <LinkButton href={`/w/${workspaceId}`} className="mt-6 h-10 px-4">
           {t("completed.goWorkspace")}
+          <ArrowRight aria-hidden />
         </LinkButton>
       ) : null}
-    </BillingNotice>
+    </div>
   );
 }
 
-function Line({ label, value }: { label: string; value: string }) {
+function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt>{label}</dt>
+    <div className="flex min-h-12 items-center justify-between gap-4 px-4 py-2.5">
+      <dt className="shrink-0 text-[var(--el-muted)]">{label}</dt>
       <dd className="text-right text-[var(--el-ink)]">{value}</dd>
     </div>
   );

@@ -35,7 +35,7 @@ describe("결제 이벤트", () => {
     type Secret = "authKey" | "state" | "customerKey" | "setup_id" | "payment_id" | "card";
     expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_started">>();
     expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_resulted">>();
-    expectTypeOf<"paymentHistory">().toExtend<Props<"settings_tab_opened">["section"]>();
+    expectTypeOf<"payment">().toExtend<Props<"settings_tab_opened">["section"]>();
   });
 
   it("구독 관리 이벤트는 공간과 결과 종류만 받고 금액·카드·결제 식별자는 받지 않는다", () => {

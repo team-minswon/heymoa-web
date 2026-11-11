@@ -12,12 +12,12 @@
       "guests": "Guest participants",
       "terms": "Custom vocabulary",
       "integrations": "Integrations",
-      "billing": "Billing",
+      "billing": "Plan",
+      "payment": "Payment",
       "workspaceAgents": "MCP connections",
       "account": "My account",
       "notifications": "Notifications",
       "agents": "My MCP connections",
-      "paymentHistory": "Payment history",
       "appUpdates": "App updates"
     },
     "loadFailed": {

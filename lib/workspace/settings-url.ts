@@ -16,8 +16,8 @@ export const SETTINGS_SECTIONS = [
   "integrations",
   "workspaceAgents",
   "billing",
+  "payment",
   "agents",
-  "paymentHistory",
   "notifications",
   "appUpdates",
 ] as const;

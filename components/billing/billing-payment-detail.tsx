@@ -3,18 +3,18 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/billing/back-link";
 import { BillingNotice } from "@/components/billing/billing-parts";
-import {
-  BillingScreen,
-  BillingSection,
-} from "@/components/billing/billing-screen";
 import {
   NoticeLine,
   PaymentStatusText,
   RefundConfirm,
 } from "@/components/billing/subscription-management";
-import { Button, LinkButton } from "@/components/ui/button";
-import { DataBoundary } from "@/components/ui/data-boundary";
+import {
+  SETTINGS_LIST,
+  SettingsHeader,
+} from "@/components/settings/settings-layout";
+import { Button } from "@/components/ui/button";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeedbackDialog } from "@/components/workspace/feedback-dialog";
@@ -32,47 +32,55 @@ import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
 /**
- * `/w/{workspaceId}/billing/payments/{paymentId}` — 공간 결제 한 건(ADMIN). 금액·기간·상태·카드·환불 상태와 출처를 보인다.
+ * 설정 › 결제 관리에서 한 단계 들어간 결제 한 건(ADMIN). 금액·기간·상태·카드·환불 상태와 출처를 보인다.
  * 환불됐거나 기간이 끝난 옛 결제는 「당시 결과」와 「현재 상태」를 갈라 적는다 — 옛 성공을 지금 권한처럼 읽히게 하지 않는다.
  * 환불 버튼은 서버가 `REQUEST_REFUND` 를 주고 이 결제가 지금 유료 기간의 결제일 때만이다.
  */
-export function BillingPaymentPage({
+export function BillingPaymentDetail({
   workspaceId,
   paymentId,
+  onBack,
 }: {
   workspaceId: string;
   paymentId: string;
+  onBack: () => void;
 }) {
   const t = useTranslations("billing.payment");
   useEffect(() => {
     billingEvents.paymentViewed(workspaceId);
   }, [workspaceId]);
   return (
-    <BillingScreen title={t("title")} description={t("description")}>
-      <DataBoundary
-        resetKeys={[workspaceId, paymentId]}
-        fallback={<PaymentSkeleton label={t("loading")} />}
-      >
-        <PaymentContent workspaceId={workspaceId} paymentId={paymentId} />
-      </DataBoundary>
-    </BillingScreen>
+    <div>
+      <BackLink onClick={onBack}>{t("back")}</BackLink>
+      <SettingsHeader title={t("title")} description={t("description")} />
+      <PaymentContent workspaceId={workspaceId} paymentId={paymentId} />
+    </div>
   );
 }
 
-const ROWS = 7;
+const HERO = "flex flex-wrap items-baseline gap-x-3 gap-y-1";
+const ROW =
+  "flex min-h-[52px] items-center justify-between gap-4 px-4 py-2.5 text-sm";
+const SKELETON_ROWS = 4;
+
 function PaymentSkeleton({ label }: { label: string }) {
-  const t = useTranslations("billing.payment");
   return (
-    <BillingSection title={t("summary")}>
-      <div
-        aria-label={label}
-        className="grid gap-3 rounded-panel border border-[var(--el-hairline)] bg-white p-5"
-      >
-        {Array.from({ length: ROWS }, (_, index) => (
-          <Skeleton key={index} className="h-5 w-full" />
+    <div aria-label={label} className="flex flex-col gap-6">
+      <div>
+        <div className={HERO}>
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <Skeleton className="mt-2 h-5 w-56" />
+      </div>
+      <div className={SETTINGS_LIST}>
+        {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+          <div key={index} className={ROW}>
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-40" />
+          </div>
         ))}
       </div>
-    </BillingSection>
+    </div>
   );
 }
 
@@ -97,52 +105,60 @@ function PaymentContent({
   const payment = okData(query.data);
   useRefundResultEvent(workspaceId, payment?.refundStatus);
 
-  const back = (
-    <LinkButton
-      href={`/w/${workspaceId}/billing`}
-      variant="outline"
-      className="self-start"
-    >
-      {t("back")}
-    </LinkButton>
-  );
   if (query.isPending) return <PaymentSkeleton label={t("loading")} />;
   if (!payment) {
     const status = query.error instanceof ApiError ? query.error.status : null;
-    return (
-      <div className="flex flex-col gap-4">
-        {status === 404 || status === 403 ? (
-          <BillingNotice tone="warn">
-            {status === 404 ? t("notFound") : t("askAdmin")}
-          </BillingNotice>
-        ) : (
-          <InlineRetry
-            onRetry={() => void query.refetch()}
-            label={t("loadFailed")}
-          />
-        )}
-        {back}
-      </div>
+    return status === 404 || status === 403 ? (
+      <BillingNotice tone="warn">
+        {status === 404 ? t("notFound") : t("askAdmin")}
+      </BillingNotice>
+    ) : (
+      <InlineRetry
+        onRetry={() => void query.refetch()}
+        label={t("loadFailed")}
+      />
     );
   }
   const current = billing.detail?.currentPaymentId === paymentId;
   return (
-    <div className="flex flex-col gap-10">
-      <BillingSection title={t("summary")}>
-        <PaymentRows payment={payment} current={current} />
-        <RefundArea
-          workspaceId={workspaceId}
-          payment={payment}
-          refundable={
-            current && billing.allowedActions.includes("REQUEST_REFUND")
-          }
-          expectedVersion={billing.detail?.subscriptionVersion ?? null}
-        />
-      </BillingSection>
-      <div className="flex flex-col gap-4">
-        {back}
-        <TaxInvoiceLine />
-      </div>
+    <div className="flex flex-col gap-6">
+      <PaymentHero payment={payment} />
+      <PaymentRows payment={payment} current={current} />
+      <RefundArea
+        workspaceId={workspaceId}
+        payment={payment}
+        refundable={
+          current && billing.allowedActions.includes("REQUEST_REFUND")
+        }
+        expectedVersion={billing.detail?.subscriptionVersion ?? null}
+      />
+      <TaxInvoiceLine />
+    </div>
+  );
+}
+
+/** 얼마를 언제 무엇으로 냈는가 — 한눈에 읽는 줄. */
+function PaymentHero({ payment }: { payment: BillingPaymentResponseData }) {
+  const t = useTranslations("billing.payment");
+  const format = useBillingFormat();
+  return (
+    <div>
+      <p className={HERO}>
+        <span className="text-[36px] leading-10 font-light tracking-[-0.035em] text-[var(--el-ink)]">
+          {format.money(payment.amountKrw)}
+        </span>
+        <span className="text-sm">
+          <PaymentStatusText payment={payment} />
+        </span>
+      </p>
+      <p className="mt-2 text-sm leading-5 text-[var(--el-muted)]">
+        {[
+          payment.completedAt ? format.dateTime(payment.completedAt) : null,
+          t(`kindValue.${payment.kind}`),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
     </div>
   );
 }
@@ -170,40 +186,24 @@ function PaymentRows({
             ? t("nowEnded")
             : null;
   return (
-    <dl className="grid gap-3 rounded-panel border border-[var(--el-hairline)] bg-white p-5 text-sm">
+    <dl className={SETTINGS_LIST}>
       <Row label={t("workspace")} value={payment.workspaceName} />
-      <Row label={t("kind")} value={t(`kindValue.${payment.kind}`)} />
-      <Row label={t("amount")} value={format.money(payment.amountKrw)} />
       {payment.period ? (
         <Row label={t("period")} value={format.period(payment.period)} />
       ) : null}
-      {payment.completedAt ? (
-        <Row
-          label={t("completedAt")}
-          value={format.dateTime(payment.completedAt)}
-        />
-      ) : null}
+      {card ? <Row label={t("card")} value={card} /> : null}
       {now ? (
         <>
           <Row label={t("then")} value={t("thenPaid")} />
           <Row label={t("now")} value={now} wrap />
         </>
-      ) : (
+      ) : null}
+      {payment.errorCode ? (
         <Row
           label={t("status")}
-          value={
-            <>
-              <PaymentStatusText payment={payment} />
-              {payment.errorCode ? (
-                <span className="mt-0.5 block text-xs text-[var(--el-muted)]">
-                  {t("errorCode", { code: payment.errorCode })}
-                </span>
-              ) : null}
-            </>
-          }
+          value={t("errorCode", { code: payment.errorCode })}
         />
-      )}
-      {card ? <Row label={t("card")} value={card} /> : null}
+      ) : null}
       {payment.refundStatus ? (
         <Row
           label={t("refund")}
@@ -243,7 +243,7 @@ function RefundArea({
   const [open, setOpen] = useState(false);
   if (!commands.notice && (!refundable || expectedVersion == null)) return null;
   return (
-    <div className="mt-4 flex flex-col items-start gap-3 [&>[role=alert]]:self-stretch [&>[role=status]]:self-stretch">
+    <div className="flex flex-col items-start gap-3 [&>[role=alert]]:self-stretch [&>[role=status]]:self-stretch">
       <NoticeLine notice={commands.notice} />
       {refundable && expectedVersion != null ? (
         <>
@@ -306,7 +306,7 @@ function Row({
   wrap?: boolean;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    <div className={ROW}>
       <dt className="shrink-0 text-[var(--el-muted)]">{label}</dt>
       <dd
         className={

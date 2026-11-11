@@ -102,7 +102,8 @@ describe("RecordingErrorToast", () => {
       };
     };
 
-    it("ADMIN 은 요금제 화면으로 가는 액션을 받고 누르면 이동한다", () => {
+    it("ADMIN 은 요금제 탭을 여는 액션을 받고 누르면 설정 창의 요금제 탭이 열린다", () => {
+      window.history.replaceState(null, "", "/w/W1");
       asRole("ADMIN");
       render(<RecordingErrorToast />);
       const [message, options] = toast.error.mock.calls.at(-1)!;
@@ -116,10 +117,17 @@ describe("RecordingErrorToast", () => {
       });
 
       options.action.onClick();
-      expect(push).toHaveBeenCalledWith("/w/W1/billing");
-      expect(track).toHaveBeenLastCalledWith("recording_quota_upgrade_clicked", {
-        workspace_id: "W1",
-      });
+      // 설정 창은 같은 화면 안의 상태라 라우터가 아니라 주소의 `?settings=` 로 연다.
+      expect(push).not.toHaveBeenCalled();
+      expect(`${window.location.pathname}${window.location.search}`).toBe(
+        "/w/W1?settings=billing"
+      );
+      expect(track).toHaveBeenLastCalledWith(
+        "recording_quota_upgrade_clicked",
+        {
+          workspace_id: "W1",
+        }
+      );
     });
 
     it("멤버는 액션 없이 관리자에게 요청하라는 안내를 받는다", () => {

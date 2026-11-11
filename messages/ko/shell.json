@@ -3,8 +3,7 @@
     "notifications": "알림",
     "allNotes": "모든 노트",
     "tasks": "할 일",
-    "connectionMap": "연결 지도",
-    "billing": "결제"
+    "connectionMap": "연결 지도"
   },
   "sidebar": {
     "label": "워크스페이스",

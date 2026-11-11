@@ -95,16 +95,28 @@ test("OAuth 복귀는 연동 탭을 열고 provider·status 를 걷는다", asyn
   await expect.poll(() => search(page)).toBe("?settings=integrations");
 });
 
-test("?settings=billing 은 결제 탭을 열고 전용 화면으로 가는 링크를 둔다", async ({
+test("?settings=billing 은 요금제 탭을, ?settings=payment 는 결제 관리 탭을 연다", async ({
   page,
 }) => {
   await page.goto(`${WS}?settings=billing`);
   await expect(dialog(page)).toBeVisible();
-  await expect(page.getByRole("button", { name: "결제" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "요금제" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+  // 구매는 전용 화면으로 가지 않고 같은 탭 안의 주문 확인으로 바뀐다.
+  await page.getByRole("button", { name: "Pro 시작하기" }).click();
+  await expect(
+    dialog(page).getByRole("heading", { name: "주문 확인" })
+  ).toBeVisible();
+  await expect.poll(() => search(page)).toBe("?settings=billing");
+
+  await page.goto(`${WS}?settings=payment`);
+  await expect(page.getByRole("button", { name: "결제 관리" })).toHaveAttribute(
     "aria-current",
     "page"
   );
   await expect(
-    page.getByRole("link", { name: "요금제·결제 관리" })
-  ).toHaveAttribute("href", `${WS}/billing`);
+    dialog(page).getByRole("region", { name: "결제 내역" })
+  ).toBeVisible();
 });

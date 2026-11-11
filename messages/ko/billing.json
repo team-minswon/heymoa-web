@@ -23,28 +23,17 @@
   "usage": {
     "loading": "사용량을 불러오는 중",
     "progress": "이번 달 녹음 사용량",
-    "usedFree": "이번 달 {used} / {allowance}",
-    "resets": "{date} 초기화",
+    "resets": "{date}에 초기화됩니다",
     "exhausted": "이번 달 제공량을 모두 썼습니다. {date}부터 새 녹음을 시작할 수 있습니다.",
     "reserved": "녹음 중인 회의는 끝난 뒤 반영됩니다",
-    "unlimited": "녹음 무제한",
-    "usedPaid": "이번 달 {used} 사용",
-    "nearLimit": "이번 달 제공량의 {percent, number}%를 썼습니다. {date}에 초기화됩니다."
-  },
-  "settings": {
-    "title": "결제",
-    "description": "워크스페이스의 요금제와 사용량을 확인합니다.",
-    "openPage": "요금제·결제 관리",
-    "loading": "결제 정보를 불러오는 중",
-    "notEnforced": "이 공간은 아직 요금제 대상이 아닙니다.",
-    "teamInProgress": "팀의 구독 처리 중입니다.",
-    "inProgress": "결제를 처리하고 있습니다."
+    "unlimited": "무제한",
+    "nearLimit": "이번 달 제공량의 {percent, number}%를 썼습니다. {date}에 초기화됩니다.",
+    "label": "이번 달 녹음",
+    "ofAllowance": "/ {allowance}"
   },
   "page": {
     "title": "요금제",
-    "description": "워크스페이스의 현재 상태와 요금제를 확인합니다.",
-    "status": "현재 상태",
-    "plans": "요금제",
+    "description": "이 워크스페이스의 요금제와 이번 달 녹음 사용량입니다.",
     "loading": "요금제를 불러오는 중",
     "notEnforced": "이 공간은 아직 요금제 대상이 아닙니다.",
     "kind": {
@@ -52,17 +41,14 @@
       "TEST": "시험 이용권",
       "GRACE": "미납 유예 중"
     },
-    "allowance": "녹음 제공량",
-    "period": "이용 기간",
-    "pastDue": "결제가 완료되지 않았습니다. 결제 상태를 확인해 주세요.",
-    "ended": "구독이 종료되었습니다.",
-    "cancelScheduled": "해지가 예약되어 {end}에 종료됩니다.",
     "plan": {
-      "paid": "{plan}",
-      "price": "{amount} / 월",
       "shared": "이 공간의 모든 멤버가 함께 씁니다",
       "autoRenew": "매월 자동으로 갱신됩니다",
-      "current": "현재 요금제"
+      "current": "사용 중",
+      "freePrice": "무료",
+      "perMonth": "/ 월",
+      "recording": "{allowance} 녹음",
+      "members": "멤버 수 제한 없음"
     },
     "teamInProgress": "팀의 구독 처리 중입니다. 끝난 뒤 다시 확인해 주세요.",
     "checking": {
@@ -77,13 +63,12 @@
       "title": "결제 확인이 필요합니다",
       "body": "자동 취소를 끝내지 못했습니다. 다시 결제하지 말고 문의·피드백으로 알려 주세요."
     },
-    "askAdmin": "구매와 결제 관리는 관리자만 할 수 있습니다. 관리자에게 요청해 주세요.",
+    "askAdmin": "구매와 결제 관리는 관리자만 할 수 있습니다.",
     "start": "{plan} 시작하기",
     "continueSetup": "진행 중인 카드 등록 이어가기",
     "viewResult": "진행 상황 보기",
     "cancelSetup": "등록 취소",
     "refresh": "상태 다시 확인",
-    "grace": "결제가 완료되지 않았습니다. {end}까지는 계속 쓸 수 있고 이후 Free로 바뀝니다.",
     "userRefunding": {
       "title": "결제 취소 처리 중입니다",
       "body": "요청한 환불을 처리하고 있습니다. 다음 결제는 이미 멈췄습니다. 취소가 끝나면 Free로 바뀝니다."
@@ -95,25 +80,32 @@
     "userRefundFailed": {
       "title": "결제 취소를 끝내지 못했습니다",
       "body": "다음 결제는 멈춘 상태로 남아 있습니다. 문의·피드백으로 알려 주세요."
+    },
+    "currentLabel": "현재 요금제",
+    "compare": "요금제 비교",
+    "openPayment": "결제 관리",
+    "badge": {
+      "pastDue": "미납",
+      "cancelScheduled": "해지 예정"
+    },
+    "line": {
+      "free": "매달 {allowance}까지 녹음할 수 있습니다.",
+      "next": "다음 결제 {date} · {amount}",
+      "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다.",
+      "grace": "결제가 완료되지 않았습니다. {end}까지 쓸 수 있습니다.",
+      "pastDue": "결제가 완료되지 않았습니다."
     }
   },
   "checkout": {
-    "title": "주문서",
+    "title": "주문 확인",
     "description": "주문 내용을 확인하고 동의한 뒤 카드를 등록합니다.",
     "loading": "주문서를 불러오는 중",
-    "order": "주문 내용",
-    "agreement": "동의",
     "notEnforced": "이 공간은 아직 요금제 대상이 아닙니다.",
     "askAdmin": "구매는 관리자만 할 수 있습니다. 관리자에게 요청해 주세요.",
     "inProgress": "팀의 구독 처리 중입니다. 끝난 뒤 다시 확인해 주세요.",
     "unavailable": "지금은 새로 구매할 수 없는 상태입니다.",
     "backToPlans": "요금제로 돌아가기",
-    "workspace": "대상 공간",
-    "product": "상품",
-    "productName": "{plan}",
-    "amount": "결제 금액",
-    "amountPerMonth": "{amount} / 월",
-    "allowance": "제공량",
+    "productName": "{plan} 월 구독",
     "shared": "이 공간의 모든 멤버가 함께 씁니다.",
     "autoRenew": "매월 같은 날 자동으로 결제되어 이용 기간이 갱신됩니다.",
     "cancelInfo": "해지하면 현재 이용 기간이 끝날 때까지 쓸 수 있고, 다음 갱신부터 결제되지 않습니다.",
@@ -136,17 +128,21 @@
       "title": "카드 변경",
       "description": "자동결제에 쓸 카드를 새로 등록합니다.",
       "loading": "카드 변경을 불러오는 중",
-      "summary": "변경 내용",
+      "summary": "{plan} 구독의 결제 카드",
       "current": "지금 카드",
       "nextCharge": "다음 결제",
       "noCharge": "카드만 바뀌고 지금 결제되지 않습니다.",
       "keepOnFail": "새 카드 등록이 실패하면 지금 카드가 그대로 유지됩니다.",
-      "pastDue": "미납 금액은 카드를 바꾼 뒤 요금제 화면의 「미납 결제」로 결제합니다.",
+      "pastDue": "미납 금액은 카드를 바꾼 뒤 요금제 탭의 「미납 결제」로 결제합니다.",
       "agreementLabel": "다음 결제부터 이 공간의 구독 금액(매월 {amount})이 새 카드로 자동 결제되는 데 동의합니다.",
       "submit": "동의하고 새 카드 등록",
       "unavailable": "지금은 카드를 바꿀 수 없는 상태입니다.",
-      "askAdmin": "카드 변경은 관리자만 할 수 있습니다. 관리자에게 요청해 주세요."
-    }
+      "askAdmin": "카드 변경은 관리자만 할 수 있습니다. 관리자에게 요청해 주세요.",
+      "back": "결제 관리"
+    },
+    "back": "요금제",
+    "perMonth": "/ 월",
+    "dueToday": "오늘 결제"
   },
   "setup": {
     "title": "카드 등록 결과",
@@ -160,7 +156,7 @@
     },
     "stale": "자동 확인을 멈췄습니다. 서버에서는 계속 처리하고 있으니 다시 확인해 주세요.",
     "recheck": "다시 확인",
-    "backToWorkspace": "요금제 화면으로 돌아가기",
+    "backToWorkspace": "요금제로 돌아가기",
     "restart": "새로 시작",
     "cancel": "취소",
     "cancelRestart": "취소하고 새로 시작",
@@ -238,7 +234,7 @@
       "completed": {
         "title": "카드를 바꿨습니다",
         "body": "지금 결제되지 않았습니다. 다음 결제부터 새 카드로 결제됩니다.",
-        "goPlans": "요금제 화면으로 가기"
+        "goPlans": "결제 관리로 가기"
       },
       "cardActionRequired": {
         "title": "카드를 바꾸지 못했습니다",
@@ -251,30 +247,29 @@
     }
   },
   "manage": {
-    "title": "구독 관리",
+    "title": "구독",
     "plan": "요금제",
     "planValue": "{plan} · {amount} / 월",
     "nextCharge": "다음 결제",
     "nextChargeValue": "{date} · {amount}",
     "noNextCharge": "없음",
-    "card": "결제 카드",
-    "noCard": "등록된 카드 없음",
-    "cardValue": "{issuer} {number}",
+    "card": "등록된 카드",
+    "noCard": "등록된 카드가 없습니다",
     "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다.",
     "notPayerHint": "구독 재개는 이 카드를 등록한 관리자만 할 수 있습니다.",
     "latestPayment": "최근 결제",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "결제 상세",
-    "changeCard": "카드 변경",
+    "changeCard": "변경",
     "cancel": "구독 해지",
     "resume": "구독 재개",
     "refund": "환불 요청",
-    "deleteMethod": "카드 삭제",
+    "deleteMethod": "삭제",
     "notice": {
       "stateChanged": "결제 상태가 바뀌었습니다. 최신 내용을 불러왔으니 다시 확인해 주세요.",
       "inProgress": "결제를 처리하는 중입니다. 끝난 뒤 다시 시도해 주세요.",
       "notPayer": "구독 재개는 이 카드를 등록한 관리자만 할 수 있습니다. 그 관리자에게 요청해 주세요.",
-      "methodInUse": "구독에 쓰는 카드라 지울 수 없습니다. 카드를 바꾸려면 「카드 변경」을 이용해 주세요.",
+      "methodInUse": "구독에 쓰는 카드라 지울 수 없습니다. 카드를 바꾸려면 「변경」을 이용해 주세요.",
       "canceled": "구독을 해지했습니다. {end}까지 쓸 수 있습니다.",
       "resumed": "구독을 재개했습니다. {date}에 {amount}이 결제됩니다.",
       "deleted": "카드를 삭제했습니다."
@@ -306,7 +301,14 @@
       "body": "자동결제에 쓰는 카드 정보만 지우고 결제 내역은 남습니다.",
       "after": "다시 구독하려면 카드를 새로 등록해야 합니다.",
       "confirm": "삭제"
-    }
+    },
+    "pageTitle": "결제 관리",
+    "pageDescription": "결제 수단과 구독, 결제 내역을 관리합니다.",
+    "loading": "결제 정보를 불러오는 중",
+    "methodTitle": "결제 수단",
+    "empty": "등록된 결제 수단이 없습니다. 요금제를 시작하면 카드가 등록됩니다.",
+    "openPlans": "요금제 보기",
+    "cancelHint": "해지해도 {end}까지는 계속 쓸 수 있습니다."
   },
   "paymentStatus": {
     "SUCCEEDED": "완료",
@@ -322,18 +324,14 @@
     "loading": "결제 상세를 불러오는 중",
     "notFound": "이 공간에서 이 결제를 찾을 수 없습니다.",
     "askAdmin": "결제 상세는 관리자만 볼 수 있습니다.",
-    "back": "요금제로 돌아가기",
-    "summary": "결제 내용",
+    "back": "결제 관리",
     "workspace": "공간",
-    "kind": "종류",
     "kindValue": {
       "PURCHASE": "첫 구매",
       "RENEWAL": "월 갱신"
     },
-    "amount": "금액",
     "period": "이용 기간",
-    "completedAt": "결제 시각",
-    "status": "상태",
+    "status": "사유",
     "card": "카드",
     "refund": "환불",
     "refundValue": "{status} · {origin}",
@@ -342,7 +340,7 @@
       "COMPENSATION": "자동 취소",
       "RECONCILIATION": "결제 확인 뒤 취소"
     },
-    "errorCode": "사유 코드: {code}",
+    "errorCode": "코드 {code}",
     "then": "당시 결과",
     "now": "현재 상태",
     "thenPaid": "결제 완료",
@@ -354,13 +352,9 @@
   },
   "history": {
     "title": "결제 내역",
-    "description": "내가 결제한 내역입니다. 나갔거나 지운 공간의 결제도 결제 때의 공간 이름으로 보입니다.",
+    "description": "내가 결제한 내역입니다. 다른 워크스페이스에서 결제한 것도 결제 때의 이름으로 함께 보입니다.",
     "loading": "결제 내역을 불러오는 중",
     "empty": "아직 결제한 내역이 없습니다.",
-    "date": "날짜",
-    "workspace": "공간",
-    "amount": "금액",
-    "status": "상태",
     "noDate": "확인 중"
   }
 }

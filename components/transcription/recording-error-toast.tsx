@@ -10,6 +10,7 @@ import { useRecording } from "@/components/transcription/recording-provider";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
+import { pushSettings } from "@/lib/workspace/settings-url";
 import { openSitePage } from "@/lib/desktop/open-site-page";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { localePath } from "@/lib/i18n/locales";
@@ -29,7 +30,6 @@ export function RecordingErrorToast() {
 function QuotaExceededToast() {
   const t = useTranslations("recording.errorToast");
   const { error, activeWorkspaceId: workspaceId } = useRecording();
-  const router = useRouter();
   const workspace = useGetWorkspace(workspaceId ?? "", {
     query: { enabled: Boolean(workspaceId) },
   });
@@ -52,13 +52,13 @@ function QuotaExceededToast() {
               label: t("quotaUpgrade"),
               onClick: () => {
                 billingEvents.quotaUpgradeClicked(workspaceId);
-                router.push(`/w/${workspaceId}/billing`);
+                pushSettings("billing");
               },
             },
           }
         : { description: t("quotaAskAdmin") }),
     });
-  }, [error, workspaceId, settled, isAdmin, router, t]);
+  }, [error, workspaceId, settled, isAdmin, t]);
 
   return null;
 }

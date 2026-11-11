@@ -2,16 +2,18 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { ArrowRight, Check, LockKeyhole } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {
   BillingNotice,
   TestPaymentNotice,
 } from "@/components/billing/billing-parts";
+import { BackLink } from "@/components/billing/back-link";
 import {
-  BillingScreen,
-  BillingSection,
-} from "@/components/billing/billing-screen";
+  SETTINGS_LIST,
+  SettingsHeader,
+} from "@/components/settings/settings-layout";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataBoundary } from "@/components/ui/data-boundary";
@@ -34,16 +36,20 @@ import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 type Purpose = "PURCHASE" | "REPLACE";
 
 /**
- * `/w/{workspaceId}/billing/checkout` — 주문서·동의. `/w/{workspaceId}/billing/card` 는 같은 화면의 카드 변경(`REPLACE`)이다 —
- * 카드만 새로 등록하고 지금 청구하지 않는다(문구·분석·진입 조건이 구매와 갈린다). **금액·상품은 서버 응답만 그린다**(화면에 값을 적어 두지 않는다).
+ * 설정 창 안의 주문 확인·동의(구매 `PURCHASE`)와 카드 변경(`REPLACE`). 카드 변경은 카드만 새로 등록하고 지금 청구하지 않는다
+ * (문구·분석·진입 조건이 구매와 갈린다). **금액·상품은 서버 응답만 그린다**(화면에 값을 적어 두지 않는다).
  * 동의 전에는 구매할 수 없다. requestKey 는 이 화면이 사용자의 한 번의 의도마다 하나 만든다(`createRequestKey`).
+ * 카드 입력만 결제 대행사 창으로 나가고, 돌아오면 등록 결과 화면(`/billing/setups/{id}`)이 받는다.
  */
-export function BillingCheckoutPage({
+export function BillingCheckout({
   workspaceId,
-  purpose = "PURCHASE",
+  purpose,
+  onBack,
 }: {
   workspaceId: string;
-  purpose?: Purpose;
+  purpose: Purpose;
+  /** 들어온 탭(요금제·결제 관리)의 첫 화면으로. */
+  onBack: () => void;
 }) {
   const t = useTranslations("billing.checkout");
   const replace = purpose === "REPLACE";
@@ -52,22 +58,30 @@ export function BillingCheckoutPage({
     if (role && !replace) billingEvents.checkoutEntered(workspaceId, role);
   }, [workspaceId, role, replace]);
   return (
-    <BillingScreen
-      title={replace ? t("replace.title") : t("title")}
-      description={replace ? t("replace.description") : t("description")}
-    >
+    <div>
+      <BackLink onClick={onBack}>
+        {replace ? t("replace.back") : t("back")}
+      </BackLink>
+      <SettingsHeader
+        title={replace ? t("replace.title") : t("title")}
+        description={replace ? t("replace.description") : t("description")}
+      />
       <DataBoundary
         resetKeys={[workspaceId]}
         fallback={
           <Skeleton
             aria-label={replace ? t("replace.loading") : t("loading")}
-            className="h-80 w-full"
+            className="h-80 w-full rounded-panel"
           />
         }
       >
-        <CheckoutContent workspaceId={workspaceId} purpose={purpose} />
+        <CheckoutContent
+          workspaceId={workspaceId}
+          purpose={purpose}
+          onBack={onBack}
+        />
       </DataBoundary>
-    </BillingScreen>
+    </div>
   );
 }
 
@@ -76,9 +90,11 @@ type Notice = "stateChanged" | "inProgress" | "unsupported";
 function CheckoutContent({
   workspaceId,
   purpose,
+  onBack,
 }: {
   workspaceId: string;
   purpose: Purpose;
+  onBack: () => void;
 }) {
   const replace = purpose === "REPLACE";
   const t = useTranslations("billing.checkout");
@@ -127,13 +143,9 @@ function CheckoutContent({
     return (
       <BillingNotice>
         <p>{replace ? t("replace.unavailable") : t("unavailable")}</p>
-        <LinkButton
-          href={`/w/${workspaceId}/billing`}
-          variant="outline"
-          className="mt-3"
-        >
-          {t("backToPlans")}
-        </LinkButton>
+        <Button variant="outline" className="mt-3" onClick={onBack}>
+          {replace ? t("replace.back") : t("backToPlans")}
+        </Button>
       </BillingNotice>
     );
   }
@@ -207,12 +219,47 @@ function CheckoutContent({
 
   const period = billing.currentPeriod;
   const card = format.card(billing.detail?.maskedCard);
+  const points = replace
+    ? [
+        t("replace.noCharge"),
+        t("replace.keepOnFail"),
+        billing.status === "PAST_DUE" ? t("replace.pastDue") : null,
+      ]
+    : [
+        format.allowance(product.recordingAllowanceMinutes),
+        t("shared"),
+        t("autoRenew"),
+        t("cancelInfo"),
+      ];
   return (
-    <div className="flex flex-col gap-10">
-      {replace ? (
-        <BillingSection title={t("replace.summary")}>
-          <dl className="grid gap-3 rounded-panel border border-[var(--el-hairline)] bg-white p-5 text-sm">
-            <Row label={t("workspace")} value={workspace?.name ?? ""} />
+    <div className="flex flex-col gap-6">
+      <div className={SETTINGS_LIST}>
+        <div className="flex items-center justify-between gap-4 px-5 py-5">
+          <div className="min-w-0">
+            <p className="truncate text-base font-medium text-[var(--el-ink)]">
+              {replace
+                ? (workspace?.name ?? "")
+                : t("productName", { plan: planName(product.planCode) })}
+            </p>
+            <p className="mt-1 truncate text-sm text-[var(--el-muted)]">
+              {replace
+                ? t("replace.summary", { plan: planName(product.planCode) })
+                : (workspace?.name ?? "")}
+            </p>
+          </div>
+          {replace ? null : (
+            <p className="flex shrink-0 items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-[28px] leading-8 font-light tracking-[-0.03em] text-[var(--el-ink)]">
+                {format.money(product.amountKrw)}
+              </span>
+              <span className="text-sm text-[var(--el-muted)]">
+                {t("perMonth")}
+              </span>
+            </p>
+          )}
+        </div>
+        {replace && (card || (billing.status === "ACTIVE" && period)) ? (
+          <dl className="grid gap-2.5 px-5 py-4 text-sm">
             {card ? <Row label={t("replace.current")} value={card} /> : null}
             {billing.status === "ACTIVE" &&
             !billing.cancelAtPeriodEnd &&
@@ -223,64 +270,50 @@ function CheckoutContent({
               />
             ) : null}
           </dl>
-          <ul className="mt-3 grid gap-1 text-sm text-[var(--el-muted)]">
-            <li>{t("replace.noCharge")}</li>
-            <li>{t("replace.keepOnFail")}</li>
-            {billing.status === "PAST_DUE" ? (
-              <li>{t("replace.pastDue")}</li>
-            ) : null}
-          </ul>
-        </BillingSection>
-      ) : (
-        <BillingSection title={t("order")}>
-          <dl className="grid gap-3 rounded-panel border border-[var(--el-hairline)] bg-white p-5 text-sm">
-            <Row label={t("workspace")} value={workspace?.name ?? ""} />
-            <Row
-              label={t("product")}
-              value={t("productName", { plan: planName(product.planCode) })}
-            />
-            <Row
-              label={t("amount")}
-              value={t("amountPerMonth", {
-                amount: format.money(product.amountKrw),
-              })}
-            />
-            <Row
-              label={t("allowance")}
-              value={format.allowance(product.recordingAllowanceMinutes)}
-            />
-          </dl>
-          <ul className="mt-3 grid gap-1 text-sm text-[var(--el-muted)]">
-            <li>{t("shared")}</li>
-            <li>{t("autoRenew")}</li>
-            <li>{t("cancelInfo")}</li>
-          </ul>
-          <div className="mt-3">
-            <TestPaymentNotice
-              notice={product.testPaymentNotice ?? undefined}
-            />
-          </div>
-        </BillingSection>
-      )}
-      <BillingSection title={t("agreement")}>
-        {openSetupId ? (
-          <BillingNotice tone="warn" title={t("openSetup.title")}>
-            <p>{t("openSetup.body")}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <LinkButton
-                href={`/billing/setups/${openSetupId}`}
-                variant="outline"
-              >
-                {t("openSetup.view")}
-              </LinkButton>
-              <Button onClick={restart} loading={cancel.isPending}>
-                {t("openSetup.restart")}
-              </Button>
-            </div>
-          </BillingNotice>
         ) : null}
-        <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-[var(--el-ink)]">
+        <ul className="grid gap-2.5 px-5 py-4 text-sm leading-5 text-[var(--el-body)]">
+          {points.filter(Boolean).map((point) => (
+            <li key={point} className="flex items-start gap-2">
+              <Check
+                className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
+                aria-hidden
+              />
+              <span>{point}</span>
+            </li>
+          ))}
+        </ul>
+        {replace ? null : (
+          <div className="flex items-baseline justify-between gap-4 bg-[var(--el-canvas-soft)] px-5 py-3.5 text-sm">
+            <span className="text-[var(--el-muted)]">{t("dueToday")}</span>
+            <span className="font-medium whitespace-nowrap text-[var(--el-ink)]">
+              {format.money(product.amountKrw)}
+            </span>
+          </div>
+        )}
+      </div>
+      {replace ? null : (
+        <TestPaymentNotice notice={product.testPaymentNotice ?? undefined} />
+      )}
+      {openSetupId ? (
+        <BillingNotice tone="warn" title={t("openSetup.title")}>
+          <p>{t("openSetup.body")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <LinkButton
+              href={`/billing/setups/${openSetupId}`}
+              variant="outline"
+            >
+              {t("openSetup.view")}
+            </LinkButton>
+            <Button onClick={restart} loading={cancel.isPending}>
+              {t("openSetup.restart")}
+            </Button>
+          </div>
+        </BillingNotice>
+      ) : null}
+      <div className="flex flex-col gap-4">
+        <label className="flex cursor-pointer items-start gap-2.5 text-sm leading-5 text-[var(--el-ink)]">
           <Checkbox
+            className="mt-0.5"
             checked={agreed}
             onCheckedChange={(checked) => {
               setAgreed(checked);
@@ -294,26 +327,28 @@ function CheckoutContent({
           <span>{agreementLabel}</span>
         </label>
         {notice ? (
-          <BillingNotice tone="warn" className="mt-4">
-            {t(`notice.${notice}`)}
-          </BillingNotice>
+          <BillingNotice tone="warn">{t(`notice.${notice}`)}</BillingNotice>
         ) : null}
-        <Button
-          className="mt-4"
-          disabled={!agreed || Boolean(openSetupId)}
-          aria-describedby={agreed ? undefined : "billing-agree-hint"}
-          loading={create.isPending}
-          onClick={start}
-        >
-          {replace ? t("replace.submit") : t("submit")}
-        </Button>
-        <span id="billing-agree-hint" className="sr-only">
-          {t("agreeFirst")}
-        </span>
-        <p className="mt-3 text-xs leading-5 text-[var(--el-muted)]">
-          {t("cardSafe")}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button
+            className="h-10 px-4"
+            disabled={!agreed || Boolean(openSetupId)}
+            aria-describedby={agreed ? undefined : "billing-agree-hint"}
+            loading={create.isPending}
+            onClick={start}
+          >
+            {replace ? t("replace.submit") : t("submit")}
+            <ArrowRight aria-hidden />
+          </Button>
+          <span id="billing-agree-hint" className="sr-only">
+            {t("agreeFirst")}
+          </span>
+        </div>
+        <p className="flex items-start gap-1.5 text-xs leading-5 text-[var(--el-muted)]">
+          <LockKeyhole className="mt-1 size-3 shrink-0" aria-hidden />
+          <span>{t("cardSafe")}</span>
         </p>
-      </BillingSection>
+      </div>
     </div>
   );
 }
