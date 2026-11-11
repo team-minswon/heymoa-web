@@ -366,7 +366,11 @@ describe("contract sync 2026-07-29", () => {
     // APP-1383(server APP-1378)에서 탈퇴 처리 목록 `users/me/deletion-plan` 한 경로가 늘었다 (91 → 92).
     // APP-1409 에서 내 대화 삭제 `agent-chats/{chatId}`(DELETE) 한 경로가 늘었다 (92 → 93).
     // APP-1392 에서 광고 수신 동의 `notification-settings/marketing-email`(PUT) 한 경로가 늘었다 (93 → 94).
-    expect(paths).toHaveLength(94);
+    // PRO-75(server APP-1564 계약)에서 결제 여덟 경로가 늘었다 (94 → 102) — `billing/returns/{success,fail}`(PG 복귀 callback),
+    // `workspaces/{workspaceId}/billing`(조회)·`.../billing/setups`(등록 열기)·`.../setups/{setupId}/{complete,cancel}`·
+    // `.../billing/cycles/{cycleId}/attempts`(다시 결제), `me/billing/setups/{setupId}`(등록 상태).
+    // 같은 사본에 이미 있던 `realtime/tickets`(APP-1546)가 함께 들어와 한 경로가 더 늘었다 (102 → 103).
+    expect(paths).toHaveLength(103);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

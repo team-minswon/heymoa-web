@@ -36,7 +36,7 @@ describe("결제 이벤트", () => {
     expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_started">>();
     expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_resulted">>();
     // @ts-expect-error 인증 키를 실을 수 없다
-    track("billing_card_setup_started", { workspace_id: "W1", provider: "toss", authKey: "k" });
+    track("billing_card_setup_started", { workspace_id: "W1", provider: "TOSS", authKey: "k" });
   });
 });
 

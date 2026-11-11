@@ -3,6 +3,7 @@ import { parse } from "yaml";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { setupServer } from "msw/node";
 
+import { billingHandlers, billingMock } from "@/lib/mocks/billing";
 import { CONTEXT_SNAPSHOT } from "@/lib/mocks/proposals";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
@@ -27,7 +28,8 @@ const server = setupServer(
   ...meetingFlowHandlers,
   ...projectTaskHandlers,
   ...restHandlers,
-  ...termHandlers
+  ...termHandlers,
+  ...billingHandlers
 );
 const contract = parse(readFileSync("openapi3.yml", "utf8"));
 
@@ -128,7 +130,7 @@ function jsonGetOperations(): GetOperation[] {
  * 채울 수 없는 `{param}`이 남은 operation은 `skipped`로 돌려준다 — 조용히 빠뜨리면
  * "전부 검사했다"로 읽힌다.
  */
-function contractSamples() {
+async function contractSamples() {
   const workspaces = mockDb.listWorkspaces();
   const tuples: Array<Record<string, string>> = [];
   for (const { workspaceId } of workspaces) {
@@ -142,6 +144,10 @@ function contractSamples() {
       }
     }
   }
+
+  // 결제(PRO-75)는 상태마다 필드가 null 이 된다. **실제 흐름을 밟아** 상태가 다른 공간을 만든다 — 공간 조회는 아래 `billingWorkspaces`
+  // 를 따로 표본에 넣고(새 공간이 다른 응답의 표본을 늘리지 않게 `tuples` 는 이미 만들어 뒀다), 등록 조회는 `setupId` 로 전개된다.
+  const billingWorkspaces = await seedBilling(workspaces[0].workspaceId);
 
   const notes = tuples.filter((tuple) => tuple.noteId).map((t) => t.noteId!);
 
@@ -378,6 +384,7 @@ function contractSamples() {
         // 검토 항목의 원본 명제는 판이 여럿인 것부터 앞에 선다. 앞의 몇 개로 이력 모양이 다 나온다.
         proposalId: [...proposalIds, ...meetingFlow.proposalIds().slice(0, 12)],
         taskId: projectTasks.ids(),
+        setupId: billingMock.setupIds(),
         // 사용 내역(APP-826) — 한 쪽을 넘는 연결과 몇 줄뿐인 연결이 커서의 양쪽을 낸다
         delegationId: mockDb
           .listAgentDelegations()
@@ -413,10 +420,72 @@ function contractSamples() {
     }
     if (filled === 0) skipped.push(`${path} — 채울 수 없는 param: ${params}`);
   }
+  for (const workspaceId of billingWorkspaces)
+    samples.push([
+      "WorkspaceBillingResponse",
+      `/v1/workspaces/${workspaceId}/billing`,
+    ]);
   return {
     samples: [...new Map(samples.map((s) => [s[1], s])).values()],
     skipped,
   };
+}
+
+/**
+ * 결제 목을 실제 호출로 여러 상태에 놓는다. 공간마다 한 상태다 — 취소된 등록·진행 중 등록(첫 공간), 완료, 거절, 결과 확인 지연,
+ * 권한 상실. 돌려주는 것은 새로 만든 공간 id 다.
+ */
+async function seedBilling(firstWorkspaceId: string) {
+  const call = (path: string, init?: { method: string; body?: unknown }) =>
+    fetch(`http://localhost${path}`, {
+      method: init?.method ?? "GET",
+      headers: { "Content-Type": "application/json" },
+      body: init?.body ? JSON.stringify(init.body) : undefined,
+    });
+  const open = async (workspaceId: string, requestKey: string) => {
+    const response = await call(`/v1/workspaces/${workspaceId}/billing/setups`, {
+      method: "POST",
+      body: {
+        requestKey,
+        purpose: "PURCHASE",
+        expectedProductVersion: "TEST_MONTHLY_V1",
+        agreementVersion: "BILLING_TEST_V1",
+      },
+    });
+    return (await response.json()).data.setupId as string;
+  };
+  const run = async (
+    scenario: Parameters<typeof billingMock.setScenario>[0],
+    name: string,
+    polls: number
+  ) => {
+    const { workspaceId } = mockDb.createWorkspace({ name });
+    billingMock.setScenario(scenario);
+    const setupId = await open(workspaceId, `key-${name}`);
+    await call(
+      `/v1/workspaces/${workspaceId}/billing/setups/${setupId}/complete`,
+      { method: "POST" }
+    );
+    for (let i = 0; i < polls; i += 1)
+      await call(`/v1/me/billing/setups/${setupId}`);
+    return workspaceId;
+  };
+  billingMock.setScenario("ok");
+  // 첫 공간: 취소한 등록(failureCode 가 있는 쪽) 뒤에 다시 연 진행 중 등록(`mySetupId` 가 있는 쪽)
+  const canceled = await open(firstWorkspaceId, "key-canceled");
+  await call(
+    `/v1/workspaces/${firstWorkspaceId}/billing/setups/${canceled}/cancel`,
+    { method: "POST" }
+  );
+  await open(firstWorkspaceId, "key-open");
+  const created = [
+    await run("ok", "결제 완료", 4),
+    await run("decline", "결제 거절", 3),
+    await run("unknown", "결제 확인 지연", 3),
+    await run("lost", "권한 상실", 1),
+  ];
+  billingMock.setScenario(null);
+  return created;
 }
 
 /**
@@ -569,7 +638,7 @@ describe("nullable 목 표본", () => {
 
   it("계약의 nullable 필드마다 null과 비-null을 모두 보여준다", async () => {
     const observed = new Map<string, { total: number; nulls: number }>();
-    const { samples, skipped } = contractSamples();
+    const { samples, skipped } = await contractSamples();
     const answered = new Set<string>();
 
     // 조용히 좁아지지 않게 못 부른 operation을 남긴다.

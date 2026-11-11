@@ -1,17 +1,39 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 
-import { BillingScreen, BillingSection } from "@/components/billing/billing-screen";
+import {
+  BillingNotice,
+  RetryPaymentButton,
+  TestPaymentNotice,
+  canRetryPayment,
+} from "@/components/billing/billing-parts";
+import {
+  BillingScreen,
+  BillingSection,
+} from "@/components/billing/billing-screen";
+import { Button, LinkButton } from "@/components/ui/button";
+import { DataBoundary } from "@/components/ui/data-boundary";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCancelBillingSetup } from "@/lib/api/generated/billing/billing";
+import type { WorkspaceBillingResponseData } from "@/lib/api/generated/models";
+import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
+import { okData } from "@/lib/api/ok-data";
+import { paidPlanName } from "@/lib/billing/plan-name";
 import { billingEvents } from "@/lib/billing/analytics";
+import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
+import { useBillingFormat } from "@/lib/billing/use-billing-format";
+import { usePollWindow } from "@/lib/billing/use-poll-window";
+import {
+  billingInProgress,
+  useWorkspaceBilling,
+} from "@/lib/billing/use-workspace-billing";
 
 /**
- * `/w/{workspaceId}/billing` — 요금제와 현재 상태.
- *
- * 다음 묶음(API 연결)이 채울 자리: 「현재 상태」(플랜·잔여량, ADMIN 에게는 청구·관리 추가),
- * 「요금제」(상품 비교 + 주문서로 가는 링크 `/w/{workspaceId}/billing/checkout`).
- * Free·ENDED 는 정상 상태이고, 진행 중·확인 중 업무가 있으면 새 주문서 대신 기존 결과로 보낸다.
+ * `/w/{workspaceId}/billing` — 요금제와 현재 상태. 값(가격·제공량·문구 종류)은 전부 서버 응답이다.
+ * Free·ENDED 는 정상 상태다. 구매·관리 버튼은 서버가 준 `allowedActions`(ADMIN 만 받는다)로 가른다.
  */
 export function WorkspaceBillingPage({ workspaceId }: { workspaceId: string }) {
   const t = useTranslations("billing.page");
@@ -20,8 +42,279 @@ export function WorkspaceBillingPage({ workspaceId }: { workspaceId: string }) {
   }, [workspaceId]);
   return (
     <BillingScreen title={t("title")} description={t("description")}>
-      <BillingSection title={t("status")} />
-      <BillingSection title={t("plans")} />
+      <DataBoundary
+        resetKeys={[workspaceId]}
+        fallback={<PlansSkeleton label={t("loading")} />}
+      >
+        <PlansContent workspaceId={workspaceId} />
+      </DataBoundary>
     </BillingScreen>
+  );
+}
+
+function PlansSkeleton({ label }: { label: string }) {
+  return (
+    <div aria-label={label} className="flex flex-col gap-10">
+      <Skeleton className="h-28 w-full" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
+}
+
+function PlansContent({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations("billing.page");
+  const poll = usePollWindow();
+  const billing = useWorkspaceBilling(workspaceId, (data) =>
+    !poll.expired && data && billingInProgress(data) ? 5000 : false
+  );
+  const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
+  const isAdmin = workspace?.role === "ADMIN";
+
+  if (!billing.enforced) {
+    return <BillingNotice>{t("notEnforced")}</BillingNotice>;
+  }
+  return (
+    <>
+      <BillingSection title={t("status")}>
+        <StatusCard billing={billing} />
+      </BillingSection>
+      <BillingSection title={t("plans")}>
+        <Plans
+          workspaceId={workspaceId}
+          billing={billing}
+          isAdmin={isAdmin}
+          onRestartPolling={poll.restart}
+        />
+      </BillingSection>
+    </>
+  );
+}
+
+function StatusCard({ billing }: { billing: WorkspaceBillingResponseData }) {
+  const t = useTranslations("billing.page");
+  const format = useBillingFormat();
+  const kind = billing.entitlement?.kind ?? "FREE";
+  const period = billing.entitlement?.period ?? billing.currentPeriod;
+  return (
+    <div className="rounded-panel border border-[var(--el-hairline)] bg-white p-5">
+      <p className="text-lg font-medium text-[var(--el-ink)]">
+        {t(`kind.${kind}`)}
+      </p>
+      <dl className="mt-3 grid gap-1.5 text-sm text-[var(--el-muted)]">
+        {billing.entitlement ? (
+          <div>
+            <dt className="sr-only">{t("allowance")}</dt>
+            <dd>
+              {format.allowance(billing.entitlement.recordingAllowanceMinutes)}
+            </dd>
+          </div>
+        ) : null}
+        {period ? (
+          <div>
+            <dt className="sr-only">{t("period")}</dt>
+            <dd>{format.period(period)}</dd>
+          </div>
+        ) : null}
+        {billing.status === "PAST_DUE" ? <div>{t("pastDue")}</div> : null}
+        {billing.status === "ENDED" ? <div>{t("ended")}</div> : null}
+        {billing.cancelAtPeriodEnd && period ? (
+          <div>{t("cancelScheduled", { end: format.date(period.end) })}</div>
+        ) : null}
+      </dl>
+    </div>
+  );
+}
+
+function Plans({
+  workspaceId,
+  billing,
+  isAdmin,
+  onRestartPolling,
+}: {
+  workspaceId: string;
+  billing: WorkspaceBillingResponseData;
+  isAdmin: boolean;
+  onRestartPolling: () => void;
+}) {
+  const t = useTranslations("billing.page");
+  const format = useBillingFormat();
+  const product = billing.product;
+  const isPaid =
+    billing.entitlement?.kind === "PAID" ||
+    billing.entitlement?.kind === "TEST";
+  const freeAllowance =
+    billing.entitlement?.kind === "FREE"
+      ? billing.entitlement.recordingAllowanceMinutes
+      : undefined;
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PlanCard name={t("plan.free")} current={!isPaid}>
+          <li>
+            {freeAllowance === undefined
+              ? t("plan.freeBasic")
+              : format.allowance(freeAllowance)}
+          </li>
+        </PlanCard>
+        {product ? (
+          <PlanCard
+            name={t("plan.paid", { plan: paidPlanName(product.planCode) })}
+            current={isPaid}
+            price={t("plan.price", { amount: format.money(product.amountKrw) })}
+          >
+            <li>{format.allowance(product.recordingAllowanceMinutes)}</li>
+            <li>{t("plan.shared")}</li>
+            <li>{t("plan.autoRenew")}</li>
+          </PlanCard>
+        ) : null}
+      </div>
+      <TestPaymentNotice notice={product?.testPaymentNotice ?? undefined} />
+      <Actions
+        workspaceId={workspaceId}
+        billing={billing}
+        isAdmin={isAdmin}
+        onRestartPolling={onRestartPolling}
+        isPaid={isPaid}
+      />
+    </div>
+  );
+}
+
+function PlanCard({
+  name,
+  price,
+  current,
+  children,
+}: {
+  name: string;
+  price?: string;
+  current: boolean;
+  children: React.ReactNode;
+}) {
+  const t = useTranslations("billing.page");
+  return (
+    <div
+      aria-current={current || undefined}
+      className="rounded-panel border border-[var(--el-hairline)] bg-white p-5 aria-[current]:border-[var(--el-ink)]"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-base font-medium text-[var(--el-ink)]">{name}</h4>
+        {current ? (
+          <span className="text-xs text-[var(--el-muted)]">
+            {t("plan.current")}
+          </span>
+        ) : null}
+      </div>
+      {price ? (
+        <p className="mt-1 text-2xl font-light text-[var(--el-ink)]">{price}</p>
+      ) : null}
+      <ul className="mt-3 grid gap-1 text-sm text-[var(--el-muted)]">
+        {children}
+      </ul>
+    </div>
+  );
+}
+
+function Actions({
+  workspaceId,
+  billing,
+  isAdmin,
+  isPaid,
+  onRestartPolling,
+}: {
+  workspaceId: string;
+  billing: WorkspaceBillingResponseData;
+  isAdmin: boolean;
+  isPaid: boolean;
+  onRestartPolling: () => void;
+}) {
+  const t = useTranslations("billing.page");
+  const queryClient = useQueryClient();
+  const cancel = useCancelBillingSetup();
+  const actions = billing.allowedActions;
+  const detail = billing.detail;
+  const checking =
+    billing.latestAttemptStatus === "PENDING" ||
+    billing.latestAttemptStatus === "PROCESSING" ||
+    billing.latestAttemptStatus === "UNKNOWN";
+
+  const cancelSetup = async () => {
+    if (!billing.mySetupId) return;
+    await cancel
+      .mutateAsync({ workspaceId, setupId: billing.mySetupId })
+      .then(() => invalidateWorkspaceBilling(queryClient, workspaceId))
+      .catch(() => undefined);
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-3">
+      {billing.teamSetupInProgress ? (
+        <BillingNotice>{t("teamInProgress")}</BillingNotice>
+      ) : null}
+      {checking ? (
+        <BillingNotice title={t("checking.title")}>
+          {t("checking.body")}
+        </BillingNotice>
+      ) : null}
+      {billing.status === "PAST_DUE" && !checking ? (
+        <BillingNotice tone="warn">{t("pastDue")}</BillingNotice>
+      ) : null}
+      {!isAdmin ? <BillingNotice>{t("askAdmin")}</BillingNotice> : null}
+      {isAdmin && actions.includes("START_PURCHASE") && !isPaid ? (
+        <LinkButton href={`/w/${workspaceId}/billing/checkout`}>
+          {t("start", { plan: paidPlanName(billing.product?.planCode) })}
+        </LinkButton>
+      ) : null}
+      {isAdmin && billing.mySetupId && actions.includes("CONTINUE_SETUP") ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <LinkButton href={`/billing/setups/${billing.mySetupId}`}>
+            {t("continueSetup")}
+          </LinkButton>
+          {actions.includes("CANCEL_SETUP") ? (
+            <Button
+              variant="outline"
+              onClick={cancelSetup}
+              loading={cancel.isPending}
+            >
+              {t("cancelSetup")}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {isAdmin &&
+      billing.mySetupId &&
+      !actions.includes("CONTINUE_SETUP") &&
+      actions.includes("REFRESH_STATUS") ? (
+        <LinkButton
+          href={`/billing/setups/${billing.mySetupId}`}
+          variant="outline"
+        >
+          {t("viewResult")}
+        </LinkButton>
+      ) : null}
+      {isAdmin &&
+      actions.includes("RETRY_PAYMENT") &&
+      detail &&
+      canRetryPayment(detail) &&
+      billing.product ? (
+        <RetryPaymentButton
+          workspaceId={workspaceId}
+          detail={detail}
+          amountKrw={billing.product.amountKrw}
+          onRetried={onRestartPolling}
+        />
+      ) : null}
+      {isAdmin && actions.includes("REFRESH_STATUS") ? (
+        <Button
+          variant="outline"
+          onClick={() => {
+            onRestartPolling();
+            void invalidateWorkspaceBilling(queryClient, workspaceId);
+          }}
+        >
+          {t("refresh")}
+        </Button>
+      ) : null}
+    </div>
   );
 }

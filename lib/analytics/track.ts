@@ -1,5 +1,6 @@
 import posthog, { type CaptureResult } from "posthog-js";
 
+import type { BillingSetupCreatedResponseDataProvider } from "@/lib/api/generated/models/billingSetupCreatedResponseDataProvider";
 import type { NotificationListResponseDataNotificationsItemType } from "@/lib/api/generated/models/notificationListResponseDataNotificationsItemType";
 import type { NotificationSettingsResponseDataItemsItemChannelsItemChannel } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemChannelsItemChannel";
 import type { NotificationSettingsResponseDataItemsItemType } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemType";
@@ -118,8 +119,8 @@ export type AnalyticsEvent =
   | "help_code_copied"
   | "help_faq_opened";
 
-/** 결제 이벤트의 PG. 서버 계약이 나오면 생성 타입으로 바꾼다. */
-export type BillingProvider = "toss" | "payple";
+/** 결제 이벤트의 PG. 서버 enum(`FAKE` 포함) 그대로다. */
+export type BillingProvider = BillingSetupCreatedResponseDataProvider;
 /** 카드 등록 결과 화면이 보인 상태. `unknown` 은 확인 중이라 성패를 아직 모르는 것이다. */
 export type BillingSetupResult = "completed" | "declined" | "unknown";
 

@@ -1,25 +1,170 @@
 {
+  "loadFailed": "Couldn't load billing information.",
+  "format": {
+    "money": "KRW {amount}",
+    "unlimited": "Unlimited recording",
+    "minutes": "{count, number} recording minutes",
+    "period": "{start} until {end}"
+  },
+  "testNotice": {
+    "SIMULATED_NO_CHARGE": "This is a test payment. You won't actually be charged.",
+    "REAL_CARD_CHARGE_AUTO_CANCEL": "This is a test payment, but your card is actually authorized and then canceled automatically."
+  },
+  "retry": {
+    "button": "Retry payment ({amount})",
+    "changed": "The payment status changed. We've loaded the latest status; please review it again.",
+    "inProgress": "We're confirming the payment. Don't pay again."
+  },
   "settings": {
     "title": "Billing",
     "description": "Review this workspace's plan and usage.",
-    "openPage": "Plans and billing"
+    "openPage": "Plans and billing",
+    "loading": "Loading billing information",
+    "notEnforced": "This workspace isn't on a paid plan program yet.",
+    "teamInProgress": "Your team has a subscription in progress.",
+    "inProgress": "A payment is being processed."
   },
   "page": {
     "title": "Plans",
     "description": "Review this workspace's current status and plans.",
     "status": "Current status",
-    "plans": "Plans"
+    "plans": "Plans",
+    "loading": "Loading plans",
+    "notEnforced": "This workspace isn't on a paid plan program yet.",
+    "kind": {
+      "FREE": "Free",
+      "PAID": "Pro",
+      "LEGACY_ACCESS": "Existing access",
+      "TEST": "Test access"
+    },
+    "allowance": "Recording allowance",
+    "period": "Usage period",
+    "pastDue": "The payment hasn't gone through. Please check the payment status.",
+    "ended": "The subscription has ended.",
+    "cancelScheduled": "Cancellation is scheduled and it ends on {end}.",
+    "plan": {
+      "free": "Free",
+      "freeBasic": "Check your monthly allowance under usage",
+      "paid": "{plan}",
+      "price": "{amount} / month",
+      "shared": "Everyone in this workspace shares it",
+      "autoRenew": "Renews automatically every month",
+      "current": "Current plan"
+    },
+    "teamInProgress": "Your team has a subscription in progress. Check again when it's done.",
+    "checking": {
+      "title": "We're confirming the payment result",
+      "body": "Don't pay again. This screen updates when we're done."
+    },
+    "askAdmin": "Only admins can purchase and manage billing. Please ask an admin.",
+    "start": "Start {plan}",
+    "continueSetup": "Continue card registration",
+    "viewResult": "View progress",
+    "cancelSetup": "Cancel registration",
+    "refresh": "Check status again"
   },
   "checkout": {
     "title": "Checkout",
     "description": "Review your order, agree to the terms, then register a card.",
+    "loading": "Loading checkout",
     "order": "Order details",
-    "agreement": "Agreement"
+    "agreement": "Agreement",
+    "notEnforced": "This workspace isn't on a paid plan program yet.",
+    "askAdmin": "Only admins can purchase. Please ask an admin.",
+    "inProgress": "Your team has a subscription in progress. Check again when it's done.",
+    "unavailable": "A new purchase isn't available right now.",
+    "backToPlans": "Back to plans",
+    "workspace": "Workspace",
+    "product": "Product",
+    "productName": "{plan}",
+    "amount": "Price",
+    "amountPerMonth": "{amount} / month",
+    "allowance": "Allowance",
+    "shared": "Everyone in this workspace shares it.",
+    "autoRenew": "You're charged on the same day every month and the usage period renews.",
+    "cancelInfo": "If you cancel, you can keep using it until the current period ends and you won't be charged from the next renewal.",
+    "agreementLabel": "I've reviewed the order and the auto-renewal terms, and I agree.",
+    "submit": "Agree and register card",
+    "openSetup": {
+      "title": "A card registration is already in progress",
+      "body": "This registration can't be continued. Check the result, or cancel it and start over.",
+      "view": "View progress",
+      "restart": "Cancel and start over"
+    },
+    "notice": {
+      "stateChanged": "The product or status changed. We've loaded the latest details; please review and agree again.",
+      "inProgress": "Your team has a subscription in progress. Check again when it's done.",
+      "unsupported": "This payment method isn't supported yet."
+    }
   },
   "setup": {
     "title": "Card registration result",
     "description": "Check the progress of your card registration.",
-    "result": "Registration result",
-    "loginRequired": "Sign in with the account that registered the card to see the result."
+    "loginRequired": "Sign in with the account that registered the card to see the result.",
+    "loading": "Loading the registration result",
+    "loadFailed": "Couldn't load the registration result.",
+    "notFound": {
+      "title": "Card registration not found",
+      "body": "Make sure you're signed in with the account that registered the card."
+    },
+    "stale": "Automatic checking stopped. The server is still working on it; check again.",
+    "recheck": "Check again",
+    "restart": "Start over",
+    "cancel": "Cancel",
+    "cancelRestart": "Cancel and start over",
+    "continue": "Continue registration",
+    "cardAuthRequired": {
+      "title": "Card registration isn't finished",
+      "body": "Card authentication wasn't completed. Please start over."
+    },
+    "authCaptured": {
+      "title": "Card authentication confirmed",
+      "body": "Finishing the registration."
+    },
+    "cardProcessing": {
+      "title": "Confirming card registration",
+      "body": "You can close this page; the server keeps working."
+    },
+    "cardUnknown": {
+      "title": "We're confirming the card registration result",
+      "body": "Don't register again. This screen updates when we're done."
+    },
+    "cardActionRequired": {
+      "title": "This registration wasn't charged",
+      "body": "Please register a card again. If it keeps happening, contact support."
+    },
+    "paymentProcessing": {
+      "title": "Confirming the payment",
+      "body": "You can close this page; the server keeps working."
+    },
+    "paymentUnknown": {
+      "title": "Confirming the payment result is taking longer",
+      "body": "We're confirming the payment result. Don't pay again."
+    },
+    "declined": {
+      "title": "The payment wasn't approved",
+      "body": "Check your card limit, balance and availability, or try another card.",
+      "code": "Reason code: {code}"
+    },
+    "accessProcessing": {
+      "title": "Payment confirmed",
+      "body": "We're applying your access. You don't need to pay again."
+    },
+    "completed": {
+      "title": "Payment complete",
+      "workspace": "Workspace",
+      "amount": "Amount",
+      "period": "Usage period",
+      "nextCharge": "Next charge date",
+      "goWorkspace": "Go to workspace"
+    },
+    "accessLost": {
+      "title": "You're no longer an admin here, so details aren't available",
+      "body": "A payment that already started may be processing or finished. We won't start a new one."
+    },
+    "closed": {
+      "title": "Card registration closed",
+      "body": "It was canceled or timed out. Start over if you still need it."
+    }
   }
 }

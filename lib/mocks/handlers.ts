@@ -3,6 +3,7 @@ import {
   getRefreshTokensMockHandler,
 } from "@/lib/api/generated/auth/auth.msw";
 
+import { billingHandlers } from "@/lib/mocks/billing";
 import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers } from "@/lib/mocks/project-tasks";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
@@ -30,6 +31,7 @@ export const handlers = [
   ...projectTaskHandlers,
   ...restHandlers,
   ...termHandlers,
+  ...billingHandlers,
   ...chatSseHandlers,
   transcriptionWebSocketHandler,
 ];
