@@ -21,7 +21,7 @@ import { useCancelBillingSetup } from "@/lib/api/generated/billing/billing";
 import type { WorkspaceBillingResponseData } from "@/lib/api/generated/models";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
-import { paidPlanName } from "@/lib/billing/plan-name";
+import { planName } from "@/lib/billing/plan-name";
 import { billingEvents } from "@/lib/billing/analytics";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
@@ -94,13 +94,15 @@ function StatusCard({ billing }: { billing: WorkspaceBillingResponseData }) {
   const t = useTranslations("billing.page");
   const format = useBillingFormat();
   const kind = billing.entitlement?.kind ?? "FREE";
+  const plan = planName(billing.entitlement?.planCode ?? "FREE");
   const period = billing.entitlement?.period ?? billing.currentPeriod;
   return (
     <div className="rounded-panel border border-[var(--el-hairline)] bg-white p-5">
-      <p className="text-lg font-medium text-[var(--el-ink)]">
-        {t(`kind.${kind}`)}
-      </p>
+      <p className="text-lg font-medium text-[var(--el-ink)]">{plan}</p>
       <dl className="mt-3 grid gap-1.5 text-sm text-[var(--el-muted)]">
+        {kind === "LEGACY_ACCESS" || kind === "TEST" ? (
+          <div>{t(`kind.${kind}`)}</div>
+        ) : null}
         {billing.entitlement ? (
           <div>
             <dt className="sr-only">{t("allowance")}</dt>
@@ -142,23 +144,19 @@ function Plans({
   const isPaid =
     billing.entitlement?.kind === "PAID" ||
     billing.entitlement?.kind === "TEST";
-  const freeAllowance =
-    billing.entitlement?.kind === "FREE"
-      ? billing.entitlement.recordingAllowanceMinutes
-      : undefined;
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <PlanCard name={t("plan.free")} current={!isPaid}>
-          <li>
-            {freeAllowance === undefined
-              ? t("plan.freeBasic")
-              : format.allowance(freeAllowance)}
-          </li>
+        <PlanCard name={planName("FREE")} current={!isPaid}>
+          {product ? (
+            <li>
+              {format.monthlyMinutes(product.freeRecordingAllowanceMinutes)}
+            </li>
+          ) : null}
         </PlanCard>
         {product ? (
           <PlanCard
-            name={t("plan.paid", { plan: paidPlanName(product.planCode) })}
+            name={t("plan.paid", { plan: planName(product.planCode) })}
             current={isPaid}
             price={t("plan.price", { amount: format.money(product.amountKrw) })}
           >
@@ -260,9 +258,12 @@ function Actions({
         <BillingNotice tone="warn">{t("pastDue")}</BillingNotice>
       ) : null}
       {!isAdmin ? <BillingNotice>{t("askAdmin")}</BillingNotice> : null}
-      {isAdmin && actions.includes("START_PURCHASE") && !isPaid ? (
+      {isAdmin &&
+      actions.includes("START_PURCHASE") &&
+      !isPaid &&
+      billing.product ? (
         <LinkButton href={`/w/${workspaceId}/billing/checkout`}>
-          {t("start", { plan: paidPlanName(billing.product?.planCode) })}
+          {t("start", { plan: planName(billing.product.planCode) })}
         </LinkButton>
       ) : null}
       {isAdmin && billing.mySetupId && actions.includes("CONTINUE_SETUP") ? (

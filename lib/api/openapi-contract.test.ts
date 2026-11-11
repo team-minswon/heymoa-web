@@ -370,7 +370,8 @@ describe("contract sync 2026-07-29", () => {
     // `workspaces/{workspaceId}/billing`(조회)·`.../billing/setups`(등록 열기)·`.../setups/{setupId}/{complete,cancel}`·
     // `.../billing/cycles/{cycleId}/attempts`(다시 결제), `me/billing/setups/{setupId}`(등록 상태).
     // 같은 사본에 이미 있던 `realtime/tickets`(APP-1546)가 함께 들어와 한 경로가 더 늘었다 (102 → 103).
-    expect(paths).toHaveLength(103);
+    // 사용량 조회 `workspaces/{workspaceId}/billing/usage`(APP-1566)가 늘었다 (103 → 104).
+    expect(paths).toHaveLength(104);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

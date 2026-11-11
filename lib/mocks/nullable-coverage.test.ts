@@ -497,6 +497,9 @@ async function seedBilling(firstWorkspaceId: string) {
  * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
  */
 const KNOWN_ONE_SIDED = new Set([
+  // 유료 상품의 녹음 제공량은 무제한(null)으로 확정이다. 숫자는 서버가 다른 상품을 줄 때만 오고, 화면은 두 쪽을 다 그린다
+  // (`billing-screens.test.tsx` 의 「서버가 제공량을 숫자로 줘도 깨지지 않는다」).
+  "WorkspaceBillingResponse.data.product.recordingAllowanceMinutes",
   // APP-1266 목에서 생략한 호환 참조입니다. 서버 계약에서 제거할 때 함께 지웁니다.
   "MeetingReviewSummaryResponse.data.agendas[].agendaItemId",
   "MeetingReviewSummaryResponse.data.agendas[].centerItemId",

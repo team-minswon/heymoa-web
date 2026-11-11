@@ -31,6 +31,7 @@ import type {
   CreateBillingSetupRequest,
   ReceiveBillingFailParams,
   ReceiveBillingSuccessParams,
+  RecordingUsageResponse,
   RetryBillingPaymentRequest,
   UnauthorizedResponse,
   WorkspaceBillingResponse,
@@ -2137,3 +2138,369 @@ export const useCompleteBillingSetup = <
     queryClient
   );
 };
+export type getRecordingUsageResponse200 = {
+  data: RecordingUsageResponse;
+  status: 200;
+};
+
+export type getRecordingUsageResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getRecordingUsageResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getRecordingUsageResponseSuccess = getRecordingUsageResponse200 & {
+  headers: Headers;
+};
+export type getRecordingUsageResponseError = (
+  | getRecordingUsageResponse401
+  | getRecordingUsageResponse404
+) & {
+  headers: Headers;
+};
+
+export type getRecordingUsageResponse =
+  | getRecordingUsageResponseSuccess
+  | getRecordingUsageResponseError;
+
+export const getGetRecordingUsageUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/billing/usage`;
+};
+
+/**
+ * 공간의 이번 기간 녹음 사용량을 조회한다. 멤버 누구나 조회한다. 기간은 유효한 유료 구독 기간, 없으면 그 달(Asia/Seoul)의 Free 다. 새 녹음은 잔여가 0 이면 시작할 때 RECORDING_QUOTA_EXCEEDED(409)로 거절되고, 진행 중인 녹음은 끝까지 기록된다.
+ * @summary 녹음 사용량 조회
+ */
+export const getRecordingUsage = async (
+  workspaceId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getRecordingUsageResponse> => {
+  return apiFetch<getRecordingUsageResponse>(
+    getGetRecordingUsageUrl(workspaceId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetRecordingUsageQueryKey = (workspaceId: string) => {
+  return [`/v1/workspaces/${workspaceId}/billing/usage`] as const;
+};
+
+export const getGetRecordingUsageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetRecordingUsageQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getRecordingUsage>>
+  > = ({ signal }) =>
+    getRecordingUsage(workspaceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRecordingUsage>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetRecordingUsageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRecordingUsage>>
+>;
+export type GetRecordingUsageQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetRecordingUsage<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRecordingUsage>>,
+          TError,
+          Awaited<ReturnType<typeof getRecordingUsage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetRecordingUsage<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRecordingUsage>>,
+          TError,
+          Awaited<ReturnType<typeof getRecordingUsage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetRecordingUsage<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 녹음 사용량 조회
+ */
+
+export function useGetRecordingUsage<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetRecordingUsageQueryOptions(workspaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 녹음 사용량 조회
+ */
+export const prefetchGetRecordingUsageQuery = async <
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetRecordingUsageQueryOptions(workspaceId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetRecordingUsageSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetRecordingUsageQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getRecordingUsage>>
+  > = ({ signal }) =>
+    getRecordingUsage(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getRecordingUsage>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetRecordingUsageSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRecordingUsage>>
+>;
+export type GetRecordingUsageSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetRecordingUsageSuspense<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetRecordingUsageSuspense<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetRecordingUsageSuspense<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 녹음 사용량 조회
+ */
+
+export function useGetRecordingUsageSuspense<
+  TData = Awaited<ReturnType<typeof getRecordingUsage>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getRecordingUsage>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetRecordingUsageSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

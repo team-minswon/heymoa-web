@@ -23,7 +23,7 @@ import {
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
-import { paidPlanName } from "@/lib/billing/plan-name";
+import { planName } from "@/lib/billing/plan-name";
 import { billingEvents } from "@/lib/billing/analytics";
 import { leaveToCardRegistration } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
@@ -172,7 +172,7 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
           <Row label={t("workspace")} value={workspace?.name ?? ""} />
           <Row
             label={t("product")}
-            value={t("productName", { plan: paidPlanName(product.planCode) })}
+            value={t("productName", { plan: planName(product.planCode) })}
           />
           <Row
             label={t("amount")}

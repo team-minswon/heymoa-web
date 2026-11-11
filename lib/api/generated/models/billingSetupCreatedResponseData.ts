@@ -35,8 +35,11 @@ export type BillingSetupCreatedResponseData = {
   amountKrw: number;
   /** 서버가 정한 PG. 브라우저가 고르지 않는다 */
   provider: BillingSetupCreatedResponseDataProvider;
-  /** 굳힌 녹음 제공량(분) */
-  recordingAllowanceMinutes: number;
+  /**
+   * 굳힌 녹음 제공량(분). null 이면 무제한
+   * @nullable
+   */
+  recordingAllowanceMinutes: number | null;
   /**
    * 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음, REAL_CARD_CHARGE_AUTO_CANCEL 실제 승인 뒤 자동 취소. LIVE 는 null
    * @nullable

@@ -96,12 +96,18 @@ const billingBody = (patch: Record<string, unknown> = {}) => ({
     policyVersion: "P1",
     amountKrw: 9900,
     recordingAllowanceMinutes: null,
+    freeRecordingAllowanceMinutes: 120,
     currency: "KRW",
     billingInterval: "MONTH",
-    planCode: "X",
+    planCode: "PRO",
     testPaymentNotice: "SIMULATED_NO_CHARGE",
   },
-  entitlement: { kind: "FREE", period: null, recordingAllowanceMinutes: 120 },
+  entitlement: {
+    kind: "FREE",
+    period: null,
+    recordingAllowanceMinutes: 120,
+    planCode: "FREE",
+  },
   currentPeriod: null,
   cancelAtPeriodEnd: false,
   mySetupId: null,
@@ -157,6 +163,8 @@ const setupBody = (
   latestAttempt: null,
   originAttempt: null,
   testPaymentNotice: "SIMULATED_NO_CHARGE",
+  planCode: "PRO",
+  provider: "TOSS",
   pollAfterSeconds: null,
   ...extra,
 });
@@ -201,6 +209,7 @@ describe("요금제 화면", () => {
     renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
     expect(await screen.findByText("9,900원 / 월")).toBeInTheDocument();
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
+    expect(screen.getByText("월 120분")).toBeInTheDocument();
     expect(
       screen.getByText("이 공간의 모든 멤버가 함께 씁니다")
     ).toBeInTheDocument();
@@ -491,7 +500,7 @@ describe("주문서", () => {
             purpose: "PURCHASE",
             status: "AUTHORIZED",
             provider: "FAKE",
-            planCode: "X",
+            planCode: "PRO",
             amountKrw: 9900,
             currency: "KRW",
             recordingAllowanceMinutes: null,
@@ -657,6 +666,7 @@ describe("등록 결과 — 상태별 화면", () => {
       await screen.findByText("테스트 유저의 워크스페이스")
     ).toBeInTheDocument();
     expect(screen.getByText("9,900원")).toBeInTheDocument();
+    expect(screen.getByText("Pro")).toBeInTheDocument();
     expect(
       screen.getByText("2026년 11월 11일부터 2026년 12월 11일 전까지")
     ).toBeInTheDocument();
@@ -736,7 +746,7 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     ).toBeInTheDocument();
     expect(requests.filter((r) => r.endsWith("/complete"))).toHaveLength(1);
     expect(resultEvents()).toEqual([
-      { workspace_id: FREE, result: "completed" },
+      { workspace_id: FREE, provider: "FAKE", result: "completed" },
     ]);
   });
 
@@ -815,8 +825,8 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
       await act(() => vi.advanceTimersByTimeAsync(1100));
     await screen.findByText("결제가 완료되었습니다");
     expect(resultEvents()).toEqual([
-      { workspace_id: FREE, result: "unknown" },
-      { workspace_id: FREE, result: "completed" },
+      { workspace_id: FREE, provider: "TOSS", result: "unknown" },
+      { workspace_id: FREE, provider: "TOSS", result: "completed" },
     ]);
     expect(JSON.stringify(vi.mocked(track).mock.calls)).not.toMatch(
       /S1|authKey|state/

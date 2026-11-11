@@ -7,6 +7,7 @@ import { SettingsHeader } from "@/components/settings/settings-layout";
 import { LinkButton } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
+import { planName } from "@/lib/billing/plan-name";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import {
   billingInProgress,
@@ -40,7 +41,6 @@ export function WorkspaceBillingSettings({
 
 function Summary({ workspaceId }: { workspaceId: string }) {
   const t = useTranslations("billing.settings");
-  const tKind = useTranslations("billing.page.kind");
   const format = useBillingFormat();
   const billing = useWorkspaceBilling(workspaceId);
   if (!billing.enforced) {
@@ -51,7 +51,7 @@ function Summary({ workspaceId }: { workspaceId: string }) {
     <div className="flex flex-col items-start gap-4">
       <div className="w-full rounded-panel border border-[var(--el-hairline)] bg-white p-4">
         <p className="font-medium text-[var(--el-ink)]">
-          {tKind(billing.entitlement?.kind ?? "FREE")}
+          {planName(billing.entitlement?.planCode ?? "FREE")}
         </p>
         {billing.entitlement ? (
           <p className="mt-1 text-sm text-[var(--el-muted)]">

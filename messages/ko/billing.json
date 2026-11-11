@@ -3,6 +3,7 @@
   "format": {
     "money": "{amount}원",
     "unlimited": "녹음 무제한",
+    "monthlyMinutes": "월 {count, number}분",
     "minutes": "녹음 {count, number}분",
     "period": "{start}부터 {end} 전까지"
   },
@@ -32,8 +33,6 @@
     "loading": "요금제를 불러오는 중",
     "notEnforced": "이 공간은 아직 요금제 대상이 아닙니다.",
     "kind": {
-      "FREE": "Free",
-      "PAID": "Pro",
       "LEGACY_ACCESS": "기존 이용권",
       "TEST": "시험 이용권"
     },
@@ -43,8 +42,6 @@
     "ended": "구독이 종료되었습니다.",
     "cancelScheduled": "해지가 예약되어 {end}에 종료됩니다.",
     "plan": {
-      "free": "Free",
-      "freeBasic": "월 제공량은 사용량에서 확인",
       "paid": "{plan}",
       "price": "{amount} / 월",
       "shared": "이 공간의 모든 멤버가 함께 씁니다",
@@ -152,6 +149,7 @@
     },
     "completed": {
       "title": "결제가 완료되었습니다",
+      "plan": "요금제",
       "workspace": "대상 공간",
       "amount": "결제 금액",
       "period": "이용 기간",

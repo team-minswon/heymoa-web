@@ -33,6 +33,7 @@ import {
   setupViewOf,
   type SetupView,
 } from "@/lib/billing/setup-view";
+import { planName } from "@/lib/billing/plan-name";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { nextPollDelay, usePollWindow } from "@/lib/billing/use-poll-window";
 
@@ -69,6 +70,7 @@ function SetupResult({ setupId }: { setupId: string }) {
   const setup = okData(query.data);
   const view = setup ? setupViewOf(setup) : null;
   const workspaceId = setup?.workspaceId ?? null;
+  const provider = setup?.provider ?? null;
 
   const complete = useCompleteBillingSetup();
   const cancel = useCancelBillingSetup();
@@ -112,9 +114,10 @@ function SetupResult({ setupId }: { setupId: string }) {
     reported.current.add(result);
     billingEvents.cardSetupResulted({
       ...(workspaceId ? { workspace_id: workspaceId } : {}),
+      ...(provider ? { provider } : {}),
       result,
     });
-  }, [view, workspaceId]);
+  }, [view, workspaceId, provider]);
 
   // 창으로 돌아오면 자동 읽기가 멈춘 뒤에도 한 번 읽는다.
   useEffect(() => {
@@ -360,6 +363,12 @@ function CompletedBody({
       <dl className="mt-2 grid gap-1.5">
         {workspace ? (
           <Line label={t("completed.workspace")} value={workspace.name} />
+        ) : null}
+        {setup.planCode ? (
+          <Line
+            label={t("completed.plan")}
+            value={planName(setup.planCode)}
+          />
         ) : null}
         {setup.amountKrw != null ? (
           <Line

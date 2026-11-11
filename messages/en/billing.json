@@ -3,6 +3,7 @@
   "format": {
     "money": "KRW {amount}",
     "unlimited": "Unlimited recording",
+    "monthlyMinutes": "{count, number} minutes per month",
     "minutes": "{count, number} recording minutes",
     "period": "{start} until {end}"
   },
@@ -32,8 +33,6 @@
     "loading": "Loading plans",
     "notEnforced": "This workspace isn't on a paid plan program yet.",
     "kind": {
-      "FREE": "Free",
-      "PAID": "Pro",
       "LEGACY_ACCESS": "Existing access",
       "TEST": "Test access"
     },
@@ -43,8 +42,6 @@
     "ended": "The subscription has ended.",
     "cancelScheduled": "Cancellation is scheduled and it ends on {end}.",
     "plan": {
-      "free": "Free",
-      "freeBasic": "Check your monthly allowance under usage",
       "paid": "{plan}",
       "price": "{amount} / month",
       "shared": "Everyone in this workspace shares it",
@@ -152,6 +149,7 @@
     },
     "completed": {
       "title": "Payment complete",
+      "plan": "Plan",
       "workspace": "Workspace",
       "amount": "Amount",
       "period": "Usage period",

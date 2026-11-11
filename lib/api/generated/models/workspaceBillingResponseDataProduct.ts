@@ -20,8 +20,11 @@ export type WorkspaceBillingResponseDataProduct = {
   policyVersion: string;
   /** 결제 금액(원) */
   amountKrw: number;
-  /** 기간당 녹음 제공량(분) */
-  recordingAllowanceMinutes: number;
+  /**
+   * 기간당 녹음 제공량(분). null 이면 무제한
+   * @nullable
+   */
+  recordingAllowanceMinutes: number | null;
   /**
    * 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음, REAL_CARD_CHARGE_AUTO_CANCEL 실제 승인 뒤 자동 취소. LIVE 는 null
    * @nullable
@@ -31,6 +34,8 @@ export type WorkspaceBillingResponseDataProduct = {
   currency: WorkspaceBillingResponseDataProductCurrency;
   /** 결제 주기 */
   billingInterval: WorkspaceBillingResponseDataProductBillingInterval;
-  /** 상품 코드 */
+  /** 상품 코드(PRO). 버전은 policyVersion */
   planCode: string;
+  /** Free 의 달력월 녹음 제공량(분). 비교표용 */
+  freeRecordingAllowanceMinutes: number;
 } | null;

@@ -10885,24 +10885,26 @@ paths:
                       enforced: true
                       status: ACTIVE
                       product:
-                        planCode: TEST_MONTHLY_V1
+                        planCode: PRO
                         policyVersion: TEST_MONTHLY_V1
                         amountKrw: 9900
                         currency: KRW
                         billingInterval: MONTH
-                        recordingAllowanceMinutes: 1000
+                        recordingAllowanceMinutes: null
                         agreementVersion: BILLING_TEST_V1
                         testPaymentNotice: SIMULATED_NO_CHARGE
+                        freeRecordingAllowanceMinutes: 120
                       currentPeriod:
                         start: '2026-11-11T01:00:00Z'
                         end: '2026-12-11T01:00:00Z'
                       cancelAtPeriodEnd: false
                       entitlement:
                         kind: PAID
-                        recordingAllowanceMinutes: 1000
+                        recordingAllowanceMinutes: null
                         period:
                           start: '2026-11-11T01:00:00Z'
                           end: '2026-12-11T01:00:00Z'
+                        planCode: PRO
                       mySetupId: null
                       teamSetupInProgress: false
                       latestAttemptStatus: SUCCEEDED
@@ -11002,6 +11004,8 @@ paths:
                         start: '2026-11-11T01:00:00Z'
                         end: '2026-12-11T01:00:00Z'
                       statusUrl: /v1/me/billing/setups/0HZX2K7M9Q4B1
+                      provider: FAKE
+                      planCode: PRO
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -11103,10 +11107,10 @@ paths:
                       setupId: 0HZX2K7M9Q4B1
                       purpose: PURCHASE
                       status: CREATED
-                      planCode: TEST_MONTHLY_V1
+                      planCode: PRO
                       amountKrw: 9900
                       currency: KRW
-                      recordingAllowanceMinutes: 1000
+                      recordingAllowanceMinutes: null
                       agreementVersion: BILLING_TEST_V1
                       provider: FAKE
                       testPaymentNotice: SIMULATED_NO_CHARGE
@@ -11408,6 +11412,8 @@ paths:
                       latestAttempt: null
                       paidPeriod: null
                       statusUrl: /v1/me/billing/setups/0HZX2K7M9Q4B1
+                      provider: FAKE
+                      planCode: PRO
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -11484,6 +11490,8 @@ paths:
                       latestAttempt: null
                       paidPeriod: null
                       statusUrl: /v1/me/billing/setups/0HZX2K7M9Q4B1
+                      provider: FAKE
+                      planCode: PRO
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -11531,6 +11539,69 @@ paths:
                     error:
                       code: BILLING_IN_PROGRESS
                       message: 팀의 구독 처리가 진행 중입니다. 끝난 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/billing/usage:
+    get:
+      tags:
+      - Billing
+      summary: 녹음 사용량 조회
+      description: 공간의 이번 기간 녹음 사용량을 조회한다. 멤버 누구나 조회한다. 기간은 유효한 유료 구독 기간, 없으면 그 달(Asia/Seoul)의 Free 다. 새 녹음은 잔여가 0 이면 시작할 때 RECORDING_QUOTA_EXCEEDED(409)로 거절되고, 진행 중인 녹음은 끝까지 기록된다.
+      operationId: getRecordingUsage
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스 식별자
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordingUsageResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      enforced: true
+                      periodKind: FREE
+                      periodStart: '2026-10-31T15:00:00Z'
+                      periodEnd: '2026-11-30T15:00:00Z'
+                      unlimited: false
+                      sampleRate: 16000
+                      allowanceSamples: 115200000
+                      usedSamples: 43200000
+                      reservedSamples: 28800000
+                      remainingSamples: 43200000
+                      allowanceMinutes: 120
+                      usedMinutes: 45
+                      remainingMinutes: 45
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -21306,10 +21377,10 @@ components:
           - planCode
           - provider
           - purpose
-          - recordingAllowanceMinutes
           - setupId
           - status
           - statusUrl
+          - recordingAllowanceMinutes
           - testPaymentNotice
           - registration
           type: object
@@ -21348,7 +21419,7 @@ components:
               type: string
               description: 굳힌 상품 코드
               nullable: false
-              example: TEST_MONTHLY_V1
+              example: PRO
             amountKrw:
               type: integer
               description: 굳힌 결제 금액(원)
@@ -21366,9 +21437,8 @@ components:
               - PAYPLE
             recordingAllowanceMinutes:
               type: integer
-              description: 굳힌 녹음 제공량(분)
-              nullable: false
-              example: 1000
+              description: 굳힌 녹음 제공량(분). null 이면 무제한
+              nullable: true
               format: int64
             testPaymentNotice:
               type: string
@@ -21448,6 +21518,8 @@ components:
           - workspaceId
           - pollAfterSeconds
           - amountKrw
+          - provider
+          - planCode
           - testPaymentNotice
           - failureCode
           - originAttempt
@@ -21677,6 +21749,20 @@ components:
               nullable: true
               example: 0HZX2K7M9Q4AD
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            planCode:
+              type: string
+              description: 등록에 고정된 상품 코드. ACCESS_LOST 면 null
+              nullable: true
+              example: PRO
+            provider:
+              type: string
+              description: 등록에 고정된 PG. ACCESS_LOST 면 null
+              nullable: true
+              example: FAKE
+              enum:
+              - FAKE
+              - TOSS
+              - PAYPLE
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -21834,6 +21920,7 @@ components:
               - amountKrw
               - billingInterval
               - currency
+              - freeRecordingAllowanceMinutes
               - planCode
               - policyVersion
               - recordingAllowanceMinutes
@@ -21858,9 +21945,8 @@ components:
                   format: int64
                 recordingAllowanceMinutes:
                   type: integer
-                  description: 기간당 녹음 제공량(분)
-                  nullable: false
-                  example: 1000
+                  description: 기간당 녹음 제공량(분). null 이면 무제한
+                  nullable: true
                   format: int64
                 testPaymentNotice:
                   type: string
@@ -21886,9 +21972,15 @@ components:
                   - MONTH
                 planCode:
                   type: string
-                  description: 상품 코드
+                  description: 상품 코드(PRO). 버전은 policyVersion
                   nullable: false
-                  example: TEST_MONTHLY_V1
+                  example: PRO
+                freeRecordingAllowanceMinutes:
+                  type: integer
+                  description: Free 의 달력월 녹음 제공량(분). 비교표용
+                  nullable: false
+                  example: 120
+                  format: int64
               description: 판매 상품(시험 fixture)
               nullable: true
             mySetupId:
@@ -21917,6 +22009,7 @@ components:
             entitlement:
               required:
               - kind
+              - planCode
               - recordingAllowanceMinutes
               - period
               type: object
@@ -21943,9 +22036,8 @@ components:
                   - end
                 recordingAllowanceMinutes:
                   type: integer
-                  description: 녹음 제공량(분)
-                  nullable: false
-                  example: 1000
+                  description: 녹음 제공량(분). null 이면 무제한
+                  nullable: true
                   format: int64
                 kind:
                   type: string
@@ -21957,6 +22049,14 @@ components:
                   - PAID
                   - LEGACY_ACCESS
                   - TEST
+                planCode:
+                  type: string
+                  description: 지금 플랜의 상품 코드. FREE 또는 PRO
+                  nullable: false
+                  example: PRO
+                  enum:
+                  - FREE
+                  - PRO
               description: 지금 유효한 녹음 권한. 유료 지급이 없으면 Free
               nullable: true
             detail:
@@ -22116,6 +22216,113 @@ components:
               nullable: false
               example: 0HZX2K7M9Q4AD
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    RecordingUsageResponse:
+      title: RecordingUsageResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - allowanceMinutes
+          - allowanceSamples
+          - enforced
+          - periodEnd
+          - periodKind
+          - periodStart
+          - remainingMinutes
+          - remainingSamples
+          - reservedSamples
+          - sampleRate
+          - unlimited
+          - usedMinutes
+          - usedSamples
+          type: object
+          properties:
+            enforced:
+              type: boolean
+              description: 사용량 집행 대상인가. false 면 나머지가 모두 null 이다
+              nullable: false
+              example: true
+            remainingMinutes:
+              type: number
+              description: 잔여의 분 환산(내림, 표시용)
+              nullable: true
+              example: 45
+            unlimited:
+              type: boolean
+              description: 녹음 무제한인가(유료). true 면 제공량·잔여가 null 이다
+              nullable: true
+              example: false
+            allowanceMinutes:
+              type: number
+              description: 제공량의 분 환산(내림, 표시용)
+              nullable: true
+              example: 120
+            usedMinutes:
+              type: number
+              description: 사용량의 분 환산(내림, 표시용)
+              nullable: true
+              example: 45
+            remainingSamples:
+              type: number
+              description: 새 녹음에 쓸 수 있는 잔여(0 이상). 무제한이면 null. 단위는 16kHz 샘플
+              nullable: true
+              example: 43200000
+            sampleRate:
+              type: number
+              description: 아래 *Samples 의 단위(초당 샘플 수)
+              nullable: true
+              example: 16000
+            reservedSamples:
+              type: number
+              description: 진행 중인 녹음이 시작할 때 잡아 둔 예약의 합. 단위는 16kHz 샘플
+              nullable: true
+              example: 28800000
+            periodKind:
+              type: string
+              description: 기간의 종류. FREE 는 달력월(Asia/Seoul) 한도, PAID 는 유료 구독 기간(무제한)
+              nullable: true
+              example: FREE
+              enum:
+              - FREE
+              - PAID
+            usedSamples:
+              type: number
+              description: 봉인된 실제 녹음 길이의 합. 제공량을 넘을 수 있다. 단위는 16kHz 샘플
+              nullable: true
+              example: 43200000
+            periodStart:
+              type: string
+              description: 기간 시작(포함)
+              nullable: true
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+            allowanceSamples:
+              type: number
+              description: 이번 기간 제공량. 무제한이면 null. 단위는 16kHz 샘플
+              nullable: true
+              example: 115200000
+            periodEnd:
+              type: string
+              description: 기간 끝(제외)
+              nullable: true
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
           description: 성공 응답 데이터
           nullable: false
         success:

@@ -23,7 +23,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `teamBusy` 다른 ADMIN 의 진행 중 구매가 있다(구매 시작 409 `BILLING_IN_PROGRESS`)
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
- * 유료 상품의 녹음 제공량은 무제한(`null`)이다 — 서버 계약이 곧 그렇게 바뀐다(지금 계약은 정수).
+ * 유료 상품의 녹음 제공량은 무제한(`null`)이다.
  */
 export type BillingScenario =
   | "ok"
@@ -88,11 +88,12 @@ const PRODUCT = {
   policyVersion: "TEST_MONTHLY_V1",
   amountKrw: 9900,
   recordingAllowanceMinutes: null as number | null,
+  freeRecordingAllowanceMinutes: 120,
   currency: "KRW",
   billingInterval: "MONTH",
-  planCode: "TEST_MONTHLY",
+  planCode: "PRO",
 };
-const FREE_ALLOWANCE_MINUTES = 120;
+const FREE_ALLOWANCE_MINUTES = PRODUCT.freeRecordingAllowanceMinutes;
 const PERIOD = {
   start: "2026-11-11T00:00:00+09:00",
   end: "2026-12-11T00:00:00+09:00",
@@ -266,11 +267,13 @@ function workspaceBilling(workspaceId: string) {
           kind: "PAID",
           period: PERIOD,
           recordingAllowanceMinutes: PRODUCT.recordingAllowanceMinutes,
+          planCode: "PRO",
         }
       : {
           kind: "FREE",
           period: null,
           recordingAllowanceMinutes: FREE_ALLOWANCE_MINUTES,
+          planCode: "FREE",
         },
     currentPeriod: ws.paid ? PERIOD : null,
     cancelAtPeriodEnd: false,
@@ -288,6 +291,72 @@ function workspaceBilling(workspaceId: string) {
           methodPayerIsMe: true,
         }
       : null,
+  };
+}
+
+// ---- 녹음 사용량 ----
+
+const SAMPLE_RATE = 16_000;
+const samplesOf = (minutes: number) => minutes * 60 * SAMPLE_RATE;
+const FREE_USED_MINUTES = 45;
+const PAID_USED_MINUTES = 330;
+const FREE_USAGE_PERIOD = {
+  start: "2026-11-01T00:00:00+09:00",
+  end: "2026-12-01T00:00:00+09:00",
+};
+
+/** 집행 Free·집행 Pro·비집행 셋이 서로 다른 모양이다. 분 값은 서버가 내림해 주는 값이라 목도 정수로 준다. */
+function recordingUsage(workspaceId: string) {
+  const ws = workspaceOf(workspaceId);
+  if (!ws.enforced) {
+    return {
+      enforced: false,
+      periodKind: null,
+      periodStart: null,
+      periodEnd: null,
+      unlimited: null,
+      sampleRate: null,
+      allowanceSamples: null,
+      usedSamples: null,
+      reservedSamples: null,
+      remainingSamples: null,
+      allowanceMinutes: null,
+      usedMinutes: null,
+      remainingMinutes: null,
+    };
+  }
+  if (ws.paid) {
+    return {
+      enforced: true,
+      periodKind: "PAID",
+      periodStart: PERIOD.start,
+      periodEnd: PERIOD.end,
+      unlimited: true,
+      sampleRate: SAMPLE_RATE,
+      allowanceSamples: null,
+      usedSamples: samplesOf(PAID_USED_MINUTES),
+      reservedSamples: 0,
+      remainingSamples: null,
+      allowanceMinutes: null,
+      usedMinutes: PAID_USED_MINUTES,
+      remainingMinutes: null,
+    };
+  }
+  const used = FREE_USED_MINUTES;
+  return {
+    enforced: true,
+    periodKind: "FREE",
+    periodStart: FREE_USAGE_PERIOD.start,
+    periodEnd: FREE_USAGE_PERIOD.end,
+    unlimited: false,
+    sampleRate: SAMPLE_RATE,
+    allowanceSamples: samplesOf(FREE_ALLOWANCE_MINUTES),
+    usedSamples: samplesOf(used),
+    reservedSamples: 0,
+    remainingSamples: samplesOf(FREE_ALLOWANCE_MINUTES - used),
+    allowanceMinutes: FREE_ALLOWANCE_MINUTES,
+    usedMinutes: used,
+    remainingMinutes: FREE_ALLOWANCE_MINUTES - used,
   };
 }
 
@@ -401,6 +470,8 @@ function setupStatus(setup: Setup, tick: boolean) {
     latestAttempt: attemptView(setup.latest),
     originAttempt: attemptView(setup.origin),
     testPaymentNotice: lost ? null : setup.notice,
+    planCode: lost ? null : PRODUCT.planCode,
+    provider: lost ? null : "FAKE",
     pollAfterSeconds: p.poll,
   };
 }
@@ -515,6 +586,9 @@ function createdView(setup: Setup, first: boolean) {
 export const billingHandlers = [
   http.get("*/v1/workspaces/:workspaceId/billing", ({ params }) =>
     respond(() => workspaceBilling(paramId(params.workspaceId)))
+  ),
+  http.get("*/v1/workspaces/:workspaceId/billing/usage", ({ params }) =>
+    respond(() => recordingUsage(paramId(params.workspaceId)))
   ),
   http.post(
     "*/v1/workspaces/:workspaceId/billing/setups",

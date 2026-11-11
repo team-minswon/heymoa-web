@@ -15,6 +15,8 @@ export function useBillingFormat() {
     /** `null`(제한 없음)과 숫자 둘 다 그린다 — 유료 상품이 무제한으로 바뀌는 중이라 서버가 어느 쪽을 줘도 깨지지 않게. */
     allowance: (minutes: number | null | undefined) =>
       minutes == null ? t("unlimited") : t("minutes", { count: minutes }),
+    /** Free 의 월 제공량(비교표). */
+    monthlyMinutes: (minutes: number) => t("monthlyMinutes", { count: minutes }),
     date: (iso: string) => formatAppDate(iso, DATE, locale),
     period: (period: { start: string; end: string }) =>
       t("period", {

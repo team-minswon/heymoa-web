@@ -8,6 +8,7 @@
 import type { BillingSetupStatusResponseDataLatestAttempt } from "./billingSetupStatusResponseDataLatestAttempt";
 import type { BillingSetupStatusResponseDataOriginAttempt } from "./billingSetupStatusResponseDataOriginAttempt";
 import type { BillingSetupStatusResponseDataPaidPeriod } from "./billingSetupStatusResponseDataPaidPeriod";
+import type { BillingSetupStatusResponseDataProvider } from "./billingSetupStatusResponseDataProvider";
 import type { BillingSetupStatusResponseDataPurpose } from "./billingSetupStatusResponseDataPurpose";
 import type { BillingSetupStatusResponseDataSetupStatus } from "./billingSetupStatusResponseDataSetupStatus";
 import type { BillingSetupStatusResponseDataStage } from "./billingSetupStatusResponseDataStage";
@@ -76,4 +77,14 @@ export type BillingSetupStatusResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string | null;
+  /**
+   * 등록에 고정된 상품 코드. ACCESS_LOST 면 null
+   * @nullable
+   */
+  planCode: string | null;
+  /**
+   * 등록에 고정된 PG. ACCESS_LOST 면 null
+   * @nullable
+   */
+  provider: BillingSetupStatusResponseDataProvider;
 };

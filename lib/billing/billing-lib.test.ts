@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { planName } from "@/lib/billing/plan-name";
 import { createRequestKey } from "@/lib/billing/request-key";
 import {
   isPollingView,
@@ -51,5 +52,13 @@ describe("nextPollDelay", () => {
     expect(nextPollDelay(7, 1)).toBe(7000);
     expect(nextPollDelay(null, 1)).toBe(2000);
     expect(nextPollDelay(undefined, 2)).toBe(5000);
+  });
+});
+
+describe("planName", () => {
+  it("FREE·PRO 는 이름으로, 모르는 코드는 코드 그대로 보인다", () => {
+    expect(planName("FREE")).toBe("Free");
+    expect(planName("PRO")).toBe("Pro");
+    expect(planName("TEST_MONTHLY")).toBe("TEST_MONTHLY");
   });
 });

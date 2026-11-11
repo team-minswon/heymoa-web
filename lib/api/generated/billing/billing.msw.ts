@@ -12,6 +12,7 @@ import type {
   BillingPaymentRetriedResponse,
   BillingSetupCreatedResponse,
   BillingSetupStatusResponse,
+  RecordingUsageResponse,
   WorkspaceBillingResponse,
 } from "../models";
 
@@ -23,14 +24,15 @@ export const getGetWorkspaceBillingResponseMock =
       enforced: true,
       status: "ACTIVE",
       product: {
-        planCode: "TEST_MONTHLY_V1",
+        planCode: "PRO",
         policyVersion: "TEST_MONTHLY_V1",
         amountKrw: 9900,
         currency: "KRW",
         billingInterval: "MONTH",
-        recordingAllowanceMinutes: 1000,
+        recordingAllowanceMinutes: null,
         agreementVersion: "BILLING_TEST_V1",
         testPaymentNotice: "SIMULATED_NO_CHARGE",
+        freeRecordingAllowanceMinutes: 120,
       },
       currentPeriod: {
         start: "2026-11-11T01:00:00Z",
@@ -39,8 +41,9 @@ export const getGetWorkspaceBillingResponseMock =
       cancelAtPeriodEnd: false,
       entitlement: {
         kind: "PAID",
-        recordingAllowanceMinutes: 1000,
+        recordingAllowanceMinutes: null,
         period: { start: "2026-11-11T01:00:00Z", end: "2026-12-11T01:00:00Z" },
+        planCode: "PRO",
       },
       mySetupId: null,
       teamSetupInProgress: false,
@@ -105,6 +108,8 @@ export const getGetMyBillingSetupResponseMock =
         end: "2026-12-11T01:00:00Z",
       },
       statusUrl: "/v1/me/billing/setups/0HZX2K7M9Q4B1",
+      provider: "FAKE",
+      planCode: "PRO",
     },
     error: null,
   });
@@ -116,10 +121,10 @@ export const getCreateBillingSetupResponseMock =
       setupId: "0HZX2K7M9Q4B1",
       purpose: "PURCHASE",
       status: "CREATED",
-      planCode: "TEST_MONTHLY_V1",
+      planCode: "PRO",
       amountKrw: 9900,
       currency: "KRW",
-      recordingAllowanceMinutes: 1000,
+      recordingAllowanceMinutes: null,
       agreementVersion: "BILLING_TEST_V1",
       provider: "FAKE",
       testPaymentNotice: "SIMULATED_NO_CHARGE",
@@ -165,6 +170,8 @@ export const getCancelBillingSetupResponseMock =
       latestAttempt: null,
       paidPeriod: null,
       statusUrl: "/v1/me/billing/setups/0HZX2K7M9Q4B1",
+      provider: "FAKE",
+      planCode: "PRO",
     },
     error: null,
   });
@@ -188,9 +195,31 @@ export const getCompleteBillingSetupResponseMock =
       latestAttempt: null,
       paidPeriod: null,
       statusUrl: "/v1/me/billing/setups/0HZX2K7M9Q4B1",
+      provider: "FAKE",
+      planCode: "PRO",
     },
     error: null,
   });
+
+export const getGetRecordingUsageResponseMock = (): RecordingUsageResponse => ({
+  success: true,
+  data: {
+    enforced: true,
+    periodKind: "FREE",
+    periodStart: "2026-10-31T15:00:00Z",
+    periodEnd: "2026-11-30T15:00:00Z",
+    unlimited: false,
+    sampleRate: 16000,
+    allowanceSamples: 115200000,
+    usedSamples: 43200000,
+    reservedSamples: 28800000,
+    remainingSamples: 43200000,
+    allowanceMinutes: 120,
+    usedMinutes: 45,
+    remainingMinutes: 45,
+  },
+  error: null,
+});
 
 export const getReceiveBillingFailMockHandler = (
   overrideResponse?:
@@ -379,6 +408,30 @@ export const getCompleteBillingSetupMockHandler = (
     options
   );
 };
+
+export const getGetRecordingUsageMockHandler = (
+  overrideResponse?:
+    | RecordingUsageResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<RecordingUsageResponse> | RecordingUsageResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/billing/usage",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetRecordingUsageResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getBillingMock = () => [
   getReceiveBillingFailMockHandler(),
   getReceiveBillingSuccessMockHandler(),
@@ -388,4 +441,5 @@ export const getBillingMock = () => [
   getRetryBillingPaymentMockHandler(),
   getCancelBillingSetupMockHandler(),
   getCompleteBillingSetupMockHandler(),
+  getGetRecordingUsageMockHandler(),
 ];

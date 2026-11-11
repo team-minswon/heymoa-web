@@ -7,6 +7,7 @@
  */
 import type { WorkspaceBillingResponseDataEntitlementKind } from "./workspaceBillingResponseDataEntitlementKind";
 import type { WorkspaceBillingResponseDataEntitlementPeriod } from "./workspaceBillingResponseDataEntitlementPeriod";
+import type { WorkspaceBillingResponseDataEntitlementPlanCode } from "./workspaceBillingResponseDataEntitlementPlanCode";
 
 /**
  * 지금 유효한 녹음 권한. 유료 지급이 없으면 Free
@@ -18,8 +19,13 @@ export type WorkspaceBillingResponseDataEntitlement = {
    * @nullable
    */
   period: WorkspaceBillingResponseDataEntitlementPeriod;
-  /** 녹음 제공량(분) */
-  recordingAllowanceMinutes: number;
+  /**
+   * 녹음 제공량(분). null 이면 무제한
+   * @nullable
+   */
+  recordingAllowanceMinutes: number | null;
   /** 권한 출처 */
   kind: WorkspaceBillingResponseDataEntitlementKind;
+  /** 지금 플랜의 상품 코드. FREE 또는 PRO */
+  planCode: WorkspaceBillingResponseDataEntitlementPlanCode;
 } | null;
