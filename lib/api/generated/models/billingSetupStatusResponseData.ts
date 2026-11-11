@@ -35,7 +35,7 @@ export type BillingSetupStatusResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   setupId: string;
-  /** 화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS */
+  /** 화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, REQUEST_REFUND, DELETE_PAYMENT_METHOD */
   allowedActions: string[];
   /**
    * 지급된 유료 기간 [start, end)

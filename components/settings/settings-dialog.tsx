@@ -14,6 +14,7 @@ import {
   CreditCard,
   Languages,
   Plug,
+  ReceiptText,
   Settings,
   ShieldCheck,
   UserRound,
@@ -36,6 +37,7 @@ import {
   NotificationSettings,
   NotificationSettingsSkeleton,
 } from "@/components/settings/notification-settings";
+import { MyBillingPayments } from "@/components/billing/my-billing-payments";
 import { WorkspaceBillingSettings } from "@/components/billing/workspace-billing-settings";
 import { WorkspaceTermsSettings } from "@/components/terms/workspace-terms-settings";
 import { WorkspaceAgentAccessSettings } from "@/components/settings/workspace-agent-access-settings";
@@ -97,6 +99,7 @@ const SETTINGS_GROUPS: {
       { key: "language", Icon: Languages },
       { key: "notifications", Icon: BellRing },
       { key: "agents", Icon: Bot },
+      { key: "paymentHistory", Icon: ReceiptText },
       { key: "appUpdates", Icon: Download },
     ],
   },
@@ -242,6 +245,8 @@ function SettingsSections({
           <WorkspaceAgentAccessSettings workspaceId={workspaceId} />
         ) : section === "billing" ? (
           <WorkspaceBillingSettings workspaceId={workspaceId} />
+        ) : section === "paymentHistory" ? (
+          <MyBillingPayments />
         ) : section === "agents" ? (
           <AgentConnectionsSettings
             workspaceId={workspaceId}

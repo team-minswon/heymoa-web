@@ -1,0 +1,487 @@
+/**
+ * 구독 관리·결제 상세·내 결제 내역 시험(APP-1565). **MSW 목으로 그린 것이라 서버·PG 정합성의 증거가 아니다.**
+ * 기본은 목의 실제 흐름(유료 공간 「제품 팀」)을 밟고, 서버만 낼 수 있는 응답(403·특정 409)은 그 요청만 바꿔 끼운다.
+ */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+
+import { BillingCheckoutPage } from "@/components/billing/billing-checkout-page";
+import { BillingPaymentPage } from "@/components/billing/billing-payment-page";
+import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
+import { MyBillingPayments } from "@/components/billing/my-billing-payments";
+import { WorkspaceBillingPage } from "@/components/billing/workspace-billing-page";
+import { track } from "@/lib/analytics/track";
+import { leaveToCardRegistration } from "@/lib/billing/navigate";
+import { billingHandlers, billingMock } from "@/lib/mocks/billing";
+import { mockDb } from "@/lib/mocks/db";
+import { restHandlers } from "@/lib/mocks/rest-handlers";
+
+vi.mock("@/lib/billing/navigate", () => ({ leaveToCardRegistration: vi.fn() }));
+vi.mock("@/lib/analytics/track", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/analytics/track")>()),
+  track: vi.fn(),
+}));
+
+const PAID = "01K0000000006";
+const CURRENT_PAYMENT = "0P00000000003";
+const OLD_PAYMENT = "0P00000000002";
+
+const server = setupServer(...restHandlers, ...billingHandlers);
+const requests: string[] = [];
+server.events.on("request:start", ({ request }) => {
+  requests.push(`${request.method} ${new URL(request.url).pathname}`);
+});
+beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+afterEach(() => {
+  cleanup();
+  server.resetHandlers();
+  mockDb.reset();
+  billingMock.setScenario(null);
+  vi.mocked(track).mockClear();
+  requests.length = 0;
+});
+afterAll(() => server.close());
+
+function renderIn(ui: React.ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+const failure = (code: string, message: string, status: number) =>
+  HttpResponse.json(
+    { success: false, data: null, error: { code, message, details: null } },
+    { status }
+  );
+const posted = (path: string) =>
+  requests.filter((request) => request === `POST ${path}`).length;
+const events = (name: string) =>
+  vi
+    .mocked(track)
+    .mock.calls.filter(([event]) => event === name)
+    .map(([, props]) => props);
+
+async function openPaid() {
+  renderIn(<WorkspaceBillingPage workspaceId={PAID} />);
+  return screen.findByRole("region", { name: "구독 관리" });
+}
+
+describe("구독 관리", () => {
+  it("다음 결제의 날짜·금액과 카드·최근 결제를 그린다", async () => {
+    const area = await openPaid();
+    expect(
+      within(area).getByText("2026년 12월 11일 · 9,900원")
+    ).toBeInTheDocument();
+    expect(
+      within(area).getByText("헤이모아카드 신용 4579-****-****-1234")
+    ).toBeInTheDocument();
+    expect(
+      await within(area).findByRole("link", { name: "결제 상세" })
+    ).toHaveAttribute("href", `/w/${PAID}/billing/payments/${CURRENT_PAYMENT}`);
+  });
+
+  it("해지는 확인 창을 거쳐야 호출되고, 끝나면 언제까지 쓰는지 보인다", async () => {
+    const area = await openPaid();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(
+        "2026년 12월 11일까지는 지금처럼 Pro를 쓸 수 있고, 그 뒤 Free로 바뀝니다."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("다음 결제(9,900원)부터 청구되지 않습니다.")
+    ).toBeInTheDocument();
+    expect(events("billing_cancel_dialog_opened")).toEqual([
+      { workspace_id: PAID },
+    ]);
+    const path = `/v1/workspaces/${PAID}/billing/subscription/cancel`;
+    expect(posted(path)).toBe(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "해지" }));
+    expect(
+      await within(area).findByText(
+        "구독을 해지했습니다. 2026년 12월 11일까지 쓸 수 있습니다."
+      )
+    ).toBeInTheDocument();
+    expect(posted(path)).toBe(1);
+    expect(events("billing_subscription_canceled")).toEqual([
+      { workspace_id: PAID },
+    ]);
+    // 해지 예약 뒤에는 재개·카드 삭제가 열리고, 다음 결제가 없다고 적는다.
+    expect(
+      await within(area).findByRole("button", { name: "구독 재개" })
+    ).toBeInTheDocument();
+    expect(
+      within(area).getByText(
+        "2026년 12월 11일까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(area).getByRole("button", { name: "카드 삭제" })
+    ).toBeInTheDocument();
+  });
+
+  it("재개는 지금 결제되지 않는다고 적고, 결제자가 아니어서 403 이면 그 이유를 안내한다", async () => {
+    const area = await openPaid();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "해지",
+      })
+    );
+    fireEvent.click(
+      await within(area).findByRole("button", { name: "구독 재개" })
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText("지금 결제되지 않습니다.")
+    ).toBeInTheDocument();
+    server.use(
+      http.post(`*/v1/workspaces/${PAID}/billing/subscription/resume`, () =>
+        failure("WORKSPACE_ACCESS_DENIED", "권한이 없습니다.", 403)
+      )
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "재개" }));
+    expect(
+      await within(area).findByText(/이 카드를 등록한 관리자만 할 수 있습니다/)
+    ).toBeInTheDocument();
+    expect(events("billing_subscription_resumed")).toEqual([
+      { workspace_id: PAID, result: "not_payer" },
+    ]);
+  });
+
+  it("서버가 행동을 주지 않으면 관리 버튼이 하나도 없다", async () => {
+    server.use(
+      http.get(`*/v1/workspaces/${PAID}/billing`, () =>
+        HttpResponse.json({
+          success: true,
+          error: null,
+          data: {
+            workspaceId: PAID,
+            enforced: true,
+            status: "ACTIVE",
+            product: {
+              agreementVersion: "A",
+              policyVersion: "P",
+              amountKrw: 9900,
+              recordingAllowanceMinutes: null,
+              freeRecordingAllowanceMinutes: 1800,
+              currency: "KRW",
+              billingInterval: "MONTH",
+              planCode: "PRO",
+              testPaymentNotice: null,
+            },
+            entitlement: {
+              kind: "PAID",
+              planCode: "PRO",
+              recordingAllowanceMinutes: null,
+              period: {
+                start: "2026-11-11T00:00:00+09:00",
+                end: "2026-12-11T00:00:00+09:00",
+              },
+            },
+            currentPeriod: {
+              start: "2026-11-11T00:00:00+09:00",
+              end: "2026-12-11T00:00:00+09:00",
+            },
+            cancelAtPeriodEnd: false,
+            mySetupId: null,
+            teamSetupInProgress: false,
+            latestAttemptStatus: null,
+            allowedActions: [],
+            detail: {
+              methodVersion: 1,
+              maskedCard: null,
+              latestAttempt: null,
+              refundedAttempt: null,
+              subscriptionVersion: 1,
+              openCycleId: null,
+              methodPayerIsMe: true,
+              currentPaymentId: null,
+              methodId: "M1",
+            },
+          },
+        })
+      )
+    );
+    const area = await openPaid();
+    expect(within(area).queryAllByRole("button")).toEqual([]);
+    expect(
+      within(area).queryByRole("link", { name: "카드 변경" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("환불 조건 밖(409)은 서버 문구를 인라인으로 보인다", async () => {
+    billingMock.setScenario("refundDenied");
+    const area = await openPaid();
+    fireEvent.click(
+      await within(area).findByRole("button", { name: "환불 요청" })
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "9,900원을 환불할까요?" })
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("요청한 뒤에는 되돌릴 수 없습니다.")
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "환불 요청" }));
+    expect(
+      await within(area).findByText(
+        "이 결제는 환불 조건을 벗어났습니다. 대신 해지를 예약할 수 있습니다."
+      )
+    ).toBeInTheDocument();
+    expect(events("billing_refund_requested")).toEqual([
+      { workspace_id: PAID, result: "not_allowed" },
+    ]);
+  });
+
+  it("결제 상태가 바뀌었으면(409) 다시 읽고 다시 확인하라고 한다", async () => {
+    const area = await openPaid();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    server.use(
+      http.post(`*/v1/workspaces/${PAID}/billing/subscription/cancel`, () =>
+        failure("BILLING_STATE_CHANGED", "결제 정보가 바뀌었습니다.", 409)
+      )
+    );
+    const before = requests.filter(
+      (r) => r === `GET /v1/workspaces/${PAID}/billing`
+    ).length;
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "해지",
+      })
+    );
+    expect(
+      await within(area).findByText(/최신 내용을 불러왔으니 다시 확인해 주세요/)
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        requests.filter((r) => r === `GET /v1/workspaces/${PAID}/billing`)
+          .length
+      ).toBeGreaterThan(before)
+    );
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("살아 있는 구독의 카드 삭제(409)는 카드 변경을 안내한다", async () => {
+    billingMock.setScenario("methodInUse");
+    const area = await openPaid();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "해지",
+      })
+    );
+    fireEvent.click(
+      await within(area).findByRole("button", { name: "카드 삭제" })
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(
+        "자동결제에 쓰는 카드 정보만 지우고 결제 내역은 남습니다."
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
+    expect(
+      await within(area).findByText(/「카드 변경」을 이용해 주세요/)
+    ).toBeInTheDocument();
+    expect(events("billing_payment_method_deleted")).toEqual([
+      { workspace_id: PAID, result: "in_use" },
+    ]);
+  });
+
+  it("미납 유예면 언제까지 쓰는지와 「미납 결제」·카드 변경을 보인다", async () => {
+    billingMock.setScenario("pastDue");
+    renderIn(<WorkspaceBillingPage workspaceId={PAID} />);
+    expect(
+      await screen.findByText(
+        "결제가 완료되지 않았습니다. 2026년 11월 18일까지는 계속 쓸 수 있고 이후 Free로 바뀝니다."
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "미납 9,900원 결제" })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "9,900원 다시 결제" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "카드 변경" })).toHaveAttribute(
+      "href",
+      `/w/${PAID}/billing/card`
+    );
+  });
+});
+
+describe("카드 변경", () => {
+  it("주문서는 지금 결제되지 않는다고 적고 REPLACE 로 등록을 연다", async () => {
+    renderIn(<BillingCheckoutPage workspaceId={PAID} purpose="REPLACE" />);
+    expect(
+      await screen.findByText("카드만 바뀌고 지금 결제되지 않습니다.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("새 카드 등록이 실패하면 지금 카드가 그대로 유지됩니다.")
+    ).toBeInTheDocument();
+    let body: Record<string, unknown> | null = null;
+    server.events.on("request:start", async ({ request }) => {
+      if (request.method === "POST" && request.url.endsWith("/billing/setups"))
+        body = await request.clone().json();
+    });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "동의하고 새 카드 등록" })
+    );
+    await waitFor(() => expect(leaveToCardRegistration).toHaveBeenCalled());
+    expect(body).toMatchObject({ purpose: "REPLACE" });
+    expect(events("billing_card_change_started")).toEqual([
+      { workspace_id: PAID },
+    ]);
+    expect(events("billing_card_setup_started")).toEqual([]);
+  });
+
+  it("결과 화면은 구매와 다른 문구로 끝나고 구매 결과 이벤트를 내지 않는다", async () => {
+    server.use(
+      http.get("*/v1/me/billing/setups/S1", () =>
+        HttpResponse.json({
+          success: true,
+          error: null,
+          data: {
+            setupId: "S1",
+            workspaceId: PAID,
+            purpose: "REPLACE",
+            statusUrl: "/v1/me/billing/setups/S1",
+            setupStatus: "ISSUED",
+            stage: "COMPLETED",
+            status: "COMPLETED",
+            failureCode: null,
+            allowedActions: [],
+            amountKrw: 9900,
+            paidPeriod: null,
+            latestAttempt: null,
+            originAttempt: null,
+            testPaymentNotice: null,
+            planCode: "PRO",
+            provider: "TOSS",
+            pollAfterSeconds: null,
+          },
+        })
+      )
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(await screen.findByText("카드를 바꿨습니다")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "지금 결제되지 않았습니다. 다음 결제부터 새 카드로 결제됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText("결제가 완료되었습니다")).not.toBeInTheDocument();
+    expect(screen.queryByText("9,900원")).not.toBeInTheDocument();
+    expect(events("billing_card_setup_resulted")).toEqual([]);
+  });
+});
+
+describe("결제 상세", () => {
+  it("환불을 요청하면 취소 처리 중 → 취소 처리 완료로 바뀌고 당시 결과와 지금을 가른다", async () => {
+    renderIn(
+      <BillingPaymentPage workspaceId={PAID} paymentId={CURRENT_PAYMENT} />
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "환불 요청" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText("요청하는 즉시 다음 결제가 멈춥니다.")
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "환불 요청" }));
+    expect(
+      await screen.findByText(
+        "결제 취소를 처리하고 있습니다. 취소가 끝나면 Free로 바뀝니다."
+      )
+    ).toBeInTheDocument();
+    expect(events("billing_refund_requested")).toEqual([
+      { workspace_id: PAID, result: "accepted" },
+    ]);
+    // 목은 조회 몇 번 뒤 취소를 끝낸다 — 화면은 5초마다 다시 읽는다.
+    expect(
+      await screen.findByText(
+        "환불되어 이 기간의 이용 권한이 없습니다.",
+        {},
+        { timeout: 15_000 }
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("결제 완료")).toBeInTheDocument();
+    expect(screen.getByText("환불됨 · 관리자 요청")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "환불 요청" })
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(events("billing_refund_resulted")).toEqual([
+        { workspace_id: PAID, result: "succeeded" },
+      ])
+    );
+  }, 20_000);
+
+  it("기간이 끝난 옛 결제는 당시 결과와 현재 상태를 가르고 환불 버튼이 없다", async () => {
+    renderIn(<BillingPaymentPage workspaceId={PAID} paymentId={OLD_PAYMENT} />);
+    expect(
+      await screen.findByText("이용 기간이 끝났습니다.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("첫 구매")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "환불 요청" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "문의·피드백" })).toBeVisible();
+  });
+
+  it("이 공간의 결제가 아니면 찾을 수 없다고 한다", async () => {
+    renderIn(
+      <BillingPaymentPage workspaceId={PAID} paymentId="0P00000000004" />
+    );
+    expect(
+      await screen.findByText("이 공간에서 이 결제를 찾을 수 없습니다.")
+    ).toBeInTheDocument();
+  });
+});
+
+describe("내 결제 내역", () => {
+  it("지운 공간의 결제도 결제 때 이름으로 보인다", async () => {
+    renderIn(<MyBillingPayments />);
+    const row = (await screen.findByText("지난 프로젝트 팀")).closest("tr")!;
+    expect(within(row).getByText("환불됨")).toBeInTheDocument();
+    expect(within(row).getByText("2026년 8월 2일")).toBeInTheDocument();
+    expect(screen.getAllByText("제품 팀").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("실패").length).toBeGreaterThan(0);
+    expect(events("billing_payment_history_viewed")).toEqual([{}]);
+  });
+
+  it("결제가 없으면 빈 상태 문구를 보인다", async () => {
+    server.use(
+      http.get("*/v1/me/billing/payments", () =>
+        HttpResponse.json({
+          success: true,
+          error: null,
+          data: { payments: [] },
+        })
+      )
+    );
+    renderIn(<MyBillingPayments />);
+    expect(
+      await screen.findByText("아직 결제한 내역이 없습니다.")
+    ).toBeInTheDocument();
+  });
+});

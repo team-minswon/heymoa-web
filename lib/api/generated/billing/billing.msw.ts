@@ -9,9 +9,13 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  BillingPaymentResponse,
   BillingPaymentRetriedResponse,
+  BillingRefundResponse,
   BillingSetupCreatedResponse,
   BillingSetupStatusResponse,
+  BillingSubscriptionStateResponse,
+  MyBillingPaymentsResponse,
   RecordingUsageResponse,
   WorkspaceBillingResponse,
 } from "../models";
@@ -32,7 +36,7 @@ export const getGetWorkspaceBillingResponseMock =
         recordingAllowanceMinutes: null,
         agreementVersion: "BILLING_TEST_V1",
         testPaymentNotice: "SIMULATED_NO_CHARGE",
-        freeRecordingAllowanceMinutes: 120,
+        freeRecordingAllowanceMinutes: 1800,
       },
       currentPeriod: {
         start: "2026-11-11T01:00:00Z",
@@ -70,6 +74,8 @@ export const getGetWorkspaceBillingResponseMock =
         },
         methodPayerIsMe: true,
         refundedAttempt: null,
+        currentPaymentId: "0HZX2K7M9Q4B3",
+        methodId: "0HZX2K7M9Q4B5",
       },
     },
     error: null,
@@ -217,16 +223,121 @@ export const getGetRecordingUsageResponseMock = (): RecordingUsageResponse => ({
     periodEnd: "2026-11-30T15:00:00Z",
     unlimited: false,
     sampleRate: 16000,
-    allowanceSamples: 115200000,
+    allowanceSamples: 1728000000,
     usedSamples: 43200000,
     reservedSamples: 28800000,
-    remainingSamples: 43200000,
-    allowanceMinutes: 120,
+    remainingSamples: 1656000000,
+    allowanceMinutes: 1800,
     usedMinutes: 45,
-    remainingMinutes: 45,
+    remainingMinutes: 1725,
   },
   error: null,
 });
+
+export const getGetMyBillingPaymentsResponseMock =
+  (): MyBillingPaymentsResponse => ({
+    success: true,
+    data: {
+      payments: [
+        {
+          paymentId: "0HZX2K7M9Q4C2",
+          workspaceId: "0HZX2K7M9Q4AD",
+          workspaceName: "결제팀",
+          cycleId: "0HZX2K7M9Q4C3",
+          kind: "RENEWAL",
+          cycleStatus: "PAID",
+          attemptNumber: 1,
+          status: "SUCCEEDED",
+          amountKrw: 9900,
+          currency: "KRW",
+          period: {
+            start: "2026-11-11T01:00:00Z",
+            end: "2026-12-11T01:00:00Z",
+          },
+          completedAt: "2026-07-14T01:02:03Z",
+          errorCode: null,
+          maskedCard: {
+            issuer: "11",
+            number: "1234****5678",
+            cardType: "CREDIT",
+          },
+          payerIsMe: true,
+          refundStatus: null,
+          refundOrigin: null,
+        },
+      ],
+    },
+    error: null,
+  });
+
+export const getGetBillingPaymentResponseMock = (): BillingPaymentResponse => ({
+  success: true,
+  data: {
+    paymentId: "0HZX2K7M9Q4C2",
+    workspaceId: "0HZX2K7M9Q4AD",
+    workspaceName: "결제팀",
+    cycleId: "0HZX2K7M9Q4C3",
+    kind: "RENEWAL",
+    cycleStatus: "PAID",
+    attemptNumber: 1,
+    status: "SUCCEEDED",
+    amountKrw: 9900,
+    currency: "KRW",
+    period: { start: "2026-11-11T01:00:00Z", end: "2026-12-11T01:00:00Z" },
+    completedAt: "2026-07-14T01:02:03Z",
+    errorCode: null,
+    maskedCard: { issuer: "11", number: "1234****5678", cardType: "CREDIT" },
+    payerIsMe: true,
+    refundStatus: null,
+    refundOrigin: null,
+  },
+  error: null,
+});
+
+export const getCancelBillingSubscriptionResponseMock =
+  (): BillingSubscriptionStateResponse => ({
+    success: true,
+    data: {
+      subscriptionId: "0HZX2K7M9Q4C1",
+      status: "ACTIVE",
+      cancelAtPeriodEnd: true,
+      currentPeriod: {
+        start: "2026-11-11T01:00:00Z",
+        end: "2026-12-11T01:00:00Z",
+      },
+      subscriptionVersion: 4,
+    },
+    error: null,
+  });
+
+export const getResumeBillingSubscriptionResponseMock =
+  (): BillingSubscriptionStateResponse => ({
+    success: true,
+    data: {
+      subscriptionId: "0HZX2K7M9Q4C1",
+      status: "ACTIVE",
+      cancelAtPeriodEnd: false,
+      currentPeriod: {
+        start: "2026-11-11T01:00:00Z",
+        end: "2026-12-11T01:00:00Z",
+      },
+      subscriptionVersion: 4,
+    },
+    error: null,
+  });
+
+export const getRequestBillingRefundResponseMock =
+  (): BillingRefundResponse => ({
+    success: true,
+    data: {
+      refundId: "0HZX2K7M9Q4C4",
+      paymentId: "0HZX2K7M9Q4C2",
+      amountKrw: 9900,
+      origin: "USER",
+      status: "PENDING",
+    },
+    error: null,
+  });
 
 export const getReceiveBillingFailMockHandler = (
   overrideResponse?:
@@ -439,6 +550,151 @@ export const getGetRecordingUsageMockHandler = (
     options
   );
 };
+
+export const getGetMyBillingPaymentsMockHandler = (
+  overrideResponse?:
+    | MyBillingPaymentsResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<MyBillingPaymentsResponse> | MyBillingPaymentsResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/me/billing/payments",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetMyBillingPaymentsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getDeleteBillingPaymentMethodMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.delete(
+    "*/v1/workspaces/:workspaceId/billing/payment-methods/:methodId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
+
+export const getGetBillingPaymentMockHandler = (
+  overrideResponse?:
+    | BillingPaymentResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<BillingPaymentResponse> | BillingPaymentResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/billing/payments/:paymentId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBillingPaymentResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getCancelBillingSubscriptionMockHandler = (
+  overrideResponse?:
+    | BillingSubscriptionStateResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) =>
+        | Promise<BillingSubscriptionStateResponse>
+        | BillingSubscriptionStateResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/billing/subscription/cancel",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCancelBillingSubscriptionResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getResumeBillingSubscriptionMockHandler = (
+  overrideResponse?:
+    | BillingSubscriptionStateResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) =>
+        | Promise<BillingSubscriptionStateResponse>
+        | BillingSubscriptionStateResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/billing/subscription/resume",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResumeBillingSubscriptionResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getRequestBillingRefundMockHandler = (
+  overrideResponse?:
+    | BillingRefundResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<BillingRefundResponse> | BillingRefundResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/billing/payments/:paymentId/refunds",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRequestBillingRefundResponseMock(),
+        { status: 202 }
+      );
+    },
+    options
+  );
+};
 export const getBillingMock = () => [
   getReceiveBillingFailMockHandler(),
   getReceiveBillingSuccessMockHandler(),
@@ -449,4 +705,10 @@ export const getBillingMock = () => [
   getCancelBillingSetupMockHandler(),
   getCompleteBillingSetupMockHandler(),
   getGetRecordingUsageMockHandler(),
+  getGetMyBillingPaymentsMockHandler(),
+  getDeleteBillingPaymentMethodMockHandler(),
+  getGetBillingPaymentMockHandler(),
+  getCancelBillingSubscriptionMockHandler(),
+  getResumeBillingSubscriptionMockHandler(),
+  getRequestBillingRefundMockHandler(),
 ];

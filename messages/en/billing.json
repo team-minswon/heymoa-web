@@ -17,7 +17,8 @@
   "retry": {
     "button": "Retry payment ({amount})",
     "changed": "The payment status changed. We've loaded the latest status; please review it again.",
-    "inProgress": "We're confirming the payment. Don't pay again."
+    "inProgress": "We're confirming the payment. Don't pay again.",
+    "pastDueButton": "Pay overdue {amount}"
   },
   "usage": {
     "loading": "Loading usage",
@@ -48,7 +49,8 @@
     "notEnforced": "This workspace isn't on a paid plan program yet.",
     "kind": {
       "LEGACY_ACCESS": "Existing access",
-      "TEST": "Test access"
+      "TEST": "Test access",
+      "GRACE": "Payment overdue"
     },
     "allowance": "Recording allowance",
     "period": "Usage period",
@@ -80,7 +82,20 @@
     "continueSetup": "Continue card registration",
     "viewResult": "View progress",
     "cancelSetup": "Cancel registration",
-    "refresh": "Check status again"
+    "refresh": "Check status again",
+    "grace": "Your payment didn't go through. You can keep using it until {end}; after that the workspace moves to Free.",
+    "userRefunding": {
+      "title": "Refund in progress",
+      "body": "We're processing your refund. Future payments have already stopped. The workspace moves to Free when it's done."
+    },
+    "userRefunded": {
+      "title": "Your refund has been processed",
+      "body": "It may take a few days to appear on your card statement, depending on the card issuer. You can start again any time."
+    },
+    "userRefundFailed": {
+      "title": "We couldn't finish the refund",
+      "body": "Future payments remain stopped. Please let us know through Help & feedback."
+    }
   },
   "checkout": {
     "title": "Checkout",
@@ -116,7 +131,22 @@
       "unsupported": "This payment method isn't supported yet."
     },
     "agreeFirst": "Check the agreement to start card registration.",
-    "cardSafe": "You enter card details on the payment provider's page. HeyMoa doesn't store your card number."
+    "cardSafe": "You enter card details on the payment provider's page. HeyMoa doesn't store your card number.",
+    "replace": {
+      "title": "Change card",
+      "description": "Register a new card for automatic payments.",
+      "loading": "Loading card change",
+      "summary": "Change",
+      "current": "Current card",
+      "nextCharge": "Next payment",
+      "noCharge": "Only the card changes. You won't be charged now.",
+      "keepOnFail": "If registering the new card fails, your current card stays.",
+      "pastDue": "After changing the card, pay the overdue amount with “Pay overdue” on the plans page.",
+      "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
+      "submit": "Agree and register new card",
+      "unavailable": "You can't change the card right now.",
+      "askAdmin": "Only admins can change the card. Please ask an admin."
+    }
   },
   "setup": {
     "title": "Card registration result",
@@ -200,6 +230,137 @@
     "closed": {
       "title": "Card registration closed",
       "body": "It was canceled or timed out. Start over if you still need it."
+    },
+    "replace": {
+      "title": "Card change result",
+      "description": "Check the progress of your card change.",
+      "restart": "Try again",
+      "completed": {
+        "title": "Card changed",
+        "body": "You weren't charged now. The new card will be used from the next payment.",
+        "goPlans": "Go to plans"
+      },
+      "cardActionRequired": {
+        "title": "We couldn't change the card",
+        "body": "Your current card stays. Please try again with another card."
+      },
+      "closed": {
+        "title": "Card change closed",
+        "body": "It was canceled or timed out. Your current card stays."
+      }
     }
+  },
+  "manage": {
+    "title": "Manage subscription",
+    "plan": "Plan",
+    "planValue": "{plan} · {amount} / month",
+    "nextCharge": "Next payment",
+    "nextChargeValue": "{date} · {amount}",
+    "noNextCharge": "None",
+    "card": "Card",
+    "noCard": "No card on file",
+    "cardValue": "{issuer} {number}",
+    "cancelScheduled": "You can use it until {end}; after that the workspace moves to Free. You won't be charged again.",
+    "notPayerHint": "Only the admin who registered this card can resume the subscription.",
+    "latestPayment": "Latest payment",
+    "latestPaymentValue": "{date} · {amount}",
+    "paymentLink": "Payment details",
+    "changeCard": "Change card",
+    "cancel": "Cancel subscription",
+    "resume": "Resume subscription",
+    "refund": "Request refund",
+    "deleteMethod": "Remove card",
+    "notice": {
+      "stateChanged": "The billing status changed. We've loaded the latest details; please review them again.",
+      "inProgress": "A payment is being processed. Please try again once it finishes.",
+      "notPayer": "Only the admin who registered this card can resume the subscription. Please ask that admin.",
+      "methodInUse": "This card is used by your subscription and can't be removed. Use “Change card” to replace it.",
+      "canceled": "Subscription canceled. You can use it until {end}.",
+      "resumed": "Subscription resumed. {amount} will be charged on {date}.",
+      "deleted": "Card removed."
+    },
+    "cancelDialog": {
+      "title": "Cancel your subscription?",
+      "until": "You can keep using Pro until {end}; after that the workspace moves to Free.",
+      "noCharge": "You won't be charged the next payment ({amount}) or after.",
+      "undo": "You can resume any time before {end}.",
+      "confirm": "Cancel subscription",
+      "keep": "Keep"
+    },
+    "resumeDialog": {
+      "title": "Resume your subscription?",
+      "noChargeNow": "You won't be charged now.",
+      "next": "{amount} will be charged to this card on {date}, then renew monthly.",
+      "confirm": "Resume"
+    },
+    "refundDialog": {
+      "title": "Refund {amount}?",
+      "amount": "We'll cancel the full {amount} paid on {date}.",
+      "stop": "Future payments stop as soon as you request it.",
+      "access": "Once the refund is processed, Pro access ends right away and the workspace moves to Free.",
+      "final": "This can't be undone.",
+      "confirm": "Request refund"
+    },
+    "deleteDialog": {
+      "title": "Remove this card?",
+      "body": "Only the card saved for automatic payments is removed. Your payment history stays.",
+      "after": "To subscribe again, you'll need to register a card.",
+      "confirm": "Remove"
+    }
+  },
+  "paymentStatus": {
+    "SUCCEEDED": "Paid",
+    "FAILED": "Failed",
+    "CHECKING": "Confirming",
+    "REFUNDED": "Refunded",
+    "REFUNDING": "Refund in progress",
+    "REFUND_FAILED": "Refund needs attention"
+  },
+  "payment": {
+    "title": "Payment details",
+    "description": "Review one payment for this workspace.",
+    "loading": "Loading payment details",
+    "notFound": "We couldn't find this payment in this workspace.",
+    "askAdmin": "Only admins can view payment details.",
+    "back": "Back to plans",
+    "summary": "Payment",
+    "workspace": "Workspace",
+    "kind": "Type",
+    "kindValue": {
+      "PURCHASE": "First purchase",
+      "RENEWAL": "Monthly renewal"
+    },
+    "amount": "Amount",
+    "period": "Period",
+    "completedAt": "Paid at",
+    "status": "Status",
+    "card": "Card",
+    "refund": "Refund",
+    "refundValue": "{status} · {origin}",
+    "origin": {
+      "USER": "Requested by an admin",
+      "COMPENSATION": "Canceled automatically",
+      "RECONCILIATION": "Canceled after review"
+    },
+    "errorCode": "Reason code: {code}",
+    "then": "At the time",
+    "now": "Now",
+    "thenPaid": "Paid",
+    "nowRefunded": "Refunded. This period no longer includes access.",
+    "nowEnded": "This period has ended.",
+    "nowRefunding": "We're processing the refund. The workspace moves to Free when it's done.",
+    "taxInvoice": "Need a tax invoice? Let us know through <link>Help & feedback</link>.",
+    "loadFailed": "Couldn't load payment details."
+  },
+  "history": {
+    "title": "Payment history",
+    "description": "Payments you made. Payments for workspaces you left or deleted show the workspace name at the time.",
+    "loading": "Loading payment history",
+    "empty": "You haven't made any payments yet.",
+    "date": "Date",
+    "workspace": "Workspace",
+    "amount": "Amount",
+    "status": "Status",
+    "noDate": "Confirming"
   }
 }

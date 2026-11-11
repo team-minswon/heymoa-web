@@ -15,6 +15,10 @@ import {
   BillingSection,
 } from "@/components/billing/billing-screen";
 import { RecordingUsage } from "@/components/billing/recording-usage";
+import {
+  SubscriptionManagement,
+  hasSubscriptionToManage,
+} from "@/components/billing/subscription-management";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +28,9 @@ import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspac
 import { okData } from "@/lib/api/ok-data";
 import { planName } from "@/lib/billing/plan-name";
 import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
+import { refundPending } from "@/lib/billing/payment-status";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
+import { useRefundResultEvent } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { usePollWindow } from "@/lib/billing/use-poll-window";
 import {
@@ -66,8 +72,20 @@ function PlansSkeleton({ label }: { label: string }) {
 function PlansContent({ workspaceId }: { workspaceId: string }) {
   const t = useTranslations("billing.page");
   const poll = usePollWindow();
+  // 사용자 환불은 미정산 시도가 아니라 `REFRESH_STATUS` 가 없다 — 취소 처리 중이면 같이 다시 읽는다.
   const billing = useWorkspaceBilling(workspaceId, (data) =>
-    !poll.expired && data && billingInProgress(data) ? 5000 : false
+    !poll.expired &&
+    data &&
+    (billingInProgress(data) ||
+      refundPending(data.detail?.refundedAttempt?.refundStatus))
+      ? 5000
+      : false
+  );
+  const refunded = billing.detail?.refundedAttempt;
+  useRefundResultEvent(
+    workspaceId,
+    refunded?.refundStatus,
+    refunded?.refundOrigin === "USER"
   );
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const isAdmin = workspace?.role === "ADMIN";
@@ -77,7 +95,9 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
   }
   const isPaid =
     billing.entitlement?.kind === "PAID" ||
-    billing.entitlement?.kind === "TEST";
+    billing.entitlement?.kind === "TEST" ||
+    billing.entitlement?.kind === "GRACE";
+  const managed = isAdmin && hasSubscriptionToManage(billing);
   const actions = (
     <Actions
       workspaceId={workspaceId}
@@ -90,6 +110,11 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
   // 처리 중·미납·이어서 할 등록은 요금제 비교보다 먼저 보여야 한다 — 그때만 안내와 버튼을 현재 상태 아래로 올린다.
   const needsAttention =
     billingInProgress(billing) ||
+    Boolean(
+      billing.detail?.refundedAttempt?.refundOrigin === "USER" &&
+      (refundPending(billing.detail.refundedAttempt.refundStatus) ||
+        billing.status === "ENDED")
+    ) ||
     billing.status === "PAST_DUE" ||
     billing.teamSetupInProgress ||
     Boolean(billing.mySetupId);
@@ -97,7 +122,7 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
     <>
       <BillingSection title={t("status")}>
         <div className="flex flex-col gap-4">
-          <StatusCard billing={billing} />
+          <StatusCard billing={billing} managed={managed} />
           <RecordingUsage
             workspaceId={workspaceId}
             paid={billing.entitlement?.planCode === "PRO"}
@@ -105,6 +130,9 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
           {needsAttention ? actions : null}
         </div>
       </BillingSection>
+      {managed ? (
+        <SubscriptionManagement workspaceId={workspaceId} billing={billing} />
+      ) : null}
       <BillingSection title={t("plans")}>
         <Plans billing={billing} isPaid={isPaid}>
           {needsAttention ? null : actions}
@@ -114,7 +142,14 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-function StatusCard({ billing }: { billing: WorkspaceBillingResponseData }) {
+/** `managed` 면 해지 예약 문장은 아래 「구독 관리」가 날짜와 함께 적는다 — 여기서 두 번 말하지 않는다. */
+function StatusCard({
+  billing,
+  managed,
+}: {
+  billing: WorkspaceBillingResponseData;
+  managed: boolean;
+}) {
   const t = useTranslations("billing.page");
   const format = useBillingFormat();
   const kind = billing.entitlement?.kind ?? "FREE";
@@ -124,7 +159,7 @@ function StatusCard({ billing }: { billing: WorkspaceBillingResponseData }) {
     <div className="rounded-panel border border-[var(--el-hairline)] bg-white p-5">
       <p className="text-lg font-medium text-[var(--el-ink)]">{plan}</p>
       <dl className="mt-3 grid gap-1.5 text-sm text-[var(--el-muted)]">
-        {kind === "LEGACY_ACCESS" || kind === "TEST" ? (
+        {kind === "LEGACY_ACCESS" || kind === "TEST" || kind === "GRACE" ? (
           <div>{t(`kind.${kind}`)}</div>
         ) : null}
         {billing.entitlement ? (
@@ -141,9 +176,11 @@ function StatusCard({ billing }: { billing: WorkspaceBillingResponseData }) {
             <dd>{format.period(period)}</dd>
           </div>
         ) : null}
-        {billing.status === "PAST_DUE" ? <div>{t("pastDue")}</div> : null}
+        {billing.status === "PAST_DUE" && kind !== "GRACE" ? (
+          <div>{t("pastDue")}</div>
+        ) : null}
         {billing.status === "ENDED" ? <div>{t("ended")}</div> : null}
-        {billing.cancelAtPeriodEnd && period ? (
+        {billing.cancelAtPeriodEnd && period && !managed ? (
           <div>{t("cancelScheduled", { end: format.date(period.end) })}</div>
         ) : null}
       </dl>
@@ -240,6 +277,7 @@ function Actions({
   onRestartPolling: () => void;
 }) {
   const t = useTranslations("billing.page");
+  const format = useBillingFormat();
   const queryClient = useQueryClient();
   const cancel = useCancelBillingSetup();
   const actions = billing.allowedActions;
@@ -253,6 +291,16 @@ function Actions({
   const refund =
     detail?.latestAttempt?.refundStatus ??
     detail?.refundedAttempt?.refundStatus;
+  // 사용자가 요청한 환불은 「결제 취소 처리 중 → 완료」로 따로 말한다(보상 취소와 섞지 않는다).
+  const userRefund =
+    detail?.refundedAttempt?.refundOrigin === "USER"
+      ? detail.refundedAttempt.refundStatus
+      : null;
+  const compensation = userRefund ? null : refund;
+  const graceEnd =
+    billing.entitlement?.kind === "GRACE"
+      ? billing.entitlement.period?.end
+      : null;
 
   const cancelSetup = async () => {
     if (!billing.mySetupId) return;
@@ -273,20 +321,35 @@ function Actions({
           {t("checking.body")}
         </BillingNotice>
       ) : null}
-      {refund === "PENDING" ||
-      refund === "PROCESSING" ||
-      refund === "UNKNOWN" ? (
+      {refundPending(compensation) ? (
         <BillingNotice tone="warn" title={t("refunding.title")}>
           {t("refunding.body")}
         </BillingNotice>
       ) : null}
-      {refund === "FAILED" ? (
+      {compensation === "FAILED" ? (
         <BillingNotice tone="warn" title={t("refundFailed.title")}>
           {t("refundFailed.body")}
         </BillingNotice>
       ) : null}
+      {refundPending(userRefund) ? (
+        <BillingNotice title={t("userRefunding.title")}>
+          {t("userRefunding.body")}
+        </BillingNotice>
+      ) : null}
+      {userRefund === "SUCCEEDED" && billing.status === "ENDED" ? (
+        <BillingNotice title={t("userRefunded.title")}>
+          {t("userRefunded.body")}
+        </BillingNotice>
+      ) : null}
+      {userRefund === "FAILED" ? (
+        <BillingNotice tone="warn" title={t("userRefundFailed.title")}>
+          {t("userRefundFailed.body")}
+        </BillingNotice>
+      ) : null}
       {billing.status === "PAST_DUE" && !checking ? (
-        <BillingNotice tone="warn">{t("pastDue")}</BillingNotice>
+        <BillingNotice tone="warn">
+          {graceEnd ? t("grace", { end: format.date(graceEnd) }) : t("pastDue")}
+        </BillingNotice>
       ) : null}
       {!isAdmin ? <BillingNotice>{t("askAdmin")}</BillingNotice> : null}
       {isAdmin &&
@@ -333,6 +396,7 @@ function Actions({
           workspaceId={workspaceId}
           detail={detail}
           amountKrw={billing.product.amountKrw}
+          pastDue={billing.status === "PAST_DUE"}
           onRetried={onRestartPolling}
         />
       ) : null}

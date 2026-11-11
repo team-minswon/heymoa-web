@@ -31,7 +31,7 @@ export type WorkspaceBillingResponseData = {
   mySetupId: string | null;
   /** 다른 ADMIN 이 연 진행 중 등록이 있다(내용은 보이지 않는다) */
   teamSetupInProgress: boolean;
-  /** 화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS */
+  /** 화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, REQUEST_REFUND, DELETE_PAYMENT_METHOD */
   allowedActions: string[];
   /** 기간 끝에 해지 예약 여부 */
   cancelAtPeriodEnd: boolean;

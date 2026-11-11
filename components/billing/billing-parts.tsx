@@ -83,11 +83,14 @@ export function RetryPaymentButton({
   workspaceId,
   detail,
   amountKrw,
+  pastDue = false,
   onRetried,
 }: {
   workspaceId: string;
   detail: Detail;
   amountKrw: number;
+  /** 갱신 실패(미납)면 「미납 결제」 — 첫 구매 실패의 「다시 결제」와 문구를 가른다. */
+  pastDue?: boolean;
   onRetried?: () => void;
 }) {
   const t = useTranslations("billing.retry");
@@ -138,7 +141,9 @@ export function RetryPaymentButton({
   return (
     <div className="flex flex-col items-start gap-2">
       <Button onClick={run} loading={retry.isPending}>
-        {t("button", { amount: format.money(amountKrw) })}
+        {t(pastDue ? "pastDueButton" : "button", {
+          amount: format.money(amountKrw),
+        })}
       </Button>
       {notice ? (
         <p role="alert" className="text-sm text-[var(--el-muted)]">

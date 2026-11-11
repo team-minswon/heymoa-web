@@ -44,4 +44,14 @@ export type WorkspaceBillingResponseDataDetail = {
    * @nullable
    */
   refundedAttempt: WorkspaceBillingResponseDataDetailRefundedAttempt;
+  /**
+   * 지금 유료 기간의 결제(환불 요청의 paymentId). 없으면 null
+   * @nullable
+   */
+  currentPaymentId: string | null;
+  /**
+   * ACTIVE 결제 수단(수단 삭제의 methodId). 없으면 null
+   * @nullable
+   */
+  methodId: string | null;
 } | null;

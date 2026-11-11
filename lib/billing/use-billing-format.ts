@@ -4,6 +4,7 @@ import { formatAppDate } from "@/lib/format/date";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 const DATE = { year: "numeric", month: "long", day: "numeric" } as const;
+const DATE_TIME = { ...DATE, hour: "numeric", minute: "2-digit" } as const;
 
 /** 금액·제공량·날짜 표시. 값은 전부 서버 응답이고, 여기는 모양만 정한다. */
 export function useBillingFormat() {
@@ -29,6 +30,20 @@ export function useBillingFormat() {
     monthlyMinutes: (minutes: number) =>
       t("monthlyMinutes", { duration: duration(minutes) }),
     date: (iso: string) => formatAppDate(iso, DATE, locale),
+    dateTime: (iso: string) => formatAppDate(iso, DATE_TIME, locale),
+    /** PG 가 가린 카드 표시값. 셋 다 없으면 null. */
+    card: (
+      card:
+        | {
+            issuer: string | null;
+            cardType: string | null;
+            number: string | null;
+          }
+        | null
+        | undefined
+    ) =>
+      [card?.issuer, card?.cardType, card?.number].filter(Boolean).join(" ") ||
+      null,
     period: (period: { start: string; end: string }) =>
       t("period", {
         start: formatAppDate(period.start, DATE, locale),

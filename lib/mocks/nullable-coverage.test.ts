@@ -385,6 +385,8 @@ async function contractSamples() {
         proposalId: [...proposalIds, ...meetingFlow.proposalIds().slice(0, 12)],
         taskId: projectTasks.ids(),
         setupId: billingMock.setupIds(),
+        // 결제 상세는 그 공간의 결제만 200 이다 — 다른 공간 조합은 404 로 빠지고 아래에서 결제의 공간으로 다시 넣는다.
+        paymentId: billingMock.payments().map((payment) => payment.paymentId),
         // 사용 내역(APP-826) — 한 쪽을 넘는 연결과 몇 줄뿐인 연결이 커서의 양쪽을 낸다
         delegationId: mockDb
           .listAgentDelegations()
@@ -424,6 +426,11 @@ async function contractSamples() {
     samples.push([
       "WorkspaceBillingResponse",
       `/v1/workspaces/${workspaceId}/billing`,
+    ]);
+  for (const { workspaceId, paymentId } of billingMock.payments())
+    samples.push([
+      "BillingPaymentResponse",
+      `/v1/workspaces/${workspaceId}/billing/payments/${paymentId}`,
     ]);
   return {
     samples: [...new Map(samples.map((s) => [s[1], s])).values()],

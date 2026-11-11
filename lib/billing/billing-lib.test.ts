@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { paymentStatusOf } from "@/lib/billing/payment-status";
 import { planName } from "@/lib/billing/plan-name";
 import { createRequestKey } from "@/lib/billing/request-key";
 import {
@@ -83,5 +84,28 @@ describe("planName", () => {
     expect(planName("FREE")).toBe("Free");
     expect(planName("PRO")).toBe("Pro");
     expect(planName("TEST_MONTHLY")).toBe("TEST_MONTHLY");
+  });
+});
+
+describe("paymentStatusOf", () => {
+  it("환불이 걸리면 결제 결과보다 환불 상태가 앞서고, 결과를 모르면 확인 중이다", () => {
+    expect(paymentStatusOf({ status: "SUCCEEDED", refundStatus: null })).toBe(
+      "SUCCEEDED"
+    );
+    expect(
+      paymentStatusOf({ status: "SUCCEEDED", refundStatus: "PROCESSING" })
+    ).toBe("REFUNDING");
+    expect(
+      paymentStatusOf({ status: "SUCCEEDED", refundStatus: "SUCCEEDED" })
+    ).toBe("REFUNDED");
+    expect(
+      paymentStatusOf({ status: "SUCCEEDED", refundStatus: "FAILED" })
+    ).toBe("REFUND_FAILED");
+    expect(paymentStatusOf({ status: "FAILED", refundStatus: null })).toBe(
+      "FAILED"
+    );
+    expect(paymentStatusOf({ status: "UNKNOWN", refundStatus: null })).toBe(
+      "CHECKING"
+    );
   });
 });

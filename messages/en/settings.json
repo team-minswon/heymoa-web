@@ -17,6 +17,7 @@
       "account": "My account",
       "notifications": "Notifications",
       "agents": "My MCP connections",
+      "paymentHistory": "Payment history",
       "appUpdates": "App updates"
     },
     "loadFailed": {

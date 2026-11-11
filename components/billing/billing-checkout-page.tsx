@@ -31,25 +31,41 @@ import { createRequestKey } from "@/lib/billing/request-key";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
+type Purpose = "PURCHASE" | "REPLACE";
+
 /**
- * `/w/{workspaceId}/billing/checkout` — 주문서·동의. **금액·상품은 서버 응답만 그린다**(화면에 값을 적어 두지 않는다).
+ * `/w/{workspaceId}/billing/checkout` — 주문서·동의. `/w/{workspaceId}/billing/card` 는 같은 화면의 카드 변경(`REPLACE`)이다 —
+ * 카드만 새로 등록하고 지금 청구하지 않는다(문구·분석·진입 조건이 구매와 갈린다). **금액·상품은 서버 응답만 그린다**(화면에 값을 적어 두지 않는다).
  * 동의 전에는 구매할 수 없다. requestKey 는 이 화면이 사용자의 한 번의 의도마다 하나 만든다(`createRequestKey`).
  */
-export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
+export function BillingCheckoutPage({
+  workspaceId,
+  purpose = "PURCHASE",
+}: {
+  workspaceId: string;
+  purpose?: Purpose;
+}) {
   const t = useTranslations("billing.checkout");
+  const replace = purpose === "REPLACE";
   const role = useBillingViewerRole(workspaceId);
   useEffect(() => {
-    if (role) billingEvents.checkoutEntered(workspaceId, role);
-  }, [workspaceId, role]);
+    if (role && !replace) billingEvents.checkoutEntered(workspaceId, role);
+  }, [workspaceId, role, replace]);
   return (
-    <BillingScreen title={t("title")} description={t("description")}>
+    <BillingScreen
+      title={replace ? t("replace.title") : t("title")}
+      description={replace ? t("replace.description") : t("description")}
+    >
       <DataBoundary
         resetKeys={[workspaceId]}
         fallback={
-          <Skeleton aria-label={t("loading")} className="h-80 w-full" />
+          <Skeleton
+            aria-label={replace ? t("replace.loading") : t("loading")}
+            className="h-80 w-full"
+          />
         }
       >
-        <CheckoutContent workspaceId={workspaceId} />
+        <CheckoutContent workspaceId={workspaceId} purpose={purpose} />
       </DataBoundary>
     </BillingScreen>
   );
@@ -57,7 +73,14 @@ export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
 
 type Notice = "stateChanged" | "inProgress" | "unsupported";
 
-function CheckoutContent({ workspaceId }: { workspaceId: string }) {
+function CheckoutContent({
+  workspaceId,
+  purpose,
+}: {
+  workspaceId: string;
+  purpose: Purpose;
+}) {
+  const replace = purpose === "REPLACE";
   const t = useTranslations("billing.checkout");
   const format = useBillingFormat();
   const queryClient = useQueryClient();
@@ -86,16 +109,24 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
   if (!billing.enforced) {
     return <BillingNotice>{t("notEnforced")}</BillingNotice>;
   }
-  if (!admin) return <BillingNotice>{t("askAdmin")}</BillingNotice>;
+  if (!admin)
+    return (
+      <BillingNotice>
+        {replace ? t("replace.askAdmin") : t("askAdmin")}
+      </BillingNotice>
+    );
   if (billing.teamSetupInProgress)
     return <BillingNotice>{t("inProgress")}</BillingNotice>;
   if (
     !product ||
-    (!billing.allowedActions.includes("START_PURCHASE") && !openSetupId)
+    (!billing.allowedActions.includes(
+      replace ? "CHANGE_CARD" : "START_PURCHASE"
+    ) &&
+      !openSetupId)
   ) {
     return (
       <BillingNotice>
-        <p>{t("unavailable")}</p>
+        <p>{replace ? t("replace.unavailable") : t("unavailable")}</p>
         <LinkButton
           href={`/w/${workspaceId}/billing`}
           variant="outline"
@@ -107,9 +138,10 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
     );
   }
   // 자동 갱신 동의는 금액과 주기를 문장에 직접 적는다.
-  const agreementLabel = t("agreementLabel", {
-    amount: format.money(product.amountKrw),
-  });
+  const agreementLabel = t(
+    replace ? "replace.agreementLabel" : "agreementLabel",
+    { amount: format.money(product.amountKrw) }
+  );
 
   const start = async () => {
     setNotice(null);
@@ -118,7 +150,7 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
         workspaceId,
         data: {
           requestKey: key.current(),
-          purpose: "PURCHASE",
+          purpose,
           expectedProductVersion: product.policyVersion,
           agreementVersion: product.agreementVersion,
         },
@@ -128,7 +160,8 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
       const registration = setup.registration;
       if (registration?.redirectUrl) {
         key.renew();
-        billingEvents.cardSetupStarted(workspaceId, setup.provider);
+        if (replace) billingEvents.cardChangeStarted(workspaceId);
+        else billingEvents.cardSetupStarted(workspaceId, setup.provider);
         leaveToCardRegistration(registration.redirectUrl);
         return;
       }
@@ -172,35 +205,63 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
     if (agreed) await start();
   };
 
+  const period = billing.currentPeriod;
+  const card = format.card(billing.detail?.maskedCard);
   return (
     <div className="flex flex-col gap-10">
-      <BillingSection title={t("order")}>
-        <dl className="grid gap-3 rounded-panel border border-[var(--el-hairline)] bg-white p-5 text-sm">
-          <Row label={t("workspace")} value={workspace?.name ?? ""} />
-          <Row
-            label={t("product")}
-            value={t("productName", { plan: planName(product.planCode) })}
-          />
-          <Row
-            label={t("amount")}
-            value={t("amountPerMonth", {
-              amount: format.money(product.amountKrw),
-            })}
-          />
-          <Row
-            label={t("allowance")}
-            value={format.allowance(product.recordingAllowanceMinutes)}
-          />
-        </dl>
-        <ul className="mt-3 grid gap-1 text-sm text-[var(--el-muted)]">
-          <li>{t("shared")}</li>
-          <li>{t("autoRenew")}</li>
-          <li>{t("cancelInfo")}</li>
-        </ul>
-        <div className="mt-3">
-          <TestPaymentNotice notice={product.testPaymentNotice ?? undefined} />
-        </div>
-      </BillingSection>
+      {replace ? (
+        <BillingSection title={t("replace.summary")}>
+          <dl className="grid gap-3 rounded-panel border border-[var(--el-hairline)] bg-white p-5 text-sm">
+            <Row label={t("workspace")} value={workspace?.name ?? ""} />
+            {card ? <Row label={t("replace.current")} value={card} /> : null}
+            {billing.status === "ACTIVE" &&
+            !billing.cancelAtPeriodEnd &&
+            period ? (
+              <Row
+                label={t("replace.nextCharge")}
+                value={`${format.date(period.end)} · ${format.money(product.amountKrw)}`}
+              />
+            ) : null}
+          </dl>
+          <ul className="mt-3 grid gap-1 text-sm text-[var(--el-muted)]">
+            <li>{t("replace.noCharge")}</li>
+            <li>{t("replace.keepOnFail")}</li>
+            {billing.status === "PAST_DUE" ? (
+              <li>{t("replace.pastDue")}</li>
+            ) : null}
+          </ul>
+        </BillingSection>
+      ) : (
+        <BillingSection title={t("order")}>
+          <dl className="grid gap-3 rounded-panel border border-[var(--el-hairline)] bg-white p-5 text-sm">
+            <Row label={t("workspace")} value={workspace?.name ?? ""} />
+            <Row
+              label={t("product")}
+              value={t("productName", { plan: planName(product.planCode) })}
+            />
+            <Row
+              label={t("amount")}
+              value={t("amountPerMonth", {
+                amount: format.money(product.amountKrw),
+              })}
+            />
+            <Row
+              label={t("allowance")}
+              value={format.allowance(product.recordingAllowanceMinutes)}
+            />
+          </dl>
+          <ul className="mt-3 grid gap-1 text-sm text-[var(--el-muted)]">
+            <li>{t("shared")}</li>
+            <li>{t("autoRenew")}</li>
+            <li>{t("cancelInfo")}</li>
+          </ul>
+          <div className="mt-3">
+            <TestPaymentNotice
+              notice={product.testPaymentNotice ?? undefined}
+            />
+          </div>
+        </BillingSection>
+      )}
       <BillingSection title={t("agreement")}>
         {openSetupId ? (
           <BillingNotice tone="warn" title={t("openSetup.title")}>
@@ -223,7 +284,7 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
             checked={agreed}
             onCheckedChange={(checked) => {
               setAgreed(checked);
-              if (checked && !agreementTracked.current) {
+              if (checked && !agreementTracked.current && !replace) {
                 agreementTracked.current = true;
                 billingEvents.agreementAccepted(workspaceId);
               }
@@ -244,7 +305,7 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
           loading={create.isPending}
           onClick={start}
         >
-          {t("submit")}
+          {replace ? t("replace.submit") : t("submit")}
         </Button>
         <span id="billing-agree-hint" className="sr-only">
           {t("agreeFirst")}

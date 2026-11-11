@@ -17,4 +17,5 @@ export const WorkspaceBillingResponseDataEntitlementKind = {
   PAID: "PAID",
   LEGACY_ACCESS: "LEGACY_ACCESS",
   TEST: "TEST",
+  GRACE: "GRACE",
 } as const;

@@ -107,9 +107,11 @@ function SetupResult({ setupId }: { setupId: string }) {
   }, [view, workspaceId, queryClient]);
 
   // 최종 상태가 처음 보일 때 한 번씩만 분석 이벤트를 낸다(같은 결과를 폴링마다 다시 내지 않는다).
+  // 카드 변경(REPLACE)은 구매 퍼널이 아니라 세지 않는다.
   const reported = useRef(new Set<string>());
+  const purchase = setup?.purpose !== "REPLACE";
   useEffect(() => {
-    const result = view ? resultOfView(view) : null;
+    const result = view && purchase ? resultOfView(view) : null;
     if (!result || reported.current.has(result)) return;
     reported.current.add(result);
     billingEvents.cardSetupResulted({
@@ -117,7 +119,7 @@ function SetupResult({ setupId }: { setupId: string }) {
       ...(provider ? { provider } : {}),
       result,
     });
-  }, [view, workspaceId, provider]);
+  }, [view, workspaceId, provider, purchase]);
 
   // 창으로 돌아오면 자동 읽기가 멈춘 뒤에도 한 번 읽는다.
   useEffect(() => {
@@ -220,7 +222,11 @@ function ViewBody({
   onRetried: () => void;
 }) {
   const t = useTranslations("billing.setup");
-  const checkout = workspaceId ? `/w/${workspaceId}/billing/checkout` : null;
+  // 카드 변경은 카드만 바꾸고 청구하지 않는다 — 결과 문구·다시 시작할 곳을 구매와 섞지 않는다.
+  const replace = setup.purpose === "REPLACE";
+  const checkout = workspaceId
+    ? `/w/${workspaceId}/billing/${replace ? "card" : "checkout"}`
+    : null;
   const card = (
     title: string,
     body?: string,
@@ -235,7 +241,9 @@ function ViewBody({
     </BillingNotice>
   );
   const restartLink = checkout ? (
-    <LinkButton href={checkout}>{t("restart")}</LinkButton>
+    <LinkButton href={checkout}>
+      {replace ? t("replace.restart") : t("restart")}
+    </LinkButton>
   ) : null;
 
   switch (view) {
@@ -272,8 +280,16 @@ function ViewBody({
       return card(t("cardUnknown.title"), t("cardUnknown.body"));
     case "cardActionRequired":
       return card(
-        t("cardActionRequired.title"),
-        t("cardActionRequired.body"),
+        t(
+          replace
+            ? "replace.cardActionRequired.title"
+            : "cardActionRequired.title"
+        ),
+        t(
+          replace
+            ? "replace.cardActionRequired.body"
+            : "cardActionRequired.body"
+        ),
         restartLink,
         "warn"
       );
@@ -314,7 +330,19 @@ function ViewBody({
         "warn"
       );
     case "completed":
-      return <CompletedBody setup={setup} workspaceId={workspaceId} />;
+      return replace ? (
+        card(
+          t("replace.completed.title"),
+          t("replace.completed.body"),
+          workspaceId ? (
+            <LinkButton href={`/w/${workspaceId}/billing`}>
+              {t("replace.completed.goPlans")}
+            </LinkButton>
+          ) : null
+        )
+      ) : (
+        <CompletedBody setup={setup} workspaceId={workspaceId} />
+      );
     case "accessLost":
       return card(
         t("accessLost.title"),
@@ -323,7 +351,11 @@ function ViewBody({
         "warn"
       );
     case "closed":
-      return card(t("closed.title"), t("closed.body"), restartLink);
+      return card(
+        t(replace ? "replace.closed.title" : "closed.title"),
+        t(replace ? "replace.closed.body" : "closed.body"),
+        restartLink
+      );
   }
 }
 

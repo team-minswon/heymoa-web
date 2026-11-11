@@ -95,6 +95,15 @@ export type AnalyticsEvent =
   | "billing_card_setup_started"
   | "billing_card_setup_resulted"
   | "billing_retry_clicked"
+  | "billing_cancel_dialog_opened"
+  | "billing_subscription_canceled"
+  | "billing_subscription_resumed"
+  | "billing_card_change_started"
+  | "billing_refund_requested"
+  | "billing_refund_resulted"
+  | "billing_payment_method_deleted"
+  | "billing_payment_viewed"
+  | "billing_payment_history_viewed"
   | "recording_quota_blocked"
   | "recording_quota_upgrade_clicked"
   | "notifications_opened"
@@ -208,7 +217,8 @@ export type WebEventProperties = {
       | "workspaceAgents"
       | "agents"
       | "notifications"
-      | "billing";
+      | "billing"
+      | "paymentHistory";
     // 어디서 열었나. 알림 모달의 「알림 설정」 이동은 modal, 설정 창 안의 탭 이동은 settings(PRO-67 I32).
     from: "modal" | "settings";
   };
@@ -232,6 +242,31 @@ export type WebEventProperties = {
     workspace_id?: string;
     result: Exclude<BillingSetupResult, "completed" | "refunded">;
   };
+  // 구매 이후의 관리(APP-1565). 해지는 확인 창을 연 수와 실제 해지를 따로 센다(확인 창에서 돌아선 비율).
+  // 결과는 종류만 싣는다 — 금액·카드·결제/환불 id 는 싣지 않는다. 관리 행동은 ADMIN 만 해서 role 을 따로 싣지 않는다.
+  billing_cancel_dialog_opened: { workspace_id: string };
+  billing_subscription_canceled: { workspace_id: string };
+  billing_subscription_resumed: {
+    workspace_id: string;
+    result: "resumed" | "not_payer";
+  };
+  billing_card_change_started: { workspace_id: string };
+  billing_refund_requested: {
+    workspace_id: string;
+    result: "accepted" | "not_allowed";
+  };
+  // 이 화면에서 취소 처리 중을 본 뒤 끝난 결과가 보일 때 한 번.
+  billing_refund_resulted: {
+    workspace_id: string;
+    result: "succeeded" | "failed";
+  };
+  billing_payment_method_deleted: {
+    workspace_id: string;
+    result: "deleted" | "in_use";
+  };
+  billing_payment_viewed: { workspace_id: string };
+  // 계정 설정의 내 결제 내역. 공간을 가로지르는 목록이라 공간이 없다.
+  billing_payment_history_viewed: Record<string, never>;
   // 무료 월 한도로 녹음 시작이 거절돼 안내가 떴다(APP-1566). role 은 그 안내를 본 사람이 ADMIN 인가 멤버인가.
   // 사용량 수치·회의 id 는 싣지 않는다. 효과는 안내 → 요금제 보기 클릭 비율로 본다.
   recording_quota_blocked: { workspace_id: string; role: "admin" | "member" };

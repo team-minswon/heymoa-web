@@ -17,6 +17,7 @@
       "account": "내 계정",
       "notifications": "알림",
       "agents": "내 MCP 연결",
+      "paymentHistory": "결제 내역",
       "appUpdates": "앱 업데이트"
     },
     "loadFailed": {
