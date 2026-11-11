@@ -209,7 +209,7 @@ describe("요금제 화면", () => {
     renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
     expect(await screen.findByText("9,900원 / 월")).toBeInTheDocument();
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
-    expect(screen.getByText("월 120분")).toBeInTheDocument();
+    expect(screen.getByText("월 30시간")).toBeInTheDocument();
     expect(
       screen.getByText("이 공간의 모든 멤버가 함께 씁니다")
     ).toBeInTheDocument();
@@ -230,7 +230,7 @@ describe("요금제 화면", () => {
       product: { ...billingBody().product, recordingAllowanceMinutes: 1000 },
     });
     renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
-    expect(await screen.findByText("녹음 1,000분")).toBeInTheDocument();
+    expect(await screen.findByText("녹음 16시간 40분")).toBeInTheDocument();
   });
 
   it("멤버에게는 구매 버튼 대신 관리자에게 요청하라고 안내한다", async () => {

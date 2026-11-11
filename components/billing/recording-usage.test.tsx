@@ -64,10 +64,12 @@ const serveUsage = (data: unknown, workspaceId = FREE) =>
 describe("녹음 사용량 — 요금제 화면", () => {
   it("Free 는 이번 달 사용분·한도·진행 막대·초기화 날짜를 서버 값으로 그린다", async () => {
     renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
-    expect(await screen.findByText("이번 달 45분 / 120분")).toBeInTheDocument();
+    expect(
+      await screen.findByText("이번 달 45분 / 30시간")
+    ).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
-      "38"
+      "3"
     );
     expect(screen.getByText("12월 1일 초기화")).toBeInTheDocument();
     expect(
@@ -85,7 +87,7 @@ describe("녹음 사용량 — 요금제 화면", () => {
     );
     renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
     expect(
-      await screen.findByText("이번 달 131분 / 120분")
+      await screen.findByText("이번 달 2시간 11분 / 2시간")
     ).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
@@ -103,7 +105,9 @@ describe("녹음 사용량 — 요금제 화면", () => {
 
   it("Pro 는 녹음 무제한과 참고용 사용 시간만 그리고 막대는 없다", async () => {
     renderIn(<WorkspaceBillingPage workspaceId={PAID} />);
-    expect(await screen.findByText("이번 달 330분 사용")).toBeInTheDocument();
+    expect(
+      await screen.findByText("이번 달 5시간 30분 사용")
+    ).toBeInTheDocument();
     expect(screen.getAllByText("녹음 무제한").length).toBeGreaterThan(0);
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText(/초기화/)).not.toBeInTheDocument();
@@ -170,7 +174,7 @@ describe("녹음 사용량 — 요금제 화면", () => {
     expect(
       await screen.findByLabelText("사용량을 불러오는 중")
     ).toBeInTheDocument();
-    await screen.findByText("이번 달 45분 / 120분");
+    await screen.findByText("이번 달 45분 / 2시간");
     expect(
       screen.queryByLabelText("사용량을 불러오는 중")
     ).not.toBeInTheDocument();
@@ -180,7 +184,9 @@ describe("녹음 사용량 — 요금제 화면", () => {
 describe("녹음 사용량 — 설정 탭 요약", () => {
   it("Free 의 사용량을 같은 모양으로 그린다", async () => {
     renderIn(<WorkspaceBillingSettings workspaceId={FREE} />);
-    expect(await screen.findByText("이번 달 45분 / 120분")).toBeInTheDocument();
+    expect(
+      await screen.findByText("이번 달 45분 / 30시간")
+    ).toBeInTheDocument();
     expect(screen.getByText("12월 1일 초기화")).toBeInTheDocument();
   });
 

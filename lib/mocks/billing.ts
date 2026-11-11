@@ -95,7 +95,7 @@ const PRODUCT = {
   policyVersion: "TEST_MONTHLY_V1",
   amountKrw: 9900,
   recordingAllowanceMinutes: null as number | null,
-  freeRecordingAllowanceMinutes: 120,
+  freeRecordingAllowanceMinutes: 1800,
   currency: "KRW",
   billingInterval: "MONTH",
   planCode: "PRO",

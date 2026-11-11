@@ -6,6 +6,7 @@ import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatAppDate } from "@/lib/format/date";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
+import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { useRecordingUsage } from "@/lib/billing/use-recording-usage";
 
 const CARD =
@@ -39,6 +40,7 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
   const t = useTranslations("billing.usage");
   const locale = useDisplayLocale();
   const usage = useRecordingUsage(workspaceId);
+  const format = useBillingFormat();
   if (!usage.enforced || usage.usedMinutes == null) return null;
 
   if (usage.unlimited) {
@@ -48,7 +50,7 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
           {t("unlimited")}
         </p>
         <p className="mt-2 text-sm leading-5 text-[var(--el-muted)]">
-          {t("usedPaid", { used: usage.usedMinutes })}
+          {t("usedPaid", { used: format.duration(usage.usedMinutes) })}
         </p>
       </div>
     );
@@ -63,8 +65,8 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
     <div className={CARD}>
       <p className="text-base leading-6 font-medium text-[var(--el-ink)]">
         {t("usedFree", {
-          used: usage.usedMinutes,
-          allowance: usage.allowanceMinutes,
+          used: format.duration(usage.usedMinutes),
+          allowance: format.duration(usage.allowanceMinutes),
         })}
       </p>
       <div

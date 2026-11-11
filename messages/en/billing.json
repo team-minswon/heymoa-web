@@ -3,9 +3,12 @@
   "format": {
     "money": "KRW {amount}",
     "unlimited": "Unlimited recording",
-    "monthlyMinutes": "{count, number} minutes per month",
-    "minutes": "{count, number} recording minutes",
-    "period": "{start} until {end}"
+    "monthlyMinutes": "{duration} per month",
+    "minutes": "{duration} of recording",
+    "period": "{start} until {end}",
+    "durationHours": "{h, number} hr",
+    "durationBoth": "{h, number} hr {m, number} min",
+    "durationMinutes": "{m, number} min"
   },
   "testNotice": {
     "SIMULATED_NO_CHARGE": "This is a test payment. You won't actually be charged.",
@@ -19,12 +22,12 @@
   "usage": {
     "loading": "Loading usage",
     "progress": "Recording usage this month",
-    "usedFree": "{used, number} / {allowance, number} min this month",
+    "usedFree": "{used} / {allowance} this month",
     "resets": "Resets on {date}",
     "exhausted": "You've used this month's allowance. New recordings can start from {date}.",
     "reserved": "Meetings being recorded are counted after they end",
     "unlimited": "Unlimited recording",
-    "usedPaid": "{used, number} min used this month"
+    "usedPaid": "{used} used this month"
   },
   "settings": {
     "title": "Billing",
