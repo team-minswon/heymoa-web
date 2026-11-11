@@ -13,10 +13,7 @@
     "versionPeriod": "{from} ~ {to}",
     "versionPeriodOpen": "{from} ~ 현재 버전 시행 전날",
     "archiveNotice": "이 문서는 {period}에 적용된 이전 버전입니다.",
-    "currentVersion": "현재 버전 보기",
-    "replayNotice": "11월 18일부터 내용이 가려진 화면 흐름을 분석합니다. 회의 내용과 입력값은 수집하지 않습니다.",
-    "replayNoticeLink": "변경사항 보기",
-    "replayNoticeDismiss": "처리방침 변경 안내 닫기"
+    "currentVersion": "현재 버전 보기"
   },
   "terms": {
     "title": "이용약관",

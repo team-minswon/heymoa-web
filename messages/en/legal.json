@@ -13,10 +13,7 @@
     "versionPeriod": "{from} – {to}",
     "versionPeriodOpen": "{from} – the day before the current version takes effect",
     "archiveNotice": "This is a previous version that applied during {period}.",
-    "currentVersion": "Read the current version",
-    "replayNotice": "From November 18, we analyze masked screen flows. Meeting content and input values are not collected.",
-    "replayNoticeLink": "View changes",
-    "replayNoticeDismiss": "Dismiss privacy policy notice"
+    "currentVersion": "Read the current version"
   },
   "terms": {
     "title": "Terms of Service",

@@ -12,7 +12,6 @@ import {
 } from "@/lib/analytics/track";
 
 import { useGetCurrentUser } from "@/lib/api/generated/users/users";
-import { SessionReplayNotice } from "./session-replay-notice";
 
 /** PostHog를 켜고 로그인한 사람을 userId로 묶는다. 켤지는 `SiteAnalytics`가 정한다. */
 export function PostHogAnalytics({ apiKey }: { apiKey: string }) {
@@ -41,5 +40,5 @@ export function PostHogAnalytics({ apiKey }: { apiKey: string }) {
   }, [account, userId]);
   useEffect(() => syncSessionReplay(), [pathname]);
 
-  return <SessionReplayNotice />;
+  return null;
 }

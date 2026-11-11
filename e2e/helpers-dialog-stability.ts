@@ -37,6 +37,8 @@ export function dialogStabilityTests(classic: boolean) {
           element.scrollIntoView({ block: "center", behavior: "instant" })
         );
       await page.evaluate(() => document.fonts.ready);
+      // 클릭의 actionability 스크롤도 끝낸 뒤 모달 전후 위치를 비교합니다.
+      if (kind === "image") await target.hover();
       const snap = () =>
         page.evaluate(() => {
           const r = (s: string) => {
