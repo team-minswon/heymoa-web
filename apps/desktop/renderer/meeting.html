@@ -18,6 +18,28 @@
       </div>
       <div class="window-controls">
         <button
+          id="settings"
+          data-i18n-aria-label="데스크톱 설정"
+          aria-label="데스크톱 설정"
+          data-i18n-title="데스크톱 설정"
+          title="데스크톱 설정"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 7h16M4 17h16" />
+            <circle cx="9" cy="7" r="3" fill="var(--canvas)" />
+            <circle cx="15" cy="17" r="3" fill="var(--canvas)" />
+          </svg>
+        </button>
+        <button
           id="pin"
           aria-pressed="false"
           data-i18n-aria-label="항상 위에 고정"
@@ -36,7 +58,11 @@
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path d="m16 3 5 5-4 2-3 5-2-2-4 4-1-1 4-4-2-2 5-3zM7 17l-4 4" />
+            <path d="M12 17v5" />
+            <path
+              class="pin-head"
+              d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+            />
           </svg>
         </button>
         <button

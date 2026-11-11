@@ -34,3 +34,7 @@ await copyFile("build/icons/icon-mac.png", "dist/onboarding-logo.png");
 // Bundle updater dependencies into the allowlisted native module; no node_modules in the installer.
 await build({ entryPoints: ["src/update-runtime.ts"], outfile: "dist/update-runtime.js", bundle: true,
   platform: "node", format: "cjs", target: "node22", external: ["electron"] });
+
+await build({ entryPoints:["renderer/preferences.ts"], outfile:"dist/preferences-renderer.js", bundle:true, platform:"browser", format:"iife", target:"chrome144" });
+await copyFile("renderer/preferences.html", "dist/preferences.html");
+await copyFile("renderer/preferences.css", "dist/preferences.css");

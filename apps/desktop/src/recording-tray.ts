@@ -198,8 +198,8 @@ export function createRecordingTray(
       { type: "separator" },
       ...(panel?.openSettings
         ? [
-            { label: t("설정…"), click: () => panel.openSettings?.("desktopAppearance") },
-            { label: t("앱 업데이트…"), click: () => panel.openSettings?.("appUpdates") },
+            { label: t("설정…"), click: () => panel.openSettings?.() },
+            { label: t("앱 업데이트…"), click: () => panel.openSettings?.() },
             { type: "separator" as const },
           ]
         : []),

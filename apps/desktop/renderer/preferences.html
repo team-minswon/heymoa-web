@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title data-i18n>데스크톱 설정</title>
+    <link rel="stylesheet" href="preferences.css" />
+  </head>
+  <body>
+    <main>
+      <h1 data-i18n>데스크톱 설정</h1>
+      <section>
+        <div class="label">
+          <label for="opacity" data-i18n>팝업 불투명도</label
+          ><output id="opacity-value" for="opacity">100%</output>
+        </div>
+        <input
+          id="opacity"
+          type="range"
+          min="60"
+          max="100"
+          step="5"
+          value="100"
+          disabled
+        />
+        <p data-i18n>핀으로 고정하고 머리글을 드래그해 이동할 수 있습니다.</p>
+      </section>
+      <section>
+        <div class="label">
+          <label for="automatic" data-i18n>자동 업데이트</label
+          ><input id="automatic" type="checkbox" disabled />
+        </div>
+        <p data-i18n>
+          새 버전을 자동으로 다운로드합니다. 녹음과 전송이 끝난 뒤 앱을 종료하면
+          적용됩니다.
+        </p>
+      </section>
+      <section class="updates">
+        <h2 data-i18n>앱 업데이트</h2>
+        <p id="version"></p>
+        <p id="status" role="status"></p>
+        <progress id="progress" max="100" hidden></progress
+        ><button id="check" disabled data-i18n>업데이트 확인</button
+        ><button id="restart" hidden data-i18n>재시작하여 업데이트</button>
+        <p id="blocked" hidden data-i18n>
+          녹음과 오디오 전송이 끝나야 재시작할 수 있습니다.
+        </p>
+      </section>
+      <p id="error" role="alert"></p>
+    </main>
+    <script src="preferences-renderer.js"></script>
+  </body>
+</html>

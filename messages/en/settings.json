@@ -16,8 +16,7 @@
       "account": "My account",
       "notifications": "Notifications",
       "agents": "My MCP connections",
-      "appUpdates": "App updates",
-      "desktopAppearance": "Desktop appearance"
+      "appUpdates": "App updates"
     },
     "loadFailed": {
       "account": "Couldn't load your account",
@@ -491,14 +490,7 @@
       "unavailable": "Updates cannot be installed in development mode.",
       "available": "Version {version} is available."
     },
-    "download": "Download update"
-  },
-  "desktopAppearance": {
-    "title": "Desktop appearance",
-    "description": "Adjust the meeting popup on this device.",
-    "opacity": "Popup opacity",
-    "hint": "Lower values let more of the screen show through. Use the pin at the top of the popup to keep it above other apps, and drag its header to move it.",
-    "unavailable": "This setting requires the latest desktop app. Check App updates for a new version.",
-    "failed": "Could not save display settings. Try again."
+    "download": "Download update",
+    "openNativeSettings": "Open desktop settings"
   }
 }

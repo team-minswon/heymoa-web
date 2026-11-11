@@ -1,0 +1,101 @@
+:root {
+  color-scheme: light dark;
+  --canvas: light-dark(#faf9f6, #18181b);
+  --ink: light-dark(#292524, #faf9f6);
+  --muted: light-dark(#78716c, #a8a29e);
+  --line: light-dark(#e7e5e4, #3f3f46);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font:
+    13px/1.6 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+}
+main {
+  padding: 20px 24px;
+}
+h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+h2 {
+  font: inherit;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+section + section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-weight: 500;
+}
+output {
+  font-variant-numeric: tabular-nums;
+}
+input {
+  accent-color: var(--ink);
+}
+input[type="range"] {
+  width: 100%;
+  margin: 14px 0 0;
+}
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+p {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+button {
+  margin-top: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+button:hover {
+  background: light-dark(#f1efed, #27272a);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin-top: 12px;
+  accent-color: var(--ink);
+}
+#error {
+  color: light-dark(#b45309, #fbbf24);
+}
+[hidden] {
+  display: none !important;
+}

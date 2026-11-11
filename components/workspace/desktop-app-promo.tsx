@@ -181,7 +181,11 @@ function DesktopUpdateNotice() {
       <Button
         variant="ghost"
         className="shrink-0"
-        onClick={() => openSettings("appUpdates")}
+        onClick={() => {
+          const bridge = desktopUpdateBridge();
+          if (bridge?.openPreferences) void bridge.openPreferences();
+          else openSettings("appUpdates");
+        }}
       >
         {t("title")}
       </Button>

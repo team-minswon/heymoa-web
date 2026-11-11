@@ -106,3 +106,54 @@ it("a live event wins over a delayed initial snapshot", async () => {
     undefined
   );
 });
+
+it("captures native settings actions and removes the activity listener", async () => {
+  let receive!: (
+    activity: import("@heymoa/desktop-contracts").DesktopUpdateActivity
+  ) => void;
+  const unsubscribe = vi.fn();
+  Object.defineProperty(window, "heymoaDesktop", {
+    configurable: true,
+    value: {
+      getUpdateState: async () => ({
+        currentVersion: "0.1.5",
+        automatic: true,
+        status: "current",
+        canRestart: false,
+      }),
+      checkForUpdates() {},
+      setAutomaticUpdates() {},
+      restartForUpdate() {},
+      subscribeUpdates: () => () => {},
+      subscribeUpdateActivity: (listener: typeof receive) => {
+        receive = listener;
+        return unsubscribe;
+      },
+    },
+  });
+  const view = render(<DesktopUpdateAnalytics />);
+  act(() => {
+    receive({ action: "opacity", opacity: 0.75 });
+    receive({ action: "automatic", currentVersion: "0.1.5", enabled: false });
+    receive({ action: "check", currentVersion: "0.1.5" });
+    receive({
+      action: "restart",
+      currentVersion: "0.1.5",
+      targetVersion: "0.1.6",
+    });
+  });
+  expect(track).toHaveBeenCalledWith("desktop_panel_opacity_changed", {
+    opacity: 0.75,
+  });
+  expect(track).toHaveBeenCalledWith("desktop_update_automatic_changed", {
+    current_version: "0.1.5",
+    enabled: false,
+  });
+  expect(track).toHaveBeenCalledWith(
+    "desktop_update_restart_requested",
+    { current_version: "0.1.5", target_version: "0.1.6" },
+    { send_instantly: true, transport: "sendBeacon" }
+  );
+  view.unmount();
+  expect(unsubscribe).toHaveBeenCalledOnce();
+});

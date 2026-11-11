@@ -341,6 +341,11 @@ describe("native update notice", () => {
     expect(screen.getAllByRole("complementary")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "앱 업데이트" }));
     expect(openSettings).toHaveBeenCalledWith("appUpdates");
+    const openPreferences = vi.fn(async () => {});
+    Object.assign((window as unknown as { heymoaDesktop: object }).heymoaDesktop, { openPreferences });
+    fireEvent.click(screen.getByRole("button", { name: "앱 업데이트" }));
+    expect(openPreferences).toHaveBeenCalledOnce();
+    expect(openSettings).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await act(async () =>
       receive({ ...state, version: "0.1.5", status: "ready" })

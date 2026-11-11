@@ -339,3 +339,5 @@ body[data-empty="true"] #empty {
 .summary[aria-expanded="true"] .chevron {
   opacity: 1;
 }
+
+#pin[aria-pressed="true"] .pin-head { fill: currentColor; }

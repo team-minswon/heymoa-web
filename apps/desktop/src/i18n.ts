@@ -3,25 +3,83 @@ let language: Language = "ko";
 export function isLanguage(value: unknown): value is Language {
   return value === "ko" || value === "en";
 }
-export function setLanguage(value: Language) { language = value; }
-export function getLanguage(): Language { return language; }
+export function setLanguage(value: Language) {
+  language = value;
+}
+export function getLanguage(): Language {
+  return language;
+}
 export const english: Record<string, string> = {
+  "데스크톱 설정": "Desktop settings",
+  "팝업 불투명도": "Popup opacity",
+  "핀으로 고정하고 머리글을 드래그해 이동할 수 있습니다.":
+    "Pin the popup to keep it on top. Drag its header to move it.",
+  "앱 업데이트": "App updates",
+  "현재 버전 {version}": "Current version {version}",
+  "업데이트 확인": "Check for updates",
+  다운로드: "Download",
+  "재시작하여 업데이트": "Restart to update",
+  "녹음과 오디오 전송이 끝나야 재시작할 수 있습니다.":
+    "Restart is available after recording and audio uploads finish.",
+  "설정을 저장하지 못했습니다. 다시 시도해 주세요.":
+    "Could not save settings. Try again.",
+  "새 버전을 확인할 수 있습니다.": "You can check for a new version.",
+  "새 버전을 확인하고 있습니다.": "Checking for updates.",
+  "최신 버전을 사용하고 있습니다.": "You're up to date.",
+  "새 버전 {version}을 사용할 수 있습니다.": "Version {version} is available.",
+  "버전 {version} 다운로드 중 · {percent}%":
+    "Downloading {version} · {percent}%",
+  "버전 {version}을 적용할 준비가 됐습니다.":
+    "Version {version} is ready to install.",
+  "업데이트를 적용하고 있습니다.": "Installing the update.",
+  "업데이트하지 못했습니다. 다시 시도해 주세요.":
+    "Could not update. Try again.",
+  "이 실행 환경에서는 업데이트를 지원하지 않습니다.":
+    "Updates are unavailable in this environment.",
   "설정…": "Settings…",
   "앱 업데이트…": "App updates…",
   "요약이 정리되면 여기에 표시됩니다.": "Your live summary will appear here.",
   "항상 위에 고정": "Keep on top",
   "불투명도 조절": "Adjust opacity",
-  "표시 설정을 저장하지 못했습니다. 다시 시도해 주세요.": "Could not save display settings. Try again.",
-  "불투명도": "Opacity",
+  "표시 설정을 저장하지 못했습니다. 다시 시도해 주세요.":
+    "Could not save display settings. Try again.",
+  불투명도: "Opacity",
   "자동 업데이트": "Automatic updates",
-  "새 버전을 자동으로 다운로드합니다. 녹음과 전송이 끝난 뒤 앱을 종료하면 적용됩니다.": "Download new versions automatically. Updates install when you quit after recording and uploads finish.",
-"HeyMoa 정보":"About HeyMoa","서비스":"Services","HeyMoa 가리기":"Hide HeyMoa","다른 앱 가리기":"Hide Others","모두 보기":"Show All","파일":"File","창 닫기":"Close Window","편집":"Edit","실행 취소":"Undo","다시 실행":"Redo","오려두기":"Cut","복사":"Copy","붙여넣기":"Paste","전체 선택":"Select All","보기":"View","다시 불러오기":"Reload","확대/축소 재설정":"Actual Size","확대":"Zoom In","축소":"Zoom Out","전체 화면":"Toggle Full Screen","윈도우":"Window","최소화":"Minimize","맨 앞으로 가져오기":"Bring All to Front","로그인 후에는 계정의 언어 설정을 따릅니다.":"After signing in, the app follows your account language.",
+  "새 버전을 자동으로 다운로드합니다. 녹음과 전송이 끝난 뒤 앱을 종료하면 적용됩니다.":
+    "Download new versions automatically. Updates install when you quit after recording and uploads finish.",
+  "HeyMoa 정보": "About HeyMoa",
+  서비스: "Services",
+  "HeyMoa 가리기": "Hide HeyMoa",
+  "다른 앱 가리기": "Hide Others",
+  "모두 보기": "Show All",
+  파일: "File",
+  "창 닫기": "Close Window",
+  편집: "Edit",
+  "실행 취소": "Undo",
+  "다시 실행": "Redo",
+  오려두기: "Cut",
+  복사: "Copy",
+  붙여넣기: "Paste",
+  "전체 선택": "Select All",
+  보기: "View",
+  "다시 불러오기": "Reload",
+  "확대/축소 재설정": "Actual Size",
+  확대: "Zoom In",
+  축소: "Zoom Out",
+  "전체 화면": "Toggle Full Screen",
+  윈도우: "Window",
+  최소화: "Minimize",
+  "맨 앞으로 가져오기": "Bring All to Front",
+  "로그인 후에는 계정의 언어 설정을 따릅니다.":
+    "After signing in, the app follows your account language.",
   "앱 화면이 중단되었습니다.": "The app stopped responding.",
-  "녹음 중이었다면 아직 전송되지 않은 소리는 사라질 수 있습니다.": "If you were recording, audio that has not been uploaded may be lost.",
+  "녹음 중이었다면 아직 전송되지 않은 소리는 사라질 수 있습니다.":
+    "If you were recording, audio that has not been uploaded may be lost.",
   "다시 열기": "Reopen",
   "앱 종료": "Quit",
   "HeyMoa에 연결하지 못했습니다.": "Could not connect to HeyMoa.",
-  "인터넷 연결을 확인한 뒤 다시 시도해 주세요.": "Check your internet connection and try again.",
+  "인터넷 연결을 확인한 뒤 다시 시도해 주세요.":
+    "Check your internet connection and try again.",
   "다시 시도": "Try again",
   "지원하지 않는 환경": "Unsupported system",
   "개발 URL 오류": "Invalid development URL",
@@ -29,9 +87,12 @@ export const english: Record<string, string> = {
   "시작 실패": "Could not start",
   "HeyMoa를 시작하지 못했습니다.": "Could not start HeyMoa.",
   "HeyMoa 시작하기": "Get started with HeyMoa",
-  "개발 URL은 loopback 주소만 사용할 수 있습니다.": "The development URL must use a loopback address.",
-  "운영체제 버전을 확인하지 못했습니다.": "Could not determine the operating system version.",
-  "HeyMoa 데스크톱은 macOS 14.2 이상(Apple Silicon), Windows 11 x64를 지원합니다.": "HeyMoa Desktop supports macOS 14.2 or later on Apple Silicon, and Windows 11 x64.",
+  "개발 URL은 loopback 주소만 사용할 수 있습니다.":
+    "The development URL must use a loopback address.",
+  "운영체제 버전을 확인하지 못했습니다.":
+    "Could not determine the operating system version.",
+  "HeyMoa 데스크톱은 macOS 14.2 이상(Apple Silicon), Windows 11 x64를 지원합니다.":
+    "HeyMoa Desktop supports macOS 14.2 or later on Apple Silicon, and Windows 11 x64.",
   "녹음 대기": "Ready to record",
   "권한 확인 중": "Checking permissions",
   "연결 중": "Connecting",
@@ -39,19 +100,24 @@ export const english: Record<string, string> = {
   "녹음 일시정지 중": "Pausing recording",
   "녹음 완료": "Recording complete",
   "녹음 중단": "Recording interrupted",
-  "마이크": "Microphone",
+  마이크: "Microphone",
   "시스템 소리": "System audio",
-  "음소거": "muted",
+  음소거: "muted",
   "일시 중단": "suspended",
-  "종료": "ended",
+  종료: "ended",
   "녹음 상태 확인 불가": "Recording status unavailable",
   "회의 보는 중": "Viewing meeting",
-  "전송되지 않은 소리를 버리고 앱을 종료하시겠습니까?": "Discard audio that has not been uploaded and quit?",
-  "녹음 종료와 전송 완료를 기다리고 있습니다.": "Waiting for recording to stop and audio to finish uploading.",
-  "녹음이 진행 중이거나 전송되지 않은 소리가 있습니다.": "Recording is active or some audio has not been uploaded.",
-  "아직 서버에 저장되지 않은 소리는 복구할 수 없습니다. 서버의 회의 완료를 의미하지 않습니다.": "Audio that has not been saved to the server cannot be recovered. This does not end the meeting on the server.",
-  "앱을 유지하면 종료와 전송을 계속할 수 있습니다. 상태를 확인할 수 없는 경우에도 완료로 판단하지 않습니다.": "Keep the app open to finish stopping and uploading. An unavailable status does not mean the recording is complete.",
-  "취소": "Cancel",
+  "전송되지 않은 소리를 버리고 앱을 종료하시겠습니까?":
+    "Discard audio that has not been uploaded and quit?",
+  "녹음 종료와 전송 완료를 기다리고 있습니다.":
+    "Waiting for recording to stop and audio to finish uploading.",
+  "녹음이 진행 중이거나 전송되지 않은 소리가 있습니다.":
+    "Recording is active or some audio has not been uploaded.",
+  "아직 서버에 저장되지 않은 소리는 복구할 수 없습니다. 서버의 회의 완료를 의미하지 않습니다.":
+    "Audio that has not been saved to the server cannot be recovered. This does not end the meeting on the server.",
+  "앱을 유지하면 종료와 전송을 계속할 수 있습니다. 상태를 확인할 수 없는 경우에도 완료로 판단하지 않습니다.":
+    "Keep the app open to finish stopping and uploading. An unavailable status does not mean the recording is complete.",
+  취소: "Cancel",
   "소리를 버리고 앱 종료": "Discard audio and quit",
   "계속 기다리기": "Keep waiting",
   "앱 종료 취소": "Cancel quitting",
@@ -65,54 +131,71 @@ export const english: Record<string, string> = {
   "진행 중인 회의": "Meetings in progress",
   "제목 없는 회의": "Untitled meeting",
   "로그인 시 자동 실행": "Open at login",
-  "녹음 종료와 전송 완료를 아직 확인하지 못했습니다.": "Recording has not yet been confirmed stopped and fully uploaded.",
-  "앱을 유지하고 현재 회의에서 상태를 확인해 주세요. 앱 종료 메뉴에서 종료 대기를 취소할 수 있습니다.": "Keep the app open and check the current meeting. You can cancel waiting from the Quit menu.",
-  "닫기": "Close",
+  "녹음 종료와 전송 완료를 아직 확인하지 못했습니다.":
+    "Recording has not yet been confirmed stopped and fully uploaded.",
+  "앱을 유지하고 현재 회의에서 상태를 확인해 주세요. 앱 종료 메뉴에서 종료 대기를 취소할 수 있습니다.":
+    "Keep the app open and check the current meeting. You can cancel waiting from the Quit menu.",
+  닫기: "Close",
   "전송 대기 중인 소리가 있습니다.": "Some audio is waiting to be uploaded.",
   "녹음 중인 회의가 없습니다.": "No meetings are being recorded.",
-  "전체": "All",
-  "결정": "Decisions",
+  전체: "All",
+  결정: "Decisions",
   "할 일": "Tasks",
   "열린 질문": "Open questions",
-  "참고": "References",
+  참고: "References",
   "회의 내용을 불러오는 중입니다.": "Loading the meeting.",
-  "회의 내용을 확인하지 못했습니다. 현재 회의를 열어 확인해 주세요.": "Could not load the meeting. Open the current meeting to check.",
+  "회의 내용을 확인하지 못했습니다. 현재 회의를 열어 확인해 주세요.":
+    "Could not load the meeting. Open the current meeting to check.",
   "아직 이 유형의 항목이 없습니다.": "No items of this type yet.",
-  "녹음 상태를 확인하지 못했습니다. HeyMoa를 열어 상태를 확인해 주세요.": "Recording status is unavailable. Open HeyMoa to check.",
-  "회의 타임라인을 기다리고 있습니다. 현재 회의를 열어 확인해 주세요.": "Waiting for the meeting timeline. Open the current meeting to check.",
-  "녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요.": "Waiting for recording to start. Check the current meeting.",
-  "녹음 일시정지와 전송 완료를 기다리고 있습니다.": "Waiting for recording to pause and audio to finish uploading.",
+  "녹음 상태를 확인하지 못했습니다. HeyMoa를 열어 상태를 확인해 주세요.":
+    "Recording status is unavailable. Open HeyMoa to check.",
+  "회의 타임라인을 기다리고 있습니다. 현재 회의를 열어 확인해 주세요.":
+    "Waiting for the meeting timeline. Open the current meeting to check.",
+  "녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요.":
+    "Waiting for recording to start. Check the current meeting.",
+  "녹음 일시정지와 전송 완료를 기다리고 있습니다.":
+    "Waiting for recording to pause and audio to finish uploading.",
   "현재 회의 열기 ↗": "Open current meeting ↗",
   "HeyMoa 열기 ↗": "Open HeyMoa ↗",
-  "갱신이 멈췄습니다. 현재 회의를 열어 확인해 주세요.": "Updates have stopped. Open the current meeting to check.",
+  "갱신이 멈췄습니다. 현재 회의를 열어 확인해 주세요.":
+    "Updates have stopped. Open the current meeting to check.",
   "연결을 다시 확인하고 있습니다.": "Checking the connection again.",
   "회의 내용을 갱신하지 못했습니다.": "Could not update the meeting.",
   " 보기 종료": " Stop viewing",
   " 녹음 일시정지": " Pause recording",
-  "처리하지 못했습니다. 현재 회의에서 확인해 주세요.": "Could not complete the action. Check the current meeting.",
+  "처리하지 못했습니다. 현재 회의에서 확인해 주세요.":
+    "Could not complete the action. Check the current meeting.",
   "현재 회의를 확인하지 못했습니다.": "Could not load the current meeting.",
   "아직 확인하지 않음": "Not checked yet",
-  "허용됨": "Allowed",
+  허용됨: "Allowed",
   "허용이 필요해요": "Permission required",
   "기기에서 제한됨": "Restricted on this device",
   "설정에서 확인": "Check system settings",
   "마이크 허용": "Allow microphone",
   "설정 열기": "Open settings",
-  "화상회의 상대방이나 강의에서 듣는 말입니다. 첫 녹음 때 macOS가 권한을 요청하면 허용해 주세요.": "Record the people you hear in video calls or lectures. Allow access when macOS asks during your first recording.",
-  "Zoom·Webex 등 컴퓨터에서 들리는 소리입니다. Windows 출력 장치의 소리를 첫 녹음 때 연결합니다. 헤드셋이나 스피커 설정을 확인해 주세요.": "Record sound from apps such as Zoom and Webex. Your Windows output device connects during your first recording. Check your headset or speaker settings.",
+  "화상회의 상대방이나 강의에서 듣는 말입니다. 첫 녹음 때 macOS가 권한을 요청하면 허용해 주세요.":
+    "Record the people you hear in video calls or lectures. Allow access when macOS asks during your first recording.",
+  "Zoom·Webex 등 컴퓨터에서 들리는 소리입니다. Windows 출력 장치의 소리를 첫 녹음 때 연결합니다. 헤드셋이나 스피커 설정을 확인해 주세요.":
+    "Record sound from apps such as Zoom and Webex. Your Windows output device connects during your first recording. Check your headset or speaker settings.",
   "나중에 설정하고 시작하기": "Set up later and get started",
-  "시작 설정을 저장하지 못했습니다. 다시 시도해 주세요.": "Could not save your setup. Try again.",
-  "설정을 확인하지 못했습니다. 잠시 후 다시 확인해 주세요.": "Could not check your settings. Try again shortly.",
+  "시작 설정을 저장하지 못했습니다. 다시 시도해 주세요.":
+    "Could not save your setup. Try again.",
+  "설정을 확인하지 못했습니다. 잠시 후 다시 확인해 주세요.":
+    "Could not check your settings. Try again shortly.",
   "녹음 준비": "Prepare to record",
-  "마이크로 들어오는 대화와 화상회의·강의 소리를 기록합니다.": "Record conversations through your microphone and audio from video calls or lectures.",
+  "마이크로 들어오는 대화와 화상회의·강의 소리를 기록합니다.":
+    "Record conversations through your microphone and audio from video calls or lectures.",
   "소리 설정": "Audio settings",
   "내 목소리": "Your voice",
   "확인 중": "Checking",
-  "내 목소리와 주변 대화를 기록합니다. 마이크 사용을 허용해 주세요.": "Record your voice and nearby conversations. Allow microphone access to continue.",
+  "내 목소리와 주변 대화를 기록합니다. 마이크 사용을 허용해 주세요.":
+    "Record your voice and nearby conversations. Allow microphone access to continue.",
   "컴퓨터 소리": "Computer audio",
   "첫 녹음 때 확인": "Checked on first recording",
-  "컴퓨터에서 들리는 회의 소리를 함께 기록해요. 실제 연결은 녹음을 시작할 때 확인합니다.": "Record meeting audio from your computer too. The connection is checked when you start recording.",
-  "여기에서는 녹음을 시작하지 않아요.": "Recording does not start on this screen.",
+  "컴퓨터에서 들리는 회의 소리를 함께 기록해요. 실제 연결은 녹음을 시작할 때 확인합니다.":
+    "Record meeting audio from your computer too. The connection is checked when you start recording.",
+  "여기에서는 녹음을 시작하지 않아요.":
+    "Recording does not start on this screen.",
   "다시 확인 ↻": "Check again ↻",
   "권한은 나중에도 변경할 수 있어요.": "You can change permissions later.",
   "HeyMoa · 현재 회의": "HeyMoa · Current meeting",
@@ -120,10 +203,10 @@ export const english: Record<string, string> = {
   "타임라인 유형": "Timeline type",
   "회의 타임라인": "Meeting timeline",
   "최신 항목으로 이동": "Go to latest item",
-  "시작": "started"
+  시작: "started",
 };
 export function t(source: string): string {
-  return language === "en" ? english[source] ?? source : source;
+  return language === "en" ? (english[source] ?? source) : source;
 }
 
 export function formatElapsed(seconds: number): string {

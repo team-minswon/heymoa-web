@@ -49,8 +49,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { DesktopAppearanceSettings } from "./desktop-appearance-settings";
-
 export type { SettingsSection };
 
 /**
@@ -94,7 +92,6 @@ const SETTINGS_GROUPS: {
       { key: "language", Icon: Languages },
       { key: "notifications", Icon: BellRing },
       { key: "agents", Icon: Bot },
-      { key: "desktopAppearance", Icon: Settings },
       { key: "appUpdates", Icon: Download },
     ],
   },
@@ -154,11 +151,7 @@ function SettingsSections({
                 {t(`groups.${group.key}`)}
               </p>
               {group.items
-                .filter(
-                  ({ key }) =>
-                    !["appUpdates", "desktopAppearance"].includes(key) ||
-                    desktop === true
-                )
+                .filter(({ key }) => key !== "appUpdates" || desktop === true)
                 .map(({ key, Icon }) => (
                   <Button
                     key={key}
@@ -217,8 +210,6 @@ function SettingsSections({
           </DataBoundary>
         ) : section === "language" ? (
           <LanguageSettings />
-        ) : section === "desktopAppearance" ? (
-          <DesktopAppearanceSettings />
         ) : section === "appUpdates" ? (
           <DesktopUpdateSettings />
         ) : section === "notifications" ? (

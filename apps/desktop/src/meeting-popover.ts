@@ -3,7 +3,7 @@ import path from "node:path";
 import { defaultPanelPreferences, type PanelPreferences } from "./preferences";
 export type PanelOptions = {
   preferences: PanelPreferences;
-  openSettings?(section: "desktopAppearance" | "appUpdates"): void;
+  openSettings?(): void;
   save(value: PanelPreferences): Promise<void>;
 };
 import { pathToFileURL } from "node:url";
@@ -85,6 +85,9 @@ export function createMeetingPopover(
       )
         throw new Error("INVALID_MEETING_ACTION");
       return updatePreferences({ pinned: value.pinned });
+    } else if (payload === "settings") {
+      if (!preferences.pinned) hide();
+      panel?.openSettings?.();
     } else if (payload === "hide") hide();
     else if (
       payload !== null &&

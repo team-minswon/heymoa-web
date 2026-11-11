@@ -54,7 +54,9 @@
       "package.json",
       "LICENSE.txt",
       "!node_modules/**/*",
-      "!node_modules"
+      "!node_modules",
+      "dist/preferences.html",
+      "dist/preferences.css"
     ],
     "mac": {
       "icon": "build/icons/icon.icns",

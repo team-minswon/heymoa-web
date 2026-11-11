@@ -159,6 +159,7 @@ test("pin survives outside clicks, dragging restores clamped position, opacity p
   await action(f.event(), { action: "set-panel", pinned: true });
   await f.popover.setOpacity(0.7);
   window.emit("blur"); assert.equal(window.hides, 0); assert.equal(window.opacity, 0.7);
+  await action(f.event(), "settings"); assert.equal(window.hides, 0);
   window.bounds = { x: 3000, y: -100, width: 420, height: 280 }; window.emit("moved");
   await new Promise(setImmediate); f.popover.hide(); f.popover.toggle();
   assert.equal(window.bounds.x, 860); assert.equal(window.bounds.y, 24);

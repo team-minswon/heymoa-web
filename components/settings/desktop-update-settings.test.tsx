@@ -151,3 +151,14 @@ it("a failed native request leaves a retry without claiming success", async () =
   });
   expect(JSON.stringify(track.mock.calls)).not.toContain("offline");
 });
+
+it("new shells open their menu-bar settings instead of rendering duplicate hosted controls", async () => {
+  const f = native();
+  f.bridge.openPreferences = vi.fn(async () => {});
+  render(<DesktopUpdateSettings />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "메뉴 막대 설정 열기" })
+  );
+  expect(f.bridge.openPreferences).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+});

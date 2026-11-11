@@ -21,6 +21,7 @@ type MeetingBridge = {
       | "stop-viewing"
       | "show-current"
       | "hide"
+      | "settings"
       | { action: "open-note"; noteId: string }
       | { action: "set-panel"; pinned: boolean }
   ): Promise<void>;
@@ -289,6 +290,7 @@ function act(
     | "stop-viewing"
     | "show-current"
     | "hide"
+      | "settings"
     | { action: "open-note"; noteId: string }
     | { action: "set-panel"; pinned: boolean }
 ) {
@@ -303,6 +305,7 @@ function act(
 }
 stop.addEventListener("click", () => act(viewing ? "stop-viewing" : "stop"));
 element("open").addEventListener("click", () => act("show-current"));
+element("settings").addEventListener("click", () => act("settings"));
 element("pin").addEventListener("click", () =>
   act({
     action: "set-panel",

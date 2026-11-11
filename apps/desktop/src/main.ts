@@ -9,6 +9,7 @@ import {
   defaultPanelPreferences,
 } from "./preferences";
 import { autoUpdater } from "./update-runtime";
+import { createDesktopPreferences } from "./desktop-preferences";
 import { DesktopUpdates } from "./updates";
 import {
   app,
@@ -20,7 +21,10 @@ import {
   Menu,
 } from "electron";
 import path from "node:path";
-import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
+import type {
+  DesktopCapabilities,
+  DesktopUpdateActivity,
+} from "@heymoa/desktop-contracts";
 import { createOnboarding, onboardingCompleted } from "./onboarding";
 import { createRecordingTray } from "./recording-tray";
 import { showOnCurrentSpace } from "./show-window";
@@ -70,6 +74,8 @@ let media: CaptureHost | null = null;
 let recording: ReturnType<typeof createRecordingTray> | null = null;
 let auth: DesktopAuthBroker | null = null;
 let updates: DesktopUpdates | null = null;
+let desktopPreferences: ReturnType<typeof createDesktopPreferences> | null =
+  null;
 let startupCallback: string | null = null;
 function receiveCallback(value: string) {
   if (!nativeCallback(value)) return;
@@ -104,13 +110,52 @@ function openExternal(value: string) {
       .openExternal(safe)
       .catch(() => console.warn("External link could not be opened"));
 }
-function openSettings(section: "account" | "appUpdates" | "desktopAppearance") {
-  if (!window || window.isDestroyed()) return;
-  showOnCurrentSpace(window);
-  if (isTrustedUrl(window.webContents.getURL(), origin))
-    window.webContents.send("heymoa:open-settings", section);
+function activity(value: DesktopUpdateActivity) {
+  if (
+    window &&
+    !window.isDestroyed() &&
+    isTrustedUrl(window.webContents.getURL(), origin)
+  )
+    window.webContents.send("heymoa:update-activity", value);
+}
+function openSettings() {
+  if (!updates) return;
+  desktopPreferences ??= createDesktopPreferences({
+    read: () => ({
+      language: getLanguage(),
+      opacity: panelPreferences.opacity,
+      update: updates!.state(),
+    }),
+    action: async (value) => {
+      const state = updates!.state();
+      if (value === "check") {
+        activity({ action: "check", currentVersion: state.currentVersion });
+        void updates!.check();
+      } else if (value === "restart") {
+        activity({
+          action: "restart",
+          currentVersion: state.currentVersion,
+          targetVersion: state.version,
+        });
+        updates!.restart();
+      } else if (value.action === "automatic") {
+        await updates!.setAutomatic(value.value);
+        activity({
+          action: "automatic",
+          currentVersion: state.currentVersion,
+          enabled: value.value,
+        });
+      } else {
+        if (!recording) throw new Error("PREFERENCES_UNAVAILABLE");
+        await recording.setPanelOpacity(value.value);
+        activity({ action: "opacity", opacity: value.value });
+      }
+    },
+  });
+  desktopPreferences.show();
 }
 function refreshApplicationMenu() {
+  desktopPreferences?.refresh();
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       ...(process.platform === "darwin"
@@ -123,11 +168,11 @@ function refreshApplicationMenu() {
                 {
                   label: t("설정…"),
                   accelerator: "CmdOrCtrl+,",
-                  click: () => openSettings("desktopAppearance"),
+                  click: () => openSettings(),
                 },
                 {
                   label: t("앱 업데이트…"),
-                  click: () => openSettings("appUpdates"),
+                  click: () => openSettings(),
                 },
                 { type: "separator" as const },
                 { role: "services" as const, label: t("서비스") },
@@ -150,11 +195,11 @@ function refreshApplicationMenu() {
                 {
                   label: t("설정…"),
                   accelerator: "CmdOrCtrl+,",
-                  click: () => openSettings("desktopAppearance"),
+                  click: () => openSettings(),
                 },
                 {
                   label: t("앱 업데이트…"),
-                  click: () => openSettings("appUpdates"),
+                  click: () => openSettings(),
                 },
                 { type: "separator" as const },
               ]),
@@ -357,6 +402,7 @@ app
       cancelInstall: () => recording?.cancelUpdate(),
       saveAutomatic: (enabled) => saveAutomaticUpdates(userDataPath, enabled),
       changed: (state) => {
+        desktopPreferences?.refresh();
         if (
           window &&
           !window.isDestroyed() &&
@@ -397,22 +443,11 @@ app
         updates: true,
       } satisfies DesktopCapabilities;
     });
-    ipcMain.handle("heymoa:panel-opacity", (event, payload: unknown) => {
+    ipcMain.handle("heymoa:open-preferences", (event, payload: unknown) => {
       authorize(event);
-      if (!emptyRequest(payload)) throw new Error("INVALID_PANEL_REQUEST");
-      return panelPreferences.opacity;
-    });
-    ipcMain.handle("heymoa:panel-opacity-set", (event, payload: unknown) => {
-      authorize(event);
-      if (
-        typeof payload !== "number" ||
-        !Number.isFinite(payload) ||
-        payload < 0.6 ||
-        payload > 1 ||
-        !recording
-      )
-        throw new Error("INVALID_PANEL_REQUEST");
-      return recording.setPanelOpacity(payload);
+      if (!emptyRequest(payload))
+        throw new Error("INVALID_PREFERENCES_REQUEST");
+      openSettings();
     });
     ipcMain.handle("heymoa:update-state", (event, payload: unknown) => {
       authorize(event);
@@ -587,4 +622,5 @@ app.on("window-all-closed", () => app.quit());
 app.on("will-quit", () => {
   auth?.cancel();
   onboarding?.dispose();
+  desktopPreferences?.dispose();
 });

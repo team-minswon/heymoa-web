@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   DesktopFoundationBridge,
-  DesktopPanelBridge,
+  DesktopUpdateActivity,
   DesktopUpdateBridge,
   DesktopUpdateState,
   DesktopAuthBridge,
@@ -48,30 +48,20 @@ if (process.isMainFrame) {
         return () =>
           ipcRenderer.removeListener("heymoa:capture-event", handler);
       },
-      subscribeOpenSettings: (
-        listener: (
-          section: "account" | "appUpdates" | "desktopAppearance"
-        ) => void
+      openPreferences: () => {
+        userGesture();
+        return ipcRenderer.invoke("heymoa:open-preferences");
+      },
+      subscribeUpdateActivity: (
+        listener: (activity: DesktopUpdateActivity) => void
       ) => {
         const receive = (
           _event: Electron.IpcRendererEvent,
-          section: unknown
-        ) => {
-          if (
-            section === "account" ||
-            section === "appUpdates" ||
-            section === "desktopAppearance"
-          )
-            listener(section);
-        };
-        ipcRenderer.on("heymoa:open-settings", receive);
+          activity: DesktopUpdateActivity
+        ) => listener(activity);
+        ipcRenderer.on("heymoa:update-activity", receive);
         return () =>
-          ipcRenderer.removeListener("heymoa:open-settings", receive);
-      },
-      getPanelOpacity: () => ipcRenderer.invoke("heymoa:panel-opacity"),
-      setPanelOpacity: (opacity: number) => {
-        userGesture();
-        return ipcRenderer.invoke("heymoa:panel-opacity-set", opacity);
+          ipcRenderer.removeListener("heymoa:update-activity", receive);
       },
       getUpdateState: () => ipcRenderer.invoke("heymoa:update-state"),
       checkForUpdates: () => {
@@ -153,8 +143,7 @@ if (process.isMainFrame) {
         return () =>
           ipcRenderer.removeListener("heymoa:recording-action", receive);
       },
-    } satisfies DesktopPanelBridge &
-      DesktopFoundationBridge &
+    } satisfies DesktopFoundationBridge &
       DesktopUpdateBridge &
       DesktopAuthBridge &
       DesktopCaptureBridge)

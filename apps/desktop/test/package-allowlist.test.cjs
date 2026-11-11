@@ -4,8 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const script = fs.readFileSync(path.join(__dirname, "../scripts/verify-package.cjs"), "utf8");
-const shippedModules = ["main", "updates", "update-runtime", "preload", "i18n", "preferences", "policy", "security", "recording-lifecycle", "recording-tray", "show-window", "auth", "auth-policy", "auth-session", "media-grant", "capture-host", "capture-protocol", "capture-preload", "capture-renderer", "pcm-capture-worklet", "meeting-timeline", "meeting-popover", "meeting-preload", "meeting-renderer", "onboarding", "onboarding-preload", "onboarding-renderer"];
-const packagePaths = ["\\dist", ...shippedModules.map((name) => `\\dist\\${name}.js`), "\\dist\\capture.html", "\\dist\\meeting.html", "\\dist\\meeting.css", "\\dist\\onboarding.html", "\\dist\\onboarding.css", "\\dist\\onboarding-logo.png", "\\package.json", "\\LICENSE.txt", "\\assets", "\\assets\\trayTemplate.png", "\\assets\\trayTemplate@2x.png", "\\assets\\tray.png"];
+const shippedModules = ["desktop-preferences", "preferences-preload", "preferences-renderer", "main", "updates", "update-runtime", "preload", "i18n", "preferences", "policy", "security", "recording-lifecycle", "recording-tray", "show-window", "auth", "auth-policy", "auth-session", "media-grant", "capture-host", "capture-protocol", "capture-preload", "capture-renderer", "pcm-capture-worklet", "meeting-timeline", "meeting-popover", "meeting-preload", "meeting-renderer", "onboarding", "onboarding-preload", "onboarding-renderer"];
+const packagePaths = ["\\dist\\preferences.html", "\\dist\\preferences.css", "\\dist", ...shippedModules.map((name) => `\\dist\\${name}.js`), "\\dist\\capture.html", "\\dist\\meeting.html", "\\dist\\meeting.css", "\\dist\\onboarding.html", "\\dist\\onboarding.css", "\\dist\\onboarding-logo.png", "\\package.json", "\\LICENSE.txt", "\\assets", "\\assets\\trayTemplate.png", "\\assets\\trayTemplate@2x.png", "\\assets\\tray.png"];
 function inspect(paths) {
   let archive;
   vm.runInNewContext(script, {

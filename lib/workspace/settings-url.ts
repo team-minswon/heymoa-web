@@ -18,7 +18,6 @@ export const SETTINGS_SECTIONS = [
   "agents",
   "notifications",
   "appUpdates",
-  "desktopAppearance",
 ] as const;
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];

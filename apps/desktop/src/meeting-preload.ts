@@ -14,6 +14,7 @@ if (process.isMainFrame)
           | "stop-viewing"
           | "show-current"
           | "hide"
+      | "settings"
           | { action: "open-note"; noteId: string }
           | { action: "set-panel"; pinned: boolean }
       ) => ipcRenderer.invoke("heymoa:meeting-action", action),

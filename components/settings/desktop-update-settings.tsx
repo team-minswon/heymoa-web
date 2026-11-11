@@ -73,6 +73,18 @@ export function DesktopUpdateSettings() {
     state?.status === "checking" ||
     state?.status === "downloading" ||
     state?.status === "installing";
+  if (desktop === true && bridge?.openPreferences)
+    return (
+      <section className="mx-auto max-w-[720px]">
+        <SettingsHeader title={t("title")} description={t("description")} />
+        <Button
+          variant="outline"
+          onClick={() => void bridge.openPreferences!()}
+        >
+          {t("openNativeSettings")}
+        </Button>
+      </section>
+    );
   return (
     <section className="mx-auto max-w-[720px]">
       <SettingsHeader title={t("title")} description={t("description")} />

@@ -187,7 +187,6 @@ export type WebEventProperties = {
       | "terms"
       | "integrations"
       | "appUpdates"
-      | "desktopAppearance"
       | "workspaceAgents"
       | "agents"
       | "notifications";

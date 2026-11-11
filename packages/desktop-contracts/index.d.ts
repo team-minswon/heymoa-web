@@ -102,12 +102,19 @@ export type DesktopUpdateState = {
   percent?: number;
   canRestart: boolean;
 };
-export type DesktopPanelBridge = {
-  getPanelOpacity(): Promise<number>;
-  setPanelOpacity(opacity: number): Promise<number>;
-};
+export type DesktopUpdateActivity =
+  | {
+      action: "check" | "restart";
+      currentVersion: string;
+      targetVersion?: string;
+    }
+  | { action: "automatic"; currentVersion: string; enabled: boolean }
+  | { action: "opacity"; opacity: number };
 export type DesktopUpdateBridge = {
-  subscribeOpenSettings?: (listener: (section: "account" | "appUpdates" | "desktopAppearance") => void) => () => void;
+  openPreferences?: () => Promise<void>;
+  subscribeUpdateActivity?: (
+    listener: (activity: DesktopUpdateActivity) => void
+  ) => () => void;
   getUpdateState(): Promise<DesktopUpdateState>;
   checkForUpdates(): Promise<DesktopUpdateState>;
   setAutomaticUpdates(enabled: boolean): Promise<DesktopUpdateState>;

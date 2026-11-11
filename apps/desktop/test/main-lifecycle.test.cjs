@@ -471,26 +471,15 @@ test("opt-in automatic update applies on safe normal quit; confirmed audio disca
   assert.equal(unsafe.updateInstalls, 0);
 });
 
-test("opacity settings admit only trusted main frame and preserve native recording safety", async t => {
+test("native settings open without navigating the main web window and reject untrusted requests", async t => {
   const f = await fixture(t);
-  assert.equal(f.invoke("heymoa:panel-opacity"), 1);
-  for (const [channel, payload] of [["heymoa:panel-opacity"], ["heymoa:panel-opacity-set", .75]]) {
-    assert.throws(() => f.invoke(channel, payload, { sender: {}, senderFrame: f.windows[0].webContents.mainFrame }), /UNTRUSTED/);
-    assert.throws(() => f.invoke(channel, payload, { sender: f.windows[0].webContents, senderFrame: { url: "https://evil.test" } }), /UNTRUSTED/);
-  }
-  for (const value of ["0.7", NaN, 0.1, 1.01]) assert.throws(() => f.invoke("heymoa:panel-opacity-set", value), /INVALID_PANEL_REQUEST/);
-  assert.equal(await f.invoke("heymoa:panel-opacity-set", .75), .75);
-  assert.equal(f.invoke("heymoa:panel-opacity"), .75);
-});
-
-test("Mac settings and update menus open the intended in-app sections without navigating or interrupting capture", async t => {
-  const f = await fixture(t);
+  assert.throws(() => f.invoke("heymoa:open-preferences", {}, { sender:{}, senderFrame:{} }), /UNTRUSTED/);
+  assert.throws(() => f.invoke("heymoa:open-preferences", {}), /INVALID_PREFERENCES_REQUEST/);
   const menu = f.applicationMenu[0].submenu;
-  const settings = menu.find(item => item.label === "설정…");
-  assert.equal(settings.accelerator, "CmdOrCtrl+,"); settings.click();
-  assert.deepEqual(f.sent.at(-1), ["heymoa:open-settings", "desktopAppearance"]);
+  menu.find(item => item.label === "설정…").click();
+  await tick();
+  assert.equal(f.windows.length, 2);
+  assert.equal(f.sent.some(([channel]) => channel === "heymoa:open-settings"), false);
   menu.find(item => item.label === "앱 업데이트…").click();
-  assert.deepEqual(f.sent.at(-1), ["heymoa:open-settings", "appUpdates"]);
-  assert.equal(f.applicationMenu.find(item => item.label === "파일").submenu.some(item => item.label === "설정…"), false);
-  assert.equal(f.quits, 0);
+  assert.equal(f.windows.length, 2); assert.equal(f.quits, 0);
 });

@@ -16,8 +16,7 @@
       "account": "내 계정",
       "notifications": "알림",
       "agents": "내 MCP 연결",
-      "appUpdates": "앱 업데이트",
-      "desktopAppearance": "데스크톱 화면"
+      "appUpdates": "앱 업데이트"
     },
     "loadFailed": {
       "account": "계정 정보를 불러오지 못했습니다",
@@ -491,14 +490,7 @@
       "unavailable": "개발 실행에서는 업데이트를 설치할 수 없습니다.",
       "available": "새 버전 {version}을 사용할 수 있습니다."
     },
-    "download": "다운로드"
-  },
-  "desktopAppearance": {
-    "title": "데스크톱 화면",
-    "description": "이 기기의 회의 팝업 표시 방식을 설정합니다.",
-    "opacity": "팝업 불투명도",
-    "hint": "낮출수록 뒤의 화면이 비칩니다. 팝업 위의 핀 아이콘으로 항상 위에 고정하고, 머리글을 드래그해 이동할 수 있습니다.",
-    "unavailable": "이 설정은 최신 데스크톱 앱에서 사용할 수 있습니다. 앱 업데이트에서 새 버전을 확인해 주세요.",
-    "failed": "표시 설정을 저장하지 못했습니다. 다시 시도해 주세요."
+    "download": "다운로드",
+    "openNativeSettings": "메뉴 막대 설정 열기"
   }
 }

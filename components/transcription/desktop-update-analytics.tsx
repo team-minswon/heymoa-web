@@ -11,6 +11,28 @@ export function DesktopUpdateAnalytics() {
   useEffect(() => {
     const bridge = desktopUpdateBridge();
     if (!bridge) return;
+    const unsubscribeActivity = bridge.subscribeUpdateActivity?.((activity) => {
+      if (activity.action === "opacity")
+        track("desktop_panel_opacity_changed", { opacity: activity.opacity });
+      else if (activity.action === "automatic")
+        track("desktop_update_automatic_changed", {
+          current_version: activity.currentVersion,
+          enabled: activity.enabled,
+        });
+      else if (activity.action === "check")
+        track("desktop_update_check_clicked", {
+          current_version: activity.currentVersion,
+        });
+      else
+        track(
+          "desktop_update_restart_requested",
+          {
+            current_version: activity.currentVersion,
+            target_version: activity.targetVersion,
+          },
+          { send_instantly: true, transport: "sendBeacon" }
+        );
+    });
     let live = true;
     let received = false;
     const observe = (state: DesktopUpdateState) => {
@@ -61,6 +83,7 @@ export function DesktopUpdateAnalytics() {
     return () => {
       live = false;
       unsubscribe();
+      unsubscribeActivity?.();
     };
   }, []);
   return null;
