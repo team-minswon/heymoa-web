@@ -134,7 +134,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
       return false;
     }
     setTitle(title) { this.title = title; }
-    show() {}
+    show() { this.shows = (this.shows ?? 0) + 1; }
     focus() {}
     hide() {}
     restore() {}
@@ -479,6 +479,8 @@ test("native settings open without navigating the main web window and reject unt
   menu.find(item => item.label === "설정…").click();
   await tick();
   assert.equal(f.windows.length, 2);
+  const mainShows = f.windows[0].shows; f.app.emit("activate");
+  assert.equal(f.windows[0].shows, mainShows);
   assert.equal(f.sent.some(([channel]) => channel === "heymoa:open-settings"), false);
   menu.find(item => item.label === "앱 업데이트…").click();
   assert.equal(f.windows.length, 2); assert.equal(f.quits, 0);

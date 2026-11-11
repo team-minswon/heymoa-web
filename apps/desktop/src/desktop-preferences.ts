@@ -64,6 +64,7 @@ export function createDesktopPreferences(options: {
     }
   );
   return {
+    isOpen: () => Boolean(window && !window.isDestroyed()),
     show() {
       if (disposed) return;
       if (window && !window.isDestroyed()) {

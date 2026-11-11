@@ -578,6 +578,7 @@ app
     app.on("activate", () => {
       if (onboarding) onboarding.show();
       else if (starting) return;
+      else if (desktopPreferences?.isOpen()) desktopPreferences.show();
       else if (!window) createWindow(url);
       else showOnCurrentSpace(window);
     });
