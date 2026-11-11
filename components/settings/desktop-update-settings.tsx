@@ -56,6 +56,12 @@ export function DesktopUpdateSettings() {
           current_version: next.currentVersion,
           enabled: next.automatic,
         });
+      if (action === "restart" && next.status === "ready" && !next.canRestart)
+        track("desktop_update_restart_blocked", {
+          current_version: next.currentVersion,
+          target_version: next.version,
+          source: "request",
+        });
     } catch {
       track("desktop_update_request_failed", { action });
       setFailed(true);

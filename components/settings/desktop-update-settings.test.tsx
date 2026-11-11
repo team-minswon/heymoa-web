@@ -99,6 +99,30 @@ it("automatic updates are off initially and user's selection is saved through th
     enabled: true,
   });
 });
+it("records a native refusal when safety changes after the restart button becomes available", async () => {
+  const f = native({ status: "ready", canRestart: true, version: "0.1.5" });
+  vi.mocked(f.bridge.restartForUpdate).mockResolvedValue({
+    currentVersion: "0.1.4",
+    automatic: false,
+    status: "ready",
+    canRestart: false,
+    version: "0.1.5",
+  });
+  render(<DesktopUpdateSettings />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "재시작하여 업데이트" })
+  );
+  await waitFor(() =>
+    expect(track).toHaveBeenCalledWith("desktop_update_restart_blocked", {
+      current_version: "0.1.4",
+      target_version: "0.1.5",
+      source: "request",
+    })
+  );
+  expect(
+    screen.getByRole("button", { name: "재시작하여 업데이트" })
+  ).toBeDisabled();
+});
 it("older apps receive an official installer link rather than calling absent native methods", async () => {
   Object.defineProperty(window, "heymoaDesktop", {
     configurable: true,

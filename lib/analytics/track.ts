@@ -128,6 +128,7 @@ export type WebEventProperties = {
   desktop_update_restart_blocked: {
     current_version: string;
     target_version?: string;
+    source: "state" | "request";
   };
   desktop_update_request_failed: {
     action: "check" | "automatic" | "restart" | "state";

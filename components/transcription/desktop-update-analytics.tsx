@@ -42,6 +42,7 @@ export function DesktopUpdateAnalytics() {
         track("desktop_update_restart_blocked", {
           current_version: state.currentVersion,
           target_version: state.version,
+          source: "state",
         });
       }
     };
