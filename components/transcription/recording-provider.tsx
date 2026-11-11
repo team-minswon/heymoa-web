@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 
 import { track, trackConversion } from "@/lib/analytics/track";
 import { REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
+import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { toast } from "@/lib/ui/toast";
 import {
@@ -49,6 +50,7 @@ import {
   interruptedMessage,
   meetingEndedMessage,
   runtimeFailureMessage,
+  isQuotaExceeded,
   startErrorMessage,
 } from "@/lib/transcription/recording-messages";
 import { transcriptionWebSocketUrl } from "@/lib/transcription/socket";
@@ -115,6 +117,8 @@ export type RecordingContextValue = {
   microphone: MicrophoneState;
   systemAudio?: MicrophoneState | null;
   error: string | null;
+  /** `error` 가 무료 월 한도 소진(시작 409)으로 선 것인가. */
+  quotaExceeded: boolean;
   start: (noteId: string, workspaceId: string) => Promise<void>;
   stop: () => Promise<boolean>;
   disconnect: (noteId?: string) => Promise<void>;
@@ -412,7 +416,12 @@ export function RecordingProvider({
   const invalidateLifecycleQueries = useCallback(
     (noteId: string, transcript = false) => {
       void invalidateNoteLifecycle(queryClient, noteId);
-      if (transcript) invalidateTranscriptQueries(noteId);
+      if (transcript) {
+        invalidateTranscriptQueries(noteId);
+        // 녹음이 끝나거나 끊긴 자리다. 그 공간의 사용량·결제 조회만 다시 읽게 한다
+        const workspaceId = latest.current.activeWorkspaceId;
+        if (workspaceId) void invalidateWorkspaceBilling(queryClient, workspaceId);
+      }
     },
     [invalidateTranscriptQueries, queryClient]
   );
@@ -754,7 +763,14 @@ export function RecordingProvider({
                 : cause.name
               : "unknown"),
         });
-        dispatch({ type: "start-failed", message: startErrorMessage(t, cause) });
+        const quotaExceeded = isQuotaExceeded(cause);
+        dispatch({
+          type: "start-failed",
+          message: startErrorMessage(t, cause),
+          quotaExceeded,
+        });
+        // 안내가 요금제 화면으로 안내하므로 사용량을 최신으로 맞춰 둔다
+        if (quotaExceeded) void invalidateWorkspaceBilling(queryClient, workspaceId);
         clearLevel();
         // 실패가 무엇이든 노트를 다시 읽는다. 연 뒤에 회의가 끝났으면(APP-1319·1328) 상단 안내가 왜
         // 끝났는지 말하고, 응답만 못 받았으면(APP-1472) 서버가 만든 세션으로 바뀐 회의 상태를 따라간다
@@ -873,6 +889,7 @@ export function RecordingProvider({
       microphone: state.microphone,
       systemAudio: state.systemAudio,
       error: state.error,
+      quotaExceeded: state.quotaExceeded,
       start,
       stop,
       disconnect,

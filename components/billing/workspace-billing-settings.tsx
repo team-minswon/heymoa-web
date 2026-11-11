@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { BillingNotice } from "@/components/billing/billing-parts";
+import { RecordingUsage } from "@/components/billing/recording-usage";
 import { SettingsHeader } from "@/components/settings/settings-layout";
 import { LinkButton } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
@@ -73,6 +74,10 @@ function Summary({ workspaceId }: { workspaceId: string }) {
           </p>
         ) : null}
       </div>
+      <RecordingUsage
+        workspaceId={workspaceId}
+        paid={billing.entitlement?.planCode === "PRO"}
+      />
       <LinkButton href={`/w/${workspaceId}/billing`} variant="outline">
         {t("openPage")}
       </LinkButton>

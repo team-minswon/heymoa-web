@@ -13,6 +13,14 @@ const t = createTranslator({
 const startErrorMessage = (cause: unknown) => startErrorMessageIn(t, cause);
 
 describe("녹음 시작 실패 안내", () => {
+  it("무료 월 한도 소진(409)은 서버 문구가 아니라 정해진 안내로 말한다", () => {
+    expect(
+      startErrorMessage({
+        error: { code: "RECORDING_QUOTA_EXCEEDED", message: "서버 문구" },
+      })
+    ).toBe("이번 달 무료 녹음 시간을 모두 사용했습니다.");
+  });
+
   it.each([
     ["AUDIO_PERMISSION_DENIED", "마이크 또는 컴퓨터 소리 권한이 필요합니다."],
     ["SYSTEM_AUDIO_INPUT_MISSING", "컴퓨터 소리 입력을 찾지 못했습니다."],

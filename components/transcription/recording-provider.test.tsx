@@ -2,6 +2,10 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import {
+  getGetRecordingUsageQueryKey,
+  getGetWorkspaceBillingQueryKey,
+} from "@/lib/api/generated/billing/billing";
 import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
@@ -1299,6 +1303,60 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.result.current.error).toBe(
       "다른 탭이나 기기에서 이 회의를 녹음하고 있습니다."
     );
+  });
+
+  it("무료 월 한도로 시작이 거절되면 안내를 세우고 그 공간의 사용량·결제 조회만 다시 읽게 한다", async () => {
+    const harness = setup();
+    vi.mocked(harness.api.startSession).mockRejectedValueOnce({
+      success: false,
+      data: null,
+      error: { code: "RECORDING_QUOTA_EXCEEDED", message: "서버 문구" },
+    });
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(harness.result.current.error).toBe(
+      "이번 달 무료 녹음 시간을 모두 사용했습니다."
+    );
+    expect(harness.result.current.quotaExceeded).toBe(true);
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetRecordingUsageQueryKey(WORKSPACE_ID),
+    });
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetWorkspaceBillingQueryKey(WORKSPACE_ID),
+    });
+    expect(harness.invalidate).not.toHaveBeenCalledWith({
+      queryKey: getGetRecordingUsageQueryKey("OTHER"),
+    });
+    // 다른 실패는 한도 안내를 세우지 않는다
+    vi.mocked(harness.api.startSession).mockRejectedValueOnce({
+      success: false,
+      data: null,
+      error: { code: "ACTIVE_TRANSCRIPTION_SESSION", message: "x" },
+    });
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(harness.result.current.quotaExceeded).toBe(false);
+  });
+
+  it("녹음이 끝나면 그 공간의 사용량·결제 조회를 다시 읽게 하고 다른 공간은 건드리지 않는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    harness.invalidate.mockClear();
+
+    await act(async () => {
+      await harness.result.current.stop();
+    });
+
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetRecordingUsageQueryKey(WORKSPACE_ID),
+    });
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetWorkspaceBillingQueryKey(WORKSPACE_ID),
+    });
+    const keys = harness.invalidate.mock.calls.map(
+      ([filters]) => (filters as { queryKey?: unknown }).queryKey
+    );
+    expect(keys).not.toContainEqual(getGetRecordingUsageQueryKey("OTHER"));
   });
 
   // 녹음자 기기가 끊겨 server 가 세션을 정리하기를 기다리는 중이다. 기다리면 된다는 것을 말해야

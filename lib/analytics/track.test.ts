@@ -40,6 +40,21 @@ describe("결제 이벤트", () => {
   });
 });
 
+describe("녹음 한도 이벤트", () => {
+  it("공간·역할만 받고 사용량 수치나 회의 식별자는 받지 않는다", () => {
+    type P<E extends AnalyticsEvent> = Parameters<typeof track<E>>[1] & {};
+    expectTypeOf<P<"recording_quota_blocked">>().toEqualTypeOf<{
+      workspace_id: string;
+      role: "admin" | "member";
+    }>();
+    expectTypeOf<P<"recording_quota_upgrade_clicked">>().toEqualTypeOf<{
+      workspace_id: string;
+    }>();
+    // @ts-expect-error 사용량 수치를 실을 수 없다
+    track("recording_quota_blocked", { workspace_id: "W1", role: "admin", used_minutes: 1 });
+  });
+});
+
 describe("연결 지도 이벤트", () => {
   it("제목 없이 개수·화면 이름만 받는다", () => {
     expectTypeOf<

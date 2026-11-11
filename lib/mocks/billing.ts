@@ -21,6 +21,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `stuck`    카드 등록 확인 중에서 멈춘다
  *   - `lost`     첫 조회부터 ACCESS_LOST(관리자 권한 상실)
  *   - `teamBusy` 다른 ADMIN 의 진행 중 구매가 있다(구매 시작 409 `BILLING_IN_PROGRESS`)
+ *   - `quota`    무료 월 한도를 다 썼다 — 사용량이 한도와 같고 녹음 시작이 409 `RECORDING_QUOTA_EXCEEDED`(`billingMock.quotaExceeded()`)
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
  * 유료 상품의 녹음 제공량은 무제한(`null`)이다.
@@ -31,7 +32,8 @@ export type BillingScenario =
   | "unknown"
   | "stuck"
   | "lost"
-  | "teamBusy";
+  | "teamBusy"
+  | "quota";
 
 type AttemptStatus =
   | "PENDING"
@@ -175,7 +177,8 @@ function currentScenario(): BillingScenario {
       value === "unknown" ||
       value === "stuck" ||
       value === "lost" ||
-      value === "teamBusy"
+      value === "teamBusy" ||
+      value === "quota"
     )
       return value;
   } catch {
@@ -342,7 +345,8 @@ function recordingUsage(workspaceId: string) {
       remainingMinutes: null,
     };
   }
-  const used = FREE_USED_MINUTES;
+  const used =
+    currentScenario() === "quota" ? FREE_ALLOWANCE_MINUTES : FREE_USED_MINUTES;
   return {
     enforced: true,
     periodKind: "FREE",
@@ -713,5 +717,7 @@ export const billingMock = {
   setScenario(scenario: BillingScenario | null) {
     scenarioOverride = scenario;
   },
+  /** 시나리오 `quota` 인가 — 녹음 시작 목이 409 를 내는 조건이다. */
+  quotaExceeded: () => currentScenario() === "quota",
   setupIds: () => Object.keys(state.setups),
 };

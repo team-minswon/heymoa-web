@@ -16,6 +16,15 @@
     "changed": "The payment status changed. We've loaded the latest status; please review it again.",
     "inProgress": "We're confirming the payment. Don't pay again."
   },
+  "usage": {
+    "loading": "Loading usage",
+    "progress": "Recording usage this month",
+    "usedFree": "{used, number} / {allowance, number} min this month",
+    "resets": "Resets on {date}",
+    "reserved": "Meetings being recorded are counted after they end",
+    "unlimited": "Unlimited recording",
+    "usedPaid": "{used, number} min used this month"
+  },
   "settings": {
     "title": "Billing",
     "description": "Review this workspace's plan and usage.",

@@ -95,6 +95,8 @@ export type AnalyticsEvent =
   | "billing_card_setup_started"
   | "billing_card_setup_resulted"
   | "billing_retry_clicked"
+  | "recording_quota_blocked"
+  | "recording_quota_upgrade_clicked"
   | "notifications_opened"
   | "notification_clicked"
   | "notifications_all_read_clicked"
@@ -219,6 +221,10 @@ export type WebEventProperties = {
     result: BillingSetupResult;
   };
   billing_retry_clicked: { workspace_id?: string; result: Exclude<BillingSetupResult, "completed"> };
+  // 무료 월 한도로 녹음 시작이 거절돼 안내가 떴다(APP-1566). role 은 그 안내를 본 사람이 ADMIN 인가 멤버인가.
+  // 사용량 수치·회의 id 는 싣지 않는다. 효과는 안내 → 요금제 보기 클릭 비율로 본다.
+  recording_quota_blocked: { workspace_id: string; role: "admin" | "member" };
+  recording_quota_upgrade_clicked: { workspace_id: string };
   // 알림 모달·알림 설정(PRO-67 I32, 발화는 I09·I10). 종류·개수·워크스페이스만 싣고 알림 내용·노트 id 는 싣지 않는다.
   // `type`·`channel` 은 계약의 enum 그대로다 — 종류가 늘면 orval 이 같이 넓힌다.
   notifications_opened: { workspace_id: string; unread_count: number };

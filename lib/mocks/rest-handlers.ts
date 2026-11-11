@@ -1,4 +1,5 @@
 import { HttpResponse, http } from "msw";
+import { billingMock } from "@/lib/mocks/billing";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow } from "@/lib/mocks/meeting-flow";
 // 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
@@ -1358,6 +1359,21 @@ export const restHandlers = [
       const body = (await request.json().catch(() => ({}))) as {
         clientInstanceId?: string;
       };
+      // 무료 월 한도 소진(`localStorage.mockBilling = "quota"`). 한도는 시작할 때만 검사한다.
+      if (billingMock.quotaExceeded()) {
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: {
+              code: "RECORDING_QUOTA_EXCEEDED",
+              message: "이번 달 무료 녹음 시간을 모두 사용했습니다.",
+              details: null,
+            },
+          },
+          { status: 409 }
+        );
+      }
       try {
         const data = mockDb.createSession(
           id(params.noteId),

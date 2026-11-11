@@ -16,6 +16,15 @@
     "changed": "결제 상태가 바뀌었습니다. 최신 상태를 불러왔으니 다시 확인해 주세요.",
     "inProgress": "결제를 확인하는 중입니다. 다시 결제하지 마세요."
   },
+  "usage": {
+    "loading": "사용량을 불러오는 중",
+    "progress": "이번 달 녹음 사용량",
+    "usedFree": "이번 달 {used, number}분 / {allowance, number}분",
+    "resets": "{date} 초기화",
+    "reserved": "녹음 중인 회의는 끝난 뒤 반영됩니다",
+    "unlimited": "녹음 무제한",
+    "usedPaid": "이번 달 {used, number}분 사용"
+  },
   "settings": {
     "title": "결제",
     "description": "워크스페이스의 요금제와 사용량을 확인합니다.",

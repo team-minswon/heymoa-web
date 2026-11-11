@@ -14,6 +14,7 @@ import {
   BillingScreen,
   BillingSection,
 } from "@/components/billing/billing-screen";
+import { RecordingUsage } from "@/components/billing/recording-usage";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,7 +77,13 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
   return (
     <>
       <BillingSection title={t("status")}>
-        <StatusCard billing={billing} />
+        <div className="flex flex-col gap-4">
+          <StatusCard billing={billing} />
+          <RecordingUsage
+            workspaceId={workspaceId}
+            paid={billing.entitlement?.planCode === "PRO"}
+          />
+        </div>
       </BillingSection>
       <BillingSection title={t("plans")}>
         <Plans
