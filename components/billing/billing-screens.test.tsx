@@ -658,7 +658,7 @@ describe("등록 결과 — 상태별 화면", () => {
     ).toBeInTheDocument();
   });
 
-  it("결제 결과 확인 지연은 다시 결제하지 말라고 하고 새 결제 버튼이 없다", async () => {
+  it("결제 결과 확인 지연은 다시 결제하지 말라고 하고 새 결제 버튼 대신 문의 길만 둔다", async () => {
     serveSetup(
       setupBody("PAYMENT", "UNKNOWN", {
         allowedActions: ["REFRESH_STATUS"],
@@ -675,10 +675,9 @@ describe("등록 결과 — 상태별 화면", () => {
     renderIn(<BillingSetupResultPage setupId="S1" />);
     expect(
       await screen.findByText(
-        "결제 결과를 확인하고 있습니다. 다시 결제하지 마세요."
+        /결제 결과를 확인하고 있습니다. 다시 결제하지 마세요./
       )
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
     // 메뉴 없는 화면이라 나갈 길은 있어야 한다.
     expect(
       screen.getByRole("link", { name: "요금제로 돌아가기" })
@@ -686,6 +685,26 @@ describe("등록 결과 — 상태별 화면", () => {
       "href",
       expect.stringMatching(/^\/w\/[^/?]+\?settings=billing$/)
     );
+    // 단추는 문의 창을 여는 링크 하나뿐이고, 결제 번호(승인 시도)를 「결제·환불」로 싣는다.
+    const support = screen.getByRole("button", { name: "문의·피드백" });
+    expect(screen.getAllByRole("button")).toEqual([support]);
+    fireEvent.click(support);
+    expect(
+      await screen.findByRole("radio", { name: /결제·환불/ })
+    ).toHaveAttribute("aria-checked", "true");
+    expect(
+      screen.getByText("결제 번호 A1도 함께 보냅니다.")
+    ).toBeInTheDocument();
+  });
+
+  it("결제 시도가 없는 등록의 문의 링크는 등록 번호를 싣는다", async () => {
+    serveSetup(setupBody("BILLING_KEY", "ACTION_REQUIRED"));
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "문의·피드백" }));
+    expect(
+      await screen.findByText("등록 번호 S1도 함께 보냅니다.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/결제 번호/)).not.toBeInTheDocument();
   });
 
   it("승인 뒤 자동 취소된 결제는 닫힘이 아니라 전액 취소로 알리고 새로 시작할 수 있다", async () => {

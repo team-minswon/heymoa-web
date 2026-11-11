@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   CircleHelp,
+  CreditCard,
   Lightbulb,
   MessageCircle,
   MessageSquareText,
@@ -52,10 +53,13 @@ export const INQUIRY_PARAM = "inquiry";
 const FOOTER_MAX = 250;
 
 type Kind = CreateFeedbackRequestKind;
+/** 결제 화면에서 열 때 같이 보내는 번호. 결제 번호가 없는 카드 등록 결과는 등록 번호를 싣는다. */
+export type FeedbackReference = { type: "payment" | "setup"; id: string };
 
 const KINDS = [
   { value: "INCIDENT", key: "incident", icon: TriangleAlert },
   { value: "QUESTION", key: "question", icon: CircleHelp },
+  { value: "BILLING", key: "billing", icon: CreditCard },
   { value: "SUGGESTION", key: "suggestion", icon: Lightbulb },
   { value: "OTHER", key: "other", icon: MessageCircle },
 ] as const satisfies readonly { value: Kind; key: string; icon: LucideIcon }[];
@@ -67,11 +71,21 @@ const KIND_KEY = Object.fromEntries(
 /**
  * 보내는 글 전체. 본문 뒤에 어디서 썼는지만 덧붙인다 — 경로에 쿼리는 안 싣는다.
  * 꼬리는 운영자가 읽고 `userPart`가 잘라 내는 형식이라 화면 언어와 무관하게 한국어로 둔다.
+ * 결제 화면에서 열었으면 결제(또는 등록) 번호 줄을 환경 앞에 둔다 — 긴 환경 문자열이 잘려도 번호는 남는다.
  */
-export function composeFeedback(message: string): string {
+export function composeFeedback(
+  message: string,
+  reference?: FeedbackReference
+): string {
   const where = typeof window === "undefined" ? "" : window.location.pathname;
   const env = typeof navigator === "undefined" ? "" : navigator.userAgent;
-  const footer = `\n\n---\n화면: ${where}\n환경: ${env}`.slice(0, FOOTER_MAX);
+  const ref = reference
+    ? `\n${reference.type === "payment" ? "결제 번호" : "등록 번호"}: ${reference.id}`
+    : "";
+  const footer = `\n\n---\n화면: ${where}${ref}\n환경: ${env}`.slice(
+    0,
+    FOOTER_MAX
+  );
   return `${message.trim()}${footer}`;
 }
 
@@ -179,11 +193,14 @@ export function FeedbackDialog({
   open,
   onOpenChange,
   focusId = null,
+  reference,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 「내 문의」 탭에서 보여 줄 문의. 목록에 없으면 탭만 연다 */
   focusId?: string | null;
+  /** 있으면 「결제·환불」을 골라 두고 이 번호를 본문 꼬리에 싣는다 */
+  reference?: FeedbackReference;
 }) {
   const t = useTranslations("workspace.feedback");
   const tActions = useTranslations("common.actions");
@@ -199,7 +216,7 @@ export function FeedbackDialog({
     refetch,
   } = useFeedbackAnswers();
   const [tab, setTab] = useState<"send" | "mine">("send");
-  const [kind, setKind] = useState<Kind>("QUESTION");
+  const [kind, setKind] = useState<Kind>(reference ? "BILLING" : "QUESTION");
   const [message, setMessage] = useState("");
   const empty = message.trim().length === 0;
   const kinds = KINDS.map(({ value, key, icon }) => ({
@@ -232,7 +249,7 @@ export function FeedbackDialog({
   function submit() {
     if (empty || create.isPending) return;
     create.mutate(
-      { data: { kind, message: composeFeedback(message) } },
+      { data: { kind, message: composeFeedback(message, reference) } },
       {
         onSuccess: () => {
           toast.success(t("sent"));
@@ -312,6 +329,11 @@ export function FeedbackDialog({
               <p className="text-xs leading-relaxed text-[var(--el-muted)]">
                 {t("privacyNote")}
               </p>
+              {reference ? (
+                <p className="text-xs leading-relaxed text-[var(--el-muted)]">
+                  {t(`referenceNote.${reference.type}`, { id: reference.id })}
+                </p>
+              ) : null}
 
               <DialogFooter className="bg-transparent">
                 <Button

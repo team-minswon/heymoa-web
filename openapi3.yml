@@ -13692,6 +13692,7 @@ components:
           - QUESTION
           - SUGGESTION
           - OTHER
+          - BILLING
         message:
           type: string
           description: 내용. 앞뒤 공백을 뺀 길이가 1~1500자
@@ -14286,6 +14287,7 @@ components:
                     - QUESTION
                     - SUGGESTION
                     - OTHER
+                    - BILLING
                   answeredAt:
                     type: string
                     description: 답변한 시각. 답변이 없으면 null
@@ -14362,6 +14364,7 @@ components:
               - QUESTION
               - SUGGESTION
               - OTHER
+              - BILLING
             answeredAt:
               type: string
               description: 답변한 시각. 답변이 없으면 null

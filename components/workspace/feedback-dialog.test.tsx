@@ -127,6 +127,42 @@ describe("FeedbackDialog", () => {
     expect(data.message).toContain("저장이 안 돼요");
     expect(data.message).toContain("화면: /w/1/notes/2\n");
     expect(data.message).not.toContain("view=full");
+    // 일반 진입은 결제 맥락이 없다.
+    expect(data.message).not.toMatch(/결제 번호|등록 번호/);
+    expect(screen.queryByText(/번호 .*함께 보냅니다/)).toBeNull();
+  });
+
+  it("일반 진입은 사용 문의를, 결제 맥락은 「결제·환불」을 골라 두고 번호 줄을 환경 앞에 싣는다", () => {
+    const view = render(<FeedbackDialog open onOpenChange={vi.fn()} />, {
+      wrapper,
+    });
+    expect(screen.getByRole("radio", { name: /사용 문의/ })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    view.unmount();
+    window.history.replaceState({}, "", "/billing/setups/S1");
+    render(
+      <FeedbackDialog
+        open
+        onOpenChange={vi.fn()}
+        reference={{ type: "payment", id: "P1" }}
+      />,
+      { wrapper }
+    );
+    expect(screen.getByRole("radio", { name: /결제·환불/ })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    fireEvent.change(screen.getByLabelText("내용"), {
+      target: { value: "환불해 주세요" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    const { data } = mutate.mock.calls[0][0];
+    expect(data.kind).toBe("BILLING");
+    expect(data.message).toMatch(
+      /\n---\n화면: \/billing\/setups\/S1\n결제 번호: P1\n환경: /
+    );
   });
 
   it("글자 수를 보여 주고 1200자에서 멈춘다", () => {

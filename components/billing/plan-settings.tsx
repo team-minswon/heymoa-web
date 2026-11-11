@@ -8,6 +8,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BillingCheckout } from "@/components/billing/billing-checkout";
 import {
   BillingNotice,
+  FeedbackLink,
   TestPaymentNotice,
 } from "@/components/billing/billing-parts";
 import { RecordingUsage } from "@/components/billing/recording-usage";
@@ -438,15 +439,17 @@ function Attention({
       billing.latestAttemptStatus === "UNKNOWN");
 
   // 승인 뒤 자동 취소(보상 환불)가 걸린 결제. 끝난 취소는 알리지 않는다 — 결과 화면이 이미 알렸고 상태는 Free 로 보인다.
-  const refund =
-    detail?.latestAttempt?.refundStatus ??
-    detail?.refundedAttempt?.refundStatus;
+  const refundAttempt = detail?.latestAttempt?.refundStatus
+    ? detail.latestAttempt
+    : detail?.refundedAttempt;
+  const refund = refundAttempt?.refundStatus;
   // 사용자가 요청한 환불은 「결제 취소 처리 중 → 완료」로 따로 말한다(보상 취소와 섞지 않는다).
   const userRefund =
     detail?.refundedAttempt?.refundOrigin === "USER"
       ? detail.refundedAttempt.refundStatus
       : null;
   const compensation = userRefund ? null : refund;
+  const userRefundAttempt = detail?.refundedAttempt;
 
   const cancelSetup = async () => {
     if (!billing.mySetupId) return;
@@ -470,13 +473,21 @@ function Attention({
         {t("refunding.body")}
       </BillingNotice>
     ) : null,
-    compensation === "FAILED" ? (
+    compensation === "FAILED" && refundAttempt ? (
       <BillingNotice
         key="refundFailed"
         tone="warn"
         title={t("refundFailed.title")}
       >
-        {t("refundFailed.body")}
+        {t.rich("refundFailed.body", {
+          link: (chunks) => (
+            <FeedbackLink
+              reference={{ type: "payment", id: refundAttempt.attemptId }}
+            >
+              {chunks}
+            </FeedbackLink>
+          ),
+        })}
       </BillingNotice>
     ) : null,
     refundPending(userRefund) ? (
@@ -497,13 +508,21 @@ function Attention({
         {t(`closed.${billing.closedReason}`)}
       </BillingNotice>
     ) : null,
-    userRefund === "FAILED" ? (
+    userRefund === "FAILED" && userRefundAttempt ? (
       <BillingNotice
         key="userRefundFailed"
         tone="warn"
         title={t("userRefundFailed.title")}
       >
-        {t("userRefundFailed.body")}
+        {t.rich("userRefundFailed.body", {
+          link: (chunks) => (
+            <FeedbackLink
+              reference={{ type: "payment", id: userRefundAttempt.attemptId }}
+            >
+              {chunks}
+            </FeedbackLink>
+          ),
+        })}
       </BillingNotice>
     ) : null,
   ].filter(Boolean);

@@ -1,8 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
+import {
+  FeedbackDialog,
+  type FeedbackReference,
+} from "@/components/workspace/feedback-dialog";
 import type { WorkspaceBillingResponseDataProductTestPaymentNotice } from "@/lib/api/generated/models";
 import { cn } from "@/lib/utils";
 
@@ -48,4 +52,34 @@ export function TestPaymentNotice({
   const t = useTranslations("billing.testNotice");
   if (!notice) return null;
   return <BillingNotice>{t(notice)}</BillingNotice>;
+}
+
+/**
+ * 결제 안내 문장 속 「문의·피드백」(`t.rich` 의 `<link>`). 문의 창을 「결제·환불」로, 번호를 실어 연다 — 환불은 문의로만 받는다.
+ * 문의 창은 어디에 마운트해도 되어 워크스페이스 셸 밖(카드 등록 결과)에서도 같이 쓴다.
+ */
+export function FeedbackLink({
+  reference,
+  children,
+}: {
+  reference: FeedbackReference;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="underline underline-offset-2 hover:text-[var(--el-ink)]"
+        onClick={() => setOpen(true)}
+      >
+        {children}
+      </button>
+      <FeedbackDialog
+        open={open}
+        onOpenChange={setOpen}
+        reference={reference}
+      />
+    </>
+  );
 }

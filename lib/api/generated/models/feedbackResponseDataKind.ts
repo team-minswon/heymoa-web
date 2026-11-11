@@ -17,4 +17,5 @@ export const FeedbackResponseDataKind = {
   QUESTION: "QUESTION",
   SUGGESTION: "SUGGESTION",
   OTHER: "OTHER",
+  BILLING: "BILLING",
 } as const;

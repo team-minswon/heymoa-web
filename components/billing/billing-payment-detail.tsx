@@ -1,10 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { BackLink } from "@/components/billing/back-link";
-import { BillingNotice } from "@/components/billing/billing-parts";
+import {
+  BillingNotice,
+  FeedbackLink,
+} from "@/components/billing/billing-parts";
 import { PaymentStatusText } from "@/components/billing/subscription-management";
 import {
   SETTINGS_LIST,
@@ -12,7 +15,6 @@ import {
 } from "@/components/settings/settings-layout";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeedbackDialog } from "@/components/workspace/feedback-dialog";
 import { useGetBillingPayment } from "@/lib/api/generated/billing/billing";
 import type { BillingPaymentResponseData } from "@/lib/api/generated/models";
 import { ApiError } from "@/lib/api/fetcher";
@@ -116,7 +118,7 @@ function PaymentContent({
     <div className="flex flex-col gap-6">
       <PaymentHero payment={payment} />
       <PaymentRows payment={payment} current={current} />
-      <SupportLine />
+      <SupportLine paymentId={paymentId} />
     </div>
   );
 }
@@ -212,23 +214,17 @@ function PaymentRows({
 }
 
 /** 환불·세금계산서는 화면을 만들지 않는다 — 기존 문의·피드백 창으로 받는다. */
-function SupportLine() {
+function SupportLine({ paymentId }: { paymentId: string }) {
   const t = useTranslations("billing.payment");
-  const [open, setOpen] = useState(false);
   return (
     <p className="text-xs leading-5 text-[var(--el-muted)]">
       {t.rich("support", {
         link: (chunks) => (
-          <button
-            type="button"
-            className="underline underline-offset-2 hover:text-[var(--el-ink)]"
-            onClick={() => setOpen(true)}
-          >
+          <FeedbackLink reference={{ type: "payment", id: paymentId }}>
             {chunks}
-          </button>
+          </FeedbackLink>
         ),
       })}
-      <FeedbackDialog open={open} onOpenChange={setOpen} />
     </p>
   );
 }

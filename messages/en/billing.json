@@ -53,7 +53,7 @@
     },
     "refundFailed": {
       "title": "This payment needs a check",
-      "body": "The automatic cancellation couldn't be finished. Don't pay again; let us know through Feedback."
+      "body": "The automatic cancellation couldn't be finished. Don't pay again; let us know through <link>Help & feedback</link>."
     },
     "askAdmin": "Only admins can purchase and manage billing.",
     "start": "Start {plan}",
@@ -71,7 +71,7 @@
     },
     "userRefundFailed": {
       "title": "We couldn't finish the refund",
-      "body": "Future payments remain stopped. Please let us know through Help & feedback."
+      "body": "Future payments remain stopped. Please let us know through <link>Help & feedback</link>."
     },
     "currentLabel": "Current plan",
     "compare": "Compare plans",
@@ -172,7 +172,7 @@
     },
     "cardActionRequired": {
       "title": "This registration wasn't charged",
-      "body": "Please register a card again. If it keeps happening, contact support."
+      "body": "Please register a card again. If it keeps happening, let us know through <link>Help & feedback</link>."
     },
     "paymentProcessing": {
       "title": "Confirming the payment",
@@ -180,7 +180,7 @@
     },
     "paymentUnknown": {
       "title": "Confirming the payment result is taking longer",
-      "body": "We're confirming the payment result. Don't pay again."
+      "body": "We're confirming the payment result. Don't pay again. If it takes long, let us know through <link>Help & feedback</link>."
     },
     "declined": {
       "title": "The payment wasn't approved",
@@ -201,7 +201,7 @@
     },
     "accessActionRequired": {
       "title": "This payment needs a check",
-      "body": "The payment was approved but couldn't be finished. Don't pay again; let us know through Feedback."
+      "body": "The payment was approved but couldn't be finished. Don't pay again; let us know through <link>Help & feedback</link>."
     },
     "completed": {
       "title": "Payment complete",

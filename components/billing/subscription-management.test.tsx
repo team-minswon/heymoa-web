@@ -488,6 +488,29 @@ describe("결제 상세", () => {
     expect(screen.getByRole("button", { name: "문의·피드백" })).toBeVisible();
   });
 
+  it("결제 상세의 「문의·피드백」은 「결제·환불」을 골라 두고 결제 번호를 실어 보낸다", async () => {
+    renderIn(paymentDetail(OLD_PAYMENT));
+    fireEvent.click(await screen.findByRole("button", { name: "문의·피드백" }));
+    expect(
+      await screen.findByRole("radio", { name: /결제·환불/ })
+    ).toHaveAttribute("aria-checked", "true");
+    expect(
+      screen.getByText(`결제 번호 ${OLD_PAYMENT}도 함께 보냅니다.`)
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("내용"), {
+      target: { value: "환불해 주세요" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    await waitFor(() =>
+      expect(mockDb.listFeedbacks().feedbacks).toContainEqual(
+        expect.objectContaining({
+          kind: "BILLING",
+          message: expect.stringContaining(`\n결제 번호: ${OLD_PAYMENT}\n`),
+        })
+      )
+    );
+  });
+
   it("이 공간의 결제가 아니면 찾을 수 없다고 한다", async () => {
     renderIn(paymentDetail("0P00000000004"));
     expect(

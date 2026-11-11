@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 
 import {
   BillingNotice,
+  FeedbackLink,
   TestPaymentNotice,
 } from "@/components/billing/billing-parts";
 import { SETTINGS_LIST } from "@/components/settings/settings-layout";
@@ -236,9 +237,25 @@ function ViewBody({
   const checkout = workspaceId
     ? `/w/${workspaceId}?settings=${replace ? "payment" : "billing"}`
     : null;
+  // 문의 창에 실을 번호 — 승인 시도(= 결제 번호)가 있으면 그것, 없으면 등록 번호.
+  const attemptId = (setup.latestAttempt ?? setup.originAttempt)?.attemptId;
+  const supportBody = (key: Parameters<typeof t.rich>[0]) =>
+    t.rich(key, {
+      link: (chunks) => (
+        <FeedbackLink
+          reference={
+            attemptId
+              ? { type: "payment", id: attemptId }
+              : { type: "setup", id: setup.setupId }
+          }
+        >
+          {chunks}
+        </FeedbackLink>
+      ),
+    });
   const card = (
     title: string,
-    body?: string,
+    body?: React.ReactNode,
     extra?: React.ReactNode,
     tone?: "warn"
   ) => (
@@ -294,7 +311,7 @@ function ViewBody({
             ? "replace.cardActionRequired.title"
             : "cardActionRequired.title"
         ),
-        t(
+        supportBody(
           replace
             ? "replace.cardActionRequired.body"
             : "cardActionRequired.body"
@@ -308,7 +325,7 @@ function ViewBody({
       // 새 결제 버튼을 두지 않는다 — 결과가 나오기 전에 다시 결제하면 이중 청구가 될 수 있다.
       return card(
         t("paymentUnknown.title"),
-        t("paymentUnknown.body"),
+        supportBody("paymentUnknown.body"),
         undefined,
         "warn"
       );
@@ -342,7 +359,7 @@ function ViewBody({
     case "accessActionRequired":
       return card(
         t("accessActionRequired.title"),
-        t("accessActionRequired.body"),
+        supportBody("accessActionRequired.body"),
         undefined,
         "warn"
       );

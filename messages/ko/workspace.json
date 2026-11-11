@@ -141,6 +141,10 @@
     "kindLabel": "분류",
     "messageLabel": "내용",
     "privacyNote": "현재 화면 경로와 사용 환경을 함께 보냅니다. 회의 내용은 보내지 않습니다.",
+    "referenceNote": {
+      "payment": "결제 번호 {id}도 함께 보냅니다.",
+      "setup": "등록 번호 {id}도 함께 보냅니다."
+    },
     "submit": "보내기",
     "sent": "보냈습니다. 답변이 달리면 「내 문의」에서 볼 수 있습니다.",
     "unseenAnswers": "새 답변 {count}개",
@@ -154,6 +158,11 @@
         "label": "사용 문의",
         "hint": "어떻게 쓰는지 궁금해요",
         "placeholder": "궁금한 점을 적어 주세요. 어떤 기능인지 알려 주시면 더 정확히 답할 수 있습니다."
+      },
+      "billing": {
+        "label": "결제·환불",
+        "hint": "결제나 환불에 대해 물어요",
+        "placeholder": "결제한 날짜와 문의 내용을 적어 주세요. 환불을 원하면 그렇게 적어 주세요."
       },
       "suggestion": {
         "label": "기능 제안",
