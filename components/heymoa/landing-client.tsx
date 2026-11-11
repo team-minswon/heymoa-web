@@ -1,4 +1,5 @@
 import { useLocale } from "next-intl";
+import { DesktopLaunchRedirect } from "@/components/auth/desktop-launch-redirect";
 
 import { useFaqQA } from "@/components/heymoa/landing/faq";
 import { textOf } from "@/lib/help/text";
@@ -79,6 +80,7 @@ export function LandingClient() {
   const { softwareLd, siteLd, faqLd } = useStructuredData();
   return (
     <>
+      <DesktopLaunchRedirect />
       <JsonLd data={softwareLd} />
       <JsonLd data={siteLd} />
       <JsonLd data={faqLd} />
