@@ -21,6 +21,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `stuck`    카드 등록 확인 중에서 멈춘다
  *   - `lost`     첫 조회부터 ACCESS_LOST(관리자 권한 상실)
  *   - `teamBusy` 다른 ADMIN 의 진행 중 구매가 있다(구매 시작 409 `BILLING_IN_PROGRESS`)
+ *   - `refund`   승인은 됐지만 권한을 못 줘 자동 취소된다(보상 환불) — 취소 중 → 취소 완료, 새로 시작 가능
  *   - `quota`    무료 월 한도를 다 썼다 — 사용량이 한도와 같고 녹음 시작이 409 `RECORDING_QUOTA_EXCEEDED`(`billingMock.quotaExceeded()`)
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
@@ -33,6 +34,7 @@ export type BillingScenario =
   | "stuck"
   | "lost"
   | "teamBusy"
+  | "refund"
   | "quota";
 
 type AttemptStatus =
@@ -48,6 +50,7 @@ type Attempt = {
   status: AttemptStatus;
   errorCode: string | null;
   requiresManualReview: boolean;
+  refundStatus?: "PROCESSING" | "SUCCEEDED";
 };
 type Card = {
   number: string | null;
@@ -74,6 +77,8 @@ type Workspace = {
   card: Card | null;
   /** 열린 청구 회차와 그 최신 시도. 결제가 성공하면 회차가 닫혀 null 이다. */
   cycle: { cycleId: string; attempt: Attempt } | null;
+  /** 가장 최근에 환불이 걸린 시도(보상 환불). */
+  refunded?: Attempt | null;
   mySetupId: string | null;
   subscriptionVersion: number;
 };
@@ -178,6 +183,7 @@ function currentScenario(): BillingScenario {
       value === "stuck" ||
       value === "lost" ||
       value === "teamBusy" ||
+      value === "refund" ||
       value === "quota"
     )
       return value;
@@ -212,6 +218,8 @@ const attemptView = (attempt: Attempt | null) =>
     status: attempt.status,
     errorCode: attempt.errorCode,
     requiresManualReview: attempt.requiresManualReview,
+    refundStatus: attempt.refundStatus ?? null,
+    refundOrigin: attempt.refundStatus ? "COMPENSATION" : null,
   };
 
 function newAttempt(
@@ -289,6 +297,7 @@ function workspaceBilling(workspaceId: string) {
           methodVersion: ws.card ? 1 : null,
           maskedCard: ws.card,
           latestAttempt: attemptView(attempt),
+          refundedAttempt: attemptView(ws.refunded ?? null),
           subscriptionVersion: ws.subscriptionVersion,
           openCycleId: ws.cycle?.cycleId ?? null,
           methodPayerIsMe: true,
@@ -431,6 +440,19 @@ function advance(setup: Setup): Phase {
   }
   if (n === 3)
     return phase("ACCESS", "PROCESSING", "ISSUED", ["REFRESH_STATUS"], 2);
+  if (setup.scenario === "refund") {
+    origin.status = "SUCCEEDED";
+    ws.refunded = origin;
+    if (n === 4) {
+      // 취소가 끝나기 전에는 공간 조회의 최신 시도에도 환불 상태가 실린다(새 구매는 막힌다).
+      ws.cycle = { cycleId, attempt: origin };
+      origin.refundStatus = "PROCESSING";
+      return phase("ACCESS", "PROCESSING", "ISSUED", ["REFRESH_STATUS"], 2);
+    }
+    origin.refundStatus = "SUCCEEDED";
+    ws.cycle = null;
+    return phase("ACCESS", "CANCELED", "ISSUED", ["START_PURCHASE"], null);
+  }
   origin.status = "SUCCEEDED";
   ws.paid = true;
   ws.cycle = null;

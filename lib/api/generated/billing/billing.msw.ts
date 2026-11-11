@@ -59,6 +59,8 @@ export const getGetWorkspaceBillingResponseMock =
           status: "SUCCEEDED",
           errorCode: null,
           requiresManualReview: false,
+          refundStatus: null,
+          refundOrigin: null,
         },
         methodVersion: 1,
         maskedCard: {
@@ -67,6 +69,7 @@ export const getGetWorkspaceBillingResponseMock =
           cardType: "CREDIT",
         },
         methodPayerIsMe: true,
+        refundedAttempt: null,
       },
     },
     error: null,
@@ -94,6 +97,8 @@ export const getGetMyBillingSetupResponseMock =
         status: "SUCCEEDED",
         errorCode: null,
         requiresManualReview: false,
+        refundStatus: null,
+        refundOrigin: null,
       },
       latestAttempt: {
         attemptId: "0HZX2K7M9Q4B3",
@@ -102,6 +107,8 @@ export const getGetMyBillingSetupResponseMock =
         status: "SUCCEEDED",
         errorCode: null,
         requiresManualReview: false,
+        refundStatus: null,
+        refundOrigin: null,
       },
       paidPeriod: {
         start: "2026-11-11T01:00:00Z",

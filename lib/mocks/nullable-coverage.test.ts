@@ -443,15 +443,18 @@ async function seedBilling(firstWorkspaceId: string) {
       body: init?.body ? JSON.stringify(init.body) : undefined,
     });
   const open = async (workspaceId: string, requestKey: string) => {
-    const response = await call(`/v1/workspaces/${workspaceId}/billing/setups`, {
-      method: "POST",
-      body: {
-        requestKey,
-        purpose: "PURCHASE",
-        expectedProductVersion: "TEST_MONTHLY_V1",
-        agreementVersion: "BILLING_TEST_V1",
-      },
-    });
+    const response = await call(
+      `/v1/workspaces/${workspaceId}/billing/setups`,
+      {
+        method: "POST",
+        body: {
+          requestKey,
+          purpose: "PURCHASE",
+          expectedProductVersion: "TEST_MONTHLY_V1",
+          agreementVersion: "BILLING_TEST_V1",
+        },
+      }
+    );
     return (await response.json()).data.setupId as string;
   };
   const run = async (
@@ -483,6 +486,8 @@ async function seedBilling(firstWorkspaceId: string) {
     await run("decline", "결제 거절", 3),
     await run("unknown", "결제 확인 지연", 3),
     await run("lost", "권한 상실", 1),
+    await run("refund", "결제 자동 취소", 5),
+    await run("refund", "결제 취소 중", 3),
   ];
   billingMock.setScenario(null);
   return created;
@@ -500,6 +505,10 @@ const KNOWN_ONE_SIDED = new Set([
   // 유료 상품의 녹음 제공량은 무제한(null)으로 확정이다. 숫자는 서버가 다른 상품을 줄 때만 오고, 화면은 두 쪽을 다 그린다
   // (`billing-screens.test.tsx` 의 「서버가 제공량을 숫자로 줘도 깨지지 않는다」).
   "WorkspaceBillingResponse.data.product.recordingAllowanceMinutes",
+  // 환불이 걸린 시도는 승인된 시도라 오류 코드가 없고, 환불 상태·출처는 항상 있다(없으면 `refundedAttempt` 자체가 null).
+  "WorkspaceBillingResponse.data.detail.refundedAttempt.errorCode",
+  "WorkspaceBillingResponse.data.detail.refundedAttempt.refundStatus",
+  "WorkspaceBillingResponse.data.detail.refundedAttempt.refundOrigin",
   // APP-1266 목에서 생략한 호환 참조입니다. 서버 계약에서 제거할 때 함께 지웁니다.
   "MeetingReviewSummaryResponse.data.agendas[].agendaItemId",
   "MeetingReviewSummaryResponse.data.agendas[].centerItemId",

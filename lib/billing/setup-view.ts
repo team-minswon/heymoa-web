@@ -15,16 +15,30 @@ export type SetupView =
   | "paymentUnknown"
   | "declined"
   | "accessProcessing"
+  | "refundProcessing"
+  | "refunded"
+  | "accessActionRequired"
   | "completed"
   | "accessLost"
   | "closed";
 
 export function setupViewOf(
-  setup: Pick<BillingSetupStatusResponseData, "stage" | "status">
+  setup: Pick<BillingSetupStatusResponseData, "stage" | "status"> &
+    Partial<
+      Pick<BillingSetupStatusResponseData, "originAttempt" | "latestAttempt">
+    >
 ): SetupView {
   const { stage, status } = setup;
   if (stage === "ACCESS_LOST") return "accessLost";
   if (stage === "COMPLETED") return "completed";
+  // 승인은 됐지만 권한 대신 자동 취소가 걸린 결제(보상 환불). 「닫힘」·「권한 반영 중」으로 읽히면 안 된다.
+  if (stage === "ACCESS") {
+    if (status === "CANCELED") return "refunded";
+    if (status === "ACTION_REQUIRED") return "accessActionRequired";
+    const refund =
+      setup.originAttempt?.refundStatus ?? setup.latestAttempt?.refundStatus;
+    return refund ? "refundProcessing" : "accessProcessing";
+  }
   if (stage === "CLOSED" || status === "CANCELED" || status === "EXPIRED")
     return "closed";
   if (stage === "CARD_AUTH_REQUIRED") return "cardAuthRequired";
@@ -35,7 +49,6 @@ export function setupViewOf(
       return "cardActionRequired";
     return "cardProcessing";
   }
-  if (stage === "ACCESS") return "accessProcessing";
   // PAYMENT
   if (status === "DECLINED") return "declined";
   if (status === "UNKNOWN") return "paymentUnknown";
@@ -50,6 +63,7 @@ const POLLING = new Set<SetupView>([
   "paymentProcessing",
   "paymentUnknown",
   "accessProcessing",
+  "refundProcessing",
 ]);
 export const isPollingView = (view: SetupView) => POLLING.has(view);
 
@@ -58,5 +72,6 @@ export function resultOfView(view: SetupView): BillingSetupResult | null {
   if (view === "completed") return "completed";
   if (view === "declined") return "declined";
   if (view === "cardUnknown" || view === "paymentUnknown") return "unknown";
+  if (view === "refunded") return "refunded";
   return null;
 }

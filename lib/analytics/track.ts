@@ -123,8 +123,12 @@ export type AnalyticsEvent =
 
 /** 결제 이벤트의 PG. 서버 enum(`FAKE` 포함) 그대로다. */
 export type BillingProvider = BillingSetupCreatedResponseDataProvider;
-/** 카드 등록 결과 화면이 보인 상태. `unknown` 은 확인 중이라 성패를 아직 모르는 것이다. */
-export type BillingSetupResult = "completed" | "declined" | "unknown";
+/** 카드 등록 결과 화면이 보인 상태. `unknown` 은 확인 중이라 성패를 아직 모르는 것, `refunded` 는 승인 뒤 자동 취소된 것이다. */
+export type BillingSetupResult =
+  | "completed"
+  | "declined"
+  | "unknown"
+  | "refunded";
 
 /** 가이드 이벤트의 언어판(`lib/i18n/locales.ts` 의 `Locale`). */
 type HelpLanguage = "ko" | "en";
@@ -214,13 +218,19 @@ export type WebEventProperties = {
   billing_plans_viewed: { workspace_id: string };
   billing_checkout_entered: { workspace_id: string };
   billing_agreement_accepted: { workspace_id: string };
-  billing_card_setup_started: { workspace_id: string; provider: BillingProvider };
+  billing_card_setup_started: {
+    workspace_id: string;
+    provider: BillingProvider;
+  };
   billing_card_setup_resulted: {
     workspace_id?: string;
     provider?: BillingProvider;
     result: BillingSetupResult;
   };
-  billing_retry_clicked: { workspace_id?: string; result: Exclude<BillingSetupResult, "completed"> };
+  billing_retry_clicked: {
+    workspace_id?: string;
+    result: Exclude<BillingSetupResult, "completed" | "refunded">;
+  };
   // 무료 월 한도로 녹음 시작이 거절돼 안내가 떴다(APP-1566). role 은 그 안내를 본 사람이 ADMIN 인가 멤버인가.
   // 사용량 수치·회의 id 는 싣지 않는다. 효과는 안내 → 요금제 보기 클릭 비율로 본다.
   recording_quota_blocked: { workspace_id: string; role: "admin" | "member" };

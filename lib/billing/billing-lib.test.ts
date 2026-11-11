@@ -30,12 +30,35 @@ describe("setupViewOf", () => {
     ["PAYMENT", "UNKNOWN", "paymentUnknown"],
     ["PAYMENT", "DECLINED", "declined"],
     ["ACCESS", "PROCESSING", "accessProcessing"],
+    ["ACCESS", "CANCELED", "refunded"],
+    ["ACCESS", "ACTION_REQUIRED", "accessActionRequired"],
     ["COMPLETED", "COMPLETED", "completed"],
     ["ACCESS_LOST", "ACTION_REQUIRED", "accessLost"],
     ["CLOSED", "CANCELED", "closed"],
     ["AUTH_CAPTURED", "EXPIRED", "closed"],
   ] as const)("%s / %s → %s", (stage, status, view) => {
     expect(setupViewOf({ stage, status })).toBe(view);
+  });
+
+  it("승인 뒤 자동 취소가 걸리면 권한 반영 중이 아니라 취소 중으로 보이고 계속 다시 읽는다", () => {
+    const attempt = {
+      attemptId: "A1",
+      cycleId: "C1",
+      attemptNumber: 1,
+      status: "SUCCEEDED",
+      errorCode: null,
+      requiresManualReview: false,
+      refundStatus: "PROCESSING",
+      refundOrigin: "COMPENSATION",
+    } as const;
+    for (const status of ["PROCESSING", "UNKNOWN"] as const) {
+      expect(
+        setupViewOf({ stage: "ACCESS", status, originAttempt: attempt })
+      ).toBe("refundProcessing");
+    }
+    expect(isPollingView("refundProcessing")).toBe(true);
+    expect(isPollingView("refunded")).toBe(false);
+    expect(resultOfView("refunded")).toBe("refunded");
   });
 
   it("결과 확인 지연은 분석에서 unknown 이고 계속 다시 읽는다", () => {

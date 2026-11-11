@@ -637,6 +637,32 @@ describe("등록 결과 — 상태별 화면", () => {
     ).toHaveAttribute("href", expect.stringMatching(/^\/w\/[^/]+\/billing$/));
   });
 
+  it("승인 뒤 자동 취소된 결제는 닫힘이 아니라 전액 취소로 알리고 새로 시작할 수 있다", async () => {
+    serveSetup(
+      setupBody("ACCESS", "CANCELED", {
+        allowedActions: ["START_PURCHASE"],
+        originAttempt: {
+          attemptId: "A1",
+          cycleId: "C1",
+          attemptNumber: 1,
+          status: "SUCCEEDED",
+          errorCode: null,
+          requiresManualReview: false,
+          refundStatus: "SUCCEEDED",
+          refundOrigin: "COMPENSATION",
+        },
+      })
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(
+      await screen.findByText("결제가 자동으로 취소되었습니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("카드 등록이 닫혔습니다")
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "새로 시작" })).toBeInTheDocument();
+  });
+
   it("권한을 잃었으면 상태만 알리고 새 작업을 주지 않는다", async () => {
     serveSetup(
       setupBody("ACCESS_LOST", "ACTION_REQUIRED", {

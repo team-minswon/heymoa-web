@@ -16,7 +16,8 @@ export function useBillingFormat() {
     allowance: (minutes: number | null | undefined) =>
       minutes == null ? t("unlimited") : t("minutes", { count: minutes }),
     /** Free 의 월 제공량(비교표). */
-    monthlyMinutes: (minutes: number) => t("monthlyMinutes", { count: minutes }),
+    monthlyMinutes: (minutes: number) =>
+      t("monthlyMinutes", { count: minutes }),
     date: (iso: string) => formatAppDate(iso, DATE, locale),
     period: (period: { start: string; end: string }) =>
       t("period", {

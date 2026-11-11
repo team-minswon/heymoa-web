@@ -30,7 +30,7 @@ describe("결제 이벤트", () => {
     >().toExtend<AnalyticsEvent>();
     expectTypeOf<"billing">().toExtend<Props<"settings_tab_opened">["section"]>();
     expectTypeOf<Props<"billing_card_setup_resulted">["result"]>().toEqualTypeOf<
-      "completed" | "declined" | "unknown"
+      "completed" | "declined" | "unknown" | "refunded"
     >();
     type Secret = "authKey" | "state" | "customerKey" | "setup_id" | "payment_id" | "card";
     expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_started">>();

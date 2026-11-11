@@ -7,6 +7,7 @@
  */
 import type { WorkspaceBillingResponseDataDetailLatestAttempt } from "./workspaceBillingResponseDataDetailLatestAttempt";
 import type { WorkspaceBillingResponseDataDetailMaskedCard } from "./workspaceBillingResponseDataDetailMaskedCard";
+import type { WorkspaceBillingResponseDataDetailRefundedAttempt } from "./workspaceBillingResponseDataDetailRefundedAttempt";
 
 /**
  * 청구 상세. ADMIN 에게만 있다
@@ -38,4 +39,9 @@ export type WorkspaceBillingResponseDataDetail = {
   openCycleId: string | null;
   /** 결제 수단의 결제자가 나인가. 재결제는 결제자 본인만 한다 */
   methodPayerIsMe: boolean;
+  /**
+   * 가장 최근 환불(보상 취소 포함)이 걸린 승인 시도. 열린 회차가 없어도 취소 진행·완료를 보인다. 없으면 null
+   * @nullable
+   */
+  refundedAttempt: WorkspaceBillingResponseDataDetailRefundedAttempt;
 } | null;

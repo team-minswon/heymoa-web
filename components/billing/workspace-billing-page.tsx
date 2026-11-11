@@ -248,6 +248,11 @@ function Actions({
     billing.latestAttemptStatus === "PROCESSING" ||
     billing.latestAttemptStatus === "UNKNOWN";
 
+  // 승인 뒤 자동 취소(보상 환불)가 걸린 결제. 끝난 취소는 알리지 않는다 — 결과 화면이 이미 알렸고 상태는 Free 로 보인다.
+  const refund =
+    detail?.latestAttempt?.refundStatus ??
+    detail?.refundedAttempt?.refundStatus;
+
   const cancelSetup = async () => {
     if (!billing.mySetupId) return;
     await cancel
@@ -265,6 +270,18 @@ function Actions({
       {checking ? (
         <BillingNotice title={t("checking.title")}>
           {t("checking.body")}
+        </BillingNotice>
+      ) : null}
+      {refund === "PENDING" ||
+      refund === "PROCESSING" ||
+      refund === "UNKNOWN" ? (
+        <BillingNotice tone="warn" title={t("refunding.title")}>
+          {t("refunding.body")}
+        </BillingNotice>
+      ) : null}
+      {refund === "FAILED" ? (
+        <BillingNotice tone="warn" title={t("refundFailed.title")}>
+          {t("refundFailed.body")}
         </BillingNotice>
       ) : null}
       {billing.status === "PAST_DUE" && !checking ? (

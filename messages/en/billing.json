@@ -63,6 +63,14 @@
       "title": "We're confirming the payment result",
       "body": "Don't pay again. This screen updates when we're done."
     },
+    "refunding": {
+      "title": "Canceling the payment",
+      "body": "The payment was approved, but access couldn't be applied, so the full amount is being canceled automatically. Don't pay again."
+    },
+    "refundFailed": {
+      "title": "This payment needs a check",
+      "body": "The automatic cancellation couldn't be finished. Don't pay again; let us know through Feedback."
+    },
     "askAdmin": "Only admins can purchase and manage billing. Please ask an admin.",
     "start": "Start {plan}",
     "continueSetup": "Continue card registration",
@@ -157,6 +165,18 @@
     "accessProcessing": {
       "title": "Payment confirmed",
       "body": "We're applying your access. You don't need to pay again."
+    },
+    "refundProcessing": {
+      "title": "Canceling the payment",
+      "body": "The payment was approved, but access couldn't be applied, so the full amount is being canceled automatically. Don't pay again."
+    },
+    "refunded": {
+      "title": "The payment was canceled automatically",
+      "body": "Access couldn't be applied, so the approved amount was canceled in full. Start again if you need to."
+    },
+    "accessActionRequired": {
+      "title": "This payment needs a check",
+      "body": "The payment was approved but couldn't be finished. Don't pay again; let us know through Feedback."
     },
     "completed": {
       "title": "Payment complete",

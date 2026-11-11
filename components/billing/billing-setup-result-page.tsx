@@ -297,6 +297,22 @@ function ViewBody({
       );
     case "accessProcessing":
       return card(t("accessProcessing.title"), t("accessProcessing.body"));
+    case "refundProcessing":
+      return card(
+        t("refundProcessing.title"),
+        t("refundProcessing.body"),
+        undefined,
+        "warn"
+      );
+    case "refunded":
+      return card(t("refunded.title"), t("refunded.body"), restartLink);
+    case "accessActionRequired":
+      return card(
+        t("accessActionRequired.title"),
+        t("accessActionRequired.body"),
+        undefined,
+        "warn"
+      );
     case "completed":
       return <CompletedBody setup={setup} workspaceId={workspaceId} />;
     case "accessLost":
