@@ -5,16 +5,11 @@ import { useEffect, useState } from "react";
 
 import { BackLink } from "@/components/billing/back-link";
 import { BillingNotice } from "@/components/billing/billing-parts";
-import {
-  NoticeLine,
-  PaymentStatusText,
-  RefundConfirm,
-} from "@/components/billing/subscription-management";
+import { PaymentStatusText } from "@/components/billing/subscription-management";
 import {
   SETTINGS_LIST,
   SettingsHeader,
 } from "@/components/settings/settings-layout";
-import { Button } from "@/components/ui/button";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeedbackDialog } from "@/components/workspace/feedback-dialog";
@@ -24,17 +19,14 @@ import { ApiError } from "@/lib/api/fetcher";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
 import { refundPending } from "@/lib/billing/payment-status";
-import {
-  useBillingCommands,
-  useRefundResultEvent,
-} from "@/lib/billing/use-billing-commands";
+import { useRefundResultEvent } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
 /**
  * 설정 › 결제 관리에서 한 단계 들어간 결제 한 건(ADMIN). 금액·기간·상태·카드·환불 상태와 출처를 보인다.
  * 환불됐거나 기간이 끝난 옛 결제는 「당시 결과」와 「현재 상태」를 갈라 적는다 — 옛 성공을 지금 권한처럼 읽히게 하지 않는다.
- * 환불 버튼은 서버가 `REQUEST_REFUND` 를 주고 이 결제가 지금 유료 기간의 결제일 때만이다.
+ * 환불은 화면에서 요청하지 않고 문의·피드백으로 받는다.
  */
 export function BillingPaymentDetail({
   workspaceId,
@@ -124,15 +116,7 @@ function PaymentContent({
     <div className="flex flex-col gap-6">
       <PaymentHero payment={payment} />
       <PaymentRows payment={payment} current={current} />
-      <RefundArea
-        workspaceId={workspaceId}
-        payment={payment}
-        refundable={
-          current && billing.allowedActions.includes("REQUEST_REFUND")
-        }
-        expectedVersion={billing.detail?.subscriptionVersion ?? null}
-      />
-      <TaxInvoiceLine />
+      <SupportLine />
     </div>
   );
 }
@@ -227,60 +211,13 @@ function PaymentRows({
   );
 }
 
-function RefundArea({
-  workspaceId,
-  payment,
-  refundable,
-  expectedVersion,
-}: {
-  workspaceId: string;
-  payment: BillingPaymentResponseData;
-  refundable: boolean;
-  expectedVersion: number | null;
-}) {
-  const t = useTranslations("billing.manage");
-  const commands = useBillingCommands(workspaceId);
-  const [open, setOpen] = useState(false);
-  if (!commands.notice && (!refundable || expectedVersion == null)) return null;
-  return (
-    <div className="flex flex-col items-start gap-3 [&>[role=alert]]:self-stretch [&>[role=status]]:self-stretch">
-      <NoticeLine notice={commands.notice} />
-      {refundable && expectedVersion != null ? (
-        <>
-          <Button
-            variant="outline"
-            loading={commands.refundPending}
-            onClick={() => setOpen(true)}
-          >
-            {t("refund")}
-          </Button>
-          <RefundConfirm
-            open={open}
-            onOpenChange={(next) => !commands.pending && setOpen(next)}
-            payment={payment}
-            pending={commands.refundPending}
-            onConfirm={async () => {
-              const outcome = await commands.requestRefund({
-                paymentId: payment.paymentId,
-                amountKrw: payment.amountKrw,
-                expectedVersion,
-              });
-              if (outcome !== "failed") setOpen(false);
-            }}
-          />
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-/** 세금계산서는 화면을 만들지 않는다 — 기존 문의·피드백 창으로 받는다. */
-function TaxInvoiceLine() {
+/** 환불·세금계산서는 화면을 만들지 않는다 — 기존 문의·피드백 창으로 받는다. */
+function SupportLine() {
   const t = useTranslations("billing.payment");
   const [open, setOpen] = useState(false);
   return (
     <p className="text-xs leading-5 text-[var(--el-muted)]">
-      {t.rich("taxInvoice", {
+      {t.rich("support", {
         link: (chunks) => (
           <button
             type="button"

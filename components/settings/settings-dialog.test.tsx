@@ -45,6 +45,29 @@ function SettingsDialog({
   );
 }
 
+// 요금제 탭 둘은 공간 요금제 조회의 `enforced` 로 보인다. 시험마다 조회 결과를 바꿔 끼운다.
+const billingQuery = vi.hoisted(() => ({
+  current: {
+    isPending: false,
+    data: {
+      status: 200,
+      data: { success: true, data: { enforced: true } },
+    } as unknown,
+  },
+}));
+vi.mock("@/lib/api/generated/billing/billing", () => ({
+  useGetWorkspaceBilling: () => billingQuery.current,
+}));
+const serveEnforced = (enforced: boolean | null) => {
+  billingQuery.current =
+    enforced === null
+      ? { isPending: true, data: undefined }
+      : {
+          isPending: false,
+          data: { status: 200, data: { success: true, data: { enforced } } },
+        };
+};
+
 vi.mock("@/components/settings/account-settings-form", () => ({
   AccountSettingsForm: () => <p>계정 내용</p>,
   AccountSettingsFormSkeleton: () => <p>계정 로딩</p>,
@@ -98,6 +121,7 @@ describe("SettingsDialog", () => {
   afterEach(() => {
     cleanup();
     Reflect.deleteProperty(window, "heymoaDesktop");
+    serveEnforced(true);
   });
   it("탭 선택을 한 번 기록하고 같은 탭·리렌더는 세지 않습니다", () => {
     const heard = vi.fn();
@@ -223,6 +247,55 @@ describe("SettingsDialog", () => {
     expect(
       screen.getByRole("button", { name: "토큰 요청 시작" })
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["대상이 아닌 공간", false],
+    ["조회가 끝나기 전", null],
+  ])("%s에는 요금제·결제 관리 탭이 없다", (_name, enforced) => {
+    serveEnforced(enforced);
+    render(
+      <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+    );
+    const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
+    expect(
+      within(workspaceGroup).queryByRole("button", { name: "요금제" })
+    ).not.toBeInTheDocument();
+    expect(
+      within(workspaceGroup).queryByRole("button", { name: "결제 관리" })
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["billing", "payment"] as const)(
+    "대상이 아닌 공간에서 %s 탭으로 들어오면 기본 탭으로 보낸다",
+    (initialSection) => {
+      serveEnforced(false);
+      render(
+        <SettingsDialog
+          open
+          onOpenChange={vi.fn()}
+          initialSection={initialSection}
+          workspaceId="01K0000000000"
+        />
+      );
+      expect(screen.getByText("워크스페이스 내용")).toBeInTheDocument();
+      expect(screen.queryByText("요금제 내용")).not.toBeInTheDocument();
+      expect(screen.queryByText("결제 관리 내용")).not.toBeInTheDocument();
+    }
+  );
+
+  it("조회가 끝나기 전에는 요금제 탭으로 들어와도 기본 탭으로 보내지 않고 내용도 그리지 않는다", () => {
+    serveEnforced(null);
+    render(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        initialSection="billing"
+        workspaceId="01K0000000000"
+      />
+    );
+    expect(screen.queryByText("요금제 내용")).not.toBeInTheDocument();
+    expect(screen.queryByText("워크스페이스 내용")).not.toBeInTheDocument();
   });
 });
 

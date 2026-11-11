@@ -94,12 +94,10 @@ export type AnalyticsEvent =
   | "billing_agreement_accepted"
   | "billing_card_setup_started"
   | "billing_card_setup_resulted"
-  | "billing_retry_clicked"
   | "billing_cancel_dialog_opened"
   | "billing_subscription_canceled"
   | "billing_subscription_resumed"
   | "billing_card_change_started"
-  | "billing_refund_requested"
   | "billing_refund_resulted"
   | "billing_payment_method_deleted"
   | "billing_payment_viewed"
@@ -222,7 +220,7 @@ export type WebEventProperties = {
     // 어디서 열었나. 알림 모달의 「알림 설정」 이동은 modal, 설정 창 안의 탭 이동은 settings(PRO-67 I32).
     from: "modal" | "settings";
   };
-  // 결제(PRO-75). 흐름은 요금제 화면 → 주문서 → 구매 동의 → 카드 등록 시작 → 등록 결과(→ 다시 결제)다.
+  // 결제(PRO-75). 흐름은 요금제 화면 → 주문서 → 구매 동의 → 카드 등록 시작 → 등록 결과다.
   // 속성은 공간·PG·결과 상태뿐이다. authKey·state·customerKey·카드 정보·setup/결제 id 는 싣지 않는다.
   // 등록 결과 화면은 setup 조회가 끝나야 공간을 알므로 결과 이벤트의 workspace_id 는 없을 수 있다.
   // role 은 본 사람이 ADMIN 인가 멤버인가 — 구매는 ADMIN 만 할 수 있어 퍼널을 역할로 갈라 봐야 한다.
@@ -238,23 +236,15 @@ export type WebEventProperties = {
     provider?: BillingProvider;
     result: BillingSetupResult;
   };
-  billing_retry_clicked: {
-    workspace_id?: string;
-    result: Exclude<BillingSetupResult, "completed" | "refunded">;
-  };
   // 구매 이후의 관리(APP-1565). 해지는 확인 창을 연 수와 실제 해지를 따로 센다(확인 창에서 돌아선 비율).
   // 결과는 종류만 싣는다 — 금액·카드·결제/환불 id 는 싣지 않는다. 관리 행동은 ADMIN 만 해서 role 을 따로 싣지 않는다.
   billing_cancel_dialog_opened: { workspace_id: string };
   billing_subscription_canceled: { workspace_id: string };
   billing_subscription_resumed: {
     workspace_id: string;
-    result: "resumed" | "not_payer";
+    result: "resumed" | "not_admin";
   };
   billing_card_change_started: { workspace_id: string };
-  billing_refund_requested: {
-    workspace_id: string;
-    result: "accepted" | "not_allowed";
-  };
   // 이 화면에서 취소 처리 중을 본 뒤 끝난 결과가 보일 때 한 번.
   billing_refund_resulted: {
     workspace_id: string;

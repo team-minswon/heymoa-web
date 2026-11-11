@@ -122,9 +122,6 @@ function CheckoutContent({
   const admin = workspace?.role === "ADMIN";
   const openSetupId = reusedSetupId ?? billing.mySetupId;
 
-  if (!billing.enforced) {
-    return <BillingNotice>{t("notEnforced")}</BillingNotice>;
-  }
   if (!admin)
     return (
       <BillingNotice>
@@ -220,11 +217,7 @@ function CheckoutContent({
   const period = billing.currentPeriod;
   const card = format.card(billing.detail?.maskedCard);
   const points = replace
-    ? [
-        t("replace.noCharge"),
-        t("replace.keepOnFail"),
-        billing.status === "PAST_DUE" ? t("replace.pastDue") : null,
-      ]
+    ? [t("replace.noCharge"), t("replace.keepOnFail")]
     : [
         format.allowance(product.recordingAllowanceMinutes),
         t("shared"),

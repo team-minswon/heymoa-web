@@ -22,7 +22,6 @@ import { restHandlers } from "@/lib/mocks/rest-handlers";
 
 const FREE = "01K0000000000";
 const PAID = "01K0000000006";
-const NOT_ENFORCED = "01K0000000009";
 
 const server = setupServer(...restHandlers, ...billingHandlers);
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
@@ -62,11 +61,11 @@ const freeUsage = (patch: Record<string, unknown> = {}) => ({
   sampleRate: 16000,
   allowanceSamples: 115200000,
   usedSamples: 43200000,
-  reservedSamples: 0,
   remainingSamples: 72000000,
   allowanceMinutes: 120,
   usedMinutes: 45,
   remainingMinutes: 75,
+  recordingInProgress: false,
   ...patch,
 });
 const serveUsage = (data: unknown, workspaceId = FREE) =>
@@ -107,8 +106,8 @@ describe("녹음 사용량 — 요금제 탭", () => {
     );
   });
 
-  it("예약분이 있으면 녹음 중인 회의는 끝난 뒤 반영된다고 한 줄 알린다", async () => {
-    serveUsage(freeUsage({ reservedSamples: 57600000 }));
+  it("끝나지 않은 녹음이 있으면 녹음 중인 회의는 끝난 뒤 반영된다고 한 줄 알린다", async () => {
+    serveUsage(freeUsage({ recordingInProgress: true }));
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText("녹음 중인 회의는 끝난 뒤 반영됩니다")
@@ -122,21 +121,6 @@ describe("녹음 사용량 — 요금제 탭", () => {
     expect(screen.getByText("무제한")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText(/초기화/)).not.toBeInTheDocument();
-  });
-
-  it("집행 대상이 아닌 공간에는 사용량 UI 가 없고 사용량도 읽지 않는다", async () => {
-    let read = false;
-    server.use(
-      http.get(`*/v1/workspaces/${NOT_ENFORCED}/billing/usage`, () => {
-        read = true;
-        return HttpResponse.json({ success: true, data: {}, error: null });
-      })
-    );
-    renderIn(<PlanTab workspaceId={NOT_ENFORCED} />);
-    await screen.findByText("이 공간은 아직 요금제 대상이 아닙니다.");
-    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.queryByText("이번 달 녹음")).not.toBeInTheDocument();
-    expect(read).toBe(false);
   });
 
   it("사용량 조회가 집행 대상이 아니라고 하면 아무것도 그리지 않는다", async () => {

@@ -106,8 +106,8 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
           )}
         </p>
       ) : null}
-      {usage.reservedSamples ? (
-        <p className={`mt-1 ${NOTE}`}>{t("reserved")}</p>
+      {usage.recordingInProgress ? (
+        <p className={`mt-1 ${NOTE}`}>{t("recordingInProgress")}</p>
       ) : null}
     </div>
   );

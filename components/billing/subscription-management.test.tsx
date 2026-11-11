@@ -27,7 +27,6 @@ import { BillingCheckout } from "@/components/billing/billing-checkout";
 import { BillingPaymentDetail } from "@/components/billing/billing-payment-detail";
 import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
 import { WorkspacePaymentSettings } from "@/components/billing/payment-settings";
-import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
 import { track } from "@/lib/analytics/track";
 import { leaveToCardRegistration } from "@/lib/billing/navigate";
 import { billingHandlers, billingMock } from "@/lib/mocks/billing";
@@ -106,7 +105,7 @@ const paymentDetail = (paymentId: string) => (
 );
 
 describe("결제 수단·구독", () => {
-  it("다음 결제의 날짜·금액과 카드·최근 결제를 그리고, 환불은 구독 영역이 아니라 결제 상세에만 있다", async () => {
+  it("다음 결제의 날짜·금액과 카드·최근 결제를 그리고, 환불 버튼은 없다", async () => {
     const area = await openPaid();
     expect(
       within(area).getByText("2026년 12월 11일 · 9,900원")
@@ -134,7 +133,7 @@ describe("결제 수단·구독", () => {
       await screen.findByRole("heading", { name: "결제 상세" })
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "환불 요청" })
+      await screen.findByRole("button", { name: "문의·피드백" })
     ).toBeInTheDocument();
     expect(
       requests.some((r) => r.endsWith(`/billing/payments/${CURRENT_PAYMENT}`))
@@ -215,7 +214,7 @@ describe("결제 수단·구독", () => {
     ).toBeInTheDocument();
   });
 
-  it("재개는 지금 결제되지 않는다고 적고, 결제자가 아니어서 403 이면 그 이유를 안내한다", async () => {
+  it("재개는 지금 결제되지 않는다고 적고, 관리자가 아니어서 403 이면 그 이유를 안내한다", async () => {
     const area = await openPaid();
     fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
     fireEvent.click(
@@ -237,10 +236,10 @@ describe("결제 수단·구독", () => {
     );
     fireEvent.click(within(dialog).getByRole("button", { name: "재개" }));
     expect(
-      await within(area).findByText(/이 카드를 등록한 관리자만 할 수 있습니다/)
+      await within(area).findByText("구독 재개는 관리자만 할 수 있습니다.")
     ).toBeInTheDocument();
     expect(events("billing_subscription_resumed")).toEqual([
-      { workspace_id: PAID, result: "not_payer" },
+      { workspace_id: PAID, result: "not_admin" },
     ]);
   });
 
@@ -303,28 +302,6 @@ describe("결제 수단·구독", () => {
     expect(within(methodArea()).queryAllByRole("button")).toEqual([]);
   });
 
-  it("환불 조건 밖(409)은 결제 상세에 서버 문구를 인라인으로 보인다", async () => {
-    billingMock.setScenario("refundDenied");
-    renderIn(paymentDetail(CURRENT_PAYMENT));
-    fireEvent.click(await screen.findByRole("button", { name: "환불 요청" }));
-    const dialog = await screen.findByRole("alertdialog");
-    expect(
-      within(dialog).getByRole("heading", { name: "9,900원을 환불할까요?" })
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText("요청한 뒤에는 되돌릴 수 없습니다.")
-    ).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: "환불 요청" }));
-    expect(
-      await screen.findByText(
-        "이 결제는 환불 조건을 벗어났습니다. 대신 해지를 예약할 수 있습니다."
-      )
-    ).toBeInTheDocument();
-    expect(events("billing_refund_requested")).toEqual([
-      { workspace_id: PAID, result: "not_allowed" },
-    ]);
-  });
-
   it("결제 상태가 바뀌었으면(409) 다시 읽고 다시 확인하라고 한다", async () => {
     const area = await openPaid();
     fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
@@ -380,33 +357,6 @@ describe("결제 수단·구독", () => {
     expect(events("billing_payment_method_deleted")).toEqual([
       { workspace_id: PAID, result: "in_use" },
     ]);
-  });
-
-  it("미납 유예면 요금제 탭에 언제까지 쓰는지와 「미납 결제」를, 결제 관리 탭에 카드 변경을 보인다", async () => {
-    billingMock.setScenario("pastDue");
-    renderIn(
-      <WorkspacePlanSettings workspaceId={PAID} onOpenPayment={vi.fn()} />
-    );
-    expect(
-      await screen.findByText(
-        "결제가 완료되지 않았습니다. 2026년 11월 18일까지 쓸 수 있습니다."
-      )
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "미납 9,900원 결제" })
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "9,900원 다시 결제" })
-    ).not.toBeInTheDocument();
-    cleanup();
-    await openPaid();
-    fireEvent.click(within(methodArea()).getByRole("button", { name: "변경" }));
-    // 카드 변경은 미납 금액을 어디서 결제하는지 알린다.
-    expect(
-      await screen.findByText(
-        "미납 금액은 카드를 바꾼 뒤 요금제 탭의 「미납 결제」로 결제합니다."
-      )
-    ).toBeInTheDocument();
   });
 });
 
@@ -480,41 +430,51 @@ describe("카드 변경", () => {
 });
 
 describe("결제 상세", () => {
-  it("환불을 요청하면 취소 처리 중 → 취소 처리 완료로 바뀌고 당시 결과와 지금을 가른다", async () => {
+  it("환불은 화면에서 요청하지 않고 문의로 받으며, 문의로 처리된 환불은 당시 결과와 지금을 가른다", async () => {
+    server.use(
+      http.get(
+        `*/v1/workspaces/${PAID}/billing/payments/${CURRENT_PAYMENT}`,
+        () =>
+          HttpResponse.json({
+            success: true,
+            error: null,
+            data: {
+              paymentId: CURRENT_PAYMENT,
+              workspaceId: PAID,
+              workspaceName: "제품 팀",
+              kind: "RENEWAL",
+              cycleId: "0C00000000002",
+              attemptNumber: 1,
+              status: "SUCCEEDED",
+              completedAt: "2026-11-11T09:05:00+09:00",
+              period: {
+                start: "2026-11-11T00:00:00+09:00",
+                end: "2026-12-11T00:00:00+09:00",
+              },
+              amountKrw: 9900,
+              currency: "KRW",
+              errorCode: null,
+              maskedCard: null,
+              refundStatus: "SUCCEEDED",
+              refundOrigin: "USER",
+              payerIsMe: true,
+              cycleStatus: "REFUNDED",
+            },
+          })
+      )
+    );
     renderIn(paymentDetail(CURRENT_PAYMENT));
-    fireEvent.click(await screen.findByRole("button", { name: "환불 요청" }));
-    const dialog = await screen.findByRole("alertdialog");
     expect(
-      within(dialog).getByText("요청하는 즉시 다음 결제가 멈춥니다.")
-    ).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: "환불 요청" }));
-    expect(
-      await screen.findByText(
-        "결제 취소를 처리하고 있습니다. 취소가 끝나면 Free로 바뀝니다."
-      )
-    ).toBeInTheDocument();
-    expect(events("billing_refund_requested")).toEqual([
-      { workspace_id: PAID, result: "accepted" },
-    ]);
-    // 목은 조회 몇 번 뒤 취소를 끝낸다 — 화면은 5초마다 다시 읽는다.
-    expect(
-      await screen.findByText(
-        "환불되어 이 기간의 이용 권한이 없습니다.",
-        {},
-        { timeout: 15_000 }
-      )
+      await screen.findByText("환불되어 이 기간의 이용 권한이 없습니다.")
     ).toBeInTheDocument();
     expect(screen.getByText("결제 완료")).toBeInTheDocument();
-    expect(screen.getByText("환불됨 · 관리자 요청")).toBeInTheDocument();
+    expect(screen.getByText("환불됨 · 문의 요청")).toBeInTheDocument();
+    expect(screen.getByText(/환불과 세금계산서는/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "문의·피드백" })).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "환불 요청" })
     ).not.toBeInTheDocument();
-    await waitFor(() =>
-      expect(events("billing_refund_resulted")).toEqual([
-        { workspace_id: PAID, result: "succeeded" },
-      ])
-    );
-  }, 20_000);
+  });
 
   it("기간이 끝난 옛 결제는 당시 결과와 현재 상태를 가르고 환불 버튼이 없다", async () => {
     renderIn(paymentDetail(OLD_PAYMENT));

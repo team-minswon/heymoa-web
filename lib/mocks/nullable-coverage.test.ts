@@ -495,7 +495,11 @@ async function seedBilling(firstWorkspaceId: string) {
     await run("lost", "권한 상실", 1),
     await run("refund", "결제 자동 취소", 5),
     await run("refund", "결제 취소 중", 3),
+    await run("ok", "갱신 거절로 종료", 4),
   ];
+  // 마지막 유료 공간의 갱신이 확정 거절돼 끝난다(`closedReason` 이 있는 쪽). 시나리오는 공간 조회 때 한 번 적용된다.
+  billingMock.setScenario("unpaid");
+  await call(`/v1/workspaces/${created[created.length - 1]}/billing`);
   billingMock.setScenario(null);
   return created;
 }
@@ -516,6 +520,8 @@ const KNOWN_ONE_SIDED = new Set([
   "WorkspaceBillingResponse.data.detail.refundedAttempt.errorCode",
   "WorkspaceBillingResponse.data.detail.refundedAttempt.refundStatus",
   "WorkspaceBillingResponse.data.detail.refundedAttempt.refundOrigin",
+  // 확정 거절은 그 자리에서 회차를 닫아(2026-11-11) 공간 조회의 열린 시도는 결과를 기다리는 시도뿐이다 — 오류 코드가 없다.
+  "WorkspaceBillingResponse.data.detail.latestAttempt.errorCode",
   // APP-1266 목에서 생략한 호환 참조입니다. 서버 계약에서 제거할 때 함께 지웁니다.
   "MeetingReviewSummaryResponse.data.agendas[].agendaItemId",
   "MeetingReviewSummaryResponse.data.agendas[].centerItemId",

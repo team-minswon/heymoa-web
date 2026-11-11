@@ -26,7 +26,6 @@ describe("결제 이벤트", () => {
       | "billing_agreement_accepted"
       | "billing_card_setup_started"
       | "billing_card_setup_resulted"
-      | "billing_retry_clicked"
     >().toExtend<AnalyticsEvent>();
     expectTypeOf<"billing">().toExtend<Props<"settings_tab_opened">["section"]>();
     expectTypeOf<Props<"billing_card_setup_resulted">["result"]>().toEqualTypeOf<
@@ -40,19 +39,17 @@ describe("결제 이벤트", () => {
 
   it("구독 관리 이벤트는 공간과 결과 종류만 받고 금액·카드·결제 식별자는 받지 않는다", () => {
     type Money = "amount" | "amount_krw" | "payment_id" | "refund_id" | "method_id" | "card";
-    expectTypeOf<Money>().not.toExtend<keyof Props<"billing_refund_requested">>();
     expectTypeOf<Money>().not.toExtend<keyof Props<"billing_refund_resulted">>();
     expectTypeOf<Money>().not.toExtend<keyof Props<"billing_payment_method_deleted">>();
     expectTypeOf<Props<"billing_cancel_dialog_opened">>().toEqualTypeOf<{ workspace_id: string }>();
     expectTypeOf<Props<"billing_subscription_canceled">>().toEqualTypeOf<{ workspace_id: string }>();
     expectTypeOf<Props<"billing_card_change_started">>().toEqualTypeOf<{ workspace_id: string }>();
     expectTypeOf<Props<"billing_payment_viewed">>().toEqualTypeOf<{ workspace_id: string }>();
-    expectTypeOf<Props<"billing_subscription_resumed">["result"]>().toEqualTypeOf<"resumed" | "not_payer">();
-    expectTypeOf<Props<"billing_refund_requested">["result"]>().toEqualTypeOf<"accepted" | "not_allowed">();
+    expectTypeOf<Props<"billing_subscription_resumed">["result"]>().toEqualTypeOf<"resumed" | "not_admin">();
     expectTypeOf<Props<"billing_refund_resulted">["result"]>().toEqualTypeOf<"succeeded" | "failed">();
     expectTypeOf<Props<"billing_payment_method_deleted">["result"]>().toEqualTypeOf<"deleted" | "in_use">();
     // @ts-expect-error 환불 금액을 실을 수 없다
-    track("billing_refund_requested", { workspace_id: "W1", result: "accepted", amount_krw: 9900 });
+    track("billing_refund_resulted", { workspace_id: "W1", result: "succeeded", amount_krw: 9900 });
     // @ts-expect-error 내 결제 내역에는 아무 속성도 싣지 않는다
     track("billing_payment_history_viewed", { workspace_id: "W1" });
     // @ts-expect-error 인증 키를 실을 수 없다

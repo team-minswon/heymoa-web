@@ -4,8 +4,7 @@ import { mockDb } from "@/lib/mocks/db";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
 
 /**
- * 결제 목 (PRO-75 · APP-1564). 서버 계약(`/v1/workspaces/{id}/billing` · `/v1/me/billing/setups/{id}` · 등록 열기·완료·취소 ·
- * 다시 결제)을 화면이 끝까지 따라갈 수 있게 흉내 낸다. **서버·PG 와의 정합성 증거가 아니다** — 상태 전이는 서버 DB·tick 이 아니라
+ * 결제 목 (PRO-75 · APP-1564). 서버 계약(`/v1/workspaces/{id}/billing` · `/v1/me/billing/setups/{id}` · 등록 열기·완료·취소)을 화면이 끝까지 따라갈 수 있게 흉내 낸다. **서버·PG 와의 정합성 증거가 아니다** — 상태 전이는 서버 DB·tick 이 아니라
  * 이 파일의 조회 횟수가 정한다.
  *
  * **시드.** 「테스트 유저의 워크스페이스」는 집행 대상·Free, 「제품 팀」은 이미 유료(ACTIVE), 「새 워크스페이스」는 집행 대상이
@@ -16,21 +15,23 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  * 브라우저가 문서를 새로 열면 목의 메모리가 사라지므로 상태를 sessionStorage 에 남긴다.
  *
  * **재현 시나리오.** 등록을 열 때 `localStorage.mockBilling` 을 읽는다(없으면 `ok`).
- *   - `decline`  결제 확정 거절 → 「다시 결제」(재결제는 성공)
+ *   - `decline`  첫 구매 결제 확정 거절 → 카드가 지워지고 카드 등록부터 새로 시작(START_PURCHASE)
  *   - `unknown`  결제 결과 확인 지연(UNKNOWN)에서 멈춘다 — 새 결제 버튼이 없다
  *   - `stuck`    카드 등록 확인 중에서 멈춘다
  *   - `lost`     첫 조회부터 ACCESS_LOST(관리자 권한 상실)
  *   - `teamBusy` 다른 ADMIN 의 진행 중 구매가 있다(구매 시작 409 `BILLING_IN_PROGRESS`)
  *   - `refund`   승인은 됐지만 권한을 못 줘 자동 취소된다(보상 환불) — 취소 중 → 취소 완료, 새로 시작 가능
  *   - `quota`    무료 월 한도를 다 썼다 — 사용량이 한도와 같고 녹음 시작이 409 `RECORDING_QUOTA_EXCEEDED`(`billingMock.quotaExceeded()`)
- *   - `pastDue`  유료 공간의 이번 갱신 결제가 거절돼 미납 유예(GRACE) 중이다 — 「미납 결제」(재결제는 성공)·카드 변경
+ *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(GRACE, 그동안 Pro)
+   - `unpaid`   유료 공간의 갱신 결제가 확정 거절돼 구독이 끝났다(ENDED/UNPAID, 카드 지워짐)
+   - `expired`  해지한 유료 구독의 기간이 끝났다(ENDED/EXPIRED, 카드 지워짐)
+   - `recording` 이 공간에 아직 끝나지 않은 녹음이 있다(사용량 `recordingInProgress=true`)
  *   - `replaceFail` 카드 변경(REPLACE)의 카드 등록이 실패한다 — 기존 카드가 그대로 남는다
- *   - `refundDenied` 환불 요청이 조건 밖(409 `BILLING_REFUND_NOT_ALLOWED`)이다
- *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
+ * *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
- * **구매 이후(APP-1565).** 유료 공간(「제품 팀」)에서 해지 예약 → 재개, 카드 변경(REPLACE 등록 → 결과 화면), 환불 요청(조회를 몇 번
- * 하는 동안 취소 처리 중 → 취소 완료, 그 뒤 Free), 해지 예약 뒤 결제 수단 삭제를 밟을 수 있다. 결제 상세·내 결제 내역은 `state.payments` 가
+ * **구매 이후(APP-1565).** 유료 공간(「제품 팀」)에서 해지 예약 → 재개, 카드 변경(REPLACE 등록 → 결과 화면), 해지 예약 뒤
+ * 결제 수단 삭제를 밟을 수 있다. 환불은 문의로만 받아 목에 요청 경로가 없다. 결제 상세·내 결제 내역은 `state.payments` 가
  * 원본이고, 「지난 프로젝트 팀」은 지운 공간(목 DB 에 없다)의 결제다.
  *
  * 유료 상품의 녹음 제공량은 무제한(`null`)이다.
@@ -44,9 +45,11 @@ export type BillingScenario =
   | "teamBusy"
   | "refund"
   | "quota"
-  | "pastDue"
+  | "renewalChecking"
+  | "unpaid"
+  | "expired"
+  | "recording"
   | "replaceFail"
-  | "refundDenied"
   | "methodInUse";
 
 const SCENARIOS: BillingScenario[] = [
@@ -57,9 +60,11 @@ const SCENARIOS: BillingScenario[] = [
   "teamBusy",
   "refund",
   "quota",
-  "pastDue",
+  "renewalChecking",
+  "unpaid",
+  "expired",
+  "recording",
   "replaceFail",
-  "refundDenied",
   "methodInUse",
 ];
 
@@ -110,8 +115,6 @@ type Setup = {
   notice: Notice;
   state: "AUTHORIZED" | "COMPLETING" | "CANCELED";
   polls: number;
-  retried: boolean;
-  retryPolls: number;
   origin: Attempt | null;
   latest: Attempt | null;
 };
@@ -126,21 +129,17 @@ type Workspace = {
   refunded?: Attempt | null;
   mySetupId: string | null;
   subscriptionVersion: number;
-  /** 미납 유예(PAST_DUE·GRACE) 중인가. */
+  /** 갱신 결제의 결과를 기다리는 중인가(GRACE). */
   grace?: boolean;
-  /** 환불로 끝난 구독(ENDED). */
-  ended?: boolean;
+  /** 끝난 구독(ENDED)의 까닭. */
+  closedReason?: "REFUNDED" | "EXPIRED" | "UNPAID" | null;
   cancelAtPeriodEnd?: boolean;
   methodId?: string | null;
   methodVersion?: number;
   /** 지금 유료 기간의 결제. */
   currentPaymentId?: string | null;
-  /** 사용자가 요청한 환불. 조회 횟수로 취소 처리 중 → 완료로 옮긴다. */
-  userRefund?: { refundId: string; paymentId: string; polls: number } | null;
-  /** 시나리오 `pastDue` 를 이미 적용했는가. */
-  pastDueApplied?: boolean;
-  /** 등록 없이 연 재결제(미납 결제)의 조회 횟수. */
-  retryPolls?: number;
+  /** 갱신 시나리오(`renewalChecking`·`unpaid`·`expired`)를 이미 적용했는가. */
+  renewalApplied?: boolean;
 };
 type State = {
   counter: number;
@@ -181,8 +180,6 @@ const PREVIOUS_PERIOD = {
   start: "2026-10-11T00:00:00+09:00",
   end: "2026-11-11T00:00:00+09:00",
 };
-/** 미납 유예가 끝나는 때. 유예 일수는 정책 미정이라 목의 임의 값이다. */
-const GRACE_END = "2026-11-18T00:00:00+09:00";
 const COMPLETED_AT = "2026-11-11T10:00:00+09:00";
 const PAID_WORKSPACE = "01K0000000006";
 const DELETED_WORKSPACE = "01K00000000ZZ";
@@ -214,7 +211,7 @@ function seed(): State {
   };
 }
 
-/** 유료 공간의 지난 결제(첫 구매 거절 → 다시 결제 성공, 이번 달 갱신)와 지운 공간의 환불된 결제. */
+/** 유료 공간의 지난 결제(첫 구매 거절 → 새 카드로 구매 성공, 이번 달 갱신)와 지운 공간의 환불된 결제. */
 function seedPayments(): Record<string, Payment> {
   const base = {
     workspaceId: PAID_WORKSPACE,
@@ -241,8 +238,8 @@ function seedPayments(): Record<string, Payment> {
       ...base,
       paymentId: "0P00000000002",
       kind: "PURCHASE",
-      cycleId: "0C00000000001",
-      attemptNumber: 2,
+      cycleId: "0C00000000004",
+      attemptNumber: 1,
       status: "SUCCEEDED",
       completedAt: "2026-10-11T09:12:00+09:00",
       period: PREVIOUS_PERIOD,
@@ -392,12 +389,11 @@ function newAttempt(
 // ---- 공간 결제 조회 ----
 
 function subscriptionStatus(ws: Workspace) {
-  if (ws.ended) return "ENDED";
-  if (ws.grace) return "PAST_DUE";
+  if (ws.closedReason) return "ENDED";
   return ws.paid ? "ACTIVE" : "FREE";
 }
 
-/** 실패한 시도를 결제 기록으로도 남긴다(결제 상세·내 결제 내역의 원본). 사용자 환불 상태는 덮지 않는다. */
+/** 실패한 시도를 결제 기록으로도 남긴다(결제 상세·내 결제 내역의 원본). */
 function recordPayment(
   workspaceId: string,
   attempt: Attempt,
@@ -421,94 +417,40 @@ function recordPayment(
     amountKrw: PRODUCT.amountKrw,
     errorCode: attempt.errorCode,
     maskedCard: previous?.maskedCard ?? ws.card,
-    refundStatus:
-      previous?.refundOrigin === "USER"
-        ? previous.refundStatus
-        : (attempt.refundStatus ?? null),
-    refundOrigin:
-      previous?.refundOrigin === "USER"
-        ? "USER"
-        : attempt.refundStatus
-          ? "COMPENSATION"
-          : null,
+    refundStatus: attempt.refundStatus ?? null,
+    refundOrigin: attempt.refundStatus ? "COMPENSATION" : null,
   };
 }
 
-/** 미납 유예 시나리오를 한 번 적용한다 — 이번 달 갱신 결제가 거절돼 열린 회차가 남는다. */
-function applyPastDue(ws: Workspace) {
-  if (currentScenario() !== "pastDue" || !ws.paid || ws.pastDueApplied) return;
-  const renewal = ws.currentPaymentId
-    ? state.payments[ws.currentPaymentId]
-    : null;
-  if (!renewal) return;
-  ws.pastDueApplied = true;
-  ws.grace = true;
-  ws.currentPaymentId = null;
-  renewal.status = "FAILED";
-  renewal.errorCode = "CARD_DECLINED";
-  renewal.period = null;
-  ws.cycle = {
-    cycleId: renewal.cycleId,
-    attempt: {
-      attemptId: renewal.paymentId,
-      cycleId: renewal.cycleId,
-      attemptNumber: renewal.attemptNumber,
-      status: "FAILED",
-      errorCode: "CARD_DECLINED",
-      requiresManualReview: false,
-    },
-  };
-}
-
-/** 조회 한 번마다 서버 tick 을 흉내 낸다 — 등록 없는 재결제(미납 결제)와 사용자 환불을 한 칸씩 옮긴다. */
-function tick(workspaceId: string) {
-  const ws = workspaceOf(workspaceId);
-  applyPastDue(ws);
-  const attempt = ws.cycle?.attempt;
-  const setupLinked = Object.values(state.setups).some(
-    (setup) => setup.origin?.cycleId === ws.cycle?.cycleId
-  );
+/**
+ * 유료 공간에 갱신 시나리오를 한 번 적용한다. 결과를 기다리는 동안은 열린 회차와 GRACE 지급이 있고, 확정 거절·기간 만료는
+ * 그 자리에서 구독을 끝내고 카드를 지운다(서버의 빌링키 삭제 의도).
+ */
+function applyRenewal(ws: Workspace) {
+  const scenario = currentScenario();
   if (
-    attempt &&
-    !setupLinked &&
-    (attempt.status === "PENDING" || attempt.status === "PROCESSING")
-  ) {
-    ws.retryPolls = (ws.retryPolls ?? 0) + 1;
-    attempt.status = ws.retryPolls >= 2 ? "SUCCEEDED" : "PROCESSING";
-    recordPayment(workspaceId, attempt, "RENEWAL", PERIOD);
-    if (attempt.status === "SUCCEEDED") {
-      ws.grace = false;
-      ws.cycle = null;
-      ws.currentPaymentId = attempt.attemptId;
-    }
+    !ws.paid ||
+    ws.renewalApplied ||
+    (scenario !== "renewalChecking" &&
+      scenario !== "unpaid" &&
+      scenario !== "expired")
+  )
+    return;
+  ws.renewalApplied = true;
+  if (scenario === "renewalChecking") {
+    const cycleId = nextId("0C");
+    ws.grace = true;
+    ws.cycle = { cycleId, attempt: newAttempt(cycleId, 1, "UNKNOWN") };
+    return;
   }
-  const refund = ws.userRefund;
-  const payment = refund ? state.payments[refund.paymentId] : null;
-  if (refund && payment && payment.refundStatus !== "SUCCEEDED") {
-    refund.polls += 1;
-    payment.refundStatus = refund.polls >= 3 ? "SUCCEEDED" : "PROCESSING";
-    if (payment.refundStatus === "SUCCEEDED") {
-      ws.paid = false;
-      ws.grace = false;
-      ws.ended = true;
-      ws.cancelAtPeriodEnd = false;
-      ws.currentPaymentId = null;
-      ws.subscriptionVersion += 1;
-    }
-  }
+  ws.paid = false;
+  ws.closedReason = scenario === "unpaid" ? "UNPAID" : "EXPIRED";
+  ws.cancelAtPeriodEnd = false;
+  ws.currentPaymentId = null;
+  ws.card = null;
+  ws.methodId = null;
+  ws.subscriptionVersion += 1;
 }
-
-const paymentAttemptView = (payment: Payment | null | undefined) =>
-  payment && {
-    attemptId: payment.paymentId,
-    cycleId: payment.cycleId,
-    attemptNumber: payment.attemptNumber,
-    status: payment.status,
-    errorCode: payment.errorCode,
-    requiresManualReview: false,
-    refundStatus: payment.refundStatus,
-    refundOrigin: payment.refundOrigin,
-  };
 
 function workspaceBilling(workspaceId: string) {
   const ws = workspaceOf(workspaceId);
@@ -528,9 +470,10 @@ function workspaceBilling(workspaceId: string) {
       latestAttemptStatus: null,
       allowedActions: [],
       detail: null,
+      closedReason: null,
     };
   }
-  tick(workspaceId);
+  applyRenewal(ws);
   const status = subscriptionStatus(ws);
   const cancel = Boolean(ws.cancelAtPeriodEnd);
   const attempt = ws.cycle?.attempt ?? null;
@@ -539,24 +482,19 @@ function workspaceBilling(workspaceId: string) {
   if (setup?.state === "AUTHORIZED")
     actions.push("CONTINUE_SETUP", "CANCEL_SETUP");
   else if (setup) actions.push("REFRESH_STATUS");
-  else if (attempt && attempt.status !== "FAILED")
-    actions.push("REFRESH_STATUS");
+  else if (attempt) actions.push("REFRESH_STATUS");
   else {
-    if (attempt?.status === "FAILED") actions.push("RETRY_PAYMENT");
-    if (!ws.paid && !teamBusy && !attempt) actions.push("START_PURCHASE");
-    const live = (status === "ACTIVE" && !cancel) || status === "PAST_DUE";
-    if (status === "ACTIVE" && !cancel) actions.push("CANCEL_SUBSCRIPTION");
-    if (status === "ACTIVE" && cancel && !ws.userRefund)
-      actions.push("RESUME_SUBSCRIPTION");
-    if (status === "ACTIVE" || status === "PAST_DUE")
-      actions.push("CHANGE_CARD");
-    if (ws.currentPaymentId && !ws.userRefund) actions.push("REQUEST_REFUND");
+    if (!ws.paid && !teamBusy) actions.push("START_PURCHASE");
+    const live = status === "ACTIVE" && !cancel;
+    if (live) actions.push("CANCEL_SUBSCRIPTION");
+    if (status === "ACTIVE" && cancel) actions.push("RESUME_SUBSCRIPTION");
+    if (status === "ACTIVE") actions.push("CHANGE_CARD");
     if (ws.methodId && !live) actions.push("DELETE_PAYMENT_METHOD");
   }
   const entitlement = ws.grace
     ? {
         kind: "GRACE",
-        period: { start: PERIOD.start, end: GRACE_END },
+        period: PERIOD,
         recordingAllowanceMinutes: PRODUCT.recordingAllowanceMinutes,
         planCode: "PRO",
       }
@@ -573,9 +511,6 @@ function workspaceBilling(workspaceId: string) {
           recordingAllowanceMinutes: FREE_ALLOWANCE_MINUTES,
           planCode: "FREE",
         };
-  const userRefunded = ws.userRefund
-    ? state.payments[ws.userRefund.paymentId]
-    : null;
   return {
     workspaceId,
     enforced: true,
@@ -593,9 +528,7 @@ function workspaceBilling(workspaceId: string) {
           methodVersion: ws.card ? (ws.methodVersion ?? 1) : null,
           maskedCard: ws.card,
           latestAttempt: attemptView(attempt),
-          refundedAttempt: userRefunded
-            ? paymentAttemptView(userRefunded)
-            : attemptView(ws.refunded ?? null),
+          refundedAttempt: attemptView(ws.refunded ?? null),
           subscriptionVersion: ws.subscriptionVersion,
           openCycleId: ws.cycle?.cycleId ?? null,
           methodPayerIsMe: true,
@@ -603,6 +536,7 @@ function workspaceBilling(workspaceId: string) {
           methodId: ws.card ? (ws.methodId ?? null) : null,
         }
       : null,
+    closedReason: status === "ENDED" ? (ws.closedReason ?? null) : null,
   };
 }
 
@@ -611,7 +545,6 @@ function workspaceBilling(workspaceId: string) {
 type CommandBody = {
   requestKey?: string;
   expectedVersion?: number;
-  amountKrw?: number;
 };
 async function commandBody(request: Request) {
   const body = (await request.json().catch(() => ({}))) as CommandBody;
@@ -649,8 +582,7 @@ async function changeSubscription(
   if (
     subscriptionStatus(ws) !== "ACTIVE" ||
     body.expectedVersion !== ws.subscriptionVersion ||
-    Boolean(ws.cancelAtPeriodEnd) === cancel ||
-    (!cancel && ws.userRefund)
+    Boolean(ws.cancelAtPeriodEnd) === cancel
   )
     STATE_CHANGED();
   ws.cancelAtPeriodEnd = cancel;
@@ -662,53 +594,11 @@ async function changeSubscription(
   return subscriptionState(workspaceId);
 }
 
-async function requestRefund(
-  workspaceId: string,
-  paymentId: string,
-  request: Request
-) {
-  requireAdmin(workspaceId);
-  const ws = workspaceOf(workspaceId);
-  const body = await commandBody(request);
-  const payment = state.payments[paymentId];
-  if (ws.userRefund && ws.userRefund.paymentId === paymentId && payment)
-    return refundView(ws.userRefund.refundId, payment);
-  if (
-    !payment ||
-    ws.currentPaymentId !== paymentId ||
-    payment.amountKrw !== body.amountKrw ||
-    body.expectedVersion !== ws.subscriptionVersion
-  )
-    STATE_CHANGED();
-  if (currentScenario() === "refundDenied")
-    failWith(
-      "BILLING_REFUND_NOT_ALLOWED",
-      409,
-      "이 결제는 환불 조건을 벗어났습니다. 대신 해지를 예약할 수 있습니다."
-    );
-  ws.userRefund = { refundId: nextId("0R"), paymentId, polls: 0 };
-  payment.refundStatus = "PENDING";
-  payment.refundOrigin = "USER";
-  // 환불을 요청하면 다음 갱신이 바로 멈춘다.
-  ws.cancelAtPeriodEnd = true;
-  ws.subscriptionVersion += 1;
-  return refundView(ws.userRefund.refundId, payment);
-}
-
-const refundView = (refundId: string, payment: Payment) => ({
-  refundId,
-  paymentId: payment.paymentId,
-  amountKrw: payment.amountKrw,
-  origin: "USER",
-  status: payment.refundStatus ?? "PENDING",
-});
-
 function deleteMethod(workspaceId: string, methodId: string) {
   requireAdmin(workspaceId);
   const ws = workspaceOf(workspaceId);
   const status = subscriptionStatus(ws);
-  const live =
-    (status === "ACTIVE" && !ws.cancelAtPeriodEnd) || status === "PAST_DUE";
+  const live = status === "ACTIVE" && !ws.cancelAtPeriodEnd;
   if (live || currentScenario() === "methodInUse")
     failWith(
       "BILLING_METHOD_IN_USE",
@@ -736,7 +626,6 @@ function paymentView(payment: Payment) {
 
 function workspacePayment(workspaceId: string, paymentId: string) {
   requireAdmin(workspaceId);
-  tick(workspaceId);
   const payment = state.payments[paymentId];
   if (!payment || payment.workspaceId !== workspaceId)
     failWith("BILLING_PAYMENT_NOT_FOUND", 404, "결제를 찾을 수 없습니다.");
@@ -782,13 +671,14 @@ function recordingUsage(workspaceId: string) {
       sampleRate: null,
       allowanceSamples: null,
       usedSamples: null,
-      reservedSamples: null,
       remainingSamples: null,
       allowanceMinutes: null,
       usedMinutes: null,
       remainingMinutes: null,
+      recordingInProgress: null,
     };
   }
+  const recordingInProgress = currentScenario() === "recording";
   if (ws.paid) {
     return {
       enforced: true,
@@ -799,11 +689,11 @@ function recordingUsage(workspaceId: string) {
       sampleRate: SAMPLE_RATE,
       allowanceSamples: null,
       usedSamples: samplesOf(PAID_USED_MINUTES),
-      reservedSamples: 0,
       remainingSamples: null,
       allowanceMinutes: null,
       usedMinutes: PAID_USED_MINUTES,
       remainingMinutes: null,
+      recordingInProgress,
     };
   }
   const used =
@@ -817,11 +707,11 @@ function recordingUsage(workspaceId: string) {
     sampleRate: SAMPLE_RATE,
     allowanceSamples: samplesOf(FREE_ALLOWANCE_MINUTES),
     usedSamples: samplesOf(used),
-    reservedSamples: 0,
     remainingSamples: samplesOf(FREE_ALLOWANCE_MINUTES - used),
     allowanceMinutes: FREE_ALLOWANCE_MINUTES,
     usedMinutes: used,
     remainingMinutes: FREE_ALLOWANCE_MINUTES - used,
+    recordingInProgress,
   };
 }
 
@@ -863,14 +753,13 @@ function advance(setup: Setup): Phase {
   if (setup.purpose === "REPLACE") return advanceReplace(setup, ws);
 
   const cycleId = setup.origin?.cycleId ?? nextId("0C");
-  if (setup.retried) return advanceRetry(setup, ws);
 
   const n = setup.polls;
   if (n <= 1)
     return phase("BILLING_KEY", "PROCESSING", "ISSUING", ["REFRESH_STATUS"], 2);
   ws.mySetupId = null;
   ws.card ??=
-    setup.scenario === "decline"
+    setup.scenario === "refund"
       ? { number: "4579-****-****-9999", cardType: null, issuer: null }
       : setup.scenario === "unknown"
         ? { number: null, cardType: "체크", issuer: "헤이모아카드" }
@@ -883,9 +772,13 @@ function advance(setup: Setup): Phase {
     return phase("PAYMENT", "PROCESSING", "ISSUED", ["REFRESH_STATUS"], 2);
   }
   if (setup.scenario === "decline") {
+    // 확정 거절은 그 자리에서 끝난다 — 회차를 닫고 카드를 지운다. 다시 쓰려면 카드 등록부터 새로 한다.
     origin.status = "FAILED";
     origin.errorCode = "CARD_DECLINED";
-    return phase("PAYMENT", "DECLINED", "ISSUED", ["RETRY_PAYMENT"], null);
+    ws.cycle = null;
+    ws.card = null;
+    ws.methodId = null;
+    return phase("PAYMENT", "DECLINED", "ISSUED", ["START_PURCHASE"], null);
   }
   if (setup.scenario === "unknown") {
     origin.status = "UNKNOWN";
@@ -912,13 +805,12 @@ function advance(setup: Setup): Phase {
 }
 
 function markPaid(ws: Workspace, attempt: Attempt) {
-  // 옛 완료 등록을 다시 읽어도 사용자가 환불한 결제로 권한을 되살리지 않는다.
-  const refunded = state.payments[attempt.attemptId]?.refundOrigin === "USER";
-  if (!ws.paid && !refunded) {
+  // 옛 완료 등록을 다시 읽어도 이미 지급한 결제로 끝난 구독을 되살리지 않는다.
+  const granted = state.payments[attempt.attemptId]?.status === "SUCCEEDED";
+  if (!ws.paid && !granted) {
     ws.paid = true;
-    ws.ended = false;
+    ws.closedReason = null;
     ws.cancelAtPeriodEnd = false;
-    ws.userRefund = null;
     ws.currentPaymentId = attempt.attemptId;
     ws.methodId ??= nextId("0M");
     ws.methodVersion ??= 1;
@@ -949,24 +841,8 @@ function advanceReplace(setup: Setup, ws: Workspace): Phase {
   return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
 }
 
-function advanceRetry(setup: Setup, ws: Workspace): Phase {
-  const retry = setup.latest!;
-  // 문서를 새로 열면 두 참조가 갈라지므로 매번 같은 시도로 다시 묶는다.
-  ws.cycle = { cycleId: retry.cycleId, attempt: retry };
-  if (setup.retryPolls <= 1) {
-    retry.status = "PROCESSING";
-    return phase("PAYMENT", "PROCESSING", "ISSUED", ["REFRESH_STATUS"], 2);
-  }
-  retry.status = "SUCCEEDED";
-  markPaid(ws, retry);
-  return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
-}
-
 function setupStatus(setup: Setup, tick: boolean) {
-  if (tick && setup.state === "COMPLETING") {
-    if (setup.retried) setup.retryPolls += 1;
-    else setup.polls += 1;
-  }
+  if (tick && setup.state === "COMPLETING") setup.polls += 1;
   const p = advance(setup);
   for (const attempt of [setup.origin, setup.latest])
     if (attempt) recordPayment(setup.workspaceId, attempt, "PURCHASE", PERIOD);
@@ -1054,7 +930,7 @@ async function createSetup(workspaceId: string, request: Request) {
     );
   if (purpose === "PURCHASE" && ws.paid)
     failWith("BILLING_STATE_CHANGED", 409, "이미 유료 요금제입니다.");
-  // 카드 변경은 지금 유료(ACTIVE·PAST_DUE)인 구독의 카드만 바꾼다.
+  // 카드 변경은 지금 유료(ACTIVE)인 구독의 카드만 바꾼다.
   if (purpose === "REPLACE" && !ws.paid) STATE_CHANGED();
   const mine = ws.mySetupId ? state.setups[ws.mySetupId] : null;
   if (mine) {
@@ -1072,8 +948,6 @@ async function createSetup(workspaceId: string, request: Request) {
     notice: ws.notice,
     state: "AUTHORIZED",
     polls: 0,
-    retried: false,
-    retryPolls: 0,
     origin: null,
     latest: null,
   };
@@ -1174,67 +1048,6 @@ export const billingHandlers = [
       })
   ),
   http.post(
-    "*/v1/workspaces/:workspaceId/billing/cycles/:cycleId/attempts",
-    async ({ params, request }) => {
-      return respond(async () => {
-        const workspaceId = paramId(params.workspaceId);
-        requireAdmin(workspaceId);
-        const ws = workspaceOf(workspaceId);
-        const body = (await request.json().catch(() => ({}))) as {
-          requestKey?: string;
-          expectedFailedAttemptId?: string;
-          expectedVersion?: number;
-          methodVersion?: number;
-        };
-        if (!body.requestKey)
-          failWith("BAD_REQUEST", 400, "잘못된 요청입니다.");
-        const cycle = ws.cycle;
-        if (!cycle || cycle.cycleId !== paramId(params.cycleId))
-          failWith("BILLING_STATE_CHANGED", 409, "결제 상태가 바뀌었습니다.");
-        if (
-          cycle.attempt.status === "UNKNOWN" ||
-          cycle.attempt.status === "PROCESSING" ||
-          cycle.attempt.status === "PENDING"
-        )
-          failWith("BILLING_IN_PROGRESS", 409, "결제를 확인하는 중입니다.");
-        if (
-          body.expectedFailedAttemptId !== cycle.attempt.attemptId ||
-          body.expectedVersion !== ws.subscriptionVersion ||
-          body.methodVersion !== (ws.methodVersion ?? 1)
-        )
-          failWith("BILLING_STATE_CHANGED", 409, "결제 상태가 바뀌었습니다.");
-        const next = newAttempt(
-          cycle.cycleId,
-          cycle.attempt.attemptNumber + 1,
-          "PENDING"
-        );
-        cycle.attempt = next;
-        ws.subscriptionVersion += 1;
-        const setup = Object.values(state.setups).find(
-          (item) =>
-            item.workspaceId === workspaceId &&
-            item.origin?.cycleId === cycle.cycleId
-        );
-        if (setup) {
-          setup.latest = next;
-          setup.retried = true;
-          setup.retryPolls = 0;
-        } else {
-          // 등록 없이 연 회차(미납 갱신)의 재결제 — 공간 조회가 tick 으로 옮긴다.
-          ws.retryPolls = 0;
-          recordPayment(workspaceId, next, "RENEWAL", PERIOD);
-        }
-        save();
-        return {
-          attemptId: next.attemptId,
-          cycleId: next.cycleId,
-          attemptNumber: next.attemptNumber,
-          status: next.status,
-        };
-      }, 202);
-    }
-  ),
-  http.post(
     "*/v1/workspaces/:workspaceId/billing/subscription/cancel",
     ({ params, request }) =>
       respond(async () => {
@@ -1259,19 +1072,6 @@ export const billingHandlers = [
         save();
         return view;
       })
-  ),
-  http.post(
-    "*/v1/workspaces/:workspaceId/billing/payments/:paymentId/refunds",
-    ({ params, request }) =>
-      respond(async () => {
-        const view = await requestRefund(
-          paramId(params.workspaceId),
-          paramId(params.paymentId),
-          request
-        );
-        save();
-        return view;
-      }, 202)
   ),
   http.get(
     "*/v1/workspaces/:workspaceId/billing/payments/:paymentId",

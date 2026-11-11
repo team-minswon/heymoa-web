@@ -14,18 +14,12 @@
     "SIMULATED_NO_CHARGE": "This is a test payment. You won't actually be charged.",
     "REAL_CARD_CHARGE_AUTO_CANCEL": "This is a test payment, but your card is actually authorized and then canceled automatically."
   },
-  "retry": {
-    "button": "Retry payment ({amount})",
-    "changed": "The payment status changed. We've loaded the latest status; please review it again.",
-    "inProgress": "We're confirming the payment. Don't pay again.",
-    "pastDueButton": "Pay overdue {amount}"
-  },
   "usage": {
     "loading": "Loading usage",
     "progress": "Recording usage this month",
     "resets": "Resets on {date}",
     "exhausted": "You've used this month's allowance. New recordings can start from {date}.",
-    "reserved": "Meetings being recorded are counted after they end",
+    "recordingInProgress": "Meetings being recorded are counted after they end",
     "unlimited": "Unlimited",
     "nearLimit": "You've used {percent, number}% of this month's allowance. It resets on {date}.",
     "label": "Recording this month",
@@ -35,11 +29,9 @@
     "title": "Plan",
     "description": "This workspace's plan and this month's recording usage.",
     "loading": "Loading plans",
-    "notEnforced": "This workspace isn't on a paid plan program yet.",
     "kind": {
       "LEGACY_ACCESS": "Existing access",
-      "TEST": "Test access",
-      "GRACE": "Payment overdue"
+      "TEST": "Test access"
     },
     "plan": {
       "shared": "Everyone in this workspace shares it",
@@ -85,22 +77,24 @@
     "compare": "Compare plans",
     "openPayment": "Manage payment",
     "badge": {
-      "pastDue": "Past due",
       "cancelScheduled": "Cancels soon"
     },
     "line": {
       "free": "Record up to {allowance} every month.",
       "next": "Next payment {date} · {amount}",
       "cancelScheduled": "Active until {end}, then switches to Free.",
-      "grace": "Payment was not completed. You can keep using it until {end}.",
-      "pastDue": "Payment was not completed."
+      "grace": "Checking the renewal payment result. You keep Pro in the meantime."
+    },
+    "closed": {
+      "UNPAID": "The subscription ended because the payment wasn't approved. Register a card to start again.",
+      "EXPIRED": "The canceled subscription's period has ended.",
+      "REFUNDED": "The subscription ended because it was refunded."
     }
   },
   "checkout": {
     "title": "Review order",
     "description": "Review your order, agree to the terms, then register a card.",
     "loading": "Loading checkout",
-    "notEnforced": "This workspace isn't on a paid plan program yet.",
     "askAdmin": "Only admins can purchase. Please ask an admin.",
     "inProgress": "Your team has a subscription in progress. Check again when it's done.",
     "unavailable": "A new purchase isn't available right now.",
@@ -133,7 +127,6 @@
       "nextCharge": "Next payment",
       "noCharge": "Only the card changes. You won't be charged now.",
       "keepOnFail": "If registering the new card fails, your current card stays.",
-      "pastDue": "After changing the card, pay the overdue amount from the Plan tab.",
       "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
       "submit": "Agree and register new card",
       "unavailable": "You can't change the card right now.",
@@ -191,7 +184,7 @@
     },
     "declined": {
       "title": "The payment wasn't approved",
-      "body": "Check your card limit, balance and availability, or try another card.",
+      "body": "Please register a card again. Check your card limit, balance and availability, or register another card.",
       "code": "Reason code: {code}"
     },
     "accessProcessing": {
@@ -256,19 +249,17 @@
     "card": "Card on file",
     "noCard": "No card on file",
     "cancelScheduled": "You can use it until {end}; after that the workspace moves to Free. You won't be charged again.",
-    "notPayerHint": "Only the admin who registered this card can resume the subscription.",
     "latestPayment": "Latest payment",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "Payment details",
     "changeCard": "Change",
     "cancel": "Cancel subscription",
     "resume": "Resume subscription",
-    "refund": "Request refund",
     "deleteMethod": "Remove",
     "notice": {
       "stateChanged": "The billing status changed. We've loaded the latest details; please review them again.",
       "inProgress": "A payment is being processed. Please try again once it finishes.",
-      "notPayer": "Only the admin who registered this card can resume the subscription. Please ask that admin.",
+      "notAdmin": "Only admins can resume the subscription.",
       "methodInUse": "This card is used by the subscription. Use Change to switch cards.",
       "canceled": "Subscription canceled. You can use it until {end}.",
       "resumed": "Subscription resumed. {amount} will be charged on {date}.",
@@ -287,14 +278,6 @@
       "noChargeNow": "You won't be charged now.",
       "next": "{amount} will be charged to this card on {date}, then renew monthly.",
       "confirm": "Resume"
-    },
-    "refundDialog": {
-      "title": "Refund {amount}?",
-      "amount": "We'll cancel the full {amount} paid on {date}.",
-      "stop": "Future payments stop as soon as you request it.",
-      "access": "Once the refund is processed, Pro access ends right away and the workspace moves to Free.",
-      "final": "This can't be undone.",
-      "confirm": "Request refund"
     },
     "deleteDialog": {
       "title": "Remove this card?",
@@ -336,7 +319,7 @@
     "refund": "Refund",
     "refundValue": "{status} · {origin}",
     "origin": {
-      "USER": "Requested by an admin",
+      "USER": "Requested via support",
       "COMPENSATION": "Canceled automatically",
       "RECONCILIATION": "Canceled after review"
     },
@@ -347,7 +330,7 @@
     "nowRefunded": "Refunded. This period no longer includes access.",
     "nowEnded": "This period has ended.",
     "nowRefunding": "We're processing the refund. The workspace moves to Free when it's done.",
-    "taxInvoice": "Need a tax invoice? Let us know through <link>Help & feedback</link>.",
+    "support": "Refunds and tax invoices are handled through <link>Help & feedback</link>.",
     "loadFailed": "Couldn't load payment details."
   },
   "history": {

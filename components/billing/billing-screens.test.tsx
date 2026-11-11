@@ -42,7 +42,6 @@ vi.mock("@/lib/analytics/track", async (importOriginal) => ({
 /** 목 시드: 집행 대상·Free / 이미 유료 / 집행 대상 아님. */
 const FREE = "01K0000000000";
 const PAID = "01K0000000006";
-const NOT_ENFORCED = "01K0000000009";
 
 const server = setupServer(...restHandlers, ...billingHandlers);
 const requests: string[] = [];
@@ -232,16 +231,6 @@ describe("요금제 화면", () => {
     expect(startButton()).not.toBeInTheDocument();
   });
 
-  it("집행 대상이 아니면 결제 UI 없이 안내만 그린다", async () => {
-    renderIn(<PlanTab workspaceId={NOT_ENFORCED} />);
-    expect(
-      await screen.findByText("이 공간은 아직 요금제 대상이 아닙니다.")
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "요금제 비교" })
-    ).not.toBeInTheDocument();
-  });
-
   it("이미 유료면 구매 버튼 없이 다음 결제를 그린다", async () => {
     renderIn(<PlanTab workspaceId={PAID} />);
     expect(
@@ -268,44 +257,42 @@ describe("요금제 화면", () => {
     expect(startButton()).not.toBeInTheDocument();
   });
 
-  it("확정 거절 뒤에는 서버 금액으로 다시 결제를 연다", async () => {
+  it("갱신 결제 결과를 기다리는 동안(GRACE)은 Pro 로 보이고 미납이라 하지 않는다", async () => {
     serveBilling({
-      latestAttemptStatus: "FAILED",
-      allowedActions: ["RETRY_PAYMENT"],
-      detail: detail(),
+      status: "ACTIVE",
+      entitlement: {
+        kind: "GRACE",
+        period: {
+          start: "2026-11-11T00:00:00+09:00",
+          end: "2026-12-11T00:00:00+09:00",
+        },
+        recordingAllowanceMinutes: null,
+        planCode: "PRO",
+      },
+      allowedActions: [],
     });
-    let sent: unknown;
-    server.use(
-      http.post(
-        `*/v1/workspaces/${FREE}/billing/cycles/C1/attempts`,
-        async ({ request }) => {
-          sent = await request.json();
-          return envelope(
-            {
-              attemptId: "A2",
-              cycleId: "C1",
-              attemptNumber: 2,
-              status: "PENDING",
-            },
-            202
-          );
-        }
-      )
-    );
     renderIn(<PlanTab workspaceId={FREE} />);
-    fireEvent.click(
-      await screen.findByRole("button", { name: "9,900원 다시 결제" })
-    );
-    await waitFor(() => expect(sent).toBeDefined());
-    expect(sent).toMatchObject({
-      expectedFailedAttemptId: "A1",
-      expectedVersion: 3,
-      methodVersion: 1,
-    });
-    expect(track).toHaveBeenCalledWith("billing_retry_clicked", {
-      workspace_id: FREE,
-      result: "declined",
-    });
+    expect(
+      await screen.findByText(
+        "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/미납|유예/)).not.toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "UNPAID",
+      "결제가 승인되지 않아 구독이 종료되었습니다. 다시 시작하려면 카드를 등록해 주세요.",
+    ],
+    ["EXPIRED", "해지한 구독의 이용 기간이 끝났습니다."],
+    ["REFUNDED", "환불되어 구독이 종료되었습니다."],
+  ])("끝난 구독(%s)은 그 까닭을 한 줄로 알린다", async (closedReason, line) => {
+    serveBilling({ status: "ENDED", closedReason });
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(await screen.findByText(line)).toBeInTheDocument();
+    expect(startButton()).toBeEnabled();
   });
 });
 
@@ -765,31 +752,32 @@ describe("등록 결과 — 상태별 화면", () => {
     );
   });
 
-  it("확정 거절은 서버 금액으로 다시 결제를 연다", async () => {
+  it("확정 거절은 같은 카드로 다시 결제하지 않고 카드 등록부터 새로 시작하게 한다", async () => {
     serveSetup(
-      setupBody("PAYMENT", "DECLINED", { allowedActions: ["RETRY_PAYMENT"] })
+      setupBody("PAYMENT", "DECLINED", { allowedActions: ["START_PURCHASE"] })
     );
-    serveBilling({
-      allowedActions: ["RETRY_PAYMENT"],
-      latestAttemptStatus: "FAILED",
-      detail: detail(),
-    });
     renderIn(<BillingSetupResultPage setupId="S1" />);
     expect(
       await screen.findByText("결제가 승인되지 않았습니다")
     ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("button", { name: "9,900원 다시 결제" })
-    ).toBeInTheDocument();
+    expect(screen.getByText(/카드를 다시 등록해 주세요/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "새로 시작" })).toHaveAttribute(
+      "href",
+      `/w/${FREE}?settings=billing`
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("서버가 다시 결제를 허용하지 않으면 거절 안내만 그린다", async () => {
+  it("서버가 새 구매를 허용하지 않으면 거절 안내만 그린다", async () => {
     serveSetup(setupBody("PAYMENT", "DECLINED", { allowedActions: [] }));
     renderIn(<BillingSetupResultPage setupId="S1" />);
     expect(
       await screen.findByText("결제가 승인되지 않았습니다")
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "새로 시작" })
+    ).not.toBeInTheDocument();
   });
 
   it("남의 등록이거나 없으면 찾을 수 없다고 알린다", async () => {

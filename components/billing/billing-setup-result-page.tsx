@@ -7,9 +7,7 @@ import { useEffect, useRef } from "react";
 
 import {
   BillingNotice,
-  RetryPaymentButton,
   TestPaymentNotice,
-  canRetryPayment,
 } from "@/components/billing/billing-parts";
 import { SETTINGS_LIST } from "@/components/settings/settings-layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,7 +19,6 @@ import {
   useCancelBillingSetup,
   useCompleteBillingSetup,
   useGetMyBillingSetup,
-  useGetWorkspaceBilling,
 } from "@/lib/api/generated/billing/billing";
 import type { BillingSetupStatusResponseData } from "@/lib/api/generated/models";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
@@ -184,11 +181,6 @@ function SetupResult({ setupId }: { setupId: string }) {
             .catch(() => false);
           if (done) await refreshSetup();
         }}
-        onRetried={() => {
-          reported.current.clear();
-          poll.restart();
-          void refreshSetup();
-        }}
       />
       <TestPaymentNotice notice={setup.testPaymentNotice ?? undefined} />
       {/* 메뉴 없는 화면이라 완료 전 상태(확인 중·거절·결과 지연)에서도 나갈 길을 둔다. */}
@@ -230,7 +222,6 @@ function ViewBody({
   busy,
   onComplete,
   onCancel,
-  onRetried,
 }: {
   view: SetupView;
   setup: SetupData;
@@ -238,7 +229,6 @@ function ViewBody({
   busy: boolean;
   onComplete: () => void;
   onCancel: () => void;
-  onRetried: () => void;
 }) {
   const t = useTranslations("billing.setup");
   // 카드 변경은 카드만 바꾸고 청구하지 않는다 — 결과 문구·다시 시작할 곳을 구매와 섞지 않는다.
@@ -322,14 +312,22 @@ function ViewBody({
         undefined,
         "warn"
       );
-    case "declined":
+    case "declined": {
+      // 거절된 카드는 서버가 지운다 — 같은 카드로 다시 결제하지 않고 카드 등록부터 새로 시작한다.
+      const code =
+        setup.latestAttempt?.errorCode ?? setup.originAttempt?.errorCode;
       return (
-        <DeclinedBody
-          setup={setup}
-          workspaceId={workspaceId}
-          onRetried={onRetried}
-        />
+        <BillingNotice tone="warn" title={t("declined.title")}>
+          <p>{t("declined.body")}</p>
+          {code ? (
+            <p className="mt-1 text-xs">{t("declined.code", { code })}</p>
+          ) : null}
+          {restartLink && setup.allowedActions.includes("START_PURCHASE") ? (
+            <div className="mt-3">{restartLink}</div>
+          ) : null}
+        </BillingNotice>
       );
+    }
     case "accessProcessing":
       return card(t("accessProcessing.title"), t("accessProcessing.body"));
     case "refundProcessing":
@@ -376,49 +374,6 @@ function ViewBody({
         restartLink
       );
   }
-}
-
-function DeclinedBody({
-  setup,
-  workspaceId,
-  onRetried,
-}: {
-  setup: SetupData;
-  workspaceId: string | null;
-  onRetried: () => void;
-}) {
-  const t = useTranslations("billing.setup");
-  const retryAllowed = setup.allowedActions.includes("RETRY_PAYMENT");
-  // 다시 결제에 필요한 버전·시도 id 는 공간 결제 조회(ADMIN)에 있다.
-  const billing = okData(
-    useGetWorkspaceBilling(workspaceId ?? "", {
-      query: { enabled: Boolean(workspaceId) && retryAllowed, staleTime: 0 },
-    }).data
-  );
-  const detail = billing?.detail ?? null;
-  const code = setup.latestAttempt?.errorCode ?? setup.originAttempt?.errorCode;
-  return (
-    <BillingNotice tone="warn" title={t("declined.title")}>
-      <p>{t("declined.body")}</p>
-      {code ? (
-        <p className="mt-1 text-xs">{t("declined.code", { code })}</p>
-      ) : null}
-      {retryAllowed &&
-      workspaceId &&
-      detail &&
-      canRetryPayment(detail) &&
-      setup.amountKrw != null ? (
-        <div className="mt-3">
-          <RetryPaymentButton
-            workspaceId={workspaceId}
-            detail={detail}
-            amountKrw={setup.amountKrw}
-            onRetried={onRetried}
-          />
-        </div>
-      ) : null}
-    </BillingNotice>
-  );
 }
 
 function CompletedBody({

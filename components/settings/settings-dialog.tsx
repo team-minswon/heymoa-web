@@ -5,7 +5,12 @@ import { track } from "@/lib/analytics/track";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import type { SettingsSection } from "@/lib/workspace/settings-url";
+import {
+  DEFAULT_SETTINGS_SECTION,
+  type SettingsSection,
+} from "@/lib/workspace/settings-url";
+import { useGetWorkspaceBilling } from "@/lib/api/generated/billing/billing";
+import { okData } from "@/lib/api/ok-data";
 import {
   BellRing,
   Download,
@@ -120,10 +125,13 @@ function SettingsSections({
   workspaceId,
   locked,
   onLockChange,
+  enforced,
 }: {
   section: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
   workspaceId: string;
+  /** 요금제 대상인 공간인가. 모르면 false 다. */
+  enforced: boolean;
   /** 섹션이 되돌릴 수 없는 일을 하는 중이다 — 다른 섹션으로 못 옮긴다. */
   locked: boolean;
   onLockChange: (locked: boolean) => void;
@@ -131,6 +139,7 @@ function SettingsSections({
   const t = useTranslations("settings.nav");
   const desktop = useDesktopApp();
   const update = useDesktopUpdates();
+  const billingSection = section === "billing" || section === "payment";
   return (
     <div className="grid h-full min-h-0 bg-[var(--el-canvas-soft)] md:grid-cols-[220px_1fr]">
       <nav
@@ -164,6 +173,10 @@ function SettingsSections({
                     key !== "appUpdates" ||
                     (desktop === true &&
                       !desktopUpdateBridge()?.openPreferences)
+                )
+                .filter(
+                  ({ key }) =>
+                    (key !== "billing" && key !== "payment") || enforced
                 )
                 .map(({ key, Icon }) => (
                   <Button
@@ -243,7 +256,7 @@ function SettingsSections({
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : section === "workspaceAgents" ? (
           <WorkspaceAgentAccessSettings workspaceId={workspaceId} />
-        ) : section === "billing" ? (
+        ) : billingSection && !enforced ? null : section === "billing" ? (
           <WorkspacePlanSettings
             workspaceId={workspaceId}
             onOpenPayment={() => onSectionChange("payment")}
@@ -323,6 +336,21 @@ export function SettingsDialog({
     });
   }, [nativeUpdate, openNative, onOpenChange, tUpdate]);
   const [locked, setLocked] = useState(false);
+  // 요금제 대상이 아닌 공간에는 요금제·결제 관리 탭이 없다. 값을 알기 전(조회 중·실패)에도 숨긴 쪽이라 탭이 나타났다 사라지지 않고,
+  // 그 탭으로 들어왔으면 값을 안 뒤 기본 탭으로 보낸다. 닫히는 중에는 보내지 않는다(주소를 고치면 창이 다시 열린다).
+  const billing = useGetWorkspaceBilling(workspaceId, {
+    query: { enabled: open },
+  });
+  const enforced = okData(billing.data)?.enforced === true;
+  useEffect(() => {
+    if (
+      open &&
+      (section === "billing" || section === "payment") &&
+      !billing.isPending &&
+      !enforced
+    )
+      onSectionChange(DEFAULT_SETTINGS_SECTION);
+  }, [open, section, billing.isPending, enforced, onSectionChange]);
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (!next && locked) return;
@@ -344,6 +372,7 @@ export function SettingsDialog({
           workspaceId={workspaceId}
           locked={locked}
           onLockChange={setLocked}
+          enforced={enforced}
         />
       </DialogContent>
     </Dialog>

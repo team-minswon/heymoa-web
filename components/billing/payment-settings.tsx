@@ -133,9 +133,6 @@ function Manage({
   const billing = useWorkspaceBilling(workspaceId);
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
 
-  if (!billing.enforced) {
-    return <BillingNotice>{tPage("notEnforced")}</BillingNotice>;
-  }
   if (workspace?.role !== "ADMIN") {
     return <BillingNotice>{tPage("askAdmin")}</BillingNotice>;
   }

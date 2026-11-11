@@ -373,7 +373,8 @@ describe("contract sync 2026-07-29", () => {
     // 사용량 조회 `workspaces/{workspaceId}/billing/usage`(APP-1566)가 늘었다 (103 → 104).
     // 구매 이후의 명령(APP-1565)이 여섯 늘었다 (104 → 110) — `.../billing/subscription/{cancel,resume}`·
     // `.../billing/payments/{paymentId}`(+`/refunds`)·`.../billing/payment-methods/{methodId}`·`me/billing/payments`.
-    expect(paths).toHaveLength(110);
+    // 2026-11-11 「환불은 문의로만」·「거절되면 바로 종료」로 사용자 환불 `/refunds`·다시 결제 `cycles/{cycleId}/attempts` 가 빠졌다 (110 → 108).
+    expect(paths).toHaveLength(108);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

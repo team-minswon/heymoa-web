@@ -42,13 +42,10 @@ import { cn } from "@/lib/utils";
 type Billing = WorkspaceBillingResponseData;
 type Dialog = "cancel" | "resume" | "delete" | null;
 
-/** 관리할 구독이 있는가 — 유료·미납이거나, 끝났어도 지울 카드가 남았다. 상세(ADMIN)가 있을 때만이다. */
+/** 관리할 구독이 있는가 — 유료이거나, 끝났어도 지울 카드가 남았다. 상세(ADMIN)가 있을 때만이다. */
 export function hasSubscriptionToManage(billing: Billing) {
   return Boolean(
-    billing.detail &&
-    (billing.status === "ACTIVE" ||
-      billing.status === "PAST_DUE" ||
-      billing.detail.methodId)
+    billing.detail && (billing.status === "ACTIVE" || billing.detail.methodId)
   );
 }
 
@@ -63,7 +60,7 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 
 /**
  * 설정 › 결제 관리의 「결제 수단」과 「구독」(APP-1565). 카드 한 줄과, 요금제·다음 결제·최근 결제를 한 목록에 둔다.
- * **버튼을 보일지는 서버의 `allowedActions` 로만 정한다** — 화면이 조건을 다시 계산하지 않는다. 위험한 행동(해지·환불·카드 삭제)은
+ * **버튼을 보일지는 서버의 `allowedActions` 로만 정한다** — 화면이 조건을 다시 계산하지 않는다. 위험한 행동(해지·카드 삭제)은
  * 확인 창에서 날짜·금액으로 결과를 적은 뒤 실행한다. 결과 안내는 사라지면 안 돼 자리에 둔다.
  */
 export function SubscriptionManagement({
@@ -91,7 +88,7 @@ export function SubscriptionManagement({
   const masked = detail.maskedCard;
   const cardName = [masked?.issuer, masked?.cardType].filter(Boolean).join(" ");
 
-  // 최근 결제 한 건. 요약과 환불 금액이 이 조회에서 온다 — 환불 본문의 금액은 상품 가격이 아니라 그 결제의 금액이다.
+  // 최근 결제 한 건의 요약.
   const paymentId = detail.currentPaymentId;
   const latest = useGetBillingPayment(workspaceId, paymentId ?? "", {
     query: {
@@ -107,8 +104,7 @@ export function SubscriptionManagement({
     if (outcome !== "failed") setDialog(null);
   };
   const busy = commands.pending;
-  const subscribed =
-    billing.status === "ACTIVE" || billing.status === "PAST_DUE";
+  const subscribed = billing.status === "ACTIVE";
   const next =
     billing.status === "ACTIVE" &&
     !billing.cancelAtPeriodEnd &&
@@ -232,9 +228,7 @@ export function SubscriptionManagement({
               <div className="flex min-h-[52px] items-center justify-between gap-4 bg-[var(--el-canvas-soft)] px-4 py-2.5">
                 <p className="text-xs leading-5 text-[var(--el-muted)]">
                   {scheduled
-                    ? canResume || detail.methodPayerIsMe
-                      ? t("cancelScheduled", { end: format.date(period.end) })
-                      : t("notPayerHint")
+                    ? t("cancelScheduled", { end: format.date(period.end) })
                     : period
                       ? t("cancelHint", { end: format.date(period.end) })
                       : null}
@@ -349,8 +343,6 @@ export function NoticeLine({
     ? format.money(billing.product.amountKrw)
     : null;
   switch (notice.kind) {
-    case "refundNotAllowed":
-      return <BillingNotice tone="warn">{notice.message}</BillingNotice>;
     case "canceled":
       return period ? (
         <BillingNotice>
@@ -393,44 +385,6 @@ export function PaymentStatusText({
       />
       {t(status)}
     </span>
-  );
-}
-
-/** 환불 확인 창. 결제 상세에서도 쓴다. 금액·결제일을 적고, 다음 결제가 멈추고 권한이 사라지며 되돌릴 수 없다는 것을 적는다. */
-export function RefundConfirm({
-  open,
-  onOpenChange,
-  payment,
-  pending,
-  onConfirm,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  payment: BillingPaymentResponseData;
-  pending: boolean;
-  onConfirm: () => void;
-}) {
-  const t = useTranslations("billing.manage.refundDialog");
-  const format = useBillingFormat();
-  const amount = format.money(payment.amountKrw);
-  return (
-    <Confirm
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("title", { amount })}
-      lines={[
-        payment.completedAt
-          ? t("amount", { date: format.date(payment.completedAt), amount })
-          : null,
-        t("stop"),
-        t("access"),
-        t("final"),
-      ]}
-      confirmLabel={t("confirm")}
-      destructive
-      pending={pending}
-      onConfirm={onConfirm}
-    />
   );
 }
 

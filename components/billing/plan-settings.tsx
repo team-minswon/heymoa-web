@@ -8,9 +8,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BillingCheckout } from "@/components/billing/billing-checkout";
 import {
   BillingNotice,
-  RetryPaymentButton,
   TestPaymentNotice,
-  canRetryPayment,
 } from "@/components/billing/billing-parts";
 import { RecordingUsage } from "@/components/billing/recording-usage";
 import { SettingsHeader } from "@/components/settings/settings-layout";
@@ -129,9 +127,8 @@ function PlanContent({
   onCheckout: () => void;
   onOpenPayment: () => void;
 }) {
-  const t = useTranslations("billing.page");
   const poll = usePollWindow();
-  // 사용자 환불은 미정산 시도가 아니라 `REFRESH_STATUS` 가 없다 — 취소 처리 중이면 같이 다시 읽는다.
+  // 문의로 받은 환불(USER)은 미정산 시도가 아니라 `REFRESH_STATUS` 가 없다 — 취소 처리 중이면 같이 다시 읽는다.
   const billing = useWorkspaceBilling(workspaceId, (data) =>
     !poll.expired &&
     data &&
@@ -149,9 +146,6 @@ function PlanContent({
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const isAdmin = workspace?.role === "ADMIN";
 
-  if (!billing.enforced) {
-    return <BillingNotice>{t("notEnforced")}</BillingNotice>;
-  }
   const kind = billing.entitlement?.kind;
   const isPaid = kind === "PAID" || kind === "TEST" || kind === "GRACE";
   return (
@@ -203,32 +197,29 @@ function CurrentPlan({
   const amount = product ? format.money(product.amountKrw) : null;
 
   const badge =
-    kind === "GRACE" || billing.status === "PAST_DUE"
-      ? t("badge.pastDue")
-      : billing.cancelAtPeriodEnd && billing.status === "ACTIVE"
-        ? t("badge.cancelScheduled")
-        : kind === "TEST" || kind === "LEGACY_ACCESS"
-          ? t(`kind.${kind}`)
-          : null;
+    billing.cancelAtPeriodEnd && billing.status === "ACTIVE"
+      ? t("badge.cancelScheduled")
+      : kind === "TEST" || kind === "LEGACY_ACCESS"
+        ? t(`kind.${kind}`)
+        : null;
 
+  // GRACE 는 갱신 결제의 결과를 기다리는 동안의 Pro 다.
   const line =
-    kind === "GRACE" && period
-      ? t("line.grace", { end: format.date(period.end) })
-      : billing.status === "PAST_DUE"
-        ? t("line.pastDue")
-        : billing.cancelAtPeriodEnd && billing.status === "ACTIVE" && period
-          ? t("line.cancelScheduled", { end: format.date(period.end) })
-          : billing.status === "ACTIVE" && period && amount
-            ? t("line.next", { date: format.date(period.end), amount })
-            : planCode === "FREE" && product
-              ? t("line.free", {
-                  allowance: format.duration(
-                    product.freeRecordingAllowanceMinutes
-                  ),
-                })
-              : period
-                ? format.period(period)
-                : null;
+    kind === "GRACE"
+      ? t("line.grace")
+      : billing.cancelAtPeriodEnd && billing.status === "ACTIVE" && period
+        ? t("line.cancelScheduled", { end: format.date(period.end) })
+        : billing.status === "ACTIVE" && period && amount
+          ? t("line.next", { date: format.date(period.end), amount })
+          : planCode === "FREE" && product
+            ? t("line.free", {
+                allowance: format.duration(
+                  product.freeRecordingAllowanceMinutes
+                ),
+              })
+            : period
+              ? format.period(period)
+              : null;
 
   return (
     <div className={PANEL}>
@@ -418,7 +409,7 @@ function PlanCard({
 }
 
 /**
- * 요금제 비교보다 먼저 봐야 하는 것 — 처리 중·미납·이어서 할 등록·환불 진행. 없으면 아무것도 그리지 않는다.
+ * 요금제 비교보다 먼저 봐야 하는 것 — 처리 중·이어서 할 등록·환불 진행·구독이 끝난 까닭. 없으면 아무것도 그리지 않는다.
  * 구매 시작은 유료 카드 안의 버튼이 맡는다.
  */
 function Attention({
@@ -494,6 +485,14 @@ function Attention({
         {t("userRefunded.body")}
       </BillingNotice>
     ) : null,
+    // 환불로 끝난 구독은 위 「결제 취소 처리가 완료되었습니다」가 이미 말한다.
+    billing.status === "ENDED" &&
+    billing.closedReason &&
+    !(billing.closedReason === "REFUNDED" && userRefund === "SUCCEEDED") ? (
+      <BillingNotice key="closed">
+        {t(`closed.${billing.closedReason}`)}
+      </BillingNotice>
+    ) : null,
     userRefund === "FAILED" ? (
       <BillingNotice
         key="userRefundFailed"
@@ -537,19 +536,6 @@ function Attention({
           >
             {t("viewResult")}
           </LinkButton>
-        ) : null,
-        actions.includes("RETRY_PAYMENT") &&
-        detail &&
-        canRetryPayment(detail) &&
-        billing.product ? (
-          <RetryPaymentButton
-            key="retry"
-            workspaceId={workspaceId}
-            detail={detail}
-            amountKrw={billing.product.amountKrw}
-            pastDue={billing.status === "PAST_DUE"}
-            onRetried={onRestartPolling}
-          />
         ) : null,
         actions.includes("REFRESH_STATUS") ? (
           <Button

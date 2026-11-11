@@ -14,18 +14,12 @@
     "SIMULATED_NO_CHARGE": "시험 결제이며 실제로 청구되지 않습니다.",
     "REAL_CARD_CHARGE_AUTO_CANCEL": "시험 결제이지만 카드가 실제로 승인된 뒤 자동 취소됩니다."
   },
-  "retry": {
-    "button": "{amount} 다시 결제",
-    "changed": "결제 상태가 바뀌었습니다. 최신 상태를 불러왔으니 다시 확인해 주세요.",
-    "inProgress": "결제를 확인하는 중입니다. 다시 결제하지 마세요.",
-    "pastDueButton": "미납 {amount} 결제"
-  },
   "usage": {
     "loading": "사용량을 불러오는 중",
     "progress": "이번 달 녹음 사용량",
     "resets": "{date}에 초기화됩니다",
     "exhausted": "이번 달 제공량을 모두 썼습니다. {date}부터 새 녹음을 시작할 수 있습니다.",
-    "reserved": "녹음 중인 회의는 끝난 뒤 반영됩니다",
+    "recordingInProgress": "녹음 중인 회의는 끝난 뒤 반영됩니다",
     "unlimited": "무제한",
     "nearLimit": "이번 달 제공량의 {percent, number}%를 썼습니다. {date}에 초기화됩니다.",
     "label": "이번 달 녹음",
@@ -35,11 +29,9 @@
     "title": "요금제",
     "description": "이 워크스페이스의 요금제와 이번 달 녹음 사용량입니다.",
     "loading": "요금제를 불러오는 중",
-    "notEnforced": "이 공간은 아직 요금제 대상이 아닙니다.",
     "kind": {
       "LEGACY_ACCESS": "기존 이용권",
-      "TEST": "시험 이용권",
-      "GRACE": "미납 유예 중"
+      "TEST": "시험 이용권"
     },
     "plan": {
       "shared": "이 공간의 모든 멤버가 함께 씁니다",
@@ -85,22 +77,24 @@
     "compare": "요금제 비교",
     "openPayment": "결제 관리",
     "badge": {
-      "pastDue": "미납",
       "cancelScheduled": "해지 예정"
     },
     "line": {
       "free": "매달 {allowance}까지 녹음할 수 있습니다.",
       "next": "다음 결제 {date} · {amount}",
       "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다.",
-      "grace": "결제가 완료되지 않았습니다. {end}까지 쓸 수 있습니다.",
-      "pastDue": "결제가 완료되지 않았습니다."
+      "grace": "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다."
+    },
+    "closed": {
+      "UNPAID": "결제가 승인되지 않아 구독이 종료되었습니다. 다시 시작하려면 카드를 등록해 주세요.",
+      "EXPIRED": "해지한 구독의 이용 기간이 끝났습니다.",
+      "REFUNDED": "환불되어 구독이 종료되었습니다."
     }
   },
   "checkout": {
     "title": "주문 확인",
     "description": "주문 내용을 확인하고 동의한 뒤 카드를 등록합니다.",
     "loading": "주문서를 불러오는 중",
-    "notEnforced": "이 공간은 아직 요금제 대상이 아닙니다.",
     "askAdmin": "구매는 관리자만 할 수 있습니다. 관리자에게 요청해 주세요.",
     "inProgress": "팀의 구독 처리 중입니다. 끝난 뒤 다시 확인해 주세요.",
     "unavailable": "지금은 새로 구매할 수 없는 상태입니다.",
@@ -133,7 +127,6 @@
       "nextCharge": "다음 결제",
       "noCharge": "카드만 바뀌고 지금 결제되지 않습니다.",
       "keepOnFail": "새 카드 등록이 실패하면 지금 카드가 그대로 유지됩니다.",
-      "pastDue": "미납 금액은 카드를 바꾼 뒤 요금제 탭의 「미납 결제」로 결제합니다.",
       "agreementLabel": "다음 결제부터 이 공간의 구독 금액(매월 {amount})이 새 카드로 자동 결제되는 데 동의합니다.",
       "submit": "동의하고 새 카드 등록",
       "unavailable": "지금은 카드를 바꿀 수 없는 상태입니다.",
@@ -191,7 +184,7 @@
     },
     "declined": {
       "title": "결제가 승인되지 않았습니다",
-      "body": "카드 한도·잔액·사용 가능 여부를 확인하거나 다른 카드로 다시 시도해 주세요.",
+      "body": "카드를 다시 등록해 주세요. 카드 한도·잔액·사용 가능 여부를 확인하거나 다른 카드를 등록할 수 있습니다.",
       "code": "사유 코드: {code}"
     },
     "accessProcessing": {
@@ -256,19 +249,17 @@
     "card": "등록된 카드",
     "noCard": "등록된 카드가 없습니다",
     "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다.",
-    "notPayerHint": "구독 재개는 이 카드를 등록한 관리자만 할 수 있습니다.",
     "latestPayment": "최근 결제",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "결제 상세",
     "changeCard": "변경",
     "cancel": "구독 해지",
     "resume": "구독 재개",
-    "refund": "환불 요청",
     "deleteMethod": "삭제",
     "notice": {
       "stateChanged": "결제 상태가 바뀌었습니다. 최신 내용을 불러왔으니 다시 확인해 주세요.",
       "inProgress": "결제를 처리하는 중입니다. 끝난 뒤 다시 시도해 주세요.",
-      "notPayer": "구독 재개는 이 카드를 등록한 관리자만 할 수 있습니다. 그 관리자에게 요청해 주세요.",
+      "notAdmin": "구독 재개는 관리자만 할 수 있습니다.",
       "methodInUse": "구독에 쓰는 카드라 지울 수 없습니다. 카드를 바꾸려면 「변경」을 이용해 주세요.",
       "canceled": "구독을 해지했습니다. {end}까지 쓸 수 있습니다.",
       "resumed": "구독을 재개했습니다. {date}에 {amount}이 결제됩니다.",
@@ -287,14 +278,6 @@
       "noChargeNow": "지금 결제되지 않습니다.",
       "next": "{date}에 {amount}이 이 카드로 결제되고 매월 자동으로 갱신됩니다.",
       "confirm": "재개"
-    },
-    "refundDialog": {
-      "title": "{amount}을 환불할까요?",
-      "amount": "{date}에 결제한 {amount} 전액을 취소합니다.",
-      "stop": "요청하는 즉시 다음 결제가 멈춥니다.",
-      "access": "취소가 처리되면 Pro 권한이 바로 사라지고 Free로 바뀝니다.",
-      "final": "요청한 뒤에는 되돌릴 수 없습니다.",
-      "confirm": "환불 요청"
     },
     "deleteDialog": {
       "title": "카드를 삭제할까요?",
@@ -336,7 +319,7 @@
     "refund": "환불",
     "refundValue": "{status} · {origin}",
     "origin": {
-      "USER": "관리자 요청",
+      "USER": "문의 요청",
       "COMPENSATION": "자동 취소",
       "RECONCILIATION": "결제 확인 뒤 취소"
     },
@@ -347,7 +330,7 @@
     "nowRefunded": "환불되어 이 기간의 이용 권한이 없습니다.",
     "nowEnded": "이용 기간이 끝났습니다.",
     "nowRefunding": "결제 취소를 처리하고 있습니다. 취소가 끝나면 Free로 바뀝니다.",
-    "taxInvoice": "세금계산서가 필요하면 <link>문의·피드백</link>으로 알려 주세요.",
+    "support": "환불과 세금계산서는 <link>문의·피드백</link>으로 접수합니다.",
     "loadFailed": "결제 상세를 불러오지 못했습니다."
   },
   "history": {
