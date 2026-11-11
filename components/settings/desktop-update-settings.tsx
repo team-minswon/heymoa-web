@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsHeader, SETTINGS_CARD } from "./settings-layout";
+import { track, type WebEventProperties } from "@/lib/analytics/track";
 
 export function DesktopUpdateSettings() {
   const t = useTranslations("settings.appUpdates");
@@ -41,12 +42,22 @@ export function DesktopUpdateSettings() {
       unsubscribe();
     };
   }, []);
-  async function run(work: () => Promise<DesktopUpdateState>) {
+  async function run(
+    work: () => Promise<DesktopUpdateState>,
+    action: WebEventProperties["desktop_update_request_failed"]["action"]
+  ) {
     setBusy(true);
     setFailed(false);
     try {
-      setState(await work());
+      const next = await work();
+      setState(next);
+      if (action === "automatic")
+        track("desktop_update_automatic_changed", {
+          current_version: next.currentVersion,
+          enabled: next.automatic,
+        });
     } catch {
+      track("desktop_update_request_failed", { action });
       setFailed(true);
     } finally {
       setBusy(false);
@@ -71,6 +82,11 @@ export function DesktopUpdateSettings() {
                 href={DESKTOP_RELEASES_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() =>
+                  track("desktop_update_installer_clicked", {
+                    surface: "settings",
+                  })
+                }
               />
             }
           >
@@ -82,7 +98,9 @@ export function DesktopUpdateSettings() {
           {failed ? (
             <Button
               variant="outline"
-              onClick={() => bridge && void run(() => bridge.getUpdateState())}
+              onClick={() =>
+                bridge && void run(() => bridge.getUpdateState(), "state")
+              }
             >
               {t("retry")}
             </Button>
@@ -115,9 +133,18 @@ export function DesktopUpdateSettings() {
                 <Button
                   disabled={busy || !state.canRestart}
                   loading={busy}
-                  onClick={() =>
-                    bridge && void run(() => bridge.restartForUpdate())
-                  }
+                  onClick={() => {
+                    if (!bridge) return;
+                    track(
+                      "desktop_update_restart_requested",
+                      {
+                        current_version: state.currentVersion,
+                        target_version: state.version,
+                      },
+                      { send_instantly: true, transport: "sendBeacon" }
+                    );
+                    void run(() => bridge.restartForUpdate(), "restart");
+                  }}
                 >
                   {t("restart")}
                 </Button>
@@ -126,9 +153,13 @@ export function DesktopUpdateSettings() {
                   variant="outline"
                   disabled={busy || working || state.status === "unavailable"}
                   loading={state.status === "checking" || busy}
-                  onClick={() =>
-                    bridge && void run(() => bridge.checkForUpdates())
-                  }
+                  onClick={() => {
+                    if (!bridge) return;
+                    track("desktop_update_check_clicked", {
+                      current_version: state.currentVersion,
+                    });
+                    void run(() => bridge.checkForUpdates(), "check");
+                  }}
                 >
                   {state.status === "error" ? t("retry") : t("check")}
                 </Button>
@@ -161,7 +192,11 @@ export function DesktopUpdateSettings() {
                   state.status === "installing"
                 }
                 onCheckedChange={(enabled) =>
-                  bridge && void run(() => bridge.setAutomaticUpdates(enabled))
+                  bridge &&
+                  void run(
+                    () => bridge.setAutomaticUpdates(enabled),
+                    "automatic"
+                  )
                 }
               />
             </div>

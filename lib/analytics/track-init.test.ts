@@ -123,3 +123,30 @@ describe("새 행동 이벤트의 수집 거부", () => {
     }
   });
 });
+
+it("restart delivery uses an immediate beacon while retaining the opt-out gate", () => {
+  setAnalyticsOptOut(false);
+  posthog.__loaded = false;
+  posthog.capture.mockClear();
+  const options = { send_instantly: true, transport: "sendBeacon" as const };
+  track(
+    "desktop_update_restart_requested",
+    { current_version: "0.1.4" },
+    options
+  );
+  expect(posthog.capture).not.toHaveBeenCalled();
+  initAnalytics("phc_test");
+  expect(posthog.capture).toHaveBeenCalledWith(
+    "desktop_update_restart_requested",
+    { current_version: "0.1.4" },
+    options
+  );
+  setAnalyticsOptOut(true);
+  track(
+    "desktop_update_restart_requested",
+    { current_version: "0.1.4" },
+    options
+  );
+  expect(posthog.capture).toHaveBeenCalledOnce();
+  setAnalyticsOptOut(false);
+});

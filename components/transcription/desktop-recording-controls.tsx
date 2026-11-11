@@ -9,6 +9,7 @@ import type {
 import { useRecording } from "./recording-provider";
 import { DesktopActiveMeetings } from "./desktop-active-meetings";
 import { DesktopMeetingTimeline } from "./desktop-meeting-timeline";
+import { DesktopUpdateAnalytics } from "./desktop-update-analytics";
 
 /** Native receives only recording metadata; navigation and session ownership stay in the web. */
 export function DesktopRecordingControls() {
@@ -66,6 +67,7 @@ export function DesktopRecordingControls() {
   }, [bridge, activeWorkspaceId, activeNoteId, phase, router, stop]);
   return (
     <>
+      <DesktopUpdateAnalytics />
       <DesktopMeetingTimeline />
       <DesktopActiveMeetings />
     </>

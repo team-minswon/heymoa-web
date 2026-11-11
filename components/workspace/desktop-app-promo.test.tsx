@@ -164,6 +164,7 @@ describe("legacy desktop update notice", () => {
     cleanup();
     Reflect.deleteProperty(window, "heymoaDesktop");
     vi.restoreAllMocks();
+    track.mockClear();
   });
   function oldApp(version: string, platform = "Windows NT 10.0; Win64; x64") {
     desktop.value = true;
@@ -171,7 +172,9 @@ describe("legacy desktop update notice", () => {
     recording.buffer = null;
     Object.defineProperty(window, "heymoaDesktop", {
       configurable: true,
-      value: { getCapabilities: vi.fn(async () => ({ architecture: "arm64" })) },
+      value: {
+        getCapabilities: vi.fn(async () => ({ architecture: "arm64" })),
+      },
     });
     vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
       `Mozilla/5.0 (${platform}) HeyMoa/${version} Electron/44.5.1`
@@ -195,6 +198,16 @@ describe("legacy desktop update notice", () => {
         "https://github.com/team-minswon/homebrew-tap/releases/latest/download/HeyMoa-win-x64.exe"
       );
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(track).toHaveBeenCalledWith("desktop_update_notice_viewed", {
+        current_version: version,
+        platform: "windows",
+      });
+      const download = screen.getByRole("link", { name: "새 설치 파일 받기" });
+      download.addEventListener("click", (event) => event.preventDefault());
+      fireEvent.click(download);
+      expect(track).toHaveBeenCalledWith("desktop_update_installer_clicked", {
+        surface: "dashboard",
+      });
       expect(
         screen.queryByRole("complementary", { name: "데스크톱 앱 안내" })
       ).not.toBeInTheDocument();

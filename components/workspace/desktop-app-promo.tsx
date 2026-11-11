@@ -2,7 +2,7 @@
 
 import { CircleHelp, Monitor } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DesktopFoundationBridge } from "@heymoa/desktop-contracts";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/desktop/downloads";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { cn } from "@/lib/utils";
+import { track } from "@/lib/analytics/track";
 
 export function DesktopAppPromo() {
   const t = useTranslations("shell.desktopPromo");
@@ -85,13 +86,25 @@ function LegacyDesktopUpdateNotice() {
   const version = /\bHeyMoa\/(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)/.exec(ua)?.[1];
   const mac = /Macintosh|Mac OS X/.test(ua);
   const [macSupported, setMacSupported] = useState(false);
+  const viewed = useRef(false);
   useEffect(() => {
     if (!mac) return;
     const bridge = desktopAuthBridge() as DesktopFoundationBridge | undefined;
-    void bridge?.getCapabilities().then((value) => {
-      setMacSupported(value.architecture === "arm64");
-    }).catch(() => {});
+    void bridge
+      ?.getCapabilities()
+      .then((value) => {
+        setMacSupported(value.architecture === "arm64");
+      })
+      .catch(() => {});
   }, [mac]);
+  useEffect(() => {
+    if (viewed.current || (mac && !macSupported)) return;
+    viewed.current = true;
+    track("desktop_update_notice_viewed", {
+      current_version: version,
+      platform: mac ? "mac" : /Windows/.test(ua) ? "windows" : "other",
+    });
+  }, [mac, macSupported, ua, version]);
   if (mac && !macSupported) return null;
   const installer = /Windows/.test(ua)
     ? DESKTOP_INSTALLERS.windows[0]
@@ -122,7 +135,16 @@ function LegacyDesktopUpdateNotice() {
         className="h-10 shrink-0 rounded-chip bg-white whitespace-nowrap"
         render={
           busy ? undefined : (
-            <a href={href} target="_blank" rel="noopener noreferrer" />
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() =>
+                track("desktop_update_installer_clicked", {
+                  surface: "dashboard",
+                })
+              }
+            />
           )
         }
       >

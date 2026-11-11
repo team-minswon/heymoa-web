@@ -51,6 +51,14 @@ export type AnalyticsEvent =
   | "integration_connected"
   | "agent_connected"
   | "desktop_download_clicked"
+  | "desktop_update_check_clicked"
+  | "desktop_update_automatic_changed"
+  | "desktop_update_restart_requested"
+  | "desktop_update_restart_blocked"
+  | "desktop_update_request_failed"
+  | "desktop_update_status_changed"
+  | "desktop_update_notice_viewed"
+  | "desktop_update_installer_clicked"
   | "help_opened"
   | "feedback_opened"
   | "onboarding_dismissed"
@@ -108,6 +116,34 @@ type HelpLanguage = "ko" | "en";
 
 /** 새 행동의 속성은 정해진 종류·개수·워크스페이스 식별자만 받습니다. */
 export type WebEventProperties = {
+  desktop_update_check_clicked: { current_version: string };
+  desktop_update_automatic_changed: {
+    current_version: string;
+    enabled: boolean;
+  };
+  desktop_update_restart_requested: {
+    current_version: string;
+    target_version?: string;
+  };
+  desktop_update_restart_blocked: {
+    current_version: string;
+    target_version?: string;
+  };
+  desktop_update_request_failed: {
+    action: "check" | "automatic" | "restart" | "state";
+  };
+  desktop_update_status_changed: {
+    current_version: string;
+    target_version?: string;
+    status: import("@heymoa/desktop-contracts").DesktopUpdateState["status"];
+    automatic: boolean;
+    initial: boolean;
+  };
+  desktop_update_notice_viewed: {
+    current_version?: string;
+    platform: "windows" | "mac" | "other";
+  };
+  desktop_update_installer_clicked: { surface: "dashboard" | "settings" };
   browser_handoff_attempted: HandoffContext & {
     method: "app_scheme" | "android_intent" | "app_parameter" | "manual";
     trigger: "entry" | "login";
@@ -418,7 +454,10 @@ export function onTrack(listener: Listener) {
  * 많이 나는 일은 없다 — 넘치면 늦은 것부터 버려진다.
  */
 const BEFORE_INIT_LIMIT = 20;
-const beforeInit: Array<[AnalyticsEvent, Properties | undefined]> = [];
+type CaptureOptions = Parameters<typeof posthog.capture>[2];
+const beforeInit: Array<
+  [AnalyticsEvent, Properties | undefined, CaptureOptions?]
+> = [];
 type GoogleEvent =
   | "sign_up"
   | "first_recording"
@@ -474,14 +513,17 @@ export function track<Event extends AnalyticsEvent>(
   event: Event,
   properties?: Event extends keyof WebEventProperties
     ? WebEventProperties[Event]
-    : Properties
+    : Properties,
+  options?: CaptureOptions
 ) {
   // 듣는 쪽(체크리스트)은 이 기기 안의 일이라 거부해도 알린다. 바깥으로 보내는 것만 막는다.
   for (const listener of listeners) listener(event, properties);
   if (isAnalyticsOptedOut() || isTestWorkspace(properties)) return;
-  if (posthog.__loaded) posthog.capture(event, properties);
-  else if (beforeInit.length < BEFORE_INIT_LIMIT)
-    beforeInit.push([event, properties]);
+  if (posthog.__loaded) {
+    if (options) posthog.capture(event, properties, options);
+    else posthog.capture(event, properties);
+  } else if (beforeInit.length < BEFORE_INIT_LIMIT)
+    beforeInit.push([event, properties, options]);
   if (GA_EVENTS.has(event)) {
     sendGoogleEvent(event as GoogleEvent, properties);
   }
@@ -602,8 +644,9 @@ export function initAnalytics(apiKey: string) {
     identifyUser(pendingUserId);
     pendingUserId = undefined;
   }
-  for (const [event, properties] of beforeInit.splice(0)) {
-    posthog.capture(event, properties);
+  for (const [event, properties, options] of beforeInit.splice(0)) {
+    if (options) posthog.capture(event, properties, options);
+    else posthog.capture(event, properties);
   }
 }
 

@@ -69,11 +69,16 @@ test("an updatable native app never gets the legacy install notice", async ({
   await page.addInitScript(() => {
     Object.defineProperty(window, "heymoaDesktop", {
       value: {
-        getUpdateState() {},
+        getUpdateState: async () => ({
+          currentVersion: "0.1.4",
+          automatic: false,
+          status: "idle",
+          canRestart: false,
+        }),
         checkForUpdates() {},
         setAutomaticUpdates() {},
         restartForUpdate() {},
-        subscribeUpdates() {},
+        subscribeUpdates: () => () => {},
       },
     });
   });

@@ -12,10 +12,13 @@ import type {
   DesktopUpdateState,
 } from "@heymoa/desktop-contracts";
 import { DesktopUpdateSettings } from "./desktop-update-settings";
+const track = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics/track", () => ({ track }));
 
 afterEach(() => {
   cleanup();
   Reflect.deleteProperty(window, "heymoaDesktop");
+  track.mockClear();
 });
 function native(initial: Partial<DesktopUpdateState> = {}) {
   let state: DesktopUpdateState = {
@@ -70,6 +73,14 @@ it("manual checking downloads automatically and a stale-ready button stays block
   });
   fireEvent.click(screen.getByRole("button", { name: "재시작하여 업데이트" }));
   await waitFor(() => expect(f.bridge.restartForUpdate).toHaveBeenCalledOnce());
+  expect(track).toHaveBeenCalledWith("desktop_update_check_clicked", {
+    current_version: "0.1.4",
+  });
+  expect(track).toHaveBeenCalledWith(
+    "desktop_update_restart_requested",
+    { current_version: "0.1.4", target_version: "0.1.5" },
+    { send_instantly: true, transport: "sendBeacon" }
+  );
   view.unmount();
   expect(f.unsubscribe).toHaveBeenCalledOnce();
 });
@@ -83,6 +94,10 @@ it("automatic updates are off initially and user's selection is saved through th
     expect(f.bridge.setAutomaticUpdates).toHaveBeenCalledWith(true)
   );
   await waitFor(() => expect(toggle).toBeChecked());
+  expect(track).toHaveBeenCalledWith("desktop_update_automatic_changed", {
+    current_version: "0.1.4",
+    enabled: true,
+  });
 });
 it("older apps receive an official installer link rather than calling absent native methods", async () => {
   Object.defineProperty(window, "heymoaDesktop", {
@@ -107,4 +122,8 @@ it("a failed native request leaves a retry without claiming success", async () =
     "처리하지 못했습니다"
   );
   expect(screen.getByRole("button", { name: "업데이트 확인" })).toBeEnabled();
+  expect(track).toHaveBeenCalledWith("desktop_update_request_failed", {
+    action: "check",
+  });
+  expect(JSON.stringify(track.mock.calls)).not.toContain("offline");
 });
