@@ -21,7 +21,7 @@ import {
 
 const VIEWING_LABEL = "회의 보는 중";
 
-export function createRecordingTray(window: BrowserWindow, origin: string) {
+export function createRecordingTray(window: BrowserWindow, origin: string, onQuit?: () => boolean) {
   // BrowserWindow.webContents throws after closed; keep the live reference for cleanup.
   const contents = window.webContents;
   let allowQuit = false;
@@ -243,7 +243,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     },
     quit: () => {
       allowQuit = true;
-      app.quit();
+      if (!onQuit?.()) app.quit();
     },
     changed: refresh,
     schedule: (callback, ms) => {
@@ -375,6 +375,16 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   refresh();
   return {
     lifecycle,
+    cancelUpdate() {
+      if (disposed) return;
+      allowQuit = false;
+      lifecycle.resumeAfterUpdateFailure();
+    },
+    prepareForUpdate() {
+      if (disposed || !lifecycle.safeForUpdate()) return false;
+      allowQuit = true;
+      return true;
+    },
     refresh,
     reportTimeline(value: MeetingTimelineSnapshot | null) {
       // 녹음 중이 아니어도 받는다 — 내가 뷰어로 보는 진행 중 회의다(APP-1092).

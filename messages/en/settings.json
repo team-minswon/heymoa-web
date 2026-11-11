@@ -15,7 +15,8 @@
       "workspaceAgents": "MCP connections",
       "account": "My account",
       "notifications": "Notifications",
-      "agents": "My MCP connections"
+      "agents": "My MCP connections",
+      "appUpdates": "App updates"
     },
     "loadFailed": {
       "account": "Couldn't load your account",
@@ -461,6 +462,32 @@
       "overLimit": "Couldn't add {count} over the limit",
       "invalid": "Skipped {count} with an invalid format",
       "failed": "Couldn't send {count}. They're back in the input, so try again"
+    }
+  },
+  "appUpdates": {
+    "title": "App updates",
+    "description": "Keep HeyMoa up to date on this device.",
+    "upgradeRequired": "This app does not support in-app updates. Install the new version once to update from here in the future.",
+    "getApp": "Download the new installer",
+    "retry": "Try again",
+    "loading": "Checking app version",
+    "currentVersion": "Current version {version}",
+    "check": "Check for updates",
+    "restart": "Restart to update",
+    "downloadProgress": "Update download progress",
+    "automatic": "Automatic updates",
+    "automaticHint": "Automatically check for and download new versions. Updates are applied when you quit after recording and audio uploads finish. Turn this off to stop future automatic checks and installation on quit.",
+    "restartBlocked": "Restart is unavailable while recording or audio uploads are pending. Finish recording and uploading first. Restart is also blocked until the app can confirm the recording status.",
+    "failed": "The update request failed. Please try again.",
+    "status": {
+      "idle": "Checking for updates automatically downloads any new version.",
+      "checking": "Checking for a new version.",
+      "current": "You are up to date.",
+      "downloading": "Downloading version {version} · {percent}%",
+      "ready": "Version {version} is ready. Restart to apply it.",
+      "installing": "Restarting the app to apply the update.",
+      "error": "The update could not be downloaded. Check your internet connection and try again.",
+      "unavailable": "Updates cannot be installed in development mode."
     }
   }
 }

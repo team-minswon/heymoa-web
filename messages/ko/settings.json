@@ -15,7 +15,8 @@
       "workspaceAgents": "MCP 연결",
       "account": "내 계정",
       "notifications": "알림",
-      "agents": "내 MCP 연결"
+      "agents": "내 MCP 연결",
+      "appUpdates": "앱 업데이트"
     },
     "loadFailed": {
       "account": "계정 정보를 불러오지 못했습니다",
@@ -461,6 +462,32 @@
       "overLimit": "한도를 넘어 {count}개는 넣지 못했습니다",
       "invalid": "{count}개는 형식이 맞지 않아 뺐습니다",
       "failed": "{count}개는 보내지 못했습니다. 입력란에 남겼으니 다시 눌러 주세요"
+    }
+  },
+  "appUpdates": {
+    "title": "앱 업데이트",
+    "description": "이 기기에 설치된 HeyMoa 앱을 최신 상태로 유지합니다.",
+    "upgradeRequired": "이 앱은 앱 내 업데이트를 지원하지 않습니다. 새 설치 파일로 한 번 업데이트하면 이후에는 여기에서 업데이트할 수 있습니다.",
+    "getApp": "새 설치 파일 받기",
+    "retry": "다시 시도",
+    "loading": "앱 버전 확인 중",
+    "currentVersion": "현재 버전 {version}",
+    "check": "업데이트 확인",
+    "restart": "재시작하여 업데이트",
+    "downloadProgress": "업데이트 다운로드 진행률",
+    "automatic": "자동 업데이트",
+    "automaticHint": "새 버전을 자동으로 확인하고 다운로드합니다. 녹음과 오디오 전송이 끝난 뒤 앱을 정상 종료하면 적용됩니다. 끄면 이후 자동 확인과 종료 시 적용이 중단됩니다.",
+    "restartBlocked": "녹음 중이거나 전송 대기 중인 소리가 있으면 재시작할 수 없습니다. 녹음과 전송이 끝났는지 확인해 주세요. 상태를 확인할 수 없는 동안에도 재시작을 막습니다.",
+    "failed": "업데이트 요청을 처리하지 못했습니다. 다시 시도해 주세요.",
+    "status": {
+      "idle": "업데이트를 확인하면 새 버전이 자동으로 다운로드됩니다.",
+      "checking": "새 버전을 확인하고 있습니다.",
+      "current": "최신 버전을 사용하고 있습니다.",
+      "downloading": "버전 {version} 다운로드 중 · {percent}%",
+      "ready": "버전 {version}이 준비됐습니다. 재시작하면 적용됩니다.",
+      "installing": "업데이트를 적용하기 위해 앱을 재시작합니다.",
+      "error": "업데이트를 받지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.",
+      "unavailable": "개발 실행에서는 업데이트를 설치할 수 없습니다."
     }
   }
 }

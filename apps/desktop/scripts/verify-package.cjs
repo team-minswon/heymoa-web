@@ -14,12 +14,14 @@ for (const folder of releases) {
   );
   const files = listPackage(archive).map((file) => file.replaceAll("\\", "/"));
   const allowed =
-    /^\/(?:dist(?:\/(?:(?:main|preload|i18n|preferences|policy|security|recording-lifecycle|recording-tray|show-window|auth|auth-policy|auth-session|media-grant|capture-host|capture-protocol|capture-preload|capture-renderer|pcm-capture-worklet|meeting-timeline|meeting-popover|meeting-preload|meeting-renderer|onboarding|onboarding-preload|onboarding-renderer)\.js|(?:capture|meeting|onboarding)\.html|(?:meeting|onboarding)\.css|onboarding-logo\.png))?|assets(?:\/(?:trayTemplate(?:@2x)?|tray)\.png)?|package\.json|LICENSE\.txt)$/;
+    /^\/(?:dist(?:\/(?:(?:main|preload|updates|update-runtime|i18n|preferences|policy|security|recording-lifecycle|recording-tray|show-window|auth|auth-policy|auth-session|media-grant|capture-host|capture-protocol|capture-preload|capture-renderer|pcm-capture-worklet|meeting-timeline|meeting-popover|meeting-preload|meeting-renderer|onboarding|onboarding-preload|onboarding-renderer)\.js|(?:capture|meeting|onboarding)\.html|(?:meeting|onboarding)\.css|onboarding-logo\.png))?|assets(?:\/(?:trayTemplate(?:@2x)?|tray)\.png)?|package\.json|LICENSE\.txt)$/;
   for (const file of files)
     if (!allowed.test(file))
       throw new Error(`Unexpected packaged file: ${file}`);
   for (const file of [
     "/dist/main.js",
+    "/dist/updates.js",
+    "/dist/update-runtime.js",
     "/dist/i18n.js",
     "/dist/preferences.js",
     "/dist/preload.js",

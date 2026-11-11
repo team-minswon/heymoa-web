@@ -20,3 +20,16 @@ test("first launch follows OS language; explicit choices survive restart, concur
   await assert.rejects(saveLanguage(blocked, "en")); assert.equal(getLanguage(), "ko");
   await saveLanguage(dir, "en"); assert.equal(getLanguage(), "en");
 });
+
+test("automatic updates default off, survive restart, and do not overwrite language", async (t) => {
+  const { loadAutomaticUpdates, saveAutomaticUpdates } = require("../dist/preferences");
+  const dir = await mkdtemp(path.join(os.tmpdir(), "heymoa-updates-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  assert.equal(await loadAutomaticUpdates(dir), false);
+  await loadLanguage(dir, "ko");
+  await saveLanguage(dir, "en"); await saveAutomaticUpdates(dir, true);
+  assert.equal(await loadAutomaticUpdates(dir), true);
+  await loadLanguage(dir, "ko"); assert.equal(getLanguage(), "en");
+  await saveAutomaticUpdates(dir, false); assert.equal(await loadAutomaticUpdates(dir), false);
+  await writeFile(path.join(dir, "updates.json"), "bad json"); assert.equal(await loadAutomaticUpdates(dir), false);
+});

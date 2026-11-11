@@ -1,6 +1,6 @@
 {
   "name": "@heymoa/desktop",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "HeyMoa desktop remote web shell",
   "author": "HeyMoa",
@@ -13,12 +13,12 @@
     "dev": "pnpm build && electron .",
     "package:dir": "pnpm build && electron-builder --mac --dir --publish never && node scripts/verify-package.cjs",
     "icons:verify": "node scripts/verify-icons.mjs",
-    "package:mac:arm64": "pnpm build && pnpm icons:verify && electron-builder --mac dmg zip --arm64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs",
-    "package:win:x64": "pnpm build && pnpm icons:verify && electron-builder --win nsis --x64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs"
+    "package:mac:arm64": "pnpm build && pnpm icons:verify && electron-builder --mac dmg zip --arm64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs && node scripts/verify-update-feed.mjs release",
+    "package:win:x64": "pnpm build && pnpm icons:verify && electron-builder --win nsis --x64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs && node scripts/verify-update-feed.mjs release"
   },
   "devDependencies": {
-    "@heymoa/desktop-contracts": "workspace:*",
     "@electron/asar": "4.3.1",
+    "@heymoa/desktop-contracts": "workspace:*",
     "@types/node": "^20",
     "electron": "44.5.1",
     "electron-builder": "26.15.3",
@@ -101,6 +101,15 @@
         "ko_KR"
       ],
       "displayLanguageSelector": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/team-minswon/homebrew-tap/releases/latest/download"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
   }
 }

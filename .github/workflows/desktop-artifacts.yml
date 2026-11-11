@@ -95,6 +95,10 @@ jobs:
             if [[ "$attempt" -lt "$attempts" ]]; then sleep 20; fi
           done
           exit 1
+      - name: Smoke test packaged update download and recording guard
+        run: node apps/desktop/scripts/smoke-updates.cjs apps/desktop/release
+      - name: Test real update installation and profile preservation
+        run: node apps/desktop/scripts/test-update-install.mjs apps/desktop/release
       - name: Verify Developer ID signature and notarization
         if: startsWith(matrix.target, 'mac')
         run: |
@@ -132,3 +136,5 @@ jobs:
             apps/desktop/release/HeyMoa-*.zip
             apps/desktop/release/HeyMoa-*.exe
             apps/desktop/release/SHA256SUMS
+            apps/desktop/release/latest*.yml
+            apps/desktop/release/*.blockmap

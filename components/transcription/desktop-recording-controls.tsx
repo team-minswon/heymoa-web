@@ -42,10 +42,16 @@ export function DesktopRecordingControls() {
       microphone: phase === "idle" ? null : microphone,
       systemAudio: systemAudio ?? null,
     };
-    void bridge.reportRecording(summary).catch(() => {
-      // Main keeps its previous unsafe/unknown state when reporting fails.
-      console.warn("Desktop recording status could not be reported");
-    });
+    const report = () =>
+      void bridge.reportRecording(summary).catch(() => {
+        // Main keeps its previous unsafe/unknown state when reporting fails.
+        console.warn("Desktop recording status could not be reported");
+      });
+    report();
+    // Update installation requires a recent recording snapshot even while idle.
+    if (!bridge.getUpdateState) return;
+    const timer = window.setInterval(report, 5_000);
+    return () => window.clearInterval(timer);
   }, [bridge, phase, startedAt, pendingMs, microphone, systemAudio]);
 
   useEffect(() => {

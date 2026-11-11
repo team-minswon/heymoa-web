@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   DesktopFoundationBridge,
+  DesktopUpdateBridge,
+  DesktopUpdateState,
   DesktopAuthBridge,
   DesktopCaptureBridge,
   DesktopCapturePacket,
@@ -44,6 +46,24 @@ if (process.isMainFrame) {
         ipcRenderer.on("heymoa:capture-event", handler);
         return () =>
           ipcRenderer.removeListener("heymoa:capture-event", handler);
+      },
+      getUpdateState: () => ipcRenderer.invoke("heymoa:update-state"),
+      checkForUpdates: () => {
+        userGesture();
+        return ipcRenderer.invoke("heymoa:update-check");
+      },
+      setAutomaticUpdates: (enabled: boolean) => {
+        userGesture();
+        return ipcRenderer.invoke("heymoa:update-automatic", enabled);
+      },
+      restartForUpdate: () => {
+        userGesture();
+        return ipcRenderer.invoke("heymoa:update-restart");
+      },
+      subscribeUpdates: (listener: (state: DesktopUpdateState) => void) => {
+        const receive = (_event: Electron.IpcRendererEvent, state: DesktopUpdateState) => listener(state);
+        ipcRenderer.on("heymoa:update-state", receive);
+        return () => ipcRenderer.removeListener("heymoa:update-state", receive);
       },
       getCapabilities: (): ReturnType<
         DesktopFoundationBridge["getCapabilities"]
@@ -99,7 +119,7 @@ if (process.isMainFrame) {
         return () =>
           ipcRenderer.removeListener("heymoa:recording-action", receive);
       },
-    } satisfies DesktopFoundationBridge &
+    } satisfies DesktopFoundationBridge & DesktopUpdateBridge &
       DesktopAuthBridge &
       DesktopCaptureBridge)
   );

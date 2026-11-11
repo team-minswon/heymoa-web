@@ -47,6 +47,11 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
     return true;
   };
   app.isPackaged = true;
+  app.getVersion = () => "0.1.4";
+  let updateInstalls = 0;
+  const updater = new EventEmitter();
+  updater.checkForUpdates = async () => { updater.emit("checking-for-update"); updater.emit("update-available", { version: "0.1.5" }); return { downloadPromise: Promise.resolve().then(() => updater.emit("update-downloaded", { version: "0.1.5" })) }; };
+  updater.quitAndInstall = () => { updateInstalls++; app.quit(); };
   app.getLocale = () => options.locale ?? "ko-KR";
   app.setAsDefaultProtocolClient = () => true;
   let quits = 0,
@@ -213,7 +218,9 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
         clearInterval,
         require: (name) =>
           name === "node:fs/promises"
-            ? { ...require(name), readFile: async (file) => JSON.stringify(file.endsWith("preferences.json") ? { language: options.savedLanguage } : { version: 1, completed: introCompleted }), mkdir: async () => {}, writeFile: async () => {}, rename: async () => {} }
+            ? { ...require(name), readFile: async (file) => JSON.stringify(file.endsWith("preferences.json") ? { language: options.savedLanguage } : file.endsWith("updates.json") ? { automatic: options.automatic } : { version: 1, completed: introCompleted }), mkdir: async () => {}, writeFile: async () => {}, rename: async () => {} }
+          : name === "./update-runtime"
+            ? { autoUpdater: updater }
           : name === "electron"
             ? electron
             : name.startsWith(".")
@@ -240,10 +247,13 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
     for (const current of windows) {
       if (!current.isDestroyed()) current.emit("closed");
     }
+    app.emit("will-quit", {});
     app.removeAllListeners();
   });
   return {
     app,
+    updater,
+    get updateInstalls() { return updateInstalls; },
     windows,
     invoke,
     requests,
@@ -423,4 +433,34 @@ test("upgrade keeps an existing Korean web choice on English OS; explicit onboar
   await intro.invoke("heymoa:onboarding", "complete"); await tick();
   assert.equal(options.lastCookie.value, "en");
   assert.equal(intro.windows[1].loadedURL, "https://heymoa.app/en");
+});
+
+test("update IPC admits only the trusted main frame and rechecks active/pending/unknown state before installation", async (t) => {
+  const f = await fixture(t);
+  for (const [channel, payload] of [["heymoa:update-state"], ["heymoa:update-check"], ["heymoa:update-restart"], ["heymoa:update-automatic", true]]) {
+    assert.throws(() => f.invoke(channel, payload, { sender: {}, senderFrame: null }), /UNTRUSTED/);
+  }
+  assert.throws(() => f.invoke("heymoa:update-automatic", "true"), /INVALID/);
+  assert.throws(() => f.invoke("heymoa:update-check", { url: "https://evil.test" }), /INVALID/);
+  f.invoke("heymoa:update-check"); await tick();
+  assert.equal(f.invoke("heymoa:update-state").status, "ready");
+  f.invoke("heymoa:update-restart"); assert.equal(f.updateInstalls, 0);
+  for (const summary of [{ ...idle, phase: "recording" }, { ...idle, phase: "failed", pendingMs: 10 }]) {
+    f.invoke("heymoa:recording-summary", summary); f.invoke("heymoa:update-restart"); assert.equal(f.updateInstalls, 0);
+  }
+  f.invoke("heymoa:recording-summary", idle);
+  f.windows[0].webContents.emit("render-process-gone");
+  f.invoke("heymoa:update-restart"); assert.equal(f.updateInstalls, 0);
+  f.invoke("heymoa:recording-summary", idle); f.invoke("heymoa:update-restart");
+  assert.equal(f.updateInstalls, 1); assert.equal(f.quits, 1);
+});
+
+test("opt-in automatic update applies on safe normal quit; confirmed audio discard never installs an update", async (t) => {
+  const f = await fixture(t, true, true, { automatic: true }); await tick();
+  f.invoke("heymoa:recording-summary", idle); f.app.quit(); await tick();
+  assert.equal(f.updateInstalls, 1);
+  const unsafe = await fixture(t, true, true, { automatic: true }); await tick();
+  unsafe.invoke("heymoa:recording-summary", { ...idle, phase: "recording" });
+  unsafe.answer = 2; unsafe.app.quit(); await tick();
+  assert.equal(unsafe.updateInstalls, 0);
 });

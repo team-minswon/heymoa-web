@@ -111,3 +111,17 @@ describe("desktop recording controls", () => {
     expect(bridge.unsubscribe).toHaveBeenCalledTimes(1);
   });
 });
+
+it("update-capable apps receive a recording heartbeat and unmount stops it", () => {
+  vi.useFakeTimers();
+  try {
+    const bridge = native();
+    Object.assign((window as unknown as { heymoaDesktop: object }).heymoaDesktop, { getUpdateState: vi.fn() });
+    const view = render(<DesktopRecordingControls />);
+    expect(bridge.reportRecording).toHaveBeenCalledOnce();
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(bridge.reportRecording).toHaveBeenCalledTimes(2);
+    view.unmount(); act(() => vi.advanceTimersByTime(10_000));
+    expect(bridge.reportRecording).toHaveBeenCalledTimes(2);
+  } finally { vi.useRealTimers(); }
+});

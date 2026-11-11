@@ -118,7 +118,7 @@ If you choose **[Quit app]** from the menu or press `kbd:⌘Q` on Mac while reco
 
 ## Updating to a new version {#update}
 
-There are no automatic updates. Check the [official release page](https://github.com/team-minswon/homebrew-tap/releases) for new versions. Most screens and features change along with the web right away. However, the app's own features, such as sound recording and the menu bar, change only when you install a new version.
+Go to Settings → App updates to check for and download a new version, then choose Restart to update. Turn on Automatic updates to download new versions automatically and apply them when you quit after recording and audio uploads finish. Older apps without this menu need a one-time manual installation from the [official release page](https://github.com/team-minswon/homebrew-tap/releases). Most screens and features change along with the web right away. However, the app's own features, such as sound recording and the menu bar, change only when you install a new version.
 
 1. **Pause recording**
    Don't update while recording.
@@ -178,7 +178,7 @@ Problems like the microphone not being found or the live transcript not connecti
 No. Closing the window doesn't quit the app, and recording continues. To open it again, click the HeyMoa icon in the menu bar or the notification area of the taskbar.
 
 ### Does the app update automatically?
-No. There are no automatic updates. When a new version comes out, install it yourself.
+Automatic updates are off by default. Enable them in Settings → App updates to automatically download new versions and apply them when you safely quit. Restarting to update is blocked while recording or audio uploads are pending.
 
 ### Can I use it on an Intel Mac?
 No. On Mac, only Apple Silicon is supported. You can use the web service in your browser instead. Only your microphone is recorded there.

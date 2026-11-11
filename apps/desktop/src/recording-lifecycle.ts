@@ -44,6 +44,7 @@ type Dependencies = {
 /** Native state follows validated web summaries; it never marks a stop request as completion. */
 export class RecordingLifecycle {
   private summary: RecordingSummary | null = null;
+  private summaryAt = 0;
   // Remote media permissions are denied: before the first native request or
   // unsafe web report, an unavailable document cannot own captured audio.
   private activityObserved = false;
@@ -58,6 +59,7 @@ export class RecordingLifecycle {
     if (this.disposed) return;
     const wasRecording = this.isRecording();
     this.summary = { ...summary };
+    this.summaryAt = this.deps.now();
     if (ACTIVE.has(summary.phase) || summary.pendingMs > 0)
       this.activityObserved = true;
     this.deps.changed();
@@ -90,6 +92,13 @@ export class RecordingLifecycle {
         ? !this.activityObserved
         : !ACTIVE.has(this.summary.phase) && this.summary.pendingMs === 0)
     );
+  }
+  resumeAfterUpdateFailure(): void {
+    // A safe normal quit can be deferred by the updater and then fail before the app exits.
+    this.disposed = false;
+  }
+  safeForUpdate(): boolean {
+    return this.summary !== null && this.deps.now() - this.summaryAt < 15_000 && this.safe();
   }
   isRecording(): boolean {
     return this.summary?.phase === "recording";

@@ -449,3 +449,25 @@ test("popover and context stop stay in the background while open and failure rev
   f.popoverAction("stop");
   assert.equal(f.shows, 2);
 });
+
+test("update restart cannot bypass active, pending, unknown or stale state, but permits a drained fresh snapshot", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  assert.equal(f.adapter.prepareForUpdate(), false);
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" }); assert.equal(f.adapter.prepareForUpdate(), false);
+  f.adapter.lifecycle.update({ ...idle, phase: "failed", pendingMs: 100 }); assert.equal(f.adapter.prepareForUpdate(), false);
+  f.adapter.lifecycle.update(idle); f.advance(16_000); assert.equal(f.adapter.prepareForUpdate(), false);
+  f.adapter.lifecycle.update(idle); f.contents.emit("render-process-gone"); assert.equal(f.adapter.prepareForUpdate(), false);
+  f.adapter.lifecycle.update(idle); assert.equal(f.adapter.prepareForUpdate(), true);
+  let blocked = false; f.window.emit("close", { preventDefault() { blocked = true; } });
+  assert.equal(blocked, false);
+});
+
+test("failed update restores quit protection and allows a later safe normal quit", async (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.adapter.lifecycle.update(idle); assert.equal(f.adapter.prepareForUpdate(), true);
+  f.adapter.cancelUpdate();
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" }); f.app.quit();
+  await new Promise((resolve) => setImmediate(resolve)); assert.equal(f.quits, 0);
+  f.adapter.lifecycle.update(idle); await f.adapter.lifecycle.requestQuit();
+  assert.equal(f.quits, 1);
+});

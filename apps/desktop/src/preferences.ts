@@ -32,3 +32,18 @@ export function saveLanguage(directory: string, language: Language): Promise<voi
   saving = next;
   return next;
 }
+
+export async function loadAutomaticUpdates(directory: string): Promise<boolean> {
+  try {
+    const saved = JSON.parse(await readFile(path.join(directory, "updates.json"), "utf8"));
+    return saved?.automatic === true;
+  } catch {
+    return false;
+  }
+}
+export async function saveAutomaticUpdates(directory: string, automatic: boolean): Promise<void> {
+  await mkdir(directory, { recursive: true });
+  const file = path.join(directory, "updates.json");
+  await writeFile(file + ".tmp", JSON.stringify({ automatic }), { mode: 0o600 });
+  await rename(file + ".tmp", file);
+}

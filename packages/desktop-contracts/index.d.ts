@@ -27,6 +27,7 @@ export type DesktopCapabilities = {
   login?: boolean;
   connectionOAuth?: boolean;
   meetingTimeline?: boolean;
+  updates?: boolean;
 };
 
 /** Display-only, bounded snapshot. No cookies, URLs, HTML, PCM or API credentials. */
@@ -84,6 +85,30 @@ export type DesktopCapturePacket =
     }
   | { kind: "error"; id: string; code: string };
 
+export type DesktopUpdateState = {
+  currentVersion: string;
+  automatic: boolean;
+  status:
+    | "idle"
+    | "checking"
+    | "current"
+    | "downloading"
+    | "ready"
+    | "installing"
+    | "error"
+    | "unavailable";
+  version?: string;
+  percent?: number;
+  canRestart: boolean;
+};
+export type DesktopUpdateBridge = {
+  getUpdateState(): Promise<DesktopUpdateState>;
+  checkForUpdates(): Promise<DesktopUpdateState>;
+  setAutomaticUpdates(enabled: boolean): Promise<DesktopUpdateState>;
+  restartForUpdate(): Promise<DesktopUpdateState>;
+  subscribeUpdates(listener: (state: DesktopUpdateState) => void): () => void;
+};
+
 export type DesktopFoundationBridge = {
   openSitePage?: (href: string) => Promise<void>;
   reportLanguage?: (language: "ko" | "en") => Promise<void>;
@@ -118,4 +143,5 @@ export type DesktopCaptureBridge = {
 };
 export type DesktopBridge = DesktopFoundationBridge &
   DesktopAuthBridge &
+  Partial<DesktopUpdateBridge> &
   Partial<DesktopCaptureBridge>;

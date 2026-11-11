@@ -1,5 +1,7 @@
 import { getLanguage, isLanguage, t } from "./i18n";
-import { loadLanguage, saveLanguage } from "./preferences";
+import { loadLanguage, saveLanguage, loadAutomaticUpdates, saveAutomaticUpdates } from "./preferences";
+import { autoUpdater } from "./update-runtime";
+import { DesktopUpdates } from "./updates";
 import { app, BrowserWindow, dialog, ipcMain, session, shell, Menu } from "electron";
 import path from "node:path";
 import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
@@ -50,6 +52,7 @@ let origin: string;
 let media: CaptureHost | null = null;
 let recording: ReturnType<typeof createRecordingTray> | null = null;
 let auth: DesktopAuthBroker | null = null;
+let updates: DesktopUpdates | null = null;
 let startupCallback: string | null = null;
 function receiveCallback(value: string) {
   if (!nativeCallback(value)) return;
@@ -125,7 +128,7 @@ function createWindow(url: string) {
   window = current;
   const contents = current.webContents;
   secureContents(contents, origin, openExternal);
-  recording = createRecordingTray(current, origin);
+  recording = createRecordingTray(current, origin, () => updates?.onQuit() ?? false);
   contents.on("did-start-navigation", (event) => {
     if (
       event.isMainFrame &&
@@ -232,6 +235,25 @@ app
       app.setAsDefaultProtocolClient("app.heymoa", process.execPath, [
         path.resolve(process.argv[1]),
       ]);
+    const safeForUpdate = () => Boolean(
+      window && !window.isDestroyed() && isTrustedUrl(window.webContents.getURL(), origin) &&
+      !media && recording?.lifecycle.safeForUpdate()
+    );
+    updates = new DesktopUpdates(autoUpdater, {
+      currentVersion: app.getVersion(),
+      available: app.isPackaged,
+      automatic: await loadAutomaticUpdates(userDataPath),
+      safe: safeForUpdate,
+      prepareInstall: () => safeForUpdate() && (recording?.prepareForUpdate() ?? false),
+      cancelInstall: () => recording?.cancelUpdate(),
+      saveAutomatic: (enabled) => saveAutomaticUpdates(userDataPath, enabled),
+      changed: (state) => {
+        if (window && !window.isDestroyed() && isTrustedUrl(window.webContents.getURL(), origin))
+          window.webContents.send("heymoa:update-state", state);
+      },
+    });
+    updates.start();
+    app.on("will-quit", () => updates?.dispose());
     function authorize(event: Electron.IpcMainInvokeEvent) {
       if (
         !window ||
@@ -259,7 +281,30 @@ app
         login: true,
         connectionOAuth: true,
         meetingTimeline: true,
+        updates: true,
       } satisfies DesktopCapabilities;
+    });
+    ipcMain.handle("heymoa:update-state", (event, payload: unknown) => {
+      authorize(event);
+      if (!emptyRequest(payload)) throw new Error("INVALID_UPDATE_REQUEST");
+      return updates!.state();
+    });
+    ipcMain.handle("heymoa:update-check", (event, payload: unknown) => {
+      authorize(event);
+      if (!emptyRequest(payload)) throw new Error("INVALID_UPDATE_REQUEST");
+      // Results and progress arrive over the subscription, without holding the UI for the whole download.
+      void updates!.check();
+      return updates!.state();
+    });
+    ipcMain.handle("heymoa:update-automatic", (event, payload: unknown) => {
+      authorize(event);
+      if (typeof payload !== "boolean") throw new Error("INVALID_UPDATE_REQUEST");
+      return updates!.setAutomatic(payload);
+    });
+    ipcMain.handle("heymoa:update-restart", (event, payload: unknown) => {
+      authorize(event);
+      if (!emptyRequest(payload)) throw new Error("INVALID_UPDATE_REQUEST");
+      return updates!.restart();
     });
     ipcMain.handle("heymoa:auth-login", (event, payload: unknown) => {
       authorize(event);
@@ -293,6 +338,7 @@ app
       const summary = recordingSummary(payload);
       // 녹음이 끝나며 지우는 일은 트레이가 상태 전이에서 한다. 뷰어 타임라인은 여기서 지우지 않는다.
       recording?.lifecycle.update(summary);
+      updates?.publish();
     });
     ipcMain.handle(MEETING_CHANNELS.report, (event, payload: unknown) => {
       authorize(event);
@@ -306,6 +352,7 @@ app
       authorize(event);
       if (!emptyRequest(payload) || !event.senderFrame)
         throw new Error("INVALID_CAPTURE_REQUEST");
+      if (updates?.state().status === "installing") throw new Error("UPDATE_INSTALLING");
       if (media) throw new Error("CAPTURE_ALREADY_REQUESTED");
       recording?.lifecycle.captureRequested();
       const host = new CaptureHost(event.sender, event.senderFrame, () => {

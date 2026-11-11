@@ -19,7 +19,7 @@
 
 **순서가 중요한 이유**: 고정 파일 업로드와 검증 전에 웹을 전환하면 아직 없는 파일을 내려받게 됩니다. 이후 릴리스도 모든 필수 파일을 붙인 뒤 정식 공개합니다.
 
-릴리즈 본문에 적을 것: 지원 환경(macOS 14.2 이상, Apple Silicon), Mac은 서명·공증됨, Windows는 서명 없음(포함하지 않으면 그렇다고), SHA256SUMS 확인 방법, 알려진 제한(자동 업데이트 없음, 녹음 중 업데이트 금지).
+릴리즈 본문에 적을 것: 지원 환경(macOS 14.2 이상, Apple Silicon), Mac은 서명·공증됨, Windows는 서명 없음(포함하지 않으면 그렇다고), SHA256SUMS 확인 방법, 업데이트 방법(0.1.4부터 설정의 앱 업데이트 지원, 자동 업데이트는 기본 꺼짐, 녹음 중 설치 차단).
 
 **서명 빌드 요구 사항**: 저장소 secret `MAC_CERT_P12_BASE64`, `MAC_CERT_PASSWORD`, `APPLE_API_KEY_P8_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`. 하나라도 비면 Mac job이 서명 없이 만들지 않고 실패합니다. 공증이 길어져도 job은 40분에서 멈춥니다. Apple 서버 연결이 끊겨 staple이 실패하면 패키징을 최대 3번 다시 합니다. 첫 계정은 공증이 30분 넘게 걸린 적이 있고, 이후 제출은 4분이었습니다.
 
@@ -68,7 +68,7 @@ Windows NSIS는 실제 Windows runner가 기본입니다. macOS에서 교차 빌
 5. `node apps/desktop/scripts/release-manifest.mjs OWNER/REPO VERSION OUTPUT_DIR`로 이미 공개된 `desktop-vVERSION`의 Mac·Windows 파일을 함께 확인합니다. 기존 `--include-windows` 인자는 호환을 위해 허용하지만 생략해도 Windows를 필수로 검증합니다. 버전별 파일·고정 파일·SHA256SUMS가 없거나 draft·download hash/size·고정 파일의 원본 해시가 불일치하면 출력하지 않습니다. 다운로드는 streaming hash를 사용해 설치 파일 전체를 메모리에 저장하지 않습니다.
 6. 공개된 최신 릴리스와 웹 고정 주소를 확인합니다. downloads.json은 공개 파일 검증 결과이며 웹에 버전별 주소를 복사하지 않습니다. tap 저장소의 `scripts/update-cask.mjs VERSION`이 공개된 Apple Silicon Mac ZIP을 다시 검증해 Casks/heymoa.rb를 만듭니다. 단일 heymoa token을 사용해 중복 앱 ID·protocol 충돌을 피합니다. brew audit·실제 설치를 확인한 뒤 안내합니다. 가짜 다운로드를 만들지 않습니다.
 
-Release manifest 도구는 파일 존재·해시·크기만 확인하고 서명 상태는 보지 않습니다. 서명 검증은 위 「서명 확인 명령」으로 따로 합니다. Windows 코드 서명을 도입할 때는 OS 검증 증거와 manifest의 서명 상태를 함께 확장해야 합니다. 자동 업데이트는 아직 구성하지 않습니다. 녹음 중 앱 교체·재시작은 피하고, 종료 후 검증된 새 설치 파일로 교체합니다.
+Release manifest 도구는 파일 존재·해시·크기만 확인하고 서명 상태는 보지 않습니다. 서명 검증은 위 「서명 확인 명령」으로 따로 합니다. Windows 코드 서명을 도입할 때는 OS 검증 증거와 manifest의 서명 상태를 함께 확장해야 합니다. 0.1.4부터 설정 > 앱 업데이트에서 확인·자동 다운로드·재시작 설치를 지원합니다. 자동 업데이트를 켜면 실행 시와 4시간마다 확인하고 안전한 정상 종료 시 적용합니다. 기본값은 꺼짐이며 기기별 `updates.json`에 저장합니다. 녹음·미전송 오디오·상태 미확인 또는 15초 이상 지난 상태에서는 업데이트 설치를 차단합니다. 0.1.3 이하 사용자는 최초 한 번 새 설치 파일로 교체합니다.
 
 ## Mac 설치
 
@@ -88,3 +88,12 @@ Mac에서 Info.plist의 CFBundleIconFile, 번들의 ICNS byte 일치, 실제 Doc
 - [electron-builder 플랫폼 빌드](https://www.electron.build/v26/docs/features/multi-platform-build/)
 - [GitHub runner architecture](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)
 - [Homebrew cask contract](https://docs.brew.sh/Cask-Cookbook)
+
+## 앱 내 업데이트 배포
+
+- 공개 배포 저장소 `team-minswon/homebrew-tap`의 latest 정식 릴리스가 업데이트 피드입니다. 앱에 토큰을 넣지 않습니다.
+- Mac ARM DMG·ZIP, Windows x64 NSIS EXE, 버전별 ZIP·EXE의 `.blockmap`, `latest-mac.yml`, `latest.yml`, 고정 다운로드 파일과 SHA256SUMS를 같은 draft에 함께 올립니다.
+- `node apps/desktop/scripts/verify-update-feed.mjs <다운로드한 산출물 폴더>`로 버전·크기·SHA512·Mac ZIP·blockmap 존재를 확인합니다. 두 OS 산출물과 메타데이터를 모두 검증한 뒤 정식 공개합니다.
+- `autoInstallOnAppQuit`는 꺼 두고 모든 설치를 네이티브 녹음 보호 검사로 보냅니다. 수동 재시작과 자동 업데이트의 정상 종료 설치 모두 같은 검사를 사용합니다. 소리를 버리는 종료는 업데이트 설치를 허용하지 않습니다.
+- 자동 업데이트를 끄면 새 자동 확인과 종료 시 설치를 멈춥니다. 이미 시작한 다운로드는 마치며 수동 재시작은 가능합니다. 다운로드 실패는 설정에서 다시 시도합니다.
+- 릴리스 전 Mac과 Windows 설치 앱에서 설정 확인·다운로드·재실행, 녹음·미전송 오디오 시 설치 차단을 확인합니다. 빌드 성공과 단위 테스트는 실제 OS 업데이트 수용을 대신하지 않습니다.

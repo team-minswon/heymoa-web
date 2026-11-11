@@ -242,3 +242,18 @@ test("elapsed time and input failures reflect state without copying private meet
   });
   assert.equal(f.model.safe(), false);
 });
+
+test("updates require a fresh, known, drained recording snapshot and no native capture", () => {
+  let now = 100;
+  const f = new RecordingLifecycle({ now: () => now, confirm: async () => "cancel", action() {}, quit() {}, changed() {}, notifyWaiting() {}, schedule: () => () => {} });
+  assert.equal(f.safeForUpdate(), false);
+  for (const phase of ["requesting-permission", "connecting", "recording", "stopping"]) {
+    f.update({ ...idle, phase }); assert.equal(f.safeForUpdate(), false);
+  }
+  f.update({ ...idle, phase: "failed", pendingMs: 100 }); assert.equal(f.safeForUpdate(), false);
+  f.update(idle); assert.equal(f.safeForUpdate(), true);
+  now += 15_000; assert.equal(f.safeForUpdate(), false);
+  f.update(idle); f.captureRequested(); f.update(idle); assert.equal(f.safeForUpdate(), false);
+  f.captureDisposed(); assert.equal(f.safeForUpdate(), true);
+  f.unavailable(); assert.equal(f.safeForUpdate(), false);
+});

@@ -147,6 +147,7 @@ export type WebEventProperties = {
       | "guests"
       | "terms"
       | "integrations"
+      | "appUpdates"
       | "workspaceAgents"
       | "agents"
       | "notifications";

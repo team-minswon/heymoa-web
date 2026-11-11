@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
 import {
   BellRing,
+  Download,
   BookA,
   Bot,
   Languages,
@@ -24,6 +25,8 @@ import {
 } from "@/components/settings/account-settings-form";
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
 import { GuestsSettings } from "@/components/settings/guests-settings";
+import { DesktopUpdateSettings } from "@/components/settings/desktop-update-settings";
+import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { LanguageSettings } from "@/components/settings/language-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
 import {
@@ -89,6 +92,7 @@ const SETTINGS_GROUPS: {
       { key: "language", Icon: Languages },
       { key: "notifications", Icon: BellRing },
       { key: "agents", Icon: Bot },
+      { key: "appUpdates", Icon: Download },
     ],
   },
 ];
@@ -112,6 +116,7 @@ function SettingsSections({
   onLockChange: (locked: boolean) => void;
 }) {
   const t = useTranslations("settings.nav");
+  const desktop = useDesktopApp();
   return (
     <div className="grid h-full min-h-0 bg-[var(--el-canvas-soft)] md:grid-cols-[220px_1fr]">
       <nav
@@ -119,7 +124,9 @@ function SettingsSections({
         className="border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
       >
         {/* 제품 면에 대문자 키커를 두지 않는다 — 세리프 제목만 남긴다. (FORM SPEC) */}
-        <p className="mb-7 text-3xl font-light tracking-[-0.03em]">{t("title")}</p>
+        <p className="mb-7 text-3xl font-light tracking-[-0.03em]">
+          {t("title")}
+        </p>
         {/* 워크스페이스 것과 내 계정 것이 섞여 있으면 무엇이 팀에 영향을 주는지 안 읽힌다. */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-1">
           {SETTINGS_GROUPS.map((group) => (
@@ -137,35 +144,40 @@ function SettingsSections({
               >
                 {t(`groups.${group.key}`)}
               </p>
-              {group.items.map(({ key, Icon }) => (
-                <Button
-                  key={key}
-                  type="button"
-                  variant="ghost"
-                  disabled={locked && section !== key}
-                  onClick={() => {
-                    if (section === key) return;
-                    track("settings_tab_opened", {
-                      workspace_id: workspaceId,
-                      section: key,
-                      from: "settings",
-                    });
-                    onSectionChange(key);
-                  }}
-                  aria-current={section === key ? "page" : undefined}
-                  // 회색 바탕이라 선택(hairline)과 호버(surface-strong)를 한 단계씩 벌린다. 같은 색의 농도만 바꾸면
-                  // (APP-1195) 바탕과 4단계 차이라 눈으로 갈리지 않았다(APP-1205).
-                  className={cn(
-                    "h-10 justify-start gap-2.5 rounded-block px-3",
-                    section === key
-                      ? "bg-[var(--el-hairline)] font-medium hover:bg-[var(--el-hairline)]"
-                      : "hover:bg-[var(--el-surface-strong)]"
-                  )}
-                >
-                  <Icon className="size-4 text-[var(--el-muted)]" aria-hidden />
-                  {key === "language" ? LANGUAGE_LABEL : t(`items.${key}`)}
-                </Button>
-              ))}
+              {group.items
+                .filter(({ key }) => key !== "appUpdates" || desktop === true)
+                .map(({ key, Icon }) => (
+                  <Button
+                    key={key}
+                    type="button"
+                    variant="ghost"
+                    disabled={locked && section !== key}
+                    onClick={() => {
+                      if (section === key) return;
+                      track("settings_tab_opened", {
+                        workspace_id: workspaceId,
+                        section: key,
+                        from: "settings",
+                      });
+                      onSectionChange(key);
+                    }}
+                    aria-current={section === key ? "page" : undefined}
+                    // 회색 바탕이라 선택(hairline)과 호버(surface-strong)를 한 단계씩 벌린다. 같은 색의 농도만 바꾸면
+                    // (APP-1195) 바탕과 4단계 차이라 눈으로 갈리지 않았다(APP-1205).
+                    className={cn(
+                      "h-10 justify-start gap-2.5 rounded-block px-3",
+                      section === key
+                        ? "bg-[var(--el-hairline)] font-medium hover:bg-[var(--el-hairline)]"
+                        : "hover:bg-[var(--el-surface-strong)]"
+                    )}
+                  >
+                    <Icon
+                      className="size-4 text-[var(--el-muted)]"
+                      aria-hidden
+                    />
+                    {key === "language" ? LANGUAGE_LABEL : t(`items.${key}`)}
+                  </Button>
+                ))}
             </div>
           ))}
         </div>
@@ -186,6 +198,8 @@ function SettingsSections({
           </DataBoundary>
         ) : section === "language" ? (
           <LanguageSettings />
+        ) : section === "appUpdates" ? (
+          <DesktopUpdateSettings />
         ) : section === "notifications" ? (
           <DataBoundary
             fallback={<NotificationSettingsSkeleton />}

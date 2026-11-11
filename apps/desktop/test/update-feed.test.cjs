@@ -1,0 +1,24 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const { mkdtemp, writeFile, rm } = require("node:fs/promises");
+const { createHash } = require("node:crypto");
+const path = require("node:path");
+const os = require("node:os");
+test("update feeds require the matching version, bundled ZIP/blockmap and verified asset bytes", async (t) => {
+  const { verifyUpdateFeed } = await import("../scripts/verify-update-feed.mjs");
+  const dir = await mkdtemp(path.join(os.tmpdir(), "heymoa-update-feed-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await assert.rejects(verifyUpdateFeed(dir, "0.1.4"), /Missing/);
+  const name = "HeyMoa-0.1.4-mac-arm64.zip", bytes = Buffer.from("fixture");
+  const data = { version: "0.1.4", files: [{ url: name, size: bytes.length, sha512: createHash("sha512").update(bytes).digest("base64") }] };
+  const save = () => writeFile(path.join(dir, "latest-mac.yml"), JSON.stringify(data));
+  await save(); await writeFile(path.join(dir, name), bytes);
+  await assert.rejects(verifyUpdateFeed(dir, "0.1.4"), /blockmap/);
+  await writeFile(path.join(dir, name + ".blockmap"), "fixture");
+  assert.deepEqual(await verifyUpdateFeed(dir, "0.1.4"), ["latest-mac.yml"]);
+  await assert.rejects(verifyUpdateFeed(dir, "0.1.5"), /Invalid/);
+  data.files[0].sha512 = "invalid"; await save();
+  await assert.rejects(verifyUpdateFeed(dir, "0.1.4"), /checksum/);
+  data.files[0].url = "https://foreign.test/installer.zip"; await save();
+  await assert.rejects(verifyUpdateFeed(dir, "0.1.4"), /path/);
+});

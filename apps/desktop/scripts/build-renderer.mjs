@@ -30,3 +30,7 @@ await build({ entryPoints: ["renderer/onboarding.ts"], outfile: "dist/onboarding
 await copyFile("renderer/onboarding.html", "dist/onboarding.html");
 await copyFile("renderer/onboarding.css", "dist/onboarding.css");
 await copyFile("build/icons/icon-mac.png", "dist/onboarding-logo.png");
+
+// Bundle updater dependencies into the allowlisted native module; no node_modules in the installer.
+await build({ entryPoints: ["src/update-runtime.ts"], outfile: "dist/update-runtime.js", bundle: true,
+  platform: "node", format: "cjs", target: "node22", external: ["electron"] });

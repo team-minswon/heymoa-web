@@ -120,7 +120,8 @@ test("신규 가입은 체크하고 로그인하면 동의 기록이 서버에 �
 
   await agreeAndLogin(await openLoginModal(page));
 
-  await expect(page).toHaveURL(WORKSPACE);
+  // 개발 서버의 첫 제품 경로 컴파일까지 기다립니다. 동의 저장은 아래에서 따로 검증합니다.
+  await expect(page).toHaveURL(WORKSPACE, { timeout: 15_000 });
   const log = await fakeLog(page);
   expect(log.google).toBe(1);
   expect(recordedVersions(log)).toEqual([

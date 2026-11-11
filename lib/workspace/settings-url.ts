@@ -17,6 +17,7 @@ export const SETTINGS_SECTIONS = [
   "workspaceAgents",
   "agents",
   "notifications",
+  "appUpdates",
 ] as const;
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
