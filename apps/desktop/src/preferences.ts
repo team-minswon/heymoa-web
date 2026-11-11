@@ -99,7 +99,7 @@ export async function loadPanelPreferences(
       opacity:
         typeof saved?.opacity === "number" &&
         Number.isFinite(saved.opacity) &&
-        saved.opacity >= 0.6 &&
+        saved.opacity >= 0.2 &&
         saved.opacity <= 1
           ? saved.opacity
           : 1,

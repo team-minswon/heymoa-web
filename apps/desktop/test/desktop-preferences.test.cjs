@@ -21,7 +21,7 @@ test('native settings are local-only and accept only bounded fixed preference ac
  await assert.rejects(f.invoke('read',{sender:{},senderFrame:f.window.webContents.mainFrame}),/UNTRUSTED/);
  await assert.rejects(f.invoke('read',{sender:f.window.webContents,senderFrame:{url:'https://heymoa.app'}}),/UNTRUSTED/);
  for(const value of [{action:'opacity',value:.1},{action:'opacity',value:NaN},{action:'opacity',value:.8,url:'https://evil.test'},{action:'automatic',value:'true'},'delete']) await assert.rejects(f.invoke(value),/INVALID/);
- await f.invoke({action:'opacity',value:.75}); await f.invoke({action:'automatic',value:false}); await f.invoke('check'); await f.invoke('restart');
+ await f.invoke({action:'opacity',value:.2}); await f.invoke({action:'automatic',value:false}); await f.invoke('check'); await f.invoke('restart');
  assert.equal(f.actions.length,4);
  assert.equal(f.window.options.webPreferences.sandbox,true); assert.equal(f.window.options.webPreferences.nodeIntegration,false);
  assert.equal(f.window.check(),false); let cancel; f.window.request({url:'https://heymoa.app'},value=>cancel=value.cancel); assert.equal(cancel,true); assert.equal(f.window.open().action,'deny');

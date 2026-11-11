@@ -101,7 +101,7 @@ function createRow(item: MeetingTimelineItem) {
   content.className = "content";
   const chevron = document.createElement("span");
   chevron.className = "chevron";
-  chevron.textContent = "⌄";
+
   chevron.setAttribute("aria-hidden", "true");
   summary.append(content, chevron);
   const detail = document.createElement("div");
@@ -123,6 +123,11 @@ function createRow(item: MeetingTimelineItem) {
   node.append(at, body);
   summary.addEventListener("click", () => {
     const open = summary.getAttribute("aria-expanded") !== "true";
+    if (open) {
+      following = false;
+      modeChosen = true;
+      syncLatest();
+    }
     summary.setAttribute("aria-expanded", String(open));
     detail.classList.toggle("open", open);
     text.classList.toggle("revealed", open);
@@ -157,7 +162,11 @@ function createRow(item: MeetingTimelineItem) {
 }
 const rowViews = new Map<string, ReturnType<typeof createRow>>();
 function syncLatest() {
-  latest.hidden = !timeline || following || distanceFromBottom(scroll) <= 2;
+  latest.hidden =
+    mode !== "timeline" ||
+    !timeline ||
+    following ||
+    distanceFromBottom(scroll) <= 2;
 }
 const groupViews = new Map<
   string,
@@ -468,6 +477,9 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
             : "진행 중"
     );
     const date = meeting.startedAt === null ? "" : startTime(meeting.startedAt);
+    button.dataset.state =
+      meeting.state ?? (meeting.ended ? "ENDED" : "IN_PROGRESS");
+    button.title = title;
     setText(button.children[0] as HTMLElement, title);
     setText(button.children[1] as HTMLElement, state);
     setText(button.children[2] as HTMLElement, date);
@@ -479,6 +491,22 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
     if (button !== cursor) container.insertBefore(button, cursor);
     cursor = button.nextElementSibling;
   }
+}
+let requestedViewTransition: string | null | undefined;
+function animateReadView() {
+  if (
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ||
+    typeof scroll.animate !== "function"
+  )
+    return;
+  for (const animation of scroll.getAnimations()) animation.cancel();
+  scroll.animate(
+    [
+      { opacity: 0.4, transform: "translateY(4px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ],
+    { duration: 140, easing: "cubic-bezier(.2,.7,.2,1)" }
+  );
 }
 function receive(view: MeetingPopoverView) {
   const focused = document.activeElement as HTMLElement | null;
@@ -582,7 +610,9 @@ function receive(view: MeetingPopoverView) {
             ? t("회의 내용을 갱신하지 못했습니다.")
             : "")
   );
-  element("notice").title = element("notice").textContent ?? "";
+  const notice = element("notice").textContent ?? "";
+  if (notice) setText(element("phase"), notice);
+  element("phase").title = notice || element("phase").textContent || "";
   const label = t(" 녹음 일시정지");
   if (stop.lastElementChild?.textContent !== label)
     stop.lastElementChild!.textContent = label;
@@ -595,6 +625,7 @@ function receive(view: MeetingPopoverView) {
   stop.hidden = stop.disabled;
   renderItems();
   const listing = !timeline;
+  document.body.dataset.view = listing ? "list" : mode;
   renderMeetings(view.meetings, listing);
   followBottom();
   syncLatest();
@@ -610,6 +641,13 @@ function receive(view: MeetingPopoverView) {
       element("open")
     ).focus();
   } else if (stoppedFocus) element("back").focus();
+  if (
+    requestedViewTransition !== undefined &&
+    requestedViewTransition === (timeline?.noteId ?? null)
+  ) {
+    requestedViewTransition = undefined;
+    if (previousNote !== timeline?.noteId) animateReadView();
+  }
 }
 scroll.addEventListener("scroll", () => {
   const top = scroll.scrollTop;
@@ -640,6 +678,7 @@ resizeObserver?.observe(items);
 resizeObserver?.observe(element("live-transcript"));
 resizeObserver?.observe(scroll);
 latest.addEventListener("click", () => {
+  if (document.activeElement === latest) scroll.focus({ preventScroll: true });
   following = true;
   followBottom();
   latest.hidden = true;
@@ -647,12 +686,21 @@ latest.addEventListener("click", () => {
 function act(value: MeetingPopoverAction) {
   localError = null;
   if (lastView) receive(lastView);
+  requestedViewTransition =
+    typeof value === "object" && value.action === "open-note"
+      ? value.noteId
+      : value === "list"
+        ? null
+        : value === "show-recording"
+          ? lastView?.recordingTarget?.noteId
+          : undefined;
   if (value === "stop" || value === "stop-viewing") {
     stopFocusPending = document.activeElement === stop;
     stop.disabled = true;
   }
   void bridge.action(value).catch(() => {
     stopFocusPending = false;
+    requestedViewTransition = undefined;
     localError =
       typeof value === "object" && value.action === "set-panel"
         ? "표시 설정을 저장하지 못했습니다. 다시 시도해 주세요."
@@ -678,6 +726,7 @@ element("settings").addEventListener("click", () => act("settings"));
 element("back").addEventListener("click", () => act("list"));
 for (const next of ["summary", "timeline"] as const)
   element(`${next}-tab`).addEventListener("click", () => {
+    if (mode === next) return;
     scrollPositions[mode] = scroll.scrollTop;
     mode = next;
     following = false;
@@ -688,6 +737,7 @@ for (const next of ["summary", "timeline"] as const)
     previousTop = scroll.scrollTop;
     previousHeight = scroll.scrollHeight;
     syncLatest();
+    animateReadView();
   });
 element("pin").addEventListener("click", () =>
   act({
@@ -710,7 +760,13 @@ void bridge
     if (!received) receive(view);
   })
   .catch(() => {
-    element("notice").textContent = t("현재 회의를 확인하지 못했습니다.");
+    if (received) return;
+    const message = t("현재 회의를 확인하지 못했습니다.");
+    setText(element("notice"), message);
+    setText(element("phase"), message);
+    element("phase").title = message;
+    setText(element("empty"), message);
+    document.body.dataset.empty = "true";
   });
 window.addEventListener(
   "unload",

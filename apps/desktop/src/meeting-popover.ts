@@ -257,7 +257,7 @@ export function createMeetingPopover(
       else publish();
     },
     async setOpacity(opacity: number) {
-      if (!Number.isFinite(opacity) || opacity < 0.6 || opacity > 1)
+      if (!Number.isFinite(opacity) || opacity < 0.2 || opacity > 1)
         throw new Error("INVALID_PANEL_REQUEST");
       await updatePreferences({ opacity });
       return preferences.opacity;

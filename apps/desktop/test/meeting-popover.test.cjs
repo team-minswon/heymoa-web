@@ -174,9 +174,9 @@ test("pin survives outside clicks, dragging restores clamped position, opacity p
 
 test("settings opacity rejects out-of-range values and is never writable through popup IPC", async t => {
   const f = fixture(t); f.popover.toggle(); f.windows[0].finishLoad(); await settle();
-  for (const value of [NaN, Infinity, 0.59, 1.01]) await assert.rejects(f.popover.setOpacity(value), /INVALID_PANEL_REQUEST/);
+  for (const value of [NaN, Infinity, 0.19, 1.01]) await assert.rejects(f.popover.setOpacity(value), /INVALID_PANEL_REQUEST/);
   assert.throws(() => f.handlers.get("heymoa:meeting-action")(f.event(), { action: "set-panel", pinned: true, opacity: .8 }), /INVALID_MEETING_ACTION/);
-  await f.popover.setOpacity(.6); assert.equal(f.windows[0].opacity, .6);
+  await f.popover.setOpacity(.2); assert.equal(f.windows[0].opacity, .2);
 });
 
 

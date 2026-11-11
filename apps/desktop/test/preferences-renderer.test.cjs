@@ -6,8 +6,8 @@ test('local settings control opacity, automatic updates and guarded restart with
  dom.window.heymoaPreferences={action:async value=>{calls.push(value);if(value.action==='opacity')view.opacity=value.value;if(value.action==='automatic')view.update.automatic=value.value;return view;},subscribe:f=>{listener=f;return()=>{};}};
  dom.window.eval(fs.readFileSync(path.join(__dirname,'../dist/preferences-renderer.js'),'utf8')); await new Promise(setImmediate);
  const $=id=>dom.window.document.getElementById(id);
- assert.equal($('automatic').checked,true); $('opacity').value='75';$('opacity').dispatchEvent(new dom.window.Event('change'));await new Promise(setImmediate);
- assert.equal(calls.at(-1).action,'opacity');assert.equal(calls.at(-1).value,.75);
+ assert.equal($('automatic').checked,true); $('opacity').value='20';$('opacity').dispatchEvent(new dom.window.Event('change'));await new Promise(setImmediate);
+ assert.equal(calls.at(-1).action,'opacity');assert.equal(calls.at(-1).value,.2);
  view={...view,update:{...view.update,status:'ready',version:'0.1.6',canRestart:false}};listener(view);
  assert.equal($('restart').disabled,true);$('restart').click();assert.equal(calls.at(-1).action,'opacity');assert.equal($('blocked').hidden,false);
  view={...view,language:'en',update:{...view.update,canRestart:true}};listener(view);
@@ -58,6 +58,7 @@ test('Chromium renders translated settings and long update states within the nat
    await page.evaluate(({ language, status }) => window.receiveSettings({ language, opacity: .95, update: { currentVersion: '0.1.6', version: '0.1.7', percent: 42, automatic: false, status, canRestart: false } }), { language, status });
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
    assert.equal(await page.locator('#opacity').getAttribute('max'), '100');
+   assert.equal(await page.locator('#opacity').getAttribute('min'), '20');
    if (status === 'ready') { assert.equal(await page.locator('#restart').isDisabled(), true); assert.equal(await page.locator('#blocked').isVisible(), true); }
    if (language === 'en') assert.doesNotMatch(await page.locator('body').innerText(), /[가-힣]/);
    if (status === 'current') {

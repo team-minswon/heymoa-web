@@ -40,8 +40,8 @@ test("panel preferences validate stored values and serialize writes without chan
   const dir = await mkdtemp(path.join(os.tmpdir(), "heymoa-panel-")); t.after(() => rm(dir, { recursive: true, force: true }));
   assert.deepEqual(await loadPanelPreferences(dir), { pinned: false, opacity: 1 });
   await saveAutomaticUpdates(dir, false);
-  await Promise.all([savePanelPreferences(dir, { pinned: true, opacity: 0.8 }), savePanelPreferences(dir, { pinned: true, opacity: 0.6, position: { x: -300, y: 40 } })]);
-  assert.deepEqual(await loadPanelPreferences(dir), { pinned: true, opacity: 0.6, position: { x: -300, y: 40 } });
+  await Promise.all([savePanelPreferences(dir, { pinned: true, opacity: 0.8 }), savePanelPreferences(dir, { pinned: true, opacity: 0.2, position: { x: -300, y: 40 } })]);
+  assert.deepEqual(await loadPanelPreferences(dir), { pinned: true, opacity: 0.2, position: { x: -300, y: 40 } });
   assert.equal(await loadAutomaticUpdates(dir), false);
   await writeFile(path.join(dir, "meeting-panel.json"), JSON.stringify({ pinned: "yes", opacity: 0.01, position: { x: "bad", y: 1 } }));
   assert.deepEqual(await loadPanelPreferences(dir), { pinned: false, opacity: 1 });

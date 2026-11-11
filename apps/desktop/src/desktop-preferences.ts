@@ -52,7 +52,7 @@ export function createDesktopPreferences(options: {
             action === "opacity" &&
             typeof value === "number" &&
             Number.isFinite(value) &&
-            value >= 0.6 &&
+            value >= 0.2 &&
             value <= 1
           ) &&
           !(action === "automatic" && typeof value === "boolean")

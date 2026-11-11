@@ -38,14 +38,14 @@ test("lost recording state is not rendered as no recording, and idle has an hone
   assert.match(f.document.querySelector("#empty").textContent, /아직 회의록이 없습니다/);
   assert.equal(f.document.querySelector("#open").textContent, "HeyMoa 열기 ↗");
 });
-function fixture(t, reduced = false) {
+function fixture(t, reduced = false, read = () => new Promise(() => {})) {
   const dom = new JSDOM(fs.readFileSync(path.join(__dirname, "../dist/meeting.html"), "utf8"), { runScripts: "outside-only" });
   t.after(() => dom.window.close());
   const actions = []; let receive; const animations = [];
   dom.window.requestAnimationFrame = (callback) => { callback(); return 0; };
   dom.window.HTMLElement.prototype.getAnimations = () => [{ finished: new Promise((resolve) => animations.push(resolve)) }];
   dom.window.matchMedia = () => ({ matches: reduced });
-  dom.window.heymoaMeeting = { read: () => new Promise(() => {}), action: async (value) => { actions.push(value); }, subscribe: (listener) => { receive = listener; return () => {}; } };
+  dom.window.heymoaMeeting = { read, action: async (value) => { actions.push(value); }, subscribe: (listener) => { receive = listener; return () => {}; } };
   dom.window.eval(fs.readFileSync(path.join(__dirname, "../dist/meeting-renderer.js"), "utf8"));
   return { window: dom.window, document: dom.window.document, actions,
     finish: async () => { animations.splice(0).forEach((resolve) => resolve()); await new Promise(setImmediate); },
@@ -121,7 +121,7 @@ test("small English window opens ended placeholders as summary and resets scroll
  live.detail = { ...waiting.detail, ended: false, meetingState: 'IN_PROGRESS', ownsRecording: true, groups: [{ id: 'g', title: 'Long meeting agenda', startMs: 3723000, endMs: 4500000, itemIds: live.items.map(item => item.id) }] };
  await publish(live);
  assert.ok(await page.locator('#scroll').evaluate(node => node.scrollTop > 0));
- const rangeOverlap = await page.locator('.group-range').evaluate(node => node.getBoundingClientRect().right > node.nextElementSibling.getBoundingClientRect().left);
+ const rangeOverlap = await page.locator('.group-range').evaluate(node => { const a=node.getBoundingClientRect(), b=node.nextElementSibling.getBoundingClientRect(); return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top; });
  assert.equal(rangeOverlap, false);
  await publish({ ...live, detail: { ...past.detail, groups: live.detail.groups } });
  assert.equal(await page.locator('#summary-tab').getAttribute('aria-pressed'), 'true');
@@ -192,6 +192,7 @@ test("Chromium reveals after same-frame close/open and preserves scroll intent",
   await page.waitForFunction(() => !document.querySelector(".detail").inert && getComputedStyle(document.querySelector(".quote-text")).opacity === "1");
   const many = { ...value, total: 60, items: Array.from({ length: 60 }, (_, i) => ({ ...value.items[0], id: `item-${i}`, atMs: i * 1000 })) };
   await publish(many);
+  await page.locator("#latest").click();
   assert.equal(await page.locator("#latest").isVisible(), false);
   await page.evaluate(() => { const scroll = document.querySelector("#scroll"); scroll.scrollTop = 0; scroll.dispatchEvent(new Event("scroll")); });
   await publish({ ...many, total: 61, items: [...many.items, { ...value.items[0], id: "last" }] });
@@ -200,8 +201,7 @@ test("Chromium reveals after same-frame close/open and preserves scroll intent",
     const bounds = node.getBoundingClientRect();
     return { center: (bounds.left + bounds.right) / 2, viewportCenter: innerWidth / 2, bottom: bounds.bottom, footerTop: document.querySelector("footer").getBoundingClientRect().top };
   });
-  assert.equal(floating.center, floating.viewportCenter);
-  assert.ok(floating.bottom < floating.footerTop);
+  assert.ok(floating.bottom > floating.footerTop, "latest navigation stays in the footer instead of covering meeting text");
   assert.equal(await page.locator("#scroll").evaluate((node) => node.scrollTop), 0);
   await page.locator("#latest").click();
   assert.equal(await page.locator("#latest").isVisible(), false);
@@ -240,7 +240,7 @@ test("Chromium aligns compact timeline metadata with optional evidence", async (
   assert.equal(geometry.leftInset, 0); assert.equal(geometry.multiline, true);
   assert.equal(await page.locator("article .label, article .offset").count(), 2);
   await page.locator(".summary").hover();
-  assert.notEqual(await page.locator(".summary").evaluate(node => getComputedStyle(node).backgroundColor), "rgba(0, 0, 0, 0)");
+  assert.equal(await page.locator(".summary .content").evaluate(node => getComputedStyle(node).textDecorationLine), "underline");
   await page.locator(".summary").focus();
   assert.equal(await page.locator(".summary").evaluate((node) => getComputedStyle(node).outlineStyle), "solid");
   await page.locator(".summary").click();
@@ -251,7 +251,7 @@ test("Chromium aligns compact timeline metadata with optional evidence", async (
 });
 
 
-test("Chromium follows long updates and expanding evidence without losing upward input intent", async (t) => {
+test("Chromium follows updates until evidence or upward input expresses reading intent", async (t) => {
   const { chromium } = require("@playwright/test");
   const browser = await chromium.launch({ headless: true });
   t.after(() => browser.close());
@@ -316,26 +316,18 @@ test("Chromium follows long updates and expanding evidence without losing upward
   };
   await publish();
   await atBottom();
+  const readingTop = await page.locator("#scroll").evaluate(node => node.scrollTop);
   await page.evaluate(() => document.querySelectorAll(".summary")[19].click());
-  await page.waitForFunction(
-    () => !document.querySelectorAll(".detail")[19].inert
-  );
-  await atBottom();
-  // A later snapshot used to mistake the expanded evidence height for a user leaving the bottom.
+  await page.locator(".detail").nth(19).evaluate(node => Promise.all(node.getAnimations().map(a=>a.finished)));
+  assert.equal(await page.locator("#scroll").evaluate(node=>node.scrollTop), readingTop);
   await publish();
-  await atBottom();
-  timeline.items[19] = {
-    ...timeline.items[19],
-    citations: [
-      { atMs: 1000, text: "뒤늦게 보충된 회의 근거입니다. ".repeat(100) },
-    ],
-  };
+  assert.equal(await page.locator("#scroll").evaluate(node=>node.scrollTop), readingTop);
+  timeline.items[19] = { ...timeline.items[19], citations: [{ atMs:1000, text:"뒤늦게 보충된 회의 근거입니다. ".repeat(100) }] };
   await publish();
+  assert.equal(await page.locator("#scroll").evaluate(node=>node.scrollTop), readingTop);
+  await page.locator("#latest").click();
   await atBottom();
-  await page.evaluate(() => {
-    const node = document.querySelector("#scroll");
-    node.style.maxHeight = "220px";
-  });
+  await page.evaluate(() => { document.querySelector("#scroll").style.maxHeight = "220px"; });
   await atBottom();
   for (const kind of ["wheel", "touch", "key"]) {
     await page.locator("#latest").evaluate((button) => button.click());
@@ -502,6 +494,7 @@ test("Chromium preserves content position across notice changes and heartbeats, 
   const top = await page.locator("article").first().evaluate(n => n.getBoundingClientRect().top);
   for (const warning of ["연결을 다시 확인하고 있습니다.", null, "마이크 음소거", null]) {
     await publish(warning);
+    assert.equal(await page.locator("#phase").textContent(), warning || "녹음 중");
     assert.equal(await page.locator("article").first().evaluate(n => n.getBoundingClientRect().top), top);
   }
   assert.equal(await page.locator("#filters button").first().textContent(), "전체 4");
@@ -601,4 +594,67 @@ test("popover action errors survive heartbeats and language changes until a succ
  f.window.heymoaMeeting.action = async () => {};
  f.document.querySelector('#pin').click(); await f.finish();
  assert.equal(f.document.querySelector('#notice').textContent, '');
+});
+
+
+test("compact reading layout fits six recent rows and motion belongs to navigation, not heartbeats", async t => {
+ const { chromium } = require('@playwright/test'); const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
+ const captures = path.resolve(__dirname, '../../../output/playwright'); fs.mkdirSync(captures, { recursive: true });
+ for (const language of ['ko', 'en']) for (const colorScheme of ['light', 'dark']) {
+  const reducedMotion = colorScheme === 'dark' ? 'reduce' : 'no-preference';
+  const page = await browser.newPage({ viewport: { width: 420, height: 580 }, colorScheme, reducedMotion });
+  await page.addInitScript(() => {
+   window.motionCalls = 0; const animate = Element.prototype.animate;
+   Element.prototype.animate = function(...args) { if (this.id === 'scroll') window.motionCalls++; return animate.apply(this, args); };
+   window.heymoaMeeting = { read: () => new Promise(() => {}), action: async () => {}, subscribe: receive => { window.receiveCompact = receive; return () => {}; } };
+  });
+  await page.goto(require('node:url').pathToFileURL(path.join(__dirname, '../dist/meeting.html')).href);
+  const en = language === 'en';
+  const meetings = Array.from({ length: 9 }, (_, i) => ({ workspaceId: 'w', noteId: `m${i}`, title: en ? ['Product weekly review', 'Desktop update and recording reliability', 'Design review and next steps'][i % 3] : ['제품 주간 회의', '데스크톱 업데이트와 녹음 안정성 점검', '디자인 검토와 다음 일정'][i % 3], startedAt: Date.parse('2026-11-11T09:00:00Z') - i * 86400000, ended: true, state: 'ENDED' }));
+  const publish = timeline => page.evaluate(({ timeline, meetings, language }) => window.receiveCompact({ language, meetings, meetingsStatus: 'ready', timeline, label: language === 'en' ? 'Completed' : '녹음 완료', elapsed: null, canStop: false, phase: 'completed', unknown: false, warning: null, stale: false }), { timeline, meetings, language });
+  await publish(null);
+  const geometry = await page.evaluate(() => {
+   const main=document.querySelector('main').getBoundingClientRect(), title=document.querySelector('h1').getBoundingClientRect();
+   const rows=[...document.querySelectorAll('.meeting')].map(node=>node.getBoundingClientRect());
+   return { visible: rows.filter(row=>row.top>=main.top && row.bottom<=main.bottom).length, gap: rows[0].top-title.bottom, overflow: document.documentElement.scrollWidth>innerWidth };
+  });
+  assert.ok(geometry.visible >= 6, `${language}/${colorScheme} exposes at least six complete rows`);
+  assert.ok(geometry.gap <= 8); assert.equal(geometry.overflow, false);
+  await page.screenshot({ path: path.join(captures, `app-1580-list-${language}-${colorScheme}.png`) });
+  await page.locator('.meeting').first().click();
+  const timeline=snapshot(); timeline.noteId='m0'; timeline.title=meetings[0].title;
+  timeline.items=Array.from({length: 12}, (_, i)=>({ id:`row-${i}`, tone:i%2 ? 'reference':'task', label:en ? (i%2 ? 'Reference':'Task') : (i%2 ? '참고':'할 일'), content:en ? 'Check the update flow and preserve the meeting when recording stops.' : '업데이트 흐름을 점검하고 녹음을 멈춰도 회의록을 계속 읽을 수 있게 합니다.', atMs:i*65000, citations:[{atMs:i*65000,text:en?'The meeting stays available after recording stops. We will check this before release.':'녹음을 멈춘 뒤에도 회의록은 그대로 볼 수 있어야 해요. 배포 전에 확인하겠습니다.'}] }));
+  timeline.total=12; timeline.detail={ended:true, ownsRecording:false, meetingState:'ENDED', counts:{ALL:12,ACTION_ITEM:6,REFERENCE:6}, groups:[{id:'g', title:en?'Desktop updates and reading the meeting notes':'데스크톱 업데이트와 회의록 읽기',startMs:0,endMs:715000,itemIds:timeline.items.map(i=>i.id)}], summary:{status:'ready',lead:en?'Keep meeting notes available after recording stops.':'녹음 중지 후에도 회의록을 계속 조회할 수 있게 합니다.',sections:[]}};
+  await publish(timeline); await page.locator('#timeline-tab').click();
+  await page.locator('#scroll').evaluate(node=>Promise.all(node.getAnimations().map(a=>a.finished)));
+  await page.locator('.summary').first().click();
+  await page.locator('.detail').first().evaluate(node=>Promise.all(node.getAnimations().map(a=>a.finished)));
+  await page.locator('#scroll').evaluate(node=>{node.scrollTop=0;});
+  const calls=await page.evaluate(()=>window.motionCalls);
+  assert.equal(calls, reducedMotion==='reduce' ? 0 : 2);
+  await publish(timeline);
+  assert.equal(await page.evaluate(()=>window.motionCalls), calls, 'heartbeat has no navigation animation');
+  assert.equal(await page.locator('.summary').first().getAttribute('aria-expanded'), 'true');
+  assert.equal(await page.locator('.quote').first().evaluate(node=>getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
+  const footer=await page.locator('footer').boundingBox(), latest=await page.locator('#latest').boundingBox();
+  if (latest) assert.ok(latest.y>=footer.y && latest.y+latest.height<=footer.y+footer.height);
+  await page.locator('#title').hover();
+  await page.screenshot({ path: path.join(captures, `app-1580-timeline-${language}-${colorScheme}.png`) });
+  await page.close();
+ }
+});
+
+
+test("initial read failure is visible and a late failed read cannot replace a fresh subscription", async t => {
+ const f=fixture(t,false,async()=>{throw new Error('offline');}); await f.finish();
+ assert.equal(f.document.querySelector('#phase').textContent,'현재 회의를 확인하지 못했습니다.');
+ assert.equal(f.document.querySelector('#empty').textContent,'현재 회의를 확인하지 못했습니다.');
+ let reject; const g=fixture(t,false,()=>new Promise((_resolve,fail)=>reject=fail));
+ g.update(snapshot()); reject(new Error('late')); await g.finish();
+ assert.equal(g.document.querySelector('#phase').textContent,'녹음 중');
+ assert.equal(g.document.querySelector('article .content').textContent,'배포 확인');
+});
+test("latest navigation preserves keyboard focus in the reading region when its button hides", t => {
+ const f=fixture(t);f.update(snapshot());const latest=f.document.querySelector('#latest');latest.hidden=false;latest.focus();latest.click();
+ assert.equal(latest.hidden,true);assert.equal(f.document.activeElement.id,'scroll');
 });
