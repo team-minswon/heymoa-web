@@ -12,6 +12,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { intlWrapper } from "@/components/help/test-intl";
 
 const desktop = vi.hoisted(() => ({ value: false as boolean | null }));
+const recording = vi.hoisted(() => ({
+  phase: "idle",
+  buffer: null as { pendingMs: number } | null,
+}));
+vi.mock("@/components/transcription/recording-provider", () => ({
+  useRecording: () => recording,
+}));
 const track = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/desktop/use-desktop-app", () => ({
@@ -22,10 +29,14 @@ vi.mock("@/lib/analytics/track", () => ({ track }));
 describe("DesktopAppPromo", () => {
   beforeEach(() => {
     desktop.value = false;
+    recording.phase = "idle";
+    recording.buffer = null;
+    Reflect.deleteProperty(window, "heymoaDesktop");
     window.localStorage.clear();
   });
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "heymoaDesktop");
     vi.restoreAllMocks();
     track.mockReset();
   });
@@ -144,8 +155,114 @@ describe("DesktopAppPromo", () => {
       dialog.getByRole("heading", { name: "Keep using your existing notes" })
     ).toBeInTheDocument();
     // 공용 Dialog 의 닫기 버튼(`components/ui/dialog.tsx`)은 이 모듈 문구가 아니다.
-    expect(baseElement.textContent?.replace("닫기", "")).not.toMatch(
-      /[가-힣]/
+    expect(baseElement.textContent?.replace("닫기", "")).not.toMatch(/[가-힣]/);
+  });
+});
+
+describe("legacy desktop update notice", () => {
+  afterEach(() => {
+    cleanup();
+    Reflect.deleteProperty(window, "heymoaDesktop");
+    vi.restoreAllMocks();
+  });
+  function oldApp(version: string, platform = "Windows NT 10.0; Win64; x64") {
+    desktop.value = true;
+    recording.phase = "idle";
+    recording.buffer = null;
+    Object.defineProperty(window, "heymoaDesktop", {
+      configurable: true,
+      value: { getCapabilities: vi.fn() },
+    });
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      `Mozilla/5.0 (${platform}) HeyMoa/${version} Electron/44.5.1`
     );
+  }
+  it.each(["0.1.2", "0.1.3"])(
+    "%s gets exactly one notice with a direct Windows installer link and no unsupported native calls",
+    (version) => {
+      oldApp(version);
+      render(<DesktopAppPromo />);
+      expect(
+        screen.getAllByRole("complementary", { name: "앱 업데이트 안내" })
+      ).toHaveLength(1);
+      expect(
+        screen.getByText(new RegExp(`현재 앱 ${version}`))
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "새 설치 파일 받기" })
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/team-minswon/homebrew-tap/releases/latest/download/HeyMoa-win-x64.exe"
+      );
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("complementary", { name: "데스크톱 앱 안내" })
+      ).not.toBeInTheDocument();
+    }
+  );
+  it("Mac gets the canonical Apple Silicon DMG, not the internal URL old shells cannot open", () => {
+    oldApp("0.1.2", "Macintosh; Intel Mac OS X 10_15_7");
+    render(<DesktopAppPromo />);
+    expect(
+      screen.getByRole("link", { name: "새 설치 파일 받기" })
+    ).toHaveAttribute(
+      "href",
+      "https://github.com/team-minswon/homebrew-tap/releases/latest/download/HeyMoa-mac-arm64.dmg"
+    );
+  });
+  it("hides the legacy notice as soon as the native updater is supported", () => {
+    oldApp("0.1.4");
+    Object.assign(
+      (window as unknown as { heymoaDesktop: object }).heymoaDesktop,
+      {
+        getUpdateState() {},
+        checkForUpdates() {},
+        setAutomaticUpdates() {},
+        restartForUpdate() {},
+        subscribeUpdates() {},
+      }
+    );
+    render(<DesktopAppPromo />);
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+  });
+  it("recording and pending audio block the download action until drained", () => {
+    oldApp("0.1.3");
+    const view = render(<DesktopAppPromo />);
+    for (const phase of [
+      "requesting-permission",
+      "connecting",
+      "recording",
+      "stopping",
+    ]) {
+      recording.phase = phase;
+      view.rerender(<DesktopAppPromo />);
+      expect(
+        screen.getByRole("button", { name: "새 설치 파일 받기" })
+      ).toBeDisabled();
+      expect(
+        screen.queryByRole("link", { name: "새 설치 파일 받기" })
+      ).not.toBeInTheDocument();
+    }
+    recording.phase = "failed";
+    recording.buffer = { pendingMs: 1000 };
+    view.rerender(<DesktopAppPromo />);
+    expect(
+      screen.getByRole("button", { name: "새 설치 파일 받기" })
+    ).toBeDisabled();
+    recording.buffer = null;
+    view.rerender(<DesktopAppPromo />);
+    expect(
+      screen.getByRole("link", { name: "새 설치 파일 받기" })
+    ).toBeInTheDocument();
+  });
+  it("English guidance stays in English and is an inline notice", () => {
+    oldApp("0.1.2");
+    render(<DesktopAppPromo />, { wrapper: intlWrapper("en") });
+    expect(
+      screen.getByRole("complementary", { name: "App update notice" })
+    ).not.toHaveTextContent(/[가-힣]/);
+    expect(
+      screen.getByRole("link", { name: "Download new installer" })
+    ).toHaveAttribute("target", "_blank");
   });
 });

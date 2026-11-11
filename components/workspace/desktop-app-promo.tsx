@@ -4,7 +4,7 @@ import { CircleHelp, Monitor } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DesktopDownloadLink } from "@/components/heymoa/desktop-download-link";
 import { DesktopCompareDialog } from "@/components/workspace/desktop-compare-dialog";
 import {
@@ -12,6 +12,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useRecording } from "@/components/transcription/recording-provider";
+import { ACTIVE_PHASES } from "@/lib/transcription/recording-state";
+import { desktopAuthBridge } from "@/lib/desktop/auth";
+import { desktopUpdateBridge } from "@/lib/desktop/updates";
+import {
+  DESKTOP_INSTALLERS,
+  DESKTOP_RELEASES_URL,
+} from "@/lib/desktop/downloads";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +27,11 @@ export function DesktopAppPromo() {
   const t = useTranslations("shell.desktopPromo");
   const isDesktopApp = useDesktopApp();
   const [compareOpen, setCompareOpen] = useState(false);
+  if (isDesktopApp === true) {
+    return desktopAuthBridge() && !desktopUpdateBridge() ? (
+      <LegacyDesktopUpdateNotice />
+    ) : null;
+  }
   if (isDesktopApp !== false) return null;
 
   return (
@@ -58,6 +71,52 @@ export function DesktopAppPromo() {
         )}
       />
       <DesktopCompareDialog open={compareOpen} onOpenChange={setCompareOpen} />
+    </aside>
+  );
+}
+
+/** Old native shells cannot install updates; use their existing external-download policy. */
+function LegacyDesktopUpdateNotice() {
+  const t = useTranslations("shell.desktopUpdate");
+  const { phase, buffer } = useRecording();
+  const busy = ACTIVE_PHASES.has(phase) || (buffer?.pendingMs ?? 0) > 0;
+  const ua = navigator.userAgent;
+  const version = /\bHeyMoa\/(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)/.exec(ua)?.[1];
+  const installer = /Windows/.test(ua)
+    ? DESKTOP_INSTALLERS.windows[0]
+    : /Macintosh|Mac OS X/.test(ua)
+      ? DESKTOP_INSTALLERS.mac[0]
+      : null;
+  const href = installer
+    ? `${DESKTOP_RELEASES_URL}/latest/download/${installer.file}`
+    : DESKTOP_RELEASES_URL;
+  return (
+    <aside
+      aria-label={t("label")}
+      className="mb-5 flex items-center gap-3 rounded-control border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-3"
+    >
+      <Monitor aria-hidden className="size-5 shrink-0 text-[var(--el-muted)]" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm leading-6 font-medium text-[var(--el-ink)]">
+          {t("body")}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-[var(--el-muted)]">
+          {version ? `${t("version", { version })} · ` : ""}
+          {busy ? t("busy") : t("install")}
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        disabled={busy}
+        className="h-10 shrink-0 rounded-chip bg-white whitespace-nowrap"
+        render={
+          busy ? undefined : (
+            <a href={href} target="_blank" rel="noopener noreferrer" />
+          )
+        }
+      >
+        {t("download")}
+      </Button>
     </aside>
   );
 }

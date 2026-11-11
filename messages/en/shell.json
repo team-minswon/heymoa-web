@@ -153,5 +153,13 @@
     "download": "Desktop app",
     "policy": "Legal",
     "disclaimer": "The AI meeting agent is a tool to support your work."
+  },
+  "desktopUpdate": {
+    "label": "App update notice",
+    "body": "Install the new version once to get future updates inside the app.",
+    "version": "Current app {version}",
+    "busy": "Finish recording and uploading audio before updating.",
+    "install": "Quit the app completely before running the new installer.",
+    "download": "Download new installer"
   }
 }
