@@ -22,6 +22,7 @@ const opacity = element<HTMLInputElement>("opacity"),
   restart = element<HTMLButtonElement>("restart");
 let pending = false;
 let current: DesktopPreferencesView | null = null;
+let errorSource: string | null = null;
 const statuses: Record<DesktopPreferencesView["update"]["status"], string> = {
   idle: "새 버전을 확인할 수 있습니다.",
   checking: "새 버전을 확인하고 있습니다.",
@@ -36,6 +37,7 @@ const statuses: Record<DesktopPreferencesView["update"]["status"], string> = {
 function render(view: DesktopPreferencesView) {
   current = view;
   localize(view.language);
+  element("error").textContent = errorSource ? t(errorSource) : "";
   if (document.activeElement !== opacity)
     opacity.value = String(Math.round(view.opacity * 100));
   element("opacity-value").textContent = `${opacity.value}%`;
@@ -70,6 +72,7 @@ function render(view: DesktopPreferencesView) {
 async function action(value: "read" | DesktopPreferencesAction) {
   if (pending) return;
   pending = true;
+  errorSource = null;
   if (current) render(current);
   element("error").textContent = "";
   try {
@@ -78,13 +81,12 @@ async function action(value: "read" | DesktopPreferencesAction) {
     render(view);
   } catch {
     pending = false;
+    errorSource = "설정을 저장하지 못했습니다. 다시 시도해 주세요.";
     if (current) {
       opacity.value = String(Math.round(current.opacity * 100));
       render(current);
     }
-    element("error").textContent = t(
-      "설정을 저장하지 못했습니다. 다시 시도해 주세요."
-    );
+    element("error").textContent = t(errorSource);
   }
 }
 opacity.addEventListener("input", () => {
@@ -111,8 +113,7 @@ void bridge
     if (!received) render(view);
   })
   .catch(() => {
-    element("error").textContent = t(
-      "설정을 확인하지 못했습니다. 잠시 후 다시 확인해 주세요."
-    );
+    errorSource = "설정을 확인하지 못했습니다. 잠시 후 다시 확인해 주세요.";
+    element("error").textContent = t(errorSource);
   });
 window.addEventListener("unload", unsubscribe, { once: true });

@@ -1,5 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { MeetingPopoverView } from "./meeting-timeline";
+import type {
+  MeetingPopoverView,
+  MeetingPopoverAction,
+} from "./meeting-timeline";
 
 // Sandboxed local preload: no generic IPC, file, URL, capture, auth or shell API.
 if (process.isMainFrame)
@@ -8,16 +11,8 @@ if (process.isMainFrame)
     Object.freeze({
       read: (): Promise<MeetingPopoverView> =>
         ipcRenderer.invoke("heymoa:meeting-read"),
-      action: (
-        action:
-          | "stop"
-          | "stop-viewing"
-          | "show-current"
-          | "hide"
-      | "settings"
-          | { action: "open-note"; noteId: string }
-          | { action: "set-panel"; pinned: boolean }
-      ) => ipcRenderer.invoke("heymoa:meeting-action", action),
+      action: (action: MeetingPopoverAction) =>
+        ipcRenderer.invoke("heymoa:meeting-action", action),
       subscribe: (listener: (view: MeetingPopoverView) => void) => {
         const receive = (
           _event: Electron.IpcRendererEvent,

@@ -485,3 +485,19 @@ test("native settings open without navigating the main web window and reject unt
   menu.find(item => item.label === "앱 업데이트…").click();
   assert.equal(f.windows.length, 2); assert.equal(f.quits, 0);
 });
+
+
+test("changing account language refreshes the open local settings and native menu without changing preferences", async t => {
+  const f = await fixture(t);
+  f.applicationMenu[0].submenu.find(item => item.label === "설정…").click(); await tick();
+  const settings = f.windows[1];
+  for (const [language, title, menu] of [["en", "Desktop settings", "Settings…"], ["ko", "데스크톱 설정", "설정…"]]) {
+    await f.invoke("heymoa:language", language);
+    assert.equal(settings.title, title);
+    assert.ok(f.applicationMenu[0].submenu.some(item => item.label === menu));
+    const latest = f.sent.filter(([channel]) => channel === "heymoa:preferences-state").at(-1)[1];
+    assert.equal(latest.language, language);
+    assert.equal(latest.opacity, 1);
+    assert.equal(latest.update.automatic, false);
+  }
+});

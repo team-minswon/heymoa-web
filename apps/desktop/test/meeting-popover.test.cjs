@@ -40,7 +40,7 @@ function fixture(t, preferences = { pinned: false, opacity: 1 }) {
     focus() { this.focuses++; }
     getBounds() { return this.bounds ?? { x: 0, y: 24, width: 420, height: 580 }; }
     setOpacity(value) { this.opacity = value; }
-    setBounds(bounds) { this.bounds = bounds; }
+    setBounds(bounds) { this.bounds = bounds; this.boundsChanges = (this.boundsChanges ?? 0) + 1; }
     setVisibleOnAllWorkspaces(...args) { this.spaces = args; }
     setAlwaysOnTop(...args) { this.onTop = args; }
     destroy() { this.destroyed = true; this.emit("closed"); }
@@ -154,7 +154,7 @@ test("failed load and renderer crash destroy the popup so the next toggle can re
 test("pin survives outside clicks, dragging restores clamped position, opacity persists, explicit close still works", async t => {
   const f = fixture(t); f.view.canStop = false;
   f.popover.toggle(); const window = f.windows[0]; window.finishLoad(); await settle();
-  assert.equal(window.bounds.height, 280);
+  assert.equal(window.bounds.height, 580);
   const action = f.handlers.get("heymoa:meeting-action");
   await action(f.event(), { action: "set-panel", pinned: true });
   await f.popover.setOpacity(0.7);
@@ -177,4 +177,46 @@ test("settings opacity rejects out-of-range values and is never writable through
   for (const value of [NaN, Infinity, 0.59, 1.01]) await assert.rejects(f.popover.setOpacity(value), /INVALID_PANEL_REQUEST/);
   assert.throws(() => f.handlers.get("heymoa:meeting-action")(f.event(), { action: "set-panel", pinned: true, opacity: .8 }), /INVALID_MEETING_ACTION/);
   await f.popover.setOpacity(.6); assert.equal(f.windows[0].opacity, .6);
+});
+
+
+test("recording content and status refreshes never resize, reposition, refocus or reopen the panel", async t => {
+  const f = fixture(t, { pinned: true, opacity: 1 });
+  f.popover.toggle(); const window = f.windows[0]; window.finishLoad(); await settle();
+  const before = JSON.stringify(window.getBounds()), changes = window.boundsChanges ?? 0;
+  for (const [timeline, warning] of [[null, null], [{ loading: true, items: [] }, null], [{ loading: false, items: [{ id: 'a' }] }, '마이크 음소거'], [{ loading: false, items: [{ id: 'b' }] }, null], [null, null]]) {
+    Object.assign(f.view, { timeline, warning }); f.popover.refresh();
+    assert.equal(JSON.stringify(window.getBounds()), before);
+  }
+  assert.equal(window.boundsChanges ?? 0, changes);
+  assert.equal(window.shows, 1); assert.equal(window.focuses, 1); assert.equal(window.hides, 0);
+  f.displays.getDisplayMatching = () => ({ workArea: { x: -300, y: 24, width: 300, height: 400 } });
+  f.displays.emit('display-metrics-changed');
+  assert.equal(window.bounds.width, 300); assert.equal(window.bounds.height, 400);
+  const clamped = JSON.stringify(window.bounds); f.popover.refresh();
+  assert.equal(JSON.stringify(window.bounds), clamped);
+});
+
+
+test("default browse and ended-note selection stay in the popup, and recording stop never hides it", async t => {
+ const f = fixture(t, { pinned: true, opacity: 1 });
+ f.view.canStop = false; f.view.meetings = [{ workspaceId: 'w1', noteId: 'past', title: '지난 회의', startedAt: 1000, ended: true }];
+ f.popover.toggle(); const window = f.windows[0]; window.finishLoad(); await settle();
+ const action = f.handlers.get('heymoa:meeting-action'), read = f.handlers.get('heymoa:meeting-read');
+ assert.equal(read(f.event()).timeline, null); assert.equal(window.bounds.height, 580);
+ await action(f.event(), { action: 'open-note', noteId: 'past' });
+ assert.equal(read(f.event()).timeline.noteId, 'past'); assert.equal(read(f.event()).timeline.loading, true);
+ f.view.selection = null; f.popover.refresh(); assert.equal(read(f.event()).timeline, null, 'scope reset removes the opening placeholder immediately');
+ f.view.selection = { workspaceId: 'w1', noteId: 'past', requestId: 1 };
+ await action(f.event(), { action: 'open-note', noteId: 'past' });
+ assert.equal(window.hides, 0);
+ f.view.timeline = { noteId: 'past', title: '지난 회의', loading: false, failed: false, reconnecting: false, total: 0, items: [], detail: { ended: true } }; f.popover.refresh();
+ assert.equal(read(f.event()).timeline.detail.ended, true);
+ await action(f.event(), 'list'); assert.equal(read(f.event()).timeline, null);
+ assert.equal(window.bounds.height, 580); assert.equal(window.hides, 0);
+ f.view.canStop = true; f.popover.refresh();
+ await action(f.event(), 'stop'); assert.deepEqual(f.actions, ['list', 'stop']); assert.equal(window.hides, 0);
+ f.view.canStop = false; f.popover.refresh(); assert.equal(window.hides, 0); assert.equal(window.bounds.height, 580);
+ assert.throws(() => action(f.event(), { action: 'open-note', noteId: 'unknown' }), /INVALID_MEETING_ACTION/);
+ assert.throws(() => action(f.event(), { action: 'open-note', noteId: 'past', url: 'https://evil.test' }), /INVALID_MEETING_ACTION/);
 });

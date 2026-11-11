@@ -11,6 +11,8 @@ import type {
   RecordingSummary,
   MeetingTimelineSnapshot,
   ActiveMeeting,
+  MeetingListSnapshot,
+  MeetingTarget,
 } from "@heymoa/desktop-contracts";
 // Sandboxed preload cannot require local modules. Keep runtime imports Electron-only.
 if (process.isMainFrame) {
@@ -21,6 +23,34 @@ if (process.isMainFrame) {
   contextBridge.exposeInMainWorld(
     "heymoaDesktop",
     Object.freeze({
+      meetingTimelineVersion: 2,
+      reportMeetingList: (snapshot: MeetingListSnapshot) =>
+        ipcRenderer.invoke("heymoa:meeting-list", snapshot),
+      getMeetingSelection: () =>
+        ipcRenderer.invoke("heymoa:meeting-selection-read"),
+      reportRecordingTarget: (target: MeetingTarget | null) =>
+        ipcRenderer.invoke("heymoa:meeting-recording-target", target),
+      reportMeetingUnavailable: (
+        noteId: string,
+        requestId?: number,
+        retryable?: boolean
+      ) =>
+        ipcRenderer.invoke("heymoa:meeting-unavailable", {
+          noteId,
+          ...(requestId !== undefined ? { requestId } : {}),
+          ...(retryable !== undefined ? { retryable } : {}),
+        }),
+      subscribeMeetingSelection: (
+        listener: (target: MeetingTarget | null) => void
+      ) => {
+        const receive = (
+          _event: Electron.IpcRendererEvent,
+          target: MeetingTarget | null
+        ) => listener(target);
+        ipcRenderer.on("heymoa:meeting-selection", receive);
+        return () =>
+          ipcRenderer.removeListener("heymoa:meeting-selection", receive);
+      },
       beginCapture: () => {
         if (!navigator.userActivation.isActive)
           return Promise.reject(new Error("CAPTURE_REQUIRES_USER_GESTURE"));
@@ -107,11 +137,15 @@ if (process.isMainFrame) {
       reportActiveMeetings: (meetings: ActiveMeeting[]) =>
         ipcRenderer.invoke("heymoa:active-meetings", meetings),
       subscribeOpenNote: (
-        listener: (target: { workspaceId: string; noteId: string }) => void
+        listener: (target: {
+          workspaceId: string;
+          noteId: string;
+          tab?: "summary" | "transcript" | "context";
+        }) => void
       ) => {
         const receive = (
           _event: Electron.IpcRendererEvent,
-          target: { workspaceId?: unknown; noteId?: unknown }
+          target: { workspaceId?: unknown; noteId?: unknown; tab?: unknown }
         ) => {
           if (
             typeof target?.workspaceId === "string" &&
@@ -120,6 +154,11 @@ if (process.isMainFrame) {
             listener({
               workspaceId: target.workspaceId,
               noteId: target.noteId,
+              ...(target.tab === "summary" ||
+              target.tab === "transcript" ||
+              target.tab === "context"
+                ? { tab: target.tab }
+                : {}),
             });
         };
         ipcRenderer.on("heymoa:open-note", receive);

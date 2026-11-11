@@ -47,15 +47,58 @@ export type MeetingTimelineSnapshot = {
   reconnecting: boolean;
   total: number;
   items: MeetingTimelineItem[];
+  /** v2 clients only; older clients reject unknown snapshot fields. */
+  detail?: {
+    workspaceId?: string;
+    ownsRecording?: boolean;
+    selectionId?: number;
+    meetingState?: "NOT_STARTED" | "IN_PROGRESS" | "PAUSED" | "ENDED";
+    ended?: boolean;
+    summary?: {
+      status: "loading" | "pending" | "failed" | "ready" | "unavailable";
+      lead: string;
+      sections: Array<{
+        id: string;
+        title: string;
+        description: string;
+        conclusions: string[];
+        openItems: string[];
+      }>;
+    };
+    counts: Record<
+      "ALL" | "DECISION" | "ACTION_ITEM" | "OPEN" | "REFERENCE",
+      number
+    >;
+    groups: Array<{
+      id: string;
+      title: string;
+      startMs: number | null;
+      endMs: number | null;
+      itemIds: string[];
+    }>;
+    partial: { confirmedText: string; pendingText: string } | null;
+  };
 };
 
 /** Display-only list entry for a meeting in progress. Navigation uses ids only. */
 export type ActiveMeeting = {
+  state?: "NOT_STARTED" | "IN_PROGRESS" | "PAUSED" | "ENDED";
+  ended?: boolean;
   workspaceId: string;
   noteId: string;
   title: string;
   /** Recording clock origin (epoch ms), same meaning as `RecordingSummary.startedAt`. */
   startedAt: number | null;
+};
+export type MeetingTarget = {
+  workspaceId: string;
+  noteId: string;
+  requestId?: number;
+};
+export type MeetingListSnapshot = {
+  workspaceId: string | null;
+  status: "loading" | "ready" | "failed" | "no-workspace";
+  meetings: ActiveMeeting[];
 };
 
 export type DesktopAuthOutcome = {
@@ -123,6 +166,7 @@ export type DesktopUpdateBridge = {
 };
 
 export type DesktopFoundationBridge = {
+  meetingTimelineVersion?: number;
   openSitePage?: (href: string) => Promise<void>;
   reportLanguage?: (language: "ko" | "en") => Promise<void>;
   getCapabilities(): Promise<DesktopCapabilities>;
@@ -131,8 +175,25 @@ export type DesktopFoundationBridge = {
     snapshot: MeetingTimelineSnapshot | null
   ) => Promise<void>;
   reportActiveMeetings?: (meetings: ActiveMeeting[]) => Promise<void>;
+  reportMeetingList?: (snapshot: MeetingListSnapshot) => Promise<void>;
+  reportRecordingTarget?: (
+    target: Pick<MeetingTarget, "workspaceId" | "noteId"> | null
+  ) => Promise<void>;
+  getMeetingSelection?: () => Promise<MeetingTarget | null>;
+  subscribeMeetingSelection?: (
+    listener: (target: MeetingTarget | null) => void
+  ) => () => void;
+  reportMeetingUnavailable?: (
+    noteId: string,
+    requestId?: number,
+    retryable?: boolean
+  ) => Promise<void>;
   subscribeOpenNote?: (
-    listener: (target: { workspaceId: string; noteId: string }) => void
+    listener: (target: {
+      workspaceId: string;
+      noteId: string;
+      tab?: "summary" | "transcript" | "context";
+    }) => void
   ) => () => void;
   subscribeRecordingActions?: (
     listener: (action: DesktopRecordingAction) => void

@@ -10,13 +10,24 @@ import { pathToFileURL } from "node:url";
 import {
   MEETING_CHANNELS,
   popoverBounds,
+  loadingMeeting,
   type MeetingPopoverView,
 } from "./meeting-timeline";
 
 export function createMeetingPopover(
   tray: Tray,
   read: () => MeetingPopoverView,
-  action: (value: "stop" | "show-current" | "stop-viewing") => void,
+  action: (
+    value:
+      | "stop"
+      | "show-current"
+      | "show-app"
+      | "stop-viewing"
+      | "list"
+      | "show-recording"
+      | "open-selection",
+    tab?: "summary" | "transcript" | "context"
+  ) => void,
   openNote: (noteId: string) => void = () => {},
   panel?: PanelOptions
 ) {
@@ -28,10 +39,46 @@ export function createMeetingPopover(
   let rememberedPosition = preferences.position;
   let positioning = false;
   let saving = Promise.resolve();
-  const view = () => ({
-    ...read(),
-    panel: { pinned: preferences.pinned, opacity: preferences.opacity },
-  });
+  let detailsRequested = false;
+  let recordingSeen = false;
+  let selectionSeen: number | undefined;
+  let opening:
+    | (import("@heymoa/desktop-contracts").ActiveMeeting & { at: number })
+    | null = null;
+  const view = () => {
+    const current = read();
+    if (
+      (!current.selection && current.canStop && !recordingSeen) ||
+      (current.selectionSource === "recording" &&
+        current.selection?.requestId !== selectionSeen)
+    ) {
+      detailsRequested = true;
+      opening = null;
+    }
+    recordingSeen = current.canStop;
+    selectionSeen = current.selection?.requestId;
+    let timeline = detailsRequested ? current.timeline : null;
+    if (
+      opening &&
+      current.selection !== undefined &&
+      current.selection?.noteId !== opening.noteId
+    )
+      opening = null;
+    if (opening && timeline?.noteId === opening.noteId && !timeline.loading)
+      opening = null;
+    if (opening) {
+      if (timeline?.noteId !== opening.noteId)
+        timeline = loadingMeeting(opening);
+      if (Date.now() - opening.at >= 30_000 || current.noteFailed)
+        timeline = { ...timeline!, loading: false, failed: true };
+    }
+    return {
+      ...current,
+      timeline,
+      viewing: detailsRequested && current.viewing,
+      panel: { pinned: preferences.pinned, opacity: preferences.opacity },
+    };
+  };
   const publish = () => {
     if (ready && popup && !popup.isDestroyed())
       popup.webContents.send(MEETING_CHANNELS.changed, view());
@@ -85,6 +132,31 @@ export function createMeetingPopover(
       )
         throw new Error("INVALID_MEETING_ACTION");
       return updatePreferences({ pinned: value.pinned });
+    } else if (payload === "list") {
+      detailsRequested = false;
+      opening = null;
+      action("list");
+      publish();
+    } else if (payload === "show-recording") {
+      detailsRequested = true;
+      opening = null;
+      action("show-recording");
+      publish();
+    } else if (
+      payload &&
+      typeof payload === "object" &&
+      (payload as { action?: unknown }).action === "open-selection"
+    ) {
+      const value = payload as { action: string; tab?: unknown };
+      if (
+        Object.keys(value).some((key) => !["action", "tab"].includes(key)) ||
+        (value.tab !== "summary" &&
+          value.tab !== "transcript" &&
+          value.tab !== "context")
+      )
+        throw new Error("INVALID_MEETING_ACTION");
+      hide();
+      action("open-selection", value.tab);
     } else if (payload === "settings") {
       if (!preferences.pinned) hide();
       panel?.openSettings?.();
@@ -95,27 +167,35 @@ export function createMeetingPopover(
       (payload as { action?: unknown }).action === "open-note" &&
       typeof (payload as { noteId?: unknown }).noteId === "string"
     ) {
-      hide();
-      openNote((payload as { noteId: string }).noteId);
+      const target = read().meetings.find(
+        (meeting) => meeting.noteId === (payload as { noteId: string }).noteId
+      );
+      if (
+        !target ||
+        Object.keys(payload as object).some(
+          (key) => !["action", "noteId"].includes(key)
+        )
+      )
+        throw new Error("INVALID_MEETING_ACTION");
+      detailsRequested = true;
+      opening = { ...target, at: Date.now() };
+      openNote(target.noteId);
+      position(popup!);
+      publish();
     } else if (
       payload === "show-current" ||
+      payload === "show-app" ||
       (payload === "stop" && read().canStop) ||
       (payload === "stop-viewing" && read().viewing)
     ) {
       // 보기 종료는 팝오버를 닫지 않는다 — 곧바로 진행 중 회의 목록이 보인다.
-      if (payload !== "stop-viewing") hide();
+      if (payload === "show-current" || payload === "show-app") hide();
       action(payload);
     } else throw new Error("INVALID_MEETING_ACTION");
   });
   function position(current: BrowserWindow, restore = false) {
     const anchor = tray.getBounds();
-    const currentView = read();
-    const height =
-      currentView.timeline || currentView.canStop
-        ? 580
-        : currentView.meetings?.length
-          ? 380
-          : 280;
+    const height = 580;
     const remembered =
       restore && preferences.pinned ? rememberedPosition : undefined;
     const bounds = current.getBounds();
@@ -166,7 +246,16 @@ export function createMeetingPopover(
     visibleRequested = false;
     if (popup && !popup.isDestroyed()) popup.hide();
   }
-  return {
+  const controller = {
+    revealNote(noteId: string, title: string) {
+      detailsRequested = true;
+      const target = read().meetings.find(
+        (meeting) => meeting.noteId === noteId
+      );
+      opening = target ? { ...target, title, at: Date.now() } : null;
+      if (!visibleRequested) controller.toggle();
+      else publish();
+    },
     async setOpacity(opacity: number) {
       if (!Number.isFinite(opacity) || opacity < 0.6 || opacity > 1)
         throw new Error("INVALID_PANEL_REQUEST");
@@ -284,4 +373,5 @@ export function createMeetingPopover(
       popup = null;
     },
   };
+  return controller;
 }

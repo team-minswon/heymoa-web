@@ -4,6 +4,8 @@ import path from "node:path";
 import type {
   ActiveMeeting,
   MeetingTimelineSnapshot,
+  MeetingListSnapshot,
+  MeetingTarget,
 } from "@heymoa/desktop-contracts";
 import { createMeetingPopover } from "./meeting-popover";
 import { showOnCurrentSpace } from "./show-window";
@@ -11,6 +13,7 @@ import {
   ACTIVE_MEETINGS_STALE_MS,
   MEETING_CHANNELS,
   TIMELINE_STALE_MS,
+  loadingMeeting,
 } from "./meeting-timeline";
 import { isTrustedUrl, CHANNELS } from "./policy";
 import {
@@ -35,6 +38,39 @@ export function createRecordingTray(
   let timelineAt = 0;
   let meetings: ActiveMeeting[] = [];
   let meetingsAt = 0;
+  let meetingsStatus: MeetingListSnapshot["status"] = "loading";
+  let noteFailed = false;
+  let selection: MeetingTarget | null = null;
+  let selectionSource: "recording" | "browse" | null = null;
+  let recordingTarget: MeetingTarget | null = null;
+  let listWorkspaceId: string | null = null;
+  let selectionSequence = 0;
+  let unavailableSelection: number | null = null;
+  function selectMeeting(
+    target: MeetingTarget | null,
+    source: "recording" | "browse" | null = null
+  ) {
+    selection = target ? { ...target, requestId: ++selectionSequence } : null;
+    selectionSource = target ? source : null;
+    unavailableSelection = null;
+    if (!contents.isDestroyed() && isTrustedUrl(contents.getURL(), origin))
+      contents.send(MEETING_CHANNELS.selection, selection);
+  }
+  function chooseMeeting(
+    target: MeetingTarget,
+    source: "recording" | "browse"
+  ) {
+    selectMeeting(target, source);
+    noteFailed = false;
+    const row = meetings.find((meeting) => meeting.noteId === target.noteId);
+    timeline = loadingMeeting(
+      row ?? { ...target, title: t("진행 중인 회의"), state: "IN_PROGRESS" },
+      selection!.requestId,
+      recordingTarget?.noteId === target.noteId
+    );
+    timelineAt = Date.now();
+    popover.refresh();
+  }
   let contextMenu: Menu | null = null;
   let throttled: boolean | undefined;
   let wasRecording = false;
@@ -111,6 +147,11 @@ export function createRecordingTray(
   /** 뷰어로 보는 회의의 경과. 시작 시각은 진행 중 회의 목록에서 찾는다(APP-1094). */
   function viewElapsed(): string | null {
     if (!timeline || lifecycle.isRecording()) return null;
+    if (
+      timeline.detail?.meetingState &&
+      timeline.detail.meetingState !== "IN_PROGRESS"
+    )
+      return null;
     const start = meetings.find(
       (m) => m.noteId === timeline!.noteId
     )?.startedAt;
@@ -122,17 +163,21 @@ export function createRecordingTray(
     if (disposed) return;
     const recording = lifecycle.isRecording();
     // 녹음이 끝나면 그때까지 받은 타임라인은 내 녹음의 것이다. 뷰어로 계속 보면 웹이 다시 보낸다.
-    if (wasRecording && !recording) clearTimeline();
+    if (wasRecording && !recording && !timeline?.detail) clearTimeline();
     wasRecording = recording;
     // 뷰어 타임라인은 웹이 10초마다 다시 보낸다. 그 두 배가 지나도 안 오면 그만 본다.
     if (
       !recording &&
       timeline &&
+      !timeline.detail &&
+      !selection &&
       Date.now() - timelineAt > TIMELINE_STALE_MS * 2
     )
       clearTimeline();
-    if (meetings.length && Date.now() - meetingsAt > ACTIVE_MEETINGS_STALE_MS)
+    if (meetings.length && Date.now() - meetingsAt > ACTIVE_MEETINGS_STALE_MS) {
       meetings = [];
+      meetingsStatus = "failed";
+    }
     const viewing = !recording && timeline !== null;
     // 숨은 창이 느려지면 타임라인 하트비트와 실시간 이벤트가 늦는다. 보는 동안도 켜 둔다.
     const backgroundThrottling = !recording && !viewing;
@@ -147,7 +192,9 @@ export function createRecordingTray(
       viewing ? t(VIEWING_LABEL) : view.label,
       elapsed &&
         (getLanguage() === "en" ? `${elapsed} elapsed` : `시작 후 ${elapsed}`),
-      view.pending && t("전송 대기"),
+      view.pending &&
+        !["recording", "stopping"].includes(view.phase ?? "") &&
+        t("전송 대기"),
       view.inputWarning,
       view.waiting && t("앱 종료 대기"),
     ]
@@ -156,12 +203,15 @@ export function createRecordingTray(
     tray.setToolTip(status);
     if (process.platform === "darwin") {
       // 내 녹음도 뷰어도 아니면 진행 중인 회의 개수를 보여 팝오버를 열기 전에 알 수 있게 한다.
-      const waiting = !recording && !viewing && meetings.length > 0;
+      const activeCount = meetings.filter((meeting) =>
+        meeting.state ? meeting.state === "IN_PROGRESS" : !meeting.ended
+      ).length;
+      const waiting = !recording && !viewing && activeCount > 0;
       tray.setTitle(
         elapsed && (viewing || !lifecycle.safe())
           ? elapsed
           : waiting
-            ? `●${meetings.length}`
+            ? `●${activeCount}`
             : "",
         { fontType: "monospacedDigit" }
       );
@@ -171,7 +221,7 @@ export function createRecordingTray(
       { type: "separator" },
       {
         label:
-          view.phase !== null && view.phase !== "idle"
+          recordingTarget || lifecycle.isRecording()
             ? t("현재 회의 열기")
             : t("HeyMoa 열기"),
         click: () => {
@@ -188,10 +238,10 @@ export function createRecordingTray(
       ...(meetings.length
         ? [
             { type: "separator" as const },
-            { label: t("진행 중인 회의"), enabled: false },
+            { label: t("최근 회의록"), enabled: false },
             ...meetings.slice(0, 5).map((meeting) => ({
               label: meeting.title || t("제목 없는 회의"),
-              click: () => openNote(meeting.noteId),
+              click: () => openNote(meeting.noteId, true),
             })),
           ]
         : []),
@@ -222,18 +272,70 @@ export function createRecordingTray(
     ]);
     popover?.refresh();
   }
-  function sendAction(action: "show-current" | "stop" | "stop-viewing") {
-    // A menu may have been built before the latest phase update.
+  function sendAction(
+    action:
+      | "show-current"
+      | "show-app"
+      | "stop"
+      | "stop-viewing"
+      | "list"
+      | "show-recording"
+      | "open-selection",
+    tab?: "summary" | "transcript" | "context"
+  ) {
+    if (action === "show-app") {
+      show();
+      return;
+    }
+    if (action === "list") {
+      selectMeeting(null);
+      clearTimeline();
+      noteFailed = false;
+      popover.refresh();
+      return;
+    }
+    if (action === "show-recording") {
+      if (recordingTarget) chooseMeeting(recordingTarget, "recording");
+      return;
+    }
     if (action === "stop" && !lifecycle.isRecording()) return;
-    // 뷰어로 보던 회의를 끝낸다. 내 녹음 중이거나 보던 회의가 없으면 받지 않는다.
     if (action === "stop-viewing" && (lifecycle.isRecording() || !timeline))
       return;
     try {
-      if (action === "stop-viewing") clearTimeline();
-      if (action === "show-current") show();
-      // 뷰어로 보는 회의는 창이 이미 그 노트에 있다. 이전 녹음 노트로 보내지 않는다.
-      if (action === "show-current" && timeline && !lifecycle.isRecording())
+      if (action === "open-selection") {
+        show();
+        if (
+          selection &&
+          !contents.isDestroyed() &&
+          isTrustedUrl(contents.getURL(), origin)
+        )
+          contents.send(MEETING_CHANNELS.openNote, {
+            workspaceId: selection.workspaceId,
+            noteId: selection.noteId,
+            tab: tab ?? (timeline?.detail?.ended ? "summary" : "transcript"),
+          });
         return;
+      }
+      if (action === "stop-viewing") {
+        selectMeeting(null);
+        clearTimeline();
+      }
+      if (action === "show-current") {
+        show();
+        if (
+          recordingTarget &&
+          !contents.isDestroyed() &&
+          isTrustedUrl(contents.getURL(), origin)
+        ) {
+          contents.send(MEETING_CHANNELS.openNote, {
+            workspaceId: recordingTarget.workspaceId,
+            noteId: recordingTarget.noteId,
+            tab: "transcript",
+          });
+          return;
+        }
+        if (!lifecycle.isRecording()) return;
+      }
       lifecycle.action(action);
     } catch {
       show();
@@ -288,19 +390,29 @@ export function createRecordingTray(
       const view = lifecycle.view();
       return {
         language: getLanguage(),
+        selection,
+        selectionSource,
+        recordingTarget,
         phase: view.phase,
         unknown: view.unknown,
         timeline,
         meetings,
+        meetingsStatus,
+        noteFailed,
         viewing: timeline !== null && !lifecycle.isRecording(),
-        label:
-          !lifecycle.isRecording() && timeline ? t(VIEWING_LABEL) : view.label,
+        label: lifecycle.safe() && timeline ? t(VIEWING_LABEL) : view.label,
         elapsed: viewElapsed() ?? view.elapsed,
         warning:
           view.inputWarning ||
-          (view.pending ? t("전송 대기 중인 소리가 있습니다.") : null),
+          // 녹음 중 청크의 짧은 전송 대기는 정상이며 경고 줄의 출몰이 본문을 밀어낸다.
+          (view.pending && !["recording", "stopping"].includes(view.phase ?? "")
+            ? t("전송 대기 중인 소리가 있습니다.")
+            : null),
         canStop: lifecycle.isRecording(),
-        stale: timeline !== null && Date.now() - timelineAt > TIMELINE_STALE_MS,
+        stale:
+          !noteFailed &&
+          timeline !== null &&
+          Date.now() - timelineAt > TIMELINE_STALE_MS,
       };
     },
     sendAction,
@@ -308,21 +420,23 @@ export function createRecordingTray(
     panel
   );
   /** 팝오버가 목록에 있던 회의를 눌렀다. 목록에 없는 id 는 받지 않는다. */
-  function openNote(noteId: string) {
+  function openNote(noteId: string, reveal = false) {
     const target = meetings.find((meeting) => meeting.noteId === noteId);
     if (!target || disposed) return;
     try {
-      show();
+      noteFailed = false;
       if (
         window.isDestroyed() ||
         contents.isDestroyed() ||
         !isTrustedUrl(contents.getURL(), origin)
       )
         throw new Error("RECORDING_RENDERER_UNAVAILABLE");
-      contents.send(MEETING_CHANNELS.openNote, {
-        workspaceId: target.workspaceId,
-        noteId: target.noteId,
-      });
+      chooseMeeting(
+        { workspaceId: target.workspaceId, noteId: target.noteId },
+        "browse"
+      );
+      if (reveal) popover.revealNote?.(target.noteId, target.title);
+      popover.refresh();
     } catch {
       show();
     }
@@ -345,8 +459,12 @@ export function createRecordingTray(
     popover.refresh();
   };
   const unavailable = () => {
+    selectMeeting(null);
+    recordingTarget = null;
+    listWorkspaceId = null;
     clearTimeline();
     meetings = [];
+    meetingsStatus = "loading";
     popover.refresh();
     lifecycle.unavailable();
   };
@@ -402,12 +520,118 @@ export function createRecordingTray(
     setPanelOpacity: popover.setOpacity,
     reportTimeline(value: MeetingTimelineSnapshot | null) {
       // 녹음 중이 아니어도 받는다 — 내가 뷰어로 보는 진행 중 회의다(APP-1092).
+      if (value?.detail) {
+        if (
+          !selection ||
+          value.noteId !== selection.noteId ||
+          value.detail.workspaceId !== selection.workspaceId
+        )
+          return;
+        if (
+          unavailableSelection === selection.requestId ||
+          value.detail.selectionId !== selection.requestId
+        )
+          return;
+      } else if (
+        selection &&
+        (!value ||
+          value.noteId !== selection.noteId ||
+          unavailableSelection === selection.requestId)
+      )
+        return;
       timeline = value;
+      noteFailed = value === null;
       timelineAt = Date.now();
       popover.refresh();
     },
     reportActiveMeetings(value: ActiveMeeting[]) {
       meetings = value;
+      meetingsAt = Date.now();
+      meetingsStatus = "ready";
+      popover.refresh();
+    },
+    meetingSelection: () => selection,
+    meetingUnavailable(noteId: string, requestId?: number, retryable = false) {
+      if (selection?.noteId !== noteId || selection?.requestId !== requestId)
+        return;
+      if (retryable) {
+        if (unavailableSelection === selection.requestId) return;
+        if (timeline)
+          timeline = {
+            ...timeline,
+            reconnecting: true,
+            ...(timeline.loading
+              ? {
+                  loading: false,
+                  failed: true,
+                  detail: timeline.detail
+                    ? {
+                        ...timeline.detail,
+                        ...(timeline.detail.ended
+                          ? {
+                              summary: {
+                                status: "failed" as const,
+                                lead: "",
+                                sections: [],
+                              },
+                            }
+                          : {}),
+                      }
+                    : undefined,
+                }
+              : {}),
+          };
+        popover.refresh();
+        return;
+      }
+      unavailableSelection = selection?.requestId ?? null;
+      noteFailed = true;
+      timeline = {
+        noteId,
+        title: t("회의록"),
+        loading: false,
+        failed: true,
+        reconnecting: false,
+        total: 0,
+        items: [],
+      };
+      timelineAt = Date.now();
+      popover.refresh();
+    },
+    reportRecordingTarget(value: MeetingTarget | null) {
+      const changed =
+        value?.noteId !== recordingTarget?.noteId ||
+        value?.workspaceId !== recordingTarget?.workspaceId;
+      recordingTarget = value;
+      if (
+        value &&
+        changed &&
+        (!selection ||
+          (selectionSource === "recording" &&
+            (selection.noteId !== value.noteId ||
+              selection.workspaceId !== value.workspaceId ||
+              unavailableSelection === selection.requestId)))
+      )
+        chooseMeeting(value, "recording");
+      else popover.refresh();
+    },
+    reportMeetingList(value: MeetingListSnapshot) {
+      const scopeChanged =
+        value.workspaceId !== null && value.workspaceId !== listWorkspaceId;
+      if (value.workspaceId !== null) listWorkspaceId = value.workspaceId;
+      if (
+        scopeChanged &&
+        selection &&
+        selection.workspaceId !== value.workspaceId &&
+        (selectionSource !== "recording" || !recordingTarget)
+      ) {
+        selectMeeting(null);
+        timeline = null;
+        timelineAt = 0;
+        noteFailed = false;
+      }
+      meetingsStatus = value.status;
+      meetings = value.meetings;
       meetingsAt = Date.now();
       popover.refresh();
     },

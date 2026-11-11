@@ -12,11 +12,42 @@
   </head>
   <body>
     <header>
+      <button
+        id="back"
+        data-i18n-aria-label="회의 목록으로"
+        aria-label="회의 목록으로"
+        data-i18n-title="회의 목록으로"
+        title="회의 목록으로"
+        hidden
+      >
+        ‹
+      </button>
       <div class="status">
         <i></i><span id="phase"><span data-i18n>녹음 대기</span></span
         ><time id="elapsed"></time>
       </div>
       <div class="window-controls">
+        <button
+          id="recording-note"
+          data-i18n-aria-label="녹음 중인 회의로"
+          aria-label="녹음 중인 회의로"
+          data-i18n-title="녹음 중인 회의로"
+          title="녹음 중인 회의로"
+          hidden
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            aria-hidden="true"
+          >
+            <rect x="9" y="2" width="6" height="12" rx="3" />
+            <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" />
+          </svg>
+        </button>
         <button
           id="settings"
           data-i18n-aria-label="데스크톱 설정"
@@ -87,7 +118,22 @@
         </button>
       </div>
     </header>
-    <h1 id="title"><span data-i18n>녹음 대기</span></h1>
+    <h1 id="title" tabindex="-1"><span data-i18n>녹음 대기</span></h1>
+    <nav
+      id="view-tabs"
+      data-i18n-aria-label="회의록 보기"
+      aria-label="회의록 보기"
+      hidden
+    >
+      <button id="summary-tab" aria-pressed="false" data-i18n>요약</button>
+      <button id="timeline-tab" aria-pressed="true" data-i18n>타임라인</button>
+    </nav>
+    <nav
+      id="filters"
+      data-i18n-aria-label="유형으로 골라 보기"
+      aria-label="유형으로 골라 보기"
+      hidden
+    ></nav>
     <p id="notice" role="status"></p>
     <main
       id="scroll"
@@ -96,7 +142,18 @@
       aria-label="회의 타임라인"
     >
       <div id="meetings" hidden></div>
+      <div id="summary-view" hidden></div>
       <div id="items"></div>
+      <section id="live-transcript" hidden>
+        <div class="live-label" data-i18n>실시간 전사</div>
+        <p
+          tabindex="0"
+          data-i18n-aria-label="실시간 전사"
+          aria-label="실시간 전사"
+        >
+          <span id="confirmed"></span><span id="pending"></span>
+        </p>
+      </section>
       <p id="empty"><span data-i18n>녹음 중인 회의가 없습니다.</span></p>
     </main>
     <button

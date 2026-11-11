@@ -32,6 +32,8 @@ import {
   MEETING_CHANNELS,
   activeMeetings,
   meetingTimeline,
+  meetingList,
+  meetingTarget,
 } from "./meeting-timeline";
 import { captureId } from "./media-grant";
 import { CaptureHost } from "./capture-host";
@@ -509,6 +511,54 @@ app
     ipcMain.handle(MEETING_CHANNELS.report, (event, payload: unknown) => {
       authorize(event);
       recording?.reportTimeline(meetingTimeline(payload));
+    });
+    ipcMain.handle(MEETING_CHANNELS.list, (event, payload: unknown) => {
+      authorize(event);
+      recording?.reportMeetingList(meetingList(payload));
+    });
+    ipcMain.handle(
+      MEETING_CHANNELS.recordingTarget,
+      (event, payload: unknown) => {
+        authorize(event);
+        recording?.reportRecordingTarget(meetingTarget(payload));
+      }
+    );
+    ipcMain.handle(
+      MEETING_CHANNELS.selectionRead,
+      (event, payload: unknown) => {
+        authorize(event);
+        if (!emptyRequest(payload)) throw new Error("INVALID_MEETING_REQUEST");
+        return recording?.meetingSelection() ?? null;
+      }
+    );
+    ipcMain.handle(MEETING_CHANNELS.unavailable, (event, payload: unknown) => {
+      authorize(event);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload))
+        throw new Error("INVALID_MEETING_REQUEST");
+      const value = payload as {
+        noteId?: unknown;
+        requestId?: unknown;
+        retryable?: unknown;
+      };
+      if (
+        Object.keys(value).some(
+          (key) => !["noteId", "requestId", "retryable"].includes(key)
+        ) ||
+        typeof value.noteId !== "string" ||
+        !value.noteId ||
+        value.noteId.length > 64 ||
+        (Object.hasOwn(value, "requestId") &&
+          (!Number.isSafeInteger(value.requestId) ||
+            (value.requestId as number) < 0)) ||
+        (Object.hasOwn(value, "retryable") &&
+          typeof value.retryable !== "boolean")
+      )
+        throw new Error("INVALID_MEETING_REQUEST");
+      recording?.meetingUnavailable(
+        value.noteId,
+        value.requestId as number | undefined,
+        value.retryable as boolean | undefined
+      );
     });
     ipcMain.handle(
       MEETING_CHANNELS.activeMeetings,

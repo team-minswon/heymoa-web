@@ -33,9 +33,23 @@ test("idle opens HeyMoa without inventing a current meeting", (t) => {
   f.tray.emit("right-click");
   f.tray.menu.find((item) => item.label === "HeyMoa 열기").click();
   assert.equal(f.shows, 1);
-  assert.deepEqual(f.sent, [["heymoa:recording-action", "show-current"]]);
+  assert.deepEqual(f.sent, []);
 });
 const snapshot = { noteId: "n1", title: "뷰어 회의", loading: false, failed: false, reconnecting: false, total: 0, items: [] };
+test("normal in-flight audio does not toggle the recording notice, but stopped pending audio stays protected", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  for (const pendingMs of [0, 20, 0, 1000, 0]) {
+    f.adapter.lifecycle.update({ ...idle, phase: "recording", pendingMs });
+    assert.equal(f.read().warning, null);
+    assert.equal(f.adapter.prepareForUpdate(), false);
+  }
+  f.adapter.lifecycle.update({ ...idle, phase: "failed", pendingMs: 1000 });
+  assert.match(f.read().warning, /전송 대기/);
+  assert.equal(f.adapter.prepareForUpdate(), false);
+  f.adapter.lifecycle.update(idle);
+  assert.equal(f.read().warning, null);
+  assert.equal(f.adapter.prepareForUpdate(), true);
+});
 test("a viewed meeting shows in the popover without a recording, keeps the window awake, and stops when the recording it replaced ends", (t) => {
   const f = fixture(); t.after(() => f.adapter.dispose());
   f.adapter.reportTimeline(snapshot);
@@ -67,8 +81,8 @@ test("active meetings reach the popover, open only listed notes in the trusted w
   f.open("unknown");
   assert.equal(f.shows, 0);
   f.open("n9");
-  assert.equal(f.shows, 1);
-  assert.equal(JSON.stringify(f.sent), JSON.stringify([["heymoa:open-note", { workspaceId: "w1", noteId: "n9" }]]));
+  assert.equal(f.shows, 0);
+  assert.equal(JSON.stringify(f.sent), JSON.stringify([["heymoa:meeting-selection", { workspaceId: "w1", noteId: "n9", requestId: 1 }]]));
   f.advance(151_000);
   f.interval();
   assert.equal(f.read().meetings.length, 0);
@@ -104,11 +118,11 @@ test("stop-viewing ends a viewed meeting only: clears the popover timeline and t
   f.popoverAction("stop-viewing");
   assert.equal(f.read().timeline, null);
   assert.equal(f.read().viewing, false);
-  assert.equal(JSON.stringify(f.sent), JSON.stringify([["heymoa:recording-action", "stop-viewing"]]));
+  assert.equal(JSON.stringify(f.sent), JSON.stringify([["heymoa:meeting-selection", null], ["heymoa:recording-action", "stop-viewing"]]));
   f.adapter.lifecycle.update({ ...idle, phase: "recording" });
   f.adapter.reportTimeline(snapshot);
   f.popoverAction("stop-viewing");
-  assert.equal(f.sent.length, 1);
+  assert.equal(f.sent.length, 2);
 });
 test("the context menu lists active meetings, the title counts them while idle, and the login item toggles only when packaged", (t) => {
   const f = fixture(); t.after(() => f.adapter.dispose());
@@ -117,9 +131,9 @@ test("the context menu lists active meetings, the title counts them while idle, 
   if (process.platform === "darwin") assert.equal(f.tray.title, "●2");
   f.tray.emit("right-click");
   const labels = f.tray.menu.map((item) => item.label);
-  assert.ok(labels.includes("진행 중인 회의") && labels.includes("진행 중") && labels.includes("둘째"));
+  assert.ok(labels.includes("최근 회의록") && labels.includes("진행 중") && labels.includes("둘째"));
   f.tray.menu.find((item) => item.label === "둘째").click();
-  assert.equal(JSON.stringify(f.sent.at(-1)), JSON.stringify(["heymoa:open-note", { workspaceId: "w1", noteId: "n10" }]));
+  assert.equal(JSON.stringify(f.sent.at(-1)), JSON.stringify(["heymoa:meeting-selection", { workspaceId: "w1", noteId: "n10", requestId: 1 }]));
   assert.ok(!labels.includes("로그인 시 자동 실행"));
   // 내 녹음 중이면 개수를 보이지 않는다.
   f.adapter.lifecycle.update({ ...idle, phase: "recording", startedAt: Date.now() });
@@ -470,4 +484,70 @@ test("failed update restores quit protection and allows a later safe normal quit
   await new Promise((resolve) => setImmediate(resolve)); assert.equal(f.quits, 0);
   f.adapter.lifecycle.update(idle); await f.adapter.lifecycle.requestQuit();
   assert.equal(f.quits, 1);
+});
+
+
+test("selected v2 meeting survives pause, rejects unrelated/late snapshots and keeps audio restart protection", t => {
+ const f = fixture(); t.after(() => f.adapter.dispose());
+ const detail = { workspaceId: 'w1', ownsRecording: true, counts: { ALL: 0, DECISION: 0, ACTION_ITEM: 0, OPEN: 0, REFERENCE: 0 }, groups: [], partial: null };
+ f.adapter.lifecycle.update({ ...idle, phase: 'recording', pendingMs: 20 });
+ f.adapter.reportRecordingTarget({ workspaceId: 'w1', noteId: 'n1' });
+ const first = f.adapter.meetingSelection(); assert.equal(first.noteId, 'n1');
+ f.adapter.reportTimeline({ ...snapshot, detail: { ...detail, selectionId: first.requestId } });
+ for (const phase of ['stopping', 'completed']) {
+  f.adapter.lifecycle.update({ ...idle, phase, pendingMs: 20 });
+  assert.equal(f.read().timeline.noteId, 'n1'); assert.equal(f.adapter.prepareForUpdate(), false);
+ }
+ f.adapter.reportMeetingList({ workspaceId: 'w1', status: 'ready', meetings: [{ ...meeting, noteId: 'b', ended: true, state: 'ENDED' }] });
+ f.open('b'); const second = f.adapter.meetingSelection();
+ assert.equal(second.noteId, 'b'); assert.equal(f.shows, 0);
+ f.adapter.reportTimeline({ ...snapshot, detail: { ...detail, selectionId: first.requestId } });
+ assert.equal(f.read().timeline.loading, true);
+ const selected = { ...snapshot, noteId: 'b', detail: { ...detail, ownsRecording: false, selectionId: second.requestId, ended: true } };
+ f.adapter.reportTimeline(selected); assert.equal(f.read().timeline.noteId, 'b');
+ f.adapter.reportTimeline(null); assert.equal(f.read().timeline.noteId, 'b');
+ f.adapter.meetingUnavailable('n1', first.requestId); assert.equal(f.read().timeline.noteId, 'b');
+ f.adapter.meetingUnavailable('b', second.requestId); assert.equal(f.read().timeline.failed, true);
+ f.adapter.reportTimeline(selected); assert.equal(f.read().timeline.failed, true, 'late heartbeat cannot revive denied content');
+ f.open('b'); const retry = f.adapter.meetingSelection(); assert.ok(retry.requestId > second.requestId);
+ f.adapter.reportTimeline(selected); assert.equal(f.read().timeline.loading, true, 'old selection cannot fill a retry');
+ f.adapter.reportTimeline({ ...selected, detail: { ...selected.detail, selectionId: retry.requestId } }); assert.equal(f.read().timeline.noteId, 'b');
+ f.advance(120_000); f.interval(); assert.equal(f.read().timeline.noteId, 'b', 'stale selected content stays with a stale indicator');
+ f.adapter.reportMeetingList({ workspaceId: 'w2', status: 'loading', meetings: [] });
+ assert.equal(f.adapter.meetingSelection(), null); assert.equal(f.read().timeline, null);
+ assert.equal(f.adapter.prepareForUpdate(), false);
+});
+
+test("recording targets, browsing and workspace heartbeats stay independent; transient failures recover", t => {
+ const f = fixture(); t.after(() => f.adapter.dispose());
+ f.adapter.lifecycle.update({ ...idle, phase: 'recording' });
+ f.adapter.reportRecordingTarget({ workspaceId: 'w1', noteId: 'a' });
+ const a = f.adapter.meetingSelection();
+ assert.equal(a.noteId, 'a');
+ f.adapter.reportMeetingList({ workspaceId: 'w2', status: 'ready', meetings: [{ ...meeting, workspaceId: 'w2', noteId: 'b', state: 'ENDED', ended: true }] });
+ assert.equal(f.adapter.meetingSelection(), a, 'cross-workspace list does not reset the active recording');
+ f.adapter.reportMeetingList({ workspaceId: 'w2', status: 'ready', meetings: [{ ...meeting, workspaceId: 'w2', noteId: 'b', state: 'ENDED', ended: true }] });
+ assert.equal(f.adapter.meetingSelection(), a, 'heartbeats do not reselect');
+ f.open('b'); const b = f.adapter.meetingSelection();
+ assert.equal(f.read().timeline.detail.ended, true, 'ended metadata is present in the loading placeholder');
+ assert.equal(f.read().canStop, true);
+ f.popoverAction('show-current'); assert.equal(f.sent.at(-1)[1].noteId, 'a'); assert.equal(f.sent.at(-1)[1].tab, 'transcript');
+ f.popoverAction('open-selection', 'summary'); assert.equal(f.sent.at(-1)[1].noteId, 'b'); assert.equal(f.sent.at(-1)[1].tab, 'summary');
+ const content = { ...snapshot, noteId: 'b', detail: { workspaceId: 'w2', selectionId: b.requestId, ownsRecording: false, ended: true, counts: { ALL: 0, DECISION: 0, ACTION_ITEM: 0, OPEN: 0, REFERENCE: 0 }, groups: [], partial: null } };
+ f.adapter.reportTimeline(content);
+ f.adapter.meetingUnavailable('b', b.requestId, true);
+ assert.equal(f.read().noteFailed, false); assert.equal(f.read().timeline.reconnecting, true);
+ f.adapter.reportTimeline(content); assert.equal(f.read().timeline.reconnecting, false);
+ f.adapter.meetingUnavailable('b', b.requestId); f.advance(31_000); f.interval();
+ assert.equal(f.read().noteFailed, true); assert.equal(f.read().stale, false);
+ f.popoverAction('list'); assert.equal(f.adapter.meetingSelection(), null); assert.equal(f.read().noteFailed, false); assert.equal(f.read().canStop, true);
+ f.adapter.reportRecordingTarget({ workspaceId: 'w1', noteId: 'c' }); assert.equal(f.adapter.meetingSelection().noteId, 'c');
+ const c = f.adapter.meetingSelection();
+ f.adapter.reportTimeline({ ...content, noteId: 'c', detail: { ...content.detail, workspaceId: 'w1', selectionId: c.requestId } });
+ const body = f.read().timeline;
+ f.adapter.reportRecordingTarget(null); f.adapter.lifecycle.update({ ...idle, phase: 'completed' });
+ const sent = f.sent.length; f.popoverAction('show-app'); f.popoverAction('show-current'); assert.equal(f.sent.length, sent, 'opening the app after recording does not navigate to stale activeNoteId');
+ f.adapter.lifecycle.update({ ...idle, phase: 'recording' }); f.adapter.reportRecordingTarget({ workspaceId: 'w1', noteId: 'c' });
+ assert.equal(f.adapter.meetingSelection(), c); assert.equal(f.read().timeline, body, 'resuming the same recording preserves its provider nonce and content');
+ f.adapter.reportRecordingTarget({ workspaceId: 'w1', noteId: 'd' }); assert.equal(f.adapter.meetingSelection().noteId, 'd');
 });

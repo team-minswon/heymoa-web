@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { ActiveMeeting, DesktopBridge } from "@heymoa/desktop-contracts";
 
-import { recordingClockOriginMs } from "@/lib/notes/meeting-state";
+import {
+  recordingClockOriginMs,
+  noteOrderedAt,
+} from "@/lib/notes/meeting-state";
 import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
+import { ApiError } from "@/lib/api/fetcher";
 
 const REPORT_MS = 30_000;
 
@@ -27,7 +31,13 @@ export function DesktopActiveMeetings() {
 
 function ActiveMeetingsReporter() {
   const router = useRouter();
-  const { workspaceId } = useParams<{ workspaceId?: string }>();
+  const { workspaceId: routeWorkspaceId } = useParams<{
+    workspaceId?: string;
+  }>();
+  const [lastWorkspaceId, setLastWorkspaceId] = useState(routeWorkspaceId);
+  if (routeWorkspaceId && routeWorkspaceId !== lastWorkspaceId)
+    setLastWorkspaceId(routeWorkspaceId);
+  const workspaceId = routeWorkspaceId ?? lastWorkspaceId;
   const bridge = desktopBridge();
   const list = useNoteListPages({
     scope: { kind: "workspace", workspaceId: workspaceId ?? "" },
@@ -38,7 +48,7 @@ function ActiveMeetingsReporter() {
     refetchIntervalInBackground: true,
   });
   const notes =
-    list.data?.status === 200 && list.data.data.success
+    workspaceId && list.data?.status === 200 && list.data.data.success
       ? list.data.data.data.notes
       : undefined;
   // 워크스페이스를 옮기면 새 조회가 오기 전까지 이전 목록이 남는다(placeholder). 그 노트에
@@ -48,35 +58,90 @@ function ActiveMeetingsReporter() {
     () =>
       workspaceId
         ? (settled ?? [])
-            .filter((note) => note.meetingStatus === "IN_PROGRESS")
+            .filter(
+              (note) =>
+                (bridge?.meetingTimelineVersion ?? 1) >= 2 ||
+                note.meetingStatus === "IN_PROGRESS"
+            )
             .slice(0, 20)
-            .map((note) => ({
-              workspaceId,
-              noteId: note.noteId,
-              title: note.title,
-              // 트레이가 `지금 − startedAt` 으로 경과를 잰다. 녹음 시계의 원점이라 재개한 회의도 처음부터 센다.
-              startedAt: recordingClockOriginMs(note),
-            }))
+            .map((note) => {
+              const date = Date.parse(noteOrderedAt(note));
+              return {
+                workspaceId,
+                noteId: note.noteId,
+                title: note.title,
+                ...((bridge?.meetingTimelineVersion ?? 1) >= 2
+                  ? {
+                      ended: note.meetingStatus === "ENDED",
+                      state: note.meetingStatus,
+                    }
+                  : {}),
+                // 트레이가 `지금 − startedAt` 으로 경과를 잰다. 녹음 시계의 원점이라 재개한 회의도 처음부터 센다.
+                startedAt:
+                  note.meetingStatus === "IN_PROGRESS"
+                    ? recordingClockOriginMs(note)
+                    : Number.isFinite(date)
+                      ? date
+                      : null,
+              };
+            })
         : [],
-    [settled, workspaceId]
+    [settled, workspaceId, bridge]
   );
 
   // 조회가 성공해 데이터가 새로 올 때마다 보낸다. 조회가 실패하거나 멈추면 하트비트도 멈춰
   // 네이티브가 150초 뒤 목록을 비운다 — 옛 목록을 새것처럼 계속 보내지 않는다.
-  // ponytail: 첫 쪽(30개)만 본다. 진행 중 회의보다 새로 만든 노트가 30개 넘게 쌓이면 빠진다.
+  // shortcut: 첫 쪽에서 최근 20건만 보여 준다. 더 오래된 회의 탐색은 큰 앱을 사용한다.
   const fresh = settled !== undefined ? list.dataUpdatedAt : 0;
   useEffect(() => {
+    if (!bridge?.reportMeetingList || fresh) return;
+    const status = !workspaceId
+      ? "no-workspace"
+      : list.isPending || list.isPlaceholderData
+        ? "loading"
+        : "failed";
+    void bridge
+      .reportMeetingList({
+        workspaceId: workspaceId ?? null,
+        status,
+        meetings: [],
+      })
+      .catch(() => {});
+  }, [
+    bridge,
+    fresh,
+    list.isPending,
+    list.isPlaceholderData,
+    list.isError,
+    workspaceId,
+  ]);
+  useEffect(() => {
     if (!bridge?.reportActiveMeetings || !fresh) return;
+    if (bridge.reportMeetingList) {
+      void bridge
+        .reportMeetingList({
+          workspaceId: workspaceId ?? null,
+          status: list.isError ? "failed" : "ready",
+          meetings:
+            list.isError &&
+            list.error instanceof ApiError &&
+            [401, 403, 404].includes(list.error.status)
+              ? []
+              : meetings,
+        })
+        .catch(() => {});
+      return;
+    }
     void bridge.reportActiveMeetings(meetings).catch(() => {
       console.warn("Desktop active meetings could not be reported");
     });
-  }, [bridge, meetings, fresh]);
+  }, [bridge, meetings, fresh, list.isError, list.error, workspaceId]);
 
   useEffect(() => {
     if (!bridge?.subscribeOpenNote) return;
-    return bridge.subscribeOpenNote(({ workspaceId: ws, noteId }) =>
+    return bridge.subscribeOpenNote(({ workspaceId: ws, noteId, tab }) =>
       router.push(
-        `/w/${encodeURIComponent(ws)}/notes/${encodeURIComponent(noteId)}?view=full&tab=transcript`
+        `/w/${encodeURIComponent(ws)}/notes/${encodeURIComponent(noteId)}?view=full&tab=${tab ?? "transcript"}`
       )
     );
   }, [bridge, router]);
