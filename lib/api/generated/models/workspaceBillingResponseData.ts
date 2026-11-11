@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { WorkspaceBillingResponseDataClosedReason } from "./workspaceBillingResponseDataClosedReason";
 import type { WorkspaceBillingResponseDataCurrentPeriod } from "./workspaceBillingResponseDataCurrentPeriod";
 import type { WorkspaceBillingResponseDataDetail } from "./workspaceBillingResponseDataDetail";
 import type { WorkspaceBillingResponseDataEntitlement } from "./workspaceBillingResponseDataEntitlement";
@@ -31,7 +32,7 @@ export type WorkspaceBillingResponseData = {
   mySetupId: string | null;
   /** 다른 ADMIN 이 연 진행 중 등록이 있다(내용은 보이지 않는다) */
   teamSetupInProgress: boolean;
-  /** 화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, REQUEST_REFUND, DELETE_PAYMENT_METHOD */
+  /** 화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD */
   allowedActions: string[];
   /** 기간 끝에 해지 예약 여부 */
   cancelAtPeriodEnd: boolean;
@@ -65,4 +66,9 @@ export type WorkspaceBillingResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;
+  /**
+   * 구독이 끝난 까닭. status=ENDED 일 때만 있고 아니면 null. UNPAID 는 갱신 결제가 승인되지 않아 끝난 것, EXPIRED 는 해지 예약·청구 중단·상품 변경으로 기간 끝에 끝난 것, REFUNDED 는 환불로 끝난 것
+   * @nullable
+   */
+  closedReason: WorkspaceBillingResponseDataClosedReason;
 };

@@ -35,7 +35,7 @@ export type BillingSetupStatusResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   setupId: string;
-  /** 화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, REQUEST_REFUND, DELETE_PAYMENT_METHOD */
+  /** 화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD */
   allowedActions: string[];
   /**
    * 지급된 유료 기간 [start, end)
@@ -50,7 +50,7 @@ export type BillingSetupStatusResponseData = {
   /** 화면의 큰 단계 */
   stage: BillingSetupStatusResponseDataStage;
   /**
-   * 그 회차의 최신 시도(재결제 뒤 originAttempt 와 갈린다)
+   * 그 회차의 최신 시도. 재결제가 없어 originAttempt 와 같다
    * @nullable
    */
   latestAttempt: BillingSetupStatusResponseDataLatestAttempt;

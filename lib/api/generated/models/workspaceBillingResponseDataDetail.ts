@@ -15,7 +15,7 @@ import type { WorkspaceBillingResponseDataDetailRefundedAttempt } from "./worksp
  */
 export type WorkspaceBillingResponseDataDetail = {
   /**
-   * 유효한 결제 수단 버전. 재결제의 methodVersion
+   * 유효한 결제 수단 버전
    * @nullable
    */
   methodVersion: number | null;
@@ -29,15 +29,15 @@ export type WorkspaceBillingResponseDataDetail = {
    * @nullable
    */
   latestAttempt: WorkspaceBillingResponseDataDetailLatestAttempt;
-  /** 구독 버전. 재결제의 expectedVersion */
+  /** 구독 버전. 해지·재개의 expectedVersion */
   subscriptionVersion: number;
   /**
-   * 열린 청구 회차. 재결제 경로의 cycleId
+   * 결과를 기다리는 열린 청구 회차. 없으면 null
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   openCycleId: string | null;
-  /** 결제 수단의 결제자가 나인가. 재결제는 결제자 본인만 한다 */
+  /** 결제 수단의 결제자가 나인가 */
   methodPayerIsMe: boolean;
   /**
    * 가장 최근 환불(보상 취소 포함)이 걸린 승인 시도. 열린 회차가 없어도 취소 진행·완료를 보인다. 없으면 null

@@ -44,11 +44,6 @@ export type RecordingUsageResponseData = {
    */
   sampleRate: number | null;
   /**
-   * 진행 중인 녹음이 시작할 때 잡아 둔 예약의 합. 단위는 16kHz 샘플
-   * @nullable
-   */
-  reservedSamples: number | null;
-  /**
    * 기간의 종류. FREE 는 달력월(Asia/Seoul) 한도, PAID 는 유료 구독 기간(무제한)
    * @nullable
    */
@@ -73,4 +68,9 @@ export type RecordingUsageResponseData = {
    * @nullable
    */
   periodEnd: string | null;
+  /**
+   * 이 공간에 아직 닫히지 않은 녹음이 있는가. true 면 끝난 뒤 usedSamples 에 반영될 녹음이 있다
+   * @nullable
+   */
+  recordingInProgress: boolean | null;
 };

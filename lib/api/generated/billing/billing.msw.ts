@@ -10,8 +10,6 @@ import type { RequestHandlerOptions } from "msw";
 
 import type {
   BillingPaymentResponse,
-  BillingPaymentRetriedResponse,
-  BillingRefundResponse,
   BillingSetupCreatedResponse,
   BillingSetupStatusResponse,
   BillingSubscriptionStateResponse,
@@ -77,6 +75,7 @@ export const getGetWorkspaceBillingResponseMock =
         currentPaymentId: "0HZX2K7M9Q4B3",
         methodId: "0HZX2K7M9Q4B5",
       },
+      closedReason: null,
     },
     error: null,
   });
@@ -152,18 +151,6 @@ export const getCreateBillingSetupResponseMock =
     error: null,
   });
 
-export const getRetryBillingPaymentResponseMock =
-  (): BillingPaymentRetriedResponse => ({
-    success: true,
-    data: {
-      attemptId: "0HZX2K7M9Q4B4",
-      cycleId: "0HZX2K7M9Q4B2",
-      attemptNumber: 2,
-      status: "PENDING",
-    },
-    error: null,
-  });
-
 export const getCancelBillingSetupResponseMock =
   (): BillingSetupStatusResponse => ({
     success: true,
@@ -225,11 +212,11 @@ export const getGetRecordingUsageResponseMock = (): RecordingUsageResponse => ({
     sampleRate: 16000,
     allowanceSamples: 1728000000,
     usedSamples: 43200000,
-    reservedSamples: 28800000,
-    remainingSamples: 1656000000,
+    remainingSamples: 1684800000,
     allowanceMinutes: 1800,
     usedMinutes: 45,
-    remainingMinutes: 1725,
+    remainingMinutes: 1755,
+    recordingInProgress: true,
   },
   error: null,
 });
@@ -322,19 +309,6 @@ export const getResumeBillingSubscriptionResponseMock =
         end: "2026-12-11T01:00:00Z",
       },
       subscriptionVersion: 4,
-    },
-    error: null,
-  });
-
-export const getRequestBillingRefundResponseMock =
-  (): BillingRefundResponse => ({
-    success: true,
-    data: {
-      refundId: "0HZX2K7M9Q4C4",
-      paymentId: "0HZX2K7M9Q4C2",
-      amountKrw: 9900,
-      origin: "USER",
-      status: "PENDING",
     },
     error: null,
   });
@@ -447,32 +421,6 @@ export const getCreateBillingSetupMockHandler = (
             : overrideResponse
           : getCreateBillingSetupResponseMock(),
         { status: 201 }
-      );
-    },
-    options
-  );
-};
-
-export const getRetryBillingPaymentMockHandler = (
-  overrideResponse?:
-    | BillingPaymentRetriedResponse
-    | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) =>
-        | Promise<BillingPaymentRetriedResponse>
-        | BillingPaymentRetriedResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.post(
-    "*/v1/workspaces/:workspaceId/billing/cycles/:cycleId/attempts",
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getRetryBillingPaymentResponseMock(),
-        { status: 202 }
       );
     },
     options
@@ -671,37 +619,12 @@ export const getResumeBillingSubscriptionMockHandler = (
     options
   );
 };
-
-export const getRequestBillingRefundMockHandler = (
-  overrideResponse?:
-    | BillingRefundResponse
-    | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<BillingRefundResponse> | BillingRefundResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.post(
-    "*/v1/workspaces/:workspaceId/billing/payments/:paymentId/refunds",
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getRequestBillingRefundResponseMock(),
-        { status: 202 }
-      );
-    },
-    options
-  );
-};
 export const getBillingMock = () => [
   getReceiveBillingFailMockHandler(),
   getReceiveBillingSuccessMockHandler(),
   getGetWorkspaceBillingMockHandler(),
   getGetMyBillingSetupMockHandler(),
   getCreateBillingSetupMockHandler(),
-  getRetryBillingPaymentMockHandler(),
   getCancelBillingSetupMockHandler(),
   getCompleteBillingSetupMockHandler(),
   getGetRecordingUsageMockHandler(),
@@ -710,5 +633,4 @@ export const getBillingMock = () => [
   getGetBillingPaymentMockHandler(),
   getCancelBillingSubscriptionMockHandler(),
   getResumeBillingSubscriptionMockHandler(),
-  getRequestBillingRefundMockHandler(),
 ];

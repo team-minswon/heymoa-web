@@ -10,7 +10,7 @@ import type { BillingSetupStatusResponseDataLatestAttemptRefundStatus } from "./
 import type { BillingSetupStatusResponseDataLatestAttemptStatus } from "./billingSetupStatusResponseDataLatestAttemptStatus";
 
 /**
- * 그 회차의 최신 시도(재결제 뒤 originAttempt 와 갈린다)
+ * 그 회차의 최신 시도. 재결제가 없어 originAttempt 와 같다
  * @nullable
  */
 export type BillingSetupStatusResponseDataLatestAttempt = {
