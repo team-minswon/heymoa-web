@@ -643,6 +643,7 @@
       "me": "Me",
       "projectSwitch": "Add to project: {content}",
       "edit": "Edit",
+      "editRow": "Edit: {content}",
       "exclude": "Exclude",
       "include": "Include",
       "excluded": "Excluded",

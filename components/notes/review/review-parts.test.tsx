@@ -230,6 +230,56 @@ describe("ReviewRow", () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
+  it("접힌 줄의 연필은 줄을 펼치며 바로 편집을 연다", () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(
+      <ReviewRow
+        item={item()}
+        assignable={false}
+        open={false}
+        canEdit
+        busy={false}
+        conflict={false}
+        fresh={false}
+        choices={[]}
+        onToggle={onToggle}
+        onSave={vi.fn()}
+        onDismissConflict={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^수정: / }));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    rerender(
+      <ReviewRow
+        item={item()}
+        assignable={false}
+        open
+        canEdit
+        busy={false}
+        conflict={false}
+        fresh={false}
+        choices={[]}
+        onToggle={onToggle}
+        onSave={vi.fn()}
+        onDismissConflict={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByRole("textbox", { name: "항목 내용" })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^수정: / })
+    ).not.toBeInTheDocument();
+  });
+
+  it("고칠 수 없거나 뺀 항목의 접힌 줄에는 연필이 없다", () => {
+    renderRow({ open: false, canEdit: false });
+    expect(screen.queryByRole("button", { name: /^수정: / })).toBeNull();
+    cleanup();
+    renderRow({ open: false, item: item({ included: false }) });
+    expect(screen.queryByRole("button", { name: /^수정: / })).toBeNull();
+  });
+
   it("내용 편집은 Enter 로 저장하고 Esc 로 닫는다", async () => {
     const { onSave } = renderRow();
 

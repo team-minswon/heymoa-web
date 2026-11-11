@@ -643,6 +643,7 @@
       "me": "나",
       "projectSwitch": "프로젝트에 추가: {content}",
       "edit": "수정",
+      "editRow": "수정: {content}",
       "exclude": "제외",
       "include": "제외 취소",
       "excluded": "제외됨",

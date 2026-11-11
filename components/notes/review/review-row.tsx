@@ -31,6 +31,8 @@ export type ItemPatch = Omit<
  * 줄 어디를 눌러도 펼쳐진다(내용 버튼이 줄을 덮는다) — 담당 · 기한 칸만 그 위에 떠서 바로 고친다.
  * 펼치면 근거 발언과 수정 · 제외가 서고, 제안은 펼치지 않아도 줄 아래에 선다. 뺀 항목은 자리를 지킨 채
  * 흐려진다 — 되살릴 수 있어야 한다.
+ * 담당 · 기한 칸을 한 줄에 펼칠지는 화면이 아니라 줄 폭(`@container/row`)이 정한다. 회의 정리 창을 옆에 연
+ * 1024 화면에서 화면 기준(`sm:`)이면 내용 칸이 14px 로 짓눌렸다(APP-1569).
  */
 export function ReviewRow({
   item,
@@ -86,7 +88,7 @@ export function ReviewRow({
       data-item-id={item.itemId}
       data-item-scroll-target
       className={cn(
-        "scroll-mt-24 border-b border-[var(--el-hairline-soft)]",
+        "@container/row scroll-mt-24 border-b border-[var(--el-hairline-soft)]",
         fresh && ARRIVE_CLASS
       )}
     >
@@ -94,7 +96,7 @@ export function ReviewRow({
         className={cn(
           "relative -mx-2 grid items-start gap-x-3 rounded-control px-2 py-[11px] transition-colors duration-200 ease-out",
           assignable
-            ? "grid-cols-[16px_minmax(0,1fr)_36px_16px] sm:grid-cols-[16px_minmax(0,1fr)_132px_150px_36px_16px]"
+            ? "grid-cols-[16px_minmax(0,1fr)_36px_16px] @xl/row:grid-cols-[16px_minmax(0,1fr)_132px_150px_36px_16px]"
             : "grid-cols-[16px_minmax(0,1fr)_auto_36px_16px]",
           open
             ? "bg-[var(--el-surface-strong)]"
@@ -111,29 +113,46 @@ export function ReviewRow({
             <TimelineToneIcon tone="decision" />
           </span>
         )}
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={onToggle}
-          // 버튼이 줄 전체를 덮는다(::after) — 주제 · 때 자리를 눌러도 펼쳐진다. 이름은 내용 그대로다.
-          className="min-w-0 self-center rounded-chip text-left after:absolute after:inset-0 after:rounded-control after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
-        >
-          <span
-            className={cn(
-              "block text-[15px] leading-6 text-[var(--el-ink)] transition-colors duration-200 ease-out",
-              "whitespace-normal break-words [overflow-wrap:anywhere]",
-              open && "font-semibold",
-              !item.included && "text-[var(--el-muted-soft)] line-through"
-            )}
+        <span className="flex min-w-0 items-center gap-2 self-center">
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={onToggle}
+            // 버튼이 줄 전체를 덮는다(::after) — 주제 · 때 자리를 눌러도 펼쳐진다. 이름은 내용 그대로다.
+            className="min-w-0 flex-1 rounded-chip text-left after:absolute after:inset-0 after:rounded-control after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
           >
-            {item.content}
-          </span>
-        </button>
+            <span
+              className={cn(
+                "block text-[15px] leading-6 text-[var(--el-ink)] transition-colors duration-200 ease-out",
+                "whitespace-normal break-words [overflow-wrap:anywhere]",
+                open && "font-semibold",
+                !item.included && "text-[var(--el-muted-soft)] line-through"
+              )}
+            >
+              {item.content}
+            </span>
+          </button>
+          {/* 접힌 줄에도 고칠 수 있다는 표시를 둔다(APP-1569). 펼친 줄은 아래 수정 버튼이 같은 일을 한다. */}
+          {canEdit && item.included && !open ? (
+            <button
+              type="button"
+              aria-label={t("editRow", { content: item.content })}
+              disabled={busy || locked}
+              onClick={() => {
+                onToggle();
+                setEditing(true);
+              }}
+              className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-chip text-[var(--el-muted-soft)] transition-colors duration-200 ease-out hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)] disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Pencil aria-hidden className="size-3.5" />
+            </button>
+          ) : null}
+        </span>
         {assignable ? (
           // 넓은 화면에서는 상자가 사라져(`contents`) 두 칸이 열에 선다. 좁은 화면에서는 둘째 줄이다.
           // 줄을 덮는 버튼 위에 떠야 눌린다.
-          <div className="relative z-10 col-[2/-1] row-start-2 flex min-w-0 flex-wrap items-center gap-x-3 pt-1.5 sm:contents">
-            <span className="flex min-w-0 items-center gap-1.5 sm:relative sm:z-10">
+          <div className="relative z-10 col-[2/-1] row-start-2 flex min-w-0 flex-wrap items-center gap-x-3 pt-1.5 @xl/row:contents">
+            <span className="flex min-w-0 items-center gap-1.5 @xl/row:relative @xl/row:z-10">
               <AssigneeCell
                 value={item.assignee}
                 choices={choices}
@@ -149,7 +168,7 @@ export function ReviewRow({
                 </span>
               ) : null}
             </span>
-            <span className="flex sm:relative sm:z-10">
+            <span className="flex @xl/row:relative @xl/row:z-10">
               <DueCell
                 value={item.due}
                 chip
@@ -170,7 +189,7 @@ export function ReviewRow({
         <span
           className={cn(
             "relative z-10 flex justify-end",
-            assignable && "col-start-3 row-start-1 sm:col-start-5"
+            assignable && "col-start-3 row-start-1 @xl/row:col-start-5"
           )}
         >
           {requiresProjectSelection(item.kind) ? (
@@ -190,7 +209,7 @@ export function ReviewRow({
           aria-hidden
           className={cn(
             "pointer-events-none flex justify-end text-[var(--el-muted-soft)]",
-            assignable && "col-start-4 row-start-1 sm:col-start-6"
+            assignable && "col-start-4 row-start-1 @xl/row:col-start-6"
           )}
         >
           {busy ? (
@@ -224,7 +243,7 @@ export function ReviewRow({
       </Collapse>
 
       <Collapse open={open} lazy>
-        <div className="space-y-2.5 pt-1 pb-3.5 sm:pl-7">
+        <div className="space-y-2.5 pt-1 pb-3.5 @xl/row:pl-7">
           {editing ? (
             <ContentEditor
               initial={item.content}
@@ -271,7 +290,7 @@ export function ReviewRow({
         </div>
       </Collapse>
       {suggestions ? (
-        <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div>
+        <div className="space-y-1.5 pb-2.5 @xl/row:pl-7">{suggestions}</div>
       ) : null}
     </div>
   );
