@@ -5,6 +5,7 @@ import {
   createReadStream,
   existsSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -36,6 +37,7 @@ function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     stdio: "inherit",
     timeout: 600_000,
+    env: { ...process.env, npm_config_user_agent: "pnpm/10.30.1" },
     ...options,
   });
   if (result.status !== 0)
@@ -48,6 +50,16 @@ const executable = mac
   : path.join(target, "HeyMoa.exe");
 let application;
 let server;
+async function launchApplication() {
+  stopRelaunchedApp();
+  const launched = await electron.launch({
+    executablePath: executable,
+    timeout: 60_000,
+  });
+  launched.process().stdout?.on("data", (data) => process.stdout.write(data));
+  launched.process().stderr?.on("data", (data) => process.stderr.write(data));
+  return launched;
+}
 async function closeApplication() {
   const closed = application.waitForEvent("close", { timeout: 30_000 });
   await application.evaluate(({ app }) => app.exit(0)).catch(() => {});
@@ -84,13 +96,11 @@ try {
       "/S",
       `/D=${target}`,
     ]);
-  application = await electron.launch({
-    executablePath: executable,
-    timeout: 60_000,
-  });
+  application = await launchApplication();
   const profile = await application.evaluate(({ app }) =>
     app.getPath("userData")
   );
+  mkdirSync(profile, { recursive: true });
   // Skip onboarding in this isolated runner without involving any real user's login or microphone.
   writeFileSync(
     path.join(profile, "onboarding.json"),
@@ -98,10 +108,7 @@ try {
   );
   writeFileSync(path.join(profile, "update-qa-marker"), "preserved");
   await closeApplication();
-  application = await electron.launch({
-    executablePath: executable,
-    timeout: 60_000,
-  });
+  application = await launchApplication();
   const page = await application.firstWindow();
   await page.waitForURL((url) => url.origin === "https://heymoa.app", {
     timeout: 60_000,
@@ -140,9 +147,17 @@ try {
     updater.disableDifferentialDownload = true;
     updater.setFeedURL({ provider: "generic", url });
   }, `http://127.0.0.1:${server.address().port}`);
-  await page.setContent(
-    '<button id="check">Check</button><button id="restart">Restart</button>'
+  // A fresh trusted document avoids the live site's React/auth effects replacing the QA controls.
+  await page.waitForLoadState("load");
+  await page.route("https://heymoa.app/__update-qa", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: '<button id="check">Check</button><button id="restart">Restart</button>',
+    })
   );
+  await page.goto("https://heymoa.app/__update-qa");
+  page.on("console", (message) => console.log("QA renderer:", message.text()));
+  page.on("pageerror", (error) => console.error("QA renderer error:", error));
   await page.evaluate(() => {
     const bridge = window.heymoaDesktop;
     bridge.subscribeUpdates((state) => {
@@ -167,9 +182,14 @@ try {
   await report("recording");
   await page.locator("#check").click();
   await page.waitForFunction(
-    () => document.body.dataset.status === "ready",
+    () => ["ready", "error"].includes(document.body.dataset.status),
     null,
     { timeout: 120_000 }
+  );
+  assert.equal(
+    await page.evaluate(() => document.body.dataset.status),
+    "ready",
+    "download must complete without an updater error"
   );
   await page.locator("#restart").click();
   assert.equal(
@@ -212,10 +232,7 @@ try {
     "the real installer must replace the baseline application"
   );
   stopRelaunchedApp();
-  application = await electron.launch({
-    executablePath: executable,
-    timeout: 60_000,
-  });
+  application = await launchApplication();
   assert.equal(
     await application.evaluate(({ app }) => app.getVersion()),
     version
