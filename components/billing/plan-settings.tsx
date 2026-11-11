@@ -428,10 +428,14 @@ function Attention({
   const cancel = useCancelBillingSetup();
   const actions = billing.allowedActions;
   const detail = billing.detail;
+  // 갱신 결과를 기다리는 동안(GRACE)은 현재 요금제 줄이 이미 알리고 사용자가 할 일이 없다 —
+  // 「다시 결제하지 마세요」 안내와 「상태 다시 확인」 버튼은 직접 구매한 사람에게만 보인다
+  const renewalWait = billing.entitlement?.kind === "GRACE";
   const checking =
-    billing.latestAttemptStatus === "PENDING" ||
-    billing.latestAttemptStatus === "PROCESSING" ||
-    billing.latestAttemptStatus === "UNKNOWN";
+    !renewalWait &&
+    (billing.latestAttemptStatus === "PENDING" ||
+      billing.latestAttemptStatus === "PROCESSING" ||
+      billing.latestAttemptStatus === "UNKNOWN");
 
   // 승인 뒤 자동 취소(보상 환불)가 걸린 결제. 끝난 취소는 알리지 않는다 — 결과 화면이 이미 알렸고 상태는 Free 로 보인다.
   const refund =
@@ -537,7 +541,7 @@ function Attention({
             {t("viewResult")}
           </LinkButton>
         ) : null,
-        actions.includes("REFRESH_STATUS") ? (
+        actions.includes("REFRESH_STATUS") && !renewalWait ? (
           <Button
             key="refresh"
             variant="outline"

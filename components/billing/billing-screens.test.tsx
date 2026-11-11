@@ -269,7 +269,8 @@ describe("요금제 화면", () => {
         recordingAllowanceMinutes: null,
         planCode: "PRO",
       },
-      allowedActions: [],
+      allowedActions: ["REFRESH_STATUS"],
+      latestAttemptStatus: "UNKNOWN",
     });
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
@@ -278,6 +279,11 @@ describe("요금제 화면", () => {
       )
     ).toBeInTheDocument();
     expect(screen.queryByText(/미납|유예/)).not.toBeInTheDocument();
+    // 같은 말을 두 번 하지 않는다 — 직접 구매한 사람에게 하는 「다시 결제하지 마세요」는 갱신에 없다
+    expect(screen.queryByText(/다시 결제하지 마세요/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "상태 다시 확인" })
+    ).not.toBeInTheDocument();
     expect(startButton()).not.toBeInTheDocument();
   });
 

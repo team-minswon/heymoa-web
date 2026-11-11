@@ -114,6 +114,26 @@ describe("녹음 사용량 — 요금제 탭", () => {
     ).toBeInTheDocument();
   });
 
+  it("Pro 도 끝나지 않은 녹음이 있으면 같은 한 줄을 알린다", async () => {
+    serveUsage(
+      freeUsage({
+        periodKind: "PAID",
+        unlimited: true,
+        allowanceSamples: null,
+        remainingSamples: null,
+        allowanceMinutes: null,
+        remainingMinutes: null,
+        recordingInProgress: true,
+      }),
+      PAID
+    );
+    renderIn(<PlanTab workspaceId={PAID} />);
+    expect(
+      await screen.findByText("녹음 중인 회의는 끝난 뒤 반영됩니다")
+    ).toBeInTheDocument();
+    expect(screen.getByText("무제한")).toBeInTheDocument();
+  });
+
   it("Pro 는 무제한과 참고용 사용 시간만 그리고 막대는 없다", async () => {
     renderIn(<PlanTab workspaceId={PAID} />);
     expect(await screen.findByText("5시간 30분")).toBeInTheDocument();

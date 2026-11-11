@@ -52,6 +52,9 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
         <p className={LABEL}>{t("label")}</p>
         <p className={VALUE}>{format.duration(usage.usedMinutes)}</p>
         <p className={`mt-3 ${NOTE}`}>{t("unlimited")}</p>
+        {usage.recordingInProgress ? (
+          <p className={`mt-1 ${NOTE}`}>{t("recordingInProgress")}</p>
+        ) : null}
       </div>
     );
   }
