@@ -23,7 +23,7 @@ import type { WorkspaceBillingResponseData } from "@/lib/api/generated/models";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 import { planName } from "@/lib/billing/plan-name";
-import { billingEvents } from "@/lib/billing/analytics";
+import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { usePollWindow } from "@/lib/billing/use-poll-window";
@@ -38,9 +38,10 @@ import {
  */
 export function WorkspaceBillingPage({ workspaceId }: { workspaceId: string }) {
   const t = useTranslations("billing.page");
+  const role = useBillingViewerRole(workspaceId);
   useEffect(() => {
-    billingEvents.plansViewed(workspaceId);
-  }, [workspaceId]);
+    if (role) billingEvents.plansViewed(workspaceId, role);
+  }, [workspaceId, role]);
   return (
     <BillingScreen title={t("title")} description={t("description")}>
       <DataBoundary

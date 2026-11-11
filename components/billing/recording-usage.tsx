@@ -84,13 +84,21 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
       </div>
       {usage.periodEnd ? (
         <p className="mt-2 text-xs leading-4 text-[var(--el-muted)]">
-          {t(percent >= 100 ? "exhausted" : "resets", {
-            date: formatAppDate(
-              usage.periodEnd,
-              { month: "long", day: "numeric" },
-              locale
-            ),
-          })}
+          {t(
+            percent >= 100
+              ? "exhausted"
+              : percent >= 80
+                ? "nearLimit"
+                : "resets",
+            {
+              percent,
+              date: formatAppDate(
+                usage.periodEnd,
+                { month: "long", day: "numeric" },
+                locale
+              ),
+            }
+          )}
         </p>
       ) : null}
       {usage.reservedSamples ? (

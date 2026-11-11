@@ -27,7 +27,8 @@
     "exhausted": "You've used this month's allowance. New recordings can start from {date}.",
     "reserved": "Meetings being recorded are counted after they end",
     "unlimited": "Unlimited recording",
-    "usedPaid": "{used} used this month"
+    "usedPaid": "{used} used this month",
+    "nearLimit": "You've used {percent, number}% of this month's allowance. It resets on {date}."
   },
   "settings": {
     "title": "Billing",
@@ -101,7 +102,7 @@
     "shared": "Everyone in this workspace shares it.",
     "autoRenew": "You're charged on the same day every month and the usage period renews.",
     "cancelInfo": "If you cancel, you can keep using it until the current period ends and you won't be charged from the next renewal.",
-    "agreementLabel": "I've reviewed the order and the auto-renewal terms, and I agree.",
+    "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
     "submit": "Agree and register card",
     "openSetup": {
       "title": "A card registration is already in progress",
@@ -113,7 +114,9 @@
       "stateChanged": "The product or status changed. We've loaded the latest details; please review and agree again.",
       "inProgress": "Your team has a subscription in progress. Check again when it's done.",
       "unsupported": "This payment method isn't supported yet."
-    }
+    },
+    "agreeFirst": "Check the agreement to start card registration.",
+    "cardSafe": "You enter card details on the payment provider's page. HeyMoa doesn't store your card number."
   },
   "setup": {
     "title": "Card registration result",

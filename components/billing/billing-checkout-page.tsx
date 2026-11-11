@@ -24,7 +24,7 @@ import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspac
 import { errorCodeOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
 import { planName } from "@/lib/billing/plan-name";
-import { billingEvents } from "@/lib/billing/analytics";
+import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
 import { leaveToCardRegistration } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
@@ -37,9 +37,10 @@ import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
  */
 export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
   const t = useTranslations("billing.checkout");
+  const role = useBillingViewerRole(workspaceId);
   useEffect(() => {
-    billingEvents.checkoutEntered(workspaceId);
-  }, [workspaceId]);
+    if (role) billingEvents.checkoutEntered(workspaceId, role);
+  }, [workspaceId, role]);
   return (
     <BillingScreen title={t("title")} description={t("description")}>
       <DataBoundary
@@ -64,6 +65,8 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const key = useRef(createRequestKey()).current;
   const [agreed, setAgreed] = useState(false);
+  // 체크·해제를 되풀이해도 동의 이벤트는 화면당 한 번만 낸다.
+  const agreementTracked = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   // 카드 등록 정보(`registration`)는 처음 만들 때 한 번만 내려온다 — 다시 받은 진행 중 등록은 이어 갈 수 없다.
   const [reusedSetupId, setReusedSetupId] = useState<string | null>(null);
@@ -103,6 +106,10 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
       </BillingNotice>
     );
   }
+  // 자동 갱신 동의는 금액과 주기를 문장에 직접 적는다.
+  const agreementLabel = t("agreementLabel", {
+    amount: format.money(product.amountKrw),
+  });
 
   const start = async () => {
     setNotice(null);
@@ -216,11 +223,14 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
             checked={agreed}
             onCheckedChange={(checked) => {
               setAgreed(checked);
-              if (checked) billingEvents.agreementAccepted(workspaceId);
+              if (checked && !agreementTracked.current) {
+                agreementTracked.current = true;
+                billingEvents.agreementAccepted(workspaceId);
+              }
             }}
-            aria-label={t("agreementLabel")}
+            aria-label={agreementLabel}
           />
-          <span>{t("agreementLabel")}</span>
+          <span>{agreementLabel}</span>
         </label>
         {notice ? (
           <BillingNotice tone="warn" className="mt-4">
@@ -230,11 +240,18 @@ function CheckoutContent({ workspaceId }: { workspaceId: string }) {
         <Button
           className="mt-4"
           disabled={!agreed || Boolean(openSetupId)}
+          aria-describedby={agreed ? undefined : "billing-agree-hint"}
           loading={create.isPending}
           onClick={start}
         >
           {t("submit")}
         </Button>
+        <span id="billing-agree-hint" className="sr-only">
+          {t("agreeFirst")}
+        </span>
+        <p className="mt-3 text-xs leading-5 text-[var(--el-muted)]">
+          {t("cardSafe")}
+        </p>
       </BillingSection>
     </div>
   );

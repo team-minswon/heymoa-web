@@ -220,9 +220,12 @@ describe("요금제 화면", () => {
     expect(
       screen.getByText("시험 결제이며 실제로 청구되지 않습니다.")
     ).toBeInTheDocument();
-    expect(track).toHaveBeenCalledWith("billing_plans_viewed", {
-      workspace_id: FREE,
-    });
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledWith("billing_plans_viewed", {
+        workspace_id: FREE,
+        role: "admin",
+      })
+    );
   });
 
   it("서버가 제공량을 숫자로 줘도 깨지지 않는다", async () => {
@@ -382,6 +385,19 @@ describe("주문서", () => {
     expect(track).toHaveBeenCalledWith("billing_agreement_accepted", {
       workspace_id: FREE,
     });
+    // 체크·해제를 되풀이해도 동의 이벤트는 한 번이다.
+    fireEvent.click(agree());
+    fireEvent.click(agree());
+    expect(
+      vi
+        .mocked(track)
+        .mock.calls.filter(([name]) => name === "billing_agreement_accepted")
+    ).toHaveLength(1);
+    expect(
+      screen.getByText(
+        "카드 정보는 결제 대행사의 결제창에서 입력하며, HeyMoa는 카드 번호를 저장하지 않습니다."
+      )
+    ).toBeInTheDocument();
   });
 
   it.each([

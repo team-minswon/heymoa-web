@@ -215,8 +215,9 @@ export type WebEventProperties = {
   // 결제(PRO-75). 흐름은 요금제 화면 → 주문서 → 구매 동의 → 카드 등록 시작 → 등록 결과(→ 다시 결제)다.
   // 속성은 공간·PG·결과 상태뿐이다. authKey·state·customerKey·카드 정보·setup/결제 id 는 싣지 않는다.
   // 등록 결과 화면은 setup 조회가 끝나야 공간을 알므로 결과 이벤트의 workspace_id 는 없을 수 있다.
-  billing_plans_viewed: { workspace_id: string };
-  billing_checkout_entered: { workspace_id: string };
+  // role 은 본 사람이 ADMIN 인가 멤버인가 — 구매는 ADMIN 만 할 수 있어 퍼널을 역할로 갈라 봐야 한다.
+  billing_plans_viewed: { workspace_id: string; role: "admin" | "member" };
+  billing_checkout_entered: { workspace_id: string; role: "admin" | "member" };
   billing_agreement_accepted: { workspace_id: string };
   billing_card_setup_started: {
     workspace_id: string;
