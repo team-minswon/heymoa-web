@@ -29,6 +29,10 @@ const desktop = path.resolve(
 const release = path.resolve(process.argv[2]);
 const qa = mkdtempSync(path.join(os.tmpdir(), "heymoa-install-qa-"));
 const mac = process.platform === "darwin";
+assert.ok(
+  mac || Number(os.release().split(".")[2]) >= 22000,
+  "Installation QA must run on an OS supported by the app (Windows build 22000 or newer)"
+);
 const version = JSON.parse(
   readFileSync(path.join(desktop, "package.json"))
 ).version;
@@ -82,7 +86,7 @@ try {
   const args = [
     require.resolve("electron-builder/cli.js"),
     mac ? "--mac" : "--win",
-    mac ? "--dir" : "nsis",
+    mac ? "zip" : "nsis",
     mac ? "--arm64" : "--x64",
     "--publish",
     "never",
@@ -96,6 +100,12 @@ try {
       "/S",
       `/D=${target}`,
     ]);
+  assert.ok(
+    existsSync(mac
+      ? path.resolve(executable, "../../Resources/app-update.yml")
+      : path.join(target, "resources/app-update.yml")),
+    "The baseline must include the same updater configuration as a distributed app"
+  );
   application = await launchApplication();
   const profile = await application.evaluate(({ app }) =>
     app.getPath("userData")

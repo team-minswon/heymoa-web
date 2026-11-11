@@ -38,7 +38,7 @@ jobs:
           - runner: macos-15
             target: mac:arm64
             artifact: mac-arm64
-          - runner: windows-2022
+          - runner: windows-2025
             target: win:x64
             artifact: win-x64
     runs-on: ${{ matrix.runner }}
