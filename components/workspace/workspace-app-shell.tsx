@@ -286,7 +286,9 @@ export function WorkspaceAppShell({
       ? tNav("tasks")
       : pathname.startsWith(`/w/${workspaceId}/projects/`)
         ? tNav("connectionMap")
-        : (projects.find((project) => project.projectId === selectedProjectId)
+        : pathname.startsWith(`/w/${workspaceId}/billing`)
+          ? tNav("billing")
+          : (projects.find((project) => project.projectId === selectedProjectId)
             ?.name ?? tNav("allNotes"));
   // 노트 전체 화면은 이 셸을 통째로 덮는다(design.pen `XtEMZ`). side 시트는 안 덮는다.
   const isFullNote =

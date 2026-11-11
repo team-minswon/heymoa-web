@@ -14,6 +14,7 @@ import {
 const REQUIRED_EN: readonly Namespace[] = [
   "common",
   "auth",
+  "billing",
   "landing",
   "download",
   "legal",

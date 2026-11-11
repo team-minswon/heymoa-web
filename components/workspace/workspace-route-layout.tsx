@@ -54,7 +54,8 @@ export function WorkspaceRouteLayout({
   const pathname = usePathname();
   const replacesList =
     pathname === `/w/${workspaceId}/tasks` ||
-    pathname.startsWith(`/w/${workspaceId}/projects/`);
+    pathname.startsWith(`/w/${workspaceId}/projects/`) ||
+    pathname.startsWith(`/w/${workspaceId}/billing`);
 
   useRedirectWhenWorkspaceGone(workspaceId);
 

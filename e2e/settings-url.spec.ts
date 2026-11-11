@@ -94,3 +94,17 @@ test("OAuth 복귀는 연동 탭을 열고 provider·status 를 걷는다", asyn
   );
   await expect.poll(() => search(page)).toBe("?settings=integrations");
 });
+
+test("?settings=billing 은 결제 탭을 열고 전용 화면으로 가는 링크를 둔다", async ({
+  page,
+}) => {
+  await page.goto(`${WS}?settings=billing`);
+  await expect(dialog(page)).toBeVisible();
+  await expect(page.getByRole("button", { name: "결제" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+  await expect(
+    page.getByRole("link", { name: "요금제·결제 관리" })
+  ).toHaveAttribute("href", `${WS}/billing`);
+});

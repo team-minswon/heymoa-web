@@ -1,4 +1,5 @@
 import enAgents from "@/messages/en/agents.json";
+import enBilling from "@/messages/en/billing.json";
 import enAuth from "@/messages/en/auth.json";
 import enChat from "@/messages/en/chat.json";
 import enCommon from "@/messages/en/common.json";
@@ -16,6 +17,7 @@ import enShell from "@/messages/en/shell.json";
 import enTasks from "@/messages/en/tasks.json";
 import enWorkspace from "@/messages/en/workspace.json";
 import koAgents from "@/messages/ko/agents.json";
+import koBilling from "@/messages/ko/billing.json";
 import koAuth from "@/messages/ko/auth.json";
 import koChat from "@/messages/ko/chat.json";
 import koCommon from "@/messages/ko/common.json";
@@ -41,6 +43,7 @@ import type { Locale } from "@/lib/i18n/locales";
 const ko = {
   common: koCommon,
   auth: koAuth,
+  billing: koBilling,
   landing: koLanding,
   download: koDownload,
   legal: koLegal,
@@ -68,6 +71,7 @@ type DeepPartial<T> = {
 const en: DeepPartial<Messages> = {
   common: enCommon,
   auth: enAuth,
+  billing: enBilling,
   landing: enLanding,
   download: enDownload,
   legal: enLegal,

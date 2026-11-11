@@ -1,0 +1,25 @@
+{
+  "settings": {
+    "title": "Billing",
+    "description": "Review this workspace's plan and usage.",
+    "openPage": "Plans and billing"
+  },
+  "page": {
+    "title": "Plans",
+    "description": "Review this workspace's current status and plans.",
+    "status": "Current status",
+    "plans": "Plans"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "description": "Review your order, agree to the terms, then register a card.",
+    "order": "Order details",
+    "agreement": "Agreement"
+  },
+  "setup": {
+    "title": "Card registration result",
+    "description": "Check the progress of your card registration.",
+    "result": "Registration result",
+    "loginRequired": "Sign in with the account that registered the card to see the result."
+  }
+}

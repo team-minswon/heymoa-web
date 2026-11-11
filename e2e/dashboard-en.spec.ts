@@ -378,6 +378,7 @@ test("설정의 모든 탭", async ({ browser }) => {
     workspaceAgents: dialog.getByRole("switch", {
       name: /Allow MCP connections/,
     }),
+    billing: dialog.getByRole("link", { name: "Plans and billing" }),
     agents: dialog.getByText("노트북 Claude Code").first(),
     notifications: dialog.getByText("Paused meetings"),
   };

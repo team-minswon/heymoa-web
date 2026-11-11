@@ -11,6 +11,7 @@ import {
   Download,
   BookA,
   Bot,
+  CreditCard,
   Languages,
   Plug,
   Settings,
@@ -35,6 +36,7 @@ import {
   NotificationSettings,
   NotificationSettingsSkeleton,
 } from "@/components/settings/notification-settings";
+import { WorkspaceBillingSettings } from "@/components/billing/workspace-billing-settings";
 import { WorkspaceTermsSettings } from "@/components/terms/workspace-terms-settings";
 import { WorkspaceAgentAccessSettings } from "@/components/settings/workspace-agent-access-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
@@ -85,6 +87,7 @@ const SETTINGS_GROUPS: {
       { key: "terms", Icon: BookA },
       { key: "integrations", Icon: Plug },
       { key: "workspaceAgents", Icon: ShieldCheck },
+      { key: "billing", Icon: CreditCard },
     ],
   },
   {
@@ -237,6 +240,8 @@ function SettingsSections({
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : section === "workspaceAgents" ? (
           <WorkspaceAgentAccessSettings workspaceId={workspaceId} />
+        ) : section === "billing" ? (
+          <WorkspaceBillingSettings workspaceId={workspaceId} />
         ) : section === "agents" ? (
           <AgentConnectionsSettings
             workspaceId={workspaceId}

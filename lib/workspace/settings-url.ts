@@ -15,6 +15,7 @@ export const SETTINGS_SECTIONS = [
   "terms",
   "integrations",
   "workspaceAgents",
+  "billing",
   "agents",
   "notifications",
   "appUpdates",

@@ -68,6 +68,9 @@ vi.mock("@/components/settings/workspace-integrations-settings", () => ({
 vi.mock("@/components/settings/workspace-agent-access-settings", () => ({
   WorkspaceAgentAccessSettings: () => <p>외부 에이전트 관리 내용</p>,
 }));
+vi.mock("@/components/billing/workspace-billing-settings", () => ({
+  WorkspaceBillingSettings: () => <p>결제 내용</p>,
+}));
 vi.mock("@/components/settings/agent-connections-settings", () => ({
   AgentConnectionsSettings: ({
     onBusyChange,
@@ -159,6 +162,11 @@ describe("SettingsDialog", () => {
     expect(screen.getByText("용어 사전 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
     expect(screen.getByText("연동 내용")).toBeInTheDocument();
+    // 결제는 워크스페이스 그룹의 탭이다(PRO-75)
+    fireEvent.click(
+      within(workspaceGroup).getByRole("button", { name: "결제" })
+    );
+    expect(screen.getByText("결제 내용")).toBeInTheDocument();
   });
 
   // 같은 말에 누구 것인지를 붙여 가른다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)

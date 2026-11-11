@@ -17,6 +17,29 @@ afterEach(() => {
   localStorage.clear();
 });
 
+describe("결제 이벤트", () => {
+  type Props<E extends AnalyticsEvent> = Parameters<typeof track<E>>[1] & {};
+  it("공간·PG·결과 상태만 받고 민감값은 받지 않는다", () => {
+    expectTypeOf<
+      | "billing_plans_viewed"
+      | "billing_checkout_entered"
+      | "billing_agreement_accepted"
+      | "billing_card_setup_started"
+      | "billing_card_setup_resulted"
+      | "billing_retry_clicked"
+    >().toExtend<AnalyticsEvent>();
+    expectTypeOf<"billing">().toExtend<Props<"settings_tab_opened">["section"]>();
+    expectTypeOf<Props<"billing_card_setup_resulted">["result"]>().toEqualTypeOf<
+      "completed" | "declined" | "unknown"
+    >();
+    type Secret = "authKey" | "state" | "customerKey" | "setup_id" | "payment_id" | "card";
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_started">>();
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_resulted">>();
+    // @ts-expect-error 인증 키를 실을 수 없다
+    track("billing_card_setup_started", { workspace_id: "W1", provider: "toss", authKey: "k" });
+  });
+});
+
 describe("연결 지도 이벤트", () => {
   it("제목 없이 개수·화면 이름만 받는다", () => {
     expectTypeOf<

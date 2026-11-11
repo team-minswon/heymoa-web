@@ -88,6 +88,12 @@ export type AnalyticsEvent =
   | "note_tab_opened"
   | "review_confirmation_clicked"
   | "settings_tab_opened"
+  | "billing_plans_viewed"
+  | "billing_checkout_entered"
+  | "billing_agreement_accepted"
+  | "billing_card_setup_started"
+  | "billing_card_setup_resulted"
+  | "billing_retry_clicked"
   | "notifications_opened"
   | "notification_clicked"
   | "notifications_all_read_clicked"
@@ -111,6 +117,11 @@ export type AnalyticsEvent =
   | "help_cta_clicked"
   | "help_code_copied"
   | "help_faq_opened";
+
+/** 결제 이벤트의 PG. 서버 계약이 나오면 생성 타입으로 바꾼다. */
+export type BillingProvider = "toss" | "payple";
+/** 카드 등록 결과 화면이 보인 상태. `unknown` 은 확인 중이라 성패를 아직 모르는 것이다. */
+export type BillingSetupResult = "completed" | "declined" | "unknown";
 
 /** 가이드 이벤트의 언어판(`lib/i18n/locales.ts` 의 `Locale`). */
 type HelpLanguage = "ko" | "en";
@@ -189,10 +200,24 @@ export type WebEventProperties = {
       | "appUpdates"
       | "workspaceAgents"
       | "agents"
-      | "notifications";
+      | "notifications"
+      | "billing";
     // 어디서 열었나. 알림 모달의 「알림 설정」 이동은 modal, 설정 창 안의 탭 이동은 settings(PRO-67 I32).
     from: "modal" | "settings";
   };
+  // 결제(PRO-75). 흐름은 요금제 화면 → 주문서 → 구매 동의 → 카드 등록 시작 → 등록 결과(→ 다시 결제)다.
+  // 속성은 공간·PG·결과 상태뿐이다. authKey·state·customerKey·카드 정보·setup/결제 id 는 싣지 않는다.
+  // 등록 결과 화면은 setup 조회가 끝나야 공간을 알므로 결과 이벤트의 workspace_id 는 없을 수 있다.
+  billing_plans_viewed: { workspace_id: string };
+  billing_checkout_entered: { workspace_id: string };
+  billing_agreement_accepted: { workspace_id: string };
+  billing_card_setup_started: { workspace_id: string; provider: BillingProvider };
+  billing_card_setup_resulted: {
+    workspace_id?: string;
+    provider?: BillingProvider;
+    result: BillingSetupResult;
+  };
+  billing_retry_clicked: { workspace_id?: string; result: Exclude<BillingSetupResult, "completed"> };
   // 알림 모달·알림 설정(PRO-67 I32, 발화는 I09·I10). 종류·개수·워크스페이스만 싣고 알림 내용·노트 id 는 싣지 않는다.
   // `type`·`channel` 은 계약의 enum 그대로다 — 종류가 늘면 orval 이 같이 넓힌다.
   notifications_opened: { workspace_id: string; unread_count: number };
