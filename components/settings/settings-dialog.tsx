@@ -2,7 +2,7 @@
 
 import { track } from "@/lib/analytics/track";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
@@ -27,6 +27,8 @@ import { AgentConnectionsSettings } from "@/components/settings/agent-connection
 import { GuestsSettings } from "@/components/settings/guests-settings";
 import { DesktopUpdateSettings } from "@/components/settings/desktop-update-settings";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
+import { desktopUpdateBridge } from "@/lib/desktop/updates";
+import { toast } from "@/lib/ui/toast";
 import { LanguageSettings } from "@/components/settings/language-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
 import {
@@ -151,7 +153,12 @@ function SettingsSections({
                 {t(`groups.${group.key}`)}
               </p>
               {group.items
-                .filter(({ key }) => key !== "appUpdates" || desktop === true)
+                .filter(
+                  ({ key }) =>
+                    key !== "appUpdates" ||
+                    (desktop === true &&
+                      !desktopUpdateBridge()?.openPreferences)
+                )
                 .map(({ key, Icon }) => (
                   <Button
                     key={key}
@@ -267,6 +274,38 @@ export function SettingsDialog({
   // 한 번 나오므로, 그 사이 창이 닫히면 발급된 토큰을 아무도 못 본다. 닫기(X·Esc·바깥 클릭)는
   // 전부 여기로 오고, 섹션 이동은 nav 가 같은 값으로 막는다.
   const t = useTranslations("settings.nav");
+  const tUpdate = useTranslations("settings.appUpdates");
+  const desktop = useDesktopApp();
+  const openNative =
+    desktop === true ? desktopUpdateBridge()?.openPreferences : undefined;
+  const nativeUpdate = open && section === "appUpdates" && Boolean(openNative);
+  const requestedNative = useRef(false);
+  useEffect(() => {
+    if (!nativeUpdate) {
+      requestedNative.current = false;
+      return;
+    }
+    if (requestedNative.current) return;
+    requestedNative.current = true;
+    // 예전 웹 화면과 URL을 정리하고, 네이티브 설정은 안내의 명시적 클릭으로만 연다.
+    onOpenChange(false);
+    toast.info(tUpdate("nativeSettingsNotice"), {
+      id: "desktop-settings-route",
+      action: {
+        label: tUpdate("openNativeSettings"),
+        onClick: () => {
+          void (async () => {
+            try {
+              await openNative?.();
+              toast.dismiss("desktop-settings-route");
+            } catch {
+              toast.error(tUpdate("failed"));
+            }
+          })();
+        },
+      },
+    });
+  }, [nativeUpdate, openNative, onOpenChange, tUpdate]);
   const [locked, setLocked] = useState(false);
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -276,7 +315,7 @@ export function SettingsDialog({
     [locked, onOpenChange]
   );
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open && !nativeUpdate} onOpenChange={handleOpenChange}>
       {/* 오버레이는 e3 2연타 + panel 16이다. rounded-[28px]는 스케일 밖 값이라 폐기했다. (ELEVATION SPEC) */}
       <DialogContent className="h-dvh max-h-none w-screen max-w-none gap-0 overflow-hidden rounded-none border border-black/5 bg-[var(--el-canvas)] p-0 shadow-e3 sm:h-[min(780px,calc(100dvh-3rem))] sm:max-w-5xl sm:rounded-panel">
         <DialogTitle className="sr-only">{t("title")}</DialogTitle>

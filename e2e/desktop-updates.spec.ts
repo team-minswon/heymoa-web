@@ -89,3 +89,91 @@ for (const width of [1440, 1024]) {
     ).toBeVisible();
   });
 }
+
+for (const locale of ["ko-KR", "en-US"]) {
+  test(`native settings replace the redundant hosted page in ${locale}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ locale });
+    await context.addCookies([
+      {
+        name: "heymoa-mock-account-lang",
+        value: locale === "ko-KR" ? "ko" : "en",
+        url: "http://localhost:3100",
+      },
+    ]);
+    const page = await context.newPage();
+    const nativeSettingsLabel =
+      locale === "ko-KR" ? "데스크톱 설정 열기" : "Open desktop settings";
+    await page.addInitScript(() => {
+      Object.assign(window, {
+        nativePreferencesOpened: 0,
+        heymoaDesktop: {
+          getUpdateState: async () => ({
+            currentVersion: "0.1.6",
+            status: "current",
+            automatic: true,
+            canRestart: false,
+          }),
+          checkForUpdates: async () => ({}),
+          setAutomaticUpdates: async () => ({}),
+          restartForUpdate: async () => ({}),
+          subscribeUpdates: () => () => {},
+          openPreferences: () => {
+            if (!navigator.userActivation.isActive)
+              throw new Error("USER_GESTURE_REQUIRED");
+            const w = window as unknown as { nativePreferencesOpened: number };
+            w.nativePreferencesOpened++;
+            return Promise.resolve();
+          },
+        },
+      });
+    });
+    try {
+      await page.goto("/w/01K0000000000?settings=account");
+      const settings = page.getByRole("dialog");
+      await expect(settings).toBeVisible();
+      await expect(
+        settings.getByRole("button", { name: /^(앱 업데이트|App updates)$/ })
+      ).toHaveCount(0);
+      await page.goto(
+        "/w/01K0000000000?settings=appUpdates&keep=value#retained"
+      );
+      await expect(
+        page.getByRole("button", {
+          name: nativeSettingsLabel,
+        })
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () =>
+            (window as unknown as { nativePreferencesOpened: number })
+              .nativePreferencesOpened
+        )
+      ).toBe(0);
+      await page
+        .getByRole("button", {
+          name: nativeSettingsLabel,
+        })
+        .click();
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              (window as unknown as { nativePreferencesOpened: number })
+                .nativePreferencesOpened
+          )
+        )
+        .toBe(1);
+      await expect(page).toHaveURL(/keep=value#retained$/);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(
+        page.getByRole("button", {
+          name: nativeSettingsLabel,
+        })
+      ).toHaveCount(0);
+    } finally {
+      await context.close();
+    }
+  });
+}

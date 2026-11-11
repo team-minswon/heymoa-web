@@ -4,12 +4,26 @@ import {
   render,
   screen,
   within,
+  waitFor,
 } from "@testing-library/react";
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { onTrack } from "@/lib/analytics/track";
 import { SettingsDialog as ControlledDialog } from "@/components/settings/settings-dialog";
 import type { SettingsSection } from "@/lib/workspace/settings-url";
+
+afterEach(() => {
+  cleanup();
+  Reflect.deleteProperty(window, "heymoaDesktop");
+});
+
+const notices = vi.hoisted(() => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  dismiss: vi.fn(),
+}));
+vi.mock("@/lib/ui/toast", () => ({ toast: notices }));
+afterEach(() => vi.clearAllMocks());
 
 // 열린 탭은 주소가 들고 있는 값이라 셸이 내려준다 — 여기서는 상태 하나로 그 자리를 대신한다.
 function SettingsDialog({
@@ -67,7 +81,10 @@ vi.mock("@/components/settings/agent-connections-settings", () => ({
 }));
 
 describe("SettingsDialog", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    Reflect.deleteProperty(window, "heymoaDesktop");
+  });
   it("탭 선택을 한 번 기록하고 같은 탭·리렌더는 세지 않습니다", () => {
     const heard = vi.fn();
     const unsubscribe = onTrack(heard);
@@ -167,4 +184,73 @@ describe("SettingsDialog", () => {
       screen.getByRole("button", { name: "토큰 요청 시작" })
     ).toBeInTheDocument();
   });
+});
+
+function desktopWithPreferences() {
+  const openPreferences = vi.fn(async () => {});
+  Object.assign(window, {
+    heymoaDesktop: {
+      openPreferences,
+      getUpdateState: async () => ({
+        currentVersion: "0.1.6",
+        status: "current",
+        automatic: true,
+        canRestart: false,
+      }),
+      checkForUpdates: vi.fn(),
+      setAutomaticUpdates: vi.fn(),
+      restartForUpdate: vi.fn(),
+      subscribeUpdates: () => () => {},
+    },
+  });
+  return openPreferences;
+}
+it("새 앱은 웹 설정에 앱 업데이트 메뉴를 중복해서 표시하지 않습니다", async () => {
+  const openPreferences = desktopWithPreferences();
+  render(
+    <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+  );
+  expect(screen.queryByRole("button", { name: "앱 업데이트" })).toBeNull();
+  expect(screen.getByText("계정 내용")).toBeVisible();
+  expect(openPreferences).not.toHaveBeenCalled();
+});
+it("예전 업데이트 주소는 빈 화면 없이 설정 안내를 한 번 표시하고 클릭으로 엽니다", async () => {
+  const openPreferences = desktopWithPreferences();
+  const close = vi.fn();
+  render(
+    <StrictMode>
+      <SettingsDialog
+        open
+        onOpenChange={close}
+        initialSection="appUpdates"
+        workspaceId="01K0000000000"
+      />
+    </StrictMode>
+  );
+  await waitFor(() => expect(notices.info).toHaveBeenCalledOnce());
+  expect(openPreferences).not.toHaveBeenCalled();
+  const action = notices.info.mock.calls[0][1].action;
+  action.onClick();
+  await waitFor(() => expect(openPreferences).toHaveBeenCalledOnce());
+  expect(close).toHaveBeenCalledWith(false);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByText("메뉴 막대 설정 열기")).toBeNull();
+});
+
+it("네이티브 설정의 동기 오류도 화면을 무너뜨리지 않고 알립니다", async () => {
+  const openPreferences = desktopWithPreferences();
+  openPreferences.mockImplementation(() => {
+    throw new Error("USER_GESTURE_REQUIRED");
+  });
+  render(
+    <SettingsDialog
+      open
+      onOpenChange={vi.fn()}
+      initialSection="appUpdates"
+      workspaceId="01K0000000000"
+    />
+  );
+  await waitFor(() => expect(notices.info).toHaveBeenCalledOnce());
+  notices.info.mock.calls[0][1].action.onClick();
+  await waitFor(() => expect(notices.error).toHaveBeenCalledOnce());
 });

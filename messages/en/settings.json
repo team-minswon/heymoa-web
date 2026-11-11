@@ -491,6 +491,7 @@
       "available": "Version {version} is available."
     },
     "download": "Download update",
+    "nativeSettingsNotice": "Manage app updates in desktop settings.",
     "openNativeSettings": "Open desktop settings"
   }
 }
