@@ -10690,6 +10690,850 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/realtime/tickets:
+    post:
+      tags:
+      - Realtime
+      summary: 실시간 소켓 연결 티켓 발급
+      description: '`/ws/transcriptions` 에 붙기 직전에 받아 `?ticket=` 쿼리로 붙인다(APP-1546). 수명 30초, 저장하지 않는다. 쿠키가 없거나 만료면 401 이라 기존 갱신 경로를 탄다.'
+      operationId: issueRealtimeTicket
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RealtimeTicketResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      ticket: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1MSIsImF1ZCI6IndzIn0.c2lnbmF0dXJl
+                      expiresAt: '2026-07-14T01:02:03Z'
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/billing/returns/fail:
+    get:
+      tags:
+      - Billing
+      summary: 카드 인증 실패 callback
+      description: PG 카드 인증이 취소·실패했을 때 브라우저가 오는 공개 경로. 시작 전 등록만 정제된 코드로 닫고 이미 시작된 등록은 건드리지 않는다. 응답은 성공 callback 과 같은 303.
+      operationId: receiveBillingFail
+      parameters:
+      - name: setupId
+        in: query
+        description: 서버가 callback 주소에 미리 넣은 카드 등록의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 서버가 callback 주소에 미리 넣은 카드 등록의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B1
+      - name: state
+        in: query
+        description: 서버가 callback 주소에 미리 넣은 고엔트로피 값. 등록 하나를 가리킬 뿐 로그인·권한을 대신하지 않는다
+        required: true
+        schema:
+          type: string
+          description: 서버가 callback 주소에 미리 넣은 고엔트로피 값. 등록 하나를 가리킬 뿐 로그인·권한을 대신하지 않는다
+          nullable: false
+          maxLength: 128
+        example: Zm9vYmFyYmF6cXV4cXV1eGNvcmdlZ3JhdWx0Z2FycGx5
+      - name: code
+        in: query
+        description: PG 오류 코드. 정해진 모양만 저장하고 나머지는 PROVIDER_ERROR 로 접는다
+        required: false
+        schema:
+          type: string
+          description: PG 오류 코드. 정해진 모양만 저장하고 나머지는 PROVIDER_ERROR 로 접는다
+          nullable: false
+          maxLength: 256
+        example: PAY_PROCESS_CANCELED
+      responses:
+        '303':
+          description: '303'
+          headers:
+            Location:
+              description: web 의 등록 결과 화면 `{web}/billing/setups/{setupId}`. authKey·state·customerKey 를 싣지 않는다
+              schema:
+                type: string
+            Cache-Control:
+              description: no-store
+              schema:
+                type: string
+            Referrer-Policy:
+              description: no-referrer — callback query 가 다음 화면의 Referer 로 새지 않게
+              schema:
+                type: string
+      security: []
+  /v1/billing/returns/success:
+    get:
+      tags:
+      - Billing
+      summary: 카드 인증 성공 callback
+      description: PG 카드 인증 뒤 브라우저가 오는 공개 경로(로그인 불필요). 인증 결과만 저장하고 발급·승인·권한은 하지 않는다. 검증에 실패해도(위조 state·다른 customerKey·만료·크기 초과) 같은 303 으로 보낸다 — 등록 화면이 원 등록자 로그인으로 상태를 다시 읽는다. setupId 가 TSID 가 아니면 400.
+      operationId: receiveBillingSuccess
+      parameters:
+      - name: setupId
+        in: query
+        description: 서버가 callback 주소에 미리 넣은 카드 등록의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 카드 등록의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: not-a-tsid
+      - name: state
+        in: query
+        description: 서버가 callback 주소에 미리 넣은 고엔트로피 값. 등록 하나를 가리킬 뿐 로그인·권한을 대신하지 않는다
+        required: true
+        schema:
+          type: string
+          description: 서버가 callback 주소에 미리 넣은 고엔트로피 값. 등록 하나를 가리킬 뿐 로그인·권한을 대신하지 않는다
+          nullable: false
+          maxLength: 128
+        example: Zm9vYmFyYmF6cXV4cXV1eGNvcmdlZ3JhdWx0Z2FycGx5
+      - name: authKey
+        in: query
+        description: PG 가 붙인 카드 인증 결과. 서버가 암호화해 등록 만료까지만 둔다
+        required: false
+        schema:
+          type: string
+          description: PG 가 붙인 카드 인증 결과. 서버가 암호화해 등록 만료까지만 둔다
+          nullable: false
+          maxLength: 512
+        example: fake-auth-approve-3f2a
+      - name: customerKey
+        in: query
+        description: PG 가 돌려준 고객 키. 등록이 굳힌 값과 다르면 거절한다
+        required: false
+        schema:
+          type: string
+          description: PG 가 돌려준 고객 키. 등록이 굳힌 값과 다르면 거절한다
+          nullable: false
+          maxLength: 300
+        example: 0b6e4f1a-2c3d-4e5f-9a8b-7c6d5e4f3a2b
+      responses:
+        '303':
+          description: '303'
+          headers:
+            Location:
+              description: web 의 등록 결과 화면 `{web}/billing/setups/{setupId}`. authKey·state·customerKey 를 싣지 않는다
+              schema:
+                type: string
+            Cache-Control:
+              description: no-store
+              schema:
+                type: string
+            Referrer-Policy:
+              description: no-referrer — callback query 가 다음 화면의 Referer 로 새지 않게
+              schema:
+                type: string
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+      security: []
+  /v1/workspaces/{workspaceId}/billing:
+    get:
+      tags:
+      - Billing
+      summary: 공간 요금제 조회
+      description: 멤버 누구나 집행 여부·상품·구독 상태·권한을 본다. 청구 상세(detail)와 allowedActions 는 ADMIN 에게만 있다. 구독 이력이 없으면 FREE 로 답하고 아무것도 만들지 않는다.
+      operationId: getWorkspaceBilling
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceBillingResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      workspaceId: 0HZX2K7M9Q4AD
+                      enforced: true
+                      status: ACTIVE
+                      product:
+                        planCode: TEST_MONTHLY_V1
+                        policyVersion: TEST_MONTHLY_V1
+                        amountKrw: 9900
+                        currency: KRW
+                        billingInterval: MONTH
+                        recordingAllowanceMinutes: 1000
+                        agreementVersion: BILLING_TEST_V1
+                        testPaymentNotice: SIMULATED_NO_CHARGE
+                      currentPeriod:
+                        start: '2026-11-11T01:00:00Z'
+                        end: '2026-12-11T01:00:00Z'
+                      cancelAtPeriodEnd: false
+                      entitlement:
+                        kind: PAID
+                        recordingAllowanceMinutes: 1000
+                        period:
+                          start: '2026-11-11T01:00:00Z'
+                          end: '2026-12-11T01:00:00Z'
+                      mySetupId: null
+                      teamSetupInProgress: false
+                      latestAttemptStatus: SUCCEEDED
+                      allowedActions: []
+                      detail:
+                        subscriptionVersion: 3
+                        openCycleId: null
+                        latestAttempt:
+                          attemptId: 0HZX2K7M9Q4B3
+                          cycleId: 0HZX2K7M9Q4B2
+                          attemptNumber: 1
+                          status: SUCCEEDED
+                          errorCode: null
+                          requiresManualReview: false
+                        methodVersion: 1
+                        maskedCard:
+                          issuer: '11'
+                          number: 1234****5678
+                          cardType: CREDIT
+                        methodPayerIsMe: true
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/me/billing/setups/{setupId}:
+    get:
+      tags:
+      - Billing
+      summary: 내 카드 등록 상태
+      description: 원 등록자 전용 등록 상태. 남의 등록은 404. 그 공간의 ADMIN 이 아니게 됐으면 stage=ACCESS_LOST 와 상태만 준다. 조회는 실행을 트리거하지 않는다.
+      operationId: getMyBillingSetup
+      parameters:
+      - name: setupId
+        in: path
+        description: 카드 등록의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 카드 등록의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B1
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSetupStatusResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      setupId: 0HZX2K7M9Q4B1
+                      workspaceId: 0HZX2K7M9Q4AD
+                      purpose: PURCHASE
+                      setupStatus: ISSUED
+                      stage: COMPLETED
+                      status: COMPLETED
+                      allowedActions: []
+                      pollAfterSeconds: null
+                      amountKrw: 9900
+                      testPaymentNotice: SIMULATED_NO_CHARGE
+                      failureCode: null
+                      originAttempt:
+                        attemptId: 0HZX2K7M9Q4B3
+                        cycleId: 0HZX2K7M9Q4B2
+                        attemptNumber: 1
+                        status: SUCCEEDED
+                        errorCode: null
+                        requiresManualReview: false
+                      latestAttempt:
+                        attemptId: 0HZX2K7M9Q4B3
+                        cycleId: 0HZX2K7M9Q4B2
+                        attemptNumber: 1
+                        status: SUCCEEDED
+                        errorCode: null
+                        requiresManualReview: false
+                      paidPeriod:
+                        start: '2026-11-11T01:00:00Z'
+                        end: '2026-12-11T01:00:00Z'
+                      statusUrl: /v1/me/billing/setups/0HZX2K7M9Q4B1
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_SETUP_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_SETUP_NOT_FOUND
+                      message: 카드 등록을 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/billing/setups:
+    post:
+      tags:
+      - Billing
+      summary: 카드 등록 열기
+      description: ADMIN 이 주문서 동의 뒤 카드 등록을 연다. 금액·provider 는 받지 않고 서버가 상품 버전으로 정해 굳힌다. 새로 연 등록은 201 과 registration(state 원문이 실려 한 번만 나간다), 같은 requestKey 재전송·본인 진행 중 등록은 200 과 registration=null 이다. 다른 ADMIN 의 진행 중 등록이 있으면 409 BILLING_IN_PROGRESS.
+      operationId: createBillingSetup
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBillingSetupRequest'
+            examples:
+              createBillingSetup_BillingRequestKeyConflictException:
+                value:
+                  purpose: PURCHASE
+                  expectedProductVersion: TEST_MONTHLY_V1
+                  agreementVersion: BILLING_TEST_V1
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              createBillingSetup_Success:
+                value:
+                  purpose: PURCHASE
+                  expectedProductVersion: TEST_MONTHLY_V1
+                  agreementVersion: BILLING_TEST_V1
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              createBillingSetup_BillingNotAvailableException:
+                value:
+                  purpose: PURCHASE
+                  expectedProductVersion: TEST_MONTHLY_V1
+                  agreementVersion: BILLING_TEST_V1
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              createBillingSetup_BillingStateChangedException:
+                value:
+                  purpose: PURCHASE
+                  expectedProductVersion: TEST_MONTHLY_V1
+                  agreementVersion: BILLING_TEST_V1
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              createBillingSetup_BillingInProgressException:
+                value:
+                  purpose: PURCHASE
+                  expectedProductVersion: TEST_MONTHLY_V1
+                  agreementVersion: BILLING_TEST_V1
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              createBillingSetup_BadRequest:
+                value:
+                  purpose: PURCHASE
+                  expectedProductVersion: ''
+                  agreementVersion: BILLING_TEST_V1
+                  requestKey: ''
+              createBillingSetup_WorkspaceAccessDeniedException:
+                value:
+                  purpose: PURCHASE
+                  expectedProductVersion: TEST_MONTHLY_V1
+                  agreementVersion: BILLING_TEST_V1
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+      responses:
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSetupCreatedResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      setupId: 0HZX2K7M9Q4B1
+                      purpose: PURCHASE
+                      status: CREATED
+                      planCode: TEST_MONTHLY_V1
+                      amountKrw: 9900
+                      currency: KRW
+                      recordingAllowanceMinutes: 1000
+                      agreementVersion: BILLING_TEST_V1
+                      provider: FAKE
+                      testPaymentNotice: SIMULATED_NO_CHARGE
+                      expiresAt: '2026-07-14T01:02:03Z'
+                      registration:
+                        redirectUrl: http://localhost:18080/authorize?customerKey=0b6e4f1a-2c3d-4e5f-9a8b-7c6d5e4f3a2b&successUrl=...&failUrl=...
+                        parameters:
+                          customerKey: 0b6e4f1a-2c3d-4e5f-9a8b-7c6d5e4f3a2b
+                      statusUrl: /v1/me/billing/setups/0HZX2K7M9Q4B1
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: expectedProductVersion
+                        message: 비울 수 없습니다.
+                      - field: requestKey
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_NOT_AVAILABLE:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_NOT_AVAILABLE
+                      message: 이 워크스페이스에서는 결제를 이용할 수 없습니다.
+                      details: null
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                REQUEST_KEY_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REQUEST_KEY_CONFLICT
+                      message: 같은 요청 키로 다른 내용의 요청을 보냈습니다. 새 요청으로 다시 시도해 주세요.
+                      details: null
+                BILLING_STATE_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_STATE_CHANGED
+                      message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+                BILLING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_IN_PROGRESS
+                      message: 팀의 구독 처리가 진행 중입니다. 끝난 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/billing/cycles/{cycleId}/attempts:
+    post:
+      tags:
+      - Billing
+      summary: 다시 결제
+      description: 확정 거절된 OPEN 청구 회차에 새 승인 시도를 연다(수단의 결제자 본인만). 금액은 회차가 정한다. 화면이 본 실패 시도·버전이 다르면 409 BILLING_STATE_CHANGED, 결과 불명·처리 중이면 409 BILLING_IN_PROGRESS. 실행은 서버 tick 이 한다.
+      operationId: retryBillingPayment
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      - name: cycleId
+        in: path
+        description: 확정 거절된 OPEN 청구 회차의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 확정 거절된 OPEN 청구 회차의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryBillingPaymentRequest'
+            examples:
+              retryBillingPayment_BadRequest:
+                value:
+                  requestKey: ''
+                  expectedFailedAttemptId: ''
+                  expectedVersion: -1
+                  methodVersion: 1
+              retryBillingPayment_Success:
+                value:
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+                  expectedFailedAttemptId: 0HZX2K7M9Q4B3
+                  expectedVersion: 3
+                  methodVersion: 1
+              retryBillingPayment_WorkspaceAccessDeniedException:
+                value:
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+                  expectedFailedAttemptId: 0HZX2K7M9Q4B3
+                  expectedVersion: 3
+                  methodVersion: 1
+              retryBillingPayment_BillingInProgressException:
+                value:
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+                  expectedFailedAttemptId: 0HZX2K7M9Q4B3
+                  expectedVersion: 3
+                  methodVersion: 1
+              retryBillingPayment_BillingStateChangedException:
+                value:
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+                  expectedFailedAttemptId: 0HZX2K7M9Q4B3
+                  expectedVersion: 3
+                  methodVersion: 1
+              retryBillingPayment_BillingRequestKeyConflictException:
+                value:
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+                  expectedFailedAttemptId: 0HZX2K7M9Q4B3
+                  expectedVersion: 3
+                  methodVersion: 1
+      responses:
+        '202':
+          description: '202'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingPaymentRetriedResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      attemptId: 0HZX2K7M9Q4B4
+                      cycleId: 0HZX2K7M9Q4B2
+                      attemptNumber: 2
+                      status: PENDING
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: expectedFailedAttemptId
+                        message: 비울 수 없습니다.
+                      - field: expectedVersion
+                        message: 0 이상이어야 합니다.
+                      - field: requestKey
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_IN_PROGRESS
+                      message: 팀의 구독 처리가 진행 중입니다. 끝난 뒤 다시 시도해 주세요.
+                      details: null
+                BILLING_STATE_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_STATE_CHANGED
+                      message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+                REQUEST_KEY_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REQUEST_KEY_CONFLICT
+                      message: 같은 요청 키로 다른 내용의 요청을 보냈습니다. 새 요청으로 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/billing/setups/{setupId}/cancel:
+    post:
+      tags:
+      - Billing
+      summary: 카드 등록 취소
+      description: 원 등록자가 시작 전(CREATED·AUTHORIZED) 등록을 닫는다. 이미 닫힌 등록은 그대로 돌려주고, 발급을 시작한 등록은 409 BILLING_STATE_CHANGED.
+      operationId: cancelBillingSetup
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      - name: setupId
+        in: path
+        description: 카드 등록의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 카드 등록의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B1
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSetupStatusResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      setupId: 0HZX2K7M9Q4B1
+                      workspaceId: 0HZX2K7M9Q4AD
+                      purpose: PURCHASE
+                      setupStatus: CANCELED
+                      stage: CLOSED
+                      status: CANCELED
+                      allowedActions:
+                      - START_PURCHASE
+                      pollAfterSeconds: null
+                      amountKrw: 9900
+                      testPaymentNotice: SIMULATED_NO_CHARGE
+                      failureCode: USER_CANCELED
+                      originAttempt: null
+                      latestAttempt: null
+                      paidPeriod: null
+                      statusUrl: /v1/me/billing/setups/0HZX2K7M9Q4B1
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_STATE_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_STATE_CHANGED
+                      message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/billing/setups/{setupId}/complete:
+    post:
+      tags:
+      - Billing
+      summary: 카드 등록 완료(발급 맡기기)
+      description: 원 등록자이며 지금 ADMIN 인 사람이 인증을 마친 등록의 발급·첫 승인을 맡긴다. 업무 키는 setupId 라 몇 번 불러도 첫 승인은 하나다. PG 를 부르지 않고 202 로 돌아온다 — 실행은 서버 tick 이 하고 화면은 statusUrl 을 pollAfterSeconds 간격으로 다시 읽는다.
+      operationId: completeBillingSetup
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      - name: setupId
+        in: path
+        description: 카드 등록의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 카드 등록의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B1
+      responses:
+        '202':
+          description: '202'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSetupStatusResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      setupId: 0HZX2K7M9Q4B1
+                      workspaceId: 0HZX2K7M9Q4AD
+                      purpose: PURCHASE
+                      setupStatus: ISSUING
+                      stage: BILLING_KEY
+                      status: PROCESSING
+                      allowedActions:
+                      - REFRESH_STATUS
+                      pollAfterSeconds: 2
+                      amountKrw: 9900
+                      testPaymentNotice: SIMULATED_NO_CHARGE
+                      failureCode: null
+                      originAttempt: null
+                      latestAttempt: null
+                      paidPeriod: null
+                      statusUrl: /v1/me/billing/setups/0HZX2K7M9Q4B1
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_SETUP_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_SETUP_NOT_FOUND
+                      message: 카드 등록을 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_IN_PROGRESS
+                      message: 팀의 구독 처리가 진행 중입니다. 끝난 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
 components:
   schemas:
     AcceptInvitationByTokenRequest:
@@ -20387,6 +21231,903 @@ components:
           type: boolean
           description: 제품 소식·혜택 메일을 받을지 여부
           nullable: false
+    BillingPaymentRetriedResponse:
+      title: BillingPaymentRetriedResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - attemptId
+          - attemptNumber
+          - cycleId
+          - status
+          type: object
+          properties:
+            attemptNumber:
+              type: integer
+              description: 회차 안의 시도 번호(1부터)
+              nullable: false
+              example: 2
+              format: int32
+              minimum: 1
+            cycleId:
+              type: string
+              description: 청구 회차 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4B2
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            status:
+              type: string
+              description: 새 시도의 상태. 실행은 서버 tick 이 한다
+              nullable: false
+              example: PENDING
+              enum:
+              - PENDING
+              - PROCESSING
+              - UNKNOWN
+              - SUCCEEDED
+              - FAILED
+            attemptId:
+              type: string
+              description: 새 승인 시도 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4B4
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    BillingSetupCreatedResponse:
+      title: BillingSetupCreatedResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - agreementVersion
+          - amountKrw
+          - currency
+          - expiresAt
+          - planCode
+          - provider
+          - purpose
+          - recordingAllowanceMinutes
+          - setupId
+          - status
+          - statusUrl
+          - testPaymentNotice
+          - registration
+          type: object
+          properties:
+            agreementVersion:
+              type: string
+              description: 동의한 주문서 문구 버전
+              nullable: false
+              example: BILLING_TEST_V1
+            purpose:
+              type: string
+              description: 등록 용도
+              nullable: false
+              example: PURCHASE
+              enum:
+              - PURCHASE
+              - REPLACE
+            statusUrl:
+              type: string
+              description: 등록 상태를 다시 읽는 경로
+              nullable: false
+              example: /v1/me/billing/setups/0HZX2K7M9Q4B1
+            setupId:
+              type: string
+              description: 카드 등록 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4B1
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            expiresAt:
+              type: string
+              description: 카드 인증을 마쳐야 하는 시각. 지나면 등록이 닫힌다
+              nullable: false
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+            planCode:
+              type: string
+              description: 굳힌 상품 코드
+              nullable: false
+              example: TEST_MONTHLY_V1
+            amountKrw:
+              type: integer
+              description: 굳힌 결제 금액(원)
+              nullable: false
+              example: 9900
+              format: int64
+            provider:
+              type: string
+              description: 서버가 정한 PG. 브라우저가 고르지 않는다
+              nullable: false
+              example: FAKE
+              enum:
+              - FAKE
+              - TOSS
+              - PAYPLE
+            recordingAllowanceMinutes:
+              type: integer
+              description: 굳힌 녹음 제공량(분)
+              nullable: false
+              example: 1000
+              format: int64
+            testPaymentNotice:
+              type: string
+              description: 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음, REAL_CARD_CHARGE_AUTO_CANCEL 실제 승인 뒤 자동 취소. LIVE 는 null
+              nullable: true
+              example: SIMULATED_NO_CHARGE
+              enum:
+              - SIMULATED_NO_CHARGE
+              - REAL_CARD_CHARGE_AUTO_CANCEL
+            registration:
+              required:
+              - parameters
+              - redirectUrl
+              type: object
+              properties:
+                redirectUrl:
+                  type: string
+                  description: 브라우저가 이동할 PG 인증 페이지 주소(서버가 조립)
+                  nullable: true
+                  example: http://localhost:18080/authorize?customerKey=0b6e4f1a-2c3d-4e5f-9a8b-7c6d5e4f3a2b&successUrl=...&failUrl=...
+                parameters:
+                  type: object
+                  description: PG SDK 가 받는 공개 값(문자열 맵, 비밀값 없음)
+              description: 카드 등록으로 가는 값. 새로 연 등록(201)에만 있고 재전송·진행 중 등록(200)은 null — 이어 가려면 취소 뒤 새로 연다
+              nullable: true
+            currency:
+              type: string
+              description: 통화
+              nullable: false
+              example: KRW
+              enum:
+              - KRW
+            status:
+              type: string
+              description: 등록 상태
+              nullable: false
+              example: CREATED
+              enum:
+              - CREATED
+              - AUTHORIZED
+              - ISSUING
+              - ISSUE_UNKNOWN
+              - ISSUED
+              - ISSUE_REJECTED
+              - ISSUE_UNRECOVERABLE
+              - CANCELED
+              - EXPIRED
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    BillingSetupStatusResponse:
+      title: BillingSetupStatusResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - allowedActions
+          - purpose
+          - setupId
+          - setupStatus
+          - stage
+          - status
+          - statusUrl
+          - workspaceId
+          - pollAfterSeconds
+          - amountKrw
+          - testPaymentNotice
+          - failureCode
+          - originAttempt
+          - latestAttempt
+          - paidPeriod
+          type: object
+          properties:
+            setupStatus:
+              type: string
+              description: 등록의 내부 상태
+              nullable: false
+              example: ISSUING
+              enum:
+              - CREATED
+              - AUTHORIZED
+              - ISSUING
+              - ISSUE_UNKNOWN
+              - ISSUED
+              - ISSUE_REJECTED
+              - ISSUE_UNRECOVERABLE
+              - CANCELED
+              - EXPIRED
+            failureCode:
+              type: string
+              description: 등록이 닫힌 정제된 사유 코드(PG 원문 메시지 아님)
+              nullable: true
+              example: USER_CANCELED
+            purpose:
+              type: string
+              description: 등록 용도
+              nullable: false
+              example: PURCHASE
+              enum:
+              - PURCHASE
+              - REPLACE
+            statusUrl:
+              type: string
+              description: 등록 상태를 다시 읽는 경로
+              nullable: false
+              example: /v1/me/billing/setups/0HZX2K7M9Q4B1
+            setupId:
+              type: string
+              description: 카드 등록 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4B1
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            allowedActions:
+              type: array
+              description: '화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS'
+              items:
+                type: string
+                example: RETRY_PAYMENT
+              nullable: false
+            paidPeriod:
+              type: object
+              properties:
+                start:
+                  type: string
+                  description: 기간 시작(포함)
+                  nullable: false
+                  example: '2026-11-11T01:00:00Z'
+                  format: date-time
+                end:
+                  type: string
+                  description: 기간 끝(제외). 다음 기간의 시작
+                  nullable: false
+                  example: '2026-12-11T01:00:00Z'
+                  format: date-time
+              description: 지급된 유료 기간 [start, end)
+              nullable: true
+              required:
+              - start
+              - end
+            amountKrw:
+              type: integer
+              description: 굳힌 결제 금액(원). ACCESS_LOST 면 null
+              nullable: true
+              example: 9900
+              format: int64
+            stage:
+              type: string
+              description: 화면의 큰 단계
+              nullable: false
+              example: BILLING_KEY
+              enum:
+              - CARD_AUTH_REQUIRED
+              - AUTH_CAPTURED
+              - BILLING_KEY
+              - PAYMENT
+              - ACCESS
+              - COMPLETED
+              - CLOSED
+              - ACCESS_LOST
+            latestAttempt:
+              type: object
+              properties:
+                attemptNumber:
+                  type: integer
+                  description: 회차 안의 시도 번호(1부터)
+                  nullable: false
+                  example: 1
+                  format: int32
+                requiresManualReview:
+                  type: boolean
+                  description: 자동 확인을 멈추고 수동 확인이 필요한가
+                  nullable: false
+                  example: false
+                cycleId:
+                  type: string
+                  description: 청구 회차 식별자
+                  nullable: false
+                  example: 0HZX2K7M9Q4B2
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                errorCode:
+                  type: string
+                  description: 확정 거절의 정제된 코드
+                  nullable: true
+                  example: REJECT_CARD_PAYMENT
+                status:
+                  type: string
+                  description: 승인 시도 상태. UNKNOWN 은 결과 확인 중이며 실패가 아니다
+                  nullable: false
+                  example: FAILED
+                  enum:
+                  - PENDING
+                  - PROCESSING
+                  - UNKNOWN
+                  - SUCCEEDED
+                  - FAILED
+                attemptId:
+                  type: string
+                  description: 승인 시도 식별자
+                  nullable: false
+                  example: 0HZX2K7M9Q4B3
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              description: 그 회차의 최신 시도(재결제 뒤 originAttempt 와 갈린다)
+              nullable: true
+              required:
+              - attemptId
+              - cycleId
+              - attemptNumber
+              - status
+              - errorCode
+              - requiresManualReview
+            originAttempt:
+              type: object
+              properties:
+                attemptNumber:
+                  type: integer
+                  description: 회차 안의 시도 번호(1부터)
+                  nullable: false
+                  example: 1
+                  format: int32
+                requiresManualReview:
+                  type: boolean
+                  description: 자동 확인을 멈추고 수동 확인이 필요한가
+                  nullable: false
+                  example: false
+                cycleId:
+                  type: string
+                  description: 청구 회차 식별자
+                  nullable: false
+                  example: 0HZX2K7M9Q4B2
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                errorCode:
+                  type: string
+                  description: 확정 거절의 정제된 코드
+                  nullable: true
+                  example: REJECT_CARD_PAYMENT
+                status:
+                  type: string
+                  description: 승인 시도 상태. UNKNOWN 은 결과 확인 중이며 실패가 아니다
+                  nullable: false
+                  example: FAILED
+                  enum:
+                  - PENDING
+                  - PROCESSING
+                  - UNKNOWN
+                  - SUCCEEDED
+                  - FAILED
+                attemptId:
+                  type: string
+                  description: 승인 시도 식별자
+                  nullable: false
+                  example: 0HZX2K7M9Q4B3
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              description: 이 등록이 만든 첫 승인 시도
+              nullable: true
+              required:
+              - attemptId
+              - cycleId
+              - attemptNumber
+              - status
+              - errorCode
+              - requiresManualReview
+            testPaymentNotice:
+              type: string
+              description: 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음, REAL_CARD_CHARGE_AUTO_CANCEL 실제 승인 뒤 자동 취소. LIVE 는 null
+              nullable: true
+              example: SIMULATED_NO_CHARGE
+              enum:
+              - SIMULATED_NO_CHARGE
+              - REAL_CARD_CHARGE_AUTO_CANCEL
+            pollAfterSeconds:
+              type: integer
+              description: 다시 조회할 간격(초). 진행 중이 아니면 null
+              nullable: true
+              example: 2
+              format: int32
+            status:
+              type: string
+              description: 단계 안의 상태
+              nullable: false
+              example: PROCESSING
+              enum:
+              - WAITING
+              - PROCESSING
+              - UNKNOWN
+              - DECLINED
+              - ACTION_REQUIRED
+              - COMPLETED
+              - CANCELED
+              - EXPIRED
+            workspaceId:
+              type: string
+              description: 대상 워크스페이스. 권한을 잃었으면(ACCESS_LOST) null
+              nullable: true
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    CreateBillingSetupRequest:
+      title: CreateBillingSetupRequest
+      required:
+      - agreementVersion
+      - expectedProductVersion
+      - purpose
+      - requestKey
+      type: object
+      properties:
+        agreementVersion:
+          type: string
+          description: 사용자가 동의한 주문서 문구 버전
+          nullable: false
+          example: BILLING_TEST_V1
+          minLength: 1
+          maxLength: 64
+        expectedProductVersion:
+          type: string
+          description: 화면이 보여 준 상품 버전. 서버와 다르면 409 BILLING_STATE_CHANGED
+          nullable: false
+          example: TEST_MONTHLY_V1
+          minLength: 1
+          maxLength: 64
+        requestKey:
+          type: string
+          description: 명령마다 화면이 새로 만드는 키. 같은 키·같은 본문은 같은 등록을 돌려준다
+          nullable: false
+          example: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+          minLength: 1
+          maxLength: 100
+        purpose:
+          type: string
+          description: PURCHASE 첫 구매·재구매, REPLACE 카드 교체(추가 청구 없음)
+          nullable: false
+          example: PURCHASE
+          enum:
+          - PURCHASE
+          - REPLACE
+    RealtimeTicketResponse:
+      title: RealtimeTicketResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - expiresAt
+          - ticket
+          type: object
+          properties:
+            ticket:
+              type: string
+              description: 연결 티켓(JWT). 핸드셰이크 주소의 ticket 쿼리 값
+              nullable: false
+            expiresAt:
+              type: string
+              description: 티켓 만료 시각
+              nullable: false
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    RetryBillingPaymentRequest:
+      title: RetryBillingPaymentRequest
+      required:
+      - expectedFailedAttemptId
+      - expectedVersion
+      - methodVersion
+      - requestKey
+      type: object
+      properties:
+        methodVersion:
+          type: integer
+          description: 화면이 본 결제 수단 버전(`detail.methodVersion`)
+          nullable: false
+          example: 1
+          format: int64
+          minimum: 0
+        requestKey:
+          type: string
+          description: 명령마다 화면이 새로 만드는 키. 같은 키·같은 본문은 같은 시도를 돌려준다
+          nullable: false
+          example: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+          minLength: 1
+          maxLength: 100
+        expectedVersion:
+          type: integer
+          description: 화면이 본 구독 버전(`detail.subscriptionVersion`)
+          nullable: false
+          example: 3
+          format: int64
+          minimum: 0
+        expectedFailedAttemptId:
+          type: string
+          description: 화면이 본 직전 실패 시도(`detail.latestAttempt.attemptId`)
+          nullable: false
+          example: 0HZX2K7M9Q4B3
+          minLength: 1
+    WorkspaceBillingResponse:
+      title: WorkspaceBillingResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - allowedActions
+          - cancelAtPeriodEnd
+          - enforced
+          - teamSetupInProgress
+          - workspaceId
+          - status
+          - product
+          - currentPeriod
+          - entitlement
+          - mySetupId
+          - latestAttemptStatus
+          - detail
+          type: object
+          properties:
+            enforced:
+              type: boolean
+              description: 결제 집행 대상 여부. false 면 나머지가 null·빈 값이고 구매 명령은 403 BILLING_NOT_AVAILABLE
+              nullable: false
+              example: true
+            product:
+              required:
+              - agreementVersion
+              - amountKrw
+              - billingInterval
+              - currency
+              - planCode
+              - policyVersion
+              - recordingAllowanceMinutes
+              - testPaymentNotice
+              type: object
+              properties:
+                agreementVersion:
+                  type: string
+                  description: 주문서 동의 문구 버전
+                  nullable: false
+                  example: BILLING_TEST_V1
+                policyVersion:
+                  type: string
+                  description: 상품 버전. 등록 요청의 expectedProductVersion 으로 보낸다
+                  nullable: false
+                  example: TEST_MONTHLY_V1
+                amountKrw:
+                  type: integer
+                  description: 결제 금액(원)
+                  nullable: false
+                  example: 9900
+                  format: int64
+                recordingAllowanceMinutes:
+                  type: integer
+                  description: 기간당 녹음 제공량(분)
+                  nullable: false
+                  example: 1000
+                  format: int64
+                testPaymentNotice:
+                  type: string
+                  description: 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음, REAL_CARD_CHARGE_AUTO_CANCEL 실제 승인 뒤 자동 취소. LIVE 는 null
+                  nullable: true
+                  example: SIMULATED_NO_CHARGE
+                  enum:
+                  - SIMULATED_NO_CHARGE
+                  - REAL_CARD_CHARGE_AUTO_CANCEL
+                currency:
+                  type: string
+                  description: 통화
+                  nullable: false
+                  example: KRW
+                  enum:
+                  - KRW
+                billingInterval:
+                  type: string
+                  description: 결제 주기
+                  nullable: false
+                  example: MONTH
+                  enum:
+                  - MONTH
+                planCode:
+                  type: string
+                  description: 상품 코드
+                  nullable: false
+                  example: TEST_MONTHLY_V1
+              description: 판매 상품(시험 fixture)
+              nullable: true
+            mySetupId:
+              type: string
+              description: 내가 연 진행 중 등록. 없으면 null
+              nullable: true
+              example: 0HZX2K7M9Q4B1
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            teamSetupInProgress:
+              type: boolean
+              description: 다른 ADMIN 이 연 진행 중 등록이 있다(내용은 보이지 않는다)
+              nullable: false
+              example: false
+            allowedActions:
+              type: array
+              description: '화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS'
+              items:
+                type: string
+                example: RETRY_PAYMENT
+              nullable: false
+            cancelAtPeriodEnd:
+              type: boolean
+              description: 기간 끝에 해지 예약 여부
+              nullable: false
+              example: false
+            entitlement:
+              required:
+              - kind
+              - recordingAllowanceMinutes
+              - period
+              type: object
+              properties:
+                period:
+                  type: object
+                  properties:
+                    start:
+                      type: string
+                      description: 기간 시작(포함)
+                      nullable: false
+                      example: '2026-11-11T01:00:00Z'
+                      format: date-time
+                    end:
+                      type: string
+                      description: 기간 끝(제외). 다음 기간의 시작
+                      nullable: false
+                      example: '2026-12-11T01:00:00Z'
+                      format: date-time
+                  description: 유료 권한 기간. Free 는 null
+                  nullable: true
+                  required:
+                  - start
+                  - end
+                recordingAllowanceMinutes:
+                  type: integer
+                  description: 녹음 제공량(분)
+                  nullable: false
+                  example: 1000
+                  format: int64
+                kind:
+                  type: string
+                  description: 권한 출처
+                  nullable: false
+                  example: PAID
+                  enum:
+                  - FREE
+                  - PAID
+                  - LEGACY_ACCESS
+                  - TEST
+              description: 지금 유효한 녹음 권한. 유료 지급이 없으면 Free
+              nullable: true
+            detail:
+              required:
+              - methodPayerIsMe
+              - subscriptionVersion
+              - openCycleId
+              - latestAttempt
+              - methodVersion
+              - maskedCard
+              type: object
+              properties:
+                methodVersion:
+                  type: integer
+                  description: 유효한 결제 수단 버전. 재결제의 methodVersion
+                  nullable: true
+                  example: 1
+                  format: int64
+                maskedCard:
+                  type: object
+                  properties:
+                    number:
+                      type: string
+                      description: 마스킹된 카드 번호
+                      nullable: true
+                      example: 1234****5678
+                    cardType:
+                      type: string
+                      description: 카드 종류
+                      nullable: true
+                      example: CREDIT
+                    issuer:
+                      type: string
+                      description: 카드사
+                      nullable: true
+                      example: '11'
+                  description: PG 가 마스킹한 카드 표시값
+                  nullable: true
+                  required:
+                  - issuer
+                  - number
+                  - cardType
+                latestAttempt:
+                  type: object
+                  properties:
+                    attemptNumber:
+                      type: integer
+                      description: 회차 안의 시도 번호(1부터)
+                      nullable: false
+                      example: 1
+                      format: int32
+                    requiresManualReview:
+                      type: boolean
+                      description: 자동 확인을 멈추고 수동 확인이 필요한가
+                      nullable: false
+                      example: false
+                    cycleId:
+                      type: string
+                      description: 청구 회차 식별자
+                      nullable: false
+                      example: 0HZX2K7M9Q4B2
+                      pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    errorCode:
+                      type: string
+                      description: 확정 거절의 정제된 코드
+                      nullable: true
+                      example: REJECT_CARD_PAYMENT
+                    status:
+                      type: string
+                      description: 승인 시도 상태. UNKNOWN 은 결과 확인 중이며 실패가 아니다
+                      nullable: false
+                      example: FAILED
+                      enum:
+                      - PENDING
+                      - PROCESSING
+                      - UNKNOWN
+                      - SUCCEEDED
+                      - FAILED
+                    attemptId:
+                      type: string
+                      description: 승인 시도 식별자
+                      nullable: false
+                      example: 0HZX2K7M9Q4B3
+                      pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  description: 열린 회차의 최신 승인 시도
+                  nullable: true
+                  required:
+                  - attemptId
+                  - cycleId
+                  - attemptNumber
+                  - status
+                  - errorCode
+                  - requiresManualReview
+                subscriptionVersion:
+                  type: integer
+                  description: 구독 버전. 재결제의 expectedVersion
+                  nullable: false
+                  example: 3
+                  format: int64
+                openCycleId:
+                  type: string
+                  description: 열린 청구 회차. 재결제 경로의 cycleId
+                  nullable: true
+                  example: 0HZX2K7M9Q4B2
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                methodPayerIsMe:
+                  type: boolean
+                  description: 결제 수단의 결제자가 나인가. 재결제는 결제자 본인만 한다
+                  nullable: false
+                  example: true
+              description: 청구 상세. ADMIN 에게만 있다
+              nullable: true
+            currentPeriod:
+              type: object
+              properties:
+                start:
+                  type: string
+                  description: 기간 시작(포함)
+                  nullable: false
+                  example: '2026-11-11T01:00:00Z'
+                  format: date-time
+                end:
+                  type: string
+                  description: 기간 끝(제외). 다음 기간의 시작
+                  nullable: false
+                  example: '2026-12-11T01:00:00Z'
+                  format: date-time
+              description: 현재 이용 기간 [start, end)
+              nullable: true
+              required:
+              - start
+              - end
+            latestAttemptStatus:
+              type: string
+              description: 열린 청구 회차의 최신 승인 시도 상태
+              nullable: true
+              example: FAILED
+              enum:
+              - PENDING
+              - PROCESSING
+              - UNKNOWN
+              - SUCCEEDED
+              - FAILED
+            status:
+              type: string
+              description: 구독 상태. 구독 이력이 없으면 FREE
+              nullable: true
+              example: ACTIVE
+              enum:
+              - FREE
+              - ACTIVE
+              - PAST_DUE
+              - ENDED
+            workspaceId:
+              type: string
+              description: 워크스페이스 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
   securitySchemes:
     accessCookie:
       type: apiKey
