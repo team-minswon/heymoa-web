@@ -4,22 +4,23 @@ const { EventEmitter } = require("node:events");
 const { DesktopUpdates } = require("../dist/updates");
 function fixture(options = {}) {
   const updater = new EventEmitter();
-  let calls = 0, installs = 0, safe = false;
+  let calls = 0, installs = 0, downloads = 0, safe = false;
   const saved = [];
   updater.checkForUpdates = async () => {
     calls++; updater.emit("checking-for-update");
     updater.emit("update-available", { version: "0.1.5" });
-    return { downloadPromise: Promise.resolve().then(() => updater.emit("update-downloaded", { version: "0.1.5" })) };
+    return { downloadPromise: updater.autoDownload ? updater.downloadUpdate() : undefined };
   };
+  updater.downloadUpdate = async () => { downloads++; updater.emit("update-downloaded", { version: "0.1.5" }); return []; };
   updater.quitAndInstall = (silent, relaunch) => { assert.equal(silent, true); assert.equal(relaunch, updater.autoRunAppAfterInstall); installs++; };
   const model = new DesktopUpdates(updater, { currentVersion: "0.1.4", available: true, automatic: false,
     safe: () => safe, prepareInstall: () => safe, cancelInstall() {},
     saveAutomatic: async (enabled) => { saved.push(enabled); }, changed() {}, ...options });
-  return { model, updater, saved, setSafe: (value) => { safe = value; }, get calls() { return calls; }, get installs() { return installs; } };
+  return { model, updater, saved, setSafe: (value) => { safe = value; }, get calls() { return calls; }, get downloads() { return downloads; }, get installs() { return installs; } };
 }
 test("manual check downloads once, reports progress, and installs only after the native guard permits it", async () => {
   const f = fixture();
-  assert.equal(f.updater.autoDownload, true);
+  assert.equal(f.updater.autoDownload, false);
   assert.equal(f.updater.autoInstallOnAppQuit, false);
   assert.equal(f.updater.allowDowngrade, false);
   assert.equal(f.updater.allowPrerelease, false);
@@ -33,9 +34,10 @@ test("manual check downloads once, reports progress, and installs only after the
   f.setSafe(false); f.model.restart(); assert.equal(f.installs, 0);
   f.setSafe(true); f.model.restart(); f.model.restart(); assert.equal(f.installs, 1);
 });
-test("automatic updates are opt-in, persist before checking, and still cannot install during recording", async () => {
+test("metadata checks do not download with automatic off; enabling persists and still respects recording", async () => {
   const f = fixture();
-  f.model.start(); assert.equal(f.calls, 0); f.model.dispose();
+  f.model.start(); await f.model.check(false); f.model.dispose();
+  assert.equal(f.calls, 1); assert.equal(f.downloads, 0); assert.equal(f.model.state().status, "available");
   await f.model.setAutomatic(true); await f.model.check();
   assert.deepEqual(f.saved, [true]); assert.equal(f.model.state().automatic, true);
   assert.equal(f.calls, 1); assert.equal(f.model.onQuit(), false);
@@ -70,4 +72,12 @@ test("installer failure removes the quit bypass and permits retry without restar
   await f.model.check(); f.setSafe(true);
   f.updater.quitAndInstall = () => { throw new Error("installer failed"); };
   assert.equal(f.model.restart().status, "error"); assert.equal(cancellations, 1);
+});
+
+test("manual download after a metadata check is single-flight and current clears stale notices", async () => {
+  const f = fixture(); await f.model.check(false);
+  assert.equal(f.model.state().status, "available"); assert.equal(f.downloads, 0);
+  await Promise.all([f.model.check(), f.model.check()]); assert.equal(f.downloads, 1);
+  f.updater.emit("update-not-available");
+  assert.equal(f.model.state().status, "current"); assert.equal(f.model.state().version, undefined); assert.equal(f.model.state().percent, undefined);
 });

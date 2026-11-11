@@ -6,6 +6,15 @@ export function isLanguage(value: unknown): value is Language {
 export function setLanguage(value: Language) { language = value; }
 export function getLanguage(): Language { return language; }
 export const english: Record<string, string> = {
+  "설정…": "Settings…",
+  "앱 업데이트…": "App updates…",
+  "요약이 정리되면 여기에 표시됩니다.": "Your live summary will appear here.",
+  "항상 위에 고정": "Keep on top",
+  "불투명도 조절": "Adjust opacity",
+  "표시 설정을 저장하지 못했습니다. 다시 시도해 주세요.": "Could not save display settings. Try again.",
+  "불투명도": "Opacity",
+  "자동 업데이트": "Automatic updates",
+  "새 버전을 자동으로 다운로드합니다. 녹음과 전송이 끝난 뒤 앱을 종료하면 적용됩니다.": "Download new versions automatically. Updates install when you quit after recording and uploads finish.",
 "HeyMoa 정보":"About HeyMoa","서비스":"Services","HeyMoa 가리기":"Hide HeyMoa","다른 앱 가리기":"Hide Others","모두 보기":"Show All","파일":"File","창 닫기":"Close Window","편집":"Edit","실행 취소":"Undo","다시 실행":"Redo","오려두기":"Cut","복사":"Copy","붙여넣기":"Paste","전체 선택":"Select All","보기":"View","다시 불러오기":"Reload","확대/축소 재설정":"Actual Size","확대":"Zoom In","축소":"Zoom Out","전체 화면":"Toggle Full Screen","윈도우":"Window","최소화":"Minimize","맨 앞으로 가져오기":"Bring All to Front","로그인 후에는 계정의 언어 설정을 따릅니다.":"After signing in, the app follows your account language.",
   "앱 화면이 중단되었습니다.": "The app stopped responding.",
   "녹음 중이었다면 아직 전송되지 않은 소리는 사라질 수 있습니다.": "If you were recording, audio that has not been uploaded may be lost.",

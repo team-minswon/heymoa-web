@@ -19,6 +19,10 @@ const recording = vi.hoisted(() => ({
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
 }));
+const openSettings = vi.hoisted(() => vi.fn());
+vi.mock("./workspace-app-shell", () => ({
+  useOpenSettings: () => openSettings,
+}));
 const track = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/desktop/use-desktop-app", () => ({
@@ -239,11 +243,16 @@ describe("legacy desktop update notice", () => {
     Object.assign(
       (window as unknown as { heymoaDesktop: object }).heymoaDesktop,
       {
-        getUpdateState() {},
+        getUpdateState: async () => ({
+          currentVersion: "0.1.4",
+          status: "current",
+          automatic: false,
+          canRestart: false,
+        }),
         checkForUpdates() {},
         setAutomaticUpdates() {},
         restartForUpdate() {},
-        subscribeUpdates() {},
+        subscribeUpdates: () => () => {},
       }
     );
     render(<DesktopAppPromo />);
@@ -288,5 +297,56 @@ describe("legacy desktop update notice", () => {
     expect(
       screen.getByRole("link", { name: "Download new installer" })
     ).toHaveAttribute("target", "_blank");
+  });
+});
+
+describe("native update notice", () => {
+  afterEach(() => {
+    cleanup();
+    Reflect.deleteProperty(window, "heymoaDesktop");
+    openSettings.mockClear();
+  });
+  it("shows one inline notice only for a newer available version and removes it once current", async () => {
+    desktop.value = true;
+    let receive: (
+      state: import("@heymoa/desktop-contracts").DesktopUpdateState
+    ) => void = () => {};
+    const state = {
+      currentVersion: "0.1.5",
+      status: "current" as const,
+      automatic: false,
+      canRestart: false,
+    };
+    Object.defineProperty(window, "heymoaDesktop", {
+      configurable: true,
+      value: {
+        getUpdateState: async () => state,
+        checkForUpdates: vi.fn(),
+        setAutomaticUpdates: vi.fn(),
+        restartForUpdate: vi.fn(),
+        subscribeUpdates: (listener: typeof receive) => {
+          receive = listener;
+          return () => {};
+        },
+      },
+    });
+    render(<DesktopAppPromo />);
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
+    );
+    const { act } = await import("@testing-library/react");
+    await act(async () =>
+      receive({ ...state, version: "0.1.6", status: "available" })
+    );
+    expect(screen.getAllByRole("complementary")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "앱 업데이트" }));
+    expect(openSettings).toHaveBeenCalledWith("appUpdates");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await act(async () =>
+      receive({ ...state, version: "0.1.5", status: "ready" })
+    );
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    await act(async () => receive(state));
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 });

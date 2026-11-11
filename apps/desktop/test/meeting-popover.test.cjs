@@ -6,9 +6,12 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const vm = require("node:vm");
 
-function fixture(t) {
+function fixture(t, preferences = { pinned: false, opacity: 1 }) {
   const windows = [], handlers = new Map(), actions = [];
-  const view = { timeline: null, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false };
+  const saved = [];
+  const displays = new EventEmitter();
+  displays.getDisplayMatching = () => ({ workArea: { x: 0, y: 24, width: 1280, height: 776 } });
+  const view = { meetings: [], timeline: null, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false };
   class BrowserWindow extends EventEmitter {
     constructor(options) {
       super();
@@ -35,6 +38,8 @@ function fixture(t) {
     show() { this.shows++; }
     hide() { this.hides++; }
     focus() { this.focuses++; }
+    getBounds() { return this.bounds ?? { x: 0, y: 24, width: 420, height: 580 }; }
+    setOpacity(value) { this.opacity = value; }
     setBounds(bounds) { this.bounds = bounds; }
     setVisibleOnAllWorkspaces(...args) { this.spaces = args; }
     setAlwaysOnTop(...args) { this.onTop = args; }
@@ -47,12 +52,12 @@ function fixture(t) {
     require: (name) => name === "electron" ? {
       BrowserWindow,
       ipcMain: { handle: (channel, handler) => handlers.set(channel, handler), removeHandler: (channel) => handlers.delete(channel) },
-      screen: { getDisplayMatching: () => ({ workArea: { x: 0, y: 24, width: 1280, height: 776 } }) },
+      screen: displays,
     } : name.startsWith(".") ? require(path.resolve(path.dirname(filename), name)) : require(name),
   });
-  const popover = module.exports.createMeetingPopover({ getBounds: () => ({ x: 800, y: 0, width: 24, height: 24 }) }, () => view, (value) => actions.push(value));
+  const popover = module.exports.createMeetingPopover({ getBounds: () => ({ x: 800, y: 0, width: 24, height: 24 }) }, () => view, (value) => actions.push(value), undefined, { preferences, save: async value => { saved.push(JSON.parse(JSON.stringify(value))); } });
   t.after(() => popover.dispose());
-  return { popover, windows, handlers, actions, view,
+  return { popover, windows, handlers, actions, view, saved, displays,
     event(window = windows.at(-1)) { return { sender: window.webContents, senderFrame: window.webContents.mainFrame }; },
   };
 }
@@ -91,7 +96,8 @@ test("only the live local popup main frame can read or invoke fixed actions", as
   const window = f.windows[0]; window.finishLoad(); await settle();
   const read = f.handlers.get("heymoa:meeting-read"), action = f.handlers.get("heymoa:meeting-action");
   const event = f.event();
-  assert.equal(read(event), f.view);
+  assert.equal(read(event).label, f.view.label);
+  assert.equal(read(event).panel.pinned, false);
   for (const invalid of [ { ...event, sender: {} }, { ...event, senderFrame: { url: event.senderFrame.url } } ]) {
     assert.throws(() => read(invalid), /UNTRUSTED_MEETING_REQUEST/);
     assert.throws(() => action(invalid, "stop"), /UNTRUSTED_MEETING_REQUEST/);
@@ -143,4 +149,31 @@ test("failed load and renderer crash destroy the popup so the next toggle can re
   assert.equal(window.shows, 1);
   window.webContents.emit("render-process-gone"); assert.equal(window.destroyed, true);
   f.popover.toggle(); assert.equal(f.windows.length, 3);
+});
+
+test("pin survives outside clicks, dragging restores clamped position, opacity persists, explicit close still works", async t => {
+  const f = fixture(t); f.view.canStop = false;
+  f.popover.toggle(); const window = f.windows[0]; window.finishLoad(); await settle();
+  assert.equal(window.bounds.height, 280);
+  const action = f.handlers.get("heymoa:meeting-action");
+  await action(f.event(), { action: "set-panel", pinned: true });
+  await f.popover.setOpacity(0.7);
+  window.emit("blur"); assert.equal(window.hides, 0); assert.equal(window.opacity, 0.7);
+  window.bounds = { x: 3000, y: -100, width: 420, height: 280 }; window.emit("moved");
+  await new Promise(setImmediate); f.popover.hide(); f.popover.toggle();
+  assert.equal(window.bounds.x, 860); assert.equal(window.bounds.y, 24);
+  assert.equal(f.saved.at(-1).pinned, true); assert.equal(f.saved.at(-1).opacity, 0.7);
+  for (const invalid of [{ opacity: 0.7 }, { opacity: 0.1 }, { opacity: NaN }, { pinned: "true" }, { pinned: true, url: "https://evil.test" }, {}])
+    assert.throws(() => action(f.event(), { action: "set-panel", ...invalid }), /INVALID_MEETING_ACTION/);
+  await action(f.event(), "hide"); assert.equal(window.hides, 2);
+  await action(f.event(), { action: "set-panel", pinned: false });
+  window.emit("blur"); assert.equal(window.hides, 3);
+  f.popover.dispose(); assert.equal(f.displays.listenerCount("display-removed"), 0);
+});
+
+test("settings opacity rejects out-of-range values and is never writable through popup IPC", async t => {
+  const f = fixture(t); f.popover.toggle(); f.windows[0].finishLoad(); await settle();
+  for (const value of [NaN, Infinity, 0.59, 1.01]) await assert.rejects(f.popover.setOpacity(value), /INVALID_PANEL_REQUEST/);
+  assert.throws(() => f.handlers.get("heymoa:meeting-action")(f.event(), { action: "set-panel", pinned: true, opacity: .8 }), /INVALID_MEETING_ACTION/);
+  await f.popover.setOpacity(.6); assert.equal(f.windows[0].opacity, .6);
 });

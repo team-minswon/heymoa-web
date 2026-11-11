@@ -22,6 +22,7 @@ type MeetingBridge = {
       | "show-current"
       | "hide"
       | { action: "open-note"; noteId: string }
+      | { action: "set-panel"; pinned: boolean }
   ): Promise<void>;
   subscribe(listener: (view: MeetingPopoverView) => void): () => void;
 };
@@ -34,31 +35,12 @@ const scroll = element("scroll"),
   latest = element<HTMLButtonElement>("latest");
 const stop = element<HTMLButtonElement>("stop");
 let timeline: MeetingTimelineSnapshot | null = null;
-let filter = "ALL";
 let recording = false;
 let emptyMessage = t("녹음 중인 회의가 없습니다.");
 let following = true;
 let previousTop = 0;
 let previousHeight = scroll.scrollHeight;
 let viewing = false;
-const filters = [
-  ["ALL", "전체"],
-  ["decision", "결정"],
-  ["task", "할 일"],
-  ["open", "열린 질문"],
-  ["reference", "참고"],
-];
-const filterButtons = filters.map(([key, label]) => {
-  const button = document.createElement("button");
-  button.textContent = t(label);
-  button.type = "button";
-  button.addEventListener("click", () => {
-    filter = key;
-    renderItems();
-  });
-  element("filters").append(button);
-  return { key, label, button };
-});
 const offset = (ms: number | null) => {
   if (ms === null) return "—";
   const seconds = Math.floor(ms / 1000);
@@ -67,10 +49,6 @@ const offset = (ms: number | null) => {
 
 function createRow(item: MeetingTimelineItem) {
   const node = document.createElement("article");
-  const time = document.createElement("time");
-  time.className = "offset";
-  const dot = document.createElement("span");
-  dot.setAttribute("aria-hidden", "true");
   const body = document.createElement("div");
   const summary = document.createElement("button");
   summary.className = "summary";
@@ -82,8 +60,7 @@ function createRow(item: MeetingTimelineItem) {
   chevron.className = "chevron";
   chevron.textContent = "⌄";
   chevron.setAttribute("aria-hidden", "true");
-  const label = document.createElement("span");
-  summary.append(content, chevron, label);
+  summary.append(content, chevron);
   const detail = document.createElement("div");
   detail.className = "detail";
   detail.inert = true;
@@ -100,48 +77,17 @@ function createRow(item: MeetingTimelineItem) {
   clip.append(quote);
   detail.append(clip);
   body.append(summary, detail);
-  node.append(time, dot, body);
-  const reveal = () => {
-    if (summary.getAttribute("aria-expanded") !== "true") return;
-    text.classList.add("revealed");
-    detail.inert = false;
-    detail.setAttribute("aria-hidden", "false");
-  };
-  let expansion = 0;
+  node.append(body);
   summary.addEventListener("click", () => {
-    const current = ++expansion;
     const open = summary.getAttribute("aria-expanded") !== "true";
     summary.setAttribute("aria-expanded", String(open));
     detail.classList.toggle("open", open);
-    text.classList.remove("revealed");
-    detail.inert = true;
-    detail.setAttribute("aria-hidden", "true");
-    if (!open) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      reveal();
-      return;
-    }
-    window.requestAnimationFrame(() => {
-      if (current !== expansion) return;
-      // A same-frame close/open may have no CSS transition to finish.
-      void Promise.allSettled(
-        detail.getAnimations().map((animation) => animation.finished)
-      ).then(() => {
-        if (current === expansion) reveal();
-      });
-    });
+    text.classList.toggle("revealed", open);
+    detail.inert = !open;
+    detail.setAttribute("aria-hidden", String(!open));
   });
-  let sizeAnimation: Animation | undefined;
   function update(value: MeetingTimelineItem) {
-    const previousHeight = node.getBoundingClientRect().height;
-    const changedContent = content.textContent !== value.content;
-    const previousCitations = text.textContent;
-    sizeAnimation?.cancel();
-    time.textContent = offset(value.atMs);
-    dot.className = `dot ${value.tone}`;
     content.textContent = value.content;
-    label.className = `label ${value.tone}`;
-    label.textContent = value.label;
     chevron.hidden = value.citations.length === 0;
     summary.disabled = value.citations.length === 0;
     text.replaceChildren(
@@ -156,42 +102,13 @@ function createRow(item: MeetingTimelineItem) {
         return line;
       })
     );
-    if (
-      node.isConnected &&
-      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      const height = node.getBoundingClientRect().height;
-      if (Math.abs(previousHeight - height) > 1) {
-        sizeAnimation = node.animate(
-          [
-            { height: `${previousHeight}px`, overflow: "clip" },
-            { height: `${height}px`, overflow: "clip" },
-          ],
-          { duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
-        );
-      }
-      if (changedContent) {
-        content.animate([{ opacity: 0.5 }, { opacity: 1 }], { duration: 180 });
-      }
-      if (
-        text.classList.contains("revealed") &&
-        previousCitations !== text.textContent
-      ) {
-        text.animate([{ opacity: 0.5 }, { opacity: 1 }], { duration: 180 });
-      }
-    }
   }
   update(item);
   return { node, item, update };
 }
 const rowViews = new Map<string, ReturnType<typeof createRow>>();
 function renderItems(animateNew = false) {
-  const displayed = (timeline?.items ?? []).filter(
-    (item) =>
-      filter === "ALL" ||
-      item.tone === filter ||
-      (filter === "reference" && item.tone === "answered")
-  );
+  const displayed = timeline?.items ?? [];
   const present = new Set(displayed.map((item) => item.id));
   for (const [id, row] of rowViews) {
     if (!present.has(id)) {
@@ -213,8 +130,6 @@ function renderItems(animateNew = false) {
     if (row.node !== cursor) items.insertBefore(row.node, cursor);
     cursor = row.node.nextElementSibling;
   }
-  for (const { key, button } of filterButtons)
-    button.setAttribute("aria-pressed", String(key === filter));
   element("empty").hidden = displayed.length > 0;
   element("empty").textContent = !timeline
     ? emptyMessage
@@ -222,7 +137,7 @@ function renderItems(animateNew = false) {
       ? t("회의 내용을 불러오는 중입니다.")
       : timeline.failed
         ? t("회의 내용을 확인하지 못했습니다. 현재 회의를 열어 확인해 주세요.")
-        : t("아직 이 유형의 항목이 없습니다.");
+        : t("요약이 정리되면 여기에 표시됩니다.");
   followBottom();
   latest.hidden = following || displayed.length === 0;
 }
@@ -242,7 +157,6 @@ let meetingsSignature = "";
 function renderMeetings(list: ActiveMeeting[], show: boolean) {
   const container = element("meetings");
   container.hidden = !show;
-  element("filters").hidden = show;
   if (!show) {
     meetingsSignature = "";
     return;
@@ -280,12 +194,16 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
 }
 function receive(view: MeetingPopoverView) {
   localize(view.language ?? "ko");
-  for (const { label, button } of filterButtons) button.textContent = t(label);
+  const pinned = view.panel?.pinned ?? false;
+  element("pin").setAttribute("aria-pressed", String(pinned));
+  document.body.dataset.recording = String(view.canStop);
+  document.body.dataset.empty = String(
+    !view.timeline && !view.canStop && !view.meetings.length
+  );
   const animateNew =
     timeline?.noteId === view.timeline?.noteId &&
     Boolean(timeline?.items.length);
   if (timeline?.noteId !== view.timeline?.noteId) {
-    filter = "ALL";
     following = true;
     rowViews.clear();
     items.replaceChildren();
@@ -323,11 +241,12 @@ function receive(view: MeetingPopoverView) {
           : "");
   // 뷰어로 보는 중에는 「녹음 일시정지」 대신 「보기 종료」로 목록에 돌아간다.
   const label = viewing ? t(" 보기 종료") : t(" 녹음 일시정지");
-  if (stop.lastChild?.textContent !== label)
-    stop.lastChild!.textContent = label;
+  if (stop.lastElementChild?.textContent !== label)
+    stop.lastElementChild!.textContent = label;
   // ⏸ 는 녹음 일시정지에만 붙는다. 보기 종료는 회의를 멈추지 않는다.
   (stop.firstElementChild as HTMLElement).hidden = viewing;
   stop.disabled = !(view.canStop || viewing);
+  stop.hidden = stop.disabled;
   renderItems(animateNew);
   const listing = !timeline && !recording && view.meetings.length > 0;
   if (listing) element("title").textContent = t("진행 중인 회의");
@@ -371,16 +290,25 @@ function act(
     | "show-current"
     | "hide"
     | { action: "open-note"; noteId: string }
+    | { action: "set-panel"; pinned: boolean }
 ) {
   if (value === "stop" || value === "stop-viewing") stop.disabled = true;
   void bridge.action(value).catch(() => {
     element("notice").textContent = t(
-      "처리하지 못했습니다. 현재 회의에서 확인해 주세요."
+      typeof value === "object" && value.action === "set-panel"
+        ? "표시 설정을 저장하지 못했습니다. 다시 시도해 주세요."
+        : "처리하지 못했습니다. 현재 회의에서 확인해 주세요."
     );
   });
 }
 stop.addEventListener("click", () => act(viewing ? "stop-viewing" : "stop"));
 element("open").addEventListener("click", () => act("show-current"));
+element("pin").addEventListener("click", () =>
+  act({
+    action: "set-panel",
+    pinned: element("pin").getAttribute("aria-pressed") !== "true",
+  })
+);
 element("close").addEventListener("click", () => act("hide"));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") act("hide");

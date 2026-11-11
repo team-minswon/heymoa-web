@@ -13,33 +13,92 @@
   <body>
     <header>
       <div class="status">
-        <i></i><span id="phase"><span data-i18n>녹음 대기</span></span><time id="elapsed"></time>
+        <i></i><span id="phase"><span data-i18n>녹음 대기</span></span
+        ><time id="elapsed"></time>
       </div>
-      <button id="close" data-i18n-aria-label="팝오버 닫기" aria-label="팝오버 닫기" data-i18n-title="닫기" title="닫기">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <path d="M6 6 18 18M18 6 6 18" />
-        </svg>
-      </button>
+      <div class="window-controls">
+        <button
+          id="pin"
+          aria-pressed="false"
+          data-i18n-aria-label="항상 위에 고정"
+          aria-label="항상 위에 고정"
+          data-i18n-title="항상 위에 고정"
+          title="항상 위에 고정"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m16 3 5 5-4 2-3 5-2-2-4 4-1-1 4-4-2-2 5-3zM7 17l-4 4" />
+          </svg>
+        </button>
+        <button
+          id="close"
+          data-i18n-aria-label="팝오버 닫기"
+          aria-label="팝오버 닫기"
+          data-i18n-title="닫기"
+          title="닫기"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6 18 18M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
     </header>
     <h1 id="title"><span data-i18n>녹음 대기</span></h1>
-    <nav data-i18n-aria-label="타임라인 유형" aria-label="타임라인 유형" id="filters"></nav>
     <p id="notice" role="status"></p>
-    <main id="scroll" tabindex="0" data-i18n-aria-label="회의 타임라인" aria-label="회의 타임라인">
+    <main
+      id="scroll"
+      tabindex="0"
+      data-i18n-aria-label="회의 타임라인"
+      aria-label="회의 타임라인"
+    >
       <div id="meetings" hidden></div>
       <div id="items"></div>
       <p id="empty"><span data-i18n>녹음 중인 회의가 없습니다.</span></p>
     </main>
     <button
       id="latest"
-      data-i18n-aria-label="최신 항목으로 이동" aria-label="최신 항목으로 이동"
-      data-i18n-title="최신 항목으로 이동" title="최신 항목으로 이동"
+      data-i18n-aria-label="최신 항목으로 이동"
+      aria-label="최신 항목으로 이동"
+      data-i18n-title="최신 항목으로 이동"
+      title="최신 항목으로 이동"
       hidden
     >
       ↓
     </button>
     <footer>
       <button id="open"><span data-i18n>HeyMoa 열기 ↗</span></button
-      ><button id="stop" disabled><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1" /><rect x="6" y="4" width="4" height="16" rx="1" /></svg></span><span>녹음 일시정지</span></button>
+      ><button id="stop" disabled>
+        <span aria-hidden="true"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="14" y="4" width="4" height="16" rx="1" />
+            <rect x="6" y="4" width="4" height="16" rx="1" /></svg></span
+        ><span>녹음 일시정지</span>
+      </button>
     </footer>
     <script src="meeting-renderer.js"></script>
   </body>

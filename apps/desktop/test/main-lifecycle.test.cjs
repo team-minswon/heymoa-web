@@ -50,7 +50,8 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
   app.getVersion = () => "0.1.4";
   let updateInstalls = 0;
   const updater = new EventEmitter();
-  updater.checkForUpdates = async () => { updater.emit("checking-for-update"); updater.emit("update-available", { version: "0.1.5" }); return { downloadPromise: Promise.resolve().then(() => updater.emit("update-downloaded", { version: "0.1.5" })) }; };
+  updater.checkForUpdates = async () => { updater.emit("checking-for-update"); updater.emit("update-available", { version: "0.1.5" }); return { downloadPromise: updater.autoDownload ? updater.downloadUpdate() : undefined }; };
+  updater.downloadUpdate = async () => { updater.emit("update-downloaded", { version: "0.1.5" }); return []; };
   updater.quitAndInstall = () => { updateInstalls++; app.quit(); };
   app.getLocale = () => options.locale ?? "ko-KR";
   app.setAsDefaultProtocolClient = () => true;
@@ -108,6 +109,8 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
     },
   };
   const sessionProfiles = [];
+  let applicationMenu;
+  const sent = [];
   let rejectCaptureLoad;
   class BrowserWindow extends EventEmitter {
     constructor() {
@@ -120,7 +123,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
         isDestroyed: () => this.destroyed ?? false,
         getURL: () => "https://heymoa.app",
         setWindowOpenHandler() {},
-        send() {},
+        send: (...value) => sent.push(value),
       });
       windows.push(this);
     }
@@ -167,11 +170,12 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
   ipcMain.removeHandler = (channel) => handlers.delete(channel);
   const electron = {
     app,
+    screen: new EventEmitter(),
     ipcMain,
     BrowserWindow,
     Tray,
     nativeImage: { createFromPath: () => image },
-    Menu: { buildFromTemplate: (value) => value, setApplicationMenu() {} },
+    Menu: { buildFromTemplate: (value) => value, setApplicationMenu(value) { applicationMenu = value; } },
     session: {
       fromPartition(partition) {
         sessionProfiles.push({ partition, storage: app.getPath("sessionData") });
@@ -218,7 +222,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
         clearInterval,
         require: (name) =>
           name === "node:fs/promises"
-            ? { ...require(name), readFile: async (file) => JSON.stringify(file.endsWith("preferences.json") ? { language: options.savedLanguage } : file.endsWith("updates.json") ? { automatic: options.automatic } : { version: 1, completed: introCompleted }), mkdir: async () => {}, writeFile: async () => {}, rename: async () => {} }
+            ? { ...require(name), readFile: async (file) => JSON.stringify(file.endsWith("preferences.json") ? { language: options.savedLanguage } : file.endsWith("updates.json") ? { automatic: options.automatic ?? false } : { version: 1, completed: introCompleted }), mkdir: async () => {}, writeFile: async () => {}, rename: async () => {} }
           : name === "./update-runtime"
             ? { autoUpdater: updater }
           : name === "electron"
@@ -255,6 +259,8 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
     updater,
     get updateInstalls() { return updateInstalls; },
     windows,
+    get applicationMenu() { return applicationMenu; },
+    sent,
     invoke,
     requests,
     dialogs,
@@ -463,4 +469,28 @@ test("opt-in automatic update applies on safe normal quit; confirmed audio disca
   unsafe.invoke("heymoa:recording-summary", { ...idle, phase: "recording" });
   unsafe.answer = 2; unsafe.app.quit(); await tick();
   assert.equal(unsafe.updateInstalls, 0);
+});
+
+test("opacity settings admit only trusted main frame and preserve native recording safety", async t => {
+  const f = await fixture(t);
+  assert.equal(f.invoke("heymoa:panel-opacity"), 1);
+  for (const [channel, payload] of [["heymoa:panel-opacity"], ["heymoa:panel-opacity-set", .75]]) {
+    assert.throws(() => f.invoke(channel, payload, { sender: {}, senderFrame: f.windows[0].webContents.mainFrame }), /UNTRUSTED/);
+    assert.throws(() => f.invoke(channel, payload, { sender: f.windows[0].webContents, senderFrame: { url: "https://evil.test" } }), /UNTRUSTED/);
+  }
+  for (const value of ["0.7", NaN, 0.1, 1.01]) assert.throws(() => f.invoke("heymoa:panel-opacity-set", value), /INVALID_PANEL_REQUEST/);
+  assert.equal(await f.invoke("heymoa:panel-opacity-set", .75), .75);
+  assert.equal(f.invoke("heymoa:panel-opacity"), .75);
+});
+
+test("Mac settings and update menus open the intended in-app sections without navigating or interrupting capture", async t => {
+  const f = await fixture(t);
+  const menu = f.applicationMenu[0].submenu;
+  const settings = menu.find(item => item.label === "설정…");
+  assert.equal(settings.accelerator, "CmdOrCtrl+,"); settings.click();
+  assert.deepEqual(f.sent.at(-1), ["heymoa:open-settings", "desktopAppearance"]);
+  menu.find(item => item.label === "앱 업데이트…").click();
+  assert.deepEqual(f.sent.at(-1), ["heymoa:open-settings", "appUpdates"]);
+  assert.equal(f.applicationMenu.find(item => item.label === "파일").submenu.some(item => item.label === "설정…"), false);
+  assert.equal(f.quits, 0);
 });

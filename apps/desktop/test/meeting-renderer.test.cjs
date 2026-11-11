@@ -5,7 +5,7 @@ const path = require("node:path");
 const { JSDOM } = require("jsdom");
 const snapshot = () => ({ noteId: "note-a", title: "회의 A", loading: false, failed: false, reconnecting: false, total: 1,
   items: [{ id: "item-a", tone: "task", label: "할 일", content: "배포 확인", atMs: 1000, citations: [{ atMs: 1000, text: "<img src=x onerror=alert(1)>" }] }] });
-test("hour-long timeline offsets remain on one line in a narrow popover", async (t) => {
+test("long elapsed time fits while summary content has no timestamps or classification", async (t) => {
   const { chromium } = require("@playwright/test");
   const { pathToFileURL } = require("node:url");
   const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
@@ -16,9 +16,10 @@ test("hour-long timeline offsets remain on one line in a narrow popover", async 
   await page.goto(pathToFileURL(path.resolve(__dirname, "../dist/meeting.html")).href);
   const timeline = snapshot(); timeline.items[0].atMs = 4_680_000;
   await page.evaluate((timeline) => window.receive({ language: "en", meetings: [], timeline, label: "Recording", elapsed: "1:18:00", warning: null, canStop: true, stale: false, viewing: false, phase: "recording", unknown: false }), timeline);
-  const offset = page.locator("article > .offset");
+  const offset = page.locator("#elapsed");
   assert.equal(await offset.textContent(), "1:18:00");
   assert.equal(await offset.evaluate(node => { const range = document.createRange(); range.selectNodeContents(node); return range.getClientRects().length; }), 1);
+  assert.equal(await page.locator("article .offset, article .label, article .dot, nav").count(), 0);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 });
 test("lost recording state is not rendered as no recording, and idle has an honest app action", (t) => {
@@ -48,10 +49,10 @@ function fixture(t, reduced = false) {
     finish: async () => { animations.splice(0).forEach((resolve) => resolve()); await new Promise(setImmediate); },
     update: (timeline, canStop = timeline !== null, label = "녹음 중", status = {}) => receive({ meetings: [], timeline, label, elapsed: "1:00", warning: null, canStop, stale: false, viewing: false, phase: canStop ? "recording" : "idle", unknown: false, ...status }) };
 }
-test("real renderer keeps an expanded row across updates, reveals text after space, and renders untrusted content only as text", async (t) => {
+test("real renderer keeps an expanded row across updates, uses one disclosure transition, and renders untrusted content only as text", async (t) => {
   const f = fixture(t); const value = snapshot(); f.update(value);
   const button = f.document.querySelector(".summary"), detail = f.document.querySelector(".detail"), text = f.document.querySelector(".quote-text");
-  button.click(); assert.equal(button.getAttribute("aria-expanded"), "true"); assert.equal(detail.inert, true); assert.equal(text.classList.contains("revealed"), false);
+  button.click(); assert.equal(button.getAttribute("aria-expanded"), "true"); assert.equal(detail.inert, false); assert.equal(text.classList.contains("revealed"), true);
   await f.finish(); assert.equal(detail.inert, false); assert.equal(text.classList.contains("revealed"), true);
   button.click(); await f.finish(); assert.equal(detail.inert, true); assert.equal(text.classList.contains("revealed"), false);
   button.click(); await f.finish(); f.update({ ...value, items: [...value.items, { ...value.items[0], id: "item-b" }], total: 2 });
@@ -59,9 +60,9 @@ test("real renderer keeps an expanded row across updates, reveals text after spa
   assert.equal(f.document.querySelector(".citation span").textContent, value.items[0].citations[0].text); assert.equal(f.document.querySelector(".citation img"), null);
   f.update(null); assert.equal(f.document.querySelectorAll("article").length, 0); assert.equal(f.document.querySelector("#stop").disabled, true);
 });
-test("reduced motion reveals immediately; filters, fixed stop and Escape actions stay separate", (t) => {
+test("reduced motion reveals immediately; stop and Escape actions stay separate", (t) => {
   const f = fixture(t, true); f.update(snapshot()); f.document.querySelector(".summary").click(); assert.equal(f.document.querySelector(".detail").inert, false);
-  [...f.document.querySelectorAll("nav button")].find((button) => button.textContent === "결정").click(); assert.equal(f.document.querySelectorAll("article").length, 0);
+  assert.equal(f.document.querySelectorAll("nav button").length, 0);
   f.document.querySelector("#stop").click(); assert.deepEqual(f.actions, ["stop"]); assert.equal(f.document.querySelector("#stop").disabled, true);
   f.document.dispatchEvent(new f.window.KeyboardEvent("keydown", { key: "Escape" })); assert.deepEqual(f.actions, ["stop", "hide"]);
 });
@@ -134,7 +135,7 @@ test("popover title follows inactive recording status and only active sessions u
 });
 
 
-test("Chromium multiline title and classification share a padded hit area and aligned evidence", async (t) => {
+test("Chromium shows only summary content in one padded hit area with aligned optional evidence", async (t) => {
   const { chromium } = require("@playwright/test");
   const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 460, height: 620 }, reducedMotion: "reduce" });
@@ -144,20 +145,18 @@ test("Chromium multiline title and classification share a padded hit area and al
   await page.goto(require("node:url").pathToFileURL(path.join(__dirname, "../dist/meeting.html")).href);
   const value = snapshot(); value.items[0].content = "클룸은 첫 번째 협박 이후 하루 동안 아무 말도 하지 않았다. 회의에서 나온 긴 내용도 같은 클릭 영역에 들어간다.";
   await page.evaluate((timeline) => window.testReceive({ meetings: [], timeline, phase: "recording", unknown: false, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), value);
-  const geometry = await page.locator("article").evaluate((row) => {
-    const button = row.querySelector(".summary"), content = row.querySelector(".content"), label = row.querySelector(".label"), time = row.querySelector(".offset"), dot = row.querySelector(".dot");
-    const b = button.getBoundingClientRect(), c = content.getBoundingClientRect(), l = label.getBoundingClientRect(), tm = time.getBoundingClientRect(), d = dot.getBoundingClientRect();
-    return { labelInside: button.contains(label), leftInset: c.left - b.left, bottomInset: b.bottom - l.bottom, multiline: c.height > parseFloat(getComputedStyle(button).lineHeight), labelLeft: l.left - c.left, timeCenter: tm.top + parseFloat(getComputedStyle(time).paddingTop) + parseFloat(getComputedStyle(time).lineHeight) / 2, firstLineCenter: c.top + parseFloat(getComputedStyle(button).lineHeight) / 2, dotCenter: (d.top + d.bottom) / 2 };
+  const geometry = await page.locator("article").evaluate(row => {
+    const button = row.querySelector(".summary"), content = row.querySelector(".content");
+    const b = button.getBoundingClientRect(), c = content.getBoundingClientRect();
+    return { leftInset: c.left - b.left, multiline: c.height > parseFloat(getComputedStyle(button).lineHeight) };
   });
-  assert.equal(geometry.labelInside, true); assert.equal(geometry.leftInset, 8); assert.equal(geometry.bottomInset, 6);
-  assert.equal(geometry.multiline, true); assert.equal(geometry.labelLeft, 0);
-  assert.ok(Math.abs(geometry.timeCenter - geometry.firstLineCenter) < 1);
-  assert.ok(Math.abs(geometry.dotCenter - geometry.firstLineCenter) < 1);
-  await page.locator(".label").hover();
-  assert.notEqual(await page.locator(".summary").evaluate((node) => getComputedStyle(node).backgroundColor), "rgba(0, 0, 0, 0)");
+  assert.equal(geometry.leftInset, 8); assert.equal(geometry.multiline, true);
+  assert.equal(await page.locator("article .label, article .offset, article .dot").count(), 0);
+  await page.locator(".summary").hover();
+  assert.notEqual(await page.locator(".summary").evaluate(node => getComputedStyle(node).backgroundColor), "rgba(0, 0, 0, 0)");
   await page.locator(".summary").focus();
   assert.equal(await page.locator(".summary").evaluate((node) => getComputedStyle(node).outlineStyle), "solid");
-  await page.locator(".label").click();
+  await page.locator(".summary").click();
   assert.equal(await page.locator(".summary").getAttribute("aria-expanded"), "true");
   assert.equal(await page.locator(".detail").evaluate((node) => node.inert), false);
   const indent = await page.locator("article").evaluate((row) => row.querySelector(".quote").getBoundingClientRect().left - row.querySelector(".content").getBoundingClientRect().left);
@@ -291,7 +290,7 @@ test("Chromium follows long updates and expanding evidence without losing upward
   await atBottom();
 });
 
-test("Chromium animates only new or changed timeline rows and respects reduced motion", async (t) => {
+test("Chromium fades new rows, avoids moving existing content, and respects reduced motion", async (t) => {
   const { chromium } = require("@playwright/test");
   const browser = await chromium.launch({ headless: true });
   t.after(() => browser.close());
@@ -377,9 +376,9 @@ test("Chromium animates only new or changed timeline rows and respects reduced m
     }, value);
     assert.equal(
       animationFrames.row.some((frame) => "height" in frame),
-      reducedMotion !== "reduce"
+      false
     );
-    assert.equal(animationFrames.content > 0, reducedMotion !== "reduce");
+    assert.equal(animationFrames.content, 0);
     await page.close();
   }
 });
@@ -390,11 +389,11 @@ test("English and Korean switches update controls and aria labels without transl
   assert.equal(f.document.documentElement.lang, "en");
   assert.equal(f.document.title, "HeyMoa · Current meeting");
   assert.equal(f.document.querySelector("#close").getAttribute("aria-label"), "Close popover");
-  assert.equal(f.document.querySelector("nav button").textContent, "All");
+  assert.equal(f.document.querySelector("#pin").getAttribute("aria-label"), "Keep on top");
   assert.equal(f.document.querySelector("#stop").textContent.trim(), "Pause recording");
   assert.equal(f.document.querySelector("#title").textContent, value.title);
   assert.equal(f.document.querySelector(".content").textContent, value.items[0].content);
   f.update(value, true, "녹음 중", { language: "ko" });
-  assert.equal(f.document.querySelector("nav button").textContent, "전체");
+  assert.equal(f.document.querySelector("#pin").getAttribute("aria-label"), "항상 위에 고정");
   assert.equal(f.document.querySelector("#close").getAttribute("aria-label"), "팝오버 닫기");
 });

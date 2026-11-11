@@ -92,6 +92,7 @@ export type DesktopUpdateState = {
     | "idle"
     | "checking"
     | "current"
+    | "available"
     | "downloading"
     | "ready"
     | "installing"
@@ -101,7 +102,12 @@ export type DesktopUpdateState = {
   percent?: number;
   canRestart: boolean;
 };
+export type DesktopPanelBridge = {
+  getPanelOpacity(): Promise<number>;
+  setPanelOpacity(opacity: number): Promise<number>;
+};
 export type DesktopUpdateBridge = {
+  subscribeOpenSettings?: (listener: (section: "account" | "appUpdates" | "desktopAppearance") => void) => () => void;
   getUpdateState(): Promise<DesktopUpdateState>;
   checkForUpdates(): Promise<DesktopUpdateState>;
   setAutomaticUpdates(enabled: boolean): Promise<DesktopUpdateState>;

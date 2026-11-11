@@ -21,15 +21,28 @@ test("first launch follows OS language; explicit choices survive restart, concur
   await saveLanguage(dir, "en"); assert.equal(getLanguage(), "en");
 });
 
-test("automatic updates default off, survive restart, and do not overwrite language", async (t) => {
+test("automatic updates default on only when unset, survive restart, and do not overwrite language", async (t) => {
   const { loadAutomaticUpdates, saveAutomaticUpdates } = require("../dist/preferences");
   const dir = await mkdtemp(path.join(os.tmpdir(), "heymoa-updates-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
-  assert.equal(await loadAutomaticUpdates(dir), false);
+  assert.equal(await loadAutomaticUpdates(dir), true);
+  await writeFile(path.join(dir, "updates.json"), "{}"); assert.equal(await loadAutomaticUpdates(dir), true);
   await loadLanguage(dir, "ko");
   await saveLanguage(dir, "en"); await saveAutomaticUpdates(dir, true);
   assert.equal(await loadAutomaticUpdates(dir), true);
   await loadLanguage(dir, "ko"); assert.equal(getLanguage(), "en");
   await saveAutomaticUpdates(dir, false); assert.equal(await loadAutomaticUpdates(dir), false);
   await writeFile(path.join(dir, "updates.json"), "bad json"); assert.equal(await loadAutomaticUpdates(dir), false);
+});
+
+test("panel preferences validate stored values and serialize writes without changing updater choices", async t => {
+  const { loadPanelPreferences, savePanelPreferences, saveAutomaticUpdates, loadAutomaticUpdates } = require("../dist/preferences");
+  const dir = await mkdtemp(path.join(os.tmpdir(), "heymoa-panel-")); t.after(() => rm(dir, { recursive: true, force: true }));
+  assert.deepEqual(await loadPanelPreferences(dir), { pinned: false, opacity: 1 });
+  await saveAutomaticUpdates(dir, false);
+  await Promise.all([savePanelPreferences(dir, { pinned: true, opacity: 0.8 }), savePanelPreferences(dir, { pinned: true, opacity: 0.6, position: { x: -300, y: 40 } })]);
+  assert.deepEqual(await loadPanelPreferences(dir), { pinned: true, opacity: 0.6, position: { x: -300, y: 40 } });
+  assert.equal(await loadAutomaticUpdates(dir), false);
+  await writeFile(path.join(dir, "meeting-panel.json"), JSON.stringify({ pinned: "yes", opacity: 0.01, position: { x: "bad", y: 1 } }));
+  assert.deepEqual(await loadPanelPreferences(dir), { pinned: false, opacity: 1 });
 });

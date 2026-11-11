@@ -6,7 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { pathToFileURL } = require("node:url");
 
-function fixture(t, platform = "darwin") {
+function fixture(t, platform = "darwin", automatic = true) {
   const handlers = new Map(), opened = [], writes = [];
   let status = "not-determined", asks = 0, saveFails = false, marker = "missing", window;
   class BrowserWindow extends EventEmitter {
@@ -28,7 +28,7 @@ function fixture(t, platform = "darwin") {
     readFile: async () => { if (marker === "missing") throw Object.assign(new Error(), { code: "ENOENT" }); return marker; },
     mkdir: async () => {}, writeFile: async (file, text, options) => { if (saveFails) throw new Error("disk full"); writes.push({ file, text, options }); }, rename: async () => {},
   } : name.startsWith(".") ? require(path.resolve(path.dirname(filename), name)) : require(name) });
-  const api = module.exports, intro = api.createOnboarding("/profile");
+  const api = module.exports, intro = api.createOnboarding("/profile", undefined, { automatic, save: async enabled => { if (saveFails) throw new Error("disk full"); writes.push({ automatic: enabled }); } });
   t.after(() => intro.dispose());
   const sender = { sender: window.webContents, senderFrame: window.webContents.mainFrame };
   return { intro, window, opened, writes, api,
@@ -70,4 +70,14 @@ test("completion is versioned and permission-independent; failed save does not f
   assert.equal(await f.api.onboardingCompleted("/profile"), false);
   f.marker = JSON.stringify({ version: 1, completed: true }); assert.equal(await f.api.onboardingCompleted("/profile"), true);
   f.marker = JSON.stringify({ version: 2, completed: true }); assert.equal(await f.api.onboardingCompleted("/profile"), false);
+});
+
+test("intro exposes default selection, preserves explicit off, and only commits successful changes", async t => {
+  const f = fixture(t, "darwin", false);
+  assert.equal((await f.invoke("read")).automatic, false);
+  f.saveFails = true; await assert.rejects(f.invoke("automatic-on"), /disk full/);
+  assert.equal((await f.invoke("read")).automatic, false);
+  f.saveFails = false; assert.equal((await f.invoke("automatic-on")).automatic, true);
+  assert.equal((await f.invoke("automatic-off")).automatic, false);
+  assert.equal(f.asks, 0);
 });

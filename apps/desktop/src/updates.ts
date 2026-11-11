@@ -11,6 +11,7 @@ type Updater = Pick<
   | "allowDowngrade"
   | "checkForUpdates"
   | "quitAndInstall"
+  | "downloadUpdate"
 >;
 type Options = {
   currentVersion: string;
@@ -36,16 +37,20 @@ export class DesktopUpdates {
     private options: Options
   ) {
     this.status = options.available ? "idle" : "unavailable";
-    updater.autoDownload = true;
+    updater.autoDownload = options.automatic;
     updater.autoInstallOnAppQuit = false;
     updater.allowPrerelease = false;
     updater.allowDowngrade = false;
     updater.on("checking-for-update", () => this.change("checking"));
-    updater.on("update-not-available", () => this.change("current"));
+    updater.on("update-not-available", () => {
+      this.version = undefined;
+      this.percent = undefined;
+      this.change("current");
+    });
     updater.on("update-available", (info) => {
       this.version = info.version;
       this.percent = 0;
-      this.change("downloading");
+      this.change(updater.autoDownload ? "downloading" : "available");
     });
     updater.on("download-progress", (progress) => {
       this.percent = Math.max(0, Math.min(100, Math.round(progress.percent)));
@@ -81,29 +86,36 @@ export class DesktopUpdates {
   }
   start() {
     if (!this.options.available) return;
-    if (this.options.automatic) void this.check();
+    void this.check(this.options.automatic);
     this.timer = setInterval(
       () => {
-        if (this.options.automatic) void this.check();
+        void this.check(this.options.automatic);
       },
       4 * 60 * 60 * 1000
     );
     this.timer.unref();
   }
-  async check(): Promise<DesktopUpdateState> {
+  async check(download = true): Promise<DesktopUpdateState> {
     if (
       !this.options.available ||
       ["ready", "installing", "downloading"].includes(this.status)
     )
       return this.state();
-    this.checking ??= this.runCheck().finally(() => {
+    this.checking ??= this.runCheck(download).finally(() => {
       this.checking = null;
     });
     await this.checking;
+    if (download && this.status === "available") return this.check(true);
     return this.state();
   }
-  private async runCheck() {
+  private async runCheck(download: boolean) {
     try {
+      if (this.status === "available" && download) {
+        this.change("downloading");
+        await this.updater.downloadUpdate();
+        return;
+      }
+      this.updater.autoDownload = download;
       const result = await this.updater.checkForUpdates();
       // Await the automatic download too, so repeated checks cannot start parallel downloads.
       await result?.downloadPromise;

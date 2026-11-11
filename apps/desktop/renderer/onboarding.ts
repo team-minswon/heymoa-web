@@ -14,7 +14,9 @@ const element = (id: string) => document.getElementById(id)!;
 const microphone = element("microphone-action") as HTMLButtonElement;
 const complete = element("complete") as HTMLButtonElement;
 const controls = Array.from(
-  document.querySelectorAll<HTMLButtonElement | HTMLSelectElement>("button, select")
+  document.querySelectorAll<
+    HTMLButtonElement | HTMLSelectElement | HTMLInputElement
+  >("button, select, input")
 );
 const labels: Record<OnboardingView["microphone"], string> = {
   "not-determined": "아직 확인하지 않음",
@@ -25,6 +27,7 @@ const labels: Record<OnboardingView["microphone"], string> = {
 };
 function render(view: OnboardingView) {
   localize(view.language ?? "ko");
+  (element("automatic") as HTMLInputElement).checked = view.automatic ?? true;
   (element("language") as HTMLSelectElement).value = getLanguage();
   element("microphone-status").textContent = t(labels[view.microphone]);
   element("microphone-status").dataset.state = view.microphone;
@@ -37,8 +40,12 @@ function render(view: OnboardingView) {
   microphone.disabled = view.microphone === "granted";
   element("audio-description").textContent =
     view.platform === "darwin"
-      ? t("화상회의 상대방이나 강의에서 듣는 말입니다. 첫 녹음 때 macOS가 권한을 요청하면 허용해 주세요.")
-      : t("Zoom·Webex 등 컴퓨터에서 들리는 소리입니다. Windows 출력 장치의 소리를 첫 녹음 때 연결합니다. 헤드셋이나 스피커 설정을 확인해 주세요.");
+      ? t(
+          "화상회의 상대방이나 강의에서 듣는 말입니다. 첫 녹음 때 macOS가 권한을 요청하면 허용해 주세요."
+        )
+      : t(
+          "Zoom·Webex 등 컴퓨터에서 들리는 소리입니다. Windows 출력 장치의 소리를 첫 녹음 때 연결합니다. 헤드셋이나 스피커 설정을 확인해 주세요."
+        );
   element("audio-action").hidden = view.platform === "darwin";
   complete.textContent =
     view.microphone === "granted"
@@ -55,7 +62,8 @@ async function action(value: OnboardingAction) {
   pending = true;
   // A focus refresh must not dismiss an open native language picker.
   controls.forEach((control) => {
-    if (value !== "read" || control.tagName !== "SELECT") control.disabled = true;
+    if (value !== "read" || control.tagName !== "SELECT")
+      control.disabled = true;
   });
   element("error").textContent = "";
   try {
@@ -90,6 +98,16 @@ complete.addEventListener("click", () => void action("complete"));
 window.addEventListener("focus", () => void action("read"));
 element("language").addEventListener("change", () => {
   const language = (element("language") as HTMLSelectElement).value;
-  if (language === "ko" || language === "en") void action(`language-${language}`);
+  if (language === "ko" || language === "en")
+    void action(`language-${language}`);
 });
+element("automatic").addEventListener(
+  "change",
+  () =>
+    void action(
+      (element("automatic") as HTMLInputElement).checked
+        ? "automatic-on"
+        : "automatic-off"
+    )
+);
 void action("read");

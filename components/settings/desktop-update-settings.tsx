@@ -167,7 +167,11 @@ export function DesktopUpdateSettings() {
                     void run(() => bridge.checkForUpdates(), "check");
                   }}
                 >
-                  {state.status === "error" ? t("retry") : t("check")}
+                  {state.status === "available"
+                    ? t("download")
+                    : state.status === "error"
+                      ? t("retry")
+                      : t("check")}
                 </Button>
               )}
             </div>

@@ -21,7 +21,12 @@ import {
 
 const VIEWING_LABEL = "회의 보는 중";
 
-export function createRecordingTray(window: BrowserWindow, origin: string, onQuit?: () => boolean) {
+export function createRecordingTray(
+  window: BrowserWindow,
+  origin: string,
+  onQuit?: () => boolean,
+  panel?: import("./meeting-popover").PanelOptions
+) {
   // BrowserWindow.webContents throws after closed; keep the live reference for cleanup.
   const contents = window.webContents;
   let allowQuit = false;
@@ -191,6 +196,13 @@ export function createRecordingTray(window: BrowserWindow, origin: string, onQui
           ]
         : []),
       { type: "separator" },
+      ...(panel?.openSettings
+        ? [
+            { label: t("설정…"), click: () => panel.openSettings?.("desktopAppearance") },
+            { label: t("앱 업데이트…"), click: () => panel.openSettings?.("appUpdates") },
+            { type: "separator" as const },
+          ]
+        : []),
       ...(loginItemSupported
         ? [
             {
@@ -292,7 +304,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string, onQui
       };
     },
     sendAction,
-    openNote
+    openNote,
+    panel
   );
   /** 팝오버가 목록에 있던 회의를 눌렀다. 목록에 없는 id 는 받지 않는다. */
   function openNote(noteId: string) {
@@ -386,6 +399,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string, onQui
       return true;
     },
     refresh,
+    setPanelOpacity: popover.setOpacity,
     reportTimeline(value: MeetingTimelineSnapshot | null) {
       // 녹음 중이 아니어도 받는다 — 내가 뷰어로 보는 진행 중 회의다(APP-1092).
       timeline = value;

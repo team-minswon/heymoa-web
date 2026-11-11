@@ -15,8 +15,8 @@ if (process.isMainFrame)
           | "show-current"
           | "hide"
           | { action: "open-note"; noteId: string }
-      ) =>
-        ipcRenderer.invoke("heymoa:meeting-action", action),
+          | { action: "set-panel"; pinned: boolean }
+      ) => ipcRenderer.invoke("heymoa:meeting-action", action),
       subscribe: (listener: (view: MeetingPopoverView) => void) => {
         const receive = (
           _event: Electron.IpcRendererEvent,

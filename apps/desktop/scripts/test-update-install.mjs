@@ -83,51 +83,6 @@ function stopRelaunchedApp() {
     });
 }
 try {
-  const args = [
-    require.resolve("electron-builder/cli.js"),
-    mac ? "--mac" : "--win",
-    mac ? "zip" : "nsis",
-    mac ? "--arm64" : "--x64",
-    "--publish",
-    "never",
-    `--config.extraMetadata.version=${baseline}`,
-    `--config.directories.output=${output}`,
-  ];
-  if (mac) args.push("--config.mac.notarize=false");
-  run(process.execPath, args, { cwd: desktop });
-  if (!mac)
-    run(path.join(output, `HeyMoa-${baseline}-win-x64.exe`), [
-      "/S",
-      `/D=${target}`,
-    ]);
-  assert.ok(
-    existsSync(mac
-      ? path.resolve(executable, "../../Resources/app-update.yml")
-      : path.join(target, "resources/app-update.yml")),
-    "The baseline must include the same updater configuration as a distributed app"
-  );
-  application = await launchApplication();
-  const profile = await application.evaluate(({ app }) =>
-    app.getPath("userData")
-  );
-  mkdirSync(profile, { recursive: true });
-  // Skip onboarding in this isolated runner without involving any real user's login or microphone.
-  writeFileSync(
-    path.join(profile, "onboarding.json"),
-    JSON.stringify({ version: 1, completed: true })
-  );
-  writeFileSync(path.join(profile, "update-qa-marker"), "preserved");
-  await closeApplication();
-  application = await launchApplication();
-  const page = await application.firstWindow();
-  await page.waitForURL((url) => url.origin === "https://heymoa.app", {
-    timeout: 60_000,
-  });
-  await page.waitForFunction(
-    () => Boolean(window.heymoaDesktop?.getUpdateState),
-    null,
-    { timeout: 60_000 }
-  );
   server = http.createServer((request, response) => {
     const name = decodeURIComponent(
       new URL(request.url, "http://localhost").pathname.slice(1)
@@ -146,6 +101,80 @@ try {
     createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  // Startup checks must use the disposable local feed, including the default-on first launch.
+  const baselineConfig = path.join(qa, "baseline.json");
+  writeFileSync(
+    baselineConfig,
+    JSON.stringify({
+      ...JSON.parse(readFileSync(path.join(desktop, "package.json"))).build,
+      publish: [
+        {
+          provider: "generic",
+          url: `http://127.0.0.1:${server.address().port}`,
+        },
+      ],
+    })
+  );
+  const args = [
+    require.resolve("electron-builder/cli.js"),
+    mac ? "--mac" : "--win",
+    mac ? "zip" : "nsis",
+    mac ? "--arm64" : "--x64",
+    "--publish",
+    "never",
+    `--config=${baselineConfig}`,
+    `--config.extraMetadata.version=${baseline}`,
+    `--config.directories.output=${output}`,
+  ];
+  if (mac) args.push("--config.mac.notarize=false");
+  run(process.execPath, args, { cwd: desktop });
+  if (!mac)
+    run(path.join(output, `HeyMoa-${baseline}-win-x64.exe`), [
+      "/S",
+      `/D=${target}`,
+    ]);
+  assert.ok(
+    existsSync(
+      mac
+        ? path.resolve(executable, "../../Resources/app-update.yml")
+        : path.join(target, "resources/app-update.yml")
+    ),
+    "The baseline must include the same updater configuration as a distributed app"
+  );
+  application = await launchApplication();
+  const profile = await application.evaluate(({ app }) =>
+    app.getPath("userData")
+  );
+  mkdirSync(profile, { recursive: true });
+  // Skip onboarding in this isolated runner without involving any real user's login or microphone.
+  writeFileSync(
+    path.join(profile, "onboarding.json"),
+    JSON.stringify({ version: 1, completed: true })
+  );
+  writeFileSync(path.join(profile, "update-qa-marker"), "preserved");
+  writeFileSync(
+    path.join(profile, "updates.json"),
+    JSON.stringify({ automatic: false })
+  );
+  writeFileSync(
+    path.join(profile, "meeting-panel.json"),
+    JSON.stringify({
+      pinned: true,
+      opacity: 0.75,
+      position: { x: 100, y: 100 },
+    })
+  );
+  await closeApplication();
+  application = await launchApplication();
+  const page = await application.firstWindow();
+  await page.waitForURL((url) => url.origin === "https://heymoa.app", {
+    timeout: 60_000,
+  });
+  await page.waitForFunction(
+    () => Boolean(window.heymoaDesktop?.getUpdateState),
+    null,
+    { timeout: 60_000 }
+  );
   await application.evaluate(({ app }, url) => {
     const nativeRequire = process.mainModule.require.bind(process.mainModule);
     const updater = nativeRequire(
@@ -250,6 +279,14 @@ try {
   assert.equal(
     readFileSync(path.join(profile, "update-qa-marker"), "utf8"),
     "preserved"
+  );
+  assert.equal(
+    JSON.parse(readFileSync(path.join(profile, "updates.json"))).automatic,
+    false
+  );
+  assert.equal(
+    JSON.parse(readFileSync(path.join(profile, "meeting-panel.json"))).opacity,
+    0.75
   );
   await closeApplication();
   console.log(

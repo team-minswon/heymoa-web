@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   DesktopFoundationBridge,
+  DesktopPanelBridge,
   DesktopUpdateBridge,
   DesktopUpdateState,
   DesktopAuthBridge,
@@ -47,6 +48,31 @@ if (process.isMainFrame) {
         return () =>
           ipcRenderer.removeListener("heymoa:capture-event", handler);
       },
+      subscribeOpenSettings: (
+        listener: (
+          section: "account" | "appUpdates" | "desktopAppearance"
+        ) => void
+      ) => {
+        const receive = (
+          _event: Electron.IpcRendererEvent,
+          section: unknown
+        ) => {
+          if (
+            section === "account" ||
+            section === "appUpdates" ||
+            section === "desktopAppearance"
+          )
+            listener(section);
+        };
+        ipcRenderer.on("heymoa:open-settings", receive);
+        return () =>
+          ipcRenderer.removeListener("heymoa:open-settings", receive);
+      },
+      getPanelOpacity: () => ipcRenderer.invoke("heymoa:panel-opacity"),
+      setPanelOpacity: (opacity: number) => {
+        userGesture();
+        return ipcRenderer.invoke("heymoa:panel-opacity-set", opacity);
+      },
       getUpdateState: () => ipcRenderer.invoke("heymoa:update-state"),
       checkForUpdates: () => {
         userGesture();
@@ -61,7 +87,10 @@ if (process.isMainFrame) {
         return ipcRenderer.invoke("heymoa:update-restart");
       },
       subscribeUpdates: (listener: (state: DesktopUpdateState) => void) => {
-        const receive = (_event: Electron.IpcRendererEvent, state: DesktopUpdateState) => listener(state);
+        const receive = (
+          _event: Electron.IpcRendererEvent,
+          state: DesktopUpdateState
+        ) => listener(state);
         ipcRenderer.on("heymoa:update-state", receive);
         return () => ipcRenderer.removeListener("heymoa:update-state", receive);
       },
@@ -77,8 +106,10 @@ if (process.isMainFrame) {
         return ipcRenderer.invoke("heymoa:auth-connection", request);
       },
       cancelAuth: () => ipcRenderer.invoke("heymoa:auth-cancel"),
-      openSitePage: (href: string) => ipcRenderer.invoke("heymoa:open-site-page", href),
-      reportLanguage: (language: "ko" | "en") => ipcRenderer.invoke("heymoa:language", language),
+      openSitePage: (href: string) =>
+        ipcRenderer.invoke("heymoa:open-site-page", href),
+      reportLanguage: (language: "ko" | "en") =>
+        ipcRenderer.invoke("heymoa:language", language),
       reportRecording: (summary: RecordingSummary) =>
         ipcRenderer.invoke("heymoa:recording-summary", summary),
       reportMeetingTimeline: (snapshot: MeetingTimelineSnapshot | null) =>
@@ -96,7 +127,10 @@ if (process.isMainFrame) {
             typeof target?.workspaceId === "string" &&
             typeof target?.noteId === "string"
           )
-            listener({ workspaceId: target.workspaceId, noteId: target.noteId });
+            listener({
+              workspaceId: target.workspaceId,
+              noteId: target.noteId,
+            });
         };
         ipcRenderer.on("heymoa:open-note", receive);
         return () => ipcRenderer.removeListener("heymoa:open-note", receive);
@@ -119,7 +153,9 @@ if (process.isMainFrame) {
         return () =>
           ipcRenderer.removeListener("heymoa:recording-action", receive);
       },
-    } satisfies DesktopFoundationBridge & DesktopUpdateBridge &
+    } satisfies DesktopPanelBridge &
+      DesktopFoundationBridge &
+      DesktopUpdateBridge &
       DesktopAuthBridge &
       DesktopCaptureBridge)
   );

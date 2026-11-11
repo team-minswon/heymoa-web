@@ -23,6 +23,11 @@ import {
 } from "@/lib/desktop/downloads";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { cn } from "@/lib/utils";
+import {
+  hasDesktopUpdate,
+  useDesktopUpdates,
+} from "@/lib/desktop/use-desktop-updates";
+import { useOpenSettings } from "./workspace-app-shell";
 import { track } from "@/lib/analytics/track";
 
 export function DesktopAppPromo() {
@@ -32,7 +37,9 @@ export function DesktopAppPromo() {
   if (isDesktopApp === true) {
     return desktopAuthBridge() && !desktopUpdateBridge() ? (
       <LegacyDesktopUpdateNotice />
-    ) : null;
+    ) : (
+      <DesktopUpdateNotice />
+    );
   }
   if (isDesktopApp !== false) return null;
 
@@ -149,6 +156,34 @@ function LegacyDesktopUpdateNotice() {
         }
       >
         {t("download")}
+      </Button>
+    </aside>
+  );
+}
+
+function DesktopUpdateNotice() {
+  const state = useDesktopUpdates();
+  const t = useTranslations("settings.appUpdates");
+  const openSettings = useOpenSettings();
+  if (!hasDesktopUpdate(state) || !state || !openSettings) return null;
+  return (
+    <aside
+      aria-label={t("title")}
+      className="mb-5 flex items-center gap-3 rounded-control border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-3"
+    >
+      <Monitor aria-hidden className="size-4 shrink-0 text-[var(--el-muted)]" />
+      <p role="status" className="min-w-0 flex-1 text-sm text-[var(--el-ink)]">
+        {t(`status.${state.status}`, {
+          version: state.version ?? "",
+          percent: state.percent ?? 0,
+        })}
+      </p>
+      <Button
+        variant="ghost"
+        className="shrink-0"
+        onClick={() => openSettings("appUpdates")}
+      >
+        {t("title")}
       </Button>
     </aside>
   );

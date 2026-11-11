@@ -1,8 +1,24 @@
 import { getLanguage, isLanguage, t } from "./i18n";
-import { loadLanguage, saveLanguage, loadAutomaticUpdates, saveAutomaticUpdates } from "./preferences";
+import {
+  loadLanguage,
+  saveLanguage,
+  loadAutomaticUpdates,
+  saveAutomaticUpdates,
+  loadPanelPreferences,
+  savePanelPreferences,
+  defaultPanelPreferences,
+} from "./preferences";
 import { autoUpdater } from "./update-runtime";
 import { DesktopUpdates } from "./updates";
-import { app, BrowserWindow, dialog, ipcMain, session, shell, Menu } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  session,
+  shell,
+  Menu,
+} from "electron";
 import path from "node:path";
 import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
 import { createOnboarding, onboardingCompleted } from "./onboarding";
@@ -45,6 +61,7 @@ app.setName("HeyMoa");
 app.setPath("userData", userDataPath);
 app.setPath("sessionData", sessionDataPath);
 
+let panelPreferences = { ...defaultPanelPreferences };
 let window: BrowserWindow | null = null;
 let onboarding: ReturnType<typeof createOnboarding> | null = null;
 let starting = true;
@@ -87,26 +104,97 @@ function openExternal(value: string) {
       .openExternal(safe)
       .catch(() => console.warn("External link could not be opened"));
 }
+function openSettings(section: "account" | "appUpdates" | "desktopAppearance") {
+  if (!window || window.isDestroyed()) return;
+  showOnCurrentSpace(window);
+  if (isTrustedUrl(window.webContents.getURL(), origin))
+    window.webContents.send("heymoa:open-settings", section);
+}
 function refreshApplicationMenu() {
-  Menu.setApplicationMenu(Menu.buildFromTemplate([
-    ...(process.platform === "darwin" ? [{ label: "HeyMoa", submenu: [
-      { role: "about" as const, label: t("HeyMoa 정보") },
-      { type: "separator" as const }, { role: "services" as const, label: t("서비스") },
-      { type: "separator" as const }, { role: "hide" as const, label: t("HeyMoa 가리기") },
-      { role: "hideOthers" as const, label: t("다른 앱 가리기") }, { role: "unhide" as const, label: t("모두 보기") },
-      { type: "separator" as const }, { role: "quit" as const, label: t("앱 종료") },
-    ] }] : []),
-    { label: t("파일"), submenu: [{ role: "close", label: t("창 닫기") }, ...(process.platform === "darwin" ? [] : [{ role: "quit" as const, label: t("앱 종료") }])] },
-    { label: t("편집"), submenu: [
-      { role: "undo", label: t("실행 취소") }, { role: "redo", label: t("다시 실행") }, { type: "separator" },
-      { role: "cut", label: t("오려두기") }, { role: "copy", label: t("복사") }, { role: "paste", label: t("붙여넣기") }, { role: "selectAll", label: t("전체 선택") },
-    ] },
-    { label: t("보기"), submenu: [
-      { role: "reload", label: t("다시 불러오기") }, { role: "resetZoom", label: t("확대/축소 재설정") },
-      { role: "zoomIn", label: t("확대") }, { role: "zoomOut", label: t("축소") }, { role: "togglefullscreen", label: t("전체 화면") },
-    ] },
-    { label: t("윈도우"), submenu: [{ role: "minimize", label: t("최소화") }, { role: "front", label: t("맨 앞으로 가져오기") }] },
-  ]));
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      ...(process.platform === "darwin"
+        ? [
+            {
+              label: "HeyMoa",
+              submenu: [
+                { role: "about" as const, label: t("HeyMoa 정보") },
+                { type: "separator" as const },
+                {
+                  label: t("설정…"),
+                  accelerator: "CmdOrCtrl+,",
+                  click: () => openSettings("desktopAppearance"),
+                },
+                {
+                  label: t("앱 업데이트…"),
+                  click: () => openSettings("appUpdates"),
+                },
+                { type: "separator" as const },
+                { role: "services" as const, label: t("서비스") },
+                { type: "separator" as const },
+                { role: "hide" as const, label: t("HeyMoa 가리기") },
+                { role: "hideOthers" as const, label: t("다른 앱 가리기") },
+                { role: "unhide" as const, label: t("모두 보기") },
+                { type: "separator" as const },
+                { role: "quit" as const, label: t("앱 종료") },
+              ],
+            },
+          ]
+        : []),
+      {
+        label: t("파일"),
+        submenu: [
+          ...(process.platform === "darwin"
+            ? []
+            : [
+                {
+                  label: t("설정…"),
+                  accelerator: "CmdOrCtrl+,",
+                  click: () => openSettings("desktopAppearance"),
+                },
+                {
+                  label: t("앱 업데이트…"),
+                  click: () => openSettings("appUpdates"),
+                },
+                { type: "separator" as const },
+              ]),
+          { role: "close", label: t("창 닫기") },
+          ...(process.platform === "darwin"
+            ? []
+            : [{ role: "quit" as const, label: t("앱 종료") }]),
+        ],
+      },
+      {
+        label: t("편집"),
+        submenu: [
+          { role: "undo", label: t("실행 취소") },
+          { role: "redo", label: t("다시 실행") },
+          { type: "separator" },
+          { role: "cut", label: t("오려두기") },
+          { role: "copy", label: t("복사") },
+          { role: "paste", label: t("붙여넣기") },
+          { role: "selectAll", label: t("전체 선택") },
+        ],
+      },
+      {
+        label: t("보기"),
+        submenu: [
+          { role: "reload", label: t("다시 불러오기") },
+          { role: "resetZoom", label: t("확대/축소 재설정") },
+          { role: "zoomIn", label: t("확대") },
+          { role: "zoomOut", label: t("축소") },
+          { role: "togglefullscreen", label: t("전체 화면") },
+        ],
+      },
+      {
+        label: t("윈도우"),
+        submenu: [
+          { role: "minimize", label: t("최소화") },
+          { role: "front", label: t("맨 앞으로 가져오기") },
+        ],
+      },
+    ])
+  );
 }
 function createWindow(url: string) {
   const current = new BrowserWindow({
@@ -128,7 +216,19 @@ function createWindow(url: string) {
   window = current;
   const contents = current.webContents;
   secureContents(contents, origin, openExternal);
-  recording = createRecordingTray(current, origin, () => updates?.onQuit() ?? false);
+  recording = createRecordingTray(
+    current,
+    origin,
+    () => updates?.onQuit() ?? false,
+    {
+      preferences: panelPreferences,
+      save: async (value) => {
+        await savePanelPreferences(userDataPath, value);
+        panelPreferences = value;
+      },
+      openSettings,
+    }
+  );
   contents.on("did-start-navigation", (event) => {
     if (
       event.isMainFrame &&
@@ -165,7 +265,9 @@ function createWindow(url: string) {
       .showMessageBox(current, {
         type: "error",
         message: t("앱 화면이 중단되었습니다."),
-        detail: t("녹음 중이었다면 아직 전송되지 않은 소리는 사라질 수 있습니다."),
+        detail: t(
+          "녹음 중이었다면 아직 전송되지 않은 소리는 사라질 수 있습니다."
+        ),
         buttons: [t("다시 열기"), t("앱 종료")],
       })
       .then(({ response }) => {
@@ -222,7 +324,8 @@ app
     // window. Requests stay on the fixed API origin and never follow redirects.
     const jar = session.fromPartition("persist:heymoa");
     const cookies = await jar.cookies.get({ url, name: "heymoa-lang" });
-    if (!storedLanguage && isLanguage(cookies[0]?.value)) await saveLanguage(userDataPath, cookies[0].value);
+    if (!storedLanguage && isLanguage(cookies[0]?.value))
+      await saveLanguage(userDataPath, cookies[0].value);
     refreshApplicationMenu();
     auth = new DesktopAuthBroker({
       apiOrigin: PRODUCTION_API_ORIGIN,
@@ -235,20 +338,30 @@ app
       app.setAsDefaultProtocolClient("app.heymoa", process.execPath, [
         path.resolve(process.argv[1]),
       ]);
-    const safeForUpdate = () => Boolean(
-      window && !window.isDestroyed() && isTrustedUrl(window.webContents.getURL(), origin) &&
-      !media && recording?.lifecycle.safeForUpdate()
-    );
+    const safeForUpdate = () =>
+      Boolean(
+        window &&
+        !window.isDestroyed() &&
+        isTrustedUrl(window.webContents.getURL(), origin) &&
+        !media &&
+        recording?.lifecycle.safeForUpdate()
+      );
+    panelPreferences = await loadPanelPreferences(userDataPath);
     updates = new DesktopUpdates(autoUpdater, {
       currentVersion: app.getVersion(),
       available: app.isPackaged,
       automatic: await loadAutomaticUpdates(userDataPath),
       safe: safeForUpdate,
-      prepareInstall: () => safeForUpdate() && (recording?.prepareForUpdate() ?? false),
+      prepareInstall: () =>
+        safeForUpdate() && (recording?.prepareForUpdate() ?? false),
       cancelInstall: () => recording?.cancelUpdate(),
       saveAutomatic: (enabled) => saveAutomaticUpdates(userDataPath, enabled),
       changed: (state) => {
-        if (window && !window.isDestroyed() && isTrustedUrl(window.webContents.getURL(), origin))
+        if (
+          window &&
+          !window.isDestroyed() &&
+          isTrustedUrl(window.webContents.getURL(), origin)
+        )
           window.webContents.send("heymoa:update-state", state);
       },
     });
@@ -284,6 +397,23 @@ app
         updates: true,
       } satisfies DesktopCapabilities;
     });
+    ipcMain.handle("heymoa:panel-opacity", (event, payload: unknown) => {
+      authorize(event);
+      if (!emptyRequest(payload)) throw new Error("INVALID_PANEL_REQUEST");
+      return panelPreferences.opacity;
+    });
+    ipcMain.handle("heymoa:panel-opacity-set", (event, payload: unknown) => {
+      authorize(event);
+      if (
+        typeof payload !== "number" ||
+        !Number.isFinite(payload) ||
+        payload < 0.6 ||
+        payload > 1 ||
+        !recording
+      )
+        throw new Error("INVALID_PANEL_REQUEST");
+      return recording.setPanelOpacity(payload);
+    });
     ipcMain.handle("heymoa:update-state", (event, payload: unknown) => {
       authorize(event);
       if (!emptyRequest(payload)) throw new Error("INVALID_UPDATE_REQUEST");
@@ -298,7 +428,8 @@ app
     });
     ipcMain.handle("heymoa:update-automatic", (event, payload: unknown) => {
       authorize(event);
-      if (typeof payload !== "boolean") throw new Error("INVALID_UPDATE_REQUEST");
+      if (typeof payload !== "boolean")
+        throw new Error("INVALID_UPDATE_REQUEST");
       return updates!.setAutomatic(payload);
     });
     ipcMain.handle("heymoa:update-restart", (event, payload: unknown) => {
@@ -344,15 +475,19 @@ app
       authorize(event);
       recording?.reportTimeline(meetingTimeline(payload));
     });
-    ipcMain.handle(MEETING_CHANNELS.activeMeetings, (event, payload: unknown) => {
-      authorize(event);
-      recording?.reportActiveMeetings(activeMeetings(payload));
-    });
+    ipcMain.handle(
+      MEETING_CHANNELS.activeMeetings,
+      (event, payload: unknown) => {
+        authorize(event);
+        recording?.reportActiveMeetings(activeMeetings(payload));
+      }
+    );
     ipcMain.handle(CHANNELS.captureBegin, async (event, payload: unknown) => {
       authorize(event);
       if (!emptyRequest(payload) || !event.senderFrame)
         throw new Error("INVALID_CAPTURE_REQUEST");
-      if (updates?.state().status === "installing") throw new Error("UPDATE_INSTALLING");
+      if (updates?.state().status === "installing")
+        throw new Error("UPDATE_INSTALLING");
       if (media) throw new Error("CAPTURE_ALREADY_REQUESTED");
       recording?.lifecycle.captureRequested();
       const host = new CaptureHost(event.sender, event.senderFrame, () => {
@@ -412,12 +547,27 @@ app
       else showOnCurrentSpace(window);
     });
     if (!(await onboardingCompleted(userDataPath))) {
-      onboarding = createOnboarding(userDataPath, refreshApplicationMenu);
+      onboarding = createOnboarding(userDataPath, refreshApplicationMenu, {
+        automatic: updates!.state().automatic,
+        save: (enabled) => updates!.setAutomatic(enabled),
+      });
       await onboarding.finished;
     }
-    if (onboarding || !cookies.length) await jar.cookies.set({ url: origin, name: "heymoa-lang", value: getLanguage(), path: "/", sameSite: "lax", secure: origin.startsWith("https:"), expirationDate: Date.now() / 1000 + 365 * 86400 });
+    if (onboarding || !cookies.length)
+      await jar.cookies.set({
+        url: origin,
+        name: "heymoa-lang",
+        value: getLanguage(),
+        path: "/",
+        sameSite: "lax",
+        secure: origin.startsWith("https:"),
+        expirationDate: Date.now() / 1000 + 365 * 86400,
+      });
     const initial = new URL(url);
-    if (initial.pathname === "/" && getLanguage() === "en") { initial.pathname = "/en"; url = initial.href; }
+    if (initial.pathname === "/" && getLanguage() === "en") {
+      initial.pathname = "/en";
+      url = initial.href;
+    }
     createWindow(url);
     starting = false;
     onboarding?.dispose();
@@ -434,4 +584,7 @@ app
 app.on("window-all-closed", () => app.quit());
 // before-quit can be vetoed by recording protection; keep pending auth alive
 // until Electron has committed to exiting.
-app.on("will-quit", () => { auth?.cancel(); onboarding?.dispose(); });
+app.on("will-quit", () => {
+  auth?.cancel();
+  onboarding?.dispose();
+});

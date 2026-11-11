@@ -180,9 +180,53 @@ footer p {
   }
 }
 
-body { word-break: keep-all; overflow-wrap: anywhere; }
+body {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
 
-.language { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 10px; color: var(--muted); }
-.language select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.language {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--muted);
+}
+.language select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
 
-.language-hint { text-align: right; font-size: 11px; margin-top: 6px; }
+.language-hint {
+  text-align: right;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.auto-update {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.auto-update input {
+  margin: 3px 0 0;
+  accent-color: #292524;
+}
+.auto-update strong {
+  font-weight: 500;
+}
+.auto-update small {
+  display: block;
+  color: #78716c;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 4px;
+}

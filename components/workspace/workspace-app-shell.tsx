@@ -1,5 +1,6 @@
 "use client";
 
+import { desktopUpdateBridge } from "@/lib/desktop/updates";
 import {
   createContext,
   useCallback,
@@ -146,6 +147,10 @@ export function WorkspaceAppShell({
     pushSettings(section);
     pushedRef.current = true;
   }, []);
+  useEffect(
+    () => desktopUpdateBridge()?.subscribeOpenSettings?.(openSettings),
+    [openSettings]
+  );
   const closeSettings = useCallback(() => {
     // 열 때 쌓은 항목이 남아 있으면 되돌아가 기록을 늘리지 않는다. 딥링크·새로고침·OAuth 복귀로
     // 열린 창에는 걷을 항목이 없다 — 쿼리만 지운다(그때 `back()` 은 사이트 밖으로 나간다).

@@ -16,7 +16,8 @@
       "account": "My account",
       "notifications": "Notifications",
       "agents": "My MCP connections",
-      "appUpdates": "App updates"
+      "appUpdates": "App updates",
+      "desktopAppearance": "Desktop appearance"
     },
     "loadFailed": {
       "account": "Couldn't load your account",
@@ -476,7 +477,7 @@
     "restart": "Restart to update",
     "downloadProgress": "Update download progress",
     "automatic": "Automatic updates",
-    "automaticHint": "Automatically check for and download new versions. Updates are applied when you quit after recording and audio uploads finish. Turn this off to stop future automatic checks and installation on quit.",
+    "automaticHint": "Download new versions automatically and install when you quit after recording and uploads finish. When turned off, you can still see new versions and choose when to download and install them.",
     "restartBlocked": "Restart is unavailable while recording or audio uploads are pending. Finish recording and uploading first. Restart is also blocked until the app can confirm the recording status.",
     "failed": "The update request failed. Please try again.",
     "status": {
@@ -487,7 +488,17 @@
       "ready": "Version {version} is ready. Restart to apply it.",
       "installing": "Restarting the app to apply the update.",
       "error": "The update could not be downloaded. Check your internet connection and try again.",
-      "unavailable": "Updates cannot be installed in development mode."
-    }
+      "unavailable": "Updates cannot be installed in development mode.",
+      "available": "Version {version} is available."
+    },
+    "download": "Download update"
+  },
+  "desktopAppearance": {
+    "title": "Desktop appearance",
+    "description": "Adjust the meeting popup on this device.",
+    "opacity": "Popup opacity",
+    "hint": "Lower values let more of the screen show through. Use the pin at the top of the popup to keep it above other apps, and drag its header to move it.",
+    "unavailable": "This setting requires the latest desktop app. Check App updates for a new version.",
+    "failed": "Could not save display settings. Try again."
   }
 }

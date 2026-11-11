@@ -51,6 +51,7 @@ export type AnalyticsEvent =
   | "integration_connected"
   | "agent_connected"
   | "desktop_download_clicked"
+  | "desktop_panel_opacity_changed"
   | "desktop_update_check_clicked"
   | "desktop_update_automatic_changed"
   | "desktop_update_restart_requested"
@@ -174,6 +175,7 @@ export type WebEventProperties = {
     tab: "context" | "details" | "transcript" | "summary";
   };
   review_confirmation_clicked: { workspace_id: string | undefined };
+  desktop_panel_opacity_changed: { opacity: number };
   settings_tab_opened: {
     workspace_id: string;
     section:
@@ -185,6 +187,7 @@ export type WebEventProperties = {
       | "terms"
       | "integrations"
       | "appUpdates"
+      | "desktopAppearance"
       | "workspaceAgents"
       | "agents"
       | "notifications";

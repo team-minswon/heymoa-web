@@ -1,5 +1,11 @@
 import { BrowserWindow, ipcMain, screen, type Tray } from "electron";
 import path from "node:path";
+import { defaultPanelPreferences, type PanelPreferences } from "./preferences";
+export type PanelOptions = {
+  preferences: PanelPreferences;
+  openSettings?(section: "desktopAppearance" | "appUpdates"): void;
+  save(value: PanelPreferences): Promise<void>;
+};
 import { pathToFileURL } from "node:url";
 import {
   MEETING_CHANNELS,
@@ -11,12 +17,43 @@ export function createMeetingPopover(
   tray: Tray,
   read: () => MeetingPopoverView,
   action: (value: "stop" | "show-current" | "stop-viewing") => void,
-  openNote: (noteId: string) => void = () => {}
+  openNote: (noteId: string) => void = () => {},
+  panel?: PanelOptions
 ) {
   let popup: BrowserWindow | null = null;
   let disposed = false;
   let ready = false;
   let visibleRequested = false;
+  let preferences = { ...(panel?.preferences ?? defaultPanelPreferences) };
+  let rememberedPosition = preferences.position;
+  let positioning = false;
+  let saving = Promise.resolve();
+  const view = () => ({
+    ...read(),
+    panel: { pinned: preferences.pinned, opacity: preferences.opacity },
+  });
+  const publish = () => {
+    if (ready && popup && !popup.isDestroyed())
+      popup.webContents.send(MEETING_CHANNELS.changed, view());
+  };
+  function updatePreferences(patch: Partial<PanelPreferences>) {
+    const next = saving
+      .catch(() => {})
+      .then(async () => {
+        const updated = {
+          ...preferences,
+          position: rememberedPosition,
+          ...patch,
+        };
+        await panel?.save(updated);
+        preferences = updated;
+        if (popup && !popup.isDestroyed())
+          popup.setOpacity(preferences.opacity);
+        publish();
+      });
+    saving = next;
+    return next;
+  }
   const file = path.join(__dirname, "meeting.html");
   const url = pathToFileURL(file).href;
   function authorized(event: Electron.IpcMainInvokeEvent) {
@@ -32,11 +69,23 @@ export function createMeetingPopover(
   ipcMain.handle(MEETING_CHANNELS.read, (event, payload: unknown) => {
     authorized(event);
     if (payload !== undefined) throw new Error("INVALID_MEETING_REQUEST");
-    return read();
+    return view();
   });
   ipcMain.handle(MEETING_CHANNELS.action, (event, payload: unknown) => {
     authorized(event);
-    if (payload === "hide") hide();
+    if (
+      payload !== null &&
+      typeof payload === "object" &&
+      (payload as { action?: unknown }).action === "set-panel"
+    ) {
+      const value = payload as { action: string; pinned?: unknown };
+      if (
+        Object.keys(value).some((key) => !["action", "pinned"].includes(key)) ||
+        typeof value.pinned !== "boolean"
+      )
+        throw new Error("INVALID_MEETING_ACTION");
+      return updatePreferences({ pinned: value.pinned });
+    } else if (payload === "hide") hide();
     else if (
       payload !== null &&
       typeof payload === "object" &&
@@ -55,15 +104,58 @@ export function createMeetingPopover(
       action(payload);
     } else throw new Error("INVALID_MEETING_ACTION");
   });
-  function position(current: BrowserWindow) {
+  function position(current: BrowserWindow, restore = false) {
     const anchor = tray.getBounds();
-    const area = screen.getDisplayMatching(anchor).workArea;
-    current.setBounds(popoverBounds(anchor, area));
+    const currentView = read();
+    const height =
+      currentView.timeline || currentView.canStop
+        ? 580
+        : currentView.meetings?.length
+          ? 380
+          : 280;
+    const remembered =
+      restore && preferences.pinned ? rememberedPosition : undefined;
+    const bounds = current.getBounds();
+    const target = remembered
+      ? { ...bounds, ...remembered }
+      : restore
+        ? anchor
+        : bounds;
+    const area = screen.getDisplayMatching(target).workArea;
+    const size = {
+      width: Math.min(420, area.width),
+      height: Math.min(height, area.height),
+    };
+    const next =
+      restore && !remembered
+        ? { ...popoverBounds(anchor, area, height), ...size }
+        : { ...target, ...size };
+    next.x = Math.round(
+      Math.max(area.x, Math.min(next.x, area.x + area.width - size.width))
+    );
+    next.y = Math.round(
+      Math.max(area.y, Math.min(next.y, area.y + area.height - size.height))
+    );
+    positioning = true;
+    if (
+      bounds.x !== next.x ||
+      bounds.y !== next.y ||
+      bounds.width !== next.width ||
+      bounds.height !== next.height
+    )
+      current.setBounds(next);
+    positioning = false;
   }
+  function displayChanged() {
+    if (popup && !popup.isDestroyed()) position(popup);
+  }
+  screen.on("display-removed", displayChanged);
+  screen.on("display-metrics-changed", displayChanged);
   function show(current: BrowserWindow) {
-    if (disposed || !ready || !visibleRequested || current.isDestroyed()) return;
-    position(current);
-    current.webContents.send(MEETING_CHANNELS.changed, read());
+    if (disposed || !ready || !visibleRequested || current.isDestroyed())
+      return;
+    position(current, true);
+    current.webContents.send(MEETING_CHANNELS.changed, view());
     current.show();
     current.focus();
   }
@@ -72,6 +164,12 @@ export function createMeetingPopover(
     if (popup && !popup.isDestroyed()) popup.hide();
   }
   return {
+    async setOpacity(opacity: number) {
+      if (!Number.isFinite(opacity) || opacity < 0.6 || opacity > 1)
+        throw new Error("INVALID_PANEL_REQUEST");
+      await updatePreferences({ opacity });
+      return preferences.opacity;
+    },
     toggle() {
       if (disposed) return;
       if (popup && !popup.isDestroyed()) {
@@ -105,6 +203,7 @@ export function createMeetingPopover(
         },
       });
       popup = current;
+      current.setOpacity(preferences.opacity);
       // 메뉴 막대를 누른 데스크탑(Space)에 뜨게 한다. 풀스크린 앱 위에서도 보이도록 pop-up-menu 레벨이다.
       if (
         process.platform === "darwin" &&
@@ -132,7 +231,17 @@ export function createMeetingPopover(
       contents.setWindowOpenHandler(() => ({ action: "deny" }));
       contents.on("will-navigate", (event) => event.preventDefault());
       contents.on("will-attach-webview", (event) => event.preventDefault());
-      current.on("blur", hide);
+      current.on("blur", () => {
+        if (!preferences.pinned) hide();
+      });
+      current.on("moved", () => {
+        if (positioning || current.isDestroyed()) return;
+        const { x, y } = current.getBounds();
+        rememberedPosition = { x, y };
+        void updatePreferences({}).catch(() =>
+          console.warn("Meeting panel position could not be saved")
+        );
+      });
       current.on("closed", () => {
         if (popup === current) {
           popup = null;
@@ -155,13 +264,17 @@ export function createMeetingPopover(
         });
     },
     refresh() {
-      if (ready && popup && !popup.isDestroyed())
-        popup.webContents.send(MEETING_CHANNELS.changed, read());
+      if (ready && popup && !popup.isDestroyed()) {
+        position(popup);
+        publish();
+      }
     },
     hide,
     dispose() {
       if (disposed) return;
       disposed = true;
+      screen.removeListener("display-removed", displayChanged);
+      screen.removeListener("display-metrics-changed", displayChanged);
       ipcMain.removeHandler(MEETING_CHANNELS.read);
       ipcMain.removeHandler(MEETING_CHANNELS.action);
       if (popup && !popup.isDestroyed()) popup.destroy();

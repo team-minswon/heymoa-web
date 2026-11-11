@@ -49,6 +49,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { DesktopAppearanceSettings } from "./desktop-appearance-settings";
+
 export type { SettingsSection };
 
 /**
@@ -92,6 +94,7 @@ const SETTINGS_GROUPS: {
       { key: "language", Icon: Languages },
       { key: "notifications", Icon: BellRing },
       { key: "agents", Icon: Bot },
+      { key: "desktopAppearance", Icon: Settings },
       { key: "appUpdates", Icon: Download },
     ],
   },
@@ -99,6 +102,11 @@ const SETTINGS_GROUPS: {
 
 // 화면 언어와 상관없이 두 언어로 적는다 — 언어를 바꾸려는 사람은 아직 못 읽는 언어의 화면을 보고 있다(APP-1285).
 // 그래서 언어 파일에 두지 않는다.
+import {
+  hasDesktopUpdate,
+  useDesktopUpdates,
+} from "@/lib/desktop/use-desktop-updates";
+
 const LANGUAGE_LABEL = "언어 · Language";
 
 function SettingsSections({
@@ -117,11 +125,12 @@ function SettingsSections({
 }) {
   const t = useTranslations("settings.nav");
   const desktop = useDesktopApp();
+  const update = useDesktopUpdates();
   return (
     <div className="grid h-full min-h-0 bg-[var(--el-canvas-soft)] md:grid-cols-[220px_1fr]">
       <nav
         aria-label={t("title")}
-        className="border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
+        className="min-h-0 overflow-y-auto border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
       >
         {/* 제품 면에 대문자 키커를 두지 않는다 — 세리프 제목만 남긴다. (FORM SPEC) */}
         <p className="mb-7 text-3xl font-light tracking-[-0.03em]">
@@ -145,7 +154,11 @@ function SettingsSections({
                 {t(`groups.${group.key}`)}
               </p>
               {group.items
-                .filter(({ key }) => key !== "appUpdates" || desktop === true)
+                .filter(
+                  ({ key }) =>
+                    !["appUpdates", "desktopAppearance"].includes(key) ||
+                    desktop === true
+                )
                 .map(({ key, Icon }) => (
                   <Button
                     key={key}
@@ -176,6 +189,12 @@ function SettingsSections({
                       aria-hidden
                     />
                     {key === "language" ? LANGUAGE_LABEL : t(`items.${key}`)}
+                    {key === "appUpdates" && hasDesktopUpdate(update) ? (
+                      <span
+                        aria-label={t("items.appUpdates")}
+                        className="ml-auto size-2 rounded-full bg-[var(--el-ink)]"
+                      />
+                    ) : null}
                   </Button>
                 ))}
             </div>
@@ -198,6 +217,8 @@ function SettingsSections({
           </DataBoundary>
         ) : section === "language" ? (
           <LanguageSettings />
+        ) : section === "desktopAppearance" ? (
+          <DesktopAppearanceSettings />
         ) : section === "appUpdates" ? (
           <DesktopUpdateSettings />
         ) : section === "notifications" ? (

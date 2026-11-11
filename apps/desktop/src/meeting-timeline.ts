@@ -128,6 +128,7 @@ export function activeMeetings(value: unknown): ActiveMeeting[] {
 }
 
 export type MeetingPopoverView = {
+  panel?: { pinned: boolean; opacity: number };
   language?: "ko" | "en";
   meetings: ActiveMeeting[];
   /** 내 녹음이 아니라 뷰어로 보는 회의가 있다 */
@@ -145,10 +146,11 @@ export type MeetingPopoverView = {
 /** Constrain both top menu bars and bottom/side taskbars to the selected display. */
 export function popoverBounds(
   anchor: { x: number; y: number; width: number; height: number },
-  area: { x: number; y: number; width: number; height: number }
+  area: { x: number; y: number; width: number; height: number },
+  preferredHeight = 580
 ) {
   const width = Math.min(420, area.width),
-    height = Math.min(580, area.height);
+    height = Math.min(preferredHeight, area.height);
   const below = anchor.y + anchor.height;
   const y = below + height <= area.y + area.height ? below : anchor.y - height;
   return {
