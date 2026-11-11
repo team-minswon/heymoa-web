@@ -2,7 +2,8 @@
 
 import { CircleHelp, Monitor } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { DesktopFoundationBridge } from "@heymoa/desktop-contracts";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DesktopDownloadLink } from "@/components/heymoa/desktop-download-link";
@@ -82,6 +83,16 @@ function LegacyDesktopUpdateNotice() {
   const busy = ACTIVE_PHASES.has(phase) || (buffer?.pendingMs ?? 0) > 0;
   const ua = navigator.userAgent;
   const version = /\bHeyMoa\/(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)/.exec(ua)?.[1];
+  const mac = /Macintosh|Mac OS X/.test(ua);
+  const [macSupported, setMacSupported] = useState(false);
+  useEffect(() => {
+    if (!mac) return;
+    const bridge = desktopAuthBridge() as DesktopFoundationBridge | undefined;
+    void bridge?.getCapabilities().then((value) => {
+      setMacSupported(value.architecture === "arm64");
+    }).catch(() => {});
+  }, [mac]);
+  if (mac && !macSupported) return null;
   const installer = /Windows/.test(ua)
     ? DESKTOP_INSTALLERS.windows[0]
     : /Macintosh|Mac OS X/.test(ua)

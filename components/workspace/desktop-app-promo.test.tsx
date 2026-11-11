@@ -171,7 +171,7 @@ describe("legacy desktop update notice", () => {
     recording.buffer = null;
     Object.defineProperty(window, "heymoaDesktop", {
       configurable: true,
-      value: { getCapabilities: vi.fn() },
+      value: { getCapabilities: vi.fn(async () => ({ architecture: "arm64" })) },
     });
     vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
       `Mozilla/5.0 (${platform}) HeyMoa/${version} Electron/44.5.1`
@@ -200,15 +200,26 @@ describe("legacy desktop update notice", () => {
       ).not.toBeInTheDocument();
     }
   );
-  it("Mac gets the canonical Apple Silicon DMG, not the internal URL old shells cannot open", () => {
+  it("Mac gets the canonical Apple Silicon DMG, not the internal URL old shells cannot open", async () => {
     oldApp("0.1.2", "Macintosh; Intel Mac OS X 10_15_7");
     render(<DesktopAppPromo />);
     expect(
-      screen.getByRole("link", { name: "새 설치 파일 받기" })
+      await screen.findByRole("link", { name: "새 설치 파일 받기" })
     ).toHaveAttribute(
       "href",
       "https://github.com/team-minswon/homebrew-tap/releases/latest/download/HeyMoa-mac-arm64.dmg"
     );
+  });
+  it("never offers an ARM installer to an existing Intel Mac", async () => {
+    oldApp("0.1.2", "Macintosh; Intel Mac OS X 10_15_7");
+    const getCapabilities = vi.fn(async () => ({ architecture: "x64" }));
+    Object.defineProperty(window, "heymoaDesktop", {
+      configurable: true,
+      value: { getCapabilities },
+    });
+    render(<DesktopAppPromo />);
+    await vi.waitFor(() => expect(getCapabilities).toHaveResolved());
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
   it("hides the legacy notice as soon as the native updater is supported", () => {
     oldApp("0.1.4");
