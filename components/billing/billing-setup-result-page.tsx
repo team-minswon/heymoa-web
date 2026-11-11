@@ -170,6 +170,16 @@ function SetupResult({ setupId }: { setupId: string }) {
         }}
       />
       <TestPaymentNotice notice={setup.testPaymentNotice ?? undefined} />
+      {/* 메뉴 없는 화면이라 완료 전 상태(확인 중·거절·결과 지연)에서도 나갈 길을 둔다. */}
+      {workspaceId && view !== "completed" ? (
+        <LinkButton
+          variant="outline"
+          href={`/w/${workspaceId}/billing`}
+          className="self-start"
+        >
+          {t("backToWorkspace")}
+        </LinkButton>
+      ) : null}
       {stale ? (
         <BillingNotice>
           <p>{t("stale")}</p>
@@ -365,10 +375,7 @@ function CompletedBody({
           <Line label={t("completed.workspace")} value={workspace.name} />
         ) : null}
         {setup.planCode ? (
-          <Line
-            label={t("completed.plan")}
-            value={planName(setup.planCode)}
-          />
+          <Line label={t("completed.plan")} value={planName(setup.planCode)} />
         ) : null}
         {setup.amountKrw != null ? (
           <Line

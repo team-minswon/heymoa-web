@@ -21,6 +21,7 @@
     "progress": "이번 달 녹음 사용량",
     "usedFree": "이번 달 {used, number}분 / {allowance, number}분",
     "resets": "{date} 초기화",
+    "exhausted": "이번 달 제공량을 모두 썼습니다. {date}부터 새 녹음을 시작할 수 있습니다.",
     "reserved": "녹음 중인 회의는 끝난 뒤 반영됩니다",
     "unlimited": "녹음 무제한",
     "usedPaid": "이번 달 {used, number}분 사용"
@@ -115,6 +116,7 @@
     },
     "stale": "자동 확인을 멈췄습니다. 서버에서는 계속 처리하고 있으니 다시 확인해 주세요.",
     "recheck": "다시 확인",
+    "backToWorkspace": "요금제 화면으로 돌아가기",
     "restart": "새로 시작",
     "cancel": "취소",
     "cancelRestart": "취소하고 새로 시작",

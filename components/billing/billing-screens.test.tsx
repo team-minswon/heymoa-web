@@ -631,6 +631,10 @@ describe("등록 결과 — 상태별 화면", () => {
       )
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // 메뉴 없는 화면이라 나갈 길은 있어야 한다.
+    expect(
+      screen.getByRole("link", { name: "요금제 화면으로 돌아가기" })
+    ).toHaveAttribute("href", expect.stringMatching(/^\/w\/[^/]+\/billing$/));
   });
 
   it("권한을 잃었으면 상태만 알리고 새 작업을 주지 않는다", async () => {

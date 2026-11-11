@@ -21,6 +21,7 @@
     "progress": "Recording usage this month",
     "usedFree": "{used, number} / {allowance, number} min this month",
     "resets": "Resets on {date}",
+    "exhausted": "You've used this month's allowance. New recordings can start from {date}.",
     "reserved": "Meetings being recorded are counted after they end",
     "unlimited": "Unlimited recording",
     "usedPaid": "{used, number} min used this month"
@@ -115,6 +116,7 @@
     },
     "stale": "Automatic checking stopped. The server is still working on it; check again.",
     "recheck": "Check again",
+    "backToWorkspace": "Back to plans",
     "restart": "Start over",
     "cancel": "Cancel",
     "cancelRestart": "Cancel and start over",

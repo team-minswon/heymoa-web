@@ -74,6 +74,24 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
   if (!billing.enforced) {
     return <BillingNotice>{t("notEnforced")}</BillingNotice>;
   }
+  const isPaid =
+    billing.entitlement?.kind === "PAID" ||
+    billing.entitlement?.kind === "TEST";
+  const actions = (
+    <Actions
+      workspaceId={workspaceId}
+      billing={billing}
+      isAdmin={isAdmin}
+      onRestartPolling={poll.restart}
+      isPaid={isPaid}
+    />
+  );
+  // 처리 중·미납·이어서 할 등록은 요금제 비교보다 먼저 보여야 한다 — 그때만 안내와 버튼을 현재 상태 아래로 올린다.
+  const needsAttention =
+    billingInProgress(billing) ||
+    billing.status === "PAST_DUE" ||
+    billing.teamSetupInProgress ||
+    Boolean(billing.mySetupId);
   return (
     <>
       <BillingSection title={t("status")}>
@@ -83,15 +101,13 @@ function PlansContent({ workspaceId }: { workspaceId: string }) {
             workspaceId={workspaceId}
             paid={billing.entitlement?.planCode === "PRO"}
           />
+          {needsAttention ? actions : null}
         </div>
       </BillingSection>
       <BillingSection title={t("plans")}>
-        <Plans
-          workspaceId={workspaceId}
-          billing={billing}
-          isAdmin={isAdmin}
-          onRestartPolling={poll.restart}
-        />
+        <Plans billing={billing} isPaid={isPaid}>
+          {needsAttention ? null : actions}
+        </Plans>
       </BillingSection>
     </>
   );
@@ -135,22 +151,17 @@ function StatusCard({ billing }: { billing: WorkspaceBillingResponseData }) {
 }
 
 function Plans({
-  workspaceId,
   billing,
-  isAdmin,
-  onRestartPolling,
+  isPaid,
+  children,
 }: {
-  workspaceId: string;
   billing: WorkspaceBillingResponseData;
-  isAdmin: boolean;
-  onRestartPolling: () => void;
+  isPaid: boolean;
+  children: React.ReactNode;
 }) {
   const t = useTranslations("billing.page");
   const format = useBillingFormat();
   const product = billing.product;
-  const isPaid =
-    billing.entitlement?.kind === "PAID" ||
-    billing.entitlement?.kind === "TEST";
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -174,13 +185,7 @@ function Plans({
         ) : null}
       </div>
       <TestPaymentNotice notice={product?.testPaymentNotice ?? undefined} />
-      <Actions
-        workspaceId={workspaceId}
-        billing={billing}
-        isAdmin={isAdmin}
-        onRestartPolling={onRestartPolling}
-        isPaid={isPaid}
-      />
+      {children}
     </div>
   );
 }
@@ -252,7 +257,8 @@ function Actions({
   };
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    // 안내 카드는 위의 카드들과 같은 폭으로, 버튼은 글자 폭으로.
+    <div className="flex flex-col items-start gap-3 [&>[role=alert]]:self-stretch [&>[role=status]]:self-stretch">
       {billing.teamSetupInProgress ? (
         <BillingNotice>{t("teamInProgress")}</BillingNotice>
       ) : null}

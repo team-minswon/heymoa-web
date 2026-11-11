@@ -30,7 +30,9 @@ afterAll(() => server.close());
 const renderIn = (ui: React.ReactNode) =>
   render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       {ui}
     </QueryClientProvider>
@@ -75,7 +77,11 @@ describe("녹음 사용량 — 요금제 화면", () => {
 
   it("한도를 넘어 사용했어도 막대는 가득 찬 채 서버 분 값을 그대로 보인다", async () => {
     serveUsage(
-      freeUsage({ usedMinutes: 131, usedSamples: 125760000, remainingMinutes: 0 })
+      freeUsage({
+        usedMinutes: 131,
+        usedSamples: 125760000,
+        remainingMinutes: 0,
+      })
     );
     renderIn(<WorkspaceBillingPage workspaceId={FREE} />);
     expect(
@@ -132,7 +138,11 @@ describe("녹음 사용량 — 요금제 화면", () => {
           {
             success: false,
             data: null,
-            error: { code: "INTERNAL_SERVER_ERROR", message: "x", details: null },
+            error: {
+              code: "INTERNAL_SERVER_ERROR",
+              message: "x",
+              details: null,
+            },
           },
           { status: 500 }
         )

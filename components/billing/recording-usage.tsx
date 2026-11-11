@@ -8,7 +8,8 @@ import { formatAppDate } from "@/lib/format/date";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { useRecordingUsage } from "@/lib/billing/use-recording-usage";
 
-const CARD = "w-full rounded-panel border border-[var(--el-hairline)] bg-white p-5";
+const CARD =
+  "w-full rounded-panel border border-[var(--el-hairline)] bg-white p-5";
 
 /**
  * 녹음 사용량 블록(APP-1566). 집행 대상이 아닌 공간(`enforced=false`)에는 아무것도 그리지 않는다.
@@ -81,7 +82,7 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
       </div>
       {usage.periodEnd ? (
         <p className="mt-2 text-xs leading-4 text-[var(--el-muted)]">
-          {t("resets", {
+          {t(percent >= 100 ? "exhausted" : "resets", {
             date: formatAppDate(
               usage.periodEnd,
               { month: "long", day: "numeric" },
@@ -100,13 +101,7 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
 }
 
 /** 사용량 블록의 자리. 플랜을 이미 알아서 Free(막대 포함)·Pro 의 높이를 각각 맞춘다. */
-function UsageSkeleton({
-  label,
-  paid,
-}: {
-  label: string;
-  paid: boolean;
-}) {
+function UsageSkeleton({ label, paid }: { label: string; paid: boolean }) {
   return (
     <div aria-label={label} className={CARD}>
       <Skeleton className="h-6 w-48" />

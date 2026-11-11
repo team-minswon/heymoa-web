@@ -64,6 +64,27 @@ const ko = {
 export type Messages = typeof ko;
 export type Namespace = keyof Messages;
 
+/**
+ * 제품 루트(`app/(product)`)가 클라이언트로 보내는 이름공간. 마케팅 루트(`app/[lang]/layout.tsx`)는 자기 목록을 따로 넘긴다.
+ * 제품 이름공간을 더하면 여기에도 더한다.
+ */
+export const PRODUCT_NAMESPACES: readonly Namespace[] = [
+  "common",
+  "auth",
+  "errors",
+  "shell",
+  "settings",
+  "workspace",
+  "notes",
+  "chat",
+  "tasks",
+  "notification",
+  "agents",
+  "recording",
+  "billing",
+  "dates",
+];
+
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
