@@ -4197,6 +4197,9 @@ export const mockDb = {
 
   /** 시험·데모가 「방금 도착한 알림」을 만든다. */
   pushNotification(item: NotificationListResponseDataNotificationsItem) {
+    // 같은 알림을 두 번 넣지 않는다 — 결제 목이 조회마다 「구독 종료」 알림을 확인한다(APP-1565).
+    const id = item.notificationId;
+    if (state.notifications.some((n) => n.notificationId === id)) return;
     state.notifications.push(copy(item));
   },
 

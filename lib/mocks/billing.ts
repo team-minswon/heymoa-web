@@ -1096,8 +1096,35 @@ export const billingHandlers = [
   ),
 ];
 
+/**
+ * 시나리오 `unpaid` 에서만 「제품 팀」의 구독 종료 알림(APP-1565)을 알림 목록에 한 번 넣는다. 기본 목에서는 그 공간이
+ * Pro 라 넣지 않는다. 알림 조회 목이 부른다.
+ */
+function ensureUnpaidNotice() {
+  if (currentScenario() !== "unpaid") return;
+  mockDb.pushNotification({
+    notificationId: "01K0000000090",
+    type: "SUBSCRIPTION_ENDED_UNPAID",
+    readAt: null,
+    createdAt: new Date().toISOString(),
+    invitation: null,
+    payload: {
+      workspaceId: "01K0000000006",
+      workspaceName: "제품 팀",
+      invitationId: null,
+      inviterUserId: null,
+      noteId: null,
+      noteTitle: null,
+      autoEnded: null,
+      pausedBusinessDays: null,
+      feedbackId: null,
+    },
+  });
+}
+
 /** 시험·콘솔용 손잡이. */
 export const billingMock = {
+  ensureUnpaidNotice,
   setScenario(scenario: BillingScenario | null) {
     scenarioOverride = scenario;
   },

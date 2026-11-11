@@ -16749,6 +16749,7 @@ components:
                     - WORKSPACE_INVITATION
                     - ANALYSIS_READY
                     - INQUIRY_ANSWERED
+                    - SUBSCRIPTION_ENDED_UNPAID
                   payload:
                     type: object
                     properties:
@@ -21109,6 +21110,7 @@ components:
                     - MEETING_PAUSED_REMINDER
                     - MEETING_AUTO_ENDED
                     - INQUIRY_ANSWERED
+                    - SUBSCRIPTION_ENDED_UNPAID
                   required:
                     type: boolean
                     description: 필수 알림. 설정과 관계없이 항상 받고 바꿀 수 없다(잠금)
@@ -21231,6 +21233,7 @@ components:
           - MEETING_PAUSED_REMINDER
           - MEETING_AUTO_ENDED
           - INQUIRY_ANSWERED
+          - SUBSCRIPTION_ENDED_UNPAID
         enabled:
           type: boolean
           description: 받을지 여부
@@ -21266,6 +21269,7 @@ components:
               - MEETING_PAUSED_REMINDER
               - MEETING_AUTO_ENDED
               - INQUIRY_ANSWERED
+              - SUBSCRIPTION_ENDED_UNPAID
             email:
               type: string
               description: 계정 이메일의 일부를 가린 값

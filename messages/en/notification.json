@@ -57,6 +57,12 @@
     "inquiry": {
       "title": "Your inquiry has a reply",
       "view": "View reply →"
+    },
+    "subscriptionEnded": {
+      "title": "Pro subscription for \"<b>{workspace}</b>\" has ended",
+      "titleUnnamed": "Your Pro subscription has ended",
+      "detail": "The payment was not approved. Register a card to start again.",
+      "view": "View plan →"
     }
   },
   "unsubscribe": {

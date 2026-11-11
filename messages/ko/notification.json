@@ -57,6 +57,12 @@
     "inquiry": {
       "title": "문의에 답변이 왔습니다",
       "view": "답변 보기 →"
+    },
+    "subscriptionEnded": {
+      "title": "「<b>{workspace}</b>」의 Pro 구독이 종료되었습니다",
+      "titleUnnamed": "Pro 구독이 종료되었습니다",
+      "detail": "결제가 승인되지 않았습니다. 다시 시작하려면 카드를 등록해 주세요.",
+      "view": "요금제 보기 →"
     }
   },
   "unsubscribe": {

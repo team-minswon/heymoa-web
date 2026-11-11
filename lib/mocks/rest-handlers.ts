@@ -1505,6 +1505,7 @@ export const restHandlers = [
     }))
   ),
   getGetNotificationsMockHandler(({ request }) => {
+    billingMock.ensureUnpaidNotice();
     const query = new URL(request.url).searchParams;
     return {
       success: true,
@@ -1519,11 +1520,14 @@ export const restHandlers = [
     };
   }),
   http.get("*/v1/notifications/unread-count", ({ request }) =>
-    commandResult(() => ({
-      unreadCount: mockDb.unreadNotificationCount(
-        new URL(request.url).searchParams.get("schema")
-      ),
-    }))
+    commandResult(() => {
+      billingMock.ensureUnpaidNotice();
+      return {
+        unreadCount: mockDb.unreadNotificationCount(
+          new URL(request.url).searchParams.get("schema")
+        ),
+      };
+    })
   ),
   http.put("*/v1/notifications/read", async ({ request }) => {
     const body = (await request.json()) as { upTo: string };
