@@ -68,3 +68,27 @@ it("취소 관계의 대상·이유와 원문 이동을 보여 준다", () => {
   expect(openScript).toHaveBeenCalledWith("s12");
   expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
 });
+
+it("지난 회의 이름은 링크로 한 번만 적는다", () => {
+  const { relations } = indexMeetingLinks(data, "now", [
+    { itemId: "i1", originalProposalRef: { proposalId: "p1", revision: 1 } },
+  ]);
+  render(
+    <RelationSuggestion
+      relation={{
+        ...relations[0],
+        scope: "past",
+        targetTitle: "로드맵 브레인스토밍",
+        target: { ...relations[0].target, noteId: "past-note" },
+      }}
+      workspaceId="ws"
+      onSelectItem={vi.fn()}
+      onOpenScript={vi.fn()}
+      segments={[]}
+    />
+  );
+  expect(screen.getAllByText("로드맵 브레인스토밍")).toHaveLength(1);
+  expect(
+    screen.getByRole("link", { name: "로드맵 브레인스토밍" })
+  ).toBeInTheDocument();
+});

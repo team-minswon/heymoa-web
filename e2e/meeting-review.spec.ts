@@ -78,7 +78,7 @@ test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐�
     page.getByRole("region", { name: "충돌·이어짐", exact: true })
   ).toHaveCount(0);
   const decisions = page.getByRole("region", { name: "결정", exact: true });
-  await decisions.getByRole("button", { name: "더 불러오기" }).click();
+  await decisions.getByRole("button", { name: /^나머지 결정/ }).click();
   const pricing = decisions
     .locator("[data-item-id]")
     .filter({

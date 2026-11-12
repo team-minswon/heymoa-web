@@ -1,7 +1,15 @@
 "use client";
 
-import { ChevronDown, Loader2, Pencil, Trash2, Undo2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import {
+  Check,
+  ChevronDown,
+  Loader2,
+  Pencil,
+  Trash2,
+  Undo2,
+  X,
+} from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
 
 import { AssigneeCell } from "@/components/heymoa/assignee-cell";
 import { Collapse } from "@/components/heymoa/collapse";
@@ -31,6 +39,7 @@ export type ItemPatch = Omit<
  * 줄 어디를 눌러도 펼쳐진다(내용 버튼이 줄을 덮는다) — 담당 · 기한 칸만 그 위에 떠서 바로 고친다.
  * 펼치면 근거 발언과 수정 · 제외가 서고, 제안은 펼치지 않아도 줄 아래에 선다. 뺀 항목은 자리를 지킨 채
  * 흐려진다 — 되살릴 수 있어야 한다.
+ * 칸마다 첫 글줄 높이(24px) 상자 가운데에 서서, 글이 두 줄로 꺾여도 아이콘 · 시각 · 스위치가 첫 줄에 맞는다.
  * 담당 · 기한 칸을 한 줄에 펼칠지는 화면이 아니라 줄 폭(`@container/row`)이 정한다. 회의 정리 창을 옆에 연
  * 1024 화면에서 화면 기준(`sm:`)이면 내용 칸이 14px 로 짓눌렸다(APP-1569).
  */
@@ -81,14 +90,22 @@ export function ReviewRow({
   const t = useTranslations("notes.review.row");
   const tAction = useTranslations("common.actions");
   const [editing, setEditing] = useState(false);
-  const cellsEditable = canEdit && item.included && !busy && !locked;
+  const editFormId = useId();
+  const cellsEditable = canEdit && item.included;
+  // 저장은 한 번에 하나라 그동안 모든 줄을 잠근다. 칸을 비활성으로 바꾸면 스위치 · 칩이 한꺼번에 흐려지고
+  // 「기한 정하기」가 사라졌다 돌아와 목록 전체가 다시 불리는 것처럼 보인다. 그래서 모양은 두고 조작만 막고(`inert`),
+  // 저장이 0.3초를 넘길 때만 흐리게 한다(APP-1587).
+  const frozen = busy || locked;
 
   return (
     <div
       data-item-id={item.itemId}
       data-item-scroll-target
+      inert={frozen}
       className={cn(
         "@container/row scroll-mt-24 border-b border-[var(--el-hairline-soft)]",
+        frozen &&
+          "opacity-60 [transition:opacity_150ms_ease-out_300ms] motion-reduce:transition-none",
         fresh && ARRIVE_CLASS
       )}
     >
@@ -96,30 +113,47 @@ export function ReviewRow({
         className={cn(
           "relative -mx-2 grid items-start gap-x-3 rounded-control px-2 py-[11px] transition-colors duration-200 ease-out",
           assignable
-            ? "grid-cols-[16px_minmax(0,1fr)_36px_16px] @xl/row:grid-cols-[16px_minmax(0,1fr)_132px_150px_36px_16px]"
-            : "grid-cols-[16px_minmax(0,1fr)_auto_36px_16px]",
-          open
-            ? "bg-[var(--el-surface-strong)]"
-            : "hover:bg-[var(--el-canvas-soft)]"
+            ? "grid-cols-[16px_minmax(0,1fr)_68px_16px] @xl/row:grid-cols-[16px_minmax(0,1fr)_132px_124px_68px_16px]"
+            : "grid-cols-[16px_minmax(0,1fr)_auto_68px_16px]",
+          editing
+            ? "bg-[var(--el-surface-card)] ring-1 ring-[var(--el-ink)]"
+            : open
+              ? "bg-[var(--el-surface-strong)]"
+              : "hover:bg-[var(--el-canvas-soft)]"
         )}
       >
         {assignable ? (
-          <span
-            aria-hidden
-            className="size-4 self-center rounded-[4px] border-[1.5px] border-[var(--el-hairline-strong)]"
-          />
+          <span aria-hidden className="flex h-6 items-center">
+            {/* 주제 목록과 같은 할 일 아이콘이다. 빈 네모는 누르면 끝낼 수 있는 체크박스로 읽힌다(APP-1587). */}
+            <TimelineToneIcon tone="task" />
+          </span>
         ) : (
-          <span aria-hidden className="flex self-center">
+          <span aria-hidden className="flex h-6 items-center">
             <TimelineToneIcon tone="decision" />
           </span>
         )}
-        <span className="flex min-w-0 items-center gap-2 self-center">
+        {editing ? (
+          // 글자가 있던 자리에서 바로 고친다. 글꼴 · 줄 높이가 같아 줄 높이가 그대로라 아래 줄이 밀리지 않는다(APP-1587).
+          <InlineContentEditor
+            formId={editFormId}
+            initial={item.content}
+            latest={item.content}
+            bold={open}
+            disabled={busy || !canEdit}
+            onCancel={() => setEditing(false)}
+            onSubmit={async (content) => {
+              const saved =
+                content === item.content || (await onSave({ content }));
+              if (saved) setEditing(false);
+            }}
+          />
+        ) : (
           <button
             type="button"
             aria-expanded={open}
             onClick={onToggle}
             // 버튼이 줄 전체를 덮는다(::after) — 주제 · 때 자리를 눌러도 펼쳐진다. 이름은 내용 그대로다.
-            className="min-w-0 flex-1 rounded-chip text-left after:absolute after:inset-0 after:rounded-control after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
+            className="min-w-0 rounded-chip text-left after:absolute after:inset-0 after:rounded-control after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
           >
             <span
               className={cn(
@@ -132,27 +166,12 @@ export function ReviewRow({
               {item.content}
             </span>
           </button>
-          {/* 접힌 줄에도 고칠 수 있다는 표시를 둔다(APP-1569). 펼친 줄은 아래 수정 버튼이 같은 일을 한다. */}
-          {canEdit && item.included && !open ? (
-            <button
-              type="button"
-              aria-label={t("editRow", { content: item.content })}
-              disabled={busy || locked}
-              onClick={() => {
-                onToggle();
-                setEditing(true);
-              }}
-              className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-chip text-[var(--el-muted-soft)] transition-colors duration-200 ease-out hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)] disabled:pointer-events-none disabled:opacity-50"
-            >
-              <Pencil aria-hidden className="size-3.5" />
-            </button>
-          ) : null}
-        </span>
+        )}
         {assignable ? (
           // 넓은 화면에서는 상자가 사라져(`contents`) 두 칸이 열에 선다. 좁은 화면에서는 둘째 줄이다.
           // 줄을 덮는 버튼 위에 떠야 눌린다.
           <div className="relative z-10 col-[2/-1] row-start-2 flex min-w-0 flex-wrap items-center gap-x-3 pt-1.5 @xl/row:contents">
-            <span className="flex min-w-0 items-center gap-1.5 @xl/row:relative @xl/row:z-10">
+            <span className="flex min-w-0 items-center gap-1.5 @xl/row:relative @xl/row:z-10 @xl/row:h-6">
               <AssigneeCell
                 value={item.assignee}
                 choices={choices}
@@ -168,7 +187,7 @@ export function ReviewRow({
                 </span>
               ) : null}
             </span>
-            <span className="flex @xl/row:relative @xl/row:z-10">
+            <span className="flex items-center @xl/row:relative @xl/row:z-10 @xl/row:h-6">
               <DueCell
                 value={item.due}
                 chip
@@ -178,9 +197,9 @@ export function ReviewRow({
             </span>
           </div>
         ) : (
-          <span className="flex min-w-0 items-center justify-end gap-3">
+          <span className="flex h-6 min-w-0 items-center justify-end gap-3">
             {whenMs !== null ? (
-              <span className="text-xs tabular-nums text-[var(--el-muted-soft)]">
+              <span className="text-xs tabular-nums text-[var(--el-muted)]">
                 {formatOffset(whenMs)}
               </span>
             ) : null}
@@ -188,27 +207,66 @@ export function ReviewRow({
         )}
         <span
           className={cn(
-            "relative z-10 flex justify-end",
+            "relative z-10 flex h-6 items-center justify-end gap-2",
             assignable && "col-start-3 row-start-1 @xl/row:col-start-5"
           )}
         >
-          {requiresProjectSelection(item.kind) ? (
-            <Switch
-              aria-label={t("projectSwitch", { content: item.content })}
-              checked={item.projectSelected}
-              disabled={!cellsEditable}
-              onCheckedChange={(projectSelected) =>
-                void onSave({ projectSelected })
-              }
-            />
-          ) : null}
+          {editing ? (
+            // 수정 중에는 같은 칸이 취소 · 저장이 된다. 칸 폭이 그대로라 옆 칸이 움직이지 않는다.
+            <>
+              <button
+                type="button"
+                aria-label={tAction("cancel")}
+                onClick={() => setEditing(false)}
+                className={ICON_BUTTON}
+              >
+                <X aria-hidden className="size-3.5" />
+              </button>
+              <button
+                type="submit"
+                form={editFormId}
+                aria-label={tAction("save")}
+                disabled={busy || !canEdit}
+                className={cn(
+                  ICON_BUTTON,
+                  "bg-[var(--el-ink)] text-[var(--el-surface-card)] hover:bg-[var(--el-ink)] hover:text-[var(--el-surface-card)]"
+                )}
+              >
+                <Check aria-hidden className="size-3.5" />
+              </button>
+            </>
+          ) : (
+            <>
+              {/* 접힌 줄에도 고칠 수 있다는 표시를 둔다(APP-1569). 스위치 옆 고정 열이라 줄마다 같은 자리에 선다(APP-1587). */}
+              {canEdit && item.included && !open ? (
+                <button
+                  type="button"
+                  aria-label={t("editRow", { content: item.content })}
+                  onClick={() => setEditing(true)}
+                  className={ICON_BUTTON}
+                >
+                  <Pencil aria-hidden className="size-3.5" />
+                </button>
+              ) : null}
+              {requiresProjectSelection(item.kind) ? (
+                <Switch
+                  aria-label={t("projectSwitch", { content: item.content })}
+                  checked={item.projectSelected}
+                  disabled={!cellsEditable}
+                  onCheckedChange={(projectSelected) =>
+                    void onSave({ projectSelected })
+                  }
+                />
+              ) : null}
+            </>
+          )}
         </span>
         {/* 클릭은 줄을 덮는 버튼이 받는다. 펼치면 화살표가 회전(transform)해 그 버튼 위에 그려지므로
             흘려보내지 않으면 화살표 자리만 눌리지 않는다. */}
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none flex justify-end text-[var(--el-muted-soft)]",
+            "pointer-events-none flex h-6 items-center justify-end text-[var(--el-muted-soft)]",
             assignable && "col-start-4 row-start-1 @xl/row:col-start-6"
           )}
         >
@@ -231,7 +289,9 @@ export function ReviewRow({
           role="alert"
           className="my-1.5 flex items-center gap-3 rounded-control bg-[var(--el-canvas-soft)] px-3 py-2 text-[12.5px] text-[var(--el-body)]"
         >
-          <span className="min-w-0 flex-1">{conflictMessage ?? tError("conflict")}</span>
+          <span className="min-w-0 flex-1">
+            {conflictMessage ?? tError("conflict")}
+          </span>
           <button
             type="button"
             className="shrink-0 text-[var(--el-muted)] underline underline-offset-2"
@@ -243,27 +303,15 @@ export function ReviewRow({
       </Collapse>
 
       <Collapse open={open} lazy>
-        <div className="space-y-2.5 pt-1 pb-3.5 @xl/row:pl-7">
-          {editing ? (
-            <ContentEditor
-              initial={item.content}
-              busy={busy}
-              disabled={!canEdit}
-              onCancel={() => setEditing(false)}
-              onSubmit={async (content) => {
-                const saved =
-                  content === item.content || (await onSave({ content }));
-                if (saved) setEditing(false);
-              }}
-            />
-          ) : canEdit ? (
-            <div className="flex items-center gap-2">
+        <div className="space-y-2.5 pt-1 pb-3.5 @sm/row:pl-7">
+          {canEdit ? (
+            <div className="-ml-2 flex items-center gap-2">
               {item.included ? (
                 <Button
                   variant="ghost"
                   size="xs"
                   aria-label={t("edit")}
-                  disabled={busy || locked}
+                  disabled={editing}
                   onClick={() => setEditing(true)}
                 >
                   <Pencil aria-hidden className="size-3.5" />
@@ -273,7 +321,6 @@ export function ReviewRow({
               <Button
                 variant="ghost"
                 size="xs"
-                disabled={busy || locked}
                 onClick={() => void onSave({ included: !item.included })}
               >
                 {item.included ? (
@@ -289,8 +336,12 @@ export function ReviewRow({
           {children}
         </div>
       </Collapse>
+      {/* 제안 묶음은 있어도 그릴 것이 없을 수 있다(저장한 선택 없음 · 접힌 관계). 빈 상자가 아래 여백을
+          차지하면 줄 높이가 줄마다 달라져서, 내용이 있을 때만 여백을 준다(APP-1587). */}
       {suggestions ? (
-        <div className="space-y-1.5 pb-2.5 @xl/row:pl-7">{suggestions}</div>
+        <div className="space-y-1.5 has-[>:not(:empty)]:pb-2.5 @sm/row:pl-7">
+          {suggestions}
+        </div>
       ) : null}
     </div>
   );
@@ -307,29 +358,44 @@ function ItemState({ item }: { item: ReviewItem }) {
   return <p className="text-xs text-[var(--el-muted)]">{notes.join(" · ")}</p>;
 }
 
-function ContentEditor({
+const ICON_BUTTON =
+  "flex size-6 shrink-0 items-center justify-center rounded-chip text-[var(--el-muted)] transition-colors duration-200 ease-out hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)] disabled:pointer-events-none disabled:opacity-50";
+
+/** 줄 내용 자리에 서는 입력. Enter 로 저장하고 Esc 로 닫는다. 저장 버튼은 같은 줄 끝 칸에서 이 폼을 보낸다. */
+function InlineContentEditor({
+  formId,
   initial,
-  busy,
+  latest,
+  bold,
   disabled,
   onSubmit,
   onCancel,
 }: {
+  formId: string;
   initial: string;
-  busy: boolean;
+  /** 지금 서버의 내용. 쓰는 사이 다른 사람이 고치면 처음 값과 달라진다 */
+  latest: string;
+  /** 펼친 줄은 내용이 굵다. 같은 굵기여야 줄바꿈 자리가 안 바뀐다 */
+  bold: boolean;
   disabled: boolean;
   onSubmit: (content: string) => Promise<void>;
   onCancel: () => void;
 }) {
   const t = useTranslations("notes.review.row");
-  const tAction = useTranslations("common.actions");
   const [value, setValue] = useState(initial);
+  // 쓰기 시작할 때의 내용. 입력이 원문을 가리므로, 그 사이 원문이 바뀌면 아래에 따로 보여 준다.
+  const [startedFrom] = useState(initial);
   const trimmed = value.trim();
+  const submit = () => {
+    if (trimmed && !disabled) void onSubmit(trimmed);
+  };
   return (
     <form
-      className="rounded-control border border-[var(--el-ink)] bg-[var(--el-surface-card)] p-2.5 animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
+      id={formId}
+      className="relative z-10 min-w-0"
       onSubmit={(event) => {
         event.preventDefault();
-        if (trimmed && !disabled) void onSubmit(trimmed);
+        submit();
       }}
     >
       <textarea
@@ -337,6 +403,11 @@ function ContentEditor({
         aria-label={t("contentLabel")}
         value={value}
         rows={1}
+        readOnly={disabled}
+        onFocus={(event) => {
+          const end = event.currentTarget.value.length;
+          event.currentTarget.setSelectionRange(end, end);
+        }}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") onCancel();
@@ -346,24 +417,19 @@ function ContentEditor({
             !event.nativeEvent.isComposing
           ) {
             event.preventDefault();
-            if (trimmed && !disabled) void onSubmit(trimmed);
+            submit();
           }
         }}
-        className="block w-full resize-none bg-transparent text-sm leading-6 text-[var(--el-ink)] outline-none [field-sizing:content]"
+        className={cn(
+          "block w-full resize-none bg-transparent p-0 text-[15px] leading-6 text-[var(--el-ink)] outline-none [field-sizing:content] [overflow-wrap:anywhere]",
+          bold && "font-semibold"
+        )}
       />
-      <div className="mt-2 flex justify-end gap-1.5">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          {tAction("cancel")}
-        </Button>
-        <Button
-          type="submit"
-          size="sm"
-          loading={busy}
-          disabled={!trimmed || disabled}
-        >
-          {tAction("save")}
-        </Button>
-      </div>
+      {latest !== startedFrom ? (
+        <p className="mt-1 text-xs leading-5 break-words text-[var(--el-muted)]">
+          {t("latestContent", { content: latest })}
+        </p>
+      ) : null}
     </form>
   );
 }

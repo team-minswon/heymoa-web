@@ -211,36 +211,39 @@ function ContinuedFrom({
             aria-hidden
             className="border-l border-b border-[var(--el-hairline-strong)] w-3 h-2"
           />
-          {note.noteId === noteId
-            ? t.rich("continuedFrom", {
-                title: note.agendaTitle ?? t("agenda"),
-                meeting: (chunks) => (
-                  <a
-                    href={`#summary-agenda-${note.agendaId}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      onSelectAgenda(note.agendaId);
-                    }}
-                    className="text-[var(--el-body)] underline underline-offset-[3px]"
-                  >
-                    {chunks}
-                  </a>
-                ),
-              })
-            : t.rich("continuedFrom", {
-                title: note.title ?? t("earlierMeeting"),
-                meeting: (chunks) =>
-                  workspaceId ? (
-                    <Link
-                      href={`/w/${workspaceId}/notes/${note.noteId}?view=full&tab=summary#summary-agenda-${note.agendaId}`}
-                      className="text-[var(--el-body)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
+          {/* 한 덩어리로 묶는다 — 따로 두면 flex 간격이 회의 이름과 조사 사이를 띄운다(「…브레인스토밍 에서」) */}
+          <span>
+            {note.noteId === noteId
+              ? t.rich("continuedFrom", {
+                  title: note.agendaTitle ?? t("agenda"),
+                  meeting: (chunks) => (
+                    <a
+                      href={`#summary-agenda-${note.agendaId}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        onSelectAgenda(note.agendaId);
+                      }}
+                      className="text-[var(--el-body)] underline underline-offset-[3px]"
                     >
                       {chunks}
-                    </Link>
-                  ) : (
-                    chunks
+                    </a>
                   ),
-              })}
+                })
+              : t.rich("continuedFrom", {
+                  title: note.title ?? t("earlierMeeting"),
+                  meeting: (chunks) =>
+                    workspaceId ? (
+                      <Link
+                        href={`/w/${workspaceId}/notes/${note.noteId}?view=full&tab=summary#summary-agenda-${note.agendaId}`}
+                        className="text-[var(--el-body)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] hover:text-[var(--el-ink)]"
+                      >
+                        {chunks}
+                      </Link>
+                    ) : (
+                      chunks
+                    ),
+                })}
+          </span>
         </span>
       ))}
       {mapHref ? (
@@ -284,13 +287,14 @@ function TopicRow({
     ? (links?.byAgendaId.get(topic.agendaId) ?? [])
     : [];
 
-  const counts = (
-    [
-      ["decision", topic.decisions.length],
-      ["task", topic.tasks.length],
-      ["open", topic.open.length],
-    ] as const
-  ).filter(([, count]) => count > 0);
+  // 없는 종류도 자리를 지킨다 — 빼면 아이콘 열이 줄마다 밀린다(APP-1587).
+  const counts = [
+    ["decision", topic.decisions.length],
+    ["task", topic.tasks.length],
+    ["open", topic.open.length],
+  ] as const;
+  // 펼치면 한 줄 요약 자리에 전체 요약이 선다. 자리가 같아야 「이어짐」 줄과 순서가 뒤바뀌지 않는다(APP-1587).
+  const body = open ? (topic.text ?? topic.gist) : topic.gist;
   const lines: Array<[Tone, ReviewItem]> = [
     ...topic.decisions.map((item) => ["decision", item] as [Tone, ReviewItem]),
     ...topic.tasks.map((item) => ["task", item] as [Tone, ReviewItem]),
@@ -312,9 +316,13 @@ function TopicRow({
         type="button"
         aria-expanded={open}
         onClick={onToggle}
-        className="-mx-2 grid w-[calc(100%+16px)] grid-cols-[44px_minmax(0,1fr)_16px] items-start gap-x-3 rounded-control px-2 py-3 text-left hover:bg-[var(--el-canvas-soft)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)] sm:grid-cols-[56px_minmax(0,1fr)_auto_16px]"
+        className={cn(
+          // 「이어짐」 줄이 아래에 서면 버튼 아래 여백을 줄인다. 줄을 버튼 위로 끌어올리면(-mt) 호버 배경이 글자에 걸친다(APP-1587).
+          continued.length > 0 ? "pb-1" : "pb-3",
+          "-mx-2 grid w-[calc(100%+16px)] grid-cols-[44px_minmax(0,1fr)_16px] items-start gap-x-3 rounded-control px-2 pt-3 text-left hover:bg-[var(--el-canvas-soft)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)] sm:grid-cols-[56px_minmax(0,1fr)_auto_16px]"
+        )}
       >
-        <span className="text-xs leading-6 tabular-nums text-[var(--el-muted-soft)]">
+        <span className="text-xs leading-6 tabular-nums text-[var(--el-muted)]">
           {topic.startMs === null ? "" : formatOffset(topic.startMs)}
         </span>
         <span className="flex min-w-0 flex-col">
@@ -330,18 +338,28 @@ function TopicRow({
               </span>
             )}
           </span>
-          {topic.gist && !open ? (
-            <span className="whitespace-pre-wrap text-[13.5px] leading-6 break-words text-[var(--el-muted)]">
-              {topic.gist}
+          {body ? (
+            <span
+              className={cn(
+                // 접힌 줄과 펼친 줄의 글자 크기 · 줄 높이는 같다. 요약이 짧으면 두 글이 같은데, 크기가 다르면 펼칠 때 줄바꿈이 바뀐다(APP-1587).
+                "text-[13.5px] leading-6 whitespace-pre-wrap break-words",
+                open ? "text-[var(--el-body)]" : "text-[var(--el-muted)]"
+              )}
+            >
+              {body}
             </span>
           ) : null}
         </span>
         <span className="col-start-2 row-start-2 mt-1 flex h-6 items-center gap-2.5 text-xs whitespace-nowrap tabular-nums text-[var(--el-muted)] sm:col-start-3 sm:row-start-1 sm:mt-0">
           {counts.map(([tone, count]) => (
-            <span key={tone} className="inline-flex items-center gap-1">
-              <TimelineToneIcon tone={tone} />
-              <span className="sr-only">{t(`counts.${tone}`)} </span>
-              {count}
+            <span key={tone} className="inline-flex w-8 items-center gap-1">
+              {count > 0 ? (
+                <>
+                  <TimelineToneIcon tone={tone} />
+                  <span className="sr-only">{t(`counts.${tone}`)} </span>
+                  {count}
+                </>
+              ) : null}
             </span>
           ))}
         </span>
@@ -355,7 +373,7 @@ function TopicRow({
       </button>
       {continued.length > 0 ? (
         // 버튼 안에 링크를 둘 수 없어 줄 아래에 따로 둔다(주제 제목 칸과 같은 들여쓰기)
-        <div className="-mt-2 pb-3 pl-[56px] sm:pl-[68px]">
+        <div className="pb-3 pl-[56px] sm:pl-[68px]">
           <ContinuedFrom
             notes={continued}
             workspaceId={workspaceId}
@@ -371,11 +389,6 @@ function TopicRow({
       ) : null}
       <Collapse open={open} lazy>
         <div className="flex flex-col gap-3 pb-[18px] pl-0 sm:pr-7 sm:pl-[68px]">
-          {topic.text ? (
-            <p className="whitespace-pre-wrap text-[14.5px] leading-[26px] break-words text-[var(--el-body)]">
-              {topic.text}
-            </p>
-          ) : null}
           {lines.length > 0 ? (
             <ul className="flex flex-col gap-1.5">
               {lines.map(([tone, item]) => (

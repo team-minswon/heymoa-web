@@ -559,7 +559,7 @@
     "confirm": {
       "unchosen": "{count, plural, one {<b>{count}</b> suggestion to review} other {<b>{count}</b> suggestions to review}}",
       "goToSuggestions": "Go to suggestions",
-      "nothingToAdd": "No decisions or tasks to add.",
+      "nothingToAdd": "No items selected to add to the project.",
       "adding": "Add {decisions, plural, one {<b>{decisions}</b> decision} other {<b>{decisions}</b> decisions}} and {tasks, plural, one {<b>{tasks}</b> task} other {<b>{tasks}</b> tasks}}",
       "ending": "{count, plural, one {<b>{count}</b> earlier decision will end} other {<b>{count}</b> earlier decisions will end}}",
       "changing": "{count, plural, one {<b>{count}</b> existing task changes} other {<b>{count}</b> existing tasks change}}",
@@ -635,7 +635,7 @@
         "REFERENCE": "No reference items."
       },
       "addToProject": "Add to project",
-      "more": "Show more",
+      "more": "Show {count} more",
       "add": "Add to {section}"
     },
     "row": {
@@ -649,7 +649,8 @@
       "excluded": "Excluded",
       "edited": "Edited",
       "authored": "Added manually",
-      "contentLabel": "Item content"
+      "contentLabel": "Item content",
+      "latestContent": "Latest: {content}"
     },
     "addItem": {
       "kindLabel": "Item type",

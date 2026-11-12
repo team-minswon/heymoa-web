@@ -158,7 +158,7 @@ export function MeetingMap({
       </div>
       <div
         aria-hidden
-        className="relative h-4 text-[11px] tabular-nums text-[var(--el-muted-soft)]"
+        className="relative h-4 text-[11px] tabular-nums text-[var(--el-muted)]"
       >
         {ticks.map((minute) => (
           <span

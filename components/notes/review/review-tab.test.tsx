@@ -2263,7 +2263,11 @@ describe("최종 요약과 늦은 관계 결과", () => {
         "최신 분석 결과를 불러오지 못했습니다."
       );
       expect(input).toHaveValue("작성 중인 내용");
-      if (resource === "review") expect(await row(content)).toBeInTheDocument();
+      // 고치는 줄은 입력이 원문을 가린다. 목록이 통째로 지워지지 않았는지는 줄 수로 본다.
+      if (resource === "review")
+        expect(
+          document.querySelectorAll("[data-item-id]").length
+        ).toBeGreaterThan(1);
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
       const reads = reviewReads;
       await act(async () => {
@@ -2311,7 +2315,9 @@ describe("최종 요약과 늦은 관계 결과", () => {
           screen.queryByText("최신 분석 결과를 불러오지 못했습니다.")
         ).toBeNull()
       );
-      expect(await row("늦게 도착한 검토 내용")).toBeInTheDocument();
+      expect(
+        await screen.findByText("최신 내용: 늦게 도착한 검토 내용")
+      ).toBeInTheDocument();
       expect(linkReads).toBeGreaterThan(previousLinkReads);
       expect(input).toHaveValue("작성 중인 내용");
       expect(
@@ -2563,13 +2569,18 @@ it("항목 저장 충돌의 복구 조회가 느려도 최신 판을 읽을 때�
   try {
     fireEvent.click(exclude);
     await arrived;
-    await waitFor(() => expect(exclude).toBeDisabled());
+    // 잠금은 버튼 비활성이 아니라 줄의 `inert` 로 건다 — 모양을 바꾸지 않고 조작만 막는다(APP-1587).
+    await waitFor(() =>
+      expect(exclude.closest("[data-item-id]")).toHaveAttribute("inert")
+    );
     expect(screen.queryByText(koErrors.conflict)).toBeNull();
     await act(async () => {
       release();
     });
     expect(await screen.findByText(koErrors.conflict)).toBeInTheDocument();
-    await waitFor(() => expect(exclude).toBeEnabled());
+    await waitFor(() =>
+      expect(exclude.closest("[data-item-id]")).not.toHaveAttribute("inert")
+    );
   } finally {
     release();
   }
@@ -2626,7 +2637,7 @@ it("충돌 복구 실패 뒤 자동 조회가 성공해도 충돌 안내와 작�
       "다른 사람이 먼저 수정했습니다. 최신 검토본을 불러오지 못했으니 다시 확인해 주세요."
     )
   );
-  await row("다른 사람이 먼저 수정한 내용");
+  await screen.findByText("최신 내용: 다른 사람이 먼저 수정한 내용");
   expect(input).toHaveValue(draft);
   expect(
     screen.getByText(

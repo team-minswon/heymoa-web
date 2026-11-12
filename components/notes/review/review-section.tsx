@@ -22,7 +22,7 @@ import {
 } from "@/lib/notes/review/sections";
 
 /**
- * 한 섹션. 앞의 몇 줄만 서고 나머지는 「더 불러오기」로 접힌다 — 항목이 백 개 가까운 회의에서
+ * 한 섹션. 앞의 몇 줄만 서고 나머지는 「나머지 결정 N개」로 접힌다 — 항목이 백 개 가까운 회의에서
  * 섹션을 다 펼치면 검토할 것이 스크롤 너머로 사라진다.
  */
 export function ReviewSection({
@@ -145,15 +145,18 @@ export function ReviewSection({
         </div>
       ) : null}
 
-      <Collapse open={showRest} lazy>
-        {rest.map(row)}
+      {/* 줄 배경은 좌우로 8px 나가는데(`-mx-2`) 접히는 상자는 넘친 것을 자른다. 상자를 그만큼 넓혀
+          처음 보이는 줄과 같은 폭으로 칠해지게 한다(APP-1587). */}
+      <Collapse open={showRest} lazy className="-mx-2">
+        <div className="px-2">{rest.map(row)}</div>
       </Collapse>
 
       {rest.length > 0 ? (
         <ShowMoreButton
           open={showRest}
-          moreLabel={t("more")}
-          subject={name}
+          moreLabel={t("more", { section: name, count: rest.length })}
+          // 접혀 있을 때는 문구에 섹션 이름이 이미 들어 있다. 「접기」에만 이름을 붙인다.
+          subject={showRest ? name : undefined}
           onToggle={() => setExpanded((value) => !value)}
           className="pt-2.5"
         />

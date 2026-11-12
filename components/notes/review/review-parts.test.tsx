@@ -230,46 +230,21 @@ describe("ReviewRow", () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
-  it("접힌 줄의 연필은 줄을 펼치며 바로 편집을 연다", () => {
+  it("접힌 줄의 연필은 줄을 펼치지 않고 바로 편집을 연다", () => {
     const onToggle = vi.fn();
-    const { rerender } = render(
-      <ReviewRow
-        item={item()}
-        assignable={false}
-        open={false}
-        canEdit
-        busy={false}
-        conflict={false}
-        fresh={false}
-        choices={[]}
-        onToggle={onToggle}
-        onSave={vi.fn()}
-        onDismissConflict={vi.fn()}
-      />
-    );
+    renderRow({ open: false, onToggle });
     fireEvent.click(screen.getByRole("button", { name: /^수정: / }));
-    expect(onToggle).toHaveBeenCalledTimes(1);
-    rerender(
-      <ReviewRow
-        item={item()}
-        assignable={false}
-        open
-        canEdit
-        busy={false}
-        conflict={false}
-        fresh={false}
-        choices={[]}
-        onToggle={onToggle}
-        onSave={vi.fn()}
-        onDismissConflict={vi.fn()}
-      />
-    );
+    expect(onToggle).not.toHaveBeenCalled();
     expect(
       screen.getByRole("textbox", { name: "항목 내용" })
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^수정: / })
     ).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "항목 내용" }), {
+      key: "Escape",
+    });
+    expect(screen.getByRole("button", { name: /^수정: / })).toBeInTheDocument();
   });
 
   it("고칠 수 없거나 뺀 항목의 접힌 줄에는 연필이 없다", () => {
@@ -315,10 +290,12 @@ describe("ReviewRow", () => {
     expect(onSave).toHaveBeenCalledWith({ included: true });
   });
 
-  it("다른 항목이 저장 중이면 이 줄의 조작도 잠근다", () => {
+  it("다른 항목이 저장 중이면 이 줄의 조작을 막되 칸 모양은 그대로 둔다", () => {
     renderRow({ locked: true });
-    expect(screen.getByRole("button", { name: "수정" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "제외" })).toBeDisabled();
+    const row = document.querySelector("[data-item-id]") as HTMLElement;
+    expect(row).toHaveAttribute("inert");
+    // 비활성으로 바꾸면 모든 줄이 한꺼번에 흐려졌다 돌아온다.
+    expect(screen.getByRole("button", { name: "제외" })).toBeEnabled();
   });
 
   it("고칠 수 없으면 조작을 두지 않고, 결정 줄에는 나온 때만 표시한다", () => {

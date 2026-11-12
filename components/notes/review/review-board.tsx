@@ -1061,11 +1061,6 @@ export function ReviewBoard({
                     {t(`enrichment.${enrichmentStatus}`)}
                   </p>
                 ) : null}
-                {!confirmed ? (
-                  <p className="mb-5 text-[13px] leading-6 text-[var(--el-muted)]">
-                    {t("switchHint")}
-                  </p>
-                ) : null}
                 {sections.map((section) => (
                   <ReviewSection
                     key={section.key}
@@ -1079,6 +1074,12 @@ export function ReviewBoard({
                     conflictItemId={editor.conflictItemId}
                     conflictMessage={editor.conflictMessage}
                     adding={editor.adding}
+                    // 스위치 안내는 스위치가 처음 나오는 섹션 머리 아래에 둔다. 주제 목록 아래에 두면 주제 설명으로 읽힌다(APP-1587).
+                    hint={
+                      !confirmed && section.key === "DECISION"
+                        ? t("switchHint")
+                        : undefined
+                    }
                     aside={
                       section.key === "ACTION_ITEM" && unnamedAssigned > 0 ? (
                         <>
@@ -1111,7 +1112,10 @@ export function ReviewBoard({
             <div>
               {relationsNotice}
               {summary?.status === "SUCCEEDED" && overviewText(summary) ? (
-                <p className="mb-5 max-w-[60ch] text-base leading-7 text-[var(--el-ink)]">
+                <p
+                  // 요약 보기의 문단과 같은 폭이다. 폭이 다르면 보기를 바꿀 때 줄바꿈이 달라져 글이 튄다(APP-1587).
+                  className="mb-5 text-base leading-7 text-[var(--el-ink)]"
+                >
                   {overviewText(summary)}
                 </p>
               ) : null}

@@ -60,7 +60,8 @@ function SuggestionShell({
           </span>
         ) : null}
       </div>
-      {footer}
+      {/* 근거는 라벨 칸이 아니라 내용 칸 아래에 선다 — 라벨 밑에 서면 내용과 따로 논다(APP-1587). */}
+      {footer ? <div className="sm:pl-[108px]">{footer}</div> : null}
     </div>
   );
 }
@@ -267,10 +268,19 @@ export function RelationSuggestion({
   onOpenScript: (segmentId: string) => void;
 }) {
   const t = useTranslations("notes.review.suggestions.relation");
+  const pastNoteLink =
+    relation.scope === "past" && workspaceId && relation.target.noteId;
   return (
     <SuggestionShell
       label={t(`kinds.${relation.kind}`)}
-      footer={<RelationContext relation={relation} {...context} />}
+      footer={
+        // 지난 회의 이름은 위 링크가 이미 말한다. 근거 줄에서 한 번 더 적지 않는다(APP-1587).
+        <RelationContext
+          relation={relation}
+          showSource={!pastNoteLink}
+          {...context}
+        />
+      }
     >
       {relation.targetItemId ? (
         <button
@@ -286,7 +296,7 @@ export function RelationSuggestion({
           {relation.target.content}
         </span>
       )}
-      {relation.scope === "past" && workspaceId && relation.target.noteId ? (
+      {pastNoteLink ? (
         <Link
           className="text-xs underline underline-offset-4"
           href={`/w/${workspaceId}/notes/${relation.target.noteId}?view=full&tab=summary`}
