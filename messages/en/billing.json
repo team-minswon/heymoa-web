@@ -104,7 +104,7 @@
     "cancelInfo": "If you cancel, you can keep using it until the current period ends and you won't be charged from the next renewal.",
     "cancelHow": "Admins can cancel in Settings > Payment.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
-    "refundPolicy": "You can get a full refund if you request it within 7 days of payment and have recorded 30 hours or less in this billing period by then. <link>See refund policy</link>",
+    "refundPolicy": "You can get a full refund if you request it within 7 days of payment and have recorded 20 hours or less in this billing period by then. <link>See refund policy</link>",
     "submit": "Agree and register card",
     "openSetup": {
       "title": "A card registration is already in progress",

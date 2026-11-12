@@ -571,7 +571,7 @@ describe("주문서", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     const notice = link.closest("p")!;
     expect(notice).toHaveTextContent(
-      "결제일부터 7일 이내에 요청하고, 요청한 때까지 이 결제 기간의 녹음이 30시간 이하이면 전액 환불받을 수 있습니다."
+      "결제일부터 7일 이내에 요청하고, 요청한 때까지 이 결제 기간의 녹음이 20시간 이하이면 전액 환불받을 수 있습니다."
     );
     // 바로 다음 형제가 자동 결제 동의 체크다.
     expect(notice.nextElementSibling).toContainElement(agree());
