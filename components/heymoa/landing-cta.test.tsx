@@ -88,18 +88,18 @@ describe("LandingCta", () => {
     );
   });
 
-  it("로그인한 사람에게 낼 라벨과 요금제 탭 행선지를 주면 대시보드 대신 그리로 보낸다", () => {
+  it("로그인한 사람에게 낼 라벨과 결제 페이지 행선지를 주면 대시보드 대신 그리로 보낸다", () => {
     auth.status = "authenticated";
     Object.assign(workspaces, { data: WITH_WORKSPACE, isSuccess: true });
     render(
       <LandingCta
         label="무료로 시작한 뒤 올리기"
-        member={{ label: "Pro 시작하기", to: "plans" }}
+        member={{ label: "Pro 시작하기", to: "checkout" }}
       />
     );
     expect(screen.getByRole("link", { name: "Pro 시작하기" })).toHaveAttribute(
       "href",
-      "/w/01K0000000000?settings=billing"
+      "/billing/checkout/01K0000000000"
     );
     expect(screen.queryByText("대시보드로 이동")).toBeNull();
   });

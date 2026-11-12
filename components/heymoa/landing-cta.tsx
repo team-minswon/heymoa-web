@@ -40,10 +40,11 @@ export function LandingCta({
   tooltip?: ReactNode;
   /**
    * 로그인한 사람에게 대시보드 대신 낼 라벨과 행선지. 가격 안내의 Pro 카드가 쓴다 — 이미 쓰는 사람에게 Pro 버튼이
-   * 「대시보드로 이동」이면 살 길이 안 보인다. `plans` 는 그 워크스페이스의 요금제 탭이다(권한·이미 Pro·판매 전은
-   * 그 탭이 가려 보여 준다). 워크스페이스가 없거나 조회에 실패한 상태는 그대로다.
+   * 「대시보드로 이동」이면 살 길이 안 보인다. `checkout` 은 마지막으로 쓴 워크스페이스의 결제 페이지다(어느 공간인지는
+   * 그 페이지가 이름으로 보이고, 권한 없음·이미 Pro·판매 전이면 그 페이지가 살 수 없다고 안내한다). 결제 페이지는 분석
+   * 없는 다른 루트 문서라 미리 받지 않는다. 워크스페이스가 없거나 조회에 실패한 상태는 그대로다.
    */
-  member?: { label: string; to: "plans" };
+  member?: { label: string; to: "checkout" };
 }) {
   const t = useTranslations("landing.cta");
   const { status } = useAuth();
@@ -129,10 +130,11 @@ export function LandingCta({
     return (
       <LinkButton
         href={
-          member?.to === "plans"
-            ? `/w/${workspaceId}?settings=billing`
+          member?.to === "checkout"
+            ? `/billing/checkout/${workspaceId}`
             : `/w/${workspaceId}`
         }
+        prefetch={member?.to === "checkout" ? false : undefined}
         className={cn(MARKETING_PILL, className)}
       >
         {member?.label ?? t("dashboard")}
