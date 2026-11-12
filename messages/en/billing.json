@@ -32,7 +32,7 @@
   },
   "page": {
     "title": "Plan",
-    "description": "This workspace's plan and this month's recording usage.",
+    "description": "This workspace's plan and recording usage.",
     "loading": "Loading plans",
     "plan": {
       "current": "Current",
