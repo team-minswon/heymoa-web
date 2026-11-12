@@ -167,7 +167,7 @@
     },
     "perMonth": "/ month · VAT included",
     "dueToday": "Due today",
-    "nextCharge": "Next payment",
+    "nextCharge": "Next payment date",
     "paymentInfo": "Payment details",
     "pgAgreementLabel": "I agree to NICEPAY's electronic financial transaction terms, data collection and use, and third-party sharing.",
     "pgTermsView": "View",
@@ -273,7 +273,7 @@
       "workspace": "Workspace",
       "amount": "Amount",
       "period": "Usage period",
-      "nextCharge": "Next payment",
+      "nextCharge": "Next payment date",
       "goWorkspace": "Go to workspace"
     },
     "accessLost": {
@@ -315,7 +315,7 @@
     "title": "Subscription",
     "plan": "Plan",
     "planValue": "{plan} · {amount} / month",
-    "nextCharge": "Next payment",
+    "nextCharge": "Next payment date",
     "nextChargeValue": "{date} · {amount}",
     "noNextCharge": "None",
     "nextChargeChecking": "Checking the payment result",
