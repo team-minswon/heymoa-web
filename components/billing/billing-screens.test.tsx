@@ -1644,7 +1644,7 @@ describe("카드 변경 문서(모달 안)", () => {
     expect(submitButton()).toBeEnabled();
   });
 
-  it("등록을 열어 카드를 내고 결과를 읽어 완료면 changed 를 우리 출처로 알리며, 메시지에 카드 값이 없다", async () => {
+  it("등록을 열어 카드를 내고 제출 응답이 완료면 다시 읽지 않고 changed 를 우리 출처로 알리며, 메시지에 카드 값이 없다", async () => {
     await renderFrame();
     fillReplace();
     fireEvent.click(submitButton());
@@ -1659,6 +1659,26 @@ describe("카드 변경 문서(모달 안)", () => {
     expect(text).not.toContain(CARD_NUMBER);
     expect(text).not.toContain("900101");
     expect(goToSetupResult).not.toHaveBeenCalled();
+    // 서버가 발급을 요청 안에서 끝낸다 — 등록 상태를 따로 다시 읽지 않는다.
+    expect(requests.some((r) => r.startsWith("GET /v1/me/billing/setups/"))).toBe(false);
+  });
+
+  it("제출 응답이 아직 처리 중(같은 등록의 다른 제출이 발급 중)이면 기다리지 않고 결과 화면에 맡긴다", async () => {
+    server.use(
+      http.post(`*/v1/workspaces/${PAID}/billing/setups/:setupId/card`, () =>
+        envelope(
+          setupBody("BILLING_KEY", "PROCESSING", {
+            workspaceId: PAID,
+            purpose: "REPLACE",
+          })
+        )
+      )
+    );
+    await renderFrame();
+    fillReplace();
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(events()).toContain("result"));
+    expect(events()).not.toContain("changed");
   });
 
   it("목 replaceFail — 거절이면 이 자리에 알리고, 다시 내면 새 등록으로 낸다", async () => {

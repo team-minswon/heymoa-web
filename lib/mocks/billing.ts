@@ -1118,6 +1118,8 @@ async function submitCard(
     setup.state = "ISSUE_UNKNOWN";
     if (ws.mySetupId === setup.setupId) ws.mySetupId = null;
   } else setup.state = "COMPLETING";
+  // 서버는 발급을 요청 안에서 끝내고 결과 상태를 돌려준다(SubmitBillingCardService). 카드 변경은 발급이 곧 끝이라 바로 결과다.
+  if (setup.purpose === "REPLACE") setup.polls = 2;
   return setupStatus(setup, false);
 }
 

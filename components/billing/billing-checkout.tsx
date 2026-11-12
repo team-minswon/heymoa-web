@@ -24,7 +24,6 @@ import {
 import {
   submitBillingCard,
   useCreateBillingSetup,
-  getMyBillingSetup,
 } from "@/lib/api/generated/billing/billing";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { errorCodeOf } from "@/lib/api/error-message";
@@ -40,7 +39,7 @@ import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { planName } from "@/lib/billing/plan-name";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
-import { isPollingView, setupViewOf } from "@/lib/billing/setup-view";
+import { setupViewOf } from "@/lib/billing/setup-view";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { localePath } from "@/lib/i18n/locales";
 import { PG_TERMS } from "@/content/billing/pg-terms";
@@ -53,25 +52,6 @@ type Notice =
   | "cardRejected"
   | "replaceRejected"
   | { message: string };
-
-/** 카드 변경 결과를 기다리는 한도. 넘으면 결과 화면에 맡긴다(그 화면이 계속 읽는다). */
-const REPLACE_WAIT_MS = 20_000;
-
-/**
- * 카드 변경을 낸 뒤 그 등록이 끝날 때까지 1초마다 읽는다(한도 `REPLACE_WAIT_MS`). 화면을 채우는 폴링이 아니라 방금 낸 제출의
- * 결과를 기다리는 것이라 제출 처리 안에서 기다린다. 한도를 넘으면 `null`(결과 화면에 맡긴다).
- */
-async function settledView(setupId: string) {
-  const deadline = Date.now() + REPLACE_WAIT_MS;
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const response = await getMyBillingSetup(setupId).catch(() => undefined);
-    const setup = okData(response);
-    const view = setup ? setupViewOf(setup) : null;
-    if (view && !isPollingView(view)) return view;
-  }
-  return null;
-}
 
 const SECTION_TITLE = "mb-3 text-sm font-medium text-[var(--el-ink)]";
 
@@ -86,7 +66,8 @@ const SECTION_TITLE = "mb-3 text-sm font-medium text-[var(--el-ink)]";
  *
  * - 400(입력 거절)·429(시도 제한)는 이 자리에서 알리고 입력을 둔다
  * - 첫 구독: 제출이 끝나면(409·결과 불명 포함) 결과 화면으로(`onResult`)
- * - 카드 변경: 등록 결과를 읽어 완료면 `onChanged`, 거절이면 이 자리에서 알리고 새 등록으로 다시 받는다. 그 밖은 결과 화면으로
+ * - 카드 변경: 서버가 발급을 요청 안에서 끝내 제출 응답이 등록 상태다. 완료면 `onChanged`, 거절이면 이 자리에서 알리고 새 등록으로
+ *   다시 받는다. 그 밖(같은 등록의 다른 제출이 발급 중 등)은 결과 화면으로
  */
 export function CheckoutForm({
   workspaceId,
@@ -234,16 +215,18 @@ export function CheckoutForm({
         void invalidateWorkspaceBilling(queryClient, workspaceId);
       }
       step = "card";
-      await submitBillingCard(workspaceId, setupId, cardRequestOf(card), {
-        timeoutMs: REQUEST_TIMEOUT_MS,
-      });
+      const submitted = okData(
+        await submitBillingCard(workspaceId, setupId, cardRequestOf(card), {
+          timeoutMs: REQUEST_TIMEOUT_MS,
+        })
+      );
       setCard(EMPTY_CARD);
       if (!replace) {
         leaving = true;
         onResult(setupId);
         return;
       }
-      const view = await settledView(setupId);
+      const view = submitted ? setupViewOf(submitted) : null;
       if (view === "completed") {
         leaving = true;
         onChanged?.();
