@@ -682,7 +682,7 @@
       "cta": "Start free, upgrade later"
     },
     "unit": "Pricing is per workspace. One admin pays, and every member gets it.",
-    "terms": "Pro renews automatically on the same day each month, and you can cancel anytime. If you cancel, you keep Pro until the paid period ends. Ask within 7 days of payment, and if the workspace has recorded {hours, number} hours or less in that billing period by then, you get a full refund.",
+    "terms": "Pro renews automatically on the same day each month, and you can cancel anytime. If you cancel, you keep Pro until the paid period ends. If you ask within 7 days of the payment date and the whole workspace recorded {hours, number} hours or less in total in that billing period, you get a full refund.",
     "refundLink": "See the refund policy"
   },
   "nav": {

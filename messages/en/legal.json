@@ -107,7 +107,7 @@
         "title": "10. Paid Services and Payment",
         "body": [
           "The Pro plan is subscribed to per workspace, and its price is the amount shown on the payment screen.",
-          "Payment is made with a card registered by a workspace admin, and HeyMoa does not store full card numbers.",
+          "Payment is made with a card registered by a workspace admin. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Payments Co., Ltd.). HeyMoa does not store these values. HeyMoa stores only the recurring payment key, the card issuer name, and the last four digits of the card number.",
           "The admin who registered the card is the payer for that subscription. Other admins of the same workspace can also cancel or resume the subscription and change the card; the admin who changes the card becomes the payer from then on, and later payments are charged to that admin's card.",
           "You can use Pro from the time the payment is approved and applied to the workspace. The usage period runs in one-month units from the date of the first payment (the anchor date), and does not include the day the next period starts. In a month that has no such date, the period starts on the last day of that month, and in the following month it goes back to the original anchor date (for example, if you start on January 31, the next period starts on the last day of February and the one after that on March 31).",
           "If a minor makes a payment without the consent of a legal guardian, the minor or the legal guardian may cancel that payment."
@@ -131,7 +131,7 @@
       {
         "title": "13. Refunds",
         "body": [
-          "If you request a refund through Help & feedback within 7 days of the payment date and 20 hours or less was recorded in that usage period up to the time of the request, HeyMoa refunds the full payment amount.",
+          "If you request a refund through Help & feedback within 7 days of the payment date and the whole workspace recorded 20 hours or less in total in that billing period, HeyMoa refunds the full amount.",
           "In other cases, HeyMoa does not give refunds for usage periods already paid for. However, if you could not use the Service for reasons attributable to HeyMoa, such as a service outage, HeyMoa refunds you after confirming it when you request it through Help & feedback.",
           "This Section does not limit the right to withdraw from a purchase granted under applicable laws.",
           "If you are refunded for the payment of the current usage period, the subscription ends and the workspace changes to the Free plan. A refund for the payment of a past usage period does not affect the current subscription.",
@@ -218,7 +218,7 @@
               ],
               [
                 "Payments",
-                "Payment method identifier (billing key), card issuer name and a masked part of the card number, payment and refund times and amounts, payer account. Full card numbers and expiry dates are held by the payment processor and are not stored by HeyMoa"
+                "Recurring payment key (billing key), card issuer name and the last four digits of the card number, payment and refund times and amounts, payer account. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Payments Co., Ltd.); HeyMoa does not store them"
               ],
               [
                 "Inquiries and feedback",
@@ -366,7 +366,7 @@
                 "Records of payment contracts and withdrawals. Kept after account deletion under the enforcement decree of the Act on Consumer Protection in Electronic Commerce"
               ],
               [
-                "Payment and service supply records (payment and refund times and amounts, masked part of the card number, payer account)",
+                "Payment and service supply records (payment and refund times and amounts, last four digits of the card number, payer account)",
                 "5 years",
                 "Kept after account deletion under the enforcement decree of the Act on Consumer Protection in Electronic Commerce"
               ],
@@ -376,7 +376,7 @@
                 "If an inquiry about a payment or refund counts as a complaint or dispute, it is kept after account deletion under the enforcement decree of the Act on Consumer Protection in Electronic Commerce"
               ],
               [
-                "Payment method identifier (billing key)",
+                "Recurring payment key (billing key)",
                 "Until the card is deleted",
                 "Deleted when the card is removed because the subscription ended or charging stopped. Managed separately from the transaction records above"
               ],

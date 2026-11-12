@@ -412,7 +412,7 @@ function CheckoutContent({
               link: (chunks) => (
                 <SitePageLink
                   href={localePath(locale, "/terms#section-13")}
-                  className="underline underline-offset-2 hover:text-[var(--el-ink)]"
+                  className="whitespace-nowrap underline underline-offset-2 hover:text-[var(--el-ink)]"
                 >
                   {chunks}
                 </SitePageLink>

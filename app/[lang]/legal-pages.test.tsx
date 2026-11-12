@@ -101,7 +101,7 @@ describe("HeyMoa legal pages", () => {
     // 주문 확인 화면의 「환불 규정 보기」가 `/terms#section-13`으로 온다. 조 순서가 밀리면 다른 조가 열린다.
     const refund = document.getElementById("section-13");
     expect(refund).toHaveTextContent("제13조 (환불)");
-    expect(refund).toHaveTextContent(/결제일부터 7일 이내에 문의·피드백으로 환불을 요청하고, 요청한 때까지 해당 이용 기간의 녹음 시간이 20시간 이하이면/);
+    expect(refund).toHaveTextContent(/결제일부터 7일 이내에 문의·피드백으로 환불을 요청하고, 그 결제 기간에 워크스페이스 전체의 녹음 시간 합계가 20시간 이하이면 전액 환불합니다/);
     expect(document.getElementById("section-11")).toHaveTextContent("제11조 (자동 갱신)");
     expect(document.getElementById("section-15")).toHaveTextContent("제15조 (약관의 변경과 문의)");
   });
@@ -110,6 +110,7 @@ describe("HeyMoa legal pages", () => {
     await renderPage(TermsPage, "ko");
     const text = (id: string) => document.getElementById(id)?.textContent ?? "";
     expect(text("section-10")).toMatch(/카드를 등록한 관리자가 그 구독의 결제자가 됩니다/);
+    expect(text("section-10")).toMatch(/HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스페이먼츠 주식회사\)에 전달하며, HeyMoa는 이 값을 저장하지 않습니다/);
     expect(text("section-10")).toMatch(/첫 결제일\(기준일\)부터 한 달 단위이며, 다음 기간이 시작하는 날은 포함하지 않습니다/);
     expect(text("section-10")).toMatch(/법정대리인의 동의 없이 결제한 경우/);
     expect(text("section-11")).toMatch(/적용일 30일 전까지 서비스 안 공지 또는 이메일로 변경 전후 금액과 적용일을 알립니다/);
@@ -127,7 +128,7 @@ describe("HeyMoa legal pages", () => {
 
   it("처리방침에 결제 정보 항목·목적·보관 기간을 적고 결제 대행사 위탁은 넣지 않는다(APP-1586 초안)", async () => {
     await renderPage(PrivacyPage, "ko");
-    expect(document.getElementById("section-1")).toHaveTextContent(/빌링키.*카드 번호 전체와 유효기간 같은 카드 정보는 결제 대행사가 보관하며 HeyMoa는 저장하지 않음/);
+    expect(document.getElementById("section-1")).toHaveTextContent(/빌링키.*카드 번호 끝 네 자리.*HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스페이먼츠 주식회사\)에 전달하며 HeyMoa는 저장하지 않음/);
     expect(document.getElementById("section-2")).toHaveTextContent(/정기 결제 갱신, 환불 처리, 결제 문의 대응/);
     expect(document.getElementById("section-2")).toHaveTextContent(/결제 메일은 보내지 않습니다/);
     const retention = document.getElementById("section-6");

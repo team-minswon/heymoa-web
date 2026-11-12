@@ -46,7 +46,7 @@ Before the paid period ends, you can resume a canceled subscription. You need a 
 
 ## Get a refund {#refund}
 
-==If you ask within 7 days of the payment date, and the workspace has recorded 20 hours or less in that billing period by then, you get a full refund.== Otherwise, periods you've already paid for aren't refunded. However, if you couldn't use the service because of a problem on HeyMoa's side, such as an outage, we check and refund you.
+==If you ask within 7 days of the payment date and the whole workspace recorded 20 hours or less in total in that billing period, you get a full refund.== Otherwise, periods you've already paid for aren't refunded. However, if you couldn't use the service because of a problem on HeyMoa's side, such as an outage, we check and refund you.
 
 1. **Click [Help & feedback] in the sidebar**
    The request window opens.
@@ -66,7 +66,7 @@ Once a refund is confirmed, we ask to cancel the card payment within 3 business 
 - **When it's checked**: The limit is checked only when you start recording. A recording in progress isn't cut off, even if it goes over. You just can't start the next one.
 - **When it resets**: Free usage starts over on the 1st of each month, Korea time.
 - **Recordings that cross into a new month**: They count toward the month they started in.
-- **Deleting notes**: Deleting a note doesn't give back usage you've already used.
+- **Deleting notes**: Even if you delete a note, the recording time you've already used stays in that month's usage.
 - **Meetings being recorded**: They're added to usage after the meeting ends.
 
 ## If the payer leaves the workspace {#payer-left}
