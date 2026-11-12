@@ -113,7 +113,6 @@ export function CardFields({
             inputMode="numeric"
             maxLength={2}
             autoComplete="off"
-            placeholder="••"
           />
           {password.error}
         </div>
