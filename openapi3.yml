@@ -11742,7 +11742,7 @@ paths:
       tags:
       - Billing
       summary: 다음 결제 해지 예약
-      description: ADMIN 이 기간 안의 ACTIVE 구독을 해지 예약한다. PG 를 부르지 않고 기간 끝(currentPeriod.end)에 청구 없이 끝난다. 같은 requestKey 재전송은 다시 적용하지 않고 지금 상태를 돌려주며, expectedVersion 이 다르면 409 BILLING_STATE_CHANGED.
+      description: ADMIN 이 기간 안의 ACTIVE 구독을 해지 예약한다. PG 를 부르지 않고 기간 끝(currentPeriod.end)에 청구 없이 끝난다. 갱신 결과를 기다리는 동안에도 받는다 — 확인 중인 갱신이 승인되면 그 기간 끝에, 거절되면 그 자리(UNPAID)에서 끝난다. 같은 requestKey 재전송은 다시 적용하지 않고 지금 상태를 돌려주며, expectedVersion 이 다르면 409 BILLING_STATE_CHANGED.
       operationId: cancelBillingSubscription
       parameters:
       - name: workspaceId
@@ -21741,7 +21741,6 @@ components:
               example: FAKE
               enum:
               - FAKE
-              - TOSS
               - PAYPLE
             recordingAllowanceMinutes:
               type: integer
@@ -21876,7 +21875,7 @@ components:
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
             allowedActions:
               type: array
-              description: '화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD'
+              description: '화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD'
               items:
                 type: string
                 example: START_PURCHASE
@@ -21969,7 +21968,7 @@ components:
                   nullable: true
                   example: COMPENSATION
                   enum:
-                  - USER
+                  - OPERATOR
                   - RECONCILIATION
                   - COMPENSATION
                 refundStatus:
@@ -22042,7 +22041,7 @@ components:
                   nullable: true
                   example: COMPENSATION
                   enum:
-                  - USER
+                  - OPERATOR
                   - RECONCILIATION
                   - COMPENSATION
                 refundStatus:
@@ -22113,7 +22112,6 @@ components:
               example: FAKE
               enum:
               - FAKE
-              - TOSS
               - PAYPLE
           description: 성공 응답 데이터
           nullable: false
@@ -22228,7 +22226,7 @@ components:
           properties:
             enforced:
               type: boolean
-              description: 결제 집행 대상 여부. false 면 나머지가 null·빈 값이고 구매 명령은 403 BILLING_NOT_AVAILABLE
+              description: 결제 화면을 보여 주는가 — 집행 대상이거나 구매를 시작한 적이 있다(계약이 붙은 구독). false 면 나머지가 null·빈 값. 새 구매(START_PURCHASE)는 집행 대상에만 나오고 아니면 등록 생성이 403 BILLING_NOT_AVAILABLE
               nullable: false
               example: true
             product:
@@ -22313,7 +22311,7 @@ components:
               example: false
             allowedActions:
               type: array
-              description: '화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD'
+              description: '화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD'
               items:
                 type: string
                 example: START_PURCHASE
@@ -22364,9 +22362,7 @@ components:
                   enum:
                   - FREE
                   - PAID
-                  - LEGACY_ACCESS
-                  - TEST
-                  - GRACE
+                  - RENEWAL_PENDING
                 planCode:
                   type: string
                   description: 지금 플랜의 상품 코드. FREE 또는 PRO
@@ -22468,7 +22464,7 @@ components:
                       nullable: true
                       example: COMPENSATION
                       enum:
-                      - USER
+                      - OPERATOR
                       - RECONCILIATION
                       - COMPENSATION
                     refundStatus:
@@ -22536,7 +22532,7 @@ components:
                       nullable: true
                       example: COMPENSATION
                       enum:
-                      - USER
+                      - OPERATOR
                       - RECONCILIATION
                       - COMPENSATION
                     refundStatus:
@@ -22634,7 +22630,6 @@ components:
               enum:
               - FREE
               - ACTIVE
-              - PAST_DUE
               - ENDED
             workspaceId:
               type: string
@@ -22856,7 +22851,7 @@ components:
               description: 그 환불의 출처. 없으면 null
               nullable: true
               enum:
-              - USER
+              - OPERATOR
               - RECONCILIATION
               - COMPENSATION
             refundStatus:
@@ -23022,7 +23017,6 @@ components:
               enum:
               - FREE
               - ACTIVE
-              - PAST_DUE
               - ENDED
           description: 성공 응답 데이터
           nullable: false
@@ -23151,7 +23145,7 @@ components:
                     description: 그 환불의 출처. 없으면 null
                     nullable: true
                     enum:
-                    - USER
+                    - OPERATOR
                     - RECONCILIATION
                     - COMPENSATION
                   refundStatus:

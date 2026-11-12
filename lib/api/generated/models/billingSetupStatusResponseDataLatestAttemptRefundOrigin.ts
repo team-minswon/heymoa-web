@@ -15,7 +15,7 @@ export type BillingSetupStatusResponseDataLatestAttemptRefundOrigin =
   | null;
 
 export const BillingSetupStatusResponseDataLatestAttemptRefundOrigin = {
-  USER: "USER",
+  OPERATOR: "OPERATOR",
   RECONCILIATION: "RECONCILIATION",
   COMPENSATION: "COMPENSATION",
 } as const;

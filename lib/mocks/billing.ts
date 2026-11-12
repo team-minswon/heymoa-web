@@ -22,7 +22,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `teamBusy` 다른 ADMIN 의 진행 중 구매가 있다(구매 시작 409 `BILLING_IN_PROGRESS`)
  *   - `refund`   승인은 됐지만 권한을 못 줘 자동 취소된다(보상 환불) — 취소 중 → 취소 완료, 새로 시작 가능
  *   - `quota`    무료 월 한도를 다 썼다 — 사용량이 한도와 같고 녹음 시작이 409 `RECORDING_QUOTA_EXCEEDED`(`billingMock.quotaExceeded()`)
- *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(GRACE, 그동안 Pro)
+ *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(RENEWAL_PENDING, 그동안 Pro)
    - `unpaid`   유료 공간의 갱신 결제가 확정 거절돼 구독이 끝났다(ENDED/UNPAID, 카드 지워짐)
    - `expired`  해지한 유료 구독의 기간이 끝났다(ENDED/EXPIRED, 카드 지워짐)
    - `recording` 이 공간에 아직 끝나지 않은 녹음이 있다(사용량 `recordingInProgress=true`)
@@ -105,7 +105,7 @@ type Payment = {
   errorCode: string | null;
   maskedCard: Card | null;
   refundStatus: RefundStatus | null;
-  refundOrigin: "USER" | "COMPENSATION" | null;
+  refundOrigin: "OPERATOR" | "COMPENSATION" | null;
 };
 type Setup = {
   setupId: string;
@@ -129,8 +129,8 @@ type Workspace = {
   refunded?: Attempt | null;
   mySetupId: string | null;
   subscriptionVersion: number;
-  /** 갱신 결제의 결과를 기다리는 중인가(GRACE). */
-  grace?: boolean;
+  /** 갱신 결제의 결과를 기다리는 중인가(RENEWAL_PENDING). */
+  renewalPending?: boolean;
   /** 끝난 구독(ENDED)의 까닭. */
   closedReason?: "REFUNDED" | "EXPIRED" | "UNPAID" | null;
   cancelAtPeriodEnd?: boolean;
@@ -279,7 +279,7 @@ function seedPayments(): Record<string, Payment> {
         issuer: "헤이모아카드",
       },
       refundStatus: "SUCCEEDED",
-      refundOrigin: "USER",
+      refundOrigin: "OPERATOR",
     },
   ];
   return Object.fromEntries(
@@ -423,7 +423,7 @@ function recordPayment(
 }
 
 /**
- * 유료 공간에 갱신 시나리오를 한 번 적용한다. 결과를 기다리는 동안은 열린 회차와 GRACE 지급이 있고, 확정 거절·기간 만료는
+ * 유료 공간에 갱신 시나리오를 한 번 적용한다. 결과를 기다리는 동안은 열린 회차와 RENEWAL_PENDING 지급이 있고, 확정 거절·기간 만료는
  * 그 자리에서 구독을 끝내고 카드를 지운다(서버의 빌링키 삭제 의도).
  */
 function applyRenewal(ws: Workspace) {
@@ -439,7 +439,7 @@ function applyRenewal(ws: Workspace) {
   ws.renewalApplied = true;
   if (scenario === "renewalChecking") {
     const cycleId = nextId("0C");
-    ws.grace = true;
+    ws.renewalPending = true;
     ws.cycle = { cycleId, attempt: newAttempt(cycleId, 1, "UNKNOWN") };
     return;
   }
@@ -491,9 +491,9 @@ function workspaceBilling(workspaceId: string) {
     if (status === "ACTIVE") actions.push("CHANGE_CARD");
     if (ws.methodId && !live) actions.push("DELETE_PAYMENT_METHOD");
   }
-  const entitlement = ws.grace
+  const entitlement = ws.renewalPending
     ? {
-        kind: "GRACE",
+        kind: "RENEWAL_PENDING",
         period: PERIOD,
         recordingAllowanceMinutes: PRODUCT.recordingAllowanceMinutes,
         planCode: "PRO",

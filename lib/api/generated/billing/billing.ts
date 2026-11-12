@@ -3252,7 +3252,7 @@ export const getCancelBillingSubscriptionUrl = (workspaceId: string) => {
 };
 
 /**
- * ADMIN 이 기간 안의 ACTIVE 구독을 해지 예약한다. PG 를 부르지 않고 기간 끝(currentPeriod.end)에 청구 없이 끝난다. 같은 requestKey 재전송은 다시 적용하지 않고 지금 상태를 돌려주며, expectedVersion 이 다르면 409 BILLING_STATE_CHANGED.
+ * ADMIN 이 기간 안의 ACTIVE 구독을 해지 예약한다. PG 를 부르지 않고 기간 끝(currentPeriod.end)에 청구 없이 끝난다. 갱신 결과를 기다리는 동안에도 받는다 — 확인 중인 갱신이 승인되면 그 기간 끝에, 거절되면 그 자리(UNPAID)에서 끝난다. 같은 requestKey 재전송은 다시 적용하지 않고 지금 상태를 돌려주며, expectedVersion 이 다르면 409 BILLING_STATE_CHANGED.
  * @summary 다음 결제 해지 예약
  */
 export const cancelBillingSubscription = async (

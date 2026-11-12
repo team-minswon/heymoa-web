@@ -15,7 +15,7 @@ export type WorkspaceBillingResponseDataDetailRefundedAttemptRefundOrigin =
   | null;
 
 export const WorkspaceBillingResponseDataDetailRefundedAttemptRefundOrigin = {
-  USER: "USER",
+  OPERATOR: "OPERATOR",
   RECONCILIATION: "RECONCILIATION",
   COMPENSATION: "COMPENSATION",
 } as const;

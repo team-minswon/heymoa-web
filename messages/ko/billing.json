@@ -29,10 +29,6 @@
     "title": "요금제",
     "description": "이 워크스페이스의 요금제와 이번 달 녹음 사용량입니다.",
     "loading": "요금제를 불러오는 중",
-    "kind": {
-      "LEGACY_ACCESS": "기존 이용권",
-      "TEST": "시험 이용권"
-    },
     "plan": {
       "shared": "이 공간의 모든 멤버가 함께 씁니다",
       "autoRenew": "매월 자동으로 갱신됩니다",
@@ -83,7 +79,7 @@
       "free": "매달 {allowance}까지 녹음할 수 있습니다.",
       "next": "다음 결제 {date} · {amount}",
       "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다.",
-      "grace": "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다."
+      "renewalPending": "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다."
     },
     "closed": {
       "UNPAID": "결제가 승인되지 않아 구독이 종료되었습니다. 다시 시작하려면 카드를 등록해 주세요.",
@@ -320,7 +316,7 @@
     "refund": "환불",
     "refundValue": "{status} · {origin}",
     "origin": {
-      "USER": "문의 요청",
+      "OPERATOR": "문의 요청",
       "COMPENSATION": "자동 취소",
       "RECONCILIATION": "결제 확인 뒤 취소"
     },

@@ -410,7 +410,7 @@ describe("카드 변경", () => {
             originAttempt: null,
             testPaymentNotice: null,
             planCode: "PRO",
-            provider: "TOSS",
+            provider: "PAYPLE",
             pollAfterSeconds: null,
           },
         })
@@ -456,7 +456,7 @@ describe("결제 상세", () => {
               errorCode: null,
               maskedCard: null,
               refundStatus: "SUCCEEDED",
-              refundOrigin: "USER",
+              refundOrigin: "OPERATOR",
               payerIsMe: true,
               cycleStatus: "REFUNDED",
             },

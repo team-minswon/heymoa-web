@@ -29,10 +29,6 @@
     "title": "Plan",
     "description": "This workspace's plan and this month's recording usage.",
     "loading": "Loading plans",
-    "kind": {
-      "LEGACY_ACCESS": "Existing access",
-      "TEST": "Test access"
-    },
     "plan": {
       "shared": "Everyone in this workspace shares it",
       "autoRenew": "Renews automatically every month",
@@ -83,7 +79,7 @@
       "free": "Record up to {allowance} every month.",
       "next": "Next payment {date} · {amount}",
       "cancelScheduled": "Active until {end}, then switches to Free.",
-      "grace": "Checking the renewal payment result. You keep Pro in the meantime."
+      "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime."
     },
     "closed": {
       "UNPAID": "The subscription ended because the payment wasn't approved. Register a card to start again.",
@@ -320,7 +316,7 @@
     "refund": "Refund",
     "refundValue": "{status} · {origin}",
     "origin": {
-      "USER": "Requested via support",
+      "OPERATOR": "Requested via support",
       "COMPENSATION": "Canceled automatically",
       "RECONCILIATION": "Canceled after review"
     },

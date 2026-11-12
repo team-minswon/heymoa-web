@@ -14,6 +14,5 @@ export type BillingSetupCreatedResponseDataProvider =
 
 export const BillingSetupCreatedResponseDataProvider = {
   FAKE: "FAKE",
-  TOSS: "TOSS",
   PAYPLE: "PAYPLE",
 } as const;

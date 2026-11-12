@@ -17,7 +17,7 @@ import type { WorkspaceBillingResponseDataStatus } from "./workspaceBillingRespo
  * 성공 응답 데이터
  */
 export type WorkspaceBillingResponseData = {
-  /** 결제 집행 대상 여부. false 면 나머지가 null·빈 값이고 구매 명령은 403 BILLING_NOT_AVAILABLE */
+  /** 결제 화면을 보여 주는가 — 집행 대상이거나 구매를 시작한 적이 있다(계약이 붙은 구독). false 면 나머지가 null·빈 값. 새 구매(START_PURCHASE)는 집행 대상에만 나오고 아니면 등록 생성이 403 BILLING_NOT_AVAILABLE */
   enforced: boolean;
   /**
    * 판매 상품(시험 fixture)
@@ -32,7 +32,7 @@ export type WorkspaceBillingResponseData = {
   mySetupId: string | null;
   /** 다른 ADMIN 이 연 진행 중 등록이 있다(내용은 보이지 않는다) */
   teamSetupInProgress: boolean;
-  /** 화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, RETRY_PAYMENT, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD */
+  /** 화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD */
   allowedActions: string[];
   /** 기간 끝에 해지 예약 여부 */
   cancelAtPeriodEnd: boolean;

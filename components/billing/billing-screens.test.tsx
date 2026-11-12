@@ -162,7 +162,7 @@ const setupBody = (
   originAttempt: null,
   testPaymentNotice: "SIMULATED_NO_CHARGE",
   planCode: "PRO",
-  provider: "TOSS",
+  provider: "PAYPLE",
   pollAfterSeconds: null,
   ...extra,
 });
@@ -257,11 +257,11 @@ describe("요금제 화면", () => {
     expect(startButton()).not.toBeInTheDocument();
   });
 
-  it("갱신 결제 결과를 기다리는 동안(GRACE)은 Pro 로 보이고 미납이라 하지 않는다", async () => {
+  it("갱신 결제 결과를 기다리는 동안(RENEWAL_PENDING)은 Pro 로 보이고 미납이라 하지 않는다", async () => {
     serveBilling({
       status: "ACTIVE",
       entitlement: {
-        kind: "GRACE",
+        kind: "RENEWAL_PENDING",
         period: {
           start: "2026-11-11T00:00:00+09:00",
           end: "2026-12-11T00:00:00+09:00",
@@ -285,6 +285,29 @@ describe("요금제 화면", () => {
       screen.queryByRole("button", { name: "상태 다시 확인" })
     ).not.toBeInTheDocument();
     expect(startButton()).not.toBeInTheDocument();
+  });
+
+  it("운영자 환불(OPERATOR)은 보상 취소가 아니라 「결제 취소 처리 중」으로 알린다", async () => {
+    serveBilling({
+      status: "ACTIVE",
+      allowedActions: [],
+      detail: {
+        ...detail("SUCCEEDED"),
+        latestAttempt: null,
+        refundedAttempt: {
+          ...detail("SUCCEEDED").latestAttempt,
+          refundStatus: "PROCESSING",
+          refundOrigin: "OPERATOR",
+        },
+      },
+    });
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(
+      await screen.findByText("결제 취소 처리 중입니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("결제를 취소하고 있습니다")
+    ).not.toBeInTheDocument();
   });
 
   it.each([
@@ -942,8 +965,8 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
       await act(() => vi.advanceTimersByTimeAsync(1100));
     await screen.findByText("결제가 완료되었습니다");
     expect(resultEvents()).toEqual([
-      { workspace_id: FREE, provider: "TOSS", result: "unknown" },
-      { workspace_id: FREE, provider: "TOSS", result: "completed" },
+      { workspace_id: FREE, provider: "PAYPLE", result: "unknown" },
+      { workspace_id: FREE, provider: "PAYPLE", result: "completed" },
     ]);
     expect(JSON.stringify(vi.mocked(track).mock.calls)).not.toMatch(
       /S1|authKey|state/

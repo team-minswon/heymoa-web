@@ -15,7 +15,7 @@ export type MyBillingPaymentsResponseDataPaymentsItemRefundOrigin =
   | null;
 
 export const MyBillingPaymentsResponseDataPaymentsItemRefundOrigin = {
-  USER: "USER",
+  OPERATOR: "OPERATOR",
   RECONCILIATION: "RECONCILIATION",
   COMPENSATION: "COMPENSATION",
 } as const;

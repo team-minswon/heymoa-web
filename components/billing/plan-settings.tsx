@@ -129,7 +129,7 @@ function PlanContent({
   onOpenPayment: () => void;
 }) {
   const poll = usePollWindow();
-  // 문의로 받은 환불(USER)은 미정산 시도가 아니라 `REFRESH_STATUS` 가 없다 — 취소 처리 중이면 같이 다시 읽는다.
+  // 운영자 환불(OPERATOR)은 미정산 시도가 아니라 `REFRESH_STATUS` 가 없다 — 취소 처리 중이면 같이 다시 읽는다.
   const billing = useWorkspaceBilling(workspaceId, (data) =>
     !poll.expired &&
     data &&
@@ -142,13 +142,13 @@ function PlanContent({
   useRefundResultEvent(
     workspaceId,
     refunded?.refundStatus,
-    refunded?.refundOrigin === "USER"
+    refunded?.refundOrigin === "OPERATOR"
   );
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const isAdmin = workspace?.role === "ADMIN";
 
   const kind = billing.entitlement?.kind;
-  const isPaid = kind === "PAID" || kind === "TEST" || kind === "GRACE";
+  const isPaid = kind === "PAID" || kind === "RENEWAL_PENDING";
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
@@ -200,14 +200,12 @@ function CurrentPlan({
   const badge =
     billing.cancelAtPeriodEnd && billing.status === "ACTIVE"
       ? t("badge.cancelScheduled")
-      : kind === "TEST" || kind === "LEGACY_ACCESS"
-        ? t(`kind.${kind}`)
-        : null;
+      : null;
 
-  // GRACE 는 갱신 결제의 결과를 기다리는 동안의 Pro 다.
+  // RENEWAL_PENDING 은 갱신 결제의 결과를 기다리는 동안의 Pro 다.
   const line =
-    kind === "GRACE"
-      ? t("line.grace")
+    kind === "RENEWAL_PENDING"
+      ? t("line.renewalPending")
       : billing.cancelAtPeriodEnd && billing.status === "ACTIVE" && period
         ? t("line.cancelScheduled", { end: format.date(period.end) })
         : billing.status === "ACTIVE" && period && amount
@@ -429,9 +427,9 @@ function Attention({
   const cancel = useCancelBillingSetup();
   const actions = billing.allowedActions;
   const detail = billing.detail;
-  // 갱신 결과를 기다리는 동안(GRACE)은 현재 요금제 줄이 이미 알리고 사용자가 할 일이 없다 —
+  // 갱신 결과를 기다리는 동안(RENEWAL_PENDING)은 현재 요금제 줄이 이미 알리고 사용자가 할 일이 없다 —
   // 「다시 결제하지 마세요」 안내와 「상태 다시 확인」 버튼은 직접 구매한 사람에게만 보인다
-  const renewalWait = billing.entitlement?.kind === "GRACE";
+  const renewalWait = billing.entitlement?.kind === "RENEWAL_PENDING";
   const checking =
     !renewalWait &&
     (billing.latestAttemptStatus === "PENDING" ||
@@ -443,9 +441,9 @@ function Attention({
     ? detail.latestAttempt
     : detail?.refundedAttempt;
   const refund = refundAttempt?.refundStatus;
-  // 사용자가 요청한 환불은 「결제 취소 처리 중 → 완료」로 따로 말한다(보상 취소와 섞지 않는다).
+  // 운영자 환불(문의로 받은 환불)은 「결제 취소 처리 중 → 완료」로 따로 말한다(보상 취소와 섞지 않는다).
   const userRefund =
-    detail?.refundedAttempt?.refundOrigin === "USER"
+    detail?.refundedAttempt?.refundOrigin === "OPERATOR"
       ? detail.refundedAttempt.refundStatus
       : null;
   const compensation = userRefund ? null : refund;

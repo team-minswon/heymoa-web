@@ -17,6 +17,5 @@ export type WorkspaceBillingResponseDataStatus =
 export const WorkspaceBillingResponseDataStatus = {
   FREE: "FREE",
   ACTIVE: "ACTIVE",
-  PAST_DUE: "PAST_DUE",
   ENDED: "ENDED",
 } as const;
