@@ -22,9 +22,12 @@
     "unlimited": "무제한",
     "nearLimit": "이번 달 제공량의 {percent, number}%를 썼습니다. {date}에 초기화됩니다.",
     "label": "이번 달 녹음",
+    "labelPaid": "이번 결제 기간 녹음",
+    "paidPeriod": "{start} ~ {end}",
     "ofAllowance": "/ {allowance}",
-    "sidebarPaid": "{plan} · 이번 달 {used}",
+    "sidebarPaid": "{plan} · 이번 기간 {used}",
     "remaining": "{duration} 남음",
+    "remainingUnderMinute": "1분 미만 남음",
     "limitReached": "이번 달 한도를 다 썼습니다"
   },
   "page": {

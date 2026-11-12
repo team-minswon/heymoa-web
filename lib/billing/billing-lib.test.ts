@@ -18,7 +18,12 @@ import {
   setupViewOf,
 } from "@/lib/billing/setup-view";
 import { nextPollDelay } from "@/lib/billing/use-poll-window";
-import { freeUsageLevel } from "@/lib/billing/use-recording-usage";
+import {
+  freeUsageLevel,
+  isPaidPeriod,
+  RECORDING_USAGE_POLL_MS,
+  RECORDING_USAGE_QUERY,
+} from "@/lib/billing/use-recording-usage";
 
 describe("nextMonthlyChargeAt", () => {
   // server contract 「기간」: anchor 일을 다음 달 말일로 자르고 시각은 그대로(Asia/Seoul).
@@ -155,7 +160,72 @@ describe("freeUsageLevel", () => {
     ["분은 한도인데 몇 초 남음", 1000, 16000, "near", 99, 0],
     ["남은 샘플이 없으면 분으로", 1000, null, "exhausted", 100, 0],
   ])("%s", (_name, used, remaining, level, percent, remainingMinutes) => {
-    expect(at(used, remaining)).toEqual({ level, percent, remainingMinutes });
+    expect(at(used, remaining)).toMatchObject({
+      level,
+      percent,
+      remainingMinutes,
+    });
+  });
+
+  // 서버는 남은 분을 내림해 준다. 남은 샘플이 있는데 분이 0 이면 1분 미만이 남은 것이다.
+  it.each([
+    [
+      "남은 샘플 0 이면 다 쓴 것이라 1분 미만이 아니다",
+      0,
+      0,
+      "exhausted",
+      false,
+    ],
+    ["1샘플 남으면 1분 미만으로 본다", 1, 0, "near", true],
+    ["59초분 남으면 1분 미만으로 본다", 59 * 16000, 0, "near", true],
+    ["60초분 남으면 1분으로 본다", 60 * 16000, 1, "near", false],
+  ])("%s", (_name, remainingSamples, remainingMinutes, level, underMinute) => {
+    expect(
+      freeUsageLevel({
+        usedMinutes: 1000 - remainingMinutes,
+        allowanceMinutes: 1000,
+        remainingMinutes,
+        remainingSamples,
+      })
+    ).toMatchObject({ level, remainingMinutes, underMinute });
+  });
+});
+
+describe("녹음 사용량 조회 설정(APP-1566)", () => {
+  const interval = (data: unknown) =>
+    RECORDING_USAGE_QUERY.refetchInterval({
+      state: {
+        data: data
+          ? ({ status: 200, data: { success: true, data } } as never)
+          : undefined,
+      },
+    });
+
+  it("창으로 돌아오면 다시 읽고, 창이 가려진 동안은 주기 읽기를 하지 않는다", () => {
+    expect(RECORDING_USAGE_QUERY.refetchOnWindowFocus).toBe(true);
+    expect(RECORDING_USAGE_QUERY.refetchIntervalInBackground).toBe(false);
+  });
+
+  it("집행 대상이면 5분마다 다시 읽는다", () => {
+    expect(RECORDING_USAGE_POLL_MS).toBe(300_000);
+    expect(interval({ enforced: true })).toBe(300_000);
+  });
+
+  it("집행 대상이 아니거나 아직 응답이 없으면 주기 읽기를 끈다", () => {
+    expect(interval({ enforced: false })).toBe(false);
+    expect(interval(undefined)).toBe(false);
+  });
+});
+
+describe("isPaidPeriod", () => {
+  it("서버의 기간 종류로 유료 기간을 가른다", () => {
+    expect(isPaidPeriod({ periodKind: "PAID", unlimited: false })).toBe(true);
+    expect(isPaidPeriod({ periodKind: "FREE", unlimited: true })).toBe(false);
+  });
+
+  it("기간 종류가 없으면 무제한인지로 가른다", () => {
+    expect(isPaidPeriod({ periodKind: null, unlimited: true })).toBe(true);
+    expect(isPaidPeriod({ periodKind: null, unlimited: false })).toBe(false);
   });
 });
 

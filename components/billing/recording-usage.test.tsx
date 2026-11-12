@@ -16,12 +16,16 @@ import {
 } from "vitest";
 
 import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
+import { intlWrapper } from "@/components/help/test-intl";
 import { billingHandlers, billingMock } from "@/lib/mocks/billing";
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
 const FREE = "01K0000000000";
 const PAID = "01K0000000006";
+
+// 영어 화면의 날짜까지 보려고 표시 locale 을 Provider 에서 읽게 한다. 기본 Provider 는 한국어다.
+vi.unmock("@/lib/i18n/use-display-locale");
 
 const server = setupServer(...restHandlers, ...billingHandlers);
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
@@ -33,7 +37,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-const renderIn = (ui: React.ReactNode) =>
+const renderIn = (ui: React.ReactNode, locale: "ko" | "en" = "ko") =>
   render(
     <QueryClientProvider
       client={
@@ -41,7 +45,8 @@ const renderIn = (ui: React.ReactNode) =>
       }
     >
       {ui}
-    </QueryClientProvider>
+    </QueryClientProvider>,
+    { wrapper: intlWrapper(locale) }
   );
 
 /** 설정 › 요금제 탭. 사용량은 현재 요금제 패널의 오른쪽 칸이다. */
@@ -162,10 +167,70 @@ describe("녹음 사용량 — 요금제 탭", () => {
   it("Pro 는 무제한과 참고용 사용 시간만 그리고 막대는 없다", async () => {
     renderIn(<PlanTab workspaceId={PAID} />);
     expect(await screen.findByText("5시간 30분")).toBeInTheDocument();
-    expect(screen.getByText("이번 달 녹음")).toBeInTheDocument();
     expect(screen.getByText("무제한")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText(/초기화/)).not.toBeInTheDocument();
+  });
+
+  it("Pro 는 이번 달 대신 이번 결제 기간이라 하고 그 기간을 한 줄로 보인다", async () => {
+    renderIn(<PlanTab workspaceId={PAID} />);
+    expect(await screen.findByText("이번 결제 기간 녹음")).toBeInTheDocument();
+    expect(screen.queryByText("이번 달 녹음")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("2026년 11월 11일 ~ 2026년 12월 11일")
+    ).toBeInTheDocument();
+  });
+
+  it("영어 화면의 Pro 는 billing period 문구와 영어 날짜로 기간을 보인다", async () => {
+    renderIn(<PlanTab workspaceId={PAID} />, "en");
+    expect(
+      await screen.findByText("Recording this billing period")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("November 11, 2026 ~ December 11, 2026")
+    ).toBeInTheDocument();
+  });
+
+  it("Free 는 이번 달 문구를 그대로 쓰고 기간 줄을 그리지 않는다", async () => {
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(await screen.findByText("이번 달 녹음")).toBeInTheDocument();
+    expect(screen.queryByText("이번 결제 기간 녹음")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ ~ /)).not.toBeInTheDocument();
+  });
+
+  it("영어 화면의 Free 는 this month 문구를 그대로 쓴다", async () => {
+    renderIn(<PlanTab workspaceId={FREE} />, "en");
+    expect(await screen.findByText("Recording this month")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Recording this billing period")
+    ).not.toBeInTheDocument();
+  });
+
+  it("1분 미만이 남으면 0분 대신 1분 미만 남음으로 그린다", async () => {
+    serveUsage(
+      freeUsage({
+        usedMinutes: 119,
+        usedSamples: 115200000 - 59 * 16000,
+        remainingMinutes: 0,
+        remainingSamples: 59 * 16000,
+      })
+    );
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(await screen.findByText("1분 미만 남음")).toBeInTheDocument();
+    expect(screen.queryByText("0분 남음")).not.toBeInTheDocument();
+  });
+
+  it("영어 화면에서 1분 미만이 남으면 Less than 1 min left 로 그린다", async () => {
+    serveUsage(
+      freeUsage({
+        usedMinutes: 119,
+        usedSamples: 115200000 - 16000,
+        remainingMinutes: 0,
+        remainingSamples: 16000,
+      })
+    );
+    renderIn(<PlanTab workspaceId={FREE} />, "en");
+    expect(await screen.findByText("Less than 1 min left")).toBeInTheDocument();
   });
 
   it("사용량 조회가 집행 대상이 아니라고 하면 아무것도 그리지 않는다", async () => {

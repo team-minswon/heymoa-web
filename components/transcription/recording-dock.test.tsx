@@ -9,6 +9,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { onTrack } from "@/lib/analytics/track";
+import { RECORDING_USAGE_QUERY } from "@/lib/billing/use-recording-usage";
 
 import { RecordingDock } from "@/components/transcription/recording-dock";
 
@@ -44,13 +45,17 @@ vi.mock("@/components/transcription/recording-provider", async () => {
 const quota = vi.hoisted(() => ({
   usage: null as Record<string, unknown> | null,
   role: "ADMIN",
+  options: undefined as unknown,
 }));
 vi.mock("@/lib/api/generated/billing/billing", () => ({
-  useGetRecordingUsage: () => ({
-    data: quota.usage
-      ? { status: 200, data: { success: true, data: quota.usage } }
-      : undefined,
-  }),
+  useGetRecordingUsage: (_id: string, options: unknown) => {
+    quota.options = options;
+    return {
+      data: quota.usage
+        ? { status: 200, data: { success: true, data: quota.usage } }
+        : undefined,
+    };
+  },
 }));
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspace: () => ({
@@ -119,6 +124,14 @@ describe("RecordingDock", () => {
       quota.usage = { ...exhausted, usedMinutes: 1100, remainingSamples: 1 };
       render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
       expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
+    });
+
+    it("사용량은 요금제 탭·사이드바와 같은 조회 설정으로 읽는다", () => {
+      recording.phase = "idle";
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      expect(quota.options).toEqual({
+        query: { ...RECORDING_USAGE_QUERY, enabled: true },
+      });
     });
   });
 

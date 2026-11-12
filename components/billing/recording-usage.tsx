@@ -10,6 +10,7 @@ import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { cn } from "@/lib/utils";
 import {
   freeUsageLevel,
+  isPaidPeriod,
   useRecordingUsage,
 } from "@/lib/billing/use-recording-usage";
 
@@ -75,13 +76,23 @@ function UsageBody({
   const usage = useRecordingUsage(workspaceId);
   const format = useBillingFormat();
   if (!usage.enforced || usage.usedMinutes == null) return null;
+  const paid = isPaidPeriod(usage);
+  const label = t(paid ? "labelPaid" : "label");
 
   if (usage.unlimited) {
     return (
       <div className={className}>
-        <p className={LABEL}>{t("label")}</p>
+        <p className={LABEL}>{label}</p>
         <p className={VALUE}>{format.duration(usage.usedMinutes)}</p>
         <p className={`mt-3 ${NOTE}`}>{t("unlimited")}</p>
+        {paid && usage.periodStart && usage.periodEnd ? (
+          <p className={`mt-1 ${NOTE}`}>
+            {t("paidPeriod", {
+              start: format.date(usage.periodStart),
+              end: format.date(usage.periodEnd),
+            })}
+          </p>
+        ) : null}
         {usage.recordingInProgress ? (
           <p className={`mt-1 ${NOTE}`}>{t("recordingInProgress")}</p>
         ) : null}
@@ -90,10 +101,11 @@ function UsageBody({
   }
   if (usage.allowanceMinutes == null) return null;
 
-  const { percent, level, remainingMinutes } = freeUsageLevel(usage);
+  const { percent, level, remainingMinutes, underMinute } =
+    freeUsageLevel(usage);
   return (
     <div className={className}>
-      <p className={LABEL}>{t("label")}</p>
+      <p className={LABEL}>{label}</p>
       {level === "ok" ? (
         <p className={VALUE}>
           <span className="whitespace-nowrap">
@@ -108,7 +120,9 @@ function UsageBody({
       ) : level === "near" ? (
         <p className={cn(VALUE, USAGE_TONE.near.text)}>
           <span className="whitespace-nowrap">
-            {t("remaining", { duration: format.duration(remainingMinutes) })}
+            {underMinute
+              ? t("remainingUnderMinute")
+              : t("remaining", { duration: format.duration(remainingMinutes) })}
           </span>
         </p>
       ) : (
@@ -166,7 +180,7 @@ function UsageSkeleton({ label, paid }: { label: string; paid: boolean }) {
   const t = useTranslations("billing.usage");
   return (
     <div aria-label={label}>
-      <p className={LABEL}>{t("label")}</p>
+      <p className={LABEL}>{t(paid ? "labelPaid" : "label")}</p>
       <Skeleton className="mt-2 h-7 w-32" />
       {paid ? (
         <Skeleton className="mt-3 h-4 w-16" />

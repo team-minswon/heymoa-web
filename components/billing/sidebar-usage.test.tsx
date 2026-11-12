@@ -3,16 +3,22 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SidebarUsage } from "@/components/billing/sidebar-usage";
+import { intlWrapper } from "@/components/help/test-intl";
+import { RECORDING_USAGE_QUERY } from "@/lib/billing/use-recording-usage";
 
 const query = vi.hoisted(() => ({
   usage: undefined as Record<string, unknown> | undefined,
+  options: undefined as unknown,
 }));
 vi.mock("@/lib/api/generated/billing/billing", () => ({
-  useGetRecordingUsage: () => ({
-    data: query.usage
-      ? { status: 200, data: { success: true, data: query.usage } }
-      : undefined,
-  }),
+  useGetRecordingUsage: (_id: string, options: unknown) => {
+    query.options = options;
+    return {
+      data: query.usage
+        ? { status: 200, data: { success: true, data: query.usage } }
+        : undefined,
+    };
+  },
 }));
 
 const free = (used: number, remainingSamples: number) => ({
@@ -23,11 +29,12 @@ const free = (used: number, remainingSamples: number) => ({
   remainingMinutes: Math.max(0, 1200 - used),
   remainingSamples,
 });
-const renderIt = (onOpen = vi.fn()) => {
+const renderIt = (onOpen = vi.fn(), locale: "ko" | "en" = "ko") => {
   render(
     <ul>
       <SidebarUsage workspaceId="01K0000000000" onOpen={onOpen} />
-    </ul>
+    </ul>,
+    { wrapper: intlWrapper(locale) }
   );
   return onOpen;
 };
@@ -84,10 +91,37 @@ describe("SidebarUsage", () => {
     );
   });
 
-  it("Pro 는 막대 없이 한 줄", () => {
+  it("Pro 는 막대 없이 이번 기간 사용 시간 한 줄을 그린다", () => {
     query.usage = { enforced: true, unlimited: true, usedMinutes: 330 };
     renderIt();
-    expect(screen.getByText("Pro · 이번 달 5시간 30분")).toBeInTheDocument();
+    expect(screen.getByText("Pro · 이번 기간 5시간 30분")).toBeInTheDocument();
+    expect(screen.queryByText(/이번 달/)).toBeNull();
     expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
+  it("영어 화면의 Pro 는 this period 로 그린다", () => {
+    query.usage = {
+      enforced: true,
+      periodKind: "PAID",
+      unlimited: true,
+      usedMinutes: 330,
+    };
+    renderIt(vi.fn(), "en");
+    expect(
+      screen.getByText("Pro · 5 hr 30 min this period")
+    ).toBeInTheDocument();
+  });
+
+  it("1분 미만이 남으면 0분 대신 1분 미만 남음으로 그린다", () => {
+    query.usage = { ...free(1200, 59 * 16000), remainingMinutes: 0 };
+    renderIt();
+    expect(screen.getByText("1분 미만 남음")).toBeInTheDocument();
+    expect(screen.queryByText("0분 남음")).toBeNull();
+  });
+
+  it("사용량은 공용 조회 설정으로 읽는다", () => {
+    query.usage = free(720, 480 * 960000);
+    renderIt();
+    expect(query.options).toEqual({ query: RECORDING_USAGE_QUERY });
   });
 });

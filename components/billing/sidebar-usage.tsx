@@ -8,7 +8,11 @@ import { useGetRecordingUsage } from "@/lib/api/generated/billing/billing";
 import { okData } from "@/lib/api/ok-data";
 import { planName } from "@/lib/billing/plan-name";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
-import { freeUsageLevel } from "@/lib/billing/use-recording-usage";
+import {
+  freeUsageLevel,
+  isPaidPeriod,
+  RECORDING_USAGE_QUERY,
+} from "@/lib/billing/use-recording-usage";
 import { cn } from "@/lib/utils";
 
 const BUTTON =
@@ -29,10 +33,11 @@ export function SidebarUsage({
   const t = useTranslations("billing.usage");
   const format = useBillingFormat();
   const usage = okData(
-    useGetRecordingUsage(workspaceId, { query: { staleTime: 0 } }).data
+    useGetRecordingUsage(workspaceId, { query: RECORDING_USAGE_QUERY }).data
   );
   if (!usage?.enforced || usage.usedMinutes == null) return null;
 
+  const paid = isPaidPeriod(usage);
   if (usage.unlimited) {
     return (
       <SidebarMenuItem>
@@ -48,7 +53,8 @@ export function SidebarUsage({
     );
   }
   if (usage.allowanceMinutes == null) return null;
-  const { percent, level, remainingMinutes } = freeUsageLevel(usage);
+  const { percent, level, remainingMinutes, underMinute } =
+    freeUsageLevel(usage);
   const tone = USAGE_TONE[level];
   return (
     <SidebarMenuItem>
@@ -61,7 +67,7 @@ export function SidebarUsage({
           ) : (
             <>
               <span className="truncate text-[var(--el-muted)]">
-                {t("label")}
+                {t(paid ? "labelPaid" : "label")}
               </span>
               <span
                 className={cn(
@@ -70,9 +76,11 @@ export function SidebarUsage({
                 )}
               >
                 {level === "near"
-                  ? t("remaining", {
-                      duration: format.duration(remainingMinutes),
-                    })
+                  ? underMinute
+                    ? t("remainingUnderMinute")
+                    : t("remaining", {
+                        duration: format.duration(remainingMinutes),
+                      })
                   : `${format.duration(usage.usedMinutes)} ${t("ofAllowance", {
                       allowance: format.duration(usage.allowanceMinutes),
                     })}`}

@@ -20,7 +20,10 @@ import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
-import { freeUsageLevel } from "@/lib/billing/use-recording-usage";
+import {
+  freeUsageLevel,
+  RECORDING_USAGE_QUERY,
+} from "@/lib/billing/use-recording-usage";
 import { pushSettings } from "@/lib/workspace/settings-url";
 import {
   Tooltip,
@@ -64,14 +67,14 @@ function PendingStatus({ label }: { label: string }) {
 
 /**
  * 이 공간이 이번 달 무료 녹음 한도를 다 썼으면 그 까닭과 역할을, 아니면 `null`. 사용량·공간 조회는 요금제 탭·사이드바와 같은
- * 키라 녹음이 끝나거나 409 를 받으면 같이 다시 읽힌다. 모르는 동안(조회 중·실패)은 막지 않는다 — 서버가 시작에서 다시 검사한다.
+ * 키·설정이라 녹음이 끝나거나 409 를 받거나 창으로 돌아오거나 5분이 지나면 같이 다시 읽힌다. 모르는 동안(조회 중·실패)은 막지 않는다 — 서버가 시작에서 다시 검사한다.
  */
 function useQuotaBlock(workspaceId: string | undefined) {
   const t = useTranslations("recording");
   const format = useBillingFormat();
   const usage = okData(
     useGetRecordingUsage(workspaceId ?? "", {
-      query: { enabled: Boolean(workspaceId), staleTime: 0 },
+      query: { ...RECORDING_USAGE_QUERY, enabled: Boolean(workspaceId) },
     }).data
   );
   const workspace = okData(

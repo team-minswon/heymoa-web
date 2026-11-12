@@ -22,9 +22,12 @@
     "unlimited": "Unlimited",
     "nearLimit": "You've used {percent, number}% of this month's allowance. It resets on {date}.",
     "label": "Recording this month",
+    "labelPaid": "Recording this billing period",
+    "paidPeriod": "{start} ~ {end}",
     "ofAllowance": "/ {allowance}",
-    "sidebarPaid": "{plan} · {used} this month",
+    "sidebarPaid": "{plan} · {used} this period",
     "remaining": "{duration} left",
+    "remainingUnderMinute": "Less than 1 min left",
     "limitReached": "Monthly limit reached"
   },
   "page": {
