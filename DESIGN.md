@@ -73,7 +73,7 @@ These appear ONLY as soft radial-gradient atmospheric orbs inside `{component.gr
 
 **Inter** carries everything — display at weight 300, body, navigation, captions, and buttons. Korean glyphs fall through to the system sans.
 
-**영어 제목은 Inter Display 모양(광학 크기)입니다 (APP-1510).** `:lang(en)`의 `h1`~`h3`만 `font-optical-sizing: auto`로 켜고 자간을 `-0.015em`으로 덜어 줍니다(`app/globals.css` 끝). 본문·화면 틀은 본문용 모양(opsz 14) 그대로입니다 — 광학 크기를 16px 본문까지 켜면 글자가 좁아져 가독성이 떨어졌습니다. 한국어 화면은 켜지 않습니다. 제목 속 띄어쓰기·문장부호가 Inter라 폭이 바뀌기 때문입니다. **The display serif (EB Garamond / Noto Serif KR) is retired (APP-1161)** — headings use the same family as body so the two never mix. Fallback: `sans-serif`.
+**영어 제목은 Inter Display 모양(광학 크기)입니다 (APP-1510).** `:lang(en)`의 `h1`~`h3`만 `font-optical-sizing: auto`로 켜고 자간을 `-0.015em`으로 덜어 줍니다(`app/globals.css` 끝). 본문·화면 틀은 본문용 모양(opsz 14) 그대로입니다 — 광학 크기를 16px 본문까지 켜면 글자가 좁아져 가독성이 떨어졌습니다. 한국어 화면은 켜지 않습니다. 제목 속 띄어쓰기·문장부호가 Inter라 폭이 바뀌기 때문입니다. **한글은 굵기마다 Apple SD Gothic Neo의 같은 굵기 면으로 잇습니다 (APP-1599).** 맥 Chrome이 `-apple-system`으로 300을 그리면 한글을 Thin으로 골라 숫자·영문보다 크게 가늘어 보였습니다. `app/globals.css`의 `"HeyMoa Hangul"`(`local()`, 한글·CJK 문장부호 범위)이 `--font-inter`에서 Inter 다음에 오고, 그 글꼴이 없는 환경에서는 건너뜁니다. **The display serif (EB Garamond / Noto Serif KR) is retired (APP-1161)** — headings use the same family as body so the two never mix. Fallback: `sans-serif`.
 
 ### Hierarchy
 
