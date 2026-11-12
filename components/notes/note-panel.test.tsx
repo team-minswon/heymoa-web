@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
+import type { NoteResponseDataParticipantsItem } from "@/lib/api/generated/models";
 import {
   afterEach,
   beforeAll,
@@ -117,9 +118,23 @@ const noteState = vi.hoisted(() => ({
     recordedDurationMs: 60_000,
     activeSessionStartedAt: "2026-07-29T00:01:00Z" as string | null,
     participants: [
-      { userId: "u1", name: "테스트 유저", email: "test@heymoa.com" },
-      { userId: "u2", name: "김서연", email: "seoyeon@heymoa.com" },
-    ] as unknown,
+      {
+        participantId: "01K00000000P1",
+        userId: "u1",
+        guestId: null,
+        name: "테스트 유저",
+        email: "test@heymoa.com",
+        image: null,
+      },
+      {
+        participantId: "01K00000000P2",
+        userId: "u2",
+        guestId: null,
+        name: "김서연",
+        email: "seoyeon@heymoa.com",
+        image: null,
+      },
+    ] as NoteResponseDataParticipantsItem[],
   },
 }));
 
@@ -354,8 +369,22 @@ describe("NotePanel", () => {
       recordedDurationMs: 60_000,
       activeSessionStartedAt: "2026-07-29T00:01:00Z",
       participants: [
-        { userId: "u1", name: "테스트 유저", email: "test@heymoa.com" },
-        { userId: "u2", name: "김서연", email: "seoyeon@heymoa.com" },
+        {
+          participantId: "01K00000000P1",
+          userId: "u1",
+          guestId: null,
+          name: "테스트 유저",
+          email: "test@heymoa.com",
+          image: null,
+        },
+        {
+          participantId: "01K00000000P2",
+          userId: "u2",
+          guestId: null,
+          name: "김서연",
+          email: "seoyeon@heymoa.com",
+          image: null,
+        },
       ],
     };
   });

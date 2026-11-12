@@ -106,7 +106,8 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
 
   return (
     <Card title={t("confirm", { name })}>
-      <p>
+      {/* `Skeleton` 이 div 라 `<p>` 안에 둘 수 없다(하이드레이션 오류). preflight 에서 둘의 기하는 같다. */}
+      <div>
         {t.rich("body", {
           count: items.length,
           email: () =>
@@ -119,7 +120,7 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
               />
             ),
         })}
-      </p>
+      </div>
       <ul className="mt-3 list-disc space-y-1 pl-5">
         {items.map((item) => (
           <li key={item}>{t(`items.${item}`)}</li>

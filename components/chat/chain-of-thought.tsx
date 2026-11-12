@@ -300,6 +300,7 @@ function Disclosure({
   // (`justify-end` 로 아래에 붙이면 넘친 윗부분이 스크롤 영역 밖으로 나가 닿을 수 없다.)
   const pinned = useRef(true);
   // 넘칠 때만 위를 흐린다. 줄 수로 세면 줄바꿈된 문장·칩이 든 줄에서 틀린다 — 그려진 높이로 잰다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 렌더마다 다시 잰다. `[tail, overflow]` 로 묶으면 줄이 늘어도 안 재서 바닥을 못 따라간다
   useLayoutEffect(() => {
     const el = tailRef.current;
     if (el && tail && pinned.current) el.scrollTop = el.scrollHeight;

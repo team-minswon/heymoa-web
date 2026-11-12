@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import type { DesktopFoundationBridge } from "@heymoa/desktop-contracts";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { AnchorButton, Button, buttonVariants } from "@/components/ui/button";
 import { DesktopDownloadLink } from "@/components/heymoa/desktop-download-link";
 import { DesktopCompareDialog } from "@/components/workspace/desktop-compare-dialog";
 import {
@@ -136,27 +136,30 @@ function LegacyDesktopUpdateNotice() {
           {busy ? t("busy") : t("install")}
         </p>
       </div>
-      <Button
-        variant="outline"
-        disabled={busy}
-        className="h-10 shrink-0 rounded-chip bg-white whitespace-nowrap"
-        render={
-          busy ? undefined : (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() =>
-                track("desktop_update_installer_clicked", {
-                  surface: "dashboard",
-                })
-              }
-            />
-          )
-        }
-      >
-        {t("download")}
-      </Button>
+      {busy ? (
+        <Button
+          variant="outline"
+          disabled
+          className="h-10 shrink-0 rounded-chip bg-white whitespace-nowrap"
+        >
+          {t("download")}
+        </Button>
+      ) : (
+        <AnchorButton
+          variant="outline"
+          className="h-10 shrink-0 rounded-chip bg-white whitespace-nowrap"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() =>
+            track("desktop_update_installer_clicked", {
+              surface: "dashboard",
+            })
+          }
+        >
+          {t("download")}
+        </AnchorButton>
+      )}
     </aside>
   );
 }

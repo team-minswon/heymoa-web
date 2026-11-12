@@ -166,7 +166,7 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
   // **캐시에 실제로 붙기 위해서다.** `reconcile()` 은 `fetchQuery` 라 훅의 `enabled` 를
   // 안 보고 캐시에만 써 넣는다 — 목이 캐시를 안 구독하면 그 왕복이 화면에 영영 안 닿고,
   // 「재조회가 화면에 반영되나」를 묻는 검사가 제품이 아니라 목을 재게 된다.
-  const { useQuery } = await import("@tanstack/react-query");
+  const { useQuery, ...query } = await import("@tanstack/react-query");
   return {
     getGetAgentChatsQueryKey: (workspaceId: string) => [
       "/v1/workspaces",
@@ -282,8 +282,8 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
     useGetAgentChatMessages: (chatId: string, options: unknown) => {
       state.messagesArgs.push({ chatId, options });
       // 값은 아래 `state` 가 정한다. 이 구독이 하는 일은 **캐시가 바뀌면 다시 그리는 것**
-      // 하나뿐이라 `enabled: false` 로 둔다 — 자기 queryFn 을 돌리면 안 된다.
-      useQuery({ queryKey: ["messages", chatId], enabled: false });
+      // 하나뿐이라 `skipToken` 으로 둔다 — 자기 queryFn 을 돌리면 안 된다.
+      useQuery({ queryKey: ["messages", chatId], queryFn: query.skipToken });
       // enabled:false여도 TanStack은 pending으로 둔다 — 화면이 isPending을 믿으면
       // 대화가 없을 때 스켈레톤에 갇힌다.
       const enabled = Boolean(chatId);

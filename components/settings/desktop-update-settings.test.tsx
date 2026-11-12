@@ -129,12 +129,15 @@ it("older apps receive an official installer link rather than calling absent nat
     value: {},
   });
   render(<DesktopUpdateSettings />);
-  expect(
-    await screen.findByRole("link", { name: "새 설치 파일 받기" })
-  ).toHaveAttribute(
+  const link = await screen.findByRole("link", { name: "새 설치 파일 받기" });
+  expect(link).toHaveAttribute(
     "href",
     "https://github.com/team-minswon/homebrew-tap/releases"
   );
+  fireEvent.click(link);
+  expect(track).toHaveBeenCalledWith("desktop_update_installer_clicked", {
+    surface: "settings",
+  });
 });
 it("a failed native request leaves a retry without claiming success", async () => {
   const f = native();

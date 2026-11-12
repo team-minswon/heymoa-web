@@ -2,6 +2,20 @@ import "@testing-library/jest-dom/vitest";
 
 import { vi } from "vitest";
 
+// 아래는 jsdom 이 구현하지 않은 것을 받는다. `@vitest-environment node` 인 파일에는 DOM 이 없어 건너뛴다.
+if (typeof window !== "undefined") {
+  // jsdom 은 미디어 재생을 구현하지 않아 `pause()` 가 「Not implemented」를 찍는다. 단언하는 시험은 자기 `vi.fn()` 으로 덮는다.
+  HTMLMediaElement.prototype.pause = () => {};
+  // jsdom 에 없는 `window.scrollTo` 를 motion 이 부른다.
+  window.scrollTo = () => {};
+  // jsdom 은 문서 이동을 못 해 링크를 누르면 「navigation to another Document」를 찍는다. React 핸들러가 먼저 돌도록
+  // 버블 단계에서 막고, 같은 문서 안 이동(`#…`)은 `help-motion` 이 직접 다뤄서 건드리지 않는다.
+  document.addEventListener("click", (event) => {
+    if ((event.target as Element | null)?.closest?.("a[href]:not([href^='#'])"))
+      event.preventDefault();
+  });
+}
+
 // `next/root-params` 는 Next 컴파일러가 바꿔 끼우는 자리표시 모듈이라 vitest 에서는 던진다.
 // 마케팅 루트의 기본 언어(한국어)로 둔다. 영어판을 보는 시험은 자기 파일에서 다시 목한다.
 vi.mock("next/root-params", () => ({ lang: async () => "ko" }));

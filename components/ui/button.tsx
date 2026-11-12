@@ -131,4 +131,26 @@ function LinkButton({
   );
 }
 
-export { Button, LinkButton, buttonVariants };
+/**
+ * 다운로드·외부 주소처럼 Next 라우터를 거치지 않는 링크용. `LinkButton` 과 같은 이유로 primitive 를
+ * 안 거치고, 일반 `<a>` 에 같은 클래스와 같은 `ButtonLabel` 을 준다.
+ */
+function AnchorButton({
+  className,
+  variant,
+  size,
+  children,
+  ...props
+}: React.ComponentProps<"a"> & VariantProps<typeof buttonVariants>) {
+  return (
+    <a
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    >
+      <ButtonLabel>{children}</ButtonLabel>
+    </a>
+  );
+}
+
+export { AnchorButton, Button, LinkButton, buttonVariants };

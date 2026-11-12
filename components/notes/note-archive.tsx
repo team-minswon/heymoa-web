@@ -756,6 +756,7 @@ export const NoteArchive = memo(function NoteArchive({
       ),
     [rows]
   );
+  // eslint-disable-next-line react-hooks/incompatible-library -- React Compiler 를 쓰지 않는다. 켜더라도 이 컴포넌트를 건너뛰는 것이 안전한 동작이다
   const virtualizer = useVirtualizer({
     count: rows.length,
     enabled: virtualized,

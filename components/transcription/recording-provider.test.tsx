@@ -43,7 +43,18 @@ vi.mock("@/lib/ui/toast", () => ({
   toast: { error: toastError, success: vi.fn(), dismiss: vi.fn() },
 }));
 
-const apiFetchMock = vi.hoisted(() => vi.fn());
+// 녹음 중 노트 조회(`useGetNote`)가 이 목을 지난다. 기본값이 없으면 undefined 를 돌려 Query 가 「data 는 undefined 일 수
+// 없다」를 찍는다. 진행 중인 노트의 봉투를 기본으로 두고, 상태를 보는 시험은 자기 값으로 덮는다.
+const apiFetchMock = vi.hoisted(() =>
+  vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({
+    status: 200,
+    data: {
+      success: true,
+      data: { id: session.noteId, meetingStatus: "IN_PROGRESS" },
+      error: null,
+    },
+  }))
+);
 const conversion = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/analytics/track", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/analytics/track")>()),

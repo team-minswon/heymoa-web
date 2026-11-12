@@ -279,14 +279,17 @@ describe("legacy desktop update notice", () => {
     recording.phase = "failed";
     recording.buffer = { pendingMs: 1000 };
     view.rerender(<DesktopAppPromo />);
-    expect(
-      screen.getByRole("button", { name: "새 설치 파일 받기" })
-    ).toBeDisabled();
+    const busyButton = screen.getByRole("button", {
+      name: "새 설치 파일 받기",
+    });
+    expect(busyButton).toBeDisabled();
+    // 두 갈래의 안쪽 구조가 같아야 폭이 안 튄다(jsdom 은 px 를 못 잰다).
+    const busyInner = busyButton.innerHTML;
     recording.buffer = null;
     view.rerender(<DesktopAppPromo />);
     expect(
-      screen.getByRole("link", { name: "새 설치 파일 받기" })
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "새 설치 파일 받기" }).innerHTML
+    ).toBe(busyInner);
   });
   it("English guidance stays in English and is an inline notice", () => {
     oldApp("0.1.2");

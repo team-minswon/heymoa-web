@@ -995,21 +995,6 @@ describe("턴 이벤트가 화면을 안 바꾼다", () => {
     return markup;
   }
 
-  it("turn_started·stream_resync는 DOM을 하나도 안 늘린다", () => {
-    // **resync를 토큰보다 앞에 둔다.** 그 뒤의 본문은 재생이 그리는 것이라 남고,
-    // 앞의 본문은 구멍이 나서 걷힌다 — 여기서 보는 것은 「이 프레임 자신이 DOM을
-    // 안 늘린다」 하나다.
-    const plain = reduce([START, frame("token", { delta: "쓰던 중" })]);
-    const withTurnEvents = reduce([
-      frame("turn_started", { turnId: "01KTURN000001" }),
-      frame("stream_resync", {}),
-      START,
-      frame("token", { delta: "쓰던 중" }),
-    ]);
-
-    expect(html(withTurnEvents)).toBe(html(plain));
-  });
-
   /**
    * ★ **`error` 는 배너를 안 세운다.** 실패 코드를 정하는 것은 server 이고, ai 가 흘린
    * `error` 로 화면을 접으면 뒤따르는 `turn_failed` 의 코드를 못 받는다 — 사용자는

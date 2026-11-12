@@ -6,7 +6,7 @@ import type { DesktopUpdateState } from "@heymoa/desktop-contracts";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { desktopUpdateBridge } from "@/lib/desktop/updates";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
-import { Button } from "@/components/ui/button";
+import { AnchorButton, Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsHeader, SETTINGS_CARD } from "./settings-layout";
@@ -81,23 +81,19 @@ export function DesktopUpdateSettings() {
           <p className="mb-4 text-sm text-[var(--el-muted)]">
             {t("upgradeRequired")}
           </p>
-          <Button
+          <AnchorButton
             variant="outline"
-            render={
-              <a
-                href={DESKTOP_RELEASES_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() =>
-                  track("desktop_update_installer_clicked", {
-                    surface: "settings",
-                  })
-                }
-              />
+            href={DESKTOP_RELEASES_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() =>
+              track("desktop_update_installer_clicked", {
+                surface: "settings",
+              })
             }
           >
             {t("getApp")}
-          </Button>
+          </AnchorButton>
         </div>
       ) : !state ? (
         <div className={SETTINGS_CARD}>
