@@ -791,3 +791,86 @@ describe("결제 내역 — 계정의 내 결제 내역", () => {
     expect(within(await list()).queryAllByRole("button")).toEqual([]);
   });
 });
+
+// 결제 영수증(나이스페이 매출전표, APP-1600). 주소가 있는 결제에만 새 창 링크를 둔다.
+describe("결제 영수증", () => {
+  const history = () => screen.getByRole("region", { name: "결제 내역" });
+  const receipt = (date: string) =>
+    screen.queryByRole("link", { name: `${date} 결제 영수증 열기` });
+
+  it("내역 행 끝에 새 창 링크로 두고, 주소가 없는 결제(실패·목의 빈 행)는 자리만 비운다. 환불된 결제에도 있다", async () => {
+    await openPaid();
+    await within(history()).findByRole("list", { name: "결제 내역" });
+    fireEvent.click(screen.getByRole("button", { name: "더 보기 (3건)" }));
+    const link = receipt("2026년 11월 11일")!;
+    expect(link).toHaveAttribute(
+      "href",
+      "https://example.com/mock-receipt/0P00000000003"
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveTextContent("영수증");
+    // 링크는 상세 버튼 밖에 있다(버튼 안 링크 금지).
+    expect(link.closest("button")).toBeNull();
+    // 실패한 결제(10월 11일 실패)와 목이 비워 둔 2025년 9월 11일 결제에는 없다.
+    const failed = within(history()).getAllByText("실패")[0].closest("li")!;
+    expect(within(failed).queryByRole("link")).not.toBeInTheDocument();
+    expect(receipt("2025년 9월 11일")).not.toBeInTheDocument();
+
+    cleanup();
+    renderIn(<MyPaymentsSettings />);
+    const refunded = (await screen.findByText("지난 프로젝트 팀")).closest(
+      "li"
+    )!;
+    expect(
+      within(refunded).getByRole("link", {
+        name: "2026년 8월 2일 결제 영수증 열기",
+      })
+    ).toHaveAttribute("href", "https://example.com/mock-receipt/0P00000000004");
+  });
+
+  it("https 가 아닌 주소는 링크로 그리지 않는다", async () => {
+    const { data } = await (
+      await fetch(`http://localhost/v1/workspaces/${PAID}/billing/payments`)
+    ).json();
+    const [first, second] = data.payments;
+    server.use(
+      http.get(`*/v1/workspaces/${PAID}/billing/payments`, () =>
+        HttpResponse.json({
+          success: true,
+          error: null,
+          data: {
+            payments: [
+              {
+                ...first,
+                receiptUrl: "http://example.com/receipt",
+              },
+              {
+                ...second,
+                receiptUrl: "javascript:alert(1)",
+              },
+            ],
+          },
+        })
+      )
+    );
+    await openPaid();
+    await within(history()).findByRole("list", { name: "결제 내역" });
+    expect(within(history()).queryAllByRole("link")).toEqual([]);
+  });
+
+  it("결제 상세에도 영수증 링크가 있다", async () => {
+    renderIn(paymentDetail("0P00000000003"));
+    expect(
+      await screen.findByRole("link", {
+        name: "2026년 11월 11일 결제 영수증 열기",
+      })
+    ).toHaveAttribute("target", "_blank");
+  });
+
+  it("영수증 주소가 없는 결제 상세에는 링크가 없다", async () => {
+    renderIn(paymentDetail("0P00000000001"));
+    await screen.findByText(/INVALID_CARD/);
+    expect(screen.queryByRole("link", { name: /영수증/ })).toBeNull();
+  });
+});

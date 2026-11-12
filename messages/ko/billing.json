@@ -396,7 +396,9 @@
     "myDescription": "내가 결제한 내역입니다. 나간 워크스페이스의 결제도 결제 당시 이름으로 보입니다.",
     "leftMember": "탈퇴한 멤버",
     "more": "더 보기 ({count, number}건)",
-    "detail": "결제 상세"
+    "detail": "결제 상세",
+    "receipt": "영수증",
+    "receiptLabel": "{date} 결제 영수증 열기"
   },
   "cardEntry": {
     "title": "카드 정보 입력",

@@ -693,6 +693,11 @@ function paymentView(payment: Payment) {
     ...rest,
     currency: "KRW",
     payerIsMe: !payerUserId,
+    // 나이스페이 매출전표(APP-1600). 승인된 결제에만 있고, 가장 오래된 갱신 한 건은 비워 빈 자리도 보이게 한다.
+    receiptUrl:
+      payment.status === "SUCCEEDED" && payment.paymentId !== "0P0000000S000"
+        ? `https://example.com/mock-receipt/${payment.paymentId}`
+        : null,
     cycleStatus:
       payment.refundStatus === "SUCCEEDED"
         ? "REFUNDED"

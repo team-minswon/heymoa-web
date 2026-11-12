@@ -8,6 +8,7 @@ import {
   BillingNotice,
   FeedbackLink,
 } from "@/components/billing/billing-parts";
+import { ReceiptLink } from "@/components/billing/payment-history";
 import { PaymentStatusText } from "@/components/billing/subscription-management";
 import {
   SETTINGS_LIST,
@@ -147,6 +148,15 @@ function PaymentHero({ payment }: { payment: BillingPaymentResponseData }) {
         ]
           .filter(Boolean)
           .join(" · ")}
+        {payment.receiptUrl?.startsWith("https://") ? (
+          <>
+            {" · "}
+            <ReceiptLink
+              url={payment.receiptUrl}
+              date={payment.completedAt ? format.date(payment.completedAt) : ""}
+            />
+          </>
+        ) : null}
       </p>
     </div>
   );

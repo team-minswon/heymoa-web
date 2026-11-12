@@ -396,7 +396,9 @@
     "myDescription": "Payments you made. Payments for workspaces you've left appear under the name they had at the time.",
     "leftMember": "Former member",
     "more": "Show more ({count, number})",
-    "detail": "Payment details"
+    "detail": "Payment details",
+    "receipt": "Receipt",
+    "receiptLabel": "Open receipt for the payment on {date}"
   },
   "cardEntry": {
     "title": "Enter card details",

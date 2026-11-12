@@ -79,4 +79,9 @@ export type MyBillingPaymentsResponseDataPaymentsItem = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;
+  /**
+   * PG 의 매출전표 주소(https). 승인 때 받지 못했으면 null. 환불된 결제도 싣는다(매출전표가 취소를 보여 준다)
+   * @nullable
+   */
+  receiptUrl: string | null;
 };

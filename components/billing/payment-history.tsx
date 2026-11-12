@@ -22,13 +22,18 @@ export type PaymentRow = {
   >[0]["payment"]["refundStatus"];
   /** 상세로 들어갈 수 있나 — 상세는 지금 그 공간의 ADMIN 만 연다. */
   openable: boolean;
+  /** 나이스페이 매출전표 주소(APP-1600). 없으면 그 자리를 비운다. */
+  receiptUrl?: string | null;
 };
 
 /** 처음에 보이는 줄 수. 나머지는 「더 보기」로 펼친다(APP-1596). */
 export const PAYMENT_PAGE = 12;
 
+// 영수증 칸(56px)은 값이 없어도 비워 둬 행마다 열이 같다. 영수증 링크는 상세 버튼 안에 둘 수 없어(버튼 안 링크 금지)
+// 행 위에 따로 얹는다 — 그 자리(오른쪽 끝에서 패딩 16 + 표시 16 + 간격 12)가 `RECEIPT_SLOT` 이다.
 const ROW =
-  "grid min-h-[52px] w-full grid-cols-[132px_minmax(0,1fr)_88px_112px_16px] items-center gap-3 px-4 py-2.5 text-left text-sm";
+  "grid min-h-[52px] w-full grid-cols-[132px_minmax(0,1fr)_88px_112px_56px_16px] items-center gap-3 px-4 py-2.5 text-left text-sm";
+const RECEIPT_SLOT = "absolute top-1/2 right-[44px] w-14 -translate-y-1/2";
 const SKELETON_ROWS = 3;
 
 /**
@@ -54,12 +59,13 @@ export function PaymentList({
       <ul aria-label={label} className="divide-y divide-[var(--el-hairline)]">
         {shown
           ? shown.map((payment) => {
+              const date = payment.completedAt
+                ? format.date(payment.completedAt)
+                : t("noDate");
               const cells = (
                 <>
                   <span className="whitespace-nowrap text-[var(--el-ink)]">
-                    {payment.completedAt
-                      ? format.date(payment.completedAt)
-                      : t("noDate")}
+                    {date}
                   </span>
                   <span className="truncate text-[var(--el-muted)]">
                     {payment.middle}
@@ -68,15 +74,20 @@ export function PaymentList({
                     {format.money(payment.amountKrw)}
                   </span>
                   <PaymentStatusText payment={payment} />
+                  <span aria-hidden />
                 </>
               );
               return (
-                <li key={payment.paymentId}>
+                // 영수증 위에 있어도 행 전체가 같이 칠해지게 행(group)의 hover 로 칠한다.
+                <li key={payment.paymentId} className="group relative">
                   {payment.openable && onOpen ? (
                     <button
                       type="button"
                       onClick={() => onOpen(payment.paymentId)}
-                      className={cn(ROW, "hover:bg-[var(--el-canvas-soft)]")}
+                      className={cn(
+                        ROW,
+                        "group-hover:bg-[var(--el-canvas-soft)]"
+                      )}
                     >
                       {cells}
                       <span className="sr-only">{t("detail")}</span>
@@ -88,6 +99,11 @@ export function PaymentList({
                   ) : (
                     <div className={ROW}>{cells}</div>
                   )}
+                  <ReceiptLink
+                    url={payment.receiptUrl}
+                    date={date}
+                    className={RECEIPT_SLOT}
+                  />
                 </li>
               );
             })
@@ -110,5 +126,34 @@ export function PaymentList({
         </button>
       ) : null}
     </div>
+  );
+}
+
+/** 결제 영수증(나이스페이 매출전표, APP-1600) 새 창 링크. `https://` 주소만 그린다 — 서버 값이 아니면 링크로 내보내지 않는다. */
+export function ReceiptLink({
+  url,
+  date,
+  className,
+}: {
+  url: string | null | undefined;
+  /** 접근성 이름에 넣는 결제 날짜(화면에 보이는 꼴 그대로). */
+  date: string;
+  className?: string;
+}) {
+  const t = useTranslations("billing.history");
+  if (!url?.startsWith("https://")) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={t("receiptLabel", { date })}
+      className={cn(
+        "text-sm whitespace-nowrap text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]",
+        className
+      )}
+    >
+      {t("receipt")}
+    </a>
   );
 }

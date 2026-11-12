@@ -223,6 +223,8 @@ export const getGetMyBillingPaymentsResponseMock =
           payerIsMe: true,
           refundStatus: null,
           refundOrigin: null,
+          receiptUrl:
+            "https://npg.nicepay.co.kr/issue/IssueLoader.do?type=0&TID=nictest04m0116261111",
         },
       ],
     },
@@ -249,6 +251,8 @@ export const getGetBillingPaymentResponseMock = (): BillingPaymentResponse => ({
     payerIsMe: true,
     refundStatus: null,
     refundOrigin: null,
+    receiptUrl:
+      "https://npg.nicepay.co.kr/issue/IssueLoader.do?type=0&TID=nictest04m0116261111",
   },
   error: null,
 });
@@ -311,6 +315,8 @@ export const getGetWorkspaceBillingPaymentsResponseMock =
           payerName: "김결제",
           refundStatus: null,
           refundOrigin: null,
+          receiptUrl:
+            "https://npg.nicepay.co.kr/issue/IssueLoader.do?type=0&TID=nictest04m0116261111",
         },
       ],
     },
