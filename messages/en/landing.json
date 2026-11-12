@@ -661,6 +661,13 @@
     "perMonth": "/ month per workspace",
     "members": "Unlimited members",
     "included": "Every feature included",
+    "features": {
+      "liveNotes": "Live notes and summaries",
+      "speakers": "Speaker labels",
+      "links": "Links across meetings",
+      "agentChat": "Agent chat",
+      "tools": "External tools and MCP"
+    },
     "free": {
       "name": "Free",
       "price": "KRW {price, number}",

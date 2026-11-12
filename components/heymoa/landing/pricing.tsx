@@ -17,20 +17,26 @@ import {
   RADIUS,
   SECTION_Y,
 } from "./tokens";
-import { useSectionNav } from "./top-bar";
 
 /**
  * 요금 안내(`#pricing`). 두 카드는 같은 줄 구성(이름 → 가격 → 한 줄 설명 → 녹음 · 멤버 → 모든 기능 → 버튼)이라
  * 격자가 늘린 높이에서 버튼만 `mt-auto` 로 바닥에 붙는다. 결제 조건(자동 결제 · 해지 · 환불)은 혜택 목록이 아니라
- * 카드 아래 작은 글이다. 기능 이름은 푸터 「제품」 열과 같은 `useSectionNav` 다.
+ * 카드 아래 작은 글이다. 기능 목록은 가격 안내 전용 키(`landing.pricing.features`)다.
  * 금액은 `PUBLIC_PRICING` 에서 오고 문구 파일에는 숫자가 없다. 앱 안 금액은 server 값이다.
  * 바탕 색은 FAQ(라벤더 옅은 면)와 근거 구간(버터)의 것을 그대로 쓴다.
  */
+const FEATURES = [
+  "liveNotes",
+  "speakers",
+  "links",
+  "agentChat",
+  "tools",
+] as const;
+
 export function Pricing() {
   const t = useTranslations("landing.pricing");
   const nav = useTranslations("landing.nav");
   const locale = useLocale();
-  const features = useSectionNav().map(([label]) => label);
   const plans = [
     {
       key: "free",
@@ -92,8 +98,8 @@ export function Pricing() {
 
               <p className={cn(LABEL, "m-0 mt-7")}>{t("included")}</p>
               <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0 text-[15px] text-[var(--tv-body)]">
-                {features.map((label) => (
-                  <CheckItem key={label}>{label}</CheckItem>
+                {FEATURES.map((key) => (
+                  <CheckItem key={key}>{t(`features.${key}`)}</CheckItem>
                 ))}
               </ul>
 

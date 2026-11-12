@@ -661,6 +661,13 @@
     "perMonth": "/ 월, 워크스페이스당",
     "members": "멤버 수 제한 없음",
     "included": "모든 기능 포함",
+    "features": {
+      "liveNotes": "실시간 회의록과 요약",
+      "speakers": "화자 구분",
+      "links": "회의 간 연결",
+      "agentChat": "에이전트 채팅",
+      "tools": "외부 도구와 MCP 연결"
+    },
     "free": {
       "name": "Free",
       "price": "{price, number}원",
