@@ -5,7 +5,6 @@ import { ArrowRight, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { BillingCheckout } from "@/components/billing/billing-checkout";
 import {
   BillingNotice,
   FeedbackLink,
@@ -13,20 +12,18 @@ import {
 } from "@/components/billing/billing-parts";
 import { RecordingUsage } from "@/components/billing/recording-usage";
 import { SettingsHeader } from "@/components/settings/settings-layout";
-import { CardEntryDialog } from "@/components/billing/card-entry-dialog";
+import { CardChangeDialog } from "@/components/billing/card-change-dialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useCancelBillingSetup,
-  useGetMyBillingSetup,
-} from "@/lib/api/generated/billing/billing";
+import { useCancelBillingSetup } from "@/lib/api/generated/billing/billing";
 import type { WorkspaceBillingResponseData } from "@/lib/api/generated/models";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
 import { refundPending } from "@/lib/billing/payment-status";
 import { planName } from "@/lib/billing/plan-name";
+import { goToCheckout } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { useRefundResultEvent } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
@@ -62,21 +59,15 @@ export function WorkspacePlanSettings({
   onOpenPayment: () => void;
 }) {
   const t = useTranslations("billing.page");
-  const [view, setView] = useState<"plans" | "checkout">("plans");
   const role = useBillingViewerRole(workspaceId);
   useEffect(() => {
     if (role) billingEvents.plansViewed(workspaceId, role);
   }, [workspaceId, role]);
-
-  if (view === "checkout") {
-    return (
-      <BillingCheckout
-        workspaceId={workspaceId}
-        purpose="PURCHASE"
-        onBack={() => setView("plans")}
-      />
-    );
-  }
+  // 첫 구독은 분석 없는 전용 결제 페이지로 문서를 새로 열어 간다(APP-1600). 그 페이지에서는 이벤트를 낼 수 없어 진입은 여기서 낸다.
+  const checkout = () => {
+    if (role) billingEvents.checkoutEntered(workspaceId, role);
+    goToCheckout(workspaceId);
+  };
   return (
     <div>
       <SettingsHeader title={t("title")} description={t("description")} />
@@ -86,7 +77,7 @@ export function WorkspacePlanSettings({
       >
         <PlanContent
           workspaceId={workspaceId}
-          onCheckout={() => setView("checkout")}
+          onCheckout={checkout}
           onOpenPayment={onOpenPayment}
         />
       </DataBoundary>
@@ -167,6 +158,7 @@ function PlanContent({
           billing={billing}
           isAdmin={isAdmin}
           onRestartPolling={poll.restart}
+          onCheckout={onCheckout}
         />
       </div>
       <PlanCompare
@@ -489,23 +481,22 @@ function Attention({
   billing,
   isAdmin,
   onRestartPolling,
+  onCheckout,
 }: {
   workspaceId: string;
   billing: Billing;
   isAdmin: boolean;
   onRestartPolling: () => void;
+  /** 첫 구독 결제 페이지로. */
+  onCheckout: () => void;
 }) {
   const t = useTranslations("billing.page");
   const queryClient = useQueryClient();
   const cancel = useCancelBillingSetup();
-  const [cardSetupId, setCardSetupId] = useState<string | null>(null);
+  const [cardChange, setCardChange] = useState(false);
   const actions = billing.allowedActions;
-  // 이어갈 등록을 미리 읽어 둔다 — 모달이 그 등록의 목적(구매·카드 변경)에 맞는 높이로 바로 열린다.
-  useGetMyBillingSetup(billing.mySetupId ?? "", {
-    query: {
-      enabled: Boolean(billing.mySetupId) && actions.includes("CONTINUE_SETUP"),
-    },
-  });
+  // 카드를 기다리는 내 등록: 구독 중(ACTIVE)이면 카드 변경이고, 아니면 첫 구독이다.
+  const replacing = billing.status === "ACTIVE";
   const detail = billing.detail;
   // 갱신 결과를 기다리는 동안(RENEWAL_PENDING)은 현재 요금제 줄이 이미 알리고 사용자가 할 일이 없다 —
   // 「다시 결제하지 마세요」 안내와 「상태 다시 확인」 버튼은 직접 구매한 사람에게만 보인다
@@ -607,11 +598,11 @@ function Attention({
 
   const buttons = isAdmin
     ? [
-        // 카드를 기다리는 등록은 동의를 이미 받았다 — 그 등록으로 카드 입력 모달을 연다(APP-1600).
+        // 카드를 기다리는 등록을 잇는다(APP-1600) — 카드 변경은 모달, 첫 구독은 결제 페이지. 둘 다 그 등록에 카드를 낸다.
         billing.mySetupId && actions.includes("CONTINUE_SETUP") ? (
           <Button
             key="continue"
-            onClick={() => setCardSetupId(billing.mySetupId)}
+            onClick={() => (replacing ? setCardChange(true) : onCheckout())}
           >
             {t("continueSetup")}
           </Button>
@@ -661,9 +652,11 @@ function Attention({
       {buttons.length > 0 ? (
         <div className="flex flex-wrap items-start gap-2">{buttons}</div>
       ) : null}
-      <CardEntryDialog
-        setupId={cardSetupId}
-        onClose={() => setCardSetupId(null)}
+      <CardChangeDialog
+        workspaceId={workspaceId}
+        open={cardChange}
+        register={!detail?.methodId}
+        onClose={() => setCardChange(false)}
       />
     </div>
   );

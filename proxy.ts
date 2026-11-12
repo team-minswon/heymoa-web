@@ -9,7 +9,10 @@ import {
 } from "@/lib/auth/cookies";
 import { fetchWithRefreshTimeout } from "@/lib/api/refresh-timeout";
 import { isRefreshTokenDead } from "@/lib/auth/refresh-failure";
-import { cardEntryCsp, isCardEntryPath } from "@/lib/billing/card-entry-csp";
+import {
+  cardEntryCsp,
+  cardEntryFrameAncestors,
+} from "@/lib/billing/card-entry-csp";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -83,15 +86,17 @@ function clearAuthCookies(request: NextRequest) {
 }
 
 /**
- * 카드 입력 화면에만 CSP 를 건다(APP-1600). Next 16 CSP 안내대로 요청마다 nonce 를 만들어 요청 헤더에도 실어야
+ * 카드를 받는 두 면에만 CSP 를 건다(APP-1600). Next 16 CSP 안내대로 요청마다 nonce 를 만들어 요청 헤더에도 실어야
  * Next 가 그 nonce 를 프레임워크 스크립트에 붙인다. 토큰 갱신은 그 요청 그대로 아래에서 한다.
  */
 export async function proxy(request: NextRequest) {
-  if (!isCardEntryPath(request.nextUrl.pathname)) return refreshForSsr(request);
+  const frameAncestors = cardEntryFrameAncestors(request.nextUrl.pathname);
+  if (!frameAncestors) return refreshForSsr(request);
   const csp = cardEntryCsp({
     nonce: Buffer.from(crypto.randomUUID()).toString("base64"),
     apiBaseUrl,
     dev: process.env.NODE_ENV === "development",
+    frameAncestors,
   });
   const headers = new Headers(request.headers);
   headers.set("content-security-policy", csp);

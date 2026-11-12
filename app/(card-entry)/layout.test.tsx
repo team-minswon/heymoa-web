@@ -49,11 +49,9 @@ describe("카드 입력 루트 레이아웃", () => {
     expect(metadata.referrer).toBe("no-referrer");
   });
 
-  it("모달 안 iframe 문서는 머리글·발이 없고, 전용 화면은 로고·약관만 둔 크롬이다", () => {
-    expect(isChromelessRoute("/billing/setups/01K0000000001/card/embed")).toBe(
-      true
-    );
-    expect(isChromelessRoute("/billing/setups/01K0000000001/card")).toBe(false);
-    expect(isFocusChromeRoute("/billing/setups/01K0000000001/card")).toBe(true);
+  it("결제 페이지·카드 변경 iframe 은 머리글·발을 앱이 세우지 않는다", () => {
+    expect(isChromelessRoute("/billing/checkout/01K0000000001")).toBe(true);
+    expect(isChromelessRoute("/billing/card-change/01K0000000001")).toBe(true);
+    expect(isFocusChromeRoute("/billing/setups/01K0000000001")).toBe(true);
   });
 });

@@ -1,23 +1,34 @@
 /**
- * 카드 입력 화면(`/billing/setups/{setupId}/card`, APP-1600)에만 거는 Content-Security-Policy. 카드 번호를 우리 화면에서
+ * 카드를 받는 두 면 — 첫 구독 결제 페이지(`/billing/checkout/{id}`)와 카드 변경 iframe(`/billing/card-change/{id}`), APP-1600 — 에만
+ * 거는 Content-Security-Policy. 카드 번호를 우리 화면에서
  * 받으므로 그 문서에서는 우리 출처의 스크립트만 돌고(인라인은 Next 가 붙이는 nonce 만), 요청은 우리 출처·API 로만 나간다
  * (PCI DSS 6.4.3·11.6.1 의 결제 화면 스크립트 통제). 분석 스크립트는 이 면의 루트 레이아웃이 아예 싣지 않는다(`app/(card-entry)`).
  * nonce 는 `proxy.ts` 가 요청마다 만들고, Next 가 요청 헤더의 CSP 에서 읽어 프레임워크 스크립트에 붙인다(Next 16 CSP 안내).
  */
-// 전용 화면(`card`)과 카드 입력 모달 안의 iframe(`card/embed`).
-const CARD_ENTRY_PATH = /^\/billing\/setups\/[^/]+\/card(?:\/embed)?\/?$/;
+const CHECKOUT_PATH = /^\/billing\/checkout\/[^/]+\/?$/;
+const CARD_CHANGE_PATH = /^\/billing\/card-change\/[^/]+\/?$/;
 
+/** CSP 를 거는 경로면 그 문서를 띄울 수 있는 곳(`frame-ancestors`), 아니면 null. 카드 변경 문서만 우리 모달이 iframe 으로 싣는다. */
+export function cardEntryFrameAncestors(pathname: string) {
+  if (CHECKOUT_PATH.test(pathname)) return "'none'";
+  if (CARD_CHANGE_PATH.test(pathname)) return "'self'";
+  return null;
+}
+
+/** 카드 칸이 있는 문서인가(목의 요청 기록을 끄는 판정에도 쓴다). */
 export const isCardEntryPath = (pathname: string) =>
-  CARD_ENTRY_PATH.test(pathname);
+  cardEntryFrameAncestors(pathname) !== null;
 
 export function cardEntryCsp({
   nonce,
   apiBaseUrl,
   dev,
+  frameAncestors,
 }: {
   nonce: string;
   apiBaseUrl: string;
   dev: boolean;
+  frameAncestors: string;
 }) {
   let api = "";
   try {
@@ -37,7 +48,6 @@ export function cardEntryCsp({
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    // 카드 입력 모달이 우리 출처의 iframe 으로 싣는다. 다른 출처는 프레임에 못 띄운다.
-    "frame-ancestors 'self'",
+    `frame-ancestors ${frameAncestors}`,
   ].join("; ");
 }

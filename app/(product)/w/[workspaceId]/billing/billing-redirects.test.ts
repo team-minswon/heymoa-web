@@ -24,11 +24,6 @@ describe("옛 결제 주소", () => {
       section: "billing",
     },
     {
-      path: "/w/{id}/billing/checkout",
-      route: () => CheckoutRoute({ params: params({ workspaceId: W }) }),
-      section: "billing",
-    },
-    {
       path: "/w/{id}/billing/card",
       route: () => CardRoute({ params: params({ workspaceId: W }) }),
       section: "payment",
@@ -47,4 +42,9 @@ describe("옛 결제 주소", () => {
       expect(redirect).toHaveBeenCalledWith(`/w/${W}?settings=${section}`);
     }
   );
+
+  it("옛 주문서 주소는 첫 구독 결제 페이지로 보낸다", async () => {
+    await CheckoutRoute({ params: params({ workspaceId: W }) });
+    expect(redirect).toHaveBeenCalledWith(`/billing/checkout/${W}`);
+  });
 });

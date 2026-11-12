@@ -379,6 +379,15 @@ function reset() {
 }
 state = load();
 mockDb.onReset(reset);
+// 카드 변경은 모달 안 iframe(다른 문서)이 낸다(APP-1600). 같은 탭의 sessionStorage 를 나눠 쓰는 그 문서가 상태를 바꾸면
+// 이 문서의 목도 다시 읽어, 모달이 닫힌 뒤 결제 관리가 새 카드를 그린다(서버는 하나라 실제로는 저절로 맞다).
+globalThis.addEventListener?.("storage", (event) => {
+  if (
+    event.key === STORAGE_KEY &&
+    event.storageArea === globalThis.sessionStorage
+  )
+    state = load();
+});
 
 function currentScenario(): BillingScenario {
   if (scenarioOverride) return scenarioOverride;

@@ -46,8 +46,8 @@ export function isChromelessRoute(pathname: string) {
   return (
     pathname === "/auth/callback" ||
     pathname === "/mock-review" ||
-    // 카드 입력 모달 안의 iframe(APP-1600) — 모달이 제목·닫기를 갖는다.
-    /^\/billing\/setups\/[^/]+\/card\/embed\/?$/.test(pathname) ||
+    // 카드를 받는 두 면(APP-1600). 결제 페이지는 자기 머리(로고·돌아가기)를, 카드 변경 iframe 은 모달이 제목·닫기를 갖는다.
+    /^\/billing\/(?:checkout|card-change)\/[^/]+\/?$/.test(pathname) ||
     isWorkspaceRoute(pathname)
   );
 }

@@ -226,8 +226,11 @@ function ViewBody({
     query: { enabled: replace && Boolean(workspaceId) },
   });
   const ending = okData(billingQuery.data)?.cancelAtPeriodEnd === true;
+  // 첫 구독은 전용 결제 페이지에서, 카드 변경은 결제 관리 탭에서 다시 시작한다(APP-1600).
   const checkout = workspaceId
-    ? `/w/${workspaceId}?settings=${replace ? "payment" : "billing"}`
+    ? replace
+      ? `/w/${workspaceId}?settings=payment`
+      : `/billing/checkout/${workspaceId}`
     : null;
   // 문의 창에 실을 번호 — 승인 시도(= 결제 번호)가 있으면 그것, 없으면 등록 번호.
   const attemptId = (setup.latestAttempt ?? setup.originAttempt)?.attemptId;

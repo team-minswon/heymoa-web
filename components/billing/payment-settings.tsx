@@ -3,9 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
-import { BillingCheckout } from "@/components/billing/billing-checkout";
 import { BillingNotice } from "@/components/billing/billing-parts";
 import { BillingPaymentDetail } from "@/components/billing/billing-payment-detail";
+import { CardChangeDialog } from "@/components/billing/card-change-dialog";
 import { PaymentList } from "@/components/billing/payment-history";
 import {
   SectionTitle,
@@ -26,13 +26,11 @@ import { billingEvents } from "@/lib/billing/analytics";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 import { cn } from "@/lib/utils";
 
-type View =
-  | { kind: "manage" }
-  | { kind: "card" }
-  | { kind: "payment"; id: string };
+type View = { kind: "manage" } | { kind: "payment"; id: string };
 
 /**
- * 설정 › 결제 관리(PRO-75). 결제 수단·구독·결제 내역을 한 탭에 둔다. 카드 변경과 결제 상세는 같은 탭 안에서 한 단계 들어간다(`view`).
+ * 설정 › 결제 관리(PRO-75). 결제 수단·구독·결제 내역을 한 탭에 둔다. 결제 상세는 같은 탭 안에서 한 단계 들어가고(`view`),
+ * 카드 변경·등록은 바로 모달을 연다(APP-1600, `CardChangeDialog`).
  * 탭 전체가 ADMIN 전용이다(멤버에게는 탭이 없다). 결제 내역은 이 공간의 것이고, 내가 결제한 내역은 계정 쪽 「내 결제 내역」 탭이다.
  */
 export function WorkspacePaymentSettings({
@@ -47,15 +45,6 @@ export function WorkspacePaymentSettings({
   const [view, setView] = useState<View>({ kind: "manage" });
   const back = () => setView({ kind: "manage" });
 
-  if (view.kind === "card") {
-    return (
-      <BillingCheckout
-        workspaceId={workspaceId}
-        purpose="REPLACE"
-        onBack={back}
-      />
-    );
-  }
   if (view.kind === "payment") {
     return (
       <DataBoundary
@@ -84,7 +73,6 @@ export function WorkspacePaymentSettings({
           <Manage
             workspaceId={workspaceId}
             onOpenPlans={onOpenPlans}
-            onChangeCard={() => setView({ kind: "card" })}
             onOpenPayment={(id) => setView({ kind: "payment", id })}
           />
         </DataBoundary>
@@ -116,18 +104,17 @@ function ManageSkeleton({ label }: { label: string }) {
 function Manage({
   workspaceId,
   onOpenPlans,
-  onChangeCard,
   onOpenPayment,
 }: {
   workspaceId: string;
   onOpenPlans: () => void;
-  onChangeCard: () => void;
   onOpenPayment: (paymentId: string) => void;
 }) {
   const t = useTranslations("billing.manage");
   const tPage = useTranslations("billing.page");
   const billing = useWorkspaceBilling(workspaceId);
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
+  const [cardChange, setCardChange] = useState(false);
 
   if (workspace?.role !== "ADMIN") {
     return <BillingNotice>{tPage("askAdmin")}</BillingNotice>;
@@ -158,12 +145,24 @@ function Manage({
     );
   }
   return (
-    <SubscriptionManagement
-      workspaceId={workspaceId}
-      billing={billing}
-      onChangeCard={onChangeCard}
-      onOpenPayment={onOpenPayment}
-    />
+    <>
+      <SubscriptionManagement
+        workspaceId={workspaceId}
+        billing={billing}
+        onChangeCard={() => {
+          // 카드 칸이 있는 문서(iframe)에는 분석이 없어 시작 이벤트는 모달을 여는 여기서 낸다(APP-1600).
+          billingEvents.cardChangeStarted(workspaceId);
+          setCardChange(true);
+        }}
+        onOpenPayment={onOpenPayment}
+      />
+      <CardChangeDialog
+        workspaceId={workspaceId}
+        open={cardChange}
+        register={!billing.detail?.methodId}
+        onClose={() => setCardChange(false)}
+      />
+    </>
   );
 }
 

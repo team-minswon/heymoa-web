@@ -23,7 +23,7 @@ import {
   vi,
 } from "vitest";
 
-import { BillingCheckout } from "@/components/billing/billing-checkout";
+import { CardChangeFrame } from "@/components/billing/card-change-frame";
 import { BillingPaymentDetail } from "@/components/billing/billing-payment-detail";
 import { MyPaymentsSettings } from "@/components/billing/my-payments-settings";
 import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
@@ -180,18 +180,38 @@ describe("결제 수단·구독", () => {
     ).toBeInTheDocument();
   });
 
-  it("「변경」을 누르면 같은 탭에서 카드 변경으로 들어가고 「결제 관리」로 돌아온다", async () => {
+  it("「변경」을 누르면 바로 카드 변경 모달이 열리고, 닫으면 결제 관리 그대로다(APP-1600)", async () => {
     await openPaid();
     fireEvent.click(within(methodArea()).getByRole("button", { name: "변경" }));
+    const dialog = await screen.findByRole("dialog");
     expect(
-      await screen.findByRole("heading", { name: "카드 변경" })
+      within(dialog).getByRole("heading", { name: "카드 변경" })
     ).toBeInTheDocument();
+    expect(within(dialog).getByTitle("카드 변경")).toHaveAttribute(
+      "src",
+      `/billing/card-change/${PAID}`
+    );
+    // 부모 문서에는 카드 칸도 동의도 없다.
+    expect(screen.queryByLabelText("카드 번호")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(events("billing_card_change_started")).toEqual([
+      { workspace_id: PAID },
+    ]);
+    fireEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+    expect(methodArea()).toBeInTheDocument();
+  });
+
+  it("카드가 없으면 「카드 등록」이 「카드 등록」 모달을 연다", async () => {
+    billingMock.setScenario("payerLeft");
+    await openPaid();
+    fireEvent.click(
+      await within(methodArea()).findByRole("button", { name: "카드 등록" })
+    );
     expect(
-      await screen.findByText("카드만 바뀌고 지금 결제되지 않습니다.")
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "결제 관리" }));
-    expect(
-      await screen.findByRole("region", { name: "결제 수단" })
+      await screen.findByRole("heading", { name: "카드 등록" })
     ).toBeInTheDocument();
   });
 
@@ -480,10 +500,8 @@ const replacedSetup = () =>
   );
 
 describe("카드 변경", () => {
-  it("주문서는 지금 결제되지 않는다고 적고 REPLACE 로 등록을 연다", async () => {
-    renderIn(
-      <BillingCheckout workspaceId={PAID} purpose="REPLACE" onBack={vi.fn()} />
-    );
+  it("카드 변경 문서는 지금 결제되지 않는다고 적고, 카드와 두 동의를 받아 REPLACE 로 등록을 열어 카드를 낸다", async () => {
+    renderIn(<CardChangeFrame workspaceId={PAID} />);
     expect(
       await screen.findByText("카드만 바뀌고 지금 결제되지 않습니다.")
     ).toBeInTheDocument();
@@ -497,32 +515,34 @@ describe("카드 변경", () => {
       if (request.method === "POST" && request.url.endsWith("/billing/setups"))
         body = await request.clone().json();
     });
+    const submit = screen.getByRole("button", { name: "카드 등록하기" });
     for (const checkbox of screen.getAllByRole("checkbox"))
       fireEvent.click(checkbox);
-    // 카드 칸은 카드 입력 문서에 있다(APP-1600) — 주문서는 등록을 열고 그 문서를 iframe 으로 싣는 모달을 띄운다.
-    fireEvent.click(screen.getByRole("button", { name: "카드 정보 입력" }));
-    expect(await screen.findByTitle("카드 정보 입력")).toHaveAttribute(
-      "src",
-      expect.stringMatching(/\/card\/embed$/)
+    // 카드 칸이 다 맞아야 켜진다.
+    expect(submit).toBeDisabled();
+    for (const [label, value] of [
+      ["카드 번호", "4111111111111111"],
+      ["유효기간", "12/39"],
+      ["비밀번호 앞 2자리", "12"],
+      ["생년월일 6자리", "900101"],
+    ]) {
+      const input = screen.getByLabelText(label);
+      fireEvent.change(input, { target: { value } });
+      fireEvent.blur(input);
+    }
+    fireEvent.click(submit);
+    await waitFor(() =>
+      expect(requests.some((r) => r.endsWith("/card"))).toBe(true)
     );
     expect(body).toMatchObject({ purpose: "REPLACE" });
-    expect(events("billing_card_change_started")).toEqual([
-      { workspace_id: PAID },
-    ]);
+    // 분석 없는 문서라 이벤트를 내지 않는다(시작 이벤트는 모달을 연 설정 창이 낸다).
+    expect(events("billing_card_change_started")).toEqual([]);
     expect(events("billing_card_setup_started")).toEqual([]);
   });
 
-  it("지금 카드가 없으면 「카드 등록」으로 그리고 지금 카드 줄을 숨기며 결제자가 바뀐다고 적는다", async () => {
+  it("지금 카드가 없으면 지금 카드 줄을 숨기고 결제자가 바뀐다고 적는다", async () => {
     billingMock.setScenario("payerLeft");
-    renderIn(
-      <BillingCheckout workspaceId={PAID} purpose="REPLACE" onBack={vi.fn()} />
-    );
-    expect(
-      await screen.findByRole("heading", { name: "카드 등록" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("자동 결제에 쓸 카드를 등록합니다.")
-    ).toBeInTheDocument();
+    renderIn(<CardChangeFrame workspaceId={PAID} />);
     expect(
       await screen.findByText(
         "새 카드를 등록하면 다음 결제부터 내 카드로 청구되고, 결제 내역도 내 계정에 쌓입니다."
@@ -545,20 +565,15 @@ describe("카드 변경", () => {
       )
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "카드 정보 입력" })
+      screen.getByRole("button", { name: "카드 등록하기" })
     ).toBeInTheDocument();
   });
 
   it("다른 관리자의 카드를 바꿀 때는 지금 카드를 두고 결제자가 바뀐다고 적는다", async () => {
     billingMock.setScenario("otherPayer");
-    renderIn(
-      <BillingCheckout workspaceId={PAID} purpose="REPLACE" onBack={vi.fn()} />
-    );
+    renderIn(<CardChangeFrame workspaceId={PAID} />);
     expect(
       await screen.findByText(/다음 결제부터 내 카드로 청구되고/)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "카드 변경" })
     ).toBeInTheDocument();
     expect(screen.getByText("지금 카드")).toBeInTheDocument();
   });

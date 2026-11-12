@@ -263,14 +263,12 @@ describe("proxy token refresh", () => {
   });
 });
 
-// 카드 입력 화면에만 CSP 를 건다(APP-1600). 같은 값을 요청 헤더에도 실어야 Next 가 nonce 를 스크립트에 붙인다.
+// 카드를 받는 두 면(결제 페이지·카드 변경 iframe)에만 CSP 를 건다(APP-1600). 같은 값을 요청 헤더에도 실어야 Next 가 nonce 를 스크립트에 붙인다.
 describe("card entry CSP", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   const cardRequest = () =>
-    new NextRequest(
-      "http://web.example.test/billing/setups/01K0000000001/card"
-    );
+    new NextRequest("http://web.example.test/billing/checkout/01K0000000001");
 
   it("sets a per-request nonce CSP on the response and the forwarded request", async () => {
     const proxy = await loadProxy();
@@ -279,8 +277,8 @@ describe("card entry CSP", () => {
 
     expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+'/);
     expect(csp).toContain("connect-src 'self' http://api.example.test");
-    // 카드 입력 모달이 우리 출처의 iframe 으로 싣는다 — 다른 출처는 못 띄운다.
-    expect(csp).toContain("frame-ancestors 'self'");
+    // 결제 페이지는 iframe 으로 싣지 않는다 — 어떤 출처도 프레임에 못 띄운다.
+    expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("form-action 'self'");
     expect(
       first.headers.get("x-middleware-request-content-security-policy")
@@ -290,11 +288,11 @@ describe("card entry CSP", () => {
     expect(second.headers.get("content-security-policy")).not.toBe(csp);
   });
 
-  it("sets the same CSP on the modal iframe document", async () => {
+  it("lets only our origin frame the card change document", async () => {
     const proxy = await loadProxy();
     const response = await proxy(
       new NextRequest(
-        "http://web.example.test/billing/setups/01K0000000001/card/embed"
+        "http://web.example.test/billing/card-change/01K0000000001"
       )
     );
     expect(response.headers.get("content-security-policy")).toMatch(

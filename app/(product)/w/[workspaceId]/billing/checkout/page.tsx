@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 
-// 요금제·결제 관리는 설정 창 안에 있다(PRO-75). 옛 주소로 들어오면 그 탭을 연다.
+// 첫 구독은 전용 결제 페이지다(APP-1600). 옛 주문서 주소로 들어오면 그 페이지로 보낸다.
 export default async function WorkspaceBillingCheckoutRoute({
   params,
 }: {
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  redirect(`/w/${workspaceId}?settings=billing`);
+  redirect(`/billing/checkout/${workspaceId}`);
 }

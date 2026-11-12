@@ -104,12 +104,12 @@ test("?settings=billing 은 요금제 탭을, ?settings=payment 는 결제 관�
     "aria-current",
     "page"
   );
-  // 구매는 전용 화면으로 가지 않고 같은 탭 안의 주문 확인으로 바뀐다.
+  // 첫 구독은 분석 없는 전용 결제 페이지로 문서를 새로 열어 간다(APP-1600).
   await page.getByRole("button", { name: "Pro 시작하기" }).click();
+  await expect(page).toHaveURL(/\/billing\/checkout\/[0-9A-Z]{13}$/);
   await expect(
-    dialog(page).getByRole("heading", { name: "주문 확인" })
+    page.getByRole("heading", { level: 1, name: "주문 확인" })
   ).toBeVisible();
-  await expect.poll(() => search(page)).toBe("?settings=billing");
 
   await page.goto(`${WS}?settings=payment`);
   await expect(page.getByRole("button", { name: "결제 관리" })).toHaveAttribute(

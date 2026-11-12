@@ -70,7 +70,7 @@ describe("normalizeReturnTo", () => {
       "/w/01K0000000000/billing",
       "/w/01K0000000000/billing/checkout",
       "/billing/setups/01K0000000001",
-      "/billing/setups/01K0000000001/card",
+      "/billing/checkout/01K0000000001",
     ]) {
       expect(normalizeReturnTo(path)).toBe(path);
       // 카드 등록 복귀의 authKey·state 가 로그인 returnTo 에 실리지 않는다
@@ -90,10 +90,12 @@ describe("normalizeReturnTo", () => {
   });
 });
 
-
 it("OAuth 로그인은 화면 언어와 돌아올 주소를 각각 보존한다", () => {
   for (const language of ["ko", "en"]) {
-    const url = new URL(buildGoogleOAuthUrl("/oauth/consent?a=1&b=2", language), "https://heymoa.app");
+    const url = new URL(
+      buildGoogleOAuthUrl("/oauth/consent?a=1&b=2", language),
+      "https://heymoa.app"
+    );
     expect(url.searchParams.get("language")).toBe(language);
     expect(url.searchParams.get("returnTo")).toBe("/oauth/consent?a=1&b=2");
   }
