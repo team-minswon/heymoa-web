@@ -36,6 +36,7 @@ import {
   type CommandNotice,
 } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
+import { usePollWindow } from "@/lib/billing/use-poll-window";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -96,12 +97,16 @@ export function SubscriptionManagement({
 
   // 최근 결제 한 건의 요약.
   const paymentId = detail.currentPaymentId;
+  // 환불 진행 중 다시 읽기는 요금제 탭과 같은 2분 창에서만 한다.
+  const poll = usePollWindow();
   const latest = useGetBillingPayment(workspaceId, paymentId ?? "", {
     query: {
       enabled: Boolean(paymentId),
       staleTime: 0,
       refetchInterval: (query) =>
-        refundPending(okData(query.state.data)?.refundStatus) ? 5000 : false,
+        !poll.expired && refundPending(okData(query.state.data)?.refundStatus)
+          ? 5000
+          : false,
     },
   });
   const payment = paymentId ? okData(latest.data) : null;

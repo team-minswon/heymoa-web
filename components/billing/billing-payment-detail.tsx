@@ -24,6 +24,7 @@ import { billingEvents } from "@/lib/billing/analytics";
 import { refundPending } from "@/lib/billing/payment-status";
 import { useRefundResultEvent } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
+import { usePollWindow } from "@/lib/billing/use-poll-window";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
 /**
@@ -92,12 +93,16 @@ function PaymentContent({
   const t = useTranslations("billing.payment");
   const billing = useWorkspaceBilling(workspaceId);
   // 404·403 을 화면이 그리고 취소 처리 중에는 다시 읽어서 suspense 조회가 아니다(rule `error-loading` 예외).
+  // 다시 읽기는 요금제 탭과 같은 2분 창에서만 한다.
+  const poll = usePollWindow();
   const query = useGetBillingPayment(workspaceId, paymentId, {
     query: {
       staleTime: 0,
       retry: false,
       refetchInterval: (q) =>
-        refundPending(okData(q.state.data)?.refundStatus) ? 5000 : false,
+        !poll.expired && refundPending(okData(q.state.data)?.refundStatus)
+          ? 5000
+          : false,
     },
   });
   const payment = okData(query.data);

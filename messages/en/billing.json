@@ -130,9 +130,8 @@
     "submit": "Agree and pay",
     "openSetup": {
       "title": "A card registration is already in progress",
-      "body": "The server is processing this registration. Check the result, or cancel it and start over.",
-      "view": "View progress",
-      "restart": "Cancel and start over"
+      "body": "The server is processing this registration. Check the result in View progress.",
+      "view": "View progress"
     },
     "notice": {
       "stateChanged": "The product or status changed. We've loaded the latest details; please review and agree again.",

@@ -964,21 +964,8 @@ describe("첫 구독 결제 페이지", () => {
     expect(createCount()).toBe(0);
   });
 
-  it("서버가 처리 중인 등록이 있으면 진행 상황을 보거나 취소하고 다시 시작할 수 있다", async () => {
-    let open = true;
-    server.use(
-      http.get(`*/v1/workspaces/${FREE}/billing`, () =>
-        envelope(
-          billingBody(
-            open ? { mySetupId: "S9", allowedActions: ["REFRESH_STATUS"] } : {}
-          )
-        )
-      ),
-      http.post(`*/v1/workspaces/${FREE}/billing/setups/S9/cancel`, () => {
-        open = false;
-        return envelope(setupBody("CLOSED", "CANCELED", { setupId: "S9" }));
-      })
-    );
+  it("서버가 처리 중인 등록이 있으면 진행 상황만 보게 하고 취소 버튼은 두지 않는다", async () => {
+    serveBilling({ mySetupId: "S9", allowedActions: ["REFRESH_STATUS"] });
     await renderCheckout();
     expect(
       screen.getByText("진행 중인 카드 등록이 있습니다")
@@ -988,13 +975,10 @@ describe("첫 구독 결제 페이지", () => {
     ).toHaveAttribute("href", "/billing/setups/S9");
     fillAll();
     expect(pay()).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "취소하고 다시 시작" }));
-    await waitFor(() =>
-      expect(
-        screen.queryByText("진행 중인 카드 등록이 있습니다")
-      ).not.toBeInTheDocument()
-    );
-    expect(pay()).toBeEnabled();
+    // 발급 중인 등록의 취소는 서버가 늘 409 로 거절한다.
+    expect(
+      screen.queryByRole("button", { name: "취소하고 다시 시작" })
+    ).not.toBeInTheDocument();
   });
 
   it("멤버는 관리자 요청 안내와 요금제로 돌아가는 링크만 본다", async () => {

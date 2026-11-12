@@ -47,8 +47,8 @@ const FIGURE =
   "text-[40px] leading-[1.1] font-light tracking-[-0.035em] text-[var(--el-ink)]";
 
 /**
- * 설정 › 요금제(PRO-75). 현재 요금제와 이번 달 사용량, 요금제 비교를 한 탭에 둔다. 구매는 같은 탭 안에서 주문 확인으로
- * 바뀌고(`view`), 카드 입력만 결제 대행사 창으로 나간다. 값(가격·제공량·문구 종류)은 전부 서버 응답이다.
+ * 설정 › 요금제(PRO-75). 현재 요금제와 이번 달 사용량, 요금제 비교를 한 탭에 둔다. 첫 구독은 분석 없는 전용 결제 페이지
+ * (`/billing/checkout/{id}`)로 문서를 새로 열어 가고, 카드 변경은 카드 변경 모달(iframe)이 받는다. 값(가격·제공량·문구 종류)은 전부 서버 응답이다.
  */
 export function WorkspacePlanSettings({
   workspaceId,

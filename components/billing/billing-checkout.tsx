@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   submitBillingCard,
-  useCancelBillingSetup,
   useCreateBillingSetup,
   getMyBillingSetup,
 } from "@/lib/api/generated/billing/billing";
@@ -129,7 +128,6 @@ export function CheckoutForm({
       },
     },
   });
-  const cancel = useCancelBillingSetup();
   useEffect(() => {
     onSubmittingChange?.(submitting);
   }, [onSubmittingChange, submitting]);
@@ -294,18 +292,6 @@ export function CheckoutForm({
     }
   };
 
-  const restart = async () => {
-    if (!openSetupId) return;
-    const closed = await cancel
-      .mutateAsync({ workspaceId, setupId: openSetupId })
-      .then(() => true)
-      .catch(() => false);
-    if (!closed) return;
-    openedSetupId.current = null;
-    key.renew();
-    await invalidateWorkspaceBilling(queryClient, workspaceId);
-  };
-
   const noticeText =
     notice === null
       ? null
@@ -375,17 +361,14 @@ export function CheckoutForm({
       {openSetupId ? (
         <BillingNotice tone="warn" title={t("openSetup.title")}>
           <p>{t("openSetup.body")}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <LinkButton
-              href={`/billing/setups/${openSetupId}`}
-              variant="outline"
-            >
-              {t("openSetup.view")}
-            </LinkButton>
-            <Button onClick={restart} loading={cancel.isPending}>
-              {t("openSetup.restart")}
-            </Button>
-          </div>
+          {/* 발급 중인 등록의 취소는 서버가 늘 409 로 거절해 취소 버튼을 두지 않는다. */}
+          <LinkButton
+            href={`/billing/setups/${openSetupId}`}
+            variant="outline"
+            className="mt-3"
+          >
+            {t("openSetup.view")}
+          </LinkButton>
         </BillingNotice>
       ) : null}
       <CardFields

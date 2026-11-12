@@ -4,6 +4,7 @@
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -702,6 +703,58 @@ describe("결제 상세", () => {
     expect(
       screen.queryByRole("button", { name: "환불 요청" })
     ).not.toBeInTheDocument();
+  });
+
+  it("취소 처리 중이면 5초마다 다시 읽다가 2분 뒤 멈춘다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let reads = 0;
+    server.use(
+      http.get(
+        `*/v1/workspaces/${PAID}/billing/payments/${CURRENT_PAYMENT}`,
+        () => {
+          reads += 1;
+          return HttpResponse.json({
+            success: true,
+            error: null,
+            data: {
+              paymentId: CURRENT_PAYMENT,
+              workspaceId: PAID,
+              workspaceName: "제품 팀",
+              kind: "RENEWAL",
+              cycleId: "0C00000000002",
+              attemptNumber: 1,
+              status: "SUCCEEDED",
+              completedAt: "2026-11-11T09:05:00+09:00",
+              period: {
+                start: "2026-11-11T00:00:00+09:00",
+                end: "2026-12-11T00:00:00+09:00",
+              },
+              amountKrw: 24900,
+              currency: "KRW",
+              errorCode: null,
+              maskedCard: null,
+              refundStatus: "PROCESSING",
+              refundOrigin: "OPERATOR",
+              payerIsMe: true,
+              cycleStatus: "OPEN",
+            },
+          });
+        }
+      )
+    );
+    try {
+      renderIn(paymentDetail(CURRENT_PAYMENT));
+      await screen.findByText("결제 취소를 처리하고 있습니다.");
+      const first = reads;
+      await act(() => vi.advanceTimersByTimeAsync(5100));
+      expect(reads).toBeGreaterThan(first);
+      await act(() => vi.advanceTimersByTimeAsync(125_000));
+      const stopped = reads;
+      await act(() => vi.advanceTimersByTimeAsync(60_000));
+      expect(reads).toBe(stopped);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("기간이 끝난 옛 결제는 당시 결과와 현재 상태를 가르고 환불 버튼이 없다", async () => {
