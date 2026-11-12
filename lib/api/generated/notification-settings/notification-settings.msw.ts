@@ -87,6 +87,19 @@ export const getGetNotificationSettingsResponseMock =
             },
           ],
         },
+        {
+          type: "SUBSCRIPTION_BILLING_STOPPED",
+          required: true,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
       ],
       marketingEmail: { agreed: false, changedAt: "2026-10-20T01:00:00Z" },
     },
@@ -159,6 +172,19 @@ export const getUpdateNotificationMutesResponseMock =
         },
         {
           type: "SUBSCRIPTION_ENDED_UNPAID",
+          required: true,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
+          type: "SUBSCRIPTION_BILLING_STOPPED",
           required: true,
           channels: [
             { channel: "WEB", provided: true, enabled: true, effective: true },
@@ -253,6 +279,19 @@ export const getResetNotificationSettingsResponseMock =
             },
           ],
         },
+        {
+          type: "SUBSCRIPTION_BILLING_STOPPED",
+          required: true,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
       ],
       marketingEmail: { agreed: true, changedAt: "2026-10-25T13:30:00Z" },
     },
@@ -336,6 +375,19 @@ export const getUpdateNotificationPreferenceResponseMock =
             },
           ],
         },
+        {
+          type: "SUBSCRIPTION_BILLING_STOPPED",
+          required: true,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
       ],
       marketingEmail: { agreed: false, changedAt: "2026-10-20T01:00:00Z" },
     },
@@ -408,6 +460,19 @@ export const getUpdateMarketingConsentResponseMock =
         },
         {
           type: "SUBSCRIPTION_ENDED_UNPAID",
+          required: true,
+          channels: [
+            { channel: "WEB", provided: true, enabled: true, effective: true },
+            {
+              channel: "EMAIL",
+              provided: false,
+              enabled: false,
+              effective: false,
+            },
+          ],
+        },
+        {
+          type: "SUBSCRIPTION_BILLING_STOPPED",
           required: true,
           channels: [
             { channel: "WEB", provided: true, enabled: true, effective: true },

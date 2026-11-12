@@ -9850,6 +9850,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                      - type: SUBSCRIPTION_BILLING_STOPPED
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: false
+                          enabled: false
+                          effective: false
                       marketingEmail:
                         agreed: false
                         changedAt: '2026-10-20T01:00:00Z'
@@ -9937,6 +9948,17 @@ paths:
                           enabled: true
                           effective: false
                       - type: SUBSCRIPTION_ENDED_UNPAID
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: false
+                          enabled: false
+                          effective: false
+                      - type: SUBSCRIPTION_BILLING_STOPPED
                         required: true
                         channels:
                         - channel: WEB
@@ -10048,6 +10070,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                      - type: SUBSCRIPTION_BILLING_STOPPED
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: false
+                          enabled: false
+                          effective: false
                       marketingEmail:
                         agreed: true
                         changedAt: '2026-10-25T13:30:00Z'
@@ -10139,6 +10172,17 @@ paths:
                           enabled: true
                           effective: false
                       - type: SUBSCRIPTION_ENDED_UNPAID
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: false
+                          enabled: false
+                          effective: false
+                      - type: SUBSCRIPTION_BILLING_STOPPED
                         required: true
                         channels:
                         - channel: WEB
@@ -10735,6 +10779,17 @@ paths:
                           enabled: true
                           effective: false
                       - type: SUBSCRIPTION_ENDED_UNPAID
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: false
+                          enabled: false
+                          effective: false
+                      - type: SUBSCRIPTION_BILLING_STOPPED
                         required: true
                         channels:
                         - channel: WEB
@@ -16808,6 +16863,7 @@ components:
                     - ANALYSIS_READY
                     - INQUIRY_ANSWERED
                     - SUBSCRIPTION_ENDED_UNPAID
+                    - SUBSCRIPTION_BILLING_STOPPED
                   payload:
                     type: object
                     properties:
@@ -21169,6 +21225,7 @@ components:
                     - MEETING_AUTO_ENDED
                     - INQUIRY_ANSWERED
                     - SUBSCRIPTION_ENDED_UNPAID
+                    - SUBSCRIPTION_BILLING_STOPPED
                   required:
                     type: boolean
                     description: 필수 알림. 설정과 관계없이 항상 받고 바꿀 수 없다(잠금)
@@ -21292,6 +21349,7 @@ components:
           - MEETING_AUTO_ENDED
           - INQUIRY_ANSWERED
           - SUBSCRIPTION_ENDED_UNPAID
+          - SUBSCRIPTION_BILLING_STOPPED
         enabled:
           type: boolean
           description: 받을지 여부
@@ -21328,6 +21386,7 @@ components:
               - MEETING_AUTO_ENDED
               - INQUIRY_ANSWERED
               - SUBSCRIPTION_ENDED_UNPAID
+              - SUBSCRIPTION_BILLING_STOPPED
             email:
               type: string
               description: 계정 이메일의 일부를 가린 값

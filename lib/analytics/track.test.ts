@@ -144,7 +144,8 @@ describe("알림 사건 타입", () => {
         | "WORKSPACE_INVITATION"
         | "ANALYSIS_READY"
         | "INQUIRY_ANSWERED"
-        | "SUBSCRIPTION_ENDED_UNPAID";
+        | "SUBSCRIPTION_ENDED_UNPAID"
+        | "SUBSCRIPTION_BILLING_STOPPED";
       was_unread: boolean;
     }>();
     expectTypeOf<Props<"notifications_all_read_clicked">>().toEqualTypeOf<{
