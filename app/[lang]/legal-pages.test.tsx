@@ -110,16 +110,18 @@ describe("HeyMoa legal pages", () => {
     await renderPage(TermsPage, "ko");
     const text = (id: string) => document.getElementById(id)?.textContent ?? "";
     expect(text("section-10")).toMatch(/카드를 등록한 관리자가 그 구독의 결제자가 됩니다/);
-    expect(text("section-10")).toMatch(/다음 달에 같은 날짜가 없으면 그 달의 말일 전까지/);
+    expect(text("section-10")).toMatch(/첫 결제일\(기준일\)부터 한 달 단위이며, 다음 기간이 시작하는 날은 포함하지 않습니다/);
     expect(text("section-10")).toMatch(/법정대리인의 동의 없이 결제한 경우/);
-    expect(text("section-11")).toMatch(/적용일 30일 전까지 변경 전후 금액과 적용일을 알리고/);
+    expect(text("section-11")).toMatch(/적용일 30일 전까지 서비스 안 공지 또는 이메일로 변경 전후 금액과 적용일을 알립니다/);
     expect(text("section-11")).toMatch(/결제자가 워크스페이스를 떠나거나/);
     expect(text("section-12")).toMatch(/결제 결과를 확인하는 중에는 해지와 재개가 되지 않을 수 있으며/);
+    expect(text("section-11")).toMatch(/결과를 확인하는 동안에는 Pro를 그대로 쓸 수 있습니다/);
+    expect(text("section-13")).toMatch(/지금 이용 기간의 결제를 환불받으면 구독이 끝나고/);
     expect(text("section-13")).toMatch(/청약철회권은 이 조항으로 제한되지 않습니다/);
     expect(text("section-13")).toMatch(/3영업일 이내에 결제 취소를 요청합니다/);
     expect(text("section-14")).toMatch(/구독 중인 워크스페이스를 삭제하면/);
     // 결제 알림은 앱 안 알림만이다(계약: 결제 메일 미연결). 결제 대행사 이름은 계약 전이라 넣지 않는다.
-    expect(text("section-2")).toMatch(/결제와 관련된 알림\(구독 종료, 자동 결제 중단\)은 서비스 안의 알림으로만/);
+    expect(text("section-2")).toMatch(/결제와 관련된 알림\(갱신 결제가 승인되지 않아 구독이 끝났을 때, 결제자가 빠져 자동 결제가 멈췄을 때\)은 서비스 안의 알림으로만/);
     expect(document.body.textContent).not.toMatch(/페이플|Payple|토스/);
   });
 
