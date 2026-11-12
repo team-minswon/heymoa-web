@@ -46,6 +46,8 @@ export function isChromelessRoute(pathname: string) {
   return (
     pathname === "/auth/callback" ||
     pathname === "/mock-review" ||
+    // 카드 입력 모달 안의 iframe(APP-1600) — 모달이 제목·닫기를 갖는다.
+    /^\/billing\/setups\/[^/]+\/card\/embed\/?$/.test(pathname) ||
     isWorkspaceRoute(pathname)
   );
 }

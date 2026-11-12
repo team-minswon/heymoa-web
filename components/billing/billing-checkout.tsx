@@ -10,6 +10,7 @@ import {
   TestPaymentNotice,
 } from "@/components/billing/billing-parts";
 import { BackLink } from "@/components/billing/back-link";
+import { CardEntryDialog } from "@/components/billing/card-entry-dialog";
 import { SitePageLink } from "@/components/heymoa/site-page-link";
 import {
   SETTINGS_LIST,
@@ -37,7 +38,6 @@ import { okData } from "@/lib/api/ok-data";
 import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { planName } from "@/lib/billing/plan-name";
 import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
-import { goToCardEntry } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
@@ -52,7 +52,7 @@ type Purpose = "PURCHASE" | "REPLACE";
  * (문구·분석·진입 조건이 구매와 갈린다). **금액·상품은 서버 응답만 그린다**(화면에 값을 적어 두지 않는다).
  * 두 동의가 맞기 전에는 낼 수 없다. requestKey 는 이 화면이 사용자의 한 번의 의도마다 하나 만든다(`createRequestKey`).
  * 나이스페이 정기결제는 결제창이 없어 카드 정보를 우리 화면에서 받는다(APP-1600). **카드 칸은 여기 두지 않는다** — 이 설정 창
- * 문서에는 분석 스크립트가 실려 있다. 등록을 연 뒤 분석이 없는 카드 입력 화면(`/billing/setups/{id}/card`)으로 문서를 새로 열어 간다.
+ * 문서에는 분석 스크립트가 실려 있다. 등록을 연 뒤 분석이 없는 카드 입력 문서를 iframe 으로 싣는 모달(`CardEntryDialog`)을 띄운다.
  */
 export function BillingCheckout({
   workspaceId,
@@ -129,6 +129,9 @@ function CheckoutContent({
   // 체크·해제를 되풀이해도 동의 이벤트는 화면당 한 번만 낸다.
   const agreementTracked = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  // 이 화면에서 연 등록. 모달을 닫았다 다시 눌러도 새로 열지 않고 이 등록으로 모달을 연다.
+  const openedSetupId = useRef<string | null>(null);
+  const [cardSetupId, setCardSetupId] = useState<string | null>(null);
   const create = useCreateBillingSetup({
     mutation: {
       meta: {
@@ -140,7 +143,7 @@ function CheckoutContent({
 
   const product = billing.product;
   const admin = workspace?.role === "ADMIN";
-  // 카드를 기다리는 내 등록(CONTINUE_SETUP)은 새로 열지 않고 그 등록의 카드 입력 화면으로 간다. 서버가 이미 처리 중인 등록만 「진행 중」으로 알린다.
+  // 카드를 기다리는 내 등록(CONTINUE_SETUP)은 새로 열지 않고 그 등록으로 카드 입력 모달을 연다. 서버가 이미 처리 중인 등록만 「진행 중」으로 알린다.
   const continuable = billing.allowedActions.includes("CONTINUE_SETUP");
   const openSetupId = continuable ? null : billing.mySetupId;
 
@@ -180,14 +183,14 @@ function CheckoutContent({
   );
   const ready = agreed && pgAgreed && !openSetupId;
 
-  /** 등록을 열고(카드를 기다리는 내 등록이면 그대로) 카드 입력 화면으로 간다. 등록 열기 실패는 생성 훅이라 전역 토스트가 띄운다. */
+  /** 등록을 열고(이미 열었거나 카드를 기다리는 내 등록이면 그대로) 카드 입력 모달을 연다. 등록 열기 실패는 생성 훅이라 전역 토스트가 띄운다. */
   const submit = async () => {
     if (submitting || !ready) return;
     setSubmitting(true);
     setNotice(null);
-    let moving = false;
     try {
-      let setupId = continuable ? billing.mySetupId : null;
+      let setupId =
+        openedSetupId.current ?? (continuable ? billing.mySetupId : null);
       if (!setupId) {
         const response = await create.mutateAsync({
           workspaceId,
@@ -201,13 +204,13 @@ function CheckoutContent({
         const setup = response.data.data;
         if (!setup) return;
         key.renew();
-        setupId = setup.setupId;
+        setupId = openedSetupId.current = setup.setupId;
+        // 요금제 탭으로 돌아가도 이 등록이 「이어가기」로 보이게 공간 조회를 새로 읽힌다.
+        void invalidateWorkspaceBilling(queryClient, workspaceId);
         if (replace) billingEvents.cardChangeStarted(workspaceId);
         else billingEvents.cardSetupStarted(workspaceId, setup.provider);
       }
-      // 이동 중에 버튼이 다시 켜지지 않게 둔다(문서가 바뀌면 함께 사라진다).
-      moving = true;
-      goToCardEntry(setupId);
+      setCardSetupId(setupId);
     } catch (error) {
       const code = errorCodeOf(error);
       if (code === "BILLING_STATE_CHANGED") {
@@ -223,7 +226,7 @@ function CheckoutContent({
         key.renew();
       }
     } finally {
-      if (!moving) setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -234,6 +237,7 @@ function CheckoutContent({
       .then(() => true)
       .catch(() => false);
     if (!closed) return;
+    openedSetupId.current = null;
     key.renew();
     await invalidateWorkspaceBilling(queryClient, workspaceId);
   };
@@ -428,6 +432,11 @@ function CheckoutContent({
           </span>
         </div>
       </div>
+      <CardEntryDialog
+        setupId={cardSetupId}
+        replace={replace}
+        onClose={() => setCardSetupId(null)}
+      />
     </div>
   );
 }

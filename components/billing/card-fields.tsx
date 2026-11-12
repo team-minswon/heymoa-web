@@ -155,7 +155,7 @@ export function CardFields({
       </div>
       <p className="mt-2.5 flex items-start gap-1.5 text-xs leading-5 text-[var(--el-muted)]">
         <LockKeyhole className="mt-1 size-3 shrink-0" aria-hidden />
-        <span>{t("safe")}</span>
+        <span className="text-pretty">{t("safe")}</span>
       </p>
     </section>
   );

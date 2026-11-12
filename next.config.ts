@@ -33,12 +33,12 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
         ],
       },
-      // 카드 정보 입력(APP-1600). 프레임에 띄우지 못하게 하고, 카드 칸이 있는 문서를 캐시·Referer 로 남기지 않는다.
-      // CSP 는 요청마다 nonce 가 달라 `proxy.ts` 가 붙인다.
+      // 카드 정보 입력(APP-1600)과 그 모달 iframe(`/card/embed`). 우리 출처만 프레임에 띄우고, 카드 칸이 있는 문서를
+      // 캐시·Referer 로 남기지 않는다. CSP 는 요청마다 nonce 가 달라 `proxy.ts` 가 붙인다.
       {
-        source: "/billing/setups/:setupId/card",
+        source: "/billing/setups/:setupId/card/:embed(embed)?",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Cache-Control", value: "no-store" },
           { key: "Referrer-Policy", value: "no-referrer" },
         ],

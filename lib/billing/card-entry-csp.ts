@@ -4,7 +4,8 @@
  * (PCI DSS 6.4.3·11.6.1 의 결제 화면 스크립트 통제). 분석 스크립트는 이 면의 루트 레이아웃이 아예 싣지 않는다(`app/(card-entry)`).
  * nonce 는 `proxy.ts` 가 요청마다 만들고, Next 가 요청 헤더의 CSP 에서 읽어 프레임워크 스크립트에 붙인다(Next 16 CSP 안내).
  */
-const CARD_ENTRY_PATH = /^\/billing\/setups\/[^/]+\/card\/?$/;
+// 전용 화면(`card`)과 카드 입력 모달 안의 iframe(`card/embed`).
+const CARD_ENTRY_PATH = /^\/billing\/setups\/[^/]+\/card(?:\/embed)?\/?$/;
 
 export const isCardEntryPath = (pathname: string) =>
   CARD_ENTRY_PATH.test(pathname);
@@ -36,6 +37,7 @@ export function cardEntryCsp({
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    // 카드 입력 모달이 우리 출처의 iframe 으로 싣는다. 다른 출처는 프레임에 못 띄운다.
+    "frame-ancestors 'self'",
   ].join("; ");
 }

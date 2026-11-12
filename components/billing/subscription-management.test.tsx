@@ -29,13 +29,12 @@ import { MyPaymentsSettings } from "@/components/billing/my-payments-settings";
 import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
 import { WorkspacePaymentSettings } from "@/components/billing/payment-settings";
 import { track } from "@/lib/analytics/track";
-import { goToCardEntry, goToSetupResult } from "@/lib/billing/navigate";
+import { goToSetupResult } from "@/lib/billing/navigate";
 import { billingHandlers, billingMock } from "@/lib/mocks/billing";
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
 vi.mock("@/lib/billing/navigate", () => ({
-  goToCardEntry: vi.fn(),
   goToSetupResult: vi.fn(),
 }));
 vi.mock("@/lib/analytics/track", async (importOriginal) => ({
@@ -60,7 +59,6 @@ afterEach(() => {
   billingMock.setScenario(null);
   vi.mocked(track).mockClear();
   vi.mocked(goToSetupResult).mockClear();
-  vi.mocked(goToCardEntry).mockClear();
   requests.length = 0;
 });
 afterAll(() => server.close());
@@ -501,9 +499,12 @@ describe("카드 변경", () => {
     });
     for (const checkbox of screen.getAllByRole("checkbox"))
       fireEvent.click(checkbox);
-    // 카드 칸은 카드 입력 화면에 있다(APP-1600) — 주문서는 등록을 열고 그 화면으로 간다.
+    // 카드 칸은 카드 입력 문서에 있다(APP-1600) — 주문서는 등록을 열고 그 문서를 iframe 으로 싣는 모달을 띄운다.
     fireEvent.click(screen.getByRole("button", { name: "카드 정보 입력" }));
-    await waitFor(() => expect(goToCardEntry).toHaveBeenCalled());
+    expect(await screen.findByTitle("카드 정보 입력")).toHaveAttribute(
+      "src",
+      expect.stringMatching(/\/card\/embed$/)
+    );
     expect(body).toMatchObject({ purpose: "REPLACE" });
     expect(events("billing_card_change_started")).toEqual([
       { workspace_id: PAID },

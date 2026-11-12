@@ -97,7 +97,10 @@ function invalidRefreshTokenResponse() {
     JSON.stringify({
       success: false,
       data: null,
-      error: { code: "INVALID_REFRESH_TOKEN", message: "세션이 만료되었습니다." },
+      error: {
+        code: "INVALID_REFRESH_TOKEN",
+        message: "세션이 만료되었습니다.",
+      },
     }),
     { status: 401, headers: { "Content-Type": "application/json" } }
   );
@@ -186,7 +189,9 @@ describe("proxy token refresh", () => {
     const proxy = await loadProxy();
 
     const request = new NextRequest("http://web.example.test/w/01K0000000000", {
-      headers: { cookie: "access_token=expired; refresh_token=dead; heymoa-lang=en" },
+      headers: {
+        cookie: "access_token=expired; refresh_token=dead; heymoa-lang=en",
+      },
     });
     const response = await proxy(request);
     const setCookie = response.headers.get("set-cookie") ?? "";
@@ -196,7 +201,9 @@ describe("proxy token refresh", () => {
     expect(request.cookies.has("access_token")).toBe(false);
     expect(request.cookies.has("refresh_token")).toBe(false);
     expect(request.cookies.get("heymoa-lang")?.value).toBe("en");
-    expect(response.headers.get("x-middleware-request-cookie")).toBe("heymoa-lang=en");
+    expect(response.headers.get("x-middleware-request-cookie")).toBe(
+      "heymoa-lang=en"
+    );
   });
 
   // 서버가 심은 쿠키와 (name, domain, path)가 같아야 지워진다. Domain이 빠지면 host-only
@@ -261,7 +268,9 @@ describe("card entry CSP", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   const cardRequest = () =>
-    new NextRequest("http://web.example.test/billing/setups/01K0000000001/card");
+    new NextRequest(
+      "http://web.example.test/billing/setups/01K0000000001/card"
+    );
 
   it("sets a per-request nonce CSP on the response and the forwarded request", async () => {
     const proxy = await loadProxy();
@@ -270,12 +279,27 @@ describe("card entry CSP", () => {
 
     expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+'/);
     expect(csp).toContain("connect-src 'self' http://api.example.test");
-    expect(csp).toContain("frame-ancestors 'none'");
+    // 카드 입력 모달이 우리 출처의 iframe 으로 싣는다 — 다른 출처는 못 띄운다.
+    expect(csp).toContain("frame-ancestors 'self'");
     expect(csp).toContain("form-action 'self'");
-    expect(first.headers.get("x-middleware-request-content-security-policy")).toBe(csp);
+    expect(
+      first.headers.get("x-middleware-request-content-security-policy")
+    ).toBe(csp);
 
     const second = await proxy(cardRequest());
     expect(second.headers.get("content-security-policy")).not.toBe(csp);
+  });
+
+  it("sets the same CSP on the modal iframe document", async () => {
+    const proxy = await loadProxy();
+    const response = await proxy(
+      new NextRequest(
+        "http://web.example.test/billing/setups/01K0000000001/card/embed"
+      )
+    );
+    expect(response.headers.get("content-security-policy")).toMatch(
+      /script-src 'self' 'nonce-.+frame-ancestors 'self'/
+    );
   });
 
   it("leaves other product pages without the card CSP", async () => {

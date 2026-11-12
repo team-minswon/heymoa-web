@@ -14,6 +14,7 @@ import {
 } from "@testing-library/react";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { useState } from "react";
 import {
   afterAll,
   afterEach,
@@ -26,12 +27,13 @@ import {
 
 import { BillingCardEntryPage } from "@/components/billing/billing-card-entry-page";
 import { BillingCheckout } from "@/components/billing/billing-checkout";
+import { CardEntryDialog } from "@/components/billing/card-entry-dialog";
 import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
 import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
 import { track } from "@/lib/analytics/track";
 import { getGetWorkspaceBillingQueryKey } from "@/lib/api/generated/billing/billing";
+import { CARD_ENTRY_MESSAGE } from "@/lib/billing/card-entry-frame";
 import {
-  goToCardEntry,
   goToSetupResult,
   replaceWithSetupResult,
 } from "@/lib/billing/navigate";
@@ -40,7 +42,6 @@ import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
 vi.mock("@/lib/billing/navigate", () => ({
-  goToCardEntry: vi.fn(),
   goToSetupResult: vi.fn(),
   replaceWithSetupResult: vi.fn(),
 }));
@@ -66,7 +67,6 @@ afterEach(() => {
   vi.useRealTimers();
   vi.mocked(track).mockClear();
   vi.mocked(goToSetupResult).mockClear();
-  vi.mocked(goToCardEntry).mockClear();
   vi.mocked(replaceWithSetupResult).mockClear();
   requests.length = 0;
 });
@@ -86,6 +86,18 @@ function renderIn(ui: React.ReactNode, client = newClient()) {
         <QueryClientProvider client={client}>{next}</QueryClientProvider>
       ),
   };
+}
+/** 카드 입력 모달의 iframe 과 그것이 실은 등록(APP-1600). 부모 문서에는 카드 칸이 없다. */
+async function cardFrame() {
+  const frame = (await screen.findByTitle(
+    "카드 정보 입력"
+  )) as HTMLIFrameElement;
+  const match = /^\/billing\/setups\/([^/]+)\/card\/embed$/.exec(
+    frame.getAttribute("src") ?? ""
+  );
+  expect(match).not.toBeNull();
+  expect(screen.queryByLabelText("카드 번호")).not.toBeInTheDocument();
+  return { frame, setupId: match![1] };
 }
 const envelope = (data: unknown, status = 200) =>
   HttpResponse.json({ success: true, data, error: null }, { status });
@@ -513,8 +525,8 @@ describe("요금제 탭 안의 단계", () => {
         role: "admin",
       })
     );
-    // 주소를 바꾸지 않는다 — 설정 창 안의 상태다.
-    expect(goToCardEntry).not.toHaveBeenCalled();
+    // 주문서만으로는 카드 모달을 열지 않는다.
+    expect(screen.queryByTitle("카드 정보 입력")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "요금제" }));
     expect(
@@ -634,7 +646,9 @@ describe("주문서", () => {
     // 혜택은 체크 목록, 결제 조건은 「결제 안내」 아래 점 목록이다(APP-1596).
     const [benefits, terms] = screen.getAllByRole("list");
     expect(within(benefits).getAllByRole("listitem")).toHaveLength(2);
-    expect(benefits).toHaveTextContent("이 워크스페이스의 모든 멤버가 함께 씁니다.");
+    expect(benefits).toHaveTextContent(
+      "이 워크스페이스의 모든 멤버가 함께 씁니다."
+    );
     expect(terms.previousElementSibling).toHaveTextContent("결제 안내");
     expect(within(terms).getAllByRole("listitem")).toHaveLength(3);
     expect(terms).toHaveTextContent("해지는 설정 > 결제 관리에서");
@@ -656,17 +670,22 @@ describe("주문서", () => {
     expect(notice.nextElementSibling).toContainElement(agree());
   });
 
-  it.each([
-    ["SIMULATED_NO_CHARGE", "시험 결제이며 실제로 청구되지 않습니다."],
-  ])("시험 결제 안내는 서버 값(%s)을 따른다", async (notice, text) => {
-    serveBilling({
-      product: { ...billingBody().product, testPaymentNotice: notice },
-    });
-    renderIn(
-      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
-    );
-    expect(await screen.findByText(text)).toBeInTheDocument();
-  });
+  it.each([["SIMULATED_NO_CHARGE", "시험 결제이며 실제로 청구되지 않습니다."]])(
+    "시험 결제 안내는 서버 값(%s)을 따른다",
+    async (notice, text) => {
+      serveBilling({
+        product: { ...billingBody().product, testPaymentNotice: notice },
+      });
+      renderIn(
+        <BillingCheckout
+          workspaceId={FREE}
+          purpose="PURCHASE"
+          onBack={vi.fn()}
+        />
+      );
+      expect(await screen.findByText(text)).toBeInTheDocument();
+    }
+  );
 
   it("실결제 상품(안내 값 없음)에는 시험 결제 문구를 쓰지 않는다", async () => {
     serveBilling({
@@ -679,15 +698,14 @@ describe("주문서", () => {
     expect(screen.queryByText(/시험 결제/)).not.toBeInTheDocument();
   });
 
-  it("동의하고 「카드 정보 입력」을 누르면 등록을 열고 카드 입력 화면으로 문서를 옮기며 카드는 아직 내지 않는다", async () => {
+  it("동의하고 「카드 정보 입력」을 누르면 등록을 열고 카드 입력 모달을 띄우며 카드는 아직 내지 않는다", async () => {
     renderIn(
       <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
     );
     await screen.findByText("오늘 결제");
     fillAll();
     fireEvent.click(submit());
-    await waitFor(() => expect(goToCardEntry).toHaveBeenCalled());
-    const setupId = vi.mocked(goToCardEntry).mock.calls[0][0];
+    const { setupId } = await cardFrame();
     expect(requests).toContain(`POST /v1/workspaces/${FREE}/billing/setups`);
     expect(requests.some((r) => r.endsWith("/card"))).toBe(false);
     expect(setupId).toEqual(expect.any(String));
@@ -727,7 +745,7 @@ describe("주문서", () => {
     await waitFor(() => expect(keys).toHaveLength(1));
     await waitFor(() => expect(submit()).toBeEnabled());
     fireEvent.click(submit());
-    await waitFor(() => expect(goToCardEntry).toHaveBeenCalled());
+    await cardFrame();
     expect(keys).toHaveLength(2);
     expect(keys[1]).toBe(keys[0]);
   });
@@ -766,11 +784,11 @@ describe("주문서", () => {
     expect(submit()).toBeDisabled();
     fireEvent.click(agree());
     fireEvent.click(submit());
-    await waitFor(() => expect(goToCardEntry).toHaveBeenCalled());
+    await cardFrame();
     expect(keys[1]).not.toBe(keys[0]);
   });
 
-  it("카드를 기다리는 내 등록(CONTINUE_SETUP)이 있으면 새로 열지 않고 그 등록의 카드 입력 화면으로 간다", async () => {
+  it("카드를 기다리는 내 등록(CONTINUE_SETUP)이 있으면 새로 열지 않고 그 등록으로 카드 입력 모달을 연다", async () => {
     serveBilling({
       mySetupId: "S9",
       allowedActions: ["CONTINUE_SETUP", "CANCEL_SETUP"],
@@ -784,22 +802,24 @@ describe("주문서", () => {
     ).not.toBeInTheDocument();
     fillAll();
     fireEvent.click(submit());
-    await waitFor(() => expect(goToCardEntry).toHaveBeenCalledWith("S9"));
+    expect((await cardFrame()).setupId).toBe("S9");
     expect(
       requests.filter((r) => r === `POST /v1/workspaces/${FREE}/billing/setups`)
     ).toHaveLength(0);
   });
 
-  it("요금제의 「진행 중인 카드 등록 이어가기」는 주문서를 거치지 않고 카드 입력 화면으로 간다", async () => {
+  it("요금제의 「진행 중인 카드 등록 이어가기」는 주문서를 거치지 않고 그 등록으로 카드 입력 모달을 연다", async () => {
     serveBilling({
       mySetupId: "S9",
       allowedActions: ["CONTINUE_SETUP", "CANCEL_SETUP"],
     });
     renderIn(<PlanTab workspaceId={FREE} />);
     fireEvent.click(
-      await screen.findByRole("button", { name: "진행 중인 카드 등록 이어가기" })
+      await screen.findByRole("button", {
+        name: "진행 중인 카드 등록 이어가기",
+      })
     );
-    expect(goToCardEntry).toHaveBeenCalledWith("S9");
+    expect((await cardFrame()).setupId).toBe("S9");
   });
 
   it("서버가 처리 중인 등록이 있으면 진행 상황을 보거나 취소하고 다시 시작할 수 있다", async () => {
@@ -808,9 +828,7 @@ describe("주문서", () => {
       http.get(`*/v1/workspaces/${FREE}/billing`, () =>
         envelope(
           billingBody(
-            open
-              ? { mySetupId: "S9", allowedActions: ["REFRESH_STATUS"] }
-              : {}
+            open ? { mySetupId: "S9", allowedActions: ["REFRESH_STATUS"] } : {}
           )
         )
       ),
@@ -908,9 +926,9 @@ describe("카드 입력 화면", () => {
       "생년월일 6자리",
     ])
       expect(screen.getByLabelText(label)).toHaveClass("ph-no-capture");
-    expect(
-      screen.getByRole("region", { name: "카드 정보" })
-    ).toHaveClass("ph-no-capture");
+    expect(screen.getByRole("region", { name: "카드 정보" })).toHaveClass(
+      "ph-no-capture"
+    );
   });
 
   it("카드 변경 등록이면 「카드 등록하기」이고 결제 관리로 돌아간다", async () => {
@@ -961,9 +979,9 @@ describe("카드 입력 화면", () => {
     const leaked = (text: string) =>
       text.includes(CARD_NUMBER) || text.includes("900101");
     expect(leaked(JSON.stringify(vi.mocked(track).mock.calls))).toBe(false);
-    expect(
-      leaked(JSON.stringify(vi.mocked(goToSetupResult).mock.calls))
-    ).toBe(false);
+    expect(leaked(JSON.stringify(vi.mocked(goToSetupResult).mock.calls))).toBe(
+      false
+    );
     expect(requests.some(leaked)).toBe(false);
     expect(window.location.href).not.toMatch(/4111|900101/);
     const stored = [localStorage, sessionStorage]
@@ -981,7 +999,10 @@ describe("카드 입력 화면", () => {
   });
 
   it("틀린 칸은 떠난 뒤 그 아래 한 줄로 알리고, 법인 카드는 사업자등록번호 10자리를 받는다", async () => {
-    vi.useFakeTimers({ now: new Date("2026-11-12T12:00:00+09:00"), shouldAdvanceTime: true });
+    vi.useFakeTimers({
+      now: new Date("2026-11-12T12:00:00+09:00"),
+      shouldAdvanceTime: true,
+    });
     serveAwaitingSetup();
     await renderCardEntry();
     typeInto("카드 번호", "4111 1111 1111 1112");
@@ -1139,7 +1160,11 @@ describe("등록 결과 — 상태별 화면", () => {
       setupBody("ACCESS", "PROCESSING"),
       "결제를 확인했습니다",
     ],
-    ["닫힘(만료)", setupBody("CLOSED", "EXPIRED"), "카드 등록이 종료되었습니다"],
+    [
+      "닫힘(만료)",
+      setupBody("CLOSED", "EXPIRED"),
+      "카드 등록이 종료되었습니다",
+    ],
     [
       "발급 결과 불명",
       setupBody("BILLING_KEY", "UNKNOWN", { setupStatus: "ISSUE_UNKNOWN" }),
@@ -1288,17 +1313,20 @@ describe("등록 결과 — 상태별 화면", () => {
       screen.getByText("2026년 11월 11일부터 2026년 12월 11일 전까지")
     ).toBeInTheDocument();
     expect(screen.getByText("2026년 12월 11일")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "워크스페이스로 가기" })).toHaveAttribute(
-      "href",
-      `/w/${FREE}`
-    );
+    expect(
+      screen.getByRole("link", { name: "워크스페이스로 가기" })
+    ).toHaveAttribute("href", `/w/${FREE}`);
   });
 
   it("확정 거절은 같은 카드로 다시 결제하지 않고 카드 등록부터 새로 시작하게 한다", async () => {
     serveSetup(
       setupBody("PAYMENT", "DECLINED", {
         allowedActions: ["START_PURCHASE"],
-        latestAttempt: { attemptId: "A1", status: "FAILED", errorCode: "CARD_DECLINED" },
+        latestAttempt: {
+          attemptId: "A1",
+          status: "FAILED",
+          errorCode: "CARD_DECLINED",
+        },
       })
     );
     renderIn(<BillingSetupResultPage setupId="S1" />);
@@ -1515,5 +1543,214 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     expect(
       client.getQueryState(getGetWorkspaceBillingQueryKey(PAID))?.isInvalidated
     ).toBe(false);
+  });
+});
+
+// ---- 카드 입력 모달 (APP-1600) ----
+
+describe("카드 입력 모달", () => {
+  function Harness() {
+    const [setupId, setSetupId] = useState<string | null>("S1");
+    return (
+      <>
+        <button type="button" onClick={() => setSetupId("S1")}>
+          다시 열기
+        </button>
+        <CardEntryDialog setupId={setupId} onClose={() => setSetupId(null)} />
+      </>
+    );
+  }
+  const send = (
+    data: unknown,
+    {
+      origin = window.location.origin,
+      source,
+    }: { origin?: string; source: MessageEventSource | null }
+  ) =>
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", { data, origin, source })
+      );
+    });
+  const msg = (body: Record<string, unknown>) => ({
+    type: CARD_ENTRY_MESSAGE,
+    ...body,
+  });
+
+  it("분석 없는 카드 입력 문서를 iframe 으로 싣고, 부모 문서에는 카드 칸이 없다", async () => {
+    serveAwaitingSetup();
+    renderIn(<Harness />);
+    const { frame, setupId } = await cardFrame();
+    expect(setupId).toBe("S1");
+    expect(frame).toHaveAttribute("referrerpolicy", "no-referrer");
+    expect(frame).toHaveAttribute("allow", "");
+    expect(frame).not.toHaveAttribute("sandbox");
+    expect(
+      await screen.findByText("테스트 유저의 워크스페이스 · Pro 월 24,900원")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveClass("ph-no-capture");
+    // 첫 높이를 받기 전에는 카드 칸 자리를 잡는다.
+    expect(
+      screen.getByLabelText("카드 등록을 불러오는 중")
+    ).toBeInTheDocument();
+  });
+
+  it("그 iframe 이 우리 출처로 보낸 메시지만 읽는다", async () => {
+    serveAwaitingSetup();
+    renderIn(<Harness />);
+    const { frame } = await cardFrame();
+    const height = msg({ event: "height", height: 512 });
+    send(height, {
+      origin: "https://evil.example",
+      source: frame.contentWindow,
+    });
+    send(height, { source: window });
+    send({ ...height, type: "other" }, { source: frame.contentWindow });
+    expect(frame.style.height).toBe("");
+    send(msg({ event: "done" }), { source: window });
+    expect(goToSetupResult).not.toHaveBeenCalled();
+
+    send(height, { source: frame.contentWindow });
+    expect(frame.style.height).toBe("512px");
+    expect(
+      screen.queryByLabelText("카드 등록을 불러오는 중")
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["done", "closed-setup"])(
+    "%s 를 받으면 모달을 닫고 결과 화면으로 간다",
+    async (event) => {
+      serveAwaitingSetup();
+      renderIn(<Harness />);
+      const { frame } = await cardFrame();
+      send(msg({ event }), { source: frame.contentWindow });
+      expect(goToSetupResult).toHaveBeenCalledWith("S1");
+      await waitFor(() =>
+        expect(screen.queryByTitle("카드 정보 입력")).not.toBeInTheDocument()
+      );
+    }
+  );
+
+  it("Esc 로 닫으면 iframe 을 떼고 등록은 그대로 두며, 다시 열면 같은 등록이다. 제출 중에는 닫지 않는다", async () => {
+    serveAwaitingSetup();
+    renderIn(<Harness />);
+    const { frame } = await cardFrame();
+    send(msg({ event: "submitting", submitting: true }), {
+      source: frame.contentWindow,
+    });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.getByTitle("카드 정보 입력")).toBe(frame);
+
+    send(msg({ event: "submitting", submitting: false }), {
+      source: frame.contentWindow,
+    });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByTitle("카드 정보 입력")).not.toBeInTheDocument()
+    );
+    expect(requests.some((r) => r.endsWith("/cancel"))).toBe(false);
+
+    // iframe 에 포커스가 있을 때의 Esc 는 자식이 알린다.
+    fireEvent.click(screen.getByRole("button", { name: "다시 열기" }));
+    const second = await cardFrame();
+    send(msg({ event: "escape" }), { source: second.frame.contentWindow });
+    await waitFor(() =>
+      expect(screen.queryByTitle("카드 정보 입력")).not.toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole("button", { name: "다시 열기" }));
+    const reopened = await cardFrame();
+    expect(reopened.setupId).toBe("S1");
+    expect(reopened.frame).not.toBe(frame);
+  });
+});
+
+describe("카드 입력 화면 — 모달 안(embed)", () => {
+  const posted = () =>
+    vi
+      .mocked(window.postMessage)
+      .mock.calls.map(([data, origin]) => ({ data, origin }));
+  const serveSubmit = (respond: () => Response) =>
+    server.use(
+      http.post(`*/v1/workspaces/${FREE}/billing/setups/S1/card`, respond)
+    );
+  const renderEmbed = async () => {
+    vi.spyOn(window, "postMessage");
+    renderIn(<BillingCardEntryPage setupId="S1" embed />);
+    await screen.findByLabelText("카드 번호");
+  };
+  afterEach(() => vi.mocked(window.postMessage).mockRestore?.());
+
+  it("머리글·요약·돌아가기 없이 카드 칸과 제출만 그린다", async () => {
+    serveAwaitingSetup();
+    await renderEmbed();
+    expect(pay()).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "카드 정보 입력" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "돌아가기" })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pro 월 24,900원/)).not.toBeInTheDocument();
+  });
+
+  it("제출이 끝나면 이동하지 않고 부모에게 done 을 우리 출처로 알리며, 메시지에 카드 값이 없다", async () => {
+    serveAwaitingSetup();
+    serveSubmit(() => envelope(setupBody("BILLING_KEY", "PROCESSING")));
+    await renderEmbed();
+    fillCard();
+    fireEvent.click(pay());
+    await waitFor(() =>
+      expect(posted()).toContainEqual({
+        data: { type: CARD_ENTRY_MESSAGE, event: "done" },
+        origin: window.location.origin,
+      })
+    );
+    expect(goToSetupResult).not.toHaveBeenCalled();
+    expect(posted()).toContainEqual({
+      data: { type: CARD_ENTRY_MESSAGE, event: "submitting", submitting: true },
+      origin: window.location.origin,
+    });
+    const text = JSON.stringify(posted());
+    expect(text).not.toContain(CARD_NUMBER);
+    expect(text).not.toContain("900101");
+  });
+
+  it("결과를 모르는 실패(5xx)도 done 으로 결과 화면에 맡기고, 입력 오류(400)는 그 자리에 알린다", async () => {
+    serveAwaitingSetup();
+    let calls = 0;
+    serveSubmit(() =>
+      ++calls === 1
+        ? failure("BAD_REQUEST", "잘못된 요청입니다.", 400)
+        : failure("INTERNAL_ERROR", "잠시 후 다시 시도해 주세요.", 500)
+    );
+    await renderEmbed();
+    fillCard();
+    fireEvent.click(pay());
+    expect(
+      await screen.findByText("카드 정보를 다시 확인해 주세요.")
+    ).toBeInTheDocument();
+    expect(
+      posted().some(({ data }) => (data as { event: string }).event === "done")
+    ).toBe(false);
+    fireEvent.click(pay());
+    await waitFor(() =>
+      expect(posted()).toContainEqual({
+        data: { type: CARD_ENTRY_MESSAGE, event: "done" },
+        origin: window.location.origin,
+      })
+    );
+  });
+
+  it("카드를 기다리지 않는 등록이면 바꿔 가지 않고 closed-setup 을 알린다", async () => {
+    vi.spyOn(window, "postMessage");
+    serveSetup(setupBody("BILLING_KEY", "PROCESSING"));
+    renderIn(<BillingCardEntryPage setupId="S1" embed />);
+    await waitFor(() =>
+      expect(posted()).toContainEqual({
+        data: { type: CARD_ENTRY_MESSAGE, event: "closed-setup" },
+        origin: window.location.origin,
+      })
+    );
+    expect(replaceWithSetupResult).not.toHaveBeenCalled();
   });
 });
