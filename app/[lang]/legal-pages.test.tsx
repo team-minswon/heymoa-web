@@ -106,6 +106,35 @@ describe("HeyMoa legal pages", () => {
     expect(document.getElementById("section-15")).toHaveTextContent("제15조 (약관의 변경과 문의)");
   });
 
+  it("약관에 결제자·이용 기간·결제자 이탈·청약철회·환불 처리 기한을 적는다(APP-1586 초안, 법무 확인 전)", async () => {
+    await renderPage(TermsPage, "ko");
+    const text = (id: string) => document.getElementById(id)?.textContent ?? "";
+    expect(text("section-10")).toMatch(/카드를 등록한 관리자가 그 구독의 결제자가 됩니다/);
+    expect(text("section-10")).toMatch(/다음 달에 같은 날짜가 없으면 그 달의 말일 전까지/);
+    expect(text("section-10")).toMatch(/법정대리인의 동의 없이 결제한 경우/);
+    expect(text("section-11")).toMatch(/적용일 30일 전까지 변경 전후 금액과 적용일을 알리고/);
+    expect(text("section-11")).toMatch(/결제자가 워크스페이스를 떠나거나/);
+    expect(text("section-12")).toMatch(/결제 결과를 확인하는 중에는 해지와 재개가 되지 않을 수 있으며/);
+    expect(text("section-13")).toMatch(/청약철회권은 이 조항으로 제한되지 않습니다/);
+    expect(text("section-13")).toMatch(/3영업일 이내에 결제 취소를 요청합니다/);
+    expect(text("section-14")).toMatch(/구독 중인 워크스페이스를 삭제하면/);
+    // 결제 알림은 앱 안 알림만이다(계약: 결제 메일 미연결). 결제 대행사 이름은 계약 전이라 넣지 않는다.
+    expect(text("section-2")).toMatch(/결제와 관련된 알림\(구독 종료, 자동 결제 중단\)은 서비스 안의 알림으로만/);
+    expect(document.body.textContent).not.toMatch(/페이플|Payple|토스/);
+  });
+
+  it("처리방침에 결제 정보 항목·목적·보관 기간을 적고 결제 대행사 위탁은 넣지 않는다(APP-1586 초안)", async () => {
+    await renderPage(PrivacyPage, "ko");
+    expect(document.getElementById("section-1")).toHaveTextContent(/빌링키.*카드 번호 전체와 유효기간 같은 카드 정보는 결제 대행사가 보관하며 HeyMoa는 저장하지 않음/);
+    expect(document.getElementById("section-2")).toHaveTextContent(/정기 결제 갱신, 환불 처리, 결제 문의 대응/);
+    expect(document.getElementById("section-2")).toHaveTextContent(/결제 메일은 보내지 않습니다/);
+    const retention = document.getElementById("section-6");
+    expect(retention).toHaveTextContent(/계약 또는 청약철회 기록\s*5년/);
+    expect(retention).toHaveTextContent(/대금 결제 및 서비스 공급 기록.*5년/);
+    expect(retention).toHaveTextContent(/소비자 불만 또는 분쟁 처리 기록\s*3년/);
+    expect(document.getElementById("section-7")).not.toHaveTextContent(/결제 대행/);
+  });
+
   it("주소에 조항 앵커가 있으면 본문이 그려진 뒤 그 조항으로 맞춘다(APP-1586)", async () => {
     // 새 탭으로 바로 연 `/terms#section-13` 은 브라우저가 도착점을 찾을 때 본문이 아직 없어 맨 위에 머문다.
     const scrollIntoView = vi.fn();
