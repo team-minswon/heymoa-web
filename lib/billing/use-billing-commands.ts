@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   getGetMyBillingPaymentsQueryKey,
@@ -9,7 +9,6 @@ import {
 } from "@/lib/api/generated/billing/billing";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { billingEvents } from "@/lib/billing/analytics";
-import { refundPending } from "@/lib/billing/payment-status";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
 
@@ -95,7 +94,6 @@ export function useBillingCommands(workspaceId: string) {
 
   return {
     notice,
-    clearNotice: () => setNotice(null),
     pending: cancel.isPending || resume.isPending || remove.isPending,
     cancelPending: cancel.isPending,
     resumePending: resume.isPending,
@@ -154,28 +152,4 @@ export function useBillingCommands(workspaceId: string) {
       return outcome;
     },
   };
-}
-
-/** 이 화면에서 취소 처리 중을 본 뒤 끝난 결과가 보이면 한 번 낸다. 처음부터 끝난 취소는 세지 않는다. */
-export function useRefundResultEvent(
-  workspaceId: string,
-  refundStatus: string | null | undefined,
-  enabled = true
-) {
-  const sawPending = useRef(false);
-  useEffect(() => {
-    if (!enabled) return;
-    if (refundPending(refundStatus)) {
-      sawPending.current = true;
-      return;
-    }
-    if (!sawPending.current) return;
-    if (refundStatus === "SUCCEEDED" || refundStatus === "FAILED") {
-      sawPending.current = false;
-      billingEvents.refundResulted(
-        workspaceId,
-        refundStatus === "SUCCEEDED" ? "succeeded" : "failed"
-      );
-    }
-  }, [workspaceId, refundStatus, enabled]);
 }

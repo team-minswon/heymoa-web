@@ -91,16 +91,6 @@ async function openPaid(workspaceId = PAID) {
   return screen.findByRole("region", { name: "구독" });
 }
 const methodArea = () => screen.getByRole("region", { name: "결제 수단" });
-const asMember = () =>
-  server.use(
-    http.get(`*/v1/workspaces/${PAID}`, () =>
-      HttpResponse.json({
-        success: true,
-        error: null,
-        data: { ...mockDb.getWorkspace(PAID), role: "MEMBER" },
-      })
-    )
-  );
 const paymentDetail = (paymentId: string) => (
   <BillingPaymentDetail
     workspaceId={PAID}
@@ -127,6 +117,11 @@ describe("결제 수단·구독", () => {
     expect(
       within(area).queryByRole("button", { name: "환불 요청" })
     ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(events("billing_payment_history_viewed")).toEqual([
+        { scope: "workspace" },
+      ])
+    );
   });
 
   it("카드 없이 종료 예정이면 「카드 등록」과 멈춤 안내를 보이고 재개 버튼은 없다(APP-1588)", async () => {
@@ -214,19 +209,6 @@ describe("결제 수단·구독", () => {
     expect(
       await screen.findByRole("heading", { name: "카드 등록" })
     ).toBeInTheDocument();
-  });
-
-  it("멤버는 결제 수단·구독 대신 관리자만 할 수 있다는 안내를 본다", async () => {
-    asMember();
-    renderIn(
-      <WorkspacePaymentSettings workspaceId={PAID} onOpenPlans={vi.fn()} />
-    );
-    expect(
-      await screen.findByText("구매와 결제 관리는 관리자만 할 수 있습니다.")
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("region", { name: "결제 수단" })
-    ).not.toBeInTheDocument();
   });
 
   it("해지는 확인 창을 거쳐야 호출되고, 끝나면 언제까지 쓰는지 보인다", async () => {
@@ -586,7 +568,6 @@ describe("카드 변경", () => {
     expect(body).toMatchObject({ purpose: "REPLACE" });
     // 분석 없는 문서라 이벤트를 내지 않는다(시작 이벤트는 모달을 연 설정 창이 낸다).
     expect(events("billing_card_change_started")).toEqual([]);
-    expect(events("billing_card_setup_started")).toEqual([]);
   });
 
   it("지금 카드가 없으면 지금 카드 줄을 숨기고 결제자가 바뀐다고 적는다", async () => {
@@ -836,7 +817,7 @@ describe("결제 내역 — 결제 관리 탭(공간)", () => {
         "이 워크스페이스의 결제 내역입니다. 관리자에게만 보입니다."
       )
     ).toBeInTheDocument();
-    expect(events("billing_payment_history_viewed")).toEqual([{}]);
+    expect(events("billing_payment_history_viewed")).toEqual([{ scope: "workspace" }]);
   });
 
   it("행은 모두 그 결제의 상세로 들어간다", async () => {
@@ -881,6 +862,7 @@ describe("결제 내역 — 계정의 내 결제 내역", () => {
     expect(within(deleted).getByText("환불됨")).toBeInTheDocument();
     expect(within(deleted).getByText("2026년 8월 2일")).toBeInTheDocument();
     expect(screen.getAllByText("실패").length).toBeGreaterThan(0);
+    expect(events("billing_payment_history_viewed")).toEqual([{ scope: "me" }]);
   });
 
   it("지금 ADMIN 인 공간의 결제만 상세로 들어가고, 돌아가면 목록이다", async () => {

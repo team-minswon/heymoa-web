@@ -38,14 +38,14 @@ export function setupViewOf(
       setup.originAttempt?.refundStatus ?? setup.latestAttempt?.refundStatus;
     return refund ? "refundProcessing" : "accessProcessing";
   }
-  if (stage === "CLOSED" || status === "CANCELED" || status === "EXPIRED")
-    return "closed";
+  // 서버(BillingSetupViewHandler)는 CANCELED·EXPIRED 를 CLOSED 단계로만 준다(ACCESS / CANCELED 는 위에서 갈랐다).
+  if (stage === "CLOSED") return "closed";
   if (stage === "CARD_AUTH_REQUIRED") return "cardAuthRequired";
   if (stage === "BILLING_KEY") {
     // 카드 발급 응답을 잃었다(ISSUE_UNKNOWN, APP-1600). 서버가 다시 보내지 않으니 결제는 없었고 새 등록부터 한다.
     if (status === "UNKNOWN") return "issueUnknown";
-    if (status === "ACTION_REQUIRED" || status === "DECLINED")
-      return "cardActionRequired";
+    // 발급 거절(ISSUE_REJECTED)은 DECLINED 다. 서버는 이 단계에 ACTION_REQUIRED 를 주지 않는다.
+    if (status === "DECLINED") return "cardActionRequired";
     return "cardProcessing";
   }
   // PAYMENT

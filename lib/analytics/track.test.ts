@@ -23,8 +23,6 @@ describe("결제 이벤트", () => {
     expectTypeOf<
       | "billing_plans_viewed"
       | "billing_checkout_entered"
-      | "billing_agreement_accepted"
-      | "billing_card_setup_started"
       | "billing_card_setup_resulted"
     >().toExtend<AnalyticsEvent>();
     expectTypeOf<"billing">().toExtend<Props<"settings_tab_opened">["section"]>();
@@ -32,28 +30,24 @@ describe("결제 이벤트", () => {
       "completed" | "declined" | "unknown" | "refunded"
     >();
     type Secret = "authKey" | "state" | "customerKey" | "setup_id" | "payment_id" | "card";
-    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_started">>();
     expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_resulted">>();
     expectTypeOf<"payment">().toExtend<Props<"settings_tab_opened">["section"]>();
   });
 
   it("구독 관리 이벤트는 공간과 결과 종류만 받고 금액·카드·결제 식별자는 받지 않는다", () => {
     type Money = "amount" | "amount_krw" | "payment_id" | "refund_id" | "method_id" | "card";
-    expectTypeOf<Money>().not.toExtend<keyof Props<"billing_refund_resulted">>();
     expectTypeOf<Money>().not.toExtend<keyof Props<"billing_payment_method_deleted">>();
     expectTypeOf<Props<"billing_cancel_dialog_opened">>().toEqualTypeOf<{ workspace_id: string }>();
     expectTypeOf<Props<"billing_subscription_canceled">>().toEqualTypeOf<{ workspace_id: string }>();
     expectTypeOf<Props<"billing_card_change_started">>().toEqualTypeOf<{ workspace_id: string }>();
     expectTypeOf<Props<"billing_payment_viewed">>().toEqualTypeOf<{ workspace_id: string }>();
     expectTypeOf<Props<"billing_subscription_resumed">["result"]>().toEqualTypeOf<"resumed" | "not_admin">();
-    expectTypeOf<Props<"billing_refund_resulted">["result"]>().toEqualTypeOf<"succeeded" | "failed">();
     expectTypeOf<Props<"billing_payment_method_deleted">["result"]>().toEqualTypeOf<"deleted" | "in_use">();
-    // @ts-expect-error 환불 금액을 실을 수 없다
-    track("billing_refund_resulted", { workspace_id: "W1", result: "succeeded", amount_krw: 9900 });
-    // @ts-expect-error 내 결제 내역에는 아무 속성도 싣지 않는다
-    track("billing_payment_history_viewed", { workspace_id: "W1" });
+    expectTypeOf<Props<"billing_payment_history_viewed">>().toEqualTypeOf<{ scope: "workspace" | "me" }>();
+    // @ts-expect-error 결제 내역 이벤트에는 범위만 싣는다
+    track("billing_payment_history_viewed", { scope: "me", workspace_id: "W1" });
     // @ts-expect-error 인증 키를 실을 수 없다
-    track("billing_card_setup_started", { workspace_id: "W1", provider: "NICEPAY", authKey: "k" });
+    track("billing_card_setup_resulted", { result: "completed", authKey: "k" });
   });
 });
 

@@ -91,14 +91,11 @@ export type AnalyticsEvent =
   | "settings_tab_opened"
   | "billing_plans_viewed"
   | "billing_checkout_entered"
-  | "billing_agreement_accepted"
-  | "billing_card_setup_started"
   | "billing_card_setup_resulted"
   | "billing_cancel_dialog_opened"
   | "billing_subscription_canceled"
   | "billing_subscription_resumed"
   | "billing_card_change_started"
-  | "billing_refund_resulted"
   | "billing_payment_method_deleted"
   | "billing_payment_viewed"
   | "billing_payment_history_viewed"
@@ -229,11 +226,6 @@ export type WebEventProperties = {
   // role 은 본 사람이 ADMIN 인가 멤버인가 — 구매는 ADMIN 만 할 수 있어 퍼널을 역할로 갈라 봐야 한다.
   billing_plans_viewed: { workspace_id: string; role: "admin" | "member" };
   billing_checkout_entered: { workspace_id: string; role: "admin" | "member" };
-  billing_agreement_accepted: { workspace_id: string };
-  billing_card_setup_started: {
-    workspace_id: string;
-    provider: BillingProvider;
-  };
   billing_card_setup_resulted: {
     workspace_id?: string;
     provider?: BillingProvider;
@@ -248,18 +240,13 @@ export type WebEventProperties = {
     result: "resumed" | "not_admin";
   };
   billing_card_change_started: { workspace_id: string };
-  // 이 화면에서 취소 처리 중을 본 뒤 끝난 결과가 보일 때 한 번.
-  billing_refund_resulted: {
-    workspace_id: string;
-    result: "succeeded" | "failed";
-  };
   billing_payment_method_deleted: {
     workspace_id: string;
     result: "deleted" | "in_use";
   };
   billing_payment_viewed: { workspace_id: string };
-  // 계정 설정의 내 결제 내역. 공간을 가로지르는 목록이라 공간이 없다.
-  billing_payment_history_viewed: Record<string, never>;
+  // 결제 내역 목록. scope: 공간 설정 › 결제 관리의 그 공간 내역(workspace)·계정 설정의 내 결제 내역(me). 내 내역은 공간을 가로질러 공간이 없다.
+  billing_payment_history_viewed: { scope: "workspace" | "me" };
   // 무료 월 한도로 녹음 시작이 거절돼 안내가 떴다(APP-1566). role 은 그 안내를 본 사람이 ADMIN 인가 멤버인가.
   // 사용량 수치·회의 id 는 싣지 않는다. 효과는 안내 → 요금제 보기 클릭 비율로 본다.
   recording_quota_blocked: { workspace_id: string; role: "admin" | "member" };

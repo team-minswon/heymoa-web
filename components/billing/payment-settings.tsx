@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
-import { BillingNotice } from "@/components/billing/billing-parts";
 import { BillingPaymentDetail } from "@/components/billing/billing-payment-detail";
 import { CardChangeDialog } from "@/components/billing/card-change-dialog";
 import { PaymentList } from "@/components/billing/payment-history";
@@ -20,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetWorkspaceBillingPaymentsSuspense } from "@/lib/api/generated/billing/billing";
-import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
@@ -111,14 +109,8 @@ function Manage({
   onOpenPayment: (paymentId: string) => void;
 }) {
   const t = useTranslations("billing.manage");
-  const tPage = useTranslations("billing.page");
   const billing = useWorkspaceBilling(workspaceId);
-  const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const [cardChange, setCardChange] = useState(false);
-
-  if (workspace?.role !== "ADMIN") {
-    return <BillingNotice>{tPage("askAdmin")}</BillingNotice>;
-  }
   if (!hasSubscriptionToManage(billing)) {
     return (
       <section aria-label={t("methodTitle")}>
@@ -179,7 +171,7 @@ function History({
 }) {
   const t = useTranslations("billing.history");
   useEffect(() => {
-    billingEvents.paymentHistoryViewed();
+    billingEvents.paymentHistoryViewed("workspace");
   }, []);
   return (
     <section aria-label={t("title")}>

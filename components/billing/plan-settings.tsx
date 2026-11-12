@@ -25,7 +25,6 @@ import { refundPending } from "@/lib/billing/payment-status";
 import { planName } from "@/lib/billing/plan-name";
 import { goToCheckout } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
-import { useRefundResultEvent } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { usePollWindow } from "@/lib/billing/use-poll-window";
 import {
@@ -132,12 +131,6 @@ function PlanContent({
       refundPending(data.detail?.refundedAttempt?.refundStatus))
       ? 5000
       : false
-  );
-  const refunded = billing.detail?.refundedAttempt;
-  useRefundResultEvent(
-    workspaceId,
-    refunded?.refundStatus,
-    refunded?.refundOrigin === "OPERATOR"
   );
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const isAdmin = workspace?.role === "ADMIN";

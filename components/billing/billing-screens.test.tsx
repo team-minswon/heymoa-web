@@ -1057,8 +1057,8 @@ describe("등록 결과 — 상태별 화면", () => {
       "카드 등록을 확인하는 중입니다",
     ],
     [
-      "카드 등록 조치 필요",
-      setupBody("BILLING_KEY", "ACTION_REQUIRED"),
+      "카드 발급 거절",
+      setupBody("BILLING_KEY", "DECLINED"),
       "이 등록으로는 결제되지 않았습니다",
     ],
     [
@@ -1151,7 +1151,7 @@ describe("등록 결과 — 상태별 화면", () => {
   });
 
   it("결제 시도가 없는 등록의 문의 링크는 등록 번호를 싣는다", async () => {
-    serveSetup(setupBody("BILLING_KEY", "ACTION_REQUIRED"));
+    serveSetup(setupBody("BILLING_KEY", "DECLINED"));
     renderIn(<BillingSetupResultPage setupId="S1" />);
     fireEvent.click(await screen.findByRole("button", { name: "문의·피드백" }));
     expect(

@@ -56,7 +56,6 @@ describe("setupViewOf", () => {
     ["BILLING_KEY", "PROCESSING", "cardProcessing"],
     ["BILLING_KEY", "UNKNOWN", "issueUnknown"],
     ["BILLING_KEY", "DECLINED", "cardActionRequired"],
-    ["BILLING_KEY", "ACTION_REQUIRED", "cardActionRequired"],
     ["PAYMENT", "PROCESSING", "paymentProcessing"],
     ["PAYMENT", "UNKNOWN", "paymentUnknown"],
     ["PAYMENT", "DECLINED", "declined"],

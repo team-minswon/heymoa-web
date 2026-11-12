@@ -29,7 +29,7 @@ export function MyPaymentsSettings() {
     paymentId: string;
   } | null>(null);
   useEffect(() => {
-    billingEvents.paymentHistoryViewed();
+    billingEvents.paymentHistoryViewed("me");
   }, []);
 
   if (open) {

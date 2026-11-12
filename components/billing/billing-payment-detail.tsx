@@ -22,7 +22,6 @@ import { ApiError } from "@/lib/api/fetcher";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
 import { refundPending } from "@/lib/billing/payment-status";
-import { useRefundResultEvent } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { usePollWindow } from "@/lib/billing/use-poll-window";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
@@ -106,7 +105,6 @@ function PaymentContent({
     },
   });
   const payment = okData(query.data);
-  useRefundResultEvent(workspaceId, payment?.refundStatus);
 
   if (query.isPending) return <PaymentSkeleton label={t("loading")} />;
   if (!payment) {
