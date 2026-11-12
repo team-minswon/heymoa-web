@@ -326,15 +326,6 @@ export function FeedbackDialog({
                 </p>
               </div>
 
-              <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-                {t("privacyNote")}
-              </p>
-              {reference ? (
-                <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-                  {t(`referenceNote.${reference.type}`, { id: reference.id })}
-                </p>
-              ) : null}
-
               <DialogFooter className="bg-transparent">
                 <Button
                   type="button"

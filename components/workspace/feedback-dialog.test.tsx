@@ -129,7 +129,6 @@ describe("FeedbackDialog", () => {
     expect(data.message).not.toContain("view=full");
     // 일반 진입은 결제 맥락이 없다.
     expect(data.message).not.toMatch(/결제 번호|등록 번호/);
-    expect(screen.queryByText(/번호 .*함께 보냅니다/)).toBeNull();
   });
 
   it("일반 진입은 사용 문의를, 결제 맥락은 「결제·환불」을 골라 두고 번호 줄을 환경 앞에 싣는다", () => {

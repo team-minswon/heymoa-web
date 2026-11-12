@@ -140,11 +140,6 @@
     },
     "kindLabel": "Category",
     "messageLabel": "Message",
-    "privacyNote": "Your current page path and environment are included. Meeting content is never sent.",
-    "referenceNote": {
-      "payment": "Payment number {id} is included too.",
-      "setup": "Registration number {id} is included too."
-    },
     "submit": "Send",
     "sent": "Sent. Replies will appear in My requests.",
     "unseenAnswers": "{count, plural, one {# new reply} other {# new replies}}",
