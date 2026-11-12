@@ -375,6 +375,15 @@ describe("invitation and notification handlers", () => {
       )
     ).toHaveLength(1);
   });
+
+  it("puts the billing-stopped notice first only in the payerLeft billing scenario", async () => {
+    billingMock.setScenario("payerLeft");
+    const notice = (
+      await (await fetch("http://localhost/v1/notifications?schema=2")).json()
+    ).data.notifications[0];
+    expect(notice.type).toBe("SUBSCRIPTION_BILLING_STOPPED");
+    expect(notice.payload.workspaceName).toBe("제품 팀");
+  });
 });
 
 describe("workspace member management handlers", () => {

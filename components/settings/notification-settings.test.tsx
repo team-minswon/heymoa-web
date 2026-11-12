@@ -141,6 +141,11 @@ describe("NotificationSettings", () => {
             muteEmail: false,
             items: [
               { type: "SUBSCRIPTION_ENDED_UNPAID", required: true, channels },
+              {
+                type: "SUBSCRIPTION_BILLING_STOPPED",
+                required: true,
+                channels,
+              },
               { type: "ANALYSIS_READY", required: false, channels },
             ],
           },

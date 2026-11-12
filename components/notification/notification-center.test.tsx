@@ -542,9 +542,7 @@ describe("알림 모달", () => {
     renderCenter();
     const dialog = await openModal();
     expect(
-      await within(dialog).findByText(
-        "새 알림이 여기에 도착합니다."
-      )
+      await within(dialog).findByText("새 알림이 여기에 도착합니다.")
     ).toBeVisible();
     expect(
       await within(dialog).findByText("인앱 알림이 꺼져 있습니다")
@@ -767,6 +765,45 @@ describe("구독 종료 행", () => {
       expect(push).toHaveBeenCalledWith("/w/WS1?settings=billing")
     );
     await waitFor(() => expect(requests).toContain("PUT read S1"));
+  });
+
+  it("자동 결제 중단은 결제자가 빠진 까닭을 그리고, 누르면 그 공간의 요금제 탭으로 간다(APP-1588)", async () => {
+    store.items = [
+      {
+        notificationId: "S2",
+        type: "SUBSCRIPTION_BILLING_STOPPED",
+        readAt: null,
+        createdAt: at(1),
+        invitation: null,
+        payload: {
+          workspaceId: "WS1",
+          workspaceName: "제품 팀",
+          invitationId: null,
+          inviterUserId: null,
+          noteId: null,
+          noteTitle: null,
+          autoEnded: null,
+          pausedBusinessDays: null,
+          feedbackId: null,
+        },
+      },
+    ];
+    renderCenter();
+    const dialog = await openModal();
+    expect(
+      await within(dialog).findByText(
+        "결제 카드를 등록한 사람이 더 이상 이 워크스페이스의 관리자가 아니어서 자동 결제가 멈췄습니다. 이어서 쓰려면 카드를 등록하고 구독을 재개해 주세요."
+      )
+    ).toBeVisible();
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "제품 팀의 자동 결제가 멈췄습니다",
+      })
+    );
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/w/WS1?settings=billing")
+    );
+    await waitFor(() => expect(requests).toContain("PUT read S2"));
   });
 });
 
