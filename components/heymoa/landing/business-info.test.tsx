@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { BusinessInfoLine } from "@/components/heymoa/landing/business-info";
+import { BusinessInfoBlock } from "@/components/heymoa/landing/business-info";
 import { messagesFor } from "@/i18n/messages";
 import { BUSINESS_INFO } from "@/lib/business-info";
 
@@ -13,13 +13,13 @@ const EMPTY = Object.fromEntries(
 const renderLine = (info = EMPTY) =>
   render(
     <NextIntlClientProvider locale="ko" messages={messagesFor("ko")}>
-      <BusinessInfoLine info={info} />
+      <BusinessInfoBlock info={info} />
     </NextIntlClientProvider>
   );
 
 afterEach(cleanup);
 
-describe("BusinessInfoLine", () => {
+describe("BusinessInfoBlock", () => {
   it("상호가 비어 있으면 아무것도 그리지 않는다", () => {
     const { container } = renderLine();
     expect(container).toBeEmptyDOMElement();
@@ -32,7 +32,7 @@ describe("BusinessInfoLine", () => {
       registration: "123-45-67890",
     });
     const list = screen.getByLabelText("사업자 정보");
-    expect(list).toHaveTextContent("상호헤이모아");
+    expect(list).toHaveTextContent("헤이모아");
     expect(list).toHaveTextContent("사업자등록번호123-45-67890");
     expect(list).not.toHaveTextContent("대표자");
     // 한글 값은 영어 페이지에서도 그대로라 그 언어를 밝힌다. 숫자 값에는 달지 않는다
@@ -43,9 +43,11 @@ describe("BusinessInfoLine", () => {
   it("실제 값에서 신고 전인 통신판매업 신고번호는 보이지 않는다", () => {
     renderLine(BUSINESS_INFO);
     const list = screen.getByLabelText("사업자 정보");
-    expect(list).toHaveTextContent("상호헤이모아");
+    expect(list).toHaveTextContent("헤이모아");
     expect(list).toHaveTextContent("대표자");
     expect(list).toHaveTextContent("사업자등록번호");
     expect(list).not.toHaveTextContent("통신판매업 신고번호");
+    // 호스팅 제공자는 적지 않는다(2026-11-12).
+    expect(list).not.toHaveTextContent("Vercel");
   });
 });

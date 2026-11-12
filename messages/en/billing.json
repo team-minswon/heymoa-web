@@ -194,8 +194,7 @@
       "mailOrder": "Mail-order business report no.",
       "address": "Address",
       "phone": "Phone",
-      "email": "Email",
-      "hosting": "Hosting provider"
+      "email": "Email"
     },
     "pageBack": "Back",
     "cardRejected": "Please check your card details again.",

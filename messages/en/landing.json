@@ -746,12 +746,9 @@
       "mailOrder": "Mail-order business report no.",
       "address": "Address",
       "phone": "Phone",
-      "email": "Email",
-      "hosting": "Hosting provider"
+      "email": "Email"
     },
     "feedback": "Send feedback",
-    "feedbackBody": "Tell us what you think, or ask us anything, by email.",
-    "example": "Every meeting, person, and date on this page is made up.",
-    "disclaimer": "The AI meeting agent is a tool to support your work."
+    "feedbackBody": "Tell us what you think, or ask us anything, by email."
   }
 }

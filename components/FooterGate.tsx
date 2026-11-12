@@ -9,7 +9,6 @@ import {
   isChromelessRoute,
   isFocusChromeRoute,
   isLandingChromeRoute,
-  isLandingHome,
 } from "@/lib/routes/app-route";
 
 /**
@@ -26,8 +25,7 @@ export function FooterGate({ children }: { children: React.ReactNode }) {
   }
 
   if (isLandingChromeRoute(pathname)) {
-    // 「지어낸 예시」 고지는 데모가 있는 랜딩에서만.
-    return <LandingFooter example={isLandingHome(pathname)} />;
+    return <LandingFooter />;
   }
 
   if (isFocusChromeRoute(pathname)) {

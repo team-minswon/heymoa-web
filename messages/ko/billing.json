@@ -194,8 +194,7 @@
       "mailOrder": "통신판매업 신고번호",
       "address": "주소",
       "phone": "전화",
-      "email": "전자우편",
-      "hosting": "호스팅 제공자"
+      "email": "전자우편"
     },
     "pageBack": "돌아가기",
     "cardRejected": "카드 정보를 다시 확인해 주세요.",
