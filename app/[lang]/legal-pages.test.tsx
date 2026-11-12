@@ -109,8 +109,10 @@ describe("HeyMoa legal pages", () => {
   it("약관에 결제자·이용 기간·결제자 이탈·청약철회·환불 처리 기한을 적는다(APP-1586 초안, 법무 확인 전)", async () => {
     await renderPage(TermsPage, "ko");
     const text = (id: string) => document.getElementById(id)?.textContent ?? "";
+    // 계약 당사자: 사업자등록증의 상호와 대표자
+    expect(text("section-1")).toMatch(/이 약관은 헤이모아\(대표자 이민형, 이하 'HeyMoa'\)가 제공하는/);
     expect(text("section-10")).toMatch(/카드를 등록한 관리자가 그 구독의 결제자가 됩니다/);
-    expect(text("section-10")).toMatch(/HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스페이먼츠 주식회사\)에 전달하며, HeyMoa는 이 값을 저장하지 않습니다/);
+    expect(text("section-10")).toMatch(/HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스정보통신 주식회사\)에 전달하며, HeyMoa는 이 값을 저장하지 않습니다/);
     expect(text("section-10")).toMatch(/첫 결제가 승인된 시각부터 한 달 단위이며, 다음 달 같은 날 같은 시각이 되기 전까지입니다/);
     expect(text("section-10")).toMatch(/법정대리인의 동의 없이 결제한 경우/);
     expect(text("section-11")).toMatch(/적용일 30일 전까지 서비스 안 공지 또는 이메일로 변경 전후 금액과 적용일을 알립니다/);
@@ -127,16 +129,19 @@ describe("HeyMoa legal pages", () => {
     expect(document.body.textContent).not.toMatch(/페이플|Payple|토스/);
   });
 
-  it("처리방침에 결제 정보 항목·목적·보관 기간을 적고 결제 대행사 위탁은 넣지 않는다(APP-1586 초안)", async () => {
+  it("처리방침에 결제 정보 항목·목적·보관 기간과 결제 대행사 위탁(국내 처리)을 적는다(APP-1586)", async () => {
     await renderPage(PrivacyPage, "ko");
-    expect(document.getElementById("section-1")).toHaveTextContent(/빌링키.*카드 번호 끝 네 자리.*HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스페이먼츠 주식회사\)에 전달하며 HeyMoa는 저장하지 않음/);
+    expect(document.getElementById("section-1")).toHaveTextContent(/빌링키.*카드 번호 끝 네 자리.*HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스정보통신 주식회사\)에 전달하며 HeyMoa는 저장하지 않음/);
     expect(document.getElementById("section-2")).toHaveTextContent(/정기 결제 갱신, 환불 처리, 결제 문의 대응/);
     expect(document.getElementById("section-2")).toHaveTextContent(/결제가 완료되거나 환불이 완료되면 결제자에게 메일을 보냅니다/);
     const retention = document.getElementById("section-6");
     expect(retention).toHaveTextContent(/계약 또는 청약철회 기록\s*5년/);
     expect(retention).toHaveTextContent(/대금 결제 및 서비스 공급 기록.*5년/);
     expect(retention).toHaveTextContent(/소비자 불만 또는 분쟁 처리 기록\s*3년/);
-    expect(document.getElementById("section-7")).not.toHaveTextContent(/결제 대행/);
+    // 계약을 접수한 뒤(11-12) 법인명을 확인해 위탁 표에 넣었다. 국내 카드만 받아 국외 이전은 없다
+    const entrust = document.getElementById("section-7");
+    expect(entrust).toHaveTextContent(/나이스정보통신\(나이스페이\)\s*카드 정기결제 처리\s*해당 없음\(국내\)/);
+    expect(entrust).toHaveTextContent(/나이스정보통신 주식회사 \(나이스페이\).*대한민국\. 국외 이전 아님.*카드 비밀번호 앞 2자리, 주문 번호, 결제 금액, 상품 이름/);
   });
 
   it("주소에 조항 앵커가 있으면 본문이 그려진 뒤 그 조항으로 맞춘다(APP-1586)", async () => {

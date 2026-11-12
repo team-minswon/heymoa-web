@@ -23,7 +23,7 @@
       {
         "title": "1. Purpose and Scope",
         "body": [
-          "These Terms set out the conditions for using meeting recording, real-time voice transcription, automatic summaries, agent questions, notes, and workspace features provided by HeyMoa.",
+          "These Terms set out the conditions for using meeting recording, real-time voice transcription, automatic summaries, agent questions, notes, and workspace features provided by HeyMoa. The business name and representative of the operator are shown in the business information at the bottom of the Service website.",
           "You can use the Service after agreeing to these Terms and the Privacy Policy when you sign in."
         ]
       },
@@ -107,7 +107,7 @@
         "title": "10. Paid Services and Payment",
         "body": [
           "The Pro plan is subscribed to per workspace, and its price is the amount shown on the payment screen. Prices include value-added tax (VAT).",
-          "Payment is made with a card registered by a workspace admin. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Payments Co., Ltd.). HeyMoa does not store these values. HeyMoa stores only the recurring payment key, the card issuer name, and the last four digits of the card number.",
+          "Payment is made with a card registered by a workspace admin. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Information & Telecommunication, Inc.). HeyMoa does not store these values. HeyMoa stores only the recurring payment key, the card issuer name, and the last four digits of the card number.",
           "The admin who registered the card is the payer for that subscription. Other admins of the same workspace can also cancel or resume the subscription and change the card; the admin who changes the card becomes the payer from then on, and later payments are charged to that admin's card.",
           "You can use Pro from the time the payment is approved and applied to the workspace. The usage period runs in one-month units from the time the first payment is approved, and lasts until just before the same time on the same day of the next month. In a month that has no such date, the next period starts on the last day of that month, and in the following month it goes back to the original date (for example, if you start on January 31, the next period starts on the last day of February and the one after that on March 31).",
           "If a minor makes a payment without the consent of a legal guardian, the minor or the legal guardian may cancel that payment."
@@ -220,7 +220,7 @@
               ],
               [
                 "Payments",
-                "Recurring payment key (billing key), card issuer name and the last four digits of the card number, payment and refund times and amounts, the payment provider's transaction number and receipt URL, refund reason, payer account. HeyMoa may receive the payment provider's transaction list and compare it with payment records to verify them. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Payments Co., Ltd.); HeyMoa does not store them"
+                "Recurring payment key (billing key), card issuer name and the last four digits of the card number, payment and refund times and amounts, the payment provider's transaction number and receipt URL, refund reason, payer account. HeyMoa may receive the payment provider's transaction list and compare it with payment records to verify them. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Information & Telecommunication, Inc.); HeyMoa does not store them"
               ],
               [
                 "Inquiries and feedback",
@@ -446,6 +446,11 @@
                 "Amazon Web Services",
                 "Infrastructure and email delivery",
                 "None (Seoul)"
+              ],
+              [
+                "NICE Information & Telecommunication (NICEPAY)",
+                "Recurring card payment processing",
+                "None (Korea)"
               ],
               [
                 "Vercel",
@@ -674,6 +679,32 @@
               [
                 "Retention",
                 "Same as the retention periods in Section 6"
+              ]
+            ]
+          },
+          {
+            "vendor": "NICE Information & Telecommunication, Inc. (NICEPAY)",
+            "role": "Recurring card payment processing",
+            "rows": [
+              [
+                "Region",
+                "Republic of Korea. This is not an international transfer"
+              ],
+              [
+                "Data processed",
+                "Card number, expiry date, date of birth (business registration number for corporate cards), first 2 digits of the card PIN, order number, payment amount, product name"
+              ],
+              [
+                "Purpose",
+                "Issuing and deleting the recurring payment key; approving, looking up, and canceling payments"
+              ],
+              [
+                "Retention",
+                "As required by the Electronic Financial Transactions Act and other applicable laws, and by NICE Information & Telecommunication's privacy policy"
+              ],
+              [
+                "Note",
+                "While processing a payment, the payment provider shares information with card issuers and others under its own terms. Consent to this is obtained on the payment screen"
               ]
             ]
           },
