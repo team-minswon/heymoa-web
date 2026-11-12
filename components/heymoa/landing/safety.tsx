@@ -15,7 +15,7 @@ import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
 
 import { Answer, AppWindow, Composer, RailHead, ScopeChip, UserBubble } from "./app";
-import { Cursor, ExampleStamp, Hand, Scribble, Sticky } from "./marks";
+import { Cursor, Hand, Scribble, Sticky } from "./marks";
 import { RICH } from "./rich";
 import {
   APP,
@@ -399,7 +399,6 @@ function AgentTile() {
           <figcaption className="sr-only">{t("figure1")}</figcaption>
           <div className="relative -rotate-1 lg:-rotate-[1.5deg]">
             <PanelNo n={1} />
-            <ExampleStamp className="absolute -top-4 -right-2 z-10" />
             <AppWindow className="@container">
               <RailHead className={NARROW_HEAD} />
               <div className="px-4 pt-4 pb-5 sm:px-5 sm:pt-5">
@@ -639,7 +638,6 @@ function ExternalTile() {
         <figure className="relative m-0 mt-8 lg:mt-9">
           <figcaption className="sr-only">{t("figure")}</figcaption>
           <div className="tv-rslide relative" style={vars({ "--d": "100ms" })}>
-            <ExampleStamp className="absolute -top-3 -left-2 z-10" />
             <AppWindow className="@container rotate-[0.6deg] p-4 sm:p-5 lg:rotate-1">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">

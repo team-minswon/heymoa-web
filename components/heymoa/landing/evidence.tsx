@@ -20,7 +20,7 @@ import {
   SectionHead,
   TaskRow,
 } from "./app";
-import { Cursor, ExampleStamp, Hand, Scribble, Sticky, Tape } from "./marks";
+import { Cursor, Hand, Scribble, Sticky, Tape } from "./marks";
 import { RICH } from "./rich";
 import {
   CAPTION,
@@ -532,7 +532,6 @@ export function Evidence() {
           <Reveal className="mt-12 lg:mt-16">
             <p className="sr-only">{t("sr")}</p>
             <div className="tv-r relative">
-              <ExampleStamp className="absolute -top-3 -left-2 z-20 lg:hidden" />
               <ScriptWindow />
               {/* 이름이 보이는 첫 창 바로 아래. 창 밑으로 반쯤 나온 종이 띠를 비켜 mt-11. */}
               <p className={cn(CAPTION, "mt-11 flex items-start gap-2")}>
@@ -558,7 +557,6 @@ export function Evidence() {
             <Hand>{t("pairs")}</Hand>
           </div>
           <div className="tv-r relative" style={vars({ "--i": 2 })}>
-            <ExampleStamp className="absolute -top-4 -left-4 z-20 hidden lg:inline-flex" />
             <SummaryWindow />
             {/* 버튼에 매단 쪽지 · 손글씨가 막대 밑으로 내려오는 자리. 버튼 바닥이 막대 바닥보다 7px 위이고,
                 좁으면 손글씨가 쪽지 아래(버튼 밑 +156), 넓으면 쪽지 옆(+110)까지 내려온다. 360 미만은 버튼이

@@ -5,7 +5,7 @@ import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
 
 import { AppWindow, Face, usePersonName, type Person } from "./app";
-import { Cursor, ExampleStamp, Scribble, Speech, Sticky } from "./marks";
+import { Cursor, Scribble, Speech, Sticky } from "./marks";
 import { RICH } from "./rich";
 import {
   APP,
@@ -293,7 +293,6 @@ function ProjectStack() {
           ))}
         </div>
       </AppWindow>
-      <ExampleStamp className="absolute -top-3 right-4 sm:right-6" />
     </Reveal>
   );
 }

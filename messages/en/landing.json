@@ -10,9 +10,6 @@
     "jiho": "Jiho Moon",
     "daon": "Daon Song"
   },
-  "marks": {
-    "example": "Sample"
-  },
   "app": {
     "status": {
       "recording": "Recording",
@@ -63,7 +60,7 @@
     "title": "Every meeting <m>lands</m> in its project",
     "lead1": "No more passing notes around. When you start a meeting, it shows up in the project's list right away, along with how long it was recorded and how many participants were picked in the Details tab.",
     "lead2": "Admins invite members by email. People who don't have an account yet sign up through the link in the invitation. There are two roles: Admin and Member.",
-    "caption": "Sample screen. The Onboarding improvements project lists three meetings by date. Next to it are the member settings for the same workspace, with four members and one pending invitation.",
+    "caption": "The Onboarding improvements project lists three meetings by date. Next to it are the member settings for the same workspace, with four members and one pending invitation.",
     "project": {
       "name": "Onboarding improvements",
       "description": "Every remark and decision from 3 meetings, kept in order."
@@ -162,10 +159,9 @@
   },
   "meetings": {
     "title": "Different meetings, <m>different</m> notes",
-    "lead": "The three meetings below, and everyone in them, are made up. On the weekly meeting card, you can click Replace or Keep yourself.",
     "swipe": "Swipe for more →",
     "summaryNote": "All three show the Summary<br></br>tab after the meeting ends",
-    "railLabel": "Sample meetings by type",
+    "railLabel": "Meeting cards by type",
     "sections": {
       "decisions": "Decisions",
       "tasks": "Tasks"
@@ -287,7 +283,7 @@
         "body": "Expand Thinking to find the issue link and the “Approved” record.",
         "note": "Opens right in Linear"
       },
-      "figure1": "Figure 1 (sample): a My agent chat next to the “Sprint 3 kickoff” meeting notes. Asked to turn the onboarding drop-off logging into a Linear issue, the agent checks first and shows an approval card for creating it. Nothing is sent before you press Approve, and the input box stays locked until then. If you decline, the chat records it as “Declined.”",
+      "figure1": "Figure 1: a My agent chat next to the “Sprint 3 kickoff” meeting notes. Asked to turn the onboarding drop-off logging into a Linear issue, the agent checks first and shows an approval card for creating it. Nothing is sent before you press Approve, and the input box stays locked until then. If you decline, the chat records it as “Declined.”",
       "figure2": "Figure 2: the Thinking section of the same chat after approval, with a link to the new issue ONB-12, an Open link, and an “Approved” line.",
       "scope": "Sprint 3 kickoff",
       "ask": "Make the onboarding drop-off logging a Linear issue",
@@ -309,7 +305,7 @@
       "label": "External agents",
       "title": "Connect your AI tools and they can look up past meetings",
       "body": "Connect HeyMoa to an AI tool like Claude Code or Codex, and right where you work it can look up decisions, tasks, and meeting notes, then link you to the HeyMoa screen you need. You create each connection yourself and can disconnect it at any time.",
-      "figure": "Figure: one connection on the My MCP connections screen in settings (sample). Laptop Claude Code is connected, and the expanded activity list shows when it fetched what and how many items. Revoking blocks it from the next request and can't be undone.",
+      "figure": "Figure: one connection on the My MCP connections screen in settings. Laptop Claude Code is connected, and the expanded activity list shows when it fetched what and how many items. Revoking blocks it from the next request and can't be undone.",
       "screenTitle": "My MCP connections",
       "screenBody": "Let AI apps like Claude or ChatGPT read the meetings and projects in a workspace you choose.",
       "newConnection": "New connection",
@@ -505,10 +501,9 @@
       "railRefs": "Answers list the notes they used"
     },
     "figcaption": {
-      "still": "The Summary tab after the sample meeting “{title}” has ended. It lists two decisions and two tasks, with the Finish review bar at the bottom.",
-      "playing": "The sample meeting “{title}”. Remarks are transcribed, and tasks and questions appear on the Timeline. Someone asks My agent mid-meeting, then recording is paused and the meeting ends, and the Summary tab shows the Finish review bar. It then starts over. Use the Pause button above to stop it."
+      "still": "The Summary tab after the meeting “{title}” has ended. It lists two decisions and two tasks, with the Finish review bar at the bottom.",
+      "playing": "The meeting “{title}”. Remarks are transcribed, and tasks and questions appear on the Timeline. Someone asks My agent mid-meeting, then recording is paused and the meeting ends, and the Summary tab shows the Finish review bar. It then starts over. Use the Pause button above to stop it."
     },
-    "tape": "Sample meeting",
     "pause": "Pause",
     "play": "Play",
     "topBar": {
@@ -601,7 +596,7 @@
     "lead": "Ask your agent during a meeting or after it. It searches this meeting first and widens to past meetings when it needs to. Click a meeting note to see where an answer came from.",
     "tryLabel": "Click one to try it",
     "current": "Viewing",
-    "figcaption": "A chat with My agent, scoped to the sample meeting “{title}”",
+    "figcaption": "A chat with My agent, scoped to the meeting “{title}”",
     "arrived": "Answer received. {answer}",
     "noteA": ["Searched back to", "the Sprint 2 notes"],
     "seedMark": "decided in the Sprint 2 kickoff",

@@ -6,7 +6,7 @@ import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
 
 import { Face, usePersonName } from "./app";
-import { ExampleStamp, Scribble, Speech } from "./marks";
+import { Scribble, Speech } from "./marks";
 import { RICH } from "./rich";
 import { CLOSING_H, CONTAINER, FOCUS_ON_BRAND, RADIUS, SHADOW, vars } from "./tokens";
 
@@ -69,7 +69,6 @@ function DutyRoster() {
           <span className="text-[13.5px] leading-[1.3] font-extrabold whitespace-nowrap text-[var(--tv-ink)] lg:text-[15px]">
             {t("title")}
           </span>
-          <ExampleStamp className="h-5 px-1.5 text-[11px]" />
         </div>
 
         <ul className="m-0 mt-1 list-none p-0 lg:mt-1.5">

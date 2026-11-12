@@ -27,7 +27,7 @@ import {
 } from "./app";
 import { AnswerRefs } from "./app-client";
 import { useFollowBottom, useOnceInView, useReducedMotion } from "./hooks";
-import { Cursor, ExampleStamp, Scribble, Sticky } from "./marks";
+import { Cursor, Scribble, Sticky } from "./marks";
 import { CONTAINER, FOCUS, LABEL, SHADOW } from "./tokens";
 
 /*
@@ -407,12 +407,6 @@ export function AskChat({ heading }: { heading: ReactNode }) {
             </Sticky>
           </span>
         ) : null}
-        {/* 도장은 창 왼쪽 위 모서리에 — 머리의 ✦ · 닫기 아이콘에 닿지 않는다. 넓은 화면에서는 모서리
-            밖으로 내밀고, 좁은 화면에서는 창이 거터(20)에 붙어 있어 밖으로 내밀면 화면 끝(x≈4)에 닿으므로
-            모서리 안쪽(left-2)에 얹는다. 아래 끝이 창 위 8px 이라 머리 아이콘 줄까지 내려오지 않는다. */}
-        <span aria-hidden className="absolute -top-4 left-2 z-10 lg:-left-4">
-          <ExampleStamp />
-        </span>
 
         <AppWindow
           as="figure"

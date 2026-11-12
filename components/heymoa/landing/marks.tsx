@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { MousePointer2 } from "lucide-react";
-import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -12,9 +11,8 @@ import { HAND, SHADOW, vars } from "./tokens";
  * 여기 있는 것은 전부 `--tv-*` 이고, 창 위에 얹을 때도 앱 글자 · 상태 칩 · 탭 · 버튼 · 방금 붙은 줄을
  * 가리지 않는다(창 가장자리 여백까지만 걸친다).
  *
- * 장식 문법은 셋으로 고정한다 — ① 노란/파스텔 쪽지(`Sticky`) = 「여기 봐」, ② 점선 「예시」 도장
- * (`ExampleStamp`) = 지어낸 것, ③ 먹색 손글씨(`Hand`) + 보라 곡선(`Scribble`) = 설명. 한 그림에 쪽지는
- * 동시에 최대 둘.
+ * 장식 문법은 둘로 고정한다 — ① 노란/파스텔 쪽지(`Sticky`) = 「여기 봐」, ② 먹색 손글씨(`Hand`) + 보라
+ * 곡선(`Scribble`) = 설명. 한 그림에 쪽지는 동시에 최대 둘.
  *
  * 서버 · 클라이언트 양쪽에서 쓴다(훅 없음). 움직임은 `motion.tsx` 의 클래스가 하고, 모션을 줄이면
  * 처음부터 끝 상태(다 보이고 다 그려진)로 선다.
@@ -252,23 +250,7 @@ export function Cursor({
   );
 }
 
-/** 「예시」 도장 — 지어낸 회의 · 사람 · 날짜에 붙는다. **실제 글자다**(읽힌다). */
-export function ExampleStamp({ className }: { className?: string }) {
-  const t = useTranslations("landing.marks");
-  return (
-    <span
-      className={cn(
-        "inline-flex h-6 shrink-0 items-center rounded-[8px] border-2 border-dashed border-[var(--tv-ink)]/55 bg-white/80 px-2 text-[12px] font-extrabold tracking-[0.06em] text-[var(--tv-ink)]",
-        className
-      )}
-      style={{ rotate: "-3deg" }}
-    >
-      {t("example")}
-    </span>
-  );
-}
-
-/** 히어로의 「예시 회의」 띠. 양 끝을 노란 테이프로 붙인 흰 종이 띠다. **실제 글자다.** */
+/** 양 끝을 노란 테이프로 붙인 흰 종이 띠(근거 구간의 「네 마디만 남겼습니다」). **실제 글자다.** */
 export function Tape({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span

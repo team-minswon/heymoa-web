@@ -36,7 +36,7 @@ import {
 import { HeroNote } from "./hero-note";
 import { HeroRail } from "./hero-rail";
 import { useOnceInView, useReducedMotion } from "./hooks";
-import { Hand, Scribble, Sticky, Tape } from "./marks";
+import { Hand, Scribble, Sticky } from "./marks";
 import { RICH } from "./rich";
 import { FOCUS, STAGE_WRAP, vars } from "./tokens";
 
@@ -807,12 +807,6 @@ export function HeroStage() {
         {/* 위 띠 — 「예시 회의」 테이프, 일시정지, 거터가 없는 화면의 장면 자막. */}
         <div className="absolute inset-x-4 top-3 max-lg:[@media(max-height:600px)]:top-2 lg:inset-x-8 xl:inset-x-0">
           <div className="mx-auto flex max-w-[960px] items-start gap-2.5">
-            <span
-              className="tv-pop -ml-1 inline-flex"
-              style={vars({ "--d": "700ms" })}
-            >
-              <Tape>{t("tape")}</Tape>
-            </span>
             {/* 보이는 크기는 36px, 누름 칸은 44px(`before:-inset-1`, 엄지 기준). */}
             <button
               type="button"
