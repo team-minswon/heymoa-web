@@ -244,6 +244,7 @@
     "nextCharge": "Next payment",
     "nextChargeValue": "{date} · {amount}",
     "noNextCharge": "None",
+    "nextChargeChecking": "Checking the payment result",
     "card": "Card on file",
     "noCard": "No card on file",
     "cancelScheduled": "You can use it until {end}; after that the workspace moves to Free. You won't be charged again.",

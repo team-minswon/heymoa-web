@@ -105,17 +105,19 @@ export function SubscriptionManagement({
   };
   const busy = commands.pending;
   const subscribed = billing.status === "ACTIVE";
-  const next =
-    billing.status === "ACTIVE" &&
-    !billing.cancelAtPeriodEnd &&
-    period &&
-    amount
-      ? t("nextChargeValue", { date: format.date(period.end), amount })
-      : null;
-  const canCancel = actions.includes("CANCEL_SUBSCRIPTION");
-  const canResume = actions.includes("RESUME_SUBSCRIPTION");
   // 갱신 결제 결과를 기다리는 동안은 기간 끝이 이미 지났다 — 끝나는 날을 말하지 않고, 결과에 따라 정해진다고 말한다.
   const renewalPending = billing.entitlement?.kind === "RENEWAL_PENDING";
+  const live = billing.status === "ACTIVE" && !billing.cancelAtPeriodEnd;
+  // 대기 중의 「다음 결제」는 지금 확인하고 있는 그 결제다. 지난 날짜를 다음 결제일로 보이지 않는다.
+  const next = !live
+    ? null
+    : renewalPending
+      ? t("nextChargeChecking")
+      : period && amount
+        ? t("nextChargeValue", { date: format.date(period.end), amount })
+        : null;
+  const canCancel = actions.includes("CANCEL_SUBSCRIPTION");
+  const canResume = actions.includes("RESUME_SUBSCRIPTION");
   const scheduled =
     billing.cancelAtPeriodEnd &&
     billing.status === "ACTIVE" &&

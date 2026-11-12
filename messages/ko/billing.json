@@ -244,6 +244,7 @@
     "nextCharge": "다음 결제",
     "nextChargeValue": "{date} · {amount}",
     "noNextCharge": "없음",
+    "nextChargeChecking": "결제 결과 확인 중",
     "card": "등록된 카드",
     "noCard": "등록된 카드가 없습니다",
     "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다.",

@@ -221,6 +221,9 @@ describe("결제 수단·구독", () => {
     expect(
       within(area).queryByText(/까지는 계속 쓸 수 있습니다/)
     ).not.toBeInTheDocument();
+    // 「다음 결제」는 지금 확인 중인 그 결제다 — 이미 지난 기간 끝을 다음 결제일로 보이지 않는다.
+    expect(within(area).getByText("결제 결과 확인 중")).toBeInTheDocument();
+    expect(within(area).queryByText(/12월 11일 · /)).not.toBeInTheDocument();
     fireEvent.click(
       await within(area).findByRole("button", { name: "구독 해지" })
     );
