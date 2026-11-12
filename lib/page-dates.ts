@@ -37,7 +37,9 @@ export const TERMS_EFFECTIVE = lastEffective("terms");
 export const PRIVACY_EFFECTIVE = lastEffective("privacy");
 
 export const PAGE_MODIFIED = {
-  "/": { ko: "2026-10-21", en: "2026-10-21" },
+  // APP-1598: 상단 바·푸터에 「가격 안내」, 푸터에 사업자 정보
+  "/": { ko: "2026-11-12", en: "2026-11-12" },
+  "/pricing": { ko: "2026-11-12", en: "2026-11-12" },
   "/download": { ko: "2026-10-21", en: "2026-10-21" },
   "/terms": { ko: TERMS_EFFECTIVE, en: TERMS_EFFECTIVE },
   "/privacy": { ko: PRIVACY_EFFECTIVE, en: PRIVACY_EFFECTIVE },

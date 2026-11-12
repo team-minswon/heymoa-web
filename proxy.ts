@@ -211,7 +211,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!$|(?:en|help|download|terms|privacy)(?:/|$)|_next/static|_next/image|favicon.ico|.*opengraph-image|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|json|webmanifest|woff2|ttf|mp4|webm)$).*)",
+        "/((?!$|(?:en|pricing|help|download|terms|privacy)(?:/|$)|_next/static|_next/image|favicon.ico|.*opengraph-image|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|json|webmanifest|woff2|ttf|mp4|webm)$).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "next-router-segment-prefetch" },

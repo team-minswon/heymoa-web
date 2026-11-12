@@ -656,6 +656,10 @@
     ]
   },
   "pricing": {
+    "meta": {
+      "title": "Pricing",
+      "description": "{brand} pricing. Free includes {hours, number} hours of recording a month. Pro is KRW {price, number} a month with unlimited recording. Same price, however big your team gets."
+    },
     "title": "<mark>Same price</mark>, however big your team gets",
     "lead": "Start on Free, and move up to Pro when your meetings pile up.",
     "perMonth": "/ month per workspace",
@@ -687,6 +691,7 @@
     },
     "unit": "Pricing is per workspace. One admin pays, and every member gets it.",
     "terms": "Pro renews automatically on the same day each month, and you can cancel anytime. If you cancel, you keep Pro until the paid period ends. If you ask within 7 days of the payment date and the whole workspace recorded {hours, number} hours or less in total in that billing period, you get a full refund.",
+    "guide": "How billing, cancellation, and refunds work",
     "refundLink": "See the refund policy"
   },
   "nav": {

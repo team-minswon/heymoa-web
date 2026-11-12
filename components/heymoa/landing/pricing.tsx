@@ -20,12 +20,12 @@ import {
   LEAD,
   MARKER,
   RADIUS,
-  SECTION_Y,
   SHADOW,
 } from "./tokens";
 
 /**
- * 요금 안내(`#pricing`). **두 요금제의 차이는 녹음 시간 하나**라서 카드에는 가격과 녹음만 두고, 둘이 똑같이 갖는
+ * 가격 안내 페이지(`/pricing`)의 본문. 랜딩의 한 구간이었다가 따로 낸 페이지라 제목이 `h1` 이고, 위에 페이지
+ * 이름을 작게 둔다. **두 요금제의 차이는 녹음 시간 하나**라서 카드에는 가격과 녹음만 두고, 둘이 똑같이 갖는
  * 것(멤버 수 · 기능 다섯)은 카드 아래 한 줄로 한 번만 적는다 — 카드마다 같은 목록을 되풀이하면 차이가 묻힌다.
  * Free 는 선만 두른 조용한 카드, Pro 는 라벤더 면이고 오른쪽에 「몇 명이 써도 같은 값」을 숫자로 보이는 흰 종이를
  * 얹는다(제목의 말을 그대로 보이는 자리). 두 카드는 같은 줄 구성(이름 → 가격 → 한 줄 설명 → 녹음 → 버튼)이라
@@ -59,16 +59,19 @@ export function Pricing() {
   const proPrice = t("pro.price", { price: PUBLIC_PRICING.proMonthlyKrw });
 
   return (
-    <section id="pricing" className={`bg-white ${SECTION_Y.color}`}>
+    <section className="bg-white pt-8 pb-16 lg:pt-14 lg:pb-24">
       <div className={CONTAINER}>
-        <h2 className={H2}>
+        <p className="m-0 text-[15px] font-bold text-[var(--tv-brand-deep)]">
+          {t("meta.title")}
+        </p>
+        <h1 className={cn(H2, "mt-3")}>
           {t.rich("title", {
             ...RICH,
             mark: (chunks) => (
               <span className={cn(MARKER, "whitespace-nowrap")}>{chunks}</span>
             ),
           })}
-        </h2>
+        </h1>
         <p className={cn(LEAD, "mt-4")}>{t("lead")}</p>
 
         <div className="mt-10 grid gap-6 lg:mt-12 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-y-0">
@@ -191,6 +194,17 @@ export function Pricing() {
               )}
             >
               {t("refundLink")}
+            </Link>
+          </p>
+          <p className={CAPTION}>
+            <Link
+              href={localePath(locale, "/help/start/billing")}
+              className={cn(
+                "rounded-sm font-semibold text-[var(--tv-ink)] underline underline-offset-4",
+                FOCUS
+              )}
+            >
+              {t("guide")}
             </Link>
           </p>
         </div>

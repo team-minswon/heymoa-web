@@ -90,7 +90,7 @@ test("삭제한 한도 가이드는 두 언어에서 404이고 sitemap과 검색
 });
 
 test("영어판은 /en 아래에서 lang=en 으로 열린다", async ({ request }) => {
-  for (const path of ["/en", "/en/download", "/en/help", "/en/terms", "/en/privacy"]) {
+  for (const path of ["/en", "/en/pricing", "/en/download", "/en/help", "/en/terms", "/en/privacy"]) {
     const response = await get(request, path);
     expect(response.status(), path).toBe(200);
     expect(htmlLang(await response.text()), path).toBe("en");
@@ -318,6 +318,7 @@ const visibleHangul = (page: Page) =>
   });
 
 for (const { path, title } of [
+  { path: "/en/pricing", title: "Pricing | HeyMoa" },
   { path: "/en/download", title: "Download the desktop app | HeyMoa" },
   { path: "/en/terms", title: "Terms of Service | HeyMoa" },
   { path: "/en/privacy", title: "Privacy Policy | HeyMoa" },
@@ -337,7 +338,7 @@ for (const { path, title } of [
 
 // 공유 이미지는 페이지·언어와 상관없이 메인 그림 하나다(APP-1400). 제목·설명만 페이지마다 다르다.
 test("모든 페이지의 공유 이미지는 메인 그림 하나다", async ({ request }) => {
-  for (const path of ["/", "/en", "/help", "/en/help", "/help/start", "/privacy", "/terms", "/download", "/en/download"]) {
+  for (const path of ["/", "/en", "/help", "/en/help", "/help/start", "/privacy", "/terms", "/download", "/en/download", "/pricing", "/en/pricing"]) {
     const html = await (await request.get(path)).text();
     expect(html, path).toContain('property="og:image" content="https://heymoa.app/opengraph-image.png"');
     expect(html, path).toContain('name="twitter:image" content="https://heymoa.app/opengraph-image.png"');

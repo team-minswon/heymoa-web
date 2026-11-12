@@ -656,6 +656,10 @@
     ]
   },
   "pricing": {
+    "meta": {
+      "title": "가격 안내",
+      "description": "{brand} 가격 안내. Free는 녹음 월 {hours, number}시간까지 무료이고, Pro는 월 {price, number}원에 녹음 무제한입니다. 인원이 늘어도 요금은 같습니다."
+    },
     "title": "인원이 늘어도 요금은 <mark>그대로</mark>입니다",
     "lead": "Free로 시작해서, 회의가 많아지면 Pro로 올리면 됩니다.",
     "perMonth": "/ 월, 워크스페이스당",
@@ -687,12 +691,13 @@
     },
     "unit": "요금은 워크스페이스 단위입니다. 관리자 한 명이 결제하면 모든 멤버가 함께 씁니다.",
     "terms": "Pro는 매월 같은 날 자동으로 결제되고 언제든 해지할 수 있습니다. 해지해도 결제한 기간 끝까지 씁니다. 결제일부터 7일 이내에 요청하고, 그 결제 기간에 워크스페이스 전체의 녹음 시간 합계가 {hours, number}시간 이하이면 전액 환불받을 수 있습니다.",
+    "guide": "결제·해지·환불 자세히 보기",
     "refundLink": "환불 규정 보기"
   },
   "nav": {
     "label": "페이지 안내",
     "features": "기능",
-    "pricing": "요금",
+    "pricing": "가격 안내",
     "guide": "사용 가이드",
     "sections": {
       "meetings": "회의 정리",
@@ -733,7 +738,7 @@
     "download": "데스크톱 다운로드",
     "terms": "이용약관",
     "privacy": "개인정보 처리방침",
-    "pricing": "요금 안내",
+    "pricing": "가격 안내",
     "business": {
       "label": "사업자 정보",
       "name": "상호",

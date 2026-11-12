@@ -39,7 +39,7 @@ const NAV_LINK = `inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-
  * 상단 바. `<main>` 밖(`NavbarGate`)에 서서 `.tv-root` 의 변수를 못 받으니 `TV_VARS` 를 직접 건다.
  * tl;dv 의 흰 가로 바를 따랐고, 앱 Navbar 의 떠 있는 알약은 쓰지 않았다.
  * 로고는 Navbar 와 같은 자산(`/apple-touch-icon.png`)이다. md 미만은 로고 + 시작하기만 남는다.
- * 메뉴는 넷이다 — 구간 다섯은 「기능」 하나로 접고(펼치면 `useSectionNav`), 그 옆에 요금(`#pricing`), 다른 페이지로 가는
+ * 메뉴는 넷이다 — 구간 다섯은 「기능」 하나로 접고(펼치면 `useSectionNav`), 그 옆에 가격 안내(`/pricing`), 다른 페이지로 가는
  * 다운로드 · 도움말을 둔다. 다섯을 펼쳐 두면 페이지 링크가 붙을 때마다 한 줄이 넘쳤다(768 에서 도움말 하나로 CTA 가 12px 밀렸다).
  * 넷이어도 768 에서 한 줄에 든다.
  * 시작 버튼에 hover·포커스하면 아래 툴팁으로 웹·앱의 녹음 범위를 안내한다.
@@ -96,7 +96,7 @@ export function TopBar() {
             </DropdownMenuContent>
           </DropdownMenu>
           {/* 요금은 다섯 구간과 달리 「기능」에 넣지 않는다 — 푸터에서도 「제품」이 아니라 「안내」 열이다. */}
-          <Link href={`${localePath(locale, "/")}#pricing`} className={NAV_LINK}>
+          <Link href={localePath(locale, "/pricing")} className={NAV_LINK}>
             {t("pricing")}
           </Link>
           {/* 푸터 「제품」(`useSectionNav`)에는 넣지 않는다 — 다운로드는 푸터 「안내」에 따로 있다. */}

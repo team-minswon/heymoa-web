@@ -30,7 +30,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
     {
       title: t("info"),
       links: [
-        [t("pricing"), `${localePath(locale, "/")}#pricing`],
+        [t("pricing"), localePath(locale, "/pricing")],
         [t("download"), localePath(locale, "/download")],
         [t("terms"), localePath(locale, "/terms")],
         [t("privacy"), localePath(locale, "/privacy")],
