@@ -145,6 +145,26 @@ export function CheckoutForm({
     </LinkButton>
   ) : null;
 
+  // 판매가 열리지 않은 공간·이미 Pro 인 공간은 권한과 상관없이 같은 안내다. 요금제 탭은 판매 전이면 없어서 워크스페이스로 돌려보낸다.
+  const toWorkspace = backHref ? (
+    <LinkButton href={`/w/${workspaceId}`} variant="outline" className="mt-3">
+      {t("backToWorkspace")}
+    </LinkButton>
+  ) : null;
+  if (!replace && !billing.enforced)
+    return (
+      <BillingNotice title={t("closed.title")}>
+        <p>{t("closed.body")}</p>
+        {toWorkspace}
+      </BillingNotice>
+    );
+  if (!replace && billing.status === "ACTIVE")
+    return (
+      <BillingNotice>
+        <p>{t("alreadyPro")}</p>
+        {toWorkspace}
+      </BillingNotice>
+    );
   if (!admin)
     return (
       <BillingNotice>

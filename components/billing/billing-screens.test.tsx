@@ -983,16 +983,58 @@ describe("첫 구독 결제 페이지", () => {
     ).toHaveAttribute("href", `/w/${FREE}?settings=billing`);
   });
 
-  it("살 수 없는 상태(이미 Pro 등)면 그 안내와 「요금제로 돌아가기」만 준다", async () => {
+  it.each([
+    ["관리자", () => undefined],
+    ["멤버", asMember],
+  ])("판매가 열리지 않은 공간(enforced=false)은 %s에게도 준비 중 안내와 워크스페이스로 돌아가는 링크만 준다", async (_who, as) => {
+    as();
+    serveBilling({
+      enforced: false,
+      status: null,
+      product: null,
+      entitlement: null,
+      allowedActions: [],
+    });
+    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    expect(
+      await screen.findByText("Pro 결제는 준비 중입니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("곧 이 화면에서 바로 시작할 수 있습니다.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/관리자에게 요청해 주세요/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "워크스페이스로 돌아가기" })
+    ).toHaveAttribute("href", `/w/${FREE}`);
+    expect(
+      screen.queryByRole("link", { name: "요금제로 돌아가기" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("이미 Pro 인 공간은 그렇다고 알리고 워크스페이스로 돌려보낸다", async () => {
+    renderIn(<BillingCheckoutPage workspaceId={PAID} />);
+    expect(
+      await screen.findByText("이 워크스페이스는 이미 Pro를 쓰고 있습니다.")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("지금은 새로 구매할 수 없는 상태입니다.")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "워크스페이스로 돌아가기" })
+    ).toHaveAttribute("href", `/w/${PAID}`);
+  });
+
+  it("판매는 열렸는데 살 수 없는 상태면 그 안내와 「요금제로 돌아가기」만 준다", async () => {
     serveBilling({ allowedActions: [] });
     renderIn(<BillingCheckoutPage workspaceId={FREE} />);
     expect(
       await screen.findByText("지금은 새로 구매할 수 없는 상태입니다.")
     ).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    // 판매가 열린 공간이라 요금제 탭이 보인다 — 돌아가기가 막다른 길이 아니다.
     expect(
       screen.getByRole("link", { name: "요금제로 돌아가기" })
-    ).toBeInTheDocument();
+    ).toHaveAttribute("href", `/w/${FREE}?settings=billing`);
   });
 });
 
