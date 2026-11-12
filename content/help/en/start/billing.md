@@ -31,7 +31,7 @@ Admins see the card, subscription, and workspace payment history in **[Settings]
 
 Pro runs one month at a time from the day you first pay. ==It's charged automatically on the same day each month, for the same amount.== In months without that date, you're charged on the last day. For example, if you start on January 31, you're charged on the last day of February and on March 31.
 
-While the result of an automatic payment is being checked, you keep Pro. Once it's confirmed that the payment wasn't approved, Pro ends and the workspace goes back to Free. The same payment isn't retried, and the registered card is removed. To use Pro again, register a card again and purchase.
+While the result of an automatic payment is being checked, you keep Pro. Once it's confirmed that the payment wasn't approved, Pro ends and the workspace goes back to Free. HeyMoa doesn't retry the payment and removes the registered card. To use Pro again, register a card again and purchase.
 
 You can change the card in **[Payment]** while you're on Pro. Changing the card doesn't charge you right away. The new card is charged from the next billing date.
 
@@ -57,7 +57,7 @@ Before the paid period ends, you can resume a canceled subscription. You need a 
 4. **Check the reply**
    We tell you the refund result in the reply to that request.
 
-If you're refunded for the payment of your current period, the subscription ends and the workspace changes to Free. Getting a refund for a past period's payment doesn't affect the current subscription. Once a refund for the current period's payment is received, the next automatic payment stops right away. Even after the workspace changes to Free, the notes and transcripts you've already made stay.
+If you're refunded for the payment of your current period, the subscription ends and the workspace changes to Free. Getting a refund for a past period's payment doesn't affect the current subscription. Once HeyMoa starts processing a refund for the current period's payment, the next automatic payment stops right away. Even after the workspace changes to Free, the notes and transcripts you've already made stay.
 
 We tell you the result within 3 business days of the day we receive your refund request, and if you're refunded, we ask to cancel the card payment within that time. It can take a few more days to show up with your card company. The full rules are in [Section 13 of the Terms](/terms#section-13).
 
@@ -71,7 +71,7 @@ We tell you the result within 3 business days of the day we receive your refund 
 
 ## If the payer leaves the workspace {#payer-left}
 
-If the payer leaves the workspace, is removed, deletes their account, or is changed from admin to member, automatic payments stop and that card isn't charged again. If a payment that was being processed at that time is approved later, it's automatically canceled in full. You keep Pro until the period you already paid for ends.
+Automatic payments stop if the payer leaves or is removed from the workspace. The same applies if they delete their account or their role changes from admin to member. That card isn't charged again. If a payment that was being processed at that time is approved later, it's automatically canceled in full. You keep Pro until the period you already paid for ends.
 
 If another admin registers a card in **[Payment]** and resumes the subscription within that period, automatic payments continue. If nobody resumes it, the workspace goes back to Free when the period ends.
 
