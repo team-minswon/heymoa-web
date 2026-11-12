@@ -22,7 +22,7 @@ const workspaceReturnPath =
 // 결제 화면(PRO-75). 카드 등록 복귀(authKey·state)의 쿼리가 로그인 returnTo 에 새지 않게 **쿼리는 받지 않는다** —
 // 아래 `normalizeReturnTo` 가 이 경로에 쿼리가 붙으면 홈으로 보낸다.
 const billingReturnPath =
-  /^\/(?:w\/[0-9A-HJKMNP-TV-Z]{13}\/billing(?:\/checkout)?|billing\/setups\/[0-9A-HJKMNP-TV-Z]{13})$/;
+  /^\/(?:w\/[0-9A-HJKMNP-TV-Z]{13}\/billing(?:\/checkout)?|billing\/setups\/[0-9A-HJKMNP-TV-Z]{13}(?:\/card)?)$/;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 

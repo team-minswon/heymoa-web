@@ -33,6 +33,16 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
         ],
       },
+      // 카드 정보 입력(APP-1600). 프레임에 띄우지 못하게 하고, 카드 칸이 있는 문서를 캐시·Referer 로 남기지 않는다.
+      // CSP 는 요청마다 nonce 가 달라 `proxy.ts` 가 붙인다.
+      {
+        source: "/billing/setups/:setupId/card",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Cache-Control", value: "no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       // 메일 수신거부(APP-1314). 주소의 토큰이 캐시와 `Referer` 로 새지 않게 한다. 분석은 루트 레이아웃이 뺀다.
       {
         source: "/unsubscribe",

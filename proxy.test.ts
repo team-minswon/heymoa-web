@@ -255,3 +255,34 @@ describe("proxy token refresh", () => {
     expect(request.headers.get("cookie")).toContain("access_token=new-access");
   });
 });
+
+// 카드 입력 화면에만 CSP 를 건다(APP-1600). 같은 값을 요청 헤더에도 실어야 Next 가 nonce 를 스크립트에 붙인다.
+describe("card entry CSP", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const cardRequest = () =>
+    new NextRequest("http://web.example.test/billing/setups/01K0000000001/card");
+
+  it("sets a per-request nonce CSP on the response and the forwarded request", async () => {
+    const proxy = await loadProxy();
+    const first = await proxy(cardRequest());
+    const csp = first.headers.get("content-security-policy") ?? "";
+
+    expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+'/);
+    expect(csp).toContain("connect-src 'self' http://api.example.test");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("form-action 'self'");
+    expect(first.headers.get("x-middleware-request-content-security-policy")).toBe(csp);
+
+    const second = await proxy(cardRequest());
+    expect(second.headers.get("content-security-policy")).not.toBe(csp);
+  });
+
+  it("leaves other product pages without the card CSP", async () => {
+    const proxy = await loadProxy();
+    const response = await proxy(
+      new NextRequest("http://web.example.test/billing/setups/01K0000000001")
+    );
+    expect(response.headers.get("content-security-policy")).toBeNull();
+  });
+});

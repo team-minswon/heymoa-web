@@ -11863,7 +11863,7 @@ paths:
       tags:
       - Billing
       summary: 카드 제출(빌키 발급)
-      description: 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다.
+      description: 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다. PG 발급까지 간 제출이 사용자당 10분 5회·공간당 1시간 10회를 넘으면 PG 를 부르지 않고 429 BILLING_CARD_RATE_LIMITED 다.
       operationId: submitBillingCard
       parameters:
       - name: workspaceId
@@ -11902,10 +11902,10 @@ paths:
               submitBillingCard_BadRequest:
                 value:
                   cardNumber: '4111111111111112'
-                  expiryMonth: '13'
+                  expiryMonth: '12'
                   expiryYear: '30'
                   identity: '800101'
-                  passwordPrefix: '13'
+                  passwordPrefix: '12'
               submitBillingCard_BillingInProgressException:
                 value:
                   cardNumber: '4111111111111111'
@@ -11921,6 +11921,13 @@ paths:
                   identity: '800101'
                   passwordPrefix: '12'
               submitBillingCard_WorkspaceAccessDeniedException:
+                value:
+                  cardNumber: '4111111111111111'
+                  expiryMonth: '12'
+                  expiryYear: '30'
+                  identity: '800101'
+                  passwordPrefix: '12'
+              submitBillingCard_BillingCardRateLimitedException:
                 value:
                   cardNumber: '4111111111111111'
                   expiryMonth: '12'
@@ -11975,8 +11982,6 @@ paths:
                       details:
                       - field: cardNumberChecksumValid
                         message: 카드번호가 올바르지 않습니다
-                      - field: expiryMonth
-                        message: 유효기간 월은 01~12 여야 합니다
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -12023,6 +12028,21 @@ paths:
                     error:
                       code: BILLING_IN_PROGRESS
                       message: 팀의 구독 처리가 진행 중입니다. 끝난 뒤 다시 시도해 주세요.
+                      details: null
+        '429':
+          description: '429'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_CARD_RATE_LIMITED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_CARD_RATE_LIMITED
+                      message: 카드 등록 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
       security:
       - accessCookie: []

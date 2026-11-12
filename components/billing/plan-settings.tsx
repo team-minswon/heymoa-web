@@ -23,6 +23,7 @@ import { okData } from "@/lib/api/ok-data";
 import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
 import { refundPending } from "@/lib/billing/payment-status";
 import { planName } from "@/lib/billing/plan-name";
+import { goToCardEntry } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { useRefundResultEvent } from "@/lib/billing/use-billing-commands";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
@@ -163,7 +164,6 @@ function PlanContent({
           billing={billing}
           isAdmin={isAdmin}
           onRestartPolling={poll.restart}
-          onContinue={onCheckout}
         />
       </div>
       <PlanCompare
@@ -486,14 +486,11 @@ function Attention({
   billing,
   isAdmin,
   onRestartPolling,
-  onContinue,
 }: {
   workspaceId: string;
   billing: Billing;
   isAdmin: boolean;
   onRestartPolling: () => void;
-  /** 카드를 기다리는 등록은 주문서에서 카드를 받아 잇는다(APP-1600). */
-  onContinue: () => void;
 }) {
   const t = useTranslations("billing.page");
   const queryClient = useQueryClient();
@@ -600,8 +597,12 @@ function Attention({
 
   const buttons = isAdmin
     ? [
+        // 카드를 기다리는 등록은 동의를 이미 받았다 — 카드 입력 화면으로 문서를 새로 열어 잇는다(APP-1600).
         billing.mySetupId && actions.includes("CONTINUE_SETUP") ? (
-          <Button key="continue" onClick={onContinue}>
+          <Button
+            key="continue"
+            onClick={() => goToCardEntry(billing.mySetupId as string)}
+          >
             {t("continueSetup")}
           </Button>
         ) : null,

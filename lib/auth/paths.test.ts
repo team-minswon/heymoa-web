@@ -70,6 +70,7 @@ describe("normalizeReturnTo", () => {
       "/w/01K0000000000/billing",
       "/w/01K0000000000/billing/checkout",
       "/billing/setups/01K0000000001",
+      "/billing/setups/01K0000000001/card",
     ]) {
       expect(normalizeReturnTo(path)).toBe(path);
       // 카드 등록 복귀의 authKey·state 가 로그인 returnTo 에 실리지 않는다

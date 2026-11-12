@@ -10,7 +10,6 @@ import {
   TestPaymentNotice,
 } from "@/components/billing/billing-parts";
 import { BackLink } from "@/components/billing/back-link";
-import { CardFields } from "@/components/billing/card-fields";
 import { SitePageLink } from "@/components/heymoa/site-page-link";
 import {
   SETTINGS_LIST,
@@ -29,30 +28,20 @@ import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCancelBillingSetup,
-  submitBillingCard,
   useCreateBillingSetup,
   useGetWorkspaceBilling,
 } from "@/lib/api/generated/billing/billing";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
-import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
-import { ApiError, isAuthError, REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
+import { errorCodeOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
 import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { planName } from "@/lib/billing/plan-name";
 import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
-import {
-  cardErrors,
-  cardRequestOf,
-  EMPTY_CARD,
-  type CardForm,
-} from "@/lib/billing/card-input";
-import { goToSetupResult } from "@/lib/billing/navigate";
+import { goToCardEntry } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { localePath } from "@/lib/i18n/locales";
-import { webMessage } from "@/lib/i18n/web-message";
-import { toast } from "@/lib/ui/toast";
 import { PG_TERMS } from "@/content/billing/pg-terms";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
@@ -61,8 +50,9 @@ type Purpose = "PURCHASE" | "REPLACE";
 /**
  * 설정 창 안의 주문 확인·동의(구매 `PURCHASE`)와 카드 변경(`REPLACE`). 카드 변경은 카드만 새로 등록하고 지금 청구하지 않는다
  * (문구·분석·진입 조건이 구매와 갈린다). **금액·상품은 서버 응답만 그린다**(화면에 값을 적어 두지 않는다).
- * 카드 정보·두 동의가 맞기 전에는 낼 수 없다. requestKey 는 이 화면이 사용자의 한 번의 의도마다 하나 만든다(`createRequestKey`).
- * 나이스페이 정기결제는 결제창이 없어 카드 정보를 이 화면에서 받아 서버로 낸다(APP-1600). 내면 등록 결과 화면(`/billing/setups/{id}`)으로 간다.
+ * 두 동의가 맞기 전에는 낼 수 없다. requestKey 는 이 화면이 사용자의 한 번의 의도마다 하나 만든다(`createRequestKey`).
+ * 나이스페이 정기결제는 결제창이 없어 카드 정보를 우리 화면에서 받는다(APP-1600). **카드 칸은 여기 두지 않는다** — 이 설정 창
+ * 문서에는 분석 스크립트가 실려 있다. 등록을 연 뒤 분석이 없는 카드 입력 화면(`/billing/setups/{id}/card`)으로 문서를 새로 열어 간다.
  */
 export function BillingCheckout({
   workspaceId,
@@ -114,7 +104,7 @@ export function BillingCheckout({
   );
 }
 
-type Notice = "stateChanged" | "inProgress" | "cardRejected";
+type Notice = "stateChanged" | "inProgress";
 
 function CheckoutContent({
   workspaceId,
@@ -133,16 +123,12 @@ function CheckoutContent({
   const billing = useWorkspaceBilling(workspaceId);
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const key = useRef(createRequestKey()).current;
-  // 카드 정보는 이 상태에만 산다 — 화면을 떠나면 함께 사라지고, 제출이 끝나면 비운다.
-  const [card, setCard] = useState<CardForm>(EMPTY_CARD);
   const [agreed, setAgreed] = useState(false);
   const [pgAgreed, setPgAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // 체크·해제를 되풀이해도 동의 이벤트는 화면당 한 번만 낸다.
   const agreementTracked = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  // 이 화면에서 연 등록. 카드 제출이 실패해도 다시 누르면 새로 열지 않고 이 등록에 다시 낸다.
-  const openedSetupId = useRef<string | null>(null);
   const create = useCreateBillingSetup({
     mutation: {
       meta: {
@@ -154,7 +140,7 @@ function CheckoutContent({
 
   const product = billing.product;
   const admin = workspace?.role === "ADMIN";
-  // 카드를 기다리는 내 등록(CONTINUE_SETUP)은 그대로 이어 낸다. 서버가 이미 처리 중인 등록만 「진행 중」으로 알린다.
+  // 카드를 기다리는 내 등록(CONTINUE_SETUP)은 새로 열지 않고 그 등록의 카드 입력 화면으로 간다. 서버가 이미 처리 중인 등록만 「진행 중」으로 알린다.
   const continuable = billing.allowedActions.includes("CONTINUE_SETUP");
   const openSetupId = continuable ? null : billing.mySetupId;
 
@@ -192,22 +178,16 @@ function CheckoutContent({
         : "replace.agreementLabel",
     { amount: format.money(product.amountKrw) }
   );
-  const errors = cardErrors(card, new Date());
-  const ready =
-    agreed && pgAgreed && Object.keys(errors).length === 0 && !openSetupId;
+  const ready = agreed && pgAgreed && !openSetupId;
 
-  /** 등록을 열고(이미 있으면 그대로) 카드를 낸다. 성공하면 결과 화면으로 간다. */
+  /** 등록을 열고(카드를 기다리는 내 등록이면 그대로) 카드 입력 화면으로 간다. 등록 열기 실패는 생성 훅이라 전역 토스트가 띄운다. */
   const submit = async () => {
     if (submitting || !ready) return;
     setSubmitting(true);
     setNotice(null);
-    // 등록 열기 실패는 생성 훅이라 전역 토스트가 띄운다. 카드 제출은 생성 함수를 훅(`useMutation`) 없이 부른다 — 뮤테이션 캐시가
-    // 변수(카드 정보)를 들고 있고 전역 `MutationCache.onSuccess` 가 변수를 분석 이벤트(`trackMutation`)에 넘기기 때문이다.
-    // 그래서 카드 제출의 실패 토스트도 여기서 띄운다.
-    let step: "open" | "card" = "open";
+    let moving = false;
     try {
-      let setupId =
-        openedSetupId.current ?? (continuable ? billing.mySetupId : null);
+      let setupId = continuable ? billing.mySetupId : null;
       if (!setupId) {
         const response = await create.mutateAsync({
           workspaceId,
@@ -221,32 +201,16 @@ function CheckoutContent({
         const setup = response.data.data;
         if (!setup) return;
         key.renew();
-        setupId = openedSetupId.current = setup.setupId;
-        // 요금제 탭으로 돌아가도 이 등록이 「이어가기」로 보이게 공간 조회를 새로 읽힌다.
-        void invalidateWorkspaceBilling(queryClient, workspaceId);
+        setupId = setup.setupId;
         if (replace) billingEvents.cardChangeStarted(workspaceId);
         else billingEvents.cardSetupStarted(workspaceId, setup.provider);
       }
-      step = "card";
-      await submitBillingCard(workspaceId, setupId, cardRequestOf(card), {
-        timeoutMs: REQUEST_TIMEOUT_MS,
-      });
-      setCard(EMPTY_CARD);
-      goToSetupResult(setupId);
+      // 이동 중에 버튼이 다시 켜지지 않게 둔다(문서가 바뀌면 함께 사라진다).
+      moving = true;
+      goToCardEntry(setupId);
     } catch (error) {
       const code = errorCodeOf(error);
-      const status = error instanceof ApiError ? error.status : null;
-      if (step === "card" && status === 400) {
-        setNotice("cardRejected");
-      } else if (step === "card" && status === 409) {
-        // 등록이 더는 카드를 받을 상태가 아니다(BILLING_IN_PROGRESS — 이미 낸 카드를 처리 중이거나 닫힘). 새로 읽게 한다.
-        openedSetupId.current = null;
-        setNotice("stateChanged");
-        await invalidateWorkspaceBilling(queryClient, workspaceId);
-      } else if (step === "card") {
-        if (!isAuthError(error))
-          toast.error(errorMessageOf(error, webMessage("requestFailed")));
-      } else if (code === "BILLING_STATE_CHANGED") {
+      if (code === "BILLING_STATE_CHANGED") {
         // 화면이 본 상품·상태가 서버와 다르다 — 새로 읽고 동의를 다시 받는다(같은 키에 다른 본문은 충돌이라 키도 새로).
         key.renew();
         setAgreed(false);
@@ -259,7 +223,7 @@ function CheckoutContent({
         key.renew();
       }
     } finally {
-      setSubmitting(false);
+      if (!moving) setSubmitting(false);
     }
   };
 
@@ -270,7 +234,6 @@ function CheckoutContent({
       .then(() => true)
       .catch(() => false);
     if (!closed) return;
-    openedSetupId.current = null;
     key.renew();
     await invalidateWorkspaceBilling(queryClient, workspaceId);
   };
@@ -404,12 +367,6 @@ function CheckoutContent({
           </div>
         </BillingNotice>
       ) : null}
-      <CardFields
-        value={card}
-        onChange={setCard}
-        errors={errors}
-        disabled={submitting}
-      />
       <div className="flex flex-col gap-4">
         {replace ? null : (
           <p className="text-xs leading-5 text-[var(--el-muted)]">

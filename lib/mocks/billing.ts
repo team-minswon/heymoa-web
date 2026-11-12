@@ -35,6 +35,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `replaceFail` 카드 변경(REPLACE)의 카드 등록이 실패한다 — 기존 카드가 그대로 남는다
  *   - `issueUnknown` 카드 제출의 발급 응답을 잃어 등록이 닫힌다(발급 결과 불명) — 결제 없음, 새 등록부터 다시
  *   - `cardInvalid` 카드 제출이 400(대행사가 카드 정보를 거절)이다
+ *   - `cardRateLimited` 카드 제출이 429(카드 등록 시도 제한)이다
  * *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
@@ -63,6 +64,7 @@ export type BillingScenario =
   | "replaceFail"
   | "issueUnknown"
   | "cardInvalid"
+  | "cardRateLimited"
   | "methodInUse";
 
 const SCENARIOS: BillingScenario[] = [
@@ -83,6 +85,7 @@ const SCENARIOS: BillingScenario[] = [
   "replaceFail",
   "issueUnknown",
   "cardInvalid",
+  "cardRateLimited",
   "methodInUse",
 ];
 
@@ -1069,6 +1072,13 @@ async function submitCard(
   request: Request
 ) {
   requireAdmin(workspaceId);
+  // 서버 계약: PG 발급까지 간 제출이 사용자당 10분 5회·공간당 1시간 10회를 넘으면 PG 를 부르지 않고 429 다.
+  if (currentScenario() === "cardRateLimited")
+    failWith(
+      "BILLING_CARD_RATE_LIMITED",
+      429,
+      "카드 등록 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."
+    );
   const setup = setupOf(setupId);
   const body = (await request.json().catch(() => ({}))) as Record<
     string,

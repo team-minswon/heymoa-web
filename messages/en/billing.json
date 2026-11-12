@@ -118,7 +118,7 @@
     "cancelHow": "Admins can cancel in Settings > Payment.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
     "refundPolicy": "If you request it within 7 days of the payment date and the whole workspace recorded 20 hours or less in total in that billing period, you get a full refund. <link>See refund policy</link>",
-    "submit": "Agree and pay",
+    "submit": "Enter card details",
     "openSetup": {
       "title": "A card registration is already in progress",
       "body": "The server is processing this registration. Check the result, or cancel it and start over.",
@@ -127,10 +127,9 @@
     },
     "notice": {
       "stateChanged": "The product or status changed. We've loaded the latest details; please review and agree again.",
-      "inProgress": "Your team has a subscription in progress. Check again when it's done.",
-      "cardRejected": "Please check your card details again."
+      "inProgress": "Your team has a subscription in progress. Check again when it's done."
     },
-    "agreeFirst": "Enter all card details and check both agreements to continue.",
+    "agreeFirst": "Check both agreements to enter your card details.",
     "replace": {
       "title": "Change card",
       "description": "Register a new card for automatic payments.",
@@ -143,7 +142,7 @@
       "payerChanges": "Once you add a card, future charges go to your card and payment history is kept under your account.",
       "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
       "agreementLabelEnding": "I agree that once the subscription is resumed, this workspace's subscription ({amount} per month) will be charged automatically to this card from the next payment.",
-      "submit": "Register card",
+      "submit": "Enter card details",
       "unavailable": "You can't change the card right now.",
       "askAdmin": "Only admins can change the card. Please ask an admin.",
       "back": "Payment",
@@ -398,5 +397,17 @@
     "leftMember": "Former member",
     "more": "Show more ({count, number})",
     "detail": "Payment details"
+  },
+  "cardEntry": {
+    "title": "Enter card details",
+    "summary": "{workspace} · {plan} {amount}/month",
+    "summaryReplace": "{workspace} · Card only, no charge now",
+    "submit": "Pay",
+    "submitReplace": "Register card",
+    "back": "Back",
+    "loading": "Loading card setup",
+    "fillFirst": "Enter all card details to continue.",
+    "cardRejected": "Please check your card details again.",
+    "tooManyAttempts": "Too many card attempts. Please try again in a moment."
   }
 }

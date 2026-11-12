@@ -3095,6 +3095,11 @@ export type submitBillingCardResponse409 = {
   status: 409;
 };
 
+export type submitBillingCardResponse429 = {
+  data: AppErrorResponse;
+  status: 429;
+};
+
 export type submitBillingCardResponseSuccess = submitBillingCardResponse200 & {
   headers: Headers;
 };
@@ -3104,6 +3109,7 @@ export type submitBillingCardResponseError = (
   | submitBillingCardResponse403
   | submitBillingCardResponse404
   | submitBillingCardResponse409
+  | submitBillingCardResponse429
 ) & {
   headers: Headers;
 };
@@ -3120,7 +3126,7 @@ export const getSubmitBillingCardUrl = (
 };
 
 /**
- * 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다.
+ * 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다. PG 발급까지 간 제출이 사용자당 10분 5회·공간당 1시간 10회를 넘으면 PG 를 부르지 않고 429 BILLING_CARD_RATE_LIMITED 다.
  * @summary 카드 제출(빌키 발급)
  */
 export const submitBillingCard = async (

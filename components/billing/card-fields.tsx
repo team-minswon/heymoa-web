@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 /**
  * 주문서·카드 변경의 「카드 정보」 칸(APP-1600). 값은 부모의 상태(`CardForm`)가 갖고, 이 컴포넌트는 그리기·자릿수 거르기만 한다.
  * 틀린 칸은 한 번 떠난 뒤에만 그 아래 한 줄로 알린다 — 치는 도중에 빨간 글이 따라오지 않게.
+ * 묶음과 칸마다 `ph-no-capture` 를 단다 — PostHog 가 자동 수집·세션 기록에서 그 요소를 빼는 공식 표시다. 이 칸이 서는 화면에는
+ * 분석 스크립트가 없지만(`app/(card-entry)`), 실수로 실려도 기록되지 않게 한 겹 더 둔다.
  */
 export function CardFields({
   value,
@@ -67,7 +69,7 @@ export function CardFields({
   const corporate = value.holder === "CORPORATE";
 
   return (
-    <section aria-labelledby={`${id}-title`}>
+    <section aria-labelledby={`${id}-title`} className="ph-no-capture">
       <h3
         id={`${id}-title`}
         className="mb-3 text-sm font-medium text-[var(--el-ink)]"
@@ -86,7 +88,7 @@ export function CardFields({
             inputMode="numeric"
             autoComplete="cc-number"
             placeholder="0000 0000 0000 0000"
-            className="tabular-nums"
+            className="ph-no-capture tabular-nums"
           />
           {number.error}
         </div>
@@ -99,7 +101,7 @@ export function CardFields({
             inputMode="numeric"
             autoComplete="cc-exp"
             placeholder="MM/YY"
-            className="tabular-nums"
+            className="ph-no-capture tabular-nums"
           />
           {expiry.error}
         </div>
@@ -113,6 +115,7 @@ export function CardFields({
             inputMode="numeric"
             maxLength={2}
             autoComplete="off"
+            className="ph-no-capture"
           />
           {password.error}
         </div>
@@ -145,7 +148,7 @@ export function CardFields({
             inputMode="numeric"
             autoComplete="off"
             placeholder={corporate ? "0000000000" : "YYMMDD"}
-            className="tabular-nums"
+            className="ph-no-capture tabular-nums"
           />
           {identity.error}
         </div>
