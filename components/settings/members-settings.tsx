@@ -77,7 +77,11 @@ import {
   useGetWorkspaceMembers,
   useRemoveWorkspaceMember,
 } from "@/lib/api/generated/workspace-members/workspace-members";
-import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
+import {
+  getGetWorkspaceQueryKey,
+  useGetWorkspaces,
+} from "@/lib/api/generated/workspaces/workspaces";
+import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { forgetWorkspace } from "@/lib/workspace/cache";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
@@ -320,10 +324,18 @@ function MemberRow({
   const roleLabels = useRoleLabels();
   const dateLocale = useDisplayLocale();
   const queryClient = useQueryClient();
+  // 역할·멤버가 바뀌면 내 역할(워크스페이스 조회)과 결제 화면도 바뀐다 — 내 역할이면 관리자 전용 동작이, 결제자면
+  // 자동 결제 중단이 따라온다. 창 포커스를 기다리지 않고 바로 다시 읽는다.
   const invalidateMembers = () =>
-    queryClient.invalidateQueries({
-      queryKey: getGetWorkspaceMembersQueryKey(workspaceId),
-    });
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: getGetWorkspaceMembersQueryKey(workspaceId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: getGetWorkspaceQueryKey(workspaceId),
+      }),
+      invalidateWorkspaceBilling(queryClient, workspaceId),
+    ]);
 
   const changeRole = useChangeWorkspaceMemberRole({
     mutation: { onSettled: invalidateMembers },
