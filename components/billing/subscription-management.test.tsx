@@ -511,6 +511,16 @@ describe("카드 변경", () => {
         "새 카드 등록에 실패하면 지금 카드가 그대로 유지됩니다."
       )
     ).not.toBeInTheDocument();
+    // 바뀔 카드가 없고 구독은 종료 예정이다 — 「카드만 바뀌고」와 「다음 결제부터 자동 결제」는 거짓이다.
+    expect(screen.getByText("지금 결제되지 않습니다.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("카드만 바뀌고 지금 결제되지 않습니다.")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "구독을 재개하면 다음 결제부터 이 워크스페이스의 구독 금액(매월 9,900원)이 이 카드로 자동 결제되는 데 동의합니다."
+      )
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "동의하고 카드 등록" })
     ).toBeInTheDocument();

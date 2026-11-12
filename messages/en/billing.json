@@ -127,6 +127,7 @@
       "keepOnFail": "If registering the new card fails, your current card stays.",
       "payerChanges": "Once you add a card, future charges go to your card and payment history is kept under your account.",
       "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
+      "agreementLabelEnding": "I agree that once the subscription is resumed, this workspace's subscription ({amount} per month) will be charged automatically to this card from the next payment.",
       "submit": "Agree and register new card",
       "unavailable": "You can't change the card right now.",
       "askAdmin": "Only admins can change the card. Please ask an admin.",
@@ -134,7 +135,8 @@
       "register": {
         "title": "Add card",
         "description": "Add a card for automatic payments.",
-        "submit": "Agree and add card"
+        "submit": "Agree and add card",
+        "noCharge": "You won't be charged now."
       }
     },
     "back": "Plan",

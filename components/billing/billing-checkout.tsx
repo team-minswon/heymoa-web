@@ -157,8 +157,13 @@ function CheckoutContent({
     );
   }
   // 자동 갱신 동의는 금액과 주기를 문장에 직접 적는다.
+  // 종료 예정인 구독은 카드를 등록해도 재개하기 전에는 결제되지 않는다 — 동의 문장도 그렇게 말한다.
   const agreementLabel = t(
-    replace ? "replace.agreementLabel" : "agreementLabel",
+    !replace
+      ? "agreementLabel"
+      : billing.cancelAtPeriodEnd
+        ? "replace.agreementLabelEnding"
+        : "replace.agreementLabel",
     { amount: format.money(product.amountKrw) }
   );
 
@@ -232,7 +237,7 @@ function CheckoutContent({
     billing.status === "ACTIVE" && !billing.cancelAtPeriodEnd ? period : null;
   const points = replace
     ? [
-        t("replace.noCharge"),
+        t(register ? "replace.register.noCharge" : "replace.noCharge"),
         register ? null : t("replace.keepOnFail"),
         billing.detail?.methodPayerIsMe === true
           ? null
