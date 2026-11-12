@@ -31,12 +31,19 @@ export function LandingCta({
   className,
   openOnWelcome = false,
   tooltip,
+  member,
 }: {
   label: string;
   className?: string;
   /** 첫 로그인 직후 생성 폼을 열 인스턴스. 랜딩에 CTA가 여럿이라 **하나만** 켠다(히어로). */
   openOnWelcome?: boolean;
   tooltip?: ReactNode;
+  /**
+   * 로그인한 사람에게 대시보드 대신 낼 라벨과 행선지. 가격 안내의 Pro 카드가 쓴다 — 이미 쓰는 사람에게 Pro 버튼이
+   * 「대시보드로 이동」이면 살 길이 안 보인다. `plans` 는 그 워크스페이스의 요금제 탭이다(권한·이미 Pro·판매 전은
+   * 그 탭이 가려 보여 준다). 워크스페이스가 없거나 조회에 실패한 상태는 그대로다.
+   */
+  member?: { label: string; to: "plans" };
 }) {
   const t = useTranslations("landing.cta");
   const { status } = useAuth();
@@ -79,7 +86,7 @@ export function LandingCta({
           disabled
           className={cn(MARKETING_PILL, className)}
         >
-          {t("dashboard")}
+          {member?.label ?? t("dashboard")}
           <ArrowRight className="size-4" />
         </Button>
       );
@@ -121,10 +128,14 @@ export function LandingCta({
     }
     return (
       <LinkButton
-        href={`/w/${workspaceId}`}
+        href={
+          member?.to === "plans"
+            ? `/w/${workspaceId}?settings=billing`
+            : `/w/${workspaceId}`
+        }
         className={cn(MARKETING_PILL, className)}
       >
-        {t("dashboard")}
+        {member?.label ?? t("dashboard")}
         <ArrowRight className="size-4" />
       </LinkButton>
     );

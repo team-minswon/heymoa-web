@@ -687,7 +687,8 @@
       "price": "KRW {price, number}",
       "summary": "For teams that meet a lot and don't want to watch the clock",
       "recording": "Unlimited",
-      "cta": "Start free, upgrade later"
+      "cta": "Start free, upgrade later",
+      "ctaMember": "Start Pro"
     },
     "unit": "Pricing is per workspace. One admin pays, and every member gets it.",
     "terms": "Pro renews automatically on the same day each month, and you can cancel anytime. If you cancel, you keep Pro until the paid period ends. If you ask within 7 days of the payment date and the whole workspace recorded {hours, number} hours or less in total in that billing period, you get a full refund.",

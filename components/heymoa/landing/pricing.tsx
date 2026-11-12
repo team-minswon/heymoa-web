@@ -155,6 +155,7 @@ export function Pricing() {
             <div className="pt-8 lg:col-start-1">
               <LandingCta
                 label={t("pro.cta")}
+                member={{ label: t("pro.ctaMember"), to: "plans" }}
                 className={cn(
                   CTA_BASE,
                   "border-transparent bg-[var(--tv-brand)] text-white hover:bg-[var(--tv-brand-deep)]",

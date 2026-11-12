@@ -88,6 +88,22 @@ describe("LandingCta", () => {
     );
   });
 
+  it("로그인한 사람에게 낼 라벨과 요금제 탭 행선지를 주면 대시보드 대신 그리로 보낸다", () => {
+    auth.status = "authenticated";
+    Object.assign(workspaces, { data: WITH_WORKSPACE, isSuccess: true });
+    render(
+      <LandingCta
+        label="무료로 시작한 뒤 올리기"
+        member={{ label: "Pro 시작하기", to: "plans" }}
+      />
+    );
+    expect(screen.getByRole("link", { name: "Pro 시작하기" })).toHaveAttribute(
+      "href",
+      "/w/01K0000000000?settings=billing"
+    );
+    expect(screen.queryByText("대시보드로 이동")).toBeNull();
+  });
+
   it("시작 버튼에 포커스하면 연결된 녹음 안내 툴팁을 연다", async () => {
     render(
       <LandingCta label="무료로 시작하기" tooltip="웹은 마이크 입력" />
