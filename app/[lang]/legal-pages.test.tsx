@@ -101,7 +101,7 @@ describe("HeyMoa legal pages", () => {
     // 주문 확인 화면의 「환불 규정 보기」가 `/terms#section-13`으로 온다. 조 순서가 밀리면 다른 조가 열린다.
     const refund = document.getElementById("section-13");
     expect(refund).toHaveTextContent("제13조 (환불)");
-    expect(refund).toHaveTextContent(/결제일부터 7일 이내에 문의·피드백으로 환불을 요청하고, 요청한 때까지 해당 이용 기간의 녹음 시간이 30시간 이하이면/);
+    expect(refund).toHaveTextContent(/결제일부터 7일 이내에 문의·피드백으로 환불을 요청하고, 요청한 때까지 해당 이용 기간의 녹음 시간이 20시간 이하이면/);
     expect(document.getElementById("section-11")).toHaveTextContent("제11조 (자동 갱신)");
     expect(document.getElementById("section-15")).toHaveTextContent("제15조 (약관의 변경과 문의)");
   });
