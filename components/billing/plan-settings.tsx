@@ -271,7 +271,17 @@ function PlanCompare({
   const format = useBillingFormat();
   const product = billing.product;
   if (!product) return null;
-  const canStart = billing.allowedActions.includes("START_PURCHASE") && !isPaid;
+  const actions = billing.allowedActions;
+  const canStart = actions.includes("START_PURCHASE") && !isPaid;
+  // 결제 화면은 보이지만(`enforced`) 새 구매가 없다 — 운영자가 새 판매를 멈췄다. 진행 중인 등록·결제·환불이 있어
+  // 버튼이 빠진 때와 가른다(그때는 위의 안내가 말한다).
+  const salesPaused =
+    !canStart &&
+    (billing.status === "FREE" || billing.status === "ENDED") &&
+    !actions.includes("CONTINUE_SETUP") &&
+    !billingInProgress(billing) &&
+    !billing.teamSetupInProgress &&
+    !refundPending(billing.detail?.refundedAttempt?.refundStatus);
   return (
     <section aria-label={t("compare")}>
       <h3 className="text-sm font-medium text-[var(--el-ink)]">
@@ -314,6 +324,10 @@ function PlanCompare({
                 {t("start", { plan: planName(product.planCode) })}
                 <ArrowRight aria-hidden />
               </Button>
+            ) : salesPaused ? (
+              <p className="text-sm leading-5 text-white/70">
+                {t("salesPaused")}
+              </p>
             ) : null
           }
         />

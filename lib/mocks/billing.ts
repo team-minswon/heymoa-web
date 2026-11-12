@@ -25,6 +25,8 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(RENEWAL_PENDING, 그동안 Pro)
    - `unpaid`   유료 공간의 갱신 결제가 확정 거절돼 구독이 끝났다(ENDED/UNPAID, 카드 지워짐)
    - `expired`  해지한 유료 구독의 기간이 끝났다(ENDED/EXPIRED, 카드 지워짐)
+   - `salesPaused` 운영자가 새 판매를 멈췄다 — 유료 공간의 구독이 끝났고(ENDED/EXPIRED) 결제 화면은 보이지만(`enforced=true`)
+     START_PURCHASE 가 없고, 한도 집행 대상이 아니라 사용량은 `enforced=false` 다
    - `recording` 이 공간에 아직 끝나지 않은 녹음이 있다(사용량 `recordingInProgress=true`)
  *   - `replaceFail` 카드 변경(REPLACE)의 카드 등록이 실패한다 — 기존 카드가 그대로 남는다
  * *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
@@ -48,6 +50,7 @@ export type BillingScenario =
   | "renewalChecking"
   | "unpaid"
   | "expired"
+  | "salesPaused"
   | "recording"
   | "replaceFail"
   | "methodInUse";
@@ -63,6 +66,7 @@ const SCENARIOS: BillingScenario[] = [
   "renewalChecking",
   "unpaid",
   "expired",
+  "salesPaused",
   "recording",
   "replaceFail",
   "methodInUse",
@@ -138,8 +142,10 @@ type Workspace = {
   methodVersion?: number;
   /** 지금 유료 기간의 결제. */
   currentPaymentId?: string | null;
-  /** 갱신 시나리오(`renewalChecking`·`unpaid`·`expired`)를 이미 적용했는가. */
+  /** 갱신 시나리오(`renewalChecking`·`unpaid`·`expired`·`salesPaused`)를 이미 적용했는가. */
   renewalApplied?: boolean;
+  /** 새 판매가 멈춘 공간 — 결제 화면은 보이지만 새 구매가 없고 한도를 집행하지 않는다. */
+  salesPaused?: boolean;
 };
 type State = {
   counter: number;
@@ -433,7 +439,8 @@ function applyRenewal(ws: Workspace) {
     ws.renewalApplied ||
     (scenario !== "renewalChecking" &&
       scenario !== "unpaid" &&
-      scenario !== "expired")
+      scenario !== "expired" &&
+      scenario !== "salesPaused")
   )
     return;
   ws.renewalApplied = true;
@@ -444,6 +451,7 @@ function applyRenewal(ws: Workspace) {
     return;
   }
   ws.paid = false;
+  ws.salesPaused = scenario === "salesPaused";
   ws.closedReason = scenario === "unpaid" ? "UNPAID" : "EXPIRED";
   ws.cancelAtPeriodEnd = false;
   ws.currentPaymentId = null;
@@ -484,7 +492,8 @@ function workspaceBilling(workspaceId: string) {
   else if (setup) actions.push("REFRESH_STATUS");
   else if (attempt) actions.push("REFRESH_STATUS");
   else {
-    if (!ws.paid && !teamBusy) actions.push("START_PURCHASE");
+    if (!ws.paid && !teamBusy && !ws.salesPaused)
+      actions.push("START_PURCHASE");
     const live = status === "ACTIVE" && !cancel;
     if (live) actions.push("CANCEL_SUBSCRIPTION");
     if (status === "ACTIVE" && cancel) actions.push("RESUME_SUBSCRIPTION");
@@ -661,7 +670,9 @@ const FREE_USAGE_PERIOD = {
 /** 집행 Free·집행 Pro·비집행 셋이 서로 다른 모양이다. 분 값은 서버가 내림해 주는 값이라 목도 정수로 준다. */
 function recordingUsage(workspaceId: string) {
   const ws = workspaceOf(workspaceId);
-  if (!ws.enforced) {
+  // 결제 조회보다 먼저 와도 같은 시나리오를 본다.
+  if (ws.enforced) applyRenewal(ws);
+  if (!ws.enforced || ws.salesPaused) {
     return {
       enforced: false,
       periodKind: null,

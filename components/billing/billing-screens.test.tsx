@@ -322,6 +322,58 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(await screen.findByText(line)).toBeInTheDocument();
     expect(startButton()).toBeEnabled();
+    expect(
+      screen.queryByText("지금은 새 구독을 받고 있지 않습니다.")
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["FREE", null],
+    ["ENDED", "EXPIRED"],
+  ])(
+    "새 구매(START_PURCHASE)가 없는 %s 공간은 버튼 자리에 새 구독을 받지 않는다고 알린다",
+    async (status, closedReason) => {
+      serveBilling({ status, closedReason, allowedActions: [] });
+      renderIn(<PlanTab workspaceId={FREE} />);
+      expect(
+        await screen.findByText("지금은 새 구독을 받고 있지 않습니다.")
+      ).toBeInTheDocument();
+      expect(startButton()).not.toBeInTheDocument();
+    }
+  );
+
+  it("진행 중인 결제 때문에 구매 버튼이 빠졌으면 새 구독을 받지 않는다고 하지 않는다", async () => {
+    serveBilling({
+      latestAttemptStatus: "UNKNOWN",
+      allowedActions: ["REFRESH_STATUS"],
+      detail: detail("UNKNOWN"),
+    });
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(
+      await screen.findByText(
+        "다시 결제하지 마세요. 확인이 끝나면 이 화면에 반영됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("지금은 새 구독을 받고 있지 않습니다.")
+    ).not.toBeInTheDocument();
+  });
+
+  it("목 salesPaused — 끝난 구독에 안내만 있고 버튼·Free 한도 막대가 없다", async () => {
+    billingMock.setScenario("salesPaused");
+    renderIn(<PlanTab workspaceId={PAID} />);
+    expect(
+      await screen.findByText("해지한 구독의 이용 기간이 끝났습니다.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("지금은 새 구독을 받고 있지 않습니다.")
+    ).toBeInTheDocument();
+    expect(startButton()).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByLabelText("사용량을 불러오는 중")).toBeNull()
+    );
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByText("이번 달 녹음")).not.toBeInTheDocument();
   });
 });
 

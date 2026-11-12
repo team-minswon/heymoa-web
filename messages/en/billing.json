@@ -52,6 +52,7 @@
       "body": "The automatic cancellation couldn't be finished. Don't pay again; let us know through <link>Help & feedback</link>."
     },
     "askAdmin": "Only admins can purchase and manage billing.",
+    "salesPaused": "New subscriptions are not available right now.",
     "start": "Start {plan}",
     "continueSetup": "Continue card registration",
     "viewResult": "View progress",
