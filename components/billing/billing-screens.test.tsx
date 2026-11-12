@@ -335,28 +335,68 @@ describe("요금제 화면", () => {
     expect(startButton()).not.toBeInTheDocument();
   });
 
-  it("운영자 환불(OPERATOR)은 보상 취소가 아니라 「환불 처리 중」으로 알린다", async () => {
+  const operatorRefund = (refundStatus: string, currentPaymentId: string) =>
     serveBilling({
       status: "ACTIVE",
       allowedActions: [],
       detail: {
         ...detail("SUCCEEDED"),
         latestAttempt: null,
+        currentPaymentId,
         refundedAttempt: {
           ...detail("SUCCEEDED").latestAttempt,
-          refundStatus: "PROCESSING",
+          refundStatus,
           refundOrigin: "OPERATOR",
         },
       },
     });
+
+  it("운영자 환불(OPERATOR)은 보상 취소가 아니라 「환불 처리 중」으로 알린다", async () => {
+    operatorRefund("PROCESSING", "A1");
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText("환불을 처리하고 있습니다")
     ).toBeInTheDocument();
     expect(
+      screen.getByText(
+        "다음 결제는 이미 멈췄습니다. 환불이 끝나면 Free로 바뀝니다."
+      )
+    ).toBeInTheDocument();
+    expect(
       screen.queryByText("결제를 취소하고 있습니다")
     ).not.toBeInTheDocument();
   });
+
+  // 서버는 지금 유료 기간의 결제를 환불할 때만 다음 결제를 멈춘다. 지난 기간의 결제 환불에 「멈췄습니다」라고 하지 않는다.
+  it("지난 기간 결제의 운영자 환불은 지금 요금제와 다음 결제가 그대로라고 알린다", async () => {
+    operatorRefund("PROCESSING", "A2");
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(
+      await screen.findByText("지난 결제의 환불을 처리하고 있습니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("지금 요금제와 다음 결제는 바뀌지 않습니다.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/이미 멈췄습니다/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["A1", "환불을 끝내지 못했습니다", true],
+    ["A2", "지난 결제의 환불을 끝내지 못했습니다", false],
+  ])(
+    "운영자 환불 실패(지금 결제 %s)는 그 결제가 지금 기간인지에 따라 다음 결제를 말한다",
+    async (currentPaymentId, title, stopped) => {
+      operatorRefund("FAILED", currentPaymentId);
+      renderIn(<PlanTab workspaceId={FREE} />);
+      expect(await screen.findByText(title)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "문의·피드백" })).toBeVisible();
+      if (stopped)
+        expect(
+          screen.getByText(/다음 결제는 멈춘 상태입니다/)
+        ).toBeInTheDocument();
+      else expect(screen.queryByText(/멈춘 상태/)).not.toBeInTheDocument();
+    }
+  );
 
   it.each([
     [
@@ -479,7 +519,7 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
-        "2026년 12월 11일까지 쓰고 이후 Free로 바뀝니다."
+        "2026년 12월 11일 오전 9:00까지 쓰고 이후 Free로 바뀝니다."
       )
     ).toBeInTheDocument();
     expect(screen.queryByText(/자동 결제가 멈췄습니다/)).not.toBeInTheDocument();

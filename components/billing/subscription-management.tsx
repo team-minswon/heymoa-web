@@ -259,9 +259,12 @@ export function SubscriptionManagement({
                   {scheduled
                     ? renewalPending || !period
                       ? t("cancelScheduledPending")
-                      : t(stopped ? "stoppedNoCard" : "cancelScheduled", {
-                          end: format.date(period.end),
-                        })
+                      : stopped
+                        ? t("stoppedNoCard", { end: format.date(period.end) })
+                        : // 기간 경계는 첫 결제 시각이라 해지 문장은 시각까지 보인다
+                          t("cancelScheduled", {
+                            end: format.dateTime(period.end),
+                          })
                     : period && !renewalPending
                       ? t("cancelHint", { end: format.date(period.end) })
                       : null}
@@ -313,7 +316,9 @@ export function SubscriptionManagement({
             renewalPending || !period || !amount
               ? [t("cancelDialog.pending")]
               : [
-                  t("cancelDialog.until", { end: format.date(period.end) }),
+                  t("cancelDialog.until", {
+                    end: format.dateTime(period.end),
+                  }),
                   t("cancelDialog.noCharge", { amount: nextAmount ?? amount }),
                   t("cancelDialog.undo", { end: format.date(period.end) }),
                 ]

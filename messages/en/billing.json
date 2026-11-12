@@ -84,6 +84,14 @@
       "title": "We couldn't finish the refund",
       "body": "Future payments remain stopped. Please let us know through <link>Help & feedback</link>."
     },
+    "userPastRefunding": {
+      "title": "Processing the refund for a past payment",
+      "body": "Your current plan and next payment stay the same."
+    },
+    "userPastRefundFailed": {
+      "title": "We couldn't finish the refund for a past payment",
+      "body": "Please let us know through <link>Help & feedback</link>."
+    },
     "currentLabel": "Current plan",
     "compare": "Compare plans",
     "openPayment": "Manage payment",
@@ -157,7 +165,7 @@
       "rejected": "We couldn't register the card. Please check your card details again. Your current card stays.",
       "loading": "Loading card change"
     },
-    "perMonth": "/ month",
+    "perMonth": "/ month · VAT included",
     "dueToday": "Due today",
     "nextCharge": "Next payment",
     "paymentInfo": "Payment details",
@@ -265,7 +273,7 @@
       "workspace": "Workspace",
       "amount": "Amount",
       "period": "Usage period",
-      "nextCharge": "Next charge date",
+      "nextCharge": "Next payment",
       "goWorkspace": "Go to workspace"
     },
     "accessLost": {
@@ -340,7 +348,7 @@
       "until": "You can keep using Pro until {end}; after that the workspace moves to Free.",
       "pending": "If the payment being checked is approved, you keep Pro until the end of that period and won't be charged after that. If it isn't approved, the subscription ends right away.",
       "noCharge": "You won't be charged the next payment ({amount}) or after.",
-      "undo": "You can resume any time before {end}, as long as a card is on file.",
+      "undo": "You can resume before {end}, as long as a card is on file.",
       "confirm": "Cancel subscription",
       "keep": "Keep"
     },
@@ -413,7 +421,7 @@
     "empty": "You haven't made any payments yet.",
     "noDate": "Confirming",
     "myTitle": "My payments",
-    "myDescription": "Payments you made. Payments for workspaces you've left appear under the name they had at the time.",
+    "myDescription": "Payments you made. Workspace names appear as they were when the subscription started.",
     "leftMember": "Former member",
     "more": "Show more ({count, number})",
     "detail": "Payment details",

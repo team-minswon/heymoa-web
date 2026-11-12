@@ -217,7 +217,7 @@ describe("결제 수단·구독", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(
       within(dialog).getByText(
-        "2026년 12월 11일까지는 지금처럼 Pro를 쓸 수 있고, 그 뒤 Free로 바뀝니다."
+        "2026년 12월 11일 오전 12:00까지는 지금처럼 Pro를 쓸 수 있고, 그 뒤 Free로 바뀝니다."
       )
     ).toBeInTheDocument();
     expect(
@@ -245,7 +245,7 @@ describe("결제 수단·구독", () => {
     ).toBeInTheDocument();
     expect(
       within(area).getByText(
-        "2026년 12월 11일까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다."
+        "2026년 12월 11일 오전 12:00까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다."
       )
     ).toBeInTheDocument();
     expect(

@@ -84,6 +84,14 @@
       "title": "환불을 끝내지 못했습니다",
       "body": "다음 결제는 멈춘 상태입니다. <link>문의·피드백</link>으로 알려 주세요."
     },
+    "userPastRefunding": {
+      "title": "지난 결제의 환불을 처리하고 있습니다",
+      "body": "지금 요금제와 다음 결제는 바뀌지 않습니다."
+    },
+    "userPastRefundFailed": {
+      "title": "지난 결제의 환불을 끝내지 못했습니다",
+      "body": "<link>문의·피드백</link>으로 알려 주세요."
+    },
     "currentLabel": "현재 요금제",
     "compare": "요금제 비교",
     "openPayment": "결제 관리",
@@ -157,7 +165,7 @@
       "rejected": "카드를 등록하지 못했습니다. 카드 정보를 다시 확인해 주세요. 지금 카드는 그대로입니다.",
       "loading": "카드 변경 정보를 불러오는 중"
     },
-    "perMonth": "/ 월",
+    "perMonth": "/ 월 · 부가세 포함",
     "dueToday": "오늘 결제",
     "nextCharge": "다음 결제 예정일",
     "paymentInfo": "결제 안내",
@@ -265,7 +273,7 @@
       "workspace": "대상 워크스페이스",
       "amount": "결제 금액",
       "period": "이용 기간",
-      "nextCharge": "다음 결제일",
+      "nextCharge": "다음 결제 예정일",
       "goWorkspace": "워크스페이스로 가기"
     },
     "accessLost": {
@@ -307,7 +315,7 @@
     "title": "구독",
     "plan": "요금제",
     "planValue": "{plan} · {amount} / 월",
-    "nextCharge": "다음 결제",
+    "nextCharge": "다음 결제 예정일",
     "nextChargeValue": "{date} · {amount}",
     "noNextCharge": "없음",
     "nextChargeChecking": "결제 결과 확인 중",
@@ -340,7 +348,7 @@
       "until": "{end}까지는 지금처럼 Pro를 쓸 수 있고, 그 뒤 Free로 바뀝니다.",
       "pending": "지금 확인 중인 결제가 승인되면 그 이용 기간이 끝날 때까지 Pro를 쓰고, 다음 결제부터 청구되지 않습니다. 승인되지 않으면 구독은 바로 종료됩니다.",
       "noCharge": "다음 결제({amount})부터 청구되지 않습니다.",
-      "undo": "{end} 전에 카드가 등록되어 있으면 언제든 재개해 이어 쓸 수 있습니다.",
+      "undo": "{end} 전에 카드가 등록되어 있으면 재개해 이어 쓸 수 있습니다.",
       "confirm": "해지",
       "keep": "유지"
     },
@@ -413,7 +421,7 @@
     "empty": "아직 결제한 내역이 없습니다.",
     "noDate": "확인 중",
     "myTitle": "내 결제 내역",
-    "myDescription": "내가 결제한 내역입니다. 나간 워크스페이스는 결제 당시 이름으로 표시됩니다.",
+    "myDescription": "내가 결제한 내역입니다. 워크스페이스 이름은 구독을 시작할 때의 이름으로 표시됩니다.",
     "leftMember": "탈퇴한 멤버",
     "more": "더 보기 ({count, number}건)",
     "detail": "결제 상세",

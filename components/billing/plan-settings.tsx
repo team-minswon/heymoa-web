@@ -204,7 +204,13 @@ function CurrentPlan({
         ? t(
             stoppedNoCard ? "line.stoppedNoCardAdmin" : "line.cancelScheduled",
             // 날짜 한 덩어리가 줄 끝에서 갈리지 않게(rule `ui-text-layout`) 띄어쓰기를 붙는 공백으로.
-            { end: format.date(period.end).replaceAll(" ", "\u00a0") }
+            // 해지 예약은 기간 경계가 첫 결제 시각이라 시각까지 보인다.
+            {
+              end: (stoppedNoCard
+                ? format.date(period.end)
+                : format.dateTime(period.end)
+              ).replaceAll(" ", "\u00a0"),
+            }
           )
         : billing.status === "ACTIVE" && period && (amount || !isAdmin)
           ? amount
@@ -514,6 +520,14 @@ function Attention({
       : null;
   const compensation = userRefund ? null : refund;
   const userRefundAttempt = detail?.refundedAttempt;
+  // 서버는 지금 유료 기간의 결제를 환불할 때만 다음 결제를 멈추고 구독을 끝낸다. 지난 기간의 결제 환불은 지금 구독과 무관하다.
+  const userRefundKey =
+    userRefundAttempt?.attemptId === detail?.currentPaymentId
+      ? ({ pending: "userRefunding", failed: "userRefundFailed" } as const)
+      : ({
+          pending: "userPastRefunding",
+          failed: "userPastRefundFailed",
+        } as const);
 
   const cancelSetup = async () => {
     if (!billing.mySetupId) return;
@@ -555,8 +569,11 @@ function Attention({
       </BillingNotice>
     ) : null,
     refundPending(userRefund) ? (
-      <BillingNotice key="userRefunding" title={t("userRefunding.title")}>
-        {t("userRefunding.body")}
+      <BillingNotice
+        key="userRefunding"
+        title={t(`${userRefundKey.pending}.title`)}
+      >
+        {t(`${userRefundKey.pending}.body`)}
       </BillingNotice>
     ) : null,
     userRefund === "SUCCEEDED" && billing.status === "ENDED" ? (
@@ -576,9 +593,9 @@ function Attention({
       <BillingNotice
         key="userRefundFailed"
         tone="warn"
-        title={t("userRefundFailed.title")}
+        title={t(`${userRefundKey.failed}.title`)}
       >
-        {t.rich("userRefundFailed.body", {
+        {t.rich(`${userRefundKey.failed}.body`, {
           link: (chunks) => (
             <FeedbackLink
               reference={{ type: "payment", id: userRefundAttempt.attemptId }}
