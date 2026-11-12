@@ -49,9 +49,6 @@ export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
         <h1 className="text-3xl font-light tracking-[-0.03em] text-balance text-[var(--el-ink)]">
           {t("title")}
         </h1>
-        <p className="mt-2 text-sm leading-5 text-[var(--el-muted)]">
-          {t("description")}
-        </p>
         <div className="mt-8">
           <DataBoundary
             resetKeys={[workspaceId]}

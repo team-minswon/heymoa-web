@@ -661,12 +661,14 @@ describe("첫 구독 결제 페이지", () => {
     expect(pay()).toBeDisabled();
     fillCard();
     expect(pay()).toBeEnabled();
-    // 다음 결제 예정일·말일 규칙·해지 방법을 결제 전에 알린다.
+    // 다음 결제 예정일과 자동 결제·해지 방법을 결제 전에 한 문장으로 알린다.
     expect(
       screen.getByText("다음 결제 예정일").nextElementSibling
     ).toHaveTextContent(/^\d{4}년 \d{1,2}월 \d{1,2}일$/);
     expect(
-      screen.getByText(/그 날짜가 없는 달은 말일에 결제됩니다/)
+      screen.getByText(
+        "매월 같은 날 자동으로 결제됩니다. 관리자는 설정 > 결제 관리에서 언제든 해지할 수 있고, 해지해도 이용 기간이 끝날 때까지 쓸 수 있습니다."
+      )
     ).toBeInTheDocument();
     // 분석 없는 문서라 이벤트를 내지 않는다(진입은 요금제 탭이 낸다).
     expect(track).not.toHaveBeenCalled();

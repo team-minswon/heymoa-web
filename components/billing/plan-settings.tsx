@@ -267,8 +267,8 @@ const FEATURES = [
 
 /**
  * Free 와 유료 상품을 나란히. 두 카드는 같은 줄 구성이고(이름 → 가격 → 한 줄 설명 → 굵은 첫 항목 → 멤버 → 모든 기능) 높이가 같다.
- * 유료 카드는 어두운 면이고(DESIGN `pricing-tier-featured`), 구매 버튼은 그 카드 안에 있다. 워크스페이스 단위·자동 결제 안내는
- * 항목마다 되풀이하지 않고 카드 아래 두 줄로 둔다(APP-1596).
+ * 유료 카드는 어두운 면이고(DESIGN `pricing-tier-featured`), 구매 버튼은 그 카드 안에 있다. 워크스페이스 단위 안내는
+ * 항목마다 되풀이하지 않고 카드 아래 한 줄로 둔다(APP-1596).
  */
 function PlanCompare({
   billing,
@@ -342,7 +342,6 @@ function PlanCompare({
       </div>
       <div className="mt-3 grid gap-1 text-xs leading-5 text-[var(--el-muted)]">
         <p>{t("plan.footWorkspace")}</p>
-        <p>{t("plan.footRenew")}</p>
       </div>
       <div className="mt-3">
         <TestPaymentNotice notice={product.testPaymentNotice ?? undefined} />

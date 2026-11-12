@@ -413,7 +413,7 @@ function PurchaseSummary({
     t("shared"),
   ];
   // 혜택(체크)과 결제 조건(점)을 가른다 — 둘 다 체크면 해지 규칙까지 혜택처럼 읽힌다(APP-1596).
-  const terms = [t("autoRenew"), t("cancelInfo"), t("cancelHow")];
+  const terms = [t("autoRenew")];
   return (
     <div className={SETTINGS_LIST}>
       <div className="flex items-center justify-between gap-4 px-5 py-5">

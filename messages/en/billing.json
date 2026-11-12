@@ -50,8 +50,7 @@
         "agentChat": "Agent chat",
         "mcp": "External tools and MCP"
       },
-      "footWorkspace": "Plans are per workspace. When one admin pays, every member shares it.",
-      "footRenew": "Pro is charged automatically on the same day each month, and you can cancel anytime. If you cancel, you keep it until the end of the paid period."
+      "footWorkspace": "Plans are per workspace. When one admin pays, every member shares it."
     },
     "teamInProgress": "Your team has a subscription in progress. Check again when it's done.",
     "checking": {
@@ -108,7 +107,6 @@
   },
   "checkout": {
     "title": "Review order",
-    "description": "Review the price, add your card, and agree to automatic payments to start your subscription.",
     "loading": "Loading checkout",
     "askAdmin": "Only admins can purchase. Please ask an admin.",
     "inProgress": "Your team has a subscription in progress. Check again when it's done.",
@@ -122,9 +120,7 @@
     "alreadyPro": "This workspace is already on Pro.",
     "productName": "{plan} monthly",
     "shared": "Everyone in this workspace shares it.",
-    "autoRenew": "You're charged on the same day every month and the usage period renews. In months without that date, you're charged on the last day of the month.",
-    "cancelInfo": "If you cancel, you can keep using it until the current period ends and you won't be charged from the next renewal.",
-    "cancelHow": "Admins can cancel in Settings > Payment.",
+    "autoRenew": "You're charged automatically on the same day every month. Admins can cancel anytime in Settings > Payment, and you can keep using it until the period ends.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
     "refundPolicy": "If you request it within 7 days of the payment date and the whole workspace recorded 20 hours or less in total in that billing period, you get a full refund. <link>See refund policy</link>",
     "submit": "Agree and pay",
