@@ -96,7 +96,7 @@ export function HelpTabsView({
       {/* 패널을 한 칸에 겹쳐 세워 상자 높이를 가장 긴 탭에 맞춘다(APP-1356). 고른 탭만 그리면 Mac ↔ Windows 를
           오갈 때마다 상자가 72~100px 줄었다 늘어 아래 본문이 통째로 오르내렸다. 안 고른 탭은 `invisible` 이라
           보조기술에도 안 읽힌다. */}
-      <div className={cn(ready && "grid")}>
+      <div className={cn(ready && "grid grid-cols-[minmax(0,1fr)]")}>
         {panels.map((panel, i) => (
           <div
             key={titles[i]}
@@ -105,7 +105,7 @@ export function HelpTabsView({
             aria-labelledby={ready ? `tab-${i}-${titles[i]}` : undefined}
             inert={ready && i !== active}
             className={cn(
-              "flex flex-col gap-3",
+              "flex min-w-0 flex-col gap-3",
               ready && "col-start-1 row-start-1",
               ready && i !== active && "invisible",
               i > 0 && !ready && "mt-4"

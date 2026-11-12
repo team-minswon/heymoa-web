@@ -35,9 +35,10 @@ export function HelpTopBar() {
       className="sticky top-0 z-30 border-b border-[var(--tv-rule)] bg-white"
     >
       <div className="mx-auto w-full max-w-[1800px]">
-        <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
+        <div className="flex h-14 items-center gap-2 px-4 sm:gap-4 lg:px-6">
           <Link
             href={localePath(locale, "/")}
+            aria-label={siteConfig.name}
             className={cn(
               "inline-flex h-10 shrink-0 items-center gap-2.5 rounded-full",
               FOCUS
@@ -51,15 +52,17 @@ export function HelpTopBar() {
               className="rounded-full object-contain"
               priority
             />
-            <span className="text-[17px] font-extrabold tracking-[-0.03em] text-[var(--tv-ink)]">
+            <span className="hidden text-[17px] font-extrabold tracking-[-0.03em] text-[var(--tv-ink)] sm:inline">
               {siteConfig.name}
             </span>
           </Link>
-          <div className="mx-auto w-full min-w-0 max-w-[560px] flex-1">
+          <div className="mx-auto min-w-0 sm:w-full sm:max-w-[560px] sm:flex-1">
             <HelpPalette />
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <AppDownloadLink variant="nav" />
+            <div className="hidden sm:block">
+              <AppDownloadLink variant="nav" />
+            </div>
             <LandingCta
               label={t("start")}
               className={`h-9 border-transparent bg-[var(--tv-brand)] px-4 text-[14px] font-bold text-white bg-clip-border hover:bg-[var(--tv-brand-deep)] focus-visible:border-[var(--tv-brand-deep)] focus-visible:ring-0 ${FOCUS} focus-visible:outline-offset-0`}

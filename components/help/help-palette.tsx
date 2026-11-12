@@ -135,7 +135,7 @@ export function HelpPalette() {
         aria-label={t("opener", { hint })}
         aria-keyshortcuts="Control+K Meta+K"
         className={cn(
-          "relative flex h-10 w-full min-w-0 items-center rounded-[10px] border border-[var(--tv-rule-strong)] bg-white pr-16 pl-10 text-left text-[14px] text-[var(--tv-muted)] help-fade hover:border-[var(--tv-ink)]",
+          "relative flex size-10 items-center rounded-[10px] border border-[var(--tv-rule-strong)] bg-white text-left text-[14px] text-[var(--tv-muted)] help-fade hover:border-[var(--tv-ink)] sm:w-full sm:min-w-0 sm:pr-16 sm:pl-10",
           FOCUS
         )}
       >
@@ -143,9 +143,9 @@ export function HelpPalette() {
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
         />
-        <span className="truncate">{t("placeholderExample")}</span>
+        <span className="hidden truncate sm:block">{t("placeholderExample")}</span>
         <kbd
-          className="pointer-events-none absolute top-1/2 right-3 grid h-6 min-w-6 -translate-y-1/2 place-items-center rounded-[6px] border border-[var(--tv-rule-strong)] bg-white px-1.5 font-sans text-[12px] font-bold"
+          className="pointer-events-none absolute top-1/2 right-3 hidden h-6 min-w-6 -translate-y-1/2 place-items-center rounded-[6px] border border-[var(--tv-rule-strong)] bg-white px-1.5 font-sans text-[12px] font-bold sm:grid"
           aria-hidden
         >
           {hint}
