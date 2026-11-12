@@ -418,7 +418,7 @@ describe("결제 수단·구독", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(
       within(dialog).getByText(
-        "자동 결제에 쓰는 카드 정보만 지우고 결제 내역은 남습니다."
+        "자동 결제에 쓰는 카드 정보만 삭제합니다. 결제 내역은 남습니다."
       )
     ).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));

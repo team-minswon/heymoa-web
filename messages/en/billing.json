@@ -59,12 +59,12 @@
     "cancelSetup": "Cancel registration",
     "refresh": "Check status again",
     "userRefunding": {
-      "title": "Refund in progress",
-      "body": "We're processing your refund. Future payments have already stopped. The workspace moves to Free when it's done."
+      "title": "Processing your refund",
+      "body": "Future payments have already stopped. The workspace moves to Free when the refund is done."
     },
     "userRefunded": {
-      "title": "Your refund has been processed",
-      "body": "It may take a few days to appear on your card statement, depending on the card issuer. You can start again any time."
+      "title": "Your refund is complete",
+      "body": "Depending on the card issuer, it may take a few days for the refund to show on your card statement. You can start again any time."
     },
     "userRefundFailed": {
       "title": "We couldn't finish the refund",
@@ -101,7 +101,7 @@
     "autoRenew": "You're charged on the same day every month and the usage period renews.",
     "cancelInfo": "If you cancel, you can keep using it until the current period ends and you won't be charged from the next renewal.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
-    "refundPolicy": "You can get a full refund if you request it within 7 days of payment and have recorded 30 hours or less by then. <link>See refund policy</link>",
+    "refundPolicy": "You can get a full refund if you request it within 7 days of payment and have recorded 30 hours or less in this billing period by then. <link>See refund policy</link>",
     "submit": "Agree and register card",
     "openSetup": {
       "title": "A card registration is already in progress",
@@ -345,7 +345,7 @@
     "thenPaid": "Paid",
     "nowRefunded": "Refunded. This period no longer includes access.",
     "nowEnded": "This period has ended.",
-    "nowRefunding": "We're processing the refund. The workspace moves to Free when it's done.",
+    "nowRefunding": "We're processing the payment cancellation.",
     "support": "Refunds and tax invoices are handled through <link>Help & feedback</link>.",
     "loadFailed": "Couldn't load payment details."
   },
