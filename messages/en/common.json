@@ -85,7 +85,8 @@
   },
   "dueCell": {
     "placeholder": "Set due date",
-    "change": "Change due date ({date})"
+    "change": "Change due date ({date})",
+    "clear": "No due date"
   },
   "recipients": {
     "placeholder": "Enter a name or email",

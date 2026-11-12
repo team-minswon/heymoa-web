@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AssigneeCell, AssigneeFace } from "@/components/heymoa/assignee-cell";
@@ -6,6 +12,7 @@ import type { AssigneeChoice } from "@/lib/assignees/describe";
 import { ChoiceToggle } from "@/components/heymoa/choice-toggle";
 import { Collapse } from "@/components/heymoa/collapse";
 import { DueCell } from "@/components/heymoa/due-cell";
+import { pickDue } from "@/lib/test/pick-due";
 import { formatDueDate } from "@/lib/format/date";
 import { SegmentedControl } from "@/components/heymoa/segmented-control";
 
@@ -14,10 +21,24 @@ afterEach(cleanup);
 describe("ChoiceToggle", () => {
   it("고른 쪽만 체크되고, 누르면 그 선택을 알린다", () => {
     const onChange = vi.fn();
-    render(<ChoiceToggle label="이전 결정을 끝낼지" changeLabel="끝내기" keepLabel="이어가기" value="keep" onChange={onChange} />);
+    render(
+      <ChoiceToggle
+        label="이전 결정을 끝낼지"
+        changeLabel="끝내기"
+        keepLabel="이어가기"
+        value="keep"
+        onChange={onChange}
+      />
+    );
 
-    expect(screen.getByRole("radio", { name: "이어가기" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("radio", { name: "끝내기" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("radio", { name: "이어가기" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    expect(screen.getByRole("radio", { name: "끝내기" })).toHaveAttribute(
+      "aria-checked",
+      "false"
+    );
 
     fireEvent.click(screen.getByRole("radio", { name: "끝내기" }));
     expect(onChange).toHaveBeenCalledWith("change");
@@ -27,7 +48,16 @@ describe("ChoiceToggle", () => {
 describe("ChoiceToggle 그대로 두는 쪽 막기", () => {
   it("keepDisabled 면 넘기기만 막고 바꾸는 쪽은 그대로 둔다", () => {
     const onChange = vi.fn();
-    render(<ChoiceToggle label="기존 할 일에 반영할지" changeLabel="반영" keepLabel="넘기기" value={null} keepDisabled onChange={onChange} />);
+    render(
+      <ChoiceToggle
+        label="기존 할 일에 반영할지"
+        changeLabel="반영"
+        keepLabel="넘기기"
+        value={null}
+        keepDisabled
+        onChange={onChange}
+      />
+    );
 
     expect(screen.getByRole("radio", { name: "넘기기" })).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: "반영" }));
@@ -55,7 +85,10 @@ describe("AssigneeCell 의 얼굴", () => {
       />
     );
 
-    expect(container.querySelector("img")).toHaveAttribute("src", 김민수.image!);
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      김민수.image!
+    );
   });
 
   it("사진이 없으면 생성된 얼굴을 그린다", () => {
@@ -86,8 +119,13 @@ describe("SegmentedControl", () => {
       />
     );
 
-    expect(screen.getByRole("radio", { name: "그래프" })).toHaveAttribute("aria-checked", "true");
-    expect((container.querySelector("[aria-hidden]") as HTMLElement).style.transform).toBe("translateX(100%)");
+    expect(screen.getByRole("radio", { name: "그래프" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    expect(
+      (container.querySelector("[aria-hidden]") as HTMLElement).style.transform
+    ).toBe("translateX(100%)");
 
     fireEvent.click(screen.getByRole("radio", { name: "요약" }));
     expect(onChange).toHaveBeenCalledWith("summary");
@@ -128,20 +166,38 @@ describe("DueCell", () => {
     expect(formatDueDate("2026-09-19")).toBe("9월 19일 (토)");
   });
 
-  it("비우면 기한이 없어진다", () => {
+  it("달력에서 날짜를 고르면 그 날로 정해지고, 「기한 없음」으로 지운다", () => {
     const onChange = vi.fn();
-    const { container } = render(<DueCell value="2026-09-19" editable onChange={onChange} />);
+    render(<DueCell value="2026-09-19" editable onChange={onChange} />);
 
-    fireEvent.change(container.querySelector("input[type=date]") as HTMLInputElement, {
-      target: { value: "" },
-    });
-    expect(onChange).toHaveBeenCalledWith(null);
+    pickDue(
+      screen.getByRole("button", { name: "기한 9월 19일 (토) 바꾸기" }),
+      "2026-09-25"
+    );
+    expect(onChange).toHaveBeenLastCalledWith("2026-09-25");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "기한 9월 19일 (토) 바꾸기" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "기한 없음" }));
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("기한이 없으면 달력에 「기한 없음」을 두지 않는다", () => {
+    render(<DueCell value={null} editable onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "기한 정하기" }));
+    expect(document.querySelector("td[data-day]")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "기한 없음" })).toBeNull();
   });
 });
 
 describe("AssigneeFace", () => {
   it("사람으로 풀리지 않은 화자에는 이름 없는 화자 표시가 붙는다", () => {
-    render(<AssigneeFace value={{ type: "SPEAKER_LABEL", noteId: "n", label: "F" }} />);
+    render(
+      <AssigneeFace
+        value={{ type: "SPEAKER_LABEL", noteId: "n", label: "F" }}
+      />
+    );
     expect(screen.getByText("화자 F")).toBeInTheDocument();
     expect(screen.getByLabelText("이름 없는 화자")).toBeInTheDocument();
   });
@@ -166,7 +222,14 @@ describe("AssigneeCell", () => {
 
   it("열어서 다른 사람을 고르거나 담당을 비운다", async () => {
     const onChange = vi.fn();
-    render(<AssigneeCell value={choices[0]} choices={choices} editable onChange={onChange} />);
+    render(
+      <AssigneeCell
+        value={choices[0]}
+        choices={choices}
+        editable
+        onChange={onChange}
+      />
+    );
 
     fireEvent.click(screen.getByRole("combobox", { name: "담당 김민 바꾸기" }));
     fireEvent.click(await screen.findByRole("option", { name: /화자 B/ }));

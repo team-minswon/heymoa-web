@@ -220,12 +220,16 @@ test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 �
   const choice = row.getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
   await choice.getByRole("radio", { name: "반영", exact: true }).click();
   await expect(choice.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
-  await row.getByRole("group", { name: "기존 할 일 변경", exact: true }).locator('input[type="date"]').fill("2026-12-05");
+  // 기한은 달력에서 고른다(APP-1591). 펼쳐진 달의 날짜 하나를 골라 그 값을 따라간다.
+  await row.getByRole("group", { name: "기존 할 일 변경", exact: true }).locator('[data-slot="popover-trigger"]').click();
+  const day = page.locator('[data-slot="popover-content"] td[data-day]:not([data-outside="true"]):not([data-selected="true"])').nth(4);
+  const picked = (await day.getAttribute("data-day"))!;
+  await day.getByRole("button").click();
   await expect.poll(() => page.evaluate(async ({ noteId, taskId }) => {
     const { data: review } = await (await fetch(`/v1/notes/${noteId}/meeting-review`)).json();
     return review.items.flatMap((item: { taskChanges: Array<{ target: { itemId: string }; draft?: { due?: { value: string } } }> }) => item.taskChanges)
       .find((change: { target: { itemId: string } }) => change.target.itemId === taskId)?.draft?.due?.value;
-  }, { noteId: MENTORING_NOTE, taskId: target.taskId })).toBe("2026-12-05");
+  }, { noteId: MENTORING_NOTE, taskId: target.taskId })).toBe(picked);
   await choice.getByRole("radio", { name: "넘기기" }).click();
   await expect(choice.getByRole("radio", { name: "넘기기" })).toHaveAttribute("aria-checked", "true");
   expect(await readTasks()).toEqual(before);
@@ -243,7 +247,7 @@ test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 �
   await page.getByRole("alertdialog").getByRole("button", { name: "검토 완료" }).click();
   await expect(page.getByText("확정됨", { exact: true })).toBeVisible({ timeout: 20_000 });
   const applied = (await readTasks()).find((task: { taskId: string }) => task.taskId === target.taskId);
-  expect(applied).toMatchObject({ assignee: null, due: "2026-12-05", revision: target.revision + 1 });
+  expect(applied).toMatchObject({ assignee: null, due: picked, revision: target.revision + 1 });
   await expect(choice.getByRole("radio", { name: "반영됨" })).toBeDisabled();
   await expect(row.getByText("검토 완료 때 적용됩니다.")).toHaveCount(0);
   await expect(row.getByText(/이 제안을 반영할 수 없습니다/)).toHaveCount(0);

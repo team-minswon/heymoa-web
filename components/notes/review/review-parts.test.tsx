@@ -822,19 +822,11 @@ describe("DueCell", () => {
     expect(screen.getByText("9월 19일 (토)")).toBeInTheDocument();
   });
 
-  it("누르면 브라우저의 날짜 고르기를 연다", () => {
-    const showPicker = vi.fn();
-    const { container } = render(
-      <DueCell value={null} editable onChange={vi.fn()} />
-    );
-    (
-      container.querySelector("input[type=date]") as HTMLInputElement & {
-        showPicker: () => void;
-      }
-    ).showPicker = showPicker;
-
+  it("누르면 달력을 연다", () => {
+    render(<DueCell value={null} editable onChange={vi.fn()} />);
+    expect(document.querySelector("td[data-day]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "기한 정하기" }));
-    expect(showPicker).toHaveBeenCalled();
+    expect(document.querySelector("td[data-day]")).not.toBeNull();
   });
 });
 

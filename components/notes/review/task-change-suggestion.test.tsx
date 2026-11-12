@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TaskChangeSuggestion } from "@/components/notes/review/suggestion-row";
 
+/** 제안 안의 기한 칸(달력을 여는 버튼). 고칠 수 없으면 버튼이 없다. 빈 값의 문구가 자리마다 달라 이름으로 찾지 않는다 */
+const dueButton = () =>
+  document.querySelector<HTMLElement>('[data-slot="popover-trigger"]');
+
 type Props = Parameters<typeof TaskChangeSuggestion>[0];
 
 const change: Props["change"] = {
@@ -76,15 +80,19 @@ describe("기존 할 일 변경 초안", () => {
 
   it("편집한 기한을 즉시 초안에 저장하며 대상의 원래 판을 유지한다", () => {
     const initial = props();
-    const { container } = render(<TaskChangeSuggestion {...initial} />);
-    fireEvent.change(container.querySelector('input[type="date"]')!, {
-      target: { value: "2026-10-30" },
-    });
+    render(<TaskChangeSuggestion {...initial} />);
+    // 기한이 없는 제안이라 달력은 이번 달을 편다. 그 달의 날짜 하나를 골라 그 값을 따라간다.
+    fireEvent.click(dueButton()!);
+    const day = document.querySelector<HTMLElement>(
+      'td[data-day]:not([data-outside="true"])'
+    )!;
+    const picked = day.dataset.day!;
+    fireEvent.click(day.querySelector("button")!);
     expect(initial.onChoose).toHaveBeenCalledWith(
       "change",
       expect.objectContaining({
         expectedRevision: 3,
-        due: { value: "2026-10-30" },
+        due: { value: picked },
       })
     );
   });
@@ -95,10 +103,10 @@ describe("기존 할 일 변경 초안", () => {
       choice: "change",
       change: { ...change, decision: "APPLY" },
     });
-    const { container } = render(<TaskChangeSuggestion {...initial} />);
+    render(<TaskChangeSuggestion {...initial} />);
     expect(screen.getByRole("alert")).toHaveTextContent(/넘기기/);
     expect(screen.getByRole("radio", { name: "반영 예정" })).toBeDisabled();
-    expect(container.querySelector('input[type="date"]')).toBeNull();
+    expect(dueButton()).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "넘기기" }));
     expect(initial.onChoose).toHaveBeenCalledWith(
       "keep",
@@ -151,10 +159,10 @@ describe("기존 할 일 변경 초안", () => {
       choice: "change",
       change: { ...change, decision: "APPLIED" },
     });
-    const { container } = render(<TaskChangeSuggestion {...initial} />);
+    render(<TaskChangeSuggestion {...initial} />);
     expect(screen.getByRole("radio", { name: "반영됨" })).toBeDisabled();
     expect(screen.getByRole("radio", { name: "넘기기" })).toBeDisabled();
-    expect(container.querySelector('input[type="date"]')).toBeNull();
+    expect(dueButton()).toBeNull();
     expect(
       screen.queryByText("검토 완료 때 적용됩니다.")
     ).not.toBeInTheDocument();

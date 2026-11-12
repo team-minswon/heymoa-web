@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AllTasks } from "@/components/tasks/all-tasks";
+import { pickDue } from "@/lib/test/pick-due";
 
 const mutate = vi.hoisted(() => vi.fn());
 const createTask = vi.hoisted(() => vi.fn());
@@ -274,9 +275,7 @@ describe("AllTasks", () => {
   it("기한을 고치면 읽은 판으로 전체 본문을 보낸다", async () => {
     renderScreen();
     const row = (await screen.findByText("지난 할 일")).closest("li")!;
-    fireEvent.change(row.querySelector('input[type="date"]')!, {
-      target: { value: "2026-09-30" },
-    });
+    pickDue(within(row).getByRole("button", { name: /^기한 .* 바꾸기$/ }), "2026-09-30");
 
     // 목록 캐시를 먼저 걸고(취소 → 패치) 요청을 보내므로 한 틱 뒤에 나간다.
     await waitFor(() =>

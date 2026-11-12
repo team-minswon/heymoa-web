@@ -85,7 +85,8 @@
   },
   "dueCell": {
     "placeholder": "기한 정하기",
-    "change": "기한 {date} 바꾸기"
+    "change": "기한 {date} 바꾸기",
+    "clear": "기한 없음"
   },
   "recipients": {
     "placeholder": "이름이나 이메일을 입력하세요",
