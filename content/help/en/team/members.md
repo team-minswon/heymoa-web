@@ -4,7 +4,7 @@ description: Invite members to your workspace and change their roles and display
 group: team
 slug: members
 order: 3
-modified: 2026-11-05
+modified: 2026-11-12
 ---
 
 ## Invite members {#invite}
@@ -77,3 +77,4 @@ Yes, you can change your own name. Only admins can change other people's names.
 - [I want to invite teammates to work together](help:invite-team) — Steps from inviting to your first meeting
 - [Attendees and speakers](help:speakers) — How to add guest participants to a meeting
 - [Integrations](help:integrations) — Connections that are removed when you remove a member
+- [Plans and billing](help:billing#payer-left) — Automatic payments when the payer leaves

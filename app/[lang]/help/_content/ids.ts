@@ -8,6 +8,7 @@ export const HELP_PAGES = {
   "workspace-basics": "start",
   account: "start",
   desktop: "start",
+  billing: "start",
   recording: "record",
   speakers: "record",
   "terms-context": "record",

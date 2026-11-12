@@ -4,7 +4,7 @@ description: 워크스페이스에 멤버를 초대하고 역할과 표시 이�
 group: team
 slug: members
 order: 3
-modified: 2026-11-05
+modified: 2026-11-12
 ---
 
 ## 멤버 초대하는 법 {#invite}
@@ -77,3 +77,4 @@ modified: 2026-11-05
 - [동료를 초대해 같이 쓰고 싶어요](help:invite-team) — 초대부터 첫 회의까지 순서
 - [참석자와 화자](help:speakers) — 임시 참여자를 회의에 올리는 방법
 - [외부 도구 연동](help:integrations) — 멤버를 내보낼 때 풀리는 연결
+- [요금제와 결제](help:billing#payer-left) — 결제자가 떠날 때의 자동 결제

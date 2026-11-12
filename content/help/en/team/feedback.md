@@ -4,7 +4,7 @@ description: Send problem reports, questions, and feature requests from the side
 group: team
 slug: feedback
 order: 4
-modified: 2026-10-26
+modified: 2026-11-12
 ---
 
 ## Send a request {#send}
@@ -48,3 +48,4 @@ No. There's a limit on how many you can send in an hour. If you hit it, wait a w
 ## Related pages {#related}
 
 - [Troubleshooting](help:troubleshooting) — Errors to check first and how to fix them
+- [Plans and billing](help:billing#refund) — Refund rules and how to ask

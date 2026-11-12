@@ -4,7 +4,7 @@ description: 사이드바에서 장애, 사용 문의, 기능 제안을 보내�
 group: team
 slug: feedback
 order: 4
-modified: 2026-11-05
+modified: 2026-11-12
 ---
 
 ## 문의 보내는 법 {#send}
@@ -48,3 +48,4 @@ modified: 2026-11-05
 ## 관련 페이지 {#related}
 
 - [문제 해결](help:troubleshooting) — 먼저 확인해 볼 오류와 해결 방법
+- [요금제와 결제](help:billing#refund) — 환불 기준과 요청하는 법
