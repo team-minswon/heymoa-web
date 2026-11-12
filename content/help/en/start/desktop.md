@@ -6,7 +6,7 @@ description: Install the Mac or Windows app, record the sound your computer play
 group: start
 slug: desktop
 order: 4
-modified: 2026-10-21
+modified: 2026-11-12
 ---
 
 ## How the web and the app differ {#overview}
@@ -85,15 +85,18 @@ If you see “Microphone disconnected” or “Computer sound disconnected” wh
 
 ## Using the menu bar and tray {#menubar}
 
-::clip{name="desktop-menubar" alt="Clicking the menu bar icon opens a popover, decisions, tasks, and open questions pile up during recording, and pausing the recording returns it to standby" caption="Sample screen. Click the menu bar icon to open the current meeting's timeline."}
+Click the HeyMoa icon in the menu bar (Mac) or taskbar notification area (Windows) to open **[Recent meetings]**. You can choose and read a meeting even when you aren't recording.
 
-The icon in the menu bar (Mac) or the notification area of the taskbar (Windows) shows the recording status.
+1. **Choose a meeting**
+   Open an ongoing, paused, or finished meeting in the small window.
+2. **Choose [Summary] or [Timeline]**
+   Read the summary, or filter the timeline by **[All]**, **[Decisions]**, **[Tasks]**, **[Open questions]**, and **[References]**. A live transcript also appears during recording. If the summary isn't ready yet, check the timeline.
+3. **Open the full meeting when needed**
+   Click **[Open in HeyMoa ↗]** to open the meeting in the app. Use the back button at the top left to return to the meeting list.
 
-Click the icon to open the current meeting's timeline. Choose what to see from **[All]**, **[Decisions]**, **[Tasks]**, **[Open questions]**, and **[Reference]**. Click **[Open current meeting ↗]** to open the meeting screen, or **[⏸ Pause recording]** to pause recording.
+Pausing recording or ending a meeting keeps the small window and what you were reading open. Use the close button at the top right to close it.
 
-If nothing new arrives for more than 30 seconds, you see “Updates paused”. Open the meeting to check on it.
-
-When you're not recording, it opens as “Ready to record” and shows “No meeting is being recorded.” While you're viewing a meeting someone else is recording, the pause recording button becomes **[Stop viewing]**. On Mac, the time since recording started appears next to the icon while you record.
+Turn on the pin icon at the top to keep the window above other apps and prevent it from closing when you click outside. Drag the header to move it. Adjust opacity using the popup's settings button, or right-click the menu bar or tray icon and choose **[Settings…]**.
 
 Right-click the icon and the first line of the menu shows the current status, for example “Recording · 12:34 since start”. The status names mean:
 
@@ -118,14 +121,18 @@ If you choose **[Quit app]** from the menu or press `kbd:⌘Q` on Mac while reco
 
 ## Updating to a new version {#update}
 
-Go to Settings → App updates to check for and download a new version, then choose Restart to update. Turn on Automatic updates to download new versions automatically and apply them when you quit after recording and audio uploads finish. Older apps without this menu need a one-time manual installation from the [official release page](https://github.com/team-minswon/homebrew-tap/releases). Most screens and features change along with the web right away. However, the app's own features, such as sound recording and the menu bar, change only when you install a new version.
+Right-click the menu bar or tray icon and choose **[Settings…]**. The settings button at the top of the popup opens the same **[Desktop settings]** window.
 
-1. **Pause recording**
-   Don't update while recording.
-2. **Quit the app**
-   The app must be fully closed before you can install the new version.
-3. **Install the new version**
-   On Mac, copy HeyMoa from the new DMG into the Applications folder, replacing the old one. With Homebrew, run `brew upgrade --cask heymoa`. On Windows, run the new installer.
+1. **Click [Check for updates]**
+   If a new version is available, it downloads. If the download fails, retry in the same window.
+2. **When the download finishes, click [Restart to update]**
+   ==Restarting to update is blocked while recording or while audio is waiting to be sent.== Wait for recording and uploads to finish, then try again.
+
+**[Automatic updates]** is on by default for new installations and when you haven't chosen an update setting. If you previously turned it off, it stays off. When enabled, new versions download automatically and are applied when you quit the app normally after recording and audio uploads finish.
+
+Turning automatic updates off still lets the app check for new versions. When an update notice appears, open settings to download it yourself. No update notice appears when you're already on the latest version.
+
+Older apps without these settings need a one-time manual installation from the [app download page](/download). Wait for recording and uploads to finish, then fully quit the app. On Mac, replace HeyMoa in Applications with the copy from the new DMG. With Homebrew, run `brew upgrade --cask heymoa`. On Windows, run the new installer.
 
 If you see “Update the app, then sign in again” when signing in, you need to update the app. Click **[See new version]** to get it.
 
@@ -178,7 +185,7 @@ Problems like the microphone not being found or the live transcript not connecti
 No. Closing the window doesn't quit the app, and recording continues. To open it again, click the HeyMoa icon in the menu bar or the notification area of the taskbar.
 
 ### Does the app update automatically?
-Automatic updates are off by default. Enable them in Settings → App updates to automatically download new versions and apply them when you safely quit. Restarting to update is blocked while recording or audio uploads are pending.
+Yes, for new installations and when you haven't chosen an update setting. A previous choice to turn it off is preserved. You can change it in **[Desktop settings]**. Restarting to update is blocked while recording or audio uploads are pending.
 
 ### Can I use it on an Intel Mac?
 No. On Mac, only Apple Silicon is supported. You can use the web service in your browser instead. Only your microphone is recorded there.
