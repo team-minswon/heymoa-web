@@ -106,6 +106,20 @@ describe("HeyMoa legal pages", () => {
     expect(document.getElementById("section-15")).toHaveTextContent("제15조 (약관의 변경과 문의)");
   });
 
+  it("주소에 조항 앵커가 있으면 본문이 그려진 뒤 그 조항으로 맞춘다(APP-1586)", async () => {
+    // 새 탭으로 바로 연 `/terms#section-13` 은 브라우저가 도착점을 찾을 때 본문이 아직 없어 맨 위에 머문다.
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView; // jsdom 에는 없다
+    window.location.hash = "#section-13";
+    try {
+      await renderPage(TermsPage, "ko");
+      expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById("section-13"));
+    } finally {
+      window.location.hash = "";
+      Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+    }
+  });
+
   it.each([
     [TermsPage, "Terms of Service", 15, "/terms"],
     [PrivacyPage, "Privacy Policy", 12, "/privacy"],
