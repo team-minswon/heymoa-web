@@ -111,8 +111,8 @@ function PlanSkeleton({ label }: { label: string }) {
           {t("compare")}
         </h3>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <Skeleton className="h-[300px] rounded-panel" />
-          <Skeleton className="h-[300px] rounded-panel" />
+          <Skeleton className="h-[475px] rounded-panel" />
+          <Skeleton className="h-[475px] rounded-panel" />
         </div>
       </div>
     </div>
@@ -214,7 +214,8 @@ function CurrentPlan({
                 ? "line.stoppedNoCardAdmin"
                 : "line.stoppedNoCardMember"
               : "line.cancelScheduled",
-            { end: format.date(period.end) }
+            // 날짜 한 덩어리가 줄 끝에서 갈리지 않게(rule `ui-text-layout`) 띄어쓰기를 붙는 공백으로.
+            { end: format.date(period.end).replaceAll(" ", "\u00a0") }
           )
         : billing.status === "ACTIVE" && period && amount
           ? t("line.next", { date: format.date(period.end), amount })
@@ -241,7 +242,8 @@ function CurrentPlan({
           ) : null}
         </p>
         {line ? (
-          <p className="mt-3 text-sm leading-5 text-balance text-[var(--el-body)]">
+          // 결제자 이탈 안내처럼 세 문장짜리도 있어 줄을 고르게 나누지 않고(`text-balance` 는 칸 폭을 덜 써 어색하게 꺾였다) 칸 폭을 다 쓴다.
+          <p className="mt-3 text-sm leading-5 text-pretty text-[var(--el-body)]">
             {line}
           </p>
         ) : null}
@@ -251,7 +253,7 @@ function CurrentPlan({
             onClick={onOpenPayment}
             className="mt-4 inline-flex items-center gap-1 self-start text-sm text-[var(--el-muted)] underline-offset-4 hover:text-[var(--el-ink)] hover:underline"
           >
-            {t("openPayment")}
+            {t(stoppedNoCard ? "registerCard" : "openPayment")}
             <ArrowRight className="size-3.5" aria-hidden />
           </button>
         ) : null}
@@ -265,7 +267,19 @@ function CurrentPlan({
   );
 }
 
-/** Free 와 유료 상품을 나란히. 유료 카드는 어두운 면이고(DESIGN `pricing-tier-featured`), 구매 버튼은 그 카드 안에 있다. */
+const FEATURES = [
+  "liveNotes",
+  "speakers",
+  "links",
+  "agentChat",
+  "mcp",
+] as const;
+
+/**
+ * Free 와 유료 상품을 나란히. 두 카드는 같은 줄 구성이고(이름 → 가격 → 한 줄 설명 → 굵은 첫 항목 → 멤버 → 모든 기능) 높이가 같다.
+ * 유료 카드는 어두운 면이고(DESIGN `pricing-tier-featured`), 구매 버튼은 그 카드 안에 있다. 워크스페이스 단위·자동 결제 안내는
+ * 항목마다 되풀이하지 않고 카드 아래 두 줄로 둔다(APP-1596).
+ */
 function PlanCompare({
   billing,
   isPaid,
@@ -301,28 +315,22 @@ function PlanCompare({
         <PlanCard
           name={planName("FREE")}
           price={t("plan.freePrice")}
+          tagline={t("plan.freeTagline")}
+          highlight={t("plan.recording", {
+            allowance: format.monthlyMinutes(
+              product.freeRecordingAllowanceMinutes
+            ),
+          })}
           current={!isPaid}
-          features={[
-            t("plan.recording", {
-              allowance: format.monthlyMinutes(
-                product.freeRecordingAllowanceMinutes
-              ),
-            }),
-            t("plan.members"),
-          ]}
         />
         <PlanCard
           featured
           name={planName(product.planCode)}
           price={format.money(product.amountKrw)}
           per={t("plan.perMonth")}
+          tagline={t("plan.proTagline")}
+          highlight={format.allowance(product.recordingAllowanceMinutes)}
           current={isPaid}
-          features={[
-            format.allowance(product.recordingAllowanceMinutes),
-            t("plan.members"),
-            t("plan.shared"),
-            t("plan.autoRenew"),
-          ]}
           footer={
             isPaid ? null : !isAdmin ? (
               <p className="text-sm leading-5 text-white/70">{t("askAdmin")}</p>
@@ -342,6 +350,10 @@ function PlanCompare({
           }
         />
       </div>
+      <div className="mt-3 grid gap-1 text-xs leading-5 text-[var(--el-muted)]">
+        <p>{t("plan.footWorkspace")}</p>
+        <p>{t("plan.footRenew")}</p>
+      </div>
       <div className="mt-3">
         <TestPaymentNotice notice={product.testPaymentNotice ?? undefined} />
       </div>
@@ -353,25 +365,45 @@ function PlanCard({
   name,
   price,
   per,
+  tagline,
+  highlight,
   current,
   featured,
-  features,
   footer,
 }: {
   name: string;
   price: string;
   per?: string;
+  tagline: string;
+  /** 굵게 보이는 첫 항목 — 두 요금제가 갈리는 녹음 제공량. */
+  highlight: string;
   current: boolean;
   featured?: boolean;
-  features: string[];
   footer?: ReactNode;
 }) {
   const t = useTranslations("billing.page");
+  const check = cn(
+    "mt-0.5 size-4 shrink-0",
+    featured ? "text-white/60" : "text-[var(--el-muted)]"
+  );
+  const item = (text: string, strong = false) => (
+    <li key={text} className="flex items-start gap-2">
+      <Check className={check} aria-hidden />
+      <span
+        className={cn(
+          strong && "font-medium",
+          strong && (featured ? "text-white" : "text-[var(--el-ink)]")
+        )}
+      >
+        {text}
+      </span>
+    </li>
+  );
   return (
     <div
       aria-current={current || undefined}
       className={cn(
-        "flex min-h-[300px] flex-col rounded-panel border p-6",
+        "flex flex-col rounded-panel border p-6",
         featured
           ? "border-transparent bg-[var(--el-ink)] text-white"
           : "border-[var(--el-hairline)] bg-white text-[var(--el-ink)]"
@@ -407,25 +439,36 @@ function PlanCard({
           </span>
         ) : null}
       </p>
-      <ul
+      <p
         className={cn(
-          "mt-5 grid gap-2.5 text-sm leading-5",
+          "mt-2 text-sm leading-5",
+          featured ? "text-white/70" : "text-[var(--el-muted)]"
+        )}
+      >
+        {tagline}
+      </p>
+      <div
+        className={cn(
+          "mt-5 text-sm leading-5",
           featured ? "text-white/85" : "text-[var(--el-body)]"
         )}
       >
-        {features.map((feature) => (
-          <li key={feature} className="flex items-start gap-2">
-            <Check
-              className={cn(
-                "mt-0.5 size-4 shrink-0",
-                featured ? "text-white/60" : "text-[var(--el-muted)]"
-              )}
-              aria-hidden
-            />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
+        <ul className="grid gap-2.5">
+          {item(highlight, true)}
+          {item(t("plan.members"))}
+        </ul>
+        <p
+          className={cn(
+            "mt-5 text-xs",
+            featured ? "text-white/60" : "text-[var(--el-muted)]"
+          )}
+        >
+          {t("plan.includes")}
+        </p>
+        <ul className="mt-2.5 grid gap-2.5">
+          {FEATURES.map((key) => item(t(`plan.features.${key}`)))}
+        </ul>
+      </div>
       {footer ? <div className="mt-auto pt-6">{footer}</div> : null}
     </div>
   );

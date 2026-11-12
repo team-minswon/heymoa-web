@@ -16,7 +16,10 @@
     "connecting": "Starting recording",
     "stopping": "Finishing recording",
     "retry": "Record again",
-    "otherNote": "Recording in another note"
+    "otherNote": "Recording in another note",
+    "quotaBlocked": "You've used this month's {allowance} of free recording.",
+    "quotaPlans": "View plans",
+    "quotaAskAdmin": "Ask an admin for Pro."
   },
   "degraded": {
     "title": "Transcription is paused.",

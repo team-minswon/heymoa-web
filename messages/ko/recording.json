@@ -16,7 +16,10 @@
     "connecting": "녹음 시작 중",
     "stopping": "녹음 마무리 중",
     "retry": "다시 녹음",
-    "otherNote": "다른 노트에서 녹음 중"
+    "otherNote": "다른 노트에서 녹음 중",
+    "quotaBlocked": "이번 달 무료 녹음 {allowance}을 다 썼습니다.",
+    "quotaPlans": "요금제 보기",
+    "quotaAskAdmin": "관리자에게 Pro를 요청해 주세요."
   },
   "degraded": {
     "title": "받아쓰기가 멈췄습니다.",

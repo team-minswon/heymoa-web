@@ -10,6 +10,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -188,9 +189,32 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(await screen.findByText("9,900원")).toBeInTheDocument();
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
-    expect(screen.getByText("월 30시간 녹음")).toBeInTheDocument();
+    expect(screen.getByText("녹음 월 20시간")).toBeInTheDocument();
+    // 두 카드가 같은 줄 구성이다 — 한 줄 설명, 멤버, 같은 다섯 기능(APP-1596).
     expect(
-      screen.getByText("이 워크스페이스의 모든 멤버가 함께 씁니다")
+      screen.getByText("회의가 많지 않은 팀에 충분합니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("회의가 많은 팀이 시간 걱정 없이 씁니다")
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("멤버 수 제한 없음")).toHaveLength(2);
+    expect(screen.getAllByText("모든 기능 포함")).toHaveLength(2);
+    for (const feature of [
+      "실시간 회의록과 요약",
+      "화자 구분",
+      "회의 간 연결",
+      "에이전트 채팅",
+      "외부 도구와 MCP 연결",
+    ])
+      expect(screen.getAllByText(feature)).toHaveLength(2);
+    // 워크스페이스 단위·자동 결제는 항목이 아니라 카드 아래 안내다.
+    expect(
+      screen.queryByText("이 워크스페이스의 모든 멤버가 함께 씁니다")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "요금은 워크스페이스 단위입니다. 관리자 한 명이 결제하면 모든 멤버가 함께 씁니다."
+      )
     ).toBeInTheDocument();
     expect(startButton()).toBeEnabled();
     expect(
@@ -398,11 +422,13 @@ describe("요금제 화면", () => {
     );
     expect(
       await screen.findByText(
-        "등록된 결제 수단이 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지 Pro를 쓸 수 있고, 결제 관리에서 카드를 등록한 뒤 재개하면 구독이 이어집니다."
+        "등록된 카드가 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지는 Pro를 그대로 씁니다. 카드를 등록하면 구독을 이어 갈 수 있습니다."
       )
     ).toBeInTheDocument();
     expect(screen.getByText("종료 예정")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "결제 관리" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "결제 관리에서 카드 등록" })
+    );
     expect(onOpenPayment).toHaveBeenCalledOnce();
   });
 
@@ -428,11 +454,11 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
-        "등록된 결제 수단이 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지 Pro를 쓸 수 있습니다. 구독을 이어 가려면 관리자에게 카드 등록을 요청해 주세요."
+        "등록된 카드가 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지는 Pro를 그대로 씁니다. 구독을 이어 가려면 관리자에게 카드 등록을 요청해 주세요."
       )
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "결제 관리" })
+      screen.queryByRole("button", { name: /결제 관리/ })
     ).not.toBeInTheDocument();
   });
 });
@@ -559,6 +585,13 @@ describe("주문서", () => {
     expect(
       screen.getByText("해지는 설정 > 결제 관리에서 관리자가 할 수 있습니다.")
     ).toBeInTheDocument();
+    // 혜택은 체크 목록, 결제 조건은 「결제 안내」 아래 점 목록이다(APP-1596).
+    const [benefits, terms] = screen.getAllByRole("list");
+    expect(within(benefits).getAllByRole("listitem")).toHaveLength(2);
+    expect(benefits).toHaveTextContent("이 워크스페이스의 모든 멤버가 함께 씁니다.");
+    expect(terms.previousElementSibling).toHaveTextContent("결제 안내");
+    expect(within(terms).getAllByRole("listitem")).toHaveLength(3);
+    expect(terms).toHaveTextContent("해지는 설정 > 결제 관리에서");
   });
 
   it("동의 체크 위에 환불 안내를 두고 약관의 환불 조항을 새 탭으로 연다(APP-1586)", async () => {

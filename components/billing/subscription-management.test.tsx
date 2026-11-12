@@ -611,7 +611,7 @@ describe("결제 상세", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("결제 완료")).toBeInTheDocument();
     expect(screen.getByText("환불됨 · 문의 요청")).toBeInTheDocument();
-    expect(screen.getByText(/환불·세금계산서 요청은/)).toBeInTheDocument();
+    expect(screen.getByText(/환불 요청은/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "문의·피드백" })).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "환불 요청" })

@@ -18,25 +18,38 @@
     "loading": "Loading usage",
     "progress": "Recording usage this month",
     "resets": "Resets on {date}",
-    "exhausted": "You've used this month's allowance. New recordings can start from {date}.",
+    "exhausted": "New recordings can start from {date}.",
     "recordingInProgress": "Meetings being recorded are counted after they end",
     "unlimited": "Unlimited",
     "nearLimit": "You've used {percent, number}% of this month's allowance. It resets on {date}.",
     "label": "Recording this month",
-    "ofAllowance": "/ {allowance}"
+    "ofAllowance": "/ {allowance}",
+    "sidebarPaid": "{plan} · {used} this month",
+    "remaining": "{duration} left",
+    "limitReached": "Monthly limit reached"
   },
   "page": {
     "title": "Plan",
     "description": "This workspace's plan and this month's recording usage.",
     "loading": "Loading plans",
     "plan": {
-      "shared": "Everyone in this workspace shares it",
-      "autoRenew": "Renews automatically every month",
       "current": "Current",
       "freePrice": "Free",
       "perMonth": "/ month",
       "recording": "{allowance} of recording",
-      "members": "Unlimited members"
+      "members": "Unlimited members",
+      "freeTagline": "Plenty for teams with a few meetings",
+      "proTagline": "For busy teams that don't want to watch the clock",
+      "includes": "Everything included",
+      "features": {
+        "liveNotes": "Live notes and summaries",
+        "speakers": "Speaker labels",
+        "links": "Links across meetings",
+        "agentChat": "Agent chat",
+        "mcp": "External tools and MCP"
+      },
+      "footWorkspace": "Plans are per workspace. When one admin pays, every member shares it.",
+      "footRenew": "Pro is charged automatically on the same day each month, and you can cancel anytime. If you cancel, you keep it until the end of the paid period."
     },
     "teamInProgress": "Your team has a subscription in progress. Check again when it's done.",
     "checking": {
@@ -80,15 +93,16 @@
       "free": "Record up to {allowance} every month.",
       "next": "Next payment {date} · {amount}",
       "cancelScheduled": "Active until {end}, then switches to Free.",
-      "stoppedNoCardAdmin": "There's no payment method on file, so automatic payments are paused. You can use Pro until {end}. Add a card in Payment and resume to keep your subscription.",
-      "stoppedNoCardMember": "There's no payment method on file, so automatic payments are paused. You can use Pro until {end}. To keep the subscription, ask an admin to add a card.",
+      "stoppedNoCardAdmin": "There's no card on file, so automatic payments are paused. You keep Pro until {end}. Add a card to continue your subscription.",
+      "stoppedNoCardMember": "There's no card on file, so automatic payments are paused. You keep Pro until {end}. To continue the subscription, ask an admin to add a card.",
       "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime."
     },
     "closed": {
       "UNPAID": "The subscription ended because the payment wasn't approved. Register a card to start again.",
       "EXPIRED": "The subscription period has ended.",
       "REFUNDED": "The subscription ended because it was refunded."
-    }
+    },
+    "registerCard": "Add a card in Payment"
   },
   "checkout": {
     "title": "Review order",
@@ -145,7 +159,8 @@
     "back": "Plan",
     "perMonth": "/ month",
     "dueToday": "Due today",
-    "nextCharge": "Next payment"
+    "nextCharge": "Next payment",
+    "paymentInfo": "Payment details"
   },
   "setup": {
     "title": "Card registration result",
@@ -353,7 +368,7 @@
     "nowRefunded": "Refunded. This period no longer includes access.",
     "nowEnded": "This period has ended.",
     "nowRefunding": "We're processing the payment cancellation.",
-    "support": "Refunds and tax invoices are handled through <link>Help & feedback</link>.",
+    "support": "Refund requests are handled through <link>Help & feedback</link>.",
     "loadFailed": "Couldn't load payment details."
   },
   "history": {

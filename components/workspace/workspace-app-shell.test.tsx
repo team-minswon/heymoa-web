@@ -75,6 +75,7 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
     data: { status: 200, data: { success: true, data: { workspaces: [] } } },
   }),
   useCreateWorkspace: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useGetWorkspace: () => ({ data: undefined, isPending: true }),
   useGetWorkspaceSuspense: () => ({
     data: {
       status: 200,

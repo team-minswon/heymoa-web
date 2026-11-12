@@ -244,13 +244,11 @@ function CheckoutContent({
           ? null
           : t("replace.payerChanges"),
       ]
-    : [
-        format.allowance(product.recordingAllowanceMinutes),
-        t("shared"),
-        t("autoRenew"),
-        t("cancelInfo"),
-        t("cancelHow"),
-      ];
+    : [format.allowance(product.recordingAllowanceMinutes), t("shared")];
+  // 혜택(체크)과 결제 조건(점)을 가른다 — 둘 다 체크면 해지 규칙까지 혜택처럼 읽힌다(APP-1596).
+  const terms = replace
+    ? []
+    : [t("autoRenew"), t("cancelInfo"), t("cancelHow")];
   return (
     <div className="flex flex-col gap-6">
       <div className={SETTINGS_LIST}>
@@ -289,17 +287,37 @@ function CheckoutContent({
             ) : null}
           </dl>
         ) : null}
-        <ul className="grid gap-2.5 px-5 py-4 text-sm leading-5 text-[var(--el-body)]">
-          {points.filter(Boolean).map((point) => (
-            <li key={point} className="flex items-start gap-2">
-              <Check
-                className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
-                aria-hidden
-              />
-              <span>{point}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="px-5 py-4 text-sm leading-5 text-[var(--el-body)]">
+          <ul className="grid gap-2.5">
+            {points.filter(Boolean).map((point) => (
+              <li key={point} className="flex items-start gap-2">
+                <Check
+                  className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
+                  aria-hidden
+                />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+          {terms.length > 0 ? (
+            <>
+              <p className="mt-5 text-xs text-[var(--el-muted)]">
+                {t("paymentInfo")}
+              </p>
+              <ul className="mt-2.5 grid gap-2">
+                {terms.map((term) => (
+                  <li key={term} className="flex items-start gap-2">
+                    <span
+                      aria-hidden
+                      className="mx-1.5 mt-2 size-1 shrink-0 rounded-full bg-[var(--el-muted-soft)]"
+                    />
+                    <span>{term}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
         {replace ? null : (
           <dl className="grid gap-2.5 bg-[var(--el-canvas-soft)] px-5 py-3.5 text-sm">
             <div className="flex items-baseline justify-between gap-4">

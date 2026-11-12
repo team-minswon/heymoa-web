@@ -10,6 +10,7 @@ import {
   type SettingsSection,
 } from "@/lib/workspace/settings-url";
 import { useGetWorkspaceBilling } from "@/lib/api/generated/billing/billing";
+import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 import {
   BellRing,
@@ -126,12 +127,15 @@ function SettingsSections({
   locked,
   onLockChange,
   enforced,
+  admin,
 }: {
   section: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
   workspaceId: string;
   /** 요금제 대상인 공간인가. 모르면 false 다. */
   enforced: boolean;
+  /** 이 공간의 ADMIN 인가. 모르면 false 다 — 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). */
+  admin: boolean;
   /** 섹션이 되돌릴 수 없는 일을 하는 중이다 — 다른 섹션으로 못 옮긴다. */
   locked: boolean;
   onLockChange: (locked: boolean) => void;
@@ -176,7 +180,8 @@ function SettingsSections({
                 )
                 .filter(
                   ({ key }) =>
-                    (key !== "billing" && key !== "payment") || enforced
+                    (key !== "billing" && key !== "payment") ||
+                    (enforced && (key === "billing" || admin))
                 )
                 .map(({ key, Icon }) => (
                   <Button
@@ -256,7 +261,8 @@ function SettingsSections({
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : section === "workspaceAgents" ? (
           <WorkspaceAgentAccessSettings workspaceId={workspaceId} />
-        ) : billingSection && !enforced ? null : section === "billing" ? (
+        ) : billingSection && !enforced ? null : section === "billing" ||
+          (section === "payment" && !admin) ? (
           <WorkspacePlanSettings
             workspaceId={workspaceId}
             onOpenPayment={() => onSectionChange("payment")}
@@ -342,6 +348,8 @@ export function SettingsDialog({
     query: { enabled: open },
   });
   const enforced = okData(billing.data)?.enforced === true;
+  const workspace = useGetWorkspace(workspaceId, { query: { enabled: open } });
+  const admin = okData(workspace.data)?.role === "ADMIN";
   useEffect(() => {
     if (
       open &&
@@ -350,7 +358,18 @@ export function SettingsDialog({
       !enforced
     )
       onSectionChange(DEFAULT_SETTINGS_SECTION);
-  }, [open, section, billing.isPending, enforced, onSectionChange]);
+    // 멤버가 결제 관리 주소로 들어오면(알림·옛 링크) 같은 묶음의 요금제 탭을 연다.
+    else if (open && section === "payment" && !workspace.isPending && !admin)
+      onSectionChange("billing");
+  }, [
+    open,
+    section,
+    billing.isPending,
+    enforced,
+    workspace.isPending,
+    admin,
+    onSectionChange,
+  ]);
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (!next && locked) return;
@@ -373,6 +392,7 @@ export function SettingsDialog({
           locked={locked}
           onLockChange={setLocked}
           enforced={enforced}
+          admin={admin}
         />
       </DialogContent>
     </Dialog>

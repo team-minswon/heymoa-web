@@ -58,6 +58,19 @@ const billingQuery = vi.hoisted(() => ({
 vi.mock("@/lib/api/generated/billing/billing", () => ({
   useGetWorkspaceBilling: () => billingQuery.current,
 }));
+// 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). 기본은 ADMIN 이다.
+const workspaceQuery = vi.hoisted(() => ({
+  role: "ADMIN" as "ADMIN" | "MEMBER",
+}));
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  useGetWorkspace: () => ({
+    isPending: false,
+    data: {
+      status: 200,
+      data: { success: true, data: { role: workspaceQuery.role } },
+    },
+  }),
+}));
 const serveEnforced = (enforced: boolean | null) => {
   billingQuery.current =
     enforced === null
@@ -122,6 +135,7 @@ describe("SettingsDialog", () => {
     cleanup();
     Reflect.deleteProperty(window, "heymoaDesktop");
     serveEnforced(true);
+    workspaceQuery.role = "ADMIN";
   });
   it("탭 선택을 한 번 기록하고 같은 탭·리렌더는 세지 않습니다", () => {
     const heard = vi.fn();
@@ -283,6 +297,27 @@ describe("SettingsDialog", () => {
       expect(screen.queryByText("결제 관리 내용")).not.toBeInTheDocument();
     }
   );
+
+  it("멤버에게는 결제 관리 탭이 없고, 결제 관리 주소로 들어오면 요금제 탭을 연다", () => {
+    workspaceQuery.role = "MEMBER";
+    render(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        initialSection="payment"
+        workspaceId="01K0000000000"
+      />
+    );
+    const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
+    expect(
+      within(workspaceGroup).getByRole("button", { name: "요금제" })
+    ).toBeInTheDocument();
+    expect(
+      within(workspaceGroup).queryByRole("button", { name: "결제 관리" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("요금제 내용")).toBeInTheDocument();
+    expect(screen.queryByText("결제 관리 내용")).not.toBeInTheDocument();
+  });
 
   it("조회가 끝나기 전에는 요금제 탭으로 들어와도 기본 탭으로 보내지 않고 내용도 그리지 않는다", () => {
     serveEnforced(null);

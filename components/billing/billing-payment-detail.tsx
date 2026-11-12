@@ -221,7 +221,7 @@ function PaymentRows({
   );
 }
 
-/** 환불·세금계산서는 화면을 만들지 않는다 — 기존 문의·피드백 창으로 받는다. */
+/** 환불은 화면을 만들지 않는다 — 기존 문의·피드백 창으로 받는다. */
 function SupportLine({ paymentId }: { paymentId: string }) {
   const t = useTranslations("billing.payment");
   return (
