@@ -184,9 +184,8 @@ export function Pricing() {
         </div>
 
         <div className="mt-6 flex flex-col gap-1">
-          <p className={CAPTION}>{t("unit")}</p>
           <p className={CAPTION}>
-            {t("terms", { hours: PUBLIC_PRICING.refundMaxRecordingHours })}{" "}
+            {t("terms")}{" "}
             <Link
               href={`${localePath(locale, "/terms")}#section-13`}
               className={cn(
@@ -195,17 +194,6 @@ export function Pricing() {
               )}
             >
               {t("refundLink")}
-            </Link>
-          </p>
-          <p className={CAPTION}>
-            <Link
-              href={localePath(locale, "/help/start/billing")}
-              className={cn(
-                "rounded-sm font-semibold text-[var(--tv-ink)] underline underline-offset-4",
-                FOCUS
-              )}
-            >
-              {t("guide")}
             </Link>
           </p>
         </div>

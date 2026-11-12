@@ -6,6 +6,4 @@ export const PUBLIC_PRICING = {
   proMonthlyKrw: 24_900,
   /** Free 월 녹음 한도(시간, 워크스페이스당). */
   freeMonthlyHours: 20,
-  /** 전액 환불 기준 녹음 시간(약관 제13조). 지금은 Free 한도와 같지만 따로 정하는 값이다. */
-  refundMaxRecordingHours: 20,
 } as const;
