@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
+import { track } from "@/lib/analytics/track";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
@@ -32,6 +33,7 @@ export function LandingCta({
   openOnWelcome = false,
   tooltip,
   member,
+  pricingPlan,
 }: {
   label: string;
   className?: string;
@@ -45,6 +47,8 @@ export function LandingCta({
    * 없는 다른 루트 문서라 미리 받지 않는다. 워크스페이스가 없거나 조회에 실패한 상태는 그대로다.
    */
   member?: { label: string; to: "checkout" };
+  /** 가격 안내의 두 버튼만 넘긴다 — 누르면 `pricing_cta_clicked` 를 낸다. 랜딩의 다른 버튼은 내지 않는다. */
+  pricingPlan?: "free" | "pro";
 }) {
   const t = useTranslations("landing.cta");
   const { status } = useAuth();
@@ -59,6 +63,13 @@ export function LandingCta({
   const workspaces = envelope?.success ? (envelope.data.workspaces ?? []) : [];
   const workspaceId = pickWorkspaceId(workspaces);
   const hasNoWorkspace = workspacesQuery.isSuccess && !workspaceId;
+  const onPricingClick = pricingPlan
+    ? () =>
+        track("pricing_cta_clicked", {
+          plan: pricingPlan,
+          auth: isAuthenticated ? "member" : "anonymous",
+        })
+    : undefined;
 
   useEffect(() => {
     if (!openOnWelcome || !hasNoWorkspace) return;
@@ -135,6 +146,7 @@ export function LandingCta({
             : `/w/${workspaceId}`
         }
         prefetch={member?.to === "checkout" ? false : undefined}
+        onClick={onPricingClick}
         className={cn(MARKETING_PILL, className)}
       >
         {member?.label ?? t("dashboard")}
@@ -155,7 +167,7 @@ export function LandingCta({
   }
 
   const button = (
-    <Button type="button" aria-describedby={tooltip ? tooltipId : undefined} className={cn(MARKETING_PILL, className)}>
+    <Button type="button" aria-describedby={tooltip ? tooltipId : undefined} onClick={onPricingClick} className={cn(MARKETING_PILL, className)}>
       {label}
       <ArrowRight className="size-4" />
     </Button>

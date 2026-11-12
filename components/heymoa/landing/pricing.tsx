@@ -94,6 +94,7 @@ export function Pricing() {
             <div className="mt-auto pt-8 lg:col-start-1">
               <LandingCta
                 label={nav("start")}
+                pricingPlan="free"
                 className={cn(
                   CTA_BASE,
                   "border-[var(--tv-rule-strong)] bg-white text-[var(--tv-ink)] hover:bg-[var(--tv-lav-soft)]",
@@ -156,6 +157,7 @@ export function Pricing() {
               <LandingCta
                 label={t("pro.cta")}
                 member={{ label: t("pro.ctaMember"), to: "checkout" }}
+                pricingPlan="pro"
                 className={cn(
                   CTA_BASE,
                   "border-transparent bg-[var(--tv-brand)] text-white hover:bg-[var(--tv-brand-deep)]",

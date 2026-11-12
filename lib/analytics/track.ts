@@ -126,7 +126,8 @@ export type AnalyticsEvent =
   | "help_image_zoomed"
   | "help_cta_clicked"
   | "help_code_copied"
-  | "help_faq_opened";
+  | "help_faq_opened"
+  | "pricing_cta_clicked";
 
 /** 결제 이벤트의 PG. 서버 enum(`FAKE` 포함) 그대로다. */
 export type BillingProvider = BillingSetupCreatedResponseDataProvider;
@@ -367,6 +368,11 @@ export type WebEventProperties = {
   };
   help_code_copied: { slug: string; language: HelpLanguage };
   help_faq_opened: { slug: string; index: number; language: HelpLanguage };
+  // 가격 안내(`/pricing`)의 Free·Pro 버튼. 로그인 전은 로그인 창을 여는 버튼, 로그인 뒤는 대시보드·결제 페이지 링크다.
+  pricing_cta_clicked: {
+    plan: "free" | "pro";
+    auth: "anonymous" | "member";
+  };
 };
 
 type Properties = Record<string, string | number | boolean | null | undefined>;
