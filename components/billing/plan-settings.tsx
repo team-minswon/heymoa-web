@@ -105,9 +105,10 @@ function PlanSkeleton({ label }: { label: string }) {
           {t("compare")}
         </h3>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <Skeleton className="h-[475px] rounded-panel" />
-          <Skeleton className="h-[475px] rounded-panel" />
+          <Skeleton className="h-[259px] rounded-panel" />
+          <Skeleton className="h-[259px] rounded-panel" />
         </div>
+        <IncludedInBoth />
       </div>
     </div>
   );
@@ -266,9 +267,10 @@ const FEATURES = [
 ] as const;
 
 /**
- * Free 와 유료 상품을 나란히. 두 카드는 같은 줄 구성이고(이름 → 가격 → 한 줄 설명 → 굵은 첫 항목 → 멤버 → 모든 기능) 높이가 같다.
+ * Free 와 유료 상품을 나란히. 두 카드는 같은 줄 구성이고(이름 → 가격 → 한 줄 설명 → 녹음 제공량) 높이가 같다. 두 요금제가
+ * 갈리는 것은 녹음 제공량 하나라, 똑같이 갖는 것(멤버 수 · 기능 다섯)은 카드 아래에 한 번만 적는다([IncludedInBoth]).
  * 유료 카드는 어두운 면이고(DESIGN `pricing-tier-featured`), 구매 버튼은 그 카드 안에 있다. 워크스페이스 단위 안내는
- * 항목마다 되풀이하지 않고 카드 아래 한 줄로 둔다(APP-1596).
+ * 항목마다 되풀이하지 않고 맨 아래 한 줄로 둔다(APP-1596).
  */
 function PlanCompare({
   billing,
@@ -340,6 +342,7 @@ function PlanCompare({
           }
         />
       </div>
+      <IncludedInBoth />
       <div className="mt-3 grid gap-1 text-xs leading-5 text-[var(--el-muted)]">
         <p>{t("plan.footWorkspace")}</p>
       </div>
@@ -371,23 +374,6 @@ function PlanCard({
   footer?: ReactNode;
 }) {
   const t = useTranslations("billing.page");
-  const check = cn(
-    "mt-0.5 size-4 shrink-0",
-    featured ? "text-white/60" : "text-[var(--el-muted)]"
-  );
-  const item = (text: string, strong = false) => (
-    <li key={text} className="flex items-start gap-2">
-      <Check className={check} aria-hidden />
-      <span
-        className={cn(
-          strong && "font-medium",
-          strong && (featured ? "text-white" : "text-[var(--el-ink)]")
-        )}
-      >
-        {text}
-      </span>
-    </li>
-  );
   return (
     <div
       aria-current={current || undefined}
@@ -436,29 +422,47 @@ function PlanCard({
       >
         {tagline}
       </p>
-      <div
+      <p
         className={cn(
-          "mt-5 text-sm leading-5",
-          featured ? "text-white/85" : "text-[var(--el-body)]"
+          "mt-5 flex items-start gap-2 text-sm leading-5 font-medium",
+          featured ? "text-white" : "text-[var(--el-ink)]"
         )}
       >
-        <ul className="grid gap-2.5">
-          {item(highlight, true)}
-          {item(t("plan.members"))}
-        </ul>
-        <p
+        <Check
           className={cn(
-            "mt-5 text-xs",
+            "mt-0.5 size-4 shrink-0",
             featured ? "text-white/60" : "text-[var(--el-muted)]"
           )}
-        >
-          {t("plan.includes")}
-        </p>
-        <ul className="mt-2.5 grid gap-2.5">
-          {FEATURES.map((key) => item(t(`plan.features.${key}`)))}
-        </ul>
-      </div>
+          aria-hidden
+        />
+        <span>{highlight}</span>
+      </p>
       {footer ? <div className="mt-auto pt-6">{footer}</div> : null}
+    </div>
+  );
+}
+
+/** 두 요금제가 똑같이 갖는 것. 카드마다 되풀이하지 않고 한 번만 적는다(가격 안내 페이지와 같은 구성). */
+function IncludedInBoth() {
+  const t = useTranslations("billing.page");
+  const items = [
+    t("plan.members"),
+    ...FEATURES.map((key) => t(`plan.features.${key}`)),
+  ];
+  return (
+    <div className="mt-4 rounded-panel border border-[var(--el-hairline)] px-6 py-5">
+      <p className="text-xs text-[var(--el-muted)]">{t("plan.includes")}</p>
+      <ul className="mt-3 grid gap-x-6 gap-y-2.5 text-sm leading-5 text-[var(--el-body)] sm:grid-cols-2">
+        {items.map((text) => (
+          <li key={text} className="flex items-start gap-2">
+            <Check
+              className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
+              aria-hidden
+            />
+            <span>{text}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

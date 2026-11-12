@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 
 import { BUSINESS_INFO, type BusinessInfo } from "@/lib/business-info";
+import { cn } from "@/lib/utils";
 
 const HANGUL = /[가-힣]/;
 
@@ -15,18 +16,45 @@ export function BusinessInfoLine({
   info?: BusinessInfo;
 }) {
   const t = useTranslations("landing.footer.business");
+  return (
+    <BusinessInfoList
+      info={info}
+      label={t("label")}
+      labelOf={(key) => t(key)}
+    />
+  );
+}
+
+/**
+ * 라벨을 밖에서 받는 사업자 정보 목록. 랜딩 문구 묶음(`landing`)이 실리지 않는 면(결제 페이지)이 자기 문구와
+ * 글자 색으로 같은 값을 그린다.
+ */
+export function BusinessInfoList({
+  info = BUSINESS_INFO,
+  label,
+  labelOf,
+  className,
+}: {
+  info?: BusinessInfo;
+  label: string;
+  labelOf: (key: keyof BusinessInfo) => string;
+  className?: string;
+}) {
   if (!info.name) return null;
   const rows = (Object.keys(info) as Array<keyof BusinessInfo>).filter(
     (key) => info[key]
   );
   return (
     <dl
-      aria-label={t("label")}
-      className="m-0 flex basis-full flex-wrap gap-x-4 gap-y-0.5 text-[12px] leading-[1.6] text-[var(--tv-muted)]"
+      aria-label={label}
+      className={cn(
+        "m-0 flex basis-full flex-wrap gap-x-4 gap-y-0.5 text-[12px] leading-[1.6] text-[var(--tv-muted)]",
+        className
+      )}
     >
       {rows.map((key) => (
         <div key={key} className="flex gap-1.5">
-          <dt>{t(key)}</dt>
+          <dt>{labelOf(key)}</dt>
           <dd className="m-0" lang={HANGUL.test(info[key]) ? "ko" : undefined}>
             {info[key]}
           </dd>

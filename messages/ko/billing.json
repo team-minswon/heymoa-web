@@ -42,7 +42,7 @@
       "members": "멤버 수 제한 없음",
       "freeTagline": "회의가 많지 않은 팀에 충분합니다",
       "proTagline": "회의가 많은 팀이 시간 걱정 없이 씁니다",
-      "includes": "모든 기능 포함",
+      "includes": "두 요금제 모두 포함",
       "features": {
         "liveNotes": "실시간 회의록과 요약",
         "speakers": "화자 구분",
@@ -186,6 +186,17 @@
     },
     "priceTitle": "요금 확인",
     "agreementTitle": "자동 결제 동의",
+    "business": {
+      "label": "사업자 정보",
+      "name": "상호",
+      "owner": "대표자",
+      "registration": "사업자등록번호",
+      "mailOrder": "통신판매업 신고번호",
+      "address": "주소",
+      "phone": "전화",
+      "email": "전자우편",
+      "hosting": "호스팅 제공자"
+    },
     "pageBack": "돌아가기",
     "cardRejected": "카드 정보를 다시 확인해 주세요.",
     "tooManyAttempts": "카드 등록 시도가 너무 많습니다. 잠시 뒤 다시 시도해 주세요."

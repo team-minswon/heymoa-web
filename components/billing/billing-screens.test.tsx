@@ -198,15 +198,15 @@ describe("요금제 화면", () => {
     expect(await screen.findByText("24,900원")).toBeInTheDocument();
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     expect(screen.getByText("녹음 월 20시간")).toBeInTheDocument();
-    // 두 카드가 같은 줄 구성이다 — 한 줄 설명, 멤버, 같은 다섯 기능(APP-1596).
+    // 두 카드가 같은 줄 구성이다 — 한 줄 설명과 녹음 제공량. 똑같이 갖는 것(멤버 · 다섯 기능)은 아래에 한 번만 적는다.
     expect(
       screen.getByText("회의가 많지 않은 팀에 충분합니다")
     ).toBeInTheDocument();
     expect(
       screen.getByText("회의가 많은 팀이 시간 걱정 없이 씁니다")
     ).toBeInTheDocument();
-    expect(screen.getAllByText("멤버 수 제한 없음")).toHaveLength(2);
-    expect(screen.getAllByText("모든 기능 포함")).toHaveLength(2);
+    expect(screen.getAllByText("멤버 수 제한 없음")).toHaveLength(1);
+    expect(screen.getAllByText("두 요금제 모두 포함")).toHaveLength(1);
     for (const feature of [
       "실시간 회의록과 요약",
       "화자 구분",
@@ -214,7 +214,7 @@ describe("요금제 화면", () => {
       "에이전트 채팅",
       "외부 도구와 MCP 연결",
     ])
-      expect(screen.getAllByText(feature)).toHaveLength(2);
+      expect(screen.getAllByText(feature)).toHaveLength(1);
     // 워크스페이스 단위·자동 결제는 항목이 아니라 카드 아래 안내다.
     expect(
       screen.queryByText("이 워크스페이스의 모든 멤버가 함께 씁니다")

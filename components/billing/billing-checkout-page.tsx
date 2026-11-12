@@ -1,13 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { CheckoutForm } from "@/components/billing/billing-checkout";
+import { BusinessInfoList } from "@/components/heymoa/landing/business-info";
+import { SitePageLink } from "@/components/heymoa/site-page-link";
 import { buttonVariants } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { goToSetupResult } from "@/lib/billing/navigate";
+import { localePath } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +70,38 @@ export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
             />
           </DataBoundary>
         </div>
+        <CheckoutLegal />
       </div>
     </div>
+  );
+}
+
+/**
+ * 결제 화면 아래의 약관 링크와 사업자 정보. 이 면에는 사이트 푸터가 없어, 결제하기 전에 판매자가 누구인지 볼 수 있게
+ * 구매 화면 안에 둔다. 링크는 새 탭으로 열어 입력한 카드와 동의 상태를 잃지 않는다(`SitePageLink`). 이 면에는 랜딩 문구
+ * 묶음이 실리지 않아 라벨은 `billing.checkout.business` 와 `shell.focusChrome` 에서 읽는다.
+ */
+function CheckoutLegal() {
+  const t = useTranslations("billing.checkout.business");
+  const links = useTranslations("shell.focusChrome");
+  const locale = useLocale();
+  const link =
+    "underline underline-offset-2 hover:text-[var(--el-ink)] whitespace-nowrap";
+  return (
+    <footer className="mt-10 grid gap-3 border-t border-[var(--el-hairline)] pt-6 text-[12px] leading-[1.6] text-[var(--el-muted)]">
+      <p className="flex flex-wrap gap-x-4 gap-y-0.5">
+        <SitePageLink href={localePath(locale, "/terms")} className={link}>
+          {links("terms")}
+        </SitePageLink>
+        <SitePageLink href={localePath(locale, "/privacy")} className={link}>
+          {links("privacy")}
+        </SitePageLink>
+      </p>
+      <BusinessInfoList
+        label={t("label")}
+        labelOf={(key) => t(key)}
+        className="text-[var(--el-muted)]"
+      />
+    </footer>
   );
 }

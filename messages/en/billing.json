@@ -42,7 +42,7 @@
       "members": "Unlimited members",
       "freeTagline": "Plenty for teams with a few meetings",
       "proTagline": "For busy teams that don't want to watch the clock",
-      "includes": "Everything included",
+      "includes": "Included in both plans",
       "features": {
         "liveNotes": "Live notes and summaries",
         "speakers": "Speaker labels",
@@ -186,6 +186,17 @@
     },
     "priceTitle": "Price",
     "agreementTitle": "Automatic payment agreement",
+    "business": {
+      "label": "Business information",
+      "name": "Company",
+      "owner": "Representative",
+      "registration": "Business registration no.",
+      "mailOrder": "Mail-order business report no.",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "hosting": "Hosting provider"
+    },
     "pageBack": "Back",
     "cardRejected": "Please check your card details again.",
     "tooManyAttempts": "Too many card attempts. Please try again in a moment."
