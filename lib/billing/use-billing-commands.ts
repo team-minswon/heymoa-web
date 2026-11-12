@@ -8,7 +8,6 @@ import {
   useResumeBillingSubscription,
 } from "@/lib/api/generated/billing/billing";
 import { errorCodeOf } from "@/lib/api/error-message";
-import { ApiError } from "@/lib/api/fetcher";
 import { billingEvents } from "@/lib/billing/analytics";
 import { refundPending } from "@/lib/billing/payment-status";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
@@ -63,7 +62,7 @@ export function useBillingCommands(workspaceId: string) {
   const run = async (
     key: ReturnType<typeof createRequestKey> | null,
     command: (requestKey: string) => Promise<unknown>,
-    onError: (code: string | null, error: unknown) => CommandNotice | null,
+    onError: (code: string | null) => CommandNotice | null,
     success: CommandNotice | null
   ): Promise<Outcome> => {
     setNotice(null);
@@ -76,12 +75,16 @@ export function useBillingCommands(workspaceId: string) {
     } catch (error) {
       const code = errorCodeOf(error);
       if (code === "REQUEST_KEY_CONFLICT") key?.renew();
+      // 관리자가 아니면(403) 어느 명령이든 같은 안내다 — 토스트를 끈 코드라 여기서 안 그리면 확인 창만 남는다.
       const handled =
         code === "BILLING_STATE_CHANGED"
           ? ({ kind: "stateChanged" } as const)
           : code === "BILLING_IN_PROGRESS"
             ? ({ kind: "inProgress" } as const)
-            : onError(code, error);
+            : (onError(code) ??
+              (code === "WORKSPACE_ACCESS_DENIED"
+                ? ({ kind: "notAdmin" } as const)
+                : null));
       if (!handled) return "failed";
       key?.renew();
       setNotice(handled);
@@ -121,11 +124,11 @@ export function useBillingCommands(workspaceId: string) {
             workspaceId,
             data: { requestKey, expectedVersion },
           }),
-        // 재개는 관리자 누구나 한다 — 관리자가 아니면 403 이다.
-        (_code, error) => {
-          if (!(error instanceof ApiError && error.status === 403)) return null;
-          billingEvents.subscriptionResumed(workspaceId, "not_admin");
-          return { kind: "notAdmin" };
+        // 재개는 관리자 누구나 한다 — 관리자가 아니면 403 이고 안내는 `run` 이 그린다. 여기서는 이벤트만 낸다.
+        (code) => {
+          if (code === "WORKSPACE_ACCESS_DENIED")
+            billingEvents.subscriptionResumed(workspaceId, "not_admin");
+          return null;
         },
         { kind: "resumed" }
       ).then((outcome) => {

@@ -191,15 +191,16 @@ function CurrentPlan({
   const planCode = billing.entitlement?.planCode ?? "FREE";
   const period = billing.entitlement?.period ?? billing.currentPeriod;
   const product = billing.product;
-  // 다음 결제는 서버가 굳힌 금액(ADMIN 에게만 있다). 멤버에게는 상품가를 보인다.
-  const nextAmount = billing.detail?.nextChargeAmountKrw ?? product?.amountKrw;
+  // 다음 결제는 서버가 굳힌 금액이고 ADMIN 에게만 온다(`detail`). 상품가와 다를 수 있어 멤버에게는 날짜만 보인다.
+  const nextAmount = billing.detail?.nextChargeAmountKrw;
   const amount = nextAmount != null ? format.money(nextAmount) : null;
 
   const cancelScheduled =
     billing.cancelAtPeriodEnd && billing.status === "ACTIVE";
   const badge = cancelScheduled ? t("badge.cancelScheduled") : null;
   // 결제자가 나가거나 강등돼 카드가 지워지고 종료가 예약된 구독. 결제 관리 탭의 `stoppedNoCard` 와 같은 상황이다.
-  const stoppedNoCard = cancelScheduled && !billing.detail?.methodId;
+  // 카드 유무는 ADMIN 에게만 오는 `detail` 로만 알 수 있다 — 멤버에게는 일반 해지 예약 줄을 보인다.
+  const stoppedNoCard = isAdmin && cancelScheduled && !billing.detail?.methodId;
 
   // RENEWAL_PENDING 은 갱신 결제의 결과를 기다리는 동안의 Pro 다.
   const line =
@@ -207,16 +208,14 @@ function CurrentPlan({
       ? t("line.renewalPending")
       : cancelScheduled && period
         ? t(
-            stoppedNoCard
-              ? isAdmin
-                ? "line.stoppedNoCardAdmin"
-                : "line.stoppedNoCardMember"
-              : "line.cancelScheduled",
+            stoppedNoCard ? "line.stoppedNoCardAdmin" : "line.cancelScheduled",
             // 날짜 한 덩어리가 줄 끝에서 갈리지 않게(rule `ui-text-layout`) 띄어쓰기를 붙는 공백으로.
             { end: format.date(period.end).replaceAll(" ", "\u00a0") }
           )
-        : billing.status === "ACTIVE" && period && amount
-          ? t("line.next", { date: format.date(period.end), amount })
+        : billing.status === "ACTIVE" && period && (amount || !isAdmin)
+          ? amount
+            ? t("line.next", { date: format.date(period.end), amount })
+            : t("line.nextDate", { date: format.date(period.end) })
           : planCode === "FREE" && product
             ? t("line.free", {
                 allowance: format.duration(

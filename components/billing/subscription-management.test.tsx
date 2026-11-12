@@ -347,7 +347,7 @@ describe("결제 수단·구독", () => {
     );
     fireEvent.click(within(dialog).getByRole("button", { name: "재개" }));
     expect(
-      await within(area).findByText("구독 재개는 관리자만 할 수 있습니다.")
+      await within(area).findByText("관리자만 할 수 있습니다.")
     ).toBeInTheDocument();
     expect(events("billing_subscription_resumed")).toEqual([
       { workspace_id: PAID, result: "not_admin" },
@@ -438,6 +438,54 @@ describe("결제 수단·구독", () => {
           .length
       ).toBeGreaterThan(before)
     );
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("해지가 403(관리자 아님)이면 확인 창을 닫고 그 자리에 안내한다", async () => {
+    server.use(
+      http.post(`*/v1/workspaces/${PAID}/billing/subscription/cancel`, () =>
+        failure("WORKSPACE_ACCESS_DENIED", "권한이 없습니다.", 403)
+      )
+    );
+    const area = await openPaid();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "해지",
+      })
+    );
+    expect(
+      await within(area).findByText("관리자만 할 수 있습니다.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(events("billing_subscription_canceled")).toEqual([]);
+  });
+
+  it("카드 삭제가 403(관리자 아님)이면 확인 창을 닫고 안내한다", async () => {
+    server.use(
+      http.delete(`*/v1/workspaces/${PAID}/billing/payment-methods/*`, () =>
+        failure("WORKSPACE_ACCESS_DENIED", "권한이 없습니다.", 403)
+      )
+    );
+    const area = await openPaid();
+    const method = methodArea();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "해지",
+      })
+    );
+    fireEvent.click(
+      await within(method).findByRole("button", { name: "삭제" })
+    );
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "삭제",
+      })
+    );
+    expect(
+      await within(area).findByText("관리자만 할 수 있습니다.")
+    ).toBeInTheDocument();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 

@@ -440,7 +440,7 @@ describe("요금제 화면", () => {
     expect(onOpenPayment).toHaveBeenCalledOnce();
   });
 
-  it("결제자가 빠진 구독을 멤버가 보면 관리자에게 카드 등록을 요청하라고 하고 결제 관리 버튼이 없다", async () => {
+  it("멤버는 청구 상세를 받지 않아 종료 예정이면 일반 해지 예약 줄을 보고 결제 관리 버튼이 없다", async () => {
     asMember();
     const period = {
       start: "2026-11-11T09:00:00+09:00",
@@ -457,17 +457,44 @@ describe("요금제 화면", () => {
       },
       currentPeriod: period,
       allowedActions: [],
-      detail: { ...detail("SUCCEEDED"), methodId: null },
+      // 서버는 멤버에게 `detail` 을 주지 않는다 — 카드가 없는지 알 수 없다.
+      detail: null,
     });
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
-        "등록된 카드가 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지는 Pro를 그대로 씁니다. 구독을 이어 가려면 관리자에게 카드 등록을 요청해 주세요."
+        "2026년 12월 11일까지 쓰고 이후 Free로 바뀝니다."
       )
     ).toBeInTheDocument();
+    expect(screen.queryByText(/자동 결제가 멈췄습니다/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /결제 관리/ })
     ).not.toBeInTheDocument();
+  });
+
+  it("멤버에게는 다음 결제의 날짜만 보이고 상품가를 청구액처럼 보이지 않는다", async () => {
+    asMember();
+    const period = {
+      start: "2026-11-11T09:00:00+09:00",
+      end: "2026-12-11T09:00:00+09:00",
+    };
+    serveBilling({
+      status: "ACTIVE",
+      entitlement: {
+        kind: "PAID",
+        period,
+        recordingAllowanceMinutes: null,
+        planCode: "PRO",
+      },
+      currentPeriod: period,
+      allowedActions: [],
+      detail: null,
+    });
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(
+      await screen.findByText("다음 결제 2026년 12월 11일")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/다음 결제 .* · /)).not.toBeInTheDocument();
   });
 });
 

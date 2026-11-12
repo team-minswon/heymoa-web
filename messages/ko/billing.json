@@ -94,9 +94,9 @@
     "line": {
       "free": "매달 {allowance}까지 녹음할 수 있습니다.",
       "next": "다음 결제 {date} · {amount}",
+      "nextDate": "다음 결제 {date}",
       "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다.",
       "stoppedNoCardAdmin": "등록된 카드가 없어 자동 결제가 멈췄습니다. {end}까지는 Pro를 그대로 씁니다. 카드를 등록하면 구독을 이어 갈 수 있습니다.",
-      "stoppedNoCardMember": "등록된 카드가 없어 자동 결제가 멈췄습니다. {end}까지는 Pro를 그대로 씁니다. 구독을 이어 가려면 관리자에게 카드 등록을 요청해 주세요.",
       "renewalPending": "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다."
     },
     "closed": {
@@ -322,7 +322,7 @@
     "notice": {
       "stateChanged": "결제 상태가 바뀌었습니다. 최신 내용을 불러왔으니 다시 확인해 주세요.",
       "inProgress": "결제를 처리하는 중입니다. 끝난 뒤 다시 시도해 주세요.",
-      "notAdmin": "구독 재개는 관리자만 할 수 있습니다.",
+      "notAdmin": "관리자만 할 수 있습니다.",
       "methodInUse": "구독에 쓰는 카드라 삭제할 수 없습니다. 카드를 바꾸려면 변경 버튼을 눌러 주세요.",
       "canceled": "구독을 해지했습니다. {end}까지 쓸 수 있습니다.",
       "resumed": "구독을 재개했습니다. {date}에 {amount}이 결제됩니다.",
