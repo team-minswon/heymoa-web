@@ -430,7 +430,7 @@ describe("요금제 화면", () => {
     );
     expect(
       await screen.findByText(
-        "등록된 카드가 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지는 Pro를 그대로 씁니다. 카드를 등록하면 구독을 이어 갈 수 있습니다."
+        "등록된 카드가 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지는 Pro를 그대로 씁니다. 카드를 등록한 뒤 구독을 재개할 수 있습니다."
       )
     ).toBeInTheDocument();
     expect(screen.getByText("종료 예정")).toBeInTheDocument();
@@ -636,7 +636,7 @@ const createCount = () =>
     .length;
 
 describe("첫 구독 결제 페이지", () => {
-  it("한 열로 요금 확인 → 카드 정보 → 자동결제 동의 → 버튼 순서이고, 카드와 두 동의가 모두 맞아야 켜진다", async () => {
+  it("한 열로 요금 확인 → 카드 정보 → 자동 결제 동의 → 버튼 순서이고, 카드와 두 동의가 모두 맞아야 켜진다", async () => {
     await renderCheckout();
     expect(screen.getByText("Pro 월 구독")).toBeInTheDocument();
     expect(screen.getByText("테스트 유저의 워크스페이스")).toBeInTheDocument();
@@ -646,7 +646,7 @@ describe("첫 구독 결제 페이지", () => {
     const order = [
       screen.getByRole("heading", { name: "요금 확인" }),
       screen.getByRole("heading", { name: "카드 정보" }),
-      screen.getByRole("heading", { name: "자동결제 동의" }),
+      screen.getByRole("heading", { name: "자동 결제 동의" }),
       pay(),
     ];
     for (let i = 1; i < order.length; i += 1)

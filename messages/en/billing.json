@@ -95,7 +95,7 @@
       "next": "Next payment {date} · {amount}",
       "nextDate": "Next payment {date}",
       "cancelScheduled": "Active until {end}, then switches to Free.",
-      "stoppedNoCardAdmin": "There's no card on file, so automatic payments are paused. You keep Pro until {end}. Add a card to continue your subscription.",
+      "stoppedNoCardAdmin": "There's no card on file, so automatic payments are paused. You keep Pro until {end}. You can resume the subscription after adding a card.",
       "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime."
     },
     "closed": {
@@ -305,7 +305,7 @@
     "cardByOtherAdmin": "Registered by another admin",
     "cancelScheduled": "You can use it until {end}; after that the workspace moves to Free. You won't be charged again.",
     "cancelScheduledPending": "Cancellation scheduled. When it ends depends on the result of the payment being checked.",
-    "stoppedNoCard": "There's no payment method on file, so the next charge is paused. You can use Pro until {end}. Add a card and resume to keep your subscription.",
+    "stoppedNoCard": "There's no payment method on file, so automatic payments are paused. You can use Pro until {end}. Add a card and resume to keep your subscription.",
     "latestPayment": "Latest payment",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "Payment details",

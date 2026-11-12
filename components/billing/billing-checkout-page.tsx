@@ -12,7 +12,7 @@ import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 /**
- * `/billing/checkout/{workspaceId}` — 첫 구독의 전용 결제 페이지(APP-1600). 한 열로 요금 확인 → 카드 정보 → 자동결제 동의 →
+ * `/billing/checkout/{workspaceId}` — 첫 구독의 전용 결제 페이지(APP-1600). 한 열로 요금 확인 → 카드 정보 → 자동 결제 동의 →
  * 「동의하고 결제하기」. 이 면(`app/(card-entry)`)에는 분석 스크립트가 없고 `proxy.ts` 가 CSP 를 건다. 요금제 탭에서 문서를
  * 새로 열어 오고, 돌아가기도 일반 링크로 문서를 새로 연다 — 카드 정보를 분석이 실린 문서로 데려가지 않는다.
  */

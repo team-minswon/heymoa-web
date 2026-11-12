@@ -18,7 +18,7 @@
     "progress": "이번 달 녹음 사용량",
     "resets": "{date}에 초기화됩니다",
     "exhausted": "{date}부터 새 녹음을 시작할 수 있습니다.",
-    "recordingInProgress": "녹음 중인 회의는 끝난 뒤 사용량에 반영됩니다",
+    "recordingInProgress": "회의가 끝나면 녹음 시간이 사용량에 반영됩니다",
     "unlimited": "무제한",
     "nearLimit": "이번 달 제공량의 {percent, number}%를 썼습니다. {date}에 초기화됩니다.",
     "label": "이번 달 녹음",
@@ -81,7 +81,7 @@
       "body": "카드사에 따라 환불 금액이 카드 대금에 반영되기까지 며칠 걸릴 수 있습니다. 필요하면 언제든 다시 시작할 수 있습니다."
     },
     "userRefundFailed": {
-      "title": "결제 취소를 끝내지 못했습니다",
+      "title": "환불을 끝내지 못했습니다",
       "body": "다음 결제는 멈춘 상태입니다. <link>문의·피드백</link>으로 알려 주세요."
     },
     "currentLabel": "현재 요금제",
@@ -95,7 +95,7 @@
       "next": "다음 결제 {date} · {amount}",
       "nextDate": "다음 결제 {date}",
       "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다.",
-      "stoppedNoCardAdmin": "등록된 카드가 없어 자동 결제가 멈췄습니다. {end}까지는 Pro를 그대로 씁니다. 카드를 등록하면 구독을 이어 갈 수 있습니다.",
+      "stoppedNoCardAdmin": "등록된 카드가 없어 자동 결제가 멈췄습니다. {end}까지는 Pro를 그대로 씁니다. 카드를 등록한 뒤 구독을 재개할 수 있습니다.",
       "renewalPending": "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다."
     },
     "closed": {
@@ -133,7 +133,7 @@
       "stateChanged": "상품 또는 상태가 바뀌었습니다. 최신 내용을 불러왔으니 다시 확인하고 동의해 주세요.",
       "inProgress": "이 워크스페이스의 구독을 처리하고 있습니다. 끝난 뒤 다시 확인해 주세요."
     },
-    "agreeFirst": "카드 정보를 모두 입력하고 두 동의 항목을 체크하면 낼 수 있습니다.",
+    "agreeFirst": "카드 정보를 모두 입력하고 두 동의 항목을 체크하면 제출할 수 있습니다.",
     "replace": {
       "title": "카드 변경",
       "summary": "{plan} 구독의 결제 카드",
@@ -174,10 +174,10 @@
       "holder": "카드 종류",
       "personal": "개인 카드",
       "corporate": "법인 카드",
-      "safe": "카드 정보는 암호화해 결제 대행사에 전달하며, HeyMoa 는 카드 번호를 저장하지 않습니다.",
+      "safe": "카드 정보는 암호화해 결제 대행사에 전달하며, HeyMoa는 카드 번호를 저장하지 않습니다.",
       "error": {
         "number": "카드 번호를 확인해 주세요.",
-        "expiryFormat": "유효기간을 MM/YY 로 입력해 주세요.",
+        "expiryFormat": "유효기간을 MM/YY로 입력해 주세요.",
         "expired": "유효기간이 지난 카드입니다.",
         "password": "비밀번호 앞 2자리를 입력해 주세요.",
         "birth": "생년월일 6자리를 확인해 주세요.",
@@ -185,7 +185,7 @@
       }
     },
     "priceTitle": "요금 확인",
-    "agreementTitle": "자동결제 동의",
+    "agreementTitle": "자동 결제 동의",
     "pageBack": "돌아가기",
     "cardRejected": "카드 정보를 다시 확인해 주세요.",
     "tooManyAttempts": "카드 등록 시도가 너무 많습니다. 잠시 뒤 다시 시도해 주세요."
@@ -305,7 +305,7 @@
     "cardByOtherAdmin": "다른 관리자가 등록한 카드입니다",
     "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다.",
     "cancelScheduledPending": "해지를 예약했습니다. 확인 중인 결제 결과에 따라 종료 시점이 정해집니다.",
-    "stoppedNoCard": "등록된 결제 수단이 없어 다음 결제가 멈췄습니다. {end}까지 쓸 수 있고, 카드를 등록한 뒤 재개하면 구독이 이어집니다.",
+    "stoppedNoCard": "등록된 결제 수단이 없어 자동 결제가 멈췄습니다. {end}까지 쓸 수 있고, 카드를 등록한 뒤 재개하면 구독이 이어집니다.",
     "latestPayment": "최근 결제",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "결제 상세",
@@ -402,7 +402,7 @@
     "empty": "아직 결제한 내역이 없습니다.",
     "noDate": "확인 중",
     "myTitle": "내 결제 내역",
-    "myDescription": "내가 결제한 내역입니다. 나간 워크스페이스의 결제도 결제 당시 이름으로 보입니다.",
+    "myDescription": "내가 결제한 내역입니다. 나간 워크스페이스는 결제 당시 이름으로 표시됩니다.",
     "leftMember": "탈퇴한 멤버",
     "more": "더 보기 ({count, number}건)",
     "detail": "결제 상세",

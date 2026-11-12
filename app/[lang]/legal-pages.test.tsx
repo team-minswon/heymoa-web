@@ -117,7 +117,7 @@ describe("HeyMoa legal pages", () => {
     expect(text("section-11")).toMatch(/결제자가 워크스페이스를 떠나거나/);
     expect(text("section-12")).toMatch(/결제 결과를 확인하는 중에는 해지와 재개가 되지 않을 수 있으며/);
     expect(text("section-11")).toMatch(/결과를 확인하는 동안에는 Pro를 그대로 쓸 수 있습니다/);
-    expect(text("section-13")).toMatch(/지금 이용 기간의 결제를 환불받으면 구독이 끝나고/);
+    expect(text("section-13")).toMatch(/현재 이용 기간의 결제를 환불받으면 구독이 끝나고/);
     expect(text("section-13")).toMatch(/청약철회권은 이 조항으로 제한되지 않습니다/);
     expect(text("section-13")).toMatch(/3영업일 이내에 결제 취소를 요청합니다/);
     expect(text("section-14")).toMatch(/구독 중인 워크스페이스를 삭제하면/);

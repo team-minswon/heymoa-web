@@ -129,7 +129,7 @@ describe("결제 수단·구독", () => {
     const area = await openPaid();
     expect(
       await within(area).findByText(
-        "등록된 결제 수단이 없어 다음 결제가 멈췄습니다. 2026년 12월 11일까지 쓸 수 있고, 카드를 등록한 뒤 재개하면 구독이 이어집니다."
+        "등록된 결제 수단이 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지 쓸 수 있고, 카드를 등록한 뒤 재개하면 구독이 이어집니다."
       )
     ).toBeInTheDocument();
     expect(

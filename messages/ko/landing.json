@@ -658,7 +658,7 @@
   "pricing": {
     "meta": {
       "title": "가격 안내",
-      "description": "{brand} 가격 안내. Free는 녹음 월 {hours, number}시간까지 무료이고, Pro는 월 {price, number}원에 녹음 무제한입니다. 인원이 늘어도 요금은 같습니다."
+      "description": "{brand} 가격 안내. Free는 월 {hours, number}시간까지 무료로 녹음할 수 있고, Pro는 월 {price, number}원에 녹음 무제한입니다. 인원이 늘어도 요금은 같습니다."
     },
     "title": "인원이 늘어도 요금은 <mark>그대로</mark>입니다",
     "lead": "Free로 시작해서, 회의가 많아지면 Pro로 올리면 됩니다.",
