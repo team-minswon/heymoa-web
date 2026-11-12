@@ -31,7 +31,7 @@ Admins see the card, subscription, and workspace payment history in **[Settings]
 
 Pro runs one month at a time from the day you first pay. ==It's charged automatically on the same day each month, for the same amount.== In months without that date, you're charged on the last day. For example, if you start on January 31, you're charged on the last day of February and on March 31.
 
-If an automatic payment isn't approved, Pro ends right then and the workspace goes back to Free.
+While the result of an automatic payment is being checked, you keep Pro. Once it's confirmed that the payment wasn't approved, Pro ends and the workspace goes back to Free.
 
 You can change the card in **[Payment]** while you're on Pro. Changing the card doesn't charge you right away. The new card is charged from the next billing date.
 
@@ -50,10 +50,14 @@ Before the paid period ends, you can resume a canceled subscription. You need a 
 
 1. **Click [Help & feedback] in the sidebar**
    The request window opens.
-2. **Say that you'd like a refund and send it**
-   Your request is received.
-3. **Check the reply**
+2. **Choose [Billing & refunds] as the category**
+   It's for questions about payments and refunds.
+3. **Say that you'd like a refund and send it**
+   It helps to include the payment date. Your request is received.
+4. **Check the reply**
    We tell you the refund result in the reply to that request.
+
+If you're refunded for the payment of your current period, the subscription ends and the workspace changes to Free. Getting a refund for a past period's payment doesn't affect the current subscription.
 
 Once a refund is confirmed, we ask to cancel the card payment within 3 business days. It can take a few more days to show up with your card company. The full rules are in [Section 13 of the Terms](/terms#section-13).
 
