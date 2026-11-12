@@ -25,6 +25,7 @@ import {
 
 import { BillingCheckout } from "@/components/billing/billing-checkout";
 import { BillingPaymentDetail } from "@/components/billing/billing-payment-detail";
+import { MyPaymentsSettings } from "@/components/billing/my-payments-settings";
 import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
 import { WorkspacePaymentSettings } from "@/components/billing/payment-settings";
 import { track } from "@/lib/analytics/track";
@@ -108,7 +109,7 @@ describe("결제 수단·구독", () => {
   it("다음 결제의 날짜·금액과 카드·최근 결제를 그리고, 환불 버튼은 없다", async () => {
     const area = await openPaid();
     expect(
-      within(area).getByText("2026년 12월 11일 · 9,900원")
+      within(area).getByText("2026년 12월 11일 · 24,900원")
     ).toBeInTheDocument();
     expect(
       within(methodArea()).getByText("헤이모아카드 신용")
@@ -214,7 +215,7 @@ describe("결제 수단·구독", () => {
       )
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText("다음 결제(9,900원)부터 청구되지 않습니다.")
+      within(dialog).getByText("다음 결제(24,900원)부터 청구되지 않습니다.")
     ).toBeInTheDocument();
     expect(events("billing_cancel_dialog_opened")).toEqual([
       { workspace_id: PAID },
@@ -243,6 +244,22 @@ describe("결제 수단·구독", () => {
     ).toBeInTheDocument();
     expect(
       within(methodArea()).getByRole("button", { name: "삭제" })
+    ).toBeInTheDocument();
+
+    // 다음 결제 금액(`nextChargeAmountKrw`)은 해지 예약 중에 없다 — 재개 확인 창은 금액 없이 날짜만 말하고(APP-1596),
+    // 재개 뒤에는 서버가 다시 준 금액으로 안내한다.
+    fireEvent.click(within(area).getByRole("button", { name: "구독 재개" }));
+    const resume = await screen.findByRole("alertdialog");
+    expect(
+      within(resume).getByText(
+        "2026년 12월 11일부터 이 카드로 결제되고 매월 자동으로 갱신됩니다."
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(within(resume).getByRole("button", { name: "재개" }));
+    expect(
+      await within(area).findByText(
+        "구독을 재개했습니다. 2026년 12월 11일에 24,900원이 결제됩니다."
+      )
     ).toBeInTheDocument();
   });
 
@@ -327,7 +344,7 @@ describe("결제 수단·구독", () => {
             product: {
               agreementVersion: "A",
               policyVersion: "P",
-              amountKrw: 9900,
+              amountKrw: 24900,
               recordingAllowanceMinutes: null,
               freeRecordingAllowanceMinutes: 1800,
               currency: "KRW",
@@ -447,7 +464,7 @@ const replacedSetup = () =>
         status: "COMPLETED",
         failureCode: null,
         allowedActions: [],
-        amountKrw: 9900,
+        amountKrw: 24900,
         paidPeriod: null,
         latestAttempt: null,
         originAttempt: null,
@@ -518,7 +535,7 @@ describe("카드 변경", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "구독을 재개하면 다음 결제부터 이 워크스페이스의 구독 금액(매월 9,900원)이 이 카드로 자동 결제되는 데 동의합니다."
+        "구독을 재개하면 다음 결제부터 이 워크스페이스의 구독 금액(매월 24,900원)이 이 카드로 자동 결제되는 데 동의합니다."
       )
     ).toBeInTheDocument();
     expect(
@@ -566,7 +583,7 @@ describe("카드 변경", () => {
       )
     ).toBeInTheDocument();
     expect(screen.queryByText("결제가 완료되었습니다")).not.toBeInTheDocument();
-    expect(screen.queryByText("9,900원")).not.toBeInTheDocument();
+    expect(screen.queryByText("24,900원")).not.toBeInTheDocument();
     expect(events("billing_card_setup_resulted")).toEqual([]);
   });
 });
@@ -593,7 +610,7 @@ describe("결제 상세", () => {
                 start: "2026-11-11T00:00:00+09:00",
                 end: "2026-12-11T00:00:00+09:00",
               },
-              amountKrw: 9900,
+              amountKrw: 24900,
               currency: "KRW",
               errorCode: null,
               maskedCard: null,
@@ -672,22 +689,49 @@ describe("결제 상세", () => {
   });
 });
 
-describe("결제 내역", () => {
+describe("결제 내역 — 결제 관리 탭(공간)", () => {
   const history = () => screen.getByRole("region", { name: "결제 내역" });
 
-  it("지운 공간의 결제도 결제 때 이름으로 보인다", async () => {
+  it("결제자가 누구든 이 공간의 결제를 결제자 이름과 함께 보이고, 12건 뒤는 더 보기로 펼친다", async () => {
     await openPaid();
-    const row = (await screen.findByText("지난 프로젝트 팀")).closest("li")!;
-    expect(within(row).getByText("환불됨")).toBeInTheDocument();
-    expect(within(row).getByText("2026년 8월 2일")).toBeInTheDocument();
-    expect(screen.getAllByText("제품 팀").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("실패").length).toBeGreaterThan(0);
+    const list = await within(history()).findByRole("list", {
+      name: "결제 내역",
+    });
+    // 「제품 팀」은 내 결제 셋 + 다른 관리자 열한 달 + 공간을 떠난 사람 한 건 = 15건이다.
+    expect(within(list).getAllByRole("listitem")).toHaveLength(12);
+    expect(within(list).getAllByText("박서연").length).toBeGreaterThan(0);
+    expect(within(list).getAllByText("리서치 담당")).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "더 보기 (3건)" }));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(15);
+    expect(within(list).getByText("탈퇴한 멤버")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /더 보기/ })
+    ).not.toBeInTheDocument();
+    // 다른 공간의 결제는 이 탭에 없다.
+    expect(screen.queryByText("지난 프로젝트 팀")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "이 워크스페이스의 결제 내역입니다. 관리자에게만 보입니다."
+      )
+    ).toBeInTheDocument();
     expect(events("billing_payment_history_viewed")).toEqual([{}]);
+  });
+
+  it("행은 모두 그 결제의 상세로 들어간다", async () => {
+    await openPaid();
+    const rows = await within(history()).findAllByRole("button", {
+      name: /결제 상세/,
+    });
+    expect(rows).toHaveLength(12);
+    fireEvent.click(rows[0]);
+    expect(
+      await screen.findByRole("heading", { name: "결제 상세" })
+    ).toBeInTheDocument();
   });
 
   it("결제가 없으면 빈 상태 문구를 보인다", async () => {
     server.use(
-      http.get("*/v1/me/billing/payments", () =>
+      http.get(`*/v1/workspaces/${PAID}/billing/payments`, () =>
         HttpResponse.json({
           success: true,
           error: null,
@@ -700,27 +744,44 @@ describe("결제 내역", () => {
       await screen.findByText("아직 결제한 내역이 없습니다.")
     ).toBeInTheDocument();
   });
+});
 
-  it("이 공간의 결제 행만 눌리고, 누르면 그 결제의 상세로 들어간다", async () => {
-    await openPaid();
-    const other = (await screen.findByText("지난 프로젝트 팀")).closest("li")!;
-    expect(within(other).queryByRole("button")).not.toBeInTheDocument();
-    const rows = within(history()).getAllByRole("button");
-    expect(rows.length).toBeGreaterThan(0);
+describe("결제 내역 — 계정의 내 결제 내역", () => {
+  const list = () => screen.findByRole("list", { name: "내 결제 내역" });
+
+  it("내가 결제한 것만, 지운 공간의 결제도 결제 때 이름으로 보인다", async () => {
+    renderIn(<MyPaymentsSettings />);
+    const rows = within(await list()).getAllByRole("listitem");
+    // 다른 관리자가 결제한 「제품 팀」 결제는 빠진다.
+    expect(rows).toHaveLength(4);
+    expect(screen.queryByText("박서연")).not.toBeInTheDocument();
+    const deleted = screen.getByText("지난 프로젝트 팀").closest("li")!;
+    expect(within(deleted).getByText("환불됨")).toBeInTheDocument();
+    expect(within(deleted).getByText("2026년 8월 2일")).toBeInTheDocument();
+    expect(screen.getAllByText("실패").length).toBeGreaterThan(0);
+  });
+
+  it("지금 ADMIN 인 공간의 결제만 상세로 들어가고, 돌아가면 목록이다", async () => {
+    renderIn(<MyPaymentsSettings />);
+    const deleted = (await screen.findByText("지난 프로젝트 팀")).closest(
+      "li"
+    )!;
+    expect(within(deleted).queryByRole("button")).not.toBeInTheDocument();
+    const rows = within(await list()).getAllByRole("button");
+    expect(rows).toHaveLength(3);
     for (const row of rows) expect(row).toHaveTextContent("제품 팀");
     fireEvent.click(rows[0]);
     expect(
       await screen.findByRole("heading", { name: "결제 상세" })
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /내 결제 내역/ }));
+    expect(await list()).toBeInTheDocument();
   });
 
-  it("멤버에게는 이 공간의 결제 행도 눌리지 않는다", async () => {
-    asMember();
-    renderIn(
-      <WorkspacePaymentSettings workspaceId={PAID} onOpenPlans={vi.fn()} />
-    );
+  it("멤버로 내려간 공간의 결제는 상세로 들어가지 않는다", async () => {
+    mockDb.changeMemberRole(PAID, mockDb.getCurrentUser().userId, "MEMBER");
+    renderIn(<MyPaymentsSettings />);
     await screen.findByText("지난 프로젝트 팀");
-    expect(screen.getAllByText("제품 팀").length).toBeGreaterThan(0);
-    expect(within(history()).queryAllByRole("button")).toEqual([]);
+    expect(within(await list()).queryAllByRole("button")).toEqual([]);
   });
 });

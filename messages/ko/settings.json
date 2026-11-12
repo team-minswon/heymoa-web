@@ -16,6 +16,7 @@
       "billing": "요금제",
       "payment": "결제 관리",
       "account": "내 계정",
+      "myPayments": "내 결제 내역",
       "notifications": "알림",
       "agents": "내 MCP 연결",
       "appUpdates": "앱 업데이트"

@@ -55,8 +55,26 @@ const billingQuery = vi.hoisted(() => ({
     } as unknown,
   },
 }));
+// 내 결제 내역 탭은 내역이 있을 때만 있다(APP-1596). 기본은 한 건.
+const myPayments = vi.hoisted(() => ({ count: 1 as number | null }));
 vi.mock("@/lib/api/generated/billing/billing", () => ({
   useGetWorkspaceBilling: () => billingQuery.current,
+  useGetMyBillingPayments: () =>
+    myPayments.count === null
+      ? { isPending: true, data: undefined }
+      : {
+          isPending: false,
+          data: {
+            status: 200,
+            data: {
+              success: true,
+              data: { payments: Array(myPayments.count).fill({}) },
+            },
+          },
+        },
+}));
+vi.mock("@/components/billing/my-payments-settings", () => ({
+  MyPaymentsSettings: () => <p>내 결제 내역 내용</p>,
 }));
 // 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). 기본은 ADMIN 이다.
 const workspaceQuery = vi.hoisted(() => ({
@@ -136,6 +154,7 @@ describe("SettingsDialog", () => {
     Reflect.deleteProperty(window, "heymoaDesktop");
     serveEnforced(true);
     workspaceQuery.role = "ADMIN";
+    myPayments.count = 1;
   });
   it("탭 선택을 한 번 기록하고 같은 탭·리렌더는 세지 않습니다", () => {
     const heard = vi.fn();
@@ -317,6 +336,39 @@ describe("SettingsDialog", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("요금제 내용")).toBeInTheDocument();
     expect(screen.queryByText("결제 관리 내용")).not.toBeInTheDocument();
+  });
+
+  it("내 결제 내역은 계정 묶음의 내 계정 다음에 있고, 대상이 아닌 공간에서도 보인다", () => {
+    serveEnforced(false);
+    render(
+      <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+    );
+    const items = within(
+      screen.getByRole("group", { name: "계정" })
+    ).getAllByRole("button");
+    expect(items[0]).toHaveTextContent("내 계정");
+    expect(items[1]).toHaveTextContent("내 결제 내역");
+    fireEvent.click(items[1]);
+    expect(screen.getByText("내 결제 내역 내용")).toBeInTheDocument();
+  });
+
+  it("내역이 없으면 탭을 숨기고, 그 탭 주소로 들어오면 내 계정을 연다", () => {
+    myPayments.count = 0;
+    render(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        initialSection="myPayments"
+        workspaceId="01K0000000000"
+      />
+    );
+    expect(
+      within(screen.getByRole("group", { name: "계정" })).queryByRole(
+        "button",
+        { name: "내 결제 내역" }
+      )
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("내 결제 내역 내용")).not.toBeInTheDocument();
   });
 
   it("조회가 끝나기 전에는 요금제 탭으로 들어와도 기본 탭으로 보내지 않고 내용도 그리지 않는다", () => {

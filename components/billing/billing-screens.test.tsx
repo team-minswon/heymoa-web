@@ -93,7 +93,7 @@ const billingBody = (patch: Record<string, unknown> = {}) => ({
   product: {
     agreementVersion: "A1",
     policyVersion: "P1",
-    amountKrw: 9900,
+    amountKrw: 24900,
     recordingAllowanceMinutes: null,
     freeRecordingAllowanceMinutes: 120,
     currency: "KRW",
@@ -157,7 +157,7 @@ const setupBody = (
   status,
   failureCode: null,
   allowedActions: [],
-  amountKrw: 9900,
+  amountKrw: 24900,
   paidPeriod: null,
   latestAttempt: null,
   originAttempt: null,
@@ -187,7 +187,7 @@ const startButton = () =>
 describe("요금제 화면", () => {
   it("ADMIN 의 Free 는 서버 값으로 상품을 그리고 구매 버튼을 준다", async () => {
     renderIn(<PlanTab workspaceId={FREE} />);
-    expect(await screen.findByText("9,900원")).toBeInTheDocument();
+    expect(await screen.findByText("24,900원")).toBeInTheDocument();
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     expect(screen.getByText("녹음 월 20시간")).toBeInTheDocument();
     // 두 카드가 같은 줄 구성이다 — 한 줄 설명, 멤버, 같은 다섯 기능(APP-1596).
@@ -258,7 +258,7 @@ describe("요금제 화면", () => {
   it("이미 유료면 구매 버튼 없이 다음 결제를 그린다", async () => {
     renderIn(<PlanTab workspaceId={PAID} />);
     expect(
-      await screen.findByText("다음 결제 2026년 12월 11일 · 9,900원")
+      await screen.findByText("다음 결제 2026년 12월 11일 · 24,900원")
     ).toBeInTheDocument();
     expect(startButton()).not.toBeInTheDocument();
   });
@@ -551,7 +551,7 @@ describe("주문서", () => {
     await screen.findByText("테스트 유저의 워크스페이스");
     expect(screen.getByText("Pro 월 구독")).toBeInTheDocument();
     // 상품 금액과 오늘 결제 금액 두 자리 모두 서버 값이다.
-    expect(screen.getAllByText("9,900원")).toHaveLength(2);
+    expect(screen.getAllByText("24,900원")).toHaveLength(2);
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     expect(
       screen.getByText("이 워크스페이스의 모든 멤버가 함께 씁니다.")
@@ -737,7 +737,7 @@ describe("주문서", () => {
             status: "AUTHORIZED",
             provider: "FAKE",
             planCode: "PRO",
-            amountKrw: 9900,
+            amountKrw: 24900,
             currency: "KRW",
             recordingAllowanceMinutes: null,
             agreementVersion: "A1",
@@ -973,7 +973,7 @@ describe("등록 결과 — 상태별 화면", () => {
     expect(
       await screen.findByText("테스트 유저의 워크스페이스")
     ).toBeInTheDocument();
-    expect(screen.getByText("9,900원")).toBeInTheDocument();
+    expect(screen.getByText("24,900원")).toBeInTheDocument();
     expect(screen.getByText("Pro")).toBeInTheDocument();
     expect(
       screen.getByText("2026년 11월 11일부터 2026년 12월 11일 전까지")

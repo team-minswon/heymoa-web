@@ -299,7 +299,8 @@
       "methodInUse": "This card is used by the subscription. Use Change to switch cards.",
       "canceled": "Subscription canceled. You can use it until {end}.",
       "resumed": "Subscription resumed. {amount} will be charged on {date}.",
-      "deleted": "Card removed."
+      "deleted": "Card removed.",
+      "resumedDate": "Subscription resumed. Payments restart on {date}."
     },
     "cancelDialog": {
       "title": "Cancel your subscription?",
@@ -314,7 +315,8 @@
       "title": "Resume your subscription?",
       "noChargeNow": "You won't be charged now.",
       "next": "{amount} will be charged to this card on {date}, then renew monthly.",
-      "confirm": "Resume"
+      "confirm": "Resume",
+      "nextDate": "This card will be charged from {date}, then renew monthly."
     },
     "deleteDialog": {
       "title": "Remove this card?",
@@ -373,9 +375,14 @@
   },
   "history": {
     "title": "Payment history",
-    "description": "Payments you made. Payments for other workspaces appear under the name they had at the time.",
+    "description": "Payments for this workspace. Only admins can see this.",
     "loading": "Loading payment history",
     "empty": "You haven't made any payments yet.",
-    "noDate": "Confirming"
+    "noDate": "Confirming",
+    "myTitle": "My payments",
+    "myDescription": "Payments you made. Payments for workspaces you've left appear under the name they had at the time.",
+    "leftMember": "Former member",
+    "more": "Show more ({count, number})",
+    "detail": "Payment details"
   }
 }

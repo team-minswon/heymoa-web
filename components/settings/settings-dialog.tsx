@@ -9,7 +9,10 @@ import {
   DEFAULT_SETTINGS_SECTION,
   type SettingsSection,
 } from "@/lib/workspace/settings-url";
-import { useGetWorkspaceBilling } from "@/lib/api/generated/billing/billing";
+import {
+  useGetMyBillingPayments,
+  useGetWorkspaceBilling,
+} from "@/lib/api/generated/billing/billing";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 import {
@@ -21,6 +24,7 @@ import {
   Gem,
   Languages,
   Plug,
+  Receipt,
   Settings,
   ShieldCheck,
   UserRound,
@@ -43,6 +47,7 @@ import {
   NotificationSettings,
   NotificationSettingsSkeleton,
 } from "@/components/settings/notification-settings";
+import { MyPaymentsSettings } from "@/components/billing/my-payments-settings";
 import { WorkspacePaymentSettings } from "@/components/billing/payment-settings";
 import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
 import { WorkspaceTermsSettings } from "@/components/terms/workspace-terms-settings";
@@ -103,6 +108,8 @@ const SETTINGS_GROUPS: {
     key: "account",
     items: [
       { key: "account", Icon: UserRound },
+      // 내가 결제한 내역(APP-1596). 내역이 없으면 숨긴다.
+      { key: "myPayments", Icon: Receipt },
       { key: "language", Icon: Languages },
       { key: "notifications", Icon: BellRing },
       { key: "agents", Icon: Bot },
@@ -128,6 +135,7 @@ function SettingsSections({
   onLockChange,
   enforced,
   admin,
+  hasPayments,
 }: {
   section: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
@@ -136,6 +144,8 @@ function SettingsSections({
   enforced: boolean;
   /** 이 공간의 ADMIN 인가. 모르면 false 다 — 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). */
   admin: boolean;
+  /** 내가 결제한 내역이 한 건이라도 있나. 모르면 false 다. */
+  hasPayments: boolean;
   /** 섹션이 되돌릴 수 없는 일을 하는 중이다 — 다른 섹션으로 못 옮긴다. */
   locked: boolean;
   onLockChange: (locked: boolean) => void;
@@ -183,6 +193,7 @@ function SettingsSections({
                     (key !== "billing" && key !== "payment") ||
                     (enforced && (key === "billing" || admin))
                 )
+                .filter(({ key }) => key !== "myPayments" || hasPayments)
                 .map(({ key, Icon }) => (
                   <Button
                     key={key}
@@ -239,6 +250,10 @@ function SettingsSections({
           >
             <AccountSettingsForm />
           </DataBoundary>
+        ) : section === "myPayments" ? (
+          hasPayments ? (
+            <MyPaymentsSettings />
+          ) : null
         ) : section === "language" ? (
           <LanguageSettings />
         ) : section === "appUpdates" ? (
@@ -349,6 +364,9 @@ export function SettingsDialog({
   });
   const enforced = okData(billing.data)?.enforced === true;
   const workspace = useGetWorkspace(workspaceId, { query: { enabled: open } });
+  // 내 결제 내역 탭은 내역이 있을 때만 있다. 탭과 같은 조회(같은 키)라 탭을 열면 다시 기다리지 않는다.
+  const myPayments = useGetMyBillingPayments({ query: { enabled: open } });
+  const hasPayments = (okData(myPayments.data)?.payments.length ?? 0) > 0;
   const admin = okData(workspace.data)?.role === "ADMIN";
   useEffect(() => {
     if (
@@ -361,7 +379,16 @@ export function SettingsDialog({
     // 멤버가 결제 관리 주소로 들어오면(알림·옛 링크) 같은 묶음의 요금제 탭을 연다.
     else if (open && section === "payment" && !workspace.isPending && !admin)
       onSectionChange("billing");
+    else if (
+      open &&
+      section === "myPayments" &&
+      !myPayments.isPending &&
+      !hasPayments
+    )
+      onSectionChange("account");
   }, [
+    myPayments.isPending,
+    hasPayments,
     open,
     section,
     billing.isPending,
@@ -393,6 +420,7 @@ export function SettingsDialog({
           onLockChange={setLocked}
           enforced={enforced}
           admin={admin}
+          hasPayments={hasPayments}
         />
       </DialogContent>
     </Dialog>

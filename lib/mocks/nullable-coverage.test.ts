@@ -422,11 +422,17 @@ async function contractSamples() {
     }
     if (filled === 0) skipped.push(`${path} — 채울 수 없는 param: ${params}`);
   }
-  for (const workspaceId of billingWorkspaces)
+  for (const workspaceId of billingWorkspaces) {
     samples.push([
       "WorkspaceBillingResponse",
       `/v1/workspaces/${workspaceId}/billing`,
     ]);
+    // 공간 결제 내역(APP-1596) — 확인 중·거절·자동 취소가 상태별 공간에 있어 null 과 값이 둘 다 나온다.
+    samples.push([
+      "WorkspaceBillingPaymentsResponse",
+      `/v1/workspaces/${workspaceId}/billing/payments`,
+    ]);
+  }
   for (const { workspaceId, paymentId } of billingMock.payments())
     samples.push([
       "BillingPaymentResponse",

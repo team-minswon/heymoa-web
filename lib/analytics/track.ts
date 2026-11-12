@@ -216,7 +216,8 @@ export type WebEventProperties = {
       | "agents"
       | "notifications"
       | "billing"
-      | "payment";
+      | "payment"
+      | "myPayments";
     // 어디서 열었나. 알림 모달의 「알림 설정」 이동은 modal, 설정 창 안의 탭 이동은 settings(PRO-67 I32).
     from: "modal" | "settings";
   };

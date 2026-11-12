@@ -34,10 +34,13 @@ export function BillingPaymentDetail({
   workspaceId,
   paymentId,
   onBack,
+  backLabel,
 }: {
   workspaceId: string;
   paymentId: string;
   onBack: () => void;
+  /** 돌아갈 곳의 이름. 없으면 「결제 관리」. */
+  backLabel?: string;
 }) {
   const t = useTranslations("billing.payment");
   useEffect(() => {
@@ -45,7 +48,7 @@ export function BillingPaymentDetail({
   }, [workspaceId]);
   return (
     <div>
-      <BackLink onClick={onBack}>{t("back")}</BackLink>
+      <BackLink onClick={onBack}>{backLabel ?? t("back")}</BackLink>
       <SettingsHeader title={t("title")} description={t("description")} />
       <PaymentContent workspaceId={workspaceId} paymentId={paymentId} />
     </div>

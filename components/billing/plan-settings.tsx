@@ -195,7 +195,9 @@ function CurrentPlan({
   const planCode = billing.entitlement?.planCode ?? "FREE";
   const period = billing.entitlement?.period ?? billing.currentPeriod;
   const product = billing.product;
-  const amount = product ? format.money(product.amountKrw) : null;
+  // 다음 결제는 서버가 굳힌 금액(ADMIN 에게만 있다). 멤버에게는 상품가를 보인다.
+  const nextAmount = billing.detail?.nextChargeAmountKrw ?? product?.amountKrw;
+  const amount = nextAmount != null ? format.money(nextAmount) : null;
 
   const cancelScheduled =
     billing.cancelAtPeriodEnd && billing.status === "ACTIVE";

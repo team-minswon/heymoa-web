@@ -117,6 +117,8 @@ type Payment = {
   maskedCard: Card | null;
   refundStatus: RefundStatus | null;
   refundOrigin: "OPERATOR" | "COMPENSATION" | null;
+  /** 결제자. 없으면 목 유저(나)다. 공간에 없는 사람이면 탈퇴한 결제자로 보인다. */
+  payerUserId?: string;
 };
 type Setup = {
   setupId: string;
@@ -168,7 +170,7 @@ const STORAGE_KEY = "heymoa:mock-billing";
 const PRODUCT = {
   agreementVersion: "BILLING_TEST_V1",
   policyVersion: "TEST_MONTHLY_V1",
-  amountKrw: 9900,
+  amountKrw: 24900,
   recordingAllowanceMinutes: null as number | null,
   freeRecordingAllowanceMinutes: 1200,
   currency: "KRW",
@@ -297,6 +299,28 @@ function seedPayments(): Record<string, Payment> {
       refundOrigin: "OPERATOR",
     },
   ];
+  // 다른 관리자(박서연)가 결제하던 지난 구독 열두 달과, 이제 공간에 없는 사람이 결제한 한 건(APP-1596). 공간 결제 내역이
+  // 12건을 넘어 「더 보기」가 보이고, 내 결제 내역에는 나오지 않는다.
+  for (let month = 0; month < 12; month += 1) {
+    const at = new Date(Date.UTC(2025, 8 + month, 11));
+    const day = at.toISOString().slice(0, 10);
+    const end = new Date(Date.UTC(2025, 9 + month, 11))
+      .toISOString()
+      .slice(0, 10);
+    list.push({
+      ...base,
+      paymentId: `0P0000000S${String(month).padStart(3, "0")}`,
+      kind: month === 0 ? "PURCHASE" : "RENEWAL",
+      cycleId: `0C0000000S${String(month).padStart(3, "0")}`,
+      attemptNumber: 1,
+      status: "SUCCEEDED",
+      completedAt: `${day}T09:05:00+09:00`,
+      period: { start: `${day}T00:00:00+09:00`, end: `${end}T00:00:00+09:00` },
+      errorCode: null,
+      maskedCard: NEW_CARD,
+      payerUserId: month === 11 ? "01K0000000M99" : "01K0000000M21",
+    });
+  }
   return Object.fromEntries(
     list.map((payment) => [payment.paymentId, payment])
   );
@@ -517,8 +541,7 @@ function workspaceBilling(workspaceId: string) {
     actions.push("REFRESH_STATUS");
     // 갱신 결과를 기다리는 동안에도 해지를 예약할 수 있다(이미 예약했으면 없다).
     if (ws.renewalPending && !cancel) actions.push("CANCEL_SUBSCRIPTION");
-  }
-  else {
+  } else {
     if (!ws.paid && !teamBusy && !ws.salesPaused)
       actions.push("START_PURCHASE");
     const live = status === "ACTIVE" && !cancel;
@@ -572,6 +595,11 @@ function workspaceBilling(workspaceId: string) {
           methodPayerIsMe: Boolean(ws.card) && !ws.otherPayer,
           currentPaymentId: ws.currentPaymentId ?? null,
           methodId: ws.card ? (ws.methodId ?? null) : null,
+          // 다음 갱신이 청구할 금액. 해지 예약·청구 중단·대기·Free 면 다음 결제가 없어 null 이다(서버와 같다).
+          nextChargeAmountKrw:
+            status === "ACTIVE" && !cancel && !ws.renewalPending
+              ? PRODUCT.amountKrw
+              : null,
         }
       : null,
     closedReason: status === "ENDED" ? (ws.closedReason ?? null) : null,
@@ -649,10 +677,11 @@ function deleteMethod(workspaceId: string, methodId: string) {
 }
 
 function paymentView(payment: Payment) {
+  const { payerUserId, ...rest } = payment;
   return {
-    ...payment,
+    ...rest,
     currency: "KRW",
-    payerIsMe: true,
+    payerIsMe: !payerUserId,
     cycleStatus:
       payment.refundStatus === "SUCCEEDED"
         ? "REFUNDED"
@@ -670,18 +699,45 @@ function workspacePayment(workspaceId: string, paymentId: string) {
   return paymentView(payment);
 }
 
-/** 내가 결제자인 결제, 최신순. 목 유저가 모든 결제의 결제자다. */
+/** 최신순. 확인 중인 결제(완료 시각 없음)가 맨 위다. */
+function latestFirst(payments: Payment[]) {
+  const order = (payment: Payment) => payment.completedAt ?? "9999";
+  return payments.sort((a, b) =>
+    order(b) === order(a)
+      ? b.paymentId.localeCompare(a.paymentId)
+      : order(b).localeCompare(order(a))
+  );
+}
+
+/** 내가 결제자인 결제, 최신순. 다른 관리자가 결제한 것은 빠진다. */
 function myPayments() {
-  const order = (payment: Payment) =>
-    payment.completedAt ?? "9999"; /* 확인 중인 결제가 맨 위 */
   return {
-    payments: Object.values(state.payments)
-      .sort((a, b) =>
-        order(b) === order(a)
-          ? b.paymentId.localeCompare(a.paymentId)
-          : order(b).localeCompare(order(a))
+    payments: latestFirst(
+      Object.values(state.payments).filter((payment) => !payment.payerUserId)
+    ).map(paymentView),
+  };
+}
+
+/** 이 공간의 결제 전부(결제자 무관), 최신순. ADMIN 만. 결제자 이름은 지금 멤버 명단에서 찾고 없으면 null(탈퇴)이다. */
+function workspacePayments(workspaceId: string) {
+  requireAdmin(workspaceId);
+  const members = mockDb.listMembers(workspaceId);
+  const me = mockDb.getCurrentUser();
+  return {
+    payments: latestFirst(
+      Object.values(state.payments).filter(
+        (payment) => payment.workspaceId === workspaceId
       )
-      .map(paymentView),
+    ).map((payment) => {
+      const payerId = payment.payerUserId ?? me.userId;
+      return {
+        ...paymentView(payment),
+        // 공간 내역은 카드 표시값을 주지 않는다(서버와 같다).
+        maskedCard: undefined,
+        payerName:
+          members.find((member) => member.userId === payerId)?.name ?? null,
+      };
+    }),
   };
 }
 
@@ -1127,6 +1183,9 @@ export const billingHandlers = [
       })
   ),
   http.get("*/v1/me/billing/payments", () => respond(myPayments)),
+  http.get("*/v1/workspaces/:workspaceId/billing/payments", ({ params }) =>
+    respond(() => workspacePayments(paramId(params.workspaceId)))
+  ),
   http.delete(
     "*/v1/workspaces/:workspaceId/billing/payment-methods/:methodId",
     ({ params }) =>

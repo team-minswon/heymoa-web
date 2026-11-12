@@ -85,6 +85,12 @@ export function SubscriptionManagement({
   const product = billing.product;
   const period = billing.currentPeriod;
   const amount = product ? format.money(product.amountKrw) : null;
+  // 다음 갱신이 실제로 청구할 금액(APP-1596). 직전 회차의 동의 금액이라 지금 상품가와 다를 수 있고, 다음 결제가 없으면 null 이다 —
+  // 그때는 금액을 빼고 날짜만 말한다.
+  const nextAmount =
+    detail.nextChargeAmountKrw != null
+      ? format.money(detail.nextChargeAmountKrw)
+      : null;
   const masked = detail.maskedCard;
   const cardName = [masked?.issuer, masked?.cardType].filter(Boolean).join(" ");
 
@@ -113,8 +119,13 @@ export function SubscriptionManagement({
     ? null
     : renewalPending
       ? t("nextChargeChecking")
-      : period && amount
-        ? t("nextChargeValue", { date: format.date(period.end), amount })
+      : period
+        ? nextAmount
+          ? t("nextChargeValue", {
+              date: format.date(period.end),
+              amount: nextAmount,
+            })
+          : format.date(period.end)
         : null;
   const canCancel = actions.includes("CANCEL_SUBSCRIPTION");
   const canResume = actions.includes("RESUME_SUBSCRIPTION");
@@ -298,7 +309,7 @@ export function SubscriptionManagement({
               ? [t("cancelDialog.pending")]
               : [
                   t("cancelDialog.until", { end: format.date(period.end) }),
-                  t("cancelDialog.noCharge", { amount }),
+                  t("cancelDialog.noCharge", { amount: nextAmount ?? amount }),
                   t("cancelDialog.undo", { end: format.date(period.end) }),
                 ]
           }
@@ -311,14 +322,19 @@ export function SubscriptionManagement({
           }
         />
       ) : null}
-      {period && amount ? (
+      {period ? (
         <Confirm
           open={dialog === "resume"}
           onOpenChange={(open) => !busy && setDialog(open ? "resume" : null)}
           title={t("resumeDialog.title")}
           lines={[
             t("resumeDialog.noChargeNow"),
-            t("resumeDialog.next", { date: format.date(period.end), amount }),
+            nextAmount
+              ? t("resumeDialog.next", {
+                  date: format.date(period.end),
+                  amount: nextAmount,
+                })
+              : t("resumeDialog.nextDate", { date: format.date(period.end) }),
           ]}
           confirmLabel={t("resumeDialog.confirm")}
           pending={commands.resumePending}
@@ -360,9 +376,9 @@ export function NoticeLine({
   const format = useBillingFormat();
   if (!notice) return null;
   const period = billing?.currentPeriod;
-  const amount = billing?.product
-    ? format.money(billing.product.amountKrw)
-    : null;
+  // 재개 뒤 다시 읽은 다음 결제 금액. 없으면 날짜만 말한다.
+  const next = billing?.detail?.nextChargeAmountKrw;
+  const amount = next != null ? format.money(next) : null;
   switch (notice.kind) {
     case "canceled":
       // 갱신 결과 대기 중에는 아래 상태 줄이 예약을 알린다 — 지난 기간 끝 날짜를 말하지 않는다.
@@ -372,9 +388,11 @@ export function NoticeLine({
         </BillingNotice>
       ) : null;
     case "resumed":
-      return period && amount ? (
+      return period ? (
         <BillingNotice>
-          {t("resumed", { date: format.date(period.end), amount })}
+          {amount
+            ? t("resumed", { date: format.date(period.end), amount })
+            : t("resumedDate", { date: format.date(period.end) })}
         </BillingNotice>
       ) : null;
     default:

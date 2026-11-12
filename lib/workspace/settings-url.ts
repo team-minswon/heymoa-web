@@ -8,6 +8,7 @@
  */
 export const SETTINGS_SECTIONS = [
   "account",
+  "myPayments",
   "language",
   "workspace",
   "members",

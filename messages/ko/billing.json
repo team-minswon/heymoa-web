@@ -299,7 +299,8 @@
       "methodInUse": "구독에 쓰는 카드라 삭제할 수 없습니다. 카드를 바꾸려면 변경 버튼을 눌러 주세요.",
       "canceled": "구독을 해지했습니다. {end}까지 쓸 수 있습니다.",
       "resumed": "구독을 재개했습니다. {date}에 {amount}이 결제됩니다.",
-      "deleted": "카드를 삭제했습니다."
+      "deleted": "카드를 삭제했습니다.",
+      "resumedDate": "구독을 재개했습니다. {date}부터 다시 결제됩니다."
     },
     "cancelDialog": {
       "title": "구독을 해지할까요?",
@@ -314,7 +315,8 @@
       "title": "구독을 재개할까요?",
       "noChargeNow": "지금 결제되지 않습니다.",
       "next": "{date}에 {amount}이 이 카드로 결제되고 매월 자동으로 갱신됩니다.",
-      "confirm": "재개"
+      "confirm": "재개",
+      "nextDate": "{date}부터 이 카드로 결제되고 매월 자동으로 갱신됩니다."
     },
     "deleteDialog": {
       "title": "카드를 삭제할까요?",
@@ -373,9 +375,14 @@
   },
   "history": {
     "title": "결제 내역",
-    "description": "내가 결제한 내역입니다. 다른 워크스페이스의 결제 내역도 결제 당시의 워크스페이스 이름으로 함께 보입니다.",
+    "description": "이 워크스페이스의 결제 내역입니다. 관리자에게만 보입니다.",
     "loading": "결제 내역을 불러오는 중",
     "empty": "아직 결제한 내역이 없습니다.",
-    "noDate": "확인 중"
+    "noDate": "확인 중",
+    "myTitle": "내 결제 내역",
+    "myDescription": "내가 결제한 내역입니다. 나간 워크스페이스의 결제도 결제 당시 이름으로 보입니다.",
+    "leftMember": "탈퇴한 멤버",
+    "more": "더 보기 ({count, number}건)",
+    "detail": "결제 상세"
   }
 }

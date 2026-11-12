@@ -282,7 +282,11 @@ function CheckoutContent({
             {nextCharge ? (
               <Row
                 label={t("replace.nextCharge")}
-                value={`${format.date(nextCharge.end)} · ${format.money(product.amountKrw)}`}
+                value={
+                  billing.detail?.nextChargeAmountKrw != null
+                    ? `${format.date(nextCharge.end)} · ${format.money(billing.detail.nextChargeAmountKrw)}`
+                    : format.date(nextCharge.end)
+                }
               />
             ) : null}
           </dl>
