@@ -62,7 +62,7 @@ You get notifications for:
 - **Paused meetings**: If you leave a meeting paused, you get an email after 1 business day. After 3 business days, the meeting ends automatically, analysis starts, and you get one more email.
 - **Results ready to review**: When a meeting's analysis is done and the results are ready to review.
 - **Inquiry replies**: When the HeyMoa team replies to your inquiry.
-- **Payment updates**: Admins get one when a renewal payment isn't approved and the subscription ends, and when the payer has left and automatic payments have stopped.
+- **Payment updates**: Admins get one when a renewal payment isn't approved and the subscription ends, and when the payer has left and automatic payments have stopped. Payment completed and refund completed notices go to the payer by email.
 
 Choose what you receive in **[Account settings]** → **[Notifications]**, where you turn **[In-app]** and **[Email]** on or off for each kind. **[Turn off all in-app notifications]** and **[Turn off all email]** switch them all off at once. The settings apply to all your workspaces. Workspace invite and payment notifications can't be turned off.
 

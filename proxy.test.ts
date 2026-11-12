@@ -71,6 +71,7 @@ describe("proxy matcher", () => {
   it.each([
     "/w/01K0000000000",
     "/settings/notifications",
+    "/settings/payments",
     "/invite",
     "/oauth/consent",
     "/auth/callback",

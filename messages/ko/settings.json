@@ -30,6 +30,9 @@
   "notificationsPage": {
     "loginRequired": "알림 설정을 바꾸려면 로그인해 주세요."
   },
+  "paymentsPage": {
+    "loginRequired": "결제 내역을 보려면 로그인해 주세요."
+  },
   "confirmPhrase": {
     "label": "확인하려면 <strong>{phrase}</strong>{particle} 그대로 입력하세요."
   },

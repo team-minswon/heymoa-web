@@ -12,13 +12,13 @@ modified: 2026-11-12
 1. **Click [Help & feedback] in the sidebar**
    The request window opens.
 2. **Pick a category**
-   Choose **[Problem or error]**, **[Question]**, **[Feature request]**, or **[Other]**.
+   Choose **[Problem or error]**, **[Question]**, **[Billing & refunds]**, **[Feature request]**, or **[Other]**.
 3. **Write your message**
    ==You can write up to 1,200 characters.==
 4. **Click [Send]**
    Your request is submitted.
 
-![The Help & feedback window with four categories, a message box, and a character count](img:feedback/dialog.webp "Your current page path and environment are included. Meeting content is never sent.")
+![The Help & feedback window with five categories, a message box, and a character count](img:feedback/dialog.webp "Your current page path and environment are included. Meeting content is never sent.")
 
 ::clip{name="feedback-send" alt="Choosing Question in Help & feedback, writing a message, and sending it so it appears in My requests" caption="Pick a category, write your message, and send it. It appears in [My requests]."}
 

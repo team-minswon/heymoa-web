@@ -30,6 +30,9 @@
   "notificationsPage": {
     "loginRequired": "Log in to change your notification settings."
   },
+  "paymentsPage": {
+    "loginRequired": "Log in to see your payment history."
+  },
   "confirmPhrase": {
     "label": "To confirm, type <strong>{phrase}</strong> exactly."
   },

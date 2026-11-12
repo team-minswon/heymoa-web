@@ -4,7 +4,7 @@ description: How Free and Pro differ, who pays, how canceling and refunds work, 
 group: start
 slug: billing
 order: 5
-modified: 2026-11-12
+modified: 2026-11-13
 ---
 
 ## Free and Pro {#plans}
@@ -13,7 +13,7 @@ Each workspace (the space your team shares) has its own plan. When one admin pay
 
 | | Free | Pro |
 |---|---|---|
-| Price | KRW 0 | KRW 24,900 a month per workspace |
+| Price | KRW 0 | KRW 24,900 a month per workspace (VAT included) |
 | Recording | 20 hours a month | Unlimited |
 | Members | Unlimited | Unlimited |
 
@@ -25,28 +25,28 @@ See your current plan and this month's usage in **[Settings]** → **[Workspace]
 - **Payer**: The admin who registered the card is the workspace's payer.
 - **Changing the card**: The admin who changes the card becomes the new payer. From the next payment on, that admin's card is charged.
 
-Admins see the card, subscription, and workspace payment history in **[Settings]** → **[Workspace]** → **[Payment]**. You see the payments you made in **[Settings]** → **[Account]** → **[Payment history]**.
+Admins see the card, subscription, and workspace payment history in **[Settings]** → **[Workspace]** → **[Payment]**. You see the payments you made in **[Settings]** → **[Account]** → **[My payments]**.
 
 ## Billing date and changing the card {#billing-date}
 
 Pro runs one month at a time from the day you first pay. ==It's charged automatically on the same day each month, for the same amount.== In months without that date, you're charged on the last day. For example, if you start on January 31, you're charged on the last day of February and on March 31.
 
-While the result of an automatic payment is being checked, you keep Pro. Once it's confirmed that the payment wasn't approved, Pro ends and the workspace goes back to Free.
+While the result of an automatic payment is being checked, you keep Pro. Once it's confirmed that the payment wasn't approved, Pro ends and the workspace goes back to Free. The same payment isn't retried, and the registered card is removed. To use Pro again, register a card again and purchase.
 
 You can change the card in **[Payment]** while you're on Pro. Changing the card doesn't charge you right away. The new card is charged from the next billing date.
 
 ## Cancel and resume {#cancel}
 
-Any admin can cancel anytime in **[Payment]**. After you cancel, you keep Pro until the period you paid for ends. You aren't charged again, and the workspace goes back to Free when the period ends.
+Any admin can cancel anytime in **[Payment]**. After you cancel, you keep Pro until the period you paid for ends. You aren't charged again, and the workspace goes back to Free when the period ends. A renewal payment already being processed because the period ended goes ahead as is. If that payment is approved, the cancellation applies from the payment after it.
 
 Before the paid period ends, you can resume a canceled subscription. You need a registered card, and the payer who registered it must still be an admin of this workspace.
 
 > [!Note]
-> While a payment result is being checked, canceling and resuming may not work. Try again in a moment.
+> While a payment or refund is being processed, resuming may not work. Try again in a moment.
 
 ## Get a refund {#refund}
 
-==If you ask within 7 days of the payment date and the whole workspace recorded 20 hours or less in total in that billing period, you get a full refund.== Otherwise, periods you've already paid for aren't refunded. However, if you couldn't use the service because of a problem on HeyMoa's side, such as an outage, we check and refund you.
+==If you ask within 7 days of the payment date and, up to the time you ask, the whole workspace has recorded 20 hours or less in total in that billing period, you get a full refund.== This applies the same way to the first payment and to each monthly renewal payment. The refund is requested by the payer of that payment or by a workspace admin. Otherwise, periods you've already paid for aren't refunded. However, if you couldn't use the service because of a problem on HeyMoa's side, such as an outage, we check and refund you.
 
 1. **Click [Help & feedback] in the sidebar**
    The request window opens.
@@ -57,9 +57,9 @@ Before the paid period ends, you can resume a canceled subscription. You need a 
 4. **Check the reply**
    We tell you the refund result in the reply to that request.
 
-If you're refunded for the payment of your current period, the subscription ends and the workspace changes to Free. Getting a refund for a past period's payment doesn't affect the current subscription.
+If you're refunded for the payment of your current period, the subscription ends and the workspace changes to Free. Getting a refund for a past period's payment doesn't affect the current subscription. Once a refund for the current period's payment is received, the next automatic payment stops right away. Even after the workspace changes to Free, the notes and transcripts you've already made stay.
 
-Once a refund is confirmed, we ask to cancel the card payment within 3 business days. It can take a few more days to show up with your card company. The full rules are in [Section 13 of the Terms](/terms#section-13).
+We tell you the result within 3 business days of the day we receive your refund request, and if you're refunded, we ask to cancel the card payment within that time. It can take a few more days to show up with your card company. The full rules are in [Section 13 of the Terms](/terms#section-13).
 
 ## Recording limit and usage {#usage}
 
@@ -71,13 +71,13 @@ Once a refund is confirmed, we ask to cancel the card payment within 3 business 
 
 ## If the payer leaves the workspace {#payer-left}
 
-If the payer leaves the workspace, is removed, deletes their account, or is changed from admin to member, automatic payments stop. The registered card details are deleted too. You keep Pro until the period you already paid for ends.
+If the payer leaves the workspace, is removed, deletes their account, or is changed from admin to member, automatic payments stop and that card isn't charged again. If a payment that was being processed at that time is approved later, it's automatically canceled in full. You keep Pro until the period you already paid for ends.
 
 If another admin registers a card in **[Payment]** and resumes the subscription within that period, automatic payments continue. If nobody resumes it, the workspace goes back to Free when the period ends.
 
 ## Payment notifications {#notifications}
 
-Payment updates come as in-app [notifications](help:account#notifications), not email. You can't turn these off.
+When a payment or a refund is completed, the payer gets an email. The two updates below come as in-app [notifications](help:account#notifications), and you can't turn them off.
 
 - **When Pro ended because an automatic payment wasn't approved**: Every admin of that workspace gets one.
 - **When automatic payments stopped because the payer left**: The remaining admins get one.
