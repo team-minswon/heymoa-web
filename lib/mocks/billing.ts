@@ -10,8 +10,9 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  * **시드.** 「테스트 유저의 워크스페이스」는 집행 대상·Free, 「제품 팀」은 이미 유료(ACTIVE), 「새 워크스페이스」는 집행 대상이
  * 아니다(`enforced=false`).
  *
- * **구매 흐름.** 등록 열기(201 + `registration.redirectUrl`) → 목은 PG 왕복을 건너뛰어 바로 AUTHORIZED 로 만들고 redirectUrl 을
- * 결과 화면 주소로 준다 → 화면이 complete(202) → 상태를 몇 번 읽는 동안 카드 확인 중 → 결제 확인 중 → 시나리오의 결과.
+ * **구매 흐름(APP-1600 나이스페이).** 등록 열기(201, CREATED — 카드를 기다린다) → 주문서가 카드 제출(`…/setups/{id}/card`)
+ * → 처리를 시작하고 결과 화면으로 간다 → 상태를 몇 번 읽는 동안 카드 확인 중 → 결제 확인 중 → 시나리오의 결과.
+ * **받은 카드 정보는 모양만 보고 버린다** — 상태·sessionStorage 어디에도 남기지 않는다.
  * 브라우저가 문서를 새로 열면 목의 메모리가 사라지므로 상태를 sessionStorage 에 남긴다.
  *
  * **재현 시나리오.** 등록을 열 때 `localStorage.mockBilling` 을 읽는다(없으면 `ok`).
@@ -32,6 +33,8 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *     재개가 나오고 자동 결제 중단 알림이 한 건 있다
  *   - `otherPayer` 평소의 유료 공간인데 카드를 다른 관리자가 등록했다(`methodPayerIsMe=false`)
  *   - `replaceFail` 카드 변경(REPLACE)의 카드 등록이 실패한다 — 기존 카드가 그대로 남는다
+ *   - `issueUnknown` 카드 제출의 발급 응답을 잃어 등록이 닫힌다(발급 결과 불명) — 결제 없음, 새 등록부터 다시
+ *   - `cardInvalid` 카드 제출이 400(대행사가 카드 정보를 거절)이다
  * *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
@@ -58,6 +61,8 @@ export type BillingScenario =
   | "payerLeft"
   | "otherPayer"
   | "replaceFail"
+  | "issueUnknown"
+  | "cardInvalid"
   | "methodInUse";
 
 const SCENARIOS: BillingScenario[] = [
@@ -76,6 +81,8 @@ const SCENARIOS: BillingScenario[] = [
   "payerLeft",
   "otherPayer",
   "replaceFail",
+  "issueUnknown",
+  "cardInvalid",
   "methodInUse",
 ];
 
@@ -126,7 +133,8 @@ type Setup = {
   purpose?: "PURCHASE" | "REPLACE";
   scenario: BillingScenario;
   notice: Notice;
-  state: "AUTHORIZED" | "COMPLETING" | "CANCELED";
+  /** CREATED 는 카드를 기다린다. ISSUE_UNKNOWN 은 발급 응답을 잃어 닫혔다. */
+  state: "CREATED" | "COMPLETING" | "CANCELED" | "ISSUE_UNKNOWN";
   polls: number;
   origin: Attempt | null;
   latest: Attempt | null;
@@ -534,7 +542,7 @@ function workspaceBilling(workspaceId: string) {
   const attempt = ws.cycle?.attempt ?? null;
   const setup = ws.mySetupId ? state.setups[ws.mySetupId] : null;
   const actions: string[] = [];
-  if (setup?.state === "AUTHORIZED")
+  if (setup?.state === "CREATED")
     actions.push("CONTINUE_SETUP", "CANCEL_SETUP");
   else if (setup) actions.push("REFRESH_STATUS");
   else if (attempt) {
@@ -833,13 +841,15 @@ function advance(setup: Setup): Phase {
   const ws = workspaceOf(setup.workspaceId);
   if (setup.state === "CANCELED")
     return phase("CLOSED", "CANCELED", "CANCELED", [], null);
-  if (setup.state === "AUTHORIZED")
+  if (setup.state === "ISSUE_UNKNOWN")
+    return phase("CLOSED", "UNKNOWN", "ISSUE_UNKNOWN", [], null);
+  if (setup.state === "CREATED")
     return phase(
-      "AUTH_CAPTURED",
+      "CARD_AUTH_REQUIRED",
       "WAITING",
-      "AUTHORIZED",
+      "CREATED",
       ["CONTINUE_SETUP", "CANCEL_SETUP"],
-      2
+      null
     );
   if (setup.scenario === "lost") {
     return phase("ACCESS_LOST", "ACTION_REQUIRED", "ISSUING", [], null);
@@ -1010,7 +1020,7 @@ async function createSetup(workspaceId: string, request: Request) {
         "같은 요청 키에 다른 내용을 보낼 수 없습니다."
       );
     return {
-      setup: createdView(state.setups[stored.setupId], false),
+      setup: createdView(state.setups[stored.setupId]),
       status: 200,
     };
   }
@@ -1035,7 +1045,7 @@ async function createSetup(workspaceId: string, request: Request) {
       setupId: mine.setupId,
       body: bodyKey,
     };
-    return { setup: createdView(mine, false), status: 200 };
+    return { setup: createdView(mine), status: 200 };
   }
   const setup: Setup = {
     setupId: nextId("0S"),
@@ -1043,7 +1053,7 @@ async function createSetup(workspaceId: string, request: Request) {
     purpose,
     scenario: currentScenario(),
     notice: ws.notice,
-    state: "AUTHORIZED",
+    state: "CREATED",
     polls: 0,
     origin: null,
     latest: null,
@@ -1054,14 +1064,48 @@ async function createSetup(workspaceId: string, request: Request) {
     body: bodyKey,
   };
   ws.mySetupId = setup.setupId;
-  return { setup: createdView(setup, true), status: 201 };
+  return { setup: createdView(setup), status: 201 };
 }
 
-function createdView(setup: Setup, first: boolean) {
+/** 카드 제출. 본문은 모양만 보고 버린다(카드 정보를 어디에도 남기지 않는다). */
+async function submitCard(
+  workspaceId: string,
+  setupId: string,
+  request: Request
+) {
+  requireAdmin(workspaceId);
+  const setup = setupOf(setupId);
+  const body = (await request.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
+  const digits = (key: string, ...lengths: number[]) =>
+    typeof body[key] === "string" &&
+    /^\d+$/.test(body[key]) &&
+    lengths.includes(body[key].length);
+  const wellFormed =
+    digits("cardNumber", 14, 15, 16) &&
+    digits("expiryMonth", 2) &&
+    digits("expiryYear", 2) &&
+    digits("identity", 6, 10) &&
+    digits("passwordPrefix", 2);
+  // 거절은 제출할 때의 시나리오를 본다 — 시나리오를 지우고 다시 내면 같은 등록으로 이어 간다.
+  if (!wellFormed || currentScenario() === "cardInvalid")
+    failWith("BILLING_CARD_INVALID", 400, "카드 정보를 다시 확인해 주세요.");
+  if (setup.state !== "CREATED") STATE_CHANGED();
+  const ws = workspaceOf(workspaceId);
+  if (setup.scenario === "issueUnknown") {
+    setup.state = "ISSUE_UNKNOWN";
+    if (ws.mySetupId === setup.setupId) ws.mySetupId = null;
+  } else setup.state = "COMPLETING";
+  return setupStatus(setup, false);
+}
+
+function createdView(setup: Setup) {
   return {
     setupId: setup.setupId,
     purpose: setup.purpose ?? "PURCHASE",
-    status: setup.state === "CANCELED" ? "CANCELED" : "AUTHORIZED",
+    status: setup.state === "CANCELED" ? "CANCELED" : "CREATED",
     provider: "FAKE",
     planCode: PRODUCT.planCode,
     amountKrw: PRODUCT.amountKrw,
@@ -1071,10 +1115,8 @@ function createdView(setup: Setup, first: boolean) {
     testPaymentNotice: setup.notice,
     expiresAt: "2026-11-11T01:00:00+09:00",
     statusUrl: `/v1/me/billing/setups/${setup.setupId}`,
-    // 한 번만 내려온다. 목은 PG 인증 페이지를 건너뛰고 곧장 결과 화면으로 보낸다.
-    registration: first
-      ? { redirectUrl: `/billing/setups/${setup.setupId}`, parameters: {} }
-      : null,
+    // 나이스페이는 결제창이 없다 — 카드는 주문서가 따로 낸다(`submitCard`).
+    registration: null,
   };
 }
 
@@ -1117,12 +1159,24 @@ export const billingHandlers = [
         const workspaceId = paramId(params.workspaceId);
         requireAdmin(workspaceId);
         const setup = setupOf(paramId(params.setupId));
-        // 몇 번 불러도 첫 승인은 하나다 — 이미 시작했으면 그대로 돌려준다.
-        if (setup.state === "AUTHORIZED") setup.state = "COMPLETING";
+        // 나이스페이 흐름은 카드 제출이 처리를 시작한다. 옛 완료 호출은 지금 상태만 돌려준다.
         const view = setupStatus(setup, false);
         save();
         return view;
       }, 202)
+  ),
+  http.post(
+    "*/v1/workspaces/:workspaceId/billing/setups/:setupId/card",
+    ({ params, request }) =>
+      respond(async () => {
+        const view = await submitCard(
+          paramId(params.workspaceId),
+          paramId(params.setupId),
+          request
+        );
+        save();
+        return view;
+      })
   ),
   http.post(
     "*/v1/workspaces/:workspaceId/billing/setups/:setupId/cancel",

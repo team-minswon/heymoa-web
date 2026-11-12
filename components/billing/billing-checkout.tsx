@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowRight, Check, LockKeyhole } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -10,6 +10,7 @@ import {
   TestPaymentNotice,
 } from "@/components/billing/billing-parts";
 import { BackLink } from "@/components/billing/back-link";
+import { CardFields } from "@/components/billing/card-fields";
 import { SitePageLink } from "@/components/heymoa/site-page-link";
 import {
   SETTINGS_LIST,
@@ -17,6 +18,13 @@ import {
 } from "@/components/settings/settings-layout";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -25,16 +33,27 @@ import {
   useGetWorkspaceBilling,
 } from "@/lib/api/generated/billing/billing";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
-import { errorCodeOf } from "@/lib/api/error-message";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
+import { ApiError, isAuthError } from "@/lib/api/fetcher";
 import { okData } from "@/lib/api/ok-data";
 import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { planName } from "@/lib/billing/plan-name";
 import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
-import { leaveToCardRegistration } from "@/lib/billing/navigate";
+import {
+  cardErrors,
+  cardRequestOf,
+  EMPTY_CARD,
+  type CardForm,
+} from "@/lib/billing/card-input";
+import { goToSetupResult } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
+import { submitBillingCard } from "@/lib/billing/submit-card";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { localePath } from "@/lib/i18n/locales";
+import { webMessage } from "@/lib/i18n/web-message";
+import { toast } from "@/lib/ui/toast";
+import { PG_TERMS } from "@/content/billing/pg-terms";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
 type Purpose = "PURCHASE" | "REPLACE";
@@ -42,8 +61,8 @@ type Purpose = "PURCHASE" | "REPLACE";
 /**
  * 설정 창 안의 주문 확인·동의(구매 `PURCHASE`)와 카드 변경(`REPLACE`). 카드 변경은 카드만 새로 등록하고 지금 청구하지 않는다
  * (문구·분석·진입 조건이 구매와 갈린다). **금액·상품은 서버 응답만 그린다**(화면에 값을 적어 두지 않는다).
- * 동의 전에는 구매할 수 없다. requestKey 는 이 화면이 사용자의 한 번의 의도마다 하나 만든다(`createRequestKey`).
- * 카드 입력만 결제 대행사 창으로 나가고, 돌아오면 등록 결과 화면(`/billing/setups/{id}`)이 받는다.
+ * 카드 정보·두 동의가 맞기 전에는 낼 수 없다. requestKey 는 이 화면이 사용자의 한 번의 의도마다 하나 만든다(`createRequestKey`).
+ * 나이스페이 정기결제는 결제창이 없어 카드 정보를 이 화면에서 받아 서버로 낸다(APP-1600). 내면 등록 결과 화면(`/billing/setups/{id}`)으로 간다.
  */
 export function BillingCheckout({
   workspaceId,
@@ -95,7 +114,7 @@ export function BillingCheckout({
   );
 }
 
-type Notice = "stateChanged" | "inProgress" | "unsupported";
+type Notice = "stateChanged" | "inProgress" | "cardRejected";
 
 function CheckoutContent({
   workspaceId,
@@ -114,12 +133,16 @@ function CheckoutContent({
   const billing = useWorkspaceBilling(workspaceId);
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const key = useRef(createRequestKey()).current;
+  // 카드 정보는 이 상태에만 산다 — 화면을 떠나면 함께 사라지고, 제출이 끝나면 비운다.
+  const [card, setCard] = useState<CardForm>(EMPTY_CARD);
   const [agreed, setAgreed] = useState(false);
+  const [pgAgreed, setPgAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   // 체크·해제를 되풀이해도 동의 이벤트는 화면당 한 번만 낸다.
   const agreementTracked = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  // 카드 등록 정보(`registration`)는 처음 만들 때 한 번만 내려온다 — 다시 받은 진행 중 등록은 이어 갈 수 없다.
-  const [reusedSetupId, setReusedSetupId] = useState<string | null>(null);
+  // 이 화면에서 연 등록. 카드 제출이 실패해도 다시 누르면 새로 열지 않고 이 등록에 다시 낸다.
+  const openedSetupId = useRef<string | null>(null);
   const create = useCreateBillingSetup({
     mutation: {
       meta: {
@@ -131,7 +154,9 @@ function CheckoutContent({
 
   const product = billing.product;
   const admin = workspace?.role === "ADMIN";
-  const openSetupId = reusedSetupId ?? billing.mySetupId;
+  // 카드를 기다리는 내 등록(CONTINUE_SETUP)은 그대로 이어 낸다. 서버가 이미 처리 중인 등록만 「진행 중」으로 알린다.
+  const continuable = billing.allowedActions.includes("CONTINUE_SETUP");
+  const openSetupId = continuable ? null : billing.mySetupId;
 
   if (!admin)
     return (
@@ -146,7 +171,7 @@ function CheckoutContent({
     (!billing.allowedActions.includes(
       replace ? "CHANGE_CARD" : "START_PURCHASE"
     ) &&
-      !openSetupId)
+      !billing.mySetupId)
   ) {
     return (
       <BillingNotice>
@@ -167,42 +192,55 @@ function CheckoutContent({
         : "replace.agreementLabel",
     { amount: format.money(product.amountKrw) }
   );
+  const errors = cardErrors(card, new Date());
+  const ready =
+    agreed && pgAgreed && Object.keys(errors).length === 0 && !openSetupId;
 
-  const start = async () => {
+  /** 등록을 열고(이미 있으면 그대로) 카드를 낸다. 성공하면 결과 화면으로 간다. */
+  const submit = async () => {
+    if (submitting || !ready) return;
+    setSubmitting(true);
     setNotice(null);
+    // 등록 열기 실패는 생성 훅이라 전역 토스트가 띄우고, 카드 제출은 훅 밖이라(`submit-card.ts`) 여기서 띄운다.
+    let step: "open" | "card" = "open";
     try {
-      const response = await create.mutateAsync({
-        workspaceId,
-        data: {
-          requestKey: key.current(),
-          purpose,
-          expectedProductVersion: product.policyVersion,
-          agreementVersion: product.agreementVersion,
-        },
-      });
-      const setup = response.data.data;
-      if (!setup) return;
-      const registration = setup.registration;
-      if (registration?.redirectUrl) {
+      let setupId =
+        openedSetupId.current ?? (continuable ? billing.mySetupId : null);
+      if (!setupId) {
+        const response = await create.mutateAsync({
+          workspaceId,
+          data: {
+            requestKey: key.current(),
+            purpose,
+            expectedProductVersion: product.policyVersion,
+            agreementVersion: product.agreementVersion,
+          },
+        });
+        const setup = response.data.data;
+        if (!setup) return;
         key.renew();
+        setupId = openedSetupId.current = setup.setupId;
         if (replace) billingEvents.cardChangeStarted(workspaceId);
         else billingEvents.cardSetupStarted(workspaceId, setup.provider);
-        leaveToCardRegistration(registration.redirectUrl);
-        return;
       }
-      if (registration) {
-        // SDK 파라미터만 주는 PG(토스)는 이번 범위가 아니다. 열어 둔 등록이 다음 구매를 막지 않게 닫는다.
-        key.renew();
-        setNotice("unsupported");
-        await cancel
-          .mutateAsync({ workspaceId, setupId: setup.setupId })
-          .catch(() => undefined);
-        return;
-      }
-      setReusedSetupId(setup.setupId);
+      step = "card";
+      await submitBillingCard(workspaceId, setupId, cardRequestOf(card));
+      setCard(EMPTY_CARD);
+      goToSetupResult(setupId);
     } catch (error) {
       const code = errorCodeOf(error);
-      if (code === "BILLING_STATE_CHANGED") {
+      const status = error instanceof ApiError ? error.status : null;
+      if (step === "card" && status === 400) {
+        setNotice("cardRejected");
+      } else if (step === "card" && status === 409) {
+        // 등록이 더는 카드를 받을 상태가 아니다(닫힘·처리 중). 새로 읽고 처음부터 다시 받게 한다.
+        openedSetupId.current = null;
+        setNotice("stateChanged");
+        await invalidateWorkspaceBilling(queryClient, workspaceId);
+      } else if (step === "card") {
+        if (!isAuthError(error))
+          toast.error(errorMessageOf(error, webMessage("requestFailed")));
+      } else if (code === "BILLING_STATE_CHANGED") {
         // 화면이 본 상품·상태가 서버와 다르다 — 새로 읽고 동의를 다시 받는다(같은 키에 다른 본문은 충돌이라 키도 새로).
         key.renew();
         setAgreed(false);
@@ -214,6 +252,8 @@ function CheckoutContent({
       } else if (code === "REQUEST_KEY_CONFLICT") {
         key.renew();
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -224,14 +264,12 @@ function CheckoutContent({
       .then(() => true)
       .catch(() => false);
     if (!closed) return;
-    setReusedSetupId(null);
+    openedSetupId.current = null;
     key.renew();
     await invalidateWorkspaceBilling(queryClient, workspaceId);
-    if (agreed) await start();
   };
-
   const period = billing.currentPeriod;
-  const card = format.card(billing.detail?.maskedCard);
+  const currentCard = format.card(billing.detail?.maskedCard);
   // 카드가 없으면 「지금 카드」와 「실패하면 지금 카드 유지」가 거짓이다. 남의 카드·카드 없음이면 결제자가 내가 된다.
   const register = !billing.detail?.methodId;
   const nextCharge =
@@ -276,9 +314,11 @@ function CheckoutContent({
             </p>
           )}
         </div>
-        {replace && (card || nextCharge) ? (
+        {replace && (currentCard || nextCharge) ? (
           <dl className="grid gap-2.5 px-5 py-4 text-sm">
-            {card ? <Row label={t("replace.current")} value={card} /> : null}
+            {currentCard ? (
+              <Row label={t("replace.current")} value={currentCard} />
+            ) : null}
             {nextCharge ? (
               <Row
                 label={t("replace.nextCharge")}
@@ -358,6 +398,12 @@ function CheckoutContent({
           </div>
         </BillingNotice>
       ) : null}
+      <CardFields
+        value={card}
+        onChange={setCard}
+        errors={errors}
+        disabled={submitting}
+      />
       <div className="flex flex-col gap-4">
         {replace ? null : (
           <p className="text-xs leading-5 text-[var(--el-muted)]">
@@ -389,32 +435,67 @@ function CheckoutContent({
           />
           <span>{agreementLabel}</span>
         </label>
+        <div className="flex items-start gap-2.5 text-sm leading-5 text-[var(--el-ink)]">
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <Checkbox
+              className="mt-0.5"
+              checked={pgAgreed}
+              onCheckedChange={setPgAgreed}
+            />
+            <span>{t("pgAgreementLabel")}</span>
+          </label>
+          <PgTermsDialog />
+        </div>
         {notice ? (
           <BillingNotice tone="warn">{t(`notice.${notice}`)}</BillingNotice>
         ) : null}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Button
             className="h-10 px-4"
-            disabled={!agreed || Boolean(openSetupId)}
-            aria-describedby={agreed ? undefined : "billing-agree-hint"}
-            loading={create.isPending}
-            onClick={start}
+            disabled={!ready}
+            aria-describedby={ready ? undefined : "billing-agree-hint"}
+            loading={submitting}
+            onClick={submit}
           >
-            {replace
-              ? t(register ? "replace.register.submit" : "replace.submit")
-              : t("submit")}
+            {replace ? t("replace.submit") : t("submit")}
             <ArrowRight aria-hidden />
           </Button>
           <span id="billing-agree-hint" className="sr-only">
             {t("agreeFirst")}
           </span>
         </div>
-        <p className="flex items-start gap-1.5 text-xs leading-5 text-[var(--el-muted)]">
-          <LockKeyhole className="mt-1 size-3 shrink-0" aria-hidden />
-          <span>{t("cardSafe")}</span>
-        </p>
       </div>
     </div>
+  );
+}
+
+/** 결제 대행 서비스 이용약관 「내용 보기」. 본문은 문구 파일이 아니라 `content/billing/pg-terms.ts` 다. */
+function PgTermsDialog() {
+  const t = useTranslations("billing.checkout");
+  const locale = useLocale();
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={
+          <button
+            type="button"
+            className="shrink-0 whitespace-nowrap text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
+          />
+        }
+      >
+        {t("pgTermsView")}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("pgTermsTitle")}</DialogTitle>
+        </DialogHeader>
+        <div className="grid max-h-[60vh] gap-3 overflow-y-auto text-sm leading-6 text-[var(--el-body)]">
+          {PG_TERMS[locale === "en" ? "en" : "ko"].map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

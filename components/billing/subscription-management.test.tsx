@@ -29,12 +29,12 @@ import { MyPaymentsSettings } from "@/components/billing/my-payments-settings";
 import { BillingSetupResultPage } from "@/components/billing/billing-setup-result-page";
 import { WorkspacePaymentSettings } from "@/components/billing/payment-settings";
 import { track } from "@/lib/analytics/track";
-import { leaveToCardRegistration } from "@/lib/billing/navigate";
+import { goToSetupResult } from "@/lib/billing/navigate";
 import { billingHandlers, billingMock } from "@/lib/mocks/billing";
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
-vi.mock("@/lib/billing/navigate", () => ({ leaveToCardRegistration: vi.fn() }));
+vi.mock("@/lib/billing/navigate", () => ({ goToSetupResult: vi.fn() }));
 vi.mock("@/lib/analytics/track", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/analytics/track")>()),
   track: vi.fn(),
@@ -56,6 +56,7 @@ afterEach(() => {
   mockDb.reset();
   billingMock.setScenario(null);
   vi.mocked(track).mockClear();
+  vi.mocked(goToSetupResult).mockClear();
   requests.length = 0;
 });
 afterAll(() => server.close());
@@ -494,11 +495,17 @@ describe("카드 변경", () => {
       if (request.method === "POST" && request.url.endsWith("/billing/setups"))
         body = await request.clone().json();
     });
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(
-      screen.getByRole("button", { name: "동의하고 새 카드 등록" })
-    );
-    await waitFor(() => expect(leaveToCardRegistration).toHaveBeenCalled());
+    for (const [label, value] of [
+      ["카드 번호", "4111111111111111"],
+      ["유효기간", "1239"],
+      ["비밀번호 앞 2자리", "12"],
+      ["생년월일 6자리", "900101"],
+    ])
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    for (const checkbox of screen.getAllByRole("checkbox"))
+      fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "카드 등록하기" }));
+    await waitFor(() => expect(goToSetupResult).toHaveBeenCalled());
     expect(body).toMatchObject({ purpose: "REPLACE" });
     expect(events("billing_card_change_started")).toEqual([
       { workspace_id: PAID },
@@ -539,7 +546,7 @@ describe("카드 변경", () => {
       )
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "동의하고 카드 등록" })
+      screen.getByRole("button", { name: "카드 등록하기" })
     ).toBeInTheDocument();
   });
 

@@ -20,6 +20,7 @@ export type SetupView =
   | "accessActionRequired"
   | "completed"
   | "accessLost"
+  | "issueUnknown"
   | "closed";
 
 export function setupViewOf(
@@ -39,6 +40,8 @@ export function setupViewOf(
       setup.originAttempt?.refundStatus ?? setup.latestAttempt?.refundStatus;
     return refund ? "refundProcessing" : "accessProcessing";
   }
+  // 카드 발급 응답을 잃어 서버가 등록을 닫았다(APP-1600). 결제는 없었고 새 등록부터 다시 한다.
+  if (stage === "CLOSED" && status === "UNKNOWN") return "issueUnknown";
   if (stage === "CLOSED" || status === "CANCELED" || status === "EXPIRED")
     return "closed";
   if (stage === "CARD_AUTH_REQUIRED") return "cardAuthRequired";
@@ -71,7 +74,12 @@ export const isPollingView = (view: SetupView) => POLLING.has(view);
 export function resultOfView(view: SetupView): BillingSetupResult | null {
   if (view === "completed") return "completed";
   if (view === "declined") return "declined";
-  if (view === "cardUnknown" || view === "paymentUnknown") return "unknown";
+  if (
+    view === "cardUnknown" ||
+    view === "paymentUnknown" ||
+    view === "issueUnknown"
+  )
+    return "unknown";
   if (view === "refunded") return "refunded";
   return null;
 }

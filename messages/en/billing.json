@@ -106,7 +106,7 @@
   },
   "checkout": {
     "title": "Review order",
-    "description": "Review your order, agree to the terms, then register a card.",
+    "description": "Review your order, enter your card details, then pay.",
     "loading": "Loading checkout",
     "askAdmin": "Only admins can purchase. Please ask an admin.",
     "inProgress": "Your team has a subscription in progress. Check again when it's done.",
@@ -119,20 +119,19 @@
     "cancelHow": "Admins can cancel in Settings > Payment.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
     "refundPolicy": "You can get a full refund if you request it within 7 days of payment and have recorded 20 hours or less in this billing period by then. <link>See refund policy</link>",
-    "submit": "Agree and register card",
+    "submit": "Agree and pay",
     "openSetup": {
       "title": "A card registration is already in progress",
-      "body": "This registration can't be continued. Check the result, or cancel it and start over.",
+      "body": "The server is processing this registration. Check the result, or cancel it and start over.",
       "view": "View progress",
       "restart": "Cancel and start over"
     },
     "notice": {
       "stateChanged": "The product or status changed. We've loaded the latest details; please review and agree again.",
       "inProgress": "Your team has a subscription in progress. Check again when it's done.",
-      "unsupported": "This payment method isn't supported yet."
+      "cardRejected": "Please check your card details again."
     },
-    "agreeFirst": "Check the agreement to start card registration.",
-    "cardSafe": "You enter card details on the payment provider's page. HeyMoa doesn't store your card number.",
+    "agreeFirst": "Enter all card details and check both agreements to continue.",
     "replace": {
       "title": "Change card",
       "description": "Register a new card for automatic payments.",
@@ -145,14 +144,13 @@
       "payerChanges": "Once you add a card, future charges go to your card and payment history is kept under your account.",
       "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
       "agreementLabelEnding": "I agree that once the subscription is resumed, this workspace's subscription ({amount} per month) will be charged automatically to this card from the next payment.",
-      "submit": "Agree and register new card",
+      "submit": "Register card",
       "unavailable": "You can't change the card right now.",
       "askAdmin": "Only admins can change the card. Please ask an admin.",
       "back": "Payment",
       "register": {
         "title": "Add card",
         "description": "Add a card for automatic payments.",
-        "submit": "Agree and add card",
         "noCharge": "You won't be charged now."
       }
     },
@@ -160,7 +158,30 @@
     "perMonth": "/ month",
     "dueToday": "Due today",
     "nextCharge": "Next payment",
-    "paymentInfo": "Payment details"
+    "paymentInfo": "Payment details",
+    "pgAgreementLabel": "I agree to the payment service provider's terms.",
+    "pgTermsView": "View",
+    "pgTermsTitle": "Payment service provider terms",
+    "card": {
+      "title": "Card details",
+      "number": "Card number",
+      "expiry": "Expiry",
+      "password": "First 2 digits of card PIN",
+      "birth": "Date of birth (YYMMDD)",
+      "business": "Business registration number (10 digits)",
+      "holder": "Card type",
+      "personal": "Personal",
+      "corporate": "Corporate",
+      "safe": "Card details are encrypted and sent to the payment provider. HeyMoa doesn't store your card number.",
+      "error": {
+        "number": "Check the card number.",
+        "expiryFormat": "Enter the expiry as MM/YY.",
+        "expired": "This card has expired.",
+        "password": "Enter the first 2 digits of the PIN.",
+        "birth": "Check your date of birth (6 digits).",
+        "business": "Check the 10-digit business registration number."
+      }
+    }
   },
   "setup": {
     "title": "Card registration result",
@@ -183,7 +204,7 @@
     "continue": "Continue registration",
     "cardAuthRequired": {
       "title": "Card registration isn't finished",
-      "body": "Card authentication wasn't completed. Please start over."
+      "body": "Card details weren't submitted. Please start over."
     },
     "authCaptured": {
       "title": "Card authentication confirmed",
@@ -268,6 +289,10 @@
         "title": "Card change closed",
         "body": "It was canceled or timed out. Your current card stays."
       }
+    },
+    "issueUnknown": {
+      "title": "We couldn't confirm the card registration",
+      "body": "You weren't charged. Please register your card again from the start."
     }
   },
   "manage": {

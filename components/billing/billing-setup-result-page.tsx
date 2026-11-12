@@ -40,10 +40,10 @@ import { nextPollDelay, usePollWindow } from "@/lib/billing/use-poll-window";
 import { cn } from "@/lib/utils";
 
 /**
- * `/billing/setups/{setupId}` — 카드 등록 결과. 워크스페이스 셸 밖이다(PG 복귀 뒤 깨끗한 주소).
+ * `/billing/setups/{setupId}` — 카드 등록 결과. 워크스페이스 셸 밖이다. 주문서·카드 변경에서 카드를 낸 뒤 여기로 온다(APP-1600).
  *
  * 서버가 일하는 동안 이 화면은 **표시용으로** 다시 읽을 뿐이다 — 화면을 닫거나 읽기를 멈춰도 서버 작업은 계속된다.
- * 주소에는 authKey·state 가 없고, 이 화면도 그 값을 읽거나 저장하지 않는다.
+ * 주소에는 등록 번호만 있고, 이 화면은 카드 정보를 받지도 읽지도 않는다.
  */
 export function BillingSetupResultPage({ setupId }: { setupId: string }) {
   const t = useTranslations("billing.setup");
@@ -406,6 +406,13 @@ function ViewBody({
         t("accessLost.title"),
         t("accessLost.body"),
         undefined,
+        "warn"
+      );
+    case "issueUnknown":
+      return card(
+        t("issueUnknown.title"),
+        t("issueUnknown.body"),
+        restartLink,
         "warn"
       );
     case "closed":

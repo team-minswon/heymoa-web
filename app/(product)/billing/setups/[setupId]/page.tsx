@@ -10,7 +10,7 @@ import { privateRouteMetadata } from "@/lib/site";
 
 export const metadata: Metadata = {
   ...privateRouteMetadata,
-  // 결제 복귀 주소의 Referer 로 setup 주소가 새지 않게 한다.
+  // 결과 주소의 Referer 로 setup 주소가 새지 않게 한다.
   referrer: "no-referrer",
 };
 

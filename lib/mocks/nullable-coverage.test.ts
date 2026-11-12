@@ -478,10 +478,17 @@ async function seedBilling(firstWorkspaceId: string) {
     const { workspaceId } = mockDb.createWorkspace({ name });
     billingMock.setScenario(scenario);
     const setupId = await open(workspaceId, `key-${name}`);
-    await call(
-      `/v1/workspaces/${workspaceId}/billing/setups/${setupId}/complete`,
-      { method: "POST" }
-    );
+    // 나이스페이 흐름(APP-1600)은 카드 제출이 처리를 시작한다.
+    await call(`/v1/workspaces/${workspaceId}/billing/setups/${setupId}/card`, {
+      method: "POST",
+      body: {
+        cardNumber: "4111111111111111",
+        expiryMonth: "12",
+        expiryYear: "39",
+        identity: "900101",
+        passwordPrefix: "12",
+      },
+    });
     for (let i = 0; i < polls; i += 1)
       await call(`/v1/me/billing/setups/${setupId}`);
     return workspaceId;

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  cardErrors,
+  cardRequestOf,
+  formatCardNumber,
+  formatExpiry,
+  luhnValid,
+  type CardForm,
+} from "@/lib/billing/card-input";
 import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { paymentStatusOf } from "@/lib/billing/payment-status";
 import { planName } from "@/lib/billing/plan-name";
@@ -146,5 +154,54 @@ describe("freeUsageLevel", () => {
     ["남은 샘플이 없으면 분으로", 1000, null, "exhausted", 100, 0],
   ])("%s", (_name, used, remaining, level, percent, remainingMinutes) => {
     expect(at(used, remaining)).toEqual({ level, percent, remainingMinutes });
+  });
+});
+
+describe("카드 정보 검사(APP-1600)", () => {
+  const now = new Date("2026-11-12T12:00:00+09:00");
+  const form = (patch: Partial<CardForm> = {}): CardForm => ({
+    number: "4111111111111111",
+    expiry: "1126",
+    password: "12",
+    identity: "900101",
+    holder: "PERSONAL",
+    ...patch,
+  });
+  it("맞는 값은 틀린 칸이 없고 본문은 숫자만 나눠 싣는다", () => {
+    expect(cardErrors(form(), now)).toEqual({});
+    expect(cardRequestOf(form())).toEqual({
+      cardNumber: "4111111111111111",
+      expiryMonth: "11",
+      expiryYear: "26",
+      identity: "900101",
+      passwordPrefix: "12",
+    });
+  });
+  it("Luhn·자리 수·지난 달·월 범위·생년월일·사업자번호를 가른다", () => {
+    expect(luhnValid("4111111111111112")).toBe(false);
+    expect(cardErrors(form({ number: "4111111111111112" }), now).number).toBe(
+      "number"
+    );
+    expect(cardErrors(form({ number: "4111111" }), now).number).toBe("number");
+    expect(cardErrors(form({ expiry: "1026" }), now).expiry).toBe("expired");
+    expect(cardErrors(form({ expiry: "1326" }), now).expiry).toBe(
+      "expiryFormat"
+    );
+    expect(cardErrors(form({ password: "1" }), now).password).toBe("password");
+    expect(cardErrors(form({ identity: "901301" }), now).identity).toBe(
+      "birth"
+    );
+    expect(
+      cardErrors(form({ holder: "CORPORATE", identity: "900101" }), now)
+        .identity
+    ).toBe("business");
+    expect(
+      cardErrors(form({ holder: "CORPORATE", identity: "1234567890" }), now)
+    ).toEqual({});
+  });
+  it("보이는 모양은 4자리 띄어쓰기와 셋째 자리부터의 MM/YY 다", () => {
+    expect(formatCardNumber("411111111111")).toBe("4111 1111 1111");
+    expect(formatExpiry("12")).toBe("12");
+    expect(formatExpiry("123")).toBe("12/3");
   });
 });
