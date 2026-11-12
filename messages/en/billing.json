@@ -161,9 +161,10 @@
     "dueToday": "Due today",
     "nextCharge": "Next payment",
     "paymentInfo": "Payment details",
-    "pgAgreementLabel": "I agree to the payment service provider's terms.",
+    "pgAgreementLabel": "I agree to NICEPAY's electronic financial transaction terms, data collection and use, and third-party sharing.",
     "pgTermsView": "View",
-    "pgTermsTitle": "Payment service provider terms",
+    "pgTermsTitle": "NICEPAY terms",
+    "pgTermsKoreanOnly": "These terms are provided in Korean by the payment provider, NICEPAY.",
     "card": {
       "title": "Card details",
       "number": "Card number",

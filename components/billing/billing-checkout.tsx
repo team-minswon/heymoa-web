@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -533,7 +534,10 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** 결제 대행 서비스 이용약관 「내용 보기」. 본문은 문구 파일이 아니라 `content/billing/pg-terms.ts` 다. */
+/**
+ * 나이스페이 약관 「내용 보기」. 세 약관을 한 창에서 제목과 함께 차례로 보이고 맨 위에 목차를 둔다. 본문은 문구 파일이 아니라
+ * `content/billing/pg-terms.ts`(나이스페이가 준 한국어 원문)라 영어 화면에서도 한국어로 보이고, 그 사실을 한 줄 덧붙인다.
+ */
 function PgTermsDialog() {
   const t = useTranslations("billing.checkout");
   const locale = useLocale();
@@ -552,11 +556,42 @@ function PgTermsDialog() {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("pgTermsTitle")}</DialogTitle>
+          {locale === "ko" ? null : (
+            <DialogDescription>{t("pgTermsKoreanOnly")}</DialogDescription>
+          )}
         </DialogHeader>
-        <div className="grid max-h-[60vh] gap-3 overflow-y-auto text-sm leading-6 text-[var(--el-body)]">
-          {PG_TERMS[locale === "en" ? "en" : "ko"].map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
+        <div lang="ko" className="grid gap-4">
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {PG_TERMS.map((terms) => (
+              <a
+                key={terms.type}
+                href={`#pg-terms-${terms.type}`}
+                className="text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]"
+              >
+                {terms.title}
+              </a>
+            ))}
+          </nav>
+          <div className="grid max-h-[60vh] gap-8 overflow-y-auto text-sm leading-6 text-[var(--el-body)]">
+            {PG_TERMS.map((terms) => (
+              <section
+                key={terms.type}
+                id={`pg-terms-${terms.type}`}
+                aria-labelledby={`pg-terms-${terms.type}-title`}
+                className="grid gap-3"
+              >
+                <h3
+                  id={`pg-terms-${terms.type}-title`}
+                  className="font-medium text-[var(--el-ink)]"
+                >
+                  {terms.title}
+                </h3>
+                {terms.paragraphs.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </section>
+            ))}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

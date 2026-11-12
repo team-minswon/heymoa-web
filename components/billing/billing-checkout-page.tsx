@@ -58,7 +58,7 @@ export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
             fallback={
               <Skeleton
                 aria-label={t("loading")}
-                className="h-[1112px] w-full rounded-panel"
+                className="h-[1132px] w-full rounded-panel"
               />
             }
           >

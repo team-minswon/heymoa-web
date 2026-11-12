@@ -10,6 +10,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -31,6 +32,8 @@ import { BillingSetupResultPage } from "@/components/billing/billing-setup-resul
 import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
 import { track } from "@/lib/analytics/track";
 import { getGetWorkspaceBillingQueryKey } from "@/lib/api/generated/billing/billing";
+import { intlWrapper } from "@/components/help/test-intl";
+import { PG_TERMS } from "@/content/billing/pg-terms";
 import { CARD_ENTRY_MESSAGE } from "@/lib/billing/card-entry-frame";
 import { goToCheckout, goToSetupResult } from "@/lib/billing/navigate";
 import { toast } from "@/lib/ui/toast";
@@ -601,7 +604,7 @@ describe("요금제 탭에서 결제 페이지로", () => {
 const agree = () => screen.getAllByRole("checkbox")[0];
 const agreePg = () =>
   screen.getByRole("checkbox", {
-    name: "결제 대행 서비스 이용약관에 동의합니다.",
+    name: "나이스페이의 전자금융거래 약관, 개인정보 수집·이용, 개인정보 제3자 제공에 동의합니다.",
   });
 const pay = () => screen.getByRole("button", { name: "동의하고 결제하기" });
 /** Luhn 이 맞는 시험 카드 번호. */
@@ -705,6 +708,65 @@ describe("첫 구독 결제 페이지", () => {
     expect(link).toHaveAttribute("target", "_blank");
     const notice = link.closest("p")!;
     expect(notice.nextElementSibling).toContainElement(agree());
+  });
+
+  it("「내용 보기」는 나이스페이 약관 셋을 목차·제목과 함께 차례로 보인다(APP-1600)", async () => {
+    await renderCheckout();
+    fireEvent.click(screen.getByRole("button", { name: "내용 보기" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "나이스페이 약관",
+    });
+    const titles = PG_TERMS.map((terms) => terms.title);
+    expect(titles).toEqual([
+      "전자금융거래 약관",
+      "개인정보 수집 및 이용 약관",
+      "개인정보 제 3자 제공약관",
+    ]);
+    const headings = within(dialog).getAllByRole("heading", { level: 3 });
+    expect(headings.map((h) => h.textContent)).toEqual(titles);
+    for (const terms of PG_TERMS) {
+      expect(
+        within(dialog).getByRole("link", { name: terms.title })
+      ).toHaveAttribute("href", `#pg-terms-${terms.type}`);
+      const section = within(dialog).getByRole("region", { name: terms.title });
+      expect(section).toHaveAttribute("id", `pg-terms-${terms.type}`);
+      expect(section.querySelectorAll("p")).toHaveLength(
+        terms.paragraphs.length
+      );
+    }
+    expect(
+      within(dialog)
+        .getByText(/^제1조 \(목적\)/)
+        .closest("[lang]")
+    ).toHaveAttribute("lang", "ko");
+    // 한국어 화면에는 「한국어로 제공」 안내가 없다.
+    expect(
+      within(dialog).queryByText(/한국어로 제공하는/)
+    ).not.toBeInTheDocument();
+  });
+
+  it("영어 화면에서도 약관 본문은 한국어 원문이고, 그 사실을 영어로 한 줄 알린다(APP-1600)", async () => {
+    render(
+      <QueryClientProvider client={newClient()}>
+        <BillingCheckoutPage workspaceId={FREE} />
+      </QueryClientProvider>,
+      { wrapper: intlWrapper("en") }
+    );
+    expect(
+      await screen.findByRole("checkbox", {
+        name: "I agree to NICEPAY's electronic financial transaction terms, data collection and use, and third-party sharing.",
+      })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    const dialog = await screen.findByRole("dialog", { name: "NICEPAY terms" });
+    expect(dialog).toHaveAccessibleDescription(
+      "These terms are provided in Korean by the payment provider, NICEPAY."
+    );
+    expect(
+      within(dialog)
+        .getByRole("heading", { name: "전자금융거래 약관" })
+        .closest("[lang]")
+    ).toHaveAttribute("lang", "ko");
   });
 
   it.each([["SIMULATED_NO_CHARGE", "시험 결제이며 실제로 청구되지 않습니다."]])(

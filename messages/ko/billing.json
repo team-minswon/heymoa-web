@@ -161,9 +161,10 @@
     "dueToday": "오늘 결제",
     "nextCharge": "다음 결제 예정일",
     "paymentInfo": "결제 안내",
-    "pgAgreementLabel": "결제 대행 서비스 이용약관에 동의합니다.",
+    "pgAgreementLabel": "나이스페이의 전자금융거래 약관, 개인정보 수집·이용, 개인정보 제3자 제공에 동의합니다.",
     "pgTermsView": "내용 보기",
-    "pgTermsTitle": "결제 대행 서비스 이용약관",
+    "pgTermsTitle": "나이스페이 약관",
+    "pgTermsKoreanOnly": "결제 대행사(나이스페이)가 한국어로 제공하는 약관입니다.",
     "card": {
       "title": "카드 정보",
       "number": "카드 번호",
