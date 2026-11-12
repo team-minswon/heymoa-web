@@ -7,12 +7,29 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatAppDate } from "@/lib/format/date";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
-import { useRecordingUsage } from "@/lib/billing/use-recording-usage";
+import { cn } from "@/lib/utils";
+import {
+  freeUsageLevel,
+  useRecordingUsage,
+} from "@/lib/billing/use-recording-usage";
 
 const LABEL = "text-xs leading-4 text-[var(--el-muted)]";
 const VALUE =
   "mt-2 flex items-baseline gap-1.5 text-2xl leading-7 font-light tracking-[-0.02em] text-[var(--el-ink)]";
 const NOTE = "text-xs leading-4 text-[var(--el-muted)]";
+
+/** 사용량 단계의 글·막대 색. 사이드바도 같은 것을 쓴다. 빨강은 다 썼을 때만. */
+export const USAGE_TONE = {
+  ok: { text: "text-[var(--el-ink)]", bar: "bg-[var(--el-ink)]" },
+  near: {
+    text: "text-[var(--el-warning-strong)]",
+    bar: "bg-[var(--el-warning-strong)]",
+  },
+  exhausted: {
+    text: "text-[var(--el-error-strong)]",
+    bar: "bg-[var(--el-error)]",
+  },
+} as const;
 
 /**
  * 이번 달 녹음 사용량(APP-1566). 요금제 패널의 오른쪽 칸에 들어가는 내용이라 자기 테두리가 없다.
@@ -73,23 +90,38 @@ function UsageBody({
   }
   if (usage.allowanceMinutes == null) return null;
 
-  const percent = Math.min(
-    100,
-    Math.round((usage.usedMinutes / Math.max(1, usage.allowanceMinutes)) * 100)
-  );
+  const { percent, level, remainingMinutes } = freeUsageLevel(usage);
   return (
     <div className={className}>
       <p className={LABEL}>{t("label")}</p>
-      <p className={VALUE}>
-        <span className="whitespace-nowrap">
-          {format.duration(usage.usedMinutes)}
-        </span>
-        <span className="text-sm font-normal tracking-normal whitespace-nowrap text-[var(--el-muted)]">
-          {t("ofAllowance", {
-            allowance: format.duration(usage.allowanceMinutes),
-          })}
-        </span>
-      </p>
+      {level === "ok" ? (
+        <p className={VALUE}>
+          <span className="whitespace-nowrap">
+            {format.duration(usage.usedMinutes)}
+          </span>
+          <span className="text-sm font-normal tracking-normal whitespace-nowrap text-[var(--el-muted)]">
+            {t("ofAllowance", {
+              allowance: format.duration(usage.allowanceMinutes),
+            })}
+          </span>
+        </p>
+      ) : level === "near" ? (
+        <p className={cn(VALUE, USAGE_TONE.near.text)}>
+          <span className="whitespace-nowrap">
+            {t("remaining", { duration: format.duration(remainingMinutes) })}
+          </span>
+        </p>
+      ) : (
+        // 문장이라 숫자 크기로 쓰면 칸(248px)에서 세 줄로 꺾인다 — 한 단계 작게.
+        <p
+          className={cn(
+            "mt-2 text-base leading-7 font-medium",
+            USAGE_TONE.exhausted.text
+          )}
+        >
+          {t("limitReached")}
+        </p>
+      )}
       <div
         role="progressbar"
         aria-label={t("progress")}
@@ -99,16 +131,16 @@ function UsageBody({
         className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--el-hairline)]"
       >
         <div
-          className="h-full rounded-full bg-[var(--el-ink)]"
+          className={cn("h-full rounded-full", USAGE_TONE[level].bar)}
           style={{ width: `${percent}%` }}
         />
       </div>
       {usage.periodEnd ? (
         <p className={`mt-3 ${NOTE}`}>
           {t(
-            percent >= 100
+            level === "exhausted"
               ? "exhausted"
-              : percent >= 80
+              : level === "near"
                 ? "nearLimit"
                 : "resets",
             {

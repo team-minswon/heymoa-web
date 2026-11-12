@@ -1105,6 +1105,25 @@ function createSeedState(): StoreState {
       image: user.image,
       joinedAt: "2026-07-03T00:00:00Z",
     },
+    // 「제품 팀」에는 관리자가 한 명 더 있다 — 내 역할을 MEMBER 로 내려 멤버가 보는 결제 화면을 볼 수 있다(APP-1596).
+    {
+      workspaceId: workspaces[1].workspaceId,
+      userId: "01K0000000M21",
+      name: "박서연",
+      email: "seoyeon@heymoa.com",
+      role: "ADMIN",
+      image: null,
+      joinedAt: "2026-07-04T00:00:00Z",
+    },
+    {
+      workspaceId: workspaces[1].workspaceId,
+      userId: "01K0000000M22",
+      name: "이도윤",
+      email: "doyoon@heymoa.com",
+      role: "MEMBER",
+      image: null,
+      joinedAt: "2026-07-06T00:00:00Z",
+    },
     {
       workspaceId: workspaces[2].workspaceId,
       userId: user.userId,
@@ -3000,7 +3019,9 @@ let localSeed: LocalSeedProject[] = [];
 function seedLocal(target: StoreState) {
   for (const entry of localSeed) {
     const workspaceId = entry.workspaceId ?? target.workspaces[0].workspaceId;
-    if (!target.projects.some((project) => project.projectId === entry.projectId)) {
+    if (
+      !target.projects.some((project) => project.projectId === entry.projectId)
+    ) {
       target.projects.push({
         projectId: entry.projectId,
         workspaceId,
@@ -3010,7 +3031,9 @@ function seedLocal(target: StoreState) {
         updatedAt: entry.notes[0]?.startedAt ?? "2026-07-01T00:00:00Z",
       });
     }
-    const template = target.notes.find((note) => note.workspaceId === workspaceId) ?? target.notes[0];
+    const template =
+      target.notes.find((note) => note.workspaceId === workspaceId) ??
+      target.notes[0];
     for (const meeting of entry.notes) {
       if (target.notes.some((note) => note.noteId === meeting.noteId)) continue;
       const startedMs = Date.parse(meeting.startedAt);
@@ -3580,7 +3603,8 @@ export const mockDb = {
     const consent = state.agentOAuthConsents[consentState];
     if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
     // 에이전트가 쓰기를 요청하지 않았는데 허용하면 서버는 400 이다(APP-1461)
-    if (allowTaskChanges && !consent.scopes.includes("mcp:write")) fail("BAD_REQUEST");
+    if (allowTaskChanges && !consent.scopes.includes("mcp:write"))
+      fail("BAD_REQUEST");
     const workspace = state.workspaces.find(
       (candidate) => candidate.workspaceId === workspaceId
     );

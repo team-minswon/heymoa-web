@@ -78,7 +78,7 @@ const serveUsage = (data: unknown, workspaceId = FREE) =>
 describe("녹음 사용량 — 요금제 탭", () => {
   it("Free 는 이번 달 사용분·한도·진행 막대·초기화 날짜를 서버 값으로 그린다", async () => {
     renderIn(<PlanTab workspaceId={FREE} />);
-    expect(await usageValue("45분")).toBe("45분/ 30시간");
+    expect(await usageValue("45분")).toBe("45분/ 20시간");
     expect(screen.getByText("이번 달 녹음")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
@@ -90,20 +90,45 @@ describe("녹음 사용량 — 요금제 탭", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("한도를 넘어 사용했어도 막대는 가득 찬 채 서버 분 값을 그대로 보인다", async () => {
+  it("80% 를 넘으면 남은 시간을 주의색으로 보이고 막대는 쓴 만큼 찬다", async () => {
+    serveUsage(
+      freeUsage({
+        usedMinutes: 100,
+        usedSamples: 96000000,
+        remainingMinutes: 20,
+        remainingSamples: 19200000,
+      })
+    );
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect((await screen.findByText("20분 남음")).closest("p")).toHaveClass(
+      "text-[var(--el-warning-strong)]"
+    );
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "83"
+    );
+  });
+
+  it("한도를 넘어 사용했으면 다 썼다고 위험색으로 알리고 막대는 가득 찬다", async () => {
     serveUsage(
       freeUsage({
         usedMinutes: 131,
         usedSamples: 125760000,
         remainingMinutes: 0,
+        remainingSamples: 0,
       })
     );
     renderIn(<PlanTab workspaceId={FREE} />);
-    expect(await usageValue("2시간 11분")).toBe("2시간 11분/ 2시간");
+    expect(await screen.findByText("이번 달 한도를 다 썼습니다")).toHaveClass(
+      "text-[var(--el-error-strong)]"
+    );
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
       "100"
     );
+    expect(
+      screen.getByText("12월 1일부터 새 녹음을 시작할 수 있습니다.")
+    ).toBeInTheDocument();
   });
 
   it("끝나지 않은 녹음이 있으면 녹음 중인 회의는 끝난 뒤 반영된다고 한 줄 알린다", async () => {

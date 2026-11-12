@@ -10,6 +10,7 @@ import {
   setupViewOf,
 } from "@/lib/billing/setup-view";
 import { nextPollDelay } from "@/lib/billing/use-poll-window";
+import { freeUsageLevel } from "@/lib/billing/use-recording-usage";
 
 describe("nextMonthlyChargeAt", () => {
   // server contract 「기간」: anchor 일을 다음 달 말일로 자르고 시각은 그대로(Asia/Seoul).
@@ -123,5 +124,27 @@ describe("paymentStatusOf", () => {
     expect(paymentStatusOf({ status: "UNKNOWN", refundStatus: null })).toBe(
       "CHECKING"
     );
+  });
+});
+
+describe("freeUsageLevel", () => {
+  // 한도 1000분, 남은 샘플은 서버 값(16kHz). 막대는 쓴 만큼 차고, 다 쓰기 전에는 99 를 넘지 않는다.
+  const at = (used: number, remainingSamples: number | null) =>
+    freeUsageLevel({
+      usedMinutes: used,
+      allowanceMinutes: 1000,
+      remainingMinutes: Math.max(0, 1000 - used),
+      remainingSamples,
+    });
+  it.each([
+    ["79.9%", 799, (1000 - 799) * 960000, "ok", 79, 201],
+    ["80%", 800, 200 * 960000, "near", 80, 200],
+    ["99.9%", 999, 960000, "near", 99, 1],
+    ["100%", 1000, 0, "exhausted", 100, 0],
+    ["한도 초과", 1100, 0, "exhausted", 100, 0],
+    ["분은 한도인데 몇 초 남음", 1000, 16000, "near", 99, 0],
+    ["남은 샘플이 없으면 분으로", 1000, null, "exhausted", 100, 0],
+  ])("%s", (_name, used, remaining, level, percent, remainingMinutes) => {
+    expect(at(used, remaining)).toEqual({ level, percent, remainingMinutes });
   });
 });

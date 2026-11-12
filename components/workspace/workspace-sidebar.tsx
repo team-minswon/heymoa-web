@@ -30,6 +30,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { SidebarUsage } from "@/components/billing/sidebar-usage";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import {
   FeedbackDialog,
@@ -450,7 +451,9 @@ export function WorkspaceSidebar({
                             <DropdownMenuTrigger
                               render={
                                 <SidebarMenuAction
-                                  aria-label={t("projectMenu", { name: project.name })}
+                                  aria-label={t("projectMenu", {
+                                    name: project.name,
+                                  })}
                                   showOnHover
                                   className="size-5 rounded-chip text-[var(--el-muted-soft)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
                                 />
@@ -514,6 +517,11 @@ export function WorkspaceSidebar({
       <SidebarGroup className="px-3.5 py-2">
         <SidebarGroupContent>
           <SidebarMenu>
+            {/* 이번 달 녹음 사용량(APP-1596). 한도 집행 대상이 아니거나 아직 모르면 아무것도 그리지 않는다. */}
+            <SidebarUsage
+              workspaceId={workspaceId}
+              onOpen={() => onOpenSettings("billing")}
+            />
             <SidebarMenuItem>
               {/* 브라우저에서는 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱은 같은 사이트 주소의 새 창을
                 막고 외부 브라우저로도 넘기지 않아서 앱 안에서 이동한다(`openSitePage`). */}
@@ -539,10 +547,7 @@ export function WorkspaceSidebar({
               >
                 <NavigationIcon icon={MessageSquareText} />
                 <span>{t("feedback")}</span>
-                <UnseenCount
-                  count={feedbackUnseen}
-                  className="ml-auto"
-                />
+                <UnseenCount count={feedbackUnseen} className="ml-auto" />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -576,7 +581,9 @@ export function WorkspaceSidebar({
               )}
               <div className="min-w-0 flex-1 text-left">
                 <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">
-                  {isLoggingOut ? t("loggingOut") : (user?.name ?? t("userFallback"))}
+                  {isLoggingOut
+                    ? t("loggingOut")
+                    : (user?.name ?? t("userFallback"))}
                 </p>
                 <p className="block truncate text-[11px] text-[var(--el-muted)] leading-tight">
                   {isLoggingOut ? t("pleaseWait") : (user?.email ?? "")}
@@ -733,9 +740,7 @@ export function WorkspaceSidebar({
                 } else if (code === "WORKSPACE_ACCESS_DENIED") {
                   toast.error(t("toast.adminOnly"));
                 } else {
-                  toast.error(
-                    errorMessageOf(failure, t("toast.deleteFailed"))
-                  );
+                  toast.error(errorMessageOf(failure, t("toast.deleteFailed")));
                 }
                 setDeleteTarget(null);
               }}

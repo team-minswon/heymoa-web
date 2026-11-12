@@ -15,6 +15,13 @@ import {
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import { Button } from "@/components/ui/button";
+import { useGetRecordingUsage } from "@/lib/api/generated/billing/billing";
+import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
+import { okData } from "@/lib/api/ok-data";
+import { billingEvents } from "@/lib/billing/analytics";
+import { useBillingFormat } from "@/lib/billing/use-billing-format";
+import { freeUsageLevel } from "@/lib/billing/use-recording-usage";
+import { pushSettings } from "@/lib/workspace/settings-url";
 import {
   Tooltip,
   TooltipContent,
@@ -55,6 +62,37 @@ function PendingStatus({ label }: { label: string }) {
   );
 }
 
+/**
+ * 이 공간이 이번 달 무료 녹음 한도를 다 썼으면 그 까닭과 역할을, 아니면 `null`. 사용량·공간 조회는 요금제 탭·사이드바와 같은
+ * 키라 녹음이 끝나거나 409 를 받으면 같이 다시 읽힌다. 모르는 동안(조회 중·실패)은 막지 않는다 — 서버가 시작에서 다시 검사한다.
+ */
+function useQuotaBlock(workspaceId: string | undefined) {
+  const t = useTranslations("recording");
+  const format = useBillingFormat();
+  const usage = okData(
+    useGetRecordingUsage(workspaceId ?? "", {
+      query: { enabled: Boolean(workspaceId), staleTime: 0 },
+    }).data
+  );
+  const workspace = okData(
+    useGetWorkspace(workspaceId ?? "", {
+      query: { enabled: Boolean(workspaceId) },
+    }).data
+  );
+  if (
+    !usage?.enforced ||
+    usage.unlimited !== false ||
+    usage.allowanceMinutes == null ||
+    freeUsageLevel(usage).level !== "exhausted"
+  )
+    return null;
+  return {
+    reason: t("dock.quotaBlocked", {
+      allowance: format.duration(usage.allowanceMinutes),
+    }),
+    admin: workspace?.role === "ADMIN",
+  };
+}
 
 export function RecordingDock({
   noteId,
@@ -92,6 +130,7 @@ export function RecordingDock({
   const isThisNote = recording.activeNoteId === noteId;
   const isOtherNote = hasActiveSession && !isThisNote;
   const state = isThisNote ? recording.phase : "idle";
+  const quota = useQuotaBlock(workspaceId);
 
   return (
     <motion.div
@@ -177,9 +216,7 @@ export function RecordingDock({
               >
                 <Pause className="size-3.5" aria-hidden />
               </TooltipTrigger>
-              <TooltipContent side="right">
-                {t("pause.tooltip")}
-              </TooltipContent>
+              <TooltipContent side="right">{t("pause.tooltip")}</TooltipContent>
             </Tooltip>
           </motion.div>
         ) : state === "requesting-permission" ||
@@ -231,6 +268,52 @@ export function RecordingDock({
             <span className="text-xs leading-snug text-[var(--el-muted)]">
               {disabledReason}
             </span>
+          </motion.div>
+        ) : quota ? (
+          // 무료 한도를 다 쓴 공간(APP-1596) — 눌러서 409 를 받기 전에 막힌 상태와 까닭을 보인다. 진행 중인 녹음은
+          // 위 분기가 먼저 잡아 끝까지 간다. 서버의 409 안내(토스트)는 그대로 둔다.
+          <motion.div
+            layout="position"
+            layoutDependency={state}
+            key="quota"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: 1,
+              transition: { duration: 0.15, delay: 0.1 },
+            }}
+            exit={{ opacity: 0, transition: { duration: 0.08 } }}
+            className="flex h-9 min-w-0 items-center gap-2 pr-1 pl-1"
+          >
+            <button
+              type="button"
+              disabled
+              aria-label={startLabel}
+              className="flex size-9 shrink-0 cursor-not-allowed items-center justify-center rounded-full bg-destructive opacity-45"
+            >
+              <span className="size-2.5 rounded-full bg-white" aria-hidden />
+            </button>
+            <span
+              role="status"
+              className="min-w-0 text-xs leading-snug text-[var(--el-muted)]"
+            >
+              {quota.reason}
+              {quota.admin ? null : ` ${t("dock.quotaAskAdmin")}`}
+            </span>
+            {quota.admin ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9 shrink-0 rounded-full px-3 text-xs"
+                onClick={() => {
+                  if (workspaceId)
+                    billingEvents.quotaUpgradeClicked(workspaceId);
+                  pushSettings("billing");
+                }}
+              >
+                {t("dock.quotaPlans")}
+              </Button>
+            ) : null}
           </motion.div>
         ) : state === "failed" ? (
           // 사유 문구는 여기 두지 않는다. `RecordingErrorToast`(app/providers.tsx)가 같은
@@ -302,11 +385,7 @@ export function RecordingDock({
                   <button
                     type="button"
                     className="relative flex size-9 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45 after:absolute after:-inset-1 after:content-['']"
-                    aria-label={
-                      isOtherNote
-                        ? t("dock.otherNote")
-                        : startLabel
-                    }
+                    aria-label={isOtherNote ? t("dock.otherNote") : startLabel}
                     // 소속이 확인되기 전에는 못 누른다 — 확인 없이 시작하면 잘못된 워크스페이스로
                     // 기록된다. 조회는 곧 끝나고, 어긋난 URL이면 위 `disabledReason`이 이유를 세운다.
                     disabled={isOtherNote || !workspaceId}

@@ -1172,7 +1172,8 @@ describe("계정 탈퇴 · 워크스페이스 삭제", () => {
   beforeEach(() => mockDb.reset());
 
   const TEAM = "01K0000000000"; // 나(ADMIN) + 한지원(MEMBER)
-  const SOLO = "01K0000000006"; // 나 혼자
+  const SOLO = "01K0000000009"; // 나 혼자
+  const SHARED_ADMIN = "01K0000000006"; // 나 + 다른 관리자(박서연) + 멤버
   const MEMBER_ID = "01K0000000020";
 
   const actionOf = (workspaceId: string) =>
@@ -1180,6 +1181,7 @@ describe("계정 탈퇴 · 워크스페이스 삭제", () => {
 
   it("혼자면 삭제, 유일 관리자 + 멤버면 넘기기(기본 가장 오래된 멤버), 다른 관리자가 있으면 나가기", () => {
     expect(actionOf(SOLO)?.action).toBe("DELETE");
+    expect(actionOf(SHARED_ADMIN)?.action).toBe("LEAVE");
     expect(actionOf(TEAM)).toMatchObject({
       action: "TRANSFER_OR_DELETE",
       defaultSuccessorUserId: MEMBER_ID,
@@ -1209,13 +1211,13 @@ describe("계정 탈퇴 · 워크스페이스 삭제", () => {
   });
 
   it("워크스페이스 삭제와 나가기는 이름이 맞아야 한다", () => {
-    expect(() => mockDb.deleteWorkspace(SOLO, "제품")).toThrow(
+    expect(() => mockDb.deleteWorkspace(SOLO, "새")).toThrow(
       "WORKSPACE_NAME_MISMATCH"
     );
     expect(() => mockDb.leaveWorkspace(TEAM)).toThrow(
       "WORKSPACE_NAME_MISMATCH"
     );
-    mockDb.deleteWorkspace(SOLO, "제품 팀");
+    mockDb.deleteWorkspace(SOLO, "새 워크스페이스");
     expect(actionOf(SOLO)).toBeUndefined();
   });
 });
