@@ -315,7 +315,7 @@ describe("요금제 화면", () => {
       "UNPAID",
       "결제가 승인되지 않아 구독이 종료되었습니다. 다시 시작하려면 카드를 등록해 주세요.",
     ],
-    ["EXPIRED", "해지한 구독의 이용 기간이 끝났습니다."],
+    ["EXPIRED", "구독의 이용 기간이 끝났습니다."],
     ["REFUNDED", "환불되어 구독이 종료되었습니다."],
   ])("끝난 구독(%s)은 그 까닭을 한 줄로 알린다", async (closedReason, line) => {
     serveBilling({ status: "ENDED", closedReason });
@@ -363,7 +363,7 @@ describe("요금제 화면", () => {
     billingMock.setScenario("salesPaused");
     renderIn(<PlanTab workspaceId={PAID} />);
     expect(
-      await screen.findByText("해지한 구독의 이용 기간이 끝났습니다.")
+      await screen.findByText("구독의 이용 기간이 끝났습니다.")
     ).toBeInTheDocument();
     expect(
       screen.getByText("지금은 새 구독을 받고 있지 않습니다.")

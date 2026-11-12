@@ -122,6 +122,8 @@ export function SubscriptionManagement({
     billing.cancelAtPeriodEnd &&
     billing.status === "ACTIVE" &&
     (renewalPending || period);
+  // 종료 예정인데 카드가 없다 — 결제자가 빠졌거나 해지 뒤 카드를 지웠다. 어느 쪽인지는 단정하지 않는다(APP-1588).
+  const stopped = scheduled && !detail.methodId;
 
   return (
     <>
@@ -147,6 +149,11 @@ export function SubscriptionManagement({
                     {masked.number}
                   </p>
                 ) : null}
+                {detail.methodId && detail.methodPayerIsMe === false ? (
+                  <p className="mt-0.5 text-xs text-[var(--el-muted)]">
+                    {t("cardByOtherAdmin")}
+                  </p>
+                ) : null}
               </>
             ) : (
               <p className="text-sm text-[var(--el-muted)]">{t("noCard")}</p>
@@ -160,7 +167,7 @@ export function SubscriptionManagement({
                 disabled={busy}
                 onClick={onChangeCard}
               >
-                {t("changeCard")}
+                {detail.methodId ? t("changeCard") : t("registerCard")}
               </Button>
             ) : null}
             {actions.includes("DELETE_PAYMENT_METHOD") && detail.methodId ? (
@@ -236,7 +243,9 @@ export function SubscriptionManagement({
                   {scheduled
                     ? renewalPending || !period
                       ? t("cancelScheduledPending")
-                      : t("cancelScheduled", { end: format.date(period.end) })
+                      : t(stopped ? "stoppedNoCard" : "cancelScheduled", {
+                          end: format.date(period.end),
+                        })
                     : period && !renewalPending
                       ? t("cancelHint", { end: format.date(period.end) })
                       : null}

@@ -1505,7 +1505,7 @@ export const restHandlers = [
     }))
   ),
   getGetNotificationsMockHandler(({ request }) => {
-    billingMock.ensureUnpaidNotice();
+    billingMock.ensureBillingNotice();
     const query = new URL(request.url).searchParams;
     return {
       success: true,
@@ -1521,7 +1521,7 @@ export const restHandlers = [
   }),
   http.get("*/v1/notifications/unread-count", ({ request }) =>
     commandResult(() => {
-      billingMock.ensureUnpaidNotice();
+      billingMock.ensureBillingNotice();
       return {
         unreadCount: mockDb.unreadNotificationCount(
           new URL(request.url).searchParams.get("schema")

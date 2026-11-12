@@ -124,6 +124,38 @@ describe("결제 수단·구독", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("카드 없이 종료 예정이면 「카드 등록」과 멈춤 안내를 보이고 재개 버튼은 없다(APP-1588)", async () => {
+    billingMock.setScenario("payerLeft");
+    const area = await openPaid();
+    expect(
+      await within(area).findByText(
+        "등록된 결제 수단이 없어 다음 결제가 멈췄습니다. 2026년 12월 11일까지 쓸 수 있고, 카드를 등록한 뒤 재개하면 구독이 이어집니다."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(methodArea()).getByRole("button", { name: "카드 등록" })
+    ).toBeInTheDocument();
+    expect(
+      within(methodArea()).queryByRole("button", { name: "변경" })
+    ).not.toBeInTheDocument();
+    expect(
+      within(area).queryByRole("button", { name: "구독 재개" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("다른 관리자가 등록한 카드면 카드 번호 아래에 그렇게 적고, 내 카드면 적지 않는다", async () => {
+    await openPaid();
+    expect(
+      within(methodArea()).queryByText("다른 관리자가 등록한 카드입니다")
+    ).not.toBeInTheDocument();
+    cleanup();
+    billingMock.setScenario("otherPayer");
+    await openPaid();
+    expect(
+      await within(methodArea()).findByText("다른 관리자가 등록한 카드입니다")
+    ).toBeInTheDocument();
+  });
+
   it("최근 결제를 누르면 같은 탭에서 결제 상세로 들어가고 「결제 관리」로 돌아온다", async () => {
     const area = await openPaid();
     fireEvent.click(
@@ -241,9 +273,9 @@ describe("결제 수단·구독", () => {
         "해지를 예약했습니다. 확인 중인 결제 결과에 따라 종료 시점이 정해집니다."
       )
     ).toBeInTheDocument();
-    expect(
-      posted(`/v1/workspaces/${PAID}/billing/subscription/cancel`)
-    ).toBe(1);
+    expect(posted(`/v1/workspaces/${PAID}/billing/subscription/cancel`)).toBe(
+      1
+    );
     expect(within(area).queryByText(/12월 11일까지/)).not.toBeInTheDocument();
     expect(
       within(area).queryByRole("button", { name: "구독 해지" })
@@ -399,6 +431,34 @@ describe("결제 수단·구독", () => {
   });
 });
 
+/** 끝난 카드 변경(REPLACE) 등록의 상태 조회. */
+const replacedSetup = () =>
+  http.get("*/v1/me/billing/setups/S1", () =>
+    HttpResponse.json({
+      success: true,
+      error: null,
+      data: {
+        setupId: "S1",
+        workspaceId: PAID,
+        purpose: "REPLACE",
+        statusUrl: "/v1/me/billing/setups/S1",
+        setupStatus: "ISSUED",
+        stage: "COMPLETED",
+        status: "COMPLETED",
+        failureCode: null,
+        allowedActions: [],
+        amountKrw: 9900,
+        paidPeriod: null,
+        latestAttempt: null,
+        originAttempt: null,
+        testPaymentNotice: null,
+        planCode: "PRO",
+        provider: "PAYPLE",
+        pollAfterSeconds: null,
+      },
+    })
+  );
+
 describe("카드 변경", () => {
   it("주문서는 지금 결제되지 않는다고 적고 REPLACE 로 등록을 연다", async () => {
     renderIn(
@@ -410,6 +470,8 @@ describe("카드 변경", () => {
     expect(
       screen.getByText("새 카드 등록에 실패하면 지금 카드가 그대로 유지됩니다.")
     ).toBeInTheDocument();
+    // 내가 이미 결제자면 결제자가 바뀐다는 안내가 없다.
+    expect(screen.queryByText(/내 카드로 청구되고/)).not.toBeInTheDocument();
     let body: Record<string, unknown> | null = null;
     server.events.on("request:start", async ({ request }) => {
       if (request.method === "POST" && request.url.endsWith("/billing/setups"))
@@ -427,34 +489,65 @@ describe("카드 변경", () => {
     expect(events("billing_card_setup_started")).toEqual([]);
   });
 
-  it("결과 화면은 구매와 다른 문구로 끝나고 구매 결과 이벤트를 내지 않는다", async () => {
-    server.use(
-      http.get("*/v1/me/billing/setups/S1", () =>
-        HttpResponse.json({
-          success: true,
-          error: null,
-          data: {
-            setupId: "S1",
-            workspaceId: PAID,
-            purpose: "REPLACE",
-            statusUrl: "/v1/me/billing/setups/S1",
-            setupStatus: "ISSUED",
-            stage: "COMPLETED",
-            status: "COMPLETED",
-            failureCode: null,
-            allowedActions: [],
-            amountKrw: 9900,
-            paidPeriod: null,
-            latestAttempt: null,
-            originAttempt: null,
-            testPaymentNotice: null,
-            planCode: "PRO",
-            provider: "PAYPLE",
-            pollAfterSeconds: null,
-          },
-        })
-      )
+  it("지금 카드가 없으면 「카드 등록」으로 그리고 지금 카드 줄을 숨기며 결제자가 바뀐다고 적는다", async () => {
+    billingMock.setScenario("payerLeft");
+    renderIn(
+      <BillingCheckout workspaceId={PAID} purpose="REPLACE" onBack={vi.fn()} />
     );
+    expect(
+      await screen.findByRole("heading", { name: "카드 등록" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("자동 결제에 쓸 카드를 등록합니다.")
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "새 카드를 등록하면 다음 결제부터 내 카드로 청구되고, 결제 내역도 내 계정에 쌓입니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText("지금 카드")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "새 카드 등록에 실패하면 지금 카드가 그대로 유지됩니다."
+      )
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "동의하고 카드 등록" })
+    ).toBeInTheDocument();
+  });
+
+  it("다른 관리자의 카드를 바꿀 때는 지금 카드를 두고 결제자가 바뀐다고 적는다", async () => {
+    billingMock.setScenario("otherPayer");
+    renderIn(
+      <BillingCheckout workspaceId={PAID} purpose="REPLACE" onBack={vi.fn()} />
+    );
+    expect(
+      await screen.findByText(/다음 결제부터 내 카드로 청구되고/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "카드 변경" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("지금 카드")).toBeInTheDocument();
+  });
+
+  it("종료 예정인 구독에 카드를 등록한 결과는 재개해야 결제된다고 적는다", async () => {
+    billingMock.setScenario("payerLeft");
+    server.use(replacedSetup());
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(await screen.findByText("카드를 등록했습니다")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "지금 결제되지 않았습니다. 구독은 아직 종료 예정입니다. 결제 관리에서 재개하면 다음 결제부터 이 카드로 결제됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText("카드를 바꿨습니다")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "결제 관리로 가기" })
+    ).toBeInTheDocument();
+  });
+
+  it("결과 화면은 구매와 다른 문구로 끝나고 구매 결과 이벤트를 내지 않는다", async () => {
+    server.use(replacedSetup());
     renderIn(<BillingSetupResultPage setupId="S1" />);
     expect(await screen.findByText("카드를 바꿨습니다")).toBeInTheDocument();
     expect(

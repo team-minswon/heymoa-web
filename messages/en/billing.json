@@ -74,7 +74,7 @@
     "compare": "Compare plans",
     "openPayment": "Manage payment",
     "badge": {
-      "cancelScheduled": "Cancels soon"
+      "cancelScheduled": "Ends soon"
     },
     "line": {
       "free": "Record up to {allowance} every month.",
@@ -84,7 +84,7 @@
     },
     "closed": {
       "UNPAID": "The subscription ended because the payment wasn't approved. Register a card to start again.",
-      "EXPIRED": "The canceled subscription's period has ended.",
+      "EXPIRED": "The subscription period has ended.",
       "REFUNDED": "The subscription ended because it was refunded."
     }
   },
@@ -125,11 +125,17 @@
       "nextCharge": "Next payment",
       "noCharge": "Only the card changes. You won't be charged now.",
       "keepOnFail": "If registering the new card fails, your current card stays.",
+      "payerChanges": "Once you add a card, future charges go to your card and payment history is kept under your account.",
       "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
       "submit": "Agree and register new card",
       "unavailable": "You can't change the card right now.",
       "askAdmin": "Only admins can change the card. Please ask an admin.",
-      "back": "Payment"
+      "back": "Payment",
+      "register": {
+        "title": "Add card",
+        "description": "Add a card for automatic payments.",
+        "submit": "Agree and add card"
+      }
     },
     "back": "Plan",
     "perMonth": "/ month",
@@ -227,6 +233,10 @@
         "body": "You weren't charged now. The new card will be used from the next payment.",
         "goPlans": "Go to payment"
       },
+      "completedEnding": {
+        "title": "Card added",
+        "body": "You weren't charged. Your subscription is still set to end. Resume it in billing settings and the next charge will go to this card."
+      },
       "cardActionRequired": {
         "title": "We couldn't change the card",
         "body": "Your current card stays. Please try again with another card."
@@ -247,12 +257,15 @@
     "nextChargeChecking": "Checking the payment result",
     "card": "Card on file",
     "noCard": "No card on file",
+    "cardByOtherAdmin": "Registered by another admin",
     "cancelScheduled": "You can use it until {end}; after that the workspace moves to Free. You won't be charged again.",
     "cancelScheduledPending": "Cancellation scheduled. When it ends depends on the result of the payment being checked.",
+    "stoppedNoCard": "There's no payment method on file, so the next charge is paused. You can use Pro until {end}. Add a card and resume to keep your subscription.",
     "latestPayment": "Latest payment",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "Payment details",
     "changeCard": "Change",
+    "registerCard": "Add card",
     "cancel": "Cancel subscription",
     "resume": "Resume subscription",
     "deleteMethod": "Remove",

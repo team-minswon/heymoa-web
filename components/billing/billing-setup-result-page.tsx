@@ -20,6 +20,7 @@ import {
   useCancelBillingSetup,
   useCompleteBillingSetup,
   useGetMyBillingSetup,
+  useGetWorkspaceBilling,
 } from "@/lib/api/generated/billing/billing";
 import type { BillingSetupStatusResponseData } from "@/lib/api/generated/models";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
@@ -234,6 +235,11 @@ function ViewBody({
   const t = useTranslations("billing.setup");
   // 카드 변경은 카드만 바꾸고 청구하지 않는다 — 결과 문구·다시 시작할 곳을 구매와 섞지 않는다.
   const replace = setup.purpose === "REPLACE";
+  // 종료 예정인 구독에 카드만 등록했으면 다음 결제가 없다 — 재개해야 이 카드로 결제된다(APP-1588).
+  const billingQuery = useGetWorkspaceBilling(workspaceId ?? "", {
+    query: { enabled: replace && Boolean(workspaceId) },
+  });
+  const ending = okData(billingQuery.data)?.cancelAtPeriodEnd === true;
   const checkout = workspaceId
     ? `/w/${workspaceId}?settings=${replace ? "payment" : "billing"}`
     : null;
@@ -364,10 +370,14 @@ function ViewBody({
         "warn"
       );
     case "completed":
+      if (replace && workspaceId && billingQuery.isPending)
+        return <Skeleton aria-label={t("loading")} className="h-28 w-full" />;
       return replace ? (
         card(
-          t("replace.completed.title"),
-          t("replace.completed.body"),
+          t(
+            ending ? "replace.completedEnding.title" : "replace.completed.title"
+          ),
+          t(ending ? "replace.completedEnding.body" : "replace.completed.body"),
           workspaceId ? (
             <LinkButton href={`/w/${workspaceId}?settings=payment`}>
               {t("replace.completed.goPlans")}

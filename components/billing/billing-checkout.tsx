@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCancelBillingSetup,
   useCreateBillingSetup,
+  useGetWorkspaceBilling,
 } from "@/lib/api/generated/billing/billing";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { errorCodeOf } from "@/lib/api/error-message";
@@ -56,6 +57,12 @@ export function BillingCheckout({
   const t = useTranslations("billing.checkout");
   const replace = purpose === "REPLACE";
   const role = useBillingViewerRole(workspaceId);
+  // 지금 카드가 없으면(결제자가 빠졌거나 지웠다) 「변경」이 아니라 「등록」이다(APP-1588). 결제 관리에서 들어와 캐시가 있다.
+  const billing = okData(useGetWorkspaceBilling(workspaceId).data);
+  const copy =
+    replace && billing && !billing.detail?.methodId
+      ? "replace.register"
+      : "replace";
   useEffect(() => {
     if (role && !replace) billingEvents.checkoutEntered(workspaceId, role);
   }, [workspaceId, role, replace]);
@@ -65,8 +72,8 @@ export function BillingCheckout({
         {replace ? t("replace.back") : t("back")}
       </BackLink>
       <SettingsHeader
-        title={replace ? t("replace.title") : t("title")}
-        description={replace ? t("replace.description") : t("description")}
+        title={replace ? t(`${copy}.title`) : t("title")}
+        description={replace ? t(`${copy}.description`) : t("description")}
       />
       <DataBoundary
         resetKeys={[workspaceId]}
@@ -219,8 +226,18 @@ function CheckoutContent({
 
   const period = billing.currentPeriod;
   const card = format.card(billing.detail?.maskedCard);
+  // 카드가 없으면 「지금 카드」와 「실패하면 지금 카드 유지」가 거짓이다. 남의 카드·카드 없음이면 결제자가 내가 된다.
+  const register = !billing.detail?.methodId;
+  const nextCharge =
+    billing.status === "ACTIVE" && !billing.cancelAtPeriodEnd ? period : null;
   const points = replace
-    ? [t("replace.noCharge"), t("replace.keepOnFail")]
+    ? [
+        t("replace.noCharge"),
+        register ? null : t("replace.keepOnFail"),
+        billing.detail?.methodPayerIsMe === true
+          ? null
+          : t("replace.payerChanges"),
+      ]
     : [
         format.allowance(product.recordingAllowanceMinutes),
         t("shared"),
@@ -254,15 +271,13 @@ function CheckoutContent({
             </p>
           )}
         </div>
-        {replace && (card || (billing.status === "ACTIVE" && period)) ? (
+        {replace && (card || nextCharge) ? (
           <dl className="grid gap-2.5 px-5 py-4 text-sm">
             {card ? <Row label={t("replace.current")} value={card} /> : null}
-            {billing.status === "ACTIVE" &&
-            !billing.cancelAtPeriodEnd &&
-            period ? (
+            {nextCharge ? (
               <Row
                 label={t("replace.nextCharge")}
-                value={`${format.date(period.end)} · ${format.money(product.amountKrw)}`}
+                value={`${format.date(nextCharge.end)} · ${format.money(product.amountKrw)}`}
               />
             ) : null}
           </dl>
@@ -348,7 +363,9 @@ function CheckoutContent({
             loading={create.isPending}
             onClick={start}
           >
-            {replace ? t("replace.submit") : t("submit")}
+            {replace
+              ? t(register ? "replace.register.submit" : "replace.submit")
+              : t("submit")}
             <ArrowRight aria-hidden />
           </Button>
           <span id="billing-agree-hint" className="sr-only">

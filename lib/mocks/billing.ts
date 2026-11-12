@@ -28,6 +28,9 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
    - `salesPaused` 운영자가 새 판매를 멈췄다 — 유료 공간의 구독이 끝났고(ENDED/EXPIRED) 결제 화면은 보이지만(`enforced=true`)
      START_PURCHASE 가 없고, 한도 집행 대상이 아니라 사용량은 `enforced=false` 다
    - `recording` 이 공간에 아직 끝나지 않은 녹음이 있다(사용량 `recordingInProgress=true`)
+ *   - `payerLeft` 유료 공간의 결제자가 빠져 자동 결제가 멈췄다(ACTIVE·종료 예정·카드 없음, CHANGE_CARD 만). 카드를 등록하면
+ *     재개가 나오고 자동 결제 중단 알림이 한 건 있다
+ *   - `otherPayer` 평소의 유료 공간인데 카드를 다른 관리자가 등록했다(`methodPayerIsMe=false`)
  *   - `replaceFail` 카드 변경(REPLACE)의 카드 등록이 실패한다 — 기존 카드가 그대로 남는다
  * *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
@@ -52,6 +55,8 @@ export type BillingScenario =
   | "expired"
   | "salesPaused"
   | "recording"
+  | "payerLeft"
+  | "otherPayer"
   | "replaceFail"
   | "methodInUse";
 
@@ -68,6 +73,8 @@ const SCENARIOS: BillingScenario[] = [
   "expired",
   "salesPaused",
   "recording",
+  "payerLeft",
+  "otherPayer",
   "replaceFail",
   "methodInUse",
 ];
@@ -140,9 +147,11 @@ type Workspace = {
   cancelAtPeriodEnd?: boolean;
   methodId?: string | null;
   methodVersion?: number;
+  /** 지금 카드를 다른 관리자가 등록했다(`methodPayerIsMe=false`). */
+  otherPayer?: boolean;
   /** 지금 유료 기간의 결제. */
   currentPaymentId?: string | null;
-  /** 갱신 시나리오(`renewalChecking`·`unpaid`·`expired`·`salesPaused`)를 이미 적용했는가. */
+  /** 갱신 시나리오(`renewalChecking`·`unpaid`·`expired`·`salesPaused`·`payerLeft`·`otherPayer`)를 이미 적용했는가. */
   renewalApplied?: boolean;
   /** 새 판매가 멈춘 공간 — 결제 화면은 보이지만 새 구매가 없고 한도를 집행하지 않는다. */
   salesPaused?: boolean;
@@ -440,10 +449,24 @@ function applyRenewal(ws: Workspace) {
     (scenario !== "renewalChecking" &&
       scenario !== "unpaid" &&
       scenario !== "expired" &&
-      scenario !== "salesPaused")
+      scenario !== "salesPaused" &&
+      scenario !== "payerLeft" &&
+      scenario !== "otherPayer")
   )
     return;
   ws.renewalApplied = true;
+  if (scenario === "otherPayer") {
+    ws.otherPayer = true;
+    return;
+  }
+  if (scenario === "payerLeft") {
+    // 서버가 결제자 이탈에 하는 일: 카드를 지우고 종료를 예약한다. 구독은 기간 끝까지 ACTIVE 다.
+    ws.cancelAtPeriodEnd = true;
+    ws.card = null;
+    ws.methodId = null;
+    ws.subscriptionVersion += 1;
+    return;
+  }
   if (scenario === "renewalChecking") {
     const cycleId = nextId("0C");
     ws.renewalPending = true;
@@ -500,7 +523,9 @@ function workspaceBilling(workspaceId: string) {
       actions.push("START_PURCHASE");
     const live = status === "ACTIVE" && !cancel;
     if (live) actions.push("CANCEL_SUBSCRIPTION");
-    if (status === "ACTIVE" && cancel) actions.push("RESUME_SUBSCRIPTION");
+    // 재개는 카드가 있어야 나온다(서버와 같다).
+    if (status === "ACTIVE" && cancel && ws.card)
+      actions.push("RESUME_SUBSCRIPTION");
     if (status === "ACTIVE") actions.push("CHANGE_CARD");
     if (ws.methodId && !live) actions.push("DELETE_PAYMENT_METHOD");
   }
@@ -544,7 +569,7 @@ function workspaceBilling(workspaceId: string) {
           refundedAttempt: attemptView(ws.refunded ?? null),
           subscriptionVersion: ws.subscriptionVersion,
           openCycleId: ws.cycle?.cycleId ?? null,
-          methodPayerIsMe: true,
+          methodPayerIsMe: Boolean(ws.card) && !ws.otherPayer,
           currentPaymentId: ws.currentPaymentId ?? null,
           methodId: ws.card ? (ws.methodId ?? null) : null,
         }
@@ -841,6 +866,7 @@ function advanceReplace(setup: Setup, ws: Workspace): Phase {
     ws.mySetupId = null;
     if (setup.scenario !== "replaceFail") {
       ws.card = NEW_CARD;
+      ws.otherPayer = false;
       ws.methodVersion = (ws.methodVersion ?? 1) + 1;
       ws.methodId = nextId("0M");
     }
@@ -1112,14 +1138,24 @@ export const billingHandlers = [
 ];
 
 /**
- * 시나리오 `unpaid` 에서만 「제품 팀」의 구독 종료 알림(APP-1565)을 알림 목록에 한 번 넣는다. 기본 목에서는 그 공간이
- * Pro 라 넣지 않는다. 알림 조회 목이 부른다.
+ * 시나리오 `unpaid` 에서는 「제품 팀」의 구독 종료 알림(APP-1565)을, `payerLeft` 에서는 자동 결제 중단 알림(APP-1588)을 알림 목록에
+ * 한 번 넣는다. 기본 목에서는 그 공간이 평소의 Pro 라 넣지 않는다. 알림 조회 목이 부른다.
  */
-function ensureUnpaidNotice() {
-  if (currentScenario() !== "unpaid") return;
-  mockDb.pushNotification({
+const BILLING_NOTICES = {
+  unpaid: {
     notificationId: "01K0000000090",
     type: "SUBSCRIPTION_ENDED_UNPAID",
+  },
+  payerLeft: {
+    notificationId: "01K0000000091",
+    type: "SUBSCRIPTION_BILLING_STOPPED",
+  },
+} as const;
+function ensureBillingNotice() {
+  const scenario = currentScenario();
+  if (scenario !== "unpaid" && scenario !== "payerLeft") return;
+  mockDb.pushNotification({
+    ...BILLING_NOTICES[scenario],
     readAt: null,
     createdAt: new Date().toISOString(),
     invitation: null,
@@ -1139,7 +1175,7 @@ function ensureUnpaidNotice() {
 
 /** 시험·콘솔용 손잡이. */
 export const billingMock = {
-  ensureUnpaidNotice,
+  ensureBillingNotice,
   setScenario(scenario: BillingScenario | null) {
     scenarioOverride = scenario;
   },
