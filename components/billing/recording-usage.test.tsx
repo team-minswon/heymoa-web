@@ -86,7 +86,7 @@ describe("녹음 사용량 — 요금제 탭", () => {
     );
     expect(screen.getByText("12월 1일에 초기화됩니다")).toBeInTheDocument();
     expect(
-      screen.queryByText("녹음 중인 회의는 끝난 뒤 반영됩니다")
+      screen.queryByText("녹음 중인 회의는 끝난 뒤 사용량에 반영됩니다")
     ).not.toBeInTheDocument();
   });
 
@@ -110,7 +110,7 @@ describe("녹음 사용량 — 요금제 탭", () => {
     serveUsage(freeUsage({ recordingInProgress: true }));
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
-      await screen.findByText("녹음 중인 회의는 끝난 뒤 반영됩니다")
+      await screen.findByText("녹음 중인 회의는 끝난 뒤 사용량에 반영됩니다")
     ).toBeInTheDocument();
   });
 
@@ -129,7 +129,7 @@ describe("녹음 사용량 — 요금제 탭", () => {
     );
     renderIn(<PlanTab workspaceId={PAID} />);
     expect(
-      await screen.findByText("녹음 중인 회의는 끝난 뒤 반영됩니다")
+      await screen.findByText("녹음 중인 회의는 끝난 뒤 사용량에 반영됩니다")
     ).toBeInTheDocument();
     expect(screen.getByText("무제한")).toBeInTheDocument();
   });

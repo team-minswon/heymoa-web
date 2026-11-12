@@ -190,7 +190,7 @@ describe("요금제 화면", () => {
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     expect(screen.getByText("월 30시간 녹음")).toBeInTheDocument();
     expect(
-      screen.getByText("이 공간의 모든 멤버가 함께 씁니다")
+      screen.getByText("이 워크스페이스의 모든 멤버가 함께 씁니다")
     ).toBeInTheDocument();
     expect(startButton()).toBeEnabled();
     expect(
@@ -226,7 +226,7 @@ describe("요금제 화면", () => {
     serveBilling({ teamSetupInProgress: true, allowedActions: [] });
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
-      await screen.findByText(/팀의 구독 처리 중입니다/)
+      await screen.findByText(/이 워크스페이스의 구독을 처리하고 있습니다/)
     ).toBeInTheDocument();
     expect(startButton()).not.toBeInTheDocument();
   });
@@ -468,7 +468,7 @@ describe("주문서", () => {
     expect(screen.getAllByText("9,900원")).toHaveLength(2);
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     expect(
-      screen.getByText("이 공간의 모든 멤버가 함께 씁니다.")
+      screen.getByText("이 워크스페이스의 모든 멤버가 함께 씁니다.")
     ).toBeInTheDocument();
     expect(submit()).toBeDisabled();
     fireEvent.click(agree());
@@ -501,7 +501,7 @@ describe("주문서", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     const notice = link.closest("p")!;
     expect(notice).toHaveTextContent(
-      "결제일부터 7일 이내이고 녹음이 30시간 이하이면 전액 환불받을 수 있습니다."
+      "결제일부터 7일 이내에 요청하고 그때까지 녹음이 30시간 이하이면 전액 환불받을 수 있습니다."
     );
     // 바로 다음 형제가 자동 결제 동의 체크다.
     expect(notice.nextElementSibling).toContainElement(agree());
@@ -511,7 +511,7 @@ describe("주문서", () => {
     ["SIMULATED_NO_CHARGE", "시험 결제이며 실제로 청구되지 않습니다."],
     [
       "REAL_CARD_CHARGE_AUTO_CANCEL",
-      "시험 결제이지만 카드가 실제로 승인된 뒤 자동 취소됩니다.",
+      "시험 결제이지만 카드 결제가 실제로 승인된 뒤 자동 취소됩니다.",
     ],
   ])("시험 결제 안내는 서버 값(%s)을 따른다", async (notice, text) => {
     serveBilling({
@@ -732,7 +732,7 @@ describe("등록 결과 — 상태별 화면", () => {
       setupBody("ACCESS", "PROCESSING"),
       "결제를 확인했습니다",
     ],
-    ["닫힘(만료)", setupBody("CLOSED", "EXPIRED"), "카드 등록이 닫혔습니다"],
+    ["닫힘(만료)", setupBody("CLOSED", "EXPIRED"), "카드 등록이 종료되었습니다"],
     [
       "카드 인증 전",
       setupBody("CARD_AUTH_REQUIRED", "WAITING", {
@@ -819,7 +819,7 @@ describe("등록 결과 — 상태별 화면", () => {
       await screen.findByText("결제가 자동으로 취소되었습니다")
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("카드 등록이 닫혔습니다")
+      screen.queryByText("카드 등록이 종료되었습니다")
     ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "새로 시작" })).toBeInTheDocument();
   });
@@ -840,7 +840,7 @@ describe("등록 결과 — 상태별 화면", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("완료는 공간·금액·기간·다음 청구일을 그린다", async () => {
+  it("완료는 워크스페이스·금액·기간·다음 결제일을 그린다", async () => {
     serveSetup(
       setupBody("COMPLETED", "COMPLETED", {
         paidPeriod: {
@@ -862,7 +862,7 @@ describe("등록 결과 — 상태별 화면", () => {
       screen.getByText("2026년 11월 11일부터 2026년 12월 11일 전까지")
     ).toBeInTheDocument();
     expect(screen.getByText("2026년 12월 11일")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "공간으로 가기" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "워크스페이스로 가기" })).toHaveAttribute(
       "href",
       `/w/${FREE}`
     );

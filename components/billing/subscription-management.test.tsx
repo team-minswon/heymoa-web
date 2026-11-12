@@ -386,12 +386,12 @@ describe("결제 수단·구독", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(
       within(dialog).getByText(
-        "자동결제에 쓰는 카드 정보만 지우고 결제 내역은 남습니다."
+        "자동 결제에 쓰는 카드 정보만 지우고 결제 내역은 남습니다."
       )
     ).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
     expect(
-      await within(area).findByText(/「변경」을 이용해 주세요/)
+      await within(area).findByText(/변경 버튼을 눌러 주세요/)
     ).toBeInTheDocument();
     expect(events("billing_payment_method_deleted")).toEqual([
       { workspace_id: PAID, result: "in_use" },
@@ -408,7 +408,7 @@ describe("카드 변경", () => {
       await screen.findByText("카드만 바뀌고 지금 결제되지 않습니다.")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("새 카드 등록이 실패하면 지금 카드가 그대로 유지됩니다.")
+      screen.getByText("새 카드 등록에 실패하면 지금 카드가 그대로 유지됩니다.")
     ).toBeInTheDocument();
     let body: Record<string, unknown> | null = null;
     server.events.on("request:start", async ({ request }) => {
@@ -508,7 +508,7 @@ describe("결제 상세", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("결제 완료")).toBeInTheDocument();
     expect(screen.getByText("환불됨 · 문의 요청")).toBeInTheDocument();
-    expect(screen.getByText(/환불과 세금계산서는/)).toBeInTheDocument();
+    expect(screen.getByText(/환불·세금계산서 요청은/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "문의·피드백" })).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "환불 요청" })
@@ -553,7 +553,7 @@ describe("결제 상세", () => {
   it("이 공간의 결제가 아니면 찾을 수 없다고 한다", async () => {
     renderIn(paymentDetail("0P00000000004"));
     expect(
-      await screen.findByText("이 공간에서 이 결제를 찾을 수 없습니다.")
+      await screen.findByText("이 워크스페이스에서 이 결제를 찾을 수 없습니다.")
     ).toBeInTheDocument();
   });
 });

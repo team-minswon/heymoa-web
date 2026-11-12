@@ -760,7 +760,7 @@ describe("구독 종료 행", () => {
     ).toBeVisible();
     fireEvent.click(
       within(dialog).getByRole("button", {
-        name: "「제품 팀」의 Pro 구독이 종료되었습니다",
+        name: "제품 팀의 Pro 구독이 종료되었습니다",
       })
     );
     await waitFor(() =>

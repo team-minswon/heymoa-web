@@ -101,7 +101,7 @@
     "autoRenew": "You're charged on the same day every month and the usage period renews.",
     "cancelInfo": "If you cancel, you can keep using it until the current period ends and you won't be charged from the next renewal.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
-    "refundPolicy": "You can get a full refund within 7 days of payment if you have recorded 30 hours or less. <link>See refund policy</link>",
+    "refundPolicy": "You can get a full refund if you request it within 7 days of payment and have recorded 30 hours or less by then. <link>See refund policy</link>",
     "submit": "Agree and register card",
     "openSetup": {
       "title": "A card registration is already in progress",
