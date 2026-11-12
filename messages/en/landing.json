@@ -656,11 +656,14 @@
     ]
   },
   "pricing": {
-    "title": "Same price, however big your team gets",
+    "title": "<mark>Same price</mark>, however big your team gets",
     "lead": "Start on Free, and move up to Pro when your meetings pile up.",
     "perMonth": "/ month per workspace",
     "members": "Unlimited members",
-    "included": "Every feature included",
+    "included": "Included in both plans",
+    "recording": "Recording",
+    "sticky": "Same price for any team size",
+    "seats": "{count, number} members",
     "features": {
       "liveNotes": "Live notes and summaries",
       "speakers": "Speaker labels",
@@ -671,14 +674,15 @@
     "free": {
       "name": "Free",
       "price": "KRW {price, number}",
+      "note": "No card needed",
       "summary": "Plenty for teams that don't meet much",
-      "recording": "{hours, number} hours of recording a month"
+      "recording": "{hours, number} hours a month"
     },
     "pro": {
       "name": "Pro",
       "price": "KRW {price, number}",
       "summary": "For teams that meet a lot and don't want to watch the clock",
-      "recording": "Unlimited recording",
+      "recording": "Unlimited",
       "cta": "Start free, upgrade later"
     },
     "unit": "Pricing is per workspace. One admin pays, and every member gets it.",

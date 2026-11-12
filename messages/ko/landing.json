@@ -656,11 +656,14 @@
     ]
   },
   "pricing": {
-    "title": "인원이 늘어도 요금은 그대로입니다",
+    "title": "인원이 늘어도 요금은 <mark>그대로</mark>입니다",
     "lead": "Free로 시작해서, 회의가 많아지면 Pro로 올리면 됩니다.",
     "perMonth": "/ 월, 워크스페이스당",
     "members": "멤버 수 제한 없음",
-    "included": "모든 기능 포함",
+    "included": "두 요금제 모두 포함",
+    "recording": "녹음",
+    "sticky": "몇 명이 쓰든 같은 요금",
+    "seats": "멤버 {count, number}명",
     "features": {
       "liveNotes": "실시간 회의록과 요약",
       "speakers": "화자 구분",
@@ -671,14 +674,15 @@
     "free": {
       "name": "Free",
       "price": "{price, number}원",
+      "note": "카드 등록 없이 시작",
       "summary": "회의가 많지 않은 팀에 충분합니다",
-      "recording": "녹음 월 {hours, number}시간"
+      "recording": "월 {hours, number}시간"
     },
     "pro": {
       "name": "Pro",
       "price": "{price, number}원",
       "summary": "회의가 많은 팀이 시간 걱정 없이 씁니다",
-      "recording": "녹음 무제한",
+      "recording": "무제한",
       "cta": "무료로 시작한 뒤 올리기"
     },
     "unit": "요금은 워크스페이스 단위입니다. 관리자 한 명이 결제하면 모든 멤버가 함께 씁니다.",
