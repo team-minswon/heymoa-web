@@ -36,6 +36,7 @@ import type {
   ReceiveBillingSuccessParams,
   RecordingUsageResponse,
   UnauthorizedResponse,
+  WorkspaceBillingPaymentsResponse,
   WorkspaceBillingResponse,
 } from "../models";
 
@@ -449,7 +450,7 @@ export const getReceiveBillingSuccessUrl = (
 };
 
 /**
- * PG 카드 인증 뒤 브라우저가 오는 공개 경로(로그인 불필요). 인증 결과만 저장하고 발급·승인·권한은 하지 않는다. 검증에 실패해도(위조 state·다른 customerKey·만료·크기 초과) 같은 303 으로 보낸다 — 등록 화면이 원 등록자 로그인으로 상태를 다시 읽는다. setupId 가 TSID 가 아니면 400.
+ * PG 카드 등록 뒤 브라우저가 오는 공개 경로(로그인 불필요, GET query 와 POST 폼 모두 받는다). 가져온 빌링키를 믿지 않고 저장만 한다 — 확인(PG 조회)·승인·권한은 하지 않는다. 검증에 실패해도(위조 state·다른 customerKey·만료·크기 초과) 같은 303 으로 보낸다 — 등록 화면이 원 등록자 로그인으로 상태를 다시 읽는다. setupId 가 TSID 가 아니면 400.
  * @summary 카드 인증 성공 callback
  */
 export const receiveBillingSuccess = async (
@@ -3545,3 +3546,384 @@ export const useResumeBillingSubscription = <
     queryClient
   );
 };
+export type getWorkspaceBillingPaymentsResponse200 = {
+  data: WorkspaceBillingPaymentsResponse;
+  status: 200;
+};
+
+export type getWorkspaceBillingPaymentsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getWorkspaceBillingPaymentsResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type getWorkspaceBillingPaymentsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getWorkspaceBillingPaymentsResponseSuccess =
+  getWorkspaceBillingPaymentsResponse200 & {
+    headers: Headers;
+  };
+export type getWorkspaceBillingPaymentsResponseError = (
+  | getWorkspaceBillingPaymentsResponse401
+  | getWorkspaceBillingPaymentsResponse403
+  | getWorkspaceBillingPaymentsResponse404
+) & {
+  headers: Headers;
+};
+
+export type getWorkspaceBillingPaymentsResponse =
+  | getWorkspaceBillingPaymentsResponseSuccess
+  | getWorkspaceBillingPaymentsResponseError;
+
+export const getGetWorkspaceBillingPaymentsUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/billing/payments`;
+};
+
+/**
+ * ADMIN 이면 누구나(결제자가 아니어도) 이 공간의 결제를 최신순으로 본다(최대 100건, 아직 보내지 않은 결제는 빠진다). 결제자 이름을 주고 카드 표시값은 주지 않는다. 비멤버는 404, ADMIN 이 아니면 403.
+ * @summary 공간 결제 내역
+ */
+export const getWorkspaceBillingPayments = async (
+  workspaceId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getWorkspaceBillingPaymentsResponse> => {
+  return apiFetch<getWorkspaceBillingPaymentsResponse>(
+    getGetWorkspaceBillingPaymentsUrl(workspaceId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetWorkspaceBillingPaymentsQueryKey = (workspaceId: string) => {
+  return [`/v1/workspaces/${workspaceId}/billing/payments`] as const;
+};
+
+export const getGetWorkspaceBillingPaymentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetWorkspaceBillingPaymentsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceBillingPayments>>
+  > = ({ signal }) =>
+    getWorkspaceBillingPayments(workspaceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceBillingPaymentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceBillingPayments>>
+>;
+export type GetWorkspaceBillingPaymentsQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetWorkspaceBillingPayments<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceBillingPayments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceBillingPayments<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceBillingPayments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceBillingPayments<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 공간 결제 내역
+ */
+
+export function useGetWorkspaceBillingPayments<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceBillingPaymentsQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 공간 결제 내역
+ */
+export const prefetchGetWorkspaceBillingPaymentsQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceBillingPaymentsQueryOptions(
+    workspaceId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceBillingPaymentsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetWorkspaceBillingPaymentsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceBillingPayments>>
+  > = ({ signal }) =>
+    getWorkspaceBillingPayments(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceBillingPaymentsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceBillingPayments>>
+>;
+export type GetWorkspaceBillingPaymentsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetWorkspaceBillingPaymentsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceBillingPaymentsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceBillingPaymentsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 공간 결제 내역
+ */
+
+export function useGetWorkspaceBillingPaymentsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceBillingPayments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceBillingPaymentsSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

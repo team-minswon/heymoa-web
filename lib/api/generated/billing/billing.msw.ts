@@ -15,6 +15,7 @@ import type {
   BillingSubscriptionStateResponse,
   MyBillingPaymentsResponse,
   RecordingUsageResponse,
+  WorkspaceBillingPaymentsResponse,
   WorkspaceBillingResponse,
 } from "../models";
 
@@ -28,13 +29,13 @@ export const getGetWorkspaceBillingResponseMock =
       product: {
         planCode: "PRO",
         policyVersion: "TEST_MONTHLY_V1",
-        amountKrw: 9900,
+        amountKrw: 24900,
         currency: "KRW",
         billingInterval: "MONTH",
         recordingAllowanceMinutes: null,
         agreementVersion: "BILLING_TEST_V1",
         testPaymentNotice: "SIMULATED_NO_CHARGE",
-        freeRecordingAllowanceMinutes: 1800,
+        freeRecordingAllowanceMinutes: 1200,
       },
       currentPeriod: {
         start: "2026-11-11T01:00:00Z",
@@ -74,6 +75,7 @@ export const getGetWorkspaceBillingResponseMock =
         refundedAttempt: null,
         currentPaymentId: "0HZX2K7M9Q4B3",
         methodId: "0HZX2K7M9Q4B5",
+        nextChargeAmountKrw: 24900,
       },
       closedReason: null,
     },
@@ -92,7 +94,7 @@ export const getGetMyBillingSetupResponseMock =
       status: "COMPLETED",
       allowedActions: [],
       pollAfterSeconds: null,
-      amountKrw: 9900,
+      amountKrw: 24900,
       testPaymentNotice: "SIMULATED_NO_CHARGE",
       failureCode: null,
       originAttempt: {
@@ -134,7 +136,7 @@ export const getCreateBillingSetupResponseMock =
       purpose: "PURCHASE",
       status: "CREATED",
       planCode: "PRO",
-      amountKrw: 9900,
+      amountKrw: 24900,
       currency: "KRW",
       recordingAllowanceMinutes: null,
       agreementVersion: "BILLING_TEST_V1",
@@ -163,7 +165,7 @@ export const getCancelBillingSetupResponseMock =
       status: "CANCELED",
       allowedActions: ["START_PURCHASE"],
       pollAfterSeconds: null,
-      amountKrw: 9900,
+      amountKrw: 24900,
       testPaymentNotice: "SIMULATED_NO_CHARGE",
       failureCode: "USER_CANCELED",
       originAttempt: null,
@@ -188,7 +190,7 @@ export const getCompleteBillingSetupResponseMock =
       status: "PROCESSING",
       allowedActions: ["REFRESH_STATUS"],
       pollAfterSeconds: 2,
-      amountKrw: 9900,
+      amountKrw: 24900,
       testPaymentNotice: "SIMULATED_NO_CHARGE",
       failureCode: null,
       originAttempt: null,
@@ -210,12 +212,12 @@ export const getGetRecordingUsageResponseMock = (): RecordingUsageResponse => ({
     periodEnd: "2026-11-30T15:00:00Z",
     unlimited: false,
     sampleRate: 16000,
-    allowanceSamples: 1728000000,
+    allowanceSamples: 1152000000,
     usedSamples: 43200000,
-    remainingSamples: 1684800000,
-    allowanceMinutes: 1800,
+    remainingSamples: 1108800000,
+    allowanceMinutes: 1200,
     usedMinutes: 45,
-    remainingMinutes: 1755,
+    remainingMinutes: 1155,
     recordingInProgress: true,
   },
   error: null,
@@ -235,7 +237,7 @@ export const getGetMyBillingPaymentsResponseMock =
           cycleStatus: "PAID",
           attemptNumber: 1,
           status: "SUCCEEDED",
-          amountKrw: 9900,
+          amountKrw: 24900,
           currency: "KRW",
           period: {
             start: "2026-11-11T01:00:00Z",
@@ -268,7 +270,7 @@ export const getGetBillingPaymentResponseMock = (): BillingPaymentResponse => ({
     cycleStatus: "PAID",
     attemptNumber: 1,
     status: "SUCCEEDED",
-    amountKrw: 9900,
+    amountKrw: 24900,
     currency: "KRW",
     period: { start: "2026-11-11T01:00:00Z", end: "2026-12-11T01:00:00Z" },
     completedAt: "2026-07-14T01:02:03Z",
@@ -309,6 +311,38 @@ export const getResumeBillingSubscriptionResponseMock =
         end: "2026-12-11T01:00:00Z",
       },
       subscriptionVersion: 4,
+    },
+    error: null,
+  });
+
+export const getGetWorkspaceBillingPaymentsResponseMock =
+  (): WorkspaceBillingPaymentsResponse => ({
+    success: true,
+    data: {
+      payments: [
+        {
+          paymentId: "0HZX2K7M9Q4C2",
+          workspaceId: "0HZX2K7M9Q4AD",
+          workspaceName: "결제팀",
+          cycleId: "0HZX2K7M9Q4C3",
+          kind: "RENEWAL",
+          cycleStatus: "PAID",
+          attemptNumber: 1,
+          status: "SUCCEEDED",
+          amountKrw: 24900,
+          currency: "KRW",
+          period: {
+            start: "2026-11-11T01:00:00Z",
+            end: "2026-12-11T01:00:00Z",
+          },
+          completedAt: "2026-07-14T01:02:03Z",
+          errorCode: null,
+          payerIsMe: false,
+          payerName: "김결제",
+          refundStatus: null,
+          refundOrigin: null,
+        },
+      ],
     },
     error: null,
   });
@@ -619,6 +653,32 @@ export const getResumeBillingSubscriptionMockHandler = (
     options
   );
 };
+
+export const getGetWorkspaceBillingPaymentsMockHandler = (
+  overrideResponse?:
+    | WorkspaceBillingPaymentsResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) =>
+        | Promise<WorkspaceBillingPaymentsResponse>
+        | WorkspaceBillingPaymentsResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/billing/payments",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetWorkspaceBillingPaymentsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getBillingMock = () => [
   getReceiveBillingFailMockHandler(),
   getReceiveBillingSuccessMockHandler(),
@@ -633,4 +693,5 @@ export const getBillingMock = () => [
   getGetBillingPaymentMockHandler(),
   getCancelBillingSubscriptionMockHandler(),
   getResumeBillingSubscriptionMockHandler(),
+  getGetWorkspaceBillingPaymentsMockHandler(),
 ];

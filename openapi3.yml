@@ -10877,7 +10877,7 @@ paths:
           description: '303'
           headers:
             Location:
-              description: web 의 등록 결과 화면 `{web}/billing/setups/{setupId}`. authKey·state·customerKey 를 싣지 않는다
+              description: web 의 등록 결과 화면 `{web}/billing/setups/{setupId}`. 빌링키·state·customerKey 를 싣지 않는다
               schema:
                 type: string
             Cache-Control:
@@ -10894,7 +10894,7 @@ paths:
       tags:
       - Billing
       summary: 카드 인증 성공 callback
-      description: PG 카드 인증 뒤 브라우저가 오는 공개 경로(로그인 불필요). 인증 결과만 저장하고 발급·승인·권한은 하지 않는다. 검증에 실패해도(위조 state·다른 customerKey·만료·크기 초과) 같은 303 으로 보낸다 — 등록 화면이 원 등록자 로그인으로 상태를 다시 읽는다. setupId 가 TSID 가 아니면 400.
+      description: PG 카드 등록 뒤 브라우저가 오는 공개 경로(로그인 불필요, GET query 와 POST 폼 모두 받는다). 가져온 빌링키를 믿지 않고 저장만 한다 — 확인(PG 조회)·승인·권한은 하지 않는다. 검증에 실패해도(위조 state·다른 customerKey·만료·크기 초과) 같은 303 으로 보낸다 — 등록 화면이 원 등록자 로그인으로 상태를 다시 읽는다. setupId 가 TSID 가 아니면 400.
       operationId: receiveBillingSuccess
       parameters:
       - name: setupId
@@ -10917,16 +10917,16 @@ paths:
           nullable: false
           maxLength: 128
         example: Zm9vYmFyYmF6cXV4cXV1eGNvcmdlZ3JhdWx0Z2FycGx5
-      - name: authKey
+      - name: billingKey
         in: query
-        description: PG 가 붙인 카드 인증 결과. 서버가 암호화해 등록 만료까지만 둔다
+        description: 브라우저가 PG 에서 가져온 빌링키. 믿지 않고 PG 조회로 확인한다. 페이플은 POST 폼으로 싣는다(같은 이름)
         required: false
         schema:
           type: string
-          description: PG 가 붙인 카드 인증 결과. 서버가 암호화해 등록 만료까지만 둔다
+          description: 브라우저가 PG 에서 가져온 빌링키. 믿지 않고 PG 조회로 확인한다. 페이플은 POST 폼으로 싣는다(같은 이름)
           nullable: false
           maxLength: 512
-        example: fake-auth-approve-3f2a
+        example: bk_fake_3f2a
       - name: customerKey
         in: query
         description: PG 가 돌려준 고객 키. 등록이 굳힌 값과 다르면 거절한다
@@ -10942,7 +10942,7 @@ paths:
           description: '303'
           headers:
             Location:
-              description: web 의 등록 결과 화면 `{web}/billing/setups/{setupId}`. authKey·state·customerKey 를 싣지 않는다
+              description: web 의 등록 결과 화면 `{web}/billing/setups/{setupId}`. 빌링키·state·customerKey 를 싣지 않는다
               schema:
                 type: string
             Cache-Control:
@@ -11005,13 +11005,13 @@ paths:
                       product:
                         planCode: PRO
                         policyVersion: TEST_MONTHLY_V1
-                        amountKrw: 9900
+                        amountKrw: 24900
                         currency: KRW
                         billingInterval: MONTH
                         recordingAllowanceMinutes: null
                         agreementVersion: BILLING_TEST_V1
                         testPaymentNotice: SIMULATED_NO_CHARGE
-                        freeRecordingAllowanceMinutes: 1800
+                        freeRecordingAllowanceMinutes: 1200
                       currentPeriod:
                         start: '2026-11-11T01:00:00Z'
                         end: '2026-12-11T01:00:00Z'
@@ -11048,6 +11048,7 @@ paths:
                         refundedAttempt: null
                         currentPaymentId: 0HZX2K7M9Q4B3
                         methodId: 0HZX2K7M9Q4B5
+                        nextChargeAmountKrw: 24900
                       closedReason: null
                     error: null
         '401':
@@ -11107,7 +11108,7 @@ paths:
                       status: COMPLETED
                       allowedActions: []
                       pollAfterSeconds: null
-                      amountKrw: 9900
+                      amountKrw: 24900
                       testPaymentNotice: SIMULATED_NO_CHARGE
                       failureCode: null
                       originAttempt:
@@ -11236,7 +11237,7 @@ paths:
                       purpose: PURCHASE
                       status: CREATED
                       planCode: PRO
-                      amountKrw: 9900
+                      amountKrw: 24900
                       currency: KRW
                       recordingAllowanceMinutes: null
                       agreementVersion: BILLING_TEST_V1
@@ -11375,7 +11376,7 @@ paths:
                       allowedActions:
                       - START_PURCHASE
                       pollAfterSeconds: null
-                      amountKrw: 9900
+                      amountKrw: 24900
                       testPaymentNotice: SIMULATED_NO_CHARGE
                       failureCode: USER_CANCELED
                       originAttempt: null
@@ -11453,7 +11454,7 @@ paths:
                       allowedActions:
                       - REFRESH_STATUS
                       pollAfterSeconds: 2
-                      amountKrw: 9900
+                      amountKrw: 24900
                       testPaymentNotice: SIMULATED_NO_CHARGE
                       failureCode: null
                       originAttempt: null
@@ -11548,12 +11549,12 @@ paths:
                       periodEnd: '2026-11-30T15:00:00Z'
                       unlimited: false
                       sampleRate: 16000
-                      allowanceSamples: 1728000000
+                      allowanceSamples: 1152000000
                       usedSamples: 43200000
-                      remainingSamples: 1684800000
-                      allowanceMinutes: 1800
+                      remainingSamples: 1108800000
+                      allowanceMinutes: 1200
                       usedMinutes: 45
-                      remainingMinutes: 1755
+                      remainingMinutes: 1155
                       recordingInProgress: true
                     error: null
         '401':
@@ -11603,7 +11604,7 @@ paths:
                         cycleStatus: PAID
                         attemptNumber: 1
                         status: SUCCEEDED
-                        amountKrw: 9900
+                        amountKrw: 24900
                         currency: KRW
                         period:
                           start: '2026-11-11T01:00:00Z'
@@ -11735,7 +11736,7 @@ paths:
                       cycleStatus: PAID
                       attemptNumber: 1
                       status: SUCCEEDED
-                      amountKrw: 9900
+                      amountKrw: 24900
                       currency: KRW
                       period:
                         start: '2026-11-11T01:00:00Z'
@@ -12016,6 +12017,91 @@ paths:
                     error:
                       code: BILLING_STATE_CHANGED
                       message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/billing/payments:
+    get:
+      tags:
+      - Billing
+      summary: 공간 결제 내역
+      description: ADMIN 이면 누구나(결제자가 아니어도) 이 공간의 결제를 최신순으로 본다(최대 100건, 아직 보내지 않은 결제는 빠진다). 결제자 이름을 주고 카드 표시값은 주지 않는다. 비멤버는 404, ADMIN 이 아니면 403.
+      operationId: getWorkspaceBillingPayments
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceBillingPaymentsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      payments:
+                      - paymentId: 0HZX2K7M9Q4C2
+                        workspaceId: 0HZX2K7M9Q4AD
+                        workspaceName: 결제팀
+                        cycleId: 0HZX2K7M9Q4C3
+                        kind: RENEWAL
+                        cycleStatus: PAID
+                        attemptNumber: 1
+                        status: SUCCEEDED
+                        amountKrw: 24900
+                        currency: KRW
+                        period:
+                          start: '2026-11-11T01:00:00Z'
+                          end: '2026-12-11T01:00:00Z'
+                        completedAt: '2026-07-14T01:02:03Z'
+                        errorCode: null
+                        payerIsMe: false
+                        payerName: 김결제
+                        refundStatus: null
+                        refundOrigin: null
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -21791,7 +21877,7 @@ components:
               type: integer
               description: 굳힌 결제 금액(원)
               nullable: false
-              example: 9900
+              example: 24900
               format: int64
             provider:
               type: string
@@ -21963,7 +22049,7 @@ components:
               type: integer
               description: 굳힌 결제 금액(원). ACCESS_LOST 면 null
               nullable: true
-              example: 9900
+              example: 24900
               format: int64
             stage:
               type: string
@@ -22315,7 +22401,7 @@ components:
                   type: integer
                   description: 결제 금액(원)
                   nullable: false
-                  example: 9900
+                  example: 24900
                   format: int64
                 recordingAllowanceMinutes:
                   type: integer
@@ -22353,7 +22439,7 @@ components:
                   type: integer
                   description: Free 의 달력월 녹음 제공량(분). 비교표용
                   nullable: false
-                  example: 120
+                  example: 1200
                   format: int64
               description: 판매 상품(시험 fixture)
               nullable: true
@@ -22443,6 +22529,7 @@ components:
               - maskedCard
               - currentPaymentId
               - methodId
+              - nextChargeAmountKrw
               type: object
               properties:
                 methodVersion:
@@ -22648,6 +22735,12 @@ components:
                   description: ACTIVE 결제 수단(수단 삭제의 methodId). 없으면 null
                   nullable: true
                   example: 0HZX2K7M9Q4B5
+                nextChargeAmountKrw:
+                  type: integer
+                  description: 다음 갱신이 실제로 청구할 금액(원). 직전에 결제한 회차의 동의 금액이라 product.amountKrw 와 다를 수 있다. 다음 결제가 없으면(Free·해지 예약·청구 중단·상품 버전 변경·종료) null
+                  nullable: true
+                  example: 24900
+                  format: int64
               description: 청구 상세. ADMIN 에게만 있다
               nullable: true
             currentPeriod:
@@ -22751,7 +22844,7 @@ components:
               type: number
               description: 잔여의 분 환산(내림, 표시용)
               nullable: true
-              example: 1755
+              example: 1155
             unlimited:
               type: boolean
               description: 녹음 무제한인가(유료). true 면 제공량·잔여가 null 이다
@@ -22761,7 +22854,7 @@ components:
               type: number
               description: 제공량의 분 환산(내림, 표시용)
               nullable: true
-              example: 1800
+              example: 1200
             usedMinutes:
               type: number
               description: 사용량의 분 환산(내림, 표시용)
@@ -22771,7 +22864,7 @@ components:
               type: number
               description: 새 녹음에 쓸 수 있는 잔여(0 이상). 무제한이면 null. 단위는 16kHz 샘플
               nullable: true
-              example: 1684800000
+              example: 1108800000
             sampleRate:
               type: number
               description: 아래 *Samples 의 단위(초당 샘플 수)
@@ -22800,7 +22893,7 @@ components:
               type: number
               description: 이번 기간 제공량. 무제한이면 null. 단위는 16kHz 샘플
               nullable: true
-              example: 1728000000
+              example: 1152000000
             periodEnd:
               type: string
               description: 기간 끝(제외)
@@ -22955,7 +23048,7 @@ components:
               type: integer
               description: 결제 금액(원)
               nullable: false
-              example: 9900
+              example: 24900
               format: int64
             paymentId:
               type: string
@@ -23249,7 +23342,7 @@ components:
                     type: integer
                     description: 결제 금액(원)
                     nullable: false
-                    example: 9900
+                    example: 24900
                     format: int64
                   paymentId:
                     type: string
@@ -23257,6 +23350,186 @@ components:
                     nullable: false
                     example: 0HZX2K7M9Q4C2
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  currency:
+                    type: string
+                    description: 통화
+                    nullable: false
+                    example: KRW
+                    enum:
+                    - KRW
+                  workspaceName:
+                    type: string
+                    description: 결제 때의 공간 이름(스냅샷)
+                    nullable: false
+                    example: 결제팀
+                  cycleStatus:
+                    type: string
+                    description: 청구 회차 상태
+                    nullable: false
+                    example: PAID
+                    enum:
+                    - OPEN
+                    - PAID
+                    - ABANDONED
+                    - REFUNDED
+                  status:
+                    type: string
+                    description: 결제 상태
+                    nullable: false
+                    example: SUCCEEDED
+                    enum:
+                    - PENDING
+                    - PROCESSING
+                    - UNKNOWN
+                    - SUCCEEDED
+                    - FAILED
+                  workspaceId:
+                    type: string
+                    description: 결제한 공간 식별자. 지운 공간일 수 있다
+                    nullable: false
+                    example: 0HZX2K7M9Q4AD
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    WorkspaceBillingPaymentsResponse:
+      title: WorkspaceBillingPaymentsResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - payments
+          type: object
+          properties:
+            payments:
+              type: array
+              description: 이 공간의 결제. 최신순, 최대 100건
+              items:
+                required:
+                - amountKrw
+                - attemptNumber
+                - currency
+                - cycleId
+                - cycleStatus
+                - kind
+                - payerIsMe
+                - paymentId
+                - status
+                - workspaceId
+                - workspaceName
+                - period
+                - completedAt
+                - errorCode
+                - payerName
+                - refundStatus
+                - refundOrigin
+                type: object
+                properties:
+                  payerIsMe:
+                    type: boolean
+                    description: 이 결제의 결제자가 나인가
+                    nullable: false
+                    example: false
+                  attemptNumber:
+                    type: integer
+                    description: 회차 안의 시도 번호(1부터)
+                    nullable: false
+                    example: 1
+                    format: int32
+                    minimum: 1
+                  completedAt:
+                    type: string
+                    description: 승인·거절이 확정된 시각. 결과를 모르면 null
+                    nullable: true
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  period:
+                    required:
+                    - end
+                    - start
+                    type: object
+                    properties:
+                      start:
+                        type: string
+                        description: 기간 시작(포함)
+                        nullable: false
+                        example: '2026-11-11T01:00:00Z'
+                        format: date-time
+                      end:
+                        type: string
+                        description: 기간 끝(미포함)
+                        nullable: false
+                        example: '2026-12-11T01:00:00Z'
+                        format: date-time
+                    description: 확정한 기간, 아직 없으면 갱신 예정 기간. 첫 구매 진행 중이면 null
+                    nullable: true
+                  kind:
+                    type: string
+                    description: PURCHASE 첫 구매·재구매, RENEWAL 월 갱신
+                    nullable: false
+                    example: RENEWAL
+                    enum:
+                    - PURCHASE
+                    - RENEWAL
+                  cycleId:
+                    type: string
+                    description: 청구 회차 식별자
+                    nullable: false
+                    example: 0HZX2K7M9Q4C3
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  refundOrigin:
+                    type: string
+                    description: 그 환불의 출처. 없으면 null
+                    nullable: true
+                    enum:
+                    - OPERATOR
+                    - RECONCILIATION
+                    - COMPENSATION
+                  refundStatus:
+                    type: string
+                    description: 이 결제의 가장 최근 환불 상태. 없으면 null
+                    nullable: true
+                    enum:
+                    - PENDING
+                    - PROCESSING
+                    - UNKNOWN
+                    - SUCCEEDED
+                    - FAILED
+                  errorCode:
+                    type: string
+                    description: 거절·격리의 정제된 코드. 없으면 null
+                    nullable: true
+                  amountKrw:
+                    type: integer
+                    description: 결제 금액(원)
+                    nullable: false
+                    example: 24900
+                    format: int64
+                  paymentId:
+                    type: string
+                    description: 결제(승인 시도) 식별자
+                    nullable: false
+                    example: 0HZX2K7M9Q4C2
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  payerName:
+                    type: string
+                    description: 그 결제에 쓴 수단을 등록한 사용자의 이름. 탈퇴해 알 수 없으면 null
+                    nullable: true
+                    example: 김결제
                   currency:
                     type: string
                     description: 통화

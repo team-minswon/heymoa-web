@@ -18,10 +18,10 @@ export type ReceiveBillingSuccessParams = {
    */
   state: string;
   /**
-   * PG 가 붙인 카드 인증 결과. 서버가 암호화해 등록 만료까지만 둔다
+   * 브라우저가 PG 에서 가져온 빌링키. 믿지 않고 PG 조회로 확인한다. 페이플은 POST 폼으로 싣는다(같은 이름)
    * @maxLength 512
    */
-  authKey?: string;
+  billingKey?: string;
   /**
    * PG 가 돌려준 고객 키. 등록이 굳힌 값과 다르면 거절한다
    * @maxLength 300

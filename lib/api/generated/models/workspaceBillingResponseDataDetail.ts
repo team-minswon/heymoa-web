@@ -54,4 +54,9 @@ export type WorkspaceBillingResponseDataDetail = {
    * @nullable
    */
   methodId: string | null;
+  /**
+   * 다음 갱신이 실제로 청구할 금액(원). 직전에 결제한 회차의 동의 금액이라 product.amountKrw 와 다를 수 있다. 다음 결제가 없으면(Free·해지 예약·청구 중단·상품 버전 변경·종료) null
+   * @nullable
+   */
+  nextChargeAmountKrw: number | null;
 } | null;
