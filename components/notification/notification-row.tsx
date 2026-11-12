@@ -200,8 +200,12 @@ export type RowActions = {
   openNote: (workspaceId: string, noteId: string) => void;
   /** 「내 문의」 창을 그 문의가 보이게 연다(모달을 닫는다). 안 읽었으면 읽는다 */
   openInquiry: (notification: NotificationItem, feedbackId: string) => void;
-  /** 그 워크스페이스 설정 창의 요금제 탭을 연다(모달을 닫는다). 안 읽었으면 읽는다 */
-  openBilling: (notification: NotificationItem, workspaceId: string) => void;
+  /** 그 워크스페이스 설정 창의 요금제 탭(기본)이나 결제 관리 탭을 연다(모달을 닫는다). 안 읽었으면 읽는다 */
+  openBilling: (
+    notification: NotificationItem,
+    workspaceId: string,
+    section?: "billing" | "payment"
+  ) => void;
   /** 내가 그 워크스페이스에 아직 있는가. 없으면 이동을 막는다 */
   canOpen: (workspaceId: string) => boolean;
   /** 만료 판정의 기준 시각. 렌더마다 `Date.now()` 를 읽지 않는다 */
@@ -383,7 +387,13 @@ function describeBilling(
     // 첫 줄이 이미 워크스페이스 이름이다
     workspaceName: null,
     onActivate: workspaceId
-      ? () => actions.openBilling(notification, workspaceId)
+      ? () =>
+          actions.openBilling(
+            notification,
+            workspaceId,
+            // 멈춘 결제를 잇는 일(카드 등록·재개)은 결제 관리 탭에 있다
+            kind === "billingStopped" ? "payment" : "billing"
+          )
       : undefined,
     aside: workspaceId ? (
       <span

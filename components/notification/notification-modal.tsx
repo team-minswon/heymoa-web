@@ -277,9 +277,9 @@ export function NotificationModal({
         )
       );
     },
-    openBilling: (target, targetWorkspaceId) => {
+    openBilling: (target, targetWorkspaceId, section = "billing") => {
       if (target.readAt === null) readNotification(target.notificationId);
-      close(() => onNavigate(`/w/${targetWorkspaceId}?settings=billing`));
+      close(() => onNavigate(`/w/${targetWorkspaceId}?settings=${section}`));
     },
     canOpen: (targetWorkspaceId) =>
       myWorkspaceIds === null || myWorkspaceIds.has(targetWorkspaceId),

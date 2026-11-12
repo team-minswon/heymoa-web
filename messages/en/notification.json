@@ -68,7 +68,7 @@
       "title": "Auto-renewal for <b>{workspace}</b> is paused",
       "titleUnnamed": "Auto-renewal is paused",
       "detail": "The person who added the payment card is no longer an admin of this workspace, so auto-renewal is paused. To keep using Pro, add a card and resume the subscription.",
-      "view": "View plan →"
+      "view": "Open payment →"
     }
   },
   "unsubscribe": {

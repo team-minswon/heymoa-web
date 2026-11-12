@@ -801,7 +801,7 @@ describe("구독 종료 행", () => {
       })
     );
     await waitFor(() =>
-      expect(push).toHaveBeenCalledWith("/w/WS1?settings=billing")
+      expect(push).toHaveBeenCalledWith("/w/WS1?settings=payment")
     );
     await waitFor(() => expect(requests).toContain("PUT read S2"));
   });
