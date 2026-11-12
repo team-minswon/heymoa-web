@@ -767,9 +767,6 @@ describe("결제 상세", () => {
     expect(
       await screen.findByRole("radio", { name: /결제·환불/ })
     ).toHaveAttribute("aria-checked", "true");
-    expect(
-      screen.getByText(`결제 번호 ${OLD_PAYMENT}도 함께 보냅니다.`)
-    ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("내용"), {
       target: { value: "환불해 주세요" },
     });

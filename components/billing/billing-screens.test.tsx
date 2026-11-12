@@ -52,6 +52,19 @@ const FREE = "01K0000000000";
 const PAID = "01K0000000006";
 
 const server = setupServer(...restHandlers, ...billingHandlers);
+
+/** 열린 문의 창에 글을 적어 보낸다. 창은 번호를 화면에 적지 않으므로 실린 번호는 보낸 글에서 본다. */
+const SENT = "확인해 주세요";
+const sentFeedback = () =>
+  mockDb.listFeedbacks().feedbacks.find((f) => f.message.startsWith(SENT))
+    ?.message;
+async function sendFeedback() {
+  fireEvent.change(await screen.findByLabelText("내용"), {
+    target: { value: SENT },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+  await waitFor(() => expect(sentFeedback()).toBeDefined());
+}
 const requests: string[] = [];
 server.events.on("request:start", ({ request }) => {
   requests.push(`${request.method} ${new URL(request.url).pathname}`);
@@ -1147,19 +1160,17 @@ describe("등록 결과 — 상태별 화면", () => {
     expect(
       await screen.findByRole("radio", { name: /결제·환불/ })
     ).toHaveAttribute("aria-checked", "true");
-    expect(
-      screen.getByText("결제 번호 A1도 함께 보냅니다.")
-    ).toBeInTheDocument();
+    await sendFeedback();
+    expect(sentFeedback()).toContain("\n결제 번호: A1\n");
   });
 
   it("결제 시도가 없는 등록의 문의 링크는 등록 번호를 싣는다", async () => {
     serveSetup(setupBody("BILLING_KEY", "DECLINED"));
     renderIn(<BillingSetupResultPage setupId="S1" />);
     fireEvent.click(await screen.findByRole("button", { name: "문의·피드백" }));
-    expect(
-      await screen.findByText("등록 번호 S1도 함께 보냅니다.")
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/결제 번호/)).not.toBeInTheDocument();
+    await sendFeedback();
+    expect(sentFeedback()).toContain("\n등록 번호: S1\n");
+    expect(sentFeedback()).not.toContain("결제 번호");
   });
 
   it("승인 뒤 자동 취소된 결제는 닫힘이 아니라 전액 취소로 알리고 새로 시작할 수 있다", async () => {
