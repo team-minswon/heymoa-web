@@ -14,12 +14,10 @@ export type BillingSetupCreatedResponseDataStatus =
 
 export const BillingSetupCreatedResponseDataStatus = {
   CREATED: "CREATED",
-  AUTHORIZED: "AUTHORIZED",
   ISSUING: "ISSUING",
-  ISSUE_UNKNOWN: "ISSUE_UNKNOWN",
   ISSUED: "ISSUED",
   ISSUE_REJECTED: "ISSUE_REJECTED",
-  ISSUE_UNRECOVERABLE: "ISSUE_UNRECOVERABLE",
+  ISSUE_UNKNOWN: "ISSUE_UNKNOWN",
   CANCELED: "CANCELED",
   EXPIRED: "EXPIRED",
 } as const;

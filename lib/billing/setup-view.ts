@@ -7,9 +7,7 @@ import type { BillingSetupStatusResponseData } from "@/lib/api/generated/models"
  */
 export type SetupView =
   | "cardAuthRequired"
-  | "authCaptured"
   | "cardProcessing"
-  | "cardUnknown"
   | "cardActionRequired"
   | "paymentProcessing"
   | "paymentUnknown"
@@ -40,14 +38,12 @@ export function setupViewOf(
       setup.originAttempt?.refundStatus ?? setup.latestAttempt?.refundStatus;
     return refund ? "refundProcessing" : "accessProcessing";
   }
-  // 카드 발급 응답을 잃어 서버가 등록을 닫았다(APP-1600). 결제는 없었고 새 등록부터 다시 한다.
-  if (stage === "CLOSED" && status === "UNKNOWN") return "issueUnknown";
   if (stage === "CLOSED" || status === "CANCELED" || status === "EXPIRED")
     return "closed";
   if (stage === "CARD_AUTH_REQUIRED") return "cardAuthRequired";
-  if (stage === "AUTH_CAPTURED") return "authCaptured";
   if (stage === "BILLING_KEY") {
-    if (status === "UNKNOWN") return "cardUnknown";
+    // 카드 발급 응답을 잃었다(ISSUE_UNKNOWN, APP-1600). 서버가 다시 보내지 않으니 결제는 없었고 새 등록부터 한다.
+    if (status === "UNKNOWN") return "issueUnknown";
     if (status === "ACTION_REQUIRED" || status === "DECLINED")
       return "cardActionRequired";
     return "cardProcessing";
@@ -60,9 +56,7 @@ export function setupViewOf(
 
 /** 서버가 아직 일하는 중이라 다시 읽을 가치가 있는 상태. 나머지는 사람이 움직여야 바뀐다. */
 const POLLING = new Set<SetupView>([
-  "authCaptured",
   "cardProcessing",
-  "cardUnknown",
   "paymentProcessing",
   "paymentUnknown",
   "accessProcessing",
@@ -74,12 +68,7 @@ export const isPollingView = (view: SetupView) => POLLING.has(view);
 export function resultOfView(view: SetupView): BillingSetupResult | null {
   if (view === "completed") return "completed";
   if (view === "declined") return "declined";
-  if (
-    view === "cardUnknown" ||
-    view === "paymentUnknown" ||
-    view === "issueUnknown"
-  )
-    return "unknown";
+  if (view === "paymentUnknown" || view === "issueUnknown") return "unknown";
   if (view === "refunded") return "refunded";
   return null;
 }

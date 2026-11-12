@@ -18,7 +18,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   getGetMyBillingSetupQueryKey,
   useCancelBillingSetup,
-  useCompleteBillingSetup,
   useGetMyBillingSetup,
   useGetWorkspaceBilling,
 } from "@/lib/api/generated/billing/billing";
@@ -102,33 +101,11 @@ function SetupResult({ setupId }: { setupId: string }) {
   const workspaceId = setup?.workspaceId ?? null;
   const provider = setup?.provider ?? null;
 
-  const complete = useCompleteBillingSetup();
   const cancel = useCancelBillingSetup();
   const refreshSetup = () =>
     queryClient.invalidateQueries({
       queryKey: getGetMyBillingSetupQueryKey(setupId),
     });
-
-  const runComplete = async () => {
-    if (!workspaceId) return;
-    const started = await complete
-      .mutateAsync({ workspaceId, setupId })
-      .then(() => true)
-      .catch(() => false);
-    if (started) {
-      poll.restart();
-      await refreshSetup();
-    }
-  };
-  // 인증이 끝난 등록은 화면에 들어오면 한 번 자동으로 완료를 맡긴다. 중복 호출은 서버가 한 번만 처리한다.
-  const autoCompleted = useRef(false);
-  useEffect(() => {
-    if (view === "authCaptured" && workspaceId && !autoCompleted.current) {
-      autoCompleted.current = true;
-      void runComplete();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 상태가 처음 authCaptured 로 보일 때 한 번만
-  }, [view, workspaceId]);
 
   // 상태가 바뀌면 그 공간의 결제 조회만 다시 읽게 한다.
   useEffect(() => {
@@ -185,8 +162,7 @@ function SetupResult({ setupId }: { setupId: string }) {
         view={view}
         setup={setup}
         workspaceId={workspaceId}
-        busy={complete.isPending || cancel.isPending}
-        onComplete={runComplete}
+        busy={cancel.isPending}
         onCancel={async () => {
           if (!workspaceId) return;
           const done = await cancel
@@ -234,14 +210,12 @@ function ViewBody({
   setup,
   workspaceId,
   busy,
-  onComplete,
   onCancel,
 }: {
   view: SetupView;
   setup: SetupData;
   workspaceId: string | null;
   busy: boolean;
-  onComplete: () => void;
   onCancel: () => void;
 }) {
   const t = useTranslations("billing.setup");
@@ -303,25 +277,8 @@ function ViewBody({
           restartLink
         )
       );
-    case "authCaptured":
-      return card(
-        t("authCaptured.title"),
-        t("authCaptured.body"),
-        <>
-          <Button onClick={onComplete} loading={busy}>
-            {t("continue")}
-          </Button>
-          {setup.allowedActions.includes("CANCEL_SETUP") ? (
-            <Button variant="outline" onClick={onCancel} disabled={busy}>
-              {t("cancel")}
-            </Button>
-          ) : null}
-        </>
-      );
     case "cardProcessing":
       return card(t("cardProcessing.title"), t("cardProcessing.body"));
-    case "cardUnknown":
-      return card(t("cardUnknown.title"), t("cardUnknown.body"));
     case "cardActionRequired":
       return card(
         t(

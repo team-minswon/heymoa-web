@@ -32,9 +32,8 @@ import type {
   ChangeBillingSubscriptionRequest,
   CreateBillingSetupRequest,
   MyBillingPaymentsResponse,
-  ReceiveBillingFailParams,
-  ReceiveBillingSuccessParams,
   RecordingUsageResponse,
+  SubmitBillingCardRequest,
   UnauthorizedResponse,
   WorkspaceBillingPaymentsResponse,
   WorkspaceBillingResponse,
@@ -61,720 +60,6 @@ const withQueryKey = <T extends object, K>(
   }
   return result;
 };
-
-export type receiveBillingFailResponse303 = {
-  data: void;
-  status: 303;
-};
-export type receiveBillingFailResponseError = receiveBillingFailResponse303 & {
-  headers: Headers;
-};
-
-export type receiveBillingFailResponse = receiveBillingFailResponseError;
-
-export const getReceiveBillingFailUrl = (params: ReceiveBillingFailParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? "null" : String(value));
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/v1/billing/returns/fail?${stringifiedParams}`
-    : `/v1/billing/returns/fail`;
-};
-
-/**
- * PG 카드 인증이 취소·실패했을 때 브라우저가 오는 공개 경로. 시작 전 등록만 정제된 코드로 닫고 이미 시작된 등록은 건드리지 않는다. 응답은 성공 callback 과 같은 303.
- * @summary 카드 인증 실패 callback
- */
-export const receiveBillingFail = async (
-  params: ReceiveBillingFailParams,
-  options?: Parameters<typeof apiFetch>[1]
-): Promise<receiveBillingFailResponse> => {
-  return apiFetch<receiveBillingFailResponse>(
-    getReceiveBillingFailUrl(params),
-    {
-      ...options,
-      method: "GET",
-    }
-  );
-};
-
-export const getReceiveBillingFailQueryKey = (
-  params?: ReceiveBillingFailParams
-) => {
-  return [`/v1/billing/returns/fail`, ...(params ? [params] : [])] as const;
-};
-
-export const getReceiveBillingFailQueryOptions = <
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ?? getReceiveBillingFailQueryKey(params);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof receiveBillingFail>>
-  > = ({ signal }) => receiveBillingFail(params, { signal, ...requestOptions });
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof receiveBillingFail>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type ReceiveBillingFailQueryResult = NonNullable<
-  Awaited<ReturnType<typeof receiveBillingFail>>
->;
-export type ReceiveBillingFailQueryError = void;
-
-export function useReceiveBillingFail<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof receiveBillingFail>>,
-          TError,
-          Awaited<ReturnType<typeof receiveBillingFail>>
-        >,
-        "initialData"
-      >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingFail<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof receiveBillingFail>>,
-          TError,
-          Awaited<ReturnType<typeof receiveBillingFail>>
-        >,
-        "initialData"
-      >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingFail<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-/**
- * @summary 카드 인증 실패 callback
- */
-
-export function useReceiveBillingFail<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getReceiveBillingFailQueryOptions(params, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-/**
- * @summary 카드 인증 실패 callback
- */
-export const prefetchReceiveBillingFailQuery = async <
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  queryClient: QueryClient,
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-): Promise<QueryClient> => {
-  const queryOptions = getReceiveBillingFailQueryOptions(params, options);
-
-  await queryClient.prefetchQuery(queryOptions);
-
-  return queryClient;
-};
-
-export const getReceiveBillingFailSuspenseQueryOptions = <
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ?? getReceiveBillingFailQueryKey(params);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof receiveBillingFail>>
-  > = ({ signal }) => receiveBillingFail(params, { signal, ...requestOptions });
-
-  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
-    Awaited<ReturnType<typeof receiveBillingFail>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type ReceiveBillingFailSuspenseQueryResult = NonNullable<
-  Awaited<ReturnType<typeof receiveBillingFail>>
->;
-export type ReceiveBillingFailSuspenseQueryError = void;
-
-export function useReceiveBillingFailSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options: {
-    query: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingFailSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingFailSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-/**
- * @summary 카드 인증 실패 callback
- */
-
-export function useReceiveBillingFailSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingFail>>,
-  TError = void,
->(
-  params: ReceiveBillingFailParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingFail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getReceiveBillingFailSuspenseQueryOptions(
-    params,
-    options
-  );
-
-  const query = useSuspenseQuery(
-    queryOptions,
-    queryClient
-  ) as UseSuspenseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-export type receiveBillingSuccessResponse303 = {
-  data: void;
-  status: 303;
-};
-
-export type receiveBillingSuccessResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-export type receiveBillingSuccessResponseError = (
-  | receiveBillingSuccessResponse303
-  | receiveBillingSuccessResponse400
-) & {
-  headers: Headers;
-};
-
-export type receiveBillingSuccessResponse = receiveBillingSuccessResponseError;
-
-export const getReceiveBillingSuccessUrl = (
-  params: ReceiveBillingSuccessParams
-) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? "null" : String(value));
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/v1/billing/returns/success?${stringifiedParams}`
-    : `/v1/billing/returns/success`;
-};
-
-/**
- * PG 카드 등록 뒤 브라우저가 오는 공개 경로(로그인 불필요, GET query 와 POST 폼 모두 받는다). 가져온 빌링키를 믿지 않고 저장만 한다 — 확인(PG 조회)·승인·권한은 하지 않는다. 검증에 실패해도(위조 state·다른 customerKey·만료·크기 초과) 같은 303 으로 보낸다 — 등록 화면이 원 등록자 로그인으로 상태를 다시 읽는다. setupId 가 TSID 가 아니면 400.
- * @summary 카드 인증 성공 callback
- */
-export const receiveBillingSuccess = async (
-  params: ReceiveBillingSuccessParams,
-  options?: Parameters<typeof apiFetch>[1]
-): Promise<receiveBillingSuccessResponse> => {
-  return apiFetch<receiveBillingSuccessResponse>(
-    getReceiveBillingSuccessUrl(params),
-    {
-      ...options,
-      method: "GET",
-    }
-  );
-};
-
-export const getReceiveBillingSuccessQueryKey = (
-  params?: ReceiveBillingSuccessParams
-) => {
-  return [`/v1/billing/returns/success`, ...(params ? [params] : [])] as const;
-};
-
-export const getReceiveBillingSuccessQueryOptions = <
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ?? getReceiveBillingSuccessQueryKey(params);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof receiveBillingSuccess>>
-  > = ({ signal }) =>
-    receiveBillingSuccess(params, { signal, ...requestOptions });
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof receiveBillingSuccess>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type ReceiveBillingSuccessQueryResult = NonNullable<
-  Awaited<ReturnType<typeof receiveBillingSuccess>>
->;
-export type ReceiveBillingSuccessQueryError = void | AppErrorResponse;
-
-export function useReceiveBillingSuccess<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof receiveBillingSuccess>>,
-          TError,
-          Awaited<ReturnType<typeof receiveBillingSuccess>>
-        >,
-        "initialData"
-      >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingSuccess<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof receiveBillingSuccess>>,
-          TError,
-          Awaited<ReturnType<typeof receiveBillingSuccess>>
-        >,
-        "initialData"
-      >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingSuccess<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-/**
- * @summary 카드 인증 성공 callback
- */
-
-export function useReceiveBillingSuccess<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getReceiveBillingSuccessQueryOptions(params, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-/**
- * @summary 카드 인증 성공 callback
- */
-export const prefetchReceiveBillingSuccessQuery = async <
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  queryClient: QueryClient,
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-): Promise<QueryClient> => {
-  const queryOptions = getReceiveBillingSuccessQueryOptions(params, options);
-
-  await queryClient.prefetchQuery(queryOptions);
-
-  return queryClient;
-};
-
-export const getReceiveBillingSuccessSuspenseQueryOptions = <
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ?? getReceiveBillingSuccessQueryKey(params);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof receiveBillingSuccess>>
-  > = ({ signal }) =>
-    receiveBillingSuccess(params, { signal, ...requestOptions });
-
-  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
-    Awaited<ReturnType<typeof receiveBillingSuccess>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type ReceiveBillingSuccessSuspenseQueryResult = NonNullable<
-  Awaited<ReturnType<typeof receiveBillingSuccess>>
->;
-export type ReceiveBillingSuccessSuspenseQueryError = void | AppErrorResponse;
-
-export function useReceiveBillingSuccessSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options: {
-    query: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingSuccessSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReceiveBillingSuccessSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-/**
- * @summary 카드 인증 성공 callback
- */
-
-export function useReceiveBillingSuccessSuspense<
-  TData = Awaited<ReturnType<typeof receiveBillingSuccess>>,
-  TError = void | AppErrorResponse,
->(
-  params: ReceiveBillingSuccessParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof receiveBillingSuccess>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getReceiveBillingSuccessSuspenseQueryOptions(
-    params,
-    options
-  );
-
-  const query = useSuspenseQuery(
-    queryOptions,
-    queryClient
-  ) as UseSuspenseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
 
 export type getWorkspaceBillingResponse200 = {
   data: WorkspaceBillingResponse;
@@ -1553,7 +838,7 @@ export const getCreateBillingSetupUrl = (workspaceId: string) => {
 };
 
 /**
- * ADMIN 이 주문서 동의 뒤 카드 등록을 연다. 금액·provider 는 받지 않고 서버가 상품 버전으로 정해 굳힌다. 새로 연 등록은 201 과 registration(state 원문이 실려 한 번만 나간다), 같은 requestKey 재전송·본인 진행 중 등록은 200 과 registration=null 이다. 다른 ADMIN 의 진행 중 등록이 있으면 409 BILLING_IN_PROGRESS.
+ * ADMIN 이 주문서 동의 뒤 카드 등록을 연다. 금액·provider 는 받지 않고 서버가 상품 버전으로 정해 굳힌다. PG 를 부르지 않는다 — 다음은 카드 제출이다. 새로 연 등록은 201, 같은 requestKey 재전송·본인 진행 중 등록은 200 이다. 다른 ADMIN 의 진행 중 등록이 있으면 409 BILLING_IN_PROGRESS.
  * @summary 카드 등록 열기
  */
 export const createBillingSetup = async (
@@ -1717,7 +1002,7 @@ export const getCancelBillingSetupUrl = (
 };
 
 /**
- * 원 등록자가 시작 전(CREATED·AUTHORIZED) 등록을 닫는다. 이미 닫힌 등록은 그대로 돌려주고, 발급을 시작한 등록은 409 BILLING_STATE_CHANGED.
+ * 원 등록자가 시작 전(CREATED) 등록을 닫는다. 이미 닫힌 등록은 그대로 돌려주고, 발급을 시작한 등록은 409 BILLING_STATE_CHANGED.
  * @summary 카드 등록 취소
  */
 export const cancelBillingSetup = async (
@@ -1812,154 +1097,6 @@ export const useCancelBillingSetup = <
 > => {
   return useMutation(
     getCancelBillingSetupMutationOptions(options),
-    queryClient
-  );
-};
-export type completeBillingSetupResponse202 = {
-  data: BillingSetupStatusResponse;
-  status: 202;
-};
-
-export type completeBillingSetupResponse401 = {
-  data: UnauthorizedResponse;
-  status: 401;
-};
-
-export type completeBillingSetupResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
-};
-
-export type completeBillingSetupResponse404 = {
-  data: AppErrorResponse;
-  status: 404;
-};
-
-export type completeBillingSetupResponse409 = {
-  data: AppErrorResponse;
-  status: 409;
-};
-
-export type completeBillingSetupResponseSuccess =
-  completeBillingSetupResponse202 & {
-    headers: Headers;
-  };
-export type completeBillingSetupResponseError = (
-  | completeBillingSetupResponse401
-  | completeBillingSetupResponse403
-  | completeBillingSetupResponse404
-  | completeBillingSetupResponse409
-) & {
-  headers: Headers;
-};
-
-export type completeBillingSetupResponse =
-  | completeBillingSetupResponseSuccess
-  | completeBillingSetupResponseError;
-
-export const getCompleteBillingSetupUrl = (
-  workspaceId: string,
-  setupId: string
-) => {
-  return `/v1/workspaces/${workspaceId}/billing/setups/${setupId}/complete`;
-};
-
-/**
- * 원 등록자이며 지금 ADMIN 인 사람이 인증을 마친 등록의 발급·첫 승인을 맡긴다. 업무 키는 setupId 라 몇 번 불러도 첫 승인은 하나다. PG 를 부르지 않고 202 로 돌아온다 — 실행은 서버 tick 이 하고 화면은 statusUrl 을 pollAfterSeconds 간격으로 다시 읽는다.
- * @summary 카드 등록 완료(발급 맡기기)
- */
-export const completeBillingSetup = async (
-  workspaceId: string,
-  setupId: string,
-  options?: Parameters<typeof apiFetch>[1]
-): Promise<completeBillingSetupResponse> => {
-  return apiFetch<completeBillingSetupResponse>(
-    getCompleteBillingSetupUrl(workspaceId, setupId),
-    {
-      ...options,
-      method: "POST",
-    }
-  );
-};
-
-export const getCompleteBillingSetupMutationKey = () =>
-  ["completeBillingSetup"] as const;
-
-export const getCompleteBillingSetupMutationOptions = <
-  TError = UnauthorizedResponse | AppErrorResponse,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof completeBillingSetup>>,
-    TError,
-    CompleteBillingSetupMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof apiFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof completeBillingSetup>>,
-  TError,
-  CompleteBillingSetupMutationVariables,
-  TContext
-> => {
-  const mutationKey = getCompleteBillingSetupMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof completeBillingSetup>>,
-    CompleteBillingSetupMutationVariables
-  > = (props) => {
-    const { workspaceId, setupId } = props ?? {};
-
-    return completeBillingSetup(workspaceId, setupId, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type CompleteBillingSetupMutationResult = NonNullable<
-  Awaited<ReturnType<typeof completeBillingSetup>>
->;
-
-export type CompleteBillingSetupMutationError =
-  | UnauthorizedResponse
-  | AppErrorResponse;
-export type CompleteBillingSetupMutationVariables = {
-  workspaceId: string;
-  setupId: string;
-};
-
-/**
- * @summary 카드 등록 완료(발급 맡기기)
- */
-export const useCompleteBillingSetup = <
-  TError = UnauthorizedResponse | AppErrorResponse,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof completeBillingSetup>>,
-      TError,
-      CompleteBillingSetupMutationVariables,
-      TContext
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof completeBillingSetup>>,
-  TError,
-  CompleteBillingSetupMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getCompleteBillingSetupMutationOptions(options),
     queryClient
   );
 };
@@ -3927,3 +3064,184 @@ export function useGetWorkspaceBillingPaymentsSuspense<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type submitBillingCardResponse200 = {
+  data: BillingSetupStatusResponse;
+  status: 200;
+};
+
+export type submitBillingCardResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type submitBillingCardResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type submitBillingCardResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type submitBillingCardResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type submitBillingCardResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type submitBillingCardResponseSuccess = submitBillingCardResponse200 & {
+  headers: Headers;
+};
+export type submitBillingCardResponseError = (
+  | submitBillingCardResponse400
+  | submitBillingCardResponse401
+  | submitBillingCardResponse403
+  | submitBillingCardResponse404
+  | submitBillingCardResponse409
+) & {
+  headers: Headers;
+};
+
+export type submitBillingCardResponse =
+  | submitBillingCardResponseSuccess
+  | submitBillingCardResponseError;
+
+export const getSubmitBillingCardUrl = (
+  workspaceId: string,
+  setupId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/billing/setups/${setupId}/card`;
+};
+
+/**
+ * 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다.
+ * @summary 카드 제출(빌키 발급)
+ */
+export const submitBillingCard = async (
+  workspaceId: string,
+  setupId: string,
+  submitBillingCardRequest?: SubmitBillingCardRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<submitBillingCardResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<submitBillingCardResponse>(
+    getSubmitBillingCardUrl(workspaceId, setupId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(submitBillingCardRequest),
+    }
+  );
+};
+
+export const getSubmitBillingCardMutationKey = () =>
+  ["submitBillingCard"] as const;
+
+export const getSubmitBillingCardMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitBillingCard>>,
+    TError,
+    SubmitBillingCardMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitBillingCard>>,
+  TError,
+  SubmitBillingCardMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSubmitBillingCardMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitBillingCard>>,
+    SubmitBillingCardMutationVariables
+  > = (props) => {
+    const { workspaceId, setupId, data } = props ?? {};
+
+    return submitBillingCard(workspaceId, setupId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitBillingCardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitBillingCard>>
+>;
+export type SubmitBillingCardMutationBody =
+  | SubmitBillingCardRequest
+  | undefined;
+export type SubmitBillingCardMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type SubmitBillingCardMutationVariables = {
+  workspaceId: string;
+  setupId: string;
+  data?: SubmitBillingCardRequest;
+};
+
+/**
+ * @summary 카드 제출(빌키 발급)
+ */
+export const useSubmitBillingCard = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof submitBillingCard>>,
+      TError,
+      SubmitBillingCardMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof submitBillingCard>>,
+  TError,
+  SubmitBillingCardMutationVariables,
+  TContext
+> => {
+  return useMutation(getSubmitBillingCardMutationOptions(options), queryClient);
+};

@@ -375,7 +375,9 @@ describe("contract sync 2026-07-29", () => {
     // `.../billing/payments/{paymentId}`(+`/refunds`)·`.../billing/payment-methods/{methodId}`·`me/billing/payments`.
     // 2026-11-11 「환불은 문의로만」·「거절되면 바로 종료」로 사용자 환불 `/refunds`·다시 결제 `cycles/{cycleId}/attempts` 가 빠졌다 (110 → 108).
     // APP-1596 에서 공간 결제 내역 `workspaces/{workspaceId}/billing/payments` 한 경로가 늘었다 (108 → 109).
-    expect(paths).toHaveLength(109);
+    // APP-1600(나이스페이)에서 결제창 복귀 `billing/returns/{success,fail}`·완료 맡기기 `.../setups/{setupId}/complete` 가 빠지고
+    // 카드 제출 `.../setups/{setupId}/card` 가 늘었다 (109 → 107).
+    expect(paths).toHaveLength(107);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

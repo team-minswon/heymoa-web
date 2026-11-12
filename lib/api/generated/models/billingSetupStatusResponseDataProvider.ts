@@ -16,5 +16,5 @@ export type BillingSetupStatusResponseDataProvider =
 
 export const BillingSetupStatusResponseDataProvider = {
   FAKE: "FAKE",
-  PAYPLE: "PAYPLE",
+  NICEPAY: "NICEPAY",
 } as const;

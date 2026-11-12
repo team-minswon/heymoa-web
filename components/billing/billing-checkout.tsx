@@ -29,12 +29,13 @@ import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCancelBillingSetup,
+  submitBillingCard,
   useCreateBillingSetup,
   useGetWorkspaceBilling,
 } from "@/lib/api/generated/billing/billing";
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
-import { ApiError, isAuthError } from "@/lib/api/fetcher";
+import { ApiError, isAuthError, REQUEST_TIMEOUT_MS } from "@/lib/api/fetcher";
 import { okData } from "@/lib/api/ok-data";
 import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { planName } from "@/lib/billing/plan-name";
@@ -48,7 +49,6 @@ import {
 import { goToSetupResult } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
-import { submitBillingCard } from "@/lib/billing/submit-card";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { localePath } from "@/lib/i18n/locales";
 import { webMessage } from "@/lib/i18n/web-message";
@@ -201,7 +201,9 @@ function CheckoutContent({
     if (submitting || !ready) return;
     setSubmitting(true);
     setNotice(null);
-    // 등록 열기 실패는 생성 훅이라 전역 토스트가 띄우고, 카드 제출은 훅 밖이라(`submit-card.ts`) 여기서 띄운다.
+    // 등록 열기 실패는 생성 훅이라 전역 토스트가 띄운다. 카드 제출은 생성 함수를 훅(`useMutation`) 없이 부른다 — 뮤테이션 캐시가
+    // 변수(카드 정보)를 들고 있고 전역 `MutationCache.onSuccess` 가 변수를 분석 이벤트(`trackMutation`)에 넘기기 때문이다.
+    // 그래서 카드 제출의 실패 토스트도 여기서 띄운다.
     let step: "open" | "card" = "open";
     try {
       let setupId =
@@ -220,11 +222,15 @@ function CheckoutContent({
         if (!setup) return;
         key.renew();
         setupId = openedSetupId.current = setup.setupId;
+        // 요금제 탭으로 돌아가도 이 등록이 「이어가기」로 보이게 공간 조회를 새로 읽힌다.
+        void invalidateWorkspaceBilling(queryClient, workspaceId);
         if (replace) billingEvents.cardChangeStarted(workspaceId);
         else billingEvents.cardSetupStarted(workspaceId, setup.provider);
       }
       step = "card";
-      await submitBillingCard(workspaceId, setupId, cardRequestOf(card));
+      await submitBillingCard(workspaceId, setupId, cardRequestOf(card), {
+        timeoutMs: REQUEST_TIMEOUT_MS,
+      });
       setCard(EMPTY_CARD);
       goToSetupResult(setupId);
     } catch (error) {
@@ -233,7 +239,7 @@ function CheckoutContent({
       if (step === "card" && status === 400) {
         setNotice("cardRejected");
       } else if (step === "card" && status === 409) {
-        // 등록이 더는 카드를 받을 상태가 아니다(닫힘·처리 중). 새로 읽고 처음부터 다시 받게 한다.
+        // 등록이 더는 카드를 받을 상태가 아니다(BILLING_IN_PROGRESS — 이미 낸 카드를 처리 중이거나 닫힘). 새로 읽게 한다.
         openedSetupId.current = null;
         setNotice("stateChanged");
         await invalidateWorkspaceBilling(queryClient, workspaceId);

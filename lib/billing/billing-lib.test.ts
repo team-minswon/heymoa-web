@@ -48,9 +48,9 @@ describe("requestKey", () => {
 describe("setupViewOf", () => {
   it.each([
     ["CARD_AUTH_REQUIRED", "WAITING", "cardAuthRequired"],
-    ["AUTH_CAPTURED", "WAITING", "authCaptured"],
     ["BILLING_KEY", "PROCESSING", "cardProcessing"],
-    ["BILLING_KEY", "UNKNOWN", "cardUnknown"],
+    ["BILLING_KEY", "UNKNOWN", "issueUnknown"],
+    ["BILLING_KEY", "DECLINED", "cardActionRequired"],
     ["BILLING_KEY", "ACTION_REQUIRED", "cardActionRequired"],
     ["PAYMENT", "PROCESSING", "paymentProcessing"],
     ["PAYMENT", "UNKNOWN", "paymentUnknown"],
@@ -61,7 +61,7 @@ describe("setupViewOf", () => {
     ["COMPLETED", "COMPLETED", "completed"],
     ["ACCESS_LOST", "ACTION_REQUIRED", "accessLost"],
     ["CLOSED", "CANCELED", "closed"],
-    ["AUTH_CAPTURED", "EXPIRED", "closed"],
+    ["CLOSED", "EXPIRED", "closed"],
   ] as const)("%s / %s → %s", (stage, status, view) => {
     expect(setupViewOf({ stage, status })).toBe(view);
   });
@@ -89,7 +89,9 @@ describe("setupViewOf", () => {
 
   it("결과 확인 지연은 분석에서 unknown 이고 계속 다시 읽는다", () => {
     expect(resultOfView("paymentUnknown")).toBe("unknown");
-    expect(resultOfView("cardUnknown")).toBe("unknown");
+    expect(resultOfView("issueUnknown")).toBe("unknown");
+    // 발급 결과 불명은 서버가 다시 보내지 않아 기다릴 것이 없다(새 등록부터).
+    expect(isPollingView("issueUnknown")).toBe(false);
     expect(resultOfView("paymentProcessing")).toBeNull();
     expect(isPollingView("paymentUnknown")).toBe(true);
     expect(isPollingView("declined")).toBe(false);

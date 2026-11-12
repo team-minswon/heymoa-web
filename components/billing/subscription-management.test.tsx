@@ -471,7 +471,7 @@ const replacedSetup = () =>
         originAttempt: null,
         testPaymentNotice: null,
         planCode: "PRO",
-        provider: "PAYPLE",
+        provider: "NICEPAY",
         pollAfterSeconds: null,
       },
     })

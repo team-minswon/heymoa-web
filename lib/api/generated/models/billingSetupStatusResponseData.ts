@@ -60,7 +60,7 @@ export type BillingSetupStatusResponseData = {
    */
   originAttempt: BillingSetupStatusResponseDataOriginAttempt;
   /**
-   * 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음, REAL_CARD_CHARGE_AUTO_CANCEL 실제 승인 뒤 자동 취소. LIVE 는 null
+   * 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음(fake·나이스페이 샌드박스). 실결제는 null
    * @nullable
    */
   testPaymentNotice: BillingSetupStatusResponseDataTestPaymentNotice;

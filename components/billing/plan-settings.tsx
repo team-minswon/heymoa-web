@@ -163,6 +163,7 @@ function PlanContent({
           billing={billing}
           isAdmin={isAdmin}
           onRestartPolling={poll.restart}
+          onContinue={onCheckout}
         />
       </div>
       <PlanCompare
@@ -485,11 +486,14 @@ function Attention({
   billing,
   isAdmin,
   onRestartPolling,
+  onContinue,
 }: {
   workspaceId: string;
   billing: Billing;
   isAdmin: boolean;
   onRestartPolling: () => void;
+  /** 카드를 기다리는 등록은 주문서에서 카드를 받아 잇는다(APP-1600). */
+  onContinue: () => void;
 }) {
   const t = useTranslations("billing.page");
   const queryClient = useQueryClient();
@@ -597,12 +601,9 @@ function Attention({
   const buttons = isAdmin
     ? [
         billing.mySetupId && actions.includes("CONTINUE_SETUP") ? (
-          <LinkButton
-            key="continue"
-            href={`/billing/setups/${billing.mySetupId}`}
-          >
+          <Button key="continue" onClick={onContinue}>
             {t("continueSetup")}
-          </LinkButton>
+          </Button>
         ) : null,
         billing.mySetupId &&
         actions.includes("CONTINUE_SETUP") &&

@@ -53,7 +53,7 @@ describe("결제 이벤트", () => {
     // @ts-expect-error 내 결제 내역에는 아무 속성도 싣지 않는다
     track("billing_payment_history_viewed", { workspace_id: "W1" });
     // @ts-expect-error 인증 키를 실을 수 없다
-    track("billing_card_setup_started", { workspace_id: "W1", provider: "PAYPLE", authKey: "k" });
+    track("billing_card_setup_started", { workspace_id: "W1", provider: "NICEPAY", authKey: "k" });
   });
 });
 

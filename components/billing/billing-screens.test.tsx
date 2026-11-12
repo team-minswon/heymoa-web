@@ -163,7 +163,7 @@ const setupBody = (
   originAttempt: null,
   testPaymentNotice: "SIMULATED_NO_CHARGE",
   planCode: "PRO",
-  provider: "PAYPLE",
+  provider: "NICEPAY",
   pollAfterSeconds: null,
   ...extra,
 });
@@ -640,10 +640,6 @@ describe("주문서", () => {
 
   it.each([
     ["SIMULATED_NO_CHARGE", "시험 결제이며 실제로 청구되지 않습니다."],
-    [
-      "REAL_CARD_CHARGE_AUTO_CANCEL",
-      "시험 결제이지만 카드 결제가 실제로 승인된 뒤 자동 취소됩니다.",
-    ],
   ])("시험 결제 안내는 서버 값(%s)을 따른다", async (notice, text) => {
     serveBilling({
       product: { ...billingBody().product, testPaymentNotice: notice },
@@ -951,11 +947,6 @@ describe("등록 결과 — 상태별 화면", () => {
       "카드 등록을 확인하는 중입니다",
     ],
     [
-      "카드 등록 결과 확인 지연",
-      setupBody("BILLING_KEY", "UNKNOWN"),
-      "카드 등록 결과를 확인하고 있습니다",
-    ],
-    [
       "카드 등록 조치 필요",
       setupBody("BILLING_KEY", "ACTION_REQUIRED"),
       "이 등록으로는 결제되지 않았습니다",
@@ -973,7 +964,7 @@ describe("등록 결과 — 상태별 화면", () => {
     ["닫힘(만료)", setupBody("CLOSED", "EXPIRED"), "카드 등록이 종료되었습니다"],
     [
       "발급 결과 불명",
-      setupBody("CLOSED", "UNKNOWN"),
+      setupBody("BILLING_KEY", "UNKNOWN", { setupStatus: "ISSUE_UNKNOWN" }),
       "카드 등록 결과를 확인하지 못했습니다",
     ],
     [
@@ -1204,7 +1195,7 @@ async function openAndSubmitCard() {
 }
 
 describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시", () => {
-  it("카드를 낸 등록은 목 흐름을 따라 완료되고 완료 호출을 따로 하지 않는다", async () => {
+  it("카드를 낸 등록은 목 흐름을 따라 완료된다", async () => {
     billingMock.setScenario("ok");
     const setupId = await openAndSubmitCard();
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -1214,7 +1205,6 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     expect(
       await screen.findByText("결제가 완료되었습니다")
     ).toBeInTheDocument();
-    expect(requests.filter((r) => r.endsWith("/complete"))).toHaveLength(0);
     expect(resultEvents()).toEqual([
       { workspace_id: FREE, provider: "FAKE", result: "completed" },
     ]);
@@ -1313,8 +1303,8 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
       await act(() => vi.advanceTimersByTimeAsync(1100));
     await screen.findByText("결제가 완료되었습니다");
     expect(resultEvents()).toEqual([
-      { workspace_id: FREE, provider: "PAYPLE", result: "unknown" },
-      { workspace_id: FREE, provider: "PAYPLE", result: "completed" },
+      { workspace_id: FREE, provider: "NICEPAY", result: "unknown" },
+      { workspace_id: FREE, provider: "NICEPAY", result: "completed" },
     ]);
     expect(JSON.stringify(vi.mocked(track).mock.calls)).not.toMatch(
       /S1|authKey|state/

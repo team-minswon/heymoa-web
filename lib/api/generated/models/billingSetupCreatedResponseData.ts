@@ -8,7 +8,6 @@
 import type { BillingSetupCreatedResponseDataCurrency } from "./billingSetupCreatedResponseDataCurrency";
 import type { BillingSetupCreatedResponseDataProvider } from "./billingSetupCreatedResponseDataProvider";
 import type { BillingSetupCreatedResponseDataPurpose } from "./billingSetupCreatedResponseDataPurpose";
-import type { BillingSetupCreatedResponseDataRegistration } from "./billingSetupCreatedResponseDataRegistration";
 import type { BillingSetupCreatedResponseDataStatus } from "./billingSetupCreatedResponseDataStatus";
 import type { BillingSetupCreatedResponseDataTestPaymentNotice } from "./billingSetupCreatedResponseDataTestPaymentNotice";
 
@@ -27,7 +26,7 @@ export type BillingSetupCreatedResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   setupId: string;
-  /** 카드 인증을 마쳐야 하는 시각. 지나면 등록이 닫힌다 */
+  /** 카드를 제출해야 하는 시각. 지나면 등록이 닫힌다 */
   expiresAt: string;
   /** 굳힌 상품 코드 */
   planCode: string;
@@ -41,15 +40,10 @@ export type BillingSetupCreatedResponseData = {
    */
   recordingAllowanceMinutes: number | null;
   /**
-   * 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음, REAL_CARD_CHARGE_AUTO_CANCEL 실제 승인 뒤 자동 취소. LIVE 는 null
+   * 시험 결제 안내. SIMULATED_NO_CHARGE 청구 없음(fake·나이스페이 샌드박스). 실결제는 null
    * @nullable
    */
   testPaymentNotice: BillingSetupCreatedResponseDataTestPaymentNotice;
-  /**
-   * 카드 등록으로 가는 값. 새로 연 등록(201)에만 있고 재전송·진행 중 등록(200)은 null — 이어 가려면 취소 뒤 새로 연다
-   * @nullable
-   */
-  registration: BillingSetupCreatedResponseDataRegistration;
   /** 통화 */
   currency: BillingSetupCreatedResponseDataCurrency;
   /** 등록 상태 */

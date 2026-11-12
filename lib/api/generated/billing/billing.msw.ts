@@ -143,11 +143,6 @@ export const getCreateBillingSetupResponseMock =
       provider: "FAKE",
       testPaymentNotice: "SIMULATED_NO_CHARGE",
       expiresAt: "2026-07-14T01:02:03Z",
-      registration: {
-        redirectUrl:
-          "http://localhost:18080/authorize?customerKey=0b6e4f1a-2c3d-4e5f-9a8b-7c6d5e4f3a2b&successUrl=...&failUrl=...",
-        parameters: { customerKey: "0b6e4f1a-2c3d-4e5f-9a8b-7c6d5e4f3a2b" },
-      },
       statusUrl: "/v1/me/billing/setups/0HZX2K7M9Q4B1",
     },
     error: null,
@@ -168,31 +163,6 @@ export const getCancelBillingSetupResponseMock =
       amountKrw: 24900,
       testPaymentNotice: "SIMULATED_NO_CHARGE",
       failureCode: "USER_CANCELED",
-      originAttempt: null,
-      latestAttempt: null,
-      paidPeriod: null,
-      statusUrl: "/v1/me/billing/setups/0HZX2K7M9Q4B1",
-      provider: "FAKE",
-      planCode: "PRO",
-    },
-    error: null,
-  });
-
-export const getCompleteBillingSetupResponseMock =
-  (): BillingSetupStatusResponse => ({
-    success: true,
-    data: {
-      setupId: "0HZX2K7M9Q4B1",
-      workspaceId: "0HZX2K7M9Q4AD",
-      purpose: "PURCHASE",
-      setupStatus: "ISSUING",
-      stage: "BILLING_KEY",
-      status: "PROCESSING",
-      allowedActions: ["REFRESH_STATUS"],
-      pollAfterSeconds: 2,
-      amountKrw: 24900,
-      testPaymentNotice: "SIMULATED_NO_CHARGE",
-      failureCode: null,
       originAttempt: null,
       latestAttempt: null,
       paidPeriod: null,
@@ -347,47 +317,30 @@ export const getGetWorkspaceBillingPaymentsResponseMock =
     error: null,
   });
 
-export const getReceiveBillingFailMockHandler = (
-  overrideResponse?:
-    | unknown
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) => Promise<unknown> | unknown),
-  options?: RequestHandlerOptions
-) => {
-  return http.get(
-    "*/v1/billing/returns/fail",
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-      if (typeof overrideResponse === "function") {
-        await overrideResponse(info);
-      }
-
-      return new HttpResponse(null, { status: 200 });
+export const getSubmitBillingCardResponseMock =
+  (): BillingSetupStatusResponse => ({
+    success: true,
+    data: {
+      setupId: "0HZX2K7M9Q4B1",
+      workspaceId: "0HZX2K7M9Q4AD",
+      purpose: "PURCHASE",
+      setupStatus: "ISSUED",
+      stage: "PAYMENT",
+      status: "PROCESSING",
+      allowedActions: ["REFRESH_STATUS"],
+      pollAfterSeconds: 2,
+      amountKrw: 24900,
+      provider: "FAKE",
+      planCode: "PRO",
+      testPaymentNotice: "SIMULATED_NO_CHARGE",
+      failureCode: null,
+      originAttempt: null,
+      latestAttempt: null,
+      paidPeriod: null,
+      statusUrl: "/v1/me/billing/setups/0HZX2K7M9Q4B1",
     },
-    options
-  );
-};
-
-export const getReceiveBillingSuccessMockHandler = (
-  overrideResponse?:
-    | unknown
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) => Promise<unknown> | unknown),
-  options?: RequestHandlerOptions
-) => {
-  return http.get(
-    "*/v1/billing/returns/success",
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-      if (typeof overrideResponse === "function") {
-        await overrideResponse(info);
-      }
-
-      return new HttpResponse(null, { status: 200 });
-    },
-    options
-  );
-};
+    error: null,
+  });
 
 export const getGetWorkspaceBillingMockHandler = (
   overrideResponse?:
@@ -479,30 +432,6 @@ export const getCancelBillingSetupMockHandler = (
             : overrideResponse
           : getCancelBillingSetupResponseMock(),
         { status: 200 }
-      );
-    },
-    options
-  );
-};
-
-export const getCompleteBillingSetupMockHandler = (
-  overrideResponse?:
-    | BillingSetupStatusResponse
-    | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<BillingSetupStatusResponse> | BillingSetupStatusResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.post(
-    "*/v1/workspaces/:workspaceId/billing/setups/:setupId/complete",
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getCompleteBillingSetupResponseMock(),
-        { status: 202 }
       );
     },
     options
@@ -679,14 +608,35 @@ export const getGetWorkspaceBillingPaymentsMockHandler = (
     options
   );
 };
+
+export const getSubmitBillingCardMockHandler = (
+  overrideResponse?:
+    | BillingSetupStatusResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<BillingSetupStatusResponse> | BillingSetupStatusResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/billing/setups/:setupId/card",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSubmitBillingCardResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getBillingMock = () => [
-  getReceiveBillingFailMockHandler(),
-  getReceiveBillingSuccessMockHandler(),
   getGetWorkspaceBillingMockHandler(),
   getGetMyBillingSetupMockHandler(),
   getCreateBillingSetupMockHandler(),
   getCancelBillingSetupMockHandler(),
-  getCompleteBillingSetupMockHandler(),
   getGetRecordingUsageMockHandler(),
   getGetMyBillingPaymentsMockHandler(),
   getDeleteBillingPaymentMethodMockHandler(),
@@ -694,4 +644,5 @@ export const getBillingMock = () => [
   getCancelBillingSubscriptionMockHandler(),
   getResumeBillingSubscriptionMockHandler(),
   getGetWorkspaceBillingPaymentsMockHandler(),
+  getSubmitBillingCardMockHandler(),
 ];

@@ -106,7 +106,7 @@ type Card = {
   cardType: string | null;
   issuer: string | null;
 };
-type Notice = "SIMULATED_NO_CHARGE" | "REAL_CARD_CHARGE_AUTO_CANCEL" | null;
+type Notice = "SIMULATED_NO_CHARGE" | null;
 type RefundStatus = "PENDING" | "PROCESSING" | "SUCCEEDED";
 type Payment = {
   paymentId: string;
@@ -841,8 +841,9 @@ function advance(setup: Setup): Phase {
   const ws = workspaceOf(setup.workspaceId);
   if (setup.state === "CANCELED")
     return phase("CLOSED", "CANCELED", "CANCELED", [], null);
+  // 서버와 같다: 발급 결과 불명은 카드 단계의 UNKNOWN 이고 다시 읽지 않는다(새 등록부터).
   if (setup.state === "ISSUE_UNKNOWN")
-    return phase("CLOSED", "UNKNOWN", "ISSUE_UNKNOWN", [], null);
+    return phase("BILLING_KEY", "UNKNOWN", "ISSUE_UNKNOWN", [], null);
   if (setup.state === "CREATED")
     return phase(
       "CARD_AUTH_REQUIRED",
@@ -938,13 +939,7 @@ function advanceReplace(setup: Setup, ws: Workspace): Phase {
     }
   }
   if (setup.scenario === "replaceFail")
-    return phase(
-      "BILLING_KEY",
-      "ACTION_REQUIRED",
-      "ISSUE_UNRECOVERABLE",
-      [],
-      null
-    );
+    return phase("BILLING_KEY", "DECLINED", "ISSUE_REJECTED", [], null);
   return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
 }
 
@@ -1091,8 +1086,9 @@ async function submitCard(
     digits("passwordPrefix", 2);
   // 거절은 제출할 때의 시나리오를 본다 — 시나리오를 지우고 다시 내면 같은 등록으로 이어 간다.
   if (!wellFormed || currentScenario() === "cardInvalid")
-    failWith("BILLING_CARD_INVALID", 400, "카드 정보를 다시 확인해 주세요.");
-  if (setup.state !== "CREATED") STATE_CHANGED();
+    failWith("BAD_REQUEST", 400, "잘못된 요청입니다.");
+  if (setup.state !== "CREATED")
+    failWith("BILLING_IN_PROGRESS", 409, "팀의 구독 처리가 진행 중입니다.");
   const ws = workspaceOf(workspaceId);
   if (setup.scenario === "issueUnknown") {
     setup.state = "ISSUE_UNKNOWN";
@@ -1116,7 +1112,6 @@ function createdView(setup: Setup) {
     expiresAt: "2026-11-11T01:00:00+09:00",
     statusUrl: `/v1/me/billing/setups/${setup.setupId}`,
     // 나이스페이는 결제창이 없다 — 카드는 주문서가 따로 낸다(`submitCard`).
-    registration: null,
   };
 }
 
@@ -1151,19 +1146,6 @@ export const billingHandlers = [
       save();
       return view;
     })
-  ),
-  http.post(
-    "*/v1/workspaces/:workspaceId/billing/setups/:setupId/complete",
-    ({ params }) =>
-      respond(() => {
-        const workspaceId = paramId(params.workspaceId);
-        requireAdmin(workspaceId);
-        const setup = setupOf(paramId(params.setupId));
-        // 나이스페이 흐름은 카드 제출이 처리를 시작한다. 옛 완료 호출은 지금 상태만 돌려준다.
-        const view = setupStatus(setup, false);
-        save();
-        return view;
-      }, 202)
   ),
   http.post(
     "*/v1/workspaces/:workspaceId/billing/setups/:setupId/card",

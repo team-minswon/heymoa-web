@@ -11,8 +11,7 @@
     "durationMinutes": "{m, number} min"
   },
   "testNotice": {
-    "SIMULATED_NO_CHARGE": "This is a test payment. You won't actually be charged.",
-    "REAL_CARD_CHARGE_AUTO_CANCEL": "This is a test payment, but your card is actually authorized and then canceled automatically."
+    "SIMULATED_NO_CHARGE": "This is a test payment. You won't actually be charged."
   },
   "usage": {
     "loading": "Loading usage",
@@ -199,24 +198,14 @@
     "recheck": "Check again",
     "backToWorkspace": "Back to plan",
     "restart": "Start over",
-    "cancel": "Cancel",
     "cancelRestart": "Cancel and start over",
-    "continue": "Continue registration",
     "cardAuthRequired": {
       "title": "Card registration isn't finished",
       "body": "Card details weren't submitted. Please start over."
     },
-    "authCaptured": {
-      "title": "Card authentication confirmed",
-      "body": "Finishing the registration."
-    },
     "cardProcessing": {
       "title": "Confirming card registration",
       "body": "You can close this page; the server keeps working."
-    },
-    "cardUnknown": {
-      "title": "We're confirming the card registration result",
-      "body": "Don't register again. This screen updates when we're done."
     },
     "cardActionRequired": {
       "title": "This registration wasn't charged",

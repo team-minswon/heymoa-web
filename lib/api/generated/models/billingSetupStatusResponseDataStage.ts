@@ -14,7 +14,6 @@ export type BillingSetupStatusResponseDataStage =
 
 export const BillingSetupStatusResponseDataStage = {
   CARD_AUTH_REQUIRED: "CARD_AUTH_REQUIRED",
-  AUTH_CAPTURED: "AUTH_CAPTURED",
   BILLING_KEY: "BILLING_KEY",
   PAYMENT: "PAYMENT",
   ACCESS: "ACCESS",
