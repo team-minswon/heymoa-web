@@ -35,6 +35,9 @@ describe("BusinessInfoLine", () => {
     expect(list).toHaveTextContent("상호헤이모아");
     expect(list).toHaveTextContent("사업자등록번호123-45-67890");
     expect(list).not.toHaveTextContent("대표자");
+    // 한글 값은 영어 페이지에서도 그대로라 그 언어를 밝힌다. 숫자 값에는 달지 않는다
+    expect(screen.getByText("헤이모아")).toHaveAttribute("lang", "ko");
+    expect(screen.getByText("123-45-67890")).not.toHaveAttribute("lang");
   });
 
   it("실제 값에서 신고 전인 통신판매업 신고번호는 보이지 않는다", () => {
