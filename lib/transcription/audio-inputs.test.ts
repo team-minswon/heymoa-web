@@ -214,7 +214,7 @@ describe("두 입력의 PCM 캡처", () => {
     f.analysers.forEach((analyser) =>
       analyser.getFloatTimeDomainData.mockClear()
     );
-    const now = performance.now() + 100;
+    const now = Math.ceil(performance.now()) + 100;
     f.frames.at(-1)?.(now);
     f.frames.at(-1)?.(now + 10);
     f.frames.at(-1)?.(now + 50);
