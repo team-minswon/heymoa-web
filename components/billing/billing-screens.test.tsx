@@ -374,6 +374,66 @@ describe("요금제 화면", () => {
     );
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText("이번 달 녹음")).not.toBeInTheDocument();
+    // 사용량 칸은 틀째 없다 — 빈 칸이 남지 않는다.
+    expect(
+      screen.getByText("현재 요금제").closest(".grid")?.children
+    ).toHaveLength(1);
+  });
+
+  it("목 expired — 기간이 끝나 Free 로 돌아온 공간은 Free 사용량을 그린다", async () => {
+    billingMock.setScenario("expired");
+    renderIn(<PlanTab workspaceId={PAID} />);
+    expect(
+      await screen.findByText("구독의 이용 기간이 끝났습니다.")
+    ).toBeInTheDocument();
+    expect(await screen.findByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByText("이번 달 녹음")).toBeInTheDocument();
+  });
+
+  it("목 payerLeft — 자동 결제가 멈춘 것과 언제까지 Pro 인지 알리고 ADMIN 에게 결제 관리로 가는 길을 준다", async () => {
+    billingMock.setScenario("payerLeft");
+    const onOpenPayment = vi.fn();
+    renderIn(
+      <WorkspacePlanSettings workspaceId={PAID} onOpenPayment={onOpenPayment} />
+    );
+    expect(
+      await screen.findByText(
+        "등록된 결제 수단이 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지 Pro를 쓸 수 있고, 결제 관리에서 카드를 등록한 뒤 재개하면 구독이 이어집니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("종료 예정")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "결제 관리" }));
+    expect(onOpenPayment).toHaveBeenCalledOnce();
+  });
+
+  it("결제자가 빠진 구독을 멤버가 보면 관리자에게 카드 등록을 요청하라고 하고 결제 관리 버튼이 없다", async () => {
+    asMember();
+    const period = {
+      start: "2026-11-11T09:00:00+09:00",
+      end: "2026-12-11T09:00:00+09:00",
+    };
+    serveBilling({
+      status: "ACTIVE",
+      cancelAtPeriodEnd: true,
+      entitlement: {
+        kind: "PAID",
+        period,
+        recordingAllowanceMinutes: null,
+        planCode: "PRO",
+      },
+      currentPeriod: period,
+      allowedActions: [],
+      detail: { ...detail("SUCCEEDED"), methodId: null },
+    });
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(
+      await screen.findByText(
+        "등록된 결제 수단이 없어 자동 결제가 멈췄습니다. 2026년 12월 11일까지 Pro를 쓸 수 있습니다. 구독을 이어 가려면 관리자에게 카드 등록을 요청해 주세요."
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "결제 관리" })
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -488,6 +548,16 @@ describe("주문서", () => {
       screen.getByText(
         "카드 정보는 결제 대행사의 결제창에서 입력하며, HeyMoa는 카드 번호를 저장하지 않습니다."
       )
+    ).toBeInTheDocument();
+    // 다음 결제 예정일·말일 규칙·해지 방법을 결제 전에 알린다.
+    expect(
+      screen.getByText("다음 결제 예정일").nextElementSibling
+    ).toHaveTextContent(/^\d{4}년 \d{1,2}월 \d{1,2}일$/);
+    expect(
+      screen.getByText(/그 날짜가 없는 달은 말일에 결제됩니다/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("해지는 설정 > 결제 관리에서 관리자가 할 수 있습니다.")
     ).toBeInTheDocument();
   });
 
@@ -749,6 +819,20 @@ describe("등록 결과 — 상태별 화면", () => {
     ).toBeInTheDocument();
   });
 
+  it("첫 구매의 결과 화면 제목은 「결제 결과」, 카드 변경은 「카드 등록 결과」다", async () => {
+    serveSetup(setupBody("PAYMENT", "PROCESSING"));
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(
+      await screen.findByRole("heading", { name: "결제 결과" })
+    ).toBeInTheDocument();
+    cleanup();
+    serveSetup(setupBody("BILLING_KEY", "PROCESSING", { purpose: "REPLACE" }));
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(
+      await screen.findByRole("heading", { name: "카드 등록 결과" })
+    ).toBeInTheDocument();
+  });
+
   it("결제 결과 확인 지연은 다시 결제하지 말라고 하고 새 결제 버튼 대신 문의 길만 둔다", async () => {
     serveSetup(
       setupBody("PAYMENT", "UNKNOWN", {
@@ -870,13 +954,25 @@ describe("등록 결과 — 상태별 화면", () => {
 
   it("확정 거절은 같은 카드로 다시 결제하지 않고 카드 등록부터 새로 시작하게 한다", async () => {
     serveSetup(
-      setupBody("PAYMENT", "DECLINED", { allowedActions: ["START_PURCHASE"] })
+      setupBody("PAYMENT", "DECLINED", {
+        allowedActions: ["START_PURCHASE"],
+        latestAttempt: { attemptId: "A1", status: "FAILED", errorCode: "CARD_DECLINED" },
+      })
     );
     renderIn(<BillingSetupResultPage setupId="S1" />);
     expect(
       await screen.findByText("결제가 승인되지 않았습니다")
     ).toBeInTheDocument();
-    expect(screen.getByText(/카드를 다시 등록해 주세요/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "카드사에서 결제를 거절했습니다. 카드 상태를 확인하거나 다른 카드로 다시 시도해 주세요."
+      )
+    ).toBeInTheDocument();
+    // 내부 코드는 사유 문장이 아니라 문의용 보조 줄로만 남는다.
+    expect(
+      screen.getByText("문의할 때 이 코드를 알려 주세요: CARD_DECLINED")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/사유 코드/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "새로 시작" })).toHaveAttribute(
       "href",
       `/w/${FREE}?settings=billing`

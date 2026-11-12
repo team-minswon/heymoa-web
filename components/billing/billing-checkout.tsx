@@ -27,6 +27,7 @@ import {
 import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
+import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { planName } from "@/lib/billing/plan-name";
 import { billingEvents, useBillingViewerRole } from "@/lib/billing/analytics";
 import { leaveToCardRegistration } from "@/lib/billing/navigate";
@@ -248,6 +249,7 @@ function CheckoutContent({
         t("shared"),
         t("autoRenew"),
         t("cancelInfo"),
+        t("cancelHow"),
       ];
   return (
     <div className="flex flex-col gap-6">
@@ -299,12 +301,20 @@ function CheckoutContent({
           ))}
         </ul>
         {replace ? null : (
-          <div className="flex items-baseline justify-between gap-4 bg-[var(--el-canvas-soft)] px-5 py-3.5 text-sm">
-            <span className="text-[var(--el-muted)]">{t("dueToday")}</span>
-            <span className="font-medium whitespace-nowrap text-[var(--el-ink)]">
-              {format.money(product.amountKrw)}
-            </span>
-          </div>
+          <dl className="grid gap-2.5 bg-[var(--el-canvas-soft)] px-5 py-3.5 text-sm">
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-[var(--el-muted)]">{t("dueToday")}</dt>
+              <dd className="font-medium whitespace-nowrap text-[var(--el-ink)]">
+                {format.money(product.amountKrw)}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-[var(--el-muted)]">{t("nextCharge")}</dt>
+              <dd className="whitespace-nowrap text-[var(--el-ink)]">
+                {format.date(nextMonthlyChargeAt(new Date()))}
+              </dd>
+            </div>
+          </dl>
         )}
       </div>
       {replace ? null : (

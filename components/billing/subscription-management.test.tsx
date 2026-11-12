@@ -630,6 +630,17 @@ describe("결제 상세", () => {
     expect(screen.getByRole("button", { name: "문의·피드백" })).toBeVisible();
   });
 
+  it("실패한 결제는 내부 코드 대신 사람 말로 사유를 적고, 코드는 문의용으로만 아래에 둔다", async () => {
+    renderIn(paymentDetail("0P00000000001"));
+    expect(
+      await screen.findByText("카드사에서 결제를 승인하지 않았습니다.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("문의할 때 이 코드를 알려 주세요: INVALID_CARD")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("코드 INVALID_CARD")).not.toBeInTheDocument();
+  });
+
   it("결제 상세의 「문의·피드백」은 「결제·환불」을 골라 두고 결제 번호를 실어 보낸다", async () => {
     renderIn(paymentDetail(OLD_PAYMENT));
     fireEvent.click(await screen.findByRole("button", { name: "문의·피드백" }));

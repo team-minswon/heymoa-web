@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { paymentStatusOf } from "@/lib/billing/payment-status";
 import { planName } from "@/lib/billing/plan-name";
 import { createRequestKey } from "@/lib/billing/request-key";
@@ -9,6 +10,21 @@ import {
   setupViewOf,
 } from "@/lib/billing/setup-view";
 import { nextPollDelay } from "@/lib/billing/use-poll-window";
+
+describe("nextMonthlyChargeAt", () => {
+  // server contract 「기간」: anchor 일을 다음 달 말일로 자르고 시각은 그대로(Asia/Seoul).
+  it.each([
+    ["2026-11-12T14:30:00+09:00", "2026-12-12T05:30:00.000Z"],
+    ["2026-01-31T10:00:00+09:00", "2026-02-28T01:00:00.000Z"],
+    ["2028-01-31T10:00:00+09:00", "2028-02-29T01:00:00.000Z"],
+    ["2026-03-31T00:10:00+09:00", "2026-04-29T15:10:00.000Z"],
+    ["2026-12-15T09:00:00+09:00", "2027-01-15T00:00:00.000Z"],
+    // UTC 로는 전날이지만 서울로는 1일이다.
+    ["2026-10-31T16:00:00Z", "2026-11-30T16:00:00.000Z"],
+  ])("%s 에 승인되면 %s", (now, expected) => {
+    expect(nextMonthlyChargeAt(new Date(now))).toBe(expected);
+  });
+});
 
 describe("requestKey", () => {
   it("renew 하기 전에는 같은 키이고 renew 하면 새 키다", () => {

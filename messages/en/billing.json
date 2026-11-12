@@ -5,7 +5,7 @@
     "unlimited": "Unlimited recording",
     "monthlyMinutes": "{duration} per month",
     "minutes": "{duration} of recording",
-    "period": "{start} until {end}",
+    "period": "{start} to before {end}",
     "durationHours": "{h, number} hr",
     "durationBoth": "{h, number} hr {m, number} min",
     "durationMinutes": "{m, number} min"
@@ -74,12 +74,14 @@
     "compare": "Compare plans",
     "openPayment": "Manage payment",
     "badge": {
-      "cancelScheduled": "Ends soon"
+      "cancelScheduled": "Cancellation scheduled"
     },
     "line": {
       "free": "Record up to {allowance} every month.",
       "next": "Next payment {date} · {amount}",
       "cancelScheduled": "Active until {end}, then switches to Free.",
+      "stoppedNoCardAdmin": "There's no payment method on file, so automatic payments are paused. You can use Pro until {end}. Add a card in Payment and resume to keep your subscription.",
+      "stoppedNoCardMember": "There's no payment method on file, so automatic payments are paused. You can use Pro until {end}. To keep the subscription, ask an admin to add a card.",
       "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime."
     },
     "closed": {
@@ -98,8 +100,9 @@
     "backToPlans": "Back to plans",
     "productName": "{plan} monthly",
     "shared": "Everyone in this workspace shares it.",
-    "autoRenew": "You're charged on the same day every month and the usage period renews.",
+    "autoRenew": "You're charged on the same day every month and the usage period renews. In months without that date, you're charged on the last day of the month.",
     "cancelInfo": "If you cancel, you can keep using it until the current period ends and you won't be charged from the next renewal.",
+    "cancelHow": "Admins can cancel in Settings > Payment.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
     "refundPolicy": "You can get a full refund if you request it within 7 days of payment and have recorded 30 hours or less in this billing period by then. <link>See refund policy</link>",
     "submit": "Agree and register card",
@@ -141,11 +144,14 @@
     },
     "back": "Plan",
     "perMonth": "/ month",
-    "dueToday": "Due today"
+    "dueToday": "Due today",
+    "nextCharge": "Next payment"
   },
   "setup": {
     "title": "Card registration result",
     "description": "Check the progress of your card registration.",
+    "purchaseTitle": "Payment result",
+    "purchaseDescription": "Check the progress of your card registration and payment.",
     "loginRequired": "Sign in with the account that registered the card to see the result.",
     "loading": "Loading the registration result",
     "loadFailed": "Couldn't load the registration result.",
@@ -190,8 +196,8 @@
     },
     "declined": {
       "title": "The payment wasn't approved",
-      "body": "Please register a card again. Check your card limit, balance and availability, or register another card.",
-      "code": "Reason code: {code}"
+      "body": "Your card issuer declined the payment. Check your card or try again with a different card.",
+      "code": "If you contact us, share this code: {code}"
     },
     "accessProcessing": {
       "title": "Payment confirmed",
@@ -285,7 +291,7 @@
       "until": "You can keep using Pro until {end}; after that the workspace moves to Free.",
       "pending": "If the payment being checked is approved, you keep Pro until the end of that period and won't be charged after that. If it isn't approved, the subscription ends right away.",
       "noCharge": "You won't be charged the next payment ({amount}) or after.",
-      "undo": "You can resume any time before {end}.",
+      "undo": "You can resume any time before {end}, as long as a card is on file.",
       "confirm": "Cancel subscription",
       "keep": "Keep"
     },
@@ -339,7 +345,8 @@
       "COMPENSATION": "Canceled automatically",
       "RECONCILIATION": "Canceled after review"
     },
-    "errorCode": "Code {code}",
+    "errorCode": "If you contact us, share this code: {code}",
+    "declined": "Your card issuer didn't approve the payment.",
     "then": "At the time",
     "now": "Now",
     "thenPaid": "Paid",

@@ -37,10 +37,10 @@ type Billing = WorkspaceBillingResponseData;
 
 /** 현재 요금제 패널. 실제 화면과 skeleton 이 같은 틀을 읽는다(rule `error-loading`). */
 const PANEL =
-  "grid overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white md:grid-cols-[minmax(0,1fr)_248px]";
+  "grid overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white md:grid-cols-[minmax(0,1fr)_auto]";
 const PANEL_CELL = "p-6";
 const PANEL_SIDE =
-  "border-t border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-6 md:border-t-0 md:border-l";
+  "border-t border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-6 md:w-[248px] md:border-t-0 md:border-l";
 const LABEL = "text-xs leading-4 text-[var(--el-muted)]";
 const FIGURE =
   "text-[40px] leading-[1.1] font-light tracking-[-0.035em] text-[var(--el-ink)]";
@@ -197,17 +197,25 @@ function CurrentPlan({
   const product = billing.product;
   const amount = product ? format.money(product.amountKrw) : null;
 
-  const badge =
-    billing.cancelAtPeriodEnd && billing.status === "ACTIVE"
-      ? t("badge.cancelScheduled")
-      : null;
+  const cancelScheduled =
+    billing.cancelAtPeriodEnd && billing.status === "ACTIVE";
+  const badge = cancelScheduled ? t("badge.cancelScheduled") : null;
+  // 결제자가 나가거나 강등돼 카드가 지워지고 종료가 예약된 구독. 결제 관리 탭의 `stoppedNoCard` 와 같은 상황이다.
+  const stoppedNoCard = cancelScheduled && !billing.detail?.methodId;
 
   // RENEWAL_PENDING 은 갱신 결제의 결과를 기다리는 동안의 Pro 다.
   const line =
     kind === "RENEWAL_PENDING"
       ? t("line.renewalPending")
-      : billing.cancelAtPeriodEnd && billing.status === "ACTIVE" && period
-        ? t("line.cancelScheduled", { end: format.date(period.end) })
+      : cancelScheduled && period
+        ? t(
+            stoppedNoCard
+              ? isAdmin
+                ? "line.stoppedNoCardAdmin"
+                : "line.stoppedNoCardMember"
+              : "line.cancelScheduled",
+            { end: format.date(period.end) }
+          )
         : billing.status === "ACTIVE" && period && amount
           ? t("line.next", { date: format.date(period.end), amount })
           : planCode === "FREE" && product
@@ -237,7 +245,7 @@ function CurrentPlan({
             {line}
           </p>
         ) : null}
-        {isAdmin && billing.detail?.methodId ? (
+        {isAdmin && (billing.detail?.methodId || stoppedNoCard) ? (
           <button
             type="button"
             onClick={onOpenPayment}
@@ -248,9 +256,11 @@ function CurrentPlan({
           </button>
         ) : null}
       </div>
-      <div className={PANEL_SIDE}>
-        <RecordingUsage workspaceId={workspaceId} paid={planCode === "PRO"} />
-      </div>
+      <RecordingUsage
+        workspaceId={workspaceId}
+        paid={planCode === "PRO"}
+        className={PANEL_SIDE}
+      />
     </div>
   );
 }
@@ -450,12 +460,12 @@ function Attention({
       billing.latestAttemptStatus === "PROCESSING" ||
       billing.latestAttemptStatus === "UNKNOWN");
 
-  // 승인 뒤 자동 취소(보상 환불)가 걸린 결제. 끝난 취소는 알리지 않는다 — 결과 화면이 이미 알렸고 상태는 Free 로 보인다.
+  // 승인 뒤 자동 취소(보상 환불, 화면 말로 「결제 취소」)가 걸린 결제. 끝난 취소는 알리지 않는다 — 결과 화면이 이미 알렸고 상태는 Free 로 보인다.
   const refundAttempt = detail?.latestAttempt?.refundStatus
     ? detail.latestAttempt
     : detail?.refundedAttempt;
   const refund = refundAttempt?.refundStatus;
-  // 운영자 환불(문의로 받은 환불)은 「결제 취소 처리 중 → 완료」로 따로 말한다(보상 취소와 섞지 않는다).
+  // 운영자 환불(문의로 받은 환불)은 「환불을 처리하고 있습니다 → 환불이 완료되었습니다」로 따로 말한다(보상 취소와 섞지 않는다).
   const userRefund =
     detail?.refundedAttempt?.refundOrigin === "OPERATOR"
       ? detail.refundedAttempt.refundStatus
@@ -512,7 +522,7 @@ function Attention({
         {t("userRefunded.body")}
       </BillingNotice>
     ) : null,
-    // 환불로 끝난 구독은 위 「결제 취소 처리가 완료되었습니다」가 이미 말한다.
+    // 환불로 끝난 구독은 위 「환불이 완료되었습니다」가 이미 말한다.
     billing.status === "ENDED" &&
     billing.closedReason &&
     !(billing.closedReason === "REFUNDED" && userRefund === "SUCCEEDED") ? (

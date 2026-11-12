@@ -47,6 +47,9 @@ import { cn } from "@/lib/utils";
  */
 export function BillingSetupResultPage({ setupId }: { setupId: string }) {
   const t = useTranslations("billing.setup");
+  // 첫 구매는 카드 등록 뒤 결제까지 가므로 「결제 결과」다. 아래 결과와 같은 조회 키라 요청은 하나다.
+  const setupQuery = useGetMyBillingSetup(setupId);
+  const purchase = okData(setupQuery.data)?.purpose === "PURCHASE";
   return (
     <ScrollArea
       className="min-h-0 flex-1"
@@ -55,12 +58,21 @@ export function BillingSetupResultPage({ setupId }: { setupId: string }) {
       {/* 한 가지 결과만 읽는 화면이라 좁은 단 하나다. */}
       <div className="mx-auto w-full max-w-[640px] px-5 pb-16 pt-10 sm:pt-16">
         <header className="mb-8">
-          <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-            {t("title")}
-          </h2>
-          <p className="mt-2 text-sm text-[var(--el-muted)]">
-            {t("description")}
-          </p>
+          {!setupQuery.isPending ? (
+            <>
+              <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+                {t(purchase ? "purchaseTitle" : "title")}
+              </h2>
+              <p className="mt-2 text-sm text-[var(--el-muted)]">
+                {t(purchase ? "purchaseDescription" : "description")}
+              </p>
+            </>
+          ) : (
+            <>
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="mt-2 h-5 w-64" />
+            </>
+          )}
         </header>
         <div className="flex flex-col gap-4">
           <SetupResult setupId={setupId} />
@@ -343,7 +355,9 @@ function ViewBody({
         <BillingNotice tone="warn" title={t("declined.title")}>
           <p>{t("declined.body")}</p>
           {code ? (
-            <p className="mt-1 text-xs">{t("declined.code", { code })}</p>
+            <p className="mt-2 text-xs text-[var(--el-muted)]">
+              {t("declined.code", { code })}
+            </p>
           ) : null}
           {restartLink && setup.allowedActions.includes("START_PURCHASE") ? (
             <div className="mt-3">{restartLink}</div>

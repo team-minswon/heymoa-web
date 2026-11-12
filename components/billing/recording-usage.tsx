@@ -16,30 +16,43 @@ const NOTE = "text-xs leading-4 text-[var(--el-muted)]";
 
 /**
  * 이번 달 녹음 사용량(APP-1566). 요금제 패널의 오른쪽 칸에 들어가는 내용이라 자기 테두리가 없다.
- * 집행 대상이 아닌 공간(`enforced=false`)에는 아무것도 그리지 않는다. Free 는 한도와 진행 막대, Pro 는 무제한과 참고용 사용 시간이다.
+ * 집행 대상이 아닌 공간(`enforced=false` — 판매 중지 뒤 끝난 구독도 여기)에는 칸 틀까지 그리지 않는다. Free 는 한도와 진행 막대, Pro 는 무제한과 참고용 사용 시간이다.
  * 분은 서버가 내림해 준 값을 그대로 쓴다. 한도는 녹음을 **시작할 때만** 검사하고 진행 중인 회의는 끝까지 녹음된다 —
  * 사용량은 녹음이 끝나 처리된 뒤 반영된다.
  */
 export function RecordingUsage({
   workspaceId,
   paid,
+  className,
 }: {
   workspaceId: string;
   /** 스켈레톤 높이만 정한다. 실제 모양은 서버 응답이 정한다. */
   paid: boolean;
+  /** 칸 틀. 보여 줄 사용량이 없으면 틀째 그리지 않아 빈 칸이 남지 않는다. */
+  className?: string;
 }) {
   const t = useTranslations("billing.usage");
   return (
     <DataBoundary
       resetKeys={[workspaceId]}
-      fallback={<UsageSkeleton label={t("loading")} paid={paid} />}
+      fallback={
+        <div className={className}>
+          <UsageSkeleton label={t("loading")} paid={paid} />
+        </div>
+      }
     >
-      <UsageBody workspaceId={workspaceId} />
+      <UsageBody workspaceId={workspaceId} className={className} />
     </DataBoundary>
   );
 }
 
-function UsageBody({ workspaceId }: { workspaceId: string }) {
+function UsageBody({
+  workspaceId,
+  className,
+}: {
+  workspaceId: string;
+  className?: string;
+}) {
   const t = useTranslations("billing.usage");
   const locale = useDisplayLocale();
   const usage = useRecordingUsage(workspaceId);
@@ -48,7 +61,7 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
 
   if (usage.unlimited) {
     return (
-      <div>
+      <div className={className}>
         <p className={LABEL}>{t("label")}</p>
         <p className={VALUE}>{format.duration(usage.usedMinutes)}</p>
         <p className={`mt-3 ${NOTE}`}>{t("unlimited")}</p>
@@ -65,7 +78,7 @@ function UsageBody({ workspaceId }: { workspaceId: string }) {
     Math.round((usage.usedMinutes / Math.max(1, usage.allowanceMinutes)) * 100)
   );
   return (
-    <div>
+    <div className={className}>
       <p className={LABEL}>{t("label")}</p>
       <p className={VALUE}>
         <span className="whitespace-nowrap">

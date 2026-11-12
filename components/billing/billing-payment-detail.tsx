@@ -187,7 +187,15 @@ function PaymentRows({
       {payment.errorCode ? (
         <Row
           label={t("status")}
-          value={t("errorCode", { code: payment.errorCode })}
+          wrap
+          value={
+            <>
+              {t("declined")}
+              <span className="mt-1 block text-xs text-[var(--el-muted)]">
+                {t("errorCode", { code: payment.errorCode })}
+              </span>
+            </>
+          }
         />
       ) : null}
       {payment.refundStatus ? (
