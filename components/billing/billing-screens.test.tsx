@@ -416,6 +416,22 @@ describe("주문서", () => {
     ).toBeInTheDocument();
   });
 
+  it("동의 체크 위에 환불 안내를 두고 약관의 환불 조항을 새 탭으로 연다(APP-1586)", async () => {
+    renderIn(
+      <BillingCheckout workspaceId={FREE} purpose="PURCHASE" onBack={vi.fn()} />
+    );
+    const link = await screen.findByRole("link", { name: "환불 규정 보기" });
+    expect(link).toHaveAttribute("href", "/terms#section-13");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    const notice = link.closest("p")!;
+    expect(notice).toHaveTextContent(
+      "결제일부터 7일 이내이고 녹음이 30시간 이하이면 전액 환불받을 수 있습니다."
+    );
+    // 바로 다음 형제가 자동 결제 동의 체크다.
+    expect(notice.nextElementSibling).toContainElement(agree());
+  });
+
   it.each([
     ["SIMULATED_NO_CHARGE", "시험 결제이며 실제로 청구되지 않습니다."],
     [

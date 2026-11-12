@@ -19,7 +19,7 @@ type LegalDates = { announced: string | null; effective: string | null };
 /**
  * 지금 본문(`messages/<언어>/legal.json`)의 공고일·시행일(`YYYY-MM-DD`). 페이지 머리에 보이고, null 이면 「미정」이다.
  * **시행일이 곧 판의 키다** — server 동의 버전(`CONSENT_PRIVACY_VERSION`·`CONSENT_TERMS_VERSION`)을 같은 날 같은 문자열로
- * 올린다. 약관은 공고일과 시행일 사이를 7일(불리하면 30일) 이상 둔다(약관 제11조·처리방침 제12조).
+ * 올린다. 약관은 공고일과 시행일 사이를 7일(불리하면 30일) 이상 둔다(약관 제15조·처리방침 제12조).
  * 시행하고 나서 본문을 다시 고치면, 그 전에 지금 본문을 `lib/legal-archive.ts` 에 얼려 넣고 여기 날짜를 새로 쓴다.
  */
 export const LEGAL_CURRENT: Record<LegalDoc, LegalDates> = {

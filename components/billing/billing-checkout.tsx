@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ArrowRight, Check, LockKeyhole } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,6 +10,7 @@ import {
   TestPaymentNotice,
 } from "@/components/billing/billing-parts";
 import { BackLink } from "@/components/billing/back-link";
+import { SitePageLink } from "@/components/heymoa/site-page-link";
 import {
   SETTINGS_LIST,
   SettingsHeader,
@@ -31,6 +32,7 @@ import { leaveToCardRegistration } from "@/lib/billing/navigate";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
+import { localePath } from "@/lib/i18n/locales";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
 type Purpose = "PURCHASE" | "REPLACE";
@@ -98,6 +100,7 @@ function CheckoutContent({
 }) {
   const replace = purpose === "REPLACE";
   const t = useTranslations("billing.checkout");
+  const locale = useLocale();
   const format = useBillingFormat();
   const queryClient = useQueryClient();
   const billing = useWorkspaceBilling(workspaceId);
@@ -304,6 +307,21 @@ function CheckoutContent({
         </BillingNotice>
       ) : null}
       <div className="flex flex-col gap-4">
+        {replace ? null : (
+          <p className="text-xs leading-5 text-[var(--el-muted)]">
+            {t.rich("refundPolicy", {
+              // 새 탭으로 열어 주문서의 동의 상태를 잃지 않는다(`SitePageLink`). 앵커는 약관 제13조(환불).
+              link: (chunks) => (
+                <SitePageLink
+                  href={localePath(locale, "/terms#section-13")}
+                  className="underline underline-offset-2 hover:text-[var(--el-ink)]"
+                >
+                  {chunks}
+                </SitePageLink>
+              ),
+            })}
+          </p>
+        )}
         <label className="flex cursor-pointer items-start gap-2.5 text-sm leading-5 text-[var(--el-ink)]">
           <Checkbox
             className="mt-0.5"

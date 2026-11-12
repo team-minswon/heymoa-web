@@ -39,7 +39,7 @@
           "For a meeting whose recording was paused and never ended, HeyMoa sends one reminder email to the user who last started recording one business day after the pause. Three business days after the pause, HeyMoa may end the meeting automatically and start its analysis. When that happens, one more notice email is sent to the same recipient. Business days are Monday through Friday, Korea Standard Time.",
           "The scheduled time of automatic ending is shown in the reminder email and on the note screen, and you can resume recording or end the meeting yourself before then. A meeting that was ended automatically cannot be resumed, and automatic ending cannot be canceled. Meetings may be ended on the same schedule even if no email was received.",
           "HeyMoa sends notifications needed to use the Service as in-app notifications and by email. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
-          "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies. Changes that affect you are announced as described in Section 11."
+          "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies. Changes that affect you are announced as described in Section 15."
         ]
       },
       {
@@ -104,7 +104,36 @@
         ]
       },
       {
-        "title": "10. Account Deletion and Workspace Deletion",
+        "title": "10. Paid Services and Payment",
+        "body": [
+          "The Pro plan is subscribed to per workspace, and its price is the amount shown on the payment screen.",
+          "Payment is made with a card registered by a workspace admin, and HeyMoa does not store card numbers."
+        ]
+      },
+      {
+        "title": "11. Automatic Renewal",
+        "body": [
+          "The subscription renews automatically on the same day every month for the same amount. If the price changes, HeyMoa will notify you in advance and will charge the new price only after you agree to it again.",
+          "If a renewal payment is not approved, the subscription ends at that point and the workspace returns to the Free plan. HeyMoa notifies the workspace admins of this."
+        ]
+      },
+      {
+        "title": "12. Cancellation",
+        "body": [
+          "Admins can cancel the subscription at any time under Payment in Settings. After canceling, you can keep using Pro until the end of the period already paid for, and you will not be charged from the next payment."
+        ]
+      },
+      {
+        "title": "13. Refunds",
+        "body": [
+          "If you request a refund through Help & feedback within 7 days of the payment date and 30 hours or less was recorded in that usage period, HeyMoa refunds the full payment amount.",
+          "In other cases, HeyMoa does not give refunds for usage periods already paid for. However, if you could not use the Service for reasons attributable to HeyMoa, such as a service outage, HeyMoa refunds you after confirming it when you request it through Help & feedback.",
+          "If a payment was approved but Pro access was not granted for reasons on HeyMoa's side, HeyMoa cancels the full payment amount without a request.",
+          "Refunds are made by canceling the approval on the card used for payment and may take a few days depending on the card issuer."
+        ]
+      },
+      {
+        "title": "14. Account Deletion and Workspace Deletion",
         "body": [
           "You can delete your account at any time from My account in Settings. If a meeting is being recorded, you can delete your account after the recording ends.",
           "When you delete your account, your workspaces are handled as follows. If you are the only administrator and other members remain, you either hand the administrator role to another member or delete the workspace. You leave workspaces that have another administrator or where you are a member. Workspaces you used alone are deleted.",
@@ -114,7 +143,7 @@
         ]
       },
       {
-        "title": "11. Changes to These Terms and Inquiries",
+        "title": "15. Changes to These Terms and Inquiries",
         "body": [
           "When these Terms change, HeyMoa announces what is changing and the effective date on this page and in the Service starting 7 days before the effective date. Changes unfavorable to you are announced starting 30 days before the effective date, together with a side-by-side comparison of the old and new text.",
           "If you do not agree to the changed Terms, you can delete your account before the effective date. To keep using the Service after the effective date, you must agree to the changed Terms.",

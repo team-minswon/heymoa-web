@@ -96,8 +96,18 @@ describe("HeyMoa legal pages", () => {
     expect(screen.queryByRole("link", { name: "한국어본 보기" })).not.toBeInTheDocument();
   });
 
+  it("약관에 유료·환불 조항이 있고 주문서가 링크하는 #section-13 이 환불 조항이다(APP-1586)", async () => {
+    await renderPage(TermsPage, "ko");
+    // 주문 확인 화면의 「환불 규정 보기」가 `/terms#section-13`으로 온다. 조 순서가 밀리면 다른 조가 열린다.
+    const refund = document.getElementById("section-13");
+    expect(refund).toHaveTextContent("제13조 (환불)");
+    expect(refund).toHaveTextContent(/결제일부터 7일 이내이고 해당 이용 기간의 녹음 시간이 30시간 이하인 경우/);
+    expect(document.getElementById("section-11")).toHaveTextContent("제11조 (자동 갱신)");
+    expect(document.getElementById("section-15")).toHaveTextContent("제15조 (약관의 변경과 문의)");
+  });
+
   it.each([
-    [TermsPage, "Terms of Service", 11, "/terms"],
+    [TermsPage, "Terms of Service", 15, "/terms"],
     [PrivacyPage, "Privacy Policy", 12, "/privacy"],
   ] as const)(
     "영어판(%#)은 한글 없이 같은 조 번호·앵커로 서고 맨 위에 한국어본 우선 고지가 있다",
@@ -141,8 +151,8 @@ describe("처리방침·약관 변경 관리(APP-1385)", () => {
     ).toEqual(versions.map((version) => `${path}/${version}`));
     // 다음 판 시행 전날까지가 적용 기간이다.
     expect(list).toHaveTextContent("2026년 10월 18일 ~ 2026년 10월 21일");
-    // 「요청하면 열람」 대신 목록으로 연다.
-    expect(document.body.textContent).not.toMatch(/요청하면/);
+    // 「요청하면 열람」 대신 목록으로 연다. (환불 조항의 「문의·피드백으로 요청하면」은 다른 뜻이라 문구로 가른다.)
+    expect(document.body.textContent).not.toMatch(/요청하면 (열람|확인할 수)/);
   });
 
   it.each([PrivacyPage, TermsPage])("AI 학습에 쓰지 않는다고 처리방침·약관 양쪽에 적는다(%#)", async (Page) => {
