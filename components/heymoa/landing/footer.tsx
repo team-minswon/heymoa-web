@@ -8,6 +8,7 @@ import { localePath } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
+import { BusinessInfoLine } from "./business-info";
 import { LanguageSwitcher } from "./language-switcher";
 import { ExampleStamp } from "./marks";
 import { CONTAINER, FOCUS, TV_VARS, vars } from "./tokens";
@@ -29,6 +30,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
     {
       title: t("info"),
       links: [
+        [t("pricing"), `${localePath(locale, "/")}#pricing`],
         [t("download"), localePath(locale, "/download")],
         [t("terms"), localePath(locale, "/terms")],
         [t("privacy"), localePath(locale, "/privacy")],
@@ -171,6 +173,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
               </p>
             ) : null}
             <LanguageSwitcher />
+            <BusinessInfoLine />
             <p className="m-0">
               © 2026 {siteConfig.name}. All rights reserved.
             </p>

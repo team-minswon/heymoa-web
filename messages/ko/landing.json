@@ -655,9 +655,33 @@
       "Claude Code나 Codex 같은 외부 에이전트 연결"
     ]
   },
+  "pricing": {
+    "title": "인원이 늘어도 요금은 그대로입니다",
+    "lead": "Free로 시작해서, 회의가 많아지면 Pro로 올리면 됩니다.",
+    "perMonth": "/ 월, 워크스페이스당",
+    "members": "멤버 수 제한 없음",
+    "included": "모든 기능 포함",
+    "free": {
+      "name": "Free",
+      "price": "{price, number}원",
+      "summary": "회의가 많지 않은 팀에 충분합니다",
+      "recording": "녹음 월 {hours, number}시간"
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "{price, number}원",
+      "summary": "회의가 많은 팀이 시간 걱정 없이 씁니다",
+      "recording": "녹음 무제한",
+      "cta": "무료로 시작한 뒤 올리기"
+    },
+    "unit": "요금은 워크스페이스 단위입니다. 관리자 한 명이 결제하면 모든 멤버가 함께 씁니다.",
+    "terms": "Pro는 매월 같은 날 자동으로 결제되고 언제든 해지할 수 있습니다. 해지해도 결제한 기간 끝까지 씁니다. 결제일부터 7일 이내에 요청하고, 요청한 때까지 그 결제 기간의 녹음이 {hours, number}시간 이하이면 전액 환불받을 수 있습니다.",
+    "refundLink": "환불 규정 보기"
+  },
   "nav": {
     "label": "페이지 안내",
     "features": "기능",
+    "pricing": "요금",
     "guide": "사용 가이드",
     "sections": {
       "meetings": "회의 정리",
@@ -698,6 +722,18 @@
     "download": "데스크톱 다운로드",
     "terms": "이용약관",
     "privacy": "개인정보 처리방침",
+    "pricing": "요금 안내",
+    "business": {
+      "label": "사업자 정보",
+      "name": "상호",
+      "owner": "대표자",
+      "registration": "사업자등록번호",
+      "mailOrder": "통신판매업 신고번호",
+      "address": "주소",
+      "phone": "전화",
+      "email": "전자우편",
+      "hosting": "호스팅 제공자"
+    },
     "feedback": "의견 보내기",
     "feedbackBody": "써 보며 느낀 점이나 궁금한 점을 메일로 보내 주세요.",
     "example": "이 페이지의 회의, 인물, 날짜는 모두 지어낸 예시입니다.",

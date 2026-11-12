@@ -655,9 +655,33 @@
       "Connect external agents like Claude Code and Codex"
     ]
   },
+  "pricing": {
+    "title": "Same price, however big your team gets",
+    "lead": "Start on Free, and move up to Pro when your meetings pile up.",
+    "perMonth": "/ month per workspace",
+    "members": "Unlimited members",
+    "included": "Every feature included",
+    "free": {
+      "name": "Free",
+      "price": "KRW {price, number}",
+      "summary": "Plenty for teams that don't meet much",
+      "recording": "{hours, number} hours of recording a month"
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "KRW {price, number}",
+      "summary": "For teams that meet a lot and don't want to watch the clock",
+      "recording": "Unlimited recording",
+      "cta": "Start free, upgrade later"
+    },
+    "unit": "Pricing is per workspace. One admin pays, and every member gets it.",
+    "terms": "Pro renews automatically on the same day each month, and you can cancel anytime. If you cancel, you keep Pro until the paid period ends. Ask within 7 days of payment, and if the workspace has recorded {hours, number} hours or less in that billing period by then, you get a full refund.",
+    "refundLink": "See the refund policy"
+  },
   "nav": {
     "label": "Site",
     "features": "Features",
+    "pricing": "Pricing",
     "guide": "Guide",
     "sections": {
       "meetings": "Meeting notes",
@@ -698,6 +722,18 @@
     "download": "Desktop app",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
+    "pricing": "Pricing",
+    "business": {
+      "label": "Business information",
+      "name": "Company",
+      "owner": "Representative",
+      "registration": "Business registration no.",
+      "mailOrder": "Mail-order business report no.",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "hosting": "Hosting provider"
+    },
     "feedback": "Send feedback",
     "feedbackBody": "Tell us what you think, or ask us anything, by email.",
     "example": "Every meeting, person, and date on this page is made up.",
