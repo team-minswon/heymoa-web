@@ -247,6 +247,7 @@
     "card": "Card on file",
     "noCard": "No card on file",
     "cancelScheduled": "You can use it until {end}; after that the workspace moves to Free. You won't be charged again.",
+    "cancelScheduledPending": "Cancellation scheduled. When it ends depends on the result of the payment being checked.",
     "latestPayment": "Latest payment",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "Payment details",
@@ -266,6 +267,7 @@
     "cancelDialog": {
       "title": "Cancel your subscription?",
       "until": "You can keep using Pro until {end}; after that the workspace moves to Free.",
+      "pending": "If the payment being checked is approved, you keep Pro until the end of that period and won't be charged after that. If it isn't approved, the subscription ends right away.",
       "noCharge": "You won't be charged the next payment ({amount}) or after.",
       "undo": "You can resume any time before {end}.",
       "confirm": "Cancel subscription",

@@ -214,6 +214,42 @@ describe("결제 수단·구독", () => {
     ).toBeInTheDocument();
   });
 
+  it("갱신 결과를 기다리는 동안에도 해지를 예약하고, 지난 기간 끝 날짜 대신 결과에 따라 끝난다고 적는다", async () => {
+    billingMock.setScenario("renewalChecking");
+    const area = await openPaid();
+    // 예약 전에는 「{end}까지 계속 쓸 수 있다」는 힌트를 두지 않는다.
+    expect(
+      within(area).queryByText(/까지는 계속 쓸 수 있습니다/)
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      await within(area).findByRole("button", { name: "구독 해지" })
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(
+        "지금 확인 중인 결제가 승인되면 그 이용 기간이 끝날 때까지 Pro를 쓰고, 다음 결제부터 청구되지 않습니다. 승인되지 않으면 구독은 바로 종료됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/12월 11일/)).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "해지" }));
+    expect(
+      await within(area).findByText(
+        "해지를 예약했습니다. 확인 중인 결제 결과에 따라 종료 시점이 정해집니다."
+      )
+    ).toBeInTheDocument();
+    expect(
+      posted(`/v1/workspaces/${PAID}/billing/subscription/cancel`)
+    ).toBe(1);
+    expect(within(area).queryByText(/12월 11일까지/)).not.toBeInTheDocument();
+    expect(
+      within(area).queryByRole("button", { name: "구독 해지" })
+    ).not.toBeInTheDocument();
+    expect(
+      within(area).queryByRole("button", { name: "구독 재개" })
+    ).not.toBeInTheDocument();
+  });
+
   it("재개는 지금 결제되지 않는다고 적고, 관리자가 아니어서 403 이면 그 이유를 안내한다", async () => {
     const area = await openPaid();
     fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));

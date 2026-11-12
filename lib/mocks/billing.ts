@@ -22,7 +22,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `teamBusy` 다른 ADMIN 의 진행 중 구매가 있다(구매 시작 409 `BILLING_IN_PROGRESS`)
  *   - `refund`   승인은 됐지만 권한을 못 줘 자동 취소된다(보상 환불) — 취소 중 → 취소 완료, 새로 시작 가능
  *   - `quota`    무료 월 한도를 다 썼다 — 사용량이 한도와 같고 녹음 시작이 409 `RECORDING_QUOTA_EXCEEDED`(`billingMock.quotaExceeded()`)
- *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(RENEWAL_PENDING, 그동안 Pro)
+ *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(RENEWAL_PENDING, 그동안 Pro). 해지 예약(CANCEL_SUBSCRIPTION)을 받고, 예약 뒤에는 같은 대기에 `cancelAtPeriodEnd=true`
    - `unpaid`   유료 공간의 갱신 결제가 확정 거절돼 구독이 끝났다(ENDED/UNPAID, 카드 지워짐)
    - `expired`  해지한 유료 구독의 기간이 끝났다(ENDED/EXPIRED, 카드 지워짐)
    - `salesPaused` 운영자가 새 판매를 멈췄다 — 유료 공간의 구독이 끝났고(ENDED/EXPIRED) 결제 화면은 보이지만(`enforced=true`)
@@ -490,7 +490,11 @@ function workspaceBilling(workspaceId: string) {
   if (setup?.state === "AUTHORIZED")
     actions.push("CONTINUE_SETUP", "CANCEL_SETUP");
   else if (setup) actions.push("REFRESH_STATUS");
-  else if (attempt) actions.push("REFRESH_STATUS");
+  else if (attempt) {
+    actions.push("REFRESH_STATUS");
+    // 갱신 결과를 기다리는 동안에도 해지를 예약할 수 있다(이미 예약했으면 없다).
+    if (ws.renewalPending && !cancel) actions.push("CANCEL_SUBSCRIPTION");
+  }
   else {
     if (!ws.paid && !teamBusy && !ws.salesPaused)
       actions.push("START_PURCHASE");

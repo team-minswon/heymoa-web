@@ -247,6 +247,7 @@
     "card": "등록된 카드",
     "noCard": "등록된 카드가 없습니다",
     "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다.",
+    "cancelScheduledPending": "해지를 예약했습니다. 확인 중인 결제 결과에 따라 종료 시점이 정해집니다.",
     "latestPayment": "최근 결제",
     "latestPaymentValue": "{date} · {amount}",
     "paymentLink": "결제 상세",
@@ -266,6 +267,7 @@
     "cancelDialog": {
       "title": "구독을 해지할까요?",
       "until": "{end}까지는 지금처럼 Pro를 쓸 수 있고, 그 뒤 Free로 바뀝니다.",
+      "pending": "지금 확인 중인 결제가 승인되면 그 이용 기간이 끝날 때까지 Pro를 쓰고, 다음 결제부터 청구되지 않습니다. 승인되지 않으면 구독은 바로 종료됩니다.",
       "noCharge": "다음 결제({amount})부터 청구되지 않습니다.",
       "undo": "{end} 전에는 언제든 다시 재개할 수 있습니다.",
       "confirm": "해지",

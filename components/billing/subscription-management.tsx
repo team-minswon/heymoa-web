@@ -114,8 +114,12 @@ export function SubscriptionManagement({
       : null;
   const canCancel = actions.includes("CANCEL_SUBSCRIPTION");
   const canResume = actions.includes("RESUME_SUBSCRIPTION");
+  // 갱신 결제 결과를 기다리는 동안은 기간 끝이 이미 지났다 — 끝나는 날을 말하지 않고, 결과에 따라 정해진다고 말한다.
+  const renewalPending = billing.entitlement?.kind === "RENEWAL_PENDING";
   const scheduled =
-    billing.cancelAtPeriodEnd && billing.status === "ACTIVE" && period;
+    billing.cancelAtPeriodEnd &&
+    billing.status === "ACTIVE" &&
+    (renewalPending || period);
 
   return (
     <>
@@ -228,8 +232,10 @@ export function SubscriptionManagement({
               <div className="flex min-h-[52px] items-center justify-between gap-4 bg-[var(--el-canvas-soft)] px-4 py-2.5">
                 <p className="text-xs leading-5 text-[var(--el-muted)]">
                   {scheduled
-                    ? t("cancelScheduled", { end: format.date(period.end) })
-                    : period
+                    ? renewalPending || !period
+                      ? t("cancelScheduledPending")
+                      : t("cancelScheduled", { end: format.date(period.end) })
+                    : period && !renewalPending
                       ? t("cancelHint", { end: format.date(period.end) })
                       : null}
                 </p>
@@ -271,16 +277,20 @@ export function SubscriptionManagement({
         <NoticeLine notice={commands.notice} billing={billing} />
       ) : null}
 
-      {period && amount ? (
+      {renewalPending || (period && amount) ? (
         <Confirm
           open={dialog === "cancel"}
           onOpenChange={(open) => !busy && setDialog(open ? "cancel" : null)}
           title={t("cancelDialog.title")}
-          lines={[
-            t("cancelDialog.until", { end: format.date(period.end) }),
-            t("cancelDialog.noCharge", { amount }),
-            t("cancelDialog.undo", { end: format.date(period.end) }),
-          ]}
+          lines={
+            renewalPending || !period || !amount
+              ? [t("cancelDialog.pending")]
+              : [
+                  t("cancelDialog.until", { end: format.date(period.end) }),
+                  t("cancelDialog.noCharge", { amount }),
+                  t("cancelDialog.undo", { end: format.date(period.end) }),
+                ]
+          }
           cancelLabel={t("cancelDialog.keep")}
           confirmLabel={t("cancelDialog.confirm")}
           destructive
@@ -344,7 +354,8 @@ export function NoticeLine({
     : null;
   switch (notice.kind) {
     case "canceled":
-      return period ? (
+      // 갱신 결과 대기 중에는 아래 상태 줄이 예약을 알린다 — 지난 기간 끝 날짜를 말하지 않는다.
+      return period && billing?.entitlement?.kind !== "RENEWAL_PENDING" ? (
         <BillingNotice>
           {t("canceled", { end: format.date(period.end) })}
         </BillingNotice>
