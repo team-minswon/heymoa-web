@@ -1,4 +1,7 @@
+import { HydrationBoundary } from "@tanstack/react-query";
+
 import { BillingCheckoutPage } from "@/components/billing/billing-checkout-page";
+import { prefetchCardEntry } from "@/lib/workspace/prefetch";
 
 import { loginRequired } from "../../../login-gate";
 
@@ -9,7 +12,11 @@ export default async function BillingCheckoutRoute({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
+  const login = await loginRequired();
+  if (login) return login;
   return (
-    (await loginRequired()) ?? <BillingCheckoutPage workspaceId={workspaceId} />
+    <HydrationBoundary state={await prefetchCardEntry(workspaceId)}>
+      <BillingCheckoutPage workspaceId={workspaceId} />
+    </HydrationBoundary>
   );
 }
