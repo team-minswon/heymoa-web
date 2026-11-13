@@ -1808,6 +1808,11 @@ export type deleteBillingPaymentMethodResponse403 = {
   status: 403;
 };
 
+export type deleteBillingPaymentMethodResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
 export type deleteBillingPaymentMethodResponse409 = {
   data: AppErrorResponse;
   status: 409;
@@ -1820,6 +1825,7 @@ export type deleteBillingPaymentMethodResponseSuccess =
 export type deleteBillingPaymentMethodResponseError = (
   | deleteBillingPaymentMethodResponse401
   | deleteBillingPaymentMethodResponse403
+  | deleteBillingPaymentMethodResponse404
   | deleteBillingPaymentMethodResponse409
 ) & {
   headers: Headers;
@@ -1837,7 +1843,7 @@ export const getDeleteBillingPaymentMethodUrl = (
 };
 
 /**
- * ADMIN 이 카드를 지운다. 구독이 없거나 해지 예약 중일 때만이고, 살아 있는 구독의 카드는 409 BILLING_METHOD_IN_USE. PG 의 빌링키 삭제는 서버가 미정산 거래가 끝난 뒤 한다. 결제·환불 기록은 지우지 않는다.
+ * ADMIN 이 카드를 지운다. 구독이 없거나 해지 예약 중일 때만이고, 살아 있는 구독의 카드는 409 BILLING_METHOD_IN_USE, 이 공간의 카드가 아니면 404 BILLING_PAYMENT_METHOD_NOT_FOUND. PG 의 빌링키 삭제는 서버가 미정산 거래가 끝난 뒤 한다. 결제·환불 기록은 지우지 않는다.
  * @summary 결제 수단 삭제
  */
 export const deleteBillingPaymentMethod = async (
