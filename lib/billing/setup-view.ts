@@ -3,7 +3,7 @@ import type { BillingSetupStatusResponseData } from "@/lib/api/generated/models"
 
 /**
  * 카드 등록 결과 화면이 그리는 상태. 서버의 (stage, status) 쌍을 화면 문구 단위로 접은 것이다 — 표는
- * `토스페이먼츠-결제/12-화면과-API-상태-계약.md` 4절. 내부 상태(`setupStatus`)는 보지 않는다.
+ * `결제-기능-추가/12-화면과-API-상태-계약.md` 4절. 내부 상태(`setupStatus`)는 보지 않는다.
  */
 export type SetupView =
   | "cardAuthRequired"
