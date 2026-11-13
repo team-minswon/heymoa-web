@@ -131,6 +131,10 @@ describe("HeyMoa legal pages", () => {
 
   it("처리방침에 결제 정보 항목·목적·보관 기간과 결제 대행사 위탁(국내 처리)을 적는다(APP-1586)", async () => {
     await renderPage(PrivacyPage, "ko");
+    // 처리 주체: 사업자등록증의 상호(카드사 심사가 처리방침 안의 상호를 확인한다)
+    expect(document.getElementById("section-1")).toHaveTextContent(
+      /헤이모아\(이하 'HeyMoa'\)는 서비스를 제공하는 데 필요한 정보만 처리합니다/,
+    );
     expect(document.getElementById("section-1")).toHaveTextContent(/빌링키.*카드 번호 끝 네 자리.*HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스정보통신 주식회사\)에 전달하며 HeyMoa는 저장하지 않음/);
     expect(document.getElementById("section-2")).toHaveTextContent(/정기 결제 갱신, 환불 처리, 결제 문의 대응/);
     expect(document.getElementById("section-2")).toHaveTextContent(/결제가 완료되거나 환불이 완료되면 결제자에게 메일을 보냅니다/);
