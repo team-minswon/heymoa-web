@@ -28,6 +28,7 @@ type Outcome = "done" | "handled" | "failed";
 
 const INLINE_CODES = [
   "BILLING_STATE_CHANGED",
+  "BILLING_PAYMENT_METHOD_NOT_FOUND",
   "BILLING_IN_PROGRESS",
   "BILLING_METHOD_IN_USE",
   "WORKSPACE_ACCESS_DENIED",
@@ -75,8 +76,10 @@ export function useBillingCommands(workspaceId: string) {
       const code = errorCodeOf(error);
       if (code === "REQUEST_KEY_CONFLICT") key?.renew();
       // 관리자가 아니면(403) 어느 명령이든 같은 안내다 — 토스트를 끈 코드라 여기서 안 그리면 확인 창만 남는다.
+      // 지우려던 카드가 이미 없으면(404) 화면이 낡은 것이다 — 상태가 바뀐 때와 같이 다시 읽는다.
       const handled =
-        code === "BILLING_STATE_CHANGED"
+        code === "BILLING_STATE_CHANGED" ||
+        code === "BILLING_PAYMENT_METHOD_NOT_FOUND"
           ? ({ kind: "stateChanged" } as const)
           : code === "BILLING_IN_PROGRESS"
             ? ({ kind: "inProgress" } as const)

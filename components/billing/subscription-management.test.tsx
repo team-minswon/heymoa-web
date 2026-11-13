@@ -472,6 +472,41 @@ describe("결제 수단·구독", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
+  it("지우려던 카드가 이미 없으면(404) 확인 창을 닫고 다시 읽으라고 한다", async () => {
+    // 실제 서버는 이 공간의 수단이 아니거나 없으면 404 를 준다 — 다른 관리자가 먼저 바꾼 낡은 화면에서 난다.
+    server.use(
+      http.delete(`*/v1/workspaces/${PAID}/billing/payment-methods/*`, () =>
+        failure(
+          "BILLING_PAYMENT_METHOD_NOT_FOUND",
+          "결제 수단을 찾을 수 없습니다.",
+          404
+        )
+      )
+    );
+    const area = await openPaid();
+    const method = methodArea();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "해지",
+      })
+    );
+    fireEvent.click(
+      await within(method).findByRole("button", { name: "삭제" })
+    );
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "삭제",
+      })
+    );
+    expect(
+      await within(area).findByText(
+        "결제 상태가 바뀌었습니다. 최신 내용을 불러왔으니 다시 확인해 주세요."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
   it("살아 있는 구독의 카드 삭제(409)는 카드 변경을 안내한다", async () => {
     billingMock.setScenario("methodInUse");
     const area = await openPaid();

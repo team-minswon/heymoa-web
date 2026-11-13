@@ -691,7 +691,12 @@ function deleteMethod(workspaceId: string, methodId: string) {
       409,
       "구독에 쓰고 있는 카드라 삭제할 수 없습니다. 해지를 예약하거나 카드를 바꿔 주세요."
     );
-  if (!ws.card || ws.methodId !== methodId) STATE_CHANGED();
+  if (!ws.card || ws.methodId !== methodId)
+    failWith(
+      "BILLING_PAYMENT_METHOD_NOT_FOUND",
+      404,
+      "결제 수단을 찾을 수 없습니다."
+    );
   ws.card = null;
   ws.methodId = null;
 }
@@ -856,11 +861,17 @@ const phase = (
 /** 조회 횟수로 상태를 한 칸씩 옮기고, 그 결과를 공간 상태에 반영한다. 같은 횟수에는 같은 결과(멱등)다. */
 function advance(setup: Setup): Phase {
   const ws = workspaceOf(setup.workspaceId);
+  // 서버의 `BillingSetupViewHandler.restart` 와 같다: 취소·발급 불명·발급 거절은 다시 읽지 않고 「새로 시작」을 준다.
   if (setup.state === "CANCELED")
-    return phase("CLOSED", "CANCELED", "CANCELED", [], null);
-  // 서버와 같다: 발급 결과 불명은 카드 단계의 UNKNOWN 이고 다시 읽지 않는다(새 등록부터).
+    return phase("CLOSED", "CANCELED", "CANCELED", ["START_PURCHASE"], null);
   if (setup.state === "ISSUE_UNKNOWN")
-    return phase("BILLING_KEY", "UNKNOWN", "ISSUE_UNKNOWN", [], null);
+    return phase(
+      "BILLING_KEY",
+      "UNKNOWN",
+      "ISSUE_UNKNOWN",
+      ["START_PURCHASE"],
+      null
+    );
   if (setup.state === "CREATED")
     return phase(
       "CARD_AUTH_REQUIRED",
@@ -956,7 +967,13 @@ function advanceReplace(setup: Setup, ws: Workspace): Phase {
     }
   }
   if (setup.scenario === "replaceFail")
-    return phase("BILLING_KEY", "DECLINED", "ISSUE_REJECTED", [], null);
+    return phase(
+      "BILLING_KEY",
+      "DECLINED",
+      "ISSUE_REJECTED",
+      ["START_PURCHASE"],
+      null
+    );
   return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
 }
 
