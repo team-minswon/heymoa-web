@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
-/** 설정 탭 안에서 한 단계 들어간 화면(주문 확인·카드 변경·결제 상세)의 돌아가기. 머리글 위에 선다. */
+/** 설정 탭 안에서 한 단계 들어간 화면(결제 상세)의 돌아가기. 머리글 위에 선다. */
 export function BackLink({
   onClick,
   children,

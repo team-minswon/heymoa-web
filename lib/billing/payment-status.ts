@@ -1,7 +1,7 @@
 import type { BillingPaymentResponseData } from "@/lib/api/generated/models";
 
 /** 결제 한 건이 지금 어떤 상태로 보이는가. 환불이 걸리면 결제 결과보다 환불 상태가 앞선다. 키는 `billing.paymentStatus`. */
-export type PaymentStatusKey =
+type PaymentStatusKey =
   | "SUCCEEDED"
   | "FAILED"
   | "CHECKING"

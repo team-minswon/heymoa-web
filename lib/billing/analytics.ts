@@ -3,7 +3,7 @@ import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { okData } from "@/lib/api/ok-data";
 
 /**
- * 결제 흐름 이벤트의 호출 자리(PRO-75). 속성은 공간·PG·결과 상태뿐이다 — authKey·state·카드 정보·결제 식별자는
+ * 결제 흐름 이벤트의 호출 자리(PRO-75). 속성은 공간·PG·결과 상태뿐이다 — 카드 정보·결제 식별자는
  * 이 함수들의 인자에도 없다. 이벤트 정의와 근거는 `lib/analytics/track.ts`. 카드를 받는 문서(결제 페이지·카드 변경 iframe)에는 분석
  * 스크립트가 없어 거기서는 이벤트를 내지 않는다(APP-1600) — 동의 체크·카드 제출은 세지 않는다.
  *

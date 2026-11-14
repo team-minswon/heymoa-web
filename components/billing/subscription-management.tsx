@@ -375,7 +375,7 @@ export function SubscriptionManagement({
 }
 
 /** 명령 결과 안내. 성공은 담담하게, 막힌 이유는 경고로. 날짜·금액은 다시 읽은 최신 상태에서 쓴다. */
-export function NoticeLine({
+function NoticeLine({
   notice,
   billing,
 }: {

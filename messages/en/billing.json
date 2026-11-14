@@ -144,7 +144,6 @@
     "agreeFirst": "Enter all card details and check both agreements to continue.",
     "replace": {
       "title": "Change card",
-      "summary": "Card for the {plan} subscription",
       "current": "Current card",
       "nextCharge": "Next payment",
       "noCharge": "Only the card changes. You won't be charged now.",
@@ -157,7 +156,6 @@
       "askAdmin": "Only admins can change the card. Please ask an admin.",
       "register": {
         "title": "Add card",
-        "description": "Add a card for automatic payments.",
         "noCharge": "You won't be charged now."
       },
       "changed": "Card changed.",
@@ -293,8 +291,6 @@
       "body": "It was canceled or timed out. Start over if you still need it."
     },
     "replace": {
-      "title": "Card change result",
-      "description": "Check the progress of your card change.",
       "restart": "Try again",
       "completed": {
         "title": "Card changed",

@@ -225,7 +225,7 @@ function Payments({
         middle: payment.payerName ?? t("leftMember"),
         openable: true,
       }))}
-      onOpen={onOpenPayment}
+      onOpen={(row) => onOpenPayment(row.paymentId)}
     />
   );
 }

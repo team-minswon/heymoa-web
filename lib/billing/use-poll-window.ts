@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** 자동 다시 읽기를 이어 갈 시간. HeyMoa 의 화면 정책이고 PG 완료 제한이 아니다(서버 작업은 이 화면과 무관하게 계속된다). */
-export const POLL_WINDOW_MS = 2 * 60_000;
+const POLL_WINDOW_MS = 2 * 60_000;
 
 /**
  * 마운트(또는 `restart()`)부터 2분이 지나면 `expired`. 쿼리의 `refetchInterval` 이 이 값으로 자동 반복을 멈추고, 화면은

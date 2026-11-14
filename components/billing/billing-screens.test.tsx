@@ -1000,20 +1000,6 @@ describe("첫 구독 결제 페이지", () => {
     expect(goToSetupResult).not.toHaveBeenCalled();
   });
 
-  it("목의 cardRateLimited 시나리오는 429 다", async () => {
-    billingMock.setScenario("cardRateLimited");
-    const response = await fetch(
-      `http://localhost/v1/workspaces/${FREE}/billing/setups/S1/card`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      }
-    );
-    expect(response.status).toBe(429);
-    billingMock.setScenario("ok");
-  });
-
   it.each([
     ["409", () => failure("BILLING_IN_PROGRESS", "처리 중", 409)],
     ["5xx", () => failure("INTERNAL_ERROR", "잠시 후", 500)],
@@ -2017,16 +2003,6 @@ describe("결과 화면 — 모르는 상태 값", () => {
       );
     }
   );
-
-  it("목 unknownState 는 모르는 단계를 준다", async () => {
-    billingMock.setScenario("unknownState");
-    const setupId = await openAndSubmitCard();
-    const { data } = await (
-      await fetch(`http://localhost/v1/me/billing/setups/${setupId}`)
-    ).json();
-    expect(data.stage).toBe("NEW_STAGE");
-    billingMock.setScenario("ok");
-  });
 });
 
 describe("카드 변경의 청구 금액", () => {
@@ -2111,22 +2087,6 @@ describe("결과 화면 이벤트", () => {
       { action: "retry", result: "declined" },
       { action: "to_workspace", result: "declined" },
     ]);
-  });
-
-  it("목 statusHang 은 결과 조회에 답하지 않는다", async () => {
-    billingMock.setScenario("statusHang");
-    const controller = new AbortController();
-    const pending = fetch("http://localhost/v1/me/billing/setups/S1", {
-      signal: controller.signal,
-    });
-    const raced = await Promise.race([
-      pending.then(() => "answered"),
-      new Promise((resolve) => setTimeout(() => resolve("waiting"), 50)),
-    ]);
-    expect(raced).toBe("waiting");
-    controller.abort();
-    await pending.catch(() => undefined);
-    billingMock.setScenario("ok");
   });
 });
 

@@ -154,9 +154,7 @@ function PlanContent({
         billing={billing}
         isPaid={isPaid}
         isAdmin={isAdmin}
-        onCheckout={() => {
-          onCheckout();
-        }}
+        onCheckout={onCheckout}
       />
     </div>
   );
@@ -300,7 +298,7 @@ function PlanCompare({
     !refundPending(billing.detail?.refundedAttempt?.refundStatus);
   // 판매 중단 안내는 ADMIN 의 Free 카드 자리에만 보인다(멤버는 관리자 요청 안내). 보일 때 마운트마다 한 번 센다.
   const salesNoticeShown =
-    Boolean(product) && !isPaid && isAdmin && !canStart && salesPaused;
+    Boolean(product) && !isPaid && isAdmin && salesPaused;
   const workspaceId = billing.workspaceId;
   useEffect(() => {
     if (salesNoticeShown)

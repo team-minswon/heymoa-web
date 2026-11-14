@@ -25,11 +25,11 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `refund`   승인은 됐지만 권한을 못 줘 자동 취소된다(보상 환불) — 취소 중 → 취소 완료, 새로 시작 가능
  *   - `quota`    무료 월 한도를 다 썼다 — 사용량이 한도와 같고 녹음 시작이 409 `RECORDING_QUOTA_EXCEEDED`(`billingMock.quotaExceeded()`)
  *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(RENEWAL_PENDING, 그동안 Pro). 해지 예약(CANCEL_SUBSCRIPTION)을 받고, 예약 뒤에는 같은 대기에 `cancelAtPeriodEnd=true`
-   - `unpaid`   유료 공간의 갱신 결제가 확정 거절돼 구독이 끝났다(ENDED/UNPAID, 카드 지워짐)
-   - `expired`  해지한 유료 구독의 기간이 끝났다(ENDED/EXPIRED, 카드 지워짐)
-   - `salesPaused` 운영자가 새 판매를 멈췄다 — 유료 공간의 구독이 끝났고(ENDED/EXPIRED) 결제 화면은 보이지만(`enforced=true`)
-     START_PURCHASE 가 없고, 한도 집행 대상이 아니라 사용량은 `enforced=false` 다
-   - `recording` 이 공간에 아직 끝나지 않은 녹음이 있다(사용량 `recordingInProgress=true`)
+ *   - `unpaid`   유료 공간의 갱신 결제가 확정 거절돼 구독이 끝났다(ENDED/UNPAID, 카드 지워짐)
+ *   - `expired`  해지한 유료 구독의 기간이 끝났다(ENDED/EXPIRED, 카드 지워짐)
+ *   - `salesPaused` 운영자가 새 판매를 멈췄다 — 유료 공간의 구독이 끝났고(ENDED/EXPIRED) 결제 화면은 보이지만(`enforced=true`)
+ *     START_PURCHASE 가 없고, 한도 집행 대상이 아니라 사용량은 `enforced=false` 다
+ *   - `recording` 이 공간에 아직 끝나지 않은 녹음이 있다(사용량 `recordingInProgress=true`)
  *   - `payerLeft` 유료 공간의 결제자가 빠져 자동 결제가 멈췄다(ACTIVE·종료 예정·카드 없음, CHANGE_CARD 만). 카드를 등록하면
  *     재개가 나오고 자동 결제 중단 알림이 한 건 있다
  *   - `otherPayer` 평소의 유료 공간인데 카드를 다른 관리자가 등록했다(`methodPayerIsMe=false`)
@@ -39,7 +39,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `cardRateLimited` 카드 제출이 429(카드 등록 시도 제한)이다
  *   - `statusHang` 등록 결과 조회(`/v1/me/billing/setups/{id}`)가 응답하지 않는다 — 결과 화면에 들어간 뒤 켜고 새로고침한다(조회 때 읽는다)
  *   - `unknownState` 등록 결과 조회가 web 이 모르는 단계(`stage: "NEW_STAGE"`, `status: "DECLINED"`)를 준다(조회 때 읽는다)
- * *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
+ *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
  * **구매 이후(APP-1565).** 유료 공간(「제품 팀」)에서 해지 예약 → 재개, 카드 변경(REPLACE 등록 → 결과 화면), 해지 예약 뒤

@@ -74,9 +74,6 @@ function Payments({
       .filter((workspace) => workspace.role === "ADMIN")
       .map((workspace) => workspace.workspaceId)
   );
-  const workspaceOf = new Map(
-    payments.map((payment) => [payment.paymentId, payment.workspaceId])
-  );
   if (payments.length === 0)
     return (
       <p className={cn(SETTINGS_CARD, "text-sm text-[var(--el-muted)]")}>
@@ -91,8 +88,8 @@ function Payments({
         middle: payment.workspaceName,
         openable: admin.has(payment.workspaceId),
       }))}
-      onOpen={(paymentId) =>
-        onOpen({ workspaceId: workspaceOf.get(paymentId)!, paymentId })
+      onOpen={({ workspaceId, paymentId }) =>
+        onOpen({ workspaceId, paymentId })
       }
     />
   );

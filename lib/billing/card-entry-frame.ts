@@ -5,7 +5,7 @@
  */
 export const CARD_ENTRY_MESSAGE = "heymoa:card-entry";
 
-export type CardEntryEvent =
+type CardEntryEvent =
   | { event: "height"; height: number }
   /** 제출 중에는 모달을 닫지 못하게 한다. */
   | { event: "submitting"; submitting: boolean }

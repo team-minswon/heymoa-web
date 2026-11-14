@@ -12,7 +12,7 @@ import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { cn } from "@/lib/utils";
 
 /** 결제 내역 한 줄. 가운데 칸은 공간 내역에서는 결제자, 내 내역에서는 워크스페이스다. */
-export type PaymentRow = {
+type PaymentRow = {
   paymentId: string;
   completedAt: string | null;
   middle: string;
@@ -30,7 +30,7 @@ export type PaymentRow = {
 };
 
 /** 처음에 보이는 줄 수. 나머지는 「더 보기」로 펼친다(APP-1596). */
-export const PAYMENT_PAGE = 12;
+const PAYMENT_PAGE = 12;
 
 // 영수증 칸(56px)은 값이 없어도 비워 둬 행마다 열이 같다. 영수증 링크는 상세 버튼 안에 둘 수 없어(버튼 안 링크 금지)
 // 행 위에 따로 얹는다 — 그 자리(오른쪽 끝에서 패딩 16 + 표시 16 + 간격 12)가 `RECEIPT_SLOT` 이다.
@@ -43,14 +43,14 @@ const SKELETON_ROWS = 3;
  * 결제 내역 표(날짜 | 결제자 또는 워크스페이스 | 금액 | 상태 | 상세 표시). 최근 12건만 보이고 더 있으면 「더 보기」가 나머지를 펼친다.
  * `rows` 가 null 이면 같은 행 구조에서 값만 막대로 바꾼 로딩 자리다(rule `error-loading`).
  */
-export function PaymentList({
+export function PaymentList<R extends PaymentRow>({
   rows,
   label,
   onOpen,
 }: {
-  rows: PaymentRow[] | null;
+  rows: R[] | null;
   label: string;
-  onOpen?: (paymentId: string) => void;
+  onOpen?: (row: R) => void;
 }) {
   const t = useTranslations("billing.history");
   const format = useBillingFormat();
@@ -86,7 +86,7 @@ export function PaymentList({
                   {payment.openable && onOpen ? (
                     <button
                       type="button"
-                      onClick={() => onOpen(payment.paymentId)}
+                      onClick={() => onOpen(payment)}
                       className={cn(
                         ROW,
                         "group-hover:bg-[var(--el-canvas-soft)]"
