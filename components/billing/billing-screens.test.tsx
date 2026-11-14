@@ -660,6 +660,17 @@ const fillCard = (number = CARD_NUMBER) => {
   typeInto("비밀번호 앞 2자리", "12");
   typeInto("생년월일 6자리", "900101");
 };
+/** 카드 네 칸이 상태와 DOM 모두 비었다(값이 없으니 낼 수도 없다). */
+const expectCardCleared = () => {
+  for (const label of [
+    "카드 번호",
+    "유효기간",
+    "비밀번호 앞 2자리",
+    "생년월일 6자리",
+  ])
+    expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");
+  expect(pay()).toBeDisabled();
+};
 /** 카드 칸과 두 동의를 모두 채운다. */
 const fillAll = () => {
   fillCard();
@@ -921,7 +932,7 @@ describe("첫 구독 결제 페이지", () => {
     );
   });
 
-  it("대행사가 카드를 거절하면(400) 그 자리에 알리고 입력을 두며, 다시 내면 같은 등록에 낸다", async () => {
+  it("대행사가 카드를 거절하면(400) 그 자리에 알리고 카드 칸을 비우며, 다시 내면 같은 등록에 낸다", async () => {
     let calls = 0;
     const bodies = serveCardSubmit(() =>
       ++calls === 1
@@ -935,9 +946,11 @@ describe("첫 구독 결제 페이지", () => {
       await screen.findByText("카드 정보를 다시 확인해 주세요.")
     ).toBeInTheDocument();
     expect(goToSetupResult).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("카드 번호")).toHaveValue(
-      "4111 1111 1111 1111"
+    await waitFor(() =>
+      expect(screen.getByLabelText("카드 번호")).toHaveFocus()
     );
+    expectCardCleared();
+    fillCard();
     fireEvent.click(pay());
     await waitFor(() => expect(goToSetupResult).toHaveBeenCalled());
     expect(createCount()).toBe(1);
@@ -961,6 +974,11 @@ describe("첫 구독 결제 페이지", () => {
     expect(
       await screen.findByText("서버가 정한 시도 제한 문구")
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("카드 번호")).toHaveFocus()
+    );
+    expectCardCleared();
+    fillCard();
     await waitFor(() => expect(pay()).toBeEnabled());
     fireEvent.click(pay());
     expect(

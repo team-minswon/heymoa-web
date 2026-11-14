@@ -65,7 +65,8 @@ const SECTION_TITLE = "mb-3 text-sm font-medium text-[var(--el-ink)]";
  * 기다리는 내 등록이면 그것) 카드를 낸다. 카드 정보는 이 상태에만 살고, 카드 제출은 훅(`useMutation`) 없이 부른다 — 뮤테이션
  * 캐시가 변수를 들고 전역 `MutationCache.onSuccess` 가 변수를 분석 이벤트에 넘기기 때문이다.
  *
- * - 400(입력 거절)·429(시도 제한)는 이 자리에서 알리고 입력을 둔다
+ * - 카드 제출이 끝나면 성패와 상관없이 카드 칸을 모두 비운다 — 카드 정보를 메모리에 남기지 않는다. 다시 낼 때는 새로 받는다
+ * - 400(입력 거절)·429(시도 제한)는 이 자리에서 알리고 초점을 카드 번호 칸으로 옮긴다
  * - 첫 구독: 제출이 끝나면(409·결과 불명 포함) 결과 화면으로(`onResult`)
  * - 카드 변경: 서버가 발급을 요청 안에서 끝내 제출 응답이 등록 상태다. 완료면 `onChanged`, 거절이면 이 자리에서 알리고 새 등록으로
  *   다시 받는다. 그 밖(같은 등록의 다른 제출이 발급 중 등)은 결과 화면으로
@@ -97,6 +98,9 @@ export function CheckoutForm({
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const key = useRef(createRequestKey()).current;
   const [card, setCard] = useState<CardForm>(EMPTY_CARD);
+  // 카드 칸을 비운 횟수. 칸을 새로 그려 「떠난 칸」 표시도 함께 지우고, 비운 뒤 카드 번호 칸에 초점을 둔다.
+  const [cleared, setCleared] = useState(0);
+  const numberRef = useRef<HTMLInputElement>(null);
   const [agreed, setAgreed] = useState(false);
   const [pgAgreed, setPgAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -113,6 +117,9 @@ export function CheckoutForm({
   useEffect(() => {
     onSubmittingChange?.(submitting);
   }, [onSubmittingChange, submitting]);
+  useEffect(() => {
+    if (cleared > 0) numberRef.current?.focus();
+  }, [cleared]);
 
   const product = billing.product;
   const admin = workspace?.role === "ADMIN";
@@ -221,7 +228,6 @@ export function CheckoutForm({
           timeoutMs: REQUEST_TIMEOUT_MS,
         })
       );
-      setCard(EMPTY_CARD);
       if (!replace) {
         leaving = true;
         onResult(setupId);
@@ -272,6 +278,10 @@ export function CheckoutForm({
         key.renew();
       }
     } finally {
+      if (step === "card") {
+        setCard((prev) => ({ ...EMPTY_CARD, holder: prev.holder }));
+        setCleared((count) => count + 1);
+      }
       if (!leaving) setSubmitting(false);
     }
   };
@@ -356,6 +366,8 @@ export function CheckoutForm({
         </BillingNotice>
       ) : null}
       <CardFields
+        key={cleared}
+        numberRef={numberRef}
         value={card}
         onChange={setCard}
         errors={errors}

@@ -2,7 +2,7 @@
 
 import { LockKeyhole } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, useState } from "react";
+import { useId, useState, type Ref } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,9 @@ export function CardFields({
   onChange,
   errors,
   disabled,
+  numberRef,
 }: {
+  numberRef?: Ref<HTMLInputElement>;
   value: CardForm;
   onChange: (next: CardForm) => void;
   errors: Partial<Record<CardField, CardError>>;
@@ -81,6 +83,7 @@ export function CardFields({
           <Label htmlFor={number.props.id}>{t("number")}</Label>
           <Input
             {...number.props}
+            ref={numberRef}
             value={formatCardNumber(value.number)}
             onChange={(e) =>
               set({ number: digitsOf(e.target.value, CARD_NUMBER_MAX) })
