@@ -411,7 +411,7 @@ function currentScenario(): BillingScenario {
 }
 
 const nextId = (prefix: string) =>
-  `${prefix}${String((state.counter += 1)).padStart(12 - prefix.length, "0")}`;
+  `${prefix}${String((state.counter += 1)).padStart(13 - prefix.length, "0")}`;
 
 /** 목 유저가 이 공간의 ADMIN 인가. 없는 공간은 404 로 던진다. */
 function isAdmin(workspaceId: string) {

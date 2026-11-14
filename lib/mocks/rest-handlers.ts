@@ -769,6 +769,13 @@ export const restHandlers = [
       )
     )
   ),
+  // 소켓 연결 티켓(APP-1546 `issueRealtimeTicket`). 목 소켓은 티켓을 검사하지 않고 `?ticket=` 붙은 주소를 그대로 받는다.
+  http.post("*/v1/realtime/tickets", () =>
+    respond(() => ({
+      ticket: "mock-realtime-ticket",
+      expiresAt: new Date(Date.now() + 30_000).toISOString(),
+    }))
+  ),
   // 계약상 204 무본문, 지금 버전이 아니면 409 `CONSENT_VERSION_OUTDATED` (APP-1276)
   http.post("*/v1/users/me/consents", async ({ request }) =>
     respond(

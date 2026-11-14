@@ -49,6 +49,34 @@ function nullableLeaves(schema: unknown, path = ""): string[] {
   return out;
 }
 
+/** `pattern` 이 걸린 잎. oneOf 분기도 같은 경로로 본다 — 분기마다 판별 값이 다를 뿐 id 형식은 같다. */
+function patternLeaves(
+  schema: unknown,
+  path = ""
+): Array<{ leaf: string; pattern: string }> {
+  if (!schema || typeof schema !== "object") return [];
+  const node = schema as {
+    properties?: Record<string, { pattern?: string }>;
+    items?: { pattern?: string };
+    oneOf?: unknown[];
+  };
+  const out: Array<{ leaf: string; pattern: string }> = [];
+  for (const [key, value] of Object.entries(node.properties ?? {})) {
+    const next = path ? `${path}.${key}` : key;
+    if (typeof value?.pattern === "string")
+      out.push({ leaf: next, pattern: value.pattern });
+    out.push(...patternLeaves(value, next));
+  }
+  if (node.items) {
+    if (typeof node.items.pattern === "string")
+      out.push({ leaf: `${path}[]`, pattern: node.items.pattern });
+    out.push(...patternLeaves(node.items, `${path}[]`));
+  }
+  for (const branch of node.oneOf ?? [])
+    out.push(...patternLeaves(branch, path));
+  return out;
+}
+
 function valuesAt(node: unknown, parts: string[]): unknown[] {
   if (parts.length === 0) return [node];
   const [head, ...rest] = parts;
@@ -287,7 +315,7 @@ async function contractSamples() {
         title: "주간 배포 회의",
         unavailable: false,
       },
-      { kind: "NOTE", id: "01KDELETED0000", title: null, unavailable: true },
+      { kind: "NOTE", id: "01KDE1ETED000", title: null, unavailable: true },
     ],
     content: "논의된 이슈를 만들어줘",
     toolEvent: null,
@@ -681,6 +709,8 @@ describe("nullable 목 표본", () => {
     const observed = new Map<string, { total: number; nulls: number }>();
     const { samples, skipped } = await contractSamples();
     const answered = new Set<string>();
+    // 목 id 가 계약 형식(TSID 13자 등)을 어기면 화면이 실서버에서 못 받을 값으로 돈다.
+    const patternViolations = new Set<string>();
 
     // 조용히 좁아지지 않게 못 부른 operation을 남긴다.
     expect(skipped, "표본을 만들 수 없는 GET operation").toEqual([]);
@@ -748,6 +778,14 @@ describe("nullable 목 표본", () => {
       }
 
       for (const body of bodies)
+        for (const { leaf, pattern } of patternLeaves(schema)) {
+          const regex = new RegExp(pattern);
+          for (const value of valuesAt(body, leaf.split(".")))
+            if (typeof value === "string" && !regex.test(value))
+              patternViolations.add(`${schemaName}.${leaf} = ${value}`);
+        }
+
+      for (const body of bodies)
         for (const leaf of nullableLeaves(schema)) {
           if (leaf === "error") continue; // 성공 응답의 봉투는 언제나 null이다
           const values = valuesAt(body, leaf.split("."));
@@ -762,6 +800,8 @@ describe("nullable 목 표본", () => {
           observed.set(key, entry);
         }
     }
+
+    expect([...patternViolations], "계약 pattern 을 어긴 목 값").toEqual([]);
 
     // 200을 한 번도 못 받은 스키마가 있으면 그 응답은 통째로 미검사다.
     const unanswered = [...new Set(samples.map(([schema]) => schema))].filter(

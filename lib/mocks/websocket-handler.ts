@@ -349,14 +349,18 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
               resendFromSeq === undefined ? undefined : Number(resendFromSeq)
             );
           } catch {
-            client.close(1008, "session not found");
+            // server 처럼 소켓을 닫지 않고 계약의 오류 이벤트로 거절한다. 재시도해도 같은 오류다.
+            scenario = null;
+            sendEvent({
+              type: "error",
+              code: "SESSION_NOT_CONNECTABLE",
+              message: "연결할 수 없는 녹음 세션입니다.",
+            });
           }
           return;
         }
-        if (!scenario) {
-          client.close(1008, "session not connected");
-          return;
-        }
+        // 붙기 전 audio·stop 은 server 처럼 조용히 버린다.
+        if (!scenario) return;
         if (action === "audio") {
           // 목이 계약을 실행 가능하게 만드는 자리다. 서버가 볼 값을 그대로 본다.
           await scenario.receiveFrame(frame.body, {

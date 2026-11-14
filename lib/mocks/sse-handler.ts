@@ -5,6 +5,7 @@ import {
   buildApprovalPlan,
   buildChatEvents,
   type MockSseEvent,
+  tsid,
 } from "@/lib/mocks/chat-stream";
 import {
   hasScenario,
@@ -339,7 +340,7 @@ function openTurn(
  * **nullable 표본이 한쪽만 나온다.** 실제 턴을 돌려 만들려면 테스트가 시간에 매인다.
  */
 export function seedAgentChatTurnForTests(chatId: string, turn: Partial<Turn>) {
-  openTurn(chatId, { turnId: `turn-${chatId}-seed`, ...turn });
+  openTurn(chatId, { turnId: tsid(`turn-${chatId}-seed`), ...turn });
 }
 
 let lastEntryMs = 0;
@@ -600,6 +601,9 @@ function scheduleAiTitle(chatId: string) {
   }, AI_TITLE_DELAY_MS / speed());
 }
 
+/** server `TurnFailureCode` 에서 retryable false 인 둘. 정체를 모르는 실패를 재시도로 안내하지 않는다. */
+const NON_RETRYABLE_FAILURES = new Set(["UPSTREAM_REJECTED", "INTERNAL_ERROR"]);
+
 /**
  * 턴을 굳히고 열린 구독을 닫는다 — 안 닫으면 web이 영원히 기다린다.
  *
@@ -619,7 +623,7 @@ function settleTurn(
       const code =
         typeof failureCode === "string" ? failureCode : "INTERNAL_ERROR";
       turn.failureCode = code;
-      turn.retryable = code !== "UPSTREAM_REJECTED";
+      turn.retryable = !NON_RETRYABLE_FAILURES.has(code);
     }
   }
   stream.finishedAt = Date.now();
@@ -983,7 +987,9 @@ export const chatSseHandlers = [
             error: {
               code: "AGENT_CHAT_TURN_IN_PROGRESS",
               message: "이미 진행 중인 턴이 있습니다.",
-              details: [{ field: "turnId", message: `turn-${chatId}-other` }],
+              details: [
+                { field: "turnId", message: tsid(`turn-${chatId}-other`) },
+              ],
             },
           },
           { status: 409 }
@@ -1010,7 +1016,7 @@ export const chatSseHandlers = [
       chat.count += 1;
       const stream = openTurn(
         chatId,
-        { turnId: `turn-${chatId}-${chat.count}` },
+        { turnId: tsid(`turn-${chatId}-${chat.count}`) },
         // 「밀리게 해줘」 — 첫 구독을 두 프레임 뒤에 끊고 끝난 스트림을 바로 지운다.
         // 재접속이 `410` 을 받고 화면이 히스토리를 다시 읽는 자리를 밟는다.
         hasScenario(body.message, "resync")

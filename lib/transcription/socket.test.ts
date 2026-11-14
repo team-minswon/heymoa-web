@@ -134,7 +134,11 @@ async function establish(socket: TranscriptionSocket) {
   };
 }
 
-function createSocket(onClose = vi.fn(), onActivity = vi.fn()) {
+function createSocket(
+  onClose = vi.fn(),
+  onActivity = vi.fn(),
+  onEvent = vi.fn()
+) {
   return new TranscriptionSocket({
     url: "ws://localhost/ws/transcriptions",
     sessionId,
@@ -143,7 +147,7 @@ function createSocket(onClose = vi.fn(), onActivity = vi.fn()) {
     reconnectReason: "no_receive",
     disconnectedMs: 21_340,
     pendingChunks: 213,
-    onEvent: vi.fn(),
+    onEvent,
     onClose,
     onActivity,
   });
@@ -357,12 +361,70 @@ describe("TranscriptionSocket", () => {
     });
     await connection.connected;
 
-    connection.malformed('{"type":"unknown"}');
+    // 아는 이벤트인데 필수 필드가 빠졌다. 모르는 이벤트와 달리 계약 위반이라 닫고 다시 붙는다.
+    connection.malformed('{"type":"ack"}');
 
     await vi.waitFor(() =>
       expect(onClose).toHaveBeenCalledWith(1008, "invalid server event")
     );
     expect(socket.sendAudio(new ArrayBuffer(2), 0, 0)).toBe(false);
+  });
+
+  it("keeps the connection on an unknown event type or capture state", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const onClose = vi.fn();
+    const onEvent = vi.fn();
+    const socket = createSocket(onClose, vi.fn(), onEvent);
+    const connection = await establish(socket);
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
+    await connection.connected;
+
+    connection.event({ type: "speaker_hint", label: "A" });
+    connection.event({ type: "capture_state", state: "PAUSED" });
+    connection.event({ type: "ack", throughChunkSeq: 3 });
+
+    await vi.waitFor(() =>
+      expect(onEvent).toHaveBeenLastCalledWith({
+        type: "ack",
+        throughChunkSeq: 3,
+      })
+    );
+    expect(onEvent).toHaveBeenCalledTimes(2);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(socket.sendAudio(new ArrayBuffer(2), 4, 0)).toBe(true);
+    vi.restoreAllMocks();
+  });
+
+  // 오류 이벤트는 원래 이 소켓을 닫는다. 모르는 code 도 같은 길(일반 오류 → 세션이 다시 붙음)로 가야지
+  // 「깨진 이벤트」(1008)로 가면 안 된다.
+  it("forwards an unknown error code as a retryable error, not as a broken frame", async () => {
+    const onClose = vi.fn();
+    const onEvent = vi.fn();
+    const socket = createSocket(onClose, vi.fn(), onEvent);
+    const connection = await establish(socket);
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
+    await connection.connected;
+
+    connection.event({ type: "error", code: "QUOTA_EXCEEDED", message: "x" });
+
+    await vi.waitFor(() =>
+      expect(onEvent).toHaveBeenLastCalledWith({
+        type: "error",
+        code: "INTERNAL_ERROR",
+        message: "x",
+      })
+    );
+    expect(onClose).not.toHaveBeenCalledWith(1008, "invalid server event");
   });
 
   it("preserves a server error received before the application session is ready", async () => {

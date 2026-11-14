@@ -23,7 +23,7 @@ const MOCK_AVATAR =
 export const MOCK_ACCOUNT_LANGUAGE_COOKIE = "heymoa-mock-account-lang";
 
 export const MOCK_USER: AuthUser = {
-  userId: "user-12345",
+  userId: "0MEMBER000001",
   name: "테스트 유저",
   email: "test@heymoa.com",
   image: MOCK_AVATAR,

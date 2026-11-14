@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  isTerminalError,
   parseClientCommand,
   parseServerEvent,
+  type ServerEvent,
 } from "@/lib/transcription/protocol";
 
 describe("AsyncAPI transcription protocol", () => {
@@ -123,7 +125,7 @@ describe("AsyncAPI transcription protocol", () => {
     ).toMatchObject({ type: "ack", throughChunkSeq: 300 });
   });
 
-  it("accepts the two capture states and rejects the retired one", () => {
+  it("accepts the two capture states and drops the retired one", () => {
     for (const state of ["LIVE", "DEGRADED"]) {
       expect(
         parseServerEvent(JSON.stringify({ type: "capture_state", state }))
@@ -131,12 +133,44 @@ describe("AsyncAPI transcription protocol", () => {
     }
     // LOST 를 뺐다. 조각을 안 보내는 당사자가 이 브라우저라 이미 알고 있고, 정말 네트워크가
     // 끊겼으면 그 말이 닿지도 않는다 — 끊긴 사실은 조회의 공백이 더 정확히 말한다.
-    expect(() =>
+    // 모르는 상태는 버린다(null). 소켓을 끊지도, 아는 상태로 바꿔 읽지도 않는다.
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(
       parseServerEvent('{"type":"capture_state","state":"LOST"}')
-    ).toThrow();
-    expect(() =>
+    ).toBeNull();
+    expect(
       parseServerEvent('{"type":"capture_state","state":"UNKNOWN"}')
-    ).toThrow();
+    ).toBeNull();
+    expect(() => parseServerEvent('{"type":"capture_state"}')).toThrow();
+  });
+});
+
+describe("배포 창을 견딘다 — 서버가 먼저 이벤트·값을 더해도", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("모르는 이벤트 종류는 버리고 경고 한 줄을 남긴다", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(parseServerEvent('{"type":"speaker_hint","x":1}')).toBeNull();
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("모르는 error.code 는 재부착하는 일반 오류로 읽는다", () => {
+    const parsed = parseServerEvent(
+      '{"type":"error","code":"QUOTA_EXCEEDED","message":"한도를 넘었습니다."}'
+    );
+    expect(parsed).toEqual({
+      type: "error",
+      code: "INTERNAL_ERROR",
+      message: "한도를 넘었습니다.",
+    });
+    expect(
+      isTerminalError(parsed as Extract<ServerEvent, { type: "error" }>)
+    ).toBe(false);
+  });
+
+  it("깨진 JSON 과 빠진 필수 필드는 여전히 던진다", () => {
+    expect(() => parseServerEvent("{not json")).toThrow();
+    expect(() => parseServerEvent('{"type":"error","message":"x"}')).toThrow();
   });
 });
 

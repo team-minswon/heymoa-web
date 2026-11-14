@@ -148,7 +148,7 @@ const TSID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
  * 계약이 요구하는 형식이라 어기면 server가 승인 row 등록을 건너뛰고 승인 API가 404가 된다.
  * 무작위로 만들면 테스트가 흔들리므로 seed에서 뽑는다.
  */
-function tsid(seed: string) {
+export function tsid(seed: string) {
   let hash = 7;
   for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   return Array.from({ length: 13 }, (_, index) => {

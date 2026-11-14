@@ -360,7 +360,7 @@ function seedMentoringReview(
     target.revisions.set(proposalId, revisions);
     const last = revisions[revisions.length - 1];
     return {
-      itemId: nextId("01KI"),
+      itemId: nextId("01KJ"),
       revision: 1,
       kind: seed.kind,
       content: last.content,
@@ -499,7 +499,7 @@ function seedMentoringReview(
     edited.revision = 2;
     review.reviewVersion = 2;
     review.items.push({
-      itemId: nextId("01KI"),
+      itemId: nextId("01KJ"),
       revision: 1,
       kind: "QUESTION",
       content: "발표 순서를 다시 정해야 하나",
@@ -796,7 +796,7 @@ function seedLargeReview(target: State, noteId: string) {
     60, 42, 33, 27, 22, 18, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 1, 1,
   ];
   const item = (kind: Kind, content: string): StoredItem => ({
-    itemId: nextId("01KI"),
+    itemId: nextId("01KJ"),
     revision: 1,
     kind,
     content,
@@ -915,7 +915,7 @@ function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
     content: string,
     over: Partial<StoredItem> = {}
   ): StoredItem => ({
-    itemId: nextId("01KI"),
+    itemId: nextId("01KJ"),
     revision: 1,
     kind,
     content,
@@ -1079,7 +1079,7 @@ function completeAnalysis(noteId: string) {
       ? helpDemoPack().endedItems
       : REVIEW_SEED_TOPICS[0].items
     ).map((seed) => ({
-      itemId: nextId("01KI"),
+      itemId: nextId("01KJ"),
       revision: 1,
       kind: seed.kind,
       content: seed.content,
@@ -1257,7 +1257,7 @@ export const meetingFlowHandlers = [
                 .summaries.get(noteId)
                 ?.topics.find((row) => row.ordinal === body.topicOrdinal) ??
               failWith("TOPIC_UNKNOWN", 400, "요약에 없는 주제입니다."));
-        const itemId = nextId("01KI");
+        const itemId = nextId("01KJ");
         // 실패할 수 있는 변환을 모두 끝낸 뒤에 상태를 바꾼다. 400 뒤에 요약만 바뀌어 남으면 안 된다.
         const assignee = assigneeFromRequest(body.assignee, noteId);
         topic?.members.push({ itemId, kind: body.kind });

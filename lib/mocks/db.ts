@@ -2495,7 +2495,7 @@ function seedAgentDelegationUsages(): MockAgentDelegationUsage[] {
     const failed = index % 7 === 3;
     return {
       delegationId: "01K00000000Q1",
-      usageId: `01K0000000U${String(index).padStart(2, "0")}`,
+      usageId: `01K0000000T${String(index).padStart(2, "0")}`,
       toolName,
       outcome: failed ? ("FAILED" as const) : ("SUCCEEDED" as const),
       resultCount:

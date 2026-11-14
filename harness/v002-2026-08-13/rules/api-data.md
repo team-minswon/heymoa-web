@@ -22,12 +22,13 @@ API 호출은 `lib/api/generated/`의 Orval 훅으로 합니다. 직접 `fetch()
 
 `lib/api/fetcher.ts`가 401 → `/v1/auth/refresh` → 재시도를 자동으로 합니다.
 
-**생성됐어도 못 쓰는 훅이 둘 있습니다.** 응답 형태가 JSON이 아니라 생성 훅의 전제를
+**생성됐어도 못 쓰는 훅이 셋 있습니다.** 응답 형태가 JSON이 아니라 생성 훅의 전제를
 벗어납니다.
 
 | 훅 | 왜 | 대신 |
 |---|---|---|
 | `subscribeAgentChatTurnEvents` | 응답이 `text/event-stream`이라 훅이 스트림을 못 읽고 한 덩어리로 다룹니다 | `lib/api/sse.ts`의 `getEventStream()` (URL 은 생성된 `getSubscribeAgentChatTurnEventsUrl()`) |
+| `subscribeUserEvents` | 사용자 이벤트 스트림 `GET /v1/events` 도 `text/event-stream` 입니다 | `lib/api/sse.ts`의 `getEventStream()` (URL 은 생성된 `getSubscribeUserEventsUrl()`, `user-event-provider.tsx`) |
 | `startWorkspaceIntegration` | 계약이 **302 리다이렉트**라 본문이 HTML이고 `apiFetch`의 JSON 파싱이 깨집니다 | `window.location.assign()`으로 이동 (`workspace-integrations-settings.tsx`) |
 
 `sendAgentChatMessage`·`resolveToolApproval` 은 `202 {turnId}` JSON 이라 생성 훅으로 씁니다.
@@ -40,12 +41,16 @@ API 호출은 `lib/api/generated/`의 Orval 훅으로 합니다. 직접 `fetch()
 `openapi3.yml`은 heymoa-server 산출물의 미러이고, `/internal/**` 경로를 뺀 것입니다 —
 그쪽은 heymoa-ai가 부르지 브라우저가 부르지 않습니다.
 
-**손으로 고치지 않습니다.** 갱신은 원본에서 복사한 뒤 `/internal/**`을 지우는 것입니다.
-원본은 docs repo(`../docs`)의 `origin/main`이고, **어느 파일인지는 그 레포의 `INDEX.md`가
-가리킵니다.** 깊은 경로를 여기 적지 않습니다 — 실제로 옮겨진 적이 있습니다.
-워킹 트리를 읽으면 남의 브랜치일 수 있습니다.
+**손으로 고치지 않습니다.** 갱신은 `node scripts/sync-openapi.mjs <docs origin/main 의 openapi3-server.yml>`
+→ `pnpm orval` 입니다. 스크립트가 `/internal` 경로·`internalToken`·닿지 않는 schema 를 지우므로
+손으로 지우지 않습니다. 원본은 docs repo(`../docs`)의 `origin/main`이고, **어느 파일인지는 그
+레포의 `contracts/README.md` §1 표가 가리킵니다.** 깊은 경로를 여기 적지 않습니다 — 실제로
+옮겨진 적이 있습니다. 워킹 트리를 읽으면 남의 브랜치일 수 있습니다.
 
-바뀌면 `pnpm orval`을 먼저 돌리고, 그다음 응답을 실제로 정의하는 핸들러 파일(아래)을 맞춥니다.
+사본에 남기는 기준은 `/internal` 접두사 하나입니다. web 이 부르지 않는 운영자 전용 경로도
+그 기준대로 사본에 둡니다.
+
+바뀌면 `pnpm orval`을 먼저 돌린 뒤 응답을 실제로 정의하는 핸들러 파일(아래)을 맞춥니다.
 `handlers.ts`는 레지스트리라 경로가 새로 생겼을 때만 건드립니다.
 `lib/api/generated/`는 산출물이라 편집하지 않습니다. (둘 다 hook이 막습니다.)
 

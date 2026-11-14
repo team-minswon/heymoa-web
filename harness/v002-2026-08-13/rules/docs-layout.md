@@ -36,6 +36,6 @@ heymoa-ai의 `docs/issues/APP-N-slug/`로 통일하지 않았습니다 — 옮�
 ## 어디에 안 넣나
 
 - 계약 원본을 `docs/`에 복사하지 않습니다. 원본은 docs repo(`../docs`)의 `origin/main`이고
-  진입점은 그 레포의 `INDEX.md`입니다.
+  진입점은 그 레포의 `contracts/README.md` §1 표입니다.
 - 토큰 값·파일 목록처럼 코드가 원본인 것을 문서에 옮기지 않습니다. 기준만 쓰고 원본을 링크합니다.
 - 하네스 안(`harness/`)에 설계 문서를 쓰지 않습니다. 하네스는 지시이고 설계는 docs repo입니다.

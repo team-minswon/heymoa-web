@@ -132,6 +132,7 @@ export class TranscriptionSocket {
             (message) => {
               try {
                 const event = parseServerEvent(message.body);
+                if (event === null) return;
                 if (event.type === "connected" && !this.connected) {
                   this.reconcileConnection?.();
                 }

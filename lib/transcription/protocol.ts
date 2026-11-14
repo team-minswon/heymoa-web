@@ -54,12 +54,15 @@ const partialEventSchema = z.object({
 
 /**
  * 모르는 필드를 거부하지 않는다(`z.object`). 배포가 heymoa-ai → heymoa-server → heymoa-web
- * 순이라 server 가 필드를 더 실은 뒤 web 이 아직 안 올라간 창이 반드시 생긴다(근거는
+ * 순이라 server 가 필드·이벤트·값을 더 실은 뒤 web 이 아직 안 올라간 창이 반드시 생긴다(근거는
  * `lib/notes/proposals/contract.ts` 상단). 이 소켓의 파싱 실패는 `onClose(1008)` 로 이어져
- * 녹음 중인 세션이 끊기므로 대가가 특히 비싸다.
+ * 녹음 중인 세션이 끊기므로 대가가 특히 비싸다. 그래서 모르는 이벤트 종류와 모르는 enum 값은
+ * `parseServerEvent` 가 실패로 만들지 않는다. 깨진 JSON·아는 필드의 깨진 값만 실패다.
  *
  * 드리프트는 server 의 `AsyncApiContractTest`·`AsyncApiMessageCoverageTest` 가 잡는다.
  */
+const captureStateSchema = z.enum(["LIVE", "DEGRADED"]);
+
 const serverEventSchema = z.discriminatedUnion("type", [
   // 세션에 붙었다(부착). 브라우저는 durableThroughSeq 다음 조각부터 버퍼에서 다시 보낸다.
   z.object({
@@ -92,29 +95,31 @@ const serverEventSchema = z.discriminatedUnion("type", [
   // 보내는 당사자인 브라우저가 이미 안다.
   z.object({
     type: z.literal("capture_state"),
-    state: z.enum(["LIVE", "DEGRADED"]),
+    state: captureStateSchema,
   }),
   z.object({ type: z.literal("completed"), sessionId: tsidSchema }),
   z.object({
     type: z.literal("error"),
     /**
-     * 값 추가는 필드 추가와 다르다. `z.object` 는 모르는 필드만 흘려보내고 `z.enum` 밖의 값은
-     * 거절한다 — 그러면 `onClose(1008)` 로 녹음이 끊긴다. 서버가 새 코드를 내보내기 전에
-     * 여기가 먼저 배포돼야 한다.
-     *
-     * 앞의 다섯과 뒤의 둘은 재시도가 의미 있는가로 갈린다.
+     * 앞의 다섯과 뒤의 둘은 재시도가 의미 있는가로 갈린다. 모르는 code 는 `INTERNAL_ERROR` 로
+     * 읽는다 — 끝내는 오류로 잘못 읽으면 녹음이 멈추지만, 다시 붙는 쪽은 틀려도 재부착 간격이 막는다.
      */
-    code: z.enum([
-      "INVALID_CLIENT_MESSAGE",
-      "INVALID_AUDIO_FRAME",
-      "STT_CONNECTION_FAILED",
-      "STT_TRANSCRIPTION_FAILED",
-      "INTERNAL_ERROR",
-      /** 이 스트림의 주인이 아니다. 재시도해도 같다. */
-      "NOT_SESSION_OWNER",
-      /** 없는 세션·이미 닫힘·회의 종료·중복 연결·접근 불가. 재시도해도 같다. */
-      "SESSION_NOT_CONNECTABLE",
-    ]),
+    // 빠진 code 는 그대로 거절한다 — 모르는 값과 달리 계약을 어긴 프레임이다.
+    code: z.string().pipe(
+      z
+        .enum([
+          "INVALID_CLIENT_MESSAGE",
+          "INVALID_AUDIO_FRAME",
+          "STT_CONNECTION_FAILED",
+          "STT_TRANSCRIPTION_FAILED",
+          "INTERNAL_ERROR",
+          /** 이 스트림의 주인이 아니다. 재시도해도 같다. */
+          "NOT_SESSION_OWNER",
+          /** 없는 세션·이미 닫힘·회의 종료·중복 연결·접근 불가. 재시도해도 같다. */
+          "SESSION_NOT_CONNECTABLE",
+        ])
+        .catch("INTERNAL_ERROR")
+    ),
     message: z.string().min(1),
     /**
      * 같은 code 안에서 화면이 할 말을 가를 때만 온다. 지금은 `SESSION_NOT_CONNECTABLE` 에만 붙는다.
@@ -150,8 +155,32 @@ export function parseClientCommand(raw: string): ClientCommand {
   return clientCommandSchema.parse(JSON.parse(raw));
 }
 
-export function parseServerEvent(raw: string): ServerEvent {
-  return serverEventSchema.parse(JSON.parse(raw));
+const knownEventTypes = new Set<unknown>(
+  serverEventSchema.options.map((option) => option.shape.type.value)
+);
+
+/**
+ * 버릴 프레임이면 null. 모르는 이벤트 종류는 노트 토픽·채팅 SSE 처럼 버리고 연결을 유지한다.
+ * 깨진 JSON 과 아는 이벤트의 깨진 필드는 던진다 — 소켓이 닫고 다시 붙는다.
+ */
+export function parseServerEvent(raw: string): ServerEvent | null {
+  const data: unknown = JSON.parse(raw);
+  const type = (data as { type?: unknown } | null)?.type;
+  if (!knownEventTypes.has(type)) {
+    console.warn(`[transcription] 모르는 서버 이벤트: ${String(type)}`);
+    return null;
+  }
+  // 모르는 수집 상태는 버린다. 아는 값으로 바꿔 읽으면 화면이 틀린 배너를 띄운다.
+  const state = (data as { state?: unknown }).state;
+  if (
+    type === "capture_state" &&
+    typeof state === "string" &&
+    !captureStateSchema.safeParse(state).success
+  ) {
+    console.warn(`[transcription] 모르는 수집 상태: ${state}`);
+    return null;
+  }
+  return serverEventSchema.parse(data);
 }
 
 export const protocolExamples = {
