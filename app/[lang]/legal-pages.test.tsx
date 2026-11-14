@@ -91,7 +91,7 @@ describe("HeyMoa legal pages", () => {
     // 머리에 공고일·시행일이 있다(`LEGAL_CURRENT`). 이번 판은 공고한 날 바로 시행한다.
     expect(screen.getByText("공고일")).toBeVisible();
     expect(screen.queryByText("미정")).not.toBeInTheDocument();
-    expect(screen.getAllByText("2026년 10월 23일")).toHaveLength(2);
+    expect(screen.getAllByText("2026년 11월 14일")).toHaveLength(2);
     // 번역본 고지는 한국어본에 서지 않는다.
     expect(screen.queryByRole("link", { name: "한국어본 보기" })).not.toBeInTheDocument();
   });
@@ -197,7 +197,7 @@ describe("처리방침·약관 변경 관리(APP-1385)", () => {
 
   it.each([
     [PrivacyPage, "/privacy", ["2026-11-03", "2026-10-23", "2026-10-22", "2026-10-18", "2026-10-12", "2026-09-04", "2026-07-17"]],
-    [TermsPage, "/terms", ["2026-10-22", "2026-10-18", "2026-09-04", "2026-07-17"]],
+    [TermsPage, "/terms", ["2026-10-23", "2026-10-22", "2026-10-18", "2026-09-04", "2026-07-17"]],
   ] as const)("이전 판 목록이 판마다 고정 주소로 선다(%#)", async (Page, path, versions) => {
     await renderPage(Page, "ko");
 

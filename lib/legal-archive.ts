@@ -9,6 +9,7 @@ import terms20260717 from "@/content/legal/terms/2026-07-17.json";
 import terms20260904 from "@/content/legal/terms/2026-09-04.json";
 import terms20261018 from "@/content/legal/terms/2026-10-18.json";
 import terms20261022 from "@/content/legal/terms/2026-10-22.json";
+import terms20261023 from "@/content/legal/terms/2026-10-23.json";
 
 export type LegalDoc = "privacy" | "terms";
 
@@ -47,6 +48,7 @@ export const LEGAL_ARCHIVE = {
     "2026-09-04": terms20260904,
     "2026-10-18": terms20261018,
     "2026-10-22": terms20261022,
+    "2026-10-23": terms20261023,
   },
 } as const;
 

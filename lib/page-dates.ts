@@ -25,7 +25,8 @@ type LegalDates = { announced: string | null; effective: string | null };
 export const LEGAL_CURRENT: Record<LegalDoc, LegalDates> = {
   // APP-1548: 내용이 가려진 화면 흐름을 녹화합니다. 기존 11/3 판은 보존합니다.
   privacy: { announced: "2026-11-11", effective: SESSION_REPLAY_EFFECTIVE },
-  terms: { announced: "2026-10-23", effective: "2026-10-23" },
+  // PRO-75: 유료 구독·환불 조항을 더한 판. 배포한 날 공고하고 바로 시행한다. 기존 10/23 판은 보존합니다.
+  terms: { announced: "2026-11-14", effective: "2026-11-14" },
 };
 
 /** sitemap·JSON-LD는 공고한 본문의 수정일입니다. 미래 시행일을 lastmod로 쓰지 않습니다. */
