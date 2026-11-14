@@ -366,7 +366,18 @@ describe("contract sync 2026-07-29", () => {
     // APP-1383(server APP-1378)에서 탈퇴 처리 목록 `users/me/deletion-plan` 한 경로가 늘었다 (91 → 92).
     // APP-1409 에서 내 대화 삭제 `agent-chats/{chatId}`(DELETE) 한 경로가 늘었다 (92 → 93).
     // APP-1392 에서 광고 수신 동의 `notification-settings/marketing-email`(PUT) 한 경로가 늘었다 (93 → 94).
-    expect(paths).toHaveLength(94);
+    // PRO-75(server APP-1564 계약)에서 결제 여덟 경로가 늘었다 (94 → 102) — `billing/returns/{success,fail}`(PG 복귀 callback),
+    // `workspaces/{workspaceId}/billing`(조회)·`.../billing/setups`(등록 열기)·`.../setups/{setupId}/{complete,cancel}`·
+    // `.../billing/cycles/{cycleId}/attempts`(다시 결제), `me/billing/setups/{setupId}`(등록 상태).
+    // 같은 사본에 이미 있던 `realtime/tickets`(APP-1546)가 함께 들어와 한 경로가 더 늘었다 (102 → 103).
+    // 사용량 조회 `workspaces/{workspaceId}/billing/usage`(APP-1566)가 늘었다 (103 → 104).
+    // 구매 이후의 명령(APP-1565)이 여섯 늘었다 (104 → 110) — `.../billing/subscription/{cancel,resume}`·
+    // `.../billing/payments/{paymentId}`(+`/refunds`)·`.../billing/payment-methods/{methodId}`·`me/billing/payments`.
+    // 2026-11-11 「환불은 문의로만」·「거절되면 바로 종료」로 사용자 환불 `/refunds`·다시 결제 `cycles/{cycleId}/attempts` 가 빠졌다 (110 → 108).
+    // APP-1596 에서 공간 결제 내역 `workspaces/{workspaceId}/billing/payments` 한 경로가 늘었다 (108 → 109).
+    // APP-1600(나이스페이)에서 결제창 복귀 `billing/returns/{success,fail}`·완료 맡기기 `.../setups/{setupId}/complete` 가 빠지고
+    // 카드 제출 `.../setups/{setupId}/card` 가 늘었다 (109 → 107).
+    expect(paths).toHaveLength(107);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

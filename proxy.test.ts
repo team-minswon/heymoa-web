@@ -71,6 +71,7 @@ describe("proxy matcher", () => {
   it.each([
     "/w/01K0000000000",
     "/settings/notifications",
+    "/settings/payments",
     "/invite",
     "/oauth/consent",
     "/auth/callback",
@@ -97,7 +98,10 @@ function invalidRefreshTokenResponse() {
     JSON.stringify({
       success: false,
       data: null,
-      error: { code: "INVALID_REFRESH_TOKEN", message: "세션이 만료되었습니다." },
+      error: {
+        code: "INVALID_REFRESH_TOKEN",
+        message: "세션이 만료되었습니다.",
+      },
     }),
     { status: 401, headers: { "Content-Type": "application/json" } }
   );
@@ -186,7 +190,9 @@ describe("proxy token refresh", () => {
     const proxy = await loadProxy();
 
     const request = new NextRequest("http://web.example.test/w/01K0000000000", {
-      headers: { cookie: "access_token=expired; refresh_token=dead; heymoa-lang=en" },
+      headers: {
+        cookie: "access_token=expired; refresh_token=dead; heymoa-lang=en",
+      },
     });
     const response = await proxy(request);
     const setCookie = response.headers.get("set-cookie") ?? "";
@@ -196,7 +202,9 @@ describe("proxy token refresh", () => {
     expect(request.cookies.has("access_token")).toBe(false);
     expect(request.cookies.has("refresh_token")).toBe(false);
     expect(request.cookies.get("heymoa-lang")?.value).toBe("en");
-    expect(response.headers.get("x-middleware-request-cookie")).toBe("heymoa-lang=en");
+    expect(response.headers.get("x-middleware-request-cookie")).toBe(
+      "heymoa-lang=en"
+    );
   });
 
   // 서버가 심은 쿠키와 (name, domain, path)가 같아야 지워진다. Domain이 빠지면 host-only
@@ -253,5 +261,51 @@ describe("proxy token refresh", () => {
     // Next가 SSR로 넘기는 것은 헤더이지 NextRequest의 쿠키 스토어가 아니다.
     expect(request.cookies.get("access_token")?.value).toBe("new-access");
     expect(request.headers.get("cookie")).toContain("access_token=new-access");
+  });
+});
+
+// 카드를 받는 두 면(결제 페이지·카드 변경 iframe)에만 CSP 를 건다(APP-1600). 같은 값을 요청 헤더에도 실어야 Next 가 nonce 를 스크립트에 붙인다.
+describe("card entry CSP", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const cardRequest = () =>
+    new NextRequest("http://web.example.test/billing/checkout/01K0000000001");
+
+  it("sets a per-request nonce CSP on the response and the forwarded request", async () => {
+    const proxy = await loadProxy();
+    const first = await proxy(cardRequest());
+    const csp = first.headers.get("content-security-policy") ?? "";
+
+    expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+'/);
+    expect(csp).toContain("connect-src 'self' http://api.example.test");
+    // 결제 페이지는 iframe 으로 싣지 않는다 — 어떤 출처도 프레임에 못 띄운다.
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("form-action 'self'");
+    expect(
+      first.headers.get("x-middleware-request-content-security-policy")
+    ).toBe(csp);
+
+    const second = await proxy(cardRequest());
+    expect(second.headers.get("content-security-policy")).not.toBe(csp);
+  });
+
+  it("lets only our origin frame the card change document", async () => {
+    const proxy = await loadProxy();
+    const response = await proxy(
+      new NextRequest(
+        "http://web.example.test/billing/card-change/01K0000000001"
+      )
+    );
+    expect(response.headers.get("content-security-policy")).toMatch(
+      /script-src 'self' 'nonce-.+frame-ancestors 'self'/
+    );
+  });
+
+  it("leaves other product pages without the card CSP", async () => {
+    const proxy = await loadProxy();
+    const response = await proxy(
+      new NextRequest("http://web.example.test/billing/setups/01K0000000001")
+    );
+    expect(response.headers.get("content-security-policy")).toBeNull();
   });
 });

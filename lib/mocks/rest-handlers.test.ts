@@ -10,6 +10,7 @@ import {
 import { setupServer } from "msw/node";
 
 import { parseAuthSession } from "@/lib/auth/session-probe";
+import { billingMock } from "@/lib/mocks/billing";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { MOCK_CONSENT_VERSION, MOCK_USER } from "@/lib/mocks/mock-user";
@@ -351,6 +352,37 @@ describe("invitation and notification handlers", () => {
     expect(body.success).toBe(true);
     // 스키마 표식이 없으면 원본이 살아 있는 초대만 센다 — 시드의 안 읽은 대기 초대 둘.
     expect(body.data.unreadCount).toBe(2);
+  });
+
+  it("puts the subscription-ended notice first only in the unpaid billing scenario", async () => {
+    const first = async () =>
+      (await (await fetch("http://localhost/v1/notifications?schema=2")).json())
+        .data.notifications[0];
+    expect((await first()).type).not.toBe("SUBSCRIPTION_ENDED_UNPAID");
+
+    billingMock.setScenario("unpaid");
+    const notice = await first();
+    expect(notice.type).toBe("SUBSCRIPTION_ENDED_UNPAID");
+    expect(notice.readAt).toBeNull();
+    expect(notice.payload.workspaceId).toBe("01K0000000006");
+    // 다시 읽어도 한 건이다.
+    const again = await (
+      await fetch("http://localhost/v1/notifications?schema=2")
+    ).json();
+    expect(
+      again.data.notifications.filter(
+        (n: { type: string }) => n.type === "SUBSCRIPTION_ENDED_UNPAID"
+      )
+    ).toHaveLength(1);
+  });
+
+  it("puts the billing-stopped notice first only in the payerLeft billing scenario", async () => {
+    billingMock.setScenario("payerLeft");
+    const notice = (
+      await (await fetch("http://localhost/v1/notifications?schema=2")).json()
+    ).data.notifications[0];
+    expect(notice.type).toBe("SUBSCRIPTION_BILLING_STOPPED");
+    expect(notice.payload.workspaceName).toBe("제품 팀");
   });
 });
 

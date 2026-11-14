@@ -16,7 +16,10 @@
     "connecting": "Starting recording",
     "stopping": "Finishing recording",
     "retry": "Record again",
-    "otherNote": "Recording in another note"
+    "otherNote": "Recording in another note",
+    "quotaBlocked": "You've used this month's {allowance} of free recording.",
+    "quotaPlans": "View plans",
+    "quotaAskAdmin": "Ask an admin for Pro."
   },
   "degraded": {
     "title": "Transcription is paused.",
@@ -32,6 +35,8 @@
     "disconnected": "Connection lost. Transcription and live analysis are paused. Recorded audio is held in this tab. Keep it open until you reconnect."
   },
   "errorToast": {
+    "quotaUpgrade": "View plans",
+    "quotaAskAdmin": "Ask an admin to switch to Pro.",
     "help": "How to fix",
     "code": "Error code: {code}"
   },
@@ -39,6 +44,7 @@
     "untitled": "Meeting in progress"
   },
   "errors": {
+    "quotaExceeded": "You've used all of this month's free recording time.",
     "startFailed": "Couldn't start recording. Try again in a moment.",
     "audioPermission": "HeyMoa needs microphone or computer audio permission. Allow it, then record again.",
     "systemAudioMissing": "Couldn't find computer audio input. Check the input and permissions, then record again.",

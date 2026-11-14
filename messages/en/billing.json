@@ -1,0 +1,440 @@
+{
+  "loadFailed": "Couldn't load billing information.",
+  "format": {
+    "money": "KRW {amount}",
+    "unlimited": "Unlimited recording",
+    "monthlyMinutes": "{duration} per month",
+    "minutes": "{duration} of recording",
+    "period": "{start} to before {end}",
+    "durationHours": "{h, number} hr",
+    "durationBoth": "{h, number} hr {m, number} min",
+    "durationMinutes": "{m, number} min"
+  },
+  "testNotice": {
+    "SIMULATED_NO_CHARGE": "This is a test payment. You won't actually be charged."
+  },
+  "usage": {
+    "loading": "Loading usage",
+    "progress": "Recording usage this month",
+    "resets": "Resets on {date}",
+    "exhausted": "New recordings can start from {date}.",
+    "recordingInProgress": "Meetings being recorded are counted after they end",
+    "unlimited": "Unlimited",
+    "nearLimit": "You've used {percent, number}% of this month's allowance. It resets on {date}.",
+    "label": "Recording this month",
+    "labelPaid": "Recording this billing period",
+    "paidPeriod": "{start} ~ {end}",
+    "ofAllowance": "/ {allowance}",
+    "sidebarPaid": "{plan} · {used} this period",
+    "remaining": "{duration} left",
+    "remainingUnderMinute": "Less than 1 min left",
+    "limitReached": "Monthly limit reached"
+  },
+  "page": {
+    "title": "Plan",
+    "description": "This workspace's plan and recording usage.",
+    "loading": "Loading plans",
+    "plan": {
+      "current": "Current",
+      "freePrice": "Free",
+      "perMonth": "/ month",
+      "recording": "{allowance} of recording",
+      "members": "Unlimited members",
+      "freeTagline": "Plenty for teams with a few meetings",
+      "proTagline": "For busy teams that don't want to watch the clock",
+      "includes": "Included in both plans",
+      "features": {
+        "liveNotes": "Live notes and summaries",
+        "speakers": "Speaker labels",
+        "links": "Links across meetings",
+        "agentChat": "Agent chat",
+        "mcp": "External tools and MCP"
+      },
+      "footWorkspace": "Plans are per workspace. When one admin pays, every member shares it."
+    },
+    "teamInProgress": "Your team has a subscription in progress. Check again when it's done.",
+    "checking": {
+      "title": "We're confirming the payment result",
+      "body": "Don't pay again. We'll let you know the result on this screen and by email within 24 hours at the latest."
+    },
+    "refunding": {
+      "title": "Canceling the payment",
+      "body": "The payment was approved, but access couldn't be applied, so the full amount is being canceled automatically. Don't pay again."
+    },
+    "refundFailed": {
+      "title": "This payment needs a check",
+      "body": "The automatic cancellation couldn't be finished. Don't pay again; let us know through <link>Help & feedback</link>."
+    },
+    "askAdmin": "Only admins can purchase and manage billing.",
+    "salesPaused": "New subscriptions are not available right now.",
+    "start": "Start {plan}",
+    "continueSetup": "Continue card registration",
+    "viewResult": "View progress",
+    "cancelSetup": "Cancel registration",
+    "refresh": "Check status again",
+    "userRefunding": {
+      "title": "Processing your refund",
+      "body": "Future payments have already stopped. The workspace moves to Free when the refund is done."
+    },
+    "userRefunded": {
+      "title": "Your refund is complete",
+      "body": "Depending on the card issuer, it may take a few days for the refund to show on your card statement. You can start again any time."
+    },
+    "userRefundFailed": {
+      "title": "We couldn't finish the refund",
+      "body": "Future payments remain stopped. Please let us know through <link>Help & feedback</link>."
+    },
+    "userPastRefunding": {
+      "title": "Processing the refund for a past payment",
+      "body": "Your current plan and next payment stay the same."
+    },
+    "userPastRefundFailed": {
+      "title": "We couldn't finish the refund for a past payment",
+      "body": "Please let us know through <link>Help & feedback</link>."
+    },
+    "currentLabel": "Current plan",
+    "compare": "Compare plans",
+    "openPayment": "Manage payment",
+    "badge": {
+      "cancelScheduled": "Cancellation scheduled"
+    },
+    "line": {
+      "free": "Record up to {allowance} every month.",
+      "next": "Next payment {date} · {amount}",
+      "nextDate": "Next payment {date}",
+      "cancelScheduled": "Active until {end}, then switches to Free.",
+      "stoppedNoCardAdmin": "There's no card on file, so automatic payments are paused. You keep Pro until {end}. You can resume the subscription after adding a card.",
+      "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime. The result shows here within 24 hours at the latest."
+    },
+    "closed": {
+      "UNPAID": "The subscription ended because the payment wasn't approved. Register a card to start again.",
+      "EXPIRED": "The subscription period has ended.",
+      "REFUNDED": "The subscription ended because it was refunded."
+    },
+    "registerCard": "Add a card in Payment"
+  },
+  "checkout": {
+    "title": "Review order",
+    "loading": "Loading checkout",
+    "askAdmin": "Only admins can purchase. Please ask an admin.",
+    "inProgress": "Your team has a subscription in progress. Check again when it's done.",
+    "unavailable": "A new purchase isn't available right now.",
+    "backToPlans": "Back to plans",
+    "backToWorkspace": "Back to workspace",
+    "closed": {
+      "title": "Pro checkout is coming soon",
+      "body": "Soon you'll be able to start right from this page."
+    },
+    "alreadyPro": "This workspace is already on Pro.",
+    "productName": "{plan} monthly",
+    "shared": "Everyone in this workspace shares it.",
+    "autoRenew": "You're charged automatically on the same day every month. Admins can cancel anytime in Settings > Payment, and you can keep using it until the period ends.",
+    "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
+    "refundPolicy": "If you request it within 7 days of the payment date and the whole workspace recorded 20 hours or less in total in that billing period, you get a full refund. <link>See refund policy</link>",
+    "submit": "Agree and pay",
+    "openSetup": {
+      "title": "A card registration is already in progress",
+      "body": "The server is processing this registration. Check the result in View progress.",
+      "view": "View progress"
+    },
+    "notice": {
+      "stateChanged": "The product or status changed. We've loaded the latest details; please review and agree again.",
+      "inProgress": "Your team has a subscription in progress. Check again when it's done."
+    },
+    "agreeFirst": "Enter all card details and check both agreements to continue.",
+    "replace": {
+      "title": "Change card",
+      "summary": "Card for the {plan} subscription",
+      "current": "Current card",
+      "nextCharge": "Next payment",
+      "noCharge": "Only the card changes. You won't be charged now.",
+      "keepOnFail": "If registering the new card fails, your current card stays.",
+      "payerChanges": "Once you add a card, future charges go to your card and payment history is kept under your account.",
+      "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
+      "agreementLabelEnding": "I agree that once the subscription is resumed, this workspace's subscription ({amount} per month) will be charged automatically to this card from the next payment.",
+      "submit": "Register card",
+      "unavailable": "You can't change the card right now.",
+      "askAdmin": "Only admins can change the card. Please ask an admin.",
+      "register": {
+        "title": "Add card",
+        "description": "Add a card for automatic payments.",
+        "noCharge": "You won't be charged now."
+      },
+      "changed": "Card changed.",
+      "registered": "Card added.",
+      "rejected": "We couldn't register the card. Please check your card details again. Your current card stays.",
+      "loading": "Loading card change"
+    },
+    "perMonth": "/ month · VAT included",
+    "dueToday": "Due today",
+    "nextCharge": "Next payment date",
+    "paymentInfo": "Payment details",
+    "pgAgreementLabel": "I agree to NICEPAY's electronic financial transaction terms, data collection and use, and third-party sharing.",
+    "pgTermsView": "View",
+    "pgTermsTitle": "NICEPAY terms",
+    "pgTermsKoreanOnly": "These terms are provided in Korean by the payment provider, NICEPAY.",
+    "card": {
+      "title": "Card details",
+      "number": "Card number",
+      "expiry": "Expiry",
+      "password": "First 2 digits of card PIN",
+      "birth": "Date of birth (YYMMDD)",
+      "business": "Business registration number (10 digits)",
+      "holder": "Card type",
+      "personal": "Personal",
+      "corporate": "Corporate",
+      "safe": "Card details are encrypted and sent to the payment provider. HeyMoa doesn't store your card number.",
+      "error": {
+        "number": "Check the card number.",
+        "expiryFormat": "Enter the expiry as MM/YY.",
+        "expired": "This card has expired.",
+        "password": "Enter the first 2 digits of the PIN.",
+        "birth": "Check your date of birth (6 digits).",
+        "business": "Check the 10-digit business registration number."
+      }
+    },
+    "priceTitle": "Price",
+    "agreementTitle": "Automatic payment agreement",
+    "business": {
+      "label": "Business information",
+      "name": "Company",
+      "owner": "Representative",
+      "registration": "Business registration no.",
+      "mailOrder": "Mail-order business report no.",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email"
+    },
+    "pageBack": "Back",
+    "cardRejected": "Please check your card details again.",
+    "tooManyAttempts": "Too many card attempts. Please try again in a moment.",
+    "openTimeout": "The request is taking longer than usual. Please try again in a moment."
+  },
+  "setup": {
+    "title": "Card registration result",
+    "description": "Check the progress of your card registration.",
+    "purchaseTitle": "Payment result",
+    "purchaseDescription": "Check the progress of your card registration and payment.",
+    "loginRequired": "Sign in with the account that registered the card to see the result.",
+    "loading": "Loading the registration result",
+    "statusFailed": {
+      "title": "Couldn't load the result",
+      "body": "The connection is unstable or the response is slow. This doesn't mean the card registration or payment failed."
+    },
+    "notFound": {
+      "title": "Card registration not found",
+      "body": "Make sure you're signed in with the account that registered the card."
+    },
+    "stale": "Automatic checking stopped. The server is still working on it; check again.",
+    "recheck": "Check again",
+    "backToWorkspace": "Back to plan",
+    "restart": "Start over",
+    "cancelRestart": "Cancel and start over",
+    "cardAuthRequired": {
+      "title": "Card registration isn't finished",
+      "body": "Card details weren't submitted. Please start over."
+    },
+    "cardProcessing": {
+      "title": "Confirming card registration",
+      "body": "You can close this page; the server keeps working."
+    },
+    "cardActionRequired": {
+      "title": "This registration wasn't charged",
+      "body": "Please register a card again. If it keeps happening, let us know through <link>Help & feedback</link>."
+    },
+    "paymentProcessing": {
+      "title": "Confirming the payment",
+      "body": "You can close this page; the server keeps working."
+    },
+    "paymentUnknown": {
+      "title": "Confirming the payment result is taking longer",
+      "body": "We'll let you know the result on this screen and by email within 24 hours at the latest. Don't pay again in the meantime. If you haven't heard after 24 hours, let us know through <link>Help & feedback</link>."
+    },
+    "declined": {
+      "title": "The payment wasn't approved",
+      "body": "Your card issuer declined the payment. Check your card or try again with a different card.",
+      "code": "If you contact us, share this code: {code}"
+    },
+    "notProcessed": {
+      "title": "The payment wasn't processed",
+      "body": "The payment provider didn't process the payment request. You have not been charged. Please try again."
+    },
+    "accessProcessing": {
+      "title": "Payment confirmed",
+      "body": "We're applying your access. You don't need to pay again."
+    },
+    "refundProcessing": {
+      "title": "Canceling the payment",
+      "body": "The payment was approved, but access couldn't be applied, so the full amount is being canceled automatically. Don't pay again."
+    },
+    "refunded": {
+      "title": "The payment was canceled automatically",
+      "body": "Access couldn't be applied, so the approved amount was canceled in full. Start again if you need to."
+    },
+    "accessActionRequired": {
+      "title": "This payment needs a check",
+      "body": "The payment was approved but couldn't be finished. Don't pay again; let us know through <link>Help & feedback</link>."
+    },
+    "completed": {
+      "title": "Payment complete",
+      "plan": "Plan",
+      "workspace": "Workspace",
+      "amount": "Amount",
+      "period": "Usage period",
+      "nextCharge": "Next payment date",
+      "goWorkspace": "Go to workspace"
+    },
+    "accessLost": {
+      "title": "You're no longer an admin here, so details aren't available",
+      "body": "A payment that already started may be processing or finished. We won't start a new one."
+    },
+    "closed": {
+      "title": "Card registration closed",
+      "body": "It was canceled or timed out. Start over if you still need it."
+    },
+    "replace": {
+      "title": "Card change result",
+      "description": "Check the progress of your card change.",
+      "restart": "Try again",
+      "completed": {
+        "title": "Card changed",
+        "body": "You weren't charged now. The new card will be used from the next payment.",
+        "goPlans": "Go to payment"
+      },
+      "completedEnding": {
+        "title": "Card added",
+        "body": "You weren't charged. Your subscription is still set to end. Resume it in billing settings and the next charge will go to this card."
+      },
+      "cardActionRequired": {
+        "title": "We couldn't change the card",
+        "body": "Your current card stays. Please try again with another card."
+      },
+      "closed": {
+        "title": "Card change closed",
+        "body": "It was canceled or timed out. Your current card stays."
+      }
+    },
+    "issueUnknown": {
+      "title": "We couldn't confirm the card registration",
+      "body": "You weren't charged. Please register your card again from the start."
+    }
+  },
+  "manage": {
+    "title": "Subscription",
+    "plan": "Plan",
+    "planValue": "{plan} · {amount} / month",
+    "nextCharge": "Next payment date",
+    "nextChargeValue": "{date} · {amount}",
+    "noNextCharge": "None",
+    "nextChargeChecking": "Checking the payment result",
+    "card": "Card on file",
+    "noCard": "No card on file",
+    "cardByOtherAdmin": "Registered by another admin",
+    "cancelScheduled": "You can use it until {end}; after that the workspace moves to Free. You won't be charged again.",
+    "cancelScheduledPending": "Cancellation scheduled. When it ends depends on the result of the payment being checked.",
+    "stoppedNoCard": "There's no payment method on file, so automatic payments are paused. You can use Pro until {end}. Add a card and resume to keep your subscription.",
+    "latestPayment": "Latest payment",
+    "latestPaymentValue": "{date} · {amount}",
+    "paymentLink": "Payment details",
+    "changeCard": "Change",
+    "registerCard": "Add card",
+    "cancel": "Cancel subscription",
+    "resume": "Resume subscription",
+    "deleteMethod": "Remove",
+    "notice": {
+      "stateChanged": "The billing status changed. We've loaded the latest details; please review them again.",
+      "inProgress": "A payment is being processed. Please try again once it finishes.",
+      "notAdmin": "Only admins can do this.",
+      "methodInUse": "This card is used by the subscription. Use Change to switch cards.",
+      "canceled": "Subscription canceled. You can use it until {end}.",
+      "resumed": "Subscription resumed. {amount} will be charged on {date}.",
+      "deleted": "Card removed.",
+      "resumedDate": "Subscription resumed. Payments restart on {date}."
+    },
+    "cancelDialog": {
+      "title": "Cancel your subscription?",
+      "until": "You can keep using Pro until {end}; after that the workspace moves to Free.",
+      "pending": "If the payment being checked is approved, you keep Pro until the end of that period and won't be charged after that. If it isn't approved, the subscription ends right away.",
+      "noCharge": "You won't be charged the next payment ({amount}) or after.",
+      "undo": "You can resume before {end}, as long as a card is on file.",
+      "confirm": "Cancel subscription",
+      "keep": "Keep"
+    },
+    "resumeDialog": {
+      "title": "Resume your subscription?",
+      "noChargeNow": "You won't be charged now.",
+      "next": "{amount} will be charged to this card on {date}, then renew monthly.",
+      "confirm": "Resume",
+      "nextDate": "This card will be charged from {date}, then renew monthly."
+    },
+    "deleteDialog": {
+      "title": "Remove this card?",
+      "body": "Only the card saved for automatic payments is removed. Your payment history stays.",
+      "after": "To subscribe again, you'll need to register a card.",
+      "confirm": "Remove"
+    },
+    "pageTitle": "Payment",
+    "pageDescription": "Manage your payment method, subscription, and payment history.",
+    "loading": "Loading payment details",
+    "methodTitle": "Payment method",
+    "empty": "No payment method yet. A card is added when you start a plan.",
+    "openPlans": "View plans",
+    "cancelHint": "If you cancel, you can keep using it until {end}."
+  },
+  "paymentStatus": {
+    "SUCCEEDED": "Paid",
+    "FAILED": "Failed",
+    "CHECKING": "Confirming",
+    "REFUNDED": "Refunded",
+    "REFUNDING": "Refund in progress",
+    "REFUND_FAILED": "Refund needs attention"
+  },
+  "payment": {
+    "title": "Payment details",
+    "description": "Review one payment for this workspace.",
+    "loading": "Loading payment details",
+    "notFound": "We couldn't find this payment in this workspace.",
+    "askAdmin": "Only admins can view payment details.",
+    "back": "Payment",
+    "workspace": "Workspace",
+    "kindValue": {
+      "PURCHASE": "First purchase",
+      "RENEWAL": "Monthly renewal"
+    },
+    "period": "Period",
+    "status": "Reason",
+    "card": "Card",
+    "refund": "Refund",
+    "refundValue": "{status} · {origin}",
+    "origin": {
+      "OPERATOR": "Requested via support",
+      "COMPENSATION": "Canceled automatically",
+      "RECONCILIATION": "Canceled after review"
+    },
+    "errorCode": "If you contact us, share this code: {code}",
+    "declined": "Your card issuer didn't approve the payment.",
+    "notProcessed": "The payment wasn't processed. You have not been charged.",
+    "then": "At the time",
+    "now": "Now",
+    "thenPaid": "Paid",
+    "nowRefunded": "Refunded. This period no longer includes access.",
+    "nowEnded": "This period has ended.",
+    "nowRefunding": "We're processing the payment cancellation.",
+    "support": "Refund requests are handled through <link>Help & feedback</link>.",
+    "loadFailed": "Couldn't load payment details."
+  },
+  "history": {
+    "title": "Payment history",
+    "description": "Payments for this workspace. Only admins can see this.",
+    "loading": "Loading payment history",
+    "empty": "You haven't made any payments yet.",
+    "noDate": "Confirming",
+    "myTitle": "My payments",
+    "myDescription": "Payments you made. Workspace names appear as they were when the subscription started.",
+    "leftMember": "Former member",
+    "more": "Show more ({count, number})",
+    "detail": "Payment details",
+    "receipt": "Receipt",
+    "receiptLabel": "Open receipt for the payment on {date}"
+  }
+}

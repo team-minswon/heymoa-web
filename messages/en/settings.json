@@ -12,8 +12,11 @@
       "guests": "Guest participants",
       "terms": "Custom vocabulary",
       "integrations": "Integrations",
+      "billing": "Plan",
+      "payment": "Payment",
       "workspaceAgents": "MCP connections",
       "account": "My account",
+      "myPayments": "My payments",
       "notifications": "Notifications",
       "agents": "My MCP connections",
       "appUpdates": "App updates"
@@ -26,6 +29,9 @@
   },
   "notificationsPage": {
     "loginRequired": "Log in to change your notification settings."
+  },
+  "paymentsPage": {
+    "loginRequired": "Log in to see your payment history."
   },
   "confirmPhrase": {
     "label": "To confirm, type <strong>{phrase}</strong> exactly."

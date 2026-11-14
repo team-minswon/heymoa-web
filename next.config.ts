@@ -33,6 +33,24 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
         ],
       },
+      // 카드를 받는 두 면(APP-1600). 첫 구독 결제 페이지는 프레임에 못 띄우고, 카드 변경 문서는 우리 모달만 iframe 으로 싣는다.
+      // 카드 칸이 있는 문서를 캐시·Referer 로 남기지 않는다. CSP 는 요청마다 nonce 가 달라 `proxy.ts` 가 붙인다.
+      {
+        source: "/billing/checkout/:workspaceId",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Cache-Control", value: "no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+      {
+        source: "/billing/card-change/:workspaceId",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Cache-Control", value: "no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       // 메일 수신거부(APP-1314). 주소의 토큰이 캐시와 `Referer` 로 새지 않게 한다. 분석은 루트 레이아웃이 뺀다.
       {
         source: "/unsubscribe",

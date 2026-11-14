@@ -19,13 +19,14 @@ type LegalDates = { announced: string | null; effective: string | null };
 /**
  * 지금 본문(`messages/<언어>/legal.json`)의 공고일·시행일(`YYYY-MM-DD`). 페이지 머리에 보이고, null 이면 「미정」이다.
  * **시행일이 곧 판의 키다** — server 동의 버전(`CONSENT_PRIVACY_VERSION`·`CONSENT_TERMS_VERSION`)을 같은 날 같은 문자열로
- * 올린다. 약관은 공고일과 시행일 사이를 7일(불리하면 30일) 이상 둔다(약관 제11조·처리방침 제12조).
+ * 올린다. 약관은 공고일과 시행일 사이를 7일(불리하면 30일) 이상 둔다(약관 제15조·처리방침 제12조).
  * 시행하고 나서 본문을 다시 고치면, 그 전에 지금 본문을 `lib/legal-archive.ts` 에 얼려 넣고 여기 날짜를 새로 쓴다.
  */
 export const LEGAL_CURRENT: Record<LegalDoc, LegalDates> = {
   // APP-1548: 내용이 가려진 화면 흐름을 녹화합니다. 기존 11/3 판은 보존합니다.
   privacy: { announced: "2026-11-11", effective: SESSION_REPLAY_EFFECTIVE },
-  terms: { announced: "2026-10-23", effective: "2026-10-23" },
+  // PRO-75: 유료 구독·환불 조항을 더한 판. 배포한 날 공고하고 바로 시행한다. 기존 10/23 판은 보존합니다.
+  terms: { announced: "2026-11-14", effective: "2026-11-14" },
 };
 
 /** sitemap·JSON-LD는 공고한 본문의 수정일입니다. 미래 시행일을 lastmod로 쓰지 않습니다. */
@@ -37,7 +38,9 @@ export const TERMS_EFFECTIVE = lastEffective("terms");
 export const PRIVACY_EFFECTIVE = lastEffective("privacy");
 
 export const PAGE_MODIFIED = {
-  "/": { ko: "2026-10-21", en: "2026-10-21" },
+  // APP-1598: 상단 바·푸터에 「가격 안내」, 푸터에 사업자 정보
+  "/": { ko: "2026-11-12", en: "2026-11-12" },
+  "/pricing": { ko: "2026-11-12", en: "2026-11-12" },
   "/download": { ko: "2026-10-21", en: "2026-10-21" },
   "/terms": { ko: TERMS_EFFECTIVE, en: TERMS_EFFECTIVE },
   "/privacy": { ko: PRIVACY_EFFECTIVE, en: PRIVACY_EFFECTIVE },

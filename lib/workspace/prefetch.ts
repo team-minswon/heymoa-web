@@ -3,6 +3,7 @@ import "server-only";
 import { dehydrate, type DehydratedState } from "@tanstack/react-query";
 
 import { getServerApiRequestOptions } from "@/lib/api/server-request";
+import { getGetWorkspaceBillingQueryOptions } from "@/lib/api/generated/billing/billing";
 import { getGetProjectsQueryOptions } from "@/lib/api/generated/projects/projects";
 import { getGetWorkspaceQueryOptions } from "@/lib/api/generated/workspaces/workspaces";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
@@ -40,6 +41,28 @@ export async function prefetchWorkspaceShell({
     ),
     queryClient.prefetchQuery(
       getGetProjectsQueryOptions(workspaceId, { request: request })
+    ),
+  ]);
+  return dehydrate(queryClient);
+}
+
+/**
+ * 카드를 받는 두 면(첫 구독 결제 페이지·카드 변경 iframe, APP-1600)의 서버 스냅샷. 양식이 워크스페이스 단건과 결제 상태를
+ * suspense 로 읽는데, 미리 받아 두지 않으면 서버 렌더가 쿠키 없이 조회하다 401 → 갱신 실패로 끝나고 브라우저가 처음부터
+ * 다시 그린다(실제 서버에 붙여 보고 찾음 — 목 모드에서는 보이지 않는다).
+ */
+export async function prefetchCardEntry(
+  workspaceId: string
+): Promise<DehydratedState> {
+  const queryClient = makeQueryClient();
+  if (shouldEnableMocking()) return dehydrate(queryClient);
+  const request = await getServerApiRequestOptions();
+  await Promise.allSettled([
+    queryClient.prefetchQuery(
+      getGetWorkspaceQueryOptions(workspaceId, { request: request })
+    ),
+    queryClient.prefetchQuery(
+      getGetWorkspaceBillingQueryOptions(workspaceId, { request: request })
     ),
   ]);
   return dehydrate(queryClient);

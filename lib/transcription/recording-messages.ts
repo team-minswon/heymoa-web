@@ -14,6 +14,9 @@ export type RecordingErrorsT = ReturnType<
 
 const lostSeconds = (ms: number) => Math.max(1, Math.round(ms / 1_000));
 
+export const isQuotaExceeded = (cause: unknown) =>
+  errorCodeOf(cause) === "RECORDING_QUOTA_EXCEEDED";
+
 export function startErrorMessage(t: RecordingErrorsT, cause: unknown) {
   const error =
     cause instanceof Error || cause instanceof DOMException ? cause : null;
@@ -43,6 +46,10 @@ export function startErrorMessage(t: RecordingErrorsT, cause: unknown) {
     message === "STOMP_APPLICATION_READY_TIMEOUT"
   ) {
     return t("socketFailed");
+  }
+  // 무료 월 한도는 녹음을 시작할 때만 검사한다. 진행 중인 회의는 한도를 넘어도 끝까지 녹음된다
+  if (isQuotaExceeded(cause)) {
+    return t("quotaExceeded");
   }
   if (errorCodeOf(cause) === "ACTIVE_TRANSCRIPTION_SESSION") {
     return t("activeSession");

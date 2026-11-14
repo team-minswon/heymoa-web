@@ -23,7 +23,7 @@
       {
         "title": "1. Purpose and Scope",
         "body": [
-          "These Terms set out the conditions for using meeting recording, real-time voice transcription, automatic summaries, agent questions, notes, and workspace features provided by HeyMoa.",
+          "These Terms set out the conditions for using meeting recording, real-time voice transcription, automatic summaries, agent questions, notes, and workspace features provided by HeyMoa. The business name and representative of the operator are shown in the business information at the bottom of the Service website.",
           "You can use the Service after agreeing to these Terms and the Privacy Policy when you sign in."
         ]
       },
@@ -38,8 +38,8 @@
           "You can share meeting notes by email, connect external tools such as Linear and GitHub as well as external AI apps (MCP connections), and send inquiries and feedback from within the Service.",
           "For a meeting whose recording was paused and never ended, HeyMoa sends one reminder email to the user who last started recording one business day after the pause. Three business days after the pause, HeyMoa may end the meeting automatically and start its analysis. When that happens, one more notice email is sent to the same recipient. Business days are Monday through Friday, Korea Standard Time.",
           "The scheduled time of automatic ending is shown in the reminder email and on the note screen, and you can resume recording or end the meeting yourself before then. A meeting that was ended automatically cannot be resumed, and automatic ending cannot be canceled. Meetings may be ended on the same schedule even if no email was received.",
-          "HeyMoa sends notifications needed to use the Service as in-app notifications and by email. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
-          "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies. Changes that affect you are announced as described in Section 11."
+          "HeyMoa sends notifications needed to use the Service as in-app notifications and by email. When a payment or a refund is completed, HeyMoa notifies the payer by email. When a renewal payment is not approved and the subscription ends, and when the payer has left and automatic payment has stopped, HeyMoa notifies workspace admins through an in-app notification. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
+          "Features, usage limits, and the scope of the Service may change depending on how the Service is operated and on pricing policies. Changes that affect you are announced as described in Section 15."
         ]
       },
       {
@@ -104,17 +104,56 @@
         ]
       },
       {
-        "title": "10. Account Deletion and Workspace Deletion",
+        "title": "10. Paid Services and Payment",
+        "body": [
+          "The Pro plan is subscribed to per workspace, and its price is the amount shown on the payment screen. Prices include value-added tax (VAT).",
+          "Payment is made with a card registered by a workspace admin. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Information & Telecommunication, Inc.). HeyMoa does not store these values. HeyMoa stores only the recurring payment key, the card issuer name, and the last four digits of the card number.",
+          "The admin who registered the card is the payer for that subscription. Other admins of the same workspace can also cancel or resume the subscription and change the card; the admin who changes the card becomes the payer from then on, and later payments are charged to that admin's card.",
+          "You can use Pro from the time the payment is approved and applied to the workspace. The usage period runs in one-month units from the time the first payment is approved, and lasts until just before the same time on the same day of the next month. In a month that has no such date, the next period starts on the last day of that month, and in the following month it goes back to the original date (for example, if you start on January 31, the next period starts on the last day of February and the one after that on March 31).",
+          "If a minor makes a payment without the consent of a legal guardian, the minor or the legal guardian may cancel that payment."
+        ]
+      },
+      {
+        "title": "11. Automatic Renewal",
+        "body": [
+          "The subscription renews automatically on the same day every month for the same amount. When the price increases, HeyMoa will notify you of the amounts before and after the change and the effective date through a notice in the Service or by email at least 30 days before it takes effect. If an admin purchases again at the new price, that is treated as consent to the new price. If no one purchases again, the subscription ends when the current payment period ends, and the workspace uses the Free plan after that.",
+          "While the result of a renewal payment is being confirmed, you can keep using Pro. Once it is confirmed that the payment was not approved, the subscription ends and the workspace returns to the Free plan. In that case, HeyMoa does not retry the same payment and deletes the recurring payment key; to use Pro again, you must register a card again and purchase. When a subscription ends because a renewal payment was not approved, HeyMoa notifies the workspace admins through an in-app notification.",
+          "If the payer leaves the workspace (including by deleting their account or being removed) or loses admin permission, automatic payments stop and that card is not charged again. The recurring payment key is deleted as soon as any payment in progress has been confirmed, and payment records remain for the retention period set out in the Privacy Policy. You can keep using the period already paid for until it ends, and if another admin registers a card and resumes the subscription during that time, automatic payments continue. If no one does, the subscription ends when the usage period ends and the workspace returns to the Free plan. HeyMoa notifies the remaining admins that automatic payments have stopped through an in-app notification."
+        ]
+      },
+      {
+        "title": "12. Cancellation",
+        "body": [
+          "Admins can cancel the subscription at any time under Payment in Settings. After canceling, you can keep using Pro until the end of the period already paid for, and you will not be charged from the next payment. However, a renewal payment already being processed because the usage period has ended proceeds as is, and if that payment is approved, the cancellation applies from the payment after it.",
+          "A canceled subscription can be resumed by an admin before the usage period ends, as long as a card is registered and the payer who registered that card is an admin. Resuming may not be available while a payment or refund is being processed; in that case, try again a little later."
+        ]
+      },
+      {
+        "title": "13. Refunds",
+        "body": [
+          "If you request a refund within 7 days of the payment date and, up to the time of the request, the whole workspace has recorded 20 hours or less in total in that billing period, HeyMoa refunds the full payment amount. This applies separately to the first payment and to each monthly renewal payment.",
+          "The 7 days are counted from the day after the payment was approved, and this applies to requests received by the end of the seventh day, Korea Standard Time.",
+          "The payer of that payment or a workspace admin can request a refund through Help & feedback in the Service. If you cannot sign in to the Service, you can send your request to the contact email address listed in Section 15. The request time is when the email is received.",
+          "If the conditions above are not met, HeyMoa does not refund fees for usage periods already paid for. However, if you could not use the Service for reasons attributable to HeyMoa, such as a service outage, HeyMoa refunds you after receiving and confirming your request.",
+          "The refund policy in this Section does not limit your rights under applicable laws, such as the right to withdraw from a purchase, and where the law is more favorable to you, the law applies.",
+          "Once HeyMoa starts processing a refund request for the payment of the current usage period, the next automatic payment is stopped. When the refund is made, the subscription ends and the workspace changes to the Free plan; notes and transcripts already created are not deleted. If the refund is not completed and you want to keep the subscription, you must resume it under Payment in Settings. A refund for the payment of a past usage period does not affect the current subscription.",
+          "If a payment was approved but the access it pays for cannot be applied (including when the payer leaves the workspace or the workspace is deleted while the payment is being processed), HeyMoa cancels that payment in full even without a request. If the approved amount differs from the order amount, HeyMoa handles it after checking.",
+          "HeyMoa notifies you of the result within 3 business days of the day it receives a refund request and, if a refund is made, requests the payment cancellation within the same period. Refunds are made by canceling the approval on the card used for payment, and it may take a few more days after the request for the cancellation to be reflected by the card issuer."
+        ]
+      },
+      {
+        "title": "14. Account Deletion and Workspace Deletion",
         "body": [
           "You can delete your account at any time from My account in Settings. If a meeting is being recorded, you can delete your account after the recording ends.",
           "When you delete your account, your workspaces are handled as follows. If you are the only administrator and other members remain, you either hand the administrator role to another member or delete the workspace. You leave workspaces that have another administrator or where you are a member. Workspaces you used alone are deleted.",
           "Deleting your account signs you out on every device right away and cannot be undone. If you sign up again with the same Google account, you get a new account that is not linked to your previous records.",
           "Workspace administrators can delete a workspace. When a workspace is deleted, all members lose access right away; its notes, transcripts, audio, agent chats, integrations, and invitations are deleted; and every member receives a notice email.",
+          "If you delete a workspace with a subscription, no further payments are charged and the registered card information is deleted. Even if part of a paid usage period remains, you cannot use Pro in the deleted workspace, and refunds for the remaining period follow Section 13.",
           "Even if you leave a workspace or delete your account, your name remains in that workspace's past meeting records. Deletion and retention periods are described in Section 6 of the Privacy Policy."
         ]
       },
       {
-        "title": "11. Changes to These Terms and Inquiries",
+        "title": "15. Changes to These Terms and Inquiries",
         "body": [
           "When these Terms change, HeyMoa announces what is changing and the effective date on this page and in the Service starting 7 days before the effective date. Changes unfavorable to you are announced starting 30 days before the effective date, together with a side-by-side comparison of the old and new text.",
           "If you do not agree to the changed Terms, you can delete your account before the effective date. To keep using the Service after the effective date, you must agree to the changed Terms.",
@@ -132,7 +171,7 @@
       {
         "title": "1. Personal Information We Process",
         "body": [
-          "HeyMoa processes only the information needed to provide the Service, as listed below.",
+          "HeyMoa processes only the information needed to provide the Service, as listed below. The operator's business name and representative are shown in the business information at the bottom of the Service website.",
           {
             "columns": [
               "Category",
@@ -177,7 +216,11 @@
               ],
               [
                 "Service notifications",
-                "Recipient, notification type, title of the related meeting and workspace name, and whether it was read"
+                "Recipient, notification type, title of the related meeting and workspace name, and whether it was read. Payment-related notifications contain the workspace name and the subscription status. Payment completed and refund completed emails contain the workspace name, the payment or refund amount and time, the usage period, and the card issuer name and the last four digits of the card number"
+              ],
+              [
+                "Payments",
+                "Recurring payment key (billing key), card issuer name and the last four digits of the card number, payment and refund times and amounts, the payment provider's transaction number and receipt URL, refund reason, payer account. HeyMoa may receive the payment provider's transaction list and compare it with payment records to verify them. The card number, expiry date, date of birth (business registration number for corporate cards), and first 2 digits of the card PIN are entered on HeyMoa's screen, encrypted, and sent to the payment provider (NICE Information & Telecommunication, Inc.); HeyMoa does not store them"
               ],
               [
                 "Inquiries and feedback",
@@ -197,7 +240,9 @@
         "title": "2. Purposes of Processing",
         "body": [
           "Providing the Service: identifying members and keeping them signed in, running workspaces, transcribing meetings, saving and viewing notes, AI organization of meetings and agent answers, and exporting to external tools when you approve. This processing is needed to perform the service contract with you.",
-          "Sending email and answering inquiries: sending meeting notes sharing emails, invitation emails, and service notification emails (such as reminders about long-paused meetings and notices of automatic ending), and answering inquiries. Service notifications and notification emails never include the meeting content, transcript, summary, or attendee names. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
+          "Paid plan payments and refunds: used for paying for a paid plan, renewing recurring payments, processing refunds, and answering payment inquiries. This processing is needed to perform the service contract with you, and payment records are kept as required by law (Section 6).",
+          "Sending email and answering inquiries: HeyMoa uses this information to answer inquiries and to send emails for sharing meeting notes, invitations, service notifications (such as reminders about long-paused meetings and notices of automatic ending), and payment and refund confirmations. Service notifications and notification emails never include the meeting content, transcript, summary, or attendee names. Service notification emails are not advertising, and optional notifications can be turned off in notification settings or through the unsubscribe link in the email.",
+          "Payment notices and notifications: when a payment or a refund is completed, HeyMoa sends the payer an email. The email contains the workspace name, the amount and time, the usage period, and the card issuer name and the last four digits of the card number; because it is a transaction notice, it is sent regardless of notification settings. When a renewal payment is not approved and the subscription ends, and when the payer has left and automatic payment has stopped, HeyMoa sends workspace admins an in-app notification. The notification contains the workspace name and the subscription status.",
           "Advertising information (optional): we send product news and offers by email only if you have agreed, and you can withdraw your consent at any time in Settings > Notifications.",
           "Automatic meeting ending: meetings paused for a long time are ended automatically after prior notice, and their analysis may proceed under the name of the person who started the meeting (or, if that person has left the workspace, another member who recorded the meeting or an administrator).",
           "Operations and security: access logs, sign-in records, and server logs are used to prevent misuse, analyze outages, support users, and investigate security incidents.",
@@ -318,6 +363,26 @@
                 "Kept as records of handling inquiries"
               ],
               [
+                "Contract or withdrawal records",
+                "5 years",
+                "Records of payment contracts and withdrawals. Kept after account deletion under the enforcement decree of the Act on Consumer Protection in Electronic Commerce"
+              ],
+              [
+                "Payment and service supply records (payment and refund times and amounts, last four digits of the card number, payer account)",
+                "5 years",
+                "Kept after account deletion under the enforcement decree of the Act on Consumer Protection in Electronic Commerce"
+              ],
+              [
+                "Consumer complaint or dispute records",
+                "3 years",
+                "If an inquiry about a payment or refund counts as a complaint or dispute, it is kept after account deletion under the enforcement decree of the Act on Consumer Protection in Electronic Commerce"
+              ],
+              [
+                "Recurring payment key (billing key)",
+                "Until the card is deleted",
+                "Deleted when the card is removed because the subscription ended or charging stopped. Managed separately from the transaction records above"
+              ],
+              [
                 "PostHog usage records",
                 "1 year from collection (session replays: 30 days)",
                 "Not deleted when you delete your account; removed automatically after 1 year"
@@ -381,6 +446,11 @@
                 "Amazon Web Services",
                 "Infrastructure and email delivery",
                 "None (Seoul)"
+              ],
+              [
+                "NICE Information & Telecommunication (NICEPAY)",
+                "Recurring card payment processing",
+                "None (Korea)"
               ],
               [
                 "Vercel",
@@ -600,7 +670,7 @@
               ],
               [
                 "Data processed",
-                "All stored service data; recipient emails, messages, and meeting notes PDFs of sharing emails; invitation emails; recipient emails and meeting titles of service notification emails"
+                "All stored service data; recipient emails, messages, and meeting notes PDFs of sharing emails; invitation emails; recipient emails and meeting titles of service notification emails; recipient emails and payment details of payment completed and refund completed emails"
               ],
               [
                 "Purpose",
@@ -609,6 +679,32 @@
               [
                 "Retention",
                 "Same as the retention periods in Section 6"
+              ]
+            ]
+          },
+          {
+            "vendor": "NICE Information & Telecommunication, Inc. (NICEPAY)",
+            "role": "Recurring card payment processing",
+            "rows": [
+              [
+                "Region",
+                "Republic of Korea. This is not an international transfer"
+              ],
+              [
+                "Data processed",
+                "Card number, expiry date, date of birth (business registration number for corporate cards), first 2 digits of the card PIN, order number, payment amount, product name"
+              ],
+              [
+                "Purpose",
+                "Issuing and deleting the recurring payment key; approving, looking up, and canceling payments"
+              ],
+              [
+                "Retention",
+                "As required by the Electronic Financial Transactions Act and other applicable laws, and by NICE Information & Telecommunication's privacy policy"
+              ],
+              [
+                "Note",
+                "While processing a payment, the payment provider shares information with card issuers and others under its own terms. Consent to this is obtained on the payment screen"
               ]
             ]
           },

@@ -26,11 +26,12 @@ describe("isFocusChromeRoute", () => {
     "/unsubscribe",
     "/oauth/consent",
     "/oauth/authorize",
+    "/billing/setups/0S0000000001",
   ])("gives %s the focus chrome", (pathname) => {
     expect(isFocusChromeRoute(pathname)).toBe(true);
   });
 
-  it.each(["/", "/terms", "/oauth", "/invitations", "/w/01K0000000000"])(
+  it.each(["/", "/terms", "/oauth", "/invitations", "/w/01K0000000000", "/billing"])(
     "leaves %s alone",
     (pathname) => {
       expect(isFocusChromeRoute(pathname)).toBe(false);

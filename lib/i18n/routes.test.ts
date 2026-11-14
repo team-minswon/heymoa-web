@@ -68,6 +68,7 @@ describe("마케팅 경로 목록 하나가 rewrite·크롬 판정을 정한다"
     expect(marketingRewrites()).toEqual(
       expect.arrayContaining([
         { source: "/", destination: "/ko" },
+        { source: "/pricing", destination: "/ko/pricing" },
         { source: "/help", destination: "/ko/help" },
         { source: "/help/:rest*", destination: "/ko/help/:rest*" },
         { source: "/download/:rest*", destination: "/ko/download/:rest*" },
@@ -139,6 +140,8 @@ describe("마케팅 경로 목록 하나가 rewrite·크롬 판정을 정한다"
     ["/terms", true],
     ["/en/privacy", true],
     ["/download", true],
+    ["/pricing", true],
+    ["/en/pricing", true],
     ["/help/start/desktop", true],
     ["/en/help", true],
     ["/w/01K0000000000", false],

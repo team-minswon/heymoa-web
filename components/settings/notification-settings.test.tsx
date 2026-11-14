@@ -126,6 +126,39 @@ describe("NotificationSettings", () => {
     );
   });
 
+  it("필수인 구독 종료 알림이 와도 줄을 더하지 않는다", async () => {
+    const channels = [
+      { channel: "WEB", provided: true, enabled: true, effective: true },
+      { channel: "EMAIL", provided: false, enabled: false, effective: false },
+    ];
+    server.use(
+      http.get("*/v1/notification-settings", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            marketingEmail: { agreed: false, changedAt: null },
+            muteAll: false,
+            muteEmail: false,
+            items: [
+              { type: "SUBSCRIPTION_ENDED_UNPAID", required: true, channels },
+              {
+                type: "SUBSCRIPTION_BILLING_STOPPED",
+                required: true,
+                channels,
+              },
+              { type: "ANALYSIS_READY", required: false, channels },
+            ],
+          },
+          error: null,
+        })
+      )
+    );
+    renderSettings();
+    const rows = await screen.findAllByRole("rowheader");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent(/^검토할 결과 준비/);
+  });
+
   it("선택 알림만 줄로 그리고 필수 알림은 안내 없이 뺀다", async () => {
     renderSettings();
     expect(await screen.findByText("일시정지된 회의")).toBeInTheDocument();

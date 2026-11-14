@@ -45,6 +45,60 @@ function SettingsDialog({
   );
 }
 
+// 요금제 탭 둘은 공간 요금제 조회의 `enforced` 로 보인다. 시험마다 조회 결과를 바꿔 끼운다.
+const billingQuery = vi.hoisted(() => ({
+  current: {
+    isPending: false,
+    data: {
+      status: 200,
+      data: { success: true, data: { enforced: true } },
+    } as unknown,
+  },
+}));
+// 내 결제 내역 탭은 내역이 있을 때만 있다(APP-1596). 기본은 한 건.
+const myPayments = vi.hoisted(() => ({ count: 1 as number | null }));
+vi.mock("@/lib/api/generated/billing/billing", () => ({
+  useGetWorkspaceBilling: () => billingQuery.current,
+  useGetMyBillingPayments: () =>
+    myPayments.count === null
+      ? { isPending: true, data: undefined }
+      : {
+          isPending: false,
+          data: {
+            status: 200,
+            data: {
+              success: true,
+              data: { payments: Array(myPayments.count).fill({}) },
+            },
+          },
+        },
+}));
+vi.mock("@/components/billing/my-payments-settings", () => ({
+  MyPaymentsSettings: () => <p>내 결제 내역 내용</p>,
+}));
+// 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). 기본은 ADMIN 이다.
+const workspaceQuery = vi.hoisted(() => ({
+  role: "ADMIN" as "ADMIN" | "MEMBER",
+}));
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  useGetWorkspace: () => ({
+    isPending: false,
+    data: {
+      status: 200,
+      data: { success: true, data: { role: workspaceQuery.role } },
+    },
+  }),
+}));
+const serveEnforced = (enforced: boolean | null) => {
+  billingQuery.current =
+    enforced === null
+      ? { isPending: true, data: undefined }
+      : {
+          isPending: false,
+          data: { status: 200, data: { success: true, data: { enforced } } },
+        };
+};
+
 vi.mock("@/components/settings/account-settings-form", () => ({
   AccountSettingsForm: () => <p>계정 내용</p>,
   AccountSettingsFormSkeleton: () => <p>계정 로딩</p>,
@@ -68,6 +122,20 @@ vi.mock("@/components/settings/workspace-integrations-settings", () => ({
 vi.mock("@/components/settings/workspace-agent-access-settings", () => ({
   WorkspaceAgentAccessSettings: () => <p>외부 에이전트 관리 내용</p>,
 }));
+vi.mock("@/components/billing/plan-settings", () => ({
+  WorkspacePlanSettings: ({ onOpenPayment }: { onOpenPayment: () => void }) => (
+    <button type="button" onClick={onOpenPayment}>
+      요금제 내용
+    </button>
+  ),
+}));
+vi.mock("@/components/billing/payment-settings", () => ({
+  WorkspacePaymentSettings: ({ onOpenPlans }: { onOpenPlans: () => void }) => (
+    <button type="button" onClick={onOpenPlans}>
+      결제 관리 내용
+    </button>
+  ),
+}));
 vi.mock("@/components/settings/agent-connections-settings", () => ({
   AgentConnectionsSettings: ({
     onBusyChange,
@@ -84,6 +152,9 @@ describe("SettingsDialog", () => {
   afterEach(() => {
     cleanup();
     Reflect.deleteProperty(window, "heymoaDesktop");
+    serveEnforced(true);
+    workspaceQuery.role = "ADMIN";
+    myPayments.count = 1;
   });
   it("탭 선택을 한 번 기록하고 같은 탭·리렌더는 세지 않습니다", () => {
     const heard = vi.fn();
@@ -159,6 +230,32 @@ describe("SettingsDialog", () => {
     expect(screen.getByText("용어 사전 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
     expect(screen.getByText("연동 내용")).toBeInTheDocument();
+    // 요금제·결제 관리는 워크스페이스 그룹의 두 탭이다(PRO-75). 결제 내역은 결제 관리 안에 있어 따로 탭이 없다.
+    fireEvent.click(
+      within(workspaceGroup).getByRole("button", { name: "요금제" })
+    );
+    expect(screen.getByText("요금제 내용")).toBeInTheDocument();
+    fireEvent.click(
+      within(workspaceGroup).getByRole("button", { name: "결제 관리" })
+    );
+    expect(screen.getByText("결제 관리 내용")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "결제 내역" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("요금제 탭과 결제 관리 탭은 서로의 탭으로 넘어간다", () => {
+    render(
+      <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+    );
+    const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
+    fireEvent.click(
+      within(workspaceGroup).getByRole("button", { name: "요금제" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "요금제 내용" }));
+    expect(screen.getByText("결제 관리 내용")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "결제 관리 내용" }));
+    expect(screen.getByText("요금제 내용")).toBeInTheDocument();
   });
 
   // 같은 말에 누구 것인지를 붙여 가른다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)
@@ -183,6 +280,109 @@ describe("SettingsDialog", () => {
     expect(
       screen.getByRole("button", { name: "토큰 요청 시작" })
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["대상이 아닌 공간", false],
+    ["조회가 끝나기 전", null],
+  ])("%s에는 요금제·결제 관리 탭이 없다", (_name, enforced) => {
+    serveEnforced(enforced);
+    render(
+      <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+    );
+    const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
+    expect(
+      within(workspaceGroup).queryByRole("button", { name: "요금제" })
+    ).not.toBeInTheDocument();
+    expect(
+      within(workspaceGroup).queryByRole("button", { name: "결제 관리" })
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["billing", "payment"] as const)(
+    "대상이 아닌 공간에서 %s 탭으로 들어오면 기본 탭으로 보낸다",
+    (initialSection) => {
+      serveEnforced(false);
+      render(
+        <SettingsDialog
+          open
+          onOpenChange={vi.fn()}
+          initialSection={initialSection}
+          workspaceId="01K0000000000"
+        />
+      );
+      expect(screen.getByText("워크스페이스 내용")).toBeInTheDocument();
+      expect(screen.queryByText("요금제 내용")).not.toBeInTheDocument();
+      expect(screen.queryByText("결제 관리 내용")).not.toBeInTheDocument();
+    }
+  );
+
+  it("멤버에게는 결제 관리 탭이 없고, 결제 관리 주소로 들어오면 요금제 탭을 연다", () => {
+    workspaceQuery.role = "MEMBER";
+    render(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        initialSection="payment"
+        workspaceId="01K0000000000"
+      />
+    );
+    const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
+    expect(
+      within(workspaceGroup).getByRole("button", { name: "요금제" })
+    ).toBeInTheDocument();
+    expect(
+      within(workspaceGroup).queryByRole("button", { name: "결제 관리" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("요금제 내용")).toBeInTheDocument();
+    expect(screen.queryByText("결제 관리 내용")).not.toBeInTheDocument();
+  });
+
+  it("내 결제 내역은 계정 묶음의 내 계정 다음에 있고, 대상이 아닌 공간에서도 보인다", () => {
+    serveEnforced(false);
+    render(
+      <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+    );
+    const items = within(
+      screen.getByRole("group", { name: "계정" })
+    ).getAllByRole("button");
+    expect(items[0]).toHaveTextContent("내 계정");
+    expect(items[1]).toHaveTextContent("내 결제 내역");
+    fireEvent.click(items[1]);
+    expect(screen.getByText("내 결제 내역 내용")).toBeInTheDocument();
+  });
+
+  it("내역이 없으면 탭을 숨기고, 그 탭 주소로 들어오면 내 계정을 연다", () => {
+    myPayments.count = 0;
+    render(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        initialSection="myPayments"
+        workspaceId="01K0000000000"
+      />
+    );
+    expect(
+      within(screen.getByRole("group", { name: "계정" })).queryByRole(
+        "button",
+        { name: "내 결제 내역" }
+      )
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("내 결제 내역 내용")).not.toBeInTheDocument();
+  });
+
+  it("조회가 끝나기 전에는 요금제 탭으로 들어와도 기본 탭으로 보내지 않고 내용도 그리지 않는다", () => {
+    serveEnforced(null);
+    render(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        initialSection="billing"
+        workspaceId="01K0000000000"
+      />
+    );
+    expect(screen.queryByText("요금제 내용")).not.toBeInTheDocument();
+    expect(screen.queryByText("워크스페이스 내용")).not.toBeInTheDocument();
   });
 });
 

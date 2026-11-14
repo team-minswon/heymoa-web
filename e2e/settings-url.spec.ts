@@ -94,3 +94,29 @@ test("OAuth 복귀는 연동 탭을 열고 provider·status 를 걷는다", asyn
   );
   await expect.poll(() => search(page)).toBe("?settings=integrations");
 });
+
+test("?settings=billing 은 요금제 탭을, ?settings=payment 는 결제 관리 탭을 연다", async ({
+  page,
+}) => {
+  await page.goto(`${WS}?settings=billing`);
+  await expect(dialog(page)).toBeVisible();
+  await expect(page.getByRole("button", { name: "요금제" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+  // 첫 구독은 분석 없는 전용 결제 페이지로 문서를 새로 열어 간다(APP-1600).
+  await page.getByRole("button", { name: "Pro 시작하기" }).click();
+  await expect(page).toHaveURL(/\/billing\/checkout\/[0-9A-Z]{13}$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "주문 확인" })
+  ).toBeVisible();
+
+  await page.goto(`${WS}?settings=payment`);
+  await expect(page.getByRole("button", { name: "결제 관리" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+  await expect(
+    dialog(page).getByRole("region", { name: "결제 내역" })
+  ).toBeVisible();
+});

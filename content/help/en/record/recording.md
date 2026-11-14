@@ -4,7 +4,7 @@ description: How to start and pause a meeting recording, allow microphone access
 group: record
 slug: recording
 order: 1
-modified: 2026-10-23
+modified: 2026-11-12
 ---
 
 ## Start recording {#start}
@@ -92,3 +92,4 @@ In the browser, HeyMoa records only your microphone. To record a video call, use
 - [Desktop app](help:desktop) — Record your computer's audio too
 - [Ending a meeting and analysis](help:meeting-end) — What to do after recording
 - [Troubleshooting](help:troubleshooting) — Fixes for each on-screen message
+- [Plans and billing](help:billing#usage) — The Free recording limit and usage

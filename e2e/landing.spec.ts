@@ -73,3 +73,13 @@ test("랜딩 상단 바에서 회의 정리로 옮겨도 카드가 보인다", a
     .toBe(true);
   await expect.poll(() => inViewHidden(page)).toBe(0);
 });
+
+// 요금 설명은 랜딩의 한 구간이 아니라 따로 낸 페이지다(APP-1598). 상단 바 · 푸터의 「가격 안내」가 그리로 간다.
+test("상단 바의 가격 안내는 가격 안내 페이지로 가고 랜딩에는 요금 구간이 없다", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#pricing")).toHaveCount(0);
+  await page.getByRole("banner").getByRole("link", { name: "가격 안내", exact: true }).click();
+  await expect(page).toHaveURL(/\/pricing$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("인원이 늘어도 요금은 그대로입니다");
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "가격 안내" })).toHaveAttribute("href", "/pricing");
+});

@@ -16,7 +16,10 @@
     "connecting": "녹음 시작 중",
     "stopping": "녹음 마무리 중",
     "retry": "다시 녹음",
-    "otherNote": "다른 노트에서 녹음 중"
+    "otherNote": "다른 노트에서 녹음 중",
+    "quotaBlocked": "이번 달 무료 녹음 {allowance}을 다 썼습니다.",
+    "quotaPlans": "요금제 보기",
+    "quotaAskAdmin": "관리자에게 Pro를 요청해 주세요."
   },
   "degraded": {
     "title": "받아쓰기가 멈췄습니다.",
@@ -32,6 +35,8 @@
     "disconnected": "연결이 끊겨 받아쓰기와 실시간 분석이 멈췄습니다. 녹음한 소리는 이 탭에 모아 둡니다. 다시 연결될 때까지 탭을 열어 두세요."
   },
   "errorToast": {
+    "quotaUpgrade": "요금제 보기",
+    "quotaAskAdmin": "관리자에게 Pro 전환을 요청하세요",
     "help": "해결 방법",
     "code": "오류 코드: {code}"
   },
@@ -39,6 +44,7 @@
     "untitled": "진행 중인 회의"
   },
   "errors": {
+    "quotaExceeded": "이번 달 무료 녹음 시간을 모두 사용했습니다.",
     "startFailed": "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     "audioPermission": "마이크 또는 컴퓨터 소리 권한이 필요합니다. 권한을 허용한 뒤 다시 녹음해 주세요.",
     "systemAudioMissing": "컴퓨터 소리 입력을 찾지 못했습니다. 입력과 권한을 확인한 뒤 다시 녹음해 주세요.",

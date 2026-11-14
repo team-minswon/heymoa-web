@@ -1,5 +1,7 @@
 import posthog, { type CaptureResult } from "posthog-js";
 
+import type { BillingSetupCreatedResponseDataProvider } from "@/lib/api/generated/models/billingSetupCreatedResponseDataProvider";
+import type { SetupView } from "@/lib/billing/setup-view";
 import type { NotificationListResponseDataNotificationsItemType } from "@/lib/api/generated/models/notificationListResponseDataNotificationsItemType";
 import type { NotificationSettingsResponseDataItemsItemChannelsItemChannel } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemChannelsItemChannel";
 import type { NotificationSettingsResponseDataItemsItemType } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemType";
@@ -88,6 +90,22 @@ export type AnalyticsEvent =
   | "note_tab_opened"
   | "review_confirmation_clicked"
   | "settings_tab_opened"
+  | "billing_plans_viewed"
+  | "billing_checkout_entered"
+  | "billing_card_setup_resulted"
+  | "billing_setup_result_action_clicked"
+  | "billing_card_change_resulted"
+  | "billing_sales_unavailable_viewed"
+  | "billing_receipt_clicked"
+  | "billing_cancel_dialog_opened"
+  | "billing_subscription_canceled"
+  | "billing_subscription_resumed"
+  | "billing_card_change_started"
+  | "billing_payment_method_deleted"
+  | "billing_payment_viewed"
+  | "billing_payment_history_viewed"
+  | "recording_quota_blocked"
+  | "recording_quota_upgrade_clicked"
   | "notifications_opened"
   | "notification_clicked"
   | "notifications_all_read_clicked"
@@ -110,7 +128,25 @@ export type AnalyticsEvent =
   | "help_image_zoomed"
   | "help_cta_clicked"
   | "help_code_copied"
-  | "help_faq_opened";
+  | "help_faq_opened"
+  | "pricing_cta_clicked";
+
+/** 결제 이벤트의 PG. 서버 enum(`FAKE` 포함) 그대로다. */
+export type BillingProvider = BillingSetupCreatedResponseDataProvider;
+/** 카드 등록 결과 화면이 보인 상태. `unknown` 은 확인 중이라 성패를 아직 모르는 것, `refunded` 는 승인 뒤 자동 취소된 것이다. */
+export type BillingSetupResult =
+  | "completed"
+  | "declined"
+  | "unknown"
+  | "refunded";
+
+/**
+ * 등록 결과 화면에서 버튼을 누른 때의 화면. 결과 값(`BillingSetupResult`)이 있으면 그것, 없으면 화면 상태 이름이다.
+ * `loadFailed` 는 첫 조회가 실패하거나 시한을 넘겨 아직 아무 상태도 읽지 못한 화면이다.
+ */
+export type BillingSetupScreen = BillingSetupResult | SetupView | "loadFailed";
+/** 카드 변경(REPLACE) 결과. `declined` 는 발급 거절, `unknown` 은 발급 결과 불명·확인 중이다. */
+export type BillingCardChangeResult = "completed" | "declined" | "unknown";
 
 /** 가이드 이벤트의 언어판(`lib/i18n/locales.ts` 의 `Locale`). */
 type HelpLanguage = "ko" | "en";
@@ -189,10 +225,64 @@ export type WebEventProperties = {
       | "appUpdates"
       | "workspaceAgents"
       | "agents"
-      | "notifications";
+      | "notifications"
+      | "billing"
+      | "payment"
+      | "myPayments";
     // 어디서 열었나. 알림 모달의 「알림 설정」 이동은 modal, 설정 창 안의 탭 이동은 settings(PRO-67 I32).
     from: "modal" | "settings";
   };
+  // 결제(PRO-75). 흐름은 요금제 화면 → 결제 페이지 진입(요금제 탭을 떠나기 직전에 센다) → 등록 결과다.
+  // 결제 페이지·카드 변경 문서는 분석 없는 문서(APP-1600)라 그 안의 동의·카드 제출은 세지 않는다.
+  // 속성은 공간·PG·결과 상태뿐이다. authKey·state·customerKey·카드 정보·setup/결제 id 는 싣지 않는다.
+  // 등록 결과 화면은 setup 조회가 끝나야 공간을 알므로 결과 이벤트의 workspace_id 는 없을 수 있다.
+  // role 은 본 사람이 ADMIN 인가 멤버인가 — 구매는 ADMIN 만 할 수 있어 퍼널을 역할로 갈라 봐야 한다.
+  billing_plans_viewed: { workspace_id: string; role: "admin" | "member" };
+  billing_checkout_entered: { workspace_id: string; role: "admin" | "member" };
+  billing_card_setup_resulted: {
+    workspace_id?: string;
+    provider?: BillingProvider;
+    result: BillingSetupResult;
+  };
+  // 등록 결과 화면의 행동(APP-1600). recheck: 「다시 확인」, retry: 새 등록으로 가는 링크, to_workspace: 워크스페이스로 돌아가기.
+  // 결과 조회가 실패한 화면에서 무엇을 하는지(다시 확인 vs 떠남)를 보려고 화면 상태를 같이 싣는다. 등록·결제 id 는 싣지 않는다.
+  billing_setup_result_action_clicked: {
+    action: "recheck" | "retry" | "to_workspace";
+    result: BillingSetupScreen;
+  };
+  // 카드 변경 결과 화면에서 결과가 처음 보일 때 1회. 구매 퍼널(`billing_card_setup_resulted`)과 섞지 않는다.
+  // 카드 변경 문서 안에서 바로 끝난 결과(완료·거절)는 분석 없는 문서라 여기 오지 않는다.
+  billing_card_change_resulted: {
+    workspace_id?: string;
+    result: BillingCardChangeResult;
+  };
+  // 요금제 탭에서 판매 중단 안내(새 구매 없음)가 보였다 — 마운트마다 1회.
+  billing_sales_unavailable_viewed: {
+    workspace_id: string;
+    role: "admin" | "member";
+  };
+  // 영수증(매출전표) 링크. 주소·결제 id 는 싣지 않는다. 내 결제 내역은 공간을 가로질러 공간이 없을 수 있다.
+  billing_receipt_clicked: { workspace_id?: string };
+  // 구매 이후의 관리(APP-1565). 해지는 확인 창을 연 수와 실제 해지를 따로 센다(확인 창에서 돌아선 비율).
+  // 결과는 종류만 싣는다 — 금액·카드·결제/환불 id 는 싣지 않는다. 관리 행동은 ADMIN 만 해서 role 을 따로 싣지 않는다.
+  billing_cancel_dialog_opened: { workspace_id: string };
+  billing_subscription_canceled: { workspace_id: string };
+  billing_subscription_resumed: {
+    workspace_id: string;
+    result: "resumed" | "not_admin";
+  };
+  billing_card_change_started: { workspace_id: string };
+  billing_payment_method_deleted: {
+    workspace_id: string;
+    result: "deleted" | "in_use";
+  };
+  billing_payment_viewed: { workspace_id: string };
+  // 결제 내역 목록. scope: 공간 설정 › 결제 관리의 그 공간 내역(workspace)·계정 설정의 내 결제 내역(me). 내 내역은 공간을 가로질러 공간이 없다.
+  billing_payment_history_viewed: { scope: "workspace" | "me" };
+  // 무료 월 한도로 녹음 시작이 거절돼 안내가 떴다(APP-1566). role 은 그 안내를 본 사람이 ADMIN 인가 멤버인가.
+  // 사용량 수치·회의 id 는 싣지 않는다. 효과는 안내 → 요금제 보기 클릭 비율로 본다.
+  recording_quota_blocked: { workspace_id: string; role: "admin" | "member" };
+  recording_quota_upgrade_clicked: { workspace_id: string };
   // 알림 모달·알림 설정(PRO-67 I32, 발화는 I09·I10). 종류·개수·워크스페이스만 싣고 알림 내용·노트 id 는 싣지 않는다.
   // `type`·`channel` 은 계약의 enum 그대로다 — 종류가 늘면 orval 이 같이 넓힌다.
   notifications_opened: { workspace_id: string; unread_count: number };
@@ -298,6 +388,11 @@ export type WebEventProperties = {
   };
   help_code_copied: { slug: string; language: HelpLanguage };
   help_faq_opened: { slug: string; index: number; language: HelpLanguage };
+  // 가격 안내(`/pricing`)의 Free·Pro 버튼. 로그인 전은 로그인 창을 여는 버튼, 로그인 뒤는 대시보드·결제 페이지 링크다.
+  pricing_cta_clicked: {
+    plan: "free" | "pro";
+    auth: "anonymous" | "member";
+  };
 };
 
 type Properties = Record<string, string | number | boolean | null | undefined>;

@@ -140,7 +140,6 @@
     },
     "kindLabel": "Category",
     "messageLabel": "Message",
-    "privacyNote": "Your current page path and environment are included. Meeting content is never sent.",
     "submit": "Send",
     "sent": "Sent. Replies will appear in My requests.",
     "unseenAnswers": "{count, plural, one {# new reply} other {# new replies}}",
@@ -154,6 +153,11 @@
         "label": "Question",
         "hint": "How do I use this?",
         "placeholder": "Write your question. Telling us which feature it's about helps us answer more precisely."
+      },
+      "billing": {
+        "label": "Billing & refunds",
+        "hint": "Ask about a payment or refund",
+        "placeholder": "Tell us the payment date and what you need. If you want a refund, say so."
       },
       "suggestion": {
         "label": "Feature request",

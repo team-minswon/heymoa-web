@@ -1,0 +1,440 @@
+{
+  "loadFailed": "결제 정보를 불러오지 못했습니다.",
+  "format": {
+    "money": "{amount}원",
+    "unlimited": "녹음 무제한",
+    "monthlyMinutes": "월 {duration}",
+    "minutes": "녹음 {duration}",
+    "period": "{start}부터 {end} 전까지",
+    "durationHours": "{h, number}시간",
+    "durationBoth": "{h, number}시간 {m, number}분",
+    "durationMinutes": "{m, number}분"
+  },
+  "testNotice": {
+    "SIMULATED_NO_CHARGE": "시험 결제이며 실제로 청구되지 않습니다."
+  },
+  "usage": {
+    "loading": "사용량을 불러오는 중",
+    "progress": "이번 달 녹음 사용량",
+    "resets": "{date}에 초기화됩니다",
+    "exhausted": "{date}부터 새 녹음을 시작할 수 있습니다.",
+    "recordingInProgress": "회의가 끝나면 녹음 시간이 사용량에 반영됩니다",
+    "unlimited": "무제한",
+    "nearLimit": "이번 달 제공량의 {percent, number}%를 썼습니다. {date}에 초기화됩니다.",
+    "label": "이번 달 녹음",
+    "labelPaid": "이번 결제 기간 녹음",
+    "paidPeriod": "{start} ~ {end}",
+    "ofAllowance": "/ {allowance}",
+    "sidebarPaid": "{plan} · 이번 기간 {used}",
+    "remaining": "{duration} 남음",
+    "remainingUnderMinute": "1분 미만 남음",
+    "limitReached": "이번 달 한도를 다 썼습니다"
+  },
+  "page": {
+    "title": "요금제",
+    "description": "이 워크스페이스의 요금제와 녹음 사용량입니다.",
+    "loading": "요금제를 불러오는 중",
+    "plan": {
+      "current": "사용 중",
+      "freePrice": "무료",
+      "perMonth": "/ 월",
+      "recording": "녹음 {allowance}",
+      "members": "멤버 수 제한 없음",
+      "freeTagline": "회의가 많지 않은 팀에 충분합니다",
+      "proTagline": "회의가 많은 팀이 시간 걱정 없이 씁니다",
+      "includes": "두 요금제 모두 포함",
+      "features": {
+        "liveNotes": "실시간 회의록과 요약",
+        "speakers": "화자 구분",
+        "links": "회의 간 연결",
+        "agentChat": "에이전트 채팅",
+        "mcp": "외부 도구와 MCP 연결"
+      },
+      "footWorkspace": "요금은 워크스페이스 단위입니다. 관리자 한 명이 결제하면 모든 멤버가 함께 씁니다."
+    },
+    "teamInProgress": "이 워크스페이스의 구독을 처리하고 있습니다. 끝난 뒤 다시 확인해 주세요.",
+    "checking": {
+      "title": "결제 결과를 확인하고 있습니다",
+      "body": "다시 결제하지 마세요. 결과는 늦어도 24시간 안에 이 화면과 이메일로 알려 드립니다."
+    },
+    "refunding": {
+      "title": "결제를 취소하고 있습니다",
+      "body": "결제는 승인됐지만 이용 권한을 반영할 수 없어 전액을 자동으로 취소하는 중입니다. 다시 결제하지 마세요."
+    },
+    "refundFailed": {
+      "title": "결제 확인이 필요합니다",
+      "body": "자동 취소를 끝내지 못했습니다. 다시 결제하지 말고 <link>문의·피드백</link>으로 알려 주세요."
+    },
+    "askAdmin": "구매와 결제 관리는 관리자만 할 수 있습니다.",
+    "salesPaused": "지금은 새 구독을 받고 있지 않습니다.",
+    "start": "{plan} 시작하기",
+    "continueSetup": "진행 중인 카드 등록 이어가기",
+    "viewResult": "진행 상황 보기",
+    "cancelSetup": "등록 취소",
+    "refresh": "상태 다시 확인",
+    "userRefunding": {
+      "title": "환불을 처리하고 있습니다",
+      "body": "다음 결제는 이미 멈췄습니다. 환불이 끝나면 Free로 바뀝니다."
+    },
+    "userRefunded": {
+      "title": "환불이 완료되었습니다",
+      "body": "카드사에 따라 환불 금액이 카드 대금에 반영되기까지 며칠 걸릴 수 있습니다. 필요하면 언제든 다시 시작할 수 있습니다."
+    },
+    "userRefundFailed": {
+      "title": "환불을 끝내지 못했습니다",
+      "body": "다음 결제는 멈춘 상태입니다. <link>문의·피드백</link>으로 알려 주세요."
+    },
+    "userPastRefunding": {
+      "title": "지난 결제의 환불을 처리하고 있습니다",
+      "body": "지금 요금제와 다음 결제는 바뀌지 않습니다."
+    },
+    "userPastRefundFailed": {
+      "title": "지난 결제의 환불을 끝내지 못했습니다",
+      "body": "<link>문의·피드백</link>으로 알려 주세요."
+    },
+    "currentLabel": "현재 요금제",
+    "compare": "요금제 비교",
+    "openPayment": "결제 관리",
+    "badge": {
+      "cancelScheduled": "종료 예정"
+    },
+    "line": {
+      "free": "매달 {allowance}까지 녹음할 수 있습니다.",
+      "next": "다음 결제 {date} · {amount}",
+      "nextDate": "다음 결제 {date}",
+      "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다.",
+      "stoppedNoCardAdmin": "등록된 카드가 없어 자동 결제가 멈췄습니다. {end}까지는 Pro를 그대로 씁니다. 카드를 등록한 뒤 구독을 재개할 수 있습니다.",
+      "renewalPending": "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다. 결과는 늦어도 24시간 안에 반영됩니다."
+    },
+    "closed": {
+      "UNPAID": "결제가 승인되지 않아 구독이 종료되었습니다. 다시 시작하려면 카드를 등록해 주세요.",
+      "EXPIRED": "구독의 이용 기간이 끝났습니다.",
+      "REFUNDED": "환불되어 구독이 종료되었습니다."
+    },
+    "registerCard": "결제 관리에서 카드 등록"
+  },
+  "checkout": {
+    "title": "주문 확인",
+    "loading": "주문서를 불러오는 중",
+    "askAdmin": "구매는 관리자만 할 수 있습니다. 관리자에게 요청해 주세요.",
+    "inProgress": "이 워크스페이스의 구독을 처리하고 있습니다. 끝난 뒤 다시 확인해 주세요.",
+    "unavailable": "지금은 새로 구매할 수 없는 상태입니다.",
+    "backToPlans": "요금제로 돌아가기",
+    "backToWorkspace": "워크스페이스로 돌아가기",
+    "closed": {
+      "title": "Pro 결제는 준비 중입니다",
+      "body": "곧 이 화면에서 바로 시작할 수 있습니다."
+    },
+    "alreadyPro": "이 워크스페이스는 이미 Pro를 쓰고 있습니다.",
+    "productName": "{plan} 월 구독",
+    "shared": "이 워크스페이스의 모든 멤버가 함께 씁니다.",
+    "autoRenew": "매월 같은 날 자동으로 결제됩니다. 관리자는 설정 > 결제 관리에서 언제든 해지할 수 있고, 해지해도 이용 기간이 끝날 때까지 쓸 수 있습니다.",
+    "agreementLabel": "매월 {amount}이 자동으로 결제되는 것을 포함해 위 주문 내용에 동의합니다.",
+    "refundPolicy": "결제일부터 7일 이내에 요청하고, 그 결제 기간에 워크스페이스 전체의 녹음 시간 합계가 20시간 이하이면 전액 환불받을 수 있습니다. <link>환불 규정 보기</link>",
+    "submit": "동의하고 결제하기",
+    "openSetup": {
+      "title": "진행 중인 카드 등록이 있습니다",
+      "body": "서버가 이 등록을 처리하고 있습니다. 진행 상황에서 결과를 확인해 주세요.",
+      "view": "진행 상황 보기"
+    },
+    "notice": {
+      "stateChanged": "상품 또는 상태가 바뀌었습니다. 최신 내용을 불러왔으니 다시 확인하고 동의해 주세요.",
+      "inProgress": "이 워크스페이스의 구독을 처리하고 있습니다. 끝난 뒤 다시 확인해 주세요."
+    },
+    "agreeFirst": "카드 정보를 모두 입력하고 두 동의 항목을 체크하면 제출할 수 있습니다.",
+    "replace": {
+      "title": "카드 변경",
+      "summary": "{plan} 구독의 결제 카드",
+      "current": "지금 카드",
+      "nextCharge": "다음 결제",
+      "noCharge": "카드만 바뀌고 지금 결제되지 않습니다.",
+      "keepOnFail": "새 카드 등록에 실패하면 지금 카드가 그대로 유지됩니다.",
+      "payerChanges": "새 카드를 등록하면 다음 결제부터 내 카드로 청구되고, 결제 내역도 내 계정에 쌓입니다.",
+      "agreementLabel": "다음 결제부터 이 워크스페이스의 구독 금액(매월 {amount})이 새 카드로 자동 결제되는 데 동의합니다.",
+      "agreementLabelEnding": "구독을 재개하면 다음 결제부터 이 워크스페이스의 구독 금액(매월 {amount})이 이 카드로 자동 결제되는 데 동의합니다.",
+      "submit": "카드 등록하기",
+      "unavailable": "지금은 카드를 바꿀 수 없는 상태입니다.",
+      "askAdmin": "카드 변경은 관리자만 할 수 있습니다. 관리자에게 요청해 주세요.",
+      "register": {
+        "title": "카드 등록",
+        "description": "자동 결제에 쓸 카드를 등록합니다.",
+        "noCharge": "지금 결제되지 않습니다."
+      },
+      "changed": "카드를 변경했습니다.",
+      "registered": "카드를 등록했습니다.",
+      "rejected": "카드를 등록하지 못했습니다. 카드 정보를 다시 확인해 주세요. 지금 카드는 그대로입니다.",
+      "loading": "카드 변경 정보를 불러오는 중"
+    },
+    "perMonth": "/ 월 · 부가세 포함",
+    "dueToday": "오늘 결제",
+    "nextCharge": "다음 결제 예정일",
+    "paymentInfo": "결제 안내",
+    "pgAgreementLabel": "나이스페이의 전자금융거래 약관, 개인정보 수집·이용, 개인정보 제3자 제공에 동의합니다.",
+    "pgTermsView": "내용 보기",
+    "pgTermsTitle": "나이스페이 약관",
+    "pgTermsKoreanOnly": "결제 대행사(나이스페이)가 한국어로 제공하는 약관입니다.",
+    "card": {
+      "title": "카드 정보",
+      "number": "카드 번호",
+      "expiry": "유효기간",
+      "password": "비밀번호 앞 2자리",
+      "birth": "생년월일 6자리",
+      "business": "사업자등록번호 10자리",
+      "holder": "카드 종류",
+      "personal": "개인 카드",
+      "corporate": "법인 카드",
+      "safe": "카드 정보는 암호화해 결제 대행사에 전달하며, HeyMoa는 카드 번호를 저장하지 않습니다.",
+      "error": {
+        "number": "카드 번호를 확인해 주세요.",
+        "expiryFormat": "유효기간을 MM/YY로 입력해 주세요.",
+        "expired": "유효기간이 지난 카드입니다.",
+        "password": "비밀번호 앞 2자리를 입력해 주세요.",
+        "birth": "생년월일 6자리를 확인해 주세요.",
+        "business": "사업자등록번호 10자리를 확인해 주세요."
+      }
+    },
+    "priceTitle": "요금 확인",
+    "agreementTitle": "자동 결제 동의",
+    "business": {
+      "label": "사업자 정보",
+      "name": "상호",
+      "owner": "대표자",
+      "registration": "사업자등록번호",
+      "mailOrder": "통신판매업 신고번호",
+      "address": "주소",
+      "phone": "전화",
+      "email": "전자우편"
+    },
+    "pageBack": "돌아가기",
+    "cardRejected": "카드 정보를 다시 확인해 주세요.",
+    "tooManyAttempts": "카드 등록 시도가 너무 많습니다. 잠시 뒤 다시 시도해 주세요.",
+    "openTimeout": "요청이 늦어지고 있습니다. 잠시 뒤 다시 시도해 주세요."
+  },
+  "setup": {
+    "title": "카드 등록 결과",
+    "description": "카드 등록 진행 상황을 확인합니다.",
+    "purchaseTitle": "결제 결과",
+    "purchaseDescription": "카드 등록과 결제 진행 상황을 확인합니다.",
+    "loginRequired": "카드 등록 결과를 보려면 등록한 계정으로 로그인해 주세요.",
+    "loading": "카드 등록 결과를 불러오는 중",
+    "statusFailed": {
+      "title": "결과를 불러오지 못했습니다",
+      "body": "연결이 불안정하거나 응답이 늦어지고 있습니다. 카드 등록이나 결제가 실패했다는 뜻은 아닙니다."
+    },
+    "notFound": {
+      "title": "카드 등록을 찾을 수 없습니다",
+      "body": "카드를 등록한 계정으로 로그인했는지 확인해 주세요."
+    },
+    "stale": "자동 확인을 멈췄습니다. 서버에서는 계속 처리하고 있으니 다시 확인해 주세요.",
+    "recheck": "다시 확인",
+    "backToWorkspace": "요금제로 돌아가기",
+    "restart": "새로 시작",
+    "cancelRestart": "취소하고 다시 시작",
+    "cardAuthRequired": {
+      "title": "카드 등록이 끝나지 않았습니다",
+      "body": "카드 정보가 제출되지 않았습니다. 처음부터 다시 시작해 주세요."
+    },
+    "cardProcessing": {
+      "title": "카드 등록을 확인하는 중입니다",
+      "body": "이 화면을 닫아도 서버에서 계속 처리합니다."
+    },
+    "cardActionRequired": {
+      "title": "이 등록으로는 결제되지 않았습니다",
+      "body": "새로 카드를 등록해 주세요. 같은 문제가 계속되면 <link>문의·피드백</link>으로 알려 주세요."
+    },
+    "paymentProcessing": {
+      "title": "결제를 확인하는 중입니다",
+      "body": "이 화면을 닫아도 서버에서 계속 처리합니다."
+    },
+    "paymentUnknown": {
+      "title": "결제 결과 확인이 지연되고 있습니다",
+      "body": "결과는 늦어도 24시간 안에 이 화면과 이메일로 알려 드립니다. 그동안 다시 결제하지 마세요. 24시간이 지나도 안내를 받지 못하면 <link>문의·피드백</link>으로 알려 주세요."
+    },
+    "declined": {
+      "title": "결제가 승인되지 않았습니다",
+      "body": "카드사에서 결제를 거절했습니다. 카드 상태를 확인하거나 다른 카드로 다시 시도해 주세요.",
+      "code": "문의할 때 이 코드를 알려 주세요: {code}"
+    },
+    "notProcessed": {
+      "title": "결제가 처리되지 않았습니다",
+      "body": "결제 요청이 결제 대행사에서 처리되지 않았습니다. 요금은 청구되지 않았습니다. 다시 시도해 주세요."
+    },
+    "accessProcessing": {
+      "title": "결제를 확인했습니다",
+      "body": "이용 권한을 반영하는 중입니다. 추가로 결제할 필요는 없습니다."
+    },
+    "refundProcessing": {
+      "title": "결제를 취소하고 있습니다",
+      "body": "결제는 승인됐지만 이용 권한을 반영할 수 없어 전액을 자동으로 취소하는 중입니다. 다시 결제하지 마세요."
+    },
+    "refunded": {
+      "title": "결제가 자동으로 취소되었습니다",
+      "body": "이용 권한을 반영할 수 없어 승인된 금액을 전액 취소했습니다. 필요하면 새로 시작해 주세요."
+    },
+    "accessActionRequired": {
+      "title": "결제 확인이 필요합니다",
+      "body": "결제는 승인됐지만 처리를 끝내지 못했습니다. 다시 결제하지 말고 <link>문의·피드백</link>으로 알려 주세요."
+    },
+    "completed": {
+      "title": "결제가 완료되었습니다",
+      "plan": "요금제",
+      "workspace": "대상 워크스페이스",
+      "amount": "결제 금액",
+      "period": "이용 기간",
+      "nextCharge": "다음 결제 예정일",
+      "goWorkspace": "워크스페이스로 가기"
+    },
+    "accessLost": {
+      "title": "이 워크스페이스의 관리자 권한이 없어 결과를 자세히 볼 수 없습니다",
+      "body": "이미 시작된 결제는 처리되고 있거나 끝났을 수 있습니다. 여기서는 결제를 새로 시작하지 않습니다."
+    },
+    "closed": {
+      "title": "카드 등록이 종료되었습니다",
+      "body": "취소되었거나 시간이 지나 종료되었습니다. 필요하면 새로 시작해 주세요."
+    },
+    "replace": {
+      "title": "카드 변경 결과",
+      "description": "카드 변경 진행 상황을 확인합니다.",
+      "restart": "다시 변경",
+      "completed": {
+        "title": "카드를 바꿨습니다",
+        "body": "지금 결제되지 않았습니다. 다음 결제부터 새 카드로 결제됩니다.",
+        "goPlans": "결제 관리로 가기"
+      },
+      "completedEnding": {
+        "title": "카드를 등록했습니다",
+        "body": "지금 결제되지 않았습니다. 구독은 아직 종료 예정입니다. 결제 관리에서 재개하면 다음 결제부터 이 카드로 결제됩니다."
+      },
+      "cardActionRequired": {
+        "title": "카드를 바꾸지 못했습니다",
+        "body": "지금 카드가 그대로 유지됩니다. 다른 카드로 다시 시도해 주세요."
+      },
+      "closed": {
+        "title": "카드 변경이 종료되었습니다",
+        "body": "취소되었거나 시간이 지나 종료되었습니다. 지금 카드가 그대로 유지됩니다."
+      }
+    },
+    "issueUnknown": {
+      "title": "카드 등록 결과를 확인하지 못했습니다",
+      "body": "결제는 이루어지지 않았습니다. 카드 등록부터 다시 시작해 주세요."
+    }
+  },
+  "manage": {
+    "title": "구독",
+    "plan": "요금제",
+    "planValue": "{plan} · {amount} / 월",
+    "nextCharge": "다음 결제 예정일",
+    "nextChargeValue": "{date} · {amount}",
+    "noNextCharge": "없음",
+    "nextChargeChecking": "결제 결과 확인 중",
+    "card": "등록된 카드",
+    "noCard": "등록된 카드가 없습니다",
+    "cardByOtherAdmin": "다른 관리자가 등록한 카드입니다",
+    "cancelScheduled": "{end}까지 쓰고 이후 Free로 바뀝니다. 다음 결제는 청구되지 않습니다.",
+    "cancelScheduledPending": "해지를 예약했습니다. 확인 중인 결제 결과에 따라 종료 시점이 정해집니다.",
+    "stoppedNoCard": "등록된 결제 수단이 없어 자동 결제가 멈췄습니다. {end}까지 쓸 수 있고, 카드를 등록한 뒤 재개하면 구독이 이어집니다.",
+    "latestPayment": "최근 결제",
+    "latestPaymentValue": "{date} · {amount}",
+    "paymentLink": "결제 상세",
+    "changeCard": "변경",
+    "registerCard": "카드 등록",
+    "cancel": "구독 해지",
+    "resume": "구독 재개",
+    "deleteMethod": "삭제",
+    "notice": {
+      "stateChanged": "결제 상태가 바뀌었습니다. 최신 내용을 불러왔으니 다시 확인해 주세요.",
+      "inProgress": "결제를 처리하는 중입니다. 끝난 뒤 다시 시도해 주세요.",
+      "notAdmin": "관리자만 할 수 있습니다.",
+      "methodInUse": "구독에 쓰는 카드라 삭제할 수 없습니다. 카드를 바꾸려면 변경 버튼을 눌러 주세요.",
+      "canceled": "구독을 해지했습니다. {end}까지 쓸 수 있습니다.",
+      "resumed": "구독을 재개했습니다. {date}에 {amount}이 결제됩니다.",
+      "deleted": "카드를 삭제했습니다.",
+      "resumedDate": "구독을 재개했습니다. {date}부터 다시 결제됩니다."
+    },
+    "cancelDialog": {
+      "title": "구독을 해지할까요?",
+      "until": "{end}까지는 지금처럼 Pro를 쓸 수 있고, 그 뒤 Free로 바뀝니다.",
+      "pending": "지금 확인 중인 결제가 승인되면 그 이용 기간이 끝날 때까지 Pro를 쓰고, 다음 결제부터 청구되지 않습니다. 승인되지 않으면 구독은 바로 종료됩니다.",
+      "noCharge": "다음 결제({amount})부터 청구되지 않습니다.",
+      "undo": "{end} 전에 카드가 등록되어 있으면 재개해 이어 쓸 수 있습니다.",
+      "confirm": "해지",
+      "keep": "유지"
+    },
+    "resumeDialog": {
+      "title": "구독을 재개할까요?",
+      "noChargeNow": "지금 결제되지 않습니다.",
+      "next": "{date}에 {amount}이 이 카드로 결제되고 매월 자동으로 갱신됩니다.",
+      "confirm": "재개",
+      "nextDate": "{date}부터 이 카드로 결제되고 매월 자동으로 갱신됩니다."
+    },
+    "deleteDialog": {
+      "title": "카드를 삭제할까요?",
+      "body": "자동 결제에 쓰는 카드 정보만 삭제합니다. 결제 내역은 남습니다.",
+      "after": "다시 구독하려면 카드를 새로 등록해야 합니다.",
+      "confirm": "삭제"
+    },
+    "pageTitle": "결제 관리",
+    "pageDescription": "결제 수단과 구독, 결제 내역을 관리합니다.",
+    "loading": "결제 정보를 불러오는 중",
+    "methodTitle": "결제 수단",
+    "empty": "등록된 결제 수단이 없습니다. 요금제를 시작하면 카드가 등록됩니다.",
+    "openPlans": "요금제 보기",
+    "cancelHint": "해지해도 {end}까지는 계속 쓸 수 있습니다."
+  },
+  "paymentStatus": {
+    "SUCCEEDED": "완료",
+    "FAILED": "실패",
+    "CHECKING": "확인 중",
+    "REFUNDED": "환불됨",
+    "REFUNDING": "취소 처리 중",
+    "REFUND_FAILED": "취소 확인 필요"
+  },
+  "payment": {
+    "title": "결제 상세",
+    "description": "이 워크스페이스의 결제 한 건을 확인합니다.",
+    "loading": "결제 상세를 불러오는 중",
+    "notFound": "이 워크스페이스에서 이 결제를 찾을 수 없습니다.",
+    "askAdmin": "결제 상세는 관리자만 볼 수 있습니다.",
+    "back": "결제 관리",
+    "workspace": "워크스페이스",
+    "kindValue": {
+      "PURCHASE": "첫 구매",
+      "RENEWAL": "월 갱신"
+    },
+    "period": "이용 기간",
+    "status": "사유",
+    "card": "카드",
+    "refund": "환불",
+    "refundValue": "{status} · {origin}",
+    "origin": {
+      "OPERATOR": "문의 요청",
+      "COMPENSATION": "자동 취소",
+      "RECONCILIATION": "결제 확인 뒤 취소"
+    },
+    "errorCode": "문의할 때 이 코드를 알려 주세요: {code}",
+    "declined": "카드사에서 결제를 승인하지 않았습니다.",
+    "notProcessed": "결제가 처리되지 않았습니다. 요금은 청구되지 않았습니다.",
+    "then": "당시 결과",
+    "now": "현재 상태",
+    "thenPaid": "결제 완료",
+    "nowRefunded": "환불되어 이 기간의 이용 권한이 없습니다.",
+    "nowEnded": "이용 기간이 끝났습니다.",
+    "nowRefunding": "결제 취소를 처리하고 있습니다.",
+    "support": "환불 요청은 <link>문의·피드백</link>으로 접수합니다.",
+    "loadFailed": "결제 상세를 불러오지 못했습니다."
+  },
+  "history": {
+    "title": "결제 내역",
+    "description": "이 워크스페이스의 결제 내역입니다. 관리자에게만 보입니다.",
+    "loading": "결제 내역을 불러오는 중",
+    "empty": "아직 결제한 내역이 없습니다.",
+    "noDate": "확인 중",
+    "myTitle": "내 결제 내역",
+    "myDescription": "내가 결제한 내역입니다. 워크스페이스 이름은 구독을 시작할 때의 이름으로 표시됩니다.",
+    "leftMember": "탈퇴한 멤버",
+    "more": "더 보기 ({count, number}건)",
+    "detail": "결제 상세",
+    "receipt": "영수증",
+    "receiptLabel": "{date} 결제 영수증 열기"
+  }
+}

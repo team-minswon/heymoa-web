@@ -9,6 +9,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { onTrack } from "@/lib/analytics/track";
+import { RECORDING_USAGE_QUERY } from "@/lib/billing/use-recording-usage";
 
 import { RecordingDock } from "@/components/transcription/recording-dock";
 
@@ -40,8 +41,99 @@ vi.mock("@/components/transcription/recording-provider", async () => {
   };
 });
 
+// 녹음 사용량·공간 조회(APP-1596). 기본은 한도가 남은 공간이다.
+const quota = vi.hoisted(() => ({
+  usage: null as Record<string, unknown> | null,
+  role: "ADMIN",
+  options: undefined as unknown,
+}));
+vi.mock("@/lib/api/generated/billing/billing", () => ({
+  useGetRecordingUsage: (_id: string, options: unknown) => {
+    quota.options = options;
+    return {
+      data: quota.usage
+        ? { status: 200, data: { success: true, data: quota.usage } }
+        : undefined,
+    };
+  },
+}));
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  useGetWorkspace: () => ({
+    data: { status: 200, data: { success: true, data: { role: quota.role } } },
+  }),
+}));
+const pushSettings = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/workspace/settings-url", () => ({ pushSettings }));
+const exhausted = {
+  enforced: true,
+  unlimited: false,
+  allowanceMinutes: 1200,
+  usedMinutes: 1200,
+  remainingMinutes: 0,
+  remainingSamples: 0,
+};
+
 describe("RecordingDock", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    quota.usage = null;
+    quota.role = "ADMIN";
+  });
+
+  describe("무료 한도를 다 쓴 공간 (APP-1596)", () => {
+    it.each(["idle", "failed"])(
+      "%s 에서 시작을 막고 까닭과 ADMIN 의 요금제 보기를 보인다",
+      (phase) => {
+        recording.phase = phase;
+        recording.activeNoteId = "note-1";
+        quota.usage = exhausted;
+        render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+        expect(
+          screen.getByRole("button", { name: "회의 시작" })
+        ).toBeDisabled();
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "이번 달 무료 녹음 20시간을 다 썼습니다."
+        );
+        fireEvent.click(screen.getByRole("button", { name: "요금제 보기" }));
+        expect(pushSettings).toHaveBeenCalledWith("billing");
+        expect(recording.start).not.toHaveBeenCalled();
+      }
+    );
+
+    it("멤버에게는 관리자에게 Pro 를 요청하라고 한다", () => {
+      recording.phase = "idle";
+      quota.usage = exhausted;
+      quota.role = "MEMBER";
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "관리자에게 Pro를 요청해 주세요."
+      );
+      expect(screen.queryByRole("button", { name: "요금제 보기" })).toBeNull();
+    });
+
+    it("진행 중인 녹음은 그대로 둔다", () => {
+      recording.phase = "recording";
+      recording.activeNoteId = "note-1";
+      quota.usage = exhausted;
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      expect(screen.getByRole("button", { name: "일시정지" })).toBeEnabled();
+    });
+
+    it("남은 시간이 있으면 막지 않는다", () => {
+      recording.phase = "idle";
+      quota.usage = { ...exhausted, usedMinutes: 1100, remainingSamples: 1 };
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
+    });
+
+    it("사용량은 요금제 탭·사이드바와 같은 조회 설정으로 읽는다", () => {
+      recording.phase = "idle";
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      expect(quota.options).toEqual({
+        query: { ...RECORDING_USAGE_QUERY, enabled: true },
+      });
+    });
+  });
 
   it.each(["idle", "failed"])(
     "%s에서 시작 클릭 한 번만 기록합니다",

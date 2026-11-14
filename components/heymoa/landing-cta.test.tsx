@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LandingCta } from "@/components/heymoa/landing-cta";
+import { track } from "@/lib/analytics/track";
 import { messagesFor } from "@/i18n/messages";
 
 const render = (ui: ReactElement) =>
@@ -24,6 +25,8 @@ const workspaces = vi.hoisted(() => ({
   isSuccess: false,
   refetch: vi.fn(),
 }));
+
+vi.mock("@/lib/analytics/track", () => ({ track: vi.fn() }));
 
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ status: auth.status }),
@@ -65,6 +68,7 @@ describe("LandingCta", () => {
     workspaces.isError = false;
     workspaces.isSuccess = false;
     workspaces.refetch.mockReset();
+    vi.mocked(track).mockClear();
     window.history.replaceState(null, "", "/");
   });
 
@@ -86,6 +90,51 @@ describe("LandingCta", () => {
       "href",
       "/w/01K0000000000"
     );
+  });
+
+  it("로그인한 사람에게 낼 라벨과 결제 페이지 행선지를 주면 대시보드 대신 그리로 보낸다", () => {
+    auth.status = "authenticated";
+    Object.assign(workspaces, { data: WITH_WORKSPACE, isSuccess: true });
+    render(
+      <LandingCta
+        label="무료로 시작한 뒤 올리기"
+        member={{ label: "Pro 시작하기", to: "checkout" }}
+      />
+    );
+    expect(screen.getByRole("link", { name: "Pro 시작하기" })).toHaveAttribute(
+      "href",
+      "/billing/checkout/01K0000000000"
+    );
+    expect(screen.queryByText("대시보드로 이동")).toBeNull();
+  });
+
+  it("가격 안내의 버튼은 로그인 전 버튼을 누르면 비회원으로 이벤트를 낸다", () => {
+    render(<LandingCta label="Google 계정으로 시작" pricingPlan="free" />);
+    fireEvent.click(screen.getByRole("button", { name: /Google 계정으로 시작/ }));
+    expect(track).toHaveBeenCalledWith("pricing_cta_clicked", {
+      plan: "free",
+      auth: "anonymous",
+    });
+  });
+
+  it("가격 안내의 버튼은 로그인 뒤 링크를 누르면 회원으로 이벤트를 내고, 넘기지 않으면 내지 않는다", () => {
+    auth.status = "authenticated";
+    Object.assign(workspaces, { data: WITH_WORKSPACE, isSuccess: true });
+    render(
+      <>
+        <LandingCta
+          label="무료로 시작한 뒤 올리기"
+          member={{ label: "Pro 시작하기", to: "checkout" }}
+          pricingPlan="pro"
+        />
+        <LandingCta label="Google 계정으로 시작" />
+      </>
+    );
+    fireEvent.click(screen.getByRole("link", { name: "Pro 시작하기" }));
+    fireEvent.click(screen.getByRole("link", { name: /대시보드로 이동/ }));
+    expect(vi.mocked(track).mock.calls).toEqual([
+      ["pricing_cta_clicked", { plan: "pro", auth: "member" }],
+    ]);
   });
 
   it("시작 버튼에 포커스하면 연결된 녹음 안내 툴팁을 연다", async () => {

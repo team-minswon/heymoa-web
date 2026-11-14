@@ -1,12 +1,14 @@
 // `/oauth/*` 는 외부 에이전트 인가 흐름이다(APP-888) — 로그인 뒤 인가 요청·동의 화면으로 쿼리째 돌아온다.
 // `/unsubscribe` 는 메일 수신거부 화면이다(APP-1314) — 「다시 켜기」가 로그인한 뒤 그 화면으로 돌아온다.
 // `/settings/notifications` 는 메일 푸터의 「알림 설정」이다(APP-1341) — 로그인한 뒤 알림 탭으로 넘어간다.
+// `/settings/payments` 는 결제·환불 완료 메일의 버튼이다(APP-1598) — 로그인한 뒤 내 결제 내역 탭으로 넘어간다.
 const allowedReturnPaths = new Set([
   "/",
   "/terms",
   "/privacy",
   "/settings",
   "/settings/notifications",
+  "/settings/payments",
   "/invite",
   "/oauth/authorize",
   "/oauth/consent",
@@ -18,6 +20,11 @@ const allowedReturnPaths = new Set([
 const inquiryReturnPath = /^\/inquiries\/[0-9A-HJKMNP-TV-Z]{13}$/;
 const workspaceReturnPath =
   /^\/w\/[0-9A-HJKMNP-TV-Z]{13}(?:\/notes\/(?:[0-9A-HJKMNP-TV-Z]{13}|new))?$/;
+
+// 결제 화면(PRO-75). 카드 등록 복귀(authKey·state)의 쿼리가 로그인 returnTo 에 새지 않게 **쿼리는 받지 않는다** —
+// 아래 `normalizeReturnTo` 가 이 경로에 쿼리가 붙으면 홈으로 보낸다.
+const billingReturnPath =
+  /^\/(?:w\/[0-9A-HJKMNP-TV-Z]{13}\/billing(?:\/checkout)?|billing\/setups\/[0-9A-HJKMNP-TV-Z]{13}|billing\/checkout\/[0-9A-HJKMNP-TV-Z]{13})$/;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -47,6 +54,8 @@ export function normalizeReturnTo(value: string | null | undefined): string {
   }
 
   const pathname = path.split("?")[0] || "/";
+
+  if (billingReturnPath.test(pathname)) return path === pathname ? path : "/";
 
   return allowedReturnPaths.has(pathname) ||
     workspaceReturnPath.test(pathname) ||
@@ -79,7 +88,8 @@ export function buildGoogleOAuthUrl(returnTo: string, language?: string) {
     normalizedReturnTo
   )}`;
 
-  const languageQuery = language === "ko" || language === "en" ? `&language=${language}` : "";
+  const languageQuery =
+    language === "ko" || language === "en" ? `&language=${language}` : "";
   return buildApiUrl(authorizePath + languageQuery);
 }
 

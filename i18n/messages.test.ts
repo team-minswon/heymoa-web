@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   messagesFor,
   overlay,
+  PRODUCT_NAMESPACES,
   rawMessages,
   type Namespace,
 } from "@/i18n/messages";
@@ -14,6 +15,7 @@ import {
 const REQUIRED_EN: readonly Namespace[] = [
   "common",
   "auth",
+  "billing",
   "landing",
   "download",
   "legal",
@@ -72,5 +74,20 @@ describe("언어 파일", () => {
       "페이지를 찾을 수 없습니다"
     );
     expect(messagesFor("en").common.notFound.title).toBe("Page not found");
+  });
+});
+
+/** 제품 화면이 클라이언트에서 쓰지 않는 이름공간(마케팅·서버 렌더 전용). 새 이름공간은 이 둘 중 한 곳에 넣어야 한다. */
+const NOT_PRODUCT_CLIENT: readonly Namespace[] = [
+  "landing",
+  "download",
+  "legal",
+  "help",
+];
+
+describe("제품 화면으로 보내는 이름공간", () => {
+  it("모든 이름공간은 제품 목록이나 제외 목록에 있다 — 빠지면 화면에 키 이름이 그대로 보인다", () => {
+    const assigned = [...PRODUCT_NAMESPACES, ...NOT_PRODUCT_CLIENT].sort();
+    expect(assigned).toEqual(Object.keys(rawMessages.ko).sort());
   });
 });

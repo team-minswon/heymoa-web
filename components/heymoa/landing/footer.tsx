@@ -8,12 +8,15 @@ import { localePath } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
+import { BusinessInfoBlock } from "./business-info";
 import { LanguageSwitcher } from "./language-switcher";
-import { ExampleStamp } from "./marks";
 import { CONTAINER, FOCUS, TV_VARS, vars } from "./tokens";
 import { useSectionNav } from "./top-bar";
 
-/** 브랜드·제품 탐색·문의의 순서로 읽고, 소셜 채널은 브랜드 아래에서 찾도록 합니다. */
+/**
+ * 브랜드·제품 탐색·문의의 순서로 읽고, 소셜 채널과 언어 선택은 브랜드 아래에서 찾도록 합니다. 선 아래에는 사업자
+ * 정보와 저작권 표기만 둡니다.
+ */
 const LINK = cn(
   "inline-flex min-h-8 items-center rounded-[4px] text-[15px] text-[var(--tv-body)] underline-offset-[5px] transition-colors hover:text-[var(--tv-ink)] hover:underline hover:decoration-[var(--tv-pop)] hover:decoration-[3px]",
   FOCUS
@@ -21,7 +24,7 @@ const LINK = cn(
 
 const HEADING = "m-0 text-[13px] font-bold text-[var(--tv-ink)]";
 
-export function LandingFooter({ example = false }: { example?: boolean }) {
+export function LandingFooter() {
   const t = useTranslations("landing.footer");
   const locale = useLocale();
   const columns: Array<{ title: string; links: Array<[string, string]> }> = [
@@ -29,6 +32,7 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
     {
       title: t("info"),
       links: [
+        [t("pricing"), localePath(locale, "/pricing")],
         [t("download"), localePath(locale, "/download")],
         [t("terms"), localePath(locale, "/terms")],
         [t("privacy"), localePath(locale, "/privacy")],
@@ -119,6 +123,9 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
                   </svg>
                 </a>
               </nav>
+              <div className="mt-5">
+                <LanguageSwitcher />
+              </div>
             </div>
 
             {columns.map((column, i) => (
@@ -163,18 +170,11 @@ export function LandingFooter({ example = false }: { example?: boolean }) {
             </div>
           </div>
 
-          <div className="mt-10 flex flex-col gap-2 border-t border-[var(--tv-rule-strong)] pt-5 text-[13px] leading-[1.6] text-[var(--tv-muted)] lg:mt-12 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
-            {example ? (
-              <p className="m-0 flex items-center gap-2.5">
-                <ExampleStamp />
-                {t("example")}
-              </p>
-            ) : null}
-            <LanguageSwitcher />
-            <p className="m-0">
+          <div className="mt-10 border-t border-[var(--tv-rule-strong)] pt-6 lg:mt-12">
+            <BusinessInfoBlock />
+            <p className="m-0 mt-4 text-[13px] leading-[1.6] text-[var(--tv-muted)]">
               © 2026 {siteConfig.name}. All rights reserved.
             </p>
-            <p className="m-0">{t("disclaimer")}</p>
           </div>
         </Reveal>
       </div>

@@ -4,7 +4,7 @@ description: How to sign in and out with Google, use the My account screen, set 
 group: start
 slug: account
 order: 3
-modified: 2026-11-05
+modified: 2026-11-12
 ---
 
 ## Signing in and out {#sign-in}
@@ -62,8 +62,9 @@ You get notifications for:
 - **Paused meetings**: If you leave a meeting paused, you get an email after 1 business day. After 3 business days, the meeting ends automatically, analysis starts, and you get one more email.
 - **Results ready to review**: When a meeting's analysis is done and the results are ready to review.
 - **Inquiry replies**: When the HeyMoa team replies to your inquiry.
+- **Payment updates**: Admins get one when a renewal payment isn't approved and the subscription ends, and when the payer has left and automatic payments have stopped. Payment completed and refund completed notices go to the payer by email.
 
-Choose what you receive in **[Account settings]** → **[Notifications]**, where you turn **[In-app]** and **[Email]** on or off for each kind. **[Turn off all in-app notifications]** and **[Turn off all email]** switch them all off at once. The settings apply to all your workspaces. Workspace invite notifications can't be turned off.
+Choose what you receive in **[Account settings]** → **[Notifications]**, where you turn **[In-app]** and **[Email]** on or off for each kind. **[Turn off all in-app notifications]** and **[Turn off all email]** switch them all off at once. The settings apply to all your workspaces. Workspace invite and payment notifications can't be turned off.
 
 ::clip{name="notification-settings" alt="Clicking Notifications in the sidebar, choosing the Needs action tab, then opening notification settings and turning off email for inquiry replies" caption="From [Notification settings] in the notifications window, turn [In-app] and [Email] on or off for each kind."}
 

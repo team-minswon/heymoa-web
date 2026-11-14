@@ -1,4 +1,5 @@
 import enAgents from "@/messages/en/agents.json";
+import enBilling from "@/messages/en/billing.json";
 import enAuth from "@/messages/en/auth.json";
 import enChat from "@/messages/en/chat.json";
 import enCommon from "@/messages/en/common.json";
@@ -16,6 +17,7 @@ import enShell from "@/messages/en/shell.json";
 import enTasks from "@/messages/en/tasks.json";
 import enWorkspace from "@/messages/en/workspace.json";
 import koAgents from "@/messages/ko/agents.json";
+import koBilling from "@/messages/ko/billing.json";
 import koAuth from "@/messages/ko/auth.json";
 import koChat from "@/messages/ko/chat.json";
 import koCommon from "@/messages/ko/common.json";
@@ -41,6 +43,7 @@ import type { Locale } from "@/lib/i18n/locales";
 const ko = {
   common: koCommon,
   auth: koAuth,
+  billing: koBilling,
   landing: koLanding,
   download: koDownload,
   legal: koLegal,
@@ -61,6 +64,27 @@ const ko = {
 export type Messages = typeof ko;
 export type Namespace = keyof Messages;
 
+/**
+ * 제품 루트(`app/(product)`)가 클라이언트로 보내는 이름공간. 마케팅 루트(`app/[lang]/layout.tsx`)는 자기 목록을 따로 넘긴다.
+ * 제품 이름공간을 더하면 여기에도 더한다.
+ */
+export const PRODUCT_NAMESPACES: readonly Namespace[] = [
+  "common",
+  "auth",
+  "errors",
+  "shell",
+  "settings",
+  "workspace",
+  "notes",
+  "chat",
+  "tasks",
+  "notification",
+  "agents",
+  "recording",
+  "billing",
+  "dates",
+];
+
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
@@ -68,6 +92,7 @@ type DeepPartial<T> = {
 const en: DeepPartial<Messages> = {
   common: enCommon,
   auth: enAuth,
+  billing: enBilling,
   landing: enLanding,
   download: enDownload,
   legal: enLegal,

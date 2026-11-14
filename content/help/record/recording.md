@@ -4,7 +4,7 @@ description: 회의 녹음을 시작하고 멈추는 법, 마이크 권한, 연�
 group: record
 slug: recording
 order: 1
-modified: 2026-11-05
+modified: 2026-11-12
 ---
 
 ## 기록 시작하는 법 {#start}
@@ -92,3 +92,4 @@ modified: 2026-11-05
 - [데스크톱 앱](help:desktop) — 컴퓨터 소리까지 녹음
 - [회의 종료와 분석](help:meeting-end) — 기록을 마친 뒤 할 일
 - [문제 해결](help:troubleshooting) — 안내 문구별 해결 방법
+- [요금제와 결제](help:billing#usage) — Free 녹음 한도와 사용량

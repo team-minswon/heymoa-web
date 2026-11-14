@@ -182,6 +182,12 @@ export function describeNotification(
   if (notification.type === "INQUIRY_ANSWERED") {
     return describeInquiryAnswered(notification, actions, t);
   }
+  if (notification.type === "SUBSCRIPTION_ENDED_UNPAID") {
+    return describeBilling(notification, actions, t, "subscriptionEnded");
+  }
+  if (notification.type === "SUBSCRIPTION_BILLING_STOPPED") {
+    return describeBilling(notification, actions, t, "billingStopped");
+  }
   return {
     title: t("generic"),
     workspaceName: notification.payload?.workspaceName ?? null,
@@ -194,6 +200,12 @@ export type RowActions = {
   openNote: (workspaceId: string, noteId: string) => void;
   /** 「내 문의」 창을 그 문의가 보이게 연다(모달을 닫는다). 안 읽었으면 읽는다 */
   openInquiry: (notification: NotificationItem, feedbackId: string) => void;
+  /** 그 워크스페이스 설정 창의 요금제 탭(기본)이나 결제 관리 탭을 연다(모달을 닫는다). 안 읽었으면 읽는다 */
+  openBilling: (
+    notification: NotificationItem,
+    workspaceId: string,
+    section?: "billing" | "payment"
+  ) => void;
   /** 내가 그 워크스페이스에 아직 있는가. 없으면 이동을 막는다 */
   canOpen: (workspaceId: string) => boolean;
   /** 만료 판정의 기준 시각. 렌더마다 `Date.now()` 를 읽지 않는다 */
@@ -344,6 +356,51 @@ function describeInquiryAnswered(
         className="text-xs font-medium whitespace-nowrap text-[var(--el-ink)] group-hover/row:underline"
       >
         {t("inquiry.view")}
+      </span>
+    ) : undefined,
+  };
+}
+
+/**
+ * 결제 알림 — 갱신 결제 미승인으로 Pro 구독 종료(APP-1565)와 결제자가 빠져 자동 결제 중단(APP-1588). 둘 다 필수 알림이라
+ * 설정에서 끌 수 없고, 누르면 그 워크스페이스의 요금제 탭으로 간다.
+ */
+function describeBilling(
+  notification: NotificationItem,
+  actions: RowActions,
+  t: RowTranslator,
+  kind: "subscriptionEnded" | "billingStopped"
+): NotificationRowView {
+  const payload = notification.payload;
+  const workspaceId =
+    payload?.workspaceId && actions.canOpen(payload.workspaceId)
+      ? payload.workspaceId
+      : null;
+  return {
+    title: payload?.workspaceName
+      ? t.rich(`${kind}.title`, {
+          workspace: payload.workspaceName,
+          b: bold,
+        })
+      : t(`${kind}.titleUnnamed`),
+    detail: t(`${kind}.detail`),
+    // 첫 줄이 이미 워크스페이스 이름이다
+    workspaceName: null,
+    onActivate: workspaceId
+      ? () =>
+          actions.openBilling(
+            notification,
+            workspaceId,
+            // 멈춘 결제를 잇는 일(카드 등록·재개)은 결제 관리 탭에 있다
+            kind === "billingStopped" ? "payment" : "billing"
+          )
+      : undefined,
+    aside: workspaceId ? (
+      <span
+        aria-hidden
+        className="text-xs font-medium whitespace-nowrap text-[var(--el-ink)] group-hover/row:underline"
+      >
+        {t(`${kind}.view`)}
       </span>
     ) : undefined,
   };

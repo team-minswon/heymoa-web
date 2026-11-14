@@ -18,8 +18,8 @@ import {
  * 띄운다(APP-194). 주소에 workspaceId가 없어서 고르는 것이지, 연동 자체는 서버가 올바른
  * 워크스페이스에 저장한다(모달은 표시용).
  *
- * `section` 을 주면 그 설정 탭을 연다 — 메일 푸터의 「알림 설정」(`/settings/notifications`, APP-1341)이 쓴다.
- * 알림 설정은 사용자 단위라 어느 워크스페이스에서 열어도 같다.
+ * `section` 을 주면 그 설정 탭을 연다 — 메일 푸터의 「알림 설정」(`/settings/notifications`, APP-1341)과
+ * 결제 메일의 「내 결제 내역」(`/settings/payments`, APP-1598)이 쓴다. 둘 다 사용자 단위라 어느 워크스페이스에서 열어도 같다.
  */
 export function SettingsReturnRedirect({
   section,

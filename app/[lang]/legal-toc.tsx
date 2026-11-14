@@ -21,6 +21,12 @@ export function LegalToc({
 }) {
   const [active, setActive] = useState<string | null>(null);
 
+  // 새 탭으로 바로 연 `/terms#section-13` 은 본문이 그려지기 전에 브라우저가 도착점을 찾아 맨 위에 머문다 — 그려진 뒤 한 번 맞춘다.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView();
+  }, []);
+
   useEffect(() => {
     // 관찰자(IntersectionObserver)는 빠르게 건너뛸 때 지나친 조를 놓쳐 낡은 조에 머물렀다 — 스크롤마다 위치를 잰다.
     // 조 열두 개의 위치를 재는 정도라 프레임 묶음(rAF) 없이 바로 잰다.

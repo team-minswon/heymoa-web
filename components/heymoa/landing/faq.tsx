@@ -17,7 +17,7 @@ import {
   TimelineList,
   TimelineRow,
 } from "./app";
-import { ExampleStamp, Scribble, Speech } from "./marks";
+import { Scribble, Speech } from "./marks";
 import { RICH } from "./rich";
 import {
   APP,
@@ -90,7 +90,6 @@ const SHADOW_NARROW =
 function Sample({ children }: { children: ReactNode }) {
   return (
     <div className="relative mt-6 -ml-[48px] max-w-[520px] sm:mx-0 lg:mb-5">
-      <ExampleStamp className="absolute -top-[18px] right-4 z-10" />
       <AppWindow className={SHADOW_NARROW}>{children}</AppWindow>
     </div>
   );

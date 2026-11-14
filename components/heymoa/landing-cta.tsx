@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
+import { track } from "@/lib/analytics/track";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
@@ -31,12 +32,23 @@ export function LandingCta({
   className,
   openOnWelcome = false,
   tooltip,
+  member,
+  pricingPlan,
 }: {
   label: string;
   className?: string;
   /** 첫 로그인 직후 생성 폼을 열 인스턴스. 랜딩에 CTA가 여럿이라 **하나만** 켠다(히어로). */
   openOnWelcome?: boolean;
   tooltip?: ReactNode;
+  /**
+   * 로그인한 사람에게 대시보드 대신 낼 라벨과 행선지. 가격 안내의 Pro 카드가 쓴다 — 이미 쓰는 사람에게 Pro 버튼이
+   * 「대시보드로 이동」이면 살 길이 안 보인다. `checkout` 은 마지막으로 쓴 워크스페이스의 결제 페이지다(어느 공간인지는
+   * 그 페이지가 이름으로 보이고, 권한 없음·이미 Pro·판매 전이면 그 페이지가 살 수 없다고 안내한다). 결제 페이지는 분석
+   * 없는 다른 루트 문서라 미리 받지 않는다. 워크스페이스가 없거나 조회에 실패한 상태는 그대로다.
+   */
+  member?: { label: string; to: "checkout" };
+  /** 가격 안내의 두 버튼만 넘긴다 — 누르면 `pricing_cta_clicked` 를 낸다. 랜딩의 다른 버튼은 내지 않는다. */
+  pricingPlan?: "free" | "pro";
 }) {
   const t = useTranslations("landing.cta");
   const { status } = useAuth();
@@ -51,6 +63,13 @@ export function LandingCta({
   const workspaces = envelope?.success ? (envelope.data.workspaces ?? []) : [];
   const workspaceId = pickWorkspaceId(workspaces);
   const hasNoWorkspace = workspacesQuery.isSuccess && !workspaceId;
+  const onPricingClick = pricingPlan
+    ? () =>
+        track("pricing_cta_clicked", {
+          plan: pricingPlan,
+          auth: isAuthenticated ? "member" : "anonymous",
+        })
+    : undefined;
 
   useEffect(() => {
     if (!openOnWelcome || !hasNoWorkspace) return;
@@ -79,7 +98,7 @@ export function LandingCta({
           disabled
           className={cn(MARKETING_PILL, className)}
         >
-          {t("dashboard")}
+          {member?.label ?? t("dashboard")}
           <ArrowRight className="size-4" />
         </Button>
       );
@@ -121,10 +140,16 @@ export function LandingCta({
     }
     return (
       <LinkButton
-        href={`/w/${workspaceId}`}
+        href={
+          member?.to === "checkout"
+            ? `/billing/checkout/${workspaceId}`
+            : `/w/${workspaceId}`
+        }
+        prefetch={member?.to === "checkout" ? false : undefined}
+        onClick={onPricingClick}
         className={cn(MARKETING_PILL, className)}
       >
-        {t("dashboard")}
+        {member?.label ?? t("dashboard")}
         <ArrowRight className="size-4" />
       </LinkButton>
     );
@@ -142,7 +167,7 @@ export function LandingCta({
   }
 
   const button = (
-    <Button type="button" aria-describedby={tooltip ? tooltipId : undefined} className={cn(MARKETING_PILL, className)}>
+    <Button type="button" aria-describedby={tooltip ? tooltipId : undefined} onClick={onPricingClick} className={cn(MARKETING_PILL, className)}>
       {label}
       <ArrowRight className="size-4" />
     </Button>

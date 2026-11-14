@@ -17,4 +17,5 @@ export const CreateFeedbackRequestKind = {
   QUESTION: "QUESTION",
   SUGGESTION: "SUGGESTION",
   OTHER: "OTHER",
+  BILLING: "BILLING",
 } as const;

@@ -55,6 +55,7 @@ const actions: RowActions = {
   pending: false,
   openNote: vi.fn(),
   openInquiry: vi.fn(),
+  openBilling: vi.fn(),
   canOpen: () => true,
   now: Date.parse("2026-10-22T04:00:00Z"),
   accept: vi.fn(),

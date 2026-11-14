@@ -22,7 +22,7 @@ import { WorksWith } from "./works-with";
  * 기존 랜딩의 `use-demo` 대본으로 혼자 회의 한 바퀴를 돈다.
  *
  * 순서: 상단 바 → 히어로 → 회의 카드 → 근거 → 팀(프로젝트) → 내 에이전트 → 도구 연결 → FAQ → 어디서든 켜 두기 띠 →
- * 마무리 → 푸터. 상단 바(`top-bar.tsx`)와 푸터(`footer.tsx`, 「지어낸 예시」 고지는 `/` 에서만)는 여기 없다 —
+ * 마무리 → 푸터. 상단 바(`top-bar.tsx`)와 푸터(`footer.tsx`)는 여기 없다 —
  * `NavbarGate` · `FooterGate` 가 마케팅 `Navbar` · `Footer` 대신 `<main>` 밖에 세운다. 상단 바를 안에 두면 「본문으로
  * 건너뛰기」 다음 Tab 이 다시 상단 바로 간다.
  * 바탕은 흰색 하나이고 색 면은 각 구간이 깐다. `overflow-x-clip` 은 기울인 쪽지 · 원 · 카드가 가로

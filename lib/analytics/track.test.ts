@@ -17,6 +17,68 @@ afterEach(() => {
   localStorage.clear();
 });
 
+describe("결제 이벤트", () => {
+  type Props<E extends AnalyticsEvent> = Parameters<typeof track<E>>[1] & {};
+  it("공간·PG·결과 상태만 받고 민감값은 받지 않는다", () => {
+    expectTypeOf<
+      | "billing_plans_viewed"
+      | "billing_checkout_entered"
+      | "billing_card_setup_resulted"
+    >().toExtend<AnalyticsEvent>();
+    expectTypeOf<"billing">().toExtend<Props<"settings_tab_opened">["section"]>();
+    expectTypeOf<Props<"billing_card_setup_resulted">["result"]>().toEqualTypeOf<
+      "completed" | "declined" | "unknown" | "refunded"
+    >();
+    type Secret = "authKey" | "state" | "customerKey" | "setup_id" | "payment_id" | "card";
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_setup_resulted">>();
+    expectTypeOf<"payment">().toExtend<Props<"settings_tab_opened">["section"]>();
+  });
+
+  it("구독 관리 이벤트는 공간과 결과 종류만 받고 금액·카드·결제 식별자는 받지 않는다", () => {
+    type Money = "amount" | "amount_krw" | "payment_id" | "refund_id" | "method_id" | "card";
+    expectTypeOf<Money>().not.toExtend<keyof Props<"billing_payment_method_deleted">>();
+    expectTypeOf<Props<"billing_cancel_dialog_opened">>().toEqualTypeOf<{ workspace_id: string }>();
+    expectTypeOf<Props<"billing_subscription_canceled">>().toEqualTypeOf<{ workspace_id: string }>();
+    expectTypeOf<Props<"billing_card_change_started">>().toEqualTypeOf<{ workspace_id: string }>();
+    expectTypeOf<Props<"billing_payment_viewed">>().toEqualTypeOf<{ workspace_id: string }>();
+    expectTypeOf<Props<"billing_subscription_resumed">["result"]>().toEqualTypeOf<"resumed" | "not_admin">();
+    expectTypeOf<Props<"billing_payment_method_deleted">["result"]>().toEqualTypeOf<"deleted" | "in_use">();
+    expectTypeOf<Props<"billing_payment_history_viewed">>().toEqualTypeOf<{ scope: "workspace" | "me" }>();
+    // @ts-expect-error 결제 내역 이벤트에는 범위만 싣는다
+    track("billing_payment_history_viewed", { scope: "me", workspace_id: "W1" });
+    // @ts-expect-error 인증 키를 실을 수 없다
+    track("billing_card_setup_resulted", { result: "completed", authKey: "k" });
+  });
+
+  it("결과 화면 행동·카드 변경 결과·판매 중단·영수증 이벤트는 카드·빌링키·주문번호·이메일·이름을 받지 않는다", () => {
+    type Secret = "card" | "card_number" | "billing_key" | "bid" | "order_id" | "moid" | "setup_id" | "payment_id" | "email" | "name" | "receipt_url";
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_setup_result_action_clicked">>();
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_change_resulted">>();
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_sales_unavailable_viewed">>();
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_receipt_clicked">>();
+    expectTypeOf<Props<"billing_setup_result_action_clicked">["action"]>().toEqualTypeOf<"recheck" | "retry" | "to_workspace">();
+    expectTypeOf<Props<"billing_card_change_resulted">["result"]>().toEqualTypeOf<"completed" | "declined" | "unknown">();
+    expectTypeOf<Props<"billing_receipt_clicked">>().toEqualTypeOf<{ workspace_id?: string }>();
+    // @ts-expect-error 영수증 이벤트에 주소를 실을 수 없다
+    track("billing_receipt_clicked", { receipt_url: "https://example.com" });
+  });
+});
+
+describe("녹음 한도 이벤트", () => {
+  it("공간·역할만 받고 사용량 수치나 회의 식별자는 받지 않는다", () => {
+    type P<E extends AnalyticsEvent> = Parameters<typeof track<E>>[1] & {};
+    expectTypeOf<P<"recording_quota_blocked">>().toEqualTypeOf<{
+      workspace_id: string;
+      role: "admin" | "member";
+    }>();
+    expectTypeOf<P<"recording_quota_upgrade_clicked">>().toEqualTypeOf<{
+      workspace_id: string;
+    }>();
+    // @ts-expect-error 사용량 수치를 실을 수 없다
+    track("recording_quota_blocked", { workspace_id: "W1", role: "admin", used_minutes: 1 });
+  });
+});
+
 describe("연결 지도 이벤트", () => {
   it("제목 없이 개수·화면 이름만 받는다", () => {
     expectTypeOf<
@@ -85,7 +147,12 @@ describe("알림 사건 타입", () => {
     }>();
     expectTypeOf<Props<"notification_clicked">>().toEqualTypeOf<{
       workspace_id: string;
-      type: "WORKSPACE_INVITATION" | "ANALYSIS_READY" | "INQUIRY_ANSWERED";
+      type:
+        | "WORKSPACE_INVITATION"
+        | "ANALYSIS_READY"
+        | "INQUIRY_ANSWERED"
+        | "SUBSCRIPTION_ENDED_UNPAID"
+        | "SUBSCRIPTION_BILLING_STOPPED";
       was_unread: boolean;
     }>();
     expectTypeOf<Props<"notifications_all_read_clicked">>().toEqualTypeOf<{

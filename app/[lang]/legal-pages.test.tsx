@@ -91,13 +91,79 @@ describe("HeyMoa legal pages", () => {
     // 머리에 공고일·시행일이 있다(`LEGAL_CURRENT`). 이번 판은 공고한 날 바로 시행한다.
     expect(screen.getByText("공고일")).toBeVisible();
     expect(screen.queryByText("미정")).not.toBeInTheDocument();
-    expect(screen.getAllByText("2026년 10월 23일")).toHaveLength(2);
+    expect(screen.getAllByText("2026년 11월 14일")).toHaveLength(2);
     // 번역본 고지는 한국어본에 서지 않는다.
     expect(screen.queryByRole("link", { name: "한국어본 보기" })).not.toBeInTheDocument();
   });
 
+  it("약관에 유료·환불 조항이 있고 주문서가 링크하는 #section-13 이 환불 조항이다(APP-1586)", async () => {
+    await renderPage(TermsPage, "ko");
+    // 주문 확인 화면의 「환불 규정 보기」가 `/terms#section-13`으로 온다. 조 순서가 밀리면 다른 조가 열린다.
+    const refund = document.getElementById("section-13");
+    expect(refund).toHaveTextContent("제13조 (환불)");
+    expect(refund).toHaveTextContent(/결제일부터 7일 이내에 환불을 요청하고, 요청한 때까지 그 결제 기간에 워크스페이스 전체가 녹음한 시간의 합계가 20시간 이하이면 결제 금액 전부를 환불합니다/);
+    expect(document.getElementById("section-11")).toHaveTextContent("제11조 (자동 갱신)");
+    expect(document.getElementById("section-15")).toHaveTextContent("제15조 (약관의 변경과 문의)");
+  });
+
+  it("약관에 결제자·이용 기간·결제자 이탈·청약철회·환불 처리 기한을 적는다(APP-1586 초안, 법무 확인 전)", async () => {
+    await renderPage(TermsPage, "ko");
+    const text = (id: string) => document.getElementById(id)?.textContent ?? "";
+    // 계약 당사자: 사업자등록증의 상호와 대표자
+    expect(text("section-1")).toMatch(/이 약관은 헤이모아\(대표자 이민형, 이하 'HeyMoa'\)가 제공하는/);
+    expect(text("section-10")).toMatch(/카드를 등록한 관리자가 그 구독의 결제자가 됩니다/);
+    expect(text("section-10")).toMatch(/HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스정보통신 주식회사\)에 전달하며, HeyMoa는 이 값을 저장하지 않습니다/);
+    expect(text("section-10")).toMatch(/첫 결제가 승인된 시각부터 한 달 단위이며, 다음 달 같은 날 같은 시각이 되기 전까지입니다/);
+    expect(text("section-10")).toMatch(/법정대리인의 동의 없이 결제한 경우/);
+    expect(text("section-11")).toMatch(/적용일 30일 전까지 서비스 안 공지 또는 이메일로 변경 전후 금액과 적용일을 알립니다/);
+    expect(text("section-11")).toMatch(/결제자가 워크스페이스를 떠나거나/);
+    expect(text("section-12")).toMatch(/결제나 환불을 처리하는 중에는 재개가 되지 않을 수 있으며/);
+    expect(text("section-11")).toMatch(/결과를 확인하는 동안에는 Pro를 그대로 쓸 수 있습니다/);
+    expect(text("section-13")).toMatch(/현재 이용 기간의 결제에 대한 환불 요청을 처리하기 시작하면 다음 자동 결제를 멈춥니다/);
+    expect(text("section-13")).toMatch(/청약철회 등 이용자의 권리를 제한하지 않으며, 법령이 이용자에게 더 유리하면 법령을 따릅니다/);
+    expect(text("section-13")).toMatch(/환불 요청을 받은 날부터 3영업일 이내에 결과를 알리고, 환불하는 경우 같은 기한 안에 결제 취소를 요청합니다/);
+    expect(text("section-14")).toMatch(/구독 중인 워크스페이스를 삭제하면/);
+    // 결제·환불 완료는 결제자에게 메일로, 구독 종료·자동 결제 중단은 관리자에게 앱 안 알림으로 간다.
+    expect(text("section-2")).toMatch(/결제가 완료되거나 환불이 완료되면 결제자에게 이메일로 알립니다/);
+    expect(text("section-2")).toMatch(/결제자가 빠져 자동 결제가 멈췄을 때는 서비스 안의 알림으로 워크스페이스 관리자에게 알립니다/);
+    expect(document.body.textContent).not.toMatch(/페이플|Payple|토스/);
+  });
+
+  it("처리방침에 결제 정보 항목·목적·보관 기간과 결제 대행사 위탁(국내 처리)을 적는다(APP-1586)", async () => {
+    await renderPage(PrivacyPage, "ko");
+    // 처리 주체: 사업자등록증의 상호(카드사 심사가 처리방침 안의 상호를 확인한다)
+    expect(document.getElementById("section-1")).toHaveTextContent(
+      /헤이모아\(이하 'HeyMoa'\)는 서비스를 제공하는 데 필요한 정보만 처리합니다/,
+    );
+    expect(document.getElementById("section-1")).toHaveTextContent(/빌링키.*카드 번호 끝 네 자리.*HeyMoa 화면에서 입력받아 암호화해 결제 대행사\(나이스정보통신 주식회사\)에 전달하며 HeyMoa는 저장하지 않음/);
+    expect(document.getElementById("section-2")).toHaveTextContent(/정기 결제 갱신, 환불 처리, 결제 문의 대응/);
+    expect(document.getElementById("section-2")).toHaveTextContent(/결제가 완료되거나 환불이 완료되면 결제자에게 메일을 보냅니다/);
+    const retention = document.getElementById("section-6");
+    expect(retention).toHaveTextContent(/계약 또는 청약철회 기록\s*5년/);
+    expect(retention).toHaveTextContent(/대금 결제 및 서비스 공급 기록.*5년/);
+    expect(retention).toHaveTextContent(/소비자 불만 또는 분쟁 처리 기록\s*3년/);
+    // 계약을 접수한 뒤(11-12) 법인명을 확인해 위탁 표에 넣었다. 국내 카드만 받아 국외 이전은 없다
+    const entrust = document.getElementById("section-7");
+    expect(entrust).toHaveTextContent(/나이스정보통신\(나이스페이\)\s*카드 정기결제 처리\s*해당 없음\(국내\)/);
+    expect(entrust).toHaveTextContent(/나이스정보통신 주식회사 \(나이스페이\).*대한민국\. 국외 이전 아님.*카드 비밀번호 앞 2자리, 주문 번호, 결제 금액, 상품 이름/);
+  });
+
+  it("주소에 조항 앵커가 있으면 본문이 그려진 뒤 그 조항으로 맞춘다(APP-1586)", async () => {
+    // 새 탭으로 바로 연 `/terms#section-13` 은 브라우저가 도착점을 찾을 때 본문이 아직 없어 맨 위에 머문다.
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView; // jsdom 에는 없다
+    window.location.hash = "#section-13";
+    try {
+      await renderPage(TermsPage, "ko");
+      expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById("section-13"));
+    } finally {
+      window.location.hash = "";
+      Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+    }
+  });
+
   it.each([
-    [TermsPage, "Terms of Service", 11, "/terms"],
+    [TermsPage, "Terms of Service", 15, "/terms"],
     [PrivacyPage, "Privacy Policy", 12, "/privacy"],
   ] as const)(
     "영어판(%#)은 한글 없이 같은 조 번호·앵커로 서고 맨 위에 한국어본 우선 고지가 있다",
@@ -131,7 +197,7 @@ describe("처리방침·약관 변경 관리(APP-1385)", () => {
 
   it.each([
     [PrivacyPage, "/privacy", ["2026-11-03", "2026-10-23", "2026-10-22", "2026-10-18", "2026-10-12", "2026-09-04", "2026-07-17"]],
-    [TermsPage, "/terms", ["2026-10-22", "2026-10-18", "2026-09-04", "2026-07-17"]],
+    [TermsPage, "/terms", ["2026-10-23", "2026-10-22", "2026-10-18", "2026-09-04", "2026-07-17"]],
   ] as const)("이전 판 목록이 판마다 고정 주소로 선다(%#)", async (Page, path, versions) => {
     await renderPage(Page, "ko");
 
@@ -141,8 +207,8 @@ describe("처리방침·약관 변경 관리(APP-1385)", () => {
     ).toEqual(versions.map((version) => `${path}/${version}`));
     // 다음 판 시행 전날까지가 적용 기간이다.
     expect(list).toHaveTextContent("2026년 10월 18일 ~ 2026년 10월 21일");
-    // 「요청하면 열람」 대신 목록으로 연다.
-    expect(document.body.textContent).not.toMatch(/요청하면/);
+    // 「요청하면 열람」 대신 목록으로 연다. (환불 조항의 「문의·피드백으로 요청하면」은 다른 뜻이라 문구로 가른다.)
+    expect(document.body.textContent).not.toMatch(/요청하면 (열람|확인할 수)/);
   });
 
   it.each([PrivacyPage, TermsPage])("AI 학습에 쓰지 않는다고 처리방침·약관 양쪽에 적는다(%#)", async (Page) => {

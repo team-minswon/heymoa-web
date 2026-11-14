@@ -35,6 +35,8 @@ export type RecordingState = {
   microphone: MicrophoneState;
   systemAudio: MicrophoneState | null;
   error: string | null;
+  /** 지금 `error` 가 「이번 달 무료 녹음 시간을 다 썼다」(시작 409)인가. 토스트가 요금제 안내를 덧붙인다. */
+  quotaExceeded: boolean;
   /** 지금 `error` 가 「종료 상태를 확인하지 못했다」인가. 서버 완료가 오면 그 문구만 걷는다. */
   unconfirmedStop: boolean;
   /** 재개 창이 끝나 멈췄다는 문구가 서 있다. 그동안만 회의 종료를 따로 감시한다. */
@@ -54,6 +56,7 @@ export const initialRecordingState: RecordingState = {
   microphone: "live",
   systemAudio: null,
   error: null,
+  quotaExceeded: false,
   unconfirmedStop: false,
   windowExhausted: false,
   droppedMs: 0,
@@ -73,7 +76,7 @@ export type RecordingAction =
   /** 재개 창이 끝나 멈췄다. 이 탭이 버린 세션이라 열린 세션으로 들지 않는다. */
   | { type: "window-exhausted"; message: string; droppedMs: number }
   /** 시작하다 실패했다. 녹음이 시작되기 전이라 걷을 알림이 없다. */
-  | { type: "start-failed"; message: string }
+  | { type: "start-failed"; message: string; quotaExceeded?: boolean }
   | { type: "completed"; session: RecordingSession | null }
   | { type: "error"; message: string }
   /** 시작하는 사이 워크스페이스에서 쫓겨났다. 문구는 추방 안내가 따로 띄운다. */
@@ -109,6 +112,7 @@ function failed(
   return patch(state, {
     phase: "failed",
     error: message,
+    quotaExceeded: false,
     unconfirmedStop,
     windowExhausted: false,
     connectionNotice: null,
@@ -145,6 +149,7 @@ export function recordingReducer(
       return patch(state, {
         phase: "failed",
         error: action.message,
+        quotaExceeded: action.quotaExceeded ?? false,
         unconfirmedStop: false,
         windowExhausted: false,
       });
@@ -162,6 +167,7 @@ export function recordingReducer(
     case "error":
       return patch(state, {
         error: action.message,
+        quotaExceeded: false,
         unconfirmedStop: false,
         windowExhausted: false,
       });

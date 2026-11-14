@@ -29,7 +29,7 @@ export const isLandingHome = (pathname: string) =>
   splitLocale(pathname).path === "/";
 
 /**
- * 카드 하나만 세우는 흐름(외부 에이전트 동의 · 초대 · 메일 수신거부). 마케팅 크롬 대신 로고 · 로그아웃만 둔 머리글과 약관 링크만 둔 발
+ * 카드 하나만 세우는 흐름(외부 에이전트 동의 · 초대 · 메일 수신거부 · 카드 등록 결과). 마케팅 크롬 대신 로고 · 로그아웃만 둔 머리글과 약관 링크만 둔 발
  * (`components/layout/focus-chrome.tsx`)을 세운다. 위와 같은 이유로 두 게이트가 이것 하나를 같이 본다.
  */
 export function isFocusChromeRoute(pathname: string) {
@@ -37,7 +37,8 @@ export function isFocusChromeRoute(pathname: string) {
     pathname === "/invite" ||
     pathname === "/auth/login" ||
     pathname === "/unsubscribe" ||
-    pathname.startsWith("/oauth/")
+    pathname.startsWith("/oauth/") ||
+    pathname.startsWith("/billing/setups/")
   );
 }
 
@@ -45,6 +46,8 @@ export function isChromelessRoute(pathname: string) {
   return (
     pathname === "/auth/callback" ||
     pathname === "/mock-review" ||
+    // 카드를 받는 두 면(APP-1600). 결제 페이지는 자기 머리(로고·돌아가기)를, 카드 변경 iframe 은 모달이 제목·닫기를 갖는다.
+    /^\/billing\/(?:checkout|card-change)\/[^/]+\/?$/.test(pathname) ||
     isWorkspaceRoute(pathname)
   );
 }

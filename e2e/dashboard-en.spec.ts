@@ -80,7 +80,10 @@ function sourceStrings(dirs: string[], skip: RegExp = /^$/) {
       const path = join(dir, entry.name);
       if (skip.test(path)) continue;
       if (entry.isDirectory()) walk(path);
-      else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+      else if (
+        /\.tsx?$/.test(entry.name) &&
+        !/\.test\.tsx?$/.test(entry.name)
+      ) {
         const source = ts.createSourceFile(
           path,
           readFileSync(path, "utf8"),
@@ -132,8 +135,12 @@ function mockStrings() {
   );
   // 긴 것부터 지워야 짧은 이름(「한지원」)이 긴 문장 일부를 먼저 지우지 않는다
   // 첨부 파일명에는 사용자 제목의 파일명 금지 문자만 치환되어 남는다.
-  const fileNames = out.map((value) => value.replace(/[\\/:*?"<>|]/g, "_").slice(0, 50));
-  return [...out, ...fileNames, ...BILINGUAL].sort((a, b) => b.length - a.length);
+  const fileNames = out.map((value) =>
+    value.replace(/[\\/:*?"<>|]/g, "_").slice(0, 50)
+  );
+  return [...out, ...fileNames, ...BILINGUAL].sort(
+    (a, b) => b.length - a.length
+  );
 }
 
 const MOCK_STRINGS = mockStrings();
@@ -182,7 +189,10 @@ async function screenTexts(page: Page) {
       );
     };
     const texts: string[] = [document.title];
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT
+    );
     while (walker.nextNode()) {
       const node = walker.currentNode;
       const el = node.parentElement;
@@ -215,7 +225,11 @@ async function expectEnglish(page: Page, screen: string) {
   await expect(page.locator('[data-slot="skeleton"]:visible')).toHaveCount(0, {
     timeout: 20_000,
   });
-  await expect.poll(async () => leftoverHangul(await screenTexts(page)), { message: screen }).toEqual([]);
+  await expect
+    .poll(async () => leftoverHangul(await screenTexts(page)), {
+      message: screen,
+    })
+    .toEqual([]);
 }
 
 /**
@@ -352,8 +366,12 @@ test("노트 상세의 탭과 회의록 내보내기", async ({ browser }) => {
   await expect(mailDialog).toBeVisible();
   // 화면 언어의 예시를 보여 주고 실제 발송 언어는 수신자 설정을 따른다고 알린다.
   await mailDialog.getByText("Email example").click();
-  await expect(mailDialog.getByText("The meeting notes are attached as a PDF.")).toBeVisible();
-  await expect(mailDialog.getByText(/actual email uses the recipient/)).toBeVisible();
+  await expect(
+    mailDialog.getByText("The meeting notes are attached as a PDF.")
+  ).toBeVisible();
+  await expect(
+    mailDialog.getByText(/actual email uses the recipient/)
+  ).toBeVisible();
   await expectEnglish(page, "회의록 메일 창");
 
   expect(warnings).toEqual([]);
@@ -378,6 +396,8 @@ test("설정의 모든 탭", async ({ browser }) => {
     workspaceAgents: dialog.getByRole("switch", {
       name: /Allow MCP connections/,
     }),
+    billing: dialog.getByRole("button", { name: "Start Pro" }),
+    payment: dialog.getByRole("region", { name: "Payment history" }),
     agents: dialog.getByText("노트북 Claude Code").first(),
     notifications: dialog.getByText("Paused meetings"),
   };

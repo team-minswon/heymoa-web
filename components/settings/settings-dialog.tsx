@@ -5,14 +5,26 @@ import { track } from "@/lib/analytics/track";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import type { SettingsSection } from "@/lib/workspace/settings-url";
+import {
+  DEFAULT_SETTINGS_SECTION,
+  type SettingsSection,
+} from "@/lib/workspace/settings-url";
+import {
+  useGetMyBillingPayments,
+  useGetWorkspaceBilling,
+} from "@/lib/api/generated/billing/billing";
+import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
+import { okData } from "@/lib/api/ok-data";
 import {
   BellRing,
   Download,
   BookA,
   Bot,
+  CreditCard,
+  Gem,
   Languages,
   Plug,
+  Receipt,
   Settings,
   ShieldCheck,
   UserRound,
@@ -35,6 +47,9 @@ import {
   NotificationSettings,
   NotificationSettingsSkeleton,
 } from "@/components/settings/notification-settings";
+import { MyPaymentsSettings } from "@/components/billing/my-payments-settings";
+import { WorkspacePaymentSettings } from "@/components/billing/payment-settings";
+import { WorkspacePlanSettings } from "@/components/billing/plan-settings";
 import { WorkspaceTermsSettings } from "@/components/terms/workspace-terms-settings";
 import { WorkspaceAgentAccessSettings } from "@/components/settings/workspace-agent-access-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
@@ -85,12 +100,16 @@ const SETTINGS_GROUPS: {
       { key: "terms", Icon: BookA },
       { key: "integrations", Icon: Plug },
       { key: "workspaceAgents", Icon: ShieldCheck },
+      { key: "billing", Icon: Gem },
+      { key: "payment", Icon: CreditCard },
     ],
   },
   {
     key: "account",
     items: [
       { key: "account", Icon: UserRound },
+      // 내가 결제한 내역(APP-1596). 내역이 없으면 숨긴다.
+      { key: "myPayments", Icon: Receipt },
       { key: "language", Icon: Languages },
       { key: "notifications", Icon: BellRing },
       { key: "agents", Icon: Bot },
@@ -114,10 +133,19 @@ function SettingsSections({
   workspaceId,
   locked,
   onLockChange,
+  enforced,
+  admin,
+  hasPayments,
 }: {
   section: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
   workspaceId: string;
+  /** 요금제 대상인 공간인가. 모르면 false 다. */
+  enforced: boolean;
+  /** 이 공간의 ADMIN 인가. 모르면 false 다 — 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). */
+  admin: boolean;
+  /** 내가 결제한 내역이 한 건이라도 있나. 모르면 false 다. */
+  hasPayments: boolean;
   /** 섹션이 되돌릴 수 없는 일을 하는 중이다 — 다른 섹션으로 못 옮긴다. */
   locked: boolean;
   onLockChange: (locked: boolean) => void;
@@ -125,6 +153,7 @@ function SettingsSections({
   const t = useTranslations("settings.nav");
   const desktop = useDesktopApp();
   const update = useDesktopUpdates();
+  const billingSection = section === "billing" || section === "payment";
   return (
     <div className="grid h-full min-h-0 bg-[var(--el-canvas-soft)] md:grid-cols-[220px_1fr]">
       <nav
@@ -159,6 +188,12 @@ function SettingsSections({
                     (desktop === true &&
                       !desktopUpdateBridge()?.openPreferences)
                 )
+                .filter(
+                  ({ key }) =>
+                    (key !== "billing" && key !== "payment") ||
+                    (enforced && (key === "billing" || admin))
+                )
+                .filter(({ key }) => key !== "myPayments" || hasPayments)
                 .map(({ key, Icon }) => (
                   <Button
                     key={key}
@@ -215,6 +250,10 @@ function SettingsSections({
           >
             <AccountSettingsForm />
           </DataBoundary>
+        ) : section === "myPayments" ? (
+          hasPayments ? (
+            <MyPaymentsSettings />
+          ) : null
         ) : section === "language" ? (
           <LanguageSettings />
         ) : section === "appUpdates" ? (
@@ -237,6 +276,17 @@ function SettingsSections({
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : section === "workspaceAgents" ? (
           <WorkspaceAgentAccessSettings workspaceId={workspaceId} />
+        ) : billingSection && !enforced ? null : section === "billing" ||
+          (section === "payment" && !admin) ? (
+          <WorkspacePlanSettings
+            workspaceId={workspaceId}
+            onOpenPayment={() => onSectionChange("payment")}
+          />
+        ) : section === "payment" ? (
+          <WorkspacePaymentSettings
+            workspaceId={workspaceId}
+            onOpenPlans={() => onSectionChange("billing")}
+          />
         ) : section === "agents" ? (
           <AgentConnectionsSettings
             workspaceId={workspaceId}
@@ -307,6 +357,46 @@ export function SettingsDialog({
     });
   }, [nativeUpdate, openNative, onOpenChange, tUpdate]);
   const [locked, setLocked] = useState(false);
+  // 요금제 대상이 아닌 공간에는 요금제·결제 관리 탭이 없다. 값을 알기 전(조회 중·실패)에도 숨긴 쪽이라 탭이 나타났다 사라지지 않고,
+  // 그 탭으로 들어왔으면 값을 안 뒤 기본 탭으로 보낸다. 닫히는 중에는 보내지 않는다(주소를 고치면 창이 다시 열린다).
+  const billing = useGetWorkspaceBilling(workspaceId, {
+    query: { enabled: open },
+  });
+  const enforced = okData(billing.data)?.enforced === true;
+  const workspace = useGetWorkspace(workspaceId, { query: { enabled: open } });
+  // 내 결제 내역 탭은 내역이 있을 때만 있다. 탭과 같은 조회(같은 키)라 탭을 열면 다시 기다리지 않는다.
+  const myPayments = useGetMyBillingPayments({ query: { enabled: open } });
+  const hasPayments = (okData(myPayments.data)?.payments.length ?? 0) > 0;
+  const admin = okData(workspace.data)?.role === "ADMIN";
+  useEffect(() => {
+    if (
+      open &&
+      (section === "billing" || section === "payment") &&
+      !billing.isPending &&
+      !enforced
+    )
+      onSectionChange(DEFAULT_SETTINGS_SECTION);
+    // 멤버가 결제 관리 주소로 들어오면(알림·옛 링크) 같은 묶음의 요금제 탭을 연다.
+    else if (open && section === "payment" && !workspace.isPending && !admin)
+      onSectionChange("billing");
+    else if (
+      open &&
+      section === "myPayments" &&
+      !myPayments.isPending &&
+      !hasPayments
+    )
+      onSectionChange("account");
+  }, [
+    myPayments.isPending,
+    hasPayments,
+    open,
+    section,
+    billing.isPending,
+    enforced,
+    workspace.isPending,
+    admin,
+    onSectionChange,
+  ]);
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (!next && locked) return;
@@ -328,6 +418,9 @@ export function SettingsDialog({
           workspaceId={workspaceId}
           locked={locked}
           onLockChange={setLocked}
+          enforced={enforced}
+          admin={admin}
+          hasPayments={hasPayments}
         />
       </DialogContent>
     </Dialog>

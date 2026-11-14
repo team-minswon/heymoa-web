@@ -17,14 +17,13 @@ import {
   usePersonName,
 } from "./app";
 import { RICH } from "./rich";
-import { ExampleStamp, Hand, Scribble, Sticky } from "./marks";
+import { Hand, Scribble, Sticky } from "./marks";
 import {
   APP,
   CARD_TITLE,
   CONTAINER,
   FOCUS,
   H2,
-  LEAD,
   MARKER_REVEAL,
   RADIUS,
   SECTION_Y,
@@ -113,11 +112,7 @@ function MeetingCard({
           FACE_TONE[tone].bg
         )}
       >
-        {/* 「예시」 도장은 제목 줄 오른쪽에 혼자 선다 — 머리 오른쪽 위에 다른 장식을 붙이지 않는다. */}
-        <div className="flex items-start justify-between gap-3">
-          <h3 className={CARD_TITLE}>{kind}</h3>
-          <ExampleStamp className="mt-0.5" />
-        </div>
+        <h3 className={CARD_TITLE}>{kind}</h3>
         <Hand aria-hidden={false} className="relative mt-1 block w-fit text-[15px]">
           {joke}
           <Scribble
@@ -378,13 +373,6 @@ export function MeetingCards() {
                 m: (chunks) => <span className={MARKER_REVEAL}>{chunks}</span>,
               })}
             </h2>
-            {/*
-              리드는 카드가 말하지 않는 것만 — 지어낸 예시라는 것과, 주간 회의 카드는 눌린다는 것.
-              회의별 성격은 카드 머리의 농담 · 한마디가, 「요약 탭」은 넓은 화면의 손글씨가 말한다.
-            */}
-            <p className={`${LEAD} mt-4 max-w-[640px]`}>
-              {t("lead")}
-            </p>
             <div className="mt-5 flex justify-end lg:hidden">
               <Sticky tone="pop" size="sm" tilt={3}>
                 {t("swipe")}

@@ -78,14 +78,14 @@ test("보내기 버튼 위·아래 여백이 같고 탭을 오가도 창 높이�
   expect(again).toBeCloseTo(send, 0);
 });
 
-test("안내 문구가 길어져도 여백이 같고 탭을 오가도 창 높이가 변하지 않는다", async ({
+test("분류 설명이 길어져도 여백이 같고 탭을 오가도 창 높이가 변하지 않는다", async ({
   page,
 }) => {
   await openDialog(page);
   const before = await dialogHeight(page);
-  // 영어 문구 등으로 글이 늘어난 경우를 흉내 낸다.
-  await page.getByText("현재 화면 경로와 사용 환경을").evaluate((el) => {
-    el.append(" Longer notice text that wraps over several lines.".repeat(8));
+  // 영어 문구 등으로 글이 늘어난 경우를 흉내 낸다. 「보내기」 패널에 남은 고정 글은 분류 카드의 설명이다.
+  await page.getByText("안 되거나 이상해요").evaluate((el) => {
+    el.append(" Longer hint text that wraps over several lines.".repeat(8));
   });
 
   await expectEvenSpacing(page);
