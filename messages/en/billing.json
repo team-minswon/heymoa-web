@@ -55,7 +55,7 @@
     "teamInProgress": "Your team has a subscription in progress. Check again when it's done.",
     "checking": {
       "title": "We're confirming the payment result",
-      "body": "Don't pay again. This screen updates when we're done."
+      "body": "Don't pay again. We'll let you know the result on this screen and by email within 24 hours at the latest."
     },
     "refunding": {
       "title": "Canceling the payment",
@@ -104,7 +104,7 @@
       "nextDate": "Next payment {date}",
       "cancelScheduled": "Active until {end}, then switches to Free.",
       "stoppedNoCardAdmin": "There's no card on file, so automatic payments are paused. You keep Pro until {end}. You can resume the subscription after adding a card.",
-      "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime."
+      "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime, and the result shows here within 24 hours at the latest."
     },
     "closed": {
       "UNPAID": "The subscription ended because the payment wasn't approved. Register a card to start again.",
@@ -248,7 +248,7 @@
     },
     "paymentUnknown": {
       "title": "Confirming the payment result is taking longer",
-      "body": "We're confirming the payment result. Don't pay again. If it takes long, let us know through <link>Help & feedback</link>."
+      "body": "We'll let you know the result on this screen and by email within 24 hours at the latest. Don't pay again in the meantime. If you haven't heard after 24 hours, let us know through <link>Help & feedback</link>."
     },
     "declined": {
       "title": "The payment wasn't approved",

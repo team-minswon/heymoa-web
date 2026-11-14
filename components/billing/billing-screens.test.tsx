@@ -304,7 +304,7 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
-        "다시 결제하지 마세요. 확인이 끝나면 이 화면에 반영됩니다."
+        "다시 결제하지 마세요. 결과는 늦어도 24시간 안에 이 화면과 이메일로 알려 드립니다."
       )
     ).toBeInTheDocument();
     expect(
@@ -331,7 +331,7 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
-        "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다."
+        "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 쓰고, 결과는 늦어도 24시간 안에 반영됩니다."
       )
     ).toBeInTheDocument();
     expect(screen.queryByText(/미납|유예/)).not.toBeInTheDocument();
@@ -447,7 +447,7 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
-        "다시 결제하지 마세요. 확인이 끝나면 이 화면에 반영됩니다."
+        "다시 결제하지 마세요. 결과는 늦어도 24시간 안에 이 화면과 이메일로 알려 드립니다."
       )
     ).toBeInTheDocument();
     expect(
@@ -1282,7 +1282,7 @@ describe("등록 결과 — 상태별 화면", () => {
     renderIn(<BillingSetupResultPage setupId="S1" />);
     expect(
       await screen.findByText(
-        /결제 결과를 확인하고 있습니다. 다시 결제하지 마세요./
+        /늦어도 24시간 안에 이 화면과 이메일로 알려 드립니다. 그동안 다시 결제하지 마세요./
       )
     ).toBeInTheDocument();
     // 메뉴 없는 화면이라 나갈 길은 있어야 한다.
