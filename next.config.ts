@@ -66,6 +66,11 @@ const nextConfig: NextConfig = {
     // 레이아웃을 거쳐 렌더되어, 아무 경로마다 SSR 유저 조회가 실서버로 나간다.
     // experimental이므로 Next를 올릴 때 이 플래그가 살아 있는지 확인한다. (APP-224)
     globalNotFound: true,
+    // Vercel 에서는 Turbopack 빌드 캐시를 끈다(16.3 부터 기본으로 켜짐). 2026-11-14 운영 빌드가
+    // `app/globals.css` 만 이틀 전 내용으로 처리해 한글 글꼴 면(APP-1599)이 통째로 빠졌다 — 운영 CSS 가
+    // 「globals.css 만 옛 판으로 되돌린 빌드」와 바이트까지 같았다. 로컬·docker 에서는 재현되지 않아 Vercel 이
+    // 복원한 캐시로 본다. 빌드가 느려지는 대신 낡은 산출물이 나가지 않는다. 로컬은 그대로 캐시를 쓴다.
+    turbopackFileSystemCacheForBuild: !process.env.VERCEL,
   },
 };
 
