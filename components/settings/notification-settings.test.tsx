@@ -484,7 +484,7 @@ describe("NotificationSettings", () => {
 
     it("「메일 모두 끄기」가 켜져 있으면 이 메일도 가지 않는다고 알린다", async () => {
       renderSettings();
-      const note = /메일 모두 끄기」가 켜져 있어/;
+      const note = /메일 모두 끄기 설정이 켜져 있어/;
       await screen.findByRole("switch", { name: "메일 모두 끄기" });
       expect(screen.queryByText(note)).toBeNull();
       fireEvent.click(switchOf("메일 모두 끄기"));

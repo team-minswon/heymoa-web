@@ -62,7 +62,7 @@ export const REVIEW_SEED_HEADLINE =
 
 export const REVIEW_SEED_LEAD: Array<{ text: string; topics: number[] }> = [
   {
-    text: "문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고, 분석 결과는 주제별로 묶어 한 번에 확정하기로 했다.",
+    text: "문제를 회의 뒤 할 일이 확정되지 않는 것으로 좁히고, 분석 결과는 주제별로 묶어 한 번에 확정하기로 했다.",
     topics: [1, 6],
   },
   {
@@ -79,14 +79,14 @@ export const REVIEW_SEED_TOPICS: SeedTopic[] = [
       { kind: "AGENDA", content: "회의가 끝난 뒤 할 일이 흐려지는 문제", at: [12] },
       {
         kind: "DECISION",
-        content: "문제 정의를 「회의 뒤 할 일이 정해지지 않는다」로 둔다",
+        content: "문제를 회의 뒤 할 일이 정해지지 않는 것으로 둔다",
         at: [12],
         history: [
           {
             operation: "AMEND",
             at: 14,
             content:
-              "문제 정의를 「회의 뒤 할 일이 확정되지 않는다」 한 문장으로 좁힌다",
+              "문제 정의를 회의 뒤 할 일이 확정되지 않는다는 한 문장으로 좁힌다",
           },
         ],
       },
@@ -97,7 +97,7 @@ export const REVIEW_SEED_TOPICS: SeedTopic[] = [
         at: [16],
         replaces: {
           content: "첫 화면 메시지는 회의 기록 품질로 둔다",
-          reason: "지난 회의의 「첫 화면 메시지는 회의 기록 품질로 둔다」를 대신합니다",
+          reason: "첫 화면 메시지는 회의 기록 품질로 둔다는 지난 회의의 결정을 대신합니다",
         },
       },
       { kind: "ACTION_ITEM", content: "아틀라시안 설문 원문 링크와 표본 수를 찾아 붙인다", at: [12], who: "A", dueIn: 4 },
@@ -120,7 +120,7 @@ export const REVIEW_SEED_TOPICS: SeedTopic[] = [
     hasAgenda: true,
     items: [
       { kind: "AGENDA", content: "차별점과 요금 정리", at: [24] },
-      { kind: "DECISION", content: "차별점은 「외부 도구까지 읽고 답하는 에이전트」로 쓴다", at: [24, 25] },
+      { kind: "DECISION", content: "차별점은 외부 도구까지 읽고 답하는 에이전트로 쓴다", at: [24, 25] },
       {
         kind: "DECISION",
         content: "요금은 좌석 기준으로 계산한다",
@@ -243,7 +243,7 @@ export const REVIEW_SEED_TOPICS: SeedTopic[] = [
         at: [444],
         replaces: {
           content: "온톨로지를 이번 학기 안에 붙인다",
-          reason: "지난 회의의 「온톨로지를 이번 학기 안에 붙인다」를 대신합니다",
+          reason: "온톨로지를 이번 학기 안에 붙인다는 지난 회의의 결정을 대신합니다",
           decision: "KEEP",
           endedElsewhere: true,
         },

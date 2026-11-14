@@ -58,7 +58,7 @@ test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐�
   await page.goto(reviewUrl(MENTORING_NOTE));
   const overview = page.getByRole("region", { name: "요약", exact: true });
   await expect(overview).toContainText(
-    "문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고", { timeout: 20_000 }
+    "문제를 회의 뒤 할 일이 확정되지 않는 것으로 좁히고", { timeout: 20_000 }
   );
   await expect(overview).toContainText("온톨로지 작업은 다음 학기로 넘겼다.");
   await expect(overview).not.toContainText(

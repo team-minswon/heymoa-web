@@ -98,7 +98,7 @@ for (const width of [1440, 1024]) {
     }) => {
       const panel = await openPanel(page);
       // 어제 대화라 오늘 첫 질문 위에 날짜 구분선이 새로 선다
-      await openChat(page, /^배포 일정 확인/);
+      await openChat(page, /^배포 일정 확인(?! 메뉴)/);
       await page.getByLabel("메시지").fill("배포 일정 정리해줘");
       await page.getByRole("button", { name: "보내기", exact: true }).click();
 
@@ -141,7 +141,7 @@ test.describe("대화 동작", () => {
     page,
   }) => {
     await openPanel(page);
-    await openChat(page, /^주간 제품 회의 진행 순서/);
+    await openChat(page, /^주간 제품 회의 진행 순서(?! 메뉴)/);
     const thread = page.getByTestId("chat-thread-view");
     const head = thread.getByRole("button", {
       name: /초 동안 생각 · 회의록 1건/,
@@ -173,7 +173,7 @@ test.describe("대화 동작", () => {
 
   test("옛 대화는 진행 문장이 본문에 섞인 그대로 그린다", async ({ page }) => {
     await openPanel(page);
-    await openChat(page, /^알림 정책 결정 사항/);
+    await openChat(page, /^알림 정책 결정 사항(?! 메뉴)/);
     const answer = page
       .getByTestId("chat-thread-view")
       .getByTestId("assistant-message")
@@ -312,7 +312,7 @@ test.describe("대화 동작", () => {
     page,
   }) => {
     await openPanel(page);
-    await openChat(page, /^주간 제품 회의 진행 순서/);
+    await openChat(page, /^주간 제품 회의 진행 순서(?! 메뉴)/);
     await page
       .getByRole("group", { name: "참고한 회의록 1개" })
       .last()

@@ -99,7 +99,7 @@ test("stop cancels the turn and keeps the partial answer in history", async ({
   const rows = history.getByRole("button").filter({ hasText: /\S/ });
   await rows.filter({ hasNotText: "길게 답해줘" }).first().click();
   await page.getByRole("button", { name: "대화 기록" }).click();
-  await history.getByRole("button", { name: /^길게 답해줘/ }).click();
+  await history.getByRole("button", { name: /^길게 답해줘(?! 메뉴)/ }).click();
 
   // 부분 답이 히스토리에 있다 — 서버가 취소를 정산하며 남긴 ASSISTANT 행이다.
   const restored = page.getByTestId("assistant-message").last();

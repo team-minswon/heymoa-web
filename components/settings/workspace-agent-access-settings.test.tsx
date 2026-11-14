@@ -168,7 +168,7 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     fireEvent.click(within(jiwon).getByRole("button", { name: "끊기" }));
     const dialog = await screen.findByRole("alertdialog");
     expect(
-      within(dialog).getByText("「지원의 Codex」 연결을 끊을까요?")
+      within(dialog).getByText("지원의 Codex 연결을 끊을까요?")
     ).toBeTruthy();
     expect(dialog.textContent).toContain("한지원 님이 허용한 연결입니다.");
     fireEvent.click(within(dialog).getByRole("button", { name: "끊기" }));

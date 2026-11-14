@@ -856,7 +856,6 @@
       "transcript": "Transcript",
       "transcriptHint": "Times, speakers, and words exactly as recorded",
       "unnamed": "{count, plural, one {# speaker without a name ({names}) will appear as is in the transcript.} other {# speakers without names ({names}) will appear as is in the transcript.}} You can name them in the transcript before sending.",
-      "quotedName": "“{name}”",
       "recipients": "To",
       "membersFailed": "Couldn't load workspace members. You can still type addresses.",
       "addAttendees": "{count, plural, one {Add all attendees (# person)} other {Add all attendees (# people)}}",

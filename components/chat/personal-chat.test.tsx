@@ -537,7 +537,7 @@ function clickNewChat() {
 function pickChat(chatId: string) {
   fireEvent.click(historyButton());
   fireEvent.click(
-    screen.getByRole("button", { name: new RegExp(`^대화 ${chatId}`) })
+    screen.getByRole("button", { name: new RegExp(`^대화 ${chatId}(?! 메뉴)`) })
   );
 }
 
@@ -1008,7 +1008,9 @@ describe("PersonalChatProvider", () => {
       await screen.findByRole("button", { name: "이전 대화 더 보기" })
     );
 
-    await screen.findByRole("button", { name: /^대화 01KOLDERCHAT01/ });
+    await screen.findByRole("button", {
+      name: /^대화 01KOLDERCHAT01(?! 메뉴)/,
+    });
     // 첫 쪽의 다음 커서를 그대로 달고 읽는다.
     expect(state.olderCalls[0]?.[1]).toEqual({
       limit: "30",
@@ -1034,7 +1036,9 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "이전 대화 더 보기" })
     );
-    await screen.findByRole("button", { name: /^대화 01KOLDERCHAT01/ });
+    await screen.findByRole("button", {
+      name: /^대화 01KOLDERCHAT01(?! 메뉴)/,
+    });
 
     // 폴링이 새 첫 쪽을 가져왔다: 끝 대화가 달라졌다. 기록을 닫았다 열어 다시 그린다.
     state.chatsNextId = "01KOTHERNEXT00";
@@ -1042,7 +1046,7 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(await screen.findByRole("button", { name: "대화 기록" }));
 
     expect(
-      screen.queryByRole("button", { name: /^대화 01KOLDERCHAT01/ })
+      screen.queryByRole("button", { name: /^대화 01KOLDERCHAT01(?! 메뉴)/ })
     ).toBeNull();
     expect(
       screen.getByRole("button", { name: "이전 대화 더 보기" })
@@ -1068,7 +1072,9 @@ describe("PersonalChatProvider", () => {
       ).toBeEnabled()
     );
     expect(
-      screen.getByRole("button", { name: new RegExp(`^대화 ${CHAT_ID}`) })
+      screen.getByRole("button", {
+        name: new RegExp(`^대화 ${CHAT_ID}(?! 메뉴)`),
+      })
     ).toBeTruthy();
   });
 
@@ -1236,7 +1242,7 @@ describe("PersonalChatProvider", () => {
 
       fireEvent.click(
         await screen.findByRole("button", {
-          name: `「대화 ${OTHER_CHAT_ID}」 메뉴`,
+          name: `대화 ${OTHER_CHAT_ID} 메뉴`,
         })
       );
       fireEvent.click(
@@ -1260,7 +1266,7 @@ describe("PersonalChatProvider", () => {
       fireEvent.click(historyButton());
 
       fireEvent.click(
-        await screen.findByRole("button", { name: `「대화 ${CHAT_ID}」 메뉴` })
+        await screen.findByRole("button", { name: `대화 ${CHAT_ID} 메뉴` })
       );
       fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
       expect(state.deleteMock).not.toHaveBeenCalled();
@@ -1317,7 +1323,7 @@ describe("PersonalChatProvider", () => {
       renderChat();
       openPanel();
       fireEvent.click(historyButton());
-      const menuName = `「대화 ${OTHER_CHAT_ID}」 메뉴`;
+      const menuName = `대화 ${OTHER_CHAT_ID} 메뉴`;
 
       fireEvent.click(await screen.findByRole("button", { name: menuName }));
       fireEvent.click(
@@ -1358,7 +1364,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
       fireEvent.click(historyButton());
       fireEvent.click(
-        await screen.findByRole("button", { name: `「대화 ${CHAT_ID}」 메뉴` })
+        await screen.findByRole("button", { name: `대화 ${CHAT_ID} 메뉴` })
       );
       fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
       fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
@@ -1515,7 +1521,7 @@ describe("PersonalChatProvider", () => {
         await screen.findByRole("button", { name: "이전 대화 더 보기" })
       );
       await screen.findByRole("button", {
-        name: new RegExp(`^대화 ${OLDER_B}`),
+        name: new RegExp(`^대화 ${OLDER_B}(?! 메뉴)`),
       });
     }
 
@@ -1525,7 +1531,7 @@ describe("PersonalChatProvider", () => {
       title: string
     ) {
       fireEvent.click(
-        await screen.findByRole("button", { name: `「${currentTitle}」 메뉴` })
+        await screen.findByRole("button", { name: `${currentTitle} 메뉴` })
       );
       fireEvent.click(
         await screen.findByRole("menuitem", { name: "이름 변경" })
@@ -1600,12 +1606,18 @@ describe("PersonalChatProvider", () => {
       await renameRow(OLDER_B, `대화 ${OLDER_B}`, "둘째");
       await act(async () => first.reject(FAIL));
 
-      expect(screen.getByRole("button", { name: /^둘째/ })).toBeTruthy();
       expect(
-        screen.getByRole("button", { name: new RegExp(`^대화 ${OLDER_A}`) })
+        screen.getByRole("button", { name: /^둘째(?! 메뉴)/ })
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(`^대화 ${OLDER_A}(?! 메뉴)`),
+        })
       ).toBeTruthy();
       await act(async () => second.resolve({ status: 200 }));
-      expect(screen.getByRole("button", { name: /^둘째/ })).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: /^둘째(?! 메뉴)/ })
+      ).toBeTruthy();
     });
 
     it("같은 대화에 겹친 이름 바꾸기는 마지막 요청만 되돌릴 수 있고, 되돌릴 곳은 서버가 확인한 제목이다", async () => {
@@ -1623,11 +1635,13 @@ describe("PersonalChatProvider", () => {
       await renameRow(OLDER_A, "하나", "둘");
       // 앞 요청의 실패가 뒤 요청의 낙관값을 덮지 않는다
       await act(async () => first.reject(FAIL));
-      expect(screen.getByRole("button", { name: /^둘/ })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^둘(?! 메뉴)/ })).toBeTruthy();
       // 뒤 요청이 실패하면 서버가 마지막으로 확인한 원래 제목으로 돌아간다
       await act(async () => second.reject(FAIL));
       expect(
-        screen.getByRole("button", { name: new RegExp(`^대화 ${OLDER_A}`) })
+        screen.getByRole("button", {
+          name: new RegExp(`^대화 ${OLDER_A}(?! 메뉴)`),
+        })
       ).toBeTruthy();
     });
 
@@ -1709,7 +1723,7 @@ describe("PersonalChatProvider", () => {
       fireEvent.click(historyButton());
       fireEvent.click(
         await screen.findByRole("button", {
-          name: `「대화 ${OTHER_CHAT_ID}」 메뉴`,
+          name: `대화 ${OTHER_CHAT_ID} 메뉴`,
         })
       );
       fireEvent.click(

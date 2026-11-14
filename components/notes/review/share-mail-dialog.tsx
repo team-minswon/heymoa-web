@@ -356,9 +356,7 @@ export function ShareMailDialog({
                 <InlineNote role="status">
                   {t("unnamed", {
                     count: unnamedSpeakers.length,
-                    names: unnamedSpeakers
-                      .map((name) => t("quotedName", { name }))
-                      .join(", "),
+                    names: unnamedSpeakers.join(", "),
                   })}
                 </InlineNote>
               ) : null}

@@ -184,7 +184,9 @@ describe("ChatStarter", () => {
         "바뀐 결정",
         "웹에서 찾기",
       ]);
-      expect(screen.getByText(/「주간 회의」 회의를 보고 답합니다/)).toBeTruthy();
+      expect(
+        screen.getByText(/회의록 주간 회의 기준으로 답합니다/)
+      ).toBeTruthy();
       // 빈 목록이어도 처음 안내로 읽지 않는다 — 회의록 안에 있다
       expect(screen.queryByText(/첫 회의를 기록하면/)).toBeNull();
       expect(data.reviewNoteIds).toContain("n1");

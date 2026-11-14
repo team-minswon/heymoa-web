@@ -111,7 +111,7 @@ export const MAIL_MEETING: MidMeeting = {
       items: [
         { kind: "DECISION", content: "확인 메일은 짧은 버전, 출시 3일 전 메일은 긴 버전으로 나눠 쓴다", at: m("split-use") },
         { kind: "DECISION", content: "안내는 출시 3일 전과 당일, 두 번만 보낸다고 본문에 적는다", at: m("two-mails") },
-        { kind: "DECISION", content: "버튼 문구는 「지금 만나보기」로 바꾼다", at: m("button") },
+        { kind: "DECISION", content: "버튼 문구는 지금 만나보기로 바꾼다", at: m("button") },
         { kind: "DECISION", content: "발송 시각은 오전 열 시 반으로 한다", at: m("send-time") },
         { kind: "ACTION_ITEM", content: "수정한 메일 두 버전을 공유한다", at: m("notice-date"), who: "B", dueIn: 1 },
         { kind: "ACTION_ITEM", content: "긴 버전의 첫 문장을 두 문장으로 나눈다", at: m("split-use"), who: "B", dueIn: 1 },

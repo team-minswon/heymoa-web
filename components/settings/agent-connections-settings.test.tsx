@@ -474,7 +474,7 @@ describe("AgentConnectionsSettings", () => {
 
       expect(
         screen.getByText(
-          "「새 연결」의 주소를 에이전트에 등록하고 브라우저에서 허락하면 여기에 보입니다."
+          "새 연결에 나온 주소를 에이전트에 등록하고 브라우저에서 허락하면 여기에 보입니다."
         )
       ).toBeTruthy();
     });

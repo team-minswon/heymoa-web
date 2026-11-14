@@ -62,7 +62,7 @@ export const VISUAL_MEETING: MidMeeting = {
       items: [
         { kind: "DECISION", content: "키비주얼은 2안을 기본으로 하고 꽃잎 요소를 약하게 얹는다", at: v("pick-two") },
         { kind: "DECISION", content: "3안은 촬영 비용 때문에 이번 캠페인에서 빼고 다음 후보로 남긴다", at: v("drop-three") },
-        { kind: "DECISION", content: "문구는 「가볍게 스며드는 봄」으로 시안에 넣는다", at: v("copy-line") },
+        { kind: "DECISION", content: "문구는 가볍게 스며드는 봄으로 시안에 넣는다", at: v("copy-line") },
         { kind: "ACTION_ITEM", content: "색 버전 두 가지로 시안을 제작한다", at: v("color-two"), who: "B", dueIn: 5 },
         { kind: "ACTION_ITEM", content: "정사각형과 세로형 최종 파일을 전달한다", at: v("deadline"), who: "B", dueIn: 6 },
         { kind: "ACTION_ITEM", content: "광고 심의에서 이미지가 문제되는지 확인한다", at: v("ask-review"), who: "C" },

@@ -185,7 +185,7 @@ describe("ShareMailDialog", () => {
     expect(screen.queryByText(/이름 없는 화자/)).toBeNull();
     expect(screen.queryByRole("switch", { name: "안건별 경과" })).toBeNull();
     fireEvent.click(screen.getByRole("switch", { name: "녹취록" }));
-    expect(screen.getByRole("status").textContent).toContain("「화자 C」");
+    expect(screen.getByRole("status").textContent).toContain("화자 C");
 
     fireEvent.click(
       screen.getByRole("button", { name: "참석자 모두 추가 (2명)" })

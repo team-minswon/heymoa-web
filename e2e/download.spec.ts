@@ -187,8 +187,8 @@ test("anonymous visitors can reach desktop downloads without starting OAuth", as
     .getByRole("listitem");
   await expect(windowsSteps).toHaveText([
     "다운로드한 설치 파일을 실행하세요.",
-    "「Windows의 PC 보호」 창이 뜨면 「추가 정보」를 누르세요.",
-    "「실행」을 누르고 설치를 진행하세요.",
+    "Windows의 PC 보호 창이 뜨면 추가 정보를 누르세요.",
+    "실행을 누르고 설치를 진행하세요.",
   ]);
   await expect(
     page.getByText("서명되지 않은 설치 파일에는", { exact: false })
