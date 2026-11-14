@@ -9,7 +9,10 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  BillingOperatorActionResponse,
   BillingPaymentResponse,
+  BillingRefundResponse,
+  BillingReviewListResponse,
   BillingSetupCreatedResponse,
   BillingSetupStatusResponse,
   BillingSubscriptionStateResponse,
@@ -348,6 +351,83 @@ export const getSubmitBillingCardResponseMock =
     error: null,
   });
 
+export const getGetBillingReviewsResponseMock =
+  (): BillingReviewListResponse => ({
+    success: true,
+    data: {
+      reviews: [
+        {
+          kind: "ATTEMPT",
+          id: "0HZX2K7M9Q4B3",
+          workspaceId: "0HZX2K7M9Q4AD",
+          subscriptionId: "0HZX2K7M9Q4B7",
+          orderId: "ORDER-0HZX2K7M9Q4B3",
+          amountKrw: 24900,
+          status: "UNKNOWN",
+          reason: "PG_RESULT_UNKNOWN",
+          createdAt: "2026-07-14T01:02:03Z",
+          ageSeconds: 3600,
+        },
+      ],
+    },
+    error: null,
+  });
+
+export const getResolveBillingAttemptResponseMock =
+  (): BillingOperatorActionResponse => ({
+    success: true,
+    data: {
+      actionId: "0HZX2K7M9Q4B9",
+      action: "ATTEMPT_APPROVED",
+      targetKind: "ATTEMPT",
+      targetId: "0HZX2K7M9Q4B3",
+      workspaceId: "0HZX2K7M9Q4AD",
+      createdAt: "2026-07-14T01:02:03Z",
+    },
+    error: null,
+  });
+
+export const getRequestOperatorRefundResponseMock =
+  (): BillingRefundResponse => ({
+    success: true,
+    data: {
+      refundId: "0HZX2K7M9Q4B6",
+      paymentId: "0HZX2K7M9Q4B3",
+      amountKrw: 24900,
+      origin: "OPERATOR",
+      status: "PENDING",
+    },
+    error: null,
+  });
+
+export const getResolveBillingRefundResponseMock =
+  (): BillingOperatorActionResponse => ({
+    success: true,
+    data: {
+      actionId: "0HZX2K7M9Q4B9",
+      action: "REFUND_COMPLETED",
+      targetKind: "REFUND",
+      targetId: "0HZX2K7M9Q4B6",
+      workspaceId: "0HZX2K7M9Q4AD",
+      createdAt: "2026-07-14T01:02:03Z",
+    },
+    error: null,
+  });
+
+export const getAcknowledgeBillingReviewResponseMock =
+  (): BillingOperatorActionResponse => ({
+    success: true,
+    data: {
+      actionId: "0HZX2K7M9Q4B9",
+      action: "ACKNOWLEDGE",
+      targetKind: "REMOTE_TRANSACTION",
+      targetId: "0HZX2K7M9Q4B8",
+      workspaceId: "0HZX2K7M9Q4AD",
+      createdAt: "2026-07-14T01:02:03Z",
+    },
+    error: null,
+  });
+
 export const getGetWorkspaceBillingMockHandler = (
   overrideResponse?:
     | WorkspaceBillingResponse
@@ -638,6 +718,132 @@ export const getSubmitBillingCardMockHandler = (
     options
   );
 };
+
+export const getGetBillingReviewsMockHandler = (
+  overrideResponse?:
+    | BillingReviewListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<BillingReviewListResponse> | BillingReviewListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/billing/operator/reviews",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBillingReviewsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getResolveBillingAttemptMockHandler = (
+  overrideResponse?:
+    | BillingOperatorActionResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) =>
+        | Promise<BillingOperatorActionResponse>
+        | BillingOperatorActionResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/billing/operator/attempts/:attemptId/resolution",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResolveBillingAttemptResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getRequestOperatorRefundMockHandler = (
+  overrideResponse?:
+    | BillingRefundResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<BillingRefundResponse> | BillingRefundResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/billing/operator/payments/:paymentId/refunds",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRequestOperatorRefundResponseMock(),
+        { status: 202 }
+      );
+    },
+    options
+  );
+};
+
+export const getResolveBillingRefundMockHandler = (
+  overrideResponse?:
+    | BillingOperatorActionResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) =>
+        | Promise<BillingOperatorActionResponse>
+        | BillingOperatorActionResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/billing/operator/refunds/:refundId/resolution",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResolveBillingRefundResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getAcknowledgeBillingReviewMockHandler = (
+  overrideResponse?:
+    | BillingOperatorActionResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) =>
+        | Promise<BillingOperatorActionResponse>
+        | BillingOperatorActionResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/billing/operator/reviews/:kind/:id/acknowledgement",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAcknowledgeBillingReviewResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getBillingMock = () => [
   getGetWorkspaceBillingMockHandler(),
   getGetMyBillingSetupMockHandler(),
@@ -651,4 +857,9 @@ export const getBillingMock = () => [
   getResumeBillingSubscriptionMockHandler(),
   getGetWorkspaceBillingPaymentsMockHandler(),
   getSubmitBillingCardMockHandler(),
+  getGetBillingReviewsMockHandler(),
+  getResolveBillingAttemptMockHandler(),
+  getRequestOperatorRefundMockHandler(),
+  getResolveBillingRefundMockHandler(),
+  getAcknowledgeBillingReviewMockHandler(),
 ];

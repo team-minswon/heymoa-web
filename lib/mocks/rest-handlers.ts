@@ -32,6 +32,7 @@ import { getGetNotificationsMockHandler } from "@/lib/api/generated/notification
 import type {
   AdminFeedbackListResponseDataFeedbacksItem,
   AdminUserListResponseDataUsersItem,
+  BillingReviewListResponseDataReviewsItem,
   NotificationSettingsResponse,
   NotificationSettingsResponseDataMarketingEmail,
   CreateFeedbackRequest,
@@ -241,6 +242,33 @@ const ADMIN_FEEDBACKS: AdminFeedbackListResponseDataFeedbacksItem[] = [
     userId: "0HZX2K7M9Q4AG",
     name: null,
     email: null,
+  },
+];
+
+const BILLING_REVIEWS: BillingReviewListResponseDataReviewsItem[] = [
+  {
+    kind: "ATTEMPT",
+    id: "0P00000000091",
+    status: "UNKNOWN",
+    reason: "PG_RESULT_UNKNOWN",
+    amountKrw: 24900,
+    orderId: "HM0P00000000091",
+    subscriptionId: "0S00000000091",
+    workspaceId: "01K0000000000",
+    createdAt: "2026-11-14T02:00:00Z",
+    ageSeconds: 3600,
+  },
+  {
+    kind: "KEY_DELETION",
+    id: "0M00000000091",
+    status: "DELETE_FAILED",
+    reason: null,
+    amountKrw: null,
+    orderId: null,
+    subscriptionId: null,
+    workspaceId: null,
+    createdAt: "2026-11-13T02:00:00Z",
+    ageSeconds: 90000,
   },
 ];
 
@@ -1631,6 +1659,14 @@ export const restHandlers = [
       nextCreatedAt: next?.createdAt ?? null,
       nextFeedbackId: next?.feedbackId ?? null,
     }))
+  ),
+  // 결제 운영 검토 목록(APP-1616). web 은 부르지 않는다 — 한 줄은 nullable 이 모두 값이고 한 줄은 모두 null 이다
+  http.get("*/v1/billing/operator/reviews", () =>
+    HttpResponse.json({
+      success: true,
+      data: { reviews: BILLING_REVIEWS },
+      error: null,
+    })
   ),
   http.get("*/v1/feedbacks", () => commandResult(() => mockDb.listFeedbacks())),
   http.post("*/v1/feedbacks/answers/seen", () => {

@@ -12214,6 +12214,629 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/billing/operator/reviews:
+    get:
+      tags:
+      - Billing
+      summary: 결제 수동 확인 목록(운영자)
+      description: 사람이 봐야 하는 결제 항목(수동 확인이 선 승인·환불, 격리된 원격 거래, 삭제 한도를 넘긴 빌링키 삭제)을 준다. 결제 감시의 수동 확인 대기 건수와 같은 조건이다. 빌링키·카드·이메일은 싣지 않는다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      operationId: getBillingReviews
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingReviewListResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      reviews:
+                      - kind: ATTEMPT
+                        id: 0HZX2K7M9Q4B3
+                        workspaceId: 0HZX2K7M9Q4AD
+                        subscriptionId: 0HZX2K7M9Q4B7
+                        orderId: ORDER-0HZX2K7M9Q4B3
+                        amountKrw: 24900
+                        status: UNKNOWN
+                        reason: PG_RESULT_UNKNOWN
+                        createdAt: '2026-07-14T01:02:03Z'
+                        ageSeconds: 3600
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/billing/operator/attempts/{attemptId}/resolution:
+    post:
+      tags:
+      - Billing
+      summary: 승인 시도 확정(운영자)
+      description: 수동 확인이 섰거나 결과 불명인 승인 시도를 운영자가 PG 화면에서 확인한 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 시도는 PG 확정과 같은 길로 반영하고(승인이면 권한 지급 또는 보상 환불, 미승인이면 확정 거절), 이미 확정된 시도는 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 시도는 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      operationId: resolveBillingAttempt
+      parameters:
+      - name: attemptId
+        in: path
+        description: 확정할 승인 시도의 13자리 TSID(목록의 ATTEMPT id)
+        required: true
+        schema:
+          type: string
+          description: 확정할 승인 시도의 13자리 TSID(목록의 ATTEMPT id)
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveChargeAttemptRequest'
+            examples:
+              resolveBillingAttempt_BillingPaymentNotFoundException:
+                value:
+                  outcome: APPROVED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingAttempt_BadRequest:
+                value:
+                  outcome: APPROVED
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingAttempt_NoResourceFoundException:
+                value:
+                  outcome: APPROVED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingAttempt_BillingStateChangedException:
+                value:
+                  outcome: APPROVED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingAttempt_Success:
+                value:
+                  outcome: APPROVED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingAttempt_BillingRequestKeyConflictException:
+                value:
+                  outcome: APPROVED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingOperatorActionResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      actionId: 0HZX2K7M9Q4B9
+                      action: ATTEMPT_APPROVED
+                      targetKind: ATTEMPT
+                      targetId: 0HZX2K7M9Q4B3
+                      workspaceId: 0HZX2K7M9Q4AD
+                      createdAt: '2026-07-14T01:02:03Z'
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: pgTransactionKeyGiven
+                        message: 승인 확정에는 pgTransactionKey 가 필요합니다
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_PAYMENT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_PAYMENT_NOT_FOUND
+                      message: 결제를 찾을 수 없습니다.
+                      details: null
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_STATE_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_STATE_CHANGED
+                      message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+                REQUEST_KEY_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REQUEST_KEY_CONFLICT
+                      message: 같은 요청 키로 다른 내용의 요청을 보냈습니다. 새 요청으로 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/billing/operator/payments/{paymentId}/refunds:
+    post:
+      tags:
+      - Billing
+      summary: 결제 전액 환불 접수(운영자)
+      description: 문의를 받은 운영자가 결제 한 건을 전액 환불한다. 환불 조건 검사는 없고 PG 를 부르지 않는다 — 환불 의도를 기록하고(202) 지금 유료 기간의 결제면 다음 갱신을 멈추며, 취소는 서버 worker 가 보낸다. 이미 진행 중이거나 끝난 환불이 있으면 그 환불을 돌려준다. 없는 결제는 404 BILLING_PAYMENT_NOT_FOUND, 승인되지 않은(결과 불명 포함) 결제는 409 BILLING_STATE_CHANGED, 같은 구독에 미정산 거래가 있으면 409 BILLING_IN_PROGRESS. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      operationId: requestOperatorRefund
+      parameters:
+      - name: paymentId
+        in: path
+        description: 환불할 결제(승인 시도)의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 환불할 결제(승인 시도)의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestOperatorRefundRequest'
+            examples:
+              requestOperatorRefund_BillingRequestKeyConflictException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              requestOperatorRefund_Success:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              requestOperatorRefund_BillingStateChangedException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              requestOperatorRefund_NoResourceFoundException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              requestOperatorRefund_BillingPaymentNotFoundException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              requestOperatorRefund_BadRequest:
+                value:
+                  reason: ' '
+                  requestKey: ''
+              requestOperatorRefund_BillingInProgressException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+      responses:
+        '202':
+          description: '202'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingRefundResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      refundId: 0HZX2K7M9Q4B6
+                      paymentId: 0HZX2K7M9Q4B3
+                      amountKrw: 24900
+                      origin: OPERATOR
+                      status: PENDING
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: reason
+                        message: 비울 수 없습니다.
+                      - field: requestKey
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
+                BILLING_PAYMENT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_PAYMENT_NOT_FOUND
+                      message: 결제를 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                REQUEST_KEY_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REQUEST_KEY_CONFLICT
+                      message: 같은 요청 키로 다른 내용의 요청을 보냈습니다. 새 요청으로 다시 시도해 주세요.
+                      details: null
+                BILLING_STATE_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_STATE_CHANGED
+                      message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+                BILLING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_IN_PROGRESS
+                      message: 팀의 구독 처리가 진행 중입니다. 끝난 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/billing/operator/refunds/{refundId}/resolution:
+    post:
+      tags:
+      - Billing
+      summary: 환불 확정(운영자)
+      description: 수동 확인이 섰거나 결과 불명인 환불을 운영자가 PG 화면에서 확인한 취소 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 환불은 PG 확정과 같은 길로 반영하고, 이미 확정된 환불은 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 환불은 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      operationId: resolveBillingRefund
+      parameters:
+      - name: refundId
+        in: path
+        description: 확정할 환불의 13자리 TSID(목록의 REFUND id)
+        required: true
+        schema:
+          type: string
+          description: 확정할 환불의 13자리 TSID(목록의 REFUND id)
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B6
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRefundRequest'
+            examples:
+              resolveBillingRefund_NoResourceFoundException:
+                value:
+                  outcome: COMPLETED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingRefund_Success:
+                value:
+                  outcome: COMPLETED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingRefund_BillingPaymentNotFoundException:
+                value:
+                  outcome: COMPLETED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingRefund_BadRequest:
+                value:
+                  outcome: COMPLETED
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingRefund_BillingRequestKeyConflictException:
+                value:
+                  outcome: COMPLETED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              resolveBillingRefund_BillingStateChangedException:
+                value:
+                  outcome: COMPLETED
+                  pgTransactionKey: nicepay_tid_0001
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingOperatorActionResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      actionId: 0HZX2K7M9Q4B9
+                      action: REFUND_COMPLETED
+                      targetKind: REFUND
+                      targetId: 0HZX2K7M9Q4B6
+                      workspaceId: 0HZX2K7M9Q4AD
+                      createdAt: '2026-07-14T01:02:03Z'
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: pgTransactionKeyGiven
+                        message: 취소 확정에는 pgTransactionKey 가 필요합니다
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
+                BILLING_PAYMENT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_PAYMENT_NOT_FOUND
+                      message: 결제를 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                REQUEST_KEY_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REQUEST_KEY_CONFLICT
+                      message: 같은 요청 키로 다른 내용의 요청을 보냈습니다. 새 요청으로 다시 시도해 주세요.
+                      details: null
+                BILLING_STATE_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_STATE_CHANGED
+                      message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/billing/operator/reviews/{kind}/{id}/acknowledgement:
+    post:
+      tags:
+      - Billing
+      summary: 결제 항목 확인함(운영자)
+      description: 격리된 원격 거래·키 삭제 수동 확인을 사람이 봤다고 감사 한 줄만 남긴다. 상태는 바꾸지 않고, 그 줄이 곧 확인 표시라 목록과 감시 건수에서 빠진다. 승인·환불(ATTEMPT·REFUND)은 확정 명령으로만 끝나 409 BILLING_STATE_CHANGED, 대기 중이 아닌 항목도 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      operationId: acknowledgeBillingReview
+      parameters:
+      - name: kind
+        in: path
+        description: 항목 종류. REMOTE_TRANSACTION·KEY_DELETION 만 확인함으로 끝난다(ATTEMPT·REFUND 는 409)
+        required: true
+        schema:
+          type: string
+          description: 항목 종류. REMOTE_TRANSACTION·KEY_DELETION 만 확인함으로 끝난다(ATTEMPT·REFUND 는 409)
+          nullable: false
+          enum:
+          - ATTEMPT
+          - REFUND
+          - REMOTE_TRANSACTION
+          - KEY_DELETION
+        example: REMOTE_TRANSACTION
+      - name: id
+        in: path
+        description: 항목 식별자. 목록의 id
+        required: true
+        schema:
+          type: string
+          description: 항목 식별자. 목록의 id
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4B8
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcknowledgeBillingReviewRequest'
+            examples:
+              acknowledgeBillingReview_NoResourceFoundException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              acknowledgeBillingReview_BillingStateChangedException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              acknowledgeBillingReview_Success:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              acknowledgeBillingReview_BadRequest:
+                value:
+                  reason: ''
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+              acknowledgeBillingReview_BillingRequestKeyConflictException:
+                value:
+                  reason: PG 관리자 화면에서 확인
+                  requestKey: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingOperatorActionResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      actionId: 0HZX2K7M9Q4B9
+                      action: ACKNOWLEDGE
+                      targetKind: REMOTE_TRANSACTION
+                      targetId: 0HZX2K7M9Q4B8
+                      workspaceId: 0HZX2K7M9Q4AD
+                      createdAt: '2026-07-14T01:02:03Z'
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: reason
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BILLING_STATE_CHANGED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BILLING_STATE_CHANGED
+                      message: 결제 정보가 바뀌었습니다. 새로 고친 뒤 다시 시도해 주세요.
+                      details: null
+                REQUEST_KEY_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: REQUEST_KEY_CONFLICT
+                      message: 같은 요청 키로 다른 내용의 요청을 보냈습니다. 새 요청으로 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
 components:
   schemas:
     AcceptInvitationByTokenRequest:
@@ -23998,6 +24621,367 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    AcknowledgeBillingReviewRequest:
+      title: AcknowledgeBillingReviewRequest
+      required:
+      - reason
+      - requestKey
+      type: object
+      properties:
+        reason:
+          type: string
+          description: 확인한 근거. 감사 기록에 남는다
+          nullable: false
+          example: PG 관리자 화면에서 확인
+          minLength: 1
+          maxLength: 500
+        requestKey:
+          type: string
+          description: 명령마다 새로 만드는 키. 같은 키·같은 본문 재전송은 같은 응답이고 효과는 한 번, 같은 키·다른 본문은 409 REQUEST_KEY_CONFLICT
+          nullable: false
+          example: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+          minLength: 1
+          maxLength: 100
+    BillingOperatorActionResponse:
+      title: BillingOperatorActionResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - action
+          - actionId
+          - createdAt
+          - targetId
+          - targetKind
+          - workspaceId
+          type: object
+          properties:
+            createdAt:
+              type: string
+              description: 기록 시각. 같은 requestKey 재전송이면 처음 기록의 시각
+              nullable: false
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+            targetId:
+              type: string
+              description: 대상 항목 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4B8
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            targetKind:
+              type: string
+              description: 대상 항목 종류
+              nullable: false
+              example: REMOTE_TRANSACTION
+              enum:
+              - ATTEMPT
+              - REFUND
+              - REMOTE_TRANSACTION
+              - KEY_DELETION
+            action:
+              type: string
+              description: 남긴 명령. 결과가 이름에 들어 있다
+              nullable: false
+              example: ACKNOWLEDGE
+              enum:
+              - ATTEMPT_APPROVED
+              - ATTEMPT_NOT_APPROVED
+              - REFUND_COMPLETED
+              - REFUND_NOT_COMPLETED
+              - ACKNOWLEDGE
+              - REQUEST_REFUND
+            actionId:
+              type: string
+              description: 운영 명령 감사 기록 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4B9
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            workspaceId:
+              type: string
+              description: 대상의 워크스페이스. 구독에 묶이지 않은 대상이면 null
+              nullable: true
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    BillingRefundResponse:
+      title: BillingRefundResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - amountKrw
+          - origin
+          - paymentId
+          - refundId
+          - status
+          type: object
+          properties:
+            amountKrw:
+              type: integer
+              description: 환불 금액(원). 결제 전액
+              nullable: false
+              example: 24900
+              format: int64
+            paymentId:
+              type: string
+              description: 환불 대상 결제(승인 시도)
+              nullable: false
+              example: 0HZX2K7M9Q4B3
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            origin:
+              type: string
+              description: 환불 출처. 운영자 환불은 OPERATOR
+              nullable: false
+              example: OPERATOR
+              enum:
+              - OPERATOR
+              - RECONCILIATION
+              - COMPENSATION
+            refundId:
+              type: string
+              description: 환불 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4B6
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            status:
+              type: string
+              description: 환불 상태. 접수 직후는 PENDING 이고 취소는 서버 worker 가 PG 에 보낸다
+              nullable: false
+              example: PENDING
+              enum:
+              - PENDING
+              - PROCESSING
+              - UNKNOWN
+              - SUCCEEDED
+              - FAILED
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    BillingReviewListResponse:
+      title: BillingReviewListResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - reviews
+          type: object
+          properties:
+            reviews:
+              type: array
+              description: 수동 확인을 기다리는 항목. 확인했거나 결과를 정한 항목은 빠진다
+              items:
+                required:
+                - ageSeconds
+                - amountKrw
+                - createdAt
+                - id
+                - kind
+                - orderId
+                - reason
+                - status
+                - subscriptionId
+                - workspaceId
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                    description: 항목이 만들어진 시각
+                    nullable: false
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  reason:
+                    type: string
+                    description: 오류 코드·격리 사유·실패 코드. 없으면 null
+                    nullable: true
+                    example: PG_RESULT_UNKNOWN
+                  amountKrw:
+                    type: integer
+                    description: 금액(원). 키 삭제면 null
+                    nullable: true
+                    example: 24900
+                    format: int64
+                  orderId:
+                    type: string
+                    description: PG 주문번호. 키 삭제면 null
+                    nullable: true
+                    example: ORDER-0HZX2K7M9Q4B3
+                  kind:
+                    type: string
+                    description: ATTEMPT 수동 확인이 선 승인 시도, REFUND 수동 확인이 선 환불, REMOTE_TRANSACTION 대사에서 격리된 원격 거래, KEY_DELETION 삭제 한도를 넘긴 빌링키 삭제
+                    nullable: false
+                    example: ATTEMPT
+                    enum:
+                    - ATTEMPT
+                    - REFUND
+                    - REMOTE_TRANSACTION
+                    - KEY_DELETION
+                  ageSeconds:
+                    type: integer
+                    description: 만들어진 뒤 지난 초
+                    nullable: false
+                    example: 3600
+                    format: int64
+                  id:
+                    type: string
+                    description: 항목 식별자(승인 시도·환불·원격 거래·결제 수단). 확정·확인함 경로의 id
+                    nullable: false
+                    example: 0HZX2K7M9Q4B3
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  subscriptionId:
+                    type: string
+                    description: 구독. 묶이지 않은 원격 거래면 null
+                    nullable: true
+                    example: 0HZX2K7M9Q4B7
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  status:
+                    type: string
+                    description: 그 항목의 지금 상태(종류마다 그 표의 상태 값)
+                    nullable: false
+                    example: UNKNOWN
+                  workspaceId:
+                    type: string
+                    description: 워크스페이스. 구독에 묶이지 않은 원격 거래면 null
+                    nullable: true
+                    example: 0HZX2K7M9Q4AD
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    RequestOperatorRefundRequest:
+      title: RequestOperatorRefundRequest
+      required:
+      - reason
+      - requestKey
+      type: object
+      properties:
+        reason:
+          type: string
+          description: 환불 사유. 문의 내용을 요약한 자유 글이고 PG 로 보내지 않는다
+          nullable: false
+          example: PG 관리자 화면에서 확인
+          minLength: 1
+          maxLength: 500
+        requestKey:
+          type: string
+          description: 명령마다 새로 만드는 키. 같은 키·같은 본문 재전송은 같은 응답이고 효과는 한 번, 같은 키·다른 본문은 409 REQUEST_KEY_CONFLICT
+          nullable: false
+          example: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+          minLength: 1
+          maxLength: 100
+    ResolveChargeAttemptRequest:
+      title: ResolveChargeAttemptRequest
+      required:
+      - outcome
+      - reason
+      - requestKey
+      type: object
+      properties:
+        reason:
+          type: string
+          description: 운영자가 판단한 근거(PG 화면에서 무엇을 봤는지). 감사 기록에 남는다
+          nullable: false
+          example: PG 관리자 화면에서 확인
+          minLength: 1
+          maxLength: 500
+        pgTransactionKey:
+          type: string
+          description: PG 결제 키. APPROVED 면 필수(없으면 400), NOT_APPROVED 면 무시한다
+          nullable: true
+          example: nicepay_tid_0001
+          maxLength: 200
+        requestKey:
+          type: string
+          description: 명령마다 새로 만드는 키. 같은 키·같은 본문 재전송은 같은 응답이고 효과는 한 번, 같은 키·다른 본문은 409 REQUEST_KEY_CONFLICT
+          nullable: false
+          example: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+          minLength: 1
+          maxLength: 100
+        outcome:
+          type: string
+          description: PG 에서 확인한 승인 결과. APPROVED 승인됨, NOT_APPROVED 승인되지 않음
+          nullable: false
+          example: APPROVED
+          enum:
+          - APPROVED
+          - NOT_APPROVED
+    ResolveRefundRequest:
+      title: ResolveRefundRequest
+      required:
+      - outcome
+      - reason
+      - requestKey
+      type: object
+      properties:
+        reason:
+          type: string
+          description: 운영자가 판단한 근거(PG 화면에서 무엇을 봤는지). 감사 기록에 남는다
+          nullable: false
+          example: PG 관리자 화면에서 확인
+          minLength: 1
+          maxLength: 500
+        pgTransactionKey:
+          type: string
+          description: PG 취소 거래 키. COMPLETED 면 필수(없으면 400), NOT_COMPLETED 면 무시한다
+          nullable: true
+          example: nicepay_tid_0001
+          maxLength: 200
+        requestKey:
+          type: string
+          description: 명령마다 새로 만드는 키. 같은 키·같은 본문 재전송은 같은 응답이고 효과는 한 번, 같은 키·다른 본문은 409 REQUEST_KEY_CONFLICT
+          nullable: false
+          example: 7f1c2a9e-3b4d-4c5e-8f60-1a2b3c4d5e6f
+          minLength: 1
+          maxLength: 100
+        outcome:
+          type: string
+          description: PG 에서 확인한 취소 결과. COMPLETED 취소됨, NOT_COMPLETED 취소되지 않음
+          nullable: false
+          example: COMPLETED
+          enum:
+          - COMPLETED
+          - NOT_COMPLETED
   securitySchemes:
     accessCookie:
       type: apiKey

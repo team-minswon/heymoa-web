@@ -24,8 +24,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AcknowledgeBillingReviewRequest,
   AppErrorResponse,
+  BillingOperatorActionResponse,
   BillingPaymentResponse,
+  BillingRefundResponse,
+  BillingReviewListResponse,
   BillingSetupCreatedResponse,
   BillingSetupStatusResponse,
   BillingSubscriptionStateResponse,
@@ -33,6 +37,9 @@ import type {
   CreateBillingSetupRequest,
   MyBillingPaymentsResponse,
   RecordingUsageResponse,
+  RequestOperatorRefundRequest,
+  ResolveChargeAttemptRequest,
+  ResolveRefundRequest,
   SubmitBillingCardRequest,
   UnauthorizedResponse,
   WorkspaceBillingPaymentsResponse,
@@ -3256,4 +3263,1035 @@ export const useSubmitBillingCard = <
   TContext
 > => {
   return useMutation(getSubmitBillingCardMutationOptions(options), queryClient);
+};
+export type getBillingReviewsResponse200 = {
+  data: BillingReviewListResponse;
+  status: 200;
+};
+
+export type getBillingReviewsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getBillingReviewsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getBillingReviewsResponseSuccess = getBillingReviewsResponse200 & {
+  headers: Headers;
+};
+export type getBillingReviewsResponseError = (
+  | getBillingReviewsResponse401
+  | getBillingReviewsResponse404
+) & {
+  headers: Headers;
+};
+
+export type getBillingReviewsResponse =
+  | getBillingReviewsResponseSuccess
+  | getBillingReviewsResponseError;
+
+export const getGetBillingReviewsUrl = () => {
+  return `/v1/billing/operator/reviews`;
+};
+
+/**
+ * 사람이 봐야 하는 결제 항목(수동 확인이 선 승인·환불, 격리된 원격 거래, 삭제 한도를 넘긴 빌링키 삭제)을 준다. 결제 감시의 수동 확인 대기 건수와 같은 조건이다. 빌링키·카드·이메일은 싣지 않는다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * @summary 결제 수동 확인 목록(운영자)
+ */
+export const getBillingReviews = async (
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getBillingReviewsResponse> => {
+  return apiFetch<getBillingReviewsResponse>(getGetBillingReviewsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBillingReviewsQueryKey = () => {
+  return [`/v1/billing/operator/reviews`] as const;
+};
+
+export const getGetBillingReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof getBillingReviews>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBillingReviewsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getBillingReviews>>
+  > = ({ signal }) => getBillingReviews({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBillingReviews>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBillingReviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBillingReviews>>
+>;
+export type GetBillingReviewsQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetBillingReviews<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBillingReviews>>,
+          TError,
+          Awaited<ReturnType<typeof getBillingReviews>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetBillingReviews<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBillingReviews>>,
+          TError,
+          Awaited<ReturnType<typeof getBillingReviews>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetBillingReviews<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 결제 수동 확인 목록(운영자)
+ */
+
+export function useGetBillingReviews<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetBillingReviewsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 결제 수동 확인 목록(운영자)
+ */
+export const prefetchGetBillingReviewsQuery = async <
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetBillingReviewsQueryOptions(options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetBillingReviewsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(options?: {
+  query?: Partial<
+    UseSuspenseQueryOptions<
+      Awaited<ReturnType<typeof getBillingReviews>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBillingReviewsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getBillingReviews>>
+  > = ({ signal }) => getBillingReviews({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getBillingReviews>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBillingReviewsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBillingReviews>>
+>;
+export type GetBillingReviewsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetBillingReviewsSuspense<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetBillingReviewsSuspense<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetBillingReviewsSuspense<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 결제 수동 확인 목록(운영자)
+ */
+
+export function useGetBillingReviewsSuspense<
+  TData = Awaited<ReturnType<typeof getBillingReviews>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getBillingReviews>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetBillingReviewsSuspenseQueryOptions(options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type resolveBillingAttemptResponse200 = {
+  data: BillingOperatorActionResponse;
+  status: 200;
+};
+
+export type resolveBillingAttemptResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type resolveBillingAttemptResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type resolveBillingAttemptResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type resolveBillingAttemptResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type resolveBillingAttemptResponseSuccess =
+  resolveBillingAttemptResponse200 & {
+    headers: Headers;
+  };
+export type resolveBillingAttemptResponseError = (
+  | resolveBillingAttemptResponse400
+  | resolveBillingAttemptResponse401
+  | resolveBillingAttemptResponse404
+  | resolveBillingAttemptResponse409
+) & {
+  headers: Headers;
+};
+
+export type resolveBillingAttemptResponse =
+  | resolveBillingAttemptResponseSuccess
+  | resolveBillingAttemptResponseError;
+
+export const getResolveBillingAttemptUrl = (attemptId: string) => {
+  return `/v1/billing/operator/attempts/${attemptId}/resolution`;
+};
+
+/**
+ * 수동 확인이 섰거나 결과 불명인 승인 시도를 운영자가 PG 화면에서 확인한 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 시도는 PG 확정과 같은 길로 반영하고(승인이면 권한 지급 또는 보상 환불, 미승인이면 확정 거절), 이미 확정된 시도는 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 시도는 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * @summary 승인 시도 확정(운영자)
+ */
+export const resolveBillingAttempt = async (
+  attemptId: string,
+  resolveChargeAttemptRequest?: ResolveChargeAttemptRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<resolveBillingAttemptResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<resolveBillingAttemptResponse>(
+    getResolveBillingAttemptUrl(attemptId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(resolveChargeAttemptRequest),
+    }
+  );
+};
+
+export const getResolveBillingAttemptMutationKey = () =>
+  ["resolveBillingAttempt"] as const;
+
+export const getResolveBillingAttemptMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveBillingAttempt>>,
+    TError,
+    ResolveBillingAttemptMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveBillingAttempt>>,
+  TError,
+  ResolveBillingAttemptMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResolveBillingAttemptMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveBillingAttempt>>,
+    ResolveBillingAttemptMutationVariables
+  > = (props) => {
+    const { attemptId, data } = props ?? {};
+
+    return resolveBillingAttempt(attemptId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveBillingAttemptMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveBillingAttempt>>
+>;
+export type ResolveBillingAttemptMutationBody =
+  | ResolveChargeAttemptRequest
+  | undefined;
+export type ResolveBillingAttemptMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type ResolveBillingAttemptMutationVariables = {
+  attemptId: string;
+  data?: ResolveChargeAttemptRequest;
+};
+
+/**
+ * @summary 승인 시도 확정(운영자)
+ */
+export const useResolveBillingAttempt = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resolveBillingAttempt>>,
+      TError,
+      ResolveBillingAttemptMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof resolveBillingAttempt>>,
+  TError,
+  ResolveBillingAttemptMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getResolveBillingAttemptMutationOptions(options),
+    queryClient
+  );
+};
+export type requestOperatorRefundResponse202 = {
+  data: BillingRefundResponse;
+  status: 202;
+};
+
+export type requestOperatorRefundResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type requestOperatorRefundResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type requestOperatorRefundResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type requestOperatorRefundResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type requestOperatorRefundResponseSuccess =
+  requestOperatorRefundResponse202 & {
+    headers: Headers;
+  };
+export type requestOperatorRefundResponseError = (
+  | requestOperatorRefundResponse400
+  | requestOperatorRefundResponse401
+  | requestOperatorRefundResponse404
+  | requestOperatorRefundResponse409
+) & {
+  headers: Headers;
+};
+
+export type requestOperatorRefundResponse =
+  | requestOperatorRefundResponseSuccess
+  | requestOperatorRefundResponseError;
+
+export const getRequestOperatorRefundUrl = (paymentId: string) => {
+  return `/v1/billing/operator/payments/${paymentId}/refunds`;
+};
+
+/**
+ * 문의를 받은 운영자가 결제 한 건을 전액 환불한다. 환불 조건 검사는 없고 PG 를 부르지 않는다 — 환불 의도를 기록하고(202) 지금 유료 기간의 결제면 다음 갱신을 멈추며, 취소는 서버 worker 가 보낸다. 이미 진행 중이거나 끝난 환불이 있으면 그 환불을 돌려준다. 없는 결제는 404 BILLING_PAYMENT_NOT_FOUND, 승인되지 않은(결과 불명 포함) 결제는 409 BILLING_STATE_CHANGED, 같은 구독에 미정산 거래가 있으면 409 BILLING_IN_PROGRESS. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * @summary 결제 전액 환불 접수(운영자)
+ */
+export const requestOperatorRefund = async (
+  paymentId: string,
+  requestOperatorRefundRequest?: RequestOperatorRefundRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<requestOperatorRefundResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<requestOperatorRefundResponse>(
+    getRequestOperatorRefundUrl(paymentId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(requestOperatorRefundRequest),
+    }
+  );
+};
+
+export const getRequestOperatorRefundMutationKey = () =>
+  ["requestOperatorRefund"] as const;
+
+export const getRequestOperatorRefundMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestOperatorRefund>>,
+    TError,
+    RequestOperatorRefundMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestOperatorRefund>>,
+  TError,
+  RequestOperatorRefundMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestOperatorRefundMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestOperatorRefund>>,
+    RequestOperatorRefundMutationVariables
+  > = (props) => {
+    const { paymentId, data } = props ?? {};
+
+    return requestOperatorRefund(paymentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestOperatorRefundMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestOperatorRefund>>
+>;
+export type RequestOperatorRefundMutationBody =
+  | RequestOperatorRefundRequest
+  | undefined;
+export type RequestOperatorRefundMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type RequestOperatorRefundMutationVariables = {
+  paymentId: string;
+  data?: RequestOperatorRefundRequest;
+};
+
+/**
+ * @summary 결제 전액 환불 접수(운영자)
+ */
+export const useRequestOperatorRefund = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestOperatorRefund>>,
+      TError,
+      RequestOperatorRefundMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof requestOperatorRefund>>,
+  TError,
+  RequestOperatorRefundMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRequestOperatorRefundMutationOptions(options),
+    queryClient
+  );
+};
+export type resolveBillingRefundResponse200 = {
+  data: BillingOperatorActionResponse;
+  status: 200;
+};
+
+export type resolveBillingRefundResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type resolveBillingRefundResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type resolveBillingRefundResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type resolveBillingRefundResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type resolveBillingRefundResponseSuccess =
+  resolveBillingRefundResponse200 & {
+    headers: Headers;
+  };
+export type resolveBillingRefundResponseError = (
+  | resolveBillingRefundResponse400
+  | resolveBillingRefundResponse401
+  | resolveBillingRefundResponse404
+  | resolveBillingRefundResponse409
+) & {
+  headers: Headers;
+};
+
+export type resolveBillingRefundResponse =
+  | resolveBillingRefundResponseSuccess
+  | resolveBillingRefundResponseError;
+
+export const getResolveBillingRefundUrl = (refundId: string) => {
+  return `/v1/billing/operator/refunds/${refundId}/resolution`;
+};
+
+/**
+ * 수동 확인이 섰거나 결과 불명인 환불을 운영자가 PG 화면에서 확인한 취소 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 환불은 PG 확정과 같은 길로 반영하고, 이미 확정된 환불은 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 환불은 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * @summary 환불 확정(운영자)
+ */
+export const resolveBillingRefund = async (
+  refundId: string,
+  resolveRefundRequest?: ResolveRefundRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<resolveBillingRefundResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<resolveBillingRefundResponse>(
+    getResolveBillingRefundUrl(refundId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(resolveRefundRequest),
+    }
+  );
+};
+
+export const getResolveBillingRefundMutationKey = () =>
+  ["resolveBillingRefund"] as const;
+
+export const getResolveBillingRefundMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveBillingRefund>>,
+    TError,
+    ResolveBillingRefundMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveBillingRefund>>,
+  TError,
+  ResolveBillingRefundMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResolveBillingRefundMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveBillingRefund>>,
+    ResolveBillingRefundMutationVariables
+  > = (props) => {
+    const { refundId, data } = props ?? {};
+
+    return resolveBillingRefund(refundId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveBillingRefundMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveBillingRefund>>
+>;
+export type ResolveBillingRefundMutationBody = ResolveRefundRequest | undefined;
+export type ResolveBillingRefundMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type ResolveBillingRefundMutationVariables = {
+  refundId: string;
+  data?: ResolveRefundRequest;
+};
+
+/**
+ * @summary 환불 확정(운영자)
+ */
+export const useResolveBillingRefund = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resolveBillingRefund>>,
+      TError,
+      ResolveBillingRefundMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof resolveBillingRefund>>,
+  TError,
+  ResolveBillingRefundMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getResolveBillingRefundMutationOptions(options),
+    queryClient
+  );
+};
+export type acknowledgeBillingReviewResponse200 = {
+  data: BillingOperatorActionResponse;
+  status: 200;
+};
+
+export type acknowledgeBillingReviewResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type acknowledgeBillingReviewResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type acknowledgeBillingReviewResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type acknowledgeBillingReviewResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type acknowledgeBillingReviewResponseSuccess =
+  acknowledgeBillingReviewResponse200 & {
+    headers: Headers;
+  };
+export type acknowledgeBillingReviewResponseError = (
+  | acknowledgeBillingReviewResponse400
+  | acknowledgeBillingReviewResponse401
+  | acknowledgeBillingReviewResponse404
+  | acknowledgeBillingReviewResponse409
+) & {
+  headers: Headers;
+};
+
+export type acknowledgeBillingReviewResponse =
+  | acknowledgeBillingReviewResponseSuccess
+  | acknowledgeBillingReviewResponseError;
+
+export const getAcknowledgeBillingReviewUrl = (
+  kind: "ATTEMPT" | "REFUND" | "REMOTE_TRANSACTION" | "KEY_DELETION",
+  id: string
+) => {
+  return `/v1/billing/operator/reviews/${kind}/${id}/acknowledgement`;
+};
+
+/**
+ * 격리된 원격 거래·키 삭제 수동 확인을 사람이 봤다고 감사 한 줄만 남긴다. 상태는 바꾸지 않고, 그 줄이 곧 확인 표시라 목록과 감시 건수에서 빠진다. 승인·환불(ATTEMPT·REFUND)은 확정 명령으로만 끝나 409 BILLING_STATE_CHANGED, 대기 중이 아닌 항목도 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * @summary 결제 항목 확인함(운영자)
+ */
+export const acknowledgeBillingReview = async (
+  kind: "ATTEMPT" | "REFUND" | "REMOTE_TRANSACTION" | "KEY_DELETION",
+  id: string,
+  acknowledgeBillingReviewRequest?: AcknowledgeBillingReviewRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<acknowledgeBillingReviewResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<acknowledgeBillingReviewResponse>(
+    getAcknowledgeBillingReviewUrl(kind, id),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(acknowledgeBillingReviewRequest),
+    }
+  );
+};
+
+export const getAcknowledgeBillingReviewMutationKey = () =>
+  ["acknowledgeBillingReview"] as const;
+
+export const getAcknowledgeBillingReviewMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeBillingReview>>,
+    TError,
+    AcknowledgeBillingReviewMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acknowledgeBillingReview>>,
+  TError,
+  AcknowledgeBillingReviewMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAcknowledgeBillingReviewMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acknowledgeBillingReview>>,
+    AcknowledgeBillingReviewMutationVariables
+  > = (props) => {
+    const { kind, id, data } = props ?? {};
+
+    return acknowledgeBillingReview(kind, id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcknowledgeBillingReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acknowledgeBillingReview>>
+>;
+export type AcknowledgeBillingReviewMutationBody =
+  | AcknowledgeBillingReviewRequest
+  | undefined;
+export type AcknowledgeBillingReviewMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type AcknowledgeBillingReviewMutationVariables = {
+  kind: "ATTEMPT" | "REFUND" | "REMOTE_TRANSACTION" | "KEY_DELETION";
+  id: string;
+  data?: AcknowledgeBillingReviewRequest;
+};
+
+/**
+ * @summary 결제 항목 확인함(운영자)
+ */
+export const useAcknowledgeBillingReview = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof acknowledgeBillingReview>>,
+      TError,
+      AcknowledgeBillingReviewMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof acknowledgeBillingReview>>,
+  TError,
+  AcknowledgeBillingReviewMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getAcknowledgeBillingReviewMutationOptions(options),
+    queryClient
+  );
 };

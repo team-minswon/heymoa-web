@@ -380,7 +380,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-1600(나이스페이)에서 결제창 복귀 `billing/returns/{success,fail}`·완료 맡기기 `.../setups/{setupId}/complete` 가 빠지고
     // 카드 제출 `.../setups/{setupId}/card` 가 늘었다 (109 → 107).
     // APP-1615 에서 운영자 조회 `admin/users`·`admin/feedbacks` 가 늘었다 (107 → 109). web 은 부르지 않는다.
-    expect(paths).toHaveLength(109);
+    // APP-1616 에서 결제 운영 명령 `billing/operator/**` 다섯이 계약에 실렸다 (109 → 114). web 은 부르지 않는다.
+    expect(paths).toHaveLength(114);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 
