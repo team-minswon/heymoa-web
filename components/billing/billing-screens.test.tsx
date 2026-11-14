@@ -1638,6 +1638,45 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     });
   });
 
+  it("목 pastDue — 결과 화면의 첫 조회가 이미 완료여도 응답의 시도로 결제 완료를 알린다", async () => {
+    billingMock.setScenario("pastDue");
+    const post = (path: string, body: unknown) =>
+      fetch(`http://localhost/v1/workspaces/${PAID}/billing/setups${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    await fetch(`http://localhost/v1/workspaces/${PAID}/billing`);
+    const created = await post("", {
+      requestKey: "k",
+      purpose: "REPLACE",
+      expectedProductVersion: "TEST_MONTHLY_V1",
+      agreementVersion: "BILLING_TEST_V1",
+    });
+    const { setupId } = (await created.json()).data as { setupId: string };
+    await post(`/${setupId}/card`, {
+      cardNumber: CARD_NUMBER,
+      expiryMonth: "12",
+      expiryYear: "39",
+      identity: "900101",
+      passwordPrefix: "12",
+    });
+    // 다른 탭이 결과를 먼저 확인해 이 화면은 완료부터 본다(APP-1625)
+    let status: { stage?: string } = {};
+    for (let i = 0; i < 6 && status.stage !== "COMPLETED"; i += 1)
+      status = (
+        await (
+          await fetch(`http://localhost/v1/me/billing/setups/${setupId}`)
+        ).json()
+      ).data;
+    expect(status.stage).toBe("COMPLETED");
+    renderIn(<BillingSetupResultPage setupId={setupId} />);
+    expect(
+      await screen.findByText("카드를 등록하고 결제했습니다")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/지금 결제되지 않았습니다/)).toBeNull();
+  });
+
   it("목 issueUnknown — 발급 결과 불명이면 결제가 없었다고 알리고 새로 시작하게 한다", async () => {
     billingMock.setScenario("issueUnknown");
     const setupId = await openAndSubmitCard();

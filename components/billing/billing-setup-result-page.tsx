@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import {
   BillingNotice,
@@ -111,11 +111,9 @@ function SetupResult({ setupId }: { setupId: string }) {
   const view = setup ? setupViewOf(setup) : null;
   const workspaceId = setup?.workspaceId ?? null;
   const provider = setup?.provider ?? null;
-  // 카드 변경이 결제 단계를 지났다 — 미납 유예 중 등록이라 밀린 회차를 청구했다(APP-1624). 승인되면 서버가 회차를 닫아
-  // 완료 응답에는 결제 흔적이 없어서, 이 화면이 본 단계로 기억한다.
-  const [charged, setCharged] = useState(false);
-  if (!charged && setup?.purpose === "REPLACE" && setup.stage === "PAYMENT")
-    setCharged(true);
+  // 카드 변경이 등록 전부터 열린 회차를 이 카드로 청구했다(미납 유예, APP-1624). 회차가 닫힌 완료 응답에도 서버가
+  // 그 시도를 originAttempt 로 싣는다(APP-1625). 평소 카드 변경에는 originAttempt 가 없다.
+  const charged = setup?.purpose === "REPLACE" && setup.originAttempt != null;
 
   const cancel = useCancelBillingSetup();
   const refreshSetup = () =>

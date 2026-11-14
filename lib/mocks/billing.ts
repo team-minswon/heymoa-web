@@ -1037,7 +1037,7 @@ function advanceReplace(setup: Setup, ws: Workspace): Phase {
   return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
 }
 
-/** 미납 유예 중 등록한 카드로 열린 갱신 회차를 다시 청구한다(APP-1624). 승인되면 회차가 닫혀 완료로만 보인다(서버와 같다). */
+/** 미납 유예 중 등록한 카드로 열린 갱신 회차를 다시 청구한다(APP-1624). 승인돼 회차가 닫혀도 완료 응답에 그 시도가 남는다(서버와 같다, APP-1625). */
 function advancePastDueCharge(setup: Setup, ws: Workspace): Phase {
   const cycle = ws.cycle;
   if (!setup.origin && cycle) {
