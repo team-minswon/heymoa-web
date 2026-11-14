@@ -1,5 +1,8 @@
 import type { BillingSetupResult } from "@/lib/analytics/track";
-import type { BillingSetupStatusResponseData } from "@/lib/api/generated/models";
+import {
+  BillingSetupStatusResponseDataStatus,
+  type BillingSetupStatusResponseData,
+} from "@/lib/api/generated/models";
 
 /**
  * 카드 등록 결과 화면이 그리는 상태. 서버의 (stage, status) 쌍을 화면 문구 단위로 접은 것이다 — 표는
@@ -21,6 +24,39 @@ export type SetupView =
   | "issueUnknown"
   | "closed";
 
+/**
+ * 서버(`BillingSetupViewHandler`)가 실제로 주는 (stage, status) 조합만 화면으로 보낸다. 표에 없는 stage·status(서버가 새 값을
+ * 더했는데 web 이 아직 모르는 경우)는 성공·거절·재구매로 읽지 않고 「확인 중」(`paymentUnknown`)으로 보낸다.
+ * `ACCESS_LOST` 는 status 에 원래 상태를 그대로 실어 와서 아는 status 이면 다 받는다.
+ */
+const KNOWN: Record<string, Record<string, SetupView | "access">> = {
+  CARD_AUTH_REQUIRED: { WAITING: "cardAuthRequired" },
+  // 발급 거절(ISSUE_REJECTED)은 DECLINED, 발급 응답을 잃은 것(ISSUE_UNKNOWN)은 UNKNOWN — 서버가 다시 보내지 않으니 결제는 없었다.
+  BILLING_KEY: {
+    PROCESSING: "cardProcessing",
+    UNKNOWN: "issueUnknown",
+    DECLINED: "cardActionRequired",
+  },
+  PAYMENT: {
+    PROCESSING: "paymentProcessing",
+    UNKNOWN: "paymentUnknown",
+    DECLINED: "declined",
+  },
+  // 승인은 됐지만 권한 대신 자동 취소가 걸린 결제(보상 환불). 「닫힘」·「권한 반영 중」으로 읽히면 안 된다.
+  ACCESS: {
+    PROCESSING: "access",
+    UNKNOWN: "access",
+    CANCELED: "refunded",
+    ACTION_REQUIRED: "accessActionRequired",
+  },
+  COMPLETED: { COMPLETED: "completed" },
+  // 서버는 CANCELED·EXPIRED 를 CLOSED 단계로만 준다(ACCESS / CANCELED 는 위에서 갈랐다).
+  CLOSED: { CANCELED: "closed", EXPIRED: "closed" },
+};
+const KNOWN_STATUS = new Set<string>(
+  Object.values(BillingSetupStatusResponseDataStatus)
+);
+
 export function setupViewOf(
   setup: Pick<BillingSetupStatusResponseData, "stage" | "status"> &
     Partial<
@@ -28,30 +64,17 @@ export function setupViewOf(
     >
 ): SetupView {
   const { stage, status } = setup;
-  if (stage === "ACCESS_LOST") return "accessLost";
-  if (stage === "COMPLETED") return "completed";
-  // 승인은 됐지만 권한 대신 자동 취소가 걸린 결제(보상 환불). 「닫힘」·「권한 반영 중」으로 읽히면 안 된다.
-  if (stage === "ACCESS") {
-    if (status === "CANCELED") return "refunded";
-    if (status === "ACTION_REQUIRED") return "accessActionRequired";
-    const refund =
-      setup.originAttempt?.refundStatus ?? setup.latestAttempt?.refundStatus;
-    return refund ? "refundProcessing" : "accessProcessing";
-  }
-  // 서버(BillingSetupViewHandler)는 CANCELED·EXPIRED 를 CLOSED 단계로만 준다(ACCESS / CANCELED 는 위에서 갈랐다).
-  if (stage === "CLOSED") return "closed";
-  if (stage === "CARD_AUTH_REQUIRED") return "cardAuthRequired";
-  if (stage === "BILLING_KEY") {
-    // 카드 발급 응답을 잃었다(ISSUE_UNKNOWN, APP-1600). 서버가 다시 보내지 않으니 결제는 없었고 새 등록부터 한다.
-    if (status === "UNKNOWN") return "issueUnknown";
-    // 발급 거절(ISSUE_REJECTED)은 DECLINED 다. 서버는 이 단계에 ACTION_REQUIRED 를 주지 않는다.
-    if (status === "DECLINED") return "cardActionRequired";
-    return "cardProcessing";
-  }
-  // PAYMENT
-  if (status === "DECLINED") return "declined";
-  if (status === "UNKNOWN") return "paymentUnknown";
-  return "paymentProcessing";
+  if (stage === "ACCESS_LOST")
+    return KNOWN_STATUS.has(status) ? "accessLost" : "paymentUnknown";
+  // 원형의 키(`toString` 등)를 조합으로 읽지 않는다.
+  const byStage = Object.hasOwn(KNOWN, stage) ? KNOWN[stage] : undefined;
+  const view =
+    byStage && Object.hasOwn(byStage, status) ? byStage[status] : undefined;
+  if (!view) return "paymentUnknown";
+  if (view !== "access") return view;
+  const refund =
+    setup.originAttempt?.refundStatus ?? setup.latestAttempt?.refundStatus;
+  return refund ? "refundProcessing" : "accessProcessing";
 }
 
 /** 서버가 아직 일하는 중이라 다시 읽을 가치가 있는 상태. 나머지는 사람이 움직여야 바뀐다. */

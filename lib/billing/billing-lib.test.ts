@@ -91,6 +91,22 @@ describe("setupViewOf", () => {
     expect(resultOfView("refunded")).toBe("refunded");
   });
 
+  it.each([
+    ["COMPLETED", "NEW_STATUS"],
+    ["NEW_STAGE", "DECLINED"],
+    ["NEW_STAGE", "COMPLETED"],
+    ["PAYMENT", "COMPLETED"],
+    ["ACCESS_LOST", "NEW_STATUS"],
+    ["toString", "name"],
+  ])(
+    "모르는 조합 %s / %s 는 성공·거절이 아니라 확인 중이다",
+    (stage, status) => {
+      const view = setupViewOf({ stage, status } as never);
+      expect(view).toBe("paymentUnknown");
+      expect(resultOfView(view)).toBe("unknown");
+    }
+  );
+
   it("결과 확인 지연은 분석에서 unknown 이고 계속 다시 읽는다", () => {
     expect(resultOfView("paymentUnknown")).toBe("unknown");
     expect(resultOfView("issueUnknown")).toBe("unknown");
