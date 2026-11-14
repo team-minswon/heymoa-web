@@ -331,7 +331,7 @@ describe("요금제 화면", () => {
     renderIn(<PlanTab workspaceId={FREE} />);
     expect(
       await screen.findByText(
-        "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 쓰고, 결과는 늦어도 24시간 안에 반영됩니다."
+        "갱신 결제 결과를 확인하고 있습니다. 그동안 Pro를 그대로 씁니다. 결과는 늦어도 24시간 안에 반영됩니다."
       )
     ).toBeInTheDocument();
     expect(screen.queryByText(/미납|유예/)).not.toBeInTheDocument();
@@ -1932,7 +1932,7 @@ describe("응답이 멈출 때", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "연결이 불안정하거나 응답이 늦어지고 있습니다. 카드 등록이나 결제가 실패한 것은 아닙니다."
+        "연결이 불안정하거나 응답이 늦어지고 있습니다. 카드 등록이나 결제가 실패했다는 뜻은 아닙니다."
       )
     ).toBeInTheDocument();
     expect(screen.queryByText("결제가 승인되지 않았습니다")).toBeNull();
