@@ -25,6 +25,7 @@ import type {
 
 import type {
   AdminFeedbackListResponse,
+  AppErrorResponse,
   CreateFeedbackRequest,
   FeedbackAnswerResponse,
   FeedbackListResponse,
@@ -361,15 +362,29 @@ export type createFeedbackResponse201 = {
   status: 201;
 };
 
+export type createFeedbackResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type createFeedbackResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
 };
 
+export type createFeedbackResponse429 = {
+  data: AppErrorResponse;
+  status: 429;
+};
+
 export type createFeedbackResponseSuccess = createFeedbackResponse201 & {
   headers: Headers;
 };
-export type createFeedbackResponseError = createFeedbackResponse401 & {
+export type createFeedbackResponseError = (
+  | createFeedbackResponse400
+  | createFeedbackResponse401
+  | createFeedbackResponse429
+) & {
   headers: Headers;
 };
 
@@ -382,7 +397,7 @@ export const getCreateFeedbackUrl = () => {
 };
 
 /**
- * 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지.
+ * 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지이고, 넘기면 429(FEEDBACK_RATE_LIMITED)다. message 가 비었거나 1500자를 넘는 등 본문이 검증을 통과하지 못하면 400(BAD_REQUEST)이다.
  * @summary 문의·피드백 접수
  */
 export const createFeedback = async (
@@ -424,7 +439,7 @@ export const createFeedback = async (
 export const getCreateFeedbackMutationKey = () => ["createFeedback"] as const;
 
 export const getCreateFeedbackMutationOptions = <
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -465,14 +480,16 @@ export type CreateFeedbackMutationResult = NonNullable<
   Awaited<ReturnType<typeof createFeedback>>
 >;
 export type CreateFeedbackMutationBody = CreateFeedbackRequest | undefined;
-export type CreateFeedbackMutationError = UnauthorizedResponse;
+export type CreateFeedbackMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
 export type CreateFeedbackMutationVariables = { data?: CreateFeedbackRequest };
 
 /**
  * @summary 문의·피드백 접수
  */
 export const useCreateFeedback = <
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(
   options?: {
@@ -614,19 +631,32 @@ export type registerFeedbackAnswerResponse200 = {
   status: 200;
 };
 
+export type registerFeedbackAnswerResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type registerFeedbackAnswerResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
+};
+
+export type registerFeedbackAnswerResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
 };
 
 export type registerFeedbackAnswerResponseSuccess =
   registerFeedbackAnswerResponse200 & {
     headers: Headers;
   };
-export type registerFeedbackAnswerResponseError =
-  registerFeedbackAnswerResponse401 & {
-    headers: Headers;
-  };
+export type registerFeedbackAnswerResponseError = (
+  | registerFeedbackAnswerResponse400
+  | registerFeedbackAnswerResponse401
+  | registerFeedbackAnswerResponse404
+) & {
+  headers: Headers;
+};
 
 export type registerFeedbackAnswerResponse =
   | registerFeedbackAnswerResponseSuccess
@@ -637,7 +667,7 @@ export const getRegisterFeedbackAnswerUrl = (feedbackId: string) => {
 };
 
 /**
- * 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다. 문의가 없으면 404(FEEDBACK_NOT_FOUND)다.
  * @summary 문의 답변 등록(운영자)
  */
 export const registerFeedbackAnswer = async (
@@ -684,7 +714,7 @@ export const getRegisterFeedbackAnswerMutationKey = () =>
   ["registerFeedbackAnswer"] as const;
 
 export const getRegisterFeedbackAnswerMutationOptions = <
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -727,7 +757,9 @@ export type RegisterFeedbackAnswerMutationResult = NonNullable<
 export type RegisterFeedbackAnswerMutationBody =
   | RegisterFeedbackAnswerRequest
   | undefined;
-export type RegisterFeedbackAnswerMutationError = UnauthorizedResponse;
+export type RegisterFeedbackAnswerMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
 export type RegisterFeedbackAnswerMutationVariables = {
   feedbackId: string;
   data?: RegisterFeedbackAnswerRequest;
@@ -737,7 +769,7 @@ export type RegisterFeedbackAnswerMutationVariables = {
  * @summary 문의 답변 등록(운영자)
  */
 export const useRegisterFeedbackAnswer = <
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(
   options?: {
@@ -766,16 +798,30 @@ export type listAdminFeedbacksResponse200 = {
   status: 200;
 };
 
+export type listAdminFeedbacksResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type listAdminFeedbacksResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
+};
+
+export type listAdminFeedbacksResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
 };
 
 export type listAdminFeedbacksResponseSuccess =
   listAdminFeedbacksResponse200 & {
     headers: Headers;
   };
-export type listAdminFeedbacksResponseError = listAdminFeedbacksResponse401 & {
+export type listAdminFeedbacksResponseError = (
+  | listAdminFeedbacksResponse400
+  | listAdminFeedbacksResponse401
+  | listAdminFeedbacksResponse404
+) & {
   headers: Headers;
 };
 
@@ -824,7 +870,7 @@ export const getListAdminFeedbacksQueryKey = (
 
 export const getListAdminFeedbacksQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {
@@ -857,11 +903,13 @@ export const getListAdminFeedbacksQueryOptions = <
 export type ListAdminFeedbacksQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminFeedbacks>>
 >;
-export type ListAdminFeedbacksQueryError = UnauthorizedResponse;
+export type ListAdminFeedbacksQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
 
 export function useListAdminFeedbacks<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params: undefined | ListAdminFeedbacksParams,
   options: {
@@ -888,7 +936,7 @@ export function useListAdminFeedbacks<
 };
 export function useListAdminFeedbacks<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {
@@ -915,7 +963,7 @@ export function useListAdminFeedbacks<
 };
 export function useListAdminFeedbacks<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {
@@ -938,7 +986,7 @@ export function useListAdminFeedbacks<
 
 export function useListAdminFeedbacks<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {
@@ -970,7 +1018,7 @@ export function useListAdminFeedbacks<
  */
 export const prefetchListAdminFeedbacksQuery = async <
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   queryClient: QueryClient,
   params?: ListAdminFeedbacksParams,
@@ -994,7 +1042,7 @@ export const prefetchListAdminFeedbacksQuery = async <
 
 export const getListAdminFeedbacksSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {
@@ -1027,11 +1075,13 @@ export const getListAdminFeedbacksSuspenseQueryOptions = <
 export type ListAdminFeedbacksSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminFeedbacks>>
 >;
-export type ListAdminFeedbacksSuspenseQueryError = UnauthorizedResponse;
+export type ListAdminFeedbacksSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
 
 export function useListAdminFeedbacksSuspense<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params: undefined | ListAdminFeedbacksParams,
   options: {
@@ -1050,7 +1100,7 @@ export function useListAdminFeedbacksSuspense<
 };
 export function useListAdminFeedbacksSuspense<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {
@@ -1069,7 +1119,7 @@ export function useListAdminFeedbacksSuspense<
 };
 export function useListAdminFeedbacksSuspense<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {
@@ -1092,7 +1142,7 @@ export function useListAdminFeedbacksSuspense<
 
 export function useListAdminFeedbacksSuspense<
   TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminFeedbacksParams,
   options?: {

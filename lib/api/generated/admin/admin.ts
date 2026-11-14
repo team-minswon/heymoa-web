@@ -22,6 +22,7 @@ import type {
 
 import type {
   AdminUserListResponse,
+  AppErrorResponse,
   ListAdminUsersParams,
   UnauthorizedResponse,
 } from "../models";
@@ -53,15 +54,29 @@ export type listAdminUsersResponse200 = {
   status: 200;
 };
 
+export type listAdminUsersResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type listAdminUsersResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
 };
 
+export type listAdminUsersResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
 export type listAdminUsersResponseSuccess = listAdminUsersResponse200 & {
   headers: Headers;
 };
-export type listAdminUsersResponseError = listAdminUsersResponse401 & {
+export type listAdminUsersResponseError = (
+  | listAdminUsersResponse400
+  | listAdminUsersResponse401
+  | listAdminUsersResponse404
+) & {
   headers: Headers;
 };
 
@@ -105,7 +120,7 @@ export const getListAdminUsersQueryKey = (params?: ListAdminUsersParams) => {
 
 export const getListAdminUsersQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {
@@ -133,11 +148,11 @@ export const getListAdminUsersQueryOptions = <
 export type ListAdminUsersQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminUsers>>
 >;
-export type ListAdminUsersQueryError = UnauthorizedResponse;
+export type ListAdminUsersQueryError = AppErrorResponse | UnauthorizedResponse;
 
 export function useListAdminUsers<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params: undefined | ListAdminUsersParams,
   options: {
@@ -160,7 +175,7 @@ export function useListAdminUsers<
 };
 export function useListAdminUsers<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {
@@ -183,7 +198,7 @@ export function useListAdminUsers<
 };
 export function useListAdminUsers<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {
@@ -202,7 +217,7 @@ export function useListAdminUsers<
 
 export function useListAdminUsers<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {
@@ -230,7 +245,7 @@ export function useListAdminUsers<
  */
 export const prefetchListAdminUsersQuery = async <
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   queryClient: QueryClient,
   params?: ListAdminUsersParams,
@@ -250,7 +265,7 @@ export const prefetchListAdminUsersQuery = async <
 
 export const getListAdminUsersSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {
@@ -282,11 +297,13 @@ export const getListAdminUsersSuspenseQueryOptions = <
 export type ListAdminUsersSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminUsers>>
 >;
-export type ListAdminUsersSuspenseQueryError = UnauthorizedResponse;
+export type ListAdminUsersSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
 
 export function useListAdminUsersSuspense<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params: undefined | ListAdminUsersParams,
   options: {
@@ -305,7 +322,7 @@ export function useListAdminUsersSuspense<
 };
 export function useListAdminUsersSuspense<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {
@@ -324,7 +341,7 @@ export function useListAdminUsersSuspense<
 };
 export function useListAdminUsersSuspense<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {
@@ -347,7 +364,7 @@ export function useListAdminUsersSuspense<
 
 export function useListAdminUsersSuspense<
   TData = Awaited<ReturnType<typeof listAdminUsers>>,
-  TError = UnauthorizedResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
 >(
   params?: ListAdminUsersParams,
   options?: {

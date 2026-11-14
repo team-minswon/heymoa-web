@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { BillingSetupStatusResponseDataAllowedActionsItem } from "./billingSetupStatusResponseDataAllowedActionsItem";
 import type { BillingSetupStatusResponseDataLatestAttempt } from "./billingSetupStatusResponseDataLatestAttempt";
 import type { BillingSetupStatusResponseDataOriginAttempt } from "./billingSetupStatusResponseDataOriginAttempt";
 import type { BillingSetupStatusResponseDataPaidPeriod } from "./billingSetupStatusResponseDataPaidPeriod";
@@ -35,8 +36,8 @@ export type BillingSetupStatusResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   setupId: string;
-  /** 화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD */
-  allowedActions: string[];
+  /** 화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다 */
+  allowedActions: BillingSetupStatusResponseDataAllowedActionsItem[];
   /**
    * 지급된 유료 기간 [start, end)
    * @nullable

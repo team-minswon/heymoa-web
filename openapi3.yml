@@ -203,7 +203,7 @@ paths:
       tags:
       - Feedbacks
       summary: 문의·피드백 접수
-      description: 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지.
+      description: 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지이고, 넘기면 429(FEEDBACK_RATE_LIMITED)다. message 가 비었거나 1500자를 넘는 등 본문이 검증을 통과하지 못하면 400(BAD_REQUEST)이다.
       operationId: createFeedback
       requestBody:
         content:
@@ -215,6 +215,14 @@ paths:
                 value:
                   kind: INCIDENT
                   message: 녹음이 자꾸 끊겨요
+              createFeedback_FeedbackRateLimitedException:
+                value:
+                  kind: OTHER
+                  message: 안녕하세요
+              createFeedback_BadRequest:
+                value:
+                  kind: OTHER
+                  message: '   '
       responses:
         '201':
           description: 생성 성공
@@ -237,6 +245,38 @@ paths:
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: message
+                        message: 비울 수 없습니다.
+        '429':
+          description: '429'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                FEEDBACK_RATE_LIMITED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: FEEDBACK_RATE_LIMITED
+                      message: 문의를 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.
+                      details: null
       security:
       - accessCookie: []
   /v1/notifications:
@@ -10501,7 +10541,7 @@ paths:
       tags:
       - Feedbacks
       summary: 문의 답변 등록(운영자)
-      description: 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      description: 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다. 문의가 없으면 404(FEEDBACK_NOT_FOUND)다.
       operationId: registerFeedbackAnswer
       parameters:
       - name: feedbackId
@@ -10524,6 +10564,15 @@ paths:
                 value:
                   answer: 왼쪽 위 녹음 버튼을 누르면 됩니다.
                   renotify: false
+              registerFeedbackAnswer_BadRequest:
+                value:
+                  answer: '  '
+              registerFeedbackAnswer_NoResourceFoundException:
+                value:
+                  answer: '  '
+              registerFeedbackAnswer_FeedbackNotFoundException:
+                value:
+                  answer: 왼쪽 위 녹음 버튼을 누르면 됩니다.
       responses:
         '200':
           description: 요청 성공
@@ -10542,6 +10591,46 @@ paths:
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: answer
+                        message: 비울 수 없습니다.
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
+                FEEDBACK_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: FEEDBACK_NOT_FOUND
+                      message: 문의를 찾을 수 없습니다.
+                      details: null
       security:
       - accessCookie: []
   /v1/users/me/deletion-plan:
@@ -12139,6 +12228,38 @@ paths:
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: limit
+                        message: 500 이하여야 합니다.
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
       security:
       - accessCookie: []
   /v1/admin/users:
@@ -12212,6 +12333,38 @@ paths:
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: limit
+                        message: 500 이하여야 합니다.
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 존재하지 않는 리소스입니다.
+                      details: null
       security:
       - accessCookie: []
   /v1/billing/operator/reviews:
@@ -21925,6 +22078,10 @@ components:
                     description: LIMIT 한도(200)를 채워 못 넣음 · TOO_LONG 40자 초과 · BLANK 비어 있음
                     nullable: false
                     example: LIMIT
+                    enum:
+                    - LIMIT
+                    - TOO_LONG
+                    - BLANK
                   term:
                     type: string
                     description: 정리한 표기. BLANK 는 빈 문자열, TOO_LONG 은 앞 40자
@@ -22730,10 +22887,19 @@ components:
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
             allowedActions:
               type: array
-              description: '화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD'
+              description: 화면 분기용 다음 행동. 명령의 권한·상태 검사를 대신하지 않는다
               items:
                 type: string
                 example: START_PURCHASE
+                enum:
+                - START_PURCHASE
+                - CONTINUE_SETUP
+                - CANCEL_SETUP
+                - REFRESH_STATUS
+                - CANCEL_SUBSCRIPTION
+                - RESUME_SUBSCRIPTION
+                - CHANGE_CARD
+                - DELETE_PAYMENT_METHOD
               nullable: false
             paidPeriod:
               type: object
@@ -23163,10 +23329,19 @@ components:
               example: false
             allowedActions:
               type: array
-              description: '화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다. 값: START_PURCHASE, CONTINUE_SETUP, CANCEL_SETUP, REFRESH_STATUS, CANCEL_SUBSCRIPTION, RESUME_SUBSCRIPTION, CHANGE_CARD, DELETE_PAYMENT_METHOD'
+              description: 화면 분기용 다음 행동(ADMIN 만). 명령의 권한·상태 검사를 대신하지 않는다
               items:
                 type: string
                 example: START_PURCHASE
+                enum:
+                - START_PURCHASE
+                - CONTINUE_SETUP
+                - CANCEL_SETUP
+                - REFRESH_STATUS
+                - CANCEL_SUBSCRIPTION
+                - RESUME_SUBSCRIPTION
+                - CHANGE_CARD
+                - DELETE_PAYMENT_METHOD
               nullable: false
             cancelAtPeriodEnd:
               type: boolean

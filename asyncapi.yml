@@ -2,37 +2,37 @@
 #
 # - 전사 STOMP·노트 토픽 구간: heymoa-server/asyncapi.yml 미러. 수정은 원본에서 하고 여기로 복사한다
 #   (원본은 `*WebSocketDocsTest`가 실제 DTO 직렬화로 검증한다).
-#   지금 미러: server asyncapi.yml info.version 3.3.1 (APP-1030 에서 노트 토픽 `MeetingAnalysisChanged`·`RelationChanged`,
-#   `ReattachEvent.overlap`, 설명문을 server 원본과 다시 맞췄다. server dev 917924e2e. APP-925 에서 노트 토픽
-#   `AgendasChanged`(`agendas.changed`)를 더했다. server feat/app-925 95db528f).
-# - agent 채팅 SSE 구간: 이 파일이 원본. server는 이벤트를 변환 없이 통과시켜 자기 DTO를 갖지
+#   지금 미러: server asyncapi.yml info.version 3.4.0 (server dev, APP-1618 병합분). APP-1546 의 연결 티켓 인증
+#   (`servers.production`·`securitySchemes.realtimeTicket`·설명문)과 노트 토픽 설명을 server 원본과 다시 맞췄다.
+#   STOMP 구간(servers.production·STOMP 채널과 operation·securitySchemes·STOMP 메시지와 schema·info.description §1)은
+#   server 원본을 그대로 옮긴 것이고, 채널마다 붙은 `servers: [production]` 만 합본이라 더한 것이다.
+# - agent 채팅 SSE 구간과 사용자 이벤트 스트림(`GET /v1/events`) 구간: 이 파일이 원본. server는 이벤트를 변환 없이 통과시켜 자기 DTO를 갖지
 #   않으므로 server 쪽 DocsTest로 검증할 수 없다. SSE 이벤트 스키마의 단일 출처가 여기이며
 #   asyncapi-server-ai.yml이 $ref로 참조한다.
 asyncapi: 3.0.0
 info:
-  title: Heymoa web ↔ server 비동기 계약 (전사 STOMP·노트 토픽 + agent 채팅 SSE)
-  version: 5.0.0
+  title: Heymoa web ↔ server 비동기 계약 (전사 STOMP·노트 토픽 + agent 채팅 SSE + 사용자 이벤트 SSE)
+  version: 5.1.0
   description: |
-    브라우저와 heymoa-server 사이의 비동기 구간은 둘이다. 프로토콜도 수명도 다르다.
+    브라우저와 heymoa-server 사이의 비동기 구간은 셋이다. 프로토콜도 수명도 다르다.
 
-    | | 전사 | agent 채팅 |
-    |---|---|---|
-    | 프로토콜 | STOMP 1.2 over WebSocket (`wss`) | SSE (`GET …/turns/{turnId}/events`) |
-    | 서버 | `production` | `sseEdge` |
-    | 생산자 | heymoa-server | heymoa-ai (Valkey Stream 에 쓰고 server 가 읽어 흘린다) |
-    | 수명 | 회의 녹음 구간 전체 | 메시지 한 건의 응답 |
+    | | 전사·노트 토픽 | agent 채팅 | 사용자 이벤트 |
+    |---|---|---|---|
+    | 프로토콜 | STOMP 1.2 over WebSocket (`wss`) | SSE (`GET …/turns/{turnId}/events`) | SSE (`GET /v1/events`) |
+    | 서버 | `production` | `sseEdge` | `sseEdge` |
+    | 생산자 | heymoa-server | heymoa-ai (Valkey Stream 에 쓰고 server 가 읽어 흘린다) | heymoa-server |
+    | 수명 | 회의 녹음 구간 전체 | 메시지 한 건의 응답 | 로그인한 탭 하나(약 25분마다 다시 붙음) |
+    | 인증 | 연결 티켓 `?ticket=`(없으면 `access_token` cookie, 이행 경로) | `access_token` cookie | `access_token` cookie |
 
-    공통: 인증은 `access_token` cookie 하나이고, 브라우저는 heymoa-ai에 직접 연결하지 않는다 —
-    heymoa-server가 유일한 public edge다.
+    브라우저는 heymoa-ai에 직접 연결하지 않는다 — heymoa-server가 유일한 public edge다.
 
     ---
 
     ## 1. 전사 STOMP·노트 토픽 구간
 
     브라우저와 Heymoa 서버 사이의 STOMP 1.2 over WebSocket 계약이다.
-    브라우저는 연결을 시도할 때마다 `POST /v1/realtime/tickets`(cookie 인증)로 연결 티켓을 받아
-    `/ws/transcriptions?ticket=<티켓>` 에 허용된 Origin으로 연결한다. 티켓 요청이 401 이 아닌 이유로
-    실패하면 티켓 없이 붙고, 서버는 access_token cookie로 인증한다(이행 경로).
+    브라우저는 연결 직전에 POST /v1/realtime/tickets 로 받은 연결 티켓을 ?ticket= 쿼리로 붙이고,
+    허용된 Origin으로 /ws/transcriptions에 연결한다. 티켓이 없으면 access_token cookie로 인증한다(이행 경로).
     SUBSCRIBE를 먼저 등록한 뒤 connect destination으로 전사 stream을 시작한다.
     같은 STOMP session의 inbound와 outbound message 순서는 서버에서 보존한다.
     provider VAD가 발화 뒤 침묵을 감지하면 segment를 확정하고, stop 수신 시 남은
@@ -78,6 +78,18 @@ info:
     - **`durableThroughSeq` 이하이거나 이 부착이 이미 받은 번호인 조각은 조용히 버려진다.**
       재전송은 멱등이다.
     - **`commit` destination 은 없다.** 옛 client 가 보내면 조용히 버려진다.
+
+    ## 노트 토픽
+
+    `/topic/notes/{noteId}`는 노트 멤버에게 회의·녹음·전사·명제·안건·분석 상태를 팬아웃한다.
+    서버는 SUBSCRIBE 시점과 이후 30초마다 멤버십을 확인하며, 권한이 없거나 노트별
+    100개 구독 상한을 넘은 요청은 STOMP ERROR 없이 조용히 거절한다. 브라우저의
+    `/topic/**` 직접 SEND도 조용히 거절한다.
+
+    현재 simple broker와 구독 registry는 단일 JVM 범위이고 outbound executor는
+    4개 worker와 queue 1000을 쓴다. 큐와 worker가 모두 차면 CallerRunsPolicy로
+    producer에 backpressure를 건다. 다중 인스턴스나 이 상한을 넘는 부하가 필요하면
+    Redis/RabbitMQ broker relay와 공유 구독 인가 상태로 교체한다.
 
     ---
 
@@ -163,6 +175,27 @@ info:
     소유권(404)·다른 대화의 턴(404)·스트림 소멸(410)·구독 상한(503)은 스트림을 열기 전 동기 단계에서
     끝난다. web은 응답 Content-Type을 보고 갈라야 한다 — 이 경우는 SSE가 아니라 평소의 오류 JSON이다
     (본문 스키마는 openapi3-server.yml).
+
+    ---
+
+    ## 3. 사용자 이벤트 스트림 구간
+
+    `GET /v1/events` 는 로그인한 사용자 한 명에게 **무엇이 바뀌었는지만** 알린다. 값은 싣지 않는다 —
+    받은 쪽이 해당 REST 를 다시 읽는다. 순서와 전달을 보장하지 않고, 유실은 다시 붙을 때의 전체 다시 읽기와
+    안전망 폴링이 메운다.
+
+    - 구독 등록이 끝나면 `ready` 가 먼저 오고, 그 뒤에 커밋된 변경이 힌트로 온다.
+    - **`id:` 줄이 없다.** `Last-Event-ID`·재생도 없다. 다시 붙으면 소유 쿼리를 전부 다시 읽는다.
+    - 하트비트는 주석 `: keepalive` 이고 15초 안팎이다.
+    - 서버는 min(약 25분 ± 2분, 인증 토큰 만료) 또는 배포 드레인 때 정상으로 닫는다. 브라우저는 곧바로 다시 붙는다.
+    - 워크스페이스 힌트는 그 워크스페이스 멤버에게, 사용자 힌트는 그 사용자의 연결에만 간다. 허용 워크스페이스는
+      연결 중에도 30~60초마다 다시 확인해 보내기 전에 거른다(`membership.changed` 는 거르지 않는다).
+    - **모르는 이벤트 이름과 필드는 무시한다.** 롤링 배포 중 새 서버가 새 힌트를 먼저 내도 연결이 산다.
+    - 스트림을 열기 전의 실패(꺼진 서버 404, 사용자당 연결 상한 429, 인스턴스 상한 503 + `Retry-After`)는
+      SSE가 아니라 평소의 오류 JSON이다(openapi3-server.yml). 404 를 받으면 다시 붙지 않고 폴링을 유지한다.
+
+    원본은 이 파일이다 — server 쪽 이벤트 이름·필드 정본은 `UserEventHint`(힌트)와 `EventStreamRegistry`(`ready`·`resync`·`degraded`)이고,
+    여기 적은 모양과 함께 고친다.
 defaultContentType: application/json
 servers:
   production:
@@ -171,9 +204,14 @@ servers:
     protocol: wss
     protocolVersion: "1.2"
     description: |
-      STOMP WebSocket endpoint. HTTP upgrade 요청에는 `ticket` query(연결 티켓)나 access_token cookie,
-      그리고 서버 CORS allowlist에 포함된 Origin header가 필요하다. `ticket` 이 있으면 cookie보다 우선하고,
-      만료·변조·다른 용도면 핸드셰이크가 401 로 거절된다.
+      STOMP WebSocket endpoint. HTTP upgrade 요청에는 인증(연결 티켓 또는 access_token cookie)과
+      서버 CORS allowlist에 포함된 Origin header가 모두 필요하다.
+
+      인증 (APP-1546):
+      - **`ticket` 쿼리가 있으면 티켓만 본다.** 같이 온 cookie는 읽지 않는다 — 만료된 cookie가 붙어 와도 티켓이 우선한다.
+        티켓은 `POST /v1/realtime/tickets` 가 발급하는 수명 30초 JWT(aud `ws`)이고, 연결 시도마다 새로 받는다.
+        만료·변조·다른 용도 티켓이나 티켓 자리의 access token은 upgrade 요청이 401로 거절된다.
+      - 티켓이 없으면 access_token cookie로 인증한다.
 
       전송 계층 제약 (server 설정과 같은 값):
       - **STOMP heartbeat 10초 / 10초.** 서버가 CONNECTED 프레임에 이 값을 실어 협상한다.
@@ -183,13 +221,14 @@ servers:
       - **STOMP 프레임 상한 1 MiB + 16 KiB** (binary + text 합). 오디오 frame 자체의 상한은
         이보다 훨씬 작다 (PcmAudio 참조).
     security:
+      - $ref: "#/components/securitySchemes/realtimeTicket"
       - $ref: "#/components/securitySchemes/accessCookie"
   sseEdge:
     host: api.heymoa.app
     protocol: https
     description: |
-      agent 채팅 SSE. 별도 endpoint가 아니라 REST와 같은 public edge이며,
-      `GET /v1/agent-chats/{chatId}/turns/{turnId}/events` 가 `text/event-stream` 으로 열린다.
+      agent 채팅 SSE와 사용자 이벤트 SSE. 별도 endpoint가 아니라 REST와 같은 public edge이며,
+      `GET /v1/agent-chats/{chatId}/turns/{turnId}/events` 와 `GET /v1/events` 가 `text/event-stream` 으로 열린다.
     security:
       - $ref: "#/components/securitySchemes/accessCookie"
 channels:
@@ -306,6 +345,8 @@ channels:
       ErrorEvent:
         $ref: "#/components/messages/ErrorEvent"
   noteSubscriptionFeedback:
+    servers:
+      - $ref: "#/servers/production"
     address: /user/queue/note-subscriptions
     title: 노트 토픽 구독 거절 통지
     description: |
@@ -329,8 +370,8 @@ channels:
       권한 상실, 중복 구독, 노트별 100개 구독 상한 초과는 거절하고 그 사실을
       `/user/queue/note-subscriptions` 로 알린다 — ERROR 프레임은 세션을 닫으므로 쓰지 않는다.
       형식이 안 맞는 프레임만 조용히 버린다(어디로 답할지 모른다). 재검증으로 권한을 잃으면
-      구독을 해제한다. 이벤트는 원본 transaction commit 뒤 발행되며, stream 기반 partial과 chat
-      이벤트처럼 transaction 밖에서 생긴 이벤트는 즉시 발행된다.
+      구독을 해제한다. 이벤트는 원본 transaction commit 뒤 발행되며, stream 기반 partial처럼
+      transaction 밖에서 생긴 이벤트는 즉시 발행된다.
     parameters:
       noteId:
         $ref: "#/components/parameters/noteId"
@@ -403,6 +444,31 @@ channels:
         $ref: "#/components/messages/MessageEnd"
       Error:
         $ref: "#/components/messages/Error"
+  userEventStream:
+    servers:
+      - $ref: "#/servers/sseEdge"
+    address: /v1/events
+    title: 사용자 이벤트 스트림
+    description: |
+      로그인한 사용자 단위의 변경 힌트 스트림이다(§3). 프레임은 `event:` + `data:` 이고 `id:` 가 없다.
+      `data:` 는 JSON 객체 하나다. 이벤트 이름이 곧 메시지 이름이다.
+    messages:
+      UserEventsReady:
+        $ref: "#/components/messages/UserEventsReady"
+      NoteChanged:
+        $ref: "#/components/messages/NoteChanged"
+      NotesChanged:
+        $ref: "#/components/messages/NotesChanged"
+      ChatsChanged:
+        $ref: "#/components/messages/ChatsChanged"
+      NotificationsChanged:
+        $ref: "#/components/messages/NotificationsChanged"
+      MembershipChanged:
+        $ref: "#/components/messages/MembershipChanged"
+      UserEventsResync:
+        $ref: "#/components/messages/UserEventsResync"
+      UserEventsDegraded:
+        $ref: "#/components/messages/UserEventsDegraded"
 operations:
   connectTranscription:
     action: receive
@@ -452,11 +518,10 @@ operations:
       - $ref: "#/channels/transcriptionEvents/messages/ErrorEvent"
   sendNoteTopicEvent:
     action: send
-    summary: 노트 멤버에게 회의·녹음·전사·공유 챗·명제 상태를 팬아웃한다.
+    summary: 노트 멤버에게 회의·녹음·전사·명제·안건·분석 상태를 팬아웃한다.
     description: |
       transcript.partial은 같은 utteranceId의 누적 snapshot이고 transcript.final은 저장 transaction
-      commit 뒤에만 발행된다. chat.lock의 locked=false는 정상 종료뿐 아니라 중단 시에도 편집 잠금이
-      풀렸음을 알리는 신호다. tool approval 이벤트는 이 토픽에 포함하지 않는다.
+      commit 뒤에만 발행된다. tool approval 이벤트는 이 토픽에 포함하지 않는다.
 
       **transcript의 두 이벤트는 sendTranscriptionEvent와 같은 순서로 나간다** — 한 응답이 발화
       끝을 담고 있으면 final이 먼저이고 남은 글자의 partial이 뒤따른다. 같은 스레드에서 이어
@@ -511,6 +576,23 @@ operations:
       - $ref: "#/channels/agentChatStream/messages/ToolCallResult"
       - $ref: "#/channels/agentChatStream/messages/MessageEnd"
       - $ref: "#/channels/agentChatStream/messages/Error"
+  receiveUserEvents:
+    action: receive
+    summary: heymoa-web이 사용자 단위 변경 힌트를 SSE로 수신한다.
+    description: |
+      server가 생산자다. 커밋된 변경을 Valkey pub/sub 으로 모든 인스턴스에 알리고, 각 인스턴스가 자기 연결에
+      걸러 보낸다. 힌트를 받은 화면은 그 힌트가 가리키는 REST 쿼리를 무효화해 다시 읽는다.
+    channel:
+      $ref: "#/channels/userEventStream"
+    messages:
+      - $ref: "#/channels/userEventStream/messages/UserEventsReady"
+      - $ref: "#/channels/userEventStream/messages/NoteChanged"
+      - $ref: "#/channels/userEventStream/messages/NotesChanged"
+      - $ref: "#/channels/userEventStream/messages/ChatsChanged"
+      - $ref: "#/channels/userEventStream/messages/NotificationsChanged"
+      - $ref: "#/channels/userEventStream/messages/MembershipChanged"
+      - $ref: "#/channels/userEventStream/messages/UserEventsResync"
+      - $ref: "#/channels/userEventStream/messages/UserEventsDegraded"
   receiveNoteSubscriptionFeedback:
     action: receive
     title: 노트 토픽 구독 거절 수신
@@ -523,6 +605,11 @@ operations:
       - $ref: "#/channels/noteSubscriptionFeedback/messages/NoteSubscriptionRejected"
 components:
   securitySchemes:
+    realtimeTicket:
+      type: httpApiKey
+      name: ticket
+      in: query
+      description: POST /v1/realtime/tickets 로 받은 연결 티켓. 수명 30초, 저장·일회용 검사 없음
     accessCookie:
       type: httpApiKey
       name: access_token
@@ -914,7 +1001,7 @@ components:
         code별 원인:
         - `INVALID_CLIENT_MESSAGE` — 같은 STOMP session의 중복 connect, 바인딩과 다른 sessionId로 온 command
         - `INVALID_AUDIO_FRAME` — 빈 body·홀수 byte·크기 초과
-        - `STT_CONNECTION_FAILED` — provider 연결 실패. **다시 시도할 수 있다**
+        - `STT_CONNECTION_FAILED` — connect 처리 중 예상하지 못한 예외. 업무 예외는 `SESSION_NOT_CONNECTABLE` 로 가고, provider 장애는 connect 를 막지 않는다. **다시 시도할 수 있다**
         - `STT_TRANSCRIPTION_FAILED` — 지금은 안 나간다. provider 오류는 capture_state(DEGRADED)로 알리고 세션을 안 끝낸다
         - `INTERNAL_ERROR` — segment 저장 실패, event 전송 실패, 완료 상태 저장 실패
         - `NOT_SESSION_OWNER` — 이 스트림의 주인이 아니다. **재시도해도 같다**
@@ -1819,6 +1906,152 @@ components:
           payload:
             type: agendas.changed
             occurredAt: "2026-10-07T01:02:03.456Z"
+    UserEventsReady:
+      name: ready
+      title: 구독 시작
+      description: |
+        구독 등록이 끝났다는 신호이고 늘 첫 프레임이다. 이 뒤에 커밋된 변경만 힌트로 온다 — 받은 화면은
+        이 시점에 소유 쿼리를 한 번 다시 읽어 놓친 것을 메운다.
+      payload:
+        type: object
+        required: [v, connectionId, serverTime, maxAgeSec]
+        properties:
+          v:
+            type: integer
+            enum: [1]
+            description: 스트림 프로토콜 판
+          connectionId:
+            $ref: "#/components/schemas/Tsid"
+          serverTime:
+            type: string
+            format: date-time
+            description: 연결을 연 서버 시각(UTC)
+          maxAgeSec:
+            type: integer
+            minimum: 0
+            description: 서버가 이 연결을 닫기까지 남은 초. 약 25분 ± 2분과 인증 토큰 만료 중 이른 쪽
+      examples:
+        - name: ready
+          payload:
+            v: 1
+            connectionId: 0K9GVJT2C4Q4C
+            serverTime: "2026-10-22T01:00:00Z"
+            maxAgeSec: 1500
+    NoteChanged:
+      name: note.changed
+      title: 노트 한 건이 바뀜
+      description: |
+        워크스페이스 멤버 전원에게 간다. `aspects` 가 무엇이 바뀌었는지 가른다 — `meeting`(회의 상태)·`analysis`(분석 흐름).
+        `transcript`·`agendas`·`review` 는 이름만 예약돼 있고 지금은 안 나간다. 모르는 면은 걸러 내고 남은 것만 쓴다.
+      payload:
+        type: object
+        required: [workspaceId, noteId, aspects]
+        properties:
+          workspaceId:
+            $ref: "#/components/schemas/Tsid"
+          noteId:
+            $ref: "#/components/schemas/Tsid"
+          aspects:
+            type: array
+            minItems: 1
+            description: 바뀐 면. 이름순으로 정렬돼 온다
+            items:
+              type: string
+              enum: [meeting, analysis, transcript, agendas, review]
+      examples:
+        - name: noteChanged
+          payload:
+            workspaceId: 0K9GVJT2C4Q2A
+            noteId: 0K9GVJT2C4Q3B
+            aspects: [analysis]
+    NotesChanged:
+      name: notes.changed
+      title: 노트 목록이 바뀜
+      description: 워크스페이스 멤버 전원에게 간다. `projectId` 가 없으면 워크스페이스 전체 노트 목록을 다시 읽는다.
+      payload:
+        type: object
+        required: [workspaceId]
+        properties:
+          workspaceId:
+            $ref: "#/components/schemas/Tsid"
+          projectId:
+            $ref: "#/components/schemas/Tsid"
+      examples:
+        - name: notesChanged
+          payload:
+            workspaceId: 0K9GVJT2C4Q2A
+            projectId: 0K9GVJT2C4Q5D
+    ChatsChanged:
+      name: chats.changed
+      title: 내 채팅 목록이 바뀜
+      description: 그 사용자의 연결에만 간다. 채팅은 주인만 본다.
+      payload:
+        type: object
+        required: [workspaceId]
+        properties:
+          workspaceId:
+            $ref: "#/components/schemas/Tsid"
+      examples:
+        - name: chatsChanged
+          payload:
+            workspaceId: 0K9GVJT2C4Q2A
+    NotificationsChanged:
+      name: notifications.changed
+      title: 내 알림이 바뀜
+      description: 그 사용자의 연결에만 간다. 알림 목록과 안 읽은 개수를 다시 읽는다. 본문은 빈 객체다.
+      payload:
+        type: object
+      examples:
+        - name: notificationsChanged
+          payload: {}
+    MembershipChanged:
+      name: membership.changed
+      title: 내 워크스페이스 멤버십이 바뀜
+      description: |
+        그 사용자의 연결에만 간다 — 추가·역할 변경·이탈·추방. **추방된 워크스페이스의 것도 온다.** 서버는 이 힌트를
+        받은 연결의 허용 워크스페이스를 곧바로 다시 계산한다.
+      payload:
+        type: object
+        required: [workspaceId]
+        properties:
+          workspaceId:
+            $ref: "#/components/schemas/Tsid"
+      examples:
+        - name: membershipChanged
+          payload:
+            workspaceId: 0K9GVJT2C4Q2A
+    UserEventsResync:
+      name: resync
+      title: 힌트 유실 — 전부 다시 읽기
+      description: 서버가 유실을 알 때 보낸다(이 연결의 대기열이 넘침). 받은 화면은 소유 쿼리 전체를 다시 읽는다. 연결은 이어진다.
+      payload:
+        type: object
+        required: [reason]
+        properties:
+          reason:
+            type: string
+            enum: [overflow]
+      examples:
+        - name: resync
+          payload:
+            reason: overflow
+    UserEventsDegraded:
+      name: degraded
+      title: 힌트를 더 못 보냄
+      description: |
+        서버가 힌트를 더 전하지 못하게 됐다 — `valkey`(서버의 힌트 구독 상실)·`server`(멤버십 재확인 실패). 보낸 뒤 서버가 연결을 닫는다.
+        받은 화면은 원래 간격의 폴링으로 돌아간다.
+      payload:
+        type: object
+        required: [reason]
+        properties:
+          reason:
+            type: string
+            enum: [valkey, server]
+      examples:
+        - name: degraded
+          payload:
+            reason: valkey
   schemas:
     ApprovalCardField:
       description: 승인 카드의 한 줄. `value` 하나, 바뀌는 값이면 `before`·`after`, 명단 교체는 `added`·`removed`·`kept`
