@@ -262,7 +262,10 @@ function MeetingRow({ m }: { m: Meeting }) {
 function ProjectStack() {
   const t = useTranslations("landing.team");
   return (
-    <Reveal className="relative max-w-[560px] sm:mr-9 sm:-rotate-1">
+    <Reveal
+      className="tv-land relative max-w-[560px] sm:mr-9 sm:-rotate-1"
+      style={vars({ "--fy": "80px", "--fr": "-3deg" })}
+    >
       <AppWindow className="px-3 pt-6 pb-3 sm:px-6 sm:pt-7 sm:pb-20">
         <div className="mx-2 border-b border-[var(--el-hairline)] pb-5 sm:mx-0 sm:pb-6">
           <p
@@ -357,7 +360,15 @@ function MembersStack() {
   const t = useTranslations("landing.team");
   const name = usePersonName();
   return (
-    <Reveal className="relative z-10 mt-8 sm:-mt-16 sm:ml-auto sm:w-[420px]">
+    <Reveal
+      className="tv-land relative z-10 mt-8 sm:-mt-16 sm:ml-auto sm:w-[420px]"
+      style={vars({
+        "--fx": "70px",
+        "--fy": "200px",
+        "--fr": "6deg",
+        "--ty": "-40px",
+      })}
+    >
       <div className="tv-rslide relative rotate-1 sm:rotate-[1.5deg]" style={vars({ "--d": "300ms" })}>
         <AppWindow className="@container p-4 sm:p-5">
           <p

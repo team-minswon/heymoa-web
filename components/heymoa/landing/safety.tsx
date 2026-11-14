@@ -348,7 +348,18 @@ function AgentTile() {
   const { call } = useCall();
   const chip = <ScopeChip title={t("scope")} />;
   return (
-    <Reveal className={cn("relative bg-[var(--tv-butter)] p-5 pb-12 sm:p-8 lg:p-10", FACE)}>
+    <Reveal
+      className={cn(
+        "tv-land relative origin-bottom bg-[var(--tv-butter)] p-5 pb-12 sm:p-8 lg:p-10",
+        FACE
+      )}
+      style={vars({
+        "--fy": "90px",
+        "--fs": 0.92,
+        "--ty": "140px",
+        "--ts": 0.92,
+      })}
+    >
       {/*
         좁을 때: 머리 → 단계 1 → 컷 1 → 단계 2 → 컷 2 로 쌓인다.
         넓을 때: 2행 격자. 1행 = 머리 + 단계 1 | 컷 1, 2행 = 단계 2 | 컷 2. 두 컷은 겹치지 않고 만화 칸처럼
@@ -393,8 +404,13 @@ function AgentTile() {
 
         {/* ① 승인 카드가 뜬 대화. */}
         <figure
-          className={cn("tv-rslide relative m-0", COL, "mt-6 lg:mt-0 lg:self-end")}
-          style={vars({ "--d": "100ms" })}
+          className={cn("tv-rslide tv-land relative m-0", COL, "mt-6 lg:mt-0 lg:self-end")}
+          style={vars({
+            "--d": "100ms",
+            "--fx": "80px",
+            "--fy": "50px",
+            "--fr": "3deg",
+          })}
         >
           <figcaption className="sr-only">{t("figure1")}</figcaption>
           <div className="relative -rotate-1 lg:-rotate-[1.5deg]">
@@ -440,8 +456,13 @@ function AgentTile() {
         */}
         <div className={cn(COL, "mt-6 lg:mt-0")}>
           <figure
-            className="tv-rslide relative m-0 ml-auto w-full lg:w-[84%]"
-            style={vars({ "--d": "450ms" })}
+            className="tv-rslide tv-land relative m-0 ml-auto w-full lg:w-[84%]"
+            style={vars({
+              "--d": "450ms",
+              "--fx": "130px",
+              "--fy": "70px",
+              "--fr": "-4deg",
+            })}
           >
             <figcaption className="sr-only">{t("figure2")}</figcaption>
             <div className="relative rotate-1 lg:rotate-[1.5deg]">
@@ -615,7 +636,13 @@ function Notch({ className }: { className: string }) {
 function ExternalTile() {
   const t = useTranslations("landing.safety.external");
   return (
-    <Reveal className={cn("relative flex flex-col bg-[var(--tv-mint)] lg:flex-row", FACE)}>
+    <Reveal
+      className={cn(
+        "tv-land relative flex flex-col bg-[var(--tv-mint)] lg:flex-row",
+        FACE
+      )}
+      style={vars({ "--fy": "90px", "--fs": 0.92 })}
+    >
       {/* 앞면 */}
       <div className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10">
         <TileHead
@@ -637,7 +664,15 @@ function ExternalTile() {
 
         <figure className="relative m-0 mt-8 lg:mt-9">
           <figcaption className="sr-only">{t("figure")}</figcaption>
-          <div className="tv-rslide relative" style={vars({ "--d": "100ms" })}>
+          <div
+            className="tv-rslide tv-land relative"
+            style={vars({
+              "--d": "100ms",
+              "--fx": "-70px",
+              "--fy": "50px",
+              "--fr": "-3deg",
+            })}
+          >
             <AppWindow className="@container rotate-[0.6deg] p-4 sm:p-5 lg:rotate-1">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -700,10 +735,16 @@ function ExternalTile() {
             <li
               key={stamp.id}
               className={cn(
-                "tv-rpop grid size-[88px] place-items-center rounded-full border-2 border-[var(--tv-brand-deep)]/75 p-2 text-center text-[12px] leading-[1.25] font-extrabold text-[var(--tv-brand-deep)] lg:size-[104px] lg:text-[13px]",
+                "tv-rpop tv-stamp grid size-[88px] place-items-center rounded-full border-2 border-[var(--tv-brand-deep)]/75 p-2 text-center text-[12px] leading-[1.25] font-extrabold text-[var(--tv-brand-deep)] lg:size-[104px] lg:text-[13px]",
                 stamp.place
               )}
-              style={{ rotate: `${stamp.tilt}deg`, ...vars({ "--d": `${500 + i * 160}ms` }) }}
+              style={{
+                rotate: `${stamp.tilt}deg`,
+                ...vars({
+                  "--d": `${500 + i * 160}ms`,
+                  "--sr": `${stamp.tilt * 3}deg`,
+                }),
+              }}
             >
               {t(`stamps.${stamp.id}`)}
             </li>

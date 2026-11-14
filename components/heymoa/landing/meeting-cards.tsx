@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
@@ -334,19 +334,23 @@ function Slot({
   i,
   tilt,
   drop,
+  land,
   children,
 }: {
   i: number;
   tilt: string;
   drop: string;
+  /** 넓은 화면의 스크롤 놓임(`tv-land`) — 어디서 와서 어디로 흘러가는지. */
+  land: CSSProperties;
   children: ReactNode;
 }) {
   return (
     <Reveal
       className={cn(
-        "w-[calc(100%-16px)] max-w-[360px] shrink-0 snap-start lg:w-auto lg:max-w-none",
+        "tv-land w-[calc(100%-16px)] max-w-[360px] shrink-0 snap-start lg:w-auto lg:max-w-none",
         drop
       )}
+      style={land}
     >
       <div className="tv-r" style={vars({ "--i": i })}>
         <div className="tv-swing relative" style={vars({ "--tilt": tilt })}>
@@ -410,13 +414,39 @@ export function MeetingCards() {
             "focus-visible:outline-offset-[-3px]"
           )}
         >
-          <Slot i={0} tilt="-1.5deg" drop="lg:mt-0">
+          {/* 놓임: 세 장이 가운데로 겹친 한 뭉치에서 부채처럼 펼쳐지고, 떠날 때는 가운데 장이 먼저 올라간다. */}
+          <Slot
+            i={0}
+            tilt="-1.5deg"
+            drop="lg:mt-0"
+            land={vars({
+              "--fx": "120px",
+              "--fy": "140px",
+              "--fr": "-8deg",
+              "--ty": "-10px",
+            })}
+          >
             <KickoffCard />
           </Slot>
-          <Slot i={1} tilt="1deg" drop="lg:mt-10">
+          <Slot
+            i={1}
+            tilt="1deg"
+            drop="lg:mt-10"
+            land={vars({ "--fy": "240px", "--fr": "2deg", "--ty": "-70px" })}
+          >
             <MentoringCard />
           </Slot>
-          <Slot i={2} tilt="-0.6deg" drop="lg:mt-5">
+          <Slot
+            i={2}
+            tilt="-0.6deg"
+            drop="lg:mt-5"
+            land={vars({
+              "--fx": "-120px",
+              "--fy": "190px",
+              "--fr": "7deg",
+              "--ty": "-35px",
+            })}
+          >
             <WeeklyCard />
           </Slot>
         </CardRail>

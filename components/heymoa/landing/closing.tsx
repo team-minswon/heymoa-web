@@ -31,7 +31,9 @@ import { CLOSING_H, CONTAINER, FOCUS_ON_BRAND, RADIUS, SHADOW, vars } from "./to
  *   「검토 완료 — 나」가 그 몫을 그림으로 말한다. 대신 당번 농담을 닫는다: 이번 주 당번 칸에 HeyMoa를
  *   적으라고 하고(종이의 「받아 적기 — HeyMoa」를 본문이 되풀이하지 않게 「받아 적기」 낱말은 피한다), 히어로의
  *   「지난주에 했는데요」를 받아 「누가 했는지 따질 일도 없습니다」. 사람이 검토해야 확정된다는 말과 어긋나는 「아무것도 안 해도 된다」류는 쓰지 않는다.
- * - 움직임은 조상 `Reveal` 이 화면에 들어올 때 한 번: 종이가 비스듬히 들어오고(0ms) → 「당번표를」
+ * - 넓은 화면은 스크롤에 묶인다(`motion.tsx` `tv-land` · `tv-roster` · `tv-loop`): 보라 면이 작게 들어와 커지고, 종이가
+ *   더 기운 채 떨어져 붙고, 내려가는 만큼 고리가 그려지고 이름이 차례로 그어진 뒤 손글씨 두 줄이 나온다.
+ * - 그 밖(좁은 화면 · 지원하지 않는 브라우저)의 움직임은 조상 `Reveal` 이 화면에 들어올 때 한 번: 종이가 비스듬히 들어오고(0ms) → 「당번표를」
  *   고리(400ms) → 이름 긋기(600 · 750 · 900 · 1050ms) → 손글씨 두 줄(1450 · 1650ms) → 박지훈 말풍선
  *   (1900ms). 모션을 줄이면 처음부터 다 그어진 끝 상태다.
  */
@@ -57,8 +59,16 @@ function DutyRoster() {
   return (
     <div
       aria-hidden
-      className="tv-rslide absolute -top-10 right-3 w-[170px] lg:-top-12 lg:-right-6 lg:w-[232px]"
-      style={{ rotate: "6deg", ...vars({ "--d": "0ms" }) }}
+      className="tv-rslide tv-land tv-roster absolute -top-10 right-3 w-[170px] lg:-top-12 lg:-right-6 lg:w-[232px]"
+      style={{
+        rotate: "6deg",
+        ...vars({
+          "--d": "0ms",
+          "--fx": "60px",
+          "--fy": "-90px",
+          "--fr": "14deg",
+        }),
+      }}
     >
       <div
         className={`relative rounded-[6px] border-[1.5px] border-[var(--tv-ink)] bg-[linear-gradient(315deg,var(--tv-lav)_0_15px,var(--tv-ink)_15px_16.5px,white_16.5px)] p-3 text-left lg:p-4 ${SHADOW.sticky}`}
@@ -79,6 +89,7 @@ function DutyRoster() {
                 "flex items-center gap-2 py-1 text-[13px] leading-[1.3] font-bold text-[var(--tv-body)] lg:text-[14px]",
                 i > 1 && "hidden lg:flex"
               )}
+              style={vars({ "--k": i })}
             >
               <span className="min-w-6 shrink-0 whitespace-nowrap text-[var(--tv-muted)] tabular-nums">
                 {t("week", { n: week })}
@@ -99,10 +110,10 @@ function DutyRoster() {
         </ul>
 
         <div className="mt-1.5 border-t border-dashed border-[var(--tv-rule-strong)] pt-1.5 lg:mt-2 lg:pt-2">
-          <p className={SCRAWL} style={vars({ "--d": "1450ms" })}>
+          <p className={SCRAWL} style={vars({ "--d": "1450ms", "--k": 0 })}>
             {t("notes")}
           </p>
-          <p className={SCRAWL} style={vars({ "--d": "1650ms" })}>
+          <p className={SCRAWL} style={vars({ "--d": "1650ms", "--k": 1 })}>
             {t("review")}
           </p>
         </div>
@@ -147,7 +158,8 @@ export function Closing() {
     <section className="bg-white pt-16 pb-16 lg:pt-28 lg:pb-24">
       <div className={CONTAINER}>
         <Reveal
-          className={`relative ${RADIUS.face} bg-[var(--tv-brand)] px-6 pt-32 pb-14 text-center md:pt-20 lg:px-16 lg:py-20`}
+          className={`tv-land relative ${RADIUS.face} bg-[var(--tv-brand)] px-6 pt-32 pb-14 text-center md:pt-20 lg:px-16 lg:py-20`}
+          style={vars({ "--fy": "100px", "--fs": 0.86 })}
         >
           <DutyRoster />
 
@@ -160,7 +172,12 @@ export function Closing() {
           </div>
 
           <div className="flex flex-col items-center">
-            <h2 className={cn(CLOSING_H, "mx-auto max-w-[780px] leading-[1.3] lg:leading-[1.2]")}>
+            <h2
+              className={cn(
+                CLOSING_H,
+                "tv-loop mx-auto max-w-[780px] leading-[1.3] lg:leading-[1.2]"
+              )}
+            >
               {t.rich("title", {
                 ...RICH,
                 loop: (chunks: ReactNode) => (

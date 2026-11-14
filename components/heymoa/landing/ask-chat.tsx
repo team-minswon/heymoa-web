@@ -28,7 +28,7 @@ import {
 import { AnswerRefs } from "./app-client";
 import { useFollowBottom, useOnceInView, useReducedMotion } from "./hooks";
 import { Cursor, Scribble, Sticky } from "./marks";
-import { CONTAINER, FOCUS, LABEL, SHADOW } from "./tokens";
+import { CONTAINER, FOCUS, LABEL, SHADOW, vars } from "./tokens";
 
 /*
  * 내 에이전트 구간의 움직이는 쪽 — 누르는 질문 쪽지 셋과 「내 에이전트」 창이 상태를 같이 쓴다.
@@ -332,7 +332,14 @@ export function AskChat({ heading }: { heading: ReactNode }) {
           {QUESTIONS.map((item, i) => {
             const current = view?.i === i;
             return (
-              <li key={item.scene}>
+              <li
+                key={item.scene}
+                className="tv-land"
+                style={vars({
+                  "--fx": `${-50 - i * 40}px`,
+                  "--fr": `${i % 2 ? 3 : -3}deg`,
+                })}
+              >
                 <button
                   type="button"
                   aria-current={current || undefined}

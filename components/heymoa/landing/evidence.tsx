@@ -529,7 +529,10 @@ export function Evidence() {
             </div>
           </Reveal>
 
-          <Reveal className="mt-12 lg:mt-16">
+          <Reveal
+            className="tv-land mt-12 lg:mt-16"
+            style={vars({ "--fx": "-50px", "--fy": "70px", "--fr": "-4deg" })}
+          >
             <p className="sr-only">{t("sr")}</p>
             <div className="tv-r relative">
               <ScriptWindow />
@@ -547,7 +550,10 @@ export function Evidence() {
         </div>
 
         {/* 오른쪽 단 — 요약 창. 위가 제목 위와 맞는다. */}
-        <Reveal className="mt-6 lg:mt-0">
+        <Reveal
+          className="tv-land mt-6 lg:mt-0"
+          style={vars({ "--fy": "170px", "--fr": "3deg", "--ty": "-50px" })}
+        >
           {/* 좁은 화면 — 두 창 사이 */}
           <div
             aria-hidden

@@ -206,7 +206,7 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 | FAQ | `faq.tsx` | `<details>` 여섯. 큰 번호 + 작은 앱 조각 |
 | 회의 앱 띠 | `works-with.tsx` | 「어디서 회의하든 켜 두기만」. 카드 두 줄이 반대로 흐르고 가운데 「HeyMoa · 기록 중」 알약 |
 | 마무리 | `closing.tsx` | 보라 면 + 당번표 종이 |
-| 푸터 | `footer.tsx` | 위만 둥근 연보라 면. 서비스 · 정책 링크, 문의, 「예시」 도장과 지어낸 예시 고지(고지는 `/` 에서만) |
+| 푸터 | `footer.tsx` · `business-info.tsx` | 위만 둥근 연보라 면. 서비스 · 정책 링크, 문의, 언어 선택, 아래에 사업자 정보와 저작권 |
 
 **두 목소리를 색으로 가른다.**
 - 페이지(창 밖 · 창 위 주석) = `--tv-*`(`tokens.ts` `TV_VARS`, 루트 `.tv-root` 에만 건다). 흰 바탕 하나에 라벤더 ·
@@ -218,12 +218,11 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
   둘로 읽힌다. 카드 안 상자, 고리 위 점선 칩도 같은 원칙이다.
 
 **주석 문법은 `marks.tsx` 하나다** — 노란 쪽지(`Sticky`), 손글씨(`Hand`), 손 그림 화살표(`Scribble`), 형광펜
-(`MARKER*`), 점선 「예시」 도장(`ExampleStamp`), 테이프(`Tape`), 말풍선(`Speech`), 커서(`Cursor`). 구간 파일은
+(`MARKER*`), 테이프(`Tape`), 말풍선(`Speech`), 커서(`Cursor`). 구간 파일은
 여기와 `tokens.ts` · `app.tsx` 에 없는 색 · 그림자 · 반경을 새로 만들지 않는다.
 
 **사실.** 예시 회의는 하나다 — `use-demo.ts` 의 「3차 스프린트 킥오프」(9월 1일 (화) 오후 2:00, 2분, 결정 둘 · 할
-일 둘). 멘토링 · 주간 회의와 그 인물은 지어내서 「예시」 도장이 붙고, 푸터의 고지가 「회의, 인물, 날짜는 모두 지어낸
-예시」라고 말한다. 후기 · 사용자 수 · 인증 배지 · 가격은 없다. 회의 앱 띠는 **연동이 아니다** — HeyMoa 는 회의
+일 둘). 멘토링 · 주간 회의와 그 인물은 지어낸 것이지만 화면에 「예시」 표시나 고지를 붙이지 않는다(APP-1604). 후기 · 사용자 수 · 인증 배지 · 가격은 없다. 회의 앱 띠는 **연동이 아니다** — HeyMoa 는 회의
 앱에 들어가지 않고 브라우저 마이크로 듣는다. 띠 리드 끝의 데스크톱 앱(베타) 한 줄과 FAQ 01 은 다운로드 페이지와 같은
 강도(「컴퓨터에서 나는 소리까지 녹음」)로만 말한다. 로고(`public/landing/logos/`)의 출처는 `works-with.tsx` 머리 주석에
 있다.
@@ -232,6 +231,13 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 있고, 규칙 밖 기본값이 곧 「다 보이고 다 그려진」 끝 상태다. 스스로 계속 도는 것(히어로 대본 · 회의 앱 띠)은
 일시정지 버튼이 있고(WCAG 2.2.2), `[data-paused]` 아래에서는 클래스를 가리지 않고 모든 애니메이션이 선다.
 히어로는 `useDemo` 를 그대로 쓰고 화면 밖이면 쉬며, 모션을 줄이면 끝 화면 한 장으로 선다(`hero-stage.test.tsx`).
+
+**넓은 화면은 스크롤에 묶인 움직임이 얹힌다(APP-1604) — 스크롤이 손이다.** 종이(창 · 카드 · 쪽지 · 색 면)는 내려가는
+만큼 제자리에 내려앉고, 형광펜 · 취소선 · 고리는 내려가는 만큼 그어진다. CSS `animation-timeline` 만 쓰고 `transform`
+으로만 움직여서, 기울임 · 한 번짜리 등장과 같은 요소에 얹는다. 1024 이상 · 높이 1400 이하 · 모션 허용 · 브라우저
+지원이 다 맞을 때만 켜지고, 아니면 위의 한 번짜리 등장 그대로다. **화면을 붙잡는 고정 연출은 두지 않는다** — 창과
+색 면이 화면보다 커서 아랫부분을 못 본 채 덮인다. **주석이 가리키는 자리는 건드리지 않는다** — 놓임은 화면 아래쪽에서
+끝나고 가운데를 지나는 동안은 설계한 자리에 선다. 새 구간에 붙일 때는 `motion.tsx` 머리 주석의 `tv-land` 를 쓴다.
 
 **크롬.** `/` · `/terms` · `/privacy` · `/download` 는 이 상단 바와 `landing/footer.tsx` 를 쓰고 마케팅 `Navbar` · `Footer` 를
 세우지 않는다. 어느 경로가 랜딩 크롬인지는 `lib/routes/app-route.ts` 의 `isLandingChromeRoute` 한 곳이 정하고

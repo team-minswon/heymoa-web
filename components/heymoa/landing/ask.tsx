@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { AskChat } from "./ask-chat";
 import { Hand, Scribble, Sticky } from "./marks";
 import { RICH } from "./rich";
-import { CONTAINER, H2, LEAD, MARKER_REVEAL, SECTION_Y } from "./tokens";
+import { CONTAINER, H2, LEAD, MARKER_REVEAL, SECTION_Y, vars } from "./tokens";
 
 /*
  * 내 에이전트 구간. tl;dv 에서 가져온 것 둘: 사람들이 회의실에서 늘 하는 말을 쪽지로 붙인 농담 띠
@@ -34,7 +34,8 @@ import { CONTAINER, H2, LEAD, MARKER_REVEAL, SECTION_Y } from "./tokens";
 
 /**
  * 회의실 명대사. 넓은 화면에서는 한 줄로 조금씩 들쭉날쭉하게, 좁은 화면에서는 2×2 로 선다. 글은
- * `landing.ask.wall` 의 같은 차례다.
+ * `landing.ask.wall` 의 같은 차례다. `land` 는 넓은 화면의 스크롤 놓임(`tv-land`) — 양옆에서 흩어져 들어와 한 줄로
+ * 모이고, 지나가면 저마다 다른 빠르기로 올라간다.
  */
 const WALL = [
   {
@@ -42,24 +43,52 @@ const WALL = [
     tilt: -4,
     big: true,
     shift: "lg:-translate-y-1",
+    land: {
+      "--fx": "-220px",
+      "--fy": "50px",
+      "--fr": "-14deg",
+      "--ty": "-24px",
+      "--tr": "-5deg",
+    },
   },
   {
     tone: "white",
     tilt: 3,
     big: false,
     shift: "lg:translate-y-3",
+    land: {
+      "--fx": "-80px",
+      "--fy": "110px",
+      "--fr": "10deg",
+      "--ty": "-60px",
+      "--tr": "4deg",
+    },
   },
   {
     tone: "mint",
     tilt: -2,
     big: false,
     shift: "lg:-translate-y-2",
+    land: {
+      "--fx": "80px",
+      "--fy": "90px",
+      "--fr": "-11deg",
+      "--ty": "-44px",
+      "--tr": "-4deg",
+    },
   },
   {
     tone: "butter",
     tilt: 4,
     big: true,
     shift: "lg:translate-y-2",
+    land: {
+      "--fx": "220px",
+      "--fy": "40px",
+      "--fr": "14deg",
+      "--ty": "-16px",
+      "--tr": "6deg",
+    },
   },
 ] as const;
 
@@ -78,7 +107,8 @@ export function Ask() {
           {WALL.map((line, i) => (
             <li
               key={line.tone}
-              className={cn("flex justify-center", line.shift)}
+              className={cn("tv-land flex justify-center", line.shift)}
+              style={vars(line.land)}
             >
               <Sticky
                 tone={line.tone}

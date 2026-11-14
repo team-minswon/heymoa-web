@@ -62,7 +62,13 @@ export function Hero() {
         <div>
           {/* 말풍선은 줄을 꺾지 않는다. 영어처럼 길어 한 줄에 둘이 안 들어가면 둘째가 아래로 내려간다. */}
           <div className="flex flex-col items-start gap-1 whitespace-nowrap lg:flex-row lg:flex-wrap lg:items-end lg:gap-3">
-            <Speech who="minseo" tone="butter" tilt={-2} anim="pop">
+            <Speech
+              who="minseo"
+              tone="butter"
+              tilt={-2}
+              anim="pop"
+              className="tv-orb [--oe:520px] [--or:-6deg] [--ox:-34px] [--oy:-12px]"
+            >
               {t("askDuty")}
             </Speech>
             <Speech
@@ -73,7 +79,7 @@ export function Hero() {
               tilt={3}
               anim="pop"
               delay={600}
-              className="-mt-1 ml-16 lg:mt-0 lg:-mb-3 lg:ml-0 lg:[@media(max-height:890px)]:mb-0"
+              className="tv-orb -mt-1 ml-16 [--oe:520px] [--or:8deg] [--ox:44px] [--oy:-26px] lg:mt-0 lg:-mb-3 lg:ml-0 lg:[@media(max-height:890px)]:mb-0"
             >
               {t("didLastWeek")}
             </Speech>

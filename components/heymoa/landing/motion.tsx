@@ -30,6 +30,25 @@
  * - 흐르는 띠(`works-with.tsx`): `tv-marquee`(트랙, 1/3 만큼 미끄러짐, `--dur` · `data-dir=right` 면 반대로) ·
  *   `tv-fade`(줄 양끝 흐림, 올리면 그 줄이 멈춤) · `tv-band`(포커스가 들어오면 두 줄 다 멈춤). 모션을 줄이면
  *   흐르지 않고 첫 벌(`tv-marquee-set`)만 접혀 서고 복사본(`tv-marquee-dup`)은 숨는다.
+ * - 스크롤에 묶인 움직임(APP-1604, 맨 아래 `@supports` 블록): **스크롤이 손이다** — 종이는 내려가는 만큼 제자리에
+ *   내려앉고, 형광펜 · 취소선은 내려가는 만큼 그어진다. 넓은 화면(1024 이상) · 모션 허용 · `animation-timeline`
+ *   지원이 다 맞고 화면 높이가 1400 이하일 때만 켜지고, 하나라도 아니면 위의 한 번짜리 등장 그대로다(끝 상태가
+ *   기본값인 것도 같다). 높이를 묶은 까닭: 화면이 아주 높으면 문서 끝에 가까운 것(마무리 면 · 당번표 · 물결)이
+ *   구간을 다 지나기 전에 스크롤이 끝나 중간 모습으로 멈추고, 회의 카드는 첫 화면에서 반쯤 펼쳐진 채 보인다.
+ *   전부 `transform` 으로만 움직인다 — 기울임(`rotate`) · 등장(`translate` · `scale` · `opacity`) · 올림(`tv-swing`)이
+ *   쓰는 속성과 겹치지 않아 같은 요소에 얹어도 서로 덮지 않는다.
+ *   - `tv-land`(놓임): 화면에 들어오며 `--fx` · `--fy` · `--fr` · `--fs` 에서 제자리로 오고(구간의 30%), 머물다가(70%까지),
+ *     나가며 `--ty` · `--tr` · `--ts` 로 흘러간다. 값은 style 로 준다. 주석이 가리키는 자리는 머무는 동안 맞는다.
+ *     이 값들은 `@property` 로 **물려주지 않게** 등록했다 — 놓임 안에 놓임이 있으면(색 면 안의 창) 안쪽이 바깥의
+ *     나가는 값까지 받아 같이 물러났다.
+ *   - `tv-orb`: 문서 맨 위에서 `--oe`(기본 900px)만큼 내려가는 동안 `--ox` · `--oy` · `--or` · `--os` 로 간다(히어로의 원 · 말풍선).
+ *   - `tv-rmark`(형광펜): 화면 높이의 86% → 58% 를 지나는 동안 칠해진다. 되올리면 지워진다.
+ *   - `tv-roster` · `tv-loop`(마무리): 그 상자가 지나는 동안 안쪽 `tv-rdraw` 가 그어진다(이름은 `--k` 차례로). 당번표의
+ *     손글씨 두 줄(`tv-rpop`)도 같은 줄자에 묶어 이름이 다 그어진 뒤에 나온다 — 시간으로 두면 천천히 내릴 때
+ *     이름이 그어지기 전에 「받아 적기 — HeyMoa」가 먼저 떴다.
+ *   - `tv-stamp`(출입증 도장): 큰 채로 내려와 찍힌다. `tv-wave`(푸터 물결): 높게 일었다가 가라앉는다.
+ *   - 흐르는 띠(`tv-band` 안 `tv-marquee`): 구간이 지나는 동안 제 방향으로 180px 더 간다. 올려 둔 줄 · 일시정지는
+ *     시간으로 흐르는 쪽만 세우고 스크롤 쪽은 두어, 다시 흐를 때 줄이 튀지 않는다.
  * `.chat-shimmer` · `.chat-rise` 는 전역(`globals.css`)이라 창 안에서 그대로 쓴다.
  *
  * 움직임이 아닌 규칙이 하나 섞여 있다 — `.tv-row`(`app.tsx` `ROW_LINE`, 검토 줄 · 스크립트 줄): **뒤에 줄이
@@ -112,6 +131,50 @@ html{scroll-padding-top:4rem}
 .tv-swing:hover{rotate:0deg;translate:0 -4px}
 }
 @media (max-width:1023px){.tv-swing{rotate:0deg}}
+@property --fx{syntax:"<length>";inherits:false;initial-value:0px}
+@property --fy{syntax:"<length>";inherits:false;initial-value:0px}
+@property --fr{syntax:"<angle>";inherits:false;initial-value:0deg}
+@property --fs{syntax:"<number>";inherits:false;initial-value:1}
+@property --ty{syntax:"<length>";inherits:false;initial-value:0px}
+@property --tr{syntax:"<angle>";inherits:false;initial-value:0deg}
+@property --ts{syntax:"<number>";inherits:false;initial-value:1}
+@property --ox{syntax:"<length>";inherits:false;initial-value:0px}
+@property --oy{syntax:"<length>";inherits:false;initial-value:0px}
+@property --or{syntax:"<angle>";inherits:false;initial-value:0deg}
+@property --os{syntax:"<number>";inherits:false;initial-value:1}
+@supports (animation-timeline:view()){
+@media (prefers-reduced-motion: no-preference) and (min-width:1024px) and (max-height:1400px){
+.tv-land{animation:tv-land linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
+@keyframes tv-land{0%{transform:translate(var(--fx,0px),var(--fy,0px)) rotate(var(--fr,0deg)) scale(var(--fs,1));animation-timing-function:cubic-bezier(.3,.3,.5,1)}30%,70%{transform:translate(0px,0px) rotate(0deg) scale(1);animation-timing-function:cubic-bezier(.5,0,.85,.7)}100%{transform:translate(0px,var(--ty,0px)) rotate(var(--tr,0deg)) scale(var(--ts,1))}}
+.tv-orb{animation:tv-orb linear both;animation-timeline:scroll(root);animation-range:0px var(--oe,900px)}
+@keyframes tv-orb{to{transform:translate(var(--ox,0px),var(--oy,0px)) rotate(var(--or,0deg)) scale(var(--os,1))}}
+.tv-pop.tv-orb{animation:tv-pop .34s cubic-bezier(.34,1.56,.64,1) both,tv-orb linear both;animation-delay:var(--d,0ms),0s;animation-timeline:auto,scroll(root);animation-range:normal,0px var(--oe,900px)}
+[data-reveal]:not([data-shown]) .tv-rmark{background-size:revert-layer}
+.tv-rmark{transition:none;animation:tv-smark linear both;animation-timeline:view();animation-range:cover 14% cover 42%}
+@keyframes tv-smark{from{background-size:0 .42em}}
+.tv-roster{view-timeline-name:--tv-roster}
+.tv-loop{view-timeline-name:--tv-loop}
+[data-reveal]:not([data-shown]) :is(.tv-roster,.tv-loop) .tv-rdraw{stroke-dashoffset:0}
+:is(.tv-roster,.tv-loop) .tv-rdraw{transition:none;animation:tv-sdraw linear both}
+.tv-roster .tv-rdraw{animation-timeline:--tv-roster;animation-range:cover calc(26% + var(--k,0)*4%) cover calc(34% + var(--k,0)*4%)}
+[data-reveal]:not([data-shown]) .tv-roster .tv-rpop{opacity:1;scale:1}
+.tv-roster .tv-rpop{transition:none;animation:tv-spop linear both;animation-timeline:--tv-roster;animation-range:cover calc(44% + var(--k,0)*4%) cover calc(50% + var(--k,0)*4%)}
+@keyframes tv-spop{from{opacity:0;transform:scale(.8)}}
+.tv-loop .tv-rdraw{animation-timeline:--tv-loop;animation-range:cover 20% cover 48%}
+@keyframes tv-sdraw{from{stroke-dashoffset:1}}
+[data-reveal]:not([data-shown]) .tv-stamp{scale:1}
+.tv-stamp{animation:tv-stamp linear both;animation-timeline:view();animation-range:cover 10% cover 32%}
+@keyframes tv-stamp{0%{opacity:0;transform:scale(2) rotate(var(--sr,-16deg));animation-timing-function:cubic-bezier(.6,0,.9,.5)}55%{opacity:1}100%{opacity:1;transform:scale(1) rotate(0deg)}}
+.tv-wave{transform-origin:50% 100%;animation:tv-wave linear both;animation-timeline:view();animation-range:cover 0% cover 30%}
+@keyframes tv-wave{from{transform:scaleY(2.6)}}
+.tv-band{view-timeline-name:--tv-band}
+.tv-band .tv-marquee{animation:tv-marquee var(--dur,48s) linear infinite,tv-shift linear both;animation-timeline:auto,--tv-band}
+.tv-band .tv-marquee[data-dir=right]{animation-direction:reverse}
+.tv-band .tv-fade:hover>.tv-marquee,.tv-band:focus-within .tv-marquee{animation-play-state:paused,running}
+.tv-band[data-paused] .tv-marquee{animation-play-state:paused,running!important}
+@keyframes tv-shift{to{transform:translateX(-180px)}}
+}
+}
 `;
 
 /**

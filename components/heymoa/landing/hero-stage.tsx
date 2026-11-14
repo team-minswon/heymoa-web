@@ -758,7 +758,7 @@ export function HeroStage() {
       aria-labelledby={capId}
       className={cn(
         STAGE_WRAP,
-        "relative mt-6 max-lg:[@media(max-height:700px)]:mt-4 lg:mt-8 lg:[@media(max-height:890px)]:mt-3"
+        "tv-land relative mt-6 [--ts:0.94] [--ty:80px] max-lg:[@media(max-height:700px)]:mt-4 lg:mt-8 lg:[@media(max-height:890px)]:mt-3"
       )}
     >
       <figcaption id={capId} className="sr-only">
@@ -771,11 +771,11 @@ export function HeroStage() {
           여백만큼만 올라간다(제목 밑으로 파고들지 않게). */}
       <span
         aria-hidden
-        className="absolute -top-8 -left-8 hidden size-[240px] rounded-full bg-[var(--tv-butter)] lg:block lg:[@media(max-height:890px)]:-top-3"
+        className="tv-orb absolute -top-8 -left-8 hidden size-[240px] rounded-full bg-[var(--tv-butter)] [--os:1.3] [--ox:-40px] [--oy:170px] lg:block lg:[@media(max-height:890px)]:-top-3"
       />
       <span
         aria-hidden
-        className="absolute -right-4 -bottom-10 hidden size-[200px] rounded-full bg-[var(--tv-mint)] lg:block"
+        className="tv-orb absolute -right-4 -bottom-10 hidden size-[200px] rounded-full bg-[var(--tv-mint)] [--oe:1100px] [--os:1.4] [--ox:50px] [--oy:-230px] lg:block"
       />
 
       <div

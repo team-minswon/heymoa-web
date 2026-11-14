@@ -48,7 +48,7 @@ export function LandingFooter() {
         aria-hidden
         viewBox="0 0 1440 48"
         preserveAspectRatio="none"
-        className="-mb-px block h-10 w-full text-[var(--tv-lav)] lg:h-10"
+        className="tv-wave -mb-px block h-10 w-full text-[var(--tv-lav)] lg:h-10"
       >
         <path
           fill="currentColor"
