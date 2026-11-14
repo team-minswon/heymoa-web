@@ -27,6 +27,9 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `renewalChecking` 유료 공간의 갱신 결제 결과를 기다린다(RENEWAL_PENDING, 그동안 Pro). 해지 예약(CANCEL_SUBSCRIPTION)을 받고, 예약 뒤에는 같은 대기에 `cancelAtPeriodEnd=true`
  *   - `unpaid`   유료 공간의 갱신 결제가 확정 거절돼 구독이 끝났다(ENDED/UNPAID, 카드 지워짐)
  *   - `expired`  해지한 유료 구독의 기간이 끝났다(ENDED/EXPIRED, 카드 지워짐)
+ *   - `pastDue`  유료 공간의 갱신 결제가 거절돼 미납 유예 중이다(PAST_DUE, 카드 지워짐, 유예 끝까지 Pro, APP-1624). 카드를 다시
+ *     등록하면 열린 회차를 바로 청구해 승인되고, 해지하면 그 자리에서 끝난다. 결제 거절 알림이 한 건 있다
+ *   - `pastDueDecline` `pastDue` 와 같은데 다시 등록한 카드의 재청구도 거절된다(PAYMENT/DECLINED + CHANGE_CARD)
  *   - `salesPaused` 운영자가 새 판매를 멈췄다 — 유료 공간의 구독이 끝났고(ENDED/EXPIRED) 결제 화면은 보이지만(`enforced=true`)
  *     START_PURCHASE 가 없고, 한도 집행 대상이 아니라 사용량은 `enforced=false` 다
  *   - `recording` 이 공간에 아직 끝나지 않은 녹음이 있다(사용량 `recordingInProgress=true`)
@@ -61,6 +64,8 @@ export type BillingScenario =
   | "renewalChecking"
   | "unpaid"
   | "expired"
+  | "pastDue"
+  | "pastDueDecline"
   | "salesPaused"
   | "recording"
   | "payerLeft"
@@ -85,6 +90,8 @@ const SCENARIOS: BillingScenario[] = [
   "renewalChecking",
   "unpaid",
   "expired",
+  "pastDue",
+  "pastDueDecline",
   "salesPaused",
   "recording",
   "payerLeft",
@@ -164,6 +171,8 @@ type Workspace = {
   subscriptionVersion: number;
   /** 갱신 결제의 결과를 기다리는 중인가(RENEWAL_PENDING). */
   renewalPending?: boolean;
+  /** 갱신 결제가 거절돼 미납 유예 중인가(PAST_DUE). 그동안 `renewalPending` 지급으로 Pro 다. */
+  pastDue?: boolean;
   /** 끝난 구독(ENDED)의 까닭. */
   closedReason?: "REFUNDED" | "EXPIRED" | "UNPAID" | null;
   cancelAtPeriodEnd?: boolean;
@@ -218,6 +227,8 @@ const PREVIOUS_PERIOD = {
   end: "2026-11-11T00:00:00+09:00",
 };
 const COMPLETED_AT = "2026-11-11T10:00:00+09:00";
+/** 미납 유예의 끝 — 거절 확정 시각 + 3일(서버 기본 `billing.past-due-grace`). */
+const PAST_DUE_ENDS_AT = "2026-12-14T10:00:00+09:00";
 const PAID_WORKSPACE = "01K0000000006";
 const DELETED_WORKSPACE = "01K00000000ZZ";
 
@@ -458,6 +469,7 @@ function newAttempt(
 
 function subscriptionStatus(ws: Workspace) {
   if (ws.closedReason) return "ENDED";
+  if (ws.pastDue) return "PAST_DUE";
   return ws.paid ? "ACTIVE" : "FREE";
 }
 
@@ -500,6 +512,8 @@ function applyRenewal(ws: Workspace) {
     !ws.paid ||
     ws.renewalApplied ||
     (scenario !== "renewalChecking" &&
+      scenario !== "pastDue" &&
+      scenario !== "pastDueDecline" &&
       scenario !== "unpaid" &&
       scenario !== "expired" &&
       scenario !== "salesPaused" &&
@@ -515,6 +529,19 @@ function applyRenewal(ws: Workspace) {
   if (scenario === "payerLeft") {
     // 서버가 결제자 이탈에 하는 일: 카드를 지우고 종료를 예약한다. 구독은 기간 끝까지 ACTIVE 다.
     ws.cancelAtPeriodEnd = true;
+    ws.card = null;
+    ws.methodId = null;
+    ws.subscriptionVersion += 1;
+    return;
+  }
+  if (scenario === "pastDue" || scenario === "pastDueDecline") {
+    // 서버의 갱신 확정 거절: 회차는 열린 채(거절된 시도) 미납 유예로 두고 거절된 카드만 지운다.
+    const cycleId = nextId("0C");
+    const attempt = newAttempt(cycleId, 1, "FAILED");
+    attempt.errorCode = "CARD_DECLINED";
+    ws.pastDue = true;
+    ws.renewalPending = true;
+    ws.cycle = { cycleId, attempt };
     ws.card = null;
     ws.methodId = null;
     ws.subscriptionVersion += 1;
@@ -566,7 +593,11 @@ function workspaceBilling(workspaceId: string) {
   if (setup?.state === "CREATED")
     actions.push("CONTINUE_SETUP", "CANCEL_SETUP");
   else if (setup) actions.push("REFRESH_STATUS");
-  else if (attempt) {
+  else if (ws.pastDue) {
+    // 재청구 결과를 기다리는 동안은 상태 확인만, 아니면 카드 다시 등록과 그 자리 해지다(서버와 같다).
+    if (attempt?.status === "PROCESSING") actions.push("REFRESH_STATUS");
+    else actions.push("CHANGE_CARD", "CANCEL_SUBSCRIPTION");
+  } else if (attempt) {
     actions.push("REFRESH_STATUS");
     // 갱신 결과를 기다리는 동안에도 해지를 예약할 수 있다(이미 예약했으면 없다).
     if (ws.renewalPending && !cancel) actions.push("CANCEL_SUBSCRIPTION");
@@ -632,6 +663,7 @@ function workspaceBilling(workspaceId: string) {
         }
       : null,
     closedReason: status === "ENDED" ? (ws.closedReason ?? null) : null,
+    pastDueEndsAt: status === "PAST_DUE" ? PAST_DUE_ENDS_AT : null,
   };
 }
 
@@ -674,6 +706,21 @@ async function changeSubscription(
   const body = await commandBody(request);
   const replay = state.keys[`${workspaceId}:${body.requestKey}`];
   if (replay) return subscriptionState(workspaceId);
+  if (cancel && ws.pastDue && body.expectedVersion === ws.subscriptionVersion) {
+    // 미납 유예 중 해지는 예약이 아니라 그 자리 종료다(ENDED/EXPIRED).
+    ws.pastDue = false;
+    ws.renewalPending = false;
+    ws.paid = false;
+    ws.cycle = null;
+    ws.closedReason = "EXPIRED";
+    ws.currentPaymentId = null;
+    ws.subscriptionVersion += 1;
+    state.keys[`${workspaceId}:${body.requestKey}`] = {
+      setupId: "",
+      body: "cancel",
+    };
+    return subscriptionState(workspaceId);
+  }
   if (
     subscriptionStatus(ws) !== "ACTIVE" ||
     body.expectedVersion !== ws.subscriptionVersion ||
@@ -965,10 +1012,11 @@ function markPaid(ws: Workspace, attempt: Attempt) {
   ws.cycle = null;
 }
 
-/** 카드 변경. 카드 등록만 하고 청구하지 않는다 — 실패하면 기존 카드가 그대로다. */
+/** 카드 변경. 카드 등록만 하고 청구하지 않는다 — 실패하면 기존 카드가 그대로다. 미납 유예 중이면 열린 회차를 다시 청구한다. */
 function advanceReplace(setup: Setup, ws: Workspace): Phase {
   if (setup.polls <= 1)
     return phase("BILLING_KEY", "PROCESSING", "ISSUING", ["REFRESH_STATUS"], 2);
+  if (ws.pastDue || setup.origin) return advancePastDueCharge(setup, ws);
   if (ws.mySetupId === setup.setupId) {
     ws.mySetupId = null;
     if (setup.scenario !== "replaceFail") {
@@ -986,6 +1034,46 @@ function advanceReplace(setup: Setup, ws: Workspace): Phase {
       ["START_PURCHASE"],
       null
     );
+  return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
+}
+
+/** 미납 유예 중 등록한 카드로 열린 갱신 회차를 다시 청구한다(APP-1624). 승인되면 회차가 닫혀 완료로만 보인다(서버와 같다). */
+function advancePastDueCharge(setup: Setup, ws: Workspace): Phase {
+  const cycle = ws.cycle;
+  if (!setup.origin && cycle) {
+    ws.mySetupId = null;
+    ws.card = NEW_CARD;
+    ws.methodId = nextId("0M");
+    ws.methodVersion = (ws.methodVersion ?? 1) + 1;
+    setup.origin = setup.latest = newAttempt(
+      cycle.cycleId,
+      cycle.attempt.attemptNumber + 1,
+      "PROCESSING"
+    );
+    ws.cycle = { cycleId: cycle.cycleId, attempt: setup.origin };
+  }
+  const origin = setup.origin;
+  if (!origin) return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
+  // 제출 응답과 결과 화면의 첫 조회까지는 재청구를 확인 중이다.
+  if (setup.polls <= 3)
+    return phase("PAYMENT", "PROCESSING", "ISSUED", ["REFRESH_STATUS"], 2);
+  if (setup.scenario === "pastDueDecline" || origin.status === "FAILED") {
+    if (origin.status !== "FAILED") {
+      origin.status = "FAILED";
+      origin.errorCode = "CARD_DECLINED";
+      ws.card = null;
+      ws.methodId = null;
+    }
+    return phase("PAYMENT", "DECLINED", "ISSUED", ["CHANGE_CARD"], null);
+  }
+  if (origin.status !== "SUCCEEDED") {
+    origin.status = "SUCCEEDED";
+    ws.pastDue = false;
+    ws.renewalPending = false;
+    ws.cycle = null;
+    ws.currentPaymentId = origin.attemptId;
+    ws.subscriptionVersion += 1;
+  }
   return phase("COMPLETED", "COMPLETED", "ISSUED", [], null);
 }
 
@@ -1291,7 +1379,8 @@ export const billingHandlers = [
 ];
 
 /**
- * 시나리오 `unpaid` 에서는 「제품 팀」의 구독 종료 알림(APP-1565)을, `payerLeft` 에서는 자동 결제 중단 알림(APP-1588)을 알림 목록에
+ * 시나리오 `unpaid` 에서는 「제품 팀」의 구독 종료 알림(APP-1565)을, `payerLeft` 에서는 자동 결제 중단 알림(APP-1588)을,
+ * `pastDue`·`pastDueDecline` 에서는 결제 거절 알림(APP-1624)을 알림 목록에
  * 한 번 넣는다. 기본 목에서는 그 공간이 평소의 Pro 라 넣지 않는다. 알림 조회 목이 부른다.
  */
 const BILLING_NOTICES = {
@@ -1303,12 +1392,24 @@ const BILLING_NOTICES = {
     notificationId: "01K0000000091",
     type: "SUBSCRIPTION_BILLING_STOPPED",
   },
+  pastDue: {
+    notificationId: "01K0000000092",
+    type: "SUBSCRIPTION_PAYMENT_DECLINED",
+  },
 } as const;
 function ensureBillingNotice() {
   const scenario = currentScenario();
-  if (scenario !== "unpaid" && scenario !== "payerLeft") return;
+  const key =
+    scenario === "pastDueDecline"
+      ? "pastDue"
+      : scenario === "unpaid" ||
+          scenario === "payerLeft" ||
+          scenario === "pastDue"
+        ? scenario
+        : null;
+  if (!key) return;
   mockDb.pushNotification({
-    ...BILLING_NOTICES[scenario],
+    ...BILLING_NOTICES[key],
     readAt: null,
     createdAt: new Date().toISOString(),
     invitation: null,

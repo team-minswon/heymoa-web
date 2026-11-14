@@ -504,6 +504,77 @@ describe("요금제 화면", () => {
     expect(onOpenPayment).toHaveBeenCalledOnce();
   });
 
+  it("목 pastDue — 갱신 결제가 승인되지 않은 것과 유예 끝 시각을 알리고, ADMIN 은 카드 다시 등록 모달을 연다", async () => {
+    billingMock.setScenario("pastDue");
+    renderIn(<PlanTab workspaceId={PAID} />);
+    expect(
+      await screen.findByText(
+        "갱신 결제가 승인되지 않았습니다. 2026년 12월 14일 오전 10:00까지 카드를 다시 등록하면 Pro 구독이 이어지고, 등록하지 않으면 그때 구독이 종료됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("결제 필요")).toBeInTheDocument();
+    // 확인 중인 갱신이 아니다 — 갱신 확인 중 줄과 상태 확인 버튼이 없다
+    expect(screen.queryByText(/갱신 결제 결과를 확인하고/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "상태 다시 확인" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "카드 다시 등록" }));
+    expect(await screen.findByTitle("카드 등록")).toHaveAttribute(
+      "src",
+      `/billing/card-change/${PAID}`
+    );
+    expect(eventsOf("billing_card_change_started")).toEqual([
+      { workspace_id: PAID },
+    ]);
+  });
+
+  it("미납 유예의 멤버는 관리자가 등록해야 한다는 안내만 보고 버튼이 없다", async () => {
+    asMember();
+    serveBilling({
+      status: "PAST_DUE",
+      pastDueEndsAt: "2026-12-14T10:00:00+09:00",
+      entitlement: {
+        kind: "RENEWAL_PENDING",
+        period: null,
+        recordingAllowanceMinutes: null,
+        planCode: "PRO",
+      },
+      allowedActions: [],
+      latestAttemptStatus: "FAILED",
+    });
+    renderIn(<PlanTab workspaceId={FREE} />);
+    expect(
+      await screen.findByText(
+        "갱신 결제가 승인되지 않았습니다. 2026년 12월 14일 오전 10:00까지 관리자가 카드를 다시 등록하면 Pro 구독이 이어지고, 등록하지 않으면 그때 구독이 종료됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "카드 다시 등록" })).toBeNull();
+  });
+
+  it("미납 유예 중 다시 등록한 카드의 결제를 기다리는 동안은 확인 중 안내와 상태 확인만 있다", async () => {
+    serveBilling(
+      {
+        status: "PAST_DUE",
+        pastDueEndsAt: "2026-12-14T10:00:00+09:00",
+        entitlement: {
+          kind: "RENEWAL_PENDING",
+          period: null,
+          recordingAllowanceMinutes: null,
+          planCode: "PRO",
+        },
+        allowedActions: ["REFRESH_STATUS"],
+        latestAttemptStatus: "PROCESSING",
+      },
+      PAID
+    );
+    renderIn(<PlanTab workspaceId={PAID} />);
+    expect(
+      await screen.findByText("결제 결과를 확인하고 있습니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "상태 다시 확인" })
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "카드 다시 등록" })).toBeNull();
+  });
+
   it("멤버는 청구 상세를 받지 않아 종료 예정이면 일반 해지 예약 줄을 보고 결제 관리 버튼이 없다", async () => {
     asMember();
     const period = {
@@ -1427,6 +1498,32 @@ describe("등록 결과 — 상태별 화면", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it("미납 유예 중 다시 등록한 카드도 거절되면 결제 관리에서 다시 등록하게 한다", async () => {
+    serveSetup(
+      setupBody("PAYMENT", "DECLINED", {
+        purpose: "REPLACE",
+        setupStatus: "ISSUED",
+        allowedActions: ["CHANGE_CARD"],
+        latestAttempt: {
+          attemptId: "A2",
+          status: "FAILED",
+          errorCode: "CARD_DECLINED",
+        },
+      })
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(
+      await screen.findByText("결제가 승인되지 않았습니다")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "다시 변경" })).toHaveAttribute(
+      "href",
+      `/w/${FREE}?settings=payment`
+    );
+    expect(eventsOf("billing_card_change_resulted")).toEqual([
+      { workspace_id: FREE, result: "declined" },
+    ]);
+  });
+
   it("서버가 새 구매를 허용하지 않으면 거절 안내만 그린다", async () => {
     serveSetup(setupBody("PAYMENT", "DECLINED", { allowedActions: [] }));
     renderIn(<BillingSetupResultPage setupId="S1" />);
@@ -1491,6 +1588,54 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     expect(resultEvents()).toEqual([
       { workspace_id: FREE, provider: "FAKE", result: "completed" },
     ]);
+  });
+
+  it("목 pastDue — 미납 중 등록한 카드는 결제 확인 중을 거쳐 결제 완료로 끝나고 지금 결제되지 않았다고 하지 않는다", async () => {
+    billingMock.setScenario("pastDue");
+    const post = (path: string, body: unknown) =>
+      fetch(`http://localhost/v1/workspaces/${PAID}/billing/setups${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    // 공간 조회가 미납 유예를 한 번 적용한다
+    await fetch(`http://localhost/v1/workspaces/${PAID}/billing`);
+    const created = await post("", {
+      requestKey: "k",
+      purpose: "REPLACE",
+      expectedProductVersion: "TEST_MONTHLY_V1",
+      agreementVersion: "BILLING_TEST_V1",
+    });
+    const { setupId } = (await created.json()).data as { setupId: string };
+    const submitted = await post(`/${setupId}/card`, {
+      cardNumber: CARD_NUMBER,
+      expiryMonth: "12",
+      expiryYear: "39",
+      identity: "900101",
+      passwordPrefix: "12",
+    });
+    expect((await submitted.json()).data).toMatchObject({
+      stage: "PAYMENT",
+      status: "PROCESSING",
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderIn(<BillingSetupResultPage setupId={setupId} />);
+    expect(
+      await screen.findByText("결제를 확인하는 중입니다")
+    ).toBeInTheDocument();
+    for (let i = 0; i < 3; i += 1)
+      await act(() => vi.advanceTimersByTimeAsync(2100));
+    expect(
+      await screen.findByText("카드를 등록하고 결제했습니다")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/지금 결제되지 않았습니다/)).toBeNull();
+    const billing = await (
+      await fetch(`http://localhost/v1/workspaces/${PAID}/billing`)
+    ).json();
+    expect(billing.data).toMatchObject({
+      status: "ACTIVE",
+      pastDueEndsAt: null,
+    });
   });
 
   it("목 issueUnknown — 발급 결과 불명이면 결제가 없었다고 알리고 새로 시작하게 한다", async () => {
@@ -1844,6 +1989,22 @@ describe("카드 변경 문서(모달 안)", () => {
     fireEvent.click(submitButton());
     await waitFor(() => expect(events()).toContain("result"));
     expect(events()).not.toContain("changed");
+  });
+
+  it("목 pastDue — 미납 중 등록은 지금 결제된다고 알리고 그 동의를 받는다", async () => {
+    billingMock.setScenario("pastDue");
+    await renderFrame();
+    expect(
+      screen.getByText(
+        "등록하면 승인되지 않은 이번 구독 금액 24,900원이 바로 결제됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/지금 결제되지 않습니다/)).toBeNull();
+    expect(
+      screen.getByText(
+        "승인되지 않은 이번 구독 금액(24,900원)이 지금 이 카드로 결제되고, 다음 결제부터 매월 24,900원이 자동 결제되는 데 동의합니다."
+      )
+    ).toBeInTheDocument();
   });
 
   it("목 replaceFail — 거절이면 이 자리에 알리고, 다시 내면 새 등록으로 낸다", async () => {

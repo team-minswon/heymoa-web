@@ -70,6 +70,7 @@
     "salesPaused": "New subscriptions are not available right now.",
     "start": "Start {plan}",
     "continueSetup": "Continue card registration",
+    "reRegisterCard": "Register a card again",
     "viewResult": "View progress",
     "cancelSetup": "Cancel registration",
     "refresh": "Check status again",
@@ -97,7 +98,8 @@
     "compare": "Compare plans",
     "openPayment": "Manage payment",
     "badge": {
-      "cancelScheduled": "Cancellation scheduled"
+      "cancelScheduled": "Cancellation scheduled",
+      "pastDue": "Payment needed"
     },
     "line": {
       "free": "Record up to {allowance} every month.",
@@ -105,7 +107,9 @@
       "nextDate": "Next payment {date}",
       "cancelScheduled": "Active until {end}, then switches to Free.",
       "stoppedNoCardAdmin": "There's no card on file, so automatic payments are paused. You keep Pro until {end}. You can resume the subscription after adding a card.",
-      "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime. The result shows here within 24 hours at the latest."
+      "renewalPending": "Checking the renewal payment result. You keep Pro in the meantime. The result shows here within 24 hours at the latest.",
+      "pastDue": "The renewal payment wasn't approved. Register a card again by {end} to keep your Pro subscription. Otherwise the subscription ends then.",
+      "pastDueMember": "The renewal payment wasn't approved. If an admin registers a card again by {end}, the Pro subscription continues. Otherwise it ends then."
     },
     "closed": {
       "UNPAID": "The subscription ended because the payment wasn't approved. Register a card to start again.",
@@ -152,6 +156,9 @@
       "payerChanges": "Once you add a card, future charges go to your card and payment history is kept under your account.",
       "agreementLabel": "I agree that this workspace's subscription ({amount} per month) will be charged automatically to the new card from the next payment.",
       "agreementLabelEnding": "I agree that once the subscription is resumed, this workspace's subscription ({amount} per month) will be charged automatically to this card from the next payment.",
+      "agreementLabelPastDue": "I agree that the unapproved subscription amount ({amount}) will be charged to this card now, and {amount} per month automatically from the next payment.",
+      "agreementLabelPastDueEnding": "I agree that the unapproved subscription amount ({amount}) will be charged to this card now.",
+      "pastDueCharge": "Once registered, the unapproved subscription amount of {amount} is charged right away.",
       "submit": "Register card",
       "unavailable": "You can't change the card right now.",
       "askAdmin": "Only admins can change the card. Please ask an admin.",
@@ -298,6 +305,10 @@
         "body": "You weren't charged now. The new card will be used from the next payment.",
         "goPlans": "Go to payment"
       },
+      "completedPastDue": {
+        "title": "Card registered and payment made",
+        "body": "The subscription amount that wasn't approved has been charged to the new card. Your Pro subscription continues, and future payments use this card."
+      },
       "completedEnding": {
         "title": "Card added",
         "body": "You weren't charged. Your subscription is still set to end. Resume it in billing settings and the next charge will go to this card."
@@ -352,6 +363,7 @@
       "title": "Cancel your subscription?",
       "until": "You can keep using Pro until {end}; after that the workspace moves to Free.",
       "pending": "If the payment being checked is approved, you keep Pro until the end of that period and won't be charged after that. If it isn't approved, the subscription ends right away.",
+      "pastDue": "The subscription ends right away and switches to Free. The unapproved subscription amount won't be charged.",
       "noCharge": "You won't be charged the next payment ({amount}) or after.",
       "undo": "You can resume before {end}, as long as a card is on file.",
       "confirm": "Cancel subscription",
@@ -376,7 +388,8 @@
     "methodTitle": "Payment method",
     "empty": "No payment method yet. A card is added when you start a plan.",
     "openPlans": "View plans",
-    "cancelHint": "If you cancel, you can keep using it until {end}."
+    "cancelHint": "If you cancel, you can keep using it until {end}.",
+    "pastDueHint": "The renewal payment wasn't approved. The subscription ends at {end} unless a card is registered."
   },
   "paymentStatus": {
     "SUCCEEDED": "Paid",

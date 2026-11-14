@@ -194,12 +194,18 @@ export function CheckoutForm({
   const chargeAmount = replace
     ? (billing.detail?.nextChargeAmountKrw ?? product.amountKrw)
     : product.amountKrw;
+  // 미납 유예 중 카드 등록은 밀린 회차를 바로 청구한다(APP-1624) — 동의 문장도 지금 결제된다고 말한다.
+  const pastDue = replace && billing.status === "PAST_DUE";
   const agreementLabel = t(
     !replace
       ? "agreementLabel"
-      : billing.cancelAtPeriodEnd
-        ? "replace.agreementLabelEnding"
-        : "replace.agreementLabel",
+      : pastDue
+        ? billing.cancelAtPeriodEnd
+          ? "replace.agreementLabelPastDueEnding"
+          : "replace.agreementLabelPastDue"
+        : billing.cancelAtPeriodEnd
+          ? "replace.agreementLabelEnding"
+          : "replace.agreementLabel",
     { amount: format.money(chargeAmount) }
   );
   const errors = cardErrors(card, new Date());
@@ -530,7 +536,9 @@ function ReplaceSummary({
   const nextCharge =
     billing.status === "ACTIVE" && !billing.cancelAtPeriodEnd ? period : null;
   const points = [
-    t(register ? "replace.register.noCharge" : "replace.noCharge"),
+    billing.status === "PAST_DUE"
+      ? t("replace.pastDueCharge", { amount: format.money(amount) })
+      : t(register ? "replace.register.noCharge" : "replace.noCharge"),
     register ? null : t("replace.keepOnFail"),
     billing.detail?.methodPayerIsMe === true ? null : t("replace.payerChanges"),
   ].filter((point): point is string => Boolean(point));

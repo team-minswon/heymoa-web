@@ -312,6 +312,36 @@ describe("결제 수단·구독", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("미납 유예면 카드 등록과 유예 끝을 보이고, 해지는 그 자리 종료라고 적은 뒤 끝낸다(APP-1624)", async () => {
+    billingMock.setScenario("pastDue");
+    const area = await openPaid();
+    expect(
+      within(area).getByText(
+        "갱신 결제가 승인되지 않았습니다. 2026년 12월 14일 오전 10:00까지 카드를 등록하지 않으면 구독이 종료됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(within(area).queryByText("다음 결제 예정일")).toBeNull();
+    expect(
+      within(methodArea()).getByRole("button", { name: "카드 등록" })
+    ).toBeInTheDocument();
+    fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(
+        "지금 바로 구독이 종료되고 Free로 바뀝니다. 승인되지 않은 이번 구독 금액은 청구되지 않습니다."
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "해지" }));
+    expect(
+      await screen.findByText(
+        "등록된 결제 수단이 없습니다. 요금제를 시작하면 카드가 등록됩니다."
+      )
+    ).toBeInTheDocument();
+    expect(posted(`/v1/workspaces/${PAID}/billing/subscription/cancel`)).toBe(
+      1
+    );
+  });
+
   it("재개는 지금 결제되지 않는다고 적고, 관리자가 아니어서 403 이면 그 이유를 안내한다", async () => {
     const area = await openPaid();
     fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));

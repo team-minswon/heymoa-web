@@ -9731,6 +9731,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                      - type: SUBSCRIPTION_PAYMENT_DECLINED
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
                       marketingEmail:
                         agreed: false
                         changedAt: '2026-10-20T01:00:00Z'
@@ -9839,6 +9850,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                      - type: SUBSCRIPTION_PAYMENT_DECLINED
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
                       marketingEmail:
                         agreed: false
                         changedAt: '2026-10-20T01:00:00Z'
@@ -9951,6 +9973,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                      - type: SUBSCRIPTION_PAYMENT_DECLINED
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
                       marketingEmail:
                         agreed: true
                         changedAt: '2026-10-25T13:30:00Z'
@@ -10063,6 +10096,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                      - type: SUBSCRIPTION_PAYMENT_DECLINED
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
                       marketingEmail:
                         agreed: false
                         changedAt: '2026-10-20T01:00:00Z'
@@ -10719,6 +10763,17 @@ paths:
                           provided: false
                           enabled: false
                           effective: false
+                      - type: SUBSCRIPTION_PAYMENT_DECLINED
+                        required: true
+                        channels:
+                        - channel: WEB
+                          provided: true
+                          enabled: true
+                          effective: true
+                        - channel: EMAIL
+                          provided: true
+                          enabled: true
+                          effective: true
                       marketingEmail:
                         agreed: true
                         changedAt: '2026-10-25T13:30:00Z'
@@ -10834,6 +10889,7 @@ paths:
                         methodId: 0HZX2K7M9Q4B5
                         nextChargeAmountKrw: 24900
                       closedReason: null
+                      pastDueEndsAt: null
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -11487,7 +11543,7 @@ paths:
       tags:
       - Billing
       summary: 다음 결제 해지 예약
-      description: ADMIN 이 기간 안의 ACTIVE 구독을 해지 예약한다. PG 를 부르지 않고 기간 끝(currentPeriod.end)에 청구 없이 끝난다. 갱신 결과를 기다리는 동안에도 받는다 — 확인 중인 갱신이 승인되면 그 기간 끝에, 거절되면 그 자리(UNPAID)에서 끝난다. 같은 requestKey 재전송은 다시 적용하지 않고 지금 상태를 돌려주며, expectedVersion 이 다르면 409 BILLING_STATE_CHANGED.
+      description: ADMIN 이 기간 안의 ACTIVE 구독을 해지 예약한다. PG 를 부르지 않고 기간 끝(currentPeriod.end)에 청구 없이 끝난다. 갱신 결과를 기다리는 동안에도 받는다 — 확인 중인 갱신이 승인되면 그 기간 끝에 끝나고, 거절되면 미납 유예(PAST_DUE)가 된다. 미납 유예 중이면 예약이 아니라 그 자리에서 끝난다(ENDED/EXPIRED, 재청구 결과를 기다리는 중이면 409 BILLING_IN_PROGRESS). 같은 requestKey 재전송은 다시 적용하지 않고 지금 상태를 돌려주며, expectedVersion 이 다르면 409 BILLING_STATE_CHANGED.
       operationId: cancelBillingSubscription
       parameters:
       - name: workspaceId
@@ -17512,6 +17568,7 @@ components:
                     - INQUIRY_ANSWERED
                     - SUBSCRIPTION_ENDED_UNPAID
                     - SUBSCRIPTION_BILLING_STOPPED
+                    - SUBSCRIPTION_PAYMENT_DECLINED
                   payload:
                     type: object
                     properties:
@@ -21461,6 +21518,7 @@ components:
                     - INQUIRY_ANSWERED
                     - SUBSCRIPTION_ENDED_UNPAID
                     - SUBSCRIPTION_BILLING_STOPPED
+                    - SUBSCRIPTION_PAYMENT_DECLINED
                   required:
                     type: boolean
                     description: 필수 알림. 설정과 관계없이 항상 받고 바꿀 수 없다(잠금)
@@ -21585,6 +21643,7 @@ components:
           - INQUIRY_ANSWERED
           - SUBSCRIPTION_ENDED_UNPAID
           - SUBSCRIPTION_BILLING_STOPPED
+          - SUBSCRIPTION_PAYMENT_DECLINED
         enabled:
           type: boolean
           description: 받을지 여부
@@ -21622,6 +21681,7 @@ components:
               - INQUIRY_ANSWERED
               - SUBSCRIPTION_ENDED_UNPAID
               - SUBSCRIPTION_BILLING_STOPPED
+              - SUBSCRIPTION_PAYMENT_DECLINED
             email:
               type: string
               description: 계정 이메일의 일부를 가린 값
@@ -22497,6 +22557,7 @@ components:
           - closedReason
           - product
           - currentPeriod
+          - pastDueEndsAt
           - entitlement
           - mySetupId
           - latestAttemptStatus
@@ -22924,6 +22985,7 @@ components:
               enum:
               - FREE
               - ACTIVE
+              - PAST_DUE
               - ENDED
             workspaceId:
               type: string
@@ -22940,6 +23002,11 @@ components:
               - REFUNDED
               - EXPIRED
               - UNPAID
+            pastDueEndsAt:
+              type: string
+              description: 미납 유예의 끝. 갱신 결제가 거절돼 PAST_DUE 일 때만 있고, 이때까지 카드를 다시 등록하면 구독이 이어진다
+              nullable: true
+              format: date-time
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -23317,6 +23384,7 @@ components:
               enum:
               - FREE
               - ACTIVE
+              - PAST_DUE
               - ENDED
           description: 성공 응답 데이터
           nullable: false

@@ -188,6 +188,9 @@ export function describeNotification(
   if (notification.type === "SUBSCRIPTION_BILLING_STOPPED") {
     return describeBilling(notification, actions, t, "billingStopped");
   }
+  if (notification.type === "SUBSCRIPTION_PAYMENT_DECLINED") {
+    return describeBilling(notification, actions, t, "paymentDeclined");
+  }
   return {
     title: t("generic"),
     workspaceName: notification.payload?.workspaceName ?? null,
@@ -362,14 +365,14 @@ function describeInquiryAnswered(
 }
 
 /**
- * 결제 알림 — 갱신 결제 미승인으로 Pro 구독 종료(APP-1565)와 결제자가 빠져 자동 결제 중단(APP-1588). 둘 다 필수 알림이라
- * 설정에서 끌 수 없고, 누르면 그 워크스페이스의 요금제 탭으로 간다.
+ * 결제 알림 — 갱신 결제 미승인으로 Pro 구독 종료(APP-1565), 결제자가 빠져 자동 결제 중단(APP-1588), 갱신 결제 거절로 미납 유예
+ * 시작(APP-1624). 모두 필수 알림이라 설정에서 끌 수 없고, 누르면 그 워크스페이스의 요금제 탭으로 간다.
  */
 function describeBilling(
   notification: NotificationItem,
   actions: RowActions,
   t: RowTranslator,
-  kind: "subscriptionEnded" | "billingStopped"
+  kind: "subscriptionEnded" | "billingStopped" | "paymentDeclined"
 ): NotificationRowView {
   const payload = notification.payload;
   const workspaceId =

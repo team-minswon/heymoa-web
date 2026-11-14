@@ -805,6 +805,45 @@ describe("구독 종료 행", () => {
     );
     await waitFor(() => expect(requests).toContain("PUT read S2"));
   });
+
+  it("갱신 결제 거절은 기한까지 카드를 다시 등록하라고 그리고, 누르면 그 공간의 요금제 탭으로 간다(APP-1624)", async () => {
+    store.items = [
+      {
+        notificationId: "S3",
+        type: "SUBSCRIPTION_PAYMENT_DECLINED",
+        readAt: null,
+        createdAt: at(1),
+        invitation: null,
+        payload: {
+          workspaceId: "WS1",
+          workspaceName: "제품 팀",
+          invitationId: null,
+          inviterUserId: null,
+          noteId: null,
+          noteTitle: null,
+          autoEnded: null,
+          pausedBusinessDays: null,
+          feedbackId: null,
+        },
+      },
+    ];
+    renderCenter();
+    const dialog = await openModal();
+    expect(
+      await within(dialog).findByText(
+        "기한까지 카드를 다시 등록하면 Pro 구독이 이어집니다. 기한은 요금제에서 확인할 수 있습니다."
+      )
+    ).toBeVisible();
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "제품 팀의 갱신 결제가 승인되지 않았습니다",
+      })
+    );
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/w/WS1?settings=billing")
+    );
+    await waitFor(() => expect(requests).toContain("PUT read S3"));
+  });
 });
 
 function Viewer({ noteId, displayed }: { noteId: string; displayed: boolean }) {

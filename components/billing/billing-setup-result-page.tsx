@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   BillingNotice,
@@ -111,6 +111,11 @@ function SetupResult({ setupId }: { setupId: string }) {
   const view = setup ? setupViewOf(setup) : null;
   const workspaceId = setup?.workspaceId ?? null;
   const provider = setup?.provider ?? null;
+  // 카드 변경이 결제 단계를 지났다 — 미납 유예 중 등록이라 밀린 회차를 청구했다(APP-1624). 승인되면 서버가 회차를 닫아
+  // 완료 응답에는 결제 흔적이 없어서, 이 화면이 본 단계로 기억한다.
+  const [charged, setCharged] = useState(false);
+  if (!charged && setup?.purpose === "REPLACE" && setup.stage === "PAYMENT")
+    setCharged(true);
 
   const cancel = useCancelBillingSetup();
   const refreshSetup = () =>
@@ -204,6 +209,7 @@ function SetupResult({ setupId }: { setupId: string }) {
         view={view}
         setup={setup}
         workspaceId={workspaceId}
+        charged={charged}
         busy={cancel.isPending}
         onAction={clicked}
         onCancel={async () => {
@@ -254,6 +260,7 @@ function ViewBody({
   view,
   setup,
   workspaceId,
+  charged,
   busy,
   onAction,
   onCancel,
@@ -261,6 +268,8 @@ function ViewBody({
   view: SetupView;
   setup: SetupData;
   workspaceId: string | null;
+  /** 카드 변경이 밀린 회차를 청구했다(미납 유예). */
+  charged: boolean;
   busy: boolean;
   onAction: (action: SetupAction) => void;
   onCancel: () => void;
@@ -367,7 +376,10 @@ function ViewBody({
               {t("declined.code", { code })}
             </p>
           ) : null}
-          {restartLink && setup.allowedActions.includes("START_PURCHASE") ? (
+          {restartLink &&
+          setup.allowedActions.includes(
+            replace ? "CHANGE_CARD" : "START_PURCHASE"
+          ) ? (
             <div className="mt-3">{restartLink}</div>
           ) : null}
         </BillingNotice>
@@ -397,9 +409,19 @@ function ViewBody({
       return replace ? (
         card(
           t(
-            ending ? "replace.completedEnding.title" : "replace.completed.title"
+            charged
+              ? "replace.completedPastDue.title"
+              : ending
+                ? "replace.completedEnding.title"
+                : "replace.completed.title"
           ),
-          t(ending ? "replace.completedEnding.body" : "replace.completed.body"),
+          t(
+            charged
+              ? "replace.completedPastDue.body"
+              : ending
+                ? "replace.completedEnding.body"
+                : "replace.completed.body"
+          ),
           workspaceId ? (
             <LinkButton
               href={`/w/${workspaceId}?settings=payment`}

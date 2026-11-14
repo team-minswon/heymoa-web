@@ -43,10 +43,13 @@ import { cn } from "@/lib/utils";
 type Billing = WorkspaceBillingResponseData;
 type Dialog = "cancel" | "resume" | "delete" | null;
 
-/** 관리할 구독이 있는가 — 유료이거나, 끝났어도 지울 카드가 남았다. 상세(ADMIN)가 있을 때만이다. */
+/** 관리할 구독이 있는가 — 유료(미납 유예 포함)이거나, 끝났어도 지울 카드가 남았다. 상세(ADMIN)가 있을 때만이다. */
 export function hasSubscriptionToManage(billing: Billing) {
   return Boolean(
-    billing.detail && (billing.status === "ACTIVE" || billing.detail.methodId)
+    billing.detail &&
+    (billing.status === "ACTIVE" ||
+      billing.status === "PAST_DUE" ||
+      billing.detail.methodId)
   );
 }
 
@@ -115,9 +118,13 @@ export function SubscriptionManagement({
     if (outcome !== "failed") setDialog(null);
   };
   const busy = commands.pending;
-  const subscribed = billing.status === "ACTIVE";
+  // 미납 유예(APP-1624)는 거절된 카드가 지워진 채 유예 끝까지 Pro 다. 해지하면 그 자리에서 끝난다.
+  const pastDueEnd =
+    billing.status === "PAST_DUE" ? billing.pastDueEndsAt : null;
+  const subscribed = billing.status === "ACTIVE" || Boolean(pastDueEnd);
   // 갱신 결제 결과를 기다리는 동안은 기간 끝이 이미 지났다 — 끝나는 날을 말하지 않고, 결과에 따라 정해진다고 말한다.
-  const renewalPending = billing.entitlement?.kind === "RENEWAL_PENDING";
+  const renewalPending =
+    billing.entitlement?.kind === "RENEWAL_PENDING" && !pastDueEnd;
   const live = billing.status === "ACTIVE" && !billing.cancelAtPeriodEnd;
   // 대기 중의 「다음 결제」는 지금 확인하고 있는 그 결제다. 지난 날짜를 다음 결제일로 보이지 않는다.
   const next = !live
@@ -265,9 +272,13 @@ export function SubscriptionManagement({
                           t("cancelScheduled", {
                             end: format.dateTime(period.end),
                           })
-                    : period && !renewalPending
-                      ? t("cancelHint", { end: format.date(period.end) })
-                      : null}
+                    : pastDueEnd
+                      ? t("pastDueHint", {
+                          end: format.dateTime(pastDueEnd),
+                        })
+                      : period && !renewalPending
+                        ? t("cancelHint", { end: format.date(period.end) })
+                        : null}
                 </p>
                 {canResume ? (
                   <Button
@@ -307,21 +318,25 @@ export function SubscriptionManagement({
         <NoticeLine notice={commands.notice} billing={billing} />
       ) : null}
 
-      {renewalPending || (period && amount) ? (
+      {pastDueEnd || renewalPending || (period && amount) ? (
         <Confirm
           open={dialog === "cancel"}
           onOpenChange={(open) => !busy && setDialog(open ? "cancel" : null)}
           title={t("cancelDialog.title")}
           lines={
-            renewalPending || !period || !amount
-              ? [t("cancelDialog.pending")]
-              : [
-                  t("cancelDialog.until", {
-                    end: format.dateTime(period.end),
-                  }),
-                  t("cancelDialog.noCharge", { amount: nextAmount ?? amount }),
-                  t("cancelDialog.undo", { end: format.date(period.end) }),
-                ]
+            pastDueEnd
+              ? [t("cancelDialog.pastDue")]
+              : renewalPending || !period || !amount
+                ? [t("cancelDialog.pending")]
+                : [
+                    t("cancelDialog.until", {
+                      end: format.dateTime(period.end),
+                    }),
+                    t("cancelDialog.noCharge", {
+                      amount: nextAmount ?? amount,
+                    }),
+                    t("cancelDialog.undo", { end: format.date(period.end) }),
+                  ]
           }
           cancelLabel={t("cancelDialog.keep")}
           confirmLabel={t("cancelDialog.confirm")}

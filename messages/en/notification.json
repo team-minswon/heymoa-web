@@ -69,6 +69,12 @@
       "titleUnnamed": "Auto-renewal is paused",
       "detail": "The person who added the payment card is no longer an admin of this workspace, so auto-renewal is paused. To keep using Pro, add a card and resume the subscription.",
       "view": "Open payment →"
+    },
+    "paymentDeclined": {
+      "title": "The renewal payment for <b>{workspace}</b> wasn't approved",
+      "titleUnnamed": "The renewal payment wasn't approved",
+      "detail": "Register a card again before the deadline to keep your Pro subscription. You can find the deadline on the plan page.",
+      "view": "View plan →"
     }
   },
   "unsubscribe": {

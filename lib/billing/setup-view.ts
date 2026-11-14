@@ -110,7 +110,8 @@ export function cardChangeResultOfView(
   view: SetupView
 ): BillingCardChangeResult | null {
   if (view === "completed") return "completed";
-  if (view === "cardActionRequired") return "declined";
+  // 미납 유예 중 등록한 카드의 재청구 거절(APP-1624)도 거절이다.
+  if (view === "cardActionRequired" || view === "declined") return "declined";
   if (view === "paymentUnknown" || view === "issueUnknown") return "unknown";
   return null;
 }

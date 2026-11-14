@@ -384,6 +384,15 @@ describe("invitation and notification handlers", () => {
     expect(notice.type).toBe("SUBSCRIPTION_BILLING_STOPPED");
     expect(notice.payload.workspaceName).toBe("제품 팀");
   });
+
+  it("puts the payment-declined notice first only in the pastDue billing scenario", async () => {
+    billingMock.setScenario("pastDue");
+    const notice = (
+      await (await fetch("http://localhost/v1/notifications?schema=2")).json()
+    ).data.notifications[0];
+    expect(notice.type).toBe("SUBSCRIPTION_PAYMENT_DECLINED");
+    expect(notice.payload.workspaceId).toBe("01K0000000006");
+  });
 });
 
 describe("workspace member management handlers", () => {

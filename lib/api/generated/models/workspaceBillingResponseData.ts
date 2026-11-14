@@ -72,4 +72,9 @@ export type WorkspaceBillingResponseData = {
    * @nullable
    */
   closedReason: WorkspaceBillingResponseDataClosedReason;
+  /**
+   * 미납 유예의 끝. 갱신 결제가 거절돼 PAST_DUE 일 때만 있고, 이때까지 카드를 다시 등록하면 구독이 이어진다
+   * @nullable
+   */
+  pastDueEndsAt: string | null;
 };

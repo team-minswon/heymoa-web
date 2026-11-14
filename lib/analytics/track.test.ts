@@ -152,7 +152,8 @@ describe("알림 사건 타입", () => {
         | "ANALYSIS_READY"
         | "INQUIRY_ANSWERED"
         | "SUBSCRIPTION_ENDED_UNPAID"
-        | "SUBSCRIPTION_BILLING_STOPPED";
+        | "SUBSCRIPTION_BILLING_STOPPED"
+        | "SUBSCRIPTION_PAYMENT_DECLINED";
       was_unread: boolean;
     }>();
     expectTypeOf<Props<"notifications_all_read_clicked">>().toEqualTypeOf<{

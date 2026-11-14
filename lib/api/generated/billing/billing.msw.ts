@@ -81,6 +81,7 @@ export const getGetWorkspaceBillingResponseMock =
         nextChargeAmountKrw: 24900,
       },
       closedReason: null,
+      pastDueEndsAt: null,
     },
     error: null,
   });

@@ -146,6 +146,11 @@ describe("NotificationSettings", () => {
                 required: true,
                 channels,
               },
+              {
+                type: "SUBSCRIPTION_PAYMENT_DECLINED",
+                required: true,
+                channels,
+              },
               { type: "ANALYSIS_READY", required: false, channels },
             ],
           },

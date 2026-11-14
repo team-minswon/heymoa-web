@@ -184,14 +184,24 @@ function CurrentPlan({
 
   const cancelScheduled =
     billing.cancelAtPeriodEnd && billing.status === "ACTIVE";
-  const badge = cancelScheduled ? t("badge.cancelScheduled") : null;
+  // 갱신 결제가 거절돼 미납 유예 중(APP-1624). 유예 끝까지 Pro 이고, 그때까지 카드를 다시 등록하면 이어진다.
+  const pastDueEnd =
+    billing.status === "PAST_DUE" ? billing.pastDueEndsAt : null;
+  const badge = pastDueEnd
+    ? t("badge.pastDue")
+    : cancelScheduled
+      ? t("badge.cancelScheduled")
+      : null;
   // 결제자가 나가거나 강등돼 카드가 지워지고 종료가 예약된 구독. 결제 관리 탭의 `stoppedNoCard` 와 같은 상황이다.
   // 카드 유무는 ADMIN 에게만 오는 `detail` 로만 알 수 있다 — 멤버에게는 일반 해지 예약 줄을 보인다.
   const stoppedNoCard = isAdmin && cancelScheduled && !billing.detail?.methodId;
 
-  // RENEWAL_PENDING 은 갱신 결제의 결과를 기다리는 동안의 Pro 다.
-  const line =
-    kind === "RENEWAL_PENDING"
+  // RENEWAL_PENDING 은 갱신 결제의 결과를 기다리는 동안의 Pro 다. 미납 유예도 같은 지급이라 먼저 가른다.
+  const line = pastDueEnd
+    ? t(isAdmin ? "line.pastDue" : "line.pastDueMember", {
+        end: format.dateTime(pastDueEnd).replaceAll(" ", "\u00a0"),
+      })
+    : kind === "RENEWAL_PENDING"
       ? t("line.renewalPending")
       : cancelScheduled && period
         ? t(
@@ -497,12 +507,15 @@ function Attention({
   const cancel = useCancelBillingSetup();
   const [cardChange, setCardChange] = useState(false);
   const actions = billing.allowedActions;
-  // 카드를 기다리는 내 등록: 구독 중(ACTIVE)이면 카드 변경이고, 아니면 첫 구독이다.
-  const replacing = billing.status === "ACTIVE";
+  // 카드를 기다리는 내 등록: 구독 중(ACTIVE·미납 유예)이면 카드 변경이고, 아니면 첫 구독이다.
+  const pastDue = billing.status === "PAST_DUE";
+  const replacing = billing.status === "ACTIVE" || pastDue;
   const detail = billing.detail;
   // 갱신 결과를 기다리는 동안(RENEWAL_PENDING)은 현재 요금제 줄이 이미 알리고 사용자가 할 일이 없다 —
   // 「다시 결제하지 마세요」 안내와 「상태 다시 확인」 버튼은 직접 구매한 사람에게만 보인다
-  const renewalWait = billing.entitlement?.kind === "RENEWAL_PENDING";
+  // 미납 유예 중 카드를 다시 등록한 재청구는 사용자가 연 결제라 확인 중 안내를 보인다.
+  const renewalWait =
+    billing.entitlement?.kind === "RENEWAL_PENDING" && !pastDue;
   const checking =
     !renewalWait &&
     (billing.latestAttemptStatus === "PENDING" ||
@@ -609,8 +622,22 @@ function Attention({
     ) : null,
   ].filter(Boolean);
 
+  const continuing =
+    Boolean(billing.mySetupId) && actions.includes("CONTINUE_SETUP");
   const buttons = isAdmin
     ? [
+        // 미납 유예 중 카드 다시 등록(APP-1624). 등록하면 서버가 밀린 회차를 바로 청구한다. 이어갈 등록이 있으면 그 버튼이 대신한다.
+        pastDue && actions.includes("CHANGE_CARD") && !continuing ? (
+          <Button
+            key="reRegister"
+            onClick={() => {
+              billingEvents.cardChangeStarted(workspaceId);
+              setCardChange(true);
+            }}
+          >
+            {t("reRegisterCard")}
+          </Button>
+        ) : null,
         // 카드를 기다리는 등록을 잇는다(APP-1600) — 카드 변경은 모달, 첫 구독은 결제 페이지. 둘 다 그 등록에 카드를 낸다.
         billing.mySetupId && actions.includes("CONTINUE_SETUP") ? (
           <Button
