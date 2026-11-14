@@ -1381,6 +1381,33 @@ describe("등록 결과 — 상태별 화면", () => {
     ).toHaveAttribute("href", `/w/${FREE}`);
   });
 
+  it("조회도 망취소도 거래 없음으로 닫힌 첫 구매는 카드사 거절이 아니라 처리되지 않았다고 알린다", async () => {
+    serveSetup(
+      setupBody("PAYMENT", "DECLINED", {
+        allowedActions: ["START_PURCHASE"],
+        latestAttempt: {
+          attemptId: "A1",
+          status: "FAILED",
+          errorCode: "NET_CANCEL_NOT_FOUND",
+        },
+      })
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(
+      await screen.findByText("결제가 처리되지 않았습니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "결제 요청이 결제 대행사에서 처리되지 않았습니다. 요금은 청구되지 않았습니다. 다시 시도해 주세요."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/카드사에서 결제를 거절/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "새로 시작" })).toHaveAttribute(
+      "href",
+      `/billing/checkout/${FREE}`
+    );
+  });
+
   it("확정 거절은 같은 카드로 다시 결제하지 않고 카드 등록부터 새로 시작하게 한다", async () => {
     serveSetup(
       setupBody("PAYMENT", "DECLINED", {

@@ -88,6 +88,12 @@ const POLLING = new Set<SetupView>([
   "accessProcessing",
   "refundProcessing",
 ]);
+/**
+ * 서버가 「조회도 망취소도 거래 없음」으로 닫은 첫 구매의 코드(APP-1600). 카드사 거절이 아니라 결제 요청이 처리되지 않은 것이라
+ * 거절 화면에 「카드사에서 거절」 대신 「처리되지 않았습니다」를 보인다.
+ */
+export const NOT_PROCESSED_CODE = "NET_CANCEL_NOT_FOUND";
+
 export const isPollingView = (view: SetupView) => POLLING.has(view);
 
 /** 분석 이벤트로 낼 최종 상태. 진행 중이거나 사람이 움직여야 하는 상태는 null. */

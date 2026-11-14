@@ -255,6 +255,10 @@
       "body": "Your card issuer declined the payment. Check your card or try again with a different card.",
       "code": "If you contact us, share this code: {code}"
     },
+    "notProcessed": {
+      "title": "The payment wasn't processed",
+      "body": "The payment provider didn't process the payment request. You have not been charged. Please try again."
+    },
     "accessProcessing": {
       "title": "Payment confirmed",
       "body": "We're applying your access. You don't need to pay again."
@@ -409,6 +413,7 @@
     },
     "errorCode": "If you contact us, share this code: {code}",
     "declined": "Your card issuer didn't approve the payment.",
+    "notProcessed": "The payment wasn't processed. You have not been charged.",
     "then": "At the time",
     "now": "Now",
     "thenPaid": "Paid",

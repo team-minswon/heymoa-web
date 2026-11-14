@@ -18,6 +18,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  * **재현 시나리오.** 등록을 열 때 `localStorage.mockBilling` 을 읽는다(없으면 `ok`).
  *   - `decline`  첫 구매 결제 확정 거절 → 카드가 지워지고 카드 등록부터 새로 시작(START_PURCHASE)
  *   - `unknown`  결제 결과 확인 지연(UNKNOWN)에서 멈춘다 — 새 결제 버튼이 없다
+ *   - `notProcessed` 첫 구매가 「조회도 망취소도 거래 없음」으로 닫힌다(FAILED `NET_CANCEL_NOT_FOUND`) — 카드사 거절이 아니라 처리되지 않음
  *   - `stuck`    카드 등록 확인 중에서 멈춘다
  *   - `lost`     첫 조회부터 ACCESS_LOST(관리자 권한 상실)
  *   - `teamBusy` 다른 ADMIN 의 진행 중 구매가 있다(구매 시작 409 `BILLING_IN_PROGRESS`)
@@ -50,6 +51,7 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
 export type BillingScenario =
   | "ok"
   | "decline"
+  | "notProcessed"
   | "unknown"
   | "stuck"
   | "lost"
@@ -73,6 +75,7 @@ export type BillingScenario =
 
 const SCENARIOS: BillingScenario[] = [
   "decline",
+  "notProcessed",
   "unknown",
   "stuck",
   "lost",
@@ -912,10 +915,13 @@ function advance(setup: Setup): Phase {
     origin.status = "PROCESSING";
     return phase("PAYMENT", "PROCESSING", "ISSUED", ["REFRESH_STATUS"], 2);
   }
-  if (setup.scenario === "decline") {
+  if (setup.scenario === "decline" || setup.scenario === "notProcessed") {
     // 확정 거절은 그 자리에서 끝난다 — 회차를 닫고 카드를 지운다. 다시 쓰려면 카드 등록부터 새로 한다.
     origin.status = "FAILED";
-    origin.errorCode = "CARD_DECLINED";
+    origin.errorCode =
+      setup.scenario === "notProcessed"
+        ? "NET_CANCEL_NOT_FOUND"
+        : "CARD_DECLINED";
     ws.cycle = null;
     ws.card = null;
     ws.methodId = null;

@@ -21,6 +21,7 @@ import type { BillingPaymentResponseData } from "@/lib/api/generated/models";
 import { ApiError } from "@/lib/api/fetcher";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
+import { NOT_PROCESSED_CODE } from "@/lib/billing/setup-view";
 import { refundPending } from "@/lib/billing/payment-status";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { usePollWindow } from "@/lib/billing/use-poll-window";
@@ -207,7 +208,11 @@ function PaymentRows({
           wrap
           value={
             <>
-              {t("declined")}
+              {t(
+                payment.errorCode === NOT_PROCESSED_CODE
+                  ? "notProcessed"
+                  : "declined"
+              )}
               <span className="mt-1 block text-xs text-[var(--el-muted)]">
                 {t("errorCode", { code: payment.errorCode })}
               </span>

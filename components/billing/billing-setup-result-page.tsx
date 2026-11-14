@@ -30,6 +30,7 @@ import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import {
   cardChangeResultOfView,
   isPollingView,
+  NOT_PROCESSED_CODE,
   resultOfView,
   setupViewOf,
   type SetupView,
@@ -357,9 +358,10 @@ function ViewBody({
       // 거절된 카드는 서버가 지운다 — 같은 카드로 다시 결제하지 않고 카드 등록부터 새로 시작한다.
       const code =
         setup.latestAttempt?.errorCode ?? setup.originAttempt?.errorCode;
+      const reason = code === NOT_PROCESSED_CODE ? "notProcessed" : "declined";
       return (
-        <BillingNotice tone="warn" title={t("declined.title")}>
-          <p>{t("declined.body")}</p>
+        <BillingNotice tone="warn" title={t(`${reason}.title`)}>
+          <p>{t(`${reason}.body`)}</p>
           {code ? (
             <p className="mt-2 text-xs text-[var(--el-muted)]">
               {t("declined.code", { code })}
