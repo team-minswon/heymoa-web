@@ -67,7 +67,8 @@ export function SidebarUsage({
           ) : (
             <>
               <span className="truncate text-[var(--el-muted)]">
-                {t(paid ? "labelPaid" : "label")}
+                {/* 칸 폭이 184px 라 요금제 탭의 영어 라벨(124px)은 값 옆에서 잘린다. 사이드바만 짧은 라벨을 쓴다 */}
+                {t(paid ? "labelPaid" : "sidebarLabel")}
               </span>
               <span
                 className={cn(

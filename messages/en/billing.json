@@ -23,6 +23,7 @@
     "nearLimit": "You've used {percent, number}% of this month's allowance. It resets on {date}.",
     "label": "Recording this month",
     "labelPaid": "Recording this billing period",
+    "sidebarLabel": "Recorded",
     "paidPeriod": "{start} ~ {end}",
     "ofAllowance": "/ {allowance}",
     "sidebarPaid": "{plan} · {used} this period",
