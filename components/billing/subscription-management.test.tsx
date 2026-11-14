@@ -993,6 +993,24 @@ describe("결제 영수증", () => {
     expect(within(history()).queryAllByRole("link")).toEqual([]);
   });
 
+  it("영수증을 누르면 공간만 실어 센다(주소·결제 id 는 싣지 않는다)", async () => {
+    await openPaid();
+    await within(history()).findByRole("list", { name: "결제 내역" });
+    fireEvent.click(screen.getByRole("button", { name: "더 보기 (3건)" }));
+    fireEvent.click(receipt("2026년 11월 11일")!);
+    cleanup();
+    renderIn(paymentDetail("0P00000000003"));
+    fireEvent.click(
+      await screen.findByRole("link", {
+        name: "2026년 11월 11일 결제 영수증 열기",
+      })
+    );
+    expect(events("billing_receipt_clicked")).toEqual([
+      { workspace_id: PAID },
+      { workspace_id: PAID },
+    ]);
+  });
+
   it("결제 상세에도 영수증 링크가 있다", async () => {
     renderIn(paymentDetail("0P00000000003"));
     expect(

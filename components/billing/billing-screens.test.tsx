@@ -195,6 +195,12 @@ const setupBody = (
 });
 const serveSetup = (body: Record<string, unknown>) =>
   server.use(http.get("*/v1/me/billing/setups/S1", () => envelope(body)));
+const eventsOf = (name: string) =>
+  vi
+    .mocked(track)
+    .mock.calls.filter(([event]) => event === name)
+    .map(([, props]) => props);
+const actionEvents = () => eventsOf("billing_setup_result_action_clicked");
 const resultEvents = () =>
   vi
     .mocked(track)
@@ -1862,5 +1868,255 @@ describe("카드 변경 문서(모달 안)", () => {
     fillReplace();
     fireEvent.click(submitButton());
     await waitFor(() => expect(events()).toContain("result"));
+  });
+});
+
+// ---- 검토 결함(APP-1600): 무응답·모르는 상태·카드 변경 금액·이벤트 ----
+
+describe("응답이 멈출 때", () => {
+  it("등록 열기가 20초 안에 답하지 않으면 이 자리에 알리고, 다시 누르면 같은 requestKey 로 연다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const error = vi.spyOn(toast, "error");
+    const keys: string[] = [];
+    server.use(
+      http.post(
+        `*/v1/workspaces/${FREE}/billing/setups`,
+        async ({ request }) => {
+          keys.push(
+            ((await request.clone().json()) as { requestKey: string })
+              .requestKey
+          );
+          if (keys.length === 1) await delay("infinite");
+        }
+      )
+    );
+    await renderCheckout();
+    fillAll();
+    fireEvent.click(pay());
+    await waitFor(() => expect(keys).toHaveLength(1));
+    await act(() => vi.advanceTimersByTimeAsync(20_100));
+    expect(
+      await screen.findByText(
+        "요청이 늦어지고 있습니다. 잠시 뒤 다시 시도해 주세요."
+      )
+    ).toBeInTheDocument();
+    // 카드는 아직 보내지 않았다 — 칸을 비우지 않고, 토스트를 겹쳐 띄우지 않는다.
+    expect(screen.getByLabelText("카드 번호")).toHaveValue(
+      "4111 1111 1111 1111"
+    );
+    expect(error).not.toHaveBeenCalled();
+    await waitFor(() => expect(pay()).toBeEnabled());
+    fireEvent.click(pay());
+    await waitFor(() => expect(goToSetupResult).toHaveBeenCalled());
+    expect(keys[1]).toBe(keys[0]);
+    error.mockRestore();
+  });
+
+  it("결과 화면의 첫 조회가 10초 안에 답하지 않으면 스켈레톤 대신 불러오지 못했다고 알리고, 거절로 보이지 않는다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let reads = 0;
+    server.use(
+      http.get("*/v1/me/billing/setups/S1", async () => {
+        reads += 1;
+        if (reads === 1) await delay("infinite");
+        return envelope(setupBody("PAYMENT", "PROCESSING"));
+      })
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    expect(
+      screen.getByLabelText("카드 등록 결과를 불러오는 중")
+    ).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(10_100));
+    expect(
+      await screen.findByText("결제 상태를 불러오지 못했습니다")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "연결이 불안정하거나 응답이 늦어지고 있습니다. 결제가 실패한 것은 아닙니다."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText("결제가 승인되지 않았습니다")).toBeNull();
+    expect(screen.queryByRole("link", { name: "새로 시작" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "다시 확인" }));
+    expect(
+      await screen.findByText("결제를 확인하는 중입니다")
+    ).toBeInTheDocument();
+    expect(actionEvents()).toEqual([
+      { action: "recheck", result: "loadFailed" },
+    ]);
+  });
+
+  it("이미 읽은 뒤의 재조회가 실패하면 마지막으로 읽은 화면을 그대로 둔다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let reads = 0;
+    server.use(
+      http.get("*/v1/me/billing/setups/S1", () => {
+        reads += 1;
+        return reads === 1
+          ? envelope(setupBody("PAYMENT", "PROCESSING"))
+          : failure("INTERNAL_ERROR", "잠시 후", 500);
+      })
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    await screen.findByText("결제를 확인하는 중입니다");
+    await act(() => vi.advanceTimersByTimeAsync(2100));
+    await waitFor(() => expect(reads).toBe(2));
+    expect(screen.getByText("결제를 확인하는 중입니다")).toBeInTheDocument();
+    expect(screen.queryByText("결제 상태를 불러오지 못했습니다")).toBeNull();
+  });
+});
+
+describe("결과 화면 — 모르는 상태 값", () => {
+  it.each([
+    ["COMPLETED", "NEW_STATUS"],
+    ["NEW_STAGE", "DECLINED"],
+  ])(
+    "%s / %s 는 성공·거절이 아니라 확인 중이고 재구매 버튼이 없다",
+    async (stage, status) => {
+      serveSetup(
+        setupBody(stage, status, { allowedActions: ["START_PURCHASE"] })
+      );
+      renderIn(<BillingSetupResultPage setupId="S1" />);
+      expect(
+        await screen.findByText("결제 결과 확인이 지연되고 있습니다")
+      ).toBeInTheDocument();
+      expect(screen.queryByText("결제가 완료되었습니다")).toBeNull();
+      expect(screen.queryByText("결제가 승인되지 않았습니다")).toBeNull();
+      expect(screen.queryByRole("link", { name: "새로 시작" })).toBeNull();
+      await waitFor(() =>
+        expect(resultEvents()).toEqual([
+          { workspace_id: FREE, provider: "NICEPAY", result: "unknown" },
+        ])
+      );
+    }
+  );
+
+  it("목 unknownState 는 모르는 단계를 준다", async () => {
+    billingMock.setScenario("unknownState");
+    const setupId = await openAndSubmitCard();
+    const { data } = await (
+      await fetch(`http://localhost/v1/me/billing/setups/${setupId}`)
+    ).json();
+    expect(data.stage).toBe("NEW_STAGE");
+    billingMock.setScenario("ok");
+  });
+});
+
+describe("카드 변경의 청구 금액", () => {
+  const paidBilling = (detailPatch: Record<string, unknown>, patch = {}) =>
+    serveBilling(
+      {
+        workspaceId: PAID,
+        status: "ACTIVE",
+        product: { ...billingBody().product, amountKrw: 30000 },
+        entitlement: {
+          kind: "PAID",
+          period: null,
+          recordingAllowanceMinutes: null,
+          planCode: "PRO",
+        },
+        currentPeriod: {
+          start: "2026-11-11T00:00:00+09:00",
+          end: "2026-12-11T00:00:00+09:00",
+        },
+        allowedActions: ["CHANGE_CARD"],
+        detail: {
+          ...detail("SUCCEEDED"),
+          methodId: "M1",
+          maskedCard: {
+            number: "4579-****-****-1234",
+            cardType: null,
+            issuer: null,
+          },
+          ...detailPatch,
+        },
+        ...patch,
+      },
+      PAID
+    );
+  const agreement = () => screen.getAllByRole("checkbox")[0];
+
+  it("요약과 동의 문구가 서버의 다음 결제 금액을 같이 쓴다(상품 금액과 달라도)", async () => {
+    paidBilling({ nextChargeAmountKrw: 24900 });
+    renderIn(<CardChangeFrame workspaceId={PAID} />);
+    expect(
+      await screen.findByText("2026년 12월 11일 · 24,900원")
+    ).toBeInTheDocument();
+    expect(agreement()).toHaveAccessibleName(/매월 24,900원/);
+    expect(screen.queryByText(/30,000원/)).toBeNull();
+  });
+
+  it("다음 결제 금액이 없으면 두 곳 모두 상품 금액이다", async () => {
+    paidBilling({ nextChargeAmountKrw: null });
+    renderIn(<CardChangeFrame workspaceId={PAID} />);
+    expect(
+      await screen.findByText("2026년 12월 11일 · 30,000원")
+    ).toBeInTheDocument();
+    expect(agreement()).toHaveAccessibleName(/매월 30,000원/);
+  });
+});
+
+describe("결과 화면 이벤트", () => {
+  it("카드 변경 결과는 구매 결과와 섞지 않고 처음 보일 때 한 번 낸다", async () => {
+    serveSetup(
+      setupBody("COMPLETED", "COMPLETED", {
+        purpose: "REPLACE",
+        workspaceId: PAID,
+      })
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    await waitFor(() =>
+      expect(eventsOf("billing_card_change_resulted")).toEqual([
+        { workspace_id: PAID, result: "completed" },
+      ])
+    );
+    expect(resultEvents()).toEqual([]);
+  });
+
+  it("다시 시도·워크스페이스로 돌아가기를 그때의 결과와 함께 낸다", async () => {
+    serveSetup(
+      setupBody("PAYMENT", "DECLINED", { allowedActions: ["START_PURCHASE"] })
+    );
+    renderIn(<BillingSetupResultPage setupId="S1" />);
+    fireEvent.click(await screen.findByRole("link", { name: "새로 시작" }));
+    fireEvent.click(screen.getByRole("link", { name: "요금제로 돌아가기" }));
+    expect(actionEvents()).toEqual([
+      { action: "retry", result: "declined" },
+      { action: "to_workspace", result: "declined" },
+    ]);
+  });
+
+  it("목 statusHang 은 결과 조회에 답하지 않는다", async () => {
+    billingMock.setScenario("statusHang");
+    const controller = new AbortController();
+    const pending = fetch("http://localhost/v1/me/billing/setups/S1", {
+      signal: controller.signal,
+    });
+    const raced = await Promise.race([
+      pending.then(() => "answered"),
+      new Promise((resolve) => setTimeout(() => resolve("waiting"), 50)),
+    ]);
+    expect(raced).toBe("waiting");
+    controller.abort();
+    await pending.catch(() => undefined);
+    billingMock.setScenario("ok");
+  });
+});
+
+describe("요금제 탭 — 판매 중단 안내", () => {
+  it("안내가 보이면 한 번 센다", async () => {
+    billingMock.setScenario("salesPaused");
+    renderIn(<PlanTab workspaceId={PAID} />);
+    await screen.findByText("지금은 새 구독을 받고 있지 않습니다.");
+    expect(eventsOf("billing_sales_unavailable_viewed")).toEqual([
+      { workspace_id: PAID, role: "admin" },
+    ]);
+    billingMock.setScenario("ok");
+  });
+
+  it("구매할 수 있는 공간에서는 세지 않는다", async () => {
+    renderIn(<PlanTab workspaceId={FREE} />);
+    await screen.findByRole("button", { name: "Pro 시작하기" });
+    expect(eventsOf("billing_sales_unavailable_viewed")).toEqual([]);
   });
 });

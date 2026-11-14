@@ -7,6 +7,7 @@ import { useState } from "react";
 import { PaymentStatusText } from "@/components/billing/subscription-management";
 import { SETTINGS_LIST } from "@/components/settings/settings-layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { billingEvents } from "@/lib/billing/analytics";
 import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ export type PaymentRow = {
   openable: boolean;
   /** 나이스페이 매출전표 주소(APP-1600). 없으면 그 자리를 비운다. */
   receiptUrl?: string | null;
+  /** 영수증 이벤트에 실을 공간. */
+  workspaceId?: string;
 };
 
 /** 처음에 보이는 줄 수. 나머지는 「더 보기」로 펼친다(APP-1596). */
@@ -102,6 +105,7 @@ export function PaymentList({
                   <ReceiptLink
                     url={payment.receiptUrl}
                     date={date}
+                    workspaceId={payment.workspaceId}
                     className={RECEIPT_SLOT}
                   />
                 </li>
@@ -133,11 +137,13 @@ export function PaymentList({
 export function ReceiptLink({
   url,
   date,
+  workspaceId,
   className,
 }: {
   url: string | null | undefined;
   /** 접근성 이름에 넣는 결제 날짜(화면에 보이는 꼴 그대로). */
   date: string;
+  workspaceId?: string;
   className?: string;
 }) {
   const t = useTranslations("billing.history");
@@ -148,6 +154,7 @@ export function ReceiptLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={t("receiptLabel", { date })}
+      onClick={() => billingEvents.receiptClicked(workspaceId)}
       className={cn(
         "text-sm whitespace-nowrap text-[var(--el-muted)] underline underline-offset-2 hover:text-[var(--el-ink)]",
         className

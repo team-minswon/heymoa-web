@@ -1,4 +1,7 @@
-import type { BillingSetupResult } from "@/lib/analytics/track";
+import type {
+  BillingCardChangeResult,
+  BillingSetupResult,
+} from "@/lib/analytics/track";
 import {
   BillingSetupStatusResponseDataStatus,
   type BillingSetupStatusResponseData,
@@ -93,5 +96,15 @@ export function resultOfView(view: SetupView): BillingSetupResult | null {
   if (view === "declined") return "declined";
   if (view === "paymentUnknown" || view === "issueUnknown") return "unknown";
   if (view === "refunded") return "refunded";
+  return null;
+}
+
+/** 카드 변경(REPLACE) 결과 이벤트로 낼 최종 상태. 카드 변경의 발급 거절은 `cardActionRequired` 화면이다. */
+export function cardChangeResultOfView(
+  view: SetupView
+): BillingCardChangeResult | null {
+  if (view === "completed") return "completed";
+  if (view === "cardActionRequired") return "declined";
+  if (view === "paymentUnknown" || view === "issueUnknown") return "unknown";
   return null;
 }

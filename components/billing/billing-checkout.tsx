@@ -109,12 +109,18 @@ export function CheckoutForm({
   const [notice, setNotice] = useState<Notice | null>(null);
   // 이 양식에서 연 등록. 카드가 거절돼도(400) 다시 내면 새로 열지 않고 이 등록에 낸다.
   const openedSetupId = useRef<string | null>(null);
+  // 응답이 멈추면 버튼이 끝없이 돌지 않게 카드 제출과 같은 시한을 준다. 시한 초과는 아래가 이 자리에 알린다.
   const create = useCreateBillingSetup({
     mutation: {
       meta: {
-        suppressErrorToast: ["BILLING_STATE_CHANGED", "BILLING_IN_PROGRESS"],
+        suppressErrorToast: [
+          "BILLING_STATE_CHANGED",
+          "BILLING_IN_PROGRESS",
+          "REQUEST_TIMEOUT",
+        ],
       },
     },
+    request: { timeoutMs: REQUEST_TIMEOUT_MS },
   });
   useEffect(() => {
     onSubmittingChange?.(submitting);
@@ -277,6 +283,9 @@ export function CheckoutForm({
         setAgreed(false);
         setNotice("stateChanged");
         await invalidateWorkspaceBilling(queryClient, workspaceId);
+      } else if (code === "REQUEST_TIMEOUT") {
+        // 서버가 등록을 열었을 수 있다 — 키를 그대로 두어 다시 누르면 같은 등록이 돌아온다.
+        setNotice({ message: t("openTimeout") });
       } else if (code === "BILLING_IN_PROGRESS") {
         setNotice("inProgress");
         await invalidateWorkspaceBilling(queryClient, workspaceId);

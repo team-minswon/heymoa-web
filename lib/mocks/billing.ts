@@ -1,4 +1,4 @@
-import { http } from "msw";
+import { delay, http } from "msw";
 
 import { mockDb } from "@/lib/mocks/db";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
@@ -36,6 +36,8 @@ import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
  *   - `issueUnknown` 카드 제출의 발급 응답을 잃어 등록이 닫힌다(발급 결과 불명) — 결제 없음, 새 등록부터 다시
  *   - `cardInvalid` 카드 제출이 400(대행사가 카드 정보를 거절)이다
  *   - `cardRateLimited` 카드 제출이 429(카드 등록 시도 제한)이다
+ *   - `statusHang` 등록 결과 조회(`/v1/me/billing/setups/{id}`)가 응답하지 않는다 — 결과 화면에 들어간 뒤 켜고 새로고침한다(조회 때 읽는다)
+ *   - `unknownState` 등록 결과 조회가 web 이 모르는 단계(`stage: "NEW_STAGE"`, `status: "DECLINED"`)를 준다(조회 때 읽는다)
  * *   - `methodInUse` 결제 수단 삭제가 409 `BILLING_METHOD_IN_USE` 다
  * 지우려면 `localStorage.removeItem("mockBilling")`. 시험은 `billingMock.setScenario(...)`.
  *
@@ -65,6 +67,8 @@ export type BillingScenario =
   | "issueUnknown"
   | "cardInvalid"
   | "cardRateLimited"
+  | "statusHang"
+  | "unknownState"
   | "methodInUse";
 
 const SCENARIOS: BillingScenario[] = [
@@ -86,6 +90,8 @@ const SCENARIOS: BillingScenario[] = [
   "issueUnknown",
   "cardInvalid",
   "cardRateLimited",
+  "statusHang",
+  "unknownState",
   "methodInUse",
 ];
 
@@ -1183,13 +1189,16 @@ export const billingHandlers = [
       }
     }
   ),
-  http.get("*/v1/me/billing/setups/:setupId", ({ params }) =>
-    respond(() => {
+  http.get("*/v1/me/billing/setups/:setupId", async ({ params }) => {
+    if (currentScenario() === "statusHang") await delay("infinite");
+    return respond(() => {
       const view = setupStatus(setupOf(paramId(params.setupId)), true);
       save();
-      return view;
-    })
-  ),
+      return currentScenario() === "unknownState"
+        ? { ...view, stage: "NEW_STAGE", status: "DECLINED" }
+        : view;
+    });
+  }),
   http.post(
     "*/v1/workspaces/:workspaceId/billing/setups/:setupId/card",
     ({ params, request }) =>

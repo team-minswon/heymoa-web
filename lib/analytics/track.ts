@@ -1,6 +1,7 @@
 import posthog, { type CaptureResult } from "posthog-js";
 
 import type { BillingSetupCreatedResponseDataProvider } from "@/lib/api/generated/models/billingSetupCreatedResponseDataProvider";
+import type { SetupView } from "@/lib/billing/setup-view";
 import type { NotificationListResponseDataNotificationsItemType } from "@/lib/api/generated/models/notificationListResponseDataNotificationsItemType";
 import type { NotificationSettingsResponseDataItemsItemChannelsItemChannel } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemChannelsItemChannel";
 import type { NotificationSettingsResponseDataItemsItemType } from "@/lib/api/generated/models/notificationSettingsResponseDataItemsItemType";
@@ -92,6 +93,10 @@ export type AnalyticsEvent =
   | "billing_plans_viewed"
   | "billing_checkout_entered"
   | "billing_card_setup_resulted"
+  | "billing_setup_result_action_clicked"
+  | "billing_card_change_resulted"
+  | "billing_sales_unavailable_viewed"
+  | "billing_receipt_clicked"
   | "billing_cancel_dialog_opened"
   | "billing_subscription_canceled"
   | "billing_subscription_resumed"
@@ -134,6 +139,14 @@ export type BillingSetupResult =
   | "declined"
   | "unknown"
   | "refunded";
+
+/**
+ * 등록 결과 화면에서 버튼을 누른 때의 화면. 결과 값(`BillingSetupResult`)이 있으면 그것, 없으면 화면 상태 이름이다.
+ * `loadFailed` 는 첫 조회가 실패하거나 시한을 넘겨 아직 아무 상태도 읽지 못한 화면이다.
+ */
+export type BillingSetupScreen = BillingSetupResult | SetupView | "loadFailed";
+/** 카드 변경(REPLACE) 결과. `declined` 는 발급 거절, `unknown` 은 발급 결과 불명·확인 중이다. */
+export type BillingCardChangeResult = "completed" | "declined" | "unknown";
 
 /** 가이드 이벤트의 언어판(`lib/i18n/locales.ts` 의 `Locale`). */
 type HelpLanguage = "ko" | "en";
@@ -231,6 +244,25 @@ export type WebEventProperties = {
     provider?: BillingProvider;
     result: BillingSetupResult;
   };
+  // 등록 결과 화면의 행동(APP-1600). recheck: 「다시 확인」, retry: 새 등록으로 가는 링크, to_workspace: 워크스페이스로 돌아가기.
+  // 결과 조회가 실패한 화면에서 무엇을 하는지(다시 확인 vs 떠남)를 보려고 화면 상태를 같이 싣는다. 등록·결제 id 는 싣지 않는다.
+  billing_setup_result_action_clicked: {
+    action: "recheck" | "retry" | "to_workspace";
+    result: BillingSetupScreen;
+  };
+  // 카드 변경 결과 화면에서 결과가 처음 보일 때 1회. 구매 퍼널(`billing_card_setup_resulted`)과 섞지 않는다.
+  // 카드 변경 문서 안에서 바로 끝난 결과(완료·거절)는 분석 없는 문서라 여기 오지 않는다.
+  billing_card_change_resulted: {
+    workspace_id?: string;
+    result: BillingCardChangeResult;
+  };
+  // 요금제 탭에서 판매 중단 안내(새 구매 없음)가 보였다 — 마운트마다 1회.
+  billing_sales_unavailable_viewed: {
+    workspace_id: string;
+    role: "admin" | "member";
+  };
+  // 영수증(매출전표) 링크. 주소·결제 id 는 싣지 않는다. 내 결제 내역은 공간을 가로질러 공간이 없을 수 있다.
+  billing_receipt_clicked: { workspace_id?: string };
   // 구매 이후의 관리(APP-1565). 해지는 확인 창을 연 수와 실제 해지를 따로 센다(확인 창에서 돌아선 비율).
   // 결과는 종류만 싣는다 — 금액·카드·결제/환불 id 는 싣지 않는다. 관리 행동은 ADMIN 만 해서 role 을 따로 싣지 않는다.
   billing_cancel_dialog_opened: { workspace_id: string };

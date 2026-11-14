@@ -157,6 +157,7 @@ function PaymentHero({ payment }: { payment: BillingPaymentResponseData }) {
             <ReceiptLink
               url={payment.receiptUrl}
               date={payment.completedAt ? format.date(payment.completedAt) : ""}
+              workspaceId={payment.workspaceId}
             />
           </>
         ) : null}

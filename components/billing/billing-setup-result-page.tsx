@@ -13,7 +13,6 @@ import {
 import { SETTINGS_LIST } from "@/components/settings/settings-layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button, LinkButton } from "@/components/ui/button";
-import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getGetMyBillingSetupQueryKey,
@@ -23,11 +22,13 @@ import {
 } from "@/lib/api/generated/billing/billing";
 import type { BillingSetupStatusResponseData } from "@/lib/api/generated/models";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
+import type { BillingSetupScreen } from "@/lib/analytics/track";
 import { ApiError } from "@/lib/api/fetcher";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import {
+  cardChangeResultOfView,
   isPollingView,
   resultOfView,
   setupViewOf,
@@ -39,6 +40,14 @@ import { nextPollDelay, usePollWindow } from "@/lib/billing/use-poll-window";
 import { cn } from "@/lib/utils";
 
 /**
+ * 결과 조회 한 번의 시한. 응답이 멈추면 스켈레톤에 머물지 않고 「불러오지 못했습니다」와 다시 확인을 보인다.
+ * 화면과 결과가 같은 조회 키를 쓰므로 둘 다 같은 시한을 준다 — 어느 쪽이 읽어도 같다.
+ */
+const SETUP_REQUEST = { timeoutMs: 10_000 };
+
+type SetupAction = "recheck" | "retry" | "to_workspace";
+
+/**
  * `/billing/setups/{setupId}` — 카드 등록 결과. 워크스페이스 셸 밖이다. 주문서·카드 변경에서 카드를 낸 뒤 여기로 온다(APP-1600).
  *
  * 서버가 일하는 동안 이 화면은 **표시용으로** 다시 읽을 뿐이다 — 화면을 닫거나 읽기를 멈춰도 서버 작업은 계속된다.
@@ -47,7 +56,7 @@ import { cn } from "@/lib/utils";
 export function BillingSetupResultPage({ setupId }: { setupId: string }) {
   const t = useTranslations("billing.setup");
   // 첫 구매는 카드 등록 뒤 결제까지 가므로 「결제 결과」다. 아래 결과와 같은 조회 키라 요청은 하나다.
-  const setupQuery = useGetMyBillingSetup(setupId);
+  const setupQuery = useGetMyBillingSetup(setupId, { request: SETUP_REQUEST });
   const purchase = okData(setupQuery.data)?.purpose === "PURCHASE";
   return (
     <ScrollArea
@@ -86,6 +95,7 @@ function SetupResult({ setupId }: { setupId: string }) {
   const queryClient = useQueryClient();
   const poll = usePollWindow();
   const query = useGetMyBillingSetup(setupId, {
+    request: SETUP_REQUEST,
     query: {
       staleTime: 0,
       refetchInterval: (q) => {
@@ -114,19 +124,38 @@ function SetupResult({ setupId }: { setupId: string }) {
   }, [view, workspaceId, queryClient]);
 
   // 최종 상태가 처음 보일 때 한 번씩만 분석 이벤트를 낸다(같은 결과를 폴링마다 다시 내지 않는다).
-  // 카드 변경(REPLACE)은 구매 퍼널이 아니라 세지 않는다.
+  // 카드 변경(REPLACE)은 구매 퍼널에 섞지 않고 카드 변경 결과로 따로 낸다.
   const reported = useRef(new Set<string>());
   const purchase = setup?.purpose !== "REPLACE";
   useEffect(() => {
-    const result = view && purchase ? resultOfView(view) : null;
-    if (!result || reported.current.has(result)) return;
-    reported.current.add(result);
-    billingEvents.cardSetupResulted({
-      ...(workspaceId ? { workspace_id: workspaceId } : {}),
-      ...(provider ? { provider } : {}),
-      result,
-    });
+    if (!view) return;
+    const workspace = workspaceId ? { workspace_id: workspaceId } : {};
+    const once = (result: string | null) => {
+      if (!result || reported.current.has(result)) return false;
+      reported.current.add(result);
+      return true;
+    };
+    if (purchase) {
+      const result = resultOfView(view);
+      if (result && once(result))
+        billingEvents.cardSetupResulted({
+          ...workspace,
+          ...(provider ? { provider } : {}),
+          result,
+        });
+    } else {
+      const result = cardChangeResultOfView(view);
+      if (result && once(result))
+        billingEvents.cardChangeResulted({ ...workspace, result });
+    }
   }, [view, workspaceId, provider, purchase]);
+
+  // 버튼을 누른 때의 화면 — 결과 값이 있으면 그것, 없으면 화면 상태 이름.
+  const screen: BillingSetupScreen = view
+    ? (resultOfView(view) ?? view)
+    : "loadFailed";
+  const clicked = (action: SetupAction) =>
+    billingEvents.setupResultActionClicked({ action, result: screen });
 
   // 창으로 돌아오면 자동 읽기가 멈춘 뒤에도 한 번 읽는다.
   useEffect(() => {
@@ -143,15 +172,27 @@ function SetupResult({ setupId }: { setupId: string }) {
   if (!setup || !view) {
     const notFound =
       query.error instanceof ApiError && query.error.status === 404;
+    // 첫 조회의 실패·시한 초과는 결제 실패가 아니다 — 거절 화면으로 보이지 않게 따로 알린다.
     return notFound ? (
       <BillingNotice tone="warn" title={t("notFound.title")}>
         {t("notFound.body")}
       </BillingNotice>
     ) : (
-      <InlineRetry
-        onRetry={() => void query.refetch()}
-        label={t("loadFailed")}
-      />
+      <BillingNotice title={t("statusFailed.title")}>
+        <p>{t("statusFailed.body")}</p>
+        <Button
+          variant="outline"
+          className="mt-3"
+          loading={query.isFetching}
+          onClick={() => {
+            clicked("recheck");
+            poll.restart();
+            void query.refetch();
+          }}
+        >
+          {t("recheck")}
+        </Button>
+      </BillingNotice>
     );
   }
 
@@ -163,6 +204,7 @@ function SetupResult({ setupId }: { setupId: string }) {
         setup={setup}
         workspaceId={workspaceId}
         busy={cancel.isPending}
+        onAction={clicked}
         onCancel={async () => {
           if (!workspaceId) return;
           const done = await cancel
@@ -179,6 +221,7 @@ function SetupResult({ setupId }: { setupId: string }) {
           variant="outline"
           href={`/w/${workspaceId}?settings=billing`}
           className="self-start"
+          onClick={() => clicked("to_workspace")}
         >
           {t("backToWorkspace")}
         </LinkButton>
@@ -191,6 +234,7 @@ function SetupResult({ setupId }: { setupId: string }) {
             className="mt-3"
             loading={query.isFetching}
             onClick={() => {
+              clicked("recheck");
               poll.restart();
               void query.refetch();
             }}
@@ -210,12 +254,14 @@ function ViewBody({
   setup,
   workspaceId,
   busy,
+  onAction,
   onCancel,
 }: {
   view: SetupView;
   setup: SetupData;
   workspaceId: string | null;
   busy: boolean;
+  onAction: (action: SetupAction) => void;
   onCancel: () => void;
 }) {
   const t = useTranslations("billing.setup");
@@ -262,7 +308,7 @@ function ViewBody({
     </BillingNotice>
   );
   const restartLink = checkout ? (
-    <LinkButton href={checkout}>
+    <LinkButton href={checkout} onClick={() => onAction("retry")}>
       {replace ? t("replace.restart") : t("restart")}
     </LinkButton>
   ) : null;
@@ -353,13 +399,20 @@ function ViewBody({
           ),
           t(ending ? "replace.completedEnding.body" : "replace.completed.body"),
           workspaceId ? (
-            <LinkButton href={`/w/${workspaceId}?settings=payment`}>
+            <LinkButton
+              href={`/w/${workspaceId}?settings=payment`}
+              onClick={() => onAction("to_workspace")}
+            >
               {t("replace.completed.goPlans")}
             </LinkButton>
           ) : null
         )
       ) : (
-        <CompletedBody setup={setup} workspaceId={workspaceId} />
+        <CompletedBody
+          setup={setup}
+          workspaceId={workspaceId}
+          onAction={onAction}
+        />
       );
     case "accessLost":
       return card(
@@ -387,9 +440,11 @@ function ViewBody({
 function CompletedBody({
   setup,
   workspaceId,
+  onAction,
 }: {
   setup: SetupData;
   workspaceId: string | null;
+  onAction: (action: SetupAction) => void;
 }) {
   const t = useTranslations("billing.setup");
   const format = useBillingFormat();
@@ -439,7 +494,11 @@ function CompletedBody({
         ) : null}
       </dl>
       {workspaceId ? (
-        <LinkButton href={`/w/${workspaceId}`} className="mt-6 h-10 px-4">
+        <LinkButton
+          href={`/w/${workspaceId}`}
+          className="mt-6 h-10 px-4"
+          onClick={() => onAction("to_workspace")}
+        >
           {t("completed.goWorkspace")}
           <ArrowRight aria-hidden />
         </LinkButton>

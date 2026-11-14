@@ -287,7 +287,6 @@ function PlanCompare({
   const t = useTranslations("billing.page");
   const format = useBillingFormat();
   const product = billing.product;
-  if (!product) return null;
   const actions = billing.allowedActions;
   const canStart = actions.includes("START_PURCHASE") && !isPaid;
   // 결제 화면은 보이지만(`enforced`) 새 구매가 없다 — 운영자가 새 판매를 멈췄다. 진행 중인 등록·결제·환불이 있어
@@ -299,6 +298,15 @@ function PlanCompare({
     !billingInProgress(billing) &&
     !billing.teamSetupInProgress &&
     !refundPending(billing.detail?.refundedAttempt?.refundStatus);
+  // 판매 중단 안내는 ADMIN 의 Free 카드 자리에만 보인다(멤버는 관리자 요청 안내). 보일 때 마운트마다 한 번 센다.
+  const salesNoticeShown =
+    Boolean(product) && !isPaid && isAdmin && !canStart && salesPaused;
+  const workspaceId = billing.workspaceId;
+  useEffect(() => {
+    if (salesNoticeShown)
+      billingEvents.salesUnavailableViewed(workspaceId, "admin");
+  }, [salesNoticeShown, workspaceId]);
+  if (!product) return null;
   return (
     <section aria-label={t("compare")}>
       <h3 className="text-sm font-medium text-[var(--el-ink)]">

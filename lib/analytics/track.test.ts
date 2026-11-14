@@ -49,6 +49,19 @@ describe("결제 이벤트", () => {
     // @ts-expect-error 인증 키를 실을 수 없다
     track("billing_card_setup_resulted", { result: "completed", authKey: "k" });
   });
+
+  it("결과 화면 행동·카드 변경 결과·판매 중단·영수증 이벤트는 카드·빌링키·주문번호·이메일·이름을 받지 않는다", () => {
+    type Secret = "card" | "card_number" | "billing_key" | "bid" | "order_id" | "moid" | "setup_id" | "payment_id" | "email" | "name" | "receipt_url";
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_setup_result_action_clicked">>();
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_card_change_resulted">>();
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_sales_unavailable_viewed">>();
+    expectTypeOf<Secret>().not.toExtend<keyof Props<"billing_receipt_clicked">>();
+    expectTypeOf<Props<"billing_setup_result_action_clicked">["action"]>().toEqualTypeOf<"recheck" | "retry" | "to_workspace">();
+    expectTypeOf<Props<"billing_card_change_resulted">["result"]>().toEqualTypeOf<"completed" | "declined" | "unknown">();
+    expectTypeOf<Props<"billing_receipt_clicked">>().toEqualTypeOf<{ workspace_id?: string }>();
+    // @ts-expect-error 영수증 이벤트에 주소를 실을 수 없다
+    track("billing_receipt_clicked", { receipt_url: "https://example.com" });
+  });
 });
 
 describe("녹음 한도 이벤트", () => {

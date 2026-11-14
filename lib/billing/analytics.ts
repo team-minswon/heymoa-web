@@ -10,7 +10,8 @@ import { okData } from "@/lib/api/ok-data";
  * 호출 자리: `plansViewed`(요금제 화면 진입)·`checkoutEntered`(요금제 탭에서 결제 페이지로 떠나기 직전)·`cardSetupResulted`(등록 결과 화면, 결과가 처음 보일 때 1회)·`quotaBlocked`·`quotaUpgradeClicked`(무료 한도로 녹음 시작이 거절된 안내 노출·거기서 요금제 보기 클릭).
  * 구독 관리(APP-1565): `cancelDialogOpened`·`subscriptionCanceled`(해지 확인 창·해지 완료)·`subscriptionResumed`·`cardChangeStarted`(카드 변경
  * 모달을 열 때)·`paymentMethodDeleted`·`paymentViewed`(결제 상세)·`paymentHistoryViewed`(공간의 결제 내역·내 결제 내역).
- * 환불 결과는 서버가 환불 사건으로 따로 낸다. 카드 변경 결과는 구매 퍼널(`cardSetupResulted`)에 섞지 않는다.
+ * 환불 결과는 서버가 환불 사건으로 따로 낸다. 카드 변경 결과는 구매 퍼널(`cardSetupResulted`)에 섞지 않고 `cardChangeResulted` 로 낸다.
+ * 결과 화면의 버튼(`setupResultActionClicked`)·판매 중단 안내 노출(`salesUnavailableViewed`)·영수증 링크(`receiptClicked`).
  */
 export const billingEvents = {
   plansViewed: (workspaceId: string, role: "admin" | "member") =>
@@ -20,6 +21,24 @@ export const billingEvents = {
   cardSetupResulted: (
     properties: Parameters<typeof track<"billing_card_setup_resulted">>[1]
   ) => track("billing_card_setup_resulted", properties),
+  cardChangeResulted: (
+    properties: Parameters<typeof track<"billing_card_change_resulted">>[1]
+  ) => track("billing_card_change_resulted", properties),
+  setupResultActionClicked: (
+    properties: Parameters<
+      typeof track<"billing_setup_result_action_clicked">
+    >[1]
+  ) => track("billing_setup_result_action_clicked", properties),
+  salesUnavailableViewed: (workspaceId: string, role: "admin" | "member") =>
+    track("billing_sales_unavailable_viewed", {
+      workspace_id: workspaceId,
+      role,
+    }),
+  receiptClicked: (workspaceId?: string) =>
+    track(
+      "billing_receipt_clicked",
+      workspaceId ? { workspace_id: workspaceId } : {}
+    ),
   quotaBlocked: (workspaceId: string, role: "admin" | "member") =>
     track("recording_quota_blocked", { workspace_id: workspaceId, role }),
   quotaUpgradeClicked: (workspaceId: string) =>

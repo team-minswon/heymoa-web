@@ -207,7 +207,8 @@
     },
     "pageBack": "Back",
     "cardRejected": "Please check your card details again.",
-    "tooManyAttempts": "Too many card attempts. Please try again in a moment."
+    "tooManyAttempts": "Too many card attempts. Please try again in a moment.",
+    "openTimeout": "The request is taking longer than usual. Please try again in a moment."
   },
   "setup": {
     "title": "Card registration result",
@@ -216,7 +217,10 @@
     "purchaseDescription": "Check the progress of your card registration and payment.",
     "loginRequired": "Sign in with the account that registered the card to see the result.",
     "loading": "Loading the registration result",
-    "loadFailed": "Couldn't load the registration result.",
+    "statusFailed": {
+      "title": "Couldn't load the payment status",
+      "body": "The connection is unstable or the response is slow. This doesn't mean the payment failed."
+    },
     "notFound": {
       "title": "Card registration not found",
       "body": "Make sure you're signed in with the account that registered the card."
