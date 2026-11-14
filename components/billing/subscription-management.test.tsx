@@ -2,7 +2,11 @@
  * 설정 › 결제 관리(결제 수단·구독·결제 내역)와 그 안의 카드 변경·결제 상세 시험(APP-1565, PRO-75). **MSW 목으로 그린 것이라 서버·PG 정합성의 증거가 아니다.**
  * 기본은 목의 실제 흐름(유료 공간 「제품 팀」)을 밟고, 서버만 낼 수 있는 응답(403·특정 409)은 그 요청만 바꿔 끼운다.
  */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -1002,5 +1006,24 @@ describe("결제 영수증", () => {
     renderIn(paymentDetail("0P00000000001"));
     await screen.findByText(/INVALID_CARD/);
     expect(screen.queryByRole("link", { name: /영수증/ })).toBeNull();
+  });
+});
+
+// 다른 탭·기기에서 바뀐 상태를 따라온다(APP-1600). 전역 기본은 포커스 갱신이 꺼져 있어 이 조회에만 켰다.
+describe("결제 관리 탭 갱신", () => {
+  const billingReads = () =>
+    requests.filter((r) => r === `GET /v1/workspaces/${PAID}/billing`).length;
+
+  it("창으로 돌아오면 공간의 결제 상태를 다시 읽는다", async () => {
+    await openPaid();
+    const before = billingReads();
+    // suspense 조회는 staleTime 을 1초 아래로 두지 않는다 — 그보다 뒤에 돌아온다.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 1100)));
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await waitFor(() => expect(billingReads()).toBe(before + 1));
+    focusManager.setFocused(undefined);
   });
 });

@@ -29,6 +29,7 @@ import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { usePollWindow } from "@/lib/billing/use-poll-window";
 import {
   billingInProgress,
+  billingNeedsRereading,
   useWorkspaceBilling,
 } from "@/lib/billing/use-workspace-billing";
 import { cn } from "@/lib/utils";
@@ -124,14 +125,8 @@ function PlanContent({
   onOpenPayment: () => void;
 }) {
   const poll = usePollWindow();
-  // 운영자 환불(OPERATOR)은 미정산 시도가 아니라 `REFRESH_STATUS` 가 없다 — 취소 처리 중이면 같이 다시 읽는다.
   const billing = useWorkspaceBilling(workspaceId, (data) =>
-    !poll.expired &&
-    data &&
-    (billingInProgress(data) ||
-      refundPending(data.detail?.refundedAttempt?.refundStatus))
-      ? 5000
-      : false
+    !poll.expired && data && billingNeedsRereading(data) ? 5000 : false
   );
   const workspace = okData(useGetWorkspaceSuspense(workspaceId).data);
   const isAdmin = workspace?.role === "ADMIN";

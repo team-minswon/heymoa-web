@@ -21,7 +21,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useGetWorkspaceBillingPaymentsSuspense } from "@/lib/api/generated/billing/billing";
 import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
-import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
+import { usePollWindow } from "@/lib/billing/use-poll-window";
+import {
+  billingNeedsRereading,
+  useWorkspaceBilling,
+} from "@/lib/billing/use-workspace-billing";
 import { cn } from "@/lib/utils";
 
 type View = { kind: "manage" } | { kind: "payment"; id: string };
@@ -109,7 +113,11 @@ function Manage({
   onOpenPayment: (paymentId: string) => void;
 }) {
   const t = useTranslations("billing.manage");
-  const billing = useWorkspaceBilling(workspaceId);
+  // 요금제 탭과 같다 — 진행 중이면 2분 동안 5초마다, 그 뒤는 창으로 돌아올 때 다시 읽는다(`useWorkspaceBilling`).
+  const poll = usePollWindow();
+  const billing = useWorkspaceBilling(workspaceId, (data) =>
+    !poll.expired && data && billingNeedsRereading(data) ? 5000 : false
+  );
   const [cardChange, setCardChange] = useState(false);
   if (!hasSubscriptionToManage(billing)) {
     return (
