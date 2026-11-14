@@ -130,7 +130,7 @@
     "shared": "Everyone in this workspace shares it.",
     "autoRenew": "You're charged automatically on the same day every month. Admins can cancel anytime in Settings > Payment, and you can keep using it until the period ends.",
     "agreementLabel": "I agree to the order above, including an automatic charge of {amount} every month.",
-    "refundPolicy": "If you request it within 7 days of the payment date and the whole workspace recorded 20 hours or less in total in that billing period, you get a full refund. <link>See refund policy</link>",
+    "refundPolicy": "<link>See refund policy</link>",
     "submit": "Agree and pay",
     "openSetup": {
       "title": "A card registration is already in progress",
