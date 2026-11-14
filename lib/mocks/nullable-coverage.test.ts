@@ -416,6 +416,9 @@ async function contractSamples() {
           // 알림은 스키마 표식이 있어야 원본이 지워진 초대·새 종류를 낸다(PRO-67 I06). 새 web 이 실제로 보내는 요청이다.
           if (path === "/v1/notifications")
             samples.push([schema, `${url}?schema=2`]);
+          // 운영자 조회(APP-1615)는 한 쪽을 줄여야 다음 커서의 비-null 쪽이 나온다
+          if (path === "/v1/admin/users" || path === "/v1/admin/feedbacks")
+            samples.push([schema, `${url}?limit=1`]);
         }
       }
       filled += urls.length;

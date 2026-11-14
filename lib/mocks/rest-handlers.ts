@@ -30,6 +30,8 @@ import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/work
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
 
 import type {
+  AdminFeedbackListResponseDataFeedbacksItem,
+  AdminUserListResponseDataUsersItem,
   NotificationSettingsResponse,
   NotificationSettingsResponseDataMarketingEmail,
   CreateFeedbackRequest,
@@ -176,6 +178,86 @@ function statusOf(code: string) {
   if (BAD_REQUEST_CODES.has(code)) return 400;
   if (code === "PARTICIPANT_NOT_IN_NOTE") return 422;
   return 409;
+}
+
+// 운영자 조회 목(APP-1615). 한 줄은 nullable 이 모두 값이고 한 줄은 모두 null 이다
+const ADMIN_USERS: AdminUserListResponseDataUsersItem[] = [
+  {
+    userId: "0HZX2K7M9Q4AM",
+    name: "김하늘",
+    email: "haneul@example.com",
+    language: "ko",
+    createdAt: "2026-11-12T03:00:00Z",
+    firstRecordingAt: "2026-11-12T04:00:00Z",
+    lastLoginAt: "2026-11-13T09:00:00Z",
+    lastActiveAt: "2026-11-14T01:00:00Z",
+    meetingCount: 3,
+    lastMeetingAt: "2026-11-13T10:00:00Z",
+    workspaceCount: 1,
+    teamRecorded: true,
+    testWorkspaceMember: false,
+    emailMuted: false,
+    onboardingMailSentAt: "2026-11-13T00:00:00Z",
+  },
+  {
+    userId: "0HZX2K7M9Q4AK",
+    name: "이도윤",
+    email: "doyun@example.com",
+    language: null,
+    createdAt: "2026-11-10T03:00:00Z",
+    firstRecordingAt: null,
+    lastLoginAt: null,
+    lastActiveAt: null,
+    meetingCount: 0,
+    lastMeetingAt: null,
+    workspaceCount: 0,
+    teamRecorded: false,
+    testWorkspaceMember: false,
+    emailMuted: true,
+    onboardingMailSentAt: null,
+  },
+];
+const ADMIN_FEEDBACKS: AdminFeedbackListResponseDataFeedbacksItem[] = [
+  {
+    feedbackId: "0HZX2K7M9Q4AJ",
+    kind: "QUESTION",
+    message: "녹음 파일을 내려받을 수 있나요?",
+    createdAt: "2026-11-14T02:00:00Z",
+    answer: "회의 노트의 더보기 메뉴에서 내려받을 수 있습니다.",
+    answeredAt: "2026-11-14T03:00:00Z",
+    answerSeenAt: "2026-11-14T04:00:00Z",
+    userId: "0HZX2K7M9Q4AM",
+    name: "김하늘",
+    email: "haneul@example.com",
+  },
+  {
+    feedbackId: "0HZX2K7M9Q4AH",
+    kind: "INCIDENT",
+    message: "회의가 끝났는데 요약이 안 보여요",
+    createdAt: "2026-11-13T02:00:00Z",
+    answer: null,
+    answeredAt: null,
+    answerSeenAt: null,
+    userId: "0HZX2K7M9Q4AG",
+    name: null,
+    email: null,
+  },
+];
+
+/** 운영자 조회의 쪽 나누기. `limit` 이 줄 수보다 작으면 다음 커서가 생긴다. */
+function adminPage<T>(
+  request: Request,
+  rows: T[],
+  body: (page: T[], next: T | null) => object
+) {
+  const limit = Number(new URL(request.url).searchParams.get("limit") ?? 100);
+  const page = rows.slice(0, limit);
+  const next = rows.length > limit ? page[page.length - 1] : null;
+  return HttpResponse.json({
+    success: true,
+    data: { ...body(page, next), hasMore: next !== null },
+    error: null,
+  });
 }
 
 /** 목의 실패 코드를 화면이 구분할 수 있는 상태 코드로 옮긴다 — 없으면 404, 상태 위반이면 409. */
@@ -1535,6 +1617,21 @@ export const restHandlers = [
       commandResult(() => mockDb.markAllNotificationsRead(body.upTo))
     );
   }),
+  // 운영자 조회(APP-1615). web 은 부르지 않는다 — 계약 표본(`nullable-coverage`)이 null·비-null 양쪽을 보도록 두 줄씩 둔다
+  http.get("*/v1/admin/users", ({ request }) =>
+    adminPage(request, ADMIN_USERS, (users, next) => ({
+      users,
+      nextCreatedAt: next?.createdAt ?? null,
+      nextUserId: next?.userId ?? null,
+    }))
+  ),
+  http.get("*/v1/admin/feedbacks", ({ request }) =>
+    adminPage(request, ADMIN_FEEDBACKS, (feedbacks, next) => ({
+      feedbacks,
+      nextCreatedAt: next?.createdAt ?? null,
+      nextFeedbackId: next?.feedbackId ?? null,
+    }))
+  ),
   http.get("*/v1/feedbacks", () => commandResult(() => mockDb.listFeedbacks())),
   http.post("*/v1/feedbacks/answers/seen", () => {
     mockDb.markFeedbackAnswersSeen();

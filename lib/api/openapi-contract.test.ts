@@ -84,6 +84,8 @@ describe("OpenAPI contract", () => {
         .filter((name) => JSON.stringify(schemas[name]).includes('"language"'))
         .sort()
     ).toEqual([
+      // 운영자 사용자 목록(APP-1615)은 각 사용자의 계정 언어를 읽기만 한다
+      "AdminUserListResponse",
       "AuthSessionResponse",
       "CurrentUserResponse",
       "DesktopLoginStartRequest",
@@ -377,7 +379,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-1596 에서 공간 결제 내역 `workspaces/{workspaceId}/billing/payments` 한 경로가 늘었다 (108 → 109).
     // APP-1600(나이스페이)에서 결제창 복귀 `billing/returns/{success,fail}`·완료 맡기기 `.../setups/{setupId}/complete` 가 빠지고
     // 카드 제출 `.../setups/{setupId}/card` 가 늘었다 (109 → 107).
-    expect(paths).toHaveLength(107);
+    // APP-1615 에서 운영자 조회 `admin/users`·`admin/feedbacks` 가 늘었다 (107 → 109). web 은 부르지 않는다.
+    expect(paths).toHaveLength(109);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

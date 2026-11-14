@@ -24,10 +24,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminFeedbackListResponse,
   CreateFeedbackRequest,
   FeedbackAnswerResponse,
   FeedbackListResponse,
   FeedbackResponse,
+  ListAdminFeedbacksParams,
   RegisterFeedbackAnswerRequest,
   UnauthorizedResponse,
 } from "../models";
@@ -635,7 +637,7 @@ export const getRegisterFeedbackAnswerUrl = (feedbackId: string) => {
 };
 
 /**
- * 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록에 없으면 문의가 없을 때와 같은 404 다.
+ * 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
  * @summary 문의 답변 등록(운영자)
  */
 export const registerFeedbackAnswer = async (
@@ -759,3 +761,365 @@ export const useRegisterFeedbackAnswer = <
     queryClient
   );
 };
+export type listAdminFeedbacksResponse200 = {
+  data: AdminFeedbackListResponse;
+  status: 200;
+};
+
+export type listAdminFeedbacksResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type listAdminFeedbacksResponseSuccess =
+  listAdminFeedbacksResponse200 & {
+    headers: Headers;
+  };
+export type listAdminFeedbacksResponseError = listAdminFeedbacksResponse401 & {
+  headers: Headers;
+};
+
+export type listAdminFeedbacksResponse =
+  | listAdminFeedbacksResponseSuccess
+  | listAdminFeedbacksResponseError;
+
+export const getListAdminFeedbacksUrl = (params?: ListAdminFeedbacksParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/admin/feedbacks?${stringifiedParams}`
+    : `/v1/admin/feedbacks`;
+};
+
+/**
+ * 모든 사용자의 문의를 접수 최신순으로 준다. answered 로 답한 것·안 한 것만 거른다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * @summary 문의 목록(운영자)
+ */
+export const listAdminFeedbacks = async (
+  params?: ListAdminFeedbacksParams,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<listAdminFeedbacksResponse> => {
+  return apiFetch<listAdminFeedbacksResponse>(
+    getListAdminFeedbacksUrl(params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getListAdminFeedbacksQueryKey = (
+  params?: ListAdminFeedbacksParams
+) => {
+  return [`/v1/admin/feedbacks`, ...(params ? [params] : [])] as const;
+};
+
+export const getListAdminFeedbacksQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListAdminFeedbacksQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAdminFeedbacks>>
+  > = ({ signal }) => listAdminFeedbacks(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminFeedbacks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListAdminFeedbacksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminFeedbacks>>
+>;
+export type ListAdminFeedbacksQueryError = UnauthorizedResponse;
+
+export function useListAdminFeedbacks<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params: undefined | ListAdminFeedbacksParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminFeedbacks>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminFeedbacks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListAdminFeedbacks<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminFeedbacks>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminFeedbacks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListAdminFeedbacks<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 문의 목록(운영자)
+ */
+
+export function useListAdminFeedbacks<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListAdminFeedbacksQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 문의 목록(운영자)
+ */
+export const prefetchListAdminFeedbacksQuery = async <
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getListAdminFeedbacksQueryOptions(params, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getListAdminFeedbacksSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListAdminFeedbacksQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAdminFeedbacks>>
+  > = ({ signal }) => listAdminFeedbacks(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof listAdminFeedbacks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListAdminFeedbacksSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminFeedbacks>>
+>;
+export type ListAdminFeedbacksSuspenseQueryError = UnauthorizedResponse;
+
+export function useListAdminFeedbacksSuspense<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params: undefined | ListAdminFeedbacksParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListAdminFeedbacksSuspense<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListAdminFeedbacksSuspense<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 문의 목록(운영자)
+ */
+
+export function useListAdminFeedbacksSuspense<
+  TData = Awaited<ReturnType<typeof listAdminFeedbacks>>,
+  TError = UnauthorizedResponse,
+>(
+  params?: ListAdminFeedbacksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listAdminFeedbacks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListAdminFeedbacksSuspenseQueryOptions(
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

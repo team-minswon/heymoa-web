@@ -9,6 +9,7 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  AdminFeedbackListResponse,
   FeedbackAnswerResponse,
   FeedbackListResponse,
   FeedbackResponse,
@@ -71,6 +72,31 @@ export const getRegisterFeedbackAnswerResponseMock =
       feedbackId: "0HZX2K7M9Q4AJ",
       answeredAt: "2026-07-14T01:02:03Z",
       notified: true,
+    },
+    error: null,
+  });
+
+export const getListAdminFeedbacksResponseMock =
+  (): AdminFeedbackListResponse => ({
+    success: true,
+    data: {
+      feedbacks: [
+        {
+          feedbackId: "0HZX2K7M9Q4AJ",
+          kind: "QUESTION",
+          message: "녹음은 어떻게 시작하나요?",
+          createdAt: "2026-07-14T01:02:03Z",
+          answer: "왼쪽 위 녹음 버튼을 누르면 됩니다.",
+          answeredAt: "2026-07-14T01:02:03Z",
+          answerSeenAt: "2026-07-14T01:02:03Z",
+          userId: "0HZX2K7M9Q4AM",
+          name: "홍길동",
+          email: "hong@example.com",
+        },
+      ],
+      hasMore: true,
+      nextCreatedAt: "2026-07-14T01:02:03Z",
+      nextFeedbackId: "0HZX2K7M9Q4AJ",
     },
     error: null,
   });
@@ -167,9 +193,34 @@ export const getRegisterFeedbackAnswerMockHandler = (
     options
   );
 };
+
+export const getListAdminFeedbacksMockHandler = (
+  overrideResponse?:
+    | AdminFeedbackListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<AdminFeedbackListResponse> | AdminFeedbackListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/admin/feedbacks",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListAdminFeedbacksResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getFeedbacksMock = () => [
   getGetMyFeedbacksMockHandler(),
   getCreateFeedbackMockHandler(),
   getMarkFeedbackAnswersSeenMockHandler(),
   getRegisterFeedbackAnswerMockHandler(),
+  getListAdminFeedbacksMockHandler(),
 ];
