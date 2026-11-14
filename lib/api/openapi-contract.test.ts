@@ -183,12 +183,11 @@ describe("OpenAPI contract", () => {
     expect(
       api().paths["/v1/workspaces/{workspaceId}/tasks"]?.get?.operationId
     ).toBe("getWorkspaceTasks");
+    // 전사 증분 조회와 화자 일괄 지정은 아무도 부르지 않아 APP-1620 에서 지웠다.
     expect(
-      api().paths["/v1/notes/{noteId}/transcript/segments"]?.get?.operationId
-    ).toBe("getTranscriptSegmentsAfter");
-    expect(api().paths["/v1/notes/{noteId}/speakers"]?.put?.operationId).toBe(
-      "assignNoteSpeakers"
-    );
+      api().paths["/v1/notes/{noteId}/transcript/segments"]
+    ).toBeUndefined();
+    expect(api().paths["/v1/notes/{noteId}/speakers"]).toBeUndefined();
 
     const notifications = api().components.schemas.NotificationListResponse as {
       properties: {
@@ -263,7 +262,7 @@ describe("OpenAPI contract", () => {
       CurrentUserResponse: {
         properties: { data: { required: string[] } };
       };
-      StartTranscriptionSessionResponse: {
+      TranscriptionSessionResponse: {
         properties: {
           data: { properties: { endReason: { enum: string[] } } };
         };
@@ -274,8 +273,8 @@ describe("OpenAPI contract", () => {
       "image"
     );
     expect(
-      schemas.StartTranscriptionSessionResponse.properties.data.properties
-        .endReason.enum
+      schemas.TranscriptionSessionResponse.properties.data.properties.endReason
+        .enum
     ).toEqual([
       "READY_TIMEOUT",
       "CLIENT_DISCONNECTED",
@@ -381,7 +380,8 @@ describe("contract sync 2026-07-29", () => {
     // 카드 제출 `.../setups/{setupId}/card` 가 늘었다 (109 → 107).
     // APP-1615 에서 운영자 조회 `admin/users`·`admin/feedbacks` 가 늘었다 (107 → 109). web 은 부르지 않는다.
     // APP-1616 에서 결제 운영 명령 `billing/operator/**` 다섯이 계약에 실렸다 (109 → 114). web 은 부르지 않는다.
-    expect(paths).toHaveLength(114);
+    // APP-1620 에서 아무도 부르지 않는 공개 경로 셋(관계·전사 증분·화자 일괄)을 지웠다 (114 → 111).
+    expect(paths).toHaveLength(111);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { ProjectTaskResponseDataAssignee } from "./projectTaskResponseDataAssignee";
+import type { Assignee } from "./assignee";
 import type { ProjectTaskResponseDataExternalAgentChange } from "./projectTaskResponseDataExternalAgentChange";
 import type { ProjectTaskResponseDataTaskStatus } from "./projectTaskResponseDataTaskStatus";
 
@@ -18,11 +18,8 @@ export type ProjectTaskResponseData = {
    * @nullable
    */
   due: string | null;
-  /**
-   * 할 일 담당. 회의 라벨은 조회 시점 화자 지정으로 풉니다. 없으면 null
-   * @nullable
-   */
-  assignee: ProjectTaskResponseDataAssignee;
+  /** 할 일 담당. 회의 라벨은 조회 시점 화자 지정으로 풉니다. 없으면 null */
+  assignee: Assignee | null;
   /**
    * 그 프로젝트의 이름. 워크스페이스 단위 조회에서 할 일마다 다르다
    * @minLength 1

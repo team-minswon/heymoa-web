@@ -1,6 +1,6 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
-import type { ProjectTaskListResponseDataTasksItemAssignee } from "@/lib/api/generated/models";
+import type { Assignee } from "@/lib/api/generated/models";
 import {
   getGetProjectTasksQueryKey,
   getGetWorkspaceTasksQueryKey,
@@ -44,7 +44,7 @@ function mapListRows(
 /** 사람이 고른 담당을 목록 행의 담당 모양으로. 사진은 서버가 안 싣는 값이라 비운다 */
 export function assigneeRowOf(
   choice: AssigneeValue | AssigneeChoice | null
-): ProjectTaskListResponseDataTasksItemAssignee | null {
+): Assignee | null {
   if (!choice) return null;
   return choice.type === "SPEAKER_LABEL"
     ? { type: choice.type, noteId: choice.noteId, label: choice.label }

@@ -1,4 +1,4 @@
-import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
+import type { TranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import type { MicrophoneState } from "@/lib/transcription/audio";
 import type {
   BufferState,
@@ -21,7 +21,7 @@ export const ACTIVE_PHASES: ReadonlySet<RecordingPhase> = new Set([
   "stopping",
 ]);
 
-export type RecordingSession = StartTranscriptionSessionResponseData;
+export type RecordingSession = TranscriptionSessionResponseData;
 
 /** 녹음 하나의 화면 상태. 컨트롤러·타이머 같은 붙들고 있는 자원은 여기 없다. */
 export type RecordingState = {

@@ -12,7 +12,6 @@ import type {
   NoteResponseData,
   ProjectRequest,
   ProjectResponseData,
-  StartTranscriptionSessionResponseData,
   TranscriptResponseDataSegmentsItem,
   TranscriptionSessionResponseData,
   UpdateWorkspaceRequest,
@@ -4995,7 +4994,7 @@ export const mockDb = {
   createSession(
     noteId: string,
     clientInstanceId?: string
-  ): StartTranscriptionSessionResponseData {
+  ): TranscriptionSessionResponseData {
     const note = findNote(noteId);
     // 조회와 같은 규칙 — 권한 승인과 이 POST 사이에 추방됐을 수 있다. 서버는 여기서도
     // 멤버십을 보고 404 `WORKSPACE_NOT_FOUND`를 준다(`NoteAccessHandler.requireProjectMember`).
@@ -5057,7 +5056,7 @@ export const mockDb = {
     state.sessions.push(session);
     if (clientInstanceId)
       sessionOpeners.set(session.sessionId, clientInstanceId);
-    return copy(session) as unknown as StartTranscriptionSessionResponseData;
+    return copy(session) as unknown as TranscriptionSessionResponseData;
   },
 
   getSession(sessionId: string): TranscriptionSessionResponseData {

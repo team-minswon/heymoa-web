@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { MeetingReviewResponseDataItemsItemSuggestedAssignmentAssignee } from "./meetingReviewResponseDataItemsItemSuggestedAssignmentAssignee";
+import type { Assignee } from "./assignee";
 
 /**
  * 화자 분리 뒤 판정한 이 할 일의 담당 · 기한 제안. 받으려면 항목 수정으로 반영합니다. 제안이 없으면 null
@@ -17,9 +17,6 @@ export type MeetingReviewResponseDataItemsItemSuggestedAssignment = {
    * @nullable
    */
   due: string | null;
-  /**
-   * 제안한 담당. 없거나 풀 수 없으면 null
-   * @nullable
-   */
-  assignee: MeetingReviewResponseDataItemsItemSuggestedAssignmentAssignee;
+  /** 제안한 담당. 없거나 풀 수 없으면 null */
+  assignee: Assignee | null;
 } | null;

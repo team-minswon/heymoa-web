@@ -6,7 +6,7 @@ import {
   getGetRecordingUsageQueryKey,
   getGetWorkspaceBillingQueryKey,
 } from "@/lib/api/generated/billing/billing";
-import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
+import type { TranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
@@ -87,7 +87,7 @@ vi.mock(
   })
 );
 
-const session: StartTranscriptionSessionResponseData = {
+const session: TranscriptionSessionResponseData = {
   sessionId: "0HZX2K7M9Q4AG",
   noteId: "0HZX2K7M9Q4AF",
   status: "READY",

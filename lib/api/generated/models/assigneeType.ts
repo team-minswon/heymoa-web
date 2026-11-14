@@ -9,10 +9,9 @@
 /**
  * 담당 종류
  */
-export type ProjectTaskResponseDataAssigneeType =
-  (typeof ProjectTaskResponseDataAssigneeType)[keyof typeof ProjectTaskResponseDataAssigneeType];
+export type AssigneeType = (typeof AssigneeType)[keyof typeof AssigneeType];
 
-export const ProjectTaskResponseDataAssigneeType = {
+export const AssigneeType = {
   USER: "USER",
   GUEST: "GUEST",
   SPEAKER_LABEL: "SPEAKER_LABEL",

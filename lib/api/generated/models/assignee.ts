@@ -5,13 +5,9 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { MeetingReviewResponseDataItemsItemTaskChangesItemAssigneeValueType } from "./meetingReviewResponseDataItemsItemTaskChangesItemAssigneeValueType";
+import type { AssigneeType } from "./assigneeType";
 
-/**
- * 바꿀 담당. null 이면 해제
- * @nullable
- */
-export type MeetingReviewResponseDataItemsItemTaskChangesItemAssigneeValue = {
+export interface Assignee {
   /** 사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자면 키가 빠진다 */
   image?: string;
   /**
@@ -36,5 +32,5 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItemAssigneeValue = {
    */
   id?: string;
   /** 담당 종류 */
-  type: MeetingReviewResponseDataItemsItemTaskChangesItemAssigneeValueType;
-} | null;
+  type: AssigneeType;
+}

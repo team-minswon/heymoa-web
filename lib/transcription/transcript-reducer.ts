@@ -4,7 +4,7 @@ import type {
 } from "@/lib/transcription/protocol";
 
 /**
- * 살아 있는 partial은 세션당 하나다 — 계약(`asyncapi.yml` PartialEvent)이
+ * 살아 있는 partial은 세션당 하나다 — 계약(`asyncapi-stomp.yml` PartialEvent)이
  * "`utteranceId`는 commit마다 새로 발급되며 확정된 발화의 partial 표시를 지우는 기준"이라고
  * 정의한다. 맵으로 쌓으면 final이 오지 않는 발화(빈 확정, 재연결로 폐기된 commit)의 텍스트가
  * 남아 이후 발화에 계속 이어 붙는다.

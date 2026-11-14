@@ -6,6 +6,8 @@ import { KNOWN_EVENTS } from "@/lib/chat/stream-protocol";
 
 const openapi = parse(readFileSync("openapi3.yml", "utf8"));
 const asyncapi = parse(readFileSync("asyncapi.yml", "utf8"));
+// 전사·노트 토픽(STOMP)은 server 원본의 사본이 따로 있다(APP-1620). SSE 는 `asyncapi.yml` 이다.
+const stomp = parse(readFileSync("asyncapi-stomp.yml", "utf8"));
 
 describe("REST and WebSocket contract consistency", () => {
   it("shares TSID and persisted final segment fields", () => {
@@ -15,6 +17,7 @@ describe("REST and WebSocket contract consistency", () => {
     const restTsidPattern =
       rest.TranscriptionSessionResponse.properties.data.properties.noteId
         .pattern;
+    expect(stomp.components.schemas.Tsid.pattern).toBe(restTsidPattern);
     expect(asyncapi.components.schemas.Tsid.pattern).toBe(restTsidPattern);
 
     // 실시간 final 과 저장된 발화가 같은 필드를 갖는지 본다. 어긋나면 화면이 두 소스를
@@ -32,7 +35,7 @@ describe("REST and WebSocket contract consistency", () => {
       .filter((field: string) => field !== "assignedParticipantId")
       .sort();
     const socketRequired = [
-      ...asyncapi.components.messages.FinalEvent.payload.required,
+      ...stomp.components.messages.FinalEvent.payload.required,
     ]
       .filter((field) => !["type", "utteranceId"].includes(field))
       .sort();
@@ -42,7 +45,7 @@ describe("REST and WebSocket contract consistency", () => {
 
   it("keeps meeting pause out of the realtime protocol", () => {
     const eventTypes = Object.values(
-      asyncapi.components.messages as Record<
+      stomp.components.messages as Record<
         string,
         { payload?: { properties?: { type?: { enum?: string[] } } } }
       >
@@ -58,9 +61,8 @@ describe("REST and WebSocket contract consistency", () => {
   });
 
   it("binds note topics to STOMP and chat streams to the SSE edge", () => {
-    expect(asyncapi.channels.noteTopic.servers).toEqual([
-      { $ref: "#/servers/production" },
-    ]);
+    expect(Object.keys(stomp.channels)).toContain("noteTopic");
+    expect(Object.keys(stomp.servers)).toEqual(["production"]);
     expect(asyncapi.channels.agentChatStream.servers).toEqual([
       { $ref: "#/servers/sseEdge" },
     ]);

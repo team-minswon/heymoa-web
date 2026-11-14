@@ -17,7 +17,7 @@
     "dev:clean": "pnpm clean:next && pnpm dev",
     "test": "vitest",
     "test:run": "vitest run",
-    "asyncapi:validate": "pnpm dlx @asyncapi/cli@^6.0.2 validate asyncapi.yml",
+    "asyncapi:validate": "pnpm dlx @asyncapi/cli@^6.0.2 validate asyncapi.yml && pnpm dlx @asyncapi/cli@^6.0.2 validate asyncapi-stomp.yml",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:auth": "playwright test --config=playwright.auth.config.ts",

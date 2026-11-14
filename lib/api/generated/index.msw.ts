@@ -18,7 +18,6 @@ export { getNotificationsMock } from "./notifications/notifications.msw";
 export { getProjectsMock } from "./projects/projects.msw";
 export { getProposalsMock } from "./proposals/proposals.msw";
 export { getRealtimeMock } from "./realtime/realtime.msw";
-export { getRelationsMock } from "./relations/relations.msw";
 export { getTranscriptionMock } from "./transcription/transcription.msw";
 export { getUsersMock } from "./users/users.msw";
 export { getWorkspaceIntegrationMock } from "./workspace-integration/workspace-integration.msw";

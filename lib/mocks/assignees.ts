@@ -1,4 +1,4 @@
-import type { MeetingReviewResponseDataItemsItemAssignee } from "@/lib/api/generated/models";
+import type { Assignee } from "@/lib/api/generated/models";
 import { mockDb } from "@/lib/mocks/db";
 import { failWith } from "@/lib/mocks/mock-envelope";
 
@@ -7,7 +7,7 @@ export type StoredAssignee =
   | { type: "USER" | "GUEST"; id: string }
   | { type: "SPEAKER_LABEL"; noteId: string; label: string };
 
-export type AssigneeView = MeetingReviewResponseDataItemsItemAssignee;
+export type AssigneeView = Assignee;
 
 type AssigneeRequest = {
   type: "USER" | "GUEST" | "SPEAKER_LABEL";

@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { MeetingReviewResponseDataItemsItemAssignee } from "./meetingReviewResponseDataItemsItemAssignee";
+import type { Assignee } from "./assignee";
 import type { MeetingReviewResponseDataItemsItemCitationsItem } from "./meetingReviewResponseDataItemsItemCitationsItem";
 import type { MeetingReviewResponseDataItemsItemDecisionsItem } from "./meetingReviewResponseDataItemsItemDecisionsItem";
 import type { MeetingReviewResponseDataItemsItemKind } from "./meetingReviewResponseDataItemsItemKind";
@@ -51,11 +51,8 @@ export type MeetingReviewResponseDataItemsItem = {
   due: string | null;
   /** 최신 분석이 제안한 대체(끝낼 옛 노드). 끝내려면 decisions 로 END 를 저장하고, 확정은 포함 항목의 END 대상만 끝냅니다 */
   replacements: MeetingReviewResponseDataItemsItemReplacementsItem[];
-  /**
-   * 담당. 할 일·이슈·질문 항목만 가집니다. 회의 라벨은 조회 시점 화자 지정으로 풉니다. 없으면 null
-   * @nullable
-   */
-  assignee: MeetingReviewResponseDataItemsItemAssignee;
+  /** 담당. 할 일·이슈·질문 항목만 가집니다. 회의 라벨은 조회 시점 화자 지정으로 풉니다. 없으면 null */
+  assignee: Assignee | null;
   /**
    * 원본 명제 출처. 사람 추가는 null
    * @nullable

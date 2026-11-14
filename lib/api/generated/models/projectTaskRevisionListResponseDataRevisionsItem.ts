@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { ProjectTaskRevisionListResponseDataRevisionsItemAssignee } from "./projectTaskRevisionListResponseDataRevisionsItemAssignee";
+import type { Assignee } from "./assignee";
 import type { ProjectTaskRevisionListResponseDataRevisionsItemChangeSource } from "./projectTaskRevisionListResponseDataRevisionsItemChangeSource";
 import type { ProjectTaskRevisionListResponseDataRevisionsItemConnection } from "./projectTaskRevisionListResponseDataRevisionsItemConnection";
 import type { ProjectTaskRevisionListResponseDataRevisionsItemTaskStatus } from "./projectTaskRevisionListResponseDataRevisionsItemTaskStatus";
@@ -30,11 +30,8 @@ export type ProjectTaskRevisionListResponseDataRevisionsItem = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   approvalId: string | null;
-  /**
-   * 할 일 담당. 회의 라벨은 조회 시점 화자 지정으로 풉니다. 없으면 null
-   * @nullable
-   */
-  assignee: ProjectTaskRevisionListResponseDataRevisionsItemAssignee;
+  /** 할 일 담당. 회의 라벨은 조회 시점 화자 지정으로 풉니다. 없으면 null */
+  assignee: Assignee | null;
   /** 할 일 상태. 삭제 대신 CANCELLED 로 둔다 */
   taskStatus: ProjectTaskRevisionListResponseDataRevisionsItemTaskStatus;
   /** 그 판의 할 일 내용 */

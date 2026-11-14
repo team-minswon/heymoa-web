@@ -13,9 +13,7 @@ import type { RequestHandlerOptions } from "msw";
 import type {
   SegmentSpeakerResponse,
   SpeakerListResponse,
-  StartTranscriptionSessionResponse,
   TranscriptResponse,
-  TranscriptSegmentListResponse,
   TranscriptionSessionResponse,
 } from "../models";
 
@@ -34,24 +32,6 @@ export const getGetTranscriptionSessionResponseMock =
     },
     error: null,
   });
-
-export const getAssignNoteSpeakersResponseMock = (): SpeakerListResponse => ({
-  success: true,
-  data: {
-    speakers: [
-      {
-        label: "A",
-        speakingMs: 940000,
-        segmentCount: 128,
-        representativeSegmentId: "0HZX2K7M9Q4AH",
-        assignedParticipantId: "0HZX2K7M9Q4AP",
-        assignedName: "홍길동",
-        confirmed: true,
-      },
-    ],
-  },
-  error: null,
-});
 
 export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
   success: true,
@@ -110,7 +90,7 @@ export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
 });
 
 export const getStartTranscriptionSessionResponseMock =
-  (): StartTranscriptionSessionResponse =>
+  (): TranscriptionSessionResponse =>
     faker.helpers.arrayElement([
       {
         success: true,
@@ -160,25 +140,6 @@ export const getAssignNoteSpeakerResponseMock = (): SpeakerListResponse => ({
   error: null,
 });
 
-export const getGetTranscriptSegmentsAfterResponseMock =
-  (): TranscriptSegmentListResponse => ({
-    success: true,
-    data: {
-      segments: [
-        {
-          segmentId: "0HZX2K7M9Q4AH",
-          sequence: 1,
-          text: "안녕하세요.",
-          startedAtMs: 0,
-          endedAtMs: 1200,
-          speakerLabel: null,
-          assignedParticipantId: null,
-        },
-      ],
-    },
-    error: null,
-  });
-
 export const getAssignSegmentSpeakerResponseMock =
   (): SegmentSpeakerResponse => ({
     success: true,
@@ -215,30 +176,6 @@ export const getGetTranscriptionSessionMockHandler = (
   );
 };
 
-export const getAssignNoteSpeakersMockHandler = (
-  overrideResponse?:
-    | SpeakerListResponse
-    | ((
-        info: Parameters<Parameters<typeof http.put>[1]>[0]
-      ) => Promise<SpeakerListResponse> | SpeakerListResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.put(
-    "*/v1/notes/:noteId/speakers",
-    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getAssignNoteSpeakersResponseMock(),
-        { status: 200 }
-      );
-    },
-    options
-  );
-};
-
 export const getGetNoteTranscriptMockHandler = (
   overrideResponse?:
     | TranscriptResponse
@@ -265,12 +202,12 @@ export const getGetNoteTranscriptMockHandler = (
 
 export const getStartTranscriptionSessionMockHandler = (
   overrideResponse?:
-    | StartTranscriptionSessionResponse
+    | TranscriptionSessionResponse
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0]
       ) =>
-        | Promise<StartTranscriptionSessionResponse>
-        | StartTranscriptionSessionResponse),
+        | Promise<TranscriptionSessionResponse>
+        | TranscriptionSessionResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.post(
@@ -313,32 +250,6 @@ export const getAssignNoteSpeakerMockHandler = (
   );
 };
 
-export const getGetTranscriptSegmentsAfterMockHandler = (
-  overrideResponse?:
-    | TranscriptSegmentListResponse
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) =>
-        | Promise<TranscriptSegmentListResponse>
-        | TranscriptSegmentListResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.get(
-    "*/v1/notes/:noteId/transcript/segments",
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getGetTranscriptSegmentsAfterResponseMock(),
-        { status: 200 }
-      );
-    },
-    options
-  );
-};
-
 export const getAssignSegmentSpeakerMockHandler = (
   overrideResponse?:
     | SegmentSpeakerResponse
@@ -364,10 +275,8 @@ export const getAssignSegmentSpeakerMockHandler = (
 };
 export const getTranscriptionMock = () => [
   getGetTranscriptionSessionMockHandler(),
-  getAssignNoteSpeakersMockHandler(),
   getGetNoteTranscriptMockHandler(),
   getStartTranscriptionSessionMockHandler(),
   getAssignNoteSpeakerMockHandler(),
-  getGetTranscriptSegmentsAfterMockHandler(),
   getAssignSegmentSpeakerMockHandler(),
 ];
