@@ -1928,11 +1928,11 @@ describe("응답이 멈출 때", () => {
     ).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(10_100));
     expect(
-      await screen.findByText("결제 상태를 불러오지 못했습니다")
+      await screen.findByText("결과를 불러오지 못했습니다")
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "연결이 불안정하거나 응답이 늦어지고 있습니다. 결제가 실패한 것은 아닙니다."
+        "연결이 불안정하거나 응답이 늦어지고 있습니다. 카드 등록이나 결제가 실패한 것은 아닙니다."
       )
     ).toBeInTheDocument();
     expect(screen.queryByText("결제가 승인되지 않았습니다")).toBeNull();
@@ -1962,7 +1962,7 @@ describe("응답이 멈출 때", () => {
     await act(() => vi.advanceTimersByTimeAsync(2100));
     await waitFor(() => expect(reads).toBe(2));
     expect(screen.getByText("결제를 확인하는 중입니다")).toBeInTheDocument();
-    expect(screen.queryByText("결제 상태를 불러오지 못했습니다")).toBeNull();
+    expect(screen.queryByText("결과를 불러오지 못했습니다")).toBeNull();
   });
 });
 
