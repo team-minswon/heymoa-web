@@ -36,7 +36,6 @@ import {
   EMPTY_CARD,
   type CardForm,
 } from "@/lib/billing/card-input";
-import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { planName } from "@/lib/billing/plan-name";
 import { invalidateWorkspaceBilling } from "@/lib/billing/queries";
 import { createRequestKey } from "@/lib/billing/request-key";
@@ -78,9 +77,12 @@ export function CheckoutForm({
   onResult,
   onChanged,
   onSubmittingChange,
+  nextChargeAt,
 }: {
   workspaceId: string;
   purpose: Purpose;
+  /** 첫 구독의 다음 결제 예정일. 페이지를 만든 서버 시각으로 계산해 내려 준다(브라우저 시계를 믿지 않는다). */
+  nextChargeAt?: string;
   /** 지금 낼 수 없을 때 돌아갈 곳. 모달 안에서는 없다(닫기가 있다). */
   backHref?: string;
   /** 결과 화면을 볼 차례. */
@@ -182,13 +184,17 @@ export function CheckoutForm({
   }
   // 자동 갱신 동의는 금액과 주기를 문장에 직접 적는다.
   // 종료 예정인 구독은 카드를 등록해도 재개하기 전에는 결제되지 않는다 — 동의 문장도 그렇게 말한다.
+  // 카드 변경은 요약과 동의가 같은 금액을 쓴다 — 서버가 준 다음 결제 금액, 없으면(해지 예약 등) 상품 금액.
+  const chargeAmount = replace
+    ? (billing.detail?.nextChargeAmountKrw ?? product.amountKrw)
+    : product.amountKrw;
   const agreementLabel = t(
     !replace
       ? "agreementLabel"
       : billing.cancelAtPeriodEnd
         ? "replace.agreementLabelEnding"
         : "replace.agreementLabel",
-    { amount: format.money(product.amountKrw) }
+    { amount: format.money(chargeAmount) }
   );
   const errors = cardErrors(card, new Date());
   const ready =
@@ -342,13 +348,14 @@ export function CheckoutForm({
   return (
     <div className="flex flex-col gap-8">
       {replace ? (
-        <ReplaceSummary billing={billing} />
+        <ReplaceSummary billing={billing} amount={chargeAmount} />
       ) : (
         <section>
           <h2 className={SECTION_TITLE}>{t("priceTitle")}</h2>
           <PurchaseSummary
             billing={billing}
             workspaceName={workspace?.name ?? ""}
+            nextChargeAt={nextChargeAt}
           />
         </section>
       )}
@@ -414,9 +421,11 @@ type Billing = ReturnType<typeof useWorkspaceBilling>;
 function PurchaseSummary({
   billing,
   workspaceName,
+  nextChargeAt,
 }: {
   billing: Billing;
   workspaceName: string;
+  nextChargeAt?: string;
 }) {
   const t = useTranslations("billing.checkout");
   const format = useBillingFormat();
@@ -481,19 +490,28 @@ function PurchaseSummary({
             {format.money(product.amountKrw)}
           </dd>
         </div>
-        <div className="flex items-baseline justify-between gap-4">
-          <dt className="text-[var(--el-muted)]">{t("nextCharge")}</dt>
-          <dd className="whitespace-nowrap text-[var(--el-ink)]">
-            {format.date(nextMonthlyChargeAt(new Date()))}
-          </dd>
-        </div>
+        {nextChargeAt ? (
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-[var(--el-muted)]">{t("nextCharge")}</dt>
+            <dd className="whitespace-nowrap text-[var(--el-ink)]">
+              {format.date(nextChargeAt)}
+            </dd>
+          </div>
+        ) : null}
       </dl>
     </div>
   );
 }
 
 /** 카드 변경의 요약 — 지금 카드·다음 결제와, 지금 결제되지 않는다는 등 짧은 안내. */
-function ReplaceSummary({ billing }: { billing: Billing }) {
+function ReplaceSummary({
+  billing,
+  amount,
+}: {
+  billing: Billing;
+  /** 동의 문장과 같은 금액. */
+  amount: number;
+}) {
   const t = useTranslations("billing.checkout");
   const format = useBillingFormat();
   const currentCard = format.card(billing.detail?.maskedCard);
@@ -517,11 +535,7 @@ function ReplaceSummary({ billing }: { billing: Billing }) {
           {nextCharge ? (
             <Row
               label={t("replace.nextCharge")}
-              value={
-                billing.detail?.nextChargeAmountKrw != null
-                  ? `${format.date(nextCharge.end)} · ${format.money(billing.detail.nextChargeAmountKrw)}`
-                  : format.date(nextCharge.end)
-              }
+              value={`${format.date(nextCharge.end)} · ${format.money(amount)}`}
             />
           ) : null}
         </dl>

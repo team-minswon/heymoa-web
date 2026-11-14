@@ -19,7 +19,14 @@ import { cn } from "@/lib/utils";
  * 「동의하고 결제하기」. 이 면(`app/(card-entry)`)에는 분석 스크립트가 없고 `proxy.ts` 가 CSP 를 건다. 요금제 탭에서 문서를
  * 새로 열어 오고, 돌아가기도 일반 링크로 문서를 새로 연다 — 카드 정보를 분석이 실린 문서로 데려가지 않는다.
  */
-export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
+export function BillingCheckoutPage({
+  workspaceId,
+  nextChargeAt,
+}: {
+  workspaceId: string;
+  /** 다음 결제 예정일 — 페이지를 만든 서버 시각으로 계산한 값(`page.tsx`). */
+  nextChargeAt: string;
+}) {
   const t = useTranslations("billing.checkout");
   const plans = `/w/${workspaceId}?settings=billing`;
   return (
@@ -67,6 +74,7 @@ export function BillingCheckoutPage({ workspaceId }: { workspaceId: string }) {
               purpose="PURCHASE"
               backHref={plans}
               onResult={goToSetupResult}
+              nextChargeAt={nextChargeAt}
             />
           </DataBoundary>
         </div>

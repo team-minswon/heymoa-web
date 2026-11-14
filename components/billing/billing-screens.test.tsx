@@ -53,6 +53,8 @@ vi.mock("@/lib/analytics/track", async (importOriginal) => ({
 /** 목 시드: 집행 대상·Free / 이미 유료 / 집행 대상 아님. */
 const FREE = "01K0000000000";
 const PAID = "01K0000000006";
+/** 결제 페이지(서버 컴포넌트)가 서버 시각으로 계산해 내려 주는 다음 결제 예정일. */
+const NEXT_CHARGE = "2026-12-12T05:30:00.000Z";
 
 const server = setupServer(...restHandlers, ...billingHandlers);
 
@@ -678,7 +680,9 @@ const fillAll = () => {
   fireEvent.click(agreePg());
 };
 const renderCheckout = async (workspaceId = FREE) => {
-  renderIn(<BillingCheckoutPage workspaceId={workspaceId} />);
+  renderIn(
+    <BillingCheckoutPage workspaceId={workspaceId} nextChargeAt={NEXT_CHARGE} />
+  );
   await screen.findByText("오늘 결제");
 };
 /** 카드 제출을 받아 본문을 남긴다. */
@@ -729,9 +733,10 @@ describe("첫 구독 결제 페이지", () => {
     fillCard();
     expect(pay()).toBeEnabled();
     // 다음 결제 예정일과 자동 결제·해지 방법을 결제 전에 한 문장으로 알린다.
+    // 브라우저 시계가 아니라 서버가 내려 준 값을 그린다.
     expect(
       screen.getByText("다음 결제 예정일").nextElementSibling
-    ).toHaveTextContent(/^\d{4}년 \d{1,2}월 \d{1,2}일$/);
+    ).toHaveTextContent("2026년 12월 12일");
     expect(
       screen.getByText(
         "매월 같은 날 자동으로 결제됩니다. 관리자는 설정 > 결제 관리에서 언제든 해지할 수 있고, 해지해도 이용 기간이 끝날 때까지 쓸 수 있습니다."
@@ -799,7 +804,7 @@ describe("첫 구독 결제 페이지", () => {
   it("영어 화면에서도 약관 본문은 한국어 원문이고, 그 사실을 영어로 한 줄 알린다(APP-1600)", async () => {
     render(
       <QueryClientProvider client={newClient()}>
-        <BillingCheckoutPage workspaceId={FREE} />
+        <BillingCheckoutPage workspaceId={FREE} nextChargeAt={NEXT_CHARGE} />
       </QueryClientProvider>,
       { wrapper: intlWrapper("en") }
     );
@@ -1119,7 +1124,9 @@ describe("첫 구독 결제 페이지", () => {
   it("멤버는 관리자 요청 안내와 요금제로 돌아가는 링크만 본다", async () => {
     asMember();
     serveBilling({ allowedActions: [] });
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    renderIn(
+      <BillingCheckoutPage workspaceId={FREE} nextChargeAt={NEXT_CHARGE} />
+    );
     expect(
       await screen.findByText(/관리자에게 요청해 주세요/)
     ).toBeInTheDocument();
@@ -1141,7 +1148,9 @@ describe("첫 구독 결제 페이지", () => {
       entitlement: null,
       allowedActions: [],
     });
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    renderIn(
+      <BillingCheckoutPage workspaceId={FREE} nextChargeAt={NEXT_CHARGE} />
+    );
     expect(
       await screen.findByText("Pro 결제는 준비 중입니다")
     ).toBeInTheDocument();
@@ -1158,7 +1167,9 @@ describe("첫 구독 결제 페이지", () => {
   });
 
   it("이미 Pro 인 공간은 그렇다고 알리고 워크스페이스로 돌려보낸다", async () => {
-    renderIn(<BillingCheckoutPage workspaceId={PAID} />);
+    renderIn(
+      <BillingCheckoutPage workspaceId={PAID} nextChargeAt={NEXT_CHARGE} />
+    );
     expect(
       await screen.findByText("이 워크스페이스는 이미 Pro를 쓰고 있습니다.")
     ).toBeInTheDocument();
@@ -1172,7 +1183,9 @@ describe("첫 구독 결제 페이지", () => {
 
   it("판매는 열렸는데 살 수 없는 상태면 그 안내와 「요금제로 돌아가기」만 준다", async () => {
     serveBilling({ allowedActions: [] });
-    renderIn(<BillingCheckoutPage workspaceId={FREE} />);
+    renderIn(
+      <BillingCheckoutPage workspaceId={FREE} nextChargeAt={NEXT_CHARGE} />
+    );
     expect(
       await screen.findByText("지금은 새로 구매할 수 없는 상태입니다.")
     ).toBeInTheDocument();

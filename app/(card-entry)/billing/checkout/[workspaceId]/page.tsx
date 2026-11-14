@@ -1,6 +1,7 @@
 import { HydrationBoundary } from "@tanstack/react-query";
 
 import { BillingCheckoutPage } from "@/components/billing/billing-checkout-page";
+import { nextMonthlyChargeAt } from "@/lib/billing/next-charge";
 import { prefetchCardEntry } from "@/lib/workspace/prefetch";
 
 import { loginRequired } from "../../../login-gate";
@@ -16,7 +17,11 @@ export default async function BillingCheckoutRoute({
   if (login) return login;
   return (
     <HydrationBoundary state={await prefetchCardEntry(workspaceId)}>
-      <BillingCheckoutPage workspaceId={workspaceId} />
+      {/* 다음 결제 예정일은 브라우저 시계가 아니라 이 페이지를 만든 서버 시각으로 계산한다. */}
+      <BillingCheckoutPage
+        workspaceId={workspaceId}
+        nextChargeAt={nextMonthlyChargeAt(new Date())}
+      />
     </HydrationBoundary>
   );
 }
