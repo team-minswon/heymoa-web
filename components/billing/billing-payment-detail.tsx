@@ -93,7 +93,7 @@ function PaymentContent({
   const t = useTranslations("billing.payment");
   const billing = useWorkspaceBilling(workspaceId);
   // 404·403 을 화면이 그리고 취소 처리 중에는 다시 읽어서 suspense 조회가 아니다(rule `error-loading` 예외).
-  // 다시 읽기는 요금제 탭과 같은 2분 창에서만 한다.
+  // 다시 읽기는 요금제 탭과 같은 3분 창에서만 한다.
   const poll = usePollWindow();
   const query = useGetBillingPayment(workspaceId, paymentId, {
     query: {

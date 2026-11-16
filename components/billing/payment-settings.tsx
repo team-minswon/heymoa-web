@@ -113,7 +113,7 @@ function Manage({
   onOpenPayment: (paymentId: string) => void;
 }) {
   const t = useTranslations("billing.manage");
-  // 요금제 탭과 같다 — 진행 중이면 2분 동안 5초마다, 그 뒤는 창으로 돌아올 때 다시 읽는다(`useWorkspaceBilling`).
+  // 요금제 탭과 같다 — 진행 중이면 3분 동안 5초마다, 그 뒤는 창으로 돌아올 때 다시 읽는다(`useWorkspaceBilling`).
   const poll = usePollWindow();
   const billing = useWorkspaceBilling(workspaceId, (data) =>
     !poll.expired && data && billingNeedsRereading(data) ? 5000 : false

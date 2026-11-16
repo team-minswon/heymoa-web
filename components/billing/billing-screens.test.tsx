@@ -1696,7 +1696,7 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     );
   });
 
-  it("2분 뒤 자동 읽기를 멈추고, 다시 확인과 창 포커스 복귀로 한 번씩 읽는다", async () => {
+  it("3분 뒤 자동 읽기를 멈추고, 다시 확인과 창 포커스 복귀로 한 번씩 읽는다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let reads = 0;
     server.use(
@@ -1713,7 +1713,10 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     await act(() => vi.advanceTimersByTimeAsync(5100)); // 이후 5초
     expect(reads).toBe(3);
 
-    await act(() => vi.advanceTimersByTimeAsync(125_000));
+    // 망취소 확정(첫 전송 뒤 약 135초)이 지난 140초 무렵에도 계속 읽는다.
+    await act(() => vi.advanceTimersByTimeAsync(133_000));
+    expect(reads).toBeGreaterThan(20);
+    await act(() => vi.advanceTimersByTimeAsync(42_000));
     const stopped = reads;
     await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(reads).toBe(stopped);

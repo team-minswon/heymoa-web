@@ -100,7 +100,7 @@ export function SubscriptionManagement({
 
   // 최근 결제 한 건의 요약.
   const paymentId = detail.currentPaymentId;
-  // 환불 진행 중 다시 읽기는 요금제 탭과 같은 2분 창에서만 한다.
+  // 환불 진행 중 다시 읽기는 요금제 탭과 같은 3분 창에서만 한다.
   const poll = usePollWindow();
   const latest = useGetBillingPayment(workspaceId, paymentId ?? "", {
     query: {

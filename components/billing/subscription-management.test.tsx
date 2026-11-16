@@ -755,7 +755,7 @@ describe("결제 상세", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("취소 처리 중이면 5초마다 다시 읽다가 2분 뒤 멈춘다", async () => {
+  it("취소 처리 중이면 5초마다 다시 읽다가 3분 뒤 멈춘다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let reads = 0;
     server.use(
@@ -798,7 +798,7 @@ describe("결제 상세", () => {
       const first = reads;
       await act(() => vi.advanceTimersByTimeAsync(5100));
       expect(reads).toBeGreaterThan(first);
-      await act(() => vi.advanceTimersByTimeAsync(125_000));
+      await act(() => vi.advanceTimersByTimeAsync(175_000));
       const stopped = reads;
       await act(() => vi.advanceTimersByTimeAsync(60_000));
       expect(reads).toBe(stopped);
