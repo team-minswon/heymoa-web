@@ -5,7 +5,8 @@ rule [`docs-layout`](rules/docs-layout.md)이 하네스 안에 설계 문서를 
 
 ## 매 세션 읽히는 rule
 
-`.claude/rules/`는 CLAUDE.md와 같은 우선순위로 전부 로드됩니다. 매번 컨텍스트를 먹으니 짧게
+`.claude/rules/`는 CLAUDE.md와 같은 우선순위로 로드됩니다. frontmatter에 `paths`가 없는
+rule은 매 세션, 있는 rule은 그 경로의 파일을 만질 때 로드됩니다. 매번 컨텍스트를 먹으니 짧게
 쓰고, 절차는 skill로 내립니다. 기준은 **skill을 안 열어도 걸려야 하는가**입니다.
 
 | rule | 무엇 |
@@ -13,6 +14,7 @@ rule [`docs-layout`](rules/docs-layout.md)이 하네스 안에 설계 문서를 
 | [`architecture`](rules/architecture.md) | 서버/클라이언트 경계, 의존 방향, 상태의 자리, 실시간 네 계층, URL, Next 16, hydration |
 | [`error-loading`](rules/error-loading.md) | 실패를 토스트로 낼지 화면에 그릴지, skeleton과 spinner를 가르는 기준, `DataBoundary` |
 | [`api-data`](rules/api-data.md) | 생성 훅으로 호출하기, 생성됐어도 못 쓰는 훅 셋, 계약 미러, MSW 목 |
+| [`desktop-downloads`](rules/desktop-downloads.md) | 설치 파일 링크의 공용 목록, 고정 다운로드 주소, 공개 릴리스 검증. frontmatter `paths`에 걸린 파일을 만질 때만 로드됩니다 |
 | [`docs-layout`](rules/docs-layout.md) | plan을 어디에 어떤 이름으로 쓰나, spec은 왜 여기 없나 |
 | [`issue-tracking`](rules/issue-tracking.md) | Linear 상태 전이, 워크트리 착수, 댓글을 다는 다섯 순간 |
 | [`ui-text-layout`](rules/ui-text-layout.md) | 데스크톱 기준 폭, 확인·경고는 `AlertDialog`, 한국어 줄바꿈, 정렬을 숫자로 확인 |
@@ -55,15 +57,16 @@ rule [`docs-layout`](rules/docs-layout.md)이 하네스 안에 설계 문서를 
 
 ## 심링크
 
-codex는 레포의 `.agents/skills/`를 프로젝트 skill로 자동 탐색합니다. 네 자리가 같은 폴더를
-보게 해서 사본을 하나로 둡니다. 버전을 올릴 때 이 네 줄을 다시 걸고 `.claude/settings.json`의
-hook 경로도 함께 고칩니다.
+codex는 레포의 `.agents/skills/`를 프로젝트 skill로 자동 탐색합니다. 규칙·skill 네 자리가 같은
+폴더를 보게 해서 사본을 하나로 둡니다. `.claude/agents`는 seo 하위 에이전트 폴더를 가리킵니다.
+버전을 올릴 때 아래 다섯 줄을 다시 걸고 `.claude/settings.json`의 hook 경로도 함께 고칩니다.
 
 ```bash
 ln -sfn ../harness/v002-2026-08-13/rules  .claude/rules
 ln -sfn ../harness/v002-2026-08-13/skills .claude/skills
 ln -sfn ../harness/v002-2026-08-13/skills .codex/skills
 ln -sfn ../harness/v002-2026-08-13/skills .agents/skills
+ln -sfn ../harness/v002-2026-08-13/skills/seo/agents .claude/agents
 ```
 
 ## 다음 버전으로 올리는 시점

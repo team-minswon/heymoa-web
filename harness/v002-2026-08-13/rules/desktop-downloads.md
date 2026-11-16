@@ -1,3 +1,17 @@
+---
+paths:
+  - "apps/desktop/**"
+  - "lib/desktop/**"
+  - "app/*/download/**"
+  - "components/**/*download*"
+  - "components/workspace/desktop-app-promo*"
+  - "components/auth/google-login-button*"
+  - "components/settings/desktop-update-settings*"
+  - "components/settings/workspace-integrations-settings*"
+  - "e2e/download.spec.ts"
+  - ".github/workflows/**"
+---
+
 # 데스크톱 다운로드와 공개 릴리스
 
 - 제품의 설치 파일 링크는 `lib/desktop/downloads.ts`의 `DESKTOP_INSTALLERS`를 공유합니다. 버전별 GitHub URL이나 앱 package 버전을 UI에 직접 넣지 않습니다.

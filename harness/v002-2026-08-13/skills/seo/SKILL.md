@@ -83,10 +83,9 @@ When the user invokes `/seo audit`, delegate to subagents in parallel:
 1. Detect business type (SaaS, local, ecommerce, publisher, agency, other)
 2. Spawn subagents: seo-technical, seo-content, seo-schema, seo-sitemap, seo-performance, seo-visual, seo-geo, seo-agentic
 3. If Google API credentials detected (`".claude/skills/seo/scripts/claude-seo" run google_auth.py --check`), also spawn seo-google agent
-4. If Matomo credentials detected (`".claude/skills/seo/scripts/claude-seo" run matomo_auth.py --check`), also spawn seo-matomo agent (alternative or complement to seo-google's GA4 reports)
-5. If local business detected, also spawn seo-local agent
-6. If local business detected AND DataForSEO MCP available, also spawn seo-maps agent
-7. Spawn seo-backlinks agent for Common Crawl domain-level metrics, adding Moz and Bing data when their credentials are detected (`".claude/skills/seo/scripts/claude-seo" run backlinks_auth.py --check`)
+4. If local business detected, also spawn seo-local agent
+5. If local business detected AND DataForSEO MCP available, also spawn seo-maps agent
+6. Spawn seo-backlinks agent for Common Crawl domain-level metrics, adding Moz and Bing data when their credentials are detected (`".claude/skills/seo/scripts/claude-seo" run backlinks_auth.py --check`)
 8. If Firecrawl MCP available, use `firecrawl_map` to discover all site URLs before analysis
 9. If content strategy signals detected (blog, pillar pages, topic clusters), also spawn seo-cluster agent
 10. If e-commerce detected, also spawn seo-ecommerce agent

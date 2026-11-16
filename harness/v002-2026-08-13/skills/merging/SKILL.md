@@ -7,7 +7,8 @@ metadata:
 
 # 브랜치를 dev에 넣는 절차
 
-**이 레포에는 GitHub 이슈도 PR도 없습니다.** 이슈/PR 템플릿과 CI 워크플로가 없습니다.
+**이 레포에는 GitHub 이슈도 PR도 없습니다.** 이슈/PR 템플릿도, 머지를 검사하는 CI도 없습니다
+(`.github/workflows/desktop-artifacts.yml`은 손으로 돌리는 데스크톱 빌드입니다).
 그래서 머지 게이트가 GitHub이 아니라 여기 적힌 로컬 절차입니다. 밟지 않으면 아무도 안 막습니다.
 
 ## 브랜치
@@ -22,8 +23,8 @@ metadata:
 커밋 제목은 잡일까지 **항상 `[APP-N] 제목`**입니다. `feat:`·`chore:`·`docs:` 같은 prefix는 쓰지
 않습니다. PR이 없어서 커밋 제목이 이슈로 돌아가는 유일한 연결입니다.
 
-**원격 PR을 열지 않고 `dev`를 push하지 않습니다.** push마다 Vercel 배포가 하나씩 생기고
-(Hobby 일일 한도에 실제로 걸렸습니다), GitHub Actions 한도도 같이 씁니다. 여러 이슈를 로컬
+**원격 PR을 열지 않고 `dev`를 push하지 않습니다.** push마다 Vercel 배포가 하나씩 생겨 Hobby
+요금제의 일일 배포 한도를 쓰고, GitHub Actions 한도도 같이 씁니다. 여러 이슈를 로컬
 `dev`에 모았다가 4단계에서 `origin/main`에 한 번 올립니다.
 
 ## 순서
@@ -55,12 +56,9 @@ GitHub 원격 `@codex` 봇 리뷰는 요청하지도 반영하지도 않습니�
 
 `--base`·`--commit`·`--uncommitted` 는 **프롬프트(위치 인자)와 함께 못 씁니다.** 셋 중 하나를
 쓰면 리뷰 지시를 따로 못 넣습니다 — `error: the argument '--base <BRANCH>' cannot be used with
-'[PROMPT]'` 로 끊깁니다. `--title` 은 **있지만** 리뷰 요약에 표시할 제목일 뿐이라 리뷰 방향을
-바꾸지 않습니다 (codex-cli 0.149.1 실측).
-
-> **버전이 올라가며 뒤집힌 자리입니다.** 0.145.0 에서는 `--base` 와 프롬프트를 함께 넘길 수
-> 있었고 `--title` 이 없었습니다. 안 되면 `codex exec review --help` 로 확인하고 이 줄을
-> 고칩니다.
+'[PROMPT]'` 로 끊깁니다. `--title` 은 리뷰 요약에 표시할 제목일 뿐이라 리뷰 방향을 바꾸지
+않습니다. 이 옵션들은 codex 버전마다 달라지니, 안 되면 `codex exec review --help` 로 확인하고
+이 문단을 고칩니다.
 
 P1·P2를 고치고 다시 돌립니다. **레포에 리뷰 기록 파일을 만들지 않습니다** — 회차는 이슈 댓글 ④로 남깁니다.
 

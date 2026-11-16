@@ -74,6 +74,7 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e:all
 
 ## 하네스
 
-항상 걸리는 규칙은 `.claude/rules/`에 있고 매 세션 로드됩니다. 부를 때만 읽는 절차는
+항상 걸리는 규칙은 `.claude/rules/`에 있고 매 세션 로드됩니다(`desktop-downloads`는
+다운로드·릴리스 파일을 만질 때만 로드됩니다). 부를 때만 읽는 절차는
 `.claude/skills/`입니다. 둘 다 [`harness/v002-2026-08-13/`](harness/v002-2026-08-13/README.md)를
 가리키는 심링크입니다. 무엇이 어디 있고 왜 그렇게 나눴는지는 그 README에 있습니다.

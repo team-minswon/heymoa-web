@@ -44,8 +44,7 @@ API 호출은 `lib/api/generated/`의 Orval 훅으로 합니다. 직접 `fetch()
 **손으로 고치지 않습니다.** 갱신은 `node scripts/sync-openapi.mjs <docs origin/main 의 openapi3-server.yml>`
 → `pnpm orval` 입니다. 스크립트가 `/internal` 경로·`internalToken`·닿지 않는 schema 를 지우므로
 손으로 지우지 않습니다. 원본은 docs repo(`../docs`)의 `origin/main`이고, **어느 파일인지는 그
-레포의 `contracts/README.md` §1 표가 가리킵니다.** 깊은 경로를 여기 적지 않습니다 — 실제로
-옮겨진 적이 있습니다. 워킹 트리를 읽으면 남의 브랜치일 수 있습니다.
+레포의 `contracts/README.md` §1 표가 가리킵니다.** 깊은 경로는 옮겨질 수 있어 여기 적지 않습니다. 워킹 트리를 읽으면 남의 브랜치일 수 있습니다.
 
 사본에 남기는 기준은 `/internal` 접두사 하나입니다. web 이 부르지 않는 운영자 전용 경로도
 그 기준대로 사본에 둡니다.
