@@ -31,9 +31,9 @@ Admins see the card, subscription, and workspace payment history in **[Settings]
 
 Pro runs one month at a time from the day you first pay. ==It's charged automatically on the same day each month, for the same amount.== In months without that date, you're charged on the last day. For example, if you start on January 31, you're charged on the last day of February and on March 31.
 
-While the result of an automatic payment is being checked, you keep Pro. Once it's confirmed that the payment wasn't approved, Pro ends and the workspace goes back to Free. HeyMoa doesn't retry the payment and removes the registered card. To use Pro again, register a card again and purchase.
+While the result of an automatic payment is being checked, you keep Pro. Even if it's confirmed that the payment wasn't approved, you keep Pro until a set deadline, shown in **[Plans]**. If the payment can be retried, for example after a temporary decline by the card issuer, HeyMoa may automatically retry it with the registered card before the deadline. If an admin registers a card again in **[Payment]** before the deadline, HeyMoa charges it right away. Once the payment is approved, Pro continues. If the payment isn't made by the deadline, Pro ends and the workspace goes back to Free, and the registered card is removed. If a payment is still being checked when the deadline passes, you keep Pro until its result is confirmed.
 
-You can change the card in **[Payment]** while you're on Pro. Changing the card doesn't charge you right away. The new card is charged from the next billing date.
+You can change the card in **[Payment]** while you're on Pro. Unless a payment wasn't approved, changing the card doesn't charge you right away, and the new card is charged from the next billing date.
 
 ## Cancel and resume {#cancel}
 
@@ -77,9 +77,10 @@ If another admin registers a card in **[Payment]** and resumes the subscription 
 
 ## Payment notifications {#notifications}
 
-When a payment or a refund is completed, the payer gets an email. The two updates below come as in-app [notifications](help:account#notifications), and you can't turn them off.
+When a payment or a refund is completed, the payer gets an email. The three updates below come as in-app [notifications](help:account#notifications), and you can't turn them off.
 
-- **When Pro ended because an automatic payment wasn't approved**: Every admin of that workspace gets one.
+- **When an automatic payment first wasn't approved**: Every admin of that workspace gets one, once, also by email. A retried payment that also isn't approved doesn't send another.
+- **When Pro ended because the payment wasn't made by the deadline**: Every admin of that workspace gets one.
 - **When automatic payments stopped because the payer left**: The remaining admins get one.
 
 ## Frequently asked questions {#faq}

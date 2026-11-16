@@ -125,7 +125,11 @@ describe("HeyMoa legal pages", () => {
     expect(text("section-14")).toMatch(/구독 중인 워크스페이스를 삭제하면/);
     // 결제·환불 완료는 결제자에게 메일로, 구독 종료·자동 결제 중단은 관리자에게 앱 안 알림으로 간다.
     expect(text("section-2")).toMatch(/결제가 완료되거나 환불이 완료되면 결제자에게 이메일로 알립니다/);
-    expect(text("section-2")).toMatch(/결제자가 빠져 자동 결제가 멈췄을 때는 서비스 안의 알림으로 워크스페이스 관리자에게 알립니다/);
+    expect(text("section-2")).toMatch(/갱신 결제가 처음 승인되지 않으면 워크스페이스 관리자에게 서비스 안의 알림과 이메일로 한 번 알립니다/);
+    expect(text("section-2")).toMatch(/결제자가 빠져 자동 결제가 멈추면 서비스 안의 알림으로 알립니다/);
+    // 미납 유예 중 다시 시도할 수 있는 거절은 등록된 카드로 자동 재시도한다(APP-1630)
+    expect(text("section-11")).toMatch(/기한 전에 등록된 카드로 같은 결제를 자동으로 다시 시도할 수 있습니다/);
+    expect(text("section-11")).not.toMatch(/같은 결제를 다시 시도하지 않고/);
     expect(document.body.textContent).not.toMatch(/페이플|Payple|토스/);
   });
 
