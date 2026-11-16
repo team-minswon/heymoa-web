@@ -90,8 +90,11 @@ export function NoteSummary({
   noteMeta,
   onEvidenceSelect,
   readOnly = false,
+  active = true,
 }: {
   noteId: string;
+  /** 요약 탭이 보이는가(APP-1660). 숨은 동안은 열람으로 세지 않는다 */
+  active?: boolean;
   workspaceId?: string;
   isEnded: boolean;
   /** 지난 노트의 구형 결과. 새 회의 분석은 이 결과를 다시 만들지 않으므로 요청 버튼을 두지 않는다. */
@@ -147,7 +150,7 @@ export function NoteSummary({
   useSummaryViewed(
     noteId,
     workspaceId,
-    isEnded && analysis?.status === "SUCCEEDED"
+    active && isEnded && analysis?.status === "SUCCEEDED"
   );
   const isMissing =
     errorCodeOf(analysisQuery.error) === "ANALYSIS_JOB_NOT_FOUND";

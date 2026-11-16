@@ -1558,6 +1558,28 @@ export const meetingFlowHandlers = [
     })
   ),
 
+  // 검토 시드 노트의 명제 원장 — 각 명제의 최신 판. 안건(`/agendas`)은 이미 이 명제들을 가리키는데
+  // 원장이 비어 있어 타임라인이 「정리된 항목이 없습니다」로 섰다. 다른 노트는 실시간 정리 목으로 넘긴다.
+  http.get("*/v1/notes/:noteId/proposals", ({ params }) => {
+    const noteId = paramId(params.noteId);
+    const review = store().reviews.get(noteId);
+    if (!review || !hasSeededReview(noteId)) return undefined;
+    const proposalIds = new Set(
+      review.items.flatMap((row) =>
+        row.originalProposalRef?.proposalId
+          ? [row.originalProposalRef.proposalId]
+          : []
+      )
+    );
+    return respond(() => ({
+      proposals: [...proposalIds].flatMap((proposalId) => {
+        const latest = store().revisions.get(proposalId)?.at(-1);
+        return latest ? [latest] : [];
+      }),
+      runs: [],
+    }));
+  }),
+
   // 검토 항목의 원본 명제 이력. 이 목이 만든 명제만 답하고, 나머지는 실시간 정리 목으로 넘긴다.
   http.get(
     "*/v1/notes/:noteId/proposals/:proposalId/revisions",

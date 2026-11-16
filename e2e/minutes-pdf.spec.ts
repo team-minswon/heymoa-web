@@ -42,7 +42,7 @@ test("타임라인 탭에서 타임라인을 복사한다 — 머리말 아래 �
   page,
   context,
 }) => {
-  // 멘토링 회의는 타임라인 항목이 없다. 후보를 흘리는 맥락 데모 노트를 쓴다(`proposals.spec` 과 같다)
+  // 후보를 흘리는 맥락 데모 노트를 쓴다(`proposals.spec` 과 같다)
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto(
     `/w/${WORKSPACE_ID}/notes/01K0000000005?view=full&tab=context`

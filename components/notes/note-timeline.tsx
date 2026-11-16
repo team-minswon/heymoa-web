@@ -193,7 +193,14 @@ export function NoteTimeline({
   participants = [],
   focusAgendaId = null,
   onFocusHandled,
+  active = true,
 }: {
+  /**
+   * 타임라인 탭이 보이는가. 읽던 위치를 지키려고 숨기기만 해서(APP-1660), 숨은 채 처음 선
+   * 목록은 보이는 순간 첫 위치(끝난 회의는 맨 위, 아니면 최신)를 잡는다 — 숨은 동안의
+   * 스크롤 이동은 브라우저가 무시한다.
+   */
+  active?: boolean;
   /**
    * 요약의 「타임라인에서 보기」가 짚은 안건(APP-1290). 그 안건의 첫 묶음으로 옮겨 머리에 형광펜을
    * 긋고, 획이 지워지면 `onFocusHandled` 로 소유자(`NotePanel`)에게 비우라고 알린다.
@@ -669,6 +676,7 @@ export function NoteTimeline({
   // 탭 재진입마다 최초 유효 목록만 최신으로 간다. 조회 중 잠정 전사의 기존
   // 추종은 유지하고, 목록이 선 뒤 사용자가 위를 읽으면 그 위치를 지킨다.
   useEffect(() => {
+    if (!active) return;
     const initial =
       positionedNoteRef.current !== noteId &&
       !listLoading &&
@@ -692,6 +700,7 @@ export function NoteTimeline({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [
+    active,
     noteId,
     recording,
     meetingEnded,

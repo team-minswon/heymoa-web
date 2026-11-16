@@ -898,8 +898,14 @@ export function NotePanel({
               ) : null}
             </div>
           ) : null}
+          {/* **스크립트·타임라인·요약은 숨기기만 한다(`keepMounted`).** 내리면 다시 고를 때 첫 위치
+              규칙(맨 위·맨 아래)을 다시 타 읽던 자리를 잃는다. 숨긴 동안은 `display:none` 이라
+              브라우저가 스크롤 위치를 쥐고 있다가 보일 때 되살린다. 안의 화면은 `noteId` 로
+              키잉해 다른 노트로 옮기면 이전 노트의 위치가 남지 않게 한다(APP-1660). 마운트마다
+              하던 재조회·열람 처리는 각 화면이 `active` 로 대신한다. */}
           <TabsContent
             value="transcript"
+            keepMounted
             className="flex min-h-0 flex-1 flex-col"
           >
             {showViewerEndNotice ? (
@@ -956,9 +962,11 @@ export function NotePanel({
                   noteMeta={noteMeta}
                   focusSegmentId={focusSegmentId}
                   onFocusHandled={clearFocusSegment}
+                  active={tab === "transcript"}
                 />
               ) : (
                 <TranscriptView
+                  key={noteId}
                   noteId={noteId}
                   phase={phase}
                   participants={note?.participants ?? []}
@@ -976,8 +984,9 @@ export function NotePanel({
               안쪽 `ScrollArea` 가 넘칠 일이 없어져 스크롤바가 아예 안 생기고 목록이 패널
               밖으로 흘러 나간다. 스크립트 탭이 같은 클래스를 쓰는 이유도 같다. */}
           {showContextTab ? (
-            <TabsContent value="context" className="min-h-0 flex-1">
+            <TabsContent value="context" keepMounted className="min-h-0 flex-1">
               <NoteTimeline
+                key={noteId}
                 participants={note?.participants ?? []}
                 header={
                   note && meta
@@ -999,12 +1008,13 @@ export function NotePanel({
                 onFocusHandled={clearTimelineFocus}
                 meetingEnded={phase === "ended"}
                 recording={phase === "active"}
+                active={tab === "context"}
               />
             </TabsContent>
           ) : null}
           {showSummaryTab ? (
-            <TabsContent value="summary" className="min-h-0 flex-1">
-              <ScrollArea className="h-full">
+            <TabsContent value="summary" keepMounted className="min-h-0 flex-1">
+              <ScrollArea key={noteId} className="h-full">
                 {phase === "unknown" ? (
                   noteLoadFailed ? null : (
                     <ReviewBoardSkeleton />
@@ -1026,6 +1036,7 @@ export function NotePanel({
                     onEditParticipants={editParticipants}
                     onMeetingEnded={meetingEnded}
                     onOpenTranscript={() => handleTabChange("transcript")}
+                    active={tab === "summary"}
                     onOpenTimeline={
                       showContextTab
                         ? (agendaId) => {

@@ -215,8 +215,14 @@ export const NoteArchive = memo(function NoteArchive({
   noteMeta,
   focusSegmentId,
   onFocusHandled,
+  active = true,
 }: {
   noteId: string;
+  /**
+   * 스크립트 탭이 보이는가. 탭을 떠나도 읽던 위치를 지키려고 숨기기만 해서(APP-1660) 탭에
+   * 들어와도 다시 마운트되지 않는다. 마운트마다 하던 후보 재조회를 이 값으로 대신 건다.
+   */
+  active?: boolean;
   /**
    * 화자 후보가 **이 회의의 참여자를 넘어** 워크스페이스 사람 전체라 필요하다.
    *
@@ -308,8 +314,13 @@ export const NoteArchive = memo(function NoteArchive({
   // 같다 — 쪼개진 것을 합치는 중인지 엉뚱한 사람을 두 번 붙이는 중인지는 누르기 전에 알아야 한다.
   // **전사에 들어올 때마다 다시 읽는다.** 전역 staleTime 이 60초라, 다른 화면에서 채운
   // 캐시가 있으면 그 사이 남이 만든 임시 참여자가 후보에 없는 채로 「＋ 추가」가 열린다.
+  // 숨긴 탭에서는 끄고, 보이는 순간 켜지며 `staleTime: 0` 이라 다시 읽는다 — 마운트와 같다.
   const candidateQueryOptions = {
-    query: { enabled: Boolean(workspaceId), refetchOnMount: "always" as const },
+    query: {
+      enabled: Boolean(workspaceId) && active,
+      staleTime: 0,
+      refetchOnMount: "always" as const,
+    },
   };
   const membersQuery = useGetWorkspaceMembers(
     workspaceId ?? "",
@@ -762,6 +773,9 @@ export const NoteArchive = memo(function NoteArchive({
     enabled: virtualized,
     getScrollElement: () => viewportRef.current,
     estimateSize: () => 100,
+    // 숨긴 탭(APP-1660)에서는 행이 높이 0으로 재진다. 그 값을 받으면 돌아왔을 때 위쪽 행 높이가
+    // 바뀌어 읽던 줄이 밀리므로, 숨은 동안은 잰 높이를 그대로 쓴다.
+    useCachedMeasurements: !active,
     overscan: 8,
     scrollMargin: listOffset,
     getItemKey: (index) =>
@@ -800,6 +814,15 @@ export const NoteArchive = memo(function NoteArchive({
       virtualizer.shouldAdjustScrollPositionOnItemSizeChange = undefined;
     };
   }, [virtualizer, viewportRef]);
+  // 숨긴 탭이 다시 보이면 브라우저가 스크롤 위치를 되살리지만 scroll 이벤트는 내지 않는다.
+  // 가상 목록은 그 이벤트로만 위치를 읽어서, 안 알리면 맨 앞 행을 그린 빈 화면이 남는다.
+  useEffect(() => {
+    if (!active) return;
+    const frame = requestAnimationFrame(() =>
+      viewportRef.current?.dispatchEvent(new Event("scroll"))
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [active, viewportRef]);
   const captureAnchor = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -827,6 +850,8 @@ export const NoteArchive = memo(function NoteArchive({
     if (!virtualized || !viewport || !list) return;
     let width = viewport.clientWidth;
     const update = () => {
+      // 탭이 숨으면(APP-1660) 폭이 0이 된다. 폭 변화로 보고 다시 재면 돌아올 때 위치가 밀린다.
+      if (viewport.clientWidth === 0) return;
       setListOffset(
         Math.round(
           list.getBoundingClientRect().top -

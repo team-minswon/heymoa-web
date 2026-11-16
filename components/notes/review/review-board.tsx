@@ -29,6 +29,7 @@ import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewSection } from "@/components/notes/review/review-section";
 import { SavedChoices } from "@/components/notes/review/saved-choices";
 import { TopicIndex } from "@/components/notes/review/topic-index";
+import { useRefetchOnReveal } from "@/components/notes/review/use-refetch-on-reveal";
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import {
@@ -154,8 +155,11 @@ export function ReviewBoard({
   onOpenScript,
   onOpenTranscript,
   onOpenTimeline,
+  active = true,
 }: {
   noteId: string;
+  /** 요약 탭이 보이는가(APP-1660). 다시 보이는 순간 다시 읽고, 숨은 동안은 열람으로 세지 않는다 */
+  active?: boolean;
   flow?: MeetingAnalysisFlowResponseData;
   /** 흐름 조회가 마지막으로 성공한 시각. 같은 값이 다시 와도 바뀐다 — 지난 조회 실패 안내를 걷는 데 쓴다. */
   flowUpdatedAt?: number;
@@ -209,6 +213,14 @@ export function ReviewBoard({
     }
   );
   const linksData = okData(linksQuery.data);
+  useRefetchOnReveal(active, [
+    getGetMeetingReviewQueryKey(noteId),
+    getGetMeetingReviewSummaryQueryKey(noteId),
+    ...(projectId ? [getGetProjectMeetingLinksQueryKey(projectId)] : []),
+    ...(workspaceId && projectId
+      ? [getGetProjectTasksQueryKey(workspaceId, projectId)]
+      : []),
+  ]);
   const tasksQuery = useGetProjectTasks(workspaceId ?? "", projectId ?? "", {
     query: {
       enabled: Boolean(workspaceId && projectId),
@@ -314,7 +326,7 @@ export function ReviewBoard({
   useSummaryViewed(
     noteId,
     workspaceId,
-    Boolean(review) && summary?.status === "SUCCEEDED"
+    active && Boolean(review) && summary?.status === "SUCCEEDED"
   );
   const transcript = okData(transcriptQuery.data);
   const tasks = okData(tasksQuery.data)?.tasks ?? null;

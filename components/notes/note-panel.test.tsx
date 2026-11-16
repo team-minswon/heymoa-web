@@ -335,6 +335,13 @@ function writeOtherTab(noteId: string, beatAt: number) {
   );
 }
 
+/** 고르지 않은 탭도 `hidden` 으로 남아 있어(APP-1660) 같은 글이 숨은 패널에도 있다. 보이는 것만 센다. */
+function visibleByText(text: string | RegExp) {
+  return screen
+    .getAllByText(text)
+    .filter((element) => !element.closest("[hidden]"));
+}
+
 describe("NotePanel", () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -405,7 +412,7 @@ describe("NotePanel", () => {
     fireEvent.click(screen.getByRole("tab", { name: "정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
     // 전사에서는 제목이 **상단바 빵조각 하나뿐이다** — 세리프 제목은 정보 탭의 머리글이다.
-    expect(screen.getAllByText("주간 제품 회의")).toHaveLength(1);
+    expect(visibleByText("주간 제품 회의")).toHaveLength(1);
     expect(
       screen.queryByRole("heading", { name: "주간 제품 회의" })
     ).toBeNull();
@@ -884,7 +891,7 @@ describe("NotePanel", () => {
         />
       );
 
-      const started = screen.getByText(/7월 29일/);
+      const [started] = visibleByText(/7월 29일/);
       expect(started.tagName).toBe("TIME");
       expect(started).toHaveAttribute("datetime", "2026-07-29T00:00:00Z");
     }
@@ -1450,7 +1457,7 @@ describe("NotePanel", () => {
         ?.contains(screen.getByRole("tablist"))
     ).toBe(true);
     // 프로젝트 pill도 이 머리글의 것이다 — 전사에서는 상단바가 이미 좁다.
-    expect(screen.getByText("모바일 앱")).toBeInTheDocument();
+    expect(visibleByText("모바일 앱")).toHaveLength(1);
   });
 
   /**

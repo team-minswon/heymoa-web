@@ -24,7 +24,7 @@ test.describe.configure({ timeout: 240_000 });
 const BASE = process.env.E2E_BASE ?? "http://localhost:3100";
 const WS = "/w/01K0000000000";
 const MENTORING_NOTE = "01K0000000920";
-/** 타임라인 항목이 있는 맥락 데모 노트(`proposals.spec` 과 같다). 멘토링 회의는 타임라인이 비어 있다. */
+/** 타임라인 후보를 흘리는 맥락 데모 노트(`proposals.spec` 과 같다). */
 const CONTEXT_NOTE = "01K0000000005";
 
 const HANGUL = /[가-힣ㄱ-ㅎㅏ-ㅣ]/;

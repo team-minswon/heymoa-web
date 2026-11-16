@@ -20,7 +20,11 @@ import { PreEndGuide } from "@/components/notes/pre-end-guide";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { useReadAnalysisReadyOnView } from "@/components/notification/use-read-analysis-ready";
-import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
+import { useRefetchOnReveal } from "@/components/notes/review/use-refetch-on-reveal";
+import {
+  getGetAnalysisFlowQueryKey,
+  useGetAnalysisFlow,
+} from "@/lib/api/generated/analysis/analysis";
 import { okData } from "@/lib/api/ok-data";
 import { flowPollInterval } from "@/lib/notes/review/flow-cache";
 import { useEventStreamHealthy } from "@/lib/events/health";
@@ -48,8 +52,14 @@ export function ReviewTab({
   note,
   onEditParticipants,
   onMeetingEnded,
+  active = true,
 }: {
   noteId: string;
+  /**
+   * 요약 탭이 보이는가. 탭을 떠나도 읽던 위치를 지키려고 숨기기만 해서(APP-1660), 보일 때만
+   * 하던 일(다시 읽기 · 알림 읽음 · 열람 집계 · 분석 중 폴링)을 이 값으로 가린다.
+   */
+  active?: boolean;
   workspaceId: string | undefined;
   projectId: string | undefined;
   isEnded: boolean;
@@ -78,6 +88,7 @@ export function ReviewTab({
       // 끝나는 시각을 모르는 단계만 다시 묻는다. 검토 가능 · 확정은 사람이 움직일 때 다시 읽는다.
       // 건강한 이벤트 스트림이면 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I03).
       refetchInterval: (query) =>
+        active &&
         hintedInterval(
           streamHealthy,
           flowPollInterval(
@@ -89,10 +100,12 @@ export function ReviewTab({
   });
 
   // 검토 가능·확정 결과가 이 화면에 그려지는 동안 그 노트의 「검토할 결과 준비」 알림을 읽는다(PRO-67 I23).
+  useRefetchOnReveal(active, [getGetAnalysisFlowQueryKey(noteId)]);
   const shownStatus = okData(flowQuery.data)?.status;
   useReadAnalysisReadyOnView(
     noteId,
-    isEnded &&
+    active &&
+      isEnded &&
       !flowQuery.isError &&
       (shownStatus === "REVIEWABLE" || shownStatus === "CONFIRMED")
   );
@@ -131,6 +144,7 @@ export function ReviewTab({
         noteMeta={noteMeta}
         onEvidenceSelect={onEvidenceSelect}
         readOnly
+        active={active}
       />
     );
   }
@@ -190,6 +204,7 @@ export function ReviewTab({
         onOpenScript={onEvidenceSelect}
         onOpenTranscript={onOpenTranscript}
         onOpenTimeline={onOpenTimeline}
+        active={active}
       />
     </>
   );

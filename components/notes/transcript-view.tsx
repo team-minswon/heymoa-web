@@ -211,12 +211,23 @@ export function TranscriptView({
 
     viewport.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
+    // 탭이 숨긴 동안(`display:none`)의 바닥 이동은 무시되고, 다시 보이면 숨기기 전 위치로
+    // 되살아난다. 따라가던 사람이 그 사이 붙은 발화를 놓치지 않게 보이는 순간 바닥에 맞춘다.
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => {
+            if (followingRef.current && viewport.clientHeight > 0)
+              scrollToLatest("auto");
+          });
+    observer?.observe(viewport);
 
     return () => {
       stopWatching();
       viewport.removeEventListener("scroll", handleScroll);
+      observer?.disconnect();
     };
-  }, [updateFollowing]);
+  }, [scrollToLatest, updateFollowing]);
 
   useEffect(() => {
     if (!serverActive || transcriptQuery.isPending) return;
