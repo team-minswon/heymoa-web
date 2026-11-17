@@ -77,7 +77,7 @@ export const CHAT_SCENARIOS = {
   legacyNarration: {
     keyword: "옛 방식",
     kind: "stream",
-    what: "진행 문장이 생각(thinking)이 아니라 **본문 token** 으로 오던 옛 ai(APP-1057). 옛 대화가 그 모양 그대로 그려지는지",
+    what: "진행 문장이 생각(thinking)이 아니라 **본문 token** 으로 오던 옛 ai. 옛 대화가 그 모양 그대로 그려지는지",
   },
   resync: {
     keyword: "밀리게 해줘",

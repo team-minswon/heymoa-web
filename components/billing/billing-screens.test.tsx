@@ -802,7 +802,7 @@ describe("첫 구독 결제 페이지", () => {
     ).toBeInTheDocument();
   });
 
-  it("동의 체크 위에 환불 안내를 두고 약관의 환불 조항을 새 탭으로 연다(APP-1586)", async () => {
+  it("동의 체크 위에 환불 안내를 두고 약관의 환불 조항을 새 탭으로 연다", async () => {
     await renderCheckout();
     const link = screen.getByRole("link", { name: "환불 규정 보기" });
     expect(link).toHaveAttribute("href", "/terms#section-13");
@@ -811,7 +811,7 @@ describe("첫 구독 결제 페이지", () => {
     expect(notice.nextElementSibling).toContainElement(agree());
   });
 
-  it("「내용 보기」는 나이스페이 약관 셋을 목차·제목과 함께 차례로 보인다(APP-1600)", async () => {
+  it("「내용 보기」는 나이스페이 약관 셋을 목차·제목과 함께 차례로 보인다", async () => {
     await renderCheckout();
     fireEvent.click(screen.getByRole("button", { name: "내용 보기" }));
     const dialog = await screen.findByRole("dialog", {
@@ -845,7 +845,7 @@ describe("첫 구독 결제 페이지", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("영어 화면에서도 약관 본문은 한국어 원문이고, 그 사실을 영어로 한 줄 알린다(APP-1600)", async () => {
+  it("영어 화면에서도 약관 본문은 한국어 원문이고, 그 사실을 영어로 한 줄 알린다", async () => {
     render(
       <QueryClientProvider client={newClient()}>
         <BillingCheckoutPage workspaceId={FREE} nextChargeAt={NEXT_CHARGE} />

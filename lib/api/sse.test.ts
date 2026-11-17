@@ -253,7 +253,7 @@ describe("id: 줄이 커서다", () => {
   });
 });
 
-describe("SSE 도 화면 언어를 Accept-Language 로 싣는다 (APP-1285)", () => {
+describe("SSE 도 화면 언어를 Accept-Language 로 싣는다", () => {
   it("영어 화면이면 en 을 보내고 Accept 는 그대로다", async () => {
     document.documentElement.lang = "en";
     const fetchMock = vi

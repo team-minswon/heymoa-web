@@ -411,7 +411,7 @@ describe("NotificationSettings", () => {
     expect(heard).toContain("notification_settings_reset");
   });
 
-  describe("제품 소식·혜택(APP-1392)", () => {
+  describe("제품 소식·혜택", () => {
     const MARKETING = "제품 소식·혜택 메일 받기(선택)";
     /** base-ui 는 잠금을 `disabled` 대신 `data-disabled` 로 표시합니다. */
     const ready = () =>

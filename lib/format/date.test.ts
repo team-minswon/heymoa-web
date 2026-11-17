@@ -48,7 +48,7 @@ describe("formatPromiseTime", () => {
   });
 });
 
-describe("영어 화면의 날짜 (APP-1285)", () => {
+describe("영어 화면의 날짜", () => {
   const lateNightSeoul = "2026-10-31T14:30:00Z";
 
   it("en-US 형식으로 쓰되 날짜 경계는 서울 기준 그대로다", () => {

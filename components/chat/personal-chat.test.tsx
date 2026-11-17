@@ -984,7 +984,7 @@ describe("PersonalChatProvider", () => {
     ).toBeTruthy();
   });
 
-  it("열린 대화를 지우면 확인한 뒤 서버에서 지우고 빈 새 대화로 선다 (APP-1409)", async () => {
+  it("열린 대화를 지우면 확인한 뒤 서버에서 지우고 빈 새 대화로 선다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     state.messages = [
       {
@@ -1015,7 +1015,7 @@ describe("PersonalChatProvider", () => {
     expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy();
   });
 
-  it("이미 지운 대화(404)는 성공으로 접고 다른 실패는 알린다 (APP-1409)", async () => {
+  it("이미 지운 대화(404)는 성공으로 접고 다른 실패는 알린다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     state.deleteMock.mockRejectedValueOnce({
       status: 500,
@@ -1312,7 +1312,7 @@ describe("PersonalChatProvider", () => {
     });
   });
 
-  describe("AI 제목을 기다리는 동안 (APP-1440)", () => {
+  describe("AI 제목을 기다리는 동안", () => {
     function rerendered(
       rerender: (ui: React.ReactNode) => void,
       client: QueryClient
@@ -1384,7 +1384,7 @@ describe("PersonalChatProvider", () => {
     });
   });
 
-  describe("겹친 요청과 외부 갱신 (APP-1433 리뷰)", () => {
+  describe("겹친 요청과 외부 갱신", () => {
     function deferred<T>() {
       let resolve!: (value: T) => void;
       let reject!: (error: unknown) => void;
@@ -1664,7 +1664,7 @@ describe("PersonalChatProvider", () => {
     });
   });
 
-  describe("개편된 머리글·런처 (APP-1436)", () => {
+  describe("머리글·런처", () => {
     it("머리글 ⋯ 메뉴의 「이름 바꾸기」는 그 자리 편집을 연다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       renderChat();
@@ -1784,7 +1784,7 @@ describe("PersonalChatProvider", () => {
     expect(last.options.query.enabled).toBe(false);
   });
 
-  it("★ 새 노트가 요청하면 보던 대화 대신 빈 새 대화로 바뀐다 (APP-1278)", async () => {
+  it("★ 새 노트가 요청하면 보던 대화 대신 빈 새 대화로 바뀐다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     state.messages = [
       {
@@ -1809,7 +1809,7 @@ describe("PersonalChatProvider", () => {
     expect(state.createMock).not.toHaveBeenCalled();
   });
 
-  it("★ 패널을 열기 전에 요청해도 앞 대화를 한 번도 읽지 않는다 (APP-1278)", async () => {
+  it("★ 패널을 열기 전에 요청해도 앞 대화를 한 번도 읽지 않는다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     renderChat(<FreshChatTrigger />);
     fireEvent.click(screen.getByRole("button", { name: "새 노트 만듦" }));

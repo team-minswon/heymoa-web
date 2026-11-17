@@ -372,7 +372,7 @@ describe("NoteTimeline", () => {
     delete Element.prototype.scrollIntoView;
   });
 
-  it("요약에서 짚은 안건의 첫 묶음을 펼쳐 머리에 형광펜을 긋고, 획이 지워지면 비우라고 알린다 (APP-1290)", () => {
+  it("요약에서 짚은 안건의 첫 묶음을 펼쳐 머리에 형광펜을 긋고, 획이 지워지면 비우라고 알린다", () => {
     vi.useFakeTimers();
     const a = head({ content: "온보딩 단계를 줄인다", atMs: 60_000 });
     const b = head({ content: "결제 방식을 정한다", atMs: 120_000 });

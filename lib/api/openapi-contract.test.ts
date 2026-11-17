@@ -157,7 +157,7 @@ describe("OpenAPI contract", () => {
     }
   });
 
-  it("APP-685의 네 경로와 필수 초대 필드를 이름으로 확인한다", () => {
+  it("초대 네 경로와 필수 초대 필드를 이름으로 확인한다", () => {
     expect(
       api().paths["/v1/workspaces/{workspaceId}/notes"]?.get?.operationId
     ).toBe("getWorkspaceNotes");

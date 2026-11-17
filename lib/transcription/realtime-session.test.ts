@@ -1350,7 +1350,7 @@ describe("버퍼 한도", () => {
   });
 });
 
-describe("30초 재개 창과 알림 (APP-705)", () => {
+describe("30초 재개 창과 알림", () => {
   const goOffline = () => window.dispatchEvent(new Event("offline"));
   const goOnline = () => window.dispatchEvent(new Event("online"));
   async function passWithHeartbeat(
@@ -1869,7 +1869,7 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
   });
 });
 
-describe("다시 붙거나 정체가 풀리면 가장 새 3초부터 실시간 (APP-706)", () => {
+describe("다시 붙거나 정체가 풀리면 가장 새 3초부터 실시간", () => {
   const emitAt = (harness: ReturnType<typeof setup>, n: number) =>
     harness.emitChunk(new ArrayBuffer(3_200), n * 1_600);
   const range = (from: number, to: number) =>
@@ -1960,7 +1960,7 @@ describe("다시 붙거나 정체가 풀리면 가장 새 3초부터 실시간 (
   });
 });
 
-describe("다시 로그인해야 하면 (APP-1547)", () => {
+describe("다시 로그인해야 하면", () => {
   it("★ 티켓 요청이 세션 만료를 알리면 30초 창을 기다리지 않고 닫는다", async () => {
     vi.useFakeTimers();
     const harness = setup();

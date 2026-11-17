@@ -271,7 +271,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
-  describe("외부 에이전트를 끈 워크스페이스(APP-941)", () => {
+  describe("외부 에이전트를 끈 워크스페이스", () => {
     const BLOCKED =
       "관리자가 이 워크스페이스의 MCP 연결을 꺼 두었습니다.";
 

@@ -65,7 +65,7 @@ async function main() {
     paragraphs: splitTerms(content),
   }));
   const source = `/**
- * 나이스페이 약관 본문(APP-1600). 주문서·카드 변경의 「내용 보기」 창이 그대로 그린다. 문구 파일(\`messages/\`)이 아니라
+ * 나이스페이 약관 본문. 주문서·카드 변경의 「내용 보기」 창이 그대로 그린다. 문구 파일(\`messages/\`)이 아니라
  * 여기 두는 까닭: 대행사가 준 약관 원문이라 화면 문구처럼 다듬지 않고 통째로 바꾼다.
  *
  * 생성 파일이다. 손으로 고치지 않고 \`scripts/fetch-nicepay-terms.mjs\` 를 돌린다.

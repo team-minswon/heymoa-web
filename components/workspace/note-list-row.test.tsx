@@ -404,7 +404,7 @@ describe("NoteListRow", () => {
     expect(screen.getByText("삭제")).toBeInTheDocument();
   });
 
-  it("관리자가 아니면 메뉴에 삭제가 없다(APP-1384)", async () => {
+  it("관리자가 아니면 메뉴에 삭제가 없다", async () => {
     admin.value = false;
     try {
       renderRow(note({ meetingStatus: "ENDED", activeSessionStartedAt: null }));

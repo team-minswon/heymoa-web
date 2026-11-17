@@ -19,7 +19,7 @@ const ticketResponse = (ticket: string) =>
     error: null,
   });
 
-describe("ticketedSocketUrl (APP-1547)", () => {
+describe("ticketedSocketUrl", () => {
   beforeEach(() => {
     resetSessionGate();
     vi.stubGlobal("fetch", vi.fn());

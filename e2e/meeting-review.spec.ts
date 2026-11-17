@@ -361,7 +361,7 @@ test("반영은 기본 OFF이고 스위치를 켜야 대체·유지가 나타난
   await expectNoHorizontalOverflow(page);
 });
 
-test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
+test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근거 형광펜을 긋는다", async ({ page }) => {
   await page.addInitScript(() => {
     const forward = window.fetch;
     let borrowed: { agendas: Array<{ agendaId: string | null }> } | null = null;
@@ -394,7 +394,7 @@ test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근
   await expect(arrived.locator(".evidence-mark")).toHaveCount(0, { timeout: 5_000 });
 });
 
-test("「타임라인에서 보기」로 넘어가면 그 안건의 첫 묶음 머리에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
+test("「타임라인에서 보기」로 넘어가면 그 안건의 첫 묶음 머리에 근거 형광펜을 긋는다", async ({ page }) => {
   await page.addInitScript(() => {
     const forward = window.fetch;
     const demo = async () => {

@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  /* 제목도 본문과 같은 글꼴이다(APP-1161). 예전에는 라틴 EB Garamond + 한글 Noto Serif KR 세리프를
+  /* 제목도 본문과 같은 글꼴이다. 예전에는 라틴 EB Garamond + 한글 Noto Serif KR 세리프를
      따로 두었으나 본문·버튼과 섞여 보여 하나로 통일했다. */
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -71,7 +71,7 @@
   --text-read: 15px; /* 전사 본문 + 목록 행 제목 */
 }
 
-/* 한글을 굵기마다 Apple SD Gothic Neo 의 같은 굵기 면으로 잇는다(APP-1599). 맥 Chrome 은
+/* 한글을 굵기마다 Apple SD Gothic Neo 의 같은 굵기 면으로 잇는다. 맥 Chrome 은
    -apple-system 으로 300 을 그리면 한글을 Thin 으로 골라 Inter 숫자보다 2.6배 가늘었다.
    local() 이라 그 글꼴이 없는 곳(윈도 등)은 이 이름을 건너뛰고 지금처럼 -apple-system 뒤로 간다.
    CJK 문장부호(「」、。, U+3000-303F)도 같은 면이라 넣는다 — 빼면 그것만 Thin 으로 남는다. */
@@ -86,7 +86,7 @@
 @font-face { font-family: "HeyMoa Hangul"; font-weight: 900; src: local("AppleSDGothicNeo-Heavy"), local("Apple SD Gothic Neo Heavy"); unicode-range: U+1100-11FF, U+3000-303F, U+3130-318F, U+AC00-D7AF; }
 
 :root {
-  /* **글꼴 변수의 원본** (APP-1115). next/font가 <html> 클래스에 심던 것을 @fontsource로
+  /* **글꼴 변수의 원본**. next/font가 <html> 클래스에 심던 것을 @fontsource로
      옮기며 여기로 왔다. family 이름은 각 패키지 CSS의 @font-face가 정본이다 —
      variable 패키지는 이름 끝에 "Variable"이 붙는다. */
   --font-inter: "Inter Variable", "HeyMoa Hangul", -apple-system, "Segoe UI", sans-serif;
@@ -347,7 +347,7 @@
   * {
     @apply border-border outline-ring/50;
   }
-  /* 안 고른 탭 패널이 자리는 남긴다(APP-1356) — 패널을 한 칸에 겹쳐 세운 상자가 가장 긴 탭 높이로 선다.
+  /* 안 고른 탭 패널이 자리는 남긴다 — 패널을 한 칸에 겹쳐 세운 상자가 가장 긴 탭 높이로 선다.
      preflight 의 `[hidden]{display:none !important}` 가 base 층에 있어 같은 층에서 더 구체적으로 이긴다
      (utilities 층의 `!` 는 important 끼리는 앞 층이 이겨서 못 덮는다). */
   [data-keep-size][hidden] {
@@ -358,11 +358,11 @@
     @apply bg-background text-foreground;
     letter-spacing: 0.16px; /* Inter looser tracking for editorial dialet */
     /* 한국어는 낱말 단위로 줄을 바꾼다(「삭제/돼요」로 갈리지 않게). 공백 없이 긴 문자열(URL 등)은 넘치지
-       않고 꺾인다. 영어 줄바꿈에는 영향이 없다. 컴포넌트마다 `break-keep` 을 붙이지 않는다(PRO-66). */
+       않고 꺾인다. 영어 줄바꿈에는 영향이 없다. 컴포넌트마다 `break-keep` 을 붙이지 않는다. */
     word-break: keep-all;
     overflow-wrap: break-word;
     /* 본문·화면 틀은 Inter 본문용 모양(opsz 14)으로 둔다. 광학 크기 자동은 16px 본문까지 좁혀
-       가독성이 떨어졌다(APP-1510). 영어 화면의 제목에서만 Display 모양을 쓴다 — 파일 끝 */
+       가독성이 떨어졌다. 영어 화면의 제목에서만 Display 모양을 쓴다 — 파일 끝 */
     font-optical-sizing: none;
   }
   html {
@@ -486,7 +486,7 @@
   }
 }
 
-/* ── 사용 가이드 모션 (APP-1237) ─────────────────────────────────────────────
+/* ── 사용 가이드 모션 ─────────────────────────────────────────────
    값은 이 블록 한 곳이다 — 시간 200ms(색·호버·활성 표시) / 300ms(등장·이동·대화상자·페이지 전환), 이징 cubic-bezier(0.22, 1, 0.36, 1)(부드럽게 안착).
    움직이는 것은 불투명도와 transform 뿐이라 자리를 밀지 않는다(CLS 0).
    ★ 서버가 그린 HTML 은 항상 보인다. 숨김(`pending`)은 JS 가 마운트한 뒤 「화면 아래에 있는」 요소에만 건다
@@ -760,7 +760,7 @@ html:has([data-help-root]) {
   opacity: 0.5;
 }
 
-/* 영어 제목은 Inter Display 모양으로 (APP-1510). 광학 크기를 켜면 큰 글자에서 획이 가늘고 자간이
+/* 영어 제목은 Inter Display 모양으로. 광학 크기를 켜면 큰 글자에서 획이 가늘고 자간이
    좁은 Display 모양이 된다. 제목 자간(-0.03 ~ -0.045em)은 한국어와 Inter 본문용 모양에 맞춰 잡은
    값이라, Display 위에 더해지면 낱말 사이까지 붙는다 — 영어 화면에서만 덜어 준다. 한국어 화면은
    제목 속 띄어쓰기·문장부호도 Inter 라 켜면 폭이 바뀌므로 켜지 않는다. @layer 밖이라 utility 를 이긴다. */

@@ -1288,7 +1288,7 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
   });
 });
 
-describe("★★ APP-1013 생각 과정 묶음", () => {
+describe("★★ 생각 과정 묶음", () => {
   const TURN = "01KTURN000009";
   const read = (at: string, content: string) =>
     message({
@@ -1386,7 +1386,7 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
   });
 });
 
-describe("APP-1436 재검사", () => {
+describe("상대 시각·중지 표시·칩 제목", () => {
   it("★ 상대 시각은 앱 언어로 적는다 — 한국어 화면에 「57m ago」가 섞이지 않는다", () => {
     const at = new Date(Date.now() - 57 * 60_000).toISOString();
     const stamp = (container: HTMLElement) =>

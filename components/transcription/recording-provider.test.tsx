@@ -1613,7 +1613,7 @@ function writeOtherTab(id: string, noteId: string, beatAt: number) {
   );
 }
 
-describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
+describe("닫힌 탭의 녹음 이어받기", () => {
   afterEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
@@ -1741,7 +1741,7 @@ describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
   });
 });
 
-describe("끊김 창과 끝 (APP-705)", () => {
+describe("끊김 창과 끝", () => {
   function meetingEnded(): SessionQueryMock {
     return {
       data: {

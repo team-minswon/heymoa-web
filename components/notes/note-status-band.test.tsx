@@ -89,7 +89,7 @@ describe("NoteStatusBand", () => {
     expect(screen.queryByTestId("note-status-band")).toBeNull();
   });
 
-  describe("메일 링크로 도착 (APP-1312)", () => {
+  describe("메일 링크로 도착", () => {
     const band = () => screen.queryByTestId("note-status-band");
 
     it("여전히 일시정지면 기간을 몰라도 할 수 있는 일을 말한다", () => {
@@ -131,7 +131,7 @@ describe("NoteStatusBand", () => {
       expect(band()).toBeNull();
     });
   });
-  describe("자동 종료 (APP-1319)", () => {
+  describe("자동 종료", () => {
     const band = () => screen.queryByTestId("note-status-band");
     const autoEnd = (
       over: Partial<NonNullable<NoteResponseData["autoEnd"]>>

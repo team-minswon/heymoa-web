@@ -8,7 +8,7 @@ vi.mock("@/lib/help/media-manifest-en", () => ({
 
 const { localizedHelpMedia } = await import("@/lib/help/localized-media");
 
-describe("localizedHelpMedia (APP-1511)", () => {
+describe("localizedHelpMedia", () => {
   it("영어 페이지는 영어로 찍은 파일과 그 크기를 쓴다", () => {
     expect(localizedHelpMedia("tasks/table.webp", "en")).toEqual({
       path: "en/tasks/table.webp",

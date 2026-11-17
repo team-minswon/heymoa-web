@@ -318,7 +318,7 @@ describe("PcmAudioCapture 마이크 상태", () => {
     expect(onState).toHaveBeenLastCalledWith("ended");
   });
 
-  describe("끊긴 마이크 다시 잡기 (APP-1091)", () => {
+  describe("끊긴 마이크 다시 잡기", () => {
     afterEach(() => vi.useRealTimers());
 
     function freshTrack() {

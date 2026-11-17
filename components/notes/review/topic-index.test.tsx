@@ -103,7 +103,7 @@ describe("안건 주소 이동", () => {
     expect(scroll).toHaveBeenCalledTimes(1);
   });
 
-  it("도착한 주제 제목에 근거 형광펜을 긋고, 획이 지워지면 거둔다 (APP-1290)", () => {
+  it("도착한 주제 제목에 근거 형광펜을 긋고, 획이 지워지면 거둔다", () => {
     vi.useFakeTimers();
     window.history.replaceState(null, "", "/#summary-agenda-ag2");
     render(
@@ -119,7 +119,7 @@ describe("안건 주소 이동", () => {
     expect(document.querySelector(".evidence-mark")).toBeNull();
   });
 
-  it("「타임라인에서 보기」는 그 안건을 짚어 넘긴다 (APP-1290)", () => {
+  it("「타임라인에서 보기」는 그 안건을 짚어 넘긴다", () => {
     const onOpenTimeline = vi.fn();
     render(
       <TopicIndex

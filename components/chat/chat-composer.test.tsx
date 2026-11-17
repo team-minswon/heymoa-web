@@ -352,7 +352,7 @@ describe("ChatComposer", () => {
   });
 });
 
-describe("범위 칩 줄바꿈 (APP-1436 에서 남긴 것)", () => {
+describe("범위 칩 줄바꿈", () => {
   it("★ 범위 칩은 제목을 자르지 않는다 — 길면 칩 안에서 줄을 바꾼다", () => {
     const { ref, input } = renderComposer();
     const long = "강상진 멘토님 특강 - 쿠버네티스_2 실습 환경과 포트 설정 정리";

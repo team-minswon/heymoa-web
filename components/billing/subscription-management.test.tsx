@@ -123,7 +123,7 @@ describe("결제 수단·구독", () => {
     );
   });
 
-  it("카드 없이 종료 예정이면 「카드 등록」과 멈춤 안내를 보이고 재개 버튼은 없다(APP-1588)", async () => {
+  it("카드 없이 종료 예정이면 「카드 등록」과 멈춤 안내를 보이고 재개 버튼은 없다", async () => {
     billingMock.setScenario("payerLeft");
     const area = await openPaid();
     expect(
@@ -175,7 +175,7 @@ describe("결제 수단·구독", () => {
     ).toBeInTheDocument();
   });
 
-  it("「변경」을 누르면 바로 카드 변경 모달이 열리고, 닫으면 결제 관리 그대로다(APP-1600)", async () => {
+  it("「변경」을 누르면 바로 카드 변경 모달이 열리고, 닫으면 결제 관리 그대로다", async () => {
     await openPaid();
     fireEvent.click(within(methodArea()).getByRole("button", { name: "변경" }));
     const dialog = await screen.findByRole("dialog");
@@ -301,7 +301,7 @@ describe("결제 수단·구독", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("미납 유예면 카드 등록과 유예 끝을 보이고, 해지는 그 자리 종료라고 적은 뒤 끝낸다(APP-1624)", async () => {
+  it("미납 유예면 카드 등록과 유예 끝을 보이고, 해지는 그 자리 종료라고 적은 뒤 끝낸다", async () => {
     billingMock.setScenario("pastDue");
     const area = await openPaid();
     expect(

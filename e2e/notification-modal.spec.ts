@@ -140,7 +140,7 @@ for (const width of [1440, 1024]) {
   });
 }
 
-test.describe("주소 상태(APP-1361)", () => {
+test.describe("주소 상태", () => {
   const openFromSidebar = async (page: import("@playwright/test").Page) => {
     await page
       .getByRole("navigation", { name: "워크스페이스" })

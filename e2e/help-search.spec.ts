@@ -204,7 +204,7 @@ test("움직임 줄이기 설정이면 영상은 자동 재생하지 않는다",
   await context.close();
 });
 
-test("같은 페이지 목차는 부드럽게 스크롤하고 주소만 바꾼다 (APP-1237)", async ({
+test("같은 페이지 목차는 부드럽게 스크롤하고 주소만 바꾼다", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -237,9 +237,7 @@ test("같은 페이지 목차는 부드럽게 스크롤하고 주소만 바꾼�
   expect(rsc).toEqual([]);
 });
 
-test("움직임 줄이기면 목차 이동이 바로 끝난다 (APP-1237)", async ({
-  browser,
-}) => {
+test("움직임 줄이기면 목차 이동이 바로 끝난다", async ({ browser }) => {
   const context = await browser.newContext({
     reducedMotion: "reduce",
     viewport: { width: 1440, height: 900 },

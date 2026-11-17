@@ -378,7 +378,7 @@ describe("apiFetch timeoutMs", () => {
     );
   }
 
-  it("시한 안에 응답이 없으면 REQUEST_TIMEOUT 오류로 끝낸다 (APP-1139)", async () => {
+  it("시한 안에 응답이 없으면 REQUEST_TIMEOUT 오류로 끝낸다", async () => {
     vi.useFakeTimers();
     hangUntilAborted();
 
@@ -436,7 +436,7 @@ describe("apiFetch timeoutMs", () => {
   });
 });
 
-describe("화면 언어를 Accept-Language 로 싣는다 (APP-1285)", () => {
+describe("화면 언어를 Accept-Language 로 싣는다", () => {
   afterEach(() => {
     document.documentElement.lang = "";
   });

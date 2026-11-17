@@ -358,7 +358,7 @@ describe("WorkspaceAppShell", () => {
     expect(screen.queryByLabelText("회의 이름")).toBeNull();
   });
 
-  describe("설정 창 주소 (APP-1211)", () => {
+  describe("설정 창 주소", () => {
     function Opener() {
       const openSettings = useOpenSettings();
       return (

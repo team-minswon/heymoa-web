@@ -39,7 +39,7 @@ describe("REST mock handlers", () => {
     });
   });
 
-  describe("계정 화면 언어 (APP-1283 계약, APP-1285)", () => {
+  describe("계정 화면 언어", () => {
     afterEach(() => {
       document.cookie = "heymoa-mock-account-lang=; path=/; max-age=0";
       mockDb.reset();
@@ -74,7 +74,7 @@ describe("REST mock handlers", () => {
     });
   });
 
-  describe("필수 문서 동의 기록 (APP-1276)", () => {
+  describe("필수 문서 동의 기록", () => {
     const record = (version: string) =>
       fetch("http://localhost/v1/users/me/consents", {
         method: "POST",

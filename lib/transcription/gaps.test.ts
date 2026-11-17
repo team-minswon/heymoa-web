@@ -184,7 +184,7 @@ describe("spansCalendarDays", () => {
   });
 });
 
-describe("전사 공백 줄 (APP-706)", () => {
+describe("전사 공백 줄", () => {
   const untranscribed = (
     gapId: string,
     startedAtMs: number,

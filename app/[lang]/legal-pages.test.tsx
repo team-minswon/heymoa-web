@@ -79,7 +79,7 @@ describe("HeyMoa legal pages", () => {
     expect(screen.queryByRole("link", { name: "한국어본 보기" })).not.toBeInTheDocument();
   });
 
-  it("약관에 유료·환불 조항이 있고 주문서가 링크하는 #section-13 이 환불 조항이다(APP-1586)", async () => {
+  it("약관에 유료·환불 조항이 있고 주문서가 링크하는 #section-13 이 환불 조항이다", async () => {
     await renderPage(TermsPage, "ko");
     const refund = document.getElementById("section-13");
     expect(refund).toHaveTextContent("제13조 (환불)");
@@ -88,7 +88,7 @@ describe("HeyMoa legal pages", () => {
     expect(document.getElementById("section-15")).toHaveTextContent("제15조 (약관의 변경과 문의)");
   });
 
-  it("약관에 결제자·이용 기간·결제자 이탈·청약철회·환불 처리 기한을 적는다(APP-1586 초안, 법무 확인 전)", async () => {
+  it("약관에 결제자·이용 기간·결제자 이탈·청약철회·환불 처리 기한을 적는다", async () => {
     await renderPage(TermsPage, "ko");
     const text = (id: string) => document.getElementById(id)?.textContent ?? "";
     expect(text("section-1")).toMatch(/이 약관은 헤이모아\(대표자 이민형, 이하 'HeyMoa'\)가 제공하는/);
@@ -112,7 +112,7 @@ describe("HeyMoa legal pages", () => {
     expect(document.body.textContent).not.toMatch(/페이플|Payple|토스/);
   });
 
-  it("처리방침에 결제 정보 항목·목적·보관 기간과 결제 대행사 위탁(국내 처리)을 적는다(APP-1586)", async () => {
+  it("처리방침에 결제 정보 항목·목적·보관 기간과 결제 대행사 위탁(국내 처리)을 적는다", async () => {
     await renderPage(PrivacyPage, "ko");
     expect(document.getElementById("section-1")).toHaveTextContent(
       /헤이모아\(이하 'HeyMoa'\)는 서비스를 제공하는 데 필요한 정보만 처리합니다/,
@@ -129,7 +129,7 @@ describe("HeyMoa legal pages", () => {
     expect(entrust).toHaveTextContent(/나이스정보통신 주식회사 \(나이스페이\).*대한민국\. 국외 이전 아님.*카드 비밀번호 앞 2자리, 주문 번호, 결제 금액, 상품 이름/);
   });
 
-  it("주소에 조항 앵커가 있으면 본문이 그려진 뒤 그 조항으로 맞춘다(APP-1586)", async () => {
+  it("주소에 조항 앵커가 있으면 본문이 그려진 뒤 그 조항으로 맞춘다", async () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
     window.location.hash = "#section-13";
@@ -170,7 +170,7 @@ describe("HeyMoa legal pages", () => {
   );
 });
 
-describe("처리방침·약관 변경 관리(APP-1385)", () => {
+describe("처리방침·약관 변경 관리", () => {
   afterEach(cleanup);
 
   it.each([

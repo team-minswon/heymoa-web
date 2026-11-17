@@ -222,7 +222,7 @@ describe("시나리오 표", () => {
   });
 });
 
-describe("general chat answer pool (APP-156)", () => {
+describe("general chat answer pool", () => {
   it("picks a pool answer deterministically per input", () => {
     expect(answerOf("요약해줘", 0)).toBe(answerOf("요약해줘", 0));
     expect(GENERAL_CHAT_ANSWERS).toContain(answerOf("요약해줘", 0));
@@ -316,7 +316,7 @@ describe("★ 목의 id 가 서로 다르다", () => {
   });
 });
 
-describe("진행 문장(APP-1435)", () => {
+describe("진행 문장", () => {
   it("★ 진행 문장은 thinking_delta 이고 ai 처럼 줄바꿈으로 끝난다 — 본문 token 에 안 섞인다", () => {
     const events = buildChatEvents({ chatId: "chat-1", message: "요약해줘" });
     const lines = events

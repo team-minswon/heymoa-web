@@ -46,7 +46,7 @@ describe("normalizeReturnTo", () => {
     );
   });
 
-  it("메일의 노트 링크는 탭·UTM 쿼리째 돌아온다(APP-1312)", () => {
+  it("메일의 노트 링크는 탭·UTM 쿼리째 돌아온다", () => {
     const link =
       "/w/01K0000000000/notes/01K0000000040?view=full&tab=transcript&utm_source=heymoa&utm_medium=email&utm_campaign=meeting_paused_reminder";
     expect(normalizeReturnTo(link)).toBe(link);
@@ -69,7 +69,7 @@ describe("normalizeReturnTo", () => {
     expect(normalizeReturnTo("/oauth/other?x=1")).toBe("/");
   });
 
-  it("결제 화면은 쿼리 없는 깨끗한 주소로만 돌아온다(PRO-75)", () => {
+  it("결제 화면은 쿼리 없는 깨끗한 주소로만 돌아온다", () => {
     for (const path of [
       "/billing/setups/01K0000000001",
       "/billing/checkout/01K0000000001",

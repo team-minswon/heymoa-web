@@ -201,7 +201,7 @@ describe("freeUsageLevel", () => {
   });
 });
 
-describe("녹음 사용량 조회 설정(APP-1566)", () => {
+describe("녹음 사용량 조회 설정", () => {
   const interval = (data: unknown) =>
     RECORDING_USAGE_QUERY.refetchInterval({
       state: {
@@ -239,7 +239,7 @@ describe("isPaidPeriod", () => {
   });
 });
 
-describe("카드 정보 검사(APP-1600)", () => {
+describe("카드 정보 검사", () => {
   const now = new Date("2026-11-12T12:00:00+09:00");
   const form = (patch: Partial<CardForm> = {}): CardForm => ({
     number: "4111111111111111",

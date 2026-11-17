@@ -78,7 +78,7 @@ describe("RecordingDock", () => {
     quota.role = "ADMIN";
   });
 
-  describe("무료 한도를 다 쓴 공간 (APP-1596)", () => {
+  describe("무료 한도를 다 쓴 공간", () => {
     it.each(["idle", "failed"])(
       "%s 에서 시작을 막고 까닭과 ADMIN 의 요금제 보기를 보인다",
       (phase) => {

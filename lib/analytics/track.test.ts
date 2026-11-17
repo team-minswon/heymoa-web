@@ -178,7 +178,7 @@ describe("알림 사건 타입", () => {
     track("notification_clicked", { workspace_id: "W1", type: "SOMETHING", was_unread: true });
   });
 
-  it("타임라인 안내 사건은 역할·닫힌 이유만 받는다 (PRO-67 I26)", () => {
+  it("타임라인 안내 사건은 역할·닫힌 이유만 받는다", () => {
     expectTypeOf<Props<"timeline_hint_shown">>().toEqualTypeOf<{
       workspace_id: string;
       role: "recorder" | "viewer";

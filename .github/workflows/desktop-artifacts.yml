@@ -129,7 +129,7 @@ jobs:
         with:
           name: heymoa-${{ matrix.artifact }}
           if-no-files-found: error
-          # 빌드 하나가 mac·win 합쳐 약 600MB 라 기본 90일이면 Actions 저장공간 0.5GB 를 넘겨 서버 CI 까지 막힙니다(APP-1051).
+          # 빌드 하나가 mac·win 합쳐 약 600MB 라 기본 90일이면 Actions 저장공간 0.5GB 를 넘겨 서버 CI 까지 막힙니다.
           retention-days: 3
           path: |
             apps/desktop/release/HeyMoa-*.dmg

@@ -13,7 +13,7 @@ import {
   isLandingHome,
 } from "@/lib/routes/app-route";
 
-describe("랜딩 홈 첫 방문 이동 (APP-1285)", () => {
+describe("랜딩 홈 첫 방문 이동", () => {
   const rule = () => {
     const found = marketingRedirects().find(
       (item) => item.source === "/" && "has" in item
@@ -103,7 +103,7 @@ describe("마케팅 경로 목록 하나가 rewrite·크롬 판정을 정한다"
     );
   });
 
-  it("지운 페이지별 공유 이미지 주소는 사이트 공통 그림으로 301 이동한다(APP-1419)", () => {
+  it("지운 페이지별 공유 이미지 주소는 사이트 공통 그림으로 301 이동한다", () => {
     const rule = marketingRedirects()[0];
     expect(rule).toMatchObject({
       destination: "/opengraph-image.png",

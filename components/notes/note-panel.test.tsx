@@ -953,7 +953,7 @@ describe("NotePanel", () => {
     );
   });
 
-  it("관리자가 아니면 노트 메뉴가 없다(APP-1384)", () => {
+  it("관리자가 아니면 노트 메뉴가 없다", () => {
     noteState.value.meetingStatus = "ENDED";
     admin.value = false;
     try {
@@ -1055,7 +1055,7 @@ describe("NotePanel", () => {
     });
   });
 
-  describe("회의 종료 뒤 의견 창 (APP-1275)", () => {
+  describe("회의 종료 뒤 의견 창", () => {
     const panel = (noteId = "01K0000000002") => (
       <NotePanel
         workspaceId="01K0000000000"
@@ -1100,7 +1100,7 @@ describe("NotePanel", () => {
     });
   });
 
-  describe("참여자 지정하러 가기 (APP-1102)", () => {
+  describe("참여자 지정하러 가기", () => {
     const panel = (
       tab: "transcript" | "details",
       noteId = "01K0000000002",

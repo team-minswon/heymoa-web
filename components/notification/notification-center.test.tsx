@@ -756,7 +756,7 @@ describe("구독 종료 행", () => {
     await waitFor(() => expect(requests).toContain("PUT read S1"));
   });
 
-  it("자동 결제 중단은 결제자가 빠진 까닭을 그리고, 누르면 그 공간의 요금제 탭으로 간다(APP-1588)", async () => {
+  it("자동 결제 중단은 결제자가 빠진 까닭을 그리고, 누르면 그 공간의 요금제 탭으로 간다", async () => {
     store.items = [
       {
         notificationId: "S2",
@@ -795,7 +795,7 @@ describe("구독 종료 행", () => {
     await waitFor(() => expect(requests).toContain("PUT read S2"));
   });
 
-  it("갱신 결제 거절은 기한까지 카드를 다시 등록하라고 그리고, 누르면 그 공간의 요금제 탭으로 간다(APP-1624)", async () => {
+  it("갱신 결제 거절은 기한까지 카드를 다시 등록하라고 그리고, 누르면 그 공간의 요금제 탭으로 간다", async () => {
     store.items = [
       {
         notificationId: "S3",

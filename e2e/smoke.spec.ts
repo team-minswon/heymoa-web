@@ -587,7 +587,7 @@ test("stops a running turn and lets the next message through", async ({
   ).toBeEnabled({ timeout: 20_000 });
 });
 
-test("renames a chat in place from the header and from history (APP-1433)", async ({
+test("renames a chat in place from the header and from history", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
@@ -626,7 +626,7 @@ test("renames a chat in place from the header and from history (APP-1433)", asyn
   ).toBeVisible();
 });
 
-test("deletes a chat from the header and from history (APP-1409)", async ({
+test("deletes a chat from the header and from history", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);

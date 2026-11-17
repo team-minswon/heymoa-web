@@ -97,7 +97,7 @@ describe("TranscriptGapRow", () => {
   });
 });
 
-describe("TranscriptGapRow — 전사 공백 (APP-706)", () => {
+describe("TranscriptGapRow — 전사 공백", () => {
   afterEach(cleanup);
 
   it("회의 축 두 끝과 문구를 그리고, 진행 중으로 읽지 않는다", () => {

@@ -105,7 +105,7 @@ describe("AuthProvider", () => {
     expect(authApi.logout).toHaveBeenCalledOnce();
   });
 
-  it("영어 화면에서 로그아웃하면 영어 랜딩(/en)으로 간다 (APP-1285)", async () => {
+  it("영어 화면에서 로그아웃하면 영어 랜딩(/en)으로 간다", async () => {
     document.documentElement.lang = "en";
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },

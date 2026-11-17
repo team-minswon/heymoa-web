@@ -304,7 +304,7 @@ describe("상대 시각은 앱 언어로", () => {
   });
 });
 
-describe("AI 제목 기다림 (APP-1440)", () => {
+describe("AI 제목 기다림", () => {
   it("정상으로 끝난 턴은 그때부터 기다리고, 실패·취소면 바로 걷는다", () => {
     const waits = { A: 99, B: 99 };
     expect(settleTitleWait(waits, "A", true, 1_000)).toEqual({
