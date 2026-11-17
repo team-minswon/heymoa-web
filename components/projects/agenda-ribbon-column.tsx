@@ -63,7 +63,6 @@ export const MIN_COL = 28;
 export const PILL_COL = 58;
 export const MAX_COL = 960;
 export const TITLE_COL = 260;
-export const OPEN_W = 220;
 export const ZONE_INSET = 24;
 export const ACCENT = "var(--el-scope-project)";
 

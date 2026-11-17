@@ -2,16 +2,16 @@ import type { MapAgenda } from "@/lib/projects/agenda-map";
 
 export const OPEN_MIN = 320;
 export const OPEN_MAX = 760;
-export const OPEN_SHARE = 0.7;
+const OPEN_SHARE = 0.7;
 export const OPEN_FLOOR = 280;
-export const OPEN_DOT_AT = 0.25;
+const OPEN_DOT_AT = 0.25;
 const GAP = 38;
 const RIGHT = 24;
 const MORE = 28;
 const ZONE_SIDE = 89;
 const SLACK = 1.05;
 
-export type TitleWidth = (text: string) => number;
+type TitleWidth = (text: string) => number;
 
 export function estimateWidth(text: string, size: number) {
   let sum = 0;

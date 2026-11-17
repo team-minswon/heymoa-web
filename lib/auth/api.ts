@@ -1,5 +1,5 @@
 import { notifyAuthStateChanged } from "@/lib/auth/events";
-import { buildApiUrl, isAuthApiConfigured } from "@/lib/auth/paths";
+import { buildApiUrl } from "@/lib/auth/paths";
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
 import { AuthRefreshError, refreshAuthOnce } from "@/lib/api/fetcher";
 import { parseAuthSession } from "@/lib/auth/session-probe";
@@ -115,4 +115,3 @@ export async function logout() {
   notifyAuthStateChanged({ reason: "logout" });
 }
 
-export { AuthApiError, isAuthApiConfigured };

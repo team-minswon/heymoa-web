@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import { helpGroups } from "@/app/[lang]/help/_content/groups";
 import type { HelpAxis } from "@/app/[lang]/help/_content/types";
 
-export function axisOfPath(pathname: string): HelpAxis {
+function axisOfPath(pathname: string): HelpAxis {
   const slug = pathname.split("/")[2];
   return helpGroups.find((group) => group.slug === slug)?.axis ?? "feature";
 }

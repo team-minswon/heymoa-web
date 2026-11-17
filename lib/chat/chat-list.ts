@@ -39,7 +39,7 @@ export function runningLabel(
 /** 날짜 키 산술에만 씁니다. DST 로 하루가 23·25시간인 날이 있습니다. */
 const DAY_MS = 86_400_000;
 
-export type ChatGroup<T> = {
+type ChatGroup<T> = {
   key: "today" | "yesterday" | "week" | "older";
   chats: T[];
 };
@@ -192,7 +192,7 @@ export function revertChatTitleInList(
   );
 }
 
-export type TitleSource = "DEFAULT" | "QUESTION" | "AI" | "USER" | "UNKNOWN";
+type TitleSource = "DEFAULT" | "QUESTION" | "AI" | "USER" | "UNKNOWN";
 const TITLE_SOURCES = new Set(["DEFAULT", "QUESTION", "AI", "USER"]);
 
 export function titleSourceOf(

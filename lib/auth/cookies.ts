@@ -6,7 +6,7 @@ export const AUTH_COOKIE_NAMES = [
   REFRESH_TOKEN_COOKIE_NAME,
 ] as const;
 
-export type AuthCookieName = (typeof AUTH_COOKIE_NAMES)[number];
+type AuthCookieName = (typeof AUTH_COOKIE_NAMES)[number];
 
 export function isAuthCookieName(name: string): name is AuthCookieName {
   return (AUTH_COOKIE_NAMES as readonly string[]).includes(name);

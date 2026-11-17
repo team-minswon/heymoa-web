@@ -457,27 +457,9 @@ function IncludedInBoth() {
   );
 }
 
-function Attention({
-  workspaceId,
-  billing,
-  isAdmin,
-  onRestartPolling,
-  onCheckout,
-}: {
-  workspaceId: string;
-  billing: Billing;
-  isAdmin: boolean;
-  onRestartPolling: () => void;
-  onCheckout: () => void;
-}) {
-  const t = useTranslations("billing.page");
-  const queryClient = useQueryClient();
-  const cancel = useCancelBillingSetup();
-  const [cardChange, setCardChange] = useState(false);
-  const actions = billing.allowedActions;
+function attentionFlagsOf(billing: Billing) {
   const pastDue = billing.status === "PAST_DUE";
   const replacing = billing.status === "ACTIVE" || pastDue;
-  const detail = billing.detail;
   const renewalWait =
     billing.entitlement?.kind === "RENEWAL_PENDING" && !pastDue;
   const checking =
@@ -485,7 +467,13 @@ function Attention({
     (billing.latestAttemptStatus === "PENDING" ||
       billing.latestAttemptStatus === "PROCESSING" ||
       billing.latestAttemptStatus === "UNKNOWN");
+  return { pastDue, replacing, renewalWait, checking };
+}
 
+function useAttentionNotices(billing: Billing) {
+  const t = useTranslations("billing.page");
+  const { checking } = attentionFlagsOf(billing);
+  const detail = billing.detail;
   const refundAttempt = detail?.latestAttempt?.refundStatus
     ? detail.latestAttempt
     : detail?.refundedAttempt;
@@ -504,15 +492,7 @@ function Attention({
           failed: "userPastRefundFailed",
         } as const);
 
-  const cancelSetup = async () => {
-    if (!billing.mySetupId) return;
-    await cancel
-      .mutateAsync({ workspaceId, setupId: billing.mySetupId })
-      .then(() => invalidateWorkspaceBilling(queryClient, workspaceId))
-      .catch(() => undefined);
-  };
-
-  const notices = [
+  return [
     billing.teamSetupInProgress ? (
       <BillingNotice key="team">{t("teamInProgress")}</BillingNotice>
     ) : null,
@@ -581,6 +561,38 @@ function Attention({
       </BillingNotice>
     ) : null,
   ].filter(Boolean);
+}
+
+function Attention({
+  workspaceId,
+  billing,
+  isAdmin,
+  onRestartPolling,
+  onCheckout,
+}: {
+  workspaceId: string;
+  billing: Billing;
+  isAdmin: boolean;
+  onRestartPolling: () => void;
+  onCheckout: () => void;
+}) {
+  const t = useTranslations("billing.page");
+  const queryClient = useQueryClient();
+  const cancel = useCancelBillingSetup();
+  const [cardChange, setCardChange] = useState(false);
+  const actions = billing.allowedActions;
+  const { pastDue, replacing, renewalWait } = attentionFlagsOf(billing);
+  const detail = billing.detail;
+
+  const cancelSetup = async () => {
+    if (!billing.mySetupId) return;
+    await cancel
+      .mutateAsync({ workspaceId, setupId: billing.mySetupId })
+      .then(() => invalidateWorkspaceBilling(queryClient, workspaceId))
+      .catch(() => undefined);
+  };
+
+  const notices = useAttentionNotices(billing);
 
   const continuing =
     Boolean(billing.mySetupId) && actions.includes("CONTINUE_SETUP");

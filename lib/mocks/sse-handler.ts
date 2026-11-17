@@ -35,7 +35,7 @@ const TOKEN_DELAY_MS = 55;
 
 const HEARTBEAT_MS = 10_000;
 
-export const STREAM_TTL_MS = 10 * 60_000;
+const STREAM_TTL_MS = 10 * 60_000;
 
 const CHAT_LIST_EVENTS = new Set([
   "message_start",

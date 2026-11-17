@@ -1,6 +1,6 @@
 import { normalizeReturnTo } from "@/lib/auth/paths";
 
-export type InAppBrowser =
+type InAppBrowser =
   | "instagram"
   | "threads"
   | "kakao"
@@ -8,7 +8,7 @@ export type InAppBrowser =
   | "facebook"
   | "tiktok"
   | "other";
-export type HandoffOs = "ios" | "android" | "other";
+type HandoffOs = "ios" | "android" | "other";
 export type HandoffContext = { app: InAppBrowser; os: HandoffOs };
 
 export function buildBrowserLandingUrl(href: string, context: HandoffContext) {

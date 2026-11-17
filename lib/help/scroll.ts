@@ -1,9 +1,7 @@
+import { prefersReducedMotion } from "@/lib/utils";
+
 const ARRIVE_MS = 1300;
 const ARRIVE_FALLBACK_MS = 700;
-
-export const prefersReducedMotion = () =>
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let flashed: HTMLElement | null = null;
 let flashTimer = 0;

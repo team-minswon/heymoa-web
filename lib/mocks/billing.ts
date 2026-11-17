@@ -3,7 +3,7 @@ import { delay, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
 import { failWith, paramId, respond } from "@/lib/mocks/mock-envelope";
 
-export type BillingScenario =
+type BillingScenario =
   | "ok"
   | "decline"
   | "notProcessed"

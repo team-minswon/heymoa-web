@@ -16,13 +16,13 @@ export type LegalDoc = "privacy" | "terms";
 export type LegalProcessor = { vendor: string; role: string; rows: readonly (readonly string[])[] };
 export type LegalTable = { columns: readonly string[]; rows: readonly (readonly string[])[] };
 export type LegalBlock = string | LegalProcessor | LegalTable;
-export type LegalText = {
+type LegalText = {
   title: string;
   description: string;
   sections: readonly { title: string; body: readonly LegalBlock[] }[];
 };
 
-export const LEGAL_ARCHIVE = {
+const LEGAL_ARCHIVE = {
   privacy: {
     "2026-07-17": privacy20260717,
     "2026-09-04": privacy20260904,

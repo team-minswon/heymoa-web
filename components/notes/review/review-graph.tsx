@@ -26,9 +26,9 @@ import {
   GRAPH_ROLE_ORDER,
   neighborsOf,
   toForceGraph,
-  topicNumber,
   type ForceNode,
 } from "@/lib/notes/review/graph-model";
+import { topicNumber } from "@/lib/notes/review/topics";
 import {
   summaryTopics,
   type MeetingReviewSummary,

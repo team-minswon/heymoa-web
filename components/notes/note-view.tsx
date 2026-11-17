@@ -103,10 +103,8 @@ export function NoteView({
     };
   }, [noteId]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsOpen(true), 10);
-    return () => clearTimeout(timer);
-  }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 첫 커밋을 표시하는 것 자체가 목적이다
+  useEffect(() => setIsOpen(true), []);
 
   const source = initialQuery.source;
   const fromMail = source === "mail";

@@ -22,7 +22,7 @@ export const siteConfig = {
   keywords: koMeta.keywords,
 } as const;
 
-export const isProductionSite = siteUrl === PRODUCTION_URL;
+const isProductionSite = siteUrl === PRODUCTION_URL;
 
 /** `robots.txt` 의 `Disallow` 는 크롤링만 막아 알려진 URL 이 색인에 남고 이 `noindex` 도 못 읽힙니다. 그래서 비운영도 크롤링은 엽니다. */
 export const noindexDirective: Metadata["robots"] = {
@@ -123,4 +123,3 @@ export function siteMetadataFor(locale: Locale): Metadata {
   };
 }
 
-export const siteMetadata: Metadata = siteMetadataFor("ko");

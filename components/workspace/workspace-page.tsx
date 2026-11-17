@@ -17,8 +17,8 @@ import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
 import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 
-export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
-export const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
+const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
+const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
 
 export function noteListRefetchInterval(
   notes: NoteListResponseDataNotesItem[] | undefined

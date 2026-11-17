@@ -1,8 +1,8 @@
 export const PAN_THRESHOLD = 5;
 
-export type PanAxes = { x: boolean; y: boolean };
+type PanAxes = { x: boolean; y: boolean };
 export type PanAxis = "x" | "y" | "xy";
-export type PanStep = { dragging: false } | { dragging: true; axis: PanAxis; left: number; top: number };
+type PanStep = { dragging: false } | { dragging: true; axis: PanAxis; left: number; top: number };
 
 export function lockAxis(dx: number, dy: number, axes: PanAxes, shift = false): PanAxis | null {
   if (axes.x && axes.y) return shift ? "xy" : Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
@@ -54,10 +54,10 @@ export function panGesture(threshold = PAN_THRESHOLD) {
 }
 
 export type PanSample = { t: number; x: number; y: number };
-export const GLIDE_WINDOW_MS = 80;
-export const GLIDE_TAU_MS = 120;
+const GLIDE_WINDOW_MS = 80;
+const GLIDE_TAU_MS = 120;
 export const GLIDE_MAX_MS = 400;
-export const GLIDE_MIN_V = 0.03;
+const GLIDE_MIN_V = 0.03;
 export const GLIDE_MAX_V = 3;
 
 export function releaseVelocity(samples: readonly PanSample[], now: number, window = GLIDE_WINDOW_MS) {

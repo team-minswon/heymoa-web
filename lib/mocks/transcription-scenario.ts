@@ -23,7 +23,7 @@ const MAX_FRAME_BYTES = CAPTURE_CONTRACT.maxFrameBytes;
 const ACK_EVERY_CHUNKS = 30;
 const PENDING_WORD_COUNT = 2;
 
-export type AudioFrameHeader = {
+type AudioFrameHeader = {
   chunkSeq: number;
   captureSamples: number;
 };

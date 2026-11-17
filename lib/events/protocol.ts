@@ -43,7 +43,7 @@ const userEvent = z.discriminatedUnion("type", [
   degraded,
 ]);
 
-export type UserEvent = z.infer<typeof userEvent>;
+type UserEvent = z.infer<typeof userEvent>;
 export type UserEventHint = Extract<
   UserEvent,
   {

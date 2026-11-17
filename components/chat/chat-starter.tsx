@@ -32,7 +32,7 @@ export const STARTERS: readonly Starter[] = [
   { key: "web", Icon: Globe },
 ];
 
-export type StarterState = "first" | "workspace" | "note";
+type StarterState = "first" | "workspace" | "note";
 
 export type ChatExample = {
   kind:
@@ -52,7 +52,7 @@ export type ChatExample = {
 
 type Note = { noteId: string; title: string };
 
-export type StarterFacts = {
+type StarterFacts = {
   context: Note | null;
   hasActionItems: boolean | null;
   recorded: boolean | null;
@@ -60,7 +60,7 @@ export type StarterFacts = {
   hasProject: boolean | null;
 };
 
-export function starterState(facts: StarterFacts): StarterState {
+function starterState(facts: StarterFacts): StarterState {
   if (facts.context) return "note";
   return facts.recorded === false ? "first" : "workspace";
 }
@@ -79,7 +79,7 @@ type MessageKey =
   | "webFirst"
   | "newTask";
 
-export function chatExamples(
+function chatExamples(
   facts: StarterFacts,
   t: ReturnType<typeof useTranslations<"chat.starter">>
 ): ChatExample[] {

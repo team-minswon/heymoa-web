@@ -28,7 +28,7 @@ type TermListCache = {
   };
 };
 
-export const termsOfCache = (cache: unknown): Term[] | undefined => {
+const termsOfCache = (cache: unknown): Term[] | undefined => {
   const value = cache as TermListCache | undefined;
   return value?.status === 200 && value.data.success
     ? value.data.data?.terms

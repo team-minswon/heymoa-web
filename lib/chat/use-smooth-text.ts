@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export const DRAIN_MS = 260;
+const DRAIN_MS = 260;
 
 const MIN_CHARS_PER_FRAME = 1;
 

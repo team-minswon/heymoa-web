@@ -1,11 +1,10 @@
 import type { PcmAudioCaptureOptions } from "@/lib/transcription/audio";
 import type { DesktopCaptureBridge } from "@heymoa/desktop-contracts";
 export type {
-  DesktopCapabilities,
   DesktopCapturePacket,
   DesktopCaptureBridge,
 } from "@heymoa/desktop-contracts";
-export interface DesktopAudioPort {
+interface DesktopAudioPort {
   readonly sampleRate: number;
   requestPermission(): Promise<void>;
   start(): Promise<void>;

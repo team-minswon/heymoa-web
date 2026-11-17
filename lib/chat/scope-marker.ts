@@ -13,7 +13,7 @@ export function scopeMarker(chip: ScopeChip) {
   return `@[${chip.title.replace(/[\\\]]/g, "\\$&")}](${KEY[chip.kind]}:${chip.id})`;
 }
 
-export type MarkerPart =
+type MarkerPart =
   | { text: string }
   | { kind: ScopeChip["kind"]; id: string; title: string; raw: string };
 

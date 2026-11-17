@@ -4,6 +4,7 @@ import {
   summaryTopics,
   type MeetingReviewSummary,
 } from "@/lib/notes/review/summary";
+import { topicNumber } from "@/lib/notes/review/topics";
 
 type ReviewItem = MeetingReviewResponseDataItemsItem;
 
@@ -142,9 +143,6 @@ export type ForceLinkKind = "hub" | "relation" | "also" | "agenda";
 export type ForceLink = { source: string; target: string; kind: ForceLinkKind };
 
 export const hubId = (ordinal: number) => `topic:${ordinal}`;
-
-export const topicNumber = (ordinal: number) =>
-  String(ordinal).padStart(2, "0");
 
 export function nodeRadius(degree: number, hub: boolean): number {
   return hub ? 8 + 0.8 * Math.sqrt(degree) : 5 + 0.7 * Math.sqrt(degree);

@@ -59,6 +59,7 @@ import {
 import type {
   AgentDelegationsResponseDataDelegationsItem,
   GetAgentDelegationUsagesParams,
+  WorkspaceListResponseDataWorkspacesItem,
 } from "@/lib/api/generated/models";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
@@ -306,15 +307,11 @@ function NewConnectionForm({
 }) {
   const t = useTranslations("settings.agentConnections.form");
   const tActions = useTranslations("common.actions");
-  const optionLabel = useWorkspaceOptionLabel();
   const workspacesQuery = useGetWorkspaces();
   const workspaces =
     workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
       ? workspacesQuery.data.data.data.workspaces
       : [];
-  const workspacesFailed =
-    workspacesQuery.isError ||
-    (workspacesQuery.data !== undefined && workspaces.length === 0);
   const [workspaceId, setWorkspaceId] = useState(defaultWorkspaceId);
   const [name, setName] = useState("");
   const [allowTaskChanges, setAllowTaskChanges] = useState(false);
@@ -329,23 +326,10 @@ function NewConnectionForm({
   }, [create.isPending, onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
   const trimmed = name.trim();
-  const items = Object.fromEntries(
-    workspaces.map((workspace) => [
-      workspace.workspaceId,
-      optionLabel(workspace),
-    ])
-  );
   const selected = workspaces.find(
     (workspace) => workspace.workspaceId === workspaceId
   );
   const blocked = selected?.agentAccessAllowed === false;
-  const recheck = {
-    onRecheck: () => void workspacesQuery.refetch(),
-    rechecking: workspacesQuery.isFetching,
-  };
-  const allBlocked = workspaces.every(
-    (workspace) => workspace.agentAccessAllowed === false
-  );
 
   const canSubmit = Boolean(trimmed) && selected !== undefined && !blocked;
 
@@ -374,56 +358,12 @@ function NewConnectionForm({
     >
       <div className="grid gap-2">
         <Label htmlFor="agent-connection-workspace">{t("workspace")}</Label>
-        {workspacesQuery.isLoading ? (
-          <Skeleton
-            className="h-9 rounded-control"
-            aria-label={t("workspacesLoading")}
-          />
-        ) : workspacesFailed ? (
-          <div role="alert" className="space-y-2">
-            <p className="text-sm text-[var(--el-ink)]">
-              {t("workspacesFailed")}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-[30px]"
-              onClick={() => void workspacesQuery.refetch()}
-            >
-              {tActions("retry")}
-            </Button>
-          </div>
-        ) : allBlocked ? (
-          <AgentAccessBlockedNotice {...recheck} />
-        ) : (
-          <>
-            <Select
-              items={items}
-              value={workspaceId}
-              onValueChange={(value) => value && setWorkspaceId(value)}
-            >
-              <SelectTrigger
-                id="agent-connection-workspace"
-                aria-label={t("workspace")}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaces.map((workspace) => (
-                  <SelectItem
-                    key={workspace.workspaceId}
-                    value={workspace.workspaceId}
-                    disabled={workspace.agentAccessAllowed === false}
-                  >
-                    {items[workspace.workspaceId]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {blocked ? <AgentAccessBlockedNotice {...recheck} /> : null}
-          </>
-        )}
+        <WorkspaceField
+          workspacesQuery={workspacesQuery}
+          workspaces={workspaces}
+          workspaceId={workspaceId}
+          onWorkspaceChange={setWorkspaceId}
+        />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="agent-connection-name">{t("name")}</Label>
@@ -463,6 +403,93 @@ function NewConnectionForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function WorkspaceField({
+  workspacesQuery,
+  workspaces,
+  workspaceId,
+  onWorkspaceChange: setWorkspaceId,
+}: {
+  workspacesQuery: ReturnType<typeof useGetWorkspaces>;
+  workspaces: WorkspaceListResponseDataWorkspacesItem[];
+  workspaceId: string;
+  onWorkspaceChange: (workspaceId: string) => void;
+}) {
+  const t = useTranslations("settings.agentConnections.form");
+  const tActions = useTranslations("common.actions");
+  const optionLabel = useWorkspaceOptionLabel();
+  const workspacesFailed =
+    workspacesQuery.isError ||
+    (workspacesQuery.data !== undefined && workspaces.length === 0);
+  const items = Object.fromEntries(
+    workspaces.map((workspace) => [
+      workspace.workspaceId,
+      optionLabel(workspace),
+    ])
+  );
+  const selected = workspaces.find(
+    (workspace) => workspace.workspaceId === workspaceId
+  );
+  const blocked = selected?.agentAccessAllowed === false;
+  const recheck = {
+    onRecheck: () => void workspacesQuery.refetch(),
+    rechecking: workspacesQuery.isFetching,
+  };
+  const allBlocked = workspaces.every(
+    (workspace) => workspace.agentAccessAllowed === false
+  );
+
+  return workspacesQuery.isLoading ? (
+    <Skeleton
+      className="h-9 rounded-control"
+      aria-label={t("workspacesLoading")}
+    />
+  ) : workspacesFailed ? (
+    <div role="alert" className="space-y-2">
+      <p className="text-sm text-[var(--el-ink)]">
+        {t("workspacesFailed")}
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-[30px]"
+        onClick={() => void workspacesQuery.refetch()}
+      >
+        {tActions("retry")}
+      </Button>
+    </div>
+  ) : allBlocked ? (
+    <AgentAccessBlockedNotice {...recheck} />
+  ) : (
+    <>
+      <Select
+        items={items}
+        value={workspaceId}
+        onValueChange={(value) => value && setWorkspaceId(value)}
+      >
+        <SelectTrigger
+          id="agent-connection-workspace"
+          aria-label={t("workspace")}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {workspaces.map((workspace) => (
+            <SelectItem
+              key={workspace.workspaceId}
+              value={workspace.workspaceId}
+              disabled={workspace.agentAccessAllowed === false}
+            >
+              {items[workspace.workspaceId]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {blocked ? <AgentAccessBlockedNotice {...recheck} /> : null}
+    </>
   );
 }
 

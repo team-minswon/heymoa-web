@@ -1,15 +1,12 @@
 import { z } from "zod";
 
+import { tsidSchema } from "@/lib/api/tsid";
+
 import {
   contextBatchAppliedSchema,
   proposalChangedSchema,
   wireInstantSchema,
 } from "@/lib/notes/proposals/contract";
-
-const tsidSchema = z
-  .string()
-  .length(13)
-  .regex(/^[0-9A-HJKMNP-TV-Z]{13}$/);
 
 const meetingLifecycle = {
   meetingStatus: z
@@ -59,10 +56,6 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export type NoteTopicEvent = z.infer<typeof noteTopicEventSchema>;
-export type NoteTopicContextEvent = Extract<
-  NoteTopicEvent,
-  { type: "proposal.changed" | "transcript-analysis-run.applied" }
->;
 export type NoteTopicFinalSegment = Extract<
   NoteTopicEvent,
   { type: "transcript.final" }

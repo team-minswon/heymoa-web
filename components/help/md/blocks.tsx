@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 
 type El = ReactElement<{ children?: ReactNode } & Record<string, unknown>>;
 
-export function resolveHelpHref(href: string, locale: Locale = "ko") {
+function resolveHelpHref(href: string, locale: Locale = "ko") {
   const [id, hash] = href.slice("help:".length).split("#");
   return `${localePath(locale, helpPathById(id as HelpPageId))}${hash ? `#${hash}` : ""}`;
 }
@@ -101,7 +101,7 @@ export function HelpCallout({
   );
 }
 
-export const STEPS_CLASS = cn(
+const STEPS_CLASS = cn(
   "m-0 flex list-none flex-col p-0 [counter-reset:step]",
   "[&>li]:relative [&>li]:min-h-8 [&>li]:pb-5 [&>li]:pl-11 [&>li]:[counter-increment:step] [&>li:last-child]:pb-0",
   "[&>li]:before:absolute [&>li]:before:top-0 [&>li]:before:left-0 [&>li]:before:grid [&>li]:before:size-7 [&>li]:before:place-items-center [&>li]:before:rounded-full",

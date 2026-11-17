@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { DesktopBridge } from "@heymoa/desktop-contracts";
+import { desktopBridge } from "@/lib/desktop/bridge";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
@@ -10,10 +10,7 @@ import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 export function DesktopLaunchRedirect() {
   const router = useRouter();
   const { status } = useAuth();
-  const bridge =
-    typeof window === "undefined"
-      ? undefined
-      : (window as unknown as { heymoaDesktop?: DesktopBridge }).heymoaDesktop;
+  const bridge = desktopBridge();
   const desktop = typeof bridge?.getCapabilities === "function";
   const query = useGetWorkspaces({
     query: {

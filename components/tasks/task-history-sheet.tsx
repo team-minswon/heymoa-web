@@ -57,7 +57,7 @@ function fieldsOf(revision: Revision, speakerName: (label: string) => string) {
   } satisfies Record<Field, string | null>;
 }
 
-export type RevisionChange = {
+type RevisionChange = {
   field: Field;
   before?: string | null;
   after: string | null;

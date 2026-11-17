@@ -1,4 +1,4 @@
-export type ApiErrorEnvelope = {
+type ApiErrorEnvelope = {
   success: false;
   data: null;
   error: { code: string; message: string; details?: unknown };

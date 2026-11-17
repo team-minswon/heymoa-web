@@ -69,6 +69,7 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { NoteResponseData } from "@/lib/api/generated/models";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
@@ -382,80 +383,13 @@ export function NotePanel({
             data-slot="note-top-bar"
             className="@container/topbar flex shrink-0 flex-wrap items-center gap-x-3 border-b border-[var(--el-hairline)] px-4 sm:h-14 sm:flex-nowrap sm:px-8"
           >
-            <div className="flex h-14 min-w-0 flex-1 items-center gap-2">
-              <div
-                role="group"
-                aria-label={t("windowControls")}
-                className="flex shrink-0 items-center gap-2"
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-control text-[var(--el-muted)]"
-                  aria-label={t("backToList")}
-                  onClick={onClose}
-                >
-                  <ArrowLeft />
-                </Button>
-                {onExpand ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-control text-[var(--el-muted)]"
-                    aria-label={
-                      turnActive ? t("expandBusy") : t("expand")
-                    }
-                    disabled={turnActive}
-                    onClick={onExpand}
-                  >
-                    <Expand />
-                  </Button>
-                ) : null}
-                {onCollapse ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-control text-[var(--el-muted)]"
-                    aria-label={
-                      turnActive ? t("collapseBusy") : t("collapse")
-                    }
-                    disabled={turnActive}
-                    onClick={onCollapse}
-                  >
-                    <Shrink />
-                  </Button>
-                ) : null}
-              </div>
-              <span
-                aria-hidden
-                className="h-[18px] w-px shrink-0 bg-[var(--el-hairline)]"
-              />
-
-              {note ? (
-                <MeetingStatusChip status={note.meetingStatus} />
-              ) : (
-                <span
-                  aria-hidden
-                  className="flex shrink-0 items-center gap-1.5"
-                >
-                  <Skeleton className="size-1.5 rounded-full" />
-                  <Skeleton className="h-3 w-[27px] rounded-chip" />
-                </span>
-              )}
-              {note ? (
-                <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--el-ink)]">
-                  {note.title}
-                </span>
-              ) : (
-                <Skeleton
-                  aria-label={t("loading")}
-                  className="h-3.5 w-40 max-w-full rounded-chip"
-                />
-              )}
-            </div>
+            <NoteWindowTitle
+              note={note}
+              turnActive={turnActive}
+              onClose={onClose}
+              onExpand={onExpand}
+              onCollapse={onCollapse}
+            />
 
             {/* 높이는 `group-data-horizontal/tabs:h-14` 처럼 같은 variant 셀렉터로 덮는다 — 평범한 `h-14` 는 tailwind-merge 가 조용히 무시한다. */}
             <TabsList
@@ -497,47 +431,16 @@ export function NotePanel({
                 onEditParticipants={editParticipants}
               />
             ) : null}
-            {note && !canDelete ? null : note ? (
-              <div className="flex shrink-0 items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        aria-label={t("menu")}
-                        className="rounded-control text-[var(--el-muted)]"
-                      />
-                    }
-                  >
-                    <MoreHorizontal />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => setDeleteTargetId(noteId)}
-                    >
-                      <Trash2 /> {tActions("delete")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <NoteDeleteDialog
-                  workspaceId={workspaceId}
-                  noteId={noteId}
-                  projectId={note.projectId}
-                  title={note.title}
-                  open={deleteTargetId === noteId}
-                  onOpenChange={(open) =>
-                    setDeleteTargetId(open ? noteId : null)
-                  }
-                  onDeleted={onDeleted ?? onClose}
-                />
-              </div>
-            ) : (
-              <Skeleton
-                aria-hidden
-                className="size-8 shrink-0 rounded-control"
+            {note && !canDelete ? null : (
+              <NoteActionsMenu
+                workspaceId={workspaceId}
+                noteId={noteId}
+                note={note}
+                deleteOpen={deleteTargetId === noteId}
+                onDeleteOpenChange={(open) =>
+                  setDeleteTargetId(open ? noteId : null)
+                }
+                onDeleted={onDeleted ?? onClose}
               />
             )}
             {showAgentRail && (agentRail === false || railFoldedOnNarrow) ? (
@@ -916,6 +819,149 @@ export function NotePanel({
           }
         />
       ) : null}
+    </div>
+  );
+}
+
+function NoteWindowTitle({
+  note,
+  turnActive,
+  onClose,
+  onExpand,
+  onCollapse,
+}: {
+  note: NoteResponseData | undefined;
+  turnActive: boolean;
+  onClose: () => void;
+  onExpand?: () => void;
+  onCollapse?: () => void;
+}) {
+  const t = useTranslations("notes.panel");
+  return (
+    <div className="flex h-14 min-w-0 flex-1 items-center gap-2">
+      <div
+        role="group"
+        aria-label={t("windowControls")}
+        className="flex shrink-0 items-center gap-2"
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="rounded-control text-[var(--el-muted)]"
+          aria-label={t("backToList")}
+          onClick={onClose}
+        >
+          <ArrowLeft />
+        </Button>
+        {onExpand ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="rounded-control text-[var(--el-muted)]"
+            aria-label={turnActive ? t("expandBusy") : t("expand")}
+            disabled={turnActive}
+            onClick={onExpand}
+          >
+            <Expand />
+          </Button>
+        ) : null}
+        {onCollapse ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="rounded-control text-[var(--el-muted)]"
+            aria-label={turnActive ? t("collapseBusy") : t("collapse")}
+            disabled={turnActive}
+            onClick={onCollapse}
+          >
+            <Shrink />
+          </Button>
+        ) : null}
+      </div>
+      <span
+        aria-hidden
+        className="h-[18px] w-px shrink-0 bg-[var(--el-hairline)]"
+      />
+
+      {note ? (
+        <MeetingStatusChip status={note.meetingStatus} />
+      ) : (
+        <span aria-hidden className="flex shrink-0 items-center gap-1.5">
+          <Skeleton className="size-1.5 rounded-full" />
+          <Skeleton className="h-3 w-[27px] rounded-chip" />
+        </span>
+      )}
+      {note ? (
+        <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--el-ink)]">
+          {note.title}
+        </span>
+      ) : (
+        <Skeleton
+          aria-label={t("loading")}
+          className="h-3.5 w-40 max-w-full rounded-chip"
+        />
+      )}
+    </div>
+  );
+}
+
+function NoteActionsMenu({
+  workspaceId,
+  noteId,
+  note,
+  deleteOpen,
+  onDeleteOpenChange,
+  onDeleted,
+}: {
+  workspaceId: string;
+  noteId: string;
+  note: NoteResponseData | undefined;
+  deleteOpen: boolean;
+  onDeleteOpenChange: (open: boolean) => void;
+  onDeleted: () => void;
+}) {
+  const t = useTranslations("notes.panel");
+  const tActions = useTranslations("common.actions");
+  if (!note) {
+    return <Skeleton aria-hidden className="size-8 shrink-0 rounded-control" />;
+  }
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={t("menu")}
+              className="rounded-control text-[var(--el-muted)]"
+            />
+          }
+        >
+          <MoreHorizontal />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => onDeleteOpenChange(true)}
+          >
+            <Trash2 /> {tActions("delete")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <NoteDeleteDialog
+        workspaceId={workspaceId}
+        noteId={noteId}
+        projectId={note.projectId}
+        title={note.title}
+        open={deleteOpen}
+        onOpenChange={onDeleteOpenChange}
+        onDeleted={onDeleted}
+      />
     </div>
   );
 }

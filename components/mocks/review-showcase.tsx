@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const WORKSPACE_ID = "01K0000000000";
 const summaryOf = (noteId: string) => `/w/${WORKSPACE_ID}/notes/${noteId}?view=full&tab=summary`;
 
-export type Scenario = {
+type Scenario = {
   key: string;
   group: string;
   title: string;

@@ -101,29 +101,11 @@ export function WorkspaceGuestsSettings({
           : "mt-8 border-t border-[var(--el-hairline)] pt-8"
       }
     >
-      {standalone ? (
-        page ? (
-          <p className="text-sm text-[var(--el-muted)]">
-            {t("count", { count: page.totalCount })}
-          </p>
-        ) : guestsQuery.isLoading ? (
-          <SkeletonLine className="w-10" />
-        ) : null
-      ) : (
-        <>
-          <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">
-            {t("title")}
-            {page ? (
-              <span className="ml-1.5 font-normal text-[var(--el-muted)]">
-                {t("count", { count: page.totalCount })}
-              </span>
-            ) : null}
-          </h3>
-          <p className="mt-1.5 text-sm text-[var(--el-muted)]">
-            {t("description")}
-          </p>
-        </>
-      )}
+      <GuestsHeading
+        standalone={standalone}
+        totalCount={page?.totalCount}
+        isLoading={guestsQuery.isLoading}
+      />
 
       {guestsQuery.isLoading ? (
         <ul
@@ -252,6 +234,42 @@ export function WorkspaceGuestsSettings({
         />
       ) : null}
     </section>
+  );
+}
+
+function GuestsHeading({
+  standalone,
+  totalCount,
+  isLoading,
+}: {
+  standalone: boolean;
+  totalCount: number | undefined;
+  isLoading: boolean;
+}) {
+  const t = useTranslations("settings.guests");
+  if (standalone) {
+    if (totalCount !== undefined)
+      return (
+        <p className="text-sm text-[var(--el-muted)]">
+          {t("count", { count: totalCount })}
+        </p>
+      );
+    return isLoading ? <SkeletonLine className="w-10" /> : null;
+  }
+  return (
+    <>
+      <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">
+        {t("title")}
+        {totalCount !== undefined ? (
+          <span className="ml-1.5 font-normal text-[var(--el-muted)]">
+            {t("count", { count: totalCount })}
+          </span>
+        ) : null}
+      </h3>
+      <p className="mt-1.5 text-sm text-[var(--el-muted)]">
+        {t("description")}
+      </p>
+    </>
   );
 }
 
@@ -489,31 +507,10 @@ function LinkGuestDialog({
         ) : !target && (membersPending || !membersSettled) ? (
           <Skeleton className="h-24 rounded-block" />
         ) : !target ? (
-          <ul className="max-h-64 space-y-0.5 overflow-y-auto rounded-block border border-[var(--el-hairline)] p-1">
-            {members.map((member) => (
-              <li key={member.userId}>
-                <button
-                  type="button"
-                  className="flex w-full cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-2 text-left transition-colors outline-none hover:bg-[var(--el-surface-strong)] focus-visible:bg-[var(--el-hairline)] focus-visible:font-medium motion-reduce:transition-none"
-                  onClick={() => void choose(member)}
-                >
-                  <PersonAvatar
-                    name={member.userId}
-                    image={member.image}
-                    size={28}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-[var(--el-ink)]">
-                      {member.name}
-                    </span>
-                    <span className="block truncate text-xs font-normal text-[var(--el-muted)]">
-                      {member.email}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <MemberPickList
+            members={members}
+            onChoose={(member) => void choose(member)}
+          />
         ) : (
           <div className="grid gap-3">
             <LinkPair guest={guest} target={target} />
@@ -557,6 +554,42 @@ function LinkGuestDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+function MemberPickList({
+  members,
+  onChoose,
+}: {
+  members: WorkspaceMemberListResponseDataMembersItem[];
+  onChoose: (member: WorkspaceMemberListResponseDataMembersItem) => void;
+}) {
+  return (
+    <ul className="max-h-64 space-y-0.5 overflow-y-auto rounded-block border border-[var(--el-hairline)] p-1">
+      {members.map((member) => (
+        <li key={member.userId}>
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-2 text-left transition-colors outline-none hover:bg-[var(--el-surface-strong)] focus-visible:bg-[var(--el-hairline)] focus-visible:font-medium motion-reduce:transition-none"
+            onClick={() => onChoose(member)}
+          >
+            <PersonAvatar
+              name={member.userId}
+              image={member.image}
+              size={28}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm text-[var(--el-ink)]">
+                {member.name}
+              </span>
+              <span className="block truncate text-xs font-normal text-[var(--el-muted)]">
+                {member.email}
+              </span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

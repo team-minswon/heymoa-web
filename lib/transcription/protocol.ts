@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-const tsidSchema = z
-  .string()
-  .length(13)
-  .regex(/^[0-9A-HJKMNP-TV-Z]{13}$/);
+import { tsidSchema } from "@/lib/api/tsid";
 
 const clientCommandSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -87,11 +84,6 @@ const serverEventSchema = z.discriminatedUnion("type", [
 export type ClientCommand = z.infer<typeof clientCommandSchema>;
 export type ServerEvent = z.infer<typeof serverEventSchema>;
 export type RealtimeFinalSegment = z.infer<typeof finalEventSchema>;
-export type RealtimePartial = z.infer<typeof partialEventSchema>;
-export type CaptureState = Extract<
-  ServerEvent,
-  { type: "capture_state" }
->["state"];
 
 export function isTerminalError(
   event: Extract<ServerEvent, { type: "error" }>

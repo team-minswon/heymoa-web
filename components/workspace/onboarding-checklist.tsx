@@ -32,7 +32,7 @@ import { hintedInterval } from "@/lib/events/interval";
 
 const NO_POLLING = () => 0;
 
-export type OnboardingChecklistModel = {
+type OnboardingChecklistModel = {
   userId: string;
   done: Set<ChecklistStepId>;
   endedNoteId?: string;

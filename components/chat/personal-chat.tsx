@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type RefObject,
   createContext,
   useCallback,
   useContext,
@@ -45,6 +46,8 @@ import { initialStreamState } from "@/lib/chat/stream-protocol";
 import { useChatTurn } from "@/lib/chat/use-chat-turn";
 import { useStickToBottom } from "@/lib/chat/use-stick-to-bottom";
 import { cn } from "@/lib/utils";
+
+type SuggestedNote = { noteId: string; title: string | null };
 
 type NoteScope = { noteId: string; title: string | null; hidden: boolean };
 
@@ -225,7 +228,7 @@ function PersonalChatPanel({
   hidden: boolean;
   railSlot?: HTMLElement | null;
   workspaceId: string;
-  suggestedNote: { noteId: string; title: string | null } | null;
+  suggestedNote: SuggestedNote | null;
   freshChatPending?: boolean;
   onFreshChatConsumed?: () => void;
   onTurnActiveChange: (active: boolean) => void;
@@ -249,111 +252,37 @@ function PersonalChatPanel({
   } = turn;
   const [view, setView] = useState<"thread" | "history">("thread");
 
-  const [chips, setChips] = useState<ScopeChip[]>([]);
-  const editorRef = useRef<MentionHandle | null>(null);
-  const dismissedRef = useRef<Set<string>>(new Set());
-  const prefilledRef = useRef<Set<string>>(new Set());
-  const clearingForSendRef = useRef(false);
-
-  const prefillSuggested = useCallback(() => {
-    const noteId = suggestedNote?.noteId;
-    const title = suggestedNote?.title;
-    prefilledRef.current.forEach((id) => {
-      if (id === noteId) return;
-      prefilledRef.current.delete(id);
-      editorRef.current?.remove({ kind: "note", id, title: "" });
-    });
-    if (!noteId || !title) return;
-    if (dismissedRef.current.has(noteId)) return;
-    if (prefilledRef.current.has(noteId)) return;
-    if (
-      editorRef.current
-        ?.read()
-        .chips.some((chip) => chip.kind === "note" && chip.id === noteId)
-    )
-      return;
-    prefilledRef.current.add(noteId);
-    editorRef.current?.prepend({ kind: "note", id: noteId, title });
-  }, [suggestedNote]);
-
-  useEffect(() => prefillSuggested(), [prefillSuggested]);
-
-  const handleChipsChange = useCallback((next: ScopeChip[]) => {
-    if (!clearingForSendRef.current) {
-      const present = new Set(next.map(scopeKey));
-      prefilledRef.current.forEach((noteId) => {
-        if (!present.has(scopeKey({ kind: "note", id: noteId })))
-          dismissedRef.current.add(noteId);
-      });
-    }
-    setChips(next);
-  }, []);
-
-  const restoreComposer = useCallback((message: string, scope: ScopeChip[]) => {
-    editorRef.current?.append(
-      dropScopeMarkers(message, new Set(scope.map((chip) => chip.id)))
-    );
-    const present = new Set(
-      (editorRef.current?.read().chips ?? []).map(scopeKey)
-    );
-    scope
-      .filter((chip) => !present.has(scopeKey(chip)))
-      .forEach((chip) => editorRef.current?.prepend(chip));
-    setChips(scope);
-  }, []);
-
-  const resetComposer = useCallback(() => {
-    editorRef.current?.clear();
-    setChips([]);
-    dismissedRef.current.clear();
-    prefilledRef.current.clear();
-    prefillSuggested();
-  }, [prefillSuggested]);
+  const {
+    chips,
+    editorRef,
+    handleChipsChange,
+    restoreComposer,
+    resetComposer,
+    clearForSend,
+  } = useComposerScope(suggestedNote);
 
   const { viewportRef, atBottom, scrollToBottom, scrollToSent } =
     useStickToBottom(
       `${turn.messageCount}:${turn.pendingUserMessage ?? ""}:${answerText(turn.stream.blocks)}:${turn.stream.blocks.length}`
     );
 
-  const [viewportHeight, setViewportHeight] = useState(0);
-  const measureViewport = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    setViewportHeight((current) =>
-      current === viewport.clientHeight ? current : viewport.clientHeight
-    );
-  }, [viewportRef]);
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    measureViewport();
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(measureViewport);
-    observer?.observe(viewport);
-    return () => observer?.disconnect();
-  }, [measureViewport, viewportRef]);
+  const { viewportHeight, measureViewport } = useViewportHeight(viewportRef);
 
   const send = useCallback(
     async (text: string, override?: ScopeChip[]) => {
       const message = text.trim();
       if (!message || isBusy) return;
       const scope = override ?? chips;
-      clearingForSendRef.current = true;
-      editorRef.current?.clear();
-      clearingForSendRef.current = false;
-      prefilledRef.current.clear();
-      prefillSuggested();
+      clearForSend();
       measureViewport();
       scrollToSent();
       if (!(await sendTurn(message, scope))) restoreComposer(message, scope);
     },
     [
       chips,
+      clearForSend,
       isBusy,
       measureViewport,
-      prefillSuggested,
       restoreComposer,
       scrollToSent,
       sendTurn,
@@ -399,28 +328,10 @@ function PersonalChatPanel({
   const catalog = useScopeCatalog(workspaceId, needsCatalog);
   const takenScope = useMemo(() => new Set(chips.map(scopeKey)), [chips]);
 
-  const overlap = useMemo(() => {
-    const projectIds = new Set(
-      chips.filter((chip) => chip.kind === "project").map((chip) => chip.id)
-    );
-    if (projectIds.size === 0) return null;
-    const inside = chips.find(
-      (chip) =>
-        chip.kind === "note" &&
-        catalog.notes.some(
-          (note) =>
-            note.id === chip.id &&
-            note.projectId &&
-            projectIds.has(note.projectId)
-        )
-    );
-    if (!inside) return null;
-    const parent = catalog.notes.find((note) => note.id === inside.id);
-    const project = chips.find(
-      (chip) => chip.kind === "project" && chip.id === parent?.projectId
-    );
-    return { note: inside, project };
-  }, [catalog.notes, chips]);
+  const overlap = useMemo(
+    () => scopeOverlapOf(chips, catalog.notes),
+    [catalog.notes, chips]
+  );
 
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
   const backButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -523,7 +434,7 @@ function PersonalChatPanel({
         written ? ` ${example.question}` : example.question
       );
     },
-    [workspaceId]
+    [editorRef, workspaceId]
   );
 
   const noteChip = chips.find((chip) => chip.kind === "note");
@@ -739,68 +650,25 @@ function PersonalChatPanel({
             }
           >
             <div className="flex min-h-full flex-col justify-end px-5 pt-5 pb-6">
-              {isThreadLoading ? (
-                <div
-                  aria-label={t("panel.loading")}
-                  className="flex flex-1 flex-col justify-end gap-5"
-                >
-                  <div className="flex justify-end">
-                    <Skeleton className="h-10 w-1/2 rounded-panel" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-5/6" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                </div>
-              ) : turn.isUnavailable && !turn.showingLocalTurn ? (
-                <div role="alert" className="space-y-2">
-                  <p className="text-sm text-[var(--el-ink)]">
-                    {t("panel.loadFailed")}
-                  </p>
-                  <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-                    {turn.isChatsUnavailable
-                      ? t("panel.loadFailedChats")
-                      : t("panel.loadFailedMessages")}
-                  </p>
-                  {retry}
-                </div>
-              ) : (
-                <ChatThread
-                  messages={turn.threadMessages}
-                  stream={
-                    turn.isTurnReconciled ? initialStreamState : turn.stream
-                  }
-                  pendingUserMessage={
-                    turn.isTurnReconciled ? null : turn.pendingUserMessage
-                  }
-                  pendingUserAt={turn.pendingUserAt}
-                  pinSlackPx={pinSlackPx}
-                  pendingUserScope={turn.pendingScope.map((chip) => ({
-                    kind: chip.kind.toUpperCase() as "NOTE" | "PROJECT",
-                    id: chip.id,
-                    title: chip.title,
-                    unavailable: false,
-                  }))}
-                  onApprove={turn.approval.approve}
-                  approvalCard={turn.approval.card}
-                  onOpenNote={openNote}
-                  activeTurnId={turn.activeTurnId}
-                  cancelledTurnId={turn.cancelledTurnId}
-                  emptyState={
-                    <ChatStarter
-                      workspaceId={workspaceId}
-                      context={contextNote}
-                      disabled={
-                        turn.isBusy ||
-                        turn.isUnavailable ||
-                        turn.stream.phase === "awaiting_approval"
-                      }
-                      onPick={pickExample}
-                    />
-                  }
-                />
-              )}
+              <ThreadBody
+                turn={turn}
+                isThreadLoading={isThreadLoading}
+                retry={retry}
+                pinSlackPx={pinSlackPx}
+                onOpenNote={openNote}
+                emptyState={
+                  <ChatStarter
+                    workspaceId={workspaceId}
+                    context={contextNote}
+                    disabled={
+                      turn.isBusy ||
+                      turn.isUnavailable ||
+                      turn.stream.phase === "awaiting_approval"
+                    }
+                    onPick={pickExample}
+                  />
+                }
+              />
             </div>
           </ScrollArea>
 
@@ -818,40 +686,7 @@ function PersonalChatPanel({
               isPending: catalog.isPending,
               taken: takenScope,
             }}
-            footer={
-              <>
-                {overlap ? (
-                  <p className="mt-2 text-xs text-[var(--el-muted)]">
-                    {t("panel.overlap", {
-                      note: overlap.note.title,
-                      project:
-                        overlap.project?.title ??
-                        t("panel.overlapProjectFallback"),
-                    })}
-                  </p>
-                ) : null}
-                {turn.stream.phase === "awaiting_approval" ? (
-                  <p className="mt-2 text-xs text-[var(--el-muted)]">
-                    {t("panel.awaitingApproval")}
-                  </p>
-                ) : null}
-                {turn.isUnavailable && turn.showingLocalTurn ? (
-                  <div
-                    role="alert"
-                    className="mt-2 flex items-center gap-2 text-xs text-[var(--el-muted)]"
-                  >
-                    <span>
-                      {turn.isChatsUnavailable
-                        ? t("panel.refetchFailedChats")
-                        : t("panel.refetchFailedMessages")}
-                    </span>
-                    <Button variant="outline" size="sm" onClick={turn.retry}>
-                      {tActions("retry")}
-                    </Button>
-                  </div>
-                ) : null}
-              </>
-            }
+            footer={<ComposerNotices turn={turn} overlap={overlap} />}
           />
         </div>
 
@@ -892,4 +727,242 @@ function PersonalChatPanel({
   );
 
   return railSlot ? createPortal(panel, railSlot) : panel;
+}
+
+function useComposerScope(suggestedNote: SuggestedNote | null) {
+  const [chips, setChips] = useState<ScopeChip[]>([]);
+  const editorRef = useRef<MentionHandle | null>(null);
+  const dismissedRef = useRef<Set<string>>(new Set());
+  const prefilledRef = useRef<Set<string>>(new Set());
+  const clearingForSendRef = useRef(false);
+
+  const prefillSuggested = useCallback(() => {
+    const noteId = suggestedNote?.noteId;
+    const title = suggestedNote?.title;
+    prefilledRef.current.forEach((id) => {
+      if (id === noteId) return;
+      prefilledRef.current.delete(id);
+      editorRef.current?.remove({ kind: "note", id, title: "" });
+    });
+    if (!noteId || !title) return;
+    if (dismissedRef.current.has(noteId)) return;
+    if (prefilledRef.current.has(noteId)) return;
+    if (
+      editorRef.current
+        ?.read()
+        .chips.some((chip) => chip.kind === "note" && chip.id === noteId)
+    )
+      return;
+    prefilledRef.current.add(noteId);
+    editorRef.current?.prepend({ kind: "note", id: noteId, title });
+  }, [suggestedNote]);
+
+  useEffect(() => prefillSuggested(), [prefillSuggested]);
+
+  const handleChipsChange = useCallback((next: ScopeChip[]) => {
+    if (!clearingForSendRef.current) {
+      const present = new Set(next.map(scopeKey));
+      prefilledRef.current.forEach((noteId) => {
+        if (!present.has(scopeKey({ kind: "note", id: noteId })))
+          dismissedRef.current.add(noteId);
+      });
+    }
+    setChips(next);
+  }, []);
+
+  const restoreComposer = useCallback((message: string, scope: ScopeChip[]) => {
+    editorRef.current?.append(
+      dropScopeMarkers(message, new Set(scope.map((chip) => chip.id)))
+    );
+    const present = new Set(
+      (editorRef.current?.read().chips ?? []).map(scopeKey)
+    );
+    scope
+      .filter((chip) => !present.has(scopeKey(chip)))
+      .forEach((chip) => editorRef.current?.prepend(chip));
+    setChips(scope);
+  }, []);
+
+  const resetComposer = useCallback(() => {
+    editorRef.current?.clear();
+    setChips([]);
+    dismissedRef.current.clear();
+    prefilledRef.current.clear();
+    prefillSuggested();
+  }, [prefillSuggested]);
+
+  const clearForSend = useCallback(() => {
+    clearingForSendRef.current = true;
+    editorRef.current?.clear();
+    clearingForSendRef.current = false;
+    prefilledRef.current.clear();
+    prefillSuggested();
+  }, [prefillSuggested]);
+
+  return {
+    chips,
+    editorRef,
+    handleChipsChange,
+    restoreComposer,
+    resetComposer,
+    clearForSend,
+  };
+}
+
+function useViewportHeight(viewportRef: RefObject<HTMLDivElement | null>) {
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const measureViewport = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    setViewportHeight((current) =>
+      current === viewport.clientHeight ? current : viewport.clientHeight
+    );
+  }, [viewportRef]);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    measureViewport();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measureViewport);
+    observer?.observe(viewport);
+    return () => observer?.disconnect();
+  }, [measureViewport, viewportRef]);
+  return { viewportHeight, measureViewport };
+}
+
+function scopeOverlapOf(
+  chips: ScopeChip[],
+  notes: ReturnType<typeof useScopeCatalog>["notes"]
+) {
+  const projectIds = new Set(
+    chips.filter((chip) => chip.kind === "project").map((chip) => chip.id)
+  );
+  if (projectIds.size === 0) return null;
+  const inside = chips.find(
+    (chip) =>
+      chip.kind === "note" &&
+      notes.some(
+        (note) =>
+          note.id === chip.id &&
+          note.projectId &&
+          projectIds.has(note.projectId)
+      )
+  );
+  if (!inside) return null;
+  const parent = notes.find((note) => note.id === inside.id);
+  const project = chips.find(
+    (chip) => chip.kind === "project" && chip.id === parent?.projectId
+  );
+  return { note: inside, project };
+}
+
+function ComposerNotices({
+  turn,
+  overlap,
+}: {
+  turn: ReturnType<typeof useChatTurn>;
+  overlap: ReturnType<typeof scopeOverlapOf>;
+}) {
+  const t = useTranslations("chat");
+  const tActions = useTranslations("common.actions");
+  return (
+    <>
+      {overlap ? (
+        <p className="mt-2 text-xs text-[var(--el-muted)]">
+          {t("panel.overlap", {
+            note: overlap.note.title,
+            project:
+              overlap.project?.title ?? t("panel.overlapProjectFallback"),
+          })}
+        </p>
+      ) : null}
+      {turn.stream.phase === "awaiting_approval" ? (
+        <p className="mt-2 text-xs text-[var(--el-muted)]">
+          {t("panel.awaitingApproval")}
+        </p>
+      ) : null}
+      {turn.isUnavailable && turn.showingLocalTurn ? (
+        <div
+          role="alert"
+          className="mt-2 flex items-center gap-2 text-xs text-[var(--el-muted)]"
+        >
+          <span>
+            {turn.isChatsUnavailable
+              ? t("panel.refetchFailedChats")
+              : t("panel.refetchFailedMessages")}
+          </span>
+          <Button variant="outline" size="sm" onClick={turn.retry}>
+            {tActions("retry")}
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function ThreadBody({
+  turn,
+  isThreadLoading,
+  retry,
+  pinSlackPx,
+  onOpenNote,
+  emptyState,
+}: {
+  turn: ReturnType<typeof useChatTurn>;
+  isThreadLoading: boolean;
+  retry: React.ReactNode;
+  pinSlackPx: number | null;
+  onOpenNote: (noteId: string) => void;
+  emptyState: React.ReactNode;
+}) {
+  const t = useTranslations("chat");
+  return isThreadLoading ? (
+    <div
+      aria-label={t("panel.loading")}
+      className="flex flex-1 flex-col justify-end gap-5"
+    >
+      <div className="flex justify-end">
+        <Skeleton className="h-10 w-1/2 rounded-panel" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    </div>
+  ) : turn.isUnavailable && !turn.showingLocalTurn ? (
+    <div role="alert" className="space-y-2">
+      <p className="text-sm text-[var(--el-ink)]">{t("panel.loadFailed")}</p>
+      <p className="text-xs leading-relaxed text-[var(--el-muted)]">
+        {turn.isChatsUnavailable
+          ? t("panel.loadFailedChats")
+          : t("panel.loadFailedMessages")}
+      </p>
+      {retry}
+    </div>
+  ) : (
+    <ChatThread
+      messages={turn.threadMessages}
+      stream={turn.isTurnReconciled ? initialStreamState : turn.stream}
+      pendingUserMessage={
+        turn.isTurnReconciled ? null : turn.pendingUserMessage
+      }
+      pendingUserAt={turn.pendingUserAt}
+      pinSlackPx={pinSlackPx}
+      pendingUserScope={turn.pendingScope.map((chip) => ({
+        kind: chip.kind.toUpperCase() as "NOTE" | "PROJECT",
+        id: chip.id,
+        title: chip.title,
+        unavailable: false,
+      }))}
+      onApprove={turn.approval.approve}
+      approvalCard={turn.approval.card}
+      onOpenNote={onOpenNote}
+      activeTurnId={turn.activeTurnId}
+      cancelledTurnId={turn.cancelledTurnId}
+      emptyState={emptyState}
+    />
+  );
 }

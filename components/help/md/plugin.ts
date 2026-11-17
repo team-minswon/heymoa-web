@@ -7,8 +7,6 @@ type Node = {
   data?: { hName?: string; hProperties?: Record<string, unknown> };
 };
 
-export const CALLOUT_KINDS = ["참고", "팁", "주의", "되돌릴 수 없어요"] as const;
-
 const containerNames = { tabs: "help-tabs", tab: "help-tab", problem: "help-problem" } as const;
 
 function walk(node: Node, fn: (n: Node, parent: Node | null, index: number) => void, parent: Node | null = null, index = 0) {

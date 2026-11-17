@@ -18,25 +18,11 @@ export function float32ToPcm16(samples: Float32Array): ArrayBuffer {
   return buffer;
 }
 
-export function normalizePcm16Level(samples: Int16Array) {
-  if (samples.length === 0) return 0;
-  const meanSquare =
-    samples.reduce((sum, sample) => {
-      const normalized = sample / 32768;
-      return sum + normalized * normalized;
-    }, 0) / samples.length;
-  return Math.min(1, Math.sqrt(meanSquare));
-}
-
 export function normalizeMicrophoneLevel(rms: number) {
   const noiseFloor = 0.005;
   if (rms <= noiseFloor) return 0;
   const normalized = Math.min(1, (rms - noiseFloor) / 0.115);
   return Math.min(1, Math.sqrt(normalized));
-}
-
-export function backlogMs(bufferedBytes: number, sampleRate: number) {
-  return (bufferedBytes / (sampleRate * PCM_BYTES_PER_SAMPLE)) * 1000;
 }
 
 export type PcmBatchListener = (

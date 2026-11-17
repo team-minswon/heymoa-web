@@ -232,73 +232,13 @@ export function ReviewBoard({
     () => ({ flowSignature, refreshAttempt }),
     [flowSignature, refreshAttempt]
   );
-  const [loadedRefreshKey, setLoadedRefreshKey] = useState(refreshKey);
-  const [failedRefreshKey, setFailedRefreshKey] = useState<
-    typeof refreshKey | null
-  >(null);
-  const refreshFailed = failedRefreshKey === refreshKey;
-  const refreshingAnalysis = loadedRefreshKey !== refreshKey && !refreshFailed;
-  useEffect(() => {
-    if (
-      editor.busyItemId !== null ||
-      loadedRefreshKey === refreshKey ||
-      refreshFailed
-    )
-      return;
-    let active = true;
-    const reload = async (queryKey: readonly unknown[]) => {
-      // 첫 응답을 기다리는 쿼리는 invalidate만으로 이전 요청이 취소되지 않는다.
-      await queryClient.cancelQueries({ queryKey });
-      if (active)
-        return queryClient.invalidateQueries(
-          { queryKey },
-          { throwOnError: true }
-        );
-    };
-    const requiredKeys = [
-      getGetMeetingReviewQueryKey(noteId),
-      getGetMeetingReviewSummaryQueryKey(noteId),
-      getGetNoteTranscriptQueryKey(noteId),
-      ...(projectId
-        ? [getGetProjectMeetingLinksQueryKey(projectId, { noteId })]
-        : []),
-    ];
-    void Promise.all([
-      ...requiredKeys.map(reload),
-      projectId && workspaceId
-        ? queryClient.invalidateQueries({
-            queryKey: getGetProjectTasksQueryKey(workspaceId, projectId),
-          })
-        : Promise.resolve(),
-    ])
-      .then(() => {
-        if (!active) return;
-        // 오프라인으로 멈춘 조회도 resolve되므로 실제 무효화가 해제됐는지 확인한다.
-        if (
-          requiredKeys.some(
-            (key) => queryClient.getQueryState(key)?.isInvalidated !== false
-          )
-        ) {
-          throw new Error("analysis refresh did not settle");
-        }
-        setLoadedRefreshKey(refreshKey);
-      })
-      .catch(() => {
-        if (active) setFailedRefreshKey(refreshKey);
-      });
-    return () => {
-      active = false;
-    };
-  }, [
+  const { refreshFailed, refreshingAnalysis } = useAnalysisRefresh({
     refreshKey,
-    loadedRefreshKey,
-    refreshFailed,
-    editor.busyItemId,
+    paused: editor.busyItemId !== null,
     noteId,
     projectId,
     workspaceId,
-    queryClient,
-  ]);
+  });
 
   const [view, setView] = useState<View>("summary");
   const [mailOpen, setMailOpen] = useState(false);
@@ -1204,6 +1144,85 @@ export function ReviewBoard({
 
 const GRAPH_WIDE =
   "relative left-1/2 w-[max(100%,min(90cqw,1100px))] -translate-x-1/2";
+
+function useAnalysisRefresh<Key>({
+  refreshKey,
+  paused,
+  noteId,
+  projectId,
+  workspaceId,
+}: {
+  refreshKey: Key;
+  paused: boolean;
+  noteId: string;
+  projectId: string | undefined;
+  workspaceId: string | undefined;
+}) {
+  const queryClient = useQueryClient();
+  const [loadedRefreshKey, setLoadedRefreshKey] = useState(refreshKey);
+  const [failedRefreshKey, setFailedRefreshKey] = useState<
+    typeof refreshKey | null
+  >(null);
+  const refreshFailed = failedRefreshKey === refreshKey;
+  const refreshingAnalysis = loadedRefreshKey !== refreshKey && !refreshFailed;
+  useEffect(() => {
+    if (paused || loadedRefreshKey === refreshKey || refreshFailed) return;
+    let active = true;
+    const reload = async (queryKey: readonly unknown[]) => {
+      // 첫 응답을 기다리는 쿼리는 invalidate만으로 이전 요청이 취소되지 않는다.
+      await queryClient.cancelQueries({ queryKey });
+      if (active)
+        return queryClient.invalidateQueries(
+          { queryKey },
+          { throwOnError: true }
+        );
+    };
+    const requiredKeys = [
+      getGetMeetingReviewQueryKey(noteId),
+      getGetMeetingReviewSummaryQueryKey(noteId),
+      getGetNoteTranscriptQueryKey(noteId),
+      ...(projectId
+        ? [getGetProjectMeetingLinksQueryKey(projectId, { noteId })]
+        : []),
+    ];
+    void Promise.all([
+      ...requiredKeys.map(reload),
+      projectId && workspaceId
+        ? queryClient.invalidateQueries({
+            queryKey: getGetProjectTasksQueryKey(workspaceId, projectId),
+          })
+        : Promise.resolve(),
+    ])
+      .then(() => {
+        if (!active) return;
+        // 오프라인으로 멈춘 조회도 resolve되므로 실제 무효화가 해제됐는지 확인한다.
+        if (
+          requiredKeys.some(
+            (key) => queryClient.getQueryState(key)?.isInvalidated !== false
+          )
+        ) {
+          throw new Error("analysis refresh did not settle");
+        }
+        setLoadedRefreshKey(refreshKey);
+      })
+      .catch(() => {
+        if (active) setFailedRefreshKey(refreshKey);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    refreshKey,
+    loadedRefreshKey,
+    refreshFailed,
+    paused,
+    noteId,
+    projectId,
+    workspaceId,
+    queryClient,
+  ]);
+  return { refreshFailed, refreshingAnalysis };
+}
 
 function BoardShell({ children }: { children: React.ReactNode }) {
   return (

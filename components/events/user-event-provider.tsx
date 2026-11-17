@@ -27,8 +27,6 @@ const RESYNC_JITTER_MS = 3_000;
 const COALESCE_MS = 300;
 const TERMINAL_STATUS = new Set([401, 403, 404, 429, 501]);
 
-export { useEventStreamHealthy } from "@/lib/events/health";
-
 type Timers = {
   setTimeout: (run: () => void, ms: number) => ReturnType<typeof setTimeout>;
   random: () => number;

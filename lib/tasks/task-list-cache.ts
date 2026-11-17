@@ -109,7 +109,7 @@ function insertSorted(
   return [...tasks.slice(0, at), row, ...tasks.slice(at)];
 }
 
-export function moveTaskAcrossLists(
+function moveTaskAcrossLists(
   queryClient: QueryClient,
   workspaceId: string,
   before: TaskEntry | null,

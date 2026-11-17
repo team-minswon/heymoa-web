@@ -5,7 +5,7 @@ import {
   type TopicRow,
 } from "@/lib/projects/agenda-map";
 
-export type Topic = {
+type Topic = {
   id: string;
   rows: TopicRow[];
   agendas: MapAgenda[];
@@ -101,10 +101,10 @@ export const SLOT_W = CARD_W + CARD_GAP;
 export const FOCUS_PAD = 16;
 export const DOT_INSET = 18;
 
-export type FocusCard = { agenda: MapAgenda; row: number; left: number };
-export type FocusLink = { from: string; to: string; fork: boolean };
+type FocusCard = { agenda: MapAgenda; row: number; left: number };
+type FocusLink = { from: string; to: string; fork: boolean };
 
-export type FocusBranch = { rowId: string; row: number; fork: MapAgenda; first: MapAgenda };
+type FocusBranch = { rowId: string; row: number; fork: MapAgenda; first: MapAgenda };
 
 export type FocusLayout = {
   width: number;

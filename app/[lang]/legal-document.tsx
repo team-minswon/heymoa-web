@@ -22,7 +22,7 @@ import { LEGAL_CURRENT, PRIVACY_EFFECTIVE, TERMS_EFFECTIVE } from "@/lib/page-da
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-export type LegalSection = {
+type LegalSection = {
   id?: string;
   title: string;
   body: readonly LegalBlock[];
@@ -31,10 +31,10 @@ export type LegalSection = {
 const anchorOf = (section: LegalSection, index: number) =>
   section.id ?? `section-${index + 1}`;
 
-export const withContact = (text: string) =>
+const withContact = (text: string) =>
   text.replaceAll("{email}", siteConfig.contactEmail);
 
-export const longDate = (locale: Locale, iso: string) =>
+const longDate = (locale: Locale, iso: string) =>
   new Intl.DateTimeFormat(locale === "ko" ? "ko-KR" : "en-US", {
     dateStyle: "long",
     timeZone: "UTC",
@@ -127,7 +127,7 @@ function Notice({ children }: { children: React.ReactNode }) {
 
 type VersionPeriod = { version: string; from: string; to: string | null };
 
-export function LegalDocument({
+function LegalDocument({
   locale,
   path,
   title,

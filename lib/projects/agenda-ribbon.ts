@@ -1,6 +1,6 @@
 import { topicOfRows, type AgendaMap, type MapAgenda, type TopicRow } from "@/lib/projects/agenda-map";
 
-export type RibbonStop = { meeting: number; agendas: MapAgenda[] };
+type RibbonStop = { meeting: number; agendas: MapAgenda[] };
 
 export type RibbonRoute = {
   id: string;
@@ -38,7 +38,7 @@ export type RibbonLayout = {
   extra: Map<number, MapAgenda[]>;
 };
 
-export const NEAR_FORK = 4;
+const NEAR_FORK = 4;
 
 export function ribbonLayout(map: AgendaMap, rows: TopicRow[]): RibbonLayout {
   const indexOf = new Map(map.meetings.map((meeting) => [meeting.noteId, meeting.index]));
@@ -195,7 +195,7 @@ export function ribbonLayout(map: AgendaMap, rows: TopicRow[]): RibbonLayout {
   };
 }
 
-export type RibbonCell = {
+type RibbonCell = {
   key: string;
   topic: RibbonTopic;
   route: RibbonRoute;
@@ -203,8 +203,8 @@ export type RibbonCell = {
   prev: number | null;
   next: number | null;
 };
-export type RibbonPass = { key: string; topic: RibbonTopic; route: RibbonRoute };
-export type RibbonFork = {
+type RibbonPass = { key: string; topic: RibbonTopic; route: RibbonRoute };
+type RibbonFork = {
   key: string;
   topic: RibbonTopic;
   route: RibbonRoute;

@@ -1,10 +1,10 @@
 import type { MeetingReviewResponseDataItemsItemKind } from "@/lib/api/generated/models";
 
-export type SeedKind = MeetingReviewResponseDataItemsItemKind;
+type SeedKind = MeetingReviewResponseDataItemsItemKind;
 
 export type SeedWho = "A" | "B" | "C" | "D" | "me" | `user:${string}`;
 
-export type SeedStep = {
+type SeedStep = {
   operation: "AMEND" | "CORRECT" | "RESOLVE" | "RETRACT";
   at: number;
   content: string;

@@ -2,12 +2,9 @@ import type { Transition } from "motion/react";
 
 export const MOVE: Transition = { type: "spring", bounce: 0, duration: 0.25 };
 export const FADE: Transition = { duration: 0.16, ease: "easeOut" };
-export const FADE_OUT: Transition = { duration: 0.1, ease: "easeOut" };
 export const FADE_REDUCED: Transition = { duration: 0.12, ease: "easeOut" };
 export const INSTANT: Transition = { duration: 0 };
 export const COLUMN_WIDTH: Transition = { duration: 0.34, ease: [0.45, 0, 0.25, 1] };
-export const EXPAND: Transition = COLUMN_WIDTH;
-export const COLLAPSE: Transition = COLUMN_WIDTH;
 export const OPEN_FADE_MS = 160;
 export const OPEN_DELAY_MS = 100;
 export const CLOSED_OUT_MS = 100;

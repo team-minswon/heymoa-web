@@ -1,6 +1,6 @@
 import { HttpResponse } from "msw";
 
-export class MockFailure extends Error {
+class MockFailure extends Error {
   constructor(
     readonly code: string,
     readonly status: number,

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import type { ActiveMeeting, DesktopBridge } from "@heymoa/desktop-contracts";
+import type { ActiveMeeting } from "@heymoa/desktop-contracts";
+import { desktopBridge } from "@/lib/desktop/bridge";
 
 import {
   recordingClockOriginMs,
@@ -12,12 +13,6 @@ import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
 import { ApiError } from "@/lib/api/fetcher";
 
 const REPORT_MS = 30_000;
-
-function desktopBridge() {
-  return typeof window === "undefined"
-    ? undefined
-    : (window as unknown as { heymoaDesktop?: DesktopBridge }).heymoaDesktop;
-}
 
 export function DesktopActiveMeetings() {
   if (!desktopBridge()?.reportActiveMeetings) return null;

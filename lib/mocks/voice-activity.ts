@@ -14,7 +14,7 @@ export type VoiceActivityConfig = {
   finalSilenceMs: number;
 };
 
-export type VoiceActivitySnapshot = {
+type VoiceActivitySnapshot = {
   voicedMs: number;
   silenceMs: number;
   isVoiced: boolean;

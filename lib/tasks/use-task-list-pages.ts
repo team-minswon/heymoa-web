@@ -12,11 +12,11 @@ import {
 } from "@/lib/api/generated/projects/projects";
 import type { TaskStatus } from "@/lib/tasks/task-groups";
 
-export const TASK_LIST_PAGE_SIZE = 30;
+const TASK_LIST_PAGE_SIZE = 30;
 
 const COUNT_KEY = { OPEN: "open", COMPLETED: "completed", CANCELLED: "cancelled" } as const;
 
-export type TaskListKeyParams = {
+type TaskListKeyParams = {
   status: TaskStatus;
   assigneeUserId?: string;
   projectId?: string;

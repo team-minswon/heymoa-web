@@ -3,14 +3,14 @@ import { deleteAudioStore } from "@/lib/transcription/audio-store";
 
 const PREFIX = "heymoa:u:";
 
-export const USER_FLAGS = {
+const USER_FLAGS = {
   agentIntroDismissed: "agent-intro-dismissed",
   endNudgeOff: "end-nudge-off",
   endFeedbackOff: "end-feedback-off",
   endFeedbackNextAt: "end-feedback-next-at",
 } as const;
 
-export type UserFlag = keyof typeof USER_FLAGS;
+type UserFlag = keyof typeof USER_FLAGS;
 
 const LEGACY_KEYS = [
   "heymoa:agent-intro-dismissed",

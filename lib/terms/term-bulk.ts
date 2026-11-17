@@ -18,7 +18,7 @@ export function splitTerms(text: string): string[] {
 
 export type PlanStatus = "fresh" | "duplicate" | "tooLong" | "overLimit";
 
-export type BulkPlan = {
+type BulkPlan = {
   items: { term: string; status: PlanStatus }[];
   total: number;
   fresh: string[];
@@ -72,7 +72,7 @@ export function planBulk({
   return plan;
 }
 
-export type SummaryPart = {
+type SummaryPart = {
   key: "fresh" | "duplicates" | "tooLong" | "overLimit";
   count: number;
   tone: "ink" | "muted" | "warn";

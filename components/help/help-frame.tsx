@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 export const HELP_PAD = "w-full px-6 pt-8 pb-16 lg:px-8 xl:px-10";
 
-export const HELP_READING = "mx-auto w-full max-w-[920px] min-w-0";
+const HELP_READING = "mx-auto w-full max-w-[920px] min-w-0";
 
 export function HelpPageHead({
   crumbs,

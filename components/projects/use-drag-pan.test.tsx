@@ -71,11 +71,30 @@ describe("useDragPan", () => {
     fireEvent.pointerUp(window, mouse(254, 100));
     expect(board.hasAttribute("data-panning")).toBe(false);
     expect(document.querySelector("[data-pan-cursor]")).toBeNull();
-    fireEvent.click(dot);
+    fireEvent.click(dot, { detail: 1 });
     expect(onClick).not.toHaveBeenCalled();
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    fireEvent.click(dot);
+    fireEvent.click(dot, { detail: 1 });
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not swallow a keyboard click or the next press when a drag ends without a click", () => {
+    const onClick = vi.fn();
+    const { getByText, getByTestId } = render(<Board onClick={onClick} />);
+    overflowing(getByTestId("board"));
+    const dot = getByText("dot");
+    const drag = () => {
+      fireEvent.pointerDown(dot, mouse(300, 100));
+      fireEvent.pointerMove(window, mouse(254, 100));
+      fireEvent.pointerUp(window, mouse(254, 100));
+    };
+    drag();
+    fireEvent.click(dot, { detail: 0 });
+    expect(onClick).toHaveBeenCalledTimes(1);
+    drag();
+    fireEvent.pointerDown(dot, mouse(100, 100));
+    fireEvent.pointerUp(window, mouse(100, 100));
+    fireEvent.click(dot, { detail: 1 });
+    expect(onClick).toHaveBeenCalledTimes(2);
   });
 
   it("shows a grab cursor only when it can move, and does not start otherwise", () => {

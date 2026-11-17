@@ -1,7 +1,7 @@
 import type { ProjectMeetingLinksResponseData } from "@/lib/api/generated/models";
 import { mockDb } from "@/lib/mocks/db";
 
-export type LocalProject = {
+type LocalProject = {
   projectId: string;
   workspaceId?: string;
   name: string;

@@ -8,7 +8,7 @@ export function onMockUserEvent(listener: Listener) {
   return () => void listeners.delete(listener);
 }
 
-export function emitMockUserEvent(event: string, data: unknown) {
+function emitMockUserEvent(event: string, data: unknown) {
   for (const listener of [...listeners]) listener(event, data);
 }
 

@@ -278,9 +278,13 @@ describe("NoteView", () => {
     const view = render(
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
+    expect(replacedUrls()).toEqual([
+      "/w/workspace/notes/note?view=side&tab=details",
+    ]);
 
     fireEvent.click(screen.getByRole("button", { name: "요약 전환" }));
     expect(replacedUrls()).toEqual([
+      "/w/workspace/notes/note?view=side&tab=details",
       "/w/workspace/notes/note?view=side&tab=summary",
     ]);
 
@@ -292,13 +296,13 @@ describe("NoteView", () => {
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
 
-    await waitFor(() => expect(replacedUrls()).toHaveLength(1));
+    await waitFor(() => expect(replacedUrls()).toHaveLength(2));
 
     state.search = "view=side&tab=summary";
     view.rerender(
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
-    await waitFor(() => expect(replacedUrls()).toHaveLength(1));
+    await waitFor(() => expect(replacedUrls()).toHaveLength(2));
   });
 
   describe("메일 링크로 도착", () => {

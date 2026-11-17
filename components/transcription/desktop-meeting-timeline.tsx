@@ -16,7 +16,7 @@ import {
 } from "@/lib/desktop/meeting-selection";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import type { DesktopBridge } from "@heymoa/desktop-contracts";
+import { desktopBridge } from "@/lib/desktop/bridge";
 import { useGetNote, useGetNoteAgendas } from "@/lib/api/generated/notes/notes";
 import { useLivePartial } from "@/components/notes/use-live-partial";
 import {
@@ -37,12 +37,6 @@ import {
   useNoteRealtime,
 } from "@/components/notes/note-realtime-provider";
 import { useRecording } from "./recording-provider";
-
-function desktopBridge() {
-  return typeof window === "undefined"
-    ? undefined
-    : (window as unknown as { heymoaDesktop?: DesktopBridge }).heymoaDesktop;
-}
 
 export function DesktopMeetingTimelineReporter() {
   if (!desktopBridge()?.reportMeetingTimeline) return null;

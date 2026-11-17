@@ -1,4 +1,4 @@
-export type ScriptLine = { label: string; text: string };
+type ScriptLine = { label: string; text: string };
 
 export type ParsedScript = {
   lines: ScriptLine[];

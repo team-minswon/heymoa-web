@@ -16,7 +16,7 @@ import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
 export const WELCOME_PARAM = "welcome";
 
-export const MARKETING_PILL = "h-12 rounded-full px-6 text-[15px]";
+const MARKETING_PILL = "h-12 rounded-full px-6 text-[15px]";
 
 export function LandingCta({
   label,

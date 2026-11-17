@@ -20,7 +20,7 @@ export const RECONNECT_BACKOFF_MS = [
 ];
 
 export const RECONNECT_JITTER_MS = 500;
-export const DRAIN_JITTER_MS = 250;
+const DRAIN_JITTER_MS = 250;
 
 /** `awaiting_approval` 도 여기입니다 — 승인 요청 뒤 server 가 구독을 닫아, 그 EOF 를 재연결 신호로 읽으면 안 됩니다. */
 function isSettled(phase: ChatStreamState["phase"]) {

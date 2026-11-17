@@ -549,12 +549,4 @@ function transcriptLines(
   return lines;
 }
 
-const MARK_CONSONANTS = [0, 2, 3, 5, 6, 7, 9, 11, 12, 14, 15, 16, 17, 18];
-const MARK_VOWELS = [0, 4, 8, 13, 18, 20];
 
-export function hangulMarker(index: number) {
-  const consonant = MARK_CONSONANTS[index % 14];
-  const vowel = MARK_VOWELS[Math.floor(index / 14)];
-  if (vowel === undefined) return `${index + 1}`;
-  return String.fromCharCode(0xac00 + (consonant * 21 + vowel) * 28);
-}

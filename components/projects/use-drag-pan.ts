@@ -84,6 +84,7 @@ export function useDragPan(
     };
 
     const down = (event: PointerEvent) => {
+      swallow = false;
       if (event.button !== 0 || (event.pointerType !== "mouse" && event.pointerType !== "pen")) return;
       stopGlide();
       if ((event.target as Element).closest(NO_PAN)) return;
@@ -138,7 +139,6 @@ export function useDragPan(
       cursor = null;
       if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
       swallow = true;
-      window.setTimeout(() => (swallow = false), 0);
       if (event.type === "pointerup" && !reducedMotion()) {
         const speed = releaseVelocity(samples, event.timeStamp);
         if (Math.abs(speed.vx) > 0 || Math.abs(speed.vy) > 0) glide(axis, speed);
@@ -146,7 +146,7 @@ export function useDragPan(
       onEnd?.();
     };
     const click = (event: MouseEvent) => {
-      if (!swallow) return;
+      if (!swallow || event.detail === 0) return;
       swallow = false;
       event.preventDefault();
       event.stopPropagation();

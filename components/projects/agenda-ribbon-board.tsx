@@ -71,6 +71,7 @@ const DIM_LABEL = 0.9;
 const FADE_MAX = 360;
 
 const MOVE_MS = 260;
+const RESIZE_SETTLE_MS = 100;
 /** 고정 규칙이다 — 고른 줄기 id 를 담은 규칙을 그때그때 넣으면 요소 만오천 개의 스타일을 전부 다시 계산한다 */
 const DIM_CSS =
   `[data-ribbon][data-picked] [data-topic]{opacity:${DIM}}[data-ribbon][data-picked] [data-label]{opacity:${DIM_LABEL}}` +
@@ -170,7 +171,7 @@ export function RibbonBoard({
       if (box.clientWidth === lastWidth) return;
       lastWidth = box.clientWidth;
       window.clearTimeout(readTimer.current);
-      readTimer.current = window.setTimeout(read, 50);
+      readTimer.current = window.setTimeout(read, RESIZE_SETTLE_MS);
     });
     observer.observe(box);
     return () => {

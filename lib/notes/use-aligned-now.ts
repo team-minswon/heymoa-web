@@ -37,7 +37,7 @@ export function useAlignedNow(
         )
       );
     };
-    const initial = window.setTimeout(tick, 0);
+    tick();
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
       window.clearTimeout(timeout);
@@ -46,7 +46,6 @@ export function useAlignedNow(
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      window.clearTimeout(initial);
       window.clearTimeout(timeout);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };

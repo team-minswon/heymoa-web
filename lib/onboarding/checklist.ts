@@ -18,7 +18,7 @@ export function requiredProgress(done: ReadonlySet<ChecklistStepId>) {
 
 export type ChecklistStepId = (typeof CHECKLIST_STEPS)[number]["id"];
 
-export type ChecklistState = {
+type ChecklistState = {
   status: "open" | "dismissed";
   done: ChecklistStepId[];
 };
@@ -29,7 +29,7 @@ export const STEP_OF_EVENT: Partial<Record<AnalyticsEvent, ChecklistStepId>> = {
   invite_sent: "invite",
 };
 
-export type ChecklistFacts = {
+type ChecklistFacts = {
   hasRecording: boolean;
 };
 

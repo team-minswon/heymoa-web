@@ -3,7 +3,8 @@
 import { useEffect, useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 
-import { prefersReducedMotion, scrollToSection } from "@/lib/help/scroll";
+import { scrollToSection } from "@/lib/help/scroll";
+import { prefersReducedMotion } from "@/lib/utils";
 
 const attrOf = (el: Element) =>
   el.hasAttribute("data-key") ? "data-key" : "data-reveal";

@@ -22,7 +22,7 @@ import {
 } from "@/lib/assignees/describe";
 import { cn } from "@/lib/utils";
 
-export const QUIET_EMPTY =
+const QUIET_EMPTY =
   "transition-opacity duration-150 ease-out motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100";
 
 function useAssigneeNames() {

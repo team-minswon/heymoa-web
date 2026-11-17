@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useEffectEvent,
   useMemo,
   useReducer,
   useRef,
@@ -167,6 +168,31 @@ const DEGRADED_NOTICE_AFTER_MS = 5_000;
 
 const LEVEL_HISTORY_LENGTH = 24;
 
+function useSmoothedLevel() {
+  const [level, setLevel] = useState(0);
+  const [levelHistory, setLevelHistory] = useState<number[]>(() =>
+    Array(LEVEL_HISTORY_LENGTH).fill(0)
+  );
+  const smoothedLevelRef = useRef(0);
+
+  const publishLevel = useCallback((nextLevel: number) => {
+    const previous = smoothedLevelRef.current;
+    const factor = nextLevel > previous ? 0.72 : 0.2;
+    const smoothed = previous + (nextLevel - previous) * factor;
+    smoothedLevelRef.current = smoothed;
+    setLevel(smoothed);
+    setLevelHistory((history) => [...history.slice(1), smoothed]);
+  }, []);
+
+  const clearLevel = useCallback(() => {
+    smoothedLevelRef.current = 0;
+    setLevel(0);
+    setLevelHistory(Array(LEVEL_HISTORY_LENGTH).fill(0));
+  }, []);
+
+  return { level, levelHistory, publishLevel, clearLevel };
+}
+
 export function RecordingProvider({
   children,
   api: apiOverride,
@@ -202,11 +228,7 @@ export function RecordingProvider({
     transcriptReducer,
     initialTranscriptState
   );
-  const [level, setLevel] = useState(0);
-  const [levelHistory, setLevelHistory] = useState<number[]>(() =>
-    Array(LEVEL_HISTORY_LENGTH).fill(0)
-  );
-  const smoothedLevelRef = useRef(0);
+  const { level, levelHistory, publishLevel, clearLevel } = useSmoothedLevel();
   const degradedTimerRef = useRef<number | undefined>(undefined);
   const controllerRef = useRef<RealtimeSessionController | null>(null);
   const cancelledControllerRef = useRef<RealtimeSessionController | null>(null);
@@ -302,21 +324,6 @@ export function RecordingProvider({
     };
   }, [liveNoteId, phase]);
 
-  const publishLevel = useCallback((nextLevel: number) => {
-    const previous = smoothedLevelRef.current;
-    const factor = nextLevel > previous ? 0.72 : 0.2;
-    const smoothed = previous + (nextLevel - previous) * factor;
-    smoothedLevelRef.current = smoothed;
-    setLevel(smoothed);
-    setLevelHistory((history) => [...history.slice(1), smoothed]);
-  }, []);
-
-  const clearLevel = useCallback(() => {
-    smoothedLevelRef.current = 0;
-    setLevel(0);
-    setLevelHistory(Array(LEVEL_HISTORY_LENGTH).fill(0));
-  }, []);
-
   const api = useMemo<RecordingApi>(
     () =>
       apiOverride ?? {
@@ -341,16 +348,18 @@ export function RecordingProvider({
   );
 
   const invalidateLifecycleQueries = useCallback(
-    (noteId: string, transcript = false) => {
-      void invalidateNoteLifecycle(queryClient, noteId);
-      if (transcript) {
-        invalidateTranscriptQueries(noteId);
-        const workspaceId = latest.current.activeWorkspaceId;
-        if (workspaceId)
-          void invalidateWorkspaceBilling(queryClient, workspaceId);
-      }
+    (noteId: string) => void invalidateNoteLifecycle(queryClient, noteId),
+    [queryClient]
+  );
+
+  const invalidateEndedRecordingQueries = useCallback(
+    (noteId: string) => {
+      invalidateLifecycleQueries(noteId);
+      invalidateTranscriptQueries(noteId);
+      const workspaceId = latest.current.activeWorkspaceId;
+      if (workspaceId) void invalidateWorkspaceBilling(queryClient, workspaceId);
     },
-    [invalidateTranscriptQueries, queryClient]
+    [invalidateLifecycleQueries, invalidateTranscriptQueries, queryClient]
   );
 
   const failRecording = useCallback(
@@ -412,7 +421,7 @@ export function RecordingProvider({
             endedAt: new Date().toISOString(),
           }
         );
-        if (current) invalidateLifecycleQueries(current.noteId, true);
+        if (current) invalidateEndedRecordingQueries(current.noteId);
       }
 
       if (event.type === "error" && isTerminalError(event)) {
@@ -435,9 +444,57 @@ export function RecordingProvider({
       completeRecording,
       dispatch,
       failRecording,
-      invalidateLifecycleQueries,
+      invalidateEndedRecordingQueries,
       t,
     ]
+  );
+
+  const reconciledSessionRef = useRef<RecordingSession | null>(null);
+  const reconcileServerSession = useEffectEvent(
+    (serverSession: RecordingSession, phase: RecordingPhase) => {
+      if (reconciledSessionRef.current === serverSession) return;
+      if (serverSession.status === "COMPLETED") {
+        reconciledSessionRef.current = serverSession;
+        if (phase === "completed") return;
+        const controller = controllerRef.current;
+        controller?.reconcile("COMPLETED");
+        if (!stopPromiseRef.current && controllerRef.current === controller) {
+          controllerRef.current = null;
+        }
+        dispatchTranscript({
+          type: "completed",
+          sessionId: serverSession.sessionId,
+        });
+        completeRecording(serverSession);
+        invalidateEndedRecordingQueries(serverSession.noteId);
+        return;
+      }
+      if (serverSession.status !== "INTERRUPTED") return;
+      const meetingDecision =
+        serverSession.endReason === "MEETING_ENDED" ||
+        serverSession.endReason === "MEETING_PAUSED";
+      if (ACTIVE_PHASES.has(phase) && !meetingDecision) return;
+      reconciledSessionRef.current = serverSession;
+      dispatch({ type: "session", session: serverSession });
+      invalidateEndedRecordingQueries(serverSession.noteId);
+      const { buffer, connectionNotice } = latest.current;
+      const pendingMs = buffer?.pendingMs ?? 0;
+      const lostMessage =
+        serverSession.endReason === "MEETING_ENDED" &&
+        pendingMs > 0 &&
+        (phase === "failed" || connectionNotice?.cause === "disconnected")
+          ? meetingEndedMessage(t, pendingMs)
+          : null;
+      if (phase !== "failed") {
+        controllerRef.current?.reconcile("INTERRUPTED");
+        failRecording({
+          type: "failed",
+          message: lostMessage ?? interruptedMessage(t, serverSession.endReason),
+        });
+      } else if (lostMessage) {
+        dispatch({ type: "error", message: lostMessage });
+      }
+    }
   );
 
   useEffect(() => {
@@ -457,57 +514,8 @@ export function RecordingProvider({
       controllerRef.current?.reconcile("ACTIVE");
       return;
     }
-    const timer = window.setTimeout(() => {
-      if (serverSession.status === "COMPLETED" && phase !== "completed") {
-        const controller = controllerRef.current;
-        controller?.reconcile("COMPLETED");
-        if (!stopPromiseRef.current && controllerRef.current === controller) {
-          controllerRef.current = null;
-        }
-        dispatchTranscript({
-          type: "completed",
-          sessionId: serverSession.sessionId,
-        });
-        completeRecording(serverSession);
-        invalidateLifecycleQueries(serverSession.noteId, true);
-        return;
-      }
-      if (serverSession.status !== "INTERRUPTED") return;
-      const meetingDecision =
-        serverSession.endReason === "MEETING_ENDED" ||
-        serverSession.endReason === "MEETING_PAUSED";
-      if (ACTIVE_PHASES.has(phase) && !meetingDecision) return;
-      dispatch({ type: "session", session: serverSession });
-      invalidateLifecycleQueries(serverSession.noteId, true);
-      const { buffer, connectionNotice } = latest.current;
-      const pendingMs = buffer?.pendingMs ?? 0;
-      const lostMessage =
-        serverSession.endReason === "MEETING_ENDED" &&
-        pendingMs > 0 &&
-        (phase === "failed" || connectionNotice?.cause === "disconnected")
-          ? meetingEndedMessage(t, pendingMs)
-          : null;
-      if (phase !== "failed") {
-        controllerRef.current?.reconcile("INTERRUPTED");
-        failRecording({
-          type: "failed",
-          message:
-            lostMessage ?? interruptedMessage(t, serverSession.endReason),
-        });
-      } else if (lostMessage) {
-        dispatch({ type: "error", message: lostMessage });
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [
-    completeRecording,
-    dispatch,
-    failRecording,
-    invalidateLifecycleQueries,
-    phase,
-    sessionQuery.data,
-    t,
-  ]);
+    reconcileServerSession(serverSession, phase);
+  }, [phase, sessionQuery.data]);
 
   const stop = useCallback((): Promise<boolean> => {
     if (stopPromiseRef.current) return stopPromiseRef.current;
@@ -733,14 +741,13 @@ export function RecordingProvider({
       (error) => errorCodeOf(error) === "TRANSCRIPTION_SESSION_NOT_FOUND"
     );
     if (sessionGone && !gone) {
-      const timer = window.setTimeout(() => void disconnect(), 0);
-      return () => window.clearTimeout(timer);
+      void disconnect();
+      return;
     }
     if (!gone) return;
     notifyWorkspaceGone();
     if (activeWorkspaceId) forgetWorkspace(queryClient, activeWorkspaceId);
-    const timer = window.setTimeout(() => void disconnect(), 0);
-    return () => window.clearTimeout(timer);
+    void disconnect();
   }, [
     activeWorkspaceId,
     disconnect,

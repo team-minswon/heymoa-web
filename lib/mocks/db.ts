@@ -2553,7 +2553,7 @@ const MOCK_RECORDER_CLIENT_ID = "mock-recorder-tab";
 
 let consentFailures = 0;
 
-export type LocalSeedProject = {
+type LocalSeedProject = {
   projectId: string;
   workspaceId?: string;
   name: string;

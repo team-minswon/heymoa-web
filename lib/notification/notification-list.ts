@@ -13,7 +13,7 @@ import { getAppDateKey, formatAppDate } from "@/lib/format/date";
 import type { DatesT } from "@/lib/i18n/translator";
 
 export type NotificationItem = NotificationListResponseDataNotificationsItem;
-export type NotificationPage = NotificationListResponseData;
+type NotificationPage = NotificationListResponseData;
 export type NotificationFilter = GetNotificationsFilter;
 
 export const NOTIFICATION_SCHEMA = "2";

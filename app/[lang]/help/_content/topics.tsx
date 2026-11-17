@@ -16,9 +16,6 @@ export const helpTopicsFor = (locale: Locale): readonly HelpTopic[] =>
 
 export const helpTopics: readonly HelpTopic[] = helpTopicsFor("ko");
 
-export const helpTopicBySlug = (slug: string, locale: Locale = "ko") =>
-  helpTopicsFor(locale).find((topic) => topic.slug === slug);
-
 export const helpGroupsFor = (locale: Locale): readonly HelpGroup[] => {
   const text = messagesFor(locale).help.groups;
   return helpGroups.map((group) => ({

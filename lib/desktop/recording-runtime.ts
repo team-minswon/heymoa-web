@@ -1,7 +1,5 @@
-import type {
-  DesktopBridge,
-  DesktopCaptureBridge,
-} from "@heymoa/desktop-contracts";
+import type { DesktopCaptureBridge } from "@heymoa/desktop-contracts";
+import { desktopBridge } from "./bridge";
 import { createDesktopAudioCapture } from "./capture";
 import {
   BrowserRealtimeSession,
@@ -9,10 +7,7 @@ import {
 } from "@/lib/transcription/realtime-session";
 
 export function createRecordingSession(options: RealtimeSessionOptions) {
-  const bridge =
-    typeof window === "undefined"
-      ? undefined
-      : (window as unknown as { heymoaDesktop?: DesktopBridge }).heymoaDesktop;
+  const bridge = desktopBridge();
   if (!bridge) return new BrowserRealtimeSession(options);
   return new BrowserRealtimeSession(options, {
     createAudio(onChunk, onLevel, onState) {

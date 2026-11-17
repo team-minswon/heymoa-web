@@ -13,7 +13,7 @@ type InvitationResult = (typeof INVITATION_RESULTS)[number];
 const isInvitationResult = (status: string): status is InvitationResult =>
   (INVITATION_RESULTS as readonly string[]).includes(status);
 
-export type RowTranslator = ReturnType<typeof useTranslations<"notification.row">>;
+type RowTranslator = ReturnType<typeof useTranslations<"notification.row">>;
 
 export function workspaceSuffix(name: string): "yes" | "no" {
   return /워크스페이스$/.test(name.trim()) ? "no" : "yes";
@@ -21,7 +21,7 @@ export function workspaceSuffix(name: string): "yes" | "no" {
 
 const bold = (chunks: React.ReactNode) => <b className="font-medium">{chunks}</b>;
 
-export type NotificationRowView = {
+type NotificationRowView = {
   title: React.ReactNode;
   detail?: React.ReactNode;
   workspaceName: string | null;

@@ -10,8 +10,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { findMatchRanges, stepIndex } from "@/lib/help/match-ranges";
-import { prefersReducedMotion } from "@/lib/help/scroll";
-import { cn } from "@/lib/utils";
+import { cn, prefersReducedMotion } from "@/lib/utils";
 
 const HIGHLIGHT_CSS = `
 ::highlight(help-search) {

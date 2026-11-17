@@ -89,12 +89,9 @@ export function TopicIndex({
       followedHash.current = key;
       selectAgenda(agendaId, SCREEN_CHANGE_HOLD_MS);
     };
-    const timer = window.setTimeout(followHash, 0);
+    followHash();
     window.addEventListener("hashchange", followHash);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("hashchange", followHash);
-    };
+    return () => window.removeEventListener("hashchange", followHash);
   }, [selectAgenda, noteId, topics]);
   const markedTitle = topics.find(
     (topic) => topic.agendaId === marked?.agendaId

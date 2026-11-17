@@ -6,7 +6,7 @@ import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { DEFAULT_LOCALE, isLocale, LANG_COOKIE, type Locale } from "./locales";
 import { requestLocale } from "./request-locale";
 
-export async function cookieLocale(): Promise<Locale> {
+async function cookieLocale(): Promise<Locale> {
   const value = (await cookies()).get(LANG_COOKIE)?.value;
   return isLocale(value) ? value : DEFAULT_LOCALE;
 }

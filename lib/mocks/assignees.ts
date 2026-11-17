@@ -6,7 +6,7 @@ export type StoredAssignee =
   | { type: "USER" | "GUEST"; id: string }
   | { type: "SPEAKER_LABEL"; noteId: string; label: string };
 
-export type AssigneeView = Assignee;
+type AssigneeView = Assignee;
 
 type AssigneeRequest = {
   type: "USER" | "GUEST" | "SPEAKER_LABEL";

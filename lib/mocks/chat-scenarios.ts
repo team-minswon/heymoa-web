@@ -89,7 +89,7 @@ export const CHAT_SCENARIOS = {
   { keyword: string; kind: "stream" | "transport"; what: string }
 >;
 
-export type ScenarioId = keyof typeof CHAT_SCENARIOS;
+type ScenarioId = keyof typeof CHAT_SCENARIOS;
 
 const IDS = Object.keys(CHAT_SCENARIOS) as ScenarioId[];
 

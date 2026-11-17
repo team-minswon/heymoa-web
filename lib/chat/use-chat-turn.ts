@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  type Dispatch,
+  type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -25,7 +27,12 @@ import {
   useResolveToolApproval,
   useSendAgentChatMessage,
 } from "@/lib/api/generated/agent-chat/agent-chat";
-import type { AgentChatsResponseDataChatsItem } from "@/lib/api/generated/models";
+import type {
+  AgentChatMessagesResponseData,
+  AgentChatMessagesResponseDataActiveTurnPendingApproval,
+  AgentChatsResponseData,
+  AgentChatsResponseDataChatsItem,
+} from "@/lib/api/generated/models";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { isAuthError } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
@@ -68,6 +75,345 @@ const CHAT_LIST_POLL_MS = 5_000;
 
 const CHAT_PAGE_SIZE = 30;
 
+function usePruneExpiredTitleWaits(
+  titleWaits: TitleWaits,
+  setTitleWaits: Dispatch<SetStateAction<TitleWaits>>
+) {
+  useEffect(() => {
+    const deadlines = Object.values(titleWaits);
+    if (deadlines.length === 0) return;
+    const timer = setTimeout(
+      () => setTitleWaits((current) => pruneTitleWaits(current, Date.now())),
+      Math.max(0, Math.min(...deadlines) - Date.now())
+    );
+    return () => clearTimeout(timer);
+  }, [titleWaits, setTitleWaits]);
+}
+
+type ChatCursor = { afterUpdatedAt: string; afterChatId: string };
+
+type ChatPage = Pick<
+  AgentChatsResponseData,
+  "hasMore" | "nextUpdatedAt" | "nextChatId"
+>;
+
+const nextCursorOf = (page: ChatPage): ChatCursor | null =>
+  page.hasMore && page.nextUpdatedAt && page.nextChatId
+    ? { afterUpdatedAt: page.nextUpdatedAt, afterChatId: page.nextChatId }
+    : null;
+
+function useOlderChats(workspaceId: string, firstPage: ChatPage | null) {
+  const t = useTranslations("chat");
+  const [older, setOlder] = useState<{
+    workspaceId: string;
+    anchor: string | null;
+    chats: AgentChatsResponseDataChatsItem[];
+    cursor: ChatCursor | null | undefined;
+  }>({ workspaceId, anchor: null, chats: [], cursor: undefined });
+  const [isLoadingMoreChats, setIsLoadingMoreChats] = useState(false);
+  const firstTail = firstPage?.nextChatId ?? null;
+  const firstTailRef = useRef(firstTail);
+  useEffect(() => {
+    firstTailRef.current = firstTail;
+  }, [firstTail]);
+  const olderHere =
+    older.workspaceId === workspaceId && older.anchor === firstTail
+      ? older
+      : { workspaceId, anchor: firstTail, chats: [], cursor: undefined };
+  const nextCursor = useMemo(() => {
+    if (olderHere.cursor !== undefined) return olderHere.cursor;
+    return firstPage ? nextCursorOf(firstPage) : null;
+  }, [firstPage, olderHere.cursor]);
+  const hasMoreChats = nextCursor !== null;
+  const loadMoreChats = useCallback(async () => {
+    if (!nextCursor || isLoadingMoreChats) return;
+    setIsLoadingMoreChats(true);
+    const anchor = firstTail;
+    try {
+      const response = await getAgentChats(workspaceId, {
+        limit: String(CHAT_PAGE_SIZE),
+        ...nextCursor,
+      });
+      if (response.status !== 200 || !response.data.success) {
+        toast.error(t("errors.loadMoreFailed"));
+        return;
+      }
+      const page = response.data.data;
+      if (firstTailRef.current !== anchor) return;
+      setOlder({
+        workspaceId,
+        anchor,
+        chats: [...olderHere.chats, ...page.chats],
+        cursor: nextCursorOf(page),
+      });
+    } catch {
+      toast.error(t("errors.loadMoreFailed"));
+    } finally {
+      setIsLoadingMoreChats(false);
+    }
+  }, [
+    firstTail,
+    isLoadingMoreChats,
+    nextCursor,
+    olderHere.chats,
+    t,
+    workspaceId,
+  ]);
+
+  return {
+    olderChats: olderHere.chats,
+    setOlder,
+    hasMoreChats,
+    isLoadingMoreChats,
+    loadMoreChats,
+  };
+}
+
+const resumedApprovalOf = (
+  pending: AgentChatMessagesResponseDataActiveTurnPendingApproval | null
+) =>
+  pending
+    ? {
+        approvalId: pending.approvalId,
+        tool: pending.tool,
+        summary: pending.summary,
+        card: parseApprovalCard(pending.card),
+      }
+    : null;
+
+function useStreamResync(
+  sessionId: string | null,
+  stream: ReturnType<typeof useChatStream>,
+  reconcile: (chatId: string) => Promise<AgentChatMessagesResponseData | null>
+) {
+  const resyncedTurnRef = useRef<string | null>(null);
+  const failedResyncRef = useRef<string | null>(null);
+  const [resyncRetry, retryResync] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    const retry = () => {
+      if (document.visibilityState !== "visible") return;
+      const failed = failedResyncRef.current;
+      if (failed === null || resyncedTurnRef.current !== failed) return;
+      failedResyncRef.current = null;
+      resyncedTurnRef.current = null;
+      retryResync();
+    };
+    document.addEventListener("visibilitychange", retry);
+    window.addEventListener("online", retry);
+    return () => {
+      document.removeEventListener("visibilitychange", retry);
+      window.removeEventListener("online", retry);
+    };
+  }, []);
+  useEffect(() => {
+    if (!sessionId) return;
+    const gaveUp =
+      stream.state.phase === "failed" &&
+      stream.state.error?.code === "STREAM_INTERRUPTED";
+    const reason = stream.state.needsResync
+      ? "resync"
+      : gaveUp
+        ? "gaveUp"
+        : null;
+    if (!reason) return;
+    const key = `${sessionId}:${stream.state.turnId ?? ""}:${reason}`;
+    if (resyncedTurnRef.current === key) return;
+    resyncedTurnRef.current = key;
+    const turnId = stream.state.turnId;
+    void reconcile(sessionId).then((refreshed) => {
+      if (!refreshed) {
+        failedResyncRef.current = key;
+        return;
+      }
+      if (reason === "resync" || !refreshed.activeTurn) {
+        stream.reset();
+        return;
+      }
+      const active = refreshed.activeTurn;
+      if (turnId === null || active.turnId !== turnId) return;
+      resyncedTurnRef.current = null;
+      const pending = resumedApprovalOf(active.pendingApproval);
+      void stream.revive(sessionId, turnId, pending).then(async (final) => {
+        if (final?.phase === "done") await reconcile(sessionId);
+      });
+    });
+  }, [reconcile, resyncRetry, sessionId, stream]);
+}
+
+function useRenameChat({
+  workspaceId,
+  knownChats,
+  setOlder,
+  forgetChat,
+}: {
+  workspaceId: string;
+  knownChats: AgentChatsResponseDataChatsItem[];
+  setOlder: ReturnType<typeof useOlderChats>["setOlder"];
+  forgetChat: (chatId: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const renameChatMutation = useRenameAgentChat({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
+
+  const renameLedgerRef = useRef(
+    new Map<
+      string,
+      { seq: number; inFlight: number; base: ChatTitleSnapshot | null }
+    >()
+  );
+
+  return useCallback(
+    async (chatId: string, title: string, failureMessage: string) => {
+      const listKey = { queryKey: getGetAgentChatsQueryKey(workspaceId) };
+      const ledger = renameLedgerRef.current;
+      const known = knownChats.find((chat) => chat.chatId === chatId);
+      const previousSource = titleSourceOf(knownChats, chatId);
+      const entry = ledger.get(chatId);
+      const seq = (entry?.seq ?? 0) + 1;
+      ledger.set(chatId, {
+        seq,
+        inFlight: (entry?.inFlight ?? 0) + 1,
+        base:
+          entry?.base ??
+          (known
+            ? {
+                title: known.title,
+                titleSource: (known as { titleSource?: unknown }).titleSource,
+              }
+            : null),
+      });
+      await queryClient.cancelQueries(listKey);
+      queryClient.setQueriesData(listKey, (current: unknown) =>
+        retitleChatInList(current, chatId, title)
+      );
+      setOlder((current) => ({
+        ...current,
+        chats: current.chats.map((chat) =>
+          chat.chatId === chatId
+            ? { ...chat, title, titleSource: "USER" }
+            : chat
+        ),
+      }));
+      const settle = (confirmed: boolean) => {
+        const now = ledger.get(chatId);
+        if (!now) return null;
+        if (confirmed) now.base = { title, titleSource: "USER" };
+        now.inFlight -= 1;
+        const latest = now.seq === seq;
+        const base = now.base;
+        if (now.inFlight === 0) ledger.delete(chatId);
+        return { latest, base };
+      };
+      try {
+        const variables: {
+          chatId: string;
+          data: { title: string };
+        } & ChatMutationContext = {
+          chatId,
+          data: { title },
+          workspaceId,
+          previousTitleSource: previousSource,
+        };
+        await renameChatMutation.mutateAsync(variables);
+        settle(true);
+        return true;
+      } catch (error) {
+        const settled = settle(false);
+        if (errorCodeOf(error) === "AGENT_CHAT_NOT_FOUND") {
+          forgetChat(chatId);
+          return false;
+        }
+        if (settled?.latest && settled.base) {
+          const restore = settled.base;
+          queryClient.setQueriesData(listKey, (current: unknown) =>
+            revertChatTitleInList(current, chatId, title, restore)
+          );
+          setOlder((current) => ({
+            ...current,
+            chats: revertChatTitle(current.chats, chatId, title, restore),
+          }));
+        }
+        if (!isAuthError(error)) toast.error(failureMessage);
+        return false;
+      }
+    },
+    [
+      forgetChat,
+      knownChats,
+      queryClient,
+      renameChatMutation,
+      setOlder,
+      workspaceId,
+    ]
+  );
+}
+
+function useResumeServerTurn({
+  sessionId,
+  history,
+  isSending,
+  partialAnswer,
+  stream,
+  reconcile,
+}: {
+  sessionId: string | null;
+  history: AgentChatMessagesResponseData | null;
+  isSending: boolean;
+  partialAnswer: ReturnType<typeof partialAnswerOf>;
+  stream: ReturnType<typeof useChatStream>;
+  reconcile: (chatId: string) => Promise<AgentChatMessagesResponseData | null>;
+}) {
+  const handledTurnRef = useRef<string | null>(null);
+  const activeTurn = history?.activeTurn ?? null;
+  const lastTurn = history?.lastTurn ?? null;
+  const cursor = history?.cursor ?? null;
+  useEffect(() => {
+    if (!sessionId || !history || isSending) return;
+    const turnId = activeTurn?.turnId ?? lastTurn?.turnId;
+    if (!turnId) return;
+    const key = `${sessionId}:${turnId}`;
+    if (handledTurnRef.current === key || stream.state.turnId === turnId)
+      return;
+    handledTurnRef.current = key;
+
+    if (!activeTurn) {
+      if (lastTurn?.status === "FAILED") {
+        stream.seed(failedTurnState(lastTurn.failureCode, lastTurn.retryable));
+      }
+      return;
+    }
+
+    const resumed = resumedState({
+      cursor,
+      partialAnswer,
+      turnId: activeTurn.turnId,
+      pendingApproval: resumedApprovalOf(activeTurn.pendingApproval),
+    });
+
+    if (activeTurn.pendingApproval) {
+      stream.seed(resumed);
+      return;
+    }
+
+    void stream.resume(sessionId, resumed).then(async (final) => {
+      if (final?.phase !== "done") return;
+      if (await reconcile(sessionId)) stream.reset();
+    });
+  }, [
+    activeTurn,
+    cursor,
+    history,
+    isSending,
+    lastTurn,
+    partialAnswer,
+    reconcile,
+    sessionId,
+    stream,
+  ]);
+  return handledTurnRef;
+}
+
 const uniqueIds = (scope: ScopeChip[], kind: ScopeChip["kind"]) => [
   ...new Set(scope.filter((chip) => chip.kind === kind).map((chip) => chip.id)),
 ];
@@ -101,15 +447,7 @@ export function useChatTurn({
   const [isSending, setIsSending] = useState(false);
   const [turnBaseline, setTurnBaseline] = useState(0);
   const [titleWaits, setTitleWaits] = useState<TitleWaits>({});
-  useEffect(() => {
-    const deadlines = Object.values(titleWaits);
-    if (deadlines.length === 0) return;
-    const timer = setTimeout(
-      () => setTitleWaits((current) => pruneTitleWaits(current, Date.now())),
-      Math.max(0, Math.min(...deadlines) - Date.now())
-    );
-    return () => clearTimeout(timer);
-  }, [titleWaits]);
+  usePruneExpiredTitleWaits(titleWaits, setTitleWaits);
 
   const streamHealthy = useEventStreamHealthy();
   const chatsQuery = useGetAgentChats(workspaceId, undefined, {
@@ -124,73 +462,14 @@ export function useChatTurn({
     [chatsOk, chatsResponse]
   );
 
-  const [older, setOlder] = useState<{
-    workspaceId: string;
-    anchor: string | null;
-    chats: AgentChatsResponseDataChatsItem[];
-    cursor: { afterUpdatedAt: string; afterChatId: string } | null | undefined;
-  }>({ workspaceId, anchor: null, chats: [], cursor: undefined });
-  const [isLoadingMoreChats, setIsLoadingMoreChats] = useState(false);
   const firstPage = chatsOk ? chatsResponse.data.data : null;
-  const firstTail = firstPage?.nextChatId ?? null;
-  const firstTailRef = useRef(firstTail);
-  useEffect(() => {
-    firstTailRef.current = firstTail;
-  }, [firstTail]);
-  const olderHere =
-    older.workspaceId === workspaceId && older.anchor === firstTail
-      ? older
-      : { workspaceId, anchor: firstTail, chats: [], cursor: undefined };
-  const nextCursor = useMemo(() => {
-    if (olderHere.cursor !== undefined) return olderHere.cursor;
-    return firstPage?.hasMore && firstPage.nextUpdatedAt && firstPage.nextChatId
-      ? {
-          afterUpdatedAt: firstPage.nextUpdatedAt,
-          afterChatId: firstPage.nextChatId,
-        }
-      : null;
-  }, [firstPage, olderHere.cursor]);
-  const hasMoreChats = nextCursor !== null;
-  const loadMoreChats = useCallback(async () => {
-    if (!nextCursor || isLoadingMoreChats) return;
-    setIsLoadingMoreChats(true);
-    const anchor = firstTail;
-    try {
-      const response = await getAgentChats(workspaceId, {
-        limit: String(CHAT_PAGE_SIZE),
-        ...nextCursor,
-      });
-      if (response.status !== 200 || !response.data.success) {
-        toast.error(t("errors.loadMoreFailed"));
-        return;
-      }
-      const page = response.data.data;
-      if (firstTailRef.current !== anchor) return;
-      setOlder({
-        workspaceId,
-        anchor,
-        chats: [...olderHere.chats, ...page.chats],
-        cursor:
-          page.hasMore && page.nextUpdatedAt && page.nextChatId
-            ? {
-                afterUpdatedAt: page.nextUpdatedAt,
-                afterChatId: page.nextChatId,
-              }
-            : null,
-      });
-    } catch {
-      toast.error(t("errors.loadMoreFailed"));
-    } finally {
-      setIsLoadingMoreChats(false);
-    }
-  }, [
-    firstTail,
+  const {
+    olderChats,
+    setOlder,
+    hasMoreChats,
     isLoadingMoreChats,
-    nextCursor,
-    olderHere.chats,
-    t,
-    workspaceId,
-  ]);
+    loadMoreChats,
+  } = useOlderChats(workspaceId, firstPage);
   const isChatsUnavailable =
     chatsQuery.isError || (chatsResponse !== undefined && !chatsOk);
 
@@ -265,9 +544,6 @@ export function useChatTurn({
   });
   const cancelTurn = useCancelAgentChatTurn();
   const deleteChatMutation = useDeleteAgentChat({
-    mutation: { meta: { suppressErrorToast: true } },
-  });
-  const renameChatMutation = useRenameAgentChat({
     mutation: { meta: { suppressErrorToast: true } },
   });
 
@@ -453,117 +729,16 @@ export function useChatTurn({
     resolve: resolveApproval,
   });
 
-  const handledTurnRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!sessionId || !history || isSending) return;
-    const turnId = activeTurn?.turnId ?? lastTurn?.turnId;
-    if (!turnId) return;
-    const key = `${sessionId}:${turnId}`;
-    if (handledTurnRef.current === key || stream.state.turnId === turnId)
-      return;
-    handledTurnRef.current = key;
-
-    if (!activeTurn) {
-      if (lastTurn?.status === "FAILED") {
-        stream.seed(failedTurnState(lastTurn.failureCode, lastTurn.retryable));
-      }
-      return;
-    }
-
-    const resumed = resumedState({
-      cursor,
-      partialAnswer,
-      turnId: activeTurn.turnId,
-      pendingApproval: activeTurn.pendingApproval
-        ? {
-            approvalId: activeTurn.pendingApproval.approvalId,
-            tool: activeTurn.pendingApproval.tool,
-            summary: activeTurn.pendingApproval.summary,
-            card: parseApprovalCard(activeTurn.pendingApproval.card),
-          }
-        : null,
-    });
-
-    if (activeTurn.pendingApproval) {
-      stream.seed(resumed);
-      return;
-    }
-
-    void stream.resume(sessionId, resumed).then(async (final) => {
-      if (final?.phase !== "done") return;
-      if (await reconcile(sessionId)) stream.reset();
-    });
-  }, [
-    activeTurn,
-    cursor,
+  const handledTurnRef = useResumeServerTurn({
+    sessionId,
     history,
     isSending,
-    lastTurn,
     partialAnswer,
-    reconcile,
-    sessionId,
     stream,
-  ]);
+    reconcile,
+  });
 
-  const resyncedTurnRef = useRef<string | null>(null);
-  const failedResyncRef = useRef<string | null>(null);
-  const [resyncRetry, retryResync] = useReducer((n: number) => n + 1, 0);
-  useEffect(() => {
-    const retry = () => {
-      if (document.visibilityState !== "visible") return;
-      const failed = failedResyncRef.current;
-      if (failed === null || resyncedTurnRef.current !== failed) return;
-      failedResyncRef.current = null;
-      resyncedTurnRef.current = null;
-      retryResync();
-    };
-    document.addEventListener("visibilitychange", retry);
-    window.addEventListener("online", retry);
-    return () => {
-      document.removeEventListener("visibilitychange", retry);
-      window.removeEventListener("online", retry);
-    };
-  }, []);
-  useEffect(() => {
-    if (!sessionId) return;
-    const gaveUp =
-      stream.state.phase === "failed" &&
-      stream.state.error?.code === "STREAM_INTERRUPTED";
-    const reason = stream.state.needsResync
-      ? "resync"
-      : gaveUp
-        ? "gaveUp"
-        : null;
-    if (!reason) return;
-    const key = `${sessionId}:${stream.state.turnId ?? ""}:${reason}`;
-    if (resyncedTurnRef.current === key) return;
-    resyncedTurnRef.current = key;
-    const turnId = stream.state.turnId;
-    void reconcile(sessionId).then((refreshed) => {
-      if (!refreshed) {
-        failedResyncRef.current = key;
-        return;
-      }
-      if (reason === "resync" || !refreshed.activeTurn) {
-        stream.reset();
-        return;
-      }
-      const active = refreshed.activeTurn;
-      if (turnId === null || active.turnId !== turnId) return;
-      resyncedTurnRef.current = null;
-      const pending = active.pendingApproval
-        ? {
-            approvalId: active.pendingApproval.approvalId,
-            tool: active.pendingApproval.tool,
-            summary: active.pendingApproval.summary,
-            card: parseApprovalCard(active.pendingApproval.card),
-          }
-        : null;
-      void stream.revive(sessionId, turnId, pending).then(async (final) => {
-        if (final?.phase === "done") await reconcile(sessionId);
-      });
-    });
-  }, [reconcile, resyncRetry, sessionId, stream]);
+  useStreamResync(sessionId, stream, reconcile);
 
   const stop = useCallback(() => {
     const turnId = stream.state.turnId;
@@ -587,7 +762,7 @@ export function useChatTurn({
     setPendingUserMessage(null);
     setPendingUserAt(null);
     handledTurnRef.current = null;
-  }, [stream]);
+  }, [handledTurnRef, stream]);
 
   const switchChat = useCallback(
     (chatId: string) => {
@@ -635,7 +810,7 @@ export function useChatTurn({
         queryKey: getGetAgentChatsQueryKey(workspaceId),
       });
     },
-    [leaveTurn, queryClient, workspaceId]
+    [leaveTurn, queryClient, setOlder, workspaceId]
   );
 
   const deleteChat = useCallback(
@@ -661,102 +836,16 @@ export function useChatTurn({
     [deleteChatMutation, forgetChat, workspaceId]
   );
 
-  const renameLedgerRef = useRef(
-    new Map<
-      string,
-      { seq: number; inFlight: number; base: ChatTitleSnapshot | null }
-    >()
+  const knownChats = useMemo(
+    () => [...chats, ...olderChats],
+    [chats, olderChats]
   );
-
-  const renameChat = useCallback(
-    async (chatId: string, title: string, failureMessage: string) => {
-      const listKey = { queryKey: getGetAgentChatsQueryKey(workspaceId) };
-      const ledger = renameLedgerRef.current;
-      const known = [...chats, ...olderHere.chats].find(
-        (chat) => chat.chatId === chatId
-      );
-      const previousSource = titleSourceOf(
-        [...chats, ...olderHere.chats],
-        chatId
-      );
-      const entry = ledger.get(chatId);
-      const seq = (entry?.seq ?? 0) + 1;
-      ledger.set(chatId, {
-        seq,
-        inFlight: (entry?.inFlight ?? 0) + 1,
-        base:
-          entry?.base ??
-          (known
-            ? {
-                title: known.title,
-                titleSource: (known as { titleSource?: unknown }).titleSource,
-              }
-            : null),
-      });
-      await queryClient.cancelQueries(listKey);
-      queryClient.setQueriesData(listKey, (current: unknown) =>
-        retitleChatInList(current, chatId, title)
-      );
-      setOlder((current) => ({
-        ...current,
-        chats: current.chats.map((chat) =>
-          chat.chatId === chatId
-            ? { ...chat, title, titleSource: "USER" }
-            : chat
-        ),
-      }));
-      const settle = (confirmed: boolean) => {
-        const now = ledger.get(chatId);
-        if (!now) return null;
-        if (confirmed) now.base = { title, titleSource: "USER" };
-        now.inFlight -= 1;
-        const latest = now.seq === seq;
-        const base = now.base;
-        if (now.inFlight === 0) ledger.delete(chatId);
-        return { latest, base };
-      };
-      try {
-        const variables: {
-          chatId: string;
-          data: { title: string };
-        } & ChatMutationContext = {
-          chatId,
-          data: { title },
-          workspaceId,
-          previousTitleSource: previousSource,
-        };
-        await renameChatMutation.mutateAsync(variables);
-        settle(true);
-        return true;
-      } catch (error) {
-        const settled = settle(false);
-        if (errorCodeOf(error) === "AGENT_CHAT_NOT_FOUND") {
-          forgetChat(chatId);
-          return false;
-        }
-        if (settled?.latest && settled.base) {
-          const restore = settled.base;
-          queryClient.setQueriesData(listKey, (current: unknown) =>
-            revertChatTitleInList(current, chatId, title, restore)
-          );
-          setOlder((current) => ({
-            ...current,
-            chats: revertChatTitle(current.chats, chatId, title, restore),
-          }));
-        }
-        if (!isAuthError(error)) toast.error(failureMessage);
-        return false;
-      }
-    },
-    [
-      chats,
-      forgetChat,
-      olderHere.chats,
-      queryClient,
-      renameChatMutation,
-      workspaceId,
-    ]
-  );
+  const renameChat = useRenameChat({
+    workspaceId,
+    knownChats,
+    setOlder,
+    forgetChat,
+  });
 
   const streamPhase = stream.state.phase;
   const streamTurnId = stream.state.turnId;
@@ -802,11 +891,8 @@ export function useChatTurn({
 
   const listedChats = useMemo(() => {
     const top = new Set(chats.map((chat) => chat.chatId));
-    return [
-      ...chats,
-      ...olderHere.chats.filter((chat) => !top.has(chat.chatId)),
-    ];
-  }, [chats, olderHere.chats]);
+    return [...chats, ...olderChats.filter((chat) => !top.has(chat.chatId))];
+  }, [chats, olderChats]);
   const chatRows = useMemo(
     () =>
       listedChats.map((chat) => ({

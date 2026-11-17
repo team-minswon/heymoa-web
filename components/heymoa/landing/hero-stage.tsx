@@ -226,7 +226,6 @@ function NoteNotes({
     (demo.noteTab === "script" || demo.noteTab === "timeline");
   const e =
     ABOVE[scene] && (ABOVE[scene].anyTab || tabOk) ? ABOVE[scene] : null;
-  const idle = scene === "open" && live?.line.at === "01:48";
   const voice =
     live !== null &&
     demo.status === "recording" &&
@@ -234,77 +233,9 @@ function NoteNotes({
 
   return (
     <>
-      {legend ? (
-        <div
-          aria-hidden
-          className="absolute top-[var(--a)] right-full -mr-3 hidden w-[132px] xl:block"
-        >
-          <Sticky tone="mint" tilt={-3} anim="pop" className="block">
-            {t("notes.legend")}
-            <span className="mt-1.5 flex flex-col gap-1 text-[13px] font-bold">
-              <span className="flex items-center gap-1.5">
-                <TimelineToneIcon tone="decision" />
-                {t("filters.decision")}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <TimelineToneIcon tone="task" />
-                <span
-                  key={scene === "task" ? "bump" : "rest"}
-                  className={
-                    scene === "task"
-                      ? "tv-bump [animation-delay:300ms]!"
-                      : undefined
-                  }
-                >
-                  {t("filters.task")}
-                </span>
-              </span>
-              {scene === "open" ? (
-                <span
-                  className="tv-pop flex items-center gap-1.5"
-                  style={vars({ "--d": `${ROW_IN_MS}ms` })}
-                >
-                  <TimelineToneIcon tone="open" />
-                  {t("filters.open")}
-                </span>
-              ) : null}
-            </span>
-          </Sticky>
-        </div>
-      ) : null}
+      {legend ? <LegendNote scene={scene} /> : null}
 
-      {voice && live ? (
-        <div
-          aria-hidden
-          className={cn(
-            "absolute right-full -mr-2 hidden w-[140px] flex-col items-start gap-1 xl:flex",
-            scene === "listen" ? "top-[var(--a)]" : "bottom-[96px]"
-          )}
-        >
-          <span
-            key={idle ? "idle" : "room"}
-            className="relative ml-2 w-[104px]"
-          >
-            <Hand
-              className={cn(
-                "tv-pop block",
-                idle ? "text-[12.5px]" : "text-[12px]"
-              )}
-            >
-              {idle ? t("notes.idle") : t("notes.room")}
-            </Hand>
-            {scene === "listen" ? null : (
-              <Scribble
-                kind="arrow"
-                draw="mount"
-                className="absolute top-1 -right-[60px] h-6 w-10"
-                rotate={20}
-              />
-            )}
-          </span>
-          <Voice key={live.line.at} line={live.line} />
-        </div>
-      ) : null}
+      {voice && live ? <VoiceNote live={live} scene={scene} /> : null}
 
       {evidence ? (
         <div
@@ -402,6 +333,85 @@ function NoteNotes({
         </div>
       ) : null}
     </>
+  );
+}
+
+function LegendNote({ scene }: { scene: Scene }) {
+  const t = useTranslations("landing.demo");
+  return (
+    <div
+      aria-hidden
+      className="absolute top-[var(--a)] right-full -mr-3 hidden w-[132px] xl:block"
+    >
+      <Sticky tone="mint" tilt={-3} anim="pop" className="block">
+        {t("notes.legend")}
+        <span className="mt-1.5 flex flex-col gap-1 text-[13px] font-bold">
+          <span className="flex items-center gap-1.5">
+            <TimelineToneIcon tone="decision" />
+            {t("filters.decision")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <TimelineToneIcon tone="task" />
+            <span
+              key={scene === "task" ? "bump" : "rest"}
+              className={
+                scene === "task"
+                  ? "tv-bump [animation-delay:300ms]!"
+                  : undefined
+              }
+            >
+              {t("filters.task")}
+            </span>
+          </span>
+          {scene === "open" ? (
+            <span
+              className="tv-pop flex items-center gap-1.5"
+              style={vars({ "--d": `${ROW_IN_MS}ms` })}
+            >
+              <TimelineToneIcon tone="open" />
+              {t("filters.open")}
+            </span>
+          ) : null}
+        </span>
+      </Sticky>
+    </div>
+  );
+}
+
+function VoiceNote({
+  live,
+  scene,
+}: {
+  live: NonNullable<Demo["live"]>;
+  scene: Scene;
+}) {
+  const idle = scene === "open" && live.line.at === "01:48";
+  const t = useTranslations("landing.demo");
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "absolute right-full -mr-2 hidden w-[140px] flex-col items-start gap-1 xl:flex",
+        scene === "listen" ? "top-[var(--a)]" : "bottom-[96px]"
+      )}
+    >
+      <span key={idle ? "idle" : "room"} className="relative ml-2 w-[104px]">
+        <Hand
+          className={cn("tv-pop block", idle ? "text-[12.5px]" : "text-[12px]")}
+        >
+          {idle ? t("notes.idle") : t("notes.room")}
+        </Hand>
+        {scene === "listen" ? null : (
+          <Scribble
+            kind="arrow"
+            draw="mount"
+            className="absolute top-1 -right-[60px] h-6 w-10"
+            rotate={20}
+          />
+        )}
+      </span>
+      <Voice key={live.line.at} line={live.line} />
+    </div>
   );
 }
 

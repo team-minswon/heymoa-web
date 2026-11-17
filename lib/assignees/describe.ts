@@ -9,7 +9,7 @@ export type AssigneeValue = {
   label?: string;
 };
 
-export type AssigneeView = {
+type AssigneeView = {
   name: string;
   avatarKey: string;
   image: string | null;

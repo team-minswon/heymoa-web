@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  backlogMs,
   float32ToPcm16,
-  normalizePcm16Level,
   normalizeMicrophoneLevel,
   PcmAudioCapture,
   PcmChunkBatcher,
@@ -11,14 +9,6 @@ import {
 import { CAPTURE_CONTRACT } from "@/lib/transcription/capture-config";
 
 describe("audio conversion", () => {
-  it("normalizes silence and full-scale PCM levels", () => {
-    expect(normalizePcm16Level(new Int16Array(480))).toBe(0);
-    expect(normalizePcm16Level(new Int16Array(480).fill(32767))).toBeCloseTo(
-      1,
-      2
-    );
-  });
-
   it("maps microphone RMS into a perceptible voice range", () => {
     expect(normalizeMicrophoneLevel(0)).toBe(0);
     expect(normalizeMicrophoneLevel(0.004)).toBe(0);
@@ -32,10 +22,6 @@ describe("audio conversion", () => {
       float32ToPcm16(new Float32Array([-2, -1, 0, 1, 2]))
     );
     expect([...pcm]).toEqual([-32768, -32768, 0, 32767, 32767]);
-  });
-
-  it("converts buffered PCM16 bytes to backlog time", () => {
-    expect(backlogMs(48_000, 24_000)).toBe(1000);
   });
 });
 

@@ -7,7 +7,7 @@ import {
   type getWorkspaceGuestsResponse,
 } from "@/lib/api/generated/workspaces/workspaces";
 
-export const GUEST_LIST_PAGE_SIZE = 30;
+const GUEST_LIST_PAGE_SIZE = 30;
 
 export function useGuestListPages({
   workspaceId,

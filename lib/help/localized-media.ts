@@ -1,7 +1,7 @@
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
 import { HELP_MEDIA_EN } from "@/lib/help/media-manifest-en";
 
-export type HelpMediaKey = keyof typeof HELP_MEDIA;
+type HelpMediaKey = keyof typeof HELP_MEDIA;
 
 type Size = { width: number; height: number };
 

@@ -1,6 +1,6 @@
 import type { DatesT } from "@/lib/i18n/translator";
 
-export const APP_TIME_ZONE = "Asia/Seoul";
+const APP_TIME_ZONE = "Asia/Seoul";
 
 export function getAppDateKey(value: string | Date) {
   const date = typeof value === "string" ? new Date(value) : value;

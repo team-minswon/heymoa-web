@@ -69,7 +69,7 @@ export function ChainOfThought({
   );
 }
 
-export function useThinkingSeconds(
+function useThinkingSeconds(
   live: boolean,
   startedAt: string | null | undefined,
   endedAt?: string | null
@@ -96,7 +96,7 @@ export function useThinkingSeconds(
 
 export const STALL_MS = 20_000;
 
-export function useStalled(signature: string, active: boolean): boolean {
+function useStalled(signature: string, active: boolean): boolean {
   const [stalled, setStalled] = useState<{ at: string; on: boolean }>({
     at: signature,
     on: false,
@@ -127,7 +127,7 @@ function stepSignature(blocks: StepBlock[]) {
     .join("|");
 }
 
-export function LiveHead({
+function LiveHead({
   seconds,
   open,
 }: {
@@ -165,7 +165,7 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-export function CurrentLine({
+function CurrentLine({
   id,
   text,
   stalled,
@@ -209,6 +209,24 @@ export function PendingProgress({ startedAt }: { startedAt: string | null }) {
   );
 }
 
+function useFollowTail(tail: boolean) {
+  const tailRef = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState(false);
+  const pinned = useRef(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 렌더마다 다시 잰다. `[tail, overflow]` 로 묶으면 줄이 늘어도 안 재서 바닥을 못 따라간다
+  useLayoutEffect(() => {
+    const el = tailRef.current;
+    if (el && tail && pinned.current) el.scrollTop = el.scrollHeight;
+    const next = !!el && el.scrollHeight > el.clientHeight;
+    if (next !== overflow) setOverflow(next);
+  });
+  const trackPinned = (event: React.UIEvent<HTMLDivElement>) => {
+    const el = event.currentTarget;
+    pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
+  };
+  return { tailRef, overflow, trackPinned };
+}
+
 function Disclosure({
   blocks,
   live,
@@ -235,16 +253,7 @@ function Disclosure({
 
   const stalled = useStalled(stepSignature(blocks), running);
   const tail = running && open;
-  const tailRef = useRef<HTMLDivElement>(null);
-  const [overflow, setOverflow] = useState(false);
-  const pinned = useRef(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- 렌더마다 다시 잰다. `[tail, overflow]` 로 묶으면 줄이 늘어도 안 재서 바닥을 못 따라간다
-  useLayoutEffect(() => {
-    const el = tailRef.current;
-    if (el && tail && pinned.current) el.scrollTop = el.scrollHeight;
-    const next = !!el && el.scrollHeight > el.clientHeight;
-    if (next !== overflow) setOverflow(next);
-  });
+  const { tailRef, overflow, trackPinned } = useFollowTail(tail);
 
   return (
     <div
@@ -293,11 +302,7 @@ function Disclosure({
           >
             <div
               ref={tailRef}
-              onScroll={(event) => {
-                const el = event.currentTarget;
-                pinned.current =
-                  el.scrollHeight - el.scrollTop - el.clientHeight < 8;
-              }}
+              onScroll={trackPinned}
               data-tail={tail || undefined}
               data-overflow={(tail && overflow) || undefined}
               className={cn(

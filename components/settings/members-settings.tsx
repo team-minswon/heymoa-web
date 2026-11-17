@@ -274,22 +274,8 @@ function MemberRow({
   const tActions = useTranslations("common.actions");
   const roleLabels = useRoleLabels();
   const dateLocale = useDisplayLocale();
-  const queryClient = useQueryClient();
-  const invalidateMembers = () =>
-    Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: getGetWorkspaceMembersQueryKey(workspaceId),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: getGetWorkspaceQueryKey(workspaceId),
-      }),
-      invalidateWorkspaceBilling(queryClient, workspaceId),
-    ]);
-
+  const invalidateMembers = useInvalidateMembers(workspaceId);
   const changeRole = useChangeWorkspaceMemberRole({
-    mutation: { onSettled: invalidateMembers },
-  });
-  const remove = useRemoveWorkspaceMember({
     mutation: { onSettled: invalidateMembers },
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -394,44 +380,86 @@ function MemberRow({
         ) : null}
       </div>
 
-      <AlertDialog
+      <RemoveMemberDialog
+        workspaceId={workspaceId}
+        member={member}
         open={confirmOpen}
-        onOpenChange={(open) => {
-          if (remove.isPending) return;
-          setConfirmOpen(open);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("removeDialog.title", { name: member.name })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("removeDialog.description", { email: member.email })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>
-              {tActions("cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              loading={remove.isPending}
-              disabled={remove.isPending}
-              onClick={async () => {
-                const response = await remove
-                  .mutateAsync({ workspaceId, userId: member.userId })
-                  .catch(() => null);
-                if (response?.status !== 204) return;
-                setConfirmOpen(false);
-              }}
-            >
-              {t("remove")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onOpenChange={setConfirmOpen}
+      />
     </li>
+  );
+}
+
+function useInvalidateMembers(workspaceId: string) {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: getGetWorkspaceMembersQueryKey(workspaceId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: getGetWorkspaceQueryKey(workspaceId),
+      }),
+      invalidateWorkspaceBilling(queryClient, workspaceId),
+    ]);
+}
+
+function RemoveMemberDialog({
+  workspaceId,
+  member,
+  open: confirmOpen,
+  onOpenChange,
+}: {
+  workspaceId: string;
+  member: WorkspaceMemberListResponseDataMembersItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const t = useTranslations("settings.members");
+  const tActions = useTranslations("common.actions");
+  const invalidateMembers = useInvalidateMembers(workspaceId);
+  const remove = useRemoveWorkspaceMember({
+    mutation: { onSettled: invalidateMembers },
+  });
+
+  return (
+    <AlertDialog
+      open={confirmOpen}
+      onOpenChange={(open) => {
+        if (remove.isPending) return;
+        onOpenChange(open);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t("removeDialog.title", { name: member.name })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("removeDialog.description", { email: member.email })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={remove.isPending}>
+            {tActions("cancel")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            loading={remove.isPending}
+            disabled={remove.isPending}
+            onClick={async () => {
+              const response = await remove
+                .mutateAsync({ workspaceId, userId: member.userId })
+                .catch(() => null);
+              if (response?.status !== 204) return;
+              onOpenChange(false);
+            }}
+          >
+            {t("remove")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

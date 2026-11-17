@@ -11,6 +11,3 @@ export function atHour(daysAgo: number, hour: number, minute = 0): number {
   return appDayMs(daysAgo) + (hour - 9) * HOUR_MS + minute * 60_000;
 }
 
-export function dueAfter(daysAgo: number, dueIn: number): string {
-  return new Date(appDayMs(daysAgo) + dueIn * DAY_MS).toISOString().slice(0, 10);
-}

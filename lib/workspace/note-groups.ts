@@ -2,7 +2,7 @@ import { formatAppDate, getAppDateKey } from "@/lib/format/date";
 import type { DatesT } from "@/lib/i18n/translator";
 import { noteOrderedAt } from "@/lib/notes/meeting-state";
 
-export type NoteGroup<T> = {
+type NoteGroup<T> = {
   key: string;
   label: string;
   notes: T[];

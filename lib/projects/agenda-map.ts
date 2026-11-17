@@ -17,9 +17,9 @@ export type MapMeeting = {
   agendas: MapAgenda[];
 };
 
-export type MapLink = { from: string; to: string; sameMeeting: boolean };
+type MapLink = { from: string; to: string; sameMeeting: boolean };
 
-export type AgendaFlow = { id: string; agendas: MapAgenda[] };
+type AgendaFlow = { id: string; agendas: MapAgenda[] };
 
 export type AgendaMap = {
   meetings: MapMeeting[];
@@ -106,7 +106,7 @@ export type TopicRow = {
   branchOf: MapAgenda | null;
 };
 
-export type TopicTimeline = {
+type TopicTimeline = {
   rows: TopicRow[];
   loose: Map<string, MapAgenda[]>;
 };
@@ -158,9 +158,9 @@ export function topicRows(map: AgendaMap): TopicTimeline {
   return { rows, loose };
 }
 
-export type LaneSeat = { meeting: number; lane: number; slot: number; slots: number };
+type LaneSeat = { meeting: number; lane: number; slot: number; slots: number };
 
-export type LaneLayout = {
+type LaneLayout = {
   seats: Map<string, LaneSeat>;
   laneCount: number;
   loose: Map<number, MapAgenda[]>;

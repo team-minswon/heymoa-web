@@ -10,14 +10,11 @@ import {
   DeleteAccountRequestReasonCode,
   type AccountDeletionPlanResponseData,
   type AccountDeletionPlanResponseDataWorkspacesItem,
-  type AccountDeletionPlanResponseDataWorkspacesItemAction,
   type DeleteAccountRequest,
   type WorkspaceNameConfirmationRequest,
 } from "@/lib/api/generated/models";
 import { okData } from "@/lib/api/ok-data";
 
-export type DeletionPlanAction =
-  AccountDeletionPlanResponseDataWorkspacesItemAction;
 export type DeletionPlanWorkspace =
   AccountDeletionPlanResponseDataWorkspacesItem;
 export type DeletionPlan = AccountDeletionPlanResponseData;
@@ -31,10 +28,9 @@ export type WithdrawalReasonCode = DeleteAccountRequestReasonCode;
 export const WITHDRAWAL_CONFIRMATION = "회원 탈퇴";
 export const WITHDRAWAL_DETAIL_MAX = 500;
 
-export type { DeleteAccountRequest };
-export type DeleteWorkspaceRequest = WorkspaceNameConfirmationRequest;
+type DeleteWorkspaceRequest = WorkspaceNameConfirmationRequest;
 
-export const DELETION_PLAN_QUERY_KEY = getGetDeletionPlanQueryKey();
+const DELETION_PLAN_QUERY_KEY = getGetDeletionPlanQueryKey();
 
 export function useDeletionPlan(enabled: boolean) {
   return useQuery({

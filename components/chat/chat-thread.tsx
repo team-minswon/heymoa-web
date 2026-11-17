@@ -95,16 +95,10 @@ export function ChatThread({
     [pendingUserAt, rows]
   );
 
-  const pinStart = useMemo(() => {
-    if (pendingUserMessage) return rows.length;
-    for (let index = rows.length - 1; index >= 0; index -= 1) {
-      const candidate = rows[index];
-      if (candidate.kind === "message" && candidate.message.role === "USER") {
-        return index;
-      }
-    }
-    return rows.length;
-  }, [pendingUserMessage, rows]);
+  const pinStart = useMemo(
+    () => pinStartOf(rows, pendingUserMessage),
+    [pendingUserMessage, rows]
+  );
 
   const slack =
     pinSlackPx && pinStart === 0
@@ -116,16 +110,7 @@ export function ChatThread({
     return <div className="flex flex-1 flex-col gap-3">{emptyState}</div>;
   }
 
-  const lastRow = rows.at(-1);
-  const carried =
-    lastRow?.kind === "steps" &&
-    activeTurnId !== null &&
-    lastRow.turnId === activeTurnId &&
-    stream.turnId === activeTurnId &&
-    stream.phase !== "idle" &&
-    (stream.phase !== "awaiting_approval" || stream.blocks.length > 0)
-      ? lastRow
-      : null;
+  const carried = carriedStepsOf(rows, activeTurnId, stream);
 
   const localAnswerLast =
     stream.phase === "done" && pendingUserMessage !== null;
@@ -137,38 +122,14 @@ export function ChatThread({
 
   const row = (item: HistoryRow, index: number) =>
     item === carried ? null : (
-      <Fragment key={`${item.at}-${index}`}>
-        {dividers[index] ? <TimeDivider at={item.at} /> : null}
-        {item.kind === "steps" ? (
-          groupBlocks(item.blocks).map((group, at) =>
-            group.kind === "approval" ? (
-              <ResolvedApproval
-                key={`approval-${group.approval.approvalId}`}
-                group={group}
-              />
-            ) : group.kind === "steps" ? (
-              <ChainOfThought
-                key={`steps-${at}`}
-                blocks={group.blocks}
-                live={false}
-                startedAt={item.startedAt}
-                endedAt={item.endedAt}
-                onOpenNote={onOpenNote}
-              />
-            ) : null
-          )
-        ) : (
-          <HistoryMessage
-            message={item.message}
-            onOpenNote={onOpenNote}
-            last={index === lastAnswerIndex}
-            stopped={
-              cancelledTurnId !== null &&
-              item.message.turnId === cancelledTurnId
-            }
-          />
-        )}
-      </Fragment>
+      <HistoryRowView
+        key={`${item.at}-${index}`}
+        item={item}
+        divider={Boolean(dividers[index])}
+        last={index === lastAnswerIndex}
+        cancelledTurnId={cancelledTurnId}
+        onOpenNote={onOpenNote}
+      />
     );
 
   return (
@@ -235,6 +196,81 @@ export function ChatThread({
         <StreamNotice stream={stream} />
       </div>
     </div>
+  );
+}
+
+function pinStartOf(rows: HistoryRow[], pendingUserMessage: string | null) {
+  if (pendingUserMessage) return rows.length;
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const candidate = rows[index];
+    if (candidate.kind === "message" && candidate.message.role === "USER") {
+      return index;
+    }
+  }
+  return rows.length;
+}
+
+function carriedStepsOf(
+  rows: HistoryRow[],
+  activeTurnId: string | null,
+  stream: ChatStreamState
+) {
+  const lastRow = rows.at(-1);
+  return lastRow?.kind === "steps" &&
+    activeTurnId !== null &&
+    lastRow.turnId === activeTurnId &&
+    stream.turnId === activeTurnId &&
+    stream.phase !== "idle" &&
+    (stream.phase !== "awaiting_approval" || stream.blocks.length > 0)
+    ? lastRow
+    : null;
+}
+
+function HistoryRowView({
+  item,
+  divider,
+  last,
+  cancelledTurnId,
+  onOpenNote,
+}: {
+  item: HistoryRow;
+  divider: boolean;
+  last: boolean;
+  cancelledTurnId: string | null;
+  onOpenNote?: (noteId: string) => void;
+}) {
+  return (
+    <>
+      {divider ? <TimeDivider at={item.at} /> : null}
+      {item.kind === "steps" ? (
+        groupBlocks(item.blocks).map((group, at) =>
+          group.kind === "approval" ? (
+            <ResolvedApproval
+              key={`approval-${group.approval.approvalId}`}
+              group={group}
+            />
+          ) : group.kind === "steps" ? (
+            <ChainOfThought
+              key={`steps-${at}`}
+              blocks={group.blocks}
+              live={false}
+              startedAt={item.startedAt}
+              endedAt={item.endedAt}
+              onOpenNote={onOpenNote}
+            />
+          ) : null
+        )
+      ) : (
+        <HistoryMessage
+          message={item.message}
+          onOpenNote={onOpenNote}
+          last={last}
+          stopped={
+            cancelledTurnId !== null && item.message.turnId === cancelledTurnId
+          }
+        />
+      )}
+    </>
   );
 }
 

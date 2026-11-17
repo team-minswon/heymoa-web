@@ -12,7 +12,7 @@ import {
 import { acceptLanguageHeader } from "@/lib/i18n/document-locale";
 import { webMessage } from "@/lib/i18n/web-message";
 
-export type SseHttpFailure = {
+type SseHttpFailure = {
   httpStatus: number;
   retryAfterMs: number | null;
 };

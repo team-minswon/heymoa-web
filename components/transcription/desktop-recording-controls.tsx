@@ -2,10 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type {
-  DesktopBridge,
-  RecordingSummary,
-} from "@heymoa/desktop-contracts";
+import type { RecordingSummary } from "@heymoa/desktop-contracts";
+import { desktopBridge } from "@/lib/desktop/bridge";
 import { useRecording } from "./recording-provider";
 import { DesktopActiveMeetings } from "./desktop-active-meetings";
 import { DesktopMeetingTimeline } from "./desktop-meeting-timeline";
@@ -25,10 +23,7 @@ export function DesktopRecordingControls() {
   } = useRecording();
   const pendingMs = buffer?.pendingMs ?? 0;
   const startedAt = clockOriginMs;
-  const bridge =
-    typeof window === "undefined"
-      ? undefined
-      : (window as unknown as { heymoaDesktop?: DesktopBridge }).heymoaDesktop;
+  const bridge = desktopBridge();
 
   useEffect(() => {
     if (!bridge?.reportRecording) return;

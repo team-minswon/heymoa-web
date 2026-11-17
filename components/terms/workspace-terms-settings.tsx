@@ -27,10 +27,10 @@ import {
   type BatchResult,
 } from "@/lib/terms/use-term-dictionary";
 
-export const workspaceTermsScope = (workspaceId: string) =>
+const workspaceTermsScope = (workspaceId: string) =>
   `terms:workspace:${workspaceId}`;
 
-export function useWorkspaceTerms(workspaceId: string) {
+function useWorkspaceTerms(workspaceId: string) {
   const t = useTranslations("settings.terms");
   const response = useGetWorkspaceTermsSuspense(workspaceId, {
     query: termQueryOptions(() =>
@@ -45,7 +45,7 @@ export function useWorkspaceTerms(workspaceId: string) {
   return data;
 }
 
-export function useWorkspaceTermDictionary(workspaceId: string) {
+function useWorkspaceTermDictionary(workspaceId: string) {
   const t = useTranslations("settings.terms");
   return useTermDictionary({
     scopeId: workspaceTermsScope(workspaceId),

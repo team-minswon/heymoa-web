@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { timelineToMarkdown } from "@/lib/notes/minutes/markdown";
 import {
   buildMinutes,
-  hangulMarker,
   minutesFileName,
   minutesTimeline,
   stillOpen,
@@ -665,18 +664,7 @@ describe("markdown", () => {
   });
 });
 
-describe("hangulMarker · minutesFileName", () => {
-  it("공문서 항목 기호는 가 … 하 다음 거로 잇는다", () => {
-    expect([0, 1, 13, 14, 15].map(hangulMarker)).toEqual([
-      "가",
-      "나",
-      "하",
-      "거",
-      "너",
-    ]);
-    expect(hangulMarker(84)).toBe("85");
-  });
-
+describe("minutesFileName", () => {
   it("파일 이름에서 못 쓰는 글자를 걷는다", () => {
     expect(minutesFileName('A/B: "결정"?', "2026-10-15T15:30:00Z", doc)).toBe(
       "회의록_A B 결정_20261016.pdf"

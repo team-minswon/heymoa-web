@@ -1,7 +1,7 @@
 import type { NoteResponseData, ProjectMeetingLinksResponseData } from "@/lib/api/generated/models";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 
-export const GUIDE_AGENDA_PROJECT_ID = "0PGP000000001";
+const GUIDE_AGENDA_PROJECT_ID = "0PGP000000001";
 export const GUIDE_AGENDA_PROJECT_NAME = "App Launch Prep";
 
 const MEETINGS = [

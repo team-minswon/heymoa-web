@@ -8,7 +8,7 @@ export type TaskEntry = ProjectTask;
 
 export type TaskGroupKey = "OVERDUE" | "THIS_WEEK" | "LATER" | "NO_DUE";
 
-export type TaskGroup = { key: TaskGroupKey; entries: TaskEntry[] };
+type TaskGroup = { key: TaskGroupKey; entries: TaskEntry[] };
 
 const GROUPS: readonly TaskGroupKey[] = ["OVERDUE", "THIS_WEEK", "LATER", "NO_DUE"];
 

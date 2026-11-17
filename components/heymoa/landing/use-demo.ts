@@ -14,8 +14,6 @@ export const SPEAKER_LABEL: Partial<Record<Person, string>> = {
   woojae: "D",
 };
 
-export { FACE_KEY } from "@/components/heymoa/landing/shell";
-
 const LINES: Array<Omit<Line, "text">> = [
   { at: "00:00", who: "minseo" },
   { at: "00:14", who: "jihoon" },
@@ -64,7 +62,7 @@ export const FILTER_OF: Record<TimelineTone, Filter> = {
   reference: "reference",
 };
 
-export const REVIEW_PARTS = 4;
+const REVIEW_PARTS = 4;
 
 export const NOTE_TABS = ["info", "script", "timeline", "summary"] as const;
 export type NoteTab = (typeof NOTE_TABS)[number];
@@ -73,7 +71,7 @@ export type Status = "recording" | "paused" | "ended";
 
 export type Ask = { q: string; a: string; refs: string[] };
 
-export type Turn = Ask & { key: string; mine: boolean };
+type Turn = Ask & { key: string; mine: boolean };
 
 export function useDemoCopy() {
   const copy = useMessages().landing.demo;
@@ -107,6 +105,14 @@ export const THINKING = -1;
 
 const THINK_MS = 620;
 
+const TYPE_TICK_MS = 16;
+const TYPE_CHARS_PER_TICK = 2;
+
+const after = (ms: number, run: () => void) => {
+  const id = window.setTimeout(run, ms);
+  return () => window.clearTimeout(id);
+};
+
 const LOOP_GAP = 2400;
 
 export const BASE_LINES = 5;
@@ -139,7 +145,7 @@ const BEATS: Beat[] = [
   ...Array.from({ length: REVIEW_PARTS }, (): Beat => ({ t: "review" })),
 ];
 
-export const LAST = BEATS.length;
+const LAST = BEATS.length;
 
 const SAY_MS = { ko: 26, en: 14 } as const;
 const HOLD: Record<Beat["t"], number> = {
@@ -258,14 +264,13 @@ export function useDemo({
 
   useEffect(() => {
     if (!visible || skip || !done || manualBusy || paused) return;
-    const id = window.setTimeout(() => {
+    return after(LOOP_GAP, () => {
       setCursor(0);
       setProgress(0);
       setNoteOverride(null);
       setExtra([]);
       setManualTyping(null);
-    }, LOOP_GAP);
-    return () => window.clearTimeout(id);
+    });
   }, [visible, skip, done, manualBusy, paused]);
 
   const here = BEATS[cursor];
@@ -278,10 +283,6 @@ export function useDemo({
     if (!beat) return;
     if (beat.t === "ask" && manualBusy) return;
 
-    const step = (ms: number, run: () => void) => {
-      const id = window.setTimeout(run, ms);
-      return () => window.clearTimeout(id);
-    };
     const next = () =>
       setCursor((c) => {
         const upcoming = BEATS[c + 1];
@@ -293,18 +294,20 @@ export function useDemo({
     if (beat.t === "say") {
       const full = transcript[beat.i].text;
       return progress < full.length
-        ? step(sayMs, () => setProgress((n) => n + 1))
-        : step(HOLD.say, next);
+        ? after(sayMs, () => setProgress((n) => n + 1))
+        : after(HOLD.say, next);
     }
     if (beat.t === "ask") {
-      if (repeated) return step(0, next);
+      if (repeated) return after(0, next);
       const full = asks[beat.i].a;
-      if (progress === THINKING) return step(THINK_MS, () => setProgress(0));
+      if (progress === THINKING) return after(THINK_MS, () => setProgress(0));
       return progress < full.length
-        ? step(16, () => setProgress((n) => Math.min(n + 2, full.length)))
-        : step(HOLD.ask, next);
+        ? after(TYPE_TICK_MS, () =>
+            setProgress((n) => Math.min(n + TYPE_CHARS_PER_TICK, full.length))
+          )
+        : after(HOLD.ask, next);
     }
-    return step(beat.ms ?? HOLD[beat.t], next);
+    return after(beat.ms ?? HOLD[beat.t], next);
   }, [playing, cursor, progress, manualBusy, repeated, transcript, asks, sayMs]);
 
   const scriptAsk = manualBusy || repeated ? null : view.scriptAsk;
@@ -325,18 +328,15 @@ export function useDemo({
   useEffect(() => {
     if (manualTyping === null) return;
     const full = extra[extra.length - 1]?.item.a ?? "";
-    if (manualTyping === THINKING) {
-      const id = window.setTimeout(() => setManualTyping(0), THINK_MS);
-      return () => window.clearTimeout(id);
-    }
-    const id = window.setTimeout(
-      () =>
-        setManualTyping((n) =>
-          n === null || n + 2 >= full.length ? null : n + 2
-        ),
-      16
+    if (manualTyping === THINKING)
+      return after(THINK_MS, () => setManualTyping(0));
+    return after(TYPE_TICK_MS, () =>
+      setManualTyping((n) =>
+        n === null || n + TYPE_CHARS_PER_TICK >= full.length
+          ? null
+          : n + TYPE_CHARS_PER_TICK
+      )
     );
-    return () => window.clearTimeout(id);
   }, [extra, manualTyping]);
 
   const script = [...view.scriptTurns, ...(scriptAsk ? [scriptAsk] : [])];

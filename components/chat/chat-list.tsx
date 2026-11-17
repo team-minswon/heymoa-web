@@ -25,7 +25,7 @@ import {
 } from "@/lib/chat/chat-list";
 import { cn } from "@/lib/utils";
 
-export type ChatListRow = {
+type ChatListRow = {
   chatId: string;
   title: string;
   titlePending?: boolean;
@@ -317,7 +317,7 @@ export function ChatMenuItems({
   );
 }
 
-export function useFrozenRows(
+function useFrozenRows(
   chats: ChatListRow[],
   frozen: boolean
 ): ChatListRow[] {

@@ -1,15 +1,12 @@
 import { z } from "zod";
 
+import { tsidSchema } from "@/lib/api/tsid";
+
 import type { ProposalCitation as GeneratedCitation } from "@/lib/api/generated/models/proposalCitation";
 import type { ProposalRevision as GeneratedRevision } from "@/lib/api/generated/models/proposalRevision";
 import type { TranscriptAnalysisRunRange as GeneratedRange } from "@/lib/api/generated/models/transcriptAnalysisRunRange";
 
 // orval 은 `client: "react-query"` 라 zod parser 를 만들지 않습니다. WS JSON 파싱에 이 스키마가 필요해 zod 를 둡니다.
-
-const tsidSchema = z
-  .string()
-  .length(13)
-  .regex(/^[0-9A-HJKMNP-TV-Z]{13}$/);
 
 const runIdSchema = tsidSchema;
 
@@ -113,11 +110,6 @@ export const runRangeSchema = z.object({
 export const proposalSnapshotSchema = z.object({
   proposals: z.array(proposalHeadSchema),
   runs: z.array(runRangeSchema),
-});
-
-export const proposalRevisionsSchema = z.object({
-  proposalId: tsidSchema,
-  revisions: z.array(proposalHeadSchema),
 });
 
 export const proposalChangedSchema = z.object({

@@ -1,6 +1,5 @@
 export { createHelpDemoState } from "@/lib/mocks/help-demo/build";
-export { helpDemoLocale, type HelpDemoLocale } from "@/lib/mocks/help-demo/locale";
-export { helpDemoPack, type HelpDemoPack } from "@/lib/mocks/help-demo/pack";
+export { helpDemoPack } from "@/lib/mocks/help-demo/pack";
 export { HD_NOTE_IDS as HELP_DEMO_NOTE_IDS } from "@/lib/mocks/help-demo/notes";
 export { HD_WORKSPACE_ID as HELP_DEMO_WORKSPACE_ID } from "@/lib/mocks/help-demo/people";
 export type { HelpDemoReviewSet } from "@/lib/mocks/help-demo/reviews";

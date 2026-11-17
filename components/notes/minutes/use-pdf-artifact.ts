@@ -7,6 +7,10 @@ import type {
   PrepareMinutesPdf,
 } from "@/components/notes/minutes/render-minutes-pdf";
 
+type PdfBuild<Key> =
+  | { key: Key; status: "idle" | "building" | "failed" }
+  | { key: Key; status: "ready"; artifact: MinutesPdfArtifact };
+
 export function usePdfArtifact(
   open: boolean,
   version: string,
@@ -30,12 +34,10 @@ export function usePdfArtifact(
     controller: AbortController;
     promise: Promise<MinutesPdfArtifact>;
   } | null>(null);
-  const [state, setState] = useState<{
-    key: typeof key;
-    artifact: MinutesPdfArtifact | null;
-    pending: boolean;
-    attempted: boolean;
-  }>({ key, artifact: null, pending: false, attempted: false });
+  const [state, setState] = useState<PdfBuild<typeof key>>({
+    key,
+    status: "idle",
+  });
   useLayoutEffect(() => {
     currentKey.current = key;
     return () => {
@@ -43,24 +45,25 @@ export function usePdfArtifact(
       request.current = null;
     };
   }, [key]);
-  const artifact = state.key === key ? state.artifact : null;
-  const pending = state.key === key && state.pending;
+  const artifact =
+    state.key === key && state.status === "ready" ? state.artifact : null;
+  const pending = state.key === key && state.status === "building";
   const invalidated =
     open &&
-    state.attempted &&
+    state.status !== "idle" &&
     state.key.session === key.session &&
     state.key !== key;
   const prepare = () => {
     if (artifact) return Promise.resolve(artifact);
     if (request.current?.key === key) return request.current.promise;
     const controller = new AbortController();
-    setState({ key, artifact: null, pending: true, attempted: true });
+    setState({ key, status: "building" });
     const promise = build(include, controller.signal)
       .then((result) => {
         controller.signal.throwIfAborted();
         if (currentKey.current !== key)
           throw new DOMException("The document changed", "AbortError");
-        setState({ key, artifact: result, pending: false, attempted: true });
+        setState({ key, status: "ready", artifact: result });
         return result;
       })
       .finally(() => {
@@ -68,7 +71,9 @@ export function usePdfArtifact(
           request.current = null;
         }
         setState((current) =>
-          current.key === key ? { ...current, pending: false } : current
+          current.key === key && current.status === "building"
+            ? { key, status: "failed" }
+            : current
         );
       });
     request.current = { key, controller, promise };

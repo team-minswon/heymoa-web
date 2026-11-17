@@ -355,7 +355,7 @@ export const CONTEXT_APPLIED_RANGES: RunRange[] = [
 
 export const CONTEXT_SWAP_NOTE_ID = "01K0000000008";
 
-export const CONTEXT_SWAP_RANGES: RunRange[] = [
+const CONTEXT_SWAP_RANGES: RunRange[] = [
   range("0RDDJSW000001", 1, 8),
   range("0RDDJSW000003", 17, 24),
 ];

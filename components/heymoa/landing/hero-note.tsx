@@ -690,6 +690,154 @@ function AgendaButton({
   );
 }
 
+type AgendaGroupData = {
+  index: number;
+  agenda: Entry;
+  end: string | null;
+  total: number;
+  items: Array<{ index: number; entry: Entry & { tone: TimelineTone } }>;
+};
+
+function agendaGroupsOf(shown: Entry[]) {
+  const groups: AgendaGroupData[] = [];
+  shown.forEach((entry, index) => {
+    const current = groups[groups.length - 1];
+    if (!entry.tone) {
+      if (current) current.end = entry.at;
+      groups.push({ index, agenda: entry, end: null, total: 0, items: [] });
+      return;
+    }
+    current.total += 1;
+    current.items.push({ index, entry: { ...entry, tone: entry.tone } });
+  });
+  return groups;
+}
+
+function TimelineFilterBar({
+  shown,
+  base,
+  ended,
+}: {
+  shown: Entry[];
+  base: ReturnType<typeof baseCount>;
+  ended: boolean;
+}) {
+  const t = useTranslations("landing.demo");
+  const count = (f: Filter) =>
+    shown.filter((e) => e.tone && inFilter(e.tone, f)).length;
+  return (
+    <div
+      data-snap
+      className={cn(
+        "flex flex-col gap-1.5 border-b pb-2.5 lg:mt-6 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-4",
+        APP.lineSoft
+      )}
+    >
+      <span aria-hidden className="flex flex-wrap items-center gap-0.5">
+        {FILTERS.map((f) => {
+          const n = count(f);
+          return (
+            <span
+              key={f}
+              className={cn(
+                "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[7px] px-2 text-[13px] sm:px-[9px]",
+                f === "all" ? cn(APP.chipBg, "font-medium", APP.ink) : APP.muted
+              )}
+            >
+              {t(`filters.${f}`)}
+              <span
+                key={n}
+                className={cn(
+                  "text-[12px] font-normal tabular-nums",
+                  f === "all" ? APP.body : APP.muted,
+                  n !== base[f] && "tv-bump [animation-delay:300ms]!"
+                )}
+              >
+                {n}
+              </span>
+            </span>
+          );
+        })}
+      </span>
+      <span className="sr-only">{t("timelinePanel.srTotal", { count: count("all") })}</span>
+      <span className={cn("text-[12px]", APP.muted)}>
+        {ended ? t("timelinePanel.endedNote") : t("timelinePanel.liveNote")}
+      </span>
+    </div>
+  );
+}
+
+function AgendaGroup({
+  group,
+  listId,
+  folded,
+  live,
+  mark,
+  recording,
+  onToggle,
+}: {
+  group: AgendaGroupData;
+  listId: string;
+  folded: boolean;
+  live: boolean;
+  mark: boolean;
+  recording: boolean;
+  onToggle: () => void;
+}) {
+  const t = useTranslations("landing.demo");
+  const { timeline } = useDemoCopy();
+  const range = group.end ? (
+    `${group.agenda.at} – ${group.end}`
+  ) : live ? (
+    <>
+      {group.agenda.at}
+      <span className="max-sm:hidden"> – {t("timelinePanel.now")}</span>
+    </>
+  ) : (
+    group.agenda.at
+  );
+  return (
+    <section className="mt-5">
+      <AgendaButton
+        range={range}
+        title={group.agenda.title}
+        total={group.total}
+        bump={group.items.some((item) => item.index >= BASE_ENTRIES)}
+        open={!folded}
+        live={live}
+        listId={listId}
+        onToggle={onToggle}
+      />
+      <ol
+        id={listId}
+        hidden={folded}
+        data-mark={mark ? "" : undefined}
+        className="relative m-0 mt-1.5 list-none p-0 [--i:0]"
+      >
+        <span
+          aria-hidden
+          className="absolute top-4 bottom-4 left-[63px] w-px bg-[var(--el-hairline)]"
+        />
+        {group.items.map(({ index, entry }) => (
+          <TimelineRow
+            key={index}
+            at={entry.at}
+            tone={entry.tone}
+            kind={entry.kind === "agenda" ? "" : t(`kinds.${entry.kind}`)}
+            title={entry.title}
+            meta={metaOf(entry, timeline, t)}
+            className={
+              index < BASE_ENTRIES
+                ? undefined
+                : cn("tv-rise [animation-duration:300ms]!", recording && FLASH)
+            }
+          />
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: PanelProps }) {
   const { entries, live, status } = demo;
   const t = useTranslations("landing.demo");
@@ -705,27 +853,8 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
     });
 
   const shown = timeline.slice(0, entries);
-  const count = (f: Filter) =>
-    shown.filter((e) => e.tone && inFilter(e.tone, f)).length;
 
-  type Group = {
-    index: number;
-    agenda: Entry;
-    end: string | null;
-    total: number;
-    items: Array<{ index: number; entry: Entry & { tone: TimelineTone } }>;
-  };
-  const groups: Group[] = [];
-  shown.forEach((entry, index) => {
-    const current = groups[groups.length - 1];
-    if (!entry.tone) {
-      if (current) current.end = entry.at;
-      groups.push({ index, agenda: entry, end: null, total: 0, items: [] });
-      return;
-    }
-    current.total += 1;
-    current.items.push({ index, entry: { ...entry, tone: entry.tone } });
-  });
+  const groups = agendaGroupsOf(shown);
   const last = groups[groups.length - 1];
   const fresh = recording && entries > BASE_ENTRIES && !live?.text;
 
@@ -759,100 +888,20 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
         </div>
       </header>
 
-      <div
-        data-snap
-        className={cn(
-          "flex flex-col gap-1.5 border-b pb-2.5 lg:mt-6 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-4",
-          APP.lineSoft
-        )}
-      >
-        <span aria-hidden className="flex flex-wrap items-center gap-0.5">
-          {FILTERS.map((f) => {
-            const n = count(f);
-            return (
-              <span
-                key={f}
-                className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[7px] px-2 text-[13px] sm:px-[9px]",
-                  f === "all" ? cn(APP.chipBg, "font-medium", APP.ink) : APP.muted
-                )}
-              >
-                {t(`filters.${f}`)}
-                <span
-                  key={n}
-                  className={cn(
-                    "text-[12px] font-normal tabular-nums",
-                    f === "all" ? APP.body : APP.muted,
-                    n !== base[f] && "tv-bump [animation-delay:300ms]!"
-                  )}
-                >
-                  {n}
-                </span>
-              </span>
-            );
-          })}
-        </span>
-        <span className="sr-only">{t("timelinePanel.srTotal", { count: count("all") })}</span>
-        <span className={cn("text-[12px]", APP.muted)}>
-          {status === "ended" ? t("timelinePanel.endedNote") : t("timelinePanel.liveNote")}
-        </span>
-      </div>
+      <TimelineFilterBar shown={shown} base={base} ended={status === "ended"} />
 
-      {groups.map((group) => {
-        const isFolded = folded.has(group.index);
-        const listId = `${uid}-agenda-${group.index}`;
-        const live = group === last && recording;
-        const range = group.end ? (
-          `${group.agenda.at} – ${group.end}`
-        ) : live ? (
-          <>
-            {group.agenda.at}
-            <span className="max-sm:hidden"> – {t("timelinePanel.now")}</span>
-          </>
-        ) : (
-          group.agenda.at
-        );
-        return (
-          <section key={group.index} className="mt-5">
-            <AgendaButton
-              range={range}
-              title={group.agenda.title}
-              total={group.total}
-              bump={group.items.some((item) => item.index >= BASE_ENTRIES)}
-              open={!isFolded}
-              live={live}
-              listId={listId}
-              onToggle={() => toggle(group.index)}
-            />
-            <ol
-              id={listId}
-              hidden={isFolded}
-              data-mark={fresh && group === last ? "" : undefined}
-              className="relative m-0 mt-1.5 list-none p-0 [--i:0]"
-            >
-              <span
-                aria-hidden
-                className="absolute top-4 bottom-4 left-[63px] w-px bg-[var(--el-hairline)]"
-              />
-              {group.items.map(({ index, entry }) => (
-                <TimelineRow
-                  key={index}
-                  at={entry.at}
-                  tone={entry.tone}
-                  kind={entry.kind === "agenda" ? "" : t(`kinds.${entry.kind}`)}
-                  title={entry.title}
-                  meta={metaOf(entry, timeline, t)}
-                  className={
-                    index < BASE_ENTRIES
-                      ? undefined
-                      : cn("tv-rise [animation-duration:300ms]!", recording && FLASH)
-                  }
-                />
-              ))}
-            </ol>
-          </section>
-        );
-      })}
+      {groups.map((group) => (
+        <AgendaGroup
+          key={group.index}
+          group={group}
+          listId={`${uid}-agenda-${group.index}`}
+          folded={folded.has(group.index)}
+          live={group === last && recording}
+          mark={fresh && group === last}
+          recording={recording}
+          onToggle={() => toggle(group.index)}
+        />
+      ))}
 
       {live && recording ? (
         <div
@@ -1089,16 +1138,11 @@ const quotesOf = (transcript: Line[], cites: readonly number[]) =>
       cited: cites.includes(at),
     }));
 
-function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
-  const t = useTranslations("landing.demo");
-  const { title, project, transcript } = useDemoCopy();
-  const DOC = useDoc();
+function useReviewScroll(review: number) {
   const ref = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const coverRef = useRef<HTMLSpanElement>(null);
   const placedOnce = useRef(false);
-  const confirming = review >= 4;
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -1139,6 +1183,133 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
       live = false;
     };
   }, [review]);
+  return { ref, barRef, coverRef };
+}
+
+function TopicsSection() {
+  const t = useTranslations("landing.demo");
+  const DOC = useDoc();
+  return (
+    <div className="chat-rise pt-7">
+      <SectionHead title={t("review.topics")} count={DOC.topics.length} />
+      <ul className="m-0 mt-1.5 list-none border-t border-[var(--el-hairline-soft)] p-0">
+        {DOC.topics.map((topic) => (
+          <li key={topic.at} className="border-b border-[var(--el-hairline-soft)]">
+            <div className="-mx-2 grid grid-cols-[44px_minmax(0,1fr)_16px] items-start gap-x-3 px-2 py-3 sm:grid-cols-[56px_minmax(0,1fr)_auto_16px]">
+              <span className={cn("text-[12px] leading-6 tabular-nums", APP.muted)}>{topic.at}</span>
+              <span className="flex min-w-0 flex-col">
+                <span className={cn("text-[15px] leading-6 font-medium", APP.ink)}>
+                  {topic.title}
+                </span>
+                <span className={cn("text-[13.5px] leading-5", APP.muted)}>{topic.gist}</span>
+              </span>
+              <span
+                className={cn(
+                  "col-start-2 row-start-2 mt-1 flex h-6 items-center gap-2.5 text-[12px] whitespace-nowrap tabular-nums sm:col-start-3 sm:row-start-1 sm:mt-0",
+                  APP.muted
+                )}
+              >
+                {topic.counts.map(([tone, n]) => (
+                  <span key={tone} className="inline-flex items-center gap-1">
+                    <TimelineToneIcon tone={tone} />
+                    <span className="sr-only">
+                      {t(
+                        tone === "decision"
+                          ? "review.srKind.decision"
+                          : tone === "task"
+                            ? "review.srKind.task"
+                            : "review.srKind.open"
+                      )}{" "}
+                    </span>
+                    {n}
+                  </span>
+                ))}
+              </span>
+              <ChevronDown
+                aria-hidden
+                className={cn("col-start-3 row-start-1 mt-1 size-4 sm:col-start-4", APP.faint)}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function DecisionsSection() {
+  const t = useTranslations("landing.demo");
+  const { transcript } = useDemoCopy();
+  const DOC = useDoc();
+  return (
+    <div className="chat-rise pt-7">
+      <Anchor name="decisions" />
+      <SectionHead title={t("review.decisions")} count={DOC.decisions.length} />
+      <div className="mt-1.5">
+        {DOC.decisions.map((decision, i) => (
+          <div key={decision.at} data-row>
+            {i === 1 ? <Anchor name="open" /> : null}
+            <DecisionRow
+              text={decision.text}
+              topic={decision.topic}
+              at={decision.at}
+              open={i === 1}
+            >
+              <div data-mark>
+                <EvidenceQuotes quotes={quotesOf(transcript, decision.cites)} />
+              </div>
+            </DecisionRow>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TasksSection() {
+  const t = useTranslations("landing.demo");
+  const DOC = useDoc();
+  return (
+    <div className="chat-rise pt-7">
+      <Anchor name="tasks" />
+      <div data-row="head">
+        <SectionHead
+          title={t("review.tasks")}
+          count={DOC.tasks.length}
+          aside={
+            <span className="hidden items-center gap-2 lg:flex">
+              <span className={cn("text-[12px]", APP.muted)}>
+                {t("review.unnamed", { count: DOC.tasks.length })}
+              </span>
+              <span
+                className={cn(
+                  "inline-flex h-[26px] items-center rounded-full border border-[var(--el-hairline-strong)] px-2.5 text-[12px] font-medium",
+                  APP.ink
+                )}
+              >
+                {t("review.nameSpeakers")}
+              </span>
+            </span>
+          }
+        />
+      </div>
+      <div className="mt-1.5">
+        {DOC.tasks.map((task) => (
+          <div key={task.at} data-row>
+            <TaskRow text={task.text} who={{ label: task.who }} due={task.due} wide />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
+  const t = useTranslations("landing.demo");
+  const { title, project } = useDemoCopy();
+  const DOC = useDoc();
+  const { ref, barRef, coverRef } = useReviewScroll(review);
+  const confirming = review >= 4;
 
   return (
     <div
@@ -1179,110 +1350,11 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
           </div>
         </div>
 
-        {review > 1 ? (
-          <div className="chat-rise pt-7">
-            <SectionHead title={t("review.topics")} count={DOC.topics.length} />
-            <ul className="m-0 mt-1.5 list-none border-t border-[var(--el-hairline-soft)] p-0">
-              {DOC.topics.map((topic) => (
-                <li key={topic.at} className="border-b border-[var(--el-hairline-soft)]">
-                  <div className="-mx-2 grid grid-cols-[44px_minmax(0,1fr)_16px] items-start gap-x-3 px-2 py-3 sm:grid-cols-[56px_minmax(0,1fr)_auto_16px]">
-                    <span className={cn("text-[12px] leading-6 tabular-nums", APP.muted)}>{topic.at}</span>
-                    <span className="flex min-w-0 flex-col">
-                      <span className={cn("text-[15px] leading-6 font-medium", APP.ink)}>
-                        {topic.title}
-                      </span>
-                      <span className={cn("text-[13.5px] leading-5", APP.muted)}>{topic.gist}</span>
-                    </span>
-                    <span
-                      className={cn(
-                        "col-start-2 row-start-2 mt-1 flex h-6 items-center gap-2.5 text-[12px] whitespace-nowrap tabular-nums sm:col-start-3 sm:row-start-1 sm:mt-0",
-                        APP.muted
-                      )}
-                    >
-                      {topic.counts.map(([tone, n]) => (
-                        <span key={tone} className="inline-flex items-center gap-1">
-                          <TimelineToneIcon tone={tone} />
-                          <span className="sr-only">
-                            {t(
-                              tone === "decision"
-                                ? "review.srKind.decision"
-                                : tone === "task"
-                                  ? "review.srKind.task"
-                                  : "review.srKind.open"
-                            )}{" "}
-                          </span>
-                          {n}
-                        </span>
-                      ))}
-                    </span>
-                    <ChevronDown
-                      aria-hidden
-                      className={cn("col-start-3 row-start-1 mt-1 size-4 sm:col-start-4", APP.faint)}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        {review > 1 ? <TopicsSection /> : null}
 
-        {review > 2 ? (
-          <div className="chat-rise pt-7">
-            <Anchor name="decisions" />
-            <SectionHead title={t("review.decisions")} count={DOC.decisions.length} />
-            <div className="mt-1.5">
-              {DOC.decisions.map((decision, i) => (
-                <div key={decision.at} data-row>
-                  {i === 1 ? <Anchor name="open" /> : null}
-                  <DecisionRow
-                    text={decision.text}
-                    topic={decision.topic}
-                    at={decision.at}
-                    open={i === 1}
-                  >
-                    <div data-mark>
-                      <EvidenceQuotes quotes={quotesOf(transcript, decision.cites)} />
-                    </div>
-                  </DecisionRow>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        {review > 2 ? <DecisionsSection /> : null}
 
-        {review > 2 ? (
-          <div className="chat-rise pt-7">
-            <Anchor name="tasks" />
-            <div data-row="head">
-              <SectionHead
-                title={t("review.tasks")}
-                count={DOC.tasks.length}
-                aside={
-                  <span className="hidden items-center gap-2 lg:flex">
-                    <span className={cn("text-[12px]", APP.muted)}>
-                      {t("review.unnamed", { count: DOC.tasks.length })}
-                    </span>
-                    <span
-                      className={cn(
-                        "inline-flex h-[26px] items-center rounded-full border border-[var(--el-hairline-strong)] px-2.5 text-[12px] font-medium",
-                        APP.ink
-                      )}
-                    >
-                      {t("review.nameSpeakers")}
-                    </span>
-                  </span>
-                }
-              />
-            </div>
-            <div className="mt-1.5">
-              {DOC.tasks.map((task) => (
-                <div key={task.at} data-row>
-                  <TaskRow text={task.text} who={{ label: task.who }} due={task.due} wide />
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        {review > 2 ? <TasksSection /> : null}
       </div>
 
       {confirming ? (

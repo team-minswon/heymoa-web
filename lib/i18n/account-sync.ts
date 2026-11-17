@@ -1,6 +1,6 @@
 import type { Locale } from "./locales";
 
-export type LanguageSyncAction = {
+type LanguageSyncAction = {
   cookie?: Locale;
   account?: Locale;
 };

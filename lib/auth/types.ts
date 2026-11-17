@@ -4,7 +4,7 @@ export type AppResponse<T> = {
   error: AppError | null;
 };
 
-export type AppError = {
+type AppError = {
   code: string;
   message: string;
   details?: Array<{

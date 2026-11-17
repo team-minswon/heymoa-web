@@ -12,9 +12,9 @@ import type {
   NoteListResponseDataNotesItem,
 } from "@/lib/api/generated/models";
 
-export const NOTE_LIST_PAGE_SIZE = 30;
+const NOTE_LIST_PAGE_SIZE = 30;
 
-export type NoteListScope =
+type NoteListScope =
   | { kind: "project"; projectId: string }
   | { kind: "workspace"; workspaceId: string };
 

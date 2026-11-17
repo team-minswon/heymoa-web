@@ -56,10 +56,8 @@ vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ status: "authenticated" }),
 }));
 
-import {
-  UserEventProvider,
-  useEventStreamHealthy,
-} from "@/components/events/user-event-provider";
+import { UserEventProvider } from "@/components/events/user-event-provider";
+import { useEventStreamHealthy } from "@/lib/events/health";
 
 const timers = {
   setTimeout: (run: () => void, ms: number) =>

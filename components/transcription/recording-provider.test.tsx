@@ -1032,6 +1032,8 @@ describe("RecordingProvider", () => {
 
     expect(harness.api.startSession).toHaveBeenCalledTimes(2);
     expect(harness.result.current.phase).toBe("recording");
+    await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+    expect(harness.result.current.phase).toBe("recording");
   });
 
   it("invalidates lifecycle caches when failed-session polling finds an interruption", async () => {

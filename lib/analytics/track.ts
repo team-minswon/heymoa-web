@@ -121,7 +121,7 @@ export type AnalyticsEvent =
   | "help_faq_opened"
   | "pricing_cta_clicked";
 
-export type BillingProvider = BillingSetupCreatedResponseDataProvider;
+type BillingProvider = BillingSetupCreatedResponseDataProvider;
 export type BillingSetupResult =
   | "completed"
   | "declined"

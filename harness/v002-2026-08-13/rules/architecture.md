@@ -60,9 +60,8 @@ protocol이 React를 알면 파싱을 테스트할 수 없습니다. 지금 전�
 
 100ms 미만 `setTimeout`(지연 없는 호출 포함)으로 렌더·effect 순서를 맞추지 않습니다. 첫 렌더 여부는
 상태로, effect 안의 상태 연쇄는 reducer나 이벤트 핸들러로 옮깁니다. `eslint.config.mjs`의
-`no-restricted-syntax`가 `app/`·`components/`·`lib/`·`hooks/`에서 막고, 이미 있던 자리는
-`eslint-suppressions.json`에만 있습니다. 고치면 그 줄을 `pnpm lint --prune-suppressions`로 지웁니다.
-늘리지 않습니다.
+`no-restricted-syntax`가 `app/`·`components/`·`lib/`·`hooks/`에서 막습니다. 예외 목록(`eslint-suppressions.json`)은
+없습니다. 새로 만들지 않습니다.
 
 ## 주석은 기본으로 쓰지 않습니다
 

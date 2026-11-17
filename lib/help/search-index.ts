@@ -52,7 +52,7 @@ export function buildHelpIndex(
   );
 }
 
-export function findInText(text: string, query: string) {
+function findInText(text: string, query: string) {
   const needle = normalizeQuery(query);
   if (!needle) return null;
   let flat = "";
