@@ -958,11 +958,7 @@ function reviewOf(noteId: string) {
   mockDb.getNote(noteId);
   return (
     store().reviews.get(noteId) ??
-    failWith(
-      "MEETING_REVIEW_NOT_FOUND",
-      404,
-      "검토본 또는 항목을 찾을 수 없습니다."
-    )
+    failWith("NOT_FOUND", 404, "요청한 내용을 찾을 수 없습니다.")
   );
 }
 
@@ -1253,11 +1249,7 @@ export const meetingFlowHandlers = [
           (row) => row.itemId === paramId(params.itemId)
         );
         if (itemIndex < 0)
-          failWith(
-            "MEETING_REVIEW_NOT_FOUND",
-            404,
-            "검토본 또는 항목을 찾을 수 없습니다."
-          );
+          failWith("NOT_FOUND", 404, "요청한 내용을 찾을 수 없습니다.");
         const item = structuredClone(review.items[itemIndex]);
         const target = store();
         if (

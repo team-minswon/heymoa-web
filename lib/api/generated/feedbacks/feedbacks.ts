@@ -397,7 +397,7 @@ export const getCreateFeedbackUrl = () => {
 };
 
 /**
- * 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지이고, 넘기면 429(FEEDBACK_RATE_LIMITED)다. message 가 비었거나 1500자를 넘는 등 본문이 검증을 통과하지 못하면 400(BAD_REQUEST)이다.
+ * 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지이고, 넘기면 429(RATE_LIMITED)다. message 가 비었거나 1500자를 넘는 등 본문이 검증을 통과하지 못하면 400(BAD_REQUEST)이다.
  * @summary 문의·피드백 접수
  */
 export const createFeedback = async (
@@ -667,7 +667,7 @@ export const getRegisterFeedbackAnswerUrl = (feedbackId: string) => {
 };
 
 /**
- * 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다. 문의가 없으면 404(FEEDBACK_NOT_FOUND)다.
+ * 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다. 문의가 없으면 404(NOT_FOUND)다.
  * @summary 문의 답변 등록(운영자)
  */
 export const registerFeedbackAnswer = async (

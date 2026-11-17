@@ -348,11 +348,11 @@ function planGuestLink(
   const guest = state.workspaceGuests.find(
     (row) => row.guestId === guestId && row.workspaceId === workspaceId
   );
-  if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+  if (!guest) fail("NOT_FOUND");
   const isMember = state.members.some(
     (row) => row.workspaceId === workspaceId && row.userId === targetUserId
   );
-  if (!isMember) fail("WORKSPACE_MEMBER_NOT_FOUND");
+  if (!isMember) fail("NOT_FOUND");
 
   const entries: GuestLinkEntry[] = [];
   for (const note of state.notes) {
@@ -2315,7 +2315,7 @@ function findIntegration(workspaceId: string, provider: string) {
   const integration = state.integrations.find(
     (item) => item.workspaceId === workspaceId && item.provider === provider
   );
-  return integration ?? fail("INTEGRATION_NOT_FOUND");
+  return integration ?? fail("NOT_FOUND");
 }
 
 function attachWorkspaceState(workspaceId: string, role: string) {
@@ -2802,7 +2802,7 @@ export const mockDb = {
 
   endMeeting(noteId: string): NoteResponseData {
     const note = findNote(noteId);
-    if (note.meetingStatus === "NOT_STARTED") fail("MEETING_NOT_STARTED");
+    if (note.meetingStatus === "NOT_STARTED") fail("CONFLICT");
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
     if (note.meetingStatus === "IN_PROGRESS") fail("MEETING_RECORDING");
     const endedAt = nextTimestamp();
@@ -3015,7 +3015,7 @@ export const mockDb = {
           candidate.userId === state.user.userId
       )
     )
-      fail("AGENT_DELEGATION_NOT_FOUND");
+      fail("NOT_FOUND");
     const cursor =
       afterOccurredAt && afterUsageId
         ? { at: Date.parse(afterOccurredAt), id: afterUsageId }
@@ -3116,7 +3116,7 @@ export const mockDb = {
         candidate.delegationId === delegationId &&
         candidate.userId === state.user.userId
     );
-    if (!delegation) fail("AGENT_DELEGATION_NOT_FOUND");
+    if (!delegation) fail("NOT_FOUND");
     if (delegation.status === "REVOKED") return;
     delegation.status = "REVOKED";
     delegation.revokedAt = nextTimestamp();
@@ -3188,7 +3188,7 @@ export const mockDb = {
         candidate.delegationId === delegationId &&
         candidate.workspaceId === workspaceId
     );
-    if (!delegation) fail("AGENT_DELEGATION_NOT_FOUND");
+    if (!delegation) fail("NOT_FOUND");
     if (
       delegation.status !== "ACTIVE" ||
       Date.parse(delegation.expiresAt) <= Date.now()
@@ -3232,7 +3232,7 @@ export const mockDb = {
     const member = state.members.find(
       (m) => m.workspaceId === workspaceId && m.userId === userId
     );
-    if (!member) fail("WORKSPACE_MEMBER_NOT_FOUND");
+    if (!member) fail("NOT_FOUND");
     const name = (displayName ?? "")
       .replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ")
       .trim();
@@ -3268,7 +3268,7 @@ export const mockDb = {
     const member = state.members.find(
       (m) => m.workspaceId === workspaceId && m.userId === userId
     );
-    if (!member) fail("WORKSPACE_MEMBER_NOT_FOUND");
+    if (!member) fail("NOT_FOUND");
     const admins = state.members.filter(
       (m) => m.workspaceId === workspaceId && m.role === "ADMIN"
     );
@@ -3285,7 +3285,7 @@ export const mockDb = {
     const index = state.members.findIndex(
       (m) => m.workspaceId === workspaceId && m.userId === userId
     );
-    if (index < 0) fail("WORKSPACE_MEMBER_NOT_FOUND");
+    if (index < 0) fail("NOT_FOUND");
     state.members.splice(index, 1);
   },
 
@@ -3684,7 +3684,7 @@ export const mockDb = {
     const notification = state.notifications.find(
       (candidate) => candidate.notificationId === notificationId
     );
-    if (!notification) fail("NOTIFICATION_NOT_FOUND");
+    if (!notification) fail("NOT_FOUND");
     notification.readAt ??= nextTimestamp();
     return copy({ notificationId: notification.notificationId });
   },
@@ -4032,7 +4032,7 @@ export const mockDb = {
       const guest = state.workspaceGuests.find(
         (row) => row.guestId === guestId && row.workspaceId === workspaceId
       );
-      if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+      if (!guest) fail("NOT_FOUND");
       return guest;
     });
 
@@ -4093,7 +4093,7 @@ export const mockDb = {
     const guest = state.workspaceGuests.find(
       (row) => row.guestId === guestId && row.workspaceId === workspaceId
     );
-    if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+    if (!guest) fail("NOT_FOUND");
 
     const name = displayName
       .replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ")
@@ -4127,7 +4127,7 @@ export const mockDb = {
     const guest = state.workspaceGuests.find(
       (row) => row.guestId === guestId && row.workspaceId === workspaceId
     );
-    if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+    if (!guest) fail("NOT_FOUND");
 
     let affectedNoteCount = 0;
     for (const note of state.notes) {
@@ -4425,7 +4425,7 @@ export const mockDb = {
     }
     const speaker = diarization.speakers.find((row) => row.label === label);
     if (!speaker) {
-      fail("SPEAKER_LABEL_NOT_FOUND");
+      fail("NOT_FOUND");
     }
 
     const participant = resolveOrJoinParticipant(note, target);
@@ -4471,8 +4471,8 @@ export const mockDb = {
         row.segmentId === segmentId &&
         sessionIds.has(row.transcriptionSessionId)
     );
-    if (!segment) fail("TRANSCRIPT_SEGMENT_NOT_FOUND");
-    if (!segment.speakerLabel) fail("SEGMENT_NOT_DIARIZED");
+    if (!segment) fail("NOT_FOUND");
+    if (!segment.speakerLabel) fail("DIARIZATION_NOT_MAPPED");
 
     const participant = resolveOrJoinParticipant(note, target);
     if (!participant) {

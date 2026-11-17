@@ -195,9 +195,7 @@ describe("REST mock handlers", () => {
     );
     expect(new Set(ids).size).toBe(ids.length);
     expect(missing.status).toBe(404);
-    expect((await missing.json()).error.code).toBe(
-      "AGENT_DELEGATION_NOT_FOUND"
-    );
+    expect((await missing.json()).error.code).toBe("NOT_FOUND");
     expect(others.status).toBe(404);
   });
 
@@ -631,7 +629,7 @@ describe("meeting and integration handlers", () => {
     });
   });
 
-  it("returns 409 MEETING_NOT_STARTED for a meeting that never began", async () => {
+  it("returns 409 CONFLICT for a meeting that never began", async () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
 
@@ -641,7 +639,7 @@ describe("meeting and integration handlers", () => {
     );
 
     expect(response.status).toBe(409);
-    expect((await response.json()).error.code).toBe("MEETING_NOT_STARTED");
+    expect((await response.json()).error.code).toBe("CONFLICT");
   });
 
   it("ends a meeting with the updated note and starts the meeting analysis", async () => {

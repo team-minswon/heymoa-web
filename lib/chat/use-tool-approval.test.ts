@@ -79,7 +79,7 @@ describe("useToolApproval", () => {
   });
 
   it("★ 자리가 없다는 503은 terminal이 아니다 — 잠금을 풀고 토스트한다", async () => {
-    failWith("AGENT_CHAT_CAPACITY_EXCEEDED", "잠시 뒤 다시 시도해 주세요.");
+    failWith("SERVICE_UNAVAILABLE", "잠시 뒤 다시 시도해 주세요.");
     const { result } = render(pending("a1"), "awaiting_approval");
     await act(async () => result.current.approve("APPROVED"));
     expect(result.current.card?.status).toEqual({ kind: "open" });

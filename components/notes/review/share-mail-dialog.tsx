@@ -59,10 +59,7 @@ import { useDocLanguage } from "@/lib/i18n/use-doc-language";
 
 const MAX_MESSAGE_LENGTH = 1000;
 
-const RECIPIENT_CODES = new Set([
-  "SHARE_MAIL_INVALID_RECIPIENT",
-  "SHARE_MAIL_TOO_MANY_RECIPIENTS",
-]);
+const RECIPIENT_CODES = new Set(["SHARE_MAIL_INVALID_RECIPIENT"]);
 
 export function ShareMailDialog({
   open,

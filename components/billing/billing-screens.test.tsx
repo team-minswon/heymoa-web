@@ -1011,7 +1011,7 @@ describe("첫 구독 결제 페이지", () => {
     serveCardSubmit(() =>
       ++calls === 1
         ? failure(
-            "BILLING_CARD_RATE_LIMITED",
+            "RATE_LIMITED",
             "서버가 정한 시도 제한 문구",
             429
           )
@@ -1500,7 +1500,7 @@ describe("등록 결과 — 상태별 화면", () => {
   it("남의 등록이거나 없으면 찾을 수 없다고 알린다", async () => {
     server.use(
       http.get("*/v1/me/billing/setups/S1", () =>
-        failure("BILLING_SETUP_NOT_FOUND", "카드 등록을 찾을 수 없습니다.", 404)
+        failure("NOT_FOUND", "카드 등록을 찾을 수 없습니다.", 404)
       )
     );
     renderIn(<BillingSetupResultPage setupId="S1" />);

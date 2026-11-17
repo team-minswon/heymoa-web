@@ -219,13 +219,13 @@ describe("apiFetch 실패 응답", () => {
         success: false,
         data: null,
         error: {
-          code: "INVITATION_RATE_LIMITED",
+          code: "RATE_LIMITED",
           message: "지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.",
         },
       })
     );
 
-    expect(errorCodeOf(error)).toBe("INVITATION_RATE_LIMITED");
+    expect(errorCodeOf(error)).toBe("RATE_LIMITED");
     expect((error as ApiError).retryAfterMs).toBeNull();
   });
 });

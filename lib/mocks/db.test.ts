@@ -481,7 +481,7 @@ describe("workspace member management", () => {
   it("역할 변경 대상이 멤버가 아니면 404 코드로 던진다", () => {
     expect(() =>
       mockDb.changeMemberRole(WORKSPACE_ID, "01K9999999999", "ADMIN")
-    ).toThrow("WORKSPACE_MEMBER_NOT_FOUND");
+    ).toThrow("NOT_FOUND");
   });
 
   it.each([
@@ -550,7 +550,7 @@ describe("workspace member management", () => {
 
   it("추방 대상이 멤버가 아니면 404 코드로 던진다", () => {
     expect(() => mockDb.removeMember(WORKSPACE_ID, "01K9999999999")).toThrow(
-      "WORKSPACE_MEMBER_NOT_FOUND"
+      "NOT_FOUND"
     );
   });
 
@@ -725,7 +725,7 @@ describe("meeting and analysis", () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
 
-    expect(() => mockDb.endMeeting(note.noteId)).toThrow("MEETING_NOT_STARTED");
+    expect(() => mockDb.endMeeting(note.noteId)).toThrow("CONFLICT");
   });
 
   it("refuses to start transcription on an ended meeting", () => {
@@ -822,9 +822,7 @@ describe("only the meeting starter can operate a meeting", () => {
     const fresh = mockDb.createNote(projectId, { title: "아직 시작 전" });
 
     expect(fresh.meetingStartedBy).toBeNull();
-    expect(() => mockDb.endMeeting(fresh.noteId)).toThrow(
-      "MEETING_NOT_STARTED"
-    );
+    expect(() => mockDb.endMeeting(fresh.noteId)).toThrow("CONFLICT");
   });
 
   it("allows them once recording has started", () => {

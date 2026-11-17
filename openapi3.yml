@@ -203,7 +203,7 @@ paths:
       tags:
       - Feedbacks
       summary: 문의·피드백 접수
-      description: 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지이고, 넘기면 429(FEEDBACK_RATE_LIMITED)다. message 가 비었거나 1500자를 넘는 등 본문이 검증을 통과하지 못하면 400(BAD_REQUEST)이다.
+      description: 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지이고, 넘기면 429(RATE_LIMITED)다. message 가 비었거나 1500자를 넘는 등 본문이 검증을 통과하지 못하면 400(BAD_REQUEST)이다.
       operationId: createFeedback
       requestBody:
         content:
@@ -269,13 +269,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                FEEDBACK_RATE_LIMITED:
+                RATE_LIMITED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: FEEDBACK_RATE_LIMITED
-                      message: 문의를 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.
+                      code: RATE_LIMITED
+                      message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
       security:
       - accessCookie: []
@@ -493,13 +493,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                AGENT_DELEGATION_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: AGENT_DELEGATION_NOT_FOUND
-                      message: 연결을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '204':
           description: 처리 성공
@@ -1064,7 +1064,7 @@ paths:
                     data: null
                     error:
                       code: TRANSCRIPTION_SESSION_NOT_FOUND
-                      message: 전사 세션을 찾을 수 없습니다.
+                      message: 녹음을 찾을 수 없습니다.
                       details: null
                 NOTE_NOT_FOUND:
                   value:
@@ -1121,13 +1121,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                USER_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: USER_NOT_FOUND
-                      message: 사용자를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '200':
           description: 현재 사용자 조회 성공
@@ -1308,7 +1308,7 @@ paths:
                     data: null
                     error:
                       code: WITHDRAWAL_CONFIRMATION_MISMATCH
-                      message: 확인 문구가 맞지 않습니다. 「회원 탈퇴」를 정확히 입력해 주세요.
+                      message: 확인 문구가 맞지 않습니다. 회원 탈퇴라고 정확히 입력해 주세요.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -1966,13 +1966,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                AGENT_DELEGATION_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: AGENT_DELEGATION_NOT_FOUND
-                      message: 연결을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -2087,13 +2087,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                INVITATION_ACCESS_DENIED:
+                FORBIDDEN:
                   value:
                     success: false
                     data: null
                     error:
-                      code: INVITATION_ACCESS_DENIED
-                      message: 초대를 처리할 권한이 없습니다.
+                      code: FORBIDDEN
+                      message: 권한이 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -2171,13 +2171,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                INVITATION_ACCESS_DENIED:
+                FORBIDDEN:
                   value:
                     success: false
                     data: null
                     error:
-                      code: INVITATION_ACCESS_DENIED
-                      message: 초대를 처리할 권한이 없습니다.
+                      code: FORBIDDEN
+                      message: 권한이 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌
@@ -2482,14 +2482,6 @@ paths:
                       code: MEETING_RECORDING
                       message: 기록 중인 회의는 일시정지한 뒤 종료할 수 있습니다.
                       details: null
-                MEETING_NOT_STARTED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: MEETING_NOT_STARTED
-                      message: 아직 시작하지 않은 회의입니다.
-                      details: null
                 MEETING_ALREADY_ENDED:
                   value:
                     success: false
@@ -2497,6 +2489,14 @@ paths:
                     error:
                       code: MEETING_ALREADY_ENDED
                       message: 이미 종료된 회의입니다.
+                      details: null
+                CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: CONFLICT
+                      message: 지금 상태에서는 처리할 수 없습니다. 새로 고친 뒤 다시 시도해 주세요.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -2599,13 +2599,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                MEETING_REVIEW_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: MEETING_REVIEW_NOT_FOUND
-                      message: 검토본 또는 항목을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -3350,7 +3350,7 @@ paths:
                     data: null
                     error:
                       code: ACTIVE_TRANSCRIPTION_SESSION
-                      message: 이미 진행 가능한 전사 세션이 있습니다.
+                      message: 이미 진행 중인 녹음이 있습니다.
                       details: null
                 RECORDER_DISCONNECTED:
                   value:
@@ -3439,13 +3439,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                NOTIFICATION_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: NOTIFICATION_NOT_FOUND
-                      message: 알림을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -4295,13 +4295,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                INVITATION_RATE_LIMITED:
+                RATE_LIMITED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: INVITATION_RATE_LIMITED
-                      message: 지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.
+                      code: RATE_LIMITED
+                      message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -4857,7 +4857,7 @@ paths:
                     data: null
                     error:
                       code: ANALYSIS_JOB_NOT_FOUND
-                      message: 분석 잡을 찾을 수 없습니다.
+                      message: 분석을 찾을 수 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -5313,13 +5313,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_GUEST_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_GUEST_NOT_FOUND
-                      message: 임시 참여자를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌
@@ -5526,13 +5526,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                SPEAKER_LABEL_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: SPEAKER_LABEL_NOT_FOUND
-                      message: 그 화자를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '422':
           description: '422'
@@ -5654,13 +5654,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_GUEST_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_GUEST_NOT_FOUND
-                      message: 임시 참여자를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -5769,13 +5769,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_GUEST_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_GUEST_NOT_FOUND
-                      message: 임시 참여자를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -5849,13 +5849,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                INTEGRATION_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: INTEGRATION_NOT_FOUND
-                      message: 연동을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -6118,13 +6118,13 @@ paths:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
                       details: null
-                WORKSPACE_MEMBER_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_MEMBER_NOT_FOUND
-                      message: 워크스페이스 멤버를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '400':
           description: 잘못된 요청
@@ -6261,13 +6261,13 @@ paths:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
                       details: null
-                WORKSPACE_MEMBER_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_MEMBER_NOT_FOUND
-                      message: 워크스페이스 멤버를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '400':
           description: 잘못된 요청
@@ -6739,7 +6739,7 @@ paths:
                     data: null
                     error:
                       code: AGENT_CHAT_TURN_NOT_FOUND
-                      message: 요청한 턴을 찾을 수 없습니다.
+                      message: 요청한 답변을 찾을 수 없습니다.
                       details: null
                 AGENT_CHAT_NOT_FOUND:
                   value:
@@ -6811,7 +6811,7 @@ paths:
                     data: null
                     error:
                       code: AGENT_CHAT_STREAM_GONE
-                      message: 스트림이 사라졌습니다. 히스토리를 다시 읽어 주세요.
+                      message: 답변을 이어 받을 수 없습니다. 대화를 다시 불러와 주세요.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -6834,7 +6834,7 @@ paths:
                     data: null
                     error:
                       code: AGENT_CHAT_TURN_NOT_FOUND
-                      message: 요청한 턴을 찾을 수 없습니다.
+                      message: 요청한 답변을 찾을 수 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -6861,13 +6861,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                AGENT_CHAT_CAPACITY_EXCEEDED:
+                SERVICE_UNAVAILABLE:
                   value:
                     success: false
                     data: null
                     error:
-                      code: AGENT_CHAT_CAPACITY_EXCEEDED
-                      message: 지금은 연결이 많아 스트림을 열 수 없습니다.
+                      code: SERVICE_UNAVAILABLE
+                      message: 잠시 후 다시 시도해 주세요.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -7315,13 +7315,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                TRANSCRIPT_SEGMENT_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: TRANSCRIPT_SEGMENT_NOT_FOUND
-                      message: 그 발화를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌
@@ -7330,13 +7330,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                SEGMENT_NOT_DIARIZED:
+                DIARIZATION_NOT_MAPPED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: SEGMENT_NOT_DIARIZED
-                      message: 화자가 나뉘지 않은 발화입니다.
+                      code: DIARIZATION_NOT_MAPPED
+                      message: 화자 분리가 아직 끝나지 않았습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -7414,13 +7414,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                CONCURRENT_GUEST_LINK:
+                CONFLICT:
                   value:
                     success: false
                     data: null
                     error:
-                      code: CONCURRENT_GUEST_LINK
-                      message: 연동 중에 회의가 바뀌었습니다. 다시 시도해 주세요.
+                      code: CONFLICT
+                      message: 지금 상태에서는 처리할 수 없습니다. 새로 고친 뒤 다시 시도해 주세요.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -7429,21 +7429,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_MEMBER_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_MEMBER_NOT_FOUND
-                      message: 워크스페이스 멤버를 찾을 수 없습니다.
-                      details: null
-                WORKSPACE_GUEST_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_GUEST_NOT_FOUND
-                      message: 임시 참여자를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -7535,21 +7527,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_MEMBER_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_MEMBER_NOT_FOUND
-                      message: 워크스페이스 멤버를 찾을 수 없습니다.
-                      details: null
-                WORKSPACE_GUEST_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_GUEST_NOT_FOUND
-                      message: 임시 참여자를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '403':
           description: 권한 없음
@@ -7906,7 +7890,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -8050,7 +8034,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -8211,13 +8195,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                DESKTOP_LOGIN_RATE_LIMITED:
+                RATE_LIMITED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: DESKTOP_LOGIN_RATE_LIMITED
-                      message: 로그인 요청이 많습니다. 잠시 후 다시 시도해 주세요.
+                      code: RATE_LIMITED
+                      message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
         '503':
           description: '503'
@@ -8753,14 +8737,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                AGENT_DELEGATION_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: AGENT_DELEGATION_NOT_FOUND
-                      message: 연결을 찾을 수 없습니다.
-                      details: null
                 WORKSPACE_NOT_FOUND:
                   value:
                     success: false
@@ -8768,6 +8744,14 @@ paths:
                     error:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -8937,7 +8921,7 @@ paths:
                     data: null
                     error:
                       code: SHARE_MAIL_INVALID_RECIPIENT
-                      message: 받는 사람 이메일 주소를 확인해 주세요.
+                      message: 받는 사람을 확인해 주세요. 올바른 이메일 주소로 한 번에 10명까지 보낼 수 있습니다.
                       details: null
                 SHARE_MAIL_FILE_TOO_LARGE:
                   value:
@@ -8946,14 +8930,6 @@ paths:
                     error:
                       code: SHARE_MAIL_FILE_TOO_LARGE
                       message: 첨부 파일은 10MB 이하여야 합니다.
-                      details: null
-                SHARE_MAIL_TOO_MANY_RECIPIENTS:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: SHARE_MAIL_TOO_MANY_RECIPIENTS
-                      message: 받는 사람은 한 번에 10명까지 지정할 수 있습니다.
                       details: null
                 SHARE_MAIL_MESSAGE_TOO_LONG:
                   value:
@@ -8995,13 +8971,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                SHARE_MAIL_RATE_LIMITED:
+                RATE_LIMITED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: SHARE_MAIL_RATE_LIMITED
-                      message: 메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.
+                      code: RATE_LIMITED
+                      message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
       security:
       - accessCookie: []
@@ -9019,7 +8995,7 @@ paths:
       tags:
       - Notes
       summary: 회의록 공유 메일 발송 상태 조회
-      description: 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `SHARE_MAIL_NOT_FOUND` 다. 상태는 SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
+      description: 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `NOT_FOUND` 다. 상태는 SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
       operationId: getNoteShareMail
       parameters:
       - name: noteId
@@ -9074,13 +9050,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                SHARE_MAIL_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: SHARE_MAIL_NOT_FOUND
-                      message: 공유 메일을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -9206,13 +9182,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_MEMBER_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_MEMBER_NOT_FOUND
-                      message: 워크스페이스 멤버를 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -10269,12 +10245,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                UNSUBSCRIBE_RATE_LIMITED:
+                RATE_LIMITED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: UNSUBSCRIBE_RATE_LIMITED
+                      code: RATE_LIMITED
                       message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
       security: []
@@ -10311,13 +10287,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                EVENT_STREAM_CONNECTION_LIMIT_EXCEEDED:
+                RATE_LIMITED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: EVENT_STREAM_CONNECTION_LIMIT_EXCEEDED
-                      message: 이벤트 스트림 연결이 너무 많습니다.
+                      code: RATE_LIMITED
+                      message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
         '503':
           description: '503'
@@ -10331,13 +10307,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                EVENT_STREAM_CAPACITY_EXCEEDED:
+                SERVICE_UNAVAILABLE:
                   value:
                     success: false
                     data: null
                     error:
-                      code: EVENT_STREAM_CAPACITY_EXCEEDED
-                      message: 지금은 연결이 많아 이벤트 스트림을 열 수 없습니다.
+                      code: SERVICE_UNAVAILABLE
+                      message: 잠시 후 다시 시도해 주세요.
                       details: null
       security:
       - accessCookie: []
@@ -10415,7 +10391,7 @@ paths:
       tags:
       - Feedbacks
       summary: 문의 답변 등록(운영자)
-      description: 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다. 문의가 없으면 404(FEEDBACK_NOT_FOUND)다.
+      description: 운영자가 문의에 답변을 등록한다. 다시 부르면 답변을 고치고 답변 시각을 새로 적는다. 처음 등록하면 사용자에게 알리고(인앱 알림·메일, 각각 사용자 알림 설정을 따른다), 고칠 때는 renotify 가 true 일 때만 다시 알린다. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다. 문의가 없으면 404(NOT_FOUND)다.
       operationId: registerFeedbackAnswer
       parameters:
       - name: feedbackId
@@ -10495,15 +10471,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
-                      details: null
-                FEEDBACK_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: FEEDBACK_NOT_FOUND
-                      message: 문의를 찾을 수 없습니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -10985,13 +10953,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BILLING_SETUP_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BILLING_SETUP_NOT_FOUND
-                      message: 카드 등록을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -11437,7 +11405,7 @@ paths:
       tags:
       - Billing
       summary: 공간 결제 상세
-      description: ADMIN 이 이 공간의 결제 한 건을 본다. 비멤버는 404, ADMIN 이 아니면 403, 이 공간의 결제가 아니면 404 BILLING_PAYMENT_NOT_FOUND.
+      description: ADMIN 이 이 공간의 결제 한 건을 본다. 비멤버는 404, ADMIN 이 아니면 403, 이 공간의 결제가 아니면 404 NOT_FOUND.
       operationId: getBillingPayment
       parameters:
       - name: workspaceId
@@ -11520,14 +11488,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BILLING_PAYMENT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BILLING_PAYMENT_NOT_FOUND
-                      message: 결제를 찾을 수 없습니다.
-                      details: null
                 WORKSPACE_NOT_FOUND:
                   value:
                     success: false
@@ -11535,6 +11495,14 @@ paths:
                     error:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+                NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -11856,7 +11824,7 @@ paths:
       tags:
       - Billing
       summary: 카드 제출(빌키 발급)
-      description: 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다. PG 발급까지 간 제출이 사용자당 10분 5회·공간당 1시간 10회를 넘으면 PG 를 부르지 않고 429 BILLING_CARD_RATE_LIMITED 다.
+      description: 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다. PG 발급까지 간 제출이 사용자당 10분 5회·공간당 1시간 10회를 넘으면 PG 를 부르지 않고 429 RATE_LIMITED 다.
       operationId: submitBillingCard
       parameters:
       - name: workspaceId
@@ -11999,13 +11967,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BILLING_SETUP_NOT_FOUND:
+                NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BILLING_SETUP_NOT_FOUND
-                      message: 카드 등록을 찾을 수 없습니다.
+                      code: NOT_FOUND
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌
@@ -12029,13 +11997,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BILLING_CARD_RATE_LIMITED:
+                RATE_LIMITED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BILLING_CARD_RATE_LIMITED
-                      message: 카드 등록 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.
+                      code: RATE_LIMITED
+                      message: 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.
                       details: null
       security:
       - accessCookie: []
@@ -12144,7 +12112,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -12249,7 +12217,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -12299,7 +12267,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -12308,7 +12276,7 @@ paths:
       tags:
       - Billing
       summary: 승인 시도 확정(운영자)
-      description: 수동 확인이 섰거나 결과 불명인 승인 시도를 운영자가 PG 화면에서 확인한 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 시도는 PG 확정과 같은 길로 반영하고(승인이면 권한 지급 또는 보상 환불, 미승인이면 확정 거절), 이미 확정된 시도는 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 시도는 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      description: 수동 확인이 섰거나 결과 불명인 승인 시도를 운영자가 PG 화면에서 확인한 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 시도는 PG 확정과 같은 길로 반영하고(승인이면 권한 지급 또는 보상 환불, 미승인이면 확정 거절), 이미 확정된 시도는 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 시도는 404 NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
       operationId: resolveBillingAttempt
       parameters:
       - name: attemptId
@@ -12407,21 +12375,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BILLING_PAYMENT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BILLING_PAYMENT_NOT_FOUND
-                      message: 결제를 찾을 수 없습니다.
-                      details: null
                 NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌
@@ -12453,7 +12413,7 @@ paths:
       tags:
       - Billing
       summary: 결제 전액 환불 접수(운영자)
-      description: 문의를 받은 운영자가 결제 한 건을 전액 환불한다. 환불 조건 검사는 없고 PG 를 부르지 않는다 — 환불 의도를 기록하고(202) 지금 유료 기간의 결제면 다음 갱신을 멈추며, 취소는 서버 worker 가 보낸다. 이미 진행 중이거나 끝난 환불이 있으면 그 환불을 돌려준다. 없는 결제는 404 BILLING_PAYMENT_NOT_FOUND, 승인되지 않은(결과 불명 포함) 결제는 409 BILLING_STATE_CHANGED, 같은 구독에 미정산 거래가 있으면 409 BILLING_IN_PROGRESS. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      description: 문의를 받은 운영자가 결제 한 건을 전액 환불한다. 환불 조건 검사는 없고 PG 를 부르지 않는다 — 환불 의도를 기록하고(202) 지금 유료 기간의 결제면 다음 갱신을 멈추며, 취소는 서버 worker 가 보낸다. 이미 진행 중이거나 끝난 환불이 있으면 그 환불을 돌려준다. 없는 결제는 404 NOT_FOUND, 승인되지 않은(결과 불명 포함) 결제는 409 BILLING_STATE_CHANGED, 같은 구독에 미정산 거래가 있으면 409 BILLING_IN_PROGRESS. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
       operationId: requestOperatorRefund
       parameters:
       - name: paymentId
@@ -12552,15 +12512,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
-                      details: null
-                BILLING_PAYMENT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BILLING_PAYMENT_NOT_FOUND
-                      message: 결제를 찾을 수 없습니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌
@@ -12600,7 +12552,7 @@ paths:
       tags:
       - Billing
       summary: 환불 확정(운영자)
-      description: 수동 확인이 섰거나 결과 불명인 환불을 운영자가 PG 화면에서 확인한 취소 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 환불은 PG 확정과 같은 길로 반영하고, 이미 확정된 환불은 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 환불은 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+      description: 수동 확인이 섰거나 결과 불명인 환불을 운영자가 PG 화면에서 확인한 취소 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 환불은 PG 확정과 같은 길로 반영하고, 이미 확정된 환불은 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 환불은 404 NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
       operationId: resolveBillingRefund
       parameters:
       - name: refundId
@@ -12705,15 +12657,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
-                      details: null
-                BILLING_PAYMENT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BILLING_PAYMENT_NOT_FOUND
-                      message: 결제를 찾을 수 없습니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌
@@ -12849,7 +12793,7 @@ paths:
                     data: null
                     error:
                       code: NOT_FOUND
-                      message: 존재하지 않는 리소스입니다.
+                      message: 요청한 내용을 찾을 수 없습니다.
                       details: null
         '409':
           description: 요청 상태 충돌

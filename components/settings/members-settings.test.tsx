@@ -342,7 +342,7 @@ describe("MembersSettings", () => {
     state.createError = new ApiError(
       429,
       {
-        code: "INVITATION_RATE_LIMITED",
+        code: "RATE_LIMITED",
         message: "지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.",
       },
       null

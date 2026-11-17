@@ -71,7 +71,7 @@ describe("mockDb.assignSpeaker", () => {
 
   it("없는 라벨을 거절한다", () => {
     expect(() => mockDb.assignSpeaker(NOTE_ID, "Z", {})).toThrow(
-      "SPEAKER_LABEL_NOT_FOUND"
+      "NOT_FOUND"
     );
   });
 
@@ -238,7 +238,7 @@ describe("mockDb.assignSegmentSpeaker", () => {
   it("이 회의의 발화가 아니면 거절한다", () => {
     expect(() =>
       mockDb.assignSegmentSpeaker(NOTE_ID, "01K9999999999", {})
-    ).toThrow("TRANSCRIPT_SEGMENT_NOT_FOUND");
+    ).toThrow("NOT_FOUND");
   });
 
   it("화자가 나뉘지 않은 발화는 거절한다", () => {
@@ -246,7 +246,7 @@ describe("mockDb.assignSegmentSpeaker", () => {
 
     expect(() =>
       mockDb.assignSegmentSpeaker(NOTE_ID, "01K0000000064", { participantId: target.participantId })
-    ).toThrow("SEGMENT_NOT_DIARIZED");
+    ).toThrow("DIARIZATION_NOT_MAPPED");
   });
 
   it("이 회의의 참여 기록이 아니면 거절한다", () => {

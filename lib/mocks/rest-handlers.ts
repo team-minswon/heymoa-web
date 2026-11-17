@@ -71,19 +71,15 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
   PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
   NOT_WORKSPACE_MEMBER: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.",
-  SPEAKER_LABEL_NOT_FOUND: "그 화자를 찾을 수 없습니다.",
+  NOT_FOUND: "요청한 내용을 찾을 수 없습니다.",
   DIARIZATION_NOT_MAPPED: "화자 분리가 아직 끝나지 않았습니다.",
   PARTICIPANT_NOT_IN_NOTE: "이 회의의 화자로 지정할 수 없는 대상입니다.",
-  TRANSCRIPT_SEGMENT_NOT_FOUND: "그 발화를 찾을 수 없습니다.",
-  SEGMENT_NOT_DIARIZED: "화자가 나뉘지 않은 발화입니다.",
-  WORKSPACE_GUEST_NOT_FOUND: "임시 참여자를 찾을 수 없습니다.",
-  WORKSPACE_MEMBER_NOT_FOUND: "워크스페이스 멤버를 찾을 수 없습니다.",
-  CONCURRENT_GUEST_LINK: "연동 중에 회의가 바뀌었습니다. 다시 시도해 주세요.",
+  CONFLICT:
+    "지금 상태에서는 처리할 수 없습니다. 새로 고친 뒤 다시 시도해 주세요.",
   NOTE_PARTICIPANTS_CONFLICT:
     "참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.",
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
-  AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
   AGENT_OAUTH_REQUEST_NOT_FOUND:
     "연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.",
   AGENT_ACCESS_DISABLED:
@@ -93,7 +89,7 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
 };
 
 const SESSION_CONFLICTS: Record<string, string> = {
-  ACTIVE_TRANSCRIPTION_SESSION: "이미 진행 가능한 스크립트 세션이 있습니다.",
+  ACTIVE_TRANSCRIPTION_SESSION: "이미 진행 중인 녹음이 있습니다.",
   MEETING_ALREADY_ENDED: "이미 종료된 회의입니다.",
 };
 
@@ -104,20 +100,14 @@ const FORBIDDEN_CODES = new Set([
 ]);
 
 const NOT_FOUND_CODES = new Set([
-  "AGENT_DELEGATION_NOT_FOUND",
+  "NOT_FOUND",
   "AGENT_OAUTH_REQUEST_NOT_FOUND",
   "NOTE_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
   "PROJECT_NOT_FOUND",
   "TRANSCRIPTION_SESSION_NOT_FOUND",
   "ANALYSIS_JOB_NOT_FOUND",
-  "INTEGRATION_NOT_FOUND",
-  "NOTIFICATION_NOT_FOUND",
   "AGENT_CHAT_NOT_FOUND",
-  "SPEAKER_LABEL_NOT_FOUND",
-  "WORKSPACE_GUEST_NOT_FOUND",
-  "WORKSPACE_MEMBER_NOT_FOUND",
-  "TRANSCRIPT_SEGMENT_NOT_FOUND",
 ]);
 
 const BAD_REQUEST_CODES = new Set(["NOT_WORKSPACE_MEMBER", "BAD_REQUEST"]);
@@ -137,8 +127,7 @@ const KNOWN_CODES = new Set([
   "NOT_MEETING_STARTER",
   "DIARIZATION_NOT_MAPPED",
   "PARTICIPANT_NOT_IN_NOTE",
-  "SEGMENT_NOT_DIARIZED",
-  "CONCURRENT_GUEST_LINK",
+  "CONFLICT",
   "NOTE_PARTICIPANTS_CONFLICT",
   "MEETING_ALREADY_ENDED",
 ]);
@@ -327,27 +316,22 @@ async function resultOf<T>(
 }
 
 const MEMBER_ERROR_MESSAGES: Record<string, string> = {
-  WORKSPACE_MEMBER_NOT_FOUND: "워크스페이스 멤버를 찾을 수 없습니다.",
+  NOT_FOUND: "요청한 내용을 찾을 수 없습니다.",
   WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
   LAST_WORKSPACE_ADMIN: "워크스페이스에는 관리자가 최소 한 명 있어야 합니다.",
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
-  AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
   WORKSPACE_NAME_MISMATCH:
     "워크스페이스 이름이 맞지 않습니다. 다시 입력해 주세요.",
   WITHDRAWAL_CONFIRMATION_MISMATCH:
-    "확인 문구가 맞지 않습니다. 「회원 탈퇴」를 정확히 입력해 주세요.",
+    "확인 문구가 맞지 않습니다. 회원 탈퇴라고 정확히 입력해 주세요.",
   DELETION_PLAN_CHANGED:
     "그사이 워크스페이스 상황이 바뀌었습니다. 목록을 다시 확인해 주세요.",
   RECORDING_IN_PROGRESS:
     "녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.",
 };
 
-const MEMBER_NOT_FOUND_CODES = new Set([
-  "WORKSPACE_MEMBER_NOT_FOUND",
-  "WORKSPACE_NOT_FOUND",
-  "AGENT_DELEGATION_NOT_FOUND",
-]);
+const MEMBER_NOT_FOUND_CODES = new Set(["NOT_FOUND", "WORKSPACE_NOT_FOUND"]);
 const MEMBER_FORBIDDEN_CODES = new Set(["WORKSPACE_ACCESS_DENIED"]);
 const MEMBER_BAD_REQUEST_CODES = new Set([
   "BAD_REQUEST",
@@ -879,7 +863,7 @@ export const restHandlers = [
     }
     if (recipients.length > 10) {
       return fail(
-        "SHARE_MAIL_TOO_MANY_RECIPIENTS",
+        "SHARE_MAIL_INVALID_RECIPIENT",
         "받는 사람은 한 번에 10명까지 지정할 수 있습니다."
       );
     }
@@ -902,8 +886,8 @@ export const restHandlers = [
     const sent = shareMailSent.get(slot) ?? 0;
     if (sent >= SHARE_MAIL_HOURLY_LIMIT) {
       return fail(
-        "SHARE_MAIL_RATE_LIMITED",
-        "메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.",
+        "RATE_LIMITED",
+        "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
         429
       );
     }
@@ -922,8 +906,8 @@ export const restHandlers = [
           success: false,
           data: null,
           error: {
-            code: "SHARE_MAIL_NOT_FOUND",
-            message: "공유 메일을 찾을 수 없습니다.",
+            code: "NOT_FOUND",
+            message: "요청한 내용을 찾을 수 없습니다.",
             details: null,
           },
         },
@@ -1122,7 +1106,7 @@ export const restHandlers = [
             ((await request.json()) as { displayName?: string }).displayName ??
               ""
           ),
-        notFound("WORKSPACE_GUEST_NOT_FOUND", "임시 참여자를 찾을 수 없습니다.")
+        notFound("NOT_FOUND", "요청한 내용을 찾을 수 없습니다.")
       )
   ),
   http.delete("*/v1/workspaces/:workspaceId/guests/:guestId", ({ params }) =>
@@ -1141,7 +1125,7 @@ export const restHandlers = [
             ((await request.json()) as { targetUserId?: string })
               .targetUserId ?? ""
           ),
-        notFound("WORKSPACE_GUEST_NOT_FOUND", "임시 참여자를 찾을 수 없습니다.")
+        notFound("NOT_FOUND", "요청한 내용을 찾을 수 없습니다.")
       )
   ),
   http.post(
@@ -1155,7 +1139,7 @@ export const restHandlers = [
             ((await request.json()) as { targetUserId?: string })
               .targetUserId ?? ""
           ),
-        notFound("WORKSPACE_GUEST_NOT_FOUND", "임시 참여자를 찾을 수 없습니다.")
+        notFound("NOT_FOUND", "요청한 내용을 찾을 수 없습니다.")
       )
   ),
   http.patch("*/v1/notes/:noteId", async ({ request, params }) =>
@@ -1408,10 +1392,7 @@ export const restHandlers = [
               }
             ).displayName ?? null
           ),
-        notFound(
-          "WORKSPACE_MEMBER_NOT_FOUND",
-          "워크스페이스 멤버를 찾을 수 없습니다."
-        )
+        notFound("NOT_FOUND", "요청한 내용을 찾을 수 없습니다.")
       )
   ),
   // 본문 파싱은 memberResult 안에서 합니다. 밖에서 파싱하면 SyntaxError 가 새어 MSW 가 500 과 스택을 돌려줍니다.

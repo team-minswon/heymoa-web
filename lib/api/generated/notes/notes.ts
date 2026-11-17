@@ -2591,7 +2591,7 @@ export const getGetNoteShareMailUrl = (noteId: string, mailId: string) => {
 };
 
 /**
- * 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `SHARE_MAIL_NOT_FOUND` 다. 상태는 SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
+ * 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `NOT_FOUND` 다. 상태는 SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
  * @summary 회의록 공유 메일 발송 상태 조회
  */
 export const getNoteShareMail = async (

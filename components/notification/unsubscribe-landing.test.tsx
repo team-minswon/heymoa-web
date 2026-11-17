@@ -165,7 +165,7 @@ describe("UnsubscribeLanding", () => {
     server.use(
       http.get(PATH, () => ok(false)),
       http.post(PATH, () =>
-        fail(429, "UNSUBSCRIBE_RATE_LIMITED", "요청이 너무 많습니다.")
+        fail(429, "RATE_LIMITED", "요청이 너무 많습니다.")
       )
     );
     renderLanding();

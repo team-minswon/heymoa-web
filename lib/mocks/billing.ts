@@ -687,7 +687,7 @@ function workspacePayment(workspaceId: string, paymentId: string) {
   requireAdmin(workspaceId);
   const payment = state.payments[paymentId];
   if (!payment || payment.workspaceId !== workspaceId)
-    failWith("BILLING_PAYMENT_NOT_FOUND", 404, "결제를 찾을 수 없습니다.");
+    failWith("NOT_FOUND", 404, "요청한 내용을 찾을 수 없습니다.");
   return paymentView(payment);
 }
 
@@ -995,8 +995,7 @@ function setupStatus(setup: Setup, tick: boolean) {
 
 function setupOf(setupId: string) {
   const setup = state.setups[setupId];
-  if (!setup)
-    failWith("BILLING_SETUP_NOT_FOUND", 404, "카드 등록을 찾을 수 없습니다.");
+  if (!setup) failWith("NOT_FOUND", 404, "요청한 내용을 찾을 수 없습니다.");
   return setup;
 }
 
@@ -1089,9 +1088,9 @@ async function submitCard(
   requireAdmin(workspaceId);
   if (currentScenario() === "cardRateLimited")
     failWith(
-      "BILLING_CARD_RATE_LIMITED",
+      "RATE_LIMITED",
       429,
-      "카드 등록 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."
+      "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
     );
   const setup = setupOf(setupId);
   const body = (await request.json().catch(() => ({}))) as Record<

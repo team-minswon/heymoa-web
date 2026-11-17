@@ -22,7 +22,7 @@ const send = () => {
   return fetch("http://localhost/v1/notes/01K0000000402/share-mails", { method: "POST", body: form });
 };
 
-it("회의록 메일은 한 시간에 30건까지 받고, 넘으면 429 SHARE_MAIL_RATE_LIMITED 다", async () => {
+it("회의록 메일은 한 시간에 30건까지 받고, 넘으면 429 RATE_LIMITED 다", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-16T10:00:00Z"));
 
@@ -30,8 +30,8 @@ it("회의록 메일은 한 시간에 30건까지 받고, 넘으면 429 SHARE_MA
   const limited = await send();
   expect(limited.status).toBe(429);
   expect((await limited.json()).error).toMatchObject({
-    code: "SHARE_MAIL_RATE_LIMITED",
-    message: "메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.",
+    code: "RATE_LIMITED",
+    message: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
   });
 
   vi.advanceTimersByTime(60 * 60 * 1000);
@@ -102,5 +102,5 @@ it("상태 조회는 접수 뒤 잠깐 PENDING 이었다가 SENT 가 되고, @re
   });
   const missing = await fetch("http://localhost/v1/notes/01K0000000402/share-mails/0K9XXXXXXXXXX");
   expect(missing.status).toBe(404);
-  expect((await missing.json()).error.code).toBe("SHARE_MAIL_NOT_FOUND");
+  expect((await missing.json()).error.code).toBe("NOT_FOUND");
 });

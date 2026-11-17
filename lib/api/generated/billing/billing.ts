@@ -1991,7 +1991,7 @@ export const getGetBillingPaymentUrl = (
 };
 
 /**
- * ADMIN 이 이 공간의 결제 한 건을 본다. 비멤버는 404, ADMIN 이 아니면 403, 이 공간의 결제가 아니면 404 BILLING_PAYMENT_NOT_FOUND.
+ * ADMIN 이 이 공간의 결제 한 건을 본다. 비멤버는 404, ADMIN 이 아니면 403, 이 공간의 결제가 아니면 404 NOT_FOUND.
  * @summary 공간 결제 상세
  */
 export const getBillingPayment = async (
@@ -3139,7 +3139,7 @@ export const getSubmitBillingCardUrl = (
 };
 
 /**
- * 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다. PG 발급까지 간 제출이 사용자당 10분 5회·공간당 1시간 10회를 넘으면 PG 를 부르지 않고 429 BILLING_CARD_RATE_LIMITED 다.
+ * 등록을 연 사람이며 지금 ADMIN 인 사람이 카드 정보를 보낸다. 서버는 요청을 처리하는 동안에만 카드 정보를 쓰고(저장·기록하지 않는다) PG 에 빌키 발급을 한 번 보낸다. 발급되면 ISSUED 이고 첫 승인은 서버 tick 이 보낸다(statusUrl 을 다시 읽는다). 거절은 ISSUE_REJECTED, 응답을 잃으면 ISSUE_UNKNOWN 이고 둘 다 새 등록부터다(다시 보내지 않는다). 같은 등록의 동시 제출은 하나만 발급하고 나머지는 지금 상태(ISSUING)를 받는다. 검증 실패는 400 이고 입력값을 싣지 않는다. PG 발급까지 간 제출이 사용자당 10분 5회·공간당 1시간 10회를 넘으면 PG 를 부르지 않고 429 RATE_LIMITED 다.
  * @summary 카드 제출(빌키 발급)
  */
 export const submitBillingCard = async (
@@ -3647,7 +3647,7 @@ export const getResolveBillingAttemptUrl = (attemptId: string) => {
 };
 
 /**
- * 수동 확인이 섰거나 결과 불명인 승인 시도를 운영자가 PG 화면에서 확인한 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 시도는 PG 확정과 같은 길로 반영하고(승인이면 권한 지급 또는 보상 환불, 미승인이면 확정 거절), 이미 확정된 시도는 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 시도는 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * 수동 확인이 섰거나 결과 불명인 승인 시도를 운영자가 PG 화면에서 확인한 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 시도는 PG 확정과 같은 길로 반영하고(승인이면 권한 지급 또는 보상 환불, 미승인이면 확정 거절), 이미 확정된 시도는 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 시도는 404 NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
  * @summary 승인 시도 확정(운영자)
  */
 export const resolveBillingAttempt = async (
@@ -3820,7 +3820,7 @@ export const getRequestOperatorRefundUrl = (paymentId: string) => {
 };
 
 /**
- * 문의를 받은 운영자가 결제 한 건을 전액 환불한다. 환불 조건 검사는 없고 PG 를 부르지 않는다 — 환불 의도를 기록하고(202) 지금 유료 기간의 결제면 다음 갱신을 멈추며, 취소는 서버 worker 가 보낸다. 이미 진행 중이거나 끝난 환불이 있으면 그 환불을 돌려준다. 없는 결제는 404 BILLING_PAYMENT_NOT_FOUND, 승인되지 않은(결과 불명 포함) 결제는 409 BILLING_STATE_CHANGED, 같은 구독에 미정산 거래가 있으면 409 BILLING_IN_PROGRESS. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * 문의를 받은 운영자가 결제 한 건을 전액 환불한다. 환불 조건 검사는 없고 PG 를 부르지 않는다 — 환불 의도를 기록하고(202) 지금 유료 기간의 결제면 다음 갱신을 멈추며, 취소는 서버 worker 가 보낸다. 이미 진행 중이거나 끝난 환불이 있으면 그 환불을 돌려준다. 없는 결제는 404 NOT_FOUND, 승인되지 않은(결과 불명 포함) 결제는 409 BILLING_STATE_CHANGED, 같은 구독에 미정산 거래가 있으면 409 BILLING_IN_PROGRESS. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
  * @summary 결제 전액 환불 접수(운영자)
  */
 export const requestOperatorRefund = async (
@@ -3993,7 +3993,7 @@ export const getResolveBillingRefundUrl = (refundId: string) => {
 };
 
 /**
- * 수동 확인이 섰거나 결과 불명인 환불을 운영자가 PG 화면에서 확인한 취소 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 환불은 PG 확정과 같은 길로 반영하고, 이미 확정된 환불은 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 환불은 404 BILLING_PAYMENT_NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
+ * 수동 확인이 섰거나 결과 불명인 환불을 운영자가 PG 화면에서 확인한 취소 결과로 끝낸다. PG 를 부르지 않는다. 확정 전 환불은 PG 확정과 같은 길로 반영하고, 이미 확정된 환불은 말한 결과가 그 확정과 같을 때만 수동 확인을 내린다. 없는 환불은 404 NOT_FOUND, 대상이 아니거나 결과가 어긋나면 409 BILLING_STATE_CHANGED. 로그인 사용자의 이메일이 운영자 목록(operator.emails)에 없으면 본문 검증보다 먼저 이 서버에 없는 경로와 같은 404(NOT_FOUND)다.
  * @summary 환불 확정(운영자)
  */
 export const resolveBillingRefund = async (
