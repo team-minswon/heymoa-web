@@ -16,7 +16,7 @@ app → feature UI → feature logic → generated API / primitive
 ```
 
 **`components/ui/`는 제품 의미를 모릅니다** — workspace·notes·transcription을 import하지
-않습니다. 어느 폴더가 무엇인지는 [`CLAUDE.md`](../../../CLAUDE.md)의 「어디에 무엇이
+않습니다. `eslint.config.mjs`의 `no-restricted-imports`가 막습니다. 어느 폴더가 무엇인지는 [`CLAUDE.md`](../../../CLAUDE.md)의 「어디에 무엇이
 있나」가 원본입니다. 여기 옮겨 적지 않습니다.
 
 **같은 API query를 여러 자식이 각각 구독하지 않습니다.** 그럴 이유가 없으면 shell이 한 번
@@ -55,6 +55,14 @@ protocol이 React를 알면 파싱을 테스트할 수 없습니다. 지금 전�
   스트림과 폴링이 같은 상태를 이중으로 쓰지 않게 reconcile 지점은 provider 한 곳입니다.
 - 스트림이 목록을 늘리는 화면에서 **follow 의도는 새 DOM이 붙기 전에 읽습니다.** 붙은 뒤에
   재면 이미 밀린 위치를 재게 되어 따라가던 사용자가 떨어집니다.
+
+## 짧은 timer로 순서를 미루지 않습니다
+
+100ms 미만 `setTimeout`(지연 없는 호출 포함)으로 렌더·effect 순서를 맞추지 않습니다. 첫 렌더 여부는
+상태로, effect 안의 상태 연쇄는 reducer나 이벤트 핸들러로 옮깁니다. `eslint.config.mjs`의
+`no-restricted-syntax`가 `app/`·`components/`·`lib/`·`hooks/`에서 막고, 이미 있던 자리는
+`eslint-suppressions.json`에만 있습니다. 고치면 그 줄을 `pnpm lint --prune-suppressions`로 지웁니다.
+늘리지 않습니다.
 
 ## URL을 쓴다고 다 이동은 아닙니다
 
