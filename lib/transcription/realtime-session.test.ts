@@ -378,6 +378,21 @@ describe("BrowserRealtimeSession", () => {
     });
   });
 
+  it("중지 전송이 실패하면 ACK되지 않은 오디오를 손실 안내에 남긴다", async () => {
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.emitChunk(new ArrayBuffer(32_000), 16_000);
+    harness.socket.stop.mockImplementationOnce(() => {
+      throw new Error("transport closed");
+    });
+
+    await harness.controller.stop();
+
+    expect(harness.onFailure).toHaveBeenCalledWith("stop_send_failed", {
+      droppedMs: 1_000,
+    });
+  });
+
   it("connected 를 못 받은 채 폴링이 시작을 풀면 다시 붙어 받은 connected 로 보내고 멈출 수 있다", async () => {
     vi.useFakeTimers();
     const harness = setup();
@@ -1631,14 +1646,14 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     });
   });
 
-  it("stop 응답을 25초까지 기다린다", async () => {
+  it("stop 응답은 발화 저장 재시도까지 45초를 기다린다", async () => {
     vi.useFakeTimers();
     const harness = setup();
     await harness.controller.connect(SESSION_ID);
     harness.server.silentStop = true;
 
     void harness.controller.stop();
-    await vi.advanceTimersByTimeAsync(24_800);
+    await vi.advanceTimersByTimeAsync(44_800);
     expect(harness.onFailure).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(300);
 

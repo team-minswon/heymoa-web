@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Heymoa Realtime Note STOMP API
-  version: 3.4.0
+  version: 3.5.0
   description: |
     브라우저와 Heymoa 서버 사이의 STOMP 1.2 over WebSocket 계약이다.
     브라우저는 연결 직전에 POST /v1/realtime/tickets 로 받은 연결 티켓을 ?ticket= 쿼리로 붙이고,
@@ -153,6 +153,9 @@ channels:
       남은 오디오를 S3 에 올리고(최대 10초) provider 의 마지막 final 을 **최대 10초**(`transcription.soniox.
       final-drain-timeout`) 기다린 뒤 completed를 보낸다. provider 가 끝내 답하지 않아도 completed 다 —
       그 뒤 발화만 못 받는다. 소리는 이미 S3 에 있다.
+      업체 갈래가 종료되고 미저장 발화·공백이 모두 저장된 뒤 오디오를 봉인한다. 저장이나 봉인이 실패하면
+      제한 시간 안에서 재시도하며, 끝내 저장하지 못하면 error(INTERNAL_ERROR)를 보내고 completed 는 보내지 않는다.
+      중지 마무리 중 새 connect 는 소유권을 바꾸지 않고 reattach(STOP_FINALIZING)로 돌려보낸다.
 
       **`finalChunkSeq` 까지 빈칸 없이 S3 에 올라가지 않았으면 completed 대신 reattach(STORE_INCOMPLETE)** 가 온다
       (S3 실패, 받은 번호에 빈칸). 세션은 열려 있다. 다시 connect 해 `durableThroughSeq` 다음부터 보내고 stop 을
@@ -479,6 +482,8 @@ components:
           소켓이 닫힌다. 그 사이 보낸 조각은 받아쓰기에만 쓰이고 ACK 되지 않는다 — 다시 붙어 이어 보내면 저장된다.
         - `BUFFER_FULL`: 이 부착이 S3 에 못 올린 소리가 상한을 넘어 일부를 버렸다. ACK 는 버린 구간을
           건너지 않으므로 다시 붙어 `durableThroughSeq` 다음부터 다시 보내면 채워진다.
+        - `STOP_FINALIZING`: 원본 저장을 확인한 중지 요청이 발화 저장과 봉인을 마무리 중이다.
+          0~500ms 뒤 다시 확인한다. 완료 여부는 세션 상태 조회로도 확인할 수 있다.
         - `STORE_INCOMPLETE`: stop 을 받았는데 `finalChunkSeq` 까지 빈칸 없이 저장하지 못했다. 세션을 끝내지 않았다.
           다시 붙어 이어 보낸 뒤 **stop 을 다시 보낸다.**
 
@@ -498,7 +503,7 @@ components:
             example: 1840
           reason:
             type: string
-            enum: [SERVER_DRAINING, BUFFER_FULL, STORE_INCOMPLETE]
+            enum: [SERVER_DRAINING, BUFFER_FULL, STORE_INCOMPLETE, STOP_FINALIZING]
           overlap:
             type: boolean
             description: |

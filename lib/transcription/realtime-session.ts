@@ -91,7 +91,7 @@ const REATTACH_MAX_DELAY_MS = 5_000;
 const RESUME_WINDOW_MS = 30_000;
 const NOTICE_AFTER_MS = 5_000;
 const RECEIPT_LIMIT_MS = 10_000;
-const STOP_TIMEOUT_MS = 25_000;
+const STOP_TIMEOUT_MS = 45_000;
 const STOP_TOTAL_MS = 60_000;
 const STABLE_ATTACH_MS = 10_000;
 const TRAILING_LIMIT_MS = 30_000;
@@ -326,7 +326,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       socket.stop(finalChunkSeq);
     } catch {
       this.terminalResolve = null;
-      this.fail("stop_send_failed", { droppedMs: 0 });
+      this.fail("stop_send_failed", {
+        droppedMs: Math.round(this.resendBuffer.bytes / BYTES_PER_MS),
+      });
       return "failed";
     }
     const sentAt = Date.now();

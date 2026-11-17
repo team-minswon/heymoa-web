@@ -631,6 +631,75 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.phase).toBe("failed");
   });
 
+  it("서버 완료 전에는 마무리 중을 유지하고 완료 이벤트 뒤에만 해제한다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    let resolveStop!: () => void;
+    harness.controller.stop.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStop = resolve;
+        })
+    );
+    let stopping!: Promise<boolean>;
+    act(() => {
+      stopping = harness.result.current.stop();
+    });
+    expect(harness.result.current.phase).toBe("stopping");
+    expect(harness.result.current.session?.status).not.toBe("COMPLETED");
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(harness.result.current.phase).toBe("stopping");
+    await act(async () => {
+      harness
+        .getCallbacks()
+        .onEvent({ type: "completed", sessionId: session.sessionId });
+      resolveStop();
+      await stopping;
+    });
+    expect(harness.result.current.phase).toBe("completed");
+    await expect(stopping).resolves.toBe(true);
+  });
+
+  it.each([0, 12_300])(
+    "중지 시간 초과 뒤 늦은 완료는 확인 실패만 해소한다: %s ms",
+    async (droppedMs) => {
+      const harness = setup({ enablePolling: true });
+      await act(() =>
+        harness.result.current.start(session.noteId, WORKSPACE_ID)
+      );
+      harness.controller.stop.mockImplementationOnce(async () => {
+        harness.getCallbacks().onFailure("stop_timeout", { droppedMs });
+      });
+      await act(() => harness.result.current.stop());
+      const failure = harness.result.current.error;
+      expect(failure).not.toBeNull();
+      sessionQuery.current = {
+        data: {
+          status: 200,
+          data: {
+            success: true,
+            data: {
+              ...session,
+              status: "COMPLETED",
+              endedAt: "2026-07-15T00:02:00Z",
+            },
+          },
+        },
+        isFetching: false,
+        dataUpdatedAt: Date.now(),
+      };
+      harness.rerender();
+      await waitFor(() =>
+        expect(harness.result.current.phase).toBe("completed")
+      );
+      expect(harness.result.current.error).toBe(
+        droppedMs === 0 ? null : failure
+      );
+    }
+  );
+
   it("returns false when stop times out before a terminal session is reconciled", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1909,9 +1978,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
       })
     );
 
-    expect(harness.result.current.error).toBe(
-      "회의가 끝나 녹음을 마쳤습니다."
-    );
+    expect(harness.result.current.error).toBe("회의가 끝나 녹음을 마쳤습니다.");
   });
 
   it("시작 요청 본문에 이 탭의 clientInstanceId 를 싣는다 — 생성된 훅 그대로", async () => {

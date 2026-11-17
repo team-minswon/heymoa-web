@@ -346,7 +346,8 @@ export function RecordingProvider({
       if (transcript) {
         invalidateTranscriptQueries(noteId);
         const workspaceId = latest.current.activeWorkspaceId;
-        if (workspaceId) void invalidateWorkspaceBilling(queryClient, workspaceId);
+        if (workspaceId)
+          void invalidateWorkspaceBilling(queryClient, workspaceId);
       }
     },
     [invalidateTranscriptQueries, queryClient]
@@ -490,7 +491,8 @@ export function RecordingProvider({
         controllerRef.current?.reconcile("INTERRUPTED");
         failRecording({
           type: "failed",
-          message: lostMessage ?? interruptedMessage(t, serverSession.endReason),
+          message:
+            lostMessage ?? interruptedMessage(t, serverSession.endReason),
         });
       } else if (lostMessage) {
         dispatch({ type: "error", message: lostMessage });
@@ -582,7 +584,13 @@ export function RecordingProvider({
           failRecording(
             kind === "resume_window_exhausted"
               ? { type: "window-exhausted", message, droppedMs }
-              : { type: "failed", message }
+              : {
+                  type: "failed",
+                  message,
+                  unconfirmedStop:
+                    (kind === "stop_timeout" || kind === "stop_send_failed") &&
+                    droppedMs === 0,
+                }
           );
         },
         onNoticeChange: (notice) => dispatch({ type: "notice", notice }),
