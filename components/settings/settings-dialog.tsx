@@ -68,22 +68,6 @@ import {
 
 export type { SettingsSection };
 
-/**
- * 워크스페이스에 영향을 주는 설정과 내 계정 설정을 갈라 둔다. 프레임 `WKSCp`의 두 그룹이고,
- * 계약에 있는 것만 둔다. 알림(PRO-67 I10)은 사용자 단위라 계정 쪽이고 모든 워크스페이스에 같이 적용된다.
- * 아이콘은 `BellRing` — 사이드바 「알림」(`Bell`)은 목록을 여는 다른 목적지다.
- *
- * 외부 에이전트 연결(APP-804)은 **계정** 쪽이다. 위임은 팀원 본인이 만들고 본인만 보며,
- * 워크스페이스 설정을 바꾸지 않는다(제품 정의 「표면과 위임」). 팀이 그 연결을 받을지와 열린 연결을
- * 끊는 관리(APP-941)는 **워크스페이스** 쪽 「MCP 연결」이다. 두 항목은 같은 말에 누구 것인지를 붙여 가른다
- * (Notion 「연결 / 내 연결」 식) — 둘 다 「외부 에이전트」였을 때는 메뉴만 보고 어느 쪽인지 갈리지 않았다.
- * 아이콘도 가른다(APP-1325): 내 연결은 `Bot`, 팀이 받을지 정하는 쪽은 `ShieldCheck`. 같은 목적지는
- * 사이드바 메뉴와 같은 아이콘이다 — 「워크스페이스 설정」이 여는 「일반」은 `Settings`, 「내 계정 설정」이 여는
- * 「내 계정」은 `UserRound`.
- * 그 말을 「MCP」로 한 것은 사용자가 연결하며 상대편에서 보는 말(claude.ai 커넥터의 원격 MCP 서버 URL,
- * ChatGPT 개발자 모드, `mcp add`)과 맞추려는 것이다. 뜻은 각 화면의 설명 문장이 쉬운 말로 푼다.
- * 「연동」은 HeyMoa 가 나가는 연결이라 들어오는 연결과 섞지 않는다.
- */
 const SETTINGS_GROUPS: {
   key: "workspace" | "account";
   items: {
@@ -108,7 +92,6 @@ const SETTINGS_GROUPS: {
     key: "account",
     items: [
       { key: "account", Icon: UserRound },
-      // 내가 결제한 내역(APP-1596). 내역이 없으면 숨긴다.
       { key: "myPayments", Icon: Receipt },
       { key: "language", Icon: Languages },
       { key: "notifications", Icon: BellRing },
@@ -118,8 +101,6 @@ const SETTINGS_GROUPS: {
   },
 ];
 
-// 화면 언어와 상관없이 두 언어로 적는다 — 언어를 바꾸려는 사람은 아직 못 읽는 언어의 화면을 보고 있다(APP-1285).
-// 그래서 언어 파일에 두지 않는다.
 import {
   hasDesktopUpdate,
   useDesktopUpdates,
@@ -140,13 +121,9 @@ function SettingsSections({
   section: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
   workspaceId: string;
-  /** 요금제 대상인 공간인가. 모르면 false 다. */
   enforced: boolean;
-  /** 이 공간의 ADMIN 인가. 모르면 false 다 — 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). */
   admin: boolean;
-  /** 내가 결제한 내역이 한 건이라도 있나. 모르면 false 다. */
   hasPayments: boolean;
-  /** 섹션이 되돌릴 수 없는 일을 하는 중이다 — 다른 섹션으로 못 옮긴다. */
   locked: boolean;
   onLockChange: (locked: boolean) => void;
 }) {
@@ -160,15 +137,11 @@ function SettingsSections({
         aria-label={t("title")}
         className="min-h-0 overflow-y-auto border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
       >
-        {/* 제품 면에 대문자 키커를 두지 않는다 — 세리프 제목만 남긴다. (FORM SPEC) */}
         <p className="mb-7 text-3xl font-light tracking-[-0.03em]">
           {t("title")}
         </p>
-        {/* 워크스페이스 것과 내 계정 것이 섞여 있으면 무엇이 팀에 영향을 주는지 안 읽힌다. */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-1">
           {SETTINGS_GROUPS.map((group) => (
-            // 라벨이 `일반`처럼 짧아 그룹 밖에서는 무엇의 일반인지 모른다 — 보조기술이
-            // "워크스페이스 그룹, 일반"으로 읽도록 그룹에 이름을 준다.
             <div
               key={group.key}
               role="group"
@@ -210,8 +183,6 @@ function SettingsSections({
                       onSectionChange(key);
                     }}
                     aria-current={section === key ? "page" : undefined}
-                    // 회색 바탕이라 선택(hairline)과 호버(surface-strong)를 한 단계씩 벌린다. 같은 색의 농도만 바꾸면
-                    // (APP-1195) 바탕과 4단계 차이라 눈으로 갈리지 않았다(APP-1205).
                     className={cn(
                       "h-10 justify-start gap-2.5 rounded-block px-3",
                       section === key
@@ -236,8 +207,8 @@ function SettingsSections({
           ))}
         </div>
       </nav>
-      {/* **탭을 오가도 본문 폭이 같아야 한다(APP-1356).** 긴 탭에만 스크롤바(클래식 15px)가 생기면 그만큼 본문이
-          좁아져 머리글이 옆으로 움직였다 — 자리를 늘 잡아 둔다. 탭마다 폭 상한도 720 하나로 맞췄다(672 와 섞여 9px 흔들렸다). */}
+      {/* **탭을 오가도 본문 폭이 같아야 한다.** 긴 탭에만 스크롤바(클래식 15px)가 생기면 그만큼 본문이
+          좁아져 머리글이 옆으로 움직였다 — 자리를 늘 잡아 둔다. */}
       <div
         data-testid="settings-panel"
         className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 [scrollbar-gutter:stable] sm:p-10 md:p-14"
@@ -315,14 +286,10 @@ export function SettingsDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 열린 탭. 주소(`?settings=`)가 단일 출처라 셸이 들고 있다. */
   section: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
   workspaceId: string;
 }) {
-  // **응답을 받아야 끝나는 일이 도는 동안은 닫지 않는다.** 외부 에이전트 토큰은 만든 응답에서만
-  // 한 번 나오므로, 그 사이 창이 닫히면 발급된 토큰을 아무도 못 본다. 닫기(X·Esc·바깥 클릭)는
-  // 전부 여기로 오고, 섹션 이동은 nav 가 같은 값으로 막는다.
   const t = useTranslations("settings.nav");
   const tUpdate = useTranslations("settings.appUpdates");
   const desktop = useDesktopApp();
@@ -337,7 +304,6 @@ export function SettingsDialog({
     }
     if (requestedNative.current) return;
     requestedNative.current = true;
-    // 예전 웹 화면과 URL을 정리하고, 네이티브 설정은 안내의 명시적 클릭으로만 연다.
     onOpenChange(false);
     toast.info(tUpdate("nativeSettingsNotice"), {
       id: "desktop-settings-route",
@@ -357,14 +323,11 @@ export function SettingsDialog({
     });
   }, [nativeUpdate, openNative, onOpenChange, tUpdate]);
   const [locked, setLocked] = useState(false);
-  // 요금제 대상이 아닌 공간에는 요금제·결제 관리 탭이 없다. 값을 알기 전(조회 중·실패)에도 숨긴 쪽이라 탭이 나타났다 사라지지 않고,
-  // 그 탭으로 들어왔으면 값을 안 뒤 기본 탭으로 보낸다. 닫히는 중에는 보내지 않는다(주소를 고치면 창이 다시 열린다).
   const billing = useGetWorkspaceBilling(workspaceId, {
     query: { enabled: open },
   });
   const enforced = okData(billing.data)?.enforced === true;
   const workspace = useGetWorkspace(workspaceId, { query: { enabled: open } });
-  // 내 결제 내역 탭은 내역이 있을 때만 있다. 탭과 같은 조회(같은 키)라 탭을 열면 다시 기다리지 않는다.
   const myPayments = useGetMyBillingPayments({ query: { enabled: open } });
   const hasPayments = (okData(myPayments.data)?.payments.length ?? 0) > 0;
   const admin = okData(workspace.data)?.role === "ADMIN";
@@ -376,7 +339,6 @@ export function SettingsDialog({
       !enforced
     )
       onSectionChange(DEFAULT_SETTINGS_SECTION);
-    // 멤버가 결제 관리 주소로 들어오면(알림·옛 링크) 같은 묶음의 요금제 탭을 연다.
     else if (open && section === "payment" && !workspace.isPending && !admin)
       onSectionChange("billing");
     else if (
@@ -406,7 +368,6 @@ export function SettingsDialog({
   );
   return (
     <Dialog open={open && !nativeUpdate} onOpenChange={handleOpenChange}>
-      {/* 오버레이는 e3 2연타 + panel 16이다. rounded-[28px]는 스케일 밖 값이라 폐기했다. (ELEVATION SPEC) */}
       <DialogContent className="h-dvh max-h-none w-screen max-w-none gap-0 overflow-hidden rounded-none border border-black/5 bg-[var(--el-canvas)] p-0 shadow-e3 sm:h-[min(780px,calc(100dvh-3rem))] sm:max-w-5xl sm:rounded-panel">
         <DialogTitle className="sr-only">{t("title")}</DialogTitle>
         <DialogDescription className="sr-only">

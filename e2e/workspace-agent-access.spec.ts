@@ -1,11 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-/**
- * 설정 › 워크스페이스 › MCP 연결(APP-941). 목 유저는 시드 워크스페이스의 ADMIN 이자 그 워크스페이스에
- * 연결을 맡긴 팀원이라, 한 사람이 끄고 나서 자기 연결이 왜 끊겼는지 본다. 목 DB 는 페이지 모듈 상태라
- * 문서를 다시 읽지 않고 클라이언트 조작만 한다. 역할별 표시·취소는 컴포넌트 시험이 본다.
- */
-
 const MOCK_WORKSPACE_ID = "01K0000000000";
 const SHOTS = process.env.E2E_SHOTS_DIR;
 
@@ -20,7 +14,6 @@ test("ADMIN 이 외부 에이전트를 끄면 열린 연결이 비고, 내 지�
     .getByRole("button", { name: "MCP 연결" })
     .click();
 
-  // 시드: 내 개인 토큰 연결 하나와 다른 멤버의 OAuth 연결 하나가 살아 있다
   const open = page.getByRole("region", { name: "열린 연결" });
   await expect(open.getByRole("listitem")).toHaveCount(2);
   await expect(open).toContainText("한지원");
@@ -42,7 +35,6 @@ test("ADMIN 이 외부 에이전트를 끄면 열린 연결이 비고, 내 지�
     .getByRole("group", { name: "계정" })
     .getByRole("button", { name: "내 MCP 연결" })
     .click();
-  // 시드의 지난 연결 둘에 방금 끊긴 내 연결이 더해진다
   await page.getByRole("button", { name: "지난 연결 3개" }).click();
   await expect(
     page

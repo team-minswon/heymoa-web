@@ -31,17 +31,6 @@ import { formatOffset } from "@/lib/transcription/presentation";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { cn } from "@/lib/utils";
 
-/**
- * 화자 패널. **누가 얼마나 말했나와 화자 붙이기를 한 면에서 한다.**
- *
- * 둘을 나누면 이름을 붙이려는 사람이 목록과 전사를 오가야 하는데, 붙일 사람을 고르는 단서가
- * 정확히 이 수치다 — 「앞 15분만 말한 사람」과 「내내 고르게 말한 사람」은 비중이 같아도
- * 다른 사람이고, 그 차이는 타임라인에만 나온다.
- *
- * 왼쪽에서 연다. 오른쪽은 노트 표면이 이미 쓰고 있고, 읽던 전사를 덜 가리는 쪽이 왼쪽이다.
- */
-
-/** 한 줄이 들어오는 데 걸리는 시간과 줄 사이 간격. 목록이 위에서 아래로 한 번 훑고 선다. */
 const ROW_STAGGER_S = 0.035;
 
 function Sparkline({
@@ -56,17 +45,12 @@ function Sparkline({
   timeline: number[];
   dim: boolean;
   durationMs: number;
-  /** 이 화자의 모든 발화(시간순). 띠를 누르면 이 중에서 고른다. */
   utterances: SpeakerUtterance[];
-  /** 「다음 발화로」가 도는 발화. 띠 아래 점으로 찍는다. */
   steps: SpeakerUtterance[];
-  /** 지금 위치(마지막으로 이동한 발화)의 [steps] 인덱스. 없으면 -1. */
   current: number;
-  /** 눌린 시각을 품은(없으면 가장 가까운) 발화. */
   onPick: (utterance: SpeakerUtterance) => void;
 }) {
   const clickable = utterances.length > 0 && durationMs > 0;
-  // 커서가 가리키는 위치(0..1). 기본 `title` 은 1초쯤 늦고 커서를 안 따라와 안 보였다.
   const [hover, setHover] = useState<number | null>(null);
   const ratioOf = (event: { clientX: number; currentTarget: HTMLElement }) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -93,14 +77,12 @@ function Sparkline({
             key={bin}
             className="min-h-px flex-1 rounded-[1px] bg-current"
             style={{
-              // 0인 칸도 실선으로 남긴다 — 빈 자리가 회의 축이라는 것을 띠가 스스로 말한다.
               height: `${Math.max(3, value * 100)}%`,
               opacity: value > 0 ? 0.25 + value * 0.75 : 0.12,
             }}
           />
         ))}
       </div>
-      {/* 올린 자리의 회의 시각. 띠만으로는 「언제」를 못 읽는다. 눌렀을 때 이동 기준과 같은 좌표다. */}
       {hover === null ? null : (
         <>
           <span
@@ -110,14 +92,12 @@ function Sparkline({
           <span
             data-testid="speaker-panel-strip-time"
             className="pointer-events-none absolute -top-5 z-20 -translate-x-1/2 rounded-chip bg-[var(--el-ink)] px-1.5 py-0.5 text-[10px] tabular-nums leading-none text-[var(--el-on-primary)]"
-            // 끝에서 라벨이 패널 밖으로 안 나가게 가운데 기준을 가장자리에서 띄운다.
             style={{ left: `${Math.min(88, Math.max(12, hover * 100))}%` }}
           >
             {formatOffset(hover * durationMs)}
           </span>
         </>
       )}
-      {/* 「다음 발화로」가 도는 지점. 띠 아래 한 줄에 점으로 찍고, 지금 위치만 강조색이다. */}
       {clickable ? (
         <div className="relative mt-0.5 h-1">
           {steps.map(({ startedAtMs: start }, index) => (
@@ -147,7 +127,6 @@ function SpeakerRow({
 }: {
   stat: SpeakerStat;
   index: number;
-  /** 마지막으로 간 이 화자의 발화. 패널을 닫으면 행이 언마운트되므로 패널이 들고 있다. */
   lastSegmentId: string | undefined;
   durationMs: number;
   onJump: (segmentId: string, via: SpeakerJumpVia) => void;
@@ -156,9 +135,6 @@ function SpeakerRow({
   const tSpeakers = useTranslations("notes.speakers");
   const reduced = useReducedMotion();
   const silent = stat.speakingMs === 0;
-  // **누를 때마다 그 사람의 다음 발화로 간다.** 첫 발화는 「네」 같은 맞장구가 많아 누구인지 알아보기
-  // 어렵다 — 말을 길게 한 대목들을 차례로 듣고(읽고) 지정한다. 끝에서는 처음으로 돌아온다.
-  // 띠로 맞장구에 갔어도 그 시각 다음의 대목으로 이어 간다.
   const targets = stat.stepTargets;
   const last = stat.utterances.find((u) => u.segmentId === lastSegmentId);
   const position = last
@@ -178,7 +154,6 @@ function SpeakerRow({
       animate={{ opacity: 1, y: 0 }}
       transition={{
         duration: 0.2,
-        // 스무 명짜리 회의에서 끝줄이 0.7초 뒤에 들어오면 목록이 덜컹거린다.
         delay: Math.min(index * ROW_STAGGER_S, 0.25),
       }}
       data-testid="speaker-panel-row"
@@ -214,8 +189,6 @@ function SpeakerRow({
             onPick={(utterance) => onJump(utterance.segmentId, "strip")}
           />
           <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--el-muted-soft)]">
-            {/* **세그먼트 개수를 「발화 N개」로 내보내지 않는다.** 그것은 전사가 문장을
-                어디서 끊었느냐는 내부 사정이라, 한 번 말한 것이 세 번으로 보인다. */}
             <span className="tabular-nums">
               {tSpeakers("speakingTime", speakingTimeParts(stat.speakingMs))}
             </span>
@@ -234,7 +207,6 @@ function SpeakerRow({
                   : t("nextLine")}
                 {targets.length > 1 ? (
                   <span className="tabular-nums text-[var(--el-muted-soft)]">
-                    {/* 지금 있는 위치. 아직 안 갔으면 전체 개수만 — 누르면 첫 번째로 간다. */}
                     {position < 0
                       ? t("spots", { count: targets.length })
                       : t("position", {
@@ -248,8 +220,6 @@ function SpeakerRow({
           </div>
         </div>
       )}
-      {/* 띠는 `aria-hidden` 이라 「언제」를 여기서만 말한다. **칸에서 되짚지 않는다** —
-          칸은 회의 63분을 48로 나눈 79초짜리라 첫 발화가 그만큼 앞당겨진다. */}
       {stat.firstStartedAtMs === null ? null : (
         <span className="sr-only">
           {t("firstAt", { time: formatOffset(stat.firstStartedAtMs) })}
@@ -272,22 +242,14 @@ export function SpeakerPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   stats: SpeakerStat[];
-  /** 회의 길이. 타임라인 축의 끝 눈금이다. */
   durationMs: number;
-  /**
-   * 그 발화로 전사를 스크롤한다. 패널은 닫는다 — 안 닫으면 도착한 자리를 자기가 가린다.
-   * [via] 는 띠를 눌렀나(strip) · 「다음 발화로」인가(step) — 계측이 가른다.
-   */
   onJump: (segmentId: string, via: SpeakerJumpVia) => void;
   onReset: () => void;
   resetting: boolean;
-  /** 되돌릴 지정이 하나라도 있나. 없으면 초기화는 아무 일도 안 하는 버튼이다. */
   resettable: boolean;
 }) {
   const t = useTranslations("notes.speakers.panel");
   const tSpeakers = useTranslations("notes.speakers");
-  // **미지정이 위다.** 이 패널을 여는 이유가 대개 그것이고, 말한 양으로만 세우면 조용한
-  // 미지정 화자가 맨 아래에 묻힌다.
   const unassigned = stats.filter((stat) => stat.unassigned);
   const assigned = stats.filter((stat) => !stat.unassigned);
 
@@ -321,22 +283,15 @@ export function SpeakerPanel({
         }
       }}
     >
-      {/* 오른쪽 모서리만 둥글다 — 제품 면의 「캔버스 위에 뜬 둥근 패널」과 같은 말이고,
-          화면 가장자리에 닿는 왼쪽은 각진 채로 둬야 붙어 있는 것으로 읽힌다. */}
       <SheetContent
         finalFocus={() => !skipReturnFocus.current}
         side="left"
         className="w-[min(21rem,88vw)] gap-0 rounded-r-panel sm:max-w-none"
       >
         <SheetHeader className="border-b border-[var(--el-hairline)]">
-          {/* 컴포넌트 제목은 작고 굵은 Inter 다(`DESIGN.md` Hierarchy) — 큰 제목(`font-light`)과 구분한다. */}
           <SheetTitle className="font-sans text-[13px] font-semibold">
             {t("title")}
           </SheetTitle>
-          {/* 둘을 더한 수를 쓰지 않는다 — 미지정 화자와 참여자는 겹칠 수 있어서, 더하면
-              넷뿐인 회의가 아홉 명이 된다. 같은 말을 상단바 버튼도 쓴다(「미지정 N」). */}
-          {/* **회의 길이를 늘 적는다.** 띠의 가로축이 그 길이인데 안 적으면 왼쪽 끝과
-              오른쪽 끝이 무엇인지 읽을 방법이 없다. */}
           <SheetDescription>
             {[
               t("participants", { count: assigned.length }),
@@ -391,21 +346,12 @@ export function SpeakerPanel({
   );
 }
 
-/**
- * 전사 상단바의 화자 도구. **복사와 나란히 선다.**
- *
- * 예전에는 스크롤 영역 위에 떠 있었는데, 흰 본문 위의 흰 원이라 잘 안 보였고 아래쪽은
- * 「맨 아래로」와 데스크톱 레코더 독이 이미 쓰는 자리였다. 상단바는 전사를 읽는 동안 늘
- * 붙어 있고(`sticky`), 같은 바의 복사와 같은 생김새라 「이 전사에 대해 할 수 있는 일」로
- * 한 묶음이 된다.
- */
 export function SpeakerTools({
   onOpen,
   onNextUnassigned,
   unassignedCount,
 }: {
   onOpen: () => void;
-  /** 다음 미지정 화자의 발화로 넘긴다. 미지정이 없으면 이 버튼이 안 선다. */
   onNextUnassigned: () => void;
   unassignedCount: number;
 }) {
@@ -424,8 +370,6 @@ export function SpeakerTools({
         <TooltipContent side="bottom">{t("openHint")}</TooltipContent>
       </Tooltip>
 
-      {/* **미지정이 있을 때만 선다.** 다 붙인 회의에서 「다음 미지정」은 누를 곳이 없는
-          버튼이고, 상단바의 자리는 한 칸이라도 아깝다. */}
       {unassignedCount ? (
         <Tooltip>
           <TooltipTrigger

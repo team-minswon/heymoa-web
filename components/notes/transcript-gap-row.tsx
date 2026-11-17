@@ -10,13 +10,6 @@ import {
 import { formatAppClock, getAppDateKey } from "@/lib/format/date";
 import { formatOffset } from "@/lib/transcription/presentation";
 
-/**
- * 날짜는 **필요할 때만** 붙인다. 일시정지가 날을 넘기면 `14:05에 멈추고 09:20에 재개했습니다`
- * 가 시간을 거슬러 올라간 것처럼 읽힌다 — 실제로는 이틀 뒤다.
- *
- * **앱 시간대로 적는다**(`formatAppClock`). 기기 시간대로 적으면 해외에서 머리글 · 회의록은 서울 시각인데
- * 이 줄만 현지 시각이 된다.
- */
 function clockTime(iso: string, withDate: boolean) {
   const time = formatAppClock(iso);
   if (!withDate) return time;
@@ -24,29 +17,18 @@ function clockTime(iso: string, withDate: boolean) {
   return `${month}/${day} ${time}`;
 }
 
-/**
- * 없는 것을 없다고 말한다.
- *
- * 안 그리면 사용자는 **연속인 줄로 읽는다** — 10분이 빈 회의록을 완전한 것으로 읽으면
- * 틀린 근거로 일한다. 접지도 않는다: 접으면 다시 「연속인 줄」이 된다.
- *
- * 세 종류(`PAUSE`·`CAPTURE`·`UPLOAD`)를 **두 부류**로 접는다. 가르는 기준은 하나 —
- * 자기가 멈췄나. 그 밖은 전부 사고이고 사고끼리는 사용자가 할 일이 같다.
- */
 export function TranscriptGapRow({ row }: { row: GapRow }) {
   const t = useTranslations("notes.transcript.gap");
   const paused = row.kind === "PAUSE";
   const open = isGapOpen(row);
   const withDate = spansCalendarDays(row);
 
-  // 일시정지는 회의 축에서 점이다 — 축이 안 나아갔으니 끝 좌표가 없다.
   const offsetLabel = paused
     ? formatOffset(row.startedAtMs)
     : `${formatOffset(row.startedAtMs)} – ${
         open ? t("ongoing") : formatOffset(row.endedAtMs)
       }`;
 
-  // 복사한 회의록은 `gapHeadline`(gaps.ts)으로 같은 줄을 쓴다. 문구를 고치면 둘 다 고친다.
   const duration = open ? null : t("duration", gapDurationOf(row.durationMs));
   const kind =
     row.kind === "PAUSE"
@@ -70,8 +52,6 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
       </time>
       <p className="min-w-0 text-read leading-7 text-[var(--el-muted-soft)]">
         {headline}
-        {/* 절대 시각이 필요한 자리가 정확히 공백이다 — 「얼마나」는 위가 말하고
-            「왜」는 이 줄이 말한다. 두 끝이 같은 분이면 숨긴다. */}
         {paused && spansVisibleClockMinutes(row) ? (
           <span className="ml-2 text-[13px] text-[var(--el-muted-soft)]">
             {t("pausedBetween", {

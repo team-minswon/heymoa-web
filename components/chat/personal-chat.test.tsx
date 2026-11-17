@@ -19,16 +19,12 @@ import {
 import { messagesFor } from "@/i18n/messages";
 import { onTrack } from "@/lib/analytics/track";
 
-// 근거 칩·도구 칩을 누르면 그 회의록으로 간다 — 이 테스트는 라우터 밖에서 돈다.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-/** 보내기 실패의 토스트는 `send()` 가 직접 띄운다 — 409 만 조용해야 한다. */
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
-/** 이름 바꾸기 `PATCH`(생성 훅 `useRenameAgentChat`). */
 const renameMock = vi.hoisted(() => vi.fn());
-/** 이름을 그 대화에 이 제목으로 바꾸는 요청이었나. 계측용 변수는 따로 본다. */
 const renamed = (chatId: string, title: string) =>
   expect.objectContaining({ chatId, data: { title } });
 
@@ -37,9 +33,7 @@ const NOTE_ID = "01K0000000002";
 const CHAT_ID = "01K0000000003";
 const NEW_CHAT_ID = "01K0000000004";
 const OTHER_CHAT_ID = "01K0000000005";
-/** `POST /messages` 의 202 가 주는 턴 id. 스트림 URL 이 이걸로 만들어진다. */
 const TURN_ID = "0K9GVJT2C4Q3B";
-/** 승인 카드 프레임의 `id:`. 승인 뒤 재접속이 `after` 에 넣는 값이다. */
 const APPROVAL_ENTRY_ID = "3-0";
 
 function eventsUrl(chatId: string, turnId: string, after?: string) {
@@ -47,10 +41,6 @@ function eventsUrl(chatId: string, turnId: string, after?: string) {
   return after === undefined ? url : `${url}?after=${after}`;
 }
 
-/**
- * 목록 한 줄. **정렬은 서버가 한다** — 여기서는 배열 순서가 곧 `updatedAt` 내림차순이고,
- * 첫 줄이 「마지막으로 쓴 대화」다.
- */
 const RUNNING_TURN = {
   turnId: "0K9GVJT2C4Q3B",
   status: "IN_PROGRESS",
@@ -59,10 +49,6 @@ const RUNNING_TURN = {
 function chatRow(
   chatId: string,
   runningTurn: { turnId: string; status: string } | null = null,
-  /**
-   * 마지막으로 쓴 시각. **정렬 기준이자 줄에 적히는 값**이라 목록 줄에는 늘 있어야 한다 —
-   * 비워 두면 `Invalid Date`가 화면에 뜬다. 기본값은 「지금」이라 검사가 시계에 안 매인다.
-   */
   updatedAt: string = new Date().toISOString()
 ) {
   return { chatId, title: `대화 ${chatId}`, runningTurn, updatedAt };
@@ -79,13 +65,10 @@ type ActiveTurn = {
 } | null;
 
 const state = vi.hoisted(() => ({
-  /** 대화 목록이 주는 것. 첫 줄이 마지막으로 쓴 대화다. */
   chats: [] as { chatId: string; title: string; runningTurn: unknown }[],
   messages: [] as unknown[],
-  /** `GET /messages`가 히스토리 옆에 싣는 재생 시작점. null 이면 처음부터다. */
   cursor: null as string | null,
   activeTurn: null as ActiveTurn,
-  /** 대화별 도는 턴. 없는 대화는 `activeTurn` 을 쓴다. */
   activeTurnByChat: {} as Record<string, ActiveTurn>,
   lastTurn: null as {
     turnId: string;
@@ -93,19 +76,14 @@ const state = vi.hoisted(() => ({
     failureCode: string | null;
     retryable: boolean | null;
   } | null,
-  /** 이어받기가 턴 스트림에서 받는 프레임. `id:` 줄이 곧 커서다. */
   resumeFrames: [] as { event: string; data: string; id?: string }[],
-  /** 열린 스트림 URL 전부 — 첫 연결·재접속·재진입이 같은 문으로 들어온다. */
   resumeUrls: [] as string[],
-  /** 스트림이 열리기도 전에 던질 것. 410 이 여기로 온다. */
   resumeFailure: null as unknown,
-  /** 「POST 가 먼저, GET 이 나중」을 재는 순서 로그. */
   order: [] as string[],
   createMock: vi.fn(),
   cancelMock: vi.fn(),
   deleteMock: vi.fn(),
   approveMock: vi.fn(),
-  /** 지금 스트림이 어느 흐름을 흘려야 하나. 202 가 오면 send, 승인 202 가 오면 approval 이다. */
   mode: "resume" as "resume" | "send" | "approval",
   refetchMock: vi.fn(),
   chatsRefetchMock: vi.fn(),
@@ -117,7 +95,6 @@ const state = vi.hoisted(() => ({
   chatsLoading: false,
   createPending: false,
   chatsParams: [] as unknown[],
-  /** 첫 쪽 뒤에 더 있다(APP-1020). `olderChats` 가 「더 보기」가 가져오는 쪽이다. */
   chatsHasMore: false,
   chatsNextId: "01KNEXTCHATID0",
   olderChats: [] as ReturnType<typeof chatRow>[],
@@ -127,34 +104,18 @@ const state = vi.hoisted(() => ({
   streamCalls: [] as { chatId: string; body: unknown }[],
   aborted: false,
   holdStream: false,
-  /** `POST /messages` 가 실패한다. 문장이 컴포저로 돌아오는 유일한 경로다. */
   streamFails: false,
-  /** 그때 던지는 오류 봉투. 409는 실패가 아니라 이어받기라 갈래가 다르다. */
   streamFailure: null as unknown,
-  /** 시작한 뒤 `turn_cancelled`로 굳는다. 「중지」가 만드는 그 결말이다. */
   cancelsAfterStart: false,
-  /** 이어받기 스트림을 열어 둔다 — 중지 버튼이 떠 있어야 누를 수 있다. */
   holdResume: false,
   approvalStream: false,
-  /** 승인 202 뒤 재접속이 확정 프레임 없이 `turn_failed` 로 끝난다. */
   approvalThenFails: false,
-  /** 승인 요청 뒤 첫 스트림이 안 닫힌 채 있다가, 풀리면 `turn_failed` 로 끝난다. */
   holdAfterApprovalRequest: null as (() => void) | null | false,
   approvalError: null as unknown,
   releaseStream: null as (() => void) | null,
-  /**
-   * 재조회 **직전에** 목을 바꾸는 손잡이. 「보내는 사이에 서버 쪽이 달라졌다」를 재현하는
-   * 유일한 수단이다 — 미리 세우면 `isBusy` 가 전송 자체를 막아 그 자리에 못 간다.
-   */
   onRefetch: null as (() => void) | null,
 }));
 
-/**
- * `GET /messages` 응답의 `data`. 히스토리와 이어받기 상태가 한 봉투에 온다.
- *
- * **대화마다 다를 수 있다** — 대화를 갈아 끼우는 검사는 「A는 돌고 B는 안 돈다」가
- * 필요한데, 하나로 두면 어느 대화를 열어도 같은 턴이 보여 그 자리가 안 재진다.
- */
 const historyData = vi.hoisted(() => (chatId: string) => ({
   messages: state.messages,
   cursor: state.cursor,
@@ -163,9 +124,6 @@ const historyData = vi.hoisted(() => (chatId: string) => ({
 }));
 
 vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
-  // **캐시에 실제로 붙기 위해서다.** `reconcile()` 은 `fetchQuery` 라 훅의 `enabled` 를
-  // 안 보고 캐시에만 써 넣는다 — 목이 캐시를 안 구독하면 그 왕복이 화면에 영영 안 닿고,
-  // 「재조회가 화면에 반영되나」를 묻는 검사가 제품이 아니라 목을 재게 된다.
   const { useQuery, ...query } = await import("@tanstack/react-query");
   return {
     getGetAgentChatsQueryKey: (workspaceId: string) => [
@@ -174,7 +132,6 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
       "agent-chats",
     ],
     getGetAgentChatMessagesQueryKey: (chatId: string) => ["messages", chatId],
-    // 첫 전송은 방금 만든 chatId로 직접 가져온다 — 훅의 refetch는 아직 빈 id에 묶여 있다.
     getGetAgentChatMessagesQueryOptions: (chatId: string) => ({
       queryKey: ["messages", chatId],
       queryFn: () => {
@@ -187,13 +144,11 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
         };
       },
     }),
-    // 스트림 URL의 단일 출처가 생성물이다. `after`가 없으면 턴의 처음부터 받는다.
     getSubscribeAgentChatTurnEventsUrl: (
       chatId: string,
       turnId: string,
       params?: { after?: string }
     ) => eventsUrl(chatId, turnId, params?.after),
-    /** `POST /messages`. 202 `{turnId}` 로 끝나고 프레임은 턴 스트림으로 온다. */
     useSendAgentChatMessage: () => ({
       mutateAsync: async ({
         chatId,
@@ -221,7 +176,6 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
       },
       isPending: false,
     }),
-    /** 승인. 202 만 주고 나머지 절반은 같은 턴 스트림에 `after` 를 넣어 다시 붙어 받는다. */
     useResolveToolApproval: () => ({
       mutateAsync: async (variables: unknown) => {
         state.approveMock(variables);
@@ -239,7 +193,6 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
       return {
         isPending: false,
         isLoading: state.chatsLoading,
-        // 폴링이라 배경 재조회가 늘 돌고 있다. 잠금이 이 값을 보면 주기마다 잠긴다.
         isFetching: true,
         refetch: state.chatsRefetchMock,
         data: state.chatsLoading
@@ -262,7 +215,6 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
               },
       };
     },
-    /** 「이전 대화 더 보기」 — 커서를 달아 한 쪽 더. */
     getAgentChats: async (...args: unknown[]) => {
       state.olderCalls.push(args);
       if (state.olderFails) throw new Error("network");
@@ -281,11 +233,7 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
     },
     useGetAgentChatMessages: (chatId: string, options: unknown) => {
       state.messagesArgs.push({ chatId, options });
-      // 값은 아래 `state` 가 정한다. 이 구독이 하는 일은 **캐시가 바뀌면 다시 그리는 것**
-      // 하나뿐이라 `skipToken` 으로 둔다 — 자기 queryFn 을 돌리면 안 된다.
       useQuery({ queryKey: ["messages", chatId], queryFn: query.skipToken });
-      // enabled:false여도 TanStack은 pending으로 둔다 — 화면이 isPending을 믿으면
-      // 대화가 없을 때 스켈레톤에 갇힌다.
       const enabled = Boolean(chatId);
       const data =
         enabled && !state.historyFails && !state.historyMissing
@@ -320,7 +268,6 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
       isPending: false,
     }),
     useRenameAgentChat: () => ({ mutateAsync: renameMock, isPending: false }),
-    // 204는 접수가 아니라 확정이고 멱등이다. 화면이 멈추는 신호로는 안 쓴다.
     useCancelAgentChatTurn: () => ({
       mutate: (variables: unknown, options?: { onSuccess?: () => void }) => {
         state.cancelMock(variables);
@@ -331,13 +278,11 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
   };
 });
 
-/** 빈 대화 예시가 읽는 워크스페이스 회의 목록. 기본은 「아직 모름」이다. */
 const noteList = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock("@/lib/workspace/use-note-list-pages", () => ({
   useNoteListPages: () => ({ data: noteList.data, isPlaceholderData: false }),
 }));
 
-/** `@` 목록. 프로젝트 수만큼 조회가 나가는 팬아웃이라 목록 자체를 목으로 준다. */
 vi.mock("@/lib/chat/use-scope-catalog", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/chat/use-scope-catalog")>()),
   useScopeCatalog: () => ({
@@ -348,10 +293,6 @@ vi.mock("@/lib/chat/use-scope-catalog", async (importOriginal) => ({
 }));
 
 vi.mock("@/lib/api/sse", () => ({
-  /**
-   * 첫 연결도 재접속도 재진입도 이 문 하나다. 무엇을 흘릴지는 `state.mode` 가 가른다 —
-   * 202 를 받은 뒤면 새 턴의 프레임, 승인 202 뒤면 나머지 절반, 그 밖에는 이어받기 프레임.
-   */
   getEventStream: async function* (
     url: string,
     options?: { signal?: AbortSignal }
@@ -362,7 +303,6 @@ vi.mock("@/lib/api/sse", () => ({
       state.aborted = true;
     });
     if (state.resumeFailure) throw state.resumeFailure;
-    // 붙잡아 둔 스트림도 abort 에는 풀린다 — 실제 전송이 그렇다(중지가 여기서 끊는다).
     const untilAbort = () =>
       new Promise<void>((resolve) =>
         options?.signal?.addEventListener("abort", () => resolve())
@@ -372,8 +312,6 @@ vi.mock("@/lib/api/sse", () => ({
       if (state.holdResume) await untilAbort();
       return;
     }
-    // **모든 프레임이 `id:` 줄을 갖는다.** 계약이 그렇고, 안 실으면 화면 커서가 한 번도
-    // 안 움직여 `?after=` 를 쓰는 자리를 목으로 하나도 못 밟는다.
     let seq = 0;
     const framed = (event: string, payload: unknown) => ({
       event,
@@ -381,7 +319,6 @@ vi.mock("@/lib/api/sse", () => ({
       id: `${(seq += 1)}-0`,
     });
     if (state.mode === "approval") {
-      // 확정은 이 스트림의 첫 프레임이 한다 — 그때까지 붙잡아 둔다.
       await new Promise<void>((resolve) => {
         state.releaseStream = resolve;
       });
@@ -432,14 +369,12 @@ vi.mock("@/lib/api/sse", () => ({
       return;
     }
     if (state.approvalStream) {
-      // `id:` 가 `APPROVAL_ENTRY_ID` 다 — 승인 뒤 재접속이 이 값을 `after` 에 넣는다.
       yield framed("tool_approval_request", {
         approvalId: "0K9GVJT2C4Q7F",
         toolCallId: "call_02",
         tool: "linear.create_issue",
         summary: "Linear 이슈 생성",
       });
-      // **스트림은 여기서 닫힌다.** 이어질 프레임은 승인 202 뒤의 재접속이 받는다.
       return;
     }
     if (state.holdStream) {
@@ -471,7 +406,6 @@ function NoteScope({
   return null;
 }
 
-/** 새 노트를 만든 자리(`useCreateMeeting`)를 대신한다. */
 function FreshChatTrigger() {
   const { startFreshChat } = usePersonalChat();
   return (
@@ -486,7 +420,6 @@ function renderChat(child?: React.ReactNode, locale: "ko" | "en" = "ko") {
     defaultOptions: { queries: { retry: false } },
   });
   const invalidate = vi.spyOn(client, "invalidateQueries");
-  // 언어 공급자는 `wrapper` 라야 `rerender` 도 그 안에서 다시 그린다. 나머지 모양은 `rerender` 들과 같아야 다시 마운트되지 않는다
   const view = render(
     <QueryClientProvider client={client}>
       <PersonalChatProvider workspaceId={WORKSPACE_ID}>
@@ -508,12 +441,10 @@ function openPanel() {
   fireEvent.click(screen.getByRole("button", { name: "내 에이전트 열기" }));
 }
 
-/** 헤더의 ⟲. 누르면 기록 목록이 스레드 자리로 밀려 들어온다. */
 function historyButton() {
   return screen.getByRole("button", { name: "대화 기록" });
 }
 
-/** 끝난 생각 묶음은 접혀 선다(APP-1436). 안쪽 줄을 보려면 머리줄을 눌러 편다. */
 function expandSteps() {
   for (const button of screen.queryAllByRole("button", {
     name: /생각/,
@@ -522,18 +453,15 @@ function expandSteps() {
     fireEvent.click(button);
 }
 
-/** 머리글 제목 옆 ⋯ 메뉴의 「삭제」. 확인창이 뜬다(지우기는 확인한 뒤다). */
 async function deleteFromHeader() {
   fireEvent.click(await screen.findByTestId("chat-menu"));
   fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
 }
 
 function clickNewChat() {
-  // 기본 제목이 「새 대화」라 목록 행과 ＋ 버튼의 접근명이 겹친다 — 누르는 자리를 testid 로 가른다.
   fireEvent.click(screen.getByTestId("chat-list-new"));
 }
 
-/** 기록을 열고 그 대화를 고른다. 고르면 곧바로 스레드로 돌아온다. */
 function pickChat(chatId: string) {
   fireEvent.click(historyButton());
   fireEvent.click(
@@ -541,10 +469,6 @@ function pickChat(chatId: string) {
   );
 }
 
-/**
- * 편집기에 문장을 넣는다. **`contenteditable` 이라 `value` 가 없다** — 칩이 문장 안에
- * 사는 구조라서 문자열 하나로는 담기지 않는다.
- */
 function write(text: string) {
   const input = screen.getByRole("textbox", { name: "메시지" });
   input.textContent = text;
@@ -558,7 +482,6 @@ function write(text: string) {
   return input;
 }
 
-/** 칩을 **남기고** 뒤에 문장을 붙인다. `write()` 는 `textContent` 를 덮어써서 문장 안의 칩 노드를 지운다. */
 function appendAfterChips(text: string) {
   const input = screen.getByRole("textbox", { name: "메시지" });
   input.append(document.createTextNode(text));
@@ -572,15 +495,11 @@ function appendAfterChips(text: string) {
   return input;
 }
 
-/**
- * 프로젝트 칩을 붙인다. `usePersonalChatScope` 는 회의록만 미리 붙이므로 `@` 로 목록을 열어 고른다(목록은 아래 목이 준다).
- */
 function putProjectChip(title: string) {
   write(`@${title}`);
   fireEvent.click(screen.getByRole("option", { name: new RegExp(title) }));
 }
 
-/** 문장 안에 박힌 범위 칩 제목. */
 function chipsInInput() {
   return [
     ...screen
@@ -589,7 +508,6 @@ function chipsInInput() {
   ].map((el) => el.textContent?.trim());
 }
 
-/** 칩을 백스페이스로 지운다 — 브라우저가 하는 일을 흉내 낸다. */
 function removeChipFromInput(title: string) {
   const input = screen.getByRole("textbox", { name: "메시지" });
   const chip = [...input.querySelectorAll("[data-scope-chip]")].find((el) =>
@@ -700,22 +618,17 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.streamCalls[0]).toEqual({
       chatId: NEW_CHAT_ID,
-      // **범위가 요청 본문에 실린다.** 붙인 것이 없으면 빈 배열이고, 그것이 곧
-      // "워크스페이스 전체가 범위"라는 뜻이다.
       body: {
         message: "정리해줘",
         noteIds: [],
         projectIds: [],
       },
     });
-    // ★ **POST → 202 → GET 순서다.** 스트림은 턴 id 로 열리고 첫 연결에는 `after` 가 없다.
     await waitFor(() =>
       expect(state.resumeUrls).toEqual([eventsUrl(NEW_CHAT_ID, TURN_ID)])
     );
     expect(state.order.slice(0, 2)).toEqual(["send", "open"]);
 
-    // 히스토리도 **방금 만든** chatId로 다시 읽어야 한다. 훅의 refetch를 쓰면 아직
-    // 빈 id에 묶여 있어 `/v1/agent-chats//messages`를 부른다.
     await waitFor(() => expect(state.refetchedChatIds).toEqual([NEW_CHAT_ID]));
   });
 
@@ -896,8 +809,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("히스토리 갱신이 실패하면 방금 끝난 턴을 지우지 않는다", async () => {
-    // invalidateQueries·refetch는 갱신이 실패해도 resolve한다. 그걸 믿고 지우면
-    // 캐시에 없는 방금 턴이 화면에서 사라진다.
     state.chats = [chatRow(CHAT_ID)];
     state.refreshFails = true;
     renderChat();
@@ -983,7 +894,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("전송이 끝나기 전 두 번째 전송을 받지 않는다", async () => {
-    // 스트리밍 구간만 잠그면 세션 생성 중 두 번째 전송이 세션을 하나 더 만든다.
     renderChat();
     openPanel();
     await sendMessage("정리해줘");
@@ -1011,19 +921,16 @@ describe("PersonalChatProvider", () => {
     await screen.findByRole("button", {
       name: /^대화 01KOLDERCHAT01(?! 메뉴)/,
     });
-    // 첫 쪽의 다음 커서를 그대로 달고 읽는다.
     expect(state.olderCalls[0]?.[1]).toEqual({
       limit: "30",
       afterUpdatedAt: "2026-07-01T00:00:00Z",
       afterChatId: "01KNEXTCHATID0",
     });
-    // 끝까지 읽었으니 버튼은 사라진다.
     expect(
       screen.queryByRole("button", { name: "이전 대화 더 보기" })
     ).toBeNull();
   });
 
-  /** 첫 쪽의 끝이 움직이면(새 대화·옛 대화가 위로 올라옴) 붙여 둔 쪽과 첫 쪽 사이에 빈틈이 생긴다 — 이어 읽기를 처음부터 다시 한다. */
   it("첫 쪽의 끝이 움직이면 붙여 둔 옛 쪽을 버리고 다시 이어 읽게 한다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     state.chatsHasMore = true;
@@ -1040,7 +947,6 @@ describe("PersonalChatProvider", () => {
       name: /^대화 01KOLDERCHAT01(?! 메뉴)/,
     });
 
-    // 폴링이 새 첫 쪽을 가져왔다: 끝 대화가 달라졌다. 기록을 닫았다 열어 다시 그린다.
     state.chatsNextId = "01KOTHERNEXT00";
     fireEvent.click(screen.getByRole("button", { name: "대화로 돌아가기" }));
     fireEvent.click(await screen.findByRole("button", { name: "대화 기록" }));
@@ -1095,7 +1001,6 @@ describe("PersonalChatProvider", () => {
     );
 
     await deleteFromHeader();
-    // 확인 전에는 아무것도 안 나간다
     expect(state.deleteMock).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
 
@@ -1140,7 +1045,6 @@ describe("PersonalChatProvider", () => {
       renderChat();
       openPanel();
       const input = await editHeader();
-      // 편집을 시작하면 전체가 선택돼 있다
       expect(input.selectionStart).toBe(0);
       expect(input.selectionEnd).toBe(input.value.length);
 
@@ -1384,7 +1288,6 @@ describe("PersonalChatProvider", () => {
       await screen.findByRole("button", {
         name: `이름 변경: 대화 ${CHAT_ID}`,
       });
-      // 이벤트 힌트(`chats.changed`)가 목록을 다시 읽은 자리다. 이 목은 캐시가 아니라 다시 그릴 때 읽는다
       const refetched = () =>
         rerender(
           <QueryClientProvider client={client}>
@@ -1434,7 +1337,6 @@ describe("PersonalChatProvider", () => {
         )
       );
 
-      // 서버가 첫 질문으로 임시 제목을 붙였다 — 아직 보이지 않는다
       state.chats = [
         { ...chatRow(NEW_CHAT_ID), title: "정리해줘", titleSource: "QUESTION" },
       ] as never;
@@ -1483,7 +1385,6 @@ describe("PersonalChatProvider", () => {
   });
 
   describe("겹친 요청과 외부 갱신 (APP-1433 리뷰)", () => {
-    /** 손으로 끝내는 약속. 요청이 떠 있는 사이를 재현한다. */
     function deferred<T>() {
       let resolve!: (value: T) => void;
       let reject!: (error: unknown) => void;
@@ -1563,10 +1464,8 @@ describe("PersonalChatProvider", () => {
       fireEvent.click(await screen.findByRole("button", { name: "삭제" }));
       await waitFor(() => expect(state.deleteMock).toHaveBeenCalled());
 
-      // 지우는 사이 다른 대화가 맨 위로 올라와 그 대화가 열렸다
       state.chats = [chatRow(OTHER_CHAT_ID), chatRow(CHAT_ID)];
       refetchedWith(rerender, client)();
-      // 확인창이 떠 있는 동안 뒤쪽은 접근성 트리에서 숨는다
       await screen.findByRole("button", {
         name: `이름 변경: 대화 ${OTHER_CHAT_ID}`,
         hidden: true,
@@ -1633,10 +1532,8 @@ describe("PersonalChatProvider", () => {
 
       await renameRow(OLDER_A, `대화 ${OLDER_A}`, "하나");
       await renameRow(OLDER_A, "하나", "둘");
-      // 앞 요청의 실패가 뒤 요청의 낙관값을 덮지 않는다
       await act(async () => first.reject(FAIL));
       expect(screen.getByRole("button", { name: /^둘(?! 메뉴)/ })).toBeTruthy();
-      // 뒤 요청이 실패하면 서버가 마지막으로 확인한 원래 제목으로 돌아간다
       await act(async () => second.reject(FAIL));
       expect(
         screen.getByRole("button", {
@@ -1678,7 +1575,6 @@ describe("PersonalChatProvider", () => {
         ).toBe("내 이름")
       );
 
-      // AI·다른 탭이 그 사이 제목을 바꿨다
       client.setQueryData(key, listed("다른 탭 제목"));
       await act(async () => pending.reject(FAIL));
       expect(
@@ -1734,7 +1630,6 @@ describe("PersonalChatProvider", () => {
       }) as HTMLInputElement;
       fireEvent.change(input, { target: { value: "옮겨도 남는다" } });
 
-      // 다른 탭에서 그 대화에 이어 써서 맨 위(오늘)로 올라왔다
       state.chats = [chatRow(OTHER_CHAT_ID), chatRow(CHAT_ID)];
       refetchedWith(rerender, client)();
 
@@ -1849,8 +1744,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("★ ＋ 는 서버를 안 부르고 화면만 빈 새 대화로 바꾼다", async () => {
-    // 누르는 즉시 만들면 아무 말도 안 하고 나간 빈 대화가 기록에 줄로 쌓인다.
-    // **＋ 를 눌렀는데 아무 말도 안 했으면 그 대화는 존재한 적이 없다.**
     state.chats = [chatRow(CHAT_ID)];
     state.messages = [
       {
@@ -1874,8 +1767,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("★ ＋ 를 누른 뒤에 목록 첫 줄이 대신 열리지 않는다", async () => {
-    // `sessionId` 의 fallback 이 `chats[0]` 이라, 고른 것만 비우면 방금 쓰던 대화가
-    // 그대로 열린다 — ＋ 를 눌렀는데 아무것도 안 바뀐 것처럼 보인다.
     state.chats = [chatRow(CHAT_ID)];
     renderChat();
     openPanel();
@@ -1885,7 +1776,6 @@ describe("PersonalChatProvider", () => {
 
     clickNewChat();
 
-    // 히스토리 조회가 아무 대화도 안 가리킨다 — 열린 대화가 없다는 뜻이다.
     const last = state.messagesArgs.at(-1) as {
       chatId: string;
       options: { query: { enabled: boolean } };
@@ -1920,7 +1810,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("★ 패널을 열기 전에 요청해도 앞 대화를 한 번도 읽지 않는다 (APP-1278)", async () => {
-    // 목록 첫 줄을 열었다가 비우면 앞 대화의 스켈레톤·말풍선이 레일에 한 번 스친다.
     state.chats = [chatRow(CHAT_ID)];
     renderChat(<FreshChatTrigger />);
     fireEvent.click(screen.getByRole("button", { name: "새 노트 만듦" }));
@@ -1934,7 +1823,6 @@ describe("PersonalChatProvider", () => {
         (args) => (args as { chatId: string }).chatId === CHAT_ID
       )
     ).toBe(false);
-    // 기록에서 앞 대화로 돌아갈 수 있다.
     pickChat(CHAT_ID);
     await waitFor(() =>
       expect(state.messagesArgs.at(-1)).toMatchObject({ chatId: CHAT_ID })
@@ -1949,7 +1837,6 @@ describe("PersonalChatProvider", () => {
     write("쓰던 문장");
     clickNewChat();
 
-    // 두 번째 ＋ 는 이미 빈 새 대화라 아무것도 안 건드린다 — 쓰던 문장이 살아 있다.
     expect(state.createMock).not.toHaveBeenCalled();
     expect(
       screen.getByRole("textbox", { name: "메시지" }).textContent
@@ -1969,8 +1856,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("새 대화가 범위도 함께 비운다", async () => {
-    // 범위는 턴이 드는 값이라 대화가 갈리면 이어질 이유가 없다. 남겨 두면 새 대화의
-    // 첫 질문이 앞 대화의 범위로 조용히 나간다.
     const { rerender, client } = renderChat();
     openPanel();
     rerender(
@@ -1985,13 +1870,11 @@ describe("PersonalChatProvider", () => {
 
     clickNewChat();
 
-    // 쓰던 문장은 사라진다.
     await waitFor(() =>
       expect(
         screen.getByRole("textbox", { name: "메시지" }).textContent
       ).not.toContain("이건 지워져야 한다")
     );
-    // **회의록 칩은 돌아온다** — 그 회의록 안에 서 있으면 새 대화에서도 그것이 힌트다.
     expect(chipsInInput()).toEqual(["주간 제품 회의"]);
   });
 
@@ -2003,7 +1886,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("회의록에 들어가면 그 회의록이 칩으로 미리 붙는다", async () => {
-    // **강제가 아니다.** 칩일 뿐이라 대화는 갈리지 않고, 사용자가 지울 수 있다.
     const { rerender, client } = renderChat();
     openPanel();
     expect(screen.queryByTestId("scope-chips")).toBeNull();
@@ -2018,13 +1900,10 @@ describe("PersonalChatProvider", () => {
 
     await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
     expect(chipsInInput()).toEqual(["주간 제품 회의"]);
-    // 회의록이 붙어도 조회 params 는 워크스페이스 하나뿐이다 — 대화가 안 갈린다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
   });
 
   it("지운 칩은 회의록을 나갔다 와도 다시 안 붙는다", async () => {
-    // 안 기억하면 방금 지운 칩이 되살아난다. 힌트가 힌트이려면 거절이 남아야 한다.
-    // 삭제는 브라우저가 원자로 한다 — 「지웠다」 이벤트가 없어서 사라진 것을 알아낸다.
     const { rerender, client } = renderChat(<NoteScope hidden={false} />);
     openPanel();
     await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
@@ -2033,7 +1912,6 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(chipsInInput()).toEqual([]));
     expect(chipsInInput()).toEqual([]);
 
-    // 회의록을 나갔다 온다.
     rerender(
       <QueryClientProvider client={client}>
         <PersonalChatProvider workspaceId={WORKSPACE_ID}>
@@ -2064,7 +1942,6 @@ describe("PersonalChatProvider", () => {
       );
     }
 
-    /** 사용자가 `@` 로 고른 회의록 칩. 편집기가 만드는 것과 같은 모양을 박는다. */
     function pickNoteByHand(id: string, title: string) {
       const input = screen.getByRole("textbox", { name: "메시지" });
       const chip = document.createElement("span");
@@ -2142,15 +2019,12 @@ describe("PersonalChatProvider", () => {
         )
       );
       await waitFor(() => expect(chipsInInput()).toEqual(["회고"]));
-      // 손으로 고른 칩이라 노트를 나가도 남는다
       rerender(at(null, client));
       expect(chipsInInput()).toEqual(["회고"]);
     });
   });
 
   it("닫아도 패널을 언마운트하지 않는다", async () => {
-    // 언마운트하면 useChatStream이 abort해서 흐르는 화면과 승인에 닿을 길을 잃고,
-    // 흐르던 답변이 통째로 사라진다. 닫기도 감추기다.
     renderChat();
     openPanel();
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
@@ -2192,8 +2066,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("워크스페이스 스코프로 열려 있을 때 노트를 side로 열어도 패널이 갈리지 않는다", async () => {
-    // 스코프가 바뀌면 패널 key가 바뀌어 언마운트되고, 흐르던 스트림이 끊긴다.
-    // 흐르는 화면과 중지·승인에 닿을 길을 잃는다.
     state.chats = [chatRow(CHAT_ID)];
     const { rerender, client } = renderChat();
     openPanel();
@@ -2212,7 +2084,6 @@ describe("PersonalChatProvider", () => {
         "data-hidden"
       )
     );
-    // 감춰졌을 뿐 대화는 그대로다. 애초에 노트가 대화를 가르지 않는다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
   });
 
@@ -2236,7 +2107,6 @@ describe("PersonalChatProvider", () => {
         "data-hidden"
       )
     );
-    // 감출 뿐 언마운트하지 않는다 — 끊으면 흐르는 화면과 중지·승인에 닿을 길을 잃는다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
     expect(
       screen.queryByRole("button", { name: "내 에이전트 열기" })
@@ -2245,8 +2115,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("워크스페이스에서 연 개인 챗봇은 노트 회의 중으로 새지 않는다", async () => {
-    // open()은 감춤을 존중한다. 안 그러면 워크스페이스에서 한 번 열면 노트 회의 중에도
-    // 공유 트레이 위에 개인 패널이 계속 뜬다.
     const { rerender, client } = renderChat();
     openPanel();
     expect(screen.getByTestId("personal-chat-panel")).not.toHaveAttribute(
@@ -2268,7 +2136,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("목록 조회가 끝나기 전에는 보내지 않는다", () => {
-    // 여기서 보내면 이미 있는 대화를 못 보고 새 대화를 하나 더 만든다.
     state.chatsLoading = true;
     renderChat();
     openPanel();
@@ -2280,7 +2147,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("새 대화가 만들어지는 중에는 보내지 않는다", () => {
-    // 여기서 보내면 곧 바뀔 옛 sessionId로 나가고, 이어지는 reset이 그 스트림을 끊는다.
     state.createPending = true;
     renderChat();
     openPanel();
@@ -2304,12 +2170,8 @@ describe("PersonalChatProvider", () => {
   });
 
   it("★★ [W-12] 시계가 어긋나도 보내며 세운 구분선이 사라지지 않는다", async () => {
-    // 구분선은 보내는 동안 클라이언트 시계로, 히스토리로 넘어간 뒤에는 서버가 적은
-    // `createdAt` 으로 판정된다 — **값의 출처가 다르다.** 두 시계가 자정을 사이에 두고
-    // 어긋나면 보낼 때 세운 줄이 히스토리가 오는 순간 사라진다. 방향만 반대인 W-12 다.
     const midnight = new Date();
     midnight.setHours(0, 0, 0, 0);
-    // 히스토리는 어제 저녁. 지금(클라이언트)은 오늘이라 보내는 순간 구분선이 하나 는다.
     const yesterday = new Date(midnight.getTime() - 4 * 3_600_000);
     state.chats = [chatRow(CHAT_ID)];
     state.messages = [
@@ -2333,13 +2195,11 @@ describe("PersonalChatProvider", () => {
       document.querySelectorAll('[data-testid="thread-divider"]').length;
     await waitFor(() => expect(dividers()).toBe(1));
 
-    // 스트림을 붙들어 「보내는 중」을 세운다. 지금은 오늘이라 구분선이 하나 는다.
     state.holdStream = true;
     await sendMessage("정리해줘");
     await waitFor(() => expect(state.releaseStream).not.toBeNull());
     await waitFor(() => expect(dividers()).toBe(2));
 
-    // **서버는 이 질문을 어제로 적는다** — 클라이언트 시계가 앞선 상황이다.
     state.messages = [
       ...state.messages,
       {
@@ -2358,13 +2218,10 @@ describe("PersonalChatProvider", () => {
     state.releaseStream?.();
     await waitFor(() => expect(screen.getByText("정리했습니다.")).toBeTruthy());
 
-    // 판정이 얼려져 있어 줄이 그대로 둘이다. 안 얼리면 여기서 하나로 줄며 화면이 밀린다.
     await waitFor(() => expect(dividers()).toBe(2));
   });
 
   it("히스토리가 나중에 그 턴을 담아 오면 로컬 사본을 겹쳐 그리지 않는다", async () => {
-    // 즉시 반영이 실패해 로컬 턴을 남겨 뒀는데, 히스토리가 스스로 성공하면 같은 턴이
-    // 두 벌 그려진다.
     state.chats = [chatRow(CHAT_ID)];
     state.refreshFails = true;
     const { rerender, client } = renderChat();
@@ -2372,7 +2229,6 @@ describe("PersonalChatProvider", () => {
     await sendMessage("정리해줘");
     await waitFor(() => expect(screen.getByText("정리했습니다.")).toBeTruthy());
 
-    // 히스토리가 뒤늦게 그 턴을 담아 온다.
     state.messages = [
       {
         turnId: TURN_ID,
@@ -2404,7 +2260,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("같은 문장의 예전 답변에 걸려 이번 턴을 가리지 않는다", async () => {
-    // 대화 전체에서 문장을 찾으면 예전 답변에 걸린다 — 같은 질문을 다시 하면 흔하다.
     state.chats = [chatRow(CHAT_ID)];
     state.messages = [
       {
@@ -2419,7 +2274,6 @@ describe("PersonalChatProvider", () => {
     openPanel();
     await sendMessage("정리해줘");
 
-    // 히스토리의 예전 답변 1건 + 이번 턴의 답변 1건.
     await waitFor(() =>
       expect(screen.getAllByText("정리했습니다.")).toHaveLength(2)
     );
@@ -2427,7 +2281,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("승인은 2차 스트림이 확정할 때까지 다시 눌리지 않는다", async () => {
-    // 보낸 것일 뿐이다. 그 사이 다시 누르면 중복 결정이 나가고 404가 뜬다.
     state.chats = [chatRow(CHAT_ID)];
     state.approvalStream = true;
     renderChat();
@@ -2439,7 +2292,6 @@ describe("PersonalChatProvider", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
-    // 202 가 오면 결정이 적혀 카드가 「실행 중」으로 서고 버튼은 사라진다. 그 전에는 잠겨 있다.
     await waitFor(() =>
       expect(
         document
@@ -2450,8 +2302,6 @@ describe("PersonalChatProvider", () => {
     expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
     expect(screen.queryByRole("button", { name: "거절" })).toBeNull();
     expect(state.approveMock).toHaveBeenCalledTimes(1);
-    // ★ **승인 요청에는 `after` 가 없다.** 202 뒤 같은 턴 스트림에 카드의 id 를 `after`
-    // 에 넣어 다시 붙는다 — 카드까지 다시 받으면 화면이 승인 대기로 되돌아간다.
     expect(state.approveMock).toHaveBeenCalledWith({
       chatId: CHAT_ID,
       approvalId: "0K9GVJT2C4Q7F",
@@ -2467,9 +2317,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("★ 2차가 끝나면 히스토리를 다시 읽되 이 탭의 로컬 말풍선을 유지한다", async () => {
-    // 승인 응답이 **이 턴의 나머지**라 꼬리가 `send()`와 같아야 한다. 다시 안 읽으면
-    // `activeTurn`이 안 비어 전송이 잠긴 채 남는다. 서버 행은 캐시에 보관하고
-    // 화면의 로컬 말풍선은 유지해야 같은 턴이 두 벌 보이거나 번쩍이지 않는다.
     state.chats = [chatRow(CHAT_ID)];
     state.approvalStream = true;
     renderChat();
@@ -2480,10 +2327,8 @@ describe("PersonalChatProvider", () => {
       expect(screen.getByRole("button", { name: "승인" })).toBeTruthy()
     );
     const question = screen.getByText("이슈 만들어줘");
-    // 1차는 승인 요청에서 끝났을 뿐이라 아직 아무것도 다시 읽지 않았다.
     expect(state.refetchedChatIds).toEqual([]);
 
-    // server가 흐르는 동안 tee한 기록. 2차가 끝나도 DOM은 로컬 사본을 유지한다.
     state.messages = [
       {
         createdAt: "2026-07-24T00:00:00Z",
@@ -2510,11 +2355,9 @@ describe("PersonalChatProvider", () => {
     );
     expect(screen.getAllByText("이슈 만들어줘")).toHaveLength(1);
     expect(screen.getByText("이슈 만들어줘")).toBe(question);
-    // 확정됐으니 카드도 사라진다.
     expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
   });
 
-  // ★ N3 — 202 는 server 가 결정을 굳힌 뒤다. 그 뒤 끝났으면 쓰기가 나갔을 수 있다
   it("★ 승인 202 뒤 확정 프레임 없이 턴이 실패하면 카드와 줄이 「확인 필요」다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     state.approvalStream = true;
@@ -2535,7 +2378,6 @@ describe("PersonalChatProvider", () => {
     );
     expect(screen.getByText("확인 필요")).toBeTruthy();
     expect(screen.queryByText(/중단됨/)).toBeNull();
-    // 쓰기는 카드 하나가 말한다. 생각 과정에 같은 쓰기 줄을 또 세우지 않는다.
     expect(
       [...document.querySelectorAll('[data-testid="approval-card"]')].map(
         (card) => card.getAttribute("data-approval")
@@ -2565,7 +2407,6 @@ describe("PersonalChatProvider", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "승인" })).toBeNull()
     );
-    // 결정은 남았고 결과만 모른다 — 「무효」가 아니라 「확인 필요」 카드다.
     expect(
       [...document.querySelectorAll('[data-testid="approval-card"]')].map(
         (card) => card.getAttribute("data-approval")
@@ -2574,7 +2415,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("승인이 재시도 가능한 오류로 실패하면 잠금을 푼다", async () => {
-    // 풀지 않으면 버튼이 영영 잠긴 채 남는다 — 만료가 없어져 저절로 풀리지 않는다.
     state.chats = [chatRow(CHAT_ID)];
     state.approvalStream = true;
     state.approvalError = {
@@ -2597,13 +2437,10 @@ describe("PersonalChatProvider", () => {
         false
       )
     );
-    // ★ 여기까지 흐른 반쪽 답이 살아 있다. 실패로 덮으면 답이 사라지고
-    // 「중지」밖에 안 남는다.
     expect(screen.getByText("정리했")).toBeTruthy();
   });
 
   it("지나간 승인은 카드를 무효화한다 — 버튼이 사라지고 사유가 남는다", async () => {
-    // 카드가 죽었다 — 다시 눌러도 같은 404다. 잠긴 버튼이 아니라 무효화 카드로 드러낸다.
     state.chats = [chatRow(CHAT_ID)];
     state.approvalStream = true;
     state.approvalError = {
@@ -2629,8 +2466,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("턴이 도는 동안에는 히스토리 조회를 켜지 않는다", async () => {
-    // 켜면 로딩 스켈레톤이 흐르는 스레드를 덮고, server가 스트림 전에 저장한
-    // USER 메시지가 pendingUserMessage와 겹쳐 두 번 보인다.
     state.holdStream = true;
     renderChat();
     openPanel();
@@ -2654,9 +2489,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("★ 승인 대기에서도 히스토리 조회를 켜지 않는다", async () => {
-    // 1차가 승인 요청으로 **정상 종료**하면 `send()`가 돌아와 `isSending`이 풀린다.
-    // 거기서 히스토리가 켜지면 저장된 USER 행이 `pendingUserMessage`와 겹쳐
-    // 말풍선이 두 벌 그려진다. 승인 대기도 「도는 중」이다.
     state.chats = [chatRow(CHAT_ID)];
     state.approvalStream = true;
     renderChat();
@@ -2676,7 +2508,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("없어진 세션(404)은 막다른 길이 아니라 빈 대화다", () => {
-    // 다른 실패와 섞어 잠그면 유일한 복구 경로(새 대화)까지 막힌다.
     state.chats = [chatRow(CHAT_ID)];
     state.historyMissing = true;
     renderChat();
@@ -2691,13 +2522,11 @@ describe("PersonalChatProvider", () => {
   });
 
   it("턴이 도는 동안에는 노트를 떠나도 스코프가 바뀌지 않는다", async () => {
-    // 스코프가 바뀌면 패널 key가 바뀌어 언마운트되고 흐르던 답변이 사라진다.
     state.chats = [chatRow(CHAT_ID)];
     const { rerender, client } = renderChat(<NoteScope hidden={false} />);
     openPanel();
     await waitFor(() => expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID));
 
-    // 턴을 시작해 두고 노트를 떠난다.
     write("정리해줘");
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
     rerender(
@@ -2713,7 +2542,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("조회가 실패하면 기록도 새 대화도 막는다", () => {
-    // 못 본 대화 위에 새 대화를 얹거나, 못 읽은 목록에서 고르는 것을 막는다.
     state.chatsFail = true;
     renderChat();
     openPanel();
@@ -2726,8 +2554,6 @@ describe("PersonalChatProvider", () => {
   });
 
   it("★ 못 닿은 문장이 컴포저로 돌아오고, 그대로 보내면 같은 몸통이 나간다", async () => {
-    // 「다시 보내기」 버튼이 있던 자리다. 그 버튼이 할 수 있던 일은 한 글자도 못 고치고
-    // 같은 문장을 보내는 것 하나였다 — 되돌려 놓으면 고칠 수도 있고 그대로 보낼 수도 있다.
     state.chats = [chatRow(CHAT_ID)];
     state.streamFails = true;
     renderChat();
@@ -2747,17 +2573,6 @@ describe("PersonalChatProvider", () => {
     expect(state.streamCalls[1].body).toEqual(state.streamCalls[0].body);
   });
 
-  /**
-   * ★ **프로젝트 범위가 실제로 와이어로 나가는가.**
-   *
-   * `projectIds` 를 늘 `[]` 로 만들어도 **다섯 게이트가 전부 초록**이었다. 회의록 쪽은
-   * e2e 하나가 우연히 잡지만 프로젝트는 아무도 안 본다.
-   *
-   * 안 덮이면: 사용자가 프로젝트 칩을 붙였는데 **워크스페이스 전체로** 답이 온다.
-   * 오류가 안 나고 답도 그럴듯해서 **틀린 줄도 모른다.**
-   *
-   * spec 완료 기준 첫 줄이 「배열과 마커가 **함께** 나간다」다.
-   */
   it("★ 프로젝트 칩이 projectIds 로 나간다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     renderChat();
@@ -2773,25 +2588,6 @@ describe("PersonalChatProvider", () => {
     });
   });
 
-  /**
-   * ★ **「같은 문장」에는 범위가 포함된다.**
-   *
-   * 위 검사는 칩 없이 보내서 양쪽 `noteIds` 가 `[]` 라 **항상 참**이었다 — 자기 fixture 만
-   * 보는 검사다. 실제로는 `send()` 가 `editorRef.current?.clear()` 로 칩을 비우고,
-   * retry 는 override 없이 `chips`(= 이미 `[]`)를 쓴다.
-   *
-   * spec §2 가 이 경로를 이름으로 지목한다 — *"앞 턴의 문장을 새 범위로 다시 보낼 때는
-   * 마커를 먼저 푼다. **지금 그 경로는 「다시 보내기」 하나다.**"* 409 갈래는 그 처리를
-   * 하는데(`unwrapScopeMarkers` + 칩 되박기) retry 갈래에는 없다.
-   *
-   * 안 고치면: 붙였던 회의록이 **날마커 `@[주간 제품 회의](noteId:…)` 로** 말풍선에 뜨고,
-   * 에이전트는 그 회의록을 **안 보고** 답한다. 오류는 안 난다.
-   */
-  /**
-   * ★ **보내고 나서도 회의록 칩이 남는다.** 보낼 때 편집기를 비우는 것은 사용자의 거절이
-   * 아니다. 거절로 치면 두 번째 질문부터 회의록 없이 나가는데, 레일은 계속 「현재 회의 범위」라고
-   * 말한다 — lab 에서 모든 턴이 `notes=0` 으로 갔다.
-   */
   it("★ 회의록 안에서 보낸 다음 질문도 그 회의록을 범위로 들고 간다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     renderChat(<NoteScope hidden={false} />);
@@ -2817,7 +2613,6 @@ describe("PersonalChatProvider", () => {
     state.streamFails = true;
     renderChat(<NoteScope hidden={false} />);
     openPanel();
-    // 회의록 안에서 열면 그 회의록이 칩으로 미리 붙는다.
     await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
     appendAfterChips("정리해줘");
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
@@ -2825,8 +2620,6 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.streamCalls[0].body).toMatchObject({ noteIds: [NOTE_ID] });
 
-    // ★ **칩이 칩으로 돌아온다.** 마커를 안 풀고 넣으면 같은 범위가 칩 한 벌 + 날글자
-    // 한 벌로 두 번 앉고, 에이전트는 그 회의록을 안 보고 답한다. 오류는 안 난다.
     await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
 
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
@@ -2835,9 +2628,6 @@ describe("PersonalChatProvider", () => {
     expect(state.streamCalls[1].body).toEqual(state.streamCalls[0].body);
   });
 
-  /**
-   * ★ 재진입 네 갈래. `activeTurn`이 가르고, 없으면 `lastTurn`만 본다.
-   */
   describe("돌아오면 이어받는다", () => {
     function frame(event: string, payload: unknown, id?: string) {
       return {
@@ -2847,7 +2637,6 @@ describe("PersonalChatProvider", () => {
       };
     }
 
-    /** 히스토리 한 줄. `turnId` 가 「흐르는 턴의 행은 접는다」를 가르는 열쇠다. */
     function historyRow(role: string, content: string, turnId: string) {
       return {
         createdAt: "2026-07-24T00:00:00Z",
@@ -2859,14 +2648,6 @@ describe("PersonalChatProvider", () => {
       };
     }
 
-    /**
-     * ★★ **밀린 것을 히스토리가 실어 주면 답은 한 덩어리여야 한다** [APP-632].
-     *
-     * 서버가 도는 턴의 안 굳은 구간을 행으로 실어 주고 커서를 그 구간 끝으로 준다. 그러면
-     * 답 조각이 **히스토리에도 있고** 재생은 그 뒤 토큰만 준다 — 둘을 안 이으면 「안녕」과
-     * 「하세요」가 따로 선다. 이 어긋남은 오류를 안 낸다. 커서 타입이 그대로라 계약 생성도
-     * 타입 검사도 안 잡는다.
-     */
     it("★ 히스토리가 실어 준 답 조각에 재생이 이어 붙는다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = "1735689600000-6";
@@ -2891,11 +2672,8 @@ describe("PersonalChatProvider", () => {
           eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B", "1735689600000-6")
         )
       );
-      // 한 덩어리로 선다.
       expect(await screen.findByText("안녕하세요")).toBeTruthy();
-      // 조각이 따로 남아 있으면 안 된다.
       expect(screen.queryByText("안녕")).toBeNull();
-      // 생각 줄은 히스토리가 유일한 출처다 — 재생은 커서 뒤부터라 다시 안 온다.
       expandSteps();
       expect(screen.getByText("전사를 봅니다.")).toBeTruthy();
     });
@@ -2909,32 +2687,21 @@ describe("PersonalChatProvider", () => {
         pendingApproval: null,
       };
       state.resumeFrames = [
-        // **본문은 재생이 그린다.** 커서 뒤부터 오는 이 프레임들이 유일한 출처다.
         frame("token", { delta: "안녕하" }, "1735689600000-5"),
         frame("token", { delta: "세요" }, "1735689600000-6"),
       ];
       renderChat();
       openPanel();
 
-      // 커서가 그대로 `?after=`에 들어간다. 안 들어가면 카드까지 통째로 다시 온다.
       await waitFor(() =>
         expect(state.resumeUrls).toContain(
           eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B", "1735689600000-4")
         )
       );
-      // 재생이 그린 본문. 화면이 이 프레임들을 안 접으면 답이 통째로 빈다.
       expect(await screen.findByText("안녕하세요")).toBeTruthy();
-      // POST는 한 번도 안 나간다 — 이어받기는 새 턴이 아니다.
       expect(state.streamCalls).toHaveLength(0);
     });
 
-    /**
-     * ★★ **서버가 「스트림이 사라졌다」고 말한 자리를 히스토리가 메운다.**
-     *
-     * `410` 은 턴은 끝났고 스트림은 TTL 로 사라졌다는 뜻이라, 그 답은 재생으로 안 온다.
-     * **안 읽으면 그 답이 화면에서 조용히 사라진다** — 오류도 로그도 없이. 다시 읽은
-     * 뒤에는 로컬 스트림을 비워 히스토리가 그 답을 그리고 컴포저가 풀린다.
-     */
     it("★ 410 을 받으면 히스토리를 다시 읽고 그 결과가 화면에 선다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = "1735689600000-4";
@@ -2944,7 +2711,6 @@ describe("PersonalChatProvider", () => {
         pendingApproval: null,
       };
       state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
-      // 재조회가 실제로 왕복을 돌았을 때만 이 행이 생긴다 — 그 사이 서버에서 굳은 답이다.
       state.onRefetch = () => {
         state.messages = [
           historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
@@ -2966,12 +2732,9 @@ describe("PersonalChatProvider", () => {
       renderChat();
       openPanel();
 
-      // 히스토리 쿼리는 흐르는 동안 `enabled: false`라 이 왕복은 `reconcile()`만 낼 수 있다.
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
       expect(await screen.findByText("TTL 뒤에 읽은 답")).toBeTruthy();
-      // 재연결은 없다 — 스트림은 한 번만 열렸다.
       expect(state.resumeUrls).toHaveLength(1);
-      // 로컬 스트림이 비워져 전송이 풀린다.
       await waitFor(() =>
         expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
           "disabled",
@@ -2980,13 +2743,6 @@ describe("PersonalChatProvider", () => {
       );
     });
 
-    /**
-     * ★★ **재연결을 포기한 자리도 같은 재조회가 필요하다.**
-     *
-     * `stalled` 는 「아무도 더 안 말해 준다」는 뜻이다. 그 사이 서버에서 답이 끝나 있어도
-     * 화면은 반쪽 스트림에 멈춰 있고, `messagesQuery` 는 전역 `staleTime` 60초에 걸려
-     * 방금 굳은 답을 안 가져온다. `reconcile()` 만 그 왕복을 돈다.
-     */
     it("★ 재연결을 포기하면 히스토리를 다시 읽어 그 사이 끝난 답을 세운다", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
@@ -2998,7 +2754,6 @@ describe("PersonalChatProvider", () => {
           pendingApproval: null,
         };
         state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
-        // 재조회 시점에는 서버 쪽에서 이미 답이 굳어 있다.
         state.onRefetch = () => {
           state.messages = [
             historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
@@ -3012,13 +2767,11 @@ describe("PersonalChatProvider", () => {
             retryable: null,
           };
         };
-        // 프레임을 하나도 안 주고 곧바로 EOF. 그것이 재연결 신호다.
         state.resumeFrames = [];
         renderChat();
         openPanel();
 
         await waitFor(() => expect(state.resumeUrls.length).toBeGreaterThan(0));
-        // 백오프 여섯 번(합 45초)을 지나면 포기한다.
         await vi.advanceTimersByTimeAsync(60_000);
 
         await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
@@ -3028,15 +2781,6 @@ describe("PersonalChatProvider", () => {
       }
     });
 
-    /**
-     * ★★ **포기한 뒤에도 로컬 사본이 남아 있으면 히스토리와 두 벌이 된다.**
-     *
-     * 재조회는 그 사이 굳은 행을 가져오는데, 그 행들은 이미 받아 둔 프레임과 같은 내용이다.
-     * `resync` 와 달리 `gaveUp` 은 스트림을 안 버려 왔다 — **턴이 아직 돌 수 있어 배너가
-     * 맞다**는 이유였다. 그런데 히스토리가 「끝났다」고 답하면 그 전제가 깨진다.
-     *
-     * 버려도 실패는 안 잃는다 — `lastTurn.status === "FAILED"` 면 히스토리가 배너를 다시 세운다.
-     */
     it("★ 포기한 뒤 히스토리가 「끝났다」고 하면 로컬 사본을 접는다", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
@@ -3068,7 +2812,6 @@ describe("PersonalChatProvider", () => {
         openPanel();
 
         expect(await screen.findByText("전사를 훑습니다")).toBeTruthy();
-        // 이후 연결은 곧바로 EOF — 그것이 재연결 신호이고 백오프 여섯 번이면 포기한다.
         state.resumeFrames = [];
         await vi.advanceTimersByTimeAsync(60_000);
 
@@ -3082,11 +2825,6 @@ describe("PersonalChatProvider", () => {
       }
     });
 
-    /**
-     * ★★ N3. **포기는 연결의 사정이지 턴의 사정이 아니다.** 히스토리가 「아직 돈다」고 하면
-     * 「끊겼습니다」로 굳히지 않고 지금 커서부터 다시 붙는다. 전에는 재조회가 턴마다 한 번이라
-     * 도는 턴이 배너 밑에 멈춰 있었다.
-     */
     it("★ 포기한 뒤 히스토리가 「아직 돈다」고 하면 다시 붙는다", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
@@ -3212,7 +2950,6 @@ describe("PersonalChatProvider", () => {
         status: "IN_PROGRESS",
         pendingApproval: null,
       };
-      // 프레임 0개 = 곧바로 EOF. 실패로 읽으면 안 된다.
       renderChat();
       openPanel();
 
@@ -3223,8 +2960,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 승인 대기 중 돌아오면 카드가 다시 뜨고 스트림을 안 연다", async () => {
-      // `GET /events`는 도는 턴이 없으면(`hasLiveTurn = IN_PROGRESS`) 밀린 것만 주고
-      // 곧바로 닫는다 — 열면 그 EOF가 재연결 루프를 태운다. 상태만 세우는 것이 맞다.
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = "1735689600000-9";
       state.activeTurn = {
@@ -3244,7 +2979,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 남이 시작한 턴이 돌면 전송을 잠근다", async () => {
-      // `isSending`은 이 탭의 이번 전송만 안다 — 열어 두면 두 번째 메시지가 409를 받는다.
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = "1735689600000-4";
       state.activeTurn = {
@@ -3258,11 +2992,8 @@ describe("PersonalChatProvider", () => {
       write("겹쳐서 보낼래");
 
       await waitFor(() => expect(state.resumeUrls).toHaveLength(1));
-      // 보낼 문이 아예 없다 — 그 자리에 중지가 서 있다.
       expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
       expect(screen.getByRole("button", { name: "중지" })).toBeTruthy();
-      // ★ **대화를 갈아 끼우는 것은 같이 안 잠긴다.** 전송만 막힌다 — 앞 대화를 안
-      // 죽이는 것이 I08 이고, 서버의 턴은 계속 돌아 돌아오면 다시 이어받는다.
       expect(historyButton()).toHaveProperty("disabled", false);
       expect(state.streamCalls).toHaveLength(0);
     });
@@ -3287,8 +3018,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 도는 턴이 곧 마지막 턴이면 실패 배너를 안 세운다", async () => {
-      // `lastTurn.turnId === activeTurn.turnId`가 정상이다. 안 가리면 흐르는 답 위에
-      // 실패가 뜬다.
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = "1735689600000-4";
       state.activeTurn = {
@@ -3309,12 +3038,6 @@ describe("PersonalChatProvider", () => {
       expect(screen.queryByText("응답을 받지 못했습니다.")).toBeNull();
     });
 
-    /**
-     * ★★ **카드 앞의 생각·도구는 히스토리에만 있다.**
-     *
-     * server 는 이어받기 커서를 승인 카드의 entry id 로 준다 — 카드까지의 행은 정산이
-     * 이미 굳혔으므로 재생에 안 싣는다. 그 행을 화면까지 접으면 **아무도 안 그린다.**
-     */
     it("★ 커서로 이어받은 턴은 카드 앞 생각·도구를 히스토리가 그린다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = APPROVAL_ENTRY_ID;
@@ -3344,27 +3067,16 @@ describe("PersonalChatProvider", () => {
       openPanel();
 
       expect(await screen.findByRole("button", { name: "승인" })).toBeTruthy();
-      // 승인 대기는 스트림을 안 연다 — 이 행들의 출처는 히스토리 하나뿐이다.
       expect(state.resumeUrls).toHaveLength(0);
 
-      // 끝난 묶음은 접힌 채로 선다. 안쪽 줄을 보려면 머리글을 한 번 눌러야 한다.
       fireEvent.click(screen.getByRole("button", { name: "생각" }));
       expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(
         1
       );
       expect(screen.getAllByText("Linear 팀 목록 · 1건")).toHaveLength(1);
-      // 카드를 세우는 것은 `pendingApproval` 하나다 — 히스토리에는 카드 행이 없다.
       expect(screen.getAllByRole("button", { name: "승인" })).toHaveLength(1);
     });
 
-    /**
-     * ★★ **승인 대기에는 열린 스트림이 없다 — 커서가 없어도 히스토리가 유일한 출처다.**
-     *
-     * 턴 스트림의 Redis 키는 600초 뒤 사라지고 승인 대기 중에는 쓰기가 없어 수명이 안
-     * 갱신된다(`AgentChatStreamKeys.TTL`). 10분 넘게 카드를 세워 두면 server 가 커서를
-     * 못 찾아 `null` 로 답하는데, 그것을 「처음부터 재생한다」로 읽고 접으면 재생할 스트림도
-     * 없어서 **아무도 안 그린다.**
-     */
     it("★ 승인 대기는 커서가 없어도 히스토리를 접지 않는다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = null;
@@ -3405,10 +3117,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 진행 중 턴의 도구 카드를 두 벌 그리지 않는다", async () => {
-      // TOOL 행이 히스토리와 스트림 백로그 양쪽에서 온다. 접는 열쇠는 `turnId`다.
-      //
-      // **`cursor` 가 null 이어야 이 자리가 실제로 생긴다** — 그때만 재생이 턴의 처음부터
-      // 오므로 굳은 행과 겹친다. 카드 커서로 이어받은 턴은 그 뒤부터만 재생돼 안 겹친다.
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = null;
       state.activeTurn = {
@@ -3457,12 +3165,10 @@ describe("PersonalChatProvider", () => {
       expect(
         await screen.findAllByText("스크립트에서 관련 발화 검색")
       ).toHaveLength(1);
-      // 질문은 스트림에 안 실린다 — 접으면 이어받기 화면에서 사라진다.
       expect(screen.getByText("이슈 만들어줘")).toBeTruthy();
     });
 
     it("★ 409는 오류 배너가 아니라 이어받기다", async () => {
-      // 배너 + 「다시 보내기」로 그리면 그 버튼이 또 409를 받아 무한 루프가 된다.
       state.chats = [chatRow(CHAT_ID)];
       state.streamFails = true;
       state.streamFailure = {
@@ -3490,14 +3196,10 @@ describe("PersonalChatProvider", () => {
       fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 
       await waitFor(() => expect(state.streamCalls).toHaveLength(1));
-      // 히스토리를 다시 읽어 무엇을 이어야 하는지 알아낸다.
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
       expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
-      // 서버에 안 닿은 문장이라 컴포저로 돌려준다.
       const restored = screen.getByRole("textbox", { name: "메시지" });
       expect(restored.textContent).toContain("겹쳐서 보낼래");
-      // ★ **칩을 다시 박으므로 마커는 풀어서 넣는다.** 안 풀면 같은 범위가 칩 한 벌 +
-      // 마커 날글자 한 벌로 두 번 앉는다.
       expect(chipsInInput()).toEqual(["주간 제품 회의"]);
       expect(restored.textContent).not.toContain("noteId:");
     });
@@ -3544,8 +3246,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 409가 온 문장이 히스토리에 이미 있으면 컴포저로 안 되돌린다", async () => {
-      // 열쇠를 걷은 뒤 **응답을 못 받은 전송의 재시도도 409로 온다.** 그때 이 문장은 이미
-      // 서버에 있고 히스토리가 곧 그린다 — 되돌리면 화면에 한 벌, 컴포저에 한 벌이 된다.
       state.chats = [chatRow(CHAT_ID)];
       state.streamFails = true;
       state.streamFailure = {
@@ -3581,18 +3281,13 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ POST가 못 열렸는데 서버에 턴이 있으면 히스토리를 다시 읽어 이어받는다", async () => {
-      // POST 가 네트워크로 실패하면 화면은 턴이 생겼는지 모른다. 그 창을 막던 것이
-      // `clientTurnKey` 였고, 이제 **실패한 전송이 스스로 히스토리를 다시 읽는다** —
-      // 안 읽으면 「다시 보내기」가 턴을 하나 더 열어 답이 두 벌 나온다.
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = "1735689600000-4";
       state.streamFails = true;
       state.resumeFrames = [
-        // **본문은 재생이 그린다.** 커서 뒤부터 오는 이 프레임들이 유일한 출처다.
         frame("token", { delta: "안녕하" }, "1735689600000-5"),
         frame("token", { delta: "세요" }, "1735689600000-6"),
       ];
-      // 보내는 사이에 서버 쪽이 달라졌다 — POST 응답은 못 받았지만 턴과 USER 행은 생겼다.
       state.onRefetch = () => {
         state.messages = [
           {
@@ -3615,7 +3310,6 @@ describe("PersonalChatProvider", () => {
       await sendMessage("정리해줘");
 
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
-      // 커서부터 이어받는다. **POST 는 한 번뿐이다** — 답이 두 벌 나오는 길이 그것뿐이다.
       await waitFor(() =>
         expect(state.resumeUrls).toContain(
           eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B", "1735689600000-4")
@@ -3623,17 +3317,11 @@ describe("PersonalChatProvider", () => {
       );
       expect(state.streamCalls).toHaveLength(1);
       expect(await screen.findByText("안녕하세요")).toBeTruthy();
-      // 실패 배너가 걷힌다 — 다시 보낼 이유가 없어졌다.
       expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
-      // 질문은 히스토리가 그린다. 로컬 사본을 안 접으면 같은 문장이 두 벌 그려진다.
       expect(screen.getAllByText("정리해줘")).toHaveLength(1);
     });
 
     it("★ 그 사이 턴이 끝나 있으면 답이 그대로 그려지고 다시 보낼 것이 없다", async () => {
-      // 「살아 있는 턴 하나」만으로는 **그 사이 끝난 경우**를 못 막는다 — server 의
-      // `같은 클라이언트 턴 키는 확정된 뒤에도 다시 못 들어간다` 가 지키던 자리다.
-      // 열쇠를 걷은 지금은 히스토리 재조회가 그것을 덮는다: 답이 이미 있으니 다시 보낼
-      // 이유가 없어진다. 안 덮으면 「다시 보내기」가 턴을 하나 더 돌려 토큰을 두 번 쓴다.
       state.chats = [chatRow(CHAT_ID)];
       state.streamFails = true;
       state.onRefetch = () => {
@@ -3668,7 +3356,6 @@ describe("PersonalChatProvider", () => {
 
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
       expect(await screen.findByText("정리했습니다.")).toBeTruthy();
-      // 이어받을 것이 없으므로 GET /events 도 안 연다. POST 는 그대로 한 번이다.
       expect(state.resumeUrls).toHaveLength(0);
       expect(state.streamCalls).toHaveLength(1);
       expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
@@ -3676,8 +3363,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 히스토리가 그 질문을 안 받아 갔으면 문장을 컴포저로 되돌린다", async () => {
-      // POST 가 아예 안 닿은 경우다. 여기서 그냥 접으면 히스토리에도 없는 질문이 화면에서
-      // 조용히 사라지고, 「다시 보내기」가 없어졌으므로 다시 칠 방법도 없다.
       state.chats = [chatRow(CHAT_ID)];
       state.streamFails = true;
       renderChat();
@@ -3685,7 +3370,6 @@ describe("PersonalChatProvider", () => {
       await sendMessage("정리해줘");
 
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
-      // 문장이 컴포저로 돌아와 있다 — 고쳐서 다시 보낼 수도, 그대로 보낼 수도 있다.
       await waitFor(() =>
         expect(
           screen.getByRole("textbox", { name: "메시지" }).textContent
@@ -3694,13 +3378,6 @@ describe("PersonalChatProvider", () => {
       expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
     });
 
-    /**
-     * ★★ **토큰이 하나도 없는 중지.** server 는 부분 답이 없으면 ASSISTANT 행을 안 쓰고
-     * (`SettleAgentChatTurnHandler` 의 `partialAnswerOf`), 그 구간의 THINKING·TOOL 행만
-     * 굳힌다. 로컬 사본을 접는 열쇠를 「ASSISTANT 행」에서만 찾으면 이 자리는 영영 안 접혀
-     * 같은 생각 줄이 스트림과 히스토리에서 **두 벌**로 선다 — 생각하다 멈추는 것이 중지의
-     * 가장 흔한 모습이다.
-     */
     it("★ 토큰 없이 중지해도 생각 줄이 두 벌로 안 그려진다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = null;
@@ -3719,9 +3396,7 @@ describe("PersonalChatProvider", () => {
 
       await waitFor(() => expect(state.resumeUrls).toHaveLength(1));
       expect(await screen.findByText("전사를 훑습니다")).toBeTruthy();
-      // 목이 `after` 를 안 보고 매 연결마다 같은 프레임을 다시 준다 — server 는 안 그런다.
       state.resumeFrames = [];
-      // 토큰이 없으니 ASSISTANT 행이 없다. 굳는 것은 생각 줄뿐이다.
       state.onRefetch = () => {
         state.messages = [
           historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
@@ -3760,17 +3435,12 @@ describe("PersonalChatProvider", () => {
       await waitFor(() => expect(state.resumeUrls).toHaveLength(1));
       fireEvent.click(await screen.findByRole("button", { name: "중지" }));
 
-      // `turnId`의 출처는 `activeTurn`(또는 202 본문) 하나다.
       expect(state.cancelMock).toHaveBeenCalledWith({
         chatId: CHAT_ID,
         turnId: "0K9GVJT2C4Q3B",
       });
     });
 
-    /**
-     * ★ **중지는 부분 답을 저장한다.** 취소 뒤 다시 읽은 히스토리에 그 턴의 ASSISTANT
-     * 행이 오면 로컬 사본을 접는다 — 안 접으면 끊긴 문장이 두 벌 그려진다.
-     */
     it("★ 중지 뒤 히스토리가 부분 답을 담아 오면 로컬 사본을 접는다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = null;
@@ -3811,7 +3481,6 @@ describe("PersonalChatProvider", () => {
   });
 
   describe("대화가 여럿 산다", () => {
-    /** A는 도는 중, B는 안 돈다. 목록 첫 줄이 A라 패널은 A로 열린다. */
     function twoChats() {
       state.chats = [chatRow(CHAT_ID, RUNNING_TURN), chatRow(OTHER_CHAT_ID)];
       state.activeTurnByChat = {
@@ -3826,8 +3495,6 @@ describe("PersonalChatProvider", () => {
     }
 
     it("★ A가 도는 동안 B로 옮기면 B의 전송이 안 잠긴다", async () => {
-      // I08 의 전부다. 패널은 하나이고 대화가 갈려도 언마운트가 없어서, 스트림을 안
-      // 끊으면 `isBusy`의 `isStreaming`이 **B의 컴포저까지** 잠근다.
       twoChats();
       renderChat();
       openPanel();
@@ -3837,7 +3504,6 @@ describe("PersonalChatProvider", () => {
 
       pickChat(OTHER_CHAT_ID);
 
-      // 앞 대화의 반쪽 답도 함께 걷힌다 — 안 걷으면 B 스레드에 A의 답이 그려진다.
       await waitFor(() => expect(screen.queryByText("안녕하")).toBeNull());
       const send = screen.getByRole("button", { name: "보내기" });
       expect(send).toHaveProperty("disabled", false);
@@ -3848,7 +3514,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 목록이 남의 턴을 말해도 전송을 잠그지 않는다", () => {
-      // 「어느 대화든 돌면 잠근다」가 한 줄이라도 들어오면 I08 이 무효가 된다.
       state.chats = [chatRow(CHAT_ID), chatRow(OTHER_CHAT_ID, RUNNING_TURN)];
       renderChat();
       openPanel();
@@ -3860,7 +3525,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 폴링이 배경에서 도는 동안에도 전송이 열려 있다", () => {
-      // `isLoading` 을 `isFetching` 으로 바꾸면 주기마다 컴포저가 잠긴다.
       state.chats = [chatRow(CHAT_ID)];
       renderChat();
       openPanel();
@@ -3872,9 +3536,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 새 대화에 쓴 뒤에도 옛 대화를 고를 수 있다", async () => {
-      // 계약 공식이 `createdChatId` 를 먼저 보므로, 갈아탈 때 그것을 안 비우면
-      // 목록에서 무엇을 골라도 화면이 안 바뀐다. `createdChatId` 는 ＋ 가 아니라
-      // **첫 전송**이 세운다.
       state.chats = [chatRow(CHAT_ID)];
       renderChat();
       openPanel();
@@ -3894,8 +3555,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ B에 들렀다 A로 돌아오면 A의 도는 턴에 다시 붙는다", async () => {
-      // 「이 턴에는 이미 붙었다」는 기억이 대화를 갈아탈 때 안 풀리면, 돌아온 A가
-      // 스트림도 없고 이어받지도 않는 채로 선다.
       twoChats();
       renderChat();
       openPanel();
@@ -3908,8 +3567,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 배지는 목록이 말하고, 열린 대화는 SSE 가 이긴다", async () => {
-      // 열린 대화(A)의 턴은 이 탭이 이어받아 그리는 중이라 목록과 같은 턴이다.
-      // B의 배지는 목록이 유일한 소식이다.
       state.chats = [
         chatRow(CHAT_ID),
         chatRow(OTHER_CHAT_ID, {
@@ -3924,14 +3581,12 @@ describe("PersonalChatProvider", () => {
       const rows = within(screen.getByTestId("chat-history-view"))
         .getAllByRole("button")
         .filter((row) => row.textContent?.startsWith("대화 "));
-      // 줄 끝 한 자리를 시각과 배지가 나눠 쓴다 — 배지가 있으면 시각 대신 배지다(제목 자리를 넓힌다).
       expect(rows[0].textContent).toBe(`대화 ${CHAT_ID}방금`);
       expect(rows[1].textContent).toBe(`대화 ${OTHER_CHAT_ID}승인 대기`);
     });
   });
 
   describe("기록이 패널 안에서 교대한다", () => {
-    /** 두 뷰는 늘 마운트돼 있다 — 가려질 뿐이라 `inert` 로 어느 쪽이 사는지 가른다. */
     function views() {
       return {
         thread: screen.getByTestId("chat-thread-view"),
@@ -3940,8 +3595,6 @@ describe("PersonalChatProvider", () => {
     }
 
     it("★ 기록은 뜨는 레이어가 아니라 스레드와 같은 상자를 나눠 쓴다", () => {
-      // 둘 다 마운트된 채 겹쳐 교대한다. 스레드를 언마운트하면 흐르던 답이 통째로
-      // 화면에서 사라지고(행은 server 가 굳힌다) 스크롤 위치도 잃는다.
       state.chats = [chatRow(CHAT_ID)];
       state.messages = [
         {
@@ -3956,24 +3609,19 @@ describe("PersonalChatProvider", () => {
 
       expect(views().history.hasAttribute("inert")).toBe(true);
       expect(views().thread.hasAttribute("inert")).toBe(false);
-      // 가려져 있는 동안에도 목록은 DOM 에 있다 — 여닫는 것이 아니라 교대다.
       expect(views().history.textContent).toContain(`대화 ${CHAT_ID}`);
 
       fireEvent.click(historyButton());
 
       expect(views().history.hasAttribute("inert")).toBe(false);
       expect(views().thread.hasAttribute("inert")).toBe(true);
-      // ★ **스레드의 내용이 그대로 DOM 에 있다.** 컴포저만 보면 안 된다 — 그건 스크롤
-      // 영역 밖이라 스레드를 통째로 언마운트해도 살아남는다(뮤테이션으로 확인).
       expect(views().thread.textContent).toContain(
         "가려져도 남아 있어야 합니다."
       );
-      // 목록도 마찬가지로 남는다 — 교대일 뿐 여닫는 것이 아니다.
       expect(views().history.textContent).toContain(`대화 ${CHAT_ID}`);
     });
 
     it("★ 뷰가 갈리면 포커스를 손으로 옮긴다", () => {
-      // 드롭다운 라이브러리가 해 주던 일이다. 안 옮기면 키보드 포커스가 가려진 상자 안에 남는다.
       state.chats = [chatRow(CHAT_ID)];
       renderChat();
       openPanel();
@@ -4011,7 +3659,6 @@ describe("PersonalChatProvider", () => {
       openPanel();
       const header = () =>
         screen.getByTestId("personal-chat-panel").querySelector("header")!;
-      // 진입(기록)과 복귀(←)가 머리글의 같은 첫 자리다 — 손이 안 움직인다
       expect(header().querySelector("button")).toBe(historyButton());
       fireEvent.click(historyButton());
 
@@ -4049,7 +3696,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 지금 보는 대화는 색이 아니라 접근성 속성으로도 말한다", () => {
-      // 배경만으로 말하면 스크린리더가 못 읽고 색을 가리기 어려운 사람에게도 안 보인다.
       state.chats = [chatRow(CHAT_ID), chatRow(OTHER_CHAT_ID)];
       renderChat();
       openPanel();
@@ -4063,7 +3709,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 빈 새 대화를 쓰는 중이면 아무 줄도 선택돼 있지 않다", () => {
-      // 그 대화는 아직 서버에 없다 — 목록에 줄이 없으니 붙을 자리도 없다.
       state.chats = [chatRow(CHAT_ID)];
       renderChat();
       openPanel();
@@ -4075,7 +3720,6 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 기록 목록이 날짜로 묶이고 줄마다 마지막으로 쓴 시각을 적는다", () => {
-      // 자정 직후에도 1분 전을 오늘로 가정하지 않도록 이 테스트의 날짜만 고정한다.
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date(2026, 9, 5, 12));
       try {
@@ -4102,14 +3746,10 @@ describe("PersonalChatProvider", () => {
         const rows = [...history.querySelectorAll("button")].filter((row) =>
           row.textContent?.startsWith("대화 ")
         );
-        // **묶어도 순서가 안 뒤집힌다.** 묶는 값과 정렬 기준이 같은 `updatedAt` 이라
-        // 순서대로 훑기만 하면 된다 — 다르면 「1분 전인데 왜 세 번째 줄」이 된다.
         expect(rows.map((row) => row.textContent?.slice(3, 16))).toEqual([
           CHAT_ID,
           OTHER_CHAT_ID,
         ]);
-        // 시각은 줄 끝에 선다. 로케일은 플랫폼이 정하므로(검사 환경은 en-US) 여기서는
-        // 「`updatedAt` 마다 다르다」만 본다 — 로케일별 문구는 `lib/chat/chat-list.test.ts` 가 잰다.
         expect(rows[0].lastElementChild?.textContent).not.toBe(
           rows[1].lastElementChild?.textContent
         );
@@ -4123,12 +3763,10 @@ describe("PersonalChatProvider", () => {
       renderChat();
       openPanel();
 
-      // 목록 첫 줄이 열린다 — 헤더가 그 대화를 말한다.
       const header = screen
         .getByTestId("personal-chat-panel")
         .querySelector("header");
       expect(header?.textContent).toContain(`대화 ${CHAT_ID}`);
-      // 범위는 턴마다 다르다 — 머리글에 범위 부제를 두지 않는다(입력창 위 줄이 말한다). 휴지통도 머리글 1급 버튼이 아니다.
       expect(header?.textContent).not.toContain("전체");
       expect(
         within(header!).queryByRole("button", { name: "대화 삭제" })

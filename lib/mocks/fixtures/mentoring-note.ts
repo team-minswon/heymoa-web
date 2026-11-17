@@ -3,36 +3,8 @@ import type {
   TranscriptResponseDataSegmentsItem,
 } from "@/lib/api/generated/models";
 
-/**
- * 실제 멘토링 회의 하나를 그대로 뜬 것이다 (운영 노트 `0RJZ9G0CBC0XG`, 63분·494발화).
- *
- * **손으로 지어낸 시드로는 화자 패널이 안 보인다.** 발화가 서넛이면 비중 막대가 전부
- * 비슷해지고, 한 사람이 라벨 둘을 갖는 경우도 안 생긴다 — 그 둘이 이 화면에서 판단해야 할
- * 전부다. 그래서 분포가 살아 있는 실제 회의를 골랐다:
- *
- * | 사람 | 라벨 | 비중 |
- * |---|---|---|
- * | 이동준 멘토님 | **D · E** | 42.8% |
- * | 한지원 | A | 28.0% |
- * | 상어 | B | 17.1% |
- * | 김민수 | C | 12.0% |
- *
- * 이동준 멘토님이 **라벨 둘을 가진다** — 목소리가 둘로 갈렸는데 사람은 하나인 경우다.
- * 화자 패널이 사람 기준으로 묶는지 여기서 드러난다. 라벨 없는 발화 22 개도 그대로 뒀다.
- *
- * 이름은 운영 그대로다 — 목이 실제로 쓰이는 자리는 개발자 화면뿐이고, 지어낸 이름으로
- * 바꾸면 위 표와 어긋나 다음 사람이 데이터를 못 믿는다.
- */
 export const MENTORING_NOTE_ID = "01K0000000920";
 export const MENTORING_SESSION_ID = "01K0000000960";
-/**
- * 참여자 넷의 임시 참여자 기록. **넷 다 계정이 없다** — 실제로도 멘토링에 온 사람들은
- * 워크스페이스 계정이 없었다.
- *
- * `userId` 도 `guestId` 도 없는 참여자를 만들면 안 된다. 참석자 필드가 그런 사람들을
- * `guest:null` 이라는 **같은 열쇠**로 다뤄 하나씩 고를 수가 없고, 저장하면 `guestIds` 에
- * 문자열 `"null"` 이 실려 `WORKSPACE_GUEST_NOT_FOUND` 로 깨진다.
- */
 export const MENTORING_GUEST_IDS = {
   hanJiwon: "01K0000000991",
   shark: "01K0000000992",
@@ -40,7 +12,6 @@ export const MENTORING_GUEST_IDS = {
   mentorLee: "01K0000000990",
 } as const;
 
-/** 회의 참여 기록. 위 임시 참여자와 짝이다. */
 export const MENTORING_PARTICIPANT_IDS = {
   hanJiwon: "01K0000000921",
   shark: "01K0000000922",

@@ -1,11 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/**
- * 설정 › 외부 에이전트(APP-804). 토큰은 만든 응답에서 한 번만 보이고, 닫은 뒤 목록에는 앞자리만
- * 남는다. 목 DB 는 페이지 모듈 상태라 문서를 다시 읽지 않고 클라이언트 조작만 한다. 빈 상태는 목
- * 시드에 연결이 있어 컴포넌트 시험(`agent-connections-settings.test.tsx`)이 본다.
- */
-
 const MOCK_WORKSPACE_ID = "01K0000000000";
 const SHOTS = process.env.E2E_SHOTS_DIR;
 
@@ -24,12 +18,10 @@ test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 �
 }) => {
   await openAgentSettings(page);
 
-  // 「새 연결」의 기본은 OAuth 안내다 — 개인 토큰은 안내의 링크로만 연다(APP-933)
   await page.getByRole("button", { name: "새 연결" }).click();
   const guide = page.getByRole("region", { name: "OAuth 연결 안내" });
   await expect(guide).toBeVisible();
   await expect(page.getByLabel("연결 이름")).toHaveCount(0);
-  // 앱 하나를 고르면 그 앱의 단계만 보인다 — 기본은 Claude 앱, Claude Code 는 어느 폴더에서나(APP-1031)
   await expect(
     guide.getByText("설정 › 커넥터를 엽니다", { exact: false })
   ).toBeVisible();
@@ -37,7 +29,6 @@ test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 �
   await expect(
     guide.getByText("--scope user heymoa", { exact: false })
   ).toBeVisible();
-  // 안 고른 앱의 안내도 자리를 지키려고 그려 둔다(APP-1356) — 보이지만 않으면 된다
   await expect(
     guide.getByText("설정 › 커넥터를 엽니다", { exact: false })
   ).toBeHidden();
@@ -80,7 +71,6 @@ test("회수하면 그 연결이 회수됨으로 바뀐다", async ({ page }) =>
     .getByRole("button", { name: "회수" })
     .click();
 
-  // 회수한 연결은 위 목록에서 빠져 「지난 연결」로 접힌다(APP-828). 시드에 회수된 연결이 둘 있다
   await expect(row).toHaveCount(0);
   await page.getByRole("button", { name: "지난 연결 3개" }).click();
   const past = page
@@ -91,7 +81,6 @@ test("회수하면 그 연결이 회수됨으로 바뀐다", async ({ page }) =>
   await expect(past).toContainText("직접 회수했습니다.");
   await expect(past.getByRole("button", { name: "회수" })).toHaveCount(0);
 
-  // 시드의 「떠난 팀의 연결」은 OAuth 연결이다 — 토큰 앞자리 대신 종류와 끊긴 까닭이 보인다(APP-889)
   const oauth = page
     .getByRole("list", { name: "지난 연결" })
     .getByRole("listitem")
@@ -100,9 +89,6 @@ test("회수하면 그 연결이 회수됨으로 바뀐다", async ({ page }) =>
   await expect(oauth).toContainText("워크스페이스를 떠나 끊겼습니다.");
 });
 
-// APP-826. 시드의 「노트북 Claude Code」는 내역이 한 쪽(20)을 넘는다(24). 응답에는 시각·도구·건수·성공
-// 여부만 있고 질문·답·인자·결과 본문은 어디에도 없다. 화면은 8개씩 보인다(APP-867) — 16 까지는 읽어
-// 둔 쪽에서, 24 는 다음 쪽을 읽어서.
 test("연결의 사용 내역을 펼치면 시각·도구·건수가 보이고 본문은 오지 않는다", async ({
   page,
 }) => {

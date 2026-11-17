@@ -23,7 +23,6 @@ import {
 
 const NAME_REQUIRED = "nameRequired";
 const workspaceSchema = z.object({
-  // 문구는 그릴 때 언어 파일에서 고른다 — 스키마는 모듈 수준이라 화면 언어를 모른다.
   name: z.string().trim().min(1, NAME_REQUIRED).max(80),
   description: z
     .string()
@@ -42,8 +41,6 @@ export function WorkspaceSettingsForm({
   const t = useTranslations("settings.workspace");
   const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
-  // suspense — 로딩/에러는 settings-dialog의 DataBoundary가 잡는다. 200 봉투가 보장되므로
-  // 아래 workspace?. 옵셔널은 타입 안전용이며 런타임엔 항상 값이 있다.
   const query = useGetWorkspaceSuspense(workspaceId);
   const update = useUpdateWorkspace({
     mutation: { meta: { suppressErrorToast: true } },
@@ -121,7 +118,6 @@ export function WorkspaceSettingsForm({
           {tActions("saveChanges")}
         </Button>
       </form>
-      {/* 관리자에게만 보인다(PRO-69). 이름은 저장된 값과 비교한다 — 폼에 고치는 중인 값이 아니다. */}
       {workspace?.role === "ADMIN" && workspaceName ? (
         <WorkspaceDeletionSection
           workspaceId={workspaceId}
@@ -132,13 +128,6 @@ export function WorkspaceSettingsForm({
   );
 }
 
-/**
- * 워크스페이스 일반 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다.
- *
- * **머리글·라벨·버튼은 가리지 않는다** — 고정 문구다. 값이 들어갈 입력 칸만 막대로 둔다. 폼 틀(`FORM`·`FIELD`)은
- * 실제와 같은 상수를 읽어, 한쪽 여백만 고쳐 어긋나는 일이 없게 한다. 설명 칸은 `field-sizing-content` 라
- * 내용이 짧으면 최소 높이(`min-h-16`)에 선다.
- */
 export function WorkspaceSettingsFormSkeleton() {
   const t = useTranslations("settings.workspace");
   const tActions = useTranslations("common.actions");

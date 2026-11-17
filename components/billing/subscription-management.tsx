@@ -43,7 +43,6 @@ import { cn } from "@/lib/utils";
 type Billing = WorkspaceBillingResponseData;
 type Dialog = "cancel" | "resume" | "delete" | null;
 
-/** 관리할 구독이 있는가 — 유료(미납 유예 포함)이거나, 끝났어도 지울 카드가 남았다. 상세(ADMIN)가 있을 때만이다. */
 export function hasSubscriptionToManage(billing: Billing) {
   return Boolean(
     billing.detail &&
@@ -53,7 +52,6 @@ export function hasSubscriptionToManage(billing: Billing) {
   );
 }
 
-/** 설정 탭 안의 영역 제목. */
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
     <h3 className="mb-3 text-sm font-medium text-[var(--el-ink)]">
@@ -62,11 +60,6 @@ export function SectionTitle({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * 설정 › 결제 관리의 「결제 수단」과 「구독」(APP-1565). 카드 한 줄과, 요금제·다음 결제·최근 결제를 한 목록에 둔다.
- * **버튼을 보일지는 서버의 `allowedActions` 로만 정한다** — 화면이 조건을 다시 계산하지 않는다. 위험한 행동(해지·카드 삭제)은
- * 확인 창에서 날짜·금액으로 결과를 적은 뒤 실행한다. 결과 안내는 사라지면 안 돼 자리에 둔다.
- */
 export function SubscriptionManagement({
   workspaceId,
   billing,
@@ -75,9 +68,7 @@ export function SubscriptionManagement({
 }: {
   workspaceId: string;
   billing: Billing;
-  /** 카드 변경 화면으로. */
   onChangeCard: () => void;
-  /** 그 결제의 상세로. */
   onOpenPayment: (paymentId: string) => void;
 }) {
   const t = useTranslations("billing.manage");
@@ -89,8 +80,6 @@ export function SubscriptionManagement({
   const product = billing.product;
   const period = billing.currentPeriod;
   const amount = product ? format.money(product.amountKrw) : null;
-  // 다음 갱신이 실제로 청구할 금액(APP-1596). 직전 회차의 동의 금액이라 지금 상품가와 다를 수 있고, 다음 결제가 없으면 null 이다 —
-  // 그때는 금액을 빼고 날짜만 말한다.
   const nextAmount =
     detail.nextChargeAmountKrw != null
       ? format.money(detail.nextChargeAmountKrw)
@@ -98,9 +87,7 @@ export function SubscriptionManagement({
   const masked = detail.maskedCard;
   const cardName = [masked?.issuer, masked?.cardType].filter(Boolean).join(" ");
 
-  // 최근 결제 한 건의 요약.
   const paymentId = detail.currentPaymentId;
-  // 환불 진행 중 다시 읽기는 요금제 탭과 같은 3분 창에서만 한다.
   const poll = usePollWindow();
   const latest = useGetBillingPayment(workspaceId, paymentId ?? "", {
     query: {
@@ -118,15 +105,12 @@ export function SubscriptionManagement({
     if (outcome !== "failed") setDialog(null);
   };
   const busy = commands.pending;
-  // 미납 유예(APP-1624)는 거절된 카드가 지워진 채 유예 끝까지 Pro 다. 해지하면 그 자리에서 끝난다.
   const pastDueEnd =
     billing.status === "PAST_DUE" ? billing.pastDueEndsAt : null;
   const subscribed = billing.status === "ACTIVE" || Boolean(pastDueEnd);
-  // 갱신 결제 결과를 기다리는 동안은 기간 끝이 이미 지났다 — 끝나는 날을 말하지 않고, 결과에 따라 정해진다고 말한다.
   const renewalPending =
     billing.entitlement?.kind === "RENEWAL_PENDING" && !pastDueEnd;
   const live = billing.status === "ACTIVE" && !billing.cancelAtPeriodEnd;
-  // 대기 중의 「다음 결제」는 지금 확인하고 있는 그 결제다. 지난 날짜를 다음 결제일로 보이지 않는다.
   const next = !live
     ? null
     : renewalPending
@@ -145,7 +129,6 @@ export function SubscriptionManagement({
     billing.cancelAtPeriodEnd &&
     billing.status === "ACTIVE" &&
     (renewalPending || period);
-  // 종료 예정인데 카드가 없다 — 결제자가 빠졌거나 해지 뒤 카드를 지웠다. 어느 쪽인지는 단정하지 않는다(APP-1588).
   const stopped = scheduled && !detail.methodId;
 
   return (
@@ -268,8 +251,7 @@ export function SubscriptionManagement({
                       ? t("cancelScheduledPending")
                       : stopped
                         ? t("stoppedNoCard", { end: format.date(period.end) })
-                        : // 기간 경계는 첫 결제 시각이라 해지 문장은 시각까지 보인다
-                          t("cancelScheduled", {
+                        : t("cancelScheduled", {
                             end: format.dateTime(period.end),
                           })
                     : pastDueEnd
@@ -379,7 +361,6 @@ export function SubscriptionManagement({
           pending={commands.removePending}
           onConfirm={async () => {
             const outcome = await commands.deleteMethod(detail.methodId!);
-            // 카드가 없어지면 이 영역이 통째로 사라져 자리 안내를 볼 수 없다 — 짧은 완료 알림으로 알린다.
             if (outcome === "done") toast.success(t("notice.deleted"));
             close(outcome);
           }}
@@ -389,7 +370,6 @@ export function SubscriptionManagement({
   );
 }
 
-/** 명령 결과 안내. 성공은 담담하게, 막힌 이유는 경고로. 날짜·금액은 다시 읽은 최신 상태에서 쓴다. */
 function NoticeLine({
   notice,
   billing,
@@ -401,12 +381,10 @@ function NoticeLine({
   const format = useBillingFormat();
   if (!notice) return null;
   const period = billing?.currentPeriod;
-  // 재개 뒤 다시 읽은 다음 결제 금액. 없으면 날짜만 말한다.
   const next = billing?.detail?.nextChargeAmountKrw;
   const amount = next != null ? format.money(next) : null;
   switch (notice.kind) {
     case "canceled":
-      // 갱신 결과 대기 중에는 아래 상태 줄이 예약을 알린다 — 지난 기간 끝 날짜를 말하지 않는다.
       return period && billing?.entitlement?.kind !== "RENEWAL_PENDING" ? (
         <BillingNotice>
           {t("canceled", { end: format.date(period.end) })}
@@ -434,7 +412,6 @@ const STATUS_DOT: Record<ReturnType<typeof paymentStatusOf>, string> = {
   REFUND_FAILED: "bg-[var(--el-error)]",
 };
 
-/** 결제 상태 — 색 점과 글. 색만으로 뜻을 전하지 않는다. */
 export function PaymentStatusText({
   payment,
 }: {

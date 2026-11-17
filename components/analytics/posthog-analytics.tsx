@@ -13,7 +13,6 @@ import {
 
 import { useGetCurrentUser } from "@/lib/api/generated/users/users";
 
-/** PostHog를 켜고 로그인한 사람을 userId로 묶는다. 켤지는 `SiteAnalytics`가 정한다. */
 export function PostHogAnalytics({ apiKey }: { apiKey: string }) {
   const userId = useAuth().user?.userId;
   const pathname = usePathname();

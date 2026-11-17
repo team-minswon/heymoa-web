@@ -7,16 +7,6 @@ import {
   type Page,
 } from "@playwright/test";
 
-/**
- * 제품 면 언어 결정과 계정 언어 연동(APP-1285).
- *
- * 언어 순서는 계정 → `heymoa-lang` 쿠키 → 브라우저 언어 → ko 다. 목 모드에서 계정 언어는 `heymoa-mock-account-lang`
- * 쿠키에 남는다 — 서버가 그린 첫 화면(SSR 목 사용자)과 브라우저 MSW 가 같이 읽어야 하기 때문이다(`lib/mocks/mock-user.ts`).
- * 그 쿠키를 다른 컨텍스트에 옮겨 심으면 「같은 계정으로 다른 브라우저에서 로그인」이 된다.
- *
- * 전체 설정은 한국어 브라우저(`locale: "ko-KR"`)로 돈다. 영어 브라우저가 필요한 시험은 자기 컨텍스트를 만든다.
- */
-
 test.describe.configure({ timeout: 240_000 });
 
 const BASE = "http://localhost:3100";
@@ -45,7 +35,6 @@ async function cookieValue(context: BrowserContext, name: string) {
   return (await context.cookies(BASE)).find((c) => c.name === name)?.value;
 }
 
-/** 개발 모드 React 가 콘솔에 남기는 hydration 경고를 모은다. */
 function collectHydrationWarnings(page: Page) {
   const warnings: string[] = [];
   page.on("console", (message) => {
@@ -203,13 +192,11 @@ test.describe("제품 면 언어", () => {
     await expect.poll(() => cookieValue(context, "heymoa-lang")).toBe("en");
 
     await page.getByRole("button", { name: /테스트 유저/ }).click();
-    // 계정 언어가 영어라 사이드바 계정 메뉴도 영어다.
     await page.getByRole("menuitem", { name: "Log out" }).click();
     await expect(page).toHaveURL(`${BASE}/en`);
 
     await page.goto("/");
     await expect(page).toHaveURL(`${BASE}/`);
-    // 홈 첫 방문 이동은 쿠키가 있으면 걸리지 않는다. 고른 언어는 푸터와 제품 면이 쿠키로 읽는다.
     await page.goto(WS);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await context.close();

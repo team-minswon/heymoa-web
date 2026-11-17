@@ -21,10 +21,6 @@ import {
   type ReviewSection as Section,
 } from "@/lib/notes/review/sections";
 
-/**
- * 한 섹션. 앞의 몇 줄만 서고 나머지는 「나머지 결정 N개」로 접힌다 — 항목이 백 개 가까운 회의에서
- * 섹션을 다 펼치면 검토할 것이 스크롤 너머로 사라진다.
- */
 export function ReviewSection({
   section,
   whenOf,
@@ -47,9 +43,7 @@ export function ReviewSection({
   suggestionsOf,
 }: {
   section: Section;
-  /** 항목이 회의에서 나온 때(ms) */
   whenOf: (item: ReviewItem) => number | null;
-  /** 담당이 보는 사람 자신인가 */
   isMine: (item: ReviewItem) => boolean;
   canEdit: boolean;
   choices: AssigneeChoice[];
@@ -66,7 +60,6 @@ export function ReviewSection({
   onAddItem: (kind: ReviewKind, content: string) => Promise<boolean>;
   onDismissConflict: () => void;
   renderDetail: (item: ReviewItem) => ReactNode;
-  /** 줄 아래에 늘 서는 제안 */
   suggestionsOf?: (item: ReviewItem) => ReactNode;
 }) {
   const t = useTranslations("notes.review.sections");
@@ -76,7 +69,6 @@ export function ReviewSection({
   const assignable = kinds.every((kind) => ASSIGNABLE_KINDS.has(kind));
   const [expanded, setExpanded] = useState(false);
   const [composing, setComposing] = useState(false);
-  // 처음 그릴 때 있던 항목. 그 뒤에 생긴 줄만 스며들며 선다.
   const [initialIds] = useState(
     () => new Set(section.items.map((item) => item.itemId))
   );
@@ -145,8 +137,6 @@ export function ReviewSection({
         </div>
       ) : null}
 
-      {/* 줄 배경은 좌우로 8px 나가는데(`-mx-2`) 접히는 상자는 넘친 것을 자른다. 상자를 그만큼 넓혀
-          처음 보이는 줄과 같은 폭으로 칠해지게 한다(APP-1587). */}
       <Collapse open={showRest} lazy className="-mx-2">
         <div className="px-2">{rest.map(row)}</div>
       </Collapse>
@@ -155,7 +145,6 @@ export function ReviewSection({
         <ShowMoreButton
           open={showRest}
           moreLabel={t("more", { section: name, count: rest.length })}
-          // 접혀 있을 때는 문구에 섹션 이름이 이미 들어 있다. 「접기」에만 이름을 붙인다.
           subject={showRest ? name : undefined}
           onToggle={() => setExpanded((value) => !value)}
           className="pt-2.5"

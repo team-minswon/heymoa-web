@@ -1,11 +1,3 @@
-/**
- * 데스크톱 앱의 메뉴 막대 팝오버를 **실제 렌더러 코드**(`apps/desktop/renderer/meeting.{html,ts,css}`)로 그린다 (APP-1236).
- *
- * macOS 의 메뉴 막대와 팝오버 창은 Playwright 로 찍을 수 없다. 대신 팝오버 안쪽은 웹 페이지(`meeting.html`)라서, 그 파일을
- * 그대로 번들해 iframe 에 올리고 Electron preload 가 주는 `window.heymoaMeeting` 만 가짜로 꽂는다 — 라벨·간격·색이 앱과 같다.
- * 바깥(메뉴 막대·바탕)은 가이드 전용 중립 틀이다(개인 화면·시계·다른 앱 아이콘 없음).
- * **실제 앱을 켜지 않는다.** 운영 계정으로 녹음을 시작하면 운영 DB 에 회의가 생긴다.
- */
 import { createRequire } from "node:module";
 import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
@@ -148,10 +140,6 @@ const recording = (seconds, count) => ({
   },
 });
 
-/**
- * 메뉴 막대 아이콘 → 팝오버 열림 → 녹음 중 실시간 카드가 쌓임 → 탭 고르기 → 녹음 일시정지. 클립 프레임워크(`clips.mjs`)가 요구하는
- * `{ name, path, ready, run }` 꼴을 돌려준다. 가짜 서버 경로 `/__help-media/` 에서 틀과 렌더러 파일을 내준다.
- */
 export async function desktopScene(context, base) {
   const dir = await bundleRenderer();
   await context.addInitScript(STUB);

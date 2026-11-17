@@ -26,7 +26,6 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
 }));
 
 const mutate = vi.hoisted(() => vi.fn());
-// 발송 결과 조회. 테스트마다 응답을 갈아 끼운다
 const statusQuery = vi.hoisted(() => ({
   current: { data: undefined, isError: false, error: null } as Record<
     string,
@@ -215,7 +214,6 @@ describe("ShareMailDialog", () => {
         data: { success: true, data: { mailId: "0K9GVJT2C4Q22" }, error: null },
       })
     );
-    // 202 는 접수일 뿐이라 창을 닫지 않고 받는 사람별 결과를 그린다. 「보냄」이지 「전달됨」이 아니다
     const results = screen.getByRole("list", { name: "받는 사람별 결과" });
     expect(results.textContent).toContain("sungjae@mentor.kr보냄");
     expect(results.textContent).toContain("seoyeon@heymoa.ai보내는 중");
@@ -370,7 +368,6 @@ describe("ShareMailDialog", () => {
       props.rerender({ open: false });
       const [, oldToast] = toastError.mock.calls[0];
 
-      // 다시 열어 새로 보낸다 — 예전 토스트는 거둔다
       props.rerender({ open: true });
       fireEvent.click(
         screen.getByRole("button", { name: "참석자 모두 추가 (2명)" })

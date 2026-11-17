@@ -4,7 +4,6 @@ import type {
   MeetingPopoverAction,
 } from "./meeting-timeline";
 
-// Sandboxed local preload: no generic IPC, file, URL, capture, auth or shell API.
 if (process.isMainFrame)
   contextBridge.exposeInMainWorld(
     "heymoaMeeting",

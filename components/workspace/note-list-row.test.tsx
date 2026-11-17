@@ -138,12 +138,6 @@ describe("NoteListRow", () => {
     recording.meter = { levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2] };
   });
 
-  /**
-   * **포커스 링은 행이 그린다.** 링을 안쪽 `<Link>`에 두면 그 링크가 행보다 좁아서
-   * (오른쪽 `⋯` 메뉴가 링크 밖에 있다) 선이 행 오른쪽 끝에 못 닿고 메뉴 앞에서 끊긴다 —
-   * hover 배경은 행 전체를 덮으니 같은 자리가 두 가지 크기로 보였다.
-   * jsdom은 px를 못 재니 링이 어느 요소에 걸렸는지로 검사한다.
-   */
   it("포커스 링을 행에 두고 링크에는 두지 않는다", () => {
     renderRow(note());
 
@@ -180,7 +174,6 @@ describe("NoteListRow", () => {
 
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.queryByRole("meter")).toBeNull();
-    // 로컬 녹음 여부와 서버 회의 상태는 별개다.
     expect(screen.queryByText("01:05")).toBeNull();
     expect(screen.getByText("기록 중")).toBeInTheDocument();
   });
@@ -253,8 +246,6 @@ describe("NoteListRow", () => {
     );
 
     expect(screen.getByText("일시정지됨")).toBeInTheDocument();
-    // 진행자는 아바타 배지만으로 안 읽혀서 둘째 줄에 글자로도 적는다.
-    // 진행자는 둘째 줄이 아니라 오른쪽 아바타 줄에서 구분선으로 갈라 선다.
     expect(screen.queryByText("김민수")).toBeNull();
     expect(
       screen.getByLabelText("진행자 김민수 (minsu@heymoa.com)")
@@ -263,7 +254,6 @@ describe("NoteListRow", () => {
   });
 
   it("오래 멈춘 회의에만 일시정지 기간을 붙인다", () => {
-    // KST 10월 22일 09:00
     const now = Date.parse("2026-10-22T00:00:00Z");
     const { unmount } = renderRow(
       note({
@@ -276,7 +266,6 @@ describe("NoteListRow", () => {
     expect(screen.getByText("3일째 일시정지됨")).toBeInTheDocument();
     unmount();
 
-    // 오늘 멈춘 회의와 일시정지가 아닌 회의에는 기간이 없다
     renderRow(
       note({
         meetingStatus: "PAUSED",
@@ -326,13 +315,7 @@ describe("NoteListRow", () => {
     expect(screen.getByText("Ended")).toBeInTheDocument();
   });
 
-  // 진행자가 참여자 명단에 없으면 예전에는 이미지를 빌릴 데가 없어, `email: ""`인 가짜
-  // 객체로 떨어지고 아바타가 이름 첫 글자가 됐다. 계약이 meetingStartedBy에 email·image를
-  // 실으면서 빌려오기 자체가 사라졌다 — **참여자 0명**이 그 회귀 조건이다.
-  //
-  // 이미지가 실제로 그려지는지는 여기서 못 본다. base-ui `Avatar.Image`는 브라우저가 로드를
-  // 알려야 <img>를 붙이는데 jsdom은 그 신호를 안 준다. 대신 계약 객체가 손실 없이 그대로
-  // 내려갔는지를 라벨의 이메일로 확인한다 — 옛 fallback은 여기가 비어 있었다.
+  // base-ui `Avatar.Image` 는 브라우저 로드 신호가 있어야 <img> 를 붙이는데 jsdom 은 그 신호를 안 줍니다. 그래서 라벨로 봅니다.
   it("참여자가 아닌 진행자도 자기 계약 값 그대로 그린다", () => {
     renderRow(
       note({
@@ -352,9 +335,6 @@ describe("NoteListRow", () => {
     ).toBeInTheDocument();
   });
 
-  // 메타를 둘째 줄로 내리면서 화면 폭별 숨김을 걷어냈다 — 폭마다 행 구성이 달라지던 원인이다.
-  // 진행자 이름만 좁은 화면에서 접는다(이름 길이를 알 수 없어 제목을 밀어낼 수 있다).
-  // 배포 직후 남은 옛 응답·캐시에는 participants가 없다 — 여기서 죽으면 목록 전체가 빈다.
   it("participants가 없는 옛 응답에도 행이 그려진다", () => {
     const legacy = note();
     delete (legacy as { participants?: unknown }).participants;
@@ -389,8 +369,6 @@ describe("NoteListRow", () => {
     expect(meta).toHaveClass("overflow-hidden");
     expect(screen.getByText("기록 중")).not.toHaveClass("hidden");
     expect(screen.getByText("기록 3분")).not.toHaveClass("hidden");
-    // 이름과 구분점을 함께 접는다 — 이름만 접으면 점만 덩그러니 남는다.
-    // 진행자 표식은 화면 폭으로 접지 않는다 — 접으면 모바일에서 알 방법이 사라진다.
     expect(
       screen.getByLabelText("진행자 김민수 (minsu@heymoa.com)")
     ).toBeInTheDocument();
@@ -442,7 +420,6 @@ describe("NoteListRow", () => {
     }
   });
 
-  /** 참석자 그룹은 최대 4칸 — 5명부터 3개 + `+N`(N≥2, 보이지 않는 인원). 인원 글자와 모순이 없어야 한다. */
   it.each([
     [3, 3, null],
     [4, 4, null],
@@ -471,7 +448,6 @@ describe("NoteListRow", () => {
     }
   );
 
-  /** jsdom 은 hover 를 못 흉내 내니 열린 상태의 클래스가 걸려 있는지로 고정한다. */
   it("행이 열리면(hover·키보드 포커스·메뉴 열림·터치) 아바타는 비키고 메뉴 버튼이 나타난다", () => {
     const { container } = renderRow(note());
     const people = container.querySelector('[data-slot="note-row-people"]')!;
@@ -487,12 +463,10 @@ describe("NoteListRow", () => {
     }
     expect(people.className).toContain("[@media(hover:none)]:-translate-x-9");
     expect(menu.className).toContain("[@media(hover:none)]:opacity-100");
-    // 기본은 숨김 + 클릭 차단, 전환은 reduced-motion 에서 끈다.
     expect(menu.className).toMatch(/\bopacity-0\b/);
     expect(menu.className).toContain("pointer-events-none");
     expect(people.className).toContain("motion-reduce:transition-none");
     expect(menu.className).toContain("motion-reduce:transition-none");
-    // 숨겨져도 키보드로 닿는다(탭 순서 불변).
     expect(menu).not.toHaveAttribute("tabindex", "-1");
   });
 });

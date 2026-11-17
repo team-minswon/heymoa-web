@@ -87,7 +87,6 @@ async function render(include: MinutesInclude) {
 }
 
 describe("renderMinutesPdfInline", () => {
-  // 쪽 수로 「붙임은 새 쪽에서 시작한다」를 본다. 글자 모양은 사람이 PDF 를 열어 본다(jsdom 은 그리지 못한다)
   it("목차 뒤 안건 전문과 상세를 새 쪽에서 읽고 녹취록은 별도 부록으로 붙는다", async () => {
     expect(await render({ transcript: false })).toEqual({
       head: "%PDF-",
@@ -140,7 +139,6 @@ describe("renderMinutesPdfInline", () => {
     const text = bytes.toString("latin1");
     expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     expect(text.match(/\/Type \/Page\b(?!s)/g)?.length).toBe(4);
-    // 문서 언어와 책갈피(목차)는 압축되지 않아 그대로 읽힌다
     expect(text).toContain("/Lang (en)");
     expect(text).toContain("/Title (1. Decisions)");
     expect(text).toContain("/Title (Appendix A. Transcript)");
@@ -178,7 +176,6 @@ describe("renderMinutesPdfInline", () => {
   it("빈칸 없이 긴 낱말은 글자마다 줄을 바꿀 수 있고, 짧은 낱말은 그대로다", () => {
     expect(breakableWord("회의록")).toEqual(["회의록"]);
     expect(breakableWord("abcdefgh")).toEqual(["abcdefgh"]);
-    // 좁은 담당 칸의 긴 한글 이름은 음절 사이에서 끊는다
     expect(breakableWord("크리스토퍼스미스").filter(Boolean)).toHaveLength(8);
     const url = "https://example.com/" + "a".repeat(40);
     expect(breakableWord(url).filter(Boolean).join("")).toBe(url);

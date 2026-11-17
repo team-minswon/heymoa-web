@@ -21,15 +21,6 @@ export type RecipientGroup = { label: string; people: readonly RecipientCandidat
 
 type Option = { person: RecipientCandidate; typed?: boolean };
 
-/**
- * 이메일 주소 칩 입력 + 후보 목록(combobox). 쉼표 · 세미콜론 · Enter · Tab · 포커스 이탈에서 칩이 서고,
- * 여러 주소를 붙여 넣으면 한 번에 나뉜다. 규칙은 `lib/notes/share-mail/recipients` 가 갖고 여기는 키와
- * 포커스만 다룬다.
- *
- * 후보는 [groups] 차례대로(예: 회의 참석자 → 워크스페이스 멤버) 묶어 보이고, 후보에 없는 올바른 주소를
- * 치면 「직접 입력」 한 줄이 붙는다.
- */
-/** 화살표 · 마우스로 고르기 전, 친 글에 따라 정하는 후보 자리 */
 const AUTO = -2;
 
 export function EmailRecipientsInput({
@@ -54,8 +45,6 @@ export function EmailRecipientsInput({
   const t = useTranslations("common.recipients");
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  // 칩을 뺀 뒤 입력칸으로 포커스를 돌려줄 때는 후보 목록을 열지 않는다 — 빼기는 고르기가 아니라서
-  // 목록이 아래 내용을 덮으면 안 된다
   const quietFocus = useRef(false);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -67,7 +56,6 @@ export function EmailRecipientsInput({
     .filter((group) => group.people.length > 0)
     .map((group, i, all) => ({
       ...group,
-      // 목록 전체에서 이 묶음의 첫 후보가 몇 번째인가 — 화살표 키와 aria-activedescendant 가 이 번호를 쓴다
       start: all.slice(0, i).reduce((sum, prev) => sum + prev.people.length, 0),
     }));
   const options: Option[] = shown.flatMap((group) => group.people.map((person) => ({ person })));
@@ -80,15 +68,11 @@ export function EmailRecipientsInput({
     options.push({ person: { name: "", email: typed }, typed: true });
   }
   const expanded = open && options.length > 0;
-  // 치는 동안 고르는 후보. **다 친 주소면 그 주소다** — 첫 후보를 고르면 `john@example.co` 를 치고 Enter 를 눌러도
-  // 후보의 `john@example.com` 이 들어가, 회의록이 엉뚱한 사람에게 갔다. 이름 · 주소 일부면 첫 후보다
   const exact = options.findIndex((option) => option.person.email.toLowerCase() === typed.toLowerCase());
   const autoIndex = !typed ? -1 : isEmail(typed) ? exact : 0;
   const activeIndex = active === AUTO ? autoIndex : active < options.length ? active : options.length - 1;
   const optionId = (index: number) => `${listId}-option-${index}`;
 
-  // 화살표로 고른 후보를 목록 안에 보이게 한다 — 포커스는 입력칸에 있어 브라우저가 대신 스크롤해 주지 않는다.
-  // 보이지 않는 사람을 고른 채 Enter 를 누르게 되면 안 된다
   useEffect(() => {
     if (!expanded || activeIndex < 0) return;
     document.getElementById(`${listId}-option-${activeIndex}`)?.scrollIntoView?.({ block: "nearest" });
@@ -146,7 +130,6 @@ export function EmailRecipientsInput({
         }
         return;
       case "Escape":
-        // 목록만 닫는다. 열린 목록이 없을 때만 대화상자가 Esc 를 받는다
         if (expanded) {
           event.preventDefault();
           event.stopPropagation();
@@ -186,7 +169,6 @@ export function EmailRecipientsInput({
                 aria-label={t("remove", { label })}
                 disabled={disabled}
                 className="grid size-5 shrink-0 place-items-center rounded-full opacity-70 hover:bg-[var(--el-ink)]/10 hover:opacity-100"
-                // 누르는 순간 입력칸 포커스가 빠지면 blur 가 칩을 다시 그려 누른 버튼이 사라지고 클릭이 삼켜진다
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -217,7 +199,6 @@ export function EmailRecipientsInput({
           value={query}
           onChange={(event) => {
             const next = event.target.value;
-            // 쉼표 · 세미콜론을 치면 그 앞까지가 받는 사람이다
             if (/[,;]/.test(next)) {
               commitText(next);
               return;
@@ -230,10 +211,8 @@ export function EmailRecipientsInput({
             const text = event.clipboardData.getData("text");
             if (!/[\s,;]/.test(text.trim())) return;
             event.preventDefault();
-            // 고른 글자는 붙여 넣은 글로 바뀐다 — 앞에 쳐 둔 주소를 통째로 골라 붙여 넣었는데 옛 주소까지 들어갔다
             const { selectionStart, selectionEnd } = event.currentTarget;
             const start = selectionStart ?? query.length;
-            // 원문 그대로 바꿔 끼운다 — 사이에 빈칸을 넣으면 `alice@old.com` 의 도메인만 바꿔 붙일 때 주소가 둘로 갈렸다
             commitText(query.slice(0, start) + text + query.slice(selectionEnd ?? start));
           }}
           onKeyDown={onKeyDown}
@@ -324,8 +303,6 @@ function OptionRow({
       role="option"
       aria-selected={selected}
       className="flex cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-1.5 hover:bg-[var(--el-surface-strong)]/55 aria-selected:bg-[var(--el-surface-strong)]"
-      // mousedown 은 입력칸의 포커스만 붙든다 — blur 가 목록을 닫으면 클릭이 닿지 않는다. 고르기는 click 에서 한다:
-      // 스크린 리더는 click 만 보내고, mousedown 에서 고르면 오른쪽 클릭에도 받는 사람이 들어갔다
       onMouseDown={(event) => event.preventDefault()}
       onClick={onPick}
       onMouseMove={onHover}

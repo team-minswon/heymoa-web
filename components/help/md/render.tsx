@@ -50,7 +50,6 @@ const BASE = {
   "help-badge": HelpBadge,
 } as unknown as Components;
 
-/** 링크 주소와 표 칩의 읽어 주는 글이 언어를 따른다. 언어 × 변형마다 한 번만 만든다. */
 const maps = new Map<string, Components>();
 function componentsFor(locale: Locale, variant?: "related"): Components {
   const key = `${locale}:${variant ?? ""}`;
@@ -71,10 +70,6 @@ function componentsFor(locale: Locale, variant?: "related"): Components {
   return map;
 }
 
-/**
- * 가이드 마크다운 한 덩어리(문단 · 목록 · 표 · 알림 …)를 그린다. 문법은 `content/help/README.md`.
- * 내용은 우리가 쓴 글이라 원시 HTML 은 받지 않고(`rehype-raw` 없음), 주소만 `help:` · `img:` 를 그대로 둔다.
- */
 export function MdBlock({
   source,
   variant,
@@ -82,9 +77,7 @@ export function MdBlock({
 }: {
   source: string;
   variant?: "related";
-  /** 본문 언어. 가이드 안 링크(`help:`)와 사이트 링크가 그 언어판 주소로 풀린다. */
   locale?: Locale;
-  /** 검색 색인 · 시험이 읽는 글(`textOf`). 화면에는 쓰지 않는다. */
   plainText?: string;
 }): ReactNode {
   return (
@@ -101,7 +94,6 @@ export function MdBlock({
 MdBlock.text = (props: { plainText?: string; source: string }) =>
   props.plainText ?? props.source;
 
-/** 자주 묻는 질문 하나. `<details>` 라서 스크립트 없이 접고 펴지고, 프리렌더에도 답이 들어 있다. */
 export function FaqItem({
   question,
   answer,

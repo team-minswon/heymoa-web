@@ -36,10 +36,6 @@ import koTasks from "@/messages/ko/tasks.json";
 import koWorkspace from "@/messages/ko/workspace.json";
 import type { Locale } from "@/lib/i18n/locales";
 
-/**
- * 언어 파일은 `messages/<언어>/<이름공간>.json` 이다. **한국어가 기준**이고 키 타입도 한국어에서 만든다.
- * 이름공간을 더하면 두 표에 한 줄씩 더한다.
- */
 const ko = {
   common: koCommon,
   auth: koAuth,
@@ -64,10 +60,6 @@ const ko = {
 export type Messages = typeof ko;
 export type Namespace = keyof Messages;
 
-/**
- * 제품 루트(`app/(product)`)가 클라이언트로 보내는 이름공간. 마케팅 루트(`app/[lang]/layout.tsx`)는 자기 목록을 따로 넘긴다.
- * 제품 이름공간을 더하면 여기에도 더한다.
- */
 export const PRODUCT_NAMESPACES: readonly Namespace[] = [
   "common",
   "auth",
@@ -110,12 +102,7 @@ const en: DeepPartial<Messages> = {
   dates: enDates,
 };
 
-/**
- * 영어 키가 빠지면 빈칸이나 키 이름 대신 **한국어 원문**이 보이게 한국어 위에 덮어 합친다.
- * 빠뜨림 자체는 `messages.test.ts` 가 단계별 이름공간 목록으로 막는다.
- */
 export function overlay<T>(base: T, top: unknown): T {
-  // 목록(대본 줄 · 자주 묻는 질문)은 통째로 바꾼다. 줄 수가 언어마다 같다는 보장이 없고, 객체로 합치면 배열이 아니게 된다.
   if (
     typeof base !== "object" ||
     base === null ||

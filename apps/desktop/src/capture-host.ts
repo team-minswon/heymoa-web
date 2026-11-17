@@ -109,7 +109,7 @@ export class CaptureHost {
           throw new Error("INVALID_CAPTURE_TIMING");
         // captureSamples is the AudioContext frame clock, created after start().
         // Monotonic coordinates bound delivered samples by it; this bounds it by wall time.
-        // ponytail: the slack also absorbs audio/system clock drift; 3 s lasts ~8 h at 100 ppm.
+        // The slack also absorbs audio/system clock drift; 3 s lasts ~8 h at 100 ppm.
         if (
           end >
           (now - this.startedAt) * PCM_SAMPLES_PER_MS + CAPTURE_BACKLOG_SAMPLES
@@ -238,9 +238,7 @@ export class CaptureHost {
         const deny = () => {
           try {
             callback({});
-          } catch {
-            /* frame closed */
-          }
+          } catch {}
         };
         if (!id) {
           deny();

@@ -1,7 +1,6 @@
 import { anchorsOf, parseScript } from "@/lib/mocks/help-demo/script";
 import type { MidMeeting } from "@/lib/mocks/help-demo/mid-campaign";
 
-/** 출시 일정 점검. 화자 A 오세라, B 한지호, C 최민재. */
 const launchScript = parseScript(`
 A 출시까지 3주 남았어요. 오늘은 남은 일을 날짜 기준으로 점검하고 늦어지는 게 있는지 확인할게요.
 A 지호님, 개발 쪽부터 말씀해 주세요.
@@ -62,7 +61,6 @@ export const LAUNCH_MEETING: MidMeeting = {
   ],
 };
 
-/** 사전 신청 안내 메일 검토. 화자 A 오세라, B 정유나, C 김서윤. */
 const mailScript = parseScript(`
 A 사전 신청 안내 메일 초안을 같이 볼게요. 유나님이 쓰신 거죠?
 B 네, 두 가지 버전으로 써 봤어요. 하나는 짧게 혜택만, 하나는 제품 설명이 들어간 길이 있는 버전이에요.
@@ -124,7 +122,6 @@ export const MAIL_MEETING: MidMeeting = {
   ],
 };
 
-/** 고객 인터뷰 3차. 화자 A 최민재(진행), B 박도윤, C 김서윤. */
 const int3Script = parseScript(`
 A 3차 인터뷰 내용을 같이 정리할게요. 이번에는 다섯 분을 만났고 모두 30대 직장인이에요.
 B 저는 두 번 참관했는데 공통적으로 나온 게 하나 있어요. 구매 전에 후기를 꼭 찾아보는데, 후기를 믿지는 않는다는 거예요.
@@ -186,7 +183,6 @@ export const INTERVIEW3_MEETING: MidMeeting = {
   ],
 };
 
-/** 고객 인터뷰 2차. 화자 A 최민재, B 이하린, C 박도윤. */
 const int2Script = parseScript(`
 A 2차 인터뷰 결과 공유할게요. 이번에는 첫 구매 이후 재구매한 분들을 만났어요. 네 분이에요.
 B 재구매하게 된 계기가 궁금하네요. 어떤 분들이었어요?
@@ -247,7 +243,6 @@ export const INTERVIEW2_MEETING: MidMeeting = {
   ],
 };
 
-/** 주간 운영 점검(지난주). 화자 A 정유나, B 한지호, C 오세라. */
 const weeklyScript = parseScript(`
 A 지난주 운영 지표부터 볼게요. 문의는 273건으로 그 전주보다 8% 줄었어요. @inquiry
 B 첫 응답 시간도 평균 36분으로 줄었어요. 목표 30분에 가까워졌어요.
@@ -308,7 +303,6 @@ export const WEEKLY_PAST_MEETING: MidMeeting = {
   ],
 };
 
-/** 브랜드 리뉴얼 방향 논의. 화자 A 이하린, B 최민재, C 강태오(외부 디자인). */
 const brandScript = parseScript(`
 A 브랜드 리뉴얼 방향부터 정해 볼게요. 지금 로고랑 색을 얼마나 바꿀지가 핵심 질문이에요.
 B 저는 완전히 바꾸는 것보다 지금 것의 장점을 남기고 다듬는 쪽을 추천해요. 지금 브랜드 인지도가 아주 낮진 않으니까요.

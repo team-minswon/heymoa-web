@@ -45,8 +45,6 @@ export function AuthStatus() {
     );
   }
 
-  // 브레이크포인트마다 같은 버튼을 두 벌 두던 자리였다 — 렌더 결과가 같아 AuthModal만
-  // 두 번 생겼다. 하나로 합친다.
   return (
     <AuthModal>
       <Button variant="outline" size="xl" className="rounded-full font-medium">

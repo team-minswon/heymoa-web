@@ -95,8 +95,6 @@ export function nativeCallback(value: string): NativeCallback | null {
       )
         return { kind: "connection", state, provider, status };
     }
-  } catch {
-    /* An unsolicited URL must not affect the current app. */
-  }
+  } catch {}
   return null;
 }

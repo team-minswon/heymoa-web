@@ -3,11 +3,8 @@ import { normalizeQuery } from "@/lib/help/match-ranges";
 import { textOf } from "@/lib/help/text";
 import { localePath, type Locale } from "@/lib/i18n/locales";
 
-/** 허브 검색이 훑는 한 줄(문단 또는 섹션 제목). 서버가 만들어 클라이언트에 넘긴다. */
 export type HelpEntry = {
-  /** 그 언어판의 페이지 주소(`/help/<그룹>/<페이지>`, `/en/help/<그룹>/<페이지>`) */
   path: string;
-  /** 기능 / 상황 — 결과에 종류 칩을 붙인다 */
   axis: "feature" | "situation";
   topicTitle: string;
   sectionId: string;
@@ -21,11 +18,9 @@ export type HelpHit = {
   topicTitle: string;
   sectionId: string;
   sectionTitle: string;
-  /** 일치 문장 발췌와 그 안의 일치 구간 */
   excerpt: string;
   from: number;
   to: number;
-  /** 이 섹션 안의 일치 줄 수 */
   count: number;
 };
 
@@ -45,7 +40,6 @@ export function buildHelpIndex(
       };
       return [
         { ...base, text: section.title },
-        // 페이지 제목·요약도 찾아지게 첫 섹션에 한 번 붙인다
         ...(section === topic.sections[0]
           ? [topic.title, topic.summary].map((text) => ({ ...base, text }))
           : []),
@@ -58,7 +52,6 @@ export function buildHelpIndex(
   );
 }
 
-/** 공백·대소문자를 무시한 첫 일치의 원문 위치. */
 export function findInText(text: string, query: string) {
   const needle = normalizeQuery(query);
   if (!needle) return null;
@@ -77,7 +70,6 @@ export function findInText(text: string, query: string) {
 
 const CONTEXT = 36;
 
-/** 섹션마다 하나로 묶어 돌려준다. 입력 순서(주제 순서)를 지킨다. */
 export function searchHelp(
   entries: readonly HelpEntry[],
   query: string

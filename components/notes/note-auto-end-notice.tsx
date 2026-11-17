@@ -11,7 +11,6 @@ import type {
   NoteResponseData,
 } from "@/lib/api/generated/models";
 
-/** 분석 흐름 상태를 사람이 읽는 한 문장(`notes.autoEnd.analysis`)으로. 내부 처리 순서(화자 나누기·담당·기한 보강)는 말하지 않는다. */
 const ANALYSIS_KEY: Partial<
   Record<
     MeetingAnalysisFlowResponseDataStatus,
@@ -24,18 +23,10 @@ const ANALYSIS_KEY: Partial<
   ANALYSIS_FAILED: "failed",
 };
 
-/** 사람이 종료했거나 옛 노트(`autoEnd` 없음)는 아니다. */
 export function isAutoEnded(note: NoteResponseData) {
   return note.meetingStatus === "ENDED" && note.autoEnd?.endedBy === "SYSTEM";
 }
 
-/**
- * 자동 종료된 노트의 고정 안내(APP-1319, PRO-67 userflow 「자동 종료된 노트의 고정 안내」). 상단바 아래에 서서 탭을
- * 바꿔도 남는다. 알림을 끈 사람과 나중에 들어온 사람에게는 이것이 유일한 설명이다.
- *
- * 접으면 첫 문장만 남는다. 사유와 시각은 정보 탭 「회의 정보」에도 있어(시각은 거기만) 접어도 잃지 않는다.
- * 분석 상태는 분석 흐름 쿼리를 읽는다 — 요약·스크립트 탭이 같은 키를 갱신한다.
- */
 export function NoteAutoEndNotice({ note }: { note: NoteResponseData }) {
   const t = useTranslations("notes.autoEnd");
   const [open, setOpen] = useState(true);

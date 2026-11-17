@@ -17,18 +17,10 @@ import { helpT } from "@/lib/help/i18n";
 import { localePath, type Locale } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
-/**
- * 사용 가이드 본문 칸의 바깥 여백. 가이드 셸(`app/[lang]/help/layout.tsx`)이 상단바 · 사이드바를 세우고, 페이지는 이 여백 안에서
- * 화면 폭을 거의 다 쓴다(양옆 24~40, 초광폭 상한은 셸의 1800).
- */
 export const HELP_PAD = "w-full px-6 pt-8 pb-16 lg:px-8 xl:px-10";
 
-/** 읽기 폭 상한. 글줄이 너무 길어지지 않게 하되 영상 · 이미지 · 표는 이 칸을 꽉 쓴다. */
 export const HELP_READING = "mx-auto w-full max-w-[920px] min-w-0";
 
-/**
- * 페이지 머리말. 색 박스 없이 breadcrumb(작은 글씨) → h1 → 요약 두 줄 이내. 허브는 breadcrumb 이 없다.
- */
 export function HelpPageHead({
   crumbs,
   badge,
@@ -76,7 +68,6 @@ export function HelpPageHead({
   );
 }
 
-/** 주제 한 페이지: 머리말 · 본문 · 이전/다음, 오른쪽에 이 페이지에서 목차(xl 이상. 그보다 좁으면 본문 위 접이식). */
 export function HelpPageFrame({
   locale = "ko",
   topic,
@@ -224,10 +215,6 @@ function StepLink({
   );
 }
 
-/**
- * 기능 페이지 끝의 "이런 상황에서 보세요". 상황별 페이지가 이 페이지를 `related` 로 가리키면 자동으로 선다 — 글을 복제하지 않고
- * 링크만 둔다(탐색과 내부 링크망).
- */
 function RelatedSituations({
   topic,
   locale,

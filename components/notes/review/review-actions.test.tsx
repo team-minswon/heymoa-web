@@ -97,7 +97,6 @@ describe("ReviewActions", () => {
       expect.stringContaining("PDF로 내보내기"),
     ]);
     expect(screen.queryByText(/준비 중/)).toBeNull();
-    // 회의록 재료가 아직 없으면 받는 중으로 막는다
     expect(items[0]).toHaveAttribute("data-disabled");
   });
 

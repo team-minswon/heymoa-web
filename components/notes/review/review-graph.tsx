@@ -35,7 +35,6 @@ import {
 } from "@/lib/notes/review/summary";
 import { cn } from "@/lib/utils";
 
-// 캔버스와 d3 힘 배치는 브라우저에서만 돈다. 서버에서 그릴 판이 없어 이 경계만 SSR 을 끈다.
 const ReviewGraphCanvas = dynamic(
   () => import("@/components/notes/review/review-graph-canvas"),
   {
@@ -44,13 +43,11 @@ const ReviewGraphCanvas = dynamic(
   }
 );
 
-/** 판의 가로세로 비. 요약이 오기 전 자리표시(`review-board`)와 같다 */
 const ASPECT = 520 / 840;
 const STEP = 1.25;
 const REVEAL_MS = 300;
 const ZOOM_RANGE: [number, number] = [0.2, 8];
 
-/** 이 폭보다 좁으면 주제 이름 대신 번호만, 중간 폭이면 이름을 더 짧게 자른다 */
 export const NARROW_LABEL_WIDTH = 480;
 const SHORT_LABEL_WIDTH = 720;
 
@@ -92,7 +89,6 @@ export function ReviewGraph({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
   const [zoom, setZoom] = useState(1);
-  // 어느 그래프의 배치가 멈췄나. 검토본이 바뀌면 새 배치가 다시 돌아 자연히 풀린다.
   const [settledData, setSettledData] = useState<object | null>(null);
   const height = Math.round(width * ASPECT);
 
@@ -119,7 +115,6 @@ export function ReviewGraph({
     return () => observer.disconnect();
   }, [ready]);
 
-  /** 그 점이 판 밖에 있으면 판 가운데로 옮긴다. 안에 있으면 보던 자리를 흔들지 않는다 */
   const reveal = useCallback(
     (id: string) => {
       const node = nodeById.get(id);
@@ -141,7 +136,6 @@ export function ReviewGraph({
     [nodeById, width, height]
   );
 
-  // 관련 항목을 눌러 밖에서 고른 항목이 지금 보이는 영역 밖이면 그 자리로 옮긴다.
   useEffect(() => {
     if (selectedItemId) reveal(selectedItemId);
   }, [selectedItemId, reveal]);
@@ -189,7 +183,6 @@ export function ReviewGraph({
         event.preventDefault();
       }}
     >
-      {/* 범례는 그래프 위에 둔다 — 점을 읽기 전에 색과 선의 뜻을 먼저 본다. */}
       <div className="mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-[var(--el-muted)]">
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
@@ -275,10 +268,6 @@ export function ReviewGraph({
           </div>
         ) : null}
 
-        {/*
-          캔버스는 화면 읽기 프로그램과 키보드가 못 쓴다. 같은 항목을 보이지 않는 목록으로 둔다.
-          초점이 오면 캔버스의 그 점과 이웃을 밝히고, 판 밖이면 그 자리로 옮긴다.
-        */}
         <ul className="sr-only">
           {graph.nodes.map((node) => (
             <li key={node.id}>
@@ -289,7 +278,6 @@ export function ReviewGraph({
                 aria-pressed={node.id === selectedItemId}
                 onClick={() => onSelect(node.id)}
                 onFocus={() => {
-                  // 판이 옮겨 가는 중에 설명 상자 자리를 재면 옮기기 전 자리에 선다.
                   if (reveal(node.id)) {
                     setHoveredId(node.id);
                     window.setTimeout(() => point(node.id), REVEAL_MS + 20);
@@ -336,7 +324,6 @@ export function ReviewGraph({
                 </p>
               </>
             ) : (
-              // 허브 이름은 그래프 위에서 잘린다. 온전한 이름은 여기서만 읽힌다
               <>
                 <p className="text-[11px] font-medium text-[var(--el-muted)]">
                   {t("hubCount", { count: tooltip.node.memberCount ?? 0 })}
@@ -349,7 +336,6 @@ export function ReviewGraph({
           </div>
         ) : null}
 
-        {/* 손가락으로 쓰는 화면에서는 버튼을 40px 로 키우고 가로로 눕혀 그래프를 덜 가린다 */}
         <div className="absolute right-2 bottom-2 flex flex-col divide-y divide-[var(--el-hairline)] overflow-hidden rounded-control border border-[var(--el-hairline)] bg-[var(--el-surface-card)] pointer-coarse:flex-row pointer-coarse:divide-x pointer-coarse:divide-y-0">
           <ControlButton
             label={t("zoomIn")}

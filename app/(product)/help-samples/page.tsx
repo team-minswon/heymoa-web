@@ -9,13 +9,11 @@ import { messagesFor } from "@/i18n/messages";
 
 export const dynamic = "force-static";
 
-/** 가이드 마크다운 표현 샘플. 내부용이라 검색에 잡히지 않고 sitemap 에도 없다. */
 export const metadata: Metadata = {
   title: { absolute: "가이드 표현 샘플" },
   robots: { index: false, follow: false },
 };
 
-/** 제품 루트는 가이드 문구(`help`)를 클라이언트로 보내지 않으므로 이 페이지만 따로 내려 준다. */
 export default function HelpSamplesPage() {
   return (
     <NextIntlClientProvider

@@ -1,11 +1,5 @@
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 
-/**
- * 가이드 캡처용 프리셋의 사람·워크스페이스·프로젝트. 전부 가상이고 이메일은 `@example.com` 이다.
- *
- * ID 는 `01KH` 로 시작한다 — 목 DB 가 새로 만드는 ID(`01K0000000100` 부터)와 겹치지 않는다.
- * 대표 워크스페이스·연습 워크스페이스만 기본 목과 같은 ID 를 쓴다(용어 사전 등 ID 로 묶인 목 모듈이 그대로 맞도록).
- */
 export const HD_WORKSPACE_ID = "01K0000000000";
 export const HD_PRACTICE_WORKSPACE_ID = "01K0000000009";
 
@@ -22,14 +16,12 @@ export type ProjectKey = keyof typeof HD_PROJECTS;
 type MemberDef = {
   userId: string;
   accountName: string;
-  /** 워크스페이스에서 따로 정한 표시 이름 */
   displayName: string | null;
   email: string;
   role: "ADMIN" | "MEMBER";
   joinedDaysAgo: number;
 };
 
-/** 나는 `MOCK_USER` 의 계정이다(userId 는 그대로, 이름만 프리셋 값). */
 export const HD_ME = MOCK_USER.userId;
 export const HD_ME_NAME = "Emma Carter";
 export const HD_ME_EMAIL = "emma.carter@example.com";
@@ -46,7 +38,6 @@ export const HD_MEMBERS = {
 
 export type MemberKey = keyof typeof HD_MEMBERS;
 
-/** 계정 없는 임시 참여자. 회사 이름도 가상이다. */
 export const HD_GUESTS = {
   taeo: { guestId: "01KH000000301", displayName: "Tyler Owens (Starlight Design)" },
   sohee: { guestId: "01KH000000302", displayName: "Rachel Young (Halo Media)" },
@@ -56,10 +47,8 @@ export const HD_GUESTS = {
 
 export type GuestKey = keyof typeof HD_GUESTS;
 
-/** 회의 참석자를 가리키는 열쇠. 멤버 열쇠이거나 `g:` 가 붙은 임시 참여자 열쇠다. */
 export type PersonRef = MemberKey | `g:${GuestKey}`;
 
-/** 목록에 보이는 이름(표시 이름 ?? 계정 이름). */
 export function personName(ref: PersonRef): string {
   if (ref.startsWith("g:")) return HD_GUESTS[ref.slice(2) as GuestKey].displayName;
   const member = HD_MEMBERS[ref as MemberKey] as MemberDef;

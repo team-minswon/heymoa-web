@@ -11,38 +11,19 @@ import {
   type TranscriptRow,
 } from "@/lib/transcription/presentation";
 
-/**
- * 붙여넣는 곳이 무엇인지 우리는 모른다 — Notion·Slack·이슈 본문일 수도, AI에게 물어보는
- * 입력창일 수도 있다. 그래서 **마크다운으로 읽히면서 평문으로도 읽히는** 형태만 쓴다:
- * 헤딩, 굵게, 불릿, 인용. 표·코드펜스는 렌더가 없는 곳에서 기호만 남는다.
- *
- * 시각은 `[00:12:30]` 대괄호다. 백틱은 렌더러가 코드로 칠해 본문보다 튀고, 평문에서는
- * 문장 안에 낀 기호로 읽힌다.
- */
-
 export type NoteMeta = {
   title: string;
-  /** 회의 시작(없으면 생성) 시각 ISO. */
   whenIso: string;
   participantCount: number;
-  /** 참석자 이름. 없으면 인원수만 적는다. 복사본은 화면 밖으로 나가 누가 있었는지가 문서에 남아야 한다(APP-1109) */
   participantNames?: string[];
-  /** 회의 길이(`meetingLengthOf`). 요약에는 없으므로 선택이다. */
   durationMs?: number;
-  /** 회의가 실제로 끝난 시각 ISO. 일시정지한 시간이 있으면 시작 + 기록 길이보다 늦다 */
   endedIso?: string;
-  /** 검토 화면 머리의 프로젝트 칩(APP-865). 복사본 머리말에는 싣지 않는다 */
   projectName?: string;
 };
 
-/**
- * 머리말이 될 사실만 남긴다. **셸이 한 번 읽어 내린다** — 탭마다 `useGetNote`를 다시
- * 구독하면 같은 쿼리에 구독자가 셋이 붙는다(rule `architecture`).
- */
 export function toNoteMeta(note: NoteResponseData): NoteMeta {
   return {
     title: note.title,
-    // 헤더 메타와 같은 기준이다 — 시작 전 노트는 만든 시각이 그 노트의 시각이다.
     whenIso: note.meetingStartedAt ?? note.createdAt,
     endedIso: note.meetingEndedAt ?? undefined,
     participantCount: note.participants?.length ?? 0,
@@ -51,7 +32,6 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
   };
 }
 
-/** 머리말에 이름으로 적는 참석자 수의 상한. 넘으면 「외 N명」으로 접는다 */
 const MAX_NAMED_PARTICIPANTS = 8;
 
 function participantsFact(meta: NoteMeta, { t }: DocLanguage) {
@@ -70,7 +50,6 @@ function participantsFact(meta: NoteMeta, { t }: DocLanguage) {
     : t("dates.document.participantsNamed", { names: shown });
 }
 
-/** 문서 머리말. [kind] 는 전사(없음) · 요약 · 타임라인 복사본을 제목에서 가른다 */
 export function headingLines(
   meta: NoteMeta,
   doc: DocLanguage,
@@ -90,7 +69,6 @@ export function headingLines(
       locale
     ),
     participantsFact(meta, doc),
-    // 1분 미만은 「기록 0분」이 된다 — 수가 뜻을 안 보태면 적지 않는다.
     meta.durationMs && meta.durationMs >= 60_000
       ? t("dates.noteMeta.recorded", {
           hours: Math.floor(meta.durationMs / 3_600_000),
@@ -108,21 +86,12 @@ export function headingLines(
   return [`# ${title}`, "", facts.join(" · ")];
 }
 
-/** 발화 한 줄. 회의록 전체 복사도 같은 모양으로 적는다 */
 export const utteranceMarkdown = (
   speaker: string | null,
   at: string,
   text: string
 ) => (speaker ? `**${speaker}** [${at}] ${text}` : `[${at}] ${text}`);
 
-/**
- * 전사를 회의록으로 옮긴다. `rows`는 화면이 그리는 것과 **같은 배열**이다 — 실시간으로
- * 들어온 줄까지 이미 섞여 있고, 복사본이 화면과 어긋날 자리가 없다.
- *
- * **서버가 가른 대로 둔다.** 발화 하나가 줄 하나이고 저마다 자기 시각을 단다. 인접 발화를
- * 문단으로 묶어 봤지만 어느 말이 몇 분에 나왔는지가 묶음의 첫 시각으로 뭉개졌다 —
- * 회의록에서 시각은 되짚을 좌표라 그것을 잃으면서 얻을 것이 없었다.
- */
 export function transcriptToMarkdown({
   note,
   rows,
@@ -132,17 +101,10 @@ export function transcriptToMarkdown({
 }: {
   note: NoteMeta;
   rows: TranscriptRow[];
-  /**
-   * 화면에 선 이름을 그대로 준다. 화자 분리 전이면 늘 `null`을 주고, 그때는 시각만 남는다.
-   *
-   * **발화 단위 지정까지 넘긴다** — 화면에서 고친 이름이 복사본에서 옛 이름으로 돌아가면,
-   * 남에게 보내는 쪽이 틀린 회의록이 된다.
-   */
   speakerNameOf: (
     label: string | null | undefined,
     assignedParticipantId?: string | null
   ) => string | null;
-  /** 봉인이 `TRUNCATED`인가. 화면이 말하는 손실을 복사본도 말해야 한다. */
   truncated?: boolean;
   doc: DocLanguage;
 }): string {
@@ -160,24 +122,17 @@ export function transcriptToMarkdown({
       row.segment.speakerLabel,
       row.segment.assignedParticipantId
     );
-    // **줄 사이를 비운다.** 마크다운에서 줄바꿈만으로는 문단이 안 갈려서, 붙여 두면
-    // 렌더러가 발화 전부를 한 문단으로 이어 붙인다.
     lines.push(
       "",
       utteranceMarkdown(speaker, formatOffset(row.segment.startedAtMs), text)
     );
   }
 
-  // **완전한 회의록처럼 붙여넣어지면 안 된다.** 화면은 이 줄을 이미 말하고 있다.
   if (truncated) lines.push("", `> ${doc.t("dates.document.truncated")}`);
 
   return `${lines.join("\n")}\n`;
 }
 
-/**
- * 요약을 옮긴다. **근거는 싣지 않는다** — 항목마다 전사 원문이 최대 셋씩 붙어 요약이
- * 서너 배로 불어난다. 근거를 되짚을 사람은 전사를 복사한다.
- */
 export function summaryToMarkdown({
   note,
   sections,
@@ -194,7 +149,6 @@ export function summaryToMarkdown({
     lines.push("", `## ${doc.t(`notes.summary.sections.${kind}`)}`, "");
     const items = byKind.get(kind)?.items ?? [];
     if (!items.length) {
-      // 화면과 같다 — 뽑을 것이 없었다는 사실도 요약의 일부다.
       lines.push(`_${doc.t("dates.document.none")}_`);
       continue;
     }

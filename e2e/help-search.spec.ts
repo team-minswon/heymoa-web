@@ -1,10 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { openGuide, settled } from "./helpers-ui";
 
-/**
- * 사용 가이드 검색 (APP-1232). 본문 DOM 은 건드리지 않고 CSS Custom Highlight API 로만 칠하므로, 칠해진 구간의 수는
- * `CSS.highlights` 로 읽는다. 정적 페이지라 목 서비스 워커와 무관하다.
- */
 const highlightCount = (page: Page, name: string) =>
   page.evaluate((key) => [...(CSS.highlights.get(key) ?? [])].length, name);
 
@@ -26,7 +22,6 @@ test("?q= 로 들어오면 본문이 칠해지고 막대의 이전·다음으로
   await bar.getByRole("button", { name: "이전 일치" }).click();
   await expect(bar.getByText(`1 / ${total}`)).toBeVisible();
 
-  // 활성 일치는 상단바(97) 아래 화면 안에 있다 — 이동이 부드러운 스크롤이라 멈출 때까지 기다린다.
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -39,7 +34,6 @@ test("?q= 로 들어오면 본문이 칠해지고 막대의 이전·다음으로
     )
     .toBe(true);
 
-  // 닫으면 막대와 칠이 사라지고 주소의 검색어도 지워진다
   await bar.getByRole("button", { name: "검색 닫기" }).click();
   await expect(bar).toHaveCount(0);
   expect(await highlightCount(page, "help-search")).toBe(0);
@@ -85,7 +79,6 @@ test("⌘K · Ctrl+K 로 검색 팔레트가 열리고 Enter 로 이동한다", 
   await expect(page).toHaveURL(/\/help\/[^/]+\/[^/?]+\?q=/);
 });
 
-// 허브 · 그룹 · 기능 · 상황 모두에서 ⌘K · Ctrl+K 가 열고, 입력칸에 포커스가 있어도 열며, 다시 누르면 닫는다.
 for (const path of [
   "/help",
   "/help/record",
@@ -147,7 +140,6 @@ test("사이드바는 선택한 축의 모든 그룹을 항상 펼쳐 두고 탭
   await expect(nav.locator("[aria-current='page']")).toHaveText(
     "회의 기록과 마이크"
   );
-  // 탭은 현재 페이지가 속한 축이 기본이고, 누르면 사이드바 내용만 바뀐다
   await expect(
     page.getByRole("button", { name: "기능별", pressed: true })
   ).toBeVisible();
@@ -159,7 +151,6 @@ test("사이드바는 선택한 축의 모든 그룹을 항상 펼쳐 두고 탭
     nav.getByRole("link", { name: "문제 해결", exact: true })
   ).toHaveCount(0);
   await expect(page).toHaveURL(/\/help\/record\/recording$/);
-  // 가로 스크롤 없음
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth
@@ -192,7 +183,6 @@ test("상황별 페이지는 단계 목록과 영상을 낸다 · 기능 페이�
       .first()
       .evaluate((v: HTMLVideoElement) => v.muted)
   ).toBe(true);
-  // 기능 페이지 끝에 “이런 상황에서 보세요”가 이 레시피로 연결된다
   await openGuide(page, "/help/record/speakers");
   await expect(
     page
@@ -234,7 +224,6 @@ test("같은 페이지 목차는 부드럽게 스크롤하고 주소만 바꾼�
   });
   await link.click();
   await expect(page).toHaveURL(new RegExp(`#${id}$`));
-  // 스크롤이 멈추면 제목이 고정 상단바(97) 아래(scroll-margin 97+16)에 선다 — 가려지지 않는다
   await expect
     .poll(() =>
       page.evaluate(
@@ -276,12 +265,11 @@ test("영상을 누르면 확대 창이 열리고 Esc 로 닫히며 포커스가
   const video = page.locator("figure video").first();
   await video.scrollIntoViewIfNeeded();
   const before = await video.boundingBox();
-  await video.click({ force: true }); // 마우스는 영상 위 덮개 버튼에 닿는다
+  await video.click({ force: true });
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   const big = await dialog.locator("video").boundingBox();
   expect(big!.width).toBeGreaterThan(before!.width);
-  // 열린 동안 본문의 같은 영상은 멈춘다
   await expect
     .poll(() => video.evaluate((v: HTMLVideoElement) => v.paused))
     .toBe(true);
@@ -290,11 +278,9 @@ test("영상을 누르면 확대 창이 열리고 Esc 로 닫히며 포커스가
   await expect(
     page.getByRole("button", { name: /크게 보기/ }).first()
   ).toBeFocused();
-  // 자리는 그대로
   expect((await video.boundingBox())!.height).toBe(before!.height);
 });
 
-// 배경을 눌러 팔레트를 닫을 때 화면이 깜빡이던 문제: 오버레이의 backdrop-blur 가 닫힘 때 서서히 풀리지 않고 뚝 끊겼다.
 test("검색 팔레트를 열고 배경을 눌러 닫아도 폭·스크롤이 그대로고 레이아웃이 밀리지 않으며 배경 흐림이 없다", async ({
   page,
 }) => {
@@ -334,7 +320,6 @@ test("검색 팔레트를 열고 배경을 눌러 닫아도 폭·스크롤이 �
   ).toBe(0);
 });
 
-// 선택해도 굵기가 바뀌지 않아야 글자 폭 · 줄바꿈 · 목록 높이가 그대로다. 누르면 주소가 바뀌기 전에 활성 표시가 먼저 옮겨 간다.
 test("사이드바 항목을 눌러도 모든 항목의 폭·높이가 그대로고 활성 표시가 바로 옮겨 간다", async ({
   page,
 }) => {
@@ -358,7 +343,6 @@ test("사이드바 항목을 눌러도 모든 항목의 폭·높이가 그대로
   expect(await sizes()).toEqual(before);
 });
 
-// 뒤로 가기로 허브에 돌아오면 주소의 ?q= 를 지웠다 100ms 뒤 다시 붙이던 문제(마운트 효과가 주소를 썼다).
 test("허브에서 검색해 결과를 눌렀다 뒤로 가면 주소가 바뀌지 않고 history 가 쌓이지 않는다", async ({
   page,
 }) => {
@@ -389,9 +373,8 @@ test("허브에서 검색해 결과를 눌렀다 뒤로 가면 주소가 바뀌�
     () => ((window as unknown as { __writes: string[] }).__writes.length = 0)
   );
   await page.clock.fastForward(1000);
-  expect(page.url()).toBe(right); // 뒤늦게 바뀌지 않는다
+  expect(page.url()).toBe(right);
   expect(await page.evaluate(() => history.length)).toBe(historyBefore);
-  // 돌아온 뒤 우리 쪽에서 history 를 쓰지 않는다
   expect(
     await page.evaluate(
       () => (window as unknown as { __writes: string[] }).__writes
@@ -402,7 +385,6 @@ test("허브에서 검색해 결과를 눌렀다 뒤로 가면 주소가 바뀌�
   ).toHaveValue("녹음 상태");
 });
 
-// 이미지 확대 창이 본문보다 작게(488 < 694) 열리던 문제. 이미지·영상 확대 창은 한 컴포넌트(HelpZoomDialog)의 같은 규칙이다.
 for (const width of [1024, 1440]) {
   test(`${width}px 에서 이미지 확대는 본문 이미지보다 1.2배 넘게 크고 Esc 로 닫히며 포커스가 돌아온다`, async ({
     page,
@@ -427,7 +409,6 @@ for (const width of [1024, 1440]) {
   });
 }
 
-// 수집이 꺼진 환경(로컬·e2e)에서는 가이드를 둘러봐도 PostHog 로 아무것도 나가지 않는다(분석 게이트는 SiteAnalytics 한 곳).
 test("가이드를 둘러봐도 분석 도구로 요청이 나가지 않는다", async ({ page }) => {
   await page.clock.install();
   const sent: string[] = [];

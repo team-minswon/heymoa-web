@@ -6,10 +6,6 @@ import { cn } from "@/lib/utils";
 
 import type { Choice } from "@/lib/notes/review/confirm";
 
-/**
- * 제안을 받을지 고르는 두 칸. **바꾸는 쪽은 초록에 체크, 그대로 두는 쪽은 먹색이다.**
- * 빨강은 오류 색이라 고르는 값에 쓰지 않는다. 아직 안 골랐으면 둘 다 흐리다.
- */
 export function ChoiceToggle({
   value,
   changeLabel,
@@ -22,14 +18,10 @@ export function ChoiceToggle({
 }: {
   value: Choice | null;
   changeLabel: string;
-  /** 그대로 두는 쪽. 무엇을 그대로 두는지가 카드마다 달라서 기본값을 두지 않는다 */
   keepLabel: string;
-  /** 무엇을 고르는지. 스크린 리더가 두 칸을 한 질문으로 읽는다 */
   label: string;
   disabled?: boolean;
-  /** 그대로 두는 쪽만 막는다. 이미 바꾼 것을 되돌릴 수 없는데 그대로 둔다고 적히면 기록과 실제가 갈린다 */
   keepDisabled?: boolean;
-  /** 바꾸는 쪽만 막고 넘기기는 남깁니다. 대상 업무가 변경된 초안에 사용합니다. */
   changeDisabled?: boolean;
   onChange: (next: Choice) => void;
 }) {

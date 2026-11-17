@@ -1,6 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// This suite runs with playwright.auth.config.ts: SSR must be anonymous, not the MSW preset's MOCK_USER.
 const SAFARI =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 const INSTAGRAM = `${SAFARI} Instagram 400.0.0.0`;
@@ -11,8 +10,6 @@ async function externalNavigationAttempts(page: Page) {
   const attempts: string[] = [];
   const session = await page.context().newCDPSession(page);
   await session.send("Page.enable");
-  // A simulator browser has no native Instagram handler. Observe the requested navigation,
-  // rather than treating a blocked scheme or pageleave as a successful app handoff.
   session.on("Page.frameRequestedNavigation", ({ url }: { url: string }) => {
     if (url.startsWith("instagram://")) attempts.push(url);
   });
@@ -77,7 +74,6 @@ test.describe("Instagram landing entry", () => {
     expect(copied.pathname).toBe("/");
     expect(copied.searchParams.get("fbclid")).toBe("sample-click");
 
-    // Reloading the same in-app tab must not keep launching the external app.
     const attemptsBeforeReload = attempts.length;
     await page.reload();
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -151,7 +147,6 @@ test.describe("regular Safari", () => {
     );
     expect(new URL(page.url()).searchParams.get("fbclid")).toBe("sample-click");
     expect(attempts).toHaveLength(0);
-    // The no-API test server deliberately stops before OAuth; returnTo forwarding is unit-tested.
   });
 });
 
@@ -159,7 +154,6 @@ for (const width of [1440, 1024, 390]) {
   test(`handoff loading and fallback fit the ${width}px bottom layout`, async ({
     page,
   }) => {
-    // Freeze the real 1200ms handoff UI timer so the loading screenshot cannot miss it.
     await page.clock.install({ time: new Date("2026-10-24T00:00:00Z") });
     await page.clock.pauseAt(new Date("2026-10-24T00:00:01Z"));
     await page.addInitScript((ua) => {
@@ -178,7 +172,6 @@ for (const width of [1440, 1024, 390]) {
     await expect
       .poll(async () => {
         if (await opening.isVisible()) return true;
-        // Let hydration/query notifications advance without exhausting the opening interval.
         await page.clock.runFor(50);
         return opening.isVisible();
       })
@@ -196,7 +189,6 @@ for (const width of [1440, 1024, 390]) {
       animations: "disabled",
     });
 
-    // Expiry exposes manual controls; it does not assert native handoff failure.
     await page.clock.runFor(1201);
     await expect(
       dialog.getByRole("button", { name: "링크 복사", exact: true })

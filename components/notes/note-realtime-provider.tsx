@@ -51,26 +51,21 @@ type SubscriptionIssue = Exclude<
 >;
 
 type NoteRealtimeValue = {
-  /** 이 컨텍스트가 지금 어느 노트의 것인가. 노트 전환에 지역 상태를 리셋할 주어다. */
   noteId: string;
   subscriptionIssue: SubscriptionIssue | null;
-  /** 30초 넘게 토픽에 못 붙었다. 멈춘 화면을 표시 없이 두지 않는다(T2). */
   reconnecting: boolean;
   retrySubscription: () => void;
   transcript: Pick<NoteRealtimeState, "partial" | "finalSegments">;
   context: {
     cards: ContextCard[];
     state: ContextState;
-    /** 원장 조회가 실패했다. 정상 빈 상태와 갈라야 한다. */
     failed: boolean;
-    /** 첫 조회가 아직 안 왔다. 이것도 빈 상태가 아니다 — 모르는 것을 없다고 하면 안 된다. */
     loading: boolean;
     retry: () => void;
   };
 };
 
 const TRANSCRIPT_CATCH_UP_DELAY_MS = 500;
-/** 재연결 뒤 따라잡기를 흩는 창. 배포 때 한 태스크의 구독이 한꺼번에 다시 붙는다. */
 const RECONNECT_CATCH_UP_JITTER_MS = 3_000;
 
 const NoteRealtimeContext = createContext<NoteRealtimeValue | null>(null);
@@ -89,8 +84,6 @@ export function NoteRealtimeProvider({
     noteRealtimeReducer,
     initialNoteRealtimeState
   );
-  // 렌더에서 주어를 대조한다. 노트가 바뀐 첫 커밋은 위 reset effect보다 먼저라,
-  // 여기서 거르지 않으면 이전 노트의 상태로 새 노트의 자식들이 한 프레임 그려진다.
   const state =
     rawState.noteId === noteId ? rawState : initialNoteRealtimeState;
   const transcriptTimerRef = useRef<number | null>(null);
@@ -108,26 +101,11 @@ export function NoteRealtimeProvider({
   const retrySubscription = useCallback(() => {
     retrySubscriptionRef.current?.();
   }, []);
-  /**
-   * WS 콜백은 연결 effect 안에서 한 번 만들어져 그 시점의 값을 가둔다. 재조회가 필요한지는
-   * event 가 올 때마다 지금 값을 봐야 하므로 ref 로 읽는다.
-   */
   const needsRefetchRef = useRef(false);
   useEffect(() => {
     needsRefetchRef.current = state.context.needsRefetch;
   }, [state.context.needsRefetch]);
 
-  /**
-   * 소켓은 아직 무언가 올 수 있는 노트에만 연다.
-   *
-   * 이 토픽으로 끝난 회의에서 올 수 있는 것은 회의 직후 분석이 도는 동안의 후보·배치뿐이다.
-   * 지난 노트를 읽는 탭마다 연결이 하나씩 서 있었고, 2대에서 배포하면 그 전부가 재연결을 한다.
-   * 시작 전 노트는 연다 — 동료가 녹음을 시작하면 이 소켓으로 `meeting.started` 가 온다.
-   *
-   * 판정은 노트 조회의 `meetingStatus` 다. 화면과 같은 Query 캐시를 읽으므로 요청은
-   * 중복되지 않고, 아직 모르면 알 때까지 안 연다. 한 번 열었으면 상태가 바뀌어도 나갈 때까지 유지한다
-   * — 회의를 끝내는 순간 닫으면 그 직후 오는 분석 배치를 놓친다. `socketFor` 가 그 래치다.
-   */
   const noteQuery = useGetNote(noteId);
   const meetingStatus =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
@@ -135,18 +113,13 @@ export function NoteRealtimeProvider({
       : undefined;
   const [socketFor, setSocketFor] = useState<string | null>(null);
   const shouldOpen = meetingStatus !== undefined && meetingStatus !== "ENDED";
-  // 렌더 중에 세우는 파생 상태다. effect 로 미루면 한 렌더 늦고 lint 도 막는다.
   if (shouldOpen && socketFor !== noteId) setSocketFor(noteId);
   const socketOpen = socketFor === noteId;
 
   useEffect(() => {
-    // 노트가 바뀌면 즉시 비운다. catch-up 의 reset 만 믿으면 WS 가 붙기 전까지
-    // (또는 못 붙으면 영영) 이전 노트의 partial·후보·처리 내역이 새 노트에 그대로 보인다.
-    // 마운트 직후에는 이미 초기 상태라 no-op 이다.
     dispatch({ type: "reset", noteId });
   }, [noteId]);
 
-  // 소켓이 열린 노트의 회의 상태는 여기서 무효화하므로 이벤트 스트림의 `meeting` 힌트가 건너뛴다(PRO-67 I02).
   useEffect(
     () => (socketOpen ? noteSocketOpened(noteId) : undefined),
     [noteId, socketOpen]
@@ -164,8 +137,6 @@ export function NoteRealtimeProvider({
       void invalidateNoteLifecycle(queryClient, noteId);
     const invalidateTranscript = () =>
       void invalidateNoteTranscript(queryClient, noteId);
-    // 틈 감지 재조회와 재연결 따라잡기가 이 타이머 하나를 나눠 쓴다. 따라잡기가 기다리는 동안의
-    // 틈은 따라잡기가 전사까지 다시 받으므로 따로 안 낸다.
     let fullCatchUpPending = false;
     const clearTranscriptCatchUp = () => {
       fullCatchUpPending = false;
@@ -174,8 +145,6 @@ export function NoteRealtimeProvider({
         transcriptTimerRef.current = null;
       }
     };
-    // 전사를 스스로 다시 받는 이벤트가 부른다. 기다리는 따라잡기가 있으면 그것이 노트·전사·제안을
-    // 모두 다시 받으므로 이벤트는 받지 않는다(참). 없으면 틈 재조회만 거둔다.
     const catchUpPendingCovers = () => {
       if (fullCatchUpPending) return true;
       clearTranscriptCatchUp();
@@ -197,8 +166,6 @@ export function NoteRealtimeProvider({
       void queryClient.invalidateQueries({
         queryKey: getGetNoteAgendasQueryKey(noteId),
       });
-    // catch-up 뒤에는 REST 가 가진 마지막 번호가 기준이다. 첫 final 로 기준을 세우면 그 앞의
-    // 유실을 못 본다. REST 가 아직 없으면 모르므로 첫 final 이 기준이 된다.
     let lastSequence: number | null = null;
     const persistedLastSequence = () => {
       const response = queryClient.getQueryData<
@@ -222,8 +189,6 @@ export function NoteRealtimeProvider({
       invalidateContext();
       invalidateAgendas();
     };
-    // 첫 따라잡기는 곧바로다. 그 뒤(재연결·안전 주기·구독 재시도)는 0~3초 난수 뒤 한 번으로 묶는다.
-    // 구독은 클라이언트가 이미 곧바로 걸었다 — 기다리는 사이 오는 이벤트는 그대로 받는다.
     let caughtUpOnce = false;
     const catchUp = () => {
       if (!caughtUpOnce) {
@@ -267,13 +232,10 @@ export function NoteRealtimeProvider({
         switch (event.type) {
           case "meeting.started":
             applyNoteLifecycleEvent(queryClient, noteId, event);
-            // 이벤트는 시작자와 updatedAt을 싣지 않는다. 즉시 반영한 상태 뒤에
-            // REST를 읽어 두 필드와 목록 행을 서버 값으로 수렴시킨다.
             invalidateLifecycle();
             break;
           case "meeting.ended":
             applyNoteLifecycleEvent(queryClient, noteId, event);
-            // 종료 시각과 updatedAt도 이벤트에 없으므로 상세·목록을 다시 읽는다.
             if (catchUpPendingCovers()) break;
             invalidateLifecycle();
             invalidateTranscript();
@@ -295,37 +257,22 @@ export function NoteRealtimeProvider({
             break;
           }
           case "transcript.final": {
-            // 발화는 이벤트가 다 싣는다 — 받을 때마다 전사 전체를 다시 받으면 보는 사람 수만큼
-            // DB 조회가 곱해진다. 번호는 노트 안에서 빈틈없이 이어지므로, 건너뛴
-            // 번호가 곧 Pub/Sub 이 흘린 final 이다. 그때만 REST 로 메운다.
+            // 번호는 노트 안에서 빈틈없이 이어지므로 건너뛴 번호가 곧 Pub/Sub 이 흘린 final 이다. 그때만 REST 로 메운다.
             const seen = lastSequence ?? persistedLastSequence();
             const skipped = seen !== null && event.sequence > seen + 1;
             lastSequence = Math.max(seen ?? 0, event.sequence);
-            // 조회가 실패해 있으면 다음 final 이 다시 받을 계기다.
             const failed =
               queryClient.getQueryState(getGetNoteTranscriptQueryKey(noteId))
                 ?.status === "error";
             if (skipped || failed) scheduleTranscriptCatchUp();
             break;
           }
-          /**
-           * 재조회가 실패한 채 갇히지 않게 한다. `needsRefetch` 는 sticky 이고 그것을
-           * 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면 스스로는 다시 안 돈다.
-           * 그 뒤 오는 proposal event 는 gap 을 못 메운다 — 빠진 revision 은 다시 안 온다.
-           *
-           * batch 는 아래에서 늘 invalidate 하므로 이미 복구 경로가 있다. 배치가 멎은
-           * 구간에서 proposal event 만 오는 경우가 남아서, 그때만 같은 경로를 연다.
-           */
           case "proposal.changed":
             if (needsRefetchRef.current) invalidateContext();
             break;
-          // REAFFIRM 수렴 지점이다. REAFFIRM 은 proposal event 를 안 만들면서 서버에서는
-          // citations 를 늘리고 `lastEvidenceSequence` 를 전진시킨다. 배치가 적용될 때마다
-          // snapshot 을 다시 받아야 그 변화가 화면에 온다.
           case "transcript-analysis-run.applied":
             invalidateContext();
             break;
-          // 안건 정리가 끝났다. 정본은 GET /agendas 이고 이벤트는 다시 읽으라는 신호뿐이다.
           case "agendas.changed":
             invalidateAgendas();
             break;
@@ -348,26 +295,14 @@ export function NoteRealtimeProvider({
     };
   }, [noteId, onNotMember, queryClient, socketOpen]);
 
-  /**
-   * 원장의 정본은 REST다. 전달이 best-effort라 event만 쌓으면 새로고침·재연결·회의 종료
-   * 뒤에 화면이 빈다 — 실제로 그렇게 만들었다가 잡았다.
-   *
-   * `phase`로 막지 않는다. 회의가 끝나도 원장은 남는다 — 사용자가 회의 중에 본 것을
-   * 나중에 되짚는 것이 이 화면의 절반이다.
-   */
   const snapshotQuery = useGetProposals(noteId, {
     query: {
       staleTime: 10_000,
-      /** 두 겹 봉투를 벗기고 성공만 zod 로 통과시킨다 — 근거는 `select.ts` 주석에 있다. */
       select: selectContextSnapshot,
     },
   });
   const snapshot = snapshotQuery.data;
-  /**
-   * `data` 가 아니라 `dataUpdatedAt` 을 본다. TanStack 은 구조가 같으면 재조회에도 같은
-   * 객체를 돌려주므로, 재연결 catch-up 이 `reset` 으로 상태를 비운 뒤에 온 재조회가
-   * effect 를 다시 안 띄운다 — 그러면 화면이 영영 빈 채로 남는다. 실제로 그렇게 비었다.
-   */
+  /** `data` 가 아니라 `dataUpdatedAt` 을 본다 — TanStack 은 구조가 같으면 재조회에도 같은 객체를 돌려줘 effect 가 다시 안 돈다. */
   const snapshotUpdatedAt = snapshotQuery.dataUpdatedAt;
 
   useEffect(() => {
@@ -380,9 +315,6 @@ export function NoteRealtimeProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 위 주석: 갱신 시각이 트리거다.
   }, [snapshotUpdatedAt]);
 
-  /**
-   * revision gap을 봤으면 다시 받는다. event로는 못 메운다 — 빠진 revision은 다시 안 온다.
-   */
   const needsRefetch = state.context.needsRefetch;
   const refetchSnapshot = snapshotQuery.refetch;
   useEffect(() => {
@@ -390,18 +322,12 @@ export function NoteRealtimeProvider({
     void refetchSnapshot();
   }, [needsRefetch, refetchSnapshot]);
 
-  // `isLoadingError` 로 가른다. 초기 조회가 성공한 뒤의 재조회(배치 무효화·gap 복구) 실패는
-  // 캐시가 남아 있으므로 그려진 카드를 유지한다 — 이미 그려진 데이터의 갱신은 덮지 않는다는
-  // 규칙(rule `error-loading`)과 같은 이유다.
   const contextFailed = snapshotQuery.isLoadingError;
-  // `isPending` 으로 가른다. `isFetching` 은 이미 그려진 데이터의 갱신까지 잡아서,
-  // 배치가 올 때마다 읽던 목록이 skeleton 으로 덮인다.
   const contextLoading = snapshotQuery.isPending;
   const retryContext = useCallback(() => {
     void refetchSnapshot();
   }, [refetchSnapshot]);
 
-  // 전사 조각은 context 를 안 건드린다. 거기에 묶어야 조각마다 카드 수백 장이 다시 안 그려진다
   const cards = useMemo(() => selectCards(state.context), [state.context]);
   const value = useMemo<NoteRealtimeValue>(
     () => ({
@@ -416,8 +342,6 @@ export function NoteRealtimeProvider({
       context: {
         cards,
         state: state.context,
-        // 실패를 화면까지 올린다. 안 올리면 레일이 「사건이 없다」로 그려서 사용자가
-        // 후보 0건을 사실로 믿는다.
         failed: contextFailed,
         loading: contextLoading,
         retry: retryContext,

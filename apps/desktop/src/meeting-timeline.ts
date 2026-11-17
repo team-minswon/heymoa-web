@@ -19,7 +19,7 @@ export const MEETING_CHANNELS = {
   recordingTarget: "heymoa:meeting-recording-target",
 } as const;
 export const TIMELINE_STALE_MS = 30_000;
-/** 웹이 30초마다 다시 보낸다. 숨은 창은 1분으로 느려질 수 있어 그 두 배 넘게 둔다. */
+/** 웹이 30초마다 다시 보냅니다. 숨은 창은 1분으로 느려질 수 있어 그 두 배 넘게 둡니다. */
 export const ACTIVE_MEETINGS_STALE_MS = 150_000;
 export const ACTIVE_MEETINGS_MAX = 20;
 
@@ -156,7 +156,6 @@ function offset(value: unknown): number {
     throw new Error("INVALID_MEETING_TIMELINE");
   return value as number;
 }
-/** Rebuild a bounded display DTO at the remote renderer -> main trust boundary. */
 export function meetingTimeline(
   value: unknown
 ): MeetingTimelineSnapshot | null {
@@ -339,7 +338,6 @@ export function meetingTimeline(
   };
 }
 
-/** Rebuild the bounded active-meeting list at the remote renderer -> main trust boundary. */
 export function activeMeetings(value: unknown): ActiveMeeting[] {
   try {
     if (!Array.isArray(value) || value.length > ACTIVE_MEETINGS_MAX)
@@ -400,7 +398,6 @@ export type MeetingPopoverView = {
   panel?: { pinned: boolean; opacity: number };
   language?: "ko" | "en";
   meetings: ActiveMeeting[];
-  /** 내 녹음이 아니라 뷰어로 보는 회의가 있다 */
   viewing: boolean;
   phase: RecordingSummary["phase"] | null;
   unknown: boolean;
@@ -424,7 +421,6 @@ export type MeetingPopoverAction =
   | { action: "set-panel"; pinned: boolean }
   | { action: "open-selection"; tab: "summary" | "transcript" | "context" };
 
-/** Constrain both top menu bars and bottom/side taskbars to the selected display. */
 export function popoverBounds(
   anchor: { x: number; y: number; width: number; height: number },
   area: { x: number; y: number; width: number; height: number },

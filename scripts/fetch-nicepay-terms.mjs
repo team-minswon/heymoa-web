@@ -1,26 +1,15 @@
 #!/usr/bin/env node
-/**
- * 결제 페이지 「내용 보기」 창의 나이스페이 약관을 샌드박스에서 받아 `content/billing/pg-terms.ts` 를 다시 만든다(APP-1600).
- *
- *   set -a; . ~/.heymoa/nicepay-sandbox.env; set +a
- *   node scripts/fetch-nicepay-terms.mjs
- *
- * 샌드박스(`sandbox-api.nicepay.co.kr`)만 부른다. 키는 환경 변수로만 읽고 출력하지 않는다.
- * 본문은 줄바꿈 없는 한 덩어리라 읽기 좋게 문단만 나눈다 — 글자는 바꾸지 않는다. 나눈 조각을 이으면 원문과 같은지 여기서 검사한다.
- */
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { format, resolveConfig } from "prettier";
 
 const ORIGIN = "https://sandbox-api.nicepay.co.kr";
-// 카드 결제에 해당하는 셋. 통신과금(`TelecommunicationCharging`)은 휴대폰 결제용이라 뺀다.
 const TYPES = [
   "ElectronicFinancialTransactions",
   "CollectPersonalInfo",
   "SharingPersonalInformation",
 ];
 
-// 새 문단이 시작되는 자리: 머리 `[제목]` 뒤, 「제N조 (」, 「부 칙」, 문장 끝(`.`·`)`) 뒤의 「1. 」·「1) 」, 탭이 붙은 「가.」, 「※」.
 const BREAKS = [
   /(?<=^\[[^\]]*\])/g,
   /제\d+조\s*\(/g,
@@ -31,7 +20,6 @@ const BREAKS = [
   /※/g,
 ];
 
-/** 본문을 문단으로 나눈다. 이어 붙이면 원문과 같다. */
 export function splitTerms(content) {
   const cuts = new Set([0]);
   for (const pattern of BREAKS)

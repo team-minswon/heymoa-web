@@ -8,10 +8,6 @@ import { SegmentedControl } from "@/components/heymoa/segmented-control";
 import { Button } from "@/components/ui/button";
 import type { ReviewKind } from "@/lib/notes/review/sections";
 
-/**
- * 섹션에 항목을 하나 더한다. 종류는 섹션이 정하고, 섹션에 종류가 여럿이면 고른다.
- * Enter 로 더하고 Shift+Enter 로 줄을 바꾸며, Esc 로 닫는다.
- */
 export function AddItemForm({
   kinds,
   busy,

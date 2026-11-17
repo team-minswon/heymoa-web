@@ -105,7 +105,6 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
     return agendas;
   },
 }));
-/** GET /agendas 응답 봉투 */
 const agendaResponse = (
   asOfSequence: number | null,
   rows: Array<{
@@ -215,7 +214,6 @@ describe("NoteTimeline", () => {
       />
     );
 
-    // 안건 머리의 시간 구간이 안건의 첫 발화로 가는 길이다.
     const range = screen.getByRole("button", { name: "스크립트 04:02로 가기" });
     expect(range).toHaveTextContent("04:02 – 지금");
     fireEvent.click(range);
@@ -261,7 +259,6 @@ describe("NoteTimeline", () => {
     expect(
       titles.map((text) => text?.match(/온보딩 개편|결제 실패 대응/)?.[0])
     ).toEqual(["온보딩 개편", "결제 실패 대응", "온보딩 개편"]);
-    // 옛 안건 명제는 정본이 있으면 머리가 되지 않는다
     expect(screen.queryByText("옛 안건 명제")).toBeNull();
     expect(screen.getByText("논의 중")).toBeVisible();
   });
@@ -356,7 +353,6 @@ describe("NoteTimeline", () => {
     render(
       <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
     );
-    // 근거가 하나인 묶음은 같은 시각을 두 번 쓰지 않는다
     expect(screen.queryByText(/01:00 – 01:00/)).toBeNull();
     expect(document.querySelectorAll(".evidence-mark")).toHaveLength(0);
     vi.useFakeTimers();
@@ -404,7 +400,6 @@ describe("NoteTimeline", () => {
         onFocusHandled={onFocusHandled}
       />
     );
-    // 같은 안건으로 돌아온 묶음이 아니라 첫 묶음에 긋는다
     const marks = document.querySelectorAll(".evidence-mark");
     expect(marks).toHaveLength(1);
     expect(marks[0]).toHaveTextContent("온보딩 개편");
@@ -412,7 +407,6 @@ describe("NoteTimeline", () => {
     expect(
       screen.getAllByRole("button", { name: /^온보딩 개편/ })[0]
     ).toHaveAttribute("aria-expanded", "true");
-    // 화면이 바뀐 이동이라 근거 점프(약 1.2초)보다 오래 머문다
     act(() => vi.advanceTimersByTime(1_500));
     expect(onFocusHandled).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(1_500));
@@ -439,7 +433,6 @@ describe("NoteTimeline", () => {
       <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
     );
     expect(agendas.refetchInterval).toBe(false);
-    // 분석이 끝나는 순간 한 번 더 읽어 최종 정본에 맞춘다
     expect(agendas.refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -526,7 +519,6 @@ describe("NoteTimeline", () => {
     await waitFor(() =>
       expect(screen.getByText("건너뛰기 버튼을 둔다")).toBeVisible()
     );
-    // 열어 준 뒤 사용자가 다시 접으면 새 내용이 더 오기 전까지 그대로 둡니다.
     fireEvent.click(screen.getByRole("button", { name: /^온보딩 개편/ }));
     rerender(
       <NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />
@@ -579,10 +571,8 @@ describe("NoteTimeline", () => {
     const groupOf = (text: string) =>
       screen.getByText(text).closest("section")?.querySelector("h3")
         ?.textContent ?? "";
-    // c 는 정리가 아직 못 봤다. 접힌 이전 안건에 숨기지 않고 제 시각에 제목 없이 보인다.
     expect(groupOf("건너뛰기 버튼을 둔다")).toBe("");
 
-    // 다음 정리가 a 를 결제로 옮기고 c 를 온보딩에 넣는다. 회의 중이라 a 는 그대로, c 만 자리를 얻는다.
     agendas.data = agendaResponse(c.createdSequence, [
       {
         agendaId: onboarding,
@@ -601,11 +591,9 @@ describe("NoteTimeline", () => {
     expect(groupOf("이탈률 38%")).toMatch("온보딩 개편");
     expect(groupOf("건너뛰기 버튼을 둔다")).toMatch("온보딩 개편");
 
-    // 회의가 끝나면 서버 판정대로 한 번 맞춘다
     rerender(
       <NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />
     );
-    // 끝난 회의는 그룹이 접힌 채 시작한다 — 결제 그룹을 펼쳐 본다
     fireEvent.click(screen.getByRole("button", { name: /^결제 실패 대응/ }));
     expect(groupOf("이탈률 38%")).toMatch("결제 실패 대응");
   });
@@ -628,13 +616,11 @@ describe("NoteTimeline", () => {
     const details = document.getElementById(
       toggle.getAttribute("aria-controls")!
     )!;
-    // 첫 펼침 전에는 전사 DOM을 만들지 않는다.
     expect(within(details).queryByText(proposal.citations[0].text)).toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(details).not.toHaveAttribute("inert");
     expect(within(details).queryByRole("button")).toBeNull();
-    // 펼침이 끝나기 전에 접었다 다시 열어도 이전 완료 신호가 내용을 남기지 않는다.
     fireEvent.click(toggle);
     expect(details).toHaveAttribute("inert");
     fireEvent.click(toggle);
@@ -670,7 +656,6 @@ describe("NoteTimeline", () => {
     withLedger(question, answer);
     render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
 
-    // 답한 질문은 언제 답했는지를 말한다.
     expect(screen.getByText("40:00에 답함")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: /인덱스를 줄이면/ }));
@@ -760,7 +745,6 @@ describe("NoteTimeline", () => {
         .getByRole("list", { name: "타임라인을 불러오는 중" })
         .closest("[aria-busy]")
     ).toHaveAttribute("aria-busy", "true");
-    // 첫 snapshot 전에는 개수를 말하지 않는다.
     expect(screen.getByRole("button", { name: "전체" })).toBeVisible();
     unmount();
 
@@ -968,7 +952,6 @@ it("조회와 reducer 적용을 기다린 첫 목록만 최신으로 가고 뒤�
     viewport.scrollTop = 900;
     rerender(view());
     flush();
-    // 끝난 회의의 첫 유효 목록은 최신이 아니라 맨 위에서 시작한다
     expect(viewport.scrollTop).toBe(0);
     viewport.scrollTop = 200;
     fireEvent.scroll(viewport);
@@ -1044,7 +1027,6 @@ describe("끝난 회의의 타임라인", () => {
     expect(onboarding).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("이탈률 38%")).toBeNull();
     fireEvent.click(onboarding);
-    // 펼칠 때 높이·투명도가 0에서 올라온다 — 다 열린 뒤 보인다
     await waitFor(() => expect(screen.getByText("이탈률 38%")).toBeVisible());
     expect(screen.queryByText("3DS 응답이 늦다")).toBeNull();
   });
@@ -1072,7 +1054,6 @@ describe("끝난 회의의 타임라인", () => {
     rerender(view(true));
     flush();
     expect(viewport.scrollTop).toBe(0);
-    // 접히는 동안은 남았다가 끝나면 내려간다
     await waitFor(() => expect(screen.queryByText("이탈률 38%")).toBeNull());
     expect(
       screen.getByRole("button", { name: /^온보딩 개편/ })
@@ -1112,7 +1093,6 @@ it("기록 중 바닥에서 조금만 올려도 새 내용이 위치를 빼앗�
     flush();
     expect(viewport.scrollTop).toBe(1500);
     fireEvent.scroll(viewport);
-    // 바닥에서 100px 올렸다. 예전 180px 폭 안이라 도로 끌려 내려갔다.
     fireEvent.wheel(viewport, { deltaY: -100 });
     viewport.scrollTop = 1400;
     fireEvent.scroll(viewport);
@@ -1120,7 +1100,6 @@ it("기록 중 바닥에서 조금만 올려도 새 내용이 위치를 빼앗�
     rerender(view());
     flush();
     expect(viewport.scrollTop).toBe(1400);
-    // 스스로 바닥 24px 안까지 내려오면 다시 따라간다.
     viewport.scrollTop = 1490;
     fireEvent.scroll(viewport);
     live.partial = { confirmedText: "", pendingText: "다시 따라가는 글자" };
@@ -1177,7 +1156,6 @@ it.each([true, false])(
       rerender(view());
       flush();
       expect(viewport.scrollTop).toBe(200);
-      // query 성공과 reducer 적용이 따로 커밋되어도 읽는 의도가 먼저다.
       realtime.context.loading = false;
       rerender(view());
       flush();
@@ -1186,7 +1164,6 @@ it.each([true, false])(
       flush();
       expect(viewport.scrollTop).toBe(200);
       expect(screen.getByRole("button", { name: "맨 아래로" })).toBeVisible();
-      // 같은 컴포넌트로 A→B→A를 방문해도 이전 방문의 읽기 의도는 남지 않는다.
       realtime.noteId = "01K0000000006";
       rerender(view());
       flush();
@@ -1311,7 +1288,6 @@ it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는
   ];
   rerender(<QueryClientProvider client={client}>{view()}</QueryClientProvider>);
   expect(within(details).getByText("화자 B")).toBeVisible();
-  // 저장본 지정이 실시간 사본의 라벨보다 우선한다.
   realtime.transcript.finalSegments.push({
     ...realtime.transcript.finalSegments[0],
     segmentId: proposal.citations[0].segmentId,
@@ -1321,7 +1297,6 @@ it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는
   expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent(
     "화자 A"
   );
-  // 분리 중에는 다시 읽고, 완료 뒤에는 폴링을 멈춘다. 실제 대기 대신 Query 타이머만 진행한다.
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
   data.diarization.status = "SUBMITTED";
   await refresh();

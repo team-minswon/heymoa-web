@@ -47,7 +47,6 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => ({ phase: state.phase, session: null }),
 }));
 
-/** 네 가지 처리를 섞은 계정 — 혼자(삭제) · 다른 관리자 있음(나가기) · 멤버(나가기) · 유일 관리자 + 멤버(넘기기/삭제) */
 const PLAN: DeletionPlan = {
   workspaces: [
     {
@@ -127,7 +126,6 @@ describe("AccountDeletionSection", () => {
     expect(
       list.getByRole("link", { name: "보관 기간 자세히 보기" })
     ).toHaveAttribute("href", "/privacy#section-6");
-    // 사업자 이름·백업 일수는 처리방침에 둔다(APP-1403).
     expect(screen.queryByText(/PostHog|7일/)).not.toBeInTheDocument();
   });
 

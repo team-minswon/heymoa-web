@@ -27,11 +27,6 @@ import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { usePollWindow } from "@/lib/billing/use-poll-window";
 import { useWorkspaceBilling } from "@/lib/billing/use-workspace-billing";
 
-/**
- * 설정 › 결제 관리에서 한 단계 들어간 결제 한 건(ADMIN). 금액·기간·상태·카드·환불 상태와 출처를 보인다.
- * 환불됐거나 기간이 끝난 옛 결제는 「당시 결과」와 「현재 상태」를 갈라 적는다 — 옛 성공을 지금 권한처럼 읽히게 하지 않는다.
- * 환불은 화면에서 요청하지 않고 문의·피드백으로 받는다.
- */
 export function BillingPaymentDetail({
   workspaceId,
   paymentId,
@@ -41,7 +36,6 @@ export function BillingPaymentDetail({
   workspaceId: string;
   paymentId: string;
   onBack: () => void;
-  /** 돌아갈 곳의 이름. 없으면 「결제 관리」. */
   backLabel?: string;
 }) {
   const t = useTranslations("billing.payment");
@@ -92,8 +86,6 @@ function PaymentContent({
 }) {
   const t = useTranslations("billing.payment");
   const billing = useWorkspaceBilling(workspaceId);
-  // 404·403 을 화면이 그리고 취소 처리 중에는 다시 읽어서 suspense 조회가 아니다(rule `error-loading` 예외).
-  // 다시 읽기는 요금제 탭과 같은 3분 창에서만 한다.
   const poll = usePollWindow();
   const query = useGetBillingPayment(workspaceId, paymentId, {
     query: {
@@ -131,7 +123,6 @@ function PaymentContent({
   );
 }
 
-/** 얼마를 언제 무엇으로 냈는가 — 한눈에 읽는 줄. */
 function PaymentHero({ payment }: { payment: BillingPaymentResponseData }) {
   const t = useTranslations("billing.payment");
   const format = useBillingFormat();
@@ -178,7 +169,6 @@ function PaymentRows({
   const tStatus = useTranslations("billing.paymentStatus");
   const format = useBillingFormat();
   const card = format.card(payment.maskedCard);
-  // 지금 기간의 결제가 아니거나 환불이 걸린 성공 결제는 그때의 결과와 지금을 따로 적는다.
   const now =
     payment.status !== "SUCCEEDED"
       ? null
@@ -243,7 +233,6 @@ function PaymentRows({
   );
 }
 
-/** 환불은 화면을 만들지 않는다 — 기존 문의·피드백 창으로 받는다. */
 function SupportLine({ paymentId }: { paymentId: string }) {
   const t = useTranslations("billing.payment");
   return (

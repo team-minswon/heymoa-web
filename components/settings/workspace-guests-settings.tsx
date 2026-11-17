@@ -61,16 +61,6 @@ import type {
   WorkspaceMemberListResponseDataMembersItem,
 } from "@/lib/api/generated/models";
 
-/**
- * 워크스페이스의 임시 참여자 (APP-495).
- *
- * **멤버 목록과 섞지 않는다.** 한 목록에 세우면 역할 변경과 내보내기가 임시 참여자에게도
- * 있는 것처럼 읽힌다 — 계정이 없는 사람에게는 둘 다 뜻이 없다.
- *
- * **목록은 전원이 본다.** 참석자 후보와 화자 지정 후보를 세우는 데 쓰이고, 그 이름들은
- * 어차피 회의록에서 보인다. 관리(연동·삭제)만 ADMIN이다 — 서버가 이미 그 모양이라
- * 화면이 그대로 비추면 된다.
- */
 type GuestDialogKind = "rename" | "link" | "delete";
 
 export function WorkspaceGuestsSettings({
@@ -80,31 +70,12 @@ export function WorkspaceGuestsSettings({
 }: {
   workspaceId: string;
   canManage: boolean;
-  /** 자기 탭 머리글이 이미 있다 — 위 여백·구분선과 제목·설명을 다시 그리지 않고 인원수만 보인다. */
   standalone?: boolean;
-  /**
-   * 회의로 옮겨 가기 직전에 부른다. **설정이 대화상자라 닫지 않으면** 이동한 화면 위에
-   * 그대로 덮여 있어 사용자는 아무것도 안 일어난 것처럼 본다.
-   */
 }) {
-  /**
-   * **들어올 때 다시 읽는다.** 전역 `staleTime` 이 60초라, 다른 화면이 채운 캐시가 아직
-   * fresh 면 요청 없이 그것을 그린다. 그 사이 남이 회의에서 이 사람을 빼면 `noteCount` 가
-   * 낡고, 사람은 **틀린 영향 범위를 보고 되돌릴 수 없는 삭제**를 누른다.
-   * 전사 화면(`note-archive`)이 같은 쿼리를 같은 이유로 이렇게 부른다.
-   */
   const t = useTranslations("settings.guests");
   const tActions = useTranslations("common.actions");
   const [pages, setPages] = useState(1);
   const guestsQuery = useGuestListPages({ workspaceId, pages });
-  /**
-   * **대화상자를 목록 밖에서 연다.** 행 안에 두면, 확인창이 여는 재조회가 마침 그 행을
-   * 목록에서 지우는 순간(남이 먼저 지웠다) **대화상자까지 함께 언마운트된다** — 「이미
-   * 지워졌습니다」가 뜰 자리가 없어 창이 설명 없이 닫힌다.
-   *
-   * 고른 행을 **객체째** 들고 있는 이유도 같다. 식별자만 들면 목록에서 사라지는 순간
-   * 무엇을 지우려던 것인지도 잃는다.
-   */
   const [dialog, setDialog] = useState<{
     kind: GuestDialogKind;
     guest: WorkspaceGuestListResponseDataGuestsItem;
@@ -118,10 +89,8 @@ export function WorkspaceGuestsSettings({
   const guests = page?.guests ?? [];
   const freshOf = (guestId: string) =>
     guests.find((item) => item.guestId === guestId);
-  // 뒷쪽을 못 읽었다(훅이 읽은 곳까지만 돌려줬다). 이 목록으로는 「그 사람이 없다」를 말할 수 없다.
   const partial =
     (response as { partial?: boolean } | undefined)?.partial === true;
-  // 다음 쪽을 읽는 중 = 키가 바뀌어 이전 목록을 붙들고 있는 동안
   const isLoadingMore = guestsQuery.isFetching && guestsQuery.isPlaceholderData;
 
   return (
@@ -138,7 +107,6 @@ export function WorkspaceGuestsSettings({
             {t("count", { count: page.totalCount })}
           </p>
         ) : guestsQuery.isLoading ? (
-          // 인원 줄도 응답이 채운다 — 자리를 안 잡으면 도착하며 목록을 한 줄 민다.
           <SkeletonLine className="w-10" />
         ) : null
       ) : (
@@ -171,10 +139,7 @@ export function WorkspaceGuestsSettings({
              임시 참여자와 연동·삭제가 **재시도가 성공할 때까지 통째로 사라진다.**
 
              `guests.length === 0` 으로 가르면 안 된다. 정상적으로 빈 목록을 캐시한 뒤 실패하면
-             빈 안내 대신 오류가 뜬다 — 길이가 아니라 **응답을 든 적이 있는가**다.
-
-             ⚠️ `200 success:false` 는 여기 안 걸린다(`isError` 가 false 다). 그 층은 앱 전체가
-             정규화를 안 하고 있어 이 프로젝트 밖에서 다룬다. */
+             빈 안내 대신 오류가 뜬다 — 길이가 아니라 **응답을 든 적이 있는가**다. */
       guestsQuery.isError && guestsQuery.data === undefined ? (
         <div role="alert" className="mt-4 space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
@@ -190,15 +155,11 @@ export function WorkspaceGuestsSettings({
           </Button>
         </div>
       ) : guests.length === 0 ? (
-        // **빈 상태는 오류가 아니다.** 한 명도 없는 것이 정상이다.
         <p className="mt-4 text-sm text-[var(--el-muted)]">
           {t("empty")}
         </p>
       ) : (
         <>
-          {/* **왜 관리가 사라졌는지 말한다.** 캐시를 든 채 리패치가 실패하면 목록은 그대로
-              두되 연동·삭제를 잠그는데(확인창의 숫자가 낡을 수 있어서), 이유가 안 보이면
-              ADMIN 은 **권한이 사라진 것으로 읽고** 되돌릴 길도 없다. */}
           {(guestsQuery.isError && guestsQuery.data !== undefined) ||
           partial ? (
             <div
@@ -225,25 +186,15 @@ export function WorkspaceGuestsSettings({
               <GuestRow
                 key={guest.guestId}
                 guest={guest}
-                // **이름 변경은 삭제와 달리 목록이 낡아도 안전하다** — 낡은 숫자를 근거로 되돌릴 수 없는 일을
-                // 하는 게 아니라 이름 하나를 덮을 뿐이고, 결과는 응답으로 캐시에 직접 쓴다. 그래서 재조회
-                // 중·실패 중에도 잠그지 않고 역할만 본다.
                 canRename={canManage}
-                // **낡은 값으로는 지우지 못하게 한다.** 캐시를 살려 목록은 그대로 그리지만,
-                // 그 사이 남이 이 사람을 다른 회의에 넣었으면 확인창의 「회의록 N개」가 거짓이
-                // 된다 — 삭제는 되돌릴 수 없고 화자 연결까지 CASCADE 로 가져간다.
-                // 연동은 실행 전 미리보기가 다시 판정하지만 삭제에는 그 관문이 없다.
                 canManage={
                   canManage &&
                   !guestsQuery.isError &&
                   !guestsQuery.isFetching &&
                   !partial
                 }
-                // **열 때 다시 읽는다.** 목록의 숫자는 화면에 들어올 때 값이고, 설정을 열어
-                // 둔 채 시간이 흐르면(`staleTime` 60초) 다시 안 읽는다.
                 onOpen={(kind) => {
                   setDialog({ kind, guest });
-                  // 이름 변경은 영향 범위를 안 보므로 다시 읽을 까닭이 없다.
                   if (kind !== "rename") void guestsQuery.refetch();
                 }}
               />
@@ -272,7 +223,6 @@ export function WorkspaceGuestsSettings({
       )}
 
       {dialog?.kind === "rename" ? (
-        // 연 순간의 모습을 든다 — 저장 중 낙관적 이름이 목록에 먼저 써져도 대화상자의 「지금 이름」은 흔들리지 않는다.
         <RenameGuestDialog
           guest={dialog.guest}
           workspaceId={workspaceId}
@@ -290,11 +240,8 @@ export function WorkspaceGuestsSettings({
         <DeleteGuestDialog
           guest={dialog.guest}
           workspaceId={workspaceId}
-          // 목록에서 사라졌으면 `undefined` — 남이 먼저 지웠다는 뜻이다.
           fresh={freshOf(dialog.guest.guestId)}
           settled={!guestsQuery.isFetching && !guestsQuery.isError && !partial}
-          // **다 읽지 못한 목록에서 안 보이는 것은 지워졌다는 뜻이 아니다.** 뒷쪽을 못 읽었거나(`partial`), 읽은 쪽 뒤에 더
-          // 있는데(`hasMore`) 그 사람이 없으면(그사이 새 참여자가 끼어 쪽 밖으로 밀렸다) 확인할 수 없는 것으로 다룬다.
           lookupFailed={
             guestsQuery.isError ||
             partial ||
@@ -308,11 +255,6 @@ export function WorkspaceGuestsSettings({
   );
 }
 
-/**
- * 한 사람 한 줄. **행에는 편집 상태가 없다** — 이름 변경·연동·삭제는 전부 행 끝 「⋯」 메뉴에서 대화상자로 연다(APP-1210).
- * 행 안에 입력을 끼우면 이름 줄과 보조 줄 높이가 달라 행이 출렁였고(57→69px), 버튼 셋이 늘어서 좁은 폭에서 이름이 눌렸다.
- * 메뉴 자리는 비어 있어도 같은 폭을 잡는다.
- */
 function GuestRow({
   guest,
   canManage,
@@ -328,7 +270,6 @@ function GuestRow({
   const tActions = useTranslations("common.actions");
   return (
     <li className={SETTINGS_LIST_ROW}>
-      {/* 색은 `guestId` 가 정한다 — 이름은 겹치고(박도현·박순영) 개명하면 튄다. */}
       <PersonAvatar name={guest.guestId} size={28} />
       <span className="flex min-w-0 flex-1 flex-col">
         <SoftName
@@ -340,7 +281,6 @@ function GuestRow({
         </span>
       </span>
 
-      {/* **관리는 ADMIN만이다.** 목록 자체는 전원이 본다 */}
       <span className="flex w-8 shrink-0 justify-end">
         {canRename ? (
           <DropdownMenu>
@@ -360,7 +300,6 @@ function GuestRow({
               <DropdownMenuItem onClick={() => onOpen("rename")}>
                 {tActions("rename")}
               </DropdownMenuItem>
-              {/* 목록이 낡았을 때는 숨기지 않고 잠근다 — 위 안내가 왜 잠겼는지 말한다. */}
               <DropdownMenuItem
                 disabled={!canManage}
                 onClick={() => onOpen("link")}
@@ -383,10 +322,8 @@ function GuestRow({
   );
 }
 
-/** skeleton 이 세우는 줄 수 — 목 시드의 흔한 워크스페이스(5명)다. */
 const SKELETON_GUEST_ROWS = 5;
 
-/** `GuestRow` 와 같은 칸(아바타·이름·회의록 수·메뉴 32)에 값만 막대로 둔다. */
 function GuestRowSkeleton() {
   return (
     <li className={SETTINGS_LIST_ROW}>
@@ -400,7 +337,6 @@ function GuestRowSkeleton() {
   );
 }
 
-/** 임시 참여자 이름 변경. 낙관적 갱신과 실패 되돌리기는 [useRenameGuest] 가 한다. */
 function RenameGuestDialog({
   guest,
   workspaceId,
@@ -429,12 +365,6 @@ function RenameGuestDialog({
   );
 }
 
-/**
- * 연동은 **멤버 고르기 → 미리보기 → 확인 → 실행** 넷을 지난다.
- *
- * 되돌릴 수 없어서 미리보기가 앞에서 막는 유일한 장치다. 되돌리기를 안 만들기로 한 근거가
- * 그것이므로, 미리보기를 건너뛰는 길을 두지 않는다.
- */
 function LinkGuestDialog({
   guest,
   workspaceId,
@@ -447,14 +377,6 @@ function LinkGuestDialog({
   const t = useTranslations("settings.guests.linkDialog");
   const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
-  /**
-   * **대화상자를 열 때 다시 읽는다.** 이 대화상자는 조건부 렌더라 열릴 때 마운트된다.
-   * `MembersSettings` 가 같은 쿼리를 이미 구독하므로 캐시가 fresh 면 그대로 재사용되는데,
-   * 그러면 그 사이 들어온 멤버를 **연동 대상으로 고를 수 없다**.
-   *
-   * 부모에서 내리지 않고 여기서 다시 읽는 이유 — 목록은 낡아도 되지만 **고르는 자리는
-   * 안 된다**. 키가 같아 요청이 아니라 관측자가 하나 는 것이고, 갱신 시점이 서로 다르다.
-   */
   const membersQuery = useGetWorkspaceMembers(workspaceId, {
     query: { refetchOnMount: "always" },
   });
@@ -464,7 +386,6 @@ function LinkGuestDialog({
   const [target, setTarget] =
     useState<WorkspaceMemberListResponseDataMembersItem | null>(null);
   const [plan, setPlan] = useState<GuestLinkResponseData | null>(null);
-  /** 실행 결과. 미리보기와 다를 수 있어 **따로 들고** 그린다. */
   const [result, setResult] = useState<GuestLinkResponseData | null>(null);
 
   const membersResponse = membersQuery.data;
@@ -472,24 +393,9 @@ function LinkGuestDialog({
     membersResponse?.status === 200 && membersResponse.data.success
       ? (membersResponse.data.data?.members ?? [])
       : [];
-  /**
-   * **멤버를 못 불러온 것과 멤버가 없는 것을 가른다.** 뭉치면 이을 계정을 못 고르는 채로
-   * 빈 목록만 남고, 사람은 무엇이 잘못됐는지도 모른 채 창을 닫는다.
-   *
-   * 워크스페이스에는 최소한 부른 사람(ADMIN)이 있으므로 빈 목록은 실패로 봐도 된다.
-   */
   const membersPending = membersQuery.isPending;
-  /**
-   * **실패는 캐시가 있어도 실패다.** 배경 재조회가 깨지면 `isError` 인데 캐시 길이가
-   * 양수라, 길이만 보면 「멀쩡한 목록」으로 읽힌다.
-   */
   const membersFailed =
     !membersPending && (membersQuery.isError || members.length === 0);
-  /**
-   * **고를 수 있나는 그릴 수 있나와 다르다.** `refetchOnMount: "always"` 가 도는 동안에도
-   * `isPending` 은 false 다 — 캐시가 있으니까. 그때 고르면 이미 나간 멤버가 눌리고,
-   * 미리보기가 404 로 끊긴다. 목록은 고르는 자리 그 자체라 확정 전에는 안 연다.
-   */
   const membersSettled = !membersQuery.isFetching && !membersQuery.isError;
 
   async function choose(member: WorkspaceMemberListResponseDataMembersItem) {
@@ -503,7 +409,6 @@ function LinkGuestDialog({
       if (response.status !== 200 || !response.data.success) return;
       setPlan(response.data.data);
     } catch {
-      // 실패 토스트는 전역이 서버 문구 그대로 띄운다.
       setTarget(null);
     }
   }
@@ -518,38 +423,18 @@ function LinkGuestDialog({
       });
       if (response.status !== 200 || !response.data.success) return;
       setResult(response.data.data);
-      /**
-       * **바뀐 것을 전부 다시 읽는다.**
-       *
-       * 예전에는 응답의 `changedNotes`만 짚었는데, 그 목록은 **100건에서 잘린다** — 회의가
-       * 그보다 많으면 나머지가 옛 이름을 들고 남는다. 노트 목록도 참여자 이름·아바타를
-       * 그리므로 함께 낡는다.
-       *
-       * 이 화면이 대화상자라 뒤에 회의록이 떠 있는 것이 흔한 상태다. 사람은 옛 이름을 보고
-       * 연동이 안 된 것으로 읽는다.
-       */
       await Promise.all([
         queryClient.invalidateQueries({ predicate: isNoteQueryKey }),
         queryClient.invalidateQueries({ predicate: isNoteTranscriptQueryKey }),
         invalidateNoteLists(queryClient),
       ]);
     } catch {
-      /**
-       * **계획을 버리고 고르는 자리로 되돌린다.** `CONCURRENT_GUEST_LINK` 는 그 사이 이 사람이
-       * 회의에 더 들어갔다는 뜻이라 **손에 든 미리보기가 이미 틀렸다.** `target` 과 `plan` 을
-       * 남기면 「연동」이 다시 눌리고, 두 번째 요청은 성공해 **낡은 미리보기를 확인한 채
-       * 되돌릴 수 없는 변경**이 나간다.
-       */
       setPlan(null);
       setTarget(null);
       return;
     }
   }
 
-  /**
-   * **목록 갱신은 닫을 때다.** 연동이 끝나면 그 사람이 목록에서 사라지는데, 이 대화상자가
-   * 그 행 안에 살고 있어서 곧바로 무효화하면 **결과를 읽기도 전에 함께 사라진다.**
-   */
   async function finish() {
     onClose();
     await queryClient.invalidateQueries({
@@ -557,8 +442,6 @@ function LinkGuestDialog({
     });
   }
 
-  // **되돌릴 수 없는 요청이 도는 동안에는 못 닫는다.** 닫아도 요청은 계속 가서 연동이
-  // 끝나는데, 결과 화면만 사라져 무엇이 바뀌었는지 볼 길이 없어진다.
   const pending = preview.isPending || link.isPending;
 
   const shown = result ?? plan;
@@ -585,9 +468,7 @@ function LinkGuestDialog({
             {result
               ? t("done")
               : target
-                ? // **이름만으로는 어느 계정인지 말할 수 없다.** 표시 이름은 OAuth 에서 와
-                  // 유일하지 않고, 연동은 되돌릴 수 없다. 고르는 목록이 이메일을 함께
-                  // 그리는 이유가 그것이라 확인 단계도 같은 식별자를 쓴다.
+                ?
                   t("target", { name: target.name, email: target.email })
                 : t("choose")}
           </AlertDialogDescription>
@@ -608,8 +489,6 @@ function LinkGuestDialog({
         ) : !target && (membersPending || !membersSettled) ? (
           <Skeleton className="h-24 rounded-block" />
         ) : !target ? (
-          // 멤버 목록 행과 같은 얼굴(사진, 없으면 userId 로 그린 얼굴)이다. 회색 목록 규칙대로 hover 는 surface-strong,
-          // 키보드 포커스는 한 단계 진한 hairline 이다 — 누르면 바로 미리보기로 넘어가 「선택된 채 머무는」 상태는 없다.
           <ul className="max-h-64 space-y-0.5 overflow-y-auto rounded-block border border-[var(--el-hairline)] p-1">
             {members.map((member) => (
               <li key={member.userId}>
@@ -637,7 +516,6 @@ function LinkGuestDialog({
           </ul>
         ) : (
           <div className="grid gap-3">
-            {/* 누가 누구에게 이어지는지를 얼굴로 먼저 보인다 — 되돌릴 수 없어서, 이름만으로는 동명이인을 못 가른다. */}
             <LinkPair guest={guest} target={target} />
             {preview.isPending ? (
               <Skeleton className="h-24 rounded-block" />
@@ -664,13 +542,10 @@ function LinkGuestDialog({
               </AlertDialogCancel>
               {target && shown ? (
                 <AlertDialogAction
-                  // base-ui는 action을 누르면 닫는다 — 실행 결과를 보여줘야 하므로 막는다.
                   onClick={(event) => {
                     event.preventDefault();
                     void run();
                   }}
-                  // **children 을 안 바꾼다.** `Button` 이 보존하는 것은 자기가 받은
-                  // children 의 폭이라, 문구를 갈아 끼우면 버튼과 footer 가 요청 중에 흔들린다.
                   loading={link.isPending}
                   disabled={pending}
                 >
@@ -714,16 +589,6 @@ function LinkPair({
   );
 }
 
-/**
- * 무엇이 바뀌는가.
- *
- * **미리보기 숫자를 최종 결과로 쓰지 않는다.** 미리보기와 실행 사이에 다른 사람이 화자를
- * 고치면 숫자가 달라지고, 그러면 사람이 본 것과 일어난 일이 어긋난다.
- *
- * **건너뛰는 회의가 없다** (V31). APP-492 는 그 계정이 이미 다른 화자에 붙어 있으면 그 회의를
- * 건너뛰고 어느 회의인지 여기에 세워, 사람이 가서 판단하게 했다. 이제는 양쪽 화자를 그대로
- * 들고 합치므로 판단할 것이 없다.
- */
 function LinkPlanSummary({
   plan,
   executed,
@@ -740,8 +605,6 @@ function LinkPlanSummary({
         })}
       </p>
 
-      {/* **어느 회의인지 이름으로 보여준다.** 되돌릴 수 없는데 개수만 보면, 같은 이름의 임시
-          참여자가 여럿일 때 **엉뚱한 사람을 잇는 것을 누르기 전에 알 방법이 없다.** */}
       {plan.changedNotes.length > 0 ? (
         <ul className="max-h-40 space-y-1 overflow-y-auto text-[var(--el-muted)]">
           {plan.changedNotes.map((note) => (
@@ -752,7 +615,6 @@ function LinkPlanSummary({
         </ul>
       ) : null}
 
-      {/* 개수는 안 자르고 목록만 자른다 — 둘이 다르면 잘린 것이다 (계약) */}
       {plan.changedNoteCount > plan.changedNotes.length ? (
         <p className="text-[var(--el-muted-soft)]">
           {t("truncated", { count: plan.changedNotes.length })}
@@ -769,12 +631,6 @@ function LinkPlanSummary({
   );
 }
 
-/** 삭제도 되돌릴 수 없다 — **쓰이고 있는 회의록 수를 먼저 보여준다.** */
-/**
- * **영향 범위는 부모가 읽어서 내린다.** 여기서 따로 구독하면 그 재조회가 부모 목록을
- * 갱신하고, 마침 이 사람이 사라지는 순간 **자기를 그리던 행과 함께 언마운트된다.**
- * 그래서 부모가 열 때 다시 읽고 결과만 넘긴다.
- */
 function DeleteGuestDialog({
   guest,
   workspaceId,
@@ -786,7 +642,6 @@ function DeleteGuestDialog({
 }: {
   guest: WorkspaceGuestListResponseDataGuestsItem;
   workspaceId: string;
-  /** 다시 읽은 결과. `undefined` 면 목록에서 사라졌다 — 남이 먼저 지웠다. */
   fresh: WorkspaceGuestListResponseDataGuestsItem | undefined;
   settled: boolean;
   lookupFailed: boolean;
@@ -798,7 +653,6 @@ function DeleteGuestDialog({
   const queryClient = useQueryClient();
   const remove = useDeleteWorkspaceGuest();
   const goneAlready = settled && fresh === undefined;
-  /** 확인 못 했으면 **손에 든 옛 숫자**를 쓰되, 그때는 삭제를 안 연다. */
   const noteCount = fresh?.noteCount ?? guest.noteCount;
 
   async function run() {
@@ -807,9 +661,6 @@ function DeleteGuestDialog({
     } catch {
       return;
     }
-    // **이 사람이 나온 회의도 전부 다시 읽는다.** 삭제는 그 회의들의 참여 기록과 화자
-    // 연결까지 지우는데(응답이 어느 회의였는지는 안 준다), 목록만 갱신하면 뒤에 떠 있는
-    // 회의록이 사라진 사람을 계속 그린다.
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: getGetWorkspaceGuestsQueryKey(workspaceId),
@@ -824,7 +675,6 @@ function DeleteGuestDialog({
   return (
     <AlertDialog
       open
-      // 되돌릴 수 없는 요청이 도는 동안에는 못 닫는다 — 연동 대화상자와 같은 규칙이다.
       onOpenChange={(open) => {
         if (open || remove.isPending) return;
         onClose();

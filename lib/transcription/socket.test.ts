@@ -42,7 +42,6 @@ class FakeWebSocket {
     this.sent.push(data);
   }
 
-  /** 서버가 닫는 인사를 보냈다. 브라우저는 여기서 CLOSING 이고, close 이벤트는 인사가 끝나야 온다. */
   closeFromServer() {
     this.readyState = FakeWebSocket.CLOSING;
   }
@@ -170,9 +169,6 @@ describe("TranscriptionSocket", () => {
     vi.unstubAllEnvs();
   });
 
-  // 망이 먹통이면 close() 를 불러도 상대가 답하지 않아 close 이벤트가 안 온다. 하트비트를 놓친
-  // 순간 끊김을 알려야 재부착이 시작된다(docker 망 먹통 실험에서 소켓이 끝까지 안 닫혔다).
-  // 가짜 전송도 그 성질을 흉내 낸다: close() 가 onclose 를 부르지 않는다.
   it("reports a drop when server heartbeats stop even if the dead link never finishes closing", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
@@ -314,7 +310,6 @@ describe("TranscriptionSocket", () => {
     expect(socket.sendAudio(new ArrayBuffer(4_800), 0, 0)).toBe(false);
   });
 
-  // 브라우저는 CLOSING·CLOSED 소켓의 send 를 버리고 콘솔에 경고만 남긴다. stompjs 의 connected 는 close 이벤트까지 true 다
   it("does not send audio once the server has started closing the WebSocket", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
@@ -361,7 +356,6 @@ describe("TranscriptionSocket", () => {
     });
     await connection.connected;
 
-    // 아는 이벤트인데 필수 필드가 빠졌다. 모르는 이벤트와 달리 계약 위반이라 닫고 다시 붙는다.
     connection.malformed('{"type":"ack"}');
 
     await vi.waitFor(() =>
@@ -400,8 +394,6 @@ describe("TranscriptionSocket", () => {
     vi.restoreAllMocks();
   });
 
-  // 오류 이벤트는 원래 이 소켓을 닫는다. 모르는 code 도 같은 길(일반 오류 → 세션이 다시 붙음)로 가야지
-  // 「깨진 이벤트」(1008)로 가면 안 된다.
   it("forwards an unknown error code as a retryable error, not as a broken frame", async () => {
     const onClose = vi.fn();
     const onEvent = vi.fn();
@@ -442,7 +434,6 @@ describe("TranscriptionSocket", () => {
     );
   });
 
-  // 핸드셰이크 401 은 브라우저가 못 본다. 시도마다 REST 로 받은 새 티켓을 주소에 붙인다(APP-1547)
   it("opens each attempt on a fresh ticket URL", async () => {
     ticket.ticketedSocketUrl
       .mockResolvedValueOnce("ws://localhost/ws/transcriptions?ticket=one")
@@ -471,7 +462,6 @@ describe("TranscriptionSocket", () => {
     expect(FakeWebSocket.instances).toHaveLength(0);
   });
 
-  // 다른 탭·기기와 이 탭을 서버가 가른다. 다시 붙을 때마다 같은 값이어야 한다.
   it("carries the tab's clientInstanceId on the STOMP CONNECT and the attach message", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
@@ -490,7 +480,6 @@ describe("TranscriptionSocket", () => {
     expect(header(attach, "resendFromSeq")).toBe("42");
   });
 
-  // server 가 부착 줄에 남긴다. 운영에서 끊김 분포를 다시 볼 수 있는 유일한 길이다(D-17).
   it("carries why and how long it was detached on the attach message", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
@@ -506,7 +495,6 @@ describe("TranscriptionSocket", () => {
     expect(header(attach, "pendingChunks")).toBe("213");
   });
 
-  // 무수신 감시는 heartbeat 까지 세야 한다. 조용한 회의에서는 이벤트가 안 온다.
   it("reports inbound heartbeats as activity", async () => {
     const onActivity = vi.fn();
     const socket = createSocket(vi.fn(), onActivity);

@@ -20,7 +20,6 @@ describe("FocusTopBar", () => {
     auth.logout.mockReset();
   });
 
-  // 초대가 다른 이메일용이면 계정을 바꿀 길이 이것뿐이다
   it("로그인했으면 메뉴 없이 로고와 로그아웃만 둔다", () => {
     render(<FocusTopBar />);
 

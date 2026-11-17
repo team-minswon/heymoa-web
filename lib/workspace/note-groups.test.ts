@@ -48,7 +48,6 @@ describe("groupNotesByRecency", () => {
   });
 
   it("KST 자정을 넘긴 UTC 시각은 그 다음 날로 묶는다", () => {
-    // 2026-07-26T16:30Z = KST 2026-07-27 01:30 → 27일 묶음이다.
     const groups = group([
       note("2026-07-26T16:30:00Z"),
       note("2026-07-26T10:00:00Z"),
@@ -68,7 +67,6 @@ describe("groupNotesByRecency", () => {
     expect(groups.map((group) => group.key)).toEqual(["2026-07-27"]);
   });
 
-  // 제목만 고쳐도 `updatedAt`이 오늘로 바뀌어 지난주 회의가 오늘 묶음으로 옮겨갔다.
   it("마지막으로 고친 시각은 묶음에 영향을 주지 않는다", () => {
     const groups = group([
       {

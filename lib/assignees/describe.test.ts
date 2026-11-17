@@ -6,7 +6,6 @@ import {
   describeAssignee,
 } from "@/lib/assignees/describe";
 
-// 시험의 한국어 화자 이름. 화면은 `notes.speakers.fallback` 을 넘긴다
 const speakerName = (label: string) => `화자 ${label}`;
 
 describe("describeAssignee", () => {
@@ -21,8 +20,6 @@ describe("describeAssignee", () => {
     });
   });
 
-  // 계정 사진이 있으면 그 사람은 어느 화면에서도 같은 사진으로 서야 한다. 안 실으면
-  // 담당 칸만 생성된 얼굴이 되어 한 사람이 화면마다 달라진다 (APP-678).
   it("계정 사진이 있으면 얼굴 대신 그것을 싣는다", () => {
     expect(
       describeAssignee({

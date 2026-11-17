@@ -6,9 +6,6 @@ import { AlertTriangle, Home, RotateCcw } from "lucide-react";
 import { messagesFor } from "@/i18n/messages";
 import { localePath, type Locale } from "@/lib/i18n/locales";
 
-/**
- * 라우트 오류 본문. 제품 `app/(product)/error` 와 마케팅 `app/[lang]/error` 가 같이 쓴다. 홈은 그 언어의 랜딩이다.
- */
 export function ErrorView({
   locale,
   reset,

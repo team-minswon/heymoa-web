@@ -85,7 +85,6 @@ describe("ChatStarter", () => {
 
   describe("시작한 회의가 없는 처음 사용자", () => {
     beforeEach(() => {
-      // 만들기만 하고 시작하지 않은 노트는 물을 내용이 없다 — 처음 사용자로 본다
       data.notes = ok({
         notes: [note("n0", "빈 노트", "NOT_STARTED")],
         hasMore: false,
@@ -187,7 +186,6 @@ describe("ChatStarter", () => {
       expect(
         screen.getByText(/회의록 주간 회의 기준으로 답합니다/)
       ).toBeTruthy();
-      // 빈 목록이어도 처음 안내로 읽지 않는다 — 회의록 안에 있다
       expect(screen.queryByText(/첫 회의를 기록하면/)).toBeNull();
       expect(data.reviewNoteIds).toContain("n1");
     });

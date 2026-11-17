@@ -44,12 +44,6 @@ export type PcmBatchListener = (
   captureSamples: number
 ) => void;
 
-/**
- * 워크릿 프레임을 배치로 모은다.
- *
- * `captureSamples`를 함께 나르는 것이 핵심이다. 배처가 자기 샘플을 세면 못 받은 구간이
- * 없었던 일이 되므로, 워크릿이 준 캡처 위치를 그대로 통과시킨다.
- */
 export class PcmChunkBatcher {
   private pending = new Int16Array(0);
   private pendingCaptureSamples = 0;
@@ -73,8 +67,6 @@ export class PcmChunkBatcher {
   }
 
   push(samples: Int16Array, captureSamples: number) {
-    // 캡처가 뛰면 pending 을 버리고 새 위치에서 시작한다. 점프를 가로질러 이어 붙이면
-    // 배치 하나가 공백을 품게 되고, 그 배치의 시작 위치가 거짓이 된다.
     const expected = this.pendingCaptureSamples + this.pending.length;
     if (this.pending.length > 0 && captureSamples !== expected) {
       this.pending = new Int16Array(0);
@@ -111,10 +103,7 @@ export class PcmChunkBatcher {
   }
 }
 
-/**
- * 마이크가 소리를 내고 있는가. `live` 가 아니면 워크릿이 조각을 안 내고, 브라우저 안에서는
- * 아무 오류도 안 난다. 사용자는 녹음되는 줄 안다.
- */
+/** 트랙이 `live` 가 아니면 워크릿이 조각을 안 내고 브라우저도 오류를 내지 않습니다. */
 export type MicrophoneState = AudioInputState;
 
 export type AudioInputs = {
@@ -141,11 +130,9 @@ export type PcmAudioCaptureOptions = {
   acquireInputs?: (signal: AbortSignal) => Promise<AudioInputs>;
   onInputStates?: (states: AudioInputStates) => void;
   onInputLevels?: (levels: AudioInputLevels) => void;
-  /** 마이크 트랙이 끊겼을 때 다시 받는 방법. 없으면 기본 마이크를 같은 조건으로 받는다. */
   acquireMicrophone?: () => Promise<MediaStream>;
 };
 
-/** 끊긴 마이크를 다시 잡는 간격. 다 쓰면 포기하고 「종료」로 남는다(기기가 다시 꽂히면 처음부터). */
 const MIC_RETRY_MS = [500, 2_000, 5_000];
 
 const MICROPHONE_CONSTRAINTS = {
@@ -309,7 +296,6 @@ export class PcmAudioCapture {
       throw error;
     }
   }
-  /** 입력 하나를 믹서와 레벨 미터에 잇는다. 이은 노드를 돌려줘 나중에 갈아 끼울 수 있게 한다. */
   private connectInput(name: "microphone" | "systemAudio", stream: MediaStream) {
     const context = this.audioContext!;
     const source = context.createMediaStreamSource(stream);
@@ -352,8 +338,7 @@ export class PcmAudioCapture {
       scheduleReacquire();
     };
 
-    // 이어폰 전환·기기 분리·기본 입력 변경으로 마이크 트랙이 끝나면 같은 녹음 안에서 다시 잡는다.
-    // 시스템 소리는 화면 공유 권한을 다시 물어야 해서 다시 잡지 않는다.
+    // 시스템 소리는 화면 공유 권한을 다시 물어야 해서 다시 잡지 않습니다.
     let attempts = 0;
     let busy = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -392,10 +377,8 @@ export class PcmAudioCapture {
         watch(tracks[0]);
         attempts = 0;
       } catch {
-        // 다음 재시도에서 다시 본다.
       } finally {
         busy = false;
-        // 그 사이 멈췄거나 새 녹음이 시작됐으면 옛 캡처의 상태를 올리지 않는다.
         if (generation === this.generation) report();
       }
     };
@@ -405,7 +388,6 @@ export class PcmAudioCapture {
       track.onunmute = report;
     };
     const onDeviceChange = () => {
-      // 새 기기가 꽂혔을 수 있다. 포기했던 재시도를 처음부터 다시 한다.
       if (micEnded()) attempts = 0;
       report();
     };

@@ -19,7 +19,6 @@ describe("마커를 만든다", () => {
     );
   });
 
-  // 제목은 […] 안에만 들고 (…) 안은 키:id 뿐이라 )는 괄호를 못 닫는다
   it("라벨의 ] 와 \\ 만 뺀다 — 괄호는 안 뺀다", () => {
     expect(
       scopeMarker({ kind: "project", id: "A", title: "알림 정책 논의 (2차)" })
@@ -59,7 +58,6 @@ describe("문장을 쪼갠다", () => {
     });
   });
 
-  // ★ 없는 것을 있는 것처럼 그리는 쪽이 나쁘다
   it("배열에 없는 id 를 가리키는 마커는 글자 그대로 남는다", () => {
     expect(
       splitScopeMarkers("@[없는 것](noteId:zzz) 봐", allow("note:aaa"))
@@ -83,7 +81,6 @@ describe("문장을 쪼갠다", () => {
     ]);
   });
 
-  // 이미 쌓인 대화에는 마커가 없다
   it("마커가 없는 옛 메시지는 빈 배열이다 — 부르는 쪽이 갈라 간다", () => {
     expect(splitScopeMarkers("그냥 문장", allow("note:A"))).toEqual([]);
   });
@@ -104,7 +101,6 @@ describe("마커를 되돌린다", () => {
     expect(unwrapScopeMarkers("@[a\\]b](noteId:A)")).toBe("a]b");
   });
 
-  // ★ 안 풀면 새 배열에 없는 id 를 가리키는 마커가 그대로 나간다
   it("keep 에 든 것만 마커로 남긴다", () => {
     expect(
       unwrapScopeMarkers("@[가](noteId:A) @[나](noteId:B)", allow("A"))
@@ -118,8 +114,6 @@ describe("마커를 되돌린다", () => {
 
 describe("칩으로 되돌릴 마커는 글자까지 지운다", () => {
   it("★ 풀지 않고 지운다 — 칩이 제목을 다시 그리므로 두 벌이 된다", () => {
-    // 못 보낸 문장을 컴포저로 되돌릴 때 쓴다. 칩도 같이 다시 박으므로 마커를 제목으로
-    // 풀어 두면 「@[주간 회의](…) 주간 회의 정리해줘」로 나간다.
     expect(
       dropScopeMarkers("@[주간 회의](noteId:n1) 정리해줘", new Set(["n1"]))
     ).toBe("정리해줘");

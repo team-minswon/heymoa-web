@@ -9,16 +9,6 @@ import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
 import { Button } from "@/components/ui/button";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 
-/**
- * 종료 전 요약 탭. **회의를 종료하면 무엇이 생기는지를 말한다.**
- *
- * 운영에서 회의를 일시정지만 하고 종료하지 않는 사람이 많았다. 종료해야 화자 분리·요약·검토가 생기는데,
- * 한 줄짜리 안내는 그것을 알려 주지 못했다. 점이나 배지로 끌지 않고, 이 탭을 연 사람에게 충분히
- * 알린다.
- *
- * 문구가 말하는 사실은 확인한 것만이다 — 종료 뒤에는 이어서 녹음할 수 없다(서버가
- * `MeetingAlreadyEndedException`), 요약은 운영 로그상 종료 후 10~30초에 생긴다.
- */
 const STEPS = [
   { icon: FileText, key: "summary" },
   { icon: Users, key: "speakers" },
@@ -31,15 +21,12 @@ export function PreEndGuide({
   onMeetingEnded,
 }: {
   note: NoteResponseData | null | undefined;
-  /** 참여자 안내의 「참여자 추가」 — note-panel이 정보 탭으로 넘긴다. */
   onEditParticipants?: () => void;
-  /** 종료 접수 후 호출 — note-panel이 요약 탭을 새로 그린다. */
   onMeetingEnded?: () => void;
 }) {
   const t = useTranslations("notes.preEnd");
   const [endOpen, setEndOpen] = useState(false);
   const reduced = useReducedMotion();
-  // 기록 중에는 서버가 종료를 거절한다. 일시정지한 뒤에만 버튼을 둔다.
   const canEnd = note?.meetingStatus === "PAUSED";
   const recording = note?.meetingStatus === "IN_PROGRESS";
   const lonely = note != null && note.participants.length <= 1;
@@ -63,7 +50,6 @@ export function PreEndGuide({
           {STEPS.map(({ icon: Icon, key }, index) => (
             <motion.li
               key={key}
-              // 제목 다음에 카드가 차례로 올라온다.
               initial={reduced ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{

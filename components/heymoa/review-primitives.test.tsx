@@ -73,10 +73,6 @@ describe("AssigneeCell 의 얼굴", () => {
     image: "https://example.test/minsu.png",
   };
 
-  /**
-   * 서버는 담당을 풀 때 계정 사진을 안 싣는다. 화면이 사람 목록에서 이어 붙이지 않으면
-   * 담당 칸만 생성된 얼굴이 되어 한 사람이 화면마다 달라진다 (APP-678).
-   */
   it("고른 사람의 계정 사진을 그린다 — 값에 사진이 없어도 선택지에서 잇는다", () => {
     const { container } = render(
       <AssigneeCell

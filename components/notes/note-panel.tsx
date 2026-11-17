@@ -87,29 +87,14 @@ import { cn } from "@/lib/utils";
 import { useIsWorkspaceAdmin } from "@/lib/workspace/use-is-workspace-admin";
 import { localePath } from "@/lib/i18n/locales";
 
-/** 노트 조회가 「없다」로 끝난 코드. 노트·프로젝트가 지워졌거나 남의 것이다. */
 const NOTE_GONE_CODES = new Set(["NOTE_NOT_FOUND", "PROJECT_NOT_FOUND"]);
 
-/**
- * 공유 챗봇이 사라지면서 `chat`이 빠졌습니다 — 대화는 이제 탭이 아니라 레일입니다.
- * `context`는 「타임라인」 탭입니다. 값 이름은 딥링크(`?tab=context`)를 지키려고 그대로 둡니다.
- */
 export type NoteTab = "context" | "details" | "transcript" | "summary";
 
-/**
- * 밑줄 탭 한 칸. 상단바(56) 안에 살아서 높이가 `h-14`다 — 활성 밑줄이 상단바의 hairline
- * 바로 위에 붙어야 「이 바의 어느 칸인가」로 읽힌다.
- *
- * `flex-none`이 핵심이다 — primitive의 기본 트리거는 `flex-1`이라 그대로 두면 셋이 폭을
- * 균등 분할해서 라벨 사이가 200px씩 벌어진다(design.pen은 `w-fit`으로 붙인다).
- */
 const TAB_ITEM =
-  // 밑줄은 상단바의 hairline **위에** 앉아야 한다. primitive 기본값이 `after:bottom-[-5px]`라
-  // 그대로 두면 바 밖으로 5px 떨어져 본문 위에 떠 있는 짧은 막대로 보인다. 덮을 때는 기본값과
-  // 같은 variant 셀렉터로 써야 한다 — 평범한 `after:bottom-0`은 조용히 무시된다.
+  // 덮을 때는 기본값과 같은 variant 셀렉터로 써야 한다 — 평범한 `after:bottom-0` 은 tailwind-merge 가 충돌로 보지 않아 조용히 무시된다.
   "h-14 flex-none px-0 text-xs group-data-horizontal/tabs:after:bottom-0";
 
-/** 박동은 다른 탭이 쓰고, 식는 것은 시간이 한다. 둘 다 다시 읽는다. */
 function subscribeRecordingClaims(notify: () => void) {
   const timer = window.setInterval(notify, RECORDING_BEAT_MS);
   window.addEventListener("storage", notify);
@@ -139,21 +124,9 @@ export function NotePanel({
   onTabChange: (tab: NoteTab, options?: { push?: boolean }) => void;
   onClose: () => void;
   onExpand?: () => void;
-  /** 전체 화면에서 사이드 뷰로 되돌린다. side에서는 안 준다. */
   onCollapse?: () => void;
-  /**
-   * 삭제 성공 뒤 이동. **`onClose`를 재사용하면 안 된다** — 닫기는 `push`라 목록에서
-   * 뒤로가기를 누르면 방금 지운 노트 URL로 돌아가 404를 만난다. 여기는 `replace`다.
-   */
   onDeleted?: () => void;
-  /**
-   * 지금 주소의 근거 발화(`?segment=`). 외부 에이전트가 「그 근거 보여줘」에 돌려준 링크가
-   * 여기로 온다(APP-802). 노트 화면이 읽은 뒤 주소에서 걷으므로 **링크로 들어올 때만 값이
-   * 있다.** 근거 인용을 누른 것과 같은 점프를 요청할 뿐이고, 이 노트의 전사에 없는 ID 면
-   * 찾지 못해 아무 일도 없다.
-   */
   linkedSegmentId?: string | null;
-  /** 메일 링크로 들어왔다(APP-1312). 상단 띠가 도착한 시점의 상태를 말한다. */
   fromMail?: boolean;
 }) {
   const t = useTranslations("notes.panel");
@@ -168,46 +141,20 @@ export function NotePanel({
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
       : undefined;
-  /**
-   * **2단 폭포수가 사라졌다** (APP-685). 전에는 노트를 받은 뒤 `useGetProject` 를 한 번 더
-   * 돌려 소속을 확인했고, 그 조회가 끝나기 전에는 **회의 시작 버튼이 잠겼다.** 이제 노트
-   * 응답이 소속과 프로젝트 이름을 같이 싣는다 — 서버가 접근 검증에서 이미 읽은 값이라
-   * 조회가 늘지도 않는다.
-   *
-   * **확인된 소속이라는 뜻은 그대로다.** 이 값은 서버가 멤버십을 검증한 뒤 그 검증에 쓴
-   * 프로젝트에서 낸 것이라, 프로젝트 조회가 확인해 주던 것과 같은 사실이다.
-   */
   const phase = deriveMeetingPhase(note);
-  // 타임라인 첫 항목 안내(APP-1333). 항목 수는 제안 스냅샷(+ 실시간 후보)에서 센다.
   const timelineItemCount = noteRealtime.context.cards.length;
   const timelineHintOpen = timelineHintEligible({
     phase,
     tab,
     itemCount: timelineItemCount,
   });
-  // 전사·요약 복사본의 머리말. **여기서 한 번 만든다** — 탭마다 노트를 다시 구독하지
-  // 않는다(rule `architecture`).
   const noteMeta = useMemo(() => (note ? toNoteMeta(note) : null), [note]);
   const { user } = useAuth();
   const isStarter = Boolean(
     user && note?.meetingStartedBy?.userId === user.userId
   );
-  // 답변이 흐르는 중에 다른 멤버가 회의를 끝내도 트레이를 바로 걷지 않는다 — 언마운트하면
-  // 흐르는 화면과 중지·승인에 닿을 길을 잃는다. 턴이 끝나면 접는다.
-  /**
-   * 삭제 확인창이 **어느 노트의 것인가.** boolean이면 A에서 창을 연 뒤 뒤로가기로 B에 왔을 때
-   * 이 패널은 재마운트되지 않아 창이 열린 채 대상만 B로 바뀌고, 확인하면 B가 지워진다.
-   * (예전에는 상단바의 노트 액션 슬롯이 `key={noteId}`로 재마운트되며 이걸 막았는데, 제어를
-   * 노트 헤더로 옮기면서 그 키가 사라졌다.)
-   *
-   * 상태에 주어를 담으면 알아서 닫힌다 — 리셋 effect도, 패널 전체 재마운트도 필요 없다.
-   */
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  // 메뉴에는 삭제 하나뿐이라 관리자가 아니면 메뉴째 없다(APP-1384). 서버도 403 으로 거절한다.
   const canDelete = useIsWorkspaceAdmin(workspaceId);
-  // 종료 직후 요약 탭으로 넘기고, 물을 차례면 1초 뒤 그 위에 의견 창을 띄운다 — 종료 확인창이 닫히고 요약 탭이
-  // 자리 잡은 것을 본 다음이다. `round` 가 창의 회차다 — 회차마다 새로 마운트해 지난 입력이 남지 않고, 닫을 때는
-  // 같은 회차로 두어 닫힘 애니메이션이 돈다.
   const [endFeedback, setEndFeedback] = useState<{
     noteId: string;
     round: number;
@@ -218,7 +165,6 @@ export function NotePanel({
     if (claimEndFeedback(user?.userId, note?.recordedDurationMs ?? 0))
       setEndFeedback({ noteId, round: Date.now(), phase: "pending" });
   };
-  // 다른 노트로 가면 예약도 창도 버린다 — 숨기기만 하면 돌아왔을 때 다시 뜬다(아래 삭제 확인창과 같은 방식).
   if (endFeedback !== null && endFeedback.noteId !== noteId) {
     setEndFeedback(null);
   }
@@ -233,50 +179,17 @@ export function NotePanel({
     );
     return () => clearTimeout(timer);
   }, [endFeedback]);
-  // `open`만 어긋나게 두면 **되돌아왔을 때 창이 되살아난다** — A에서 열고 B에 갔다가 A로
-  // 오면 저장된 대상이 아직 A라 확인창이 저절로 뜬다. 렌더 중에 실제로 버린다(이 파일의
-  // `sideChatVisit`·`archiveState`와 같은 방식).
   if (deleteTargetId !== null && deleteTargetId !== noteId) {
     setDeleteTargetId(null);
   }
   const noteLoadFailed = noteQuery.isError && !note;
-  /**
-   * 지운 노트이거나 볼 수 없는 노트다(APP-1312). 다시 물어도 답이 같으니 「다시 시도」 대신 나갈 길을 준다.
-   * 서버는 비멤버에게도 존재를 숨기려 404 를 쓴다 — 워크스페이스 자체가 남의 것이면 레이아웃이 홈으로 보낸다.
-   */
   const noteGone =
     noteLoadFailed && NOTE_GONE_CODES.has(errorCodeOf(noteQuery.error) ?? "");
-  // **노트를 못 읽었으면 레일도 없다.** 왼쪽은 `InlineRetry`인데 오른쪽 레일이 서면 같은
-  // 실패가 두 가지 뜻으로 보인다. 캐시가 있으면 `note`가 살아 있어 여기 걸리지 않으므로, 흐르던
-  // 스트림이 일시적 조회 실패로 끊기지는 않는다.
   const showAgentRail = view === "full" && !noteLoadFailed;
-  /**
-   * **내 에이전트 레일을 접었는가.** `null`은 기본값이다 — 넓은 화면에서는 펴고, 좁은 화면에서는
-   * 접는다(좁은 화면의 레일은 본문 아래 14rem 레인이라 전사 높이를 깎는다). 사용자가 한 번
-   * 고르면 화면 폭과 상관없이 그 값을 따른다.
-   *
-   * 노트에 묶지 않는다 — 노트를 넘겨도 접어 둔 레일은 접혀 있어야 한다.
-   */
   const [agentRail, setAgentRail] = useState<boolean | null>(null);
-  // 개인 챗봇이 한 턴을 굴리는 중이면 레일을 접으면 안 된다 — 중지도 도구 승인도 그 안에만
-  // 있는데, 노트 안에서는 떠 있는 카드와 FAB 도 감춰져 있어 닿을 길이 끊긴다.
   const { isTurnActive: personalTurnActive } = usePersonalChat();
-  /** 어느 쪽이든 한 턴이 도는 중. 뷰를 바꾸면 그 답변에 닿을 길이 끊긴다. */
   const turnActive = personalTurnActive;
-  /**
-   * 기본값이라 좁은 화면에서 접혀 있다. **답이 흐르는 동안에는 기본값도 접지 않는다** — 넓은
-   * 화면에서 묻고 창을 좁히면 반응형 규칙이 레일을 감춰 중지·도구 승인에 닿을 길이 끊긴다.
-   */
   const railFoldedOnNarrow = agentRail === null && !personalTurnActive;
-  /**
-   * **타임라인 탭.** 전체 뷰에서는 늘 선다 — 탭 줄이 회의 상태에 따라 늘었다 줄면 같은 자리를
-   * 누를 때 다른 탭이 눌린다.
-   *
-   * 사이드 뷰는 회의가 끝나도 남긴다(회의 중에 본 것을 되짚는 것이 이 화면의 절반이다).
-   * **`not-started` 는 예외인데, `unknown` 에서 고른 뒤 확정되는 경로가 있다.** 그때 trigger 와
-   * content 만 사라지고 controlled `tab="context"` 는 남아 빈 면이 된다 — 지금 그 탭을 보고
-   * 있으면 유지한다.
-   */
   const showContextTab =
     !noteLoadFailed &&
     (view === "full" || phase !== "not-started" || tab === "context");
@@ -285,7 +198,6 @@ export function NotePanel({
     (view === "side" &&
       !noteLoadFailed &&
       (phase === "ended" || (phase === "unknown" && tab === "summary")));
-  // 전환을 렌더 중에 접어야 ended 아카이브를 한 번 커밋했다가 읽던 전사를 다시 세우지 않는다.
   const [archiveState, setArchiveState] = useState({
     noteId,
     phase,
@@ -305,23 +217,11 @@ export function NotePanel({
   }
   const showViewerEndNotice =
     phase === "ended" && !isStarter && !archiveState.visible;
-  // 예전에는 흐르던 **공유** 턴이 끝날 때까지 아카이브를 미뤘다. 개인 대화는 레일에 있고
-  // 본문과 자리를 다투지 않으므로 그 대기가 없어졌다.
   const showArchive = phase === "ended" && archiveState.visible;
 
-  /**
-   * 요약의 근거 인용이 짚은 전사 세그먼트. 전사 화면이 그 줄로 옮겨 가 잠깐 하이라이트하고,
-   * 끝나면 **비운다** — 안 비우면 스크립트 탭을 다시 열 때마다 같은 자리로 끌려간다.
-   * 탭을 옮기는 것도 같은 이유로 비운다(점프는 그 직후 다시 세운다).
-   */
   const [focusSegmentId, setFocusSegmentId] = useState<string | null>(
     linkedSegmentId
   );
-  // **링크가 새로 들어오거나 노트가 바뀌면 점프를 다시 세운다.** 이 패널은 노트가 바뀌어도
-  // 재마운트되지 않아(`rail`·`deleteTargetId` 와 같은 함정) 렌더 중에 접는다.
-  // - 같은 노트에 링크가 들어오면(없음→B, A→B, 걷힌 뒤 같은 B 다시) 그 발화로 점프한다
-  // - 노트가 바뀌면 이전 노트의 점프를 버리고 새 노트의 링크 값으로 세운다 — 안 버리면 그
-  //   발화가 없는 노트에서는 끝나지 않고 남았다가, 돌아왔을 때 옛 줄로 끌려간다
   const [linkSeen, setLinkSeen] = useState({ noteId, linkedSegmentId });
   if (
     linkSeen.noteId !== noteId ||
@@ -331,20 +231,10 @@ export function NotePanel({
     if (linkSeen.noteId !== noteId) setFocusSegmentId(linkedSegmentId);
     else if (linkedSegmentId) setFocusSegmentId(linkedSegmentId);
   }
-  /**
-   * 정보 탭의 참여자 선택창을 열어 달라는 요청(APP-1102). 종료 확인창의 「참여자 지정하러
-   * 가기」가 걸고, 선택창이 열리면 거둔다.
-   *
-   * **노트와 도착 여부를 같이 든다**(codex 리뷰 1회차). 걸어 둔 채 다른 노트로 넘어가거나,
-   * 정보 탭에 닿은 뒤 뒤로 가기 같은 바깥 경로로 탭을 떠나면 요청이 남아 한참 뒤 그 탭에
-   * 들어갈 때 선택창이 갑자기 열린다. 탭 이동이 URL 을 거쳐 늦게 반영되므로 「아직 안 닿음」과
-   * 「떠남」을 `arrived` 로 가른다. 사용자가 탭을 직접 고르면 `handleTabChange` 가 바로 거둔다.
-   */
   const [participantsRequest, setParticipantsRequest] = useState<{
     noteId: string;
     arrived: boolean;
   } | null>(null);
-  // 렌더 중 상태 조정(React 공식 패턴) — 각 가지가 다음 상태에서는 맞지 않아 되돌지 않는다.
   if (participantsRequest) {
     if (participantsRequest.noteId !== noteId) {
       setParticipantsRequest(null);
@@ -358,7 +248,6 @@ export function NotePanel({
     () => setParticipantsRequest(null),
     []
   );
-  /** 요약 「타임라인에서 보기」가 짚은 안건(APP-1290). 타임라인이 형광펜을 다 그으면 비운다. */
   const [timelineFocus, setTimelineFocus] = useState<{
     noteId: string;
     agendaId: string;
@@ -381,10 +270,6 @@ export function NotePanel({
     onTabChange("details");
     setParticipantsRequest({ noteId, arrived: false });
   }, [noteId, onTabChange]);
-  /**
-   * 근거를 눌러 전사로 건너뛴다. **뒤로가기로 읽던 요약에 돌아올 수 있어야 한다** —
-   * 각주를 따라간 것이지 탭을 고른 것이 아니라서, 이 이동만 히스토리에 자리를 남긴다.
-   */
   const jumpToSegment = useCallback(
     (segmentId: string) => {
       onTabChange("transcript", { push: true });
@@ -398,31 +283,14 @@ export function NotePanel({
   const localProviderCanControlNote =
     recordingNoteLive &&
     !(recording.phase === "failed" && recording.session?.status === "ACTIVE");
-  /**
-   * **이 창이 방금 이 노트의 세션을 닫았다.** 서버가 종료를 확인해 준 상태(`COMPLETED`)이거나,
-   * 죽음이 확인된 실패(`INTERRUPTED`)다.
-   *
-   * 둘 다 원격 기록으로 취급하면 안 된다. 특히 일시정지 직후가 그렇다 — 소켓이 `completed`를
-   * 주는 순간 phase는 `ACTIVE_PHASES` 밖으로 나가는데 노트 쿼리는 아직 `IN_PROGRESS`라,
-   * **일시정지를 누른 진행자 본인에게 "다른 탭·기기에서 기록 중입니다"가 떴다.** 자기가 방금
-   * 끈 것을 남이 켠 것으로 읽던 자리다.
-   *
-   * `failed`+`ACTIVE`(서버 상태 미확인)와 세션 없는 실패는 여전히 원격으로 본다.
-   */
   const finishedHere =
     recording.activeNoteId === noteId &&
     recording.session?.noteId === noteId &&
     ((recording.phase === "completed" &&
       recording.session.status === "COMPLETED" &&
-      // **노트가 아직 내 세션을 활성으로 들고 있을 때만**이다. 완료를 영구 예외로 두면,
-      // 이 창에서 끈 뒤 다른 탭이 재개했을 때 낡은 로컬 세션이 그 활성 세션을 계속 가려
-      // "회의 시작"이 열리고 누르면 409가 난다. 남이 재개하면 노트의 활성 세션 시작 시각이
-      // 내 것과 달라지므로 그 순간부터 다시 차단으로 돌아간다.
-      // (`isFetching`으로 가리면 일반 재조회 때마다 그 틈이 다시 열린다.)
       note?.activeSessionStartedAt === recording.session.startedAt) ||
       (recording.phase === "failed" &&
         recording.session.status === "INTERRUPTED"));
-  // 이 노트를 녹음 중일 때만 뜬다. 다른 노트의 상태를 여기에 그리면 거짓말이 된다.
   const recordingHere = recording.activeNoteId === noteId;
   const recordingDegraded = recordingHere && recording.transcriptionDegraded;
 
@@ -432,35 +300,16 @@ export function NotePanel({
       note.meetingStatus === "IN_PROGRESS" ||
       note.meetingStatus === "PAUSED")
   );
-  /**
-   * **이 URL의 워크스페이스가 이 노트의 것이 아니다.**
-   *
-   * 노트 조회는 워크스페이스로 범위가 좁혀지지 않아 `/w/B/notes/<A의 노트>`도 A의 노트를
-   * 그대로 그린다. 그 화면에서 녹음을 시작하면 세션은 A에 생기는데 소속은 B로 기록돼
-   * A의 나가기 잠금과 추방 정리가 둘 다 빗나간다. 노트 응답의 `workspaceId` 를 URL 과 견줘
-   * 안다(전에는 프로젝트 조회의 404 로 알았다).
-   */
   const noteNotInThisWorkspace =
     note !== undefined && note.workspaceId !== workspaceId;
-  /**
-   * 독에 넘길 **확인된 소속.** 서버가 확인해 준 값만 쓴다 — 비어 있으면 독이 시작을 안 연다.
-   *
-   * **실패했다고 URL의 값으로 대신하면 안 된다.** 조회가 500으로 끝난 채 시작하면 세션은
-   * A에 생기는데 소속은 B로 기록된다(codex 7회차 — 6회차 반영에서 한 번 틀린 자리다).
-   * 일시적 실패의 복구는 값을 추측하는 것이 아니라 **이유를 보이고 다시 물어보는 것**이다:
-   * 아래 `startBlockedReason`이 이유를 세우고, 사용자가 다시 조회할 수 있다.
-   */
   const confirmedWorkspaceId = noteNotInThisWorkspace
     ? undefined
     : note?.workspaceId;
-  // 새로고침한 탭(mine)과 닫힌 탭을 새 탭으로 연 경우(dead)는 서버가 그 ID 의 새 시작으로 옛 세션을
-  // 닫으므로(D-16) 잠그지 않는다. 다른 기기의 녹음은 여기서 알 수 없어 잠근다.
   const recordingClaim = useSyncExternalStore(
     subscribeRecordingClaims,
     () => recordingClaimOf(noteId),
     () => null
   );
-  // 회의가 녹음 중을 벗어났으면 그 녹음은 끝났다. 남겨 두면 다른 기기가 재개한 녹음까지 이어받으려 한다.
   const meetingNotRecording =
     note !== undefined && note.meetingStatus !== "IN_PROGRESS";
   useEffect(() => {
@@ -480,14 +329,10 @@ export function NotePanel({
   const startLabel =
     note?.meetingStatus === "PAUSED" ? t("resume") : t("start");
 
-  // 전체 화면은 **노트(왼쪽) + 에이전트 레일(오른쪽 고정)** 두 패널이다. 사이는 캔버스 10px,
-  // 레일 폭 440 — design.pen `XtEMZ` + `L4PpR`. 레일은 **상주이고 닫기가 없다.**
   const isFull = view === "full";
   const paneChrome = isFull
     ? "rounded-panel border border-[var(--el-hairline)] shadow-e2"
     : "";
-  // 머리글의 회의 길이를 화자 패널 · 회의록과 같은 값으로 맞추려고 전사를 같이 본다. 전사 · 검토 탭이 같은
-  // 키로 받아 요청은 겹치지 않는다. 길이를 말하는 상태(일시정지 · 종료)에서만 켠다.
   const headerTranscriptQuery = useGetNoteTranscript(noteId, {
     query: { enabled: phase === "paused" || phase === "ended" },
   });
@@ -504,12 +349,6 @@ export function NotePanel({
         t: tDates,
       })
     : null;
-  /**
-   * 회의 제어(`MeetingControls`)가 실제로 그릴 것이 있는가. **조건을 여기서 한 번 더 적는
-   * 이유는 제어가 제목 블록과 따로 켜지기 때문이다** — 전사·요약에서 제어만 세우려면 그
-   * 줄을 그릴지 부모가 알아야 하고, 모르면 회의가 끝난 노트에도 빈 줄이 하나 선다.
-   * (`MeetingControls`는 같은 조건에서 `null`을 돌려준다.)
-   */
   const canEndMeeting =
     note?.meetingStatus === "IN_PROGRESS" || note?.meetingStatus === "PAUSED";
 
@@ -517,61 +356,33 @@ export function NotePanel({
     <div
       className={cn(
         "flex h-full min-h-0 w-full flex-col max-lg:landscape:flex-row lg:flex-row",
-        // 캔버스 틈은 넓은 화면 규칙이다 — 좁은 화면에서는 두 면이 테두리로 붙는데 틈까지
-        // 두면 붙은 척하면서 벌어진다.
         isFull ? "lg:gap-2.5 lg:bg-transparent" : "bg-white"
       )}
     >
       <div
         className={cn(
-          // **`hidden` 이 아니라 `clip` 이다.** `hidden` 은 스크롤 컨테이너라서 `scrollIntoView` 가
-          // 본문 끝 항목을 가운데로 못 옮기면 남는 만큼 이 면을 굴린다 — 상단바가 위로 잘려 나가고,
-          // 본문을 다시 올려도 이 면은 돌아오지 않는다(「언제 정해졌나」에서 끝쪽 표시를 누를 때).
-          // `min-w-0` — 안쪽 최소 폭(상단바의 상태 칩 「종료됨」처럼 낱말 단위로 안 꺾이는 글자)이 이 면을 넓혀
-          // 옆 에이전트 칸을 화면 밖으로 밀지 않게 한다. `overflow-clip` 은 스크롤 컨테이너가 아니라 이 일을 못 한다.
+          // `hidden` 이 아니라 `clip` 이다. `hidden` 은 스크롤 컨테이너라 `scrollIntoView` 가 이 면을 굴려 상단바가 잘려 나간다.
           "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-clip bg-white",
-          // 본문 좌우 여백은 **면이 정하고 내용이 읽는다.** design.pen은 side 시트(860)에
-          // 좌우 100을, 전체 뷰 본문(970)에 좌우 64를 준다 — 같은 노트인데 두 값이 다르므로
-          // 헤더·전사·요약·정보가 각자 하드코딩하면 뷰를 바꿀 때마다 네 군데가 어긋난다.
-          // 좁은 화면은 두 뷰가 같다(20 → sm 36).
           "[--note-gutter:20px] sm:[--note-gutter:36px]",
           isFull ? "lg:[--note-gutter:64px]" : "lg:[--note-gutter:100px]",
           paneChrome
         )}
       >
-        {/* **`Tabs` 루트가 패널 기둥이다.** 탭 목록이 상단바 안에 있으므로 루트가 상단바까지
-            감싸야 한다 — primitive가 `flex flex-col`을 이미 주니 여기서는 채우기만 시킨다. */}
         <Tabs
           value={tab}
           onValueChange={(value) => {
             if (!value) return;
-            // 타임라인을 직접 찾았으면 안내는 할 일을 다 했다(APP-1333).
             if (value === "context") graduateTimelineHint();
             handleTabChange(value as NoteTab);
           }}
           className="min-h-0 flex-1 gap-0"
         >
-          {/* **상단바(56)가 노트의 크롬 전부다.** design.pen `KktRX`(side)/`Sghjz`(full).
-            안에 이동·창 제어 · 상태 · 제목 빵조각 · **탭** · 노트 메뉴가 다 들어간다.
 
-            탭이 여기 있는 이유는 **탭 줄이 움직이면 안 되기 때문**이다. 전사·요약에서 큰
-            제목 블록을 걷어내려면 탭이 그 블록 아래에 있을 수 없다 — 그러면 탭을 누를 때마다
-            줄이 141px씩 오르내려 커서 밑에서 버튼이 도망간다. 56 고정인 이 바에 얹으면
-            제목 블록이 켜지든 꺼지든 탭은 제자리다.
-
-            상태 칩도 여기다. 전사를 읽는 동안 「지금 실시간인가」는 계속 필요한 정보인데,
-            제목 블록과 함께 사라지면 그걸 알 길이 없어진다.
-
-            좁은 화면(sm 미만)에서는 탭이 둘째 줄로 내려간다. 한 줄에 창 제어 · 상태 · 탭 · 메뉴가
-            다 서면 제목이 0px로 줄어 어느 회의인지 안 보였다. 줄 수는 탭과 상관없이 늘 둘이라
-            탭이 제자리라는 약속은 그대로다. */}
           <div
             data-slot="note-top-bar"
             className="@container/topbar flex shrink-0 flex-wrap items-center gap-x-3 border-b border-[var(--el-hairline)] px-4 sm:h-14 sm:flex-nowrap sm:px-8"
           >
             <div className="flex h-14 min-w-0 flex-1 items-center gap-2">
-              {/* 이동과 창 제어를 한 그룹으로 묶는다 — 스크린리더에서 「목록으로」와 「전체 화면」이
-                제목 빵조각과 섞이면 어느 것이 이동이고 어느 것이 표시인지 알 수 없다. */}
               <div
                 role="group"
                 aria-label={t("windowControls")}
@@ -602,10 +413,6 @@ export function NotePanel({
                     <Expand />
                   </Button>
                 ) : null}
-                {/* 확장과 같은 이유로 답변이 흐르는 동안 막는다 — 축소하면 레일이 슬롯을
-                  놓고(`NoteAgentRail`), side에서는 `isPersonalChatHiddenInNote`가 개인
-                  패널도 FAB도 감춰서 흐르던 답변의 중지·도구 승인에 닿을 길이 없어진다.
-                  승인은 만료가 없어서, 놓치면 그 턴이 사람을 기다린 채로 선다. */}
                 {onCollapse ? (
                   <Button
                     type="button"
@@ -626,12 +433,7 @@ export function NotePanel({
                 aria-hidden
                 className="h-[18px] w-px shrink-0 bg-[var(--el-hairline)]"
               />
-              {/* **아직 없는 값을 그럴듯한 글자로 채우지 않는다.** 예전에는 상태 칩이 없고
-                제목이 「회의 노트」였다 — 그 문자열은 이 노트의 이름으로 읽히고, 도착하면
-                제목이 칩 폭(41) + gap(8)만큼 오른쪽으로 밀렸다.
 
-                지금은 칩과 제목이 **같은 자리를 잡은 채** 비어 있다. 상태 라벨은 대부분 세 글자(시작 전·기록 중·종료됨)라
-                칩 자리표시가 실제와 거의 같은 폭이다. 「일시정지됨」만 길어서, 상단바가 좁으면 칩이 ⏸ 아이콘만 남긴다(APP-1406). */}
               {note ? (
                 <MeetingStatusChip status={note.meetingStatus} />
               ) : (
@@ -643,8 +445,6 @@ export function NotePanel({
                   <Skeleton className="h-3 w-[27px] rounded-chip" />
                 </span>
               )}
-              {/* 제목은 **지금 어디인지**를 말하는 빵조각이다. 좁아지면 여기가 줄어든다 —
-                옆의 상태 칩과 탭은 줄어들 수 없는 것들이다. */}
               {note ? (
                 <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--el-ink)]">
                   {note.title}
@@ -657,16 +457,7 @@ export function NotePanel({
               )}
             </div>
 
-            {/* design.pen `U5DbV`/`U9YGl`: **밑줄 탭이다.** 활성 탭만 2px 밑줄을 갖는다.
-              전체폭 균등 분할이 아니다 — 탭이 셋~넷뿐인데 폭을 나누면 라벨 사이가 200px씩
-              벌어져 한 뭉치로 안 읽힌다(그래서 트리거가 `flex-none`이다).
-
-              순서는 정보 → 전사 → 요약이고 정보가 기본이다. 회의를 열면 먼저 보이는 것이
-              제목·참여자·시각이고, 전사는 필요할 때 넘어간다. 라벨은 뷰·상태에 따라 갈리지
-              않는다 — 같은 탭이 화면마다 다른 이름으로 불리면 같은 자리인지 알기 어렵다. */}
-            {/* 높이를 덮을 때는 `group-data-horizontal/tabs:h-9`처럼 **같은 variant 셀렉터로**
-              써야 한다 — primitive의 기본값도 그 형태라(`:h-8`) 평범한 `h-9`는 tailwind-merge가
-              충돌로 보지 않아 조용히 무시된다. 여기서는 상단바 높이에 맞춰 `h-14`다. */}
+            {/* 높이는 `group-data-horizontal/tabs:h-14` 처럼 같은 variant 셀렉터로 덮는다 — 평범한 `h-14` 는 tailwind-merge 가 조용히 무시한다. */}
             <TabsList
               variant="line"
               className="shrink-0 gap-5 group-data-horizontal/tabs:h-14 max-sm:order-last max-sm:w-full max-sm:justify-start max-sm:group-data-horizontal/tabs:h-11"
@@ -678,7 +469,6 @@ export function NotePanel({
                 {t("tabs.transcript")}
               </TabsTrigger>
               {showContextTab ? (
-                // 안내 말풍선이 이 탭 아래에 붙는다 — 감싼 칸이 기준점이다.
                 <span className="relative flex">
                   <TabsTrigger value="context" className={TAB_ITEM}>
                     {t("tabs.timeline")}
@@ -692,7 +482,6 @@ export function NotePanel({
                   />
                 </span>
               ) : null}
-              {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
               {showSummaryTab ? (
                 <TabsTrigger value="summary" className={TAB_ITEM}>
                   {t("tabs.summary")}
@@ -700,11 +489,7 @@ export function NotePanel({
               ) : null}
             </TabsList>
 
-            {/* 회의 종료 제어와 삭제 메뉴는 상태와 무관하게 함께 사용할 수 있습니다. */}
             {note && canEndMeeting ? (
-              // **noteId로 키잉한다.** 안 하면 A의 회의 종료 확인창을 연 채 뒤로가기로 B에
-              // 왔을 때 이 패널이 재마운트되지 않아 `endOpen`이 남고, 대상만 B로 바뀌어
-              // **다른 회의가 종료된다.** 삭제 확인창과 같은 함정이다.
               <MeetingControls
                 key={noteId}
                 note={note}
@@ -750,15 +535,11 @@ export function NotePanel({
                 />
               </div>
             ) : (
-              // 메뉴 자리를 미리 잡는다(APP-1356). 탭 목록이 이 버튼 바로 왼쪽에 붙어 있어, 노트가 도착하며 메뉴가
-              // 끼어들면 탭 줄이 44px 왼쪽으로 밀렸다
               <Skeleton
                 aria-hidden
                 className="size-8 shrink-0 rounded-control"
               />
             )}
-            {/* **접힌 레일을 다시 여는 손잡이.** 레일이 통째로 빠지므로 남는 줄이 없다 — 여기가
-                그 자리다. 기본값(`null`)에서는 좁은 화면에서만 레일이 접혀 있으므로 그때만 선다. */}
             {showAgentRail && (agentRail === false || railFoldedOnNarrow) ? (
               <Button
                 type="button"
@@ -779,16 +560,6 @@ export function NotePanel({
 
           {note ? <NoteStatusBand note={note} fromMail={fromMail} /> : null}
 
-          {/**
-           * 제목 블록은 **정보 탭의 머리글이다** — 노트 전체의 크롬이 아니다.
-           *
-           * 전사·요약은 읽는 면이고, 여기에 세리프 34 제목(41) + 메타 두 줄(36)이 얹히면
-           * 700 패널에서 크롬이 233까지 올라가 본문에 467만 남았다(33%). 그 둘은 **이미 다른
-           * 곳에 있다** — 제목은 상단바 빵조각에, 메타는 정보 탭의 「회의 정보」 표에.
-           *
-           * **회의 제어는 여기 없다** — 상단바 오른쪽에 있다. 전사를 보다가 회의를 끝내는 것은
-           * 흔한 일인데, 제목 블록에 묶어 두면 정보 탭까지 다녀와야 한다.
-           */}
           {tab === "details" && !noteGone ? (
             <header className="relative z-10 shrink-0 border-b border-[var(--el-hairline)] bg-white px-[var(--note-gutter)] pb-5 pt-5">
               <div className="mx-auto flex w-full max-w-[820px] items-start justify-between gap-4">
@@ -809,8 +580,6 @@ export function NotePanel({
                     )}
                   </h1>
                   {meta ? (
-                    // 아바타 스택은 목록 행과 같은 컴포넌트다 — 같은 사람인지 알아야 한다.
-                    // 링은 캔버스가 아니라 카드 위에 있으므로 흰색이다(정본 `stroke: $--card`).
                     <div className="flex min-w-0 items-center gap-2.5">
                       <NoteParticipantAvatars
                         participants={note?.participants}
@@ -823,7 +592,6 @@ export function NotePanel({
                           {meta.participantLabel
                             ? `${meta.participantLabel} · `
                             : null}
-                          {/* 절대 시각은 기계도 읽어야 한다 — 상대 표현("2일 전")은 목록의 몫이다. */}
                           <time dateTime={meta.whenIso}>{meta.whenLabel}</time>
                         </span>
                         <span className="block truncate">{meta.secondary}</span>
@@ -898,11 +666,7 @@ export function NotePanel({
               ) : null}
             </div>
           ) : null}
-          {/* **스크립트·타임라인·요약은 숨기기만 한다(`keepMounted`).** 내리면 다시 고를 때 첫 위치
-              규칙(맨 위·맨 아래)을 다시 타 읽던 자리를 잃는다. 숨긴 동안은 `display:none` 이라
-              브라우저가 스크롤 위치를 쥐고 있다가 보일 때 되살린다. 안의 화면은 `noteId` 로
-              키잉해 다른 노트로 옮기면 이전 노트의 위치가 남지 않게 한다(APP-1660). 마운트마다
-              하던 재조회·열람 처리는 각 화면이 `active` 로 대신한다. */}
+          {/* 숨긴 탭은 `display:none` 이라 브라우저가 스크롤 위치를 쥐고 있다가 보일 때 되살린다 — 그래서 내리지 않고 숨긴다(`keepMounted`). */}
           <TabsContent
             value="transcript"
             keepMounted
@@ -940,24 +704,11 @@ export function NotePanel({
               </div>
             ) : null}
             <div className="min-h-0 flex-1">
-              {/* 종료된 회의는 스크립트 탭이 아카이브가 된다. */}
-              {/* 요약 → 전사 점프는 **양쪽 다** 된다. 요약이 있는 상태는 대개 아카이브
-                  경로지만, 관전자가 종료 안내에서 아직 넘어가지 않았으면 같은 탭에
-                  `TranscriptView`가 서 있다. */}
               {showArchive ? (
                 <NoteArchive
-                  // **URL이 아니라 확인된 소속을 넘긴다.** 위 `RecordingDock`과 같은 이유다 —
-                  // `/w/B/notes/<A의 노트>` 로 들어오면 B의 멤버·임시 참여자가 후보로 서고,
-                  // 고르면 422 로 거절되거나 **A에 이미 있는 사람을 못 찾아 동명이인을 또
-                  // 만든다.** 확인 전에는 비어 있고, 그동안 아카이브가 만들기를 안 연다.
                   workspaceId={confirmedWorkspaceId}
-                  // **noteId로 키잉한다.** 위 `MeetingControls`와 같은 함정이다 — A의 「모든
-                  // 발화에 적용」 확인창을 연 채 뒤로가기로 B에 오면 이 패널이 재마운트되지
-                  // 않아 그 상태가 남고, 대상만 B로 바뀌어 **다른 회의의 화자가 바뀐다.**
                   key={noteId}
                   noteId={noteId}
-                  // **이 회의의 참여자 전부다.** 화자 지정이 참여 기록 식별자로 대상을
-                  // 말하게 되면서(APP-491) 계정 없는 사람도 그대로 후보가 된다.
                   participants={note?.participants ?? []}
                   noteMeta={noteMeta}
                   focusSegmentId={focusSegmentId}
@@ -971,18 +722,12 @@ export function NotePanel({
                   phase={phase}
                   participants={note?.participants ?? []}
                   noteMeta={noteMeta}
-                  // 종료 노트는 상태 확인 뒤 아카이브로 바뀐다. 임시 전사 화면에서
-                  // 점프를 소진하면 교체된 화면이 근거 위치를 잃는다.
                   focusSegmentId={phase === "unknown" ? null : focusSegmentId}
                   onFocusHandled={clearFocusSegment}
                 />
               )}
             </div>
           </TabsContent>
-          {/* **`flex flex-col` 이 있어야 레일이 스크롤한다.** `TabsContent` 는 block 이라
-              이게 없으면 레일 루트의 `flex-1` 이 걸릴 데가 없어 높이가 내용만큼 자란다 —
-              안쪽 `ScrollArea` 가 넘칠 일이 없어져 스크롤바가 아예 안 생기고 목록이 패널
-              밖으로 흘러 나간다. 스크립트 탭이 같은 클래스를 쓰는 이유도 같다. */}
           {showContextTab ? (
             <TabsContent value="context" keepMounted className="min-h-0 flex-1">
               <NoteTimeline
@@ -1029,7 +774,6 @@ export function NotePanel({
                     participants={note?.participants ?? []}
                     currentUserId={user?.userId}
                     currentUserName={user?.name}
-                    // 레일을 접으면 「이 회의에 대해 물어보기」 알약이 검토 막대와 같은 자리에 뜬다.
                     dockRaised={showAgentRail && agentRail === false}
                     onEvidenceSelect={jumpToSegment}
                     note={note}
@@ -1051,7 +795,6 @@ export function NotePanel({
               </ScrollArea>
             </TabsContent>
           ) : null}
-          {/* 없는 노트면 정보 탭이 같은 실패를 「다시 시도」로 한 번 더 그리지 않는다. */}
           {noteGone ? null : (
             <TabsContent value="details" className="min-h-0 flex-1">
               <ScrollArea className="h-full">
@@ -1075,11 +818,9 @@ export function NotePanel({
         </Tabs>
 
         {showDock || (showAgentRail && agentRail === false) ? (
-          /* 좁은 화면에서는 스크롤을 덮지 않는 footer 레인이고, lg부터 기존처럼 떠 있다. */
           <div
             className={cn(
               "pointer-events-none z-30 flex shrink-0 items-end justify-center gap-2 pb-6 pl-5 pr-[84px] sm:px-9 lg:absolute lg:inset-x-0 lg:bottom-6 lg:pb-0",
-              // 묻기 알약만 설 때는 넓은 화면 전용이다 — 좁은 화면에 빈 레인을 세우지 않는다.
               !showDock && "max-lg:hidden"
             )}
           >
@@ -1094,16 +835,12 @@ export function NotePanel({
                     finishing={recording.phase === "stopping"}
                   />
                 ) : null}
-                {/* 자막이 멈춘 이유를 말해 준다. 안 말하면 멀쩡한 녹음을 중단한다. */}
                 {recordingDegraded ? <RecordingDegradedNotice /> : null}
-                {/* 브라우저는 마이크만 받는다. 화상회의 상대방 목소리가 빠진다는 것을 **시작 전에** 한 번
-                    말한다 — 끝나고 알면 그 회의는 되돌릴 수 없다. 시작한 회의·앱 안에서는 안 띄운다. */}
                 {isDesktopApp === false &&
                 note?.meetingStatus === "NOT_STARTED" &&
                 !recordingHere ? (
                   <p
                     data-testid="desktop-app-hint"
-                    // 독을 가리키는 말풍선. 화살표는 EndNudge 와 같이 회전한 정사각형의 두 변만 테두리를 그린다.
                     className="relative rounded-full border border-[var(--el-hairline-strong)] bg-white px-3 whitespace-nowrap py-1.5 text-[12px] text-[var(--el-muted)] shadow-e2 animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
                   >
                     {t.rich("desktopHint", {
@@ -1124,12 +861,8 @@ export function NotePanel({
                     />
                   </p>
                 ) : null}
-                {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
-                시작 버튼 자리에 이 문구가 선다. */}
                 <RecordingDock
                   noteId={noteId}
-                  // **URL이 아니라 확인된 소속을 넘긴다.** 조회가 끝나기 전에는 비어 있고,
-                  // 독은 그동안 시작을 안 연다 — 확인 전에 누르면 잘못된 워크스페이스로 기록된다.
                   workspaceId={confirmedWorkspaceId}
                   disabledReason={startBlockedReason}
                   startLabel={startLabel}
@@ -1137,7 +870,6 @@ export function NotePanel({
                 />
               </div>
             ) : null}
-            {/* 레일을 접어 두었을 때 묻는 자리. 누르면 레일이 다시 열린다 — 대화는 레일에만 산다. */}
             {showAgentRail && agentRail === false ? (
               <button
                 type="button"
@@ -1158,15 +890,6 @@ export function NotePanel({
       </div>
 
       {showAgentRail ? (
-        // **접어도 언마운트하지 않고 감춘다.** 언마운트하면 개인 챗 패널이 포털 자리를 잃고
-        // 다시 마운트되어, 쓰던 질문과 회의록 참조 칩이 사라진다. 화면에서는 통째로 빠진다.
-        //
-        // 넓은 화면은 우측 레일(440), 좁은 세로 화면은 본문 아래 스택이다. 짧은 가로 화면은
-        // 14rem 높이 floor가 전사를 밀어내므로 옆 열로 둔다.
-        //
-        // 전체 화면에서는 캔버스 10px이 두 패널을 가르므로 **맞닿는 테두리를 두지 않는다** —
-        // 두면 틈 양쪽에 선이 하나씩 서서 두 줄로 보인다. 좁은 화면은 틈 없이 붙으므로
-        // 그때만 이어 붙이는 선을 남긴다.
         <div
           data-testid="note-agent-rail"
           className={cn(

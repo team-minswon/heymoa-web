@@ -9,7 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HelpClip } from "@/components/help/help-clip";
 import { intlWrapper } from "@/components/help/test-intl";
 
-/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
 const render = (ui: React.ReactElement) =>
   rtlRender(ui, { wrapper: intlWrapper() });
 
@@ -73,7 +72,6 @@ describe("HelpClip", () => {
     render(
       <HelpClip name="desktop-menubar" alt="메뉴 막대 팝오버가 열리는 모습" />
     );
-    // 첫 렌더의 관찰자는 설정을 읽은 뒤 바로 해제된다 — 재생은 한 번도 시작하지 않는다
     for (const observer of observers)
       expect(observer.disconnect).toHaveBeenCalled();
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();

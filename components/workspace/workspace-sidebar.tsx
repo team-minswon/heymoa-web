@@ -101,7 +101,6 @@ import { openSitePage } from "@/lib/desktop/open-site-page";
 import { updateChecklist } from "@/lib/onboarding/checklist";
 import { localePath } from "@/lib/i18n/locales";
 
-/** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
 type ProjectDialogState = { project: ProjectResponseData } | null;
 
 export function WorkspaceSidebar({
@@ -121,14 +120,8 @@ export function WorkspaceSidebar({
   selectedProjectId: string | null;
   onSelectProject: (projectId: string | null) => void;
   onOpenSettings: (section: SettingsSection) => void;
-  /**
-   * 프로젝트 만들기 창을 연다. **셸이 소유한다** — 입구가 여기 `+`·빈 상태 CTA·상단바
-   * 「새 노트」 셋이고, 「새 노트」는 프로젝트가 없으면 이 창을 먼저 열어야 한다.
-   */
   onCreateProject: () => void;
-  /** 노트 전체 화면이 이 사이드바를 덮고 있는가. 열려 있던 창을 닫는 데 쓴다. */
   covered?: boolean;
-  /** 계정 메뉴 바로 위에 앉는 「시작하기」. 셸 상태를 읽어서 셸이 만들어 넘긴다. */
   onboarding?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -140,7 +133,6 @@ export function WorkspaceSidebar({
   const tasksHref = `/w/${workspaceId}/tasks`;
   const pathname = usePathname();
   const onTasks = pathname === tasksHref;
-  // 안건 지도(`/projects/{id}`)는 노트 목록이 아니다 — 「모든 노트」 대신 그 프로젝트를 밝힌다
   const projectMapPrefix = `/w/${workspaceId}/projects/`;
   const mapProjectId = pathname.startsWith(projectMapPrefix)
     ? pathname.slice(projectMapPrefix.length)
@@ -163,7 +155,6 @@ export function WorkspaceSidebar({
   );
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  // 문의 답변 알림·메일이 `?inquiry=<id>` 로 「내 문의」를 연다. 닫으면 쿼리를 걷는다.
   const inquiryId = useSearchParams().get(INQUIRY_PARAM);
   const { unseen: feedbackUnseen } = useFeedbackAnswers();
   const notifications = useNotificationCenter();
@@ -187,16 +178,6 @@ export function WorkspaceSidebar({
       queryKey: getGetProjectsQueryKey(workspaceId),
     });
 
-  /**
-   * 이름 변경 응답을 목록 캐시에 **바로 써 넣는다.** 예전에는 invalidate의 refetch를 기다렸다가
-   * 다이얼로그를 닫았는데, 그사이 버튼의 loading은 이미 꺼져 있어서 **아무 일도 안 일어나는
-   * 구간**이 생겼다. 그 구간 동안 뒤에 깔린 사이드바는 옛 이름 그대로였고, 다이얼로그가 닫히는
-   * 순간에야 이름이 바뀌어 "확인을 눌렀는데 옛 이름이 잠깐 보인다"로 읽혔다.
-   *
-   * 서버가 갱신된 프로젝트를 응답으로 주므로 왕복을 한 번 더 돌 이유가 없다. 캐시를 먼저
-   * 고치면 닫는 순간 이미 새 이름이고, `refreshProjects()`는 다른 필드(updatedAt 등)를
-   * 맞추는 뒷정리로만 남는다.
-   */
   const applyRenamedProject = (project: ProjectResponseData) => {
     queryClient.setQueryData(
       getGetProjectsQueryKey(workspaceId),
@@ -244,7 +225,6 @@ export function WorkspaceSidebar({
   return (
     <>
       <SidebarHeader className="p-0">
-        {/* ── Workspace switcher (single ~56px row) ── */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -266,13 +246,6 @@ export function WorkspaceSidebar({
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
-            {/* **기억한 워크스페이스가 맨 위다.** 서버는 합류 순으로 주므로, 지금 보고 있는
-                곳(= 마지막으로 방문한 곳)이 목록 중간에 체크만 달고 앉아 있었다. 방금 온 자리를
-                목록에서 찾아야 하는 것은 순서가 잘못된 것이다.
-
-                아래 체크는 `workspaceId`(URL)로 그리고 순서는 기억한 값으로 정한다 — 대개 같은
-                값이지만, 다른 워크스페이스로 이동하는 찰나에는 URL이 먼저 바뀐다. 그때 체크가
-                따라 움직이고 순서는 다음 방문 기록이 쓰일 때 맞춰지는 편이 낫다. */}
             {sortByLastVisited(workspaces).map((item) => (
               <DropdownMenuItem
                 key={item.workspaceId}
@@ -308,14 +281,11 @@ export function WorkspaceSidebar({
 
       <SidebarContent className="px-1.5 py-2">
         <nav aria-label={t("label")}>
-          {/* ── 작업: 알림 · 모든 노트 · 할 일 ──
-              도움(가이드·문의)은 작업이 아니라 아래 고정 묶음으로 뗐다(APP-1325). */}
           <SidebarGroup className="py-0.5">
             <SidebarGroupContent>
               <SidebarMenu>
                 {notifications ? (
                   <SidebarMenuItem>
-                    {/* 숫자는 모든 워크스페이스의 안 읽은 개수다. 처리 필요 개수와 섞지 않는다(PRO-67 I09). */}
                     <SidebarMenuButton
                       onClick={notifications.openNotifications}
                       className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
@@ -364,7 +334,6 @@ export function WorkspaceSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* ── 프로젝트 ── */}
           <SidebarGroup className="py-0.5 mt-2">
             <div className="flex items-center justify-between px-2 py-1">
               <button
@@ -394,11 +363,6 @@ export function WorkspaceSidebar({
               <div className="p-1">
                 {projects.length === 0 && (
                   <SidebarGroupContent>
-                    {/* 프로젝트가 0개면 이 자리가 통째로 비어서, 만들 수 있다는 것을 알리는 것이
-                    머리글 옆 14px `+` 하나뿐이었다. 새 워크스페이스는 항상 이 상태로
-                    시작하므로 처음 들어온 사람이 가장 먼저 보는 화면이 그것이었다.
-                    프로젝트 행과 같은 무게의 행 하나를 두어 라벨이 있는 입구를 만든다 —
-                    다이얼로그는 `+`가 여는 것과 같은 것이다. */}
                     <SidebarMenu className="space-y-0">
                       <SidebarMenuItem>
                         <SidebarMenuButton
@@ -484,7 +448,6 @@ export function WorkspaceSidebar({
                                 <Orbit className="size-3.5 text-[var(--el-muted)]" />
                                 <span>{tNav("connectionMap")}</span>
                               </DropdownMenuItem>
-                              {/* 삭제는 서버가 ADMIN 에게만 허락한다(`DeleteProjectService`) — 눌러 봐야 403인 메뉴는 두지 않는다. */}
                               {canDeleteProject && (
                                 <DropdownMenuItem
                                   variant="destructive"
@@ -510,21 +473,14 @@ export function WorkspaceSidebar({
 
       {onboarding}
 
-      {/* ── 도움: 사용 가이드 · 문의·피드백 ──
-          작업 메뉴와 섞이지 않게 프로젝트 목록 밖, 계정 바로 위에 고정한다(APP-1325).
-          프로젝트가 많아 목록이 스크롤돼도 늘 같은 자리에 있다. */}
-      {/* 왼쪽 기준선을 위 작업 묶음과 맞춘다: SidebarContent px-1.5 + SidebarGroup p-2 = 14px */}
       <SidebarGroup className="px-3.5 py-2">
         <SidebarGroupContent>
           <SidebarMenu>
-            {/* 이번 달 녹음 사용량(APP-1596). 한도 집행 대상이 아니거나 아직 모르면 아무것도 그리지 않는다. */}
             <SidebarUsage
               workspaceId={workspaceId}
               onOpen={() => onOpenSettings("billing")}
             />
             <SidebarMenuItem>
-              {/* 브라우저에서는 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱은 같은 사이트 주소의 새 창을
-                막고 외부 브라우저로도 넘기지 않아서 앱 안에서 이동한다(`openSitePage`). */}
               <SidebarMenuButton
                 onClick={() => {
                   track("help_opened", { from: "sidebar" });
@@ -537,7 +493,6 @@ export function WorkspaceSidebar({
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              {/* 푸터의 문의 메일은 랜딩에만 있었다. 로그인한 화면 안에서 바로 보낼 수 있게 도움말 아래에 둔다(APP-1173). */}
               <SidebarMenuButton
                 onClick={() => {
                   track("feedback_opened", { from: "sidebar" });
@@ -554,7 +509,6 @@ export function WorkspaceSidebar({
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {/* ── User profile (footer) ── */}
       <SidebarFooter className="p-0 border-t border-[var(--el-hairline)]">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -597,7 +551,6 @@ export function WorkspaceSidebar({
               onClick={() => onOpenSettings("account")}
               className="gap-2 rounded-control py-2 text-sm"
             >
-              {/* 설정의 「내 계정」 탭과 같은 아이콘 — 같은 목적지(APP-1325) */}
               <UserRound className="size-4 text-[var(--el-muted)]" />
               <span>{t("accountSettings")}</span>
             </DropdownMenuItem>
@@ -726,7 +679,6 @@ export function WorkspaceSidebar({
                   })
                   .then(() => null)
                   .catch((error: unknown) => error);
-                // 404 는 그사이 다른 사람이 먼저 지운 것이다 — 바라던 결과라 성공과 같이 다룬다.
                 const code = errorCodeOf(failure);
                 if (failure === null || code === "PROJECT_NOT_FOUND") {
                   if (selectedProjectId === deleteTarget.projectId) {
@@ -754,7 +706,6 @@ export function WorkspaceSidebar({
   );
 }
 
-/** Link 이동만 진행을 표시한다. 현재 목록의 필터 버튼은 대기 없이 바뀐다. */
 function NavigationIcon({ icon: Icon }: { icon: LucideIcon }) {
   const { pending } = useLinkStatus();
   const t = useTranslations("shell.sidebar");

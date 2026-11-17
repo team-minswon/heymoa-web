@@ -99,9 +99,7 @@ export function createOnboarding(
         ["not-determined", "granted", "denied", "restricted"].includes(status)
       )
         microphone = status;
-    } catch {
-      /* OS status is unavailable, not approved. */
-    }
+    } catch {}
     return { platform, microphone, language: getLanguage(), automatic };
   }
   ipcMain.handle(ONBOARDING_CHANNEL, async (event, action: unknown) => {
@@ -174,7 +172,6 @@ export function createOnboarding(
     }
   });
   current.on("ready-to-show", () => current.show());
-  // Reload only the isolated introduction; never start capture or open the web on a crash.
   contents.on("render-process-gone", () => {
     if (!disposed && !current.isDestroyed())
       void current.loadFile(file).catch(() => current.close());

@@ -8,8 +8,6 @@ import {
 } from "@/lib/format/date";
 
 describe("formatAppDate", () => {
-  // Node 22·24 의 ICU 78 은 ko-KR 오전·오후를 「AM」「PM」으로 내고 브라우저는 「오전」「오후」를
-  // 낸다. 서버 HTML 과 첫 클라이언트 렌더가 갈려 노트 화면이 React #418 을 던졌다.
   it("오전·오후는 런타임 ICU 와 상관없이 한국어로 쓴다", () => {
     expect(
       formatAppDate("2026-09-26T07:25:20Z", {
@@ -51,7 +49,6 @@ describe("formatPromiseTime", () => {
 });
 
 describe("영어 화면의 날짜 (APP-1285)", () => {
-  // 서울 2026-10-31 23:30 = UTC 14:30. 보는 사람이 어디 있든 서울 날짜로 그린다.
   const lateNightSeoul = "2026-10-31T14:30:00Z";
 
   it("en-US 형식으로 쓰되 날짜 경계는 서울 기준 그대로다", () => {
@@ -64,7 +61,7 @@ describe("영어 화면의 날짜 (APP-1285)", () => {
         { hour: "numeric", minute: "2-digit" },
         "en-US"
       )
-    ).toBe("11:30 PM"); // 서버(Node)의 좁은 공백(U+202F)을 브라우저와 같은 보통 공백으로 맞춘다(하이드레이션)
+    ).toBe("11:30 PM");
     expect(getAppDateKey(lateNightSeoul)).toBe("2026-10-31");
   });
 

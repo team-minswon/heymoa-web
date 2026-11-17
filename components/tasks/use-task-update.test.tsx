@@ -6,10 +6,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTaskUpdate } from "@/components/tasks/use-task-update";
 import type { TaskEntry } from "@/lib/tasks/task-groups";
 
-/**
- * `vi.fn()` 이 거절하는 프라미스를 따로 추적하다 **처리된 거절도 미처리 오류로 보고**해서, 거절 시험이 본문과 무관하게
- * 실패한다. 손으로 쓴 대역으로 바꿔 호출 기록만 남긴다.
- */
 const mutate = vi.hoisted(() => ({
   impl: (async () => undefined) as (...args: unknown[]) => Promise<unknown>,
   calls: [] as unknown[][],
@@ -80,7 +76,6 @@ describe("useTaskUpdate — 낙관적 적용", () => {
     mutate.calls = [];
   });
 
-  /** **응답을 기다리지 않고 줄에 걸린다.** 두 목록(워크스페이스·프로젝트)이 같이 바뀐다. */
   it("기한을 고치면 응답 전에 두 목록의 그 줄에 먼저 걸고, 다른 줄은 건드리지 않는다", async () => {
     let finish!: (value: unknown) => void;
     mutate.impl = () => new Promise((resolve) => (finish = resolve));
@@ -116,7 +111,6 @@ describe("useTaskUpdate — 낙관적 적용", () => {
         void (await result.current.save(task(), { due: "2026-09-30" }))
     );
 
-    // 워크스페이스 목록은 기한 순이라 기한이 늦어진 줄은 정렬 자리(t2 뒤)로 옮겨 선다.
     expect(rowsOf(client, ["/workspaces/w1/tasks"]).map((row) => row.taskId)).toEqual([
       "t2",
       "t1",
@@ -139,7 +133,6 @@ describe("useTaskUpdate — 낙관적 적용", () => {
     );
   });
 
-  /** 한 줄이 저장 중일 때 다른 줄이 끝나도 목록을 다시 읽지 않는다 — 읽으면 저장 중인 줄의 먼저 건 값을 옛 값으로 덮는다. */
   it("다른 줄이 저장 중이면 목록 재조회를 미룬다", async () => {
     let finishA!: (value: unknown) => void;
     mutate.impl = (...args: unknown[]) => {
@@ -188,7 +181,6 @@ describe("useTaskUpdate — 낙관적 적용", () => {
     expect(listKeysAfter.length).toBeGreaterThan(0);
   });
 
-  /** 충돌 뒤 목록 재조회도 다른 줄이 저장 중이면 미룬다 — 먼저 시작한 조회가 늦게 도착해 그 줄의 새 판을 덮는다. */
   it("충돌이어도 다른 줄이 저장 중이면 목록 재조회를 지금 하지 않는다", async () => {
     let finishA!: (value: unknown) => void;
     mutate.impl = (...args: unknown[]) => {
@@ -230,7 +222,6 @@ describe("useTaskUpdate — 낙관적 적용", () => {
     expect(lists().length).toBeGreaterThan(0);
   });
 
-  /** 한 줄의 실패가 다른 줄의 성공을 되돌리지 않는다 — 되돌리면 그 줄의 판이 옛 값이 되어 다음 저장이 거절된다. */
   it("실패한 줄만 되돌리고 그사이 성공한 다른 줄은 그대로 둔다", async () => {
     let rejectA!: (reason: unknown) => void;
     mutate.impl = (...args: unknown[]) => {
@@ -320,7 +311,6 @@ describe("useTaskUpdate — 낙관적 적용", () => {
     );
   });
 
-  /** 끝내기·취소는 줄을 그 자리에 두고 먼저 긋는 연출이 있어, 응답 전에는 상태를 안 바꾼다. */
   it("끝내기는 응답 전에 상태를 바꾸지 않고 응답이 오면 바꾼다", async () => {
     let finish!: (value: unknown) => void;
     mutate.impl = () => new Promise((resolve) => (finish = resolve));
@@ -348,10 +338,6 @@ describe("useTaskUpdate — 낙관적 적용", () => {
   });
 });
 
-/**
- * 워크스페이스 목록은 상태 탭 × 거르기마다 따로 캐시이고 서버가 줄을 걸러 준다 (APP-1043). 저장된 줄은 항목마다 다르게 서거나
- * 떠나고, 개수는 줄이 읽은 쪽에 있는지와 무관하게 옮겨 간다.
- */
 describe("useTaskUpdate — 거른 목록과 개수", () => {
   beforeEach(() => {
     mutate.impl = async () => undefined;
@@ -380,7 +366,6 @@ describe("useTaskUpdate — 거른 목록과 개수", () => {
   function setupPaged() {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const mine = task({ assignee: { type: "USER", id: "me", name: "나" } });
-    // 진행 중 탭(내 할 일 아님·내 할 일), 완료 탭, 다른 프로젝트 필터.
     client.setQueryData(keyOf({ status: "OPEN" }), paged([mine, task({ taskId: "t2" })], { totalCount: 5 }));
     client.setQueryData(keyOf({ status: "OPEN", assigneeUserId: "me" }), paged([mine], { totalCount: 5 }));
     client.setQueryData(keyOf({ status: "COMPLETED" }), paged([], { totalCount: 2 }));
@@ -404,11 +389,9 @@ describe("useTaskUpdate — 거른 목록과 개수", () => {
     expect(open.tasks.map((row) => row.taskId)).toEqual(["t2"]);
     expect(open.counts).toEqual({ open: 4, completed: 3, cancelled: 1 });
     expect(open.totalCount).toBe(4);
-    // 완료 탭은 줄이 읽은 범위 안이라 정렬 자리에 서고 그 탭의 전체 수는 완료 개수다.
     const completed = dataOf(client, keyOf({ status: "COMPLETED" }));
     expect(completed.tasks.map((row) => row.taskId)).toEqual(["t1"]);
     expect(completed.totalCount).toBe(3);
-    // 내 할 일 탭: 내 줄이라 같이 옮겨 간다. 다른 프로젝트 필터: 그 프로젝트 줄이 아니라 개수가 그대로다.
     expect(dataOf(client, keyOf({ status: "OPEN", assigneeUserId: "me" })).counts).toEqual({
       open: 4,
       completed: 3,
@@ -426,7 +409,6 @@ describe("useTaskUpdate — 거른 목록과 개수", () => {
     act(() => {
       saved = result.current.save(mine, { assignee: { type: "USER", id: "you", name: "너" } });
     });
-    // 낙관 단계는 줄 필드만 제자리에서 고친다. 목록 소속과 개수는 그대로다.
     await waitFor(() =>
       expect(dataOf(client, keyOf({ status: "OPEN", assigneeUserId: "me" })).tasks[0].assignee).toMatchObject({
         id: "you",
@@ -471,7 +453,6 @@ describe("useTaskUpdate — 거른 목록과 개수", () => {
     expect(completed.totalCount).toBe(41);
   });
 
-  /** 재조회가 저장 반영 뒤의 서버 값을 먼저 가져왔다면 같은 변화를 또 세지 않는다. */
   it("이미 그 판의 줄을 든 항목은 개수를 다시 옮기지 않는다", async () => {
     const { client, mine, result } = setupPaged();
     const done = { ...mine, taskStatus: "COMPLETED" as const, revision: 4 };
@@ -485,7 +466,6 @@ describe("useTaskUpdate — 거른 목록과 개수", () => {
     expect(completed.totalCount).toBe(3);
   });
 
-  /** 읽은 범위의 마지막 줄의 기한이 뒤로 밀리면(여기서는 기한 없음) 아직 읽지 않은 줄 너머일 수 있어 목록에서 뺀다. */
   it("읽은 범위의 마지막 줄을 뒤로 밀면 빼고, 내용만 고치면 그 자리에 남긴다", async () => {
     const { client, result } = setupPaged();
     const t1 = task({ taskId: "t1", due: "2026-09-10" });

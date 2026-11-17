@@ -21,7 +21,6 @@ const server = setupServer(
   ...termHandlers
 );
 
-// 응답 모양을 건건이 타입으로 옮기지 않고 필요한 필드만 읽는다
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function get<T = any>(path: string): Promise<T> {
   const response = await fetch(`http://localhost${path}`);
@@ -92,12 +91,10 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
       expect(members.members).toHaveLength(7);
       expect(new Set(members.members.map((row) => row.role))).toEqual(new Set(["ADMIN", "MEMBER"]));
       expect(members.members.every((row) => row.email.endsWith("@example.com"))).toBe(true);
-      // 표시 이름이 계정 이름과 다른 멤버가 있다
       expect(members.members.filter((row) => row.displayName && row.displayName !== row.accountName).length).toBeGreaterThan(0);
 
       const guests = await get<{ guests: unknown[] }>(`/v1/workspaces/${WORKSPACE}/guests`);
       expect(guests.guests).toHaveLength(4);
-      // 빈 워크스페이스는 프로젝트가 없다
       expect(mockDb.listProjects("01K0000000009")).toHaveLength(0);
     });
 
@@ -115,7 +112,6 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
       const sizes = new Set(notes.map((row) => row.participants.length));
       expect(Math.min(...sizes)).toBe(1);
       expect(Math.max(...sizes)).toBeGreaterThanOrEqual(5);
-      // 시작이 오늘부터 두 달 전까지 흩어진다
       const days = new Set(notes.map((row) => row.createdAt.slice(0, 10)));
       expect(days.size).toBeGreaterThan(15);
     });
@@ -128,12 +124,9 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
       const speakers = transcript.diarization.speakers as { label: string; assignedParticipantId: string | null; speakingMs: number }[];
       expect(speakers).toHaveLength(4);
       expect(speakers.filter((row) => row.assignedParticipantId !== null)).toHaveLength(2);
-      // 발화량이 한쪽으로 쏠려 있다
       const shares = speakers.map((row) => row.speakingMs).sort((a, b) => b - a);
       expect(shares[0]).toBeGreaterThan(shares[3] * 1.5);
-      // 한 사람의 긴 발언이 있다
       expect(Math.max(...transcript.segments.map((row: { text: string }) => row.text.length))).toBeGreaterThan(110);
-      // 분 단위 타임스탬프가 이어진다
       expect(transcript.segments.at(-1).endedAtMs).toBeGreaterThan(25 * 60_000);
 
       const flow = await get(`/v1/notes/${campaign}/analyses/flow`);
@@ -151,7 +144,6 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
       expect(open).toBeLessThanOrEqual(5);
       expect(kinds("STATUS_REPORT").length + kinds("INSIGHT").length).toBeGreaterThanOrEqual(3);
       expect(review.items.every((row) => row.kind === "AGENDA" || row.citations.length > 0)).toBe(true);
-      // 지정된 화자의 할 일은 사람 이름으로, 미지정 화자의 할 일은 화자 라벨로 풀린다
       const assignees = new Set(review.items.map((row) => row.assignee?.type));
       expect(assignees.has("USER")).toBe(true);
       expect(assignees.has("SPEAKER_LABEL")).toBe(true);
@@ -189,7 +181,6 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
       const transcript = await get(`/v1/notes/${weekly}/transcript`);
       expect(transcript.segments.length).toBeGreaterThanOrEqual(15);
       expect(transcript.segments.every((row: { speakerLabel: string | null }) => row.speakerLabel === null)).toBe(true);
-      // 녹음을 이어 하면 새 세션이 열린다
       expect(mockDb.createSession(weekly).status).toBe("READY");
     });
 
@@ -263,7 +254,6 @@ describe("가이드 캡처 프리셋 (helpDemo)", () => {
 
     it("사람이 보는 글에 시험용 이름 · 실제 메일 주소가 섞이지 않는다", () => {
       const state = createHelpDemoState();
-      // 「테스트」 「샘플」 은 업무 용어(A/B 테스트, 샘플 제작)로 나오므로 시험용 이름이 오는 자리만 본다
       const names = JSON.stringify([
         state.user.name,
         state.workspaces.map((row) => row.name),

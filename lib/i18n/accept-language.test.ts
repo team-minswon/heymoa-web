@@ -5,7 +5,6 @@ import {
   localeFromAcceptLanguage,
 } from "@/lib/i18n/accept-language";
 
-// Next 의 `has` 매칭과 같은 방식으로 감싼다(`^…$`, 플래그 없음).
 const redirectMatches = (header: string) =>
   new RegExp(`^${ACCEPT_LANGUAGE_EN_ONLY}$`).test(header);
 
@@ -24,7 +23,6 @@ const SAMPLES: [header: string, expected: "ko" | "en"][] = [
   ["ja-JP,ja", "ko"],
   ["*", "ko"],
   ["", "ko"],
-  // `ko` 로 시작하는 다른 언어(코사어 `kok` 등)는 한국어가 아니다.
   ["kok,en", "en"],
 ];
 

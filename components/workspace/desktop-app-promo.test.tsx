@@ -158,7 +158,6 @@ describe("DesktopAppPromo", () => {
     expect(
       dialog.getByRole("heading", { name: "Keep using your existing notes" })
     ).toBeInTheDocument();
-    // 공용 Dialog 의 닫기 버튼(`components/ui/dialog.tsx`)은 이 모듈 문구가 아니다.
     expect(baseElement.textContent?.replace("닫기", "")).not.toMatch(/[가-힣]/);
   });
 });
@@ -283,7 +282,6 @@ describe("legacy desktop update notice", () => {
       name: "새 설치 파일 받기",
     });
     expect(busyButton).toBeDisabled();
-    // 두 갈래의 안쪽 구조가 같아야 폭이 안 튄다(jsdom 은 px 를 못 잰다).
     const busyInner = busyButton.innerHTML;
     recording.buffer = null;
     view.rerender(<DesktopAppPromo />);

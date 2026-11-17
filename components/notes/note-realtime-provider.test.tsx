@@ -102,7 +102,6 @@ function coverageRange(over: Record<string, unknown> = {}) {
   };
 }
 
-/** 렌더마다 받은 카드 배열. 참조가 같아야 레일이 다시 안 그린다. */
 const seenCards: unknown[] = [];
 
 function Probe() {
@@ -137,7 +136,6 @@ function Probe() {
   );
 }
 
-/** 노트 조회 봉투. 소켓을 열지 말지는 이 안의 `meetingStatus` 가 정한다. */
 function noteEnvelope(meetingStatus: string, noteId = NOTE_ID) {
   return {
     status: 200,
@@ -161,12 +159,10 @@ function renderProvider({
   onNotMember,
 }: {
   strict?: boolean;
-  /** `null` 이면 캐시를 안 심는다 — 상태를 모르는 채 마운트되는 경우. */
   meetingStatus?: string | null;
   onNotMember?: () => void;
 } = {}) {
   const queryClient = new QueryClient({
-    // 노트 조회는 화면이 서버에서 미리 받아 온 것을 쓴다. 여기서는 심어 두고 다시 안 받는다.
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
   if (meetingStatus !== null) {
@@ -185,7 +181,6 @@ function renderProvider({
       </NoteRealtimeProvider>
     </QueryClientProvider>
   );
-  // 기본 wrapper(언어 Provider, `vitest.setup.ts`)까지 StrictMode 안에 들도록 루트에서 켠다.
   const result = render(provider, { reactStrictMode: strict });
 
   return { ...result, invalidateQueries, queryClient };
@@ -482,10 +477,8 @@ describe("NoteRealtimeProvider", () => {
       meetingStatus: "IN_PROGRESS",
     });
 
-    // 구조 공유로 참조는 바뀔 수 있다. 덮어쓰지 않았다는 것은 아래 spy 가 지킨다.
     expect(queryClient.getQueryData(noteKey)).toEqual(endedNote);
     expect(setQueryData).not.toHaveBeenCalled();
-    // meeting.ended 가 note·목록·transcript·후보·안건을, recording.started 가 note·목록을 갱신한다.
     expect(invalidateQueries).toHaveBeenCalledTimes(7);
     expectInvalidated(invalidateQueries, noteKey);
     expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID));
@@ -631,8 +624,6 @@ describe("NoteRealtimeProvider", () => {
   });
 
   it("다른 발화의 final이 와도 현재 partial을 비운다", async () => {
-    // utteranceId는 최신성을 뜻하지 않는다 — 서버가 재연결 때 폐기한 commit의 이전 id를
-    // 되살린다. id 일치로만 지우면 확정되지 못한 발화가 세션 끝까지 화면에 남는다.
     renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
@@ -721,10 +712,6 @@ describe("NoteRealtimeProvider", () => {
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
   });
 
-  /**
-   * 전사 조각은 초당 여러 번 온다. 그때마다 카드 배열을 새로 만들면 실시간 정리의 카드
-   * 수백 장이 매번 다시 그려져 칩을 눌러도 버벅인다.
-   */
   it("전사 조각이 와도 후보 카드 배열은 그대로다", async () => {
     renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -770,8 +757,6 @@ describe("NoteRealtimeProvider", () => {
   });
 
   it("노트가 바뀌면 이전 노트의 후보·처리 상태를 즉시 비운다", async () => {
-    // catch-up 의 reset 만 믿으면 WS 가 붙기 전까지(또는 못 붙으면 영영) A 의 원장이
-    // B 에 그대로 보인다.
     const { rerender, queryClient } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
@@ -812,16 +797,12 @@ describe("NoteRealtimeProvider", () => {
       range: coverageRange({ appliedAt: "2026-08-24T02:00:00.000Z" }),
     });
 
-    // REAFFIRM 은 proposal event 가 없어서 이 무효화로만 화면에 수렴한다.
     expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID));
-    // 갱신 띠 시각은 수신 시각이 아니라 서버가 준 값이다.
     expect(screen.getByTestId("context-batch-at").textContent).toBe(
       "2026-08-24T02:00:00.000Z"
     );
   });
 
-  // REST 가 최대 60초 묵어 있으니, 이벤트 발화를 비우면 다시 받는 동안 최근 발화가 사라졌다
-  // 나타난다(APP-746). 화면은 같은 발화를 저장본으로 그리므로 남겨 둬도 겹치지 않는다.
   it("catch-up 은 이벤트로 받은 확정 발화를 비우지 않는다", async () => {
     renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -843,7 +824,6 @@ describe("NoteRealtimeProvider", () => {
     ).toEqual([expect.objectContaining({ segmentId: SEGMENT_ID })]);
   });
 
-  // 비우지 않으면 긴 회의에서 끝없이 쌓인다. 저장본이 이미 가진 발화만 덜어 낸다.
   it("catch-up 은 저장본이 이미 가진 확정 발화만 덜어 낸다", async () => {
     const { queryClient } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -909,9 +889,6 @@ describe("NoteRealtimeProvider", () => {
   });
 
   it("재연결 catch-up은 원장을 비우지 않고 조회만 다시 받는다", async () => {
-    // 비우면 그 직후의 snapshot 재조회가 실패했을 때(캐시가 남아 isLoadingError도 거짓)
-    // 다시 채울 경로가 없어 「정리된 사건이 없습니다」가 영구히 남는다. 원장은 낡은 것을
-    // 되돌리지 않는 snapshot 병합으로 수렴시키고, catch-up이 버리는 것은 전사뿐이다.
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
@@ -930,24 +907,11 @@ describe("NoteRealtimeProvider", () => {
     expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID));
   });
 
-  /**
-   * **revision gap 을 본 뒤 재조회가 실패하면 갇힙니다.**
-   *
-   * `needsRefetch` 는 sticky 이고 그것을 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면
-   * 다시 안 돕니다. 그 뒤 오는 proposal event 는 gap 을 못 메웁니다 — 빠진 revision 은
-   * 다시 안 오기 때문입니다.
-   *
-   * **batch 는 이미 복구 경로가 있습니다** — `invalidateContext()` 가 조회를 다시 띄웁니다.
-   * 그런데 proposal event 만 계속 오는 구간(배치가 멎은 회의)에서는 그 경로가 안 열립니다.
-   * 여기서 그 한 갈래를 지킵니다.
-   */
   it("gap 을 본 뒤에는 proposal event 가 재조회를 깨운다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
-    // 마운트 catch-up 이 이미 한 번 invalidate 한다. 그 뒤부터를 본다.
     invalidateQueries.mockClear();
 
-    // revision 1 을 못 보고 2 가 왔다 — 사이를 놓쳤으므로 snapshot 을 다시 받아야 한다.
     emit({
       type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:03.000Z",
@@ -955,7 +919,6 @@ describe("NoteRealtimeProvider", () => {
     });
     expect(invalidateQueries).not.toHaveBeenCalled();
 
-    // jsdom 에는 서버가 없어 그 재조회는 실패한다. 그 상태에서 다음 event 가 와야 한다.
     invalidateQueries.mockClear();
     emit({
       type: "proposal.changed",
@@ -973,7 +936,6 @@ describe("NoteRealtimeProvider", () => {
     await waitFor(() => expect(topicClients).toHaveLength(1));
     invalidateQueries.mockClear();
 
-    // revision 1 부터 순서대로면 놓친 것이 없다 — 재조회할 이유가 없다.
     emit({
       type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:03.000Z",
@@ -988,10 +950,6 @@ describe("NoteRealtimeProvider", () => {
     expect(invalidateQueries).not.toHaveBeenCalled();
   });
 
-  /**
-   * ★ 배포 때 한 태스크의 구독이 한꺼번에 다시 붙는다. 붙을 때마다 GET 셋(노트·전사 전체·제안)을
-   * 곧바로 내면 새 태스크에 몰린다. 구독은 곧바로, 따라잡기만 0~3초 난수 뒤 한 번 낸다.
-   */
   describe("재연결 뒤 따라잡기는 흩어 한 번", () => {
     const transcriptKey = getGetNoteTranscriptQueryKey(NOTE_ID);
     const calls = (
@@ -1008,7 +966,6 @@ describe("NoteRealtimeProvider", () => {
       await waitFor(() => expect(topicClients).toHaveLength(1));
       vi.useFakeTimers();
       vi.spyOn(Math, "random").mockReturnValue(random);
-      // 첫 연결의 따라잡기는 곧바로다. 흩을 무리가 없다.
       await act(() => topicClients[0].options.onCatchUp());
       rendered.invalidateQueries.mockClear();
       await act(() => topicClients[0].options.onCatchUp());
@@ -1118,14 +1075,6 @@ describe("NoteRealtimeProvider", () => {
   });
 });
 
-/**
- * ★ **소켓은 아직 무언가 올 수 있는 노트에만 연다.**
- *
- * 이 토픽의 여덟 이벤트 중 끝난 회의에서 올 수 있는 것은 회의 직후 분석이 도는 동안의 후보·배치
- * 둘뿐이다. 지난 노트를 읽는 탭마다 연결이 하나씩 서 있었고, 2대에서 배포할 때 그 전부가
- * 재연결을 했다. 반대로 **시작 전 노트는 열어야 한다** — 동료가 녹음을 시작하면 그 소켓으로
- * `meeting.started` 가 온다.
- */
 describe("소켓을 여는 조건", () => {
   it("끝난 노트에 들어오면 소켓을 안 연다", async () => {
     renderProvider({ meetingStatus: "ENDED" });

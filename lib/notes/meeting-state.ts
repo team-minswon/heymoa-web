@@ -4,7 +4,6 @@ import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models/n
 import type { TranscriptResponseData } from "@/lib/api/generated/models/transcriptResponseData";
 import { getAppDateKey } from "@/lib/format/date";
 
-/** 회의 상태 → `common.meetingStatus` 키. 노트 목록과 노트 화면이 같은 이름을 쓴다. */
 export const MEETING_STATUS_KEY = {
   NOT_STARTED: "notStarted",
   IN_PROGRESS: "inProgress",
@@ -12,11 +11,6 @@ export const MEETING_STATUS_KEY = {
   ENDED: "ended",
 } as const satisfies Record<NoteResponseDataMeetingStatus, string>;
 
-/**
- * 회의 상태를 화면이 쓰는 형태로 접은 값. 계약의 `meetingStatus` 넷에 **`unknown`**을 더한다 —
- * 노트를 아직 못 읽은 것이라 게이트를 열지도 닫지도 않는다. 지금은 전사 화면과 노트 패널이
- * 이 값으로 갈린다(탭 구성·레일 폭·폴링 지속).
- */
 export type MeetingPhase =
   | "active"
   | "not-started"
@@ -26,9 +20,6 @@ export type MeetingPhase =
 
 type MeetingFields = Pick<NoteResponseData, "meetingStatus">;
 
-/**
- * 노트의 회의 상태를 화면 상태로 접는다. 순수 함수 — 브라우저 없이 테스트한다.
- */
 export function deriveMeetingPhase(
   note: MeetingFields | undefined
 ): MeetingPhase {
@@ -39,11 +30,6 @@ export function deriveMeetingPhase(
   return "active";
 }
 
-/**
- * 일시정지 며칠째인가(APP-1313). 앱 시간대의 달력일로 세고 **일시정지한 날이 1일째**다 — 어제 일시정지했으면 2일째.
- * 메일(I17)의 「2일째」와 같은 셈이다. 일시정지 시각을 모르거나 오늘 일시정지했으면 `null` — 「1일째」는
- * 방금 멈춘 회의에 기간을 붙이는 것이라 말하지 않는다.
- */
 export function pausedDayCount(
   pausedAt: string | null | undefined,
   now: number | null
@@ -78,13 +64,6 @@ const recordedOf = (note: MeetingTimingFields) =>
     ? Math.max(0, note.recordedDurationMs)
     : 0;
 
-/**
- * 녹음 시계의 원점(epoch ms) — 시계는 `now − 원점`이다. 진행 중이 아니면 null.
- *
- * 계약(APP-1432): `recordedDurationMs` 는 회의 축의 끝이고 열린 세션은 원점까지만 센다. 화면은 그 위에
- * `activeSessionStartedAt` 부터 잰다. 그래서 원점은 `activeSessionStartedAt − recordedDurationMs` 하나다.
- * 브라우저 타이머를 쌓지 않으므로 백그라운드 탭에서 타이머가 조여도 늦지 않고, 재개해도 0으로 돌아가지 않는다.
- */
 export function recordingClockOriginMs(
   note: MeetingTimingFields
 ): number | null {
@@ -94,7 +73,6 @@ export function recordingClockOriginMs(
   return Number.isFinite(startedAt) ? startedAt - recordedOf(note) : null;
 }
 
-/** 지금까지의 회의 축 길이. 진행 중이면 [recordingClockOriginMs] 부터 잰 녹음 시계와 같다. */
 export function getRecordedDurationMs(
   note: MeetingTimingFields,
   now: number
@@ -112,13 +90,6 @@ type AxisTranscript = Pick<
   "segments" | "gaps" | "transcriptGaps"
 >;
 
-/**
- * 회의 길이. 머리글 · 화자 도크와 패널 · 검토 머리 칩 · 회의 지도 · 회의록 · 스크립트 복사본이 **모두 이 값**이다.
- *
- * 원천은 서버의 회의 축 끝이다 — 전사 `recording.durationMs` 와 노트 `recordedDurationMs` 는 같은 함수가
- * 낸다(APP-1432). 다만 그 값이 발화 · 공백 끝보다 짧게 온 옛 노트가 있어(APP-1427), 축 위에 놓인 것 중
- * 가장 늦은 끝까지는 늘린다. 안 늘리면 띠와 지도 표식이 막대 밖으로 나간다.
- */
 export function meetingLengthOf(
   axisEndMs: number | null | undefined,
   transcript: Partial<AxisTranscript> | null | undefined
@@ -139,38 +110,10 @@ type NoteOrderFields = Pick<
   "meetingStartedAt" | "createdAt"
 >;
 
-/**
- * 노트 목록에서 노트가 서는 시각. **회의를 기록하기 시작한 시각**이고, 한 번도 기록하지
- * 않았으면 만든 시각이다. 서버의 정렬 기준과 같은 식이다(`openapi3.yml`의 노트 목록 설명).
- *
- * **`updatedAt`이 아니다.** 제목만 고쳐도 `updatedAt`이 바뀌어서, 지난주 회의가 오늘 회의보다
- * 위에 서고 오늘 날짜 묶음으로 옮겨갔다. 회의 목록은 "무엇을 마지막으로 만졌나"가 아니라
- * "언제 열렸나"로 찾는 기록이다.
- *
- * **정렬과 날짜 묶음이 같은 값을 써야 한다.** `groupNotesByRecency`는 입력이 이미 그 키로
- * 정렬됐다고 전제하므로, 둘이 갈리면 같은 날짜 묶음이 목록에 여러 번 생긴다.
- */
 export function noteOrderedAt(note: NoteOrderFields): string {
   return note.meetingStartedAt ?? note.createdAt;
 }
 
-/**
- * 노트 화면에서 **떠 있는 카드로는** 개인 챗봇을 감출까. 노트 안에서는 **항상** 감춘다.
- *
- * - full: 오른쪽 440은 에이전트 레일이 상주하는 자리라(design.pen `L4PpR`) 개인 챗봇이 `fixed`로
- *   그 위에 뜨면 챗 UI 둘이 겹친다.
- * - side: 시트와 backdrop이 `z-50`이라 `z-30/40`인 개인 챗봇 패널·FAB는 그 아래 깔린다 —
- *   보여 봐야 누를 수 없다.
- *
- * **조회 실패도 예외로 두지 않는다.** 한때 실패면 개인 챗봇을 남기게 했는데, side에서는 위
- * 이유로 눌리지 않아 없는 구제책이었다. 실패의 정상 경로는 노트 자신의 `InlineRetry`다.
- */
 export function isPersonalChatHiddenInNote(view: "side" | "full"): boolean {
-  // 노트 안에서는 **떠 있는 카드로는** 항상 감춘다. `fixed`로 뜨면 오른쪽 440의 레일
-  // (design.pen `L4PpR`) 위에 겹쳐 챗 UI가 둘이 된다.
-  //
-  // 전체 화면에서 개인 챗봇에 못 가는 것은 아니다 — 레일이 셸의 그 패널을 자기 자리로
-  // 포털해 온다(`note-agent-rail`). 이 값이 참이어야 스코프가 워크스페이스로 남고, 그게
-  // 정본의 「나만 보는 대화 · 워크스페이스 범위」와 맞는다.
   return view === "side" || view === "full";
 }

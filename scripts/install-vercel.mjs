@@ -1,8 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-// A custom Vercel install command can select pnpm 6. Bootstrap the pinned
-// version without relying on the build container's pnpm or Corepack setting.
 const { packageManager } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8")
 );

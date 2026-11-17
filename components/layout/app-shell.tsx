@@ -1,9 +1,8 @@
 /**
- * **글꼴은 패키지(`@fontsource`)로 싣는다** (APP-1115). `next/font/google`은 빌드할 때
+ * **글꼴은 패키지(`@fontsource`)로 싣는다**. `next/font/google`은 빌드할 때
  * `fonts.gstatic.com`에서 받아서, 한글 조각 수백 개 중 하나만 끊겨도 빌드가 실패했다.
  * 패키지로 두면 `pnpm install`만으로 Vercel · 로컬 · CI가 같은 글꼴로 빌드한다.
  *
- * - 세리프(EB Garamond · Noto Serif KR)는 싣지 않는다(APP-1161) — 제목도 Inter 와 시스템 고딕이다.
  * - 변수(`--font-*`)는 `globals.css`의 `:root`가 선언한다. next/font가 `<html>` 클래스에 심던 자리다.
  */
 import "@fontsource-variable/inter/opsz.css";
@@ -32,10 +31,6 @@ import { getCurrentUserForSsr } from "@/lib/auth/server";
 import type { Locale } from "@/lib/i18n/locales";
 import "@/app/globals.css";
 
-/**
- * 두 루트 레이아웃(마케팅 `app/[lang]`, 제품 `app/(product)`)이 같이 세우는 `<html>` 과 셸.
- * 루트가 둘이라 둘 사이 이동(랜딩 → 대시보드, 로그아웃 → 랜딩)은 전체 페이지 로드다.
- */
 export async function AppShell({
   locale,
   clientNamespaces = PRODUCT_NAMESPACES,
@@ -43,12 +38,7 @@ export async function AppShell({
   children,
 }: {
   locale: Locale;
-  /** 클라이언트로 보낼 이름공간. 그 루트가 쓰는 것만 보낸다(마케팅 페이지가 대시보드 문구를 받지 않게). */
   clientNamespaces?: readonly Namespace[];
-  /**
-   * 분석 넷(GA·PostHog·Vercel)을 싣는가. 주소에 토큰이 실리는 메일 수신거부 화면만 끈다(APP-1314) — 페이지뷰가
-   * 쿼리째 나간다. 루트 레이아웃이 따로라 다른 면과 오가면 문서가 새로 열리므로, 앞 화면에서 켠 분석이 이어지지 않는다.
-   */
   analytics?: boolean;
   children: React.ReactNode;
 }) {
@@ -82,7 +72,6 @@ export async function AppShell({
             </div>
             <Toaster />
             <AccountDeletedNotice />
-            {/* Providers 안이어야 PostHog가 로그인한 사람(`useAuth`)을 안다. */}
             {analytics ? <SiteAnalytics /> : null}
           </Providers>
         </NextIntlClientProvider>

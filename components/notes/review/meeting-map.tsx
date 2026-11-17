@@ -24,12 +24,6 @@ const MARK_COLOR = {
 const at = (ms: number, lengthMs: number) =>
   `${Math.min(100, Math.max(0, (ms / lengthMs) * 100)).toFixed(2)}%`;
 
-/**
- * 막대 위에서 겹치는 표시를 한 묶음으로 모은다. 같은 줄을 인용한 항목은 때가 같아 완전히 포개지고,
- * 포개지면 위에 그린 것만 눌린다. 바로 앞 표시와 막대 길이의 1.2% 안이면 같은 묶음이다 — 표시는 3px 이고
- * 누를 자리를 넓히지 않으므로, 막대가 250px 이상이면 묶이지 않은 이웃끼리 겹치지 않는다. 고정 칸으로
- * 자르면 칸 경계 양쪽의 두 표시가 따로 묶여 다시 포개진다.
- */
 export function groupMarks(
   marks: readonly MapMark[],
   lengthMs: number
@@ -44,11 +38,6 @@ export function groupMarks(
   return groups;
 }
 
-/**
- * 「언제 정해졌나」(APP-865). 회의 길이 위에 주제 구간을 깔고, 결정 · 할 일이 나온 때를 색 막대로 찍는다 —
- * 회의의 어느 대목에서 결론이 몰렸는지 한눈에 보인다. 막대를 누르면 그 줄을 펼치고 그 자리로 간다.
- * 때를 아는 항목이 하나도 없으면 서지 않는다.
- */
 export function MeetingMap({
   lengthMs,
   chapters,
@@ -60,7 +49,6 @@ export function MeetingMap({
   marks: readonly MapMark[];
   onSelect: (itemId: string) => void;
 }) {
-  // 묶음마다 몇 번 눌렀나. 누를 때마다 묶음 안의 다음 항목으로 간다
   const t = useTranslations("notes.review.map");
   const tKind = useTranslations("notes.kinds");
   const [turns, setTurns] = useState<Record<string, number>>({});
@@ -121,7 +109,6 @@ export function MeetingMap({
         })}
         {groupMarks(marks, lengthMs).map((group) => {
           const key = group[0].itemId;
-          // 묶음은 누를 때마다 다음 항목으로 넘어간다 — 같은 때의 항목 모두에 닿는다.
           const next = group[(turns[key] ?? 0) % group.length];
           const label =
             group.length === 1
@@ -142,8 +129,6 @@ export function MeetingMap({
                 }));
                 onSelect(next.itemId);
               }}
-              // 누를 자리를 옆으로 넓히지 않는다 — 넓히면 가까운 이웃의 표시를 덮어 다른 항목이 열린다.
-              // 위아래로만 넓힌다. 묶음은 조금 길게 그린다.
               className={cn(
                 "absolute -ml-[1.5px] w-[3px] rounded-[2px] transition-transform duration-200 ease-out before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:scale-y-[1.35] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)] motion-reduce:transition-none",
                 group.length === 1 ? "top-1.5 h-3.5" : "top-1 h-[18px]"

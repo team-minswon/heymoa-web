@@ -76,7 +76,6 @@ async function fixture(
     new Request(`http://localhost${path}`)
   );
   const review: MeetingReviewResponseData = (await response!.json()).data;
-  // 현재 제안은 모두 유지로 검토를 마친 상태입니다. 복구해야 할 선택만 별도로 둡니다.
   for (const item of review.items) {
     item.projectSelected = item.included;
     for (const row of [...item.replacements, ...item.taskChanges])
@@ -233,7 +232,6 @@ describe("현재 제안에서 사라진 저장 선택", () => {
     async (decision) => {
       const f = await fixture(decision);
       const other = f.review.items.find((row) => row.itemId !== f.item.itemId)!;
-      // 같은 대상이어도 다른 항목의 선택은 해제하지 않습니다.
       other.included = false;
       other.decisions.push({
         targetId: orphanId,

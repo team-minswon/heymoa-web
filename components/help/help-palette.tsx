@@ -22,17 +22,12 @@ import { useHelpIndex } from "@/lib/help/use-help-index";
 import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
-/** 입력이 멎었다고 보는 시간. */
 const SETTLE_MS = 800;
 
 const isMac = () =>
   typeof navigator !== "undefined" &&
   /Mac|iPhone|iPad/.test(navigator.platform);
 
-/**
- * 가이드 전체 검색 팔레트. 상단바의 검색 버튼(⌘K 표시)이나 ⌘K / Ctrl+K 로 연다. 결과는 허브와 같은 줄(`HelpHitRow`)이고
- * ↑↓ 로 고르고 Enter 로 그 주제의 그 섹션으로 간다(도착한 페이지가 같은 검색어로 본문을 칠한다). 색인은 열 때 한 번 받는다.
- */
 export function HelpPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -48,8 +43,6 @@ export function HelpPalette() {
   }, []);
 
   useEffect(() => {
-    // ⌘K · Ctrl+K 는 입력칸에 포커스가 있어도 열고(브라우저의 Ctrl+K 동작은 막는다), 열려 있으면 닫는다.
-    // `/` 는 입력 중이 아닐 때만 연다. 허브의 큰 검색칸이 있으면 그쪽이 `/` 를 받는다.
     const onKey = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
@@ -85,7 +78,6 @@ export function HelpPalette() {
     () => (entries && value.trim() ? searchHelp(entries, value) : []),
     [entries, value]
   );
-  // 입력이 멎은 뒤 한 번 — 한 글자마다 세지 않는다. 검색어 원문은 보내지 않고 길이와 결과 수만 보낸다.
   useEffect(() => {
     const q = value.trim();
     if (!open || !entries || !q) return;
@@ -106,7 +98,6 @@ export function HelpPalette() {
     return [...seen];
   }, [entries]);
 
-  // 같은 페이지의 결과면 라우터 없이 그 자리로 부드럽게 가고, 닫히며 포커스가 도착한 제목에 남게 한다.
   const arrived = useRef<HTMLElement | null>(null);
   const go = (href: string) => {
     setOpen(false);
@@ -219,7 +210,6 @@ export function HelpPalette() {
             id={listId}
             role="listbox"
             aria-label={t("results")}
-            // 높이를 고정한다(APP-1356) — 주제 목록 · 결과 · 「찾지 못했어요」가 오갈 때마다 창이 217 ↔ 525px 로 늘었다 줄었다
             className="h-[52vh] overflow-y-auto p-3"
           >
             {failed ? (

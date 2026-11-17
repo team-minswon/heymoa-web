@@ -7,10 +7,6 @@ import { pickDue } from "@/lib/test/pick-due";
 
 const mutate = vi.hoisted(() => vi.fn());
 const createTask = vi.hoisted(() => vi.fn());
-/**
- * **할 일이 자기 프로젝트를 들고 온다** (APP-685). 전에는 프로젝트마다 따로 받아 합치면서
- * `useQueries` 결과 배열의 **인덱스로** 프로젝트를 대조했다.
- */
 const TASKS = vi.hoisted(() => ({
   p1: [
     { projectId: "p1", projectName: "제품", taskId: "t1", content: "지난 할 일", taskStatus: "OPEN", assignee: null, due: "2026-09-15", revision: 3 },
@@ -46,7 +42,6 @@ const TASKS = vi.hoisted(() => ({
       assignee: null,
       due: null,
       revision: 1,
-      // 연결 행이 지워졌다
       externalAgentChange: { connectionName: null, changedAt: "2026-09-15T03:00:00Z" },
     },
     { projectId: "p2", projectName: "리서치", taskId: "t5", content: "끝낸 할 일", taskStatus: "COMPLETED", assignee: null, due: null, revision: 2 },
@@ -88,10 +83,8 @@ type ListArgs = {
   projectId?: string;
   pages: number;
 };
-/** 서버처럼 상태·내 할 일·프로젝트로 거르고 `(기한, id)` 로 정렬해 준다. 개수는 상태만 뺀 거르기 안의 전체 수다. */
 const listCalls = vi.hoisted(() => [] as unknown[]);
 const MORE = vi.hoisted(() => ({ hasMore: false, limit: 100 }));
-/** 켜면 「내 할 일」 응답이 아직 안 온 것처럼 앞 거르기(전체)의 응답을 자리표시로 준다. */
 const WAITING = vi.hoisted(() => ({ mine: false }));
 vi.mock("@/lib/tasks/use-task-list-pages", async () => {
   const { compareTasks } = await import("@/lib/tasks/task-groups");
@@ -238,17 +231,14 @@ describe("AllTasks", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "내 할 일" }));
 
-    // skeleton 으로 비우면 즉답에서는 번쩍이고, 지연에서는 목록 높이가 통째로 바뀐다 (APP-1212)
     expect(screen.queryByLabelText("할 일 불러오는 중")).toBeNull();
     const list = screen.getByText("지난 할 일").closest("[aria-busy]");
     expect(list).toHaveAttribute("aria-busy", "true");
     expect(list).toHaveAttribute("inert");
-    // 앞 거르기의 「더 보기」를 이 거르기의 것처럼 세우지 않는다
     expect(screen.queryByRole("button", { name: /더 보기/ })).toBeNull();
 
     expect(screen.getByText(/진행 중 4개/).className).toContain("opacity-60");
 
-    // 같은 거르기의 응답이 도착한다 — 옅음과 잠금이 풀리고 내 할 일만 남는다
     WAITING.mine = false;
     view.rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -277,7 +267,6 @@ describe("AllTasks", () => {
     const row = (await screen.findByText("지난 할 일")).closest("li")!;
     pickDue(within(row).getByRole("button", { name: /^기한 .* 바꾸기$/ }), "2026-09-30");
 
-    // 목록 캐시를 먼저 걸고(취소 → 패치) 요청을 보내므로 한 틱 뒤에 나간다.
     await waitFor(() =>
       expect(mutate).toHaveBeenCalledWith({
         workspaceId: "w1",
@@ -354,7 +343,6 @@ describe("AllTasks", () => {
     );
   });
 
-  /** 서버가 읽은 쪽 밖에 더 있다고 하면 마지막 묶음만 덜 읽은 것이다 — 개수에 +를 붙이고 더 보기를 세운다. */
   it("쪽이 남았으면 마지막 묶음 개수에 +를 붙이고 더 보기가 쪽 수를 올린다", async () => {
     MORE.hasMore = true;
     MORE.limit = 3;
@@ -369,7 +357,6 @@ describe("AllTasks", () => {
     ]);
     expect(within(regions[0]).getByText("1")).toBeTruthy();
     expect(within(regions[2]).getByText("1+")).toBeTruthy();
-    // 머리글과 탭의 개수는 읽은 줄 수가 아니라 서버가 센 전체 수다.
     expect(screen.getByText("프로젝트 2개 · 진행 중 4개")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "할 일 더 보기" }));

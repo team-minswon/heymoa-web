@@ -24,21 +24,11 @@ import { toast } from "@/lib/ui/toast";
 
 const COPY_FORMATS: readonly ExportFormat[] = ["text", "markdown"];
 
-/**
- * 내보내기·공유 대상. **연결된 것만 메뉴에 세운다** — 아직 없는 대상(Word · Slack · Teams · Notion)을 「준비 중」으로
- * 늘어놓으면 쓸 수 있는 것이 그 사이에 묻혔다(APP-1108 이 틀로 두었던 것을 걷었다). 대상을 더할 때는 [target] 을
- * 이벤트 속성으로 그대로 쓰므로 영문 소문자 식별자로 둔다.
- */
 const EXPORT_TARGETS = [
   { target: "pdf", icon: FileText },
-  // onSendEmail 이 있을 때만 선다
   { target: "email", icon: Mail },
 ] as const;
 
-/**
- * 요약 탭 머리의 복사 · 내보내기 · 공유. **문서는 누를 때 만든다** — 확정 전 요약은 계속 바뀌고, 렌더마다 미리
- * 조립하면 그 비용을 매번 낸다. [build] 가 마크다운 한 벌을 돌려주면 형식은 여기서 갈린다.
- */
 export function ReviewActions({
   build,
   disabled,
@@ -48,31 +38,20 @@ export function ReviewActions({
   onSendEmail,
 }: {
   build: () => string;
-  /** 복사할 문서가 아직 없다. 숨기지 않는 이유는 자리가 흔들리기 때문이다. */
   disabled?: boolean;
-  /**
-   * 회의록 PDF. 요약 밖의 재료(녹취록 · 원장)까지 누를 때 읽어 오므로 비동기다. 없으면 PDF 를 열지 않는다 —
-   * 왜 없는지는 [material] 이 말한다.
-   */
   wider?: {
     minutes: (include: MinutesInclude) => Promise<MinutesDocument>;
     preparePdf?: PrepareMinutesPdf;
     version?: string;
   };
-  /**
-   * [wider] 가 아직 없는 까닭 — 녹취록을 받는 중이거나 받지 못했다. 둘 다 「준비 중」(기능이 없다)과 다르다:
-   * 받는 중이면 PDF 를 막고, 못 받았으면 메뉴에서 다시 받는다. 없으면 기능이 없는 것이다
-   */
   material?: "loading" | "failed";
   onRetryMaterial?: () => void;
-  /** 「이메일로 보내기」를 연다. 없으면 그 항목을 그리지 않는다 */
   onSendEmail?: () => void;
 }) {
   const t = useTranslations("notes.share");
   const tAction = useTranslations("common.actions");
   const [minutesOpen, setMinutesOpen] = useState(false);
 
-  // 요약 탭은 요약만 복사한다 — 타임라인은 타임라인 탭, 녹취록은 스크립트 탭이 저마다 복사한다
   const copy = async (format: ExportFormat) => {
     try {
       await copyText(renderExport(format, build()));
@@ -98,7 +77,6 @@ export function ReviewActions({
               type="button"
               variant="outline"
               size="sm"
-              // 옆 전환 컨트롤(보기)이 32px 알약이라 높이와 모서리를 맞춘다 — 낮은 네모 버튼이 같은 줄에서 따로 놀았다.
               className="h-8 rounded-full px-3"
               disabled={disabled}
               aria-label={t("copyLabel")}
@@ -133,7 +111,6 @@ export function ReviewActions({
               type="button"
               variant="outline"
               size="sm"
-              // 옆 전환 컨트롤(보기)이 32px 알약이라 높이와 모서리를 맞춘다 — 낮은 네모 버튼이 같은 줄에서 따로 놀았다.
               className="h-8 rounded-full px-3"
               aria-label={t("menuLabel")}
             />
@@ -146,13 +123,11 @@ export function ReviewActions({
           {EXPORT_TARGETS.filter(
             ({ target }) => target !== "email" || onSendEmail !== undefined
           ).map(({ target, icon: Icon }) => {
-            // PDF 와 메일은 같은 회의록 재료를 쓰므로 녹취록이 와야 연다. 노트 머리조차 안 왔으면 받는 중과 같다
             const ready = wider !== undefined;
             const waiting = ready ? undefined : (material ?? "loading");
             return (
               <DropdownMenuItem
                 key={target}
-                // 요약이 아직 없으면 회의록 본문이 빈다 — 복사와 같이 막는다. 녹취록을 받는 중이어도 막는다
                 disabled={(ready && disabled) || waiting === "loading"}
                 onClick={() => {
                   track("export_requested", { target });

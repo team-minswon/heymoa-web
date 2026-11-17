@@ -9,18 +9,6 @@ import remarkGfm from "remark-gfm";
 import { MermaidBlock } from "@/components/chat/mermaid-block";
 import { copyText } from "@/lib/ui/copy-text";
 
-/*
- * 답변 본문 렌더. 스트리밍 중에는 닫히지 않은 코드펜스·링크·표가 정상 입력이다.
- *
- * - 원시 HTML 은 안 그린다(`rehype-raw` 를 안 붙인다). 모델은 도구 결과를 그대로 옮길 수 있다.
- * - 링크는 새 탭에 `noopener noreferrer`. `javascript:` 는 기본 `urlTransform` 이 떨군다.
- * - 이미지는 안 그린다. URL 만으로 열람 사실이 밖으로 새는 픽셀이 된다.
- */
-
-/**
- * ```sql 의 `sql`. 안 닫힌 코드펜스도 정상 입력이라 hast 모양을 가정하지 않는다. 못 읽으면
- * 언어를 지어내지 않고 `null` 을 낸다.
- */
 function languageOf(node: unknown): string | null {
   const first = (
     node as
@@ -35,21 +23,18 @@ function languageOf(node: unknown): string | null {
   return typeof hit === "string" ? hit.slice("language-".length) : null;
 }
 
-/** 코드 머리줄의 복사 버튼. `read` 는 누른 순간에 읽는다 — 렌더 시점 값이면 스트리밍 중 글이 낡는다. */
 function CopyButton({ read }: { read: () => string }) {
   const t = useTranslations("chat.code");
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
-      // 고정 `aria-label` 이면 「복사됨」으로 바뀐 글자를 덮어 화면 낭독기에는 변화가 없다.
       aria-label={copied ? t("copiedLabel") : t("copyLabel")}
       className="inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 py-0.5 text-[11px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
       onClick={async () => {
         try {
           await copyText(read());
         } catch {
-          // 클립보드가 없거나 권한이 없다. 「복사됨」이라고 거짓말하지 않는다.
           return;
         }
         setCopied(true);
@@ -67,8 +52,6 @@ function CopyButton({ read }: { read: () => string }) {
 }
 
 /**
- * 코드블록. 머리줄에 언어와 복사가 선다.
- *
  * 복사할 글은 `children` 이 아니라 그려진 DOM 의 `textContent` 에서 읽는다. `innerText` 는
  * 레이아웃을 강제하고 jsdom 에 없어서, 검사가 빈 문자열을 상대로 통과한다.
  *
@@ -93,7 +76,6 @@ function CodeBlock({
         </span>
         <CopyButton read={() => ref.current?.textContent ?? ""} />
       </div>
-      {/* 긴 줄은 자기 안에서 가로 스크롤한다. 접으면 들여쓰기가 뭉개진다. */}
       <pre
         ref={ref}
         className="overflow-x-auto p-2.5 font-mono text-xs leading-relaxed"
@@ -104,17 +86,12 @@ function CodeBlock({
   );
 }
 
-/** hast 노드 아래 글자를 모은다. 코드펜스 원문이다. */
 function textOf(node: unknown): string {
   const n = node as { value?: unknown; children?: unknown[] } | undefined;
   if (typeof n?.value === "string") return n.value;
   return Array.isArray(n?.children) ? n.children.map(textOf).join("") : "";
 }
 
-/**
- * 답이 아직 흐르는 중인가. `COMPONENTS` 는 모듈 스코프라 prop 으로 못 넘겨 context 로 내린다.
- * 흐르는 동안은 펜스가 닫혔는지 몰라 도표를 안 그린다 — 토큰마다 다시 그리면 깜빡이고 무겁다.
- */
 const StreamingContext = createContext(false);
 
 function MermaidPre({
@@ -136,8 +113,6 @@ function MermaidPre({
   );
 }
 
-// 모듈 스코프에 둔다. 렌더마다 새 함수면 React 가 다른 컴포넌트로 보고 토큰마다 마크다운
-// 전체를 다시 마운트한다.
 const COMPONENTS: Components = {
   a: ({ href, children }) => (
     <a
@@ -149,7 +124,6 @@ const COMPONENTS: Components = {
       {children}
     </a>
   ),
-  // 표는 좁은 레일에서 넘친다. 페이지 전체가 가로로 밀리지 않게 자기 안에서 스크롤한다.
   table: ({ children }) => (
     <div className="my-2 overflow-x-auto">
       <table className="w-full border-collapse text-xs">{children}</table>
@@ -192,7 +166,6 @@ const COMPONENTS: Components = {
   p: ({ children }) => (
     <p className="my-3.5 [text-wrap:pretty] first:mt-0 last:mb-0">{children}</p>
   ),
-  // 본문이 14.5px 이라 h1·h2 는 17·15px, h3 는 굵기와 색으로만 가른다. 위 여백은 16·14·12px 로 문단 간격보다 넓다.
   h1: ({ children }) => (
     <h1 className="mt-5 mb-2 text-[1.0625rem] leading-snug font-semibold text-[var(--el-ink)] first:mt-0">
       {children}
@@ -214,26 +187,19 @@ const COMPONENTS: Components = {
     </blockquote>
   ),
   hr: () => <hr className="my-3 border-[var(--el-hairline)]" />,
-  // 일부러 안 그린다. 파일 머리의 sanitize 정책을 본다.
   img: () => null,
 };
 
-/** 같은 이유로 고정한다. 새 배열이면 processor 가 매번 다시 선다. */
 const REMARK = [remarkGfm];
 
-/** 낱말마다 span 을 세우지 않는다. 매끄러움은 `use-smooth-text` 가 토큰을 고르게 푸는 데서 온다. */
 export function Markdown({
   content,
   streaming = false,
 }: {
   content: string;
-  /** 토큰이 흐르는 중. 켜져 있으면 mermaid 를 그리지 않고 코드로 둔다. */
   streaming?: boolean;
 }) {
   return (
-    // 한국어 어절 단위 줄바꿈(`keep-all`)은 body 전역이 맡는다. 여기서는 끊을 자리가 없는 긴 URL·영문을 아무 데서나 끊어
-    // 패널 밖으로 안 나가게 한다.
-    // 본문 14.5px · 줄 간격 1.7, 문단 간격(14px)은 줄 사이 여백보다 넓어 문단 경계가 보인다.
     // 체크박스 목록은 표식을 뗀다. `li:has(input)` 은 자손을 봐서 상위 `li` 의 불릿까지 떼므로
     // gfm 이 붙이는 `task-list-item` 을 짚는다.
     <div className="chat-md text-[14.5px] leading-[1.7] text-[var(--el-ink)] [overflow-wrap:anywhere] [&_.task-list-item]:list-none">

@@ -26,7 +26,6 @@ vi.mock("@/components/transcription/recording-provider", () => ({
 }));
 
 vi.mock("@/lib/ui/toast", () => ({ toast }));
-// 「해결 방법」이 데스크톱 앱에서는 앱 안에서 이동한다(openSitePage) — 라우터만 있으면 된다
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspace: () => workspace.state,
@@ -54,14 +53,11 @@ describe("RecordingErrorToast", () => {
     recording.error = "실시간 스크립트 연결이 중단되었습니다.";
     view.rerender(<RecordingErrorToast />);
 
-    // 사유는 이제 이 토스트가 유일한 통로다(독에는 다시 시도만 남는다) — 자동으로 닫히면
-    // 무엇을 고쳐야 하는지 알 길이 사라지므로 사용자가 닫을 때까지 띄워 둔다.
     expect(toast.error).toHaveBeenCalledWith(
       "실시간 스크립트 연결이 중단되었습니다.",
       {
         id: "recording-error",
         duration: Infinity,
-        // 권한 거부처럼 사용자가 고칠 수 있는 사유는 도움말의 막힐 때 항목으로 보낸다
         action: expect.objectContaining({ label: "해결 방법" }),
       }
     );
@@ -117,7 +113,6 @@ describe("RecordingErrorToast", () => {
       });
 
       options.action.onClick();
-      // 설정 창은 같은 화면 안의 상태라 라우터가 아니라 주소의 `?settings=` 로 연다.
       expect(push).not.toHaveBeenCalled();
       expect(`${window.location.pathname}${window.location.search}`).toBe(
         "/w/W1?settings=billing"

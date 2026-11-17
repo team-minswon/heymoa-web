@@ -1,4 +1,3 @@
-// 녹화에 포함되는 커서. 실제 DOM click에서만 물결을 만든다.
 export function installCursor() {
   const mount = () => {
     const style = document.createElement("style");
@@ -18,7 +17,7 @@ export function installCursor() {
     document.addEventListener(
       "click",
       (e) => {
-        if (window.__helpQuiet) return; // 장면 준비용 클릭은 물결을 만들지 않는다
+        if (window.__helpQuiet) return;
         const ring = document.createElement("div");
         ring.className = "help-ripple";
         ring.style.left = `${e.clientX}px`;
@@ -38,13 +37,11 @@ export function installCursor() {
 
 const positions = new WeakMap();
 
-/** 영상에 담기지 않을 준비 클릭(커서·물결 없이). 이 절과 상관없는 패널을 치울 때 쓴다. */
 export async function quietClick(page, target) {
   await page.evaluate(() => (window.__helpQuiet = true));
   await target.click();
   await page.evaluate(() => (window.__helpQuiet = false));
 }
-/** `hold`: 커서가 대상 위에 멈춰 있는 시간(ms). 눌리기 전에 어디를 누르는지 보이게 한다. */
 export async function click(page, target, pause = 700, hold = 150) {
   await target.waitFor({ state: "visible" });
   await target.scrollIntoViewIfNeeded();
@@ -64,7 +61,6 @@ export async function click(page, target, pause = 700, hold = 150) {
   }
   positions.set(page, to);
   await page.waitForTimeout(hold);
-  // Locator의 actionability 검사와 실제 마우스 click을 함께 사용한다.
   await target.click();
   await page.waitForTimeout(pause);
 }
@@ -72,7 +68,6 @@ export async function click(page, target, pause = 700, hold = 150) {
 export async function type(page, target, text, { hold = 150, delay = 50 } = {}) {
   await click(page, target, 0, hold);
   await target.fill("");
-  // insertText는 한글에도 동작한다. pressSequentially의 한글 delay 누락을 피한다.
   for (const letter of text) {
     await page.keyboard.insertText(letter);
     await page.waitForTimeout(delay);

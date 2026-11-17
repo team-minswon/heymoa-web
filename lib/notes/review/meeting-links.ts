@@ -4,10 +4,6 @@ import type {
   ProjectMeetingLinksResponseDataMeetingLinksItem,
 } from "@/lib/api/generated/models";
 
-/**
- * 서버가 판정한 종류 중 그리는 것. 이름은 화면이 `notes.review.suggestions.relation.kinds` 에서 고른다.
- * 관계를 읽는 것으로 대상 상태나 승인을 바꾸지 않는다.
- */
 export const SHOWN_LINK_KINDS = [
   "CONFLICTS_WITH",
   "SUPERSEDES",
@@ -19,7 +15,6 @@ export const SHOWN_LINK_KINDS = [
 export type ShownLinkKind = (typeof SHOWN_LINK_KINDS)[number];
 const SHOWN: ReadonlySet<string> = new Set(SHOWN_LINK_KINDS);
 
-/** 제목을 모르면 null 이다. 화면이 「이전 회의」·「안건」 같은 말을 제 언어로 채운다 */
 export type PastNote = {
   noteId: string;
   title: string | null;
@@ -32,7 +27,6 @@ export type MeetingRelation =
     sourceItemId: string | null;
     targetItemId: string | null;
     kind: ShownLinkKind;
-    /** 이전 회의 제목. 확정 항목이거나 제목을 모르면 null */
     targetTitle: string | null;
     scope: "same" | "past" | "approved";
   };
@@ -42,7 +36,6 @@ export type MeetingLinkIndex = {
   byAgendaId: ReadonlyMap<string, PastNote[]>;
 };
 
-/** 확정 항목과 원래 명제의 판은 별개이므로 각각 같은 종류의 참조끼리 비교한다. */
 export function relationMatchesTarget(
   relation: MeetingRelation,
   target: {
@@ -69,7 +62,6 @@ const endpointKey = (
     end.revision,
   ]);
 
-/** 내용이 같아도 ID·판이 다르면 별개 관계다. 옛 서버에는 conflicts가 없다. */
 export function indexMeetingLinks(
   data: ProjectMeetingLinksResponseData | null | undefined,
   noteId: string,
@@ -105,7 +97,6 @@ export function indexMeetingLinks(
       : null;
   const seen = new Set<string>();
   const relations: MeetingRelation[] = [];
-  // 강한 관계를 먼저 둔다. 같은 방향·끝점·종류만 중복으로 처리한다.
   for (const link of [...(data.conflicts ?? []), ...data.meetingLinks]) {
     if (link.source.noteId !== noteId || !SHOWN.has(link.kind)) continue;
     const key = JSON.stringify([

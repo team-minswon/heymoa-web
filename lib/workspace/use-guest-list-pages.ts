@@ -9,15 +9,6 @@ import {
 
 export const GUEST_LIST_PAGE_SIZE = 30;
 
-/**
- * 임시 참여자 **관리 화면**의 목록. 쪽 수만큼 이어 붙인 한 응답을 돌려준다 (APP-1032).
- *
- * 쪽 수가 키에 들어가고 응답은 한 덩어리라, 목록 캐시를 만지는 쪽(삭제·연동의 무효화)은 그대로 읽는다. 키의 첫 칸은
- * 생성 훅과 같은 경로라 `invalidateQueries({ queryKey: getGetWorkspaceGuestsQueryKey(id) })` 가 이 목록도 집는다.
- *
- * **선택 상자와 화자 드롭다운은 이걸 쓰지 않는다.** 그쪽은 후보를 전건에서 세우므로 `limit` 없이 전건을 부르는
- * 생성 훅 그대로다 — 쪽으로 자르면 후보가 조용히 빠진다.
- */
 export function useGuestListPages({
   workspaceId,
   pages,
@@ -50,7 +41,6 @@ export function useGuestListPages({
         try {
           response = await getWorkspaceGuests(workspaceId, params, { signal });
         } catch (error) {
-          // 첫 쪽이 아니면 이미 읽은 것까지만 돌려준다 — 던지면 보던 목록이 통째로 사라진다.
           if (page > 0 && !signal.aborted) {
             partial = true;
             break;
@@ -74,8 +64,6 @@ export function useGuestListPages({
       }
       const tail = last?.status === 200 ? last.data.data : undefined;
       return {
-        // **뒷쪽을 못 읽었음을 알린다.** 계약 밖의 표시라 `data` 에 넣지 않는다 — 읽은 곳까지만 든 응답을 완전한 목록으로
-        // 읽으면 못 읽은 쪽의 사람이 「이미 지워졌다」로 보인다(삭제 확인창).
         partial,
         status: 200,
         headers: last?.headers ?? new Headers(),

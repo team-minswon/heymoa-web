@@ -133,7 +133,6 @@ describe("TermEditor 여러 개 한 번에", () => {
     });
     const list = screen.getByRole("list", { name: "넣은 용어" });
     expect(list).toHaveTextContent("핀볼");
-    // 빠지는 칩은 퇴장 애니메이션이 끝나야 사라진다
     await waitFor(() => expect(list).not.toHaveTextContent("결제 승인"));
   });
 

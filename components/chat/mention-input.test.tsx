@@ -30,7 +30,6 @@ describe("MentionInput.prepend", () => {
     const probe = document.createRange();
     probe.setStart(box, 0);
     probe.setEnd(caret.startContainer, caret.startOffset);
-    // 칩 하나 + 공백 하나가 캐럿 앞에 있다
     expect(probe.cloneContents().childNodes.length).toBe(2);
     expect(probe.toString().endsWith(" ")).toBe(true);
   });

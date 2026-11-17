@@ -11,7 +11,6 @@ export type InAppBrowser =
 export type HandoffOs = "ios" | "android" | "other";
 export type HandoffContext = { app: InAppBrowser; os: HandoffOs };
 
-/** Landing entry carries advertising tags; authentication starts later in the new browser. */
 export function buildBrowserLandingUrl(href: string, context: HandoffContext) {
   const current = new URL(href);
   if (!/^https?:$/.test(current.protocol))
@@ -47,7 +46,6 @@ export function handoffOs(ua: string): HandoffOs {
   return /iPhone|iPad|iPod/i.test(ua) ? "ios" : "other";
 }
 
-/** Only classification travels in analytics; never the destination or an OAuth credential. */
 export function parseHandoffContext(
   app: string | null,
   os: string | null
@@ -69,7 +67,6 @@ export function parseHandoffContext(
   return { app: app as InAppBrowser, os: os as HandoffOs };
 }
 
-/** Anonymous PostHog IDs carried across a handoff (`withAnalyticsHandoff`); never kept in returnTo. */
 export const HANDOFF_ANALYTICS_PARAMS = ["ph_did", "ph_sid", "ph_ts"] as const;
 
 export function buildBrowserLoginUrl(
@@ -86,7 +83,6 @@ export function buildBrowserLoginUrl(
       ? current.searchParams.get("returnTo")
       : current.pathname + current.search);
   const back = new URL(normalizeReturnTo(original), current.origin);
-  // Never move credentials from a callback or an accidentally decorated page to another app.
   for (const key of [
     "code",
     "access_token",
@@ -99,7 +95,6 @@ export function buildBrowserLoginUrl(
     back.searchParams.delete(key);
   }
   if (!back.pathname.startsWith("/oauth/")) back.searchParams.delete("state");
-  // Signed mail links keep their original layout, including analytics=false on /unsubscribe.
   const keepOriginalPage =
     back.pathname === "/invite" ||
     back.pathname === "/unsubscribe" ||
@@ -140,7 +135,6 @@ export function externalBrowserUrl(
   if (context.os === "android") {
     return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${url.protocol.slice(0, -1)};action=android.intent.action.VIEW;package=com.android.chrome;end`;
   }
-  // shortcut: Meta's private schemes can change; keep manual instructions and verify on app updates.
   if (context.os === "ios" && context.app === "instagram")
     return `instagram://extbrowser/?url=${encoded}`;
   if (context.os === "ios" && context.app === "threads")

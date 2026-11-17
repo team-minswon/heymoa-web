@@ -1,9 +1,5 @@
 import { parseScript } from "@/lib/mocks/help-demo/script";
 
-/**
- * 짧은 종료 회의의 대사. 목록과 회의 화면의 밀도를 채우는 것이 목적이라 8줄 안팎으로 둔다.
- * 키는 `notes.ts` 의 회의 열쇠와 같다.
- */
 export const SMALL_SCRIPTS = {
   influencer: parseScript(`
 A Let's line up the influencer collab schedule first. Four creators total, and shoots start next week.

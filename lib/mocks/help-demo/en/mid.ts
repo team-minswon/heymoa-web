@@ -20,7 +20,6 @@ export const MID_MEETINGS: Record<MidKey, MidMeeting> = {
   brand: BRAND_MEETING,
 };
 
-/** 중간 길이 회의의 회의 뒤 흐름 상태. 확정된 것과 검토 전인 것을 섞는다. */
 export const MID_FLOW: Record<MidKey, "REVIEWABLE" | "CONFIRMED"> = {
   visual: "REVIEWABLE",
   abtest: "CONFIRMED",

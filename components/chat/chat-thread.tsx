@@ -41,10 +41,8 @@ import type { PendingApprovalCard } from "@/lib/chat/use-tool-approval";
 
 export type ThreadMessage = AgentChatMessagesResponseDataMessagesItem;
 
-/** 스크롤 상자의 위 여백. 원본은 `personal-chat.tsx` 의 `p-6` 이라 저쪽을 고치면 같이 고친다. */
 const THREAD_PAD_PX = 24;
 
-// 토큰마다 스레드가 다시 그려져도 `at` 이 같으면 포매터를 다시 만들지 않는다.
 const TimeDivider = memo(function TimeDivider({ at }: { at: string }) {
   // 앱 언어로 적는다. 비우면 브라우저 언어를 따라 「어제 11:44 PM」이 섞인다
   const locale = useLocale();
@@ -57,7 +55,6 @@ const TimeDivider = memo(function TimeDivider({ at }: { at: string }) {
   );
 });
 
-/** 채팅 한 스레드. 히스토리 배열과 진행 중 스트림 상태만 받는다. */
 export function ChatThread({
   messages,
   stream,
@@ -74,34 +71,17 @@ export function ChatThread({
 }: {
   messages: ThreadMessage[];
   stream: ChatStreamState;
-  /** 방금 보냈지만 아직 히스토리에 없는 유저 메시지. */
   pendingUserMessage: string | null;
-  /**
-   * 그 질문을 보낸 시각. 서버 `createdAt` 을 기다리면 히스토리로 넘어가는 순간 구분선이
-   * 끼어들어 화면이 밀린다. 렌더마다 `Date.now()` 를 읽으면 메모가 안 걸리므로 보낼 때
-   * 한 번 붙든 값을 준다.
-   */
   pendingUserAt?: string | null;
-  /**
-   * 마지막 질문 아래에 남길 자리(px). 있으면 그 질문이 스크롤 맨 위로 간다. 값은 패널이
-   * 잰다. 이 대화에서 아직 보낸 게 없으면 비운다 — 옛 대화를 열자마자 읽을 것이 위로 밀린다.
-   */
   pinSlackPx?: number | null;
-  /** 방금 보낸 질문의 범위. 여기서 안 그리면 히스토리로 넘어갈 때 칩이 생기며 아래가 밀린다. */
   pendingUserScope?: HistoryScope;
   onApprove: (decision: ApprovalDecision) => void;
-  /** 훅이 소유하는 승인 카드. pending이 사라진 뒤에도 무효화 카드를 남기려고 stream이 아니라 이걸 그린다. */
   approvalCard?: PendingApprovalCard | null;
   emptyState?: React.ReactNode;
-  /** 도구 칩·근거 칩을 눌러 그 회의록으로 간다. */
   onOpenNote?: (noteId: string) => void;
-  /** 지금 도는 턴(`activeTurn.turnId`). 이 턴의 히스토리 행만 끝난 턴으로 닫지 않는다. */
   activeTurnId?: string | null;
-  /** 사용자가 멈춘 턴(`lastTurn` 이 CANCELLED). 그 답 끝에 「중지됨」을 단다. */
   cancelledTurnId?: string | null;
 }) {
-  // 스트리밍 중에는 토큰마다 다시 그려지므로 구분선 계산을 붙든다. 구분선은 메시지가 아니라
-  // 묶음의 첫 시각으로 잰다 — 화면에 안 그려지는 행이 구분선을 삼키지 않게.
   const rows = useMemo(
     () => groupHistory(messages, activeTurnId),
     [activeTurnId, messages]
@@ -115,7 +95,6 @@ export function ChatThread({
     [pendingUserAt, rows]
   );
 
-  // 맨 위로 올릴 질문의 시작 행. 보내는 중이면 끝자리, 아니면 마지막 USER 행이다.
   const pinStart = useMemo(() => {
     if (pendingUserMessage) return rows.length;
     for (let index = rows.length - 1; index >= 0; index -= 1) {
@@ -127,8 +106,6 @@ export function ChatThread({
     return rows.length;
   }, [pendingUserMessage, rows]);
 
-  // 위에 옛 대화가 없으면 스크롤 상자의 위 여백만큼 덜 준다. 안 빼면 바닥까지 내려도 볼 것
-  // 없는 칸이 24px 남는다.
   const slack =
     pinSlackPx && pinStart === 0
       ? Math.max(0, pinSlackPx - THREAD_PAD_PX)
@@ -139,8 +116,6 @@ export function ChatThread({
     return <div className="flex flex-1 flex-col gap-3">{emptyState}</div>;
   }
 
-  // 커서로 이어받은 턴은 커서 앞 단계가 히스토리 행으로, 뒤가 스트림으로 온다. 따로 그리면 처음부터
-  // 흘렀을 때와 달리 묶음이 둘로 갈리므로 그 행을 스트림 앞에 붙여 한 묶음으로 그린다.
   const lastRow = rows.at(-1);
   const carried =
     lastRow?.kind === "steps" &&
@@ -148,13 +123,10 @@ export function ChatThread({
     lastRow.turnId === activeTurnId &&
     stream.turnId === activeTurnId &&
     stream.phase !== "idle" &&
-    // 돌아와서 본 승인 대기는 스트림을 안 열어 블록이 없다. 그 단계는 히스토리가 그대로 그린다.
-    // 이어받아 흐르다 물은 승인은 블록이 있으니 한 묶음을 지킨다.
     (stream.phase !== "awaiting_approval" || stream.blocks.length > 0)
       ? lastRow
       : null;
 
-  // 마지막 답의 손잡이 줄은 늘 보인다. 흐르다 끝난 로컬 답이 있으면 그쪽이 마지막이다
   const localAnswerLast =
     stream.phase === "done" && pendingUserMessage !== null;
   const lastAnswerIndex = localAnswerLast
@@ -200,23 +172,11 @@ export function ChatThread({
     );
 
   return (
-    // 위에서부터 쌓는다. 아래 정렬이면 짧은 대화 위에 빈 띠가 크게 남는다. 하단 추적은
-    // 스크롤 로직이 맡는다.
     <div className="flex flex-1 flex-col gap-5">
       {rows.slice(0, pinStart).map(row)}
 
-      {/*
-       * 마지막 턴에 뷰포트 높이만큼 최소 높이를 줘서 질문이 스크롤 맨 위에 서게 한다.
-       * 답이 자라는 만큼 남는 자리가 줄어 scrollHeight 가 그대로라 `useStickToBottom` 과
-       * 안 싸운다. 턴이 끝나도 걷지 않는다 — 걷으면 그 높이만큼 아래가 한 번에 올라온다.
-       */}
       <div
         data-testid="chat-pinned-turn"
-        /**
-         * 위 여백은 구분선이 화면 끝에 붙어 잘려 보이지 않게 하는 자리다. 위에 아무것도
-         * 없으면 스크롤 상자의 `p-6` 과 겹쳐 두 벌이 되므로 안 준다. `border-box` 라
-         * `minHeight` 안에 들어가고 스크롤 끝을 밀지 않는다.
-         */
         className={cn(
           "flex flex-col gap-5",
           slack && pinStart > 0 && "pt-6",
@@ -260,7 +220,6 @@ export function ChatThread({
           />
         ) : null}
 
-        {/* 답 꼬리(참고 회의록 · 손잡이 줄)는 히스토리 행과 같은 간격으로 붙는다. 답이 히스토리로 넘어가도 자리가 같다. */}
         {stream.phase === "done" ? (
           <div className="-mt-2.5 flex flex-col gap-2.5 empty:hidden">
             <StreamTail stream={stream} onOpenNote={onOpenNote} />
@@ -279,11 +238,6 @@ export function ChatThread({
   );
 }
 
-/**
- * 히스토리 행의 범위·근거. USER 행은 그 턴에 쓴 범위, ASSISTANT 행은 에이전트가 본 것이다.
- * `unavailable` 은 지워졌거나 권한을 잃은 것인데 둘을 가르지 않는다 — 가르면 워크스페이스
- * 밖 id 의 존재 여부가 샌다.
- */
 type HistoryScope = NonNullable<ThreadMessage["scope"]>;
 
 function usableRefs(scope: HistoryScope | undefined) {
@@ -302,9 +256,7 @@ function HistoryMessage({
 }: {
   message: ThreadMessage;
   onOpenNote?: (noteId: string) => void;
-  /** 대화의 마지막 답. 손잡이 줄이 늘 보인다. */
   last?: boolean;
-  /** 사용자가 멈춘 답. 끝에 「중지됨」을 단다. */
   stopped?: boolean;
 }) {
   if (message.role === "USER")
@@ -317,12 +269,9 @@ function HistoryMessage({
     );
   if (message.role === "ASSISTANT") {
     return (
-      // `group/msg` 로 이름을 붙여야 이 답에 손이 닿았을 때만 손잡이 줄이 뜬다.
       <div className="group/msg flex flex-col gap-2.5">
         <AssistantText content={message.content} />
         {stopped ? <StoppedMark /> : null}
-        {/* 스트림이 끝나면 이 행이 라이브 말풍선을 대신한다. 여기서 안 그리면
-            근거 줄이 몇 초 떴다가 사라진다. */}
         <AnswerRefs refs={usableRefs(message.scope)} onOpenNote={onOpenNote} />
         <MessageActions
           content={message.content}
@@ -333,18 +282,11 @@ function HistoryMessage({
     );
   }
 
-  // TOOL·THINKING 행은 여기 안 온다 — `groupHistory`가 스트림과 같은 블록으로 접어 낸다.
   return null;
 }
 
-/** 「복사함」이 되돌아가기까지. 눌린 것이 보일 만큼만이고 잰 값은 아니다. */
 const COPIED_MS = 1600;
 
-/**
- * 답 하나에 딸린 손잡이 줄(복사 · 시각). 조건부로 그리면 손이 닿을 때 아래가 밀려서 투명하게 자리를 잡아 둔다. 데스크톱은
- * 답에 손이 닿거나 키보드 포커스가 들어올 때 뜨고, 마지막 답(`pinned`)과 마우스가 없는 화면(터치)에서는 늘 보인다 — 「복사가
- * 어디 있지」를 줄인다.
- */
 function MessageActions({
   content,
   at,
@@ -366,7 +308,6 @@ function MessageActions({
   }, [copied]);
 
   const copy = () => {
-    // `copyText` 는 reject 로 알리니 여기서 삼킨다 — 던지면 스레드가 통째로 안 그려진다.
     void copyText(content)
       .then(() => setCopied(true))
       .catch(() => undefined);
@@ -394,7 +335,6 @@ function MessageActions({
       <span className="text-xs tabular-nums">
         {relativeUpdatedAt(at, new Date(), tDates, locale)}
       </span>
-      {/* 눌렀는지 화면 읽기에도 한 번 말한다 */}
       <span className="sr-only" aria-live="polite">
         {copied ? t("copiedAnnounce") : ""}
       </span>
@@ -402,27 +342,17 @@ function MessageActions({
   );
 }
 
-// 히스토리 행을 스트림과 같은 블록으로 되돌린다. 흐를 때와 끝난 뒤의 모양이 같아야 한다.
 type HistoryRow = { at: string } & (
   | {
       kind: "steps";
       turnId: string | null;
       blocks: StepBlock[];
-      /**
-       * 생각을 시작한 시각. 바로 앞이 질문이면 그 시각이다 — 흐를 때 초를 질문을 보낸 시각부터 세므로, 첫 단계 행부터 세면
-       * 새로고침한 뒤 초가 짧아지고 단계 행이 하나뿐이면 0초라 시간이 아예 빠진다.
-       */
       startedAt: string;
-      /** 마지막 단계 행의 시각. 첫 본문 토큰 바로 앞이라 흐를 때 「생각 중」이 끝난 시각과 맞는다. */
       endedAt: string;
     }
   | { kind: "message"; message: ThreadMessage }
 );
 
-/**
- * TOOL 행의 `scope` 를 스트림의 `target` 모양으로 되돌린다. 계약의 `kind` 는 대문자,
- * 스트림은 소문자다. 도구 한 번은 한 곳을 향하므로 첫 항목만 본다.
- */
 function historyTarget(
   scope: HistoryScope | undefined
 ): Extract<StepBlock, { kind: "tool" }>["target"] {
@@ -432,7 +362,6 @@ function historyTarget(
   return { kind, id: first.id, title: first.title };
 }
 
-// 승인 기록(`decision`)과 실행 기록(`status`)은 계약상 배타다. 둘 다 아니면 안 그린다.
 function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
   const event = message.toolEvent;
   if (!event) return null;
@@ -442,8 +371,6 @@ function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
       approvalId: `history-${index}`,
       toolCallId: `history-${index}`,
       tool: event.tool,
-      // 히스토리 `toolEvent` 에는 승인 요약이 없다. `content` 는 「…님이 승인」이라 붙이면
-      // 같은 말을 두 번 하고, 도구 id 를 넣으면 카드와 이름이 갈린다. 비우면 그 자리를 안 그린다.
       summary: null,
       card: parseApprovalCard(event.card),
       decision: event.decision,
@@ -455,7 +382,6 @@ function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
       toolCallId: `history-${index}`,
       tool: event.tool,
       summary: message.content,
-      // server 가 `tool_call_start` 의 `target` 을 TOOL 행의 `scope` 로 굳혀 준다.
       target: historyTarget(message.scope),
       status: event.status,
       url: event.url,
@@ -464,17 +390,11 @@ function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
   return null;
 }
 
-/**
- * 스트림과 같은 묶음으로 접는다. `TOOL`·`THINKING` 만 이리 온다 — 새 role 을 여기 안 적으면
- * `HistoryMessage` 가 null 을 돌려 그 행이 조용히 사라진다.
- */
 function groupHistory(
   messages: ThreadMessage[],
   activeTurnId: string | null
 ): HistoryRow[] {
   const rows: HistoryRow[] = [];
-  // 히스토리 행에는 `toolCallId` 가 없다. server 는 승인 뒤 재개에서 그 도구를 먼저 실행해 결과를
-  // 쓰므로, APPROVED 뒤 첫 결과 행이 그 승인의 짝이다.
   let approvedCallId: string | null = null;
   messages.forEach((message, index) => {
     if (message.role === "TOOL" || message.role === "THINKING") {
@@ -492,8 +412,6 @@ function groupHistory(
       const last = rows.at(-1);
       if (last?.kind === "steps") {
         last.endedAt = message.createdAt;
-        // 스트림은 이어지는 `thinking_delta` 를 앞 블록에 붙이는데 server 는 델타마다 한 행으로
-        // 굳힌다. 여기서도 구분자 없이 이어 붙여야 턴이 끝날 때 줄 수가 안 바뀐다.
         const previous = last.blocks.at(-1);
         if (previous?.kind === "thinking" && step.kind === "thinking") {
           last.blocks[last.blocks.length - 1] = {
@@ -528,14 +446,12 @@ function groupHistory(
   );
 }
 
-/** 유저 발화. 오른쪽 정렬이고, 범위는 입력할 때처럼 문장 안에 칩으로 둔다. */
 function UserBubble({
   content,
   scope,
   onOpenNote,
 }: {
   content: string;
-  /** 이 질문이 쓴 범위. 대화가 아니라 턴의 값이라 말풍선마다 다를 수 있다. */
   scope?: HistoryScope;
   onOpenNote?: (noteId: string) => void;
 }) {
@@ -548,7 +464,6 @@ function UserBubble({
   );
 }
 
-/** 정규식에 넣을 제목. 괄호·물음표가 든 제목이 실제로 있다. */
 function escapeForRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -573,18 +488,12 @@ function livingScope(scope?: HistoryScope) {
   );
 }
 
-/**
- * 보낸 문장에서 범위를 칩으로 되돌린다. 마커(`@[제목](noteId:…)`)가 있으면 그 자리를 쓰고
- * 누를 수 있다. 마커가 없는 옛 메시지는 제목을 찾아 칩만 그린다(id 가 없어 못 누른다).
- * 어느 쪽이든 범위 배열에 없는 것은 칩으로 안 그린다 — 마커는 손으로도 칠 수 있다.
- */
 function withScopeChips(
   content: string,
   scope?: HistoryScope,
   onOpenNote?: (noteId: string) => void
 ) {
   const living = livingScope(scope);
-  // 배열에 없는 마커는 파서가 글자로 내므로 아래 `find` 는 늘 찾는다.
   const parts = splitScopeMarkers(content, new Set(living.map(scopeKey)));
   if (parts.length > 0) {
     return parts.map((part, index) => {
@@ -609,8 +518,6 @@ function withScopeChips(
 
   if (living.length === 0) return content;
 
-  // 긴 제목부터. 짧은 것이 긴 것의 일부일 때(「회고」 ⊂ 「스프린트 회고」) 긴 쪽이 먼저
-  // 걸려야 반쪽짜리 칩이 안 생긴다.
   const byLength = [...living].sort((a, b) => b.title.length - a.title.length);
   const pattern = new RegExp(
     `(${byLength.map((each) => escapeForRegExp(each.title)).join("|")})`,
@@ -619,15 +526,10 @@ function withScopeChips(
   return content.split(pattern).map((part, index) => {
     const hit = byLength.find((each) => each.title === part);
     if (!hit) return part;
-    // 옛 문장은 제목으로만 이어져 동명 회의록을 못 가르므로 못 누르게 둔다.
     return <ScopeChipMark key={index} kind={hit.kind} title={part} />;
   });
 }
 
-/**
- * 말풍선 안의 범위 칩. 입력창 칩과 같은 class 를 쓴다(`scope-chip.ts`). 문장 안이라 밑줄
- * 대신 hover 로 눌리는 것을 보인다.
- */
 function ScopeChipMark({
   kind,
   title,
@@ -642,7 +544,6 @@ function ScopeChipMark({
   const inside = (
     <>
       <Icon aria-hidden className="size-3.5 shrink-0 self-start mt-[2px]" />
-      {/* 자르지 않는다 — 범위가 무엇인지 끝까지 보여야 한다. 길면 칩 안에서 줄을 바꾼다 */}
       <span>{title}</span>
     </>
   );
@@ -658,7 +559,6 @@ function ScopeChipMark({
       type="button"
       data-scope-chip={kind}
       onClick={onOpen}
-      // 아래 「찾은 곳」 칩과 접근성 이름이 같아지지 않게 「열기」를 붙인다.
       aria-label={t("openScope", { title })}
       className={scopeChipClass(kind, {
         extra: "cursor-pointer hover:brightness-95",
@@ -669,10 +569,6 @@ function ScopeChipMark({
   );
 }
 
-/**
- * 에이전트 발화. 이름·시각·커서를 안 붙인다. 시각은 서버 저장 뒤에야 와서 답이 끝나는
- * 순간 줄이 끼어든다.
- */
 function AssistantText({
   content,
   partial,
@@ -680,10 +576,8 @@ function AssistantText({
 }: {
   content: string;
   partial?: boolean;
-  /** 지금 토큰이 흐르고 있다. 고르게 푸는 것만 켠다. */
   streaming?: boolean;
 }) {
-  // 받은 것을 곧바로 안 그린다 — 덩어리로 오는 것을 고른 속도로 푼다(`use-smooth-text`).
   const shown = useSmoothText(content, Boolean(streaming));
   return (
     <div
@@ -692,7 +586,6 @@ function AssistantText({
       data-partial={partial ? "true" : undefined}
       className={cn(partial && "opacity-60")}
     >
-      {/* 흐름이 끝난 직후 한 렌더는 아직 덜 푼 글이다. 그때도 도표를 그리지 않는다. */}
       <Markdown
         content={shown}
         streaming={Boolean(streaming) || shown !== content}
@@ -701,17 +594,12 @@ function AssistantText({
   );
 }
 
-/**
- * 보낸 뒤 첫 블록이 오기 전까지 서는 줄. 단계가 흐를 때의 머리줄과 같은 모양·같은 자리라 첫 단계가 와도 줄이 안 바뀐다.
- * 초는 질문을 보낸 시각부터 센다 — 첫 단계의 묶음도 같은 시각에서 세어 이어진다.
- */
 function ThinkingLine({
   stream,
   pending,
   startedAt,
 }: {
   stream: ChatStreamState;
-  /** 말풍선은 섰는데 스트림이 아직 안 열렸다. 새 대화는 대화를 만드는 동안 `phase` 가 `idle` 이다. */
   pending: boolean;
   startedAt: string | null;
 }) {
@@ -721,10 +609,6 @@ function ThinkingLine({
   return <PendingProgress startedAt={startedAt} />;
 }
 
-/**
- * 진행 중 스트림을 블록 순서대로 그린다. 생각·도구·승인이 이어지면 한 묶음으로 접고,
- * 본문이 끼면 묶음이 끊긴다.
- */
 function StreamBlocks({
   stream,
   carried,
@@ -732,9 +616,7 @@ function StreamBlocks({
   onOpenNote,
 }: {
   stream: ChatStreamState;
-  /** 커서 앞 히스토리 단계. 스트림 앞에 붙여 한 묶음으로 그린다. */
   carried: { startedAt: string; blocks: StepBlock[] } | null;
-  /** 이 탭이 질문을 보낸 시각. 첫 묶음의 초가 「생각 중」 줄에서 끊기지 않고 이어진다. */
   startedAt: string | null;
   onOpenNote?: (noteId: string) => void;
 }) {
@@ -752,8 +634,6 @@ function StreamBlocks({
   );
   if (groups.length === 0) return null;
 
-  // `turn_failed` 는 본문 블록을 걷으므로, 실패인데 본문이 남았으면 재연결을 포기한 것이다
-  // (`endStream`).
   const isPartial =
     stream.phase === "cancelled" ||
     (stream.phase === "failed" &&
@@ -799,10 +679,6 @@ function StreamBlocks({
   );
 }
 
-/**
- * 사용자가 멈춘 답의 끝. 끊긴 문장이 완성된 답과 똑같아 보이면 「여기까지가 전부인가」를 잘못 읽는다(처음 사용자 재검사 N-2).
- * 배너가 아니라 작은 회색 한 줄이다 — 멈춘 것은 사용자가 한 일이라 오류처럼 보이면 안 된다.
- */
 function StoppedMark() {
   const t = useTranslations("chat.thread");
   return (
@@ -816,7 +692,6 @@ function StoppedMark() {
   );
 }
 
-/** 결정이 끝난 승인. 같은 카드가 제자리에 남고 상태만 바뀐다. */
 function ResolvedApproval({
   group,
 }: {
@@ -826,14 +701,12 @@ function ResolvedApproval({
   return (
     <ApprovalCard
       card={approval.card}
-      // 히스토리의 승인 행에는 요약이 없다. 짝인 결과 행의 요약이 같은 일을 사람 말로 적는다.
       summary={approval.summary ?? tool?.summary ?? null}
       status={resolvedStatus(approval.decision, tool)}
     />
   );
 }
 
-/** 근거 줄. 끝나지 않은 답에 결론을 붙이지 않게 `done` 에서만 선다. */
 function StreamTail({
   stream,
   onOpenNote,
@@ -845,12 +718,10 @@ function StreamTail({
   return <AnswerRefs refs={stream.refs} animate onOpenNote={onOpenNote} />;
 }
 
-// 「다시 보내기」는 없다. 서버가 문장을 안 받아 갔으면 `send` 가 컴포저로 되돌린다.
 function StreamNotice({ stream }: { stream: ChatStreamState }) {
   const t = useTranslations("chat");
   if (stream.phase === "failed") {
     const error = stream.error;
-    // 서버 문구가 먼저다. 코드만 왔으면 코드의 문구, 모르는 코드면 기본 문구다
     const failure =
       `errors.turnFailures.${error?.code}` as "errors.turnFailures.INTERNAL_ERROR";
     return (
@@ -865,7 +736,6 @@ function StreamNotice({ stream }: { stream: ChatStreamState }) {
       />
     );
   }
-  // 중지는 사용자가 한 일이라 배너를 안 세운다. 흐리게 남은 답이 이미 그 말을 한다.
   return null;
 }
 

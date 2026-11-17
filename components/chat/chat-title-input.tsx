@@ -8,14 +8,6 @@ import {
 } from "@/lib/chat/rename-chat";
 import { cn } from "@/lib/utils";
 
-/**
- * 대화 제목 그 자리 편집. Enter·바깥 클릭은 저장, Esc 는 취소. 비었거나 그대로면 저장하지 않는다.
- *
- * 값은 처음 한 번만 받는다(`defaultValue`) — 편집 중에 AI·다른 탭의 제목이 도착해도 쓰던 글자를 덮지 않는다.
- *
- * 끝나면 입력이 사라진다. 그 자리로 포커스를 돌려줄지(`restoreFocus`)는 끝난 방식이 정한다 — Enter·Esc 는 늘,
- * blur 는 포커스가 갈 곳 없이 빠졌을 때만이다. 다른 버튼을 눌러 빠졌으면 그 버튼에서 뺏지 않는다.
- */
 export function ChatTitleInput({
   initial,
   label,
@@ -30,7 +22,6 @@ export function ChatTitleInput({
   className?: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
-  // Enter 로 끝낸 뒤 사라지며 나는 blur 가 한 번 더 저장하지 않게
   const finished = useRef(false);
 
   useEffect(() => {
@@ -59,7 +50,6 @@ export function ChatTitleInput({
           event.preventDefault();
           finish(event.currentTarget.value, true);
         } else if (event.key === "Escape") {
-          // 패널·대화상자의 Esc 로 번지지 않게
           event.preventDefault();
           event.stopPropagation();
           finish(null, true);

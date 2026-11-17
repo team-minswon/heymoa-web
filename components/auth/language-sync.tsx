@@ -17,19 +17,6 @@ export const reloadForAccountLanguage = {
   run: () => window.location.reload(),
 };
 
-/**
- * 로그인한 제품 화면이 처음 뜬 뒤 계정과 언어 쿠키를 **문서마다 한 번** 맞춘다(APP-1285). 판정은 `decideLanguageSync`.
- *
- * 제품 루트(`app/(product)/layout.tsx`)에만 둔다. 마케팅 면의 언어는 주소가 정하므로 `/en` 랜딩에 들어온 것을 고른
- * 것으로 치면 안 된다. 계정 저장이 실패해도 화면은 이미 그 언어라 알리지 않는다 — 사용자가 한 행동이 아니고, 다음
- * 문서에서 다시 시도한다.
- *
- * - 저장은 `trackInitialLanguageSave` 에 걸어 둔다. 설정의 언어 탭이 이것이 끝난 뒤에 저장해야, 늦게 닿은 초기값이
- *   방금 고른 언어를 되돌리지 않는다.
- * - SSR 이 계정을 놓치고(세션 조회 일시 실패·`refresh_required`) 클라이언트가 계정을 되찾으면, 화면은 쿠키·브라우저
- *   언어로 그려져 계정과 다를 수 있다. 그때는 쿠키를 계정 값으로 쓰고 **한 번** 새로 연다. 새 문서는 SSR 이 또 계정을
- *   놓쳐도 그 쿠키로 같은 언어를 그리므로 다시 새로 열지 않는다.
- */
 export function LanguageSync() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -57,7 +44,6 @@ export function LanguageSync() {
       const language = action.account;
       trackInitialLanguageSave(mutateAsync({ data: { language } }))
         .then(() => {
-          // 그사이 바뀐 사용자 정보를 덮지 않게 언어만 고친다.
           queryClient.setQueryData<AuthUser | null>(["user"], (current) =>
             current ? { ...current, language } : current
           );

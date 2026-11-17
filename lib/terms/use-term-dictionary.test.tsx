@@ -127,7 +127,6 @@ describe("useTermDictionary", () => {
         rejected: [{ term: "헬름 차트", reason: "LIMIT" }],
       })
     );
-    // 거절된 칩은 빠지고, 나머지는 실제 id 를 받는다
     await waitFor(() =>
       expect(termsOf(client).map((t) => t.termId)).toEqual(["a", "b"])
     );
@@ -249,7 +248,6 @@ describe("useTermDictionary", () => {
       result.current.addMany(["B"]);
     });
     await waitFor(() => expect(termsOf(client)).toHaveLength(2));
-    // 앞 요청이 끝나기 전에 뒤 요청은 나가지 않는다
     expect(calls).toEqual(["A"]);
 
     await act(async () => replies[0].reject(new Error("boom")));

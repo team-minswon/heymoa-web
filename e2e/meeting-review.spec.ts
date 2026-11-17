@@ -1,9 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/**
- * 회의 뒤 검토를 서비스 워커 목으로 끝까지 굴린다. vitest 는 jsdom 이라 브라우저 목 경로와
- * 실제 레이아웃(좁은 화면의 넘침, 붙박이 확정 줄)을 지나지 않는다 — 그 둘을 여기서 본다.
- */
 const WORKSPACE_ID = "01K0000000000";
 const MENTORING_NOTE = "01K0000000920";
 const ANALYZING_NOTE = "01K0000000022";
@@ -116,7 +112,6 @@ test("최종 회의 정리와 안건 요약 전문, 강한 관계와 이어짐�
 
 });
 
-/** 검토 줄 하나. 줄의 내용 버튼을 품은 상자다 */
 const rowOf = (page: Page, content: string) =>
   page.locator("[data-item-id]").filter({ has: page.getByRole("button", { name: content, exact: true }) });
 
@@ -162,7 +157,6 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
   await page.goto(reviewUrl(MENTORING_NOTE));
   await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
 
-  // 줄 이름은 exact 로 찾는다 — 「언제 정해졌나」의 표시도 같은 문장을 이름에 품는다.
   const decision = page.getByRole("button", { name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다", exact: true });
   await decision.click();
   await expect(page.getByRole("list", { name: "근거 발언", exact: true })).toBeVisible();
@@ -175,14 +169,12 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
   ).toBeVisible();
 
   await page.getByRole("button", { name: "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다", exact: true }).click();
-  // 제안은 줄마다 늘 서 있어 같은 이름의 토글이 여럿이다. 그 줄 안에서 찾는다.
   await rowOf(page, "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")
     .getByRole("radiogroup", { name: "이전 결정을 어떻게 할까요?" })
     .getByRole("radio", { name: /대체/ })
     .click();
   await expect(page.getByText(/확인할 제안/)).toContainText("확인할 제안 2개");
 
-  // 고를 제안을 다 골라야 확정이 풀린다. 남은 기존 할 일 변경 둘은 넘긴다.
   for (const content of ["경쟁 서비스 요금제를 한 표로 정리한다", "구현 결과를 기대 효과 순서로 다시 배치한다"]) {
     const keep = rowOf(page, content)
       .getByRole("radiogroup", { name: "기존 할 일에 반영할지" })
@@ -220,7 +212,6 @@ test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 �
   const choice = row.getByRole("radiogroup", { name: "기존 할 일에 반영할지" });
   await choice.getByRole("radio", { name: "반영", exact: true }).click();
   await expect(choice.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
-  // 기한은 달력에서 고른다(APP-1591). 펼쳐진 달의 날짜 하나를 골라 그 값을 따라간다.
   await row.getByRole("group", { name: "기존 할 일 변경", exact: true }).locator('[data-slot="popover-trigger"]').click();
   const day = page.locator('[data-slot="popover-content"] td[data-day]:not([data-outside="true"]):not([data-selected="true"])').nth(4);
   const picked = (await day.getAttribute("data-day"))!;
@@ -269,8 +260,6 @@ test("재진입 GET에서 사라진 제안의 저장 선택을 해제하고 업�
   await action.getByRole("radio", { name: "반영", exact: true }).click();
   await expect(action.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
 
-  // 요청은 실제 MSW를 통과합니다. 조회/저장 응답의 현재 제안만 숨겨 새 주기 응답을 재현합니다.
-  // 서버의 실제 주기 전환과 409 원자성은 별도 Mock OFF QA로 검증합니다.
   await page.evaluate((noteId) => {
     const original = window.fetch.bind(window);
     const reviewPath = `/v1/notes/${noteId}/meeting-review`;
@@ -312,9 +301,6 @@ test("그래프를 열고 키보드로 항목을 골라 수정 기록을 읽고 
   const graph = page.locator("[data-review-graph][data-settled]");
   await expect(graph).toBeVisible({ timeout: 20_000 });
   await expect(graph.locator("canvas").first()).toBeVisible();
-  // 확대·맞춤·hover·선택 콜백은 review-graph.test.tsx에서 검사합니다.
-  // 랜덤 힘 배치의 픽셀 차이·점 좌표 탐색으로 라이브러리를 다시 검사하지 않습니다.
-  // 캔버스를 못 쓰는 사람은 보이지 않는 목록으로 같은 항목을 고른다.
   await graph.getByRole("button", { name: /무료 구간은 월 5시간으로 두고 팀 요금제에서는 뺀다/ }).first().focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "연결된 안건" })).toContainText("차별점과 요금");
@@ -376,8 +362,6 @@ test("반영은 기본 OFF이고 스위치를 켜야 대체·유지가 나타난
 });
 
 test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
-  // 목의 지난 회의(01K0000000024) 요약에는 안건이 없다. 이어짐 링크가 가리키는 안건이 도착 화면에 서도록
-  // 멘토링 요약의 안건을 빌려 그 ID로 바꿔 돌려준다.
   await page.addInitScript(() => {
     const forward = window.fetch;
     let borrowed: { agendas: Array<{ agendaId: string | null }> } | null = null;
@@ -402,18 +386,15 @@ test("이어짐 링크로 다른 회의에 도착하면 그 안건 제목에 근
   const href = await continued.getAttribute("href");
   const agendaId = href!.split("#summary-agenda-")[1];
   const arrived = page.locator(`[id="summary-agenda-${agendaId}"]`);
-  // 획은 1초 남짓 머물고 지워진다 — 누르기 전부터 기다려야 놓치지 않는다
   const marked = arrived.locator(".evidence-mark").waitFor();
   await continued.click();
   await marked;
   await expect(page).toHaveURL(new RegExp(`#summary-agenda-${agendaId}$`));
   await expect(arrived.getByRole("button").first()).toHaveAttribute("aria-expanded", "true");
-  // 획이 다 지워지면 거둔다
   await expect(arrived.locator(".evidence-mark")).toHaveCount(0, { timeout: 5_000 });
 });
 
 test("「타임라인에서 보기」로 넘어가면 그 안건의 첫 묶음 머리에 근거 형광펜을 긋는다 (APP-1290)", async ({ page }) => {
-  // 목의 멘토링 회의에는 타임라인 원장이 없다. 데모 노트(01K0000000005)의 원장을 빌려 와 첫 안건에 넣는다.
   await page.addInitScript(() => {
     const forward = window.fetch;
     const demo = async () => {
@@ -438,7 +419,6 @@ test("「타임라인에서 보기」로 넘어가면 그 안건의 첫 묶음 �
   const row = index.locator('[id^="summary-agenda-"]').first();
   const agendaId = (await row.getAttribute("id"))!.slice("summary-agenda-".length);
   await row.getByRole("button").first().click();
-  // 그 안건의 첫 묶음(`timeline-agenda-<agendaId>:<첫 명제>`) 머리에 긋는다. 획은 몇 초 뒤 지워지니 누르기 전부터 기다린다
   const head = page.locator(`[id^="timeline-agenda-${agendaId}:"]`).first();
   const marked = head.locator(".evidence-mark").waitFor();
   await row.getByRole("button", { name: /타임라인에서 보기/ }).click();

@@ -19,7 +19,6 @@ const VALUE =
   "mt-2 flex items-baseline gap-1.5 text-2xl leading-7 font-light tracking-[-0.02em] text-[var(--el-ink)]";
 const NOTE = "text-xs leading-4 text-[var(--el-muted)]";
 
-/** 사용량 단계의 글·막대 색. 사이드바도 같은 것을 쓴다. 빨강은 다 썼을 때만. */
 export const USAGE_TONE = {
   ok: { text: "text-[var(--el-ink)]", bar: "bg-[var(--el-ink)]" },
   near: {
@@ -32,21 +31,13 @@ export const USAGE_TONE = {
   },
 } as const;
 
-/**
- * 이번 달 녹음 사용량(APP-1566). 요금제 패널의 오른쪽 칸에 들어가는 내용이라 자기 테두리가 없다.
- * 집행 대상이 아닌 공간(`enforced=false` — 판매 중지 뒤 끝난 구독도 여기)에는 칸 틀까지 그리지 않는다. Free 는 한도와 진행 막대, Pro 는 무제한과 참고용 사용 시간이다.
- * 분은 서버가 내림해 준 값을 그대로 쓴다. 한도는 녹음을 **시작할 때만** 검사하고 진행 중인 회의는 끝까지 녹음된다 —
- * 사용량은 녹음이 끝나 처리된 뒤 반영된다.
- */
 export function RecordingUsage({
   workspaceId,
   paid,
   className,
 }: {
   workspaceId: string;
-  /** 스켈레톤 높이만 정한다. 실제 모양은 서버 응답이 정한다. */
   paid: boolean;
-  /** 칸 틀. 보여 줄 사용량이 없으면 틀째 그리지 않아 빈 칸이 남지 않는다. */
   className?: string;
 }) {
   const t = useTranslations("billing.usage");
@@ -126,7 +117,6 @@ function UsageBody({
           </span>
         </p>
       ) : (
-        // 문장이라 숫자 크기로 쓰면 칸(248px)에서 세 줄로 꺾인다 — 한 단계 작게.
         <p
           className={cn(
             "mt-2 text-base leading-7 font-medium",
@@ -175,7 +165,6 @@ function UsageBody({
   );
 }
 
-/** 사용량 자리. 라벨은 고정 문구라 그대로 그리고 값만 막대다. 요금제를 이미 알아서 Free(막대 포함)·Pro 의 높이를 각각 맞춘다. */
 function UsageSkeleton({ label, paid }: { label: string; paid: boolean }) {
   const t = useTranslations("billing.usage");
   return (

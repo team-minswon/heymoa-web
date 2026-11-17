@@ -10,12 +10,9 @@ import { privateRouteMetadata } from "@/lib/site";
 
 export const metadata: Metadata = {
   ...privateRouteMetadata,
-  // 결과 주소의 Referer 로 setup 주소가 새지 않게 한다.
   referrer: "no-referrer",
 };
 
-// 카드 등록 결과(PRO-75). 워크스페이스 레이아웃 밖이라 로그인 확인을 여기서 한다 — 로그인 전이면 로그인 카드를 세우고,
-// 로그인하면 이 깨끗한 주소로 돌아온다(`lib/auth/paths.ts`). `SettingsReturnRedirect` 는 쓰지 않는다.
 export default async function BillingSetupRoute({
   params,
 }: {

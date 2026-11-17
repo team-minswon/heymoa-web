@@ -4,7 +4,6 @@ import { AuthCallbackClient } from "@/components/auth/auth-callback-client";
 
 import { privateRouteMetadata } from "@/lib/site";
 
-// 토큰이 실리는 입구라 robots.txt 와 별개로 페이지가 noindex 를 낸다(APP-1036).
 export const metadata: Metadata = privateRouteMetadata;
 
 function first(value: string | string[] | undefined) {
@@ -18,9 +17,7 @@ export default async function AuthCallbackPage({
 }) {
   const query = await searchParams;
   const urlError = first(query.error);
-  // 이름을 server가 정한다 — OAuth2AuthenticationSuccessHandler가 `?returnTo=`로 보낸다.
-  // `return_to`로 읽던 동안 값이 항상 undefined였고, 초대 링크로 로그인한 사람이
-  // 초대 페이지 대신 기본 워크스페이스로 떨어졌다 (APP-400).
+  // 쿼리 이름은 server 의 OAuth2AuthenticationSuccessHandler 가 정합니다(`?returnTo=`).
   const returnTo = first(query.returnTo);
 
   return <AuthCallbackClient urlError={urlError} returnTo={returnTo} />;

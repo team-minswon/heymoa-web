@@ -65,9 +65,7 @@ describe("buildNoteHeaderMeta", () => {
     const meta = buildNoteHeaderMeta(note(), { ...KO, isStarter: true });
 
     expect(meta.participantLabel).toBe("참석자 2명");
-    // 시각은 Asia/Seoul 기준이다 — 00:00Z는 같은 날 9시다.
     expect(meta.whenLabel).toBe("2026년 7월 30일 오전 9:00");
-    // `<time datetime>`이 그대로 쓰는 값이라 원본 ISO여야 한다.
     expect(meta.whenIso).toBe("2026-07-30T00:00:00Z");
   });
 
@@ -83,7 +81,6 @@ describe("buildNoteHeaderMeta", () => {
       { ...KO, isStarter: false }
     );
 
-    // 시작 시각이 없으면 생성 시각으로 떨어진다.
     expect(whenIso).toBe("2026-07-30T00:00:00Z");
     expect(whenLabel).toContain("2026년 7월 30일");
     expect(secondary).toBe("아직 시작하지 않았습니다");
@@ -143,7 +140,6 @@ describe("buildNoteHeaderMeta", () => {
   });
 
   it("진행 중 회의도 시계를 읽지 않는다 — 하이드레이션이 어긋난다", () => {
-    // 같은 노트를 두 번 접으면 언제 접었는지와 무관하게 같은 문자열이어야 한다.
     const first = buildNoteHeaderMeta(note({ meetingStatus: "ENDED" }), {
       ...KO,
       isStarter: true,

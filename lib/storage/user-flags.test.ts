@@ -42,12 +42,10 @@ describe("user flags", () => {
     expect(
       window.localStorage.getItem("heymoa:desktop-promo-dismissed")
     ).toBeNull();
-    // 읽음을 서버로 옮긴 옛 문의 표시는 전역·사용자별 모두 지운다.
     expect(window.localStorage.getItem("heymoa:feedback-seen")).toBeNull();
     expect(window.localStorage.getItem("heymoa:u:A:feedback-seen")).toBeNull();
     expect(window.localStorage.getItem("heymoa:u:B:feedback-seen")).toBeNull();
     expect(window.localStorage.getItem("heymoa:u:A:end-nudge-off")).toBe("1");
-    // 기기 범위인 분석 거부는 건드리지 않는다.
     expect(window.localStorage.getItem("heymoa:analytics-opt-out")).toBe("1");
   });
 });

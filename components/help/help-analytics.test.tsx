@@ -13,7 +13,6 @@ import { track } from "@/lib/analytics/track";
 import { helpLocation } from "@/lib/help/analytics";
 import { intlWrapper } from "@/components/help/test-intl";
 
-/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
 const render = (ui: React.ReactElement) =>
   rtlRender(ui, { wrapper: intlWrapper() });
 
@@ -61,7 +60,6 @@ describe("가이드 이벤트", () => {
     });
   });
 
-  // 영어판도 같은 주제로 센다 — 언어 접두사를 slug·group 으로 읽지 않고 language 로만 남긴다(PRO-66).
   it("영어판 주소는 한국어판과 같은 group · slug 에 language=en 으로 보낸다", () => {
     nav.pathname = "/en/help/start/desktop";
     window.history.replaceState(null, "", "/en/help/start/desktop");

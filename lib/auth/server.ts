@@ -31,14 +31,10 @@ export const getCurrentUserForSsr = cache(
   async (): Promise<AuthUser | null> => {
     if (shouldEnableMocking()) {
       const cookieStore = await cookies();
-      // 목 계정의 언어는 브라우저 MSW 가 쿠키에 남긴다(`lib/mocks/db.ts`). 서버가 그린 첫 화면과 MSW 의 사용자가
-      // 같은 언어여야 hydration 이 갈리지 않는다.
+      // 목 계정 언어는 브라우저 MSW 가 쿠키에 남깁니다. 서버가 그린 첫 화면과 같아야 hydration 이 갈리지 않습니다.
       const stored = cookieStore.get(MOCK_ACCOUNT_LANGUAGE_COOKIE)?.value;
       const language = isLocale(stored) ? stored : null;
-      // 가이드 캡처용 목 프리셋(`lib/mocks/help-demo`)은 사용자 이름도 가상이다. 캡처 스크립트가 심는 쿠키가 있을 때만
-      // 서버가 그린 첫 화면의 사용자도 같은 이름으로 맞춘다. 목 모드에서만 이 분기를 지난다.
       if (cookieStore.get("heymoa-help-demo")?.value === "1") {
-        // 영어 계정이면 영어 프리셋의 이름이다(APP-1511) — 브라우저 쪽 프리셋은 문서 언어로 고른다
         const people = language === "en" ? enHelpDemoPeople : helpDemoPeople;
         return { ...MOCK_USER, name: people.HD_ME_NAME, email: people.HD_ME_EMAIL, language };
       }
@@ -62,7 +58,6 @@ export const getCurrentUserForSsr = cache(
         method: "GET",
         headers: {
           Cookie: cookieHeader,
-          // 계정을 알기 전이라 쿠키 → 브라우저 언어다. 오류 문구만 이 값을 따른다(server `ApiLocaleResolver`).
           "Accept-Language": await requestLocale(),
         },
         credentials: "include",

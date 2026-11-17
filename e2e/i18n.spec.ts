@@ -1,11 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
-/**
- * 웹 국제화 기반(PRO-66-I01). 한국어는 무접두 주소 그대로, 영어는 `/en` 아래에 있고 설정 없이 검색에 공개된다(noindex 없음 · sitemap · hreflang).
- * 크롤러가 읽는 상태 코드·이동·`<head>` 는 서버 응답으로 보고, 화면 전환은 브라우저로 본다.
- */
-
-/** 운영 sitemap 주소(2026-10-21 목록에서 삭제한 페이지는 제외). */
 const PRODUCTION_SITEMAP = [
   "/",
   "/download",
@@ -51,7 +45,6 @@ const PRODUCTION_SITEMAP = [
   "/privacy",
 ];
 
-// dev 서버가 처음 보는 라우트를 컴파일하느라 첫 요청이 느리다.
 test.describe.configure({ timeout: 240_000 });
 
 const get = (request: APIRequestContext, path: string) =>
@@ -137,11 +130,6 @@ async function expectNotFound(page: Page, lang: "ko" | "en") {
   );
 }
 
-/**
- * `/en` 아래 없는 주소도 미리 그린 전역 404(`app/global-not-found.tsx`)가 받고, 주소의 언어 접두사로 영어 본문을 고른다(APP-1419).
- * **상태 코드는 여기서 보지 않는다.** 목 모드에서는 `MockProvider` 가 SSR 에서 본문을 그리지 않아 `notFound()` 가
- * 응답 전에 불리지 않으므로 200 이다. 운영 빌드의 404 는 `scripts/check-route-status.mjs` 가 본다.
- */
 for (const path of ["/en/없는-주소", "/en/w/x"]) {
   test(`${path} 는 직접 진입과 앱 안 이동 모두 영어 404 다`, async ({ page }) => {
     await page.goto(path);
@@ -185,7 +173,6 @@ test("랜딩 푸터에서 언어를 고르면 같은 페이지의 다른 언어�
 
   await page.goto("/en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  // `/en` 에 들어온 것만으로는 쿠키를 쓰지 않는다.
   expect(await langCookie()).toBeUndefined();
 
   await page.goto("/help/start/desktop");
@@ -211,18 +198,15 @@ test("/en 랜딩은 제목·설명·OpenGraph·본문이 영어이고 한글이 
   const head = html.slice(0, html.indexOf("</head>"));
   expect(head).toContain("<title>HeyMoa | Real-time AI meeting notes</title>");
   expect(head).toContain('property="og:locale" content="en_US"');
-  // 머리의 글(title · description · og · twitter · JSON-LD)에 한글이 없다. alternateName 의 「헤이모아」는 브랜드 표기라 뺀다.
   expect(head.replaceAll("헤이모아", "").replaceAll("헤이 모아", "")).not.toMatch(/[가-힣]/);
 
   await page.goto("/en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  // 대본이 한 바퀴 도는 사이 모든 장면의 글이 영어인지는 vitest(hero-stage)가 본다. 여기서는 첫 화면과 아래 구간 전부다.
   const korean = await page.evaluate(() => {
     const found: string[] = [];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode as Text;
-      // 언어 선택의 「한국어」는 그 언어 자신의 이름으로 쓴다(`lang="ko"`).
       if (node.parentElement?.closest('[lang="ko"], script, style')) continue;
       if (/[가-힣]/.test(node.data)) found.push(node.data.trim());
     }
@@ -273,7 +257,6 @@ test("회의록 삭제 확인창의 긴 문구에서 한국어 낱말이 줄 끝
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode as Text;
-      // 낱말은 공백과 가운뎃점·쉼표로 나눈다. 가운뎃점 뒤는 원래 줄을 바꿀 수 있는 자리다.
       for (const match of node.data.matchAll(/[^\s·,.]+/g)) {
         if (!/[가-힣]/.test(match[0])) continue;
         words += 1;
@@ -298,7 +281,6 @@ test("회의록 삭제 확인창의 긴 문구에서 한국어 낱말이 줄 끝
   expect(result.broken).toEqual([]);
 });
 
-/** 화면의 글자(언어 선택의 「한국어」처럼 `lang="ko"` 로 표시한 것 제외)에서 한글을 모은다. */
 const visibleHangul = (page: Page) =>
   page.evaluate(() => {
     const found: string[] = [];
@@ -336,7 +318,6 @@ for (const { path, title } of [
   });
 }
 
-// 공유 이미지는 페이지·언어와 상관없이 메인 그림 하나다(APP-1400). 제목·설명만 페이지마다 다르다.
 test("모든 페이지의 공유 이미지는 메인 그림 하나다", async ({ request }) => {
   for (const path of ["/", "/en", "/help", "/en/help", "/help/start", "/privacy", "/terms", "/download", "/en/download", "/pricing", "/en/pricing"]) {
     const html = await (await request.get(path)).text();

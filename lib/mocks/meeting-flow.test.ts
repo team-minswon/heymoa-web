@@ -8,10 +8,6 @@ import { LARGE_REVIEW_NOTE_ID, MOCK_STEP_MS, meetingFlow, meetingFlowHandlers } 
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
 import type { MeetingReviewResponseData, UpdateMeetingReviewItemRequest } from "@/lib/api/generated/models";
 
-/**
- * 회의 뒤 흐름 · 할 일 목이 계약대로 답하는지. 화면 테스트가 성공 경로를 밟으니 여기서는
- * 거절 경로와 상태 전이를 본다 — 목이 너그러우면 화면이 실서버에서 처음 거절을 만난다.
- */
 const server = setupServer(...meetingFlowHandlers, ...projectTaskHandlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));

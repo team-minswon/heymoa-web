@@ -48,17 +48,12 @@ describe("buildChatEvents", () => {
       message: "Linear 이슈 만들어줘",
     });
 
-    // 토큰 개수는 문장 길이에 딸린 값이라 세지 않는다 — 이벤트의 순서가 계약이다.
     expect(names(events).filter((name) => name !== "token")).toEqual([
       "message_start",
       "thinking_delta",
       "thinking_delta",
-      // **인자를 나르는 프레임.** 계약(ai)은 쓰기 도구에도 이것을 먼저 낸다 —
-      // 승인 카드가 「무엇을 승인하나」를 여기서 집어 간다.
       "tool_call_start",
       "tool_approval_request",
-      // 여기서 1차가 끝난다. 아래는 승인 API가 여는 2차 스트림이다 —
-      // **`tool_call_start`가 없다**(계약).
       "tool_approval_resolved",
       "tool_call_result",
       "message_end",
@@ -68,7 +63,6 @@ describe("buildChatEvents", () => {
     );
 
     const request = payloadOf(events, "tool_approval_request");
-    // 13자 TSID가 아니면 server가 승인 row 등록을 건너뛰어 승인 API가 404가 된다 (계약).
     expect(request.approvalId).toMatch(/^[0-9A-HJKMNP-TV-Z]{13}$/);
     expect(payloadOf(events, "tool_approval_resolved").approvalId).toBe(
       request.approvalId
@@ -96,8 +90,6 @@ describe("buildChatEvents", () => {
     expect(names(events)).not.toContain("message_end");
   });
 
-  // 계약이 말하는 "스트림이 끝나는 세 번째 경로" — 종료 이벤트 없이 연결만 끊긴다.
-  // web이 이걸 처리하지 않으면 영원히 로딩이다.
   it("drops the stream without a terminal event when asked", () => {
     const events = buildChatEvents({
       chatId: "chat-1",
@@ -109,11 +101,6 @@ describe("buildChatEvents", () => {
     expect(events.length).toBeGreaterThan(0);
   });
 
-  /**
-   * ★ 제일 큰 구멍이었던 자리. 파서(`stream-protocol.ts`)와 화면이 목이 한 번도 안 내던
-   * 값에 매달려 있었다. **목이 낸 것을 파서에 그대로 먹여서** 계약 모양을 못박는다 —
-   * 목만 통과하는 모양이면 여기서 깨진다.
-   */
   it("범위 밖까지 넓히면 그 회의록이 근거 줄에 선다", () => {
     const events = buildChatEvents({
       chatId: "chat-1",
@@ -130,8 +117,6 @@ describe("buildChatEvents", () => {
     ]);
 
     const state = events.reduce(reduceStreamEvent, initialStreamState);
-    // ★ **넓혔다는 알림이 이 목록 하나다.** 묻는 카드가 없으므로, 범위 밖 회의록이
-    // 여기 안 서면 사용자는 자기가 붙인 것만 봤다고 믿는다.
     expect(state.refs.map((ref) => ref.title)).toEqual([
       "주간 배포 회의",
       "결제 개편 킥오프",
@@ -139,7 +124,6 @@ describe("buildChatEvents", () => {
     expect(state.phase).toBe("done");
   });
 
-  /** `error` 없이 `turn_failed`만 오는 갈래. 안 열면 화면이 EOF까지 로딩으로 남는다. */
   it("용량이면 error 없이 turn_failed로 끝난다", () => {
     const events = buildChatEvents({
       chatId: "chat-1",
@@ -158,7 +142,6 @@ describe("buildChatEvents", () => {
 
     const state = events.reduce(reduceStreamEvent, initialStreamState);
     expect(state.phase).toBe("failed");
-    // 다시 눌러도 되는 실패다. 문구는 web이 코드로 고른다 — server는 code만 보낸다.
     expect(state.retryable).toBe(true);
     expect(state.error).toEqual({ code: "CAPACITY_EXCEEDED", message: null });
   });
@@ -170,26 +153,18 @@ describe("buildChatEvents", () => {
     });
     const content = payloadOf(events, "message_end").content as string;
 
-    // 코드를 읽어야만 알 수 있던 것을 없애는 것이 이 시나리오의 목적이다 —
-    // 표에 키워드를 더하고 안내에 안 실리면 여기서 깨진다.
     for (const scenario of Object.values(CHAT_SCENARIOS)) {
       expect(content).toContain(scenario.keyword);
     }
-    // 안내는 도구도 생각도 안 쓴다 — 목이 자기 사용법을 답할 뿐이다.
     expect(names(events).filter((name) => name !== "token")).toEqual([
       "message_start",
       "message_end",
     ]);
   });
 
-  /**
-   * 전송만 바꾸는 시나리오(`kind: transport`)는 **시퀀스를 안 건드린다.** 목이 여기서
-   * 갈리면 「좀비 턴」·「느린 첫 프레임」이 아니라 다른 답이 흘러 버린다.
-   */
   it.each([["좀비"], ["천천히"], ["버퍼를 비워줘"], ["밀리게 해줘"]])(
     "%s는 이벤트 시퀀스를 안 바꾼다",
     (keyword) => {
-      // 답 길이는 메시지에서 파생한 시드에 딸린 값이라 토큰 수는 세지 않는다.
       const shape = (message: string) =>
         names(buildChatEvents({ chatId: "chat-1", message })).filter(
           (name) => name !== "token"
@@ -210,7 +185,6 @@ describe("buildChatEvents", () => {
       message: "Linear 이슈 만들어줘, 버퍼를 비워줘",
     });
 
-    // 「승인 대기 중에 버퍼를 비운다」가 실제로 보고 싶은 조합이다.
     expect(plan).not.toBeNull();
   });
 
@@ -238,10 +212,6 @@ describe("buildChatEvents", () => {
 });
 
 describe("시나리오 표", () => {
-  /**
-   * 분기는 `includes`라 키워드 하나가 다른 키워드를 품으면 **뒤 갈래가 영영 안 걸린다.**
-   * 표를 늘릴 때 여기서 막는다.
-   */
   it("키워드가 서로를 품지 않는다", () => {
     const keywords = Object.values(CHAT_SCENARIOS).map((each) => each.keyword);
 
@@ -259,7 +229,6 @@ describe("general chat answer pool (APP-156)", () => {
   });
 
   it("gives an answer long enough to judge density (multi-sentence)", () => {
-    // 고정 한 줄로 회귀하면 밀도를 못 본다 — 후보는 모두 여러 문장이어야 한다.
     for (const answer of GENERAL_CHAT_ANSWERS) {
       expect(answer.length).toBeGreaterThan(60);
     }
@@ -281,8 +250,6 @@ describe("streamed tokens match the persisted content", () => {
       .join("");
   }
 
-  // 계약: 토큰을 이어붙인 결과 = message_end.content. 다르면 스트리밍 중 보이던 글이
-  // 새로고침 후 다른 글로 바뀐다.
   it.each([
     ["요약해줘"],
     ["Linear 이슈 만들어줘"],
@@ -316,7 +283,6 @@ describe("길게", () => {
     expect(content.length).toBeGreaterThan(
       (payloadOf(plain, "message_end").content as string).length * 3
     );
-    // 토큰을 이어붙인 것이 곧 본문이다 — 스트리밍 중 보이던 글과 저장된 글이 같아야 한다.
     expect(
       long
         .filter((event) => event.event === "token")
@@ -328,11 +294,6 @@ describe("길게", () => {
 });
 
 describe("★ 목의 id 가 서로 다르다", () => {
-  /**
-   * 예전에는 `tsid()`가 **무엇을 넣든 `0000000000000`** 을 돌려줬다. 형식(13자 Crockford)은
-   * 계약을 지켜서 아무 검사도 안 걸렸고, 대화 하나에서 승인을 두 번 받으면 두 번째 카드가
-   * 앞의 `submittedId` 와 id 가 같아 **누르기도 전에 잠긴 채로** 떴다.
-   */
   it("승인 id 가 턴마다 달라진다", () => {
     const ids = [0, 1, 2].map(
       (turn) =>

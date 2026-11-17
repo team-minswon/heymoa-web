@@ -40,23 +40,12 @@ import { useBillingFormat } from "@/lib/billing/use-billing-format";
 import { nextPollDelay, usePollWindow } from "@/lib/billing/use-poll-window";
 import { cn } from "@/lib/utils";
 
-/**
- * 결과 조회 한 번의 시한. 응답이 멈추면 스켈레톤에 머물지 않고 「불러오지 못했습니다」와 다시 확인을 보인다.
- * 화면과 결과가 같은 조회 키를 쓰므로 둘 다 같은 시한을 준다 — 어느 쪽이 읽어도 같다.
- */
 const SETUP_REQUEST = { timeoutMs: 10_000 };
 
 type SetupAction = "recheck" | "retry" | "to_workspace";
 
-/**
- * `/billing/setups/{setupId}` — 카드 등록 결과. 워크스페이스 셸 밖이다. 주문서·카드 변경에서 카드를 낸 뒤 여기로 온다(APP-1600).
- *
- * 서버가 일하는 동안 이 화면은 **표시용으로** 다시 읽을 뿐이다 — 화면을 닫거나 읽기를 멈춰도 서버 작업은 계속된다.
- * 주소에는 등록 번호만 있고, 이 화면은 카드 정보를 받지도 읽지도 않는다.
- */
 export function BillingSetupResultPage({ setupId }: { setupId: string }) {
   const t = useTranslations("billing.setup");
-  // 첫 구매는 카드 등록 뒤 결제까지 가므로 「결제 결과」다. 아래 결과와 같은 조회 키라 요청은 하나다.
   const setupQuery = useGetMyBillingSetup(setupId, { request: SETUP_REQUEST });
   const purchase = okData(setupQuery.data)?.purpose === "PURCHASE";
   return (
@@ -64,7 +53,6 @@ export function BillingSetupResultPage({ setupId }: { setupId: string }) {
       className="min-h-0 flex-1"
       viewportClassName="overflow-x-hidden!"
     >
-      {/* 한 가지 결과만 읽는 화면이라 좁은 단 하나다. */}
       <div className="mx-auto w-full max-w-[640px] px-5 pb-16 pt-10 sm:pt-16">
         <header className="mb-8">
           {!setupQuery.isPending ? (
@@ -111,8 +99,6 @@ function SetupResult({ setupId }: { setupId: string }) {
   const view = setup ? setupViewOf(setup) : null;
   const workspaceId = setup?.workspaceId ?? null;
   const provider = setup?.provider ?? null;
-  // 카드 변경이 등록 전부터 열린 회차를 이 카드로 청구했다(미납 유예, APP-1624). 회차가 닫힌 완료 응답에도 서버가
-  // 그 시도를 originAttempt 로 싣는다(APP-1625). 평소 카드 변경에는 originAttempt 가 없다.
   const charged = setup?.purpose === "REPLACE" && setup.originAttempt != null;
 
   const cancel = useCancelBillingSetup();
@@ -121,14 +107,11 @@ function SetupResult({ setupId }: { setupId: string }) {
       queryKey: getGetMyBillingSetupQueryKey(setupId),
     });
 
-  // 상태가 바뀌면 그 공간의 결제 조회만 다시 읽게 한다.
   useEffect(() => {
     if (view && workspaceId)
       void invalidateWorkspaceBilling(queryClient, workspaceId);
   }, [view, workspaceId, queryClient]);
 
-  // 최종 상태가 처음 보일 때 한 번씩만 분석 이벤트를 낸다(같은 결과를 폴링마다 다시 내지 않는다).
-  // 카드 변경(REPLACE)은 구매 퍼널에 섞지 않고 카드 변경 결과로 따로 낸다.
   const reported = useRef(new Set<string>());
   const purchase = setup?.purpose !== "REPLACE";
   useEffect(() => {
@@ -154,14 +137,12 @@ function SetupResult({ setupId }: { setupId: string }) {
     }
   }, [view, workspaceId, provider, purchase]);
 
-  // 버튼을 누른 때의 화면 — 결과 값이 있으면 그것, 없으면 화면 상태 이름.
   const screen: BillingSetupScreen = view
     ? (resultOfView(view) ?? view)
     : "loadFailed";
   const clicked = (action: SetupAction) =>
     billingEvents.setupResultActionClicked({ action, result: screen });
 
-  // 창으로 돌아오면 자동 읽기가 멈춘 뒤에도 한 번 읽는다.
   useEffect(() => {
     const onFocus = () => {
       if (poll.expired && view && isPollingView(view)) void query.refetch();
@@ -176,7 +157,6 @@ function SetupResult({ setupId }: { setupId: string }) {
   if (!setup || !view) {
     const notFound =
       query.error instanceof ApiError && query.error.status === 404;
-    // 첫 조회의 실패·시한 초과는 결제 실패가 아니다 — 거절 화면으로 보이지 않게 따로 알린다.
     return notFound ? (
       <BillingNotice tone="warn" title={t("notFound.title")}>
         {t("notFound.body")}
@@ -220,7 +200,6 @@ function SetupResult({ setupId }: { setupId: string }) {
         }}
       />
       <TestPaymentNotice notice={setup.testPaymentNotice ?? undefined} />
-      {/* 메뉴 없는 화면이라 완료 전 상태(확인 중·거절·결과 지연)에서도 나갈 길을 둔다. */}
       {workspaceId && view !== "completed" ? (
         <LinkButton
           variant="outline"
@@ -266,27 +245,22 @@ function ViewBody({
   view: SetupView;
   setup: SetupData;
   workspaceId: string | null;
-  /** 카드 변경이 밀린 회차를 청구했다(미납 유예). */
   charged: boolean;
   busy: boolean;
   onAction: (action: SetupAction) => void;
   onCancel: () => void;
 }) {
   const t = useTranslations("billing.setup");
-  // 카드 변경은 카드만 바꾸고 청구하지 않는다 — 결과 문구·다시 시작할 곳을 구매와 섞지 않는다.
   const replace = setup.purpose === "REPLACE";
-  // 종료 예정인 구독에 카드만 등록했으면 다음 결제가 없다 — 재개해야 이 카드로 결제된다(APP-1588).
   const billingQuery = useGetWorkspaceBilling(workspaceId ?? "", {
     query: { enabled: replace && Boolean(workspaceId) },
   });
   const ending = okData(billingQuery.data)?.cancelAtPeriodEnd === true;
-  // 첫 구독은 전용 결제 페이지에서, 카드 변경은 결제 관리 탭에서 다시 시작한다(APP-1600).
   const checkout = workspaceId
     ? replace
       ? `/w/${workspaceId}?settings=payment`
       : `/billing/checkout/${workspaceId}`
     : null;
-  // 문의 창에 실을 번호 — 승인 시도(= 결제 번호)가 있으면 그것, 없으면 등록 번호.
   const attemptId = (setup.latestAttempt ?? setup.originAttempt)?.attemptId;
   const supportBody = (key: Parameters<typeof t.rich>[0]) =>
     t.rich(key, {
@@ -354,7 +328,6 @@ function ViewBody({
     case "paymentProcessing":
       return card(t("paymentProcessing.title"), t("paymentProcessing.body"));
     case "paymentUnknown":
-      // 새 결제 버튼을 두지 않는다 — 결과가 나오기 전에 다시 결제하면 이중 청구가 될 수 있다.
       return card(
         t("paymentUnknown.title"),
         supportBody("paymentUnknown.body"),
@@ -362,7 +335,6 @@ function ViewBody({
         "warn"
       );
     case "declined": {
-      // 거절된 카드는 서버가 지운다 — 같은 카드로 다시 결제하지 않고 카드 등록부터 새로 시작한다.
       const code =
         setup.latestAttempt?.errorCode ?? setup.originAttempt?.errorCode;
       const reason = code === NOT_PROCESSED_CODE ? "notProcessed" : "declined";

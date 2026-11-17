@@ -1,4 +1,3 @@
-// Exercise the shipped updater bundle with real Electron and real release bytes, without installing anything.
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
@@ -48,7 +47,6 @@ if (!process.versions.electron) {
         fs.readFileSync(path.join(resources, "app-update.yml"), "utf8"),
         /https:\/\/github.com\/team-minswon\/homebrew-tap\/releases\/latest\/download/
       );
-      // The test serves only local build artifacts; production still uses its bundled HTTPS feed.
       const server = http.createServer((request, response) => {
         const name = decodeURIComponent(
           new URL(request.url, "http://localhost").pathname.slice(1)
@@ -96,7 +94,6 @@ if (!process.versions.electron) {
       });
       let safe = false,
         installs = 0;
-      // Test the installation handoff, never replace the CI runner's Electron application.
       autoUpdater.quitAndInstall = (silent, relaunch) => {
         assert.equal(silent, true);
         assert.equal(relaunch, true);

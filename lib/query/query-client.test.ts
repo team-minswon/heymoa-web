@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-// vi.mock은 import보다 먼저 끌어올려지므로 팩토리 안에서 만든다.
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: vi.fn() } }));
 
 import { toast } from "@/lib/ui/toast";
@@ -54,8 +53,6 @@ describe("mutation error toasts", () => {
     expect(toastError).toHaveBeenCalledWith("Failed to fetch");
   });
 
-  // 지속 상태(입력 잠금·비ACTIVE)와 주 데이터 실패는 화면이 그린다 — 토스트는 사라지므로
-  // 왜 막혔는지 알 수 없게 된다.
   it("stays silent when the screen draws the failure itself", async () => {
     const client = makeQueryClient();
 
@@ -68,7 +65,6 @@ describe("mutation error toasts", () => {
     expect(toastError).not.toHaveBeenCalled();
   });
 
-  // 개인 토큰 폼은 꺼진 워크스페이스(403)만 인라인으로 그린다 — 다른 실패는 여전히 토스트다
   it("skips only the listed codes when the screen draws some failures itself", async () => {
     const client = makeQueryClient();
     const meta = { suppressErrorToast: ["AGENT_ACCESS_DISABLED"] };
@@ -95,8 +91,6 @@ describe("mutation error toasts", () => {
 describe("callers that already toast are not doubled up", () => {
   beforeEach(() => toastError.mockClear());
 
-  // 실패 코드에 따라 문구가 갈리는 곳(프로젝트 삭제 등)은 자기 토스트를 띄운다.
-  // 전역 훅이 또 띄우면 두 개가 겹치고 문구가 서로 다르다.
   it("skips the global toast for flows that opt out", async () => {
     const client = makeQueryClient();
 

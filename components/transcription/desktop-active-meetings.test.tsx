@@ -25,7 +25,6 @@ const listOptions = vi.hoisted(() => ({
     refetchIntervalInBackground?: boolean;
   },
 }));
-// 이벤트 스트림이 건강해도 데스크톱 보고 간격은 그대로다(PRO-67 I04) — 앱이 150초 안에 보고가 없으면 트레이를 비운다.
 vi.mock("@/lib/events/health", () => ({ useEventStreamHealthy: () => true }));
 vi.mock("@/lib/workspace/use-note-list-pages", () => ({
   useNoteListPages: (options: typeof listOptions.value) => {

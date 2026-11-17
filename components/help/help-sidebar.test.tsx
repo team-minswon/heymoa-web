@@ -23,7 +23,6 @@ const weightOf = (el: HTMLElement) =>
 describe("HelpSidebar", () => {
   afterEach(cleanup);
 
-  // 굵기가 달라지면 글자 폭이 달라져 줄바꿈과 목록 높이가 출렁인다.
   it("선택한 항목과 아닌 항목의 굵기·크기 클래스가 같다", () => {
     render(<HelpSidebar
         groups={helpGroupsFor("ko")}

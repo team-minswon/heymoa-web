@@ -26,14 +26,8 @@ import {
 } from "@/lib/transcription/speaker-identity";
 import type { SpeakerOf } from "@/lib/notes/minutes/model";
 
-/**
- * 회의록 · 전체 복사가 누를 때 읽는 재료. **구독하지 않고 캐시에서 꺼낸다** — 타임라인 · 스크립트 탭이 이미 같은
- * 쿼리를 구독하고 있어, 요약 화면이 또 구독하면 같은 쿼리에 구독자만 는다(rule `architecture`). 캐시에 있으면
- * 그대로 쓰고, 없거나 오래됐으면 한 번 받는다. 끝난 회의라 그 사이 바뀔 것이 거의 없다.
- */
 const FRESH_MS = 60_000;
 
-/** 타임라인 탭과 같은 묶음 — 끝난 회의의 원장을 안건 정본대로 한 번 맞춘 것이다 */
 export async function loadTimelineGroups(
   queryClient: QueryClient,
   noteId: string
@@ -65,7 +59,6 @@ export async function loadTimelineGroups(
 
 export type TranscriptSource = {
   rows: TranscriptRow[];
-  /** 화자 분리 전이면 null — 「화자 A」는 아직 아무도 아니라 이름 칸을 비운다 */
   speakerOf: SpeakerOf | null;
   truncated: boolean;
 };

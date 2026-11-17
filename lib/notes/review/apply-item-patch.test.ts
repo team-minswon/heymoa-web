@@ -77,7 +77,6 @@ describe("applyItemPatch", () => {
       revision: 2,
     });
     expect(next.reviewVersion).toBe(5);
-    // 다른 항목은 그대로(같은 객체).
     expect(next.items[1]).toEqual(review().items[1]);
   });
 
@@ -158,7 +157,6 @@ describe("applyItemPatch", () => {
       included: false,
       decisions: [{ targetId: "N1", decision: "END" }],
     });
-    // 그사이 다른 조회가 판을 올리고 B 의 내용을 바꿨다.
     const newer = {
       ...patched,
       reviewVersion: 6,
@@ -174,7 +172,6 @@ describe("applyItemPatch", () => {
       decisions: [{ targetId: "N1", decision: "END" }],
     });
 
-    // 같은 판이면(이 항목의 revision 이 그대로) 먼저 건 칸만 이전 값으로 돌린다.
     expect(restored.items[0]).toMatchObject({ included: true });
     expect(restored.items[0].replacements[0].decision).toBeNull();
     expect(restored.reviewVersion).toBe(6);
@@ -206,7 +203,6 @@ describe("applyItemPatch", () => {
     const patch = {
       decisions: [{ targetId: "T1", decision: "APPLIED" as const }],
     };
-    // 다른 길이 이미 APPLIED 를 저장했다(이 항목의 판은 그대로).
     const current = {
       ...review(),
       items: review().items.map((row) =>

@@ -7,27 +7,20 @@ import { CAMPAIGN_SCRIPT } from "@/lib/mocks/help-demo/en/script-campaign";
 import { LANDING_SCRIPT } from "@/lib/mocks/help-demo/en/script-landing";
 import { appDayMs } from "@/lib/mocks/help-demo/time";
 
-/** 회의 하나의 검토본·요약 시드. `meeting-flow.ts` 가 멘토링 시드와 같은 틀로 푼다. */
 export type HelpDemoReviewSet = {
   noteId: string;
-  /** 회의 뒤 흐름 상태 */
   flow: "REVIEWABLE" | "CONFIRMED";
   headline: string;
   headlineTopics: number[];
   lead: Array<{ text: string; topics: number[] }>;
   topics: SeedTopic[];
   loose: SeedItem[];
-  /** 기한을 세는 기준 날짜(회의 날, UTC 자정) */
   meetingDate: number;
 };
 
 const c = anchorsOf(CAMPAIGN_SCRIPT);
 const l = anchorsOf(LANDING_SCRIPT);
 
-/**
- * 핵심 회의 1. 결정 9 · 할 일 12 · 열린 질문 5(질문 3 + 이슈 2) · 참고 여럿.
- * 담당 `A`·`B` 는 참석자에 연결된 화자라 이름으로 풀리고, `C`·`D` 는 아직 연결 전이라 화자 라벨로 남는다.
- */
 const campaignTopics: SeedTopic[] = [
   {
     title: "April results overall",
@@ -173,7 +166,6 @@ const dateOf = (noteId: string) => {
   return appDayMs(def.daysAgo);
 };
 
-/** 모든 검토본 시드. 핵심 회의 둘과 중간 길이 회의 여덟 개. */
 export function helpDemoReviewSets(): HelpDemoReviewSet[] {
   const mids = NOTE_DEFS.flatMap((def) =>
     def.source?.kind === "mid" ? [{ def, key: def.source.id }] : []
@@ -221,7 +213,6 @@ export function helpDemoReviewSets(): HelpDemoReviewSet[] {
   ];
 }
 
-/** 아직 검토본이 없는 회의를 방금 끝냈을 때 목이 만들어 내는 항목(`completeAnalysis`). 내용은 일반 업무 대화다. */
 export const HELP_DEMO_ENDED_ITEMS: SeedItem[] = [
   { kind: "AGENDA", content: "Coupon rules and ticket routing", at: [0] },
   { kind: "DECISION", content: "Give a $5 coupon only on orders delayed three days or more", at: [0] },

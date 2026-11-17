@@ -35,7 +35,6 @@ describe("BusinessInfoBlock", () => {
     expect(list).toHaveTextContent("헤이모아");
     expect(list).toHaveTextContent("사업자등록번호123-45-67890");
     expect(list).not.toHaveTextContent("대표자");
-    // 한글 값은 영어 페이지에서도 그대로라 그 언어를 밝힌다. 숫자 값에는 달지 않는다
     expect(screen.getByText("헤이모아")).toHaveAttribute("lang", "ko");
     expect(screen.getByText("123-45-67890")).not.toHaveAttribute("lang");
   });
@@ -47,7 +46,6 @@ describe("BusinessInfoBlock", () => {
     expect(list).toHaveTextContent("대표자");
     expect(list).toHaveTextContent("사업자등록번호");
     expect(list).not.toHaveTextContent("통신판매업 신고번호");
-    // 호스팅 제공자는 적지 않는다(2026-11-12).
     expect(list).not.toHaveTextContent("Vercel");
   });
 });

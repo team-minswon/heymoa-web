@@ -25,8 +25,6 @@ describe("색인 지시", () => {
     expect(robots().sitemap).toBe("https://heymoa.app/sitemap.xml");
   });
 
-  // 랩 환경 셋이 인터넷에 열려 있습니다. 같은 제품이 여러 주소로 색인되면 운영 쪽
-  // 순위를 갉아먹고, sitemap 도 운영 주소를 가리켜 거울처럼 보입니다 (APP-642).
   it("운영이 아닌 배포는 noindex 이고 사이트맵이 자기 주소를 가리킨다", async () => {
     const { robots, site } = await load("https://env-001.realillust.com");
 
@@ -34,15 +32,12 @@ describe("색인 지시", () => {
     expect(robots().sitemap).toBe("https://env-001.realillust.com/sitemap.xml");
   });
 
-  // `https://heymoa.app/` 는 같은 주소다. 문자열로만 비교하면 운영이 통째로 색인에서
-  // 빠진다 — 랩이 색인되는 것보다 훨씬 비싼 실패다.
   it("끝 슬래시가 붙은 운영 주소도 운영으로 본다", async () => {
     const { site } = await load("https://heymoa.app/");
 
     expect(site.robotsDirective).toMatchObject({ index: true, follow: true });
   });
 
-  // 🔴 크롤링을 막으면 크롤러가 noindex 를 못 읽는다. 이미 알려진 URL 이 색인에 남는다.
   it("운영이 아니어도 크롤링 자체는 막지 않는다", async () => {
     const { robots } = await load("https://env-001.realillust.com");
 
@@ -50,11 +45,9 @@ describe("색인 지시", () => {
   });
 });
 
-// 공개 정적 페이지가 사이트맵에 빠지면 Search Console 이 늦게 찾는다(APP-1036).
-// 고정 목록이 아니라 **원본 목록과 대조**한다 — 마케팅 경로나 가이드 주제를 더했는데 sitemap 에 없으면 실패한다(PRO-66).
 describe("사이트맵", () => {
   async function load() {
-    vi.resetModules(); // 앞 테스트가 바꾼 NEXT_PUBLIC_SITE_URL 이 캐시된 siteConfig 에 남지 않게
+    vi.resetModules();
     return {
       sitemap: (await import("@/app/sitemap")).default,
       locales: (await import("@/lib/i18n/locales")).LOCALES,
@@ -127,7 +120,6 @@ describe("사이트맵", () => {
     }
   });
 
-  // 구글은 lastmod 가 실제 수정과 맞을 때만 쓴다. 배포 시각(`new Date()`)이 들어오면 배포마다 바뀐다(APP-1293).
   it("lastmod 는 날짜뿐이고 시계에 따라 바뀌지 않는다", async () => {
     const { sitemap } = await load();
     vi.useFakeTimers();
@@ -147,7 +139,6 @@ describe("사이트맵", () => {
 
   it("lastmod 가 미래 날짜가 아니다", async () => {
     const { sitemap } = await load();
-    // 한국 날짜가 UTC 보다 하루 앞설 수 있어 하루를 더 허용한다.
     const limit = Date.now() + 24 * 60 * 60 * 1000;
     for (const entry of sitemap()) {
       expect(Date.parse(String(entry.lastModified)), entry.url).toBeLessThanOrEqual(limit);
@@ -168,7 +159,6 @@ describe("사이트맵", () => {
       for (const topic of topics) {
         expect(at(locale, pathOf(topic)), pathOf(topic)).toBe(topic.modified);
       }
-      // 허브는 아래 페이지 중 가장 최근에 고친 날이다.
       expect(at(locale, "/help")).toBe(
         topics.map((topic) => topic.modified).sort().at(-1)
       );

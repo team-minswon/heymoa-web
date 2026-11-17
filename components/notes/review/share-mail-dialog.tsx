@@ -57,25 +57,13 @@ import { cn } from "@/lib/utils";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { useDocLanguage } from "@/lib/i18n/use-doc-language";
 
-/**
- * 보낸 사람이 남기는 말의 상한. 정본은 서버의 공유 메일 도메인 상수(`NoteShareMail.MAX_MESSAGE_LENGTH`)이고
- * 넘기면 400 `SHARE_MAIL_MESSAGE_TOO_LONG` 이다. 여기서는 입력칸이 미리 막는다.
- */
 const MAX_MESSAGE_LENGTH = 1000;
 
-/** 서버가 받는 사람 때문에 거절한 코드. 토스트와 함께 입력칸 테두리도 붉힌다 */
 const RECIPIENT_CODES = new Set([
   "SHARE_MAIL_INVALID_RECIPIENT",
   "SHARE_MAIL_TOO_MANY_RECIPIENTS",
 ]);
 
-/**
- * 「회의록 보내기」. 넓은 화면은 가운데 대화상자, 좁은 화면(`< sm`)은 아래에서 올라오는 시트다 — 같은
- * 팝업의 기하만 CSS 로 바꾼다(첫 렌더가 화면 폭을 몰라도 갈리지 않는다).
- *
- * PDF 는 누를 때 [buildPdf] 로 만든다. 무엇을 붙일지만 넘기고, 회의록 모델은 부르는 쪽이 안다.
- * 실패는 전역 토스트(서버 문구)이고 창과 입력은 그대로 남는다.
- */
 export function ShareMailDialog({
   open,
   onOpenChange,
@@ -93,9 +81,7 @@ export function ShareMailDialog({
   noteId: string;
   workspaceId: string | undefined;
   meeting: { title: string; whenIso: string };
-  /** 이 회의 참석자 중 주소가 있는 사람 */
   attendees: readonly RecipientCandidate[];
-  /** 녹취록에 이름 없이 나갈 화자의 표시 이름(「화자 C」) */
   unnamedSpeakers: readonly string[];
   buildPdf: (include: MinutesInclude) => Promise<Blob>;
   preparePdf?: PrepareMinutesPdf;
@@ -109,7 +95,6 @@ export function ShareMailDialog({
   const { user } = useAuth();
   const recipientsId = useId();
   const problemId = useId();
-  // 검토 화면의 담당 후보가 같은 키로 이미 읽어 두어 대개 캐시에서 온다. 창을 열 때만 구독한다
   const membersQuery = useGetWorkspaceMembers(workspaceId ?? "", {
     query: { enabled: open && Boolean(workspaceId) },
   });
@@ -123,17 +108,11 @@ export function ShareMailDialog({
 
   const [include, setInclude] = useState<MinutesInclude>({ transcript: false });
   const [previewed, setPreviewed] = useState(false);
-  // **열 때마다 녹취록을 끈다** — 창은 닫혀도 마운트된 채라 지난번에 켠 녹취록이 다음 메일에 말없이 실렸다.
-  // 받는 사람 · 메시지는 쓰다 만 것이라 남긴다(보내면 비운다)
-  // 보낸 뒤에는 창을 닫지 않고 받는 사람별 결과를 그린다. [since] 는 결과를 다시 묻기 시작한 때다
   const [sent, setSent] = useState<{ mailId: string; since: number } | null>(
     null
   );
   const status = useShareMailStatus(noteId, sent);
-  // 더 기다릴 것이 없는 발송이다. **서버가 끝났다고 할 때뿐이다** — 조회가 실패했거나 30초가 지나 묻기를 멈춘
-  // 것은 끝난 것이 아니다. 그런 발송은 다시 열어도 결과 화면과 다시 확인을 남긴다
   const sentDone = status.mail?.completed === true;
-  // 지금 추적하는 발송. 늦게 눌린 예전 토스트가 새 발송을 건드리지 않게 확인할 때 쓴다
   const sentRef = useRef(sent);
   useEffect(() => {
     sentRef.current = sent;
@@ -144,8 +123,6 @@ export function ShareMailDialog({
     if (open) {
       setInclude({ transcript: false });
       setPreviewed(false);
-      // 아직 결과를 기다리는 발송이 있으면 그 결과 화면을 다시 연다 — 지우면 그 발송을 더 묻지 않아 뒤에 나온
-      // 실패를 아무도 모른다. 끝난 발송만 걷고 새로 쓴다
       if (sentDone) setSent(null);
     }
   }
@@ -190,7 +167,6 @@ export function ShareMailDialog({
 
   const changeRecipients = (next: Recipient[]) => {
     setRecipients(next);
-    // 서버가 받는 사람 때문에 거절한 표시는 고치기 시작하면 걷는다
     if (sendMail.isError) sendMail.reset();
   };
 
@@ -209,7 +185,6 @@ export function ShareMailDialog({
     } finally {
       setBuilding(false);
     }
-    // 회의록에는 붙임 「안건별 경과」가 없다(1쪽 안건 표와 상세가 그 자리다) — 계약의 AGENDA_LOG 는 보내지 않는다
     const kinds: SendNoteShareMailRequestIncludeItem[] = include.transcript
       ? ["TRANSCRIPT"]
       : [];
@@ -226,11 +201,9 @@ export function ShareMailDialog({
       {
         onSuccess: (response) => {
           sending.current = false;
-          // 202 는 접수일 뿐이다(계약). 받는 사람별 결과는 이 창에서 이어 묻는다
           const mailId =
             response.status === 202 ? response.data.data?.mailId : undefined;
           if (!mailId) return;
-          // 예전 발송의 실패 토스트는 거둔다 — 남겨 두면 그 「다시 보내기」가 새 발송 화면을 덮는다
           if (notified.current) toast.dismiss(`share-mail-${notified.current}`);
           setSent({ mailId, since: Date.now() });
           setRecipients([]);
@@ -243,15 +216,12 @@ export function ShareMailDialog({
     );
   };
 
-  /** 「보내지 못함」 주소만 받는 사람 칸에 다시 채운다. 이유를 몰라 바로 보내지 않고 고칠 자리를 준다 */
   const retryFailed = (emails: readonly string[]) => {
     setRecipients(addRecipients([], [...emails], [...attendees, ...members]));
     setSent(null);
     sendMail.reset();
   };
 
-  // **창을 닫은 뒤 나온 실패는 토스트로 알린다.** 창 안에서 최종 결과를 이미 봤으면 다시 알리지 않는다 — 모두
-  // 「보냄」이면 아무것도 띄우지 않는다. 다시 보내기를 누르면 그 주소만 채운 창을 다시 연다
   const [seen, setSeen] = useState<string | null>(null);
   if (open && sent && status.mail?.completed && seen !== sent.mailId)
     setSeen(sent.mailId);
@@ -275,7 +245,6 @@ export function ShareMailDialog({
       action: {
         label: t("resend"),
         onClick: () => {
-          // 그 사이 새 발송을 접수했으면 그 발송을 건드리지 않고 창만 연다
           if (sentRef.current?.mailId === mailId) retryFailed(unsent);
           onOpenChange(true);
         },
@@ -291,10 +260,7 @@ export function ShareMailDialog({
       <DialogContent
         showCloseButton={!submitting}
         className={cn(
-          // **높이를 고정한다(APP-1356).** 글을 쓰는 화면(664)에서 보낸 결과(241)로 넘어가며 창이 절반 넘게 줄어 화면 가운데로
-          // 튀었다. 두 화면 모두 본문만 스크롤하고 푸터는 아래에 붙는다
           "flex max-h-[calc(100dvh-3rem)] flex-col gap-0 p-0 sm:h-[min(720px,calc(100dvh-3rem))] sm:max-w-[520px]",
-          // 좁은 화면은 아래 시트 — 손이 닿는 자리에 보내기가 오고, 키보드가 올라와도 위가 덜 가린다
           "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-h-[92dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:pb-[env(safe-area-inset-bottom)] max-sm:data-open:slide-in-from-bottom-10"
         )}
       >
@@ -310,7 +276,6 @@ export function ShareMailDialog({
         {sent ? (
           <ShareMailResult
             status={status}
-            // 30초를 새로 세고 지금 한 번 묻는다 — 실패한 조회는 묻기가 멈춰 있어 키만 그대로면 다시 나가지 않는다
             onRefresh={() => {
               setSent({ ...sent, since: Date.now() });
               void status.query.refetch();
@@ -377,7 +342,6 @@ export function ShareMailDialog({
                   invalid={Boolean(problem) || rejected}
                   describedBy={problem ? problemId : undefined}
                 />
-                {/* 멤버를 못 불러온 것과 맞는 멤버가 없는 것은 다르다 — 빈 후보로 접으면 이름을 쳐도 아무도 없는 줄 안다 */}
                 {membersQuery.isError && !membersQuery.data ? (
                   <InlineRetry
                     variant="line"
@@ -500,7 +464,6 @@ export function ShareMailDialog({
   );
 }
 
-/** 다시 묻는 간격과 그만 묻는 때(계약 합의). SES 응답은 보통 수 초 안에 끝난다 */
 const POLL_MS = 2_000;
 const POLL_FOR_MS = 30_000;
 
@@ -508,11 +471,6 @@ type MailStatus = "PENDING" | "SENT" | "FAILED";
 
 type ShareMailStatus = ReturnType<typeof useShareMailStatus>;
 
-/**
- * 보낸 메일의 받는 사람별 결과를 묻는다. **창 밖에 둔다** — 창을 닫아도 30초까지는 계속 물어, 그 사이 「보내지 못함」이
- * 나오면 토스트로 알린다(창 안 결과만 보면 바로 닫은 사람은 실패를 모른다). 202 직후 한 번 묻고 2초마다 다시 묻다가,
- * 모두 끝났거나(`completed`) 30초가 지나거나 조회가 실패하면 멈춘다.
- */
 function useShareMailStatus(
   noteId: string,
   sent: { mailId: string; since: number } | null
@@ -535,7 +493,6 @@ function useShareMailStatus(
       .filter((row) => row.status === "FAILED")
       .map((row) => row.email) ?? [];
   const pending = mail ? !mail.completed : true;
-  // 그만 묻는 때를 렌더 밖(타이머)에서 알린다 — 다시 확인을 누르면 [since] 가 바뀌어 30초를 새로 센다
   const [expiredAt, setExpiredAt] = useState<number | null>(null);
   const since = sent?.since ?? null;
   useEffect(() => {
@@ -550,13 +507,7 @@ function useShareMailStatus(
   return { query, mail, failed, pending, polling };
 }
 
-/**
- * 보낸 뒤 받는 사람별 결과. 묻기는 [useShareMailStatus] 가 창 밖에서 하고 여기는 그리기만 한다.
- * 멈춘 뒤에도 「보내는 중」이 남으면 다시 확인할 버튼을 둔다(발송 큐가 밀리면 남는다).
- *
- * **「보냄」은 메일 서버(SES)가 받았다는 뜻이다** — 없는 주소로 되돌아와도 「보냄」으로 남는다(계약). 그래서
- * 「전달됨」이라고 쓰지 않는다.
- */
+/** 「보냄」은 메일 서버(SES)가 받았다는 뜻이다 — 없는 주소로 되돌아와도 「보냄」으로 남는다(계약). 그래서 「전달됨」이라 쓰지 않는다. */
 function ShareMailResult({
   status: { query, mail, failed, pending, polling },
   onRefresh,
@@ -627,7 +578,6 @@ function ShareMailResult({
         ) : null}
       </div>
       <DialogFooter className="mx-0 mt-3.5 mb-0 rounded-b-panel bg-transparent px-5 pt-3.5 pb-4 max-sm:rounded-b-none">
-        {/* 다시 보내기는 모두 끝난 뒤에만 — 아직 보내는 중인 주소가 있을 때 누르면 그 주소들의 결과를 놓친다 */}
         {failed.length && !pending ? (
           <Button variant="outline" onClick={() => onRetryFailed(failed)}>
             {t("resendFailed", { count: failed.length })}
@@ -723,7 +673,6 @@ function ToggleRow({
           {description}
         </span>
       </span>
-      {/* 줄 전체가 label 이라 어디를 눌러도 켜진다. 이름은 제목만, 설명은 따로 읽힌다 */}
       <Switch
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-desc`}
@@ -763,10 +712,6 @@ function InlineNote({
   );
 }
 
-/**
- * 받는 사람이 볼 메일의 겉모양. 틀의 정본은 서버(메일 템플릿)이고 본문에는 회의록 내용을 싣지 않는다 —
- * 회의록은 첨부로만 간다. 보낸 사람 표시 · 제목 · 첨부 이름은 서버가 정한 모양을 그대로 따른다.
- */
 function MailPreview({
   sender,
   recipients,

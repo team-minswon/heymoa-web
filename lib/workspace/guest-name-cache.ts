@@ -6,20 +6,6 @@ import {
 } from "@/lib/notes/query-keys";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 
-/**
- * 임시 참여자 이름 변경 (APP-1194)을 **이미 받아 둔 캐시에 직접 쓴다.** 재조회도 전체 무효화도 하지 않는다.
- *
- * 이름을 사본으로 들고 있는 조회는 넷이다. 모두 `guestId` 로 같은 사람을 짚는다.
- *
- * - 임시 참여자 목록(쪽 수·`limit` 이 다른 키 여럿) — 항목의 `displayName`
- * - 회의의 참여자(회의 상세·참여자 목록·노트 목록) — 항목의 `name`
- * - 할 일·회의 검토 항목의 담당 — `{ type: "GUEST", id, name }`
- * - 전사의 화자 — `assignedName`. 화자는 `guestId` 가 아니라 **참여 기록 id**(`assignedParticipantId`)로 사람을 가리키므로,
- *   위에서 `guestId` 와 함께 본 `participantId` 로 이어 붙인다
- *
- * 값이 안 바뀐 쿼리는 건드리지 않고, 바뀐 쿼리도 **받아 온 시각은 그대로 둔다** — 쓰기가 신선도를 새로 찍으면
- * 아직 안 받은 다른 필드까지 방금 받은 것처럼 보인다.
- */
 export function writeGuestName(
   queryClient: QueryClient,
   { guestId, displayName }: { guestId: string; displayName: string }
@@ -28,7 +14,6 @@ export function writeGuestName(
     .getQueryCache()
     .findAll({ predicate: (query) => holdsGuestName(query.queryKey) });
 
-  // 화자는 참여 기록 id 로만 사람을 가리킨다. 이름 사본에서 먼저 그 id 를 모은 뒤에 화자를 고친다.
   const participantIds = new Set<string>();
   for (const query of queries) {
     write(queryClient, query, (data) =>
@@ -43,10 +28,6 @@ export function writeGuestName(
   }
 }
 
-/**
- * 임시 참여자 목록 캐시에서 그 사람의 지금 이름을 읽는다. 쪽 수가 다른 목록 캐시가 여럿이면 **가장 늦게 받은** 것을 믿는다.
- * 없으면 undefined.
- */
 export function cachedGuestName(
   queryClient: QueryClient,
   guestId: string
@@ -79,11 +60,6 @@ function payload(query: Query): Json | undefined {
     : undefined;
 }
 
-/**
- * 캐시에 든 조회 중 **이 워크스페이스 것**을 가르는 판정. 회의·할 일 조회의 키에는 워크스페이스가 없어서, 회의 상세·
- * 프로젝트 목록·노트 목록으로 이 워크스페이스의 회의·프로젝트를 먼저 모은다. 어디 것인지 모르는 조회는 아니라고 본다.
- * 이름 쓰기와 진행 중 조회 끊기가 둘 다 이 판정을 지나야 다른 워크스페이스를 건드리지 않는다.
- */
 export function workspaceScope(queries: Query[], workspaceId: string) {
   const notes = new Set<string>();
   const projects = new Set<string>();
@@ -106,7 +82,6 @@ export function workspaceScope(queries: Query[], workspaceId: string) {
       }
     }
   }
-  // 프로젝트 단위 노트 목록은 그 프로젝트가 이 워크스페이스 것일 때만 믿는다.
   for (const query of queries) {
     const project = /^\/v1\/projects\/([^/]+)\/notes$/.exec(
       String(query.queryKey[0])
@@ -129,7 +104,6 @@ export function workspaceScope(queries: Query[], workspaceId: string) {
   };
 }
 
-/** [workspaceId] 의 조회 중 [holds] 가 고른 것을 고르는 술어 — 진행 중 조회를 끊을 때 다른 워크스페이스를 건드리지 않게. */
 export function inWorkspace(
   queryClient: QueryClient,
   workspaceId: string,
@@ -142,7 +116,6 @@ export function inWorkspace(
   return (query: Query) => holds(query.queryKey) && scope(query.queryKey);
 }
 
-/** 이 이름을 사본으로 들 수 있는 조회인가. 이름 변경 전에 이 조회들의 진행 중인 요청을 끊는 데도 쓴다. */
 export function holdsGuestName(queryKey: readonly unknown[]) {
   const path = queryKey[0];
   return (
@@ -172,7 +145,6 @@ function isJson(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** 바뀐 곳만 새로 만들고 나머지는 같은 참조로 둔다 — 안 바뀌면 입력 그대로를 돌려준다. */
 export function mapDeep(value: unknown, visit: (node: Json) => Json): unknown {
   if (Array.isArray(value)) {
     let changed = false;
@@ -202,7 +174,6 @@ function renameGuestOwned(
   participantIds: Set<string>
 ) {
   return mapDeep(data, (node) => {
-    // 담당은 `guestId` 가 아니라 `{ type, id, name }` 으로 사람을 가리킨다.
     if (node.type === "GUEST" && node.id === guestId) {
       return typeof node.name === "string" && node.name !== displayName
         ? { ...node, name: displayName }

@@ -1,9 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-/**
- * 목 모드에서는 `proxy.ts` 가 곧바로 넘긴다 — 만료 토큰이어도 갱신·쿠키 변경이 없다. 일반 요청과 prefetch 가 같다.
- * 정상·만료·일시 실패·폐기 네 경우는 진짜 소켓의 가짜 API 로 `e2e/agent-oauth/proxy-refresh.spec.ts` 가 본다.
- */
 const EXPIRED =
   "eyJhbGciOiJub25lIn0.eyJzdWIiOiIwMUswMDAwMDAwMDAwIiwiZXhwIjoxfQ.e2e";
 

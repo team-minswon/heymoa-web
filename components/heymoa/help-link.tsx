@@ -9,10 +9,6 @@ import { helpPathById } from "@/app/[lang]/help/_content/path-by-id";
 import { track } from "@/lib/analytics/track";
 import { localePath } from "@/lib/i18n/locales";
 
-/**
- * 제품 화면에서 도움말(`/help`)의 그 항목으로 가는 글자 링크. 브라우저에서는 새 탭, 데스크톱 앱에서는 앱 안에서
- * 연다(`SitePageLink`). `topic`은 `app/[lang]/help/_content/topics.tsx`의 주제 slug다.
- */
 export function HelpLink({
   topic,
   children,

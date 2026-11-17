@@ -2,26 +2,7 @@ import type { RunRange, ProposalHead } from "@/lib/notes/proposals/contract";
 
 export type { RunRange, ProposalHead };
 
-/**
- * 후보 event를 화면 상태로 접는 순수 함수. React도 Query도 모른다.
- *
- * **전달 보장이 best-effort다.** WebSocket send 실패를 durable retry하지 않으므로 event가
- * 유실될 수 있다. 그래서 이 리듀서가 하는 일은 「도착한 것을 정확히 접는 것」까지이고,
- * 「빠진 것을 아는 것」은 `needsRefetch`로 provider에 넘긴다. 정합의 정본은 REST snapshot이다.
- *
- * 계약이 만드는 함정 넷을 여기서 못 박는다.
- *
- * 1. **`operation`에서 `status`를 유도하지 않는다.** `RESOLVE` 하나가 질문의 `CLOSED`와
- *    결과의 `OPEN`을 동시에 만든다. 유도 함수는 이 경우 반드시 틀린다.
- * 2. **정렬 키는 `createdSequence`다.** 도착 순서도 `revision`도 아니다. `AMEND`가 오면
- *    카드가 제자리에서 바뀌어야지 목록 아래로 튀면 시간순이 무너진다.
- * 3. **`REAFFIRM`은 event가 없다.** 서버에서는 evidence가 늘고 `lastEvidenceSequence`가
- *    전진하는데 화면은 신호를 못 받는다. 그래서 batch event를 받으면 provider가 snapshot을
- *    다시 받아 수렴시킨다 — 근거 개수를 실시간 지표로 쓰면 안 되는 이유다.
- */
-
 export type ContextCard = ProposalHead & {
-  /** `RESOLVE`가 만든 결과 후보. 질문 카드에만 찬다. */
   results: ProposalHead[];
 };
 
@@ -31,12 +12,6 @@ export type ContextActivityOutcome =
   | "RESYNC_REQUIRED"
   | "RECOVERED";
 
-/**
- * 실시간 프레임이 화면 상태에 어떻게 접혔는지 보여 주는 짧은 처리 이력.
- *
- * 서버 원장을 복제하는 감사 로그가 아니다. 전달은 best-effort이고 재연결 replay도 없으므로
- * 최근 프레임만 남기며, 정합성의 정본은 계속 REST snapshot이다.
- */
 export type ContextActivity =
   | {
       type: "proposal";
@@ -65,16 +40,11 @@ export type ContextActivity =
     };
 
 export type ContextState = {
-  /** `proposalId` → 현재 head. */
   proposals: Record<string, ProposalHead>;
   runs: RunRange[];
-  /** 이미 접은 run 의 `runId`. best-effort라 같은 것이 두 번 올 수 있다. */
   seenRunIds: string[];
-  /** 마지막 배치 적용 시각. **서버 값이다** — 수신 시각을 쓰면 재연결 직후 「방금」이 된다. */
   lastBatchAt: string | null;
-  /** revision gap을 봤다. provider가 snapshot을 다시 받아야 한다. */
   needsRefetch: boolean;
-  /** 가장 최근 처리가 앞에 오는, 화면용 bounded 이력. */
   activities: ContextActivity[];
 };
 
@@ -114,7 +84,6 @@ function withActivity(state: ContextState, activity: ContextActivity) {
   ].slice(0, MAX_ACTIVITIES);
 }
 
-/** `(fromSequence, toSequence, runId)` 오름차순. 서버 정렬과 같은 순서다. */
 function sortRanges(ranges: RunRange[]) {
   return [...ranges].sort(
     (a, b) =>
@@ -124,18 +93,8 @@ function sortRanges(ranges: RunRange[]) {
   );
 }
 
-/**
- * **갱신 시각은 뒤로 가지 않는다.** batch event 는 best-effort 이고 relay 가 여럿이라
- * 늦은 옛 event 가 뒤늦게 도착할 수 있다. 그때 `appliedAt` 을 무조건 덮으면 화면의 「갱신」이
- * 과거로 뛴다 — `runs` 가 runId 로 수렴하듯 이 값도 max 로 수렴시킨다.
- *
- * 비교는 시각으로 한다. 문자열 비교는 같은 표기(둘 다 `Z`)일 때만 맞고, offset 표기가
- * 섞이면 틀린다. 파싱이 안 되는 값은 기존 값을 지킨다.
- */
 function laterInstant(current: string | null, incoming: string | null) {
   if (!incoming) return current;
-  // **들어온 값을 먼저 검증한다.** `!current` 를 먼저 보면 malformed 첫 값이 검사 없이
-  // 통과해 화면에서 `Invalid Date` 가 된다 — 상태가 빈 순간이 가장 무방비다.
   const b = Date.parse(incoming);
   if (Number.isNaN(b)) return current;
   if (!current) return incoming;
@@ -157,13 +116,6 @@ export function reduceContextEvent(
       return initialContextState;
 
     case "snapshot": {
-      /**
-       * REST가 정본이되, **자기보다 새 것을 되돌리지는 않는다.** 초기 조회가 도는 동안
-       * WS 이벤트가 먼저 닿으면 그 응답은 이미 낡은 시점이다 — 통째로 교체하면 방금 온
-       * 후보·범위가 사라지고 다음 이벤트까지 화면이 과거로 남는다. 그래서 후보는
-       * revision이 큰 쪽을, 범위는 snapshot에 없는 runId를 보존하며 합친다
-       * (rule `architecture`: reconcile 지점은 provider 한 곳, 확정 데이터로 수렴).
-       */
       const proposals = byId(event.proposals);
       for (const current of Object.values(state.proposals)) {
         const incoming = proposals[current.proposalId];
@@ -176,8 +128,6 @@ export function reduceContextEvent(
         ...event.runs,
         ...state.runs.filter((range) => !snapshotRunIds.has(range.runId)),
       ]);
-      // **갱신 시각도 snapshot 에서 복원한다.** event 로만 채우면, 종료된 회의를 새 탭에서
-      // 열었을 때 범위가 있는데도 갱신 띠가 영원히 빈다 — 그 회의는 더 이상 event 가 안 온다.
       const latestApplied = ranges.reduce<string | null>(
         (latest, range) => laterInstant(latest, range.appliedAt),
         null
@@ -185,8 +135,6 @@ export function reduceContextEvent(
       return {
         proposals,
         runs: ranges,
-        // 비우지 않는다 — snapshot이 이벤트로 이미 얹은 범위를 안 실었을 수 있고,
-        // 그때 같은 batch가 재전달되면 중복 처리 내역이 선다.
         seenRunIds: state.seenRunIds,
         lastBatchAt: laterInstant(state.lastBatchAt, latestApplied),
         needsRefetch: false,
@@ -204,7 +152,6 @@ export function reduceContextEvent(
       const next = event.proposal;
       const current = state.proposals[next.proposalId];
 
-      // 역순·중복. 같은 revision이 다시 와도 여기서 걸린다.
       if (current && next.revision <= current.revision) {
         return {
           ...state,
@@ -221,7 +168,6 @@ export function reduceContextEvent(
         };
       }
 
-      // 처음 보는데 revision이 1이 아니거나, 이어지지 않으면 사이를 놓쳤다.
       const expected = current ? current.revision + 1 : 1;
       const needsRefetch = state.needsRefetch || next.revision !== expected;
 
@@ -280,12 +226,6 @@ export function reduceContextEvent(
   }
 }
 
-/**
- * 시간순 카드 목록. 결과 후보는 최상위에 두 번 나오지 않고 질문 아래로 들어간다.
- *
- * **닫힌 후보를 걸러내지 않는다.** `RESOLVE`로 닫힌 질문을 감추면 사용자가 그 질문을 되짚을
- * 표면이 없어지고, 철회된 후보는 무엇이 취소됐는지가 화면에서 사라진다.
- */
 export function selectCards(state: ContextState): ContextCard[] {
   const all = Object.values(state.proposals);
   const results = new Map<string, ProposalHead[]>();
@@ -297,24 +237,17 @@ export function selectCards(state: ContextState): ContextCard[] {
     results.set(proposal.resolvesProposalId, bucket);
   }
 
-  /**
-   * **계약의 정렬 키는 `(createdSequence, proposalId)` 둘이다.** 한 batch 가 여러 후보를
-   * 같은 sequence 로 낼 수 있어서 `createdSequence` 만 비교하면 동률의 순서가 도착 순서에
-   * 좌우된다 — 같은 원장을 역순 event 로 채운 화면과 snapshot 으로 채운 화면이 달라진다.
-   */
   const byOrder = (
     a: { createdSequence: number; proposalId: string },
     b: { createdSequence: number; proposalId: string }
   ) =>
     a.createdSequence - b.createdSequence ||
-    // TSID는 Crockford base32라 코드 단위 비교가 곧 서버의 `ORDER BY candidate_id ASC`다.
-    // `localeCompare`는 로케일에 따라 숫자와 문자의 순서가 달라질 수 있어 쓰지 않는다.
+    // TSID 는 Crockford base32 라 코드 단위 비교가 서버의 `ORDER BY` 와 같습니다. `localeCompare` 는 로케일마다 순서가 달라 쓰지 않습니다.
     (a.proposalId < b.proposalId ? -1 : a.proposalId > b.proposalId ? 1 : 0);
 
   return all
     .filter((proposal) => {
       if (!proposal.resolvesProposalId) return true;
-      // 부모가 아직 안 왔으면 최상위에 남겨 둔다 — 안 그러면 화면에서 사라진다.
       return !(proposal.resolvesProposalId in state.proposals);
     })
     .sort(byOrder)

@@ -33,7 +33,6 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
 }));
 
 describe("Auth callback", () => {
-  // 마지막 방문 기록이 없는 첫 로그인이다 — 목록의 첫 항목(서버가 합류한 순서로 준다)으로 간다.
   it("기억이 없으면 목록의 첫 워크스페이스로 보낸다", async () => {
     render(<CallbackProcessor />);
     await waitFor(() =>
@@ -51,8 +50,6 @@ describe("Auth callback", () => {
     window.localStorage.clear();
   });
 
-  // 쿼리 이름의 원본은 heymoa-server다 — 성공은 `?returnTo=`, 실패는 `?error=`로 온다.
-  // 이름이 갈리면 값이 조용히 undefined가 되고 화면은 정상으로 보인다. 그래서 이름을 검사한다.
   it("server가 보낸 쿼리 이름을 그대로 읽는다", async () => {
     const element = await AuthCallbackPage({
       searchParams: Promise.resolve({

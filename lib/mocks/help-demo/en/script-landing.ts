@@ -1,16 +1,5 @@
 import { parseScript } from "@/lib/mocks/help-demo/script";
 
-/**
- * 핵심 회의 2 「신제품 소개 페이지 문구 정리」의 대사. 검토까지 끝나 확정된 회의다.
- *
- * | 라벨 | 사람 |
- * |---|---|
- * | A | 오세라 — 진행 |
- * | B | 최민재 — 문구·디자인 |
- * | C | 김서윤(나) |
- *
- * 한지호는 참석했지만 말하지 않았다(참석자만 있고 화자가 없는 경우의 표본).
- */
 export const LANDING_SCRIPT = parseScript(`
 A Let's get started. Today we're locking the copy for the new product landing page. It goes to the dev team next Monday, so we need to finish today. @opening
 A We'll go top to bottom. Headline, three benefits, ingredients, reviews, and the sign-up button copy at the end.

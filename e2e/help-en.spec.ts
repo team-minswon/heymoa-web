@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openGuide } from "./helpers-ui";
 
-/**
- * 사용 가이드 영어판(APP-1282). 영어 본문 · 영어 검색 색인 · `/en` 링크를 브라우저로 본다. 정적 페이지라 목 서비스 워커와 무관하다.
- */
 const HANGUL = /[가-힣ㄱ-ㆎ]/;
 
 test("/en/help 와 주제 페이지에 한글이 남지 않는다", async ({ page }) => {
@@ -16,9 +13,6 @@ test("/en/help 와 주제 페이지에 한글이 남지 않는다", async ({ pag
   ]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    // 상단바 · 사이드바 · 본문 · 푸터까지, 화면에 보이는 글 전부. 푸터 언어 선택의 「한국어」(`lang="ko"`)는 일부러 그 언어로 쓴다.
-    // dev 서버는 다른 워커가 새 라우트를 컴파일할 때 HMR 로 문서를 다시 불러, 읽는 도중 실행 문맥이
-    // 사라질 수 있다(전체 e2e 에서만 가끔). 읽기를 poll 로 감싸 그때는 다시 읽는다.
     await expect
       .poll(
         () =>
@@ -43,14 +37,12 @@ test("/en/help 와 주제 페이지에 한글이 남지 않는다", async ({ pag
 test("영어 검색은 영어 결과와 /en 링크를 내고, 한국어판 색인과 섞이지 않는다", async ({
   page,
 }) => {
-  // 한국어판에서 먼저 검색해 한국어 색인을 받아 둔다
   await page.goto("/help");
   await page
     .getByRole("searchbox", { name: "사용 가이드 전체에서 찾기" })
     .fill("용어");
   await expect(page.getByRole("link", { name: /용어/ }).first()).toBeVisible();
 
-  // 푸터의 언어 선택으로 영어판으로 넘어간다
   await page.getByRole("link", { name: "English" }).click();
   await expect(page).toHaveURL(/\/en\/help$/);
   await page

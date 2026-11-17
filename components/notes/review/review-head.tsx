@@ -25,11 +25,6 @@ function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   );
 }
 
-/**
- * 검토 화면의 머리 — 회의록 문서의 첫 줄이다(APP-865). 상태 배지 · 회의 제목 · 날짜 · 길이 · 참석자 ·
- * 프로젝트. [aside] 는 배지 줄 오른쪽 끝에 선다(요약 / 그래프 전환). 값이 아직 없으면 그 칩을 비운다 —
- * 그럴듯한 기본값을 채우지 않는다.
- */
 export function ReviewHead({
   meta,
   participants,
@@ -40,11 +35,9 @@ export function ReviewHead({
 }: {
   meta: NoteMeta | null | undefined;
   participants: readonly SpeakerFace[];
-  /** 회의 길이. 전사가 아직 안 왔으면 null */
   lengthMs: number | null;
   confirmed: boolean;
   aside?: ReactNode;
-  /** 이 회의가 속한 프로젝트의 안건 지도. 프로젝트가 없으면 비운다(링크도 숨는다). 이어진 안건이 없어도 늘 보인다 */
   mapHref?: string;
 }) {
   const t = useTranslations("notes.review.head");

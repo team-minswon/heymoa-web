@@ -39,7 +39,6 @@ describe("TranscriptRow", () => {
     );
     expect(chipRenders.count).toBe(1);
 
-    // 실시간 줄이 재조회로 서버의 같은 줄로 바뀌는 경우
     view.rerender(
       <TranscriptRow
         segment={{ ...segment, sequence: 9 }}

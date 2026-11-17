@@ -1,7 +1,6 @@
 import type { SeedTopic } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { anchorsOf, parseScript } from "@/lib/mocks/help-demo/script";
 
-/** 중간 길이 회의의 전사와 요약 시드. 요약은 주제 하나, 결정 2~4개, 할 일 2~5개로 작게 둔다. */
 export type MidMeeting = {
   script: ReturnType<typeof parseScript>;
   headline: string;
@@ -9,7 +8,6 @@ export type MidMeeting = {
   topics: SeedTopic[];
 };
 
-/** 봄 캠페인 키비주얼 시안 검토. 화자 A 이하린, B 최민재, C 박도윤. */
 const visualScript = parseScript(`
 A So we've got three key visual drafts. The goal today is to narrow it down to one. Marcus, can you walk us through the idea behind each?
 B Sure. Option 1 is mostly a shot of drifting petals. Option 2 puts the product big in the center on a soft green background. Option 3 is someone holding the product.
@@ -75,7 +73,6 @@ export const VISUAL_MEETING: MidMeeting = {
   ],
 };
 
-/** 광고 소재 A/B 테스트 설계. 화자 A 박도윤, B 최민재, C 이하린. */
 const abScript = parseScript(`
 A This meeting is to decide how we design the May creative A/B test. In April we just ran creative A and B side by side, but this time we want to change one variable at a time.
 C Good. In April the two creatives differed in a bunch of ways, so we never really knew why one won.

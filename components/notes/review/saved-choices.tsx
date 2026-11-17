@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import { missingChoicesOf } from "@/lib/notes/review/saved-choices";
 
-/** 과거 제안을 다시 만들지 않고, 저장된 선택만 확인하고 해제합니다. */
 export function SavedChoices({
   item,
   disabled,

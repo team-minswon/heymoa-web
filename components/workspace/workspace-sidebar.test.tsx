@@ -111,7 +111,6 @@ function renderSidebar(overrides: Partial<typeof props> = {}) {
   };
 }
 
-/** 목록 응답 봉투. 사이드바가 캐시에 써 넣는 모양과 같아야 한다. */
 function projectsResponse(name: string) {
   return {
     status: 200 as const,
@@ -137,22 +136,14 @@ describe("WorkspaceSidebar", () => {
     cleanup();
     auth.isLoggingOut = false;
     logout.mockReset();
-    // 스위처 순서가 이 값을 읽는다 — 안 비우면 다음 케이스로 새어 순서가 흔들린다.
     window.localStorage.clear();
   });
 
-  /**
-   * 프로젝트가 0개면 이 자리가 통째로 비어서, 만들 수 있다는 것을 알리는 것이 머리글 옆
-   * 14px `+` 하나뿐이었다. 새 워크스페이스는 항상 이 상태로 시작하므로 처음 들어온 사람이
-   * 가장 먼저 보는 화면이 그것이었다.
-   */
   it("프로젝트가 없으면 라벨 있는 만들기 입구를 낸다", () => {
     const onCreateProject = vi.fn();
     renderSidebar({ projects: [], onCreateProject });
 
     fireEvent.click(screen.getByRole("button", { name: "프로젝트 만들기" }));
-    // 창은 셸이 소유한다 — 상단바 「새 노트」도 같은 창을 열고, 프로젝트가 없으면 거기서
-    // 회의 창으로 이어 붙기 때문이다(`workspace-app-shell.test.tsx`).
     expect(onCreateProject).toHaveBeenCalledOnce();
   });
 
@@ -175,16 +166,6 @@ describe("WorkspaceSidebar", () => {
     expect(props.onCreateProject).toHaveBeenCalledOnce();
   });
 
-  /**
-   * 이름 변경은 서버 응답을 목록 캐시에 **바로** 써야 한다.
-   *
-   * 예전에는 invalidate의 refetch를 기다렸다가 다이얼로그를 닫았다. 그사이 버튼 loading은
-   * 이미 꺼져 있어서 아무 일도 안 일어나는 구간이 생겼고, 뒤에 깔린 사이드바는 옛 이름
-   * 그대로였다 — "확인을 눌렀는데 옛 이름이 잠깐 보인다"가 이것이다.
-   *
-   * 캐시를 검사하는 이유: 옛 코드는 캐시에 **아무것도 안 썼다**. 닫힘 여부만 보면 두 구현이
-   * 구분되지 않는다.
-   */
   it("이름 변경 응답을 목록 캐시에 바로 써 넣고 기다리지 않고 닫는다", async () => {
     projectApi.updateMock.mockResolvedValue({
       status: 200,
@@ -241,10 +222,6 @@ describe("WorkspaceSidebar", () => {
     expect(push).toHaveBeenCalledWith("/w/01K0000000007");
   });
 
-  /**
-   * **기억한 워크스페이스가 목록의 첫 줄이다.** 서버는 합류 순으로 주므로, 지금 보고 있는
-   * 곳이 목록 중간에 체크만 달고 앉아 있었다 — 방금 온 자리를 목록에서 찾아야 했다.
-   */
   it("마지막으로 방문한 워크스페이스를 목록 맨 위에 둔다", async () => {
     window.localStorage.setItem("heymoa:last-workspace", "01K0000000007");
     renderSidebar();
@@ -252,7 +229,6 @@ describe("WorkspaceSidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "워크스페이스 전환" }));
     await screen.findByRole("menuitem", { name: /제품 팀/ });
 
-    // 목록 항목은 만들기·설정보다 앞에 있으므로 앞의 둘만 본다(서버 순서는 김민수 → 제품 팀).
     const items = screen
       .getAllByRole("menuitem")
       .slice(0, 2)
@@ -286,7 +262,6 @@ describe("WorkspaceSidebar", () => {
       name: /김민수 minsu@example.com/,
     });
     expect(footer).toContainElement(profile);
-    // settings gear replaces the old chevron affordance
     expect(profile.querySelector("svg.lucide-settings")).toBeInTheDocument();
   });
 

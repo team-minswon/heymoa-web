@@ -42,10 +42,6 @@ export function Navbar() {
   const dashboardHref = workspaceId ? `/w/${workspaceId}` : null;
   const logoHref = dashboardHref ?? "/";
   const inWorkspace = pathname.startsWith("/w/");
-  // **워크스페이스 0개는 실패가 아니다.** 마지막 워크스페이스에서 추방되면 도달하는 정상
-  // 상태이고, 같은 홈의 랜딩 CTA가 그때 「워크스페이스 만들기」를 낸다(APP-402). 여기서
-  // 오류 토스트와 「다시 시도」를 함께 띄우면 방금 안내한 행동을 옆에서 부정하게 되고,
-  // 재시도해 봐야 같은 0개가 온다.
   useEffect(() => {
     if (!isWorkspacesError) return;
 
@@ -59,7 +55,6 @@ export function Navbar() {
     });
   }, [isWorkspacesError, refetchWorkspaces, t, tActions]);
 
-  // `/` 는 `NavbarGate` 가 랜딩 상단 바를 세워 여기 오지 않는다 — 구간 링크는 늘 랜딩으로 이동한다.
   const handleScroll = (id: string) => {
     router.push(`/#${id}`);
   };
@@ -67,7 +62,6 @@ export function Navbar() {
   return (
     <div className="fixed top-4 left-0 right-0 z-40 mx-auto w-full max-w-5xl px-4 sm:px-6">
       <header className="flex items-center justify-between gap-4 rounded-full border border-[var(--el-hairline)] bg-white/70 px-4 py-2.5 sm:px-6 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-        {/* Left Logo Section */}
         <Link href={logoHref} className="flex items-center gap-3">
           <Image
             src="/apple-touch-icon.png"
@@ -85,12 +79,9 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Middle Navigation - Hidden on Mobile */}
         <nav
           className={`${inWorkspace ? "hidden" : "hidden md:flex"} items-center gap-8 text-[15px] font-medium text-[var(--el-muted)]`}
         >
-          {/* `min-h-6`는 WCAG 2.2 AA의 24px 최소 타깃이다 — 15px 글자에 여백이 없어 22.5px
-              줄상자 그대로 22~23px였다. 알약이 40px라 겉보기는 안 바뀐다. */}
           <button
             onClick={() => handleScroll("meetings")}
             className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
@@ -105,7 +96,6 @@ export function Navbar() {
           </button>
         </nav>
 
-        {/* Right Section */}
         <div className="flex items-center gap-3">
           <AuthStatus />
           {!inWorkspace &&
@@ -133,9 +123,6 @@ export function Navbar() {
                     <span className="hidden sm:inline">{t("dashboard")}</span>
                   </LinkButton>
                 ) : isWorkspacesPending ? (
-                  // children이 위 확정 버튼과 같아야 폭이 안 튄다. `min-w-24 sm:min-w-36`으로
-                  // 덮어 두었었는데 그 144px이 실제 확정 폭 138.1px보다 커서 반대로 6px
-                  // 줄어들었다. 자리표시를 실물과 같게 두면 min-w가 필요 없다.
                   <Button
                     type="button"
                     size="xl"
@@ -162,8 +149,6 @@ export function Navbar() {
               </div>
             ) : (
               <AuthModal>
-                {/* 손으로 쓴 버튼이었다 — 옆의 `로그인`(공용 Button)과 높이가 8px 어긋났다.
-                    같은 Button + size="xl"로 맞춘다. */}
                 <Button
                   type="button"
                   size="xl"

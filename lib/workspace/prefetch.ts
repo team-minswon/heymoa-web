@@ -23,18 +23,6 @@ export async function prefetchWorkspaceShell({
   }
 
   const request = await getServerApiRequestOptions();
-  /**
-   * **첫 페인트에 실제로 필요한 둘만 기다린다.**
-   *
-   * 이 prefetch는 `app/w/[workspaceId]/layout.tsx`가 `await`하므로 여기서 기다리는 시간이
-   * 그대로 `/w/**` 모든 진입의 블로킹 구간이고, 그동안 `app/w/loading.tsx`의 골격이 뜬다.
-   *
-   * **워크스페이스 목록(`getWorkspaces`)은 빼냈다.** 첫 화면이 그것으로 그리는 것이 하나도
-   * 없다 — 사이드바 헤더의 이름은 `getWorkspace`(단건)에서 오고, 목록은 상단 전환
-   * 드롭다운을 **열 때만** 쓴다. 그 소비자들은 전부 비-suspense `useGetWorkspaces()`거나
-   * 자기 `DataBoundary` 안에 있어서(설정 다이얼로그의 `useGetWorkspacesSuspense`) 셸을
-   * 매달지 않는다. 하이드레이션 뒤 필요할 때 받아 온다.
-   */
   await Promise.allSettled([
     queryClient.prefetchQuery(
       getGetWorkspaceQueryOptions(workspaceId, { request: request })
@@ -46,11 +34,7 @@ export async function prefetchWorkspaceShell({
   return dehydrate(queryClient);
 }
 
-/**
- * 카드를 받는 두 면(첫 구독 결제 페이지·카드 변경 iframe, APP-1600)의 서버 스냅샷. 양식이 워크스페이스 단건과 결제 상태를
- * suspense 로 읽는데, 미리 받아 두지 않으면 서버 렌더가 쿠키 없이 조회하다 401 → 갱신 실패로 끝나고 브라우저가 처음부터
- * 다시 그린다(실제 서버에 붙여 보고 찾음 — 목 모드에서는 보이지 않는다).
- */
+/** 미리 받지 않으면 서버 렌더가 쿠키 없이 조회하다 401 로 끝나 브라우저가 처음부터 다시 그립니다. */
 export async function prefetchCardEntry(
   workspaceId: string
 ): Promise<DehydratedState> {

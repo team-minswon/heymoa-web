@@ -95,7 +95,6 @@ describe("UnsubscribeLanding", () => {
     expect(
       screen.getByText("회의를 자동 종료했을 때 보내는 안내")
     ).toBeInTheDocument();
-    // 서버가 자동 종료가 돌지 않는다고(`autoEndActive=false`) 하면 일정 고지는 없다.
     expect(
       screen.getByText("초대 등 다른 메일은 그대로 받습니다.")
     ).toBeInTheDocument();

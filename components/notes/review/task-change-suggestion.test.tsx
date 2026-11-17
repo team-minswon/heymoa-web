@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TaskChangeSuggestion } from "@/components/notes/review/suggestion-row";
 
-/** 제안 안의 기한 칸(달력을 여는 버튼). 고칠 수 없으면 버튼이 없다. 빈 값의 문구가 자리마다 달라 이름으로 찾지 않는다 */
 const dueButton = () =>
   document.querySelector<HTMLElement>('[data-slot="popover-trigger"]');
 
@@ -81,7 +80,6 @@ describe("기존 할 일 변경 초안", () => {
   it("편집한 기한을 즉시 초안에 저장하며 대상의 원래 판을 유지한다", () => {
     const initial = props();
     render(<TaskChangeSuggestion {...initial} />);
-    // 기한이 없는 제안이라 달력은 이번 달을 편다. 그 달의 날짜 하나를 골라 그 값을 따라간다.
     fireEvent.click(dueButton()!);
     const day = document.querySelector<HTMLElement>(
       'td[data-day]:not([data-outside="true"])'

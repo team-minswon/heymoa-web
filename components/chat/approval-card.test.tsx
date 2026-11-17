@@ -94,7 +94,6 @@ describe("ApprovalCard", () => {
     expect(screen.getByText("2건 더 보기")).toBeTruthy();
     const details = screen.getByText("할 일 7").closest("details");
     expect(details?.open).toBe(false);
-    // 펼친 뒤에도 접을 수 있어야 한다 — 요약 줄이 사라지면 긴 목록이 스레드를 계속 차지한다.
     expect(details?.querySelector("summary")?.textContent).toContain("접기");
   });
 

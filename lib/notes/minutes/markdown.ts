@@ -5,10 +5,6 @@ import type {
   MinutesTimelineRow,
 } from "@/lib/notes/minutes/model";
 
-/**
- * 타임라인 탭의 복사본. 머리말(회의명 · 일시 · 참석자)은 요약 · 스크립트 복사와 같고, 그 아래 안건마다 결정 · 할 일 ·
- * 미결을 시간순 한 줄씩 적는다. 헤딩 · 굵게 · 불릿만 쓴다 — 렌더하지 않는 곳에서도 읽힌다.
- */
 export function timelineToMarkdown(
   note: NoteMeta,
   groups: readonly MinutesGroup<MinutesTimelineRow>[],

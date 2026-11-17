@@ -37,10 +37,6 @@ describe("claimOf", () => {
   });
 });
 
-/**
- * 새 창에 sessionStorage 가 복사되는 두 길(opener 를 가진 window.open, 탭 복제)과 새로고침을 가른다.
- * 모듈을 다시 불러오는 것이 문서 하나가 새로 뜨는 것이다.
- */
 describe("탭 식별 clientInstanceId", () => {
   const KEY = "heymoa.transcription.clientInstanceId";
   const load = async () => {
@@ -61,7 +57,6 @@ describe("탭 식별 clientInstanceId", () => {
 
   it("sessionStorage 를 물려받은 새 창은 다른 값을 만든다", async () => {
     const opener = (await load())();
-    // 새 창: 저장소는 복사되지만 창 이름은 비어 있다
     window.name = "";
     expect(sessionStorage.getItem(KEY)).toBe(opener);
 

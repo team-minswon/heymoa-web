@@ -5,7 +5,6 @@ import type { ApprovalCardData } from "@/lib/chat/approval-card";
 import type { ChatStreamPhase } from "@/lib/chat/stream-protocol";
 import { useToolApproval } from "@/lib/chat/use-tool-approval";
 
-/** 주입된 승인 호출. 열렸으면 null, 실패면 사유를 돌려준다. */
 const resolveMock = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
@@ -80,7 +79,6 @@ describe("useToolApproval", () => {
   });
 
   it("★ 자리가 없다는 503은 terminal이 아니다 — 잠금을 풀고 토스트한다", async () => {
-    // 승인을 되돌린 것이라 잠시 뒤 다시 누르면 된다. 무효화하면 유일한 재시도가 막힌다.
     failWith("AGENT_CHAT_CAPACITY_EXCEEDED", "잠시 뒤 다시 시도해 주세요.");
     const { result } = render(pending("a1"), "awaiting_approval");
     await act(async () => result.current.approve("APPROVED"));
@@ -100,7 +98,6 @@ describe("useToolApproval", () => {
     const { result, rerender } = render(pending("a1"), "awaiting_approval");
     expect(result.current.card?.status).toEqual({ kind: "open" });
 
-    // 리듀서가 무종료로 pending을 지우고 phase가 stalled로 간다.
     rerender({ p: null, ph: "failed" });
     expect(result.current.card?.status).toMatchObject({ kind: "invalid" });
     const state = result.current.card?.status as { reason: string };
@@ -127,7 +124,6 @@ describe("useToolApproval", () => {
   });
 
   it("스트림이 먼저 확정한 뒤 늦게 온 종료 오류는 죽은 카드를 되살리지 않는다", async () => {
-    // 2차가 확정해 pending이 지워진 뒤, 늦게 온 404가 도착하는 경합.
     let settle: ((e: unknown) => void) | undefined;
     resolveMock.mockImplementation(
       () => new Promise((resolve) => (settle = resolve))
@@ -135,11 +131,9 @@ describe("useToolApproval", () => {
     const { result, rerender } = render(pending("a1"), "awaiting_approval");
     act(() => result.current.approve("APPROVED"));
 
-    // 스트림이 확정하고 정상 종료 → pending 소실.
     rerender({ p: null, ph: "done" });
     expect(result.current.card).toBeNull();
 
-    // 늦은 404 도착 — 이미 지나간 승인이라 무시한다.
     await act(async () =>
       settle?.({ code: "APPROVAL_NOT_FOUND", message: "이미 처리됐습니다." })
     );
@@ -147,8 +141,6 @@ describe("useToolApproval", () => {
   });
 
   it("카드 구조를 그대로 들고 있다 — 무효화된 뒤에도 같은 카드다", () => {
-    // **참조가 안정적이어야 한다.** 훅이 렌더 중에 직전 pending을 추적하므로
-    // 인라인 객체를 넘기면 매 렌더가 새 값이라 무한 렌더가 된다.
     const card: ApprovalCardData = {
       title: "Linear 이슈 만들기",
       target: "앱 팀",
@@ -174,7 +166,6 @@ describe("useToolApproval", () => {
     });
   });
 
-  // ★ 만료가 없어졌다. 만료라고 말하면 없는 시계를 있다고 하는 것이다
   it("안 누른 채 끝나면 만료가 아니라 「처리하지 못한 채 끝났다」로 말한다", () => {
     const { result, rerender } = render(pending("a1"), "awaiting_approval");
     rerender({ p: null, ph: "failed" });
@@ -184,7 +175,6 @@ describe("useToolApproval", () => {
     });
   });
 
-  // ★ N3 — server 는 202 전에 결정을 굳히고 재개를 넘긴다. 그 뒤 끝났으면 쓰기가 나갔을 수 있다
   it("★ 승인을 보낸 뒤 비정상 종료로 끝나면 「중단됨」이 아니라 「확인 필요」다", async () => {
     const { result, rerender } = render(pending("a1"), "awaiting_approval");
     await act(async () => result.current.approve("APPROVED"));

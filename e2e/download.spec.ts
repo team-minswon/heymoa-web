@@ -161,7 +161,6 @@ test("anonymous visitors can reach desktop downloads without starting OAuth", as
     .getByRole("link", { name: "데스크톱 다운로드" })
     .click();
   await expect(page).toHaveURL(/\/download$/);
-  // 다운로드도 랜딩 크롬이다(`isLandingChromeRoute`) — 마케팅 Navbar(떠 있는 알약)가 서면 안 된다.
   await expect(page.locator("header.rounded-full")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(

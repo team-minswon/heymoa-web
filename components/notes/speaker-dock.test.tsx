@@ -71,8 +71,6 @@ describe("SpeakerDock", () => {
     ).toBeDisabled();
   });
 
-  // 띠에는 짧은 발화도 다 보이는데 ◀ ▶ 가 1.5초 이상만 밟아 큰 덩어리로 건너뛰었다.
-  // 도크는 모든 발화를 세로선 기준으로 하나씩 밟는다(맞장구 건너뛰기는 패널 지정 흐름 몫).
   describe("짧은 발화 사이 이동", () => {
     const short = [
       { segmentId: "s1", startedAtMs: 10_000, endedAtMs: 11_000 },
@@ -125,7 +123,6 @@ describe("SpeakerDock", () => {
     expect(onJump).toHaveBeenLastCalledWith("a3", "strip");
   });
 
-  /** 1px = 1000ms 인 띠에서 [clientX] 를 누르고 고른 발화를 돌려준다. */
   function clickAt(
     clientX: number,
     targets: { id: string; start: number; end: number }[],
@@ -164,10 +161,6 @@ describe("SpeakerDock", () => {
     expect(onJump).toHaveBeenCalledWith("long", "strip");
   });
 
-  /**
-   * 실제 회의(10/13, 51분): 김민수의 46:22 발화 뒤 46:44 를 눌렀다. 「그 시각 이후 첫 발화」로
-   * 고르면 2분 뒤 48:39 로 갔다. 가장 가까운 것은 방금 끝난 46:22 발화다.
-   */
   it("품은 발화가 없으면 앞뒤로 가장 가까운 발화로 간다", () => {
     const onJump = clickAt(2804, [
       { id: "m1", start: 2_782_560, end: 2_785_000 },
@@ -176,8 +169,6 @@ describe("SpeakerDock", () => {
     expect(onJump).toHaveBeenCalledWith("m1", "strip");
   });
 
-  // 실제 회의(약 1시간): 김민수가 58:36 에 「네.」(1초 남짓)라고 했는데 띠에 안 보이고
-  // 눌러도 거기로 가지 않았다. 띠와 클릭은 짧은 발화도 다 대상이다.
   it("1시간 회의 끝부분의 1초 발화를 누르면 그 발화로 간다", () => {
     const onJump = clickAt(
       3516,
@@ -219,7 +210,6 @@ describe("SpeakerDock", () => {
   it("접으면 줄이 사라지고 알약이 서며, 다시 누르면 펼쳐진다", async () => {
     renderDock(0);
     fireEvent.click(screen.getByRole("button", { name: "화자 도크 접기" }));
-    // 퇴장 애니메이션이 끝나야 줄이 빠진다.
     await waitFor(() =>
       expect(screen.queryByTestId("speaker-dock-row")).toBeNull()
     );

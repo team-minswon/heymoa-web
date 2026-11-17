@@ -49,12 +49,10 @@ describe("moveFlowStatus", () => {
     });
 
     moveFlowStatus(client, "n1", "CONFIRMED");
-    // 받아들여진 요청이 진행 중이라 재조회 전까지 다시 요청할 수 없다고 본다(APP-1475)
     expect(client.getQueryData(key)).toMatchObject({
       data: { data: { noteId: "n1", status: "CONFIRMED", retryable: false } },
     });
 
-    // 분석 재요청이 받아들여진 경우. 재조회 전까지 요청 버튼이 다시 서지 않는다
     client.setQueryData(key, {
       status: 200,
       data: {

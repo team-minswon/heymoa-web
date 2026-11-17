@@ -427,7 +427,6 @@ const startTime = (ms: number) =>
     hour: "2-digit",
     minute: "2-digit",
   });
-/** 최근 회의 목록은 녹음 상태와 독립적으로 탐색한다. */
 let meetingsSignature = "";
 const meetingButtons = new Map<string, HTMLButtonElement>();
 function renderMeetings(list: ActiveMeeting[], show: boolean) {

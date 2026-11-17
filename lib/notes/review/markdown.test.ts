@@ -109,7 +109,6 @@ describe("overview · topics", () => {
     expect(overviewToMarkdown(summary, doc)).toBe(
       "## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n"
     );
-    // 제목 후보가 있어도 회의 정리를 가리지 않는다
     expect(
       overviewToMarkdown(
         {
@@ -172,7 +171,6 @@ describe("reviewToMarkdown", () => {
     expect(out).toContain("## 주제");
     expect(out).toContain("- 다운로드를 아래에 둔다");
     expect(out.match(/## 결정/g)).toHaveLength(1);
-    // 요약이 아직 안 왔으면 요약 머리도 없다
     expect(out).not.toContain("## 요약");
   });
 
@@ -190,11 +188,9 @@ describe("reviewToMarkdown", () => {
       confirmed: true,
       context: { whenOf: () => 290_000, topicTitleOf: () => "홍보" },
     });
-    // ordinal(5, 3)이 아니라 목록 차례(1, 2)로 센다
     expect(out).toContain("1. [00:07] **에이전트**");
     expect(out).toContain("2. [04:08] **홍보**");
     expect(out).toContain("- 다운로드를 아래에 둔다 ([04:50] · 주제: 홍보)");
-    // 머리말 사실 줄에 기록 시간 · 프로젝트 · 확정 여부
     expect(out).toContain("기록 9분 · 프로젝트 멘토링 · 확정됨");
   });
 

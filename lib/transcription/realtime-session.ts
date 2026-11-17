@@ -36,21 +36,11 @@ export type RealtimeSessionController = {
   close: () => Promise<void>;
 };
 
-/**
- * 노랑 알림. 받아쓰기와 실시간 분석이 멈췄다는 뜻이다.
- * - `disconnected`: 끊김을 알아챈 지 5초(offline 이면 곧바로). `sinceMs` 는 알아챈 시각이다.
- * - `no_receipt`: 붙어 있는데 영수증(`connected`·ack)이 10초 없다. `sinceMs` 는 마지막 영수증 시각이다.
- */
 export type ConnectionNotice = {
   cause: "disconnected" | "no_receipt";
   sinceMs: number;
 };
 
-/**
- * 서버가 확정 안 한 소리가 이 기기(메모리)에 얼마나 있나.
- * - `paused`: 한도에 닿아 캡처한 소리를 받지 않는 중이다. 밀린 것이 빠지면 저절로 풀린다.
- * - `upload`: 다시 붙은 뒤나 멈춘 뒤 밀린 소리를 올리는 중. 다 보내면 null.
- */
 export type BufferState = {
   pendingMs: number;
   limitMs: number;
@@ -58,13 +48,6 @@ export type BufferState = {
   upload: { percent: number; remainingMs: number } | null;
 };
 
-/**
- * 컨트롤러가 녹음을 끝낸 이유. 사용자 문구는 받는 쪽이 만든다.
- * - `resume_window_exhausted`: 끊김을 알아챈 뒤 재개 창 안에 다시 잇지 못했다
- * - `stop_timeout`: stop 을 보냈지만 기한 안에 completed 를 못 받았다
- * - `stop_send_failed`: stop 프레임을 보내지 못했다
- * - `server_error`: 다시 붙어도 풀리지 않는 in-band 오류다. 서버 문구는 `reason` 에 있다
- */
 export type RealtimeFailureKind =
   | "resume_window_exhausted"
   | "stop_timeout"
@@ -72,7 +55,6 @@ export type RealtimeFailureKind =
   | "server_error";
 
 export type RealtimeFailureDetail = {
-  /** 올리지 못하고 버린 소리. */
   droppedMs: number;
   reason?: string;
 };
@@ -84,7 +66,6 @@ export type RealtimeSessionOptions = {
   onFailure: (kind: RealtimeFailureKind, detail: RealtimeFailureDetail) => void;
   onNoticeChange?: (notice: ConnectionNotice | null) => void;
   onBufferChange?: (state: BufferState) => void;
-  /** `captureGapMs`: 첫 조각 이후 벽시계에서 실제로 잡은 소리를 뺀 것. 마이크가 쉰 시간이다. */
   onMicrophoneChange?: (state: MicrophoneState, captureGapMs: number) => void;
   onSystemAudioChange?: (state: MicrophoneState | null) => void;
   onCaptureError?: (code: string) => void;
@@ -99,31 +80,20 @@ export type RealtimeSessionDependencies = {
   createSocket?: (options: TranscriptionSocketOptions) => SocketPort;
 };
 
-/** `reattach`: stop 을 보낸 부착이 끊겼거나 서버가 저장을 못 끝냈다. 다시 붙어 stop 을 다시 보낸다. */
 type TerminalState = "completed" | "failed" | "timeout" | "reattach";
 
-/** 이만큼 연속으로 한 조각도 못 보내면 회선이 죽은 것으로 보고 다시 붙는다. 실패가 아니다. */
 const MAX_CONGESTION_MS = CAPTURE_TUNING.congestionMs;
-/** heartbeat 가 10s 라 두 번 놓치면 끊긴 것이다. 망 먹통을 서버보다 먼저 안다. */
 const SILENCE_LIMIT_MS = 20_000;
-/** 소켓이 비는 대로 밀린 것을 채우고 무수신을 잰다. 조각 하나(100ms)와 같은 박자다. */
 const PUMP_MS = 100;
-/** 첫 재시도 대기의 가운데. 급사한 태스크의 녹음들이 같은 순간 몰리지 않게 ±절반을 흩는다. */
 const REATTACH_FIRST_DELAY_MS = 500;
 const REATTACH_MIN_DELAY_MS = 500;
 const REATTACH_MAX_DELAY_MS = 5_000;
-/** 끊김을 알아챈 뒤 이만큼 다시 잇지 못하면 녹음을 멈춘다. */
 const RESUME_WINDOW_MS = 30_000;
 const NOTICE_AFTER_MS = 5_000;
-/** S3 flush 주기(5초)의 두 배. */
 const RECEIPT_LIMIT_MS = 10_000;
-/** server stop 최악(S3 10초 + 업체 10초)보다 길게. */
 const STOP_TIMEOUT_MS = 25_000;
-/** stop 을 누른 때부터의 상한. 느린 S3 에서 다시 붙으라는 답이 이어져도 여기서 끝낸다. */
 const STOP_TOTAL_MS = 60_000;
-/** 이보다 짧게 살고 끊긴 부착이 이어지면 연결은 되는데 못 버티는 것이다. 다시 붙는 간격을 늘려 간다. */
 const STABLE_ATTACH_MS = 10_000;
-/** 겹친 옛 소켓의 상한. server 는 새 부착을 5초, 자르기를 16초, 마무리를 3초까지 기다린다. */
 const TRAILING_LIMIT_MS = 30_000;
 const BYTES_PER_MS =
   (CAPTURE_CONTRACT.sampleRate * CAPTURE_CONTRACT.bytesPerSample) / 1000;
@@ -143,7 +113,6 @@ function firstReattachDelayMs() {
   return REATTACH_FIRST_DELAY_MS * (0.5 + Math.random());
 }
 
-/** n 번째 재시도(1부터) 전 대기. 한 태스크에 붙어 있던 녹음들이 같은 박자로 두드리지 않게 흩는다. */
 function reattachDelayMs(attempt: number) {
   const ceiling = Math.min(
     REATTACH_MAX_DELAY_MS,
@@ -154,29 +123,14 @@ function reattachDelayMs(attempt: number) {
   );
 }
 
-/**
- * 녹음 한 번 = 세션 하나. 소켓은 그 세션에 붙는 부착이라 끊기면 같은 세션에 다시 붙고,
- * 서버가 확정한 조각 다음부터 버퍼에서 다시 보낸다. `chunkSeq` 는 녹음 내내 이어진다.
- *
- * 녹음이 실패로 끝나는 길: 재시도해도 같은 in-band 오류, 끊김을 알아챈 뒤 30초 창 소진,
- * 종료 응답 시간 초과. 창이 끝나면 캡처를 끄고 메모리 소리를 버리며 연결이 돌아와도 다시 켜지 않는다.
- * 다시 붙다가 로그인 만료(갱신 토큰까지 죽음)를 알면 창을 기다리지 않고 닫는다. 실패로 알리지 않는다 — 세션 게이트가 화면을 맡는다.
- * 메모리 한도(5분)는 실패가 아니다. 캡처를 멈췄다가 빠지면 다시 받는다.
- */
 export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
   private sessionId: string | null = null;
   private socket: SocketPort | null = null;
-  /**
-   * 두 스트림 겹치기. 옛 서버가 옛 스트림을 자르고 닫을 때까지 새 조각을 여기에도 보낸다. 받은 말(final·partial)은
-   * 화면으로 넘기고, 녹음 상태는 새 소켓이 말한다.
-   */
   private trailing: SocketPort | null = null;
   private trailingTimer: ReturnType<typeof setTimeout> | null = null;
-  /** 지금 소켓이 `connected` 를 받았다. 그 전에는 보내지 않는다. */
   private attached = false;
   private reattaching: Promise<void> | null = null;
-  /** 다시 붙는 시도 중에만 있다. 그 소켓이 돌려보내지면 서버가 준 delayMs 로 시도를 끝낸다. */
   private bounce: ((delayMs: number) => void) | null = null;
   private stopPromise: Promise<void> | null = null;
   private closePromise: Promise<void> | null = null;
@@ -188,11 +142,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     | ((state: Exclude<TerminalState, "timeout">) => void)
     | null = null;
   private attachedAt = 0;
-  /** 짧게 살고 끊긴 부착이 몇 번 이어졌나. */
   private churn = 0;
   private failed = false;
   private congestedSinceMs: number | null = null;
-  /** 정체 동안 가장 새 3초 뒤로 넘긴 조각. 정체가 풀릴 때 한 줄로 남긴다. */
   private congestionCatchUp: CatchUp | null = null;
   private lastInboundAt = 0;
   private pumpTimer: ReturnType<typeof setInterval> | null = null;
@@ -200,17 +152,14 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private captureStartedAt: number | null = null;
   private capturedMs = 0;
   private resendBuffer!: ResendBuffer;
-  /** 올리기 진행률의 분모. 다시 붙거나 멈출 때 남은 양으로 잡는다. */
   private uploadBaselineBytes: number | null = null;
   private lastBufferKey = "";
-  /** 끊김을 알아챈 시각. 소켓 닫힘·무수신·정체·reattach·offline 중 가장 이른 것이고 `connected` 에서 지운다. */
   private disconnectedSince: number | null = null;
   private disconnectDetail = "";
   private reconnectReason: ReconnectReason = "initial";
   private offline = false;
   private lastAckAt = 0;
   private notice: ConnectionNotice | null = null;
-  /** 재시도 대기를 곧바로 끝낸다. online 이 쓴다. */
   private wakeRetry: (() => void) | null = null;
   private readonly handleOffline = () => {
     logTranscription("offline");
@@ -263,12 +212,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     try {
       await this.attach();
     } catch (error) {
-      // 내려가는 서버가 connected 전에 다른 서버로 가라고 했다. 녹음은 시작하고 다시 붙기는 창 안에서 한다.
-      // 옛 소켓의 거절이 새 소켓이 붙은 뒤에 올 수도 있다
       if (!this.reattaching && !this.attached) throw error;
     }
     await this.rejectIfStopped();
-    // 폴링(ACTIVE)이 connect() 를 먼저 풀었다. connected 없이는 어디까지 저장됐는지 몰라 보낼 수 없다
     if (!this.attached) void this.reattach("no_receive", "connected missing");
     await this.audio.start();
     await this.rejectIfStopped();
@@ -290,20 +236,13 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     return this.stopPromise;
   }
 
-  /**
-   * 서버는 `finalChunkSeq` 까지 저장한 뒤에만 completed 를 보낸다. 못 끝냈거나 stop 을 보낸 부착이 끊기면 다시 붙어
-   * 이어 보내고 stop 을 다시 보낸다. 끊긴 채면 30초 창 안에서만 기다린다.
-   */
   private async stopOnce() {
     if (this.closing) return this.closePromise ?? Promise.resolve();
     const since = Date.now();
     const deadline = since + STOP_TOTAL_MS;
-    /** stop 경로의 모든 기다림은 이것을 거친다. 조금씩 나가는 올리기나 끝나지 않는 부착이 상한을 넘기지 못한다. */
     const untilDeadline = (work: Promise<unknown>) =>
       Promise.race([work, sleep(Math.max(0, deadline - Date.now()))]);
-    // Browser audio cleanup can reject after the final PCM batch was flushed
-    // (for example when AudioContext was already closed). The server stop must
-    // still be sent so an ACTIVE session is not left behind.
+    // Browser audio cleanup can reject (e.g. AudioContext already closed); stop must still be sent.
     await untilDeadline(this.stopAudio().catch(() => undefined));
     let reattaches = 0;
     const closeUnattached = () => {
@@ -315,16 +254,13 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       return this.close();
     };
     for (;;) {
-      // 다시 잇는 중이면 이은 뒤에 남은 소리를 보내고 멈춘다
       if (this.reattaching) await untilDeadline(this.reattaching);
       if (Date.now() >= deadline) break;
       if (!this.socket || !this.attached) return closeUnattached();
-      // 회의 끝이 올리기 끝이 아니다. 밀린 것을 다 건넨 뒤에 stop 을 보낸다
       await this.sendAllForStop(deadline);
       if (Date.now() >= deadline) break;
       const socket = this.socket;
       if (this.closing || !socket || !this.attached) return closeUnattached();
-      // 겹친 옛 소켓은 남은 소리를 다 받았다. 닫아야 옛 서버가 옛 스트림을 마무리해 자르고, 새 서버의 stop 이 그 자리를 기다린다
       this.dropTrailing();
       const remainingMs = deadline - Date.now();
       const state =
@@ -356,7 +292,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     await this.close();
   }
 
-  /** 닫으면 들고 있던 소리는 보낼 곳이 없다. 양을 알리고 버려야 탭 닫기 붙잡기도 풀린다. */
   private failStop() {
     const droppedMs = Math.round(this.resendBuffer.bytes / BYTES_PER_MS);
     this.resendBuffer.ackThrough(Number.MAX_SAFE_INTEGER);
@@ -364,7 +299,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     this.fail("stop_timeout", { droppedMs });
   }
 
-  /** 막힌 소켓은 정체 감시가 다시 붙이고, 끊긴 채 30초면 창이 닫는다. 조금씩 나가는 소켓은 deadline 이 끊는다. */
   private async sendAllForStop(deadline: number) {
     const unsent = this.resendBuffer.unsentBytes;
     if (unsent > 0) {
@@ -418,7 +352,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
 
   reconcile(status: RealtimeSessionStatus) {
     if (status === "ACTIVE") {
-      // 세션은 끊긴 동안에도 ACTIVE 다. 다시 붙는 부착을 connected 보다 먼저 풀면 stop 이 소켓을 닫는다
       if (!this.reattaching) this.socket?.reconcileConnected();
       return;
     }
@@ -494,7 +427,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
   }
 
-  /** 버린 소켓은 기다리지 않는다. 망이 죽었으면 닫는 인사도 안 끝난다. */
   private dropSocket(socket: SocketPort | null) {
     if (!socket) return;
     if (this.socket === socket) {
@@ -509,7 +441,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       this.dropTrailing();
       return;
     }
-    // 버린 소켓이 늦게 닫혔거나, 붙기 전에 닫혔다. 붙기 전 실패는 connect() 의 reject 가 맡는다.
     if (socket !== this.socket || this.reattaching || !this.attached) return;
     if (this.terminalEventReceived) {
       void this.close();
@@ -590,7 +521,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
           this.bounce(event.delayMs);
           return;
         }
-        // 밀린 조각이 있으면 옛 소켓에 구멍이 난다. 옛 서버는 받은 끝에서 자르므로 겹치지 않는다
         if (
           event.overlap &&
           this.attached &&
@@ -616,7 +546,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
   }
 
-  /** 옛 소켓을 버리지 않고 겹쳐 둔다. 옛 서버가 안 닫으면 상한에서 닫는다. 지금 소켓에서 떼는 것은 reattach 가 한다. */
   private keepTrailing(socket: SocketPort) {
     this.dropTrailing();
     this.trailing = socket;
@@ -641,10 +570,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   ) {
     if (this.closing || this.failed || this.reattaching)
       return this.reattaching;
-    // stop 을 기다리던 중이면 다시 붙은 뒤 stop 을 다시 보낸다
     this.terminalResolve?.("reattach");
     this.terminalResolve = null;
-    // 붙자마자 끊기기를 되풀이하면 한 번 붙을 때마다 0.5초마다 두드린다
     const churned =
       this.attached && Date.now() - this.attachedAt < STABLE_ATTACH_MS;
     this.churn = churned ? this.churn + 1 : 0;
@@ -659,12 +586,10 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     return this.reattaching;
   }
 
-  /** 창은 펌프가 잰다. 여기서는 창이 닫히거나(close) 붙을 때까지 두드린다. */
   private async reattachLoop(firstDelayMs: number) {
     let bouncedDelayMs: number | null = null;
     let bounces = 0;
     for (let attempt = 0; ; attempt += 1) {
-      // 첫 돌려보냄만 서버가 준 대로 곧바로. 거듭되면 재시도 간격으로 늦춘다 — delayMs 0 이 이어지면 쉬지 않고 두드린다
       const delayMs =
         attempt === 0
           ? firstDelayMs
@@ -685,9 +610,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
         if (bouncedDelayMs === null) break;
         bounces += 1;
       } catch (error) {
-        // 재시도해도 같은 오류였다면 handleEvent 가 이미 실패로 끝냈다
         if (this.closing || this.failed) break;
-        // 티켓을 받으려다 다시 로그인해야 함을 알았다. 창을 태우지 않고 닫는다 — 화면은 방금 연 세션 게이트(만료 경로)가 맡는다
         if (error instanceof SessionExpiredError) {
           logTranscription("reconnect", { step: "session_expired" });
           void this.close();
@@ -698,10 +621,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     this.reattaching = null;
   }
 
-  /**
-   * 붙었으면 null, connected 전에 돌려보내졌으면 서버가 준 delayMs. 돌려보낸 소켓은 닫히기를 기다리지 않고 버린다 —
-   * ALB 가 아직 내려가는 태스크로 보낸 것이라 닫힘까지 1~2초가 걸리고, 그만큼 밀린 소리가 실시간 창을 넘는다.
-   */
+  /** 돌려보낸 소켓은 닫힘을 기다리지 않습니다. ALB 가 내려가는 태스크로 보낸 것이라 닫힘까지 1~2초가 걸립니다. */
   private attachUnlessBounced() {
     const bounced = new Promise<number>((resolve) => {
       this.bounce = resolve;
@@ -732,7 +652,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     });
   }
 
-  /** 알아챈 뒤 30초가 지났으면 녹음을 멈춘다. 멈췄으면 true. */
   private checkWindow() {
     if (this.disconnectedSince === null || this.closing || this.failed)
       return false;
@@ -746,7 +665,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       droppedMs,
     });
     logTranscription("notice", { state: "shown", cause: "stopped" });
-    // 창 밖의 소리는 보낼 세션이 없다. 버려야 탭 닫기 붙잡기도 풀린다
     this.resendBuffer.ackThrough(Number.MAX_SAFE_INTEGER);
     this.reportBuffer();
     this.fail("resume_window_exhausted", {
@@ -760,7 +678,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     const now = Date.now();
     let next: ConnectionNotice | null = null;
     if (!this.closing && this.disconnectedSince !== null) {
-      // 영수증 노랑이 이미 떠 있으면 끊지 않고 이어 간다
       if (
         this.offline ||
         this.notice !== null ||
@@ -818,7 +735,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     const endMs = (captureSamples + chunk.byteLength / 2) / SAMPLES_PER_MS;
     this.captureStartedAt ??= now - endMs;
     this.capturedMs = endMs;
-    // 한도에서는 번호를 쓰지 않고 흘려보낸다. 멈춘 구간은 다음 조각의 captureSamples 건너뜀으로 남는다
     const chunkSeq = this.nextChunkSeq;
     const accepted = this.resendBuffer.push({
       chunkSeq,
@@ -827,7 +743,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     });
     if (accepted) {
       this.nextChunkSeq += 1;
-      // 옛 서버는 옛 소켓이 닫히면 받은 끝에서 자르고 뒤는 새 스트림이 적는다. 구멍 난 채 더 보내면 구멍 자리를 둘 다 안 적는다
       if (
         this.trailing &&
         !this.trailing.sendAudio(chunk, chunkSeq, captureSamples)
@@ -858,7 +773,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
               remainingMs: Math.round(unsent / BYTES_PER_MS),
             },
     };
-    // 조각마다(100ms) 그리지 않는다. 화면이 쓰는 단위(초·퍼센트)가 바뀔 때만 알린다
     const key = [
       state.pendingMs > 0,
       Math.floor(state.pendingMs / 1000),
@@ -880,10 +794,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     );
   }
 
-  /**
-   * 아직 못 건넨 조각을 민다. 실시간이 먼저, 밀린 것은 소켓이 받아 주는 만큼.
-   * 소켓이 거절하면 그 자리에서 멈춘다 — 각 줄 안에서 건너뛰면 서버가 유실로 읽는다.
-   */
   private flushPending() {
     if (!this.socket || !this.attached) return;
     const catchUp = this.resendBuffer.catchUp();
@@ -924,7 +834,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       return;
     }
     const now = Date.now();
-    // 조금이라도 나갔으면 회선이 살아 있는 것이다. 시계를 다시 잡는다.
     if (this.congestedSinceMs === null || sentAny) {
       this.congestedSinceMs = now;
       return;

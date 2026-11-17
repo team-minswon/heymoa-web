@@ -53,7 +53,6 @@ describe("quotesOf", () => {
 describe("ticksOf", () => {
   it("다섯 칸 안쪽 간격으로 나누고 끝에 길이를 둔다", () => {
     expect(ticksOf(75 * 60_000)).toEqual([0, 15, 30, 45, 60, 75]);
-    // 끝(42분)에 붙는 40분은 이름이 겹쳐 뺀다.
     expect(ticksOf(42 * 60_000)).toEqual([0, 10, 20, 30, 42]);
     const units = {
       minutes: (count: number) => `${count}분`,

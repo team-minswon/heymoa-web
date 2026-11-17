@@ -15,11 +15,6 @@ import { useUpdateNotificationPreference } from "@/lib/api/generated/notificatio
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
 import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 
-/**
- * 링크가 끄는 설정 항목(응답 `kind`)별로 끄는 메일 목록. 문구는 `notification.unsubscribe.items.<키>` 다.
- * 자동 종료 안내 메일의 링크도 리마인더 항목으로 온다(계약).
- * 모르는 종류·불러오는 중에는 리마인더 문구다 — 이 화면이 처음 생긴 메일이다.
- */
 const MAIL_ITEMS = {
   MEETING_PAUSED_REMINDER: ["pausedNextDay", "autoEnded"],
   INQUIRY_ANSWERED: ["inquiryAnswered"],
@@ -28,16 +23,6 @@ type MailKind = keyof typeof MAIL_ITEMS;
 const mailKindOf = (kind: string | undefined): MailKind =>
   kind === "INQUIRY_ANSWERED" ? kind : "MEETING_PAUSED_REMINDER";
 
-/**
- * 메일 푸터의 「이 종류의 메일 받지 않기」가 여는 독립 페이지(APP-1314, PRO-67 userflow 「수신거부」). 로그인이 필요 없다.
- *
- * **여는 것은 아무것도 바꾸지 않는다** — 메일 보안 검사기·링크 미리보기가 먼저 열 수 있어서 GET 으로 읽기만 하고,
- * 「메일 끄기」를 눌러야 POST 한다. 완료는 저장 응답을 받은 뒤에만 보인다. 실패는 전역 mutation 토스트가 말하고
- * 확인 화면은 그대로 남는다.
- *
- * 「다시 켜기」는 로그인한 사람의 설정을 바꾼다. 로그인하지 않았으면 로그인한 뒤 같은 링크로 돌아오고, 그때 GET 이
- * 「이미 꺼져 있습니다」로 다시 켜기를 보인다. 「알림 설정 열기」는 설정 탭(PRO-67 I10, 트랙 B)이 생기면 둔다.
- */
 export function UnsubscribeLanding({ token }: { token: string | null }) {
   const t = useTranslations("notification.unsubscribe");
   const tActions = useTranslations("common.actions");
@@ -127,7 +112,6 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
         ))}
       </ul>
       <p className="mt-3">
-        {/* 자동 종료가 실제로 돌 때만 고지한다(PRO-67 userflow). 판정은 서버가 싣는다(APP-1328) */}
         {kind === "MEETING_PAUSED_REMINDER" && info?.autoEndActive
           ? `${t("autoEndNote")} `
           : null}
@@ -149,7 +133,6 @@ export function UnsubscribeLanding({ token }: { token: string | null }) {
                 if (response.status === 200 && response.data.success)
                   setDone(true);
               })
-              // 실패 문구는 전역 mutation 토스트가 띄운다. 확인 화면은 그대로 둔다.
               .catch(() => {})
           }
         >
@@ -193,7 +176,6 @@ function ResubscribeCard({
             loading={resubscribe.isPending}
             onClick={() => {
               if (status !== "authenticated") {
-                // 로그인한 뒤 같은 링크로 돌아온다(`normalizeReturnTo` 가 `/unsubscribe` 를 허용한다).
                 window.location.assign(
                   buildGoogleOAuthUrl(
                     `/unsubscribe?t=${encodeURIComponent(token)}`, locale
@@ -224,7 +206,6 @@ function ResubscribeCard({
   );
 }
 
-/** 빈 배경 위 카드 하나. 목록이 있어 왼쪽 정렬이고, 버튼은 확인 창과 같은 자리(오른쪽, 취소 → 실행)다. */
 function Card({
   title,
   children,

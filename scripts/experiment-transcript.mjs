@@ -1,4 +1,3 @@
-// Local experiment only. Start a production MSW build on :3102, then run with node.
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import fs from "node:fs";

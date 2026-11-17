@@ -1,10 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/**
- * 로그인 약관 동의(APP-1277). 로그인 창의 체크박스, Google 왕복, 돌아온 `/auth/callback` 의 동의 기록을 브라우저로
- * 본다. 가짜 API 가 server 의 Google 로그인 왕복과 동의 API(`POST /v1/users/me/consents`)를 흉내 내고, 시험은
- * `/__test/account` 로 계정의 동의 상태를 정한다.
- */
 const API = `http://localhost:${process.env.E2E_API_PORT ?? "3199"}`;
 const WORKSPACE = "/w/01K0000000001";
 
@@ -25,7 +20,6 @@ async function setAccount(
   await page.request.post(`${API}/__test/account`, { data: account });
 }
 
-/** 랜딩 머리글의 시작 버튼으로 로그인 창을 연다. */
 async function openLoginModal(
   page: Page,
   path = "/",
@@ -38,7 +32,6 @@ async function openLoginModal(
   return dialog;
 }
 
-/** 체크하고 Google 로 로그인한다. 가짜 API 가 쿠키를 심고 callback 으로 돌려보낸다. */
 async function agreeAndLogin(dialog: ReturnType<Page["getByRole"]>) {
   await dialog.getByRole("checkbox").check();
   await dialog.getByRole("button", { name: "Google로 로그인" }).click();
@@ -59,18 +52,16 @@ test("체크하기 전에는 Google 로그인이 시작되지 않고, 누르면 
   const dialog = await openLoginModal(page);
   const google = dialog.getByRole("button", { name: "Google로 로그인" });
   const agreement = dialog.getByRole("checkbox");
-  // 레이아웃 높이다. 창이 열리며 커지는 transform 은 빼고 본다.
   const height = () =>
     dialog.evaluate((element) => (element as HTMLElement).offsetHeight);
 
-  // 흐리게만 보이고 클릭은 받는다. 이유 문장은 스크린리더에만 있다(APP-1402).
   await expect(google).toHaveAttribute("aria-disabled", "true");
   await expect(google).toHaveAccessibleDescription(
     "동의해야 로그인할 수 있습니다."
   );
   const before = await height();
 
-  // Playwright 는 aria-disabled 버튼을 「누를 수 없음」으로 보고 기다린다. 실제 브라우저에서는 눌린다.
+  // Playwright 는 aria-disabled 버튼을 누를 수 없다고 보고 기다립니다. 실제 브라우저에서는 눌립니다.
   await google.click({ force: true });
   await expect(agreement).toBeFocused();
   await expect(dialog.getByRole("status")).toHaveText(
@@ -80,7 +71,6 @@ test("체크하기 전에는 Google 로그인이 시작되지 않고, 누르면 
   expect((await fakeLog(page)).google).toBe(0);
   expect(await height()).toBe(before);
 
-  // 체크하면 열리고, 풀면 다시 막힌다. 어느 쪽이든 창 높이는 그대로다.
   await agreement.check();
   await expect(google).not.toHaveAttribute("aria-disabled");
   expect(await height()).toBe(before);
@@ -105,7 +95,6 @@ test("문서 이름은 각 문서로 가는 링크이고 체크박스의 이름�
     "href",
     "/terms"
   );
-  // 문구가 줄 끝에서 낱말 중간으로 갈라지지 않는다 — 한 줄이거나 낱말 단위로만 줄을 바꾼다.
   const wordBreak = await dialog
     .getByRole("checkbox")
     .locator("xpath=ancestor::label//span[last()]")
@@ -120,7 +109,6 @@ test("신규 가입은 체크하고 로그인하면 동의 기록이 서버에 �
 
   await agreeAndLogin(await openLoginModal(page));
 
-  // 개발 서버의 첫 제품 경로 컴파일까지 기다립니다. 동의 저장은 아래에서 따로 검증합니다.
   await expect(page).toHaveURL(WORKSPACE, { timeout: 15_000 });
   const log = await fakeLog(page);
   expect(log.google).toBe(1);
@@ -181,7 +169,6 @@ test("로그인 창을 거치지 않은 로그인은 동의를 기록하지 않�
 }) => {
   await setAccount(page, { consentRequired: true });
 
-  // 초대 링크·외부 에이전트 로그인처럼 창의 체크를 거치지 않고 Google 왕복만 한 경우.
   await page.goto(`${API}/v1/auth/oauth2/authorize/google?returnTo=%2F`);
 
   await expect(

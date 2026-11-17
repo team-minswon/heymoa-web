@@ -30,17 +30,11 @@ import { cn } from "@/lib/utils";
 
 type View = { kind: "manage" } | { kind: "payment"; id: string };
 
-/**
- * 설정 › 결제 관리(PRO-75). 결제 수단·구독·결제 내역을 한 탭에 둔다. 결제 상세는 같은 탭 안에서 한 단계 들어가고(`view`),
- * 카드 변경·등록은 바로 모달을 연다(APP-1600, `CardChangeDialog`).
- * 탭 전체가 ADMIN 전용이다(멤버에게는 탭이 없다). 결제 내역은 이 공간의 것이고, 내가 결제한 내역은 계정 쪽 「내 결제 내역」 탭이다.
- */
 export function WorkspacePaymentSettings({
   workspaceId,
   onOpenPlans,
 }: {
   workspaceId: string;
-  /** 「요금제」 탭으로. */
   onOpenPlans: () => void;
 }) {
   const t = useTranslations("billing.manage");
@@ -113,7 +107,6 @@ function Manage({
   onOpenPayment: (paymentId: string) => void;
 }) {
   const t = useTranslations("billing.manage");
-  // 요금제 탭과 같다 — 진행 중이면 3분 동안 5초마다, 그 뒤는 창으로 돌아올 때 다시 읽는다(`useWorkspaceBilling`).
   const poll = usePollWindow();
   const billing = useWorkspaceBilling(workspaceId, (data) =>
     !poll.expired && data && billingNeedsRereading(data) ? 5000 : false
@@ -150,7 +143,6 @@ function Manage({
         workspaceId={workspaceId}
         billing={billing}
         onChangeCard={() => {
-          // 카드 칸이 있는 문서(iframe)에는 분석이 없어 시작 이벤트는 모달을 여는 여기서 낸다(APP-1600).
           billingEvents.cardChangeStarted(workspaceId);
           setCardChange(true);
         }}
@@ -166,10 +158,6 @@ function Manage({
   );
 }
 
-/**
- * 이 공간의 결제 내역(APP-1596). 결제자가 누구든 이 공간의 결제 전부이고 ADMIN 에게만 보인다(이 탭이 ADMIN 전용이다).
- * 결제자 이름이 없으면(탈퇴) 「탈퇴한 멤버」. 행은 모두 이 공간의 결제라 상세로 들어간다.
- */
 function History({
   workspaceId,
   onOpenPayment,

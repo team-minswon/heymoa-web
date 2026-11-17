@@ -1,7 +1,3 @@
-/**
- * 결제 화면 시험. **MSW 목으로 화면을 그린 것이라 서버·PG 정합성의 증거가 아니다** — 서버 계약과의 일치는 계약 미러
- * (`openapi3.yml`)와 다음 단계의 실서버 확인이 맡는다.
- */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -50,15 +46,12 @@ vi.mock("@/lib/analytics/track", async (importOriginal) => ({
   track: vi.fn(),
 }));
 
-/** 목 시드: 집행 대상·Free / 이미 유료 / 집행 대상 아님. */
 const FREE = "01K0000000000";
 const PAID = "01K0000000006";
-/** 결제 페이지(서버 컴포넌트)가 서버 시각으로 계산해 내려 주는 다음 결제 예정일. */
 const NEXT_CHARGE = "2026-12-12T05:30:00.000Z";
 
 const server = setupServer(...restHandlers, ...billingHandlers);
 
-/** 열린 문의 창에 글을 적어 보낸다. 창은 번호를 화면에 적지 않으므로 실린 번호는 보낸 글에서 본다. */
 const SENT = "확인해 주세요";
 const sentFeedback = () =>
   mockDb.listFeedbacks().feedbacks.find((f) => f.message.startsWith(SENT))
@@ -109,8 +102,6 @@ const failure = (code: string, message: string, status: number) =>
     { success: false, data: null, error: { code, message, details: null } },
     { status }
   );
-
-// ---- 응답 만들기 ----
 
 const billingBody = (patch: Record<string, unknown> = {}) => ({
   workspaceId: FREE,
@@ -207,9 +198,6 @@ const resultEvents = () =>
     .mock.calls.filter(([name]) => name === "billing_card_setup_resulted")
     .map(([, props]) => props);
 
-// ---- 설정 › 요금제 ----
-
-/** 설정 창의 「요금제」 탭. 「결제 관리」로 넘기는 콜백만 받는다. */
 const PlanTab = ({ workspaceId }: { workspaceId: string }) => (
   <WorkspacePlanSettings workspaceId={workspaceId} onOpenPayment={vi.fn()} />
 );
@@ -222,7 +210,6 @@ describe("요금제 화면", () => {
     expect(await screen.findByText("24,900원")).toBeInTheDocument();
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     expect(screen.getByText("녹음 월 20시간")).toBeInTheDocument();
-    // 두 카드가 같은 줄 구성이다 — 한 줄 설명과 녹음 제공량. 똑같이 갖는 것(멤버 · 다섯 기능)은 아래에 한 번만 적는다.
     expect(
       screen.getByText("회의가 많지 않은 팀에 충분합니다")
     ).toBeInTheDocument();
@@ -239,7 +226,6 @@ describe("요금제 화면", () => {
       "외부 도구와 MCP 연결",
     ])
       expect(screen.getAllByText(feature)).toHaveLength(1);
-    // 워크스페이스 단위·자동 결제는 항목이 아니라 카드 아래 안내다.
     expect(
       screen.queryByText("이 워크스페이스의 모든 멤버가 함께 씁니다")
     ).not.toBeInTheDocument();
@@ -335,7 +321,6 @@ describe("요금제 화면", () => {
       )
     ).toBeInTheDocument();
     expect(screen.queryByText(/미납|유예/)).not.toBeInTheDocument();
-    // 같은 말을 두 번 하지 않는다 — 직접 구매한 사람에게 하는 「다시 결제하지 마세요」는 갱신에 없다
     expect(screen.queryByText(/다시 결제하지 마세요/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "상태 다시 확인" })
@@ -375,7 +360,6 @@ describe("요금제 화면", () => {
     ).not.toBeInTheDocument();
   });
 
-  // 서버는 지금 유료 기간의 결제를 환불할 때만 다음 결제를 멈춘다. 지난 기간의 결제 환불에 「멈췄습니다」라고 하지 않는다.
   it("지난 기간 결제의 운영자 환불은 지금 요금제와 다음 결제가 그대로라고 알린다", async () => {
     operatorRefund("PROCESSING", "A2");
     renderIn(<PlanTab workspaceId={FREE} />);
@@ -470,7 +454,6 @@ describe("요금제 화면", () => {
     );
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText("이번 달 녹음")).not.toBeInTheDocument();
-    // 사용량 칸은 틀째 없다 — 빈 칸이 남지 않는다.
     expect(
       screen.getByText("현재 요금제").closest(".grid")?.children
     ).toHaveLength(1);
@@ -513,7 +496,6 @@ describe("요금제 화면", () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByText("결제 필요")).toBeInTheDocument();
-    // 확인 중인 갱신이 아니다 — 갱신 확인 중 줄과 상태 확인 버튼이 없다
     expect(screen.queryByText(/갱신 결제 결과를 확인하고/)).toBeNull();
     expect(screen.queryByRole("button", { name: "상태 다시 확인" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "카드 다시 등록" }));
@@ -592,7 +574,6 @@ describe("요금제 화면", () => {
       },
       currentPeriod: period,
       allowedActions: [],
-      // 서버는 멤버에게 `detail` 을 주지 않는다 — 카드가 없는지 알 수 없다.
       detail: null,
     });
     renderIn(<PlanTab workspaceId={FREE} />);
@@ -646,7 +627,6 @@ describe("공간 전환 캐시", () => {
     ).toBeInTheDocument();
 
     rerender(<PlanTab workspaceId={PAID} />);
-    // 새 공간 값이 오기 전에는 skeleton 이다 — Free 공간의 구매 링크가 남아 있으면 안 된다.
     expect(startButton()).not.toBeInTheDocument();
     expect(screen.getByLabelText("요금제를 불러오는 중")).toBeInTheDocument();
     expect(
@@ -667,7 +647,6 @@ describe("요금제 탭에서 결제 페이지로", () => {
       workspace_id: FREE,
       role: "admin",
     });
-    // 설정 창 안에는 주문서가 없다.
     expect(
       screen.queryByRole("heading", { name: "주문 확인" })
     ).not.toBeInTheDocument();
@@ -718,15 +697,12 @@ describe("요금제 탭에서 결제 페이지로", () => {
   });
 });
 
-// ---- 첫 구독 결제 페이지 ----
-
 const agree = () => screen.getAllByRole("checkbox")[0];
 const agreePg = () =>
   screen.getByRole("checkbox", {
     name: "나이스페이의 전자금융거래 약관, 개인정보 수집·이용, 개인정보 제3자 제공에 동의합니다.",
   });
 const pay = () => screen.getByRole("button", { name: "동의하고 결제하기" });
-/** Luhn 이 맞는 시험 카드 번호. */
 const CARD_NUMBER = "4111111111111111";
 const typeInto = (label: string, value: string) => {
   const input = screen.getByLabelText(label);
@@ -739,7 +715,6 @@ const fillCard = (number = CARD_NUMBER) => {
   typeInto("비밀번호 앞 2자리", "12");
   typeInto("생년월일 6자리", "900101");
 };
-/** 카드 네 칸이 상태와 DOM 모두 비었다(값이 없으니 낼 수도 없다). */
 const expectCardCleared = () => {
   for (const label of [
     "카드 번호",
@@ -750,7 +725,6 @@ const expectCardCleared = () => {
     expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");
   expect(pay()).toBeDisabled();
 };
-/** 카드 칸과 두 동의를 모두 채운다. */
 const fillAll = () => {
   fillCard();
   fireEvent.click(agree());
@@ -762,7 +736,6 @@ const renderCheckout = async (workspaceId = FREE) => {
   );
   await screen.findByText("오늘 결제");
 };
-/** 카드 제출을 받아 본문을 남긴다. */
 const serveCardSubmit = (respond?: () => Response) => {
   const bodies: { setupId: string; body: unknown }[] = [];
   server.use(
@@ -788,7 +761,6 @@ describe("첫 구독 결제 페이지", () => {
     await renderCheckout();
     expect(screen.getByText("Pro 월 구독")).toBeInTheDocument();
     expect(screen.getByText("테스트 유저의 워크스페이스")).toBeInTheDocument();
-    // 상품 금액과 오늘 결제 금액 두 자리 모두 서버 값이다.
     expect(screen.getAllByText("24,900원")).toHaveLength(2);
     expect(screen.getByText("녹음 무제한")).toBeInTheDocument();
     const order = [
@@ -805,12 +777,9 @@ describe("첫 구독 결제 페이지", () => {
     expect(pay()).toBeDisabled();
     fireEvent.click(agree());
     fireEvent.click(agreePg());
-    // 동의만으로는 안 켜진다 — 카드 칸이 이 페이지에 있다.
     expect(pay()).toBeDisabled();
     fillCard();
     expect(pay()).toBeEnabled();
-    // 다음 결제 예정일과 자동 결제·해지 방법을 결제 전에 한 문장으로 알린다.
-    // 브라우저 시계가 아니라 서버가 내려 준 값을 그린다.
     expect(
       screen.getByText("다음 결제 예정일").nextElementSibling
     ).toHaveTextContent("2026년 12월 12일");
@@ -819,7 +788,6 @@ describe("첫 구독 결제 페이지", () => {
         "매월 같은 날 자동으로 결제됩니다. 관리자는 설정 > 결제 관리에서 언제든 해지할 수 있고, 해지해도 이용 기간이 끝날 때까지 쓸 수 있습니다."
       )
     ).toBeInTheDocument();
-    // 분석 없는 문서라 이벤트를 내지 않는다(진입은 요금제 탭이 낸다).
     expect(track).not.toHaveBeenCalled();
   });
 
@@ -872,7 +840,6 @@ describe("첫 구독 결제 페이지", () => {
         .getByText(/^제1조 \(목적\)/)
         .closest("[lang]")
     ).toHaveAttribute("lang", "ko");
-    // 한국어 화면에는 「한국어로 제공」 안내가 없다.
     expect(
       within(dialog).queryByText(/한국어로 제공하는/)
     ).not.toBeInTheDocument();
@@ -1178,7 +1145,6 @@ describe("첫 구독 결제 페이지", () => {
     ).toHaveAttribute("href", "/billing/setups/S9");
     fillAll();
     expect(pay()).toBeDisabled();
-    // 발급 중인 등록의 취소는 서버가 늘 409 로 거절한다.
     expect(
       screen.queryByRole("button", { name: "취소하고 다시 시작" })
     ).not.toBeInTheDocument();
@@ -1253,7 +1219,6 @@ describe("첫 구독 결제 페이지", () => {
       await screen.findByText("지금은 새로 구매할 수 없는 상태입니다.")
     ).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    // 판매가 열린 공간이라 요금제 탭이 보인다 — 돌아가기가 막다른 길이 아니다.
     expect(
       screen.getByRole("link", { name: "요금제로 돌아가기" })
     ).toHaveAttribute("href", `/w/${FREE}?settings=billing`);
@@ -1342,14 +1307,12 @@ describe("등록 결과 — 상태별 화면", () => {
         /늦어도 24시간 안에 이 화면과 이메일로 알려 드립니다. 그동안 다시 결제하지 마세요./
       )
     ).toBeInTheDocument();
-    // 메뉴 없는 화면이라 나갈 길은 있어야 한다.
     expect(
       screen.getByRole("link", { name: "요금제로 돌아가기" })
     ).toHaveAttribute(
       "href",
       expect.stringMatching(/^\/w\/[^/?]+\?settings=billing$/)
     );
-    // 단추는 문의 창을 여는 링크 하나뿐이고, 결제 번호(승인 시도)를 「결제·환불」로 싣는다.
     const support = screen.getByRole("button", { name: "문의·피드백" });
     expect(screen.getAllByRole("button")).toEqual([support]);
     fireEvent.click(support);
@@ -1485,12 +1448,10 @@ describe("등록 결과 — 상태별 화면", () => {
         "카드사에서 결제를 거절했습니다. 카드 상태를 확인하거나 다른 카드로 다시 시도해 주세요."
       )
     ).toBeInTheDocument();
-    // 내부 코드는 사유 문장이 아니라 문의용 보조 줄로만 남는다.
     expect(
       screen.getByText("문의할 때 이 코드를 알려 주세요: CARD_DECLINED")
     ).toBeInTheDocument();
     expect(screen.queryByText(/사유 코드/)).not.toBeInTheDocument();
-    // 첫 구독은 전용 결제 페이지에서 다시 시작한다(APP-1600).
     expect(screen.getByRole("link", { name: "새로 시작" })).toHaveAttribute(
       "href",
       `/billing/checkout/${FREE}`
@@ -1549,7 +1510,6 @@ describe("등록 결과 — 상태별 화면", () => {
   });
 });
 
-/** 목에 등록을 열고 카드를 낸다(화면 밖). 등록 번호를 돌려준다. */
 async function openAndSubmitCard() {
   const post = (path: string, body: unknown) =>
     fetch(`http://localhost/v1/workspaces/${FREE}/billing/setups${path}`, {
@@ -1598,7 +1558,6 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-    // 공간 조회가 미납 유예를 한 번 적용한다
     await fetch(`http://localhost/v1/workspaces/${PAID}/billing`);
     const created = await post("", {
       requestKey: "k",
@@ -1661,7 +1620,6 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
       identity: "900101",
       passwordPrefix: "12",
     });
-    // 다른 탭이 결과를 먼저 확인해 이 화면은 완료부터 본다(APP-1625)
     let status: { stage?: string } = {};
     for (let i = 0; i < 6 && status.stage !== "COMPLETED"; i += 1)
       status = (
@@ -1689,7 +1647,6 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
         "결제는 이루어지지 않았습니다. 카드 등록부터 다시 시작해 주세요."
       )
     ).toBeInTheDocument();
-    // 첫 구독은 전용 결제 페이지에서 다시 시작한다(APP-1600).
     expect(screen.getByRole("link", { name: "새로 시작" })).toHaveAttribute(
       "href",
       `/billing/checkout/${FREE}`
@@ -1708,12 +1665,11 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
     renderIn(<BillingSetupResultPage setupId="S1" />);
     await screen.findByText("결제를 확인하는 중입니다");
     expect(reads).toBe(1);
-    await act(() => vi.advanceTimersByTimeAsync(2100)); // 최초 2초
+    await act(() => vi.advanceTimersByTimeAsync(2100));
     expect(reads).toBe(2);
-    await act(() => vi.advanceTimersByTimeAsync(5100)); // 이후 5초
+    await act(() => vi.advanceTimersByTimeAsync(5100));
     expect(reads).toBe(3);
 
-    // 망취소 확정(첫 전송 뒤 약 135초)이 지난 140초 무렵에도 계속 읽는다.
     await act(() => vi.advanceTimersByTimeAsync(133_000));
     expect(reads).toBeGreaterThan(20);
     await act(() => vi.advanceTimersByTimeAsync(42_000));
@@ -1811,8 +1767,6 @@ describe("등록 결과 — 완료 맡기기·다시 읽기·이벤트·캐시",
   });
 });
 
-// ---- 카드 변경 모달 (APP-1600) ----
-
 describe("카드 변경 모달", () => {
   function Harness({ register = false }: { register?: boolean }) {
     const [open, setOpen] = useState(true);
@@ -1862,7 +1816,6 @@ describe("카드 변경 모달", () => {
     expect(
       screen.getByRole("heading", { name: "카드 변경" })
     ).toBeInTheDocument();
-    // 첫 높이를 받기 전에는 자리를 잡는다.
     expect(
       screen.getByLabelText("카드 변경 정보를 불러오는 중")
     ).toBeInTheDocument();
@@ -2011,7 +1964,6 @@ describe("카드 변경 문서(모달 안)", () => {
     expect(text).not.toContain(CARD_NUMBER);
     expect(text).not.toContain("900101");
     expect(goToSetupResult).not.toHaveBeenCalled();
-    // 서버가 발급을 요청 안에서 끝낸다 — 등록 상태를 따로 다시 읽지 않는다.
     expect(requests.some((r) => r.startsWith("GET /v1/me/billing/setups/"))).toBe(false);
   });
 
@@ -2087,8 +2039,6 @@ describe("카드 변경 문서(모달 안)", () => {
   });
 });
 
-// ---- 검토 결함(APP-1600): 무응답·모르는 상태·카드 변경 금액·이벤트 ----
-
 describe("응답이 멈출 때", () => {
   it("등록 열기가 20초 안에 답하지 않으면 이 자리에 알리고, 다시 누르면 같은 requestKey 로 연다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -2116,7 +2066,6 @@ describe("응답이 멈출 때", () => {
         "요청이 늦어지고 있습니다. 잠시 뒤 다시 시도해 주세요."
       )
     ).toBeInTheDocument();
-    // 카드는 아직 보내지 않았다 — 칸을 비우지 않고, 토스트를 겹쳐 띄우지 않는다.
     expect(screen.getByLabelText("카드 번호")).toHaveValue(
       "4111 1111 1111 1111"
     );

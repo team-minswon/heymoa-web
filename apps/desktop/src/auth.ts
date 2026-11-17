@@ -31,7 +31,6 @@ type Pending = {
   resolve: (outcome: AuthOutcome) => void;
 };
 
-/** Owns native auth secrets. Neither the dependency API nor outcomes expose tokens. */
 export class DesktopAuthBroker {
   private pending: Pending | null = null;
   constructor(private readonly dependencies: Dependencies) {}

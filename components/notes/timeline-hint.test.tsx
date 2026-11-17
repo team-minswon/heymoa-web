@@ -17,14 +17,12 @@ import { onTrack } from "@/lib/analytics/track";
 
 const TEXT = "타임라인에 정리된 항목이 생겼습니다";
 
-// 움직임 줄이기 설정만 바꿔 끼운다. 나머지 motion 은 진짜다 — 퇴장이 끝나야 빠지는지를 본다.
 let reducedMotion = false;
 vi.mock("motion/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("motion/react")>()),
   useReducedMotion: () => reducedMotion,
 }));
 
-/** 퇴장 애니메이션(150ms)이 끝날 만큼 프레임을 흘린다. */
 async function finishExit() {
   await act(() => vi.advanceTimersByTimeAsync(400));
 }
@@ -53,7 +51,6 @@ function setup(props: Partial<Parameters<typeof TimelineHint>[0]> = {}) {
 }
 
 beforeEach(() => {
-  // motion 은 requestAnimationFrame·performance 로 프레임을 돈다 — 그것까지 가짜로 돌려야 퇴장이 끝난다.
   vi.useFakeTimers({
     toFake: [
       "setTimeout",
@@ -72,8 +69,6 @@ beforeEach(() => {
 
 afterEach(async () => {
   cleanup();
-  // motion 의 프레임 루프는 모듈 상태다. 가짜 requestAnimationFrame 에 걸어 둔 프레임을 남긴 채 진짜
-  // 타이머로 돌아가면 다음 시험에서 루프가 영영 안 돈다 — 돌던 애니메이션을 다 끝내고 넘긴다.
   await act(() => vi.advanceTimersByTimeAsync(1000));
   vi.useRealTimers();
   vi.restoreAllMocks();

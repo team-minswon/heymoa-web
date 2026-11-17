@@ -1,4 +1,4 @@
-// 자동 생성: `pnpm help:shots` · `pnpm help:clips` 가 쓴다. 손으로 고치지 않는다.
+// 자동 생성: `pnpm help:shots` · `pnpm help:clips` 가 씁니다. 손으로 고치지 않습니다.
 export const HELP_MEDIA = {
   "agenda-map/entry.webp": {
     "width": 1100,

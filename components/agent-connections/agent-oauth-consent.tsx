@@ -37,13 +37,8 @@ import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 
 const REQUEST_NOT_FOUND = "AGENT_OAUTH_REQUEST_NOT_FOUND";
 
-/** 계약이 정한 권한을 사람이 읽는 말(`agents.consent.scope`)로. 모르는 값은 이름 그대로 둔다. */
 const SCOPE_KEYS: Record<string, "read" | "write"> = { "mcp:read": "read", "mcp:write": "write" };
 
-/**
- * server 가 돌려준 돌아갈 주소로 간다. server 가 등록 때 주소를 검사하지만, `javascript:` 같은 다른 scheme 으로는
- * 이 화면이 직접 이동하지 않는다.
- */
 export function isNavigableRedirect(uri: string) {
   try {
     const { protocol } = new URL(uri);
@@ -53,19 +48,6 @@ export function isNavigableRedirect(uri: string) {
   }
 }
 
-/**
- * 외부 에이전트가 요청한 연결을 보고 워크스페이스를 골라 허락하거나 거절한다(APP-888).
- *
- * - 에이전트 이름은 에이전트가 스스로 등록한 값이라 사칭될 수 있다 — 「확인한 앱이 아닙니다」를 늘 붙이고,
- *   이름보다 믿을 수 있는 돌아갈 호스트를 함께 보인다
- * - 워크스페이스가 하나면 미리 고르고, 둘 이상이면 고르기 전에는 허락할 수 없다 — 맡길 범위는 사람이 고른다
- * - 요청이 없거나 이미 처리됐으면(`AGENT_OAUTH_REQUEST_NOT_FOUND`) server 문구로 끝낸다. 실패는 전역 토스트
- *   대신 이 화면이 그린다
- * - 외부 에이전트를 끈 워크스페이스는 고를 수 없다(APP-941). 고르는 사이 꺼져 허락이 403 이면 목록을 다시
- *   읽고 같은 안내를 띄운다 — 요청은 server 에 남아 있어 화면을 닫지 않는다
- * - 할 일 변경 허용은 에이전트가 `mcp:write` 를 요청했을 때만 고르게 한다(APP-1369). 요청하지 않은 쓰기를 참으로
- *   보내면 server 가 400 이라, 그때는 본문에 싣지도 않는다
- */
 export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   const t = useTranslations("agents.consent");
   const optionLabel = useWorkspaceOptionLabel();
@@ -139,7 +121,6 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
     window.location.assign(redirectUri);
   };
 
-  // 화면은 마지막 동작의 실패만 그린다 — 앞선 반대 동작의 실패가 남아 있으면 그것이 먼저 읽힌다
   const onApprove = async () => {
     if (!workspaceId) return;
     deny.reset();
@@ -153,8 +134,6 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
         },
       })
       .catch(async (error) => {
-        // 다시 읽은 목록이 그 워크스페이스를 꺼짐으로 바꿔 안내가 뜬다. 잠금은 목록만 보고 가르고 이 오류
-        // 문구는 아래에서 거른다 — 여기서 reset 하면 그사이 시작한 새 허락의 관찰까지 끊는다
         if (errorCodeOf(error) === AGENT_ACCESS_DISABLED)
           await workspacesQuery.refetch();
         return null;
@@ -245,12 +224,10 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
           <Select
             items={items}
             value={workspaceId}
-            // 허락·거절이 도는 동안 바꾸면 아래 reset 이 진행 중인 요청의 관찰을 끊어 버튼이 다시 열린다
             disabled={busy}
             onValueChange={(value) => {
               if (!value) return;
               setChosenWorkspaceId(value);
-              // 앞 워크스페이스의 403 이 새로 고른 것의 안내로 남지 않게
               approve.reset();
             }}
           >

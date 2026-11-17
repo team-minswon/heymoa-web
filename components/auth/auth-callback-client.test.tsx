@@ -134,7 +134,6 @@ it("로그인 창에서 체크하지 않은 로그인은 체크박스를 받고,
   expect(agree).toHaveAttribute("aria-disabled", "true");
   expect(agree).toHaveAccessibleDescription("동의해야 계속할 수 있습니다.");
 
-  // 체크 전에 누르면 기록하지 않고 체크박스로 보낸다(APP-1402).
   fireEvent.click(agree);
   expect(screen.getByRole("checkbox")).toHaveFocus();
   expect(screen.getByRole("status")).toHaveTextContent(

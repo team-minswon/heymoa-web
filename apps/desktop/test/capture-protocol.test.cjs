@@ -61,7 +61,6 @@ const chunk = (index) => [new ArrayBuffer(3200), index * 1600];
 test("a 300 ms main-window stall queues chunks instead of overflowing, then drains in order", () => {
   const { sent, sender: s } = sender();
   assert.equal(s.push(...chunk(0)), true);
-  // Main window stalls: no ACK while three more 100 ms chunks arrive.
   for (let index = 1; index <= 3; index++)
     assert.equal(s.push(...chunk(index)), true);
   assert.equal(sent.length, 1);

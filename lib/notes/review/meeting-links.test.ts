@@ -53,13 +53,9 @@ const data: ProjectMeetingLinksResponseData = {
   meetingLinks: [
     link("SUPERSEDES", "p1", "old1"),
     link("COMPLETES", "p2", "old2"),
-    // 보이지 않는 관계 종류
     link("SUPPORTS", "p1", "old3"),
-    // 지난 회의에서 들어오는 연결 — 이 회의에서는 보이지 않는다
     link("SUPERSEDES", "x", "p1", "이번 결정", "later", "now"),
-    // 같은 지난 항목에 제안 카드가 있다
     link("SUPERSEDES", "p3", "carded"),
-    // 지난 질문을 푼다 — 종류는 응답 그대로
     {
       ...link("RESOLVES", "p2", "q1", "지난 질문"),
       target: {

@@ -6,10 +6,6 @@ import { useTranslations } from "next-intl";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-/**
- * 연결에 할 일 쓰기를 맡길지(APP-1369). 새 연결과 OAuth 동의가 같이 쓴다. 기본은 꺼짐이고, server 가 만든 뒤에는
- * 바꾸지 않으므로(APP-1461) 켜는 그 자리에서 무엇이 달라지는지와 되돌릴 수 없다는 것을 함께 말한다.
- */
 export function TaskChangesToggle({
   checked,
   onCheckedChange,

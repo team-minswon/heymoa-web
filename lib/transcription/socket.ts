@@ -11,7 +11,6 @@ import {
   type ServerEvent,
 } from "@/lib/transcription/protocol";
 
-/** 왜 붙나. server 가 부착 줄에 남긴다(observability.md). */
 export type ReconnectReason =
   | "initial"
   | "socket_closed"
@@ -25,31 +24,20 @@ export type ReconnectReason =
 export type TranscriptionSocketOptions = {
   url: string;
   sessionId: string;
-  /** 이 탭. 서버가 다른 탭·기기의 부착과 가른다. 다시 붙을 때도 같은 값이다. */
   clientInstanceId: string;
-  /** 아직 들고 있는 가장 앞 조각 번호. 그 앞은 이미 지웠으니 서버가 기다리지 않는다. */
   resendFromSeq?: number;
   reconnectReason?: ReconnectReason;
-  /** 끊김을 알아챈 뒤 이 부착 시도까지. 처음 붙을 때는 0. */
   disconnectedMs?: number;
-  /** ACK 못 받아 들고 있는 조각 수. */
   pendingChunks?: number;
   onEvent: (event: ServerEvent) => void;
   onClose: (code: number, reason: string) => void;
-  /** heartbeat 를 포함해 무엇이든 들어왔다. 이벤트만으로는 조용한 회의의 무수신을 못 가른다. */
   onActivity?: () => void;
 };
 
-/** 티켓 요청을 기다리는 상한. 재연결 SLO(3초)이고 옛 서버가 새 부착을 기다리는 5초 안쪽이다. 넘으면 티켓 없이 붙어 본다. */
 const TICKET_TIMEOUT_MS = 3_000;
 
-/**
- * OS 소켓 버퍼가 밀렸는지만 본다. 「서버가 내구 저장했는가」는 `ResendBuffer`가 본다 —
- * 소켓을 떠난 조각도 서버가 S3에 쓰기 전에 죽으면 사라지므로 둘은 다른 질문이다.
- */
 const MAX_BUFFERED_BYTES = CAPTURE_TUNING.backpressureBytes;
 
-/** 녹음 소켓과 노트 토픽이 같은 STOMP 엔드포인트에 붙는다. 목 환경은 MSW 가 같은 origin 에서 받는다. */
 export function transcriptionWebSocketUrl() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -107,12 +95,11 @@ export class TranscriptionSocket {
         connectionTimeout: 10_000,
         heartbeatIncoming: 10_000,
         heartbeatOutgoing: 10_000,
-        // 기본값이면 하트비트를 놓쳐도 close() 만 부르고, 죽은 망에서는 close 이벤트가 오지 않는다.
+        // 기본값이면 하트비트를 놓쳐도 close() 만 부르고, 죽은 망에서는 close 이벤트가 오지 않습니다.
         discardWebsocketOnCommFailure: true,
         connectHeaders: { clientInstanceId: this.options.clientInstanceId },
         onHeartbeatReceived: () => this.options.onActivity?.(),
         debug: () => undefined,
-        // 시도마다 새 티켓을 붙인다(APP-1547). 다시 로그인해야 하면 붙지 않고 끝낸다 — 게이트는 이미 열렸다.
         beforeConnect: async () => {
           const url = await ticketedSocketUrl(
             this.options.url,
@@ -153,8 +140,7 @@ export class TranscriptionSocket {
             }
           );
           // Spring's simple broker does not acknowledge SUBSCRIBE receipts.
-          // Frame order plus preserveReceiveOrder(true) guarantees registration
-          // before the following application connect message is handled.
+          // Frame order plus preserveReceiveOrder(true) guarantees registration first.
           client.publish({
             destination: this.destination("connect"),
             headers: {
@@ -207,10 +193,6 @@ export class TranscriptionSocket {
     this.reconcileConnection?.();
   }
 
-  /**
-   * 헤더가 둘이다. `chunkSeq`는 몇 번째인가, `captureSamples`는 언제인가를 말한다.
-   * 번호만으로는 백그라운드로 못 잡은 20초를 못 잡아낸다 — 번호는 그대로 이어진다.
-   */
   sendAudio(
     chunk: ArrayBuffer,
     chunkSeq: number,
@@ -246,7 +228,6 @@ export class TranscriptionSocket {
     return true;
   }
 
-  /** 조각을 하나도 못 보냈으면 `-1`이다. 서버가 그것으로 「보낸 것이 없다」를 안다. */
   stop(finalChunkSeq: number) {
     if (this.client?.connected) {
       this.client.publish({

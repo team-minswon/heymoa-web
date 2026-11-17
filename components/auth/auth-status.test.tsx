@@ -17,7 +17,6 @@ describe("AuthStatus", () => {
 
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-busy", "true");
-    // 세 상태(확인 중·미설정·로그인)와 옆의 `시작하기`가 모두 size="xl"(h-10)이다.
     expect(button).toHaveClass("h-10", "rounded-full");
     expect(button).toHaveTextContent("로그인");
     expect(button.firstElementChild).toHaveClass("opacity-0");

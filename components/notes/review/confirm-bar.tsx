@@ -18,7 +18,6 @@ import type { ConfirmSummary } from "@/lib/notes/review/confirm";
 import { cn } from "@/lib/utils";
 
 function Count({ children }: { children: React.ReactNode }) {
-  // 숫자가 바뀌면 그 숫자만 한 번 스며든다 — 방금 고른 것이 무엇을 바꿨는지 눈이 따라간다.
   return (
     <b
       key={String(children)}
@@ -29,11 +28,6 @@ function Count({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * 검토 완료 — 아래 가운데 떠 있는 막대(APP-865). 고를 제안이 남았으면 그 수와 그 줄로 가는 링크를,
- * 다른 까닭으로 막혔으면 까닭을, 아니면 무엇이 프로젝트에 올라가는지를 말한다. 확정은 되돌릴 수 없어서
- * 한 번 더 묻는다. 기존 할 일 변경도 이때 함께 적용된다.
- */
 export function ConfirmBar({
   summary,
   decisions,
@@ -46,17 +40,12 @@ export function ConfirmBar({
   onConfirm,
 }: {
   summary: ConfirmSummary;
-  /** 프로젝트에 올라갈 결정 수 */
   decisions: number;
   pending: boolean;
-  /** 지금 확정하면 안 되는 까닭. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰다 */
   blocked?: string | null;
-  /** 아직 고르지 않은 제안 수. 있으면 까닭 대신 「확인할 제안」과 링크가 선다 */
   unchosen?: number;
   onShowUnchosen?: () => void;
-  /** 마지막 확정이 거절된 까닭. 사라지는 토스트가 아니라 여기 남아야 왜 막혔는지 다시 볼 수 있다 */
   error?: string | null;
-  /** 넓은 화면에서 「이 회의에 대해 물어보기」 알약이 같은 자리에 떠 있다. 그 위로 올라간다 */
   raised?: boolean;
   onConfirm: () => Promise<boolean>;
 }) {
@@ -72,7 +61,6 @@ export function ConfirmBar({
         raised && "lg:pb-[84px]"
       )}
     >
-      {/* 막대 뒤로 글이 스며 사라진다 — 마지막 줄이 막대 밑에 걸려도 읽히지 않는 경계가 생기지 않게 */}
       <div
         aria-hidden
         className="absolute inset-x-0 -top-10 bottom-0 bg-gradient-to-b from-transparent to-[var(--el-surface-card)] to-60%"

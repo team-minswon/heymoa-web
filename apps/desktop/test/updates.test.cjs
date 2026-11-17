@@ -30,7 +30,6 @@ test("manual check downloads once, reports progress, and installs only after the
   f.model.restart(); assert.equal(f.installs, 0);
   assert.equal(f.model.onQuit(), false);
   f.setSafe(true); assert.equal(f.model.state().canRestart, true);
-  // A new recording may begin after the button was drawn.
   f.setSafe(false); f.model.restart(); assert.equal(f.installs, 0);
   f.setSafe(true); f.model.restart(); f.model.restart(); assert.equal(f.installs, 1);
 });

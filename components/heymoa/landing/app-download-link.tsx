@@ -43,13 +43,11 @@ export function AppDownloadLink({
     )
       return;
     event.preventDefault();
-    // 별도 다운로드 탐색으로 시작해야 안내 페이지 이동이 파일 요청을 취소하지 않습니다.
     window.open(event.currentTarget.href, "_blank", "noopener,noreferrer");
     track("desktop_download_clicked");
     router.push(localePath(locale, "/download"));
   }
 
-  // 폭을 고정해 확인 중(스피너) → 이름으로 바뀔 때 옆 버튼이 밀리지 않게 한다. 영어 이름이 길어 언어마다 다르다.
   const en = locale === "en";
   const className = cn(
     variant === "hero"
@@ -90,7 +88,6 @@ export function AppDownloadLink({
           : t("app");
   return (
     <a
-      // OS를 모르면 다운로드 페이지로 간다. 그 페이지는 화면 언어 주소에 있다
       href={
         target.os === "other" ? localePath(locale, target.href) : target.href
       }

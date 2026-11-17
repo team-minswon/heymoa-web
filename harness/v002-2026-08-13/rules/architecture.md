@@ -64,6 +64,17 @@ protocol이 React를 알면 파싱을 테스트할 수 없습니다. 지금 전�
 `eslint-suppressions.json`에만 있습니다. 고치면 그 줄을 `pnpm lint --prune-suppressions`로 지웁니다.
 늘리지 않습니다.
 
+## 주석은 기본으로 쓰지 않습니다
+
+아래만 남기고, 애매하면 지웁니다. 이름·구조·타입·테스트로 드러낼 수 있으면 주석 대신 그쪽을 고칩니다.
+
+- 우리가 못 바꾸는 바깥(브라우저·Next·React·라이브러리·업체)이 강제한 뜻밖의 동작
+- 다른 저장소나 법·설정과 맞춰야 하는 값(예: server 와 같은 검증 규칙, 처리방침 조항)
+- 지시어(`eslint-disable`·`@ts-expect-error`·`prettier-ignore`·`@vitest-environment`)
+- 이 규칙 문서가 가리키는 설명
+
+이슈 번호(`APP-`·`PRO-`)와 과거 이력은 주석에 쓰지 않습니다. 커밋 제목이 이슈와의 연결입니다.
+
 ## URL을 쓴다고 다 이동은 아닙니다
 
 **같은 화면 안의 상태를 URL에 쓸 때는 `router.push/replace`를 쓰지 않습니다.**

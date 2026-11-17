@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
 
-/** 플랫폼 이름(Mac · Windows)은 어느 언어에서나 그대로이고, 나머지 글은 언어 파일 `download` 에 있다. */
 const PLATFORMS = [
   { key: "mac", name: "Mac", installers: DESKTOP_INSTALLERS.mac },
   { key: "windows", name: "Windows", installers: DESKTOP_INSTALLERS.windows },
@@ -50,7 +49,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** 랜딩과 같은 색·기둥을 쓰고, 루트 레이아웃의 main 안에 설치 방법을 둡니다. */
 export default async function DownloadPage() {
   const locale = await marketingLocale();
   const t = await getTranslations({ locale, namespace: "download" });

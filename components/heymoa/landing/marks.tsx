@@ -6,21 +6,8 @@ import { cn } from "@/lib/utils";
 import { Face, type Person } from "./app";
 import { HAND, SHADOW, vars } from "./tokens";
 
-/*
- * 주석 키트 — 페이지가 하는 말. **창 안 = `--el-*` · `APP` · `ROLE_*`, 창 밖 · 창 위 주석 = `--tv-*`.**
- * 여기 있는 것은 전부 `--tv-*` 이고, 창 위에 얹을 때도 앱 글자 · 상태 칩 · 탭 · 버튼 · 방금 붙은 줄을
- * 가리지 않는다(창 가장자리 여백까지만 걸친다).
- *
- * 장식 문법은 둘로 고정한다 — ① 노란/파스텔 쪽지(`Sticky`) = 「여기 봐」, ② 먹색 손글씨(`Hand`) + 보라
- * 곡선(`Scribble`) = 설명. 한 그림에 쪽지는 동시에 최대 둘.
- *
- * 서버 · 클라이언트 양쪽에서 쓴다(훅 없음). 움직임은 `motion.tsx` 의 클래스가 하고, 모션을 줄이면
- * 처음부터 끝 상태(다 보이고 다 그려진)로 선다.
- */
-
 type Anim = "none" | "pop" | "reveal";
 
-/** 마운트 때 튀어나오기(`tv-pop`) / 조상 `Reveal` 이 보일 때 튀어나오기(`tv-rpop`). */
 const POP: Record<Anim, string | undefined> = {
   none: undefined,
   pop: "tv-pop",
@@ -42,12 +29,6 @@ const STICKY_SIZE = {
   lg: "px-4 py-2.5 text-[17px]",
 } as const;
 
-/**
- * 쪽지 — 「여기 봐」. 기울임 ±2~5°, 쪽지 그림자, 굵은 먹색 글자, 가끔 테이프.
- * 기울기는 `rotate` 속성(인라인)이라 등장 애니메이션(scale · translate · opacity)과 겹치지 않는다.
- * 기본은 `aria-hidden` — 뜻이 있는 말이면 `aria-hidden={false}` 로 읽히게 하거나 sr-only 캡션을 따로 둔다.
- * 위치는 `className`(absolute 등)으로 준다.
- */
 export function Sticky({
   tone = "pop",
   tilt = -3,
@@ -102,10 +83,6 @@ type ScribbleKind =
   | "strike"
   | "chevrons";
 
-/**
- * 손으로 그린 선의 모양. `lines` 가 먼저 그려지고 `heads`(화살촉)가 뒤따른다. `stretch` 인 것은
- * 크기에 맞춰 늘어난다(동그라미 · 밑줄 · 취소선). 화살촉은 끝 접선에서 ±35° 로 계산한 자리다.
- */
 const SHAPES: Record<
   ScribbleKind,
   { w: number; h: number; stretch?: boolean; lines: string[]; heads?: string[] }
@@ -157,11 +134,6 @@ const INK = {
   white: "text-white",
 } as const;
 
-/**
- * 손으로 그린 선 — 화살표 · 동그라미 · 밑줄 · 취소선 · `>>>`. 기본 크기는 모양의 viewBox 그대로이고
- * `className`(w-/h-/absolute)으로 바꾼다. `draw="mount"` 면 붙자마자, `"reveal"` 이면 조상 `Reveal` 이
- * 보일 때 그려진다(화살촉은 몸통 뒤 420ms). 모션을 줄이면 처음부터 다 그려져 있다.
- */
 export function Scribble({
   kind,
   color = "brand",
@@ -214,11 +186,6 @@ export function Scribble({
   );
 }
 
-/**
- * 손가락 커서 — 창 위 주석. 가리킬 요소 안에 `absolute` 로 넣는다(좌표 계산 없음). 기본 자리는
- * `left-[60%] top-[55%]`, `className` 으로 덮어쓴다. 붙을 때 미끄러져 들어오고(`tv-glide` .45s),
- * `press` 면 그 뒤 화살 끝에서 노란 고리가 퍼진다(지연 = 450ms + `delay`). 모션을 줄이면 숨는다.
- */
 export function Cursor({
   press = false,
   delay = 0,
@@ -250,7 +217,6 @@ export function Cursor({
   );
 }
 
-/** 양 끝을 노란 테이프로 붙인 흰 종이 띠(근거 구간의 「네 마디만 남겼습니다」). **실제 글자다.** */
 export function Tape({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span
@@ -282,10 +248,6 @@ const SPEECH_TONE = {
   white: "bg-white border-[1.5px] border-[var(--tv-ink)]",
 } as const;
 
-/**
- * 얼굴 + 말풍선 — 페이지의 농담(「이번 주 회의록 당번 누구예요?」). 얼굴 쪽 아래 모서리만 뾰족하다.
- * 앱의 대화 말풍선(`UserBubble`, 꼬리 없음)과 다른 페이지 장식이라 창 밖에만 둔다. 글자는 읽힌다.
- */
 export function Speech({
   who,
   side = "left",
@@ -332,7 +294,6 @@ export function Speech({
   );
 }
 
-/** 먹색 손글씨 주석(살짝 기울임). 기본 `aria-hidden` — 뜻이 있는 말이면 끄거나 sr-only 로 따로 남긴다. */
 export function Hand({
   "aria-hidden": ariaHidden = true,
   className,

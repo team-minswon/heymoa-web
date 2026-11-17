@@ -95,14 +95,11 @@ describe("Navbar", () => {
 
     expect(screen.queryByRole("link", { name: /대시보드/ })).toBeNull();
 
-    // 로딩 자리표시의 children이 확정 링크와 같아야 폭이 안 튄다 — 좁은 화면 `대시보드`와
-    // 넓은 화면 `대시보드로 이동` 두 span을 그대로 들고 있다(둘 중 하나만 CSS로 보인다).
     const placeholder = screen.getByRole("button", { name: /대시보드/ });
     expect(placeholder).toHaveTextContent("대시보드");
     expect(placeholder).toHaveTextContent("대시보드로 이동");
     expect(placeholder).toBeDisabled();
     expect(placeholder).toHaveAttribute("aria-busy", "true");
-    // 폭을 min-w로 못 박지 않는다 — 그 값(144px)이 확정 폭(138.1px)보다 커서 반대로 줄었다.
     expect(placeholder.className).not.toMatch(/min-w-/);
   });
 
@@ -122,11 +119,6 @@ describe("Navbar", () => {
     expect(workspaceQuery.refetch).toHaveBeenCalledOnce();
   });
 
-  /**
-   * **0개는 실패가 아니다.** 마지막 워크스페이스에서 추방되면 도달하는 정상 상태이고, 같은
-   * 홈의 랜딩 CTA가 그때 「워크스페이스 만들기」를 낸다(APP-402). 여기서 오류 토스트를 띄우면
-   * 방금 안내한 행동을 옆에서 부정하게 되고, 재시도해 봐야 같은 0개가 온다.
-   */
   it("워크스페이스가 0개여도 오류로 다루지 않는다", () => {
     workspaceQuery.data = {
       status: 200,

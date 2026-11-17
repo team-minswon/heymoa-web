@@ -12,8 +12,6 @@ import { privateRouteMetadata } from "@/lib/site";
 
 export const metadata: Metadata = privateRouteMetadata;
 
-// 메일 푸터의 「알림 설정」(APP-1341). 서버에는 기본 워크스페이스가 없어 마지막으로 연 워크스페이스의 알림 탭으로 넘긴다.
-// 로그인 전이면 로그인 카드를 세우고, 로그인하면 이 주소로 돌아와 다시 넘긴다(`normalizeReturnTo` 허용 경로).
 export default async function SettingsNotificationsPage() {
   const jar = await cookies();
   if (

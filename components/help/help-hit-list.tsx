@@ -7,7 +7,6 @@ import { FOCUS } from "@/components/heymoa/landing/tokens";
 import type { HelpHit } from "@/lib/help/search-index";
 import { cn } from "@/lib/utils";
 
-/** 결과를 눌렀다 — 주제 slug · 순위 · 검색어 길이만 보낸다(검색어 원문은 보내지 않는다). */
 export const trackResultClick = (hit: HelpHit, rank: number, query: string) =>
   trackHelp("help_result_clicked", {
     slug: hit.path.split("/").pop() ?? "",
@@ -18,7 +17,6 @@ export const trackResultClick = (hit: HelpHit, rank: number, query: string) =>
 export const hitHref = (hit: HelpHit, query: string) =>
   `${hit.path}?q=${encodeURIComponent(query)}#${hit.sectionId}`;
 
-/** 검색 결과 한 줄 — "주제 · 섹션" + 일치 문장 발췌(일치 부분 강조). 허브와 ⌘K 팔레트가 같이 쓴다. */
 export function HelpHitRow({
   hit,
   query,
@@ -31,7 +29,6 @@ export function HelpHitRow({
   query: string;
   active?: boolean;
   id?: string;
-  /** 결과 목록에서의 순위(1부터). 눌렀을 때 이벤트에 싣는다. */
   rank?: number;
   onNavigate?: () => void;
 }) {
@@ -42,7 +39,6 @@ export function HelpHitRow({
       href={hitHref(hit, query)}
       onClick={(event) => {
         if (rank) trackResultClick(hit, rank, query);
-        // 같은 페이지의 결과는 라우터 없이 부드럽게 그 자리로 간다(다른 페이지는 링크가 이동한다).
         const plain =
           event.button === 0 &&
           !event.metaKey &&

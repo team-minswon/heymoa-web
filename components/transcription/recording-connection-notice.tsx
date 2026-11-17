@@ -11,13 +11,6 @@ import type {
 
 const seconds = (ms: number) => Math.max(1, Math.round(ms / 1_000));
 
-/**
- * 녹음이 **어디까지 남고 있는지**를 말한다. 독의 타이머는 계속 돌아서, 안 알리면 사용자는
- * 모든 구간이 저장되는 줄 안다.
- *
- * 끊기면 받아쓰기와 실시간 분석이 먼저 멈추므로 그것부터 말한다. 소리는 30초 창 동안 이 기기
- * 메모리에 쌓이고, 붙으면 올라간다. 창이 끝난 뒤의 멈춤은 오류 토스트가 말한다.
- */
 export function RecordingConnectionNotice({
   notice,
   buffer,
@@ -32,7 +25,6 @@ export function RecordingConnectionNotice({
   finishing: boolean;
 }) {
   const t = useTranslations("recording.connection");
-  // 한도에 닿아 새 소리를 받지 않는다. 노랑(영수증 10초)이 먼저 떠 있어도 「저장 중」이라 하면 거짓이다
   if (buffer?.paused && !finishing) {
     return (
       <Pill role="alert" tone="danger" Icon={PauseCircle}>
@@ -76,7 +68,6 @@ export function RecordingConnectionNotice({
   );
 }
 
-/** 모양은 `RecordingDegradedNotice` 와 같다. 경고색 토큰이 없어 아이콘만 물들인다. */
 function Pill({
   role,
   tone,

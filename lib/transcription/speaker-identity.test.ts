@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { personAvatarKey } from "@/components/heymoa/person-avatar";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 
-// 시험의 한국어 화자 이름. 화면은 `notes.speakers.fallback` 을 넘긴다
 const speakerName = (label: string) => `화자 ${label}`;
 
 const speaker = (
@@ -22,10 +21,6 @@ const speaker = (
 });
 
 describe("createSpeakerIdentityResolver", () => {
-  /**
-   * **이름은 참여자 목록에서 온다** (APP-685). 화자에 실린 `assignedName` 은 지정 당시의
-   * 사본이라 개명하면 낡는다 — 화면은 늘 참여자 목록을 함께 넘긴다.
-   */
   it("연결된 화자는 이름을, 안 된 화자는 라벨을 보인다", () => {
     const resolve = createSpeakerIdentityResolver(
       [speaker("A", "김민수"), speaker("B")],
@@ -35,7 +30,6 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("B")?.displayName).toBe("화자 B");
   });
 
-  /** 같은 사람이면 같은 객체여야 화면의 memo 가 깨지지 않는다(APP-1246). */
   it("같은 라벨은 부를 때마다 같은 객체를 준다", () => {
     const resolve = createSpeakerIdentityResolver([speaker("A"), speaker("B")], [], speakerName);
 
@@ -45,7 +39,6 @@ describe("createSpeakerIdentityResolver", () => {
   });
 
   it("「참석자 아님」으로 확정해도 화자 A 로 남는다", () => {
-    // 그 사람이 누구인지 우리가 모른다는 것이 사실이다
     const resolve = createSpeakerIdentityResolver([
       { ...speaker("A"), assignedParticipantId: null, confirmed: true },
     ], [], speakerName);
@@ -54,8 +47,6 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("A")?.unassigned).toBe(false);
   });
 
-  // **얼굴에 글자를 얹지 않는다.** 이름이 늘 옆에 붙어 있어 글자가 가려 주는 것이 없고,
-  // 글자를 빼면 대비 하한이 사라져 색을 더 또렷하게 쓸 수 있다.
   it("얼굴에 글자를 얹지 않는다", () => {
     const resolve = createSpeakerIdentityResolver([speaker("A"), speaker("B")], [], speakerName);
 
@@ -75,12 +66,6 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("A")?.unassigned).toBe(true);
   });
 
-  /**
-   * 이름을 붙이면 얼굴이 **그 사람 것**으로 바뀐다. 예전에는 색이 라벨 것이라 안 바뀌는
-   * 것이 규칙이었는데, 얼굴은 사람을 가리키므로 반대가 맞다 — 참석자 목록·설정에서 보던
-   * 그 얼굴이 전사에도 서야 「같은 사람」으로 읽힌다. 바로 그 사람을 방금 골랐으니 튀지도
-   * 않는다.
-   */
   it("이름을 붙이면 그 사람의 얼굴이 된다 — 참석자 목록과 같은 얼굴이다", () => {
     const participant = {
       participantId: "0HZX2K7M9Q4AP",
@@ -94,16 +79,9 @@ describe("createSpeakerIdentityResolver", () => {
       [participant], speakerName);
 
     expect(after("A")?.avatarName).not.toBe(before("A")?.avatarName);
-    // 참석자 아바타가 쓰는 열쇠와 **같아야** 한다.
     expect(after("A")?.avatarName).toBe(personAvatarKey(participant));
   });
 
-  /**
-   * **한 사람은 한 색이다.** V31 부터 한 사람이 라벨 둘을 맡을 수 있는데(목소리가 갈렸고
-   * 사람은 하나다), 색을 라벨마다 주면 이름과 얼굴이 같은 두 줄이 다른 색으로 서서
-   * 「왜 색이 두 개지」가 된다. 그 사람의 **가장 이른 라벨**이 색을 정한다 — 순번 배정의
-   * 안 겹치는 성질을 그대로 쓰면서 사람 하나에 색 하나가 된다.
-   */
   it("한 사람이 라벨 둘을 맡아도 색이 하나다", () => {
     const resolve = createSpeakerIdentityResolver([
       speaker("A", "한지원"),
@@ -112,14 +90,9 @@ describe("createSpeakerIdentityResolver", () => {
     ], [], speakerName);
 
     expect(resolve("E")?.avatarName).toEqual(resolve("D")?.avatarName);
-    // 라벨 색을 그대로 쓰면 E 는 다섯 번째 색이다 — 그것이 아니어야 한다.
     expect(resolve("E")?.avatarName).not.toEqual(resolve("A")?.avatarName);
   });
 
-  /**
-   * 얼굴은 `boring-avatars` 가 **열쇠 문자열**에서 그린다. 열쇠가 다르면 얼굴이 다르므로,
-   * 여기서 볼 것은 「서로 다른 화자가 서로 다른 열쇠를 받는가」다.
-   */
   it("화자마다 다른 얼굴 열쇠를 받는다", () => {
     const labels = Array.from({ length: 26 }, (_, index) =>
       String.fromCharCode(65 + index)
@@ -144,10 +117,6 @@ describe("createSpeakerIdentityResolver", () => {
     expect(first("A")?.avatarName).toEqual(second("A")?.avatarName);
   });
 
-  /**
-   * **라벨만으로 열쇠를 만들면 안 된다.** 라벨은 회의마다 다시 쓰여서, 다른 회의의 화자 A 가
-   * 같은 얼굴로 서면 서로 다른 두 사람이 한 얼굴이 된다. 참여 기록을 섞어 그걸 가른다.
-   */
   it("같은 라벨이라도 사람이 다르면 얼굴이 다르다", () => {
     const one = createSpeakerIdentityResolver([
       { label: "A", assignedName: "김민수", assignedParticipantId: "p-1" },
@@ -167,12 +136,6 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("A")?.imageUrl).toBe("https://cdn.example.com/kim.png");
   });
 
-  // **여기가 실제 계약이다.** `speakers[]` 는 붙은 사람의 식별자만 주고 사진은 참석자
-  // 목록에 있다. 위 테스트가 `image` 를 화자에 직접 얹는 바람에, 아무도 안 잇고 있다는
-  // 사실이 안 보였다 — 화면에서는 붙는 순간 얼굴이 글자로 바뀌었다.
-  //
-  // 잇는 열쇠는 **참여 기록**이다(APP-491). 계정으로 이으면 계정 없는 사람은 그 값이
-  // 없어 전부 한 칸에 뭉치고, 남의 사진이 실릴 수 있다.
   it("참석자 목록에서 얼굴을 끌어온다 — 화자에는 참여 기록 식별자만 온다", () => {
     const resolve = createSpeakerIdentityResolver(
       [speaker("A", "김민수", { assignedParticipantId: "01K0000000101" })],
@@ -210,7 +173,6 @@ describe("createSpeakerIdentityResolver", () => {
 describe("발화 단위 화자 지정", () => {
   const speakers = [
     { label: "A", assignedName: "김민수", assignedParticipantId: "p-1" },
-    // 박서준은 화자 B 의 주인이다 — 아래 색 검사가 「그 사람의 색」을 여기서 가져온다.
     { label: "B", assignedName: "박서준", assignedParticipantId: "p-2" },
   ] as never;
   const participants = [
@@ -218,7 +180,6 @@ describe("발화 단위 화자 지정", () => {
     { participantId: "p-2", name: "박서준", image: "https://cdn/park.png" },
   ];
 
-  /** 더 좁은 범위를 사람이 나중에 골랐다는 뜻이다. */
   it("라벨의 이름을 이긴다", () => {
     const resolve = createSpeakerIdentityResolver(speakers, participants, speakerName);
 
@@ -232,19 +193,13 @@ describe("발화 단위 화자 지정", () => {
     expect(resolve("A", "p-2")?.imageUrl).toBe("https://cdn/park.png");
   });
 
-  /**
-   * **색도 그 사람 것으로 바뀐다.** 이 줄은 이름과 얼굴이 이미 다른 사람인데 색만 라벨
-   * 것으로 남으면, 같은 사람이 화면에서 두 색으로 선다.
-   */
   it("색도 그 사람 것으로 바뀐다", () => {
     const resolve = createSpeakerIdentityResolver(speakers, participants, speakerName);
 
     expect(resolve("A", "p-2")?.avatarName).not.toEqual(resolve("A")?.avatarName);
-    // p-2 는 화자 B 의 주인이다 — 그 사람의 색은 어디서 보든 B 의 색이다.
     expect(resolve("A", "p-2")?.avatarName).toEqual(resolve("B")?.avatarName);
   });
 
-  /** 사람이 이 줄을 콕 집어 골랐다. 「아직 아무도 안 본 화자」가 아니다. */
   it("사람이 고른 줄이므로 미확인이 아니다", () => {
     const unconfirmed = [{ label: "B" }] as never;
     const resolve = createSpeakerIdentityResolver(unconfirmed, participants, speakerName);
@@ -253,9 +208,6 @@ describe("발화 단위 화자 지정", () => {
     expect(resolve("B", "p-2")?.unassigned).toBe(false);
   });
 
-  /**
-   * 참석자에서 빠진 사람이 전사에 이름만 남는 것보다, 라벨의 답으로 돌아가는 편이 덜 틀리다.
-   */
   it("목록에 없는 참여 기록이면 라벨을 따른다", () => {
     const resolve = createSpeakerIdentityResolver(speakers, participants, speakerName);
 
@@ -270,9 +222,6 @@ describe("발화 단위 화자 지정", () => {
 });
 
 describe("얼굴 열쇠", () => {
-
-  // **목록이 바뀌어도 내 색은 그대로다.** 순번 배정이면 남이 들어올 때 내 색이 밀린다 —
-  // 색이 사람을 기억하는 단서라 그쪽이 더 나쁘다(겹침은 이름이 옆에 있어 감당된다).
   it("다른 guestId 는 대체로 다른 색을 받는다", () => {
     const ids = [
       "0RH39K0Q9GRZK",
@@ -281,7 +230,6 @@ describe("얼굴 열쇠", () => {
       "0RFSZX711SRVN",
       "0RFSZK4B1SRZT",
     ];
-    // 얼굴은 열쇠에서 나온다 — 식별자가 다르면 열쇠도 다르다.
     expect(new Set(ids).size).toBe(ids.length);
   });
 });

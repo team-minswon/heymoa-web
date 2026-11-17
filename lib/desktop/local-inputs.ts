@@ -7,7 +7,6 @@ const MICROPHONE_CONSTRAINTS = {
   autoGainControl: true,
 } as const;
 
-/** 끊긴 마이크를 같은 조건으로 다시 받는다(APP-1091). 시스템 소리는 다시 받지 않는다. */
 export function acquireLocalMicrophone(): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({ audio: MICROPHONE_CONSTRAINTS });
 }

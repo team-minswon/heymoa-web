@@ -184,7 +184,6 @@ describe("context proposal reducer", () => {
   });
 
   it("RESOLVE는 실린 status를 그대로 쓴다 — operation에서 유도하지 않는다", () => {
-    // 같은 operation=RESOLVE 가 질문은 CLOSED/RESOLVED 로, 결과는 OPEN/null 로 만든다.
     const state = apply([
       changed(
         head({
@@ -212,7 +211,6 @@ describe("context proposal reducer", () => {
       ),
     ]);
 
-    // 결과 후보는 최상위가 아니라 질문 아래로 들어간다.
     const [question] = selectCards(state);
     expect(question).toMatchObject({
       proposalId: "0HZX2K7M9Q4AQ",
@@ -251,7 +249,6 @@ describe("context proposal reducer", () => {
     expect(question?.results.map((r) => r.proposalId)).toEqual([
       "0HZX2K7M9Q4AR",
     ]);
-    // 결과는 최상위에 두 번 나오지 않는다.
     expect(selectCards(state)).toHaveLength(1);
   });
 
@@ -336,8 +333,6 @@ describe("context proposal reducer", () => {
   });
 
   it("snapshot은 자기보다 새 것을 되돌리지 않는다 — WS로 먼저 온 후보와 병합한다", () => {
-    // 초기 조회가 도는 동안 WS 이벤트가 먼저 닿으면 그 응답은 낡은 시점이다. 통째로
-    // 교체하면 방금 온 후보가 사라지고 다음 이벤트까지 화면이 과거로 남는다.
     const live = apply([
       changed(head({ proposalId: "0HZX2K7M9Q4A1" })),
       changed(
@@ -347,7 +342,6 @@ describe("context proposal reducer", () => {
     const settled = reduceContextEvent(live, {
       type: "snapshot",
       proposals: [
-        // 낡은 판 — WS가 이미 revision 2를 세웠으니 되돌리면 안 된다.
         head({ proposalId: "0HZX2K7M9Q4A1" }),
         head({ proposalId: "0HZX2K7M9Q4A2", createdSequence: 5 }),
       ],
@@ -363,21 +357,15 @@ describe("context proposal reducer", () => {
     expect(settled.needsRefetch).toBe(false);
   });
 
-  /**
-   * **정렬 키는 `(createdSequence, proposalId)` 둘이다.** 한 batch 가 여러 후보를 같은
-   * sequence 로 낼 수 있어서, 앞 키만 비교하면 동률의 순서가 도착 순서에 좌우된다.
-   */
   it("createdSequence 가 같으면 proposalId 오름차순이다 — 도착 순서와 무관하다", () => {
     const ids = ["0HZX2K7M9Q4C1", "0HZX2K7M9Q4C2", "0HZX2K7M9Q4C3"];
     const sameSequence = ids.map((proposalId) =>
       head({ proposalId, createdSequence: 42 })
     );
 
-    // 역순으로 밀어 넣어도…
     const byEvents = apply([...sameSequence].reverse().map((c) => changed(c)));
     expect(selectCards(byEvents).map((c) => c.proposalId)).toEqual(ids);
 
-    // …snapshot 으로 역순을 실어도 같은 순서다. 두 경로가 갈리면 새로고침에 화면이 바뀐다.
     const bySnapshot = apply([
       {
         type: "snapshot",
@@ -413,34 +401,23 @@ describe("context proposal reducer", () => {
     ]);
   });
 
-  /**
-   * **갱신 시각은 뒤로 안 간다.** batch 는 best-effort 이고 relay 가 여럿이라 늦은 옛
-   * event 가 뒤늦게 온다. 덮어쓰면 화면의 「갱신」이 과거로 뛴다.
-   */
   it("늦게 도착한 옛 batch 가 lastBatchAt 을 되돌리지 않는다", () => {
     const later = "2026-08-24T01:10:00.000Z";
     const earlier = "2026-08-24T01:00:00.000Z";
 
     const state = apply([
       batch(range({ runId: "run-2", appliedAt: later })),
-      // 다른 relay 를 늦게 지난 옛 batch.
       batch(range({ runId: "run-1", appliedAt: earlier })),
     ]);
 
     expect(state.lastBatchAt).toBe(later);
-    // 범위 자체는 여전히 둘 다 수렴해 있다 — 시각만 max 를 지킨다.
     expect(state.runs).toHaveLength(2);
   });
 
-  /**
-   * **상태가 빈 순간이 가장 무방비다.** `lastBatchAt` 이 `null` 일 때 검증 없이 받으면
-   * 깨진 값이 그대로 화면까지 가서 `Invalid Date` 가 된다.
-   */
   it("malformed 시각은 첫 event 여도 lastBatchAt 에 안 앉는다", () => {
     const broken = apply([batch(range({ appliedAt: "언젠가" }))]);
     expect(broken.lastBatchAt).toBeNull();
 
-    // 그 뒤 정상 값이 오면 정상적으로 선다.
     const recovered = apply(
       [batch(range({ runId: "run-9", appliedAt: NOW }))],
       broken

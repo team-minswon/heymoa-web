@@ -75,20 +75,11 @@ import {
 import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 
-/** 바닥에서 이만큼 안쪽이면 "바닥"으로 본다. 스크롤 위치는 소수점으로 떨어진다. */
 const BOTTOM_THRESHOLD_PX = 48;
 const DIARIZATION_POLL_MS = 5_000;
 
-/** 발화 길이는 고르지 않다 — 전부 같은 폭이면 표처럼 보여서 대화로 안 읽힌다. */
 const TRANSCRIPT_SKELETON_WIDTHS = ["62%", "84%", "45%"];
 
-/**
- * 바닥에서 멀어졌는지만 본다. **따라가지 않는다.**
- *
- * 챗봇의 `useStickToBottom`은 내용이 자라면 바닥으로 붙이는데, 아카이브는 새 내용이 쌓이는
- * 면이 아니라 다 끝난 기록을 위에서부터 읽는 면이다. 그걸 그대로 쓰면 열자마자 맨 끝으로
- * 튄다. 전사 뷰의 엔진도 라이브 판정·프로그램 스크롤 가드가 붙어 있어 여기엔 과하다.
- */
 function useAwayFromBottom() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [away, setAway] = useState(false);
@@ -109,9 +100,7 @@ function useAwayFromBottom() {
     viewport.addEventListener("scroll", sync, { passive: true });
     sync();
 
-    // **높이 변화는 scroll 이벤트를 내지 않는다.** 두 쿼리(`refetchOnMount: "always"`)가
-    // 늦게 도착하면 스크롤 없이도 바닥이 멀어지는데, 그때 다시 재지 않으면 버튼이 안 뜬다.
-    // 행·메시지 개수를 키로 쓰는 방법도 있지만 개수가 같고 문장만 길어지는 갱신을 놓친다.
+    // 높이 변화는 scroll 이벤트를 내지 않는다 — 늦게 온 조회로 바닥이 멀어져도 다시 재야 버튼이 뜬다.
     const observer =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(sync);
     observer?.observe(viewport);
@@ -128,8 +117,7 @@ function useAwayFromBottom() {
   const scrollToBottom = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    // 즉시 이동이다. smooth는 애니메이션 중 scroll 이벤트가 "아직 바닥이 아니다"로 읽혀
-    // 버튼이 깜빡인다(APP-227에서 밟았다).
+    // 즉시 이동이다. smooth 는 애니메이션 중 scroll 이벤트가 「아직 바닥이 아니다」로 읽혀 버튼이 깜빡인다.
     viewport.scrollTop = viewport.scrollHeight;
     sync();
   }, [sync]);
@@ -137,16 +125,6 @@ function useAwayFromBottom() {
   return { viewportRef, away, scrollToBottom };
 }
 
-/**
- * 종료된 회의의 아카이브. **전사 타임라인 하나다.**
- *
- * 예전에는 「대화 기록 / 회의 중 챗봇」 두 탭이었다. 공유 챗봇이 사라지면서 Q&A 탭이 빠졌고,
- * 개인 대화는 남의 아카이브에 노출할 수 없어 대체 표면을 두지 않는다.
- *
- * `ponytail:` 전사 응답에 세션 벽시계 시작이 생기면 `sessionStart + startedAtMs`로 하나의
- * 타임라인에 인터리브해 올린다 — 그때는 이 세그먼트가 필요 없어진다.
- */
-/** 이 라벨에 걸린 개별 지정이 몇 줄인가. 「모든 발화에 적용」이 그만큼을 지운다. */
 const countOverrides = (
   rows: ReadonlyArray<{
     speakerLabel?: string | null;
@@ -158,17 +136,6 @@ const countOverrides = (
     (segment) => segment.speakerLabel === label && segment.assignedParticipantId
   ).length;
 
-/**
- * 「전체 초기화」가 빈 본문 PUT 을 보낼 라벨. **이름이 붙은 것만이다.**
- *
- * `confirmed` 로 세면 안 된다 — 그 PUT 은 라벨의 *이름*을 지울 뿐 확정 자체는 남긴다(서버의
- * `confirmed` 는 「사람이 답했나」라서 되돌릴 API 가 없다). 그걸로 세면 초기화를 누른 뒤에도
- * 버튼이 계속 「되돌릴 것이 있다」고 서 있는다. 「참석자 아님」으로 확정한 라벨도 화면에는
- * 이미 `화자 A` 라 되돌릴 것이 없다.
- *
- * 발화 단위 지정만 걸린 라벨은 넣는다. 라벨 PUT 이 그 화자의 개별 지정을 함께 지우므로
- * (`deleteByNoteIdAndSpeakerLabel`), 빠뜨리면 그 줄만 옛 이름으로 남는다.
- */
 const labelsToReset = (
   diarization:
     | {
@@ -189,8 +156,6 @@ const labelsToReset = (
   const labels = new Set<string>();
   if (diarization?.status === "MAPPED") {
     for (const speaker of diarization.speakers ?? []) {
-      // `assignedName` 을 같이 안 본다 (APP-685). 그 값은 서버가 `assignedParticipantId` 로
-      // 조인해 만든 사본이라 **참여 기록 없이 이름만 있는 화자는 존재할 수 없다.**
       if (speaker.assignedParticipantId) {
         labels.add(speaker.label);
       }
@@ -204,10 +169,8 @@ const labelsToReset = (
   return [...labels];
 };
 
-/** 이 회의의 참여자. 아직 참여자가 아닌 후보와 달리 참여 기록을 반드시 갖는다. */
 type NoteParticipantFace = SpeakerCandidate & { participantId: string };
 
-// 폭만 바꾸는 뷰 전환에서 긴 전사·화자 메뉴 전체를 다시 그리지 않는다.
 export const NoteArchive = memo(function NoteArchive({
   noteId,
   workspaceId,
@@ -218,32 +181,14 @@ export const NoteArchive = memo(function NoteArchive({
   active = true,
 }: {
   noteId: string;
-  /**
-   * 스크립트 탭이 보이는가. 탭을 떠나도 읽던 위치를 지키려고 숨기기만 해서(APP-1660) 탭에
-   * 들어와도 다시 마운트되지 않는다. 마운트마다 하던 후보 재조회를 이 값으로 대신 건다.
-   */
   active?: boolean;
-  /**
-   * 화자 후보가 **이 회의의 참여자를 넘어** 워크스페이스 사람 전체라 필요하다.
-   *
-   * **확인된 소속만 받는다.** 조회가 끝나기 전에는 `undefined` 이고, 그동안 후보 조회를
-   * 안 걸어 만들기가 잠긴다 — URL 의 워크스페이스로 후보를 세우면 남의 목록이 선다.
-   */
   workspaceId?: string;
-  /**
-   * 이 회의의 참여자. 후보([SpeakerCandidate])와 달리 **참여 기록이 반드시 있다** —
-   * 아직 참여자가 아닌 멤버는 여기 안 들어온다.
-   */
   participants?: NoteParticipantFace[];
-  /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
   noteMeta?: NoteMeta | null;
 } & TranscriptFocus) {
   const t = useTranslations("notes.archive");
   const fallbackNames = useSpeakerFallbackNames();
   const tActions = useTranslations("common.actions");
-  // 종료 뒤에 연 화면에는 노트 소켓이 없어 화자 분리 결과가 오지 않는다. 분리가 끝날
-  // 때까지만 전사를 다시 읽는다. 봉인 전에는 전사가 NOT_REQUESTED 라 흐름 상태로 가른다.
-  // 흐름은 건강한 이벤트 스트림이면 힌트가 다시 읽는다(PRO-67 I03). 아래 전사 5초는 그대로다 — 화자 분리 상태 변화에는 힌트가 없다.
   const streamHealthy = useEventStreamHealthy();
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
@@ -264,8 +209,6 @@ export const NoteArchive = memo(function NoteArchive({
     okData(flowQuery.data)?.regions?.some(
       (row) => row.region === "ITEM_ENRICHMENT" && row.status === "PENDING"
     ) ?? false;
-  // 종료 직후 마운트다 — 전역 staleTime(60초)을 그대로 두면 방금 전 라이브 캐시를 재사용해
-  // 마지막 전사가 빠질 수 있다. 마운트할 때 최종 상태를 다시 당긴다.
   const transcriptQuery = useGetNoteTranscript(noteId, {
     query: {
       refetchOnMount: "always",
@@ -286,8 +229,6 @@ export const NoteArchive = memo(function NoteArchive({
       ? transcriptQuery.data.data.data
       : null;
   const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
-  // 종료된 회의를 여는 자리가 여기다. 공백과 화자를 `TranscriptView`에만 넣으면
-  // 정작 볼 사람이 못 본다.
   const rows = useMemo(
     () =>
       interleaveTranscript(
@@ -297,8 +238,6 @@ export const NoteArchive = memo(function NoteArchive({
     [segments, transcript]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";
-  // **참석자에 이름이 실려 있어야 한다.** 발화 단위 지정은 라벨이 아니라 사람을 가리키므로,
-  // 그 줄에 쓸 이름을 참석자 목록에서 찾는다.
   const speakerOf = useMemo(
     () =>
       createSpeakerIdentityResolver(
@@ -309,12 +248,6 @@ export const NoteArchive = memo(function NoteArchive({
     [diarized, transcript, participants, fallbackNames]
   );
   const truncated = transcript?.recording?.seal === "TRUNCATED";
-  // **한 사람이 여러 화자를 맡을 수 있다** (V31). 예전에는 하나였고 「고르면 저쪽에서
-  // 떨어진다」는 경고였는데, 이제는 「저기에도 붙어 있다」는 정보다. 그래도 보여주는 이유는
-  // 같다 — 쪼개진 것을 합치는 중인지 엉뚱한 사람을 두 번 붙이는 중인지는 누르기 전에 알아야 한다.
-  // **전사에 들어올 때마다 다시 읽는다.** 전역 staleTime 이 60초라, 다른 화면에서 채운
-  // 캐시가 있으면 그 사이 남이 만든 임시 참여자가 후보에 없는 채로 「＋ 추가」가 열린다.
-  // 숨긴 탭에서는 끄고, 보이는 순간 켜지며 `staleTime: 0` 이라 다시 읽는다 — 마운트와 같다.
   const candidateQueryOptions = {
     query: {
       enabled: Boolean(workspaceId) && active,
@@ -328,32 +261,12 @@ export const NoteArchive = memo(function NoteArchive({
   );
   const guestsQuery = useGetWorkspaceGuests(
     workspaceId ?? "",
-    // `limit` 을 안 보낸다 — 후보를 전건에서 세우므로 쪽으로 자르면 후보가 빠진다(APP-1032).
     undefined,
     candidateQueryOptions
   );
   const membersData = membersQuery.data;
   const guestsData = guestsQuery.data;
-  /**
-   * **후보를 다 못 읽었으면 새 이름을 만들 수 없다.**
-   *
-   * 조회가 실패하거나 아직 도는 동안에는 그 갈래가 빈 목록이 되는데, 「＋ 추가」를 그대로
-   * 두면 **이미 있는 사람의 이름을 쳤을 때 후보를 못 찾아 같은 이름을 하나 더 만든다** —
-   * 방금 고친 그 버그가 로딩 창으로 되돌아온다.
-   */
-  /**
-   * **리패치 실패도 「못 읽었다」로 친다.** TanStack 은 백그라운드 리패치가 실패해도 직전
-   * 데이터를 들고 있어서 `.data` 만 보면 늘 성공으로 읽힌다 — 그 사이 남이 만든 임시
-   * 참여자가 후보에 없는데 「＋ 추가」는 살아 있어 **같은 이름을 또 만든다.**
-   */
-  /**
-   * **다시 읽는 중도 「아직」이다.** TanStack 은 캐시를 든 채 리패치할 때
-   * `isPending=false, isFetching=true` 라, 이것을 안 보면 **다시 읽는 중을 다 읽었다로
-   * 번역**한다. 마운트 직후(`refetchOnMount: "always"`)와 메뉴를 열 때가 정확히 그 창이다.
-   *
-   * **표시 규칙과 다르다.** 「리패치로 화면을 덮지 않는다」는 *무엇을 그리나*의 규칙이고,
-   * 이것은 *만들기를 열어도 되나*의 판정이다. 후보 목록 자체는 그대로 그린다.
-   */
+  /** TanStack 은 리패치가 실패해도 옛 `data` 를 들고, 캐시를 든 리패치 중에는 `isPending=false, isFetching=true` 다 — 둘 다 「못 읽었다」로 친다. */
   const candidatesRefetching =
     membersQuery.isFetching || guestsQuery.isFetching;
   const candidatesReady =
@@ -364,27 +277,17 @@ export const NoteArchive = memo(function NoteArchive({
     membersData.data.success &&
     guestsData?.status === 200 &&
     guestsData.data.success;
-  /**
-   * **실패를 「없음」으로 위장하지 않는다.** 조회가 실패하면 후보가 이 회의 사람으로 줄어드는데,
-   * 그대로 두면 사람이 참여자 아닌 멤버를 검색하고 「일치하는 참석자가 없습니다」를 보고
-   * **그 사람이 없다고 믿는다.** 로딩은 실패가 아니라 아직 아닌 것이라 가른다.
-   */
   const candidatesPending =
     membersQuery.isPending || guestsQuery.isPending || candidatesRefetching;
   const candidatesFailed = !candidatesReady && !candidatesPending;
   const retryCandidates = useCallback(() => {
-    // **확인된 워크스페이스가 없으면 안 부른다.** 수동 `refetch()` 는 `enabled: false` 를
-    // 무시해서 `/v1/workspaces//members` 가 그대로 나간다 — 로딩이던 후보 UI 가
-    // **거짓 실패**로 바뀐다.
+    // 수동 `refetch()` 는 `enabled: false` 를 무시해 `/v1/workspaces//members` 가 나가므로, 확인된 워크스페이스가 없으면 부르지 않는다.
     if (!workspaceId) return;
     void membersQuery.refetch();
     void guestsQuery.refetch();
   }, [workspaceId, membersQuery, guestsQuery]);
 
   const withAssignedLabels = useMemo(() => {
-    // **useMemo 안에서 푼다.** 밖에서 풀면 매 렌더 새 배열이라 의존이 늘 바뀌어
-    // 아무것도 기억 못 한다 — 기억하는 척하는 비용만 남는다.
-    // 실패하면 빈 목록이다. 후보가 이 회의의 참여자로 좁아질 뿐 화면이 안 깨진다.
     const members =
       membersData?.status === 200 && membersData.data.success
         ? membersData.data.data.members
@@ -393,8 +296,6 @@ export const NoteArchive = memo(function NoteArchive({
       transcript?.diarization?.status === "MAPPED"
         ? transcript.diarization.speakers
         : [];
-    // **참여 기록으로 잇는다.** 계정으로 이으면 계정 없는 사람은 그 값이 없어 「이미
-    // 화자 B」 표시가 원리적으로 안 붙는다.
     const labelsOf = new Map<string, string[]>();
     for (const speaker of speakers) {
       if (!speaker.assignedParticipantId) continue;
@@ -402,13 +303,6 @@ export const NoteArchive = memo(function NoteArchive({
       labels.push(speaker.label);
       labelsOf.set(speaker.assignedParticipantId, labels);
     }
-    /**
-     * **이미 화자로 고른 사람이 맨 위다.** 회의에 화자가 다섯인데 워크스페이스 멤버가
-     * 스무 명이면, 다음 라벨에 붙일 사람은 거의 확실히 앞에서 이미 고른 그 다섯 중
-     * 하나다. 순서를 안 주면 그 다섯을 매번 목록에서 다시 찾는다.
-     *
-     * 그 안의 순서는 서버가 준 이름 오름차순 그대로다(`sort` 가 안정 정렬이다).
-     */
     const joined = participants
       .map((participant) => ({
         ...participant,
@@ -419,9 +313,6 @@ export const NoteArchive = memo(function NoteArchive({
           Number(Boolean(b.assignedLabels.length)) -
           Number(Boolean(a.assignedLabels.length))
       );
-    // **아직 참여자가 아닌 멤버도 후보다.** 참여자로 안 찍힌 사람을 화자로 못 고르면,
-    // 회의록을 정리하는 사람이 먼저 정보 화면에 가서 체크하고 돌아와야 한다. 고르는 순간
-    // 서버가 참여자로 넣으므로 여기서는 참여 기록 없이(`participantId: null`) 올린다.
     const already = new Set(
       participants.map((participant) => participant.userId).filter(Boolean)
     );
@@ -434,14 +325,9 @@ export const NoteArchive = memo(function NoteArchive({
         email: member.email,
         image: member.image,
         assignedLabels: [],
-        // 참여자가 아니면 이름을 쳐야 보인다 — 기본 목록은 이 회의의 참여자만이다. **참여자가 한 명도
-        // 없으면 예외다**: 그러면 기본 목록이 비어 「없다」로 읽힌다.
         searchOnly: participants.length > 0,
       }));
 
-    // **이 회의 밖의 임시 참여자는 검색해야 보인다.** 늘 보이면 회의와 상관없는 이름으로
-    // 드롭다운이 불어나고, 아예 빼면 사람이 **같은 이름을 하나 더 만든다** — 실제로 그렇게
-    // 됐다. 이름을 친 순간에만 내보내 둘 다 피한다.
     const guests =
       guestsData?.status === 200 && guestsData.data.success
         ? guestsData.data.data.guests
@@ -466,11 +352,6 @@ export const NoteArchive = memo(function NoteArchive({
   }, [participants, transcript, membersData, guestsData]);
 
   const queryClient = useQueryClient();
-  /**
-   * 임시 참여자를 만들면 **세 곳이 같이 바뀐다** — 이 회의의 참석자, 워크스페이스의 임시
-   * 참여자 목록(설정과 참석자 필드가 후보를 여기서 세운다), 그리고 참여자 수를 그리는 노트
-   * 목록이다. 하나만 갱신하면 이미 열어 둔 화면이 새 사람을 못 찾아 같은 이름을 또 만든다.
-   */
   const refreshGuestSources = useCallback(
     () =>
       Promise.all([
@@ -490,18 +371,7 @@ export const NoteArchive = memo(function NoteArchive({
       }),
     [queryClient, noteId]
   );
-  /**
-   * 화자 지정이 **참여자를 늘릴 수 있다** — 아직 참여자가 아닌 멤버를 고르면 서버가 같은
-   * 요청 안에서 참여자로 넣는다. 정보 화면의 참석자 필드와 아바타가 그 목록을 읽으므로
-   * 전사와 함께 다시 읽는다.
-   *
-   * 늘었는지 안 늘었는지 안 가린다. 가리려면 「무엇을 보냈나」를 성공 콜백까지 들고 가야
-   * 하는데, 노트 조회 한 번이 그 배관보다 싸다.
-   */
   const refreshAfterAssign = useCallback(
-    // 참여자가 늘면 **노트 하나만 낡는 게 아니다** — 회의 목록의 참여자 아바타와 설정의
-    // 임시 참여자 「쓰이는 회의록 수」도 같이 뒤처진다. `refreshGuestSources` 가 그 셋을
-    // 이미 갖고 있어 전사만 더한다.
     () =>
       Promise.all([
         refreshTranscript(),
@@ -513,56 +383,22 @@ export const NoteArchive = memo(function NoteArchive({
       ]),
     [refreshTranscript, refreshGuestSources, queryClient, noteId]
   );
-  // 라벨 지정은 그 화자의 **발화 단위 지정을 함께 지운다** — 응답에 그 사실이 안 실리므로
-  // 전사를 통째로 다시 읽는다.
   const assign = useAssignNoteSpeaker({
     mutation: { onSuccess: refreshAfterAssign },
   });
-  // 발화 하나만 바꿔도 마찬가지다. 응답은 그 줄뿐이지만 캐시를 부분 수정하면 그 줄만
-  // 손으로 맞추는 코드가 하나 더 생긴다 — 다시 읽는 편이 짧고 틀릴 자리가 없다.
   const assignSegment = useAssignSegmentSpeaker({
     mutation: { onSuccess: refreshAfterAssign },
   });
   const createGuest = useCreateNoteGuestParticipant();
 
-  /**
-   * 「모든 발화에 적용」을 눌렀는데 그 화자에 **발화 단위 지정이 남아 있을 때** 확인을 받는다.
-   *
-   * 서버는 어차피 지운다 — 「모든」이 말 그대로여야 하기 때문이다. 다만 그 몇 줄은 사람이
-   * 콕 집어 고쳐 둔 것이라, 말없이 사라지면 「분명 고쳤는데」가 된다. 건수는 이미 손에 든
-   * 발화 목록에서 세므로 서버에 묻지 않는다.
-   */
   const [pendingLabelAssign, setPendingLabelAssign] = useState<{
     label: string;
     target: SpeakerTarget | null;
-    /**
-     * 확인을 받은 **뒤에** 만들 이름. 먼저 만들면 사람이 취소해도 임시 참여자와 참여 기록이
-     * 영구히 남는다 — 「취소」가 취소가 아니게 된다.
-     */
     createName?: string;
-    /** `null` 은 「확인 못 했다」다 — 0(「없다」)과 다르다. */
     overrides: number | null;
   } | null>(null);
 
-  /**
-   * 이 라벨에 개별 지정이 **몇 줄** 걸려 있나. 「모든 발화에 적용」이 그것을 지운다.
-   *
-   * **0으로 보일 때만 다시 읽는다.** 종료된 전사는 마운트할 때만 당기므로, 그 사이 다른
-   * 사람이 발화 하나를 고쳤으면 캐시로는 0이다 — 그러면 **확인 없이 보내고 서버가 그
-   * 지정을 지운다.** 사람이 콕 집어 고쳐 둔 것이 경고도 없이 사라지는 자리다.
-   *
-   * 반대 방향(캐시가 더 세는 것)은 확인창이 한 번 더 뜰 뿐이라 다시 안 읽는다.
-   *
-   * **못 읽었으면 `null` 이다.** 실패를 0으로 돌려주면 「없다」와 구분이 안 돼 확인창 없이
-   * 보내고, 서버가 그 지정을 지운다 — 막지 않으려던 것이 **모른 채 지우는** 길이 된다.
-   * `refetch()` 는 실패해도 reject 하지 않고 성공 캐시를 그대로 들고 오므로 `isError` 를 본다.
-   */
-  /**
-   * **잠금을 여기 둔다.** 호출부마다 켜면 다음에 이 함수를 부르는 세 번째 자리가 또 샌다 —
-   * 실제로 한 번 그랬다. 개별 지정이 0인 라벨은 이 조회가 끝나야 mutation 이 시작하는데,
-   * 그 사이 `assign.isPending` 이 아직 꺼져 있다. 그때 다른 행에서 「현재 발화에만」을
-   * 지정하면 그 PUT 이 먼저 끝나고 **뒤늦게 도착한 라벨 지정이 그것을 지운다.**
-   */
+  /** `refetch()` 는 실패해도 reject 하지 않고 성공 캐시를 그대로 들고 오므로 `isError` 를 본다. */
   const [resolvingOverrides, setResolvingOverrides] = useState(false);
 
   const overrideCountOf = useCallback(
@@ -589,7 +425,6 @@ export const NoteArchive = memo(function NoteArchive({
 
   const applyToLabel = useCallback(
     (label: string, target: SpeakerTarget | null) => {
-      // 대상이 없으면 「이름 안 붙임」이다. 열쇠 둘을 다 비워 보낸다.
       assign.mutate({ noteId, label, data: target ?? { participantId: null } });
     },
     [assign, noteId]
@@ -598,7 +433,6 @@ export const NoteArchive = memo(function NoteArchive({
   const requestLabelAssign = useCallback(
     async (label: string, target: SpeakerTarget | null) => {
       const overrides = await overrideCountOf(label);
-      // **모르면 물어본다.** `null` 은 「없다」가 아니라 「확인 못 했다」다.
       if (overrides === 0) {
         applyToLabel(label, target);
         return;
@@ -608,13 +442,6 @@ export const NoteArchive = memo(function NoteArchive({
     [overrideCountOf, applyToLabel]
   );
 
-  /**
-   * 읽던 자리에서 이름을 만들어 그 화자에 붙인다 (APP-494).
-   *
-   * **만든 사람을 응답에서 바로 집는다.** 참여자 목록을 다시 조회해 찾으면 그 사이에
-   * 다른 사람이 참여자를 바꿨을 때 엉뚱한 사람을 붙일 수 있고, 무엇보다 조회가 돌아오기
-   * 전에는 집을 것이 없다.
-   */
   const assignNewGuest = useCallback(
     async (
       label: string,
@@ -629,16 +456,10 @@ export const NoteArchive = memo(function NoteArchive({
           data: { displayName },
         });
         if (response.status !== 201 || !response.data.success) return;
-        // **응답이 만든 사람을 직접 짚어 준다.** 예전에는 「로컬 목록에 없는 id」와 이름으로
-        // 추측했는데, 같은 이름을 막지 않는 것이 이 기능의 규칙이라(동명이인이 정상 입력)
-        // 그 사이 남이 같은 이름을 더하면 엉뚱한 참여 기록에 화자가 붙었다.
         createdId = response.data.data.participantId;
       } catch {
-        // 실패 토스트는 전역이 서버 문구 그대로 띄운다.
         return;
       } finally {
-        // **만들기가 성공했으면 뒤가 어떻게 되든 목록은 갱신한다.** 화자 지정만 실패했을 때
-        // 여기서 빠져나가면, 사람은 만든 이름을 후보에서 못 찾아 같은 이름을 또 만든다.
         void refreshGuestSources();
       }
       if (!createdId) return;
@@ -655,13 +476,6 @@ export const NoteArchive = memo(function NoteArchive({
     [createGuest, assignSegment, applyToLabel, refreshGuestSources, noteId]
   );
 
-  /**
-   * 이름을 만들어 붙이는 진입점. **덮어쓰기 확인이 만들기보다 앞선다.**
-   *
-   * 방금 만든 사람을 발화 단위 지정이 가리킬 리는 없지만, 「모든 발화에 적용」이 지우는 것은
-   * *다른 사람*을 가리키던 개별 지정이라 같은 규칙을 탄다. 만들기를 먼저 하면 사람이 확인창에서
-   * 취소해도 **임시 참여자와 참여 기록이 이미 영구히 생긴 뒤**다.
-   */
   const requestNewGuest = useCallback(
     async (
       label: string,
@@ -685,20 +499,9 @@ export const NoteArchive = memo(function NoteArchive({
   );
 
   const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
-  /**
-   * 지금 짚고 있는 발화. **요약의 근거 인용과 화자 패널의 「여기로 가기」가 한 자리를 쓴다** —
-   * 도착한 줄을 형광으로 긋고 포커스를 옮기는 동작이 둘 다 필요하고, 두 벌로 만들면 같은
-   * 점프가 화면 안에서 두 가지로 움직인다.
-   *
-   * **나중에 누른 쪽이 이긴다.** 소유자의 `focusSegmentId` 를 우선하면, 인용으로 간 뒤
-   * 형광이 사라지기 전에 패널에서 이동을 누를 때 패널만 닫히고 화면은 안 움직인다 — 지나간
-   * 요청이 방금 누른 것을 막는다. 반대 방향도 같아서, 새 인용이 오면 그것이 최신이다.
-   */
   const [focusedSegmentId, setFocusedSegmentId] = useState<string | null>(
     focusSegmentId
   );
-  // 「prop 이 바뀌면 상태를 맞춘다」 — effect 가 아니라 렌더 중에 한다. effect 로 하면 한 번
-  // 옛 값으로 그린 뒤 두 번째 렌더에서 고쳐, 지나간 인용의 형광이 한 프레임 스친다.
   const [preserveSearchFocus, setPreserveSearchFocus] = useState(false);
   const [lastCitation, setLastCitation] = useState<string | null>(
     focusSegmentId
@@ -718,8 +521,6 @@ export const NoteArchive = memo(function NoteArchive({
   const jumpToSegment = useCallback(
     (segmentId: string, fromSearch = false) => {
       setPreserveSearchFocus(fromSearch);
-      // 소유자가 든 옛 인용을 함께 비운다. 안 비우면 그 값이 남아 위 effect 가 다시 돌 때
-      // 되살아난다.
       onFocusHandled();
       setFocusedSegmentId(segmentId);
       setFocusRequest((value) => value + 1);
@@ -730,7 +531,6 @@ export const NoteArchive = memo(function NoteArchive({
     (id: string) => jumpToSegment(id, true),
     [jumpToSegment]
   );
-  // 화자 띠 · 이전/다음으로 발화를 찾아가는지 센다. 노트 id 는 싣지 않는다.
   const [currentMsStore] = useState(createCurrentMsStore);
   const speakerJump = useCallback(
     (surface: "dock" | "panel") => (segmentId: string, via: SpeakerJumpVia) => {
@@ -773,8 +573,7 @@ export const NoteArchive = memo(function NoteArchive({
     enabled: virtualized,
     getScrollElement: () => viewportRef.current,
     estimateSize: () => 100,
-    // 숨긴 탭(APP-1660)에서는 행이 높이 0으로 재진다. 그 값을 받으면 돌아왔을 때 위쪽 행 높이가
-    // 바뀌어 읽던 줄이 밀리므로, 숨은 동안은 잰 높이를 그대로 쓴다.
+    // 숨긴 탭(`display:none`)에서는 행이 높이 0으로 재진다. 그 값을 받으면 돌아왔을 때 읽던 줄이 밀린다.
     useCachedMeasurements: !active,
     overscan: 8,
     scrollMargin: listOffset,
@@ -850,7 +649,7 @@ export const NoteArchive = memo(function NoteArchive({
     if (!virtualized || !viewport || !list) return;
     let width = viewport.clientWidth;
     const update = () => {
-      // 탭이 숨으면(APP-1660) 폭이 0이 된다. 폭 변화로 보고 다시 재면 돌아올 때 위치가 밀린다.
+      // 탭이 숨으면 폭이 0이 된다. 폭 변화로 보고 다시 재면 돌아올 때 위치가 밀린다.
       if (viewport.clientWidth === 0) return;
       setListOffset(
         Math.round(
@@ -924,10 +723,6 @@ export const NoteArchive = memo(function NoteArchive({
     focusRequest
   );
 
-  /**
-   * 도크의 「지금 위치」. **저장한 번호가 아니라 화면 가운데 발화의 시각**이다 —
-   * 직접 스크롤해도 어긋나지 않는다.
-   */
   const startedAtOf = useMemo(
     () =>
       new Map(
@@ -946,10 +741,6 @@ export const NoteArchive = memo(function NoteArchive({
         viewport
           .querySelector('[data-testid="transcript-tools"]')
           ?.getBoundingClientRect().bottom ?? box.top;
-      // **맨 위가 아니라 가운데 줄이다.** 이동하면 도착한 발화가 화면 가운데로 오므로(`center`),
-      // 맨 위 줄로 재면 방금 간 발화보다 앞을 가리켜 ▶ 가 같은 발화를 또 고른다.
-      // **줄을 돌며 재지 않고 한 점을 짚는다**(`elementFromPoint`) — 프레임마다 전사 줄 수백 개의
-      // 위치를 읽으면 그것이 레이아웃을 강제한다. 가운데가 줄 사이 틈이면 위아래로 조금 더 짚는다.
       const x = box.left + box.width / 2;
       const middle = (toolsBottom + box.bottom) / 2;
       for (const dy of [0, 24, -24, 56, -56]) {
@@ -967,7 +758,6 @@ export const NoteArchive = memo(function NoteArchive({
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(measure);
     };
-    // 사람이 직접 움직인 스크롤만 고정을 푼다. 이동이 일으킨 scroll 이벤트로는 풀지 않는다.
     const release = () => currentMsStore.release();
     const inputs = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
     measure();
@@ -983,11 +773,6 @@ export const NoteArchive = memo(function NoteArchive({
   }, [viewportRef, startedAtOf, rows.length, currentMsStore]);
 
   const [panelOpen, setPanelOpen] = useState(false);
-  /**
-   * 회의 길이. 패널의 머리글, 띠를 그리는 축(`summarizeSpeakers`), 띠를 누른 자리를 시각으로
-   * 되짚는 축, 스크립트 복사본이 **같은 값**을 써야 한다(`meetingLengthOf`). 녹음 길이가 발화 끝보다 짧게 오면 띠는 발화 끝까지로
-   * 그려지는데 누른 자리는 녹음 길이로 되짚혀, 뒤쪽을 눌러도 앞쪽 발화로 갔다(APP-1427).
-   */
   const meetingDurationMs = meetingLengthOf(
     transcript?.recording?.durationMs,
     transcript
@@ -1012,34 +797,22 @@ export const NoteArchive = memo(function NoteArchive({
       fallbackNames,
     ]
   );
-  /** 아직 누구인지 모르는 화자. 갈 곳이 있는 것만 — 발화가 없으면 넘길 자리가 없다. */
   const unassignedStats = speakerStats.filter(
     (stat) => stat.unassigned && stat.firstSegmentId
   );
-  /**
-   * 「미지정」을 눌러 지금까지 넘어간 횟수. **어느 화자였나가 아니라 몇 번째냐를 센다** —
-   * 이름을 붙이면 그 화자가 목록에서 빠지므로 라벨을 기억해 두면 다음 자리를 잃는다.
-   */
   const [unassignedCursor, setUnassignedCursor] = useState(0);
   const jumpToNextUnassigned = useCallback(() => {
     if (!unassignedStats.length) return;
-    // 끝에서 처음으로 돈다 — 마지막에서 멈추면 되짚으려고 패널을 다시 열어야 한다.
     const index = unassignedCursor % unassignedStats.length;
     setUnassignedCursor(index + 1);
-    // 패널의 「지정하러 가기」와 같은 곳으로 간다.
     jumpToSegment(unassignedStats[index].firstSegmentId!);
   }, [unassignedStats, unassignedCursor, jumpToSegment]);
-  /**
-   * 도크의 미지정 줄에 서는 지정 메뉴. 전사 안의 메뉴와 **같은 배선**이다 — 라벨 하나에
-   * 이름을 붙이고, 그 라벨의 첫 발화를 새 임시 참여자의 기준 발화로 삼는다.
-   */
   const renderDockAssign = (stat: SpeakerStat) => {
     const label = stat.labels[0];
     if (!label) return null;
     return (
       <SpeakerAssignMenu
         triggerTestId="speaker-dock-assign"
-        // 도크에는 「현재 발화」가 없다 — 라벨 단위로만 지정한다.
         allowSegmentScope={false}
         identity={{
           displayName: stat.name,
@@ -1055,7 +828,6 @@ export const NoteArchive = memo(function NoteArchive({
         onRetryCandidates={retryCandidates}
         onOpen={retryCandidates}
         onAssign={(target, scope) => {
-          // 도크는 라벨 단위다. 한 발화만 고치는 것은 전사의 메뉴가 맡는다.
           if (scope === "segment" && !target) return;
           if (scope === "segment" && stat.firstSegmentId) {
             assignSegment.mutate({
@@ -1081,46 +853,17 @@ export const NoteArchive = memo(function NoteArchive({
       />
     );
   };
-  /**
-   * 되돌릴 것이 있는 라벨. **이름이 붙은 것만 센다.**
-   *
-   * `confirmed` 로 세면 안 된다 — 초기화가 보내는 빈 본문 PUT 은 그 라벨의 *이름*을 지울
-   * 뿐 확정 자체는 남긴다(서버의 `confirmed` 는 「사람이 답했나」라서 되돌릴 API 가 없다).
-   * 그걸로 세면 초기화를 누른 뒤에도 버튼이 계속 「되돌릴 것이 있다」고 서 있는다.
-   * 「참석자 아님」으로 확정한 라벨도 화면에는 이미 `화자 A` 라 되돌릴 것이 없다.
-   *
-   * 발화 단위 지정만 걸린 라벨은 넣는다. 라벨 PUT 이 그 화자의 개별 지정을 함께 지우므로
-   * (`deleteByNoteIdAndSpeakerLabel`), 빠뜨리면 그 줄만 옛 이름으로 남는다.
-   */
-  // 버튼을 잠글지만 정한다. **보낼 목록은 이것이 아니다** — 캐시는 낡을 수 있어서,
-  // 실제 대상은 `requestReset` 이 서버에 다시 물어 센다.
   const resettableLabels = useMemo(
     () => labelsToReset(transcript?.diarization, segments),
     [transcript, segments]
   );
 
-  /**
-   * 초기화 전용 mutation. **위의 `assign` 과 나눈 이유가 갱신 횟수다** — 그쪽은 성공마다
-   * 네 갈래를 다시 읽는데, 라벨 다섯이면 그 왕복이 스무 번이 된다. 여기서는 전부 보낸 뒤
-   * 한 번만 읽는다. 실패 토스트도 라벨마다 뜨지 않게 끄고 아래에서 한 줄로 모은다.
-   */
   const resetSpeaker = useAssignNoteSpeaker({
     mutation: { meta: { suppressErrorToast: true } },
   });
   const [resetting, setResetting] = useState(false);
-  /** 확인을 기다리는 초기화. **대상을 들고 있다** — 확인창이 센 것과 보낸 것이 같아야 한다. */
   const [pendingReset, setPendingReset] = useState<string[] | null>(null);
 
-  /**
-   * 되돌릴 라벨을 **서버에 다시 물어서** 정한다.
-   *
-   * 종료된 전사는 마운트할 때만 당기므로, 그 사이 다른 사람이 화자 B 에 이름을 붙였으면
-   * 캐시에는 없다 — 그대로 보내면 「전체 초기화」가 B 를 조용히 건너뛰고, 다시 읽는 순간
-   * 지운 줄 알았던 이름이 돌아와 있다. 위 `overrideCountOf` 와 같은 이유, 같은 처방이다.
-   *
-   * **못 읽었으면 `null` 이다.** 실패를 「되돌릴 것 없음」으로 번역하면 아무 일도 안 하고
-   * 끝난 것처럼 닫힌다.
-   */
   const requestReset = useCallback(async () => {
     setResetting(true);
     try {
@@ -1149,14 +892,6 @@ export const NoteArchive = memo(function NoteArchive({
     async (labels: string[]) => {
       setResetting(true);
       try {
-        /**
-         * **한 번에 하나씩 보낸다.** 서버가 지정마다 그 노트 행을 `FOR UPDATE` 로 잠그므로
-         * (`AssignNoteSpeakerService` → `requireNoteProjectForUpdate`) 동시에 보내도 어차피
-         * 줄을 서고, 기다리는 동안 라벨 수만큼 커넥션과 트랜잭션을 쥔 채로 있게 된다.
-         * 병렬이 벌어 주는 것이 없고 비용만 있다.
-         *
-         * 하나가 실패해도 멈추지 않는다 — 되돌릴 수 있는 만큼은 되돌리는 편이 낫다.
-         */
         let failed = 0;
         for (const label of labels) {
           try {
@@ -1169,12 +904,8 @@ export const NoteArchive = memo(function NoteArchive({
             failed += 1;
           }
         }
-        // **부분 실패를 성공으로 보이지 않는다.** 몇은 되돌아가고 몇은 남은 화면을 말없이
-        // 내주면, 사람은 남은 이름을 「초기화가 안 지우는 것」으로 읽는다.
         if (failed) toast.error(t("resetFailed", { count: failed }));
       } finally {
-        // **다시 읽을 때까지 잠근 채로 둔다.** PUT 이 끝난 순간에 풀면 화면은 아직 옛 이름을
-        // 들고 있고, 그 사이 누른 지정이 곧 도착할 초기화 결과에 덮인다.
         await refreshAfterAssign();
         setResetting(false);
       }
@@ -1182,11 +913,6 @@ export const NoteArchive = memo(function NoteArchive({
     [resetSpeaker, noteId, refreshAfterAssign, t]
   );
 
-  /**
-   * 화자를 건드리는 요청이 하나라도 도는 중인가. **초기화와 지정이 같은 잠금을 쓴다** —
-   * 둘은 같은 라벨을 두고 경쟁하고, 늦게 도착한 쪽이 먼저 끝난 쪽을 지운다. 초기화를 걸어
-   * 놓고 패널을 닫으면 전사의 메뉴가 살아 있던 자리가 정확히 그것이었다.
-   */
   const speakerMutating =
     createGuest.isPending ||
     assign.isPending ||
@@ -1220,8 +946,6 @@ export const NoteArchive = memo(function NoteArchive({
                   ? virtualizer.scrollToIndex(rows.length - 1, { align: "end" })
                   : scrollToBottom()
               }
-              // desktop에서는 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
-              // 화자 도크가 떠 있으면 그 위로 올린다.
               className={dockShown ? "bottom-44 lg:bottom-48" : "lg:bottom-20"}
             />
           ) : null}
@@ -1232,25 +956,13 @@ export const NoteArchive = memo(function NoteArchive({
         data-testid="note-archive-content"
         className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-7 pt-5 sm:pb-9 lg:pb-28"
       >
-        {/*
-          예전에는 「대화 기록 / 회의 중 챗봇」 두 탭이었다. 공유 챗봇이 사라지면서
-          Q&A 탭이 빠졌고, 개인 대화는 남의 아카이브에 노출할 수 없어 **대체 표면을 두지
-          않는다**. 회의 아카이브에서 그때 뭘 물어봤는지 찾는 일이 실제로 생기면 그때 본다.
 
-          **복사 버튼은 탭이 사라져도 남는다.** 전사는 길어서, 아래로 한참 내려간 자리에서
-          복사하려고 맨 위로 올라가야 한다면 그 버튼은 없는 것과 같다 — 스크롤 컨테이너
-          위에 붙인다. `-mt-5 pt-5`로 콘텐츠의 위 여백을 이 바가 들고 올라간다. 안 그러면
-          지나가는 글이 바 위쪽 20px 틈으로 비친다.
-        */}
         <TranscriptSearch
           segments={transcriptQuery.isError ? [] : segments}
           onJump={searchJump}
         >
-          {/* 화자가 나뉘기 전에는 열어도 빈 목록이라 안 내보낸다.
+          {/* 다시 읽기가 실패해도 TanStack 은 옛 `data` 를 들고 있어 `diarized` 가 참으로 남는다 — 본문이 오류면 도구도 내린다. */}
 
-              **다시 읽기가 실패했으면 같이 내린다.** TanStack 은 실패해도 옛 `data` 를 들고
-              있어 `diarized` 가 계속 참인데, 본문은 오류 화면으로 바뀌어 있다 — 도구만 남으면
-              「첫 발화로」가 없는 DOM 을 짚고 낡은 수치가 멀쩡한 결과처럼 선다. */}
           {diarized && !transcriptQuery.isError ? (
             <SpeakerTools
               onOpen={() => setPanelOpen(true)}
@@ -1258,14 +970,10 @@ export const NoteArchive = memo(function NoteArchive({
               unassignedCount={unassignedStats.length}
             />
           ) : null}
-          {/* 재조회가 실패하면 TanStack은 옛 `data`를 그대로 들고 `isError`가 된다 —
-              본문은 오류·재시도로 바뀌는데 여기만 남으면 그 숨은 캐시가 복사된다. */}
+          {/* 재조회가 실패하면 TanStack은 옛 `data`를 그대로 들고 `isError`가 된다 — 여기만 남으면 그 숨은 캐시가 복사된다. */}
           {noteMeta && rows.length && !transcriptQuery.isError ? (
             <CopyMarkdownButton
               kind="transcript"
-              // **최종 조회가 끝나기 전에는 못 누른다.** 아카이브는 종료 직후 마운트되어
-              // 라이브 캐시를 그대로 보여주며 다시 읽는다(`refetchOnMount: "always"`).
-              // 그 창에서 복사하면 마지막 발화가 빠진 회의록이 남는다.
               disabled={transcriptQuery.isFetching}
               build={(doc) =>
                 transcriptToMarkdown({
@@ -1276,10 +984,6 @@ export const NoteArchive = memo(function NoteArchive({
                   },
                   rows,
                   truncated,
-                  // 화자 분리 전에는 라벨이 있어도 안 적는다 — `화자 A`는 아직 아무도
-                  // 아닌 이름이라, 복사본에서는 시각만 남기는 편이 사실에 가깝다.
-                  // **발화 단위 지정도 따른다.** 화면에서 고친 이름이 복사본에서 옛
-                  // 이름으로 돌아가면, 남에게 보내는 쪽이 틀린 회의록이 된다.
                   speakerNameOf: (label, assignedParticipantId) =>
                     diarized
                       ? (speakerOf(label, assignedParticipantId)?.displayName ??
@@ -1293,9 +997,6 @@ export const NoteArchive = memo(function NoteArchive({
 
         <div aria-label={t("transcriptLabel")}>
           {transcriptQuery.isPending ? (
-            /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `mt-6`에 `h-24`/`h-28` 막대
-                 둘이라 248이었고 실제는 288이었다 — 첫 줄이 12px 아래에서 시작했고 행
-                 경계도 없어 도착하는 순간 모양이 통째로 바뀌었다. */
             <div className="mt-3" aria-label={t("loading")}>
               {[0, 1, 2].map((row) => (
                 <div
@@ -1303,8 +1004,6 @@ export const NoteArchive = memo(function NoteArchive({
                   className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
                 >
                   <Skeleton className="mt-1 h-3 w-10 rounded-chip" />
-                  {/* 실제 발화는 15px·leading-7이라 한 줄이 28이다 — 막대는 그 줄 안에 놓는다.
-                        막대 높이만 맞추면(16) 행이 12px 낮아진다. */}
                   <div className="flex h-7 items-center">
                     <Skeleton
                       className="h-4 rounded-chip"
@@ -1315,8 +1014,6 @@ export const NoteArchive = memo(function NoteArchive({
               ))}
             </div>
           ) : transcriptQuery.isError ? (
-            // 실패를 "없음"으로 위장하지 않는다 — 아카이브가 TranscriptView의 재시도 경로를
-            // 대체하므로 그 실패 피드백을 여기서 되살린다.
             <div role="alert" className="mt-6 space-y-2">
               <p className="text-sm text-[var(--el-ink)]">
                 {t("loadFailed")}
@@ -1370,7 +1067,6 @@ export const NoteArchive = memo(function NoteArchive({
                           setKeyboardSegment(row.segment.segmentId)
                         }
                         ref={segmentRef(row.segment.segmentId)}
-                        /* 도착한 줄로 포커스를 옮긴다(`use-transcript-focus` 참조). */
                         tabIndex={-1}
                         data-testid="archive-transcript-block"
                         data-focused={
@@ -1395,19 +1091,10 @@ export const NoteArchive = memo(function NoteArchive({
                               }
                               candidates={withAssignedLabels}
                               creating={createGuest.isPending}
-                              // **지정이 도는 동안 다른 메뉴도 잠근다.**
-                              //
-                              // 만들기는 두 왕복(POST 뒤 PUT)이고, 그 사이 다른 발화에서 고른
-                              // 최신 선택이 먼저 저장되면 **늦게 도착한 PUT 이 그것을 되돌린다.**
-                              // `createGuest` 만 보면 POST 가 끝난 시점에 풀려 **첫 PUT 이 아직
-                              // 도는 동안** 다음 지정이 나가고, 둘의 도착 순서가 뒤집히면 화면이
-                              // 앞 선택으로 되돌아간다. 지정끼리도 같은 경쟁이라 함께 잠근다.
                               disabled={speakerMutating}
                               candidatesFailed={candidatesFailed}
                               candidatesPending={candidatesPending}
                               onRetryCandidates={retryCandidates}
-                              // 열 때 다시 읽는다. 그동안 `candidatesPending` 이 서서
-                              // 「＋ 추가」가 닫히므로, 낡은 캐시로 동명이인을 만들 창이 없다.
                               onOpen={retryCandidates}
                               onMenuOpenChange={(open) =>
                                 setOpenMenuSegment(
@@ -1419,7 +1106,6 @@ export const NoteArchive = memo(function NoteArchive({
                               )}
                               onAssign={(target, scope) => {
                                 if (scope === "segment") {
-                                  // 해제가 아니라 지정이다 — 「이름 안 붙임」은 라벨 범위에만 있다
                                   if (!target) return;
                                   assignSegment.mutate({
                                     noteId,
@@ -1433,8 +1119,6 @@ export const NoteArchive = memo(function NoteArchive({
                                   target
                                 );
                               }}
-                              // **후보를 다 못 읽었으면 만들기를 아예 안 내보낸다.** 메뉴가
-                              // `onCreateGuest` 가 없으면 「＋ 추가」를 숨긴다.
                               onCreateGuest={
                                 candidatesReady
                                   ? (displayName, scope) =>
@@ -1450,7 +1134,6 @@ export const NoteArchive = memo(function NoteArchive({
                                 assignSegment.mutate({
                                   noteId,
                                   segmentId: row.segment.segmentId,
-                                  // 행을 비우는 게 아니라 지운다 — 다시 라벨을 따른다
                                   data: { participantId: null },
                                 })
                               }
@@ -1484,7 +1167,6 @@ export const NoteArchive = memo(function NoteArchive({
           )}
         </div>
         <SpeakerPanel
-          // 도구와 같은 이유로 닫는다 — 열어 둔 채로 실패하면 짚을 자리가 사라진다.
           open={panelOpen && !transcriptQuery.isError}
           onOpenChange={setPanelOpen}
           stats={speakerStats}
@@ -1492,12 +1174,9 @@ export const NoteArchive = memo(function NoteArchive({
           onJump={panelJump}
           onReset={() => void requestReset()}
           resetting={resetting}
-          // 지정이 도는 동안에는 초기화도 못 누른다 — 반대 방향의 같은 경쟁이다.
           resettable={resettableLabels.length > 0 && !speakerMutating}
         />
 
-        {/* **초기화는 사람이 한 답을 전부 지운다.** 되돌릴 방법이 없어(서버는 옛 지정을
-            안 들고 있다) 누르기 전에 무엇이 사라지는지 세어 말한다. */}
         <AlertDialog
           open={pendingReset !== null}
           onOpenChange={(next) => {
@@ -1518,7 +1197,6 @@ export const NoteArchive = memo(function NoteArchive({
               <AlertDialogAction
                 onClick={() => {
                   if (!pendingReset) return;
-                  // 확인창이 센 그 목록을 그대로 보낸다 — 다시 세면 물어본 것과 달라진다.
                   void resetSpeakers(pendingReset);
                   setPendingReset(null);
                 }}
@@ -1529,11 +1207,6 @@ export const NoteArchive = memo(function NoteArchive({
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* **「모든 발화에 적용」이 무엇을 지우는지 누르기 전에 말한다.**
-
-            서버는 어차피 그 화자의 발화 단위 지정을 지운다 — 「모든」이 말 그대로여야 하기
-            때문이다. 다만 그 몇 줄은 사람이 콕 집어 고쳐 둔 것이라, 말없이 사라지면
-            「분명 고쳤는데」가 된다. 취소하면 요청 자체를 안 보낸다. */}
         <AlertDialog
           open={pendingLabelAssign !== null}
           onOpenChange={(next) => {

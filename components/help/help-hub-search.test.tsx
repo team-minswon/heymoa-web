@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HelpHubInput, HelpHubProvider } from "@/components/help/help-hub-search";
 import { intlWrapper } from "@/components/help/test-intl";
 
-/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
 const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: intlWrapper() });
 
 let search = "q=%EB%85%B9%EC%9D%8C%20%EC%83%81%ED%83%9C";
@@ -32,7 +31,6 @@ describe("허브 검색의 주소", () => {
     vi.unstubAllGlobals();
   });
 
-  // 뒤로 가기로 돌아왔을 때(마운트) 주소를 지웠다 100ms 뒤 다시 붙이던 문제 — 마운트는 주소를 읽기만 한다.
   it("마운트하면 주소의 검색어를 읽기만 하고 주소를 쓰지 않는다", () => {
     render(
       <HelpHubProvider>

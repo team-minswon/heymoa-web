@@ -248,7 +248,6 @@ describe("NoteTopicClient", () => {
     expect(stomp.configs[0].discardWebsocketOnCommFailure).toBe(true);
   });
 
-  /** ★ 핸드셰이크 401 은 브라우저가 못 본다. 시도마다 새 티켓을 REST 로 받아 주소에 붙인다(APP-1547). */
   describe("시도마다 연결 티켓", () => {
     const beforeConnect = () =>
       (

@@ -3,7 +3,6 @@ import { click, quietClick, type } from "./cursor.mjs";
 import { K, L, LOCALE, R } from "./ui.mjs";
 const workspace = "/w/01K0000000000";
 const note = (id, tab) => `${workspace}/notes/${id}?tab=${tab}&view=full`;
-// 설정 창이 열리며 첫 탭에 남는 포커스 링을 지운다(영상에서는 누른 것처럼 보인다).
 const blur = (p) => p.evaluate(() => document.activeElement?.blur?.());
 const button = (p, name) => p.getByRole("button", { name, exact: true });
 
@@ -11,13 +10,11 @@ export const scenes = [
   {
     name: "new-meeting-record",
     path: workspace,
-    // 1024 폭으로 찍어 960으로 줄인다 — 거의 1:1이라 도크의 작은 글자와 버튼이 뭉개지지 않는다.
     viewport: { width: 1024, height: 576 },
     fade: true,
     endHold: 1200,
     ready: (p) => button(p, L("새 노트")).waitFor(),
     async run(p, mark) {
-      // 본문 단계와 1:1: [새 노트] → 이름 입력 → [만들기] → 빨간 점(회의 시작) → 받아쓰기가 쌓임
       await click(p, button(p, L("새 노트")), 300, 450);
       await p.getByRole("dialog", { name: L("새 회의 만들기") }).waitFor();
       await p.waitForTimeout(250);
@@ -29,9 +26,7 @@ export const scenes = [
       );
       await p.waitForTimeout(350);
       await click(p, button(p, L("만들기")), 100, 450);
-      // 노트가 열리면 하단 도크의 빨간 점이 보인다. 읽을 시간을 준다.
       await button(p, L("회의 시작")).waitFor();
-      // 이 절과 상관없는 「내 에이전트」 패널은 접어 둔다. 받아쓰기가 넓게 보이게.
       await quietClick(
         p,
         p.getByRole("button", { name: L("내 에이전트 접기"), exact: true })
@@ -39,9 +34,7 @@ export const scenes = [
       await p.waitForTimeout(700);
       await click(p, button(p, L("회의 시작")), 100, 450);
       await p.getByTestId("note-recording-waveform").waitFor();
-      // 커서가 일시정지 버튼 위에 남아 있으면 누르려는 것처럼 보인다. 받아쓰기 쪽으로 비켜 준다.
       await p.mouse.move(700, 330, { steps: 14 });
-      // 받아쓰기 줄이 하나둘 쌓이는 걸 보여 준다.
       await p.getByTestId("transcript-block").first().waitFor({ timeout: 30000 });
       await p.getByTestId("partial-pending").waitFor({ timeout: 30000 });
       await p.waitForTimeout(300);
@@ -49,14 +42,12 @@ export const scenes = [
     },
   },
   {
-    // 기록 중 ⏸ → 「일시정지됨」 칩 → 종료 안내 말풍선(APP-1406·1411)
     name: "pause-end-nudge",
     path: workspace,
     viewport: { width: 1024, height: 576 },
     endNudge: true,
     endHold: 2600,
     async ready(p) {
-      // 새 회의를 만들어 기록을 켜 두는 데까지는 준비 구간이다(영상에서 잘린다).
       await button(p, L("새 노트")).click();
       await p.getByRole("dialog").getByRole("button", { name: L("만들기") }).click();
       await button(p, L("회의 시작")).waitFor();
@@ -66,7 +57,6 @@ export const scenes = [
       await p.waitForTimeout(3000);
     },
     async run(p, mark) {
-      // 툴팁이 읽히게 잠깐 올려 둔 뒤 누른다.
       await click(p, button(p, K("recording.dock.pause")), 300, 1600);
       await p.getByTestId("end-nudge").waitFor();
       await p.mouse.move(560, 420, { steps: 14 });
@@ -90,7 +80,6 @@ export const scenes = [
       await p.waitForTimeout(700);
       mark();
       const mail = p.getByRole("switch", {
-        // 스위치 이름은 「{종류} {채널}」 이다(settings.notifications.channelLabel)
         name: `${K("settings.notifications.types.INQUIRY_ANSWERED")} ${K("settings.notifications.channels.email.label")}`,
       });
       await click(p, mail, 900);
@@ -103,7 +92,6 @@ export const scenes = [
     async ready(p) {
       const open = button(p, L("계정 삭제"));
       await open.waitFor();
-      // 설정 창은 계정 조회가 끝나면 한 번 다시 그려진다 — 그 뒤에 스크롤한다
       await p.waitForTimeout(1500);
       await open.scrollIntoViewIfNeeded();
       await blur(p);
@@ -122,7 +110,6 @@ export const scenes = [
       });
       const submit = dialog.getByRole("button", { name: L("탈퇴"), exact: true });
       assert.ok(await submit.isEnabled());
-      // 누르지 않는다 — 켜진 [탈퇴]를 보여 주는 데서 끝낸다.
       const box = await submit.boundingBox();
       await p.mouse.move(box.x - 40, box.y + 60, { steps: 14 });
     },
@@ -234,11 +221,8 @@ export const scenes = [
     async run(p) {
       await click(p, button(p, L("내 에이전트 열기")));
       await click(p, button(p, L("새 대화")));
-      // 시작 화면의 예시 질문 중 첫 칩(「최근 결정」 등). 칩 구성은 워크스페이스 상태에 따라 고른다
       await click(p, p.getByRole("list", { name: K("chat.starter.examplesLabel") }).getByRole("button").first(), 0);
-      // 칩은 질문을 입력칸에 채운다 — 보내기를 눌러 답을 받는다
       await click(p, button(p, K("chat.composer.send")), 600);
-      // 답이 짧으면 「중지」가 잠깐만 보인다 — 나타나기를 기다리지 않고 사라진 뒤(답이 끝난 뒤)를 본다
       await p.waitForTimeout(1500);
       await button(p, K("chat.composer.stop")).waitFor({ state: "hidden", timeout: 30000 });
       assert.ok(

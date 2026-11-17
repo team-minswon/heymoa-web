@@ -49,7 +49,6 @@ async function prepare() {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version)) throw new Error("Invalid repository/version");
   const release = await (await response(`https://api.github.com/repos/${repository}/releases/tags/desktop-v${version}`)).json();
   if (platform !== undefined && platform !== "--include-windows") throw new Error("Unknown platform option");
-  // 웹의 최신 다운로드는 Apple Silicon Mac과 Windows를 함께 제공합니다.
   const assets = releaseAssets(release, repository, version, true);
   const checksums = checksumMap(await (await response(assets.at(-1).browser_download_url)).text());
   const verified = [];

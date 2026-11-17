@@ -116,7 +116,6 @@ describe("MeetingEndFeedback", () => {
     expect(screen.getByRole("status").textContent).toContain(
       "불러오지 못했습니다"
     );
-    // 분석 중이던 데이터가 캐시에 남은 채 폴링이 실패해도 진행 중이라고 하지 않는다
     cleanup();
     flowStatus = "ANALYZING";
     flowError = true;

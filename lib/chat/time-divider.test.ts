@@ -14,7 +14,6 @@ describe("구분선은 날짜가 바뀔 때만 선다", () => {
     expect(threadDividers(["2026-08-25T01:00:00Z"], TZ)).toEqual([true]);
   });
 
-  // 그 30분은 잰 값이 아니라 감이었다
   it("같은 날 안에서는 몇 시간을 비워도 안 선다", () => {
     expect(
       threadDividers(["2026-08-25T01:00:00Z", "2026-08-25T09:00:00Z"], TZ)
@@ -27,9 +26,7 @@ describe("구분선은 날짜가 바뀔 때만 선다", () => {
     ).toEqual([true, true]);
   });
 
-  // UTC로 자르면 자정 근처 대화가 하루 밀린다
   it("보는 사람의 시간대로 자른다", () => {
-    // 서울에서는 08-24 23:00 과 08-25 01:00 — 날이 갈린다. UTC 로는 둘 다 08-24 다.
     const times = ["2026-08-24T14:00:00Z", "2026-08-24T16:00:00Z"];
     expect(threadDividers(times, "UTC")).toEqual([true, false]);
     expect(threadDividers(times, "Asia/Seoul")).toEqual([true, true]);
@@ -56,7 +53,6 @@ describe("구분선 라벨", () => {
     expect(label).toContain("20");
   });
 
-  // 「1월 3일」만 있으면 올해인지 재작년인지 알 수 없다
   it("해가 바뀌면 연도를 함께 적는다", () => {
     expect(dividerLabel("2025-01-03T01:00:00Z", NOW, tKo, "ko", TZ)).toContain(
       "2025"

@@ -8,11 +8,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { siteConfig } from "@/lib/site";
 import { localePath } from "@/lib/i18n/locales";
 
-/**
- * 범용 푸터. 랜딩 크롬 경로(`isLandingChromeRoute`)는 `FooterGate` 가 랜딩 푸터를 세우므로 여기 오지 않고,
- * 그 밖(`/invite` · `/mock-oauth` · `/settings/integrations` 등)만 이것을 쓴다. 그래서 `/` 에 있을 때의
- * 제자리 스크롤 갈래도 없다 — 구간 링크는 늘 랜딩으로 이동한다.
- */
 export function Footer() {
   const router = useRouter();
   const t = useTranslations("shell.footer");

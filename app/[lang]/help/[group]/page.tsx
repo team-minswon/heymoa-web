@@ -44,7 +44,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** 그룹 소개: 그 그룹의 페이지를 카드로 보여 준다. 기능 그룹과 "상황별로 찾기"가 같은 틀이다. */
 export default async function HelpGroupPage({ params }: Props) {
   const locale = await marketingLocale();
   const t = helpT(locale);

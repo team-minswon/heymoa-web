@@ -61,7 +61,6 @@ describe("makeQueryClient 재시도 정책", () => {
     expect(retry(0, new AuthRefreshError(false))).toBe(true);
   });
 
-  // 다시 보내도 답이 같다 — 오류만 늦게 보인다 (APP-783)
   it("4xx 는 재시도하지 않는다", () => {
     const retry = retryOf(makeQueryClient());
 
@@ -83,7 +82,6 @@ describe("makeQueryClient 재시도 정책", () => {
 
     expect(retry(0, apiError(429, 5_000))).toBe(true);
     expect(retry(1, apiError(429, 5_000))).toBe(false);
-    // 얼마나 기다릴지 모르거나 너무 길면 조회를 붙잡아 두지 않는다
     expect(retry(0, apiError(429))).toBe(false);
     expect(retry(0, apiError(429, 60_000))).toBe(false);
   });
@@ -139,13 +137,6 @@ describe("makeQueryClient mutation 토스트", () => {
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
-  // 위 두 테스트는 합성 `throw new Error("실패")`라 "토스트가 한 번 불렸다"만 본다.
-  // `errorMessageOf`가 실제 문구를 뽑는지, 그 문구가 `toast.error`의 인자까지 도달하는지는
-  // 아무도 못 잡는다. `apiFetch`(`lib/api/fetcher.ts`의 `parseResponse`)는 비-2xx일 때
-  // `ApiError`를 throw한다 — 모양은 `{ success: false, data: null, error: { code, message } }`
-  // (`lib/api/error-message.ts`의 `ApiErrorEnvelope`)에 상태 코드를 더한 것이다. 이 테스트는
-  // 그 모양 그대로 던져서 실제 합성 사슬(fetcher가 던지는
-  // 모양 → `errorMessageOf`가 뽑는 문구 → `toast.error`에 넘어가는 인자)을 검증한다.
   it("실제 API 오류 봉투(예: 409 LAST_WORKSPACE_ADMIN)를 던지면 서버 문구가 toast.error 인자까지 도달한다", async () => {
     const envelope = {
       success: false,

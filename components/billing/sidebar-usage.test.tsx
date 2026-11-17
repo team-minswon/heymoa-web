@@ -1,4 +1,3 @@
-/** 사이드바 사용량(APP-1596). 조회 훅을 바꿔 끼워 단계별 글·색·막대와 누르면 요금제를 여는지만 본다. */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

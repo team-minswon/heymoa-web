@@ -88,7 +88,6 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
 }));
 
 describe("normalizeNoteViewQuery", () => {
-  // 기본 탭은 정보다 — 회의를 열면 제목·참여자·시각이 먼저 보인다.
   it("falls back to full details", () => {
     expect(
       normalizeNoteViewQuery({ view: "invalid", tab: "invalid" }, "unknown")
@@ -122,7 +121,6 @@ describe("normalizeNoteViewQuery", () => {
   it.each([
     ["active", "summary", "details"],
     ["ended", "summary", "summary"],
-    // `chat`은 계약에서 사라졌다 — 옛 직링크가 와도 조용히 기본 탭으로 접는다.
     ["active", "chat", "details"],
     ["paused", "chat", "details"],
     ["ended", "chat", "details"],
@@ -145,9 +143,6 @@ describe("normalizeNoteViewQuery", () => {
 });
 
 describe("NoteView", () => {
-  // `view`·`tab`은 라우터를 안 거치고 `window.history.replaceState`로 쓴다 — 그래야
-  // Next가 탭 클릭을 내비게이션으로 취급하지 않는다. 그래서 여기를 감시한다.
-  // `state.replace`(라우터)는 노트 삭제 후 목록으로 나가는 진짜 이동에만 남아 있다.
   const replaceState = vi.fn();
   const pushState = vi.fn();
 
@@ -166,15 +161,10 @@ describe("NoteView", () => {
     cleanup();
   });
 
-  /** 라우터를 안 탄 채 쓰인 URL만 뽑는다. */
   function replacedUrls() {
     return replaceState.mock.calls.map((call) => call[2]);
   }
 
-  /**
-   * 근거를 눌러 전사로 건너뛴 뒤 뒤로가기를 누르면 **읽던 요약에 돌아와야 한다.**
-   * `replaceState`로 쓰면 항목이 안 쌓여 뒤로가기가 노트 진입 이전으로 나가고 노트가 닫힌다.
-   */
   it("근거 점프는 뒤로가기 자리를 남긴다", () => {
     state.search = "view=full&tab=summary";
     render(<NoteView workspaceId="w1" noteId="n1" initialQuery={{}} />);
@@ -186,7 +176,6 @@ describe("NoteView", () => {
     ]);
   });
 
-  // 탭마다 항목을 쌓으면 다섯 번 누른 사람이 나가는 데 다섯 번을 눌러야 한다.
   it("탭 클릭은 뒤로가기 자리를 남기지 않는다", () => {
     state.search = "view=full&tab=transcript";
     render(<NoteView workspaceId="w1" noteId="n1" initialQuery={{}} />);
@@ -312,10 +301,6 @@ describe("NoteView", () => {
     await waitFor(() => expect(replacedUrls()).toHaveLength(1));
   });
 
-  /**
-   * 메일 링크 진입(APP-1312). 노트 진입이 `note_opened{source=mail}` 을 한 번 보내고, 목록 클릭으로 연 노트는
-   * 행이 이미 보냈으므로 여기서 보내지 않는다. 회의가 그새 끝났으면 도착할 때 한 번 요약 탭으로 보낸다.
-   */
   describe("메일 링크로 도착", () => {
     afterEach(() => track.mockReset());
 

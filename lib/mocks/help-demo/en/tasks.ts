@@ -8,10 +8,6 @@ import {
 } from "@/lib/mocks/help-demo/en/people";
 import { helpDemoReviewSets } from "@/lib/mocks/help-demo/en/reviews";
 
-/**
- * 프로젝트 할 일 시드 한 줄. `project-tasks.ts` 의 시드가 같은 모양을 쓴다.
- * `due` 는 오늘에서 며칠 떨어진 날(음수는 기한 지남), `null` 은 기한 없음이다.
- */
 export type TaskSeedRow = {
   key: string;
   projectId: string;
@@ -22,13 +18,11 @@ export type TaskSeedRow = {
     | { type: "SPEAKER_LABEL"; noteId: string; label: string }
     | null;
   due: number | null;
-  /** 회의 확정에서 생긴 할 일이다 */
   fromApproval?: boolean;
   edit?: {
     by: string;
     due?: number;
     status?: "OPEN" | "COMPLETED" | "CANCELLED";
-    /** 외부 에이전트 연결이 `by` 의 이름으로 고친 판이다. null 이면 그 연결 행이 지워졌다 */
     via?: { delegationId: string; name: string } | null;
   };
 };
@@ -43,11 +37,6 @@ const person = (ref: PersonRef | null): TaskSeedRow["assignee"] => {
 
 const PROJECT = (key: NoteDef["project"]) => HD_PROJECTS[key].id;
 
-/**
- * 확정된 회의(핵심 회의 2와 확정 상태의 중간 회의)의 할 일 항목이 그대로 프로젝트 할 일이 된 것.
- * 담당은 화자 라벨 → 참석자로 풀고, 기한은 회의 날짜 기준 `dueIn` 을 오늘 기준으로 옮긴다.
- * 오래된 회의의 할 일은 대부분 끝난 것으로, 하나는 기한이 지난 채 남은 것으로 둔다.
- */
 function approvedRows(): TaskSeedRow[] {
   return helpDemoReviewSets()
     .filter((set) => set.flow === "CONFIRMED")
@@ -100,7 +89,6 @@ const manual = (
   edit: status === "COMPLETED" ? { by: HD_ME, status: "COMPLETED" } : undefined,
 });
 
-/** 손으로 둔 할 일. 기한은 지남 · 오늘 · 이번 주 · 그 뒤 · 없음이 고르게 섞인다. */
 const MANUAL_ROWS: TaskSeedRow[] = [
   manual("spring-1", "spring", "Draft review-based copy for May ad creative", "minjae", 3),
   manual("spring-2", "spring", "Reorganize search ad keyword groups", "doyun", -1),

@@ -131,21 +131,11 @@ export function GlobalRecordingIndicator() {
     Boolean(buffer?.paused || buffer?.upload || connectionNotice) ||
     microphone !== "live" ||
     (systemAudio != null && systemAudio !== "live");
-  // 연결·마이크·한도 안내는 녹음 중인 노트 패널에만 있다. 그 노트를 안 보고 있으면 워크스페이스 안에서도 여기서 알린다
   const away = !pathname.includes(`/notes/${session?.noteId ?? ""}`);
   const isVisible =
     (!isWorkspaceRoute(pathname) || (alerting && away)) &&
     Boolean(session) &&
     ACTIVE_PHASES.has(phase);
-  /**
-   * **녹음 중인 워크스페이스로 돌아간다.** 예전에는 기본 워크스페이스(`find(isDefault) ?? [0]`)를
-   * 골랐는데, 그것은 지금 녹음 중인 곳이 아닐 수 있다 — 기본이 아닌 A를 녹음하다 홈에 오면
-   * `/w/B/notes/<A의 노트>`가 만들어졌다. 노트 조회는 워크스페이스를 받지 않아 A의 노트가
-   * 그대로 그려지므로 **틀린 URL인 줄도 모른 채** 그 화면에서 재개하게 되고, 그러면 녹음의
-   * 소속이 B로 기록돼 A의 나가기 잠금과 추방 정리가 둘 다 빗나간다.
-   *
-   * 이제 `start()`가 소속을 들고 있으니 목록을 뒤질 필요가 없다.
-   */
   const href = activeWorkspaceId
     ? `/w/${activeWorkspaceId}/notes/${session?.noteId ?? ""}?view=full&tab=transcript`
     : "#";

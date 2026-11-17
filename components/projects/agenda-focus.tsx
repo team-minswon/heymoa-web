@@ -40,10 +40,8 @@ import { ribbonLayout, type RibbonLayout } from "@/lib/projects/agenda-ribbon";
 import { cn } from "@/lib/utils";
 
 const ACCENT = "var(--el-scope-project)";
-/** 줄기·갈래를 옮기는 칩(`Badge` 위에 얹는 크기·호버). 호버·키보드 포커스는 색과 테두리가 함께 바뀐다 */
 const CHIP =
   "h-7 max-w-[260px] cursor-pointer gap-1.5 bg-[var(--el-surface-card)] px-2.5 text-[13px] font-normal text-[var(--el-ink)] hover:border-[var(--el-scope-project)] hover:bg-[var(--el-surface-card)] hover:text-[var(--el-scope-project)] hover:shadow-[0_0_0_1px_var(--el-scope-project)]";
-/** 페이지 스크롤 상자와, 그 안에서 요소의 위치(변환·애니메이션을 빼고 레이아웃 좌표로 잰다) */
 const pageOf = (element: Element) => element.closest("[data-slot=scroll-area-viewport]");
 const pageTopOf = (element: Element) => {
   let top = 0;
@@ -53,12 +51,10 @@ const pageTopOf = (element: Element) => {
 const DOT_Y = 20;
 const STEM = 18;
 const CARD_H = 180;
-/** 줄(줄기·갈래) 하나의 높이. 카드 아래 갈래 칩이 들어갈 틈까지 */
 const ROW_H = DOT_Y + STEM + CARD_H + 40;
 const FORK_R = 12;
-/** 타임라인 위의 날짜 머리 줄(세로로 스크롤해도 화면 위에 붙는다)의 높이 */
 const HEAD_H = 60;
-/** 머리 줄의 안쪽(`data-focus-head`)을 가로 스크롤 상자의 스크롤에 맞춘다. 스크롤 타임라인이 있으면 CSS 만으로(JS 지연 없음), 없으면 아래 효과가 옮긴다 */
+/** 스크롤 타임라인을 지원하는 브라우저는 CSS 만으로 머리 줄을 가로 스크롤에 맞추고, 없으면 아래 효과가 스크롤마다 옮긴다 */
 const HEAD_SYNC_CSS =
   "@keyframes focus-head-shift{to{transform:translateX(var(--focus-range,0px))}}" +
   "@supports (animation-timeline:scroll()){" +
@@ -76,27 +72,19 @@ type Props = {
   rows: TopicRow[];
   index: TopicIndex;
   topicId: string;
-  /** 주소나 안건 점으로 들어왔을 때 짚을 안건 */
   agendaId?: string;
   onBack: () => void;
   onPick: (topicId: string, agendaId: string | undefined) => void;
 };
 
-/**
- * 포커스 화면: 줄기 하나를 큰 가로 타임라인으로 편다. 위에는 전체 윤곽 띠(고른 줄기만 강조색, 같은 회의에서 만난 줄기는
- * 조금 진하게)가 남아 있어 맥락을 잃지 않고, 띠나 이웃 칩을 누르면 다른 줄기로 옮겨 간다. 줄기를 옮길 때 점·카드는 옛 자리에서 날아오지 않는다 — 띠 아래의
- * 내용(제목·칩·타임라인)이 한 덩어리로 옅게 나타나며 8px 올라온다(`swapIn`). 전체 지도에서 들어오고 돌아가는 것은 부모가 같은 방식으로 맡는다.
- */
 export function AgendaFocus(props: Props) {
   const topic = props.index.topics.get(props.topicId);
   return topic ? <FocusStage {...props} topic={topic} /> : <FocusGone onBack={props.onBack} />;
 }
 
-/** 다시 받은 응답에서 이 줄기가 사라졌다: 그릴 것이 없으니 전체 지도로 돌아간다 */
 function FocusGone({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     onBack();
-    // 한 번만
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
@@ -112,10 +100,8 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
   const [moreBranches, setMoreBranches] = useState(false);
   const stripRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  // 타임라인 밖(윤곽·칩·여백)에서 시작한 끌기도 세로 스크롤로 움직인다. 타임라인 안은 자기 훅(좌우+상하)이 맡고, 버튼·링크 위에서도 5px 넘게 끌면 끌린다
   useDragPan(stageRef, { skip: "[data-scroller], [data-edge-buttons]" });
   const reduced = useReducedMotion() ?? false;
-  // 처음 들어온 줄기는 부모가 나타내니 따로 움직이지 않고, 줄기를 옮길 때만 새 내용이 나타난다
   const [firstTopic] = useState(topicId);
   const enter = swapIn(reduced);
   const timelineRef = useRef<FocusTimelineApi>(null);
@@ -125,16 +111,13 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
   const first = topic.agendas[0];
   const last = topic.agendas.at(-1)!;
 
-  // 들어오면 키보드 포커스는 「전체 지도」 버튼으로(돌아가는 길이 가장 먼저 닿는다)
   useEffect(() => {
     stageRef.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
   }, []);
-  // 들어올 때 페이지를 맨 위로(줄기를 바꿀 때는 그대로)
   useLayoutEffect(() => {
     const page = stageRef.current?.closest("[data-slot=scroll-area-viewport]");
     if (page) page.scrollTop = 0;
   }, []);
-  // 칩을 눌러 줄기를 옮기면 제목·갈래 줄 수가 달라져 칩 줄이 아래위로 밀릴 수 있다 — 칩 줄이 옮기기 전과 같은 화면 높이에 오도록 페이지 스크롤을 맞춘다(같은 프레임)
   const chipAnchor = useRef<{ top: number; scroll: number } | null>(null);
   useLayoutEffect(() => {
     const held = chipAnchor.current;
@@ -229,7 +212,6 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
                     type="button"
                     title={t("focus.neighborTitle", { title: other.title, dates: noteIds.map(dateOf).join(", ") })}
                     onClick={() => {
-                      // 눌러서 줄기를 옮겨도 이 칩 줄이 화면에서 밀려 가지 않게, 옮기기 전 자리를 기억해 둔다
                       const block = stageRef.current?.querySelector("[data-chips]");
                       chipAnchor.current = block ? { top: pageTopOf(block), scroll: pageOf(block)?.scrollTop ?? 0 } : null;
                       onPick(other.id, undefined);
@@ -273,11 +255,6 @@ function FocusStage({ workspaceId, map, rows, index, topicId, agendaId, onBack, 
   );
 }
 
-// ── 위의 윤곽 띠 ───────────────────────────────────────────────────────────────
-
-/**
- * 전체 윤곽의 얇은 띠. 줄기마다 가는 선과 작은 점이고, 고른 줄기만 강조색이다. 줄기를 누르면 그 줄기로 옮겨 간다.
- */
 function GhostStrip({
   map,
   layout,
@@ -347,7 +324,6 @@ function GhostStrip({
                 style={{ opacity: opacityOf(topic.id) }}
               >
                 <title>{topic.name}</title>
-                {/* 누르기 쉽게 보이지 않는 넓은 줄 */}
                 <rect
                   x={x(stops[0].meeting) - 4}
                   y={yy - laneH / 2}
@@ -385,15 +361,8 @@ function GhostStrip({
   );
 }
 
-// ── 타임라인 ───────────────────────────────────────────────────────────────────
-
 type FocusTimelineApi = { reveal: (agendaId: string) => void };
 
-/**
- * 줄기 하나의 가로 타임라인. 줄기가 바뀌면 부모가 key 로 새로 세우고, 점·선·카드는 옮겨 오지 않고 바로 선다. 갈래가 오른쪽 끝에 숨지 않게,
- * 처음 자리는 첫 갈래가 보이는 곳이고 갈래 줄마다 왼쪽에 붙어 따라오는 칩이 있다. 잡아 끌거나 양옆의 둥근 버튼으로 옮긴다 — 스크롤 상자는 스테이지 끝까지 쓰고,
- * 버튼은 레이아웃 공간 없이 가장자리 가까이 갈 때만 뜨며 세로로 스크롤해도 보이는 구간의 가운데에 붙어 따라온다.
- */
 function FocusTimeline({
   ref,
   workspaceId,
@@ -418,7 +387,6 @@ function FocusTimeline({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion() ?? false;
   useDragPan(scrollRef);
-  // 날짜 머리 칸: 줄기가 지나간 회의마다 한 칸, 카드 칸(그 회의의 카드들이 차지한 x 범위)과 left·width 가 같다
   const cells = useMemo(() => {
     const spans = new Map<string, { from: number; to: number; agenda: MapAgenda }>();
     for (const { agenda, left } of layout.cards) {
@@ -430,7 +398,6 @@ function FocusTimeline({
     }
     return [...spans.entries()].map(([noteId, span]) => ({ noteId, ...span })).sort((a, b) => a.from - b.from);
   }, [layout]);
-  // 머리 줄이 화면 위에 붙어 있을 때만 옅은 그림자: 맨 위 감시 요소가 화면 위로 나가면 붙은 것이다(스크롤 이벤트 없이 교차 관찰자가 알려 준다)
   const [stuck, setStuck] = useState(false);
   useLayoutEffect(() => {
     const sentinel = sentinelRef.current;
@@ -442,7 +409,6 @@ function FocusTimeline({
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, []);
-  // 머리 줄 안쪽이 가로 스크롤을 따라가게 범위를 알려 준다(스크롤 타임라인이 없는 브라우저는 스크롤마다 옮긴다)
   useLayoutEffect(() => {
     const scroller = scrollRef.current;
     const head = headRef.current;
@@ -466,7 +432,6 @@ function FocusTimeline({
   const dotX = (id: string) => layout.leftOf.get(id)! + DOT_INSET;
   const height = layout.rowCount * ROW_H - 40 + 8;
 
-  // 갈래 칩: 그 카드가 가운데 오게 바로 옮기고, 타임라인이 옅게 나타나며 올라온다(카드가 옆으로 날아가지 않는다)
   const reveal = (id: string) => {
     const card = boxRef.current?.querySelector(`[data-card="${CSS.escape(id)}"]`);
     const content = scrollRef.current?.firstElementChild;
@@ -483,14 +448,12 @@ function FocusTimeline({
     );
   };
   useLayoutEffect(() => {
-    // 바깥에 reveal 을 내준다(렌더가 아니라 마운트 때 한 번)
     if (typeof ref === "function") ref({ reveal });
     else if (ref) (ref as React.RefObject<FocusTimelineApi | null>).current = { reveal };
     return () => {
       if (typeof ref === "function") ref(null);
       else if (ref) (ref as React.RefObject<FocusTimelineApi | null>).current = null;
     };
-    // 줄기마다 한 번
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -501,17 +464,14 @@ function FocusTimeline({
     const room = scroller.clientWidth;
     if (picked !== undefined) scroller.scrollLeft = picked + CARD_W / 2 - room / 2;
     else if (layout.branches.length > 0) {
-      // 첫 갈래가 처음 화면 밖이면, 갈라진 안건과 갈래 첫 카드가 함께 보이게 옮긴다
       const branch = layout.branches[0];
       const [parent, child] = [layout.leftOf.get(branch.fork.agendaId)!, layout.leftOf.get(branch.first.agendaId)!];
       if (child + CARD_W > room - 24) {
-        // 카드가 반쯤 잘리지 않게 카드 칸에 맞춰 옮긴다. 갈라진 안건 카드는 늘 화면에 남긴다
         const slot = Math.ceil((child + CARD_W - room + 48 - FOCUS_PAD + 16) / SLOT_W);
         const keep = Math.round((parent - FOCUS_PAD) / SLOT_W);
         scroller.scrollLeft = FOCUS_PAD + Math.min(slot, keep) * SLOT_W - 16;
       }
     }
-    // 줄기가 바뀌면 부모가 key 로 다시 세운다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -519,7 +479,6 @@ function FocusTimeline({
     <div ref={boxRef} data-focus-box="" className="relative border-t border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]">
       <style>{HEAD_SYNC_CSS}</style>
       <div ref={sentinelRef} aria-hidden className="pointer-events-none absolute top-0 left-0 h-px w-px" />
-      {/* 날짜 머리 줄: 판의 열 머리와 같은 문법(날짜 굵게, 아래 회의 이름). 세로로 스크롤하면 화면 위에 붙고, 가로로는 카드와 함께 움직인다 */}
       <div
         data-focus-strip=""
         data-stuck={stuck ? "" : undefined}
@@ -545,7 +504,6 @@ function FocusTimeline({
           })}
         </div>
       </div>
-      {/* 가장자리의 이동 버튼: 타임라인이 화면보다 넓을 때, 더 갈 수 있는 쪽은 늘 보인다. 세로 스크롤은 CSS sticky 가 따라온다(머리 줄 아래 구간의 가운데) */}
       <EdgeButtons scroller={scrollRef} reduced={reduced} inset={HEAD_H} />
       <div
         ref={scrollRef}
@@ -598,7 +556,6 @@ function FocusTimeline({
             })}
           </svg>
 
-          {/* 갈래 줄의 이름표: 줄이 화면 오른쪽에 있어도 왼쪽에 붙어 따라와서 갈래가 있다는 걸 알린다. 한 줄에 갈래가 여럿이면 하나로 묶는다 */}
           {[...new Set(layout.branches.map((branch) => branch.row))].map((row) => {
             const here = layout.branches.filter((branch) => branch.row === row);
             return (
@@ -656,7 +613,6 @@ function FocusTimeline({
   );
 }
 
-/** 해가 바뀌는 카드(와 맨 처음 카드)에는 연도를 붙인다 */
 function dateLabel(map: AgendaMap, agenda: MapAgenda) {
   const meeting = map.meetings.find((candidate) => candidate.noteId === agenda.noteId)!;
   const year = meetingYear(meeting.startedAt);
@@ -666,7 +622,6 @@ function dateLabel(map: AgendaMap, agenda: MapAgenda) {
 }
 
 
-/** 안건 카드. 날짜 · 회의명 · 제목 · 한 줄 요약 · 결정/할 일 수 · 회의록 링크 */
 function AgendaCard({
   workspaceId,
   agenda,

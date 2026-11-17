@@ -37,15 +37,9 @@ export function WorkspaceNoteList({
   isPending: boolean;
   isError: boolean;
   onRetry: () => void;
-  /** 빈 상태 CTA. 프로젝트가 없으면 셸이 프로젝트를 먼저 묻는다. */
   onNewMeeting: () => void;
-  /** 서버에 이 뒤로 더 있다. 목록 끝에 「이전 기록 더 보기」를 둔다. */
   hasMore?: boolean;
   isLoadingMore?: boolean;
-  /**
-   * 다른 범위(프로젝트)의 목록이 새 목록을 기다리며 자리를 지키는 중. 옅게 두고 손을 막는다 — 비웠다 채우면 번쩍이고, 그대로 두면 새
-   * 프로젝트 이름 아래 남의 노트가 진짜처럼 선다 (APP-1212).
-   */
   stale?: boolean;
   onLoadMore?: () => void;
 }) {
@@ -57,14 +51,8 @@ export function WorkspaceNoteList({
   const activeMeetingStarts = notes
     .filter(isMeetingActive)
     .flatMap((note) => recordingClockOriginMs(note) ?? []);
-  // 목록 전체가 이 타이머 하나만 공유하되, 각 활성 회의의 다음 경과 분 경계 중 가장 가까운
-  // 시각에 깨운다. 원점(녹음 시계)이 다른 회의도 최대 59초 늦게 바뀌지 않는다.
   const now = useAlignedNow(60_000, true, activeMeetingStarts);
 
-  /**
-   * 「더 보기」가 끝난 순간 이미 있던 행. 그 뒤에 붙은 행만 짧게 들어온다(APP-1215). 폴링 · 범위 바꾸기로 바뀐 목록은 움직이지
-   * 않는다 — 불러오는 중이던 직전 렌더에서 넘어온 변화만 본다.
-   */
   const ids = notes.map((note) => note.noteId).join(",");
   const [shown, setShown] = useState<{
     ids: string;
@@ -78,8 +66,7 @@ export function WorkspaceNoteList({
       before:
         shown.ids === ids
           ? shown.before
-          : // 앞에 이어 붙은 것만 — 더 보기 도중 범위를 바꾸면 목록이 통째로 바뀐다.
-            shown.loadingMore && ids.startsWith(shown.ids)
+          : shown.loadingMore && ids.startsWith(shown.ids)
             ? new Set(shown.ids.split(","))
             : null,
     });
@@ -101,20 +88,14 @@ export function WorkspaceNoteList({
     });
   }, [isError, workspaceId, t, tActions]);
 
-  // 다른 프로젝트의 목록을 읽는 중이어도 이미 받은 노트는 유지한다.
   if (isPending && notes.length === 0) {
     return (
       <div aria-label={t("loading")}>
-        {/* 도착할 목록처럼 날짜 머리(`pt-5 pb-2` + 12px 글) 아래에 줄이 선다. 머리 자리가 없으면 도착할 때 첫 줄이 44px 밀린다. */}
         <div className="px-3 pt-5 pb-2">
           <Skeleton className="h-4 w-12" />
         </div>
         {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            key={index}
-            // 실제 행(note-list-row)이 두 줄 h-16이다. 어긋나면 데이터 도착 시 목록이 아래로 점프한다.
-            className="flex h-16 items-center gap-[14px] px-3"
-          >
+          <div key={index} className="flex h-16 items-center gap-[14px] px-3">
             <Skeleton className="size-5 rounded-full" />
             <Skeleton className="h-4 w-1/3" />
           </div>
@@ -139,8 +120,6 @@ export function WorkspaceNoteList({
   }
 
   if (!notes.length) {
-    // **누를 수 있는 것을 여기 둔다.** 예전에는 "상단바의 새 노트로…"라고 가리키기만 했는데,
-    // 프로젝트가 없으면 그 버튼이 비활성이라 가리키는 곳이 눌리지 않았다.
     return (
       <WorkspaceOnboarding
         stage="no-note"
@@ -165,9 +144,6 @@ export function WorkspaceNoteList({
           <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">
             {group.label}
           </h2>
-          {/* **행 사이에 선을 두지 않는다.** 가르는 것은 날짜 머리글이고, 행은 h-16과 hover로
-              선다. 예전에는 그룹 안에서만 `divide-y`를 돌려서, 하루에 두 건 이상인 그룹에만
-              선이 생겼다 — 목록 전체에 한 줄만 뜨니 규칙이 아니라 사고로 읽혔다. */}
           <div>
             {group.notes.map((note) => (
               <NoteListRow

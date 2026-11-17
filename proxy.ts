@@ -16,7 +16,6 @@ import {
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
-/** `Set-Cookie` 한 줄에서 이름과 값만 뽑는다. 속성은 서버 것을 그대로 흘려보낸다. */
 function parseAuthCookie(setCookie: string) {
   const [name, ...valueParts] = setCookie.split(";", 1)[0].trim().split("=");
 
@@ -70,7 +69,6 @@ function shouldRefreshBeforeSsr(request: NextRequest) {
 }
 
 function clearAuthCookies(request: NextRequest) {
-  // 같은 요청의 SSR도 만료 쿠키 없이 로그인 화면을 그려야 합니다.
   AUTH_COOKIE_NAMES.forEach((name) => request.cookies.delete(name));
   const response = NextResponse.next({ request });
 
@@ -86,8 +84,7 @@ function clearAuthCookies(request: NextRequest) {
 }
 
 /**
- * 카드를 받는 두 면에만 CSP 를 건다(APP-1600). Next 16 CSP 안내대로 요청마다 nonce 를 만들어 요청 헤더에도 실어야
- * Next 가 그 nonce 를 프레임워크 스크립트에 붙인다. 토큰 갱신은 그 요청 그대로 아래에서 한다.
+ * 카드를 받는 두 면에만 CSP 를 겁니다. Next 16 은 요청 헤더에도 nonce 를 실어야 프레임워크 스크립트에 붙입니다.
  */
 export async function proxy(request: NextRequest) {
   const frameAncestors = cardEntryFrameAncestors(request.nextUrl.pathname);
@@ -106,7 +103,6 @@ export async function proxy(request: NextRequest) {
 }
 
 async function refreshForSsr(request: NextRequest) {
-  // Skip during mocking or if no refresh is needed
   if (
     process.env.NEXT_PUBLIC_API_MOCKING === "enabled" ||
     !shouldRefreshBeforeSsr(request)
@@ -134,14 +130,11 @@ async function refreshForSsr(request: NextRequest) {
       }
     );
   } catch {
-    // 네트워크 실패와 시한 초과는 일시적이다. 쿠키를 건드리지 않고 다음 요청에 맡긴다.
     return NextResponse.next({ request });
   }
 
   if (!refreshResponse.ok) {
-    // **상태 코드만 보고 지우지 않는다.** 서버가 INVALID_REFRESH_TOKEN이라고 말할 때만
-    // 지운다. 회전 경쟁에서 진 요청은 정상 동작이고, 그때 지우면 경쟁에서 이긴 쪽이 방금
-    // 심은 유효한 리프레시 쿠키까지 날아가 로그인이 풀린다 (APP-347).
+    // 상태 코드만 보고 쿠키를 지우지 않습니다. 회전 경쟁에서 진 요청까지 지우면 이긴 쪽이 막 심은 쿠키가 날아갑니다.
     return (await isRefreshTokenDead(refreshResponse))
       ? clearAuthCookies(request)
       : NextResponse.next({ request });
@@ -156,14 +149,12 @@ async function refreshForSsr(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // 이번 요청의 SSR(`cookies()`)이 새 토큰을 보게 한다. Next 16 proxy 문서의
-  // `request.cookies.set()` → `NextResponse.next({ request })` 패턴이다.
+  // 이번 요청의 SSR 이 새 토큰을 보게 하는 Next 16 proxy 패턴입니다(`request.cookies.set` → `NextResponse.next({ request })`).
   authCookies.forEach(({ name, value }) => request.cookies.set(name, value));
 
   const response = NextResponse.next({ request });
 
-  // 브라우저에는 서버가 준 `Set-Cookie`를 **그대로** 넘긴다. Domain·Secure·SameSite·Max-Age를
-  // web이 다시 만들면 서버가 바꿀 때마다 두 벌이 갈라진다.
+  // 서버가 준 `Set-Cookie` 를 그대로 넘깁니다. web 이 속성을 다시 만들면 서버와 두 벌이 갈라집니다.
   setCookieHeaders.forEach((setCookie) => {
     response.headers.append("set-cookie", setCookie);
   });
@@ -172,40 +163,10 @@ async function refreshForSsr(request: NextRequest) {
 }
 
 /**
- * **투기적(speculative) 요청에서는 proxy가 돌지 않는다.**
- *
- * 투기적 요청은 응답이 **버려질 수 있는** 요청이다. 여기서 토큰을 회전시키면 새 refresh
- * 쿠키가 담긴 `Set-Cookie`가 브라우저에 도달하지 못한 채 옛 토큰만 무효가 된다. 그 뒤
- * 진짜 내비게이션은 이미 죽은 토큰으로 오고, 그때부터 모든 요청이 재발급에 실패한다
- * (APP-286에서 처음 밟았고, 목록이 불완전해 APP-347로 다시 났다).
- *
- * | 헤더 | 누가 보내나 |
- * |---|---|
- * | `next-router-prefetch` | `<Link>` prefetch |
- * | `next-router-segment-prefetch` | per-segment prefetch (PPR) |
- * | `next-instant-navigation-testing-prefetch` | instant navigation |
- * | `purpose: prefetch` | 구형 브라우저·크롤러 |
- * | `sec-purpose` | **브라우저**의 speculation rules와 주소창 prerender |
- *
- * 앞의 넷은 Next가 보내고 원본은 `next/dist/client/components/app-router-headers.js`다.
- * **`sec-purpose`는 브라우저가 보내므로 앱이 끌 수 없다** — Chrome은 주소창 자동완성만으로도
- * 페이지를 미리 렌더한다. 값이 `prefetch`이거나 `prefetch;prerender`라 값 비교를 하지 않고
- * 키 유무만 본다.
- *
- * `<Link prefetch={false}>`로 끄는 방향이 아니다. prefetch는 정상 기능이고, 브라우저가
- * 하는 prerender는 애초에 끌 수도 없다. 막아야 하는 것은 prefetch가 아니라 **투기적 요청이
- * 상태를 바꾸는 것**이다.
- *
- * 가이드의 정적 자산(영상 `.mp4`·`.webm`, 검색 색인 `.json`)과 공유 카드(`opengraph-image`)도 뺀다 — 인증과 상관없는 정적
- * 응답이 요청마다 프록시 실행량을 쓰지 않게(APP-1236). 데이터 응답용 `.json` 라우트를 새로 만들 때는 여기에 걸리는지 본다.
- *
- * **마케팅 면(`/`, `/en/**`, `/help/**`, `/download/**`, `/terms/**`, `/privacy/**`)도 뺀다(APP-1418).** 모두 미리 그린
- * 페이지라 서버가 쿠키를 읽지 않으니 SSR 전 갱신이 쓸 데가 없고, 봇·방문자의 문서 요청마다 함수 CPU 만 쓴다. 로그인
- * 상태는 클라이언트가 묻고 401 이면 `lib/api/fetcher.ts` 가 갱신한다. proxy 는 rewrite 앞에서 돌아 무접두 주소를 본다.
- * 경로 목록은 `lib/i18n/marketing-routes.ts` 의 `MARKETING_PAGES` 와 같아야 한다(`proxy.test.ts` 가 맞춰 본다).
- *
- * 목록을 상수로 빼지 않는다 — Next는 `config`를 정적으로 읽으므로 변수 참조를 쓰면
- * "Invalid segment configuration export"로 빌드가 깨진다.
+ * 투기적 요청(prefetch·prerender)에서는 proxy 가 돌지 않습니다. 버려질 수 있는 응답에서 토큰을 돌리면 새 쿠키는 못 닿고
+ * 옛 토큰만 죽습니다. `sec-purpose` 는 브라우저가 보내 앱이 끌 수 없어 키 유무만 봅니다.
+ * 마케팅 면과 정적 자산도 뺍니다. 목록은 `lib/i18n/marketing-routes.ts` 의 `MARKETING_PAGES` 와 같아야 합니다(`proxy.test.ts`).
+ * Next 가 `config` 를 정적으로 읽어 목록을 상수로 빼면 빌드가 깨집니다.
  */
 export const config = {
   matcher: [

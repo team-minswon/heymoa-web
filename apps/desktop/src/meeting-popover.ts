@@ -188,7 +188,6 @@ export function createMeetingPopover(
       (payload === "stop" && read().canStop) ||
       (payload === "stop-viewing" && read().viewing)
     ) {
-      // 보기 종료는 팝오버를 닫지 않는다 — 곧바로 진행 중 회의 목록이 보인다.
       if (payload === "show-current" || payload === "show-app") hide();
       action(payload);
     } else throw new Error("INVALID_MEETING_ACTION");
@@ -296,7 +295,7 @@ export function createMeetingPopover(
       });
       popup = current;
       current.setOpacity(preferences.opacity);
-      // 메뉴 막대를 누른 데스크탑(Space)에 뜨게 한다. 풀스크린 앱 위에서도 보이도록 pop-up-menu 레벨이다.
+      // 메뉴 막대를 누른 데스크탑(Space)에 뜨고, 풀스크린 앱 위에서도 보이도록 pop-up-menu 레벨입니다.
       if (
         process.platform === "darwin" &&
         typeof current.setVisibleOnAllWorkspaces === "function"
@@ -313,7 +312,6 @@ export function createMeetingPopover(
       );
       contents.session.setPermissionCheckHandler(() => false);
       contents.session.webRequest.onBeforeRequest((details, callback) => {
-        // Local display assets only; the popup has no network or service session.
         callback({
           cancel: !details.url.startsWith(
             pathToFileURL(__dirname + path.sep).href

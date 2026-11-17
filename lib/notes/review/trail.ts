@@ -5,10 +5,6 @@ import type {
 
 type Role = ProposalRevision["citations"][number]["role"];
 
-/**
- * 이름표를 다는 인용 역할. 뒷받침하는 줄은 표시하지 않는다 — 대부분이 그렇다.
- * 이름은 화면이 `notes.review.trail.roles` 에서 고른다.
- */
 export const LABELED_CITATION_ROLES = [
   "REFUTES",
   "CONDITIONS",
@@ -25,7 +21,6 @@ export type TrailLine = {
   text: string;
   speakerLabel: string | null;
   assignedParticipantId: string | null;
-  /** 인용된 줄이면 그 역할. 앞뒤 맥락 줄은 `null` */
   role: Role | null;
 };
 
@@ -33,18 +28,10 @@ export type TrailStep = {
   key: string;
   revision: number | null;
   content: string;
-  /** 스크립트가 없는 단계(검토에서 수정)는 `null` */
   startedAtMs: number | null;
   lines: TrailLine[];
 };
 
-/**
- * 수정 기록 → 스크립트. **최근 단계가 위다.** 단계마다 인용된 줄과 그 앞뒤 한 줄씩을 붙인다 —
- * 인용 한 줄만으로는 무엇에 대한 말인지 안 읽힌다.
- *
- * 사람이 검토에서 내용을 고쳤으면 맨 위에 「검토에서 수정」이 선다. 누가 언제 고쳤는지는
- * 서버가 남기지 않아, 원래 내용과 지금 내용만 보인다.
- */
 export function trailOf({
   revisions,
   segments,

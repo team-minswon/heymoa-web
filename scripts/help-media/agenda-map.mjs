@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * `pnpm help:agenda-map [entry|overview|expand|panel|focus]` — 가이드 「안건 연결 지도」 글의 이미지 5장(APP-1455).
- * 목 모드 dev 서버를 연 채: `HELP_BASE=http://localhost:3068 pnpm help:agenda-map` (이름을 안 주면 다섯 다).
- * 가이드 목 프리셋(`heymoa:helpDemo=1`, `openDemo` 가 켠다)이 프로젝트 「앱 출시 준비」(`lib/mocks/guide-agenda-map.ts`)를 낸다.
- * 출력: public/help/agenda-map/{entry,overview,expand,panel,focus}.webp (+ lib/help/media-manifest.ts). 화면이 바뀌면 이 명령 한 줄로 다시 찍는다.
- */
 import { BASE, chromium, openDemo, shoot, wait } from "./common.mjs";
 import { K, L } from "./ui.mjs";
 
@@ -28,7 +22,6 @@ async function open(page, url) {
   await page.mouse.move(1, 1);
 }
 
-/** 지도를 열고 사이드바를 접은 뒤 판을 살짝 밀어 첫·마지막 회의 열이 다 보이게 한다 */
 async function openMap(page) {
   await open(page, MAP);
   await page.keyboard.press("Control+b");
@@ -64,7 +57,6 @@ const SCENES = {
   },
   async panel(page) {
     await openMap(page);
-    // 안건 칩의 이름은 「날짜 제목」 이다. 날짜 모양이 언어마다 달라 끝 제목으로 찾는다
     await page.getByRole("button", { name: new RegExp(`${L("요금제 경쟁사 비교", "Competitor pricing comparison")}$`) }).first().click();
     await wait(1200);
     await page.mouse.move(600, 160);
@@ -86,7 +78,6 @@ for (const [name, scene] of Object.entries(SCENES)) {
   if (wanted.length && !wanted.includes(name)) continue;
   console.log(`shot ${name}`);
   const { context, page } = await openDemo(browser, { width: 1440, height: 1040, scale: 2 });
-  // 개발자 로컬 시드(public/mock-local, 실제 팀 데이터일 수 있다)는 가이드 화면에 절대 나오면 안 된다 — 없는 것으로 만든다
   await context.route("**/mock-local/projects.json", (route) => route.fulfill({ status: 404, body: "" }));
   try {
     await scene(page);

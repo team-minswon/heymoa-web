@@ -25,7 +25,6 @@ const notices = vi.hoisted(() => ({
 vi.mock("@/lib/ui/toast", () => ({ toast: notices }));
 afterEach(() => vi.clearAllMocks());
 
-// 열린 탭은 주소가 들고 있는 값이라 셸이 내려준다 — 여기서는 상태 하나로 그 자리를 대신한다.
 function SettingsDialog({
   initialSection = "account",
   ...props
@@ -45,7 +44,6 @@ function SettingsDialog({
   );
 }
 
-// 요금제 탭 둘은 공간 요금제 조회의 `enforced` 로 보인다. 시험마다 조회 결과를 바꿔 끼운다.
 const billingQuery = vi.hoisted(() => ({
   current: {
     isPending: false,
@@ -55,7 +53,6 @@ const billingQuery = vi.hoisted(() => ({
     } as unknown,
   },
 }));
-// 내 결제 내역 탭은 내역이 있을 때만 있다(APP-1596). 기본은 한 건.
 const myPayments = vi.hoisted(() => ({ count: 1 as number | null }));
 vi.mock("@/lib/api/generated/billing/billing", () => ({
   useGetWorkspaceBilling: () => billingQuery.current,
@@ -76,7 +73,6 @@ vi.mock("@/lib/api/generated/billing/billing", () => ({
 vi.mock("@/components/billing/my-payments-settings", () => ({
   MyPaymentsSettings: () => <p>내 결제 내역 내용</p>,
 }));
-// 결제 관리 탭은 ADMIN 에게만 보인다(APP-1596). 기본은 ADMIN 이다.
 const workspaceQuery = vi.hoisted(() => ({
   role: "ADMIN" as "ADMIN" | "MEMBER",
 }));
@@ -185,7 +181,6 @@ describe("SettingsDialog", () => {
     }
   });
 
-  // 외부 에이전트 토큰은 만든 응답에서만 한 번 나온다 — 그 사이 닫히면 아무도 못 본다
   it("섹션이 잠근 동안에는 닫히지도 다른 섹션으로 옮기지도 않는다", () => {
     const onOpenChange = vi.fn();
     render(
@@ -214,7 +209,6 @@ describe("SettingsDialog", () => {
       <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
     );
     expect(screen.getByText("계정 내용")).toBeInTheDocument();
-    // nav는 `워크스페이스`·`계정` 두 그룹이고 항목 이름은 그 안에서 짧다(프레임 WKSCp).
     const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
     fireEvent.click(
       within(workspaceGroup).getByRole("button", { name: "일반" })
@@ -222,15 +216,12 @@ describe("SettingsDialog", () => {
     expect(screen.getByText("워크스페이스 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "멤버" }));
     expect(screen.getByText("멤버 내용")).toBeInTheDocument();
-    // 임시 참여자는 멤버 탭 아래가 아니라 자기 탭이다
     fireEvent.click(screen.getByRole("button", { name: "임시 참여자" }));
     expect(screen.getByText("임시 참여자 내용")).toBeInTheDocument();
-    // 용어 사전은 임시 참여자 다음 탭이다(APP-1189)
     fireEvent.click(screen.getByRole("button", { name: "용어 사전" }));
     expect(screen.getByText("용어 사전 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
     expect(screen.getByText("연동 내용")).toBeInTheDocument();
-    // 요금제·결제 관리는 워크스페이스 그룹의 두 탭이다(PRO-75). 결제 내역은 결제 관리 안에 있어 따로 탭이 없다.
     fireEvent.click(
       within(workspaceGroup).getByRole("button", { name: "요금제" })
     );
@@ -258,7 +249,6 @@ describe("SettingsDialog", () => {
     expect(screen.getByText("요금제 내용")).toBeInTheDocument();
   });
 
-  // 같은 말에 누구 것인지를 붙여 가른다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)
   it("워크스페이스 쪽 「MCP 연결」는 관리, 계정 쪽 「내 MCP 연결」은 내 연결을 연다", () => {
     render(
       <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />

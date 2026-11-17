@@ -76,7 +76,6 @@ describe("힌트 → 다시 읽을 쿼리", () => {
       closed,
       ["note:N", "notes:ws:W"],
     ],
-    // 노트 소켓이 열린 노트의 회의 상태는 STOMP 가 이미 무효화한다.
     [
       {
         type: "note.changed",
@@ -144,7 +143,6 @@ describe("힌트 → 다시 읽을 쿼리", () => {
     expect(hit("note:N")).toEqual([JSON.stringify(keys[2])]);
     expect(hit("notes:ws:W")).toEqual([JSON.stringify(keys[6])]);
     expect(hit("chats:W")).toEqual([JSON.stringify(keys[8])]);
-    // 불러온 알림 목록(무한 쿼리)은 다시 읽지 않는다 — 개수와 열린 모달의 첫 쪽만.
     expect(hit("notifications")).toEqual([
       JSON.stringify(keys[9]),
       JSON.stringify(keys[11]),

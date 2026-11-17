@@ -30,7 +30,6 @@ const agreement = () => screen.getByRole("checkbox");
 describe("AuthModal 약관 동의", () => {
   beforeEach(() => {
     paths.buildGoogleOAuthUrl.mockReset();
-    // jsdom 은 문서 이동을 못 한다. 이동 직전(주소를 만드는 자리)에서 멈춘다.
     paths.buildGoogleOAuthUrl.mockImplementation(() => {
       throw new Error("navigation boundary");
     });
@@ -42,7 +41,6 @@ describe("AuthModal 약관 동의", () => {
     render(<AuthModal open />);
 
     expect(agreement()).not.toBeChecked();
-    // 흐리게 보이지만 클릭은 받는다 — 화면에 줄을 두지 않아 체크 전후 높이가 같다(APP-1402).
     expect(loginButton()).toBeEnabled();
     expect(loginButton()).toHaveAttribute("aria-disabled", "true");
     expect(loginButton()).toHaveAccessibleDescription(
@@ -102,7 +100,6 @@ describe("AuthModal 약관 동의", () => {
     expect(privacy).toHaveAttribute("href", "/privacy");
     expect(terms).toHaveAttribute("href", "/terms");
     expect(privacy).toHaveAttribute("target", "_blank");
-    // 링크를 눌러도 체크가 바뀌지 않는다 — 읽으러 가는 것과 동의하는 것은 다른 동작이다.
     fireEvent.click(privacy);
     expect(agreement()).not.toBeChecked();
   });

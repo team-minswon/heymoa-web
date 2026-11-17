@@ -41,7 +41,6 @@ import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import { MEETING_STATUS_KEY } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
-/** 일시정지된 회의를 확인 한 번으로 종료한다. 기록 중이면 서버가 409 MEETING_RECORDING 을 준다. */
 export function MeetingEndDialog({
   noteId,
   meetingStatus,
@@ -53,18 +52,10 @@ export function MeetingEndDialog({
 }: {
   noteId: string;
   meetingStatus: NoteResponseData["meetingStatus"];
-  /**
-   * 서버는 **종료 순간**의 참여자 수를 화자 분리의 최대 화자 수로 쓴다(APP-1098). 종료 뒤에
-   * 넣은 참여자는 반영되지 않고, 말한 사람보다 적게 넣으면 화자가 합쳐진다. 한 명이어도 그 수를
-   * 상한으로 보낸다(APP-1104) — 서버가 화자 수를 알려 주지 않는 것은 참여자가 0명일 때뿐이다.
-   * 그래서 수만이 아니라 **누가 들어 있는지**를 보인다(APP-1102).
-   */
   participants: Participant[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 종료가 접수된(202) 뒤 호출 — 호출부가 요약 탭으로 넘겨 분석 진행을 보인다. */
   onEnded?: () => void;
-  /** 창을 닫고 참여자를 고칠 수 있는 정보 탭으로 보낸다. 뷰(side·full)는 호출부가 유지한다. */
   onEditParticipants?: () => void;
 }) {
   const t = useTranslations("notes.endDialog");
@@ -73,13 +64,9 @@ export function MeetingEndDialog({
   const queryClient = useQueryClient();
   const recording = useRecording();
   const endMeeting = useEndMeeting({
-    // 응답이 안 오면 이 창이 잠긴 채 남는다(APP-1472). 시한 뒤 다시 누르면 이미 끝난 회의는
-    // MEETING_ALREADY_ENDED 로 수렴한다
     request: { timeoutMs: REQUEST_TIMEOUT_MS },
-    // 인라인 차단 안내가 사유를 소유하므로 전역 토스트는 끈다 — 인라인이 없는 실패만 토스트한다.
     mutation: {
       meta: { suppressErrorToast: true },
-      // meeting.ended가 HTTP 응답보다 먼저 제어를 제거해도 종료 결과를 반영한다.
       onSuccess: (response) => void convergeEnded(response),
       onError: (error) => {
         const code = errorCodeOf(error);
@@ -87,7 +74,6 @@ export function MeetingEndDialog({
           void convergeEnded();
           return;
         }
-        // 그 사이 누군가 기록을 시작했다(APP-694). 화면이 따라잡도록 노트를 다시 묻는다.
         if (code === "MEETING_RECORDING") {
           setBlocked(errorMessageOf(error, t("recordingBlocked")));
           void queryClient.invalidateQueries({
@@ -101,8 +87,6 @@ export function MeetingEndDialog({
   });
   const [blocked, setBlocked] = useState<string | null>(null);
 
-  // 다이얼로그가 닫히거나(재오픈) noteId가 바뀌면 지난 차단 상태를 접는다 — 그 사이 원격
-  // 녹음이 끝났을 수 있다. 렌더 중 상태 조정(React 공식 패턴).
   const [context, setContext] = useState(`${noteId}:${open}`);
   if (context !== `${noteId}:${open}`) {
     setContext(`${noteId}:${open}`);
@@ -110,36 +94,23 @@ export function MeetingEndDialog({
   }
 
   const starting = isRecordingStarting(recording, noteId);
-  // 한 명 이하면 말한 사람이 적게 처리될 수 있어 경고 톤으로 그린다. 서버는 한 명이어도 그 수를
-  // 화자 상한으로 보낸다(APP-1104, `DiarizationProperties.forMeeting`)
   const few = participants.length < 2;
-  /**
-   * **서버가 준 노트를 그대로 캐시에 넣는다** (APP-685).
-   *
-   * 전에는 종료가 204 라 화면이 종료 뒤 상태를 **스스로 지어냈다** — 녹음 길이를 브라우저의
-   * `Date.now()` 로 계산했고, 시계가 서로 다른 두 사람이 같은 회의를 다른 길이로 봤다.
-   * 이제 응답이 갱신된 노트이고 `meetingEndedAt` 은 서버가 찍은 시각이다.
-   */
   const convergeEnded = async (ended?: endMeetingResponse) => {
     await queryClient.cancelQueries({ queryKey: getGetNoteQueryKey(noteId) });
     if (ended?.status === 200 && ended.data.success) {
-      // 종료 응답과 노트 조회는 **같은 `NoteResponse`** 다. 서버가 그렇게 맞춰 뒀다.
       queryClient.setQueryData<getNoteResponse>(
         getGetNoteQueryKey(noteId),
         ended as unknown as getNoteResponse
       );
     } else {
-      // 이미 끝난 회의였다 — 응답에 노트가 없다. 지어내지 말고 다시 묻는다.
       void queryClient.invalidateQueries({
         queryKey: getGetNoteQueryKey(noteId),
       });
     }
-    // 종료 전에 읽던 흐름 조회를 끊고 다음 탭이 서버의 종료 후 상태를 새로 읽게 한다.
     const flowKey = getGetAnalysisFlowQueryKey(noteId);
     await queryClient.cancelQueries({ queryKey: flowKey });
     void queryClient.invalidateQueries({ queryKey: flowKey });
     onOpenChange(false);
-    // 목록 항목이 상태와 시간을 보여주므로 같이 비운다. 응답 하나로는 못 대신한다.
     void invalidateNoteLists(queryClient);
     void queryClient.invalidateQueries({
       queryKey: getGetLatestAnalysisQueryKey(noteId),
@@ -153,8 +124,6 @@ export function MeetingEndDialog({
     endMeeting.mutate({ noteId });
   };
 
-  // **종료 요청이 떠 있는 동안은 닫지 못하게 한다.** 이 창이 진행 표시(버튼 spinner)를 들고 있고,
-  // 응답이 오면 `onEnded` 가 요약 탭으로 넘긴다. 배경·X·Esc 도 같은 길로 막힌다(APP-1105).
   const busy = endMeeting.isPending || starting;
   const handleOpenChange = (next: boolean) => {
     if (!next && busy) return;
@@ -162,17 +131,11 @@ export function MeetingEndDialog({
   };
 
   return (
-    // **일반 `Dialog` 다** — 배경 클릭·Esc·우측 상단 X 로 닫힌다. 예전 `AlertDialog` 는 배경을 눌러도
-    // 안 닫히고 X 도 없어 빠져나갈 길이 하단 버튼 하나뿐이었다(APP-1105). 종료는 이 창 안의
-    // `회의 종료` 를 눌러야만 일어나므로 가볍게 닫혀도 잃는 것이 없다.
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* 진행 중에는 X 를 그리지 않고 취소를 잠근다 — 눌러도 안 닫히는 활성 버튼을 두지 않는다 */}
       <DialogContent showCloseButton={!busy}>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
-          {/* 참여자 안내도 설명 안에 둔다 — 창의 `aria-describedby`가 이 요소 하나만 가리켜서
-              밖에 두면 스크린리더가 창을 열 때 읽지 않는다(codex 리뷰 1회차). 칩 목록(`ul`)이
-              들어가므로 기본 `<p>` 가 아니라 `<div>` 로 그린다. */}
+          {/* 참여자 안내도 설명 안에 둔다 — 창의 `aria-describedby` 가 이 요소 하나만 가리켜, 밖에 두면 스크린리더가 창을 열 때 읽지 않는다. */}
           <DialogDescription render={<div />}>
             <p>{t("description")}</p>
             <section
@@ -243,13 +206,10 @@ export function MeetingEndDialog({
         ) : null}
 
         <DialogFooter>
-          {/* 우측 상단 X 의 이름이 「닫기」라 같은 이름을 또 두지 않는다 */}
           <DialogClose render={<Button variant="outline" disabled={busy} />}>
             {tActions("cancel")}
           </DialogClose>
           {onEditParticipants ? (
-            // 종료 요청이 떠 있는 동안은 막는다 — 응답이 오면 `onEnded`가 요약 탭으로 다시
-            // 데려가고, 종료 순간의 참여자 수는 이미 정해진 뒤다(codex 리뷰 1회차).
             <Button
               variant="outline"
               disabled={busy}
@@ -261,8 +221,6 @@ export function MeetingEndDialog({
               {t("editParticipants")}
             </Button>
           ) : null}
-          {/* 높이를 손으로 주지 않는다 — `h-11`(44)이 `닫기`의 기본 높이와 달라 같은 줄에서
-              두 버튼 크기가 어긋났다. 진행 표시는 문구 교체가 아니라 `loading`으로 준다. */}
           <Button loading={busy} disabled={busy} onClick={requestEnd}>
             {t("confirm")}
           </Button>

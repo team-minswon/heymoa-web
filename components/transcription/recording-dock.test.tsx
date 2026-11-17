@@ -13,7 +13,6 @@ import { RECORDING_USAGE_QUERY } from "@/lib/billing/use-recording-usage";
 
 import { RecordingDock } from "@/components/transcription/recording-dock";
 
-/** 독이 시작할 때 넘겨야 하는 워크스페이스. 계약이 노트에서 알려주지 않는다. */
 const WORKSPACE_ID = "0HZX2K7M9Q4AW";
 
 const recording = vi.hoisted(() => ({
@@ -41,7 +40,6 @@ vi.mock("@/components/transcription/recording-provider", async () => {
   };
 });
 
-// 녹음 사용량·공간 조회(APP-1596). 기본은 한도가 남은 공간이다.
 const quota = vi.hoisted(() => ({
   usage: null as Record<string, unknown> | null,
   role: "ADMIN",
@@ -198,7 +196,6 @@ describe("RecordingDock", () => {
       expect(
         screen.getByRole("status", { name: "녹음 처리 중" })
       ).toBeInTheDocument();
-      // 평소에는 글자를 펼치지 않는다 — 스크린리더용 한 줄만 있다.
       expect(screen.getAllByText(label)).toHaveLength(1);
       expect(screen.getByText(label)).toHaveClass("sr-only");
       expect(screen.queryByText("마이크·컴퓨터 소리 권한 확인 중")).toBeNull();
@@ -226,7 +223,6 @@ describe("RecordingDock", () => {
           vi.advanceTimersByTime(200);
         });
         expect(screen.getAllByText(label)).toHaveLength(2);
-        // 스피너는 그대로 있다.
         expect(
           screen.getByRole("status", { name: "녹음 처리 중" })
         ).toBeInTheDocument();
@@ -268,14 +264,11 @@ describe("RecordingDock", () => {
         />
       );
 
-      // 잠긴 버튼 + title이 아니라 본문이어야 터치·키보드에서도 이유가 보인다.
       expect(screen.getByText(reason)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
     });
 
     it("녹음 중이면 이유가 정지 버튼을 밀어내지 않는다", () => {
-      // 내가 녹음하는 도중 다른 멤버가 회의를 끝내면 종료 사유가 들어온다. 이때
-      // 이유를 대신 세우면 내 녹음을 멈출 방법이 사라진다.
       recording.phase = "recording";
 
       render(
@@ -310,8 +303,6 @@ describe("RecordingDock", () => {
       const button = screen.getByRole("button", { name: startLabel });
       expect(button).toHaveClass("size-9");
       fireEvent.click(button);
-      // 워크스페이스를 같이 넘긴다 — 계약이 노트에서 안 알려주므로 여기서 안 넘기면
-      // 프로바이더가 "어느 워크스페이스를 녹음 중인지"를 영영 모른다.
       expect(recording.start).toHaveBeenCalledWith("note-1", WORKSPACE_ID);
     }
   );
@@ -367,8 +358,6 @@ describe("RecordingDock", () => {
       recording.session = { noteId: "note-1", status: "ACTIVE" };
     });
 
-    // 사유는 `RecordingErrorToast`(app/providers.tsx)가 토스트로 띄운다. 독까지 같은 문장을
-    // 두면 두 곳에 나고, 마이크 권한 안내처럼 긴 문장이 오면 독이 화면 폭만큼 늘어난다.
     it("사유를 독에 다시 적지 않고 되돌릴 수단만 남긴다", () => {
       recording.phase = "failed";
       recording.error = reason;
@@ -382,8 +371,6 @@ describe("RecordingDock", () => {
     });
 
     it("서버 세션이 열려 있으면 닫기를 숨긴다", () => {
-      // disconnect()는 로컬만 지운다 — 서버에 READY/ACTIVE 세션이 남으면 회의
-      // 종료·재시작이 계속 거절되므로 버리는 길을 열지 않는다.
       recording.phase = "failed";
       recording.error = reason;
       recording.session = { noteId: "note-1", status: "ACTIVE" };

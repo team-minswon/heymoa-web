@@ -7,7 +7,6 @@ import type {
   PrepareMinutesPdf,
 } from "@/components/notes/minutes/render-minutes-pdf";
 
-/** 창·옵션·문서 판이 바뀌면 이전 결과를 감추고 늦은 완료도 버린다. 명시한 동작에서만 생성한다. */
 export function usePdfArtifact(
   open: boolean,
   version: string,

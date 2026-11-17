@@ -52,7 +52,6 @@ it("전달된 쿠키로 세션을 읽고 유효 사용자만 hydration에 제공
     expect.objectContaining({
       method: "GET",
       cache: "no-store",
-      // 계정을 알기 전이라 쿠키 → 브라우저 언어 → ko 다. 이 시험은 둘 다 없다.
       headers: { Cookie: "access_token=fixture", "Accept-Language": "ko" },
     })
   );

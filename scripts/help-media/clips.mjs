@@ -9,7 +9,6 @@ import { encode } from "./encode.mjs";
 import { languageCookies, OUT, record } from "./common.mjs";
 import { BROWSER_LOCALE, LOCALE } from "./ui.mjs";
 
-// cwd에 상관없이 이 워크트리 안에서만 임시 파일과 산출물을 만든다.
 const root = fileURLToPath(new URL("../../", import.meta.url));
 process.chdir(root);
 const work = path.join(root, "scripts/help-media/.work");
@@ -40,7 +39,6 @@ assert.ok(
   "3100~4100의 다른 서버는 사용하지 않습니다."
 );
 const requested = process.argv.slice(2);
-// 데스크톱 앱 창은 앱 문구가 아직 한국어라(APP-1287) 영어로 찍지 않는다 — 영어 가이드는 한국어 파일로 대체된다
 const names = [...scenes.map((s) => s.name), ...(LOCALE === "en" ? [] : ["desktop-menubar"])];
 for (const name of requested)
   assert.ok(names.includes(name), `알 수 없는 클립: ${name}`);
@@ -73,7 +71,6 @@ try {
   });
   for (const name of selected) {
     console.log(`녹화: ${name}`);
-    // 데스크톱 팝오버(420x580)가 크게 보이게 그 장면만 좁게 잡는다. 확대하지 않고 그대로 쓴다.
     const vp =
       name === "desktop-menubar"
         ? { width: 760, height: 640 }
@@ -91,7 +88,6 @@ try {
       serviceWorkers: "allow",
     });
     try {
-      // MSW가 처리하지 못한 외부 요청은 차단한다. 실계정/운영 API로 나가지 않는다.
       await context.route("**/*", (route) => {
         const url = new URL(route.request().url());
         return url.origin === origin.origin ||
@@ -103,7 +99,6 @@ try {
         { name: "heymoa-help-demo", value: "1", url: base },
         ...languageCookies(base),
       ]);
-      // 일시정지 직후 종료 안내는 그것을 보여 주는 장면(`endNudge`)에서만 띄운다.
       const endNudge = Boolean(
         scenes.find((s) => s.name === name)?.endNudge
       );
@@ -117,7 +112,6 @@ try {
           "heymoa:onboarding:user-12345",
           JSON.stringify({ status: "dismissed", done: [] })
         );
-        // 날짜 표시는 고정하되 실제 타이머/마이크는 계속 흐른다.
         const NativeDate = Date;
         const epoch = NativeDate.now();
         const fixed = NativeDate.parse("2026-04-30T05:00:00+09:00");
@@ -137,7 +131,6 @@ try {
           : scenes.find((s) => s.name === name);
       const page = await context.newPage();
       page.setDefaultTimeout(20000);
-      // Playwright video는 페이지 생성 시 시작한다. 준비 구간을 이 기준으로 잘라 낸다.
       const videoZero = performance.now();
       const video = page.video();
       await page.goto(`${base}${scene.path}`, {
@@ -156,7 +149,6 @@ try {
       await page.mouse.move(vp.width - 180, vp.height - 60, { steps: 24 });
       const start = (performance.now() - videoZero) / 1000;
       await page.waitForTimeout(650);
-      // 포스터로 쓸 가장 이해하기 쉬운 순간을 장면이 짚는다(없으면 첫 프레임).
       let posterAt = 0;
       await scene.run(page, () => {
         posterAt = (performance.now() - videoZero) / 1000 - start;
@@ -181,7 +173,6 @@ try {
       await context.close();
     }
   }
-  // 선택한 모든 클립 성공 뒤에만 공개 산출물과 manifest를 교체한다.
   await mkdir(path.join(OUT, "clips"), { recursive: true });
   for (const [name, result] of Object.entries(report)) {
     for (const ext of ["webm", "mp4", "webp"])

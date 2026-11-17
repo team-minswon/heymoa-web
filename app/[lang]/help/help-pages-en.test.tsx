@@ -19,7 +19,6 @@ import { intlWrapper } from "@/components/help/test-intl";
 import { textOf } from "@/lib/help/text";
 import { buildHelpIndex, searchHelp } from "@/lib/help/search-index";
 
-// 영어판(`/en/help/...`)을 그린다. 루트 레이아웃의 root param 이 `en` 이다.
 vi.mock("next/root-params", () => ({ lang: async () => "en" }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -36,7 +35,6 @@ const render = (ui: React.ReactElement) =>
 const HANGUL = /[가-힣ㄱ-ㆎ]/;
 const en = helpTopicsFor("en");
 
-/** 화면에 보이는 글과 접근성 이름(aria-label · alt · title)에 한글이 있는 곳. */
 function hangulIn(container: HTMLElement) {
   const found: string[] = [];
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
@@ -59,7 +57,6 @@ function hangulIn(container: HTMLElement) {
 describe("사용 가이드 영어판", () => {
   afterEach(cleanup);
 
-  // 같은 제목이 두 페이지에 붙으면 검색 결과에서 구분되지 않는다(APP-1296). 그룹 소개도 제목을 가진 페이지다.
   it("그룹과 페이지의 <title> 이 서로 다르다", () => {
     const titles = [
       ...helpGroupsFor("en").map((group) => group.title),
@@ -71,7 +68,6 @@ describe("사용 가이드 영어판", () => {
     );
   });
 
-  // 주소 · 섹션 id 가 언어판끼리 같아야 언어 전환과 바깥 `#id` 링크가 같은 곳으로 간다.
   it("한국어판과 같은 주제 · 순서 · 섹션 id 를 갖는다", () => {
     expect(en.map(helpPathOf)).toEqual(helpTopics.map(helpPathOf));
     for (const [i, topic] of en.entries()) {
@@ -115,7 +111,6 @@ describe("사용 가이드 영어판", () => {
         topic.title
       );
       expect(hangulIn(container), topic.slug).toEqual([]);
-      // 가이드 안 링크는 영어판 주소로 풀린다
       for (const a of container.querySelectorAll<HTMLAnchorElement>(
         "a[href^='/help']"
       ))
@@ -130,7 +125,6 @@ describe("사용 가이드 영어판", () => {
     expect(
       screen.getByRole("heading", { name: "HeyMoa Guide", level: 1 })
     ).toBeInTheDocument();
-    // 대시보드가 영어로 나오므로 「앱은 아직 한국어」 안내를 두지 않는다
     expect(hub.container.querySelector("[data-help-ui-note]")).toBeNull();
     expect(hangulIn(hub.container)).toEqual([]);
     for (const topic of en)
@@ -155,7 +149,6 @@ describe("사용 가이드 영어판", () => {
     });
     expect(meta.alternates?.canonical).toBe(`/en${helpPathOf(topic)}`);
     expect(meta.title).toEqual({ absolute: `${topic.title} · HeyMoa Guide` });
-    // 페이지가 robots 를 내지 않는다 — 영어판이 색인 대상이다(비운영 배포의 noindex 는 루트 레이아웃이 건다).
     expect(meta.robots).toBeUndefined();
     expect(meta.alternates?.languages).toEqual({
       ko: helpPathOf(topic),
@@ -185,7 +178,6 @@ describe("영어판 검색 색인", () => {
     const [ko, enIndex] = [await get("ko"), await get("en")];
     expect(enIndex.every((e) => e.path.startsWith("/en/help/"))).toBe(true);
     expect(ko.every((e) => e.path.startsWith("/help/"))).toBe(true);
-    // 한국어 결과가 섞이지 않는다
     expect(enIndex.filter((e) => HANGUL.test(e.text))).toEqual([]);
   });
 
@@ -197,7 +189,6 @@ describe("영어판 검색 색인", () => {
     );
     const hits = searchHelp(entries, "vocabulary");
     expect(hits.length).toBeGreaterThan(0);
-    // 옛 이름(glossary)으로 찾아도 용어 페이지가 나온다
     expect(searchHelp(entries, "glossary").length).toBeGreaterThan(0);
     expect(hits.every((h) => h.path.startsWith("/en/help/"))).toBe(true);
     expect(searchHelp(entries, "용어 사전")).toEqual([]);

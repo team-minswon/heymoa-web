@@ -1,10 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-/**
- * 용어 사전(APP-1189 · APP-1227). 목 DB 는 페이지 모듈 상태라 문서를 다시 읽지 않고 클라이언트 조작만 한다. 낙관적 갱신의
- * 경합·롤백은 `use-term-dictionary.test.tsx` 가 본다 — 여기서는 서비스 워커를 지나는 실제 왕복이 칩·미리보기·일괄 추가로
- * 이어지는지만 본다.
- */
 const MOCK_WORKSPACE_ID = "01K0000000000";
 
 test("설정에서 쉼표로 나눈 용어를 한 번에 더한다", async ({ page }) => {

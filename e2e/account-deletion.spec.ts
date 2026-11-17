@@ -1,10 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/**
- * 탈퇴·워크스페이스 삭제·이름 확인 나가기 (PRO-69, APP-1383). 재로그인은 받지 않는다(2026-10-23 결정) — 입력만 맞으면 보낸다.
- * 탈퇴하면 홈으로 가고 거기서 완료 토스트가 한 번 뜬다(문서째 바뀌는 이동이라 jsdom 이 못 덮는다).
- */
-// 주소로 바로 연다 — 메뉴로 열면 탭 주소 바꾸기가 늦게 끝나며 설정 본문을 다시 그려, 그 사이 연 확인 창이 사라진다(dev 컴파일 중).
 async function openSettings(page: Page, section: string) {
   await page.goto(`/w/01K0000000000?settings=${section}`);
 }

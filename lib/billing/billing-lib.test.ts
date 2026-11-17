@@ -26,14 +26,12 @@ import {
 } from "@/lib/billing/use-recording-usage";
 
 describe("nextMonthlyChargeAt", () => {
-  // server contract 「기간」: anchor 일을 다음 달 말일로 자르고 시각은 그대로(Asia/Seoul).
   it.each([
     ["2026-11-12T14:30:00+09:00", "2026-12-12T05:30:00.000Z"],
     ["2026-01-31T10:00:00+09:00", "2026-02-28T01:00:00.000Z"],
     ["2028-01-31T10:00:00+09:00", "2028-02-29T01:00:00.000Z"],
     ["2026-03-31T00:10:00+09:00", "2026-04-29T15:10:00.000Z"],
     ["2026-12-15T09:00:00+09:00", "2027-01-15T00:00:00.000Z"],
-    // UTC 로는 전날이지만 서울로는 1일이다.
     ["2026-10-31T16:00:00Z", "2026-11-30T16:00:00.000Z"],
   ])("%s 에 승인되면 %s", (now, expected) => {
     expect(nextMonthlyChargeAt(new Date(now))).toBe(expected);
@@ -110,7 +108,6 @@ describe("setupViewOf", () => {
   it("결과 확인 지연은 분석에서 unknown 이고 계속 다시 읽는다", () => {
     expect(resultOfView("paymentUnknown")).toBe("unknown");
     expect(resultOfView("issueUnknown")).toBe("unknown");
-    // 발급 결과 불명은 서버가 다시 보내지 않아 기다릴 것이 없다(새 등록부터).
     expect(isPollingView("issueUnknown")).toBe(false);
     expect(resultOfView("paymentProcessing")).toBeNull();
     expect(isPollingView("paymentUnknown")).toBe(true);
@@ -158,7 +155,6 @@ describe("paymentStatusOf", () => {
 });
 
 describe("freeUsageLevel", () => {
-  // 한도 1000분, 남은 샘플은 서버 값(16kHz). 막대는 쓴 만큼 차고, 다 쓰기 전에는 99 를 넘지 않는다.
   const at = (used: number, remainingSamples: number | null) =>
     freeUsageLevel({
       usedMinutes: used,
@@ -182,7 +178,6 @@ describe("freeUsageLevel", () => {
     });
   });
 
-  // 서버는 남은 분을 내림해 준다. 남은 샘플이 있는데 분이 0 이면 1분 미만이 남은 것이다.
   it.each([
     [
       "남은 샘플 0 이면 다 쓴 것이라 1분 미만이 아니다",

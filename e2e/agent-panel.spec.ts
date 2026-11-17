@@ -1,13 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { settled } from "./helpers-ui";
 
-/**
- * 「내 에이전트」 패널 개편(APP-1436)의 화면 기하와 흐름. jsdom 은 레이아웃·툴팁·전환을 못 재서 실제 브라우저에서 본다.
- *
- * 시드(목 DB)의 「주간 제품 회의 진행 순서」는 진행 문장이 생각(thinking)으로 굳은 대화이고, 「알림 정책 결정 사항」은 진행
- * 문장이 본문에 섞인 옛 대화다(`lib/mocks/db.ts`).
- */
-
 const MOCK_WORKSPACE_ID = "01K0000000000";
 
 async function openPanel(page: Page) {
@@ -41,7 +34,6 @@ for (const width of [1440, 1024]) {
       const history = page.getByRole("button", { name: "대화 기록" });
       const before = (await history.boundingBox())!;
       const headerHeight = (await header.boundingBox())!.height;
-      // 머리글 아이콘 버튼은 34px 이다
       expect(Math.round(before.width)).toBe(34);
       expect(Math.round(before.height)).toBe(34);
 
@@ -53,13 +45,11 @@ for (const width of [1440, 1024]) {
       expect(Math.round(after.y)).toBe(Math.round(before.y));
       expect((await header.boundingBox())!.height).toBe(headerHeight);
       await expect(header).toContainText("대화 기록");
-      // 목록 위에 「뒤로가기」 줄이 따로 없다
       await expect(
         page
           .getByTestId("chat-history-view")
           .getByRole("button", { name: /뒤로/ })
       ).toHaveCount(0);
-      // 묶음이 오늘 · 어제 · 지난 7일 · 이전으로 선다
       await expect(page.getByTestId("chat-group")).toHaveText([
         "오늘",
         "어제",
@@ -67,7 +57,6 @@ for (const width of [1440, 1024]) {
         "이전",
       ]);
 
-      // Esc 는 기록에서 대화로 돌아간다
       await page.keyboard.press("Escape");
       await expect(page.getByTestId("chat-history-view")).toBeHidden();
     });
@@ -80,7 +69,6 @@ for (const width of [1440, 1024]) {
         .getByTestId("chat-thread-view")
         .locator('[data-slot="scroll-area-scrollbar"]')
         .first();
-      // 막대가 서는 대화에서 잰다 — 질문 아래 남긴 자리 때문에 늘 넘친다
       if ((await scrollbar.count()) > 0) {
         await page.mouse.move(10, 10);
         await expect
@@ -97,7 +85,6 @@ for (const width of [1440, 1024]) {
       page,
     }) => {
       const panel = await openPanel(page);
-      // 어제 대화라 오늘 첫 질문 위에 날짜 구분선이 새로 선다
       await openChat(page, /^배포 일정 확인(?! 메뉴)/);
       await page.getByLabel("메시지").fill("배포 일정 정리해줘");
       await page.getByRole("button", { name: "보내기", exact: true }).click();
@@ -107,7 +94,6 @@ for (const width of [1440, 1024]) {
       const pinned = thread.getByTestId("chat-pinned-turn");
       const divider = pinned.getByTestId("thread-divider");
       await expect(divider).toBeVisible();
-      // 부드러운 이동(700ms)이 끝난 뒤의 자리: 턴의 위 끝 = 뷰포트 위 끝, 그 아래 위 여백(24px) 뒤에 구분선
       await expect
         .poll(async () => {
           const top = (await viewport.boundingBox())!.y;
@@ -130,7 +116,6 @@ for (const width of [1440, 1024]) {
   });
 }
 
-// 흐름은 대표 폭에서 한 번, 기하는 위의 두 폭과 아래 모바일에서 검사합니다.
 const width = 1440;
 test.describe("대화 동작", () => {
   test.beforeEach(async ({ page }) => {
@@ -147,7 +132,6 @@ test.describe("대화 동작", () => {
       name: /초 동안 생각 · 회의록 1건/,
     });
     await expect(head).toHaveAttribute("aria-expanded", "false");
-    // 단계 수는 머리줄에 없다
     await expect(head).not.toContainText("단계");
     await head.click();
     await expect(thread.locator('[data-step="thinking"]')).toHaveText([
@@ -155,15 +139,12 @@ test.describe("대화 동작", () => {
       "안건 요약에서 진행 순서를 확인할게요.",
       "스크립트에서 각 안건이 나온 시각을 확인할게요.",
     ]);
-    // 본문에는 답만 있다
     await expect(
       thread.getByTestId("assistant-message").last()
     ).not.toContainText("찾아볼게요");
-    // 마지막 답의 복사 줄은 늘 보인다
     const actions = thread.getByTestId("message-actions").last();
     await expect(actions).toHaveCSS("opacity", "1");
 
-    // 참고 회의록 칩은 접지 않고 서고, 누르면 그 회의록으로 간다
     const refs = thread
       .getByRole("group", { name: "참고한 회의록 1개" })
       .last();
@@ -197,18 +178,15 @@ test.describe("대화 동작", () => {
     await expect(thread.getByText("생각 중", { exact: true })).toBeVisible({
       timeout: 10_000,
     });
-    // 첫 단계 전에는 지금 하는 일 한 줄, 단계가 오면 최근 줄만 보이는 꼬리가 같은 자리에 선다
     await expect(
       thread.locator("[data-current], [data-tail]").first()
     ).toBeVisible();
-    // 꼬리 높이는 단계 줄 4줄(12px × 1.625 = 19.5px × 4 + 간격 6px × 3 = 96px)이다
     const tail = thread.locator("[data-tail]").first();
     await expect(tail).toBeVisible({ timeout: 10_000 });
     const maxHeight = await tail.evaluate((el) =>
       parseFloat(getComputedStyle(el).maxHeight)
     );
     expect(maxHeight).toBeCloseTo(96, 0);
-    // 답 받는 동안 보내기 자리에 중지가 선다
     await expect(
       page.getByRole("button", { name: "중지", exact: true })
     ).toBeVisible();
@@ -216,7 +194,6 @@ test.describe("대화 동작", () => {
     await expect(
       thread.getByRole("button", { name: /초 동안 생각/ }).last()
     ).toBeVisible({ timeout: 30_000 });
-    // 첫 질문 제목 뒤에 AI 제목이 붙는다(목은 1.5초 뒤)
     await expect(panel.locator("header")).toContainText("배포 일정 정리", {
       timeout: 10_000,
     });
@@ -232,7 +209,6 @@ test.describe("대화 동작", () => {
     await page.getByTestId("chat-list-new").click();
     const composer = page.getByTestId("chat-thread-view").locator("form");
     const input = page.getByLabel("메시지");
-    // 개편 때의 「회의록」 버튼·칩 줄은 없다
     await expect(
       page.getByRole("button", { name: "회의록·프로젝트 고르기" })
     ).toHaveCount(0);
@@ -248,10 +224,8 @@ test.describe("대화 동작", () => {
     await page.keyboard.type("@");
     const picker = page.getByTestId("scope-picker");
     await expect(picker).toBeVisible();
-    // 약 여섯 줄 높이를 넘지 않는다
     expect((await picker.boundingBox())!.height).toBeLessThanOrEqual(300);
     await expect(picker).toContainText("↑↓ 이동");
-    // 계속 입력하면 좁혀진다
     await page.keyboard.type("주간 제품");
     await picker
       .getByRole("option")
@@ -260,9 +234,7 @@ test.describe("대화 동작", () => {
       .click();
     const chip = input.locator("[data-scope-chip]");
     await expect(chip).toHaveText(["주간 제품 회의"]);
-    // `@` 는 문장에 남지 않는다
     await expect(input).not.toContainText("@");
-    // 이어 쓰면 칩 뒤에 붙는다
     await page.keyboard.type("결정만 정리해줘");
     await expect(input).toHaveText(/주간 제품 회의\s결정만 정리해줘/);
   });
@@ -344,7 +316,6 @@ test.describe("대화 동작", () => {
     const collapse = (await rail
       .getByRole("button", { name: "내 에이전트 접기" })
       .boundingBox())!;
-    // 접기 버튼이 패널 머리글 줄 안 맨 오른쪽에 선다
     expect(collapse.y).toBeGreaterThanOrEqual(headerBox.y);
     expect(collapse.y + collapse.height).toBeLessThanOrEqual(
       headerBox.y + headerBox.height

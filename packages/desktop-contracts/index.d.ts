@@ -1,4 +1,3 @@
-/** Native bridge declarations only. Runtime validation stays at each trust boundary. */
 export type AudioInputState = "live" | "muted" | "ended" | "suspended";
 
 export type RecordingSummary = {
@@ -10,7 +9,6 @@ export type RecordingSummary = {
     | "stopping"
     | "completed"
     | "failed";
-  /** Recording clock origin (epoch ms). The tray shows `now - startedAt`; it is not the session start. */
   startedAt: number | null;
   pendingMs: number;
   microphone: AudioInputState | null;
@@ -80,14 +78,12 @@ export type MeetingTimelineSnapshot = {
   };
 };
 
-/** Display-only list entry for a meeting in progress. Navigation uses ids only. */
 export type ActiveMeeting = {
   state?: "NOT_STARTED" | "IN_PROGRESS" | "PAUSED" | "ENDED";
   ended?: boolean;
   workspaceId: string;
   noteId: string;
   title: string;
-  /** Recording clock origin (epoch ms), same meaning as `RecordingSummary.startedAt`. */
   startedAt: number | null;
 };
 export type MeetingTarget = {

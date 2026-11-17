@@ -24,11 +24,6 @@ interface AuthModalProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-/**
- * 로그인 버튼과 약관 동의(APP-1277). **체크하기 전에는 로그인이 시작되지 않는다** — 누르면 체크박스를
- * 강조한다(APP-1402). 창이 열릴 때마다 새로 마운트되어
- * 닫았다 열면 체크가 풀린다 — 동의는 로그인할 때마다 직접 한다.
- */
 export function LoginForm({ returnTo }: { returnTo?: string } = {}) {
   const t = useTranslations("auth.consent");
   const [agreed, setAgreed] = React.useState(false);

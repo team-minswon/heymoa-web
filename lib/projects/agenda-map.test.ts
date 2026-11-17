@@ -11,12 +11,10 @@ import {
 
 const agenda = (agendaId: string, title: string, completed = false) => ({ agendaId, title, completed, proposalIds: [] });
 const link = (from: [string, string], to: [string, string]) => ({
-  // 계약은 source 가 뒤 안건, target 이 앞 안건이다
   source: { noteId: to[0], agendaId: to[1] },
   target: { noteId: from[0], agendaId: from[1] },
 });
 
-// 응답은 최근 순이다
 const data: ProjectMeetingLinksResponseData = {
   notes: [
     { noteId: "N3", title: "베타 회고", startedAt: "2026-08-19T01:00:00Z", agendas: [agenda("C1", "베타 회고"), agenda("C2", "로드맵")] },
@@ -27,9 +25,7 @@ const data: ProjectMeetingLinksResponseData = {
     link(["N1", "A1"], ["N2", "B1"]),
     link(["N2", "B1"], ["N2", "B2"]),
     link(["N2", "B2"], ["N3", "C1"]),
-    // 창 밖(응답에 없는 노트)을 가리키는 연결은 버린다
     link(["N0", "Z9"], ["N3", "C2"]),
-    // 같은 연결이 두 번 와도 하나다
     link(["N1", "A1"], ["N2", "B1"]),
   ],
   meetingLinks: [],
@@ -90,14 +86,12 @@ describe("topicRows", () => {
     expect(ids(rows[0].cells.get("N2"))).toEqual(["B1", "B2"]);
     expect(ids(rows[0].cells.get("N3"))).toEqual(["C1"]);
     expect(rows[0].branchOf).toBeNull();
-    // 이어짐 없는 안건은 회의별로 따로 모은다
     expect(ids(loose.get("N1"))).toEqual(["A2"]);
     expect(ids(loose.get("N2"))).toEqual(["B3"]);
     expect(ids(loose.get("N3"))).toEqual(["C2"]);
   });
 
   it("splits a branch into its own row under the row it left, keeping the longest branch on the row", () => {
-    // A1 을 B1(→B2→C1 로 길게)과 B3(여기서 끝) 이 이어받는다
     const map = buildAgendaMap({ ...data, agendaLinks: [...data.agendaLinks, link(["N1", "A1"], ["N2", "B3"])] });
     const { rows } = topicRows(map);
     expect(rows).toHaveLength(2);
@@ -109,7 +103,6 @@ describe("topicRows", () => {
   it("takes the latest predecessor as parent when an agenda continues two", () => {
     const map = buildAgendaMap({ ...data, agendaLinks: [...data.agendaLinks, link(["N1", "A2"], ["N3", "C1"])] });
     const { rows } = topicRows(map);
-    // C1 의 앞 안건은 B2(08.12)와 A2(08.05) — 최근인 B2 줄기에 남고 A2 는 홀로 한 줄
     expect(ids(rows.find((row) => row.cells.has("N3"))!.cells.get("N2"))).toEqual(["B1", "B2"]);
     expect(rows.some((row) => ids(row.cells.get("N1")).includes("A2") && !row.cells.has("N3"))).toBe(true);
   });
@@ -122,7 +115,6 @@ describe("shortMeetingDate", () => {
 });
 
 describe("laneLayout", () => {
-  // N1 A1 → N2 B1 → B2(같은 회의) → N3 C1, 그리고 B1 에서 B3 로 갈라진다. 따로 N2 B4 → N3 C2 가 이어진다
   const forked = buildAgendaMap({
     ...data,
     notes: data.notes.map((note) =>

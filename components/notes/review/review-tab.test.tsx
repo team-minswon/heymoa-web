@@ -45,15 +45,10 @@ vi.mock("@/lib/ui/toast", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-// 판 아래 메일 다이얼로그가 보내는 사람 이름을 읽는다. 제품에서는 app/providers.tsx 가 감싼다
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { name: "김민수" } }),
 }));
 
-/**
- * 요약 탭을 목 서버와 끝까지 굴린다. 훅을 가짜로 바꾸지 않고 목 핸들러를 그대로 지나야
- * 판(CAS) · 흐름 상태 · 할 일 반영이 실제 계약대로 도는지 볼 수 있다.
- */
 const server = setupServer(
   ...meetingFlowHandlers,
   ...projectTaskHandlers,
@@ -61,7 +56,6 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
-// 기존 검토 시나리오는 프로젝트 추가 대상을 선택한 상태에서 제안과 충돌을 검사합니다.
 beforeEach(() => meetingFlow.seedApprovalCase("all-selected"));
 afterEach(() => {
   cleanup();
@@ -113,7 +107,6 @@ const editButton = () => {
 
 const row = (content: string) => screen.findByRole("button", { name: content });
 const section = (title: string) => screen.getByRole("region", { name: title });
-/** 검토 줄 하나. 제안 토글은 줄마다 서 있어 이름이 같은 것이 여럿이다 */
 const rowBox = async (content: string) =>
   (await row(content)).closest("[data-item-id]") as HTMLElement;
 
@@ -157,7 +150,6 @@ describe("검토 가능한 회의", () => {
       (node) => node.getAttribute("aria-label")
     );
     expect(order).toEqual(["언제 정해졌나", "요약", "주제", "결정", "할 일"]);
-    // 이슈 · 질문과 참고는 요약 보기의 섹션에 서지 않는다(APP-864).
     expect(
       screen.queryByText(
         "설문의 54%가 우리 사용자층에도 맞는 수치인지 알 수 없다"
@@ -168,7 +160,6 @@ describe("검토 가능한 회의", () => {
     expect(topic).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(topic);
     expect(topic).toHaveAttribute("aria-expanded", "true");
-    // 펼친 주제 안에 그 주제의 결정이 선다. 다른 섹션은 거르지 않는다.
     const index = screen.getByRole("list", { name: "주제 목차" });
     expect(
       await within(index).findByText(
@@ -186,7 +177,6 @@ describe("검토 가능한 회의", () => {
     renderTab();
     const past = mockDb.getNote("01K0000000024");
     const index = await screen.findByRole("list", { name: "주제 목차" });
-    // 주제 01 · 06 두 곳에서 이어진다. 앞의 여섯 밖에 있는 주제도 펼쳐서 본다
     fireEvent.click(
       screen.getByRole("button", { name: /^나머지 주제 \d+개$/ })
     );
@@ -205,7 +195,6 @@ describe("검토 가능한 회의", () => {
     fireEvent.click(
       within(index).getByRole("button", { name: /차별점과 요금/ })
     );
-    // 펼친 주제는 예전처럼 서술 + 항목 줄이고, 이어진 항목 바로 아래에 연결 한 줄이 선다
     expect(within(index).queryByText("결론")).toBeNull();
     expect(
       await within(section("결정")).findByText(/경쟁 도구 요금표를 모은다/)
@@ -365,7 +354,6 @@ describe("검토 가능한 회의", () => {
       screen.getByRole("button", { name: /^나머지 주제 \d+개$/ })
     );
     const index = screen.getByRole("list", { name: "주제 목차" });
-    // 이어진 주제마다 지난 회의 링크 하나와 연결 지도 링크 하나
     const mapLinks = await within(index).findAllByRole("link", {
       name: "연결 지도에서 보기",
     });
@@ -486,7 +474,6 @@ describe("검토 가능한 회의", () => {
     const lines = within(quotes).getAllByRole("button");
     expect(lines.length).toBeGreaterThan(0);
     expect(lines[0].textContent).toMatch(/\d{2}:\d{2}/);
-    // 수정 기록은 요약 보기의 줄에 서지 않는다 — 그래프의 상세 패널에 있다.
     expect(screen.queryByText("처음 나옴")).toBeNull();
 
     fireEvent.click(lines[0]);
@@ -986,7 +973,6 @@ describe("검토 가능한 회의", () => {
   it("제안으로 가기는 접힌 줄에 남은 제안도 펼쳐서 데려간다", async () => {
     let lastDecision = "";
     server.use(
-      // 결정 여섯에 대체 제안을 붙이고 앞의 다섯은 골라 둔다 — 남은 하나는 「결정 N개 더」 안에 접힌다.
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();
@@ -1027,18 +1013,15 @@ describe("검토 가능한 회의", () => {
 
   it("고를 제안을 다 고르기 전에는 확정을 막고, 이전 결정을 대체로 고르면 확정 줄이 바뀐 뒤 확정한다", async () => {
     renderTab();
-    // 목의 멘토링 회의에는 아직 안 고른 제안이 셋이다(대체 하나 · 기존 할 일 변경 둘).
     expect(await screen.findByText(/확인할 제안/)).toHaveTextContent(
       "확인할 제안 3개"
     );
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
 
-    // 제안은 줄을 펼치지 않아도 줄 아래에 서 있다.
     const box = await rowBox(
       "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다"
     );
     fireEvent.click(within(box).getByRole("radio", { name: /대체/ }));
-    // 선택은 검토본에 저장된 뒤에 선다. 남은 제안 수가 하나 준다.
     await waitFor(() =>
       expect(screen.getByText(/확인할 제안/)).toHaveTextContent(
         "확인할 제안 2개"
@@ -1071,7 +1054,6 @@ describe("검토 가능한 회의", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
-    // 다 고르면 막대가 무엇이 올라가고 무엇이 끝나는지 말한다.
     expect(screen.getByText(/개 추가/)).toHaveTextContent("이전 결정 1개 끝남");
 
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
@@ -1113,7 +1095,6 @@ describe("검토 가능한 회의", () => {
 
   it("요약 보기에 없는 이슈 · 질문 · 참고에 붙은 제안은 검토 완료를 막지 않는다", async () => {
     server.use(
-      // 제안을 모두 걷고 이슈 하나에만 고르지 않은 대체를 붙인다 — 제안은 종류를 가리지 않고 붙는다.
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();
@@ -1138,7 +1119,6 @@ describe("검토 가능한 회의", () => {
     renderTab();
 
     await screen.findByRole("region", { name: "결정" });
-    // 고를 곳이 없는 제안을 세면 검토 완료가 영영 막힌다.
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
@@ -1149,7 +1129,6 @@ describe("검토 가능한 회의", () => {
     let issueContent = "";
     const before = await readProjectTasks();
     server.use(
-      // 할 일 변경 하나를 이슈로 옮기고 나머지 제안은 걷는다.
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();
@@ -1211,7 +1190,6 @@ describe("검토 가능한 회의", () => {
     fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("오류"));
     expect(await readProjectTasks()).toEqual(before);
-    // 감춘 항목의 실패한 선택은 저장되지 않아 확정에서 적용되지 않습니다.
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
@@ -1262,7 +1240,6 @@ describe("검토 가능한 회의", () => {
   it("그래프에서 감춘 항목의 할 일 변경을 반영해 저장되면 같은 할 일을 겨냥한 다른 감춘 제안은 막지 않는다", async () => {
     let firstContent = "";
     let applied = false;
-    // 같은 할 일 변경을 감춘 항목 둘에 붙이고 나머지 제안은 걷는다. 첫 항목의 선택만 기억한다.
     const reviewBody = async (url: string) => {
       const original = await getResponse(meetingFlowHandlers, new Request(url));
       const body = await original!.json();
@@ -1331,7 +1308,6 @@ describe("검토 가능한 회의", () => {
     expect(
       await within(toggle).findByRole("radio", { name: /반영 예정/ })
     ).toHaveAttribute("aria-checked", "true");
-    // 저장된 반영은 더 막을 것이 없다. 다른 감춘 제안은 고르지 않아도 확정이 건너뛴다.
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
@@ -1544,7 +1520,6 @@ describe("검토 가능한 회의", () => {
         ).toBeDisabled()
       );
       expect(screen.getByRole("alertdialog")).toBe(dialog);
-      // 확인창이 열리면 배경은 aria-hidden입니다. 실제 버튼 잠금은 DOM으로 확인합니다.
       for (const button of toggle.querySelectorAll("button"))
         expect(button).toBeDisabled();
     } finally {
@@ -1679,7 +1654,6 @@ describe("검토 가능한 회의", () => {
     );
     await screen.findByRole("button", { name: "제외" });
 
-    // 화면이 읽은 뒤 누군가 다른 항목을 고쳐 검토본 판을 올린다.
     const review = await (
       await fetch(
         `http://localhost/v1/notes/${MENTORING_NOTE_ID}/meeting-review`
@@ -1934,7 +1908,6 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(input).toHaveValue("편집 중인 내용");
   });
 
-  // 대기 중이 아니라 실패한 후속 분석도 서버가 받으면 다시 보낼 수 있어야 한다(APP-1475)
   it("실패한 후속 분석도 서버가 받으면 재요청 버튼을 내놓는다", async () => {
     installFlow(() => ({
       ...flow("SUCCEEDED", "REVIEWABLE", true),
@@ -1950,7 +1923,6 @@ describe("최종 요약과 늦은 관계 결과", () => {
     ).toBeInTheDocument();
   });
 
-  // 담당·관계가 대기 중이어도 이미 보냈으면 서버는 다시 받지 않는다(APP-1475). 버튼은 그 판정을 따른다
   it("서버가 다시 받지 않는 대기 중 분석에는 재요청 버튼을 내놓지 않는다", async () => {
     installFlow(() => flow("PENDING", "REVIEWABLE", false));
     renderTab();
@@ -1994,7 +1966,6 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
   });
 
-  // 요청 직후 조회가 한 번 실패해도, 뒤이은 폴링이 성공하면 실패 안내는 낡은 말이다(APP-1475)
   it("재요청 뒤 조회 실패 안내는 다음 성공 조회에서 걷힌다", async () => {
     let readFailed = false;
     server.use(
@@ -2263,7 +2234,6 @@ describe("최종 요약과 늦은 관계 결과", () => {
         "최신 분석 결과를 불러오지 못했습니다."
       );
       expect(input).toHaveValue("작성 중인 내용");
-      // 고치는 줄은 입력이 원문을 가린다. 목록이 통째로 지워지지 않았는지는 줄 수로 본다.
       if (resource === "review")
         expect(
           document.querySelectorAll("[data-item-id]").length
@@ -2569,7 +2539,6 @@ it("항목 저장 충돌의 복구 조회가 느려도 최신 판을 읽을 때�
   try {
     fireEvent.click(exclude);
     await arrived;
-    // 잠금은 버튼 비활성이 아니라 줄의 `inert` 로 건다 — 모양을 바꾸지 않고 조작만 막는다(APP-1587).
     await waitFor(() =>
       expect(exclude.closest("[data-item-id]")).toHaveAttribute("inert")
     );

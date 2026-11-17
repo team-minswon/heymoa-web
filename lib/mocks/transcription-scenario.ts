@@ -16,15 +16,11 @@ import {
 } from "@/lib/transcription/protocol";
 
 const AUTO_COMMIT_BYTES = CAPTURE_CONTRACT.sampleRate * 2 * 15;
-/** 가이드 캡처는 10초 안팎 영상이라, 받아쓰기 줄이 몇 초 만에 굳고 다음 줄로 넘어가게 한다. */
 const HELP_DEMO_COMMIT_BYTES = CAPTURE_CONTRACT.sampleRate * 2 * 3;
 const HELP_DEMO_PARTIAL_EVERY_MS = 200;
-/** partial 한 번에 드러나는 어절 수. 기본 3이라 한 문장에 4초가 걸린다. */
 const HELP_DEMO_TOKENS_PER_STEP = 4;
 const MAX_FRAME_BYTES = CAPTURE_CONTRACT.maxFrameBytes;
-/** 서버는 S3 적재(30초)마다 ACK한다. 목은 그보다 자주 보내 재전송 버퍼를 빨리 흔든다. */
 const ACK_EVERY_CHUNKS = 30;
-/** partial 꼬리에서 아직 안 굳은 어절 수. 화면의 두 농도를 실제로 움직이게 하는 값이다. */
 const PENDING_WORD_COUNT = 2;
 
 export type AudioFrameHeader = {
@@ -63,10 +59,6 @@ type ScenarioOptions = {
 
 type ScenarioPhase = "connecting" | "recording" | "stopping" | "closed";
 
-/**
- * 서버의 S3 정본을 흉내 낸다. 부착(시나리오)을 넘어 세션마다 남는다.
- * `durableThroughSeq` 는 0 번부터 빈칸 없이 받은 끝이다 — 빈칸 뒤 번호를 받아도 오르지 않는다.
- */
 type Durability = { epoch: number; received: Set<number>; throughSeq: number };
 const durability = new Map<string, Durability>();
 
@@ -104,13 +96,11 @@ export class MockTranscriptionScenario {
   private partialPending = "";
   private utteranceStartedAtMs: number | null = null;
   private lastPartialAtMs = 0;
-  /** 가이드 캡처 전용: 이번 발화에서 말한 것으로 센 시간. */
   private demoVoicedMs = 0;
   private lastChunkSeq: number | null = null;
   private lastCaptureEnd: number | null = null;
   private chunksSinceAck = 0;
   private durable!: Durability;
-  /** 이 부착이 받은 번호. 다시 보낸 조각은 조용히 버린다. */
   private readonly attachReceived = new Set<number>();
   private readonly config: VoiceActivityConfig;
   private readonly detector: VoiceActivityDetector;
@@ -127,14 +117,12 @@ export class MockTranscriptionScenario {
     this.detector = new VoiceActivityDetector(this.config);
     this.script =
       options.script ??
-      // 가이드 캡처 프리셋(help-demo)은 주간 운영 점검 대화를 이어서 흘린다
       (isHelpDemoEnabled() ? helpDemoPack().liveScript : undefined) ??
       KOREAN_MEETING_SCRIPTS[
         stableIndex(options.sessionId, KOREAN_MEETING_SCRIPTS.length)
       ];
   }
 
-  /** `resendFromSeq`: 브라우저가 들고 있는 가장 앞 번호. 그 앞은 기다리지 않는다. */
   open(resendFromSeq?: number) {
     if (this.phase !== "connecting") return;
     const { sessionId } = this.options;
@@ -218,8 +206,6 @@ export class MockTranscriptionScenario {
       (buffer.byteLength / 2 / CAPTURE_CONTRACT.sampleRate) * 1000;
     this.recordedDurationMs += frameDurationMs;
     this.bufferedBytes += buffer.byteLength;
-    // 가이드 캡처는 마이크 음량과 상관없이 늘 말하는 중으로 본다 — 가짜 마이크의 신호가 어느 박자에
-    // 시작하느냐에 따라 받아쓰기가 안 붙는 일이 없게 한다.
     const activity = isHelpDemoEnabled()
       ? {
           voicedMs: (this.demoVoicedMs += frameDurationMs),
@@ -269,7 +255,6 @@ export class MockTranscriptionScenario {
   }
 
   private receiveStop(finalChunkSeq: number) {
-    // 서버처럼 finalChunkSeq 까지 빈칸 없이 받았을 때만 끝낸다. 세션은 열어 둔다
     if (finalChunkSeq > this.durable.throughSeq) {
       this.options.send({
         type: "reattach",
@@ -278,11 +263,8 @@ export class MockTranscriptionScenario {
       });
       return;
     }
-    // 발화 경계는 침묵(`finalSilenceMs`)과 버퍼 상한이 정한다.
     this.commitBufferedAudio();
     this.phase = "stopping";
-    // 실서버는 남은 소리 저장과 업체의 마지막 확정을 기다려 수 초 뒤에 끝낸다(최대 10초+10초).
-    // 「마무리 중」 상태를 눈으로 볼 수 있게 `localStorage["heymoa:mockStopDelayMs"]` 만큼 미룬다.
     const finish = () => {
       if (this.phase !== "stopping") return;
       mockDb.updateSessionStatus(this.options.sessionId, "COMPLETED");
@@ -298,13 +280,6 @@ export class MockTranscriptionScenario {
     else finish();
   }
 
-  /**
-   * 헤더 둘이 서버가 볼 값과 같은지 본다. 어긋나면 목이 조용히 넘어가는 대신 경고를 남긴다 —
-   * 여기서 잡히는 것이 서버를 짜기 전에 잡히는 것이다. 받을 조각이면 true.
-   *
-   * 번호는 건너뛰어도 된다(가장 새 3초가 먼저 오고 앞은 늦게 온다). 이미 저장했거나 이 부착이
-   * 받은 번호는 서버처럼 조용히 버린다.
-   */
   private observeHeader(header: AudioFrameHeader | undefined, bytes: number) {
     if (!header || Number.isNaN(header.chunkSeq)) {
       console.warn("mock transcription: 조각에 chunkSeq 헤더가 없습니다");
@@ -351,7 +326,6 @@ export class MockTranscriptionScenario {
     return `01K00000002${String(this.itemSequence).padStart(2, "0")}`;
   }
 
-  /** 화면에 나가는 것 = 확정 + 미확정. 서버의 `UtteranceAccumulator`가 하는 일과 같다. */
   private get partialText() {
     return `${this.partialConfirmed}${this.partialPending}`;
   }
@@ -369,9 +343,6 @@ export class MockTranscriptionScenario {
     );
     const revealed = tokens.slice(0, tokenCount);
 
-    // **꼬리 두 어절은 아직 안 굳었다.** 업체가 다음 응답에서 통째로 갈아치울 수 있는
-    // 구간이라, 목도 그만큼은 미확정으로 흘려야 화면의 농도 차이가 실제로 움직인다.
-    // 앞은 확정이므로 다시 안 바뀐다 — 이어 붙이면 예전의 한 문자열과 같다.
     const confirmedCount = Math.max(0, revealed.length - PENDING_WORD_COUNT);
     this.partialConfirmed = revealed.slice(0, confirmedCount).join(" ");
     const pendingWords = revealed.slice(confirmedCount).join(" ");
@@ -410,7 +381,6 @@ export class MockTranscriptionScenario {
       text: segment.text,
       startedAtMs: segment.startedAtMs,
       endedAtMs: segment.endedAtMs,
-      // 화자는 PRO-32가 회의 뒤에 채운다. 실시간에는 항상 null이다.
       speakerLabel: null,
     });
     this.itemSequence += 1;

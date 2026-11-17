@@ -85,21 +85,6 @@ import {
 
 const MotionChevronDown = motion.create(ChevronDown);
 
-/**
- * 본문 「타임라인」 탭 — 실시간 정리 원장을 회의가 흘러간 순서로 읽는 면이다.
- *
- * **이 화면은 실시간 요약이 아니다.** 끝난 발화에서 남길 만한 변화만 항목이 되고, 대부분의
- * 분석 배치는 항목을 0건 낸다. 그래서 받아 적는 중인 줄에 「정리해 붙인다」고 약속하지 않는다 —
- * 그 말 대부분은 항목이 되지 않는다.
- *
- * **유형은 모양과 요약 화면의 역할 색으로 말한다.** 결정은 채운 체크, 할 일은 빈 원, 열린
- * 질문은 점선 원, 답한 질문은 회색 체크, 참고는 작은 점이다. 색만으로 말하지 않는다 — 옆에
- * 늘 유형 이름이 선다(`role-dot.tsx` 와 같은 약속).
- *
- * 새 항목에는 입장 애니메이션을 넣지 않는다. 사용자가 펼친 근거는 공간이 열린 뒤 내용을
- * 표시해, 펼쳐지는 중에 전사 글자가 잘려 보이지 않게 한다.
- */
-
 export type TimelineHeader = {
   title: string;
   whenIso: string;
@@ -110,7 +95,6 @@ export type TimelineHeader = {
 
 type TimelineT = ReturnType<typeof useTranslations<"notes.timeline">>;
 
-/** 마지막 갱신을 사람 말로. 서버 시각과 지금의 차이다. */
 export function formatFreshness(
   lastBatchAt: string | null,
   now: number,
@@ -125,10 +109,7 @@ export function formatFreshness(
   return t("freshness.hoursAgo", { count: Math.floor(minutes / 60) });
 }
 
-/**
- * 흐르는 시계. **렌더 중에 `Date.now()` 를 부르지 않는다** — hydration 이 어긋나고, 항목이 안
- * 오면 몇 분씩 리렌더가 없어 「방금」이 30분째 남는다. 서버에서는 `null` 이다.
- */
+/** 흐르는 시계. 렌더 중에 `Date.now()` 를 부르면 hydration 이 어긋난다. 서버에서는 `null` 이다. */
 function useNow(intervalMs: number) {
   const [now, setNow] = useState<number | null>(() =>
     typeof window === "undefined" ? null : Date.now()
@@ -195,29 +176,14 @@ export function NoteTimeline({
   onFocusHandled,
   active = true,
 }: {
-  /**
-   * 타임라인 탭이 보이는가. 읽던 위치를 지키려고 숨기기만 해서(APP-1660), 숨은 채 처음 선
-   * 목록은 보이는 순간 첫 위치(끝난 회의는 맨 위, 아니면 최신)를 잡는다 — 숨은 동안의
-   * 스크롤 이동은 브라우저가 무시한다.
-   */
+  /** 타임라인 탭이 보이는가. 숨은 동안의 스크롤 이동은 브라우저가 무시하므로 보이는 순간 첫 위치를 잡는다. */
   active?: boolean;
-  /**
-   * 요약의 「타임라인에서 보기」가 짚은 안건(APP-1290). 그 안건의 첫 묶음으로 옮겨 머리에 형광펜을
-   * 긋고, 획이 지워지면 `onFocusHandled` 로 소유자(`NotePanel`)에게 비우라고 알린다.
-   */
   focusAgendaId?: string | null;
   onFocusHandled?: () => void;
-  /** 문서 머리(제목·시각·참여 인원·프로젝트). 노트를 아직 못 읽었으면 비운다. */
   header: TimelineHeader | null;
   participants?: SpeakerFace[];
-  /** 근거를 누르면 스크립트의 그 발화로 간다. 소유자는 `NotePanel` 이다. */
   onEvidenceSelect: (segmentId: string) => void;
-  /** 종료된 회의는 더 안 쌓인다 — 진행형 문구가 미래를 약속하면 거짓이 된다. */
   meetingEnded?: boolean;
-  /**
-   * 회의가 기록 중이다. 「논의 중」과 「– 지금」은 이때만 말한다 — 시작 전이나 일시정지된 회의의
-   * 마지막 안건을 지금 논의 중이라고 하면 거짓이다.
-   */
   recording?: boolean;
 }) {
   const t = useTranslations("notes.timeline");
@@ -229,16 +195,10 @@ export function NoteTimeline({
     (ownRecording.activeNoteId ?? ownRecording.session?.noteId) === noteId;
   const partial = useLivePartial(noteId);
 
-  // **화면 상태에 주어(noteId)를 담는다.** 이 면은 노트가 바뀌어도 재마운트되지 않아서, 값만
-  // 담으면 A에서 고른 유형·펼친 항목이 B에 남는다.
-  //
-  // **안건 그룹은 끝난 회의에서 접힌 채 시작한다.** 기록 중에는 새 항목을 따라 읽으니 펼쳐 두고,
-  // 끝난 회의는 위에서부터 훑는 문서라 접어 둔다. `flipped` 는 그 기본값을 뒤집은 그룹만 담는다.
   const [view, setView] = useState<{
     noteId: string;
     endedSeen: boolean;
     foldByDefault: boolean;
-    /** 관계 링크로 펼친 직후다 — 대상으로 스크롤하는 동안 높이가 변하면 자리가 어긋나니 움직이지 않는다. */
     instant: boolean;
     filter: TimelineFilter;
     open: ReadonlySet<string>;
@@ -263,7 +223,6 @@ export function NoteTimeline({
       flipped: NONE,
     });
   } else if (view.endedSeen !== meetingEnded) {
-    // 보던 회의가 끝나거나 다시 열리면 기본값이 바뀐다 — 지난 기본값 기준의 뒤집기는 버린다.
     setView({
       ...view,
       endedSeen: meetingEnded,
@@ -272,12 +231,7 @@ export function NoteTimeline({
       flipped: NONE,
     });
   }
-  // 근거를 펼칠 때만 전사를 읽는다. 스크립트와 같은 query key라 지정 후 invalidate도 따른다.
   const evidenceOpen = view.noteId === noteId && view.open.size > 0;
-  // 종료 후에는 노트 소켓이 없는 경우도 있다. 봉인·화자 분리 완료까지 Query가 재조회한다.
-  // 끝난 회의는 분석이 끝날 때까지 흐름을 본다 — 화자 분리와 회의 뒤 안건 정리가 그동안 바뀐다.
-  // 소켓 없이 연 끝난 노트에서는 agendas.changed 가 안 오므로 이 흐름이 주제 제목을 다시 읽게 한다.
-  // 이벤트 스트림이 건강하면 `note.changed`(analysis) 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I03).
   const streamHealthy = useEventStreamHealthy();
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
@@ -340,15 +294,12 @@ export function NoteTimeline({
     topicTranscript.finalSegments,
   ]);
   const filter = view.filter;
-  // 칩은 바로 바뀌고 목록은 뒤따른다 — 수백 줄을 다시 그리는 동안 누른 칩이 멈춰 보이지 않게.
   const listFilter = useDeferredValue(filter);
   const reducedMotion = useReducedMotion();
 
-  // 주제 제목은 안건 정본이 준다. 노트 소켓의 agendas.changed 가 오면 provider 가 다시 읽게 한다.
   const agendasQuery = useGetNoteAgendas(noteId, {
     query: { refetchInterval: analyzing ? 10_000 : false },
   });
-  // 분석이 끝나는 순간 한 번 더 읽는다 — 마지막 주기 사이에 확정된 정본을 놓치지 않게
   const refetchAgendas = agendasQuery.refetch;
   const wasAnalyzing = useRef(analyzing);
   useEffect(() => {
@@ -356,11 +307,8 @@ export function NoteTimeline({
     wasAnalyzing.current = analyzing;
   }, [analyzing, refetchAgendas]);
   const agendaList = okData(agendasQuery.data);
-  // 주제 정본이 오기 전에 옛 방식으로 먼저 그리면 도착할 때 줄과 제목이 한꺼번에 자리를 바꾼다 — 함께 기다린다.
   const listLoading = context.loading || agendasQuery.isPending;
-  // 정본을 못 받았으면 주제 없이 그리고, 다시 읽기가 실패했으면 지난 제목을 둔 채 — 둘 다 다시 불러올 길을 둔다
   const agendasFailed = agendasQuery.isError;
-  // 회의 중에 한 번 자리를 정한 줄은 옮기지 않는다 — 지난 배치를 기억해 다음 배치의 바탕으로 쓴다.
   const [placed, setPlaced] = useState<{
     noteId: string;
     placement: AgendaPlacement;
@@ -416,7 +364,6 @@ export function NoteTimeline({
     [allTimeline, listFilter]
   );
 
-  // 골라 보기로 가린 묶음도 기억합니다. 분류되는 첫 화면부터 새 명제를 펼쳐 둡니다.
   const [seenGroups, setSeenGroups] = useState({
     noteId,
     groups: allTimeline.groups,
@@ -452,7 +399,6 @@ export function NoteTimeline({
     }
   }
 
-  /** 관계(질문 ↔ 답)를 누르면 그 항목을 펼치고 화면 가운데로 데려온다. */
   const pendingScroll = useRef<{
     id: string;
     block: ScrollLogicalPosition;
@@ -467,7 +413,6 @@ export function NoteTimeline({
       ...current,
       filter: "ALL",
       open: new Set(current.open).add(proposal.proposalId),
-      // 대상이 접힌 그룹 안일 수 있다 — 전부 펼쳐 둔다.
       foldByDefault: false,
       instant: true,
       flipped: NONE,
@@ -486,21 +431,12 @@ export function NoteTimeline({
   useEffect(() => {
     const target = pendingScroll.current;
     if (!target) return;
-    // 골라 보기를 「전체」로 되돌린 목록은 `useDeferredValue` 로 한 박자 늦게 선다 — 그 사이
-    // 커밋에는 대상이 아직 없다. 찾을 때까지 비우지 않고 다음 커밋에서 다시 본다.
     const element = document.getElementById(target.id);
     if (!element) return;
     pendingScroll.current = null;
     element.scrollIntoView?.({ block: target.block });
   });
 
-  /**
-   * **끝을 읽고 있으면 새 항목을 따라간다.** 기록 중에는 항목과 받아 적는 줄이 아래에 붙는데,
-   * 스크롤 위치가 그대로면 새 줄이 화면 밖으로 밀린다. 위를 읽는 사람은 그대로 둔다.
-   *
-   * 따라갈지는 **새 줄이 붙기 전에** 정한다(rule `architecture`) — 스크롤할 때마다 끝과의
-   * 거리를 재 두고, 내용이 바뀐 커밋에서는 그 값만 본다. 붙은 뒤에 재면 이미 밀린 거리를 잰다.
-   */
   const viewportRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
   const readAwayNoteRef = useRef<string | null>(null);
@@ -524,7 +460,6 @@ export function NoteTimeline({
   );
   const toggle = useCallback(
     (key: "open" | "flipped", id: string) => {
-      // 직접 펼치는 조작은 읽으려는 의도다. 높이 변화가 자동 추종을 타고 바닥으로 끌고 가지 않게 한다.
       updateFollowing(false);
       readAwayNoteRef.current = noteId;
       setView((current) => {
@@ -535,7 +470,6 @@ export function NoteTimeline({
     },
     [noteId, updateFollowing]
   );
-  /** 방향 없이 거리만으로 잰다. 기록이 끝난 목록의 버튼 위치용이다. */
   const syncFollowing = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -545,8 +479,6 @@ export function NoteTimeline({
   useEffect(() => {
     jumpToGroupRef.current = jumpToGroup;
   });
-  // 짚힌 안건의 **첫** 묶음(같은 안건으로 돌아온 묶음은 「이어서」로 선다). 묶음이 아직 없으면
-  // (안건·명제 조회 중) 없는 채로 두고, 도착한 커밋에서 다시 돈다.
   const focusGroup = focusAgendaId
     ? allTimeline.groups.find(
         (group) => group.agenda && group.key.startsWith(`${focusAgendaId}:`)
@@ -557,8 +489,6 @@ export function NoteTimeline({
     ? evidenceMarkOf(focusGroup.agenda.title, { holdMs: SCREEN_CHANGE_HOLD_MS })
     : null;
   const focusLifetimeMs = focusMark?.lifetimeMs ?? 0;
-  // 「앞선 논의」도 같은 형광펜을 긋는다. 화면이 그대로인 이동이라 근거 점프와 같은 시간만 머문다.
-  // `nonce` 는 같은 링크를 다시 누를 때 획을 처음부터 다시 긋게 한다.
   const [priorMark, setPriorMark] = useState<{
     key: string;
     nonce: number;
@@ -581,7 +511,6 @@ export function NoteTimeline({
   };
   useEffect(() => {
     if (!focusKey) return;
-    // 탭을 막 바꾼 참이라 다음 프레임에 옮긴다(전사 점프와 같다).
     const frame = requestAnimationFrame(() => jumpToGroupRef.current(focusKey));
     const timer = window.setTimeout(() => onFocusHandled?.(), focusLifetimeMs);
     return () => {
@@ -593,7 +522,6 @@ export function NoteTimeline({
   const scrollToLatest = () => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    // 즉시 이동해 중간 scroll 이벤트가 추종을 끄거나 버튼을 깜빡이지 않게 한다.
     viewport.scrollTop = Math.max(
       0,
       viewport.scrollHeight - viewport.clientHeight
@@ -605,7 +533,6 @@ export function NoteTimeline({
     positionedNoteRef.current = null;
     followingRef.current = true;
   }, [noteId]);
-  // 보던 회의가 끝나면 끝난 노트를 처음 연 것과 같다 — 접힌 목록을 맨 위부터 읽게 한다.
   const endedRef = useRef(meetingEnded);
   useEffect(() => {
     if (endedRef.current === meetingEnded) return;
@@ -626,7 +553,6 @@ export function NoteTimeline({
       const height = viewport.scrollHeight;
       const contentGrew = height > previousHeight;
       previousHeight = height;
-      // 위로 올리는 입력 직후, 위치가 그대로인 지연 scroll 이벤트로 다시 붙이지 않는다.
       if (previous !== null && top === previous) return;
       updateFollowing(
         nextFollowing({
@@ -639,7 +565,6 @@ export function NoteTimeline({
       );
       if (!followingRef.current) readAwayNoteRef.current = noteId;
     };
-    // scroll 은 비동기라 다음 항목의 rAF 스크롤이 먼저 바닥으로 되돌린다. 손이 닿는 순간 끈다.
     const stopWatching = watchUpwardInput(viewport, () => {
       if (!followingRef.current) return;
       updateFollowing(false);
@@ -647,15 +572,12 @@ export function NoteTimeline({
     });
     viewport.addEventListener("scroll", handleScroll, { passive: true });
     if (!recording) syncFollowing();
-    // 완료된 목록의 조회·접기·폰트 변화도 버튼 위치를 다시 잰다. 라이브 추종 의도는
-    // 새 항목이 붙은 뒤 거리로 덮지 않는다.
     const observer =
       typeof ResizeObserver === "undefined"
         ? null
         : new ResizeObserver(() => {
             if (!recording) syncFollowing();
             else if (followingRef.current) {
-              // 근거 펼침·줄바꿈·폰트 로딩은 React 갱신 뒤에도 높이를 바꾼다.
               viewport.scrollTop = Math.max(
                 0,
                 viewport.scrollHeight - viewport.clientHeight
@@ -673,8 +595,6 @@ export function NoteTimeline({
       observer?.disconnect();
     };
   }, [noteId, recording, syncFollowing, updateFollowing]);
-  // 탭 재진입마다 최초 유효 목록만 최신으로 간다. 조회 중 잠정 전사의 기존
-  // 추종은 유지하고, 목록이 선 뒤 사용자가 위를 읽으면 그 위치를 지킨다.
   useEffect(() => {
     if (!active) return;
     const initial =
@@ -688,10 +608,8 @@ export function NoteTimeline({
       if (!viewport || (!initial && !followingRef.current)) return;
       if (initial) {
         positionedNoteRef.current = noteId;
-        // 빈 snapshot 뒤 첫 live 항목이 와도 이미 위를 읽는 사용자의 조작이 먼저다.
         if (readAwayNoteRef.current === noteId && !followingRef.current) return;
       }
-      // 끝난 회의는 접힌 목록을 위에서부터 읽고, 진행 중이거나 멈춘 회의는 최신을 본다.
       const toTop = initial && meetingEnded;
       viewport.scrollTop = toTop
         ? 0
@@ -712,7 +630,6 @@ export function NoteTimeline({
     updateFollowing,
   ]);
 
-  // **첫 snapshot 이 서기 전에는 개수를 말하지 않는다.** 조회 중·실패의 0은 잰 값이 아니다.
   const settled = !listLoading && !context.failed;
   const now = useNow(20_000);
   const freshness =
@@ -815,8 +732,6 @@ export function NoteTimeline({
           </div>
           <div className="flex items-center gap-1">
             <p className="text-[12px] text-[var(--el-muted-soft)]">{hint}</p>
-            {/* 타임라인 복사는 이 탭이 맡는다 — 요약은 요약 탭, 녹취록은 스크립트 탭이 복사한다. 거르기와 상관없이 전부
-                복사한다. 원장을 다 받기 전이나 못 받았으면 막는다 — 빠진 타임라인이 완전한 것처럼 붙여넣어진다 */}
             {header ? (
               <CopyMarkdownButton
                 kind="timeline"
@@ -850,9 +765,6 @@ export function NoteTimeline({
           </div>
         </div>
 
-        {/* **놓친 변경이 있다.** 순서가 빈 revision 을 받으면 provider 가 원장을 다시 받는다 —
-            그게 끝나기 전, 특히 다시 받기가 실패해 갇혔을 때 목록은 낡았을 수 있다. 목록은
-            그대로 두고 그 사실과 다시 맞출 길을 남긴다. */}
         {settled && context.state.needsRefetch ? (
           <div
             role="status"
@@ -921,7 +833,6 @@ export function NoteTimeline({
           />
         ) : null}
         {listLoading || context.failed ? null : timeline.groups.length === 0 ? (
-          // **오류가 아니다.** 정리할 끝난 발화가 없다는 사실은 정상 경로다.
           <p className="mt-7 text-[14px] leading-relaxed text-[var(--el-muted)]">
             {timeline.counts.ALL === 0
               ? meetingEnded
@@ -932,7 +843,6 @@ export function NoteTimeline({
         ) : (
           timeline.groups.map((group) => {
             const key = group.key;
-            // 머리(손잡이)가 없는 묶음은 접을 길이 없으니 접지 않는다.
             const folded =
               !!group.agenda && view.foldByDefault !== view.flipped.has(key);
             const listId = `timeline-group-${key}`;
@@ -940,8 +850,6 @@ export function NoteTimeline({
               <section key={key} id={groupId(key)} className="mt-7 scroll-mt-4">
                 {group.agenda ? (
                   <h3 className="-mx-2 grid w-[calc(100%+16px)] grid-cols-[auto_minmax(0,1fr)] items-center gap-0.5 sm:flex sm:h-[30px]">
-                    {/* **안건도 근거로 갈 수 있어야 한다.** 머리는 접는 손잡이라, 안건의 첫 발화로
-                        가는 길은 시간 구간이 진다 — 항목의 시각 열과 같은 약속이다. */}
                     {group.agenda.citation ? (
                       <button
                         type="button"
@@ -1033,15 +941,11 @@ export function NoteTimeline({
                     ) : null}
                   </h3>
                 ) : null}
-                {/* 열고 닫을 때 높이와 투명도로 접힌다. `initial={false}` 라 처음 그릴 때는 움직이지 않고,
-                    닫는 동안만 DOM 에 남았다가 내려간다(접힌 그룹의 수백 줄을 들고 있지 않는다). */}
                 <AnimatePresence initial={false}>
                   {folded ? null : (
                     <motion.div
                       key="items"
                       className="overflow-hidden"
-                      // 관계 링크로 펼칠 때는 처음부터 다 열린 높이로 선다 — 부모가 바로 scrollIntoView 를 부르는데
-                      // 0 에서 시작하면 접힌 배치를 재서 자리가 어긋난다.
                       initial={view.instant ? false : { height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
@@ -1079,8 +983,6 @@ export function NoteTimeline({
           })
         )}
 
-        {/* 받아 적는 중인 발화. 확정 앞부분은 진하게, 다음 조각이 갈아치울 뒷부분은 옅게 —
-            스크립트 탭의 같은 줄과 같은 규칙이다. 화자 칸은 없다(분리는 회의 뒤에 끝난다). */}
         {partial ? (
           <div
             aria-live="polite"
@@ -1150,7 +1052,6 @@ function TimelineRow({
   const reduced = useReducedMotion();
   const [opened, setOpened] = useState(open);
   const [expanded, setExpanded] = useState(open);
-  // 근거는 처음 펼칠 때 만들고 이후에는 유지해 빠른 재토글도 같은 영역을 전환한다.
   if (open && !opened) setOpened(true);
   if (!open && expanded) setExpanded(false);
   const visible = open && (reduced || expanded);
@@ -1179,8 +1080,6 @@ function TimelineRow({
       transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
     >
       <article className={cn(TIMELINE_ROW_GRID, "py-[7px]")}>
-        {/* **`segmentId` 로만 찾는다** — `startedAtMs` 는 세션별 오프셋이라 세션이 둘 이상이면
-            화면의 시각과 어긋난다(APP-398 선례). */}
         {first ? (
           <button
             type="button"

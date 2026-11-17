@@ -19,16 +19,6 @@ function api() {
 }
 
 describe("OpenAPI contract", () => {
-  /**
-   * ★ **지어낸 스키마 이름을 미러에 들이지 않는다.**
-   *
-   * `restdocs-api-spec` 은 서버 쪽에서 schema 이름을 못 찾으면 경로 + 해시로 짓는다
-   * (`v1-notes-noteId-speakers-label-647408416`). 그대로 복사하면 orval 이 그 이름으로
-   * 타입을 만들고, **경로가 바뀌면 타입 이름도 같이 바뀐다.**
-   *
-   * 서버가 생성 시점에 막게 했지만(`OpenApi3Normalizer.requireNamedSchemas`), 이 미러는
-   * 손으로 쓰는 파일이라 그 게이트를 안 지난다. 여기서 한 번 더 본다.
-   */
   it("gives every schema a human name — no path hashes", () => {
     const generated = Object.keys(api().components.schemas).filter((name) =>
       /\d{6,}/.test(name)
@@ -67,13 +57,6 @@ describe("OpenAPI contract", () => {
     );
   });
 
-  /**
-   * 기본 워크스페이스는 서버에서 사라졌다(APP-401) — 「로그인 후 어디로 갈지」는 브라우저의
-   * 마지막 방문 기록으로 옮겼다. 계약에 다시 들어오면 그 규칙이 두 벌이 된다.
-   *
-   * `language` 는 **계정 화면 언어**(APP-1283)만 있다 — 내 정보·세션·언어 변경·데스크톱 로그인 시작.
-   * 전사 언어처럼 다른 뜻의 `language` 가 스키마에 생기면 이 목록이 알려 준다.
-   */
   it("exposes language only as the account display language and has no default-workspace surface", () => {
     expect(source).not.toContain("/v1/workspaces/default:");
     expect(source).not.toContain("/v1/users/me/default-workspace:");
@@ -84,7 +67,6 @@ describe("OpenAPI contract", () => {
         .filter((name) => JSON.stringify(schemas[name]).includes('"language"'))
         .sort()
     ).toEqual([
-      // 운영자 사용자 목록(APP-1615)은 각 사용자의 계정 언어를 읽기만 한다
       "AdminUserListResponse",
       "AuthSessionResponse",
       "CurrentUserResponse",
@@ -93,7 +75,6 @@ describe("OpenAPI contract", () => {
     ]);
   });
 
-  // 본문은 선택이다. 같은 탭이 다시 시작하면 server 가 옛 세션을 곧바로 닫는다(D-16)
   it("starts transcription with an optional clientInstanceId body", () => {
     const requestBody = api().paths["/v1/notes/{noteId}/transcription-sessions"]
       ?.post?.requestBody as
@@ -183,7 +164,6 @@ describe("OpenAPI contract", () => {
     expect(
       api().paths["/v1/workspaces/{workspaceId}/tasks"]?.get?.operationId
     ).toBe("getWorkspaceTasks");
-    // 전사 증분 조회와 화자 일괄 지정은 아무도 부르지 않아 APP-1620 에서 지웠다.
     expect(
       api().paths["/v1/notes/{noteId}/transcript/segments"]
     ).toBeUndefined();
@@ -202,8 +182,6 @@ describe("OpenAPI contract", () => {
   });
 
   it("omits the internal-only security scheme", () => {
-    // 경로만 지우면 securitySchemes에 내부 전용 항목이 남는다 — APP-380 계약 갱신에서 실제로
-    // `internalToken`이 딸려 왔고, 경로와 생성 클라이언트만 보는 다른 검사들은 못 잡았다.
     expect(source).not.toContain("X-Internal-Token");
     expect(Object.keys(api().components.securitySchemes)).toEqual([
       "accessCookie",
@@ -219,10 +197,6 @@ describe("OpenAPI contract", () => {
     );
   });
 
-  /**
-   * 로그인 동의(APP-1277·server APP-1276). 로그인 뒤 web 은 내 정보의 `consentRequired` 를 보고, 서버가 정한
-   * `currentVersion` 을 그대로 돌려보내 기록한다. 이 모양이 갈리면 callback 의 동의 단계가 조용히 깨진다.
-   */
   it("records login consent from the current-user consent state", () => {
     const record = (
       api().paths["/v1/users/me/consents"] as {
@@ -281,11 +255,7 @@ describe("OpenAPI contract", () => {
       "CLIENT_PROTOCOL_ERROR",
       "STT_PROVIDER_ERROR",
       "INTERNAL_ERROR",
-      // 회의 상태 머신(APP-120)이 추가한 둘. `MEETING_PAUSED`는 이전 세션의 종료 사유라
-      // 현재 MeetingStatus에 PAUSED가 있어도 역직렬화를 위해 남겨 둔다.
       "MEETING_ENDED",
-      // 워치독이 조각이 끊긴 세션을 닫은 것(APP-531). `CLIENT_DISCONNECTED`와 가른 이유는
-      // 워치독이 원인을 모르기 때문이다 — 브라우저가 끊었는지 서버가 죽었는지 구분이 안 된다.
       "HEARTBEAT_TIMEOUT",
       "MEETING_PAUSED",
     ]);
@@ -313,84 +283,10 @@ describe("OpenAPI contract", () => {
 describe("contract sync 2026-07-29", () => {
   it("mirrors the public paths and excludes internal ones", () => {
     const paths = Object.keys(api().paths);
-    // APP-281에서 현재 전사 세션 조회 경로가 하나 추가됐다 (32 → 33).
-    // APP-340에서 참여자 교체 경로가 하나 더 늘었다 (33 → 34).
-    // APP-185에서 토큰 초대 수락 경로가 추가됐다 (34 → 35).
-    // APP-379에서 멤버 관리 경로 둘이 늘었다 (35 → 37) — `members/me`(나가기)와
-    // `members/{userId}`(역할 변경 PATCH · 추방 DELETE). 후자는 경로 하나에 메서드 둘이다.
-    // APP-401에서 `users/me/default-workspace`가 사라졌다 (37 → 36).
-    // APP-421에서 `notes/{noteId}/speakers/{label}`이 생겼다 (36 → 37).
-    // APP-490·492에서 임시 참여자 경로 다섯이 늘었다 (37 → 42) —
-    // `notes/{noteId}/participants/guests`(만들기 POST · 전체 교체 PUT),
-    // `workspaces/{workspaceId}/guests`(목록),
-    // `.../guests/{guestId}`(삭제), `.../guests/{guestId}/link`,
-    // `.../guests/{guestId}/link-preview`.
-    // V31에서 발화 단위 화자 지정이 생겼다 (42 → 43) —
-    // `notes/{noteId}/segments/{segmentId}/speaker`.
-    // APP-459에서 후보 조회와 revision 이력 둘이 늘었다 (43 → 45) —
-    // `notes/{noteId}/context-candidates`와 `.../context-candidates/{candidateId}/revisions`.
-    // APP-557(PRO-45)에서 그 둘이 `notes/{noteId}/proposals`와
-    // `.../proposals/{proposalId}/revisions`로 이름을 바꿨다. 개수는 그대로다.
-    // 회의 뒤 흐름 경로 열이 늘었다 (45 → 55) —
-    // `analyses/flow`, `meeting-review`·`.../items`·`.../items/{itemId}`, `approval`,
-    // `agendas`·`agendas/{agendaId}`, `projects/{projectId}/tasks`·`.../{taskId}`·`.../revisions`.
-    // 회의 요약 조회가 늘었다 (55 → 56) — `meeting-review/summary`.
-    // APP-804(server APP-801)에서 외부 에이전트 연결 둘이 늘었다 (60 → 62) —
-    // `agent-delegations`(목록 GET · 만들기 POST)와 `agent-delegations/{delegationId}`(회수 DELETE).
-    // APP-826(server APP-825)에서 연결의 사용 내역이 늘었다 (62 → 63) —
-    // `agent-delegations/{delegationId}/usages`.
-    // APP-891 adds the four desktop broker endpoints to the public mirror.
-    // APP-901 adds the read-only session probe (67 → 68).
-    // APP-888(server APP-886)에서 외부 에이전트 OAuth 동의 셋이 늘었다 (68 → 71) —
-    // `agent-oauth/consent`(조회)·`.../approve`·`.../deny`.
-    // APP-1007에서 현재 전사 세션 조회가 빠졌다 (71 → 70) — `transcription-sessions/current`.
-    // APP-941(server APP-939·940)에서 워크스페이스 외부 에이전트 관리 셋이 늘었다 (70 → 73) —
-    // `workspaces/{workspaceId}/agent-access`·`.../agent-delegations`·`.../agent-delegations/{delegationId}`.
-    // APP-1030에서 `notes/{noteId}/relations`(회의 안 관계 조회)가 늘었다 (73 → 74).
-    // APP-1114(server APP-1113)에서 회의록 메일 둘이 늘었다 (74 → 76) — `notes/{noteId}/share-mails`(발송)·
-    // `.../share-mails/{mailId}`(받는 사람별 상태).
-    // APP-1177(server APP-1174)에서 문의·피드백 `/v1/feedbacks`(접수·조회) 한 경로가 늘었다 (76 → 77).
-    // APP-1206(server APP-1204)에서 멤버 표시 이름 변경 `.../members/{userId}/display-name` 한 경로가 늘었다 (77 → 78).
-    // APP-1214(server APP-1213)에서 답변 읽음 처리 `/v1/feedbacks/answers/seen` 한 경로가 늘었다 (78 → 79).
-    // PRO-61(server APP-1187·1188)에서 용어 사전 넷과 회의 맥락 하나가 늘었다 (77 → 82) —
-    // `workspaces/{workspaceId}/terms`·`.../terms/{termId}`·`.../projects/{projectId}/terms`·
-    // `.../projects/{projectId}/terms/{termId}`·`notes/{noteId}/context`.
-    // 합치면 77 → 84 (멤버 표시 이름 1 + 답변 읽음 1 + 용어 사전 넷 + 회의 맥락 1).
-    // APP-1227(server APP-1226)에서 프로젝트 용어 사전 둘이 사라지고(`.../projects/{projectId}/terms`·`.../terms/{termId}`)
-    // 일괄 추가 `workspaces/{workspaceId}/terms/batch` 하나가 늘었다 (84 → 83).
-    // APP-1276(server)에서 로그인 동의 기록 `users/me/consents` 한 경로가 늘었다 (83 → 84).
-    // 언어 변경(APP-1283)은 이미 있는 `users/me` 의 PATCH 라 경로 수가 그대로다.
-    // PRO-67(server APP-1303)에서 알림 설정 `notification-settings`·`.../items` 두 경로가 늘었다 (84 → 86).
-    // PRO-67(server APP-1311)에서 메일 수신거부 `mail/unsubscribe`(GET·POST) 한 경로가 늘었다 (86 → 87).
-    // PRO-67(server APP-1331·1337)에서 이벤트 스트림 `events`, 알림 `unread-count`·모두 읽음 `read` 셋이 늘었다 (87 → 90).
-    // APP-1399(server APP-1398)에서 운영자 답변 등록 `admin/feedbacks/{feedbackId}/answer` 한 경로가 늘었다 (90 → 91).
-    // APP-1383(server APP-1378)에서 탈퇴 처리 목록 `users/me/deletion-plan` 한 경로가 늘었다 (91 → 92).
-    // APP-1409 에서 내 대화 삭제 `agent-chats/{chatId}`(DELETE) 한 경로가 늘었다 (92 → 93).
-    // APP-1392 에서 광고 수신 동의 `notification-settings/marketing-email`(PUT) 한 경로가 늘었다 (93 → 94).
-    // PRO-75(server APP-1564 계약)에서 결제 여덟 경로가 늘었다 (94 → 102) — `billing/returns/{success,fail}`(PG 복귀 callback),
-    // `workspaces/{workspaceId}/billing`(조회)·`.../billing/setups`(등록 열기)·`.../setups/{setupId}/{complete,cancel}`·
-    // `.../billing/cycles/{cycleId}/attempts`(다시 결제), `me/billing/setups/{setupId}`(등록 상태).
-    // 같은 사본에 이미 있던 `realtime/tickets`(APP-1546)가 함께 들어와 한 경로가 더 늘었다 (102 → 103).
-    // 사용량 조회 `workspaces/{workspaceId}/billing/usage`(APP-1566)가 늘었다 (103 → 104).
-    // 구매 이후의 명령(APP-1565)이 여섯 늘었다 (104 → 110) — `.../billing/subscription/{cancel,resume}`·
-    // `.../billing/payments/{paymentId}`(+`/refunds`)·`.../billing/payment-methods/{methodId}`·`me/billing/payments`.
-    // 2026-11-11 「환불은 문의로만」·「거절되면 바로 종료」로 사용자 환불 `/refunds`·다시 결제 `cycles/{cycleId}/attempts` 가 빠졌다 (110 → 108).
-    // APP-1596 에서 공간 결제 내역 `workspaces/{workspaceId}/billing/payments` 한 경로가 늘었다 (108 → 109).
-    // APP-1600(나이스페이)에서 결제창 복귀 `billing/returns/{success,fail}`·완료 맡기기 `.../setups/{setupId}/complete` 가 빠지고
-    // 카드 제출 `.../setups/{setupId}/card` 가 늘었다 (109 → 107).
-    // APP-1615 에서 운영자 조회 `admin/users`·`admin/feedbacks` 가 늘었다 (107 → 109). web 은 부르지 않는다.
-    // APP-1616 에서 결제 운영 명령 `billing/operator/**` 다섯이 계약에 실렸다 (109 → 114). web 은 부르지 않는다.
-    // APP-1620 에서 아무도 부르지 않는 공개 경로 셋(관계·전사 증분·화자 일괄)을 지웠다 (114 → 111).
     expect(paths).toHaveLength(111);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 
-  /**
-   * **미러는 public 만 담는다.** internal 경로를 지우면서 그 경로에서만 닿던 스키마를 남기면
-   * 계약에 죽은 정의가 쌓이고, orval 이 아무도 안 쓰는 타입을 만든다.
-   *
-   * 여기서는 **도달 가능성으로 판정한다** — 이름을 나열하면 계약이 바뀔 때마다 낡는다.
-   */
   it("public 경로에서 닿지 않는 스키마를 남기지 않는다", () => {
     const doc = api() as unknown as Record<string, unknown>;
     const components = doc.components as {
@@ -433,17 +329,11 @@ describe("contract sync 2026-07-29", () => {
     expect(
       Object.keys(components.schemas).filter((name) => !reachable.has(name))
     ).toEqual([]);
-    // internal 전용 인증 수단도 남기지 않는다.
     expect(Object.keys(components.securitySchemes ?? {})).toEqual([
       "accessCookie",
     ]);
   });
 
-  /**
-   * APP-459 후보 계약이 PRO-45 에서 명제(proposal) 어휘가 됐다. **`oneOf` 세 갈래가
-   * 상태 행렬 자체다** — 하나라도 빠지면 「OPEN 인데 RETRACTED」 같은 조합이 계약상
-   * 유효해진다.
-   */
   it("명제 계약의 상태 행렬과 v1 생산값을 고정한다", () => {
     const schemas = (api() as unknown as Record<string, never>)
       .components as unknown as { schemas: Record<string, never> };
@@ -464,7 +354,6 @@ describe("contract sync 2026-07-29", () => {
       null,
     ]);
     expect(revision.properties.closeReason.nullable).toBe(true);
-    // POSTPROCESS 는 producer 가 없어 v1 계약에서 걷혔다.
     expect(revision.properties.revisionSource.enum).toEqual(["LIVE"]);
   });
 
@@ -491,8 +380,6 @@ describe("contract sync 2026-07-29", () => {
     expect(
       api().paths["/v1/workspaces/{workspaceId}/members"]?.get?.operationId
     ).toBe("getWorkspaceMembers");
-    // APP-379. 역할 변경과 추방이 같은 경로의 다른 메서드다 — 하나만 검사하면
-    // 다른 하나가 계약에서 빠져도 이 테스트가 통과한다.
     expect(
       api().paths["/v1/workspaces/{workspaceId}/members/{userId}"]?.patch
         ?.operationId

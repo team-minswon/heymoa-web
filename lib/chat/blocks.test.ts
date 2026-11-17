@@ -70,7 +70,6 @@ describe("도구", () => {
     expect(settled[0]).toMatchObject({ kind: "tool", status: "error" });
   });
 
-  // 승인을 거친 쓰기 도구는 tool_call_start 없이 곧장 결과가 온다
   it("짝을 못 찾으면 승인 블록에서 이름을 이어 쓴다", () => {
     const approved = pushApproval([], {
       approvalId: "a1",
@@ -92,7 +91,6 @@ describe("도구", () => {
     });
   });
 
-  // 결과로 덮으면 「무엇을 하다 3건을 찾았는지」가 사라진다
   it("시작 요약과 결과 요약을 둘 다 남긴다", () => {
     expect(joinSummary("전사 검색", "3건 찾음")).toBe("전사 검색 · 3건 찾음");
     expect(joinSummary(null, "3건 찾음")).toBe("3건 찾음");
@@ -100,7 +98,6 @@ describe("도구", () => {
     expect(joinSummary("같다", "같다")).toBe("같다");
   });
 
-  // 결과 문구가 시작 문구를 이미 품는다(ai 가 「라벨 · 인자 · 결과」로 낸다). 붙이면 라벨이 두 번 찍힌다.
   it("결과 요약이 시작 요약으로 시작하면 결과 요약만 쓴다", () => {
     expect(
       joinSummary('스크립트 검색 · "배포"', '스크립트 검색 · "배포" · 20건')
@@ -152,7 +149,6 @@ describe("확정 본문이 토큰 합을 이긴다", () => {
     ]);
   });
 
-  // 마지막 것만 바꾸면 도구 앞쪽 본문이 남아 content 와 겹쳐 두 번 보인다
   it("도구 사이에 끼어 있던 앞쪽 본문도 걷는다", () => {
     const blocks: Block[] = [
       { kind: "text", text: "앞" },
@@ -178,9 +174,6 @@ describe("확정 본문이 토큰 합을 이긴다", () => {
   });
 
   it("★ 흘린 것과 같으면 아무것도 안 옮긴다 — 마지막 프레임에서 화면이 안 흔들린다", () => {
-    // 갈아끼우기는 **어긋났을 때의 안전망**이지 매 턴의 의식이 아니다. 같은데도 새 배열을
-    // 만들면 본문이 도구 카드 **아래로 옮겨 앉고**, 낱말이 전부 새로 마운트돼 답 전체가
-    // 한 프레임에 다시 떠오른다 — QA 가 본 「마지막에 깜빡인다」의 web 쪽 몫이다.
     const blocks: Block[] = [
       { kind: "text", text: "앞" },
       { kind: "tool", ...tool("t1") },
@@ -215,7 +208,6 @@ describe("묶기", () => {
     expect(groups[0]).toMatchObject({ blocks: expect.any(Array) });
   });
 
-  // 답을 쓰기 시작한 뒤의 도구 호출은 앞 묶음의 일부가 아니다
   it("본문이 끼면 묶음이 끊긴다", () => {
     const blocks: Block[] = [
       { kind: "thinking", text: "음" },
@@ -260,7 +252,6 @@ describe("타임라인 줄 묶기", () => {
     expect(rows.map((row) => row.kind)).toEqual(["single", "single", "single"]);
   });
 
-  // 승인을 거친 도구가 쓰기다. 무엇을 바꿨는지는 한 건씩 보여야 한다.
   it("승인·쓰기 도구는 묶지 않는다", () => {
     const write = (id: string) =>
       ({
@@ -297,15 +288,12 @@ describe("타임라인 줄 묶기", () => {
     expect(rows.map((row) => row.kind)).toEqual(["single", "single", "single"]);
   });
 
-  // 두 번째 호출이 와서 줄이 묶음이 돼도 키가 같아야 그 자리의 상태가 안 날아간다.
   it("묶음의 키는 첫 호출의 단독 줄 키와 같다", () => {
     expect(groupSteps([read("t1")])[0].key).toBe(
       groupSteps([read("t1"), read("t2")])[0].key
     );
   });
 
-  // 생각은 델타마다 조각으로 온다(히스토리는 델타마다 한 행, 재개는 커서 앞뒤로 갈린다). 도구 사이의
-  // 생각은 한 문단이다.
   it("이어진 생각 조각은 한 줄로 잇는다", () => {
     const rows = groupSteps([
       { kind: "thinking", text: "회의를 찾습니다." },
@@ -320,7 +308,6 @@ describe("타임라인 줄 묶기", () => {
     });
   });
 
-  // 앞 묶음이 갈려도 뒤 줄의 키가 안 바뀐다 — 바뀌면 그 줄이 다시 마운트되며 한 번 더 떠오른다.
   it("생각 줄의 키는 묶음 수가 아니라 블록 자리로 정한다", () => {
     const before = groupSteps([
       read("t1"),
@@ -335,7 +322,6 @@ describe("타임라인 줄 묶기", () => {
     expect(before.at(-1)?.key).toBe(after.at(-1)?.key);
   });
 
-  // 실시간·재연결 재개·히스토리가 같은 블록이면 같은 줄이 나와야 한다. 블록을 안 바꾸는 순수 함수다.
   it("입력 배열을 바꾸지 않는다", () => {
     const steps = [read("t1"), read("t2")];
     const copy = structuredClone(steps);
@@ -344,10 +330,6 @@ describe("타임라인 줄 묶기", () => {
   });
 });
 
-/**
- * ★ N3 — 끝난 턴에 도는 표시도, 나갔을 수 있는 쓰기를 「안 함」으로 그리는 표시도 없다.
- * 실시간 스트림과 히스토리가 이 함수 하나를 지난다.
- */
 describe("끝난 턴 닫기", () => {
   const approved = (
     toolCallId: string,

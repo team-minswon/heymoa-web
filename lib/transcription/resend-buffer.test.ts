@@ -16,7 +16,6 @@ function buffer({ memory = 10_485_760 } = {}) {
   return created;
 }
 
-/** 소켓이 다 받아 준다고 치고 보낼 순서대로 꺼낸다. */
 function drain(target: ResendBuffer) {
   const seqs: number[] = [];
   for (let next = target.next(); next; next = target.next()) {
@@ -79,7 +78,6 @@ describe("ResendBuffer", () => {
 
     target.ackThrough(0);
 
-    // 1(건넴)·2(안 건넴)가 남는다
     expect(target.bytes).toBe(6_400);
     expect(target.unsentBytes).toBe(3_200);
     expect(drain(target)).toEqual([2]);
@@ -97,7 +95,7 @@ describe("ResendBuffer", () => {
 
   it("rewind 하면 가장 새 3초와 그 뒤에 들어온 것이 먼저, 그 앞은 밀린 것으로 뒤에 나간다", () => {
     const target = buffer();
-    for (let n = 0; n < 40; n += 1) target.push(chunk(n)); // 4초
+    for (let n = 0; n < 40; n += 1) target.push(chunk(n));
 
     expect(target.rewind()).toEqual({ lateChunks: 10, liveLagMs: 3_000 });
     target.push(chunk(40));
@@ -111,7 +109,7 @@ describe("ResendBuffer", () => {
   it("catchUp 은 보낸 것을 건드리지 않고 안 보낸 실시간 중 3초보다 오래된 것만 넘긴다", () => {
     const target = buffer();
     for (let n = 0; n < 5; n += 1) target.push(chunk(n));
-    drain(target); // 0..4 는 나갔다
+    drain(target);
     for (let n = 5; n < 65; n += 1) target.push(chunk(n));
 
     expect(target.catchUp()).toEqual({ lateChunks: 30, liveLagMs: 3_000 });

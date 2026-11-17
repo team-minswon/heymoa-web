@@ -21,18 +21,6 @@ import {
   useCreateWorkspace,
 } from "@/lib/api/generated/workspaces/workspaces";
 
-/**
- * 새 워크스페이스 만들기. **여는 자리가 둘이라 컴포넌트로 산다.**
- *
- * 원래 이 폼은 `workspace-sidebar.tsx`의 드롭다운 안에 인라인으로 있었고, 그 사이드바는
- * `/w/[workspaceId]` 아래에서만 그려진다. 워크스페이스가 하나도 없는 사람은 그 라우트에
- * 들어갈 수 없어서 **만드는 입구 자체가 없었다**(APP-402). 이제 랜딩(`landing-cta.tsx`)도
- * 같은 폼을 연다.
- *
- * **제어형 하나만 낸다.** 트리거를 children으로 받는 편이 랜딩에는 편하지만, 사이드바는
- * 드롭다운 항목이 열어야 해서 트리거를 이 안에 둘 수 없다. 두 API를 다 지원하면 여는 방법이
- * 둘로 갈리고, 그러면 「어느 쪽이 정본인가」가 매번 질문이 된다.
- */
 export function CreateWorkspaceDialog({
   open,
   onOpenChange,
@@ -40,7 +28,6 @@ export function CreateWorkspaceDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  // 랜딩(마케팅 루트)도 이 창을 열어서 두 루트가 같이 받는 `common`에 둔다.
   const t = useTranslations("common.createWorkspace");
   const tActions = useTranslations("common.actions");
   const router = useRouter();
@@ -68,25 +55,12 @@ export function CreateWorkspaceDialog({
   // formData로만 읽으면 실패했을 때 방금 친 이름이 사라져 다시 타이핑하게 된다.
   const [name, setName] = useState("");
 
-  /**
-   * **초기화를 `open` 하나에 묶는다.** `name`을 state로 든 뒤로는 언마운트가 비워 주지 않아
-   * 취소한 이름이 다음에 열 때 그대로 뜬다. 닫는 경로가 다섯이라(Escape · 바깥 클릭 · X ·
-   * 「취소」 · **부모가 직접 `open`을 false로**) 콜백마다 비우면 마지막 하나를 빠뜨린다 —
-   * 사이드바는 노트 전체 화면이 열리면 자기 다이얼로그를 그렇게 닫는다.
-   *
-   * effect가 아니라 렌더 중에 맞춘다. `useEffect`로 쓰면 lint가 막고(cascading renders),
-   * 한 프레임 늦게 비워져 닫히는 순간이 화면에 비친다.
-   */
   const [lastOpen, setLastOpen] = useState(open);
   if (lastOpen !== open) {
     setLastOpen(open);
     if (!open) setName("");
   }
 
-  /**
-   * 요청 중에는 닫지 않는다. 창만 사라지면 취소한 줄 알지만 요청은 계속 가고, 뒤늦게
-   * 성공하면 갑자기 새 워크스페이스로 튕긴다.
-   */
   const setOpen = (next: boolean) => {
     if (createWorkspace.isPending) return;
     onOpenChange(next);
@@ -94,8 +68,6 @@ export function CreateWorkspaceDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* 요청 중에는 X도 감춘다 — 눌러도 위 가드가 무시하므로, 보이는 채로 두면 반응 없는
-          컨트롤이 된다. */}
       <DialogContent
         aria-label={t("ariaLabel")}
         showCloseButton={!createWorkspace.isPending}

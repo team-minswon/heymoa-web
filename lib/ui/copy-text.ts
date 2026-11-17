@@ -1,9 +1,4 @@
-/**
- * 텍스트를 클립보드에 넣는다. 실패하면 reject한다 — 삼키면 사용자는 복사된 줄 안다.
- *
- * `navigator.clipboard` 는 포커스가 없거나 권한 정책이 막거나 안전하지 않은 출처이면 없거나
- * 거부한다. 그때 같은 사용자 동작 안에서 `execCommand("copy")` 로 한 번 더 시도한다.
- */
+/** `navigator.clipboard` 는 포커스·권한 정책·안전하지 않은 출처에서 없거나 거부해서 `execCommand("copy")` 로 한 번 더 시도합니다. */
 export async function copyText(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);

@@ -17,10 +17,7 @@ import "./globals.css";
 
 const subscribe = () => () => {};
 
-/**
- * 루트 레이아웃이 실패했을 때라 `[lang]` 도 서버 쿠키도 못 받는다. 브라우저에서 주소(`/en/...`)를 먼저 보고,
- * 없으면 사용자가 고른 `heymoa-lang` 쿠키를 본다. 서버에서 그릴 때는 한국어다.
- */
+/** 루트 레이아웃이 실패한 때라 `[lang]` 도 서버 쿠키도 못 받아 브라우저에서 주소·쿠키를 봅니다. */
 function browserLocale(): Locale {
   const { locale } = splitLocale(window.location.pathname);
   if (locale !== DEFAULT_LOCALE) return locale;

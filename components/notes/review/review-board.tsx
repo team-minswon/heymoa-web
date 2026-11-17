@@ -112,13 +112,9 @@ const VIEWS = ["summary", "graph"] as const;
 
 const TSID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-/** `Collapse` 의 높이 전환(200ms)이 끝나는 때. 그 뒤에 재야 줄의 자리가 맞다 */
 const COLLAPSE_SETTLE_MS = 240;
 
-/**
- * 확정 요청 식별자. 같은 본문을 다시 보낼 때만 같은 값을 쓴다 — 서버가 재전송을 한 결과로 모은다.
- * 서버가 TSID 로 검증하므로 13자이고, 64비트에 맞게 첫 글자는 0~7 이다.
- */
+/** 확정 요청 식별자. 서버가 TSID 로 검증하므로 13자이고 첫 글자는 0~7 이다. 같은 본문을 다시 보낼 때만 같은 값을 쓴다. */
 function newRequestId() {
   const bytes = crypto.getRandomValues(new Uint8Array(13));
   return Array.from(
@@ -127,7 +123,6 @@ function newRequestId() {
   ).join("");
 }
 
-/** 어느 주제에도 들지 않은 질문 · 이슈. 회의록의 「기타」 미결이다 */
 const unfiledOpen = (
   items: readonly ReviewItem[],
   topicOf: (itemId: string) => number | null
@@ -158,24 +153,17 @@ export function ReviewBoard({
   active = true,
 }: {
   noteId: string;
-  /** 요약 탭이 보이는가(APP-1660). 다시 보이는 순간 다시 읽고, 숨은 동안은 열람으로 세지 않는다 */
   active?: boolean;
   flow?: MeetingAnalysisFlowResponseData;
-  /** 흐름 조회가 마지막으로 성공한 시각. 같은 값이 다시 와도 바뀐다 — 지난 조회 실패 안내를 걷는 데 쓴다. */
   flowUpdatedAt?: number;
   workspaceId: string | undefined;
   projectId: string | undefined;
   confirmed: boolean;
   canEdit: boolean;
-  /** 머리에 세울 회의 제목 · 시각 · 프로젝트. 셸이 한 번 읽어 내린다 */
   noteMeta?: NoteMeta | null;
-  /** 주소는 「회의록 보내기」의 받는 사람 후보가 쓴다 */
   participants: (SpeakerFace & { email?: string | null })[];
-  /** 「나」 표시. 담당이 이 사람이면 붙는다 */
   currentUserId?: string | null;
-  /** 회의록 PDF 의 「공유」 칸. 받는 쪽이 누구에게 물어야 할지 안다 */
   currentUserName?: string | null;
-  /** 「이 회의에 대해 물어보기」 알약이 아래 가운데에 떠 있다. 검토 막대를 그 위로 올린다 */
   dockRaised?: boolean;
   onOpenScript: (segmentId: string) => void;
   onOpenTranscript: () => void;
@@ -200,7 +188,6 @@ export function ReviewBoard({
     query: { staleTime: 0, refetchOnMount: "always" },
   });
   const transcriptQuery = useGetNoteTranscript(noteId);
-  // 회의 간 연결은 이 회의가 양 끝인 것만 받는다. 프로젝트 없는 회의는 연결이 없다.
   const linksQuery = useGetProjectMeetingLinks(
     projectId ?? "",
     { noteId },
@@ -228,7 +215,6 @@ export function ReviewBoard({
       refetchOnMount: "always",
     },
   });
-  // 거절 까닭은 확정 줄과 확인창에 남기므로 전역 토스트를 끈다(두 번 뜨지 않게).
   const approve = useApproveMeetingReview({
     mutation: { meta: { suppressErrorToast: true } },
   });
@@ -253,7 +239,6 @@ export function ReviewBoard({
   const refreshFailed = failedRefreshKey === refreshKey;
   const refreshingAnalysis = loadedRefreshKey !== refreshKey && !refreshFailed;
   useEffect(() => {
-    // 저장 중에는 늦은 GET을 늘리지 않는다. 상태 변화는 저장이 끝난 뒤 읽는다.
     if (
       editor.busyItemId !== null ||
       loadedRefreshKey === refreshKey ||
@@ -281,8 +266,7 @@ export function ReviewBoard({
     void Promise.all([
       ...requiredKeys.map(reload),
       projectId && workspaceId
-        ? // 업무 조회 실패는 제안의 판과 캐시를 대조해 taskStateOf에서 처리한다.
-          queryClient.invalidateQueries({
+        ? queryClient.invalidateQueries({
             queryKey: getGetProjectTasksQueryKey(workspaceId, projectId),
           })
         : Promise.resolve(),
@@ -344,7 +328,6 @@ export function ReviewBoard({
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
   const topicTitleOf = (ordinal: number) =>
     summaryTopics(summary).find((row) => row.ordinal === ordinal)?.title ?? "";
-  // 요약 보기는 결정 · 할 일만 세운다(APP-864). 이슈 · 질문 · 참고는 그래프 보기에만 선다.
   const sections = sectionsOf(items, topicOf).filter((section) =>
     isSummarySection(section.key)
   );
@@ -382,7 +365,6 @@ export function ReviewBoard({
       refreshAttempt,
     ]
   );
-  // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
   const byId = useMemo(() => segmentsById(segments), [segments]);
   const spanOf = useCallback(
     (item: ReviewItem) => citedSpanOf(item, byId),
@@ -474,7 +456,6 @@ export function ReviewBoard({
   ).length;
   const editable = canEdit && !confirmed && !approve.isPending;
 
-  // 제안의 선택은 검토본에 저장한다 — 새로고침하거나 다른 참석자가 열어도 같은 선택이 보인다.
   const choose = (
     item: ReviewItem,
     targetId: string,
@@ -482,9 +463,6 @@ export function ReviewBoard({
   ) => editor.updateItem(item.itemId, { decisions: [{ targetId, decision }] });
   const saving = editor.busyItemId !== null;
   const hasTask = (taskId: string) => tasksById.has(taskId);
-  // **화면에 서는 항목의 제안만 본다.** 요약 보기에 없는 이슈 · 질문 · 참고의 제안은 고를 곳이 없어,
-  // 세면 검토 완료가 영영 막힌다. 고르지 않은 제안은 확정이 건너뛴다 — 이전 결정을 끝내지 않고 할 일도
-  // 바꾸지 않는다(그래프 보기에서 고르면 그 선택대로 된다).
   const unchosen = unchosenSuggestionCount(gateItems, hasTask);
   const blockInput = {
     saving,
@@ -503,8 +481,7 @@ export function ReviewBoard({
           item.taskChanges.some((change) => taskStateOf(change) === "pending")
       )
         ? ("pending" as const)
-        : // 이미 읽은 할 일은 재조회가 실패해도 쓴다. 제안보다 낮은 판은 확인하지 못한 것이므로 다시 읽는다.
-          tasks &&
+        : tasks &&
             !gateItems.some(
               (item) =>
                 isProjectIncluded(item) &&
@@ -515,8 +492,6 @@ export function ReviewBoard({
           ? ("ready" as const)
           : ("failed" as const),
   };
-  // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
-  // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
   const analysisBlock = reviewQuery.isError
     ? ("reviewStale" as const)
     : refreshFailed
@@ -543,7 +518,6 @@ export function ReviewBoard({
   const confirmBlocked = confirmBlock
     ? tBlocked(confirmBlock, { count: unchosen })
     : null;
-  // 막대의 「제안으로 가기」가 데려갈 줄. 요약 보기에 선 줄만이다.
   const firstUnchosen = sections
     .flatMap((section) => section.items)
     .find((item) => unchosenSuggestionCount([item], hasTask) > 0);
@@ -551,10 +525,6 @@ export function ReviewBoard({
   const toggleItem = (itemId: string) =>
     setOpenItemId((current) => (current === itemId ? null : itemId));
 
-  /**
-   * 그 줄로 간다. 접힌 「더 불러오기」가 펼쳐지고 앞서 펼쳐 둔 줄이 접히는 높이 전환(`Collapse` 200ms)이
-   * 끝난 뒤에 재야 자리가 맞다 — 전환 중에 재면 뒤쪽 줄은 펼침이 끝난 뒤 화면 밖에 남는다.
-   */
   const scrollToItem = (itemId: string, focusChoice = false) => {
     const reduce =
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -728,7 +698,6 @@ export function ReviewBoard({
     : transcript
       ? ("ready" as const)
       : ("failed" as const);
-  // 요약 보기의 줄을 펼치면 근거 발언이 선다(APP-865). 수정 기록 · 관련 항목은 그래프의 상세 패널에 남는다.
   const quotesFor = (item: ReviewItem) => (
     <EvidenceQuotes
       quotes={quotesOf(item, segments)}
@@ -790,14 +759,12 @@ export function ReviewBoard({
         queryClient.invalidateQueries({
           queryKey: getGetMeetingReviewQueryKey(noteId),
         }),
-        // 노트의 프로젝트를 아직 모를 수도 있어 할 일 · 할 일 이력 조회를 통째로 다시 읽힌다.
         queryClient.invalidateQueries({
           predicate: (query) => isProjectTaskQueryKey(query.queryKey),
         }),
       ]);
       return true;
     } catch (error) {
-      // 서버 문구를 확정 줄에 남긴다. 판이 낡아 거절됐을 수 있으니 검토본도 다시 읽는다.
       setApproveError({
         version: review.reviewVersion,
         message: errorMessageOf(error, t("confirmFailed")),
@@ -845,9 +812,6 @@ export function ReviewBoard({
         },
       },
     });
-  // 복사 · PDF · 메일이 같은 회의록 재료를 쓴다 — 셋이 따로 조립하면 받은 PDF 와 내려받은 PDF 가 갈라진다.
-  // 녹취록이 온 뒤에 연다 — 항목 시각 · 안건 시작 · 회의 길이를 녹취록에서 잰다. **받은 녹취록이 있는지로 가린다**:
-  // isSuccess 로 가리면 다시 받기가 실패할 때 열린 PDF · 메일 창이 사라지고 쓰던 받는 사람 · 메시지도 날아갔다
   const exportSources =
     noteMeta && transcript
       ? widerExports({
@@ -930,7 +894,6 @@ export function ReviewBoard({
           aside={
             <div className="flex items-center gap-2">
               <ReviewActions
-                // **요약을 못 받았으면 복사를 막는다.** 요약·주제가 빠진 문서가 성공 토스트와 함께 복사된다.
                 disabled={
                   !noteMeta ||
                   summaryQuery.isPending ||
@@ -946,7 +909,6 @@ export function ReviewBoard({
                 }
                 onRetryMaterial={() => void transcriptQuery.refetch()}
                 wider={wider}
-                // 발송 API 가 운영에 배포되기 전에는 목 환경에서만 연다 — 운영에서는 메일 항목을 세우지 않는다
                 onSendEmail={() => setMailOpen(true)}
               />
               <SegmentedControl
@@ -1004,8 +966,6 @@ export function ReviewBoard({
             </button>
           </div>
         ) : null}
-        {/* 담당·관계가 대기 중이든 실패했든, 다시 보낼 수 있는지는 서버가 정한다(APP-1475). 요청 뒤 조회
-            실패 안내가 사라지지 않게 버튼만 그 값을 따르고 자리는 남긴다 */}
         {flow?.status === "REVIEWABLE" &&
         (flow.retryable ||
           [relationsStatus, enrichmentStatus].some(
@@ -1049,8 +1009,6 @@ export function ReviewBoard({
                 <ReviewOverview
                   summary={summary}
                   pending={summaryQuery.isPending}
-                  // **이미 든 요약이 있으면 재조회 실패로 덮지 않는다** (APP-1033). 캐시를 든 채 리패치만 실패해도
-                  // `isError` 가 되는데, 그때 보이던 요약을 에러 줄로 바꾸면 재시도가 성공할 때까지 통째로 사라진다.
                   failed={summaryQuery.isError && !summary}
                   onRetry={() => void summaryQuery.refetch()}
                 />
@@ -1086,7 +1044,6 @@ export function ReviewBoard({
                     conflictItemId={editor.conflictItemId}
                     conflictMessage={editor.conflictMessage}
                     adding={editor.adding}
-                    // 스위치 안내는 스위치가 처음 나오는 섹션 머리 아래에 둔다. 주제 목록 아래에 두면 주제 설명으로 읽힌다(APP-1587).
                     hint={
                       !confirmed && section.key === "DECISION"
                         ? t("switchHint")
@@ -1124,14 +1081,10 @@ export function ReviewBoard({
             <div>
               {relationsNotice}
               {summary?.status === "SUCCEEDED" && overviewText(summary) ? (
-                <p
-                  // 요약 보기의 문단과 같은 폭이다. 폭이 다르면 보기를 바꿀 때 줄바꿈이 달라져 글이 튄다(APP-1587).
-                  className="mb-5 text-base leading-7 text-[var(--el-ink)]"
-                >
+                <p className="mb-5 text-base leading-7 text-[var(--el-ink)]">
                   {overviewText(summary)}
                 </p>
               ) : null}
-              {/* 조회가 실패했는데 「주제 묶음이 없다」고 말하면 없는 것처럼 읽힌다 */}
               {summaryQuery.isError && !summary ? (
                 <InlineRetry
                   variant="line"
@@ -1140,7 +1093,6 @@ export function ReviewBoard({
                   className="py-6"
                 />
               ) : summaryQuery.isPending ? (
-                // 요약이 오기 전에 「주제 묶음이 없다」고 말하지 않는다. 그래프 판 크기로 자리만 잡는다.
                 <Skeleton
                   aria-label={t("graphLoading")}
                   className={`aspect-[840/520] ${GRAPH_WIDE} rounded-block`}
@@ -1211,8 +1163,7 @@ export function ReviewBoard({
           unchosen={earlierBlock ? 0 : unchosen}
           onShowUnchosen={
             firstUnchosen && view === "summary"
-              ? // 접힌 「더 불러오기」 안의 줄은 펼쳐야 DOM 에 선다 — 펼치고 간다.
-                () => showItem(firstUnchosen.itemId)
+              ? () => showItem(firstUnchosen.itemId)
               : undefined
           }
           error={
@@ -1242,7 +1193,6 @@ export function ReviewBoard({
               ? [fallbackNames.speaker(speaker.label)]
               : []
           )}
-          // 「PDF로 내보내기」와 같은 생성기다 — 받는 사람이 받는 파일과 내려받은 파일이 같다
           buildPdf={async (include) => (await preparePdf(include)).blob}
           preparePdf={preparePdf}
           version={exportVersion}
@@ -1252,14 +1202,11 @@ export function ReviewBoard({
   );
 }
 
-/** 그래프만 글 칸(680)에서 벗어나 가용 폭의 90%(최대 1100)로 펼친다. 칸보다 좁아지면 칸 폭 그대로다. */
 const GRAPH_WIDE =
   "relative left-1/2 w-[max(100%,min(90cqw,1100px))] -translate-x-1/2";
 
-/** 회의록 문서 한 단(APP-865). 시안의 760 칸에서 좌우 여백을 뺀 680 이 글 폭이다. */
 function BoardShell({ children }: { children: React.ReactNode }) {
   return (
-    // 바깥 `@container` 는 그래프가 글 칸 밖으로 얼마나 넓어질 수 있는지(`cqw`) 재는 기준이다.
     <div className="@container/note flex flex-1 flex-col">
       <div className="mx-auto w-full max-w-[calc(680px+2*var(--note-gutter))] flex-1 px-[var(--note-gutter)] pt-8 pb-10 sm:pt-10">
         {children}
@@ -1268,7 +1215,6 @@ function BoardShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** 검토본 조회 skeleton. 머리 · 섹션 제목은 고정 문구라 가리지 않고 값 자리만 막대로 둔다. */
 export function ReviewBoardSkeleton() {
   const t = useTranslations("notes.review");
   return (

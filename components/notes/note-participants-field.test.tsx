@@ -15,9 +15,7 @@ const replaceParticipants = vi.hoisted(() => vi.fn());
 const replaceGuestParticipants = vi.hoisted(() => vi.fn());
 const createGuestParticipant = vi.hoisted(() => vi.fn());
 const getNote = vi.hoisted(() => vi.fn());
-/** 저장 중인가. 참여자 추가 트리거가 잠기는 상태를 흉내 낸다. */
 const savingState = vi.hoisted(() => ({ pending: false }));
-/** 저장 훅이 받은 옵션. 전역 토스트를 껐는지 본다. */
 const replaceOptions = vi.hoisted(() => [] as unknown[]);
 vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -38,7 +36,6 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
 
 const guestsState = vi.hoisted(() => ({
   failed: false,
-  /** **캐시를 든 채 리패치만 실패한 상태.** `data` 는 살아 있고 `isError` 만 참이다. */
   staleFailed: false,
   fetching: false,
   refetch: vi.fn(),
@@ -70,7 +67,6 @@ vi.mock(
 
 const membersState = vi.hoisted(() => ({
   failed: false,
-  /** 위와 같다 — 캐시를 든 채 리패치만 실패. */
   staleFailed: false,
   fetching: false,
   refetch: vi.fn(),
@@ -81,7 +77,6 @@ vi.mock(
     ...(await importOriginal<object>()),
     useGetWorkspaceMembers: () => ({
       isPending: false,
-      // **캐시를 든 리패치**를 흉내 낸다. TanStack 은 이때 isPending=false, isFetching=true 다
       isFetching: membersState.fetching,
       isError: membersState.failed || membersState.staleFailed,
       refetch: membersState.refetch,
@@ -120,7 +115,6 @@ vi.mock(
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
-/** 워크스페이스 셸 안이면 설정을 여는 함수, 밖이면 `null`. 가볍게 쓰려고 모듈째 대신한다. */
 const shell = vi.hoisted(() => ({
   openSettings: null as null | ((section: string) => void),
 }));
@@ -137,7 +131,6 @@ const PARTICIPANT: Participant = {
   image: null,
 };
 
-/** 계정 없는 참여자. 저장할 때 계정 참여자와 **다른 요청**에 실려야 한다. */
 const GUEST_PARTICIPANT: Participant = {
   participantId: "01K0000000201",
   userId: null,
@@ -217,18 +210,10 @@ describe("NoteParticipantsField", () => {
   });
   afterEach(cleanup);
 
-  /**
-   * **저장된 것을 조회 실패로 지우면 안 된다.**
-   *
-   * 후보 목록은 조회가 실패한 쪽을 빈 배열로 접는다. 목록 컴포넌트가 「고른 것」을 후보에서만
-   * 골라 돌려주므로, 그 값으로 draft 를 통째로 다시 만들면 임시 참여자가 사라진 채 전체 교체가
-   * 나간다 — 참여자와 **거기 붙은 화자 연결까지** 함께 지워진다.
-   */
   it("열어 달라는 요청이 있으면 선택창을 열고 요청을 거둔다", async () => {
     const onAutoOpened = vi.fn();
     render(autoOpenField({ autoOpen: true, onAutoOpened }));
 
-    // 사용자가 트리거를 누른 것과 같은 길이라 후보 목록이 서 있다
     expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
     expect(onAutoOpened).toHaveBeenCalledTimes(1);
   });
@@ -262,14 +247,12 @@ describe("NoteParticipantsField", () => {
     renderField([PARTICIPANT, GUEST_PARTICIPANT]);
     openMenu();
 
-    // 임시 참여자는 후보에 못 서지만, 멤버는 그대로 고를 수 있다
     const items = await screen.findAllByRole("option");
     fireEvent.click(items[items.length - 1]);
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
 
-    // 계정 쪽만 바뀌고 임시 참여자는 그대로여야 한다 — 안 바뀌었으므로 요청 자체가 없다
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalled());
     expect(replaceGuestParticipants).not.toHaveBeenCalled();
   });
@@ -289,9 +272,6 @@ describe("NoteParticipantsField", () => {
     expect(replaceParticipants).not.toHaveBeenCalled();
   });
 
-  // ── 워크스페이스를 떠난 참여자 ────────────────────────────────────────────
-
-  /** 계정은 있는데 더는 멤버가 아닌 사람. 내보내도 참여 기록은 남는다. */
   const DEPARTED: Participant = {
     participantId: "01K0000000109",
     userId: "01K0000000009",
@@ -301,10 +281,6 @@ describe("NoteParticipantsField", () => {
     image: null,
   };
 
-  /**
-   * **후보를 멤버·게스트로만 세우면 이 사람이 화면에서 사라진다.** 그러면 뺄 수도 없고,
-   * 전체 교체라 다른 멤버를 더하는 저장에 이 사람을 안 실어 조용히 함께 지워진다.
-   */
   it("워크스페이스를 떠난 참여자도 후보에 선다", async () => {
     renderField([PARTICIPANT, DEPARTED]);
     openMenu();
@@ -317,13 +293,6 @@ describe("NoteParticipantsField", () => {
     expect(departed).toHaveAttribute("aria-selected", "true");
   });
 
-  /**
-   * **리패치는 그리기를 막지 않는다.**
-   *
-   * 캐시를 든 리패치(`isPending=false, isFetching=true`)를 「아직 못 읽었다」로 읽으면 떠난
-   * 참여자가 후보에서 사라져 **그 사이 해제할 수 없다.** 만들기 판정에는 `isFetching` 이
-   * 들어가야 하고 그리기 판정에는 들어가면 안 된다 — 한 변수로 겸용하다 실제로 깨졌다.
-   */
   it("후보를 다시 읽는 중에도 떠난 참여자가 남는다", async () => {
     membersState.fetching = true;
     guestsState.fetching = true;
@@ -341,12 +310,6 @@ describe("NoteParticipantsField", () => {
     }
   });
 
-  /**
-   * **캐시를 든 채 리패치만 실패한 상태.** `data` 는 살아 있고 `isError` 만 참이다.
-   *
-   * 이것을 「못 읽었다」로 읽으면 떠난 참여자가 사라져 해제할 수 없다. 「들고 있나」와
-   * 「지금 최신인가」를 한 변수로 겸용하다 두 번 깨진 자리다 — 그리기는 들고 있는 것으로 한다.
-   */
   it("리패치가 실패해도 캐시가 있으면 떠난 참여자가 남는다", async () => {
     membersState.staleFailed = true;
     guestsState.staleFailed = true;
@@ -364,7 +327,6 @@ describe("NoteParticipantsField", () => {
     }
   });
 
-  /** 반대쪽 — 그 상태에서 **만들기**는 닫혀야 한다. 낡은 캐시로 동명이인이 생긴다. */
   it("리패치가 실패하면 ＋ 추가를 안 연다", async () => {
     membersState.staleFailed = true;
     try {
@@ -381,35 +343,21 @@ describe("NoteParticipantsField", () => {
     }
   });
 
-  /**
-   * **여는 동안 남이 넣은 사람을 지우지 않는다.**
-   *
-   * 메뉴를 열 때 최신을 당기는데, 그 응답이 도착하기 전에 사람이 하나를 고르면 draft 가
-   * 옛 목록으로 굳는다. 그대로 전체 교체로 보내면 **그 사이 도착한 참여자와 그의 화자 연결이
-   * 지워진다** — 최신을 당기려던 것이 남의 것을 지우는 길이 된다. 사람이 한 것은 「무엇을
-   * 켰고 껐나」지 「목록이 이것이다」가 아니다.
-   */
   it("고르는 사이에 도착한 참여자를 지우지 않는다", async () => {
     const { rerender } = renderField([PARTICIPANT]);
     openMenu();
     await screen.findAllByRole("option");
 
-    // 사람이 한지원을 켠다 — 이 순간 draft 는 [김민수, 한지원] 으로 굳는다
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
-    // 그 사이 남이 넣은 박서준이 도착한다
     rerender(fieldOf([PARTICIPANT, GUEST_PARTICIPANT]));
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
 
-    // 계정 참여자 요청에 한지원이 더해지고 김민수가 남는다
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalled());
     const sent = replaceParticipants.mock.calls[0][0].data.userIds as string[];
     expect(sent).toContain("01K0000000001");
     expect(sent).toContain("01K0000000002");
-    // **임시 참여자 요청이 아예 안 나가야 한다.** 박서준을 켠 적도 끈 적도 없으니 그쪽은
-    // 바뀐 것이 없다. 병합이 없으면 draft 에 그가 없어 `guestIds: []` 가 나가고 **그와 그의
-    // 화자 연결이 지워진다.**
     expect(replaceGuestParticipants).not.toHaveBeenCalled();
   });
 
@@ -445,7 +393,6 @@ describe("NoteParticipantsField", () => {
     );
   });
 
-  /** 전체 교체라 남길 사람도 요청에 실어야 한다 — 안 실으면 조용히 지워진다. */
   it("다른 멤버를 더해도 떠난 참여자를 요청에 함께 싣는다", async () => {
     renderField([PARTICIPANT, DEPARTED]);
     openMenu();
@@ -477,7 +424,6 @@ describe("NoteParticipantsField", () => {
     expect(items[items.length - 1]).toHaveAttribute("aria-selected", "false");
   });
 
-  // 닫아야 반영되면 체크가 되다 만 것처럼 보인다(APP-1106).
   it("고를 때마다 닫지 않아도 바로 저장한다", async () => {
     renderField();
     openMenu();
@@ -503,7 +449,6 @@ describe("NoteParticipantsField", () => {
 
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
-    // 첫 요청이 끝나기 전에는 둘째를 안 보낸다 — 응답 순서가 뒤집히면 앞이 뒤를 덮는다
     expect(replaceParticipants).toHaveBeenCalledTimes(1);
 
     settle({ status: 200 });
@@ -525,7 +470,6 @@ describe("NoteParticipantsField", () => {
         })
       )
       .mockResolvedValueOnce({ status: 200 })
-      // 대기 중이던 저장은 도는 채로 둔다 — 그 사이 다시 누른다
       .mockReturnValueOnce(
         new Promise((resolve) => {
           settleQueued = resolve;
@@ -543,10 +487,8 @@ describe("NoteParticipantsField", () => {
     openMenu();
     await screen.findAllByRole("option");
 
-    // 한지원을 켰다 끈다 — 첫 요청이 도는 사이 대기 선택은 [김민수]다
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
-    // 첫 요청은 409 — 그 사이 남이 이영희를 넣었다
     settle({
       success: false,
       data: null,
@@ -560,13 +502,10 @@ describe("NoteParticipantsField", () => {
     await waitFor(() =>
       expect(replaceParticipants.mock.calls.length).toBeGreaterThanOrEqual(2)
     );
-    // 후보에 없는 이영희는 화면에 안 서지만 선택에는 들어 있어야 한다 — 그 뒤 다른 항목을 누른다
-    // 거절 → 병합 재시도 → 대기 중이던 저장 순이다
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(3));
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
     settleQueued({ status: 200 });
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(4));
-    // 어느 저장도 이영희를 「껐다」로 보내면 안 된다
     for (const [call] of replaceParticipants.mock.calls.slice(1)) {
       expect(call.data.userIds).toContain("01K0000000003");
     }
@@ -582,7 +521,6 @@ describe("NoteParticipantsField", () => {
       const manage = await screen.findByRole("button", {
         name: "임시 참여자 관리",
       });
-      // 목록 밖 맨 아래에 있다 — 검색창보다 뒤다
       const search = screen.getByRole("combobox", { name: /참여자 검색/ });
       expect(
         manage.compareDocumentPosition(search) &
@@ -612,7 +550,6 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    // 이름순이면 김민수가 먼저인데, 골라진 한지원이 위로 온다
     expect(items[0]).toHaveTextContent("한지원");
   });
 
@@ -638,14 +575,11 @@ describe("NoteParticipantsField", () => {
     });
   });
 
-  // 열어만 두고 닫는 사이 폴링이 다른 사람의 변경을 가져오면, 아무것도 안 건드린 사용자가
-  // 열던 시점의 목록으로 그 변경을 되돌리게 된다.
   it("아무것도 안 건드리고 닫으면 그 사이 바뀐 참여자를 덮어쓰지 않는다", async () => {
     const view = renderField();
     openMenu();
     await screen.findAllByRole("option");
 
-    // 메뉴가 열려 있는 동안 다른 사용자가 한지원을 추가했다.
     view.rerender(
       <QueryClientProvider client={new QueryClient()}>
         <NoteParticipantsField
@@ -701,7 +635,6 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    // 김민수 · 박서준(외부) · 한지원
     expect(items).toHaveLength(3);
     expect(items[1]).toHaveTextContent("박서준");
     expect(items[1]).toHaveTextContent("외부");
@@ -717,16 +650,12 @@ describe("NoteParticipantsField", () => {
     expect(items[2]).toHaveAttribute("aria-selected", "false");
   });
 
-  /**
-   * **한 요청에 섞으면 안 된다.** 서버에서 계정 참여자 전체 교체는 임시 참여자를 안 건드리게
-   * 뜻이 좁아졌고, 섞어 보내면 그 요청이 400으로 막히거나 조용히 무시된다.
-   */
   it("임시 참여자는 계정 참여자와 다른 요청으로 저장한다", async () => {
     renderField();
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    fireEvent.click(items[1]); // 박서준(외부)
+    fireEvent.click(items[1]);
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
@@ -737,23 +666,17 @@ describe("NoteParticipantsField", () => {
         data: { guestIds: ["01K0000000301"], expectedGuestIds: [] },
       })
     );
-    // 계정 참여자는 안 바뀌었으니 그쪽 요청은 아예 안 나간다.
     expect(replaceParticipants).not.toHaveBeenCalled();
   });
 
-  /**
-   * **둘은 서로 독립인 요청이다.** 이어 붙이면 앞이 실패했을 때 뒤를 아예 안 보내는데,
-   * 사람은 한 번의 저장으로 둘을 다 바꿨고 토스트는 하나만 뜬다 — 임시 참여자 변경은
-   * 시도조차 안 된 채 조용히 사라진다.
-   */
   it("계정 참여자 저장이 실패해도 임시 참여자 요청은 나간다", async () => {
     replaceParticipants.mockRejectedValue(new Error("boom"));
     renderField([PARTICIPANT, GUEST_PARTICIPANT]);
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    fireEvent.click(items[1]); // 박서준(외부) 해제
-    fireEvent.click(items[2]); // 한지원 추가
+    fireEvent.click(items[1]);
+    fireEvent.click(items[2]);
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
@@ -767,7 +690,7 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const items = await screen.findAllByRole("option");
-    fireEvent.click(items[2]); // 한지원 추가
+    fireEvent.click(items[2]);
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
@@ -776,7 +699,6 @@ describe("NoteParticipantsField", () => {
     expect(replaceGuestParticipants).not.toHaveBeenCalled();
   });
 
-  /** 화자 메뉴와 같은 자리다 — 한글은 한 글자가 곧 조합이라 목록이 안 좁혀졌다. */
   it("조합 중인 한 글자로도 후보가 좁혀진다", async () => {
     renderField();
     openMenu();
@@ -835,7 +757,6 @@ describe("NoteParticipantsField", () => {
     openMenu();
 
     const input = await screen.findByRole("combobox", { name: /참여자 검색/ });
-    // **`input` 이벤트여야 한다.** `fireEvent.change` 는 `onInput` 을 안 태운다.
     fireEvent.input(input, { target: { value: "이민" } });
     fireEvent.compositionStart(input);
     fireEvent.input(input, { target: { value: "이민형" } });
@@ -865,16 +786,10 @@ describe("NoteParticipantsField", () => {
     await waitFor(() =>
       expect(createGuestParticipant).toHaveBeenCalledWith({
         noteId: "01K0000000009",
-        // 앞뒤 공백은 보내기 전에 지운다 — 서버도 접지만 목록 대조가 먼저다.
         data: { displayName: "이도현" },
       })
     );
   });
-
-  // ── 그 사이 남이 바꿨을 때 (APP-778) ─────────────────────────────────────────
-  //
-  // 서버는 요청에 실린 「병합 기준 목록」(`expected*`)이 지금과 다르면 409 로 거절한다(APP-777).
-  // 화면은 최신을 다시 읽어 **내가 켜고 끈 것만** 새 기준에 얹고 한 번만 다시 보낸다.
 
   const CONFLICT = {
     success: false,
@@ -896,7 +811,6 @@ describe("NoteParticipantsField", () => {
     image: null,
   };
 
-  /** 메뉴를 연 뒤 남이 넣은 사람. 후보 목록(멤버 조회)에는 아직 없다. */
   const ADDED_BY_OTHER: Participant = {
     participantId: "01K0000000103",
     userId: "01K0000000003",
@@ -910,7 +824,6 @@ describe("NoteParticipantsField", () => {
     return { status: 200, data: { success: true, data: { participants } } };
   }
 
-  /** 한지원을 끄고 닫는다. 후보는 이름순이라 마지막이 한지원이다. */
   async function turnOffMemberTwo() {
     openMenu();
     await screen.findAllByRole("option");
@@ -956,9 +869,7 @@ describe("NoteParticipantsField", () => {
       "01K0000000002",
       "01K0000000003",
     ]);
-    // 다시 맞춰 성공했으면 알릴 것이 없다
     expect(toastError).not.toHaveBeenCalled();
-    // 안 바뀐 임시 참여자 쪽은 두 번 다 안 보낸다
     expect(replaceGuestParticipants).not.toHaveBeenCalled();
   });
 
@@ -987,8 +898,6 @@ describe("NoteParticipantsField", () => {
     expect(replaceParticipants).toHaveBeenCalledTimes(1);
   });
 
-  // 전역 `MutationCache.onError` 는 끄고 이 컴포넌트가 알린다. 둘 다 띄우면 겹치고, 전역만
-  // 두면 다시 보내 성공한 저장 앞에 409 문구가 먼저 뜬다.
   it("충돌이 아닌 실패는 다시 보내지 않고 서버 문구로 한 번 알린다", async () => {
     replaceParticipants.mockRejectedValue({
       success: false,
@@ -1013,7 +922,6 @@ describe("NoteParticipantsField", () => {
     });
     expect(replaceParticipants).toHaveBeenCalledTimes(1);
     expect(getNote).not.toHaveBeenCalled();
-    // 실패했으니 화면은 서버가 준 기존 참여자 그대로 남는다.
     expect(screen.getByLabelText("참여자 2명")).toBeInTheDocument();
   });
 });

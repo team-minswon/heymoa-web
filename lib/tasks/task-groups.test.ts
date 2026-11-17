@@ -26,7 +26,6 @@ const entry = (
 
 describe("groupTasks", () => {
   it("진행 중인 할 일만 기한으로 나눈다", () => {
-    // 2026-09-16 은 수요일이고 그 주는 20일(일)에 끝난다.
     const groups = groupTasks(
       [
         entry("다음 주", "2026-09-21"),
@@ -76,7 +75,6 @@ describe("tasksWithStatus", () => {
 describe("compareTasks", () => {
   const row = (taskId: string, due: string | null) => ({ ...entry(taskId, due), taskId });
 
-  /** 서버 정렬 `(기한 오름차순·기한 없음 뒤, taskId 오름차순)` 과 같은 순서여야 쪽을 이어 붙인 목록이 어긋나지 않는다. */
   it("기한 순이고 기한 없음이 뒤이며 같은 기한 안에서는 id 순이다", () => {
     const sorted = [
       row("01B", null),

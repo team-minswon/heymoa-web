@@ -13,10 +13,6 @@ import { findMatchRanges, stepIndex } from "@/lib/help/match-ranges";
 import { prefersReducedMotion } from "@/lib/help/scroll";
 import { cn } from "@/lib/utils";
 
-/** 스크린리더 안내는 일치 수가 정해진 뒤 한 번만 읽는다. */
-/* 사용 가이드 검색 (APP-1232) — CSS Custom Highlight API. 본문 DOM 은 그대로 두고 일치 구간만 칠한다.
-   색에만 기대지 않게 모든 일치에 밑줄을 긋고, 활성 일치는 더 진한 노랑 + 굵은 밑줄이다. 글자색은 본문 그대로(잉크 위 노랑 12:1 이상).
-   globals.css 에 두면 빌드의 CSS 최적화기가 `::highlight` 를 못 읽어 경고하므로 여기서 style 로 낸다. */
 const HIGHLIGHT_CSS = `
 ::highlight(help-search) {
   background-color: var(--tv-butter);
@@ -34,10 +30,8 @@ const HIGHLIGHT_CSS = `
 }`;
 
 const ANNOUNCE_MS = 600;
-/** 상단바(97) 아래로 이 높이 안에 든 일치는 가려진 것으로 본다. */
 const TOP_SAFE = 120;
 
-/** 주소 해시를 안전하게 읽는다. 깨진 인코딩(`#%`)은 빈 값으로 본다. */
 const readHash = () => {
   try {
     return decodeURIComponent(window.location.hash.slice(1));
@@ -46,23 +40,12 @@ const readHash = () => {
   }
 };
 
-/**
- * 같은 페이지 안에서 `?q=` 가 바뀌는 이동(검색 팔레트 결과, 링크)을 알린다. 화면에는 아무것도 그리지 않아서, 정적 렌더가
- * 요구하는 Suspense 경계로 감싸도 자리가 밀리지 않는다.
- */
 function UrlQuerySync({ onChange }: { onChange: (q: string) => void }) {
   const q = useSearchParams().get("q") ?? "";
   useEffect(() => onChange(q), [q, onChange]);
   return null;
 }
 
-/**
- * 본문 안 일치 이동 막대 (APP-1232 → APP-1245). 검색은 상단바 팔레트가 하고, 이 컴포넌트는 주소의 `?q=` 로 들어온
- * 페이지에서 본문의 일치를 칠하고 이전/다음으로 오가게 한다. 막대는 `?q=` 가 있을 때만 화면 아래에 **떠 있어서**(fixed)
- * 나타나도 본문이 밀리지 않는다. 본문 DOM 은 건드리지 않고 일치 구간을 CSS Custom Highlight API 로만 칠하므로 서버 HTML 과
- * 첫 클라이언트 렌더가 같다. 이 API 가 없는 브라우저에서는 칠하지 않고 개수와 이동(스크롤)만 된다. 칠하는 규칙은
- * `app/globals.css` 의 `::highlight(help-search*)`.
- */
 export function HelpSearch({ targetId }: { targetId: string }) {
   const t = useTranslations("help.search");
   const rangesRef = useRef<Range[]>([]);
@@ -71,24 +54,21 @@ export function HelpSearch({ targetId }: { targetId: string }) {
   const [active, setActive] = useState(0);
   const [announce, setAnnounce] = useState("");
   const firstRun = useRef(true);
-  // 주소로 처음 들어온 직후의 이동은 모션 없이 바로 간다(공유한 링크가 로드 뒤에 흘러가지 않게). 이후 이동은 부드럽게.
   const loaded = useRef(false);
   const jump = useRef(false);
 
   const syncFromUrl = useCallback((q: string) => {
     jump.current = !loaded.current && q !== "";
     loaded.current = true;
-    firstRun.current = true; // 새 이동이니 `#섹션` 안 첫 일치부터 다시 찾는다
+    firstRun.current = true;
     setQuery(q);
   }, []);
 
-  // 검색어가 바뀌면 일치를 다시 구하고 첫 일치를 활성으로 둔다. 목차에서 일치가 없는 조항은 흐리게 한다.
   useEffect(() => {
     const root = document.getElementById(targetId);
     const ranges = root ? findMatchRanges(root, query) : [];
     rangesRef.current = ranges;
     setTotal(ranges.length);
-    // 처음 들어올 때는 주소의 `#섹션` 안 첫 일치부터 — 검색 결과에서 누른 그 자리다.
     let first = 0;
     if (firstRun.current && query) {
       firstRun.current = false;
@@ -118,7 +98,6 @@ export function HelpSearch({ targetId }: { targetId: string }) {
     };
   }, [query, targetId]);
 
-  // 칠하기와 스크롤.
   useEffect(() => {
     const ranges = rangesRef.current;
     const highlights = typeof CSS !== "undefined" ? CSS.highlights : undefined;
@@ -132,7 +111,6 @@ export function HelpSearch({ targetId }: { targetId: string }) {
     }
     if (current) {
       const rect = current.getBoundingClientRect();
-      // 이미 편하게 보이는 자리면 움직이지 않는다.
       if (rect.top < TOP_SAFE || rect.bottom > window.innerHeight - 80) {
         current.startContainer.parentElement?.scrollIntoView({
           block: "center",

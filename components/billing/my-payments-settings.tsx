@@ -17,11 +17,6 @@ import { okData } from "@/lib/api/ok-data";
 import { billingEvents } from "@/lib/billing/analytics";
 import { cn } from "@/lib/utils";
 
-/**
- * 설정 › 계정 › 내 결제 내역(APP-1596). 내가 결제자인 결제 전부라 워크스페이스의 한도 집행 여부와 상관없고, 나갔거나 지운 공간의
- * 결제도 결제 때의 이름(스냅샷)으로 보인다. 행은 지금 내가 그 공간의 ADMIN 일 때만 상세로 들어간다 — 상세는 그 공간의 ADMIN 만 연다.
- * 내역이 한 건도 없으면 설정 창이 이 탭을 숨긴다.
- */
 export function MyPaymentsSettings() {
   const t = useTranslations("billing.history");
   const [open, setOpen] = useState<{

@@ -38,7 +38,6 @@ describe("OnboardingChecklist", () => {
     ).toBeEnabled();
   });
 
-  // 초대를 안 해도 필수 셋을 마치면 끝난 것으로 보인다
   it("필수 단계를 마치면 초대 없이도 준비가 끝났다고 보인다", () => {
     render(
       <OnboardingChecklist
@@ -55,7 +54,6 @@ describe("OnboardingChecklist", () => {
     expect(screen.getByText("2/2")).toBeInTheDocument();
   });
 
-  // 목록을 못 읽었는데 그대로 그리면 기록이 없는 것처럼 「첫 회의 기록하기」가 미완료로 보인다
   it("진행을 못 읽으면 단계 대신 실패와 다시 시도를 보인다", () => {
     const retry = vi.fn();
     render(

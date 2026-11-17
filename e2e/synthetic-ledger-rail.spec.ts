@@ -2,30 +2,9 @@ import { expect, test } from "@playwright/test";
 
 import ledger from "../lib/notes/proposals/__fixtures__/synthetic-ledger-snapshot.json";
 
-/**
- * **server 가 실제로 적재한 원장을 화면에 그린다.**
- *
- * **입력 108발화는 합성 시나리오이고 실사용자 전사가 아닙니다.** 진짜인 것은 wire 이지
- * 회의 내용이 아닙니다 — 여기 나오는 건수나 문장을 실사용 품질 근거로 인용하지 않습니다.
- * 그 판정은 AWS 실전사 gate 가 따로 냅니다.
- *
- * 그래도 필요한 이유는, 다른 e2e 가 전부 **손으로 쓴 목**을 보기 때문입니다. 그건 내가
- * 아는 것만 담아서, 계약을 오해했으면 목도 같이 틀리고 화면은 멀쩡해 보입니다.
- *
- * **기대값을 픽스처에서 유도합니다.** 같은 대본을 다시 흘리면 후보 개수도 kind 구성도
- * 달라지는 것이 실측으로 확인됐습니다. 개수를 박아 두면 픽스처를 재생성하는 순간 web
- * 결함과 무관하게 빨개지고, 그 빨강은 아무것도 안 알려 줍니다.
- *
- * 순수 함수 층의 같은 검증은
- * `lib/notes/proposals/synthetic-ledger-snapshot.test.ts` 에 있습니다.
- * 그쪽이 상태를, 이쪽이 화면을 봅니다.
- */
-
 const WORKSPACE_ID = "01K0000000000";
-/** `CONTEXT_SYNTHETIC_LEDGER_NOTE_ID`. 이 노트만 server 적재 원장을 싣는다. */
 const NOTE_ID = "01K0000000007";
 
-/** 타임라인은 안건을 머리로 세우고 항목으로 세지 않는다. */
 const ITEMS = ledger.proposals.filter((c) => c.kind !== "AGENDA");
 const CANDIDATE_COUNT = ITEMS.length;
 
@@ -40,19 +19,12 @@ test.describe("server 적재 원장 — 화면", () => {
       timeout: 30_000,
     });
 
-    // **내용의 옳음을 주장하지 않는다** — 이 원장에는 `ACTION_ITEM` 을 `DECISION` 으로 낸
-    // 오분류가 섞여 있다. 그것까지 「맞다」고 쓰면 테스트가 오분류를 정답으로 문서화하고,
-    // 나중에 그게 고쳐질 때 수정을 막는다. 여기서 보는 것은 **후보가 화면에 닿는가**다.
     await expect(page.getByText(ledger.proposals[0].content).first()).toBeVisible();
     await expect(
       page.getByText(ledger.proposals[ledger.proposals.length - 1].content).first()
     ).toBeVisible();
   });
 
-  /**
-   * **개정이 카드를 늘리면 안 된다.** 이 원장에는 같은 값을 두 번 고쳐 revision 이 여러 번
-   * 오른 후보가 있다. 개정마다 카드가 쌓이면 사용자가 폐기된 값을 현재 결정으로 읽는다.
-   */
   test("개정된 결정은 최신 값 하나로만 선다", async ({ page }) => {
     test.setTimeout(90_000);
     await expect(page.getByRole("button", { name: `전체 ${CANDIDATE_COUNT}` })).toBeVisible({
@@ -70,7 +42,6 @@ test.describe("server 적재 원장 — 화면", () => {
       timeout: 30_000,
     });
 
-    // 철회된 안건도 머리에 「철회됨」을 단다 — 안건이든 항목이든 철회는 하나씩 보인다.
     const retracted = ledger.proposals.filter(
       (c) => c.closeReason === "RETRACTED"
     ).length;
@@ -96,19 +67,16 @@ test.describe("server 적재 원장 — 화면", () => {
       timeout: 30_000,
     });
 
-    // 근거가 없는 카드는 사용자가 출처를 확인할 방법이 없다.
     await page
       .getByRole("button", { name: new RegExp(escape(ITEMS[0].content)) })
       .first()
       .click();
-    // 펼친 근거 행(시각 + 발화)이 선다.
     await expect(
       page.locator('[id^="timeline-item-"][id$="-details"] button').first()
     ).toBeVisible();
   });
 });
 
-/** 후보 내용은 서버가 낸 문장이라 정규식 메타문자가 들어 있을 수 있다. */
 function escape(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

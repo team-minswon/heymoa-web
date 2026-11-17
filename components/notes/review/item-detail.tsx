@@ -11,7 +11,6 @@ import {
 import { linkedItemsOf } from "@/lib/notes/review/topics";
 import { cn } from "@/lib/utils";
 
-/** 화면 언어로 이름을 다는 관계. 나머지는 서버가 붙인 이름을 그대로 쓴다 */
 const LINK_KINDS: ReadonlySet<string> = new Set([
   "LEADS_TO",
   "SUPPORTS",
@@ -20,11 +19,6 @@ const LINK_KINDS: ReadonlySet<string> = new Set([
 ]);
 type LinkKind = "LEADS_TO" | "SUPPORTS" | "PROGRESS" | "RESOLVES";
 
-/**
- * 펼친 항목의 속. 붙은 제안(있으면)이 먼저 서고, 그 아래 수정 기록 카드와 관련 항목이다.
- * 요약 보기에서는 줄 아래에 떠 있는 카드라 옅은 그림자를 두고, 그래프의 상세 패널 안에서는 카드 안의
- * 카드라 hairline 만 쓴다.
- */
 export function ItemDetail({
   item,
   summary,
@@ -45,7 +39,6 @@ export function ItemDetail({
   onSelectAgenda?: (agendaId: string) => void;
 }) {
   const t = useTranslations("notes.review.detail");
-  // 열 수 있는 항목으로 거른 뒤 넷까지 — 먼저 자르면 앞 넷이 없는 항목일 때 뒤의 것까지 사라진다.
   const agendas = summaryTopics(summary).filter((topic) =>
     topic.memberships.some((member) => member.itemId === item.itemId)
   );

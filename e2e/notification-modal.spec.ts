@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { settled } from "./helpers-ui";
 
-/**
- * 알림 모달(PRO-67 I09). 사이드바 첫 항목이 연다. 노트 상단바에는 진입점이 없다(APP-1401).
- */
 const WS = "/w/01K0000000000";
 
 test("사이드바 「알림」이 모달을 열고 초대를 거절하려면 확인 창을 거친다", async ({
@@ -14,7 +11,6 @@ test("사이드바 「알림」이 모달을 열고 초대를 거절하려면 �
     .getByRole("navigation", { name: "워크스페이스" })
     .getByRole("button", { name: /^알림/ });
   await expect(entry).toBeVisible();
-  // 목 시드의 안 읽은 알림은 대기 초대 둘, 검토 결과 셋, 권한 없는 결과 하나, 문의 답변 하나다.
   await expect(entry.getByLabel("안 읽은 알림 7개")).toBeVisible();
   await entry.click();
 
@@ -49,7 +45,6 @@ test("검토할 결과 준비 행을 누르면 검토 화면으로 가고, 결�
       "마지막 일시정지 후 3영업일이 지나 회의를 자동으로 종료했습니다."
     )
   ).toBeVisible();
-  // 검토 화면이 결과를 그리면 그 알림만 읽는다.
   const read = page.waitForRequest(
     (request) =>
       request.method() === "PUT" &&
@@ -93,7 +88,6 @@ test("문의 답변 행을 누르면 「내 문의」가 그 문의를 연다. �
 test("로그인한 탭에는 이벤트 스트림 연결이 하나이고, 워크스페이스를 바꿔도 다시 연결하지 않는다", async ({
   page,
 }) => {
-  // 개발 모드의 StrictMode 는 effect 를 두 번 돌려 첫 연결을 곧바로 끊는다 — 열려 있는 연결 수로 센다.
   let opened = 0;
   let closed = 0;
   const isEvents = (url: string) => new URL(url).pathname === "/v1/events";
@@ -130,7 +124,6 @@ for (const width of [1440, 1024]) {
     await expect(
       dialog.getByRole("button", { name: "수락" }).first()
     ).toBeVisible();
-    // 포커스는 창 자체에 있다 — 첫 탭에 두면 링이 보인다(APP-1355).
     expect(
       await page.evaluate(() => document.activeElement?.getAttribute("role"))
     ).toBe("dialog");
@@ -199,7 +192,6 @@ test.describe("주소 상태(APP-1361)", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`${WS}$`));
-    // 닫을 때 쌓은 칸을 한 번에 걷었다 — 여기서 뒤로 가면 모달이 아니라 이 화면 앞으로 간다.
     await page.goBack();
     await expect(page.getByRole("dialog", { name: "알림" })).toBeHidden();
   });
@@ -234,7 +226,6 @@ test.describe("주소 상태(APP-1361)", () => {
     await expect(page.getByRole("dialog", { name: "알림" })).toBeHidden();
   });
 
-  // APP-1363 — 설정은 알림 위에 얹힌다. 뒤로 가기·설정 X 는 설정만 걷고 알림(같은 탭)으로 돌아온다.
   test("「알림 설정」 뒤 뒤로 가기는 알림(같은 탭)으로 돌아오고, 한 번 더 뒤로 가면 닫힌다", async ({
     page,
   }) => {
@@ -318,10 +309,8 @@ test("목에서 초대를 수락하면 다시 열어도 결과가 남고, 새 �
   await expect(dialog.getByText("수락됨").first()).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  // 수락한 초대는 읽음이 된다(모달이 덮는 동안 사이드바는 접근성 트리에서 빠져 닫은 뒤에 본다).
   await expect(entry.getByLabel("안 읽은 알림 6개")).toBeVisible();
 
-  // 이벤트 스트림 목이 `notifications.changed` 를 내면 폴링(60초)을 기다리지 않고 개수가 따라온다.
   await page.evaluate(() => window.heymoaMock!.notify());
   await expect(entry.getByLabel("안 읽은 알림 7개")).toBeVisible();
 
@@ -353,7 +342,6 @@ for (const width of [1440, 1024]) {
       while (!/auto|scroll/.test(getComputedStyle(scroller).overflowY))
         scroller = scroller.parentElement!;
       return {
-        // 클래식 막대(15px)는 `scrollbar-gutter: stable` 로 자리를 잡고, 오버레이 막대는 0 이다.
         gutter: scroller.offsetWidth - scroller.clientWidth,
         dialogLeft: Math.round(box.left),
         dialogRight: Math.round(box.right),
@@ -378,8 +366,7 @@ for (const width of [1440, 1024]) {
     const base = geometry.dialogLeft + 24;
     expect(geometry.title).toBe(base);
     expect(geometry.day).toBe(base);
-    // APP-1363 — 카드 바깥 8·12px 이 답답해 24px 로 넓혔다. 행 위아래 14px, 날짜 묶음 사이 20px.
-    // 오른쪽 24px 은 막대 자리 안쪽에서 잰다 — 시험 브라우저는 클래식 막대(15px)라 그만큼 더 들어간다.
+    // 시험 브라우저는 클래식 막대(15px)라 오른쪽 24px 은 막대 자리 안쪽에서 잽니다.
     const right = geometry.dialogRight - geometry.gutter;
     expect(geometry.card).toEqual([base, right - 24]);
     expect(geometry.text).toBe(base + 28);

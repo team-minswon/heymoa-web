@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// 핸드오프 ID 부착·도착을 보려고 SDK를 대역으로 바꾼다. 모듈 상태가 남으므로 파일을 따로 둔다.
 const posthog = vi.hoisted(() => ({
   __loaded: false,
   init: vi.fn(),
@@ -89,7 +88,6 @@ describe("핸드오프로 도착한 브라우저", () => {
       "/auth/login?returnTo=%2F"
     );
     expect(window.location.hash).toBe("#x");
-    // init 뒤에 보낸다 — bootstrap한 ID로 찍힌다
     expect(posthog.init.mock.invocationCallOrder[0]).toBeLessThan(
       posthog.capture.mock.invocationCallOrder[0]
     );

@@ -13,11 +13,8 @@ import terms20261023 from "@/content/legal/terms/2026-10-23.json";
 
 export type LegalDoc = "privacy" | "terms";
 
-/** 처리방침 위탁 사업자 카드(라벨·값 줄). */
 export type LegalProcessor = { vendor: string; role: string; rows: readonly (readonly string[])[] };
-/** 표(첫 줄이 머리). */
 export type LegalTable = { columns: readonly string[]; rows: readonly (readonly string[])[] };
-/** 조항 본문 한 덩이: 문단, 사업자 카드, 표. */
 export type LegalBlock = string | LegalProcessor | LegalTable;
 export type LegalText = {
   title: string;
@@ -25,14 +22,6 @@ export type LegalText = {
   sections: readonly { title: string; body: readonly LegalBlock[] }[];
 };
 
-/**
- * 이전 판 원문(한국어만). 키는 그 판의 시행일이고, server 동의 버전(`ConsentProperties`)과 같은 날짜 문자열이다.
- * 주소는 `/privacy/<키>`·`/terms/<키>` 로 고정이다 — 키를 바꾸지 않는다.
- *
- * 2026-06-18 판은 넣지 않았다: 이름을 HeyMoa 로 바꾸기 전(진짜그림) 서비스의 문서다. 07-17 이후 판은 git 에서 그 시행일이
- * 화면에 걸려 있던 마지막 커밋의 문장을 그대로 옮겼다(APP-1385). 새 판을 시행하면 그때까지의 본문(`messages/ko/legal.json`)을
- * 여기 한 파일로 얼려 넣는다.
- */
 export const LEGAL_ARCHIVE = {
   privacy: {
     "2026-07-17": privacy20260717,
@@ -52,7 +41,6 @@ export const LEGAL_ARCHIVE = {
   },
 } as const;
 
-/** 오래된 판부터. */
 export const archivedVersions = (doc: LegalDoc): string[] =>
   Object.keys(LEGAL_ARCHIVE[doc]).sort();
 
@@ -62,10 +50,6 @@ export const archivedDocument = (doc: LegalDoc, version: string): LegalText | un
 const dayBefore = (iso: string) =>
   new Date(Date.parse(iso) - 86_400_000).toISOString().slice(0, 10);
 
-/**
- * 이전 판마다 적용 기간. 다음 판 시행 전날까지이고, 가장 최근 판은 지금 판 시행 전날까지다(지금 판 시행일이 미정이면 끝이 없다).
- * 최근 판이 먼저 온다.
- */
 export function versionPeriods(doc: LegalDoc, currentEffective: string | null) {
   const versions = archivedVersions(doc);
   return versions

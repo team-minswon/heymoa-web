@@ -6,13 +6,8 @@ import { useTranslations } from "next-intl";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { cn } from "@/lib/utils";
 
-/** 상단바(97)를 지나 이 높이 위로 올라간 마지막 섹션이 "지금 읽는 곳"이다. */
 const SPY_OFFSET = 120;
 
-/**
- * "이 페이지" 목차. 스크롤하면 지금 읽는 섹션이 진하게 + 왼쪽 막대로 바뀐다(scroll-spy). 서버가 그린 HTML 과 같아야
- * 해서 첫 렌더에는 아무것도 활성이 아니고, 스크롤 위치는 마운트한 뒤에만 읽는다.
- */
 export function HelpPageToc({
   sections,
   label,
@@ -21,7 +16,6 @@ export function HelpPageToc({
 }: {
   sections: readonly { id: string; title: string }[];
   label?: string;
-  /** 접이식(`<details>`) 안에서는 요약이 이름표라 이 글자를 숨긴다. */
   hideLabel?: boolean;
   className?: string;
 }) {
@@ -30,7 +24,6 @@ export function HelpPageToc({
   const listRef = useRef<HTMLOListElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
 
-  // 활성 막대는 항목마다 켜고 끄지 않고 하나가 항목 사이를 미끄러진다. 숨어 있다가 처음 서는 자리는 미끄러지지 않고 바로 놓는다.
   useEffect(() => {
     const list = listRef.current;
     const bar = barRef.current;

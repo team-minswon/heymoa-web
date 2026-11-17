@@ -75,34 +75,20 @@ import { useReadNotification } from "@/lib/notification/use-notification-read";
 import { cn } from "@/lib/utils";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
-/** 목록 칸의 스크롤을 옮긴다. 렌더 밖(이벤트·ref 콜백)에서만 부른다. */
 function scrollListTo(node: HTMLElement | null, top: number) {
   if (node) node.scrollTop = top;
 }
 
-/**
- * 노트 패널과 같은 밑줄 탭. 버튼은 글자 높이(28px)로 줄 가운데에 두고, 밑줄만 7px 내려 탭 줄의 hairline 위에 앉힌다.
- * 포커스는 키보드일 때만 글자를 감싸는 1px 링 — primitive 의 3px 링은 이 작은 글자 탭에 너무 두껍다.
- */
 const TAB_ITEM =
   "-mx-1.5 h-7 flex-none px-1.5 text-[13px] group-data-horizontal/tabs:after:inset-x-1.5 group-data-horizontal/tabs:after:bottom-[-7px] focus-visible:border-transparent focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none";
 
-/** 탭 줄 오른쪽의 보조 동작. 둘 다 같은 옅은 글자색이고 hover 에서 먹색이 된다. */
 const ACTION =
   "h-7 px-2 text-xs font-normal text-[var(--el-body)] hover:text-[var(--el-ink)]";
 
 const TABS: readonly NotificationFilter[] = ["ALL", "UNREAD", "ACTION_REQUIRED"];
 
-/** 무한 목록은 모달이 닫혀도 오래 남긴다 — 다시 열 때 불러온 쪽을 그대로 보여 준다. */
 const LIST_GC_MS = 30 * 60_000;
 
-/**
- * 알림 모달(PRO-67 I09). 모든 워크스페이스의 알림을 서버 필터 탭 셋으로 본다.
- *
- * - 목록은 **열려 있을 때만** 읽는다. 쪽은 커서 「더 보기」로 붙이고, 닫았다 열면 불러온 쪽·탭·스크롤을 그대로 둔다.
- * - 읽는 도중 도착한 알림은 끼워 넣지 않고 「새 알림 N개」로만 알린다(첫 쪽을 따로 다시 읽어 센다).
- * - 「모두 읽음」은 첫 쪽 응답의 서버 시각(`upTo`)까지만 읽는다 — 그 뒤 도착한 알림은 안 읽음으로 남는다.
- */
 export function NotificationModal({
   open,
   filter,
@@ -114,17 +100,12 @@ export function NotificationModal({
   onNavigate,
 }: {
   open: boolean;
-  /** 보이는 탭. 주소가 정한다(`notification-url`) */
   filter: NotificationFilter;
-  /** 탭을 바꾼다 — 방문 기록을 한 칸 쌓는다 */
   onFilterChange: (filter: NotificationFilter) => void;
-  /** 닫는다. 쌓은 기록을 걷은 뒤 `then` 을 한다(이동) */
   onClose: (then?: () => void) => void;
   workspaceId: string;
   unreadCount: number | undefined;
-  /** 설정을 알림 위에 얹어 연다 — 알림은 주소에 남아 뒤로 가기로 돌아온다(`notification-url`) */
   onOpenSettings: (section: SettingsSection) => void;
-  /** 다른 화면으로 간다(검토할 결과 준비 행) */
   onNavigate: (href: string) => void;
 }) {
   const t = useTranslations("notification.modal");
@@ -135,7 +116,6 @@ export function NotificationModal({
   const setFilter = (next: NotificationFilter) => {
     if (next !== filter) onFilterChange(next);
   };
-  // 탭이 바뀌면(누르기·뒤로 가기 모두) 목록 맨 위에서 시작한다.
   const shownFilterRef = useRef(filter);
   useEffect(() => {
     if (shownFilterRef.current === filter) return;
@@ -144,7 +124,6 @@ export function NotificationModal({
     scrollListTo(viewportRef.current, 0);
   }, [filter]);
   const popupRef = useRef<HTMLDivElement | null>(null);
-  /** 모달이 열려 목록 칸이 붙는 순간 마지막 스크롤 자리로 — 불러온 쪽은 캐시에 있어 이미 그려져 있다. */
   const attachViewport = useCallback((node: HTMLDivElement | null) => {
     viewportRef.current = node;
     if (node) node.scrollTop = notificationModalMemory.scrollTop;
@@ -154,7 +133,6 @@ export function NotificationModal({
     queryKey: notificationListKey(filter),
     queryFn: async ({ pageParam, signal }) => {
       const page = await fetchNotificationPage(filter, pageParam, signal);
-      // 첫 쪽은 「새 알림」 셈의 출발점이다 — 같은 응답으로 채워 두어 열자마자 같은 쪽을 두 번 읽지 않는다.
       if (!pageParam.afterNotificationId)
         queryClient.setQueryData(notificationHeadKey(filter), page);
       return page;
@@ -162,7 +140,6 @@ export function NotificationModal({
     initialPageParam: {} as NotificationCursor,
     getNextPageParam: nextCursor,
     enabled: open,
-    // 다시 열 때 불러온 쪽을 차례로 다시 읽지 않는다. 새 알림은 아래 첫 쪽 조회가 센다.
     staleTime: Infinity,
     gcTime: LIST_GC_MS,
   });
@@ -208,7 +185,6 @@ export function NotificationModal({
       { data: { upTo } },
       {
         onSuccess: () => {
-          // 보이는 행이 함께 읽음으로 바뀐다(점이 동시에 빠진다). 기준 시각 뒤에 온 것은 그대로 둔다.
           markReadInCache(
             queryClient,
             (item) => item.createdAt <= upTo,
@@ -226,7 +202,6 @@ export function NotificationModal({
     null
   );
   const [now] = useState(() => Date.now());
-  // 내 워크스페이스 목록 — 사이드바가 이미 읽어 캐시에 있다. 없는 워크스페이스의 알림은 이동을 막는다(권한 없음).
   const workspacesQuery = useGetWorkspaces({ query: { enabled: open } });
   const myWorkspaceIds =
     workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
@@ -237,7 +212,6 @@ export function NotificationModal({
         )
       : null;
 
-  /** 초대를 처리한 결과를 행에 바로 적는다. 목록을 다시 읽지 않는다. */
   const settleInvitation = (
     target: NotificationItem,
     status: "ACCEPTED" | "DECLINED"
@@ -249,7 +223,6 @@ export function NotificationModal({
     );
     if (target.readAt === null) readNotification(target.notificationId);
   };
-  /** 이미 처리됐거나 만료된 초대다(409) — 서버 문구는 전역 토스트가 띄우고, 목록을 새 상태로 다시 읽는다. */
   const onInvitationError = (error: unknown) => {
     const code = errorCodeOf(error);
     if (code === "INVITATION_NOT_PENDING" || code === "INVITATION_EXPIRED") {
@@ -261,7 +234,6 @@ export function NotificationModal({
   const invitationActions: RowActions = {
     pending: accept.isPending || decline.isPending,
     openNote: (targetWorkspaceId, noteId) => {
-      // 모달 쿼리를 걷은 뒤에 간다 — 노트에서 뒤로 가기가 모달이 열린 칸으로 돌아오지 않게.
       close(() =>
         onNavigate(
           `/w/${targetWorkspaceId}/notes/${noteId}?view=full&tab=summary&source=notification`
@@ -270,7 +242,6 @@ export function NotificationModal({
     },
     openInquiry: (target, feedbackId) => {
       if (target.readAt === null) readNotification(target.notificationId);
-      // 지금 워크스페이스에서 사이드바가 「내 문의」를 연다(`?inquiry=`).
       close(() =>
         onNavigate(
           `/w/${workspaceId}?${INQUIRY_PARAM}=${encodeURIComponent(feedbackId)}`
@@ -290,7 +261,6 @@ export function NotificationModal({
         {
           onSuccess: () => {
             settleInvitation(target, "ACCEPTED");
-            // 합류한 워크스페이스가 사이드바 목록에 생긴다.
             void queryClient.invalidateQueries({
               queryKey: getGetWorkspacesQueryKey(),
             });
@@ -298,13 +268,11 @@ export function NotificationModal({
           onError: onInvitationError,
         }
       ),
-    // 거절은 되돌릴 수 없어 확인 창을 거친다.
     decline: (target) => setDeclineTarget(target),
   };
 
   const showNew = () => {
     scrollListTo(viewportRef.current, 0);
-    // 첫 쪽부터 다시 — 불러온 쪽을 차례로 다시 읽지 않는다.
     void queryClient.resetQueries({
       queryKey: notificationListKey(filter),
       exact: true,
@@ -350,17 +318,11 @@ export function NotificationModal({
   return (
     <>
       <Dialog open={open} onOpenChange={(next) => !next && close()}>
-        {/*
-          크기는 내용과 상관없이 고정이다 — 탭을 바꾸거나 로딩·빈 상태가 되어도 창이 줄었다 늘었다 하지 않고, 목록 칸만
-          스크롤한다. 왼쪽 기준선은 24px(제목·탭·날짜 머리글·카드 테두리)이고 행의 글은 카드 안 52px 이다. 안 읽음 점은 그 사이 칸에 매달린다.
-          열 때 포커스는 창 자체에 둔다 — 첫 탭에 두면 열자마자 포커스 링이 뜬다. Tab 으로 탭부터 차례로 간다.
-        */}
         <DialogContent
           ref={popupRef}
           initialFocus={popupRef}
           className="flex h-[min(600px,calc(100dvh-4rem))] flex-col gap-0 overflow-hidden bg-[var(--el-canvas)] p-0 outline-none sm:max-w-[540px] [&>[data-slot=dialog-close]]:top-5 [&>[data-slot=dialog-close]]:right-[18px]"
         >
-          {/* 머리(제목·탭·동작)는 흰 면, 목록은 회색 캔버스 위의 흰 카드 — 두 층이 한눈에 갈린다(APP-1361). */}
           <div className="bg-[var(--el-surface-card)]">
             <DialogHeader className="gap-1 px-6 pt-5 pb-1">
               <DialogTitle className="leading-7">{t("title")}</DialogTitle>
@@ -387,7 +349,6 @@ export function NotificationModal({
                 </TabsList>
               </Tabs>
               <span className="flex-1" />
-              {/* 같은 위계의 보조 동작 둘 — 같은 ghost 모양, 글 끝이 카드 오른쪽 끝(24px)과 맞게 마지막을 당긴다. */}
               <div className="-mr-2 flex h-10 items-center gap-0.5">
                 <Button
                   variant="ghost"
@@ -411,12 +372,6 @@ export function NotificationModal({
             </div>
           </div>
 
-          {/*
-            목록 칸은 네이티브 스크롤이다(APP-1363) — 설정·가이드 창과 같은 막대. base-ui ScrollArea 의 막대는 칸 위에 그려진
-            절대 위치 요소라 sticky 날짜 머리글(z-10)이 그 위를 덮어 막대가 날짜마다 토막났고, 폭(10px)이 카드 여백(8px)보다 커
-            카드 테두리를 덮었다. 네이티브 막대는 늘 내용 위에 그려진다. 클래식 막대(15px)는 자리를 예약하고(`stable`), 오버레이
-            막대는 카드 오른쪽 여백(24px) 안에서 뜬다. 안쪽 칸이 높이를 채워 빈 상태·오류를 가운데에 둔다.
-          */}
           <div
             ref={attachViewport}
             data-slot="notification-list"
@@ -535,11 +490,6 @@ export function NotificationModal({
   );
 }
 
-/**
- * 목록 칸의 틀. 카드 테두리가 모달 제목·날짜 머리글과 같은 24px 선에 서고(오른쪽 24px 은 오버레이 스크롤 막대 자리도 겸한다),
- * 카드 안 행의 글은 그 안쪽 15px + 테두리 1px = 40px 선이다. 날짜 묶음 사이는 머리글 위 20px(APP-1363 — 16px·8px 여백이 답답했다).
- * 날짜 머리글은 스크롤해도 칸 위에 붙는 캔버스색 띠다(뒤로 지나가는 카드를 가린다).
- */
 const LIST = "flex flex-col px-6 pb-6";
 const CARD =
   "divide-y divide-[var(--el-hairline)] overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-surface-card)]";
@@ -606,7 +556,6 @@ function NotificationListBody({
       </div>
     );
   }
-  // 전체 탭은 날짜로 묶는다 — 묶음마다 흰 카드 하나, 머리글은 스크롤해도 위에 붙는다. 다른 탭은 카드 하나에 행마다 날짜를 붙인다.
   const grouped = filter === "ALL";
   const groups: { day: string | null; items: NotificationItem[] }[] = [];
   for (const item of items) {

@@ -1,16 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { openGuide, settled } from "./helpers-ui";
 
-/**
- * **탭·단계·로딩을 오가도 그릇의 크기와 탭 줄 자리가 그대로인가(APP-1356).**
- *
- * 전수조사에서 어긋났던 곳마다 대표 전환 하나씩을 잰다. jsdom 은 레이아웃을 계산하지 않아 vitest 로는 못 잰다.
- * 같은 묶음의 다른 검사 — 문의·피드백 탭(`feedback-dialog-geometry`), 데스크톱 앱 안내 단계(`download`),
- * 스켈레톤 → 도착(`skeleton-geometry`) — 는 그 파일들에 있다.
- *
- * 절대 크기는 못박지 않는다. 문구가 바뀌면 값이 바뀌는 것이 정상이고, 재는 것은 **전환 전후의 차이**다.
- */
-
 const WS = "01K0000000000";
 const NOTE = `/w/${WS}/notes/01K0000000920`;
 
@@ -59,7 +49,6 @@ for (const width of [1440, 1024]) {
         await expect(
           nav.getByRole("button", { name, exact: true })
         ).toHaveAttribute("aria-current", "page");
-        // skeleton 이 걷힌 뒤에 잰다 — 도착 전후의 차이는 `skeleton-geometry` 몫이다
         await expect(
           page.getByTestId("settings-panel").locator("[data-slot=skeleton]")
         ).toHaveCount(0, { timeout: 15_000 });
@@ -135,7 +124,7 @@ for (const width of [1440, 1024]) {
     }) => {
       await page.goto("/help/start/desktop");
       const tabs = page.locator("[data-help-main] [role=tablist]").first();
-      await expect(tabs).toBeVisible(); // 하이드레이션 뒤에만 선다
+      await expect(tabs).toBeVisible();
       const box = tabs.locator("..");
       const sizes = [];
       for (const tab of await tabs.getByRole("tab").all()) {
@@ -164,7 +153,6 @@ for (const width of [1440, 1024]) {
     });
 
     test("노트 상단바 — 노트가 도착해도 탭 줄이 제자리다", async ({ page }) => {
-      // 목이 즉답이라 불러오는 중을 붙잡아 둔다 — `page.route` 는 서비스 워커 응답을 못 늦춘다(`skeleton-geometry`)
       await page.addInitScript(() => {
         const original = window.fetch.bind(window);
         window.fetch = async (...args: Parameters<typeof fetch>) => {

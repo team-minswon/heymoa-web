@@ -32,10 +32,6 @@ import { hintedInterval } from "@/lib/events/interval";
 import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import type { SpeakerFace } from "@/lib/transcription/speaker-identity";
 
-/**
- * 요약 탭. 흐름 상태 하나가 무엇을 그릴지 정한다 — 지난 노트는 구형 요약을 읽기만 하고,
- * 분석이 도는 동안은 진행을, 검토본이 서면 검토 화면을 그린다.
- */
 export function ReviewTab({
   noteId,
   workspaceId,
@@ -55,10 +51,6 @@ export function ReviewTab({
   active = true,
 }: {
   noteId: string;
-  /**
-   * 요약 탭이 보이는가. 탭을 떠나도 읽던 위치를 지키려고 숨기기만 해서(APP-1660), 보일 때만
-   * 하던 일(다시 읽기 · 알림 읽음 · 열람 집계 · 분석 중 폴링)을 이 값으로 가린다.
-   */
   active?: boolean;
   workspaceId: string | undefined;
   projectId: string | undefined;
@@ -67,12 +59,10 @@ export function ReviewTab({
   participants: (SpeakerFace & { email?: string | null })[];
   currentUserId?: string | null;
   currentUserName?: string | null;
-  /** 「이 회의에 대해 물어보기」 알약이 아래 가운데에 떠 있다 */
   dockRaised?: boolean;
   onEvidenceSelect: (segmentId: string) => void;
   onOpenTranscript: () => void;
   onOpenTimeline?: (agendaId: string | null) => void;
-  /** 종료 전 안내가 종료 확인창을 직접 연다. */
   note?: NoteResponseData | null;
   onEditParticipants?: () => void;
   onMeetingEnded?: () => void;
@@ -85,8 +75,6 @@ export function ReviewTab({
       enabled: isEnded,
       staleTime: 0,
       refetchOnMount: "always",
-      // 끝나는 시각을 모르는 단계만 다시 묻는다. 검토 가능 · 확정은 사람이 움직일 때 다시 읽는다.
-      // 건강한 이벤트 스트림이면 힌트가 다시 읽게 하고 폴링은 안전망만(PRO-67 I03).
       refetchInterval: (query) =>
         active &&
         hintedInterval(
@@ -99,7 +87,6 @@ export function ReviewTab({
     },
   });
 
-  // 검토 가능·확정 결과가 이 화면에 그려지는 동안 그 노트의 「검토할 결과 준비」 알림을 읽는다(PRO-67 I23).
   useRefetchOnReveal(active, [getGetAnalysisFlowQueryKey(noteId)]);
   const shownStatus = okData(flowQuery.data)?.status;
   useReadAnalysisReadyOnView(
@@ -187,7 +174,6 @@ export function ReviewTab({
         />
       ) : null}
       <ReviewBoard
-        // 뒤늦은 관계·담당 도착이나 재분석으로 열어 둔 줄과 편집 초안을 초기화하지 않는다.
         key={noteId}
         noteId={noteId}
         flow={flow}

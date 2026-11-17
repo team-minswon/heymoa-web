@@ -7,7 +7,6 @@ import {
 } from "@/lib/notes/speaker-stats";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
 
-// 시험의 한국어 이름. 화면은 `useSpeakerFallbackNames()` 를 넘긴다
 const names = {
   unnamedParticipant: "이름 없는 참여자",
   speaker: (label: string) => `화자 ${label}`,
@@ -45,16 +44,12 @@ describe("summarizeSpeakers", () => {
       names,
       segments: [segment(1, "A", 1000)],
       speakers: [speaker("A", "p1", "한지원"), speaker("B", "p2", "상어")],
-      // **참여자를 비워 넘긴다.** 이 함수는 발화가 없는 참여자에게도 빈 줄을 만들어 주므로
-      // (참석자 목록이 그 사람을 보여야 한다), 여기서 유도하면 이 테스트의 주제가 흐려진다.
       participants: [],
     });
 
     expect(rows.map((row) => row.key)).toEqual(["p1"]);
   });
 
-  // 한 사람이 라벨 둘을 갖는 일이 실제로 있다(목소리가 갈렸고 사람은 하나다).
-  // 사람 기준으로 묶지 않으면 같은 이름이 두 줄로 나와 합이 안 맞는다.
   it("한 사람이 라벨 둘을 가지면 합쳐서 한 줄이다", () => {
     const rows = summarizeSpeakers({
       names,
@@ -112,7 +107,6 @@ describe("summarizeSpeakers", () => {
     expect(rows[1].share).toBeCloseTo(0.25);
   });
 
-  // 아직 아무도 안 붙인 화자도 줄이 있어야 한다 — 그 줄이 곧 붙이러 가는 자리다.
   it("지정 안 된 화자는 라벨 이름으로 남는다", () => {
     const rows = summarizeSpeakers({
       names,
@@ -127,7 +121,6 @@ describe("summarizeSpeakers", () => {
     });
   });
 
-  // 발화 단위 지정은 더 좁은 범위를 사람이 나중에 고른 것이라 라벨의 지정을 이긴다.
   it("발화 단위 지정이 그 줄의 라벨보다 앞선다", () => {
     const rows = summarizeSpeakers({
       names,
@@ -139,11 +132,6 @@ describe("summarizeSpeakers", () => {
     expect(rows.find((row) => row.key === "p1")?.speakingMs).toBe(1000);
   });
 
-  /**
-   * **색은 그 사람이 「가진」 라벨이 정한다.** 발화 하나만 그 사람에게 돌린 줄은 그 사람이
-   * 라벨을 가진 것이 아니라, 라벨 A 안에 그 사람의 줄이 하나 섞인 것이다 — 그걸 소유로
-   * 세면 패널과 전사가 같은 사람에게 다른 색을 준다.
-   */
   it("발화 하나만 돌린 사람은 그 라벨을 가진 것이 아니다", () => {
     const rows = summarizeSpeakers({
       names,
@@ -153,15 +141,9 @@ describe("summarizeSpeakers", () => {
 
     expect(rows.find((row) => row.key === "p1")?.ownedLabels).toEqual(["A"]);
     expect(rows.find((row) => row.key === "p2")?.ownedLabels).toEqual([]);
-    // 「어느 라벨 안에 있었나」는 그대로 A 다.
     expect(rows.find((row) => row.key === "p2")?.labels).toEqual(["A"]);
   });
 
-  /**
-   * A·B 를 가진 사람의 A 발화를 **전부** 다른 사람에게 개별 지정하면, 발화에서 소유를 세는
-   * 한 그 사람의 줄에는 A 가 한 번도 안 들어온다 — 소유가 [B] 로 줄어 색이 튄다.
-   * 소유는 발화가 아니라 **화자 지정 목록**이 정한다.
-   */
   it("소유는 발화가 아니라 화자 지정이 정한다 — 그 라벨 발화를 다 넘겨도 소유는 남는다", () => {
     const rows = summarizeSpeakers({
       names,
@@ -178,8 +160,6 @@ describe("summarizeSpeakers", () => {
     ]);
   });
 
-  // 기본 정렬은 문자열이라 `["AA","B"]` 를 그대로 둔다 — 라벨 순번은 B 가 먼저다.
-  // 여기서 어긋나면 26명 넘는 회의에서 패널과 전사의 색이 갈린다.
   it("라벨은 순번 순으로 선다 — 글자 순이 아니다", () => {
     const rows = summarizeSpeakers({
       names,
@@ -197,20 +177,17 @@ describe("summarizeSpeakers", () => {
     const rows = summarizeSpeakers({
       names,
       segments: [
-        segment(5, "A", 4000), // 길다
-        segment(1, "A", 400), // 맞장구
-        segment(3, "A", 3000), // 길다
+        segment(5, "A", 4000),
+        segment(1, "A", 400),
+        segment(3, "A", 3000),
       ],
       speakers: [speaker("A", null, null)],
     });
 
-    // 도착 순서가 아니라 시간순이고, 1.5초 미만인 s1 은 빠진다.
     const ids = (list: { segmentId: string }[]) =>
       list.map((item) => item.segmentId);
     expect(ids(rows[0].stepTargets)).toEqual(["s3", "s5"]);
-    // 띠와 띠 클릭은 맞장구까지 전부다.
     expect(ids(rows[0].utterances)).toEqual(["s1", "s3", "s5"]);
-    // 첫 발화(맞장구 포함)는 그대로다.
     expect(rows[0].firstSegmentId).toBe("s1");
   });
 
@@ -235,8 +212,6 @@ describe("summarizeSpeakers", () => {
     });
 
     expect(rows[0].firstSegmentId).toBe("s2");
-    // 시각은 그 발화의 것이다 — 타임라인 칸에서 되짚으면 칸 하나만큼(회의 63분이면 79초)
-    // 틀린 시각을 읽어 준다.
     expect(rows[0].firstStartedAtMs).toBe(200_000);
   });
 
@@ -246,8 +221,6 @@ describe("summarizeSpeakers", () => {
     );
   });
 
-  // 회의에 앉아 있었지만 한 마디도 안 한 사람이 있다. 말한 사람만 세면 그 사람은
-  // 목록에서 사라지고, 「내가 왜 없지」가 아니라 「이 회의에 없던 사람」으로 읽힌다.
   it("참여자인데 한 마디도 안 했으면 0으로 맨 뒤에 선다", () => {
     const rows = summarizeSpeakers({
       names,
@@ -287,8 +260,6 @@ describe("summarizeSpeakers", () => {
     expect(rows.map((row) => row.name)).toEqual(["김민수", "한지원"]);
   });
 
-  // 「누가 얼마나」만으로는 붙일 사람을 못 고른다. 앞 15분만 말하고 사라진 사람과 내내
-  // 고르게 말한 사람은 비중이 같아도 다른 사람이고, 그 차이가 곧 알아보는 단서다.
   describe("타임라인", () => {
     const at = (
       sequence: number,
@@ -304,7 +275,6 @@ describe("summarizeSpeakers", () => {
       speakerLabel,
     });
 
-    // 칸은 회의 전체를 나눈 것이다 — 자기 발화 구간만 나누면 모든 사람이 꽉 찬 띠가 된다.
     it("회의 전체를 칸으로 나누고 말한 칸만 채운다", () => {
       const rows = summarizeSpeakers({
         names,
@@ -319,7 +289,6 @@ describe("summarizeSpeakers", () => {
       expect(rows.find((row) => row.key === "p2")!.timeline.at(-1)).toBe(1);
     });
 
-    // 실제 회의(약 1시간): 김민수의 58:36 「네.」(1초 남짓)가 띠에서 사라졌다(APP-1429 회귀).
     it("1시간 회의 끝부분의 1초 발화도 띠에 보인다 — 말 없는 칸과 구분된다", () => {
       const rows = summarizeSpeakers({
         names,
@@ -337,7 +306,6 @@ describe("summarizeSpeakers", () => {
         startedAtMs: 3_516_000,
         endedAtMs: 3_517_200,
       });
-      // 이전·다음 버튼만 맞장구를 건너뛴다.
       expect(rows[0].stepTargets.map((item) => item.segmentId)).toEqual(["s1"]);
     });
 
@@ -352,7 +320,6 @@ describe("summarizeSpeakers", () => {
       expect(rows[0].timeline.at(-1)).toBe(TIMELINE_MIN_VISIBLE);
     });
 
-    // 칸보다 긴 발화를 한 칸에 몰면 그 사람만 봉우리 하나로 보인다.
     it("칸을 넘는 발화는 걸친 칸에 나눠 담는다", () => {
       const rows = summarizeSpeakers({
         names,
@@ -363,8 +330,6 @@ describe("summarizeSpeakers", () => {
       expect(rows[0].timeline.every((value) => value === 1)).toBe(true);
     });
 
-    // 마지막 발화 뒤에 침묵이 길면 축이 통째로 짧아진다 — 10분 녹음에서 앞 1분만 말한
-    // 사람의 띠가 48칸을 꽉 채워, 머리글의 「회의 10분」과 다른 회의를 그린다.
     it("축은 녹음 길이다 — 마지막 발화 뒤의 침묵도 회의다", () => {
       const rows = summarizeSpeakers({
         names,
@@ -394,7 +359,6 @@ describe("summarizeSpeakers", () => {
     });
   });
 
-  // 이름의 원본은 참여자 목록이다 — 화자에 실린 이름은 지정 당시의 사본이라 개명하면 낡는다.
   it("이름은 참여자 목록을 따른다", () => {
     const rows = summarizeSpeakers({
       names,

@@ -12,26 +12,15 @@ export type TranscriptGap = {
   reason?: string | null;
 };
 
-/** 소리는 저장됐는데 받아쓰지 못한 구간. 종류(TRIM·NOT_SENT·UNANSWERED)는 화면에서 하나다(D-07). */
 export type UntranscribedGap = TranscriptResponseDataTranscriptGapsItem;
 
-/**
- * 화면에 그리는 공백. **세 종류를 두 부류로 접는다** — `PAUSE`/`CAPTURE`/`UPLOAD` 는
- * 내부 구현이고, 사용자가 알아야 하는 것은 「내가 멈췄나」 하나다. 사고끼리는 할 일이
- * 같아서(자리를 옮기거나 화면을 켜 둔다) 나눌 이유가 없다.
- *
- * `UNTRANSCRIBED` 는 소리 공백과 따로 온다. 소리는 있으니 사용자가 할 일이 다르다.
- */
 export type GapRow = {
   gapId: string;
   kind: "PAUSE" | "LOST" | "UNTRANSCRIBED";
-  /** 회의 축. `PAUSE` 는 점이라 둘이 같다. */
   startedAtMs: number;
   endedAtMs: number;
-  /** 벽시계. `UNTRANSCRIBED` 는 회의 축으로만 와서 둘 다 null 이다. */
   startedAt: string | null;
   endedAt: string | null;
-  /** 화면에 쓸 길이. `PAUSE` 는 벽시계에서, 나머지는 회의 축에서 온다. */
   durationMs: number;
 };
 
@@ -40,12 +29,10 @@ function wallClockMs(startedAt: string, endedAt: string | null) {
   return Math.max(0, Date.parse(endedAt) - Date.parse(startedAt));
 }
 
-/** 아직 안 끝난 구간. 끝 좌표는 지금까지 확인된 끝이다. */
 export function isGapOpen(row: GapRow) {
   return row.kind !== "UNTRANSCRIBED" && row.endedAt === null;
 }
 
-/** 두 끝이 같은 분으로 반올림되면 절대 시각 줄을 숨긴다. */
 export function spansVisibleClockMinutes(row: GapRow) {
   if (!row.startedAt || !row.endedAt) return false;
   return (
@@ -54,12 +41,6 @@ export function spansVisibleClockMinutes(row: GapRow) {
   );
 }
 
-/**
- * 겹친 사고 공백을 행 하나로 합친다.
- *
- * `gaps` 는 겹친다 — 캡처가 끊기면 업로드도 끊긴다. 겹친 것마다 행을 만들면 같은 20분에
- * 세 줄이 쌓여 **회의록이 장애 로그처럼 보인다.** `PAUSE` 는 점이라 절대 안 합쳐진다.
- */
 export function toGapRows(
   gaps: TranscriptGap[],
   untranscribed: UntranscribedGap[] = []
@@ -77,7 +58,6 @@ export function toGapRows(
         endedAtMs: gap.endedAtMs,
         startedAt: gap.startedAt,
         endedAt,
-        // 일시정지는 회의 축에서 빠지므로 축의 차가 항상 0이다. 길이는 벽시계에서만 나온다.
         durationMs: wallClockMs(gap.startedAt, endedAt),
       });
       continue;
@@ -91,7 +71,6 @@ export function toGapRows(
     ) {
       previous.endedAtMs = Math.max(previous.endedAtMs, gap.endedAtMs);
       previous.durationMs = previous.endedAtMs - previous.startedAtMs;
-      // 진행 중(null)이 하나라도 있으면 합친 행도 진행 중이다.
       previous.endedAt = previous.endedAt && endedAt ? endedAt : null;
       continue;
     }
@@ -126,12 +105,10 @@ export function toGapRows(
   return rows.sort((a, b) => a.startedAtMs - b.startedAtMs);
 }
 
-/** server 가 1초 미만을 이미 뺀다. 소리 공백에 가려 남은 조각에도 같은 선을 긋는다. */
 const MIN_UNTRANSCRIBED_MS = 1_000;
 
 type Span = { gapId: string; startedAtMs: number; endedAtMs: number };
 
-/** 종류끼리 겹칠 수 있다(D-15). 겹치거나 맞닿으면 하나로 합친다. */
 function mergeSpans(gaps: UntranscribedGap[]): Span[] {
   const spans: Span[] = [];
   const ordered = [...gaps].sort((a, b) => a.startedAtMs - b.startedAtMs);
@@ -146,7 +123,6 @@ function mergeSpans(gaps: UntranscribedGap[]): Span[] {
   return spans;
 }
 
-/** 소리가 없던 구간은 받아쓸 것도 없었다. 소리 공백 줄이 그 자리를 말한다. */
 function subtractSpans(span: Span, lost: GapRow[]): [number, number][] {
   let pieces: [number, number][] = [[span.startedAtMs, span.endedAtMs]];
   for (const { startedAtMs, endedAtMs } of lost) {
@@ -161,22 +137,10 @@ function subtractSpans(span: Span, lost: GapRow[]): [number, number][] {
   return pieces;
 }
 
-/**
- * **대충 말한다.** 단위 하나만, 반올림해서, 「약」을 붙인다.
- *
- * 정확한 값이 필요한 자리가 아니다 — 「9분 48초」의 48초로 하는 일이 없고, 일시정지는 정확한
- * 두 끝을 아랫줄(`10:00에 멈추고 …`)이 이미 말한다. 여기가 답하는 질문은 **「많이 비었나」**
- * 하나다.
- *
- * 큰 단위까지 올라가는 것은 안 접는다. 분에서 멈추면 두 시간 반이 `150분`, 이틀 반이
- * `3600분` 으로 나와 읽는 사람이 60 으로 두 번 나눠야 한다.
- */
 export function gapDurationOf(milliseconds: number): GapDuration {
   const seconds = Math.max(0, Math.round(milliseconds / 1000));
-  // 1분 미만에 「약 40초」라고 쓰면 안 대충이다. 이 구간은 길이가 뜻을 안 바꾼다.
   if (seconds < 60) return { unit: "brief", value: 0 };
 
-  // 반올림한 뒤에 칸을 다시 고른다. 그래야 59분 40초가 「약 60분」이 아니라 「약 1시간」이다.
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return { unit: "minutes", value: minutes };
 
@@ -186,30 +150,20 @@ export function gapDurationOf(milliseconds: number): GapDuration {
   return { unit: "days", value: Math.round(hours / 24) };
 }
 
-/** 단위 하나와 그 값. 화면 문구는 `notes.transcript.gap.duration` 이 만든다. */
 export type GapDuration = {
   unit: "brief" | "minutes" | "hours" | "days";
   value: number;
 };
 
-/** 화면 언어의 길이(「약 10분」·「for about 10 minutes」). 복사본·회의록이 쓴다 — 화면과 같은 키(`notes.transcript.gap.duration`)다. */
 export function formatGapDuration(milliseconds: number, t: AppT) {
   return t("notes.transcript.gap.duration", gapDurationOf(milliseconds));
 }
 
-/** 두 끝이 (앱 시간대에서) 다른 날이면 시:분만으로는 거꾸로 읽힌다. */
 export function spansCalendarDays(row: GapRow) {
   if (!row.startedAt || !row.endedAt) return false;
   return getAppDateKey(row.startedAt) !== getAppDateKey(row.endedAt);
 }
 
-/**
- * 빈 구간 한 줄. 복사본·회의록이 쓴다. **화면(`notes.transcript.gap`)과 같은 키를 읽는다** — 회의록을 붙여넣은 사람과
- * 화면을 보는 사람이 같은 10분을 다르게 읽으면 안 된다.
- *
- * 진행 중(`endedAt === null`)이면 길이를 말하지 않는다. 아직 안 끝난 구간이라 「약 3분」이
- * 곧 거짓이 된다.
- */
 export function gapHeadline(row: GapRow, t: AppT) {
   const duration = isGapOpen(row) ? null : formatGapDuration(row.durationMs, t);
   if (row.kind === "PAUSE") {

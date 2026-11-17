@@ -11,20 +11,11 @@ import { restHandlers } from "@/lib/mocks/rest-handlers";
 
 const server = setupServer(...restHandlers, ...chatSseHandlers);
 
-/**
- * **여기서 재는 것은 순서와 내용이지 시간이 아니다.** 데모 속도(생각 0.7초 · 도구 1.6초)
- * 그대로 돌리면 스트림 하나가 몇 초씩 걸려 스위트가 타임아웃으로 죽는다.
- */
 beforeAll(() => setStreamSpeedForTests(200));
 afterAll(() => setStreamSpeedForTests(1));
 
-/** Redis Stream entry id 꼴. 숫자가 아니라 **문자열**이고 크기 비교하지 않는다. */
 const ENTRY_ID = /^\d+-\d+$/;
 
-/**
- * 프레임을 읽는다. **`data:`는 payload 하나뿐이고 커서는 `id:` 줄에만 있다** —
- * 모든 프레임이 그 줄을 갖는다.
- */
 function readEventsFromText(text: string) {
   return text
     .split("\n\n")
@@ -64,7 +55,6 @@ function send(chatId: string, message: string) {
   });
 }
 
-/** `POST` 가 준 `202 {turnId}`. 프레임은 이 뒤 `GET …/turns/{turnId}/events` 로 온다. */
 async function sendAndAccept(chatId: string, message: string) {
   const response = await send(chatId, message);
   expect(response.status).toBe(202);
@@ -78,7 +68,6 @@ function events(chatId: string, turnId: string, after?: string) {
   return fetch(after === undefined ? url : `${url}?after=${after}`);
 }
 
-/** 보내고 그 턴의 스트림을 끝까지 읽는다. */
 async function sendAndRead(chatId: string, message: string) {
   const turnId = await sendAndAccept(chatId, message);
   return { turnId, events: await readEvents(await events(chatId, turnId)) };
@@ -91,12 +80,6 @@ function resolve(chatId: string, approvalId: string, decision: string) {
   });
 }
 
-/**
- * 승인 한 흐름을 **한 스트림에서 두 번** 읽는다. 첫 연결은 `tool_approval_request`에서
- * 닫히고, 승인 `202` 뒤 그 카드의 id 를 `after` 에 넣어 다시 붙으면 나머지 절반이 온다.
- *
- * 승인 id를 바깥에서 추측하지 않는다 — 턴마다 달라지므로 스트림이 유일한 출처다.
- */
 async function streamAndDecide(
   chatId: string,
   message: string,
@@ -112,7 +95,6 @@ async function streamAndDecide(
   return { turnId, first, second, events: [...first, ...second] };
 }
 
-/** 조건이 참이 될 때까지. 턴이 응답과 무관하게 도는지를 보려면 기다릴 수밖에 없다. */
 async function until(predicate: () => boolean, timeoutMs = 5_000) {
   const deadline = Date.now() + timeoutMs;
   while (!predicate()) {
@@ -121,14 +103,7 @@ async function until(predicate: () => boolean, timeoutMs = 5_000) {
   }
 }
 
-/**
- * 스트림을 읽다가 원하는 이벤트가 보이면 멈춘다. 턴이 그 자리에 살아 있는 동안 다른
- * 요청을 걸어 보기 위한 것이다.
- *
- * **`reader.cancel()`을 await하지 않는다.** msw/node에서는 끝이 없는 스트림의 cancel이
- * 영영 resolve하지 않는다(브라우저에서는 아니다). 여기서 재는 것은 「연결을 끊었을 때
- * 턴이 어떻게 되나」이지 cancel의 반환값이 아니다.
- */
+/** `reader.cancel()` 을 await 하지 않습니다. msw/node 에서는 끝없는 스트림의 cancel 이 resolve 되지 않습니다. */
 async function readUntil(response: Response, event: string) {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
@@ -146,7 +121,6 @@ function setup() {
   afterEach(() => {
     server.resetHandlers();
     mockDb.reset();
-    // 목 DB는 리셋하면 같은 chatId를 다시 발급한다 — 스트림 상태도 같이 비워야 한다.
     resetChatStreamsForTests();
   });
   afterAll(() => server.close());
@@ -163,8 +137,6 @@ describe("chat SSE handlers", () => {
     expect(response.headers.get("content-type")).toBe("text/event-stream");
     const names = (await readEvents(response)).map((event) => event.event);
 
-    // **한 턴이 지나는 길을 그대로 흘린다.** 생각 → 도구 → 답. `turn_started` 는 없다 —
-    // turnId 는 202 본문이 줬다.
     expect(names.filter((name) => name !== "token")).toEqual([
       "message_start",
       "thinking_delta",
@@ -186,7 +158,6 @@ describe("chat SSE handlers", () => {
     }
     expect(new Set(frames.map((event) => event.id)).size).toBe(frames.length);
     expect(frames.find((event) => event.event === "token")!.data.delta).toBeTruthy();
-    // 「찾은 곳」 줄은 스트림이 끝날 때 이미 있어야 한다.
     expect((frames.at(-1)!.data as { refs?: unknown[] }).refs).toHaveLength(1);
   });
 
@@ -222,7 +193,6 @@ describe("chat SSE handlers", () => {
     expect(state.data.activeTurn.status).toBe("IN_PROGRESS");
     expect(state.data.cursor).toBeNull();
 
-    // 끝나지 않는 스트림이라 본문을 읽지 않는다 — 읽으면 이 테스트가 안 끝난다.
     const response = await events(chatId, turnId);
     expect(response.status).toBe(200);
     void response.body!.cancel();
@@ -286,7 +256,6 @@ describe("stream is teed into history", () => {
   it("★ 중지는 부분 답을 저장한다 — 끊긴 문장이 히스토리에 남는다", async () => {
     const chatId = newChat();
     const turnId = await sendAndAccept(chatId, "요약해줘");
-    // 토큰이 몇 개 흐를 때까지 붙어 있다가 중지한다.
     const { text, drop } = await readUntil(await events(chatId, turnId), "token");
     drop();
     const flowed = readEventsFromText(text).filter((event) => event.event === "token");
@@ -299,7 +268,6 @@ describe("stream is teed into history", () => {
       .find((message) => message.role === "ASSISTANT");
     expect(answer?.turnId).toBe(turnId);
     expect(answer?.content.length).toBeGreaterThan(0);
-    // 끝까지 간 답이 아니다 — 흘린 만큼만이다.
     const full = await (
       await fetch(`${base(chatId)}/messages`)
     ).json();
@@ -362,9 +330,7 @@ describe("write tool approval actually pauses the stream", () => {
 
     expect(first.at(-1)!.event).toBe("tool_approval_request");
     expect(second[0].event).toBe("tool_approval_resolved");
-    // 재개는 카드 **뒤**부터다 — 카드까지 다시 보내면 화면이 승인 대기로 되돌아간다.
     expect(second.map((event) => event.event)).not.toContain("tool_approval_request");
-    // **`tool_call_start`가 없다** (계약). 결과는 승인 요청의 이름으로 귀속한다.
     expect(second.map((event) => event.event)).not.toContain("tool_call_start");
     expect(
       mockDb
@@ -372,7 +338,6 @@ describe("write tool approval actually pauses the stream", () => {
         .flatMap((m) => (m.toolEvent ? [m.toolEvent.tool] : []))
     ).toEqual(["linear.create_issue", "linear.create_issue"]);
 
-    // 두 번 누르면 이미 처리된 것이라 404다.
     const approvalId = String(first.at(-1)!.data.approvalId);
     expect((await resolve(chatId, approvalId, "APPROVED")).status).toBe(404);
   });
@@ -386,7 +351,6 @@ describe("write tool approval actually pauses the stream", () => {
     expect(data.cursor).toBe(request.id);
     expect(data.activeTurn.status).toBe("WAITING_APPROVAL");
     expect(data.activeTurn.pendingApproval.approvalId).toBe(request.data.approvalId);
-    // REST 의 카드는 모든 칸을 싣고 없는 것은 null 이다 — SSE 처럼 칸을 빼지 않는다.
     expect(data.activeTurn.pendingApproval.card).toMatchObject({
       title: "Linear 이슈 만들기",
       warning: null,
@@ -437,9 +401,6 @@ describe("input validation matches the contract", () => {
   });
 });
 
-/**
- * ★ 이 구조의 인수 조건. 목이 「턴 = 연결」인 채로 두면 e2e가 아무것도 증명하지 않는다.
- */
 describe("턴은 연결이 아니다", () => {
   setup();
 
@@ -481,10 +442,8 @@ describe("턴은 연결이 아니다", () => {
     const chatId = newChat();
     const turnId = await sendAndAccept(chatId, "요약해줘, 밀리게 해줘");
     const first = await readEvents(await events(chatId, turnId));
-    // 종료 프레임 없이 끊긴다 — 화면은 이것을 재연결 신호로 읽는다.
     expect(first.map((event) => event.event)).not.toContain("message_end");
 
-    // 그 사이 턴은 끝나고 스트림은 TTL 로 사라졌다.
     await until(() =>
       mockDb.getAgentChatMessages(chatId).some((message) => message.role === "ASSISTANT")
     );
@@ -494,8 +453,6 @@ describe("턴은 연결이 아니다", () => {
   });
 
   it("하트비트가 여는 순간 한 번이 아니라 계속 나온다", async () => {
-    // 여는 순간 한 번뿐이면 web의 40초 유휴 타이머가 「연결이 죽었나」를 못 잰다.
-    // **좀비로 잡아 둔다** — 승인 대기는 스트림을 끝내므로 붙잡아 주지 못한다.
     const chatId = newChat();
     const turnId = await sendAndAccept(chatId, "좀비");
     const response = await events(chatId, turnId);
@@ -518,7 +475,6 @@ describe("턴은 대화당 하나다", () => {
 
   it("★ 도는 중에 겹쳐 보내면 409이고 본문에 turnId가 있다", async () => {
     const chatId = newChat();
-    // 승인 대기로 첫 턴을 붙잡아 둔다.
     const { turnId } = await sendAndRead(chatId, "Linear 이슈 만들어줘");
 
     const conflict = await send(chatId, "한 번 더");
@@ -538,11 +494,9 @@ describe("턴은 대화당 하나다", () => {
     });
     expect(cancelled.status).toBe(204);
 
-    // 화면이 멈추는 신호는 204가 아니라 이 프레임이다.
     const resumed = await readEvents(await events(chatId, turnId));
     expect(resumed.at(-1)!.event).toBe("turn_cancelled");
 
-    // 멱등. 답이 막 끝나는 순간의 중지는 경합이지 오류가 아니다.
     expect(
       (await fetch(`${base(chatId)}/turns/${turnId}/cancel`, { method: "POST" })).status
     ).toBe(204);

@@ -89,10 +89,6 @@ describe("WorkspaceSettingsForm", () => {
     toast.success.mockReset();
   });
 
-  /**
-   * 「기본 워크스페이스로 설정」 카드가 여기 있었다. 그 명령이 사라지면서(APP-401) 이 화면은
-   * 이름·설명만 다룬다 — design.pen 설정 > 일반에서도 같은 행을 지웠다.
-   */
   it("기본 워크스페이스 명령을 그리지 않는다", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
@@ -134,7 +130,6 @@ describe("WorkspaceSettingsForm", () => {
       </QueryClientProvider>
     );
 
-  // 워크스페이스 삭제는 관리자 전용이다(PRO-69). 서버도 관리자 여부를 다시 본다.
   it("MEMBER 에게는 워크스페이스 삭제 구역이 없다", () => {
     mutations.role = "MEMBER";
     renderForm();

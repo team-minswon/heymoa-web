@@ -31,7 +31,6 @@ test("one grant approves only one display and one microphone request", (t) => {
   grant.ready(id);
   t.mock.timers.tick(200000);
   assert.equal(grant.alive(frame, origin, origin), true);
-  // 캡처 중에는 끊긴 마이크를 다시 받기 위한 마이크 재요청만 허용한다. 화면과 다른 프레임은 아니다.
   assert.equal(grant.allowPermission(frame, origin, origin, ["audio"]), true);
   assert.equal(grant.allowPermission(frame, origin, origin, ["audio"]), true);
   assert.equal(grant.allowPermission(frame, origin, origin, []), false);

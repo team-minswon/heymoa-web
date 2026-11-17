@@ -14,17 +14,11 @@ import { localePath } from "@/lib/i18n/locales";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-/**
- * `/billing/checkout/{workspaceId}` — 첫 구독의 전용 결제 페이지(APP-1600). 한 열로 요금 확인 → 카드 정보 → 자동 결제 동의 →
- * 「동의하고 결제하기」. 이 면(`app/(card-entry)`)에는 분석 스크립트가 없고 `proxy.ts` 가 CSP 를 건다. 요금제 탭에서 문서를
- * 새로 열어 오고, 돌아가기도 일반 링크로 문서를 새로 연다 — 카드 정보를 분석이 실린 문서로 데려가지 않는다.
- */
 export function BillingCheckoutPage({
   workspaceId,
   nextChargeAt,
 }: {
   workspaceId: string;
-  /** 다음 결제 예정일 — 페이지를 만든 서버 시각으로 계산한 값(`page.tsx`). */
   nextChargeAt: string;
 }) {
   const t = useTranslations("billing.checkout");
@@ -84,11 +78,6 @@ export function BillingCheckoutPage({
   );
 }
 
-/**
- * 결제 화면 아래의 약관 링크와 사업자 정보. 이 면에는 사이트 푸터가 없어, 결제하기 전에 판매자가 누구인지 볼 수 있게
- * 구매 화면 안에 둔다. 링크는 새 탭으로 열어 입력한 카드와 동의 상태를 잃지 않는다(`SitePageLink`). 이 면에는 랜딩 문구
- * 묶음이 실리지 않아 라벨은 `billing.checkout.business` 와 `shell.focusChrome` 에서 읽는다.
- */
 function CheckoutLegal() {
   const t = useTranslations("billing.checkout.business");
   const links = useTranslations("shell.focusChrome");

@@ -8,7 +8,6 @@ vi.mock("next/navigation", () => ({
 import { HelpSearch } from "@/components/help/help-search";
 import { intlWrapper } from "@/components/help/test-intl";
 
-/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
 const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: intlWrapper() });
 
 function setup(q = "녹음") {
@@ -74,7 +73,6 @@ describe("HelpSearch", () => {
     expect(screen.getByText("1 / 2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "이전 일치" }));
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
-    // 개수는 한 번만 알린다
     settle();
     expect(screen.getByRole("status")).toHaveTextContent("일치하는 내용 2개");
   });
@@ -99,7 +97,6 @@ describe("HelpSearch", () => {
     setup();
     settle();
     fireEvent.click(screen.getByRole("button", { name: "검색 닫기" }));
-    // 막대가 사라지는 것은 Next 가 주소 변화를 알릴 때(e2e)다 — 여기 목은 반응하지 않는다.
     expect(window.location.search).toBe("");
   });
 });

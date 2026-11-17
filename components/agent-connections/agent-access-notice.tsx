@@ -3,11 +3,6 @@ import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
-/**
- * 외부 에이전트에 워크스페이스를 맡길 때 알리는 것. 설정의 새 연결(APP-804)과 OAuth 동의 화면(APP-888)이
- * 같은 문구를 쓴다 — PRD 「정한 것」 1·4·5: 범위는 워크스페이스 전체이고, 회의 전사도 읽히며, 할 일 변경을
- * 허용하지 않은 연결은 아무것도 바꾸지 않는다. 허용하면 그 줄만 달라진다(APP-1369).
- */
 export function AgentAccessNotice({
   allowTaskChanges = false,
   className,
@@ -26,7 +21,6 @@ export function AgentAccessNotice({
       <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
       <ul className="space-y-1 leading-relaxed text-[var(--el-muted)]">
         <li>{t("allProjects")}</li>
-        {/* 게스트를 포함한 다른 참석자의 말이 내가 고른 외부 AI 로 간다 — 알고 맡기게 한다(APP-844) */}
         <li>{t("transcripts")}</li>
         <li>
           {allowTaskChanges ? t("readAndTasks") : t("readOnly")}{" "}

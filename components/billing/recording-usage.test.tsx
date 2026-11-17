@@ -1,6 +1,3 @@
-/**
- * 녹음 사용량 블록 시험(APP-1566). MSW 목으로 그린 것이라 서버 정합성의 증거가 아니다 — 값은 전부 서버가 준 분 필드를 그대로 쓴다.
- */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { delay, http, HttpResponse } from "msw";
@@ -24,7 +21,6 @@ import { restHandlers } from "@/lib/mocks/rest-handlers";
 const FREE = "01K0000000000";
 const PAID = "01K0000000006";
 
-// 영어 화면의 날짜까지 보려고 표시 locale 을 Provider 에서 읽게 한다. 기본 Provider 는 한국어다.
 vi.unmock("@/lib/i18n/use-display-locale");
 
 const server = setupServer(...restHandlers, ...billingHandlers);
@@ -49,11 +45,9 @@ const renderIn = (ui: React.ReactNode, locale: "ko" | "en" = "ko") =>
     { wrapper: intlWrapper(locale) }
   );
 
-/** 설정 › 요금제 탭. 사용량은 현재 요금제 패널의 오른쪽 칸이다. */
 const PlanTab = ({ workspaceId }: { workspaceId: string }) => (
   <WorkspacePlanSettings workspaceId={workspaceId} onOpenPayment={vi.fn()} />
 );
-/** 사용량 값 한 줄(사용분과 「/ 한도」)의 글. 두 조각이 한 줄에 붙어 읽힌다. */
 const usageValue = async (used: string) =>
   (await screen.findByText(used)).parentElement?.textContent;
 

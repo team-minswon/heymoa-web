@@ -37,7 +37,6 @@ import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 import { formatOffset as formatRecordedClock } from "@/lib/transcription/presentation";
 
-/** 라벨 + 컨트롤 한 칸. design.pen `OmVNh`: vertical · gap 6. 라벨은 정보 탭 공용 위계(`INFO_LABEL`). */
 function Field({
   label,
   htmlFor,
@@ -57,12 +56,6 @@ function Field({
   );
 }
 
-/**
- * 「회의 정보」 표의 한 줄. design.pen `M0Bfl`: 키 열 **124 고정**. 키는 라벨(13 · 흐림), 값은 본문(14 · 진함).
- *
- * 키 열을 고정하는 이유는 값이 세로로 훑히기 때문이다 — 키 길이에 따라 값이 들쭉날쭉하면
- * 「무엇이 무엇인지」를 한 줄씩 다시 읽어야 한다.
- */
 function Fact({
   label,
   children,
@@ -80,12 +73,6 @@ function Fact({
   );
 }
 
-/**
- * 정보 탭의 본문 상자. design.pen `VaEPF`: vertical · gap 24 · 좌우는 뷰가 정하는 거터다.
- *
- * **스켈레톤과 실제가 같은 것을 쓴다.** 예전에는 두 곳에 같은 클래스 문자열을 손으로
- * 적어 두었고, 한쪽만 고쳐져 로딩이 끝날 때 본문이 밀렸다.
- */
 function Body({
   children,
   ...rest
@@ -100,7 +87,6 @@ function Body({
   );
 }
 
-/** 회의의 사실과 문서의 이력을 가르는 선 (design.pen `i3zDhK`). */
 function FactDivider() {
   return (
     <div aria-hidden className="my-2.5 h-px w-full bg-[var(--el-hairline)]" />
@@ -114,14 +100,8 @@ export function NoteDetails({
   onParticipantsAutoOpened,
 }: {
   noteId: string;
-  /** 참여자 선택창을 열어 보이라는 요청. 열면 `onParticipantsAutoOpened` 로 거둔다. */
   autoOpenParticipants?: boolean;
   onParticipantsAutoOpened?: () => void;
-  /**
-   * **URL 이 아니라 확인된 소속이다.** `/w/B/notes/<A의 노트>` 로 들어오면 URL 은 B 인데
-   * 이 노트는 A 것이다. 그대로 쓰면 B 의 후보가 서고, A 에만 있는 이름을 쳐도 못 찾아
-   * **동명이인을 또 만든다.** 확인 전에는 `undefined` 다 — 전사 화면과 같은 규칙이다.
-   */
   workspaceId?: string;
 }) {
   const t = useTranslations("notes.details");
@@ -138,20 +118,14 @@ export function NoteDetails({
     noteResponse.status === 200 && noteResponse.data.success
       ? noteResponse.data.data
       : undefined;
-  // **throw보다 먼저 부른다.** 아래 경계로 던지는 렌더와 정상 렌더가 훅 개수까지 달라지면
-  // 안 된다. 진행 중일 때만 돌고, 녹음 시계의 초에 맞춰 눈금이 튀지 않게 원점을 넘긴다.
   const clockOrigin = loaded ? recordingClockOriginMs(loaded) : null;
   const now = useAlignedNow(
     1_000,
     loaded?.meetingStatus === "IN_PROGRESS",
     clockOrigin === null ? [] : [clockOrigin]
   );
-  // **프로젝트를 여기서 조회하지 않는다.** 노트 헤더의 pill이 이미 그 이름을 말하고, 계약에
-  // 노트의 프로젝트를 바꾸는 길도 없다(`NoteRequest`는 `title`만 받는다).
 
-  // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
   if (!loaded) {
-    // 경계(`DataBoundary`)가 자기 문구로 그린다. 이 메시지는 화면에 나가지 않는다
     throw new Error("Note response was empty");
   }
   const note = loaded;
@@ -162,13 +136,8 @@ export function NoteDetails({
     formatAppDate(iso, { dateStyle: "medium", timeStyle: "short" }, dateLocale);
 
   return (
-    // **카드가 없다.** 예전에는 제목·참여자·사실이 각자 `rounded-block` 상자에 들어 있었는데,
-    // 카드 넷이 쌓이면 무엇이 편집이고 무엇이 읽기인지 테두리로는 구분되지 않았다.
-    // 지금은 편집만 컨트롤 테두리를 갖고, 읽기는 키/값 표로 눕는다.
     <Body>
       <form
-        // 제목을 저장하면(또는 남이 제목을 바꾸면) 이 폼이 재마운트되어 서버가 확정한 값을 보인다.
-        // `updatedAt`으로 걸면 회의 맥락 자동 저장(APP-1190)도 그 값을 바꿔, 아직 저장 안 한 제목을 날린다.
         key={`${note.noteId}-${note.title}-${titleSaves}`}
         className="flex flex-col gap-4"
         onSubmit={async (event) => {
@@ -203,10 +172,6 @@ export function NoteDetails({
           />
         </Field>
 
-        {/* **회의 상태로 가르지 않는다.** 계약이 "회의 상태와 무관하게 언제나 호출할 수 있다"고
-            못박은 자리다(`PUT /v1/notes/{noteId}/participants`) — 늦게 합류한 사람을 기록 중인
-            회의나 끝난 회의에 뒤늦게 넣는 일은 실제로 생긴다. 정본은 시작 전 화면에서만
-            편집하게 그려 두었지만, 그러면 그 일을 할 방법이 사라진다. */}
         <Field label={t("attendees")}>
           <NoteParticipantsField
             noteId={noteId}
@@ -218,9 +183,6 @@ export function NoteDetails({
           />
         </Field>
 
-        {/* 정본은 「변경 사항은 자동 저장됩니다」지만 저장은 명시적으로 둔다. 저장이 끝나면
-            `updatedAt`이 바뀌어 이 폼이 재마운트되므로, 자동 저장은 **타이핑 중에 커서를
-            날린다.** 편집 대상이 제목 하나뿐이라 버튼 하나로 잃는 것도 없다. */}
         <div className="flex items-center gap-3">
           <Button
             type="submit"
@@ -237,7 +199,6 @@ export function NoteDetails({
         </div>
       </form>
 
-      {/* 노트마다 따로 — 회의가 끝나 못 쓴 글이 다른 노트로 따라가지 않게 */}
       <NoteContextSection
         key={noteId}
         noteId={noteId}
@@ -246,19 +207,6 @@ export function NoteDetails({
         background={note.contextBackground}
       />
 
-      {/**
-       * **표는 헤더가 말하지 않은 것만 담는다.**
-       *
-       * 한때 회의 상태·프로젝트·시작 시각·참석자를 여기 다시 적었는데, 넷 다 바로 위
-       * 노트 헤더에 **글자까지 같은 모양으로** 이미 있다(상태 칩, 프로젝트 pill, 메타 두 줄).
-       * 참석자는 더 심해서, 헤더와 이 탭의 편집 필드와 표에 세 번 나왔다.
-       *
-       * 그래서 남긴 기준은 「한 줄 요약에 안 들어가는 사실」이다 —
-       * - 진행자: 헤더는 참관자에게만 이름을 말한다
-       * - 기록 길이: 헤더는 분 단위 요약이고 기록 중에는 아예 안 적는다
-       * - 공유 범위: 헤더 메타 둘째 줄은 종료되면 누적 시간으로 바뀌어 이 값을 놓는다
-       * - 생성·최종 수정: 회의의 사실이 아니라 문서의 이력이라 헤더에 없다
-       */}
       <section aria-labelledby="note-facts-title" className={INFO_SECTION}>
         <h2 id="note-facts-title" className={cn("mb-3", INFO_SECTION_TITLE)}>
           {t("facts.title")}
@@ -279,10 +227,6 @@ export function NoteDetails({
               </span>
             </Fact>
           ) : null}
-          {/* 초 단위로 바뀌는 값은 여기 하나뿐이다 — 노트 헤더는 같은 값을 분 단위로 요약하고
-              (「기록 42분」), 진행 중 라이브 타이머는 레코더 독이 갖는다.
-              **「종료된 구간만 합산」을 적지 않는다.** `recordedDurationMs` 는 이제 회의 축의 끝이고(APP-1432)
-              진행 중이면 원점부터 지금까지 자란다 — 구간 합이 아니라 회의 길이다. */}
           <Fact label={t("facts.duration")}>
             <span
               role="timer"
@@ -292,12 +236,9 @@ export function NoteDetails({
               {formatRecordedClock(getRecordedDurationMs(note, now ?? 0))}
             </span>
           </Fact>
-          {/* 정본은 「워크스페이스 멤버 4명 공개」지만 그 수는 노트 계약에 없다 — 참석자 수와
-              헷갈리기도 해서 수를 뺐다(노트 헤더 메타와 같은 판단). */}
           <Fact label={t("facts.sharedWith")}>
             {t("facts.workspaceMembers")}
           </Fact>
-          {/* 자동 종료의 사유와 시각(APP-1319). 상단 안내를 접어도 여기 남는다 — 시각은 여기에만 있다. */}
           {isAutoEnded(note) && note.meetingEndedAt ? (
             <Fact label={t("facts.ended")}>
               <time dateTime={note.meetingEndedAt}>
@@ -315,7 +256,6 @@ export function NoteDetails({
             </Fact>
           ) : null}
 
-          {/* 위는 회의의 사실, 아래는 문서의 이력이다 — 선 하나로 가른다. */}
           <FactDivider />
           <Fact label={t("facts.created")}>
             <time dateTime={note.createdAt}>{timestamp(note.createdAt)}</time>
@@ -329,16 +269,6 @@ export function NoteDetails({
   );
 }
 
-/**
- * 노트 정보 로딩 스켈레톤. DataBoundary fallback으로 부모(note-panel)가 쓴다.
- *
- * **실제 화면과 같은 wrapper(`Body`·`Field`·`Fact`)로 짓는다.** 손으로 막대 몇 개를 쌓았을
- * 때 296이었고 실제는 568이었다 — 라벨·저장 버튼·「회의 정보」 머리글이 스켈레톤에 없고
- * 표 다섯 줄이 `h-40` 한 덩어리였다. 도착하는 순간 아래 절반이 밀려 내려왔다.
- *
- * **라벨과 머리글은 가리지 않는다.** 그것들은 도착을 기다리는 값이 아니라 화면의 뼈대다.
- * 그대로 그리면 기하가 자동으로 맞고, 무엇을 불러오는 중인지도 읽힌다.
- */
 export function NoteDetailsSkeleton() {
   const t = useTranslations("notes.details");
   return (
@@ -347,7 +277,6 @@ export function NoteDetailsSkeleton() {
         <Field label={t("title")}>
           <Skeleton className="h-9 w-full rounded-control" />
         </Field>
-        {/* 실측: 참석자 컨트롤 줄은 32(아바타 스택 + `참여자 선택` 버튼), 저장 버튼은 32×105. */}
         <Field label={t("attendees")}>
           <Skeleton className="h-8 w-56 rounded-control" />
         </Field>
@@ -359,10 +288,8 @@ export function NoteDetailsSkeleton() {
         <dl className="flex flex-col">
           {FACT_ROWS.map(({ key, width }) => (
             <Fragment key={key}>
-              {/* 실제와 같은 자리에 선이 있어야 높이가 맞는다 — 회의의 사실과 문서의 이력. */}
               {key === "created" ? <FactDivider /> : null}
               <Fact label={t(`facts.${key}`)}>
-                {/* 값 폭은 실제와 비슷하게 — 전부 같으면 표가 아니라 블록으로 보인다. */}
                 <Skeleton className="h-3.5 rounded-chip" style={{ width }} />
               </Fact>
             </Fragment>
@@ -373,7 +300,6 @@ export function NoteDetailsSkeleton() {
   );
 }
 
-/** 사실 표의 키 열은 데이터가 아니다 — 실제 화면과 같은 순서·같은 라벨을 그린다. */
 const FACT_ROWS = [
   { key: "host", width: 180 },
   { key: "duration", width: 48 },

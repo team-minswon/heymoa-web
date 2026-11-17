@@ -59,7 +59,6 @@ mockDb.onReset(() => {
 const nextId = (prefix: string) =>
   `${prefix}${String((counter += 1)).padStart(13 - prefix.length, "0")}`;
 
-/** 오늘에서 며칠 떨어진 날. 할 일 목록의 「기한 지남 · 이번 주 · 그 뒤」가 매일 같은 모양으로 선다. */
 const dayFromToday = (days: number) =>
   getAppDateKey(new Date(Date.now() + days * DAY_MS));
 const hoursAgo = (hours: number) =>
@@ -69,7 +68,6 @@ const current = (task: StoredTask) => task.history[task.history.length - 1];
 
 function seed(): StoredTask[] {
   const me = mockDb.getCurrentUser().userId;
-  // 가이드 캡처 프리셋(help-demo)이 켜져 있으면 그쪽 할 일 목록을 쓴다
   if (isHelpDemoEnabled()) return build(helpDemoPack().taskRows(), nextId("01KA"), me);
   const meetingProject = mockDb.getNote(MENTORING_NOTE_ID).projectId;
   const workspaceId = workspaceOfProject(meetingProject);
@@ -114,7 +112,6 @@ function seed(): StoredTask[] {
       projectId: meetingProject,
       content: "STT 원가를 분 단위로 다시 잰다",
       status: "OPEN",
-      // 그 회의에서 한 번도 말하지 않은 라벨이라 사람으로 풀리지 않는다.
       assignee: { type: "SPEAKER_LABEL", noteId: MENTORING_NOTE_ID, label: "F" },
       due: null,
       fromApproval: true,
@@ -126,7 +123,6 @@ function seed(): StoredTask[] {
       status: "OPEN",
       assignee: { type: "USER", id: "01K0000000020" },
       due: 9,
-      // 외부 에이전트 연결이 기한을 당긴 판. 목 모드에서 변경 표시와 되돌리기를 손으로 본다 (APP-1369).
       edit: { by: me, due: -3, via: { delegationId: "01K00000000Q1", name: "노트북 Claude Code" } },
     },
     {
@@ -177,7 +173,6 @@ function seed(): StoredTask[] {
       status: "OPEN",
       assignee: { type: "USER", id: me },
       due: 12,
-      // 연결을 지운 뒤에도 그 연결이 쓴 판은 남는다. 이름 없이 「에이전트」로만 보인다.
       edit: { by: me, due: 7, via: null },
     },
   ];
@@ -219,7 +214,6 @@ function build(rows: TaskSeedRow[], approvalId: string, me: string): StoredTask[
 
 const all = () => (tasks ??= seed());
 
-/** 서버는 프로젝트를 조인해 이름을 싣는다. 목도 같은 출처를 봐야 이름이 갈리지 않는다. */
 function projectNameOf(projectId: string): string {
   const workspaceId = workspaceOfProject(projectId);
   return (
@@ -233,8 +227,6 @@ function view(task: StoredTask): ProjectTaskResponseData {
   const head = current(task);
   return {
     taskId: task.taskId,
-    // 워크스페이스 단위 목록에서 할 일마다 프로젝트가 다르다 (APP-685). 전에는 web 이
-    // `useQueries` 결과 배열의 **인덱스로** 프로젝트를 대조해 이름을 붙였다.
     projectId: task.projectId,
     projectName: projectNameOf(task.projectId),
     content: head.content,
@@ -274,7 +266,6 @@ function tasksOf(workspaceId: string, projectId: string) {
   return all().filter((task) => task.projectId === projectId);
 }
 
-/** 그 워크스페이스의 모든 프로젝트를 가로지르는 할 일. 서버가 조인 하나로 낸다. */
 function workspaceTasksOf(workspaceId: string) {
   const projectIds = new Set(
     mockDb.listProjects(workspaceId).map((project) => project.projectId)
@@ -282,11 +273,6 @@ function workspaceTasksOf(workspaceId: string) {
   return all().filter((task) => projectIds.has(task.projectId));
 }
 
-/**
- * 워크스페이스 할 일 한 쪽 (APP-1043). 서버와 같은 규칙이다 — `limit` 이 없으면 거르기 안의 전건, 있으면 `(기한 오름차순·
- * 기한 없음 뒤, taskId 오름차순)` 에서 커서 뒤부터 limit 개. 「내 할 일」은 푼 담당이 그 계정인 것이고, 개수는 상태를 뺀
- * 거르기 안의 전체 수다.
- */
 function workspaceTaskPage(workspaceId: string, url: URL) {
   const query = url.searchParams;
   const status = query.get("status");
@@ -359,7 +345,6 @@ export const projectTasks = {
     const task = all().find((row) => row.taskId === taskId);
     return task ? current(task).revision : 1;
   },
-  /** 승인 전에 전부 검사합니다. 하나가 낡거나 중복이면 업무 이력을 하나도 바꾸지 않습니다. */
   applyReviewedChanges(
     projectId: string,
     entries: Array<{
@@ -395,7 +380,6 @@ export const projectTasks = {
     });
     for (const { task, next } of updates) task.history.push(next);
   },
-  /** 회의 확정이 포함된 할 일 항목마다 새 할 일을 만든다. */
   promote(
     projectId: string,
     entries: Array<{ content: string; assignee: StoredAssignee | null; due: string | null }>,
@@ -428,8 +412,6 @@ export const projectTasks = {
 };
 
 export const projectTaskHandlers = [
-  // 워크스페이스 단위 목록 (APP-685). 프로젝트 단위 경로도 남는다 — 프로젝트 하나만 보는
-  // 화면이 따로 있다.
   http.get("*/v1/workspaces/:workspaceId/tasks", ({ params, request }) =>
     respond(() => workspaceTaskPage(paramId(params.workspaceId), new URL(request.url)))
   ),

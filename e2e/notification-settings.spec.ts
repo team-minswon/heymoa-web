@@ -1,9 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/**
- * 설정 > 계정 > 알림 (APP-1341). 목 서버는 이 문서 안에서 설정을 들고 있어 창을 닫았다 다시 열면 서버 값이 다시 그려진다.
- * 새로고침은 목 서버 상태를 지우므로(브라우저 안 MSW) 「새로고침 뒤 유지」는 운영 server 가 맡는다.
- */
 const WS = "/w/01K0000000000";
 const dialog = (page: Page) => page.getByRole("dialog", { name: "설정" });
 
@@ -21,7 +17,6 @@ test("알림 탭에서 바꾼 값이 다시 열어도 남고, 모두 끄기는 �
   await mail.click();
   await expect(mail).not.toBeChecked();
 
-  // 다른 탭에 갔다 오면 서버 값을 다시 읽는다
   await page.getByRole("button", { name: "내 계정" }).click();
   await page.getByRole("button", { name: "알림", exact: true }).click();
   await expect(mail).not.toBeChecked();
@@ -36,7 +31,6 @@ test("알림 탭에서 바꾼 값이 다시 열어도 남고, 모두 끄기는 �
   await expect(
     page.getByRole("switch", { name: "메일 모두 끄기" })
   ).toBeChecked();
-  // 메일을 보내는 선택 종류(일시정지된 회의·문의 답변)의 메일 열이 가려진다.
   await expect(dialog(page).getByText("꺼짐")).toHaveCount(2);
 
   await page.getByRole("button", { name: "기본값으로 되돌리기" }).click();

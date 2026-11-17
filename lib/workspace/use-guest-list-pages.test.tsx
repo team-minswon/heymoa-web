@@ -69,7 +69,6 @@ describe("useGuestListPages", () => {
     ).toEqual(["G1", "G2"]);
     expect(data?.status === 200 && data.data.data.totalCount).toBe(3);
     expect(data?.status === 200 && data.data.data.hasMore).toBe(false);
-    // 둘째 요청은 첫 쪽의 다음 커서를 그대로 단다.
     expect(getWorkspaceGuests.mock.calls[1]?.[1]).toEqual({
       limit: "30",
       afterDisplayName: "가",
@@ -88,7 +87,6 @@ describe("useGuestListPages", () => {
     const data = result.current.data;
     expect(data?.status === 200 && data.data.data.guests).toHaveLength(1);
     expect(data?.status === 200 && data.data.data.hasMore).toBe(true);
-    // 뒷쪽을 못 읽었음을 알린다 — 읽은 곳까지만 든 목록으로 「그 사람이 없다」를 말하면 안 된다.
     expect((data as { partial?: boolean }).partial).toBe(true);
   });
 });

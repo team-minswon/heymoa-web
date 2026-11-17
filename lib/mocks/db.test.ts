@@ -2,10 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "@/lib/mocks/db";
 import { MOCK_ACCOUNT, MOCK_USER } from "@/lib/mocks/mock-user";
 
-/**
- * 이미 진행 중인 시드에는 열린 세션이 있다. 회의 조작 검사는 전사가 있는 0002의
- * 열린 세션을 끝내어, 근거 인용까지 검증하면서 실제 세션 전이를 따른다.
- */
 function startedNoteId() {
   const noteId = "01K0000000002";
   const session = mockDb.getCurrentSession(noteId);
@@ -21,12 +17,8 @@ describe("mockDb", () => {
     expect(mockDb.getCurrentUser()).toEqual({ ...MOCK_USER, ...MOCK_ACCOUNT });
     const workspaces = mockDb.listWorkspaces();
     expect(workspaces).toHaveLength(3);
-    // **id로 짚는다** — `listWorkspaces()`가 내리는 순서는 이 테스트의 관심이 아니고,
-    // 위치로 짚으면 워크스페이스를 하나 더 시드할 때마다 이 줄이 엉뚱하게 깨진다.
     expect(mockDb.listProjects("01K0000000000")).toHaveLength(2);
     expect(mockDb.listProjects("01K0000000006")).toHaveLength(2);
-    // 셋째는 **비어 있는 것이 내용이다** — 새로 만든 워크스페이스는 항상 프로젝트 0으로
-    // 시작하고, 그 온보딩 화면의 유일한 표본이다.
     expect(mockDb.listProjects("01K0000000009")).toHaveLength(0);
     expect(
       workspaces.flatMap((workspace) =>
@@ -34,9 +26,6 @@ describe("mockDb", () => {
           .listProjects(workspace.workspaceId)
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
-      // 13 + 후보 e2e 전용 셋(커버리지 추종 0008·정리 실패 0006·합성 원장 0007)
-      // + 실제 멘토링 회의 하나(화자 패널용 실데이터) + 실시간 안건 회의 0016
-      // + 오래 멈춘 회의 0040(APP-1313 일시정지 기간).
     ).toHaveLength(19);
   });
 
@@ -95,7 +84,6 @@ describe("mockDb", () => {
     );
   });
 
-  // 서버 D-16: 그 세션을 연 탭이 다시 시작하면 리스가 살아 있어도 곧바로 닫는다. 다른 탭이면 409
   it("closes the open session when the same clientInstanceId starts again", () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
@@ -285,7 +273,6 @@ describe("mockDb", () => {
     expect(mockDb.listSegments(foreignNote!.noteId)).toHaveLength(3);
   });
 
-  // APP-694: 종료가 열린 세션을 닫던 길이 사라졌다. 그래서 목이 TRUNCATED 를 찍을 일도 없다.
   it.each(["READY", "ACTIVE"])(
     "★ %s 세션이 열린 기록 중 회의는 MEETING_RECORDING 으로 거절한다",
     (status) => {
@@ -316,8 +303,6 @@ describe("mockDb", () => {
   });
 
   it("★ 방금 만든 노트가 시드보다 위에 선다", () => {
-    // 목의 시계가 굳은 과거였고 시드 노트에는 그보다 뒤인 날짜가 박혀 있어서, 만든 노트가
-    // 워크스페이스 목록 **맨 아래**에 섰다. 팬아웃을 없애며 전역 정렬이 되자 드러났다.
     const project = mockDb.listProjects("01K0000000000")[0];
     const created = mockDb.createNote(project.projectId, { title: "새 노트" });
 
@@ -372,7 +357,6 @@ describe("invitations, members and notifications", () => {
   });
 
   it("accepting an expired invitation by token fails and marks it EXPIRED", () => {
-    // 01K0000000026 — 만료 지난 PENDING 시드
     expect(() => mockDb.acceptInvitationByToken("01K0000000026")).toThrowError(
       "INVITATION_EXPIRED"
     );
@@ -382,7 +366,6 @@ describe("invitations, members and notifications", () => {
   });
 
   it("accepting another user's invitation by token fails with email mismatch", () => {
-    // 01K0000000025 — stranger@heymoa.dev 대상 시드
     expect(() => mockDb.acceptInvitationByToken("01K0000000025")).toThrowError(
       "INVITATION_EMAIL_MISMATCH"
     );
@@ -451,7 +434,6 @@ describe("invitations, members and notifications", () => {
       .notifications.find(
         (item) => item.notificationId === pending!.notificationId
       );
-    // 취소된 초대의 알림도 목록에 남고, 상태만 현재 값을 따라간다 (계약 규칙).
     expect(after?.invitation?.status).toBe("CANCELED");
   });
 });
@@ -459,10 +441,9 @@ describe("invitations, members and notifications", () => {
 describe("workspace member management", () => {
   beforeEach(() => mockDb.reset());
 
-  const WORKSPACE_ID = "01K0000000000"; // 시드: 나(ADMIN) + 한지원(01K0000000020, MEMBER)
+  const WORKSPACE_ID = "01K0000000000";
   const OTHER_MEMBER_ID = "01K0000000020";
 
-  /** 자신을 강등·추방·탈퇴시켜도 마지막 ADMIN 규칙에 걸리지 않도록 관리자를 하나 더 만든다. */
   function addSecondAdmin() {
     mockDb.changeMemberRole(WORKSPACE_ID, OTHER_MEMBER_ID, "ADMIN");
   }
@@ -471,7 +452,6 @@ describe("workspace member management", () => {
     expect(() =>
       mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER")
     ).toThrow("LAST_WORKSPACE_ADMIN");
-    // 실패했으니 역할은 그대로다.
     expect(
       mockDb
         .listMembers(WORKSPACE_ID)
@@ -504,8 +484,6 @@ describe("workspace member management", () => {
     ).toThrow("WORKSPACE_MEMBER_NOT_FOUND");
   });
 
-  // 서버 WorkspaceAccessHandler는 requireMember(404) → 역할 확인(403) 순이다. 즉 403은
-  // "멤버지만 ADMIN이 아니다"일 때만 나오고, 멤버가 아니면 워크스페이스의 존재 자체를 숨긴다.
   it.each([
     ["없는 워크스페이스", "01K9999999999"],
     ["초대만 받고 합류하지 않은 워크스페이스", "01K0000000030"],
@@ -533,8 +511,6 @@ describe("workspace member management", () => {
 
     mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER");
 
-    // 멤버 명단과 워크스페이스 응답은 같은 멤버십을 두 벌로 들고 있다. 한쪽만 고치면
-    // 멤버 탭은 MEMBER인데 사이드바·권한 분기는 ADMIN으로 남는다.
     expect(mockDb.getWorkspace(WORKSPACE_ID).role).toBe("MEMBER");
     expect(
       mockDb.listWorkspaces().find((w) => w.workspaceId === WORKSPACE_ID)?.role
@@ -543,7 +519,7 @@ describe("workspace member management", () => {
 
   it("ADMIN이 아닌 사람은 역할을 바꿀 수 없다", () => {
     addSecondAdmin();
-    mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER"); // 나를 MEMBER로
+    mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER");
 
     expect(() =>
       mockDb.changeMemberRole(WORKSPACE_ID, OTHER_MEMBER_ID, "MEMBER")
@@ -554,7 +530,6 @@ describe("workspace member management", () => {
     expect(() => mockDb.removeMember(WORKSPACE_ID, MOCK_USER.userId)).toThrow(
       "BAD_REQUEST"
     );
-    // 실패했으니 멤버 목록은 그대로다.
     expect(
       mockDb
         .listMembers(WORKSPACE_ID)
@@ -655,8 +630,6 @@ describe("workspace member management", () => {
       )
     ).not.toThrow();
 
-    // 멤버 행만 지우면 목록·조회가 떠난 공간을 계속 반환한다 — 합류(초대 수락)가 두 곳에
-    // 넣으므로 탈퇴도 두 곳에서 빼야 한다.
     expect(
       mockDb.listWorkspaces().some((w) => w.workspaceId === WORKSPACE_ID)
     ).toBe(false);
@@ -669,7 +642,6 @@ describe("workspace member management", () => {
   });
 
   it("멤버가 아닌 워크스페이스는 나가기에서 WORKSPACE_NOT_FOUND다 (추방과 다른 코드)", () => {
-    // 01K0000000030 — 초대만 와 있고 아직 합류하지 않은 워크스페이스.
     expect(() => mockDb.leaveWorkspace("01K0000000030")).toThrow(
       "WORKSPACE_NOT_FOUND"
     );
@@ -680,11 +652,6 @@ describe("참여자 전체 교체와 떠난 사람", () => {
   const WORKSPACE_ID = "01K0000000000";
   const NOTE_ID = "01K0000000020";
 
-  /**
-   * 서버는 **이미 이 회의의 참여자면 멤버가 아니어도** 전체 교체에 실어 유지할 수 있다.
-   * 목이 멤버 목록만 훑으면 그 사람이 조용히 빠지고 화자 연결까지 풀린다 — 목과 서버가
-   * 갈라지면 화면 테스트가 전부 거짓으로 통과한다.
-   */
   it("내보낸 멤버도 요청에 실으면 참여자로 남는다", () => {
     const before = mockDb
       .getNote(NOTE_ID)
@@ -703,7 +670,6 @@ describe("참여자 전체 교체와 떠난 사람", () => {
     const after = mockDb.getNote(NOTE_ID).participants;
     const kept = after.find((row) => row.userId === departing.userId);
     expect(kept).toBeDefined();
-    // 참여 기록 id 가 그대로여야 화자 연결이 산다 (APP-480)
     expect(kept!.participantId).toBe(departing.participantId);
   });
 });
@@ -727,7 +693,6 @@ describe("meeting and analysis", () => {
       "ACTION_ITEM",
       "DECISION",
     ]);
-    // 근거 0개 항목도 남는다(설계 D2) — 목이 한쪽만 심으면 칩 없는 분기가 안 그려진다.
     const items = done.sections.flatMap((section) => section.items);
     expect(items.some((item) => item.evidence.length > 0)).toBe(true);
     expect(items.some((item) => item.evidence.length === 0)).toBe(true);
@@ -763,8 +728,6 @@ describe("meeting and analysis", () => {
     expect(() => mockDb.endMeeting(note.noteId)).toThrow("MEETING_NOT_STARTED");
   });
 
-  // 계약의 409에 MEETING_ALREADY_ENDED가 생겼다(APP-214, server@a582684). 서버는 원래부터
-  // 막고 있었고 없던 것이 계약뿐이었다 — 그래서 목만 그 사실을 몰라 로컬이 초록이었다.
   it("refuses to start transcription on an ended meeting", () => {
     const noteId = startedNoteId();
     mockDb.endMeeting(noteId);
@@ -776,8 +739,6 @@ describe("meeting and analysis", () => {
 describe("workspace integrations", () => {
   beforeEach(() => mockDb.reset());
 
-  // 계약은 미연동 provider도 목록에 담는다 (connected: false). 화면이 "연결하기"
-  // 버튼을 그리려면 아직 안 붙은 도구도 알아야 하기 때문이다.
   it("lists every supported provider, connected or not", () => {
     const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
 
@@ -854,7 +815,6 @@ describe("workspaces gained after seeding", () => {
 describe("only the meeting starter can operate a meeting", () => {
   beforeEach(() => mockDb.reset());
 
-  // 새 노트는 NOT_STARTED라 회의 종료 자체가 409 MEETING_NOT_STARTED다.
   it("refuses ending a note nobody started", () => {
     const projectId = mockDb.listProjects(
       mockDb.listWorkspaces()[0].workspaceId
@@ -897,8 +857,6 @@ describe("노트 삭제", () => {
       .find((row) => row.meetingStatus !== "IN_PROGRESS");
     expect(target).toBeDefined();
     const noteId = target!.noteId;
-    // 서버는 FK CASCADE가 지운다(APP-335 V18). 목이 안 지우면 "지웠는데 요약이 남는" 상태가
-    // 목에서만 만들어져 화면 검증이 거짓이 된다.
     expect(mockDb.listSegments(noteId).length).toBeGreaterThanOrEqual(0);
 
     mockDb.deleteNote(noteId);
@@ -908,15 +866,6 @@ describe("노트 삭제", () => {
     expect(() => mockDb.getLatestAnalysis(noteId)).toThrow();
   });
 
-  /**
-   * 서버는 세션 조회에도 멤버십을 본다 — 노트 → 프로젝트 → 워크스페이스를 따라가
-   * 비멤버에게는 존재를 숨기려고 404 `WORKSPACE_NOT_FOUND`를 준다
-   * (`NoteAccessHandler.requireProjectMember` → `WorkspaceNotFoundException`).
-   *
-   * 목이 200을 주면 **추방 뒤 녹음을 끊는 경로가 목에서만 안 돈다.** 화면 검증이 거짓이 된다.
-   */
-  // 권한 승인과 세션 생성 POST 사이에도 추방될 수 있다. 서버는 생성에도 멤버십을 보는데,
-  // 목이 201을 주면 **시작 중 추방 처리 경로가 개발 환경에서만 안 돈다.**
   it("워크스페이스를 나가면 그 노트의 세션 생성도 404다", () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
@@ -954,7 +903,6 @@ describe("노트 삭제", () => {
       sessionId: session.sessionId,
     });
 
-    // 나 혼자 ADMIN이면 나갈 수 없다(`LAST_WORKSPACE_ADMIN`). 다른 멤버를 올리고 나간다.
     mockDb.changeMemberRole("01K0000000000", "01K0000000020", "ADMIN");
     mockDb.leaveWorkspace(
       "01K0000000000",
@@ -966,14 +914,6 @@ describe("노트 삭제", () => {
     );
   });
 
-  /**
-   * 워크스페이스와 프로젝트가 어긋난 조합은 **403이 아니라 404다.** 서버가
-   * `findByWorkspaceIdAndProjectId(...)` 한 번으로 찾고 없으면 `ProjectNotFoundException`을
-   * 던진다(조회·수정·삭제 셋 다 같다).
-   *
-   * 목이 `FORBIDDEN`을 주면 `/w/B/notes/<A의 노트>` 딥링크를 판정하는 화면이 목에서만
-   * 다르게 동작한다 — 코드로 가리기 때문이다.
-   */
   it("다른 워크스페이스의 프로젝트를 조회하면 404다", () => {
     const mine = mockDb.listProjects("01K0000000000")[0];
 
@@ -994,8 +934,6 @@ describe("대화가 여럿 산다", () => {
   }
 
   it("새 대화가 앞 대화를 안 죽인다 — 목록에 한 줄이 늘 뿐이다", () => {
-    // 시드에 이미 나이 든 대화들이 있다(날짜 묶음을 목에서 보려고). 늘어난 두 줄이
-    // **맨 위에** 서는지만 본다 — 그것이 「안 죽인다」의 내용이다.
     const before = mockDb.listAgentChats({ workspaceId: workspaceId() }).length;
     const first = mockDb.createAgentChat({ workspaceId: workspaceId() });
     const second = mockDb.createAgentChat({ workspaceId: workspaceId() });
@@ -1008,8 +946,6 @@ describe("대화가 여럿 산다", () => {
   });
 
   it("★ 방금 만든 대화가 시드보다 위에 선다", () => {
-    // 시드는 「지금」에서 거꾸로 잡은 시각이고 목의 기본 시계는 2026-07-11 에 굳어 있다.
-    // 둘을 섞으면 방금 만든 대화가 목록 **맨 아래**에 「44일 전」으로 선다.
     const created = mockDb.createAgentChat({ workspaceId: workspaceId() });
     const [top] = mockDb.listAgentChats({ workspaceId: workspaceId() });
 
@@ -1018,8 +954,6 @@ describe("대화가 여럿 산다", () => {
   });
 
   it("마지막으로 쓴 대화가 첫 줄이 된다", () => {
-    // **생성 시각으로만 정렬하면 여기서 거짓말이 된다.** 옛 대화에 다시 쓰면 그것이
-    // 마지막으로 쓴 대화이고, 새로고침한 화면이 돌아갈 곳도 거기다.
     const older = mockDb.createAgentChat({ workspaceId: workspaceId() });
     mockDb.createAgentChat({ workspaceId: workspaceId() });
 
@@ -1050,7 +984,6 @@ describe("대화가 여럿 산다", () => {
         scope: [],
         toolEvent: null,
       });
-      // 두 번째 USER 메시지는 제목을 못 바꾼다 — 이미 기본값이 아니다.
       mockDb.appendAgentChatMessage(chatId, {
         role: "USER",
         content: "그리고 이건 제목이 되면 안 됩니다",
@@ -1064,14 +997,11 @@ describe("대화가 여럿 산다", () => {
         .listAgentChats({ workspaceId: workspaceId() })
         .map((chat) => [chat.chatId, chat.title])
     );
-    // 줄바꿈과 이중 공백이 한 줄로 접힌다 — 목록은 한 줄이다.
     expect(titles[auto.chatId]).toBe("지난 회의에서 정한 것만 정리해줘");
     expect(titles[named.chatId]).toBe("내가 정한 제목");
   });
 
   it("★ 제목에서 마커를 사람 말로 되돌린다", () => {
-    // 안 걷으면 목록에 `@[주간 회의](noteId:…) 액션 정리해줘` 가 그대로 뜬다.
-    // 실제 서버(`AgentChat.fillTitleFromFirstMessage`)가 하는 일과 같아야 한다.
     const chat = mockDb.createAgentChat({ workspaceId: workspaceId() });
     mockDb.appendAgentChatMessage(chat.chatId, {
       role: "USER",
@@ -1131,7 +1061,6 @@ describe("대화가 여럿 산다", () => {
       titleSource: "AI",
       updatedAt: before.updatedAt,
     });
-    // 이미 AI 제목이면 다시 안 짓는다
     expect(mockDb.retitleAgentChatByAi(chat.chatId)).toBe(false);
 
     const named = mockDb.createAgentChat({
@@ -1142,14 +1071,12 @@ describe("대화가 여럿 산다", () => {
   });
 
   it("최근 50개까지만 준다", () => {
-    // 상한이 없으면 51번째가 실서버에서 처음 사라진다 — 목이 관대하면 안 보인다.
     for (let i = 0; i < 55; i += 1) {
       mockDb.createAgentChat({ workspaceId: workspaceId() });
     }
     const chats = mockDb.listAgentChats({ workspaceId: workspaceId() });
 
     expect(chats).toHaveLength(50);
-    // 잘리는 쪽은 **오래된 쪽**이다.
     expect(chats[0].updatedAt >= chats[49].updatedAt).toBe(true);
   });
 
@@ -1160,20 +1087,18 @@ describe("대화가 여럿 산다", () => {
     expect(mockDb.listAgentChats({ workspaceId: second.workspaceId })).toEqual(
       []
     );
-    // 멤버가 아니면 존재를 은닉한다 (생성과 같은 규칙).
     expect(() =>
       mockDb.listAgentChats({ workspaceId: "01KNOTAMEMBER" })
     ).toThrow("WORKSPACE_NOT_FOUND");
   });
 });
 
-// PRO-69 탈퇴 처리 규칙(userflow 「워크스페이스별 처리 규칙」)을 목이 서버와 같게 계산하는지.
 describe("계정 탈퇴 · 워크스페이스 삭제", () => {
   beforeEach(() => mockDb.reset());
 
-  const TEAM = "01K0000000000"; // 나(ADMIN) + 한지원(MEMBER)
-  const SOLO = "01K0000000009"; // 나 혼자
-  const SHARED_ADMIN = "01K0000000006"; // 나 + 다른 관리자(박서연) + 멤버
+  const TEAM = "01K0000000000";
+  const SOLO = "01K0000000009";
+  const SHARED_ADMIN = "01K0000000006";
   const MEMBER_ID = "01K0000000020";
 
   const actionOf = (workspaceId: string) =>

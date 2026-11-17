@@ -2,14 +2,12 @@ import type { StoreState } from "@/lib/mocks/db";
 import { HD_NOTE_IDS, NOTE_DEFS } from "@/lib/mocks/help-demo/notes";
 import { HD_ME, HD_MEMBERS, HD_PRACTICE_WORKSPACE_ID, HD_WORKSPACE_ID } from "@/lib/mocks/help-demo/people";
 
-/** 용어 사전. 쉼표 일괄 등록 시연용 「코호트, 리텐션, 이탈률」은 일부러 넣지 않는다. */
 export const HELP_DEMO_TERMS = [
   "ROAS", "CTR", "CPC", "CPA", "전환율", "리타겟팅", "퍼널", "OKR", "KPI", "A/B 테스트",
   "랜딩 페이지", "브랜드 가이드", "CRM", "리드", "온보딩", "세그먼트", "키비주얼", "톤앤매너",
   "인플루언서", "어트리뷰션", "장바구니 이탈", "사전 신청", "상세 페이지", "소재", "마지막 클릭", "노출 빈도",
 ];
 
-/** 챗봇이 일반 질문에 답하는 문장. 목의 기본 답변 대신 가이드 화면에 어울리는 업무 이야기를 쓴다. */
 export const HELP_DEMO_CHAT_ANSWERS = [
   "4월 캠페인 성과 리뷰에서는 ROAS 402%로 목표 380%를 넘겼다고 정리됐습니다. 채널 중에서는 디스플레이가 180%로 가장 낮아, 5월에는 예산을 600만 원에서 300만 원으로 줄이기로 했습니다.",
   "지금 남은 할 일은 김서윤님 몫으로 두 가지입니다. KPI 문서 업데이트(이번 주)와 주간 성과 한 장 리포트(다음 주 월요일부터)입니다. 둘 다 4월 캠페인 성과 리뷰에서 맡았습니다.",
@@ -20,7 +18,6 @@ export const HELP_DEMO_CHAT_ANSWERS = [
 
 type Chats = Pick<StoreState, "agentChats" | "agentChatMessages">;
 
-/** 개인 챗봇 대화 4개. 첫 대화는 회의 근거를 인용하는 4턴이고 마지막 질문은 몇 분 전이다. */
 export function helpDemoChats(now: number): Chats {
   const minutesAgo = (minutes: number) => new Date(now - minutes * 60_000).toISOString();
   const campaign = NOTE_DEFS.find((def) => def.noteId === HD_NOTE_IDS.campaign)!;
@@ -95,7 +92,6 @@ export function helpDemoChats(now: number): Chats {
   const interview = open("01KH000005004", "인터뷰에서 반복된 말", minutesAgo(5 * 24 * 60));
   exchange(interview, minutesAgo(5 * 24 * 60), "고객 인터뷰에서 반복된 얘기 있어?", HELP_DEMO_CHAT_ANSWERS[3]);
 
-  // 목록 정렬 기준은 마지막 메시지 시각이다.
   for (const chat of chats) {
     const last = messages.filter((message) => message.chatId === chat.chatId).at(-1);
     if (last) chat.updatedAt = last.createdAt;
@@ -103,7 +99,6 @@ export function helpDemoChats(now: number): Chats {
   return { agentChats: chats, agentChatMessages: messages };
 }
 
-/** 문의 · 피드백 여섯 건. 답변 셋 중 하나는 아직 읽지 않았다. */
 export function helpDemoFeedbacks(now: number): StoreState["feedbacks"] {
   const ago = (hours: number) => new Date(now - hours * 3_600_000).toISOString();
   return [
@@ -143,7 +138,6 @@ export function helpDemoFeedbacks(now: number): StoreState["feedbacks"] {
   ];
 }
 
-/** 연동: Linear 는 연결됨(관리자 본인), GitHub 는 연결 안 됨. 연습 공간은 둘 다 안 됨. */
 export function helpDemoIntegrations(now: number): StoreState["integrations"] {
   return [
     { workspaceId: HD_WORKSPACE_ID, provider: "LINEAR", connected: true, connectedBy: "김서윤", connectedAt: new Date(now - 40 * 86_400_000).toISOString() },
@@ -153,7 +147,6 @@ export function helpDemoIntegrations(now: number): StoreState["integrations"] {
   ];
 }
 
-/** 외부 에이전트(MCP) 연결: 쓰는 중 둘, 회수 하나, 다른 멤버 하나(관리자 목록용). */
 export function helpDemoDelegations(now: number): Pick<StoreState, "agentDelegations" | "agentDelegationUsages"> {
   const day = 86_400_000;
   const iso = (offsetDays: number) => new Date(now + offsetDays * day).toISOString();

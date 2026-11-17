@@ -12,8 +12,6 @@ import { privateRouteMetadata } from "@/lib/site";
 
 export const metadata: Metadata = privateRouteMetadata;
 
-// 문의 답변 메일의 「답변 보기」(APP-1399). 마지막으로 연 워크스페이스로 넘기며 「내 문의」를 그 항목이 보이게 연다
-// (`?inquiry=`, 사이드바가 읽는다). 로그인 전이면 로그인 카드를 세우고, 로그인하면 이 주소로 돌아온다.
 export default async function InquiryPage({
   params,
 }: {

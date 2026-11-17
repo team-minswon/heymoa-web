@@ -1,14 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/**
- * 외부 에이전트가 돌려주는 두 주소(APP-802). 주소 모양은 server 의 화면 열기 도구(APP-806)와
- * 같다 — 한쪽만 바꾸면 에이전트가 준 링크가 목적 화면에 닿지 않는다.
- */
-
 const MOCK_WORKSPACE_ID = "01K0000000000";
-/** 목 워크스페이스의 첫 프로젝트 “주간”(`lib/mocks/db.ts`). */
 const PROJECT_ID = "01K0000000001";
-/** 화자 분리까지 끝난 종료 노트. 전사가 아카이브로 그려진다(`lib/mocks/db.ts`). */
 const ENDED_NOTE_ID = "01K0000000020";
 
 for (const [tab, label] of [
@@ -65,7 +58,6 @@ for (const [tab, label] of [
       await expect(page.getByLabel("검토본 불러오는 중")).toBeVisible();
     }
     if (evidence) {
-      // 전사만 먼저 도착해도 임시 화면에서 근거 점프를 시작하지 않는다.
       const pendingTarget = page
         .getByTestId("transcript-block")
         .filter({ hasText: evidence.text });
@@ -117,7 +109,6 @@ test("발화 주소로 들어오면 그 발화가 화면에 보이고 주소에�
 }) => {
   await page.goto("/");
   await serviceWorkerReady(page);
-  // 첫 줄이 아니라 끝 줄을 고른다 — 첫 줄은 점프하지 않아도 이미 보인다.
   const segment = await page.evaluate(async (noteId) => {
     const response = await fetch(`/v1/notes/${noteId}/transcript`, {
       credentials: "include",
@@ -131,7 +122,6 @@ test("발화 주소로 들어오면 그 발화가 화면에 보이고 주소에�
     `/w/${MOCK_WORKSPACE_ID}/notes/${ENDED_NOTE_ID}?tab=transcript&segment=${segment.id}`
   );
 
-  // 행에는 발화 ID 속성이 없다 — 그 발화의 글로 찾는다
   const target = page
     .getByTestId("archive-transcript-block")
     .filter({ hasText: segment.text });
@@ -152,7 +142,6 @@ test("새 회의 주소로 들어와 창을 닫으면 노트 목록이 그대로
 
   const dialog = page.getByRole("dialog", { name: "새 회의 만들기" });
   await expect(dialog).toBeVisible();
-  // 노트는 만들어지지 않았고, 다시 열리지 않게 쿼리가 걷혔다
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();

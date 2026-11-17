@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 
 type Billing = WorkspaceBillingResponseData;
 
-/** 현재 요금제 패널. 실제 화면과 skeleton 이 같은 틀을 읽는다(rule `error-loading`). */
 const PANEL =
   "grid overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white md:grid-cols-[minmax(0,1fr)_auto]";
 const PANEL_CELL = "p-6";
@@ -46,16 +45,11 @@ const LABEL = "text-xs leading-4 text-[var(--el-muted)]";
 const FIGURE =
   "text-[40px] leading-[1.1] font-light tracking-[-0.035em] text-[var(--el-ink)]";
 
-/**
- * 설정 › 요금제(PRO-75). 현재 요금제와 이번 달 사용량, 요금제 비교를 한 탭에 둔다. 첫 구독은 분석 없는 전용 결제 페이지
- * (`/billing/checkout/{id}`)로 문서를 새로 열어 가고, 카드 변경은 카드 변경 모달(iframe)이 받는다. 값(가격·제공량·문구 종류)은 전부 서버 응답이다.
- */
 export function WorkspacePlanSettings({
   workspaceId,
   onOpenPayment,
 }: {
   workspaceId: string;
-  /** 「결제 관리」 탭으로. */
   onOpenPayment: () => void;
 }) {
   const t = useTranslations("billing.page");
@@ -63,7 +57,6 @@ export function WorkspacePlanSettings({
   useEffect(() => {
     if (role) billingEvents.plansViewed(workspaceId, role);
   }, [workspaceId, role]);
-  // 첫 구독은 분석 없는 전용 결제 페이지로 문서를 새로 열어 간다(APP-1600). 그 페이지에서는 이벤트를 낼 수 없어 진입은 여기서 낸다.
   const checkout = () => {
     if (role) billingEvents.checkoutEntered(workspaceId, role);
     goToCheckout(workspaceId);
@@ -160,7 +153,6 @@ function PlanContent({
   );
 }
 
-/** 왼쪽은 지금 요금제와 그 상태 한 줄, 오른쪽은 이번 달 녹음 사용량. */
 function CurrentPlan({
   workspaceId,
   billing,
@@ -178,13 +170,11 @@ function CurrentPlan({
   const planCode = billing.entitlement?.planCode ?? "FREE";
   const period = billing.entitlement?.period ?? billing.currentPeriod;
   const product = billing.product;
-  // 다음 결제는 서버가 굳힌 금액이고 ADMIN 에게만 온다(`detail`). 상품가와 다를 수 있어 멤버에게는 날짜만 보인다.
   const nextAmount = billing.detail?.nextChargeAmountKrw;
   const amount = nextAmount != null ? format.money(nextAmount) : null;
 
   const cancelScheduled =
     billing.cancelAtPeriodEnd && billing.status === "ACTIVE";
-  // 갱신 결제가 거절돼 미납 유예 중(APP-1624). 유예 끝까지 Pro 이고, 그때까지 카드를 다시 등록하면 이어진다.
   const pastDueEnd =
     billing.status === "PAST_DUE" ? billing.pastDueEndsAt : null;
   const badge = pastDueEnd
@@ -192,11 +182,8 @@ function CurrentPlan({
     : cancelScheduled
       ? t("badge.cancelScheduled")
       : null;
-  // 결제자가 나가거나 강등돼 카드가 지워지고 종료가 예약된 구독. 결제 관리 탭의 `stoppedNoCard` 와 같은 상황이다.
-  // 카드 유무는 ADMIN 에게만 오는 `detail` 로만 알 수 있다 — 멤버에게는 일반 해지 예약 줄을 보인다.
   const stoppedNoCard = isAdmin && cancelScheduled && !billing.detail?.methodId;
 
-  // RENEWAL_PENDING 은 갱신 결제의 결과를 기다리는 동안의 Pro 다. 미납 유예도 같은 지급이라 먼저 가른다.
   const line = pastDueEnd
     ? t(isAdmin ? "line.pastDue" : "line.pastDueMember", {
         end: format.dateTime(pastDueEnd).replaceAll(" ", "\u00a0"),
@@ -206,8 +193,6 @@ function CurrentPlan({
       : cancelScheduled && period
         ? t(
             stoppedNoCard ? "line.stoppedNoCardAdmin" : "line.cancelScheduled",
-            // 날짜 한 덩어리가 줄 끝에서 갈리지 않게(rule `ui-text-layout`) 띄어쓰기를 붙는 공백으로.
-            // 해지 예약은 기간 경계가 첫 결제 시각이라 시각까지 보인다.
             {
               end: (stoppedNoCard
                 ? format.date(period.end)
@@ -242,7 +227,6 @@ function CurrentPlan({
           ) : null}
         </p>
         {line ? (
-          // 결제자 이탈 안내처럼 세 문장짜리도 있어 줄을 고르게 나누지 않고(`text-balance` 는 칸 폭을 덜 써 어색하게 꺾였다) 칸 폭을 다 쓴다.
           <p className="mt-3 text-sm leading-5 text-pretty text-[var(--el-body)]">
             {line}
           </p>
@@ -275,12 +259,6 @@ const FEATURES = [
   "mcp",
 ] as const;
 
-/**
- * Free 와 유료 상품을 나란히. 두 카드는 같은 줄 구성이고(이름 → 가격 → 한 줄 설명 → 녹음 제공량) 높이가 같다. 두 요금제가
- * 갈리는 것은 녹음 제공량 하나라, 똑같이 갖는 것(멤버 수 · 기능 다섯)은 카드 아래에 한 번만 적는다([IncludedInBoth]).
- * 유료 카드는 어두운 면이고(DESIGN `pricing-tier-featured`), 구매 버튼은 그 카드 안에 있다. 워크스페이스 단위 안내는
- * 항목마다 되풀이하지 않고 맨 아래 한 줄로 둔다(APP-1596).
- */
 function PlanCompare({
   billing,
   isPaid,
@@ -297,8 +275,6 @@ function PlanCompare({
   const product = billing.product;
   const actions = billing.allowedActions;
   const canStart = actions.includes("START_PURCHASE") && !isPaid;
-  // 결제 화면은 보이지만(`enforced`) 새 구매가 없다 — 운영자가 새 판매를 멈췄다. 진행 중인 등록·결제·환불이 있어
-  // 버튼이 빠진 때와 가른다(그때는 위의 안내가 말한다).
   const salesPaused =
     !canStart &&
     (billing.status === "FREE" || billing.status === "ENDED") &&
@@ -306,7 +282,6 @@ function PlanCompare({
     !billingInProgress(billing) &&
     !billing.teamSetupInProgress &&
     !refundPending(billing.detail?.refundedAttempt?.refundStatus);
-  // 판매 중단 안내는 ADMIN 의 Free 카드 자리에만 보인다(멤버는 관리자 요청 안내). 보일 때 마운트마다 한 번 센다.
   const salesNoticeShown =
     Boolean(product) && !isPaid && isAdmin && salesPaused;
   const workspaceId = billing.workspaceId;
@@ -384,7 +359,6 @@ function PlanCard({
   price: string;
   per?: string;
   tagline: string;
-  /** 굵게 보이는 첫 항목 — 두 요금제가 갈리는 녹음 제공량. */
   highlight: string;
   current: boolean;
   featured?: boolean;
@@ -459,7 +433,6 @@ function PlanCard({
   );
 }
 
-/** 두 요금제가 똑같이 갖는 것. 카드마다 되풀이하지 않고 한 번만 적는다(가격 안내 페이지와 같은 구성). */
 function IncludedInBoth() {
   const t = useTranslations("billing.page");
   const items = [
@@ -484,10 +457,6 @@ function IncludedInBoth() {
   );
 }
 
-/**
- * 요금제 비교보다 먼저 봐야 하는 것 — 처리 중·이어서 할 등록·환불 진행·구독이 끝난 까닭. 없으면 아무것도 그리지 않는다.
- * 구매 시작은 유료 카드 안의 버튼이 맡는다.
- */
 function Attention({
   workspaceId,
   billing,
@@ -499,7 +468,6 @@ function Attention({
   billing: Billing;
   isAdmin: boolean;
   onRestartPolling: () => void;
-  /** 첫 구독 결제 페이지로. */
   onCheckout: () => void;
 }) {
   const t = useTranslations("billing.page");
@@ -507,13 +475,9 @@ function Attention({
   const cancel = useCancelBillingSetup();
   const [cardChange, setCardChange] = useState(false);
   const actions = billing.allowedActions;
-  // 카드를 기다리는 내 등록: 구독 중(ACTIVE·미납 유예)이면 카드 변경이고, 아니면 첫 구독이다.
   const pastDue = billing.status === "PAST_DUE";
   const replacing = billing.status === "ACTIVE" || pastDue;
   const detail = billing.detail;
-  // 갱신 결과를 기다리는 동안(RENEWAL_PENDING)은 현재 요금제 줄이 이미 알리고 사용자가 할 일이 없다 —
-  // 「다시 결제하지 마세요」 안내와 「상태 다시 확인」 버튼은 직접 구매한 사람에게만 보인다
-  // 미납 유예 중 카드를 다시 등록한 재청구는 사용자가 연 결제라 확인 중 안내를 보인다.
   const renewalWait =
     billing.entitlement?.kind === "RENEWAL_PENDING" && !pastDue;
   const checking =
@@ -522,19 +486,16 @@ function Attention({
       billing.latestAttemptStatus === "PROCESSING" ||
       billing.latestAttemptStatus === "UNKNOWN");
 
-  // 승인 뒤 자동 취소(보상 환불, 화면 말로 「결제 취소」)가 걸린 결제. 끝난 취소는 알리지 않는다 — 결과 화면이 이미 알렸고 상태는 Free 로 보인다.
   const refundAttempt = detail?.latestAttempt?.refundStatus
     ? detail.latestAttempt
     : detail?.refundedAttempt;
   const refund = refundAttempt?.refundStatus;
-  // 운영자 환불(문의로 받은 환불)은 「환불을 처리하고 있습니다 → 환불이 완료되었습니다」로 따로 말한다(보상 취소와 섞지 않는다).
   const userRefund =
     detail?.refundedAttempt?.refundOrigin === "OPERATOR"
       ? detail.refundedAttempt.refundStatus
       : null;
   const compensation = userRefund ? null : refund;
   const userRefundAttempt = detail?.refundedAttempt;
-  // 서버는 지금 유료 기간의 결제를 환불할 때만 다음 결제를 멈추고 구독을 끝낸다. 지난 기간의 결제 환불은 지금 구독과 무관하다.
   const userRefundKey =
     userRefundAttempt?.attemptId === detail?.currentPaymentId
       ? ({ pending: "userRefunding", failed: "userRefundFailed" } as const)
@@ -595,7 +556,6 @@ function Attention({
         {t("userRefunded.body")}
       </BillingNotice>
     ) : null,
-    // 환불로 끝난 구독은 위 「환불이 완료되었습니다」가 이미 말한다.
     billing.status === "ENDED" &&
     billing.closedReason &&
     !(billing.closedReason === "REFUNDED" && userRefund === "SUCCEEDED") ? (
@@ -626,7 +586,6 @@ function Attention({
     Boolean(billing.mySetupId) && actions.includes("CONTINUE_SETUP");
   const buttons = isAdmin
     ? [
-        // 미납 유예 중 카드 다시 등록(APP-1624). 등록하면 서버가 밀린 회차를 바로 청구한다. 이어갈 등록이 있으면 그 버튼이 대신한다.
         pastDue && actions.includes("CHANGE_CARD") && !continuing ? (
           <Button
             key="reRegister"
@@ -638,7 +597,6 @@ function Attention({
             {t("reRegisterCard")}
           </Button>
         ) : null,
-        // 카드를 기다리는 등록을 잇는다(APP-1600) — 카드 변경은 모달, 첫 구독은 결제 페이지. 둘 다 그 등록에 카드를 낸다.
         billing.mySetupId && actions.includes("CONTINUE_SETUP") ? (
           <Button
             key="continue"

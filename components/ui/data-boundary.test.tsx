@@ -25,7 +25,6 @@ function wrap(ui: React.ReactNode) {
   );
 }
 
-// 첫 호출은 reject, 리셋 후 재호출은 성공 — resetErrorBoundary가 재요청을 유발함을 검증.
 function makeFlakyChild() {
   let attempt = 0;
   return function Child() {

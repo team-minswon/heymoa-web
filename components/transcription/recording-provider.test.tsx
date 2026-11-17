@@ -47,8 +47,6 @@ vi.mock("@/lib/ui/toast", () => ({
   toast: { error: toastError, success: vi.fn(), dismiss: vi.fn() },
 }));
 
-// 녹음 중 노트 조회(`useGetNote`)가 이 목을 지난다. 기본값이 없으면 undefined 를 돌려 Query 가 「data 는 undefined 일 수
-// 없다」를 찍는다. 진행 중인 노트의 봉투를 기본으로 두고, 상태를 보는 시험은 자기 값으로 덮는다.
 const apiFetchMock = vi.hoisted(() =>
   vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({
     status: 200,
@@ -98,7 +96,6 @@ const session: TranscriptionSessionResponseData = {
   endReason: null,
 };
 
-/** 녹음이 시작된 워크스페이스. 계약이 안 알려줘서 `start()`가 받아 들고 있어야 하는 값이다. */
 const WORKSPACE_ID = "0HZX2K7M9Q4AW";
 const OTHER_WORKSPACE_ID = "0HZX2K7M9Q4AX";
 
@@ -215,7 +212,6 @@ describe("녹음 시계 (계약: recordedDurationMs 위에 activeSessionStartedA
     vi.useRealTimers();
   });
 
-  /** 노트 캐시에 회의 축 끝과 활성 세션 시작을 넣는다. 재조회 · 실시간 이벤트가 하는 일이다. */
   function seedNote(
     harness: ReturnType<typeof setup>,
     recordedDurationMs: number,
@@ -243,7 +239,6 @@ describe("녹음 시계 (계약: recordedDurationMs 위에 activeSessionStartedA
     vi.useFakeTimers({ now: ACTIVE_AT });
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
-    // 20분 녹음하고 일시정지한 뒤 재개한 회의. 노트는 회의 축 끝(20:00)과 새 세션 시작을 말한다.
     seedNote(harness, 20 * 60_000, ACTIVE_AT);
     await act(() => vi.advanceTimersByTimeAsync(5_000));
 
@@ -259,7 +254,6 @@ describe("녹음 시계 (계약: recordedDurationMs 위에 activeSessionStartedA
     seedNote(harness, 20 * 60_000, ACTIVE_AT);
     await act(() => vi.advanceTimersByTimeAsync(5_000));
 
-    // 백그라운드 탭: 5분이 흘렀는데 타이머는 한 번도 안 돌았다.
     vi.setSystemTime(ACTIVE_AT + 5_000 + 5 * 60_000);
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
@@ -278,13 +272,11 @@ describe("녹음 시계 (계약: recordedDurationMs 위에 activeSessionStartedA
 
     await act(() => harness.result.current.stop());
     await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
-    // 재개. 캐시는 아직 첫 세션(원점 0, 시작 ACTIVE_AT)이다 — 그대로 재면 30:00 으로 튄다.
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     await act(() => vi.advanceTimersByTimeAsync(2_000));
     expect(harness.result.current.phase).toBe("recording");
     expect(harness.result.current.elapsedMs).toBe(20 * 60_000);
 
-    // 재조회가 새 원점을 가져오면 그 자리부터 이어 간다.
     const resumedAt = ACTIVE_AT + 30 * 60_000;
     seedNote(harness, 20 * 60_000, resumedAt);
     await act(() => vi.advanceTimersByTimeAsync(3_000));
@@ -505,8 +497,6 @@ describe("RecordingProvider", () => {
     await expect(second).resolves.toBe(true);
   });
 
-  // final 은 발화를 다 싣고 화면이 곧바로 붙인다. 받을 때마다 전사 전체를 다시 받으면
-  // 녹음 중 DB 조회가 발화 수만큼 는다(APP-746). 빠진 번호는 노트 토픽 쪽이 메운다.
   it("final 을 받아도 전사 전체를 다시 받지 않는다", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -532,8 +522,6 @@ describe("RecordingProvider", () => {
     });
   });
 
-  // 소리는 쌓이는데 글자만 멈춘 상태. 서버만 아는 사실이라 이벤트로만 들어온다.
-  // 운영 503 은 1초에 풀렸다 — 5초 이어질 때만 알린다(D-23)
   it("업체 멈춤이 5초 이어질 때만 알리고, 회복하면 곧바로 걷는다", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -692,8 +680,6 @@ describe("RecordingProvider", () => {
     await expect(second).resolves.toBe(false);
   });
 
-  // 실패 뒤 [다시 녹음]을 막으면 창이 끝난 녹음자가 다시 켤 길이 없다. 같은 탭의 옛 세션은
-  // 시작 요청의 clientInstanceId 로 server 가 닫는다(D-10·D-16)
   it("실패 뒤에도 [다시 녹음]은 새 세션을 연다", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -867,8 +853,6 @@ describe("RecordingProvider", () => {
   });
 
   it("keeps the server-sent failure message verbatim", async () => {
-    // 계약(asyncapi)의 error.message가 사용자에게 보일 한국어 문구의 원본이다.
-    // web이 코드별로 다시 쓰면 서버가 바뀔 때마다 갈라진다 — rule error-loading.
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
@@ -879,7 +863,6 @@ describe("RecordingProvider", () => {
         message: "다른 기기에서 이 녹음을 진행 중입니다.",
       })
     );
-    // 컨트롤러도 같은 사건으로 onFailure 를 부른다. 서버 문구를 덮으면 안 된다.
     act(() =>
       harness.getCallbacks().onFailure("server_error", {
         droppedMs: 0,
@@ -892,7 +875,6 @@ describe("RecordingProvider", () => {
     );
   });
 
-  // 업체 장애·서버 내부 오류는 같은 세션에 다시 붙으면 풀린다. 컨트롤러가 다시 붙는다.
   it("does not fail on a retryable in-band error", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1026,11 +1008,6 @@ describe("RecordingProvider", () => {
   });
 
   it("★ 남이 회의를 끝낸 것을 장애로 말하지 않는다", async () => {
-    // 권한이 「시작자만」에서 「멤버 누구나」로 열리면서(APP-685) 자주 일어나게 됐다.
-    // 전에는 `MEETING_ENDED` 가 기본 문구로 떨어져 「서버에서 스크립트 세션이 중단되었습니다」로
-    // 보였다 — 정상적으로 끝난 회의가 녹음하던 사람에게는 장애로 읽힌다.
-    // **정상적으로 녹음 중이어야 한다.** 이미 failed 면 재조정이 통째로 건너뛰어져서
-    // 이 문구가 나올 자리 자체가 없다.
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     expect(harness.result.current.phase).toBe("recording");
@@ -1061,11 +1038,6 @@ describe("RecordingProvider", () => {
   });
 });
 
-/**
- * 녹음이 **어느 워크스페이스 것인지**는 계약이 안 알려준다 — 노트 응답에 `projectId`만 있고
- * 세션 응답에는 둘 다 없다. 그래서 `start()`가 받아서 들고 있는다. 이 값이 없으면
- * 「이 워크스페이스를 녹음 중인가」를 물을 수 없어 나가기 잠금도 추방 정리도 못 만든다.
- */
 describe("녹음 중인 워크스페이스", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -1079,8 +1051,6 @@ describe("녹음 중인 워크스페이스", () => {
     expect(harness.result.current.activeWorkspaceId).toBe(WORKSPACE_ID);
   });
 
-  // `disconnect`는 로그아웃과 추방이 함께 쓰는 정리다. 워크스페이스만 남으면 이미 끝난
-  // 녹음을 근거로 다음 워크스페이스의 나가기가 잠긴다.
   it("disconnect가 노트와 함께 워크스페이스도 비운다", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1112,13 +1082,6 @@ describe("녹음 중인 워크스페이스", () => {
   });
 });
 
-/**
- * **화면 밖 녹음도 끊어야 한다.** 녹음은 route를 넘어 살아 있어서(`RecordingProvider`가
- * `app/providers.tsx`에 있다) A를 녹음한 채 B나 홈으로 갈 수 있고, 그 상태로 A에서
- * 추방되면 아무 화면도 A를 보고 있지 않다. 화면 쪽 감지로는 닿지 않는 자리다.
- *
- * 세션 조회도 비멤버에게는 같은 404를 준다(`NoteAccessHandler.requireProjectMember`).
- */
 describe("녹음 중에 워크스페이스에서 쫓겨나면", () => {
   beforeEach(() => {
     toastError.mockReset();
@@ -1141,7 +1104,6 @@ describe("녹음 중에 워크스페이스에서 쫓겨나면", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     expect(harness.result.current.phase).toBe("recording");
 
-    // 세션 폴링이 404를 받았다. `error`는 재시도를 다 소진해야 차므로 첫 실패를 본다.
     sessionQuery.current = {
       ...sessionQuery.current,
       failureReason: GONE,
@@ -1149,9 +1111,6 @@ describe("녹음 중에 워크스페이스에서 쫓겨나면", () => {
     harness.rerender();
 
     await waitFor(() => expect(harness.result.current.phase).toBe("idle"));
-    // **말없이 사라지면 안 된다.** 화면이 다른 워크스페이스에 있으면 이 경로만 404를 보고,
-    // 안내가 없으면 녹음 표시가 이유 없이 없어진다. **닫을 때까지 남아야 한다** — 숨긴
-    // 탭에서 감지되면 기본 5초가 사용자 없이 다 지나간다.
     expect(toastError).toHaveBeenCalledWith(
       "이 워크스페이스에 더 이상 접근할 수 없습니다.",
       expect.objectContaining({ id: expect.any(String), duration: Infinity })
@@ -1159,15 +1118,11 @@ describe("녹음 중에 워크스페이스에서 쫓겨나면", () => {
     expect(harness.controller.close).toHaveBeenCalled();
     expect(harness.result.current.session).toBeNull();
     expect(harness.result.current.activeWorkspaceId).toBeNull();
-    // 사이드바·홈이 죽은 워크스페이스를 계속 그리면 눌러서 다시 들어갔다가 또 쫓겨난다.
-    // 화면이 그곳에 없으면 `useRedirectWhenWorkspaceGone`이 안 떠 있어 아무도 안 고친다.
     expect(harness.invalidate).toHaveBeenCalledWith({
       queryKey: getGetWorkspacesQueryKey(),
     });
   });
 
-  // 네트워크·500은 끊을 이유가 아니다 — 잠깐 끊긴 것뿐인데 녹음을 죽이면 그때까지의
-  // 발화가 통째로 날아간다.
   it("다른 실패로는 안 끊는다", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1184,14 +1139,6 @@ describe("녹음 중에 워크스페이스에서 쫓겨나면", () => {
   });
 });
 
-/**
- * 추방·로그아웃 정리가 **진행 중인 시작과 겹칠 때.** `api.startSession()`이 대기하는 사이에
- * `disconnect()`가 돌면 상태는 비워지는데, 뒤늦게 도착한 READY 세션을 다시 저장하면
- * phase가 `idle`이라 폴링도 안 도는 **고아 세션**이 만료될 때까지 남는다.
- *
- * 사용자가 직접 취소한 경우에는 반대로 저장해야 한다 — 서버에 열린 세션이 있다는 것을
- * 독이 알려야 하기 때문이다. 그래서 "취소"와 "통째로 정리"를 구분한다.
- */
 describe("정리 중에 시작이 끝나면", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -1210,7 +1157,6 @@ describe("정리 중에 시작이 끝나면", () => {
     let starting!: Promise<void>;
     await act(async () => {
       starting = harness.result.current.start(session.noteId, WORKSPACE_ID);
-      // 권한까지만 지나고 세션 생성에서 멈춘다.
       await Promise.resolve();
     });
     await waitFor(() =>
@@ -1229,11 +1175,6 @@ describe("정리 중에 시작이 끝나면", () => {
   });
 });
 
-/**
- * **세션이 생기기 전에 쫓겨나면** 폴링이 아직 없다(`session?.sessionId`가 있어야 켜진다).
- * 그 사이 다른 워크스페이스로 옮겼으면 화면 쪽 감지기도 언마운트돼 아무도 안 본다.
- * 그러면 `startSession`의 404가 일반 실패로 처리돼 「다시 시도」만 남고, 눌러도 계속 404다.
- */
 describe("시작하는 사이에 쫓겨나면", () => {
   beforeEach(() => {
     toastError.mockReset();
@@ -1242,8 +1183,6 @@ describe("시작하는 사이에 쫓겨나면", () => {
     vi.unstubAllEnvs();
   });
 
-  // 전역 mutation 토스트를 껐으므로 **이 문구가 유일한 안내다.** 서버가 준 이유를 접으면
-  // 사용자는 원인 대신 「녹음을 시작하지 못했습니다」만 보고 같은 재시도를 반복한다.
   it("서버가 준 이유를 그대로 보여 준다", async () => {
     const harness = setup();
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
@@ -1260,8 +1199,6 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.result.current.error).toBe("이미 종료된 회의입니다.");
   });
 
-  // 응답만 못 받았어도 서버는 세션을 만들고 회의를 진행 중으로 바꿨을 수 있다. 노트를 다시 읽지 않으면
-  // 화면은 일시정지로 남고 회의 종료가 MEETING_RECORDING 으로 막힌다(APP-1472)
   it("응답 시한으로 실패해도 노트를 다시 읽는다", async () => {
     const harness = setup();
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
@@ -1278,7 +1215,6 @@ describe("시작하는 사이에 쫓겨나면", () => {
     });
   });
 
-  // 자동 종료된 회의는 사용자가 끝낸 적이 없어 「이미 종료」로는 왜 막혔는지 모른다(APP-1328). 서버 문구를 그대로 쓴다
   it("자동 종료된 회의면 서버가 준 자동 종료 문구를 그대로 보여 준다", async () => {
     const harness = setup();
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
@@ -1297,7 +1233,6 @@ describe("시작하는 사이에 쫓겨나면", () => {
     );
   });
 
-  // 같은 브라우저의 다른 탭도 409 를 받는다(서버: 같은 사용자라도 다른 탭이 리스를 쥐고 있으면). 「다른 기기」라고만 하면 사실과 다르다(D-26 G4)
   it("다른 탭이나 기기가 녹음 중이라 막히면 그렇게 말한다", async () => {
     const harness = setup();
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
@@ -1339,7 +1274,6 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.invalidate).not.toHaveBeenCalledWith({
       queryKey: getGetRecordingUsageQueryKey("OTHER"),
     });
-    // 다른 실패는 한도 안내를 세우지 않는다
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
       success: false,
       data: null,
@@ -1370,8 +1304,6 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(keys).not.toContainEqual(getGetRecordingUsageQueryKey("OTHER"));
   });
 
-  // 녹음자 기기가 끊겨 server 가 세션을 정리하기를 기다리는 중이다. 기다리면 된다는 것을 말해야
-  // 같은 재시도를 멈춘다(D-10)
   it("녹음하던 기기가 끊겨 막히면 정리될 때까지 기다리면 된다고 말한다", async () => {
     const harness = setup();
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
@@ -1411,17 +1343,12 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.invalidate).toHaveBeenCalledWith({
       queryKey: getGetWorkspacesQueryKey(),
     });
-    // 「다시 시도」를 그리는 실패 상태로 두지 않는다 — 눌러도 결과가 같다.
     expect(harness.result.current.phase).toBe("idle");
     expect(harness.result.current.error).toBeNull();
     expect(harness.result.current.activeWorkspaceId).toBeNull();
   });
 });
 
-/**
- * 세션은 녹음 한 번이고 소켓은 거기 붙는 부착이다. 끊겨도 컨트롤러가 **같은 세션에** 다시
- * 붙는다. 그래서 3초 폴링은 표시용이고, 녹음을 끝내는 것은 회의 쪽 결정뿐이다.
- */
 describe("같은 세션에 다시 붙는 동안", () => {
   function interrupted(
     endReason: "CLIENT_DISCONNECTED" | "HEARTBEAT_TIMEOUT" | "MEETING_PAUSED"
@@ -1518,7 +1445,6 @@ describe("같은 세션에 다시 붙는 동안", () => {
   });
 
   it("녹음 중에는 탭을 닫으려 하면 붙잡고, 끝나면 놓는다", async () => {
-    // 이 파일은 자동 cleanup 이 없어 앞 테스트의 녹음 중 provider 가 window 에 남아 있다
     cleanup();
     const harness = setup();
     const leave = () => {
@@ -1591,7 +1517,6 @@ describe("같은 세션에 다시 붙는 동안", () => {
   it("다른 탭이나 기기가 이어받으면 그렇다고 말하고 이 탭의 녹음을 놓는다", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
-    // 새로고침해도 이 탭이 녹음하던 노트를 안다 — 독이 제 녹음에 잠기지 않는다(D-16)
     expect(recordingClaimOf(session.noteId)).toBe("mine");
 
     act(() =>
@@ -1600,7 +1525,6 @@ describe("같은 세션에 다시 붙는 동안", () => {
         .onEvent({ type: "superseded", sessionId: session.sessionId })
     );
 
-    // 남의 것이 된 녹음을 제 것으로 기억하면 새로고침 뒤 독이 409 로 가는 시작을 연다
     expect(recordingClaimOf(session.noteId)).toBeNull();
 
     expect(harness.result.current.error).toBe(
@@ -1611,7 +1535,6 @@ describe("같은 세션에 다시 붙는 동안", () => {
   });
 });
 
-/** 다른 탭이 localStorage 에 남긴 녹음 기록 */
 function writeOtherTab(id: string, noteId: string, beatAt: number) {
   localStorage.setItem(
     `heymoa.transcription.recording:${id}`,
@@ -1619,7 +1542,6 @@ function writeOtherTab(id: string, noteId: string, beatAt: number) {
   );
 }
 
-// 운영 20260926T174318: 녹음 중 탭을 닫고 새 탭으로 열면 워치독까지 55초를 시작할 수 없었다
 describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
   afterEach(() => {
     localStorage.clear();
@@ -1651,8 +1573,6 @@ describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
     expect(takeover?.[2]).toMatchObject({ noteId: session.noteId });
   });
 
-  // 운영 20260926T180752-tab_5: 브라우저의 권한 요청은 렌더가 끝난 뒤에 풀린다. 그 사이 진행 phase 의
-  // 박동이 새 ID 로 기록을 적어, 권한 뒤에 판정하면 제 기록(mine)이 보여 이어받지 않고 409 로 갔다
   it("권한 요청이 늦게 풀려도 식은 탭의 ID 로 시작한다", async () => {
     writeOtherTab("dead-tab-slow", session.noteId, Date.now() - 11_700);
     const harness = setup();
@@ -1724,7 +1644,6 @@ describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
     expect(recordingClaimOf(session.noteId)).toBeNull();
   });
 
-  // 식게 두면 다른 탭이 산 탭의 ID 를 이어받아 두 탭이 같은 ID 가 되고, 한쪽 시작이 다른 쪽 녹음을 닫는다
   it("새로고침 뒤 아직 시작 안 한 탭도 제 기록의 박동을 이어 간다", () => {
     beatRecording(session.noteId, Date.now() - 10_000);
 
@@ -1736,7 +1655,6 @@ describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
     expect(JSON.parse(raw!).beatAt).toBeGreaterThan(Date.now() - 1_000);
   });
 
-  // 새로고침은 같은 ID 라 상관없고, 닫힌 탭이면 새 탭이 6초를 기다리지 않는다
   it("탭이 닫히면(pagehide) 박동을 곧바로 식힌다", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1790,7 +1708,6 @@ describe("끊김 창과 끝 (APP-705)", () => {
 
     expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄습니다.");
     expect(harness.result.current.phase).toBe("failed");
-    // 이 탭이 버린 세션이다. 열린 세션으로 들고 있으면 독이 「다른 탭·기기에서 기록 중」으로 막는다
     expect(harness.result.current.session?.status).toBe("INTERRUPTED");
 
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1865,7 +1782,6 @@ describe("끊김 창과 끝 (APP-705)", () => {
       expect(harness.result.current.error).toBe(
         "회의가 끝나 이 기기에 남은 소리 12초를 올리지 못했습니다."
       );
-      // 종료 화면 규칙: 노트가 ENDED 면 note-panel 이 독을 걷어 [다시 녹음]이 없다. 같은 캐시를 채운다
       expect(
         harness.queryClient.getQueryData<ReturnType<typeof noteWith>>(
           getGetNoteQueryKey(session.noteId)
@@ -1905,7 +1821,6 @@ describe("끊김 창과 끝 (APP-705)", () => {
     });
 
     it("버린 소리가 없으면 회의 종료 문구를 쓴다", async () => {
-      // 녹음하는 동안 시계가 같은 노트 캐시를 읽는다. 그때는 아직 진행 중이다.
       apiFetchMock.mockResolvedValue(noteWith("IN_PROGRESS"));
       const harness = await dropAfterWindow(0);
 
@@ -1938,7 +1853,6 @@ describe("끊김 창과 끝 (APP-705)", () => {
     );
   });
 
-  // 재부착이 먼저 SESSION_NOT_CONNECTABLE 로 거절되고, 회의 종료는 폴링으로 뒤에 안다(APP-697 전)
   it("재부착이 먼저 거절돼도 회의 종료를 알면 못 올린 소리를 말한다", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));

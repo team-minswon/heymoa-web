@@ -1,7 +1,6 @@
 import { anchorsOf, parseScript } from "@/lib/mocks/help-demo/script";
 import type { MidMeeting } from "@/lib/mocks/help-demo/en/mid-campaign";
 
-/** 출시 일정 점검. 화자 A 오세라, B 한지호, C 최민재. */
 const launchScript = parseScript(`
 A Three weeks to launch. Today let's go through what's left by date and see if anything's slipping.
 A Jake, can you start with dev?
@@ -62,7 +61,6 @@ export const LAUNCH_MEETING: MidMeeting = {
   ],
 };
 
-/** 사전 신청 안내 메일 검토. 화자 A 오세라, B 정유나, C 김서윤. */
 const mailScript = parseScript(`
 A Let's go over the waitlist email drafts together. Grace, you wrote these?
 B Yes, I wrote two versions. One's short and just covers the perks. The other's longer and includes a product description.
@@ -124,7 +122,6 @@ export const MAIL_MEETING: MidMeeting = {
   ],
 };
 
-/** 고객 인터뷰 3차. 화자 A 최민재(진행), B 박도윤, C 김서윤. */
 const int3Script = parseScript(`
 A Let's go through round 3 together. We talked to five people this time, all working professionals in their 30s.
 B I sat in on two, and one thing came up in both. They always look up reviews before buying, but they don't trust them.
@@ -186,7 +183,6 @@ export const INTERVIEW3_MEETING: MidMeeting = {
   ],
 };
 
-/** 고객 인터뷰 2차. 화자 A 최민재, B 이하린, C 박도윤. */
 const int2Script = parseScript(`
 A Here's what we heard in round 2. This time we met people who bought again after their first purchase. Four of them.
 B I'm curious what made them buy again. Who were they?
@@ -247,7 +243,6 @@ export const INTERVIEW2_MEETING: MidMeeting = {
   ],
 };
 
-/** 주간 운영 점검(지난주). 화자 A 정유나, B 한지호, C 오세라. */
 const weeklyScript = parseScript(`
 A Let's start with last week's ops numbers. We got 273 support tickets, down 8% from the week before. @inquiry
 B Average first response time is down to 36 minutes too. That's getting close to the 30-minute target.
@@ -308,7 +303,6 @@ export const WEEKLY_PAST_MEETING: MidMeeting = {
   ],
 };
 
-/** 브랜드 리뉴얼 방향 논의. 화자 A 이하린, B 최민재, C 강태오(외부 디자인). */
 const brandScript = parseScript(`
 A Let's start with the direction for the brand refresh. The key question is how much we change the logo and colors.
 B I'd rather refine what we have and keep its strengths than change everything. Our brand recognition isn't that low.

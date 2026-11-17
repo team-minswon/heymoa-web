@@ -1,7 +1,6 @@
 import type { SeedTopic } from "@/lib/mocks/fixtures/meeting-review-seed";
 import { anchorsOf, parseScript } from "@/lib/mocks/help-demo/script";
 
-/** 중간 길이 회의의 전사와 요약 시드. 요약은 주제 하나, 결정 2~4개, 할 일 2~5개로 작게 둔다. */
 export type MidMeeting = {
   script: ReturnType<typeof parseScript>;
   headline: string;
@@ -9,7 +8,6 @@ export type MidMeeting = {
   topics: SeedTopic[];
 };
 
-/** 봄 캠페인 키비주얼 시안 검토. 화자 A 이하린, B 최민재, C 박도윤. */
 const visualScript = parseScript(`
 A 키비주얼 시안 세 개 올라왔죠. 오늘은 하나로 좁히는 게 목표예요. 먼저 민재님이 시안마다 의도를 간단히 말씀해 주세요.
 B 네. 1안은 꽃잎이 흩날리는 사진 위주고요, 2안은 제품을 가운데 크게 놓고 배경을 연한 초록으로 했어요. 3안은 사람 손에 제품을 들고 있는 장면이에요.
@@ -75,7 +73,6 @@ export const VISUAL_MEETING: MidMeeting = {
   ],
 };
 
-/** 광고 소재 A/B 테스트 설계. 화자 A 박도윤, B 최민재, C 이하린. */
 const abScript = parseScript(`
 A 이번 회의는 5월 소재 A/B 테스트를 어떻게 설계할지 정하는 자리예요. 4월에는 소재 A와 B를 그냥 돌렸는데, 이번엔 변수를 하나씩만 바꿔서 보려고 해요.
 C 좋아요. 4월에는 소재 두 개가 이것저것 다 달라서 왜 이겼는지 정확히 몰랐잖아요.

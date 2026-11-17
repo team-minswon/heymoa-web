@@ -17,10 +17,6 @@ import { cn } from "@/lib/utils";
 
 const subscribe = () => () => {};
 
-/**
- * 탭. 서버가 **모든 탭의 내용을 그려 보내서** 스크립트 없이도 다 읽힌다(탭 이름이 작은 제목으로 선다).
- * 하이드레이션 뒤에만 탭 목록이 서고 고른 탭의 내용만 보인다. 방향키 · Home · End 로 옮긴다.
- */
 export function HelpTabsView({
   titles,
   panels,
@@ -93,9 +89,6 @@ export function HelpTabsView({
           </button>
         ))}
       </div>
-      {/* 패널을 한 칸에 겹쳐 세워 상자 높이를 가장 긴 탭에 맞춘다(APP-1356). 고른 탭만 그리면 Mac ↔ Windows 를
-          오갈 때마다 상자가 72~100px 줄었다 늘어 아래 본문이 통째로 오르내렸다. 안 고른 탭은 `invisible` 이라
-          보조기술에도 안 읽힌다. */}
       <div className={cn(ready && "grid grid-cols-[minmax(0,1fr)]")}>
         {panels.map((panel, i) => (
           <div
@@ -122,7 +115,6 @@ export function HelpTabsView({
   );
 }
 
-/** 코드 블록. 오른쪽 위 복사 버튼. */
 export function HelpCodeBlock({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   const slug = useHelpSlug();
@@ -141,9 +133,7 @@ export function HelpCodeBlock({ text }: { text: string }) {
             trackHelp("help_code_copied", { slug });
             setDone(true);
             setTimeout(() => setDone(false), 1500);
-          } catch {
-            /* 복사하지 못해도 글은 그대로 보인다 */
-          }
+          } catch {}
         }}
         className={cn(
           "absolute top-2 right-2 grid size-8 place-items-center rounded-[8px] bg-white text-[var(--tv-muted)] hover:text-[var(--tv-ink)]",

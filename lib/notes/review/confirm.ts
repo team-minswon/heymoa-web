@@ -1,16 +1,13 @@
 import { isProjectIncluded } from "@/lib/notes/review/project-approval";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 
-/** 제안에 대해 고른 쪽. 바꾸는 쪽(반영 · 끝내기)이거나 그대로 두는 쪽(넘기기 · 이어가기)이다. */
 export type Choice = "change" | "keep";
 
-/** APPLY는 확정 때 적용할 선택, APPLIED는 이미 적용된 옛 이력이다. */
 export const choiceOf = (
   decision: "END" | "APPLY" | "APPLIED" | "KEEP" | null
 ): Choice | null =>
   decision === null ? null : decision === "KEEP" ? "keep" : "change";
 
-/** 확정을 막는 까닭. 문구는 화면이 `notes.review.blocked` 에서 고른다. */
 export type ConfirmBlock =
   | "saving"
   | "tasksLoading"
@@ -19,10 +16,6 @@ export type ConfirmBlock =
   | "staleApplies"
   | "unchosen";
 
-/**
- * 지금 확정하면 안 되는 까닭. 없으면 null 이다. 확정은 되돌릴 수 없어 선택 저장이 끝나고,
- * 포함 항목에 기존 할 일 변경 제안이 있으면 그 할 일을 읽어 사람이 볼 수 있어야 한다.
- */
 export function confirmBlockReason({
   saving,
   hasTaskChanges,
@@ -34,7 +27,6 @@ export function confirmBlockReason({
   saving: boolean;
   hasTaskChanges: boolean;
   tasks: "pending" | "ready" | "failed";
-  /** 포함 항목에 붙었는데 아직 고르지 않은, 고를 수 있는 제안 수 */
   unchosen: number;
   duplicateApplies?: number;
   staleApplies?: number;
@@ -44,12 +36,10 @@ export function confirmBlockReason({
   if (hasTaskChanges && tasks === "failed") return "tasksFailed";
   if (duplicateApplies > 0) return "duplicateApplies";
   if (staleApplies > 0) return "staleApplies";
-  // 사람이 고르는 것은 제안뿐이다. 안 본 제안을 둔 채 되돌릴 수 없는 확정으로 넘기지 않는다.
   if (unchosen > 0) return "unchosen";
   return null;
 }
 
-/** 승인에서 전체 거절될 선택. 원본 제안의 기대 판을 현재 판으로 덮어쓰지 않습니다. */
 export function taskApplyConflictsOf(
   items: readonly ReviewItem[],
   revisionOf: (id: string) => number | undefined
@@ -77,10 +67,6 @@ export function taskApplyConflictsOf(
   };
 }
 
-/**
- * 포함 항목에 붙었는데 아직 고르지 않은 제안 수. 고를 수 없는 것은 세지 않는다 — 다른 확정이 이미 끝낸
- * 대체와, 대상 할 일을 찾지 못한 할 일 변경이다. 세면 확정이 영영 막힌다.
- */
 export function unchosenSuggestionCount(
   items: readonly ReviewItem[],
   hasTask: (taskId: string) => boolean
@@ -106,10 +92,6 @@ export type ConfirmSummary = {
   changedTasks: number;
 };
 
-/**
- * 확정하면 무엇이 일어나는지. 서버는 포함 항목에 저장된 끝내기(`END`)만 끝내고 다른 확정이 먼저 끝낸 노드는
- * 건너뛰므로 여기서도 그것만 센다. 기존 할 일은 APPLY 초안만 세며 APPLIED 이력은 재적용하지 않는다.
- */
 export function confirmSummaryOf(items: readonly ReviewItem[]): ConfirmSummary {
   const included = items.filter(isProjectIncluded);
   const targets = (rows: ReadonlyArray<{ target: { itemId: string } }>) =>

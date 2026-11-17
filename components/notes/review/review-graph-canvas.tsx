@@ -27,7 +27,6 @@ export type GraphTokens = {
   canvas: string;
 };
 
-/** 이 배율부터 항목 이름을 늘 적는다 */
 const LABEL_ZOOM = 2.4;
 
 /** 배치가 돌면 링크 끝이 ID 문자열에서 점 객체로 바뀐다 */
@@ -36,7 +35,6 @@ const endId = (end: unknown) =>
     typeof end === "object" && end !== null ? (end as { id: string }).id : end
   );
 
-/** 토큰은 hex 다. 흐림은 투명도로만 준다 */
 function withAlpha(color: string, alpha: number) {
   const hex = color.trim().replace("#", "");
   if (!/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(hex)) return color;
@@ -48,10 +46,6 @@ function withAlpha(color: string, alpha: number) {
 const clip = (text: string, limit: number) =>
   text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 
-/**
- * 판을 가운데로 끄는 약한 힘. 서로 이어지지 않은 주제 뭉치와 주제 밖 항목이 밀어냄에 밀려
- * 판 밖으로 흩어지지 않게 한다. d3 의 forceX/Y 와 같지만 그 패키지를 직접 들이지 않으려 여기 둔다.
- */
 function gravity(strength: number) {
   let nodes: GraphNodeObject[] = [];
   return Object.assign(
@@ -65,12 +59,10 @@ function gravity(strength: number) {
   );
 }
 
-/** 점끼리 반지름 + 여백보다 가까우면 반씩 밀어낸다. d3 의 forceCollide 와 같은 일이다 */
 function collide(padding: number) {
   let nodes: GraphNodeObject[] = [];
   return Object.assign(
     () => {
-      // ponytail: 모든 쌍을 본다(O(n²)). 점 수백 개면 틱당 1ms 안쪽, 천 개를 넘으면 사분 트리로 바꾼다.
       for (let i = 0; i < nodes.length; i += 1) {
         const a = nodes[i];
         for (let j = i + 1; j < nodes.length; j += 1) {
@@ -92,9 +84,7 @@ function collide(padding: number) {
   );
 }
 
-/** 이 배율보다 멀리서는 작은 주제의 이름을 번호로만 적는다. 촘촘한 자리에서 이름끼리 겹친다 */
 const TOPIC_NAME_ZOOM = 1.2;
-/** 멀리서도 이름을 적는 큰 주제의 항목 수 */
 const BIG_TOPIC = 10;
 const LINK_DISTANCE: Record<ForceLinkKind, number> = {
   hub: 40,
@@ -129,7 +119,6 @@ export default function ReviewGraphCanvas({
   width: number;
   height: number;
   tokens: GraphTokens;
-  /** 허브 이름을 몇 글자에서 자르나. 0 이면 번호만 */
   labelLimit: number;
   zoomRange: [number, number];
   hoveredId: string | null;
@@ -166,7 +155,6 @@ export default function ReviewGraphCanvas({
     const graph = graphRef.current;
     if (!graph) return;
     fitted.current = false;
-    // 허브는 크게 밀어내 주제끼리 떨어뜨리고, 항목은 덜 밀어 제 허브 곁에 모이게 한다.
     graph
       .d3Force("charge")
       ?.strength((node: GraphNodeObject) => (node.hub ? -300 : -45))
@@ -195,7 +183,6 @@ export default function ReviewGraphCanvas({
         ctx.fill();
       } else {
         const item = node.item!;
-        // 안건은 속이 빈 원이다 — 결론이 아니라 이야기의 뿌리라 역할 색으로 칠하지 않는다.
         ctx.fillStyle =
           item.kind === "AGENDA" ? tokens.card : ROLE_COLOR[item.role];
         ctx.fill();
@@ -218,8 +205,6 @@ export default function ReviewGraphCanvas({
     [tokens, selectedId, hoveredId, lit]
   );
 
-  // 이름은 모든 점 위에 한 번 더 그린다. 점과 같이 그리면 나중에 그린 점이 앞선 이름을 덮는다.
-  // 이미 그린 이름이나 점과 겹치는 이름은 건너뛴다 — 허브, 불 켜진 이웃, 나머지 순으로 자리를 먼저 잡는다.
   const drawLabels = useCallback(
     (ctx: CanvasRenderingContext2D, scale: number) => {
       ctx.textAlign = "center";
@@ -247,7 +232,6 @@ export default function ReviewGraphCanvas({
           x + half,
           y + (size + 2) / scale,
         ];
-        // ponytail: 이름끼리 전부 견준다(O(n²)). 이름 수백 개면 한 틀에 1ms 안쪽이다.
         const overlaps = taken.some(
           ([l, t, r, b]) => box[0] < r && box[2] > l && box[1] < b && box[3] > t
         );
@@ -278,7 +262,6 @@ export default function ReviewGraphCanvas({
       ctx.globalAlpha = 1;
       if (scale < LABEL_ZOOM) return;
       const items = data.nodes.filter((node) => !node.hub && !dimmed(node.id));
-      // 점도 자리를 차지한다. 남의 점을 덮는 이름은 적지 않는다
       for (const node of items) {
         const radius = screenRadius(node.radius, node.hub, scale);
         const [x, y] = [node.x ?? 0, node.y ?? 0];
@@ -340,7 +323,6 @@ export default function ReviewGraphCanvas({
       d3VelocityDecay={0.35}
       nodeCanvasObject={drawNode}
       nodePointerAreaPaint={(node, color, ctx, scale) => {
-        // 작은 점도 손가락으로 누를 수 있게 누를 자리는 화면에서 8px 반지름을 넘게 둔다.
         ctx.fillStyle = color;
         ctx.beginPath();
         const radius = screenRadius(node.radius, node.hub, scale);

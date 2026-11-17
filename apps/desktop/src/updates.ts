@@ -24,7 +24,6 @@ type Options = {
   changed(state: DesktopUpdateState): void;
 };
 
-/** The updater never installs on its own: every installation passes the native audio guard. */
 export class DesktopUpdates {
   private status: DesktopUpdateState["status"];
   private version?: string;
@@ -117,7 +116,6 @@ export class DesktopUpdates {
       }
       this.updater.autoDownload = download;
       const result = await this.updater.checkForUpdates();
-      // Await the automatic download too, so repeated checks cannot start parallel downloads.
       await result?.downloadPromise;
     } catch {
       this.change("error");

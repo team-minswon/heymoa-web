@@ -26,10 +26,6 @@ export type ResolveSpeaker = (
   participantId: string | null
 ) => SpeakerIdentity | null;
 
-/**
- * 수정이력 → 스크립트. 회의 중에 이 항목이 어떻게 생기고 바뀌었는지를 최근 것부터 세우고,
- * 단계를 펼치면 그 말이 나온 스크립트 줄이 앞뒤 한 줄과 함께 선다. 줄을 누르면 스크립트 탭의 그 줄로 간다.
- */
 export function ItemTrail({
   noteId,
   item,
@@ -42,7 +38,6 @@ export function ItemTrail({
   noteId: string;
   item: ReviewItem;
   segments: readonly TranscriptResponseDataSegmentsItem[];
-  /** 스크립트 조회 상태. 오는 중이거나 실패했는데 단계마다 「스크립트 없음」이라 적으면 없는 것처럼 읽힌다 */
   scriptState?: "pending" | "ready" | "failed";
   onRetryScript?: () => void;
   resolveSpeaker: ResolveSpeaker;
@@ -106,7 +101,6 @@ export function ItemTrail({
     );
   }
 
-  // 스크립트를 못 읽었는데 단계를 그리면 단계마다 「스크립트 없음」이라 적혀 없는 것처럼 읽힌다.
   if (scriptState === "failed" && onRetryScript) {
     return (
       <TrailHeader count={revisions ? steps.length : undefined}>

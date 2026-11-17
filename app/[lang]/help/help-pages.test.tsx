@@ -20,7 +20,6 @@ import HelpHubPage from "@/app/[lang]/help/page";
 import { buildHelpIndex, searchHelp } from "@/lib/help/search-index";
 import { intlWrapper } from "@/components/help/test-intl";
 
-/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
 const render = (ui: React.ReactElement) =>
   rtlRender(ui, { wrapper: intlWrapper() });
 
@@ -36,7 +35,6 @@ vi.mock("next/navigation", () => ({
 describe("도움말 페이지", () => {
   afterEach(cleanup);
 
-  // 앱 안 링크(`HelpLink`)와 옛 앵커가 쓰는 id → 그룹 표가 실제 페이지 목록과 같아야 한다
   it("id · 그룹 표가 페이지 목록과 일치한다", () => {
     expect(
       Object.fromEntries(helpTopics.map((t) => [t.slug, t.group]))
@@ -55,7 +53,6 @@ describe("도움말 페이지", () => {
     );
   });
 
-  // 상황별 사이드바는 짧은 이름(navTitle)을 묶음 제목 아래에 낸다 — 한 줄에 들어가게, 모든 상황이 정확히 한 묶음에.
   it("상황별 페이지는 모두 한 묶음에 들고 짧고 겹치지 않는 navTitle 이 있다", () => {
     const situations = helpTopics.filter((t) => t.group === "situations");
     const clustered = situationClusters.flatMap((c) => c.pages);
@@ -69,7 +66,6 @@ describe("도움말 페이지", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  // 데스크톱 앱 전용 페이지만 알약을 붙이고, 붙인 페이지의 라벨에는 「데스크톱」이 또 나오지 않는다.
   it("badge 는 데스크톱 앱 전용 페이지에만 있고 라벨과 겹치지 않는다", () => {
     const badged = helpTopics.filter((t) => t.badge);
     expect(badged.map((t) => t.slug).sort()).toEqual([
@@ -97,7 +93,6 @@ describe("도움말 페이지", () => {
     }
   });
 
-  // 한 장짜리 시절 `/help#id` 링크가 새 주소로 간다(APP-1024 앵커). 키를 지우면 이미 퍼진 링크가 깨진다.
   it("옛 앵커가 모두 실제 페이지로 간다", () => {
     expect(Object.keys(LEGACY_HELP_ANCHORS).sort()).toEqual(
       [
@@ -149,7 +144,6 @@ describe("도움말 페이지", () => {
     expect(descriptions.size).toBe(helpTopics.length);
   });
 
-  // 검색 결과에 잘리지 않도록: 제목은 60자 안팎, 설명은 한 문장~두 문장(120자 안팎)
   it("제목과 설명의 길이가 검색 결과에 맞다", () => {
     for (const topic of helpTopics) {
       const title = `${topic.title} · HeyMoa(헤이모아) 사용법`;

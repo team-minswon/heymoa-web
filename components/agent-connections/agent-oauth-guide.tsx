@@ -18,16 +18,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildUrl } from "@/lib/api/fetcher";
 import { cn } from "@/lib/utils";
 
-/** ChatGPT 의 커스텀 커넥터 조건은 자주 바뀐다 — 요금제를 적지 않고 공식 도움말로 보낸다(APP-889). */
 const CHATGPT_HELP_URL =
   "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt";
 
 type AppKey = "claude-app" | "claude-code" | "codex" | "chatgpt";
 
-/**
- * 고르는 카드 네 장. 이름 아래 한 줄은 「어디서 하는 일인가」 — 터미널이 필요한지 먼저 보이게 한다.
- * 이름·자리 중 번역할 것은 `agents.guide.apps` 의 키이고, 제품 이름은 그대로 쓴다.
- */
 const APPS: {
   key: AppKey;
   name: string | { key: "claudeApp" };
@@ -57,12 +52,6 @@ const APPS: {
 
 const code = (chunks: ReactNode) => <code>{chunks}</code>;
 
-/**
- * OAuth 로 연결하는 안내(APP-889 · APP-1031). 앱 카드 하나를 고르면 그 앱의 단계만 타임라인으로 보인다 — 네 앱을
- * 한꺼번에 펼치면 내 앱을 찾다가 막혔다. 앱에 주소만 등록하면 앱이 연 브라우저에서 로그인하고 동의 화면(APP-888)에서
- * 워크스페이스를 고른다 — 그래서 여기에는 토큰도 워크스페이스 고르기도 없다. 브라우저로 허락할 수 없는 곳은 개인 토큰으로
- * 간다(PRD 「정한 것」 6). 카드 안에서는 「에이전트」·「MCP」라는 말을 쓰지 않는다.
- */
 export function AgentOAuthGuide({
   onPersonalToken,
   onClose,
@@ -89,9 +78,7 @@ export function AgentOAuthGuide({
         {t("description")}
       </p>
 
-      {/* 기본은 Claude 앱이다 — 터미널이 필요 없고, 같은 계정의 Claude Code 에도 들어온다(APP-1031 spec) */}
       <Tabs defaultValue="claude-app" className="mt-5 gap-5">
-        {/* primitive 의 회색 줄 · 고정 높이(group-data-horizontal/tabs:h-8)를 풀고 카드 격자로 쓴다 */}
         <TabsList className="grid w-full grid-cols-2 gap-2 bg-transparent p-0 group-data-horizontal/tabs:h-auto sm:grid-cols-4">
           {APPS.map(({ key, name, where, Icon }) => (
             <TabsTrigger
@@ -114,8 +101,6 @@ export function AgentOAuthGuide({
           ))}
         </TabsList>
 
-        {/* 네 앱의 안내를 한 칸에 겹쳐 세운다(APP-1356) — 고른 것만 그리면 앱을 바꿀 때마다 안내 높이가 달라
-            아래 「닫기」 줄이 40px 씩 오르내렸다. 상자는 가장 긴 안내 높이로 선다. */}
         <div className="grid">
           <TabsContent
             value="claude-app"
@@ -143,7 +128,7 @@ export function AgentOAuthGuide({
             <Steps>
               <Step n={1}>
                 {t("pasteInTerminal")}
-                {/* 어느 폴더에서나 쓰이게 한다 — 폴더 범위(기본)로 등록하면 다른 폴더에서 heymoa 가 보이지 않았다(APP-1031) */}
+                {/* 어느 폴더에서나 쓰이게 한다 — 폴더 범위(기본)로 등록하면 다른 폴더에서 heymoa 가 보이지 않았다 */}
                 <CopyBlock
                   inline
                   label={t("claudeCode.command")}
@@ -151,7 +136,6 @@ export function AgentOAuthGuide({
                 />
               </Step>
               <Step n={2}>
-                {/* 「Claude Code 에서」만 쓰면 데스크톱 앱의 Code 탭으로 읽힌다 — 터미널 CLI 임을 적는다(APP-1031) */}
                 {t.rich("claudeCode.authenticate", { code })}
               </Step>
               <Step n={3}>{t("allow")}</Step>
@@ -169,7 +153,7 @@ export function AgentOAuthGuide({
               <Step n={1}>
                 {t("pasteInTerminal")}
                 {/* Codex 는 OAuth 서버를 등록하면 바로 로그인을 시작한다 — `codex mcp login` 을 같이 붙여 넣으면 허락을
-                  두 번 하게 되고 연결도 둘 생긴다(APP-889 로컬 확인) */}
+                  두 번 하게 되고 연결도 둘 생긴다 */}
                 <CopyBlock
                   inline
                   label={t("codex.command")}
@@ -187,7 +171,6 @@ export function AgentOAuthGuide({
             data-keep-size
             className={PANEL}
           >
-            {/* 메뉴 이름이 자주 바뀌어 화면 경로를 자세히 적지 않는다(APP-1031 spec) */}
             <Steps>
               <Step n={1}>
                 {t.rich("chatgpt.developerMode", {
@@ -215,7 +198,6 @@ export function AgentOAuthGuide({
       </Tabs>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--el-hairline)] pt-4">
-        {/* 공용 Button 은 줄바꿈하지 않는다 — 긴 설명은 버튼 밖에 두고 버튼은 짧게 둔다 */}
         <p className="text-xs text-[var(--el-muted)]">
           {t.rich("noBrowser", {
             token: (chunks) => (
@@ -239,14 +221,12 @@ export function AgentOAuthGuide({
   );
 }
 
-/** 안 고른 패널도 자리를 남긴다 — `data-keep-size` 가 `hidden` 을 보이지 않는 블록으로 바꾼다(`globals.css`). */
 const PANEL = "col-start-1 row-start-1";
 
 function Steps({ children }: { children: ReactNode }) {
   return <ol>{children}</ol>;
 }
 
-/** 타임라인 한 칸. 번호 점을 세로선으로 잇고, 마지막 칸은 선을 그리지 않는다. */
 function Step({ n, children }: { n: number; children: ReactNode }) {
   return (
     <li className="group/step relative pb-4 pl-8 text-sm text-[var(--el-body-strong)] last:pb-0">
@@ -265,7 +245,6 @@ function Step({ n, children }: { n: number; children: ReactNode }) {
   );
 }
 
-/** 끝 상태 한 줄. 예외는 본 단계와 같은 무게로 섞지 않고 「잘 안 될 때」를 눌러야 보인다(APP-1031). */
 function Done({ trouble }: { trouble?: ReactNode }) {
   const t = useTranslations("agents.guide");
   const [open, setOpen] = useState(false);

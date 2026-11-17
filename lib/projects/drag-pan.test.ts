@@ -23,16 +23,13 @@ describe("panGesture", () => {
   it("measures the threshold as distance, not per axis", () => {
     const pan = panGesture();
     pan.down(0, 0, 0, 0);
-    // 축마다 4px 면 대각선으로는 5.66px
     expect(pan.move(4, 4)).toMatchObject({ dragging: true });
   });
 
   it("starts from where the threshold was crossed, so the content does not jump", () => {
     const pan = panGesture();
     pan.down(200, 300, 500, 80);
-    // 문턱을 막 넘은 첫 걸음은 누르기 전 스크롤 값 그대로다(옛 방식이면 문턱만큼 튄다)
     expect(pan.move(194, 300)).toEqual({ dragging: true, axis: "x", left: 500, top: 80 });
-    // 이후는 그 자리부터의 움직임만 따라간다
     expect(pan.move(174, 300)).toEqual({ dragging: true, axis: "x", left: 520, top: 80 });
     expect(pan.move(204, 300)).toEqual({ dragging: true, axis: "x", left: 490, top: 80 });
   });
@@ -40,12 +37,10 @@ describe("panGesture", () => {
   it("locks to the dominant axis and never moves the other one", () => {
     const pan = panGesture();
     pan.down(0, 0, 100, 50);
-    // 오른쪽 240·위 160 으로 비스듬히: 가로가 우세
     const crossing = pan.move(30, -20);
     expect(crossing).toMatchObject({ dragging: true, axis: "x" });
     const step = pan.move(240, -160);
     expect(step).toEqual({ dragging: true, axis: "x", left: 100 - (240 - 30), top: 50 });
-    // 세로 우세로 시작하면 가로는 움직이지 않는다
     const tall = panGesture();
     tall.down(0, 0, 100, 50);
     tall.move(3, 20);
@@ -106,7 +101,6 @@ describe("glide", () => {
       { t: 60, x: 24, y: 0 },
       { t: 76, x: 56, y: 0 },
     ];
-    // 80ms 안의 표본은 t=0 이후 모두 (now=80 → t>=0): 0 → 56px / 76ms
     expect(releaseVelocity(samples, 80).vx).toBeCloseTo(56 / 76, 5);
     expect(releaseVelocity([{ t: 0, x: 0, y: 0 }, { t: 10, x: 5000, y: 0 }], 12).vx).toBe(GLIDE_MAX_V);
   });
@@ -127,10 +121,8 @@ describe("glide", () => {
       elapsed += 8;
     }
     expect(elapsed).toBeLessThanOrEqual(GLIDE_MAX_MS);
-    // 총 이동은 v0·τ 를 넘지 않는다(2 × 120 = 240px)
     expect(distance).toBeGreaterThan(150);
     expect(distance).toBeLessThanOrEqual(240);
-    // 걸음을 어떻게 쪼개도 같은 거리다
     const whole = glideStep(2, 64).delta;
     const parts = glideStep(2, 32).delta + glideStep(2 * Math.exp(-32 / 120), 32).delta;
     expect(parts).toBeCloseTo(whole, 6);

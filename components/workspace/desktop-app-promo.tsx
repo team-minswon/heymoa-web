@@ -84,7 +84,6 @@ export function DesktopAppPromo() {
   );
 }
 
-/** Old native shells cannot install updates; use their existing external-download policy. */
 function LegacyDesktopUpdateNotice() {
   const t = useTranslations("shell.desktopUpdate");
   const { phase, buffer } = useRecording();

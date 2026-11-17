@@ -17,7 +17,6 @@ function participant(index: number): Participant {
   };
 }
 
-/** 계정 없는 참여자. userId·email이 비고 guestId가 채워진다. */
 function guest(index: number): Participant {
   return {
     participantId: `01K000000020${index}`,
@@ -78,10 +77,6 @@ describe("NoteParticipantAvatars", () => {
     ).toBeInTheDocument();
   });
 
-  /**
-   * 얼굴에 글자를 안 얹는다 — 이름은 늘 툴팁에 있다. **이름이 비어도 빈 원으로 남으면 안
-   * 된다**: 얼굴은 그 사람의 변하지 않는 식별자에서 나오므로 이름이 없어도 그려진다.
-   */
   it("이름이 비어도 얼굴은 그려진다", () => {
     const { container } = render(
       <NoteParticipantAvatars
@@ -98,11 +93,9 @@ describe("NoteParticipantAvatars", () => {
     );
 
     expect(container.querySelector("svg")).toBeTruthy();
-    // 얼굴에 글자를 안 얹는다.
     expect(container.textContent).toBe("");
   });
 
-  // 같은 열쇠면 같은 얼굴이다 — 저장하지 않아도 흔들리지 않는다.
   it("같은 사람은 늘 같은 얼굴이다", () => {
     const person = {
       participantId: "01K0000000101",
@@ -111,7 +104,7 @@ describe("NoteParticipantAvatars", () => {
       name: "한지원",
       email: "jiwon@heymoa.com",
     };
-    // React 가 매 렌더 새로 뽑는 `useId` 마스크 id 는 얼굴이 아니다 — 빼고 본다.
+    // React 가 매 렌더 새로 뽑는 `useId` 마스크 id 는 빼고 봅니다.
     const orb = () =>
       render(<NoteParticipantAvatars participants={[person]} />)
         .container.querySelector("svg")
@@ -128,10 +121,6 @@ describe("NoteParticipantAvatars", () => {
     expect(screen.getByLabelText("외부인0 (외부)")).toBeInTheDocument();
   });
 
-  /**
-   * 계정 없는 사람은 `userId`가 전부 `null`이라 그걸 키로 쓰면 둘 이상일 때 React가
-   * 같은 항목으로 보고 하나만 그린다. 키는 참여 기록 식별자여야 한다.
-   */
   it("계정 없는 참여자가 여럿이어도 전부 그려진다", () => {
     render(
       <NoteParticipantAvatars participants={[guest(0), guest(1), guest(2)]} />

@@ -55,10 +55,8 @@ describe("언어 경로", () => {
     expect(splitLocale("/en/help")).toEqual({ locale: "en", path: "/help" });
     expect(splitLocale("/en")).toEqual({ locale: "en", path: "/" });
     expect(splitLocale("/help")).toEqual({ locale: "ko", path: "/help" });
-    // 한국어 페이지를 서버에서 그릴 때 usePathname 이 주는 rewrite 뒤 주소.
     expect(splitLocale("/ko/terms")).toEqual({ locale: "ko", path: "/terms" });
     expect(splitLocale("/ko")).toEqual({ locale: "ko", path: "/" });
-    // `/english` 같은 첫 세그먼트는 언어가 아니다.
     expect(splitLocale("/english")).toEqual({ locale: "ko", path: "/english" });
   });
 });
@@ -76,7 +74,6 @@ describe("마케팅 경로 목록 하나가 rewrite·크롬 판정을 정한다"
         { source: "/privacy", destination: "/ko/privacy" },
       ])
     );
-    // 제품 면은 잇지 않는다.
     expect(
       marketingRewrites().some(({ source }) =>
         /^\/(w|settings|invite|oauth|auth)\b/.test(source)
@@ -169,7 +166,6 @@ describe("언어판 metadata — 설정 없이 모든 언어판이 검색에 공
     const en = localizedMetadata("en", "/help");
 
     expect(en.alternates?.canonical).toBe("/en/help");
-    // robots 를 아예 내지 않는다 — 비운영 배포의 noindex 는 루트 레이아웃이 그대로 건다.
     expect(en).not.toHaveProperty("robots");
   });
 
@@ -186,7 +182,6 @@ describe("언어판 metadata — 설정 없이 모든 언어판이 검색에 공
     });
   });
 
-  // 안 얹으면 모든 페이지가 사이트 공통값의 홈 주소를 `og:url` 로 낸다(APP-1294).
   it("공유 카드의 og:url 은 그 언어판 페이지의 주소다", () => {
     expect(localizedMetadata("ko", "/").openGraph).toMatchObject({
       url: "/",
@@ -218,7 +213,6 @@ describe("언어판 metadata — 설정 없이 모든 언어판이 검색에 공
       description: "약관 설명",
     });
     expect(terms.openGraph?.title).not.toBe(home.openGraph?.title);
-    // 이미지·카드 종류 같은 사이트 공통값은 그대로 물려받는다.
     expect(terms.openGraph).toHaveProperty("images");
     expect(terms.twitter).toMatchObject({ card: "summary_large_image" });
   });

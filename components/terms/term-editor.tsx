@@ -19,9 +19,7 @@ import {
 } from "@/lib/terms/term-list";
 import type { AddManyOutcome } from "@/lib/terms/use-term-dictionary";
 
-/** 미리보기 칩은 이만큼만 그린다 — 엑셀 열을 통째로 붙여 넣어도 입력이 버벅이지 않게. 나머지는 개수로 말한다. */
 const PREVIEW_CHIPS_MAX = 120;
-/** 등록한 칩이 이보다 많으면 칩 하나하나의 움직임(등장·퇴장·자리 이동)을 끈다. */
 const MOTION_CHIPS_MAX = 60;
 
 const PREVIEW_CLASS: Record<PlanStatus, string> = {
@@ -35,7 +33,6 @@ const PREVIEW_CLASS: Record<PlanStatus, string> = {
 };
 type Translate = ReturnType<typeof useTranslations<"settings.terms">>;
 
-/** 한 번의 추가가 끝난 결과를 한 줄로. */
 function outcomeNotice(
   outcome: AddManyOutcome,
   t: Translate
@@ -56,15 +53,6 @@ function outcomeNotice(
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-/**
- * 워크스페이스 용어 사전의 입력 카드 + 등록한 칩 목록 (APP-1189 · APP-1227).
- *
- * **입력은 처음부터 여러 줄이다.** 쉼표(기본)·줄바꿈·세미콜론·탭으로 나눈 글을 쓰거나 붙여 넣으면 입력하는 동안 아래에
- * 칩 미리보기와 요약(새 · 중복 · 제외 · 한도)이 보이고 「n개 추가」가 한 번의 동작으로 모두 넣는다. 용어 하나만 적어도
- * 똑같이 Enter 로 들어간다(Shift+Enter 는 줄바꿈, 한글 조합 중 Enter 는 무시).
- *
- * **자리가 안 움직인다.** 미리보기 칸과 카드 아랫줄은 높이가 고정이고 글자만 바뀐다. 판단(중복·한도)은 받아 둔 목록만 본다.
- */
 export function TermEditor({
   terms,
   limit,
@@ -83,13 +71,11 @@ export function TermEditor({
     }
   ) => void;
   onRemove: (termId: string) => void;
-  /** 직렬 대체 경로가 도는 중이면 몇 개째인지. */
   progress?: { done: number; total: number } | null;
   inputId: string;
 }) {
   const t = useTranslations("settings.terms");
   const [value, setValue] = useState("");
-  /** 방금 끝난 추가의 결과. 다음 입력에서 지운다. */
   const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -115,7 +101,6 @@ export function TermEditor({
     onAddMany(plan.fresh, {
       onDone: (outcome) => {
         setNotice(outcomeNotice(outcome, t));
-        // 못 보낸 것은 입력란에 돌려놓는다 — 그 사이 다른 것을 쓰고 있으면 두지 않는다.
         if (outcome.failed.length > 0)
           setValue((current) =>
             current === "" ? outcome.failed.join(", ") : current
@@ -167,7 +152,6 @@ export function TermEditor({
           className="max-h-48 min-h-[88px] resize-none rounded-b-none rounded-t-panel border-0 bg-transparent px-4 py-3 text-sm shadow-none focus-visible:ring-0 md:text-sm"
         />
 
-        {/* 미리보기 칸: 높이가 고정이다. 비어 있어도 같은 자리를 지키고, 많으면 안에서 스크롤한다. */}
         <div
           aria-label={t("preview")}
           className="h-[104px] overflow-y-auto border-t border-[var(--el-hairline)] px-4 py-2.5"
@@ -269,7 +253,6 @@ export function TermEditor({
         </div>
       </div>
 
-      {/* 용량: 숫자와 막대. 막대는 너비를 바꾸지 않고 눈금만 움직인다. */}
       <div className="mt-4 flex items-center gap-3">
         <div
           role="progressbar"
@@ -316,7 +299,6 @@ export function TermEditor({
         </div>
       </div>
 
-      {/* 칩 목록 칸: 최소 높이를 잡아 비어 있다가 채워져도, 필터로 줄어도 아래가 밀리지 않는다. 많으면 안에서 스크롤. */}
       <div className="mt-3 max-h-[min(360px,45dvh)] min-h-28 overflow-y-auto">
         {terms.length === 0 ? (
           <div className="flex min-h-28 flex-col items-start justify-center gap-2">
@@ -344,14 +326,11 @@ export function TermEditor({
           <ul
             ref={listRef}
             aria-label={t("added")}
-            // 지우기 버튼의 포커스 링이 스크롤 상자에 잘리지 않게 안쪽 여백을 둔다
             className="-mx-1 flex flex-wrap gap-1.5 px-1 pt-0.5 pb-1"
           >
             <AnimatePresence initial={false} mode={lite ? "sync" : "popLayout"}>
               {shown.map((item, index) => (
                 <motion.li
-                  // 임시 id 칩이 응답으로 실제 id 를 받아도 같은 칩이다 — id 로 키를 잡으면 사라졌다 다시 생긴다.
-                  // 한 사전 안에서 용어는 대소문자를 무시하고 하나뿐이라 그것이 키다.
                   key={normalizeTerm(item.term)}
                   layout={lite ? false : "position"}
                   className="max-w-full min-w-0"
@@ -364,7 +343,6 @@ export function TermEditor({
                     variant="outline"
                     className="h-7 max-w-full gap-0.5 rounded-chip bg-white pr-0.5 pl-2.5 text-[13px] font-normal text-[var(--el-ink)]"
                   >
-                    {/* 40자 용어도 좁은 폭에서 지우기 버튼을 밀어내지 않게 글자만 줄인다. */}
                     <span className="min-w-0 truncate" title={item.term}>
                       {item.term}
                     </span>
@@ -377,7 +355,6 @@ export function TermEditor({
                       className="size-6 text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
                       onClick={() => {
                         onRemove(item.termId);
-                        // 지운 칩의 버튼이 사라지면 포커스가 문서 맨 위로 튄다 — 옆 칩(없으면 입력란)으로 옮긴다.
                         const neighbor = shown[index + 1] ?? shown[index - 1];
                         requestAnimationFrame(() => {
                           const next = neighbor
@@ -402,7 +379,6 @@ export function TermEditor({
   );
 }
 
-/** 칩 목록을 불러오는 동안. 카드·용량·머리글은 실제와 같은 기하로 두고 칩만 막대로 둔다 — 도착해도 안 밀린다. */
 export function TermEditorSkeleton() {
   const t = useTranslations("settings.terms");
   return (

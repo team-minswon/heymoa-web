@@ -12,11 +12,6 @@ import { trackHelp, useHelpSlug } from "@/lib/help/analytics";
 import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { cn } from "@/lib/utils";
 
-/**
- * 가이드 설명 이미지. 캡처 스크립트(`pnpm help:shots`)가 미리 WebP 로 줄여 `public/help/<주제>/` 에 둔 파일을 **변환 없이 그대로**
- * 서빙한다 — Vercel 이미지 최적화(변환 한도)를 쓰지 않으려는 것이다. 그래서 평범한 `<img>` 이고 `width`·`height` 를
- * 목록에서 읽어 적어 자리를 미리 잡는다(레이아웃 점프 0). 눌러서 크게 볼 수 있다(Dialog: Esc 로 닫고 포커스가 갇힌다).
- */
 export function HelpFigure({
   src,
   alt,
@@ -24,12 +19,9 @@ export function HelpFigure({
   priority = false,
   className,
 }: {
-  /** `public/help/` 아래 경로. 예: `recording/dock.webp` */
   src: keyof typeof HELP_MEDIA & `${string}.webp`;
-  /** 그 단계가 무엇을 보여 주는지. 화면 글자를 그대로 읽어 주지 않고 하는 일을 적는다. */
   alt: string;
   caption?: string;
-  /** 페이지 첫 화면에 보이는 대표 이미지만 true. */
   priority?: boolean;
   className?: string;
 }) {
@@ -37,7 +29,6 @@ export function HelpFigure({
   const trigger = useRef<HTMLButtonElement>(null);
   const slug = useHelpSlug();
   const t = useTranslations("help.media");
-  // 페이지 언어의 파일을 고르고(없으면 한국어), 크기는 캡처 스크립트가 쓴 목록에서 읽는다 — 자리를 미리 잡는다.
   const media = localizedHelpMedia(src, useLocale());
   const url = helpAssetUrl(media.path);
   const { width, height } = media;

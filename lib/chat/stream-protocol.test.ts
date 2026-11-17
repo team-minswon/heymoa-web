@@ -13,14 +13,12 @@ import {
   type ChatStreamState,
 } from "@/lib/chat/stream-protocol";
 
-/** `data:`는 payload 그 자체다. 봉투가 없고 커서는 `id:` 줄에만 있다. */
 const frame = (id: string | null, event: string, data: unknown = {}) => ({
   id: id === null ? undefined : id,
   event,
   data: JSON.stringify(data),
 });
 
-/** 프레임 열을 시작 상태부터 차례로 접는다. */
 function fold(...events: ReturnType<typeof frame>[]): ChatStreamState {
   return events.reduce(reduceStreamEvent, startedState({ turnId: "t1" }));
 }
@@ -78,7 +76,6 @@ describe("아는 이벤트", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const state = fold(START, frame("1735689600000-1", "새_이벤트", {}));
     expect(state.phase).toBe("streaming");
-    // id 를 먹었으면 이미 지나온 자리다
     expect(state.cursor).toBe("1735689600000-1");
     expect(warn).toHaveBeenCalledOnce();
     warn.mockRestore();
@@ -103,7 +100,6 @@ describe("시작 상태", () => {
   });
 });
 
-// ★ 규칙 7 — 이 검사가 하나 있어야 「초기화하는 게 자연스럽지 않나」로 안 되돌아간다
 describe("message_start 가 상태를 리셋하지 않는다", () => {
   it("승인 뒤 이어지는 message_start 가 복원한 블록을 안 지운다", () => {
     const restored = reduceStreamEvent(
@@ -175,7 +171,6 @@ describe("본문", () => {
     expect(answerText(state.blocks)).toBe("안녕");
   });
 
-  // ★ 새로고침하면 글이 달라지던 결함
   it("message_end 의 content 가 토큰 합을 이기고 done 으로 간다", () => {
     const state = fold(
       START,
@@ -204,7 +199,6 @@ describe("본문", () => {
 });
 
 describe("도구", () => {
-  // ★ 절대 같은 갈래에 두지 않는다
   it("도구 실패는 턴 실패가 아니다 — 토큰이 이어진다", () => {
     const state = fold(
       START,
@@ -257,9 +251,7 @@ describe("승인", () => {
       title: "회의록 만들기",
       fields: [{ label: "제목", value: "회의록" }],
     });
-    // 결정된 뒤에도 같은 카드를 그리도록 승인 블록도 같은 카드를 든다.
     expect(state.blocks.at(-1)).toMatchObject({ kind: "approval", card: { title: "회의록 만들기" } });
-    // 카드의 id 가 곧 재개 자리다 — 승인 뒤 `after` 에 이 값이 간다.
     expect(state.cursor).toBe("3-0");
   });
 
@@ -291,7 +283,6 @@ describe("승인", () => {
   });
 });
 
-// ★ 여기서 스트림을 닫으면 화면이 server 의 코드를 못 받는다
 describe("ai 의 error 는 종료가 아니다", () => {
   it("phase 를 안 바꾸고 본문도 안 버린다", () => {
     const state = fold(
@@ -324,7 +315,6 @@ describe("턴 종료", () => {
       frame("4-0", "turn_failed", { turnId: "t1", code: "TURN_TIMEOUT", retryable: true })
     );
     expect(answerText(state.blocks)).toBe("");
-    // 무엇을 하다 실패했는지가 사유의 절반이라 생각은 남긴다
     expect(state.blocks.some((b) => b.kind === "thinking")).toBe(true);
   });
 
@@ -352,7 +342,6 @@ describe("endStream — 닫힘 자체는 상태가 아니다", () => {
     expect(endStream(flowing, "closed")).toBe(flowing);
   });
 
-  // ★ 승인 카드가 정지 화면에 덮이던 결함
   it("승인 대기의 EOF 도 정상 종료다", () => {
     const waiting = fold(
       START,

@@ -149,7 +149,6 @@ test("source enumeration failure settles acquire even when destroyed Chromium ev
 test("explicit disposal settles a pending acquire without a native rejection or timer", async (t) => {
   const f = fixture(t, { neverSettleAcquire: true });
   const acquiring = f.host.acquire();
-  // Let native grant/selection finish, but keep the evaluated acquire Promise pending.
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(f.windows[0].selection.audio, "loopback");
   f.host.dispose();
@@ -188,7 +187,7 @@ test("only packaged local exact frame receives native media and external local r
   assert.equal(window.options.webPreferences.sandbox, true);
   assert.equal(window.options.webPreferences.nodeIntegration, false);
   assert.equal(window.selection.audio, "loopback");
-  assert.equal(f.packets.length, 0); // Native source/video never crosses to remote destination.
+  assert.equal(f.packets.length, 0);
   let allowed;
   window.handlers.permission(
     f.destination,
@@ -378,7 +377,6 @@ test("a late first chunk followed by catch-up is measured against capture time, 
   t.after(() => f.host.dispose());
   const id = await f.host.acquire();
   await f.host.start(id);
-  // Audio started on time but the first chunk crossed IPC 500 ms late; the rest follow at once.
   t.mock.timers.tick(500);
   for (let sequence = 0; sequence < 5; sequence++) {
     f.emit(pcm(id, sequence));
@@ -400,7 +398,6 @@ test("a 300 ms main-window stall delays ACKs without stopping capture", async (t
   }
   t.mock.timers.tick(100);
   f.emit(pcm(id, sequence));
-  // Main window blocked: the in-flight ACK is 300 ms late while the local queue holds 3 chunks.
   t.mock.timers.tick(300);
   f.host.ack(id, sequence++);
   for (const end = sequence + 3; sequence < end; sequence++) {
@@ -416,7 +413,6 @@ test("capture time running ahead of the wall clock beyond the backlog bound fail
   const id = await f.host.acquire();
   await f.host.start(id);
   t.mock.timers.tick(1000);
-  // 1 s elapsed + 3 s bound = 64000 samples; this chunk ends at 65600.
   f.emit(pcm(id, 0, 64000));
   assert.equal(f.windows[0].destroyed, true);
   assert.equal(f.packets.at(-1)[1].code, "AUDIO_CAPTURE_FAILED");

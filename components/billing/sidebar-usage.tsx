@@ -18,11 +18,6 @@ import { cn } from "@/lib/utils";
 const BUTTON =
   "w-full rounded-control px-2.5 py-2 text-left text-xs leading-4 outline-hidden hover:bg-[var(--el-surface-strong)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sidebar-ring/40";
 
-/**
- * 사이드바의 이번 달 녹음 사용량(APP-1596). 한도 집행 대상인 공간에서만 그리고, 불러오는 중·실패면 자리를 잡지 않는다 —
- * 보조 정보라 비어 있어도 할 일이 막히지 않는다. 누르면 설정의 요금제 탭이 열린다. 조회는 요금제 탭과 같은 키라 녹음이 끝나
- * `invalidateWorkspaceBilling` 이 돌면 같이 갱신되고, 글과 색은 요금제 탭과 같은 `freeUsageLevel` 이 정한다.
- */
 export function SidebarUsage({
   workspaceId,
   onOpen,
@@ -67,7 +62,6 @@ export function SidebarUsage({
           ) : (
             <>
               <span className="truncate text-[var(--el-muted)]">
-                {/* 칸 폭이 184px 라 요금제 탭의 영어 라벨(124px)은 값 옆에서 잘린다. 사이드바만 짧은 라벨을 쓴다 */}
                 {t(paid ? "labelPaid" : "sidebarLabel")}
               </span>
               <span

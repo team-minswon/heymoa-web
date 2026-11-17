@@ -23,7 +23,6 @@ vi.mock("@/components/auth/auth-provider", () => ({
 vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
   useGetWorkspaceMembers: () => ({ data: undefined, isError: false }),
 }));
-// 목록은 자기 시험(workspace-guests-settings.test)이 본다. 여기서는 추가 흐름만 본다.
 vi.mock("@/components/settings/workspace-guests-settings", () => ({
   WorkspaceGuestsSettings: () => null,
 }));

@@ -19,7 +19,6 @@ import { recordConsentNow, settleLoginConsent } from "@/lib/auth/login-consent";
 import { normalizeReturnTo } from "@/lib/auth/paths";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
-/** 로그인과 동의가 끝난 사람을 가려던 곳 — 없으면 마지막으로 연 워크스페이스 — 으로 보낸다. 실패하면 던진다. */
 async function enterApp(
   router: ReturnType<typeof useRouter>,
   returnTo?: string
@@ -35,10 +34,6 @@ async function enterApp(
   }
   const items = response.data.data.workspaces ?? [];
   const selected = pickWorkspaceId(items);
-  // **워크스페이스가 없으면 홈으로 보낸다.** 예전에는 여기서 「새 워크스페이스를 만든 뒤
-  // 시작해 주세요」를 그렸는데 이 화면에 만드는 버튼이 없어서, 존재하지 않는 행동을
-  // 지시하는 안내였다(APP-402). 홈의 CTA가 그 상태를 받아 생성 폼을 연다 — 막 가입한
-  // 사람은 그 버튼을 찾지 않아도 되게 `?welcome`으로 보내 폼을 바로 연다(APP-1023).
   if (!selected) {
     router.replace(`/?${WELCOME_PARAM}`);
     return;
@@ -99,7 +94,6 @@ export function CallbackProcessor({
           setUser(user);
           identifyUser(user.userId);
           track("login_completed");
-          // 서버가 신규 가입에만 붙이는 표식입니다. 새로고침·effect 재실행 전에 URL 에서 걷습니다.
           const callbackUrl = new URL(window.location.href);
           if (callbackUrl.searchParams.get("signup") === "1") {
             callbackUrl.searchParams.delete("signup");
@@ -107,7 +101,6 @@ export function CallbackProcessor({
             trackConversion("sign_up", { method: "google" });
           }
 
-          // 약관 동의가 기록돼야 앱으로 들어간다(APP-1277). 기록이 실패하면 대시보드 앞에서 다시 시도하게 한다.
           let consent: "done" | "ask" | "retry";
           try {
             consent = await settleLoginConsent();
@@ -141,12 +134,10 @@ export function CallbackProcessor({
     };
   }, [returnTo, router, setUser, urlError, t]);
 
-  /** 동의 화면의 버튼. 기록이 끝나면 앱으로 들어간다. 기록·확인 실패는 던져 화면이 사유를 보이게 한다. */
   const submitConsent = async () => {
     if (consentMode === "ask") {
       await recordConsentNow();
     } else if ((await settleLoginConsent()) === "ask") {
-      // 다시 확인해 보니 로그인 창에서 체크한 표시가 없다 — 체크하지 않은 동의는 기록하지 않고 체크박스를 보인다.
       setConsentMode("ask");
       return;
     }
@@ -202,13 +193,6 @@ export function CallbackProcessor({
     );
   }
 
-  /**
-   * **route fallback(`app/auth/callback/loading.tsx`)과 같은 화면이어야 한다.** 이 컴포넌트는
-   * 그 fallback 바로 뒤에 마운트되는데, 예전에는 spinner가 손으로 만든 CSS 링이고 문구도
-   * 「로그인 처리 중...」이라, 같은 기다림 안에서 모양과 글자가 한 번 갈아치워졌다.
-   *
-   * 여기는 그릴 최종 기하가 없는 전환이라 spinner가 맞다 — skeleton은 채울 자리가 있을 때다.
-   */
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
       <Loader2 className="mb-5 size-8 animate-spin text-[var(--el-ink)]" />

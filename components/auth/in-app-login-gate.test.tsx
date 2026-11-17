@@ -13,7 +13,6 @@ import { intlWrapper } from "@/components/help/test-intl";
 const track = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/analytics/track", () => ({
   track,
-  // Marks launched links so copied ones can be shown to carry no analytics IDs.
   withAnalyticsHandoff: (target: string) => `${target}&ph_did=launched`,
 }));
 const render = (ui: ReactElement) =>

@@ -38,7 +38,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = helpT(locale);
   const title = `${t("guide")} · ${t("brandTitle")}`;
   const description = t("hub.description");
-  // 공유 이미지는 사이트 공통 그림(`localizedMetadata`)이고, 제목·설명만 이 페이지 것으로 바꾼다.
   const share = localizedMetadata(locale, "/help");
   return {
     title: { absolute: title },
@@ -49,7 +48,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** 허브 위쪽에 크게 세우는 페이지. 처음 오는 사람이 가장 먼저 찾는 것들이다. */
 const FEATURED: readonly HelpPageId[] = [
   "getting-started",
   "terms-context",
@@ -62,11 +60,6 @@ const card =
 const H2_SMALL =
   "m-0 mb-4 text-[14px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]";
 
-/**
- * 사용 가이드 허브 (APP-1231). 머리 판 안의 큰 검색칸이 입구이고(전 페이지 검색), 그 아래 "자주 찾는 주제", 그리고 두 축 —
- * 기능별(그룹 카드와 그 안의 페이지)과 상황별("이럴 때" 레시피)이 나란히 선다. 옛 한 장짜리 시절의 `#해시` 링크는
- * `LegacyHashRedirect` 가 새 주소로 옮긴다.
- */
 export default async function HelpHubPage() {
   const locale = await marketingLocale();
   const t = helpT(locale);

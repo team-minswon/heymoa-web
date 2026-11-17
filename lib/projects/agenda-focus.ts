@@ -5,17 +5,11 @@ import {
   type TopicRow,
 } from "@/lib/projects/agenda-map";
 
-/** 포커스 화면의 순수 로직. 주제(줄기) 색인, 같은 회의에서 만난 줄기, 포커스 타임라인 배치 */
-
-/** 이어진 안건 한 줄기. 갈래까지 포함한다 */
 export type Topic = {
   id: string;
-  /** 줄기 행이 먼저, 갈래 행이 그 뒤(부모 행이 자식 행보다 앞) */
   rows: TopicRow[];
-  /** 시간 순서 */
   agendas: MapAgenda[];
   noteIds: ReadonlySet<string>;
-  /** 이름은 줄기에서 가장 최근 안건의 제목이다 */
   title: string;
   branches: number;
 };
@@ -69,7 +63,6 @@ export function buildTopicIndex(map: AgendaMap, rows: TopicRow[]): TopicIndex {
   return { topics, topicOfAgenda, topicsByNote };
 }
 
-/** 같은 회의에서 만난 다른 줄기. 함께한 회의가 많은 순, 같으면 최근 순 */
 export function neighborsOf(
   index: TopicIndex,
   map: AgendaMap,
@@ -102,19 +95,15 @@ export function neighborsOf(
     );
 }
 
-// ── 포커스 타임라인 배치 ─────────────────────────────────────────────────────
-
 export const CARD_W = 224;
 export const CARD_GAP = 16;
 export const SLOT_W = CARD_W + CARD_GAP;
 export const FOCUS_PAD = 16;
-/** 카드 왼쪽 끝에서 점 가운데까지 */
 export const DOT_INSET = 18;
 
 export type FocusCard = { agenda: MapAgenda; row: number; left: number };
 export type FocusLink = { from: string; to: string; fork: boolean };
 
-/** 갈래 한 줄: 어느 안건에서 갈라져 어느 줄에 서는가 */
 export type FocusBranch = { rowId: string; row: number; fork: MapAgenda; first: MapAgenda };
 
 export type FocusLayout = {
@@ -127,11 +116,6 @@ export type FocusLayout = {
   branches: FocusBranch[];
 };
 
-/**
- * 줄기 하나를 가로 타임라인으로 편다. 칸은 줄기가 지나간 회의(시간순)이고, 줄기는 맨 위 줄, 갈래는 그 아래 줄이다.
- * 같은 회의에서 이어진 안건은 한 칸 안에서 옆 자리(slot)로 서고, 같은 회의 안에서 갈라진 갈래는 부모 옆 자리부터 선다 —
- * 갈래 선이 부모 카드 오른쪽 틈새로 내려와서 카드를 가로지르지 않는다. 겹치지 않는 갈래는 같은 줄을 나눠 쓴다.
- */
 export function focusLayout(map: AgendaMap, topic: Topic): FocusLayout {
   const meetingIndex = new Map(
     map.meetings.map((meeting) => [meeting.noteId, meeting.index])
@@ -145,7 +129,6 @@ export function focusLayout(map: AgendaMap, topic: Topic): FocusLayout {
       ([a], [b]) => meetingIndex.get(a)! - meetingIndex.get(b)!
     );
 
-  // 칸 안의 자리. 부모 행이 자식 행보다 앞이라 한 번 훑으면 된다
   const slotOf = new Map<string, number>();
   const slots = new Map<string, number>(notes.map((noteId) => [noteId, 1]));
   for (const row of topic.rows) {
@@ -166,7 +149,6 @@ export function focusLayout(map: AgendaMap, topic: Topic): FocusLayout {
   }
   const width = x - CARD_GAP + FOCUS_PAD;
 
-  // 줄 배정. 갈래는 부모 행 바로 아래부터, 겹치지 않는 첫 줄
   const rowIndex = new Map<string, number>();
   const rowOfAgenda = new Map<string, TopicRow>();
   for (const row of topic.rows)

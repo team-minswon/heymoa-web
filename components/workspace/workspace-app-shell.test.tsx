@@ -29,7 +29,6 @@ const navState = vi.hoisted(() => ({
   push: vi.fn(),
   replace: vi.fn(),
 }));
-// Next 16 은 pushState/replaceState/popstate 를 라우터와 통합해 `useSearchParams` 를 갱신한다 — 같은 일을 흉내 낸다.
 function subscribeLocation(notify: () => void) {
   window.addEventListener("locationchange", notify);
   window.addEventListener("popstate", notify);
@@ -119,7 +118,6 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
   useDeleteProject: () => ({ mutateAsync: vi.fn() }),
 }));
 
-// 체크리스트는 따로 시험한다(`lib/onboarding/checklist.test.ts`). 여기서는 셸만 본다.
 vi.mock("@/components/workspace/onboarding-checklist", () => ({
   OnboardingChecklist: () => null,
   useOnboardingChecklist: () => null,
@@ -134,7 +132,6 @@ function visit(search: string) {
   window.history.replaceState(null, "", `/w/01K0000000000${search}`);
 }
 
-// 탭 내용은 따로 시험한다(`settings-dialog.test.tsx`). 여기서는 창과 주소만 본다.
 vi.mock("@/components/settings/account-settings-form", () => ({
   AccountSettingsForm: () => <p>계정 내용</p>,
   AccountSettingsFormSkeleton: () => <p>계정 로딩</p>,
@@ -193,8 +190,6 @@ describe("WorkspaceAppShell", () => {
     });
   });
 
-  // 이 파일은 셸을 통째로 마운트한다 — 안 치우면 앞 테스트가 남긴 트리의 입력이
-  // `screen` 질의에 함께 걸려서 "창이 닫혔는가"를 물을 수 없다.
   afterEach(cleanup);
 
   it("renders one app navigation and a main content region", () => {
@@ -213,9 +208,6 @@ describe("WorkspaceAppShell", () => {
     expect(screen.getByRole("main")).toHaveTextContent("노트 목록");
     expect(screen.getAllByText("김민수의 워크스페이스")).not.toHaveLength(0);
 
-    // 셸이 캔버스를 꽉 채우지 않는다 — 사이드바는 캔버스 위에 그냥 앉고(배경·테두리 없음)
-    // 본문만 둥근 흰 패널로 뜬다(design.pen `IUax1`). 예전에는 사이드바에 `border-r`이 있어
-    // 두 면이 한 셸처럼 붙어 있었다.
     const sidebarContainer = document.querySelector(
       '[data-slot="sidebar-container"]'
     );
@@ -269,7 +261,6 @@ describe("WorkspaceAppShell", () => {
         "Linear 연결을 마쳤습니다."
       );
     });
-    // 라우터 왕복 없이 주소만 바꾼다 — 복귀 항목이 곧 `?settings=integrations` 다.
     expect(navState.replace).not.toHaveBeenCalled();
     expect(window.location.search).toBe("?settings=integrations");
     expect(await screen.findByRole("button", { name: "연동" })).toHaveAttribute(
@@ -294,11 +285,6 @@ describe("WorkspaceAppShell", () => {
       );
     });
   });
-  /**
-   * 프로젝트가 없는 워크스페이스에서 「새 노트」를 누르면 **프로젝트를 먼저 묻고, 만든 뒤
-   * 회의 창으로 이어진다.** 예전에는 그 버튼이 그냥 비활성이었고, 유일한 입구인 사이드바
-   * 「프로젝트 만들기」는 절차의 1단계로 읽히지 않았다.
-   */
   it("프로젝트가 없으면 새 노트가 프로젝트 만들기부터 이어 붙인다", async () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
@@ -309,7 +295,6 @@ describe("WorkspaceAppShell", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "새 노트" }));
-    // 회의 이름이 아니라 프로젝트 이름을 먼저 묻는다.
     expect(
       screen.getByRole("dialog", { name: "첫 프로젝트 만들기" })
     ).toBeInTheDocument();
@@ -325,7 +310,6 @@ describe("WorkspaceAppShell", () => {
         workspaceId: "01K0000000000",
         data: { name: "주간", description: null },
       });
-      // 절차가 끊기지 않는다 — 프로젝트를 만들면 회의 창이 바로 이어진다.
       expect(screen.getByLabelText("회의 이름")).toBeInTheDocument();
     });
   });
@@ -347,8 +331,6 @@ describe("WorkspaceAppShell", () => {
   });
 
   it("전체 노트 화면이 셸을 덮으면 열려 있던 만들기 창을 닫는다", () => {
-    // 창은 포털(`z-50`)이라 `inert`도 덮는 면(`z-30`)도 닿지 않는다. 셸은 노트로 이동해도
-    // 재마운트되지 않으니 저절로 사라지지도 않아, 허브에서 열어 둔 창이 노트 위에 남았다.
     projectState.projects = [{ projectId: "01K0000000001", name: "주간" }];
     const { rerender } = render(
       <QueryClientProvider client={new QueryClient()}>
@@ -377,7 +359,6 @@ describe("WorkspaceAppShell", () => {
   });
 
   describe("설정 창 주소 (APP-1211)", () => {
-    // 사이드바·체크리스트·채팅 카드는 모두 이 컨텍스트 함수로 연다 — 같은 길 하나다.
     function Opener() {
       const openSettings = useOpenSettings();
       return (
@@ -417,7 +398,6 @@ describe("WorkspaceAppShell", () => {
         .mockImplementation(() => {});
       fireEvent.click(screen.getByRole("button", { name: "설정 열기" }));
       await screen.findByRole("dialog", { name: "설정" });
-      // 다른 쿼리는 그대로 병합된다
       expect(window.location.search).toContain("settings=account");
       fireEvent.keyDown(document.activeElement ?? document.body, {
         key: "Escape",

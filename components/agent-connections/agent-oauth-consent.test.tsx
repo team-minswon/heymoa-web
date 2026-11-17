@@ -25,7 +25,6 @@ import {
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
-// jsdom 은 실제 이동을 구현하지 않아 location.assign 이 "Not implemented" 로 터진다.
 const assign = vi.fn();
 Object.defineProperty(window, "location", {
   configurable: true,
@@ -40,7 +39,6 @@ Object.defineProperty(window, "location", {
   },
 });
 
-/** 목 동의 화면이 잇는 실제 계약 경로를 그대로 지난다 — 404 봉투가 오류 코드로 읽히는지까지 본다. */
 const server = setupServer(...restHandlers);
 const approved: unknown[] = [];
 const denied: unknown[] = [];
@@ -299,11 +297,9 @@ describe("외부 에이전트 연결 동의 화면", () => {
       await waitFor(() => expect(reject.hasAttribute("disabled")).toBe(false));
     });
 
-    // 고르는 사이 꺼졌다 — 요청은 server 에 남아 있어 다른 워크스페이스로 허락하거나 거절할 수 있다
     it("허락이 403 AGENT_ACCESS_DISABLED 면 목록을 다시 읽어 안내로 바꾸고 화면을 닫지 않는다", async () => {
       const [only] = mockDb.listWorkspaces();
       withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);
-      // 화면이 목록을 읽은 뒤 ADMIN 이 끈다 — 목이 실서버처럼 그 워크스페이스를 막고 꺼짐으로 내린다
       renderConsent();
       const allow = await screen.findByRole("button", { name: "허락" });
       await waitFor(() => expect(allow.hasAttribute("disabled")).toBe(false));
@@ -360,7 +356,6 @@ describe("외부 에이전트 연결 동의 화면", () => {
       await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
     });
 
-    // 바꾸면 진행 중인 허락의 관찰이 끊겨 버튼이 다시 열리고 같은 요청이 두 번 나갈 수 있다
     it("허락이 도는 동안에는 워크스페이스를 바꿀 수 없다", async () => {
       const [first, second] = mockDb.listWorkspaces();
       withWorkspaces([
@@ -399,7 +394,6 @@ describe("외부 에이전트 연결 동의 화면", () => {
       ).toBe(true);
     });
 
-    // 403 뒤 다시 읽는 사이 다른 워크스페이스로 허락하면, 앞선 복구가 새 허락의 관찰을 끊으면 안 된다
     it("403 뒤 목록을 다시 읽는 사이 시작한 허락은 끝날 때까지 잠겨 있다", async () => {
       const [first, second] = mockDb.listWorkspaces();
       const both = [
@@ -477,7 +471,6 @@ describe("외부 에이전트 연결 동의 화면", () => {
       await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
     });
 
-    // 403 의 흔적이 잠금으로 남으면 관리자가 다시 켜도 같은 화면에서 허락할 수 없다
     it("관리자가 다시 켠 뒤 목록을 다시 읽으면 같은 화면에서 허락할 수 있다", async () => {
       const [only] = mockDb.listWorkspaces();
       withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);

@@ -29,20 +29,13 @@ import { localePath, type Locale } from "@/lib/i18n/locales";
 import { isMarketingPath } from "@/lib/i18n/marketing-routes";
 import { cn } from "@/lib/utils";
 
-/*
- * 가이드 마크다운이 그려지는 모양. 문법표는 `content/help/README.md`. 색은 가이드의 `--tv-*` 토큰만 쓴다(새 색 없음).
- * 서버 컴포넌트라 본문은 스크립트 없이도 있다 — 탭만 하이드레이션 뒤에 접힌다(`client.tsx`).
- */
-
 type El = ReactElement<{ children?: ReactNode } & Record<string, unknown>>;
 
-/** `help:slug#앵커` → 그 언어의 가이드 안 주소 */
 export function resolveHelpHref(href: string, locale: Locale = "ko") {
   const [id, hash] = href.slice("help:".length).split("#");
   return `${localePath(locale, helpPathById(id as HelpPageId))}${hash ? `#${hash}` : ""}`;
 }
 
-/** 사이트 안 주소(`/privacy#x`)를 그 언어판으로. 언어판이 없는 제품 면(`/w/...`)은 그대로 둔다. */
 function localSiteHref(href: string, locale: Locale) {
   const at = href.search(/[?#]/);
   const path = at === -1 ? href : href.slice(0, at);
@@ -91,7 +84,6 @@ export function HelpCallout({
   kind?: string;
   children?: ReactNode;
 }) {
-  // 이름표는 본문 언어로 적힌 종류 낱말 그대로다(`labels.ts`)
   const { Icon, line } =
     CALLOUT[Object.hasOwn(CALLOUT_TONES, kind) ? CALLOUT_TONES[kind] : "note"];
   return (
@@ -118,12 +110,10 @@ export const STEPS_CLASS = cn(
   "[&>li>strong:first-child]:block [&>li>strong:first-child]:text-[var(--tv-ink)] [&>li>p:first-child>strong:first-child]:block [&>li>p:first-child>strong:first-child]:text-[var(--tv-ink)] [&>li>p]:m-0 [&>li>p+p]:mt-1.5"
 );
 
-/** 번호 목록은 모두 단계 카드다: 번호 원 + 굵은 제목 + 설명, 세로 연결선. */
 export const MdSteps = ({ children }: { children?: ReactNode }) => (
   <ol className={STEPS_CLASS}>{children}</ol>
 );
 
-/** 줄무늬 표. */
 export function MdTable({ children }: { children?: ReactNode }) {
   return (
     <div className="overflow-hidden rounded-[12px] border border-[var(--tv-rule)]">
@@ -155,7 +145,6 @@ const MARKS: Record<
   },
 };
 
-/** ✓ ✗ – 만 든 칸은 아이콘 칩이 된다(스크린 리더에는 가능 · 불가 · 해당 없음을 그 언어로). */
 export function MdCell({
   children,
   node: _node,
@@ -194,7 +183,6 @@ export function HelpBadge({ children }: { children?: ReactNode }) {
   );
 }
 
-/** 인라인 코드. `kbd:⌘K` 는 키캡이 된다. */
 export function MdInlineCode({ children, className }: ComponentProps<"code">) {
   const text = typeof children === "string" ? children : "";
   if (text.startsWith("kbd:")) {
@@ -218,13 +206,11 @@ export function MdInlineCode({ children, className }: ComponentProps<"code">) {
 
 type HastLike = { children?: { tagName?: string; value?: string; children?: HastLike["children"] }[] };
 
-/** 코드 블록(복사 버튼) */
 export function MdPre({ node }: { node?: HastLike }) {
   const text = node?.children?.[0]?.children?.[0]?.value ?? "";
   return <HelpCodeBlock text={text.replace(/\n$/, "")} />;
 }
 
-/** 문단 안에 이미지 하나뿐이면 `<p>` 를 벗긴다(그림은 블록이라 `<p>` 안에 둘 수 없다). */
 export function MdParagraph({
   node,
   children,
@@ -237,7 +223,6 @@ export function MdParagraph({
   return only ? <>{children}</> : <p>{children}</p>;
 }
 
-/** `![설명](img:주제/파일.webp "캡션")` */
 export function MdImage({ src = "", alt = "", title }: ComponentProps<"img">) {
   const path = typeof src === "string" ? src.replace(/^img:/, "") : "";
   return (
@@ -249,7 +234,6 @@ export function MdImage({ src = "", alt = "", title }: ComponentProps<"img">) {
   );
 }
 
-/** `::clip{name="…" alt="…" caption="…"}` */
 export function MdClip({ name, alt, caption }: Record<string, string>) {
   return (
     <HelpClip
@@ -260,7 +244,6 @@ export function MdClip({ name, alt, caption }: Record<string, string>) {
   );
 }
 
-/** 탭 하나. 제목과 내용은 `HelpTabs` 가 읽어 간다. */
 export function HelpTab({ children }: { title?: string; children?: ReactNode }) {
   return <>{children}</>;
 }
@@ -279,10 +262,6 @@ export function HelpTabs({ children }: { children?: ReactNode }) {
   );
 }
 
-/**
- * 증상 / 원인 / 해결 방법 3칸. 안쪽은 `**증상:** …` `**원인:** …` `**해결 방법:** …` 문단이고,
- * 해결 방법 뒤에는 목록이 이어질 수 있다.
- */
 export function HelpProblem({ children }: { children?: ReactNode }) {
   const rows: { label: string; inline: ReactNode[]; extra: ReactNode[] }[] = [];
   const isLabel = (label: string) => Object.hasOwn(PROBLEM_LABELS, label);
@@ -296,9 +275,8 @@ export function HelpProblem({ children }: { children?: ReactNode }) {
     const kids = Children.toArray(el.props.children);
     const isLine = el.type === "p" || el.type === MdParagraph;
     if (isLine && !isLabel(labelOf(kids[0])) && rows.length > 0) {
-      rows[rows.length - 1].extra.push(el); // 라벨 없는 다음 문단은 앞 칸에 이어 붙인다
+      rows[rows.length - 1].extra.push(el);
     } else if (isLine) {
-      // 세 줄이 한 문단으로 이어져 있다: 굵은 라벨이 나올 때마다 새 칸
       for (const kid of kids) {
         const label = labelOf(kid);
         if (isLabel(label)) rows.push({ label, inline: [], extra: [] });
@@ -332,7 +310,6 @@ export function HelpProblem({ children }: { children?: ReactNode }) {
   );
 }
 
-/** 점 목록. 안쪽 문단은 붙여서 그린다. */
 export const MdList = ({ children }: { children?: ReactNode }) => (
   <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 [&_p]:m-0">
     {children}
@@ -345,7 +322,6 @@ export const MdH3 = ({ children }: { children?: ReactNode }) => (
   </h3>
 );
 
-/** 관련 페이지 섹션의 목록: 링크 카드 묶음 */
 export const RelatedList = ({ children }: { children?: ReactNode }) => (
   <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
     {children}

@@ -9,16 +9,6 @@ import { cn } from "@/lib/utils";
 import { RefChips } from "./app";
 import { APP, FOCUS } from "./tokens";
 
-/*
- * 앱 화면 조각 중 **진짜로 눌리는 것.** 창 안 = `--el-*` · `APP`, 창 밖 · 창 위 주석 = `--tv-*`.
- * 포커스 링만 페이지의 것(`FOCUS`)이다 — 링은 창 위에 얹는 주석이라 앱 화면으로 오인되지 않는다.
- */
-
-/**
- * 「참고한 회의록 N개」 펼치기(`chain-of-thought.tsx` `AnswerRefs`). 앱 규칙대로 하나면 펴 두고 여럿이면
- * 접어 둔다. `open` 을 주면 제어 모드다(물어보기의 커서 장면이 연다) — 누르면 `onOpenChange` 만 부른다.
- * 칩은 갈 곳이 없어 그림(`span`)이다.
- */
 export function AnswerRefs({
   refs,
   open,

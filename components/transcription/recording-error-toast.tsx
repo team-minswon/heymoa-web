@@ -22,11 +22,6 @@ export function RecordingErrorToast() {
   return quotaExceeded ? <QuotaExceededToast /> : <FailureToast />;
 }
 
-/**
- * 무료 월 한도로 녹음 시작이 거절됐다(409 `RECORDING_QUOTA_EXCEEDED`). 막힌 것은 **새 시작뿐**이고 진행 중인 회의는 끊기지
- * 않는다. ADMIN 은 요금제 화면으로 가는 액션을, 멤버는 관리자에게 요청하라는 안내를 받는다. 역할을 알아야 그릴 수 있어
- * 공간 조회가 끝나길 기다린다(실패하면 멤버 안내로 그린다).
- */
 function QuotaExceededToast() {
   const t = useTranslations("recording.errorToast");
   const { error, activeWorkspaceId: workspaceId } = useRecording();
@@ -72,17 +67,13 @@ function FailureToast() {
 
   useEffect(() => {
     if (!error) {
-      // 복구되면 손으로 닫지 않아도 사라진다.
       toast.dismiss(RECORDING_ERROR_TOAST_ID);
       return;
     }
 
-    // **자동으로 닫지 않는다.** 독에는 되돌릴 수단(다시 시도)만 남기고 사유는 여기로 모았으므로,
-    // 이 토스트가 닫히면 사용자가 무엇을 고쳐야 하는지 알 길이 사라진다(마이크 권한 등).
     toast.error(error, {
       id: RECORDING_ERROR_TOAST_ID,
       duration: Infinity,
-      // 권한 거부처럼 브라우저 설정을 바꿔야 풀리는 사유가 많다. 어디를 고치는지는 도움말에 있다.
       action: {
         label: t("help"),
         onClick: () =>

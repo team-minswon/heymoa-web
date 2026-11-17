@@ -78,7 +78,6 @@ describe("설정 > 언어", () => {
     expect(state.mutate).toHaveBeenCalledTimes(1);
     expect(state.mutate.mock.calls[0][0]).toEqual({ data: { language: "en" } });
     expect(reload).not.toHaveBeenCalled();
-    // 저장하는 동안 다른 선택지는 막힌다.
     expect(screen.getByRole("radio", { name: "한국어" })).toBeDisabled();
 
     act(() => state.mutate.mock.calls[0][1].onSuccess());

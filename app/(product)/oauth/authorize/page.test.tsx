@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { redirect, getCurrentUserForSsr } = vi.hoisted(() => {
-  // `buildApiUrl` 이 모듈을 읽을 때 API 주소를 잡으므로 가져오기 전에 둔다.
   process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.heymoa.test";
   return {
     redirect: vi.fn((url: string) => {

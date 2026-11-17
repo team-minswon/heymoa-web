@@ -121,7 +121,6 @@ describe("recordingReducer", () => {
     expect(state.error).toBeNull();
   });
 
-  // 다른 탭·부착이 같은 세션을 자기 끝 번호로 완료해도, 이 탭이 버린 소리는 저장되지 않았다
   it("버린 소리를 알린 문구는 서버 완료 뒤에도 남는다", () => {
     const message = "마지막 소리를 저장하지 못해 3초를 올리지 못했습니다.";
     const state = run(

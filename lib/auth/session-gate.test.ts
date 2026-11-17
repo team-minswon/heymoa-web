@@ -44,8 +44,6 @@ describe("session gate", () => {
     expect(new SessionExpiredError().name).toBe("SessionExpiredError");
   });
 
-  // 서버에서 모듈 상태를 쓰면 Next 프로세스가 모든 요청과 공유한다. 비로그인 사용자의
-  // SSR prefetch가 게이트를 열면 다른 사용자의 SSR까지 막힌다.
   describe("서버에서는 열리지도 보이지도 않는다", () => {
     afterEach(() => {
       vi.unstubAllGlobals();

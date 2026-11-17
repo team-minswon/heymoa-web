@@ -145,30 +145,23 @@ describe("WorkspaceIntegrationsSettings", () => {
     expect(screen.getByText(/김민수/)).toBeTruthy();
   });
 
-  // 예전에는 연결됨·연결되지 않음이 둘 다 회색이라 칩 글자를 읽어야만 구분됐다.
-  // 색은 상태에만 준다 — 연결됨은 success 틴트, 연결되지 않음은 무채색(색 없음 = 아직 아님).
   it("연결 상태에만 색을 준다 — 연결됨은 success, 연결되지 않음은 무채색", () => {
     renderPanel();
 
     const connected = screen.getByText("연결됨");
     const disconnected = screen.getByText("연결되지 않음");
 
-    // 배경 틴트는 --el-success, 글자는 --el-success-strong이다. 같은 값을 둘 다 쓰면
-    // 10% 틴트 위에서 명암비가 AA에 못 미친다(2.96:1).
     expect(connected.className).toContain("bg-[var(--el-success)]/10");
     expect(connected.className).toContain("text-[var(--el-success-strong)]");
     expect(disconnected.className).not.toContain("--el-success");
-    // 되돌릴 수 있는 제거라 솔리드가 아니라 destructive 틴트다.
     const disconnectButton = screen.getByRole("button", { name: "연결 해제" });
     expect(disconnectButton.className).toContain("bg-destructive/10");
     expect(disconnectButton.className).toContain(
       "text-[var(--el-error-strong)]"
     );
-    // 연결은 이 카드의 주 행동이라 primary 그대로 — 색을 더 얹지 않는다.
     expect(
       screen.getByRole("button", { name: "연결" }).className
     ).not.toContain("--el-success");
-    // 아이콘도 상태 단서라 같은 틴트 위에서 대비를 넘겨야 한다 — 틴트색을 그대로 쓰면 안 된다.
     const icons = Array.from(document.querySelectorAll("svg.lucide-link-2"));
     const iconClasses = icons.map((icon) => icon.getAttribute("class") ?? "");
     expect(iconClasses.some((c) => c.includes("--el-success-strong"))).toBe(
@@ -203,18 +196,15 @@ describe("WorkspaceIntegrationsSettings", () => {
     renderPanel();
     expect(screen.queryByRole("button", { name: "연결" })).toBeNull();
     expect(screen.queryByRole("button", { name: "연결 해제" })).toBeNull();
-    // 안내 Alert도 아직 안 뜬다(역할 불명).
     expect(screen.queryByText(/관리자만 연동을 연결하거나 해제할 수 있습니다/)).toBeNull();
   });
 
   it("역할 조회가 실패하면 조작을 숨기고 사유·재시도를 보인다", () => {
-    // members 실패를 빈 목록으로 접으면 ADMIN이 조작을 영영 못 본다 — 사유와 재시도를 준다.
     state.membersError = true;
     renderPanel();
     expect(screen.getByText(/권한을 확인하지 못해/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "연결 해제" })).toBeNull();
-    // 관리자 안내(MEMBER용)도 뜨지 않는다(역할 불명).
     expect(screen.queryByText(/관리자만 연동을 연결하거나 해제할 수 있습니다/)).toBeNull();
   });
 

@@ -16,14 +16,6 @@ import {
 } from "@/lib/api/generated/models";
 import { okData } from "@/lib/api/ok-data";
 
-/**
- * 계정 탈퇴 · 워크스페이스 삭제 · 이름 확인 나가기 API (PRO-69, APP-1383).
- *
- * 계약은 server openapi(APP-1378·1380·1381)에서 생성한 클라이언트다. 여기는 화면이 쓰는 이름과
- * 훅 모양(처리 목록은 매번 새로, 실패 토스트는 화면이 직접)만 붙인다.
- * 재로그인은 받지 않는다(2026-10-23 결정). 녹음 중이면 409 `RECORDING_IN_PROGRESS` — 화면은 서버 문구를 그대로 보인다(`errorMessageOf`).
- */
-
 export type DeletionPlanAction =
   AccountDeletionPlanResponseDataWorkspacesItemAction;
 export type DeletionPlanWorkspace =
@@ -35,7 +27,7 @@ export const WITHDRAWAL_REASON_CODES = Object.values(
 );
 export type WithdrawalReasonCode = DeleteAccountRequestReasonCode;
 
-/** 탈퇴 확인 문구. 서버도 앞뒤 공백만 걷고 정확히 같은지 본다. */
+/** 탈퇴 확인 문구입니다. 서버도 앞뒤 공백만 걷고 정확히 같은지 봅니다. */
 export const WITHDRAWAL_CONFIRMATION = "회원 탈퇴";
 export const WITHDRAWAL_DETAIL_MAX = 500;
 
@@ -48,11 +40,9 @@ export function useDeletionPlan(enabled: boolean) {
   return useQuery({
     queryKey: DELETION_PLAN_QUERY_KEY,
     enabled,
-    // 열 때마다 지금 상태로 다시 받는다 — 그사이 멤버가 나가면 처리가 바뀐다.
     staleTime: 0,
     queryFn: async ({ signal }) => {
       const plan = okData(await getDeletionPlan({ signal }));
-      // 화면은 `isError` 로 자기 문구(`settings.accountDeletion.plan.loadFailed`)를 그린다
       if (!plan) throw new Error("Deletion plan response was empty");
       return plan;
     },
@@ -79,7 +69,6 @@ export function useDeleteWorkspace() {
   });
 }
 
-/** 확인 입력이 맞는가. 서버와 같은 규칙 — 앞뒤 공백만 걷고 정확히 같아야 한다. */
 export function confirmationMatches(input: string, expected: string) {
   return input.trim() === expected.trim() && expected.trim().length > 0;
 }

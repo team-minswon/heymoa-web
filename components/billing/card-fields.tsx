@@ -20,10 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * 주문서·카드 변경의 「카드 정보」 칸(APP-1600). 값은 부모의 상태(`CardForm`)가 갖고, 이 컴포넌트는 그리기·자릿수 거르기만 한다.
- * 틀린 칸은 한 번 떠난 뒤에만 그 아래 한 줄로 알린다 — 치는 도중에 빨간 글이 따라오지 않게.
- * 묶음과 칸마다 `ph-no-capture` 를 단다 — PostHog 가 자동 수집·세션 기록에서 그 요소를 빼는 공식 표시다. 이 칸이 서는 화면에는
- * 분석 스크립트가 없지만(`app/(card-entry)`), 실수로 실려도 기록되지 않게 한 겹 더 둔다.
+ * 묶음과 칸마다 `ph-no-capture` 를 답니다 — PostHog 가 자동 수집 · 세션 기록에서 그 요소를 빼는 공식 표시입니다. 이 칸이 서는
+ * 화면에는 분석 스크립트가 없지만(`app/(card-entry)`), 실수로 실려도 기록되지 않게 한 겹 더 둡니다.
  */
 export function CardFields({
   value,
@@ -131,7 +129,6 @@ export function CardFields({
               value={value.holder}
               disabled={disabled}
               onChange={(holder) => {
-                // 자리 수가 다른 값이라 바꾸면 비우고, 새 칸을 떠나기 전에는 알리지 않는다.
                 set({ holder, identity: "" });
                 setTouched((prev) => ({ ...prev, identity: undefined }));
               }}

@@ -33,7 +33,6 @@ test("느린 로그아웃 요청 중 대기를 표시하고 성공하면 익명 
     authenticated = false;
     await route.fulfill({ status: 204 });
   });
-  // 랜딩 크롬은 시작 CTA만 둔다. 로그아웃이 있는 인증 카드 크롬에서 상태를 확인한다.
   await page.goto("/oauth/authorize");
   const logout = page.getByRole("button", { name: "로그아웃", exact: true });
   await logout.click();

@@ -25,7 +25,6 @@ function seed() {
       ],
     })
   );
-  // 이 워크스페이스의 회의 — 상세가 workspaceId 를 들고 있다
   client.setQueryData(
     ["/v1/notes/N1"],
     ok({
@@ -45,7 +44,6 @@ function seed() {
       },
     })
   );
-  // 프로젝트 할 일 — 프로젝트가 이 워크스페이스 것임을 회의 상세가 알려 준다
   client.setQueryData(
     ["/v1/projects/P1/tasks"],
     ok({
@@ -54,7 +52,6 @@ function seed() {
       ],
     })
   );
-  // 다른 워크스페이스의 회의 — 같은 사람이지만 거기서는 다른 이름일 수 있다
   client.setQueryData(
     ["/v1/notes/N2"],
     ok({

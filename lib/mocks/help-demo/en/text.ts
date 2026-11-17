@@ -1,6 +1,5 @@
 import type { ParsedScript } from "@/lib/mocks/help-demo/script";
 
-/** English counterpart of `../text.ts`. */
 export const HD_TEXT = {
   workspaceName: "Brightside Studio",
   workspaceDescription: "Where our marketing team keeps campaigns, the new product launch, and customer interviews in one place.",

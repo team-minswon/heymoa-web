@@ -3,8 +3,6 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-// v5 SPEC(FORM·ELEVATION)의 고도·형태·타이포 스케일이 코드 토큰으로 존재하는지 지킨다.
-// 누가 토큰을 지우거나 e2/e3를 단일 티어로 되돌리면 여기서 깨진다. (APP-153)
 const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 describe("design tokens (globals.css)", () => {
@@ -27,11 +25,6 @@ describe("design tokens (globals.css)", () => {
     expect(css).toContain(token);
   });
 
-  /**
-   * 상태색은 **10% 틴트 배경 + `*-strong` 글자**의 짝으로만 쓴다. 배경과 글자에 같은 값을
-   * 쓰면 틴트가 배경을 거의 흰색으로 남겨서 AA(4.5:1)에 못 미친다 — success는 2.96:1,
-   * error는 4.13:1이었다. 여기서 실제 명암비를 계산해 못 박는다.
-   */
   describe("상태색 틴트 대비", () => {
     const tokenValue = (name: string) =>
       css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
@@ -46,7 +39,6 @@ describe("design tokens (globals.css)", () => {
     };
     const luminance = ([r, g, b]: number[]) =>
       0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
-    /** 흰 패널 위 10% 틴트가 실제로 그려지는 색. */
     const tintOnWhite = (rgb: number[]) =>
       rgb.map((channel) => channel * 0.1 + 255 * 0.9);
     const contrast = (fg: number[], bg: number[]) => {

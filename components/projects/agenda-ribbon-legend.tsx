@@ -5,13 +5,10 @@ import { useTranslations } from "next-intl";
 import { FoldPill, JoinMark, NORMAL, StopGlyph, THIN, forkPath, stopMetrics } from "@/components/projects/agenda-ribbon-column";
 import { Badge } from "@/components/ui/badge";
 
-/** 이 판에 실제로 있는 것만 범례에 올린다 */
 export type LegendHas = { capsule: boolean; gap: boolean; branch: boolean; fold: boolean; join: boolean };
 
-/** 범례의 기호는 판에서 가장 흔한 넓은 열의 모양으로 그린다 */
 const COL = 40;
 
-/** 굵은 노선 조각 위에 점이 앉은 기호 하나(판의 안건 점과 같은 컴포넌트) */
 function Rail({ children }: { children: React.ReactNode }) {
   return (
     <span aria-hidden className="relative flex h-6 w-[34px] shrink-0 items-center justify-center">
@@ -30,10 +27,6 @@ function Pair({ glyph, label }: { glyph: React.ReactNode; label: string }) {
   );
 }
 
-/**
- * 판 아래 설명은 늘 펼쳐 둔다(접는 버튼 없음). 기호 설명과 조작 안내가 한 덩어리로 이어져, 넓으면 한 줄에 쭉 서고 좁으면 조작 안내가 아래 줄로 내려간다.
- * 기호 설명은 기호 + 짧은 말 쌍(쌍 안은 줄바꿈 없이, 넘치면 쌍 단위로 내려간다)이고 이 판에 있는 기호만 보인다. 두 묶음 사이는 32px 로 벌려 구분한다.
- */
 export function Legend({ has }: { has: LegendHas }) {
   const t = useTranslations("workspace.agendaMap.legend");
   const tActions = useTranslations("common.actions");

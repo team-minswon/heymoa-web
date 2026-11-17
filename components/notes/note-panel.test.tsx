@@ -37,7 +37,6 @@ vi.mock("@/lib/desktop/use-desktop-app", () => ({
   useDesktopApp: () => desktopApp.value,
 }));
 
-// 이 파일이 보는 것은 패널이지 소켓이 아니다. 연결은 세우지 않는다.
 vi.mock("@/lib/notes/note-topic-client", () => ({
   NoteTopicClient: class {
     readonly connect = vi.fn();
@@ -49,7 +48,6 @@ const noteRefetch = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({
   userId: "u1",
 }));
-/** 로컬 provider 소유권을 상태 행렬에서 바꿔 볼 수 있게 둔다. */
 const recordingState = vi.hoisted(() => ({
   activeNoteId: null as string | null,
   phase: "idle" as string,
@@ -59,7 +57,6 @@ const recordingState = vi.hoisted(() => ({
     | "INTERRUPTED"
     | "COMPLETED"
     | null,
-  /** 노트가 들고 있는 활성 세션이 이 세션인지 가르는 값. */
   sessionStartedAt: null as string | null,
   connectionNotice: null as
     | import("@/lib/transcription/realtime-session").ConnectionNotice
@@ -98,7 +95,6 @@ vi.mock("@/components/transcription/recording-provider", async () => {
   };
 });
 const noteState = vi.hoisted(() => ({
-  /** 세팅하면 `useGetNote` 반환을 통째로 대신한다 — 로딩·실패를 그리려고 쓴다. */
   query: null as {
     data?: unknown;
     isError?: boolean;
@@ -108,8 +104,6 @@ const noteState = vi.hoisted(() => ({
     noteId: "01K0000000002",
     title: "주간 제품 회의",
     projectId: "01K0000000001",
-    // **노트 응답이 소속과 프로젝트 이름을 싣는다** (APP-685). 전에는 이 둘을 얻으려고
-    // 프로젝트 조회를 한 번 더 돌렸고, 그 왕복이 끝나기 전에는 회의 시작이 잠겼다.
     workspaceId: "01K0000000000" as string,
     projectName: "모바일 앱",
     meetingStatus: "IN_PROGRESS" as string,
@@ -186,7 +180,6 @@ vi.mock("@/components/notes/transcript-view", () => ({
     </p>
   ),
 }));
-// 레일이 셸의 개인 챗봇 자리를 등록한다. 여기서는 provider를 세우지 않으므로 훅만 채운다.
 const setRailSlot = vi.hoisted(() => vi.fn());
 const personalChat = vi.hoisted(() => ({ isTurnActive: false }));
 vi.mock("@/components/chat/personal-chat", () => ({
@@ -207,7 +200,6 @@ vi.mock("@/components/notes/note-archive", () => ({
       data-workspace={workspaceId ?? ""}
       data-focus={focusSegmentId ?? ""}
     >
-      {/* 실제 아카이브는 하이라이트가 끝나면 부른다 */}
       <button type="button" onClick={onFocusHandled}>
         점프 끝
       </button>
@@ -240,7 +232,6 @@ vi.mock("@/components/notes/meeting-end-dialog", () => ({
       </>
     ) : null,
 }));
-// 의견 창의 빈도·저장은 자기 테스트가 본다. 여기서는 패널이 언제 띄우고 언제 버리는지만 본다.
 vi.mock("@/components/notes/meeting-end-feedback", () => ({
   END_FEEDBACK_DELAY_MS: 1000,
   claimEndFeedback: () => true,
@@ -252,9 +243,7 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryKey: (projectId: string) => [
     `/v1/projects/${projectId}/notes`,
   ],
-  // 삭제 메뉴가 노트 헤더로 옮겨오면서 패널이 이 훅을 지나간다.
   useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  // 타임라인 탭이 주제 제목을 안건 정본에서 읽는다. 이 테스트는 정본이 없는 회의다.
   useGetNoteAgendas: () => ({
     data: undefined,
     isPending: false,
@@ -311,8 +300,6 @@ function renderNotePanel(ui: ReactNode) {
           })),
         }}
       >
-        {/* NotePanel 은 프로덕션에서 항상 NoteRealtimeProvider 안이다
-            (`note-route-client.tsx`). 여기서는 소켓을 띄우지 않고 컨텍스트만 세운다. */}
         <NoteRealtimeProvider noteId="01K0000000002">
           {node}
         </NoteRealtimeProvider>
@@ -327,7 +314,6 @@ function renderNotePanel(ui: ReactNode) {
   };
 }
 
-/** 다른 탭이 localStorage 에 남긴 녹음 기록 */
 function writeOtherTab(noteId: string, beatAt: number) {
   localStorage.setItem(
     "heymoa.transcription.recording:dead-tab",
@@ -335,7 +321,6 @@ function writeOtherTab(noteId: string, beatAt: number) {
   );
 }
 
-/** 고르지 않은 탭도 `hidden` 으로 남아 있어(APP-1660) 같은 글이 숨은 패널에도 있다. 보이는 것만 센다. */
 function visibleByText(text: string | RegExp) {
   return screen
     .getAllByText(text)
@@ -411,21 +396,12 @@ describe("NotePanel", () => {
     expect(screen.getByRole("tab", { name: "스크립트" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
-    // 전사에서는 제목이 **상단바 빵조각 하나뿐이다** — 세리프 제목은 정보 탭의 머리글이다.
     expect(visibleByText("주간 제품 회의")).toHaveLength(1);
     expect(
       screen.queryByRole("heading", { name: "주간 제품 회의" })
     ).toBeNull();
   });
 
-  /**
-   * **녹음이 어느 워크스페이스 것인지는 여기서만 정해진다.** 계약이 노트 → 워크스페이스를
-   * 안 알려줘서(노트 응답에 `projectId`만 있다) 이 패널이 아는 값을 독에 내려주고, 독이
-   * `start()`에 실어야 프로바이더가 안다. 타입은 문자열 두 개라 **noteId를 잘못 넘겨도
-   * 컴파일이 통과한다** — 실제로 무엇이 실렸는지를 본다.
-   *
-   * 이 값이 틀리면 나가기 잠금과 추방 시 녹음 정리가 조용히 엉뚱한 워크스페이스에 걸린다.
-   */
   it("녹음을 시작하면 그 노트가 속한 워크스페이스를 함께 기록한다", async () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
@@ -458,15 +434,6 @@ describe("NotePanel", () => {
     );
   });
 
-  /**
-   * **`/w/B/notes/<A의 노트>` 딥링크.** 노트 조회는 워크스페이스로 좁혀지지 않아 A의 노트가
-   * 그대로 그려진다. 여기서 녹음을 시작하면 세션은 A에 생기는데 소속은 B로 기록돼 A의
-   * 나가기 잠금과 추방 정리가 둘 다 빗나간다.
-   *
-   * **노트 응답이 소속을 싣는다** (APP-685). 전에는 프로젝트 조회의 `PROJECT_NOT_FOUND` 로
-   * 판정했고, 그 왕복이 끝나기까지 회의 시작이 잠겨 있었다. 독은 감추지 않고 시작 자리에
-   * 이유를 세운다 — 감추면 레이아웃이 흔들린다.
-   */
   it("다른 워크스페이스의 노트 URL이면 시작을 막고 이유를 보인다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
@@ -491,8 +458,6 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
-  // **확인 전에는 시작을 열지 않는다.** 프로젝트 조회가 끝나기 전에 눌리면 URL의 값으로
-  // 시작하게 되는데, `/w/B/notes/<A의 노트>`면 세션은 A에 생기고 소속은 B로 기록된다.
   it("노트가 아직 안 왔으면 시작을 못 누른다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
@@ -512,11 +477,6 @@ describe("NotePanel", () => {
     expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
   });
 
-  /**
-   * **프로젝트 조회 실패라는 상태가 사라졌다** (APP-685). 소속이 노트 응답에 실리므로 그
-   * 조회 자체가 없고, 노트 조회가 실패하면 패널이 통째로 못 서는 기존 경로를 탄다.
-   * 「소속만 확인 못 한 채 버튼이 잠긴」 상태는 이제 만들 수 없다.
-   */
   it("shows five microphone bars in the compact recording dock", async () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
@@ -591,8 +551,6 @@ describe("NotePanel", () => {
       />
     );
 
-    // 레일 안쪽은 포털 슬롯이라 DOM 깊이가 언제든 바뀐다. 거슬러 오르는 대신 기하를
-    // 실제로 갖는 상자를 이름으로 잡는다.
     const tray = screen.getByTestId("note-agent-rail");
     const root = tray.parentElement;
 
@@ -609,17 +567,13 @@ describe("NotePanel", () => {
       "max-lg:landscape:border-l",
       "max-lg:landscape:border-t-0",
       "lg:h-full",
-      // 레일 폭은 440이다 (design.pen `L4PpR`). 예전 464는 옛 산술이었다.
       "lg:w-[440px]"
     );
-    // 캔버스 10px 틈은 **넓은 화면 규칙**이다 — 좁은 화면은 두 면이 테두리로 붙는데
-    // 틈까지 두면 붙은 척하면서 벌어진다.
     expect(root).toHaveClass("lg:gap-2.5");
     expect(root?.className).not.toMatch(/(^|\s)gap-2\.5(\s|$)/);
     expect(tray).toHaveClass("rounded-panel", "shadow-e2");
   });
 
-  // 가르는 선을 두 곳이 그리면 두 겹이 된다 — 자리를 잡아 주는 쪽만 그린다.
   it("전사와 레일 사이 선을 한 번만 그린다", () => {
     renderNotePanel(
       <NotePanel
@@ -632,7 +586,6 @@ describe("NotePanel", () => {
       />
     );
 
-    // 캔버스 10px 이 두 패널을 가르므로 맞닿는 테두리를 두지 않는다 — 두면 두 줄로 보인다.
     const rail = screen.getByTestId("note-agent-rail");
     expect(rail.className).not.toContain("lg:border-l");
   });
@@ -655,8 +608,6 @@ describe("NotePanel", () => {
     );
   });
 
-  // 레일은 회의 상태로 여닫지 않는다 — 전체 화면이면 항상 오른쪽 440에 서 있다
-  // (design.pen `XtEMZ`/`L4PpR`). 예전에는 종료되면 통째로 사라져 본문 폭이 튀었다.
   it("full 레일은 종료된 회의에도 상주한다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
@@ -670,7 +621,6 @@ describe("NotePanel", () => {
       />
     );
     expect(screen.getByTestId("note-agent-rail")).toBeInTheDocument();
-    // 닫기가 없다 — 레일은 고정이다.
     expect(
       screen.queryByRole("button", { name: /레일 닫기|챗봇 닫기/ })
     ).toBeNull();
@@ -690,7 +640,6 @@ describe("NotePanel", () => {
     );
 
     const rail = screen.getByTestId("note-agent-rail");
-    // 실시간 정리는 본문 「타임라인」 탭으로 갔다 — 레일에는 탭이 없다.
     expect(within(rail).queryByRole("tab")).toBeNull();
     expect(setRailSlot).toHaveBeenCalledWith(expect.any(HTMLElement));
   });
@@ -708,9 +657,7 @@ describe("NotePanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "내 에이전트 접기" }));
-    // 남는 줄이 없다. 다시 여는 손잡이는 위 막대와 아래에 있다.
     expect(screen.getByTestId("note-agent-rail")).toHaveClass("hidden");
-    // 감출 뿐 자리를 놓지 않는다 — 놓으면 패널이 다시 마운트되어 쓰던 질문이 사라진다.
     expect(setRailSlot).toHaveBeenLastCalledWith(expect.any(HTMLElement));
 
     fireEvent.click(
@@ -735,7 +682,6 @@ describe("NotePanel", () => {
       />
     );
 
-    // 좁은 화면의 레일은 본문 아래 14rem 레인이라 전사 높이를 깎는다.
     expect(screen.getByTestId("note-agent-rail")).toHaveClass("max-lg:hidden");
     expect(
       screen.getByRole("button", { name: "내 에이전트 열기" })
@@ -799,7 +745,6 @@ describe("NotePanel", () => {
     expect(
       screen.getByRole("button", { name: "답변이 끝나면 접을 수 있습니다" })
     ).toBeDisabled();
-    // 창을 좁혀도 반응형 규칙이 레일을 감추지 않는다 — 중지·도구 승인이 그 안에만 있다.
     expect(screen.getByTestId("note-agent-rail")).not.toHaveClass(
       "max-lg:hidden"
     );
@@ -820,7 +765,6 @@ describe("NotePanel", () => {
       />
     );
 
-    // 사이드 860 시트에는 오른쪽 레일 자리가 없다.
     expect(screen.queryByTestId("note-agent-rail")).toBeNull();
     expect(screen.getByRole("tab", { name: "타임라인" })).toBeInTheDocument();
     expect(
@@ -828,15 +772,8 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
-  /**
-   * **아카이브도 URL 값을 받으면 안 된다.** 화자 후보를 워크스페이스에서 세우므로,
-   * `/w/B/notes/<A의 노트>` 면 B 의 멤버가 후보로 서고 고르면 422 로 거절되거나
-   * **A 에 이미 있는 사람을 못 찾아 동명이인을 또 만든다.** 독과 같은 규칙이다.
-   */
   it("URL 과 노트의 소속이 다르면 아카이브에 워크스페이스를 안 넘긴다", () => {
     noteState.value.meetingStatus = "ENDED";
-    // 소속이 **확인 안 된** 상태는 이제 「노트가 아직 안 왔다」뿐이고 그때는 아카이브 자체가
-    // 안 선다. 남은 위험은 URL 과 실제 소속이 어긋난 경우다 (APP-685).
     noteState.value.workspaceId = "01K0000000099";
 
     renderNotePanel(
@@ -879,7 +816,6 @@ describe("NotePanel", () => {
   it.each(["full", "side"] as const)(
     "%s는 최초 시작을 절대 시각 time 요소로 보인다",
     (view) => {
-      // 메타 줄은 정보 탭의 머리글에 있다 — 전사·요약은 읽는 면이라 크롬을 걷었다.
       renderNotePanel(
         <NotePanel
           workspaceId="01K0000000000"
@@ -898,8 +834,6 @@ describe("NotePanel", () => {
   );
 
   it("side 전사만 읽을 때는 에이전트 레일을 세우지 않는다", () => {
-    // `showSharedTray`의 앞쪽 절반(`view === "full"`)을 문다. 예전에는 없는
-    // `shared-chat-panel`을 찾아서 **무엇을 하든 초록이었다.**
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -965,8 +899,6 @@ describe("NotePanel", () => {
   );
 
   it("삭제 확인창을 연 채 다른 노트로 바뀌면 창이 따라가지 않는다", async () => {
-    // 이 패널은 노트가 바뀌어도 재마운트되지 않는다. 창이 열린 채 대상만 바뀌면 A를 지우려다
-    // B가 지워진다 — 상태가 「열렸나」가 아니라 「어느 노트의 것인가」를 담아야 한다.
     noteState.value.meetingStatus = "ENDED";
 
     const { rerenderNote } = renderNotePanel(
@@ -1002,8 +934,6 @@ describe("NotePanel", () => {
   });
 
   it("개인 답변이 흐르는 동안에는 좁은 화면에서도 레일을 접지 않는다", () => {
-    // 접으면 중지도 도구 승인도 화면 밖으로 나간다 — 레일이 슬롯을 쥐고 있어 떠 있는 FAB로
-    // 되돌아가지도 않는다. 다른 멤버가 회의를 끝내는 순간이 바로 그 자리다.
     noteState.value.meetingStatus = "ENDED";
     personalChat.isTurnActive = true;
 
@@ -1067,7 +997,6 @@ describe("NotePanel", () => {
       expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull()
     );
 
-    // 되돌아온다. 저장된 대상을 안 버렸으면 여기서 창이 저절로 뜬다.
     noteState.value = { ...noteState.value, noteId: "01K0000000002" };
     rerenderNote(panel("01K0000000002"));
     expect(screen.queryByText(/회의록을 삭제할까요/)).toBeNull();
@@ -1107,7 +1036,6 @@ describe("NotePanel", () => {
       const { rerenderNote } = renderNotePanel(panel("01K00000000A1"));
       await screen.findByTestId("note-archive");
       fireEvent.click(screen.getByRole("button", { name: "점프 끝" }));
-      // 노트 화면이 링크를 읽고 주소에서 걷었다
       rerenderNote(panel(null));
       await waitFor(() => expect(focusOf()).toBe(""));
 
@@ -1191,7 +1119,6 @@ describe("NotePanel", () => {
       screen.getByTestId("note-details").getAttribute("data-auto-open");
 
     beforeEach(() => {
-      // 기록 중에는 회의 종료가 잠긴다(APP-694) — 일시정지된 회의로 연다.
       noteState.value.meetingStatus = "PAUSED";
       noteState.value.activeSessionStartedAt = null;
     });
@@ -1226,7 +1153,6 @@ describe("NotePanel", () => {
       rerenderNote(panel("details", undefined, onTabChange));
       expect(autoOpen()).toBe("true");
 
-      // 뒤로 가기처럼 패널 밖에서 탭이 바뀌고, 나중에 정보 탭으로 다시 들어온다
       rerenderNote(panel("transcript", undefined, onTabChange));
       rerenderNote(panel("details", undefined, onTabChange));
       expect(autoOpen()).toBe("false");
@@ -1249,11 +1175,8 @@ describe("NotePanel", () => {
   });
 
   it("회의 종료 확인창이 노트 전환을 따라가지 않는다", async () => {
-    // 기록 중에는 회의 종료가 잠긴다(APP-694) — 일시정지된 회의로 연다.
     noteState.value.meetingStatus = "PAUSED";
     noteState.value.activeSessionStartedAt = null;
-    // 삭제 확인창과 같은 함정인데 결과가 더 나쁘다 — 대상만 B로 바뀌어 **다른 회의가
-    // 종료된다.** 예전에는 상단바의 노트 액션 슬롯이 `key={activeNoteId}`로 막았다.
     const panel = (noteId: string) => (
       <NotePanel
         workspaceId="01K0000000000"
@@ -1278,8 +1201,6 @@ describe("NotePanel", () => {
   });
 
   it("full에서 노트를 못 읽으면 에이전트 레일도 세우지 않는다", () => {
-    // 왼쪽이 재시도인데 오른쪽 레일이 「회의 상태를 확인하는 중」을 그리면 같은 실패가
-    // 두 가지 뜻으로 보인다. `showSharedTray`의 뒤쪽 절반(`!noteLoadFailed`)을 문다.
     noteState.query = { data: undefined, isError: true };
 
     renderNotePanel(
@@ -1311,14 +1232,9 @@ describe("NotePanel", () => {
     );
     expect(screen.getByRole("tab", { name: "요약" })).toBeTruthy();
     expect(screen.getByTestId("review-tab")).toBeTruthy();
-    // 전체 화면이 워크스페이스 상단바를 통째로 덮으므로 **회의 제어·창 제어를 노트가 직접
-    // 갖는다.** 예전에는 셸 상단바의 노트 액션 슬롯이 맡았고, 그 바가 안 보이게 되면서
-    // 회의 종료·축소·닫기가 갈 곳이 없어졌다.
     expect(
       screen.getByRole("group", { name: "회의 상태와 제어" })
     ).toBeTruthy();
-    // 목록으로 나가는 길은 상단바의 ← 하나다 — 예전에는 같은 곳으로 가는 「노트 닫기」가
-    // 헤더에 따로 있었다.
     expect(screen.getByRole("button", { name: "목록으로" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
     expect(
@@ -1342,7 +1258,6 @@ describe("NotePanel", () => {
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
       "스크립트",
-      // 원장은 종료로 지워지지 않는다 — 회의 중에 본 것을 되짚는 자리라 종료 뒤에도 남는다.
       "타임라인",
       "요약",
     ]);
@@ -1363,8 +1278,6 @@ describe("NotePanel", () => {
       />
     );
 
-    // 상태 칩은 상단바에 있고, 메타 줄은 정보 탭 머리글에 있다. 시작자에게는 자기 이름을
-    // 다시 적지 않는다 — 참관일 때만 메타 줄이 「OOO님이 기록 중」을 말한다.
     expect(screen.getByText("기록 중")).toBeInTheDocument();
     expect(screen.queryByText("참관")).toBeNull();
     expect(screen.getByText("워크스페이스 멤버에게 공개")).toBeInTheDocument();
@@ -1375,7 +1288,6 @@ describe("NotePanel", () => {
       screen.getByRole("group", { name: "회의 상태와 제어" })
     ).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "창 제어" })).toBeInTheDocument();
-    // 기록 중에는 회의 종료가 잠긴다(APP-694).
     expect(screen.getByRole("button", { name: "회의 종료" })).toBeDisabled();
     expect(onTabChange).not.toHaveBeenCalled();
   });
@@ -1401,17 +1313,7 @@ describe("NotePanel", () => {
     expect(onTabChange).toHaveBeenCalledWith("summary");
   });
 
-  /**
-   * **크롬이 700 패널에서 233(33%)을 먹던 것을 걷은 것이 이 구조다.** 세리프 제목(41)과
-   * 메타 두 줄(36)은 전사·요약에서 군더더기였다 — 제목은 상단바 빵조각에, 메타는 정보 탭의
-   * 「회의 정보」 표에 이미 있다.
-   *
-   * **탭이 상단바에 있어야 이게 가능하다.** 탭이 제목 블록 아래에 있으면 탭을 누를 때마다
-   * 줄이 141px씩 오르내려 커서 밑에서 버튼이 도망간다. jsdom은 px를 못 재니 **탭 목록이
-   * 상단바 안에 있는지**로 검사한다.
-   */
   it("탭은 상단바 안에 있고 제목 블록은 정보 탭만 갖는다", () => {
-    // `rerenderNote`다 — 맨 `rerender`는 프로바이더 래퍼를 벗겨서 `useRecording`이 터진다.
     const { rerenderNote } = renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -1425,11 +1327,8 @@ describe("NotePanel", () => {
 
     const windowGroup = screen.getByRole("group", { name: "창 제어" });
     const topBar = windowGroup.closest('[data-slot="note-top-bar"]');
-    // 넓은 화면은 56 한 줄, 좁은 화면은 제목 줄 56 + 탭 줄 두 줄이다 — 어느 쪽이든 탭과 무관하게 고정이다.
     expect(topBar).toHaveClass("sm:h-14", "shrink-0");
-    // 탭 목록이 그 바 안에 있어야 제목 블록이 켜지든 꺼지든 제자리에 남는다.
     expect(topBar?.contains(screen.getByRole("tablist"))).toBe(true);
-    // 전사에는 세리프 제목도 메타도 없다.
     expect(
       screen.queryByRole("heading", { name: "주간 제품 회의" })
     ).toBeNull();
@@ -1449,24 +1348,15 @@ describe("NotePanel", () => {
     expect(
       screen.getByRole("heading", { name: "주간 제품 회의" })
     ).toBeInTheDocument();
-    // 탭은 여전히 같은 바 안이다 — 이게 깨지면 탭 줄이 튄다.
     expect(
       screen
         .getByRole("group", { name: "창 제어" })
         .closest('[data-slot="note-top-bar"]')
         ?.contains(screen.getByRole("tablist"))
     ).toBe(true);
-    // 프로젝트 pill도 이 머리글의 것이다 — 전사에서는 상단바가 이미 좁다.
     expect(visibleByText("모바일 앱")).toHaveLength(1);
   });
 
-  /**
-   * 회의 제어는 **상단바 오른쪽**이다. 전사를 보다가 회의를 끝내는 것은 흔한 일인데, 제목
-   * 블록에 묶어 두면 정보 탭까지 다녀와야 한다.
-   *
-   * 노트 메뉴(`⋯`)와 한 자리를 나눠 쓴다 — 삭제는 기록 중에 숨고(서버 409) 회의 종료는
-   * 기록 중·일시정지됨에만 뜨니 겹치지 않는다.
-   */
   it("살아 있는 회의는 전사에서도 회의 종료에 닿는다", () => {
     renderNotePanel(
       <NotePanel
@@ -1481,7 +1371,6 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getByRole("button", { name: "회의 종료" })).toBeTruthy();
-    // 제목 블록은 여전히 없다 — 제어 한 줄만 섰다.
     expect(
       screen.queryByRole("heading", { name: "주간 제품 회의" })
     ).toBeNull();
@@ -1502,7 +1391,6 @@ describe("NotePanel", () => {
       />
     );
 
-    // 종료된 회의에서는 그 자리를 노트 메뉴가 쓴다.
     expect(screen.queryByRole("button", { name: "회의 종료" })).toBeNull();
     expect(screen.getByRole("button", { name: "노트 메뉴" })).toBeTruthy();
     expect(
@@ -1510,9 +1398,6 @@ describe("NotePanel", () => {
     ).toBeNull();
   });
 
-  // 좁은 폭에서 헤더가 세로로 자라 전사 높이를 0까지 밀어낸 적이 있다(812×375 landscape에서
-  // 헤더 278/355 실측). 그 원인은 창 제어·회의 제어·상태·제목이 **한 헤더에 다 있었기**
-  // 때문이다. 지금은 창 제어·상태·탭이 모두 높이 56 고정 바에 있다(design.pen `KktRX`).
   it("창 제어 버튼은 정본대로 32×32다", () => {
     renderNotePanel(
       <NotePanel
@@ -1526,7 +1411,6 @@ describe("NotePanel", () => {
       />
     );
 
-    // 정본은 32×32 버튼이다(`UfrA6`/`BJAQl`).
     expect(
       screen.getByRole("button", { name: "전체 화면으로 보기" })
     ).toHaveClass("size-8");
@@ -1647,7 +1531,6 @@ describe("NotePanel", () => {
       ).toBeInTheDocument();
     });
 
-    // 같은 세션에 다시 붙는 동안 소리는 이 기기에 쌓인다. 타이머만 돌면 무엇이 남는지 모른다.
     it("끊기면 받아쓰기가 멈췄다고 말하고, 이으면 걷는다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "recording";
@@ -1686,7 +1569,6 @@ describe("NotePanel", () => {
 
       renderDock(view);
 
-      // 독도 멈추는 중 spinner 로 status 를 하나 더 든다
       expect(screen.getByText("저장 마무리 중… 40%")).toBeInTheDocument();
     });
 
@@ -1714,8 +1596,6 @@ describe("NotePanel", () => {
       expect(screen.queryByRole("button", { name: "재개" })).toBeNull();
     });
 
-    // lab 20260926T162918Z: 새로고침한 탭이 제 녹음에 잠겨 워치독까지 87초를 못 눌렀다.
-    // 서버는 같은 탭의 새 시작을 받아 옛 세션을 닫는다(D-16).
     it("IN_PROGRESS라도 새로고침한 같은 탭이 녹음하던 노트면 잠그지 않는다", () => {
       beatRecording("01K0000000002");
 
@@ -1725,7 +1605,6 @@ describe("NotePanel", () => {
       expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
     });
 
-    // 운영 20260926T174318: 탭을 닫고 새 탭으로 열면 워치독까지 55초를 못 눌렀다
     it("닫힌 탭의 박동이 식었으면 새 탭에서도 잠그지 않는다", () => {
       writeOtherTab("01K0000000002", Date.now() - 10_000);
 
@@ -1735,7 +1614,6 @@ describe("NotePanel", () => {
       expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
     });
 
-    // 산 탭의 ID 로 시작하면 서버가 그 탭의 녹음을 닫는다(D-16)
     it("다른 탭의 박동이 살아 있으면 잠근다", () => {
       writeOtherTab("01K0000000002", Date.now() - 1_000);
 
@@ -1746,7 +1624,6 @@ describe("NotePanel", () => {
       ).toBeInTheDocument();
     });
 
-    // 워치독이 닫은 뒤 다른 기기가 재개하면 그 녹음을 제 것으로 읽어 409 로 가는 시작을 연다
     it("회의가 녹음 중을 벗어나면 그 노트의 녹음 기록을 지운다", () => {
       beatRecording("01K0000000002");
       writeOtherTab("01K0000000002", Date.now() - 10_000);
@@ -1794,9 +1671,6 @@ describe("NotePanel", () => {
     });
 
     it("IN_PROGRESS라도 죽음이 확인된 실패는 차단 대신 다시 시도를 연다", () => {
-      // failed+ACTIVE(서버 상태 미확인)·failed+세션 없음은 위에서 원격 기록으로 차단하지만,
-      // 폴링이 INTERRUPTED를 확인한 실패까지 "다른 탭·기기에서 기록 중"으로 가리면
-      // 아무도 기록하지 않는데 그렇게 읽힌다.
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "failed";
       recordingState.sessionStatus = "INTERRUPTED";
@@ -1809,14 +1683,10 @@ describe("NotePanel", () => {
       ).toBeInTheDocument();
     });
 
-    // 일시정지 직후의 창이다. 소켓이 completed를 주면 phase는 활성 밖으로 나가는데 노트 쿼리는
-    // 아직 IN_PROGRESS라, 자기가 방금 끈 것을 남이 켠 것으로 읽어 진행자 본인에게
-    // "다른 탭·기기에서 기록 중입니다"가 떴다.
     it("방금 이 창에서 일시정지한 진행자에게는 다른 탭 안내를 띄우지 않는다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "completed";
       recordingState.sessionStatus = "COMPLETED";
-      // 노트가 아직 내 세션을 활성으로 들고 있다 — IN_PROGRESS는 그 갱신을 못 따라온 값이다.
       recordingState.sessionStartedAt = noteState.value.activeSessionStartedAt;
 
       renderDock(view);
@@ -1824,12 +1694,10 @@ describe("NotePanel", () => {
       expect(screen.queryByText("다른 탭이나 기기에서 기록 중입니다.")).toBeNull();
     });
 
-    // 완료를 영구 예외로 두면 낡은 로컬 세션이 남의 활성 세션을 계속 가린다.
     it("갱신이 끝났는데도 IN_PROGRESS면 남이 재개한 것으로 본다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "completed";
       recordingState.sessionStatus = "COMPLETED";
-      // 다른 탭이 재개해 노트의 활성 세션이 내 것과 달라졌다.
       recordingState.sessionStartedAt = "2026-07-29T09:00:00Z";
 
       renderDock(view);
@@ -1934,7 +1802,6 @@ describe("NotePanel", () => {
     });
 
     it("상태를 아직 모르면 독을 열지 않는다", () => {
-      // 콜드 캐시·느린 응답. 소유자도 모르는 동안은 독 자체를 열지 않는다.
       noteState.query = { data: undefined, isError: false };
 
       renderStartGate();

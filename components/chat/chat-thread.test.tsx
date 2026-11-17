@@ -24,7 +24,6 @@ function message(overrides: Partial<ThreadMessage>): ThreadMessage {
   } as ThreadMessage;
 }
 
-/** 끝난 생각 묶음은 접혀 선다(APP-1436). 안쪽 줄을 보려면 머리줄을 눌러 편다. */
 function expandSteps() {
   for (const button of screen.queryAllByRole("button", {
     name: /생각/,
@@ -59,21 +58,11 @@ function streaming(overrides: Partial<ChatStreamState>): ChatStreamState {
   return { ...initialStreamState, phase: "streaming", ...overrides };
 }
 
-/** 본문 한 덩이. 예전 헬퍼가 `text: "..."`로 주던 것과 같은 뜻이다. */
 function body(text: string): ChatStreamState["blocks"] {
   return [{ kind: "text", text }];
 }
 
-/**
- * ★★ **[W-12] 왕복에서 구분선 개수가 안 변한다.**
- *
- * 「보내는 중」과 「답이 끝나 히스토리로 넘어간 뒤」를 같은 트리에서 갈아 끼우고 구분선을
- * 센다. 개수가 달라지면 그 차이만큼 아래가 밀린다 — 읽던 자리가 어긋난다.
- *
- * pending 이 구분선을 안 만들면 **보내는 중 0개 → 끝난 뒤 1개** 가 되어 여기서 걸린다.
- */
 describe("★★ [W-12] 답이 히스토리로 넘어가도 화면이 안 밀린다", () => {
-  /** 오늘 자정(보는 사람 시간대). 여기서 거꾸로 잡아야 검사가 실행 날짜에 안 매인다. */
   function todayMidnight() {
     const at = new Date();
     at.setHours(0, 0, 0, 0);
@@ -101,7 +90,6 @@ describe("★★ [W-12] 답이 히스토리로 넘어가도 화면이 안 밀린
     ].map((each) => each.textContent);
   }
 
-  /** 보내는 중 → 끝난 뒤. 두 상태의 구분선을 돌려준다. */
   function roundTrip(askedAt: string) {
     const sending = (
       <ChatThread
@@ -121,8 +109,6 @@ describe("★★ [W-12] 답이 히스토리로 넘어가도 화면이 안 밀린
     });
     const before = dividerTexts(container);
 
-    // 히스토리로 넘어간다. **질문의 시각은 보낼 때 쓴 값 그대로다** — 패널이 그것을
-    // 얼려서 넘긴다(`frozenMessages`).
     rerender(
       <ChatThread
         messages={[
@@ -176,10 +162,6 @@ describe("ChatThread", () => {
     expect(screen.getByText("이렇게 정리했습니다.")).toBeTruthy();
   });
 
-  /**
-   * ★ **답 아래 손잡이 줄.** 평소에는 안 보이고 그 답에 손이 닿을 때만 뜬다 —
-   * 대화를 읽는 동안 줄마다 버튼이 서 있으면 읽을 것보다 누를 것이 많아진다.
-   */
   describe("답 아래 손잡이", () => {
     it("★ 답에는 붙고 질문에는 안 붙는다", () => {
       const { container } = renderThread({
@@ -203,12 +185,9 @@ describe("ChatThread", () => {
       const [earlier, last] = container.querySelectorAll(
         '[data-testid="message-actions"]'
       );
-      // 보임/안 보임은 투명도로만 가른다. 조건부 렌더면 뜰 때마다 아래가 밀린다.
       expect(earlier.className).toContain("opacity-0");
       expect(earlier.className).toContain("group-hover/msg:opacity-100");
-      // 터치 화면에는 손이 닿는 hover 가 없어 늘 보인다
       expect(earlier.className).toContain("[@media(hover:none)]:opacity-100");
-      // ★ 마지막 답은 늘 보인다 — 「복사가 어디 있지」를 줄인다
       expect(last.getAttribute("data-pinned")).toBe("true");
       expect(last.className).not.toContain("opacity-0");
     });
@@ -242,9 +221,6 @@ describe("ChatThread", () => {
     });
 
     it("★ 절대 시각이 아니라 상대 시각을 적는다", () => {
-      // 문구는 보는 사람의 로케일이 정한다(`Intl.RelativeTimeFormat`). 그래서 글자를
-      // 못 박지 않고 **성질**을 본다 — 나이가 다르면 다르게 적히고, 원본 타임스탬프는
-      // 한 글자도 안 실린다.
       const { container } = renderThread({
         messages: [
           message({
@@ -274,7 +250,6 @@ describe("ChatThread", () => {
 
   it("작성자 이름이 없으면(개인 챗봇) 이름을 그리지 않는다", () => {
     renderThread({ messages: [message({ role: "USER", content: "안녕" })] });
-    // authorName 없이 렌더 — 이름 노드가 없다.
     expect(screen.getByText("안녕")).toBeTruthy();
   });
 
@@ -294,12 +269,9 @@ describe("ChatThread", () => {
         }),
       ],
     });
-    // 결과 행이 없는 끝난 턴이라 쓰기가 나갔는지 모른다(N3).
     const card = container.querySelector('[data-testid="approval-card"]');
     expect(card?.getAttribute("data-approval")).toBe("check");
-    // 생각 과정에 같은 일을 한 번 더 적지 않는다.
     expect(container.querySelector('[data-cot="group"]')).toBeNull();
-    // ★ 도구 id 도, 「테스트 유저님이 승인」(content)도 제목으로 쓰지 않는다.
     expect(screen.queryByText(/linear\.create_issue/)).toBeNull();
     expect(screen.queryByText(/테스트 유저님이 승인/)).toBeNull();
     expect(screen.getByText("변경 작업 승인")).toBeTruthy();
@@ -330,8 +302,6 @@ describe("ChatThread", () => {
   });
 
   it("끝난 도구 기록은 내부 식별자도 상태 배지도 세우지 않는다", () => {
-    // 예전에는 히스토리에서만 흰 카드가 서서 `linear.create_issue`가 제목이었고
-    // 「완료」 배지가 붙었다 — 기록에 늘 같은 값이 붙으니 아무것도 말하지 않는다.
     renderThread({
       messages: [
         message({
@@ -449,18 +419,15 @@ describe("ChatThread", () => {
     });
     const card = container.querySelector('[data-testid="approval-card"]');
     expect(card?.getAttribute("data-approval")).toBe("done");
-    // 히스토리 승인 행에는 요약이 없어 짝인 결과 행의 말을 제목으로 쓴다.
     expect(card?.textContent).toContain("APP-12 생성됨");
     expect(
       screen.getByRole("link", { name: /열기/ }).getAttribute("href")
     ).toBe("https://linear.app/heymoa/issue/APP-12");
-    // 앞의 조회는 생각 과정에 남고, 쓰기 줄은 거기 없다.
     expandSteps();
     expect(container.querySelectorAll('[data-step="tool"]')).toHaveLength(1);
   });
 
   it("decision도 status도 없는 TOOL 메시지는 그리지 않는다", () => {
-    // 계약상 둘은 배타다. 한쪽만 검사하면 계약 밖 형태가 반대쪽으로 새어 든다.
     const { container } = renderThread({
       messages: [
         message({
@@ -481,8 +448,6 @@ describe("ChatThread", () => {
   });
 
   it("★ 흐르는 동안 글자에 아무것도 안 건다 — 통짜로 그린다", () => {
-    // 한때 낱말마다 `<span>` 을 세워 각자 떠오르게 했다. **커서도 없다** — 「지금 오고
-    // 있다」는 글자가 계속 붙는 것 자체가 말한다.
     const { container } = renderThread({
       stream: streaming({ blocks: body("만들던 중") }),
     });
@@ -493,12 +458,6 @@ describe("ChatThread", () => {
     expect(container.querySelector('[data-stream="cursor"]')).toBeNull();
   });
 
-  /**
-   * ★ **고정된 턴 위의 숨 쉴 자리는 한 벌이다.**
-   *
-   * 위에 아무것도 없을 때는 스크롤 상자의 `p-6` 이 이미 그 일을 한다. 거기에 또 얹으면
-   * 새 대화의 첫 구분선만 48px 을 이고 옛 턴들은 16px 이 되어 결이 어긋난다.
-   */
   it("★ 위에 옛 대화가 없으면 고정 턴이 위 여백을 안 이고 선다", () => {
     const { container } = renderThread({
       pendingUserMessage: "지난 회의에서 정한 것만 정리해줘",
@@ -532,8 +491,6 @@ describe("ChatThread", () => {
   });
 
   it("★ [W-09] 말풍선에는 이름도 시각도 안 붙는다 — 시각은 구분선만 말한다", () => {
-    // 말풍선의 시각은 서버가 저장한 뒤에야 오므로, 붙이면 답이 끝나는 순간 없던 줄이
-    // 끼어들어 읽던 자리가 밀린다. 구분선은 **질문 시각**이라 답이 끝나는 것과 무관하다.
     const { container } = renderThread({
       messages: [
         message({ role: "USER", content: "정한 게 뭐야" }),
@@ -550,7 +507,6 @@ describe("ChatThread", () => {
       expect(bubble.textContent).not.toMatch(/\d{1,2}:\d{2}/);
     }
 
-    // 구분선은 하나 서고, 시각은 거기 있다.
     const dividers = container.querySelectorAll(
       '[data-testid="thread-divider"]'
     );
@@ -573,16 +529,9 @@ describe("ChatThread", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "응답 생성에 실패했습니다."
     );
-    // ★ **버튼이 없다.** 「다시 보내기」가 할 수 있던 일은 같은 문장을 한 글자도 못 고치고
-    // 다시 보내는 것 하나였다. 서버가 문장을 안 받아 갔으면 패널이 컴포저로 되돌린다.
     expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
   });
 
-  /**
-   * 재연결을 다 쓰고 포기한 자리. **`turn_failed`와 같은 `failed`이지만 본문이 남아
-   * 있다** — server가 실패를 선언하면 본문 블록을 걷으므로, 남아 있다는 것이
-   * 「선언된 실패가 아니라 끊긴 것」의 표시다.
-   */
   it("재연결을 포기하면 부분 토큰을 회색으로 남긴다", () => {
     const { container } = renderThread({
       stream: {
@@ -611,14 +560,12 @@ describe("ChatThread", () => {
     const onApprove = vi.fn();
     renderThread({ approvalCard: openCard, onApprove });
     expect(screen.getByText("Linear 이슈 'APP 버그 수정' 생성")).toBeTruthy();
-    // 만료가 없다는 문구가 있다. 「중지」가 유일한 탈출구다.
     expect(screen.getByText(/승인하거나 거절할 때까지 기다립니다/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "거절" }));
     expect(onApprove).toHaveBeenCalledWith("REJECTED");
   });
 
   it("★ 카드에 도구 id 를 안 적는다 — summary 가 제목이다", () => {
-    // `linear.create_issue` 는 기계 이름이고, 바로 아래 줄이 같은 말을 사람 말로 더 잘 했다.
     const { container } = renderThread({ approvalCard: openCard });
 
     expect(container.textContent).not.toContain("linear.create_issue");
@@ -705,8 +652,6 @@ describe("ChatThread", () => {
   });
 
   it("앞 전송이 정리되기 전에는 재전송을 막는다", () => {
-    // 사용자가 스스로 멈춘 것이라 배너로 알릴 일이 아니다. 여기까지 흐른 답이 흐리게
-    // 서 있는 것이 이미 그 말을 한다.
     const { container } = renderThread({
       stream: {
         ...initialStreamState,
@@ -722,11 +667,6 @@ describe("ChatThread", () => {
   });
 
   it("지난 질문이 그때 쓴 범위를 들고 있다", () => {
-    // 범위는 대화가 아니라 턴이 든다. 여기가 비면 스크롤을 올렸을 때 모든 질문이
-    // 범위 없이 보이고, 계약이 DB까지 실어 나른 값이 화면에서 사라진다.
-    //
-    // 나가는 문장에는 칩이 마커로 남는다(`MentionInput.read`). 화면은 그 자리를
-    // 읽어 칩으로 되돌린다.
     renderThread({
       messages: [
         message({
@@ -743,15 +683,11 @@ describe("ChatThread", () => {
         }),
       ],
     });
-    // 문장 안에 칩으로 박힌다 — 입력에서 보던 그 모양 그대로다.
     const chip = document.querySelector('[data-scope-chip="note"]');
     expect(chip?.textContent).toBe("주간 배포 회의");
   });
 
   it("★ 말풍선의 칩을 누르면 그 회의록으로 간다", () => {
-    // **이것이 마커를 실어 보내는 이유다.** 제목만 나가던 시절에는 id 가 없어
-    // `onOpenNote` 를 못 걸었고, 정작 그 아래 「찾은 곳」은 눌러서 회의록으로 갔다 —
-    // 사용자가 지목한 것은 못 가고 에이전트가 찾은 것은 갔다.
     const onOpenNote = vi.fn();
     renderThread({
       onOpenNote,
@@ -776,8 +712,6 @@ describe("ChatThread", () => {
   });
 
   it("★ 마커에 있어도 범위 배열에 없는 id 는 칩으로 안 그린다", () => {
-    // 사용자가 문장에 손으로 마커를 칠 수 있다. 권한은 배열이 쥐므로 안전하지만
-    // **화면이 없는 것을 있는 것처럼 그리면 안 된다** — 글자 그대로 남는다.
     renderThread({
       messages: [
         message({
@@ -800,8 +734,6 @@ describe("ChatThread", () => {
   });
 
   it("★ 괄호가 든 제목도 마커에서 온전히 나온다", () => {
-    // 「알림 정책 논의 (2차)」 같은 제목이 실제로 있다. 이스케이프 규칙이 어긋나면
-    // 여기서 제목이 반쪽으로 잘리거나 파싱이 통째로 실패한다.
     renderThread({
       messages: [
         message({
@@ -825,8 +757,6 @@ describe("ChatThread", () => {
   });
 
   it("★ 마커가 없는 옛 메시지는 제목 탐색으로 되돌린다", () => {
-    // 이미 쌓인 대화에는 마커가 없다. 파서가 둘 다 받아야 옛 대화가 안 깨진다.
-    // 그 길에서는 「회고」가 먼저 걸리면 「스프린트 회고」가 반쪽으로 잘린다.
     renderThread({
       messages: [
         message({
@@ -852,8 +782,6 @@ describe("ChatThread", () => {
   });
 
   it("★ 옛 메시지의 칩은 못 누른다 — 동명 회의록을 못 가른다", () => {
-    // 제목으로만 이어진 문장은 「주간 회의」가 셋일 때 어느 것인지 모른다.
-    // 아무 데로나 보내는 것보다 안 보내는 쪽이 낫다.
     const onOpenNote = vi.fn();
     renderThread({
       onOpenNote,
@@ -877,14 +805,6 @@ describe("ChatThread", () => {
     expect(document.querySelector('[data-scope-chip="note"]')).toBeTruthy();
   });
 
-  /**
-   * ★ **히스토리의 `kind` 는 대문자다.** server 가 도메인 enum 을 그대로 내고, SSE 는
-   * ai 가 내서 소문자다 — 같은 필드가 두 전송에서 두 모양이라 화면이 접는다.
-   *
-   * 접기가 없던 동안 `=== "project"` 를 못 지나 **프로젝트가 회의록 칩으로** 그려졌고,
-   * 마커가 붙으면 `kind` 대조가 어긋나 **칩이 아예 안 그려졌다.** 둘 다 안 터져서
-   * 검사도 화면도 멀쩡해 보였다 — 프로젝트 칩을 덮는 검사가 하나도 없었다.
-   */
   it("★ 프로젝트 범위가 프로젝트 칩으로 그려진다 — 대소문자를 접는다", () => {
     renderThread({
       messages: [
@@ -908,8 +828,6 @@ describe("ChatThread", () => {
   });
 
   it("지워졌거나 권한을 잃은 범위는 칩으로 안 그린다", () => {
-    // 제목이 없으니 문장에서 찾을 자리도 없다. 사용자가 쓴 글자는 그대로 남고 **살아
-    // 있는 범위라는 표시만** 안 붙는다 — 없는 것을 있는 것처럼 그리는 쪽이 나쁘다.
     renderThread({
       messages: [
         message({
@@ -924,8 +842,6 @@ describe("ChatThread", () => {
   });
 
   it("히스토리의 답변도 근거 줄을 남긴다", () => {
-    // 스트림이 끝나면 이 행이 라이브 말풍선을 대신한다. 안 그리면 근거 줄이
-    // 몇 초 떴다가 사라진다.
     renderThread({
       messages: [
         message({
@@ -948,7 +864,6 @@ describe("ChatThread", () => {
   });
 
   it("쓸 수 없는 근거는 근거 줄에서 뺀다", () => {
-    // 누를 수도 셀 수도 없는 것을 「1건」으로 세면 숫자가 거짓말이 된다.
     const { container } = renderThread({
       messages: [
         message({
@@ -967,13 +882,6 @@ describe("ChatThread", () => {
   });
 });
 
-/**
- * ★ 화면 불변 가드.
- *
- * 턴 이벤트 다섯은 **기존 phase 여섯으로 접힌다.** 그래서 화면에 새로 생기는 것이 없어야
- * 한다 — 새 배너도 새 스피너도. `chat-thread.tsx`의 diff가 0인 것이 그 기계적 증거이고,
- * 여기서는 실제로 그려 보고 확인한다.
- */
 describe("턴 이벤트가 화면을 안 바꾼다", () => {
   function reduce(events: { event: string; data: string }[]) {
     return events.reduce(
@@ -995,11 +903,6 @@ describe("턴 이벤트가 화면을 안 바꾼다", () => {
     return markup;
   }
 
-  /**
-   * ★ **`error` 는 배너를 안 세운다.** 실패 코드를 정하는 것은 server 이고, ai 가 흘린
-   * `error` 로 화면을 접으면 뒤따르는 `turn_failed` 의 코드를 못 받는다 — 사용자는
-   * server 가 정한 사유 대신 ai 의 날문구를 본다(`프레임-처리표.md` 규칙 3).
-   */
   it("error 하나로는 화면이 안 바뀐다 — 흐르던 그대로다", () => {
     const flowing = reduce([START, frame("token", { delta: "쓰던 중" })]);
     const afterError = reduceStreamEvent(
@@ -1016,7 +919,6 @@ describe("턴 이벤트가 화면을 안 바꾼다", () => {
       frame("error", { code: "X", message: "ai 날문구" }),
       frame("turn_failed", { code: "UPSTREAM_ERROR", retryable: true }),
     ]);
-    // ai 의 error 를 아예 안 본 경우와 같은 화면이어야 한다 — 그 문구는 안 쓴다.
     const withoutError = reduce([
       START,
       frame("turn_failed", { code: "UPSTREAM_ERROR", retryable: true }),
@@ -1033,12 +935,6 @@ describe("턴 이벤트가 화면을 안 바꾼다", () => {
   });
 });
 
-/**
- * ★★ **[W-11] 흐를 때와 끝난 뒤가 같은 모양이다 — 생각도 포함해서.**
- *
- * 계약이 생각을 저장하기 전에는 새로고침 한 번에 **말이 사라지고 도구 뼈대만 남았다.**
- * 그때는 오류도 안 났다 — `HistoryMessage`가 모르는 role 에 `null`을 돌려주기 때문이다.
- */
 describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
   const TRACE = [
     message({ role: "USER", content: "결제 실패 얘기 있었어?" }),
@@ -1066,16 +962,6 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
     }),
   ];
 
-  /**
-   * ★ **이어지는 생각은 흐를 때처럼 한 줄이다.**
-   *
-   * 스트림은 `thinking_delta` 를 만나는 족족 앞 블록에 **이어 붙인다**(`appendRun`).
-   * 그런데 server 는 **델타마다 한 행**으로 굳히므로, 그대로 펼치면 흐를 때 세 줄이던 것이
-   * 히스토리에서 네 줄이 된다 — 턴이 끝나는 순간 점이 하나 늘고 줄이 밀린다.
-   *
-   * 실측으로 잡은 자리다(3줄 → 4줄). 붙이는 방식도 스트림과 같게 **그냥 잇는다** —
-   * 구분자를 여기서 새로 만들면 흐를 때와 또 달라진다.
-   */
   it("연달아 온 THINKING 은 한 줄로 잇는다", () => {
     const { container } = renderThread({
       messages: [
@@ -1093,7 +979,6 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
     });
 
     expandSteps();
-    // 한 블록으로 이어 붙고, 펼치면 줄바꿈마다 한 줄이다 — 흐를 때와 같다.
     const rows = container.querySelectorAll('[data-step="thinking"]');
     expect([...rows].map((row) => row.textContent)).toEqual([
       "전사를 훑습니다.",
@@ -1102,7 +987,6 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
   });
 
   it("사이에 도구가 끼면 안 잇는다", () => {
-    // 「생각 → 도구 → 생각」은 실제로 세 줄이다. 잇는 것은 **연달아 온 것**뿐이다.
     const { container } = renderThread({
       messages: [
         message({
@@ -1129,7 +1013,6 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
         }),
       ],
     });
-    // 줄이 셋이라 접혀 있다 — 펴야 안이 보인다.
     expandSteps();
 
     expect(container.querySelectorAll('[data-step="thinking"]')).toHaveLength(
@@ -1137,13 +1020,6 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
     );
   });
 
-  /**
-   * ★ **흐를 때 서 있던 칩이 히스토리에서도 산다.**
-   *
-   * 계약의 `toolEvent` 에는 대상이 없어서, 예전에는 그 회의록으로 가는 문이 턴이 끝나는
-   * 순간 닫혔다. server 가 `tool_call_start` 의 `target` 을 TOOL 행의 `refs` 로 굳히면
-   * 읽는 쪽에서는 여느 행과 같은 `scope` 필드로 온다 — 계약 모양이 안 바뀐다.
-   */
   it("TOOL 행의 scope 가 대상 칩으로 선다", () => {
     const onOpenNote = vi.fn();
     renderThread({
@@ -1178,13 +1054,11 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
     });
     expandSteps();
 
-    // 눌러서 그 회의록으로 가는 문이다 — 글자만 있으면 반쪽이다.
     fireEvent.click(screen.getByRole("button", { name: /주간 배포 회의/ }));
     expect(onOpenNote).toHaveBeenCalledWith("0HZX2K7M9Q4AF");
   });
 
   it("제목을 잃은 대상은 칩을 안 세운다", () => {
-    // 지워졌거나 권한을 잃으면 `ScopeRefResolver` 가 제목을 지운다. 눌러도 갈 곳이 없다.
     const { container } = renderThread({
       messages: [
         message({
@@ -1222,19 +1096,15 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
   it("THINKING 행이 도구와 같은 묶음의 한 줄로 선다", () => {
     const { container } = renderThread({ messages: TRACE });
 
-    // 끝난 묶음은 접힌 채로 선다. 생각과 도구가 **한 묶음**이라 서랍도 하나다 —
-    // 갈리면 레일이 두 개 서고, 그건 흐를 때와 다른 모양이다 [W-11].
     expect(container.querySelectorAll('[data-cot="group"]').length).toBe(1);
 
     fireEvent.click(screen.getByRole("button", { expanded: false }));
 
     expect(screen.getByText("전사에서 관련 발화를 찾습니다.")).toBeTruthy();
-    // 스트림이 쓰던 그 줄이다 — 흰 카드로 갈아입지 않는다.
     expect(container.querySelector('[data-step="thinking"]')).toBeTruthy();
   });
 
   it("생각이 답변 말풍선으로 새지 않는다", () => {
-    // 예전에는 계획 문장이 `token`으로 나가 답변 본문과 섞였다. 그 회귀를 여기서 막는다.
     renderThread({ messages: TRACE });
 
     const answer = screen.getByText("두 회의에서 나왔습니다.");
@@ -1242,26 +1112,16 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
   });
 
   it("★ 모르는 role 처럼 조용히 사라지지 않는다", () => {
-    // `HistoryMessage` 는 USER·ASSISTANT 가 아니면 null 을 돌려준다. `groupHistory` 가
-    // THINKING 을 안 집으면 그 행이 **오류 하나 없이** 화면에서 없어진다.
     const { container } = renderThread({
       messages: [message({ role: "THINKING", content: "혼자 남은 생각" })],
     });
 
-    // 하나여도 서랍이다. 접혀 서고, 펴면 그 생각이 있다.
     expect(container.querySelector('[data-cot="group"]')).toBeTruthy();
     expandSteps();
     expect(container.textContent).toContain("혼자 남은 생각");
   });
 });
 
-/**
- * ★ **근거 줄은 `message_end` 에 선다.**
- *
- * refs 는 `message_end` 에 실려 오는데 예전 `StreamTail` 은 `phase !== "idle"` 이면 아무것도
- * 안 그리는 조건이라 **한 번도 렌더되지 않았다.** 근거 줄이 히스토리로 갈아끼울 때 처음
- * 튀어 들어와 높이가 한 프레임에 뛰었다(2026-09-03 실측).
- */
 describe("message_end 뒤의 근거 줄", () => {
   it("★ 답이 끝나면 히스토리를 기다리지 않고 근거 줄이 바로 선다", () => {
     renderThread({
@@ -1289,10 +1149,6 @@ describe("message_end 뒤의 근거 줄", () => {
   });
 });
 
-/**
- * ★★ N3 — 끝난 턴에 도는 줄이 없고, 승인받은 쓰기는 「확인 필요」로 선다. 실시간과
- * 히스토리가 같은 규칙을 지난다.
- */
 describe("★★ N3 끝난 턴의 도구 줄", () => {
   function frame(event: string, payload: unknown) {
     return { event, data: JSON.stringify(payload) };
@@ -1432,12 +1288,6 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
   });
 });
 
-/**
- * ★★ APP-1013 **세 경로가 같은 묶음이다.**
- *
- * 커서로 이어받으면 커서 앞 단계는 히스토리 행으로, 뒤는 스트림으로 온다. 따로 그리면 처음부터
- * 흘렀을 때(한 묶음)와 달리 「생각 과정」이 둘로 갈리고 같은 조회 묶음도 둘로 쪼개진다.
- */
 describe("★★ APP-1013 생각 과정 묶음", () => {
   const TURN = "01KTURN000009";
   const read = (at: string, content: string) =>
@@ -1460,13 +1310,11 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
     read("2026-07-24T00:00:05Z", "연관 스크립트 읽기 · 10:01"),
   ];
 
-  // 흐를 때처럼 질문을 보낸 시각부터 마지막 단계까지 잰다 — 첫 단계 행부터 재면 새로고침 뒤 초가 줄어든다.
   it("히스토리는 질문 시각부터 마지막 단계 행까지 걸린 시간을 말한다", () => {
     renderThread({ messages: HISTORY });
     expect(screen.getByText("5초 동안 생각")).toBeTruthy();
   });
 
-  // 단계 행이 하나뿐이어도 질문 시각이 있으면 시간을 안다. 예전에는 0초로 재여 「생각 과정」이 떴다.
   it("단계 행이 하나여도 질문 시각부터 잰다", () => {
     renderThread({ messages: HISTORY.slice(0, 2) });
     expect(screen.getByText("2초 동안 생각")).toBeTruthy();
@@ -1504,7 +1352,6 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
     );
   });
 
-  // 이어받은 뒤 흐르다가 승인을 물으면 그 묶음이 다시 갈리면 안 된다.
   it("이어받은 뒤 승인을 물어도 한 묶음이다", () => {
     const { container } = renderThread({
       messages: HISTORY,
@@ -1584,7 +1431,6 @@ describe("APP-1436 재검사", () => {
     expect(screen.getByTestId("answer-stopped")).toBeTruthy();
     cleanup();
 
-    // 끝까지 받은 답에는 없다
     renderThread({
       messages: [
         message({ role: "ASSISTANT", content: "다 받은 답", turnId: "t2" }),

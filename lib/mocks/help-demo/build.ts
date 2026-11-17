@@ -30,12 +30,6 @@ function scriptOf(pack: HelpDemoPack, def: NoteDef): ParsedScript | null {
   return pack.scripts[source.id];
 }
 
-/**
- * 발화 길이로 말하는 데 걸린 시간을 정한다. 무작위 없이 인덱스로 사이 간격을 벌린다.
- *
- * 길이는 **한국어 대사**(`timing`)로 잰다. 영어판은 같은 순번의 한국어 발화와 같은 시각을 받는다 —
- * 글자 수가 달라 시각이 밀리면 검토본·챗봇 답변이 가리키는 「약 31분」 같은 근거 위치가 어긋난다.
- */
 function timed(script: ParsedScript, timing: ParsedScript) {
   let at = 1_200;
   return script.lines.map((line, index) => {
@@ -46,9 +40,6 @@ function timed(script: ParsedScript, timing: ParsedScript) {
   });
 }
 
-/**
- * 프리셋 상태 한 벌. 언어를 안 넘기면 지금 문서의 언어다(APP-1511) — 영어 문서는 같은 ID 의 영어 회의를 받는다.
- */
 export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): StoreState {
   const pack = helpDemoPack(locale);
   const {
@@ -73,7 +64,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
       role: "ADMIN",
       agentAccessAllowed: true,
     },
-    // 프로젝트도 노트도 없는 새 워크스페이스. 온보딩 화면을 찍을 때 쓴다.
     { workspaceId: HD_PRACTICE_WORKSPACE_ID, name: pack.text.practiceWorkspaceName, description: null, role: "ADMIN", agentAccessAllowed: true },
   ];
 
@@ -119,7 +109,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
     createdAt: iso(now - (60 - index * 10) * DAY_MS),
   }));
 
-  // ── 회의 ──
   let participantSeq = 0;
   const participantOf = (ref: PersonRef): NoteResponseData["participants"][number] => {
     participantSeq += 1;
@@ -155,7 +144,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
     const lastEnd = lines.at(-1)?.endedAtMs ?? 0;
     const sessionLength = lastEnd + 15_000;
 
-    // 시작 시각. 오늘 열린 회의는 지금보다 앞서지 않게 끝나는 시각을 맞춘다.
     let startMs = atHour(def.daysAgo, def.hour, index % 7);
     if (def.status === "IN_PROGRESS") startMs = now - 30 * 60_000;
     else if (def.status === "ENDED" || def.status === "PAUSED") {
@@ -206,7 +194,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
       endedAt: iso(startMs + (def.status === "IN_PROGRESS" ? lastEnd + 15_000 : sessionLength)),
       endReason: "CLIENT_DISCONNECTED",
     });
-    // 진행 중 회의는 화자 분리 전이라 라벨이 없다(`null`). 끝난 회의는 라벨을 심는다.
     const labeled = def.status !== "IN_PROGRESS";
     const rows = lines.map((line, at): Segment => {
       segmentSeq += 1;
@@ -245,7 +232,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
     diarizations.set(def.noteId, { status: "MAPPED", speakers });
   });
 
-  // ── 초대와 알림 ──
   const invitations: StoreState["invitations"] = [
     {
       workspaceId: "01K0000000030",
@@ -259,7 +245,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
       createdAt: iso(now - 3_600_000),
       expiresAt: iso(now + 6 * DAY_MS),
     },
-    // 우리 워크스페이스에서 합류를 기다리는 초대. 가입 전이라 이름이 없다.
     {
       workspaceId: HD_WORKSPACE_ID,
       invitationId: "01KH000009002",
@@ -301,7 +286,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
       },
       payload: null,
     },
-    // 가이드의 알림 클립(APP-1411)이 세 종류를 다 보이게 — 검토할 결과 준비 · 문의 답변
     {
       notificationId: "01KH000009102",
       type: "ANALYSIS_READY",
@@ -329,7 +313,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
     },
   ];
 
-  // 가이드 「연결 지도」 촬영용 프로젝트와 회의(`lib/mocks/guide-agenda-map.ts`)
   const guideMap = pack.agendaMap.seed(HD_WORKSPACE_ID, notes[0]);
   projects.push(guideMap.project);
   notes.push(...guideMap.notes);
@@ -356,7 +339,6 @@ export function createHelpDemoState(now = Date.now(), locale?: HelpDemoLocale): 
     agentChats: chats.agentChats,
     agentChatMessages: chats.agentChatMessages,
     ...pack.delegations(now),
-    // 동의 화면(`/oauth/consent?state=mock-consent`)을 찍을 수 있게 하나 둔다.
     agentOAuthConsents: {
       "mock-consent": {
         clientName: "Claude",

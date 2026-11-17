@@ -10,7 +10,6 @@ export function invalidateNoteLists(queryClient: QueryClient) {
   });
 }
 
-/** 회의 상태·시각이 바뀌면 상세와 목록 행이 같이 낡는다. */
 export function invalidateNoteLifecycle(
   queryClient: QueryClient,
   noteId: string

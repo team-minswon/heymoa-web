@@ -16,7 +16,6 @@ function Board({ reduced = false }: { reduced?: boolean }) {
   );
 }
 
-/** jsdom 은 레이아웃이 없다 — 가로 스크롤 상자처럼 보이게 크기와 위치를 심는다 */
 const setup = (scroller: HTMLElement, { width, view, left }: { width: number; view: number; left: number }) => {
   Object.defineProperty(scroller, "scrollWidth", { configurable: true, value: width });
   Object.defineProperty(scroller, "clientWidth", { configurable: true, value: view });
@@ -56,7 +55,6 @@ describe("EdgeButtons", () => {
     setup(scroller, { width: 2000, view: 500, left: 0 });
     fireEvent.scroll(scroller);
     await frames();
-    // 더 갈 수 있는 쪽은 포인터와 상관없이 늘 보이고, 더 갈 수 없는 쪽은 투명 + 눌리지도 포커스되지도 않는다(inert)
     const [left, right] = [screen.getByLabelText("왼쪽으로"), screen.getByLabelText("오른쪽으로")];
     expect(right.className).toContain("opacity-100");
     expect(left.className).toContain("opacity-0");
@@ -65,7 +63,6 @@ describe("EdgeButtons", () => {
     fireEvent.click(right);
     expect(scroller.scrollBy).toHaveBeenCalledWith({ left: 400, behavior: "smooth" });
 
-    // 가운데로 가면 둘 다, 끝에 닿으면 오른쪽이 사라진다
     scroller.scrollLeft = 700;
     fireEvent.scroll(scroller);
     await frames();
@@ -88,9 +85,7 @@ describe("EdgeButtons", () => {
     await frames();
     const rail = view.container.querySelector("[data-edge-buttons]") as HTMLElement;
     expect(rail.className).toContain("sticky");
-    // 높이가 없는 줄이라 레이아웃 공간을 쓰지 않는다
     expect(rail.style.marginBottom).toBe("-32px");
-    // 스크롤마다 위치를 옮기는 인라인 변환이 없다
     expect(rail.style.transform).toBe("");
   });
 

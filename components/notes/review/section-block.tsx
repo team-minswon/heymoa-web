@@ -1,9 +1,5 @@
 import type { ReactNode } from "react";
 
-/**
- * 검토 화면의 한 덩어리. 회의록 문서처럼 한 단으로 흐른다(APP-865) — 제목 옆에 회색 개수,
- * 그 아래 내용이다. 복사는 섹션마다 두지 않고 화면 머리의 복사 메뉴가 한 번에 한다(APP-1108).
- */
 export function SectionBlock({
   title,
   count,

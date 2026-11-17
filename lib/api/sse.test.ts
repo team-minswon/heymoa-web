@@ -52,7 +52,6 @@ describe("getEventStream", () => {
 
     expect(events).toEqual([
       { event: "token", data: '{"t":1}', id: undefined },
-      // 주석은 하트비트로 올라온다 — 유휴 타이머가 연결이 살아 있음을 아는 유일한 신호다.
       { event: "heartbeat", data: "{}" },
       { event: "message", data: "첫 줄\n둘째 줄", id: "7" },
     ]);
@@ -121,10 +120,6 @@ describe("getEventStream", () => {
     });
   });
 
-  /**
-   * ★ **410 은 「턴은 끝났고 스트림은 사라졌다」다.** 훅이 재연결 대신 히스토리를 다시
-   * 읽어야 하므로, 서버 문구는 남기되 코드는 한 값으로 접어 준다.
-   */
   it("410 은 SSE_STREAM_GONE 코드로 던지고 서버 문구를 남긴다", async () => {
     vi.stubGlobal(
       "fetch",

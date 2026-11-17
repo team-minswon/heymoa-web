@@ -87,7 +87,7 @@ describe("PcmChunkBatcher", () => {
     );
 
     batcher.push(new Int16Array(1_600), 0);
-    batcher.push(new Int16Array(1_600), 321_600); // 20초를 못 잡았다
+    batcher.push(new Int16Array(1_600), 321_600);
 
     expect(emitted).toEqual([0, 321_600]);
   });
@@ -98,10 +98,9 @@ describe("PcmChunkBatcher", () => {
       emitted.push(captureSamples)
     );
 
-    batcher.push(new Int16Array(800), 0); // 배치를 못 채운 채 끊겼다
+    batcher.push(new Int16Array(800), 0);
     batcher.push(new Int16Array(1_600), 321_600);
 
-    // 800 샘플을 이어 붙였다면 첫 배치가 0에서 시작하며 공백을 품었을 것이다
     expect(emitted).toEqual([321_600]);
   });
 
@@ -125,15 +124,10 @@ describe("PcmChunkBatcher", () => {
   });
 
   it("rejects a 48 kHz context at the contract frame limit", () => {
-    // 16 kHz 를 못 여는 기기가 48 kHz 로 열리면 100ms 가 9,600 byte 라 계약 안이다.
     expect(() => new PcmChunkBatcher(48_000, 100, vi.fn())).not.toThrow();
   });
 });
 
-/**
- * 마이크가 조용히 사라지면 워크릿은 그냥 조각을 안 낸다. 브라우저 안에서 아무 오류도 안 나서
- * 사용자는 녹음되는 줄 안다. 그 순간을 이벤트로 올린다.
- */
 describe("PcmAudioCapture 마이크 상태", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -279,7 +273,6 @@ describe("PcmAudioCapture 마이크 상태", () => {
     expect(onState).toHaveBeenLastCalledWith("ended");
   });
 
-  // 브라우저는 이벤트 전에 track.muted·context.state 를 먼저 바꾼다. 마지막 이벤트가 아니라 둘의 지금 값이 답이다
   it("트랙이 음소거된 채면 컨텍스트가 다시 돌아도 live 로 되돌리지 않는다", async () => {
     const browser = stubBrowser();
     const onState = vi.fn();
@@ -380,7 +373,6 @@ describe("PcmAudioCapture 마이크 상태", () => {
       expect(getUserMedia(browser)).toHaveBeenCalledTimes(2);
       expect(browser.track.stop).toHaveBeenCalled();
       expect(onState).toHaveBeenLastCalledWith("live");
-      // 새 트랙이 또 끊기면 그 트랙을 따라 다시 잡는다.
       next.readyState = "ended";
       (next.onended as () => void)();
       expect(onState).toHaveBeenLastCalledWith("ended");
@@ -402,7 +394,6 @@ describe("PcmAudioCapture 마이크 상태", () => {
       expect(getUserMedia(browser)).toHaveBeenCalledTimes(1 + 3);
       expect(onState).toHaveBeenLastCalledWith("ended");
 
-      // 기기가 다시 꽂히면(devicechange) 처음부터 다시 시도한다.
       const next = freshTrack();
       getUserMedia(browser).mockResolvedValueOnce(streamOf(next));
       browser.devices.dispatchEvent(new Event("devicechange"));

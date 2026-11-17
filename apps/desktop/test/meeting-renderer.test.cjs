@@ -160,7 +160,6 @@ test("long recent list starts at the top, preserves keyboard focus, and long liv
  await publish(value, list, false); assert.equal(await page.evaluate(() => document.activeElement.id), 'back');
 });
 
-// Exercise real CSS rather than manufacturing transitionend events.
 test("Chromium reveals after same-frame close/open and preserves scroll intent", async (t) => {
   const { chromium } = require("@playwright/test");
   const browser = await chromium.launch({ headless: true });
@@ -503,7 +502,6 @@ test("Chromium preserves content position across notice changes and heartbeats, 
   const captures = path.resolve(__dirname, "../../../output/playwright");
   fs.mkdirSync(captures, { recursive: true });
   await page.screenshot({ path: path.join(captures, "app-1567-compact-timeline-ko.png") });
-  // A one-second native heartbeat must not touch timeline DOM or replay animations.
   await page.evaluate(() => { window.mutations = 0; new MutationObserver(records => window.mutations += records.length).observe(document.querySelector("#items"), { childList: true, characterData: true, subtree: true, attributes: true }); });
   await publish(); await publish();
   assert.equal(await page.evaluate(() => window.mutations), 0);

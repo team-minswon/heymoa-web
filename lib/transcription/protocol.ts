@@ -5,14 +5,7 @@ const tsidSchema = z
   .length(13)
   .regex(/^[0-9A-HJKMNP-TV-Z]{13}$/);
 
-/**
- * 종료는 `stop` 하나이고 브라우저가 보낸 마지막 조각 번호를 싣는다. 서버가 받은 것과 대조해
- * 봉인을 `COMPLETE`/`TRUNCATED` 로 가른다.
- *
- * 총 샘플 수는 안 보낸다 — 서버가 바이트를 세면 되고, 브라우저에게 물으면 추측이 계약으로 굳는다.
- */
 const clientCommandSchema = z.discriminatedUnion("type", [
-  // 나가는 쪽은 web 이 producer 라 아래 서버 이벤트와 달리 엄격하게 둔다.
   z.strictObject({
     type: z.literal("stop"),
     finalChunkSeq: z.number().int().min(-1),
@@ -23,48 +16,24 @@ const finalEventSchema = z.object({
   type: z.literal("final"),
   segmentId: tsidSchema,
   utteranceId: tsidSchema,
-  // 노트 안에서의 순번
   sequence: z.number().int().min(1),
   text: z.string().min(1),
-  // 회의 시작 기준
   startedAtMs: z.number().int().min(0),
   endedAtMs: z.number().int().min(0),
-  // 겹침이 0이면 null
   speakerLabel: z.string().min(1).nullable(),
 });
 
-/**
- * 진행 중인 발화를 두 토막으로 싣는다. 업체(Soniox)는 토큰마다 `is_final` 을 주고, 안 바뀔
- * 글자와 다음 응답이 갈아치울 글자의 경계를 화면이 알아야 한다.
- *
- * 길이를 실어 잘라 쓰지 않는다. 인덱스는 한 칸만 어긋나도 한글 음절을 가르고 그 사고는
- * 화면에서 조용하다. 두 토막은 이어 붙이면 곧 전체라 산술이 필요 없다.
- *
- * 둘 다 빌 수 있다. 서버는 빈 것을 안 보내지만 그것은 발행 규칙이지 형식이 아니다. 여기서
- * `min(1)` 로 막으면 규칙이 흔들릴 때 파싱이 끊기고 소켓이 통째로 닫힌다.
- */
+/** 업체(Soniox)는 토큰마다 `is_final` 을 줘서 안 바뀔 글자와 갈아치울 글자를 두 토막으로 싣습니다. */
 const partialEventSchema = z.object({
   type: z.literal("partial"),
   utteranceId: tsidSchema,
-  /** 업체가 확정한 토큰. 이 발화가 끝날 때까지 안 바뀐다. */
   confirmedText: z.string(),
-  /** 다음 응답이 통째로 갈아치운다. 앞에 붙는 공백은 어절 경계라 지우지 않는다. */
   pendingText: z.string(),
 });
 
-/**
- * 모르는 필드를 거부하지 않는다(`z.object`). 배포가 heymoa-ai → heymoa-server → heymoa-web
- * 순이라 server 가 필드·이벤트·값을 더 실은 뒤 web 이 아직 안 올라간 창이 반드시 생긴다(근거는
- * `lib/notes/proposals/contract.ts` 상단). 이 소켓의 파싱 실패는 `onClose(1008)` 로 이어져
- * 녹음 중인 세션이 끊기므로 대가가 특히 비싸다. 그래서 모르는 이벤트 종류와 모르는 enum 값은
- * `parseServerEvent` 가 실패로 만들지 않는다. 깨진 JSON·아는 필드의 깨진 값만 실패다.
- *
- * 드리프트는 server 의 `AsyncApiContractTest`·`AsyncApiMessageCoverageTest` 가 잡는다.
- */
 const captureStateSchema = z.enum(["LIVE", "DEGRADED"]);
 
 const serverEventSchema = z.discriminatedUnion("type", [
-  // 세션에 붙었다(부착). 브라우저는 durableThroughSeq 다음 조각부터 버퍼에서 다시 보낸다.
   z.object({
     type: z.literal("connected"),
     sessionId: tsidSchema,
@@ -72,27 +41,19 @@ const serverEventSchema = z.discriminatedUnion("type", [
     /** 서버가 S3 와 행까지 확정한 마지막 조각. 없으면 -1. */
     durableThroughSeq: z.number().int().min(-1),
   }),
-  // 이 서버가 곧 내려간다. delayMs 뒤 같은 세션에 다시 붙는다(다른 태스크로 간다).
   z.object({
     type: z.literal("reattach"),
     delayMs: z.number().int().min(0),
     reason: z.string(),
-    /** 두 스트림 겹치기. 이 소켓을 닫지 말고 reattach 직후부터 서버가 닫을 때까지 두 소켓 모두에 보낸다. */
     overlap: z.boolean().optional(),
   }),
-  // 같은 세션에 다른 부착(다른 탭·기기)이 이겼다. 다시 붙지 않는다.
   z.object({ type: z.literal("superseded"), sessionId: tsidSchema }),
   partialEventSchema,
   finalEventSchema,
-  // throughChunkSeq 까지 내구 쓰기가 끝났다. 누적값이라 조각마다 안 보내도 된다.
-  // 소리의 내구성만 증명한다 — 그 구간의 전사가 저장됐다는 뜻이 아니다.
   z.object({
     type: z.literal("ack"),
     throughChunkSeq: z.number().int().min(0),
   }),
-  // 살아 있는 동안만 존재한다. 회복하면 사라지고 조회 응답에 안 남는다.
-  // 서버만 아는 것(업체가 죽어 소리는 쌓이는데 글자만 멈췄다)만 알린다. 조각이 안 오는 것은
-  // 보내는 당사자인 브라우저가 이미 안다.
   z.object({
     type: z.literal("capture_state"),
     state: captureStateSchema,
@@ -100,31 +61,22 @@ const serverEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("completed"), sessionId: tsidSchema }),
   z.object({
     type: z.literal("error"),
-    /**
-     * 앞의 다섯과 뒤의 둘은 재시도가 의미 있는가로 갈린다. 모르는 code 는 `INTERNAL_ERROR` 로
-     * 읽는다 — 끝내는 오류로 잘못 읽으면 녹음이 멈추지만, 다시 붙는 쪽은 틀려도 재부착 간격이 막는다.
-     */
-    // 빠진 code 는 그대로 거절한다 — 모르는 값과 달리 계약을 어긴 프레임이다.
-    code: z.string().pipe(
-      z
-        .enum([
-          "INVALID_CLIENT_MESSAGE",
-          "INVALID_AUDIO_FRAME",
-          "STT_CONNECTION_FAILED",
-          "STT_TRANSCRIPTION_FAILED",
-          "INTERNAL_ERROR",
-          /** 이 스트림의 주인이 아니다. 재시도해도 같다. */
-          "NOT_SESSION_OWNER",
-          /** 없는 세션·이미 닫힘·회의 종료·중복 연결·접근 불가. 재시도해도 같다. */
-          "SESSION_NOT_CONNECTABLE",
-        ])
-        .catch("INTERNAL_ERROR")
-    ),
+    code: z
+      .string()
+      .pipe(
+        z
+          .enum([
+            "INVALID_CLIENT_MESSAGE",
+            "INVALID_AUDIO_FRAME",
+            "STT_CONNECTION_FAILED",
+            "STT_TRANSCRIPTION_FAILED",
+            "INTERNAL_ERROR",
+            "NOT_SESSION_OWNER",
+            "SESSION_NOT_CONNECTABLE",
+          ])
+          .catch("INTERNAL_ERROR")
+      ),
     message: z.string().min(1),
-    /**
-     * 같은 code 안에서 화면이 할 말을 가를 때만 온다. 지금은 `SESSION_NOT_CONNECTABLE` 에만 붙는다.
-     * 모르는 값은 없는 것으로 읽는다 — code 와 달리 이 값 하나로 녹음을 끊을 까닭이 없다.
-     */
     reason: z
       .enum(["MEETING_ENDED", "SESSION_CLOSED"])
       .optional()
@@ -141,7 +93,6 @@ export type CaptureState = Extract<
   { type: "capture_state" }
 >["state"];
 
-/** 같은 세션에 다시 붙어도 답이 같은 오류. 녹음을 끝내는 in-band 오류는 이 둘뿐이다. */
 export function isTerminalError(
   event: Extract<ServerEvent, { type: "error" }>
 ) {
@@ -159,10 +110,6 @@ const knownEventTypes = new Set<unknown>(
   serverEventSchema.options.map((option) => option.shape.type.value)
 );
 
-/**
- * 버릴 프레임이면 null. 모르는 이벤트 종류는 노트 토픽·채팅 SSE 처럼 버리고 연결을 유지한다.
- * 깨진 JSON 과 아는 이벤트의 깨진 필드는 던진다 — 소켓이 닫고 다시 붙는다.
- */
 export function parseServerEvent(raw: string): ServerEvent | null {
   const data: unknown = JSON.parse(raw);
   const type = (data as { type?: unknown } | null)?.type;
@@ -170,7 +117,6 @@ export function parseServerEvent(raw: string): ServerEvent | null {
     console.warn(`[transcription] 모르는 서버 이벤트: ${String(type)}`);
     return null;
   }
-  // 모르는 수집 상태는 버린다. 아는 값으로 바꿔 읽으면 화면이 틀린 배너를 띄운다.
   const state = (data as { state?: unknown }).state;
   if (
     type === "capture_state" &&

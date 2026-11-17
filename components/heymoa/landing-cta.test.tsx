@@ -40,8 +40,6 @@ vi.mock("@/components/auth/auth-modal", () => ({
   AuthModal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// 다이얼로그 본체는 라우터·쿼리 클라이언트를 요구한다. 여기서 보려는 것은 「어느 CTA가
-// 뜨는가」뿐이라 열렸는지만 드러내는 대역으로 바꾼다.
 vi.mock("@/components/workspace/create-workspace-dialog", () => ({
   CreateWorkspaceDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="create-workspace-dialog" /> : null,
@@ -150,7 +148,6 @@ describe("LandingCta", () => {
   });
 
   it("조회가 실패하면 스피너를 멈추고 다시 시도를 낸다", () => {
-    // 실패를 로딩과 같은 스피너로 그리면 CTA가 영원히 돌면서 빠져나갈 길이 없다.
     auth.status = "authenticated";
     workspaces.data = undefined;
     workspaces.isError = true;
@@ -163,10 +160,6 @@ describe("LandingCta", () => {
     expect(workspaces.refetch).toHaveBeenCalledOnce();
   });
 
-  /**
-   * **0개는 재시도로 풀리지 않는다.** 마지막 워크스페이스에서 추방되면 여기가 앱에서 유일하게
-   * 남는 입구다 — 사이드바의 「새 워크스페이스」는 `/w/[workspaceId]` 아래에 있어 닿을 수 없다.
-   */
   it("조회에 성공했는데 워크스페이스가 0개면 만들기를 낸다", () => {
     auth.status = "authenticated";
     workspaces.data = {
@@ -181,7 +174,6 @@ describe("LandingCta", () => {
     expect(screen.getByTestId("create-workspace-dialog")).toBeTruthy();
   });
 
-  // 막 가입한 사람은 콜백이 `/?welcome`으로 보낸다. 버튼을 찾게 하지 않고 폼을 바로 연다 (APP-1023).
   it("첫 로그인 직후에는 만들기 폼을 바로 열고 쿼리를 지운다", () => {
     auth.status = "authenticated";
     workspaces.isSuccess = true;
@@ -191,7 +183,6 @@ describe("LandingCta", () => {
     };
     window.history.replaceState(null, "", "/?welcome");
 
-    // 랜딩에는 CTA가 여럿이다 — 켠 하나만 연다.
     render(
       <>
         <LandingCta label="Google 계정으로 시작" openOnWelcome />
@@ -214,14 +205,6 @@ describe("LandingCta", () => {
     expect(button).toHaveAttribute("aria-busy", "true");
   });
 
-  /**
-   * 공용 `Button`은 로딩 중 라벨을 `opacity-0`으로 남겨 폭을 보존하지만, 보존하는 것은
-   * **자기가 받은** children의 폭이다. 로딩 브랜치에만 `ArrowRight`가 없던 동안 146.1px로
-   * 떴다가 확정되며 168.1px로 22px 튀었다.
-   *
-   * jsdom에는 레이아웃이 없어 px를 못 잰다 — 대신 두 브랜치의 children이 같은지를 본다.
-   * 같은 children이면 같은 폭이고, 이 등식이 깨지는 순간이 곧 폭이 튀는 순간이다.
-   */
   it("로딩 자리표시와 확정 버튼의 내용이 같다", () => {
     auth.status = "authenticated";
     workspaces.isPending = true;

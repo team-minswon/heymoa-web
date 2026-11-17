@@ -23,7 +23,6 @@ export const ACTIVE_PHASES: ReadonlySet<RecordingPhase> = new Set([
 
 export type RecordingSession = TranscriptionSessionResponseData;
 
-/** 녹음 하나의 화면 상태. 컨트롤러·타이머 같은 붙들고 있는 자원은 여기 없다. */
 export type RecordingState = {
   session: RecordingSession | null;
   activeNoteId: string | null;
@@ -35,13 +34,9 @@ export type RecordingState = {
   microphone: MicrophoneState;
   systemAudio: MicrophoneState | null;
   error: string | null;
-  /** 지금 `error` 가 「이번 달 무료 녹음 시간을 다 썼다」(시작 409)인가. 토스트가 요금제 안내를 덧붙인다. */
   quotaExceeded: boolean;
-  /** 지금 `error` 가 「종료 상태를 확인하지 못했다」인가. 서버 완료가 오면 그 문구만 걷는다. */
   unconfirmedStop: boolean;
-  /** 재개 창이 끝나 멈췄다는 문구가 서 있다. 그동안만 회의 종료를 따로 감시한다. */
   windowExhausted: boolean;
-  /** 재개 창이 끝나 버린 소리. 그 뒤 회의가 끝나면 「N초를 올리지 못했습니다」가 쓴다. */
   droppedMs: number;
 };
 
@@ -71,15 +66,11 @@ export type RecordingAction =
     }
   | { type: "phase"; phase: RecordingPhase }
   | { type: "session"; session: RecordingSession | null }
-  /** 녹음이 실패로 끝났다. 알림과 받아쓰기 멈춤 표시를 걷는다. */
   | { type: "failed"; message: string; unconfirmedStop?: boolean }
-  /** 재개 창이 끝나 멈췄다. 이 탭이 버린 세션이라 열린 세션으로 들지 않는다. */
   | { type: "window-exhausted"; message: string; droppedMs: number }
-  /** 시작하다 실패했다. 녹음이 시작되기 전이라 걷을 알림이 없다. */
   | { type: "start-failed"; message: string; quotaExceeded?: boolean }
   | { type: "completed"; session: RecordingSession | null }
   | { type: "error"; message: string }
-  /** 시작하는 사이 워크스페이스에서 쫓겨났다. 문구는 추방 안내가 따로 띄운다. */
   | { type: "evicted" }
   | { type: "disconnected" }
   | { type: "degraded"; shown: boolean }
@@ -93,7 +84,6 @@ export type RecordingFailure = Extract<
   { type: "failed" | "window-exhausted" }
 >;
 
-/** 바뀐 값이 없으면 같은 객체를 돌려준다. 폴링이 같은 결론을 되풀이해도 다시 그리지 않는다. */
 function patch(
   state: RecordingState,
   changes: Partial<RecordingState>
@@ -158,9 +148,6 @@ export function recordingReducer(
         session: action.session ?? state.session,
         phase: "completed",
         transcriptionDegraded: false,
-        // 「확인하지 못했다」는 이 탭이 소리를 다 보낸 뒤에만 서므로, 누가 세션을 완료했든 잃은 것이
-        // 없다(APP-1473). 다른 실패 문구는 남긴다 — 다른 탭·부착이 자기 끝 번호로 완료해도 이 탭이 버린
-        // 소리는 돌아오지 않는다. 그 실패로 선 문구일 때만 걷는다
         error: state.unconfirmedStop ? null : state.error,
         unconfirmedStop: false,
       });

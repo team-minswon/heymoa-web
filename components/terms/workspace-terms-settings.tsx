@@ -30,7 +30,6 @@ import {
 export const workspaceTermsScope = (workspaceId: string) =>
   `terms:workspace:${workspaceId}`;
 
-/** 워크스페이스 용어 사전을 읽는다. */
 export function useWorkspaceTerms(workspaceId: string) {
   const t = useTranslations("settings.terms");
   const response = useGetWorkspaceTermsSuspense(workspaceId, {
@@ -64,11 +63,9 @@ export function useWorkspaceTermDictionary(workspaceId: string) {
         response.status === 200 && response.data.success
           ? response.data.data
           : undefined;
-      // 전역 토스트가 이 문구를 그대로 띄운다(`errorMessageOf`).
       if (!data) throw new Error(t("addFailed"));
       return {
         ...data,
-        // 계약은 문자열로만 알려 준다 — 값 집합은 LIMIT · TOO_LONG · BLANK(server APP-1226)
         rejected: data.rejected.map((item) => ({
           term: item.term,
           reason: item.reason as RejectReason,
@@ -95,10 +92,6 @@ function WorkspaceTermsEditor({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-/**
- * 설정의 「용어 사전」 탭 (APP-1189 · APP-1227). 사전은 워크스페이스 하나다. 설명은 제목 옆 ?에 두고 본문은 입력 카드와
- * 칩 목록이 바로 보이게 한다. 편집은 멤버 전원이다.
- */
 export function WorkspaceTermsSettings({
   workspaceId,
 }: {

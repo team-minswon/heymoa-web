@@ -105,12 +105,6 @@ function WorkspaceRecordingIndicator({
   );
 }
 
-/**
- * 워크스페이스 허브의 상단바. **노트를 모른다** — 노트 전체 화면이 이 바를 통째로 덮고
- * 자기 크롬(제목·회의 제어·창 제어)을 직접 그리기 때문이다(design.pen `XtEMZ`).
- * 예전에는 여기에 노트 액션 슬롯과 노트 제목 브레드크럼이 있었고, 전체 화면이 이 바 아래에
- * 눕던 시절의 구조였다.
- */
 export function WorkspaceToolbar({
   workspaceId,
   currentLabel,
@@ -119,37 +113,16 @@ export function WorkspaceToolbar({
 }: {
   workspaceId: string;
   currentLabel: string;
-  /**
-   * 지금 열려 있는 노트. **크롬을 바꾸는 데는 안 쓴다** — 녹음 필을 "다른 노트에서 기록 중"
-   * 일 때만 띄우기 위한 판정에만 쓴다. side 시트로 그 노트를 보고 있는데 필까지 뜨면
-   * 보고 있는 회의를 "다른 곳"이라고 말하게 된다.
-   */
   activeNoteId?: string;
-  /**
-   * 노트 전체 화면이 이 바를 덮고 있는가. **덮이는 것은 바뿐이다** — 다른 노트를 녹음 중일 때
-   * 뜨는 상단 필은 `z-50`이라 그 면 위에 남아 눌려야 한다. 그래서 `inert`를 이 컴포넌트
-   * 바깥에 씌우지 않고 바에만 준다(씌웠더니 필이 보이는데 안 눌렸다).
-   */
   covered?: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("shell.toolbar");
   const recording = useRecording();
-  // 창은 셸이 소유한다 — 프로젝트가 없으면 프로젝트부터 묻고 회의 창으로 이어 가야 해서,
-  // 두 창이 한 자리에 있어야 이어 붙는다(`workspace-app-shell`).
   const { requestNewMeeting } = useWorkspaceShell();
 
   const isActive = ACTIVE_PHASES.has(recording.phase);
 
-  /**
-   * 녹음 중인 노트로 돌아간다.
-   *
-   * **지금 보고 있는 워크스페이스가 아니라 녹음 중인 워크스페이스로 간다.** 녹음은 route를
-   * 넘어 살아 있어서 A를 녹음한 채 B의 상단바를 볼 수 있는데, 예전에는 여기서 `workspaceId`
-   * (=B)로 링크를 만들어 `/w/B/notes/<A의 노트>`가 됐다. 노트 조회는 워크스페이스를 받지
-   * 않아 A의 노트가 그대로 열리므로 **틀린 줄도 모르고** 그 화면에서 재개하게 되고, 그러면
-   * 녹음의 소속이 B로 기록돼 A의 나가기 잠금과 추방 정리가 둘 다 빗나간다(codex 리뷰 3회차).
-   */
   const openRecordingNote = (noteId: string) =>
     router.push(
       `/w/${recording.activeWorkspaceId ?? workspaceId}/notes/${noteId}?view=side&tab=details`
@@ -161,21 +134,16 @@ export function WorkspaceToolbar({
 
   return (
     <>
-      {/* 배경을 주지 않는다 — 상단바는 이제 **흰 패널 안**이라 캔버스 틴트(`--el-canvas` 88%)를
-          깔면 흰 바닥 위에 회색 띠가 하나 생긴다. 각진 셸 시절엔 그 틴트가 크롬으로 읽혔지만
-          패널 셸에서는 얼룩이다. 구분은 아래 hairline 하나가 한다(design.pen Top Bar). */}
       <div
         inert={covered}
         className="sticky top-0 z-20 border-b border-[var(--el-hairline)] bg-[var(--el-surface-card)]"
       >
-        {/* 상단바는 56이다 — design.pen Top Bar `h-56 · px-32`. */}
         <div className="flex h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
           <nav
             aria-label={t("location")}
             className="flex min-w-0 flex-1 items-baseline gap-2"
           >
-            {/* 좁은 화면(full 노트)에서는 앞 세그먼트를 접어 노트 제목·우측 액션을 확보한다. */}
             <span className="shrink-0 text-lg font-light tracking-[-0.03em] text-[var(--el-ink)]">
               {siteConfig.name}
             </span>
@@ -185,12 +153,6 @@ export function WorkspaceToolbar({
             </span>
           </nav>
           <div className="flex shrink-0 items-center gap-2">
-            {/* noteId로 키잉한다 — 안 하면 A의 삭제 확인창을 연 채 뒤로가기로 B에 왔을 때
-                그 창이 B 제목으로 남아 엉뚱한 노트를 지운다. */}
-            {/* **프로젝트가 없어도 눌린다.** 예전에는 대상 프로젝트가 없으면 그냥 비활성
-                이었는데, 새 워크스페이스는 항상 그 상태로 시작하므로 처음 들어온 사람이 가장
-                먼저 보는 것이 죽은 버튼이었다. 지금은 누르면 프로젝트를 먼저 묻고 이어서
-                회의 창이 뜬다. */}
             <Button
               type="button"
               size="sm"
@@ -199,7 +161,6 @@ export function WorkspaceToolbar({
               onClick={requestNewMeeting}
             >
               <Plus className="size-3.5" />
-              {/* 좁은 화면에서는 아이콘만 — 노트 액션이 잘리지 않게. */}
               <span>{t("newNote")}</span>
             </Button>
           </div>

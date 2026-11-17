@@ -177,7 +177,6 @@ describe("DesktopMeetingTimelineReporter 보기 종료", () => {
     expect(report).toHaveBeenCalledTimes(1);
     expect(report).toHaveBeenLastCalledWith(null);
 
-    // 목록에서 같은 회의를 다시 고르면 다시 보고한다.
     report.mockClear();
     act(() => open?.({ workspaceId: "w1", noteId: "n1" }));
     expect(report).toHaveBeenCalledWith({ noteId: "n1", title: "뷰어 회의" });

@@ -18,7 +18,6 @@ describe("NoteAgentRail", () => {
     const { unmount } = render(
       <NoteAgentRail onCollapse={vi.fn()} collapseDisabled={false} />
     );
-    // 레일이 곧 대화다 — 탭을 고를 필요 없이 서자마자 자리를 넘긴다.
     expect(setRailSlot).toHaveBeenLastCalledWith(expect.any(HTMLDivElement));
 
     unmount();

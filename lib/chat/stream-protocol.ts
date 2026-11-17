@@ -1,21 +1,9 @@
 /**
- * 채팅 SSE 이벤트를 화면 상태로 접는 순수 리듀서. 계약은 `asyncapi.yml` 의 `agentChatStream`
- * 채널이다.
- *
- * 봉투는 없다. `data:` 에는 payload 하나만 실리고 커서는 `id:` 줄에만 있다. `turnId` 는
- * 프레임에서 오지 않고 `POST` 의 `202` 본문이나 `GET /messages` 의 `activeTurn` 이 준다.
- *
- * 계약의 함정 넷:
- *
- * 1. `message_end.content` 가 토큰 합을 이긴다. 토큰 합을 남기면 새로고침 뒤 히스토리와
- *    다른 글이 될 수 있어 `finalizeText` 가 본문을 갈아끼운다.
- * 2. `tool_call_result` 의 `status=error` 는 종료가 아니다. 도구만 실패했고 토큰은 이어진다.
- * 3. 종료 프레임 없이 끊기는 경로가 있다. 훅이 재연결하고, 포기하면 `endStream` 이 `failed`
- *    로 접는다.
- * 4. 모르는 이벤트로 화면이 죽으면 안 되지만 조용히 삼켜서도 안 된다. 아는 이벤트는
- *    `KNOWN_EVENTS` 에 전부 적는다.
+ * 계약(`asyncapi.yml` 의 `agentChatStream`)의 함정입니다.
+ * - `message_end.content` 가 토큰 합을 이깁니다.
+ * - `tool_call_result` 의 `status=error` 는 종료가 아닙니다.
+ * - 종료 프레임 없이 끊기는 경로가 있습니다.
  */
-
 import {
   type Block,
   appendText,
@@ -35,13 +23,6 @@ import type {
   ApprovalCardItem,
 } from "@/lib/chat/approval-card";
 
-/**
- * 화면이 아는 상태 여섯. 늘리지 않는다 — `personal-chat.tsx` 의 `isStreaming` 이 phase 로
- * 갈려서 새 값 하나가 중지 버튼을 조용히 지운다. 새 이벤트는 이 여섯 중 하나로 접는다.
- *
- * 재연결 중에도 `streaming` 이다. `idle` 은 아직 시작 안 한 것이고 `done` 은 답이 끝난 것이다.
- * 배열로 둔 것은 테스트가 목록을 고정하기 위해서다.
- */
 export const CHAT_STREAM_PHASES = [
   "idle",
   "streaming",
@@ -53,7 +34,6 @@ export const CHAT_STREAM_PHASES = [
 
 export type ChatStreamPhase = (typeof CHAT_STREAM_PHASES)[number];
 
-/** 이 턴에 근거로 쓴 회의록. 본 것이지 인용한 것이 아니다. */
 export type NoteRef = {
   kind: "note";
   id: string;
@@ -63,41 +43,20 @@ export type NoteRef = {
 export type ChatStreamState = {
   phase: ChatStreamPhase;
   messageId: string | null;
-  /** 이 턴의 id. 프레임에서 오지 않는다(`startedState`·`resumedState`). 취소와 스트림 URL 이 쓴다. */
   turnId: string | null;
-  /**
-   * 마지막에 본 `id:`. 재접속의 `?after=` 값이다. 불투명한 문자열이라 크기 비교가 없다.
-   * null 이면 `after` 를 빼고 처음부터 받는다.
-   */
   cursor: string | null;
-  /** 생각·도구·승인·본문이 한 배열에 시간 순서대로. */
   blocks: Block[];
-  /** 확정된 답변. message_end 전에는 null이다. */
   content: string | null;
-  /**
-   * 에이전트가 실제로 본 회의록. `message_end` 가 채운다. 범위 밖을 봤다는 알림도 이
-   * 목록이다 — 범위 밖 회의록이 여기 서는 것이 곧 알림이라 따로 프레임이 없다.
-   */
+  /** `message_end` 가 채웁니다. 범위 밖 회의록이 여기 서는 것이 곧 알림이라 따로 프레임이 없습니다. */
   refs: NoteRef[];
   pendingApproval: {
     approvalId: string;
     tool: string;
     summary: string | null;
-    /** 승인 카드 구조. 없으면 `summary` 로 묻는다. */
     card: ApprovalCardData | null;
   } | null;
-  /**
-   * `message` 는 서버가 보낸 문구다. 실패 코드만 온 자리(`turn_failed`·재접속 포기)는 null 이고, 화면이 코드로
-   * `chat.errors.turnFailures.<코드>` 를 고른다(모르는 코드는 `chat.errors.noResponse`).
-   */
   error: { code: string; message: string | null } | null;
-  /** 다시 눌러도 되는 실패인가. server 의 닫힌 enum 이 정한다. 아직 화면 분기는 없다. */
   retryable: boolean | null;
-  /**
-   * 「히스토리부터 다시 읽어라」. 새 phase 를 만들면 `isStreaming` 이 갈리므로 불리언이다.
-   * 훅이 스트림이 `410` 으로 사라졌을 때 세우고, `personal-chat.tsx` 의 재조회 효과가 읽어
-   * `GET /messages` 를 다시 당긴다.
-   */
   needsResync: boolean;
 };
 
@@ -115,27 +74,14 @@ export const initialStreamState: ChatStreamState = {
   needsResync: false,
 };
 
-/** `POST` 가 `202` 로 턴을 열었다. 프레임은 아직 하나도 없고 커서도 없다. */
 export function startedState(input: { turnId: string }): ChatStreamState {
   return { ...initialStreamState, phase: "streaming", turnId: input.turnId };
 }
 
-/**
- * 돌아왔더니 턴이 아직 돌고 있다. 본문은 `?after=` 재생이, 도구·생각은 히스토리의
- * TOOL·THINKING 행이 그린다.
- *
- * `content` 를 세우면 안 된다. `content !== null` 을 「턴이 끝났다」로 읽는 곳이 있다.
- * `status` 도 안 본다 — 카드를 세우는 것은 `pendingApproval` 이 있느냐 하나다.
- */
 export function resumedState(input: {
   cursor: string | null;
   turnId: string;
   pendingApproval: ChatStreamState["pendingApproval"];
-  /**
-   * 히스토리가 실어 준 도는 턴의 답 조각. 재생은 커서 뒤 토큰만 주므로 이것을 첫 본문으로
-   * 깔아야 답이 한 덩어리가 된다. 승인 대기에는 안 깐다 — 열린 스트림이 없어 히스토리가
-   * 유일한 출처라 두 번 선다.
-   */
   partialAnswer?: string | null;
 }): ChatStreamState {
   const awaitingApproval = input.pendingApproval !== null;
@@ -152,10 +98,6 @@ export function resumedState(input: {
   };
 }
 
-/**
- * 돌아왔더니 마지막 턴이 실패로 끝나 있었다. `activeTurn` 이 null 일 때만 부른다 — 아니면
- * 흐르는 답 위에 실패 배너가 뜬다.
- */
 export function failedTurnState(
   failureCode: string | null,
   retryable: boolean | null
@@ -222,10 +164,6 @@ function item(value: unknown): ApprovalCardItem | null {
   return { title, target: text(raw.target), fields: fields(raw.fields) };
 }
 
-/**
- * `tool_approval_request.card`. 제목이 없으면 카드가 아니라 `summary` 로 대신 묻는다. 칸 하나가
- * 틀리면 그 칸만 뺀다 — 반쯤 읽은 칸이 무엇을 승인하는지 잘못 읽게 하지 않게.
- */
 export function parseApprovalCard(value: unknown): ApprovalCardData | null {
   const raw = record(value);
   const title = raw && text(raw.title);
@@ -249,7 +187,6 @@ export function parseApprovalCard(value: unknown): ApprovalCardData | null {
   };
 }
 
-/** `kind` 가 없으면 그릴 수 없다. 나머지는 없어도 된다. */
 function toolTarget(value: unknown): ToolTarget | null {
   const raw = record(value);
   const kind = raw && text(raw.kind);
@@ -257,7 +194,6 @@ function toolTarget(value: unknown): ToolTarget | null {
   return { kind, id: text(raw.id), title: text(raw.title) };
 }
 
-/** id·title 이 없으면 누를 수도 셀 수도 없어 뺀다. */
 function noteRefs(value: unknown): NoteRef[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
@@ -269,10 +205,6 @@ function noteRefs(value: unknown): NoteRef[] {
   });
 }
 
-/**
- * 마지막에 본 것이 커서다. 프레임은 순서대로 오고 `after` 는 배타라 비교·중복 거르기가 없다.
- * 하트비트는 `id:` 가 없어 커서를 안 옮긴다.
- */
 function advanceCursor(
   current: string | null,
   id: string | undefined
@@ -280,10 +212,6 @@ function advanceCursor(
   return id === undefined ? current : id;
 }
 
-/**
- * 화면이 아는 이벤트. 계약의 11종이 전부 있어야 한다 — `contract-consistency` 가
- * `asyncapi.yml` 과 대조한다.
- */
 export const KNOWN_EVENTS: ReadonlySet<string> = new Set([
   "message_start",
   "token",
@@ -298,7 +226,6 @@ export const KNOWN_EVENTS: ReadonlySet<string> = new Set([
   "turn_cancelled",
 ]);
 
-/** 계약 이벤트는 아니지만 전송이 올리는 것. 커서를 안 밀고 아무 일도 안 한다. */
 const INERT_EVENTS: ReadonlySet<string> = new Set(["heartbeat"]);
 
 export function reduceStreamEvent(
@@ -309,8 +236,7 @@ export function reduceStreamEvent(
   try {
     payload = JSON.parse(event.data) as Record<string, unknown>;
   } catch {
-    // 깨진 `data:` 로 화면을 깨뜨리지 않는다. 다만 커서는 옮긴다 — `data:` 는 ai 가 준 것이지만
-    // `id:` 는 서버가 쓴다. 여기서 멈추면 재접속이 영영 옛 자리부터 받는다.
+    // `data:` 는 ai 가, `id:` 는 서버가 씁니다. 깨진 `data:` 라도 커서는 옮겨야 재접속이 옛 자리부터 받지 않습니다.
     return { ...state, cursor: advanceCursor(state.cursor, event.id) };
   }
 
@@ -320,7 +246,7 @@ export function reduceStreamEvent(
   };
 
   switch (event.event) {
-    // 스트림을 열기 전 실패(`UPSTREAM_REJECTED`)는 `error` 이벤트 없이 이것만 온다.
+    // 스트림을 열기 전 실패(`UPSTREAM_REJECTED`)는 `error` 이벤트 없이 이것만 옵니다.
     case "turn_failed": {
       const code = String(payload.code ?? "INTERNAL_ERROR");
       return {
@@ -329,7 +255,6 @@ export function reduceStreamEvent(
         blocks: base.blocks.filter((block) => block.kind !== "text"),
         pendingApproval: null,
         retryable: typeof payload.retryable === "boolean" ? payload.retryable : null,
-        // server 는 닫힌 enum 만 보내고 문구는 화면이 코드로 고른다.
         error: { code, message: null },
       };
     }
@@ -337,8 +262,6 @@ export function reduceStreamEvent(
     case "turn_cancelled":
       return { ...base, phase: "cancelled", pendingApproval: null };
 
-    // 상태를 리셋하지 않는다. 승인 뒤 재개나 재생에 다시 올 수 있고, 리셋하면 복원한 블록이
-    // 지워진다. 새 턴의 초기화는 `startedState` 가 한다.
     case "message_start":
       return {
         ...base,
@@ -371,8 +294,7 @@ export function reduceStreamEvent(
       };
     }
 
-    // 종료가 아니다. 실패 코드는 뒤따르는 `turn_failed` 에서 server 가 정한다. 여기서 닫으면
-    // 그 코드를 못 받는다. 본문도 안 건드린다 — 본문을 접는 것은 `turn_failed` 의 일이다.
+    // 종료가 아닙니다. 실패 코드는 뒤따르는 `turn_failed` 에서 server 가 정합니다.
     case "error":
       return {
         ...base,
@@ -397,7 +319,6 @@ export function reduceStreamEvent(
       };
 
     case "tool_call_result":
-      // 도구가 실패해도 스트림은 계속된다.
       return {
         ...base,
         phase: "streaming",
@@ -448,25 +369,13 @@ export function reduceStreamEvent(
     }
 
     default:
-      // 계약이 이벤트를 늘려도 화면은 살아 있되, 조용히 삼키지 않고 경고를 남긴다.
       if (!INERT_EVENTS.has(event.event)) {
         console.warn(`[chat] 모르는 SSE 이벤트: ${event.event}`);
       }
-      // 모르는 이벤트도 `id:` 를 먹었으면 지나온 자리라 커서는 옮긴다.
       return base;
   }
 }
 
-/**
- * 스트림이 닫혔다. 닫힘 자체는 상태가 아니다. 스트림을 닫는 프레임
- * (`message_end`·`turn_failed`·`turn_cancelled`·`tool_approval_request`)이 이미 phase 를
- * 정했고, 그 없이 끝났으면 연결이 끊긴 것이라 훅이 재연결로 받는다.
- *
- * @param reason
- *  - `closed` — 리더가 끝났다. 상태를 그대로 둔다
- *  - `cancelled` — 사용자가 중지를 눌렀고 서버가 받았다
- *  - `gaveUp` — 백오프를 다 돌고 못 붙었다
- */
 export function endStream(
   state: ChatStreamState,
   reason: "closed" | "cancelled" | "gaveUp"
@@ -474,7 +383,6 @@ export function endStream(
   if (reason === "cancelled")
     return { ...state, phase: "cancelled", pendingApproval: null };
   if (reason === "gaveUp") {
-    // 기존 오류 배너에 접는다. 다시 눌러 볼 만한 실패라 `retryable` 은 참이다.
     if (state.phase !== "streaming") return state;
     return {
       ...state,
@@ -484,6 +392,5 @@ export function endStream(
       error: { code: "STREAM_INTERRUPTED", message: null },
     };
   }
-  // 승인 대기도 정상 종료다. 승인 요청 프레임이 스트림을 끝내므로 여기서 바꾸면 카드가 덮인다.
   return state;
 }

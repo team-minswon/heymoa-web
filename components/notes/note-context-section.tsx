@@ -21,23 +21,16 @@ import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
 export const TOPIC_MAX = 200;
 export const BACKGROUND_MAX = 1000;
-/** 입력을 멈추고 이만큼 지나면 저장한다. 포커스가 빠지면 기다리지 않는다. */
 const SAVE_DELAY_MS = 800;
 
-/**
- * 정보 탭의 타입 위계. 「회의 맥락」·「회의 정보」 두 구역이 **같은 머리글**을 쓰고, 그 아래 라벨은 한 단 작고 흐리게,
- * 값은 라벨보다 크고 진하게 둔다. 예전에는 머리글 13 · 라벨 12 · 값 12~14 가 섞여 무엇이 무엇의 제목인지 안 보였다.
- */
 export const INFO_SECTION_TITLE =
   "text-base font-semibold text-[var(--el-ink)]";
 export const INFO_LABEL =
   "text-[13px] font-medium tracking-[0.01em] text-[var(--el-muted)]";
-/** 구역 사이를 가르는 얇은 선과 여백. 두 구역이 같은 층이라는 것을 선이 말한다. */
 export const INFO_SECTION =
   "flex flex-col border-t border-[var(--el-hairline)] pt-6";
 
 type Context = { topic: string; background: string };
-/** 서버와 같은 정규화 — 앞뒤 공백을 떼고 빈 값은 지운다(null). */
 const normalize = (value: Context) => ({
   topic: value.topic.trim() || null,
   background: value.background.trim() || null,
@@ -67,8 +60,6 @@ function FieldLabel({
       <Label htmlFor={htmlFor} className={INFO_LABEL}>
         {label}
       </Label>
-      {/* 글자 수는 라벨 줄 오른쪽에 둔다 — 줄을 새로 만들지 않아 나타나도 아래가 안 밀린다. 비어 있으면 「0 / 200」을
-          보이지 않는다(읽을 것이 없는 같은 무게의 숫자). */}
       {max !== undefined && length ? (
         <span
           className={cn(
@@ -101,17 +92,6 @@ function SectionHeading({ status }: { status?: React.ReactNode }) {
   );
 }
 
-/**
- * 정보 탭의 「회의 맥락」 (APP-1190). 참석자 아래, 회의 정보 위.
- *
- * **저장은 자동이다.** 입력을 멈추고 잠시 뒤, 또는 포커스가 빠질 때 보낸다. 제목은 「변경 저장」 버튼인데 여기를 버튼으로
- * 두지 않은 이유: 회의 중에 적는 칸이라 버튼을 누르는 것을 잊고 녹음을 이어 가면 그 연결에 맥락이 안 실린다. 제목 폼과는
- * 구역(머리글)으로 나뉘고, 저장 상태는 머리글 오른쪽에 그 구역 것으로 보인다.
- *
- * **화면의 값은 내 입력이 원본이다.** 저장 응답은 노트 캐시에만 쓰고 입력란에는 쓰지 않는다. 진행 중 폴링이 노트를 다시
- * 받아도, 내가 한 글자라도 고쳤으면(저장이 끝나 서버와 같아지기 전까지) 입력란을 서버 값으로 되돌리지 않는다. 저장은
- * 한 번에 하나만 보내고, 그 사이 더 쓴 것은 끝난 뒤 **마지막 값 하나만** 보낸다.
- */
 export function NoteContextSection({
   noteId,
   phase,
@@ -125,7 +105,6 @@ export function NoteContextSection({
 }) {
   const t = useTranslations("notes.context");
   const server: Context = { topic: topic ?? "", background: background ?? "" };
-  // 저장하려던 사이 회의가 끝났다(409). 읽기 전용으로 바뀌어도 쓴 글을 버리지 않고 복사할 수 있게 보인다.
   const [unsaved, setUnsaved] = useState<Context | null>(null);
 
   if (phase === "ended") {
@@ -174,7 +153,6 @@ export function NoteContextSection({
   );
 }
 
-/** 읽기 전용 값. 주제는 한 줄 요지라 본문보다 한 단 굵게, 배경은 빈 줄을 문단으로 나눠 읽힌다. */
 function ReadOnlyValue({
   label,
   value,
@@ -225,10 +203,8 @@ function EditableContext({
   const update = useUpdateNoteContext();
   const [draft, setDraft] = useState<Context>(server);
   const [state, setState] = useState<SaveState>("idle");
-  /** 내가 고친 것이 아직 서버와 같아지지 않았다. 이 동안은 서버 값으로 입력란을 되돌리지 않는다. */
   const [touched, setTouched] = useState(false);
 
-  // 서버 값이 바뀌었다(다른 사람이 고쳤거나 폴링). 내가 손대지 않았을 때만 받아들인다.
   const [seen, setSeen] = useState<Context>(server);
   if (seen.topic !== server.topic || seen.background !== server.background) {
     setSeen(server);
@@ -236,7 +212,6 @@ function EditableContext({
   }
 
   const latest = useRef(draft);
-  /** 서버가 마지막으로 확인한 값. 이것과 같으면 보낼 것이 없다. */
   const sent = useRef<Context>(server);
   useEffect(() => {
     sent.current = { topic: seen.topic, background: seen.background };
@@ -247,7 +222,6 @@ function EditableContext({
   useEffect(() => {
     latest.current = draft;
   }, [draft]);
-  // 기다리던 저장이 있는데 탭을 옮기거나 노트를 닫았다 — 버리지 않고 바로 보낸다.
   const flush = useRef<() => void>(() => {});
   useEffect(
     () => () => {
@@ -278,19 +252,15 @@ function EditableContext({
       });
       if (response.status === 200 && response.data.success) {
         sent.current = value;
-        // 떠 있던 노트 조회(폴링)가 저장 전 값을 늦게 써서 캐시를 되돌리지 않게 끊고 응답을 쓴다. 입력란에는 쓰지 않는다.
         await queryClient.cancelQueries({
           queryKey: getGetNoteQueryKey(noteId),
         });
         queryClient.setQueryData(getGetNoteQueryKey(noteId), response);
-        // 보낸 뒤 더 쓰지 않았으면 서버와 같아졌다 — 이제 남의 변경을 다시 따라간다.
         if (sameContext(latest.current, value)) setTouched(false);
         setState("saved");
       }
     } catch (error) {
       setState("error");
-      // 그 사이 회의가 끝났다 — 노트를 다시 받아 읽기 전용으로 바꾼다. 쓴 글은 위로 넘겨 읽기 전용 화면에 남기고,
-      // 이유는 토스트(전역)가 말한다.
       if (errorCodeOf(error) === "MEETING_ALREADY_ENDED") {
         onEnded(latest.current);
         void invalidateNoteLifecycle(queryClient, noteId);
@@ -352,7 +322,6 @@ function EditableContext({
           </p>
         }
       />
-      {/* 꼭 알아야 하는 상태라 ? 안에 넣지 않고 본문에 둔다. 녹음 중일 때만이다. */}
       {recording ? (
         <p className="mb-3 flex items-center gap-2 text-xs text-[var(--el-body)]">
           <span
@@ -405,13 +374,6 @@ function EditableContext({
   );
 }
 
-/**
- * 정보 탭 스켈레톤의 같은 자리. 머리글은 그대로 그리고 값 한 줄만 막대로 둔다.
- *
- * **종료된 회의의 모양에 맞춘다.** 스켈레톤이 뜰 때는 노트를 아직 못 받아 회의 상태를 모른다. 스켈레톤이 실제로 보이는
- * 것은 목록에서 지난 회의를 처음 열 때가 대부분이고(진행 중 회의는 녹음 화면이 노트를 이미 받아 두어 바로 그린다),
- * 그 회의는 대개 맥락이 비어 한 줄이다(`e2e/skeleton-geometry`).
- */
 export function NoteContextSkeleton() {
   const t = useTranslations("notes.context");
   return (

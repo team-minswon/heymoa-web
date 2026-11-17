@@ -1,7 +1,6 @@
 import type { WebContents } from "electron";
 import { isTrustedUrl } from "./policy";
 
-/** A cancelled external link does not replace the document owning the request. */
 export function onDocumentReplacement(
   contents: WebContents,
   origin: string,
@@ -10,11 +9,9 @@ export function onDocumentReplacement(
   contents.on("did-start-navigation", (_event, url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace && isTrustedUrl(url, origin)) revoke();
   });
-  // Also cover programmatic replacements and redirects that actually commit.
   contents.on("did-navigate", () => revoke());
 }
 
-/** Deny every OS/media permission until the capture issue installs a scoped grant. */
 export function secureContents(
   contents: WebContents,
   origin: string,

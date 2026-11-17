@@ -1,4 +1,3 @@
-// Disposable CI machines only: install a signed/NSIS baseline and exercise a real in-app upgrade.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -101,7 +100,6 @@ try {
     createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  // Startup checks must use the disposable local feed, including the default-on first launch.
   const baselineConfig = path.join(qa, "baseline.json");
   writeFileSync(
     baselineConfig,
@@ -146,7 +144,6 @@ try {
     app.getPath("userData")
   );
   mkdirSync(profile, { recursive: true });
-  // Skip onboarding in this isolated runner without involving any real user's login or microphone.
   writeFileSync(
     path.join(profile, "onboarding.json"),
     JSON.stringify({ version: 1, completed: true })
@@ -186,7 +183,6 @@ try {
     updater.disableDifferentialDownload = true;
     updater.setFeedURL({ provider: "generic", url });
   }, `http://127.0.0.1:${server.address().port}`);
-  // A fresh trusted document avoids the live site's React/auth effects replacing the QA controls.
   await page.waitForLoadState("load");
   await page.route("https://heymoa.app/__update-qa", (route) =>
     route.fulfill({

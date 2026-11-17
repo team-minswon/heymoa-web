@@ -98,21 +98,15 @@ type State = {
     string,
     { body: string; response: MeetingApprovalResponseData }
   >;
-  /** 노트 안건 정본(GET /agendas). 확정 일꾼이 없는 목이라 비어 있고, 검토 요약의 주제로 채워진다 */
   agendas: Map<string, NoteAgendasResponseDataAgendasItem[]>;
-  /** 이 회의 → 지난 회의 연결 중 제안 카드와 같은 지난 명제를 가리키는 것. 화면에서는 카드에 가려진다 */
   pastLinks: PastLink[];
-  /** 목에는 콜백을 밀어 줄 주체가 없어, 도는 단계는 시간이 지나면 스스로 다음으로 넘어간다. */
   runningSince: Map<string, number>;
 };
 
-/** 화자 분리 → 분석 → 검토 가능이 목에서 각각 이만큼 걸린다. 화면의 진행 표시를 볼 만큼만 둔다. */
 export const MOCK_STEP_MS = 6_000;
 
-/** 항목 317개 · 주제 21개 검토본을 가진 노트. 그래프가 실제 규모에서 어떻게 보이는지 여기서 본다. */
 export const LARGE_REVIEW_NOTE_ID = "01K0000000027";
 
-/** 흐름 상태 표본. 종료된 시드 노트마다 한 상태씩 둬서 요약 탭의 모든 갈래를 목에서 밟는다. */
 const SEEDED_FLOWS: Record<string, FlowStatus> = {
   "01K0000000020": "NOT_APPLICABLE",
   "01K0000000021": "REVIEWABLE",
@@ -126,14 +120,11 @@ const SEEDED_FLOWS: Record<string, FlowStatus> = {
 };
 
 const MEETING_DATE = Date.UTC(2026, 8, 11);
-/** 대체 제안이 끝내자는 이전 결정을 확정한 회의 */
 const PREVIOUS_NOTE_ID = "01K0000000024";
-/** 멘토링 검토본 주제의 안건 ID. 회의 간 연결 목(주제 이어짐)이 같은 ID를 가리켜야 해서 고정한다 */
 const MENTORING_AGENDA_IDS = Array.from(
   { length: 8 },
   (_, at) => `01KG${String(at + 1).padStart(9, "0")}`
 );
-/** 지난 회의(PREVIOUS_NOTE_ID)의 안건. 멘토링 01 · 06 주제가 여기서 이어진다 */
 const PREVIOUS_AGENDAS = [
   { agendaId: "01KG100000001", title: "첫 화면 메시지" },
   { agendaId: "01KG100000002", title: "분석 범위" },
@@ -149,7 +140,6 @@ type PastLink = {
   };
 };
 
-/** 제안 카드가 끝내자는 지난 명제를 만들고, 같은 명제를 가리키는 회의 간 연결을 남긴다 */
 function pastProposal(
   target: State,
   sourceProposalId: string,
@@ -169,7 +159,6 @@ function pastProposal(
 const dueAfterMeeting = (days: number, base = MEETING_DATE) =>
   new Date(base + days * 86_400_000).toISOString().slice(0, 10);
 
-/** 검토본 시드 한 벌. 멘토링 노트가 기본이고, 가이드 캡처 프리셋은 회의마다 한 벌씩 더한다(help-demo). */
 type ReviewSeedSet = {
   noteId: string;
   topics: SeedTopic[];
@@ -178,9 +167,7 @@ type ReviewSeedSet = {
   headlineTopics: number[];
   lead: Array<{ text: string; topics: number[] }>;
   agendaIds?: string[];
-  /** 기한을 세는 기준 날짜 */
   meetingDate: number;
-  /** 멘토링 시드에만 있는 손질(사람이 고친 항목 · 직접 더한 항목 · 다른 주제에도 속한 항목) */
   decorated: boolean;
 };
 
@@ -201,7 +188,6 @@ const reviewSetOf = (set: HelpDemoReviewSet): ReviewSeedSet => ({
   decorated: false,
 });
 
-/** 검토본 시드가 있는 노트인가. 멘토링 노트이거나, 프리셋이 켜졌을 때 요약이 성공한 프리셋 회의다. */
 const hasSeededReview = (noteId: string) =>
   noteId === MENTORING_NOTE_ID ||
   (isHelpDemoEnabled() &&
@@ -300,7 +286,6 @@ function seedMentoringReview(
     items: [],
   };
 
-  // 담당이 없는 할 일에는 담당만 있는 제안과 기한만 있는 제안을 번갈아 둔다. nullable 양쪽 표본이다.
   let suggestions = 0;
   const suggest = (seed: SeedItem): StoredItem["suggestedAssignment"] => {
     if (seed.kind !== "ACTION_ITEM" || seed.who !== undefined) return null;
@@ -354,7 +339,6 @@ function seedMentoringReview(
         citations: cited.map((at) =>
           citationOf(segment(at), step.role ?? "SUPPORTS")
         ),
-        // 상태·닫힌 이유·종류 조합은 위에서 계약 행렬대로 골랐다. 생성 타입은 그 조합을 합집합으로 나눈다.
       } as ProposalRevision;
     });
     target.revisions.set(proposalId, revisions);
@@ -381,7 +365,6 @@ function seedMentoringReview(
       replacements: seed.replaces
         ? [
             {
-              // 끝낼 이전 결정은 지난 회의가 확정한 노드다. 목에서는 확정된 표본 노트를 출처로 둔다.
               target: {
                 itemId: nextId("01KN"),
                 revision: 1,
@@ -389,7 +372,6 @@ function seedMentoringReview(
                 content: seed.replaces.content,
                 noteId: PREVIOUS_NOTE_ID,
                 noteTitle: mockDb.getNote(PREVIOUS_NOTE_ID).title,
-                // 다른 회의가 먼저 끝낸 결정은 사람이 만든 항목이라 원래 명제가 없는 경우로 둔다
                 originalProposalRef: seed.replaces.endedElsewhere
                   ? null
                   : pastProposal(
@@ -402,7 +384,6 @@ function seedMentoringReview(
                 approvedAt: new Date(
                   set.meetingDate - 7 * 86_400_000
                 ).toISOString(),
-                // 이 회의를 검토하는 사이 다른 회의의 확정이 먼저 끝낸 결정
                 endedAt: seed.replaces.endedElsewhere
                   ? new Date(set.meetingDate - 86_400_000).toISOString()
                   : null,
@@ -420,11 +401,9 @@ function seedMentoringReview(
               const change = seed.changesTask;
               const taskId = projectTasks.idOf(change.task);
               return {
-                // 프로젝트 할 일은 공개 경로로도 생겨 원래 명제가 없을 수 있다 — 목에서는 없음으로 둔다
                 target: {
                   itemId: taskId,
                   revision: projectTasks.revisionOf(taskId),
-                  // 완료로 바꾸자는 할 일만 회의에서 나온 할 일이다 — 같은 할 일을 가리키는 「마침」 연결이 카드에 가려진다
                   originalProposalRef:
                     change.status === "COMPLETED"
                       ? pastProposal(
@@ -492,7 +471,6 @@ function seedMentoringReview(
   }
 
   if (set.decorated) {
-    // 사람이 고친 항목과 사람이 더한 항목. 원본과 다른 모양이 목에 하나씩은 있어야 한다.
     const edited = topicItems[1][3];
     edited.content = "무료 구간은 월 5시간으로 두고 팀 요금제에서는 뺀다";
     edited.edited = true;
@@ -672,7 +650,6 @@ function buildSummary(
       label,
     });
     const center = items.find((item) => item.itemId === centerItemId);
-    // 중심이 없는 주제는 「주제」 관계를 두지 않는다. 양 끝이 없거나 같은 관계도 뺀다.
     const link = (
       source: StoredItem | undefined,
       targetItem: StoredItem | undefined,
@@ -711,7 +688,6 @@ function buildSummary(
         link(decisions[0] ?? center, item, "RESOLVES", "해결")
       ),
     ];
-    // 주 소속과 보조 소속을 나누어 서버의 호환 응답과 맞춥니다.
     const also = set.decorated && index === 5 ? [topicItems[0][3]] : [];
     return {
       ordinal: index + 1,
@@ -760,10 +736,6 @@ function buildSummary(
   };
 }
 
-/**
- * 큰 검토본. 주제 크기를 1~60 으로 고르지 않게 두고, 주제 안 관계 · 주제를 넘는 관계 ·
- * 「다른 주제에도 속함」을 섞는다. 무작위는 고정 씨앗이라 열 때마다 같다.
- */
 function seedLargeReview(target: State, noteId: string) {
   let seed = 7;
   const random = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
@@ -866,7 +838,6 @@ function seedLargeReview(target: State, noteId: string) {
       center.kind === "AGENDA"
         ? center.content
         : `${words[index % words.length]} ${index + 1}차 논의`;
-    // 같은 항목의 주 소속이 있으면 보조 소속을 중복하지 않습니다.
     const also = (random() < 0.4 ? [pick(pick(groups))] : []).filter(
       (row) => !items.includes(row)
     );
@@ -884,9 +855,7 @@ function seedLargeReview(target: State, noteId: string) {
       relations,
       sentences: [],
       openItemIds: open.map((row) => row.itemId),
-      // 옛 노트처럼 안건 행이 없는 주제도 섞는다 — 화면 key 는 순서 번호로 대신한다
       agendaId: index % 5 === 4 ? null : nextId("01KG"),
-      // 옛 노트는 한 줄 요약도 없다
       summary: index % 5 === 4 ? null : `${title}에서 나온 항목을 정리했다`,
       completed: true,
       description: [],
@@ -908,7 +877,6 @@ function seedLargeReview(target: State, noteId: string) {
   });
 }
 
-/** 전사가 없는 노트의 작은 검토본. 요약은 실패로 두어 요약 없는 화면의 표본이 된다. */
 function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
   const item = (
     kind: Kind,
@@ -959,7 +927,6 @@ function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
   });
 }
 
-/** 목은 입력 준비가 늦어지는 회의를 만들지 않는다. 서버의 `retryable` 중 요청 전·실패 칸만 흉내 낸다. */
 function retryableOf(status: FlowStatus) {
   return status === "ANALYSIS_FAILED" || status === "NOT_REQUESTED";
 }
@@ -1065,7 +1032,6 @@ function checkAssignable(kind: Kind, assignee: unknown, due: unknown) {
     failWith(...BAD_REQUEST);
 }
 
-/** 확정된 회의의 검토본을 새 회의 분석으로 만든다. 목에는 콜백을 밀어 줄 주체가 없어 개발 화면이 부른다. */
 function completeAnalysis(noteId: string) {
   const target = store();
   if (target.flows.get(noteId) !== "ANALYZING") return;
@@ -1119,10 +1085,6 @@ function completeAnalysis(noteId: string) {
 }
 
 export const meetingFlow = {
-  /**
-   * 다음 단계로 넘어갈 때가 된 분석 노트(PRO-67 I03). 목 이벤트 스트림이 이 노트들에 `note.changed`(analysis) 힌트를
-   * 보낸다 — 스트림이 건강하면 web 이 흐름을 폴링하지 않으므로, 힌트가 없으면 목의 분석이 다음 단계로 안 넘어간다.
-   */
   dueAnalysisNoteIds(): string[] {
     const target = store();
     return [...target.runningSince.entries()]
@@ -1132,7 +1094,6 @@ export const meetingFlow = {
   seedApprovalCase(key: ProjectApprovalCase) {
     seedApprovalCase(store(), key);
   },
-  /** 새 분석 주기에 제안이 없는 표본. 저장 선택은 실제 서버처럼 별도로 유지합니다. */
   clearSuggestions(noteId: string) {
     for (const item of reviewOf(noteId).items) {
       item.replacements = [];
@@ -1157,7 +1118,6 @@ export const meetingFlow = {
       }
     );
   },
-  /** 표본을 만드는 테스트가 계약 경로의 인자를 고를 때 쓴다. */
   proposalIds() {
     return [...store().revisions.keys()];
   },
@@ -1178,7 +1138,6 @@ export const meetingFlowHandlers = [
     respond(() => {
       const noteId = paramId(params.noteId);
       const status = flowOf(noteId);
-      // 요청 전이면 빈 배열이다. 요청 뒤에는 네 영역이 흐름 상태를 따라간다.
       const regionStatus =
         status === "ANALYZING"
           ? "PENDING"
@@ -1216,7 +1175,6 @@ export const meetingFlowHandlers = [
 
   http.get("*/v1/notes/:noteId/meeting-review/summary", ({ params }) =>
     respond(() => {
-      // 브라우저도 옛 필드를 생략한 응답으로 검사합니다. 저장 목은 현행·호환 표현을 함께 유지합니다.
       const summary = structuredClone(
         projectAgendaMapSummary(paramId(params.noteId)) ??
           meetingFlow.summaryOf(paramId(params.noteId))
@@ -1249,7 +1207,6 @@ export const meetingFlowHandlers = [
         const review = editableReview(noteId, body.expectedReviewVersion);
         if (!body.content?.trim()) failWith(...BAD_REQUEST);
         checkAssignable(body.kind, body.assignee, body.due);
-        // 서버처럼: 요약에 없는 주제 번호는 거절하고, 있으면 그 주제 members 에 합친다.
         const topic =
           body.topicOrdinal == null
             ? null
@@ -1258,7 +1215,6 @@ export const meetingFlowHandlers = [
                 ?.topics.find((row) => row.ordinal === body.topicOrdinal) ??
               failWith("TOPIC_UNKNOWN", 400, "요약에 없는 주제입니다."));
         const itemId = nextId("01KJ");
-        // 실패할 수 있는 변환을 모두 끝낸 뒤에 상태를 바꾼다. 400 뒤에 요약만 바뀌어 남으면 안 된다.
         const assignee = assigneeFromRequest(body.assignee, noteId);
         topic?.members.push({ itemId, kind: body.kind });
         topic?.memberships.push({ itemId, secondary: false });
@@ -1366,7 +1322,6 @@ export const meetingFlowHandlers = [
           decisions.length
         )
           failWith(...BAD_REQUEST);
-        // 선택 저장은 실제 업무를 바꾸지 않습니다. APPLY는 초안 전체가 필요하고 KEEP 생략은 보존합니다.
         for (const { targetId, decision, taskChange: draft } of decisions) {
           const replacement = item.replacements.find(
             (row) => row.target.itemId === targetId
@@ -1482,7 +1437,6 @@ export const meetingFlowHandlers = [
         );
       }
       const included = review.items.filter(isProjectIncluded);
-      // 저장 선택이 현재 제안에서 사라졌으면 업무를 쓰기 전에 전체 거절합니다.
       if (
         included.some((item) =>
           item.decisions.some(
@@ -1517,9 +1471,7 @@ export const meetingFlowHandlers = [
               : null,
           };
         });
-      // 모든 충돌 검사가 끝난 뒤에만 새 할 일과 이전 결정도 확정합니다.
       projectTasks.applyReviewedChanges(note.projectId, changes, approvalId);
-      // 포함 항목에 저장된 끝내기만 끝낸다. 다른 확정이 먼저 끝낸 노드는 건너뛴다.
       const endedAt = new Date().toISOString();
       for (const row of included.flatMap((item) => item.replacements)) {
         if (row.decision === "END" && row.target.endedAt === null)
@@ -1558,8 +1510,6 @@ export const meetingFlowHandlers = [
     })
   ),
 
-  // 검토 시드 노트의 명제 원장 — 각 명제의 최신 판. 안건(`/agendas`)은 이미 이 명제들을 가리키는데
-  // 원장이 비어 있어 타임라인이 「정리된 항목이 없습니다」로 섰다. 다른 노트는 실시간 정리 목으로 넘긴다.
   http.get("*/v1/notes/:noteId/proposals", ({ params }) => {
     const noteId = paramId(params.noteId);
     const review = store().reviews.get(noteId);
@@ -1580,7 +1530,6 @@ export const meetingFlowHandlers = [
     }));
   }),
 
-  // 검토 항목의 원본 명제 이력. 이 목이 만든 명제만 답하고, 나머지는 실시간 정리 목으로 넘긴다.
   http.get(
     "*/v1/notes/:noteId/proposals/:proposalId/revisions",
     ({ params }) => {
@@ -1594,8 +1543,6 @@ export const meetingFlowHandlers = [
     }
   ),
 
-  // 회의 간 연결. 멘토링 노트만 지난 회의(PREVIOUS_NOTE_ID)와 이어져 있다 — 카드에 가려지는 대체 연결,
-  // 카드 없이 서는 「마침」 연결 하나, 주제 이어짐 둘.
   http.get("*/v1/projects/:projectId/meeting-links", ({ request, params }) =>
     respond(() => {
       const noteId = new URL(request.url).searchParams.get("noteId");
@@ -1605,7 +1552,6 @@ export const meetingFlowHandlers = [
         conflicts: [],
         agendaLinks: [],
       };
-      // 노트를 주지 않으면 프로젝트 전체 — 안건 지도(APP-1455)가 쓰는 여덟 회의 목을 돌려준다
       if (!noteId) return projectAgendaMapMock(paramId(params.projectId));
       if (noteId !== MENTORING_NOTE_ID) return empty;
       const summary = store().summaries.get(MENTORING_NOTE_ID);
@@ -1657,7 +1603,6 @@ export const meetingFlowHandlers = [
           },
         ];
       });
-      // 「차별점과 요금」의 첫 결정이 지난 회의의 할 일을 마친다 — 카드가 없어 결론 옆 한 줄로 선다
       const pricing = summary.agendas[1];
       const finishing = pricing?.members
         .map((member) => byId.get(member.itemId))
@@ -1812,7 +1757,6 @@ export const meetingFlowHandlers = [
     respond(() => {
       const noteId = paramId(params.noteId);
       mockDb.getNote(noteId);
-      // 끝난 멘토링 회의는 검토 요약의 주제가 곧 안건 정본이다(분석이 목록을 바꾼 뒤의 모양)
       const summary = hasSeededReview(noteId)
         ? store().summaries.get(noteId)
         : undefined;

@@ -24,7 +24,6 @@ import {
   restHandlers,
 } from "@/lib/mocks/rest-handlers";
 
-/** 실제 계약 경로를 지난다 — 확인 창에서 취소하면 요청이 안 나갔는지를 요청 기록으로 본다. */
 const server = setupServer(...restHandlers);
 const writes: string[] = [];
 server.events.on("request:start", async ({ request }) => {
@@ -75,7 +74,6 @@ describe("NotificationSettings", () => {
       screen.getByRole("heading", { name: "Notifications" })
     ).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "In-app" })).toBeTruthy();
-    // 광고 수신 동의 카드는 `common.marketingConsent` 라 이 모듈 밖이다 — 표 부분만 본다.
     const table = container.querySelector("table");
     expect(table?.textContent).not.toMatch(/[\uAC00-\uD7A3]/);
     fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
@@ -102,7 +100,6 @@ describe("NotificationSettings", () => {
             marketingEmail: { agreed: false, changedAt: null },
             muteAll: false,
             muteEmail: false,
-            // 서버 순서는 시안과 다르다 — 화면이 순서를 맞춘다.
             items: [
               { type: "INQUIRY_ANSWERED", required: false, channels },
               { type: "ANALYSIS_READY", required: false, channels },
@@ -168,21 +165,16 @@ describe("NotificationSettings", () => {
     renderSettings();
     expect(await screen.findByText("일시정지된 회의")).toBeInTheDocument();
     expect(screen.queryByText("워크스페이스 초대")).toBeNull();
-    // 필수 알림 안내 문장은 두지 않는다(APP-1348).
     expect(screen.queryByText(/필수 알림/)).toBeNull();
-    // 보내지 않는 채널은 「—」이고 이유를 읽힌다
     expect(
       screen.getByLabelText("이 알림은 인앱으로 보내지 않습니다")
     ).toHaveTextContent("—");
-    // 기본값은 서버가 정한다 — 일시정지된 회의 메일은 켜짐
     expect(switchOf("일시정지된 회의 메일")).toBeChecked();
-    // 일시정지된 회의 이름 옆 ? 도움말이 언제 무엇이 오는지 읽힌다(APP-1348).
     expect(
       screen.getByRole("button", { name: "도움말: 일시정지된 회의 알림 안내" })
     ).toHaveAccessibleDescription(
       "회의를 일시정지한 채 두면 1영업일 뒤 메일로 알려 드립니다.3영업일이 지나면 회의를 자동으로 종료하고 분석을 시작한 뒤, 안내 메일을 한 번 더 보냅니다."
     );
-    // 메일 받는 주소 카드는 걷었다(APP-1348).
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
@@ -241,7 +233,6 @@ describe("NotificationSettings", () => {
     fireEvent.click(
       await screen.findByRole("switch", { name: "일시정지된 회의 메일" })
     );
-    // 응답 전인데 이미 꺼져 있다.
     await waitFor(() =>
       expect(switchOf("일시정지된 회의 메일")).not.toBeChecked()
     );
@@ -289,7 +280,6 @@ describe("NotificationSettings", () => {
         const { enabled } = (await request.json()) as { enabled: boolean };
         stored = enabled;
         calls += 1;
-        // 첫 요청의 응답이 가장 늦게 온다.
         await new Promise((resolve) =>
           setTimeout(resolve, calls === 1 ? 120 : 10)
         );
@@ -300,13 +290,13 @@ describe("NotificationSettings", () => {
     const toggle = await screen.findByRole("switch", {
       name: "일시정지된 회의 메일",
     });
-    fireEvent.click(toggle); // 끔
+    fireEvent.click(toggle);
     await waitFor(() =>
       expect(switchOf("일시정지된 회의 메일")).not.toBeChecked()
     );
-    fireEvent.click(switchOf("일시정지된 회의 메일")); // 켬
+    fireEvent.click(switchOf("일시정지된 회의 메일"));
     await waitFor(() => expect(switchOf("일시정지된 회의 메일")).toBeChecked());
-    fireEvent.click(switchOf("일시정지된 회의 메일")); // 끔
+    fireEvent.click(switchOf("일시정지된 회의 메일"));
     await waitFor(() => expect(calls).toBe(3));
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(switchOf("일시정지된 회의 메일")).not.toBeChecked();
@@ -343,14 +333,12 @@ describe("NotificationSettings", () => {
       })
     );
     await waitFor(() => expect(switchOf("인앱 알림 모두 끄기")).toBeChecked());
-    // 인앱 열(검토할 결과 준비)만 가려지고, 메일 열(일시정지된 회의)은 그대로 켜져 있고 누를 수 있다.
     expect(
       screen.getByLabelText("검토할 결과 준비 인앱 꺼짐")
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("switch", { name: "검토할 결과 준비 인앱" })
     ).toBeNull();
-    // 문의 답변(APP-1399)의 인앱 열도 같이 가려진다.
     expect(screen.getByLabelText("문의 답변 인앱 꺼짐")).toBeInTheDocument();
     expect(screen.getAllByText("꺼짐")).toHaveLength(2);
     expect(switchOf("일시정지된 회의 메일")).toBeChecked();
@@ -425,7 +413,7 @@ describe("NotificationSettings", () => {
 
   describe("제품 소식·혜택(APP-1392)", () => {
     const MARKETING = "제품 소식·혜택 메일 받기(선택)";
-    /** 조회 전에는 스위치가 잠겨 있다(base-ui 는 `disabled` 속성 대신 `data-disabled` 로 표시한다). */
+    /** base-ui 는 잠금을 `disabled` 대신 `data-disabled` 로 표시합니다. */
     const ready = () =>
       waitFor(() =>
         expect(switchOf(MARKETING)).not.toHaveAttribute("data-disabled")

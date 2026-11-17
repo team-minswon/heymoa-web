@@ -1,15 +1,6 @@
-/**
- * 블록 목록을 접고 이어붙이는 순수 함수들. 한 배열의 순서가 곧 시간이다. 계약의 함정
- * 하나(`message_end.content` 가 토큰 합을 이긴다)를 여기서 진다.
- */
-
+/** 계약의 함정 하나(`message_end.content` 가 토큰 합을 이깁니다)를 여기서 집니다. */
 import type { ApprovalCardData } from "@/lib/chat/approval-card";
 
-/**
- * 도구가 향하는 곳. `kind` 는 열어 둔다 — 모르는 `kind` 는 칩 없이 `summary` 로 떨어진다.
- * 여기서 정의하고 `stream-protocol` 이 다시 내보낸다. 반대면 순수 블록 층이 리듀서를
- * 참조한다.
- */
 export type ToolTarget = {
   kind: string;
   id: string | null;
@@ -19,37 +10,27 @@ export type ToolTarget = {
 export type ApprovalDecision = "APPROVED" | "REJECTED";
 
 export type Block =
-  /** 모델이 답을 쓰기 전에 흘린 계획 문장. 답변 본문이 아니다. */
   | { kind: "thinking"; text: string }
   | {
       kind: "tool";
       toolCallId: string;
       tool: string;
       summary: string | null;
-      /** 이 도구가 향하는 곳. 눌러서 그 회의록으로 간다. 모르는 kind면 null로 접는다. */
       target: ToolTarget | null;
-      /**
-       * 실행 중에는 null. `stopped`·`unknown` 은 화면만의 값으로, 결과 없이 끝난 턴을
-       * `settleEndedTurn` 이 닫을 때 쓴다.
-       */
       status: "success" | "error" | "stopped" | "unknown" | null;
       url: string | null;
     }
   | {
       kind: "approval";
       approvalId: string;
-      /** 뒤따르는 tool_call_result가 도구 이름을 찾아오는 열쇠. */
       toolCallId: string;
       tool: string;
       summary: string | null;
-      /** 카드 구조. 없으면 `summary` 한 줄로 묻는다. 결정 뒤에도, 새로고침 뒤에도 같은 카드를 그린다. */
       card: ApprovalCardData | null;
-      /** 확정 전에는 null. tool_approval_resolved가 채운다. */
       decision: ApprovalDecision | null;
     }
   | { kind: "text"; text: string };
 
-/** 같은 종류가 연속이면 이어붙이고 아니면 새 블록을 연다. */
 function appendRun(
   blocks: Block[],
   kind: "text" | "thinking",
@@ -78,11 +59,7 @@ export function pushTool(
   return [...blocks, { kind: "tool", ...tool }];
 }
 
-/**
- * 결과를 시작 블록에 겹친다. 승인을 거친 쓰기 도구는 `tool_call_start` 없이 결과가 오고
- * payload 에 `tool` 도 없어서, 짝이 없으면 새로 열고 이름은 같은 `toolCallId` 의 승인 블록에서
- * 가져온다.
- */
+/** 승인을 거친 쓰기 도구는 `tool_call_start` 없이 결과가 오고 payload 에 `tool` 도 없어, 이름을 같은 `toolCallId` 의 승인 블록에서 가져옵니다. */
 export function settleTool(
   blocks: Block[],
   toolCallId: string,
@@ -108,8 +85,6 @@ export function settleTool(
         : block
     );
   }
-  // 재진입해 세운 승인은 `toolCallId` 를 모른다(`decideApproval`). 승인 뒤 첫 결과가 그 짝이다 —
-  // 히스토리가 짝을 짓는 규칙과 같다.
   const orphan = blocks.find(
     (block) =>
       block.kind === "approval" &&
@@ -134,16 +109,7 @@ export function settleTool(
   });
 }
 
-/**
- * 끝난 턴의 결과 없는 도구를 닫는다. 승인받은 쓰기는 나갔는지 모르므로 `unknown`, 나머지는
- * `stopped`. 짝 도구 블록 없이 승인만 있으면 그 뒤에 `unknown` 줄을 세운다. 실시간과
- * 히스토리가 이 함수 하나를 지난다.
- */
-export function settleEndedTurn(
-  blocks: Block[],
-  /** 끝을 server 가 말하지 않았다(재연결 포기). 멈췄는지도 모르므로 전부 `unknown` 이다. */
-  outcomeKnown = true
-): Block[] {
+export function settleEndedTurn(blocks: Block[], outcomeKnown = true): Block[] {
   const tools = new Set<string>();
   const approved = new Set<string>();
   for (const block of blocks) {
@@ -176,7 +142,6 @@ export function settleEndedTurn(
         {
           kind: "tool",
           toolCallId: block.toolCallId,
-          // 이름은 바로 위 승인 줄이 말한다. 도구 id 로 채우면 같은 일을 두 이름으로 부른다.
           tool: "",
           summary: block.summary,
           target: null,
@@ -190,10 +155,6 @@ export function settleEndedTurn(
   return changed ? settled : blocks;
 }
 
-/**
- * 시작 요약과 결과 요약을 둘 다 남긴다(「전사에서 관련 발화 검색 · 3건 찾음」). 결과가 시작을
- * 이미 품고 오면(「스크립트 검색 · "q" · 20건」) 붙이지 않는다 — 라벨이 두 번 찍힌다.
- */
 export function joinSummary(started: string | null, settled: string | null) {
   if (!settled) return started;
   if (!started || settled.startsWith(started)) return settled;
@@ -207,12 +168,7 @@ export function pushApproval(
   return [...blocks, { kind: "approval", ...approval }];
 }
 
-/**
- * 사람이 고른 결정을 적는다. 재진입한 화면에는 승인 블록이 없다 — 대기는 히스토리의
- * `pendingApproval` 이 줬고 스트림은 그 프레임을 다시 안 보낸다. 그때는 대기로 블록을 세운다.
- * 안 세우면 대기를 걷는 순간 카드가 사라진다. `toolCallId` 는 히스토리가 안 주므로 비워 두고
- * 뒤따르는 결과가 채운다(`settleTool`).
- */
+/** 재진입한 화면에는 승인 블록이 없습니다 — 스트림이 대기 프레임을 다시 보내지 않아 히스토리의 `pendingApproval` 로 세웁니다. */
 export function decideApproval(
   blocks: Block[],
   pending: {
@@ -252,20 +208,12 @@ export function resolveApproval(
   );
 }
 
-/**
- * 확정된 답변으로 본문을 갈아끼운다. `text` 블록을 전부 버리고 하나로 다시 세운다 — 마지막
- * 것만 바꾸면 도구 사이의 앞쪽 본문이 `content` 와 겹쳐 두 번 보인다. 히스토리의 ASSISTANT
- * 행도 `content` 하나라 새로고침 뒤와 같아진다. 생각·도구·승인 블록은 자리를 지킨다.
- */
 export function finalizeText(blocks: Block[], content: string): Block[] {
-  // 같으면 손대지 않는다. 새 배열이면 본문이 도구 아래 한 덩어리로 옮겨 앉고 답 전체가
-  // 다시 마운트되며 한 번 더 떠오른다.
   if (answerText(blocks) === content) return blocks;
   const kept = blocks.filter((block) => block.kind !== "text");
   return content ? [...kept, { kind: "text", text: content }] : kept;
 }
 
-/** 화면에 그려질 답변 본문. 스크롤 추적 키로도 쓴다. */
 export function answerText(blocks: Block[]): string {
   return blocks
     .filter((block) => block.kind === "text")
@@ -273,20 +221,11 @@ export function answerText(blocks: Block[]): string {
     .join("");
 }
 
-/**
- * 연속된 `thinking`·`tool` 을 한 묶음으로 접는다. 본문이 끼면 묶음이 끊긴다 — 답을 쓰기 시작한
- * 뒤의 도구 호출은 앞 묶음의 일부가 아니다.
- *
- * 결정된 승인은 묶음을 끊고 제자리에 카드로 선다. 그 쓰기 도구의 줄은 카드가 상태로 말하므로
- * 묶음에서 뺀다 — 같은 일을 생각 과정과 카드에 두 번 적지 않는다. 결정 전 승인은 묶음에 남는다.
- * 따로 선 승인 카드가 그리고, 생각 과정은 그것으로 「사람을 기다린다」를 안다.
- */
 export type Group =
   | { kind: "steps"; blocks: Exclude<Block, { kind: "text" }>[] }
   | {
       kind: "approval";
       approval: Extract<Block, { kind: "approval" }>;
-      /** 승인 뒤 실행된 그 도구. 결과가 오기 전이면 상태가 null 이다. */
       tool: Extract<Block, { kind: "tool" }> | null;
     }
   | { kind: "text"; text: string };
@@ -322,24 +261,16 @@ export function groupBlocks(blocks: Block[]): Group[] {
 type StepBlock = Exclude<Block, { kind: "text" }>;
 type ToolBlock = Extract<Block, { kind: "tool" }>;
 
-/** 펼친 타임라인의 한 줄. `run` 은 이어진 같은 조회 도구 호출 여럿이다. */
 export type StepLine =
   | { kind: "single"; key: string; block: StepBlock }
   | { kind: "run"; key: string; tool: string; blocks: ToolBlock[] };
 
-/**
- * 이어진 같은 조회 도구를 한 줄로 묶고, 이어진 생각 조각을 한 문단으로 잇는다. 블록 배열은
- * 그대로 두는 렌더 단계 함수다 — 실시간·재연결 재개·히스토리가 같은 블록이면 같은 줄이 나온다.
- * 승인을 거치는 쓰기는 `groupBlocks` 가 이미 카드로 뺐다. 실패·중단은 그 줄의 사유가 보여야 해서
- * 안 묶는다.
- */
 export function groupSteps(blocks: StepBlock[]): StepLine[] {
   const groupable = (block: StepBlock): block is ToolBlock =>
     block.kind === "tool" &&
     block.tool !== "" &&
     (block.status === null || block.status === "success");
 
-  // 키는 줄의 첫 블록 자리로 정한다. 줄 순번이면 앞 묶음이 갈릴 때 뒤 줄이 다시 마운트된다.
   const runs: { at: number; blocks: StepBlock[] }[] = [];
   blocks.forEach((block, at) => {
     const run = runs.at(-1);
@@ -363,7 +294,6 @@ export function groupSteps(blocks: StepBlock[]): StepLine[] {
     if (run.length > 1 && head.kind === "tool") {
       return {
         kind: "run",
-        // 첫 호출이 단독 줄일 때와 같은 키다. 두 번째 호출이 와도 그 자리가 다시 마운트되지 않는다.
         key: stepKey(head, at),
         tool: head.tool,
         blocks: run as ToolBlock[],

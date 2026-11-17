@@ -2,10 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-/**
- * 브라우저 절대 시각을 다음 주기 경계에 맞춰 갱신한다.
- * 백그라운드 탭에서 타이머가 밀려도 누적하지 않고 복귀 즉시 다시 읽는다.
- */
 export function useAlignedNow(
   intervalMs: number,
   active = true,

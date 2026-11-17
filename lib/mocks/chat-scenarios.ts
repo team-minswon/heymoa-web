@@ -1,17 +1,3 @@
-/**
- * 목이 재현하는 상황 표. **키워드는 여기 한 곳에만 적힌다.**
- *
- * 예전에는 문자열이 `chat-stream.ts`와 `sse-handler.ts`에 흩어져 있어서, 무엇을 쳐야
- * 어떤 화면을 볼 수 있는지 알려면 두 파일을 읽어야 했다. 표가 정본이고 두 파일이 이걸
- * 참조한다 — `"시나리오"` 답변도 이 표에서 만들어지므로 표를 늘리면 안내도 같이 는다.
- *
- * `kind`는 **갈리는 자리**를 말한다.
- * - `stream` — 이벤트 시퀀스 자체가 달라진다 (`chat-stream.ts`)
- * - `transport` — 시퀀스는 그대로고 전송·연결이 달라진다 (`sse-handler.ts`)
- *
- * 승인 흐름은 다른 `stream` 시나리오와 섞이면 자리를 내준다(`STREAM_SCENARIOS`).
- * `transport`는 섞여도 된다 — 「승인 대기 중에 버퍼를 비운다」가 실제로 보고 싶은 조합이다.
- */
 export const CHAT_SCENARIOS = {
   help: {
     keyword: "시나리오",
@@ -107,52 +93,30 @@ export type ScenarioId = keyof typeof CHAT_SCENARIOS;
 
 const IDS = Object.keys(CHAT_SCENARIOS) as ScenarioId[];
 
-/** 이 메시지가 그 시나리오를 켰나. 키워드 문자열을 바깥에서 다시 적지 않는다. */
 export function hasScenario(message: string, id: ScenarioId): boolean {
   return message.includes(CHAT_SCENARIOS[id].keyword);
 }
 
-/**
- * 시퀀스를 통째로 바꾸는 시나리오들. `"이슈"`가 든 메시지라도 이 중 하나가 섞여 있으면
- * 승인 흐름이 아니다 — 그쪽이 이긴다.
- */
 export const STREAM_SCENARIOS = IDS.filter(
   (id) => CHAT_SCENARIOS[id].kind === "stream"
 );
 
-/**
- * 승인 흐름의 갈래들. **서로는 배타지만 위 「그쪽이 이긴다」 규칙에서는 빠진다** —
- * 셋 다 같은 승인 시퀀스의 인자만 바꾼 것이라, 서로를 승인 아닌 것으로 보면 안 된다.
- *
- * 앞에 있는 것이 이긴다. `"긴 설명으로 이슈 만들어줘"`처럼 둘이 섞여도 판정이 하나다.
- */
 export const APPROVAL_SCENARIOS = [
   "longArgs",
   "noArgs",
   "approval",
 ] as const satisfies readonly ScenarioId[];
 
-/**
- * 첫 프레임 앞의 침묵(ms). 평소에는 0이고 `"천천히"`만 사람이 볼 수 있는 길이로 늘린다 —
- * 그 구간의 화면은 `groups.length === 0`이라 아무것도 안 그린다(`chat-thread.tsx`).
- */
 export function leadSilenceMs(message: string): number {
   return hasScenario(message, "slow") ? 3_000 : 0;
 }
 
-/** `"멈칫"` 이 도구 결과 앞에 두는 침묵(ms). 화면이 「늦어지고 있어요」로 바꾸는 문턱(20초)을 넘겨야 그 자리가 보인다. */
 export function stallSilenceMs(message: string, event: string): number {
   return hasScenario(message, "stall") && event === "tool_call_result"
     ? 25_000
     : 0;
 }
 
-/**
- * `"시나리오"`라고 치면 목이 답하는 글. **표에서 만든다** — 손으로 적으면 표와 갈린다.
- *
- * 줄 끝 공백과 이중 공백을 넣지 않는다: 토큰을 이어붙인 결과가 `message_end.content`와
- * 같아야 한다는 계약을 목 스스로 지켜야 해서다.
- */
 export const SCENARIO_HELP = [
   "이 화면은 목(MSW)으로 돕니다. 메시지에 아래 키워드를 넣으면 그 상황이 재현됩니다.",
   "",

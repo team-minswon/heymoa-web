@@ -2,10 +2,6 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "@playwright/test";
 
-/**
- * 회의록 PDF 를 서비스 워커 목으로 끝까지 만든다. vitest 는 jsdom 이라 워커 · 글꼴 내려받기 · 실제 react-pdf 브라우저
- * 빌드를 지나지 않는다 — 그 길을 여기서 본다. 실제 멘토링 회의(63분 · 494발화)라 녹취록을 켜면 쪽 나누기도 길게 돈다.
- */
 const WORKSPACE_ID = "01K0000000000";
 const MENTORING_NOTE = "01K0000000920";
 
@@ -42,7 +38,6 @@ test("타임라인 탭에서 타임라인을 복사한다 — 머리말 아래 �
   page,
   context,
 }) => {
-  // 후보를 흘리는 맥락 데모 노트를 쓴다(`proposals.spec` 과 같다)
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto(
     `/w/${WORKSPACE_ID}/notes/01K0000000005?view=full&tab=context`
@@ -51,7 +46,6 @@ test("타임라인 탭에서 타임라인을 복사한다 — 머리말 아래 �
     page.getByText("경로 데이터 저장소는 MongoDB를 사용한다")
   ).toBeVisible({ timeout: 20_000 });
 
-  // 거르기와 상관없이 전부 복사한다 — 「할 일」만 보이게 거른 뒤 눌러도 결정이 실린다
   await page.getByRole("button", { name: /^할 일 \d+$/ }).click();
   await page.getByRole("button", { name: "타임라인 복사" }).click();
   await expect(

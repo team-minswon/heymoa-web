@@ -94,7 +94,6 @@ test("a viewed meeting shows how long it has run when the active list knows its 
   f.adapter.reportTimeline({ ...snapshot, noteId: "n1" });
   assert.match(f.read().elapsed, /^2:0\d$/);
   f.interval();
-  // 메뉴 막대 제목은 macOS 에만 있다.
   if (process.platform === "darwin") assert.match(f.tray.title, /^2:0\d$/);
   assert.match(f.tray.tooltip, /회의 보는 중 · 시작 후 2:0\d/);
   f.adapter.reportTimeline({ ...snapshot, noteId: "elsewhere" });
@@ -135,7 +134,6 @@ test("the context menu lists active meetings, the title counts them while idle, 
   f.tray.menu.find((item) => item.label === "둘째").click();
   assert.equal(JSON.stringify(f.sent.at(-1)), JSON.stringify(["heymoa:meeting-selection", { workspaceId: "w1", noteId: "n10", requestId: 1 }]));
   assert.ok(!labels.includes("로그인 시 자동 실행"));
-  // 내 녹음 중이면 개수를 보이지 않는다.
   f.adapter.lifecycle.update({ ...idle, phase: "recording", startedAt: Date.now() });
   f.interval();
   if (process.platform === "darwin") assert.doesNotMatch(f.tray.title, /●/);
@@ -149,7 +147,6 @@ test("login item shows the current setting and writes the toggled one", (t) => {
   assert.equal(JSON.stringify(f.app.loginWrites), JSON.stringify([{ openAtLogin: true }]));
   f.tray.emit("right-click");
   assert.equal(f.tray.menu.find((entry) => entry.label === "로그인 시 자동 실행").checked, true);
-  // 시스템 설정에서 꺼도 다음에 메뉴를 열 때 반영된다.
   f.app.loginOpen = false;
   f.tray.emit("right-click");
   assert.equal(f.tray.menu.find((entry) => entry.label === "로그인 시 자동 실행").checked, false);
@@ -396,7 +393,6 @@ test("cancelled external navigation does not erase summary; replacement and rend
 test("closed window cleanup removes listeners and timers without querying its destroyed native getter", () => {
   const f = fixture();
   assert.equal(f.app.listenerCount("before-quit"), 1);
-  // main.ts owns this callback; Electron has destroyed the window before closed.
   f.window.once("closed", () => f.adapter.dispose());
   assert.doesNotThrow(() => f.destroyWindow());
   assert.throws(() => f.window.webContents, /Object has been destroyed/);
@@ -422,7 +418,6 @@ test("renderer beforeunload is overridden only after native loss confirmation", 
     },
   });
   assert.equal(prevented, false);
-  // The first dialog chooses discard, the second independently confirms it.
   f.adapter.lifecycle.captureRequested();
   f.answer(2, 1);
   await f.adapter.lifecycle.requestQuit();

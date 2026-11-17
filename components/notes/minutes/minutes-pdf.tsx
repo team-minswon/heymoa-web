@@ -14,10 +14,6 @@ import { messagesFor } from "@/i18n/messages";
 import type { Locale } from "@/lib/i18n/locales";
 import type { MinutesDocument, MinutesLine } from "@/lib/notes/minutes/model";
 
-/**
- * 회의록 PDF 의 문구(`notes.minutes.pdf`). 워커 안에서도 그려서 React 훅 대신 언어를 받아 고른다.
- * 회의록은 만든 사람이 보던 화면 언어로 나간다(복사본과 같은 결정).
- */
 const pdfTranslator = (locale: Locale) =>
   createTranslator({
     locale,
@@ -27,14 +23,9 @@ const pdfTranslator = (locale: Locale) =>
 type PdfT = ReturnType<typeof pdfTranslator>;
 
 /**
- * 회의록 PDF 의 모양. **노트 화면 번들에 들지 않는다** — `render-minutes-pdf` 가 누를 때 워커를 띄워 그 안에서만
- * 이 모듈과 react-pdf · 한글 글꼴(약 6.5MB)을 읽는다. 모양의 원본은 회의록 양식 시안(A4, 공문서식 회의록)이다.
- *
- * 글꼴은 Noto Sans KR 전체 한글(KR) 판이다 — 이름에는 드문 음절이 나와서, 자주 쓰는 글자만 남긴 판으로는
- * 빈 네모가 찍힌다. 제목 「회의록」만 Noto Serif KR 이고, 그 세 글자만 남긴 판을 쓴다. 라이선스는 OFL 1.1
- * (`public/fonts/minutes/OFL.txt`).
+ * 글꼴은 Noto Sans KR 전체 한글 판이다 — 이름에 드문 음절이 나와 자주 쓰는 글자만 남긴 판으로는 빈 네모가 찍힌다.
+ * 라이선스는 OFL 1.1(`public/fonts/minutes/OFL.txt`).
  */
-
 const SANS = "MinutesSans";
 const TITLE = "MinutesTitle";
 
@@ -57,21 +48,11 @@ function registerFonts(base: string) {
   registeredBase = base;
 }
 
-/**
- * 줄을 바꿀 수 있는 자리. react-pdf 는 빈칸에서만 줄을 바꿔, 빈칸 없이 긴 글(URL · 붙여 쓴 한글)은 칸 밖으로 넘쳐
- * 잘렸다(「가」 100자가 56자만 남았다). 긴 낱말은 글자마다 끊을 수 있게 하고 — 사이의 빈 조각이 하이픈 없이 끊으라는
- * 표시다 — 짧은 낱말은 그대로 둔다(한국어는 빈칸으로 띄어 쓰므로 보통 글은 대개 낱말 사이에서 바뀐다).
- */
-/**
- * 좁은 칸(담당 · 기한 · 녹취록 화자)의 줄바꿈. 이 칸은 22mm 남짓이라 `ChristopherSmith` 같은 영문 이름 한 낱말도 넘쳐 옆 칸을
- * 덮었다. 이 칸의 글만 네 자 넘는 낱말을 글자마다 끊는다 — 본문까지 이렇게 끊으면 영문 낱말이 아무 데서나 갈린다
- */
+/** react-pdf 는 빈칸에서만 줄을 바꿔, 빈칸 없이 긴 글(URL · 붙여 쓴 한글)은 칸 밖으로 넘쳐 잘린다. 긴 낱말에 끊을 자리(빈 조각)를 넣는다. */
 const narrowBreak = (word: string) =>
   word.length <= 4 ? [word] : Array.from(word).flatMap((char) => [char, ""]);
 
 export function breakableWord(word: string): string[] {
-  // 한글이 든 낱말은 다섯 자부터 끊는다 — 담당 칸(22mm)에는 「크리스토퍼스미스」 같은 이름도 넘쳐 기한 칸을 덮었다.
-  // 한국어 조판은 음절 사이에서 줄을 바꾸는 것이 보통이다. 나머지(영문 · URL)는 열일곱 자부터
   if (word.length <= (/[\uac00-\ud7a3]/.test(word) ? 4 : 16)) return [word];
   return Array.from(word).flatMap((char) => [char, ""]);
 }
@@ -85,21 +66,16 @@ const color = {
   rule: "#d6d3d1",
   ruleSoft: "#ebe9e7",
   label: "#f5f4f2",
-  // 앱의 결정 · 할 일 · 열린 질문 색. 흑백으로 뽑아도 글자(구분 칸)로 갈린다
   decision: "#1d5fa8",
   task: "#13805a",
   open: "#b4501f",
 };
 
-/**
- * 줄 간격. **단위를 붙인다** — react-pdf 는 단위 없는 배수를 그 글자에 직접 준 크기로만 곱해서, 크기를 물려받는
- * 글자에서는 기본 18pt 로 곱해 줄 사이가 세 배로 벌어졌다. 본문 10pt × 1.65 다.
- */
+/** 줄 간격에 단위를 붙인다 — react-pdf 는 단위 없는 배수를 크기를 물려받는 글자에서 기본 18pt 로 곱해 줄 사이가 벌어진다. */
 const LINE = "16.5pt";
 
 const s = StyleSheet.create({
-  // 줄 간격은 쪽(`page`)이나 감싼 View 가 아니라 글자(Text)마다 준다(`LINE`). react-pdf 4.9 의 쪽 틀(`layout`)은
-  // 쪽에 건 줄 간격으로 꼬리말 자리를 잘못 재 꼬리말이 쪽의 3/4 지점에 떴다.
+  // 줄 간격은 쪽(`page`)이 아니라 글자(Text)마다 준다 — react-pdf 4.9 의 `layout` 은 쪽에 건 줄 간격으로 꼬리말 자리를 잘못 잰다.
   page: {
     fontFamily: SANS,
     fontSize: 10,
@@ -118,7 +94,6 @@ const s = StyleSheet.create({
     paddingLeft: 12,
     marginBottom: mm(3.5),
   },
-  // 영어 제목. 세리프 제목 글꼴은 「회의록」 세 글자만 담은 판이라 영어는 본문 글꼴로 쓴다
   titleLatin: {
     fontWeight: 700,
     fontSize: 20,
@@ -150,7 +125,6 @@ const s = StyleSheet.create({
     paddingVertical: mm(2),
     paddingHorizontal: mm(3.5),
   },
-  // 공문서 양식처럼 칸 제목 글자를 같은 폭에 고르게 편다
   metaLabelText: {
     width: mm(13),
     flexDirection: "row",
@@ -192,7 +166,7 @@ const s = StyleSheet.create({
     borderBottomColor: color.ruleSoft,
   },
   cell: { paddingVertical: mm(2), paddingHorizontal: mm(3) },
-  // 본문 칸의 줄 간격. 되풀이되는 칸 머리(`fixed`)에는 걸지 않는다 — 걸면 4.9 의 새 쪽 나누기가 그 표의 줄을 통째로 잃었다
+  // 되풀이되는 칸 머리(`fixed`)에는 줄 간격을 걸지 않는다 — 걸면 react-pdf 4.9 의 쪽 나누기가 그 표의 줄을 통째로 잃는다
   body: { lineHeight: LINE },
   compact: {
     paddingVertical: mm(1),
@@ -215,7 +189,6 @@ const s = StyleSheet.create({
     color: color.muted,
     backgroundColor: color.label,
   },
-  // 1쪽 「핵심」
   pageLabel: {
     fontSize: 8,
     letterSpacing: 2,
@@ -232,10 +205,8 @@ const s = StyleSheet.create({
   leadMark: { lineHeight: LINE, width: mm(4), color: color.muted },
   leadText: { lineHeight: LINE, flex: 1, color: color.ink },
   agendaTitleCell: { flex: 1, color: color.ink },
-  // 1쪽 안건 표는 한 쪽에 들어야 해 칸 위아래를 줄인다
   tight: { paddingVertical: mm(1.4), paddingHorizontal: mm(2.5) },
   num: { width: mm(13), textAlign: "center" },
-  // 영어 칸 머리(Decisions · Agenda)는 한글 두 자보다 길다
   numLatin: { width: mm(20), textAlign: "center" },
   start: { width: mm(15), color: color.muted },
   zero: { color: color.ruleSoft },
@@ -255,11 +226,9 @@ const s = StyleSheet.create({
   },
   owner: { lineHeight: LINE, marginRight: mm(4) },
   ownerCount: { fontWeight: 700, color: color.ink },
-  // 상세
   agendaRef: { width: mm(13), color: color.muted, textAlign: "center" },
   agendaRefLatin: { width: mm(18), color: color.muted, textAlign: "center" },
   at: { width: mm(15), color: color.muted, textAlign: "right" },
-  // 부록
   agendaMark: {
     flexDirection: "row",
     backgroundColor: color.label,
@@ -284,7 +253,6 @@ const s = StyleSheet.create({
     fontSize: 9,
   },
   footer: {
-    // 내용이 짧은 쪽에서도 꼬리말은 쪽 아래에 선다
     marginTop: "auto",
     paddingTop: mm(2.5),
     borderTopWidth: 0.75,
@@ -314,7 +282,6 @@ function MetaRow({
   children,
 }: {
   label: string;
-  /** 글자를 칸 폭에 고르게 편다. 한글 두세 자 칸 제목에만 쓴다 — 영어 낱말을 펴면 글자가 흩어진다 */
   spread: boolean;
   last?: boolean;
   children: React.ReactNode;
@@ -339,11 +306,6 @@ function MetaRow({
   );
 }
 
-/**
- * A4 한 장의 틀. 꼬리말은 쪽마다 서야 하고 쪽 번호에는 전체 쪽 수가 든다 — react-pdf 의 `layout` 이 쪽마다 이 틀을
- * 다시 그린다. `layout` 은 새 쪽 나누기 엔진을 쓰는데, 내용을 한 번만 재고 쪽에 채워 넣어 3시간 녹취록(약 80쪽)도
- * 수 초에 끝난다. 옛 엔진은 쪽마다 남은 내용 전체를 다시 재서 같은 문서에 40초 가까이 걸렸다.
- */
 function Sheet({
   footer,
   logoSrc,
@@ -396,7 +358,6 @@ function Section({
 }) {
   return (
     <View style={s.section}>
-      {/* 머리가 쪽 끝에 홀로 남지 않게 아래 내용이 조금이라도 따라올 자리를 본다 */}
       <BookmarkText
         id={id}
         bookmark={title}
@@ -410,11 +371,7 @@ function Section({
   );
 }
 
-/**
- * 표 한 칸의 글을 여러 행으로 나눈다. react-pdf 는 가로로 늘어선 표 행 안의 글을 쪽 사이에서 가르지 못해, 한 쪽보다
- * 긴 행(항목 수정에는 길이 · 줄바꿈 제한이 없다)은 뒤가 쪽 밖으로 잘렸다. 행 하나를 [maxLines] 줄 · [maxChars] 자로
- * 묶고, 그보다 긴 한 줄은 낱말 사이에서 끊는다. 첫 행에만 번호 · 담당 같은 칸을 적는다.
- */
+/** react-pdf 는 가로로 늘어선 표 행 안의 글을 쪽 사이에서 가르지 못해 한 쪽보다 긴 행이 잘린다. 행을 [maxLines] 줄 · [maxChars] 자로 나눈다. */
 export function pieces(text: string, maxLines = 8, maxChars = 320): string[] {
   const lines = text.split("\n").flatMap((line) => {
     const parts: string[] = [];
@@ -447,7 +404,6 @@ export function pieces(text: string, maxLines = 8, maxChars = 320): string[] {
   return out;
 }
 
-/** 항목 하나를 [pieces] 대로 여러 행에 그린다. 이어지는 행 사이에는 줄을 긋지 않아 한 항목으로 읽힌다 */
 function ItemRows({
   text,
   cells,
@@ -478,7 +434,6 @@ const agendaLabel = (no: number | null) => (no === null ? "—" : String(no));
 const agendaDestination = (no: number) => `minutes-agenda-${no}`;
 const countText = (count: number) => (count > 0 ? String(count) : "–");
 
-/** 1쪽 표의 수 칸. 0 은 흐리게 — 숫자 사이에서 「없음」이 먼저 읽히지 않게 한다 */
 function Count({ value, wide }: { value: number | null; wide: boolean }) {
   return (
     <Text
@@ -494,7 +449,6 @@ function Count({ value, wide }: { value: number | null; wide: boolean }) {
   );
 }
 
-/** 할 일 담당별 수. 누가 몇 개를 들고 나갔는지가 1쪽에서 읽혀야 한다 — 항목은 상세의 할 일 표에 있다 */
 function Owners({ owners, t }: { owners: MinutesDocument["owners"]; t: PdfT }) {
   return (
     <View style={s.owners}>
@@ -522,7 +476,6 @@ function TranscriptTable({
 }) {
   return (
     <View style={s.grid}>
-      {/* `fixed` 라 쪽이 넘어가도 칸 머리가 다시 선다 */}
       <View style={s.head} fixed>
         <Text style={[s.cell, s.time]}>{t("columns.time")}</Text>
         <Text
@@ -566,7 +519,6 @@ function TranscriptTable({
         return (
           <View key={index} style={s.row} wrap={false}>
             <Text style={[s.compact, s.time]}>{line.at}</Text>
-            {/* 누가 말했는지 모르는 발언. 빈칸이면 빠뜨린 것처럼 읽힌다 */}
             <Text
               style={[
                 s.compact,
@@ -578,7 +530,6 @@ function TranscriptTable({
               {line.speaker ?? "—"}
             </Text>
             <Text style={[s.compact, { flex: 1 }]}>{line.text}</Text>
-            {/* 본문 참조가 낱말 사이에서 꺾이지 않게 번호 안의 빈칸은 붙여 쓴다 */}
             <Text style={[s.compact, s.refs]}>
               {line.refs.map((ref) => ref.replaceAll(" ", "\u00a0")).join(", ")}
             </Text>
@@ -645,7 +596,6 @@ export function MinutesPdf({
       language={locale}
     >
       <Sheet footer={doc.footer} logoSrc={logoSrc}>
-        {/* ── 1쪽 핵심: 이 쪽만 읽어도 회의를 안다 ── */}
         <Text style={hangul ? s.title : s.titleLatin}>{t("title")}</Text>
         <Text style={[s.documentStatus, doc.confirmed ? s.sub : s.pending]}>
           {doc.confirmed ? t("confirmed") : t("inReview")}
@@ -669,7 +619,6 @@ export function MinutesPdf({
             ) : (
               <Text style={s.tbd}>{t("attendeesUnknown")}</Text>
             )}
-            {/* 녹취록의 「화자 N」이 참석자 밖의 사람처럼 읽히지 않게 함께 센다 */}
             {doc.unnamedSpeakers > 0 ? (
               <Text
                 style={s.sub}
@@ -706,7 +655,6 @@ export function MinutesPdf({
             <Text style={s.none}>{t("noAgendas")}</Text>
           ) : (
             <View style={s.grid}>
-              {/* 안건이 많아 다음 쪽으로 이어지면 칸 머리도 다시 선다 */}
               <View style={s.head} fixed>
                 <Text style={[s.tight, s.no]}>{t("columns.no")}</Text>
                 <Text style={[s.tight, { flex: 1 }]}>
@@ -787,7 +735,6 @@ export function MinutesPdf({
           </View>
         ) : null}
 
-        {/* 상세 항목은 한 번씩만 싣고 안건 번호를 병기한다. */}
         <View break>
           <Section title={t("decisions")} id="minutes-decisions">
             {doc.decisions.length === 0 ? (
@@ -867,7 +814,6 @@ export function MinutesPdf({
                       >
                         {piece}
                       </Text>
-                      {/* 담당·기한이 없는 항목은 미지정으로 표시한다. */}
                       <Text
                         style={[
                           s.cell,
@@ -904,7 +850,6 @@ export function MinutesPdf({
                 <Text style={[s.cell, { flex: 1 }]}>
                   {t("columns.content")}
                 </Text>
-                {/* 담당이 지정된 미결 사항이 있을 때만 담당 칸을 표시한다. */}
                 {openHasOwner ? (
                   <Text style={[s.cell, s.who, { color: color.muted }]}>
                     {t("columns.owner")}
@@ -956,7 +901,6 @@ export function MinutesPdf({
         ) : null}
       </Sheet>
 
-      {/* 부록은 새 쪽에서 시작한다 */}
       {doc.transcript ? (
         <Sheet footer={doc.footer} logoSrc={logoSrc}>
           <BookmarkText
@@ -978,17 +922,12 @@ export function MinutesPdf({
   );
 }
 
-/**
- * 이 스레드에서 바로 만든다. 화면에서는 `render-minutes-pdf` 의 `renderMinutesPdf` 를 쓴다 — 3시간 회의는 수 초가
- * 걸려 화면이 멈춘다. [fontBase] 는 글꼴을 읽을 자리다: 브라우저는 절대 URL, node(검사)는 파일 경로를 준다.
- */
 export async function renderMinutesPdfInline(
   doc: MinutesDocument,
   fontBase: string,
   locale: Locale
 ): Promise<Blob> {
   registerFonts(fontBase);
-  // 브라우저·워커·Node 모두 글꼴과 같은 public 디렉터리의 기존 브랜드 자산을 읽습니다.
   const logoSrc = `${fontBase}/../../apple-touch-icon.png`;
   return pdf(
     <MinutesPdf doc={doc} logoSrc={logoSrc} locale={locale} />

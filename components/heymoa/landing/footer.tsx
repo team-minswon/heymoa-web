@@ -13,10 +13,6 @@ import { LanguageSwitcher } from "./language-switcher";
 import { CONTAINER, FOCUS, TV_VARS, vars } from "./tokens";
 import { useSectionNav } from "./top-bar";
 
-/**
- * 브랜드·제품 탐색·문의의 순서로 읽고, 소셜 채널과 언어 선택은 브랜드 아래에서 찾도록 합니다. 선 아래에는 사업자
- * 정보와 저작권 표기만 둡니다.
- */
 const LINK = cn(
   "inline-flex min-h-8 items-center rounded-[4px] text-[15px] text-[var(--tv-body)] underline-offset-[5px] transition-colors hover:text-[var(--tv-ink)] hover:underline hover:decoration-[var(--tv-pop)] hover:decoration-[3px]",
   FOCUS
@@ -112,7 +108,6 @@ export function LandingFooter() {
                     FOCUS
                   )}
                 >
-                  {/* Simple Icons의 Threads 브랜드 마크(CC0). */}
                   <svg
                     aria-hidden
                     viewBox="0 0 24 24"

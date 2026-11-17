@@ -1,8 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Document, isMap, isSeq, parseDocument } from "yaml";
 
-// Input must be the server-generated docs mirror read with moa docs-read.sh.
-// Keep only the public contract and schemas reachable by its consumers.
 const source = process.argv[2];
 if (!source)
   throw new Error("Usage: node scripts/sync-openapi.mjs <server-mirror.yml>");
@@ -52,8 +50,6 @@ while (pending.size) {
 for (const name of Object.keys(schemas)) {
   if (!reachable.has(name)) document.deleteIn(["components", "schemas", name]);
 }
-// Preserve the existing mirror's key order for a readable diff. Values always
-// come from the generated server contract; the baseline controls formatting only.
 const target = new URL("../openapi3.yml", import.meta.url);
 const baseline = parseDocument(readFileSync(target, "utf8"));
 function ordered(value, previous) {

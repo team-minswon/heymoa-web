@@ -7,13 +7,11 @@ import {
 } from "@/lib/notes/proposals/timeline";
 import type { ProposalHead } from "@/lib/notes/proposals/contract";
 
-// The popup is a recent view. Native validates the same ceilings at the IPC boundary.
 export function meetingTimelineSnapshot(
   noteId: string,
   title: string,
   state: ContextState,
   status: Pick<MeetingTimelineSnapshot, "loading" | "failed" | "reconnecting">,
-  /** 유형 이름. 화면 언어(`notes.kinds`)로 넘긴다 */
   kindLabel: (kind: ProposalHead["kind"]) => string,
   detail?: {
     plan: { list: AgendaList; placement: AgendaPlacement } | null;

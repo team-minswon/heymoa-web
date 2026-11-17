@@ -2,17 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { createHelpDemoState, helpDemoPack } from "@/lib/mocks/help-demo";
 
-/**
- * 영어 프리셋 (APP-1511). 영어 가이드의 캡처는 한국어 캡처와 같은 장면을 같은 자리에서 찍는다 —
- * 그래서 ID·개수·발화 시각·화자가 한국어와 같아야 하고, 화면에 나가는 글자에 한글이 없어야 한다.
- */
 const NOW = Date.parse("2026-04-30T05:00:00Z");
 const HANGUL = /[가-힣ㄱ-ㅎㅏ-ㅣ]/;
 
 const ko = createHelpDemoState(NOW, "ko");
 const en = createHelpDemoState(NOW, "en");
 
-/** 값 안의 문자열 중 한글이 든 것. 경로를 붙여 어디인지 보인다 */
 function hangulStrings(value: unknown, at = "$"): string[] {
   if (typeof value === "string") return HANGUL.test(value) ? [`${at}: ${value}`] : [];
   if (value instanceof Map) return [...value].flatMap(([key, v]) => hangulStrings(v, `${at}[${String(key)}]`));

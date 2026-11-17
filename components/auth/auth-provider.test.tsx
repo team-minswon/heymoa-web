@@ -14,8 +14,6 @@ const authApi = vi.hoisted(() => ({
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
-// jsdom은 실제 이동을 구현하지 않아 location.replace가 "Not implemented"로 터진다.
-// href는 document.URL로 위임해 history.replaceState가 반영되게 둔다.
 const hardNavigate = vi.fn();
 Object.defineProperty(window, "location", {
   configurable: true,
@@ -57,16 +55,12 @@ describe("AuthProvider", () => {
   beforeEach(() => {
     authApi.getMe.mockResolvedValue(user);
     authApi.logout.mockReset();
-    // 만료 처리가 logout을 best-effort로 부르므로 기본 구현이 promise여야 한다.
     authApi.logout.mockResolvedValue(undefined);
     toast.error.mockReset();
-    // jsdom은 실제 이동을 구현하지 않는다. 로그아웃도 만료도 하드 내비게이션이라 여기서 잡는다.
     hardNavigate.mockReset();
     window.history.replaceState(null, "", "/");
   });
 
-  // AuthProvider가 window에 리스너를 건다. 언마운트하지 않으면 앞선 테스트의 provider가
-  // 남아 다음 테스트의 이벤트에도 반응해 호출 횟수가 부풀려진다.
   afterEach(() => {
     cleanup();
   });
@@ -103,11 +97,7 @@ describe("AuthProvider", () => {
     });
 
     expect(result.current.isLoggingOut).toBe(true);
-    // 세션 게이트가 열린 채 소프트 이동하면 홈에서도 모든 요청이 거절된다 — 만료 처리와
-    // 같은 이유로 하드 내비게이션이다.
     expect(hardNavigate).toHaveBeenCalledWith("/");
-    // **캐시를 비우지 않는다.** 문서를 통째로 버리는 참이라 비울 이유가 없고, 비우면 아직
-    // 떠 있는 화면이 다시 조회해 "노트를 불러오지 못했습니다"가 뜬 뒤에 로그아웃된다.
     expect(queryClient.getQueryData(["workspace", "workspace-1"])).toEqual({
       name: "회의 워크스페이스",
     });
@@ -214,8 +204,6 @@ describe("AuthProvider", () => {
     });
 
     await waitFor(() => expect(beforeLogout).toHaveBeenCalledOnce());
-    // APP-205부터 만료 처리가 logout을 부른다. HttpOnly 쿠키는 JS가 못 지우므로
-    // 서버가 만료 Set-Cookie를 내려주는 것이 유일한 정리 수단이다.
     expect(authApi.logout).toHaveBeenCalledTimes(1);
   });
 
@@ -324,8 +312,6 @@ describe("AuthProvider", () => {
     expect(hardNavigate).not.toHaveBeenCalled();
   });
 
-  // 세션 게이트는 모듈 수준 상태이고 새 문서로만 풀린다. 소프트 이동으로 보내면 홈에
-  // 도착해도 게이트가 열린 채라 이후 모든 요청이 거절된다 — 앱이 죽은 채 남았다(APP-223).
   it("만료 이벤트를 받으면 로그아웃하고 홈으로 하드 이동한다", async () => {
     authApi.logout.mockResolvedValue(undefined);
     renderWithProvider();
@@ -350,8 +336,6 @@ describe("AuthProvider", () => {
     });
   });
 
-  // 토스트는 하드 이동과 함께 사라지므로 사유를 쿼리로 넘긴다. 도착한 문서에서 한 번
-  // 보이고 주소를 정리한다 — 안 지우면 새로고침·뒤로가기마다 다시 뜬다.
   it("만료로 도착하면 사유를 한 번 보이고 쿼리를 지운다", async () => {
     window.history.replaceState(null, "", "/?session=expired");
 

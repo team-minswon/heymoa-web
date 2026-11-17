@@ -17,7 +17,6 @@ afterEach(() => localStorage.clear());
 describe("firstChecklistStatus", () => {
   it("기록한 회의가 없는 워크스페이스의 처음 보는 사람에게만 연다", () => {
     expect(firstChecklistStatus({ hasRecording: false })).toBe("open");
-    // 이 기능 전부터 쓰던 사람 · 굴러가는 워크스페이스에 초대된 사람은 닫아 둔다(다시 보기로 연다)
     expect(firstChecklistStatus({ hasRecording: true })).toBe("dismissed");
   });
 });
@@ -29,13 +28,11 @@ describe("isChecklistVisible", () => {
       false
     );
     expect(isChecklistVisible(null, false)).toBe(false);
-    // 판단 전 실패를 숨기면 판단이 영영 안 나서 시작 안내가 조용히 사라진다
     expect(isChecklistVisible(null, true)).toBe(true);
   });
 });
 
 describe("requiredProgress", () => {
-  // 혼자 쓰는 사람도 끝까지 가도록 초대는 선택이다 — 세지 않는다
   it("선택 단계(초대)는 세지 않는다", () => {
     expect(requiredProgress(new Set(["record", "invite"]))).toEqual({
       done: 1,
@@ -59,7 +56,6 @@ describe("hasRecordedMeeting", () => {
     expect(
       hasRecordedMeeting({ notes: [notStarted, started], hasMore: false })
     ).toBe(true);
-    // 녹음 안 한 노트가 30개 넘게 쌓인 기존 워크스페이스
     expect(hasRecordedMeeting({ notes: [notStarted], hasMore: true })).toBe(
       true
     );
@@ -91,7 +87,6 @@ describe("저장", () => {
     });
   });
 
-  // 저장 공간이 꽉 차 쓰기만 실패해도 이번 문서에서는 닫기·완료가 먹어야 한다 (codex 리뷰)
   it("저장하지 못한 값을 저장소의 옛 값보다 먼저 읽는다", () => {
     writeChecklist("u2", { status: "open", done: [] });
     const set = vi

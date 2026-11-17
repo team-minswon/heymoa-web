@@ -1,8 +1,6 @@
 export const DESKTOP_RELEASES_URL =
   "https://github.com/team-minswon/homebrew-tap/releases";
 
-// 설치 파일 링크는 이 목록을 공유합니다. 앱 버전은 공개 릴리스의 latest가 결정합니다.
-// 버튼 글은 언어마다 달라 언어 파일(`download.platforms.<os>.installer`)에 있습니다.
 export const DESKTOP_INSTALLERS = {
   mac: [
     {

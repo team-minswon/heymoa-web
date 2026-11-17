@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { cn } from "@/lib/utils";
 
-/** 섹션 제목 옆에서 그 항목의 링크를 복사한다. 제목에 마우스를 올리거나 키보드로 오면 나타난다. */
 export function AnchorCopy({ id, title }: { id: string; title: string }) {
   const t = useTranslations("help.anchor");
   const [copied, setCopied] = useState(false);
@@ -30,9 +29,7 @@ export function AnchorCopy({ id, title }: { id: string; title: string }) {
         try {
           await navigator.clipboard.writeText(url.toString());
           setCopied(true);
-        } catch {
-          // 복사 권한이 없으면 주소창에 남은 `#id` 를 직접 복사하게 둔다.
-        }
+        } catch {}
       }}
       className={cn(
         "grid size-8 shrink-0 place-items-center rounded-[8px] text-[var(--tv-muted)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)] motion-reduce:transition-none",

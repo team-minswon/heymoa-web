@@ -40,20 +40,11 @@ import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
-/**
- * 문의·피드백. 서버가 받아 저장하고(`POST /v1/feedbacks`) 운영자에게 Slack 으로 알린다.
- * 답변은 운영자가 DB 에 직접 넣고, 「내 문의」 탭이 그것을 보여 준다.
- *
- * **회의 내용은 자동으로 싣지 않는다.** 현재 화면 경로(쿼리 제외)와 환경 요약만 본문 뒤에 붙는다.
- */
-// 본문 뒤에 붙는 화면·환경 꼬리(최대 FOOTER_MAX)까지 합쳐 서버 한도(1500)를 넘지 않게 사용자 몫을 줄여 둔다.
 export const FEEDBACK_MAX = 1200;
-/** `/w/{id}?inquiry=<feedbackId>` — 「내 문의」를 그 항목이 보이게 연다(문의 답변 알림·메일, APP-1399). */
 export const INQUIRY_PARAM = "inquiry";
 const FOOTER_MAX = 250;
 
 type Kind = CreateFeedbackRequestKind;
-/** 결제 화면에서 열 때 같이 보내는 번호. 결제 번호가 없는 카드 등록 결과는 등록 번호를 싣는다. */
 export type FeedbackReference = { type: "payment" | "setup"; id: string };
 
 const KINDS = [
@@ -68,11 +59,6 @@ const KIND_KEY = Object.fromEntries(
   KINDS.map(({ value, key }) => [value, key])
 ) as Record<Kind, (typeof KINDS)[number]["key"]>;
 
-/**
- * 보내는 글 전체. 본문 뒤에 어디서 썼는지만 덧붙인다 — 경로에 쿼리는 안 싣는다.
- * 꼬리는 운영자가 읽고 `userPart`가 잘라 내는 형식이라 화면 언어와 무관하게 한국어로 둔다.
- * 결제 화면에서 열었으면 결제(또는 등록) 번호 줄을 환경 앞에 둔다 — 긴 환경 문자열이 잘려도 번호는 남는다.
- */
 export function composeFeedback(
   message: string,
   reference?: FeedbackReference
@@ -89,12 +75,6 @@ export function composeFeedback(
   return `${message.trim()}${footer}`;
 }
 
-/**
- * 새 답변 수. 읽어서 0 이 되면 마지막 숫자를 남긴 채 150ms 동안 흐려지며 사라진다 — 숫자가 「0」으로 바뀌거나 자리가
- * 툭 빠지지 않게. 한 번도 숫자가 없었으면 아무것도 그리지 않는다. 사이드바와 「내 문의」 탭이 같이 쓴다.
- * 맨 숫자는 "새로 볼 것"으로 안 읽혀서 채운 배지로 그린다 — 한 자리는 원, 두 자리부터 알약. 채움은 primary 하나라
- * 선택된 항목(옅은 회색 배경) 위에서도 대비가 그대로다.
- */
 export function UnseenCount({
   count,
   className,
@@ -102,7 +82,6 @@ export function UnseenCount({
 }: {
   count: number;
   className?: string;
-  /** 화면 읽기 프로그램에 읽히는 말 */
   label?: (count: number) => string;
 }) {
   const t = useTranslations("workspace.feedback");
@@ -124,13 +103,11 @@ export function UnseenCount({
         className
       )}
     >
-      {/* 99를 넘으면 99+ — 사이드바 한 칸에 숫자가 길어지지 않게(알림). */}
       {shown > 99 ? "99+" : shown}
     </span>
   );
 }
 
-/** 아이콘 · 이름 · 한 줄 설명을 단 2열 카드 중 하나를 고른다. 회의 종료 뒤 의견 창도 같은 모양을 쓴다. */
 export function ChoiceCards<T extends string>({
   label,
   items,
@@ -197,9 +174,7 @@ export function FeedbackDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 「내 문의」 탭에서 보여 줄 문의. 목록에 없으면 탭만 연다 */
   focusId?: string | null;
-  /** 있으면 「결제·환불」을 골라 두고 이 번호를 본문 꼬리에 싣는다 */
   reference?: FeedbackReference;
 }) {
   const t = useTranslations("workspace.feedback");
@@ -225,23 +200,19 @@ export function FeedbackDialog({
     label: t(`kinds.${key}.label`),
     hint: t(`kinds.${key}.hint`),
   }));
-  // 문의를 가리키며 열리면 「내 문의」 탭부터 보인다.
   const [focused, setFocused] = useState<string | null>(null);
   if (open && focusId && focusId !== focused) {
     setFocused(focusId);
     setTab("mine");
   }
   if (!open && focused) setFocused(null);
-  // 방금 달린 답변이 캐시(60초)에 아직 없을 수 있다.
   useEffect(() => {
     if (open && focusId) void refetch();
   }, [open, focusId, refetch]);
 
-  // 내 문의를 펼쳐 본 순간 새 답변을 읽은 것으로 친다.
   useEffect(() => {
     if (open && tab === "mine") markSeen();
   }, [open, tab, markSeen]);
-  // 실패한 읽음 처리는 창을 다시 열 때 한 번 더 시도한다.
   useEffect(() => {
     if (!open) resetMarkSeen();
   }, [open, resetMarkSeen]);
@@ -291,12 +262,6 @@ export function FeedbackDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/*
-            두 패널을 한 칸에 겹쳐 둔다 — 창 높이는 더 큰 「보내기」 쪽을 따라서, 탭을 바꿔도 안 변하고 문구가
-            길어져도 푸터가 패널 밖으로 넘치지 않는다(APP-1292. 예전엔 둘 다 380px 고정이라 푸터가 32px 넘쳤다).
-            「보내기」는 숨겨도(inert) 높이를 재도록 `keepMounted` 에 `hidden={false}` 로 남기고 `invisible` 로만 가린다.
-            「내 문의」는 목록을 칸 안에 절대 배치해 자기 높이를 칸에 보태지 않는다.
-          */}
           <div className="mt-4 grid">
             <TabsContent
               value="send"
@@ -452,7 +417,6 @@ function MyFeedbacks({
   );
 }
 
-/** 보낼 때 뒤에 붙인 화면·환경 꼬리는 보낸 사람에게 다시 보이지 않는다. */
 function userPart(message: string) {
   const at = message.indexOf("\n\n---\n화면: ");
   return at === -1 ? message : message.slice(0, at);
@@ -461,10 +425,6 @@ function userPart(message: string) {
 const URL_PATTERN = /https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/g;
 const URL_TRAILING = /[.,;:!?)\]}'"]+$/;
 
-/**
- * 답변 속 http·https 주소만 링크로 바꾼다(APP-1404, 문의 답변 메일과 같은 규칙). 끝 문장부호는 링크에서 빼고, 나머지는 글자
- * 그대로라 React 가 이스케이프한다. 괄호 짝은 보지 않는다 — `)` 로 끝나는 주소는 `)` 가 빠진다.
- */
 export function linkified(text: string): ReactNode[] {
   const parts: ReactNode[] = [];
   let at = 0;

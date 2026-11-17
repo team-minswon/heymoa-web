@@ -19,15 +19,7 @@ import { PROBLEM_LABELS } from "@/components/help/md/labels";
 import { FaqItem, MdBlock } from "@/components/help/md/render";
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "@/lib/i18n/locales";
 
-/**
- * 가이드 본문은 `content/help/<그룹>/<slug>.md` 에 있다(문법: `content/help/README.md`). 영어판은 `content/help/en/<그룹>/<slug>.md` 다.
- * 여기서 한 번 읽어 `HelpTopic` 으로 만든다 — 라우트 · 검색 색인 · sitemap · JSON-LD 는 모두 이 결과를 쓴다.
- *
- * 파일을 읽는 곳은 여기 하나다(빌드 때 한 번, 정적 프리렌더). 파일은 `## 제목 {#섹션-id}` 로 섹션을 나눈다 —
- * 섹션 id 는 바깥 링크가 `#id` 로 오는 주소라서 바꾸지 않는다.
- */
 const CONTENT_ROOT = path.join(process.cwd(), "content", "help");
-/** 한국어는 바로 아래, 다른 언어는 언어 이름의 하위 폴더다. */
 const rootOf = (locale: Locale) =>
   locale === DEFAULT_LOCALE ? CONTENT_ROOT : path.join(CONTENT_ROOT, locale);
 
@@ -43,7 +35,6 @@ type Mdast = {
 
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkDirective);
 
-/** mdast 의 글자(렌더된 DOM 의 textContent 와 같게 이어 붙인다). */
 const plain = (node: Mdast): string =>
   node.value ?? (node.children ?? []).map(plain).join("");
 
@@ -92,7 +83,6 @@ const slice = (body: string, nodes: Mdast[]) =>
     nodes[nodes.length - 1].position!.end.offset
   );
 
-/** `### 질문` + 그 아래 답 덩어리들 */
 function faqGroups(nodes: Mdast[]) {
   const groups: { question: Mdast; answer: Mdast[] }[] = [];
   for (const node of nodes) {
@@ -105,7 +95,6 @@ function faqGroups(nodes: Mdast[]) {
   return groups;
 }
 
-/** `:::problem` 에서 증상(질문)과 해결 방법(답)을 뽑는다 — 본문 글 그대로(렌더된 글과 같게 이어 붙인다). */
 function problemQa(node: Mdast) {
   const segs: { label: string; text: string }[] = [];
   const add = (text: string) => {
@@ -232,14 +221,12 @@ function topicOf(
 
 const INLINE = new Set(["text", "strong", "emphasis", "link", "inlineCode", "delete", "textDirective", "break"]);
 
-/** 검색 색인이 읽는 글: 블록 사이는 공백으로 띄운다. */
 function spaced(node: Mdast): string {
   if (node.value !== undefined) return node.value;
   const kids = node.children ?? [];
   return kids.map(spaced).join(kids.some((k) => !INLINE.has(k.type)) ? " " : "");
 }
 
-/** 단계 한 줄의 글: 굵은 제목과 설명 사이에 공백을 둔다(검색 · HowTo 가 읽는다). */
 function plainSpaced(node: Mdast): string {
   if (node.value !== undefined) return node.value;
   const parts = (node.children ?? []).map(plainSpaced);
@@ -256,7 +243,6 @@ export function loadHelpTopics(locale: Locale = DEFAULT_LOCALE): readonly HelpTo
   const root = rootOf(locale);
   const found: { topic: HelpTopic; order: number }[] = [];
   for (const group of fs.readdirSync(root, { withFileTypes: true })) {
-    // 한국어 폴더 안의 언어 폴더(`en/`)는 그 언어판이다
     if (!group.isDirectory() || (LOCALES as readonly string[]).includes(group.name)) continue;
     for (const file of fs.readdirSync(path.join(root, group.name))) {
       if (file.endsWith(".md")) {

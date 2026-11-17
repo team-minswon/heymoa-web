@@ -103,7 +103,6 @@ describe("confirmSummaryOf", () => {
           replacement("n1", "END"),
           replacement("n2", "KEEP"),
           replacement("n3"),
-          // 다른 확정이 먼저 끝낸 결정은 끝내기로 저장돼 있어도 이번 확정이 끝내지 않는다.
           {
             ...replacement("n5", "END"),
             target: {
@@ -176,7 +175,6 @@ describe("confirmSummaryOf", () => {
     expect(confirmBlockReason({ ...base, tasks: "failed" })).toBe(
       "tasksFailed"
     );
-    // 변경 제안이 없으면 할 일 조회를 기다릴 까닭이 없다.
     expect(
       confirmBlockReason({ ...base, hasTaskChanges: false, tasks: "failed" })
     ).toBeNull();
@@ -431,12 +429,10 @@ describe("topicDigests", () => {
     expect(first.tasks.map((row) => row.itemId)).toEqual(["t"]);
     expect(first.open.map((row) => row.itemId)).toEqual(["q"]);
     expect(first.count).toBe(2);
-    // 옛 응답은 접힌 한 줄 요약과 펼친 설명 전문을 함께 보존한다.
     expect(first).toMatchObject({
       gist: "한 줄 요약",
       text: "첫 문장. 둘째 문장.",
       startMs: 5_000,
-      // 범위 끝은 마지막 근거 발화의 **끝**이다 — 시작(9초)으로 적으면 그 발화가 범위 밖에 놓인다
       endMs: 13_000,
     });
     expect(digests.find((row) => row.ordinal === 2)?.gist).toBeNull();
@@ -540,7 +536,6 @@ describe("topicDigests", () => {
           members: [],
           openItemIds: [],
         },
-        // 새 안건의 합친 문장에는 결론이 섞여 있다 — 설명이 비어도 그것을 서술로 쓰지 않는다
         {
           ordinal: 3,
           title: "새",

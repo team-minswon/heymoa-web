@@ -41,12 +41,9 @@ type Dependencies = {
   schedule(callback: () => void, ms: number): () => void;
 };
 
-/** Native state follows validated web summaries; it never marks a stop request as completion. */
 export class RecordingLifecycle {
   private summary: RecordingSummary | null = null;
   private summaryAt = 0;
-  // Remote media permissions are denied: before the first native request or
-  // unsafe web report, an unavailable document cannot own captured audio.
   private activityObserved = false;
   private captureActive = false;
   private waiting = false;
@@ -94,7 +91,6 @@ export class RecordingLifecycle {
     );
   }
   resumeAfterUpdateFailure(): void {
-    // A safe normal quit can be deferred by the updater and then fail before the app exits.
     this.disposed = false;
   }
   safeForUpdate(): boolean {
@@ -171,12 +167,9 @@ export class RecordingLifecycle {
           if (!this.disposed && this.waiting) this.deps.notifyWaiting();
         }, STOP_WAIT_NOTICE_MS);
         this.deps.changed();
-        // Starting has no safely stoppable server attachment yet. Its first
-        // recording summary will deliver stop without cancelling acquisition.
         if (this.isRecording()) this.deps.action("stop");
       }
     } catch {
-      // Dialog or action delivery failure cannot authorize audio loss.
       this.clearWait();
       if (!this.disposed) this.deps.changed();
     } finally {

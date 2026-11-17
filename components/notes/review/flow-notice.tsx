@@ -20,7 +20,6 @@ type WaitingStatus = Extract<
 
 const STEPS = ["organize", "check", "review", "confirm"] as const;
 
-/** 흐름 상태 → 지금 선 단계와 그 단계의 모양. */
 const CURRENT: Record<
   WaitingStatus,
   { index: number; state: "running" | "waiting" | "failed" }
@@ -31,20 +30,10 @@ const CURRENT: Record<
   ANALYSIS_FAILED: { index: 0, state: "failed" },
 };
 
-/**
- * 분석 실패로 보이지만 다시 요청해도 서버가 받지 않는 경우(`retryable` 거짓). 종료 뒤 상한이 지나도
- * 녹음 반영이 끝나지 않은 회의다(APP-1475). 실패 버튼을 주면 누를 때마다 409 만 돌아온다. 반영이 끝나면
- * 서버가 요청하지만 끝난다는 보장은 없어 「진행 중」이나 「자동으로 시작」이라고 말하지 않는다.
- */
-
 export function isWaitingStatus(status: FlowStatus): status is WaitingStatus {
   return status in CURRENT;
 }
 
-/**
- * 검토본이 서기 전의 요약 탭. 끝나는 시각을 모르는 서버 작업이라 skeleton 이 아니라
- * 진행 표시와 왜 기다리는지 한 줄로 그린다. 재요청은 노트 멤버 누구나 할 수 있다.
- */
 export function FlowNotice({
   noteId,
   status,
@@ -55,9 +44,7 @@ export function FlowNotice({
 }: {
   noteId: string;
   status: WaitingStatus;
-  /** 지금 다시 요청하면 서버가 받는지. 버튼은 상태가 아니라 이 값을 따른다(APP-1475). */
   retryable: boolean;
-  /** 이번 화면에서 서버의 최신 상태를 확인한 뒤에만 수동 요청을 제공한다. */
   verified?: boolean;
   compact?: boolean;
   onOpenTranscript: () => void;
@@ -84,11 +71,6 @@ export function FlowNotice({
           request.mutate(
             { noteId },
             {
-              /**
-               * **서버가 준 상태를 쓴다** (APP-685). 전에는 `"ANALYZING"` 을 추측해 캐시에
-               * 써 넣고 폴링이 따라오기를 기다렸다 — 추측이 틀리면 버튼이 잠깐 거짓을
-               * 말한다. 202 응답이 **요청을 보낸 뒤의** 흐름 상태를 싣는다.
-               */
               onSuccess: (response) => {
                 if (response.status === 202 && response.data.success) {
                   moveFlowStatus(

@@ -38,14 +38,6 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
   useDeleteNote: () => ({ mutateAsync: deleteNote, isPending: false }),
 }));
 
-/**
- * **queryClient 를 손으로 흉내 내지 않는다.** 예전에는 `setQueryData`·`removeQueries` 를
- * `vi.fn()` 으로 갈아끼우고 「무엇을 어떤 인자로 불렀나」를 단언했다. 그러면 구현을 그대로
- * 되읽는 거울이 되고, 실제로 목록 키가 둘로 늘었을 때 **초록인 채 지나갔다.**
- *
- * 진짜 캐시를 세우고 **그 안에 무엇이 남았는지**를 본다.
- */
-
 const stream = vi.hoisted(() => ({ healthy: false }));
 vi.mock("@/lib/events/health", () => ({
   useEventStreamHealthy: () => stream.healthy,
@@ -75,7 +67,6 @@ async function clickDelete() {
   fireEvent.click(button);
 }
 
-/** 두 목록에 같은 두 행을 세운다. 지운 뒤 **양쪽 다** 한 행만 남아야 한다. */
 function listPayload() {
   return {
     status: 200,
@@ -184,7 +175,6 @@ describe("NoteDeleteDialog", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
-    // 회의 제목(사용자 데이터)만 한국어로 남는다.
     const dialog = screen.getByRole("alertdialog");
     expect(
       dialog.textContent?.replace("주간 제품 회의", "")
@@ -295,7 +285,6 @@ describe("NoteDeleteDialog", () => {
   });
 
   it("그 노트를 키에 담은 캐시를 전부 버린다", async () => {
-    // 단건만 지우면 전사·요약·공유 채팅이 각자 키로 살아남아 뒤로가기에서 되살아난다.
     deleteNote.mockResolvedValue({ status: 204 });
     const client = renderDialog();
 
@@ -304,14 +293,12 @@ describe("NoteDeleteDialog", () => {
     await waitFor(() =>
       expect(client.getQueryData(["/v1/notes/01K0000000002"])).toBeUndefined()
     );
-    // noteId 가 객체 안에 있는 키도 같이 사라져야 한다 — 최상위 문자열 검사로는 안 걸린다.
     expect(
       client.getQueryData([
         "/v1/notes/01K0000000002/transcript",
         { cursor: "01K0000000050" },
       ])
     ).toBeUndefined();
-    // 남의 노트는 그대로다.
     expect(client.getQueryData(["/v1/notes/01K0000000009"])).toBeDefined();
     expect(
       client.getQueryData(["/v1/projects/01K0000000001/meeting-links"])
@@ -322,9 +309,6 @@ describe("NoteDeleteDialog", () => {
   });
 
   it("★ 목록 둘 다에서 행을 먼저 뺀다", async () => {
-    // `invalidateQueries` 는 재조회가 실패해도 resolve 하고 옛 데이터를 남긴다. 그래서
-    // 재검증 전에 행을 직접 뺀다 — **그리고 목록은 둘이다** (APP-685). 프로젝트 것만 빼면
-    // 「모든 노트」 화면에 지운 회의가 그대로 서 있다.
     deleteNote.mockResolvedValue({ status: 204 });
     const client = renderDialog();
 
@@ -337,7 +321,6 @@ describe("NoteDeleteDialog", () => {
   });
 
   it("후처리가 끝날 때까지 버튼을 다시 열지 않는다", async () => {
-    // isPending은 DELETE가 끝나면 바로 풀린다. 그때 다시 누르면 지운 노트로 또 나간다.
     deleteNote.mockResolvedValue({ status: 204 });
     renderDialog();
     const button = screen.getByRole("button", { name: "삭제" });
@@ -350,7 +333,6 @@ describe("NoteDeleteDialog", () => {
   });
 
   it("실패는 삼키지 않고 거절을 소비한다", async () => {
-    // catch가 없으면 unhandled rejection이 된다. 토스트는 MutationCache가 띄운다.
     deleteNote.mockRejectedValue(new Error("Network request failed"));
     const onDeleted = vi.fn();
     renderDialog(onDeleted);
@@ -364,7 +346,6 @@ describe("NoteDeleteDialog", () => {
   });
 
   it("204가 아니면 성공으로 다루지 않는다", async () => {
-    // 실패 토스트는 MutationCache가 전역으로 띄운다 — 여기서 또 부르면 두 개가 겹친다.
     deleteNote.mockResolvedValue({ status: 409 });
     const onDeleted = vi.fn();
     renderDialog(onDeleted);
@@ -378,10 +359,6 @@ describe("NoteDeleteDialog", () => {
   });
 });
 
-/**
- * 분석 흐름의 힌트 전환(PRO-67 I03). 분석 중(3초)인 흐름도 이벤트 스트림이 건강하면 폴링하지 않고(안전망 60초), 스트림이
- * 끊기면 지금 간격으로 돌아온다. 힌트가 오면 provider 가 같은 키를 무효화해 다시 읽는다(lib/events 표가 검증한다).
- */
 describe("분석 흐름 폴링과 이벤트 스트림", () => {
   async function flowReadsWithin(ms: number) {
     let reads = 0;

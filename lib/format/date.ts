@@ -17,17 +17,7 @@ export function getAppDateKey(value: string | Date) {
   return `${byType.year}-${byType.month}-${byType.day}`;
 }
 
-/**
- * **보는 사람의 시간대·로케일로** 포맷한다. 아래 `formatAppDate`와 다른 물건이다 —
- * 그쪽은 `APP_TIME_ZONE` 고정이고, 이유는 서버 HTML과 첫 클라이언트 렌더가 같아야 하기
- * 때문이다(hydration).
- *
- * **서버를 한 번도 안 지나는 표면만 이걸 쓴다.** 지금 유일한 손님은 개인 챗봇 패널이고,
- * 그 패널은 한 번 열기 전에는 마운트조차 되지 않아 SSR을 지나지 않는다. 서버에서 렌더되는
- * 자리에 쓰면 hydration이 갈린다.
- *
- * `locale`은 검사에서만 넘긴다 — 안 넘기면 플랫폼이 보는 사람의 로케일을 고른다.
- */
+// 보는 사람의 시간대·로케일로 포맷합니다. SSR 을 지나는 자리에 쓰면 hydration 이 갈리므로 서버를 안 지나는 표면에서만 씁니다.
 export function formatViewerDate(
   value: string | Date,
   options: Intl.DateTimeFormatOptions,
@@ -38,10 +28,6 @@ export function formatViewerDate(
   return new Intl.DateTimeFormat(locale, options).format(date);
 }
 
-/**
- * 보는 사람의 시간대 기준 `YYYY-MM-DD`. **날짜가 같은지만 보는 값**이라 로케일은 고정한다 —
- * `en-CA`가 ISO와 같은 순서를 내므로 문자열 비교가 곧 날짜 비교다.
- */
 export function viewerDateKey(value: string | Date, timeZone?: string) {
   const date = typeof value === "string" ? new Date(value) : value;
 
@@ -53,10 +39,7 @@ export function viewerDateKey(value: string | Date, timeZone?: string) {
   }).format(date);
 }
 
-/**
- * ICU 78(Node 22·24)은 ko 의 오전·오후를 「AM」「PM」으로 내고 브라우저는 「오전」「오후」를
- * 낸다. 그대로 두면 서버 HTML 과 첫 클라이언트 렌더가 갈린다(React #418).
- */
+// ICU 78(Node 22·24)은 ko 의 오전·오후를 AM·PM 으로 내고 브라우저는 오전·오후를 내서 hydration 이 갈립니다(React #418).
 const KO_DAY_PERIOD: Record<string, string> = { AM: "오전", PM: "오후" };
 
 export function formatAppDate(
@@ -79,12 +62,11 @@ export function formatAppDate(
           : part.value
       )
       .join("")
-      // Node 의 ICU 는 en 의 「9:00 AM」 사이에 좁은 공백(U+202F)을 넣고 브라우저는 보통 공백을 넣는다. 같은 이유로 맞춘다
+      // Node \uc758 ICU \ub294 en \uc758 \u300c9:00 AM\u300d \uc0ac\uc774\uc5d0 \uc881\uc740 \uacf5\ubc31(U+202F)\uc744 \ub123\uace0 \ube0c\ub77c\uc6b0\uc800\ub294 \ubcf4\ud1b5 \uacf5\ubc31\uc744 \ub123\uc2b5\ub2c8\ub2e4. \uac19\uc740 \uc774\uc720\ub85c \ub9de\ucda5\ub2c8\ub2e4
       .replace(/\u202f/g, " ")
   );
 }
 
-/** 앱 시간대의 24시간 시:분 — 「09:05」. 회의록 일시 · 일시정지 줄이 같은 벽시계를 쓴다. */
 export function formatAppClock(value: string | Date) {
   return formatAppDate(value, {
     hour: "2-digit",
@@ -93,7 +75,6 @@ export function formatAppClock(value: string | Date) {
   });
 }
 
-/** `2026-09-19` → 「9월 19일 (토)」. 날짜만 있는 값이라 서울 자정으로 읽는다. */
 export function formatDueDate(value: string, locale?: string) {
   return formatAppDate(
     `${value}T00:00:00+09:00`,
@@ -102,10 +83,6 @@ export function formatDueDate(value: string, locale?: string) {
   );
 }
 
-/**
- * 약속하는 시각을 메일과 같은 꼴로 — 「10월 23일(금) 오후 4시 20분」, 정각이면 「오후 4시」(PRO-67 자동 종료 예고).
- * 영어는 「Fri, Oct 23 at 4:20 PM」. 숫자·요일·오전오후는 `Intl` 이 그 언어로 내고 어순은 `dates.promiseTime` 이 정한다.
- */
 export function formatPromiseTime(
   value: string | Date,
   locale: string,

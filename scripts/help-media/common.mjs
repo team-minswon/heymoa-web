@@ -1,14 +1,3 @@
-/**
- * 가이드 이미지·영상 파이프라인의 공통부 (APP-1236). 시험이 아니다 — CI 에 넣지 않는다.
- *
- * 쓰는 법: 목 모드 dev 서버를 띄운 채 `pnpm help:shots` · `pnpm help:clips`.
- *   NEXT_PUBLIC_API_MOCKING=enabled pnpm dev --port 4200
- *   HELP_BASE=http://localhost:4200 pnpm help:shots
- * 화면은 **가이드 전용 목 프리셋**(`lib/mocks/help-demo`)으로만 찍는다 — 브라우저 localStorage 의
- * `heymoa:helpDemo=1` 이 켠다(아래 `openDemo`). 운영 서버는 건드리지 않는다.
- *
- * 이미지는 `sharp`(Next 가 이미 의존)로 줄여 WebP 로, 영상은 `ffmpeg` 로 WebM(VP9) + MP4(H.264) + poster WebP 로 만든다.
- */
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import {
@@ -28,9 +17,7 @@ export const ROOT = path.resolve(
   "../.."
 );
 export const BASE = process.env.HELP_BASE ?? "http://localhost:4200";
-// 점검용: HELP_OUT 을 주면 그 폴더에만 쓰고 목록(manifest)은 건드리지 않는다.
 export const DRY = Boolean(process.env.HELP_OUT);
-// 영어(`HELP_LOCALE=en`)는 `public/help/en/` 과 따로 된 목록에 쓴다(APP-1511). 가이드가 언어별로 고르고 없으면 한국어로 대체한다.
 export const OUT =
   process.env.HELP_OUT ?? path.join(ROOT, LOCALE === "en" ? "public/help/en" : "public/help");
 export const MANIFEST = path.join(ROOT, LOCALE === "en" ? "lib/help/media-manifest-en.ts" : "lib/help/media-manifest.ts");
@@ -39,7 +26,6 @@ export const FFMPEG = process.env.FFMPEG ?? "/opt/homebrew/bin/ffmpeg";
 export const FFPROBE = process.env.FFPROBE ?? "/opt/homebrew/bin/ffprobe";
 
 const require = createRequire(import.meta.url);
-// pnpm 은 sharp 를 최상위에 두지 않는다 — Next 가 의존하는 것을 Next 기준으로 푼다.
 export const sharp = createRequire(require.resolve("next/package.json"))(
   "sharp"
 );
@@ -49,13 +35,11 @@ export const { chromium } = await import(
 
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** 이미지·영상의 크기를 모아 `lib/help/media-manifest.ts` 로 쓴다(컴포넌트가 width·height 를 여기서 읽는다). */
 const loadManifest = () => {
   if (!existsSync(MANIFEST)) return {};
   const match = readFileSync(MANIFEST, "utf8").match(
     /= (\{[\s\S]*\}) as const/
   );
-  // prettier 가 따옴표를 바꿔 놓을 수 있어 JSON 이 아니라 객체 리터럴로 읽는다(우리가 쓴 파일이다)
   return match ? new Function(`return ${match[1]}`)() : {};
 };
 export function record(key, entry) {
@@ -71,7 +55,6 @@ export function record(key, entry) {
   );
 }
 
-/** 가이드용 목 프리셋이 켜진 컨텍스트. */
 export async function openDemo(
   browser,
   { width = 1280, height = 800, scale = 2, video } = {}
@@ -90,7 +73,6 @@ export async function openDemo(
   await context.addInitScript((enabled) => {
     if (enabled) localStorage.setItem("heymoa:helpDemo", "1");
   }, demo);
-  // 개발 서버의 Next 표시(왼쪽 아래 N)를 지운다 — 가이드 화면에 개발 도구가 보이면 안 된다.
   await context.addInitScript(() => {
     const hide = () => {
       const style = document.createElement("style");
@@ -101,7 +83,6 @@ export async function openDemo(
       addEventListener("DOMContentLoaded", hide);
     else hide();
   });
-  // 서버가 그리는 첫 화면의 사용자 이름도 프리셋 값으로 맞춘다(`lib/auth/server.ts` 의 목 분기가 이 쿠키를 읽는다)
   if (demo)
     await context.addCookies([
       { name: "heymoa-help-demo", value: "1", url: BASE },
@@ -111,7 +92,6 @@ export async function openDemo(
   return { context, page };
 }
 
-/** 강조 링: 보라 토큰의 얇은 링을 요소 둘레에 겹쳐 그린다. 레이아웃을 바꾸지 않는다(position:fixed). */
 export async function ring(page, locator, { pad = 4 } = {}) {
   const box = await locator.boundingBox();
   if (!box) throw new Error("ring: 요소를 찾지 못했습니다");
@@ -141,10 +121,6 @@ export const clearRings = (page) =>
     document.querySelectorAll("[data-help-ring]").forEach((el) => el.remove())
   );
 
-/**
- * 화면을 찍어 WebP 로 저장한다. `target` 은 Locator 또는 `{x,y,width,height}` 클립. 가로 최대 1200px(2x 로 찍어 줄임),
- * 장당 200KB 안팎을 목표로 품질을 낮춰 가며 맞춘다.
- */
 export async function shoot(
   page,
   target,
@@ -195,10 +171,6 @@ export async function shoot(
 export const run = (cmd, args) =>
   execFileSync(cmd, args, { stdio: ["ignore", "ignore", "pipe"] });
 
-/**
- * 화면 언어 쿠키. 영어면 언어 쿠키와 목 계정 언어를 en 으로 심어 제품 면이 영어로 서고, 프리셋도 영어 회의를 낸다
- * (`lib/mocks/help-demo/locale.ts` 가 `<html lang>` 을 본다). 한국어는 언어 쿠키를 ko 로 고정한다.
- */
 export const languageCookies = (base) => [
   { name: "heymoa-lang", value: LOCALE, url: base },
   ...(LOCALE === "en" ? [{ name: "heymoa-mock-account-lang", value: "en", url: base }] : []),

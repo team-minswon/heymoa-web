@@ -71,7 +71,6 @@ describe("selectTimeline", () => {
     });
     const t1 = head({ kind: "ACTION_ITEM", atMs: 300_000 });
 
-    // 도착 순서와 상관없이 createdSequence 로 선다.
     const { groups } = selectTimeline(stateOf(t1, a2, d1, early, a1), "ALL");
 
     expect(groups.map((g) => g.agenda?.title ?? null)).toEqual([
@@ -82,7 +81,6 @@ describe("selectTimeline", () => {
     expect(
       groups.map((g) => g.items.map((i) => i.proposal.proposalId))
     ).toEqual([[early.proposalId], [d1.proposalId], [t1.proposalId]]);
-    // 안건의 끝은 묶음 근거의 가장 늦은 시각이고, 마지막 안건만 열려 있다.
     expect(groups[1]).toMatchObject({
       startMs: 120_000,
       endMs: 180_000,
@@ -156,7 +154,6 @@ describe("selectTimeline", () => {
     expect(
       opened.groups.map((g) => g.items.map((i) => i.proposal.proposalId))
     ).toEqual([[open.proposalId], [issue.proposalId]]);
-    // 답한 질문은 참고로 센다. 안건은 개수에 안 든다.
     expect(opened.counts).toEqual({
       ALL: 5,
       DECISION: 0,
@@ -167,7 +164,6 @@ describe("selectTimeline", () => {
 
     const decisions = selectTimeline(state, "DECISION");
     expect(decisions.groups).toEqual([]);
-    // 「전체」에서는 아직 비어 있는 안건도 선다.
     expect(
       selectTimeline(stateOf(head({ kind: "AGENDA" })), "ALL").groups
     ).toHaveLength(1);
@@ -191,7 +187,6 @@ describe("toneOf", () => {
       )
     ).toBe("answered");
     expect(toneOf(head({ kind: "ISSUE" }))).toBe("open");
-    // 철회된 질문·이슈는 열려 있지 않다.
     expect(
       toneOf(
         head({ kind: "QUESTION", status: "CLOSED", closeReason: "RETRACTED" })

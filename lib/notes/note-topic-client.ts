@@ -19,14 +19,11 @@ export type NoteTopicClientOptions = {
   onEvent: (event: NoteTopicEvent) => void;
   onCatchUp: () => void;
   onSubscriptionRejected: (rejection: NoteSubscriptionRejected) => void;
-  /** 30초 넘게 못 붙었다(true) · 다시 붙었다(false). */
   onReconnectingChange?: (reconnecting: boolean) => void;
 };
 
 const SAFETY_CATCH_UP_INTERVAL_MS = 60_000;
-/** 녹음 쪽 알림(D-03)과 같은 창이다. 한 화면에서 두 기준을 쓰지 않는다. */
 export const RECONNECT_NOTICE_MS = 30_000;
-/** 티켓 요청을 기다리는 상한. 넘으면 티켓 없이 시도한다 — 안 끝나는 요청이 재연결을 세우면 안 된다. */
 const TICKET_TIMEOUT_MS = 10_000;
 
 export class NoteTopicClient {
@@ -50,10 +47,8 @@ export class NoteTopicClient {
       connectionTimeout: 10_000,
       heartbeatIncoming: 10_000,
       heartbeatOutgoing: 10_000,
-      // 끊긴 소켓의 close 핸드셰이크를 기다리지 않는다. 배포 드레인 뒤 다시 붙기가 그만큼 늦어진다.
       discardWebsocketOnCommFailure: true,
       debug: () => undefined,
-      // 시도마다 새 티켓을 붙인다. 다시 로그인해야 하면(null) 게이트가 열렸고, 지금처럼 쿠키 주소로 두드린다.
       beforeConnect: async () => {
         client.brokerURL =
           (await ticketedSocketUrl(this.options.url, TICKET_TIMEOUT_MS)) ??
@@ -74,7 +69,6 @@ export class NoteTopicClient {
         this.clearSafetyCatchUp();
         this.subscription?.unsubscribe();
         this.feedbackSubscription?.unsubscribe();
-        // 거절된 노트 토픽은 이벤트를 받을 수 없다. 사용자 queue를 먼저 연다.
         this.feedbackSubscription = client.subscribe(
           NOTE_SUBSCRIPTION_FEEDBACK_DESTINATION,
           (message) => {
@@ -85,15 +79,12 @@ export class NoteTopicClient {
               this.subscription = null;
               this.clearSafetyCatchUp();
               this.options.onSubscriptionRejected(rejection);
-            } catch {
-              // 알 수 없는 피드백 한 건이 이후 정상 프레임을 끊지 않게 한다.
-            }
+            } catch {}
           }
         );
         this.subscribeNote(client);
-        // Spring simple broker에는 SUBSCRIBE receipt가 없다. 즉시 snapshot만 읽으면
-        // 구독 등록 전에 끝난 REST 요청과 등록 사이의 이벤트를 놓칠 수 있다.
-        // 연결 중 60초마다 같은 catch-up을 반복해 영구 stale을 막는다.
+        // Spring simple broker 에는 SUBSCRIBE receipt 가 없어 구독 등록 전후의 이벤트를 놓칠 수 있습니다.
+        // 연결 중 60초마다 catch-up 을 되풀이해 영구 stale 을 막습니다.
         this.options.onCatchUp();
         this.startSafetyCatchUp();
       },
@@ -103,7 +94,6 @@ export class NoteTopicClient {
     client.activate();
   }
 
-  /** 못 붙은 첫 순간부터 센다. 시도마다 다시 세면 영영 안 뜬다. */
   private startReconnectNotice() {
     if (this.reconnectNoticeTimer !== null || this.reconnecting) return;
     this.reconnectNoticeTimer = window.setTimeout(() => {
@@ -148,9 +138,7 @@ export class NoteTopicClient {
       (message) => {
         try {
           this.options.onEvent(parseNoteTopicEvent(message.body));
-        } catch {
-          // 서버 계약 밖 프레임 하나가 이후의 정상 이벤트까지 끊지 않게 한다.
-        }
+        } catch {}
       }
     );
   }

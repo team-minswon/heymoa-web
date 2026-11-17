@@ -137,7 +137,6 @@ describe("GoogleLoginButton", () => {
   });
   it("keeps ordinary web login on the OAuth URL builder with returnTo", async () => {
     paths.configured = true;
-    // Stop at the navigation boundary; jsdom cannot perform document navigation.
     paths.buildGoogleOAuthUrl.mockImplementation(() => {
       throw new Error("navigation boundary");
     });

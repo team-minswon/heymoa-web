@@ -15,7 +15,6 @@ const items = [
   { itemId: "q", kind: "QUESTION", content: "남은 일", included: true },
 ] as ReviewItem[];
 
-// 서버 제거를 앞둔 실제 전송 모양입니다. 생성 계약은 호환 단계라 옛 필드를 아직 필수로 선언합니다.
 const summary = {
   noteId: "n",
   status: "SUCCEEDED",

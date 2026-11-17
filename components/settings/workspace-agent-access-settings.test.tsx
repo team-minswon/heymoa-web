@@ -28,10 +28,8 @@ vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: MOCK_USER }),
 }));
 
-/** 목 시드의 첫 워크스페이스. 목 유저가 ADMIN 이고, 목 유저와 다른 멤버의 연결이 하나씩 살아 있다. */
 const WORKSPACE_ID = "01K0000000000";
 
-/** 실제 계약 경로를 그대로 지난다 — 끄기·끊기가 정말 나갔는지, 취소하면 안 나갔는지를 요청으로 본다. */
 const server = setupServer(...restHandlers);
 const requests: string[] = [];
 server.events.on("request:start", async ({ request }) => {
@@ -65,7 +63,6 @@ function renderSettings(
   );
 }
 
-/** 멤버 목록에서 목 유저의 역할만 바꿔 내린다 — 역할 판정이 이 목록을 본다. */
 function asRole(role: "ADMIN" | "MEMBER") {
   server.use(
     http.get(`*/v1/workspaces/${WORKSPACE_ID}/members`, () =>
@@ -95,7 +92,6 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     const region = await list();
     const rows = await within(region).findAllByRole("listitem");
     expect(rows).toHaveLength(2);
-    // 최근에 연결한 것부터
     const [jiwon, mine] = rows;
     expect(within(jiwon).getByText("지원의 Codex")).toBeTruthy();
     expect(within(jiwon).getByText("OAuth")).toBeTruthy();
@@ -104,10 +100,8 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(within(mine).getByText("노트북 Claude Code")).toBeTruthy();
     expect(within(mine).getByText("개인 토큰")).toBeTruthy();
     expect(within(mine).getByText(MOCK_USER.name)).toBeTruthy();
-    // 할 일 변경을 허용한 연결에만 단다(APP-1369)
     expect(within(mine).getByText("할 일 변경 허용")).toBeTruthy();
     expect(within(jiwon).queryByText("할 일 변경 허용")).toBeNull();
-    // 사용 내역·토큰 앞자리는 관리자에게 보이지 않는다
     expect(within(region).queryByText(/hm_/)).toBeNull();
     expect(within(region).queryByText("사용 내역")).toBeNull();
   });
@@ -135,7 +129,6 @@ describe("워크스페이스 외부 에이전트 관리", () => {
       expect((await toggle()).getAttribute("aria-checked")).toBe("false")
     );
     expect(screen.getByText("꺼져 있어 새 연결을 만들 수 없습니다.")).toBeTruthy();
-    // ADMIN 본인의 연결도 같은 사유로 끊긴다
     expect(
       mockDb
         .listAgentDelegations()
@@ -180,7 +173,6 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(requests.filter((line) => line === ADMIN_LIST)).toHaveLength(2);
   });
 
-  // 계정 탭·다른 팀원·다른 창에서 바뀌는 목록이다 — 앱의 staleTime(60초) 안에 돌아와도 다시 읽는다
   it("관리 화면을 다시 열면 관리자 목록을 다시 읽는다", async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: 60_000 } },
@@ -227,7 +219,6 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(screen.queryByText("지원의 Codex")).toBeNull();
   });
 
-  // 다른 관리자가 끈 것을 모르고 「켜짐」을 보면, 켜려고 눌러도 끄기 확인창이 열린다
   it("관리 화면을 다시 열면 허용 상태도 다시 읽는다", async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: 60_000 } },

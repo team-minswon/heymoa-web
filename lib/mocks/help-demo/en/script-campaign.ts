@@ -1,17 +1,5 @@
 import { parseScript } from "@/lib/mocks/help-demo/script";
 
-/**
- * 핵심 회의 1 「4월 캠페인 성과 리뷰」의 대사. 가상의 마케팅 팀이 한 달 캠페인 숫자를 같이 보는 회의다.
- *
- * | 라벨 | 역할 | 비중 |
- * |---|---|---|
- * | A | 퍼포먼스 마케터(박도윤) — 숫자를 길게 설명한다 | 가장 많음 |
- * | B | 팀장(이하린) — 묻고 결정한다 | 많음 |
- * | C | 크리에이티브(최민재) | 중간 |
- * | D | 기록 담당(김서윤, 나) | 적음 |
- *
- * 숫자는 한 번 정한 값을 끝까지 쓴다 — 광고비 4,800만 원, 클릭 22만 6천, 전환 5,420건, 매출 1억 9,300만 원.
- */
 export const CAMPAIGN_SCRIPT = parseScript(`
 B Okay, looks like everyone's here. Let's kick off the April campaign review. @opening
 B We've got four things today. Overall numbers, channel comparison, creative test results, and then the May budget and targets.

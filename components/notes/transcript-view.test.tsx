@@ -33,11 +33,6 @@ const THIRD_SEGMENT = {
   startedAtMs: 2_000,
   endedAtMs: 2_900,
 };
-/**
- * 살아 있는 partial 하나를 두 토막으로 만든다. **마지막 어절만 미확정으로 둔다** —
- * 화면이 한 줄 안에서 농도를 가르는 것을 픽스처가 그대로 재현해야, 이어 붙인 결과만
- * 보는 단언이 경계가 깨진 것을 놓치지 않는다.
- */
 function livePartial(utteranceId: string, text: string) {
   const words = text.split(" ");
   return words.length > 1
@@ -49,11 +44,6 @@ function livePartial(utteranceId: string, text: string) {
     : { utteranceId, confirmedText: "", pendingText: text };
 }
 
-/**
- * 살아 있는 partial 행. **`getByText` 로 못 잡는다** — 본문이 확정/미확정 두 `span` 으로
- * 갈려 있어서 어느 요소의 직접 텍스트도 전체 문장과 같지 않다. 그 갈림이 이 변경의
- * 핵심이므로 잡는 방법을 바꾸지, 갈림을 되돌리지 않는다.
- */
 function partialRow() {
   return document.querySelector('[data-state="partial"]');
 }
@@ -65,7 +55,6 @@ const noteRealtime = vi.hoisted(() => ({
     partial: null as ReturnType<typeof livePartial> | null,
     finalSegments: [] as Array<Record<string, unknown>>,
   },
-  // 분류 커버리지가 전사 축에 얹히므로 이 파일도 그 자리를 준다.
   context: {
     cards: [] as Array<Record<string, unknown>>,
     state: { runs: [] as Array<Record<string, unknown>> },
@@ -152,7 +141,6 @@ function recordingState(partialText = "결과를 정리합니다") {
   };
 }
 
-/** 회의가 안 도는 상태 — 종료된 회의의 전사를 다시 읽을 때가 이렇다. */
 function idleState() {
   return {
     activeNoteId: null,
@@ -389,7 +377,6 @@ describe("TranscriptView", () => {
     });
   });
 
-  // 따라가기는 합친 목록의 마지막 행을 본다. 저장본이 있어도 이벤트로 온 새 발화가 마지막이어야 한다.
   it("저장본 뒤에 이벤트로 온 새 발화도 따라간다", () => {
     const flushAnimationFrames = deferAnimationFrames();
     useRecording.mockReturnValue(idleState());
@@ -434,7 +421,6 @@ describe("TranscriptView", () => {
     flushAnimationFrames();
     fireEvent.scroll(viewport);
 
-    // 바닥에서 100px 올렸다. 예전 180px 폭 안이라 따라가기가 켜진 채였다.
     fireEvent.wheel(viewport, { deltaY: -100 });
     setScrollMetrics(viewport, { scrollTop: 500 });
     fireEvent.scroll(viewport);
@@ -446,7 +432,6 @@ describe("TranscriptView", () => {
     flushAnimationFrames();
     expect(scrollTo).not.toHaveBeenCalled();
 
-    // 스스로 바닥 24px 안까지 내려오면 다시 따라간다.
     setScrollMetrics(viewport, { scrollTop: 580 });
     fireEvent.scroll(viewport);
     useGetNoteTranscript.mockReturnValueOnce(
@@ -477,7 +462,6 @@ describe("TranscriptView", () => {
       transcriptResult([POLLED_SEGMENT, NEW_POLLED_SEGMENT])
     );
     rerenderTranscript();
-    // 프레임이 돌기 전에 손이 먼저 닿았다.
     fireEvent.wheel(viewport, { deltaY: -40 });
     flushAnimationFrames();
 
@@ -513,7 +497,6 @@ describe("TranscriptView", () => {
   it("확정 발화를 묶지 않고 한 줄에 하나씩 그리며 partial을 살려 둔다", () => {
     renderTranscript();
 
-    // 묶기를 지웠다 — 예전에는 앞의 두 결정사항이 한 블록(`data-segment-count=2`)이었다.
     const blocks = screen.getAllByTestId("transcript-block");
     expect(blocks).toHaveLength(4);
     expect(blocks[0]).toHaveTextContent("첫 번째 결정사항입니다.");
@@ -526,7 +509,6 @@ describe("TranscriptView", () => {
     expect(partial).toHaveTextContent("결과를 정리합니다");
     expect(partial).toHaveTextContent("받아 적는 중");
 
-    // v5: 제품 면 대문자 키커·세리프 헤더 없음(FORM SPEC), 전사 행은 단일 값 grid.
     expect(screen.queryByText("Conversation")).toBeNull();
     expect(screen.queryByText("대화 기록")).toBeNull();
     expect(blocks[0]).toHaveClass(
@@ -537,8 +519,6 @@ describe("TranscriptView", () => {
   });
 
   it("partial 한 줄 안에서 확정된 앞부분만 확정 행과 같은 농도로 그린다", () => {
-    // 이 변경의 전부다. 업체는 토큰마다 is_final 을 주는데 예전 계약은 그것을 이어 붙인
-    // 문자열 하나만 실었고, 화면은 이미 굳은 글자까지 통째로 옅게 그렸다.
     useRecording.mockReturnValue({
       ...recordingState(),
       transcript: {
@@ -558,18 +538,15 @@ describe("TranscriptView", () => {
 
     expect(confirmed).toHaveTextContent("오늘 배포는 금요일에");
     expect(pending).toHaveTextContent("하지 않기로");
-    // 확정 토막은 확정 행과 같은 잉크색, 미확정 토막은 부모 `<p>`의 옅은 색을 그대로 쓴다.
     expect(confirmed).toHaveClass("text-[var(--el-ink)]");
     expect(pending.className).not.toContain("text-[var(--el-ink)]");
     expect(partialRow()?.querySelector("p")).toHaveClass(
       "text-[var(--el-body)]"
     );
-    // 이어 붙이면 사람이 읽는 한 문장이다 — 어절 경계의 공백이 살아 있어야 한다.
     expect(partialRow()).toHaveTextContent("오늘 배포는 금요일에 하지 않기로");
   });
 
   it("확정 토막이 비어 있으면 미확정 토막만 그린다", () => {
-    // 발화 첫머리다. 업체가 아직 아무 토큰도 확정하지 않았다.
     useRecording.mockReturnValue({
       ...recordingState(),
       transcript: {
@@ -585,7 +562,6 @@ describe("TranscriptView", () => {
     renderTranscript();
 
     expect(screen.queryByTestId("partial-confirmed")).toBeNull();
-    // 첫머리의 공백은 털어 낸다 — 확정 행과 본문 시작 x 좌표가 어긋나면 안 된다.
     expect(screen.getByTestId("partial-pending")).toHaveTextContent("그러면");
     expect(screen.getByTestId("partial-pending").textContent).toBe("그러면");
   });
@@ -615,9 +591,6 @@ describe("TranscriptView", () => {
     expect(partialLabel).toHaveClass("whitespace-nowrap", "shrink-0");
     expect(partialBody).toHaveClass("min-w-0", "whitespace-normal");
     expect(partialBody).not.toHaveClass("truncate", "break-all");
-    // **본문 x 좌표가 확정 행과 같아야 한다.** 확정되는 순간 같은 자리에서 바뀌어야지,
-    // 글자가 옆으로 튀면 읽던 줄을 놓친다. 실시간 행은 바탕이 있어 안쪽 여백이 필요한데,
-    // 그만큼 음수 여백으로 끌어내 상쇄한다 — 지키는 것은 클래스가 같은지가 아니라 상쇄다.
     const scale = (element: Element, prefix: RegExp) =>
       [...element.classList]
         .map((name) => prefix.exec(name)?.[1])
@@ -647,12 +620,9 @@ describe("TranscriptView", () => {
     renderTranscript();
 
     expect(document.querySelector('[data-state="partial"]')).toBeNull();
-    // partial 행 자체가 사라지고 확정 텍스트만 자기 행에 남는다
     expect(screen.getByText(/확정됐습니다\./)).toBeInTheDocument();
   });
 
-  // 이벤트로 받은 발화는 저장본이 오기 전까지만 빈자리를 메운다. 같은 발화면 저장본이 정본이다 —
-  // 그래야 따라잡기가 이벤트 발화를 비우지 않아도 되고, 뒤에 붙는 화자 같은 값이 가려지지 않는다.
   it("같은 발화는 이벤트 사본보다 저장본을 그린다", () => {
     noteRealtime.transcript.finalSegments = [
       {
@@ -673,8 +643,6 @@ describe("TranscriptView", () => {
   });
 
   it("내가 녹음자면 토픽이 아니라 내 소켓의 발화를 그린다", () => {
-    // 두 소스는 같은 서버 이벤트에서 갈라지고 토픽이 메아리다. 토픽이 지연·재연결되는
-    // 동안 이미 지나간 발화를 그리지 않도록 녹음자는 자기 소켓만 본다.
     useRecording.mockReturnValue({
       ...recordingState(),
       transcript: {
@@ -691,16 +659,12 @@ describe("TranscriptView", () => {
 
     expect(partialRow()).toHaveTextContent("지금 말하는 문장");
     expect(partialRow()).not.toHaveTextContent("토픽에 남은 이전 문장");
-    // 예전에는 두 소스의 partial을 map에 모아 join(" ")했다. 확정되지 못한 발화가
-    // 그렇게 남아 회의 내내 앞에 붙었다 — 이어 붙는 형태 자체가 없어야 한다.
     expect(
       screen.queryByText(/토픽에 남은 이전 문장\s+지금 말하는 문장/)
     ).toBeNull();
   });
 
   it("일시정지 drain 동안에도 내 소켓의 partial을 그린다", () => {
-    // 일시정지 요청 뒤에도 같은 소켓이 마지막 final을 drain한다. 그 구간에 토픽으로 넘기면
-    // 토픽이 재연결·catch-up으로 비어 있을 때 화면이 빈다.
     useRecording.mockReturnValue({
       ...recordingState(),
       phase: "stopping",
@@ -717,8 +681,6 @@ describe("TranscriptView", () => {
   });
 
   it("내 녹음이 끝난 뒤에는 다른 탭의 토픽 발화를 그린다", () => {
-    // 녹음이 끝나도 activeNoteId는 disconnect 전까지 남는다. 그것만 보고 내 소켓을
-    // 고르면, 다른 탭·기기가 회의를 재개했을 때 비어 있는 내 소켓이 토픽을 가린다.
     useRecording.mockReturnValue({
       ...recordingState(),
       phase: "completed",
@@ -820,8 +782,6 @@ describe("TranscriptView", () => {
   });
 
   it("offers the way back even when no meeting is running", () => {
-    // 종료된 회의의 전사를 위로 올려 읽는 경우다. 예전에는 표시 조건이 라이브에
-    // 묶여 있어서 바닥으로 돌아갈 방법이 없었다(APP-239).
     useRecording.mockReturnValue(idleState());
     const { container } = renderTranscript();
     const viewport = container.querySelector<HTMLElement>(

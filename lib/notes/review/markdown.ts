@@ -14,12 +14,6 @@ import {
 } from "@/lib/notes/review/summary";
 import type { TopicChip } from "@/lib/notes/review/topics";
 
-/**
- * 검토 화면의 섹션을 하나씩 마크다운으로 옮긴다. 전사 · 요약 복사(`copy-markdown`)와 같이 헤딩 · 굵게 ·
- * 번호 · 불릿만 쓴다 — 붙여넣는 곳이 렌더하지 않아도 평문으로 읽힌다.
- * 뺀 항목은 싣지 않는다. 확정되지 않을 줄이 복사본을 타고 남에게 가면 안 된다.
- */
-
 const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
 const joined = (lines: string[]) => `${lines.join("\n")}\n`;
 
@@ -34,10 +28,6 @@ export function overviewToMarkdown(
   ]);
 }
 
-/**
- * 주제를 회의에서 나온 차례로 적는다. **번호는 목록 안의 차례다** — 요약이 주는 번호(`ordinal`)는 분석이 붙인 이름표라
- * 시간순으로 세우면 1·2·5·4·3 처럼 뛰어, 복사본에서는 잘못 센 것으로 읽힌다. 때를 알면 `[00:07]` 을 앞에 붙인다.
- */
 export function topicsToMarkdown(
   topics: readonly (TopicChip & { startMs?: number | null; text?: string })[],
   { t }: DocLanguage
@@ -54,11 +44,8 @@ export function topicsToMarkdown(
   ]);
 }
 
-/** [topicTitle] 은 주제로 걸러 본 섹션이다. 걸러진 목록이 전부인 것처럼 읽히지 않게 제목에 붙인다. */
 export type ItemContext = {
-  /** 항목이 회의에서 나온 때(ms). 모르면 null */
   whenOf?: (item: ReviewItem) => number | null;
-  /** 항목이 속한 주제 제목. 주제 밖이면 null */
   topicTitleOf?: (item: ReviewItem) => string | null;
 };
 
@@ -104,13 +91,8 @@ export function reviewSectionToMarkdown(
   return joined(lines);
 }
 
-/** 복사·내보내기가 고르는 형식. 형식을 더하면 [renderExport] 한 곳만 늘린다. */
 export type ExportFormat = "text" | "markdown";
 
-/**
- * 요약 탭 전체 — 머리말 · 요약 · 주제 · 섹션 — 를 한 문서로 옮긴다. 복사 · 내보내기 · 공유가 모두 이 문서에서 출발한다.
- * 비어 있는 부분은 싣지 않는다: 아직 안 온 요약이나 뺀 항목만 남은 섹션이 「_없음_」 줄로 복사본에 남으면 빈 회의록처럼 읽힌다.
- */
 export function reviewToMarkdown({
   note,
   summary,
@@ -124,13 +106,11 @@ export function reviewToMarkdown({
   summary: MeetingReviewSummary | null | undefined;
   topics: readonly (TopicChip & { startMs?: number | null })[];
   sections: readonly ReviewSection[];
-  /** 확정된 요약인가. 검토 중인 줄이 확정본처럼 남에게 가면 안 된다 */
   confirmed?: boolean;
   context?: ItemContext;
   doc: DocLanguage;
 }) {
   const { t } = doc;
-  // 머리말 사실 줄(날짜 · 참석자 · 기록 시간)에 프로젝트와 확정 여부를 잇는다. 화면 머리에 있는 사실이다.
   const head = headingLines(note, doc);
   head[2] = [
     head[2],
@@ -154,7 +134,6 @@ export function reviewToMarkdown({
   return blocks.join("\n");
 }
 
-/** 마크다운 기호를 걷어 낸 평문. 렌더하지 않는 곳(메신저·메일 본문)에 붙일 때 기호가 남지 않게 한다. */
 export function markdownToText(markdown: string) {
   return markdown
     .replace(/^#{1,6}\s+/gm, "")

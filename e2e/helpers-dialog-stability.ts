@@ -1,11 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openGuide, settled } from "./helpers-ui";
 
-/**
- * 가이드 대화상자(검색 팔레트 · 이미지 확대 · 영상 확대, 한 오버레이를 쓴다)를 열고 닫아도 폭과 고정 요소(상단바·사이드바·본문) 자리가
- * 변하지 않는다. 스크롤바 두 조건 모두에서 본다 — 클래식(폭 15px, 마우스)과 오버레이(폭 0, 트랙패드). 헤드리스는 기본으로 스크롤바를
- * 숨기므로(--hide-scrollbars) 클래식 쪽 파일이 그 인자를 뺀다.
- */
 export function dialogStabilityTests(classic: boolean) {
   for (const kind of ["palette", "image", "clip"] as const) {
     test(`${classic ? "클래식" : "오버레이"} 스크롤바에서 ${kind} 대화상자를 열고 닫아도 폭과 고정 요소 자리가 변하지 않는다`, async ({
@@ -23,7 +18,6 @@ export function dialogStabilityTests(classic: boolean) {
           content:
             "::-webkit-scrollbar{width:15px;background:#eee}::-webkit-scrollbar-thumb{background:#aaa}",
         });
-      // 누를 것을 먼저 화면에 올려 둔다 — 누르면서 생기는 스크롤이 전후 비교에 끼지 않게.
       const target =
         kind === "image"
           ? page.locator("figure button:has(img)").first()
@@ -37,7 +31,6 @@ export function dialogStabilityTests(classic: boolean) {
           element.scrollIntoView({ block: "center", behavior: "instant" })
         );
       await page.evaluate(() => document.fonts.ready);
-      // 클릭의 actionability 스크롤도 끝낸 뒤 모달 전후 위치를 비교합니다.
       if (kind === "image") await target.hover();
       const snap = () =>
         page.evaluate(() => {
@@ -53,7 +46,7 @@ export function dialogStabilityTests(classic: boolean) {
           };
         });
       const before = await snap();
-      expect(before.width).toBe(classic ? 1425 : 1440); // 클래식은 스크롤바가 폭을 차지하고, 오버레이는 차지하지 않는다
+      expect(before.width).toBe(classic ? 1425 : 1440);
       if (kind === "palette") await page.keyboard.press("Control+k");
       else if (kind === "image") await target.click();
       else await target.click({ force: true });
@@ -62,18 +55,13 @@ export function dialogStabilityTests(classic: boolean) {
       expect(open.width).toBe(before.width);
       expect(open.header).toEqual(before.header);
       expect(open.sidebar).toEqual(before.sidebar);
-      await page.mouse.click(1420, 880); // 바깥(배경 막)
+      await page.mouse.click(1420, 880);
       await expect(page.getByRole("dialog")).toHaveCount(0);
       expect(await snap()).toEqual(before);
     });
   }
 }
 
-/**
- * 알림 모달 목록 칸의 스크롤 막대(APP-1363). 예전 base-ui 막대는 sticky 날짜 머리글이 덮어 날짜마다 토막났고 카드 테두리를 덮었다.
- * 지금은 네이티브 막대 하나다 — 클래식(15px)이면 자리를 예약해 카드 밖에 서고 막대 열 어디를 찍어도 머리글이 아니라 칸 자신이
- * 잡힌다(끊김 없음). 오버레이(폭 0)면 카드 오른쪽 24px 여백이 비어 있다.
- */
 export function notificationScrollbarTests(classic: boolean) {
   for (const width of [1440, 1024]) {
     test(`${classic ? "클래식" : "오버레이"} 스크롤바 ${width}px — 알림 목록 막대가 하나로 이어지고 카드와 겹치지 않는다`, async ({
@@ -92,14 +80,13 @@ export function notificationScrollbarTests(classic: boolean) {
       ).toBeVisible();
       await settled(dialog);
       const list = dialog.locator("[data-slot=notification-list]");
-      await list.evaluate((node) => (node.scrollTop = 120)); // 날짜 머리글이 sticky 로 붙은 상태에서 본다
+      await list.evaluate((node) => (node.scrollTop = 120));
       const g = await list.evaluate((node: HTMLElement, classic) => {
         const box = node.getBoundingClientRect();
         const inner = box.left + node.clientLeft + node.clientWidth;
         const cards = [...node.querySelectorAll("ul")].map(
           (ul) => ul.getBoundingClientRect().right
         );
-        // 막대 열(클래식)·카드 오른쪽 여백(오버레이)을 위에서 아래로 찍어 잡히는 것.
         const x = classic ? inner + 7 : inner - 6;
         const hits = new Set<string>();
         for (let y = box.top + 4; y < box.bottom - 4; y += 6) {
@@ -124,13 +111,10 @@ export function notificationScrollbarTests(classic: boolean) {
       }, classic);
       expect(g.scrollable).toBe(true);
       expect(g.primitive).toBe(0);
-      // 오버레이 쪽은 막대 폭을 안 본다. 헤드리스의 --hide-scrollbars 는 막대를 숨길 뿐 `scrollbar-gutter: stable` 자리(15px)는
-      // 그대로 잡는다 — 진짜 오버레이 막대(트랙패드)에서는 이 자리가 0 이라 시험 브라우저로는 그 조건을 못 만든다.
-      // 카드와 겹치지 않는지는 아래 cardGap·hits 가 막대 자리 안쪽 기준으로 본다.
+      // 헤드리스의 --hide-scrollbars 는 막대만 숨기고 `scrollbar-gutter: stable` 자리(15px)는 잡아, 오버레이 막대 조건은 못 만듭니다.
       if (classic) expect(g.bar).toBe(15);
       expect(new Set(g.cardGap)).toEqual(new Set([24]));
-      if (classic)
-        expect(g.hits).toEqual(["list"]); // 머리글(H3)·카드에 끊기지 않는다
+      if (classic) expect(g.hits).toEqual(["list"]);
       else expect(g.hits).not.toContain("card");
     });
   }

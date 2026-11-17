@@ -17,10 +17,6 @@ import type {
 
 type Props = Record<string, unknown> & { ref?: Ref<unknown> };
 
-/**
- * 캔버스는 jsdom 에서 그려지지 않는다. 라이브러리 자리에 받은 속성과 API 만 남기는 대역을 둔다.
- * 그리기 콜백은 가짜 붓으로 불러 무엇을 적는지 본다.
- */
 const forceGraph = vi.hoisted(() => ({
   props: null as Props | null,
   zoomDuringRender: null as number | null,
@@ -169,7 +165,6 @@ async function renderGraph(
       {...extra}
     />
   );
-  // 캔버스는 브라우저에서만 불러온다(next/dynamic, ssr: false)
   await vi.waitFor(() => expect(forceGraph.props).not.toBeNull());
   return { ...view, onSelect };
 }
@@ -190,7 +185,6 @@ const graphProps = () =>
     onRenderFramePost: (ctx: CanvasRenderingContext2D, scale: number) => void;
   };
 
-/** 이름 그리기를 가짜 붓으로 돌려 적힌 글자를 모은다 */
 function drawnLabels(scale = 1) {
   const texts: string[] = [];
   const ctx = new Proxy({} as Record<string, unknown>, {

@@ -29,7 +29,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 
-/** 제안 한 줄의 틀. 무엇에 대한 제안인지 · 무엇이 바뀌는지 · 받을지를 한 줄에 둔다. */
 function SuggestionShell({
   label,
   children,
@@ -60,7 +59,6 @@ function SuggestionShell({
           </span>
         ) : null}
       </div>
-      {/* 근거는 라벨 칸이 아니라 내용 칸 아래에 선다 — 라벨 밑에 서면 내용과 따로 논다(APP-1587). */}
       {footer ? <div className="sm:pl-[108px]">{footer}</div> : null}
     </div>
   );
@@ -104,7 +102,6 @@ export function ReplacementSuggestion({
   const tKind = useTranslations("notes.kinds");
   const dateLocale = useDisplayLocale();
   const { target } = replacement;
-  // 다른 확정이 먼저 끝낸 결정은 여기서 끝낼 것이 없다. 확정도 그 노드를 건너뛴다.
   const ended = target.endedAt !== null;
   return (
     <SuggestionShell
@@ -196,7 +193,6 @@ export function ReplacementSuggestion({
   );
 }
 
-/** 승인 제안의 근거를 그 제안 안에 둔다. 관계 조회만으로 선택이나 대상 상태를 바꾸지 않는다. */
 export function RelationContext({
   relation,
   segments,
@@ -254,7 +250,6 @@ export function RelationContext({
   );
 }
 
-/** 승인 API에 제안이 없는 관계도 해당 결정·할 일 아래에서 읽는다. */
 export function RelationSuggestion({
   relation,
   workspaceId,
@@ -274,7 +269,6 @@ export function RelationSuggestion({
     <SuggestionShell
       label={t(`kinds.${relation.kind}`)}
       footer={
-        // 지난 회의 이름은 위 링크가 이미 말한다. 근거 줄에서 한 번 더 적지 않는다(APP-1587).
         <RelationContext
           relation={relation}
           showSource={!pastNoteLink}
@@ -312,7 +306,6 @@ type TaskDraft = NonNullable<
   NonNullable<UpdateMeetingReviewItemRequest["decisions"]>[number]["taskChange"]
 >;
 
-/** 회의 라벨은 이 회의 소유입니다. 응답의 nullable 참조를 요청 모양으로 돌립니다. */
 function taskAssigneeRequestOf(
   box: NonNullable<TaskChange["draft"]>["assignee"]
 ): TaskDraft["assignee"] {
@@ -327,7 +320,6 @@ function taskAssigneeRequestOf(
   };
 }
 
-/** 기존 할 일의 변경 초안. 실제 업무는 검토 완료에서만 바뀝니다. */
 export function TaskChangeSuggestion({
   change,
   task,
@@ -348,11 +340,9 @@ export function TaskChangeSuggestion({
   noteId: string;
   choices: AssigneeChoice[];
   choice: Choice | null;
-  /** 프로젝트 할 일 조회 상태. 실패를 「할 일을 찾지 못했다」로 적지 않는다 */
   taskState: "pending" | "ready" | "failed";
   onRetryTask: () => void;
   disabled: boolean;
-  /** 선택을 검토본에 저장한다. 저장했는지를 돌려준다 */
   onChoose: (next: Choice, draft: TaskDraft) => Promise<boolean>;
   context?: ReactNode;
   duplicate?: boolean;
@@ -374,7 +364,6 @@ export function TaskChangeSuggestion({
         assignee: taskAssigneeRequestOf(change.assignee),
         due: change.due,
       };
-  // 초안은 표시 이름이 아닌 참조로 옵니다. UI에서만 선택 목록과 이어 이름을 붙입니다.
   const reference = draft.assignee?.value;
   const assignee: AssigneeValue | null = reference
     ? reference.type === "SPEAKER_LABEL"

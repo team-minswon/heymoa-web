@@ -13,7 +13,6 @@ const code = "c".repeat(43);
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const brokers = new Set();
 afterEach(() => {
-  // Failed assertions must not leave a five-minute timer or pending request alive.
   for (const broker of brokers) broker.cancel();
   brokers.clear();
 });

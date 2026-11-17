@@ -54,7 +54,6 @@ export default async function HelpTopicPage({ params }: Props) {
   const topic = topics[index];
   const groupInfo = helpGroupBySlug(group, locale)!;
   const url = `${siteConfig.url}${href(helpPathOf(topic))}`;
-  // FAQ 는 마크다운의 "자주 묻는 질문"과 문제 해결 블록(증상 → 해결 방법)에서 온다. 단계가 분명한 상황별 페이지는 HowTo 다 — 둘을 겹쳐 마크업하지 않는다.
   const faq = topic.faq?.length
     ? topic.faq.map(({ question, answer }) => ({
         "@type": "Question",

@@ -1,7 +1,3 @@
-// `/oauth/*` 는 외부 에이전트 인가 흐름이다(APP-888) — 로그인 뒤 인가 요청·동의 화면으로 쿼리째 돌아온다.
-// `/unsubscribe` 는 메일 수신거부 화면이다(APP-1314) — 「다시 켜기」가 로그인한 뒤 그 화면으로 돌아온다.
-// `/settings/notifications` 는 메일 푸터의 「알림 설정」이다(APP-1341) — 로그인한 뒤 알림 탭으로 넘어간다.
-// `/settings/payments` 는 결제·환불 완료 메일의 버튼이다(APP-1598) — 로그인한 뒤 내 결제 내역 탭으로 넘어간다.
 const allowedReturnPaths = new Set([
   "/",
   "/terms",
@@ -14,15 +10,10 @@ const allowedReturnPaths = new Set([
   "/oauth/consent",
   "/unsubscribe",
 ]);
-// `notes/new` 는 새 회의 진입 주소다(APP-802) — 외부 에이전트가 준 링크를 로그인 전에 열어도
-// 로그인 뒤 그 자리로 돌아온다.
-// `/inquiries/{id}` 는 문의 답변 메일의 「답변 보기」다(APP-1399).
 const inquiryReturnPath = /^\/inquiries\/[0-9A-HJKMNP-TV-Z]{13}$/;
 const workspaceReturnPath =
   /^\/w\/[0-9A-HJKMNP-TV-Z]{13}(?:\/notes\/(?:[0-9A-HJKMNP-TV-Z]{13}|new))?$/;
 
-// 결제 화면(PRO-75): 등록 결과(`/billing/setups/{id}`)와 첫 구독 결제 페이지(`/billing/checkout/{id}`).
-// **쿼리는 받지 않는다** — 아래 `normalizeReturnTo` 가 이 경로에 쿼리가 붙으면 홈으로 보낸다.
 const billingReturnPath =
   /^\/(?:billing\/setups\/[0-9A-HJKMNP-TV-Z]{13}|billing\/checkout\/[0-9A-HJKMNP-TV-Z]{13})$/;
 
@@ -93,18 +84,10 @@ export function buildGoogleOAuthUrl(returnTo: string, language?: string) {
   return buildApiUrl(authorizePath + languageQuery);
 }
 
-/**
- * 외부 에이전트의 인가 요청을 server 인가 엔드포인트로 되돌린다(APP-888). server 는 로그인 안 된 인가 요청을
- * web `/oauth/authorize?<받은 쿼리>` 로 보내므로, web 이 로그인을 확인한 뒤 받은 쿼리를 그대로 붙여 돌려보낸다.
- *
- * **보내는 곳은 여기서 정한다.** 쿼리의 어떤 값(`redirect_uri` 등)도 주소로 쓰지 않는다 — 검사는 server 가
- * 하고, 이 경로로 다른 주소에 보낼 길이 없다.
- */
 export function buildAgentAuthorizeUrl(query: URLSearchParams) {
   return buildApiUrl(`/oauth2/authorize?${query.toString()}`);
 }
 
-/** 페이지가 받은 `searchParams` 를 이름·값·순서 그대로 옮긴다. 같은 이름이 여러 번 오면 모두 옮긴다. */
 export function searchParamsOf(
   query: Record<string, string | string[] | undefined>
 ) {

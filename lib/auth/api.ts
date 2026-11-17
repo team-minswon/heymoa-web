@@ -63,7 +63,6 @@ async function postAuth<T>(
 }
 
 async function fetchMe(hasRetried = false): Promise<AuthUser | null> {
-  // apiFetch를 안 거치는 경로라 게이트를 따로 확인한다.
   if (isSessionExpired()) {
     throw new SessionExpiredError();
   }
@@ -90,8 +89,6 @@ async function fetchMe(hasRetried = false): Promise<AuthUser | null> {
     await refreshAuthOnce();
     return fetchMe(true);
   } catch (error) {
-    // A login probe never expires the product session gate. Only a server
-    // assertion that the refresh token is dead proves an anonymous result.
     if (error instanceof AuthRefreshError && error.expired) return null;
     throw error;
   }
@@ -109,15 +106,11 @@ export async function logout() {
     controller.abort(new DOMException("Logout timed out", "TimeoutError"));
   }, LOGOUT_TIMEOUT_MS);
   try {
-    // The deadline covers the response body as well as response headers.
     await postAuth<void>("/v1/auth/logout", true, controller.signal);
   } finally {
     clearTimeout(timer);
   }
 
-  // **알리기 전에 막는다.** 쿠키는 이 줄 위에서 이미 사라졌고, 새 문서가 뜨기까지 폴링
-  // 타이머와 이미 예약된 조회는 계속 깨어난다. 막지 않으면 그 401들이 갱신을 시도하고
-  // 실패해 만료 경로를 깨운다 — 스스로 누른 로그아웃에 "세션이 만료되었습니다"가 뜬다.
   openSessionGateQuietly();
   notifyAuthStateChanged({ reason: "logout" });
 }

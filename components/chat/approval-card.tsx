@@ -25,15 +25,12 @@ import type {
 import type { ApprovalDecision } from "@/lib/chat/blocks";
 import { cn } from "@/lib/utils";
 
-/** 한 화면에 늘어놓는 일괄 항목 수. 넘으면 나머지를 접는다. */
 const ITEMS_SHOWN = 5;
-/** 본문을 접는 기준. 미리보기 줄 수(`line-clamp-5`)와 같다. */
 const BODY_LINES = 5;
 const BODY_CHARS = 280;
 
 type BadgeVariant = "secondary" | "success" | "destructive" | "outline";
 
-/** 배지 이름은 `chat.approval.badges.<label>` 이다. 보낸 뒤(`submitted`)도 확정 전이라 「승인 대기」다. */
 const BADGES: Record<
   ApprovalCardStatus["kind"],
   {
@@ -52,7 +49,6 @@ const BADGES: Record<
   check: { label: "check", icon: CircleHelp, variant: "outline" },
 };
 
-/** 결정 뒤 상태는 테두리로도 말한다. 결정 전은 진한 테두리로 「지금 답할 것」을 세운다. */
 const BORDERS: Record<ApprovalCardStatus["kind"], string> = {
   open: "border-[var(--el-hairline-strong)]",
   submitted: "border-[var(--el-hairline-strong)]",
@@ -64,7 +60,6 @@ const BORDERS: Record<ApprovalCardStatus["kind"], string> = {
   check: "border-[var(--el-hairline)]",
 };
 
-/** 실행하지 않았거나 결과를 모르는 카드는 무엇을 하려 했는지보다 왜 끝났는지를 말한다(`chat.approval.reasons.<값>`). */
 const REASONS: Partial<
   Record<ApprovalCardStatus["kind"], "rejected" | "failed" | "unknown">
 > = {
@@ -73,13 +68,6 @@ const REASONS: Partial<
   check: "unknown",
 };
 
-/**
- * 쓰기 승인 카드. heymoa·Linear·GitHub·메일 모두 이 하나다. 모양은 ai 가 보낸 `card` 가 정하고,
- * 없으면 `summary` 한 줄을 제목 자리에 둔다. 도구 id·인자 원문은 어느 경우에도 그리지 않는다.
- *
- * 모든 값은 평문으로만 그린다 — 마크다운·HTML·링크로 해석하지 않는다. 승인의 근거가 이 화면이라
- * 표시가 위조되면 안 된다.
- */
 export function ApprovalCard({
   card,
   summary,
@@ -98,7 +86,6 @@ export function ApprovalCard({
   const badge = BADGES[status.kind];
   const Icon = badge.icon;
   const count = card?.items.length ?? 0;
-  // 무엇을 하는지 모르는 쓰기는 승인하게 두지 않는다. 도구 id 로 대신 채우지도 않는다.
   const blind = !card && !summary;
   const fallbackReason = REASONS[status.kind];
   const reason =
@@ -131,7 +118,6 @@ export function ApprovalCard({
             {card?.title ?? summary ?? t("fallbackTitle")}
           </p>
           {card?.target ? (
-            // 대상은 승인의 근거라 자르지 않는다. 길면 줄을 바꾼다.
             <p className="text-xs break-words text-[var(--el-muted)]">
               {card.target}
             </p>
@@ -192,7 +178,6 @@ export function ApprovalCard({
               ? t("submittedHint")
               : t("waitingHint")}
           </p>
-          {/* 누른 것만으로 뒤집지 않는다. 확정은 재개 스트림의 첫 프레임이 정한다. */}
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -233,7 +218,6 @@ function Fields({ fields }: { fields: ApprovalCardField[] }) {
   );
 }
 
-/** 값 하나. 명단 > 「전 → 후」 > 일반 값 순서로 읽는다. */
 function FieldValue({ field }: { field: ApprovalCardField }) {
   const t = useTranslations("chat.approval");
   if (field.added.length + field.removed.length + field.kept.length > 0) {
@@ -293,7 +277,6 @@ function Items({ items }: { items: ApprovalCardData["items"] }) {
     <div className="overflow-hidden rounded-block border border-[var(--el-hairline)]">
       <ItemList items={items.slice(0, ITEMS_SHOWN)} start={1} />
       {rest.length > 0 ? (
-        // 열림을 React state 로 들면 카드가 다시 그려질 때마다 접힌다.
         <details className="details-motion group border-t border-[var(--el-hairline)]">
           <summary className="flex cursor-pointer list-none items-center gap-1 bg-[var(--el-canvas-soft)] px-3 py-2 text-xs font-medium text-[var(--el-body-strong)] [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">
@@ -354,7 +337,6 @@ function ItemList({
   );
 }
 
-/** 긴 평문. 줄바꿈을 지키고, 길면 미리보기로 접어 둔다. */
 function Body({ label, text }: { label: string; text: string }) {
   const t = useTranslations("chat.approval");
   const long = text.split("\n").length > BODY_LINES || text.length > BODY_CHARS;

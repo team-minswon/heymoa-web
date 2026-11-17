@@ -11,7 +11,6 @@ import { localizedMetadata } from "@/lib/i18n/metadata";
 
 export const dynamic = "force-static";
 
-/** 제목과 설명. 금액 · 시간은 `PUBLIC_PRICING` 에서 오고 문구 파일에는 숫자가 없다. */
 async function pageMeta(locale: Locale) {
   const t = await getTranslations({ locale, namespace: "landing.pricing" });
   const brand = (await getTranslations({ locale, namespace: "landing.meta" }))(
@@ -33,7 +32,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return { ...meta, ...localizedMetadata(locale, "/pricing", meta) };
 }
 
-/** 가격 안내(`/pricing`). 랜딩과 같은 색 · 기둥을 쓰고, 본문은 `Pricing` 하나다. 로그인 없이 볼 수 있다. */
 export default async function PricingPage() {
   const locale = await marketingLocale();
   const meta = await pageMeta(locale);

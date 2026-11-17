@@ -1,14 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/**
- * vitest는 jsdom이라 MSW의 브라우저 서비스 워커 경로(`worker.start()`)를 한 번도 지나지 않는다.
- * Vercel `dev` 배포가 정확히 그 경로로 도는데도 그렇다 — 여기를 이 스모크가 덮는다.
- *
- * 기본 dev 포트(3000)를 피해 3100을 쓴다. 개발 중인 서버를 죽이지 않기 위해서다.
- */
 export default defineConfig({
   testDir: "./e2e",
-  // 목을 끄고 따로 도는 묶음이다 — 인증(APP-902)·외부 에이전트 OAuth(APP-888) 각자의 설정이 띄운다.
   testIgnore: [
     "**/auth-session-probe/**",
     "**/agent-oauth/**",
@@ -20,8 +13,6 @@ export default defineConfig({
   retries: 0,
   reporter: "list",
   use: {
-    // 화면 언어의 초기 기본값이 브라우저 언어다(APP-1285). Chromium 기본(en-US)이면 모든 시험이 영어 화면을 받으므로
-    // 한국어 사용자로 고정한다. 영어 화면을 보는 시험은 자기 컨텍스트에 `locale: "en-US"` 를 준다.
     locale: "ko-KR",
     baseURL: "http://localhost:3100",
     trace: "retain-on-failure",
@@ -34,10 +25,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    // HMR 재시작·라우트 지연 컴파일 없이 배포와 같은 최적화 번들을 검사합니다.
     command: "pnpm build && pnpm start --port 3100",
     url: "http://localhost:3100",
-    // 다른 체크아웃·목 설정의 서버를 재사용하면 검증 대상이 바뀝니다.
     reuseExistingServer: false,
     env: {
       NEXT_PUBLIC_API_MOCKING: "enabled",

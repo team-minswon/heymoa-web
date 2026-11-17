@@ -18,7 +18,6 @@ export type Scenario = {
   tryThis: string[];
 };
 
-/** 목 시드의 노트마다 한 상태. 무엇을 눌러 볼지를 함께 둬서, 화면을 모르는 사람도 전부 밟아 본다. */
 export const SCENARIOS: Scenario[] = [
   ...PROJECT_APPROVAL_CASES.map((row) => ({
     key: row.key,
@@ -212,7 +211,6 @@ export function ReviewShowcase() {
   );
 }
 
-/** 실제 화면을 그 폭 그대로 띄우고, 자리가 모자라면 통째로 줄인다. 줄여도 레이아웃은 그 폭의 것이다. */
 function DeviceFrame({
   frame,
   src,

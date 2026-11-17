@@ -7,11 +7,6 @@ import { cn } from "@/lib/utils";
 export const LEGAL_FOCUS =
   "outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-/**
- * 약관·처리방침 목차. 읽는 중인 조를 왼쪽 선과 진한 글자로 짚는다(Stripe·Linear 정책 페이지와 같은 방식).
- * 머리가 화면 위 1/3 선을 넘은 조 가운데 마지막 것이 「읽는 중」이다. 페이지 끝에 닿으면 마지막 조를 짚는다
- * — 짧은 끝 조들은 위 1/3 선까지 올라오지 못한다.
- */
 export function LegalToc({
   label,
   items,
@@ -21,16 +16,14 @@ export function LegalToc({
 }) {
   const [active, setActive] = useState<string | null>(null);
 
-  // 새 탭으로 바로 연 `/terms#section-13` 은 본문이 그려지기 전에 브라우저가 도착점을 찾아 맨 위에 머문다 — 그려진 뒤 한 번 맞춘다.
+  // 새 탭으로 바로 연 `#section-N` 은 본문이 그려지기 전에 브라우저가 도착점을 찾아 맨 위에 머물러, 그려진 뒤 한 번 맞춥니다.
   useEffect(() => {
     const id = window.location.hash.slice(1);
     if (id) document.getElementById(id)?.scrollIntoView();
   }, []);
 
   useEffect(() => {
-    // 관찰자(IntersectionObserver)는 빠르게 건너뛸 때 지나친 조를 놓쳐 낡은 조에 머물렀다 — 스크롤마다 위치를 잰다.
-    // 조 열두 개의 위치를 재는 정도라 프레임 묶음(rAF) 없이 바로 잰다.
-    // 기준선은 조항 도착점(scroll-mt-20, 80px) 바로 아래다. 화면 1/3 이면 목차로 짧은 조(제1조)에 가도 다음 조가 짚혔다.
+    // IntersectionObserver 는 빠르게 건너뛸 때 지나친 조를 놓쳐, 스크롤마다 위치를 잽니다.
     const LINE = 120;
     const update = () => {
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;

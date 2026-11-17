@@ -7,7 +7,6 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
-/** 설치 앱의 시작 주소는 랜딩이므로, 소속을 새로 확인한 뒤 제품으로 진입한다. */
 export function DesktopLaunchRedirect() {
   const router = useRouter();
   const { status } = useAuth();

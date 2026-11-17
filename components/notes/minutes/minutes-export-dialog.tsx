@@ -29,10 +29,6 @@ import type {
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
-/**
- * 회의록 PDF 내려받기. 회의록 본문은 늘 들어가고 붙임 녹취록만 고른다. **녹취록은 꺼 둔 채 연다** — 한 말이
- * 그대로 남는 기록이라, 보내는 사람이 직접 켰을 때만 싣는다.
- */
 export function MinutesExportDialog({
   open,
   onOpenChange,
@@ -53,8 +49,6 @@ export function MinutesExportDialog({
   const [pending, setPending] = useState(false);
   const downloading = useRef(false);
   const [previewed, setPreviewed] = useState(false);
-  // **열 때마다 녹취록을 끈다.** 창은 닫혀도 마운트된 채라, 지난번에 켠 녹취록이 다음 내보내기에 말없이 실렸다.
-  // 렌더 중에 연 순간을 보고 되돌린다 — effect 로 하면 켜진 채 한 번 그려진다
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -101,8 +95,6 @@ export function MinutesExportDialog({
       onOpenChange(false);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      // 다시 시도는 창의 「PDF 받기」로 한다 — 토스트에 다시 시도를 달면 실패한 그때의 녹취록 선택으로 다시 만들어,
-      // 그 사이 끈 녹취록이 실렸다. 창은 열린 채라 지금 고른 대로 다시 받는다
       toast.error(t("pdfFailed"), {
         id: "export-minutes",
         description: t("export.retryHint"),
@@ -114,14 +106,11 @@ export function MinutesExportDialog({
   };
 
   return (
-    // 만드는 동안에는 닫지 않는다 — 닫아도 내려받기는 계속돼, 닫은 창에서 파일이 튀어나온다
     <Dialog
       open={open}
       onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}
     >
       <DialogContent
-        // 넓히는 기준은 「미리보기를 열었나」다(APP-1356). PDF 가 있는지로 가르면 녹취록을 켜고 끌 때마다 PDF 가 무효가 되어
-        // 창이 896 → 384px 로 접혔다가 다시 미리보면 또 펴졌다. 미리보기가 A4 를 보여 줘야 해서 여는 순간 넓어지는 것은 그대로다
         className={`max-h-[calc(100dvh-2rem)] overflow-y-auto ${previewed ? "sm:max-w-4xl" : ""}`}
       >
         <DialogHeader>

@@ -13,16 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { track } from "@/lib/analytics/track";
 
-/*
- * ```mermaid 코드펜스를 도표로 그린다.
- *
- * - `mermaid` 는 수 MB 라 `import()` 로 첫 도표가 나올 때만 받는다. 초기 번들에 안 든다.
- * - `securityLevel: "strict"` — 라벨의 HTML 을 DOMPurify 로 걸러내고 클릭 바인딩을 끈다.
- *   `htmlLabels: false` 로 라벨을 `<foreignObject>` HTML 이 아니라 SVG 글자로 그린다.
- *   모델이 도구 결과를 옮겨 적을 수 있어 원문은 믿지 않는다. 넣는 것은 결과 SVG 뿐이다.
- * - 못 그리면 조용히 코드로 되돌린다. 오류 SVG 를 문서에 끼우지 않고 로그도 끈다.
- */
-
 type Mermaid = (typeof import("mermaid"))["default"];
 let loading: Promise<Mermaid> | null = null;
 function loadMermaid(): Promise<Mermaid> {
@@ -55,12 +45,10 @@ export function renderMermaid(
     });
     return (await mermaid.render(id, source)).svg;
   });
-  // 실패해도 다음 작업은 돈다.
   queue = job.catch(() => undefined);
   return job;
 }
 
-/** `id` 로 그린 SVG. 테마가 바뀌면 다시 그린다. 떠난 뒤 늦게 온 결과는 버린다. */
 function useMermaidSvg(id: string, source: string, theme: Theme): Result {
   const [result, setResult] = useState<Result>(null);
   useEffect(() => {
@@ -89,7 +77,6 @@ export function MermaidBlock({
   copyButton,
 }: {
   source: string;
-  /** 그리기 전·못 그렸을 때 보일 코드블록. */
   fallback: React.ReactNode;
   copyButton: React.ReactNode;
 }) {
@@ -175,16 +162,11 @@ function ModalDiagram({ id, source }: { id: string; source: string }) {
   return <ZoomView svg={result.svg} />;
 }
 
-/**
- * 레일 안 도표. 자르지 않고 칸에 통째로 맞춘다(contain). 폭 100%·높이 auto 에 최대 높이를 걸면
- * viewBox 비율이 유지된 채 더 줄어든다. 가로 스크롤을 만들지 않는다.
- */
 function RailDiagram({ svg }: { svg: string }) {
   return (
     <div
       data-testid="mermaid-diagram"
       className="flex justify-center p-2.5 [&_svg]:h-auto [&_svg]:max-h-[320px] [&_svg]:w-full"
-      // mermaid 가 strict 로 걸러 낸 SVG 문자열이다. 원문을 넣지 않는다.
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
@@ -205,10 +187,6 @@ type View = { s: number; x: number; y: number };
 
 type Snap = { cx: number; cy: number; dist: number; view: View };
 
-/**
- * 기준 순간(`b`)에서 지금(`now`)으로. 손가락 중심 아래 점이 중심을 따라가고, 두 손가락이면
- * 거리 비율만큼 배율도 바꾼다. 한 손가락이면 배율 1 이라 그냥 이동이다.
- */
 function moved(st: { fit: View; view: View }, b: Snap, now: Snap) {
   const raw =
     b.dist > 0 && now.dist > 0 ? b.view.s * (now.dist / b.dist) : b.view.s;
@@ -224,7 +202,6 @@ function moved(st: { fit: View; view: View }, b: Snap, now: Snap) {
   };
 }
 
-/** (px, py) 를 제자리에 둔 채 배율을 `factor` 만큼 바꾼다. 맞춤의 0.5~4배로 묶는다. */
 function zoomed(
   st: { fit: View; view: View },
   factor: number,
@@ -237,25 +214,17 @@ function zoomed(
   return { ...st, view: { s, x: px - (px - v.x) * k, y: py - (py - v.y) * k } };
 }
 
-/**
- * 모달 안 도표. CSS transform 하나(translate + scale)로 움직인다.
- * 열리면 창에 맞춰 가운데 둔다. 배율은 맞춤의 0.5~4배. 끌어서 이동, Ctrl/⌘+휠(트랙패드 핀치)은
- * 커서 기준 확대, 일반 휠은 이동, 두 손가락은 핀치, 두 번 누르면 맞춤.
- */
 function ZoomView({ svg }: { svg: string }) {
   const box = viewBoxOf(svg) ?? { w: 800, h: 600 };
   const { w, h } = box;
   const elRef = useRef<HTMLDivElement | null>(null);
-  // 맞춤과 지금 보기를 한 상태에 둔다. 갱신 함수 안에서 맞춤을 읽어 휠 핸들러가 낡지 않는다.
   const [state, setState] = useState<{ fit: View; view: View }>({
     fit: { s: 1, x: 0, y: 0 },
     view: { s: 1, x: 0, y: 0 },
   });
   const { view } = state;
   const t = useTranslations("chat.diagram");
-  /** 눌린 손가락·포인터. 하나면 이동, 둘이면 핀치. */
   const pts = useRef(new Map<number, { x: number; y: number }>());
-  /** 포인터 수가 바뀐 순간의 기준. 움직임은 늘 이 기준에서 다시 계산한다. */
   const base = useRef<Snap | null>(null);
 
   /**
@@ -269,7 +238,6 @@ function ZoomView({ svg }: { svg: string }) {
       const fitOf = (): View => {
         const cw = el.clientWidth;
         const ch = el.clientHeight;
-        // 재지 못하면(jsdom) 원래 크기로 둔다.
         if (cw <= 0 || ch <= 0) return { s: 1, x: 0, y: 0 };
         const s = Math.min(cw / w, ch / h) * 0.95;
         return { s, x: (cw - w * s) / 2, y: (ch - h * s) / 2 };

@@ -15,7 +15,6 @@ import { CenteredCard } from "@/components/layout/centered-card";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
 import { InAppLoginGate } from "@/components/auth/in-app-login-gate";
 
-/** 초대 수락 실패 코드 → `workspace.invite.errors` 키. */
 const ERROR_KEY = {
   INVITATION_NOT_FOUND: "notFound",
   INVITATION_EXPIRED: "expired",
@@ -23,11 +22,6 @@ const ERROR_KEY = {
   INVITATION_EMAIL_MISMATCH: "emailMismatch",
 } as const;
 
-/**
- * 초대 이메일 링크의 목적지. 로그인돼 있으면 토큰으로 즉시 수락하고 워크스페이스로 이동한다 —
- * 링크 클릭이 곧 수락 의사라는 계약(APP-148). 미로그인이면 returnTo에 토큰을 보존한 채
- * 구글 로그인으로 보낸다.
- */
 export function InviteLanding({ token }: { token: string | null }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -35,10 +29,7 @@ export function InviteLanding({ token }: { token: string | null }) {
   const acceptByToken = useAcceptInvitationByToken({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  // StrictMode 이중 이펙트·리렌더에도 수락은 한 번만 쏜다
   const fired = useRef(false);
-  // mutate(vars, { onSuccess })의 per-call 콜백은 StrictMode 리마운트에서 옵저버와 함께
-  // 유실된다 — 결과는 옵저버에 안 묶이는 mutateAsync 프라미스로 받고 로컬 상태에 담는다
   const [acceptError, setAcceptError] = useState<unknown>(null);
 
   useEffect(() => {
@@ -50,7 +41,6 @@ export function InviteLanding({ token }: { token: string | null }) {
       .mutateAsync({ data: { token } })
       .then((response) => {
         if (response.status === 200 && response.data.success) {
-          // 합류했으니 사이드바 워크스페이스 목록도 새 워크스페이스를 알아야 한다
           void queryClient.invalidateQueries({
             queryKey: getGetWorkspacesQueryKey(),
           });
@@ -150,7 +140,6 @@ function InviteCard({
     );
   }
 
-  // checking(인증 확인) 또는 수락 진행 중 — 페이지 전체 스피너 대신 카드 안에서 알린다
   return (
     <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
       <h1 className="text-2xl font-light tracking-[-0.01em]">

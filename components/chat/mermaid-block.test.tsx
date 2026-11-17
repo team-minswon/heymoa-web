@@ -74,7 +74,6 @@ describe("mermaid 코드펜스", () => {
     render(<Markdown content={FENCE} />, { wrapper });
     fireEvent.click(await screen.findByRole("button", { name: "크게 보기" }));
 
-    // jsdom 은 크기를 못 재 맞춤이 원래 크기(100%)다.
     const zoom = await screen.findByTestId("mermaid-zoom");
     expect(zoom.textContent).toBe("100%");
     fireEvent.click(screen.getByRole("button", { name: "확대" }));
@@ -82,7 +81,6 @@ describe("mermaid 코드펜스", () => {
     fireEvent.click(screen.getByRole("button", { name: "축소" }));
     fireEvent.click(screen.getByRole("button", { name: "축소" }));
     expect(zoom.textContent).toBe("80%");
-    // 맞춤의 0.5배 아래로는 안 내려간다.
     for (let i = 0; i < 5; i++)
       fireEvent.click(screen.getByRole("button", { name: "축소" }));
     expect(zoom.textContent).toBe("50%");

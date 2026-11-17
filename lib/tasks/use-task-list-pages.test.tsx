@@ -72,7 +72,6 @@ describe("useTaskListPages", () => {
     expect(data?.status === 200 && data.data.data.tasks.map((t) => t.taskId)).toEqual(["T1", "T2"]);
     expect(data?.status === 200 && data.data.data.counts).toEqual(counts);
     expect(data?.status === 200 && data.data.data.hasMore).toBe(false);
-    // 첫 요청은 커서 없이 거르기와 쪽 크기를 단다. 둘째는 첫 쪽의 다음 커서를 그대로 단다.
     expect(getWorkspaceTasks.mock.calls[0]?.[1]).toEqual({
       status: "OPEN",
       assigneeUserId: "me",
@@ -85,7 +84,6 @@ describe("useTaskListPages", () => {
     });
   });
 
-  /** 기한 없는 줄이 쪽 끝이면 `nextDue` 가 null 이다 — 보내지 않아야 서버가 「기한 없는 행 뒤」로 읽는다. */
   it("커서 행에 기한이 없으면 afterDue 를 보내지 않는다", async () => {
     getWorkspaceTasks
       .mockResolvedValueOnce(page([task("T1", null)], true, { due: null, id: "T1" }))
@@ -112,7 +110,6 @@ describe("useTaskListPages", () => {
     expect(data?.status === 200 && data.data.data.hasMore).toBe(true);
   });
 
-  /** 쪽 사이에 줄이 상태를 옮겨 마지막 쪽의 개수가 읽은 줄 수보다 작아도 응답이 스스로 모순되지 않는다. */
   it("개수는 읽은 줄 수 밑으로 내려가지 않는다", async () => {
     const small = page([task("T3", null)], false);
     small.data.data.counts = { open: 1, completed: 1, cancelled: 0 };

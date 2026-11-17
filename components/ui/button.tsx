@@ -18,8 +18,6 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        // 글자색이 배경 틴트와 다른 값이다 — 같은 `--el-error`를 둘 다 쓰면 10% 틴트 위에서
-        // 명암비 4.13:1로 AA(4.5:1)에 못 미친다. `--el-error-strong`이 그 글자색이다.
         destructive:
           "bg-destructive/10 text-[var(--el-error-strong)] hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:text-destructive dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
@@ -104,15 +102,6 @@ function Button({
   );
 }
 
-/**
- * 이동하는 CTA. `Button`에 `render={<Link/>}`를 주면 base-ui가 「앵커인데 nativeButton이
- * 참이다」라고 dev 경고를 내고, 그 경고를 끄려고 `nativeButton={false}`를 주면 이번엔
- * 앵커에 `role="button"`이 붙어 링크가 링크로 안 읽힌다. **이동은 링크다** — primitive를
- * 안 거치고 클래스만 쓴다.
- *
- * children 구조는 `Button`과 같다(같은 `ButtonLabel`). 옆 자리의 로딩 자리표시가 공용
- * `Button`이라 래퍼가 다르면 폭이 어긋난다.
- */
 function LinkButton({
   className,
   variant,
@@ -131,10 +120,6 @@ function LinkButton({
   );
 }
 
-/**
- * 다운로드·외부 주소처럼 Next 라우터를 거치지 않는 링크용. `LinkButton` 과 같은 이유로 primitive 를
- * 안 거치고, 일반 `<a>` 에 같은 클래스와 같은 `ButtonLabel` 을 준다.
- */
 function AnchorButton({
   className,
   variant,

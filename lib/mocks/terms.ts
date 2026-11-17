@@ -9,17 +9,6 @@ import {
   normalizeTerm,
 } from "@/lib/terms/term-list";
 
-/**
- * 전사 용어 사전 목 (APP-1187 · APP-1226 계약). 서버와 같은 규칙만 흉내 낸다 — 같은 용어(대소문자·앞뒤 공백 무시)는 멱등하게
- * 기존 항목을 200 으로, 한도는 409 `TERM_LIMIT_EXCEEDED`, 삭제는 없어도 204. 일괄 추가(`/terms/batch`)는 한도를 넘어도 막지 않고
- * 들어갈 만큼 넣은 뒤 나머지를 `rejected` 로 돌려준다(항상 200).
- *
- * **응답을 조금 늦춘다.** 화면은 응답을 기다리지 않고 칩을 먼저 그린다(낙관적 갱신). 목이 즉시 답하면 그 경로와
- * 연달아 누를 때의 줄 세우기가 dev 에서 한 번도 드러나지 않는다.
- *
- * 「오류재현」이 들어간 용어는 500 으로 거절한다 — 실패 롤백을 화면에서 확인하는 자리다(브라우저 서비스 워커가
- * 처리하는 요청은 Playwright `page.route` 가 가로채지 못한다).
- */
 type StoredTerm = { termId: string; term: string };
 
 const WORKSPACE_LIMIT = 200;
@@ -38,7 +27,6 @@ function reset() {
     [
       "01K0000000000",
       seed(
-        // 가이드 캡처 프리셋(help-demo)이 켜져 있으면 마케팅 용어 사전을 쓴다
         isHelpDemoEnabled()
           ? [...helpDemoPack().terms]
           : ["HeyMoa", "핀볼", "MCP", "PRD", "pyannote", "온보딩 퍼널"]
@@ -50,7 +38,7 @@ reset();
 mockDb.onReset(reset);
 
 function wsList(workspaceId: string) {
-  mockDb.listProjects(workspaceId); // 없는 워크스페이스는 404
+  mockDb.listProjects(workspaceId);
   if (!workspaceTerms.has(workspaceId)) workspaceTerms.set(workspaceId, []);
   return workspaceTerms.get(workspaceId)!;
 }
@@ -65,7 +53,6 @@ async function readTerm(request: Request) {
   return term;
 }
 
-/** 멱등 추가. 새로 만들면 201, 이미 있으면 그 항목을 200 으로. */
 function add(list: StoredTerm[], term: string, limit: number) {
   const existing = list.find(
     (item) => normalizeTerm(item.term) === normalizeTerm(term)
@@ -82,7 +69,6 @@ function add(list: StoredTerm[], term: string, limit: number) {
   return { item, status: 201 };
 }
 
-/** 추가는 결과에 따라 200·201 이 갈린다 — 상태를 정한 뒤 봉투로 감싼다. */
 async function addResponse<T>(run: () => Promise<{ item: T; status: number }>) {
   await delay(LATENCY_MS);
   try {

@@ -84,7 +84,6 @@ describe("toGapRows", () => {
       }),
     ]);
 
-    // 회의 축의 차는 0이다 — 축이 안 나아갔다
     expect(rows[0].endedAtMs - rows[0].startedAtMs).toBe(0);
     expect(rows[0].durationMs).toBe(569_000);
   });
@@ -100,8 +99,6 @@ describe("toGapRows", () => {
   it("겹친 것 중 하나가 진행 중이면 합친 행도 진행 중이다", () => {
     const rows = toGapRows([
       gap({ gapId: "a", startedAtMs: 0, endedAtMs: 20_000 }),
-      // 열려 있을 수 있는 것은 CAPTURE 뿐이다 — UPLOAD 는 구멍 다음 번호가 도착해야
-      // 알 수 있어서 발견되는 순간 이미 닫혀 있다.
       gap({
         gapId: "b",
         kind: "CAPTURE",
@@ -118,7 +115,6 @@ describe("toGapRows", () => {
 
 describe("spansVisibleClockMinutes", () => {
   it("같은 분이면 절대 시각을 숨긴다", () => {
-    // 「09:10에 멈추고 09:10에 재개했습니다」가 실제로 나왔고 우스꽝스러웠다
     const [row] = toGapRows([
       gap({
         kind: "PAUSE",
@@ -229,10 +225,10 @@ describe("전사 공백 줄 (APP-706)", () => {
         }),
       ],
       [
-        untranscribed("t1", 5_000, 12_000), // 앞 5초가 남는다
-        untranscribed("t2", 29_500, 40_000), // 뒤 10초가 남는다
-        untranscribed("t3", 15_000, 20_000), // 통째로 가려진다
-        untranscribed("t4", 30_000, 30_600), // 1초 미만
+        untranscribed("t1", 5_000, 12_000),
+        untranscribed("t2", 29_500, 40_000),
+        untranscribed("t3", 15_000, 20_000),
+        untranscribed("t4", 30_000, 30_600),
       ]
     );
 

@@ -367,8 +367,6 @@ app
       return;
     }
     origin = new URL(url).origin;
-    // Native authentication uses the same persistent cookie jar as the web
-    // window. Requests stay on the fixed API origin and never follow redirects.
     const jar = session.fromPartition("persist:heymoa");
     const cookies = await jar.cookies.get({ url, name: "heymoa-lang" });
     if (!storedLanguage && isLanguage(cookies[0]?.value))
@@ -459,7 +457,6 @@ app
     ipcMain.handle("heymoa:update-check", (event, payload: unknown) => {
       authorize(event);
       if (!emptyRequest(payload)) throw new Error("INVALID_UPDATE_REQUEST");
-      // Results and progress arrive over the subscription, without holding the UI for the whole download.
       void updates!.check();
       return updates!.state();
     });
@@ -504,7 +501,6 @@ app
     ipcMain.handle(CHANNELS.summary, (event, payload: unknown) => {
       authorize(event);
       const summary = recordingSummary(payload);
-      // 녹음이 끝나며 지우는 일은 트레이가 상태 전이에서 한다. 뷰어 타임라인은 여기서 지우지 않는다.
       recording?.lifecycle.update(summary);
       updates?.publish();
     });
@@ -621,9 +617,7 @@ app
         )
           return;
         media?.ack(captureId(ack.id), ack.sequence as number);
-      } catch {
-        /* Untrusted or stale acknowledgment. */
-      }
+      } catch {}
     });
     app.on("activate", () => {
       if (onboarding) onboarding.show();

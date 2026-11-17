@@ -42,9 +42,6 @@ describe("deriveMeetingPhase", () => {
 });
 
 describe("isPersonalChatHiddenInNote", () => {
-  // 노트 안에서는 항상 감춘다. 전체 화면의 오른쪽 440은 공유 레일이 **상주**하는 자리라
-  // (design.pen `L4PpR`), 개인 챗봇이 `fixed`로 그 위에 뜨면 챗 UI 둘이 겹친다.
-  // 예전에는 종료되면 레일이 걷혀 그 자리를 개인 챗봇이 물려받는 규칙이었다.
   it.each([
     ["side", "active"],
     ["side", "ended"],
@@ -58,8 +55,6 @@ describe("isPersonalChatHiddenInNote", () => {
     expect(isPersonalChatHiddenInNote(view)).toBe(true);
   });
 
-  // 조회 실패도 예외가 아니다 — side는 시트가 z-50이라 개인 챗봇 FAB(z-40)이 그 아래 깔려
-  // 보여도 못 누른다. 실패의 정상 경로는 노트 자신의 InlineRetry다.
   it("조회 실패도 예외로 두지 않는다", () => {
     expect(isPersonalChatHiddenInNote("full")).toBe(true);
     expect(isPersonalChatHiddenInNote("side")).toBe(true);
@@ -176,7 +171,6 @@ describe("recordingClockOriginMs", () => {
     };
     const origin = Date.parse("2026-07-29T10:00:00Z") - 20 * 60_000;
     expect(recordingClockOriginMs(resumed)).toBe(origin);
-    // 재개 5초 뒤 시계는 20:05 다. 스크립트 줄(회의 축)과 같은 수다.
     expect(
       getRecordedDurationMs(resumed, Date.parse("2026-07-29T10:00:05Z"))
     ).toBe(20 * 60_000 + 5_000);
@@ -217,7 +211,6 @@ describe("meetingLengthOf", () => {
       transcriptGaps: [span(80_000)],
     } as never;
     expect(meetingLengthOf(10_000, transcript)).toBe(80_000);
-    // 미시작 세션이 마지막에 정렬돼 0으로 온 옛 응답(APP-1432 이전)도 끝까지 그린다
     expect(meetingLengthOf(0, transcript)).toBe(80_000);
   });
 
@@ -228,13 +221,10 @@ describe("meetingLengthOf", () => {
 });
 
 describe("pausedDayCount", () => {
-  // KST 10월 22일 09:00
   const now = Date.parse("2026-10-22T00:00:00Z");
 
   it("앱 시간대 달력일로 세고 일시정지한 날이 1일째다", () => {
-    // KST 10월 21일 23:30 — 9시간 반 전이지만 어제라 2일째
     expect(pausedDayCount("2026-10-21T14:30:00Z", now)).toBe(2);
-    // KST 10월 19일
     expect(pausedDayCount("2026-10-19T05:00:00Z", now)).toBe(4);
   });
 

@@ -10,7 +10,6 @@ function pause(partial: Partial<TranscriptGap> = {}) {
     {
       gapId: "p1",
       kind: "PAUSE",
-      // 일시정지는 회의 축에서 점이다 — 두 좌표가 같다.
       startedAtMs: 612_000,
       endedAtMs: 612_000,
       startedAt: "2026-08-18T01:00:00Z",
@@ -66,7 +65,6 @@ describe("TranscriptGapRow", () => {
 
   it("기기 시간대가 달라도 머리글 · 회의록과 같은 앱 시간대(서울)로 적는다", () => {
     const deviceZone = process.env.TZ;
-    // 해외 기기. 기기 시간대로 적으면 「18:00에 멈추고 22:30에 재개」가 된다.
     process.env.TZ = "America/Los_Angeles";
     try {
       render(<TranscriptGapRow row={pause()} />);
@@ -82,7 +80,6 @@ describe("TranscriptGapRow", () => {
     const deviceZone = process.env.TZ;
     process.env.TZ = "UTC";
     try {
-      // UTC 로는 17일 23:30 · 18일 00:30 이지만 서울로는 18일 08:30 · 09:30 이다
       render(
         <TranscriptGapRow
           row={pause({

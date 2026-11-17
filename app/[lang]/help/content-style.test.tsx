@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { helpTopics } from "@/app/[lang]/help/_content/topics";
 import { textOf } from "@/lib/help/text";
 
-/** 따옴표 안(화면에 뜨는 문구)은 화면의 말투 그대로 두므로 검사에서 뺀다. */
 const withoutQuoted = (text: string) => text.replace(/“[^”]*”/g, "");
 
 const textsOf = (topic: (typeof helpTopics)[number]) => [

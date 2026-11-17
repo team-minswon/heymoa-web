@@ -16,14 +16,6 @@ import {
   seedAgentChatTurnForTests,
 } from "@/lib/mocks/sse-handler";
 
-/**
- * 계약에서 `nullable: true`인 필드는 실서버가 null을 줄 수 있다는 뜻이다. 목이 한쪽 값만
- * 주면 화면의 반대쪽 분기는 411개 테스트를 다 통과하고 실서버에서 처음 실행된다.
- * 여기서 "목이 양쪽을 다 보여주는가"를 지킨다 — 화면 검증이 아니라 **표본 검증**이다.
- *
- * 시드만 찌르면 오판한다 (`startedAt` 같은 필드는 `createSession`이 런타임에 null로 만든다).
- * 그래서 목록·상세를 전수로 훑고, 세션은 생성 직후 상태까지 함께 본다.
- */
 const server = setupServer(
   ...meetingFlowHandlers,
   ...projectTaskHandlers,
@@ -49,7 +41,6 @@ function nullableLeaves(schema: unknown, path = ""): string[] {
   return out;
 }
 
-/** `pattern` 이 걸린 잎. oneOf 분기도 같은 경로로 본다 — 분기마다 판별 값이 다를 뿐 id 형식은 같다. */
 function patternLeaves(
   schema: unknown,
   path = ""
@@ -90,7 +81,6 @@ function valuesAt(node: unknown, parts: string[]): unknown[] {
   return valuesAt((node as Record<string, unknown>)[head], rest);
 }
 
-/** 최종 필드 자체가 선택일 때만 NON_NULL 직렬화에 따른 누락을 null 표본으로 센다. */
 type NullableSchema = {
   properties?: Record<string, NullableSchema>;
   items?: NullableSchema;
@@ -114,7 +104,6 @@ type GetOperation = {
   requiredQuery: string[];
 };
 
-/** 계약의 GET operation에서 `{param}`·필수 query·200 응답 스키마를 뽑는다. */
 function jsonGetOperations(): GetOperation[] {
   const paths = contract.paths as Record<
     string,
@@ -136,7 +125,7 @@ function jsonGetOperations(): GetOperation[] {
     const ref = ok
       ? Object.values(ok).find((media) => media?.schema?.$ref)?.schema?.$ref
       : undefined;
-    if (!ref) continue; // 리다이렉트 계열(`/authorize`·`/callback`)은 JSON 본문이 없다
+    if (!ref) continue;
     operations.push({
       path,
       schema: ref.replace("#/components/schemas/", ""),
@@ -151,13 +140,6 @@ function jsonGetOperations(): GetOperation[] {
   return operations;
 }
 
-/**
- * 시드의 모든 엔티티 조합으로 GET operation마다 URL을 만든다. 손으로 나열하지 않는 이유는
- * 새 엔드포인트가 계약에 생겼을 때 목록에서 빠져 게이트가 조용히 좁아지기 때문이다.
- *
- * 채울 수 없는 `{param}`이 남은 operation은 `skipped`로 돌려준다 — 조용히 빠뜨리면
- * "전부 검사했다"로 읽힌다.
- */
 async function contractSamples() {
   const workspaces = mockDb.listWorkspaces();
   const tuples: Array<Record<string, string>> = [];
@@ -173,16 +155,10 @@ async function contractSamples() {
     }
   }
 
-  // 결제(PRO-75)는 상태마다 필드가 null 이 된다. **실제 흐름을 밟아** 상태가 다른 공간을 만든다 — 공간 조회는 아래 `billingWorkspaces`
-  // 를 따로 표본에 넣고(새 공간이 다른 응답의 표본을 늘리지 않게 `tuples` 는 이미 만들어 뒀다), 등록 조회는 `setupId` 로 전개된다.
   const billingWorkspaces = await seedBilling(workspaces[0].workspaceId);
 
   const notes = tuples.filter((tuple) => tuple.noteId).map((t) => t.noteId!);
 
-  // 분석 표본을 만들 노트에는 열린 세션이 없어야 한다. 진행 중인 시드는 실제
-  // ACTIVE 세션을 가지므로, 미시작·일시정지된 노트만 골라 세션 생성 → 종료를 검사한다.
-  // **위치가 아니라 상태로 고른다** — 시드가 늘어도 표본 생성이 흔들리지 않는다.
-  // 현재 목 DB의 정본인 상세 상태로 고른다.
   const operable = notes.filter((noteId) => {
     const note = mockDb.getNote(noteId);
     return (
@@ -190,28 +166,18 @@ async function contractSamples() {
     );
   });
 
-  // 분석은 시드에 없어 모든 노트가 404다. 회의를 끝내 두 표본을 만든다 — **목에서 회의를
-  // 끝낼 수 있는 노트가 넷뿐이고 둘은 아래 세션이 쓴다.** 그래서 이 둘에 최대한 담는다.
-  //
-  //   [0] FAILED           → 결과 `errorCode`·`errorMessage`의 비-null 쪽, `retry`의 null 쪽
-  //   [1] SUCCEEDED + 재요약 진행 중 → 그 반대쪽과 `retry`의 비-null 쪽
   for (const [index, noteId] of [operable[0], operable[1]].entries()) {
     const session = mockDb.createSession(noteId);
     mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
     mockDb.endMeeting(noteId);
-    // 회의 종료는 구형 결과를 만들지 않는다. 지난 노트의 결과 모양을 보려고 직접 쌓는다.
     mockDb.requestAnalysis(noteId);
     if (index === 0) {
       mockDb.failAnalysis(noteId);
       continue;
     }
     mockDb.advanceAnalysis(noteId);
-    // 요약은 마지막 성공본 하나이므로 이 노트의 본문은 그대로고 `retry`만 붙는다 (APP-421).
     mockDb.requestAnalysis(noteId);
   }
-  // READY 세션은 마지막에 만든다. 이 세션이
-  // `startedAt`·`endedAt`·`endReason`의 null 쪽 표본이다.
-  // 방금 종료한 둘 말고 아직 진행 중인 노트에 만든다 — 종료된 회의는 세션을 못 만든다.
   const unstartedSession = mockDb.createSession(operable[2]);
   mockDb.updateSessionStatus(unstartedSession.sessionId, "COMPLETED");
   const activeSession = mockDb.createSession(operable[3]);
@@ -222,18 +188,8 @@ async function contractSamples() {
     activeSession.sessionId,
   ];
 
-  // 연동은 목이 둘 다 미연동으로 시작한다 — 하나를 연결해 `connectedAt`·`connectedBy`의
-  // 비-null 쪽을 만든다.
   mockDb.connectIntegration(workspaces[0].workspaceId, "LINEAR");
 
-  /**
-   * 후보 revision 이력은 `{proposalId}` 가 있어야 부를 수 있다. **id 를 손으로 박지
-   * 않는다** — 목이 바뀌면 조용히 빈 응답을 부르게 되고, 그러면 nullable 표본이 0개인데도
-   * 이 테스트가 통과한다.
-   *
-   * 목 스냅샷에서 **필요한 성질별로 하나씩** 고른다. `closeReason` 과
-   * `resolvesProposalId` 가 둘 다 nullable 이라 양쪽 값을 내는 후보가 함께 있어야 한다.
-   */
   const proposalIds = [
     ...new Set(
       [
@@ -248,18 +204,6 @@ async function contractSamples() {
     ),
   ];
 
-  /**
-   * 채팅은 시드에 없다. **다섯을 만든다** — 이어받기 필드(`activeTurn`·`lastTurn`)는 턴
-   * 상태에서 나오는데 한 대화가 한 조합만 보여 줄 수 있어서다. 정지 상태의 GET만으로는
-   * 전부 null이라 「목이 양쪽을 다 보여주는가」가 거짓말이 된다.
-   *
-   *   [0] 턴 없음        → activeTurn·lastTurn 의 null 쪽. 히스토리도 이 대화에 담는다
-   *   [1] 도는 턴 + 승인  → pendingApproval·summary 의 비-null 쪽
-   *   [2] 도는 턴만       → 그 셋의 null 쪽
-   *   [3] 도는 턴 + 요약 없는 승인 → pendingApproval.summary 의 null 쪽
-   *   [4] 실패로 끝난 턴  → lastTurn.failureCode·retryable 의 비-null 쪽
-   *   [5] 도는 턴 + 빈 카드 승인 → pendingApproval.card 안쪽 필드의 null 쪽
-   */
   const chatIds = Array.from(
     { length: 6 },
     () =>
@@ -270,9 +214,7 @@ async function contractSamples() {
     tool: "linear.create_issue",
   };
   seedAgentChatTurnForTests(chatIds[1], {
-    // 승인 카드가 섰던 턴 — `cursor` 가 그 카드의 entry id 인 쪽.
     approvalEntryId: "1735689600000-4",
-    // 인자가 있는 승인 — 카드가 「무엇을 승인하나」를 말하는 쪽.
     pendingApproval: {
       ...approval,
       summary: "이슈를 만들까요?",
@@ -290,7 +232,6 @@ async function contractSamples() {
   });
   seedAgentChatTurnForTests(chatIds[2], {});
   seedAgentChatTurnForTests(chatIds[3], {
-    // 카드도 요약도 없는 승인 — 무엇인지 몰라 승인을 막고 거절만 남기는 쪽.
     pendingApproval: { ...approval, summary: null, args: null, card: null },
   });
   seedAgentChatTurnForTests(chatIds[4], {
@@ -299,13 +240,6 @@ async function contractSamples() {
     retryable: true,
   });
 
-  /**
-   * 메시지가 없으면 `messages[]` 안의 nullable 필드는 값이 0개라 관측조차 안 된다.
-   * `toolEvent`의 `decision`과 `status`는 서로 배타라(승인 확정이면 decision, 실행 결과면
-   * status) 기록 둘을 다 넣어야 양쪽이 나온다. `url`도 실행 기록에만 있다.
-   */
-  // `scope[].title`은 nullable이다 — 지워졌거나 권한이 없으면 제목을 안 싣는다.
-  // 둘을 한 메시지에 담아 null·비-null 양쪽을 만든다.
   mockDb.appendAgentChatMessage(chatIds[0], {
     role: "USER",
     scope: [
@@ -332,7 +266,6 @@ async function contractSamples() {
       card: FULL_CARD,
     },
   });
-  // 승인 카드의 안쪽 필드는 꽉 찬 카드(위)와 빈 카드(여기)를 함께 넣어야 양쪽이 나온다.
   mockDb.appendAgentChatMessage(chatIds[0], {
     role: "TOOL",
     scope: [],
@@ -345,7 +278,6 @@ async function contractSamples() {
       card: SPARSE_CARD,
     },
   });
-  // `turnId`도 nullable이다 — 위 둘은 안 싣고(null 쪽) 이 행만 싣는다(비-null 쪽).
   mockDb.appendAgentChatMessage(chatIds[0], {
     role: "TOOL",
     turnId: "0K9GVJT2C4Q3B",
@@ -360,36 +292,22 @@ async function contractSamples() {
     },
   });
 
-  // 시드의 초대는 받은 것(다른 워크스페이스) 하나뿐이라 `/invitations`가 비어 있다.
   mockDb.createInvitation(workspaces[0].workspaceId, {
     email: "invitee@heymoa.com",
     role: "MEMBER",
   });
 
-  /**
-   * 필수 query가 있는 operation은 경로만으로는 **계약을 어기는 요청**이다. 자동 루프에
-   * 넣으면 목이 기본값을 적용해 돌려주는 계약 위반 응답(예: `scope` 없이 200 + `data: null`)을
-   * 유효한 null 표본으로 세게 되고, 핸들러를 계약대로 400으로 고치는 순간 이 테스트가
-   * 정상 변경을 막는다. 그래서 여기 손으로 적은 유효 요청만 쓴다.
-   */
   const requiredQuerySamples: Record<string, string[]> = {
-    // 전사 증분 조회 (APP-685). **커서 둘을 함께** 보내는 것이 유효한 요청이다 — 한쪽만
-    // 보내면 같은 밀리초의 발화가 조용히 빠진다. 0 부터면 처음부터이므로 전체와 같은 표본을
-    // 낸다.
     "/v1/notes/{noteId}/transcript/segments": [
       "?afterStartedAtMs=0&afterSequence=0",
     ],
-    // 동의 화면이 읽는 요청 (APP-888). 목 시드의 대기 요청 하나다.
     "/v1/agent-oauth/consent": ["?state=mock-consent"],
-    // 메일 수신거부 확인 화면이 읽는 요청 (APP-1314). 목은 `invalid` 밖의 토큰을 맞는 링크로 본다.
     "/v1/mail/unsubscribe": ["?t=mock"],
   };
 
   const samples: Array<[string, string]> = [];
   const skipped: string[] = [];
   for (const { path, schema, params, requiredQuery } of jsonGetOperations()) {
-    // 필수 query 는 손으로 적은 유효 요청을 쓰되, `{param}` 은 아래 전개에 그대로 맡긴다 —
-    // 쿼리 때문에 경로 채우기를 건너뛰면 그 operation 이 표본에서 통째로 빠진다.
     let queries = [""];
     if (requiredQuery.length > 0) {
       const sampled = requiredQuerySamples[path];
@@ -399,7 +317,6 @@ async function contractSamples() {
       }
       queries = sampled;
     }
-    // 파라미터가 없는 operation은 시드 조합과 무관하게 한 번만 부른다.
     const proposals = params.length === 0 ? [{}] : tuples;
     let filled = 0;
     for (const tuple of proposals) {
@@ -409,24 +326,19 @@ async function contractSamples() {
         ),
         sessionId: sessionIds,
         chatId: chatIds,
-        // 검토 항목의 원본 명제는 판이 여럿인 것부터 앞에 선다. 앞의 몇 개로 이력 모양이 다 나온다.
         proposalId: [...proposalIds, ...meetingFlow.proposalIds().slice(0, 12)],
         taskId: projectTasks.ids(),
         setupId: billingMock.setupIds(),
-        // 결제 상세는 그 공간의 결제만 200 이다 — 다른 공간 조합은 404 로 빠지고 아래에서 결제의 공간으로 다시 넣는다.
         paymentId: billingMock.payments().map((payment) => payment.paymentId),
-        // 사용 내역(APP-826) — 한 쪽을 넘는 연결과 몇 줄뿐인 연결이 커서의 양쪽을 낸다
         delegationId: mockDb
           .listAgentDelegations()
           .map((delegation) => delegation.delegationId),
-        // 회의록 메일(APP-1114) — 그 노트로 보낸 발송 하나를 심어 둔다
         mailId:
           "noteId" in tuple
             ? [seedShareMail(String(tuple.noteId), ["kim@example.com"])]
             : [],
       };
       if (params.some((param) => !values[param]?.length)) continue;
-      // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).
       let urls = [path];
       for (const param of params) {
         urls = urls.flatMap((url) =>
@@ -435,16 +347,13 @@ async function contractSamples() {
       }
       for (const url of urls) {
         for (const query of queries) {
-          // 선택 noteId 필터로 실제 관계가 있는 회의도 검사한다. 경로만 부르면 목은 빈 목록을 준다.
           const suffix =
             path === "/v1/projects/{projectId}/meeting-links" && tuple.noteId
               ? `?noteId=${tuple.noteId}`
               : query;
           samples.push([schema, `${url}${suffix}`]);
-          // 알림은 스키마 표식이 있어야 원본이 지워진 초대·새 종류를 낸다(PRO-67 I06). 새 web 이 실제로 보내는 요청이다.
           if (path === "/v1/notifications")
             samples.push([schema, `${url}?schema=2`]);
-          // 운영자 조회(APP-1615)는 한 쪽을 줄여야 다음 커서의 비-null 쪽이 나온다
           if (path === "/v1/admin/users" || path === "/v1/admin/feedbacks")
             samples.push([schema, `${url}?limit=1`]);
         }
@@ -458,7 +367,6 @@ async function contractSamples() {
       "WorkspaceBillingResponse",
       `/v1/workspaces/${workspaceId}/billing`,
     ]);
-    // 공간 결제 내역(APP-1596) — 확인 중·거절·자동 취소가 상태별 공간에 있어 null 과 값이 둘 다 나온다.
     samples.push([
       "WorkspaceBillingPaymentsResponse",
       `/v1/workspaces/${workspaceId}/billing/payments`,
@@ -475,10 +383,6 @@ async function contractSamples() {
   };
 }
 
-/**
- * 결제 목을 실제 호출로 여러 상태에 놓는다. 공간마다 한 상태다 — 취소된 등록·진행 중 등록(첫 공간), 완료, 거절, 결과 확인 지연,
- * 권한 상실. 돌려주는 것은 새로 만든 공간 id 다.
- */
 async function seedBilling(firstWorkspaceId: string) {
   const call = (path: string, init?: { method: string; body?: unknown }) =>
     fetch(`http://localhost${path}`, {
@@ -509,7 +413,6 @@ async function seedBilling(firstWorkspaceId: string) {
     const { workspaceId } = mockDb.createWorkspace({ name });
     billingMock.setScenario(scenario);
     const setupId = await open(workspaceId, `key-${name}`);
-    // 나이스페이 흐름(APP-1600)은 카드 제출이 처리를 시작한다.
     await call(`/v1/workspaces/${workspaceId}/billing/setups/${setupId}/card`, {
       method: "POST",
       body: {
@@ -525,7 +428,6 @@ async function seedBilling(firstWorkspaceId: string) {
     return workspaceId;
   };
   billingMock.setScenario("ok");
-  // 첫 공간: 취소한 등록(failureCode 가 있는 쪽) 뒤에 다시 연 진행 중 등록(`mySetupId` 가 있는 쪽)
   const canceled = await open(firstWorkspaceId, "key-canceled");
   await call(
     `/v1/workspaces/${firstWorkspaceId}/billing/setups/${canceled}/cancel`,
@@ -541,98 +443,51 @@ async function seedBilling(firstWorkspaceId: string) {
     await run("refund", "결제 취소 중", 3),
     await run("ok", "갱신 거절로 종료", 4),
   ];
-  // 마지막 유료 공간의 갱신이 확정 거절돼 끝난다(`closedReason` 이 있는 쪽). 시나리오는 공간 조회 때 한 번 적용된다.
   billingMock.setScenario("unpaid");
   await call(`/v1/workspaces/${created[created.length - 1]}/billing`);
   billingMock.setScenario(null);
   return created;
 }
 
-/**
- * 양쪽 표본이 구조적으로 불가능한 필드만 남긴다. **늘리면 이 테스트가 깨진다** — 새로 심은
- * 목이 한쪽 값만 준다는 뜻이다. 반대로 줄면 여기서 지워야 목록이 거짓말을 하지 않는다.
- *
- * `CurrentUserResponse`는 목 유저가 하나라 `image`가 한쪽밖에 안 나온다. 실서버는 Google
- * 로그인이라 값이 오는 쪽이 정상이다. null 쪽 표본은 멤버 목록 응답(`한지원`)에 있지만
- * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
- */
 const KNOWN_ONE_SIDED = new Set([
-  // 유료 상품의 녹음 제공량은 무제한(null)으로 확정이다. 숫자는 서버가 다른 상품을 줄 때만 오고, 화면은 두 쪽을 다 그린다
-  // (`billing-screens.test.tsx` 의 「서버가 제공량을 숫자로 줘도 깨지지 않는다」).
   "WorkspaceBillingResponse.data.product.recordingAllowanceMinutes",
-  // 환불이 걸린 시도는 승인된 시도라 오류 코드가 없고, 환불 상태·출처는 항상 있다(없으면 `refundedAttempt` 자체가 null).
   "WorkspaceBillingResponse.data.detail.refundedAttempt.errorCode",
   "WorkspaceBillingResponse.data.detail.refundedAttempt.refundStatus",
   "WorkspaceBillingResponse.data.detail.refundedAttempt.refundOrigin",
-  // 확정 거절은 그 자리에서 회차를 닫아(2026-11-11) 공간 조회의 열린 시도는 결과를 기다리는 시도뿐이다 — 오류 코드가 없다.
   "WorkspaceBillingResponse.data.detail.latestAttempt.errorCode",
-  // APP-1266 목에서 생략한 호환 참조입니다. 서버 계약에서 제거할 때 함께 지웁니다.
   "MeetingReviewSummaryResponse.data.agendas[].agendaItemId",
   "MeetingReviewSummaryResponse.data.agendas[].centerItemId",
-  // 삭제된 출처의 표시 fallback은 review-parts에서 확인하며 이 표본의 대체 대상은 생존 회의뿐입니다.
   "MeetingReviewResponse.data.items[].replacements[].target.noteTitle",
   "MeetingReviewResponse.data.items[].replacements[].target.noteId",
-  // 관계의 출발은 항상 현재 회의 명제다. 공용 endpoint DTO의 승격 구분·ID는 출발 쪽에 나오지 않는다.
   "ProjectMeetingLinksResponse.data.meetingLinks[].source.itemId",
   "ProjectMeetingLinksResponse.data.meetingLinks[].source.type",
   "ProjectMeetingLinksResponse.data.conflicts[].source.itemId",
   "ProjectMeetingLinksResponse.data.conflicts[].source.type",
-  // **목의 알림은 한 쪽뿐이다.** 커서는 `hasMore` 가 참일 때만 값이 있는데, 그러려면 시드에
-  // 알림을 50건 넘게 심어야 한다 — 모든 테스트가 그만큼 느려지는 값을 이 한 필드 때문에
-  // 치르지 않는다. 서버 쪽은 `GetNotificationsService` 가 한 건 더 읽어 정하고 IT 가 본다.
   "NotificationListResponse.data.nextCreatedAt",
   "NotificationListResponse.data.nextNotificationId",
-  // **노트 목록도 목은 쪽 인자 없이 부르면 전건을 준다** (APP-1019). 커서는 `limit` 을 보낸 요청에서
-  // `hasMore` 가 참일 때만 서는데, 이 표본은 인자 없이 훑는다. 쪽 끊기는 `workspace-page.test.tsx`
-  // 가 `limit` 을 보내 본다.
   "NoteListResponse.data.nextNoteId",
   "NoteListResponse.data.nextSortedAt",
-  // 워크스페이스 할 일 목록도 같다 (APP-1043). 커서는 `limit` 을 보낸 요청에서 `hasMore` 가 참일 때만 서고, 이 표본은 인자 없이
-  // 훑는다. 쪽 끊기는 `rest-handlers.test.ts` 와 `all-tasks.test.tsx` 가 본다.
   "WorkspaceTaskListResponse.data.nextDue",
   "WorkspaceTaskListResponse.data.nextTaskId",
-  // 대화 목록도 같다. 목 대화가 50개를 넘지 않는 한 커서는 `null` 이다.
   "AgentChatsResponse.data.nextUpdatedAt",
   "AgentChatsResponse.data.nextChatId",
-  // 임시 참여자 목록도 같다. `limit` 없이 부르면 전건이라 커서가 `null` 이다.
   "WorkspaceGuestListResponse.data.nextDisplayName",
   "WorkspaceGuestListResponse.data.nextGuestId",
-  // **server 가 늘 `null` 을 보낸다.** 계약이 선언만 하고 채우는 경로가 없다
-  // (`변경사항/계약-어긋남.md` 6번 「스키마만 넓다」). 고칠 자리는 server 의
-  // `turnFields()` 헬퍼이고, 그때 이 줄을 지운다.
   "AgentChatMessagesResponse.data.lastTurn.pendingApproval",
-  // **도는 턴에는 실패 코드가 없다.** `activeTurn` 은 정의상 아직 안 끝났으므로
-  // 이 값은 늘 `null` 이다 — 목이 좁은 게 아니라 뜻이 그렇다. 값이 서는 자리는
-  // `lastTurn.failureCode` 와 `turn_failed` 프레임이고 그쪽은 양쪽 다 관측된다.
   "AgentChatMessagesResponse.data.activeTurn.failureCode",
   "CurrentUserResponse.data.image",
-  // 계정 언어(APP-1283)는 고르는 화면이 아직 없다(APP-1285). 목 유저는 고르지 않은 쪽(null)만 준다.
-  // 설정 화면이 목에 `PATCH /v1/users/me` 를 심을 때 이 두 줄을 지운다.
   "CurrentUserResponse.data.language",
   "AuthSessionResponse.data.user.language",
-  // 같은 고정 목 유저를 쓰는 세션 조회도 프로필 이미지 표본이 한 쪽이다.
   "AuthSessionResponse.data.user.image",
-  // 재요약의 오류 두 필드는 **실패한 재요약** 표본이 있어야 비-null이 나오는데, 회의를
-  // 끝낼 수 있는 목 노트가 넷뿐이고 둘은 세션이 쓴다. 남은 둘에는 「실패한 분석」과
-  // 「진행 중인 재요약」을 담았다 — 셋째 조합을 놓을 노트가 없다 (APP-421).
   "AnalysisResultResponse.data.retry.errorCode",
   "AnalysisResultResponse.data.retry.errorMessage",
-  // 광고 수신 동의(APP-1392)는 바꾼 적이 없는 기본 상태(null)로 시작하고, 값은 PUT 뒤에만 생긴다.
-  // 이 표본은 GET 만 훑는다 — 비-null 쪽은 설정 화면 시험이 PUT 으로 본다.
   "NotificationSettingsResponse.data.marketingEmail.changedAt",
 ]);
 
-/** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */
 const KNOWN_UNOBSERVED = new Set<string>([
-  // APP-1266 브라우저 목은 폐기 예정 topics를 생략합니다. 서버 호환 계약에서 제거할 때 함께 지웁니다.
   ...["agendaItemId", "centerItemId", "agendaId", "summary"].map(
     (field) => `MeetingReviewSummaryResponse.data.topics[].${field}`
   ),
-  // **server 가 `lastTurn.pendingApproval` 에 늘 `null` 을 보낸다.** 계약이 선언만 하고
-  // 채우는 경로가 없어서, 그 아래 필드는 목이 무엇을 해도 관측될 수 없다.
-  // 목을 억지로 채우면 **실서버가 안 내는 모양을 화면이 믿게 된다** — 그게 이 프로젝트가
-  // 계약 감사에서 찾은 병이다(`변경사항/계약-어긋남.md` 6번, 「스키마만 넓다」).
-  // 고칠 자리는 server 의 `turnFields()` 헬퍼이고, 그때 이 둘을 여기서 지운다.
   "AgentChatMessagesResponse.data.lastTurn.pendingApproval.args",
   "AgentChatMessagesResponse.data.lastTurn.pendingApproval.summary",
   ...[
@@ -653,10 +508,6 @@ const KNOWN_UNOBSERVED = new Set<string>([
   ),
 ]);
 
-/**
- * 승인 카드 표본. 한 칸에 값·「전 → 후」·명단이 다 설 수는 없어서 줄마다 하나씩 싣고, 나머지는
- * `null` 이다 — 실서버도 없는 칸을 `null` 로 보낸다. 빈 카드는 카드 바깥 칸의 `null` 쪽이다.
- */
 const emptyField = {
   value: null,
   before: null,
@@ -698,7 +549,6 @@ const SPARSE_CARD = {
 
 describe("nullable 목 표본", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
-  // 목 DB는 리셋하면 같은 chatId를 다시 발급하므로 스트림 상태도 짝으로 비운다.
   afterEach(() => {
     mockDb.reset();
     resetChatStreamsForTests();
@@ -709,10 +559,8 @@ describe("nullable 목 표본", () => {
     const observed = new Map<string, { total: number; nulls: number }>();
     const { samples, skipped } = await contractSamples();
     const answered = new Set<string>();
-    // 목 id 가 계약 형식(TSID 13자 등)을 어기면 화면이 실서버에서 못 받을 값으로 돈다.
     const patternViolations = new Set<string>();
 
-    // 조용히 좁아지지 않게 못 부른 operation을 남긴다.
     expect(skipped, "표본을 만들 수 없는 GET operation").toEqual([]);
 
     for (const [schemaName, url] of samples) {
@@ -720,12 +568,9 @@ describe("nullable 목 표본", () => {
       expect(schema, `계약에 ${schemaName}이 없습니다`).toBeDefined();
 
       const response = await fetch(`http://localhost${url}`);
-      // 404는 정상 응답인 operation이 있다 (분석 없는 노트의 `/analyses/latest`).
-      // 그래서 개별 URL은 봐주고, 아래에서 스키마별로 200을 한 번은 받았는지 본다.
       if (!response.ok) continue;
       answered.add(schemaName);
       const bodies = [await response.json()];
-      // 저장한 초안은 처음 시드에 없습니다. 실제 PATCH → GET으로 담당 참조·해제·미변경을 함께 검사합니다.
       if (
         schemaName === "MeetingReviewResponse" &&
         bodies[0].data.noteId === MENTORING_NOTE_ID
@@ -787,7 +632,7 @@ describe("nullable 목 표본", () => {
 
       for (const body of bodies)
         for (const leaf of nullableLeaves(schema)) {
-          if (leaf === "error") continue; // 성공 응답의 봉투는 언제나 null이다
+          if (leaf === "error") continue;
           const values = valuesAt(body, leaf.split("."));
           if (values.length === 0) continue;
           const key = `${schemaName}.${leaf}`;
@@ -803,17 +648,11 @@ describe("nullable 목 표본", () => {
 
     expect([...patternViolations], "계약 pattern 을 어긴 목 값").toEqual([]);
 
-    // 200을 한 번도 못 받은 스키마가 있으면 그 응답은 통째로 미검사다.
     const unanswered = [...new Set(samples.map(([schema]) => schema))].filter(
       (schema) => !answered.has(schema)
     );
     expect(unanswered, "200 응답을 한 번도 못 받은 스키마").toEqual([]);
 
-    /**
-     * 빈 배열 안의 필드는 값이 0개라 위 루프가 아무것도 세지 않는다. 그대로 두면 관측조차
-     * 안 된 필드가 `oneSided`에도 안 들어가 "검사했다"로 읽힌다 — 계약에서 기대한 키와
-     * 대조해 0회 관측을 드러낸다.
-     */
     const expected = new Set(
       [...new Set(samples.map(([schema]) => schema))].flatMap((schemaName) =>
         nullableLeaves(contract.components.schemas[schemaName])
@@ -835,9 +674,7 @@ describe("nullable 목 표본", () => {
       .filter(([, v]) => v.nulls === 0 || v.nulls === v.total)
       .map(([key]) => key);
 
-    // 알려진 것보다 늘어났으면 새로 심은 목이 한쪽 값만 준다는 뜻이다.
     expect(oneSided.filter((key) => !KNOWN_ONE_SIDED.has(key))).toEqual([]);
-    // 줄었으면 KNOWN_ONE_SIDED에서 지워야 목록이 거짓말을 하지 않는다.
     expect(
       [...KNOWN_ONE_SIDED].filter((key) => !oneSided.includes(key))
     ).toEqual([]);

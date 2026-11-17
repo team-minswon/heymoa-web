@@ -74,12 +74,11 @@ export function createRecordingTray(
   let contextMenu: Menu | null = null;
   let throttled: boolean | undefined;
   let wasRecording = false;
-  /** 로그인 시 자동 실행. 설치된 앱에서만 다룬다(개발 중 electron 바이너리를 등록하지 않는다). */
   const loginItemSupported =
     app.isPackaged === true &&
     typeof app.getLoginItemSettings === "function" &&
     typeof app.setLoginItemSettings === "function";
-  /** Windows 는 작업 관리자에서 시작 프로그램을 꺼도 등록은 남는다. 실제로 실행될지를 본다. */
+  /** Windows 는 작업 관리자에서 시작 프로그램을 꺼도 등록이 남아, 실제로 실행될지를 봅니다. */
   const readOpenAtLogin = () => {
     const settings = app.getLoginItemSettings();
     return settings.executableWillLaunchAtLogin ?? settings.openAtLogin;
@@ -144,7 +143,6 @@ export function createRecordingTray(
         ? "discard"
         : "cancel";
   }
-  /** 뷰어로 보는 회의의 경과. 시작 시각은 진행 중 회의 목록에서 찾는다(APP-1094). */
   function viewElapsed(): string | null {
     if (!timeline || lifecycle.isRecording()) return null;
     if (
@@ -162,10 +160,8 @@ export function createRecordingTray(
   function refresh() {
     if (disposed) return;
     const recording = lifecycle.isRecording();
-    // 녹음이 끝나면 그때까지 받은 타임라인은 내 녹음의 것이다. 뷰어로 계속 보면 웹이 다시 보낸다.
     if (wasRecording && !recording && !timeline?.detail) clearTimeline();
     wasRecording = recording;
-    // 뷰어 타임라인은 웹이 10초마다 다시 보낸다. 그 두 배가 지나도 안 오면 그만 본다.
     if (
       !recording &&
       timeline &&
@@ -179,7 +175,6 @@ export function createRecordingTray(
       meetingsStatus = "failed";
     }
     const viewing = !recording && timeline !== null;
-    // 숨은 창이 느려지면 타임라인 하트비트와 실시간 이벤트가 늦는다. 보는 동안도 켜 둔다.
     const backgroundThrottling = !recording && !viewing;
     if (!contents.isDestroyed() && throttled !== backgroundThrottling) {
       // Keep the hidden recording window's timeline heartbeat and realtime events active.
@@ -202,7 +197,6 @@ export function createRecordingTray(
       .join(" · ");
     tray.setToolTip(status);
     if (process.platform === "darwin") {
-      // 내 녹음도 뷰어도 아니면 진행 중인 회의 개수를 보여 팝오버를 열기 전에 알 수 있게 한다.
       const activeCount = meetings.filter((meeting) =>
         meeting.state ? meeting.state === "IN_PROGRESS" : !meeting.ended
       ).length;
@@ -261,7 +255,7 @@ export function createRecordingTray(
               checked: openAtLogin,
               click: (item: { checked: boolean }) => {
                 app.setLoginItemSettings({ openAtLogin: item.checked });
-                // 실제로 적용된 값을 다시 읽는다. 시스템 설정에서 막혀 있으면 체크가 되돌아간다.
+                // 실제로 적용된 값을 다시 읽습니다. 시스템 설정에서 막혀 있으면 체크가 되돌아갑니다.
                 openAtLogin = readOpenAtLogin();
                 refresh();
               },
@@ -404,7 +398,6 @@ export function createRecordingTray(
         elapsed: viewElapsed() ?? view.elapsed,
         warning:
           view.inputWarning ||
-          // 녹음 중 청크의 짧은 전송 대기는 정상이며 경고 줄의 출몰이 본문을 밀어낸다.
           (view.pending && !["recording", "stopping"].includes(view.phase ?? "")
             ? t("전송 대기 중인 소리가 있습니다.")
             : null),
@@ -419,7 +412,6 @@ export function createRecordingTray(
     openNote,
     panel
   );
-  /** 팝오버가 목록에 있던 회의를 눌렀다. 목록에 없는 id 는 받지 않는다. */
   function openNote(noteId: string, reveal = false) {
     const target = meetings.find((meeting) => meeting.noteId === noteId);
     if (!target || disposed) return;
@@ -491,7 +483,7 @@ export function createRecordingTray(
   tray.on("double-click", show);
   const togglePopover = () => popover.toggle();
   const showMenu = () => {
-    // 시스템 설정에서 로그인 항목을 바꿨을 수 있다. 메뉴를 열 때 다시 읽는다.
+    // 시스템 설정에서 로그인 항목을 바꿨을 수 있어 메뉴를 열 때 다시 읽습니다.
     if (loginItemSupported) {
       const current = readOpenAtLogin();
       if (current !== openAtLogin) {
@@ -519,7 +511,6 @@ export function createRecordingTray(
     refresh,
     setPanelOpacity: popover.setOpacity,
     reportTimeline(value: MeetingTimelineSnapshot | null) {
-      // 녹음 중이 아니어도 받는다 — 내가 뷰어로 보는 진행 중 회의다(APP-1092).
       if (value?.detail) {
         if (
           !selection ||

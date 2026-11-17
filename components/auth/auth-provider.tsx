@@ -35,16 +35,11 @@ type AuthContextValue = {
   setUser: (user: AuthUser | null) => void;
   refreshUser: () => Promise<AuthUser | null>;
   logout: () => Promise<void>;
-  /** 서버가 이미 세션을 끝낸 뒤(탈퇴) 로컬 흔적을 지우고 새 문서로 떠난다. */
   leave: (destination: string) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-/**
- * 인증된 앱을 떠날 때 가는 랜딩 홈. **지금 화면 언어의 홈**이다(`/` 또는 `/en`, APP-1285). 언어 쿠키는 지우지 않으므로
- * 다음 방문에도 같은 언어로 뜬다.
- */
 function landingHome() {
   return localePath(documentLocale() ?? DEFAULT_LOCALE, "/");
 }
@@ -67,7 +62,7 @@ export function AuthProvider({
     queryKey: ["user"],
     queryFn: getMe,
     ...(initialUser !== null ? { initialData: initialUser } : {}),
-    staleTime: 5 * 60 * 1000, // 5 minutes cache stale time
+    staleTime: 5 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -85,24 +80,10 @@ export function AuthProvider({
     return nextUser;
   }, [setUser]);
 
-  /**
-   * 인증된 앱을 떠난다. **하드 내비게이션이어야 한다** — 세션 게이트는 모듈 수준 상태이고
-   * 새 문서로만 풀린다. 소프트 이동하면 도착지에서도 모든 요청이 거절돼 앱이 죽은 채
-   * 남는다(APP-223). 게이트를 클라이언트에서 리셋해 때우지 않는다. 게이트가 있는 이유가
-   * 401을 만난 호출부들이 각자 갱신을 시도하는 무한 루프를 막는 것이다(APP-205).
-   *
-   * **진행 중인 조회만 끊고 캐시는 그대로 둔다.** 쿠키가 사라진 뒤 도착하는 401은 갱신까지
-   * 부르고 화면을 오류로 바꾼다. 반대로 캐시를 비우면 아직 떠 있는 화면이 그 자리에서 다시
-   * 조회해, 새 문서가 뜨기까지 수백 ms 동안 "노트를 불러오지 못했습니다"가 떴다. 어차피
-   * 문서째 버릴 참이라 비울 이유도 없다. 단, "문서째 버린다"가 **뒤로 가기에는 성립하지
-   * 않는다** — 남은 히스토리 엔트리로 돌아오면 이 문서가 BFCache에서 힙째 되살아난다.
-   * 그 대비는 아래 `pageshow` 핸들러다.
-   */
   const leaveAuthenticatedApp = useCallback(
     (destination: string) => {
       void queryClient.cancelQueries();
       resetAnalytics();
-      // 공용 브라우저에 앞 사람의 표시가 남지 않게(기기 범위 키는 남긴다).
       clearUserFlags();
       window.location.replace(destination);
     },
@@ -114,13 +95,10 @@ export function AuthProvider({
 
     try {
       void Promise.resolve(beforeLogout()).catch(() => undefined);
-    } catch {
-      // 인증은 이미 만료된 상태이므로 로컬 리소스 정리는 best-effort로 끝낸다.
-    }
+    } catch {}
   }, [beforeLogout]);
 
   const logout = useCallback(async () => {
-    // React state updates after this handler returns; lock before the first await.
     if (logoutStarted.current) return;
 
     logoutStarted.current = true;
@@ -142,9 +120,6 @@ export function AuthProvider({
     const handleAuthStateChanged = (event: Event) => {
       const detail = (event as CustomEvent<AuthStateChangedDetail>).detail;
 
-      // reason "logout"은 여기서 할 일이 없다. 캐시는 하드 내비게이션이 문서째 버리고,
-      // 이동과 문구는 `logout()`이 정한다. 아래 만료 처리가 부르는 `requestLogout()`도 이
-      // 핸들러로 재진입하는데, 거기서 또 이동하거나 토스트를 띄우면 두 번씩 일어난다.
       if (detail?.reason !== "unauthenticated") {
         return;
       }
@@ -157,7 +132,6 @@ export function AuthProvider({
       // 다음 SSR에서 proxy.ts의 clearAuthCookies()가 정리한다.
       void requestLogout().catch(() => undefined);
 
-      // 사유는 쿼리로 넘긴다 — 토스트는 새 문서와 함께 사라진다.
       leaveAuthenticatedApp(`${landingHome()}?${SESSION_EXPIRED_PARAM}`);
     };
 
@@ -189,8 +163,6 @@ export function AuthProvider({
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, []);
 
-  // 만료로 쫓겨나 도착한 문서에서 사유를 한 번 보이고 쿼리를 지운다. 안 지우면 새로고침·
-  // 뒤로가기마다 다시 뜬다. `history.replaceState`라 이동이 아니라 주소만 정리된다.
   useEffect(() => {
     const [key, value] = SESSION_EXPIRED_PARAM.split("=");
     const url = new URL(window.location.href);
@@ -233,7 +205,6 @@ export function AuthProvider({
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/** 로그인한 사용자의 id. **공급자가 없어도 던지지 않는다** — 사용자별 표시를 읽고 쓰는 가벼운 화면 조각이 쓴다. */
 export function useAuthUserId(): string | undefined {
   return useContext(AuthContext)?.user?.userId;
 }

@@ -27,10 +27,6 @@ const TWO_PARTICIPANTS = [
   participant("p2", "한지원"),
 ];
 
-/**
- * **종료 응답이 갱신된 노트다** (APP-685). 전에는 204 라 화면이 종료 뒤 상태를 스스로
- * 지어냈고, 녹음 길이를 브라우저의 `Date.now()` 로 계산했다.
- */
 const ENDED_NOTE = {
   status: 200 as const,
   data: {
@@ -171,7 +167,6 @@ describe("MeetingEndDialog", () => {
     const view = renderDialog(onEnded);
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
     await waitFor(() => expect(state.request).toHaveBeenCalledOnce());
-    // meeting.ended가 캐시를 ENDED로 바꾸면 부모가 MeetingControls를 제거한다.
     view.unmount();
     await act(async () => finish(ENDED_NOTE));
     await waitFor(() => expect(onEnded).toHaveBeenCalledOnce());
@@ -211,7 +206,6 @@ describe("MeetingEndDialog", () => {
   it("종료 전에 참여자 수와 이름을 접근성 설명 안에 보인다", () => {
     renderDialog();
     const dialog = screen.getByRole("dialog");
-    // 창의 접근성 설명(aria-describedby)에 들어가야 열 때 읽힌다.
     const description = document.getElementById(
       dialog.getAttribute("aria-describedby")!
     );
@@ -263,7 +257,6 @@ describe("MeetingEndDialog", () => {
 
     view.rerender(ui(TWO_PARTICIPANTS));
     expect(section.textContent).toContain("2 participants");
-    // 참여자 이름(사용자 데이터)과 공용 창의 닫기 버튼(`components/ui/dialog`, 이 모듈 밖)만 한국어로 남는다.
     expect(
       screen
         .getByRole("dialog")
@@ -343,8 +336,6 @@ describe("MeetingEndDialog", () => {
     });
   });
 
-  // invalidate만 하면 재조회 응답이 올 때까지 캐시에 IN_PROGRESS가 남고, 그 틈에
-  // 녹음 시작이 열린다 — 계약이 종료된 회의의 세션 생성을 안 막아 서버도 안 잡아 준다.
   it("종료 직후 캐시의 회의 상태를 ENDED로 먼저 적는다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
       options?.onSuccess?.(ENDED_NOTE)
@@ -416,10 +407,6 @@ describe("MeetingEndDialog", () => {
     ).toBe("ENDED");
   });
 
-  /**
-   * **지어내지 않고 서버가 준 것을 그대로 넣는다.** 전에는 `Date.now()` 로 마지막 구간을
-   * 계산해 캐시에 썼다 — 시계가 서로 다른 두 사람이 같은 회의를 다른 길이로 봤다.
-   */
   it("종료 응답의 노트를 그대로 캐시에 넣는다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
       options?.onSuccess?.(ENDED_NOTE)
@@ -450,7 +437,6 @@ describe("MeetingEndDialog", () => {
         ).data.data
       ).toMatchObject({
         meetingStatus: "ENDED",
-        // 서버가 찍은 시각이다. 브라우저 시계가 아니다.
         meetingEndedAt: "2026-07-29T00:00:05.000Z",
         recordedDurationMs: 15_000,
         activeSessionStartedAt: null,
@@ -465,8 +451,6 @@ describe("MeetingEndDialog", () => {
       state.phase = phase;
       renderDialog(undefined, "IN_PROGRESS");
 
-      // 라벨은 진행 중에도 「회의 종료」 그대로다 — 문구를 갈면 스피너가 도는 동안
-      // 버튼 폭이 튄다. 막혔다는 사실은 `disabled`와 `aria-busy`가 말한다.
       const confirm = screen.getByRole("button", { name: "회의 종료" });
       expect(confirm).toBeDisabled();
       expect(confirm).toHaveAttribute("aria-busy", "true");
@@ -477,10 +461,6 @@ describe("MeetingEndDialog", () => {
     }
   );
 
-  /**
-   * **기록 중인 회의는 끝낼 수 없다** (APP-694). 예전에는 여기서 로컬 녹음을 먼저 끄고
-   * 종료했다. 이제 서버가 409 로 거절하므로 대신 끄지 않고 판정을 서버에 맡긴다.
-   */
   it("기록 중이어도 이 창의 녹음을 대신 끄지 않는다", () => {
     state.activeNoteId = "01K0000000002";
     state.phase = "recording";
@@ -537,8 +517,6 @@ describe("MeetingEndDialog", () => {
     expect(state.endMock).toHaveBeenCalledOnce();
   });
 
-  // 시한이 지나 끊기는 동작 자체는 `fetcher.test.ts` 가 본다. 여기서는 이 창이 시한을 넘기는지와
-  // 시한 오류를 받은 뒤 다시 누를 수 있게 풀리는지를 본다(APP-1472)
   it("종료 요청에 사람을 기다리게 하는 호출의 시한을 넘긴다", () => {
     renderDialog();
 
@@ -574,11 +552,6 @@ describe("MeetingEndDialog", () => {
     expect(screen.getByRole("button", { name: "회의 종료" })).toBeEnabled();
   });
 
-  /**
-   * **409 는 지어내지 않고 다시 묻는다** (APP-685). 이미 끝난 회의라 응답에 노트가 없는데,
-   * 그 자리에서 ENDED 를 써 넣으면 종료 시각·녹음 길이를 우리가 만들어 내게 된다. 이제
-   * 서버가 그 값을 주므로 무효화하고 받아 오는 편이 짧고 정확하다.
-   */
   it("다른 탭이 먼저 종료한 409면 노트를 다시 묻는다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
       options?.onError?.({

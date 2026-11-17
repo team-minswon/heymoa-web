@@ -9,7 +9,6 @@ import {
 } from "@/components/chat/chain-of-thought";
 import type { Block } from "@/lib/chat/blocks";
 
-// 동작 줄이기를 테스트마다 켜고 끈다. 나머지 `motion/react` 는 그대로 쓴다.
 const motionPrefs = vi.hoisted(() => ({ reduced: false }));
 vi.mock("motion/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("motion/react")>()),
@@ -21,10 +20,6 @@ afterEach(() => {
   motionPrefs.reduced = false;
 });
 
-/**
- * 서랍을 펴고 본다. `live={false}` 로 그리면 접힌 채로 서므로(끝난 턴의 기본), 안쪽 줄을
- * 단언하려면 머리글을 한 번 눌러야 한다. 「접혀 있다」 자체를 보는 검사는 이걸 안 쓴다.
- */
 function open() {
   fireEvent.click(screen.getByRole("button", { name: /생각/ }));
 }
@@ -45,7 +40,6 @@ function tool(
 }
 const NOTE = { kind: "note", id: "0HZX2K7M9Q4AF", title: "주간 배포 회의" };
 
-/** 승인 블록. `decision: null`이면 아직 카드가 서 있는 것이라 이 줄은 안 그려진다. */
 function approval(
   decision: "APPROVED" | "REJECTED" | null,
   summary: string | null = null
@@ -62,16 +56,6 @@ function approval(
 }
 
 describe("ChainOfThought", () => {
-  /**
-   * ★ **하나여도 서랍이다.**
-   *
-   * 예전에는 하나면 평평하게 그렸다 — 「접었다 폈다 할 것이 하나인 서랍은 서랍이 아니다」가
-   * 이유였다. 그런데 단계는 **하나로 시작해서 늘어난다.** 실측하면 첫 단계에서
-   * `data-cot="single"`, 둘째가 오는 순간 `data-cot="group"` 으로 갈아끼워져 머리글이
-   * 없다가 생기고 레일이 통째로 다시 마운트된다 — 도는 중에 화면이 한 번 튄다.
-   *
-   * 모양이 상태에 따라 갈리지 않는 쪽이 낫다. 하나든 여섯이든 같은 서랍이다.
-   */
   it("단계가 하나여도 서랍으로 뜬다", () => {
     const { container } = render(
       <ChainOfThought blocks={[tool("c1")]} live={false} />
@@ -80,10 +64,6 @@ describe("ChainOfThought", () => {
     expect(container.querySelector('[data-cot="single"]')).toBeNull();
   });
 
-  /**
-   * ★ **끝나면 하나여도 접는다.** 본문은 답만 담는다(APP-1436). 과정은 누른 사람만 본다 — 단계가 하나일 때만 펴 두면
-   * 답마다 모양이 갈려 「이건 왜 펼쳐져 있지」가 된다.
-   */
   it("끝나면 줄이 하나여도 접는다", () => {
     const { container } = render(
       <ChainOfThought blocks={[tool("c1")]} live={false} />
@@ -103,12 +83,6 @@ describe("ChainOfThought", () => {
     ).toBe("false");
   });
 
-  /**
-   * ★ **도는 동안은 펴 두되 최근 몇 줄만 보인다.** (C안)
-   *
-   * 한 줄로만 보이면 무엇을 거쳐 왔는지가 안 보이고, 다 펴면 도구 호출마다 쌓여 질문 하나에 20줄이 넘는다(APP-1013).
-   * 높이를 묶고 아래에 붙여 새 줄이 아래에서 올라오고 위 줄은 흐려지며 밀려난다. 단계 수는 안 센다.
-   */
   it("★ 스트리밍 중에는 펴진 채 최근 줄만 보이는 꼬리로 선다 — 단계 수는 안 센다", () => {
     const { container } = render(
       <ChainOfThought
@@ -133,7 +107,6 @@ describe("ChainOfThought", () => {
     expect(screen.getByRole("button", { expanded: true }).textContent).toBe(
       "생각 중"
     );
-    // 「지금 하는 일 한 줄」은 따로 안 선다 — 꼬리의 마지막 줄이 그 말을 한다
     expect(container.querySelector("[data-current]")).toBeNull();
     const rows = container.querySelectorAll("[data-step]");
     expect(
@@ -142,7 +115,6 @@ describe("ChainOfThought", () => {
   });
 
   it("★ 꼬리가 넘칠 때만 위 줄을 흐린다", () => {
-    // jsdom 은 배치를 안 해 높이가 0 이다 — 넘친 것으로 보이게 높이를 준다.
     const scroll = vi
       .spyOn(HTMLElement.prototype, "scrollHeight", "get")
       .mockReturnValue(300);
@@ -212,7 +184,6 @@ describe("ChainOfThought", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "7초 동안 생각 · 회의록 1건" })
     );
-    // 펴면 꼬리가 아니라 전체다
     expect(container.querySelector("[data-tail]")).toBeNull();
     expect(
       [...container.querySelectorAll("[data-step]")].map(
@@ -241,7 +212,6 @@ describe("ChainOfThought", () => {
     const { container, rerender } = render(
       <ChainOfThought blocks={[tool("c1"), tool("c2")]} live />
     );
-    // 도는 중에 손으로 접었으면 승인 뒤 다시 흘러도 그대로 접힌 채다.
     fireEvent.click(screen.getByRole("button", { expanded: true }));
     rerender(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live={false} />);
     rerender(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live />);
@@ -311,8 +281,6 @@ describe("ChainOfThought", () => {
   });
 
   it("★ 확정 전 승인만 있는 묶음은 빈 자리를 안 남긴다", () => {
-    // 그 블록은 아무것도 안 그린다(카드가 따로 선다). 그래도 레일을 세우면 답변과
-    // 승인 카드 사이가 한 칸 더 벌어져 카드가 딴 데 떠 있는 것처럼 보인다.
     const { container } = render(
       <ChainOfThought blocks={[approval(null)]} live />
     );
@@ -320,13 +288,6 @@ describe("ChainOfThought", () => {
   });
 
   it("★ 승인을 기다리는 동안 앞 단계가 계속 돌지 않는다", () => {
-    /**
-     * 확정 전 승인을 걸러 내면 「마지막 단계」 자리가 **바로 앞 단계로 넘어간다.** 그
-     * 자리에 `live` 를 그대로 물려주면, 이미 끝난 「전사를 훑습니다」가 사람이 승인
-     * 버튼을 누를 때까지 무한히 도는 진행 표시가 된다. 기다린다는 말은 카드가 한다.
-     *
-     * **서랍은 열린 채로 둔다** — 무엇을 하려다 물었는지가 그 안에 있다.
-     */
     const { container, rerender } = render(
       <ChainOfThought
         blocks={[
@@ -342,7 +303,6 @@ describe("ChainOfThought", () => {
       container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
     ).toBe("true");
 
-    // 도구가 아직 안 끝난 진짜 「도는 중」은 그대로 돈다.
     rerender(
       <ChainOfThought
         blocks={[
@@ -356,14 +316,12 @@ describe("ChainOfThought", () => {
   });
 
   it("★ 확정 전 승인은 그리지도, 헤더에도 안 들어간다", () => {
-    // 확정 전 승인은 「도는 중」이 아니라 사람을 기다리는 중이다. 카드가 따로 서 있다.
     const { container } = render(
       <ChainOfThought
         blocks={[tool("c1"), tool("c2"), approval(null)]}
         live={false}
       />
     );
-    // 접힌 채로 선다(`live={false}`) — 헤더가 곧 요약이고, 확정 전 승인은 단계로 안 센다.
     expect(screen.getByText("생각")).toBeTruthy();
     expect(
       container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
@@ -371,7 +329,6 @@ describe("ChainOfThought", () => {
   });
 
   it("모르는 kind는 칩 없이 summary만 그린다", () => {
-    // 도구가 늘 때마다 web을 고쳐야 하면 배포가 묶인다.
     const { container } = render(
       <ChainOfThought
         blocks={[tool("c1", { kind: "graph", id: "g1", title: "그래프" })]}
@@ -386,8 +343,6 @@ describe("ChainOfThought", () => {
 
 describe("AnswerRefs", () => {
   it("★ 「출처」가 아니라 「참고한」이다 — 본 것이지 인용한 것이 아니다", () => {
-    // 계약이 싣는 것은 **에이전트가 본 것**이다. 넷을 보고 하나만 근거로 썼어도 넷이
-    // 다 여기 선다 — 「출처」는 그것보다 더 말하는 단어라 신뢰를 잘못 만든다.
     render(<AnswerRefs refs={[{ id: "n1", title: "주간 배포 회의" }]} />);
     expect(
       screen.getByRole("group", { name: "참고한 회의록 1개" })
@@ -429,13 +384,6 @@ describe("AnswerRefs", () => {
   });
 });
 
-/**
- * ★ **등장 애니메이션은 흐를 때 한 번이다.**
- *
- * 답이 끝나면 같은 단계가 히스토리 컴포넌트로 다시 마운트되는데, 거기에 `chat-rise` 가
- * 붙어 있으면 방금 본 레일이 **한 번 더 떠오른다** — 2026-09-03 실측에서 답 끝 번쩍임의
- * 본체였다. 끝난 묶음은 소리 없이 선다.
- */
 describe("등장 애니메이션", () => {
   it("끝난 묶음(live=false)에는 등장 애니메이션이 안 붙는다", () => {
     const { container } = render(
@@ -482,12 +430,6 @@ describe("등장 애니메이션", () => {
   });
 });
 
-/**
- * ★ **단계 사이의 빈 구간도 「도는 중」이다.**
- *
- * 도구 결과가 오고 다음 생각·토큰이 오기까지 모델이 도는 몇 초가 있다. 그 사이 마지막 줄은
- * 체크로 굳어 있고 빛나는 글자가 하나도 없어서 **멈춘 것처럼 보였다.**
- */
 describe("단계 사이의 「생각하는 중」", () => {
   it("도구가 끝났는데 다음 단계가 아직이면 머리줄 「생각 중」이 그 말을 한다 — 「생각하는 중」 줄을 되풀이하지 않는다", () => {
     const { container } = render(<ChainOfThought blocks={[tool("c1")]} live />);
@@ -558,11 +500,6 @@ describe("★ N3 끝난 턴의 도구 줄", () => {
   });
 });
 
-/**
- * ★ **얼마나 생각했는지 말한다.** (APP-1013)
- *
- * 기다린 이유가 접힌 줄에 있어야 한다. 시각이 없는 경로는 짐작하지 않고 초를 뺀다.
- */
 describe("생각한 시간", () => {
   afterEach(() => vi.useRealTimers());
 
@@ -614,7 +551,6 @@ describe("생각한 시간", () => {
     expect(screen.getByText("2분 5초 동안 생각")).toBeTruthy();
   });
 
-  // 「생각 과정」이 아니라 「생각」이다 — 시간을 알 때의 「N초 동안 생각」과 같은 말에서 시간만 뺀다.
   it("시각이 없거나 1초가 안 되면 초를 안 붙인다", () => {
     render(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live={false} />);
     expect(screen.getByText("생각")).toBeTruthy();
@@ -653,7 +589,6 @@ describe("도는 동안의 지금 단계 줄", () => {
     expect(live?.textContent).toBe("c1 검색 중");
   });
 
-  // 문구를 키로 쓰면 생각 델타마다 줄이 다시 마운트되어 등장 애니메이션이 끝없이 다시 돈다.
   it("같은 생각에 글자가 붙어도 줄을 다시 세우지 않는다", () => {
     const { container, rerender } = render(
       <ChainOfThought blocks={[{ kind: "thinking", text: "회의를" }]} live />
@@ -671,7 +606,6 @@ describe("도는 동안의 지금 단계 줄", () => {
   });
 });
 
-/** 커서 경계에서 생각이 두 블록으로 갈려 와도 처음부터 흐른 한 블록과 같아야 한다. */
 describe("갈려 온 생각", () => {
   const split = [
     tool("c1"),
@@ -721,7 +655,6 @@ it("도는 동안 흐르는 초는 버튼 이름에서 뺀다 — 매초 다시 
   vi.useRealTimers();
 });
 
-/** ai 가 진행 문장을 `thinking_delta` 로 보낸다(APP-1435). 한 문장이 한 줄이고 줄바꿈으로 끝난다. */
 describe("진행 문장(thinking) 줄", () => {
   const narration = {
     kind: "thinking" as const,

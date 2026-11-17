@@ -32,10 +32,7 @@ export function NoteRouteSurface({
   if (isOpen && !hasOpened) setHasOpened(true);
   return (
     <>
-      {/* 포털은 클라이언트에서 붙는다. 전체 뷰 직링크는 그동안 같은 형태의 골격을 보인다. */}
       {isFull && !hasOpened ? <NoteFullSkeleton /> : null}
-      {/* 같은 포털·본문을 유지하고 기하만 바꾼다. 조회 구독·스크롤·편집 상태는 살아 있다.
-          전체 뷰는 가려진 셸의 inert 정책을 쓰며, 기록 상태 필과 중첩 창을 막지 않는다. */}
       <Sheet
         open={isOpen}
         modal={!isFull}
@@ -49,7 +46,6 @@ export function NoteRouteSurface({
           showCloseButton={false}
           overlayClassName={isFull ? "hidden" : undefined}
           className={cn(
-            // 뷰 전환의 배경·그림자는 즉시 바꾸고, 열기·닫기의 투명도만 전환한다.
             "inset-0 min-h-0 w-full max-w-none gap-0 overflow-hidden border-0 p-0 sm:max-w-none transition-opacity motion-reduce:transition-none",
             isFull
               ? "z-30 block h-dvh bg-[var(--el-canvas)] p-2.5 shadow-none"

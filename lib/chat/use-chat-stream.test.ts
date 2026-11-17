@@ -18,19 +18,16 @@ const EVENTS_URL = `/v1/agent-chats/${CHAT_ID}/turns/${TURN_ID}/events`;
 
 type Frame = { event: string; data: string; id?: string };
 
-/** 커서는 `id:` 줄에만 붙는다. `data:`는 언제나 payload 하나뿐이다. */
 function frame(event: string, payload: unknown, id?: string): Frame {
   return id === undefined
     ? { event, data: JSON.stringify(payload) }
     : { event, data: JSON.stringify(payload), id };
 }
 
-/** 지터를 0 으로 고정한다. 시간표 자체를 재는 시험이라 난수가 끼면 경계가 흔들린다. */
 const NO_JITTER = { random: () => 0 };
 
 const START = frame("message_start", { chatId: "c", messageId: "m" }, "1-0");
 
-/** 연결 하나. 이벤트를 하나씩 밀어넣고 끝을 직접 정한다. */
 function connection() {
   const queue: Frame[] = [];
   let notify: (() => void) | null = null;
@@ -47,7 +44,6 @@ function connection() {
       finished = true;
       notify?.();
     },
-    /** 열리기도 전에 실패한다 — `connect` 가 던진 것과 같은 자리다. */
     fail(error: unknown) {
       failure = error;
       finished = true;
@@ -77,10 +73,6 @@ function connection() {
   };
 }
 
-/**
- * 열린 연결들을 순서대로 모은다. **재연결이 몇 번째로 어느 URL에 갔는지**를 여기서 본다 —
- * 훅의 축이 「끊기면 다시 붙는다」라 연결 자체가 검증 대상이다.
- */
 function wire() {
   const opened: { url: string; conn: ReturnType<typeof connection> }[] = [];
   getEventStream.mockImplementation(
@@ -186,7 +178,6 @@ describe("useChatStream", () => {
 
     expect(opened).toHaveLength(1);
     expect(result.current.state.needsResync).toBe(true);
-    // 상태 자체는 그대로다 — 새 phase 를 만들지 않는다. 히스토리 재조회가 답을 세운다.
     expect(result.current.state.turnId).toBe(TURN_ID);
   });
 
@@ -220,8 +211,6 @@ describe("useChatStream", () => {
   );
 
   it("★ 승인 요청으로 끝난 스트림은 다시 붙지 않는다", async () => {
-    // 계약상 이것이 마지막 프레임이고 server가 곧바로 닫는다. EOF를 재연결 신호로
-    // 읽으면 백오프 여섯 번(45초)을 돌다 포기 표시가 되어 승인 카드가 덮인다.
     vi.useFakeTimers();
     const opened = wire();
     const { result } = renderHook(() => useChatStream(NO_JITTER));
@@ -243,8 +232,6 @@ describe("useChatStream", () => {
   });
 
   it("★ 승인 대기에서 stop()이 대화를 푼다", async () => {
-    // 만료가 없어 「중지」가 유일한 탈출구다. 루프는 이미 빠져나와 있으므로
-    // `runningRef`만 보고 돌아가면 컴포저가 영영 잠긴다.
     const opened = wire();
     const { result } = renderHook(() => useChatStream(NO_JITTER));
 
@@ -261,7 +248,6 @@ describe("useChatStream", () => {
   });
 
   it("★ 승인 뒤 다시 열면 카드의 id 가 after 로 간다", async () => {
-    // 승인 API 는 202 만 주고, 나머지 절반은 같은 스트림에 지금 커서를 넣어 다시 붙어 받는다.
     const opened = wire();
     const { result } = renderHook(() => useChatStream(NO_JITTER));
 
@@ -355,11 +341,6 @@ describe("useChatStream", () => {
   });
 });
 
-/**
- * ★ 이 훅의 축. **EOF는 성공도 실패도 아니다** — 턴은 server 에서 계속 돌고 있을 수
- * 있으므로 마지막 `id:` 를 `after` 에 넣어 같은 주소로 다시 붙는다. 포기했을 때만 기존
- * 오류 배너에 접는다.
- */
 describe("끊겨도 다시 붙는다", () => {
   beforeEach(() => {
     getEventStream.mockReset();
@@ -392,7 +373,6 @@ describe("끊겨도 다시 붙는다", () => {
     });
 
     expect(opened[1].url).toBe(`${EVENTS_URL}?after=1735689600000-1`);
-    // **복원한 블록을 안 지운다.**
     expect(answerText(result.current.state.blocks)).toBe("앞부분");
 
     await act(async () => {
@@ -408,8 +388,6 @@ describe("끊겨도 다시 붙는다", () => {
   });
 
   it("★ 언마운트하면 백오프가 다 지나도 다시 붙지 않는다", async () => {
-    // 개인 채팅 provider 는 워크스페이스 셸에 산다 — 워크스페이스를 떠나면 화면은 없는데
-    // 버려진 루프가 EOF 를 재연결 신호로 읽고 여섯 번(45초) 서버에 다시 붙었다.
     const opened = wire();
     const { result, unmount } = renderHook(() => useChatStream(NO_JITTER));
 
@@ -467,7 +445,6 @@ describe("끊겨도 다시 붙는다", () => {
   });
 
   it("재연결이 실패하면 백오프가 늘고, 다 쓰면 기존 오류 배너에 접힌다", async () => {
-    // 커서가 한 번도 안 움직이는 연결들이다. 움직이면 시간표가 처음으로 돌아간다.
     const opened = wire();
     const { result } = renderHook(() => useChatStream(NO_JITTER));
 
@@ -622,10 +599,6 @@ describe("끊겨도 다시 붙는다", () => {
   });
 });
 
-/**
- * ★ 배포 드레인. server 는 끝 프레임 없이 스트림을 닫아 새 태스크로 보낸다. 그 끊김이 시간표를
- * 갉아먹으면 누적 7번째에 살아 있는 턴을 「끊겼습니다」로 포기한다(N3).
- */
 describe("진행한 연결은 시간표를 되감는다", () => {
   beforeEach(() => {
     getEventStream.mockReset();
@@ -656,14 +629,12 @@ describe("진행한 연결은 시간표를 되감는다", () => {
   it("★ 커서가 움직인 연결 뒤에는 칸이 처음으로 돌아간다", async () => {
     const { opened } = await openTurn();
 
-    // 진행 없이 두 번 실패해 칸이 2초까지 올라간다.
     await act(async () => opened[0].conn.fail(NETWORK));
     await advance(RECONNECT_BACKOFF_MS[0]);
     await act(async () => opened[1].conn.fail(NETWORK));
     await advance(RECONNECT_BACKOFF_MS[1]);
     expect(opened).toHaveLength(3);
 
-    // 이번 연결은 토큰을 받았다(커서 이동). 그 뒤의 실패는 다시 1초부터다.
     await act(async () => opened[2].conn.push(START, frame("token", { delta: "a" }, "2-0")));
     await act(async () => opened[2].conn.fail(NETWORK));
     await advance(RECONNECT_BACKOFF_MS[0] - 1);
@@ -694,7 +665,6 @@ describe("진행한 연결은 시간표를 되감는다", () => {
 
     await act(async () => opened[0].conn.fail(NETWORK));
     await advance(RECONNECT_BACKOFF_MS[0]);
-    // 하트비트는 id 가 없어 커서를 안 민다. 되감으면 「하트비트 뒤 끊기는」 장애에서 1초가 끝없이 돈다.
     await act(async () => opened[1].conn.push({ event: "heartbeat", data: "{}" }));
     await act(async () => opened[1].conn.fail(NETWORK));
     await advance(RECONNECT_BACKOFF_MS[1] - 1);
@@ -782,7 +752,6 @@ describe("돌아오면 이어받는다", () => {
     });
     expect(opened[0].url).toBe(EVENTS_URL);
 
-    // 프레임 없이 곧바로 닫혀도 실패가 아니다 — 다시 붙는다.
     await act(async () => opened[0].conn.finish());
     expect(result.current.state.phase).toBe("streaming");
     await act(async () => {
@@ -820,7 +789,6 @@ describe("돌아오면 이어받는다", () => {
 
     expect(opened[0].conn.aborted).toBe(true);
     expect(result.current.state.phase).toBe("cancelled");
-    // `turnId`가 남아야 취소 API를 부를 수 있다.
     expect(result.current.state.turnId).toBe(TURN_ID);
 
     await act(async () => {

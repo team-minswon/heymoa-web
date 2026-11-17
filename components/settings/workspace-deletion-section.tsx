@@ -31,10 +31,6 @@ import { okData } from "@/lib/api/ok-data";
 import { forgetWorkspace } from "@/lib/workspace/cache";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
-/**
- * 설정 > 일반 맨 아래 「워크스페이스 삭제」(PRO-69 userflow 「워크스페이스 삭제」, APP-1383). ADMIN 에게만 그린다 —
- * 서버가 관리자 여부와 이름을 다시 본다. 이름 입력 → 요청 → 남은 워크스페이스, 없으면 홈(새로 만들기).
- */
 export function WorkspaceDeletionSection({
   workspaceId,
   workspaceName,
@@ -69,7 +65,6 @@ export function WorkspaceDeletionSection({
       setError(errorMessageOf(failure, t("failed")));
       return;
     }
-    // 목적지를 먼저 고른 뒤 캐시를 걷는다(나가기와 같은 순서·규칙, `members-settings`).
     const next = pickWorkspaceId(
       workspaces.filter((item) => item.workspaceId !== workspaceId)
     );

@@ -38,31 +38,6 @@ import { cn } from "@/lib/utils";
 import { RICH } from "./rich";
 import { APP, RADIUS, SHADOW } from "./tokens";
 
-/*
- * 앱 화면 조각. **창 안 = `--el-*` · `APP` · `ROLE_*` 만, 창 밖 · 창 위 주석 = `--tv-*`(`marks.tsx`).**
- *
- * - 서버 · 클라이언트 양쪽에서 쓴다 — 훅은 `useTranslations` 뿐이고(서버 · 클라이언트 둘 다 된다), 전부 `<span>`/`<div>` 그림이라 포커스가 가지 않는다.
- *   진짜로 눌리는 것은 구간이 `<button>` 으로 따로 만든다(펼치기는 `app-client.tsx`).
- * - 값은 괄호 안 앱 컴포넌트의 클래스를 다시 읽고 맞췄다. **크기 prop 이 없는 것은 앱 값 그대로다** —
- *   키울 때는 구간이 창 본문에 `[zoom:1.05]` 처럼 균일 확대를 건다(0.95~1.1).
- * - 앱과 다른 곳은 넷이다. ① 앱이 말줄임(`truncate`)하는 줄 내용을 여기서는 줄바꿈해 다 보인다(과장 허용).
- *   ② 앱이 `--el-muted-soft`(흰 바탕 2.5:1)로 쓰는 **글자**(시각 · 개수 · 주제 · 레일 부제 · 「담당 정하기」 ·
- *   철회 · 제외 줄 · 빈 상태 문구)를 한 단 진한 앱 토큰 `APP.muted`(4.8:1)로 올렸다. 「몇 분에 누가 한 말인지」가
- *   이 페이지가 파는 정보라 읽혀야 한다(가독성 손보기 허용 범위). 점 · 선 · 아이콘은 앱처럼 `APP.faint` 그대로다.
- *   ③ **테두리는 한 겹(사용자: 「테두리가 2개인 건 이상하다」).** 잘라 보인 창 · 카드에서는 앱의 줄 선 · 상자가
- *   프레임과 나란히 서서 두 겹으로 읽힌다. 그래서 마지막 줄의 아래 선을 지우고(`ROW_LINE`), 좁은 화면의 근거
- *   상자는 선 상자 대신 왼쪽 세로선으로 서고(`EvidenceQuotes`), 확정 막대는 창 폭에 맞는 모양을 고른다(`ConfirmBar`).
- *   ④ 화면 읽기 프로그램용 구분(`Dots` 의 sr-only 쉼표) — 그림 글자가 「결정철회됨」처럼 붙어 읽히지 않게.
- * - 앱에 없는 버튼 · 칩 · 라벨을 여기 더하지 않는다. 필요하면 창 밖 주석으로 말한다.
- */
-
-/* ── 얼굴 ─────────────────────────────────────────────────────────────── */
-
-/**
- * 얼굴 열쇠. 앞의 넷은 기존 랜딩과 같은 사람(`landing/shell.tsx`)이고, 나머지는 이 페이지의 예시
- * 회의가 지어낸 사람이다. 이름이 아니라 변하지 않는 식별자를 넘기는 것은 앱의 `personAvatarKey` 규칙.
- * 열쇠(`Person`)는 로마자 식별자이고, 보이는 이름은 `usePersonName` 이 언어 파일(`landing.people`)에서 낸다.
- */
 const FACE = {
   ...FACE_KEY,
   seojin: "landing:tldv:han-seojin",
@@ -72,16 +47,13 @@ const FACE = {
   daon: "landing:tldv:song-daon",
 } as const;
 
-/** 랜딩의 지어낸 사람. */
 export type Person = keyof typeof FACE;
 
-/** 사람의 보이는 이름(「김민서」 · 「Minseo Kim」). */
 export function usePersonName() {
   const t = useTranslations("landing.people");
   return (who: Person) => t(who);
 }
 
-/** 이름이 붙은 사람의 얼굴(`PersonAvatar`). */
 export function Face({
   who,
   size = 20,
@@ -94,7 +66,6 @@ export function Face({
   return <PersonAvatar name={FACE[who]} size={size} className={className} />;
 }
 
-/** 아직 이름이 안 붙은 화자의 얼굴. `label` 은 「A」 같은 화자 라벨(`unnamedSpeakerAvatarKey`). */
 export function SpeakerFace({
   label,
   size = 20,
@@ -113,10 +84,6 @@ export function SpeakerFace({
   );
 }
 
-/**
- * 겹친 얼굴(`review-head.tsx` 참석자 칩). 5px 씩 겹치고 1.5px 테를 두른다. `ring` 은 테 색 클래스 —
- * 창 안은 흰색 그대로, 창 밖 색 면 위에 둘 때만 그 면 색을 준다(예: `ring-[var(--tv-lav)]`).
- */
 export function FacePile({
   names,
   size = 22,
@@ -142,14 +109,6 @@ export function FacePile({
   );
 }
 
-/* ── 창 ───────────────────────────────────────────────────────────────── */
-
-/**
- * 앱 창 하나. 흰 바탕 · 16 모서리 · 그림자 하나 — **테두리 선이 없다**(색 면 위에서도 흰 면 위에서도).
- * 또 다른 흰 상자 · 매트로 감싸지 않는다. 창 안 기본 글자색은 앱 먹색이다.
- * 확정 막대처럼 창 바닥 가장자리에 반쯤 걸칠 것은 창 밖 형제로 두거나 `className="overflow-visible"` 을
- * 넘긴다(창 안 면이 모서리 밖으로 비어져 나오지 않는지 같이 본다).
- */
 export function AppWindow({
   as: Tag = "div",
   className,
@@ -174,14 +133,8 @@ export function AppWindow({
   );
 }
 
-/* ── 노트 상단바 ──────────────────────────────────────────────────────── */
-
 const TABS: readonly NoteTab[] = ["info", "script", "timeline", "summary"];
 
-/**
- * 회의 상태 칩(`meeting-controls.tsx` `MeetingStatusChip`). 바탕 없이 점 + 글자 11px. 기록 중만
- * 붉고, 중지됨은 ⏸ 아이콘, 종료됨은 회색 점이다.
- */
 export function StatusChip({
   status,
   className,
@@ -215,12 +168,6 @@ export function StatusChip({
   );
 }
 
-/**
- * 노트 탭 넷의 그림(`note-panel.tsx` `TAB_ITEM` · `tabs.tsx` line 변형). 순서는 늘 정보 · 스크립트 ·
- * 타임라인 · 요약이고, 지금 탭만 먹색 + 2px 먹색 밑줄, 나머지는 먹색 60%. 무게는 둘 다 medium.
- * 앱 글자는 12px — `md` 는 한 단 키운 13px 이다. 그림이라 `aria-hidden` 이고 지금 탭 이름만 읽힌다.
- * 진짜로 눌리는 탭(히어로)은 구간이 이 모양을 따라 `<button role="tab">` 으로 만든다.
- */
 function TabStrip({
   active,
   size = "md",
@@ -260,16 +207,6 @@ function TabStrip({
   );
 }
 
-/**
- * 노트 상단바 축소판(`note-panel.tsx` `note-top-bar`). `상태 칩 · 제목 … 탭 넷`. 앱의 ← · ⤡ 와 탭 뒤
- * 「회의 종료」 · 「…」는 잘라 보이기로 생략한다. 탭 줄은 바 높이를 채우고 밑줄이 바의 hairline 위에
- * 앉는다(앱과 같다).
- *
- * 창이 좁아 상태 칩(+ 제목)과 탭 넷이 한 줄에 안 들어가면 탭 줄이 저절로 둘째 줄로 내려간다 — 앱의
- * 모바일 상단바(히어로 모바일)와 같은 배치다. 칩 칸이 `flex-auto`(바탕 크기 = 칩 폭)라 겹치기 전에
- * 줄이 바뀌고, 문턱 숫자를 따로 두지 않는다. 제목은 `w-0 grow` 라 바탕 크기에 안 들어가 먼저 말줄임된다.
- * 한 줄일 때는 `min-h` 가 바 높이를 정하고 줄이 그만큼 늘어난다.
- */
 export function MiniBar({
   status,
   tab,
@@ -315,8 +252,6 @@ export function MiniBar({
   );
 }
 
-/* ── 문서 머리 ────────────────────────────────────────────────────────── */
-
 const HEAD_ICON = {
   date: CalendarDays,
   calendar: Calendar,
@@ -331,10 +266,6 @@ const HEAD_CHIP = cn(
   APP.body
 );
 
-/**
- * 머리 칩(`review-head.tsx` `Chip` · `note-timeline.tsx` `HeaderChip`). 검토 문서는 date(9월 1일 (화)
- * 오후 2:00) · length(2분) · project, 타임라인은 calendar(2026년 …) · people(4명) · project 를 쓴다.
- */
 export function HeadChip({
   icon,
   children,
@@ -351,7 +282,6 @@ export function HeadChip({
   );
 }
 
-/** 참석자 칩(`review-head.tsx`). 얼굴 넷까지 + 「첫 이름 외 N명」. 이름 붙은 회의에만 선다. */
 export function FacesChip({ names }: { names: Person[] }) {
   const t = useTranslations("landing.app");
   const name = usePersonName();
@@ -367,12 +297,6 @@ export function FacesChip({ names }: { names: Person[] }) {
   );
 }
 
-/**
- * 문서 머리(`review-head.tsx`). 배지(검토 중 / 확정됨) + 오른쪽 aside → 세리프 제목 → 칩 줄.
- * `state` 를 비우면 배지 줄이 빠져 타임라인 탭의 머리(`note-timeline.tsx` header)가 된다.
- * 제목은 앱처럼 세리프 medium — 페이지의 굵은 고딕 제목과 갈려 「여기부터 앱」이 보인다.
- * 제목은 `<p>` 다(그림 안의 제목이 페이지 목차에 끼지 않게).
- */
 export function ReviewHead({
   state,
   title,
@@ -423,7 +347,6 @@ export function ReviewHead({
   );
 }
 
-/** 검토 문서 한 덩어리의 머리(`section-block.tsx`). 「결정 2」 · 「할 일 2」처럼 개수가 회색으로 붙는다. */
 export function SectionHead({
   title,
   count,
@@ -462,18 +385,8 @@ export function SectionHead({
   );
 }
 
-/* ── 검토 줄(요약 탭) ─────────────────────────────────────────────────── */
-
 const ROW_CONTENT = "block min-w-0 text-[15px] leading-6";
 
-/**
- * 줄 사이 선(검토 줄 · 스크립트 줄). 앱은 마지막 줄에도 선을 긋지만, 잘라 보인 창 · 카드에서는 그 선이 프레임
- * 바닥 13~20px 위에 남아 바닥이 두 겹으로 읽혔다(근거 구간 두 창, 회의 카드). **뒤에 줄이 없으면 선을 지운다** —
- * 규칙은 `motion.tsx` 의 `.tv-row`(전역 `<style>` 한 줄)에 있다. `last:` 가 아닌 까닭: 구간들이 줄을 한 겹씩
- * 감싼다(히어로 `data-row`, 근거 구간의 번호표 칸 · 스크립트 `li`, 회의 카드의 형광펜 칸). `last:` 면 한 줄씩
- * 감싼 히어로의 선이 전부 지워지고, 번호표가 뒤따르는 근거 구간의 마지막 선은 남는다. 그래서 「줄 자신의
- * 뒤 형제, 또는 감싼 칸의 뒤 형제 안에 줄이 있나」를 본다(한 겹까지).
- */
 const ROW_LINE = "tv-row border-b";
 
 function RowChevron({
@@ -492,11 +405,6 @@ function RowChevron({
   );
 }
 
-/**
- * 검토 문서의 결정 한 줄(`review-row.tsx` 결정). `체크 · 내용 · 주제 · 나온 때 · ⌄`.
- * 유형 이름은 없다 — 섹션 머리 「결정 N」이 유형을 말한다. `suggestions` 는 펼치지 않아도 줄 아래
- * 서는 제안(「이전 결정 대체」 `ReplacementRow`), `children` 은 펼쳤을 때(`open`)의 근거 · 수정/제외.
- */
 export function DecisionRow({
   text,
   topic,
@@ -542,7 +450,6 @@ export function DecisionRow({
             <span
               className={cn(
                 "hidden max-w-[180px] truncate text-[12.5px] sm:block",
-                // 펼친 줄은 #f0efed 면이라 muted 도 4.2:1 — 한 단 더 진하게.
                 open ? APP.body : APP.muted
               )}
             >
@@ -573,7 +480,6 @@ export function DecisionRow({
   );
 }
 
-/** 담당 칸의 그림(`assignee-cell.tsx` `AssigneeFace`). 이름 없는 화자는 회색 이름 + 작은 점이다. */
 function Assignee({ who }: { who: { name: Person } | { label: string } }) {
   const t = useTranslations("landing.app");
   const name = usePersonName();
@@ -605,7 +511,6 @@ function Assignee({ who }: { who: { name: Person } | { label: string } }) {
   );
 }
 
-/** 기한 칩(`due-cell.tsx` chip). 없고 고칠 수 있으면 주황 점선 「기한 정하기」, 확정 뒤에는 아무것도 없다. */
 function Due({ due, editable }: { due: string | null; editable: boolean }) {
   const t = useTranslations("landing.app");
   if (!due && !editable) return null;
@@ -624,12 +529,6 @@ function Due({ due, editable }: { due: string | null; editable: boolean }) {
   );
 }
 
-/**
- * 검토 문서의 할 일 한 줄(`review-row.tsx` 할 일). `회색 둥근 네모 · 내용 · 담당 · 기한 · ⌄`.
- * 기본은 앱의 좁은 배치(담당 · 기한이 둘째 줄), `wide` 면 앱처럼 sm 부터 열로 선다.
- * `who` 는 `{ name }`(이름 붙은 사람) 또는 `{ label: "D" }`(이름 없는 화자 → 「화자 D」).
- * `editable` 을 끄면(확정됨) 기한 없는 줄에 「기한 정하기」가 안 선다.
- */
 export function TaskRow({
   text,
   who,
@@ -714,13 +613,6 @@ export function TaskRow({
   );
 }
 
-/**
- * 근거 발언 목록(`evidence-quotes.tsx`). 앱에서도 상자다(hairline · rounded-10). 인용한 줄은 먹색,
- * 그 앞 맥락 줄은 회색. 화자는 `who`(이름) 또는 `label`(「화자 A」). `text` 에 형광펜 span 을 넣어도 된다.
- * **sm 미만은 상자 대신 왼쪽 세로선 하나다.** 좁은 화면에서는 펼친 칸의 들여쓰기(`sm:pl-7`)가 없어 상자가 창
- * 양옆 약 20px 안쪽에 나란히 서서 창과 동심 두 겹으로 읽혔다(390 근거 구간 · 히어로). 선을 한쪽에만 두면
- * 인용 묶음이라는 뜻은 남고 테두리는 생기지 않는다. sm 부터는 들여 선 앱 상자 그대로다.
- */
 export function EvidenceQuotes({
   quotes,
   className,
@@ -784,7 +676,6 @@ export function EvidenceQuotes({
   );
 }
 
-/** 펼친 줄의 「수정」 「제외」(`review-row.tsx`, outline xs 버튼). 뺀 줄은 「제외 취소」 하나다. */
 export function RowActions({ excluded = false }: { excluded?: boolean }) {
   const t = useTranslations("landing.app");
   const button = cn(
@@ -802,9 +693,6 @@ export function RowActions({ excluded = false }: { excluded?: boolean }) {
   );
 }
 
-/* ── 확정 막대 ────────────────────────────────────────────────────────── */
-
-/** 숫자가 바뀌면 그 숫자만 한 번 스며든다(`confirm-bar.tsx` `Count`). */
 function Count({ value }: { value: number }) {
   return (
     <b
@@ -823,18 +711,6 @@ type ConfirmState =
   | { kind: "ready"; decisions: number; tasks: number; ended?: number }
   | { kind: "unchosen"; n: number };
 
-/**
- * 막대 모양. 앱에는 `float` 하나뿐이고(`confirm-bar.tsx`: 둥근 14 · 선 · 그림자), 나머지는 창 · 카드 폭에 맞춘
- * 잘라 보이기다 — 문구 · 버튼 · 상태는 모두 같다.
- * - `float`: 앱 그대로. **넓은 창 가운데, 또는 창 바닥 가장자리에 반쯤 걸칠 때만 쓴다.** 창 · 카드 폭을 거의
- *   다 채우고 바닥 20px 위에 서면 프레임과 나란한 둥근 선이 한 겹 더 생긴다(주간 카드 · 근거 창 · 390 히어로).
- * - `pill`: 좁은 알약. 폭을 264 이하로 묶어 가운데 서고, 글자 12.5 · 버튼도 알약이다. 카드 폭 330 이면 양옆이
- *   프레임에서 약 33px, 390 창이면 약 47px 떨어져 동심으로 읽히지 않는다. 문구는 두 줄(덩어리마다), 「이전 결정
- *   N개 끝남」이 붙으면 세 줄이다. 300 미만 폭(320 화면의 카드)에서는 양옆이 다시 좁아지니 `plate` 를 쓴다.
- * - `plate`: 선 · 그림자 없는 회색 판(`--el-canvas` #f5f5f5 — 주황 「확인할 제안」 4.7:1). 폭을 다 써도 선이
- *   없어 테두리로 읽히지 않는다.
- * - `dock`: 창 바닥에 붙인 띠(위 hairline 하나). 프레임 바닥이 곧 띠의 바닥이라 겹이 없다.
- */
 const BAR = {
   float: cn(
     "relative flex min-h-[50px] max-w-full flex-wrap items-center gap-x-3.5 gap-y-1 rounded-[14px] border bg-white/[0.98] py-[7px] pr-[7px] pl-[18px]",
@@ -854,14 +730,6 @@ const BAR = {
   ),
 } as const;
 
-/**
- * 검토 완료 막대(`confirm-bar.tsx`). 모양은 위 `BAR` — 창 폭을 거의 다 채우는 자리면 `float` 대신 `pill` ·
- * `plate` · `dock` 중 하나를 고른다(동심 테두리 금지). 고를 제안이 남았으면 주황 「확인할 제안 N개」와 흐린 버튼.
- * 문구는 덩어리(「결정 N개와 할 일 N개를」 · 「프로젝트에 올립니다」 · 「· 이전 결정 N개 끝남」)마다 줄바꿈을
- * 막는다 — 좁은 폭에서 「이전 / 결정」처럼 끊기지 않게(주간 카드가 요청한 칸). 읽히는 글은 앱과 같다.
- * `buttonSlot` 은 「검토 완료」 버튼 안에 그린다 — 커서 · 링 자리(`relative`). 링 모서리를 `rounded-[inherit]`
- * 로 두면 모양마다 버튼 모서리(9px / 알약)를 따른다.
- */
 export function ConfirmBar({
   variant = "float",
   state,
@@ -911,7 +779,6 @@ export function ConfirmBar({
             APP.body
           )}
         >
-          {/* 줄을 갈지 않을 덩어리는 언어 파일의 `<nw>` 가 정한다 — 한국어는 덩어리째, 영어는 낱말 사이에서 갈린다. */}
           <span>
             {t.rich("counts", {
               ...RICH,
@@ -959,9 +826,6 @@ export function ConfirmBar({
   );
 }
 
-/* ── 제안(이전 결정 대체) ─────────────────────────────────────────────── */
-
-/** 「대체 / 유지」 두 칸의 클래스(`choice-toggle.tsx`). 진짜 `role="radio"` 버튼은 구간이 이걸로 만든다. */
 export const CHOICE = {
   group:
     "inline-flex shrink-0 rounded-full bg-[var(--el-surface-strong)] p-0.5",
@@ -972,16 +836,10 @@ export const CHOICE = {
   keepOn: "bg-[var(--el-primary)] text-white",
 } as const;
 
-/** 고른 쪽 「끝내기」 앞의 체크(`choice-toggle.tsx`). 진짜 버튼에도 같이 쓴다. */
 export function ChoiceCheck() {
   return <Check aria-hidden className="size-[11px]" strokeWidth={3} />;
 }
 
-/**
- * 「이전 결정 대체」 제안 한 줄(`suggestion-row.tsx` `SuggestionShell` + `ReplacementSuggestion`).
- * 앱에서도 옅은 면(canvas-soft)이다. 카드가 좁아 늘 앱의 좁은 배치(세로)로 선다.
- * `meta` 는 「2차 스프린트 킥오프 · 8월 25일 확정」 같은 출처, `toggle` 은 `CHOICE` 로 만든 진짜 버튼.
- */
 export function ReplacementRow({
   target,
   meta,
@@ -1022,13 +880,6 @@ export function ReplacementRow({
   );
 }
 
-/* ── 타임라인(회의 중) ────────────────────────────────────────────────── */
-
-/**
- * 안건 머리(`note-timeline.tsx` 안건 h3). `시간 구간 · 제목 · 개수 · ›` 와 기록 중이면 오른쪽 「논의 중」.
- * 기본은 그림(`div`). 히어로처럼 진짜로 접는 자리는 `as="button"` + `aria-expanded` · `onClick` 을
- * 넘긴다(포커스 링은 넘기는 쪽이 `className` 으로).
- */
 export function AgendaHead({
   range,
   title,
@@ -1104,7 +955,6 @@ export function AgendaHead({
   );
 }
 
-/** 타임라인 목록(`note-timeline.tsx` ol). 아이콘 열을 잇는 세로선 하나가 깔린다. */
 export function TimelineList({
   children,
   className,
@@ -1123,13 +973,6 @@ export function TimelineList({
   );
 }
 
-/**
- * 타임라인 한 줄(`note-timeline.tsx` `TimelineRow`). `시각 · 아이콘 · 제목 / 유형 이름 · 메타 · ⌄`.
- * **담당 · 기한 · 화자 이름은 없다**(그건 요약 탭의 검토 줄). `retracted` 면 아이콘이 회색 점, 제목이
- * 그어지고 메타 앞에 붉은 「철회됨」. `meta` 는 앱이 덧붙이는 말만 — 「답을 기다리는 중」 · 「00:44에
- * 답함」 · 「내용 보강」. `flash` 는 방금 붙은 줄의 노란 섬광(창 위 주석), `dim` 은 스포트라이트 밖의 줄.
- * `open` + `cites` 면 앱처럼 근거 발언 상자가 아래 펼쳐진다.
- */
 export function TimelineRow({
   at,
   tone,
@@ -1258,14 +1101,6 @@ export function TimelineRow({
   );
 }
 
-/* ── 스크립트 ─────────────────────────────────────────────────────────── */
-
-/**
- * 스크립트 한 줄(`note-archive.tsx` 발화 · `transcript-view.tsx`). `mono 시각 | (회의 뒤에만) 화자 칩 /
- * 말`. **화자 칩은 회의가 끝나 화자가 갈린 뒤에만 붙는다** — 기록 중에는 넘기지 않는다. 이름을
- * 안 붙였으면 `{ label: "A" }`(「화자 A」 + 아직 확인 안 한 화자 점). `live` 는 받아 적는 중인 줄:
- * 옅은 면이 깔리고 시각 자리에 붉은 점 + 「받아 적는 중」, 끝에 캐럿이 선다.
- */
 export function ScriptRow({
   at,
   speaker,
@@ -1286,7 +1121,6 @@ export function ScriptRow({
     <div
       className={cn(
         "grid grid-cols-[58px_minmax(0,1fr)] gap-4 py-4 sm:grid-cols-[66px_minmax(0,1fr)] sm:gap-6",
-        // 받아 적는 줄도 `tv-row` 다 — 그 위 줄은 뒤에 줄이 있으니 앱처럼 선을 지킨다.
         live
           ? cn("tv-row -mx-4 rounded-[6px] px-4", APP.softBg)
           : cn(ROW_LINE, APP.line),
@@ -1356,9 +1190,6 @@ export function ScriptRow({
   );
 }
 
-/* ── 내 에이전트 ──────────────────────────────────────────────────────── */
-
-/** 오른쪽 레일의 머리(`note-agent-rail.tsx`). 「내 에이전트 · 나만 보는 대화 · 현재 회의 범위」 + 접기. */
 export function RailHead({ className }: { className?: string }) {
   const t = useTranslations("landing.app.rail");
   return (
@@ -1390,7 +1221,6 @@ export function RailHead({ className }: { className?: string }) {
   );
 }
 
-/** 대화 제목 줄(`personal-chat.tsx` header). 제목 + 새 대화(＋) · 기록. */
 export function ThreadTitle({
   title,
   className,
@@ -1426,10 +1256,6 @@ export function ThreadTitle({
   );
 }
 
-/**
- * 범위 칩(`lib/chat/scope-chip.ts` 의 클래스를 그대로 쓴다). 회의록은 초록 + 문서 아이콘, 프로젝트는
- * 파랑 + 폴더 아이콘. 입력창과 말풍선이 같은 칩이다.
- */
 export function ScopeChip({
   kind = "note",
   title,
@@ -1448,7 +1274,6 @@ export function ScopeChip({
   );
 }
 
-/** 내가 보낸 말(`chat-thread.tsx` `UserBubble`). 오른쪽 · 회색 면 · 모서리 16 균일 — **꼬리 없음.** 칩은 문장 앞. */
 export function UserBubble({
   chip,
   children,
@@ -1474,7 +1299,6 @@ export function UserBubble({
   );
 }
 
-/** 에이전트의 답(`markdown.tsx` 본문). 말풍선 없이 본문 글자로 선다. */
 export function Answer({
   children,
   className,
@@ -1489,7 +1313,6 @@ export function Answer({
   );
 }
 
-/** 참고한 회의록 칩 줄. 정적 그림과 눌리는 판이 같이 쓴다. */
 export function RefChips({ refs }: { refs: string[] }) {
   return (
     <span className="flex flex-wrap gap-1.5 pt-1.5">
@@ -1509,10 +1332,6 @@ export function RefChips({ refs }: { refs: string[] }) {
   );
 }
 
-/**
- * 입력창(`chat-composer.tsx`). `chip` 은 붙인 범위(`ScopeChip`), `children` 은 그 뒤에 쓴 글.
- * 둘 다 없으면 앱의 안내 문구가 선다. `busy` 면 보내기(↑) 대신 중지(■) — 답이 흐르는 동안이다.
- */
 export function Composer({
   chip,
   busy = false,
@@ -1574,10 +1393,6 @@ export function Composer({
   );
 }
 
-/**
- * 앱 메타 줄의 구분점 「·」. 점은 장식이라 숨기고, 화면 읽기 프로그램에는 쉼표를 남긴다 — 점만 숨기면
- * 앞뒤 글자 사이에 공백이 없어 「결정철회됨」 · 「질문00:44에 답함」처럼 한 낱말로 붙어 읽혔다.
- */
 function Dots() {
   return (
     <>

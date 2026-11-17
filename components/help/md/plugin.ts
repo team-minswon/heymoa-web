@@ -1,15 +1,3 @@
-/**
- * 가이드 마크다운 문법을 화면 컴포넌트 이름(hast 태그)으로 옮기는 remark 플러그인.
- * 문법표와 예시는 `content/help/README.md` 에 있다. 새 문법을 더하면 거기도 고친다.
- *
- * - `> [!참고]` 같은 알림 → `help-callout`
- * - `==핵심==` → `mark`
- * - `::::tabs` / `:::tab{title="Mac"}` → `help-tabs` / `help-tab`
- * - `:::problem` → `help-problem` (증상 / 원인 / 해결 방법)
- * - `::clip{name="…" alt="…" caption="…"}` → `help-clip`
- * - `:badge[관리자만]` → `help-badge`
- * - 모르는 `:이름` 은 글자 그대로 되돌린다(예: 시각 `HH:MM`).
- */
 type Node = {
   type: string;
   value?: string;
@@ -25,7 +13,6 @@ const containerNames = { tabs: "help-tabs", tab: "help-tab", problem: "help-prob
 
 function walk(node: Node, fn: (n: Node, parent: Node | null, index: number) => void, parent: Node | null = null, index = 0) {
   fn(node, parent, index);
-  // fn 이 자식을 바꿀 수 있어 매번 길이를 다시 읽는다
   for (let i = 0; node.children && i < node.children.length; i += 1) {
     walk(node.children[i], fn, node, i);
   }
@@ -33,10 +20,6 @@ function walk(node: Node, fn: (n: Node, parent: Node | null, index: number) => v
 
 const MARK = /==([^=\n][^\n]*?)==/g;
 
-/**
- * `**[새 노트]** 를` 의 띄어쓰기. 마크다운은 `]**를` 처럼 붙이면 굵게가 풀려서 원문은 띄워 쓴다.
- * 굵은 글 바로 뒤 낱말이 조사로만 이뤄졌으면 앞 공백을 지워 「[새 노트]를」로 붙인다(줄 머리에 조사만 넘어가지 않게).
- */
 const PARTICLE = /^ (?:으로|에서|에게|까지|부터|처럼|보다|이나|이라|이에요|예요|이요|은|는|이|가|을|를|도|만|의|에|로|와|과|나|라|요)+(?=[^가-힣]|$)/;
 
 export function remarkHelp() {
@@ -46,7 +29,6 @@ export function remarkHelp() {
         node.value = (node.value ?? "").slice(1);
       }
 
-      // ==핵심 문구==
       if (node.type === "text" && node.value?.includes("==") && parent?.children) {
         const parts: Node[] = [];
         let last = 0;
@@ -66,7 +48,6 @@ export function remarkHelp() {
         return;
       }
 
-      // > [!참고] 알림
       if (node.type === "blockquote") {
         const first = node.children?.[0];
         const text = first?.type === "paragraph" ? first.children?.[0] : undefined;
@@ -94,7 +75,6 @@ export function remarkHelp() {
         node.data = { hName: "help-badge", hProperties: {} };
         return;
       }
-      // 모르는 지시문은 글자 그대로
       if (
         (node.type === "textDirective" || node.type === "leafDirective" || node.type === "containerDirective") &&
         parent?.children

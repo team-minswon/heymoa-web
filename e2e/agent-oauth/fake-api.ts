@@ -1,14 +1,6 @@
 /**
- * 외부 에이전트 OAuth e2e(APP-888)의 가짜 API.
- *
- * web 의 SSR(`getCurrentUserForSsr`)과 `proxy.ts` 의 토큰 갱신은 Node 쪽에서 API 를 부르므로 MSW 도 `page.route` 도
- * 못 가로챈다. 그래서 진짜 소켓으로 server 를 흉내 낸다. 응답 모양은 생성 타입으로 묶어, 계약 이름이 갈라지면
- * `pnpm typecheck` 가 깨진다. Node 의 타입 제거로 그대로 돈다(`node e2e/agent-oauth/fake-api.ts`) — 타입 전용
- * 가져오기만 쓴다.
- *
- * 흉내 내는 것: 세션 확인·갱신(refresh 회전), Google 로그인 왕복, server 인가 엔드포인트, 동의 API 셋, 워크스페이스
- * 목록, 에이전트 콜백, 로그인 약관 동의(APP-1277: 내 정보의 `consentRequired` · `POST /v1/users/me/consents`).
- * 시험은 `/__test/*` 로 기록을 읽고 세션을 만든다.
+ * web 의 SSR 과 `proxy.ts` 의 토큰 갱신은 Node 쪽에서 API 를 불러 MSW 도 `page.route` 도 못 가로챕니다. 그래서 진짜 소켓으로 server 를 흉내 냅니다.
+ * `node` 의 타입 제거로 그대로 돌아 타입 전용 가져오기만 씁니다.
  */
 import {
   createServer,
@@ -47,23 +39,18 @@ type Pending = { agentState: string; redirectUri: string };
 type Log = {
   authorize: string[];
   refresh: number;
-  /** 성공·실패를 가리지 않은 갱신 요청 수. proxy 가 갱신을 시도했는지 본다(PRO-66). */
   refreshAttempts: number;
   approve: unknown[];
   deny: unknown[];
   callbacks: string[];
-  /** Google 로그인 시작 요청 수. 약관에 동의하지 않으면 로그인이 시작되지 않는다(APP-1277). */
   google: number;
-  /** 동의 기록 요청 수(실패 포함)와 서버에 남은 기록. */
   consentAttempts: number;
   consents: unknown[];
 };
 
-/** 로그인 약관 동의(APP-1277). 새 계정은 동의 전이지만 기본값은 동의한 계정이다 — 이전 시험이 로그인 뒤 동의 화면을 안 만나게. */
 type Account = {
   consentRequired: boolean;
   version: string;
-  /** 앞으로 이만큼의 기록 요청을 503 으로 거절한다. */
   failRecords: number;
 };
 
@@ -71,7 +58,6 @@ let refreshTokens = new Set<string>();
 let consents = new Map<string, Pending>();
 let log: Log = emptyLog();
 let account: Account = emptyAccount();
-/** 켜면 갱신이 일시 장애(503)로 실패한다. 토큰이 죽었다는 코드가 아니라 proxy 가 쿠키를 지우면 안 된다. */
 let refreshUnavailable = false;
 let seq = 0;
 
@@ -93,7 +79,6 @@ function emptyAccount(): Account {
   return { consentRequired: false, version: "2026-10-22", failRecords: 0 };
 }
 
-/** 내 정보 응답. 동의한 계정이면 두 문서 모두 `agreed` 다. */
 function currentUser(): CurrentUserResponseData {
   return {
     ...USER,
@@ -110,7 +95,6 @@ function base64Url(value: unknown) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
-/** `proxy.ts` 는 access 의 `exp` 만 읽는다. 서명은 보지 않으므로 모양만 맞춘다. */
 function accessToken(expiresInSeconds: number) {
   const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
   return `${base64Url({ alg: "none" })}.${base64Url({ sub: USER.userId, exp })}.e2e`;
@@ -252,7 +236,6 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       account = emptyAccount();
       refreshUnavailable = false;
       return send(response, 200, {});
-    // 계정의 약관 동의 상태를 정한다. `{ consentRequired?, version?, failRecords? }`
     case "POST /__test/account":
       account = { ...account, ...(await bodyOf(request)) };
       return send(response, 200, account);
@@ -293,7 +276,6 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       log.refresh += 1;
       return ok(response, null, sessionCookies(issueSession()));
     }
-    // Google 로그인 왕복을 한 번에 끝낸다 — 쿠키를 심고 server 처럼 web 콜백으로 보낸다.
     case "GET /v1/auth/oauth2/authorize/google": {
       log.google += 1;
       const returnTo = url.searchParams.get("returnTo") ?? "/";
@@ -304,7 +286,6 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       );
     }
 
-    // server 인가 엔드포인트. 로그인 안 됐으면 받은 쿼리 그대로 web 입구로, 됐으면 동의 화면으로.
     case "GET /oauth2/authorize": {
       log.authorize.push(rawQuery);
       if (!isAuthenticated(request)) {
@@ -357,7 +338,6 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     case "GET /v1/users/me":
       if (!isAuthenticated(request)) return unauthorized(response);
       return ok(response, currentUser());
-    // 계약대로 204 무본문. 옛 버전이면 아무것도 기록하지 않고 409 다.
     case "POST /v1/users/me/consents": {
       if (!isAuthenticated(request)) return unauthorized(response);
       const body = (await bodyOf(request)) as unknown as {
@@ -388,7 +368,6 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       if (!isAuthenticated(request)) return unauthorized(response);
       return ok(response, { workspaces: [WORKSPACE] });
 
-    // 에이전트가 띄운 로컬 콜백 자리. 받은 쿼리를 남긴다.
     case "GET /agent/callback":
       log.callbacks.push(rawQuery);
       cors(response);

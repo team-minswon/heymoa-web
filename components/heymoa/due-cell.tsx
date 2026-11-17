@@ -17,11 +17,6 @@ import { formatDueDate } from "@/lib/format/date";
 import { useDisplayLocale } from "@/lib/i18n/use-display-locale";
 import { cn } from "@/lib/utils";
 
-/**
- * 기한 칸. 누르면 달력이 뜨고 날짜를 고르면 바로 정해진다. 기한이 있으면 달력 아래 「기한 없음」으로 지운다.
- * 브라우저의 날짜 고르기는 브라우저 · 운영체제마다 모양이 달라 쓰지 않는다(APP-1591).
- * 검토 화면의 할 일 · 이슈와 할 일 목록이 같은 칸을 쓴다.
- */
 export function DueCell({
   value,
   placeholder,
@@ -36,12 +31,7 @@ export function DueCell({
   placeholder?: string;
   editable?: boolean;
   overdue?: boolean;
-  /**
-   * 달력 아이콘이 붙은 칩 모양(검토 화면 · APP-865). 기한이 없으면 점선 테두리의 「기한 정하기」라
-   * 정해야 할 것이 남았다는 것이 눈에 띈다.
-   */
   chip?: boolean;
-  /** 표 안의 칸이면 빈 값을 달력 아이콘으로만 두고 글은 줄(`group`)을 가리키거나 포커스가 들 때 세운다. 좁은 화면은 늘 보인다 */
   quiet?: boolean;
   onChange?: (next: string | null) => void;
   className?: string;
@@ -72,7 +62,6 @@ export function DueCell({
         aria-hidden
         className="size-[14px] shrink-0 text-[var(--el-muted)]"
       />
-      {/* 기한 칸은 오른쪽 끝에 붙는다. 투명하게만 두면 보이지 않는 글 폭만큼 아이콘이 왼쪽에 떠서, 폭째 접었다 편다. */}
       <span className="ml-1.5 overflow-hidden whitespace-nowrap text-[var(--el-muted)] transition-[max-width,opacity,margin] duration-150 ease-out motion-reduce:transition-none sm:ml-0 sm:max-w-0 sm:opacity-0 sm:group-hover:ml-1.5 sm:group-hover:max-w-24 sm:group-hover:opacity-100 sm:group-focus-within:ml-1.5 sm:group-focus-within:max-w-24 sm:group-focus-within:opacity-100">
         {text}
       </span>
@@ -137,14 +126,12 @@ export function DueCell({
         >
           {content}
         </PopoverTrigger>
-        {/* 메뉴(dropdown-menu)와 같은 면이다 — 흰 바탕 · 패널 모서리 · 같은 그림자. */}
         <PopoverContent
           align="start"
           className="w-auto gap-0 rounded-panel bg-[var(--el-surface-card)] p-0 shadow-e3"
         >
           <Calendar
             mode="single"
-            // 고른 날을 다시 눌러도 지워지지 않는다. 지우기는 아래 버튼이 맡는다.
             required
             locale={calendarLocale}
             selected={selected}
@@ -178,7 +165,6 @@ export function DueCell({
   );
 }
 
-/** `YYYY-MM-DD` 를 그 날의 로컬 자정으로. `new Date("YYYY-MM-DD")` 는 UTC 자정이라 시간대에 따라 하루 밀린다. */
 function dateOf(iso: string) {
   const [year, month, day] = iso.split("-").map(Number);
   return new Date(year, month - 1, day);

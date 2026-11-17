@@ -59,11 +59,9 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
   it("누를 때마다 그 사람의 다음 발화로 돌고 몇 번째인지 보인다", () => {
     const { onOpenChange } = renderPanel([stat()]);
 
-    // 아직 안 갔을 때는 전체 개수만.
     const button = screen.getByRole("button", { name: /지정하러 가기/ });
     expect(button).toHaveTextContent("3곳");
 
-    // 지금 있는 위치가 보인다.
     fireEvent.click(button);
     expect(
       screen.getByRole("button", { name: /다음 발화로/ })
@@ -76,12 +74,10 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
     expect(
       screen.getByRole("button", { name: /다음 발화로/ })
     ).toHaveTextContent("3 / 3");
-    // 끝에서는 처음으로 돌아온다.
     fireEvent.click(screen.getByRole("button", { name: /다음 발화로/ }));
     expect(
       screen.getByRole("button", { name: /다음 발화로/ })
     ).toHaveTextContent("1 / 3");
-    // 누를 때마다 패널은 닫혀 도착한 자리를 가리지 않는다.
     expect(onOpenChange).toHaveBeenCalledTimes(4);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -105,11 +101,9 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
   it("띠를 누르면 누른 시각에 가장 가까운 발화로 가고 n / m 이 그 위치로 맞춰진다", () => {
     renderPanel([stat()]);
     const strip = screen.getByTestId("speaker-panel-strip");
-    // jsdom 은 레이아웃이 없어 상자를 직접 준다: 폭 600, 회의 600_000ms → 1px = 1000ms.
     strip.getBoundingClientRect = () =>
       ({ left: 0, width: 600, top: 0, height: 24 }) as DOMRect;
 
-    // 200_000ms 에서 가장 가까운 발화는 2번째(100_000ms) — 3번째(400_000ms)보다 가깝다.
     fireEvent.click(strip, { clientX: 200 });
 
     expect(
@@ -129,7 +123,6 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
     strip.getBoundingClientRect = () =>
       ({ left: 0, width: 600, top: 0, height: 24 }) as DOMRect;
 
-    // 200_000ms 를 품은 것은 맞장구 「ne」다 — 점 목록에 없으니 n / m 대신 개수만.
     fireEvent.click(strip, { clientX: 200 });
     const button = screen.getByRole("button", { name: /다음 발화로/ });
     expect(button).toHaveTextContent("3곳");
@@ -146,7 +139,6 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
       ({ left: 0, width: 600, top: 0, height: 24 }) as DOMRect;
 
     fireEvent.pointerMove(strip, { clientX: 300 });
-    // 600_000ms 의 절반 = 5분.
     expect(screen.getByTestId("speaker-panel-strip-time")).toHaveTextContent(
       "5:00"
     );
@@ -183,7 +175,6 @@ describe("SpeakerPanel 영어 화면", () => {
       screen.getByText("1 participant · 1 unassigned speaker · Meeting 10m")
     ).toBeTruthy();
     expect(screen.getByText("1m")).toBeTruthy();
-    // 시트 닫기 버튼(`components/ui/sheet`)은 이 모듈 문구가 아니라 목록만 본다
     expect(screen.getByRole("list").textContent).not.toMatch(/[가-힣]/);
   });
 });

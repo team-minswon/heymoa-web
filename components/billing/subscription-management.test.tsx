@@ -1,7 +1,3 @@
-/**
- * 설정 › 결제 관리(결제 수단·구독·결제 내역)와 그 안의 카드 변경·결제 상세 시험(APP-1565, PRO-75). **MSW 목으로 그린 것이라 서버·PG 정합성의 증거가 아니다.**
- * 기본은 목의 실제 흐름(유료 공간 「제품 팀」)을 밟고, 서버만 낼 수 있는 응답(403·특정 409)은 그 요청만 바꿔 끼운다.
- */
 import {
   focusManager,
   QueryClient,
@@ -87,7 +83,6 @@ const events = (name: string) =>
     .mock.calls.filter(([event]) => event === name)
     .map(([, props]) => props);
 
-/** 설정 › 결제 관리 탭. 돌려주는 것은 「구독」 영역이다. */
 async function openPaid(workspaceId = PAID) {
   renderIn(
     <WorkspacePaymentSettings workspaceId={workspaceId} onOpenPlans={vi.fn()} />
@@ -191,7 +186,6 @@ describe("결제 수단·구독", () => {
       "src",
       `/billing/card-change/${PAID}`
     );
-    // 부모 문서에는 카드 칸도 동의도 없다.
     expect(screen.queryByLabelText("카드 번호")).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
     expect(events("billing_card_change_started")).toEqual([
@@ -243,7 +237,6 @@ describe("결제 수단·구독", () => {
     expect(events("billing_subscription_canceled")).toEqual([
       { workspace_id: PAID },
     ]);
-    // 해지 예약 뒤에는 재개·카드 삭제가 열리고, 다음 결제가 없다고 적는다.
     expect(
       await within(area).findByRole("button", { name: "구독 재개" })
     ).toBeInTheDocument();
@@ -256,8 +249,6 @@ describe("결제 수단·구독", () => {
       within(methodArea()).getByRole("button", { name: "삭제" })
     ).toBeInTheDocument();
 
-    // 다음 결제 금액(`nextChargeAmountKrw`)은 해지 예약 중에 없다 — 재개 확인 창은 금액 없이 날짜만 말하고(APP-1596),
-    // 재개 뒤에는 서버가 다시 준 금액으로 안내한다.
     fireEvent.click(within(area).getByRole("button", { name: "구독 재개" }));
     const resume = await screen.findByRole("alertdialog");
     expect(
@@ -276,11 +267,9 @@ describe("결제 수단·구독", () => {
   it("갱신 결과를 기다리는 동안에도 해지를 예약하고, 지난 기간 끝 날짜 대신 결과에 따라 끝난다고 적는다", async () => {
     billingMock.setScenario("renewalChecking");
     const area = await openPaid();
-    // 예약 전에는 「{end}까지 계속 쓸 수 있다」는 힌트를 두지 않는다.
     expect(
       within(area).queryByText(/까지는 계속 쓸 수 있습니다/)
     ).not.toBeInTheDocument();
-    // 「다음 결제」는 지금 확인 중인 그 결제다 — 이미 지난 기간 끝을 다음 결제일로 보이지 않는다.
     expect(within(area).getByText("결제 결과 확인 중")).toBeInTheDocument();
     expect(within(area).queryByText(/12월 11일 · /)).not.toBeInTheDocument();
     fireEvent.click(
@@ -507,7 +496,6 @@ describe("결제 수단·구독", () => {
   });
 
   it("지우려던 카드가 이미 없으면(404) 확인 창을 닫고 다시 읽으라고 한다", async () => {
-    // 실제 서버는 이 공간의 수단이 아니거나 없으면 404 를 준다 — 다른 관리자가 먼저 바꾼 낡은 화면에서 난다.
     server.use(
       http.delete(`*/v1/workspaces/${PAID}/billing/payment-methods/*`, () =>
         failure(
@@ -544,7 +532,6 @@ describe("결제 수단·구독", () => {
   it("살아 있는 구독의 카드 삭제(409)는 카드 변경을 안내한다", async () => {
     billingMock.setScenario("methodInUse");
     const area = await openPaid();
-    // 확인 창이 열린 동안 나머지는 접근성 트리에서 숨는다 — 영역은 창을 열기 전에 잡아 둔다.
     const method = methodArea();
     fireEvent.click(within(area).getByRole("button", { name: "구독 해지" }));
     fireEvent.click(
@@ -571,7 +558,6 @@ describe("결제 수단·구독", () => {
   });
 });
 
-/** 끝난 카드 변경(REPLACE) 등록의 상태 조회. */
 const replacedSetup = () =>
   http.get("*/v1/me/billing/setups/S1", () =>
     HttpResponse.json({
@@ -608,7 +594,6 @@ describe("카드 변경", () => {
     expect(
       screen.getByText("새 카드 등록에 실패하면 지금 카드가 그대로 유지됩니다.")
     ).toBeInTheDocument();
-    // 내가 이미 결제자면 결제자가 바뀐다는 안내가 없다.
     expect(screen.queryByText(/내 카드로 청구되고/)).not.toBeInTheDocument();
     let body: Record<string, unknown> | null = null;
     server.events.on("request:start", async ({ request }) => {
@@ -618,7 +603,6 @@ describe("카드 변경", () => {
     const submit = screen.getByRole("button", { name: "카드 등록하기" });
     for (const checkbox of screen.getAllByRole("checkbox"))
       fireEvent.click(checkbox);
-    // 카드 칸이 다 맞아야 켜진다.
     expect(submit).toBeDisabled();
     for (const [label, value] of [
       ["카드 번호", "4111111111111111"],
@@ -635,7 +619,6 @@ describe("카드 변경", () => {
       expect(requests.some((r) => r.endsWith("/card"))).toBe(true)
     );
     expect(body).toMatchObject({ purpose: "REPLACE" });
-    // 분석 없는 문서라 이벤트를 내지 않는다(시작 이벤트는 모달을 연 설정 창이 낸다).
     expect(events("billing_card_change_started")).toEqual([]);
   });
 
@@ -653,7 +636,6 @@ describe("카드 변경", () => {
         "새 카드 등록에 실패하면 지금 카드가 그대로 유지됩니다."
       )
     ).not.toBeInTheDocument();
-    // 바뀔 카드가 없고 구독은 종료 예정이다 — 「카드만 바뀌고」와 「다음 결제부터 자동 결제」는 거짓이다.
     expect(screen.getByText("지금 결제되지 않습니다.")).toBeInTheDocument();
     expect(
       screen.queryByText("카드만 바뀌고 지금 결제되지 않습니다.")
@@ -866,7 +848,6 @@ describe("결제 내역 — 결제 관리 탭(공간)", () => {
     const list = await within(history()).findByRole("list", {
       name: "결제 내역",
     });
-    // 「제품 팀」은 내 결제 셋 + 다른 관리자 열한 달 + 공간을 떠난 사람 한 건 = 15건이다.
     expect(within(list).getAllByRole("listitem")).toHaveLength(12);
     expect(within(list).getAllByText("박서연").length).toBeGreaterThan(0);
     expect(within(list).getAllByText("리서치 담당")).toHaveLength(3);
@@ -876,7 +857,6 @@ describe("결제 내역 — 결제 관리 탭(공간)", () => {
     expect(
       screen.queryByRole("button", { name: /더 보기/ })
     ).not.toBeInTheDocument();
-    // 다른 공간의 결제는 이 탭에 없다.
     expect(screen.queryByText("지난 프로젝트 팀")).not.toBeInTheDocument();
     expect(
       screen.getByText(
@@ -921,7 +901,6 @@ describe("결제 내역 — 계정의 내 결제 내역", () => {
   it("내가 결제한 것만, 지운 공간의 결제도 결제 때 이름으로 보인다", async () => {
     renderIn(<MyPaymentsSettings />);
     const rows = within(await list()).getAllByRole("listitem");
-    // 다른 관리자가 결제한 「제품 팀」 결제는 빠진다.
     expect(rows).toHaveLength(4);
     expect(screen.queryByText("박서연")).not.toBeInTheDocument();
     const deleted = screen.getByText("지난 프로젝트 팀").closest("li")!;
@@ -956,7 +935,6 @@ describe("결제 내역 — 계정의 내 결제 내역", () => {
   });
 });
 
-// 결제 영수증(나이스페이 매출전표, APP-1600). 주소가 있는 결제에만 새 창 링크를 둔다.
 describe("결제 영수증", () => {
   const history = () => screen.getByRole("region", { name: "결제 내역" });
   const receipt = (date: string) =>
@@ -974,9 +952,7 @@ describe("결제 영수증", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     expect(link).toHaveTextContent("영수증");
-    // 링크는 상세 버튼 밖에 있다(버튼 안 링크 금지).
     expect(link.closest("button")).toBeNull();
-    // 실패한 결제(10월 11일 실패)와 목이 비워 둔 2025년 9월 11일 결제에는 없다.
     const failed = within(history()).getAllByText("실패")[0].closest("li")!;
     expect(within(failed).queryByRole("link")).not.toBeInTheDocument();
     expect(receipt("2025년 9월 11일")).not.toBeInTheDocument();
@@ -1057,7 +1033,6 @@ describe("결제 영수증", () => {
   });
 });
 
-// 다른 탭·기기에서 바뀐 상태를 따라온다(APP-1600). 전역 기본은 포커스 갱신이 꺼져 있어 이 조회에만 켰다.
 describe("결제 관리 탭 갱신", () => {
   const billingReads = () =>
     requests.filter((r) => r === `GET /v1/workspaces/${PAID}/billing`).length;
@@ -1065,7 +1040,6 @@ describe("결제 관리 탭 갱신", () => {
   it("창으로 돌아오면 공간의 결제 상태를 다시 읽는다", async () => {
     await openPaid();
     const before = billingReads();
-    // suspense 조회는 staleTime 을 1초 아래로 두지 않는다 — 그보다 뒤에 돌아온다.
     await act(() => new Promise((resolve) => setTimeout(resolve, 1100)));
     act(() => {
       focusManager.setFocused(false);

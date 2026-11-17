@@ -23,17 +23,6 @@ import { cn } from "@/lib/utils";
 /** 테스트가 바꿔 끼운다. jsdom 의 `location.reload` 는 바꿀 수 없다. */
 export const reloadDocument = { run: () => window.location.reload() };
 
-/**
- * 설정 > 계정 > 언어(APP-1285). 처음에는 브라우저 언어로 정한 초기 기본값이 계정에 들어가고, 여기서 덮어쓴다.
- *
- * - 고르면 계정(`PATCH /v1/users/me`)에 저장하고, 성공한 뒤 쿠키를 쓰고 **문서를 새로 연다.** `router.refresh` 는
- *   Query 캐시에 받아 둔 옛 언어 오류 문구와 열린 SSE 의 `Accept-Language` 를 그대로 남긴다. 실패하면 새로고침하지
- *   않고 전역 mutation 토스트가 알린다.
- * - 녹음 중에는 고를 수 없다. 새로고침이 녹음을 끊는데, 녹음 중인 회의의 AI 언어는 시작할 때 이미 정해져(APP-1299)
- *   바꿔도 얻는 것이 없다. 지속 상태라 인라인으로 알린다(rule `error-loading`).
- * - 선택지 이름은 화면 언어와 상관없이 그 언어 자신의 이름이다. 탭 이름도 두 언어를 같이 적는다(`settings-dialog`) —
- *   언어를 바꾸려는 사람은 아직 못 읽는 언어의 화면을 보고 있다.
- */
 export function LanguageSettings() {
   const t = useTranslations("common.language.settings");
   const current = useLocale() as Locale;
@@ -46,7 +35,6 @@ export function LanguageSettings() {
   const choose = (language: Locale) => {
     if (locked || pending || language === current) return;
     setPending(language);
-    // 로그인 직후 초기값 저장이 아직 가는 중이면 끝난 뒤에 보낸다 — 늦게 닿은 초기값이 고른 언어를 되돌리지 않게.
     void initialLanguageSaveSettled().then(() =>
       mutate(
         { data: { language } },

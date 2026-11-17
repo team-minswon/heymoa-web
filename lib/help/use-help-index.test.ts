@@ -30,7 +30,6 @@ it("언어판마다 자기 색인 주소를 받고 따로 둔다", async () => {
     json: async () => [{ path: url }],
   }));
   vi.stubGlobal("fetch", fetchMock);
-  // 앞 시험이 모듈 캐시에 둔 색인을 비운다
   vi.resetModules();
   const { useHelpIndex } = await import("@/lib/help/use-help-index");
 
@@ -38,7 +37,6 @@ it("언어판마다 자기 색인 주소를 받고 따로 둔다", async () => {
   await waitFor(() => expect(en.result.current.entries).toHaveLength(1));
   expect(fetchMock).toHaveBeenCalledWith("/en/help/search-index.json");
 
-  // 영어판 색인을 먼저 받아 두어도 한국어 화면은 한국어 색인을 따로 받는다
   const ko = renderHook(() => useHelpIndex(true, "ko"));
   await waitFor(() => expect(ko.result.current.entries).toHaveLength(1));
   expect(fetchMock).toHaveBeenCalledWith("/help/search-index.json");

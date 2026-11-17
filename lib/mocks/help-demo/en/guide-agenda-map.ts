@@ -1,19 +1,9 @@
 import type { NoteResponseData, ProjectMeetingLinksResponseData } from "@/lib/api/generated/models";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 
-/**
- * 가이드 촬영 전용 「연결 지도」 데이터(APP-1455). 가이드 목 프리셋(`lib/mocks/help-demo`)이 켜졌을 때만 쓰인다 —
- * 프리셋 상태에 프로젝트·노트를 더하는 것은 `help-demo/build.ts`, 지도와 요약 응답을 돌려주는 것은 `project-agenda-map.ts` 가
- * `isHelpDemoEnabled()` 로 가른다. 꺼져 있으면 이 파일은 읽히지 않는다. 사람 이름·실제 팀 데이터는 하나도 없는 가상의 앱 출시 준비 프로젝트다.
- *
- * 모양: 회의 7개(9/17~10/27, 주 단위) · 안건 42개 · 주제 6개(요금제·온보딩·베타·릴리스·알림·문의). 같은 회의 안 이어짐(캡슐 2곳),
- * 갈라짐 2곳(요금제의 환불·학생 할인 — 둘이 구간이 겹쳐 하나는 「+2」로 접힌다), 이어짐 없는 안건, 완료·미완료가 섞여 있다.
- * 촬영 방법은 `scripts/help-media/README.md`.
- */
 export const GUIDE_AGENDA_PROJECT_ID = "0PGP000000001";
 export const GUIDE_AGENDA_PROJECT_NAME = "App Launch Prep";
 
-// [날짜(2026), 제목] — 한국 시간 오전 10시
 const MEETINGS = [
   ["09-17", "Product launch kickoff"],
   ["09-24", "Weekly sync"],
@@ -37,7 +27,6 @@ type Row = readonly [
   open: string | null,
 ];
 
-// 안건. 같은 회의 안에서는 적힌 순서가 다룬 순서다. parent 는 이어받은 앞 안건
 const ROWS: readonly Row[] = [
 
   ["p1",1,"Pricing plan structure",true,null,"We'll start with monthly and annual plans. What the free plan includes will be decided next meeting after looking at a comparison.",1,1,"Launch with monthly and annual plans.",null],
@@ -87,7 +76,6 @@ const noteId = (meeting: number) => `0PGN${String(meeting).padStart(9, "0")}`;
 const agendaId = (key: string) => `0PGA${String(ROWS.findIndex((row) => row[0] === key) + 1).padStart(9, "0")}`;
 const startedAt = (meeting: number) => `2026-${MEETINGS[meeting - 1][0]}T01:00:00.000Z`;
 
-/** `GET /v1/projects/{projectId}/meeting-links`(noteId 없음)의 data. 서버처럼 최근 회의가 먼저다 */
 export function guideAgendaMapLinks(): ProjectMeetingLinksResponseData {
   return {
     notes: MEETINGS.map(([, title], index) => ({
@@ -112,7 +100,6 @@ export function guideAgendaMapLinks(): ProjectMeetingLinksResponseData {
   };
 }
 
-/** 프리셋 상태에 더할 프로젝트와 회의. 참석자 등은 프리셋의 첫 노트에서 빌린다 */
 export function guideAgendaMapSeed(workspaceId: string, template: NoteResponseData) {
   const project = {
     projectId: GUIDE_AGENDA_PROJECT_ID,
@@ -147,7 +134,6 @@ export function guideAgendaMapSeed(workspaceId: string, template: NoteResponseDa
   return { project, notes };
 }
 
-/** 이 가이드 회의의 요약(안건 한 줄 요약 · 결정·할 일 수 · 결론 · 남은 질문). 이 회의가 아니면 null */
 export function guideAgendaMapSummary(id: string): MeetingReviewSummary | null {
   const meeting = Array.from({ length: MEETINGS.length }, (_, index) => index + 1).find((n) => noteId(n) === id);
   if (!meeting) return null;

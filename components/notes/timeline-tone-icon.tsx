@@ -1,11 +1,6 @@
 import { ROLE_COLOR } from "@/components/notes/review/role-dot";
 import type { TimelineTone } from "@/lib/notes/proposals/timeline";
 
-/**
- * 유형의 모양 — 결정은 채운 체크, 할 일은 빈 원, 열린 질문은 점선 원, 답한 질문은 회색 체크, 참고는 작은
- * 점이다. 타임라인 · 검토 화면 · 랜딩 시연이 같은 모양을 쓴다. 랜딩이 타임라인 화면 모듈 전체를 끌어오지
- * 않게 따로 둔다.
- */
 const TONE_ICON: Record<
   TimelineTone,
   { r: number; fill: string; stroke: string; dash?: string; check?: string }

@@ -69,7 +69,6 @@ describe("NoteContextSection", () => {
     release();
     await waitFor(() => expect(bodies).toHaveLength(2));
     expect(bodies[1]).toEqual({ topic: "결제 오류", background: null });
-    // 저장 응답이 입력란을 덮지 않는다(뒤 공백이 그대로)
     expect(topic).toHaveValue("결제 오류 ");
     await waitFor(() =>
       expect(screen.getByText("저장했습니다")).toBeInTheDocument()

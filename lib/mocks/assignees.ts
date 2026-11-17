@@ -2,7 +2,6 @@ import type { Assignee } from "@/lib/api/generated/models";
 import { mockDb } from "@/lib/mocks/db";
 import { failWith } from "@/lib/mocks/mock-envelope";
 
-/** 저장된 담당. 서버처럼 사람은 식별자, 회의 라벨은 노트·라벨로 두고 조회 때 푼다. */
 export type StoredAssignee =
   | { type: "USER" | "GUEST"; id: string }
   | { type: "SPEAKER_LABEL"; noteId: string; label: string };
@@ -34,10 +33,6 @@ export function assigneeFromRequest(
   return { type: request.type, id: request.id };
 }
 
-/**
- * 조회 시점 담당. 회의 라벨은 그 라벨의 발화가 **모두 한 참여자**로 풀릴 때만 그 사람이 되고,
- * 아니면 라벨 그대로 내린다. 지워진 사람은 `null` 이다.
- */
 export function resolveAssignee(
   workspaceId: string,
   stored: StoredAssignee | null

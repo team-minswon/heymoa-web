@@ -12,7 +12,6 @@ import { HelpPalette } from "@/components/help/help-palette";
 import { buildHelpIndex } from "@/lib/help/search-index";
 import { intlWrapper } from "@/components/help/test-intl";
 
-/** 가이드 컴포넌트는 언어 파일을 읽는다 — 실제 마케팅 루트처럼 한국어 언어 파일을 내려 준다. */
 const render = (ui: React.ReactElement) =>
   rtlRender(ui, { wrapper: intlWrapper() });
 

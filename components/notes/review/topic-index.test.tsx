@@ -110,7 +110,6 @@ describe("안건 주소 이동", () => {
       <TopicIndex noteId="note" topics={[topic("ag1", 1), topic("ag2", 2)]} />
     );
     act(() => vi.advanceTimersByTime(0));
-    // 펼침이 끝나기 전에는 긋지 않는다
     expect(document.querySelector(".evidence-mark")).toBeNull();
     act(() => vi.advanceTimersByTime(240));
     expect(document.querySelector(".evidence-mark")).toHaveTextContent(

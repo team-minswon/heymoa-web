@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-// MSW 회의만 사용합니다. 실제 회의·녹음 상태는 바꾸지 않습니다.
 test("새 내용의 높이 변화는 하단을 유지하고 수동 스크롤은 존중합니다", async ({
   page,
 }) => {

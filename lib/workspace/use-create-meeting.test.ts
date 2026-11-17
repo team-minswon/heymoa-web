@@ -71,7 +71,6 @@ describe("useCreateMeeting", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
-  /** 만들 때 고른 프로젝트가 보고 있던 프로젝트보다 우선이다. 회의의 프로젝트는 만든 뒤 못 바꾼다(APP-1033). */
   it("고른 프로젝트로 만든다", async () => {
     shell.selectedProjectId = null;
     createNote.mockResolvedValue({
@@ -140,11 +139,9 @@ describe("useCreateMeeting", () => {
 
     expect(recording.start).not.toHaveBeenCalled();
     expect(getUserMedia).not.toHaveBeenCalled();
-    // tab을 안 붙인다 — 전사가 기본 탭이고, 붙이면 "기록하러 왔다"로 읽힌다.
     expect(push).toHaveBeenCalledWith(
       "/w/01K0000000000/notes/01K0000000100?view=full"
     );
-    // 오른쪽 「내 에이전트」도 앞 회의 대화가 아니라 빈 새 대화로 선다(APP-1278).
     expect(startFreshChat).toHaveBeenCalledTimes(1);
     expect(createNote).toHaveBeenCalledWith({
       projectId: "01K0000000001",

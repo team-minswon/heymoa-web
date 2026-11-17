@@ -18,7 +18,6 @@ function jsonResponse(status: number, body: unknown) {
   });
 }
 
-/** 만료 판정은 상태 코드가 아니라 계약 코드로 한다 (APP-347). */
 function invalidRefreshTokenResponse() {
   return jsonResponse(401, {
     success: false,
@@ -63,7 +62,6 @@ describe("apiFetch", () => {
   });
 
   it("서버가 만료라고 말하지 않은 4xx에는 게이트를 열지 않는다", async () => {
-    // 만료 판정은 계약 코드로만 한다. 상태 코드로 넘겨짚으면 일시 실패에 로그아웃한다.
     const fetchMock = vi.mocked(fetch);
     fetchMock
       .mockResolvedValueOnce(jsonResponse(401, { success: false }))
@@ -93,7 +91,6 @@ describe("apiFetch", () => {
 
     await expect(apiFetch("/v1/notes")).rejects.toBeInstanceOf(AuthRefreshError);
 
-    // 게이트가 안 열렸으므로 다음 요청은 다시 네트워크를 탄다.
     fetchMock.mockClear();
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, { success: true, data: [] })
@@ -126,7 +123,6 @@ describe("prerender 문서", () => {
     Reflect.deleteProperty(document, "prerendering");
   });
 
-  // prerender는 폐기될 수 있다. 거기서 회전시키면 새 쿠키를 아무도 못 받는다 (APP-347).
   it("활성화 전에는 갱신 요청을 보내지 않는다", async () => {
     Object.defineProperty(document, "prerendering", {
       value: true,
@@ -134,14 +130,13 @@ describe("prerender 문서", () => {
     });
     const fetchMock = vi.mocked(fetch);
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(401, { success: false })) // 최초 요청
-      .mockResolvedValueOnce(jsonResponse(200, { success: true, data: null })) // 갱신
-      .mockResolvedValueOnce(jsonResponse(200, { success: true, data: [] })); // 재시도
+      .mockResolvedValueOnce(jsonResponse(401, { success: false }))
+      .mockResolvedValueOnce(jsonResponse(200, { success: true, data: null }))
+      .mockResolvedValueOnce(jsonResponse(200, { success: true, data: [] }));
 
     const pending = apiFetch("/v1/notes");
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
-    // Flush the settled 401 without a wall-clock sleep; prerender must still block refresh.
     await Promise.resolve();
     await Promise.resolve();
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -157,7 +152,6 @@ describe("prerender 문서", () => {
   });
 });
 
-// 실패 응답은 상태를 잃지 않고, 봉투가 아니어도 사용자에게 내부 문구를 흘리지 않는다 (APP-783).
 describe("apiFetch 실패 응답", () => {
   beforeEach(() => {
     resetSessionGate();
@@ -189,7 +183,6 @@ describe("apiFetch 실패 응답", () => {
 
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(409);
-    // 호출부 61곳이 쓰는 판정이 그대로 통한다
     expect(errorCodeOf(error)).toBe("LAST_WORKSPACE_ADMIN");
     expect(errorMessageOf(error, "기본")).toBe("관리자가 한 명은 있어야 합니다.");
   });
@@ -238,7 +231,6 @@ describe("apiFetch 실패 응답", () => {
 });
 
 
-/** 응답이 안 오는 fetch 입니다. signal 이 abort 되면 그 사유로 reject 합니다. */
 function hangingFetch(_input: RequestInfo | URL, init?: RequestInit) {
   return new Promise<Response>((_resolve, reject) => {
     init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
@@ -260,7 +252,6 @@ describe("토큰 갱신 시한", () => {
     Reflect.deleteProperty(document, "prerendering");
   });
 
-  /** 시한이 지난 뒤 갱신이 일시 실패로 끝났는지 봅니다. 게이트가 열렸으면 다음 요청이 네트워크를 안 탑니다. */
   async function expectTransientFailure(pending: Promise<void>) {
     const failure = expect(pending).rejects.toMatchObject({
       name: "AuthRefreshError",
@@ -376,7 +367,6 @@ describe("apiFetch timeoutMs", () => {
     vi.unstubAllGlobals();
   });
 
-  /** abort 되면 signal 의 사유로 reject 한다 — 실제 fetch 와 같다. */
   function hangUntilAborted() {
     vi.mocked(fetch).mockImplementation(
       (_url, init) =>

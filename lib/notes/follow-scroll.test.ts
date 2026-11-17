@@ -113,7 +113,6 @@ describe("watchUpwardInput", () => {
     viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp" }));
     expect(onUp).toHaveBeenCalledTimes(2);
 
-    // 확대·축소(ctrl+휠)는 스크롤이 아니다.
     viewport.dispatchEvent(
       new WheelEvent("wheel", { deltaY: -1, ctrlKey: true })
     );

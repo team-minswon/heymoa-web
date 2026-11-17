@@ -294,7 +294,6 @@ describe("ReviewRow", () => {
     renderRow({ locked: true });
     const row = document.querySelector("[data-item-id]") as HTMLElement;
     expect(row).toHaveAttribute("inert");
-    // 비활성으로 바꾸면 모든 줄이 한꺼번에 흐려졌다 돌아온다.
     expect(screen.getByRole("button", { name: "제외" })).toBeEnabled();
   });
 
@@ -575,7 +574,6 @@ describe("MeetingMap", () => {
   });
 
   it("고정 칸 경계 양쪽에 걸친 가까운 표시도 한 묶음이다", () => {
-    // 60분 회의의 8.99초와 9.01초는 같은 자리(0.25%)에 그려진다. 22초 간격도 640px 막대에서 4px 안쪽이다.
     const groups = groupMarks(
       [
         { itemId: "a", kind: "DECISION", atMs: 8_990, content: "가" },
@@ -750,7 +748,6 @@ describe("ItemDetail", () => {
   });
 
   it("관련 항목은 열 수 있는 것으로 거른 뒤 넷까지 세운다", () => {
-    // 앞의 넷은 화면에 없는 항목이다. 먼저 자르면 뒤의 결정까지 사라진다.
     const others = ["h1", "h2", "h3", "h4", "d2"];
     const summary = {
       agendas: [

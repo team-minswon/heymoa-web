@@ -7,7 +7,6 @@ import {
 
 type ReviewItem = MeetingReviewResponseDataItemsItem;
 
-/** 그래프의 색 역할. 종류 일곱을 넷으로 줄여 한눈에 가른다 */
 export type GraphRole = "DECISION" | "ACTION" | "OPEN" | "REFERENCE";
 
 export const GRAPH_ROLE_ORDER: readonly GraphRole[] = [
@@ -23,7 +22,6 @@ export type GraphNode = {
   role: GraphRole;
   kind: ReviewItem["kind"];
   content: string;
-  /** 첫 주제 말고도 속한 주제들. 그 주제의 허브와 약하게 잇는다 */
   alsoGroups: number[];
 };
 
@@ -35,15 +33,10 @@ export type GraphEdge = {
 export type ReviewGraph = {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  /** 안건 이어짐은 앞선 안건 → 뒤 안건 방향이다. 항목 관계와 별도로 그린다. */
   agendaEdges: GraphEdge[];
   topics: Map<number, string>;
 };
 
-/**
- * 검토 항목과 요약의 주제 묶음으로 그래프를 만든다. 제외한 항목은 확정에 안 들어가므로 그리지 않는다.
- * 미해결은 종류가 아니라 주제가 「결론 없이 남았다」고 짚은 이슈·질문이다 — 답이 나온 질문은 참고다.
- */
 export function buildReviewGraph(
   summary: MeetingReviewSummary,
   items: readonly ReviewItem[],
@@ -51,7 +44,6 @@ export function buildReviewGraph(
 ): ReviewGraph {
   const shown = items.filter((item) => item.included);
   const present = new Set(shown.map((item) => item.itemId));
-  // 주 소속을 먼저 정하고 보조 소속을 더합니다. 앞 주제의 보조 소속이 뒤 주제의 집을 바꾸지 않습니다.
   const groupsOf = new Map<string, number[]>();
   const open = new Set<string>();
   const join = (itemId: string, ordinal: number) => {
@@ -133,23 +125,18 @@ export function buildReviewGraph(
   };
 }
 
-/** 힘 배치의 점. 주제는 허브 점 하나로 서고, 항목은 그 허브에 매달린다 */
 export type ForceNode = {
   id: string;
   hub: boolean;
-  /** 허브면 null */
   item: GraphNode | null;
-  /** 허브는 「01 제목」, 항목은 내용 */
   label: string;
   degree: number;
-  /** 허브에 속한 항목 수. 안건 간 연결은 세지 않는다. */
   memberCount?: number;
   radius: number;
   x: number;
   y: number;
 };
 
-/** 허브-항목 · 항목 사이 관계 · 다른 주제에도 속함 */
 export type ForceLinkKind = "hub" | "relation" | "also" | "agenda";
 
 export type ForceLink = { source: string; target: string; kind: ForceLinkKind };
@@ -159,15 +146,12 @@ export const hubId = (ordinal: number) => `topic:${ordinal}`;
 export const topicNumber = (ordinal: number) =>
   String(ordinal).padStart(2, "0");
 
-/** 연결이 많을수록 크게. 제곱근이라 허브 몇 개가 판을 덮지 않는다 */
 export function nodeRadius(degree: number, hub: boolean): number {
   return hub ? 8 + 0.8 * Math.sqrt(degree) : 5 + 0.7 * Math.sqrt(degree);
 }
 
-/** 화면에서 점 반지름의 아래위(px). 아래는 역할 색이 읽히는 크기, 위는 확대해도 점이 판을 덮지 않는 크기다 */
 const SCREEN_RADIUS = { item: [4, 14], hub: [6, 22] } as const;
 
-/** 그릴 반지름(배치 좌표). 배율 `scale` 에서 화면 크기가 위 범위를 벗어나지 않게 묶는다 */
 export function screenRadius(
   radius: number,
   hub: boolean,
@@ -177,7 +161,6 @@ export function screenRadius(
   return Math.min(Math.max(radius, min / scale), max / scale);
 }
 
-/** 문자열에서 0~1 두 수를 뽑는다(FNV-1a). 같은 ID 는 늘 같은 자리에서 출발한다 */
 function hashPair(id: string): [number, number] {
   let h = 2166136261;
   for (let at = 0; at < id.length; at += 1) {
@@ -195,7 +178,6 @@ export function toForceGraph(graph: ReviewGraph): {
   nodes: ForceNode[];
   links: ForceLink[];
 } {
-  // 항목이 남은 주제마다 허브를 둔다. 다른 주제에도 속한 항목만 남은 주제도 그 점선이 닿을 허브가 있어야 한다.
   const linkedAgendas = new Set(
     graph.agendaEdges.flatMap((edge) => [edge.source, edge.target])
   );
@@ -206,7 +188,6 @@ export function toForceGraph(graph: ReviewGraph): {
         (node) => node.group === ordinal || node.alsoGroups.includes(ordinal)
       )
   );
-  // 허브는 해바라기 씨 배열로 흩어 두고, 항목은 제 허브 곁에서 ID 로 정한 자리에서 출발한다.
   const hubAt = new Map(
     ordinals.map((ordinal, index) => {
       const r = 60 * Math.sqrt(index + 0.5);
@@ -237,7 +218,6 @@ export function toForceGraph(graph: ReviewGraph): {
     ...graph.agendaEdges.map(
       (edge): ForceLink => ({ ...edge, kind: "agenda" })
     ),
-    // 다른 주제에도 속한 항목은 그 주제의 허브와 약하게 잇는다
     ...graph.nodes.flatMap((node): ForceLink[] =>
       node.alsoGroups.flatMap((group): ForceLink[] =>
         hubAt.has(group)

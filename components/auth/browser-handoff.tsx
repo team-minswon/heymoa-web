@@ -24,7 +24,6 @@ import { isLandingHome } from "@/lib/routes/app-route";
 
 const ATTEMPT_KEY = "heymoa:browser-handoff-attempted";
 
-/** Move landing visitors before OAuth; never automatically launch from callbacks or product screens. */
 export function BrowserHandoff() {
   const { status } = useAuth();
   const t = useTranslations("auth.browser");
@@ -70,10 +69,7 @@ export function BrowserHandoff() {
     try {
       if (sessionStorage.getItem(ATTEMPT_KEY)) return;
       sessionStorage.setItem(ATTEMPT_KEY, "1");
-    } catch {
-      // The ref still prevents repeated attempts within this document when storage is blocked.
-    }
-    // A destination reopened inside the app receives instructions instead of another auto-launch.
+    } catch {}
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize the entry URL with its handoff dialog
     setPrompt({
       context,

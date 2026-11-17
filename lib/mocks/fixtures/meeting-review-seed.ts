@@ -1,41 +1,25 @@
 import type { MeetingReviewResponseDataItemsItemKind } from "@/lib/api/generated/models";
 
-/**
- * 멘토링 회의(`mentoring-note.ts`)의 검토본 시드. 인용은 그 회의 전사의 **순번**으로 적고,
- * 목이 실제 발화 ID로 푼다 — 스크립트 트리가 실제 줄을 가리켜야 화면을 검증할 수 있다.
- *
- * 한 회의에서 항목이 백 개 가까이 나오는 크기를 그대로 둔다. 몇 개짜리 시드로는 섹션을 접을지,
- * 주제 칩이 필요한지 판단할 수 없다.
- */
 export type SeedKind = MeetingReviewResponseDataItemsItemKind;
 
-/** 담당. 글자는 그 회의의 화자 라벨, `me` 는 목 유저, `user:<ID>` 는 워크스페이스 멤버다. */
 export type SeedWho = "A" | "B" | "C" | "D" | "me" | `user:${string}`;
 
 export type SeedStep = {
   operation: "AMEND" | "CORRECT" | "RESOLVE" | "RETRACT";
   at: number;
-  /** 이 판의 내용. 마지막 판이 검토 항목 내용이다 */
   content: string;
   role?: "SUPPORTS" | "REFUTES" | "CONDITIONS" | "RETRACTS" | "REFERENCES";
 };
 
 export type SeedItem = {
   kind: SeedKind;
-  /** 처음 나온 내용. `history` 가 있으면 마지막 판 내용이 검토 항목에 선다 */
   content: string;
   at: number[];
   who?: SeedWho;
-  /** 회의 날짜(9월 11일)로부터 며칠 뒤가 기한인가 */
   dueIn?: number;
   history?: SeedStep[];
   excluded?: boolean;
-  /**
-   * 이 결정이 대신하자고 제안된 이전 결정. `decision` 은 검토에서 이미 저장한 선택이고,
-   * `endedElsewhere` 는 검토하는 사이 다른 회의의 확정이 그 결정을 먼저 끝낸 경우다
-   */
   replaces?: { content: string; reason: string; decision?: "END" | "KEEP"; endedElsewhere?: boolean };
-  /** 이 할 일이 바꾸자고 제안된 기존 할 일(`project-tasks` 시드의 열쇠). `decision` 은 이미 저장한 선택 */
   changesTask?: {
     task: string;
     status?: "OPEN" | "COMPLETED" | "CANCELLED";
@@ -48,12 +32,9 @@ export type SeedItem = {
 
 export type SeedTopic = {
   title: string;
-  /** 뿌리 안건이 있으면 `items[0]` 이 그 안건이다 */
   hasAgenda: boolean;
-  /** AI 가 중심 항목을 고르지 못한 주제. 요약의 `centerItemId` 가 비고 「주제」 관계가 없다 */
   centerless?: boolean;
   items: SeedItem[];
-  /** 주제 서술. 숫자는 이 주제 `items` 의 순번이다 */
   sentences: Array<{ text: string; items: number[] }>;
 };
 
@@ -325,7 +306,6 @@ export const REVIEW_SEED_TOPICS: SeedTopic[] = [
   },
 ];
 
-/** 어느 주제에도 묶이지 않은 항목. 관계 판정이 없으면 이렇게 남는다. */
 export const REVIEW_SEED_LOOSE: SeedItem[] = [
   { kind: "DECISION", content: "에어플로우는 배치 작업에만 쓴다", at: [372] },
   { kind: "ACTION_ITEM", content: "툴 에이전트 목록과 개수를 문서에 적는다", at: [240] },

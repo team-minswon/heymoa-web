@@ -26,9 +26,6 @@ import {
 } from "@/lib/projects/agenda-map";
 import { cn } from "@/lib/utils";
 
-/**
- * 고른 것. 안건을 고르면 그 안건이 든 주제 전체(갈래 포함)가 강조된다. 주소의 `?topic=` 으로 열면 안건 없이 주제만 고른다.
- */
 export type Selection = {
   rowId: string | null;
   agendaId: string | null;
@@ -38,12 +35,10 @@ export type Tab = "agenda" | "flow";
 export const summaryHref = (workspaceId: string, noteId: string, agendaId?: string) =>
   `/w/${workspaceId}/notes/${noteId}?view=full&tab=summary${agendaId ? `#summary-agenda-${agendaId}` : ""}`;
 
-/** 주제 하나가 이보다 길면 가운데를 접는다. 앞 `HEAD` 개와 뒤 `TAIL` 개만 보인다 */
 const LONG_TOPIC = 7;
 const HEAD = 2;
 const TAIL = 3;
 
-/** 오른쪽 사이드 탭. 「안건」은 고른 안건의 내용과 앞뒤 안건, 「흐름」은 고른 주제의 안건 순서(갈래 포함) */
 export function SidePanel({
   workspaceId,
   map,
@@ -64,13 +59,11 @@ export function SidePanel({
   topicOf: Map<string, string>;
   rowOfAgenda: Map<string, TopicRow>;
   selection: NonNullable<Selection>;
-  /** 고른 안건과 같은 회의·같은 줄기에서 다룬 안건(고른 것 포함). 둘 이상이면 목록으로 보인다 */
   siblings: MapAgenda[];
   tab: Tab;
   onTab: (next: Tab) => void;
   onPick: (agenda: MapAgenda) => void;
   onClose: () => void;
-  /** 이 줄기 하나를 크게 보는 포커스 화면으로 */
   onFocusTopic: () => void;
 }) {
   const t = useTranslations("workspace.agendaMap");
@@ -98,7 +91,6 @@ export function SidePanel({
       </Button>
       <Tabs value={tab} onValueChange={(value) => onTab(value as Tab)} className="min-h-0 gap-0">
         <div className="flex items-center justify-between gap-2 border-b border-[var(--el-hairline)] pr-14 pl-4">
-          {/* 위쪽 「노트 | 연결 지도」 탭과 같은 밑줄 탭. 밑줄은 머리의 아래 선 바로 위에 앉는다(공용 탭의 기본 -5px 는 40px 줄에서 선 아래로 떠 보인다) */}
           <TabsList variant="line" aria-label={t("panel.tabs")} className="gap-5 p-0 group-data-horizontal/tabs:h-10">
             <TabsTrigger value="agenda" disabled={!agenda} className="flex-none px-0 text-[13px] group-data-horizontal/tabs:after:bottom-[-1px]">
               {t("panel.agendaTab")}
@@ -171,7 +163,6 @@ export function SidePanel({
   );
 }
 
-/** 안건에 묶인 항목 종류 → `workspace.agendaMap.members` 키. 그 밖의 종류는 세지 않는다 */
 export const MEMBER_KEY: Record<string, "decision" | "actionItem" | "issue" | "question"> = {
   DECISION: "decision",
   ACTION_ITEM: "actionItem",
@@ -179,10 +170,6 @@ export const MEMBER_KEY: Record<string, "decision" | "actionItem" | "issue" | "q
   QUESTION: "question",
 };
 
-/**
- * 고른 안건의 내용. 회의록 요약의 그 안건(한 줄 요약 · 결정·할 일 개수 · 결론 · 남은 질문)과 앞뒤 안건이다. 다음 안건이
- * 둘 이상이면 여기서 갈라진 것이라, 갈래마다 다음 안건의 한 줄 요약을 나란히 둔다.
- */
 function AgendaDetail({
   workspaceId,
   map,
@@ -195,7 +182,6 @@ function AgendaDetail({
   map: AgendaMap;
   agenda: MapAgenda;
   rowOfAgenda: Map<string, TopicRow>;
-  /** 같은 회의·같은 줄기에서 다룬 안건(고른 것 포함). 위 목록에 이미 있는 안건은 앞뒤 안건에 다시 적지 않는다 */
   siblings: MapAgenda[];
   onPick: (agenda: MapAgenda) => void;
 }) {
@@ -203,7 +189,6 @@ function AgendaDetail({
   const meeting = map.meetings.find((candidate) => candidate.noteId === agenda.noteId)!;
   const summaryQuery = useGetMeetingReviewSummary(agenda.noteId);
   const item = okData(summaryQuery.data)?.agendas.find((candidate) => candidate.agendaId === agenda.agendaId);
-  // 같은 칸에 든 안건은 위 「이어서 다룬 안건」 목록이 이미 보인다 — 앞뒤 안건에서는 뺀다(같은 안건을 두 번 보이지 않는다)
   const listed = new Set(siblings.length > 1 ? siblings.map((sibling) => sibling.agendaId) : []);
   const previous = map.links
     .filter((link) => link.to === agenda.agendaId)
@@ -213,7 +198,6 @@ function AgendaDetail({
     .filter((link) => link.from === agenda.agendaId)
     .map((link) => map.agendaById.get(link.to)!)
     .filter((candidate) => !listed.has(candidate.agendaId));
-  // 다음 안건들의 회의 요약. 같은 회의는 한 번만 읽는다
   const nextNotes = [...new Set(next.map((candidate) => candidate.noteId))];
   const nextSummaries = useQueries({
     queries: nextNotes.map((noteId) => getGetMeetingReviewSummaryQueryOptions(noteId)),
@@ -265,7 +249,6 @@ function AgendaDetail({
             {next.map((candidate) => {
               const entry = nextItem(candidate);
               const loading = nextSummaries[nextNotes.indexOf(candidate.noteId)]?.isLoading;
-              // 갈래(접혀 있던 쪽)는 옅은 줄, 같은 줄기를 잇는 쪽은 진한 줄
               const branch = rowOfAgenda.get(candidate.agendaId)?.branchOf?.agendaId === agenda.agendaId;
               return (
                 <li
@@ -364,7 +347,6 @@ function StepButton({
   );
 }
 
-/** 주제의 안건 순서. 갈래는 갈라진 안건 아래에 들여 쓴다. 줄기가 길면 가운데를 접는다 */
 function TopicFlow({
   map,
   rows,

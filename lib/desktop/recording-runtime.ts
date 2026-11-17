@@ -8,7 +8,6 @@ import {
   type RealtimeSessionOptions,
 } from "@/lib/transcription/realtime-session";
 
-/** Browser sessions keep their existing microphone path; native sessions capture both inputs. */
 export function createRecordingSession(options: RealtimeSessionOptions) {
   const bridge =
     typeof window === "undefined"

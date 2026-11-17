@@ -1,5 +1,5 @@
 // @vitest-environment node
-// jsdom 의 FormData · Blob 은 fetch 쪽과 서로 맞지 않아 목이 첨부를 파일로 못 읽는다
+// jsdom 의 FormData · Blob 은 fetch 쪽과 맞지 않아 목이 첨부를 파일로 못 읽습니다
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { setupServer } from "msw/node";
 
@@ -34,7 +34,6 @@ it("회의록 메일은 한 시간에 30건까지 받고, 넘으면 429 SHARE_MA
     message: "메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.",
   });
 
-  // 첫 발송이 한 시간 창을 벗어나면 다시 보낼 수 있다
   vi.advanceTimersByTime(60 * 60 * 1000);
   expect((await send()).status).toBe(202);
 });

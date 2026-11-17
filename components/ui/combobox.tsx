@@ -89,9 +89,7 @@ function ComboboxInput({
    * 쓰는 자리**다. 「이민형」을 치면 「형」이 아직 조합 중이라 `onValueChange` 는 「이민」에
    * 머물고, 그 값으로 「＋ "이민" 추가」를 그리면 이름이 한 글자 모자란 채로 만들어진다.
    *
-   * 이름을 짓는 자리(「＋ 추가」)가 이쪽을 쓴다. **거르기도 이쪽을 쓴다** — 처음에는 base-ui
-   * 값을 그대로 뒀는데, 한글에서 한 글자를 쳐도 목록이 안 좁혀졌다. 목록은
-   * [filterByTyped] 로 거른다.
+   * 이름을 짓는 자리(「＋ 추가」)와 거르기([filterByTyped])가 이쪽을 쓴다.
    * base-ui 의 controlled 값에 되쓰지 않으므로 조합을 깨뜨리지 않는다.
    */
   onTypedValueChange?: (value: string) => void;

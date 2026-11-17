@@ -7,7 +7,6 @@ import type { TaskEntry } from "@/lib/tasks/task-groups";
 
 const revisionsQuery = vi.hoisted(() => ({ fetch: vi.fn() }));
 
-// 생성 훅 자리에 같은 모양의 쿼리를 둔다 — 불러오는 중 · 실패 · 다시 시도가 실제 쿼리대로 돈다.
 vi.mock("@/lib/api/generated/projects/projects", async (importOriginal) => {
   const { useQuery } = await import("@tanstack/react-query");
   return {
@@ -178,7 +177,6 @@ describe("TaskHistorySheet", () => {
     expect(first).not.toHaveTextContent("되돌리기");
     fireEvent.click(within(latest).getByRole("button", { name: "되돌리기" }));
     const dialog = await screen.findByRole("alertdialog");
-    // 바뀐 칸만 지금 → 앞 값으로 보인다
     expect(dialog).toHaveTextContent(/상태완료.*진행 중/);
     expect(dialog).toHaveTextContent(/기한9월 25일.*9월 19일/);
     expect(dialog).not.toHaveTextContent("담당");
@@ -199,14 +197,12 @@ describe("TaskHistorySheet", () => {
 
   it("되돌리기는 외부 에이전트가 바꾼 가장 최근 판에만 있다", async () => {
     const agent = { changedBy: "u1", changeSource: "EXTERNAL_AGENT" as const };
-    // 에이전트가 만든 판(1)은 되돌릴 앞 값이 없다
     revisionsQuery.fetch.mockResolvedValueOnce(answer([revision(agent)]));
     renderSheet({ entry: entry({ revision: 1 }) });
     await screen.findAllByRole("listitem");
     expect(screen.queryByRole("button", { name: "되돌리기" })).not.toBeInTheDocument();
     cleanup();
 
-    // 에이전트 뒤에 사람이 고쳤으면 사람의 변경을 덮지 않는다
     revisionsQuery.fetch.mockResolvedValueOnce(
       answer([
         revision({ changedBy: "u1" }),
@@ -238,7 +234,6 @@ describe("TaskHistorySheet", () => {
 
     fireEvent.change(input, { target: { value: " 운영에 올린다 " } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    // **바꾸지 않은 담당·기한은 싣지 않는다** — 편집하는 사이 남이 바꾼 값을 낡은 값으로 덮지 않게(APP-1033).
     expect(onSave).toHaveBeenCalledWith({ content: "운영에 올린다" });
     await waitFor(() => expect(screen.queryByRole("textbox", { name: "내용" })).not.toBeInTheDocument());
   });

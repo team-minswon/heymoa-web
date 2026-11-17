@@ -35,22 +35,11 @@ const NO_POLLING = () => 0;
 export type OnboardingChecklistModel = {
   userId: string;
   done: Set<ChecklistStepId>;
-  /** 요약을 검토할 끝난 회의(첫 쪽에서 찾은 것). */
   endedNoteId?: string;
-  /** 첫 쪽 뒤에 회의가 더 있다. */
   hasMoreNotes: boolean;
-  /**
-   * 회의 목록을 못 읽었다. 그대로 그리면 기록한 회의가 없는 것처럼 「첫 회의 기록하기」가 미완료로 보여서,
-   * 실패는 따로 보이고 다시 읽게 한다(codex 리뷰). 기록이 있는 셈인 단계는 이때 판단하지 않는다.
-   */
   retry?: () => void;
 };
 
-/**
- * 「시작하기」의 판단·조회·기록. **늘 떠 있는 워크스페이스 셸이 부른다** — 모바일에서는 사이드바가 시트라
- * 닫히면 그 안의 체크리스트가 언마운트되어, 거기서 판단하면 사이드바를 연 적 없는 사람의 첫 판단과 진행
- * 기록을 놓쳤다(codex 리뷰). 열려 있을 때만 그릴 값을 돌려주고, 그리기는 `OnboardingChecklist`가 한다.
- */
 export function useOnboardingChecklist({
   workspaceId,
   isWorkspacePending,
@@ -61,7 +50,6 @@ export function useOnboardingChecklist({
   const userId = useAuth().user?.userId;
   useOnboardingProgress(userId);
 
-  // 서버 스냅숏은 null — 저장소는 브라우저에만 있으니 첫 렌더는 서버와 같이 아무것도 안 그린다.
   const raw = useSyncExternalStore(
     subscribeChecklist,
     () => (userId ? readChecklistRaw(userId) : null),
@@ -70,20 +58,15 @@ export function useOnboardingChecklist({
   const state = parseChecklist(raw);
   const undecided = state === null;
   const open = state?.status === "open";
-  // 처음 판단할 때 한 번, 그리고 열려 있는 동안만 읽는다. 닫힌 사람(기존 사용자 포함)에게는 안 읽는다.
-  // 열려 있으면 목록 화면과 같은 주기로 다시 읽는다 — 그 화면이 다른 범위를 보고 있어도 낡지 않게(codex 리뷰).
   const streamHealthy = useEventStreamHealthy();
   const notesQuery = useNoteListPages({
     scope: { kind: "workspace", workspaceId },
     pages: 1,
     enabled: Boolean(userId) && (undecided || open),
-    // 닫혀 있으면 폴링하지 않는다. 열려 있으면 목록 화면과 같은 규칙(PRO-67 I04: 건강한 스트림이면 안전망).
     refetchInterval: open
       ? (notes) => hintedInterval(streamHealthy, noteListRefetchInterval(notes))
       : NO_POLLING,
   });
-  // 워크스페이스를 옮기면 `keepPreviousData`가 직전 워크스페이스 목록을 자리표시로 준다 —
-  // 그걸로 판단하면 빈 워크스페이스에서 넘어온 사람에게 엉뚱하게 열린다.
   const page =
     !notesQuery.isPlaceholderData &&
     notesQuery.data?.status === 200 &&
@@ -99,7 +82,6 @@ export function useOnboardingChecklist({
   const factsReady = facts !== null;
   const hasRecording = facts?.hasRecording ?? false;
 
-  // 처음 보는 사람의 판단을 한 번 적어 둔다. 적은 뒤에는 이 판단을 다시 하지 않는다.
   useEffect(() => {
     if (!userId || !undecided || !factsReady) return;
     writeChecklist(userId, {
@@ -112,12 +94,8 @@ export function useOnboardingChecklist({
   const progress = requiredProgress(done);
   const finished = progress.done === progress.total;
 
-  // 필수 단계를 **이번에 막 다 마치면** 닫는다 — 혼자 쓰는 사람도 초대 없이 끝난다. 이미 다 마친 채로
-  // 「시작 안내 다시 보기」로 연 사람에게는 닫지 않고 「준비가 끝났어요」를 보인다(열자마자 닫히면 안 된다).
   const wasFinished = useRef<boolean | null>(null);
   useEffect(() => {
-    // 닫혀 있는 동안 기준을 비운다 — 닫힌 사이 남은 단계를 마치고 다시 열면, 남아 있던 「미완료」를 기준으로
-    // 「방금 다 마쳤다」고 잘못 보고 열자마자 닫았다(codex 리뷰). 열릴 때마다 그때 상태부터 다시 잰다.
     if (!userId || !open) {
       wasFinished.current = null;
       return;
@@ -145,11 +123,6 @@ export function useOnboardingChecklist({
   };
 }
 
-/**
- * 사이드바 아래의 「시작하기」. 첫 요약까지 무엇이 남았는지 한 줄씩 보이고, 줄을 누르면 그 일을
- * 하는 창으로 바로 간다. 빈 워크스페이스의 본문 안내(`WorkspaceOnboarding`)가 「지금 할 한 가지」라면
- * 이건 그 뒤로 이어지는 순서다. 판단은 `useOnboardingChecklist`(셸)가 하고 여기는 그리기만 한다.
- */
 export function OnboardingChecklist({
   workspaceId,
   model,
@@ -169,8 +142,6 @@ export function OnboardingChecklist({
       case "record":
         return requestNewMeeting;
       case "confirm":
-        // 끝난 회의가 있어야 검토할 요약이 있다. 첫 쪽에 없고 뒤에 더 있으면 목록에서 고르게 하고,
-        // 아예 없으면 누를 곳이 없다 — 회의부터다.
         if (endedNoteId) {
           return () =>
             router.push(

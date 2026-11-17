@@ -54,7 +54,6 @@ const section = (
   includedCount: items.filter((row) => row.included).length,
 });
 
-// 항목이 나온 때. 테스트는 항목 ID 에 분을 적어 둔다(`d@12` → 12분)
 const citedAt = (row: ReviewItem) => {
   const minute = /@(\d+)$/.exec(row.itemId)?.[1];
   return minute === undefined ? null : Number(minute) * 60_000;
@@ -151,16 +150,13 @@ describe("buildMinutes", () => {
       { transcript: false },
       { sharedBy: " 김민수 ", unnamedSpeakers: 2 }
     );
-    // 끝난 시각을 모르면 시작 시각만 — 기록 길이(65분)를 더해 끝 시각을 지어내지 않는다
     expect(doc.dateLabel).toBe("2026. 10. 15. (목) 14:00");
-    // 20분 일시정지했던 회의는 기록 길이보다 늦게 끝난다. 실제 끝난 시각을 쓴다
     expect(
       minutes(
         { transcript: false },
         { note: { ...NOTE, endedIso: "2026-10-15T06:25:00Z" } }
       ).dateLabel
     ).toBe("2026. 10. 15. (목) 14:00 – 15:25");
-    // 자정을 넘기면 끝난 날도 적는다
     expect(
       minutes(
         { transcript: false },
@@ -318,7 +314,6 @@ describe("buildMinutes", () => {
         at: "05:00",
       },
     ]);
-    // 실제 안건만 목차에 싣고, 안건 미지정 결정은 상세에 남긴다
     expect(doc.agendas.map((agenda) => [agenda.no, agenda.title])).toEqual([
       [1, "외부 공유"],
     ]);

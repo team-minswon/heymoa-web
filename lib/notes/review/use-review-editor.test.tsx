@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useReviewEditor } from "@/lib/notes/review/use-review-editor";
 
-/** `vi.fn()` 은 거절하는 프라미스를 미처리 오류로 보고해 거절 시험을 깨뜨린다 — 손으로 쓴 대역을 쓴다. */
 const update = vi.hoisted(() => ({
   impl: (async () => undefined) as (...args: unknown[]) => Promise<unknown>,
   calls: [] as unknown[][],
@@ -83,7 +82,6 @@ describe("useReviewEditor — 낙관적 적용", () => {
     });
 
     await waitFor(() => expect(includedOf(client)).toBe(false));
-    // 보낸 판은 읽은 그대로다.
     await waitFor(() => expect(update.calls.length).toBe(1));
     expect(update.calls[0]?.[0]).toMatchObject({
       data: {
@@ -118,7 +116,6 @@ describe("useReviewEditor — 낙관적 적용", () => {
     expect(includedOf(client)).toBe(true);
   });
 
-  /** 저장 중에 다른 조회가 더 새 검토본(v6)을 가져왔으면, 실패해도 그 새 값은 지키고 이 항목의 칸만 되돌린다. */
   it("실패해도 그사이 들어온 더 새 검토본은 옛 값으로 되돌리지 않는다", async () => {
     let rejectSave!: (reason: unknown) => void;
     update.impl = () => new Promise((_, reject) => (rejectSave = reject));
@@ -129,7 +126,6 @@ describe("useReviewEditor — 낙관적 적용", () => {
       saved = result.current.updateItem("A", { included: false });
     });
     await waitFor(() => expect(includedOf(client)).toBe(false));
-    // 다른 조회가 v6 을 가져왔다(이 항목은 아직 낙관 값, 판은 6).
     client.setQueryData(KEY, review(false, 6, 3));
 
     rejectSave({
@@ -141,7 +137,6 @@ describe("useReviewEditor — 낙관적 적용", () => {
 
     const data = (client.getQueryData(KEY) as ReturnType<typeof review>).data
       .data;
-    // 더 새 판(v6·항목 revision 3)은 서버의 값이다 — 옛 값으로 되돌려 「새 판 번호 + 옛 값」 조합을 만들지 않는다.
     expect(data.reviewVersion).toBe(6);
     expect(data.items[0]).toMatchObject({ included: false, revision: 3 });
   });

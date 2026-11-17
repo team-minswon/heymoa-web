@@ -14,17 +14,10 @@ type ApiFetchOptions = RequestInit & {
   params?: Record<string, unknown>;
   responseType?: string;
   skipAuthRefresh?: boolean;
-  /**
-   * 응답 헤더가 오기까지 기다릴 한도(ms). 없으면 기다리는 한도가 없다.
-   *
-   * 연결이 반쯤 끊기면 fetch 는 몇 분이 지나도 실패하지 않는다. 만들기 창은 그동안 닫기·취소를 잠가서
-   * 사용자가 앱을 껐다 켜야 빠져나온다(APP-1139). 사람이 결과를 기다리는 호출에만
-   * `REQUEST_TIMEOUT_MS` 로 준다.
-   */
+  /** 응답 헤더까지 기다릴 한도(ms)입니다. 연결이 반쯤 끊기면 fetch 는 몇 분이 지나도 실패하지 않습니다. */
   timeoutMs?: number;
 };
 
-/** 사람이 결과를 기다리는 호출(만들기·녹음 시작·회의 종료)의 `timeoutMs`. 정상 응답은 닿지 않는다. */
 export const REQUEST_TIMEOUT_MS = 20_000;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -81,9 +74,7 @@ function shouldSkipRefresh(url: string, options: ApiFetchOptions) {
   );
 }
 
-/** 갱신 실패 사유. `expired`면 재로그인이 필요하고, 아니면 일시 오류다. */
 export class AuthRefreshError extends Error {
-  /** 판정은 `lib/auth/refresh-failure.ts`가 한다 — proxy와 규칙이 하나여야 한다. */
   readonly expired: boolean;
   constructor(expired: boolean) {
     super("Authentication refresh failed.");
@@ -92,12 +83,6 @@ export class AuthRefreshError extends Error {
   }
 }
 
-/**
- * 재시도해도 소용없는 인증 오류인가. 전역 재시도 정책(`lib/query/query-client.ts`)이 쓴다.
- *
- * 네트워크 때문에 갱신이 실패한 경우(`expired === false`)는 여기 안 걸린다. 지하철에서
- * 잠깐 끊긴 사용자를 작업 중인 화면에서 내보내면 안 되기 때문이다.
- */
 export function isAuthError(error: unknown) {
   if (error instanceof SessionExpiredError) {
     return true;
@@ -106,17 +91,7 @@ export function isAuthError(error: unknown) {
   return error instanceof AuthRefreshError && error.expired;
 }
 
-/**
- * prerender된 문서라면 **활성화될 때까지 기다린다.**
- *
- * proxy의 matcher는 서버 쪽 갱신만 막는다. prerender된 문서는 JS를 실행하므로
- * `AuthProvider`가 hydration 중에 `getMe()` → 여기로 들어온다. 그 prerender가 폐기되면
- * 서버는 토큰을 회전시켰는데 새 쿠키는 아무도 못 받는다 — matcher로 막으려던 바로 그
- * 상황이 클라이언트 경로로 다시 생긴다 (APP-347).
- *
- * `document.prerendering`은 아직 lib.dom에 없어서 좁혀서 읽는다. 없는 브라우저에서는
- * 항상 활성 문서로 본다.
- */
+/** prerender 된 문서는 활성화까지 기다립니다. 폐기된 prerender 가 갱신하면 서버는 토큰을 회전시켰는데 새 쿠키를 아무도 못 받습니다. `document.prerendering` 은 아직 lib.dom 에 없습니다. */
 function whenActivated() {
   const doc =
     typeof document === "undefined"
@@ -136,7 +111,6 @@ export async function refreshAuthOnce() {
   if (!refreshPromise) {
     refreshPromise = whenActivated()
       .then(() =>
-        // 시한은 fetch 를 시작할 때 잰다. prerender 활성화를 기다린 시간은 넣지 않는다.
         fetchWithRefreshTimeout(buildUrl("/v1/auth/refresh"), {
           method: "POST",
           credentials: "include",
@@ -148,7 +122,6 @@ export async function refreshAuthOnce() {
         }
       })
       .catch((error) => {
-        // 네트워크 오류(fetch reject)는 만료가 아니라 일시 실패다.
         if (error instanceof AuthRefreshError) throw error;
         throw new AuthRefreshError(false);
       })
@@ -160,16 +133,11 @@ export async function refreshAuthOnce() {
   return refreshPromise;
 }
 
-/**
- * 실패한 응답. **서버 오류 봉투와 같은 모양**(`success`·`data`·`error`)을 갖고 HTTP 상태와 `Retry-After` 를
- * 더 싣는다 — `errorCodeOf`·`errorMessageOf` 가 봉투 모양으로 판정하므로 호출부는 그대로 읽는다 (APP-783).
- */
 export class ApiError extends Error {
   readonly success = false as const;
   readonly data = null;
   readonly error: { code: string; message: string; details?: unknown };
   readonly status: number;
-  /** `Retry-After`(초)를 ms 로. 없거나 못 읽으면 null 이다 — 언제 다시 될지 모른다는 뜻이다. */
   readonly retryAfterMs: number | null;
 
   constructor(
@@ -185,17 +153,13 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * 봉투가 없을 때의 문구. ALB 가 돌려주는 HTML 502·503·504 나 본문 없는 429 가 여기 온다 — 예전엔
- * `response.json()` 이 터져 「Unexpected token '<'」 가 사용자 토스트까지 갔다.
- */
+/** 봉투가 없을 때의 문구입니다. ALB 가 돌려주는 HTML 502·503·504 나 본문 없는 429 가 옵니다. */
 function fallbackMessage(status: number) {
   if (status === 429) return webMessage("tooManyRequests");
   if (status >= 500) return webMessage("serverUnavailable");
   return webMessage("requestFailed");
 }
 
-// ponytail: 초 단위만 읽는다. 서버(`RetryLater`)가 초로 싣는다 — HTTP-date 를 보내는 상대가 생기면 그때 더한다
 export function retryAfterMsOf(headers: Headers) {
   const seconds = Number(headers.get("Retry-After"));
   return headers.has("Retry-After") && Number.isFinite(seconds) && seconds >= 0
@@ -209,7 +173,6 @@ async function toApiError(response: Response) {
   try {
     body = text ? JSON.parse(text) : null;
   } catch {
-    // HTML·평문 본문 — 아래 기본 문구로 간다
   }
   const error = (body as { error?: { code?: unknown; message?: unknown } } | null)
     ?.error;
@@ -239,7 +202,6 @@ async function parseResponse<T>(response: Response, responseType?: string) {
   } as T;
 }
 
-/** 호출부 signal 과 시한을 한 signal 로 묶는다. 시한은 타이머를 직접 둔다(`refresh-timeout.ts` 와 같은 까닭). */
 function withTimeout(caller: AbortSignal | null | undefined, timeoutMs: number) {
   const controller = new AbortController();
   let timedOut = false;
@@ -266,9 +228,6 @@ async function request<T>(
   options: ApiFetchOptions,
   hasRetried: boolean
 ): Promise<T> {
-  // 세션이 끝났으면 네트워크를 타지 않는다. 폴링 호출부가 5곳이라 여기서 막지 않으면
-  // 각자 401을 만나 갱신을 다시 시도하고, 그것이 무한 루프의 실체다.
-  // 인증 엔드포인트 자신은 통과시킨다 — 로그아웃이 쿠키를 지워야 하기 때문이다.
   if (isSessionExpired() && !shouldSkipRefresh(url, options)) {
     throw new SessionExpiredError();
   }
@@ -288,7 +247,6 @@ async function request<T>(
   const builtUrl = buildUrl(url, params);
 
   const timeout = timeoutMs ? withTimeout(signal, timeoutMs) : null;
-  // 시한이 지나 끊긴 것만 시한 오류로 바꾼다. 호출부가 직접 취소한 것은 그대로 올린다.
   const timedOutError = (error: unknown) => {
     if (!timeout?.timedOut()) return error;
     return new ApiError(
@@ -324,23 +282,19 @@ async function request<T>(
     !hasRetried &&
     !shouldSkipRefresh(url, { ...options, skipAuthRefresh })
   ) {
-    // 갱신은 자기 시한이 있고, 재시도는 새 시한으로 시작한다.
     timeout?.clear();
     try {
       await refreshAuthOnce();
       return request<T>(url, options, true);
     } catch (error) {
-      // 만료일 때만 게이트를 연다. 네트워크 오류는 일시 실패라 재시도 대상으로 남긴다.
       if (error instanceof AuthRefreshError && error.expired) {
         openSessionGate();
       }
 
-      // 타입을 뭉개지 않는다. 전역 재시도 정책이 `isAuthError`로 판별해야 한다.
       throw error;
     }
   }
 
-  // 헤더만 오고 본문이 멈추는 경우도 같은 시한으로 끊는다 — 본문을 다 읽은 뒤에야 타이머를 푼다.
   try {
     return await parseResponse<T>(response, responseType);
   } catch (error) {

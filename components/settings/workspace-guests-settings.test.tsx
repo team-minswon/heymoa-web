@@ -27,7 +27,6 @@ const state = vi.hoisted(() => ({
   partial: false,
   totalCount: null as number | null,
   pagesAsked: [] as number[],
-  /** **캐시를 든 채 리패치만 실패한 상태.** `data` 는 살아 있고 `isError` 만 참이다. */
   staleFailed: false,
   isFetching: false,
   preview: vi.fn(),
@@ -37,7 +36,6 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/workspace/use-guest-list-pages", () => ({
-  /** 쪽 이어 붙이기는 훅 자신의 시험 몫이다. 여기서는 훅이 준 응답을 화면이 어떻게 그리는지만 본다. */
   useGuestListPages: (args: { pages: number }) => {
     state.pagesAsked.push(args.pages);
     return {
@@ -49,7 +47,6 @@ vi.mock("@/lib/workspace/use-guest-list-pages", () => ({
       data: state.isError
         ? undefined
         : {
-            // 훅이 뒷쪽을 못 읽었을 때 응답에 싣는 표시(계약 밖).
             partial: state.partial,
             status: 200,
             data: {
@@ -118,13 +115,11 @@ function envelope(data: unknown) {
   return { status: 200, data: { success: true, data } };
 }
 
-/** 행 끝 「⋯」 메뉴에서 항목을 고른다(APP-1210). */
 async function pick(item: string) {
   fireEvent.click(screen.getByRole("button", { name: "박서준 관리" }));
   fireEvent.click(await screen.findByRole("menuitem", { name: item }));
 }
 
-/** 메뉴를 열어 항목이 잠겼는지 본다. */
 async function menuItem(item: string) {
   fireEvent.click(screen.getByRole("button", { name: "박서준 관리" }));
   return screen.findByRole("menuitem", { name: item });
@@ -157,7 +152,6 @@ describe("WorkspaceGuestsSettings", () => {
   });
   afterEach(cleanup);
 
-  /** 전체 수는 읽어 온 쪽 수가 아니라 서버가 센 값이다 — 쪽을 다 안 읽었어도 「N명」이 맞아야 한다. */
   it("읽은 수가 아니라 서버가 센 전체 수를 말한다", () => {
     state.totalCount = 57;
     renderSection();
@@ -200,7 +194,6 @@ describe("WorkspaceGuestsSettings", () => {
     expect(screen.getByText("회의록 3개")).toBeInTheDocument();
   });
 
-  /** 빈 상태는 오류가 아니다 — 한 명도 없는 것이 정상이다. */
   it("한 명도 없으면 오류가 아니라 빈 안내를 보인다", () => {
     state.guests = [];
     renderSection();
@@ -221,23 +214,15 @@ describe("WorkspaceGuestsSettings", () => {
     ).toBeInTheDocument();
   });
 
-  /**
-   * **캐시를 든 채 리패치만 실패한 상태.** `data` 는 살아 있고 `isError` 만 참이다.
-   *
-   * 이때 목록을 오류 화면으로 덮으면 이미 보이던 임시 참여자가 **재시도가 성공할 때까지
-   * 통째로 사라진다.** 「실패」와 「들고 있는 것이 없다」는 다른 상태다.
-   */
   it("리패치가 실패해도 캐시가 있으면 목록을 유지한다", () => {
     state.staleFailed = true;
     try {
       renderSection();
 
       expect(screen.getByText("박서준")).toBeInTheDocument();
-      // **오류 화면으로 바뀌지 않는다.** 목록을 통째로 덮는 분기는 안 탄다
       expect(
         screen.queryByText("임시 참여자를 불러오지 못했습니다.")
       ).toBeNull();
-      // **다만 왜 관리가 잠겼는지는 말한다.** 안 그러면 권한이 사라진 것으로 읽는다
       expect(
         screen.getByText(/최신 목록을 확인하지 못해 연동하거나 삭제할 수 없습니다/)
       ).toBeInTheDocument();
@@ -249,10 +234,6 @@ describe("WorkspaceGuestsSettings", () => {
     }
   });
 
-  /**
-   * **정상적으로 빈 목록**을 캐시한 뒤 실패한 경우다. 길이로 캐시 유무를 판정하면 이때
-   * 빈 안내 대신 오류가 뜬다 — 성공 응답을 든 적이 있는가로 갈라야 한다.
-   */
   it("빈 목록을 캐시한 뒤 실패해도 빈 안내를 보인다", () => {
     state.guests = [];
     state.staleFailed = true;
@@ -268,7 +249,6 @@ describe("WorkspaceGuestsSettings", () => {
     }
   });
 
-  /** 다만 **지우지는 못한다.** 확인창의 「회의록 N개」가 낡았을 수 있다. */
   it("리패치가 실패하면 연동·삭제는 잠그고 이름 변경은 연다", async () => {
     state.staleFailed = true;
     try {
@@ -286,10 +266,6 @@ describe("WorkspaceGuestsSettings", () => {
     }
   });
 
-  /**
-   * **목록은 전원이 본다.** 참석자 후보를 세우는 데 쓰이고 그 이름은 어차피 회의록에서
-   * 보인다. 관리(연동·삭제)만 ADMIN이다.
-   */
   it("ADMIN이 아니면 목록은 보이고 관리 메뉴가 없다", () => {
     renderSection(false);
 
@@ -304,7 +280,6 @@ describe("WorkspaceGuestsSettings", () => {
       return screen.getByRole("textbox", { name: "이름" });
     }
 
-    /** 행에는 편집 상태가 없다 — 대화상자가 열려도 행은 그대로 이름 줄과 보조 줄을 그린다. */
     it("대화상자에서 고치고 Enter 로 저장하면 응답 뒤에 닫는다", async () => {
       state.rename.mockResolvedValue(null);
       const input = await openRename();
@@ -375,16 +350,10 @@ describe("WorkspaceGuestsSettings", () => {
     await waitFor(() =>
       expect(screen.getByText("회의록 2개가 바뀝니다.")).toBeInTheDocument()
     );
-    // **되돌릴 수 없다는 사실**이 함께 보여야 한다 — 되돌리기를 안 만든 근거가 이 화면이다.
     expect(screen.getByText("되돌릴 수 없습니다.")).toBeInTheDocument();
-    // 미리보기는 아무것도 안 바꾼다.
     expect(state.link).not.toHaveBeenCalled();
   });
 
-  /**
-   * **미리보기 숫자를 최종 결과로 쓰지 않는다.** 그 사이에 다른 사람이 화자를 고치면
-   * 숫자가 달라지고, 그러면 사람이 본 것과 일어난 일이 어긋난다.
-   */
   it("실행 결과가 미리보기와 다르면 실행 결과를 보여준다", async () => {
     state.preview.mockResolvedValue(
       envelope({
@@ -405,7 +374,6 @@ describe("WorkspaceGuestsSettings", () => {
     await screen.findByText("회의록 3개가 바뀝니다.");
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
 
-    // 미리보기의 3이 아니라 실제로 바뀐 2다.
     await waitFor(() =>
       expect(screen.getByText("회의록 2개가 바뀌었습니다.")).toBeInTheDocument()
     );
@@ -440,10 +408,6 @@ describe("WorkspaceGuestsSettings", () => {
     expect(screen.getByText(/되돌릴 수 없습니다/)).toBeInTheDocument();
   });
 
-  /**
-   * **확인창이 목록 밖에 살아야 하는 이유다.** 행 안에 두면, 남이 먼저 지워 목록에서 그
-   * 행이 사라지는 순간 확인창까지 함께 언마운트돼 **설명 없이 닫힌다.**
-   */
   it("남이 먼저 지웠으면 창을 닫지 않고 그렇다고 말한다", async () => {
     const { rerender } = renderSection();
 
@@ -452,7 +416,6 @@ describe("WorkspaceGuestsSettings", () => {
       screen.getByText(/회의록 3개에서 이 사람이 사라지고/)
     ).toBeInTheDocument();
 
-    // 그 사이 남이 먼저 지웠다 — 목록에서 사라진다
     state.guests = [];
     rerender(<WorkspaceGuestsSettings workspaceId="01K0000000000" canManage />);
 
@@ -461,10 +424,6 @@ describe("WorkspaceGuestsSettings", () => {
     expect(confirm).toBeDisabled();
   });
 
-  /**
-   * 다 읽지 못한 목록에서 안 보이는 것은 지워졌다는 뜻이 아니다 — 읽은 쪽 뒤에 더 있는데 그 사람이 없으면(그사이 새 참여자가
-   * 끼어 쪽 밖으로 밀렸다) 「이미 지워졌습니다」가 아니라 확인하지 못했다고 말하고 다시 시도하게 한다(APP-1032).
-   */
   it("더 읽을 쪽이 있는데 그 사람이 안 보이면 지워졌다고 하지 않고 확인하지 못했다고 말한다", async () => {
     state.hasMore = true;
     const { rerender } = renderSection();

@@ -27,7 +27,6 @@ import { flowPollInterval } from "@/lib/notes/review/flow-cache";
 import { useEventStreamHealthy } from "@/lib/events/health";
 import { hintedInterval } from "@/lib/events/interval";
 
-/** 목록 캐시에서 그 노트 행만 뺀다. 모양이 예상과 다르면 손대지 않는다. */
 function dropNoteFromList(current: unknown, noteId: string) {
   const response = current as
     | {
@@ -50,15 +49,6 @@ function dropNoteFromList(current: unknown, noteId: string) {
   };
 }
 
-/**
- * 회의 삭제 확인.
- *
- * 회의 소유 데이터와 이 회의록만 물어본 에이전트 대화는 함께 지우며(APP-1409), 프로젝트로 승계된 결정사항·할 일과
- * 다른 자료도 함께 물어본 대화는 유지합니다.
- *
- * 실패 토스트는 안 띄운다. `MutationCache.onError`가 전역으로 잡으므로 여기서 또 부르면 두 개가
- * 겹친다(rule `error-loading`).
- */
 export function NoteDeleteDialog({
   workspaceId,
   noteId,
@@ -74,7 +64,6 @@ export function NoteDeleteDialog({
   title: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 삭제 성공 뒤 — 상세는 목록으로 되돌아간다. */
   onDeleted?: () => void;
 }) {
   const t = useTranslations("notes.deleteDialog");
@@ -96,9 +85,6 @@ export function NoteDeleteDialog({
   });
   const flow = okData(flowQuery.data);
   const analyzing = flow?.status === "ANALYZING";
-  // `deleteNote.isPending`은 DELETE가 끝나면 바로 false가 된다. 캐시 정리와 이동이 남았는데
-  // 버튼이 다시 살아나면 지운 노트로 DELETE가 한 번 더 나가 404 토스트가 성공 토스트와
-  // 나란히 뜬다. 후처리까지 덮는 잠금을 따로 둔다.
   const [busy, setBusy] = useState(false);
   const locked = deleteNote.isPending || busy;
 
@@ -147,10 +133,7 @@ export function NoteDeleteDialog({
             }
             onClick={async () => {
               setBusy(true);
-              // **거절을 여기서 소비한다.** `MutationCache.onError`는 토스트만 띄우고
-              // Promise를 삼키지 않아서, catch가 없으면 409·404·네트워크 실패가
-              // unhandled rejection으로 남는다.
-              // 생성 함수는 noteId만 꺼냅니다. workspaceId는 공통 성공 계측용이며 서버로 보내지 않습니다.
+              // `MutationCache.onError` 는 토스트만 띄우고 Promise 를 삼키지 않아, catch 가 없으면 unhandled rejection 으로 남는다.
               const variables = { noteId, workspaceId };
               const response = await deleteNote
                 .mutateAsync(variables)
@@ -160,25 +143,14 @@ export function NoteDeleteDialog({
                 return;
               }
               await recording.disconnect(noteId);
-              // 삭제 전에 시작된 비활성 목록 조회도 취소해야 늦은 응답이 행을 되살리지 않습니다.
               await queryClient.cancelQueries({
                 predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
               });
-              // **그 노트를 키에 담은 캐시를 전부 버린다.** 단건만 지우면 전사·요약·공유
-              // 채팅이 각자 키를 써서 살아남고, `NotePanel`은 단건이 404여도 탭을 마운트하므로
-              // 뒤로가기로 돌아갔을 때 지운 회의 내용이 다시 그려진다.
               queryClient.removeQueries({
                 predicate: (query) =>
-                  // 문자열로 펴서 본다. 노트 상세를 담은 키 중에는
-                  // `["/v1/notes/{noteId}/transcript", { cursor }]`처럼 noteId가 객체
-                  // 안에 있는 것도 있어 최상위 문자열 검사로는 안 걸린다.
                   JSON.stringify(query.queryKey).includes(noteId),
               });
-              // 목록은 재조회 전에 행을 먼저 뺀다 — `invalidateQueries`는 재조회가 실패해도
-              // resolve하고 옛 데이터를 남겨서, 지운 행이 그대로 보인다.
-              //
-              // **목록이 둘이다** (APP-685). 프로젝트 것만 빼면 「모든 노트」 화면에 지운 행이
-              // 그대로 서 있다. 캐시에 있는 것만 손대므로 없는 키는 그냥 지나간다.
+              // `invalidateQueries` 는 재조회가 실패해도 resolve 하고 옛 데이터를 남기므로 목록에서 행을 먼저 뺀다.
               queryClient.setQueriesData(
                 { predicate: ({ queryKey }) => isNoteListQueryKey(queryKey) },
                 (current: unknown) => dropNoteFromList(current, noteId)

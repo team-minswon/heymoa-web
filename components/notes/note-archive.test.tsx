@@ -9,8 +9,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NoteArchive } from "@/components/notes/note-archive";
 
-// 이 테스트는 화자 후보에 멤버를 섞지 않는다 — 멤버 조회는 목이 없으면 빈 목록이라
-// 후보가 이 회의의 참여자로 좁아진다. 그 자리는 아래 「워크스페이스 멤버」 테스트가 본다.
 const WORKSPACE_ID = "01K0000000000";
 
 const NOTE_META = {
@@ -23,7 +21,6 @@ const data = vi.hoisted(() => ({
   segments: [] as unknown[],
   diarization: null as unknown,
   recording: undefined as unknown,
-  /** 다시 읽었을 때 서버가 주는 발화. `null`이면 캐시와 같은 것을 준다. */
   refetched: null as unknown[] | null,
   transcriptFails: false,
   flowStatus: "REVIEWABLE" as string,
@@ -35,7 +32,6 @@ type PollOptions = {
     refetchInterval?: (query: { state: { data: unknown } }) => number | false;
   };
 };
-/** 조회 훅이 받은 옵션. 폴링 판정을 캐시 데이터로 직접 불러 본다. */
 const polled = vi.hoisted(() => ({
   transcript: undefined as PollOptions | undefined,
   flow: undefined as PollOptions | undefined,
@@ -43,18 +39,14 @@ const polled = vi.hoisted(() => ({
 
 const spies = vi.hoisted(() => ({
   assignLabel: vi.fn(),
-  /** 화자 패널의 초기화가 쓰는 쪽. 라벨마다 한 번씩 부른다. */
   assignLabelAsync: vi.fn(() => Promise.resolve({ status: 200 })),
   assignSegment: vi.fn(),
   createGuest: vi.fn(),
 }));
 
-/** 화자 후보에 섞이는 워크스페이스 멤버. 비우면 후보가 이 회의의 참여자로 좁아진다. */
 const members = vi.hoisted(() => ({ rows: [] as unknown[] }));
-/** 워크스페이스의 임시 참여자. 이 회의에 없는 사람은 **검색해야** 후보로 나온다. */
 const guests = vi.hoisted(() => ({ rows: [] as unknown[] }));
 
-// 이 파일이 보는 것은 아카이브지 실시간 배선이 아니다 — 커버리지 원장은 비워 둔다.
 const track = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/analytics/track", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/analytics/track")>()),
@@ -136,8 +128,6 @@ vi.mock("@/lib/api/generated/analysis/analysis", () => ({
     return { data: flowEnvelope(data.flowStatus) };
   },
 }));
-// **`enabled` 를 지킨다.** 소속이 확인되기 전에는 조회를 안 걸어야 하는데, 목이 늘 데이터를
-// 주면 화면이 「후보를 다 읽었다」로 믿어 그 규칙을 아무도 안 지킨다.
 const candidateQuery =
   (rows: unknown[], key: string) =>
   (_id: string, options?: { query?: { enabled?: boolean } }) =>
@@ -196,8 +186,6 @@ describe("NoteArchive", () => {
 
     expect(screen.getByRole("button", { name: "복사" })).toBeTruthy();
 
-    // 공유 챗봇이 사라지며 탭도 함께 없어졌다. 「어느 탭이냐」로 가리던 것이
-    // 「전사가 있느냐」 하나로 줄었다 — 아래 검사가 그 반대쪽을 본다.
     expect(screen.queryByRole("tab")).toBeNull();
   });
 
@@ -228,8 +216,6 @@ describe("NoteArchive", () => {
     expect(screen.queryByText("스크립트가 없습니다.")).toBeNull();
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
-
-  // 탭이 나타났다 사라지면 같은 자리인지 알기 어렵다 — 비어 있어도 탭은 남기고 안내를 준다.
 
   it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {
     render(
@@ -308,15 +294,12 @@ describe("NoteArchive", () => {
       fireEvent.scroll(viewport);
       fireEvent.click(screen.getByRole("button", { name: "맨 아래로" }));
 
-      // 정적 문서라 마운트 시 튀면 안 되고, 명령을 받았을 때만 내려간다.
       expect(viewport.scrollTop).toBe(1_000);
       expect(screen.queryByRole("button", { name: "맨 아래로" })).toBeNull();
     });
   });
 
   describe("요약 근거 점프", () => {
-    // 세 세그먼트가 한 블록으로 묶이고 blockId는 첫 세그먼트다 — 가운데를 가리키는 DOM
-    // 노드가 없으므로 `segmentIds.includes()`로 블록을 찾지 않으면 아무 데도 못 간다.
     function seedThreeSegments() {
       data.segments = [
         {
@@ -343,7 +326,6 @@ describe("NoteArchive", () => {
           endedAtMs: 61_000,
           text: "셋째 줄.",
         },
-        // 여러 줄로 감기는 발화. 형광펜 속도가 고정이면 이 줄은 위 셋보다 오래 그어진다.
         {
           segmentId: "s4",
           transcriptionSessionId: "sess1",
@@ -369,8 +351,6 @@ describe("NoteArchive", () => {
     };
 
     it("가리킨 발화를 그 줄에서 정확히 짚는다", () => {
-      // 묶기를 지운 뒤로 행이 곧 세그먼트다 — 예전에는 s2 가 s1 과 한 블록이라
-      // 첫 줄이 짚혔고, 인용이 문단 어디를 가리키는지 표시할 방법이 없었다.
       seedThreeSegments();
       render(
         <NoteArchive
@@ -389,13 +369,6 @@ describe("NoteArchive", () => {
       expect(rows[3]).not.toHaveAttribute("data-focused");
     });
 
-    /**
-     * **형광은 글자에만 칠하고 여백은 건드리지 않는다.** 예전에는 행 배경을 통째로
-     * 칠하면서 `px-3`이 함께 붙어, 도착한 줄만 글자가 12px 밀리고 아래 hairline이 24px
-     * 짧아졌다 — 찾아간 자리가 도착과 동시에 움직였다.
-     *
-     * jsdom은 px를 못 재니 **어느 요소에 칠하는지**와 **여백 유틸리티가 붙는지**로 검사한다.
-     */
     it("형광을 글자에만 칠하고 여백은 그대로 둔다", () => {
       seedThreeSegments();
       render(
@@ -412,25 +385,17 @@ describe("NoteArchive", () => {
       );
       const spacing = (node: Element) =>
         [...node.classList].filter((name) => /^-?(p|m)[xytrbl]?-/.test(name));
-      // 행은 짚혀도 그대로다 — 여백도 배경도.
       expect(spacing(focused)).toEqual(spacing(plain));
       expect(focused.className).not.toContain("evidence-mark");
 
-      // 칠하는 것은 글자를 감싼 인라인 span이다.
       const mark = focused.querySelector("p > span");
       expect(mark?.className).toContain("evidence-mark");
-      // 인라인 여백은 첫 글자를 밀기 때문에 쓰지 않는다.
       expect(spacing(mark!)).toEqual([]);
       expect(plain.querySelector("p > span")?.className ?? "").not.toContain(
         "evidence-mark"
       );
     });
 
-    /**
-     * **펜 속도가 고정이고 시간이 길이를 따라간다.** 어느 줄이든 같은 시간에 그으면 긴
-     * 발화에서는 펜이 몇 배 빨리 지나가고 짧은 발화에서는 기어가서, 같은 표시가 줄마다
-     * 다른 물건으로 보인다. 표시의 수명도 그만큼 길어지고 짧아진다.
-     */
     it("긴 발화일수록 길게·오래 긋는다", () => {
       seedThreeSegments();
       const { unmount } = render(
@@ -454,7 +419,6 @@ describe("NoteArchive", () => {
       );
       const long = penOf(screen.getAllByTestId("archive-transcript-block")[3]);
 
-      // 펜이 지나갈 길이도, 그 시간도 길이를 따라간다 — 속도는 그대로다.
       expect(long.spanEm).toBeGreaterThan(short.spanEm);
       expect(long.strokeMs).toBeGreaterThan(short.strokeMs);
     });
@@ -473,27 +437,18 @@ describe("NoteArchive", () => {
           />
         );
 
-        // 수명은 **긋기 + 머물기 + 지우기**다. 획이 다 지워지기 전에 비우면 표시가
-        // 중간에 끊기고, 늦게 비우면 다 지워진 자리가 남는다.
         const { strokeMs } = penOf(
           screen.getAllByTestId("archive-transcript-block")[2]
         );
         vi.advanceTimersByTime(strokeMs * 2 + 1_000 - 1);
         expect(onFocusHandled).not.toHaveBeenCalled();
         vi.advanceTimersByTime(1);
-        // 안 비우면 스크립트 탭을 다시 열 때마다 같은 자리로 끌려간다.
         expect(onFocusHandled).toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
       }
     });
 
-    /**
-     * **각주를 따라가는 일이 눈에만 일어나면 안 된다.** 인용 버튼은 탭이 바뀌며 사라지고
-     * 포커스는 `<body>`로 떨어지므로, 보지 않는 사람에게는 화면만 바뀌고 아무 일도 안
-     * 일어난 것이 된다. 도착한 발화를 포커스로 잡아야 그 줄이 읽히고 다음 Tab도 거기서
-     * 이어진다.
-     */
     it("짚은 발화로 포커스를 옮긴다", async () => {
       seedThreeSegments();
       render(
@@ -505,7 +460,6 @@ describe("NoteArchive", () => {
         />
       );
 
-      // 스크롤·포커스는 다음 프레임에 일어난다(목록이 아직 자라는 중이라서).
       await waitFor(() =>
         expect(
           screen.getAllByTestId("archive-transcript-block")[2]
@@ -532,8 +486,6 @@ describe("NoteArchive", () => {
     });
   });
 
-  // ── 화자 지정 범위 ──────────────────────────────────────────────────────────
-
   const MEMBER = {
     participantId: "01K0000000101",
     userId: "01K0000000001",
@@ -547,9 +499,7 @@ describe("NoteArchive", () => {
     email: null,
   };
 
-  /** 화자 A 는 한지원. 두 발화 중 뒤쪽 한 줄만 박서준으로 개별 지정돼 있다. */
   function seedDiarizedNote() {
-    // 다시 읽기는 기본으로 캐시와 같은 것을 준다 — 그 차이를 보는 테스트만 따로 세운다.
     data.refetched = null;
     data.diarization = {
       status: "MAPPED",
@@ -603,7 +553,6 @@ describe("NoteArchive", () => {
     );
   }
 
-  /** 라벨은 한지원인데 그 줄만 박서준이다 — 이 기능이 보이는 자리다. */
   it("개별로 지정한 발화는 그 줄만 다른 이름으로 선다", () => {
     renderDiarized();
 
@@ -612,10 +561,6 @@ describe("NoteArchive", () => {
     expect(chips[1]).toHaveTextContent("박서준");
   });
 
-  /**
-   * **말없이 사라지면 「분명 고쳤는데」가 된다.** 서버는 어차피 지우지만, 그 몇 줄은
-   * 사람이 콕 집어 고쳐 둔 것이라 누르기 전에 말해야 한다.
-   */
   it("개별 지정이 남은 화자에 전체 적용하면 먼저 확인한다", async () => {
     renderDiarized();
 
@@ -625,7 +570,6 @@ describe("NoteArchive", () => {
     expect(
       await screen.findByText(/개별로 지정한 발화가 1개/)
     ).toBeInTheDocument();
-    // 확인 전에는 아무것도 안 보낸다
     expect(spies.assignLabel).not.toHaveBeenCalled();
   });
 
@@ -647,10 +591,6 @@ describe("NoteArchive", () => {
     );
   });
 
-  /**
-   * **만들기가 확인보다 앞서면 취소가 취소가 아니다.** 임시 참여자와 참여 기록은 이미
-   * 영구히 생긴 뒤라, 사람은 취소했는데 워크스페이스에 이름이 하나 남는다.
-   */
   it("개별 지정이 남은 화자에 새 이름을 만들면 확인 전에는 안 만든다", async () => {
     renderDiarized();
 
@@ -676,16 +616,6 @@ describe("NoteArchive", () => {
     expect(spies.assignLabel).not.toHaveBeenCalled();
   });
 
-  /**
-   * **캐시로 세면 남의 수정을 못 본다.** 종료된 전사는 마운트할 때만 당기므로, 다른 사람이
-   * 그 사이 발화 하나를 고쳤으면 여기서는 0으로 보인다 — 그대로 보내면 서버가 **경고 없이**
-   * 그 지정을 지운다. 0으로 보일 때 한 번 더 읽는 이유다.
-   */
-  /**
-   * **URL 의 워크스페이스로 후보를 세우면 안 된다.** `/w/B/notes/<A의 노트>` 로 들어오면
-   * 소속이 확인되기 전인데, 그때 B 의 멤버를 후보로 세우면 고르는 순간 422 로 거절되고
-   * A 에 이미 있는 사람을 못 찾아 **동명이인을 또 만든다.**
-   */
   it("소속이 확인되기 전에는 만들기를 안 연다", async () => {
     seedDiarizedNote();
     render(
@@ -709,11 +639,9 @@ describe("NoteArchive", () => {
 
   it("캐시엔 없어도 다시 읽어 개별 지정을 찾아내면 확인한다", async () => {
     seedDiarizedNote();
-    // 캐시에는 개별 지정이 없다
     data.segments = (
       data.segments as { assignedParticipantId?: string | null }[]
     ).map((segment) => ({ ...segment, assignedParticipantId: null }));
-    // 그런데 서버는 하나 갖고 있다
     data.refetched = (data.segments as { speakerLabel?: string | null }[]).map(
       (segment, index) =>
         index === 0
@@ -740,7 +668,6 @@ describe("NoteArchive", () => {
     expect(spies.assignLabel).not.toHaveBeenCalled();
   });
 
-  /** 지울 개별 지정이 없으면 확인이 끼어들 이유가 없다. */
   it("개별 지정이 없는 화자는 확인 없이 바로 적용한다", async () => {
     data.refetched = null;
     data.diarization = {
@@ -783,8 +710,6 @@ describe("NoteArchive", () => {
     fireEvent.click(screen.getByTestId("speaker-assign-trigger"));
     fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
 
-    // **개별 지정이 0으로 보이면 전사를 다시 읽고 나서 보낸다** — 캐시가 남의 수정을 못 봤을
-    // 수 있어서다. 그래서 여기도 기다린다.
     await waitFor(() => expect(spies.assignLabel).toHaveBeenCalled());
     expect(screen.queryByText(/개별로 지정한 발화/)).toBeNull();
   });
@@ -803,14 +728,12 @@ describe("NoteArchive", () => {
         data: { participantId: GUEST.participantId },
       })
     );
-    // 라벨은 안 건드린다
     expect(spies.assignLabel).not.toHaveBeenCalled();
   });
 
   it("개별 지정 해제는 그 발화만 라벨로 되돌린다", async () => {
     renderDiarized();
 
-    // 두 번째 줄이 개별 지정된 발화다
     fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[1]);
     fireEvent.click(screen.getByRole("radio", { name: "현재 발화에만 적용" }));
     fireEvent.click(screen.getByRole("button", { name: "개별 지정 해제" }));
@@ -824,8 +747,6 @@ describe("NoteArchive", () => {
     );
   });
 
-  // ── 화자 패널 ───────────────────────────────────────────────────────────────
-
   const SILENT = {
     participantId: "01K0000000103",
     userId: "01K0000000003",
@@ -833,10 +754,6 @@ describe("NoteArchive", () => {
     email: "quiet@heymoa.com",
   };
 
-  /**
-   * A 는 한지원, B 는 아무도 안 붙었고, C 는 「참석자 아님」으로만 확정됐다.
-   * 조용한 사람은 참여자인데 한 마디도 안 했다.
-   */
   function renderPanelNote(people: unknown[] = [MEMBER, SILENT]) {
     data.refetched = null;
     data.diarization = {
@@ -894,13 +811,8 @@ describe("NoteArchive", () => {
     fireEvent.click(screen.getByRole("button", { name: "화자" }));
   }
 
-  /**
-   * 화자를 붙이려면 전사를 훑으며 「화자 A」를 찾아야 했다. 이 버튼이 그 일을 대신한다 —
-   * 누를 때마다 아직 누구인지 모르는 화자의 발화로 넘어가고, 끝에서 처음으로 돈다.
-   */
   it("「미지정」을 누르면 미지정 화자를 차례로 넘긴다", async () => {
     renderPanelNote();
-    // 패널은 닫고 전사에서 쓴다 — 넘기는 도구가 제 목적지를 가리면 안 된다.
     fireEvent.keyDown(document.body, { key: "Escape" });
 
     const next = await screen.findByRole("button", { name: /미지정 2/ });
@@ -915,43 +827,29 @@ describe("NoteArchive", () => {
     fireEvent.click(next);
     await waitFor(() => expect(focusedText()).toContain("발화 2"));
 
-    // 끝에서 처음으로 돈다 — 마지막에서 멈추면 되짚으려고 패널을 다시 열어야 한다.
     fireEvent.click(next);
     await waitFor(() => expect(focusedText()).toContain("발화 1"));
   });
 
-  /**
-   * 회의에 화자가 다섯인데 워크스페이스 멤버가 스무 명이면, 다음 라벨에 붙일 사람은 거의
-   * 확실히 앞에서 이미 고른 그 다섯 중 하나다. 순서를 안 주면 매번 다시 찾는다.
-   */
   it("이미 화자로 고른 사람이 후보 맨 위에 선다", () => {
-    // **뒤집어 넘긴다.** 서버가 준 이름 순서에서 이미 고른 사람이 뒤에 있을 때
-    // 정렬이 일하는지가 이 검사의 전부다.
     renderPanelNote([SILENT, MEMBER]);
     fireEvent.keyDown(document.body, { key: "Escape" });
 
-    // 화자 B(미지정)의 메뉴를 연다 — 여기서 고를 사람이 위에 있어야 한다.
     fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[1]);
 
     const names = screen
       .getAllByRole("option")
       .map((option) => option.textContent ?? "");
-    // MEMBER 는 화자 A 에 붙어 있고 SILENT 는 아무 데도 안 붙었다.
     expect(names[0]).toContain(MEMBER.name);
     expect(names[0]).toContain("화자 A");
   });
 
-  /**
-   * 서버가 지정마다 그 노트 행을 `FOR UPDATE` 로 잠근다. 동시에 보내면 어차피 줄을 서고,
-   * 기다리는 동안 라벨 수만큼 커넥션과 트랜잭션을 쥔 채로 있는다.
-   */
   it("초기화는 한 번에 하나씩 보낸다", async () => {
     let release!: () => void;
     spies.assignLabelAsync.mockImplementationOnce(
       () => new Promise((resolve) => (release = () => resolve({ status: 200 })))
     );
     renderPanelNote();
-    // A 와 C 둘을 되돌리게 만든다.
     data.diarization = {
       status: "MAPPED",
       speakers: [
@@ -975,7 +873,6 @@ describe("NoteArchive", () => {
     await waitFor(() =>
       expect(spies.assignLabelAsync).toHaveBeenCalledTimes(1)
     );
-    // 첫 요청이 아직 도는 동안에는 두 번째가 안 나간다.
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(spies.assignLabelAsync).toHaveBeenCalledTimes(1);
 
@@ -985,13 +882,8 @@ describe("NoteArchive", () => {
     );
   });
 
-  /**
-   * TanStack 은 재조회가 실패해도 옛 `data` 를 들고 있다. 본문은 오류 화면으로 바뀌는데
-   * 도구만 남으면, 「첫 발화로」가 사라진 DOM 을 짚고 낡은 수치가 멀쩡한 결과처럼 선다.
-   */
   it("전사를 다시 읽지 못하면 화자 도구도 내린다", () => {
     renderPanelNote();
-    // 패널이 열려 있으면 바깥이 inert 라 상단바를 못 짚는다 — 닫고 본다.
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(screen.getByRole("button", { name: "화자" })).toBeTruthy();
 
@@ -1017,8 +909,6 @@ describe("NoteArchive", () => {
     expect(screen.queryByRole("button", { name: /미지정/ })).toBeNull();
   });
 
-  // 회의에 앉아 듣기만 한 사람이 실제로 있다. 말한 사람만 세면 그 사람은 목록에서 사라져
-  // 「이 회의에 없던 사람」으로 읽힌다.
   it("한 마디도 안 한 참여자도 패널에 선다", () => {
     renderPanelNote();
 
@@ -1036,15 +926,10 @@ describe("NoteArchive", () => {
     expect(names[1]).toContain("화자 C");
   });
 
-  /**
-   * 초기화는 **이름이 붙은 라벨만** 되돌린다. 「참석자 아님」으로 확정한 C 는 화면에 이미
-   * `화자 C` 라 되돌릴 것이 없고, 서버에는 확정을 무를 API 가 없다.
-   */
   it("전체 초기화는 이름이 붙은 라벨에만 빈 본문을 보낸다", async () => {
     renderPanelNote();
 
     fireEvent.click(screen.getByRole("button", { name: /전체 초기화/ }));
-    // 대상은 서버에 다시 물어 세므로 확인창이 한 박자 뒤에 선다.
     await screen.findByRole("alertdialog");
     fireEvent.click(screen.getByRole("button", { name: "전체 초기화" }));
 
@@ -1058,11 +943,6 @@ describe("NoteArchive", () => {
     });
   });
 
-  /**
-   * 초기화를 걸어 놓고 패널을 닫으면 전사의 메뉴는 그대로 살아 있었다. 거기서 개별 지정을
-   * 끝내도 **늦게 도착한 초기화 PUT 이 그 지정을 지운다** — 라벨 PUT 이 그 화자의 발화 단위
-   * 지정을 함께 지우기 때문이다. 같은 라벨을 두고 두 경로가 경쟁하므로 잠금을 공유한다.
-   */
   it("초기화가 도는 동안에는 전사의 화자 지정도 잠긴다", async () => {
     let release!: () => void;
     spies.assignLabelAsync.mockImplementationOnce(
@@ -1071,11 +951,9 @@ describe("NoteArchive", () => {
     renderPanelNote();
 
     fireEvent.click(screen.getByRole("button", { name: /전체 초기화/ }));
-    // 대상은 서버에 다시 물어 세므로 확인창이 한 박자 뒤에 선다.
     await screen.findByRole("alertdialog");
     fireEvent.click(screen.getByRole("button", { name: "전체 초기화" }));
 
-    // 잠긴 메뉴는 누를 자리 없이 칩만 남는다 (`SpeakerAssignMenu` 의 `disabled` 분기).
     await waitFor(() =>
       expect(screen.queryByTestId("speaker-assign-trigger")).toBeNull()
     );
@@ -1088,14 +966,6 @@ describe("NoteArchive", () => {
     );
   });
 
-  /**
-   * 인용으로 간 뒤 형광이 사라지기 전에 패널에서 이동을 누르면, 예전에는 패널만 닫히고
-   * 화면이 안 움직였다 — 소유자가 든 옛 `focusSegmentId` 가 새 점프를 이겼다.
-   */
-  /**
-   * 녹음 길이(`recording.durationMs`)가 발화의 회의 축보다 짧게 오면, 띠는 발화 끝까지로 그리고
-   * 누른 자리는 녹음 길이로 시각을 되짚어 뒤쪽 점을 눌러도 앞쪽 발화로 갔다(40분대 → 9분대).
-   */
   it("도크 띠의 뒤쪽 점을 누르면 그 발화로 간다 — 녹음 길이가 짧게 와도", async () => {
     data.refetched = null;
     data.recording = { durationMs: 500_000 };
@@ -1136,7 +1006,6 @@ describe("NoteArchive", () => {
     const strip = screen.getByTestId("speaker-dock-strip");
     strip.getBoundingClientRect = () =>
       ({ left: 0, width: 1000, top: 0, height: 24 }) as DOMRect;
-    // 맨 끝 칸 — 40분대 발화가 그려진 자리다.
     fireEvent.click(strip, { clientX: 995 });
 
     await waitFor(() => {
@@ -1146,7 +1015,6 @@ describe("NoteArchive", () => {
       expect(focused).toHaveLength(1);
       expect(focused[0].textContent).toContain("발화 2");
     });
-    // 띠로 찾아갔다는 것만 센다 — 노트 id 는 싣지 않는다
     expect(track).toHaveBeenCalledWith("speaker_timeline_jumped", {
       workspace_id: WORKSPACE_ID,
       surface: "dock",
@@ -1189,7 +1057,6 @@ describe("NoteArchive", () => {
       speakerLabel: label,
       assignedParticipantId: null,
     }));
-    // 요약의 근거 인용이 s1 을 짚어 둔 상태다 — 아직 형광이 안 끝나 소유자가 안 비웠다.
     render(
       <NoteArchive
         workspaceId={WORKSPACE_ID}
@@ -1216,14 +1083,8 @@ describe("NoteArchive", () => {
     });
   });
 
-  /**
-   * 종료된 전사는 마운트할 때만 당긴다. 그 사이 남이 화자 C 에 이름을 붙였으면 캐시에는
-   * 없고, 그대로 보내면 「전체 초기화」가 C 를 조용히 건너뛴다 — 다시 읽는 순간 지운 줄
-   * 알았던 이름이 돌아와 있다.
-   */
   it("초기화 대상은 서버에 다시 물어 센다", async () => {
     renderPanelNote();
-    // 남이 방금 화자 C 에 이름을 붙였다. 캐시에는 A 만 있다.
     data.diarization = {
       status: "MAPPED",
       speakers: [

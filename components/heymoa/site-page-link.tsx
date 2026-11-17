@@ -6,7 +6,6 @@ import Link from "next/link";
 import { blockedByRecording, openSitePage } from "@/lib/desktop/open-site-page";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 
-/** 새 앱은 외부 브라우저로 가이드를 열고, 구버전 앱은 녹음 이탈 보호를 유지한다. */
 export function SitePageLink({
   href,
   onClick,

@@ -67,13 +67,6 @@ describe("AccountSettingsForm", () => {
     ).toHaveAttribute("src", expect.stringContaining("test-user.png"));
   });
 
-  /**
-   * 기본 워크스페이스 목록이 여기 있었다(APP-237). 「로그인 후 어디로 갈지」가 브라우저의
-   * 마지막 방문으로 옮겨 가면서 통째로 사라졌고(APP-401), design.pen 설정 > 계정(`LJJWo`)에도
-   * 원래 없던 섹션이라 지우면서 정본에 맞춰졌다. 워크스페이스 조회도 함께 빠져서, 이 탭은
-   * 이제 유저 자원만 그린다.
-   */
-  // PRO-69 가 「이용 통계 보내기」 스위치를 없앴다(APP-1385). 거부 방법은 처리방침 5조의 브라우저 설정이다.
   it("이용 통계 스위치를 그리지 않는다", () => {
     renderForm();
     expect(screen.queryByRole("switch")).toBeNull();

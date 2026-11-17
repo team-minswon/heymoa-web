@@ -68,25 +68,10 @@ type MockSession = Omit<TranscriptionSessionResponseData, "status"> & {
   status: string;
 };
 
-/**
- * 목이 저장하는 발화. 응답 타입에는 `transcriptionSessionId`가 없다 — 그 필드가 있는 동안
- * web 이 세션 경계로 타임라인을 이어 붙였다. 소속은 안쪽에서만 들고 있고, 응답으로 나갈 때
- * 회의 축 좌표로 바뀐다.
- */
 type StoredSegment = TranscriptResponseDataSegmentsItem & {
   transcriptionSessionId: string;
 };
 
-/**
- * 세션마다 회의 축의 원점.
- *
- * ```
- * note_offset_ms(N) = Σ (session_i.ended_at − session_i.started_at)  for i < N
- * ```
- *
- * **세션 길이만 더하고 사이는 안 더한다** — 일시정지는 회의 축에서 제외다. 서버의 V25
- * 마이그레이션이 쓰는 것과 같은 식이다.
- */
 function noteOffsetsMs(sessions: MockSession[]) {
   const offsets = new Map<string, number>();
   let accumulated = 0;
@@ -102,11 +87,6 @@ function noteOffsetsMs(sessions: MockSession[]) {
   return offsets;
 }
 
-/**
- * 멤버는 워크스페이스 소속이므로 응답 항목에 없는 workspaceId를 안쪽에서만 들고 있는다.
- * **`name` 은 계정 이름이다.** 워크스페이스가 정한 이름은 `displayName` 에 따로 들고, 응답을 만들 때
- * 서버처럼 `name` = 표시 이름 ?? 계정 이름으로 합친다(APP-1204).
- */
 type MockMember = Omit<
   WorkspaceMemberListResponseDataMembersItem,
   "displayName" | "accountName"
@@ -115,7 +95,6 @@ type MockMember = Omit<
   displayName?: string | null;
 };
 
-/** 지금 유저가 그 워크스페이스에서 보이는 이름. 멤버가 아니면 계정 이름이다. */
 function myNameIn(workspaceId: string | undefined) {
   const me = state.members.find(
     (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
@@ -123,7 +102,6 @@ function myNameIn(workspaceId: string | undefined) {
   return me ? memberView(me).name : state.user.name;
 }
 
-/** 서버의 `coalesce(display_name, users.name)` 과 같다. */
 function memberView(member: MockMember) {
   const { displayName, ...rest } = omit(member, ["workspaceId"]);
   return {
@@ -134,33 +112,21 @@ function memberView(member: MockMember) {
   };
 }
 
-/**
- * 초대는 목록 응답 항목보다 넓다 — 목록은 PENDING만 보여주지만 목은 수락·거절·취소된 것도
- * 갖고 있어야 알림의 상태를 따라가게 할 수 있다 (계약: 취소된 초대의 알림도 목록에 남는다).
- */
 type MockInvitation = WorkspaceInvitationListResponseDataInvitationsItem & {
   workspaceId: string;
   status: NotificationListResponseDataNotificationsItemInvitationStatus;
 };
 
-/** 계약은 미연동 provider도 목록에 담으므로(connected: false) 목도 두 provider를 항상 들고 있는다. */
-/** 유저가 아직 멤버가 아닌, 초대만 와 있는 워크스페이스. 수락하면 여기 합류한다. */
 const INVITED_WORKSPACE = {
   workspaceId: "01K0000000030",
   name: "디자인 팀",
 } as const;
 
-/** 두 번째 대기 초대의 워크스페이스(APP-1361). */
 const RESEARCH_WORKSPACE = {
   workspaceId: "01K0000000043",
   name: "리서치 랩",
 } as const;
 
-/**
- * 워크스페이스를 떠난 시작자의 아바타. 멤버 목록에 없어 참여자에서 이미지를 빌릴 수 없는
- * 유일한 표본이라, 계약이 `meetingStartedBy.image`를 싣는지가 여기서만 눈에 보인다.
- * `MOCK_AVATAR`와 같은 이유로 원격 URL이 아닌 인라인 data URI다 (오프라인에서 안 흔들린다).
- */
 const EX_MEMBER_AVATAR =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
@@ -173,17 +139,6 @@ type MockIntegration = ToolConnectionsResponseDataIntegrationsItem & {
   workspaceId: string;
 };
 
-/**
- * 메시지 하나에 붙는 범위. 서버 계약(`AgentChatMessagesResponse`)의 그 모양이다.
- *
- * ★ **`kind` 가 대문자다.** server 가 도메인 enum(`ScopeRefKind`)을 응답에 그대로 쓰고
- * Jackson 이 이름을 그대로 낸다 — 그 레포는 전 API 를 그렇게 내고 `ExposedEnumContractTest`
- * 가 못박고 있다. SSE 는 ai 가 내서 소문자라 **같은 필드가 두 전송에서 두 모양**이고,
- * 접는 것은 화면의 일이다(`chat-thread.tsx`의 `livingScope`).
- *
- * 목이 소문자를 내던 동안 프로젝트 칩이 회의록 칩으로 그려지는 결함이 살아 있었다 —
- * **목만 통과하는 모양이면 검사가 아무것도 안 지킨다.**
- */
 export type ScopeRef = {
   kind: "NOTE" | "PROJECT";
   id: string;
@@ -191,29 +146,17 @@ export type ScopeRef = {
   unavailable: boolean;
 };
 
-/**
- * 개인 챗봇 대화. **활성 플래그가 없다** — 대화가 여럿 살고, 목록의 첫 줄(=`updatedAt`이
- * 가장 큰 것)이 「마지막으로 쓴 대화」다. `updatedAt`은 응답 밖 필드가 아니라 목록 계약의
- * 정렬 기준이라 여기 산다.
- */
 type MockAgentChat = AgentChatResponseData & { updatedAt: string };
 
-/** 목록 상한. 계약이 못박은 값이다 — cursor는 대화가 실제로 쌓일 때. */
 const AGENT_CHAT_LIST_LIMIT = 50;
 
-/** 생성 시점의 제목. 첫 USER 메시지가 이 값일 때만 덮는다. */
 const DEFAULT_AGENT_CHAT_TITLE = "새 대화";
 
-/** 시드 대화의 제목 출처. 서버 백필 규칙과 같다 — 기본 제목이면 DEFAULT, 그 밖은 QUESTION. */
 const seededTitleSource = (title: string) =>
   title === DEFAULT_AGENT_CHAT_TITLE
     ? ("DEFAULT" as const)
     : ("QUESTION" as const);
 
-/**
- * 목이 짓는 「AI 제목」. 실제 AI 처럼 질문을 짧은 명사구로 줄인다 — 요청 어미(「~해줘」「~알려줘」)와 물음표를 떼고 24자에서
- * 자른다. 첫 질문 제목(QUESTION)과 눈으로 갈려야 「제목이 늦게 바뀐다」가 화면에서 보인다.
- */
 function aiTitleFor(question: string) {
   const core = question
     .replace(/\s+/g, " ")
@@ -227,14 +170,12 @@ function aiTitleFor(question: string) {
   return title ? `${title} 정리` : "대화 정리";
 }
 
-/** 제목 컬럼 상한(`AgentChat.MAX_TITLE_LENGTH`). 목록에서 한 줄로 자르는 것은 CSS가 한다. */
 const MAX_AGENT_CHAT_TITLE_LENGTH = 200;
 
 type MockAgentChatMessage = AgentChatMessagesResponseDataMessagesItem & {
   chatId: string;
 };
 
-/** 임시 참여자. 응답에 없는 `workspaceId`를 목이 소유 판정에 쓴다. */
 type MockWorkspaceGuest = {
   guestId: string;
   workspaceId: string;
@@ -249,14 +190,10 @@ export type StoreState = {
   notes: NoteResponseData[];
   sessions: MockSession[];
   segments: StoredSegment[];
-  /** 화자 분리 결과. 목이 시나리오로 심는다 — 아직 만드는 흐름이 없다(APP-419·420). */
   diarizations: Map<string, TranscriptResponseDataDiarization>;
-  /** 세션 사이가 아닌 공백(CAPTURE·UPLOAD). 서버가 오브젝트에서 유도하는 것을 목이 심는다. */
   extraGaps: Map<string, TranscriptResponseDataGapsItem[]>;
-  /** 받아쓰지 못한 구간. 서버가 업체 연결에서 기록하는 것을 목이 심는다(APP-706). */
   transcriptGaps: Map<string, TranscriptResponseDataTranscriptGapsItem[]>;
   members: MockMember[];
-  /** 워크스페이스가 소유하는 계정 없는 참여자 (APP-490). */
   workspaceGuests: MockWorkspaceGuest[];
   invitations: MockInvitation[];
   notifications: NotificationListResponseDataNotificationsItem[];
@@ -265,11 +202,8 @@ export type StoreState = {
   integrations: MockIntegration[];
   agentChats: MockAgentChat[];
   agentChatMessages: MockAgentChatMessage[];
-  /** 외부 에이전트 연결(APP-804). 관리자 목록(APP-941)이 맡긴 사람을 보여 소유자 열을 둔다. */
   agentDelegations: MockAgentDelegation[];
-  /** 연결별 도구 호출 내역(APP-826). 본문은 서버 표에도 없어 여기에도 없다. */
   agentDelegationUsages: MockAgentDelegationUsage[];
-  /** 나를 기다리는 OAuth 동의 요청(APP-888). 키는 server 가 동의 화면 주소에 붙이는 `state` 다. */
   agentOAuthConsents: Record<string, MockAgentOAuthConsent>;
 };
 
@@ -287,13 +221,11 @@ type MockAgentDelegationUsage = AgentDelegationUsagesResponseDataUsagesItem & {
   delegationId: string;
 };
 
-/** 서버(APP-825)의 한 쪽 크기와 같다. */
 const AGENT_USAGE_PAGE_SIZE = 20;
 
 let state: StoreState;
 let idCounter = 100;
 
-/** 응답에 없는 내부 전용 필드를 떼어낸다 (멤버·초대의 workspaceId 등). */
 function omit<T extends object, K extends keyof T>(
   value: T,
   keys: readonly K[]
@@ -303,12 +235,6 @@ function omit<T extends object, K extends keyof T>(
   return next;
 }
 
-/**
- * 시드 화자를 **실제 참여자에서** 만든다.
- *
- * 이름을 손으로 박으면 참여자 시드가 바뀔 때 조용히 어긋난다 — 실제로 없는 사람 이름이
- * 화자에 붙어 있었고, 그 상태로는 「연결을 옮기면 앞 화자에서 떨어진다」가 테스트되지 않는다.
- */
 function seededDiarizations(
   notes: NoteResponseData[]
 ): Map<string, TranscriptResponseDataDiarization> {
@@ -345,32 +271,17 @@ function seededDiarizations(
   ]);
 }
 
-/**
- * 발화 단위 화자 지정을 하나 심는다 (V31).
- *
- * **목에 하나도 없으면 이 기능이 목에서 한 번도 안 그려진다.** 계약의 `assignedParticipantId`
- * 도 늘 `null` 이라 nullable 표본이 한쪽으로 기운다.
- *
- * 심는 자리는 **화자 A 의 두 발화 중 하나**다. A 는 첫 참여자로 지정돼 있으므로, 그 중 한
- * 줄만 다른 사람으로 두면 「라벨은 맞는데 이 줄만 남의 말」이라는 실제 상황이 된다.
- * 이름을 손으로 박지 않는다 — 참여자 시드가 바뀌면 조용히 어긋난다.
- */
 function seedSegmentOverride(
   notes: NoteResponseData[],
   segments: StoredSegment[]
 ) {
   const note = notes.find((row) => row.noteId === "01K0000000020");
-  // 라벨 A 에 붙은 사람과 **다른** 사람이라야 「이 줄만 다르다」가 보인다
   const other = note?.participants[1];
   const segment = segments.find((row) => row.segmentId === "01K0000000063");
   if (!other || !segment) return;
   segment.assignedParticipantId = other.participantId;
 }
 
-/**
- * 계정 참여자와 임시 참여자가 한 목록에 섞이므로 **채워진 이름으로 정렬**한다.
- * 서버의 `coalesce(user.name, workspace_guests.display_name)` 정렬과 같은 값이다.
- */
 function sortParticipants(
   participants: NoteResponseData["participants"]
 ): NoteResponseData["participants"] {
@@ -381,21 +292,8 @@ function sortParticipants(
   );
 }
 
-/**
- * 회의에서 빠진 사람의 화자 연결을 끊는다.
- *
- * 서버에서는 목이 흉내 낼 코드가 아니라 **DB 제약**이다 —
- * `speaker_assignments.participant_id`의 `ON DELETE CASCADE`가 한다. 목이 이걸 안 하면
- * 회의에서 뺀 사람의 이름이 화자에 계속 붙어 있어, 목으로만 보는 화면이 서버와 갈라진다.
- *
- * **`participantId`가 `null`인 행은 안 지운다.** 그것은 「참석자 중에 없다」로 사람이 확정한
- * 답이라 참여자를 어떻게 바꿔도 남아야 한다.
- */
 function detachSpeakers(noteId: string, participantIds: string[]) {
   if (participantIds.length === 0) return;
-  // **발화 단위 지정을 먼저 지운다** (V31). 서버는 참여 기록 FK 의 CASCADE 가 가져가는데,
-  // 목에는 CASCADE 가 없어 없는 기록을 가리킨 채 남는다 — 전사가 주인 없는 이름을 낸다.
-  // 화자 분리가 없는 회의도 지나야 하므로 아래 early return 보다 위에 둔다.
   for (const segment of segmentsOfNote(noteId)) {
     if (
       segment.assignedParticipantId &&
@@ -422,24 +320,15 @@ function detachSpeakers(noteId: string, participantIds: string[]) {
   });
 }
 
-/** 연동이 회의 하나에서 만나는 것. 서버의 네 값과 같은 모양이다. */
 type GuestLinkEntry = {
   noteId: string;
   title: string;
-  /** 계약이 목록을 **최근순**으로 자르라고 한다. 그 기준이다. */
   createdAt: string;
   guestParticipantId: string;
   guestHasSpeaker: boolean;
   accountParticipantId: string | null;
 };
 
-/**
- * 그 참여 기록에 **화자가 하나라도 붙어 있나.** 라벨이 아니라 참/거짓인 이유는 V31 부터 한
- * 기록이 화자 여럿을 들 수 있어서다 — 쓰는 쪽은 「붙었나」만 본다.
- *
- * **발화 단위 지정도 화자로 센다.** 라벨은 없고 그 줄만 지정한 기록을 지우면 그 지정이
- * 함께 사라진다.
- */
 function hasSpeaker(noteId: string, participantId: string) {
   const onLabel = state.diarizations
     .get(noteId)
@@ -450,10 +339,6 @@ function hasSpeaker(noteId: string, participantId: string) {
   return Boolean(onLabel) || onSegment;
 }
 
-/**
- * 미리보기와 실행이 **같은 판정을 공유한다.** 각자 세면 「바뀔 회의」와 「바뀐 회의」가
- * 어긋나는데, 연동은 되돌릴 수 없어 사후에 고칠 방법이 없다.
- */
 function planGuestLink(
   workspaceId: string,
   guestId: string,
@@ -485,20 +370,14 @@ function planGuestLink(
       accountParticipantId: accountRow?.participantId ?? null,
     });
   }
-  // **모든 회의가 합쳐진다** (V31). APP-492 는 양쪽이 서로 다른 화자에 붙어 있으면
-  // 건너뛰었는데 — 합치면 한 사람이 두 화자가 되고 유니크가 그것을 막았다 — 그 유니크가
-  // 사라지면서 건너뛸 이유도 함께 사라졌다.
   return { changed: entries };
 }
 
-/** 목록은 100건에서 자르고 **개수는 절대 안 자른다** — 서버와 같은 규칙이다. */
 const MAX_LISTED_NOTES = 100;
 
 function guestLinkResultOf(plan: { changed: GuestLinkEntry[] }) {
   return {
     changedNoteCount: plan.changed.length,
-    // **계약이 「최근순 최대 100건」이다.** `planGuestLink` 는 시드 배열 순서로 만드는데,
-    // 새 노트가 뒤에 붙으므로 그대로 자르면 **오래된 100건**이 나간다 — 서버와 반대다.
     changedNotes: [...plan.changed]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, MAX_LISTED_NOTES)
@@ -506,7 +385,6 @@ function guestLinkResultOf(plan: { changed: GuestLinkEntry[] }) {
   };
 }
 
-/** 주인이 바뀌면 화자 목록이 들고 있는 이름·계정도 함께 바뀐다. */
 function renameSpeaker(
   noteId: string,
   participantId: string,
@@ -524,10 +402,6 @@ function renameSpeaker(
   });
 }
 
-/**
- * 그 회의에 속한 발화들. **세그먼트는 세션에 매달려 있어** 노트로 바로 못 고른다 —
- * 노트를 안 가리고 라벨만 보면 다른 회의의 같은 라벨까지 걸린다(서버는 note_id 로 가른다).
- */
 function segmentsOfNote(noteId: string) {
   const sessionIds = new Set(
     state.sessions
@@ -539,14 +413,6 @@ function segmentsOfNote(noteId: string) {
   );
 }
 
-/**
- * 사라질 참여 기록에 붙어 있던 화자를 살아남을 기록으로 옮긴다 (V31).
- *
- * 서버는 `ON DELETE CASCADE` 라 옮기지 않으면 화자가 조용히 사라지고, 목은 CASCADE 가 없어
- * 지워진 기록을 가리킨 채 남는다 — **증상은 다르지만 둘 다 이름을 잃는다.**
- *
- * 라벨 지정과 발화 단위 지정을 **둘 다** 옮긴다.
- */
 function repointSpeakers(noteId: string, fromId: string, toId: string) {
   const diarization = state.diarizations.get(noteId);
   if (diarization) {
@@ -566,7 +432,6 @@ function repointSpeakers(noteId: string, fromId: string, toId: string) {
   }
 }
 
-/** 목 계정 언어 쿠키(`MOCK_ACCOUNT_LANGUAGE_COOKIE`). 브라우저 밖(vitest node·SSR 시드)에서는 없음이다. */
 function readMockAccountLanguage(): "ko" | "en" | null {
   if (typeof document === "undefined") return null;
   const value = document.cookie
@@ -593,11 +458,6 @@ function withQuery(uri: string, params: Record<string, string>) {
   return url.toString();
 }
 
-/**
- * **참여자 저장의 병합 기준이 지금과 다르면 거절한다** (APP-777). 서버와 같은 규칙이다 —
- * 기준이 없으면 옛 화면이라 비교하지 않고, 요청한 목록이 이미 지금과 같으면 다시 보낸
- * 같은 저장이라 통과시킨다.
- */
 function rejectIfChanged(
   expected: string[] | undefined,
   current: string[],
@@ -617,15 +477,6 @@ function nextId() {
   return id;
 }
 
-/**
- * ★ **목이 만드는 것의 시각. 굳은 값을 쓰지 않는다.**
- *
- * 전에는 `2026-07-11T09:00:00Z`에 굳어 있었고, 시드 노트에는 그보다 **뒤인** 날짜가 박혀
- * 있었다. 그래서 방금 만든 노트가 목록 맨 아래에 섰다 — 챗 쪽에서 먼저 밟고 시계를 하나 더
- * 만들어 피했던 것과 같은 병이다. 시계는 하나면 된다.
- *
- * 같은 밀리초에 여러 번 불려도 순서가 뒤집히지 않게 1ms 씩 앞으로 민다.
- */
 let mockClock = 0;
 function nextTimestamp() {
   mockClock = Math.max(Date.now(), mockClock + 1);
@@ -644,42 +495,18 @@ function nextSessionTimestamp() {
   return new Date(Math.max(Date.now(), latest + 1_000)).toISOString();
 }
 
-/**
- * 오늘로부터 `daysAgo`일 전의 시각. 앱 타임존(KST) 날짜가 정확히 그 날이 되도록
- * UTC 01시대에 놓는다 — 자정 근처에 두면 KST 기준 날짜가 하루 밀려 묶음이 어긋난다.
- * `order`는 같은 날 안의 정렬만 벌리는 분 단위 오프셋이다.
- *
- * ★ **미래로 넘어가지 않게 잘라낸다.** `daysAgo=0` 은 앱 타임존 오전 10시라 그 전에 열면
- * 아직 오지 않은 시각이 되고, 그 시드는 **방금 만든 것보다도 위**에 선다. 챗 시드가 먼저
- * 밟아 `Date.now()` 로 피해 갔던 자리인데 노트 시드는 그대로였다.
- */
 function daysAgoIso(daysAgo: number, order = 0): string {
   const todayUtcMidnight = Date.parse(`${getAppDateKey(new Date())}T00:00:00Z`);
   const at =
     todayUtcMidnight - daysAgo * 86_400_000 + 3_600_000 - order * 60_000;
-  // 음수 `daysAgo` 는 일부러 미래를 잡는 자리다(초대 만료). 거기까지 자르지 않는다.
   const capped =
     daysAgo >= 0 ? Math.min(at, Date.now() - order * 60_000 - 1_000) : at;
   return new Date(capped).toISOString();
 }
 
-/**
- * ★ **개인 챗봇 대화 시드. 절대 시각을 박지 않는다.**
- *
- * 「2026-07-11T18:00:00Z」처럼 굳혀 두면 시간이 지나면서 「오늘」 묶음이 영원히 빈 채로
- * 남고, 목록의 날짜 묶음과 스레드의 날짜 구분선을 목에서 한 번도 볼 수 없다. 전부 **지금
- * 시각에서 거꾸로** 잡는다.
- *
- * 오늘 자리에만 `Date.now()` 를 직접 쓴다 — `daysAgoIso(0)` 은 앱 타임존 오전 10시라
- * 새벽에 열면 **미래**가 된다.
- *
- * 첫 대화 하나가 스레드 구분선 두 갈래를 다 보여준다: **날짜가 바뀌어 서는 자리**와
- * **같은 날이라 안 서는 자리**(어제 안에서 세 시간 벌어진 왕복).
- */
 function seedAgentChats(workspaceId: string) {
   const minutesAgo = (minutes: number) =>
     new Date(Date.now() - minutes * 60_000).toISOString();
-  /** 그날(앱 타임존) 오전 10시를 기준으로 `minutes` 분 뒤. */
   const dayAt = (daysAgo: number, minutes: number) =>
     new Date(Date.parse(daysAgoIso(daysAgo)) + minutes * 60_000).toISOString();
 
@@ -687,7 +514,6 @@ function seedAgentChats(workspaceId: string) {
   const messages: MockAgentChatMessage[] = [];
   let turn = 300;
 
-  /** 한 왕복. 답은 질문 8초 뒤라 둘 사이에는 구분선이 안 선다. */
   const exchange = (
     chatId: string,
     askedAt: string,
@@ -730,7 +556,6 @@ function seedAgentChats(workspaceId: string) {
     return chatId;
   };
 
-  // 오늘 — 몇 분 전. **스레드 안에서 구분선 세 갈래가 다 보이는 대화다.**
   const followUp = chat("01K0000000201", "회의 후속 정리", dayAt(1, 320));
   exchange(
     followUp,
@@ -738,14 +563,12 @@ function seedAgentChats(workspaceId: string) {
     "지난 회의에서 정한 것만 정리해줘",
     "세 가지가 남아 있었습니다. 첫 화면 개편, 알림 정책 확정, 그리고 배포 일정 재조정입니다."
   );
-  // 같은 날 세 시간 뒤 — 날짜가 그대로라 구분선이 안 선다.
   exchange(
     followUp,
     dayAt(1, 496),
     "그럼 두 번째는?",
     "알림 정책은 기본값을 끄기로 하고, 켤 사람만 설정에서 켜는 쪽으로 좁혔습니다."
   );
-  // 오늘 — 날짜가 바뀌어 구분선이 다시 선다.
   exchange(
     followUp,
     minutesAgo(6),
@@ -785,15 +608,6 @@ function seedAgentChats(workspaceId: string) {
     "리뷰 대기 시간을 줄이자는 것과 배포 체크리스트를 문서로 남기자는 것 둘입니다."
   );
 
-  /**
-   * ★ **끝난 뒤에도 생각이 남는가를 보는 자리.**
-   *
-   * 이것 하나가 없으면 그 변경을 확인하려고 매번 살아 있는 턴을 굴려야 하고, 그러면
-   * 「흐를 때」와 「끝난 뒤」를 나란히 못 본다 [W-11]. 여기는 **열자마자 끝난 모습**이다.
-   *
-   * 도구를 두 번 부르고 생각이 그 사이사이에 낀다 — 단계가 여럿 쌓인 묶음이 어떻게
-   * 접히는지가 한 번에 보인다.
-   */
   const traced = chat("01K0000000208", "생각이 남은 대화", dayAt(2, 60));
   {
     const turnId = `01K${String(turn).padStart(10, "0")}`;
@@ -837,7 +651,6 @@ function seedAgentChats(workspaceId: string) {
       url: null,
       card: null,
     });
-    // 아주 긴 생각 — 접히는지, 아니면 화면을 밀어내는지 보는 자리다.
     step(
       6,
       "THINKING",
@@ -867,11 +680,6 @@ function seedAgentChats(workspaceId: string) {
     });
   }
 
-  /**
-   * ★ **진행 문장이 생각(thinking)으로 굳은 대화(APP-1435).** 지금 ai 의 모양이다 — 진행 문장은 줄바꿈으로 끝나는 THINKING 행이고,
-   * 답 본문에는 답만 있다. 열면 「N초 동안 생각 · 회의록 1건」 한 줄로 접혀 있고, 펴면 줄마다 한 단계다. 질문에는 회의록 칩이,
-   * 답 아래에는 누르면 그 회의록으로 가는 참고 칩이 선다. 제목은 AI 가 지었다.
-   */
   const ordered = chat(
     "01K0000000209",
     "주간 제품 회의 진행 순서",
@@ -951,10 +759,6 @@ function seedAgentChats(workspaceId: string) {
     );
   }
 
-  /**
-   * ★ **옛 대화(APP-1057 시절).** 진행 문장이 본문 `token` 으로 와서 답 앞에 문단으로 굳어 있다. 이관하지 않으므로 화면이 이
-   * 모양을 깨지 않고 그대로 그리는지 보는 자리다.
-   */
   const legacy = chat("01K0000000210", "알림 정책 결정 사항", dayAt(4, 90));
   exchange(
     legacy,
@@ -983,12 +787,9 @@ function seedAgentChats(workspaceId: string) {
     "회의 기록과 요약까지 냈고, 연동은 다음 분기로 미뤘습니다."
   );
 
-  // AI 가 제목을 지은 대화. 시드 규칙(`seededTitleSource`)은 첫 질문 제목으로 보므로 여기서 고친다
   for (const each of chats)
     if (each.chatId === ordered) each.titleSource = "AI";
 
-  // **`updatedAt` 은 마지막 메시지 시각이다.** 목록 정렬과 줄에 적히는 시각이 같은 값이라야
-  // 「1분 전인데 왜 세 번째 줄」이 안 생긴다.
   for (const each of chats) {
     const last = messages
       .filter((message) => message.chatId === each.chatId)
@@ -1005,7 +806,6 @@ function createSeedState(): StoreState {
   const user: CurrentUserResponseData = {
     ...MOCK_USER,
     ...structuredClone(MOCK_ACCOUNT),
-    // 설정에서 고른 언어는 새로고침 뒤에도 남는다(서버 SSR 목 사용자도 같은 쿠키를 읽는다).
     language: readMockAccountLanguage(),
   };
   const workspaces: WorkspaceResponseData[] = [
@@ -1016,8 +816,6 @@ function createSeedState(): StoreState {
       role: "ADMIN",
       agentAccessAllowed: true,
     },
-    // description은 계약상 nullable이다 — 설명 없는 워크스페이스를 화면이 어떻게 그리는지
-    // 목이 한 번도 안 보여주면 그 레이아웃은 검증되지 않는다.
     {
       workspaceId: "01K0000000006",
       name: "제품 팀",
@@ -1025,9 +823,6 @@ function createSeedState(): StoreState {
       role: "ADMIN",
       agentAccessAllowed: true,
     },
-    // **프로젝트가 하나도 없는 워크스페이스.** 새로 만든 워크스페이스는 항상 이 상태로
-    // 시작하는데 목에 표본이 없어서 온보딩 화면을 아무도 못 봤다. 노트도 프로젝트도
-    // 시드하지 않는다 — 비어 있는 것이 이 표본의 내용이다.
     {
       workspaceId: "01K0000000009",
       name: "새 워크스페이스",
@@ -1064,7 +859,6 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-03T00:00:00Z",
       updatedAt: "2026-07-03T00:00:00Z",
     },
-    // 설명 없는 프로젝트. 목록 행과 상세 헤더가 null을 어떻게 다루는지의 유일한 표본이다.
     {
       projectId: "01K0000000008",
       workspaceId: workspaces[1].workspaceId,
@@ -1097,14 +891,12 @@ function createSeedState(): StoreState {
       workspaceId: workspaces[1].workspaceId,
       userId: user.userId,
       name: user.name,
-      // 이 워크스페이스에서만 다른 이름을 정해 둔 모습이다(APP-1204) — 같은 사람이 워크스페이스마다 다른 이름일 수 있다.
       displayName: "리서치 담당",
       email: user.email,
       role: "ADMIN",
       image: user.image,
       joinedAt: "2026-07-03T00:00:00Z",
     },
-    // 「제품 팀」에는 관리자가 한 명 더 있다 — 내 역할을 MEMBER 로 내려 멤버가 보는 결제 화면을 볼 수 있다(APP-1596).
     {
       workspaceId: workspaces[1].workspaceId,
       userId: "01K0000000M21",
@@ -1134,16 +926,6 @@ function createSeedState(): StoreState {
     },
   ];
 
-  // 서버는 참여자를 이름 오름차순으로 내린다. 목도 같은 순서를 지켜야 아바타 순서가
-  // 화면 검증에서 뒤집히지 않는다.
-  /**
-   * **노트가 속한 워크스페이스의 멤버만** 참여자로 넣는다. 서버가 그 워크스페이스 멤버만
-   * 받으므로(`NOT_WORKSPACE_MEMBER`), 다른 워크스페이스 사람을 시드해 두면 그 노트에서
-   * 참여자를 한 명 추가하는 순간 보이지도 않는 ID까지 함께 PUT되어 400으로 막힌다.
-   * 메뉴에 없으니 지울 수도 없어 그 노트만 영영 편집 불가가 된다.
-   *
-   * members는 (워크스페이스, 유저) 쌍이라 같은 사람이 여러 줄이다 — userId로 한 번만 집는다.
-   */
   const participantsOf = (
     projectId: string,
     ...userIds: string[]
@@ -1174,25 +956,12 @@ function createSeedState(): StoreState {
           a.participantId.localeCompare(b.participantId)
       );
   };
-  /**
-   * 시드 임시 참여자 하나 (APP-490).
-   *
-   * 안 두면 목 표본에 **계정 없는 참여자가 한 번도 안 나온다** — `userId`·`email`·`guestId`가
-   * 계약상 nullable인데 목이 한쪽 값만 보여주게 되고, 그 상태로는 화면이 계정 없는 사람을
-   * 제대로 그리는지 브라우저에서 확인할 수가 없다. `nullable-coverage` 테스트가 그걸 잡는다.
-   */
   const seededGuest: MockWorkspaceGuest = {
     guestId: "01K0000000900",
     workspaceId: workspaces[0].workspaceId,
     displayName: "박서준",
     createdAt: "2026-07-08T00:00:00Z",
   };
-  /**
-   * 실제 멘토링에 온 넷. 계정이 없어 전부 임시 참여자다 — 참여자에게 `userId` 도 `guestId` 도
-   * 없으면 참석자 필드가 그들을 한 열쇠로 다뤄 하나씩 고를 수 없고, 저장이 깨진다.
-   *
-   * 이동준 멘토님이 라벨 D·E 둘을 갖는 사람이라 화자 패널의 묶음 판정에 쓰인다.
-   */
   const mentoringGuests: MockWorkspaceGuest[] = (
     [
       [MENTORING_GUEST_IDS.hanJiwon, "한지원"],
@@ -1214,25 +983,12 @@ function createSeedState(): StoreState {
     email: null,
     image: null,
   });
-  /**
-   * 회의 시작자. 계약이 참여자와 **같은 네 필드**를 내리므로 목도 같은 모양으로 시드한다 —
-   * 예전에는 시작자만 userId·name이라 화면이 이미지를 참여자 목록에서 빌려 왔고, 그
-   * 우회가 사라졌다. 여기서 email·image를 빠뜨리면 목만 옛 계약으로 남는다.
-   *
-   * 시작자는 워크스페이스 멤버가 아닐 수 있다(회의 뒤 나간 사람). 그 경우는 호출부가
-   * 직접 적는다 — members에 없다고 null을 돌려주면 시작자가 통째로 사라진다.
-   */
   const starterOf = (userId: string): NoteResponseData["meetingStartedBy"] => {
     const member = members.find((candidate) => candidate.userId === userId);
     if (!member) return null;
     const { name, email, image } = memberView(member);
     return { userId, name, email, image };
   };
-  /**
-   * **프로젝트에서 나오는 셋은 손으로 안 쓴다.** `workspaceId`·`projectName` 은 서버가 접근
-   * 검증에서 이미 읽은 프로젝트에서 그대로 나오고(APP-685), 시드마다 손으로 적으면 프로젝트를
-   * 옮길 때 한 줄만 낡는다. `meetingEndedAt` 은 종료한 회의만 값이 있다.
-   */
   type SeedNote = Omit<
     NoteResponseData,
     | "workspaceId"
@@ -1258,7 +1014,6 @@ function createSeedState(): StoreState {
       contextTopic: note.contextTopic ?? null,
       contextBackground: note.contextBackground ?? null,
       autoEnd: note.autoEnd ?? null,
-      // 일시정지 시각은 세션에서 읽어 낸다(`pausedAtOf`). 저장하지 않는다.
       pausedAt: null,
     };
   };
@@ -1269,7 +1024,6 @@ function createSeedState(): StoreState {
       title: "주간 제품 회의",
       createdAt: "2026-07-10T00:00:00Z",
       updatedAt: "2026-07-11T00:00:00Z",
-      // 회의 맥락(APP-1188)을 적어 둔 표본. 나머지 시드는 비어 있다
       contextTopic: "결제 오류 대응과 다음 주 출시 일정",
       contextBackground:
         "지난주 결제 승인 실패가 늘어 원인을 찾는 중입니다. 오늘은 PG사 로그 결과와 임시 조치를 정합니다.",
@@ -1278,7 +1032,6 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: starterOf(MOCK_USER.userId),
-      // 계정 참여자 둘과 임시 참여자 하나가 섞인 회의. 이 프로젝트가 여는 것이 그 조합이다.
       participants: sortParticipants([
         ...participantsOf(
           projects[0].projectId,
@@ -1301,13 +1054,10 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
       participants: participantsOf(projects[1].projectId, MOCK_USER.userId),
     },
-    // 후보 조회가 500 을 내는 노트 (`CONTEXT_FAILING_NOTE_ID`). **노트 자체는 정상으로
-    // 실려야 한다** — 죽는 것은 후보 표면뿐이고, 전사와 회의 종료는 계속된다.
     {
       noteId: "01K0000000006",
       projectId: projects[0].projectId,
       title: "정리 실패 재현 회의",
-      // 커버리지 노트(0008)보다 과거로 둔다.
       createdAt: "2026-07-05T00:00:00Z",
       updatedAt: "2026-07-05T00:00:00Z",
       meetingStatus: "PAUSED",
@@ -1317,7 +1067,6 @@ function createSeedState(): StoreState {
       meetingStartedBy: starterOf(MOCK_USER.userId),
       participants: participantsOf(projects[0].projectId, MOCK_USER.userId),
     },
-    // server 적재 합성 원장을 싣는 노트 (`CONTEXT_SYNTHETIC_LEDGER_NOTE_ID`).
     {
       noteId: "01K0000000007",
       projectId: projects[0].projectId,
@@ -1331,7 +1080,6 @@ function createSeedState(): StoreState {
       meetingStartedBy: starterOf(MOCK_USER.userId),
       participants: participantsOf(projects[0].projectId, MOCK_USER.userId),
     },
-    // 커버리지 행 «교체» 회귀 전용. 다른 e2e 와 섞이면 무엇이 행을 움직였는지 흐려진다.
     {
       noteId: "01K0000000008",
       projectId: projects[0].projectId,
@@ -1345,8 +1093,6 @@ function createSeedState(): StoreState {
       meetingStartedBy: starterOf(MOCK_USER.userId),
       participants: participantsOf(projects[0].projectId, MOCK_USER.userId),
     },
-    // 안건이 실시간으로 정해지는 회의 (`LIVE_AGENDA_NOTE_ID`). 노트 토픽을 구독하면 명제와
-    // agendas.changed 가 차례로 온다.
     {
       noteId: "01K0000000016",
       projectId: projects[0].projectId,
@@ -1370,9 +1116,6 @@ function createSeedState(): StoreState {
       meetingStartedAt: "2026-07-12T00:00:00Z",
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
-      // 워크스페이스 멤버 목록에 없는 시작자다 — 회의 뒤 나간 사람. 참여자에서 이미지를
-      // 빌려 올 수 없는 유일한 표본이라, 시작자 아바타 회귀는 이 노트에서만 눈에 띈다.
-      // **image를 null로 두면 이 표본이 무의미해진다** — 고쳐도 이니셜만 보이기 때문이다.
       meetingStartedBy: {
         userId: "01K0000000099",
         name: "김서연",
@@ -1401,8 +1144,6 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
       participants: [],
     },
-    // 오래 멈춘 회의(APP-1313). 녹음한 세션이 있어 목록이 일시정지 시각(`pausedAt`)을 낸다 — 「N일째 일시정지됨」과
-    // 노트 상단 띠가 이 노트로 선다. 다른 일시정지 시드는 녹음 없는 READY 만료이거나 다른 e2e 가 끝내 버린다.
     {
       noteId: "01K0000000040",
       projectId: projects[2].projectId,
@@ -1410,7 +1151,6 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-07T00:00:00Z",
       updatedAt: "2026-07-07T00:05:00Z",
       meetingStatus: "PAUSED",
-      // 자동 종료가 예고된 회의(APP-1319). 예정 시각은 실행일 기준 이틀 뒤 오후 4시 20분(KST)이다.
       autoEnd: {
         scheduledAt: new Date(
           Math.floor(Date.now() / 86_400_000) * 86_400_000 +
@@ -1442,20 +1182,10 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: null,
-      // projects[3]은 두 번째 워크스페이스라 그 워크스페이스 멤버(나)만 들어간다.
       participants: participantsOf(projects[3].projectId, MOCK_USER.userId),
     },
-    // 날짜 묶음(오늘·어제·이번 주·지난주·이번 달·연월)과 밀도 합격선(주 콘텐츠 8개 이상)을
-    // 실제 화면에서 볼 수 있어야 해서 시간대를 흩어 둔다. 노트가 둘뿐이면 목록이 한 묶음으로
-    // 뭉쳐 "날짜 구분이 없다"처럼 보인다.
-    //
-    // **날짜만 실행일 기준 상대값이다.** 고정 문자열로 두면 하루만 지나도 `오늘` 묶음이
-    // 사라지고 결국 전부 한 달로 뭉쳐, 묶음을 보여주려던 시드가 제 일을 못 한다.
-    // 무작위가 아니라 오늘에 맞춘 값이라 실행 안에서는 결정적이다.
     ...[
       ["01K0000000020", "온보딩 이탈 구간 리뷰", 0, 0],
-      // **괄호가 든 제목이 목에 하나는 있어야 한다.** 마커의 이스케이프 규칙이
-      // 어긋나면 이런 제목에서만 깨지는데, 표본이 없으면 e2e 가 그 자리를 못 밟는다.
       ["01K0000000021", "알림 정책 논의 (2차)", 0, 1],
       ["01K0000000022", "고객 피드백 정리", 1, 0],
       ["01K0000000023", "스프린트 회고", 3, 1],
@@ -1464,8 +1194,6 @@ function createSeedState(): StoreState {
       ["01K0000000026", "분기 계획 세션", 20, 0],
       ["01K0000000027", "파트너십 킥오프", 45, 1],
     ].map(([noteId, title, daysAgo, projectIndex], index) => {
-      // **한 번 계산해 셋이 나눠 쓴다.** 세 번 부르면 상한(`Date.now()`)에 걸리는 시각대에서
-      // 호출 사이의 실제 몇 ms 가 섞여, 같은 순간이어야 할 셋이 조금씩 어긋난다.
       const at = daysAgoIso(daysAgo as number, index);
       return {
         noteId: noteId as string,
@@ -1475,29 +1203,15 @@ function createSeedState(): StoreState {
         updatedAt: at,
         meetingStatus: "ENDED" as const,
         meetingStartedAt: null,
-        /**
-         * **끝난 회의는 종료 시각이 있다** (APP-685). 계약이 「안 끝났으면 null」이라고 말하므로
-         * ENDED 인데 null 이면 목이 계약을 어긴다 — 화면이 그 조합을 정상으로 보고 만들어진다.
-         *
-         * 한 번도 녹음하지 않은 회의라 `meetingStartedAt` 은 그대로 null 이다. 종료는 녹음과
-         * 무관하게 누를 수 있다.
-         */
         meetingEndedAt: at,
         recordedDurationMs: 0,
         activeSessionStartedAt: null,
-        // 절반은 내가 시작한 회의로 둔다 — 행의 시작자 아바타가 「나」인 경우도 표본에 있어야 한다.
-        //
-        // 나머지 절반은 다시 둘로 가른다. **셋 다 필요하다** — 이미지 있는 시작자, 이미지 없는
-        // 시작자(한지원), 시작자 자체가 없는 회의. 「시작 전」 노트들도 시작자가 null이지만
-        // 그건 표본이 못 된다: `nullable-coverage`가 그 노트들로 세션을 만들면서 시작자를
-        // 채워 버려, **종료된 이 노트들만이 null 쪽을 끝까지 들고 있다.**
         meetingStartedBy:
           (projectIndex as number) === 0
             ? starterOf(MOCK_USER.userId)
             : (index as number) < 4
               ? starterOf("01K0000000020")
               : null,
-        // 넘침(+N) 표시를 화면에서 볼 수 있게 절반은 참여자를 둘 다 넣는다.
         participants:
           index % 2 === 0
             ? participantsOf(
@@ -1509,7 +1223,6 @@ function createSeedState(): StoreState {
                 projects[projectIndex as number].projectId,
                 MOCK_USER.userId
               ),
-        // 시스템이 자동 종료한 회의 표본(APP-1319). 분석 실패 시드라 안내의 「분석하지 못했습니다」도 여기서 본다.
         autoEnd:
           noteId === "01K0000000026"
             ? {
@@ -1522,10 +1235,6 @@ function createSeedState(): StoreState {
             : null,
       };
     }),
-    /**
-     * 실제 멘토링 회의(63분·494발화). 화자 다섯이 사람 넷에 붙고 **한 명이 라벨 둘을**
-     * 가진다 — 지어낸 시드로는 안 나오는 모양이라 그대로 떠 왔다.
-     */
     {
       noteId: MENTORING_NOTE_ID,
       projectId: projects[0].projectId,
@@ -1534,7 +1243,6 @@ function createSeedState(): StoreState {
       updatedAt: "2026-09-11T02:48:18Z",
       meetingStatus: "ENDED",
       meetingStartedAt: "2026-09-11T01:45:00Z",
-      // 서버가 찍는 종료 시각 (APP-685). 없는 동안 화면이 브라우저의 `Date.now()` 로 지어냈다.
       meetingEndedAt: "2026-09-11T02:48:18Z",
       recordedDurationMs: 3_797_080,
       activeSessionStartedAt: null,
@@ -1589,8 +1297,6 @@ function createSeedState(): StoreState {
       endedAt: "2026-07-11T00:02:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
-    // 진행 중인 시드에는 실제 열린 세션이 있어야 한다. 0002·0028은 앞선 완료 세션이
-    // 회의 시작 시각을 정하고, 이 세션이 지금 다른 탭에서 진행되는 녹음을 나타낸다.
     {
       sessionId: "01K0000000402",
       noteId: "01K0000000002",
@@ -1611,7 +1317,6 @@ function createSeedState(): StoreState {
       endedAt: null,
       endReason: null,
     },
-    // 실시간 안건 회의(0016)도 다른 탭에서 녹음 중이다.
     {
       sessionId: "01K0000000416",
       noteId: "01K0000000016",
@@ -1622,7 +1327,6 @@ function createSeedState(): StoreState {
       endedAt: null,
       endReason: null,
     },
-    // READY 만료는 회의를 PAUSED 로 돌리고 회의 시작 시각은 남기지 않는다.
     {
       sessionId: "01K0000000406",
       noteId: "01K0000000006",
@@ -1663,7 +1367,6 @@ function createSeedState(): StoreState {
       endedAt: "2026-07-07T00:05:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
-    // 커버리지 «교체» 회귀 전용 세션. 전사가 화면을 넘겨야 추종을 잴 수 있다.
     {
       sessionId: "01K0000000008",
       noteId: "01K0000000008",
@@ -1674,9 +1377,6 @@ function createSeedState(): StoreState {
       endedAt: "2026-07-13T00:05:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
-    // 시드 분석(아래 `analyses`)이 붙은 종료 노트의 세션이다. 근거 인용이 실제 전사 줄을
-    // 가리켜야 요약 → 전사 점프를 목에서 밟을 수 있다 — 세그먼트가 없으면 칩만 있고
-    // 눌러도 갈 곳이 없다.
     {
       sessionId: "01K0000000060",
       noteId: "01K0000000020",
@@ -1697,7 +1397,6 @@ function createSeedState(): StoreState {
       endedAt: "2026-09-11T02:48:18Z",
       endReason: "CLIENT_DISCONNECTED",
     },
-    // 열린 세션 가드는 노트별이다. 새 노트의 세션 생성은 위 진행 중 시드와 독립적이다.
   ];
   const segments: StoredSegment[] = [
     {
@@ -1730,8 +1429,6 @@ function createSeedState(): StoreState {
       speakerLabel: null,
       assignedParticipantId: null,
     },
-    // 커버리지 «교체» 회귀 전용. 40줄이면 어느 뷰포트에서도 화면을 넘긴다 —
-    // 넘치지 않으면 추종이 성립하는지 자체를 잴 수 없다.
     ...Array.from({ length: 40 }, (_, index) => ({
       segmentId: `01K${String(index + 500).padStart(10, "0")}`,
       transcriptionSessionId: "01K0000000008",
@@ -1772,8 +1469,6 @@ function createSeedState(): StoreState {
       speakerLabel: null,
       assignedParticipantId: null,
     },
-    // 시드 분석의 근거가 가리키는 줄들. 블록 묶기(최대 6개·간격 1.5초)를 넘기려고 간격을
-    // 벌려 둔다 — 한 블록에 다 뭉치면 근거 셋이 같은 자리로 점프해 이동을 검증할 수 없다.
     {
       segmentId: "01K0000000061",
       transcriptionSessionId: "01K0000000060",
@@ -1814,13 +1509,6 @@ function createSeedState(): StoreState {
       speakerLabel: null,
       assignedParticipantId: null,
     },
-    // **긴 발화.** 위 넷은 전부 한 줄에 끝나서, 목으로는 여러 줄로 감기는 발화를 한 번도
-    // 볼 수 없었다. 그 줄에서만 드러나는 것들이 있다 — 형광이 줄마다 잘리지 않는지
-    // (`box-decoration-clone`), 요약의 인용 줄에서 긴 따옴말과 점선 리더·시각이 어떻게
-    // 눕는지, 짚은 줄로 점프했을 때 `block: "center"`가 어디에 서는지.
-    //
-    // 실제 회의에서 길어지는 말은 정해져 있다 — **관찰을 늘어놓는 말과 결론을 정리하는 말**이다.
-    // 그 둘을 하나씩 둔다(대략 3줄·5줄. 820px 읽기 폭 기준이라 좁은 화면에서는 더 감긴다).
     {
       segmentId: "01K0000000065",
       transcriptionSessionId: "01K0000000060",
@@ -1841,16 +1529,8 @@ function createSeedState(): StoreState {
       startedAtMs: 268000,
       endedAtMs: 297600,
     },
-    /**
-     * 실제 멘토링 회의 494 발화. 화자 패널이 그릴 분포가 여기서 나온다.
-     *
-     * **베껴서 넣는다.** 발화 단위 지정(`assignSegmentSpeaker`)이 세그먼트를 제자리에서
-     * 고치는데, 모듈의 배열을 그대로 펼치면 `reset()` 이 다시 씨를 뿌려도 그 수정이 남는다 —
-     * 초기화가 초기화가 아니게 되고, 지웠던 참여자를 가리키는 id 가 살아남는다.
-     */
     ...mentoringSegments.map((segment) => ({ ...segment })),
   ];
-  // 실험 전용 합성 데이터: 운영 전사 내용이나 개인 식별자는 복제하지 않는다.
   if (process.env.NEXT_PUBLIC_TRANSCRIPT_EXPERIMENT === "enabled") {
     const sessionId = "01K0000000060";
     const experimentSession = sessions.find((s) => s.sessionId === sessionId)!;
@@ -1907,9 +1587,6 @@ function createSeedState(): StoreState {
       ...generated
     );
   }
-  // 아직 멤버가 아닌 워크스페이스에서 온 초대여야 수락이 실제 합류를 흉내낸다.
-  // 이미 들어가 있는 워크스페이스를 가리키면 수락이 멤버를 중복으로 만든다.
-  // 받은 초대 하나를 대기 상태로 시드한다 — 알림 벨의 수락/거절을 데모에서 바로 밟을 수 있어야 한다.
   const invitations: MockInvitation[] = [
     {
       workspaceId: INVITED_WORKSPACE.workspaceId,
@@ -1921,10 +1598,8 @@ function createSeedState(): StoreState {
       role: "MEMBER",
       status: "PENDING",
       createdAt: "2026-07-11T00:00:00Z",
-      // UI 만료 판정은 실제 시계라 데모용 PENDING은 항상 미래여야 한다 (고정일이면 썩는다)
       expiresAt: daysAgoIso(-1),
     },
-    // 미가입자 초대 — 이름이 없는(null) 표본. 계약의 nullable 양쪽을 목이 보여줘야 한다
     {
       workspaceId: "01K0000000006",
       invitationId: "01K0000000025",
@@ -1937,8 +1612,6 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-11T02:00:00Z",
       expiresAt: daysAgoIso(-1, 1),
     },
-    // 만료 지난 PENDING 표본 — 토큰 수락의 INVITATION_EXPIRED 경로(/invite)와 멤버 탭의
-    // 만료 배지를 dev에서 밟을 수 있어야 한다. 유저가 ADMIN인 워크스페이스에 둔다.
     {
       workspaceId: "01K0000000006",
       invitationId: "01K0000000026",
@@ -1951,7 +1624,6 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-09T00:00:00Z",
       expiresAt: "2026-07-10T00:00:00Z",
     },
-    // 두 번째 대기 초대(APP-1361) — 알림 모달의 「처리 필요」 탭에 두 줄이 서고, 수락하면 이 이름으로 합류한다.
     {
       workspaceId: RESEARCH_WORKSPACE.workspaceId,
       invitationId: "01K0000000044",
@@ -1986,8 +1658,6 @@ function createSeedState(): StoreState {
         invitations[0].invitationId
       ),
     },
-    // 이미 읽은 알림. `readAt`이 전부 null이면 읽음 표시와 안읽음 카운트 분기가
-    // 한쪽만 검증된다.
     {
       notificationId: "01K0000000023",
       type: "WORKSPACE_INVITATION",
@@ -2008,7 +1678,6 @@ function createSeedState(): StoreState {
         "01K0000000024"
       ),
     },
-    // 원본 초대가 지워진 알림(PRO-67 I06). `invitation` 이 없고 표시용 값만 남는다 — 스키마 표식이 없는 옛 web 에는 안 나간다.
     {
       notificationId: "01K0000000019",
       type: "WORKSPACE_INVITATION",
@@ -2021,7 +1690,6 @@ function createSeedState(): StoreState {
         "01K0000000017"
       ),
     },
-    // 오래된 알림 — 백필 전이라 표시용 값(payload)이 없다. 화면은 살아 있는 초대 값만으로 그린다.
     {
       notificationId: "01K0000000016",
       type: "WORKSPACE_INVITATION",
@@ -2038,7 +1706,6 @@ function createSeedState(): StoreState {
       },
       payload: null,
     },
-    // 문의 답변(APP-1399). 답이 달린 시드 문의(01K0000000031)를 가리킨다.
     {
       notificationId: "01K0000000080",
       type: "INQUIRY_ANSWERED",
@@ -2057,7 +1724,6 @@ function createSeedState(): StoreState {
         feedbackId: "01K0000000031",
       },
     },
-    // 검토할 결과 준비(PRO-67 I22). 자동 종료분(사유 줄)·일반 종료분·원본이 지워진 노트 셋.
     {
       notificationId: "01K0000000031",
       type: "ANALYSIS_READY",
@@ -2093,7 +1759,6 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-12T00:00:00Z",
       invitation: null,
       payload: {
-        // 워크스페이스째 지워져 표시용 값도 노트 제목만 남은 쪽.
         workspaceId: null,
         workspaceName: null,
         invitationId: null,
@@ -2105,8 +1770,6 @@ function createSeedState(): StoreState {
         feedbackId: null,
       },
     },
-    // ── 알림 모달을 목에서 실제처럼 밟는 묶음(APP-1361). 지금 시각에서 거꾸로 잡아 「오늘」·「어제」·며칠 전 묶음이 늘
-    // 서고, 스크롤이 생길 만큼 쌓는다. 읽음·안 읽음, 초대의 모든 결과, 일반·자동 종료·권한 없는 결과를 섞었다.
     {
       notificationId: "01K0000000041",
       type: "ANALYSIS_READY",
@@ -2219,7 +1882,6 @@ function createSeedState(): StoreState {
         "01K0000000037"
       ),
     },
-    // 내가 없는 워크스페이스의 결과 — 행은 남고 이동만 막힌다(「볼 권한이 없는 회의」).
     {
       notificationId: "01K0000000038",
       type: "ANALYSIS_READY",
@@ -2235,7 +1897,6 @@ function createSeedState(): StoreState {
       ),
     },
   ];
-  // 연동은 두 provider가 모두 미연동으로 시작한다 — 연결 흐름을 데모에서 직접 밟게 한다.
   const integrations: MockIntegration[] = workspaces.flatMap((workspace) =>
     SUPPORTED_PROVIDERS.map((provider) => ({
       workspaceId: workspace.workspaceId,
@@ -2245,7 +1906,6 @@ function createSeedState(): StoreState {
       connectedAt: null,
     }))
   );
-  // 발화 단위 지정을 하나 심는다 — 없으면 목에서 이 기능이 한 번도 안 그려진다
   seedSegmentOverride(notes, segments);
   return {
     user,
@@ -2254,21 +1914,11 @@ function createSeedState(): StoreState {
     notes,
     sessions,
     segments,
-    // 시드하지 않는다 — 「한 명도 없는 것이 정상」이 이 화면의 빈 상태다.
     workspaceGuests: [seededGuest, ...mentoringGuests],
-    // 화자 분리를 시드한다. 목에 이걸 밀어줄 주체가 없어서(APP-419·420이 서버 몫)
-    // 없으면 **화자 이름이 붙은 회의록을 목에서 한 번도 볼 수 없다.**
-    //
-    // 연결된 화자와 안 연결된 화자를 **둘 다** 심는다 — 한쪽만 심으면 `화자 A` 분기가
-    // 목에서 안 그려지고 실서버에서 처음 실행된다.
-    //
-    // 이름을 손으로 박지 않는다. 참여자 시드가 바뀌면 조용히 어긋나고, 실제로 한 번
-    // 어긋났다 — 없는 사람 이름이 화자에 붙어 있었다.
     diarizations: new Map([
       ...seededDiarizations(notes),
       [MENTORING_NOTE_ID, mentoringDiarization],
     ]),
-    // 사고 공백. 끝난 것과 진행 중인 것, 이유가 있는 것과 없는 것을 함께 심는다.
     extraGaps: new Map<string, TranscriptResponseDataGapsItem[]>([
       [
         "01K0000000020",
@@ -2282,11 +1932,6 @@ function createSeedState(): StoreState {
             endedAt: "2026-07-13T00:10:20Z",
           },
           {
-            // 아직 안 끝난 공백. 화면이 `02:20 – 진행 중`으로 열어 두고 회복하면 닫는다.
-            //
-            // **UPLOAD 로 두면 안 된다.** 조각 번호에 구멍이 났다는 것은 구멍 **다음** 번호가
-            // 도착해야 알 수 있어서 — 13 이 안 온 것은 14 가 와야 안다 — UPLOAD 공백은
-            // 발견되는 순간 이미 닫혀 있다. 열려 있을 수 있는 것은 CAPTURE 뿐이다.
             gapId: "c-01K0000000020-140000",
             kind: "CAPTURE",
             startedAtMs: 140_000,
@@ -2297,7 +1942,6 @@ function createSeedState(): StoreState {
         ],
       ],
     ]),
-    // 소리 공백과 겹친 것(소리 공백이 이긴다)과 홀로 선 것을 함께 심는다.
     transcriptGaps: new Map<string, TranscriptResponseDataTranscriptGapsItem[]>(
       [
         [
@@ -2322,7 +1966,6 @@ function createSeedState(): StoreState {
     members,
     invitations,
     notifications,
-    // 답변이 달린 문의와 아직 접수 상태인 문의를 하나씩 시드한다 — 내 문의 탭의 두 모양을 목에서 본다.
     feedbacks: [
       {
         feedbackId: "01K0000000031",
@@ -2345,18 +1988,11 @@ function createSeedState(): StoreState {
         createdAt: "2026-10-18T01:05:00.000Z",
       },
     ],
-    // 완료된 분석을 하나 시드한다. 실제로는 heymoa-ai의 callback이 채우는데 목에는 그걸
-    // 밀어줄 주체가 없어서, 이게 없으면 **요약 화면(개요·액션 아이템·결정)을 목에서
-    // 한 번도 볼 수 없다.** 종료된 노트 하나에만 붙여 빈 상태·분석 중 화면도 그대로 남긴다.
-    //
-    // 근거가 **있는 항목과 없는 항목을 둘 다** 심는다 — 계약상 근거 0개가 정상이고(칩 없음),
-    // 한쪽만 심으면 그 분기가 목에서 한 번도 안 그려진다.
     analyses: [
       {
         analysisId: "01K0000000050",
         noteId: "01K0000000020",
         status: "SUCCEEDED",
-        // 성공본이고 재요약도 없다 — 돌고 있지 않다.
         analysisRunning: false,
         sections: [
           {
@@ -2371,8 +2007,6 @@ function createSeedState(): StoreState {
                     text: "가입 후 첫 회의를 만들기까지 이탈이 가장 큽니다.",
                     startedAtMs: 12000,
                   },
-                  // 여러 줄로 감기는 근거. 짧은 한 줄짜리만 있으면 인용 줄의 점선 리더와
-                  // 시각이 긴 따옴말 옆에서 어떻게 서는지가 목에서 한 번도 안 그려진다.
                   {
                     segmentId: "01K0000000065",
                     text: "제가 지난주에 신규 가입자 마흔 명 세션을 전부 돌려봤는데요, 대시보드까지는 다들 무리 없이 들어오다가 회의 만들기 버튼 앞에서 평균 이 분 가까이 머물다 그냥 나가더라고요. 화면에 버튼이 없는 게 아니라 그게 지금 눌러야 할 것으로 안 읽히는 겁니다.",
@@ -2414,7 +2048,6 @@ function createSeedState(): StoreState {
                   },
                 ],
               },
-              // 근거를 못 찾은 항목. 버리지 않고 칩 없이 남긴다(설계 D2).
               {
                 itemId: "01K0000000073",
                 content:
@@ -2455,17 +2088,12 @@ function createSeedState(): StoreState {
     agentChatMessages: seededChats.messages,
     agentDelegations: seedAgentDelegations(workspaces, user.userId),
     agentDelegationUsages: seedAgentDelegationUsages(),
-    // 목 개발에서 `/oauth/consent?state=mock-consent` 로 동의 화면을 연다(APP-888).
-    // 허락·거절은 이 요청을 지우므로, 다시 열면 실서버처럼 「다시 연결」 안내가 나온다.
     agentOAuthConsents: {
       "mock-consent": {
         clientName: "Codex",
         redirectUri: "http://127.0.0.1:1455/callback",
-        // 서버는 범위가 없는 인가 요청을 읽기·쓰기 둘로 채운다(APP-1461). 목도 쓰기를 요청한 것으로 둬
-        // 동의 화면의 할 일 변경 스위치가 보인다
         scopes: ["mcp:read", "mcp:write"],
       },
-      // 읽기만 요청한 에이전트. 동의 화면에 할 일 변경 스위치가 없다
       "mock-consent-read": {
         clientName: "Codex",
         redirectUri: "http://127.0.0.1:1455/callback",
@@ -2475,11 +2103,6 @@ function createSeedState(): StoreState {
   };
 }
 
-/**
- * 연결 사용 내역 시드(APP-826). 쓰고 있는 연결에는 **한 쪽(20)을 넘게** 심어 이어 읽기 커서의
- * 양쪽 값이 다 나오게 하고, 회수한 연결 하나는 내역이 몇 줄뿐이다. 쓴 적 없는 연결은 빈 상태다.
- * 실패한 호출과 건수 없는 호출(화면 열기)이 섞여 `resultCount` 도 양쪽이 나온다.
- */
 function seedAgentDelegationUsages(): MockAgentDelegationUsage[] {
   const tools = [
     "list_projects",
@@ -2499,7 +2122,6 @@ function seedAgentDelegationUsages(): MockAgentDelegationUsage[] {
       outcome: failed ? ("FAILED" as const) : ("SUCCEEDED" as const),
       resultCount:
         failed || toolName === "open_screen" ? null : (index % 5) + 1,
-      // 30분 간격으로 거슬러 간다 — 마지막 사용 시각(13:00)이 가장 최근 줄이다
       occurredAt: new Date(
         Date.parse("2026-09-30T13:00:00Z") - index * 30 * 60 * 1000
       ).toISOString(),
@@ -2518,11 +2140,6 @@ function seedAgentDelegationUsages(): MockAgentDelegationUsage[] {
   return [...active, ...left];
 }
 
-/**
- * 외부 에이전트 연결 시드(APP-804). 계약의 nullable 필드가 양쪽 값을 다 보이도록 셋을 둔다 —
- * 쓰고 있는 연결, 본인이 회수한 연결, 워크스페이스를 떠나 회수된 힌트 없는 연결(2단계 OAuth 처럼
- * 개인 토큰 자격이 없는 연결은 앞자리가 없다). 빈 상태는 컴포넌트 시험이 본다.
- */
 function seedAgentDelegations(
   workspaces: WorkspaceResponseData[],
   userId: string
@@ -2540,7 +2157,6 @@ function seedAgentDelegations(
       name: "노트북 Claude Code",
       tokenHint: "hm_Q7xKp2a",
       credentialKind: "PERSONAL_TOKEN",
-      // 목 모드에서 「할 일 변경 허용」 배지와 에이전트 변경 표시를 볼 수 있게 하나는 허용한 연결이다(APP-1369)
       allowTaskChanges: true,
       status: "ACTIVE",
       createdAt: "2026-09-20T09:00:00Z",
@@ -2567,7 +2183,6 @@ function seedAgentDelegations(
       ...base,
       delegationId: "01K00000000Q3",
       name: "떠난 팀의 연결",
-      // 계약상 hint 가 없는 것은 OAuth 연결이다(APP-886)
       tokenHint: null,
       credentialKind: "OAUTH",
       allowTaskChanges: false,
@@ -2578,7 +2193,6 @@ function seedAgentDelegations(
       revokedAt: "2026-08-28T09:00:00Z",
       revokeReason: "MEMBERSHIP_ENDED",
     },
-    // 다른 멤버의 연결(APP-941). 내 목록에는 안 보이고 ADMIN 의 관리자 목록에만 보인다
     {
       ...base,
       userId: "01K0000000020",
@@ -2642,7 +2256,6 @@ function invitationPayload(
   };
 }
 
-/** 스키마 표식(2 이상)이 있어야 초대 밖의 종류와 원본이 지워진 초대를 낸다 — 서버와 같은 규칙. */
 function visibleNotifications(schema?: string | null) {
   const modern = Number(schema) >= 2;
   return [...state.notifications]
@@ -2658,10 +2271,6 @@ function visibleNotifications(schema?: string | null) {
     );
 }
 
-/**
- * 알림은 초대의 현재 상태를 보여줘야 한다 (계약 규칙). 초대가 확정되면 알림은 사라지지 않고
- * status만 따라간다 — 취소된 초대의 알림도 목록에 남는다.
- */
 function syncInvitationNotification(invitation: MockInvitation) {
   const notification = state.notifications.find(
     (candidate) =>
@@ -2671,11 +2280,6 @@ function syncInvitationNotification(invitation: MockInvitation) {
     notification.invitation.status = invitation.status;
 }
 
-/**
- * 만료 지난 PENDING은 EXPIRED로 밀고 409를 낸다 — 서버(APP-184)와 같은 전이.
- * 시계는 실제 시계다 — UI 만료 판정과 같은 시계여야 화면과 목 API가 갈라지지 않는다.
- * (시드의 만료 시각도 전부 실제-상대라 세월 따라 썩지 않는다.)
- */
 function expireIfNeeded(invitation: MockInvitation) {
   if (invitation.status !== "PENDING") return;
   if (Date.parse(invitation.expiresAt) > Date.now()) return;
@@ -2684,7 +2288,6 @@ function expireIfNeeded(invitation: MockInvitation) {
   fail("INVITATION_EXPIRED");
 }
 
-/** PENDING 초대를 확정 상태로 옮기고 알림을 맞춘다. 수락만 멤버를 늘린다. */
 function resolveInvitation(
   invitationId: string,
   status: NotificationListResponseDataNotificationsItemInvitationStatus
@@ -2715,15 +2318,6 @@ function findIntegration(workspaceId: string, provider: string) {
   return integration ?? fail("INTEGRATION_NOT_FOUND");
 }
 
-/**
- * 초대만 와 있는 워크스페이스는 아직 유저의 목록에 없다. 그 워크스페이스를 가리키는
- * 조회는 존재하지 않는 것으로 취급하면 안 되므로 초대 유무도 함께 본다.
- */
-/**
- * 워크스페이스가 생기면 멤버(생성자 ADMIN)와 연동 행이 함께 생겨야 한다. 시드에서만
- * 채우면 createWorkspace·초대 수락으로 생긴 워크스페이스는 멤버 목록이 비고 연동 조회가
- * 빈손이 된다.
- */
 function attachWorkspaceState(workspaceId: string, role: string) {
   if (!state.members.some((m) => m.workspaceId === workspaceId)) {
     state.members.push({
@@ -2759,7 +2353,6 @@ function assertWorkspaceOrInvited(workspaceId: string) {
   if (!known) fail("WORKSPACE_NOT_FOUND");
 }
 
-/** 확인 입력 비교 — 앞뒤 공백만 걷고 정확히 같아야 한다(PRO-69 contract 경계 조건). */
 function assertWorkspaceName(workspaceId: string, workspaceName: unknown) {
   const workspace = assertWorkspace(workspaceId);
   if (
@@ -2770,7 +2363,6 @@ function assertWorkspaceName(workspaceId: string, workspaceName: unknown) {
   }
 }
 
-/** 워크스페이스와 그 멤버십을 목록에서 걷어낸다. 노트·프로젝트 행은 남아도 목록에 닿을 길이 없다. */
 function removeWorkspace(workspaceId: string) {
   state.members = state.members.filter((m) => m.workspaceId !== workspaceId);
   state.workspaces = state.workspaces.filter(
@@ -2786,15 +2378,6 @@ function assertWorkspace(workspaceId: string) {
   );
 }
 
-/**
- * 멤버 역할 변경·추방은 ADMIN만 부를 수 있다. 나가기는 멤버 누구나 가능해서 이 가드를 쓰지 않는다.
- *
- * **멤버가 아닌 것과 ADMIN이 아닌 것은 다른 응답이다.** 서버 `WorkspaceAccessHandler`가
- * `requireMember`(없으면 404 WORKSPACE_NOT_FOUND) 다음에 역할을 보고 403을 내는 구조라,
- * 워크스페이스가 아예 없는 것도 남의 워크스페이스인 것도 똑같이 404로 존재를 숨긴다.
- * 둘을 `caller?.role !== "ADMIN"` 하나로 합치면 비멤버에게 그 워크스페이스가 있다고 알려준다.
- */
-/** 이 워크스페이스를 볼 수 있나. 없는 워크스페이스와 떠난 워크스페이스가 같은 답을 받는다. */
 function requireWorkspaceMember(workspaceId: string) {
   const caller = state.members.find(
     (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
@@ -2810,21 +2393,11 @@ function requireWorkspaceAdmin(workspaceId: string) {
   if (caller.role !== "ADMIN") fail("WORKSPACE_ACCESS_DENIED");
 }
 
-/**
- * 계약에 없는 역할은 400이다. 핸들러가 요청 본문에 붙이는 타입 단언은 런타임에 아무것도
- * 막지 않으므로 여기서 검사한다 — 목이 계약보다 관대하면 웹에서는 통과하는 값이
- * 실제 서버에서 거부된다.
- */
 function assertRole(value: string): MockMember["role"] {
   if (value === "ADMIN" || value === "MEMBER") return value;
   return fail("BAD_REQUEST");
 }
 
-/**
- * 현재 유저의 멤버십은 목에 두 벌 있다 — 멤버 명단(`state.members`)과 워크스페이스 응답
- * (`state.workspaces`, `listWorkspaces`·`getWorkspace`의 원본). 초대 수락이 합류를 두 곳에
- * 모두 반영하듯 본인 역할 변경도 둘을 같이 고쳐야 `getWorkspace().role`이 명단과 갈라지지 않는다.
- */
 function syncOwnWorkspaceRole(
   workspaceId: string,
   userId: string,
@@ -2842,13 +2415,6 @@ function assertProject(projectId: string) {
   );
 }
 
-/**
- * 그 워크스페이스 **안의** 프로젝트를 찾는다.
- *
- * **어긋난 조합은 403이 아니라 404다.** 서버가 `findByWorkspaceIdAndProjectId(...)` 한 번으로
- * 찾고 없으면 `ProjectNotFoundException`을 던진다(조회·수정·삭제 셋 다). 목이 `FORBIDDEN`을
- * 주면 "이 워크스페이스의 노트가 아니다"를 코드로 가리는 화면이 목에서만 다르게 동작한다.
- */
 function assertProjectIn(workspaceId: string, projectId: string) {
   const project = state.projects.find(
     (candidate) =>
@@ -2862,15 +2428,6 @@ function findNote(noteId: string) {
   return note ?? fail("NOTE_NOT_FOUND");
 }
 
-/**
- * 화자로 가리킨 대상을 이 회의의 참여 기록으로 바꾼다. **참여자가 아닌 멤버는 넣는다.**
- *
- * 서버 `NoteParticipantJoinHandler` 와 같은 규칙이다 — 화자 후보가 워크스페이스 멤버
- * 전원이라, 아직 참여 기록이 없는 사람을 고를 수 있다.
- *
- * 순서가 규칙이다: **이미 참여자면 멤버십을 안 본다.** 워크스페이스를 떠난 사람도 이 회의의
- * 참여자면 그대로 쓴다. 기록은 지키되 새로 붙이는 길은 멤버에게만 연다.
- */
 function resolveOrJoinParticipant(
   note: NoteResponseData,
   target: {
@@ -2902,7 +2459,6 @@ function resolveOrJoinParticipant(
     );
     if (already) return already;
 
-    // 임시 참여자도 워크스페이스가 소유한다. 남의 워크스페이스 것은 못 붙인다.
     const guest = state.workspaceGuests.find(
       (row) => row.guestId === target.guestId && row.workspaceId === workspaceId
     );
@@ -2938,8 +2494,6 @@ function resolveOrJoinParticipant(
     email: member.email,
     image: member.image,
   };
-  // **계약이 이름 오름차순이다.** push 로 끝내면 새로 넣은 사람만 늘 맨 뒤라, 목과 e2e 가
-  // 서버와 다른 순서를 검증하게 된다.
   note.participants = sortParticipants([...note.participants, joined]);
   return joined;
 }
@@ -2992,18 +2546,13 @@ function expireReadySessions(noteId: string) {
   }
 }
 
-/** 목 DB 밖에 상태를 두는 목 모듈이 같은 시점에 비우도록 거는 자리. */
 const resetListeners = new Set<() => void>();
 
-/** 세션을 연 탭. 응답 모양에 없는 값이라 세션 밖에 둔다 */
 const sessionOpeners = new Map<string, string>();
-/** 0002 의 진행 중 시드를 연 탭. 닫힌 탭 이어받기를 목에서 굴릴 때 이 ID 로 식은 기록을 심는다 */
 const MOCK_RECORDER_CLIENT_ID = "mock-recorder-tab";
 
-/** 남은 동의 기록 실패 횟수(`failNextConsents`). */
 let consentFailures = 0;
 
-/** 로컬 전용 시드(public/mock-local, git 제외)가 싣는 프로젝트와 그 회의. `loadLocalProjects` 가 채운다. */
 export type LocalSeedProject = {
   projectId: string;
   workspaceId?: string;
@@ -3014,7 +2563,6 @@ export type LocalSeedProject = {
 
 let localSeed: LocalSeedProject[] = [];
 
-/** 프로젝트와 끝난 회의를 목 DB 에 올린다. 같은 id 는 두 번 올리지 않는다. 참석자는 같은 워크스페이스의 첫 시드 노트에서 빌린다. */
 function seedLocal(target: StoreState) {
   for (const entry of localSeed) {
     const workspaceId = entry.workspaceId ?? target.workspaces[0].workspaceId;
@@ -3063,7 +2611,6 @@ function reset() {
   idCounter = 100;
   consentFailures = 0;
   mockClock = 0;
-  // 가이드 캡처용 프리셋이 켜져 있으면 그것으로, 아니면 기본 시드로 연다(help-demo/index.ts)
   state = isHelpDemoEnabled() ? createHelpDemoState() : createSeedState();
   if (localSeed.length > 0) seedLocal(state);
   sessionOpeners.clear();
@@ -3073,8 +2620,6 @@ function reset() {
 
 reset();
 
-/** 노트 목록의 조립부. 프로젝트 단위와 워크스페이스 단위가 **같은 것을 쓴다**. */
-/** 일시정지 시각(APP-1310): 실제로 녹음이 시작된 마지막 세션의 종료 시각. 녹음 없이 끝난 시도는 세지 않는다. */
 function pausedAtOf(note: NoteResponseData) {
   if (note.meetingStatus !== "PAUSED") return null;
   return (
@@ -3132,14 +2677,6 @@ export const mockDb = {
     resetListeners.add(listener);
   },
 
-  /**
-   * 공유 챗은 회의가 ACTIVE일 때 한 번에 한 명만 쓴다. 게이트를 스트림 열기 전에
-   * 통과시켜야 패배한 쪽이 오류로 끝난 스트림 대신 409 JSON을 받는다.
-   */
-  /**
-   * 개인 챗봇 대화를 만든다. **앞 대화를 안 죽인다** — 목록에 한 줄이 늘 뿐이다.
-   * 예전에는 같은 워크스페이스의 활성 대화를 비활성으로 내렸다(활성은 하나였다).
-   */
   createAgentChat(input: {
     workspaceId: string;
     title?: string | null;
@@ -3153,18 +2690,12 @@ export const mockDb = {
       title: input.title ?? DEFAULT_AGENT_CHAT_TITLE,
       titleSource: input.title ? "USER" : "DEFAULT",
       createdAt: now,
-      // 아직 아무것도 안 썼어도 방금 만든 것이 맨 위다 — 만들자마자 그 대화로 들어간다.
       updatedAt: now,
     };
     state.agentChats.push(chat);
     return copy(omit(chat, ["updatedAt"]));
   },
 
-  /**
-   * 대화 목록. **정렬과 상한이 계약이다** — `updatedAt` 내림차순이라 첫 번째가 마지막으로
-   * 쓴 대화이고, 새로고침한 화면이 그 줄로 돌아온다. 도는 턴은 스트림의 사실이라 여기
-   * 없다 — 핸들러가 `runningTurnOf`로 붙인다.
-   */
   listAgentChats(query: { workspaceId: string }) {
     return this.listAllAgentChats(query.workspaceId).slice(
       0,
@@ -3172,7 +2703,6 @@ export const mockDb = {
     );
   },
 
-  /** 상한 없는 전건(정렬은 같다). 쪽 끊기가 필요한 핸들러가 쓴다 — 쪽 규칙은 서버와 같은 `limit`·커서다. */
   listAllAgentChats(workspaceId: string) {
     assertWorkspace(workspaceId);
     return state.agentChats
@@ -3190,9 +2720,6 @@ export const mockDb = {
       }));
   },
 
-  /**
-   * 범위 칩에 쓸 제목. 없으면 null이다 — 지워졌거나 권한이 없다는 뜻이고 **둘을 가르지 않는다.**
-   */
   findNoteBrief(noteId: string) {
     return state.notes.find((note) => note.noteId === noteId) ?? null;
   },
@@ -3203,10 +2730,6 @@ export const mockDb = {
     );
   },
 
-  /**
-   * 첫 답이 끝난 뒤 AI 가 지은 제목을 단다(APP-1430). **첫 질문 제목(QUESTION)일 때만 덮는다** — 사용자가 정한 제목과
-   * 이미 단 AI 제목은 안 바꾼다. `updatedAt` 은 안 바꾼다(계약: 이름 변경·AI 제목은 정렬을 안 흔든다). 바꿨으면 true.
-   */
   retitleAgentChatByAi(chatId: string) {
     const chat = state.agentChats.find((each) => each.chatId === chatId);
     if (!chat || chat.titleSource !== "QUESTION") return false;
@@ -3219,7 +2742,6 @@ export const mockDb = {
     return true;
   },
 
-  /** 대화와 그 메시지를 지운다(APP-1409). 없으면 404 `AGENT_CHAT_NOT_FOUND` — 이미 지운 대화도 그렇다. */
   deleteAgentChat(chatId: string) {
     if (!state.agentChats.some((chat) => chat.chatId === chatId)) {
       fail("AGENT_CHAT_NOT_FOUND");
@@ -3232,7 +2754,6 @@ export const mockDb = {
     );
   },
 
-  /** 이 대화가 어느 워크스페이스의 것인가. 범위 확장 제안이 실재하는 프로젝트를 고르는 데 쓴다. */
   findAgentChat(chatId: string) {
     return state.agentChats.find((chat) => chat.chatId === chatId) ?? null;
   },
@@ -3250,7 +2771,6 @@ export const mockDb = {
     );
   },
 
-  /** 스트림이 흐르는 동안 server가 하는 tee를 목도 흉내낸다 — 히스토리가 남아야 새로고침 뒤 복원이 산다. */
   appendAgentChatMessage(
     chatId: string,
     message: Omit<
@@ -3260,8 +2780,6 @@ export const mockDb = {
   ) {
     const createdAt = nextAgentChatTimestamp();
     state.agentChatMessages.push({
-      // **`turnId`는 없으면 null이다.** 키가 통째로 빠지면 화면이 「어느 턴인지 모른다」와
-      // 「필드가 없다」를 못 가르고, 진행 중 턴의 도구 카드가 두 벌 그려진다.
       turnId: null,
       ...message,
       chatId,
@@ -3272,14 +2790,7 @@ export const mockDb = {
       (candidate) => candidate.chatId === chatId
     );
     if (!chat) return;
-    // **여기서 안 밀면 목록 정렬이 거짓말을 한다.** 생성 시각으로만 두면 옛 대화에 다시
-    // 쓰는 순간 「첫 줄 = 마지막으로 쓴 대화」가 깨지고, 새로고침이 엉뚱한 대화를 연다.
     chat.updatedAt = createdAt;
-    // 제목이 저절로 붙는다 — 첫 USER 메시지가 기본 제목을 채운다. 사용자가 정한 제목은
-    // 안 덮는다. 실제 서버가 USER 행을 저장할 때 하는 일이다.
-    //
-    // ★ **마커를 사람 말로 되돌린 뒤 자른다.** 안 그러면 목록에
-    // `@[주간 회의](noteId:…) 액션 정리해줘` 가 그대로 뜬다 — 서버가 하는 일과 같다.
     if (message.role === "USER" && chat.titleSource === "DEFAULT") {
       chat.title = unwrapScopeMarkers(message.content)
         .replace(/\s+/g, " ")
@@ -3289,13 +2800,6 @@ export const mockDb = {
     }
   },
 
-  /**
-   * 회의 뒤 분석은 `meeting-flow` 목이 이어받는다. 여기서는 회의 상태만 닫는다.
-   * 응답은 갱신된 노트이고, 워크스페이스 멤버 누구나 끝낼 수 있다 (APP-685).
-   *
-   * **기록 중(IN_PROGRESS)이면 거절한다** (APP-694). 열린 세션이 있으면 IN_PROGRESS 이므로
-   * 종료가 세션을 닫을 일도, 소리 흐르던 세션을 잘라 TRUNCATED 를 찍을 일도 없다.
-   */
   endMeeting(noteId: string): NoteResponseData {
     const note = findNote(noteId);
     if (note.meetingStatus === "NOT_STARTED") fail("MEETING_NOT_STARTED");
@@ -3308,10 +2812,6 @@ export const mockDb = {
     return this.getNote(noteId);
   },
 
-  /**
-   * 구형 요약 결과를 하나 쌓는다. 새 회의는 구형 결과를 만들지 않으므로 HTTP 경로가 없고,
-   * 지난 노트의 읽기 전용 요약 화면과 그 표본을 만드는 테스트만 쓴다.
-   */
   requestAnalysis(noteId: string): AnalysisResultResponseData {
     const note = findNote(noteId);
     if (note.meetingStatus !== "ENDED") fail("MEETING_NOT_ENDED");
@@ -3326,27 +2826,16 @@ export const mockDb = {
       analysisId: nextId(),
       noteId,
       status: "PENDING",
-      // 방금 만들었으니 돌고 있다. 서버는 이 값을 `retry ?? status` 로 답한다 (APP-685).
       analysisRunning: true,
-      // 계약: 완료 전에는 섹션이 빈 배열이다(null이 아니다).
       sections: [],
       errorCode: null,
       errorMessage: null,
-      // 서버는 이 키를 항상 보낸다(Jackson이 null을 싣는다). 목이 키를 빼면 web의
-      // 「재요약 없음」 분기가 표본에서 사라진다.
       retry: null,
     };
     state.analyses.push(analysis);
     return copy(analysis);
   },
 
-  /**
-   * 대기 중인 분석을 완료로 넘긴다. 실제 서버는 heymoa-ai의 callback으로 채워지지만
-   * 목에는 그걸 밀어줄 주체가 없어 폴링 데모와 테스트가 이 함수를 직접 부른다.
-   *
-   * 근거는 **그 노트에 실제로 있는 세그먼트**에서 뽑는다. 고정 id를 박으면 다른 노트를
-   * 종료했을 때 인용을 눌러도 갈 곳이 없어, 목이 되는 척만 하게 된다.
-   */
   advanceAnalysis(noteId: string): AnalysisResultResponseData | null {
     const analysis = latestAnalysis(noteId);
     if (!analysis || analysis.status !== "PENDING") return null;
@@ -3380,7 +2869,6 @@ export const mockDb = {
             content: "배포 체크리스트를 작성합니다 (김민수)",
             evidence: evidenceAt(2),
           },
-          // 근거를 못 찾은 항목도 남는다(설계 D2) — 칩 없는 분기의 표본이다.
           {
             itemId: nextId(),
             content: "QA 일정을 공유합니다 (한지원)",
@@ -3403,10 +2891,6 @@ export const mockDb = {
     return copy(analysis);
   },
 
-  /**
-   * 요약은 **마지막 성공본 하나**다. 재요약이 돌거나 실패해도 화면의 요약은 그대로 있고
-   * 그 사실만 `retry`로 실린다 (APP-421). 성공본이 없을 때만 진행 중·실패한 잡이 본문이다.
-   */
   getLatestAnalysis(noteId: string): AnalysisResultResponseData {
     findNote(noteId);
     const latest = latestAnalysis(noteId) ?? fail("ANALYSIS_JOB_NOT_FOUND");
@@ -3429,10 +2913,6 @@ export const mockDb = {
     });
   },
 
-  /**
-   * 대기 중인 분석을 실패로 넘긴다. 실서버는 heymoa-ai 콜백이나 워치독이 밀지만 목에는
-   * 그 주체가 없다 — 실패 화면과 「재요약 실패」 표본을 만들려면 이것이 필요하다.
-   */
   failAnalysis(noteId: string): AnalysisResultResponseData | null {
     const analysis = latestAnalysis(noteId);
     if (!analysis || analysis.status !== "PENDING") return null;
@@ -3466,10 +2946,6 @@ export const mockDb = {
     return copy(omit(integration, ["workspaceId"]));
   },
 
-  /**
-   * 서버처럼 **조회 시점에** 만료를 판정한다 — 만료 시각이 지난 살아 있는 연결은 `EXPIRED` 다.
-   * 저장된 행은 바꾸지 않는다(서버도 만료를 행에 쓰지 않는다).
-   */
   listAgentDelegations(): AgentDelegationsResponseDataDelegationsItem[] {
     const now = Date.now();
     return copy(
@@ -3486,10 +2962,6 @@ export const mockDb = {
     );
   },
 
-  /**
-   * 서버(APP-801)처럼 토큰은 `hm_` 접두어 + 무작위이고 앞 10자만 힌트로 남긴다. 원문은 이 응답에서만
-   * 나가고 목록에는 다시 안 나간다. 만료는 마지막 사용 뒤 90일이라 쓴 적 없으면 만든 때부터다.
-   */
   createAgentDelegation(
     workspaceId: string,
     name: string,
@@ -3501,7 +2973,6 @@ export const mockDb = {
     const workspace = assertWorkspace(workspaceId);
     if (!workspace.agentAccessAllowed) fail("AGENT_ACCESS_DISABLED");
     const createdAt = nextTimestamp();
-    // 시드를 고정한 의사 난수(LCG) — 매번 같은 값이지만 반복 무늬로 보이지 않게
     let seed = idCounter * 2654435761;
     const random = Array.from({ length: 43 }, () => {
       seed = (seed * 1103515245 + 12345) % 2147483648;
@@ -3532,16 +3003,11 @@ export const mockDb = {
     return { delegation: copy(omit(delegation, ["userId"])), token };
   },
 
-  /**
-   * 서버(APP-825)처럼 최근 것부터 한 쪽씩, 커서는 `(occurredAt, usageId)` 둘을 함께 받는다 — 하나만 오면
-   * 처음부터다. 회수·만료된 연결의 내역도 보인다.
-   */
   listAgentDelegationUsages(
     delegationId: string,
     afterOccurredAt?: string | null,
     afterUsageId?: string | null
   ): AgentDelegationUsagesResponseData {
-    // 남의 연결은 없는 연결과 같다 — 같은 워크스페이스의 ADMIN 에게도 내역은 열리지 않는다(APP-940)
     if (
       !state.agentDelegations.some(
         (candidate) =>
@@ -3579,10 +3045,6 @@ export const mockDb = {
     });
   },
 
-  /**
-   * 동의 화면이 읽는 요청(APP-888). 없거나 이미 처리했으면 서버처럼 `AGENT_OAUTH_REQUEST_NOT_FOUND` 다.
-   * 권한은 에이전트가 요청한 범위다 — `mcp:read` 는 늘 있고, `mcp:write` 는 요청했을 때만 있다(APP-1461).
-   */
   getAgentOAuthConsent(consentState: string) {
     const consent = state.agentOAuthConsents[consentState];
     if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
@@ -3593,7 +3055,6 @@ export const mockDb = {
     };
   },
 
-  /** 허락하면 그 워크스페이스로 OAuth 연결이 하나 생기고, 돌아갈 주소에 `code`·`state` 가 붙는다. */
   approveAgentOAuthConsent(
     consentState: string,
     workspaceId: string,
@@ -3601,14 +3062,12 @@ export const mockDb = {
   ) {
     const consent = state.agentOAuthConsents[consentState];
     if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
-    // 에이전트가 쓰기를 요청하지 않았는데 허용하면 서버는 400 이다(APP-1461)
     if (allowTaskChanges && !consent.scopes.includes("mcp:write"))
       fail("BAD_REQUEST");
     const workspace = state.workspaces.find(
       (candidate) => candidate.workspaceId === workspaceId
     );
     if (!workspace) fail("WORKSPACE_NOT_FOUND");
-    // 막혀도 요청은 남는다 — 다른 워크스페이스로 허락하거나 거절할 수 있다(server 와 같다)
     if (!workspace.agentAccessAllowed) fail("AGENT_ACCESS_DISABLED");
     delete state.agentOAuthConsents[consentState];
     const createdAt = nextTimestamp();
@@ -3639,7 +3098,6 @@ export const mockDb = {
     };
   },
 
-  /** 거절은 아무것도 만들지 않고 돌아갈 주소에 `error=access_denied` 를 붙인다. */
   denyAgentOAuthConsent(consentState: string) {
     const consent = state.agentOAuthConsents[consentState];
     if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
@@ -3652,7 +3110,6 @@ export const mockDb = {
     };
   },
 
-  /** 본인 회수. 이미 회수된 연결을 다시 회수해도 그대로 둔다(서버와 같다). */
   revokeAgentDelegation(delegationId: string): void {
     const delegation = state.agentDelegations.find(
       (candidate) =>
@@ -3666,7 +3123,6 @@ export const mockDb = {
     delegation.revokeReason = "USER";
   },
 
-  /** 외부 에이전트 허용(APP-939). 끄면 그 워크스페이스의 연결을 모두 끊고, 다시 켜도 되살리지 않는다. */
   changeWorkspaceAgentAccess(workspaceId: string, allowed: boolean): void {
     requireWorkspaceAdmin(workspaceId);
     const workspace = assertWorkspace(workspaceId);
@@ -3685,7 +3141,6 @@ export const mockDb = {
     }
   },
 
-  /** 관리자 목록(APP-940). 누가 맡겼든 살아 있는(회수·만료되지 않은) 연결만, 최근 것부터. */
   listWorkspaceAgentDelegations(
     workspaceId: string
   ): WorkspaceAgentDelegationsResponseDataDelegationsItem[] {
@@ -3723,7 +3178,6 @@ export const mockDb = {
     );
   },
 
-  /** 관리자 회수(APP-940). 다른 워크스페이스 연결은 없는 것과 같고, 이미 끊긴 것은 그대로 둔다. */
   revokeWorkspaceAgentDelegation(
     workspaceId: string,
     delegationId: string
@@ -3745,7 +3199,6 @@ export const mockDb = {
     delegation.revokeReason = "ADMIN";
   },
 
-  /** 연결만 끊고 행은 남긴다 — 계약이 미연동 provider도 목록에 담기 때문이다. */
   disconnectIntegration(
     workspaceId: string,
     provider: string
@@ -3769,10 +3222,6 @@ export const mockDb = {
     );
   },
 
-  /**
-   * 멤버의 워크스페이스 표시 이름을 고친다 (APP-1204). 본인은 자기 이름을, ADMIN 은 누구의 이름이든.
-   * 비우면 계정 이름으로 되돌린다. 회의가 들고 있는 이름 사본(참여자·화자)도 따라 바뀐다 — 서버는 id 로 조인해 읽는다.
-   */
   renameMember(
     workspaceId: string,
     userId: string,
@@ -3806,7 +3255,6 @@ export const mockDb = {
       for (const participantId of participantIds) {
         renameSpeaker(note.noteId, participantId, { userId, name: shown });
       }
-      // 회의 시작자도 같은 이름을 읽는다(서버는 id 로 조인한다)
       if (note.meetingStartedBy?.userId === userId) {
         note.meetingStartedBy = { ...note.meetingStartedBy, name: shown };
       }
@@ -3814,10 +3262,6 @@ export const mockDb = {
     return copy(memberView(member));
   },
 
-  /**
-   * 역할 변경은 ADMIN만 할 수 있다. 마지막 ADMIN을 MEMBER로 내리는 것은 막는다 —
-   * 계약(openapi3.yml)의 409 LAST_WORKSPACE_ADMIN. 같은 역할로 바꾸면 그냥 통과한다(no-op 성공).
-   */
   changeMemberRole(workspaceId: string, userId: string, requestedRole: string) {
     requireWorkspaceAdmin(workspaceId);
     const role = assertRole(requestedRole);
@@ -3835,11 +3279,6 @@ export const mockDb = {
     syncOwnWorkspaceRole(workspaceId, userId, role);
   },
 
-  /**
-   * 추방은 ADMIN만, 자기 자신은 대상이 될 수 없다(계약 400 BAD_REQUEST). 이 규칙 때문에
-   * 호출자가 항상 ADMIN이면서 대상과 다른 사람이라, 대상이 마지막 ADMIN인 경우는 수학적으로
-   * 나올 수 없다(호출자 자신도 ADMIN으로 남으므로) — 계약도 이 엔드포인트엔 409가 없다.
-   */
   removeMember(workspaceId: string, userId: string) {
     requireWorkspaceAdmin(workspaceId);
     if (userId === state.user.userId) fail("BAD_REQUEST");
@@ -3850,17 +3289,11 @@ export const mockDb = {
     state.members.splice(index, 1);
   },
 
-  /**
-   * 나가기는 멤버 누구나 할 수 있고(ADMIN 가드 없음), 마지막 ADMIN은 나갈 수 없다(409).
-   * 비멤버의 404 코드는 추방과 달리 WORKSPACE_MEMBER_NOT_FOUND가 아니라 WORKSPACE_NOT_FOUND다
-   * (계약 — 본인 접근 관점에서는 멤버가 아닌 워크스페이스가 곧 "없는" 워크스페이스다).
-   */
   leaveWorkspace(workspaceId: string, workspaceName?: unknown) {
     const index = state.members.findIndex(
       (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
     );
     if (index < 0) fail("WORKSPACE_NOT_FOUND");
-    // 본문의 이름이 현재 이름과 같아야 나간다(PRO-69 contract, server APP-1381). 없거나 틀리면 400.
     assertWorkspaceName(workspaceId, workspaceName);
     const member = state.members[index];
     const admins = state.members.filter(
@@ -3871,7 +3304,6 @@ export const mockDb = {
     }
     state.members.splice(index, 1);
 
-    // 떠나면 그 워크스페이스에 맡긴 내 연결이 회수된다 — 서버의 멤버십 종료 리스너(APP-801)와 같다.
     const revokedAt = nextTimestamp();
     for (const delegation of state.agentDelegations) {
       if (
@@ -3885,7 +3317,6 @@ export const mockDb = {
       delegation.revokeReason = "MEMBERSHIP_ENDED";
     }
 
-    // 떠나면 그 워크스페이스의 내 에이전트 대화가 지워진다(server APP-1415). 목의 대화는 모두 내 것이다.
     const leftChats = new Set(
       state.agentChats
         .filter((chat) => chat.workspaceId === workspaceId)
@@ -3898,7 +3329,6 @@ export const mockDb = {
       (message) => !leftChats.has(message.chatId)
     );
 
-    // 멤버십이 사라지면 그 워크스페이스는 목록에서도 빠진다 — 초대 수락(합류)의 역이다.
     const workspaceIndex = state.workspaces.findIndex(
       (w) => w.workspaceId === workspaceId
     );
@@ -3906,10 +3336,6 @@ export const mockDb = {
     state.workspaces.splice(workspaceIndex, 1);
   },
 
-  /**
-   * 탈퇴 처리 목록(PRO-69 contract 제안 `GET /v1/users/me/deletion-plan`). 규칙은 userflow 「워크스페이스별 처리 규칙」:
-   * 혼자 → 삭제, 다른 관리자가 있거나 내가 멤버 → 나가기, 유일 관리자 + 다른 멤버 → 넘기기 또는 삭제(기본 가장 오래된 멤버).
-   */
   deletionPlan() {
     const me = state.user.userId;
     return {
@@ -3947,16 +3373,12 @@ export const mockDb = {
     };
   },
 
-  /** 관리자의 워크스페이스 삭제(제안 `DELETE /v1/workspaces/{id}`). 본문의 이름이 현재 이름과 같아야 한다. */
   deleteWorkspace(workspaceId: string, workspaceName?: unknown) {
     requireWorkspaceAdmin(workspaceId);
     assertWorkspaceName(workspaceId, workspaceName);
     removeWorkspace(workspaceId);
   },
 
-  /**
-   * 탈퇴(제안 `DELETE /v1/users/me`). 서버처럼 지금 상태로 처리를 다시 판정하고, 화면의 선택이 맞지 않으면 아무것도 바꾸지 않는다.
-   */
   deleteAccount(body: {
     confirmation?: unknown;
     workspaces?: {
@@ -4032,7 +3454,6 @@ export const mockDb = {
     input: { email: string; role: string }
   ): WorkspaceInvitationActionResponseData {
     assertWorkspace(workspaceId);
-    // 서버(APP-183)와 동일한 정규화 — 미가입자 초대가 정상 경로라 404는 없다
     const email = input.email.trim().toLowerCase();
     const alreadyMember = state.members.some(
       (member) => member.workspaceId === workspaceId && member.email === email
@@ -4046,13 +3467,10 @@ export const mockDb = {
     );
     if (alreadyInvited) fail("DUPLICATE_PENDING_INVITATION");
 
-    // 생성·만료(생성+1일, 계약)는 같은 시각에서 계산한다. 만료 판정과 UI가 실제 시계를
-    // 쓰므로 여기도 실제 시계다 — 시계가 갈리면 방금 만든 초대가 만료로 보인다.
     const createdAtMs = Date.now();
     const invitation: MockInvitation = {
       workspaceId,
       invitationId: nextId(),
-      // 목엔 가입자 레지스트리가 없다 — 계약의 미가입자 초대(inviteeName null)로 취급한다
       inviteeName: null,
       inviteeEmail: email,
       inviteeImage: null,
@@ -4071,22 +3489,15 @@ export const mockDb = {
     });
   },
 
-  /**
-   * 토큰 수락 — 목의 토큰은 invitationId다. 실서버 계약대로 만료(409)와 이메일
-   * 일치(403)를 먼저 본다. 인앱 수락(`acceptInvitation`)은 항상 본인 초대라 안 본다.
-   */
   acceptInvitationByToken(
     token: string
   ): WorkspaceInvitationActionResponseData {
     const invitation = findInvitation(token);
-    // 서버(AcceptWorkspaceInvitationByTokenService)와 같은 순서 — 만료 → 상태 → 이메일 → 멤버
     expireIfNeeded(invitation);
     if (invitation.status !== "PENDING") fail("INVITATION_NOT_PENDING");
     if (invitation.inviteeEmail !== state.user.email) {
       fail("INVITATION_EMAIL_MISMATCH");
     }
-    // 계약의 409. 지금은 createInvitation이 이미 멤버를 막아 목에서 도달할 수 없지만,
-    // 목에 멤버 변동 기능이 생겨도 실서버와 갈라지지 않게 검사를 둔다.
     if (
       state.members.some(
         (member) =>
@@ -4106,14 +3517,12 @@ export const mockDb = {
     const resolved = resolveInvitation(invitationId, "ACCEPTED");
     const isSelf = invitation.inviteeEmail === state.user.email;
 
-    // 본인이 받은 초대를 수락하면 그 워크스페이스가 목록에 나타나야 한다 — 그게 합류다.
     if (
       isSelf &&
       !state.workspaces.some((w) => w.workspaceId === invitation.workspaceId)
     ) {
       state.workspaces.push({
         workspaceId: invitation.workspaceId,
-        // 초대가 실어 온 이름으로 합류한다 — 대기 초대가 둘이라 한 이름으로 굳히면 다른 쪽이 엉뚱한 이름이 된다.
         name:
           state.notifications.find(
             (item) => item.invitation?.invitationId === invitation.invitationId
@@ -4156,10 +3565,6 @@ export const mockDb = {
     return resolveInvitation(invitationId, "CANCELED");
   },
 
-  /**
-   * 알림 목록(PRO-67 I06 계약). 서버처럼 **필터를 쪽을 자르기 전에** 적용하고 `(createdAt, id)` 커서로 자른다.
-   * 스키마 표식이 없으면(옛 web) 원본이 살아 있는 초대만 낸다. `serverTime` 은 모두 읽음의 기준 시각이다.
-   */
   listNotifications(
     params: {
       filter?: string | null;
@@ -4205,7 +3610,6 @@ export const mockDb = {
       .length;
   },
 
-  /** `upTo` 까지 만든 알림만 읽는다 — 그 뒤 도착한 것은 안 읽음으로 남는다. 멱등이다. */
   markAllNotificationsRead(upTo: string): { readCount: number } {
     let readCount = 0;
     const readAt = nextTimestamp();
@@ -4218,18 +3622,12 @@ export const mockDb = {
     return { readCount };
   },
 
-  /** 시험·데모가 「방금 도착한 알림」을 만든다. */
   pushNotification(item: NotificationListResponseDataNotificationsItem) {
-    // 같은 알림을 두 번 넣지 않는다 — 결제 목이 조회마다 「구독 종료」 알림을 확인한다(APP-1565).
     const id = item.notificationId;
     if (state.notifications.some((n) => n.notificationId === id)) return;
     state.notifications.push(copy(item));
   },
 
-  /**
-   * 「방금 도착한 검토할 결과」 하나를 만든다(APP-1361). 목 모드 콘솔의 `heymoaMock.notify()` 와 e2e 가 부른다 —
-   * 이벤트 스트림 힌트로 개수·「새 알림 N개」가 따라오는지 본다. 제목은 고정 목록을 돈다(무작위 없음).
-   */
   arriveNotification(): NotificationListResponseDataNotificationsItem {
     const titles = ["분기 계획 세션", "주간 제품 회의", "고객 인터뷰"];
     const notes = ["01K0000000026", "01K0000000002", "01K0000000005"];
@@ -4274,14 +3672,12 @@ export const mockDb = {
     return copy(feedback);
   },
 
-  /** 서버처럼 답변 있는 것만 읽음으로 한다. 멱등이다. */
   markFeedbackAnswersSeen(): void {
     for (const item of state.feedbacks) {
       if (item.answer !== null) item.answerSeen = true;
     }
   },
 
-  /** 계약은 식별자만 돌려준다 — 전체 알림을 흘리면 UI가 없는 필드에 기대게 된다. */
   markNotificationRead(
     notificationId: string
   ): MarkNotificationReadResponseData {
@@ -4297,10 +3693,6 @@ export const mockDb = {
     return copy(state.user);
   },
 
-  /**
-   * 계정 화면 언어(`PATCH /v1/users/me`, APP-1283). 같은 값을 다시 보내도 결과가 같다. 새로고침해도 남도록
-   * 쿠키에도 적는다 — SSR 목 사용자(`lib/auth/server.ts`)가 그 쿠키로 같은 언어를 그린다.
-   */
   updateCurrentUserLanguage(language: "ko" | "en"): CurrentUserResponseData {
     state.user.language = language;
     if (typeof document !== "undefined") {
@@ -4309,10 +3701,6 @@ export const mockDb = {
     return copy(state.user);
   },
 
-  /**
-   * 필수 문서 동의(APP-1276). 서버처럼 하나라도 지금 버전이 아니면 아무것도 기록하지 않고 409 로 거절한다.
-   * 멱등이다 — 이미 동의한 버전을 다시 보내도 같은 결과다.
-   */
   recordConsents(request: RecordConsentRequest): void {
     if (consentFailures > 0) {
       consentFailures -= 1;
@@ -4344,12 +3732,10 @@ export const mockDb = {
     };
   },
 
-  /** 다음 동의 기록 `count` 번을 500 으로 실패시킨다 — 대시보드 앞 「다시 시도」 화면을 목에서 본다. */
   failNextConsents(count: number): void {
     consentFailures = count;
   },
 
-  /** 시험이 「아직 동의하지 않은 계정」을 만든다. 목 화면은 늘 동의한 계정으로 시작한다. */
   requireConsent(): void {
     state.user = {
       ...state.user,
@@ -4361,8 +3747,6 @@ export const mockDb = {
     };
   },
 
-  // 서버는 **합류한 순서**로 준다(workspaceMember.createdAt). 목은 삽입 순서가 곧 합류 순서라
-  // 그대로 넘긴다 — 이름순으로 다시 정렬하면 목만 서버와 다른 순서를 보여 준다.
   listWorkspaces(): WorkspaceListResponseDataWorkspacesItem[] {
     return copy(state.workspaces);
   },
@@ -4379,7 +3763,6 @@ export const mockDb = {
     };
     state.workspaces.push(workspace);
     attachWorkspaceState(workspace.workspaceId, workspace.role);
-    // 서버는 워크스페이스를 만들 때 「일반」 프로젝트를 함께 만든다(APP-1179).
     const createdAt = nextTimestamp();
     state.projects.push({
       projectId: nextId(),
@@ -4408,7 +3791,6 @@ export const mockDb = {
     return copy(workspace);
   },
 
-  /** 로컬 전용 시드를 올린다(public/mock-local). 목을 리셋해도 다시 올라가게 기억해 둔다. */
   applyLocalSeed(list: LocalSeedProject[]) {
     localSeed = list;
     seedLocal(state);
@@ -4477,10 +3859,6 @@ export const mockDb = {
     return listNotesWhere((note) => note.projectId === projectId);
   },
 
-  /**
-   * 워크스페이스의 노트 전부 (APP-685). **조립부는 프로젝트 단위와 한 벌이다** — 정렬 규칙이
-   * 두 곳에 생기면 팬아웃을 없애도 순서가 갈린다. 서버도 같은 이유로 where 절만 갈랐다.
-   */
   listWorkspaceNotes(workspaceId: string): NoteListResponseDataNotesItem[] {
     assertWorkspace(workspaceId);
     requireWorkspaceMember(workspaceId);
@@ -4498,7 +3876,6 @@ export const mockDb = {
     const note: NoteResponseData = {
       noteId: nextId(),
       projectId,
-      // 서버는 접근 검증에서 이미 읽은 프로젝트에서 이 둘을 낸다 (APP-685).
       workspaceId: project.workspaceId,
       projectName: project.name,
       title: input.title?.trim() || "제목 없는 노트",
@@ -4514,7 +3891,6 @@ export const mockDb = {
       contextBackground: null,
       autoEnd: null,
       pausedAt: null,
-      // 서버(CreateNoteService)가 만든 사람을 참여자로 넣는다.
       participants: [
         {
           participantId: nextId(),
@@ -4530,10 +3906,6 @@ export const mockDb = {
     return copy(note);
   },
 
-  /**
-   * 참여자를 통째로 교체한다(PUT). 부분 추가·삭제가 아니라 요청한 목록이 곧 최종 상태다.
-   * 워크스페이스 멤버가 아닌 유저가 섞이면 아무것도 바꾸지 않고 400을 낸다.
-   */
   replaceNoteParticipants(
     noteId: string,
     userIds: string[],
@@ -4543,14 +3915,10 @@ export const mockDb = {
     const project = state.projects.find(
       (row) => row.projectId === note.projectId
     );
-    // 참여자 이름은 이 워크스페이스에서 보이는 이름이다(APP-1204)
     const workspaceMembers = state.members
       .filter((member) => member.workspaceId === project?.workspaceId)
       .map(memberView);
     const unique = [...new Set(userIds)];
-    // **이미 이 회의의 참여자면 멤버가 아니어도 남길 수 있다.** 멤버를 내보내도 참여 기록은
-    // 남는데 이건 전체 교체라, 「현재 멤버」만 받으면 나간 사람이 낀 회의록은 참여자를
-    // 아무것도 못 고친다 — 다른 멤버 하나 더하는 저장까지 거절된다. 서버와 같은 규칙이다.
     const currentUserIds = note.participants
       .map((row) => row.userId)
       .filter((userId): userId is string => Boolean(userId));
@@ -4564,22 +3932,12 @@ export const mockDb = {
     ) {
       fail("NOT_WORKSPACE_MEMBER");
     }
-    /**
-     * **남는 사람의 `participantId`를 새로 발급하지 않는다.** 서버가 차집합으로 저장하는
-     * 이유와 같다(APP-480) — 화자 연결이 참여 기록을 가리키므로 id가 바뀌면 그 노트의
-     * 화자가 통째로 풀린다. 목이 매번 새로 발급하면 화면에서만 그 결함이 재현된다.
-     *
-     * **임시 참여자는 건드리지 않는다** (APP-490). 이 요청의 뜻이 계정 참여자로 좁혀졌다.
-     */
     const keptGuests = note.participants.filter((row) => row.guestId !== null);
     const existingByUserId = new Map(
       note.participants
         .filter((row) => row.userId !== null)
         .map((row) => [row.userId as string, row])
     );
-    // **떠난 참여자도 재구성 원본에 넣는다.** 위 검증이 「이미 참여자면 멤버가 아니어도
-    // 된다」를 허용하는데, 멤버 목록만 훑으면 그 사람이 요청에 실려 와도 조용히 빠진다 —
-    // 화자 연결까지 `detachSpeakers` 로 함께 풀린다. 서버는 보존한다.
     const rebuildSource = [
       ...workspaceMembers,
       ...note.participants
@@ -4619,7 +3977,6 @@ export const mockDb = {
     return copy({ participants: note.participants });
   },
 
-  /** 이름만으로 임시 참여자를 만들어 이 회의에 곧바로 넣는다 (APP-490). */
   createNoteGuestParticipant(noteId: string, displayName: string) {
     const note = findNote(noteId);
     const workspaceId = state.projects.find(
@@ -4627,7 +3984,6 @@ export const mockDb = {
     )?.workspaceId;
     if (!workspaceId) fail("NOTE_NOT_FOUND");
 
-    // 서버의 singleLine(): 제어문자를 공백으로 접고 양끝을 자른다. 거부가 아니라 접는다.
     const name = displayName
       .replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ")
       .trim();
@@ -4652,12 +4008,9 @@ export const mockDb = {
         image: null,
       },
     ]);
-    // **만든 사람을 짚어 준다.** 같은 이름을 막지 않으므로 목록만으로는 어느 것이 방금
-    // 만든 것인지 가릴 수 없다 — 서버와 같은 계약이다.
     return copy({ participantId, participants: note.participants });
   },
 
-  /** 이 회의의 **임시 참여자만** 전체 교체한다. 계정 참여자는 안 건드린다. */
   replaceNoteGuestParticipants(
     noteId: string,
     guestIds: string[],
@@ -4668,7 +4021,6 @@ export const mockDb = {
       (row) => row.projectId === note.projectId
     )?.workspaceId;
     const unique = [...new Set(guestIds)];
-    // 없는 임시 참여자(404)보다 먼저 본다 — 그 사이 남이 지운 사람일 수 있다. 서버와 같은 순서다.
     rejectIfChanged(
       expectedGuestIds,
       note.participants
@@ -4680,7 +4032,6 @@ export const mockDb = {
       const guest = state.workspaceGuests.find(
         (row) => row.guestId === guestId && row.workspaceId === workspaceId
       );
-      // 다른 워크스페이스 것을 넣으려 하면 없는 것으로 본다 — 신뢰 경계다.
       if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
       return guest;
     });
@@ -4691,7 +4042,6 @@ export const mockDb = {
         .filter((row) => row.guestId !== null)
         .map((row) => [row.guestId as string, row])
     );
-    // 남는 사람의 participantId 를 유지한다 — 화자 연결이 그 값을 가리킨다.
     const next = guests.map((guest) => ({
       participantId:
         existingByGuestId.get(guest.guestId)?.participantId ?? nextId(),
@@ -4705,7 +4055,6 @@ export const mockDb = {
       (row) => row.guestId !== null && !unique.includes(row.guestId)
     );
     note.participants = sortParticipants([...keptAccounts, ...next]);
-    // 서버의 ON DELETE CASCADE 를 흉내 낸다 — 회의에서 빠진 사람의 화자 연결은 끊긴다.
     detachSpeakers(
       noteId,
       removed.map((row) => row.participantId)
@@ -4713,7 +4062,6 @@ export const mockDb = {
     return copy({ participants: note.participants });
   },
 
-  /** 회의에 붙이지 않고 임시 참여자를 만든다. 멤버 누구나 만든다 — 회의의 참여자 추가와 같은 권한이다. */
   createWorkspaceGuest(workspaceId: string, displayName: string) {
     requireWorkspaceMember(workspaceId);
     const name = displayName
@@ -4736,10 +4084,6 @@ export const mockDb = {
     });
   },
 
-  /**
-   * 임시 참여자의 이름을 고친다 (APP-1193). **같은 행의 이름만 바뀐다** — 참여 기록 id 와 화자 지정은
-   * 그대로고, 회의가 들고 있는 이름 사본(참여자·화자 목록)만 따라 바뀐다. 같은 이름은 막지 않는다.
-   */
   renameWorkspaceGuest(
     workspaceId: string,
     guestId: string,
@@ -4778,10 +4122,6 @@ export const mockDb = {
     });
   },
 
-  /**
-   * 임시 참여자를 지운다. **되돌릴 수 없다** — 그 참여 기록과 거기 붙은 화자 연결이
-   * 함께 사라진다. 서버에서는 `ON DELETE CASCADE` 가 하는 일이라 목이 흉내 낸다.
-   */
   deleteWorkspaceGuest(workspaceId: string, guestId: string) {
     requireWorkspaceAdmin(workspaceId);
     const guest = state.workspaceGuests.find(
@@ -4810,7 +4150,6 @@ export const mockDb = {
     return copy({ affectedNoteCount });
   },
 
-  /** 연동 미리보기. **아무것도 안 바꾼다** — 실행과 같은 판정을 같은 모양으로 돌려준다. */
   previewWorkspaceGuestLink(
     workspaceId: string,
     guestId: string,
@@ -4821,10 +4160,6 @@ export const mockDb = {
     );
   },
 
-  /**
-   * 임시 참여자를 계정과 잇는다. **참여 기록의 `participantId` 를 유지한다** — 화자 연결이
-   * 그 값을 가리키므로 지우고 새로 만들면 그 사람이 나온 모든 회의의 화자가 풀린다.
-   */
   linkWorkspaceGuest(
     workspaceId: string,
     guestId: string,
@@ -4838,13 +4173,10 @@ export const mockDb = {
     for (const entry of plan.changed) {
       const note = findNote(entry.noteId);
       if (entry.accountParticipantId && !entry.guestHasSpeaker) {
-        // 계정 기록을 남기고 임시 기록을 지운다 — 화자가 안 붙어 있어 잃을 것이 없다.
         note.participants = note.participants.filter(
           (row) => row.participantId !== entry.guestParticipantId
         );
       } else {
-        // **지우기보다 먼저 옮긴다.** 사라질 계정 기록에도 화자가 붙어 있으면(V31 부터
-        // 열린 경우다) 그대로 지울 때 그 화자가 주인을 잃는다.
         if (entry.accountParticipantId) {
           repointSpeakers(
             entry.noteId,
@@ -4852,7 +4184,6 @@ export const mockDb = {
             entry.guestParticipantId
           );
         }
-        // **화자가 붙은 쪽을 남기고** 반대쪽을 지운다. 그래야 화자 연결이 산다.
         note.participants = note.participants
           .filter((row) => row.participantId !== entry.accountParticipantId)
           .map((row) =>
@@ -4867,31 +4198,24 @@ export const mockDb = {
                 }
               : row
           );
-        // 화자 목록이 들고 있는 이름도 함께 바뀐다.
         renameSpeaker(entry.noteId, entry.guestParticipantId, target);
       }
       note.participants = sortParticipants(note.participants);
     }
 
-    // 모든 회의가 합쳐졌으므로 임시 참여자를 남길 이유가 없다 (V31).
     state.workspaceGuests = state.workspaceGuests.filter(
       (row) => row.guestId !== guestId
     );
     return copy(guestLinkResultOf(plan));
   },
 
-  /** 워크스페이스의 임시 참여자 목록. 멤버 누구나 본다 — 참석자 후보를 세우는 데 쓰인다. */
   listWorkspaceGuests(workspaceId: string) {
-    // **없는 워크스페이스를 빈 목록으로 접지 않는다.** 계약이 404 를 말하는데 200 + `[]` 로
-    // 답하면, 목에서는 접근 오류가 「한 명도 없음」과 똑같이 보이고 그 상태로 테스트도
-    // 통과한다 — 화면은 되는데 실제로는 안 되는 자리가 여기서 생긴다.
     requireWorkspaceMember(workspaceId);
     const guests = state.workspaceGuests
       .filter((guest) => guest.workspaceId === workspaceId)
       .map((guest) => ({
         guestId: guest.guestId,
         displayName: guest.displayName,
-        // 그 임시 참여자가 참여자로 들어가 있는 회의 수. 지우기 전에 보여줄 영향 범위다.
         noteCount: state.notes.filter((note) =>
           note.participants.some((row) => row.guestId === guest.guestId)
         ).length,
@@ -4910,7 +4234,6 @@ export const mockDb = {
     const note = findNote(noteId);
     return copy({
       ...note,
-      // 노트 상세도 일시정지 시각을 싣는다(APP-1317). 자동 종료 예정은 일시정지 상태일 때만 의미가 있다.
       pausedAt: pausedAtOf(note),
       autoEnd:
         note.meetingStatus === "PAUSED" || note.autoEnd?.endedBy === "SYSTEM"
@@ -4933,10 +4256,6 @@ export const mockDb = {
     return this.getNote(noteId);
   },
 
-  /**
-   * 회의 맥락을 통째로 바꾼다(PUT, APP-1188). 빈 값·생략은 지운다. 종료된 회의는 409 — 서버와 같은 차례로
-   * 길이(400)보다 먼저 본다.
-   */
   updateNoteContext(
     noteId: string,
     input: { topic?: string | null; background?: string | null }
@@ -4953,11 +4272,6 @@ export const mockDb = {
     return this.getNote(noteId);
   },
 
-  /**
-   * 노트를 물리 삭제한다. 서버는 FK CASCADE가 자식을 지우므로(APP-335 V18) 목도 같은 것을
-   * 같이 지운다 — 세션·전사 세그먼트·분석·챗과 그 메시지. 안 지우면 "지웠는데 요약이 남는"
-   * 상태가 목에서만 만들어져 화면 검증이 거짓이 된다.
-   */
   deleteNote(noteId: string) {
     findNote(noteId);
     const sessionIds = new Set(
@@ -4971,8 +4285,6 @@ export const mockDb = {
       (row) => !sessionIds.has(row.transcriptionSessionId)
     );
     state.analyses = state.analyses.filter((row) => row.noteId !== noteId);
-    // 서버와 같다(APP-1409) — 모든 질문의 범위가 정확히 이 노트 하나인 대화만 함께 지운다. 다른 범위도 물은
-    // 대화는 남고, 메시지의 `scope`에 남은 죽은 id는 조회할 때 서버가 재검증해 「삭제됨」으로 접는다.
     state.agentChats
       .filter((chat) => {
         const questions = state.agentChatMessages.filter(
@@ -4996,15 +4308,9 @@ export const mockDb = {
     clientInstanceId?: string
   ): TranscriptionSessionResponseData {
     const note = findNote(noteId);
-    // 조회와 같은 규칙 — 권한 승인과 이 POST 사이에 추방됐을 수 있다. 서버는 여기서도
-    // 멤버십을 보고 404 `WORKSPACE_NOT_FOUND`를 준다(`NoteAccessHandler.requireProjectMember`).
     assertWorkspace(assertProject(note.projectId).workspaceId);
-    // 계약의 409에 `MEETING_ALREADY_ENDED`가 생겨(APP-214, server@a582684) 목도 막는다.
-    // **서버는 원래부터 막고 있었다** — 없던 것은 계약뿐이었고, 그래서 목과 생성 클라이언트만
-    // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
     expireReadySessions(noteId);
-    // 서버 D-16: 그 세션을 연 탭이 다시 누른 것이면 그 탭은 이미 떠났다. 리스가 살아 있어도 닫는다
     for (const session of state.sessions) {
       if (
         session.noteId === noteId &&
@@ -5017,12 +4323,6 @@ export const mockDb = {
         session.endReason = "HEARTBEAT_TIMEOUT";
       }
     }
-    // **시작자 제한이 없다** (APP-685). 서버가 시작·재개를 시작자로 묶지 않는다 — 둘이
-    // 동시에 눌러도 아래 열린 세션 검사가 둘째를 「이미 녹음 중」으로 막고, 그것이 사용자에게
-    // 사실인 말이다.
-    //
-    // **그리고 그 검사는 이 노트만 본다.** 전에는 `noteId` 필터가 없어서 **다른 노트의**
-    // 열린 세션이 이 노트의 녹음을 막았다. 서버는 `findOpenByNoteIdForUpdate(noteId)` 다.
     if (
       state.sessions.some(
         (session) =>
@@ -5041,8 +4341,6 @@ export const mockDb = {
       endedAt: null,
       endReason: null,
     };
-    // 회의 시작자는 녹음을 처음 시작한 유저다 (계약). **권한이 아니라 기록이다** (APP-685) —
-    // 종료도 재개도 시작자로 묶이지 않는다.
     note.meetingStartedBy ??= {
       userId: state.user.userId,
       name: myNameIn(
@@ -5061,12 +4359,6 @@ export const mockDb = {
 
   getSession(sessionId: string): TranscriptionSessionResponseData {
     const session = findSession(sessionId);
-    // **세션 조회도 멤버십을 본다.** 서버는 노트 → 프로젝트 → 워크스페이스 멤버십을 확인하고
-    // 비멤버에게는 존재를 숨기려고 404 `WORKSPACE_NOT_FOUND`를 준다
-    // (`NoteAccessHandler.requireProjectMember` → `WorkspaceNotFoundException`).
-    //
-    // 이게 없으면 목에서는 추방 뒤에도 200이 와서, 녹음을 끊는 경로(`RecordingProvider`)가
-    // 화면에서는 되는데 목으로는 재현이 안 된다 — 목이 계약과 갈리는 그 자리다.
     assertWorkspace(
       assertProject(findNote(session.noteId).projectId).workspaceId
     );
@@ -5074,7 +4366,6 @@ export const mockDb = {
     return copy(session) as unknown as TranscriptionSessionResponseData;
   },
 
-  /** 열린 세션(ACTIVE 또는 만료 전 READY). REST 경로는 없고 시험이 상태를 확인하는 데 쓴다. */
   getCurrentSession(
     noteId: string
   ): Pick<
@@ -5118,18 +4409,6 @@ export const mockDb = {
     return copy(session) as unknown as TranscriptionSessionResponseData;
   },
 
-  /**
-   * 화자에 참석자를 연결하거나 「참석자 아님」으로 확정한다. **「모든 발화에 적용」이다.**
-   *
-   * **한 사람이 여러 화자를 맡을 수 있다** (V31). 예전에는 새로 붙이면 앞 화자에서
-   * 떨어졌는데, pyannote 가 한 사람을 둘로 쪼갠 회의에서 그것이 고칠수록 나빠지게 만들었다.
-   *
-   * 이 화자에 달린 **발화 단위 지정은 함께 지운다** — 그래야 「모든」이 말 그대로가 된다.
-   *
-   * **대상을 참여 기록으로 가리킨다** (APP-491). 계정 없는 임시 참여자는 `userId` 가 없어
-   * 그 계약으로는 가리킬 수가 없다. 겸용 `userId` 도 계속 받는다 — 옛 web 이 아직 그것으로
-   * 보내고, APP-496 이 배포 뒤에 뗀다.
-   */
   assignSpeaker(
     noteId: string,
     label: string,
@@ -5160,14 +4439,10 @@ export const mockDb = {
           confirmed: true,
         };
       }
-      // 다른 화자는 그대로 둔다. 같은 사람이 붙어 있어도 안 떨어진다 (V31)
       return row;
     });
     state.diarizations.set(noteId, { ...diarization, speakers });
 
-    // 이 화자의 발화 단위 지정을 지운다. **다른 화자 것도, 다른 회의 것도 안 건드린다** —
-    // 사람이 고른 것은 이 회의 이 화자의 「모든 발화」다. 라벨은 회의마다 독립이라 노트를
-    // 안 가리면 다른 회의의 같은 라벨까지 쓸어간다.
     for (const segment of segmentsOfNote(noteId)) {
       if (segment.speakerLabel === label && segment.assignedParticipantId) {
         segment.assignedParticipantId = null;
@@ -5176,12 +4451,6 @@ export const mockDb = {
     return copy(speakers);
   },
 
-  /**
-   * **발화 하나에만** 참석자를 붙이거나, 붙였던 것을 뗀다 (V31).
-   *
-   * 대상이 없으면 **해제**다 — 그 발화는 다시 화자 라벨의 지정을 따른다.
-   * 라벨 지정의 `null`(「참석자 중에 없다」)과 뜻이 다르다.
-   */
   assignSegmentSpeaker(
     noteId: string,
     segmentId: string,
@@ -5202,10 +4471,7 @@ export const mockDb = {
         row.segmentId === segmentId &&
         sessionIds.has(row.transcriptionSessionId)
     );
-    // 발화 id 는 식별자만 있으면 보낼 수 있는 값이라, 이 회의 것인지 보는 게 신뢰 경계다
     if (!segment) fail("TRANSCRIPT_SEGMENT_NOT_FOUND");
-    // 화면은 라벨이 붙은 줄에만 메뉴를 띄운다. 라벨 없는 줄에 저장하면 화면에서 다시
-    // 지울 방법이 없는 값이 남는다
     if (!segment.speakerLabel) fail("SEGMENT_NOT_DIARIZED");
 
     const participant = resolveOrJoinParticipant(note, target);
@@ -5217,10 +4483,6 @@ export const mockDb = {
     return { segmentId, assignedParticipantId: participant.participantId };
   },
 
-  /**
-   * 화면이 읽는 유일한 조회. **응답 하나에 다 담는다** — 발화·공백·화자·봉인을 따로
-   * 조회하면 네 응답의 시각이 서로 어긋난 순간이 그려진다.
-   */
   getTranscript(noteId: string): TranscriptResponseData {
     const note = findNote(noteId);
     const sessions = state.sessions
@@ -5236,8 +4498,6 @@ export const mockDb = {
           Math.max(0, Date.parse(last.endedAt) - Date.parse(last.startedAt))
         : (segments.at(-1)?.endedAtMs ?? 0);
 
-    // 세션과 세션 사이가 PAUSE 다. 회의 축에서 제외이므로 두 좌표가 같은 **점**이고,
-    // 길이는 벽시계에서만 나온다.
     const gaps: TranscriptResponseDataGapsItem[] = [];
     sessions.forEach((session, index) => {
       const previous = sessions[index - 1];
@@ -5257,14 +4517,8 @@ export const mockDb = {
       recording: {
         startedAt:
           sessions[0]?.startedAt ?? note.meetingStartedAt ?? note.createdAt,
-        // 봉인은 회의가 끝나야 찍힌다. 진행 중이면 OPEN 이고 그건 오류가 아니다.
-        // 종료가 기록 중을 거절하므로(APP-694) 목은 TRUNCATED 를 찍지 않는다.
         seal: note.meetingStatus === "ENDED" ? "COMPLETE" : "OPEN",
         durationMs,
-        // **소리가 실제로 흐른 세션이 있어야 한다** (APP-685). 세션이 있기만 하면 참으로
-        // 두면, 한 조각도 못 받고 만료된 READY 뿐인 노트가 「조립할 소리가 있다」고 말한다.
-        // 서버는 오브젝트 존재를 직접 본다(`audioObjectRepository.existsByNoteId`).
-        // 옛 노트는 전사만 있고 소리가 없다 — 「COMPLETE 인데 조립은 못 한다」가 정상이다.
         audioRetained: sessions.some((session) => session.startedAt !== null),
       },
       diarization: state.diarizations.get(noteId) ?? {
@@ -5291,9 +4545,6 @@ export const mockDb = {
     const sessionOrder = new Map(
       noteSessions.map((session, index) => [session.sessionId, index])
     );
-    // 서버가 하는 일을 목이 그대로 한다 — 세션 좌표를 회의 축으로 옮기고 노트 내
-    // 순서로 다시 번호를 매긴다. 이 계산이 web 에 남아 있는 동안 다세션 노트의 시각이
-    // 세션마다 00:00 으로 되돌아갔다.
     const offsets = noteOffsetsMs(noteSessions);
     const segments = state.segments
       .filter((segment) => sessionOrder.has(segment.transcriptionSessionId))
@@ -5331,7 +4582,6 @@ export const mockDb = {
       segmentId: nextId(),
       transcriptionSessionId: sessionId,
       sequence,
-      // 실시간으로 만들어지는 발화에는 화자가 없다. 회의가 끝난 뒤 PRO-32 가 채운다
       speakerLabel: null,
       assignedParticipantId: null,
       ...input,

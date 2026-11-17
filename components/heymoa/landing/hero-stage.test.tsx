@@ -6,13 +6,11 @@ import { HeroStage } from "@/components/heymoa/landing/hero-stage";
 import { messagesFor } from "@/i18n/messages";
 import type { Locale } from "@/lib/i18n/locales";
 
-/** 랜딩 문구는 언어 파일에서 온다 — 마케팅 루트처럼 공급자로 감싼다. */
 const renderStage = (locale: Locale = "ko") =>
   render(
     <NextIntlClientProvider
       locale={locale}
       messages={messagesFor(locale)}
-      // 없는 키는 키 이름이 화면에 그대로 선다 — 대본 한 바퀴 동안 하나라도 나오면 실패한다.
       onError={(error) => {
         throw error;
       }}
@@ -21,10 +19,6 @@ const renderStage = (locale: Locale = "ko") =>
     </NextIntlClientProvider>
   );
 
-/**
- * 히어로 시연. **혼자 한 바퀴 돌고, 멈출 수 있다.** 대본(`use-demo.ts`)은 그대로이고 여기서 지키는 것은
- * 이 무대가 대본을 끝까지 몰고 가는가, 그리고 멈춤 셋(일시정지 · 화면 밖 · 모션 줄이기)이 듣는가다.
- */
 const matchMedia = (reduced: boolean) =>
   vi.fn().mockImplementation((query: string) => ({
     matches: reduced && query.includes("reduce"),
@@ -37,7 +31,6 @@ const matchMedia = (reduced: boolean) =>
     dispatchEvent: vi.fn(),
   }));
 
-/** `IntersectionObserver` 를 곧바로 「보인다」로 대답하는 대역 — jsdom 에는 없어서 대본이 아예 안 돈다. */
 let observers: IntersectionObserverCallback[] = [];
 
 function seeImmediately() {
@@ -69,7 +62,6 @@ function leaveView() {
   });
 }
 
-/** 타이머를 조금씩 당긴다 — 다음 타이머는 효과가 돈 뒤에 걸려서 한 번에 당기면 안 따라온다. */
 const STEP_MS = 60;
 
 function play(steps: number) {
@@ -80,7 +72,6 @@ function play(steps: number) {
   }
 }
 
-/** 조건이 참이 될 때까지만 당긴다. 상한(약 90초)에 닿으면 거짓이다 — 무한 대기가 없다. */
 function playUntil(hit: () => boolean, steps = 1500) {
   for (let i = 0; i < steps; i += 1) {
     if (hit()) return true;
@@ -91,19 +82,16 @@ function playUntil(hit: () => boolean, steps = 1500) {
   return hit();
 }
 
-/** 한 바퀴의 끝 — 검토 막대의 「검토 완료」. 넘겨 당기면 대본이 처음으로 돌아가니 거기서 멈춘다. */
 const playToEnd = () => playUntil(() => screen.queryAllByText("검토 완료").length > 0);
 
 const stage = () => document.querySelector("figure") as HTMLElement;
 
-/** 가짜 시계로 대본 한 바퀴를 `act` 수백 번으로 돌린다 — 부하가 걸린 머신에서 기본 5초를 넘긴 적이 있다. */
 vi.setConfig({ testTimeout: 20_000 });
 
 describe("HeroStage", () => {
   beforeEach(() => {
     window.matchMedia = matchMedia(false);
     seeImmediately();
-    // 노트 창은 장면마다 제 안에서 줄을 옮긴다. jsdom 의 요소에는 scrollTo 가 없다.
     Element.prototype.scrollTo = vi.fn();
   });
 
@@ -125,7 +113,6 @@ describe("HeroStage", () => {
     expect(screen.queryAllByText("기록 중")).toHaveLength(0);
   });
 
-  /** WCAG 2.2.2 — 화면에 있는 한 스스로 계속 도는 움직임이라 멈출 수 있어야 한다. */
   it("일시정지를 누르면 그 자리에 서고, 재생하면 이어서 끝까지 간다", () => {
     vi.useFakeTimers();
     renderStage();
@@ -175,7 +162,6 @@ describe("HeroStage", () => {
       playUntil(() => screen.queryAllByText("Finish review").length > 0)
     ).toBe(true);
     expect(screen.getAllByText("Ended").length).toBeGreaterThan(0);
-    // 창 안에 한국어가 남지 않는다(지어낸 회의 · 앱 라벨 · 쪽지 모두 언어 파일에서 온다).
     expect(stage().textContent).not.toMatch(/[가-힣]/);
   });
 });

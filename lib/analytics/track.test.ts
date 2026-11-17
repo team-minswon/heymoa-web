@@ -110,7 +110,6 @@ describe("이벤트 타입", () => {
     }>();
   });
 
-  // 메일·알림 유입 계측 (APP-1309): 출처는 닫힌 값이고 노트 id·이메일·이름·제목 자리는 없다
   it("note_opened 는 출처를 enum 으로만 받고 식별·내용 값을 받지 않는다", () => {
     type NoteOpened = Parameters<typeof track<"note_opened">>[1] & {};
     expectTypeOf<NoteOpened>().toEqualTypeOf<{
@@ -128,7 +127,6 @@ describe("이벤트 타입", () => {
   });
 });
 
-// 알림 모달·알림 설정 (PRO-67 I32): 종류·개수·워크스페이스만 받고 알림 내용·식별 값 자리는 없다
 describe("알림 사건 타입", () => {
   type Props<E extends AnalyticsEvent> = Parameters<typeof track<E>>[1] & {};
   type Forbidden = "note_id" | "noteId" | "notification_id" | "email" | "name" | "title";
@@ -210,7 +208,6 @@ describe("알림 사건 타입", () => {
   });
 });
 
-// 가이드 이벤트(로그인 전 방문자도 온다): 이름은 유니온에만, 속성은 닫힌 값·숫자·slug 뿐이고 검색어 원문 필드는 없다.
 describe("가이드 이벤트 타입", () => {
   it("검색 이벤트는 길이와 개수만 받고 원문을 받지 않는다", () => {
     expectTypeOf<
@@ -253,7 +250,6 @@ describe("trackMutation", () => {
     ])).toEqual([["feedback_sent", { kind: "QUESTION" }]]);
   });
 
-  // 요청 내용으로 거르는 것 (APP-1072): 화자 연결을 지우거나 완료가 아닌 할 일 수정은 세지 않는다
   it("요청 내용을 보고 보낼지와 속성을 정한다", () => {
     expect(
       heardFrom([
@@ -275,7 +271,6 @@ describe("trackMutation", () => {
   });
 
 
-  // 대화 이름·삭제는 계측용 워크스페이스·출처를 변수에 싣는다(`ChatMutationContext`). 제목·chat_id 는 안 나간다
   it("대화 이름 바꾸기·삭제는 워크스페이스와 바꾸기 전 출처만 보낸다", () => {
     expect(
       heardFrom([
@@ -302,7 +297,6 @@ describe("trackMutation", () => {
   });
 });
 
-// 같은 사건을 GA와 PostHog가 따로 세지 않게 GA는 유입만 받는다 (APP-1037)
 describe("GA로 가는 이벤트", () => {
   it("유입 이벤트만 GA로 보낸다", () => {
     const gtag = vi.fn();
@@ -371,7 +365,6 @@ describe("저장소가 막힌 브라우저", () => {
 });
 
 describe("저장 공간이 꽉 찬 브라우저", () => {
-  // 쓰기만 실패하고 읽기는 된다 — 저장소에는 옛 값(켜짐)이 남아 있다 (codex 리뷰 3회차)
   it("저장하지 못한 거부를 옛 값보다 먼저 지킨다", () => {
     const gtag = vi.fn();
     (window as { gtag?: unknown }).gtag = gtag;
@@ -384,7 +377,6 @@ describe("저장 공간이 꽉 찬 브라우저", () => {
 
     expect(isAnalyticsOptedOut()).toBe(true);
     expect(gtag).not.toHaveBeenCalled();
-    // SDK도 동의를 저장하지 못해 자동 페이지뷰를 보내려 한다 — 마지막 관문에서 막는다
     expect(
       beforeSend({ uuid: "u", event: "$pageview", properties: {} } as CaptureResult)
     ).toBeNull();
@@ -402,7 +394,6 @@ describe("stripUrlQueries", () => {
       properties: {
         $current_url: "https://heymoa.app/invite?token=SECRET#x",
         $pathname: "/invite",
-        // SDK가 이름을 조합해 붙이는 진입 속성 — 이름 목록으로 막았을 때 샜다
         $session_entry_url: "https://heymoa.app/oauth/consent?state=S&code=C",
         $session_entry_referrer: "https://heymoa.app/invite?token=SECRET",
         utm_source: "newsletter",

@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SseEvent } from "@/lib/api/sse";
 
-/** 열 때마다 새 가짜 스트림을 하나 돌려준다. 시험이 프레임을 밀어 넣고 끝내거나 실패시킨다. */
 type Fake = {
   push: (event: string, data?: unknown) => void;
   end: () => void;
@@ -62,7 +61,6 @@ import {
   useEventStreamHealthy,
 } from "@/components/events/user-event-provider";
 
-/** 지연은 짧게, 유휴 타이머(40초)는 안 울리게, 지터는 0. */
 const timers = {
   setTimeout: (run: () => void, ms: number) =>
     setTimeout(run, ms >= 40_000 ? 1e9 : Math.min(ms, 5)),
@@ -141,7 +139,6 @@ describe("UserEventProvider", () => {
       streams[0].push("chats.changed", { workspaceId: "W" });
     });
     await flushed();
-    // 같은 대상의 연속 힌트는 한 번으로 합친다.
     expect(invalidated).toEqual(["/v1/workspaces/W/agent-chats"]);
   });
 
@@ -226,7 +223,6 @@ describe("UserEventProvider", () => {
   });
 
   it("온라인으로 돌아오면 기다리던 재연결을 바로 깨워 다시 붙고, 소유 쿼리를 다시 읽는다", async () => {
-    // 백오프(1초 이상)는 시험 안에서 끝나지 않게 둔다 — 온라인 복귀만이 깨울 수 있다.
     const slow = {
       setTimeout: (run: () => void, ms: number) =>
         setTimeout(run, ms >= 1_000 ? 1e9 : Math.min(ms, 5)),

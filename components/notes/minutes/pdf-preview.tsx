@@ -5,10 +5,6 @@ import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
-/**
- * `blob` 이 없으면(포함 항목이 바뀌어 다시 만들어야 할 때) 같은 크기의 빈 틀에 `children` 을 그린다(APP-1356).
- * 틀을 걷으면 미리보기를 연 창이 그만큼 줄었다가 다시 미리보면 또 늘었다.
- */
 export function PdfPreview({
   blob,
   children,

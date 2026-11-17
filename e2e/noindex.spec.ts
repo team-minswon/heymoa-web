@@ -1,19 +1,10 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
-/**
- * 로그인 뒤 화면과 토큰이 실리는 입구는 **운영에서도** 색인하지 않는다 (APP-1036).
- * 개인 회의 내용이라 robots.txt 가 아니라 페이지의 noindex 로 막는다(`lib/site.ts` 🔴).
- * 공개 페이지가 같이 막히지 않았는지도 본다 — 실수로 루트에 걸면 운영이 통째로 빠진다.
- *
- * 크롤러가 읽는 것은 서버 HTML 이라 브라우저 이동 없이 요청으로 본다. dev 서버가 처음 보는
- * 라우트를 컴파일하며 페이지를 다시 불러 `page.goto` 가 ERR_ABORTED 로 끊긴 적이 있다.
- */
 const robotsOf = async (request: APIRequestContext, path: string) => {
   const html = await (await request.get(path)).text();
   return html.match(/<meta name="robots" content="([^"]*)"/)?.[1] ?? null;
 };
 
-// 제품 루트 레이아웃이 기본 noindex 라 라우트가 따로 걸지 않아도 막힌다(APP-1295). `/help-samples` 는 그 예다.
 const PRIVATE_PATHS = [
   "/w/01K0000000000",
   "/w/01K0000000000/tasks",
@@ -31,7 +22,6 @@ test("로그인 뒤 화면과 초대·인가 입구는 noindex 다", async ({ re
   }
 });
 
-// 색인하지 않는 페이지가 자신을 홈의 중복(canonical)이나 한국어판(hreflang)이라고 말하지 않는다.
 test("제품 면은 canonical·hreflang 을 내지 않는다", async ({ request }) => {
   for (const path of PRIVATE_PATHS) {
     const html = await (await request.get(path)).text();
@@ -40,7 +30,6 @@ test("제품 면은 canonical·hreflang 을 내지 않는다", async ({ request 
   }
 });
 
-// 크롤링을 막으면 크롤러가 위 noindex 를 못 읽는다. 어떤 경로도 robots.txt 로 막지 않는다.
 test("robots.txt 는 어떤 경로도 막지 않는다", async ({ request }) => {
   const txt = await (await request.get("/robots.txt")).text();
   expect(txt).toMatch(/^Allow: \/$/m);
@@ -57,7 +46,6 @@ test("다운로드·약관·개인정보는 JSON-LD 를 내고 다운로드는 �
   page,
   request,
 }) => {
-  // 목 환경은 MockProvider 준비 전 본문을 비운다. JSON-LD는 준비된 화면에서 확인한다.
   for (const path of ["/download", "/terms", "/privacy"]) {
     await page.goto(path);
     await expect
@@ -84,7 +72,6 @@ test("다운로드·약관·개인정보는 JSON-LD 를 내고 다운로드는 �
   expect(res.headers()["content-type"]).toBe("image/png");
 });
 
-// 공유 카드의 og:url 이 홈 값이면 약관·다운로드 링크를 공유할 때 홈으로 묶인다(APP-1294).
 test("공유 카드의 og:url 이 각 페이지의 canonical 과 같다", async ({
   request,
 }) => {

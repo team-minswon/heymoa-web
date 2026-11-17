@@ -25,11 +25,6 @@ const VISIBLE_TOPICS = 6;
 
 type Tone = "decision" | "task" | "open";
 
-/**
- * 주제 개요(APP-865). 회의에서 나온 차례로 한 줄씩 서고 — 때 · 제목 · 한 줄 서술 · 결정 / 할 일 /
- * 열린 질문 개수 — 누르면 그 자리에서 펼쳐져 서술 전체와 그 주제의 항목이 선다. 앞의 여섯만 서고
- * 나머지는 접힌다.
- */
 export function TopicIndex({
   topics,
   noteId,
@@ -41,10 +36,8 @@ export function TopicIndex({
   topics: readonly TopicDigest[];
   noteId?: string;
   onOpenTimeline?: (agendaId: string | null) => void;
-  /** 이 회의에서 나가는 회의 간 연결. 없으면(조회 전 · 프로젝트 없음) 연결 줄을 그리지 않는다 */
   links?: MeetingLinkIndex;
   workspaceId?: string;
-  /** 있으면 연결 줄 끝에 그 프로젝트의 안건 지도로 가는 링크를 단다 */
   projectId?: string;
 }) {
   const t = useTranslations("notes.review.topics");
@@ -53,11 +46,6 @@ export function TopicIndex({
   );
   const [expanded, setExpanded] = useState(false);
   const followedHash = useRef<string | null>(null);
-  /**
-   * 점프로 도착한 주제(APP-1290). 스크롤만 하면 어디를 봐야 할지 모른다 — 전사의 근거 점프와 같은
-   * 형광펜으로 제목을 긋는다. `nonce` 는 같은 주제로 다시 와도 획을 처음부터 긋게 하는 key 다.
-   * 주소(해시)로 도착했으면 다른 노트나 다른 탭에서 넘어온 것이라 더 오래 머문다.
-   */
   const [marked, setMarked] = useState<{
     agendaId: string;
     nonce: number;
@@ -77,7 +65,6 @@ export function TopicIndex({
         const element = document.getElementById(`summary-agenda-${agendaId}`);
         element?.querySelector("button")?.focus({ preventScroll: true });
         element?.scrollIntoView?.({ block: "center" });
-        // 펼침(240ms)이 끝나고 자리에 선 뒤에 긋는다 — 먼저 그으면 움직이는 동안 획이 지나간다.
         setMarked((current) => ({
           agendaId,
           nonce: (current?.nonce ?? 0) + 1,
@@ -114,7 +101,6 @@ export function TopicIndex({
   )?.title;
   useEffect(() => {
     if (markedTitle === undefined) return;
-    // 획이 다 지워지는 순간에 거둔다. reduced-motion 이면 획 없이 같은 시간 동안 칠해져 있다.
     const timer = window.setTimeout(
       () => setMarked(null),
       evidenceMarkOf(markedTitle, { holdMs: marked?.holdMs }).lifetimeMs
@@ -180,10 +166,6 @@ export function TopicIndex({
   );
 }
 
-/**
- * 「〈회의 이름〉에서 이어짐」. 회의 이름이 그 회의 요약으로 가는 링크다. 이어짐만 말하고 무엇이 바뀌었다고
- * 단정하지 않는다 — 연결은 사람 검토 없이 만들어져 틀릴 수 있고, 바꾸는 일은 제안 카드가 맡는다.
- */
 function ContinuedFrom({
   notes,
   workspaceId,
@@ -195,7 +177,6 @@ function ContinuedFrom({
   workspaceId?: string;
   noteId?: string;
   onSelectAgenda: (agendaId: string) => void;
-  /** 이 안건을 고른 채 여는 안건 지도 주소 */
   mapHref?: string;
 }) {
   const t = useTranslations("notes.review.topics");
@@ -211,7 +192,6 @@ function ContinuedFrom({
             aria-hidden
             className="border-l border-b border-[var(--el-hairline-strong)] w-3 h-2"
           />
-          {/* 한 덩어리로 묶는다 — 따로 두면 flex 간격이 회의 이름과 조사 사이를 띄운다(「…브레인스토밍 에서」) */}
           <span>
             {note.noteId === noteId
               ? t.rich("continuedFrom", {
@@ -273,7 +253,6 @@ function TopicRow({
   topic: TopicDigest;
   noteId?: string;
   onSelectAgenda: (agendaId: string) => void;
-  /** 점프로 도착해 형광펜을 긋는 중이면 그 회차와 머무는 시간. 아니면 null */
   mark: { nonce: number; holdMs?: number } | null;
   open: boolean;
   onToggle: () => void;
@@ -287,13 +266,11 @@ function TopicRow({
     ? (links?.byAgendaId.get(topic.agendaId) ?? [])
     : [];
 
-  // 없는 종류도 자리를 지킨다 — 빼면 아이콘 열이 줄마다 밀린다(APP-1587).
   const counts = [
     ["decision", topic.decisions.length],
     ["task", topic.tasks.length],
     ["open", topic.open.length],
   ] as const;
-  // 펼치면 한 줄 요약 자리에 전체 요약이 선다. 자리가 같아야 「이어짐」 줄과 순서가 뒤바뀌지 않는다(APP-1587).
   const body = open ? (topic.text ?? topic.gist) : topic.gist;
   const lines: Array<[Tone, ReviewItem]> = [
     ...topic.decisions.map((item) => ["decision", item] as [Tone, ReviewItem]),
@@ -317,7 +294,6 @@ function TopicRow({
         aria-expanded={open}
         onClick={onToggle}
         className={cn(
-          // 「이어짐」 줄이 아래에 서면 버튼 아래 여백을 줄인다. 줄을 버튼 위로 끌어올리면(-mt) 호버 배경이 글자에 걸친다(APP-1587).
           continued.length > 0 ? "pb-1" : "pb-3",
           "-mx-2 grid w-[calc(100%+16px)] grid-cols-[44px_minmax(0,1fr)_16px] items-start gap-x-3 rounded-control px-2 pt-3 text-left hover:bg-[var(--el-canvas-soft)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)] sm:grid-cols-[56px_minmax(0,1fr)_auto_16px]"
         )}
@@ -341,7 +317,6 @@ function TopicRow({
           {body ? (
             <span
               className={cn(
-                // 접힌 줄과 펼친 줄의 글자 크기 · 줄 높이는 같다. 요약이 짧으면 두 글이 같은데, 크기가 다르면 펼칠 때 줄바꿈이 바뀐다(APP-1587).
                 "text-[13.5px] leading-6 whitespace-pre-wrap break-words",
                 open ? "text-[var(--el-body)]" : "text-[var(--el-muted)]"
               )}
@@ -372,7 +347,6 @@ function TopicRow({
         />
       </button>
       {continued.length > 0 ? (
-        // 버튼 안에 링크를 둘 수 없어 줄 아래에 따로 둔다(주제 제목 칸과 같은 들여쓰기)
         <div className="pb-3 pl-[56px] sm:pl-[68px]">
           <ContinuedFrom
             notes={continued}

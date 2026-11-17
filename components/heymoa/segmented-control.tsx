@@ -2,10 +2,6 @@
 
 import { cn } from "@/lib/utils";
 
-/**
- * 한 화면 안에서 보기를 바꾸는 칸. 고른 칸 밑의 흰 판이 옆으로 미끄러진다 — 무엇이 바뀌었는지
- * 눈이 따라간다. 다른 화면으로 가는 것이 아니라서 탭이 아니라 라디오다.
- */
 export function SegmentedControl<T extends string>({
   value,
   options,

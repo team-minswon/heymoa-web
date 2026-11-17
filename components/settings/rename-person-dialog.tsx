@@ -19,22 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/ui/toast";
 
-/**
- * 설정에서 보이는 사람 이름의 상한. 멤버 표시 이름(서버 30)과 같다. 임시 참여자는 서버 상한이 100이지만(기존 데이터)
- * 새로 고치는 이름은 같은 30으로 받는다 — 목록·칩·화자 이름이 한 줄에 서야 한다.
- */
 export const PERSON_NAME_MAX_LENGTH = 30;
 
-/**
- * 멤버·임시 참여자 공용 이름 변경 대화상자 (APP-1206·APP-1210).
- *
- * **행 안에서 고치지 않는다.** 행에 입력을 끼우면 이름 줄과 보조 줄 높이가 달라 행이 출렁이고(APP-1203 에서 57→69px),
- * 저장·취소가 연동·삭제 버튼과 한 줄에 서 위계가 흐려진다. 대화상자는 행을 그대로 둔다.
- *
- * 연동·삭제와 같은 `AlertDialog` 를 쓴다 — 같은 설정 화면에서 대화상자의 크기·여백·열림 전환이 하나다.
- * 저장은 응답을 기다린다(버튼 loading). 실패하면 닫지 않고 이 안에 서버 문구를 남긴다 — 무엇을 고치다 실패했는지가
- * 입력과 함께 보여야 다시 누를 수 있다. 그래서 호출부의 mutation 은 전역 토스트를 끈다.
- */
 export function RenamePersonDialog({
   avatarKey,
   image,
@@ -48,19 +34,15 @@ export function RenamePersonDialog({
   onSubmit,
   onClose,
 }: {
-  /** 얼굴 열쇠 — 목록 행과 같은 값을 넘겨야 같은 얼굴이 선다. */
   avatarKey: string;
   image?: string | null;
   currentName: string;
-  /** 이름 아래 한 줄(이메일 등). */
   secondary?: string;
   label: string;
   initialValue: string;
   placeholder?: string;
   hint?: string;
-  /** 비운 채 저장할 수 있나. 멤버는 비우면 계정 이름으로 돌아간다. */
   allowEmpty?: boolean;
-  /** 실패하면 사람에게 보일 문구를 돌려준다. 성공하면 null. */
   onSubmit: (value: string) => Promise<string | null>;
   onClose: () => void;
 }) {
@@ -72,7 +54,6 @@ export function RenamePersonDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  /** 저장 중에 닫았는가. 그러면 실패 문구를 띄울 자리가 없어 토스트로 알린다. */
   const closed = useRef(false);
 
   function close() {
@@ -92,7 +73,6 @@ export function RenamePersonDialog({
     setError(null);
     const failure = await onSubmit(trimmed);
     if (closed.current) {
-      // 이미 닫혔다 — 이름은 훅이 되돌렸고, 무엇이 실패했는지만 알린다.
       if (failure !== null) toast.error(failure);
       return;
     }
@@ -102,7 +82,6 @@ export function RenamePersonDialog({
       return;
     }
     setError(failure);
-    // 저장 중 잠갔던 입력으로 포커스를 돌린다 — 키보드로 고쳐 다시 Enter 할 수 있게.
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
@@ -110,8 +89,6 @@ export function RenamePersonDialog({
     <AlertDialog
       open
       onOpenChange={(open) => {
-        // 저장 중에도 닫을 수 있다 — 응답이 멎으면 빠져나올 길이 있어야 한다. 요청은 계속 가고, 실패하면 훅이 이름을
-        // 되돌리고 여기서 토스트로 알린다(위 `closed`).
         if (open) return;
         close();
       }}
@@ -186,7 +163,6 @@ export function RenamePersonDialog({
             <AlertDialogCancel type="button">
               {tActions("cancel")}
             </AlertDialogCancel>
-            {/* 대화상자를 닫는 `AlertDialogAction` 이 아니라 폼 제출 버튼이다 — 실패하면 열어 둔다. Enter 도 같은 길이다. */}
             <Button type="submit" loading={pending} disabled={blocked}>
               {tActions("save")}
             </Button>
@@ -197,10 +173,6 @@ export function RenamePersonDialog({
   );
 }
 
-/**
- * 이름이 바뀔 때 **자리는 그대로 두고 글자만** 옅게 바꾼다. 폭·높이는 텍스트가 정하므로 레이아웃 이동이 없다.
- * 움직임을 줄인 환경에서는 그냥 바꾼다.
- */
 export function SoftName({
   name,
   className,

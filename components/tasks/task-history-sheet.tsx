@@ -46,10 +46,8 @@ import { useTranslations } from "next-intl";
 
 type Revision = ProjectTaskRevisionListResponseDataRevisionsItem;
 
-/** 이력이 견주는 칸. 이름은 `common.fields.<field>` 다. */
 type Field = "content" | "status" | "assignee" | "due";
 
-/** 판의 칸 값. 문구가 아니라 견줄 값이다 — 상태는 코드, 담당은 이름(없으면 `null`), 기한은 날짜 키. */
 function fieldsOf(revision: Revision, speakerName: (label: string) => string) {
   return {
     content: revision.content,
@@ -61,12 +59,10 @@ function fieldsOf(revision: Revision, speakerName: (label: string) => string) {
 
 export type RevisionChange = {
   field: Field;
-  /** 첫 판에는 앞 값이 없다(`undefined`). `null` 은 「없음」이다 */
   before?: string | null;
   after: string | null;
 };
 
-/** 앞 판과 달라진 칸. 첫 판은 무엇으로 시작했는지 담당·기한만 보인다. */
 export function revisionChanges(
   previous: Revision | undefined,
   current: Revision,
@@ -82,14 +78,12 @@ export function revisionChanges(
     .map((field) => ({ field, before: before[field], after: after[field] }));
 }
 
-/** 이름 뒤 주격 조사. 받침이 있으면 「이」, 없으면 「가」. 영어 문장은 쓰지 않는다. */
 function subjectParticle(name: string) {
   const code = name.charCodeAt(name.length - 1) - 0xac00;
   if (code < 0 || code > 11171) return "이(가)";
   return code % 28 === 0 ? "가" : "이";
 }
 
-/** 이력 칸의 이름과 값을 화면 언어로 그린다. */
 function useChangeText() {
   const tFields = useTranslations("common.fields");
   const tStatus = useTranslations("common.taskStatus");
@@ -114,10 +108,6 @@ const STATUS_ICON = {
   CANCELLED: CircleSlash,
 } as const;
 
-/**
- * 누가 바꿨나. 사람은 얼굴과 굵은 이름으로, 회의 확정은 문장으로만 선다. 에이전트가 사람 이름으로 바꾼 판은
- * 무엇으로 바꿨는지를 붙인다(APP-1369) — 안 붙이면 그 사람이 직접 바꾼 것으로 읽힌다.
- */
 function Author({
   revision,
   personOf,
@@ -163,11 +153,6 @@ function Author({
   );
 }
 
-/**
- * 외부 에이전트가 바꾼 가장 최근 판을 바로 앞 판으로 되돌린다(APP-1369). 직전 판의 네 값을 지금 판 번호로 다시
- * 저장하는 것이라 저장 길은 다른 수정과 같다 — 그사이 누가 고쳤으면 판 충돌로 거절되고 이력을 다시 읽는다.
- * 되돌리면 팀원에게도 곧바로 보이므로 무엇이 무엇으로 돌아가는지 한 번 보이고 묻는다.
- */
 function RevertAgentChange({
   latest,
   previous,
@@ -234,7 +219,6 @@ function RevertAgentChange({
               loading={pending}
               disabled={pending}
               onClick={async () => {
-                // 실패는 저장 길이 그 자리에 알린다(충돌 안내·토스트). 창은 어느 쪽이든 닫아 안내가 보이게 한다
                 await onSave({
                   content: previous.content,
                   taskStatus: previous.taskStatus,
@@ -253,10 +237,6 @@ function RevertAgentChange({
   );
 }
 
-/**
- * 할 일 한 줄의 담당 · 기한과 이력. 어느 회의에서 생겼는지는 조회가 알려 주지 않아
- * 「회의 확정」까지만 말한다. 고치기와 끝내기는 목록 칸과 같은 저장 길을 쓴다.
- */
 export function TaskHistorySheet({
   workspaceId,
   entry,
@@ -269,17 +249,13 @@ export function TaskHistorySheet({
 }: {
   workspaceId: string;
   entry: TaskEntry | null;
-  /** 열자마자 내용 고치기부터 세운다(목록 줄의 「수정」) */
   startEditing?: boolean;
-  /** 담당 칸의 선택지이자, 바꾼 사람의 이름을 푸는 멤버 목록이다 */
   choices: AssigneeChoice[];
   pending: boolean;
   conflict: boolean;
-  /** 저장이 받아들여졌는지를 돌려준다 */
   onSave: (patch: TaskPatch) => Promise<boolean>;
   onOpenChange: (open: boolean) => void;
 }) {
-  // 닫히는 동안에도 내용이 남아 있어야 빈 시트가 미끄러져 나가지 않는다.
   const [shown, setShown] = useState(entry);
   if (entry && entry !== shown) setShown(entry);
 
@@ -344,7 +320,6 @@ function HistoryBody({
     content: string;
     assignee: TaskPatch["assignee"];
     due: string | null;
-    /** 편집을 연 순간의 값. 저장은 **사람이 바꾼 칸만** 보낸다 — 아래 `finishEdit`. */
     base: {
       content: string;
       assignee: TaskPatch["assignee"];
@@ -364,11 +339,6 @@ function HistoryBody({
     return undefined;
   };
 
-  // 저장이 끝나 받아들여졌을 때만 편집을 닫는다. 실패하면 고친 내용이 그대로 남아야 다시 보낼 수 있다.
-  //
-  // **사람이 바꾼 칸만 보낸다** (APP-1033). 세 칸을 통째로 보내면, 편집하는 사이 남이 담당을 바꿔 저장이 거절된
-  // 뒤(그때 목록은 서버 값으로 갱신된다) 다시 눌렀을 때 새 판에 **낡은 담당이 실려 남의 변경을 조용히 덮는다.**
-  // 안 바꾼 칸은 부르는 쪽이 지금 줄(새 판)의 값으로 채운다.
   const finishEdit = async () => {
     if (!draft?.content.trim()) return;
     const content = draft.content.trim();
@@ -377,7 +347,6 @@ function HistoryBody({
     if (assigneeKey(draft.assignee) !== assigneeKey(draft.base.assignee))
       patch.assignee = draft.assignee;
     if (draft.due !== draft.base.due) patch.due = draft.due;
-    // 바꾼 것이 없으면 보낼 것도 없다.
     if (Object.keys(patch).length === 0) {
       setDraft(null);
       return;
@@ -544,7 +513,6 @@ function HistoryBody({
                   key={revision.revision}
                   className={`relative ${ARRIVE_CLASS}`}
                 >
-                  {/* 지금 값을 만든 가장 최근 판만 점을 칠한다 */}
                   <span
                     aria-hidden
                     className={`absolute -left-[21px] top-1.5 size-2 rounded-full border ${
@@ -563,7 +531,6 @@ function HistoryBody({
                         minute: "2-digit",
                       }, dateLocale)}
                     </span>
-                    {/* 가장 최근 변경만 되돌린다 — 그 뒤 사람이 한 변경을 덮지 않는다. 에이전트가 만든 판(1)은 앞 값이 없다 */}
                     {index === 0 &&
                     revision.changeSource === "EXTERNAL_AGENT" &&
                     previous ? (

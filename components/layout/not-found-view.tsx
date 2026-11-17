@@ -4,13 +4,6 @@ import Link from "next/link";
 import { messagesFor } from "@/i18n/messages";
 import { localePath, type Locale } from "@/lib/i18n/locales";
 
-/**
- * 404 본문. 세 곳(마케팅 `app/[lang]/not-found`, 제품 `app/(product)/not-found`, `app/global-not-found`)이
- * 같이 쓴다. 홈 링크는 그 언어의 랜딩(`/` 또는 `/en`)이다.
- *
- * `plainLink` — 전역 404 문서는 앱 라우터 트리 밖이라 `<Link>` 클라이언트 이동이 반쪽만 동작한다. 실측하면
- * 주소와 제목만 `/`로 바뀌고 본문은 404 그대로 남아서 사용자가 막다른 곳에 갇힌다. 거기서는 새 문서를 연다.
- */
 export function NotFoundView({
   locale,
   plainLink = false,

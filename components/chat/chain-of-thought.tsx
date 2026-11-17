@@ -21,12 +21,6 @@ import {
 } from "@/lib/chat/blocks";
 import { cn } from "@/lib/utils";
 
-/**
- * 연속된 생각·도구·승인을 접이식 묶음 하나로 그린다. AI Elements·assistant-ui 는 AI SDK 의
- * `UIMessage` 에 묶여 있어 직접 만든다. 문구는 ai 가 아니라 여기서 블록을 보고 만든다.
- */
-
-// `note-summary` 의 근거 목록과 같은 값이다. 같은 화면에서 다른 속도로 열리면 따로 논다.
 const COLLAPSE_TRANSITION = {
   type: "spring" as const,
   bounce: 0,
@@ -35,21 +29,12 @@ const COLLAPSE_TRANSITION = {
 
 export type StepBlock = Exclude<Block, { kind: "text" }>;
 
-/** 과정은 카드가 아니라 답변 옆 여백 메모라 세로선 한 줄로 가른다. */
 const RAIL = "border-l border-[var(--el-hairline-strong)] pl-3.5";
 
-/**
- * 그려지는 단계만 센다. 확정 전 승인은 카드가 따로 서서 여기 안 그리는데, 그걸 세면
- * 헤더 개수가 틀어지고 그 블록 하나뿐일 때 빈 레일이 한 칸 선다.
- */
 function drawable(blocks: StepBlock[]) {
   return blocks.filter((block) => !isPendingApproval(block));
 }
 
-/**
- * 확정 전 승인. `StepRow` 가 안 그리는 조건과 같은 술어여야 한다 — 어긋나면 필터는
- * 통과시키고 렌더러는 null 을 내어 빈 레일이 돌아온다.
- */
 function isPendingApproval(block: StepBlock) {
   return block.kind === "approval" && !block.decision;
 }
@@ -62,14 +47,8 @@ export function ChainOfThought({
   onOpenNote,
 }: {
   blocks: StepBlock[];
-  /** 이 묶음이 아직 흐르는 중인가. 도는 동안은 최근 몇 줄만 펴 두고 끝나면 요약 한 줄로 접는다. */
   live: boolean;
-  /**
-   * 첫 단계의 시각(ISO). 히스토리 행, 커서 앞 히스토리, 또는 이 탭이 질문을 보낸 시각이 준다. 없으면 흐르는 동안
-   * 마운트된 시각부터 잰다. 보낸 시각을 주면 첫 단계 전 「생각 중」 줄의 초가 이 묶음으로 끊기지 않고 이어진다.
-   */
   startedAt?: string | null;
-  /** 마지막 단계의 시각(ISO). 히스토리만 준다. 흐른 묶음은 `live` 가 꺼진 시각이 끝이다. */
   endedAt?: string | null;
   onOpenNote?: (noteId: string) => void;
 }) {
@@ -77,11 +56,8 @@ export function ChainOfThought({
   const seconds = useThinkingSeconds(live, startedAt, endedAt);
   if (drawn.length === 0) return null;
 
-  // 확정 전 승인은 도는 중이 아니라 사람을 기다리는 중이다. 그걸 걸러 냈다면 그려지는
-  // 단계는 다 끝났으므로 `running` 을 내린다 — 안 그러면 바로 앞 단계가 승인 때까지 돈다.
   const running = live && drawn.length === blocks.length;
 
-  // 하나여도 서랍으로 그린다. 개수로 모양을 가르면 둘째 단계가 오는 순간 다시 마운트되며 튄다.
   return (
     <Disclosure
       blocks={drawn}
@@ -93,9 +69,6 @@ export function ChainOfThought({
   );
 }
 
-/**
- * 생각한 초. 시각이 없는 경로는 짐작하지 않고 null 이다. 흐르는 동안은 1초마다 다시 잰다.
- */
 export function useThinkingSeconds(
   live: boolean,
   startedAt: string | null | undefined,
@@ -108,7 +81,6 @@ export function useThinkingSeconds(
   useEffect(() => {
     if (!live) return;
     const timer = setInterval(() => setNow(Date.now()), 1_000);
-    // 흐름이 멈춘 시각이 끝이다. 다시 흐르면 `live` 쪽 갈래가 `now` 를 써서 이 값은 안 읽힌다.
     return () => {
       clearInterval(timer);
       setStoppedAt(Date.now());
@@ -122,22 +94,13 @@ export function useThinkingSeconds(
   return seconds >= 1 ? seconds : null;
 }
 
-/**
- * 새 이벤트가 이만큼 없으면 「늦어지고 있어요」로 바꿔 말한다. 근거 있는 값이 아니다 — 도구 하나가 보통 몇 초 안에 끝나는
- * 목·실측 감각에서 고른 값이고, 연결이 죽었다고 판정하는 값(스트림 유휴 40초)보다 먼저 와야 한다.
- */
 export const STALL_MS = 20_000;
 
-/**
- * `signature` 가 `STALL_MS` 동안 안 바뀌었나. 초 타이머는 이벤트가 없어도 오르므로, 멈춘 것과 오래 걸리는 것을 가르려면
- * 마지막 이벤트로부터 잰다. 흐르지 않으면(`active` 거짓) 늘 거짓이다.
- */
 export function useStalled(signature: string, active: boolean): boolean {
   const [stalled, setStalled] = useState<{ at: string; on: boolean }>({
     at: signature,
     on: false,
   });
-  // 새 이벤트가 오면 렌더 중에 바로 푼다. effect 로 미루면 낡은 「늦어져요」가 한 번 그려진다
   if (stalled.at !== signature) setStalled({ at: signature, on: false });
   useEffect(() => {
     if (!active) return;
@@ -152,7 +115,6 @@ export function useStalled(signature: string, active: boolean): boolean {
 
 type ThoughtT = ReturnType<typeof useTranslations<"chat.thought">>;
 
-/** 블록이 바뀌었는지 가르는 값. 생각은 글자 수, 도구는 상태까지 본다. */
 function stepSignature(blocks: StepBlock[]) {
   return blocks
     .map((block) =>
@@ -165,18 +127,11 @@ function stepSignature(blocks: StepBlock[]) {
     .join("|");
 }
 
-/**
- * 흐르는 동안의 머리줄 「생각 중 · 8초」. 첫 단계가 오기 전(`ThinkingLine`)과 단계가 흐르는 동안(`Disclosure`)이 같은
- * 이 모양을 써서, 첫 단계가 와도 머리줄이 바뀌거나 튀지 않는다.
- *
- * 매초 바뀌는 초는 접근성 이름에서 뺀다 — 포커스가 있으면 매초 다시 읽힌다.
- */
 export function LiveHead({
   seconds,
   open,
 }: {
   seconds: number | null;
-  /** 펼칠 수 있는 머리줄이면 지금 펼쳐져 있는가. 없으면 버튼이 아니다(첫 단계 전). */
   open?: boolean;
 }) {
   const t = useTranslations("chat.thought");
@@ -186,7 +141,6 @@ export function LiveHead({
         {t("thinking")}
       </span>
       {seconds !== null ? (
-        // 플렉스 안이라 앞 공백이 접힌다 — `pre` 로 공백을 지킨다
         <span
           aria-hidden
           className="whitespace-pre text-[var(--el-muted)] tabular-nums"
@@ -211,7 +165,6 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-/** 첫 단계 전 지금 하는 일 한 줄. 높이를 잡아 두어 문구가 바뀌어도 아래가 안 움직인다. */
 export function CurrentLine({
   id,
   text,
@@ -224,7 +177,6 @@ export function CurrentLine({
   const t = useTranslations("chat.thought");
   return (
     <p
-      // 키는 단계의 정체로 준다. 문구로 주면 생각 델타마다 다시 마운트되어 떠오르기를 끝없이 되풀이한다.
       key={stalled ? "stalled" : id}
       data-current
       data-stalled={stalled || undefined}
@@ -240,7 +192,6 @@ export function CurrentLine({
   );
 }
 
-/** 첫 단계가 오기 전의 진행 줄. 보낸 시각부터 초를 세고, 이벤트가 오래 없으면 늦어진다고 말한다. */
 export function PendingProgress({ startedAt }: { startedAt: string | null }) {
   const seconds = useThinkingSeconds(true, startedAt);
   const stalled = useStalled("pending", true);
@@ -266,23 +217,15 @@ function Disclosure({
   onOpenNote,
 }: {
   blocks: StepBlock[];
-  /** 이 턴이 아직 안 끝났나. 서랍 여닫기는 이 값을 따른다. */
   live: boolean;
-  /**
-   * 지금 도는 단계가 있나. 최근 줄만 보이는 꼬리 모양은 이 값을 따른다. 승인을 기다리는 동안은 `live` 인데
-   * 도는 것은 없다.
-   */
   running: boolean;
   seconds: number | null;
   onOpenNote?: (noteId: string) => void;
 }) {
   const t = useTranslations("chat.thought");
   const lines = groupSteps(blocks);
-  // 흐르는 동안은 펴 두고(도는 중이면 최근 몇 줄만, 승인을 기다리면 무엇을 하려다 물었는지 전부) 끝나면 접는다 —
-  // 본문은 답만 담고, 과정은 누른 사람만 본다.
   const [open, setOpen] = useState(live);
   const reduced = useReducedMotion();
-  // 사용자가 손으로 건드렸으면 자동 접힘/펼침이 그걸 덮지 않는다.
   const touched = useRef(false);
 
   useEffect(() => {
@@ -291,15 +234,10 @@ function Disclosure({
   }, [live]);
 
   const stalled = useStalled(stepSignature(blocks), running);
-  // 도는 동안은 높이를 `LIVE_TAIL` 로 묶고 아래에 붙여, 새 줄이 아래에서 올라오고 위 줄은 흐려지며 밀려난다.
   const tail = running && open;
   const tailRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState(false);
-  // 꼬리는 스크롤할 수 있어야 한다 — 위로 올려 지난 단계를 읽는 사람이 있다. 바닥에 붙어 있을 때만
-  // 새 줄을 따라 내려가고, 위로 올린 동안은 그 자리를 지킨다.
-  // (`justify-end` 로 아래에 붙이면 넘친 윗부분이 스크롤 영역 밖으로 나가 닿을 수 없다.)
   const pinned = useRef(true);
-  // 넘칠 때만 위를 흐린다. 줄 수로 세면 줄바꿈된 문장·칩이 든 줄에서 틀린다 — 그려진 높이로 잰다.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 렌더마다 다시 잰다. `[tail, overflow]` 로 묶으면 줄이 늘어도 안 재서 바닥을 못 따라간다
   useLayoutEffect(() => {
     const el = tailRef.current;
@@ -312,8 +250,6 @@ function Disclosure({
     <div
       data-cot="group"
       data-open={open ? "true" : "false"}
-      // 떠오르는 것은 흐를 때 한 번이다. 끝난 묶음은 히스토리로 다시 마운트되는데 거기서 또
-      // 떠오르면 한 번 더 번쩍인다.
       className={cn(live && "chat-rise", "flex flex-col")}
     >
       <button
@@ -340,13 +276,11 @@ function Disclosure({
           )}
         </span>
       </button>
-      {/* 화면 읽기에는 단계가 바뀔 때만 알린다. 생각 문장은 델타마다 바뀌어 그대로 걸면 글자마다 읽힌다. 보이는 줄은 숨긴다. */}
       {running ? (
         <span className="sr-only" aria-live="polite">
           {stalled ? t("stalled") : announceStep(blocks, t)}
         </span>
       ) : null}
-      {/* `initial={false}` 는 흐르는 중 이미 펴진 채로 다시 그려질 때 매 토큰 다시 자라지 않게 한다. */}
       <AnimatePresence initial={false}>
         {open ? (
           <motion.div
@@ -376,7 +310,6 @@ function Disclosure({
                   "[mask-image:linear-gradient(to_bottom,transparent,black_0.75lh)]"
               )}
             >
-              {/* 줄이 늘어 위로 밀릴 때 자리 이동만 옮긴다(크기는 안 건드려 글자가 늘어나지 않는다). */}
               <motion.div
                 layout={tail && !reduced ? "position" : false}
                 data-motion={tail && !reduced ? "slide" : undefined}
@@ -409,18 +342,8 @@ function Disclosure({
   );
 }
 
-/**
- * 도는 동안 보이는 높이. 한 줄(12px·1.625)과 줄 간격(6px)이 25.5px 라 네 줄쯤이다 — 칩이 든 줄이나 줄바꿈된 문장이
- * 섞이면 셋. 근거 있는 값이 아니라 답 위가 덜 출렁이는 선에서 고른 값이다.
- */
-/**
- * 꼬리 높이 = **단계 줄 4줄**. 줄 글자(`text-xs leading-relaxed`)의 줄 높이(`lh`)로 재고, 줄 사이 간격
- * (`space-y-1.5` = 0.375rem) 세 번을 더한다. 고정 px 로 두면 글자 크기·줄 높이가 바뀔 때 보이는 줄 수가 같이 바뀐다.
- * 줄바꿈된 단계나 칩이 든 단계는 그만큼 자리를 더 쓴다 — 넘친 위쪽은 스크롤로 본다.
- */
 const LIVE_TAIL = "text-xs leading-relaxed max-h-[calc(4lh+1.125rem)]";
 
-/** 「45초」·「2분 5초」·「1시간 18분」. */
 function duration(seconds: number, t: ThoughtT) {
   const hours = Math.floor(seconds / 3600);
   if (hours > 0)
@@ -437,7 +360,6 @@ function duration(seconds: number, t: ThoughtT) {
     : t("duration.minutesSeconds", { minutes, seconds: rest });
 }
 
-/** 생각 블록의 줄. ai 는 진행 문장 하나를 줄바꿈으로 끝내 보낸다 — 줄마다 한 단계다. 줄바꿈 없는 옛 생각은 한 줄이다. */
 function thinkingLines(text: string) {
   return text
     .split("\n")
@@ -445,10 +367,6 @@ function thinkingLines(text: string) {
     .filter(Boolean);
 }
 
-/**
- * 화면 읽기에 알릴 지금 단계. 결과를 기다리는 도구가 있으면 그 라벨(인자·결과를 뺀 「연관 스크립트 읽기 중」 — 길게 읽으면
- * 다음 단계에 밀린다), 아니면 「생각하는 중」이다. 승인 대기는 이미 걸러졌다(`drawable`).
- */
 function announceStep(blocks: StepBlock[], t: ThoughtT): string {
   const pending = blocks.findLast(
     (block) => block.kind === "tool" && block.status === null
@@ -460,10 +378,6 @@ function announceStep(blocks: StepBlock[], t: ThoughtT): string {
   return label ? t("step", { label }) : t("thinkingNow");
 }
 
-/**
- * 펼친 타임라인의 한 줄. 묶인 조회 호출은 「라벨 ×N」 한 줄로 서고 누르면 호출마다 펼친다.
- * 개수는 요약 문구에서 읽지 않고 호출 수를 센다.
- */
 function TimelineLine({
   line,
   live,
@@ -471,7 +385,6 @@ function TimelineLine({
   onOpenNote,
 }: {
   line: StepLine;
-  /** 지금 도는 줄인가. 묶음이면 그 안의 마지막 호출이 도는 것이다. */
   live: boolean;
   animate: boolean;
   onOpenNote?: (noteId: string) => void;
@@ -490,7 +403,6 @@ function TimelineLine({
   }
 
   const active = line.blocks.some((block) => block.status === null);
-  // 라벨은 ai 가 「라벨 · 인자 · 결과」로 내는 요약의 첫 마디다. 호출마다 다른 인자는 펴서 본다.
   const label = line.blocks[0].summary?.split(" · ")[0] || line.tool;
   return (
     <div data-step="run" className={cn(animate && "chat-rise")}>
@@ -540,10 +452,6 @@ function TimelineLine({
   );
 }
 
-/**
- * 끝난 묶음의 이름. 얼마나 생각했는지와 무엇을 봤는지만 말한다 — 단계 수는 사용자에게 뜻이 약해 펼쳐야 보인다.
- * 승인을 기다리며 펴져 있을 때는 아직 끝나지 않아 시간을 안 붙인다.
- */
 function headline(
   blocks: StepBlock[],
   live: boolean,
@@ -566,7 +474,6 @@ function headline(
         : []
     )
   );
-  // 걸린 시간을 모르면(옛 대화·1초 미만) 시간만 뺀다. 흐를 때와 새로고침 뒤가 같은 말이어야 한다.
   const lead = live
     ? t("awaiting")
     : seconds !== null
@@ -588,14 +495,12 @@ function StepRow({
 }: {
   block: StepBlock;
   live: boolean;
-  /** 이 묶음이 흐르는 중이라 새 줄이 떠오르며 선다. 끝난 묶음은 소리 없이 선다. */
   animate: boolean;
   onOpenNote?: (noteId: string) => void;
 }) {
   const t = useTranslations("chat.thought");
   const row = cn(animate && "chat-rise", "flex gap-2");
   if (block.kind === "thinking") {
-    // 진행 문장은 줄마다 한 단계다. 줄바꿈 없이 이어진 옛 생각은 한 문단으로 읽힌다.
     const rows = thinkingLines(block.text);
     return (
       <>
@@ -619,7 +524,6 @@ function StepRow({
     );
   }
 
-  // 확정 전 승인은 카드가 따로 서 있고, 결정된 승인은 `groupBlocks` 가 묶음을 끊고 카드로 세운다.
   if (block.kind === "approval") return null;
 
   return (
@@ -636,7 +540,6 @@ function StepRow({
         }
       />
       <div className="min-w-0 flex-1">
-        {/* 도는 줄은 글자 자신이 빛난다. 끝나면 빛이 멈추고 점이 체크로 바뀐다. */}
         {block.summary || block.tool ? (
           <p
             className={cn(
@@ -650,7 +553,6 @@ function StepRow({
           </p>
         ) : null}
         <TargetChip target={block.target} onOpenNote={onOpenNote} />
-        {/* 성공은 왼쪽 체크가 말하므로 배지를 안 단다. 실패·중단만 한 줄로 적는다. */}
         {block.status === "error" ? (
           <p className="text-xs text-[var(--el-error)]">{t("failed")}</p>
         ) : null}
@@ -678,9 +580,6 @@ function StepRow({
   );
 }
 
-/**
- * 도구가 향하는 곳. 그릴 줄 아는 `kind` 둘만 칩으로 세우고 모르는 것은 안 그린다.
- */
 function TargetChip({
   target,
   onOpenNote,
@@ -754,22 +653,14 @@ function Dot({
   );
 }
 
-/** 근거 칩을 접지 않고 보이는 수. 넘으면 「+N」 하나로 접는다. */
 const REFS_SHOWN = 3;
 
-/**
- * 답변 아래 참고한 회의록. 머리말 없이 칩만 바로 보인다 — 1건짜리 접힘 서랍은 누를 일 하나를 늘릴 뿐이다. 칩을 누르면
- * 그 회의록으로 간다. `refs` 는 「본 것」이지 「어느 문장을 뒷받침하는지」가 아니라서 번호 각주로 그리지 않는다.
- *
- * 3개가 넘으면 「+N」으로 접고, 누르면 나머지가 선다. 답이 끝난 뒤에만 한 번 선다(부르는 쪽).
- */
 export function AnswerRefs({
   refs,
   animate = false,
   onOpenNote,
 }: {
   refs: { id: string; title: string }[];
-  /** 방금 흐르다 끝난 답의 근거 줄이라 떠오르며 선다. 히스토리 행은 소리 없이 선다. */
   animate?: boolean;
   onOpenNote?: (noteId: string) => void;
 }) {
@@ -783,7 +674,6 @@ export function AnswerRefs({
     <div
       data-refs="answer"
       role="group"
-      // 「출처」가 아니다. 계약이 싣는 것은 인용한 것이 아니라 본 것이다.
       aria-label={t("refs", { count: refs.length })}
       className={cn(animate && "chat-rise", "flex flex-wrap gap-1.5")}
     >
@@ -800,7 +690,6 @@ export function AnswerRefs({
             aria-hidden
             className="size-3.5 shrink-0 self-start mt-px text-[var(--el-scope-note)]"
           />
-          {/* 자르지 않는다 — 길면 칩 안에서 줄을 바꾼다 */}
           <span className="[overflow-wrap:anywhere]">{ref.title}</span>
         </button>
       ))}

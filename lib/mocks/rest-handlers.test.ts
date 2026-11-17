@@ -40,7 +40,6 @@ describe("REST mock handlers", () => {
   });
 
   describe("계정 화면 언어 (APP-1283 계약, APP-1285)", () => {
-    // 저장한 언어는 새로고침(시드 재생성)에도 남도록 쿠키에 적힌다. 시험 사이에는 지운다.
     afterEach(() => {
       document.cookie = "heymoa-mock-account-lang=; path=/; max-age=0";
       mockDb.reset();
@@ -115,10 +114,6 @@ describe("REST mock handlers", () => {
     });
   });
 
-  /**
-   * 시작 실패는 전역 토스트를 끄고 프로바이더가 이 문구를 그대로 그린다 — 코드가 문구
-   * 자리에 흘러오면 화면에 `NOTE_NOT_FOUND`가 그대로 뜬다. 문구는 계약의 것이어야 한다.
-   */
   it("세션 생성 404의 문구는 계약의 한국어다", async () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
@@ -172,7 +167,6 @@ describe("REST mock handlers", () => {
     expect((await ok.json()).data.delegation.name).toBe("노트북");
   });
 
-  // 서버(APP-825)처럼 한 쪽 20개, 다음 쪽은 직전 응답의 커서 둘로. 없는 연결은 404 다
   it("외부 에이전트 연결의 사용 내역을 커서로 이어 읽고 없는 연결은 404 다", async () => {
     const read = (query = "") =>
       fetch(
@@ -188,7 +182,6 @@ describe("REST mock handlers", () => {
     const missing = await fetch(
       "http://localhost/v1/agent-delegations/01KNOPE000000/usages"
     );
-    // 시드의 다른 멤버 연결(APP-941) — 관리자라도 남의 내역은 없는 연결과 같다
     const others = await fetch(
       "http://localhost/v1/agent-delegations/01K00000000Q4/usages"
     );
@@ -209,8 +202,6 @@ describe("REST mock handlers", () => {
   });
 
   it("생성은 201로 답한다", async () => {
-    // 화면이 `status === 201`로 성공을 가른다. 생성 mock 래퍼는 200만 줄 수 있어
-    // 목에서 워크스페이스가 만들어지지 않았다.
     const response = await fetch("http://localhost/v1/workspaces", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -222,8 +213,6 @@ describe("REST mock handlers", () => {
   });
 
   it("한 operation의 실패가 여럿이면 던진 코드를 그대로 쓴다", async () => {
-    // createProject는 잘못된 본문이면 400, 없는 워크스페이스면 404다.
-    // 기본값으로 덮으면 계약과 어긋난다.
     const response = await fetch(
       "http://localhost/v1/workspaces/01KZZZZZZZZZZ/projects",
       {
@@ -238,7 +227,6 @@ describe("REST mock handlers", () => {
   });
 
   it("없는 노트는 200 success:false가 아니라 404다", async () => {
-    // 계약의 성공 응답은 error가 null로 못박혀 있다 — 실패는 4xx + AppErrorResponse다.
     const response = await fetch("http://localhost/v1/notes/01KZZZZZZZZZZ");
 
     expect(response.status).toBe(404);
@@ -316,7 +304,6 @@ describe("invitation and notification handlers", () => {
     expect(second.status).toBe(409);
     const body = await second.json();
     expect(body.error.code).toBe("DUPLICATE_PENDING_INVITATION");
-    // 실서버처럼 한국어 메시지를 담아야 web이 errorMessageOf로 서버 문구를 그린다.
     expect(body.error.message).toBe("이미 대기 중인 초대가 있습니다.");
   });
 
@@ -350,7 +337,6 @@ describe("invitation and notification handlers", () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    // 스키마 표식이 없으면 원본이 살아 있는 초대만 센다 — 시드의 안 읽은 대기 초대 둘.
     expect(body.data.unreadCount).toBe(2);
   });
 
@@ -365,7 +351,6 @@ describe("invitation and notification handlers", () => {
     expect(notice.type).toBe("SUBSCRIPTION_ENDED_UNPAID");
     expect(notice.readAt).toBeNull();
     expect(notice.payload.workspaceId).toBe("01K0000000006");
-    // 다시 읽어도 한 건이다.
     const again = await (
       await fetch("http://localhost/v1/notifications?schema=2")
     ).json();
@@ -403,7 +388,7 @@ describe("workspace member management handlers", () => {
   });
   afterAll(() => server.close());
 
-  const WORKSPACE_ID = "01K0000000000"; // 시드: 나(ADMIN) + 한지원(01K0000000020, MEMBER)
+  const WORKSPACE_ID = "01K0000000000";
   const OTHER_MEMBER_ID = "01K0000000020";
   const currentUserId = () => mockDb.getCurrentUser().userId;
 
@@ -443,8 +428,6 @@ describe("workspace member management handlers", () => {
     });
   });
 
-  // 웹은 생성 타입에 묶여 "OWNER"를 못 보내지만, 목이 계약보다 관대하면 그 차이가 서버에
-  // 붙는 날에야 드러난다. 핸들러의 타입 단언은 런타임에 아무것도 막지 않는다.
   it("계약에 없는 역할은 400 BAD_REQUEST다", async () => {
     const response = await fetch(
       `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${OTHER_MEMBER_ID}`,
@@ -463,8 +446,6 @@ describe("workspace member management handlers", () => {
     ).toBe("MEMBER");
   });
 
-  // 생성 훅의 `data`가 optional이라 본문 없는 PATCH가 실제로 날아올 수 있다. 파싱이
-  // 오류 변환 밖에서 일어나면 MSW가 500과 스택 트레이스를 주고, 그건 계약에 없는 응답이다.
   it("본문이 없거나 깨진 PATCH도 500이 아니라 400 봉투다", async () => {
     for (const body of [undefined, "{"]) {
       const response = await fetch(
@@ -513,11 +494,7 @@ describe("workspace member management handlers", () => {
     ).toBe(false);
   });
 
-  // /members/me가 /members/:userId보다 먼저 등록돼야 한다 — 등록 순서가 뒤집히면 이 요청이
-  // :userId 라우트에 userId="me"로 잡혀 removeMember를 타고, 있지도 않은 "me" 멤버를 찾다가
-  // 404 WORKSPACE_MEMBER_NOT_FOUND로 잘못 응답한다. 이 테스트는 그 회귀를 잡는다.
   it("나가기(/members/me)는 :userId 라우트에 먹히지 않고 별도로 처리된다", async () => {
-    // 마지막 ADMIN이면 나가기 자체가 409라 라우팅 문제를 가린다 — 관리자를 하나 더 만든다.
     await fetch(
       `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${OTHER_MEMBER_ID}`,
       {
@@ -539,7 +516,6 @@ describe("workspace member management handlers", () => {
     );
 
     expect(response.status).toBe(204);
-    // 나간 뒤에는 멤버 목록을 조회할 수 없다(워크스페이스가 사라진다) — 목록으로 확인한다.
     expect(
       mockDb.listWorkspaces().some((w) => w.workspaceId === WORKSPACE_ID)
     ).toBe(false);
@@ -559,7 +535,6 @@ describe("workspace member management handlers", () => {
     expect(lastAdmin.status).toBe(409);
     expect((await lastAdmin.json()).error.code).toBe("LAST_WORKSPACE_ADMIN");
 
-    // 01K0000000030 — 초대만 와 있고 아직 합류하지 않은 워크스페이스.
     const notMember = await fetch(
       "http://localhost/v1/workspaces/01K0000000030/members/me",
       { method: "DELETE" }
@@ -569,7 +544,6 @@ describe("workspace member management handlers", () => {
   });
 });
 
-/** 회의 조작은 시작자만 가능하다 — 녹음을 시작해 시작자를 만든 노트를 쓴다. */
 function startedNote() {
   const project = mockDb.listProjects("01K0000000000")[0];
   const note = mockDb.createNote(project.projectId, {});
@@ -586,7 +560,6 @@ describe("meeting and integration handlers", () => {
   });
   afterAll(() => server.close());
 
-  // 서버가 시작·재개를 시작자로 묶지 않는다 (APP-685). 목만 403 을 내고 있었다.
   it("lets a member record a meeting someone else started", async () => {
     const foreignNote = mockDb
       .listWorkspaces()
@@ -600,8 +573,6 @@ describe("meeting and integration handlers", () => {
       );
 
     expect(foreignNote).toBeDefined();
-    // 시드의 진행 중 회의에는 실제 열린 세션이 있다. 그 세션이 일시정지된 뒤
-    // 비시작자 멤버가 재개할 수 있는지를 본다.
     const current = mockDb.getCurrentSession(foreignNote!.noteId);
     expect(current?.status).toBe("ACTIVE");
     mockDb.updateSessionStatus(current!.sessionId, "COMPLETED");
@@ -613,7 +584,6 @@ describe("meeting and integration handlers", () => {
     expect(response.status).toBe(201);
   });
 
-  // 열린 세션 검사가 노트를 안 보고 있었다 — 다른 회의의 녹음이 이 회의를 막았다.
   it("does not let another note's open session block this one", async () => {
     const [project] = mockDb.listProjects("01K0000000000");
     const busy = mockDb.createNote(project.projectId, { title: "먼저 녹음" });
@@ -686,7 +656,6 @@ describe("meeting and integration handlers", () => {
     );
 
     expect(response.status).toBe(200);
-    // 종료 시각을 화면이 지어내지 않으려면 응답이 그것을 싣고 있어야 한다 (APP-685).
     expect((await response.json()).data).toMatchObject({
       meetingStatus: "ENDED",
       meetingEndedAt: expect.any(String),
@@ -695,9 +664,6 @@ describe("meeting and integration handlers", () => {
     expect((await flow.json()).data.status).toBe("ANALYZING");
   });
 
-  // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 화면이
-  // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 409 예시 그대로여야
-  // `errorMessageOf`가 서버 문구를 그리는 것과 어긋나지 않는다.
   it("종료된 회의의 전사 시작을 409 MEETING_ALREADY_ENDED로 거절한다", async () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});

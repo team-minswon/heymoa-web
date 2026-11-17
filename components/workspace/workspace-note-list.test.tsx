@@ -14,7 +14,6 @@ import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
 vi.mock("@/lib/ui/toast", () => ({ toast }));
-// note-list-row는 자체 테스트가 있다 — 목록의 정렬·에러 처리만 본다.
 vi.mock("@/components/workspace/note-list-row", () => ({
   NoteListRow: ({
     note,
@@ -29,10 +28,6 @@ vi.mock("@/components/workspace/note-list-row", () => ({
   ),
 }));
 
-/**
- * `meetingStartedAt`이 정렬 키다. `updatedAt`을 일부러 **역순으로** 채워 둔다 — 셋이 같은
- * 값이면 예전의 `updatedAt` 정렬에서도 같은 답이 나와 이 테스트가 회귀를 못 잡는다.
- */
 function note(
   noteId: string,
   meetingStartedAt: string | null,
@@ -98,11 +93,6 @@ describe("WorkspaceNoteList", () => {
     expect(rows.map((r) => r.textContent)).toEqual(["newest", "older"]);
   });
 
-  /**
-   * 예전 빈 상태는 "상단바의 **새 노트**로 첫 회의를 시작하면…"이라고 가리키기만 했다.
-   * 프로젝트가 없으면 그 버튼이 비활성이라 **가리키는 곳이 눌리지 않았다** — 누를 수 있는
-   * 것을 이 자리에 둔다.
-   */
   it("회의가 없으면 누를 수 있는 CTA와 다음 단계를 그린다", () => {
     const onNewMeeting = vi.fn();
     render(

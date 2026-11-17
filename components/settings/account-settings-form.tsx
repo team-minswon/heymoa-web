@@ -44,7 +44,6 @@ export function AccountSettingsForm() {
           disabled
           aria-describedby="account-name-hint"
         />
-        {/* 계정 이름은 로그인한 계정에서 와 여기서 못 고친다. 고칠 길이 어디 있는지만 한 줄로 알린다(APP-1206). */}
         <NameHint id="account-name-hint" />
       </div>
       <AccountDeletionSection />
@@ -52,12 +51,6 @@ export function AccountSettingsForm() {
   );
 }
 
-/**
- * 계정 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다.
- *
- * **머리글·라벨·안내 문구는 가리지 않는다** — 고정 문구다. 아바타와 입력 칸(값)만 막대로 둔다. 카드 틀은 실제와 같은
- * 상수를 읽는다.
- */
 export function AccountSettingsFormSkeleton() {
   const t = useTranslations("settings.account");
   return (
@@ -78,7 +71,6 @@ export function AccountSettingsFormSkeleton() {
         <Skeleton className="h-8 rounded-control" />
         <NameHint />
       </div>
-      {/* 고정 구역이라 스켈레톤에도 실물을 세운다(도착할 때 아래가 안 밀린다). */}
       <AccountDeletionSection />
     </div>
   );

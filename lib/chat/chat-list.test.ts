@@ -38,7 +38,6 @@ const open = (
   finishedTurnId: string | null = null
 ): OpenChatStatus => ({ chatId, turnId, phase, finishedTurnId });
 
-// ★ 배지가 깜빡이는 것이 두 출처의 어긋남이다. 순서를 바꾸면 깜빡인다.
 describe("배지는 두 출처를 턴 id 로 맞춘다", () => {
   it("다른 대화는 목록을 믿는다 — 이 탭은 그 스트림을 안 듣고 있다", () => {
     expect(runningLabel(row("c2", "t9"), open("c1", "t1", "streaming"))).toBe(
@@ -75,16 +74,12 @@ describe("배지는 두 출처를 턴 id 로 맞춘다", () => {
   });
 
   it("★ 끝나는 것을 본 턴은 목록이 아직 들고 있어도 배지를 안 세운다", () => {
-    // 턴이 끝나면 `stream.reset()` 이 `turnId` 를 비운다. 그 순간 목록은 아직 한 주기(5초)
-    // 동안 그 턴을 「도는 중」으로 들고 있어서, 맞출 열쇠가 없으면 위 「다른 턴 id」 규칙에
-    // 걸려 **사라졌던 배지가 다시 선다** — QA 가 본 깜빡임이 이것이다.
     expect(
       runningLabel(row("c1", "t1"), open("c1", null, "idle", "t1"))
     ).toBeNull();
   });
 
   it("끝난 턴을 기억해도 그 뒤에 시작한 남의 턴은 가리지 않는다", () => {
-    // 다른 탭이 t2 를 열었다. 우리가 t1 이 끝나는 것을 봤다는 사실과 무관하다.
     expect(runningLabel(row("c1", "t2"), open("c1", null, "idle", "t1"))).toBe(
       "streaming"
     );
@@ -144,7 +139,6 @@ describe("시간으로 묶는다", () => {
     ]);
   });
 
-  // 「어제 오후 11시」와 「오늘 오전 1시」는 두 시간 차이지만 다른 묶음이다
   it("경계는 시각이 아니라 날짜다", () => {
     const groups = groupChatsByRecency(
       [at("2026-08-25T01:00:00Z"), at("2026-08-24T23:00:00Z")],
@@ -164,7 +158,6 @@ describe("시간으로 묶는다", () => {
   });
 });
 
-// 다른 값을 그리면 「1분 전인데 왜 세 번째 줄」이 된다
 describe("그리는 시각이 정렬 기준과 같은 값이다", () => {
   it("1분 미만은 방금이다", () => {
     expect(relativeUpdatedAt("2026-08-25T11:59:30Z", NOW, tKo, "ko")).toBe(
@@ -222,7 +215,6 @@ describe("retitleChatInList", () => {
         },
       },
     };
-    // 출처도 사람으로 바뀐다 — 다시 바꿀 때 계측이 「USER 를 또 고쳤다」를 안다
     expect(retitleChatInList(list, "B", "새")).toEqual({
       ...list,
       data: {

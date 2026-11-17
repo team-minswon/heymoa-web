@@ -63,7 +63,6 @@ describe("RecordingConnectionNotice", () => {
     );
   });
 
-  // 창이 30초라 4분·5분 경고가 설 자리가 없다(D-02)
   it("버퍼가 많이 차도 몇 분 뒤 멈춘다고 말하지 않는다", () => {
     const { container } = render(
       notice({ buffer: buffer({ pendingMs: 290_000 }) })
@@ -80,7 +79,6 @@ describe("RecordingConnectionNotice", () => {
     expect(alert).not.toHaveTextContent("이 기기에");
   });
 
-  // 영수증 노랑이 10초에 먼저 뜬 채 한도에 닿는 것이 이 길의 보통 순서다
   it.each([{ cause: "no_receipt", sinceMs: 0 }, DISCONNECTED] as const)(
     "노랑($cause)이 떠 있어도 한도에 닿아 소리를 받지 않으면 저장 중이라고 하지 않는다",
     (current) => {

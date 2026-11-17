@@ -10,7 +10,6 @@ import {
 import type { WorkspaceBillingResponseDataProductTestPaymentNotice } from "@/lib/api/generated/models";
 import { cn } from "@/lib/utils";
 
-/** 화면 안의 상태 한 덩어리. 사라지면 안 되는 안내라 토스트가 아니라 자리에 둔다(rule `error-loading`). */
 export function BillingNotice({
   tone = "info",
   title,
@@ -43,7 +42,6 @@ export function BillingNotice({
   );
 }
 
-/** 시험 결제 안내. 서버 값이 문구를 정하고, 값이 없으면(실결제) 아무것도 그리지 않는다. */
 export function TestPaymentNotice({
   notice,
 }: {
@@ -54,10 +52,6 @@ export function TestPaymentNotice({
   return <BillingNotice>{t(notice)}</BillingNotice>;
 }
 
-/**
- * 결제 안내 문장 속 「문의·피드백」(`t.rich` 의 `<link>`). 문의 창을 「결제·환불」로, 번호를 실어 연다 — 환불은 문의로만 받는다.
- * 문의 창은 어디에 마운트해도 되어 워크스페이스 셸 밖(카드 등록 결과)에서도 같이 쓴다.
- */
 export function FeedbackLink({
   reference,
   children,

@@ -26,7 +26,6 @@ const getApp = () =>
   desktopAuthBridge() ? null : detectInAppBrowser(navigator.userAgent);
 const serverApp = () => null;
 
-/** Browser selection precedes consent and OAuth, so neither is silently transferred. */
 export function InAppLoginGate({
   children,
   returnTo,
@@ -69,7 +68,6 @@ export function BrowserHandoffPrompt({
   const openBrowser = useCallback(
     (interaction: "automatic" | "click") => {
       const context = { app, os };
-      // Only a launched link carries analytics IDs; a copied one may be forwarded to someone else.
       const link = externalBrowserUrl(withAnalyticsHandoff(target), context);
       track("browser_handoff_attempted", {
         ...context,
@@ -85,12 +83,9 @@ export function BrowserHandoffPrompt({
       });
       setAttempted(true);
       setOpening(Boolean(link));
-      // A returned navigation call is not proof of arrival. The target page records arrival separately.
       try {
         if (link) window.location.assign(link);
-      } catch {
-        // Blocked schemes leave the manual instructions below available.
-      }
+      } catch {}
     },
     [app, os, target, entry]
   );
@@ -103,7 +98,6 @@ export function BrowserHandoffPrompt({
 
   useEffect(() => {
     if (!opening) return;
-    // This only changes the available UI; a timeout is not evidence that the handoff failed.
     const timer = window.setTimeout(() => setOpening(false), 1200);
     return () => window.clearTimeout(timer);
   }, [opening]);

@@ -9,21 +9,15 @@ import {
 } from "./lib/i18n/marketing-routes";
 
 const nextConfig: NextConfig = {
-  // **루트를 못박는다.** 워크트리(`.worktrees/app-N`)에서 빌드하면 Next가 부모 레포의
-  // 락파일을 보고 워크스페이스 루트를 위로 잡아, 폰트 같은 내부 모듈 해석이 깨지고
-  // 산출물 경로가 `.worktrees/` 아래로 한 겹 더 들어간다.
+  // 루트를 못박습니다. 워크트리에서 빌드하면 Next 가 부모 레포의 락파일을 보고 루트를 위로 잡아 모듈 해석이 깨집니다.
   outputFileTracingRoot: path.join(__dirname),
   turbopack: { root: path.join(__dirname) },
-  // 언어 경로는 proxy 가 아니라 여기서 푼다(PRO-66). proxy 는 토큰 갱신만 하고 matcher 로 투기적 요청을
-  // 건너뛰는데, rewrite 는 prefetch 를 포함한 모든 요청에 같게 걸려야 하기 때문이다. 목록은 `marketing-routes.ts` 하나다.
   async redirects() {
     return marketingRedirects();
   },
   async rewrites() {
     return { beforeFiles: [], afterFiles: marketingRewrites(), fallback: [] };
   },
-  // 외부 에이전트 동의 화면(APP-888)을 다른 사이트가 프레임에 띄워 허락을 누르게 하지 못하게 한다.
-  // `X-Frame-Options` 는 `frame-ancestors` 를 모르는 브라우저용이다. 사이트 전체는 따로 정한다.
   async headers() {
     return [
       {
@@ -33,8 +27,6 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
         ],
       },
-      // 카드를 받는 두 면(APP-1600). 첫 구독 결제 페이지는 프레임에 못 띄우고, 카드 변경 문서는 우리 모달만 iframe 으로 싣는다.
-      // 카드 칸이 있는 문서를 캐시·Referer 로 남기지 않는다. CSP 는 요청마다 nonce 가 달라 `proxy.ts` 가 붙인다.
       {
         source: "/billing/checkout/:workspaceId",
         headers: [
@@ -51,7 +43,6 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
-      // 메일 수신거부(APP-1314). 주소의 토큰이 캐시와 `Referer` 로 새지 않게 한다. 분석은 루트 레이아웃이 뺀다.
       {
         source: "/unsubscribe",
         headers: [
@@ -62,17 +53,11 @@ const nextConfig: NextConfig = {
     ];
   },
   experimental: {
-    // 매치 안 되는 URL을 `app/global-not-found.tsx`가 받는다. 없으면 그 URL들이 루트
-    // 레이아웃을 거쳐 렌더되어, 아무 경로마다 SSR 유저 조회가 실서버로 나간다.
-    // experimental이므로 Next를 올릴 때 이 플래그가 살아 있는지 확인한다. (APP-224)
+    // 없으면 매치 안 되는 URL 이 루트 레이아웃을 거쳐 SSR 유저 조회를 냅니다. experimental 이라 Next 를 올릴 때 살아 있는지 봅니다.
     globalNotFound: true,
-    // Vercel 에서는 Turbopack 빌드 캐시를 끈다(16.3 부터 기본으로 켜짐). 2026-11-14 운영 빌드가
-    // `app/globals.css` 만 이틀 전 내용으로 처리해 한글 글꼴 면(APP-1599)이 통째로 빠졌다 — 운영 CSS 가
-    // 「globals.css 만 옛 판으로 되돌린 빌드」와 바이트까지 같았다. 로컬·docker 에서는 재현되지 않아 Vercel 이
-    // 복원한 캐시로 본다. 빌드가 느려지는 대신 낡은 산출물이 나가지 않는다. 로컬은 그대로 캐시를 쓴다.
+    // Vercel 이 복원한 Turbopack 캐시로 `globals.css` 만 옛 판이 나간 적이 있어 Vercel 에서는 빌드 캐시를 끕니다.
     turbopackFileSystemCacheForBuild: !process.env.VERCEL,
   },
 };
 
-// 문구·형식만 쓴다. next-intl 의 라우팅 미들웨어는 쓰지 않는다(인증 proxy 와 합치지 않기 위해).
 export default createNextIntlPlugin("./i18n/request.ts")(nextConfig);

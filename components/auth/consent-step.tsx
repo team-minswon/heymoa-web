@@ -11,21 +11,11 @@ import { errorMessageOf } from "@/lib/api/error-message";
 
 export type ConsentStepMode = "ask" | "retry";
 
-/**
- * 로그인은 끝났지만 약관 동의가 아직 기록되지 않았을 때 `/auth/callback` 이 대시보드로 보내기 전에 세우는 화면
- * (APP-1277). 두 경우다.
- *
- * - `ask` — 로그인 창에서 체크한 표시가 없다(초대·외부 에이전트 로그인 링크, 표시가 만료됨). 같은 체크박스로 받는다.
- * - `retry` — 체크는 했는데 기록이 실패했다. 대시보드에 들어가기 전에 다시 시도한다.
- *
- * 동의하지 않을 사람은 로그아웃으로 나간다 — 동의는 필수라 철회는 탈퇴다(APP-1141).
- */
 export function ConsentStep({
   mode,
   onSubmit,
 }: {
   mode: ConsentStepMode;
-  /** 기록하고 앱으로 들어간다. 실패하면 던진다 — 이 화면이 사유를 그대로 보인다. */
   onSubmit: () => Promise<void>;
 }) {
   const t = useTranslations("auth.consent");
@@ -37,7 +27,6 @@ export function ConsentStep({
   const [error, setError] = useState<string | null>(null);
 
   const ask = mode === "ask";
-  // 체크 전에는 흐린 버튼이 클릭을 받아 체크박스를 강조한다(APP-1402).
   const blocked = ask && !agreed;
 
   const submit = async () => {
@@ -45,7 +34,6 @@ export function ConsentStep({
     setError(null);
     try {
       await onSubmit();
-      // 성공하면 곧 이동한다. 이동 전에 버튼이 되살아나 한 번 더 눌리지 않게 잠가 둔다.
     } catch (cause) {
       setError(errorMessageOf(cause, t("step.failed")));
       setPending(false);

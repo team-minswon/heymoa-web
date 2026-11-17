@@ -7,7 +7,6 @@ import {
 } from "@/lib/transcription/presentation";
 import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
 
-/** 근거 인용이 짚은 줄에만 붙는 것. 다른 줄은 `null` 이라 같은 값으로 비교된다. */
 export type TranscriptRowFocus = {
   ref: RefObject<HTMLElement | null> | undefined;
   markProps: { className?: string; style?: CSSProperties };
@@ -19,13 +18,6 @@ type Props = {
   focus: TranscriptRowFocus | null;
 };
 
-/**
- * 같은 줄이면 다시 그리지 않는다. 확정 줄은 불변이라, 새 발화가 붙을 때마다 전체 N줄을 다시
- * 그리면 긴 회의일수록 final·일시정지·마지막 재조회가 메인 스레드를 길게 잡는다(APP-1246).
- *
- * `segment` 는 참조가 아니라 **그리는 값**으로 가른다 — 실시간 줄이 재조회로 서버의 같은 줄로
- * 바뀌어도 내용이 같으면 그대로 둔다. 화자(`speaker`)는 부모가 라벨마다 한 번만 만들어 참조가 같다.
- */
 export function sameTranscriptRow(prev: Props, next: Props) {
   const a = prev.segment;
   const b = next.segment;

@@ -12,16 +12,6 @@ import { HELP_MEDIA } from "@/lib/help/media-manifest";
 import { localizedHelpMedia } from "@/lib/help/localized-media";
 import { cn } from "@/lib/utils";
 
-/**
- * 가이드의 움직이는 설명. 소리 없는 짧은 루프 영상(WebM + MP4, 첫 장면 poster)이다.
- *
- * - **화면에 들어올 때만 재생**하고 벗어나면 멈춘다(IntersectionObserver) — 안 보이는 영상이 전송량과 배터리를 쓰지 않게.
- * - `prefers-reduced-motion` 이면 자동 재생하지 않고 poster 만 보인다. "재생" 버튼으로 직접 볼 수 있다.
- * - 영상을 누르거나 오른쪽 아래 크게 보기 버튼을 누르면 `HelpFigure` 와 같은 확대 창(Dialog)이 열려 처음부터 재생한다. 열려 있는 동안
- *   본문의 영상은 멈춘다. 확대 창에는 재생/일시정지와 진행 막대가 있다.
- * - 재생/일시정지 버튼은 키보드로 닿는다. 영상에 의존하지 않도록 따라 하는 단계는 본문 글에 따로 적는다.
- * - 파일은 `pnpm help:clips` 가 `public/help/clips/` 에 만든다.
- */
 type ClipName = keyof typeof HELP_MEDIA extends infer K
   ? K extends `clips/${infer N}`
     ? N
@@ -33,12 +23,10 @@ export function HelpClip({
   alt,
   caption,
 }: {
-  /** 확장자 없는 이름. 예: `new-meeting` → `clips/new-meeting.webm` · `.mp4` · `.webp`(poster) */
   name: ClipName;
   alt: string;
   caption?: string;
 }) {
-  // 페이지 언어의 영상(영어는 `en/clips/…`, 없으면 한국어)
   const { path, width, height } = localizedHelpMedia(`clips/${name}`, useLocale());
   const video = useRef<HTMLVideoElement>(null);
   const figure = useRef<HTMLElement>(null);
@@ -57,7 +45,6 @@ export function HelpClip({
   };
 
   useEffect(() => {
-    // (matchMedia 가 없는 환경 — 서버 렌더 검사·오래된 브라우저 — 에서는 움직임 줄이기 설정이 없는 것으로 본다)
     if (typeof window.matchMedia !== "function") return;
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReduced(query.matches); // eslint-disable-line react-hooks/set-state-in-effect -- 브라우저 설정은 마운트한 뒤에만 읽는다(서버 HTML 과 같게)
@@ -77,7 +64,7 @@ export function HelpClip({
       zoomed ||
       typeof IntersectionObserver === "undefined"
     ) {
-      el?.pause(); // 움직임 줄이기를 켠 순간·확대 창이 열린 동안 재생 중이던 영상도 멈춘다
+      el?.pause();
       return;
     }
     const observer = new IntersectionObserver(
@@ -119,7 +106,6 @@ export function HelpClip({
           aria-describedby={caption ? captionId : undefined}
           onPlay={() => {
             setPlaying(true);
-            // 화면에 들어와 자동으로 시작해도 한 번만 센다(열람 중 재생된 영상 수).
             if (!played.current) {
               played.current = true;
               trackHelp("help_clip_played", { clip: name, slug });
@@ -131,7 +117,6 @@ export function HelpClip({
           <source src={helpAssetUrl(`${path}.webm`)} type="video/webm" />
           <source src={helpAssetUrl(`${path}.mp4`)} type="video/mp4" />
         </video>
-        {/* 마우스용 덮개. 키보드는 아래 크게 보기 버튼으로 같은 곳에 닿는다. */}
         <button
           type="button"
           tabIndex={-1}
@@ -195,10 +180,6 @@ export function HelpClip({
   );
 }
 
-/**
- * 확대 창의 영상. 열릴 때 처음부터 재생하고(움직임 줄이기면 poster 와 재생 버튼만), 재생/일시정지와 진행 막대를 둔다.
- * Space 는 일시정지/재생이다(버튼·막대에 포커스가 있으면 그 컨트롤의 기본 동작).
- */
 function ZoomPlayer({
   path,
   alt,
@@ -206,7 +187,6 @@ function ZoomPlayer({
   height,
   reduced,
 }: {
-  /** `localizedHelpMedia` 가 고른 확장자 없는 경로 */
   path: string;
   alt: string;
   width: number;

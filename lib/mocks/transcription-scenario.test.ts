@@ -37,16 +37,13 @@ describe("MockTranscriptionScenario", () => {
       .filter((event) => event.type === "partial");
     expect(partials).toHaveLength(2);
     expect(partials[1].utteranceId).toBe(partials[0].utteranceId);
-    // 이어 붙인 것이 곧 화면에 나가는 문장이고, 그것은 자라기만 한다.
     const whole = (event: { confirmedText: string; pendingText: string }) =>
       `${event.confirmedText}${event.pendingText}`;
     expect(whole(partials[1])).toContain(whole(partials[0]));
-    // **확정 토막도 자라기만 한다** — 굳은 글자가 뒤로 물러나면 화면이 앞뒤로 흔들린다.
     expect(partials[1].confirmedText).toContain(partials[0].confirmedText);
     expect(partials[1].pendingText).not.toBe("");
 
-    // `commit` 명령이 사라졌다. 발화 경계는 이제 침묵이 정한다.
-    const silence = new Int16Array(16_000).buffer; // 1초
+    const silence = new Int16Array(16_000).buffer;
     await scenario.receiveFrame(silence, {
       chunkSeq: 2,
       captureSamples: 1_920,
@@ -69,7 +66,6 @@ describe("MockTranscriptionScenario", () => {
     });
     scenario.open();
 
-    // 계약이 프레임을 32,000 byte(1초)로 묶는다. 15초는 조각 열여섯이다.
     for (let chunkSeq = 0; chunkSeq < 16; chunkSeq += 1) {
       await scenario.receiveFrame(new Int16Array(16_000).fill(12_000).buffer, {
         chunkSeq,
@@ -185,10 +181,6 @@ describe("MockTranscriptionScenario", () => {
   });
 });
 
-/**
- * 재부착 계약(asyncapi): 부착마다 epoch 가 오르고, connected 의 durableThroughSeq 와 ack 는 0 번부터
- * 빈칸 없이 받은 끝이다. 가장 새 3초를 먼저 보내면 앞 번호가 비는데, 그 빈칸을 ack 가 건너면 안 된다.
- */
 describe("MockTranscriptionScenario 재부착 내구성", () => {
   beforeEach(() => mockDb.reset());
 

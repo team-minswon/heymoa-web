@@ -34,12 +34,7 @@ import { onTrack } from "@/lib/analytics/track";
 import type { NotificationItem } from "@/lib/notification/notification-list";
 import { notificationModalMemory } from "@/lib/notification/notification-list";
 
-/**
- * 서버를 흉내 낸다 — 필터를 쪽을 자르기 전에 적용하고 `(createdAt, id)` 커서로 자르며, 모두 읽음은 `upTo` 까지만 읽는다.
- * 요청 기록으로 「목록을 다시 읽지 않았다」·「쪽 수만큼 다시 읽지 않았다」를 본다.
- */
 const push = vi.hoisted(() => vi.fn());
-/** 라우터가 `history.pushState/replaceState` 를 `useSearchParams` 에 잇는 것을 흉내 낸다(Next 16 통합). */
 vi.mock("next/navigation", async () => {
   const { useSyncExternalStore } = await import("react");
   const subscribe = (notify: () => void) => {
@@ -72,7 +67,6 @@ const store = {
   failCount: false,
   legacy: false,
   muteAll: false,
-  /** 있으면 하나 읽기 응답이 이것을 기다린다 — 응답 전 화면을 보려고 */
   readGate: null as Promise<void> | null,
 };
 const requests: string[] = [];
@@ -309,7 +303,7 @@ describe("알림 개수", () => {
     renderCenter();
     expect(await screen.findByRole("button", { name: "알림 2" })).toBeVisible();
 
-    store.items[0].readAt = at(3); // 다른 탭에서 읽었다
+    store.items[0].readAt = at(3);
     act(() => {
       focusManager.setFocused(false);
       focusManager.setFocused(true);
@@ -423,7 +417,6 @@ describe("알림 모달", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull()
     );
-    // 다시 열면 마지막 탭이다.
     dialog = await openModal();
     expect(window.location.search).toBe("?notifications=unread");
   });
@@ -497,7 +490,7 @@ describe("알림 모달", () => {
     await screen.findByRole("button", { name: "알림 2" });
     const dialog = await openModal();
     await within(dialog).findAllByRole("button", { name: "읽음으로 표시" });
-    store.items.push(invitation("LATE", at(7))); // 목록을 받은 뒤 도착
+    store.items.push(invitation("LATE", at(7)));
     fireEvent.click(
       within(dialog).getByRole("button", { name: "모두 읽음으로 표시" })
     );
@@ -505,7 +498,6 @@ describe("알림 모달", () => {
     expect(store.items.find((i) => i.notificationId === "LATE")!.readAt).toBe(
       null
     );
-    // 모달이 열려 있어 바깥은 접근성 트리에서 빠진다(hidden).
     expect(
       await screen.findByRole("button", { name: "알림 1", hidden: true })
     ).toBeInTheDocument();
@@ -586,7 +578,6 @@ describe("알림 모달", () => {
     await screen.findByRole("button", { name: "알림 1" });
     const dialog = await openModal();
     fireEvent.click(within(dialog).getByRole("button", { name: "알림 설정" }));
-    // 알림을 걷지 않고 그 위에 설정을 얹는다(APP-1363) — 뒤로 가기가 알림으로 돌아오게.
     expect(openSettings).toHaveBeenCalledWith("notifications");
     expect(window.location.search).toBe("?notifications=all");
     off();
@@ -646,7 +637,6 @@ describe("검토할 결과 준비 행", () => {
         "/w/WS1/notes/NOTE1?view=full&tab=summary&source=notification"
       )
     );
-    // 모달 쿼리를 걷은 뒤에 간다 — 노트에서 뒤로 가기가 모달 칸으로 돌아오지 않는다.
     expect(window.location.search).toBe("");
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull()
@@ -667,7 +657,6 @@ describe("검토할 결과 준비 행", () => {
     store.readGate = new Promise((resolve) => (release = resolve));
     fireEvent.click(within(row).getByRole("button", { name: "읽음으로 표시" }));
     await waitFor(() => expect(requests).toContain("PUT read A1"));
-    // 서버가 아직 답하지 않았는데 배지는 이미 1이다(모달 뒤라 접근성 트리에서는 가려져 있다).
     expect(
       await screen.findByRole("button", { name: "알림 1", hidden: true })
     ).toBeInTheDocument();

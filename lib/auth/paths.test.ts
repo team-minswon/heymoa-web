@@ -75,7 +75,6 @@ describe("normalizeReturnTo", () => {
       "/billing/checkout/01K0000000001",
     ]) {
       expect(normalizeReturnTo(path)).toBe(path);
-      // 쿼리가 붙으면 로그인 returnTo 에 실리지 않는다
       expect(normalizeReturnTo(`${path}?authKey=a&state=s`)).toBe("/");
       expect(normalizeReturnTo(`${path}?`)).toBe(path);
     }

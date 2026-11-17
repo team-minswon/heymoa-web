@@ -39,7 +39,6 @@ describe("읽음 표시", () => {
     expect(dot).toBeEnabled();
     expect(dot.className).toContain("visible");
     rerender(row("2026-10-22T03:00:00Z"));
-    // invisible 이라 접근성 트리·탭 순서에서 빠진다. 점 칸이 글 흐름 밖(absolute)이라 글의 왼쪽 기준선은 그대로다.
     const hidden = screen.getByRole("button", {
       name: "읽음으로 표시",
       hidden: true,

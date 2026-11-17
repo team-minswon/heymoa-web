@@ -13,8 +13,6 @@ const idle = {
   systemAudio: null,
 };
 
-// Execute the shipped main entry and its modules together. Only Electron's OS
-// boundary is replaced; broker, session adapter, IPC admission and tray are real.
 async function fixture(t, overriddenProfiles = true, introCompleted = true, options = {}) {
   const app = new EventEmitter();
   const ipcMain = new EventEmitter();
@@ -28,8 +26,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true, opti
     ready = resolve;
   });
   app.whenReady = () => readiness;
-  // Model Electron's name-derived defaults and explicit path overrides. The
-  // profiles intentionally differ, as a caller may override session storage.
+  // Model Electron's name-derived defaults and explicit path overrides.
   let name = "@heymoa/desktop";
   const paths = new Map(overriddenProfiles ? [
     ["userData", "/isolated-qa/existing-user-profile"],

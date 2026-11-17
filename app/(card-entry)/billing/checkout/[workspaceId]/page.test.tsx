@@ -12,7 +12,6 @@ import BillingCheckoutRoute from "@/app/(card-entry)/billing/checkout/[workspace
 
 afterEach(() => vi.useRealTimers());
 
-// 첫 구독 주문서의 다음 결제 예정일은 브라우저 시계가 아니라 페이지를 만든 서버 시각으로 계산해 내려 준다(APP-1600).
 describe("결제 페이지(서버 컴포넌트)", () => {
   it("서버 시각으로 계산한 다음 결제 예정일을 내려 준다", async () => {
     vi.useFakeTimers({ now: new Date("2026-01-31T10:00:00+09:00") });

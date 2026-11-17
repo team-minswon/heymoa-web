@@ -5,7 +5,6 @@ import type { DesktopUpdateState } from "@heymoa/desktop-contracts";
 import { desktopUpdateBridge } from "@/lib/desktop/updates";
 import { track } from "@/lib/analytics/track";
 
-/** Observe outside settings so automatic downloads remain visible after the dialog closes. */
 export function DesktopUpdateAnalytics() {
   const previous = useRef<DesktopUpdateState | null>(null);
   useEffect(() => {

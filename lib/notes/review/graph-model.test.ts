@@ -211,7 +211,6 @@ describe("buildReviewGraph", () => {
             relation("d1", "x"),
           ],
         }),
-        // d1 은 주제 2 에도 속한다 — 첫 주제가 집이고 주제 2 와는 약하게 잇는다
         topic(2, {
           members: [
             { itemId: "a1", kind: "ACTION_ITEM" },
@@ -241,9 +240,7 @@ describe("buildReviewGraph", () => {
     expect(graph.nodes.find((node) => node.id === "d1")?.alsoGroups).toEqual([
       2,
     ]);
-    // 양방향 관계는 선 하나, 제외 항목으로 가는 관계는 없다
     expect(graph.edges).toEqual([{ source: "d1", target: "q1" }]);
-    // 다른 주제에도 속한 항목은 그 주제의 허브와 약하게 잇는다
     expect(toForceGraph(graph).links).toContainEqual({
       source: "topic:2",
       target: "d1",
@@ -277,7 +274,6 @@ describe("toForceGraph", () => {
           { itemId: "a1", kind: "ACTION_ITEM" },
         ],
       }),
-      // 항목이 전부 제외된 주제는 허브도 없다
       topic(3, { members: [{ itemId: "x", kind: "DECISION" }] }),
     ],
   };
@@ -306,7 +302,6 @@ describe("toForceGraph", () => {
       { source: hubId(1), target: "a2", kind: "hub" },
       { source: hubId(2), target: "g2", kind: "hub" },
     ]);
-    // 주제 밖 항목은 허브 없이 관계선만 갖는다
     expect(
       links.some((link) => link.target === "loose" || link.source === "loose")
     ).toBe(false);
@@ -341,12 +336,9 @@ describe("toForceGraph", () => {
   });
 
   it("그리는 크기는 화면 px 로 아래위를 묶어, 멀리서는 사라지지 않고 가까이서는 부풀지 않는다", () => {
-    // 배율 0.4 에서 반지름 5 는 화면 2px — 색이 안 보인다. 화면 4px 은 넘게 그린다.
     expect(screenRadius(5, false, 0.4) * 0.4).toBeGreaterThanOrEqual(4);
-    // 배율 8 에서 반지름 10 은 화면 80px. 화면 상한으로 묶는다.
     expect(screenRadius(10, false, 8) * 8).toBeLessThanOrEqual(16);
     expect(screenRadius(14, true, 8) * 8).toBeLessThanOrEqual(24);
-    // 중간 배율은 제 크기 그대로다
     expect(screenRadius(6, false, 1.5)).toBe(6);
   });
 
@@ -358,7 +350,6 @@ describe("toForceGraph", () => {
     expect(new Set(first.map(({ x, y }) => `${x},${y}`)).size).toBe(
       first.length
     );
-    // 항목은 남의 허브보다 제 허브 가까이에서 시작한다
     const at = new Map(first.map((row) => [row.id, row]));
     const distance = (a: string, b: string) =>
       Math.hypot(at.get(a)!.x - at.get(b)!.x, at.get(a)!.y - at.get(b)!.y);

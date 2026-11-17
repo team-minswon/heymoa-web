@@ -14,7 +14,6 @@ import { ApiError } from "@/lib/api/fetcher";
 
 const state = vi.hoisted(() => ({
   myRole: "ADMIN" as "ADMIN" | "MEMBER",
-  /** 서버는 가입순으로 내려주므로 내가 첫 줄이 아닐 수 있다. 그 경우를 재현한다. */
   meJoinedLast: false,
   membersError: false,
   invitations: [] as unknown[],
@@ -26,16 +25,13 @@ const state = vi.hoisted(() => ({
   changeRoleOptions: null as { mutation?: Record<string, unknown> } | null,
   removeCalls: [] as unknown[],
   replaceMock: vi.fn(),
-  /** 나가기 뒤 어디로 갈지는 이 목록에서 고른다. 떠나는 곳(01K0000000000)도 아직 들어 있다. */
   workspaces: [] as { workspaceId: string; name?: string }[],
   leaveCalls: [] as unknown[],
   leaveError: null as unknown,
-  /** 나가기 응답이 오지 않는 상태(요청 중) */
   leaveHang: false,
   renameMock: vi.fn(),
   toastError: vi.fn(),
   renameArgs: [] as unknown[],
-  /** 지금 녹음 중인 것. `useRecording()`이 돌려줄 것 중 이 화면이 보는 부분이다. */
   recording: null as { activeWorkspaceId: string; phase: string } | null,
 }));
 
@@ -48,7 +44,6 @@ vi.mock("@/components/transcription/recording-provider", async () => {
   >("@/components/transcription/recording-provider");
   return {
     ...actual,
-    // 어느 워크스페이스의 녹음인지 가리는 판정(`isWorkspaceRecordingActive`)은 진짜를 쓴다.
     useRecording: () => ({
       activeWorkspaceId: state.recording?.activeWorkspaceId ?? null,
       phase: state.recording?.phase ?? "idle",
@@ -65,8 +60,6 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   }),
   getGetWorkspacesQueryKey: () => ["workspaces"],
   getGetWorkspaceQueryKey: (id: string) => ["workspace", id],
-  // 임시 참여자 자리는 이 파일의 검증 대상이 아니다 — 빈 목록으로 두고
-  // `workspace-guests-settings.test.tsx`가 그쪽을 지킨다.
   getGetWorkspaceGuestsQueryKey: (id: string) => ["guests", id],
   useGetWorkspaceGuests: () => ({
     isLoading: false,
@@ -146,7 +139,6 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
                   joinedAt: "2026-07-05T00:00:00Z",
                   image: null,
                 };
-                // 계정 이름은 「고래」인데 이 워크스페이스에서 「박서준」으로 고친 사람이다(APP-1206).
                 const third = {
                   userId: "user-24680",
                   name: "박서준",
@@ -168,7 +160,6 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
 }));
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: state.toastError } }));
 
-/** 낙관적 갱신·되돌리기는 훅 자신의 시험 몫이다. 여기서는 대화상자가 무엇을 넘기고 결과를 어떻게 그리는지만 본다. */
 vi.mock("@/lib/workspace/use-rename-member", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/lib/workspace/use-rename-member")
@@ -242,11 +233,6 @@ async function invite(email: string) {
   fireEvent.click(screen.getByRole("button", { name: "초대" }));
 }
 
-/**
- * 역할을 고른다. 네이티브 `<select>` 가 아니라 base-ui `Select` 라 값 이벤트가 아니라
- * **열고 고르는** 두 동작이다 — 실제 사용자가 하는 것과 같다.
- */
-/** 행 끝 「⋯」 메뉴를 연다(APP-1206). */
 async function openMenu(label: string) {
   fireEvent.click(screen.getByRole("button", { name: `${label} 관리` }));
   return screen.findByRole("menu");
@@ -255,7 +241,7 @@ async function openMenu(label: string) {
 async function pickRole(label: string, option: string) {
   fireEvent.click(screen.getByLabelText(label));
   const item = await screen.findByRole("option", { name: option });
-  // base-ui `Select` 는 포인터로 고른다 — `click` 만으로는 값이 안 바뀐다.
+  // base-ui `Select` 는 포인터로 고릅니다. `click` 만으로는 값이 안 바뀝니다.
   fireEvent.pointerDown(item, { pointerType: "mouse", button: 0 });
   fireEvent.pointerUp(item, { pointerType: "mouse", button: 0 });
   fireEvent.click(item);
@@ -295,8 +281,6 @@ describe("MembersSettings", () => {
     expect(screen.getByText("(나)")).toBeTruthy();
   });
 
-  // 계약은 가입순이라 늦게 합류하면 내 행이 목록 아래로 밀린다. 「나」 배지와 역할이 붙은
-  // 행이라 제일 먼저 보여야 한다.
   it("가입이 늦어도 내 행을 맨 위로 올리고 나머지 순서는 서버 그대로 둔다", () => {
     state.meJoinedLast = true;
     renderSettings();
@@ -307,7 +291,6 @@ describe("MembersSettings", () => {
 
     expect(names[0]).toContain("테스트 유저");
     expect(names[0]).toContain("(나)");
-    // 나를 뽑아 올린 것뿐이고 남은 둘은 서버가 준 가입순 그대로다.
     expect(names[1]).toContain("김민수");
     expect(names[2]).toContain("박서준");
   });
@@ -325,7 +308,6 @@ describe("MembersSettings", () => {
       </QueryClientProvider>
     );
     expect(screen.queryByRole("button", { name: "초대" })).toBeNull();
-    // ADMIN 전용 초대 목록 조회는 MEMBER에겐 아예 나가지 않는다.
     expect(state.invitationsEnabled).toBe(false);
   });
 
@@ -356,8 +338,6 @@ describe("MembersSettings", () => {
     );
   });
 
-  // 초대 상한(APP-776)은 하루 창이고 Retry-After 를 싣지 않는다. 걸리기 쉬운 「같은 주소 하루 3통」은
-  // 그 주소만 막으므로 폼을 잠그지 않고 서버 문구만 보인다 (APP-783)
   it("초대가 429 로 거절되면 서버 문구를 보이고 폼은 잠그지 않는다", async () => {
     state.createError = new ApiError(
       429,
@@ -432,9 +412,7 @@ describe("MembersSettings", () => {
 
   it("관리자에게는 모든 행에 관리 메뉴를, MEMBER 에게는 자기 행에만 보인다", async () => {
     renderSettings();
-    // 나 + 김민수 + 박서준 = 3개 select.
     expect(screen.getAllByLabelText(/ 역할$/)).toHaveLength(3);
-    // ADMIN 은 모든 행의 이름을 고칠 수 있어 메뉴가 셋이다.
     expect(screen.getAllByRole("button", { name: / 관리$/ })).toHaveLength(3);
     const menu = await openMenu("김민수(minsu@heymoa.com)");
     expect(
@@ -448,7 +426,6 @@ describe("MembersSettings", () => {
     state.myRole = "MEMBER";
     renderSettings();
     expect(screen.queryAllByLabelText(/ 역할$/)).toHaveLength(0);
-    // MEMBER 는 자기 이름만 고친다 — 메뉴는 내 행 하나, 내보내기는 없다.
     expect(screen.getAllByRole("button", { name: / 관리$/ })).toHaveLength(1);
     const mine = await openMenu("테스트 유저(me@heymoa.com)");
     expect(
@@ -468,17 +445,11 @@ describe("MembersSettings", () => {
     expect(
       within(menu).queryByRole("menuitem", { name: "내보내기" })
     ).toBeNull();
-    // 자기 역할은 select로 바꿀 수 있어야 한다 — 자기 강등 흐름이 이걸로 된다.
     expect(
       within(myRow).getByLabelText("테스트 유저(me@heymoa.com) 역할")
     ).toBeTruthy();
   });
 
-  /**
-   * **날짜 열이 행마다 다른 자리에서 시작하면 안 된다.** 내 행에는 「내보내기」가 없고,
-   * 역할은 고칠 수 있으면 select·없으면 칩이라 폭이 다르다 — 자리를 안 잡아 두면 두 줄의
-   * 날짜가 서로 어긋난다. jsdom 은 px 를 못 재니 자리 상자가 양쪽에 다 있는지로 본다.
-   */
   it("역할·관리 메뉴 자리를 폭 고정으로 잡아 날짜 열이 어긋나지 않는다", () => {
     renderSettings();
     const rows = ["테스트 유저", "김민수"].map((name) => {
@@ -490,7 +461,6 @@ describe("MembersSettings", () => {
     for (const row of rows) {
       const slots = [...row.querySelectorAll("div")].map((el) => el.className);
       expect(slots.some((cls) => cls.includes("w-[104px]"))).toBe(true);
-      // 메뉴가 없는 행에도 그 자리는 남아 있어야 한다.
       expect(slots.some((cls) => /(^| )w-8( |$)/.test(cls))).toBe(true);
     }
   });
@@ -511,16 +481,11 @@ describe("MembersSettings", () => {
       userId: "user-67890",
       data: { role: "ADMIN" },
     });
-    // onSettled로 걸려 있어야 실패해도 재조회된다(APP-187).
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ["/v1/workspaces/01K0000000000/members"],
     });
   });
 
-  /**
-   * 이 파일은 생성 훅을 목으로 갈아끼워 mutation이 캐시에 올라가지 않는다. 잠금은 행이 아니라
-   * 캐시를 보고 판정하므로, 끝나지 않는 mutation을 하나 띄워 진행 중 상태를 만든다.
-   */
   function clientWithPendingRoleChange(workspaceId: string) {
     const client = new QueryClient();
     void client
@@ -542,8 +507,6 @@ describe("MembersSettings", () => {
       </QueryClientProvider>
     );
 
-    // 진행 중인 행뿐 아니라 전부 잠긴다. 아직 invalidate되지 않은 낡은 목록으로 두 번째
-    // 조작을 시작하면 "ADMIN 최소 1명" 판정이 요청 도착 순서에 따라 달라진다.
     for (const select of screen.getAllByLabelText(/ 역할$/)) {
       expect(select).toBeDisabled();
     }
@@ -553,8 +516,6 @@ describe("MembersSettings", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 
-  // QueryClient는 앱 전역이고 mutation은 언마운트로 취소되지 않는다. 키만 보고 세면 A에서
-  // 시작한 변경이 B의 멤버 탭을 잠그고, A의 요청이 멈추면 B가 계속 잠긴 채로 남는다.
   it("다른 워크스페이스의 변경은 이 목록을 잠그지 않는다", async () => {
     const client = clientWithPendingRoleChange("01K0000000006");
 
@@ -573,8 +534,6 @@ describe("MembersSettings", () => {
     ).not.toHaveAttribute("aria-disabled", "true");
   });
 
-  // canManage는 멤버 목록에서 나온다 — 목록이 새로 내려오면 관리 UI는 저절로 사라져야 하고,
-  // 그 실패(예: 마지막 관리자 409)를 컴포넌트가 직접 토스트로 띄우면 전역 토스트와 겹친다.
   it("자기를 MEMBER로 강등한 뒤 목록이 갱신되면 관리 UI가 사라진다", async () => {
     const { rerender } = renderSettings();
 
@@ -584,8 +543,6 @@ describe("MembersSettings", () => {
       userId: "user-12345",
       data: { role: "MEMBER" },
     });
-    // 실패(마지막 관리자 409 등)는 전역 MutationCache가 토스트로 띄운다 — 이 컴포넌트가
-    // suppressErrorToast나 자기 onError로 가로채면 안 된다.
     expect(state.changeRoleOptions?.mutation?.onError).toBeUndefined();
     expect(
       (
@@ -595,7 +552,6 @@ describe("MembersSettings", () => {
       )?.meta?.suppressErrorToast
     ).toBeFalsy();
 
-    // 서버가 강등을 받아들이고 목록이 새로 내려온 상태를 재현한다.
     state.myRole = "MEMBER";
     rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -604,7 +560,6 @@ describe("MembersSettings", () => {
     );
 
     expect(screen.queryAllByLabelText(/ 역할$/)).toHaveLength(0);
-    // 남은 관리 메뉴는 내 행(이름 변경) 하나다.
     expect(screen.getAllByRole("button", { name: / 관리$/ })).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "초대" })).toBeNull();
   });
@@ -627,7 +582,6 @@ describe("MembersSettings", () => {
         userId: "user-67890",
       })
     );
-    // `note-delete-dialog.tsx`와 같은 패턴 — 성공이 확인된 뒤에야 닫는다.
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   });
 });
@@ -649,10 +603,6 @@ describe("워크스페이스 나가기", () => {
   });
   afterEach(cleanup);
 
-  /**
-   * 확인 다이얼로그까지 열어 준다. 나가기는 되돌릴 수 없어 한 번 묻고, 워크스페이스 이름을 입력해야 「나가기」가 켜진다
-   * (PRO-69, APP-1383). `typed` 를 안 주면 맞는 이름을 넣는다.
-   */
   function openLeaveDialog(typed = "테스트 워크스페이스") {
     fireEvent.click(
       screen.getByRole("button", { name: "워크스페이스 나가기" })
@@ -664,9 +614,6 @@ describe("워크스페이스 나가기", () => {
     return dialog;
   }
 
-  // 역할 변경과 나가기는 같은 「ADMIN 최소 1명」 판정을 놓고 겹친다. 마지막 관리자가 다른
-  // 멤버를 승격한 직후 응답 전에 나가기를 누르면 도착 순서에 따라 성공하기도 409가 되기도
-  // 한다 — 행들끼리는 이미 직렬화했으니 나가기도 같은 잠금에 넣는다.
   it("같은 워크스페이스의 역할 변경이 진행 중이면 나가기도 잠긴다", () => {
     const client = new QueryClient();
     void client
@@ -688,12 +635,6 @@ describe("워크스페이스 나가기", () => {
     ).toBeDisabled();
   });
 
-  // **녹음 중에 나가면 마이크와 오디오 전송이 계속 돈다** — 화면은 다른 워크스페이스로
-  // 가는데 `RecordingProvider`는 route를 넘어 살아 있어서 이미 접근할 수 없는 노트로 음성이
-  // 계속 나간다. 그래서 나가기 자체를 막는다.
-  //
-  // 이유를 화면에 남긴다. 잠긴 버튼 + `title`은 터치에 호버가 없고 disabled는 포커스도
-  // 안 받아 왜 못 누르는지가 사라진다(`recording-dock`이 같은 이유로 문구를 그린다).
   it("이 워크스페이스를 녹음 중이면 나가기가 잠기고 이유가 보인다", () => {
     state.recording = {
       activeWorkspaceId: "01K0000000000",
@@ -714,8 +655,6 @@ describe("워크스페이스 나가기", () => {
     ).toBeInTheDocument();
   });
 
-  // 다른 워크스페이스에서 녹음 중인데 여기서 막으면 틀린 잠금이다 — 녹음은 route를 넘어
-  // 살아 있어서 A를 녹음한 채 B의 설정을 열 수 있다.
   it("다른 워크스페이스를 녹음 중이면 잠그지 않는다", () => {
     state.recording = {
       activeWorkspaceId: "01K0000000006",
@@ -734,11 +673,9 @@ describe("워크스페이스 나가기", () => {
     expect(screen.queryByText("녹음을 끝낸 뒤 나갈 수 있습니다.")).toBeNull();
   });
 
-  // 요청 중에 창만 사라지면 취소한 줄 알지만 요청은 계속 간다 — 뒤늦게 성공하면 갑자기
-  // 다른 워크스페이스로 튕긴다. 버튼만 잠그고 Escape를 열어 두면 그 구멍이 남는다.
   it("요청 중에는 Escape로 닫히지 않는다", async () => {
     const client = new QueryClient();
-    // 같은 엘리먼트 참조로 rerender하면 React가 렌더를 건너뛴다 — 매번 새로 만든다.
+    // 같은 엘리먼트 참조로 rerender 하면 React 가 렌더를 건너뛰어 매번 새로 만듭니다.
     const view = () => (
       <QueryClientProvider client={client}>
         <MembersSettings workspaceId="01K0000000000" />
@@ -747,7 +684,6 @@ describe("워크스페이스 나가기", () => {
     render(view());
     const dialog = openLeaveDialog();
 
-    // 확인을 누른 뒤 응답을 기다리는 상태를 만든다.
     state.leaveHang = true;
     fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
     await waitFor(() => expect(state.leaveCalls).toHaveLength(1));
@@ -757,7 +693,6 @@ describe("워크스페이스 나가기", () => {
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 
-  // 나가기는 ADMIN 전용이 아니다 — 마지막 ADMIN인지는 서버가 판정한다(409).
   it("MEMBER에게도 나가기를 보인다", () => {
     state.myRole = "MEMBER";
     renderSettings();
@@ -782,7 +717,6 @@ describe("워크스페이스 나가기", () => {
     );
   });
 
-  // 앞뒤 공백만 걷고 정확히 같아야 한다 — server 도 같은 규칙으로 다시 본다(PRO-69 contract).
   it("워크스페이스 이름이 다르면 나가기가 꺼져 있다", () => {
     renderSettings();
     const dialog = openLeaveDialog("테스트 워크스페이");
@@ -798,8 +732,6 @@ describe("워크스페이스 나가기", () => {
     ).toBeEnabled();
   });
 
-  // 목적지 규칙은 `auth-callback-client.tsx`의 `pickWorkspaceId`를 그대로 쓴다.
-  // 떠나는 워크스페이스를 목록에서 뺀 뒤 고르므로 그리로 되돌아가지 않는다.
   it("나가면 남은 워크스페이스로 이동한다", async () => {
     renderSettings();
     const dialog = openLeaveDialog();
@@ -811,8 +743,6 @@ describe("워크스페이스 나가기", () => {
     );
   });
 
-  // 무효화만 하면 재조회가 끝날 때까지, 실패하면 영영, 떠난 워크스페이스가 목록에 남는다.
-  // 사이드바와 홈 CTA가 그걸 그대로 그려서 누르면 방금 떠난 곳으로 다시 들어간다.
   it("나가면 목록 캐시에서 그 워크스페이스를 즉시 지운다", async () => {
     const client = new QueryClient();
     client.setQueryData(["workspaces"], {
@@ -858,8 +788,6 @@ describe("워크스페이스 나가기", () => {
     await waitFor(() => expect(state.replaceMock).toHaveBeenCalledWith("/"));
   });
 
-  // 마지막 관리자 409는 「지금 할 수 없음」이지 방금 한 행동의 실패가 아니다. 토스트로
-  // 사라지면 왜 막혔는지 알 수 없어서 화면에 남긴다 — rule error-loading의 「지속 상태」 줄.
   it("마지막 관리자면 서버 문구를 화면에 남기고 이동하지 않는다", async () => {
     state.leaveError = {
       success: false,
@@ -885,7 +813,6 @@ describe("워크스페이스 나가기", () => {
       ).toBeTruthy()
     );
     expect(state.replaceMock).not.toHaveBeenCalled();
-    // 인라인으로 그리므로 전역 토스트는 꺼야 한다 — 안 그러면 같은 문구가 두 번 뜬다.
     expect(
       client.getMutationCache().getAll()[0]?.options.meta?.suppressErrorToast
     ).toBe(true);
@@ -917,7 +844,6 @@ describe("MembersSettings 이름 변경", () => {
     expect(
       screen.getByText("계정 이름 고래 · seojun@heymoa.com")
     ).toBeInTheDocument();
-    // 안 고친 사람은 이메일만이다
     expect(screen.getByText("minsu@heymoa.com")).toBeInTheDocument();
   });
 
@@ -940,7 +866,6 @@ describe("MembersSettings 이름 변경", () => {
         screen.queryByRole("textbox", { name: "이 워크스페이스에서 보일 이름" })
       ).toBeNull()
     );
-    // 훅에는 서버가 준 모습(표시 이름·계정 이름)을 넘긴다
     expect(state.renameArgs.at(-1)).toMatchObject({
       workspaceId: "01K0000000000",
       member: {
@@ -955,7 +880,6 @@ describe("MembersSettings 이름 변경", () => {
     const input = await openRename("김민수(minsu@heymoa.com)");
     expect(input).toHaveValue("");
     expect(input).toHaveAttribute("placeholder", "김민수");
-    // 바뀐 것이 없으면 저장을 잠근다
     expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
   });
 

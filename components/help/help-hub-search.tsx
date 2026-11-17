@@ -38,7 +38,6 @@ type Hub = {
   failed: boolean;
 };
 const HubContext = createContext<Hub | null>(null);
-/** 주소의 `?q=` 를 알린다(마운트 · 뒤로/앞으로). 화면에는 아무것도 그리지 않는다. */
 function UrlQuerySync({ onChange }: { onChange: (q: string) => void }) {
   const q = useSearchParams().get("q") ?? "";
   useEffect(() => onChange(q), [q, onChange]);
@@ -51,22 +50,14 @@ const useHub = () => {
   return hub;
 };
 
-/**
- * 허브의 검색 상태. 큰 검색칸(`HelpHubInput`, 머리 판 안)과 결과(`HelpHubBody`)가 서로 떨어져 서 있어서 상태를 context 로
- * 나눈다. 색인은 검색을 시작할 때 한 번 내려받는다. 결과를 누르면 그 주제의 그 섹션으로 가고, 도착한 페이지가 같은
- * 검색어(`?q=`)로 본문을 칠한다.
- */
 export function HelpHubProvider({ children }: { children: React.ReactNode }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const [announce, setAnnounce] = useState("");
   const timer = useRef(0);
-  // 우리가 방금 주소에 쓴 검색어. 이것과 같은 주소 변화는 바깥 이동이 아니라 우리 자신의 기록이라 입력을 되돌리지 않는다.
   const written = useRef<string | null>(null);
-  // 사용자가 직접 입력한 검색어만 센다(뒤로 가기로 복원된 주소의 검색어는 세지 않는다).
   const typed = useRef(false);
-  // 검색칸을 처음 연 방법(`/` 키인지 눌러서인지). 마운트마다 한 번만 센다.
   const openedBy = useRef<"keyboard" | "click" | null>(null);
   const opened = useRef(false);
   const onFocus = () => {
@@ -77,8 +68,6 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations("help.search");
   const { entries, failed } = useHelpIndex(value.length > 0, useLocale());
 
-  // 주소가 원본이다. 마운트 · 뒤로/앞으로 · 새로고침으로 주소가 정해지면 그 검색어를 읽어 오기만 하고 **주소를 쓰지 않는다**.
-  // (예전에는 마운트 효과가 주소의 `?q=` 를 지웠다가 100ms 뒤 다시 붙였다 — 뒤로 갔을 때 주소가 뒤늦게 바뀌었다.)
   const syncFromUrl = useCallback((q: string) => {
     if (q === written.current) return;
     window.clearTimeout(timer.current);
@@ -86,7 +75,6 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
     setQuery(q);
   }, []);
 
-  // 주소는 사용자가 입력할 때만 쓴다(같은 항목을 바꾸는 `replaceState` 라 history 가 쌓이지 않는다).
   const writeUrl = (q: string) => {
     written.current = q;
     const url = new URL(window.location.href);
@@ -111,7 +99,6 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
       setAnnounce("");
       return;
     }
-    // 입력이 멎은 뒤(ANNOUNCE_MS) 한 번 — 한 글자마다 세지 않는다.
     const timer = window.setTimeout(() => {
       setAnnounce(
         hits.length ? t("found", { count: hits.length }) : t("noMatch")
@@ -128,7 +115,6 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [query, entries, hits.length, t]);
 
-  // 입력 중이 아닐 때의 `/` 는 이 칸으로 온다. ⌘K · Ctrl+K 는 상단바의 검색 팔레트가 받는다.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const slash =
@@ -181,7 +167,6 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** 큰 검색칸. 머리 판 안에 선다. */
 export function HelpHubInput() {
   const { value, setValue, clear, inputRef, onFocus, announce } = useHub();
   const t = useTranslations("help.search");
@@ -246,7 +231,6 @@ export function HelpHubInput() {
   );
 }
 
-/** 검색어가 없으면 `children`(주제 카드), 있으면 결과 목록. */
 export function HelpHubBody({ children }: { children: React.ReactNode }) {
   const { query, hits, loading, failed } = useHub();
   const t = useTranslations("help.search");

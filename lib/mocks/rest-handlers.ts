@@ -2,7 +2,6 @@ import { HttpResponse, http } from "msw";
 import { billingMock } from "@/lib/mocks/billing";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow } from "@/lib/mocks/meeting-flow";
-// 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
 import { agentChatTurnState, runningTurnOf } from "@/lib/mocks/sse-handler";
 import {
   LIVE_AGENDA_NOTE_ID,
@@ -21,8 +20,6 @@ import {
 } from "@/lib/mocks/proposals";
 import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/proposals/__fixtures__/synthetic-ledger-snapshot.json";
 
-// 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
-// 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
 import { getGetAuthSessionMockHandler } from "@/lib/api/generated/auth/auth.msw";
 import { getGetCurrentUserMockHandler } from "@/lib/api/generated/users/users.msw";
 import { getGetNotificationSettingsMockHandler } from "@/lib/api/generated/notification-settings/notification-settings.msw";
@@ -55,10 +52,6 @@ function id(value: string | readonly string[] | undefined) {
   return Array.isArray(value) ? value[0] : String(value ?? "");
 }
 
-/**
- * 초대 관련 명령은 실패 코드에 따라 상태 코드가 갈린다 — 없는 초대는 404, 이미 확정된
- * 초대나 중복·기존 멤버는 409다. 화면이 이 셋을 다르게 다뤄야 해서 목도 갈라 준다.
- */
 const INVITATION_NOT_FOUND_CODES = new Set([
   "INVITATION_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
@@ -66,10 +59,6 @@ const INVITATION_NOT_FOUND_CODES = new Set([
 
 const INVITATION_FORBIDDEN_CODES = new Set(["INVITATION_EMAIL_MISMATCH"]);
 
-/**
- * 실서버 봉투는 코드별 한국어 메시지를 담는데(openapi3.yml) 목은 코드를 그대로 넣고 있었다.
- * dev는 MSW로 도니 web이 `errorMessageOf`로 서버 문구를 그리려면 목도 같은 메시지를 줘야 한다.
- */
 const INVITATION_ERROR_MESSAGES: Record<string, string> = {
   ALREADY_WORKSPACE_MEMBER: "이미 워크스페이스 멤버입니다.",
   INVITATION_EXPIRED: "만료된 초대입니다.",
@@ -77,10 +66,6 @@ const INVITATION_ERROR_MESSAGES: Record<string, string> = {
   DUPLICATE_PENDING_INVITATION: "이미 대기 중인 초대가 있습니다.",
 };
 
-/**
- * `resultOf`가 기본값이 아닌 코드로 떨어질 때 쓸 문구. 없으면 원시 코드가 그대로
- * `error.message`에 들어가 실서버 봉투와 갈라진다 — `errorMessageOf`가 그걸 그대로 그린다.
- */
 const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   NOTE_NOT_FOUND: "노트를 찾을 수 없습니다.",
   WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
@@ -107,21 +92,14 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   MEETING_ALREADY_ENDED: "이미 종료된 회의입니다.",
 };
 
-/**
- * 전사 세션 생성이 409로 거절되는 이유들. 문구는 계약(`openapi3.yml`)의 409 예시 그대로다.
- */
 const SESSION_CONFLICTS: Record<string, string> = {
   ACTIVE_TRANSCRIPTION_SESSION: "이미 진행 가능한 스크립트 세션이 있습니다.",
   MEETING_ALREADY_ENDED: "이미 종료된 회의입니다.",
 };
 
-/** 권한 문제는 403이다 — 없음(404)이나 상태 충돌(409)과 구분해야 화면이 다르게 다룬다. */
 const FORBIDDEN_CODES = new Set([
   "NOT_MEETING_STARTER",
-  // ADMIN 만 임시 참여자를 연동·삭제한다. 여기 없으면 `statusOf` 가 409 로 떨어뜨려
-  // 계약(403)과 갈리고, `KNOWN_CODES` 밖이라 `resultOf` 는 아예 guest 404 로 덮는다.
   "WORKSPACE_ACCESS_DENIED",
-  // 외부 에이전트를 끈 워크스페이스로 발급·허락(APP-939)
   "AGENT_ACCESS_DISABLED",
 ]);
 
@@ -139,11 +117,9 @@ const NOT_FOUND_CODES = new Set([
   "SPEAKER_LABEL_NOT_FOUND",
   "WORKSPACE_GUEST_NOT_FOUND",
   "WORKSPACE_MEMBER_NOT_FOUND",
-  // 그 발화가 이 회의의 것이 아니다. 「그 화자가 없다」와 가른다 — 화면이 할 일이 다르다
   "TRANSCRIPT_SEGMENT_NOT_FOUND",
 ]);
 
-/** 요청 값이 틀린 것은 400이다 — 없음(404)이나 상태 충돌(409)과 구분한다. */
 const BAD_REQUEST_CODES = new Set(["NOT_WORKSPACE_MEMBER", "BAD_REQUEST"]);
 
 const NOT_WORKSPACE_MEMBER = {
@@ -152,7 +128,6 @@ const NOT_WORKSPACE_MEMBER = {
   status: 400,
 } as const;
 
-/** mockDb가 던지는 계약 코드. 이것 말고는 목 자신의 버그이므로 fallback으로 떨어뜨린다. */
 const KNOWN_CODES = new Set([
   ...NOT_FOUND_CODES,
   ...BAD_REQUEST_CODES,
@@ -161,15 +136,10 @@ const KNOWN_CODES = new Set([
   "PROJECT_HAS_NOTES",
   "NOT_MEETING_STARTER",
   "DIARIZATION_NOT_MAPPED",
-  // 422 — 연결 대상이 참여자가 아니다. 부른 사람이 아닌 것(403)과 가른다
   "PARTICIPANT_NOT_IN_NOTE",
-  // 409 — 라벨이 안 붙은 발화. 화면은 여기에 메뉴를 안 띄우므로 직접 요청일 때만 난다
   "SEGMENT_NOT_DIARIZED",
-  // 409 — 연동이 회의를 잠그는 사이 그 사람이 다른 회의에 추가됐다. **재시도로 푸는 자리다**
   "CONCURRENT_GUEST_LINK",
-  // 409 — 참여자 저장의 병합 기준이 그 사이 바뀌었다. 화면이 다시 읽고 한 번 더 보낸다
   "NOTE_PARTICIPANTS_CONFLICT",
-  // 409 — 종료된 회의의 맥락을 고치려 했다(APP-1188)
   "MEETING_ALREADY_ENDED",
 ]);
 
@@ -181,7 +151,6 @@ function statusOf(code: string) {
   return 409;
 }
 
-// 운영자 조회 목(APP-1615). 한 줄은 nullable 이 모두 값이고 한 줄은 모두 null 이다
 const ADMIN_USERS: AdminUserListResponseDataUsersItem[] = [
   {
     userId: "0HZX2K7M9Q4AM",
@@ -272,7 +241,6 @@ const BILLING_REVIEWS: BillingReviewListResponseDataReviewsItem[] = [
   },
 ];
 
-/** 운영자 조회의 쪽 나누기. `limit` 이 줄 수보다 작으면 다음 커서가 생긴다. */
 function adminPage<T>(
   request: Request,
   rows: T[],
@@ -288,7 +256,6 @@ function adminPage<T>(
   });
 }
 
-/** 목의 실패 코드를 화면이 구분할 수 있는 상태 코드로 옮긴다 — 없으면 404, 상태 위반이면 409. */
 function commandResult<T>(run: () => T, okStatus = 200) {
   try {
     return HttpResponse.json(
@@ -299,8 +266,6 @@ function commandResult<T>(run: () => T, okStatus = 200) {
     const code = (error as Error).message;
     return HttpResponse.json(
       {
-        // **원시 코드를 문구로 쓰지 않는다.** `errorMessageOf` 가 이 값을 화면에 그대로
-        // 그리므로, 실서버 봉투와 갈리면 목에서는 멀쩡하던 문구가 실제로는 코드로 나온다.
         success: false,
         data: null,
         error: {
@@ -330,12 +295,6 @@ function notFound(code: string, message: string) {
   return { code, message, status: 404 } as const;
 }
 
-/**
- * orval이 만든 `get*MockHandler`는 **항상 200을 준다.** 실패 봉투를 그 안에 넣으면
- * `200 success:false`가 되어 계약을 어긴다 — 계약의 성공 응답은 `error`가 null로 못박혀
- * 있고, 실패는 4xx + AppErrorResponse다. 실패 경로가 있는 operation은 직접 `http.*`로
- * 쓰고 이 헬퍼로 상태 코드를 붙인다. 생성 mock 래퍼는 실패가 없는 조회에만 쓴다.
- */
 async function resultOf<T>(
   run: () => T | Promise<T>,
   onError: { code: string; message: string; status: number },
@@ -347,8 +306,6 @@ async function resultOf<T>(
       { status: okStatus }
     );
   } catch (error) {
-    // mockDb가 계약 코드를 던졌으면 그걸 그대로 쓴다. 한 operation에 실패가 여럿인데
-    // 기본값으로 덮으면(예: createProject의 WORKSPACE_NOT_FOUND → 400) 계약과 어긋난다.
     const thrown = error instanceof Error ? error.message : "";
     const code = KNOWN_CODES.has(thrown) ? thrown : onError.code;
     return HttpResponse.json(
@@ -369,11 +326,6 @@ async function resultOf<T>(
   }
 }
 
-/**
- * 멤버 조작(역할 변경·추방·나가기)은 초대와 다른 상태 코드 집합을 쓴다 — 403 권한 없음,
- * 400 자기 자신 추방, 404 멤버/워크스페이스 없음, 409 마지막 ADMIN. 문구는 계약
- * (openapi3.yml)의 예시 그대로다. 성공은 셋 다 204 무본문이다.
- */
 const MEMBER_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_MEMBER_NOT_FOUND: "워크스페이스 멤버를 찾을 수 없습니다.",
   WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
@@ -381,7 +333,6 @@ const MEMBER_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
   AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
-  // PRO-69 삭제·나가기 확인(server APP-1378·1380·1381 계약 예시 문구)
   WORKSPACE_NAME_MISMATCH:
     "워크스페이스 이름이 맞지 않습니다. 다시 입력해 주세요.",
   WITHDRAWAL_CONFIRMATION_MISMATCH:
@@ -392,7 +343,6 @@ const MEMBER_ERROR_MESSAGES: Record<string, string> = {
     "녹음 중인 회의가 있습니다. 녹음을 끝낸 뒤 다시 시도해 주세요.",
 };
 
-// 외부 에이전트 관리(APP-939·940)도 ADMIN 전용 204 조작이라 같은 묶음을 쓴다
 const MEMBER_NOT_FOUND_CODES = new Set([
   "WORKSPACE_MEMBER_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
@@ -405,7 +355,6 @@ const MEMBER_BAD_REQUEST_CODES = new Set([
   "WITHDRAWAL_CONFIRMATION_MISMATCH",
 ]);
 
-/** 본문 JSON. 없거나 깨졌으면 빈 객체 — 검사는 목 DB 가 한다. */
 async function jsonBody(request: Request): Promise<Record<string, unknown>> {
   return ((await request.json().catch(() => null)) ?? {}) as Record<
     string,
@@ -442,10 +391,6 @@ async function memberResult(run: () => void | Promise<void>) {
   }
 }
 
-/**
- * 알림 상태를 바꾼 응답에 힌트를 붙인다 — 실서버가 커밋 뒤 `notifications.changed` 를 내는 자리다(다른 탭의 개수가 따라온다).
- * 실패 응답에는 안 낸다.
- */
 function notified(response: Response) {
   if (response.ok) emitNotificationsChanged();
   return response;
@@ -480,11 +425,6 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
   }
 }
 
-/**
- * 노트 목록의 키셋 쪽 끊기 (APP-1019). 서버와 같은 규칙이다 — `limit` 이 없으면 커서 뒤의 전건을
- * 주고, 있으면 `(정렬 시각, id)` 내림차순에서 커서 다음부터 limit 개를 준다. 정렬 시각은
- * `meetingStartedAt ?? createdAt` 이다(목 노트에는 세션 시작 시각 보정이 없다).
- */
 function pageOfNotes(
   notes: NoteListResponseDataNotesItem[],
   url: URL
@@ -494,7 +434,6 @@ function pageOfNotes(
   const afterNoteId = url.searchParams.get("afterNoteId");
   const sortedAt = (note: NoteListResponseDataNotesItem) =>
     note.meetingStartedAt ?? note.createdAt;
-  // 회의 상태 필터는 서버처럼 **쪽을 자르기 전에** 건다(APP-1310) — 뒤에 걸면 뒤쪽 쪽의 일시정지 회의가 빠진다.
   const meetingStatus = url.searchParams.get("meetingStatus");
   const matching = meetingStatus
     ? notes.filter((note) => note.meetingStatus === meetingStatus)
@@ -518,12 +457,9 @@ function pageOfNotes(
   };
 }
 
-/** 회의록 메일 발송 상한(`SHARE_MAIL_RATE_LIMITED`). 서버와 같은 수 · 같은 창이다 */
 const SHARE_MAIL_HOURLY_LIMIT = 30;
 const SHARE_MAIL_WINDOW_MS = 60 * 60 * 1000;
-/** 한 시간 칸(정시 기준) → 그 칸에 받아들인 발송 수 */
 const shareMailSent = new Map<number, number>();
-/** 받아들인 발송. 받는 사람은 서버처럼 대소문자만 다른 주소를 합치고 처음 쓴 표기를 남긴다 */
 const shareMails = new Map<
   string,
   { noteId: string; requestedAt: number; recipients: string[] }
@@ -532,10 +468,8 @@ mockDb.onReset(() => {
   shareMailSent.clear();
   shareMails.clear();
 });
-/** 목의 발송이 끝나는 데 걸리는 시간. 그동안 「보내는 중」이다 */
 const SHARE_MAIL_SETTLE_MS = 1_500;
 
-/** 발송 하나를 접수해 둔다. 목 핸들러 POST 와 계약 표본 테스트(`nullable-coverage`)가 쓴다 */
 export function seedShareMail(
   noteId: string,
   recipients: string[],
@@ -546,10 +480,6 @@ export function seedShareMail(
   return mailId;
 }
 
-/**
- * 알림 설정(server APP-1303 · 화면 APP-1341). server 정책 표를 흉내 낸다 — 필수는 초대, 선택은 일시정지된 회의 메일(기본 켜짐)과 검토할 결과 준비 웹(기본 켜짐).
- * 사용자의 선택(`enabled`)과 두 「모두 끄기」를 따로 들고 `effective` 는 둘을 합쳐 낸다. 이 문서 안에서만 산다.
- */
 type MockChannel = {
   channel: "WEB" | "EMAIL";
   provided: boolean;
@@ -572,7 +502,6 @@ const NOTIFICATION_DEFAULTS: {
       { channel: "EMAIL", provided: true, enabled: true },
     ],
   },
-  // 검토할 결과 준비(server APP-1342). 웹만 보내고 기본 켜짐 — 서버가 내는 순서 그대로 둔다(화면이 순서를 맞춘다).
   {
     type: "ANALYSIS_READY",
     required: false,
@@ -589,7 +518,6 @@ const NOTIFICATION_DEFAULTS: {
       { channel: "EMAIL", provided: true, enabled: true },
     ],
   },
-  // 문의 답변(server APP-1398). 인앱·메일 둘 다 보내고 기본 켜짐.
   {
     type: "INQUIRY_ANSWERED",
     required: false,
@@ -601,7 +529,6 @@ const NOTIFICATION_DEFAULTS: {
 ];
 let notificationPrefs = structuredClone(NOTIFICATION_DEFAULTS);
 let notificationMutes = { muteAll: false, muteEmail: false };
-/** 광고 수신 동의(APP-1392). 기본 꺼짐이고 「기본값으로 되돌리기」(DELETE)가 건드리지 않는다 — 시험만 되돌린다. */
 let marketingEmail: NotificationSettingsResponseDataMarketingEmail = {
   agreed: false,
   changedAt: null,
@@ -610,7 +537,6 @@ export function resetMarketingConsentMock() {
   marketingEmail = { agreed: false, changedAt: null };
 }
 
-/** 시험이 사이마다 되돌린다. 화면에서는 「기본값으로 되돌리기」(DELETE)와 같다. */
 export function resetNotificationSettingsMock() {
   notificationPrefs = structuredClone(NOTIFICATION_DEFAULTS);
   notificationMutes = { muteAll: false, muteEmail: false };
@@ -629,7 +555,6 @@ function notificationSettings(): NotificationSettingsResponse {
           effective:
             entry.provided &&
             (item.required ||
-              // 채널별로 따로 끈다(APP-1352): muteAll 은 인앱, muteEmail 은 메일만.
               (entry.enabled &&
                 !(entry.channel === "WEB" && notificationMutes.muteAll) &&
                 !(entry.channel === "EMAIL" && notificationMutes.muteEmail))),
@@ -671,8 +596,6 @@ function unsubscribeResult(request: Request, run: () => boolean) {
 }
 
 export const restHandlers = [
-  // Users
-  // 세션 응답의 사용자는 내 정보 응답보다 좁다 — 동의 상태(`consents`)는 `/v1/users/me` 만 싣는다.
   getGetAuthSessionMockHandler(() => {
     const { userId, name, email, image, language } = mockDb.getCurrentUser();
     return {
@@ -694,7 +617,6 @@ export const restHandlers = [
     resetNotificationSettingsMock();
     return HttpResponse.json(notificationSettings());
   }),
-  // 설정 화면과 수신거부 화면의 「다시 켜기」(APP-1314)가 쓴다. 필수 종류·안 보내는 채널은 server 처럼 400.
   http.put("*/v1/notification-settings/items", async ({ request }) => {
     const body = (await request.json()) as {
       type: string;
@@ -722,7 +644,6 @@ export const restHandlers = [
     target.enabled = body.enabled;
     return HttpResponse.json(notificationSettings());
   }),
-  // 광고 수신 동의(APP-1392). 같은 값은 server 처럼 바꾸지 않는다(일시 유지).
   http.put(
     "*/v1/notification-settings/marketing-email",
     async ({ request }) => {
@@ -732,7 +653,6 @@ export const restHandlers = [
       return HttpResponse.json(notificationSettings());
     }
   ),
-  // 메일 수신거부(APP-1314). 토큰 `invalid` 는 서명이 맞지 않는 링크다. 끈 상태는 이 문서 안에서만 산다.
   http.get("*/v1/mail/unsubscribe", ({ request }) =>
     unsubscribeResult(request, () => mailUnsubscribed)
   ),
@@ -744,7 +664,6 @@ export const restHandlers = [
     data: mockDb.getCurrentUser(),
     error: null,
   })),
-  // 계정 화면 언어(APP-1283 계약 `updateCurrentUser`). 잘못된 값은 계약처럼 400 `BAD_REQUEST` 다.
   http.patch("*/v1/users/me", async ({ request }) =>
     respond(async () => {
       const { language } = (await jsonBody(request)) as { language?: unknown };
@@ -754,7 +673,6 @@ export const restHandlers = [
       return mockDb.updateCurrentUserLanguage(language);
     })
   ),
-  // PRO-69 탈퇴·워크스페이스 삭제 — 계약(openapi3.yml deleteAccount·deleteWorkspace·getDeletionPlan)과 같은 경로
   http.get("*/v1/users/me/deletion-plan", () =>
     respond(() => mockDb.deletionPlan())
   ),
@@ -769,14 +687,12 @@ export const restHandlers = [
       )
     )
   ),
-  // 소켓 연결 티켓(APP-1546 `issueRealtimeTicket`). 목 소켓은 티켓을 검사하지 않고 `?ticket=` 붙은 주소를 그대로 받는다.
   http.post("*/v1/realtime/tickets", () =>
     respond(() => ({
       ticket: "mock-realtime-ticket",
       expiresAt: new Date(Date.now() + 30_000).toISOString(),
     }))
   ),
-  // 계약상 204 무본문, 지금 버전이 아니면 409 `CONSENT_VERSION_OUTDATED` (APP-1276)
   http.post("*/v1/users/me/consents", async ({ request }) =>
     respond(
       async () =>
@@ -785,14 +701,11 @@ export const restHandlers = [
     )
   ),
 
-  // Workspaces
   getGetWorkspacesMockHandler(() => ({
     success: true,
     data: { workspaces: mockDb.listWorkspaces() },
     error: null,
   })),
-  // 계약상 생성은 201이다. 생성 mock 래퍼는 200만 줄 수 있어 화면의
-  // `status === 201` 분기가 통과하지 못했다 — 목에서 워크스페이스가 만들어지지 않던 원인이다.
   http.post("*/v1/workspaces", async ({ request }) =>
     resultOf(
       async () =>
@@ -857,8 +770,6 @@ export const restHandlers = [
         BAD_REQUEST
       )
   ),
-  // Hand-written (not the Orval getDeleteProjectMockHandler): needs 204/409
-  // status codes the generated wrapper can't express.
   http.delete(
     "*/v1/workspaces/:workspaceId/projects/:projectId",
     async ({ params }) => {
@@ -898,9 +809,6 @@ export const restHandlers = [
     }
   ),
 
-  // Notes
-  // 워크스페이스 단위 목록 (APP-685). 전에는 web 이 프로젝트마다 요청을 보내고 결과를
-  // `flatMap` 한 뒤 서버와 같은 규칙으로 다시 정렬했다.
   http.get("*/v1/workspaces/:workspaceId/notes", ({ params, request }) =>
     resultOf(
       () =>
@@ -938,8 +846,6 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
   ),
-  // 회의록 메일 발송(`sendNoteShareMail`). 코드 · 문구 · 상한이 서버(`NoteShareMail`)와 같아야 화면이 실서버와
-  // 같은 길을 지난다.
   http.post("*/v1/notes/:noteId/share-mails", async ({ request, params }) => {
     const form = await request.formData();
     const file = form.get("file");
@@ -948,8 +854,6 @@ export const restHandlers = [
         { success: false, data: null, error: { code, message, details: null } },
         { status }
       );
-    // 서버(SendNoteShareMailService)와 같은 차례로 거절한다 — 받는 사람 → 메시지 → 파일 → 상한. 한 요청에 틀린 곳이
-    // 여럿이면 어느 문구가 뜨는지가 이 차례로 정해진다
     const recipients = [
       ...new Map(
         form
@@ -964,7 +868,6 @@ export const restHandlers = [
           .reverse()
       ).values(),
     ].reverse();
-    // 서버와 같은 주소 규칙(`isEmail`)이다. 서버만 거절하는 주소(도달 불가)를 재현하려고 예약 도메인 `.invalid` 도 막는다
     if (
       recipients.length === 0 ||
       recipients.some((value) => !isEmail(value) || value.endsWith(".invalid"))
@@ -995,8 +898,6 @@ export const restHandlers = [
     const head = file instanceof Blob ? await file.slice(0, 5).text() : "";
     if (head !== "%PDF-")
       return fail("SHARE_MAIL_NOT_PDF", "PDF 파일만 보낼 수 있습니다.");
-    // 서버처럼 정시로 자른 한 시간 칸마다 30건이다(고정 창). 직전 60분을 세면 10:59 에 30건을 보낸 뒤 11:00 에
-    // 서버는 받는데 목은 막았다. 검사를 다 통과한 요청만 센다
     const slot = Math.floor(Date.now() / SHARE_MAIL_WINDOW_MS);
     const sent = shareMailSent.get(slot) ?? 0;
     if (sent >= SHARE_MAIL_HOURLY_LIMIT) {
@@ -1013,8 +914,6 @@ export const restHandlers = [
       { status: 202 }
     );
   }),
-  // 받는 사람별 발송 상태(`getNoteShareMail`). 보낸 사람만 본다 — 목의 보낸 사람은 늘 한 명이라 노트만 맞춘다.
-  // 접수 뒤 잠깐 PENDING 이었다가 SENT 가 된다. 실패 길을 화면에서 볼 수 있게 `@reject.test` 주소는 FAILED 다
   http.get("*/v1/notes/:noteId/share-mails/:mailId", ({ params }) => {
     const mail = shareMails.get(String(params.mailId));
     if (!mail || mail.noteId !== String(params.noteId)) {
@@ -1051,12 +950,7 @@ export const restHandlers = [
       error: null,
     });
   }),
-  // 맥락 후보. **명시적 override로 준다** — 생성 목은 무작위 success:false 를 낸다.
-  // 계약이 `openapi3.yml`에 아직 없어 생성 훅 자체가 없기도 하다.
   http.get("*/v1/notes/:noteId/proposals", ({ params }) => {
-    // **실패 주입 자리.** 「분석이 실패해도 전사 확인과 회의 종료가 계속된다」를 e2e 로
-    // 지키려면 실패하는 노트가 하나 필요하다. 그 노트에서만 500 을 준다 —
-    // `_mock/foreign-lock` 과 같은 방식이다.
     if (id(params.noteId) === CONTEXT_FAILING_NOTE_ID) {
       return HttpResponse.json(
         {
@@ -1067,13 +961,6 @@ export const restHandlers = [
         { status: 500 }
       );
     }
-    // 커버리지 행이 «교체»되는 노트. 처음에는 구멍 하나만 있고, WS batch 가 그것을
-    // 포화 범위로 채운다 — 행 수는 1로 유지된다.
-    //
-    // **서버 상태가 전진하는 것을 재현해야 한다.** batch 는 `invalidateContext()` 를
-    // 부르고 그 재조회가 옛 스냅샷을 돌려주면 화면이 구멍으로 되돌아간다. 첫 조회 뒤에는
-    // 채워진 범위를 준다 — 실제 서버도 batch 를 적용한 뒤에는 그렇게 답한다.
-    // 안건이 실시간으로 정해지는 노트. 구독 뒤 지난 시간만큼 온 명제를 준다.
     if (id(params.noteId) === LIVE_AGENDA_NOTE_ID) {
       return HttpResponse.json({
         success: true,
@@ -1087,8 +974,6 @@ export const restHandlers = [
         : CONTEXT_SWAP_SNAPSHOT;
       return HttpResponse.json({ success: true, data, error: null });
     }
-    // **실서버가 실제로 낸 원장.** 손으로 쓴 목은 내가 아는 것만 담아서, 계약을
-    // 오해했으면 목도 같이 틀린다. 이 노트만 실제 wire 를 그대로 싣는다.
     if (id(params.noteId) === CONTEXT_SYNTHETIC_LEDGER_NOTE_ID) {
       return HttpResponse.json({
         success: true,
@@ -1096,8 +981,6 @@ export const restHandlers = [
         error: null,
       });
     }
-    // **없는 노트는 실서버처럼 404다.** 그리고 데모 원장은 전용 노트에만 준다 — 아무
-    // 노트에나 같은 스냅샷을 돌려주면 근거 클릭이 그 노트에 없는 전사를 가리킨다.
     return resultOf(
       () => {
         mockDb.getNote(id(params.noteId));
@@ -1108,7 +991,6 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     );
   }),
-  // 회의 안 관계. 화면이 아직 읽지 않아 목은 빈 목록만 준다. 없는 노트는 실서버처럼 404다.
   http.get("*/v1/notes/:noteId/relations", ({ params }) =>
     resultOf(
       () => {
@@ -1123,11 +1005,6 @@ export const restHandlers = [
       () => {
         mockDb.getNote(id(params.noteId));
         const proposalId = id(params.proposalId);
-        /**
-         * **이력 전체를 준다(계약: revision 오름차순).** 스냅샷은 후보별 최신 head 하나라
-         * 그것만 거르면 AMEND·RETRACT 를 거친 후보도 revision 하나로 보인다 — 이력 UI 가
-         * 목에서 검증이 안 된다. 지난 판은 데모 피드(`CONTEXT_TIMELINE`)가 들고 있다.
-         */
         const byRevision = new Map(
           [
             ...CONTEXT_TIMELINE.filter(
@@ -1147,25 +1024,18 @@ export const restHandlers = [
     )
   ),
   http.put("*/v1/notes/:noteId/participants", async ({ request, params }) =>
-    resultOf(
-      async () => {
-        const body = (await request.json()) as {
-          userIds?: string[];
-          expectedUserIds?: string[];
-        };
-        return mockDb.replaceNoteParticipants(
-          id(params.noteId),
-          body.userIds ?? [],
-          body.expectedUserIds
-        );
-      },
-      // 기본 BAD_REQUEST를 쓰면 error.message에 원시 코드가 그대로 들어간다.
-      // 계약의 400 문구를 그대로 돌려줘야 자동 토스트가 실제 서버와 같아진다.
-      NOT_WORKSPACE_MEMBER
-    )
+    resultOf(async () => {
+      const body = (await request.json()) as {
+        userIds?: string[];
+        expectedUserIds?: string[];
+      };
+      return mockDb.replaceNoteParticipants(
+        id(params.noteId),
+        body.userIds ?? [],
+        body.expectedUserIds
+      );
+    }, NOT_WORKSPACE_MEMBER)
   ),
-  // 계정 없는 참여자는 경로가 따로다 - 한 요청에 섞으면 멤버를 하나 바꿀 때마다 임시
-  // 참여자가 함께 지워지고 그 화자 연결이 CASCADE 로 날아간다.
   http.post(
     "*/v1/notes/:noteId/participants/guests",
     async ({ request, params }) =>
@@ -1200,8 +1070,6 @@ export const restHandlers = [
   ),
   http.get("*/v1/workspaces/:workspaceId/guests", ({ params, request }) => {
     const url = new URL(request.url);
-    // 서버와 같다 — `limit` 이 없으면 전건, 있으면 `(displayName, guestId)` 오름차순에서 커서 뒤부터.
-    // `totalCount` 는 쪽과 무관한 전체 수다.
     const limit = Number(url.searchParams.get("limit")) || null;
     const afterName = url.searchParams.get("afterDisplayName");
     const afterId = url.searchParams.get("afterGuestId");
@@ -1262,8 +1130,6 @@ export const restHandlers = [
       mockDb.deleteWorkspaceGuest(id(params.workspaceId), id(params.guestId))
     )
   ),
-  // 미리보기와 실행이 같은 요청·응답 모양이다 — 사람이 확인한 것과 일어난 일을 맞춰
-  // 볼 수 있어야 한다. 연동은 되돌릴 수 없어 그 대조가 유일한 사후 확인이다.
   http.post(
     "*/v1/workspaces/:workspaceId/guests/:guestId/link-preview",
     async ({ request, params }) =>
@@ -1303,7 +1169,6 @@ export const restHandlers = [
     )
   ),
 
-  // 회의 맥락(APP-1188). 종료된 회의는 409, 길이 초과는 400
   http.put("*/v1/notes/:noteId/context", async ({ request, params }) =>
     resultOf(
       async () =>
@@ -1318,8 +1183,6 @@ export const restHandlers = [
     )
   ),
 
-  // 손으로 쓴다(생성 목이 아니라): 204는 본문이 없어야 하는데 resultOf는 모든 성공을 JSON
-  // 봉투로 만들어 `HttpResponse.json(..., {status: 204})`가 TypeError를 던진다.
   http.delete("*/v1/notes/:noteId", ({ params }) => {
     try {
       mockDb.deleteNote(id(params.noteId));
@@ -1334,7 +1197,6 @@ export const restHandlers = [
           data: null,
           error: {
             code,
-            // 문구는 서버 계약 것을 쓴다 — 원시 코드를 넣으면 토스트에 그대로 나온다.
             message: notFound ? "노트를 찾을 수 없습니다." : code,
             details: null,
           },
@@ -1344,7 +1206,6 @@ export const restHandlers = [
     }
   }),
 
-  // Transcription
   http.get("*/v1/transcription-sessions/:sessionId", ({ params }) =>
     resultOf(
       () => mockDb.getSession(id(params.sessionId)),
@@ -1354,12 +1215,6 @@ export const restHandlers = [
       )
     )
   ),
-  /**
-   * 화자 벌크 (APP-685). **본문에 실린 라벨만 바꾼다** — 여기 없는 라벨의 확정은 그대로다.
-   * 전체 교체로 읽으면 「참석자 중에 없다」 확정을 지우는 길이 열리는데 되돌릴 API 가 없다.
-   *
-   * 라벨 하나의 규칙은 단건 경로와 **같은 함수**를 쓴다. 서버도 그렇게 핸들러 하나로 모았다.
-   */
   http.put("*/v1/notes/:noteId/speakers", async ({ params, request }) => {
     const body = (await request.json()) as {
       assignments?: Array<{
@@ -1438,13 +1293,6 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
   ),
-  /**
-   * 커서 뒤 증분 (APP-685). **덧붙기 전용이다** — 이미 내려간 발화의 화자 지정 변경은 이
-   * 경로로 안 보이고, 그 수렴은 전체 조회가 맡는다.
-   *
-   * 커서는 `(startedAtMs, sequence)` 복합이다. 한쪽만 비교하면 같은 밀리초의 뒤엣것이
-   * 조용히 빠진다 — 서버가 그렇게 비교하므로 목도 같아야 그 버그가 목에서 재현된다.
-   */
   http.get("*/v1/notes/:noteId/transcript/segments", ({ params, request }) =>
     resultOf(
       () => {
@@ -1468,15 +1316,12 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
   ),
-  // Hand-written (not the Orval getStartTranscriptionSessionMockHandler): needs
-  // 201/409 status codes the generated wrapper can't express.
   http.post(
     "*/v1/notes/:noteId/transcription-sessions",
     async ({ params, request }) => {
       const body = (await request.json().catch(() => ({}))) as {
         clientInstanceId?: string;
       };
-      // 무료 월 한도 소진(`localStorage.mockBilling = "quota"`). 한도는 시작할 때만 검사한다.
       if (billingMock.quotaExceeded()) {
         return HttpResponse.json(
           {
@@ -1517,9 +1362,6 @@ export const restHandlers = [
             { status: 403 }
           );
         }
-        // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 web이
-        // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 예시를 그대로 쓴다 —
-        // web이 코드별 문구를 다시 만들면 서버가 바뀔 때마다 갈라진다.
         const conflict = SESSION_CONFLICTS[msg];
         if (conflict) {
           return HttpResponse.json(
@@ -1531,10 +1373,6 @@ export const restHandlers = [
             { status: 409 }
           );
         }
-        // 노트가 지워졌거나(NOTE_NOT_FOUND) 권한 승인과 이 POST 사이에 추방된 경우다
-        // (WORKSPACE_NOT_FOUND). 문구도 계약의 것을 준다 — 시작 실패는 전역 토스트를 끄고
-        // 프로바이더가 이 문구를 그대로 그리므로, 코드를 문구 자리에 흘리면 화면에
-        // `NOTE_NOT_FOUND`가 그대로 뜬다.
         return HttpResponse.json(
           {
             success: false,
@@ -1551,13 +1389,11 @@ export const restHandlers = [
     }
   ),
 
-  // Workspace members / invitations / notifications
   http.get("*/v1/workspaces/:workspaceId/members", ({ params }) =>
     commandResult(() => ({
       members: mockDb.listMembers(id(params.workspaceId)),
     }))
   ),
-  // 하위 경로라 역할 변경(`/members/:userId`)과 겹치지 않는다(APP-1204).
   http.patch(
     "*/v1/workspaces/:workspaceId/members/:userId/display-name",
     async ({ request, params }) =>
@@ -1578,15 +1414,11 @@ export const restHandlers = [
         )
       )
   ),
-  // 본문 파싱은 반드시 memberResult 안에서 한다. 생성 훅의 `data`가 optional이라 본문 없는
-  // 요청이 실제로 날아올 수 있는데, 밖에서 파싱하면 SyntaxError가 그대로 새어 MSW가 500과
-  // 스택 트레이스를 돌려준다 — 실제 서버는 같은 입력에 400 봉투를 준다.
+  // 본문 파싱은 memberResult 안에서 합니다. 밖에서 파싱하면 SyntaxError 가 새어 MSW 가 500 과 스택을 돌려줍니다.
   http.patch(
     "*/v1/workspaces/:workspaceId/members/:userId",
     ({ params, request }) =>
       memberResult(async () => {
-        // 좁은 유니온으로 단언하지 않는다 — 단언은 런타임에 아무것도 막지 않으면서 검증이
-        // 끝난 것처럼 보이게 한다. 계약에 없는 역할은 mockDb가 400으로 막는다.
         const body = await request
           .json()
           .catch(() => {
@@ -1600,7 +1432,7 @@ export const restHandlers = [
         );
       })
   ),
-  // 정적 경로(/members/me)가 :userId보다 먼저 와야 한다 — MSW는 등록 순서대로 매칭한다.
+  // 정적 경로(/members/me)가 :userId 보다 먼저 와야 합니다. MSW 는 등록 순서대로 매칭합니다.
   http.delete(
     "*/v1/workspaces/:workspaceId/members/me",
     ({ params, request }) =>
@@ -1652,7 +1484,6 @@ export const restHandlers = [
       commandResult(() => mockDb.markAllNotificationsRead(body.upTo))
     );
   }),
-  // 운영자 조회(APP-1615). web 은 부르지 않는다 — 계약 표본(`nullable-coverage`)이 null·비-null 양쪽을 보도록 두 줄씩 둔다
   http.get("*/v1/admin/users", ({ request }) =>
     adminPage(request, ADMIN_USERS, (users, next) => ({
       users,
@@ -1667,7 +1498,6 @@ export const restHandlers = [
       nextFeedbackId: next?.feedbackId ?? null,
     }))
   ),
-  // 결제 운영 검토 목록(APP-1616). web 은 부르지 않는다 — 한 줄은 nullable 이 모두 값이고 한 줄은 모두 null 이다
   http.get("*/v1/billing/operator/reviews", () =>
     HttpResponse.json({
       success: true,
@@ -1712,7 +1542,6 @@ export const restHandlers = [
       invitationResult(() => mockDb.acceptInvitation(id(params.invitationId)))
     )
   ),
-  // 목 세계의 토큰은 invitationId 그 자체다 — 실서버의 digest 매칭까지 흉내내지 않는다
   http.post("*/v1/invitations/accept-by-token", async ({ request }) => {
     const body = (await request.json()) as { token?: string };
     return invitationResult(() =>
@@ -1725,7 +1554,6 @@ export const restHandlers = [
     )
   ),
 
-  // 외부 에이전트 연결 (APP-804·826). 계약: 목록 200 · 만들기 201 · 회수 bodyless 204 · 사용 내역 200.
   http.get("*/v1/agent-delegations", () =>
     commandResult(() => ({ delegations: mockDb.listAgentDelegations() }))
   ),
@@ -1735,8 +1563,6 @@ export const restHandlers = [
       name: string;
       allowTaskChanges?: boolean;
     };
-    // 계약의 이름은 앞뒤 공백을 걷고 1~50자다. 넘으면 실서버처럼 400 이다 — 목에서만 통과하면
-    // 실서버에서 처음 깨진다.
     const name = (body.name ?? "").trim();
     if (name.length < 1 || name.length > 50) {
       return HttpResponse.json(
@@ -1775,7 +1601,6 @@ export const restHandlers = [
       );
     }
   ),
-  // 외부 에이전트 OAuth 동의 (APP-888). 계약: 조회·허락·거절 모두 200, 없는·끝난 요청은 404.
   http.get("*/v1/agent-oauth/consent", ({ request }) => {
     const consentState = new URL(request.url).searchParams.get("state") ?? "";
     return commandResult(() => mockDb.getAgentOAuthConsent(consentState));
@@ -1818,7 +1643,6 @@ export const restHandlers = [
     }
     return new HttpResponse(null, { status: 204 });
   }),
-  // 워크스페이스 외부 에이전트 관리 (APP-939·940). 계약: 허용 변경·회수 204, 목록 200, 모두 ADMIN 전용.
   http.put("*/v1/workspaces/:workspaceId/agent-access", ({ params, request }) =>
     memberResult(async () => {
       const body = (await request.json().catch(() => null)) as {
@@ -1844,7 +1668,6 @@ export const restHandlers = [
       )
   ),
 
-  // Meeting / analysis / integrations
   http.get("*/v1/notes/:noteId/analyses/latest", ({ params }) =>
     commandResult(() => mockDb.getLatestAnalysis(id(params.noteId)))
   ),
@@ -1854,7 +1677,6 @@ export const restHandlers = [
     }))
   ),
 
-  // 응답이 **갱신된 노트**다 (APP-685). 204 였을 때 화면이 종료 뒤 상태를 지어냈다.
   http.post("*/v1/notes/:noteId/meeting-end", ({ params }) => {
     const noteId = id(params.noteId);
     return commandResult(() => {
@@ -1882,16 +1704,10 @@ export const restHandlers = [
           { status: NOT_FOUND_CODES.has(code) ? 404 : 409 }
         );
       }
-      // 계약은 bodyless 204다.
       return new HttpResponse(null, { status: 204 });
     }
   ),
 
-  // OAuth는 외부 도메인으로 리다이렉트하는 흐름이라 서비스 워커가 가로챌 수 없다.
-  // 목에서는 우리 도메인의 목 전용 승인 화면으로 보내고 거기서 callback으로 돌려보낸다.
-  // 이 경로는 fetch 대상이 아니다. 계약이 302 리다이렉트라 생성 훅으로 부르면 응답 본문이
-  // HTML이고 apiFetch의 JSON 파싱이 깨진다 — 실제 서버(Linear·GitHub로 이동)도 마찬가지다.
-  // web은 window.location으로 이동해야 한다. 목은 계약대로 302를 돌려준다.
   http.get(
     "*/v1/workspaces/:workspaceId/integrations/:provider/authorize",
     ({ params }) => {
@@ -1909,17 +1725,13 @@ export const restHandlers = [
     const workspaceId = new URL(request.url).searchParams.get("state") ?? "";
     try {
       mockDb.connectIntegration(workspaceId, id(params.provider));
-    } catch {
-      // 이미 연결된 상태로 돌아오는 것은 왕복의 정상 재시도다. 화면은 결과만 보면 된다.
-    }
-    // 설정 화면은 아직 없다(APP-115). 존재하는 워크스페이스 화면으로 돌려보낸다.
+    } catch {}
     return new HttpResponse(null, {
       status: 302,
       headers: { Location: `/w/${workspaceId}` },
     });
   }),
 
-  // Agent chat sessions (SSE 전송은 sse-handler.ts가 맡는다)
   http.post(
     "*/v1/workspaces/:workspaceId/agent-chats",
     async ({ request, params }) => {
@@ -1936,16 +1748,11 @@ export const restHandlers = [
       return response;
     }
   ),
-  /**
-   * 대화 목록. **정렬·상한은 목 DB가, 도는 턴은 스트림이 안다** — 두 출처를 여기서 합친다.
-   * 멤버가 아닌 워크스페이스는 `assertWorkspace`가 404로 은닉한다(계약).
-   */
   http.get(
     "*/v1/workspaces/:workspaceId/agent-chats",
     ({ params, request }) => {
       const workspaceId = id(params.workspaceId);
       const url = new URL(request.url);
-      // 서버와 같다 — `limit` 이 없으면 50개, 커서는 `(updatedAt, chatId)` 내림차순에서 그 뒤부터.
       const limit = Number(url.searchParams.get("limit")) || 50;
       const afterUpdatedAt = url.searchParams.get("afterUpdatedAt");
       const afterChatId = url.searchParams.get("afterChatId");
@@ -1975,8 +1782,6 @@ export const restHandlers = [
       });
     }
   ),
-  // 이름 바꾸기(APP-1431). 바꾸면 그 뒤로 첫 질문·AI 제목이 덮지 않는다(USER). 같은 이름이면 아무것도 안 바꾼다.
-  // 새 이름에 「오류」가 들면 500 으로 실패한다 — 화면이 낙관값을 되돌리고 알리는지 목에서 보는 자리다.
   http.patch("*/v1/agent-chats/:chatId", async ({ params, request }) => {
     const { title } = (await request.json()) as { title: string };
     if (title.includes("오류")) {
@@ -2006,7 +1811,6 @@ export const restHandlers = [
       return chat;
     });
   }),
-  // 내 대화 삭제(APP-1409). 계약상 204 무본문, 없거나 이미 지운 대화는 404.
   http.delete("*/v1/agent-chats/:chatId", ({ params }) => {
     const chat = mockDb.findAgentChat(id(params.chatId));
     const response = commandResult(
@@ -2017,8 +1821,6 @@ export const restHandlers = [
     if (chat) emitChatsChanged();
     return new HttpResponse(null, { status: 204 });
   }),
-  // 히스토리와 **이어받기 상태**를 함께 준다. 커서·도는 턴·마지막 턴이 없으면 돌아온
-  // 브라우저는 무엇을 어디서부터 이어야 하는지 알 방법이 없다.
   http.get("*/v1/agent-chats/:chatId/messages", ({ params }) =>
     commandResult(() => ({
       messages: mockDb.getAgentChatMessages(id(params.chatId)),

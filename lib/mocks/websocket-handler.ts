@@ -102,7 +102,6 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
     let subscriptionId = "sub-0";
     let subscriptionDestination = "/user/queue/transcription-events";
     let messageSequence = 1;
-    /** note topic 구독. `/user/queue/...`(녹음자 전용)와 별개다. */
     const noteTopics = new Map<string, { id: string; destination: string }>();
     const noteTopicTimers: number[] = [];
 
@@ -121,24 +120,8 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
       );
     };
 
-    /**
-     * **`/topic/notes/{noteId}` 발행은 이 목이 처음 만든다.** 서비스 워커가 붙기 전에는 web이
-     * 후보 화면을 볼 방법이 없었다.
-     *
-     * 실제 주기를 압축해서 흘린다 — 회의 42분을 그대로 기다릴 수 없으므로 `SPEED`로 나눈다.
-     * 압축해도 **사건 사이가 성기다는 성질은 남는다**. 그게 이 화면의 실제 모습이다.
-     *
-     * **압축이 공짜가 아니다.** 60배로 흘리면 note topic event가 4~7초마다 오는데, 그동안
-     * 공유 챗의 30초 안전 폴링이 한 번도 안 돌았다(`smoke.spec.ts` 「locks the composer」가
-     * 그것으로 깨졌다). 실제 주기(배치 15~25초)에서도 같은 일이 일어날 수 있어 별도로
-     * 확인이 필요하다. 여기서는 전용 노트로 가둬 다른 화면을 안 건드린다.
-     */
     const SPEED = 60;
 
-    /**
-     * **커버리지 행 «교체» 전용 피드.** 구멍 하나만 있는 상태에서 그 구멍을 포화 범위로
-     * 채운다 — 행 수는 1로 유지되고 종류만 바뀐다. 개수만 세는 추종 키가 못 보는 전이다.
-     */
     const startSwapFeed = (noteId: string, send: (body: unknown) => void) => {
       resetSwapFill();
       noteTopicTimers.push(
@@ -153,7 +136,6 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
       );
     };
 
-    /** 안건이 실시간으로 정해지는 노트. 명제와 agendas.changed 를 차례로 흘린다 */
     const startLiveAgendaFeed = (noteId: string) => {
       for (const { atMs, delayMs } of startLiveAgendas(Date.now())) {
         noteTopicTimers.push(
@@ -179,8 +161,6 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
     };
 
     const startNoteTopicFeed = (noteId: string) => {
-      // **전용 노트에서만 흘린다.** 모든 노트에 흘리면 다른 화면의 폴링과 섞인다 —
-      // 실제로 공유 챗의 30초 안전 폴링이 굶어 e2e 하나가 깨졌다(아래 주석).
       if (noteId === LIVE_AGENDA_NOTE_ID) {
         startLiveAgendaFeed(noteId);
         return;
@@ -205,21 +185,11 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         );
       };
 
-      // 치환 노트는 batch 하나만 흘린다 — 후보 피드를 섞으면 무엇이 행을 움직였는지 흐려진다.
       if (noteId === CONTEXT_SWAP_NOTE_ID) {
         startSwapFeed(noteId, send);
         return;
       }
 
-      /**
-       * **살아 있는 발화 하나를 먼저 흘린다.** partial 두 토막이 자라다가 final 이 걷는다.
-       *
-       * 후보 피드보다 앞에 두는 것은 의도다 — 첫 후보가 4초 뒤에 오는데 partial 을 그
-       * 뒤에 두면 e2e 가 확인할 창이 회의 끝까지 밀린다.
-       *
-       * final 을 넉넉히 뒤에 둔다. 둘째 partial 과 final 사이가 **두 토막이 동시에 보이는
-       * 유일한 창**이라, 좁으면 테스트가 화면을 못 보고 지나간다.
-       */
       const live = LIVE_UTTERANCE;
       const partialFrame = (confirmedText: string, pendingText: string) => ({
         type: "transcript.partial",
@@ -229,9 +199,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         pendingText,
       });
       noteTopicTimers.push(
-        // 확정 토막이 아직 없다 — 미확정만 뜬다.
         window.setTimeout(() => send(partialFrame("", live.confirmed)), 700),
-        // 앞이 굳고 뒤가 흐리다. **둘 다 보이는 순간이 여기서 시작된다.**
         window.setTimeout(
           () => send(partialFrame(live.confirmed, live.pending)),
           1_500
@@ -349,7 +317,6 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
               resendFromSeq === undefined ? undefined : Number(resendFromSeq)
             );
           } catch {
-            // server 처럼 소켓을 닫지 않고 계약의 오류 이벤트로 거절한다. 재시도해도 같은 오류다.
             scenario = null;
             sendEvent({
               type: "error",
@@ -359,16 +326,13 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           }
           return;
         }
-        // 붙기 전 audio·stop 은 server 처럼 조용히 버린다.
         if (!scenario) return;
         if (action === "audio") {
-          // 목이 계약을 실행 가능하게 만드는 자리다. 서버가 볼 값을 그대로 본다.
           await scenario.receiveFrame(frame.body, {
             chunkSeq: Number(frame.headers.chunkSeq),
             captureSamples: Number(frame.headers.captureSamples),
           });
         } else {
-          // body 는 Uint8Array 라 빈 것도 truthy 다. 길이로 갈라야 한다.
           const command = frame.body.byteLength
             ? decoder.decode(frame.body)
             : JSON.stringify({ type: action, finalChunkSeq: -1 });

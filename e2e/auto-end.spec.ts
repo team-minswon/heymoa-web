@@ -1,9 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-/**
- * 일시정지 회의의 자동 종료 예고와 자동 종료된 노트의 고정 안내(APP-1319, PRO-67 userflow). 목 시드:
- * `01K0000000040` 은 예고된 일시정지 회의, `01K0000000026` 은 자동 종료된 뒤 분석이 실패한 회의다.
- */
 const WORKSPACE = "/w/01K0000000000/notes";
 
 test("예고된 일시정지 회의는 상단 띠에 자동 종료 예정 시각을 말한다", async ({

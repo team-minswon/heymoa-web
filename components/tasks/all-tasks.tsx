@@ -40,19 +40,8 @@ const VIEWS: readonly TaskStatus[] = ["OPEN", "COMPLETED", "CANCELLED"];
 
 const COUNT_KEY = { OPEN: "open", COMPLETED: "completed", CANCELLED: "cancelled" } as const;
 
-/** 할 일 id → 상태. 직전 목록과 견줘 새로 생기거나 상태를 옮긴 줄만 등장을 그린다. */
 type StatusSnapshot = Map<string, TaskStatus>;
 
-/**
- * 프로젝트를 가로지르는 할 일.
- *
- * **팬아웃이 사라졌다** (APP-685). 전에는 프로젝트마다 요청을 보내고 결과를 합치면서
- * `useQueries` 결과 배열의 **인덱스로** 프로젝트를 대조해 이름을 붙였다 — 요청 하나가 실패해
- * 배열이 밀리면 남의 프로젝트 이름이 붙는다. 지금은 할 일이 자기 프로젝트를 들고 온다.
- *
- * **전건을 받지 않는다** (APP-1043). 상태 탭 하나의 목록을 서버가 거르고 정렬해 한 쪽(30개)씩 준다. 탭의 개수와
- * 머리글의 「진행 중 N개」는 서버가 센 전체 수(`counts`)다 — 읽어 온 줄 수가 아니다.
- */
 export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const t = useTranslations("tasks");
   const tFields = useTranslations("common.fields");
@@ -63,20 +52,15 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const today = getAppDateKey(new Date());
 
   const [view, setView] = useState<TaskStatus>("OPEN");
-  /** 사람이 보기 · 거르기를 바꿨는가. 첫 목록은 그대로 서고, 바꿀 때만 목록이 들어온다. */
   const [switched, setSwitched] = useState(false);
   const [mine, setMine] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
-  /** 이어 읽은 쪽 수. 탭·거르기가 바뀌면 처음 쪽으로 돌아간다. */
   const [pages, setPages] = useState(1);
-  // 고른 프로젝트가 그사이 지워졌으면 전체로 돌아간다. 남겨 두면 없는 프로젝트로 할 일을 만들려다 거절된다.
   const activeProjectId =
     projectId !== null && projects.some((project) => project.projectId === projectId) ? projectId : null;
   const [adding, setAdding] = useState(false);
   const [historyTaskId, setHistoryTaskId] = useState<string | null>(null);
-  /** 시트를 줄의 「수정」으로 열었나. 그러면 내용 고치기부터 선다 */
   const [historyEditing, setHistoryEditing] = useState(false);
-  /** 시트 안에서 저장한 줄. 상태·담당이 바뀌어 보던 목록을 떠나도 시트가 그 줄을 계속 든다 */
   const [savedRow, setSavedRow] = useState<TaskEntry | null>(null);
   const { save, pendingOf, conflictTaskId } = useTaskUpdate(workspaceId, setSavedRow);
 
@@ -87,11 +71,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   };
   const result = useTaskListPages({ ...filter, status: view, pages });
   const queryClient = useQueryClient();
-  /**
-   * 상태 칸을 가리키거나 키보드로 들어오면 다른 두 상태의 첫 쪽을 미리 받는다 (APP-1212). 상태를 바꾸면 앞 상태의 줄은 쓸 수 없어
-   * skeleton 이 서는데, 가리키고 누르는 사이(보통 100ms 넘게)에 받아 두면 대개 바로 선다. 이미 받아 신선하면 다시 묻지 않는다.
-   * 프로젝트 메뉴는 미리 받지 않는다 — 프로젝트 수만큼 요청이 나가고, 앞 목록을 옅게 두는 것으로 기다림이 이미 가려진다.
-   */
   const prefetchViews = () => {
     for (const status of VIEWS) {
       if (status !== view) {
@@ -101,24 +80,18 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   };
   const response = result.data;
   const data = response?.status === 200 && response.data.success ? response.data.data : null;
-  // 탭만 바뀌어 이전 탭의 응답이 자리를 채우는 동안(개수만 쓴다) 그 줄을 이 탭의 줄로 그리지 않는다.
   const entries: TaskEntry[] = (data?.tasks ?? []).filter((task) => task.taskStatus === view);
   const counts = data?.counts;
   const countOf = (status: TaskStatus) => counts?.[COUNT_KEY[status]] ?? 0;
-  // 읽어 둔 목록이 있어도 다시 읽기가 실패했으면 알린다 — 낡은 목록만 보이면 실패를 모른다.
   const failed =
     result.isError || (!data && !result.isPending) ? () => void result.refetch() : null;
   const isPending = isWorkspacePending || result.isPending;
   const loadingRows = isPending || (result.isPlaceholderData && entries.length === 0);
-  // 보기 · 거르기가 바뀌면 처음 쪽으로 돌아가고, 도착하는 목록이 짧게 들어온다.
   const resetPages = () => {
     setPages(1);
     setSwitched(true);
   };
 
-  // 줄에 그리는 것이 바뀌면 목록도 새로 묶는다 — 판뿐 아니라 프로젝트 이름도 줄에 선다.
-  // **그리는 값을 다 넣는다.** 담당·기한·내용은 응답 전에 캐시에 먼저 걸리는데(`use-task-update`) 그때는 판이
-  // 아직 그대로다 — 판만 보면 묶음이 옛 줄을 그대로 들고 있어 화면이 안 바뀐다.
   const signature = entries
     .map(
       (e) =>
@@ -135,16 +108,12 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
     [signature, scopeKey, view, today]
   ).filter((group) => group.entries.length > 0);
 
-  // 첫 목록은 그대로 서고, 그 뒤로 달라진 줄만 들어온다.
-  // 탭이나 거르기가 바뀌면 줄이 통째로 바뀌므로 등장을 그리지 않는다(목록 전체가 이미 들어온다).
   const [snapshot, setSnapshot] = useState<{
     signature: string;
     scopeKey: string;
     statuses: StatusSnapshot;
   } | null>(null);
   const [previous, setPrevious] = useState<StatusSnapshot | null>(null);
-  // 자리표시(앞 키의 응답)는 이 거르기의 목록이 아니라 판에 넣지 않는다 — 넣으면 도착한 진짜 목록을 「같은 거르기 안의 변화」로 읽어
-  // 줄마다 등장 · 접힘을 그린다. 그래서 판의 `scopeKey` 는 마지막으로 **도착한** 목록의 거르기다 (APP-1212).
   if (
     !loadingRows &&
     !result.isPlaceholderData &&
@@ -157,11 +126,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
       statuses: new Map(entries.map((e) => [e.taskId, e.taskStatus])),
     });
   }
-  /**
-   * 거르기를 바꿔 새 목록을 기다리는 동안 앞 거르기의 목록이 자리를 지킨다 (APP-1212). 비웠다가 skeleton 으로 채우면 목이 즉답일 때는
-   * 한두 프레임 번쩍이고, 실제 지연에서는 목록 높이가 통째로 바뀌었다. 옅게 두고 손은 막는다 — 곧 사라질 줄을 누르지 않게.
-   * 같은 거르기에서 쪽만 늘리는 「더 보기」는 이것이 아니다(그 줄은 이 거르기의 것이다).
-   */
   const stale = result.isPlaceholderData && !loadingRows && snapshot?.scopeKey !== scopeKey;
   const isLoadingMore = result.isFetching && result.isPlaceholderData && entries.length > 0 && !stale;
   const hasMore = !loadingRows && !stale && data?.hasMore === true;
@@ -170,13 +134,11 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
     entries.find((e) => e.taskId === historyTaskId) ??
     (savedRow?.taskId === historyTaskId ? savedRow : null);
   const filtering = mine || activeProjectId !== null;
-  // 한 프로젝트만 보이면 프로젝트 칸은 모든 줄이 같은 글이라 아무것도 가르지 않는다.
   const showProject = activeProjectId === null && projects.length > 1;
   const grid = taskRowGrid(showProject);
 
   const reduceMotion = useReducedMotion() ?? false;
 
-  // 첫 목록은 움직이지 않는다(initial=false). 줄이 빠질 때만 접힌다.
   const renderRows = (list: TaskEntry[]) => (
     <ul>
       <AnimatePresence initial={false}>
@@ -219,7 +181,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             <h2 className="text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
               {t("title")}
             </h2>
-            {/* 기다리는 동안의 개수는 앞 거르기의 것이라 목록처럼 옅게 둔다 — 지우면 줄 높이 · 칸 폭이 출렁인다. */}
             <p
               className={cn(
                 "mt-3 min-h-6 text-sm leading-6 text-[var(--el-muted)] transition-opacity duration-150 ease-out motion-reduce:transition-none",
@@ -305,11 +266,9 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
           </div>
 
           <div className="-mx-2 mt-3">
-            {/* 좁은 화면에서는 칸이 둘째 줄로 내려가 머리글이 가리킬 칸이 없다. */}
             <div
               className={cn(
                 grid,
-                // 선은 줄의 hover 면처럼 밖으로 번지지 않고 위 머리의 선과 같은 폭에 선다(mx-2 · px-0).
                 "mx-2 hidden h-8 border-b border-[var(--el-hairline)] px-0 text-xs text-[var(--el-muted)] sm:grid"
               )}
             >
@@ -339,8 +298,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             ) : null}
 
             {loadingRows ? (
-              // 도착할 목록과 같은 틀이다 — 진행 중은 묶음(`mt-3` + 머리 `h-8`) 안에, 완료 · 취소는 `mt-1` 안에 줄이 선다.
-              // 머리 없이 줄만 세우면 도착할 때 목록이 머리만큼 밀린다(APP-1207 P3).
               <div aria-label={t("loading")} className={view === "OPEN" ? "mt-3" : "mt-1"}>
                 {view === "OPEN" ? (
                   <div className="flex h-8 items-center px-2">
@@ -363,9 +320,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               </div>
             ) : (
               <div
-                // **도착한 목록의 거르기로 새로 세운다** (APP-1212). 보기 · 거르기가 바뀌면 줄이 통째로 바뀌는데, 같은 목록에 두면
-                // 빠지는 줄마다 접힘(180ms)이 돌아 새 목록이 그만큼 늦게 서고 높이가 출렁였다(전체 9줄 → 고객 4줄에서 212ms).
-                // 기다리는 동안은 판이 앞 거르기라 그대로 서 있다. 첫 목록은 움직이지 않고, 바꾼 뒤에는 옅은 데서 짧게 들어온다.
                 key={snapshot?.scopeKey ?? scopeKey}
                 aria-busy={stale || undefined}
                 inert={stale}
@@ -385,11 +339,9 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                   </p>
                 ) : view === "OPEN" ? (
                   groups.map((group) => {
-                    // 진행 중 탭의 묶음은 기한 묶음뿐이다
                     const name = t(`groups.${group.key as TaskGroupKey}`);
                     return (
                       <section key={group.key} aria-label={name} className="mt-6 first:mt-3">
-                        {/* 묶음 머리는 열 머리글(옅은 12px)보다 한 단 위다 — 먹색 13px. 기한 지남만 기한 칸과 같은 빨강. */}
                         <h3
                           className={cn(
                             "flex h-8 items-center gap-2 px-2 text-[13px] font-medium",
@@ -398,7 +350,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                         >
                           {name}
                           <span
-                            // 개수가 바뀌면 다시 들어오게 해 무엇이 옮겼는지 눈에 걸리게 한다.
                             key={previous ? group.entries.length : undefined}
                             className={cn(
                               "text-xs font-normal tabular-nums text-[var(--el-muted-soft)]",
@@ -406,7 +357,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                                 "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
                             )}
                           >
-                            {/* 쪽이 남았으면 마지막 묶음만 아직 덜 읽었다 — 기한 순이라 앞 묶음은 다 읽은 것이다. */}
                             {group.entries.length}
                             {hasMore && group === groups.at(-1) ? "+" : ""}
                           </span>
@@ -445,8 +395,6 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
         onSave={async (patch) => {
           if (!historyEntry) return false;
           const ok = await save(historyEntry, patch);
-          // 목록을 떠난 줄(저장 응답에서 받은 사본)은 재조회로 새 판을 얻을 길이 없다 — 실패하면 같은 낡은 판으로 계속 거절되므로
-          // 시트를 닫아 목록에서 다시 열게 한다.
           if (!ok && !entries.some((e) => e.taskId === historyEntry.taskId)) {
             setHistoryTaskId(null);
             toast.error(t("sheetClosed"));

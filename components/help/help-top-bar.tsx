@@ -18,13 +18,7 @@ import { cn } from "@/lib/utils";
 
 const TABS: readonly HelpAxis[] = ["feature", "situation"];
 
-/**
- * 사용 가이드 고정 상단바. 위 줄(56): 로고 · 가운데 검색 · 앱 다운로드 / 대시보드. 아래 줄(40): 기능별 / 상황별 탭.
- * 탭은 페이지를 옮기지 않고 사이드바가 보여 줄 축만 바꾼다(`help-axis.ts`). 높이 합계는 `--help-top`(globals.css).
- * `<main>` 밖(`NavbarGate`)에 서서 건너뛰기 링크가 이 바도 건너뛴다. ⌘K 는 여기 한 곳(`HelpPalette`)에서만 듣는다.
- */
 export function HelpTopBar() {
-  // 언어 접두사를 벗긴 경로. 한국어 SSR 의 `/ko/help/...`(rewrite 뒤 주소)와 영어판 `/en/help/...` 이 같은 판정을 받는다.
   const pathname = splitLocale(usePathname()).path;
   const axis = useHelpAxis(pathname);
   const locale = useLocale();

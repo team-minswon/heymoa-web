@@ -117,7 +117,6 @@ describe("transcriptToMarkdown", () => {
     expect(markdown).toContain(
       "**홍길동** [12:30] 결제 실패율이 3%로 올랐습니다."
     );
-    // 같은 화자가 4초 뒤에 이어 말해도 묶지 않는다 — 그 발화의 시각이 그대로 남는다.
     expect(markdown).toContain(
       "**홍길동** [12:34] 로그를 보니 카드사 응답이 늦습니다."
     );
@@ -144,7 +143,6 @@ describe("transcriptToMarkdown", () => {
     const markdown = transcriptToMarkdown({
       doc,
       note: NOTE,
-      // 실시간 final은 라벨이 늘 null이고, 분리 전에는 호출부가 항상 null을 준다.
       rows: [
         segment(0, "안녕하세요.", "A"),
         segment(4_000, "시작하겠습니다.", "A"),
@@ -251,7 +249,6 @@ describe("영어 화면의 복사본", () => {
     expect(transcript).toContain("Attendees: Ann, Bo");
     expect(transcript).toContain("> Paused for about 12 minutes");
     expect(transcript).toContain("> The recording wasn't fully saved");
-    // 제목(사용자 데이터) 줄 밖에는 한글이 없다
     expect(transcript.split("\n").slice(1).join("\n")).not.toMatch(/[가-힣]/);
   });
 });

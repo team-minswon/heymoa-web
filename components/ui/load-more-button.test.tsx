@@ -3,10 +3,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { LoadMoreButton } from "@/components/ui/load-more-button";
 
-/**
- * jsdom 은 폭을 못 잰다 — 그래서 **두 상태의 버튼 안이 같은 모양인지**로 본다(rule `error-loading`, `landing-cta.test` 선례).
- * 문구가 「불러오는 중」으로 바뀌거나 아이콘이 빠지면 폭이 달라져 버튼이 출렁인다.
- */
 describe("LoadMoreButton", () => {
   afterEach(cleanup);
 

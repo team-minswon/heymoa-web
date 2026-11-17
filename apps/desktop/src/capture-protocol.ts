@@ -10,9 +10,6 @@ export const LOCAL_ACK = "heymoa:local-capture-ack";
 // 16 kHz mono PCM16, at most 100 ms per packet.
 export const PCM_SAMPLES_PER_MS = 16;
 export const PCM_MAX_BYTES = 3200;
-// How long the remote window may stall before capture gives up. Long tasks and GC
-// pauses run in the hundreds of ms; a window silent for 3 s is hung, not busy.
-// 30 queued 100 ms chunks are about 96 KB.
 export const CAPTURE_BACKLOG_MS = 3000;
 export const CAPTURE_BACKLOG_SAMPLES = CAPTURE_BACKLOG_MS * PCM_SAMPLES_PER_MS;
 export const INPUT_STATUS_INTERVAL_MS = 50;
@@ -75,7 +72,6 @@ export function capturePacket(value: unknown, id: string): CapturePacket {
 }
 
 type PcmPacket = Extract<CapturePacket, { kind: "pcm" }>;
-// One packet in flight to the remote window; the rest wait here up to the backlog bound.
 export class PcmSender {
   private sequence = 0;
   private pending: number | null = null;
@@ -113,7 +109,6 @@ export class PcmSender {
       this.drained = null;
     }
   }
-  /** Fails only when no ACK arrives for the backlog bound, like the host's per-packet deadline. */
   drain(): Promise<void> {
     if (this.pending === null) return Promise.resolve();
     return new Promise((resolve, reject) => {

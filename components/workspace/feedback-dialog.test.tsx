@@ -39,7 +39,6 @@ vi.mock("@/lib/ui/toast", () => ({
 vi.mock("@/lib/api/generated/feedbacks/feedbacks", () => ({
   getGetMyFeedbacksQueryKey: () => ["feedbacks"],
   useCreateFeedback: () => ({ mutate, isPending: false }),
-  // 캐시는 진짜 QueryClient 다 — 낙관적 갱신과 되돌림을 실제 캐시에서 본다.
   useGetMyFeedbacks: () => {
     const query = useQuery({
       queryKey: ["feedbacks"],
@@ -62,7 +61,6 @@ vi.mock("@/lib/api/generated/feedbacks/feedbacks", () => ({
       };
     return query;
   },
-  // 화면이 넘기는 낙관적 갱신·되돌림 옵션을 그대로 진짜 useMutation 에 싣는다.
   useMarkFeedbackAnswersSeen: (options: {
     mutation: Parameters<typeof useMutation>[0];
   }) => useMutation({ ...options.mutation, mutationFn: markOnServer }),
@@ -127,7 +125,6 @@ describe("FeedbackDialog", () => {
     expect(data.message).toContain("저장이 안 돼요");
     expect(data.message).toContain("화면: /w/1/notes/2\n");
     expect(data.message).not.toContain("view=full");
-    // 일반 진입은 결제 맥락이 없다.
     expect(data.message).not.toMatch(/결제 번호|등록 번호/);
   });
 
@@ -182,7 +179,6 @@ describe("FeedbackDialog", () => {
     expect(screen.getByText("고쳤습니다")).toBeTruthy();
     expect(screen.getByText("전사가 멈췄어요")).toBeTruthy();
     expect(screen.queryByText(/환경: x/)).toBeNull();
-    // 본 뒤에는 서버 응답을 기다리지 않고 새 답변 표시가 사라진다.
     await waitFor(() =>
       expect(screen.queryByLabelText("새 답변 1개")).toBeNull()
     );
@@ -226,12 +222,10 @@ describe("FeedbackDialog", () => {
     expect(screen.getByLabelText("1 new reply")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: /My requests/ }));
     expect(screen.getByText("Answered")).toBeTruthy();
-    // 사용자 데이터(문의 본문·답변)와 공용 Dialog 의 닫기 버튼(`components/ui/dialog.tsx`)은 이 모듈 문구가 아니다.
     const text = (baseElement.textContent ?? "")
       .replace("전사가 멈췄어요", "")
       .replace("고쳤습니다", "")
       .replace("닫기", "")
-      // 날짜 언어는 `useDisplayLocale` 목(`vitest.setup.ts`)이 한국어로 고정한다.
       .replace(/오[전후]/g, "");
     expect(text.match(/[가-힣]+/g)).toBeNull();
   });
@@ -261,7 +255,6 @@ describe("useFeedbackAnswers", () => {
 
     act(() => dialog.result.current.markSeen());
 
-    // 답 없는 문의는 그대로 둔다. 서버 응답을 기다리지 않는다(markOnServer 는 아직 끝나지 않아도 된다).
     await waitFor(() => expect(cachedSeen()).toEqual([true, false]));
     await waitFor(() => expect(sidebar.result.current.unseen).toBe(0));
     act(() => dialog.result.current.markSeen());
@@ -279,7 +272,6 @@ describe("useFeedbackAnswers", () => {
 
     act(() => hook.result.current.markSeen());
     await waitFor(() => expect(markOnServer).toHaveBeenCalledTimes(1));
-    // 낙관적으로 0 이 됐어도 새 미읽음이 들어온 상황을 만든다.
     seed([
       { ...answered, answerSeen: true },
       { ...answered, feedbackId: "N" },
@@ -316,7 +308,6 @@ describe("useFeedbackAnswers", () => {
     seed([answered]);
     const refetch = vi.spyOn(client, "refetchQueries");
     const hook = renderHook(() => useFeedbackAnswers(), { wrapper });
-    // 마운트한 조회는 끝나지 않는 상태다(시험의 queryFn) — 보낸 문의를 받아 오던 조회라고 본다.
     await waitFor(() => expect(client.isFetching()).toBe(1));
 
     act(() => hook.result.current.markSeen());
@@ -338,7 +329,6 @@ describe("useFeedbackAnswers", () => {
     act(() => hook.result.current.markSeen());
     await waitFor(() => expect(markOnServer).toHaveBeenCalled());
 
-    // 다른 기기에서 읽어 서버가 이미 읽음을 돌려준 목록이 도착했다.
     seed([{ ...answered, answerSeen: true }]);
     await act(async () => fail());
 

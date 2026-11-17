@@ -32,10 +32,6 @@ import {
 } from "@/lib/assignees/describe";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 
-/**
- * 회의 밖에서 생긴 할 일을 프로젝트에 더한다. 담당은 사람만 고른다 — 화자는 회의 안에서만 뜻이 있다.
- * 입력은 우리가 들고 있어서 실패해도 쓴 내용이 남는다. 실패 알림은 전역 토스트가 맡는다.
- */
 export function NewTaskDialog({
   workspaceId,
   open,
@@ -82,9 +78,6 @@ export function NewTaskDialog({
       },
       {
         onSuccess: (response) => {
-          // **응답을 목록에 먼저 끼운다** (APP-1033). 닫히는 순간 새 줄이 이미 서 있고, 재조회를 기다리지 않는다.
-          // **목록이 둘이다** (APP-685) — 한쪽만 끼우면 다른 화면에 안 나타난다. 끼운 뒤에도 한 번 다시 읽는다:
-          // 서버가 정하는 값(정렬·이름)을 맞추는 일이라 화면은 이미 맞고, 실패해도 끼운 줄은 남는다.
           if (response.status === 201 && response.data.success) {
             insertTaskIntoLists(queryClient, workspaceId, response.data.data);
           }

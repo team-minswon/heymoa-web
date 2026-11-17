@@ -35,10 +35,6 @@ import type { TaskSeedRow } from "@/lib/mocks/help-demo/tasks";
 import * as koText from "@/lib/mocks/help-demo/text";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 
-/**
- * 가이드 캡처 프리셋 한 벌(APP-1511). 한국어(`./*.ts`)와 영어(`./en/*.ts`)가 같은 ID·같은 모양을 내고,
- * 소비자(`build.ts` · 목 핸들러)는 이 팩으로만 읽는다 — 한쪽에만 고치면 다른 언어의 캡처가 어긋난다.
- */
 export type HelpDemoPack = {
   projects: Record<ProjectKey, { id: string; name: string; description: string | null }>;
   members: Record<
@@ -148,7 +144,6 @@ const EN: HelpDemoPack = {
   },
 };
 
-/** 그 언어의 프리셋. 언어를 안 넘기면 지금 문서의 언어(`helpDemoLocale()`)다. */
 export function helpDemoPack(locale: HelpDemoLocale = helpDemoLocale()): HelpDemoPack {
   return locale === "en" ? EN : KO;
 }

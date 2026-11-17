@@ -1,4 +1,3 @@
-// spinner 글리프는 앱 전체가 `Loader2`다(Button·목록 행·녹음 대기·토스트).
 import { Loader2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 

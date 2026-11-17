@@ -31,8 +31,6 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
   useRecordingMeter: () => recordingMeter,
 }));
-// 창은 셸이 소유한다 — 상단바는 「새 노트」를 셸에 **요청**만 한다. 프로젝트가 없을 때
-// 프로젝트 창을 먼저 여는 것은 셸의 일이고 `workspace-app-shell.test.tsx`가 본다.
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useWorkspaceShell: () => ({ requestNewMeeting }),
 }));
@@ -52,11 +50,9 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
     },
   }),
 }));
-// 삭제 다이얼로그도 자체 테스트가 있다 — 여기선 메뉴가 툴바에 걸리는지만 본다.
 vi.mock("@/components/notes/note-delete-dialog", () => ({
   NoteDeleteDialog: () => null,
 }));
-// 회의 조작·벨은 각자 테스트가 있다 — 여기선 툴바에 걸리는지만 본다.
 vi.mock("@/components/notes/meeting-controls", () => ({
   MeetingControls: () => <div data-testid="meeting-controls" />,
 }));
@@ -95,20 +91,13 @@ describe("WorkspaceToolbar", () => {
     );
 
     const newNote = screen.getByRole("button", { name: "새 노트" });
-    // **프로젝트가 없어도 눌린다.** 예전에는 대상 프로젝트가 없으면 비활성이라, 새
-    // 워크스페이스에 처음 들어온 사람이 가장 먼저 보는 것이 죽은 버튼이었다.
     expect(newNote).not.toBeDisabled();
     fireEvent.click(newNote);
     expect(requestNewMeeting).toHaveBeenCalledOnce();
-    // 알림은 상단바가 아니라 사이드바 첫 항목에서 연다(PRO-67 I09).
     expect(screen.queryByRole("button", { name: /알림/ })).toBeNull();
-    // 노트가 열려 있지 않으면 회의 조작 슬롯은 없다.
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
   });
 
-  // 상단바는 더 이상 노트를 모른다 — 노트 전체 화면이 이 바를 통째로 덮고 자기 크롬을
-  // 직접 그린다(design.pen `XtEMZ`). 회의 제어·닫기·노트 메뉴가 실제로 그려지는지는
-  // `note-panel.test.tsx`의 「full 모드는 요약 탭과 함께 회의 제어·창 제어를 직접 갖는다」가 본다.
   it("노트가 열려 있어도 상단바는 허브 크롬만 그린다", () => {
     recording.session = null;
     recording.phase = "idle";
@@ -129,9 +118,7 @@ describe("WorkspaceToolbar", () => {
     expect(
       screen.queryByRole("heading", { name: "주간 제품 회의" })
     ).toBeNull();
-    // 허브 크롬은 그대로다.
     expect(screen.getByRole("button", { name: "새 노트" })).toBeInTheDocument();
-    // 알림은 상단바가 아니라 사이드바 첫 항목에서 연다(PRO-67 I09).
     expect(screen.queryByRole("button", { name: /알림/ })).toBeNull();
   });
 
@@ -163,13 +150,6 @@ describe("WorkspaceToolbar", () => {
     ).not.toBeInTheDocument();
   });
 
-  /**
-   * **녹음 중인 워크스페이스로 간다.** 녹음은 route를 넘어 살아 있어서 A를 녹음한 채 B의
-   * 상단바를 볼 수 있는데, 여기서 보고 있는 `workspaceId`(=B)로 링크를 만들면
-   * `/w/B/notes/<A의 노트>`가 된다. 노트 조회는 워크스페이스를 받지 않아 A의 노트가 그대로
-   * 열리므로 **틀린 줄도 모르고** 그 화면에서 재개하게 되고, 그러면 녹음 소속이 B로 기록돼
-   * A의 나가기 잠금과 추방 정리가 둘 다 빗나간다.
-   */
   it("다른 워크스페이스의 녹음으로 돌아갈 때 그 워크스페이스로 간다", () => {
     recording.session = {
       sessionId: "01K0000000010",
@@ -212,15 +192,12 @@ describe("WorkspaceToolbar", () => {
       </SidebarProvider>
     );
 
-    // 다른 노트가 기록 중이어도 진입점은 하나다.
     expect(screen.getAllByRole("button", { name: "새 노트" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "새 노트" }));
     expect(requestNewMeeting).toHaveBeenCalledOnce();
   });
 
   it("덮이면 바 전체가 inert가 된다", () => {
-    // 창을 닫는 것은 이제 셸의 일이다(`workspace-app-shell.test.tsx`) — 창을 소유한 쪽이
-    // 닫아야 한다. 여기 남는 것은 바 자신이 포커스에서 빠지는지다.
     render(
       <SidebarProvider>
         <WorkspaceToolbar

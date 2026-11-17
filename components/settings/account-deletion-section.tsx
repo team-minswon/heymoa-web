@@ -46,17 +46,10 @@ import { forgetDeletedAccount } from "@/lib/storage/user-flags";
 import { cn } from "@/lib/utils";
 import { localePath } from "@/lib/i18n/locales";
 
-/** 유일 관리자 워크스페이스에서 고른 것. 기본은 서버가 정한 가장 오래된 멤버에게 넘기기다. */
 type Choice =
   | { decision: "TRANSFER"; successorUserId: string }
   | { decision: "DELETE" };
 
-/**
- * 설정 > 내 계정 맨 아래 「계정 삭제」(PRO-69 userflow 「계정 탈퇴」, APP-1383).
- *
- * 처리 목록은 서버가 계산하고, 요청 때 서버가 같은 규칙으로 다시 판정한다 — 화면은 고른 것만 보낸다.
- * 사유는 건너뛸 수 있다. 버튼은 「회원 탈퇴」 입력만으로 켜진다(권리 행사를 어렵게 하지 않는다).
- */
 export function AccountDeletionSection() {
   const t = useTranslations("settings.accountDeletion");
   const [open, setOpen] = useState(false);
@@ -104,10 +97,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * 화면 언어로 입력받는 확인 문구. 계약(`confirmation`)은 「회원 탈퇴」 하나라, 영어 화면에서 맞게 입력하면 계약 값을
-   * 대신 보낸다 — 한국어 입력기가 없는 사람도 탈퇴할 수 있어야 한다. 실수로 지우지 않게 하는 관문은 이 입력 그대로다.
-   */
   const phrase = t("confirmPhrase");
   const busy = deleteAccount.isPending;
   const workspaces = plan.data?.workspaces;
@@ -147,7 +136,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
           : undefined,
       });
     } catch (failure) {
-      // 그사이 멤버가 바뀌었으면 목록을 새로 받는다 — 같은 선택으로 다시 보내면 또 거절된다.
       if (errorCodeOf(failure) === "DELETION_PLAN_CHANGED") {
         setChoices({});
         void plan.refetch();
@@ -155,7 +143,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
       setError(errorMessageOf(failure, t("failed")));
       return;
     }
-    // 홈으로 보낸다. 완료 안내는 홈에서 짧은 토스트로 한 번 띄운다(`AccountDeletedNotice`).
     markAccountDeleted();
     if (user) await forgetDeletedAccount(user.userId);
     leave("/");
@@ -165,7 +152,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
     <Dialog
       open
       onOpenChange={(next) => {
-        // 요청 중에는 닫지 않는다 — 창만 사라지면 취소한 줄 알지만 탈퇴는 계속 간다.
         if (!next && !deleteAccount.isPending) onClose();
       }}
     >
@@ -197,7 +183,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
                   type="button"
                   aria-pressed={reason === code}
                   disabled={busy}
-                  // 하나만 고른다. 다시 누르면 고르지 않은 상태로 돌아간다(건너뛸 수 있다).
                   onClick={() => setReason(reason === code ? null : code)}
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors disabled:opacity-50",
@@ -270,7 +255,6 @@ function AccountDeletionDialog({ onClose }: { onClose: () => void }) {
 
           <section aria-label={t("effects.label")}>
             <SectionLabel>{t("effects.label")}</SectionLabel>
-            {/* 사업자 이름·내부 항목은 나열하지 않는다. 기간은 처리방침 6조가 원본이다(APP-1403). */}
             <ul className="list-disc space-y-1 pl-5 text-[13px] leading-relaxed text-[var(--el-body)]">
               <li>
                 {t.rich("effects.deleted", {

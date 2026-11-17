@@ -1,4 +1,4 @@
-// 자동 생성: `HELP_LOCALE=en pnpm help:shots` · `help:clips` 가 쓴다. 손으로 고치지 않는다.
+// 자동 생성: `HELP_LOCALE=en pnpm help:shots` · `help:clips` 가 씁니다. 손으로 고치지 않습니다.
 export const HELP_MEDIA_EN = {
   "agenda-map/entry.webp": {
     "width": 1100,

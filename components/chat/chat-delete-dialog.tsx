@@ -14,17 +14,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-/**
- * 대화 삭제 확인(APP-1409). 기록 줄의 휴지통과 대화 위쪽의 「대화 삭제」가 함께 쓴다.
- *
- * 실패 알림은 [onConfirm] 쪽(`useChatTurn.deleteChat`)이 띄운다. 여기는 누른 뒤 끝날 때까지 버튼을 잠그고, 성공하면 닫는다.
- */
 export function ChatDeleteDialog({
   target,
   onOpenChange,
   onConfirm,
 }: {
-  /** 지울 대화. null 이면 닫혀 있다. */
   target: { chatId: string; title: string } | null;
   onOpenChange: (open: boolean) => void;
   onConfirm: (chatId: string) => Promise<boolean>;

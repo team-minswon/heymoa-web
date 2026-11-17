@@ -12,8 +12,6 @@ import type {
 import { cn } from "@/lib/utils";
 
 /**
- * `@` 피커. 캐럿이 아니라 컴포저에 붙인다 — 좁은 레일에서는 어차피 컴포저 폭을 다 쓴다.
- *
  * Base UI `Combobox` 는 자기 input 을 가져서 안 쓴다. 입력은 본문 편집기이고 `@` 뒤 글자가
  * 곧 질의다. 입력이 둘이면 포커스가 갈리고 IME 조합이 그 경계에서 깨진다.
  */
@@ -26,16 +24,12 @@ export function ScopePicker({
   onDismiss,
   onActiveChange,
 }: {
-  /** 목록 상자의 id. 편집기가 `aria-controls` 로 가리킨다. 항목 id 는 여기에 순번을 붙인다. */
   id: string;
-  /** 겨눈 자리를 언제 맨 위로 되돌릴지 가르는 값. 목록을 거르는 것은 컴포저가 이미 했다. */
   query: string;
-  /** 이미 걸러진 목록(`matchScope`). 비어 있으면 컴포저가 이걸 안 연다. */
   sections: ScopeSection[];
   isPending: boolean;
   onPick: (candidate: ScopeCandidate) => void;
   onDismiss: () => void;
-  /** 겨눈 항목의 id. 포커스는 편집기에 남으므로 편집기가 `aria-activedescendant` 로 알린다. */
   onActiveChange?: (optionId: string | null) => void;
 }) {
   const t = useTranslations("chat.picker");
@@ -43,8 +37,6 @@ export function ScopePicker({
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  // 겨눈 항목을 렌더에서 접는다. 효과로 되돌리면 한 프레임 동안 없는 항목을 겨누고, 그 사이
-  // Enter 가 들어오면 엉뚱한 것이 붙는다. 질의가 바뀌면 저절로 맨 위로 간다.
   const [mark, setMark] = useState({ query, index: 0 });
   const cursor =
     mark.query === query && flat.length > 0
@@ -84,7 +76,6 @@ export function ScopePicker({
           (value) => (value - 1 + flat.length) % Math.max(1, flat.length)
         );
       } else if (event.key === "Enter" || event.key === "Tab") {
-        // 목록이 아직 안 왔어도 먹는다. 안 그러면 고르려던 Enter 가 반쯤 쓴 문장을 보낸다.
         consume();
         if (flat[cursor]) onPick(flat[cursor]);
       } else if (event.key === "Escape") {
@@ -98,7 +89,6 @@ export function ScopePicker({
 
   useEffect(() => {
     const active = listRef.current?.querySelector('[data-active="true"]');
-    // jsdom 에는 `scrollIntoView` 가 없다.
     active?.scrollIntoView?.({ block: "nearest" });
   }, [cursor]);
 
@@ -108,7 +98,6 @@ export function ScopePicker({
   }, [activeId, onActiveChange]);
   useEffect(() => () => onActiveChange?.(null), [onActiveChange]);
 
-  // 맞는 것이 없으면 컴포저가 피커를 안 연다. 남는 빈 상태는 목록이 아직 안 온 동안뿐이다.
   if (flat.length === 0) {
     return isPending ? (
       <Shell>
@@ -121,7 +110,6 @@ export function ScopePicker({
 
   return (
     <Shell>
-      {/* 높이는 약 여섯 줄까지다. 그 이상은 안에서 스크롤하고 막대는 가리킬 때만 보인다 — 메시지를 크게 덮지 않는다. */}
       <div
         ref={listRef}
         id={id}
@@ -166,7 +154,6 @@ export function ScopePicker({
                       : "text-[var(--el-body)]"
                   )}
                 >
-                  {/* 칩과 같은 색으로 가른다. */}
                   <Icon
                     aria-hidden
                     className={cn(
@@ -198,7 +185,6 @@ export function ScopePicker({
   );
 }
 
-/** 「10/24」. 보는 사람의 날짜로 센다. */
 function shortDate(at: string) {
   const [, month, day] = viewerDateKey(at).split("-");
   return `${Number(month)}/${Number(day)}`;

@@ -8,11 +8,6 @@ import type { Quote } from "@/lib/notes/review/moments";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
-/**
- * 근거 발언(APP-865). 이 항목이 인용한 줄은 먹색, 그 앞 맥락 줄은 회색으로 화자 · 때와 함께 선다.
- * 줄을 누르면 스크립트의 그 줄로 간다. 전사가 오는 중이거나 실패했는데 「발언이 없다」고 말하면 없는
- * 것처럼 읽히므로 따로 그린다.
- */
 export function EvidenceQuotes({
   quotes,
   authored,
@@ -22,7 +17,6 @@ export function EvidenceQuotes({
   onOpenScript,
 }: {
   quotes: readonly Quote[];
-  /** 사람이 검토에서 더한 항목. 회의 중 발언이 원래 없다 */
   authored: boolean;
   scriptState: "pending" | "ready" | "failed";
   onRetryScript: () => void;

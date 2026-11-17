@@ -24,18 +24,11 @@ import {
 } from "@/components/ui/select";
 
 /**
- * 「새 회의」의 생성 단계.
- *
- * **만들기와 시작은 별개다.** 예전에는 제목도 안 묻고 `"실시간 기록 노트"`로 만들어 곧장
- * 전사 화면으로 보냈고, 그래서 만들자마자 기록해야 하는 화면처럼 읽혔다. 여기서 이름을 짓고,
- * 기록은 노트 안에서 「회의 시작」을 눌러야 시작된다.
- *
  * 입력을 controlled로 둔 이유가 둘이다. 함수형 form action은 완료되면 비제어 입력을 비우는데,
  * **실패했을 때 사용자가 쓴 이름이 사라지면 안 된다.** 그리고 React 19는 거절된 action을 오류
  * 경계로 올리므로 실패를 action 안에서 삼켜야 하는데, 삼키면 action이 성공으로 끝나 또 비워진다.
  * 값을 우리가 들고 있으면 둘 다 걸리지 않는다.
  */
-/** 오늘 날짜로 채우는 기본 이름 「MM/DD 회의록」. 보는 사람의 시간대 기준이다(`viewerDateKey`). */
 function defaultMeetingTitle(
   t: ReturnType<typeof useTranslations<"workspace.newMeeting">>
 ) {
@@ -54,12 +47,10 @@ export function NewMeetingDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 실제로 만들어졌으면 true. 그때만 입력을 비운다. */
   onSubmit: (title: string, projectId: string) => Promise<boolean>;
   isPending: boolean;
   workspaceId: string;
   projects: { projectId: string; name: string }[];
-  /** 지금 보고 있는 프로젝트. 「모든 노트」에서 열었으면 null 이다. */
   defaultProjectId: string | null;
 }) {
   const t = useTranslations("workspace.newMeeting");
@@ -69,9 +60,6 @@ export function NewMeetingDialog({
   );
   const [picked, setPicked] = useState<string | null>(null);
   const trimmed = title.trim();
-  // **부모가 창을 닫아도(뒤로가기·화면 이동) 쓰던 이름과 고른 프로젝트를 비운다.** 이 컴포넌트는 그대로 남아 있어
-  // 자체 `close()` 를 안 거치면 다음에 열 때 지난 선택이 새 기본 프로젝트보다 앞선다(렌더 중에 맞춘다 — effect 로 미루면
-  // 낡은 값으로 한 번 그린다).
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -79,15 +67,9 @@ export function NewMeetingDialog({
       setTitle("");
       setPicked(null);
     } else {
-      // 열 때마다 오늘 날짜로 이름을 채운다 — 매번 이름을 새로 짓지 않아도 되고, 입력은 전체 선택돼 바로 덮어쓸 수 있다.
       setTitle(defaultMeetingTitle(t));
     }
   }
-  /**
-   * **회의가 어느 프로젝트에 속하는지는 만들 때 정해지고 그 뒤로 못 바꾼다** (APP-1033) — 분석이 그 프로젝트의 지식으로
-   * 대조하고 확정이 그 프로젝트에 쌓이므로, 나중에 옮기면 두 프로젝트의 지식이 섞인다. 그래서 여기서 보여 주고 고르게 한다.
-   * 기본값은 보고 있던 프로젝트, 「모든 노트」에서는 마지막으로 쓴 프로젝트다(없으면 첫 프로젝트).
-   */
   const fallback =
     (defaultProjectId && projects.some((p) => p.projectId === defaultProjectId)
       ? defaultProjectId
@@ -107,18 +89,10 @@ export function NewMeetingDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !isPending && !next && close()}>
       {open && (
-        <DialogContent
-          aria-label={t("title")}
-          // 처리 중에는 X를 안 그린다 — onOpenChange가 닫기를 무시하므로, 두면 눌러도
-          // 아무 일이 없어 고장으로 읽힌다.
-          showCloseButton={!isPending}
-        >
+        <DialogContent aria-label={t("title")} showCloseButton={!isPending}>
           <form
             action={async () => {
               if (!trimmed) return;
-              // 성공했을 때만 비운다. 부모는 닫기만 하므로 여기서 안 비우면 다음에 열었을 때
-              // 지난 회의 이름이 그대로 남는다.
-              //
               // 실패는 전역 `MutationCache`가 토스트로 알린다. 여기서 안 삼키면 React가
               // 거절을 오류 경계로 올려 워크스페이스 전체가 오류 화면이 된다.
               if (!target) return;
@@ -146,7 +120,6 @@ export function NewMeetingDialog({
                 name="title"
                 className="mt-2"
                 placeholder={t("namePlaceholder")}
-                // 서버 계약이 1~200자다.
                 maxLength={200}
                 required
                 autoFocus
@@ -222,7 +195,6 @@ export function NewMeetingDialog({
 const LAST_PROJECT_KEY = (workspaceId: string) =>
   `heymoa:last-meeting-project:${workspaceId}`;
 
-/** 이 워크스페이스에서 마지막으로 회의를 만든 프로젝트. 지금 목록에 없으면(지워졌다) 없는 것이다. 브라우저 저장소가 막혀도 화면은 그대로다. */
 function lastMeetingProject(
   workspaceId: string,
   projects: { projectId: string }[]
@@ -238,7 +210,5 @@ function lastMeetingProject(
 function rememberMeetingProject(workspaceId: string, projectId: string) {
   try {
     window.localStorage.setItem(LAST_PROJECT_KEY(workspaceId), projectId);
-  } catch {
-    // 저장은 편의일 뿐이다.
-  }
+  } catch {}
 }

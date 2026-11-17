@@ -1,7 +1,3 @@
-/**
- * 가이드 마크다운 표현 샘플. `/help-samples`(검색 제외 · sitemap 제외 내부용)가 쓰고 시험이 같은 글을 그려 본다.
- * 표현을 더하거나 바꾸면 여기와 `content/help/README.md` 를 같이 고친다.
- */
 export const HELP_SAMPLES: readonly { name: string; source: string }[] = [
   {
     name: "단계 카드 (번호 목록)",

@@ -15,7 +15,6 @@ import type {
   NoteResponseData,
 } from "@/lib/api/generated/models";
 
-// KST 10월 22일 09:00
 vi.mock("@/lib/notes/use-aligned-now", () => ({
   useAlignedNow: () => Date.parse("2026-10-22T00:00:00Z"),
 }));
@@ -65,7 +64,6 @@ describe("NoteStatusBand", () => {
     expect(screen.getByTestId("note-status-band")).toHaveTextContent(
       /^3일째 일시정지 상태입니다\.$/
     );
-    // 버튼은 없다 — 재개는 레코더 독, 종료는 상단바가 한다.
     expect(screen.queryByRole("button")).toBeNull();
   });
 

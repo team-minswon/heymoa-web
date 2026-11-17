@@ -26,7 +26,6 @@ export const handlers = [
     },
     error: null,
   }),
-  // 회의 뒤 흐름 목이 먼저다 — 검토 항목의 명제 이력을 답하지 못하면 실시간 정리 목으로 넘긴다.
   ...meetingFlowHandlers,
   ...projectTaskHandlers,
   ...restHandlers,

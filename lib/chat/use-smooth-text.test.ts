@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSmoothText } from "@/lib/chat/use-smooth-text";
 
-/** rAF 를 손으로 돌린다. jsdom 의 것은 타이머라 `vi.useFakeTimers` 와 엇갈린다. */
+/** rAF 를 손으로 돌립니다. jsdom 의 rAF 는 타이머라 `vi.useFakeTimers` 와 엇갈립니다. */
 let frames: FrameRequestCallback[] = [];
 let clock = 0;
 
@@ -33,7 +33,6 @@ describe("받은 것을 고르게 풀어 놓는다", () => {
       { initialProps: { text: "" } }
     );
 
-    // 모델이 멈췄다가 200자를 통째로 뱉었다.
     hook.rerender({ text: "가".repeat(200) });
     tick();
 

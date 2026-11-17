@@ -2,7 +2,6 @@
 
 import { CopyBlock } from "@/components/agent-connections/copy-block";
 
-/** 다운로드 페이지의 Homebrew 명령. 글은 페이지가 그 언어로 넘긴다(언어 파일 `download.homebrew`). */
 export function HomebrewInstallCommand({
   label,
   copyLabel,

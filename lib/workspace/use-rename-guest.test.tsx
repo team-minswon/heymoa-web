@@ -115,7 +115,6 @@ describe("useRenameGuest", () => {
     });
 
     await waitFor(() => expect(nameOf(client)).toBe("박서준"));
-    // 대화상자가 그 안에 띄울 서버 문구를 돌려준다(전역 토스트는 끈다)
     expect(failure).toBe("권한 없음");
   });
 
@@ -137,12 +136,10 @@ describe("useRenameGuest", () => {
       void result.current.rename("둘");
     });
 
-    // 화면은 즉시 마지막 이름이고, 요청은 앞 것이 끝나야 나간다.
     await waitFor(() => expect(nameOf(client)).toBe("둘"));
     expect(releases).toHaveLength(1);
 
     await act(async () => releases[0](reply("하나")));
-    // 앞 응답이 낙관적인 「둘」을 덮어 되돌리지 않는다.
     expect(nameOf(client)).toBe("둘");
     await waitFor(() => expect(releases).toHaveLength(2));
     expect(bodies).toEqual(['{"displayName":"하나"}', '{"displayName":"둘"}']);

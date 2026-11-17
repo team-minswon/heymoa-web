@@ -6,22 +6,11 @@ import { personAvatarKey } from "@/components/heymoa/person-avatar";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
 
-// 시험의 한국어 화자 이름. 화면은 `notes.speakers.fallback` 을 넘긴다
 const speakerName = (label: string) => `화자 ${label}`;
-// 시험의 한국어 이름. 화면은 `useSpeakerFallbackNames()` 를 넘긴다
 const names = {
   unnamedParticipant: "이름 없는 참여자",
   speaker: (label: string) => `화자 ${label}`,
 };
-
-/**
- * **패널의 얼굴과 전사의 칩은 같은 색이어야 한다.** 목록에서 고른 사람을 본문에서 색으로
- * 되찾는 것이 그 얼굴의 일이고, 두 화면이 갈리면 그 일을 못 한다.
- *
- * 이 검사가 있는 이유는 실제로 두 번 갈렸기 때문이다 — 한 번은 한 사람이 라벨 둘을 맡았을
- * 때, 한 번은 발화 하나만 남에게 돌렸을 때. 규칙을 `speakerAvatarName` 하나로 모았고 이 파일이
- * 그 하나를 두 호출부가 정말로 같이 쓰는지 본다.
- */
 
 const segment = (
   sequence: number,
@@ -37,14 +26,9 @@ const segment = (
   assignedParticipantId,
 });
 
-/**
- * 패널 한 줄이 그리는 얼굴. **`speaker-panel.tsx` 가 그리는 바로 그 값이다** —
- * 예전에는 여기서 같은 식을 다시 써서 거울이었고, 그래서 화면만 틀려도 검사는 초록이었다.
- */
 const panelOrb = (stat: { avatarName: string }) => stat.avatarName;
 
 describe("패널의 얼굴과 전사의 칩", () => {
-  // pyannote 가 한 사람을 둘로 쪼갠 실제 회의(이동준 멘토님이 라벨 D·E)에서 드러났다.
   it("한 사람이 라벨 둘을 맡아도 두 화면이 같은 얼굴이다", () => {
     const speakers = [
       {
@@ -102,10 +86,6 @@ describe("패널의 얼굴과 전사의 칩", () => {
     expect(panelOrb(stats[0])).toEqual(resolve("C")?.avatarName);
   });
 
-  /**
-   * 발화 하나만 남에게 돌린 사람은 그 라벨을 **가진** 것이 아니다. 그걸 소유로 세면 패널이
-   * 라벨 얼굴을, 전사가 해시 얼굴을 줘서 같은 사람이 두 얼굴로 선다.
-   */
   it("발화 하나만 돌려받은 사람도 두 화면이 같은 얼굴이다", () => {
     const speakers = [
       {
@@ -134,11 +114,9 @@ describe("패널의 얼굴과 전사의 칩", () => {
 
     const shark = stats.find((stat) => stat.key === "p2")!;
     expect(panelOrb(shark)).toEqual(resolve("A", "p2")?.avatarName);
-    // 그리고 라벨 A 의 주인과는 다른 색이어야 한다 — 같으면 구분이 안 된다.
     expect(panelOrb(shark)).not.toEqual(resolve("A")?.avatarName);
   });
 
-  // 기본 `sort()` 는 글자 순이라 `["AA","B"]` 를 그대로 둔다. 라벨 순번으로는 B 가 먼저다.
   it("라벨이 Z 를 넘어도 두 화면이 같은 얼굴이다", () => {
     const speakers = [
       {
@@ -167,14 +145,6 @@ describe("패널의 얼굴과 전사의 칩", () => {
   });
 });
 
-/**
- * 임시 참여자는 회의마다 `participantId` 가 새로 생기고 `guestId` 만 워크스페이스에서
- * 안 변한다. 그래서 얼굴 열쇠는 `guestId` 여야 한다 — `personAvatarKey` 가 그렇게 정한다.
- *
- * 위 검사들이 이걸 못 봤다. 참여자를 전부 `{participantId, name, image}` 로만 만들어서
- * `guestId` 가 없었고, 없으면 `personAvatarKey` 가 `participantId` 로 떨어져 두 쪽이
- * 우연히 같아진다. **갈리게 하는 바로 그 필드가 검사에 없었다.**
- */
 describe("계정 없는 임시 참여자", () => {
   it("전사·참석자 목록과 같은 얼굴이다", () => {
     const speakers = [
@@ -232,16 +202,11 @@ describe("계정 없는 임시 참여자", () => {
     });
 
     const silent = stats.find((stat) => stat.name === "황성윤")!;
-    // 발화가 없으면 화자로 못 부르니, 참석자 목록이 쓰는 열쇠와 직접 견준다.
     expect(panelOrb(silent)).toEqual(personAvatarKey(participants[0]));
     expect(resolve).toBeTypeOf("function");
   });
 });
 
-/**
- * **요약의 담당 칸과 전사의 칩도 같은 얼굴이어야 한다.** 담당은 `describeAssignee` 가, 칩은
- * 화자 해석기가 얼굴을 정해서 둘이 따로 자랐고, 이름 없는 화자에서 열쇠가 갈렸다.
- */
 describe("요약의 담당 칸과 전사의 칩", () => {
   it("아직 아무도 안 붙은 화자는 같은 얼굴이다", () => {
     const resolve = createSpeakerIdentityResolver(

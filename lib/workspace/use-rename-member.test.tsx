@@ -156,7 +156,6 @@ describe("useRenameMember", () => {
 
   it("되돌릴 기준은 연 순간이 아니라 지금 캐시의 이름이다", async () => {
     const client = seed();
-    // 대화상자를 연 뒤(훅은 「상어」로 열렸다) 목록이 다른 이름을 받았다
     client.setQueryData(KEY, {
       status: 200,
       data: {

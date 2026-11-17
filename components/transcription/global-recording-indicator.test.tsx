@@ -49,7 +49,6 @@ describe("GlobalRecordingIndicator", () => {
     vi.clearAllMocks();
   });
 
-  // 한도에서는 마이크를 끄지 않고 조각만 안 받는다. 노트 패널을 떠나 있으면 그 안내가 안 보인다
   it("기기 저장 한도로 녹음을 멈췄으면 노트 밖에서도 알린다", () => {
     recording.buffer = { paused: true, limitMs: 3_600_000 };
 

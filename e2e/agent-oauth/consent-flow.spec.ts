@@ -1,9 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-/**
- * 외부 에이전트가 연 브라우저의 흐름(APP-888). 가짜 API 가 server 인가 엔드포인트와 에이전트 콜백을 겸한다 —
- * 시험은 에이전트처럼 server 인가 주소를 열고, 에이전트 콜백에 무엇이 돌아오는지 본다.
- */
 const API_PORT = process.env.E2E_API_PORT ?? "3199";
 const API = `http://localhost:${API_PORT}`;
 const CALLBACK = `${API}/agent/callback`;
@@ -32,7 +28,6 @@ async function fakeLog(page: Page): Promise<FakeLog> {
   return (await page.request.get(`${API}/__test/state`)).json();
 }
 
-/** 가짜 API 에 세션을 만들고 그 쿠키를 브라우저에 심는다. 포트가 달라도 localhost 쿠키는 같이 간다. */
 async function signIn(page: Page, context: BrowserContext, expired = false) {
   const session = (await (
     await page.request.post(
@@ -89,7 +84,6 @@ test("로그인 안 된 인가 요청이 로그인을 거쳐 동의 화면에 �
   expect(callback.searchParams.get("state")).toBe("agent-state-1");
   expect(callback.searchParams.get("code")).toBeTruthy();
   const log = await fakeLog(page);
-  // 처음 인가 요청과 web 입구가 로그인 뒤 돌려보낸 요청이 같은 쿼리다
   expect(log.authorize).toEqual([authorizeQuery, authorizeQuery]);
   expect(log.approve).toEqual([
     { state: expect.stringMatching(/^consent-/), workspaceId: "01K0000000001" },
@@ -136,7 +130,6 @@ test("access 쿠키만 만료된 인가 요청은 로그인 카드 없이 동의
   await expect(
     page.getByText("AI 앱을 HeyMoa에 연결하려면 로그인하세요")
   ).toHaveCount(0);
-  // proxy 가 한 번 갱신했고, 그 쿠키로 server 인가 엔드포인트를 다시 지났다
   const log = await fakeLog(page);
   expect(log.refresh).toBe(1);
   expect(log.authorize).toEqual([authorizeQuery, authorizeQuery]);

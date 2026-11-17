@@ -21,7 +21,6 @@ async function get(query: string): Promise<Page> {
   return (await response.json()).data;
 }
 
-/** 목이 서버의 쪽 끊기 규칙을 따르는지 — 화면 시험이 믿는 전제라 여기서 못 박는다. */
 describe("워크스페이스 할 일 목", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
   afterEach(() => {
@@ -59,7 +58,6 @@ describe("워크스페이스 할 일 목", () => {
     expect(mine.tasks.length).toBeGreaterThan(0);
     expect(mine.tasks.every((task) => task.assignee?.id === mockDb.getCurrentUser().userId)).toBe(true);
     expect(mine.totalCount).toBe(mine.counts.open);
-    // 상태를 걸어도 다른 상태의 개수는 같은 거르기 안에서 그대로다.
     expect(mine.counts.completed).toBeGreaterThan(0);
   });
 });

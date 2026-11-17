@@ -49,16 +49,6 @@ type Delegation = WorkspaceAgentDelegationsResponseDataDelegationsItem;
 
 const DATE = { year: "numeric", month: "long", day: "numeric" } as const;
 
-/**
- * 워크스페이스 외부 에이전트 관리(APP-941). 팀이 바깥 에이전트의 연결을 받을지 정하고 열린 연결을 끊는다 —
- * 연결 자체는 팀원 본인이 「계정 › 외부 에이전트」에서 만든다.
- *
- * 항목은 모두에게 보이지만 **바꾸는 것은 ADMIN 뿐**이다. 역할은 연동 탭처럼 멤버 목록에서 가르고, 역할을 모르는
- * 동안 관리 UI 를 그리지 않는다(낙관적으로 그리면 MEMBER 에게 눌러 봤자 403 인 조작이 보인다). 관리자 목록도
- * ADMIN 전용이라 MEMBER 는 부르지 않는다.
- *
- * 끄기와 끊기는 되돌릴 수 없어 확인을 거친다. 켜기는 아무것도 되살리지 않으니 바로 켠다.
- */
 export function WorkspaceAgentAccessSettings({
   workspaceId,
 }: {
@@ -68,7 +58,6 @@ export function WorkspaceAgentAccessSettings({
   const tActions = useTranslations("common.actions");
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  // 허용 상태도 다른 관리자가 바꾼다 — 열 때마다 다시 읽는다(아래 목록과 같은 이유)
   const workspaceQuery = useGetWorkspace(workspaceId, {
     query: { staleTime: 0 },
   });
@@ -80,8 +69,6 @@ export function WorkspaceAgentAccessSettings({
   const myRole = members.find((member) => member.userId === user?.userId)?.role;
   const roleError = membersQuery.isError;
   const isAdmin = myRole === "ADMIN" && !roleError;
-  // 다른 팀원·계정 탭·다른 창(OAuth 허락)에서 바뀌는 목록이라 열 때마다 다시 읽는다 — 전역 staleTime(60초)을
-  // 따르면 방금 만든 연결이 안 보여 끊을 수 없다
   const delegationsQuery = useGetWorkspaceAgentDelegations(workspaceId, {
     query: { enabled: isAdmin, staleTime: 0 },
   });
@@ -97,7 +84,6 @@ export function WorkspaceAgentAccessSettings({
       ? delegationsQuery.data.data.data.delegations
       : null;
 
-  // 끄기·켜기·끊기 뒤에 다시 읽는다 — ADMIN 본인의 연결도 끊겼을 수 있어 「내 연결」까지
   const refresh = () =>
     Promise.all(
       [
@@ -108,7 +94,6 @@ export function WorkspaceAgentAccessSettings({
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
     );
 
-  // 거절은 여기서 소비한다 — 토스트는 전역 `MutationCache.onError` 가 띄운다
   const setAllowed = async (allowed: boolean) => {
     const response = await change
       .mutateAsync({ workspaceId, data: { allowed } })
@@ -138,7 +123,7 @@ export function WorkspaceAgentAccessSettings({
           </div>
           <Skeleton className="h-5 w-9 shrink-0 rounded-full" />
         </section>
-      ) : // 다시 읽다 실패하면 캐시가 남아도 옛 값 대신 실패를 보인다 — 옛 「켜짐」을 보고 끄기를 누르게 된다
+      ) :
       workspaceQuery.isError || !workspace ? (
         <div role="alert" className="space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
@@ -221,7 +206,7 @@ export function WorkspaceAgentAccessSettings({
         <OpenConnectionsFrame>
           {delegationsQuery.isLoading ? (
             <DelegationRowsSkeleton />
-          ) : // 캐시가 남아도 실패를 「열린 연결이 없습니다」나 옛 목록으로 접지 않는다
+          ) :
           delegationsQuery.isError || !delegations ? (
             <div role="alert" className="space-y-2">
               <p className="text-sm text-[var(--el-ink)]">
@@ -237,7 +222,6 @@ export function WorkspaceAgentAccessSettings({
               </Button>
             </div>
           ) : delegations.length === 0 ? (
-            // 실패가 아니다 — 경고 색·아이콘을 쓰지 않는다
             <div className="rounded-panel border border-dashed border-[var(--el-hairline)] p-6 text-center">
               <p className="text-sm text-[var(--el-ink)]">
                 {t("open.empty")}
@@ -258,8 +242,6 @@ export function WorkspaceAgentAccessSettings({
           )}
         </OpenConnectionsFrame>
       ) : membersQuery.isLoading ? (
-        // 역할을 모르는 동안은 관리자 자리를 잡아 둔다 — 멤버 탭과 같은 이유다(`members-settings`). 관리 UI 가 아니라
-        // 자리일 뿐이라 보조기술에는 숨긴다.
         <OpenConnectionsFrame placeholder>
           <DelegationRowsSkeleton />
         </OpenConnectionsFrame>
@@ -310,7 +292,6 @@ function WorkspaceDelegationRow({
 }: {
   workspaceId: string;
   delegation: Delegation;
-  /** 허용을 바꾸는 중이다 — 끊기와 겹치지 않게 잠근다. */
   busy: boolean;
   onRevoked: () => Promise<unknown>;
 }) {
@@ -332,7 +313,6 @@ function WorkspaceDelegationRow({
             <p className="truncate text-sm font-medium text-[var(--el-ink)]">
               {delegation.name}
             </p>
-            {/* OAuth 이름은 에이전트가 스스로 정해 사칭될 수 있다 — 무엇으로 붙었는지 함께 보인다 */}
             <Badge variant="outline">
               {tAgents(`credential.${delegation.credentialKind}`)}
             </Badge>
@@ -387,7 +367,6 @@ function WorkspaceDelegationRow({
               loading={revoke.isPending}
               disabled={revoke.isPending}
               onClick={async () => {
-                // 다이얼로그를 연 채 기다린다(본인 회수와 같다). 거절은 전역 토스트가 띄운다
                 const response = await revoke
                   .mutateAsync({
                     workspaceId,
@@ -409,7 +388,6 @@ function WorkspaceDelegationRow({
 }
 
 const CARD_ROW = "flex items-center justify-between gap-4";
-/** skeleton 이 세우는 열린 연결 수 — 목 시드의 흔한 워크스페이스(2개)다. */
 const SKELETON_DELEGATIONS = 2;
 
 function AllowTitle() {
@@ -419,7 +397,6 @@ function AllowTitle() {
   );
 }
 
-/** 「열린 연결」 머리글과 본문 자리. 실제와 skeleton 이 같이 쓴다. */
 function OpenConnectionsFrame({
   placeholder = false,
   children,
@@ -440,11 +417,9 @@ function OpenConnectionsFrame({
   );
 }
 
-/** `WorkspaceDelegationRow` 와 같은 틀(이름 줄·팀원 줄·날짜 줄·끊기)에 값만 막대로 둔다. */
 function DelegationRowsSkeleton() {
   const t = useTranslations("settings.workspaceAgents.open");
   return (
-    // 목록(`ul`)으로 세우지 않는다 — 도착 전의 자리가 연결 목록으로 읽히면 안 된다.
     <div className="space-y-3" aria-label={t("loading")}>
       {Array.from({ length: SKELETON_DELEGATIONS }, (_, index) => (
         <div key={index} className={cn(CARD_ROW, SETTINGS_CARD)}>

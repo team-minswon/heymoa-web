@@ -32,7 +32,6 @@ vi.mock("@/components/transcription/recording-provider", async () => {
     }),
   };
 });
-// 퇴장 애니메이션을 기다리지 않는다 — 시험은 상태만 본다.
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -42,7 +41,6 @@ vi.mock("motion/react", () => ({
     {
       get: (_target, tag: string) =>
         function MotionStub(props: Record<string, unknown>) {
-          // 애니메이션 속성은 DOM 에 내리지 않는다.
           const rest = Object.fromEntries(
             Object.entries(props).filter(
               ([key]) =>
@@ -125,12 +123,10 @@ describe("MeetingControls", () => {
 
     expect(screen.getByRole("button", { name: "회의 종료" })).toBeTruthy();
     expect(screen.getAllByRole("button")).toHaveLength(1);
-    // 상태 칩은 헤더 첫 줄로, 초 단위 타이머는 레코더 독으로 갔다.
     expect(screen.queryByText("기록 중")).toBeNull();
     expect(screen.queryByRole("timer")).toBeNull();
   });
 
-  // APP-694: 서버가 기록 중인 회의의 종료를 409 MEETING_RECORDING 으로 거절한다.
   it("기록 중이면 회의 종료를 잠그고 이 창의 녹음자에게는 일시정지부터 하라고 알린다", () => {
     state.activeNoteId = "01K0000000002";
     renderControls(note({ meetingStatus: "IN_PROGRESS" }));
@@ -164,7 +160,6 @@ describe("MeetingControls", () => {
   it("잠긴 버튼 위에서도 툴팁이 뜬다", async () => {
     renderControls(note({ meetingStatus: "IN_PROGRESS" }));
 
-    // disabled 버튼은 포인터 이벤트를 안 내므로 감싼 요소가 트리거다.
     fireEvent.pointerEnter(
       screen.getByRole("button", { name: "회의 종료" }).parentElement!,
       { pointerType: "mouse" }
@@ -197,8 +192,6 @@ describe("MeetingControls", () => {
     expect(screen.getByTestId("end-dialog")).toBeTruthy();
   });
 
-  // 시작만 누르고 소켓을 못 붙인 채 떠난 회의는 IN_PROGRESS 로 남는다. 서버는 활성 세션이 없으면
-  // 종료를 받으므로(APP-694) 화면도 막지 않는다 — 막으면 아무도 끝낼 수 없다.
   it("기록 중이어도 활성 세션이 없으면 누구나 끝낼 수 있다", () => {
     state.userId = "user-other";
     renderControls(
@@ -208,7 +201,6 @@ describe("MeetingControls", () => {
     expect(screen.getByRole("button", { name: "회의 종료" })).toBeEnabled();
   });
 
-  // `요약 보기` 버튼은 없앴다 — 바로 위 탭 줄에 `요약`이 있어 같은 곳으로 가는 길이 둘이었다.
   it("종료·미시작에는 아무것도 내놓지 않는다", () => {
     const ended = render(
       <MeetingControls
